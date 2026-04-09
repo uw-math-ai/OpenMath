@@ -2,3 +2,4 @@
 /lake-packages
 /.lake
 /lakefile.olean
+*.pdf
