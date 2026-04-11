@@ -237,3 +237,94 @@ theorem adamsBashforth2_order_two : adamsBashforth2.HasOrder 2 := by
   · intro q hq
     interval_cases q <;> simp [LMM.orderCondVal, adamsBashforth2, Fin.sum_univ_three] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth2, Fin.sum_univ_three]; norm_num
+
+/-! ## Zero-Stability
+
+A linear multistep method is zero-stable if all roots of its first characteristic
+polynomial ρ lie in the closed unit disk, and any root on the unit circle is simple
+(the root condition).
+
+Reference: Iserles, *A First Course in the Numerical Analysis of Differential Equations*,
+Section 1.5.
+-/
+
+namespace LMM
+
+variable {s : ℕ}
+
+/-- The first characteristic polynomial evaluated over ℂ:
+  ρ_ℂ(ξ) = ∑_{j=0}^{s} α_j ξ^j where α_j are cast from ℝ to ℂ. -/
+noncomputable def rhoC (m : LMM s) (ξ : ℂ) : ℂ :=
+  ∑ j : Fin (s + 1), (m.α j : ℂ) * ξ ^ (j : ℕ)
+
+/-- The formal derivative of ρ evaluated over ℂ:
+  ρ'_ℂ(ξ) = ∑_{j=0}^{s} j · α_j · ξ^{j-1}. -/
+noncomputable def rhoCDeriv (m : LMM s) (ξ : ℂ) : ℂ :=
+  ∑ j : Fin (s + 1), ((j : ℕ) : ℂ) * (m.α j : ℂ) * ξ ^ ((j : ℕ) - 1)
+
+/-- A linear multistep method is **zero-stable** if all roots of ρ (over ℂ) lie in the
+closed unit disk, and roots on the unit circle are simple (ρ'(ξ) ≠ 0 there).
+This is the "root condition" (Iserles, Section 1.5). -/
+structure IsZeroStable (m : LMM s) : Prop where
+  /-- All roots of ρ lie in the closed unit disk. -/
+  roots_in_disk : ∀ ξ : ℂ, m.rhoC ξ = 0 → ‖ξ‖ ≤ 1
+  /-- Roots on the unit circle are simple. -/
+  unit_roots_simple : ∀ ξ : ℂ, m.rhoC ξ = 0 → ‖ξ‖ = 1 → m.rhoCDeriv ξ ≠ 0
+
+end LMM
+
+/-! ### Zero-Stability of Standard Methods -/
+
+/-- Forward Euler is zero-stable: ρ(ξ) = ξ - 1 has sole root ξ = 1, which is simple. -/
+theorem forwardEuler_zeroStable : forwardEuler.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, forwardEuler, Fin.sum_univ_two] at hξ
+    have h : ξ = 1 := by linear_combination hξ
+    rw [h]; simp
+  unit_roots_simple := by
+    intro ξ hξ _
+    simp [LMM.rhoCDeriv, forwardEuler, Fin.sum_univ_two]
+
+/-- Backward Euler is zero-stable: ρ(ξ) = ξ - 1 has sole root ξ = 1, which is simple. -/
+theorem backwardEuler_zeroStable : backwardEuler.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, backwardEuler, Fin.sum_univ_two] at hξ
+    have h : ξ = 1 := by linear_combination hξ
+    rw [h]; simp
+  unit_roots_simple := by
+    intro ξ hξ _
+    simp [LMM.rhoCDeriv, backwardEuler, Fin.sum_univ_two]
+
+/-- The trapezoidal rule is zero-stable: ρ(ξ) = ξ - 1 has sole root ξ = 1, which is simple. -/
+theorem trapezoidalRule_zeroStable : trapezoidalRule.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, trapezoidalRule, Fin.sum_univ_two] at hξ
+    have h : ξ = 1 := by linear_combination hξ
+    rw [h]; simp
+  unit_roots_simple := by
+    intro ξ hξ _
+    simp [LMM.rhoCDeriv, trapezoidalRule, Fin.sum_univ_two]
+
+/-- Adams–Bashforth 2-step is zero-stable: ρ(ξ) = ξ² - ξ has roots 0 and 1,
+both in the closed unit disk, and the unit root ξ = 1 is simple (ρ'(1) = 1 ≠ 0). -/
+theorem adamsBashforth2_zeroStable : adamsBashforth2.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, adamsBashforth2, Fin.sum_univ_three] at hξ
+    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · rw [h0]; simp
+    · have : ξ = 1 := by linear_combination h1
+      rw [this]; simp
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp [LMM.rhoCDeriv, adamsBashforth2, Fin.sum_univ_three]
+    simp [LMM.rhoC, adamsBashforth2, Fin.sum_univ_three] at hξ
+    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · rw [h0] at habs; simp at habs
+    · have h1' : ξ = 1 := by linear_combination h1
+      rw [h1']; norm_num
