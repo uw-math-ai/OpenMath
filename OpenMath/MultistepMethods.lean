@@ -627,6 +627,97 @@ theorem IsAStable.E_nonneg_re (m : LMM s) (ha : m.IsAStable)
   -- Contradiction: key says ¬(Re ≤ 0), but hf_neg says Re < 0
   exact key (1 + ε / 2) (by linarith) hσr_ne (le_of_lt hf_neg)
 
+/-- On the unit circle, Re(1/(e^{iθ}-1)) = -1/2 when e^{iθ} ≠ 1.
+Proof: 1/(e^{iθ}-1) = ((cos θ - 1) - i sin θ)/(2 - 2cos θ),
+so Re = (cos θ - 1)/(2 - 2cos θ) = -1/2. -/
+theorem re_inv_exp_sub_one (θ : ℝ) (hne : Complex.exp (↑θ * Complex.I) ≠ 1) :
+    (1 / (Complex.exp (↑θ * Complex.I) - 1)).re = -1/2 := by
+  set ζ := Complex.exp (↑θ * Complex.I)
+  have hζ_nsq : Complex.normSq ζ = 1 := by
+    rw [Complex.normSq_eq_norm_sq, Complex.norm_exp_ofReal_mul_I]; norm_num
+  have hne_sub : ζ - 1 ≠ 0 := sub_ne_zero.mpr hne
+  rw [one_div, Complex.inv_re]
+  have h_nsq : Complex.normSq (ζ - 1) = 2 - 2 * ζ.re := by
+    rw [Complex.normSq_apply, Complex.sub_re, Complex.one_re, Complex.sub_im,
+        Complex.one_im, sub_zero]
+    have : ζ.re * ζ.re + ζ.im * ζ.im = 1 := by rw [← Complex.normSq_apply, hζ_nsq]
+    nlinarith
+  rw [h_nsq, Complex.sub_re, Complex.one_re]
+  have hre_ne : ζ.re ≠ 1 := by
+    intro h; apply hne_sub
+    rw [Complex.normSq_apply] at hζ_nsq
+    have him : ζ.im = 0 := by nlinarith
+    exact Complex.ext (by simp [Complex.sub_re, h]) (by simp [Complex.sub_im, him])
+  have hd_ne : 2 - 2 * ζ.re ≠ 0 := by intro h; apply hre_ne; linarith
+  rw [div_eq_iff hd_ne]; linarith
+
+/-- ρ_ℂ(1) equals ρ(1) cast to ℂ. -/
+theorem rhoC_one_cast (m : LMM s) : m.rhoC 1 = (m.rho 1 : ℂ) := by
+  simp [rhoC, rho]
+
+/-- For a consistent method, ρ_ℂ(1) = 0. -/
+theorem IsConsistent.rhoC_one (m : LMM s) (hc : m.IsConsistent) : m.rhoC 1 = 0 := by
+  rw [rhoC_one_cast, hc.sum_α_eq_zero, Complex.ofReal_zero]
+
+/-- The "modified numerator": N(ζ) = 2·σ(ζ)·(ζ-1) - ρ(ζ)·(ζ+1).
+When σ/ρ = 1/(ζ-1) + 1/2, this is zero. The order conditions force N to vanish
+at ζ = 1 to a specific order. -/
+noncomputable def modifiedNumeratorC (m : LMM s) (ζ : ℂ) : ℂ :=
+  2 * m.sigmaC ζ * (ζ - 1) - m.rhoC ζ * (ζ + 1)
+
+/-- For order ≥ 1 (consistency), N(1) = 0.
+Proof: N(1) = 2σ(1)·0 - ρ(1)·2 = -2ρ(1) = 0. -/
+theorem modifiedNumeratorC_one (m : LMM s) {p : ℕ} (hp : m.HasOrder p) (hp1 : 1 ≤ p) :
+    m.modifiedNumeratorC 1 = 0 := by
+  have hρ1 := (hp.isConsistent hp1).rhoC_one m
+  simp [modifiedNumeratorC, hρ1]
+
+/-- The "cross-energy" Re(σ(ζ)·conj(ρ(ζ))) is non-negative on the unit circle
+for A-stable methods. This follows from Re(σ/ρ) ≥ 0 and |ρ|² ≥ 0. -/
+theorem cross_energy_nonneg (m : LMM s) (ha : m.IsAStable)
+    (θ : ℝ) :
+    0 ≤ (m.sigmaC (Complex.exp (↑θ * Complex.I)) *
+         starRingEnd ℂ (m.rhoC (Complex.exp (↑θ * Complex.I)))).re := by
+  set ζ := Complex.exp (↑θ * Complex.I)
+  by_cases hρ : m.rhoC ζ = 0
+  · simp [hρ]
+  · by_cases hσ : m.sigmaC ζ = 0
+    · rw [hσ, zero_mul, Complex.zero_re]
+    · -- Re(σ·conj(ρ)) = Re(σ/ρ · |ρ|²) = Re(σ/ρ) · |ρ|²
+      have h_eq : (m.sigmaC ζ * starRingEnd ℂ (m.rhoC ζ)).re =
+          (m.sigmaC ζ / m.rhoC ζ).re * Complex.normSq (m.rhoC ζ) := by
+        conv_lhs => rw [show m.sigmaC ζ = (m.sigmaC ζ / m.rhoC ζ) * m.rhoC ζ from
+          (div_mul_cancel₀ _ hρ).symm]
+        rw [mul_assoc, Complex.mul_conj, Complex.mul_re,
+            Complex.ofReal_re, Complex.ofReal_im, mul_zero, sub_zero]
+      rw [h_eq]
+      exact mul_nonneg (IsAStable.E_nonneg_re m ha θ hρ hσ) (Complex.normSq_nonneg _)
+
+/-- Core analytical lemma for the Dahlquist barrier: if the cross-energy
+Re(σ(e^{iθ})·conj(ρ(e^{iθ}))) ≥ 0 for all θ (from A-stability), the E-function
+has specific structure from the order conditions, and the order is ≥ 3, we get False.
+
+The proof uses the minimum principle for harmonic functions: the modified E-function
+G(ζ) = σ(ζ)/ρ(ζ) - 1/(ζ-1) - 1/2 satisfies Re(G) ≥ 0 on the unit circle
+(since Re(1/(e^{iθ}-1)+1/2) = 0) and G(1) = 0 (from order ≥ 3). By the minimum
+principle, G ≡ 0, forcing σ/ρ = (ζ+1)/(2(ζ-1)) — the trapezoidal rule (order 2),
+contradicting order ≥ 3.
+
+This is the hardest step; it requires complex-analytic machinery (Poisson integral /
+maximum principle for harmonic functions) that is partially available in Mathlib
+(Complex.AbsMax). -/
+theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p)
+    (hp3 : 3 ≤ p) (ha : m.IsAStable)
+    -- The established facts:
+    (hE_nonneg : ∀ θ : ℝ, ∀ hρ : m.rhoC (Complex.exp (↑θ * Complex.I)) ≠ 0,
+      ∀ hσ : m.sigmaC (Complex.exp (↑θ * Complex.I)) ≠ 0,
+      0 ≤ (m.sigmaC (Complex.exp (↑θ * Complex.I)) /
+           m.rhoC (Complex.exp (↑θ * Complex.I))).re)
+    (hRe_inv : ∀ θ : ℝ, ∀ hne : Complex.exp (↑θ * Complex.I) ≠ 1,
+      (1 / (Complex.exp (↑θ * Complex.I) - 1)).re = -1/2) :
+    False := by
+  sorry
+
 /-- Key lemma (order constraint): For a method of order p ≥ 3, the modified E-function
 G(ζ) = E(ζ) - 1/(ζ-1) - 1/2 vanishes at ζ = 1 (i.e., G is analytic at ζ = 1 with G(1) = 0).
 Combined with Re(G(e^{iθ})) ≥ 0 from A-stability and the fact that Re(1/(e^{iθ}-1)+1/2) = 0,
@@ -635,8 +726,10 @@ for harmonic functions must be identically zero — contradicting G being a non-
 rational function.
 Reference: Iserles, proof of Theorem 3.4, step 2. -/
 theorem order_ge_three_not_aStable (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3 ≤ p)
-    (ha : m.IsAStable) : False := by
-  sorry
+    (ha : m.IsAStable) : False :=
+  order_ge_three_not_aStable_core m p hp hp3 ha
+    (fun θ hρ hσ => IsAStable.E_nonneg_re m ha θ hρ hσ)
+    (fun θ hne => re_inv_exp_sub_one θ hne)
 
 /-- **Dahlquist's Second Barrier** (Iserles, Theorem 3.4):
 An A-stable linear multistep method has order at most 2. -/
