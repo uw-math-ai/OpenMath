@@ -328,3 +328,169 @@ theorem adamsBashforth2_zeroStable : adamsBashforth2.IsZeroStable where
     · rw [h0] at habs; simp at habs
     · have h1' : ξ = 1 := by linear_combination h1
       rw [h1']; norm_num
+
+/-! ## Stability Polynomial and A-Stability
+
+The stability polynomial for the test equation y' = λy is:
+  π(ξ, z) = ρ(ξ) - z · σ(ξ), where z = hλ.
+
+A method is A-stable if its stability region contains the closed left half-plane.
+
+Reference: Iserles, *A First Course in the Numerical Analysis of Differential Equations*,
+Chapter 3.
+-/
+
+namespace LMM
+
+variable {s : ℕ}
+
+/-- Second characteristic polynomial over ℂ:
+  σ_ℂ(ξ) = ∑_{j=0}^{s} β_j ξ^j where β_j are cast from ℝ to ℂ. -/
+noncomputable def sigmaC (m : LMM s) (ξ : ℂ) : ℂ :=
+  ∑ j : Fin (s + 1), (m.β j : ℂ) * ξ ^ (j : ℕ)
+
+/-- Stability polynomial for the test equation y' = λy:
+  π(ξ, z) = ρ(ξ) - z · σ(ξ) where z = hλ ∈ ℂ. -/
+noncomputable def stabilityPoly (m : LMM s) (ξ z : ℂ) : ℂ :=
+  m.rhoC ξ - z * m.sigmaC ξ
+
+/-- A value z ∈ ℂ is in the **stability region** of the method if all roots of the
+stability polynomial π(·, z) lie in the closed unit disk. -/
+def InStabilityRegion (m : LMM s) (z : ℂ) : Prop :=
+  ∀ ξ : ℂ, m.stabilityPoly ξ z = 0 → ‖ξ‖ ≤ 1
+
+/-- An LMM is **A-stable** if its stability region contains the entire closed left
+half-plane {z ∈ ℂ : Re(z) ≤ 0}.
+A-stable methods can handle stiff equations without step-size restrictions.
+Reference: Iserles, Definition 3.3. -/
+def IsAStable (m : LMM s) : Prop :=
+  ∀ z : ℂ, z.re ≤ 0 → m.InStabilityRegion z
+
+end LMM
+
+/-! ### A-Stability of Standard Methods -/
+
+/-- Backward Euler is A-stable: the amplification factor 1/(1-z) has |·| ≤ 1
+when Re(z) ≤ 0, since |1-z| ≥ 1. -/
+theorem backwardEuler_aStable : backwardEuler.IsAStable := by
+  intro z hz ξ hξ
+  simp only [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, backwardEuler] at hξ
+  simp [Fin.sum_univ_two] at hξ ⊢
+  have key : ξ * (1 - z) = 1 := by linear_combination hξ
+  have hnorm : ‖ξ‖ * ‖(1 : ℂ) - z‖ = 1 := by
+    rw [← norm_mul, key, norm_one]
+  have h1z_ge : 1 ≤ ‖(1 : ℂ) - z‖ := by
+    have h1 := Complex.abs_re_le_norm ((1 : ℂ) - z)
+    simp [Complex.sub_re] at h1
+    rw [abs_of_nonneg (by linarith : (0 : ℝ) ≤ 1 - z.re)] at h1
+    linarith
+  nlinarith [norm_nonneg ξ, norm_nonneg ((1 : ℂ) - z)]
+
+/-- The trapezoidal rule is A-stable: the amplification factor (2+z)/(2-z) has |·| ≤ 1
+when Re(z) ≤ 0, since |2+z| ≤ |2-z|. -/
+theorem trapezoidalRule_aStable : trapezoidalRule.IsAStable := by
+  intro z hz ξ hξ
+  simp only [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, trapezoidalRule] at hξ
+  simp [Fin.sum_univ_two] at hξ ⊢
+  have key : (2 - z) * ξ = 2 + z := by linear_combination 2 * hξ
+  have hnorm : ‖(2 : ℂ) - z‖ * ‖ξ‖ = ‖(2 : ℂ) + z‖ := by
+    rw [← norm_mul, key]
+  have h_denom_ne : (2 : ℂ) - z ≠ 0 := by
+    intro h; have : ((2 : ℂ) - z).re = 0 := by rw [h]; simp
+    simp at this; linarith
+  have h_denom_pos : (0 : ℝ) < ‖(2 : ℂ) - z‖ := norm_pos_iff.mpr h_denom_ne
+  have h_nsq_le : ‖(2 : ℂ) + z‖ ^ 2 ≤ ‖(2 : ℂ) - z‖ ^ 2 := by
+    rw [Complex.sq_norm, Complex.sq_norm]
+    simp only [Complex.normSq_apply, Complex.add_re, Complex.sub_re, Complex.add_im, Complex.sub_im]
+    norm_num
+    nlinarith
+  have h_num_le : ‖(2 : ℂ) + z‖ ≤ ‖(2 : ℂ) - z‖ := by
+    nlinarith [norm_nonneg ((2 : ℂ) + z), norm_nonneg ((2 : ℂ) - z),
+               sq_nonneg (‖(2 : ℂ) - z‖ - ‖(2 : ℂ) + z‖)]
+  nlinarith [norm_nonneg ξ]
+
+/-- Forward Euler is **not** A-stable: z = -3 gives amplification factor |1+z| = 2 > 1. -/
+theorem forwardEuler_not_aStable : ¬forwardEuler.IsAStable := by
+  intro h
+  have h1 := h ((-3 : ℝ) : ℂ) (by simp) ((-2 : ℝ) : ℂ) (by
+    simp only [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, forwardEuler]
+    simp [Fin.sum_univ_two]; norm_num)
+  norm_num at h1
+
+/-! ## BDF2 (Backward Differentiation Formula, 2-step)
+
+The BDF2 method: y_{n+2} - (4/3)y_{n+1} + (1/3)y_n = (2/3)h·f_{n+2}.
+It is implicit, A-stable, and has order 2.
+
+Reference: Iserles, Section 3.3.
+-/
+
+/-- **BDF2** (Backward Differentiation Formula, 2-step):
+  y_{n+2} - (4/3)y_{n+1} + (1/3)y_n = (2/3)h·f_{n+2}.
+  Coefficients: α = [1/3, -4/3, 1], β = [0, 0, 2/3]. -/
+noncomputable def bdf2 : LMM 2 where
+  α := ![1/3, -4/3, 1]
+  β := ![0, 0, 2/3]
+  normalized := by simp [Fin.last]
+
+/-- BDF2 is consistent. -/
+theorem bdf2_consistent : bdf2.IsConsistent :=
+  ⟨by simp [LMM.rho, bdf2, Fin.sum_univ_three]; norm_num,
+   by simp [LMM.sigma, bdf2, Fin.sum_univ_three]; norm_num⟩
+
+/-- BDF2 has order 2. -/
+theorem bdf2_order_two : bdf2.HasOrder 2 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, bdf2, Fin.sum_univ_three] <;> norm_num
+  · simp [LMM.orderCondVal, bdf2, Fin.sum_univ_three]; norm_num
+
+/-- BDF2 is implicit (β₂ = 2/3 ≠ 0). -/
+theorem bdf2_implicit : bdf2.IsImplicit := by
+  simp [LMM.IsImplicit, bdf2, Fin.last]
+
+/-- BDF2 is zero-stable: ρ(ξ) = ξ² - (4/3)ξ + 1/3 = (ξ-1)(ξ-1/3)
+has roots 1 and 1/3, both in the closed unit disk,
+and the unit root ξ = 1 is simple (ρ'(1) = 2/3 ≠ 0). -/
+theorem bdf2_zeroStable : bdf2.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp only [LMM.rhoC, bdf2] at hξ
+    simp [Fin.sum_univ_three] at hξ
+    have h : (ξ - 1) * (ξ - 1/3) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have : ξ = 1 := by linear_combination h0
+      rw [this]; simp
+    · have : ξ = 1/3 := by linear_combination h1
+      rw [this]; simp; norm_num
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp only [LMM.rhoCDeriv, bdf2]
+    simp only [LMM.rhoC, bdf2] at hξ
+    simp [Fin.sum_univ_three] at hξ
+    have h : (ξ - 1) * (ξ - 1/3) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have hξ1 : ξ = 1 := by linear_combination h0
+      rw [hξ1]
+      simp [Fin.sum_univ_three]; norm_num
+    · have hξ13 : ξ = 1/3 := by linear_combination h1
+      rw [hξ13] at habs; norm_num at habs
+
+/-! ## Dahlquist's Second Barrier
+
+No A-stable LMM can have order greater than 2. The trapezoidal rule achieves this bound.
+
+Reference: Iserles, Theorem 3.4.
+-/
+
+namespace LMM
+
+/-- **Dahlquist's Second Barrier** (Iserles, Theorem 3.4):
+An A-stable linear multistep method has order at most 2.
+The proof requires boundary locus analysis and is not formalized here. -/
+theorem dahlquist_second_barrier {s : ℕ} (m : LMM s) (p : ℕ)
+    (hp : m.HasOrder p) (ha : m.IsAStable) : p ≤ 2 := by
+  sorry
+
+end LMM
