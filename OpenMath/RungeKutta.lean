@@ -270,3 +270,125 @@ theorem rk4_order4 : rk4.HasOrderGe4 := by
     simp [ButcherTableau.order4c, rk4, Fin.sum_univ_four]; norm_num
   · -- order4d: ∑ b_i a_{ij} a_{jk} c_k = 1/24
     simp [ButcherTableau.order4d, rk4, Fin.sum_univ_four]; norm_num
+
+/-! ## Implicit Runge–Kutta Methods
+
+Implicit RK methods allow the stage coefficient matrix A to have entries on or above
+the diagonal. This enables superior stability properties, in particular A-stability.
+
+Reference: Iserles, Section 2.2 and Chapter 3.
+-/
+
+/-! ### Standard Implicit Methods -/
+
+/-- **Implicit Euler** (backward Euler) as a 1-stage RK method:
+  k₁ = f(tₙ + h, yₙ + h·k₁),  yₙ₊₁ = yₙ + h·k₁.
+  Butcher tableau: A = [[1]], b = [1], c = [1]. -/
+noncomputable def rkImplicitEuler : ButcherTableau 1 where
+  A := ![![1]]
+  b := ![1]
+  c := ![1]
+
+/-- **Implicit midpoint rule** as a 1-stage RK method:
+  k₁ = f(tₙ + h/2, yₙ + (h/2)·k₁),  yₙ₊₁ = yₙ + h·k₁.
+  Butcher tableau: A = [[1/2]], b = [1], c = [1/2]. -/
+noncomputable def rkImplicitMidpoint : ButcherTableau 1 where
+  A := ![![1/2]]
+  b := ![1]
+  c := ![1/2]
+
+/-- Implicit Euler is consistent. -/
+theorem rkImplicitEuler_consistent : rkImplicitEuler.IsConsistent where
+  weights_sum := by simp [rkImplicitEuler]
+  row_sum := by intro i; fin_cases i; simp [rkImplicitEuler]
+
+/-- Implicit Euler is NOT explicit (A has nonzero diagonal entry). -/
+theorem rkImplicitEuler_not_explicit : ¬rkImplicitEuler.IsExplicit := by
+  intro h; have := h 0 0 (le_refl _); simp [rkImplicitEuler] at this
+
+/-- Implicit midpoint is consistent. -/
+theorem rkImplicitMidpoint_consistent : rkImplicitMidpoint.IsConsistent where
+  weights_sum := by simp [rkImplicitMidpoint]
+  row_sum := by intro i; fin_cases i; simp [rkImplicitMidpoint]
+
+/-- Implicit midpoint is NOT explicit. -/
+theorem rkImplicitMidpoint_not_explicit : ¬rkImplicitMidpoint.IsExplicit := by
+  intro h; have := h 0 0 (le_refl _); simp [rkImplicitMidpoint] at this
+
+/-- Implicit midpoint has order at least 2. -/
+theorem rkImplicitMidpoint_order2 : rkImplicitMidpoint.HasOrderGe2 := by
+  refine ⟨?_, ?_⟩
+  · simp [ButcherTableau.order1, rkImplicitMidpoint]
+  · simp [ButcherTableau.order2, rkImplicitMidpoint]
+
+/-! ## A-Stability for Runge–Kutta Methods
+
+For a 1-stage RK method with tableau (a, b, c), the stability function applied to
+the test equation y' = λy with z = hλ is:
+  R(z) = 1 + z·b·(1 - z·a)⁻¹ = (1 + z·(b - a)) / (1 - z·a)
+
+For implicit Euler (a=1, b=1): R(z) = 1/(1-z)
+For implicit midpoint (a=1/2, b=1): R(z) = (1+z/2)/(1-z/2)
+
+A method is A-stable if |R(z)| ≤ 1 for all Re(z) ≤ 0.
+
+Reference: Iserles, Chapter 3.
+-/
+
+namespace ButcherTableau
+
+/-- The stability function R(z) for a 1-stage RK method applied to y' = λy:
+  R(z) = (1 + z(b₁ - a₁₁)) / (1 - z·a₁₁),
+  defined as the unique ξ satisfying ξ(1 - z·a₁₁) = 1 + z(b₁ - a₁₁).
+  This is the amplification factor: yₙ₊₁ = R(z)·yₙ. -/
+noncomputable def stabilityFn1 (t : ButcherTableau 1) (z : ℂ) : ℂ :=
+  (1 + z * ((t.b 0 : ℂ) - (t.A 0 0 : ℂ))) / (1 - z * (t.A 0 0 : ℂ))
+
+/-- A 1-stage RK method is **A-stable** if |R(z)| ≤ 1 for all z with Re(z) ≤ 0.
+Reference: Iserles, Definition 3.3. -/
+def IsAStable1 (t : ButcherTableau 1) : Prop :=
+  ∀ z : ℂ, z.re ≤ 0 → 1 - z * (t.A 0 0 : ℂ) ≠ 0 →
+    ‖t.stabilityFn1 z‖ ≤ 1
+
+end ButcherTableau
+
+/-- Implicit Euler is A-stable: R(z) = 1/(1-z) satisfies |R(z)| ≤ 1 when Re(z) ≤ 0. -/
+theorem rkImplicitEuler_aStable : rkImplicitEuler.IsAStable1 := by
+  intro z hz hne
+  simp only [ButcherTableau.stabilityFn1, rkImplicitEuler]
+  simp only [Matrix.cons_val_zero]
+  norm_num
+  simp only [rkImplicitEuler] at hne
+  have h1z_ge : 1 ≤ ‖(1 : ℂ) - z‖ := by
+    have h := Complex.abs_re_le_norm ((1 : ℂ) - z)
+    simp [Complex.sub_re] at h
+    rw [abs_of_nonneg (by linarith : (0 : ℝ) ≤ 1 - z.re)] at h
+    linarith
+  exact inv_le_one_of_one_le₀ h1z_ge
+
+/-- Implicit midpoint is A-stable: R(z) = (2+z)/(2-z) satisfies |R(z)| ≤ 1
+when Re(z) ≤ 0. -/
+theorem rkImplicitMidpoint_aStable : rkImplicitMidpoint.IsAStable1 := by
+  intro z hz hne
+  simp only [ButcherTableau.stabilityFn1, rkImplicitMidpoint]
+  simp only [Matrix.cons_val_zero]
+  simp only [rkImplicitMidpoint] at hne
+  norm_num at hne ⊢
+  have h_denom_pos : (0 : ℝ) < ‖(1 : ℂ) - z * (1/2)‖ := norm_pos_iff.mpr hne
+  rw [div_le_one h_denom_pos]
+  have h_nsq_le : ‖(1 : ℂ) + z * (1/2)‖ ^ 2 ≤ ‖(1 : ℂ) - z * (1/2)‖ ^ 2 := by
+    rw [Complex.sq_norm, Complex.sq_norm]
+    simp only [Complex.normSq_apply, Complex.add_re, Complex.sub_re, Complex.mul_re,
+               Complex.add_im, Complex.sub_im, Complex.mul_im,
+               Complex.one_re, Complex.one_im]
+    norm_num
+    nlinarith
+  nlinarith [norm_nonneg ((1 : ℂ) + z * (1/2)), norm_nonneg ((1 : ℂ) - z * (1/2)),
+             sq_nonneg (‖(1 : ℂ) - z * (1/2)‖ - ‖(1 : ℂ) + z * (1/2)‖)]
+
+/-- Forward Euler (RK) is **not** A-stable: R(-3) = 1 + (-3) = -2, |R(-3)| = 2 > 1. -/
+theorem rkEuler_not_aStable : ¬rkEuler.IsAStable1 := by
+  intro h
+  have h1 := h ((-3 : ℝ) : ℂ) (by simp) (by simp [rkEuler])
+  simp only [ButcherTableau.stabilityFn1, rkEuler, Matrix.cons_val_zero] at h1
+  norm_num at h1

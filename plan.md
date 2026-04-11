@@ -36,8 +36,10 @@
 - [x] **Example**: Classical RK4 method — consistency, explicit, order 4 (`OpenMath/RungeKutta.lean`)
 
 ### 2.2 Implicit Runge–Kutta Methods
-- [ ] **Definition**: Implicit RK methods
-- [ ] **Theorem**: A-stability of implicit methods
+- [x] **Definition**: Implicit RK methods (implicit Euler, implicit midpoint) (`OpenMath/RungeKutta.lean`)
+- [x] **Definition**: Stability function R(z) for 1-stage RK methods (`OpenMath/RungeKutta.lean`)
+- [x] **Theorem**: A-stability of implicit Euler and implicit midpoint (`OpenMath/RungeKutta.lean`)
+- [x] **Theorem**: Forward Euler (RK) is NOT A-stable (`OpenMath/RungeKutta.lean`)
 
 ## Chapter 3: Stiff Equations
 
@@ -48,9 +50,9 @@
 
 ## Current Target
 
-**Next: Implicit Runge–Kutta methods or Dahlquist equivalence theorem**
+**Next: Dahlquist equivalence theorem or Gauss–Legendre methods**
 
 Options:
-- Define implicit RK methods and prove A-stability of implicit methods (e.g., implicit Euler as RK, Gauss–Legendre).
 - Formalize convergence definition and Dahlquist equivalence theorem (consistency + stability ⟺ convergence).
+- Add Gauss–Legendre 2-stage method (order 4, A-stable) — requires 2-stage stability function with matrix inverse.
 - Attempt Dahlquist's second barrier proof (hard: requires boundary locus analysis).
