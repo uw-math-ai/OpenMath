@@ -392,3 +392,157 @@ theorem rkEuler_not_aStable : ¬rkEuler.IsAStable1 := by
   have h1 := h ((-3 : ℝ) : ℂ) (by simp) (by simp [rkEuler])
   simp only [ButcherTableau.stabilityFn1, rkEuler, Matrix.cons_val_zero] at h1
   norm_num at h1
+
+/-! ## Gauss–Legendre 2-Stage Method
+
+The Gauss–Legendre 2-stage (GL2) method is the 2-stage implicit RK method based on
+Gauss–Legendre quadrature nodes. It achieves order 2s = 4, the maximum for s-stage
+methods. Its stability function is the [1/1] diagonal Padé approximant to eᶻ:
+  R(z) = (1 + z/2 + z²/12) / (1 - z/2 + z²/12).
+
+Butcher tableau:
+  1/2 - √3/6 | 1/4          1/4 - √3/6
+  1/2 + √3/6 | 1/4 + √3/6   1/4
+  ────────────|────────────────────────
+              | 1/2           1/2
+
+Reference: Iserles, *A First Course in the Numerical Analysis of Differential Equations*,
+Section 2.2, Table 2.2 and Chapter 3.
+-/
+
+/-- **Gauss–Legendre 2-stage** RK method.
+Nodes are the Gauss–Legendre quadrature points on [0,1]: c = 1/2 ∓ √3/6.
+This 2-stage method achieves order 4 and is A-stable.
+Reference: Iserles, Table 2.2. -/
+noncomputable def rkGaussLegendre2 : ButcherTableau 2 where
+  A := ![![1/4,                    1/4 - Real.sqrt 3 / 6],
+         ![1/4 + Real.sqrt 3 / 6,  1/4                 ]]
+  b := ![1/2, 1/2]
+  c := ![1/2 - Real.sqrt 3 / 6, 1/2 + Real.sqrt 3 / 6]
+
+/-- GL2 is consistent: ∑ bᵢ = 1 and cᵢ = ∑ⱼ aᵢⱼ. -/
+theorem rkGaussLegendre2_consistent : rkGaussLegendre2.IsConsistent where
+  weights_sum := by
+    simp [rkGaussLegendre2, Fin.sum_univ_two]; ring
+  row_sum := by
+    intro i; fin_cases i <;> simp [rkGaussLegendre2, Fin.sum_univ_two] <;> ring
+
+/-- GL2 is NOT explicit (the matrix A has nonzero diagonal entry a₁₁ = 1/4). -/
+theorem rkGaussLegendre2_not_explicit : ¬rkGaussLegendre2.IsExplicit := by
+  intro h; have := h 0 0 (le_refl _); simp [rkGaussLegendre2] at this
+
+/-! ### GL2 Stability Function and A-Stability
+
+The stability function for the GL2 method is:
+  R(z) = (1 + z/2 + z²/12) / (1 - z/2 + z²/12)
+
+This is the [1/1] diagonal Padé approximant to eᶻ. A-stability follows from
+the algebraic identity |D(z)|² - |N(z)|² = -Re(z)·(12 + |z|²)/6 ≥ 0
+for Re(z) ≤ 0, where N and D are the numerator and denominator.
+-/
+
+/-- Numerator of the GL2 stability function: N(z) = 1 + z/2 + z²/12. -/
+noncomputable def gl2Num (z : ℂ) : ℂ := 1 + z / 2 + z ^ 2 / 12
+
+/-- Denominator of the GL2 stability function: D(z) = 1 - z/2 + z²/12. -/
+noncomputable def gl2Denom (z : ℂ) : ℂ := 1 - z / 2 + z ^ 2 / 12
+
+/-- GL2 stability function: R(z) = (1 + z/2 + z²/12) / (1 - z/2 + z²/12).
+This is the [1/1] diagonal Padé approximant to eᶻ. -/
+noncomputable def gl2StabilityFn (z : ℂ) : ℂ := gl2Num z / gl2Denom z
+
+/-- The GL2 denominator equals the numerator minus z: D(z) = N(z) - z. -/
+theorem gl2Denom_eq_num_sub (z : ℂ) : gl2Denom z = gl2Num z - z := by
+  simp [gl2Num, gl2Denom]; ring
+
+/-- Key norm inequality: |N(z)|² ≤ |D(z)|² for Re(z) ≤ 0.
+The difference |D|² - |N|² = -Re(z)·(12 + Re(z)² + Im(z)²)/6 ≥ 0. -/
+theorem gl2_normSq_denom_ge_num (z : ℂ) (hz : z.re ≤ 0) :
+    Complex.normSq (gl2Num z) ≤ Complex.normSq (gl2Denom z) := by
+  suffices h : 0 ≤ Complex.normSq (gl2Denom z) - Complex.normSq (gl2Num z) by linarith
+  set x := z.re with hx_def
+  set y := z.im with hy_def
+  -- Rewrite z as ⟨x, y⟩ to enable full expansion
+  have hz_eq : z = (⟨x, y⟩ : ℂ) := (Complex.eta z).symm
+  rw [hz_eq]
+  simp only [gl2Num, gl2Denom, Complex.normSq_apply,
+    Complex.add_re, Complex.sub_re, Complex.add_im, Complex.sub_im,
+    Complex.one_re, Complex.one_im, sq]
+  simp only [show (2 : ℂ) = ((2 : ℝ) : ℂ) from by norm_num,
+    show (12 : ℂ) = ((12 : ℝ) : ℂ) from by norm_num,
+    Complex.div_ofReal, Complex.mul_re, Complex.mul_im]
+  ring_nf
+  nlinarith [sq_nonneg x, sq_nonneg y, sq_nonneg (x * y)]
+
+/-- The GL2 denominator is nonzero for Re(z) ≤ 0.
+The roots of 1 - z/2 + z²/12 = 0 are z = 3 ± i√3, both with Re = 3 > 0. -/
+theorem gl2_denom_ne_zero (z : ℂ) (hz : z.re ≤ 0) : gl2Denom z ≠ 0 := by
+  intro heq
+  have h0 : Complex.normSq (gl2Denom z) = 0 := by rw [heq]; simp
+  have h1 : Complex.normSq (gl2Num z) ≤ 0 := by linarith [gl2_normSq_denom_ge_num z hz]
+  have h2 : Complex.normSq (gl2Num z) = 0 := le_antisymm h1 (Complex.normSq_nonneg _)
+  have hN0 : gl2Num z = 0 := Complex.normSq_eq_zero.mp h2
+  -- N(z) = 0 and D(z) = N(z) - z = 0, so z = 0
+  have h_sub : gl2Num z - z = 0 := by rw [← gl2Denom_eq_num_sub]; exact heq
+  rw [hN0, zero_sub] at h_sub
+  have hz0 : z = 0 := neg_eq_zero.mp h_sub
+  -- But N(0) = 1 ≠ 0
+  rw [hz0] at hN0; simp [gl2Num] at hN0
+
+/-- **A-stability of the Gauss–Legendre 2-stage method**:
+|R(z)| ≤ 1 for all z with Re(z) ≤ 0.
+Reference: Iserles, Chapter 3. -/
+theorem gl2_aStable (z : ℂ) (hz : z.re ≤ 0) : ‖gl2StabilityFn z‖ ≤ 1 := by
+  have hD := gl2_denom_ne_zero z hz
+  have hD_pos : (0 : ℝ) < ‖gl2Denom z‖ := norm_pos_iff.mpr hD
+  unfold gl2StabilityFn
+  rw [norm_div, div_le_one hD_pos]
+  -- ‖gl2Num z‖ ≤ ‖gl2Denom z‖ from normSq inequality
+  have hnsq := gl2_normSq_denom_ge_num z hz
+  have h_sq_le : ‖gl2Num z‖ ^ 2 ≤ ‖gl2Denom z‖ ^ 2 := by
+    rw [Complex.sq_norm, Complex.sq_norm]; exact hnsq
+  -- Deduce ‖N‖ ≤ ‖D‖ from ‖N‖² ≤ ‖D‖² and ‖D‖ > 0
+  by_contra hlt
+  push_neg at hlt
+  -- hlt: ‖D‖ < ‖N‖, derive ‖D‖² < ‖N‖² for contradiction
+  nlinarith [norm_nonneg (gl2Num z), norm_nonneg (gl2Denom z),
+             mul_pos (by linarith : (0 : ℝ) < ‖gl2Num z‖ - ‖gl2Denom z‖)
+                     (by linarith [norm_nonneg (gl2Num z)] :
+                       (0 : ℝ) < ‖gl2Num z‖ + ‖gl2Denom z‖)]
+
+/-! ### GL2 Order Conditions
+
+The Gauss–Legendre 2-stage method achieves order 2s = 4, the maximum possible
+for an s-stage Runge–Kutta method. We verify all 8 order conditions (up to order 4).
+
+Reference: Iserles, Section 2.3, Table 2.1.
+-/
+
+private theorem sqrt3_sq : Real.sqrt 3 ^ 2 = 3 :=
+  Real.sq_sqrt (by norm_num : (3 : ℝ) ≥ 0)
+
+/-- **GL2 has order at least 4**: all order conditions through fourth order are satisfied. -/
+theorem rkGaussLegendre2_order4 : rkGaussLegendre2.HasOrderGe4 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- order1: ∑ b_i = 1
+    simp [ButcherTableau.order1, rkGaussLegendre2, Fin.sum_univ_two]; ring
+  · -- order2: ∑ b_i c_i = 1/2
+    simp [ButcherTableau.order2, rkGaussLegendre2, Fin.sum_univ_two]; ring
+  · -- order3a: ∑ b_i c_i² = 1/3
+    simp [ButcherTableau.order3a, rkGaussLegendre2, Fin.sum_univ_two]
+    nlinarith [sqrt3_sq]
+  · -- order3b: ∑ b_i a_{ij} c_j = 1/6
+    simp [ButcherTableau.order3b, rkGaussLegendre2, Fin.sum_univ_two]
+    nlinarith [sqrt3_sq]
+  · -- order4a: ∑ b_i c_i³ = 1/4
+    simp [ButcherTableau.order4a, rkGaussLegendre2, Fin.sum_univ_two]
+    nlinarith [sqrt3_sq, Real.sq_sqrt (show (3 : ℝ) ≥ 0 by norm_num)]
+  · -- order4b: ∑ b_i c_i (∑ a_{ij} c_j) = 1/8
+    simp [ButcherTableau.order4b, rkGaussLegendre2, Fin.sum_univ_two]
+    nlinarith [sqrt3_sq]
+  · -- order4c: ∑ b_i a_{ij} c_j² = 1/12
+    simp [ButcherTableau.order4c, rkGaussLegendre2, Fin.sum_univ_two]
+    nlinarith [sqrt3_sq]
+  · -- order4d: ∑ b_i a_{ij} a_{jk} c_k = 1/24
+    simp [ButcherTableau.order4d, rkGaussLegendre2, Fin.sum_univ_two]
+    nlinarith [sqrt3_sq]

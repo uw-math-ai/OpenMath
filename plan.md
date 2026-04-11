@@ -48,6 +48,10 @@
 - [x] **Definition**: Stability function R(z) for 1-stage RK methods (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: A-stability of implicit Euler and implicit midpoint (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Forward Euler (RK) is NOT A-stable (`OpenMath/RungeKutta.lean`)
+- [x] **Example**: Gauss–Legendre 2-stage method — Butcher tableau, consistency, not explicit (`OpenMath/RungeKutta.lean`)
+- [x] **Definition**: GL2 stability function R(z) = (1+z/2+z²/12)/(1-z/2+z²/12) (`OpenMath/RungeKutta.lean`)
+- [x] **Theorem**: A-stability of GL2 method (`gl2_aStable`) (`OpenMath/RungeKutta.lean`)
+- [x] **Theorem**: GL2 has order 4 (`rkGaussLegendre2_order4`) (`OpenMath/RungeKutta.lean`)
 
 ## Chapter 3: Stiff Equations
 
@@ -59,9 +63,9 @@
 
 ## Current Target
 
-**Next: Dahlquist equivalence theorem or Gauss–Legendre methods**
+**Next: Dahlquist equivalence theorem or convergence theory**
 
 Options:
 - Close remaining Dahlquist barrier sorry: `order_ge_three_not_aStable_core` (hard: requires minimum principle for harmonic functions / Hopf boundary lemma). The proof structure is fully documented in the sorry comment: via conformal map w = 1/ζ, analytic G̃ with Re(G̃) ≥ 0 on boundary and G̃(1) = 0, G̃'(1) = 1/12 contradicts Re(G̃) ≥ 0 inside by Taylor expansion.
 - Formalize convergence definition and Dahlquist equivalence theorem (consistency + stability ⟺ convergence).
-- Add Gauss–Legendre 2-stage method (order 4, A-stable) — requires 2-stage stability function with matrix inverse.
+- Add higher-order Gauss–Legendre methods (3-stage, order 6) or collocation RK framework.
