@@ -771,6 +771,40 @@ theorem re_nonneg_of_frontier_re_nonneg {U : Set ℂ}
   simp only [g, Complex.norm_exp, Complex.neg_re] at hmm
   linarith [Real.exp_le_one_iff.mp hmm]
 
+/-- On the unit circle, Re(1/(ζ-1)) = -1/2 when ζ ≠ 1 (abstract version).
+This is the same computation as `re_inv_exp_sub_one` but stated for any ζ with ‖ζ‖ = 1. -/
+theorem re_inv_sub_one_of_norm_one (ζ : ℂ) (habs : ‖ζ‖ = 1) (hne : ζ ≠ 1) :
+    (1 / (ζ - 1)).re = -1/2 := by
+  obtain ⟨θ, hθ⟩ := (Complex.norm_eq_one_iff ζ).mp habs
+  rw [← hθ]
+  exact re_inv_exp_sub_one θ (by rwa [hθ])
+
+/-- On the unit circle, Re((ζ+1)/(2(ζ-1))) = 0 when ζ ≠ 1.
+Proof: (ζ+1)/(2(ζ-1)) = 1/2 + 1/(ζ-1), and Re(1/(ζ-1)) = -1/2. -/
+theorem re_half_plus_inv_sub_one_eq_zero (ζ : ℂ) (habs : ‖ζ‖ = 1) (hne : ζ ≠ 1) :
+    ((ζ + 1) / (2 * (ζ - 1))).re = 0 := by
+  have hsub : ζ - 1 ≠ 0 := sub_ne_zero.mpr hne
+  have h2ne : (2 : ℂ) * (ζ - 1) ≠ 0 := mul_ne_zero two_ne_zero hsub
+  -- (ζ+1)/(2(ζ-1)) = 1/2 + 1/(ζ-1)
+  have h_eq : (ζ + 1) / (2 * (ζ - 1)) = 1/2 + 1 / (ζ - 1) := by
+    rw [div_add_div _ _ (two_ne_zero' ℂ) hsub]
+    congr 1
+    ring
+  rw [h_eq, Complex.add_re, re_inv_sub_one_of_norm_one ζ habs hne]
+  simp
+  norm_num
+
+/-- Re(σ(ζ)/ρ(ζ)) ≥ 0 on the unit circle for A-stable methods (for any ζ with ‖ζ‖ = 1).
+Handles both the σ = 0 case (Re = 0) and the σ ≠ 0 case (from E_nonneg_re). -/
+theorem IsAStable.E_nonneg_re_unit_circle (m : LMM s) (ha : m.IsAStable)
+    (ζ : ℂ) (habs : ‖ζ‖ = 1) (hρ : m.rhoC ζ ≠ 0) :
+    0 ≤ (m.sigmaC ζ / m.rhoC ζ).re := by
+  by_cases hσ : m.sigmaC ζ = 0
+  · rw [hσ, zero_div, Complex.zero_re]
+  · obtain ⟨θ, hθ⟩ := (Complex.norm_eq_one_iff ζ).mp habs
+    rw [← hθ] at hρ hσ ⊢
+    exact IsAStable.E_nonneg_re m ha θ hρ hσ
+
 /-- Core analytical lemma for the Dahlquist barrier: if the cross-energy
 Re(σ(e^{iθ})·conj(ρ(e^{iθ}))) ≥ 0 for all θ (from A-stability), the E-function
 has specific structure from the order conditions, the order is ≥ 3, and ρ has a
@@ -840,13 +874,114 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
       rw [closure_ball (0 : ℂ) (by norm_num : (1 : ℝ) ≠ 0)]
       exact Metric.ball_subset_closedBall hw₀
     exact absurd (hGt_min w₀ hw₀_cl) (not_le.mpr hGt_neg)
-  -- Construction of Gtilde from the LMM data.
-  -- Gtilde(w) = G(1/w) where G(ζ) = σ(ζ)/ρ(ζ) - (ζ+1)/(2(ζ-1)).
-  -- Properties:
-  --   (a) DiffContOnCl: poles of G at roots of ρ (in |ζ| ≤ 1) map to |w| ≥ 1;
-  --       the singularity at ζ = 1 (w = 1) is removable (from order conditions).
-  --   (b) Re(Gtilde) ≥ 0 on |w| = 1: from hE_nonneg and hRe_inv.
-  --   (c) Gtilde(1) = 0, Gtilde'(1) = 1/12, so Gtilde(1-ε) ≈ -ε/12 < 0.
+  -- Step A: Extract consistency facts from order hypotheses.
+  have hcons := hp.isConsistent (by omega : 1 ≤ p)
+  have hρ1 : m.rhoC 1 = 0 := hcons.rhoC_one m
+  have hσ1_eq : m.sigmaC 1 = m.rhoCDeriv 1 := hcons.sigmaC_one_eq_rhoCDeriv_one
+  have hσ1_ne : m.sigmaC 1 ≠ 0 := by rw [hσ1_eq]; exact hρ_simple
+  -- Step B: Define the reversed polynomials.
+  -- ρ̃(w) = w^s · ρ(1/w) is a polynomial; σ̃(w) = w^s · σ(1/w) is a polynomial.
+  -- For |w| < 1: ρ̃(w) ≠ 0 (A-stability puts roots of ρ in |ζ| ≤ 1, so 1/w with |w| < 1
+  -- gives |1/w| > 1, outside the root region; at w = 0, ρ̃(0) = α_s = 1).
+  -- The function G̃(w) = σ̃(w)/ρ̃(w) - (1+w)/(2(1-w)) is well-defined for w ∈ ball(0,1).
+  -- It has a removable singularity at w = 1 (from order ≥ 3 and simple root).
+  -- After removal: G̃(1) = 0, G̃'(1) = 1/12.
+
+  -- Step C: Construct Gtilde and prove the three properties via sub-lemmas.
+  -- We decompose into three independent claims:
+  --   (a) DiffContOnCl (hardest — requires removable singularity argument)
+  --   (b) Boundary non-negativity (from hE_nonneg and hRe_inv)
+  --   (c) Interior negative point (from derivative computation at w = 1)
+
+  -- For now, we define Gtilde and prove (b) directly, leaving (a) and (c) as sorry.
+  -- Define Gtilde piecewise: at w ≠ 0, 1 use the formula; at w = 0 and w = 1 use limits.
+  -- The key formula: for w on the unit circle with w ≠ 1,
+  --   Re(Gtilde(w)) = Re(σ(1/w)/ρ(1/w)) - Re((1/w+1)/(2(1/w-1)))
+  --                  = Re(σ(1/w)/ρ(1/w)) - 0 ≥ 0
+  -- because (1/w+1)/(2(1/w-1)) = (1+w)/(2(1-w)) is purely imaginary on |w| = 1.
+
+  -- Sub-lemma: cross-energy gives Re(σ(ζ)·conj(ρ(ζ))) ≥ 0 everywhere on the unit circle
+  have hce := cross_energy_nonneg m ha
+
+  -- The construction requires substantial complex analysis infrastructure.
+  -- We decompose into two sorry-marked goals:
+  --   (1) Construction of Gt with DiffContOnCl, boundary Re ≥ 0, Gt(1) = 0, and HasDerivAt
+  --   (2) Interior negative point from HasDerivAt (pure analysis, proved below)
+  suffices h_dcl : ∃ (Gt : ℂ → ℂ),
+      DiffContOnCl ℂ Gt (Metric.ball 0 1) ∧
+      Gt 1 = 0 ∧
+      (∀ z ∈ Metric.sphere (0 : ℂ) 1, 0 ≤ (Gt z).re) ∧
+      HasDerivAt Gt (1/12 : ℂ) 1 by
+    obtain ⟨Gt, hGt_dcl, hGt_one, hGt_bd, hGt_deriv⟩ := h_dcl
+    refine ⟨Gt, hGt_dcl, hGt_bd, ?_⟩
+    -- (c) Interior negative point: from HasDerivAt at w = 1 with derivative 1/12
+    -- Gt(1) = 0 and Gt'(1) = 1/12 (as a complex number). For real t < 1 close to 1:
+    -- Gt(t) = Gt(1) + (t-1)·(1/12) + o(t-1) = (t-1)/12 + o(t-1)
+    -- Re(Gt(t)) ≈ (t-1)/12 < 0 for t < 1.
+    -- We use the ε-δ definition of HasDerivAt with ε = 1/24.
+    rw [hasDerivAt_iff_isLittleO, Asymptotics.isLittleO_iff] at hGt_deriv
+    have hε : (0 : ℝ) < 1/24 := by norm_num
+    obtain ⟨U, hU_nhds, hU⟩ := (hGt_deriv hε).exists_mem
+    rw [Metric.mem_nhds_iff] at hU_nhds
+    obtain ⟨δ, hδ_pos, hδ_ball⟩ := hU_nhds
+    -- Choose w₀ = 1 - min(δ/2, 1/2) ∈ (0, 1) ∩ ball(1, δ)
+    set ε₀ := min (δ / 2) (1/2) with hε₀_def
+    have hε₀_pos : 0 < ε₀ := lt_min (by linarith) (by norm_num)
+    have hε₀_le : ε₀ ≤ 1/2 := min_le_right _ _
+    have hε₀_lt_δ : ε₀ < δ := by linarith [min_le_left (δ/2) (1/2 : ℝ)]
+    set w₀ : ℂ := (1 : ℂ) - (ε₀ : ℂ) with hw₀_def
+    have hw₀_sub : w₀ - 1 = -(ε₀ : ℂ) := by rw [hw₀_def]; ring
+    have h_norm_diff : ‖w₀ - (1 : ℂ)‖ = ε₀ := by
+      rw [hw₀_sub]; simp [Complex.norm_real, abs_of_pos hε₀_pos]
+    refine ⟨w₀, ?_, ?_⟩
+    · -- w₀ ∈ ball(0, 1): |1 - ε₀| < 1 since 0 < ε₀ ≤ 1/2
+      rw [Metric.mem_ball, dist_zero_right, hw₀_def]
+      rw [show (1 : ℂ) - (ε₀ : ℂ) = ((1 - ε₀ : ℝ) : ℂ) from by push_cast; ring]
+      rw [Complex.norm_real, Real.norm_eq_abs, abs_of_pos (by linarith)]
+      linarith
+    · -- Re(Gt(w₀)) < 0: from the derivative approximation
+      -- w₀ ∈ U (within δ of 1)
+      have hw₀_mem : w₀ ∈ U := by
+        apply hδ_ball; rw [Metric.mem_ball, dist_eq_norm, h_norm_diff]
+        exact hε₀_lt_δ
+      -- Apply the little-o estimate
+      have h_est := hU w₀ hw₀_mem
+      rw [hGt_one, sub_zero, hw₀_sub, smul_eq_mul] at h_est
+      -- ‖-ε₀‖ = ε₀
+      simp only [norm_neg, Complex.norm_real, Real.norm_eq_abs, abs_of_pos hε₀_pos] at h_est
+      -- (-ε₀) * (1/12) = ↑(-ε₀/12)
+      have h_smul : -(ε₀ : ℂ) * ((1 : ℂ) / 12) = ((- ε₀ / 12 : ℝ) : ℂ) := by push_cast; ring
+      rw [h_smul] at h_est
+      -- |Re(Gt(w₀)) - (-ε₀/12)| ≤ ‖Gt(w₀) - ↑(-ε₀/12)‖ ≤ ε₀/24
+      have h_combined : |(Gt w₀).re - (-ε₀/12)| ≤ ε₀/24 := by
+        calc |(Gt w₀).re - (-ε₀/12)|
+            = |(Gt w₀ - ((- ε₀ / 12 : ℝ) : ℂ)).re| := by rw [Complex.sub_re, Complex.ofReal_re]
+          _ ≤ ‖Gt w₀ - ((- ε₀ / 12 : ℝ) : ℂ)‖ := Complex.abs_re_le_norm _
+          _ ≤ 1/24 * ε₀ := h_est
+          _ = ε₀/24 := by ring
+      -- Re(Gt(w₀)) ≤ -ε₀/12 + ε₀/24 = -ε₀/24 < 0
+      linarith [abs_le.mp h_combined]
+  -- =========================================================================
+  -- MAIN CONSTRUCTION (sorry): existence of Gt satisfying the four properties.
+  --
+  -- Strategy (documented in the proof outline comments above):
+  --   Define Gt(w) = σ̃(w)/ρ̃(w) - (1+w)/(2(1-w)) where σ̃, ρ̃ are reversed polynomials,
+  --   with the removable singularity at w = 1 filled in by Gt(1) = 0.
+  --
+  -- Properties to prove:
+  --   (a) DiffContOnCl: ρ̃(w) ≠ 0 for |w| < 1 (from A-stability), removable singularity
+  --       at w = 1 (from order ≥ 3 + simple root). Requires polynomial factoring.
+  --   (b) Re(Gt) ≥ 0 on sphere: at w ≠ 1 with ρ(w⁻¹) ≠ 0, use E_nonneg_re_unit_circle
+  --       and re_half_plus_inv_sub_one_eq_zero. At w = 1: Gt(1) = 0. At w with ρ(w⁻¹) = 0:
+  --       continuity + density of non-root points.
+  --   (c) Gt(1) = 0: by definition (removable singularity limit is 0).
+  --   (d) HasDerivAt Gt (1/12) 1: from order conditions, Q(1)/(2R(1)) = -1/12 gives
+  --       G'(1) = -1/12, hence G̃'(1) = 1/12. Requires detailed polynomial computation.
+  --
+  -- Lemmas proved in this cycle that will be used:
+  --   - re_half_plus_inv_sub_one_eq_zero: Re((ζ+1)/(2(ζ-1))) = 0 on unit circle
+  --   - E_nonneg_re_unit_circle: Re(σ/ρ) ≥ 0 on unit circle (any ζ, not just e^{iθ})
+  --   - re_inv_sub_one_of_norm_one: Re(1/(ζ-1)) = -1/2 on unit circle
   sorry
 
 /-- For a zero-stable, A-stable LMM of order ≥ 3, derive False.
