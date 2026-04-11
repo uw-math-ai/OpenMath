@@ -23,13 +23,16 @@
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: A-stability implies roots of ρ in unit disk (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier — A-stable + zero-stable ⟹ order ≤ 2 (1 sorry remains: `order_ge_three_not_aStable_core`)
+- [~] **Theorem**: Dahlquist's second barrier — A-stable + zero-stable ⟹ order ≤ 2 (2 sorrys remain in `order_ge_three_not_aStable_core`)
   - [x] `E_nonneg_re`: Re(σ/ρ) ≥ 0 on unit circle for A-stable methods
   - [x] `re_inv_exp_sub_one`: Re(1/(e^{iθ}-1)) = -1/2 on the unit circle
   - [x] `sigmaC_one_eq_rhoCDeriv_one`: σ_ℂ(1) = ρ'_ℂ(1) for consistent methods
   - [x] `sigmaC_one_ne_zero`: σ(1) ≠ 0 for zero-stable consistent methods
   - [x] `dahlquistCounterexample`: counterexample showing barrier is FALSE without zero-stability (order 3, A-stable, not zero-stable)
-  - [ ] `order_ge_three_not_aStable_core`: order ≥ 3 + A-stable + zero-stable → False (requires minimum principle for harmonic functions)
+  - [x] Reversed polynomial identity: ρ̃(w) = w^s · ρ(1/w) via `Fin.revPerm`
+  - [x] Boundary non-negativity: Re(Gt(z)) ≥ 0 for |z| = 1
+  - [ ] `DiffContOnCl ℂ Gt (Metric.ball 0 1)`: removable singularity + boundary regularity
+  - [ ] `HasDerivAt Gt (1/12) 1`: polynomial algebra for derivative at removable singularity
 - [ ] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence)
 
 ### 1.3 Order and Convergence
