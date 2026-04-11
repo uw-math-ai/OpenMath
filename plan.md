@@ -23,7 +23,9 @@
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: A-stability implies roots of ρ in unit disk (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier — A-stable ⟹ order ≤ 2 (decomposed into sub-lemmas, 2 sorry)
+- [~] **Theorem**: Dahlquist's second barrier — A-stable ⟹ order ≤ 2 (decomposed into sub-lemmas, 1 sorry remains: `order_ge_three_not_aStable`)
+  - [x] `E_nonneg_re`: Re(σ/ρ) ≥ 0 on unit circle for A-stable methods (proved via continuity-perturbation argument)
+  - [ ] `order_ge_three_not_aStable`: order ≥ 3 + A-stable → False (requires harmonic analysis)
 - [ ] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence)
 
 ### 1.3 Order and Convergence
@@ -48,13 +50,13 @@
 - [ ] **Definition**: Stiffness
 - [x] **Theorem**: A-stability of backward Euler and trapezoidal rule (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Forward Euler is not A-stable (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier (A-stable methods have order ≤ 2) — decomposed, 2 sorry remain
+- [~] **Theorem**: Dahlquist's second barrier (A-stable methods have order ≤ 2) — 1 sorry remains (`order_ge_three_not_aStable`)
 
 ## Current Target
 
 **Next: Dahlquist equivalence theorem or Gauss–Legendre methods**
 
 Options:
+- Close remaining Dahlquist barrier sorry: `order_ge_three_not_aStable` (hard: requires harmonic analysis or Fourier argument on unit circle).
 - Formalize convergence definition and Dahlquist equivalence theorem (consistency + stability ⟺ convergence).
 - Add Gauss–Legendre 2-stage method (order 4, A-stable) — requires 2-stage stability function with matrix inverse.
-- Close Dahlquist barrier sub-lemmas: `E_nonneg_re` and `order_ge_three_not_aStable` (hard: requires harmonic analysis on unit circle).

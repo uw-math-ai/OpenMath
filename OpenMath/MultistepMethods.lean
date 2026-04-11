@@ -562,7 +562,70 @@ theorem IsAStable.E_nonneg_re (m : LMM s) (ha : m.IsAStable)
     (hσ : m.sigmaC (Complex.exp (↑θ * Complex.I)) ≠ 0) :
     0 ≤ (m.sigmaC (Complex.exp (↑θ * Complex.I)) /
          m.rhoC (Complex.exp (↑θ * Complex.I))).re := by
-  sorry
+  -- Proof by contradiction using the boundary locus method.
+  -- If Re(σ/ρ) < 0 at ζ = e^{iθ}, then Re(ρ/σ) < 0. By continuity, Re(ρ/σ) < 0
+  -- for r·ζ with r slightly > 1. But |r·ζ| > 1 and A-stability forces Re(ρ/σ) > 0
+  -- at such points — contradiction.
+  by_contra h_neg
+  push_neg at h_neg
+  set ζ := Complex.exp (↑θ * Complex.I) with hζ_def
+  -- Step 1: Re(σ/ρ) < 0 implies Re(ρ/σ) < 0 (reciprocal preserves sign of Re)
+  have hE_ne : m.sigmaC ζ / m.rhoC ζ ≠ 0 := div_ne_zero hσ hρ
+  have h_rho_sigma_neg : (m.rhoC ζ / m.sigmaC ζ).re < 0 := by
+    have h_eq : m.rhoC ζ / m.sigmaC ζ = (m.sigmaC ζ / m.rhoC ζ)⁻¹ := by
+      field_simp
+    rw [h_eq, Complex.inv_re]
+    exact div_neg_of_neg_of_pos h_neg (Complex.normSq_pos.mpr hE_ne)
+  -- Step 2: For r > 1 with σ(r·ζ) ≠ 0, A-stability forces ¬(Re(ρ(r·ζ)/σ(r·ζ)) ≤ 0)
+  -- Because r·ζ is a root of π(·, z) with |r·ζ| = r > 1.
+  have key : ∀ r : ℝ, 1 < r → m.sigmaC ((r : ℂ) * ζ) ≠ 0 →
+      ¬(m.rhoC ((r : ℂ) * ζ) / m.sigmaC ((r : ℂ) * ζ)).re ≤ 0 := by
+    intro r hr hσr hle
+    have h_stab : m.stabilityPoly ((r : ℂ) * ζ)
+        (m.rhoC ((r : ℂ) * ζ) / m.sigmaC ((r : ℂ) * ζ)) = 0 := by
+      simp only [stabilityPoly, sub_eq_zero]
+      exact (div_mul_cancel₀ (m.rhoC ((r : ℂ) * ζ)) hσr).symm
+    have h_le := ha _ hle _ h_stab
+    have h_norm : ‖(↑r : ℂ) * ζ‖ = r := by
+      rw [norm_mul, Complex.norm_real, Real.norm_eq_abs,
+          abs_of_pos (by linarith : (0 : ℝ) < r),
+          hζ_def, Complex.norm_exp_ofReal_mul_I, mul_one]
+    linarith
+  -- Step 3: Continuity of ρ and σ as functions of r
+  have hσ_cont : Continuous (fun r : ℝ => m.sigmaC ((r : ℂ) * ζ)) := by
+    unfold sigmaC; apply continuous_finset_sum; intro j _
+    exact continuous_const.mul ((Complex.continuous_ofReal.mul continuous_const).pow _)
+  have hρ_cont : Continuous (fun r : ℝ => m.rhoC ((r : ℂ) * ζ)) := by
+    unfold rhoC; apply continuous_finset_sum; intro j _
+    exact continuous_const.mul ((Complex.continuous_ofReal.mul continuous_const).pow _)
+  -- Step 4: The quotient Re(ρ/σ) is continuous at r = 1 (since σ(ζ) ≠ 0)
+  have hσ1 : m.sigmaC ((1 : ℂ) * ζ) ≠ 0 := by rwa [one_mul]
+  have hquot_cont : ContinuousAt
+      (fun r : ℝ => m.rhoC ((r : ℂ) * ζ) / m.sigmaC ((r : ℂ) * ζ)) 1 :=
+    hρ_cont.continuousAt.div hσ_cont.continuousAt hσ1
+  have hre_cont : ContinuousAt
+      (fun r : ℝ => (m.rhoC ((r : ℂ) * ζ) / m.sigmaC ((r : ℂ) * ζ)).re) 1 :=
+    Complex.continuous_re.continuousAt.comp hquot_cont
+  -- Step 5: f(1) = Re(ρ(ζ)/σ(ζ)) < 0
+  have hf1_neg : (fun r : ℝ =>
+      (m.rhoC ((r : ℂ) * ζ) / m.sigmaC ((r : ℂ) * ζ)).re) 1 < 0 := by
+    simp only [Complex.ofReal_one, one_mul]; exact h_rho_sigma_neg
+  -- Step 6: By continuity, Re(ρ(r·ζ)/σ(r·ζ)) < 0 in a neighborhood of r = 1
+  have h_ev := hre_cont.eventually (Iio_mem_nhds hf1_neg)
+  -- Step 7: Extract r > 1 from the neighborhood
+  rw [Filter.eventually_iff_exists_mem] at h_ev
+  obtain ⟨U, hU_nhds, hU⟩ := h_ev
+  rw [Metric.mem_nhds_iff] at hU_nhds
+  obtain ⟨ε, hε_pos, hε_ball⟩ := hU_nhds
+  have hr_mem : 1 + ε / 2 ∈ U := by
+    apply hε_ball; rw [Metric.mem_ball, Real.dist_eq]
+    rw [show 1 + ε / 2 - 1 = ε / 2 from by ring, abs_of_pos (by linarith)]; linarith
+  have hf_neg := hU _ hr_mem
+  -- σ(r·ζ) ≠ 0 (if σ = 0 then ρ/σ = 0 and Re(0) = 0, contradicting Re < 0)
+  have hσr_ne : m.sigmaC (((1 + ε / 2 : ℝ) : ℂ) * ζ) ≠ 0 := by
+    intro heq; rw [heq, div_zero, Complex.zero_re] at hf_neg; linarith
+  -- Contradiction: key says ¬(Re ≤ 0), but hf_neg says Re < 0
+  exact key (1 + ε / 2) (by linarith) hσr_ne (le_of_lt hf_neg)
 
 /-- Key lemma (order constraint): For a method of order p ≥ 3, the modified E-function
 G(ζ) = E(ζ) - 1/(ζ-1) - 1/2 vanishes at ζ = 1 (i.e., G is analytic at ζ = 1 with G(1) = 0).
