@@ -672,6 +672,26 @@ theorem modifiedNumeratorC_one (m : LMM s) {p : ℕ} (hp : m.HasOrder p) (hp1 : 
   have hρ1 := (hp.isConsistent hp1).rhoC_one m
   simp [modifiedNumeratorC, hρ1]
 
+/-- For a consistent method, σ_ℂ(1) = ρ'_ℂ(1).
+This is the complex version of the consistency condition ρ'(1) = σ(1). -/
+theorem IsConsistent.sigmaC_one_eq_rhoCDeriv_one (m : LMM s)
+    (hc : m.IsConsistent) : m.sigmaC 1 = m.rhoCDeriv 1 := by
+  simp only [sigmaC, rhoCDeriv, one_pow, mul_one]
+  have h := hc.deriv_match
+  rw [sigma_one] at h
+  -- ∑ (m.β j : ℂ) = ∑ ((j:ℕ):ℂ) * (m.α j : ℂ)
+  -- follows from h : ∑ (j:ℝ) * m.α j = ∑ m.β j by casting to ℂ
+  have hc := congr_arg (Complex.ofReal) h
+  push_cast at hc ⊢
+  exact hc.symm
+
+/-- For a zero-stable, consistent method, σ_ℂ(1) ≠ 0.
+Proof: σ_ℂ(1) = ρ'_ℂ(1) ≠ 0 (simple root from zero-stability). -/
+theorem IsConsistent.sigmaC_one_ne_zero (m : LMM s) (hc : m.IsConsistent)
+    (hzs : m.IsZeroStable) : m.sigmaC 1 ≠ 0 := by
+  rw [hc.sigmaC_one_eq_rhoCDeriv_one]
+  exact hzs.unit_roots_simple 1 (hc.rhoC_one m) (by simp)
+
 /-- The "cross-energy" Re(σ(ζ)·conj(ρ(ζ))) is non-negative on the unit circle
 for A-stable methods. This follows from Re(σ/ρ) ≥ 0 and |ρ|² ≥ 0. -/
 theorem cross_energy_nonneg (m : LMM s) (ha : m.IsAStable)
@@ -695,19 +715,23 @@ theorem cross_energy_nonneg (m : LMM s) (ha : m.IsAStable)
 
 /-- Core analytical lemma for the Dahlquist barrier: if the cross-energy
 Re(σ(e^{iθ})·conj(ρ(e^{iθ}))) ≥ 0 for all θ (from A-stability), the E-function
-has specific structure from the order conditions, and the order is ≥ 3, we get False.
+has specific structure from the order conditions, the order is ≥ 3, and ρ has a
+simple root at ζ = 1 (zero-stability), we get False.
 
 The proof uses the minimum principle for harmonic functions: the modified E-function
 G(ζ) = σ(ζ)/ρ(ζ) - 1/(ζ-1) - 1/2 satisfies Re(G) ≥ 0 on the unit circle
-(since Re(1/(e^{iθ}-1)+1/2) = 0) and G(1) = 0 (from order ≥ 3). By the minimum
-principle, G ≡ 0, forcing σ/ρ = (ζ+1)/(2(ζ-1)) — the trapezoidal rule (order 2),
-contradicting order ≥ 3.
+(since Re(1/(e^{iθ}-1)+1/2) = 0) and G(1) = 0 (from order ≥ 3 + simple root).
+G'(1) = -1/12. Via conformal map w = 1/ζ, G̃(w) = G(1/w) is analytic in
+{|w| < 1} with Re(G̃) ≥ 0 on the boundary. The minimum principle gives
+Re(G̃) ≥ 0 inside, but G̃(1-ε) ≈ -ε/12 < 0 for small ε > 0 — contradiction.
 
-This is the hardest step; it requires complex-analytic machinery (Poisson integral /
-maximum principle for harmonic functions) that is partially available in Mathlib
-(Complex.AbsMax). -/
+NOTE: Without zero-stability (ρ'(1) ≠ 0), this theorem is FALSE.
+See `dahlquistCounterexample` below for a method with order 3 that is A-stable
+but not zero-stable (ρ = (ζ-1)², a double root). -/
 theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p)
     (hp3 : 3 ≤ p) (ha : m.IsAStable)
+    -- Zero-stability gives a simple root at ζ = 1:
+    (hρ_simple : m.rhoCDeriv 1 ≠ 0)
     -- The established facts:
     (hE_nonneg : ∀ θ : ℝ, ∀ hρ : m.rhoC (Complex.exp (↑θ * Complex.I)) ≠ 0,
       ∀ hσ : m.sigmaC (Complex.exp (↑θ * Complex.I)) ≠ 0,
@@ -716,27 +740,112 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
     (hRe_inv : ∀ θ : ℝ, ∀ hne : Complex.exp (↑θ * Complex.I) ≠ 1,
       (1 / (Complex.exp (↑θ * Complex.I) - 1)).re = -1/2) :
     False := by
+  -- KEY PROOF STRUCTURE (sorry: minimum principle for harmonic functions)
+  --
+  -- The proof derives a contradiction via these steps:
+  -- 1. Consistency (order ≥ 1) gives ρ(1) = 0, σ(1) = ρ'(1).
+  -- 2. Zero-stability gives ρ'(1) ≠ 0, hence σ(1) ≠ 0.
+  -- 3. Define G(ζ) = σ(ζ)/ρ(ζ) - (ζ+1)/(2(ζ-1)).
+  --    Equivalently G = N(ζ)/(2ρ(ζ)(ζ-1)) where N = 2σ(ζ-1) - ρ(ζ+1).
+  -- 4. Order ≥ 2 gives N(1) = N'(1) = N''(1) = 0, so N = (ζ-1)³·Q(ζ).
+  --    With ρ = (ζ-1)·R(ζ) (simple root), G = (ζ-1)Q(ζ)/(2R(ζ)).
+  -- 5. N'''(1) = -σ(1), so Q(1) = -σ(1)/6.
+  --    G(1) = 0, G'(1) = Q(1)/(2R(1)) = -σ(1)/(12ρ'(1)) = -1/12.
+  -- 6. Re(G(e^{iθ})) = Re(σ/ρ) - Re(1/(ζ-1) + 1/2) = Re(σ/ρ) ≥ 0  [from hypotheses]
+  -- 7. Via w = 1/ζ, G̃(w) = G(1/w) is analytic in {|w| < 1} with
+  --    Re(G̃) ≥ 0 on {|w| = 1} and G̃(1) = 0, G̃'(1) = 1/12.
+  -- 8. MINIMUM PRINCIPLE: Re(G̃) ≥ 0 in {|w| < 1}.
+  -- 9. But G̃(1-ε) ≈ -ε/12 + O(ε²) < 0 for small ε > 0 — contradiction.
   sorry
 
-/-- Key lemma (order constraint): For a method of order p ≥ 3, the modified E-function
-G(ζ) = E(ζ) - 1/(ζ-1) - 1/2 vanishes at ζ = 1 (i.e., G is analytic at ζ = 1 with G(1) = 0).
-Combined with Re(G(e^{iθ})) ≥ 0 from A-stability and the fact that Re(1/(e^{iθ}-1)+1/2) = 0,
-this gives a non-negative harmonic function vanishing at a point, which by the minimum principle
-for harmonic functions must be identically zero — contradicting G being a non-trivial
-rational function.
-Reference: Iserles, proof of Theorem 3.4, step 2. -/
+/-- For a zero-stable, A-stable LMM of order ≥ 3, derive False.
+Combines `E_nonneg_re`, `re_inv_exp_sub_one`, and the zero-stability condition
+(simple root of ρ at ζ = 1) to invoke `order_ge_three_not_aStable_core`.
+Reference: Iserles, proof of Theorem 3.4. -/
 theorem order_ge_three_not_aStable (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3 ≤ p)
-    (ha : m.IsAStable) : False :=
-  order_ge_three_not_aStable_core m p hp hp3 ha
+    (ha : m.IsAStable) (hzs : m.IsZeroStable) : False := by
+  have hρ1 : m.rhoC 1 = 0 := (hp.isConsistent (by omega)).rhoC_one m
+  exact order_ge_three_not_aStable_core m p hp hp3 ha
+    (hzs.unit_roots_simple 1 hρ1 (by simp))
     (fun θ hρ hσ => IsAStable.E_nonneg_re m ha θ hρ hσ)
     (fun θ hne => re_inv_exp_sub_one θ hne)
 
 /-- **Dahlquist's Second Barrier** (Iserles, Theorem 3.4):
-An A-stable linear multistep method has order at most 2. -/
+An A-stable, zero-stable linear multistep method has order at most 2.
+
+NOTE: Zero-stability is necessary. See `dahlquistCounterexample` for a method
+that is A-stable with order 3 but not zero-stable (ρ has a double root at ζ = 1).
+The standard textbook statement "A-stable ⟹ order ≤ 2" implicitly assumes
+zero-stability (which is needed for convergence anyway). -/
 theorem dahlquist_second_barrier {s : ℕ} (m : LMM s) (p : ℕ)
-    (hp : m.HasOrder p) (ha : m.IsAStable) : p ≤ 2 := by
+    (hp : m.HasOrder p) (ha : m.IsAStable) (hzs : m.IsZeroStable) : p ≤ 2 := by
   by_contra h
   push_neg at h
-  exact order_ge_three_not_aStable m p hp h ha
+  exact order_ge_three_not_aStable m p hp h ha hzs
+
+/-! ## Counterexample: A-stable order-3 method without zero-stability
+
+The method ρ(ζ) = (ζ-1)², σ(ζ) = (ζ²-1)/2 has σ/ρ = (ζ+1)/(2(ζ-1)) (same
+as the trapezoidal rule), but because ρ has a double root at ζ = 1, the order
+conditions V₀ = V₁ = V₂ = V₃ = 0 are all satisfied. It is A-stable because
+the stability polynomial factors as (ξ-1)[(ξ-1) - z(ξ+1)/2], giving roots
+ξ = 1 and ξ = (2+z)/(2-z), both in the closed unit disk for Re(z) ≤ 0.
+However, the double root violates zero-stability (ρ'(1) = 0), and the
+method diverges for the trivial equation y' = 0 (parasitic solution y_n = c·n).
+
+This demonstrates that the Dahlquist barrier requires zero-stability. -/
+
+/-- Counterexample: a 2-step method with ρ(ζ) = (ζ-1)² and σ(ζ) = (ζ²-1)/2.
+Has order 3, is A-stable, but is NOT zero-stable. -/
+noncomputable def dahlquistCounterexample : LMM 2 where
+  α := ![1, -2, 1]
+  β := ![-1/2, 0, 1/2]
+  normalized := by simp [Fin.last]
+
+/-- The counterexample has order 3: V₀ = V₁ = V₂ = V₃ = 0 and V₄ = -2 ≠ 0. -/
+theorem dahlquistCounterexample_order_three : dahlquistCounterexample.HasOrder 3 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [orderCondVal, dahlquistCounterexample, Fin.sum_univ_three] <;> norm_num
+  · simp [orderCondVal, dahlquistCounterexample, Fin.sum_univ_three]; norm_num
+
+/-- The counterexample is A-stable: the stability polynomial factors as
+(ξ-1)[(ξ-1) - z(ξ+1)/2], with roots ξ = 1 and ξ = (2+z)/(2-z).
+For Re(z) ≤ 0: |1| ≤ 1 and |2+z| ≤ |2-z|, so both roots are in the closed unit disk. -/
+theorem dahlquistCounterexample_aStable : dahlquistCounterexample.IsAStable := by
+  intro z hz ξ hξ
+  simp only [stabilityPoly, rhoC, sigmaC, dahlquistCounterexample] at hξ
+  simp [Fin.sum_univ_three] at hξ
+  have factor : (ξ - 1) * ((ξ - 1) - z * (ξ + 1) / 2) = 0 := by
+    linear_combination hξ
+  rcases mul_eq_zero.mp factor with h1 | h2
+  · have : ξ = 1 := by linear_combination h1
+    rw [this]; simp
+  · have key : ξ * (2 - z) = 2 + z := by linear_combination 2 * h2
+    have h_denom_ne : (2 : ℂ) - z ≠ 0 := by
+      intro h; have : ((2 : ℂ) - z).re = 0 := by rw [h]; simp
+      simp at this; linarith
+    have h_denom_pos : (0 : ℝ) < ‖(2 : ℂ) - z‖ := norm_pos_iff.mpr h_denom_ne
+    have hnorm : ‖ξ‖ * ‖(2 : ℂ) - z‖ = ‖(2 : ℂ) + z‖ := by
+      rw [← norm_mul, key]
+    have h_nsq_le : ‖(2 : ℂ) + z‖ ^ 2 ≤ ‖(2 : ℂ) - z‖ ^ 2 := by
+      rw [Complex.sq_norm, Complex.sq_norm]
+      simp only [Complex.normSq_apply, Complex.add_re, Complex.sub_re,
+                 Complex.add_im, Complex.sub_im]
+      norm_num; nlinarith
+    have h_num_le : ‖(2 : ℂ) + z‖ ≤ ‖(2 : ℂ) - z‖ := by
+      nlinarith [norm_nonneg ((2 : ℂ) + z), norm_nonneg ((2 : ℂ) - z),
+                 sq_nonneg (‖(2 : ℂ) - z‖ - ‖(2 : ℂ) + z‖)]
+    nlinarith [norm_nonneg ξ]
+
+/-- The counterexample is NOT zero-stable: ρ'(1) = 0 (ζ = 1 is a double root). -/
+theorem dahlquistCounterexample_not_zeroStable :
+    ¬dahlquistCounterexample.IsZeroStable := by
+  intro ⟨_, h_simple⟩
+  have hρ1 : dahlquistCounterexample.rhoC 1 = 0 := by
+    simp [rhoC, dahlquistCounterexample, Fin.sum_univ_three]; norm_num
+  have h := h_simple 1 hρ1 (by simp)
+  simp [rhoCDeriv, dahlquistCounterexample, Fin.sum_univ_three] at h
 
 end LMM

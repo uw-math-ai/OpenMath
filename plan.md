@@ -23,9 +23,13 @@
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: A-stability implies roots of ρ in unit disk (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier — A-stable ⟹ order ≤ 2 (decomposed into sub-lemmas, 1 sorry remains: `order_ge_three_not_aStable`)
-  - [x] `E_nonneg_re`: Re(σ/ρ) ≥ 0 on unit circle for A-stable methods (proved via continuity-perturbation argument)
-  - [ ] `order_ge_three_not_aStable`: order ≥ 3 + A-stable → False (requires harmonic analysis)
+- [~] **Theorem**: Dahlquist's second barrier — A-stable + zero-stable ⟹ order ≤ 2 (1 sorry remains: `order_ge_three_not_aStable_core`)
+  - [x] `E_nonneg_re`: Re(σ/ρ) ≥ 0 on unit circle for A-stable methods
+  - [x] `re_inv_exp_sub_one`: Re(1/(e^{iθ}-1)) = -1/2 on the unit circle
+  - [x] `sigmaC_one_eq_rhoCDeriv_one`: σ_ℂ(1) = ρ'_ℂ(1) for consistent methods
+  - [x] `sigmaC_one_ne_zero`: σ(1) ≠ 0 for zero-stable consistent methods
+  - [x] `dahlquistCounterexample`: counterexample showing barrier is FALSE without zero-stability (order 3, A-stable, not zero-stable)
+  - [ ] `order_ge_three_not_aStable_core`: order ≥ 3 + A-stable + zero-stable → False (requires minimum principle for harmonic functions)
 - [ ] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence)
 
 ### 1.3 Order and Convergence
@@ -50,13 +54,14 @@
 - [ ] **Definition**: Stiffness
 - [x] **Theorem**: A-stability of backward Euler and trapezoidal rule (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Forward Euler is not A-stable (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier (A-stable methods have order ≤ 2) — 1 sorry remains (`order_ge_three_not_aStable`)
+- [~] **Theorem**: Dahlquist's second barrier (A-stable + zero-stable ⟹ order ≤ 2) — 1 sorry remains (`order_ge_three_not_aStable_core`)
+- [x] **Counterexample**: A-stable order-3 method without zero-stability (`dahlquistCounterexample`)
 
 ## Current Target
 
 **Next: Dahlquist equivalence theorem or Gauss–Legendre methods**
 
 Options:
-- Close remaining Dahlquist barrier sorry: `order_ge_three_not_aStable` (hard: requires harmonic analysis or Fourier argument on unit circle).
+- Close remaining Dahlquist barrier sorry: `order_ge_three_not_aStable_core` (hard: requires minimum principle for harmonic functions / Hopf boundary lemma). The proof structure is fully documented in the sorry comment: via conformal map w = 1/ζ, analytic G̃ with Re(G̃) ≥ 0 on boundary and G̃(1) = 0, G̃'(1) = 1/12 contradicts Re(G̃) ≥ 0 inside by Taylor expansion.
 - Formalize convergence definition and Dahlquist equivalence theorem (consistency + stability ⟺ convergence).
 - Add Gauss–Legendre 2-stage method (order 4, A-stable) — requires 2-stage stability function with matrix inverse.
