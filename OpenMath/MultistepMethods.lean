@@ -962,27 +962,117 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
       -- Re(Gt(w₀)) ≤ -ε₀/12 + ε₀/24 = -ε₀/24 < 0
       linarith [abs_le.mp h_combined]
   -- =========================================================================
-  -- MAIN CONSTRUCTION (sorry): existence of Gt satisfying the four properties.
+  -- MAIN CONSTRUCTION: existence of Gt satisfying the four properties.
   --
-  -- Strategy (documented in the proof outline comments above):
-  --   Define Gt(w) = σ̃(w)/ρ̃(w) - (1+w)/(2(1-w)) where σ̃, ρ̃ are reversed polynomials,
-  --   with the removable singularity at w = 1 filled in by Gt(1) = 0.
+  -- Strategy: Define Gt(w) = σ̃(w)/ρ̃(w) - (1+w)/(2(1-w)) where σ̃, ρ̃ are reversed
+  -- polynomials, with the removable singularity at w = 1 filled in by Gt(1) = 0.
   --
-  -- Properties to prove:
-  --   (a) DiffContOnCl: ρ̃(w) ≠ 0 for |w| < 1 (from A-stability), removable singularity
-  --       at w = 1 (from order ≥ 3 + simple root). Requires polynomial factoring.
-  --   (b) Re(Gt) ≥ 0 on sphere: at w ≠ 1 with ρ(w⁻¹) ≠ 0, use E_nonneg_re_unit_circle
-  --       and re_half_plus_inv_sub_one_eq_zero. At w = 1: Gt(1) = 0. At w with ρ(w⁻¹) = 0:
-  --       continuity + density of non-root points.
-  --   (c) Gt(1) = 0: by definition (removable singularity limit is 0).
-  --   (d) HasDerivAt Gt (1/12) 1: from order conditions, Q(1)/(2R(1)) = -1/12 gives
-  --       G'(1) = -1/12, hence G̃'(1) = 1/12. Requires detailed polynomial computation.
+  -- The reversed polynomials are:
+  --   ρ̃(w) = Σ α_{s-j} w^j = w^s · ρ(1/w)  (for w ≠ 0)
+  --   σ̃(w) = Σ β_{s-j} w^j = w^s · σ(1/w)  (for w ≠ 0)
   --
-  -- Lemmas proved in this cycle that will be used:
-  --   - re_half_plus_inv_sub_one_eq_zero: Re((ζ+1)/(2(ζ-1))) = 0 on unit circle
-  --   - E_nonneg_re_unit_circle: Re(σ/ρ) ≥ 0 on unit circle (any ζ, not just e^{iθ})
-  --   - re_inv_sub_one_of_norm_one: Re(1/(ζ-1)) = -1/2 on unit circle
-  sorry
+  -- Key facts:
+  --   ρ̃(0) = α_s = 1 ≠ 0, ρ̃(1) = ρ(1) = 0
+  --   For |w| < 1: ρ̃(w) ≠ 0 (roots of ρ at |ζ| ≤ 1 map to |1/ζ| ≥ 1)
+  --   On |w| = 1: σ̃/ρ̃ = σ(1/w)/ρ(1/w), so Re(σ̃/ρ̃) = Re(E(1/w)) ≥ 0 by A-stability
+  --   Re((w+1)/(2(1-w))) = 0 on |w| = 1 (from re_half_plus_inv_sub_one_eq_zero)
+  -- Define the reversed polynomials
+  let σ_rev : ℂ → ℂ := fun w => ∑ j : Fin (s + 1), (m.β (Fin.rev j) : ℂ) * w ^ (j : ℕ)
+  let ρ_rev : ℂ → ℂ := fun w => ∑ j : Fin (s + 1), (m.α (Fin.rev j) : ℂ) * w ^ (j : ℕ)
+  -- Key identity: reversed polynomials relate to rhoC/sigmaC via ρ̃(w) = w^s · ρ(1/w)
+  have h_rev_identity : ∀ (c : Fin (s + 1) → ℝ) (z : ℂ), z ≠ 0 →
+      (∑ j : Fin (s + 1), (c (Fin.rev j) : ℂ) * z ^ (j : ℕ)) =
+      z ^ s * ∑ j : Fin (s + 1), (c j : ℂ) * z⁻¹ ^ (j : ℕ) := by
+    intro c z hz
+    rw [Finset.mul_sum]
+    exact Fintype.sum_equiv Fin.revPerm _ _ (fun j => by
+      simp only [Fin.revPerm_apply]
+      have hj : (j : ℕ) + (Fin.rev j : ℕ) = s := by rw [Fin.val_rev]; omega
+      have key : z ^ (j : ℕ) = z ^ s * z⁻¹ ^ (Fin.rev j : ℕ) := by
+        have h1 : z ^ (j : ℕ) * z ^ (Fin.rev j : ℕ) = z ^ s := by rw [← pow_add, hj]
+        rw [inv_pow, ← h1, mul_assoc, mul_inv_cancel₀ (pow_ne_zero _ hz), mul_one]
+      rw [key, ← mul_assoc, mul_comm _ (z ^ s), mul_assoc])
+  have h_rho_rev : ∀ z : ℂ, z ≠ 0 → ρ_rev z = z ^ s * m.rhoC z⁻¹ := by
+    intro z hz; exact h_rev_identity m.α z hz
+  have h_sigma_rev : ∀ z : ℂ, z ≠ 0 → σ_rev z = z ^ s * m.sigmaC z⁻¹ := by
+    intro z hz; exact h_rev_identity m.β z hz
+  -- Define Gt: formula at w ≠ 1, removable singularity value 0 at w = 1
+  let Gt : ℂ → ℂ := fun w =>
+    if w = 1 then 0 else σ_rev w / ρ_rev w - (w + 1) / (2 * (1 - w))
+  refine ⟨Gt, ?_, ?_, ?_, ?_⟩
+  · -- (a) DiffContOnCl ℂ Gt (Metric.ball 0 1)
+    -- Part 1: DifferentiableOn ℂ Gt (Metric.ball 0 1)
+    --   For |w| < 1: w ≠ 1 (since |1| = 1), so Gt(w) = σ̃/ρ̃ - (w+1)/(2(1-w)).
+    --   ρ̃(w) ≠ 0 for |w| < 1 (roots of ρ̃ correspond to 1/ζ for roots ζ of ρ;
+    --   A-stability puts roots of ρ in |ζ| ≤ 1, so roots of ρ̃ have |·| ≥ 1).
+    --   1-w ≠ 0 for w ≠ 1. So Gt is a ratio of differentiable functions with
+    --   non-zero denominators, hence differentiable.
+    --
+    -- Part 2: ContinuousOn Gt (closure (Metric.ball 0 1))
+    --   At |w| < 1: follows from Part 1.
+    --   At |w| = 1, w ≠ 1: need ρ̃(w) ≠ 0, i.e., ρ has no unit-circle roots
+    --   other than ζ = 1. This may need zero-stability (or A-stability argument).
+    --   NOTE: If ρ has other unit-circle roots, Gt has poles on the boundary
+    --   and DiffContOnCl fails. The textbook proof implicitly assumes this.
+    --   At w = 1: REMOVABLE SINGULARITY. The combined fraction
+    --     G = [2σ̃(1-w) - ρ̃(w+1)] / [2ρ̃(1-w)]
+    --   has numerator vanishing to order 3 and denominator to order 2 at w=1
+    --   (N(1)=N'(1)=N''(1)=0, D(1)=D'(1)=0, D''(1)=4ρ'(1)≠0).
+    --   This uses: C₀: ρ(1)=0, C₁: σ(1)=ρ'(1), C₂: ρ''(1)=2σ'(1)-ρ'(1).
+    --   So Gt = -(w-1)Q/(2R) with R(1)=ρ'(1)≠0, giving Gt(1) = 0 and
+    --   continuity at w = 1. [Polynomial factoring + Filter.Tendsto]
+    sorry
+  · -- (b) Gt 1 = 0 (by definition)
+    simp only [Gt, if_pos rfl]
+  · -- (c) Boundary non-negativity: ∀ z ∈ sphere(0,1), Re(Gt(z)) ≥ 0
+    intro z hz
+    rw [Metric.mem_sphere, dist_zero_right] at hz
+    by_cases h1 : z = 1
+    · simp only [Gt, h1, if_pos rfl, Complex.zero_re]; exact le_refl 0
+    · simp only [Gt, if_neg h1]
+      -- Re(σ̃(z)/ρ̃(z) - (z+1)/(2(1-z))) = Re(σ̃/ρ̃) - Re((z+1)/(2(1-z)))
+      -- Re((z+1)/(2(1-z))) = 0 on the unit circle
+      -- Re(σ̃/ρ̃) ≥ 0 (from A-stability via reversed polynomial identity)
+      have hz_ne : z ≠ 0 := by intro h; rw [h, norm_zero] at hz; norm_num at hz
+      -- σ̃/ρ̃ = σ(z⁻¹)/ρ(z⁻¹) (z^s cancels)
+      have h_quot : σ_rev z / ρ_rev z = m.sigmaC z⁻¹ / m.rhoC z⁻¹ := by
+        rw [h_sigma_rev z hz_ne, h_rho_rev z hz_ne]
+        rw [mul_div_mul_left _ _ (pow_ne_zero s hz_ne)]
+      rw [h_quot]
+      -- Re((z+1)/(2(1-z))) = -Re((z+1)/(2(z-1))) = 0
+      have h_re_zero : ((z + 1) / (2 * (1 - z))).re = 0 := by
+        rw [show 2 * (1 - z) = -(2 * (z - 1)) from by ring,
+            div_neg, Complex.neg_re, neg_eq_zero]
+        exact re_half_plus_inv_sub_one_eq_zero z hz h1
+      -- Re(σ(z⁻¹)/ρ(z⁻¹)) ≥ 0
+      have hz_inv_norm : ‖z⁻¹‖ = 1 := by rw [norm_inv, hz, inv_one]
+      have h_re_nonneg : 0 ≤ (m.sigmaC z⁻¹ / m.rhoC z⁻¹).re := by
+        by_cases hρz : m.rhoC z⁻¹ = 0
+        · rw [hρz, div_zero, Complex.zero_re]
+        · exact IsAStable.E_nonneg_re_unit_circle m ha z⁻¹ hz_inv_norm hρz
+      linarith [Complex.sub_re (m.sigmaC z⁻¹ / m.rhoC z⁻¹) ((z + 1) / (2 * (1 - z)))]
+  · -- (d) HasDerivAt Gt (1/12) 1
+    -- Combined fraction: Gt(w) = N̄(w)/D̄(w) where:
+    --   N̄(w) = 2σ̃(w)(1-w) - ρ̃(w)(w+1)  (polynomial, degree ≤ s+1)
+    --   D̄(w) = 2ρ̃(w)(1-w)               (polynomial, degree ≤ s+1)
+    --
+    -- At w = 1: N̄ has triple zero, D̄ has double zero (using order ≥ 2):
+    --   N̄(1) = 0 (ρ̃(1) = ρ(1) = 0)
+    --   N̄'(1) = 0 (uses σ(1) = ρ'(1))
+    --   N̄''(1) = 0 (uses ρ''(1) = 2σ'(1) - ρ'(1) from C₂)
+    --   N̄'''(1) = -ρ'(1) (uses C₃: ρ'''(1) = 3σ''(1) - 3σ'(1) + 2ρ'(1))
+    --   D̄''(1) = 4ρ'(1) ≠ 0
+    --
+    -- Factor: N̄(w) = (w-1)³ Q̄(w), D̄(w) = (w-1)² · (-2R̃(w)) where ρ̃(w) = (w-1)R̃(w).
+    -- Then Gt(w) = -(w-1)Q̄(w)/(2R̃(w)) for w ≠ 1.
+    -- Q̄(1) = N̄'''(1)/6 = -ρ'(1)/6, R̃(1) = -ρ'(1).
+    -- So Gt'(1) = -Q̄(1)/(2R̃(1)) = ρ'(1)/(6 · 2 · (-ρ'(1))) · (-1)
+    --           = 1/12.
+    --
+    -- Equivalently: G(ζ) = N(ζ)/D(ζ) in the original variable gives
+    --   G'(1) = -1/12. Via Gt(w) = G(1/w): Gt'(1) = -G'(1)·(-1) = -(-1/12) · (-1) = 1/12.
+    --   Wait: Gt'(w) = G'(1/w)·(-1/w²), so Gt'(1) = G'(1)·(-1) = (-1/12)·(-1) = 1/12. ✓
+    sorry
 
 /-- For a zero-stable, A-stable LMM of order ≥ 3, derive False.
 Combines `E_nonneg_re`, `re_inv_exp_sub_one`, and the zero-stability condition
