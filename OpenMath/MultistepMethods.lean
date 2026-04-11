@@ -692,6 +692,29 @@ theorem IsConsistent.sigmaC_one_ne_zero (m : LMM s) (hc : m.IsConsistent)
   rw [hc.sigmaC_one_eq_rhoCDeriv_one]
   exact hzs.unit_roots_simple 1 (hc.rhoC_one m) (by simp)
 
+/-- ρ_ℂ commutes with complex conjugation: ρ_ℂ(conj z) = conj(ρ_ℂ(z)).
+This holds because ρ has real coefficients. -/
+theorem rhoC_conj (m : LMM s) (z : ℂ) :
+    m.rhoC (starRingEnd ℂ z) = starRingEnd ℂ (m.rhoC z) := by
+  simp only [rhoC, map_sum, map_mul, map_pow, Complex.conj_ofReal]
+
+/-- σ_ℂ commutes with complex conjugation: σ_ℂ(conj z) = conj(σ_ℂ(z)).
+This holds because σ has real coefficients. -/
+theorem sigmaC_conj (m : LMM s) (z : ℂ) :
+    m.sigmaC (starRingEnd ℂ z) = starRingEnd ℂ (m.sigmaC z) := by
+  simp only [sigmaC, map_sum, map_mul, map_pow, Complex.conj_ofReal]
+
+/-- On the unit circle, the E-function σ/ρ satisfies Re(σ(ζ⁻¹)/ρ(ζ⁻¹)) = Re(σ(ζ)/ρ(ζ)),
+because σ(ζ⁻¹)/ρ(ζ⁻¹) = conj(σ(ζ)/ρ(ζ)) when |ζ| = 1 (since the coefficients are real
+and ζ⁻¹ = conj(ζ) on the unit circle). -/
+theorem E_re_inv_eq (m : LMM s) (ζ : ℂ) (habs : ‖ζ‖ = 1) :
+    (m.sigmaC ζ⁻¹ / m.rhoC ζ⁻¹).re = (m.sigmaC ζ / m.rhoC ζ).re := by
+  -- ζ⁻¹ = conj(ζ) on the unit circle
+  have hinv : ζ⁻¹ = starRingEnd ℂ ζ := by
+    have hne : ζ ≠ 0 := by intro h; simp [h] at habs
+    rw [Complex.inv_def, Complex.normSq_eq_norm_sq, habs]; simp
+  rw [hinv, m.sigmaC_conj, m.rhoC_conj, ← map_div₀, Complex.conj_re]
+
 /-- The "cross-energy" Re(σ(ζ)·conj(ρ(ζ))) is non-negative on the unit circle
 for A-stable methods. This follows from Re(σ/ρ) ≥ 0 and |ρ|² ≥ 0. -/
 theorem cross_energy_nonneg (m : LMM s) (ha : m.IsAStable)
@@ -712,6 +735,41 @@ theorem cross_energy_nonneg (m : LMM s) (ha : m.IsAStable)
             Complex.ofReal_re, Complex.ofReal_im, mul_zero, sub_zero]
       rw [h_eq]
       exact mul_nonneg (IsAStable.E_nonneg_re m ha θ hρ hσ) (Complex.normSq_nonneg _)
+
+/-! ### Minimum Principle for Harmonic Functions
+
+The minimum principle for the real part of an analytic function, proved via
+the maximum modulus principle. Used in the proof of Dahlquist's second barrier. -/
+
+/-- **Minimum principle for Re of analytic functions on a bounded domain**:
+If `f` is differentiable on `U` and continuous on `closure U`, and `Re(f) ≥ 0`
+on the frontier of `U`, then `Re(f) ≥ 0` on `closure U`.
+
+Proof via the maximum modulus principle applied to `exp(-f)`:
+- `‖exp(-f(z))‖ = exp(-Re(f(z))) ≤ 1` on the frontier (since `Re(f) ≥ 0`)
+- By the maximum modulus principle, `‖exp(-f(z))‖ ≤ 1` on the closure
+- Hence `Re(f(z)) ≥ 0` on the closure -/
+theorem re_nonneg_of_frontier_re_nonneg {U : Set ℂ}
+    (hU : Bornology.IsBounded U)
+    (f : ℂ → ℂ) (hf : DiffContOnCl ℂ f U)
+    (hbd : ∀ z ∈ frontier U, 0 ≤ (f z).re) :
+    ∀ z ∈ closure U, 0 ≤ (f z).re := by
+  intro z hz
+  -- Consider g(z) = exp(-f(z))
+  set g : ℂ → ℂ := fun w => Complex.exp (-f w)
+  -- g is DiffContOnCl on U
+  have hg : DiffContOnCl ℂ g U := ⟨hf.1.neg.cexp, hf.2.neg.cexp⟩
+  -- On frontier U, ‖g(z)‖ = exp(-Re(f(z))) ≤ exp(0) = 1
+  have hg_bd : ∀ w ∈ frontier U, ‖g w‖ ≤ 1 := by
+    intro w hw
+    simp only [g, Complex.norm_exp, Complex.neg_re]
+    have : 0 ≤ (f w).re := hbd w hw
+    linarith [Real.exp_le_one_iff.mpr (by linarith : -(f w).re ≤ 0)]
+  -- By the maximum modulus principle: ‖g(z)‖ ≤ 1 on closure U
+  have hmm := Complex.norm_le_of_forall_mem_frontier_norm_le hU hg hg_bd hz
+  -- Unpack: exp(-Re(f(z))) ≤ 1, so -Re(f(z)) ≤ 0, so Re(f(z)) ≥ 0
+  simp only [g, Complex.norm_exp, Complex.neg_re] at hmm
+  linarith [Real.exp_le_one_iff.mp hmm]
 
 /-- Core analytical lemma for the Dahlquist barrier: if the cross-energy
 Re(σ(e^{iθ})·conj(ρ(e^{iθ}))) ≥ 0 for all θ (from A-stability), the E-function
@@ -740,22 +798,55 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
     (hRe_inv : ∀ θ : ℝ, ∀ hne : Complex.exp (↑θ * Complex.I) ≠ 1,
       (1 / (Complex.exp (↑θ * Complex.I) - 1)).re = -1/2) :
     False := by
-  -- KEY PROOF STRUCTURE (sorry: minimum principle for harmonic functions)
-  --
-  -- The proof derives a contradiction via these steps:
-  -- 1. Consistency (order ≥ 1) gives ρ(1) = 0, σ(1) = ρ'(1).
-  -- 2. Zero-stability gives ρ'(1) ≠ 0, hence σ(1) ≠ 0.
-  -- 3. Define G(ζ) = σ(ζ)/ρ(ζ) - (ζ+1)/(2(ζ-1)).
-  --    Equivalently G = N(ζ)/(2ρ(ζ)(ζ-1)) where N = 2σ(ζ-1) - ρ(ζ+1).
-  -- 4. Order ≥ 2 gives N(1) = N'(1) = N''(1) = 0, so N = (ζ-1)³·Q(ζ).
-  --    With ρ = (ζ-1)·R(ζ) (simple root), G = (ζ-1)Q(ζ)/(2R(ζ)).
-  -- 5. N'''(1) = -σ(1), so Q(1) = -σ(1)/6.
-  --    G(1) = 0, G'(1) = Q(1)/(2R(1)) = -σ(1)/(12ρ'(1)) = -1/12.
-  -- 6. Re(G(e^{iθ})) = Re(σ/ρ) - Re(1/(ζ-1) + 1/2) = Re(σ/ρ) ≥ 0  [from hypotheses]
-  -- 7. Via w = 1/ζ, G̃(w) = G(1/w) is analytic in {|w| < 1} with
-  --    Re(G̃) ≥ 0 on {|w| = 1} and G̃(1) = 0, G̃'(1) = 1/12.
-  -- 8. MINIMUM PRINCIPLE: Re(G̃) ≥ 0 in {|w| < 1}.
-  -- 9. But G̃(1-ε) ≈ -ε/12 + O(ε²) < 0 for small ε > 0 — contradiction.
+  /- Proof structure (via minimum principle, now proved as `re_nonneg_of_frontier_re_nonneg`):
+
+  1. ALGEBRAIC SETUP:
+     - Consistency (order ≥ 1) gives ρ(1) = 0, σ(1) = ρ'(1).
+     - Zero-stability gives ρ'(1) ≠ 0, hence σ(1) ≠ 0.
+     - Define G(ζ) = σ(ζ)/ρ(ζ) - (ζ+1)/(2(ζ-1)) = N(ζ)/(2ρ(ζ)(ζ-1))
+       where N = 2σ(ζ-1) - ρ(ζ+1) is `modifiedNumeratorC`.
+     - Order ≥ 3 gives N(1) = N'(1) = N''(1) = 0, so N = (ζ-1)³·Q(ζ).
+       With ρ = (ζ-1)·R(ζ) (simple root), G = (ζ-1)Q(ζ)/(2R(ζ)).
+     - G(1) = 0, G'(1) = Q(1)/(2R(1)) = -σ(1)/(12ρ'(1)) = -1/12.
+
+  2. BOUNDARY NON-NEGATIVITY:
+     Re(G(e^{iθ})) = Re(σ/ρ) - Re(1/(ζ-1) + 1/2) = Re(σ/ρ) ≥ 0
+     (from hE_nonneg and hRe_inv).
+
+  3. CONFORMAL MAP & MINIMUM PRINCIPLE:
+     Via w = 1/ζ, G̃(w) = G(1/w) is DiffContOnCl on ball(0,1) with
+     Re(G̃) ≥ 0 on sphere(0,1). By `re_nonneg_of_frontier_re_nonneg`,
+     Re(G̃) ≥ 0 on closedBall(0,1).
+
+  4. CONTRADICTION:
+     G̃(1) = 0, G̃'(1) = 1/12. So G̃(1-ε) ≈ -ε/12 < 0 for small ε > 0,
+     but 1-ε ∈ ball(0,1), contradicting Re(G̃) ≥ 0.
+
+  The remaining sorry captures step 1 (polynomial algebra on the E-function),
+  step 2 (connecting hE_nonneg/hRe_inv to G̃ on the boundary), step 3 (showing
+  G̃ is DiffContOnCl), and step 4 (the derivative/continuity argument for G̃). -/
+  -- Once Gtilde : ℂ → ℂ is constructed with:
+  --   (a) DiffContOnCl ℂ Gtilde (Metric.ball 0 1)
+  --   (b) ∀ z ∈ Metric.sphere 0 1, 0 ≤ (Gtilde z).re
+  --   (c) ∃ w₀ ∈ Metric.ball 0 1, (Gtilde w₀).re < 0
+  -- the minimum principle (re_nonneg_of_frontier_re_nonneg) gives the contradiction.
+  suffices h : ∃ (Gtilde : ℂ → ℂ), DiffContOnCl ℂ Gtilde (Metric.ball 0 1) ∧
+      (∀ z ∈ Metric.sphere (0 : ℂ) 1, 0 ≤ (Gtilde z).re) ∧
+      (∃ w₀ ∈ Metric.ball (0 : ℂ) 1, (Gtilde w₀).re < 0) by
+    obtain ⟨Gt, hGt_dcl, hGt_bd, w₀, hw₀, hGt_neg⟩ := h
+    have hGt_min := re_nonneg_of_frontier_re_nonneg Metric.isBounded_ball Gt hGt_dcl
+      (by rwa [frontier_ball (0 : ℂ) (by norm_num : (1 : ℝ) ≠ 0)])
+    have hw₀_cl : w₀ ∈ closure (Metric.ball (0 : ℂ) 1) := by
+      rw [closure_ball (0 : ℂ) (by norm_num : (1 : ℝ) ≠ 0)]
+      exact Metric.ball_subset_closedBall hw₀
+    exact absurd (hGt_min w₀ hw₀_cl) (not_le.mpr hGt_neg)
+  -- Construction of Gtilde from the LMM data.
+  -- Gtilde(w) = G(1/w) where G(ζ) = σ(ζ)/ρ(ζ) - (ζ+1)/(2(ζ-1)).
+  -- Properties:
+  --   (a) DiffContOnCl: poles of G at roots of ρ (in |ζ| ≤ 1) map to |w| ≥ 1;
+  --       the singularity at ζ = 1 (w = 1) is removable (from order conditions).
+  --   (b) Re(Gtilde) ≥ 0 on |w| = 1: from hE_nonneg and hRe_inv.
+  --   (c) Gtilde(1) = 0, Gtilde'(1) = 1/12, so Gtilde(1-ε) ≈ -ε/12 < 0.
   sorry
 
 /-- For a zero-stable, A-stable LMM of order ≥ 3, derive False.
