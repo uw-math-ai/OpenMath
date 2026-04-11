@@ -30,9 +30,10 @@
 ## Chapter 2: Runge–Kutta Methods
 
 ### 2.1 Explicit Runge–Kutta Methods
-- [ ] **Definition**: Butcher tableau
-- [ ] **Theorem**: Order conditions for RK methods
-- [ ] **Example**: Classical RK4 method
+- [x] **Definition**: Butcher tableau (`OpenMath/RungeKutta.lean`)
+- [x] **Definition**: Consistency, explicit RK, order conditions up to order 4 (`OpenMath/RungeKutta.lean`)
+- [x] **Example**: Forward Euler, explicit midpoint, Heun's method as RK (`OpenMath/RungeKutta.lean`)
+- [x] **Example**: Classical RK4 method — consistency, explicit, order 4 (`OpenMath/RungeKutta.lean`)
 
 ### 2.2 Implicit Runge–Kutta Methods
 - [ ] **Definition**: Implicit RK methods
@@ -47,7 +48,9 @@
 
 ## Current Target
 
-**Next: Runge–Kutta methods (Chapter 2)**
+**Next: Implicit Runge–Kutta methods or Dahlquist equivalence theorem**
 
-Define Butcher tableaux, explicit RK methods, and prove order conditions for classical RK4.
-Alternative: formalize convergence definition and Dahlquist equivalence theorem.
+Options:
+- Define implicit RK methods and prove A-stability of implicit methods (e.g., implicit Euler as RK, Gauss–Legendre).
+- Formalize convergence definition and Dahlquist equivalence theorem (consistency + stability ⟺ convergence).
+- Attempt Dahlquist's second barrier proof (hard: requires boundary locus analysis).
