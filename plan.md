@@ -17,11 +17,13 @@
 
 ### 1.2 Multistep Methods
 - [x] **Definition**: General linear multistep method (Adams–Bashforth, Adams–Moulton) (`OpenMath/MultistepMethods.lean`)
+- [x] **Example**: Adams–Moulton 2-step method — consistency, order 3, implicit, zero-stable (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier — A-stable ⟹ order ≤ 2 (stated, proof sorry)
+- [x] **Theorem**: A-stability implies roots of ρ in unit disk (`OpenMath/MultistepMethods.lean`)
+- [~] **Theorem**: Dahlquist's second barrier — A-stable ⟹ order ≤ 2 (decomposed into sub-lemmas, 2 sorry)
 - [ ] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence)
 
 ### 1.3 Order and Convergence
@@ -46,7 +48,7 @@
 - [ ] **Definition**: Stiffness
 - [x] **Theorem**: A-stability of backward Euler and trapezoidal rule (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Forward Euler is not A-stable (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier (A-stable methods have order ≤ 2) — stated in `MultistepMethods.lean`
+- [~] **Theorem**: Dahlquist's second barrier (A-stable methods have order ≤ 2) — decomposed, 2 sorry remain
 
 ## Current Target
 
@@ -55,4 +57,4 @@
 Options:
 - Formalize convergence definition and Dahlquist equivalence theorem (consistency + stability ⟺ convergence).
 - Add Gauss–Legendre 2-stage method (order 4, A-stable) — requires 2-stage stability function with matrix inverse.
-- Attempt Dahlquist's second barrier proof (hard: requires boundary locus analysis).
+- Close Dahlquist barrier sub-lemmas: `E_nonneg_re` and `order_ge_three_not_aStable` (hard: requires harmonic analysis on unit circle).

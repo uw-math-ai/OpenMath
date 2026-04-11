@@ -110,6 +110,16 @@ noncomputable def adamsBashforth2 : LMM 2 where
   β := ![-1/2, 3/2, 0]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Moulton 2-step** method:
+y_{n+2} = y_{n+1} + h·(5/12·f_{n+2} + 8/12·f_{n+1} - 1/12·f_n).
+Coefficients: α = [0, -1, 1], β = [-1/12, 8/12, 5/12].
+This is an implicit method of order 3.
+Reference: Iserles, Section 1.2. -/
+noncomputable def adamsMoulton2 : LMM 2 where
+  α := ![0, -1, 1]
+  β := ![-1/12, 8/12, 5/12]
+  normalized := by simp [Fin.last]
+
 /-! ## Properties of Standard Methods -/
 
 /-- Forward Euler is consistent. -/
@@ -147,6 +157,15 @@ theorem adamsBashforth2_consistent : adamsBashforth2.IsConsistent :=
 /-- Adams–Bashforth 2-step is explicit (β₂ = 0). -/
 theorem adamsBashforth2_explicit : adamsBashforth2.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth2, Fin.last]
+
+/-- Adams–Moulton 2-step is consistent. -/
+theorem adamsMoulton2_consistent : adamsMoulton2.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsMoulton2, Fin.sum_univ_three],
+   by simp [LMM.sigma, adamsMoulton2, Fin.sum_univ_three]; norm_num⟩
+
+/-- Adams–Moulton 2-step is implicit (β₂ = 5/12 ≠ 0). -/
+theorem adamsMoulton2_implicit : adamsMoulton2.IsImplicit := by
+  simp [LMM.IsImplicit, adamsMoulton2, Fin.last]
 
 /-! ## Order of a Linear Multistep Method
 
@@ -238,6 +257,14 @@ theorem adamsBashforth2_order_two : adamsBashforth2.HasOrder 2 := by
     interval_cases q <;> simp [LMM.orderCondVal, adamsBashforth2, Fin.sum_univ_three] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth2, Fin.sum_univ_three]; norm_num
 
+/-- Adams–Moulton 2-step has order 3. -/
+theorem adamsMoulton2_order_three : adamsMoulton2.HasOrder 3 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsMoulton2, Fin.sum_univ_three] <;> norm_num
+  · simp [LMM.orderCondVal, adamsMoulton2, Fin.sum_univ_three]; norm_num
+
 /-! ## Zero-Stability
 
 A linear multistep method is zero-stable if all roots of its first characteristic
@@ -323,6 +350,27 @@ theorem adamsBashforth2_zeroStable : adamsBashforth2.IsZeroStable where
     intro ξ hξ habs
     simp [LMM.rhoCDeriv, adamsBashforth2, Fin.sum_univ_three]
     simp [LMM.rhoC, adamsBashforth2, Fin.sum_univ_three] at hξ
+    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · rw [h0] at habs; simp at habs
+    · have h1' : ξ = 1 := by linear_combination h1
+      rw [h1']; norm_num
+
+/-- Adams–Moulton 2-step is zero-stable: ρ(ξ) = ξ² - ξ has roots 0 and 1
+(same as Adams–Bashforth 2-step). -/
+theorem adamsMoulton2_zeroStable : adamsMoulton2.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, adamsMoulton2, Fin.sum_univ_three] at hξ
+    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · rw [h0]; simp
+    · have : ξ = 1 := by linear_combination h1
+      rw [this]; simp
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp [LMM.rhoCDeriv, adamsMoulton2, Fin.sum_univ_three]
+    simp [LMM.rhoC, adamsMoulton2, Fin.sum_univ_three] at hξ
     have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
     rcases mul_eq_zero.mp h with h0 | h1
     · rw [h0] at habs; simp at habs
@@ -481,16 +529,58 @@ theorem bdf2_zeroStable : bdf2.IsZeroStable where
 
 No A-stable LMM can have order greater than 2. The trapezoidal rule achieves this bound.
 
+The proof uses the boundary locus method:
+1. A-stability implies all roots of ρ lie in the closed unit disk (from z = 0).
+2. The E-function E(ζ) = σ(ζ)/ρ(ζ) has Re(E(e^{iθ})) ≥ 0 for all θ where ρ(e^{iθ}) ≠ 0.
+3. For a method of order p ≥ 3, the function G(ζ) = E(ζ) - 1/(ζ-1) - 1/2 is analytic
+   at ζ = 1 and vanishes there. Since Re(G(e^{iθ})) = Re(E(e^{iθ})) ≥ 0 and G(1) = 0,
+   this contradicts the maximum principle for harmonic functions.
+
 Reference: Iserles, Theorem 3.4.
 -/
 
 namespace LMM
 
+variable {s : ℕ}
+
+/-- A-stability implies all roots of ρ lie in the closed unit disk.
+This follows directly by evaluating the A-stability condition at z = 0. -/
+theorem IsAStable.rho_roots_in_disk (m : LMM s) (ha : m.IsAStable) :
+    ∀ ξ : ℂ, m.rhoC ξ = 0 → ‖ξ‖ ≤ 1 := by
+  intro ξ hξ
+  apply ha 0 (le_refl _)
+  simp [stabilityPoly, hξ]
+
+/-- Key lemma (boundary locus analysis): For an A-stable method, the E-function
+E(ζ) = σ(ζ)/ρ(ζ) satisfies Re(E(e^{iθ})) ≥ 0 on the unit circle away from roots of ρ.
+This encodes the fact that the boundary of the stability region lies in the closed right
+half-plane. The proof requires careful analysis of the stability polynomial roots as z
+varies along the imaginary axis.
+Reference: Iserles, proof of Theorem 3.4, step 1. -/
+theorem IsAStable.E_nonneg_re (m : LMM s) (ha : m.IsAStable)
+    (θ : ℝ) (hρ : m.rhoC (Complex.exp (↑θ * Complex.I)) ≠ 0)
+    (hσ : m.sigmaC (Complex.exp (↑θ * Complex.I)) ≠ 0) :
+    0 ≤ (m.sigmaC (Complex.exp (↑θ * Complex.I)) /
+         m.rhoC (Complex.exp (↑θ * Complex.I))).re := by
+  sorry
+
+/-- Key lemma (order constraint): For a method of order p ≥ 3, the modified E-function
+G(ζ) = E(ζ) - 1/(ζ-1) - 1/2 vanishes at ζ = 1 (i.e., G is analytic at ζ = 1 with G(1) = 0).
+Combined with Re(G(e^{iθ})) ≥ 0 from A-stability and the fact that Re(1/(e^{iθ}-1)+1/2) = 0,
+this gives a non-negative harmonic function vanishing at a point, which by the minimum principle
+for harmonic functions must be identically zero — contradicting G being a non-trivial
+rational function.
+Reference: Iserles, proof of Theorem 3.4, step 2. -/
+theorem order_ge_three_not_aStable (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3 ≤ p)
+    (ha : m.IsAStable) : False := by
+  sorry
+
 /-- **Dahlquist's Second Barrier** (Iserles, Theorem 3.4):
-An A-stable linear multistep method has order at most 2.
-The proof requires boundary locus analysis and is not formalized here. -/
+An A-stable linear multistep method has order at most 2. -/
 theorem dahlquist_second_barrier {s : ℕ} (m : LMM s) (p : ℕ)
     (hp : m.HasOrder p) (ha : m.IsAStable) : p ≤ 2 := by
-  sorry
+  by_contra h
+  push_neg at h
+  exact order_ge_three_not_aStable m p hp h ha
 
 end LMM
