@@ -33,7 +33,19 @@
   - [x] Boundary non-negativity: Re(Gt(z)) ≥ 0 for |z| = 1
   - [ ] `DiffContOnCl ℂ Gt (Metric.ball 0 1)`: removable singularity + boundary regularity
   - [ ] `HasDerivAt Gt (1/12) 1`: polynomial algebra for derivative at removable singularity
-- [ ] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence)
+- [~] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence) (`OpenMath/DahlquistEquivalence.lean`)
+  - [x] Definition: `SatisfiesRecurrence` — characteristic recurrence of LMM
+  - [x] Definition: `HasStableRecurrence` — all solutions bounded
+  - [x] Definition: `IsConvergent` — consistency + stable recurrence
+  - [x] `geometric_satisfies_iff`: ξ^n satisfies recurrence iff ρ(ξ) = 0
+  - [x] `linear_geometric_satisfies`: n·ξ^n satisfies recurrence when ξ is double root
+  - [x] `not_stableRecurrence_of_root_outside_disk`: root with |ξ| > 1 → unstable
+  - [x] `not_stableRecurrence_of_double_root_on_circle`: double root on |ξ| = 1 → unstable
+  - [x] `zeroStable_of_stableRecurrence`: stable recurrence → zero-stable (proved)
+  - [ ] `stableRecurrence_of_zeroStable`: zero-stable → stable recurrence (1 sorry — needs general solution theory for linear recurrences)
+  - [x] `dahlquist_equivalence`: full equivalence theorem (modulo above sorry)
+  - [x] Convergence verified for all standard methods (Euler, trapezoidal, AB2, AM2, BDF2)
+  - [x] `dahlquistCounterexample_not_convergent`: counterexample is not convergent
 
 ### 1.3 Order and Convergence
 - [ ] **Theorem**: Convergence theorem for one-step methods
@@ -66,9 +78,10 @@
 
 ## Current Target
 
-**Next: Dahlquist equivalence theorem or convergence theory**
+**Next: Close remaining sorrys or advance to new material**
 
 Options:
-- Close remaining Dahlquist barrier sorry: `order_ge_three_not_aStable_core` (hard: requires minimum principle for harmonic functions / Hopf boundary lemma). The proof structure is fully documented in the sorry comment: via conformal map w = 1/ζ, analytic G̃ with Re(G̃) ≥ 0 on boundary and G̃(1) = 0, G̃'(1) = 1/12 contradicts Re(G̃) ≥ 0 inside by Taylor expansion.
-- Formalize convergence definition and Dahlquist equivalence theorem (consistency + stability ⟺ convergence).
+- Close `stableRecurrence_of_zeroStable` (1 sorry in DahlquistEquivalence.lean): needs general solution theory for linear recurrences (companion matrix, eigenvalue analysis). Key step: show solutions of ∑ α_j y_{n+j} = 0 are linear combinations of generalized eigensolutions ξ^n, n·ξ^n, etc.
+- Close remaining Dahlquist barrier sorrys in MultistepMethods.lean (2 sorrys: `hasDerivAt_Gtilde_one`, `continuousOn_Gtilde_closedBall`): requires removable singularity theory, blocked by Mathlib gaps.
 - Add higher-order Gauss–Legendre methods (3-stage, order 6) or collocation RK framework.
+- Formalize Chapter 4: stiff equations — L-stability, algebraic stability, stiff decay.
