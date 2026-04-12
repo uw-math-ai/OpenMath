@@ -1,3 +1,10 @@
 import OpenMath.Basic
 import OpenMath.EulerConvergence
 import OpenMath.MultistepMethods
+import OpenMath.DahlquistEquivalence
+import OpenMath.Collocation
+import OpenMath.SDIRK
+import OpenMath.RadauIIA3
+import OpenMath.LobattoIIIC
+import OpenMath.LobattoIIIA
+import OpenMath.LobattoIIIB
