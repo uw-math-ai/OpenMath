@@ -10,37 +10,33 @@ with zero progress. An issue file has been written.
 ## Dahlquist equivalence theorem (Cycles 35-36)
 
 The Dahlquist equivalence theorem is formalized in `OpenMath/DahlquistEquivalence.lean`.
-`stableRecurrence_of_zeroStable` has been decomposed into structured sub-lemmas using
-Mathlib's `LinearRecurrence` infrastructure.
+**1 sorry remains**: `uniformly_bounded_tupleSucc_iterates` — the spectral bound.
+See `.prover-state/issues/spectral_bound_tupleSucc.md` for detailed analysis.
+This requires 3-5 cycles of eigenspace infrastructure work. Defer until Mathlib gaps shrink.
 
-**1 sorry remains**: `uniformly_bounded_tupleSucc_iterates` — the spectral bound on the
-companion operator `tupleSucc`. This requires: under the root condition (zero-stability),
-‖tupleSucc^n(v)‖ ≤ M·‖v‖ for all n, v.
+## Chapter 4: Stiff Equations (Cycle 38 — DONE)
 
-**Proved in Cycle 36**:
-- `toLinearRecurrence`: LMM → `LinearRecurrence ℂ`
-- `satisfiesRecurrence_iff_isSolution`: equivalence of solution predicates
-- `tupleSucc_iterate_eq_mkSol`: state vector at time n = tupleSucc^n(init)
-- `stableRecurrence_of_zeroStable`: fully proved modulo spectral bound
+`OpenMath/StiffEquations.lean` now contains:
+- L-stability definitions and proofs (backward Euler L-stable, midpoint/GL2 NOT L-stable)
+- Algebraic stability definitions and proofs (backward Euler, midpoint, GL2, Radau IIA)
+- **Radau IIA 2-stage**: definition, consistency, order 3 (not 4), stability function,
+  A-stability, stiff decay, L-stability — all sorry-free
 
-## Current target: Close `uniformly_bounded_tupleSucc_iterates` OR advance to new material
+## Current target: Continue Chapter 4 OR advance to new material
 
-### Option A: Close the spectral bound
-The sorry needs: spectral radius ≤ 1 with semisimple unit eigenvalues → bounded operator powers.
-Possible approaches:
-1. **Cayley-Hamilton**: `aeval_self_charpoly` expresses tupleSucc^n mod charpoly as
-   polynomial of degree < s in tupleSucc. Bound the coefficients under the root condition.
-2. **Generalized eigenspace decomposition**: Mathlib has `Module.End.genEigenspace`.
-   Decompose tupleSucc and bound each component.
-3. **Direct companion matrix**: Define the s×s matrix, relate charpoly to ρ, bound powers.
+### Option A: More stiff equations
+- **SDIRK methods** (Section 4.3) — singly-diagonally-implicit RK, L-stability proof
+- **BDF methods** (Section 4.5) — backward differentiation formulae, A(α)-stability
+- **Stiff order conditions** — B-series for stiff problems
 
-### Option B: Move to new material
-- **Chapter 4: Stiff equations** — L-stability, algebraic stability, stiff decay.
-- **Collocation methods** (Section 2.3) — define collocation RK, prove order conditions.
-- **Higher-order Gauss-Legendre** — 3-stage GL method, order 6.
+### Option B: Collocation methods (Section 2.3)
+- Define collocation RK methods
+- Prove collocation → RK equivalence
+- Show Gauss/Radau/Lobatto nodes give specific methods
 
-### If blocked:
-Write an issue file and move to Option B.
+### Option C: Higher-order methods
+- 3-stage Gauss-Legendre (order 6)
+- Radau IIA 3-stage (order 5)
 
 ## Rules reminder
 - Sorry-first: write full proof structure with sorry, verify compilation, then close sorrys.
