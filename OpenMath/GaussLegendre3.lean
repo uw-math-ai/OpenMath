@@ -86,6 +86,28 @@ theorem rkGaussLegendre3_D1 : rkGaussLegendre3.SatisfiesD 1 := by
   subst hk; fin_cases j <;>
     simp [rkGaussLegendre3, Fin.sum_univ_three] <;> nlinarith [sqrt15_sq]
 
+/-- GL3 satisfies B(6): the 3-point Gauss–Legendre quadrature integrates polynomials
+of degree ≤ 5 exactly (2s−1 = 5 for s=3). This is the maximal quadrature order B(2s). -/
+theorem rkGaussLegendre3_B6 : rkGaussLegendre3.SatisfiesB 6 := by
+  intro k hk1 hk2
+  interval_cases k <;> simp [rkGaussLegendre3, Fin.sum_univ_three] <;> nlinarith [sqrt15_sq]
+
+/-- GL3 satisfies D(3): ∑ᵢ bᵢ cᵢ^{k-1} aᵢⱼ = bⱼ(1 − cⱼ^k)/k for k = 1,2,3 and all j.
+This is the maximal D condition for an s=3 stage Gauss method. -/
+theorem rkGaussLegendre3_D3 : rkGaussLegendre3.SatisfiesD 3 := by
+  intro k hk1 hk2 j
+  interval_cases k <;> fin_cases j <;>
+    simp [rkGaussLegendre3, Fin.sum_univ_three] <;> nlinarith [sqrt15_sq]
+
+/-! ## Order ≥ 5
+
+GL3 has order ≥ 5 via B(5) ∧ C(3) ∧ D(1). In fact GL3 has order 6 (= 2s),
+but proving order ≥ 6 requires defining the 20 sixth-order conditions. -/
+
+theorem rkGaussLegendre3_order5 : rkGaussLegendre3.HasOrderGe5 :=
+  ButcherTableau.HasOrderGe5_of_B5_C3_D1 _
+    (rkGaussLegendre3_B6.mono (by omega)) rkGaussLegendre3_C3 rkGaussLegendre3_D1
+
 /-! ## Stability Function
 
 The GL3 stability function is the (3,3)-diagonal Padé approximant to eᶻ:

@@ -126,6 +126,64 @@ def HasOrderGe4 (t : ButcherTableau s) : Prop :=
   t.order1 ∧ t.order2 ∧ t.order3a ∧ t.order3b ∧
   t.order4a ∧ t.order4b ∧ t.order4c ∧ t.order4d
 
+/-! ### Fifth-Order Conditions
+
+The 9 fifth-order conditions correspond to the 9 rooted trees of order 5.
+Reference: Hairer–Nørsett–Wanner, *Solving ODEs I*, Table II.2.1;
+Iserles, Section 2.3.
+-/
+
+/-- **Fifth-order condition (τ₁)**: ∑ bᵢ cᵢ⁴ = 1/5. Tree: [•⁴]. -/
+def order5a (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i ^ 4 = 1 / 5
+
+/-- **Fifth-order condition (τ₂)**: ∑ bᵢ cᵢ² (∑ aᵢⱼ cⱼ) = 1/10. Tree: [•²,[•]]. -/
+def order5b (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i ^ 2 * (∑ j : Fin s, t.A i j * t.c j) = 1 / 10
+
+/-- **Fifth-order condition (τ₃)**: ∑ bᵢ (∑ aᵢⱼ cⱼ)² = 1/20. Tree: [[•]²]. -/
+def order5c (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * (∑ j : Fin s, t.A i j * t.c j) ^ 2 = 1 / 20
+
+/-- **Fifth-order condition (τ₄)**: ∑ bᵢ cᵢ (∑ aᵢⱼ cⱼ²) = 1/15. Tree: [•,[•²]]. -/
+def order5d (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i * (∑ j : Fin s, t.A i j * t.c j ^ 2) = 1 / 15
+
+/-- **Fifth-order condition (τ₅)**: ∑ bᵢ (∑ aᵢⱼ cⱼ³) = 1/20. Tree: [[•³]]. -/
+def order5e (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s, t.b i * t.A i j * t.c j ^ 3 = 1 / 20
+
+/-- **Fifth-order condition (τ₆)**: ∑ bᵢ cᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ cₖ)) = 1/30.
+Tree: [•,[[•]]]. -/
+def order5f (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i *
+    (∑ j : Fin s, t.A i j * (∑ k : Fin s, t.A j k * t.c k)) = 1 / 30
+
+/-- **Fifth-order condition (τ₇)**: ∑ bᵢ (∑ⱼ aᵢⱼ cⱼ (∑ₖ aⱼₖ cₖ)) = 1/40.
+Tree: [[•,[•]]]. -/
+def order5g (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * t.c j * (∑ k : Fin s, t.A j k * t.c k) = 1 / 40
+
+/-- **Fifth-order condition (τ₈)**: ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ cₖ²)) = 1/60.
+Tree: [[[•²]]]. -/
+def order5h (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * (∑ k : Fin s, t.A j k * t.c k ^ 2) = 1 / 60
+
+/-- **Fifth-order condition (τ₉)**: ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ (∑ₗ aₖₗ cₗ))) = 1/120.
+Tree: [[[[•]]]]. -/
+def order5i (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+    t.b i * t.A i j * t.A j k * (∑ l : Fin s, t.A k l * t.c l) = 1 / 120
+
+/-- A method has **order at least 5** if it satisfies all order conditions through
+fifth order (17 conditions total: 8 from order 4 + 9 new). -/
+def HasOrderGe5 (t : ButcherTableau s) : Prop :=
+  t.HasOrderGe4 ∧
+  t.order5a ∧ t.order5b ∧ t.order5c ∧ t.order5d ∧ t.order5e ∧
+  t.order5f ∧ t.order5g ∧ t.order5h ∧ t.order5i
+
 /-- A consistent method has order at least 1. -/
 theorem IsConsistent.hasOrderGe1 {t : ButcherTableau s} (h : t.IsConsistent) :
     t.HasOrderGe1 :=

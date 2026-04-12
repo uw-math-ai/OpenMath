@@ -1,3 +1,4 @@
+import OpenMath.Collocation
 import OpenMath.StiffEquations
 
 /-!
@@ -81,31 +82,40 @@ theorem rkRadauIIA3_not_explicit : ¬rkRadauIIA3.IsExplicit := by
   intro h; have := h 0 0 (le_refl _); simp [rkRadauIIA3] at this
   nlinarith [sqrt6_sq]
 
-/-! ## Order Conditions
+/-! ## Order via Simplifying Assumptions
 
-The Radau IIA 3-stage method has order 2s-1 = 5. We verify the order conditions
-through fourth order (8 conditions). The method also satisfies order 5 conditions
-but those are not yet defined in our framework.
+The Radau IIA 3-stage method has order 2s−1 = 5. We prove this via the simplifying
+assumptions B(5), C(3), D(1) using the theorem B(5)∧C(3)∧D(1) → order ≥ 5.
 -/
 
-/-- Radau IIA 3-stage has order at least 4. -/
-theorem rkRadauIIA3_order4 : rkRadauIIA3.HasOrderGe4 := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · simp [ButcherTableau.order1, rkRadauIIA3, Fin.sum_univ_three]; ring
-  · simp [ButcherTableau.order2, rkRadauIIA3, Fin.sum_univ_three]
-    nlinarith [sqrt6_sq]
-  · simp [ButcherTableau.order3a, rkRadauIIA3, Fin.sum_univ_three]
-    nlinarith [sqrt6_sq]
-  · simp [ButcherTableau.order3b, rkRadauIIA3, Fin.sum_univ_three]
-    nlinarith [sqrt6_sq]
-  · simp [ButcherTableau.order4a, rkRadauIIA3, Fin.sum_univ_three]
-    nlinarith [sqrt6_sq, sqrt6_pos, sqrt6_nonneg, mul_self_nonneg (Real.sqrt 6)]
-  · simp [ButcherTableau.order4b, rkRadauIIA3, Fin.sum_univ_three]
-    nlinarith [sqrt6_sq]
-  · simp [ButcherTableau.order4c, rkRadauIIA3, Fin.sum_univ_three]
-    nlinarith [sqrt6_sq]
-  · simp [ButcherTableau.order4d, rkRadauIIA3, Fin.sum_univ_three]
-    nlinarith [sqrt6_sq]
+/-- Radau IIA 3-stage satisfies B(5): Radau quadrature on [0,1] with s points
+integrates polynomials of degree ≤ 2s−2 = 4 exactly. -/
+theorem rkRadauIIA3_B5 : rkRadauIIA3.SatisfiesB 5 := by
+  intro k hk1 hk2
+  interval_cases k <;> simp [rkRadauIIA3, Fin.sum_univ_three] <;> nlinarith [sqrt6_sq]
+
+/-- Radau IIA 3-stage satisfies C(3): collocation with s=3 nodes gives C(s). -/
+theorem rkRadauIIA3_C3 : rkRadauIIA3.SatisfiesC 3 := by
+  intro k hk1 hk2 i
+  interval_cases k <;> fin_cases i <;>
+    simp [rkRadauIIA3, Fin.sum_univ_three] <;> nlinarith [sqrt6_sq]
+
+/-- Radau IIA 3-stage satisfies D(1): ∑ᵢ bᵢ aᵢⱼ = bⱼ(1−cⱼ). -/
+theorem rkRadauIIA3_D1 : rkRadauIIA3.SatisfiesD 1 := by
+  intro k hk1 hk2 j
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases j <;>
+    simp [rkRadauIIA3, Fin.sum_univ_three] <;> nlinarith [sqrt6_sq]
+
+/-- Radau IIA 3-stage has order at least 4 (via B(4)∧C(3)). -/
+theorem rkRadauIIA3_order4 : rkRadauIIA3.HasOrderGe4 :=
+  ButcherTableau.HasOrderGe4_of_B4_C3 _ (rkRadauIIA3_B5.mono (by omega)) rkRadauIIA3_C3
+
+/-- **Radau IIA 3-stage has order at least 5** (= 2s−1 for s=3),
+the maximum possible for a Radau method.
+Proved via B(5) ∧ C(3) ∧ D(1). -/
+theorem rkRadauIIA3_order5 : rkRadauIIA3.HasOrderGe5 :=
+  ButcherTableau.HasOrderGe5_of_B5_C3_D1 _ rkRadauIIA3_B5 rkRadauIIA3_C3 rkRadauIIA3_D1
 
 /-! ## Stability Function
 
