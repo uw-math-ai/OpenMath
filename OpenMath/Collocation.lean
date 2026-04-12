@@ -247,6 +247,96 @@ theorem HasOrderGe4_of_B4_C3 (t : ButcherTableau s) (hB : t.SatisfiesB 4)
       rw [Finset.mul_sum]; congr 1; ext i; ring
     rw [this, hB4]; ring
 
+/-- **B(4) ∧ C(2) ∧ D(1) → order ≥ 4.**
+
+This alternative to `HasOrderGe4_of_B4_C3` uses D(1) instead of C(3).
+The key insights:
+- order4c: swap sums, apply D(1) to get ∑ bⱼ cⱼ²(1-cⱼ) = 1/3 - 1/4 = 1/12
+- order4d: use C(2) first, then reduce to order4c
+
+This is needed for Lobatto IIIC methods which satisfy C(2) and D(1) but not C(3).
+Reference: Hairer–Nørsett–Wanner, Theorem IV.5.1. -/
+theorem HasOrderGe4_of_B4_C2_D1 (t : ButcherTableau s) (hB : t.SatisfiesB 4)
+    (hC : t.SatisfiesC 2) (hD : t.SatisfiesD 1) : t.HasOrderGe4 := by
+  have hOrd3 := HasOrderGe3_of_B3_C2 t (hB.mono (by omega)) hC
+  refine ⟨hOrd3.1, hOrd3.2.1, hOrd3.2.2.1, hOrd3.2.2.2, ?_, ?_, ?_, ?_⟩
+  · -- order4a: ∑ bᵢ cᵢ³ = 1/4, from B(4) at k=4
+    have h := hB 4 (by omega) le_rfl
+    simp [order4a] at h ⊢
+    convert h using 1
+  · -- order4b: ∑ bᵢ cᵢ (∑ aᵢⱼ cⱼ) = 1/8, using C(2)
+    have hC2 : ∀ i : Fin s, ∑ j, t.A i j * t.c j = t.c i ^ 2 / 2 := by
+      intro i; have h := hC 2 (by omega) le_rfl i; simpa using h
+    have hB4 : ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4 := by
+      have h := hB 4 (by omega) le_rfl; simpa using h
+    simp only [order4b]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i * ∑ j, t.A i j * t.c j = t.b i * t.c i * (t.c i ^ 2 / 2) := by
+      intro i; rw [hC2 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * t.c i * (t.c i ^ 2 / 2) =
+        (1 / 2) * ∑ i : Fin s, t.b i * t.c i ^ 3 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB4]; ring
+  · -- order4c: ∑ bᵢ aᵢⱼ cⱼ² = 1/12, using D(1)
+    -- Swap sums: ∑ᵢⱼ bᵢ aᵢⱼ cⱼ² = ∑ⱼ cⱼ² (∑ᵢ bᵢ aᵢⱼ) = ∑ⱼ cⱼ² bⱼ(1-cⱼ)
+    have hD1 : ∀ j : Fin s, ∑ i, t.b i * t.A i j = t.b j * (1 - t.c j) := by
+      intro j
+      have h := hD 1 (by omega) le_rfl j
+      simpa using h
+    have hB3 : ∑ i : Fin s, t.b i * t.c i ^ 2 = 1 / 3 := by
+      have h := hB 3 (by omega) (by omega); simpa using h
+    have hB4 : ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4 := by
+      have h := hB 4 (by omega) le_rfl; simpa using h
+    simp only [order4c]
+    -- Swap sums: ∑ᵢ ∑ⱼ bᵢ aᵢⱼ cⱼ² = ∑ⱼ cⱼ² ∑ᵢ bᵢ aᵢⱼ
+    rw [Finset.sum_comm]
+    have step : ∀ j : Fin s,
+        ∑ i, t.b i * t.A i j * t.c j ^ 2 = t.c j ^ 2 * ∑ i, t.b i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [step j, hD1 j]
+    -- Now ∑ⱼ cⱼ² · bⱼ(1-cⱼ) = ∑ bⱼ cⱼ² - ∑ bⱼ cⱼ³ = 1/3 - 1/4 = 1/12
+    have : ∑ j : Fin s, t.c j ^ 2 * (t.b j * (1 - t.c j)) =
+        ∑ j, t.b j * t.c j ^ 2 - ∑ j, t.b j * t.c j ^ 3 := by
+      rw [← Finset.sum_sub_distrib]; congr 1; ext j; ring
+    rw [this, hB3, hB4]; ring
+  · -- order4d: ∑ᵢⱼₖ bᵢ aᵢⱼ aⱼₖ cₖ = 1/24, using C(2) then order4c
+    -- Strategy: C(2) collapses the inner sum, then we get (1/2) · order4c = 1/24
+    have hC2 : ∀ j : Fin s, ∑ k, t.A j k * t.c k = t.c j ^ 2 / 2 := by
+      intro j; have h := hC 2 (by omega) le_rfl j; simpa using h
+    -- First show order4c = 1/12 using D(1)
+    have hD1' : ∀ j : Fin s, ∑ i, t.b i * t.A i j = t.b j * (1 - t.c j) := by
+      intro j; have h := hD 1 (by omega) le_rfl j; simpa using h
+    have hB3' : ∑ i : Fin s, t.b i * t.c i ^ 2 = 1 / 3 := by
+      have h := hB 3 (by omega) (by omega); simpa using h
+    have hB4' : ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4 := by
+      have h := hB 4 (by omega) le_rfl; simpa using h
+    have h4c : ∑ i : Fin s, ∑ j, t.b i * t.A i j * t.c j ^ 2 = 1 / 12 := by
+      rw [Finset.sum_comm]
+      have : ∀ j : Fin s,
+          ∑ i, t.b i * t.A i j * t.c j ^ 2 = t.c j ^ 2 * ∑ i, t.b i * t.A i j := by
+        intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+      simp_rw [this]
+      conv_lhs => arg 2; ext j; rw [hD1' j]
+      have : ∑ j : Fin s, t.c j ^ 2 * (t.b j * (1 - t.c j)) =
+          ∑ j, t.b j * t.c j ^ 2 - ∑ j, t.b j * t.c j ^ 3 := by
+        rw [← Finset.sum_sub_distrib]; congr 1; ext j; ring
+      rw [this, hB3', hB4']; ring
+    simp only [order4d]
+    -- Step 1: collapse innermost sum using C(2)
+    have step1 : ∀ i j : Fin s,
+        ∑ k, t.b i * t.A i j * t.A j k * t.c k =
+        t.b i * t.A i j * (∑ k, t.A j k * t.c k) := by
+      intro i j; rw [Finset.mul_sum]; congr 1; ext k; ring
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step1 i j, hC2 j]
+    -- Step 2: factor out 1/2
+    have step2 : ∀ i : Fin s,
+        ∑ j, t.b i * t.A i j * (t.c j ^ 2 / 2) =
+        (1 / 2) * ∑ j, t.b i * t.A i j * t.c j ^ 2 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step2 i]
+    rw [← Finset.mul_sum, h4c]; ring
+
 /-! ## Verification for Standard Methods -/
 
 section BackwardEuler
