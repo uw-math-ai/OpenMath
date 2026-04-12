@@ -80,12 +80,24 @@
 - [~] **Theorem**: Dahlquist's second barrier (A-stable + zero-stable ⟹ order ≤ 2) — 1 sorry remains (`order_ge_three_not_aStable_core`)
 - [x] **Counterexample**: A-stable order-3 method without zero-stability (`dahlquistCounterexample`)
 
+### BDF Methods (Section 4.5)
+- [x] **BDF3** (3-step backward differentiation formula) (`OpenMath/MultistepMethods.lean`)
+  - [x] Definition: α = [-2/11, 9/11, -18/11, 1], β = [0, 0, 0, 6/11]
+  - [x] Consistency, order 3, implicit
+  - [x] Zero-stability (triangle inequality + factoring ρ)
+  - [x] Convergence via Dahlquist equivalence (`OpenMath/DahlquistEquivalence.lean`)
+- [~] **BDF4** (4-step backward differentiation formula) (`OpenMath/MultistepMethods.lean`)
+  - [x] Definition: α = [3/25, -16/25, 36/25, -48/25, 1], β = [0, 0, 0, 0, 12/25]
+  - [x] Consistency, order 4, implicit
+  - [ ] Zero-stability (2 sorrys: cubic root analysis needs Schur-Cohn criterion)
+
 ## Current Target
 
-**Next: Close remaining sorrys or advance to new material**
+**Next: Close BDF4 zero-stability or advance to new material**
 
 Options:
-- Close `stableRecurrence_of_zeroStable` (1 sorry in DahlquistEquivalence.lean): needs general solution theory for linear recurrences (companion matrix, eigenvalue analysis). Key step: show solutions of ∑ α_j y_{n+j} = 0 are linear combinations of generalized eigensolutions ξ^n, n·ξ^n, etc.
-- Close remaining Dahlquist barrier sorrys in MultistepMethods.lean (2 sorrys: `hasDerivAt_Gtilde_one`, `continuousOn_Gtilde_closedBall`): requires removable singularity theory, blocked by Mathlib gaps.
-- Add higher-order Gauss–Legendre methods (3-stage, order 6) or collocation RK framework.
-- Formalize Chapter 4: stiff equations — L-stability, algebraic stability, stiff decay.
+- Close BDF4 `roots_in_disk` and `unit_roots_simple` sorrys: needs Schur-Cohn stability criterion or explicit root analysis of 25ξ³-23ξ²+13ξ-3.
+- Add BDF5, BDF6 definitions and properties.
+- Add A(α)-stability definitions and prove BDF3-6 are A(α)-stable.
+- Add SDIRK methods (Section 4.3): singly-diagonally-implicit RK, L-stability.
+- Collocation methods (Section 2.3): define collocation RK framework.

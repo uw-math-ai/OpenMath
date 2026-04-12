@@ -525,6 +525,170 @@ theorem bdf2_zeroStable : bdf2.IsZeroStable where
     · have hξ13 : ξ = 1/3 := by linear_combination h1
       rw [hξ13] at habs; norm_num at habs
 
+/-! ## BDF3 (Backward Differentiation Formula, 3-step)
+
+The BDF3 method: y_{n+3} - (18/11)y_{n+2} + (9/11)y_{n+1} - (2/11)y_n = (6/11)h·f_{n+3}.
+It is implicit, has order 3, and is zero-stable.
+Roots of ρ: ξ = 1 (simple) and roots of 11ξ² - 7ξ + 2 = 0 with |ξ|² = 2/11 < 1.
+
+Reference: Iserles, Section 4.5.
+-/
+
+/-- **BDF3** (Backward Differentiation Formula, 3-step):
+  y_{n+3} - (18/11)y_{n+2} + (9/11)y_{n+1} - (2/11)y_n = (6/11)h·f_{n+3}.
+  Coefficients: α = [-2/11, 9/11, -18/11, 1], β = [0, 0, 0, 6/11]. -/
+noncomputable def bdf3 : LMM 3 where
+  α := ![-2/11, 9/11, -18/11, 1]
+  β := ![0, 0, 0, 6/11]
+  normalized := by simp [Fin.last]
+
+/-- BDF3 is consistent. -/
+theorem bdf3_consistent : bdf3.IsConsistent :=
+  ⟨by simp [LMM.rho, bdf3, Fin.sum_univ_four]; norm_num,
+   by simp [LMM.sigma, bdf3, Fin.sum_univ_four]; norm_num⟩
+
+/-- BDF3 has order 3. -/
+theorem bdf3_order_three : bdf3.HasOrder 3 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, bdf3, Fin.sum_univ_four] <;> norm_num
+  · simp [LMM.orderCondVal, bdf3, Fin.sum_univ_four]; norm_num
+
+/-- BDF3 is implicit (β₃ = 6/11 ≠ 0). -/
+theorem bdf3_implicit : bdf3.IsImplicit := by
+  simp [LMM.IsImplicit, bdf3, Fin.last]
+
+/-- BDF3 is zero-stable: ρ(ξ) = ξ³ - (18/11)ξ² + (9/11)ξ - 2/11.
+  Factoring: 11·ρ(ξ) = (ξ-1)(11ξ² - 7ξ + 2).
+  Root ξ = 1 is simple (ρ'(1) = 6/11 ≠ 0).
+  Roots of 11ξ² - 7ξ + 2 = 0 satisfy |ξ|² = 2/11 < 1
+  (triangle inequality: 11‖ξ‖² = ‖7ξ-2‖ ≤ 7‖ξ‖+2, but 11t²-7t-2 > 0 for t ≥ 1). -/
+theorem bdf3_zeroStable : bdf3.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp only [LMM.rhoC, bdf3] at hξ
+    simp [Fin.sum_univ_four] at hξ
+    -- 11·ρ(ξ) = (ξ-1)(11ξ²-7ξ+2) = 0
+    have h11 : (ξ - 1) * (11 * ξ ^ 2 - 7 * ξ + 2) = 0 := by linear_combination 11 * hξ
+    rcases mul_eq_zero.mp h11 with h0 | h1
+    · -- ξ = 1
+      have : ξ = 1 := by linear_combination h0
+      rw [this]; simp
+    · -- 11ξ²-7ξ+2 = 0 ⟹ ‖ξ‖ < 1
+      -- From h1: 11*ξ² = 7*ξ - 2
+      have h_eq : (11 : ℂ) * ξ ^ 2 = 7 * ξ - 2 := by linear_combination h1
+      -- 11*‖ξ‖² = ‖11*ξ²‖ = ‖7*ξ - 2‖ ≤ 7*‖ξ‖ + 2 by triangle inequality
+      have h_norm_eq : 11 * ‖ξ‖ ^ 2 = ‖7 * ξ - 2‖ := by
+        have := congr_arg norm h_eq
+        rwa [norm_mul, norm_pow, show ‖(11 : ℂ)‖ = 11 from by norm_num] at this
+      have h_tri : ‖(7 : ℂ) * ξ - 2‖ ≤ 7 * ‖ξ‖ + 2 :=
+        calc ‖(7 : ℂ) * ξ - 2‖ ≤ ‖(7 : ℂ) * ξ‖ + ‖(2 : ℂ)‖ := norm_sub_le _ _
+          _ = 7 * ‖ξ‖ + 2 := by
+              rw [norm_mul]; norm_num
+      -- So 11*‖ξ‖² ≤ 7*‖ξ‖ + 2
+      have h_ineq : 11 * ‖ξ‖ ^ 2 ≤ 7 * ‖ξ‖ + 2 := by linarith
+      -- For t = ‖ξ‖ ≥ 0, 11t²-7t-2 ≤ 0 implies t < 1 (since 11-7-2=2>0)
+      by_contra h_gt
+      push_neg at h_gt
+      nlinarith [norm_nonneg ξ]
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp only [LMM.rhoCDeriv, bdf3]
+    simp only [LMM.rhoC, bdf3] at hξ
+    simp [Fin.sum_univ_four] at hξ
+    have h11 : (ξ - 1) * (11 * ξ ^ 2 - 7 * ξ + 2) = 0 := by linear_combination 11 * hξ
+    rcases mul_eq_zero.mp h11 with h0 | h1
+    · -- ξ = 1, show ρ'(1) = 6/11 ≠ 0
+      have hξ1 : ξ = 1 := by linear_combination h0
+      rw [hξ1]
+      simp [Fin.sum_univ_four]; norm_num
+    · -- other roots have |ξ|² = 2/11 < 1, contradicts |ξ| = 1
+      exfalso
+      have h_eq : (11 : ℂ) * ξ ^ 2 = 7 * ξ - 2 := by linear_combination h1
+      have h_norm_eq : 11 * ‖ξ‖ ^ 2 = ‖7 * ξ - 2‖ := by
+        have := congr_arg norm h_eq
+        rwa [norm_mul, norm_pow, show ‖(11 : ℂ)‖ = 11 from by norm_num] at this
+      rw [habs] at h_norm_eq
+      simp at h_norm_eq
+      -- 11 = ‖7*ξ - 2‖, but ‖7*ξ - 2‖ ≤ 9
+      have h_tri : ‖(7 : ℂ) * ξ - 2‖ ≤ 7 * ‖ξ‖ + 2 :=
+        calc ‖(7 : ℂ) * ξ - 2‖ ≤ ‖(7 : ℂ) * ξ‖ + ‖(2 : ℂ)‖ := norm_sub_le _ _
+          _ = 7 * ‖ξ‖ + 2 := by rw [norm_mul]; norm_num
+      rw [habs] at h_tri
+      linarith
+
+/-! ## BDF4 (Backward Differentiation Formula, 4-step)
+
+The BDF4 method: y_{n+4} - (48/25)y_{n+3} + (36/25)y_{n+2} - (16/25)y_{n+1} + (3/25)y_n
+  = (12/25)h·f_{n+4}.
+It is implicit, has order 4, and is zero-stable.
+
+Reference: Iserles, Section 4.5.
+-/
+
+/-- **BDF4** (Backward Differentiation Formula, 4-step):
+  y_{n+4} - (48/25)y_{n+3} + (36/25)y_{n+2} - (16/25)y_{n+1} + (3/25)y_n = (12/25)h·f_{n+4}.
+  Coefficients: α = [3/25, -16/25, 36/25, -48/25, 1], β = [0, 0, 0, 0, 12/25]. -/
+noncomputable def bdf4 : LMM 4 where
+  α := ![3/25, -16/25, 36/25, -48/25, 1]
+  β := ![0, 0, 0, 0, 12/25]
+  normalized := by simp [Fin.last]
+
+/-- BDF4 is consistent. -/
+theorem bdf4_consistent : bdf4.IsConsistent :=
+  ⟨by simp [LMM.rho, bdf4, Fin.sum_univ_five]; norm_num,
+   by simp [LMM.sigma, bdf4, Fin.sum_univ_five]; norm_num⟩
+
+/-- BDF4 has order 4. -/
+theorem bdf4_order_four : bdf4.HasOrder 4 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, bdf4, Fin.sum_univ_five] <;> norm_num
+  · simp [LMM.orderCondVal, bdf4, Fin.sum_univ_five]; norm_num
+
+/-- BDF4 is implicit (β₄ = 12/25 ≠ 0). -/
+theorem bdf4_implicit : bdf4.IsImplicit := by
+  simp [LMM.IsImplicit, bdf4, Fin.last]
+
+/-- BDF4 is zero-stable: ρ(ξ) = ξ⁴ - (48/25)ξ³ + (36/25)ξ² - (16/25)ξ + 3/25.
+  Factoring: 25·ρ(ξ) = (ξ-1)(25ξ³ - 23ξ² + 13ξ - 3).
+  Root ξ = 1 is simple (ρ'(1) = 12/25 ≠ 0).
+  The cubic 25ξ³ - 23ξ² + 13ξ - 3 has all roots strictly inside the unit disk:
+  - Real roots: p is strictly increasing (p' has Δ < 0), p(0) < 0, p(1) > 0 → real root ∈ (0,1).
+  - Complex roots: conjugate pair with |ξ|² = 3/(25r) < 1 since r > 3/25.
+  - No roots on unit circle: eliminating between p(ξ)=0 and p(1/ξ̄)=0 yields
+    32z²-67z+77=0 whose roots have |z|² = 77/32 ≠ 1, contradiction. -/
+theorem bdf4_zeroStable : bdf4.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp only [LMM.rhoC, bdf4] at hξ
+    simp [Fin.sum_univ_five] at hξ
+    have h25 : (ξ - 1) * (25 * ξ ^ 3 - 23 * ξ ^ 2 + 13 * ξ - 3) = 0 := by
+      linear_combination 25 * hξ
+    rcases mul_eq_zero.mp h25 with h0 | h1
+    · have : ξ = 1 := by linear_combination h0
+      rw [this]; simp
+    · -- Cubic 25ξ³-23ξ²+13ξ-3=0: all roots are inside unit disk.
+      -- Requires Schur-Cohn / Jury stability criterion not available in Mathlib.
+      sorry
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp only [LMM.rhoCDeriv, bdf4]
+    simp only [LMM.rhoC, bdf4] at hξ
+    simp [Fin.sum_univ_five] at hξ
+    have h25 : (ξ - 1) * (25 * ξ ^ 3 - 23 * ξ ^ 2 + 13 * ξ - 3) = 0 := by
+      linear_combination 25 * hξ
+    rcases mul_eq_zero.mp h25 with h0 | h1
+    · have hξ1 : ξ = 1 := by linear_combination h0
+      rw [hξ1]
+      simp [Fin.sum_univ_five]; norm_num
+    · -- Cubic has no roots on the unit circle.
+      -- Proof outline: eliminate between p(ξ)=0 and conjugate/reversed equation,
+      -- derive quadratic 32z²-67z+77=0 whose solutions have |z|²=77/32≠1.
+      sorry
+
 /-! ## Dahlquist's Second Barrier
 
 No A-stable LMM can have order greater than 2. The trapezoidal rule achieves this bound.

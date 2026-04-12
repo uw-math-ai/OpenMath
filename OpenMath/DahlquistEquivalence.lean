@@ -423,6 +423,11 @@ theorem adamsMoulton2_convergent : adamsMoulton2.IsConvergent :=
 theorem bdf2_convergent : bdf2.IsConvergent :=
   (dahlquist_equivalence bdf2).mpr ⟨bdf2_consistent, bdf2_zeroStable⟩
 
+/-- BDF3 is convergent: consistent (Section 4.5) and zero-stable
+  (ρ has roots at 1 (simple) and two roots with |ξ|² = 2/11 < 1). -/
+theorem bdf3_convergent : bdf3.IsConvergent :=
+  (dahlquist_equivalence bdf3).mpr ⟨bdf3_consistent, bdf3_zeroStable⟩
+
 /-- The Dahlquist counterexample is NOT convergent (not zero-stable). -/
 theorem dahlquistCounterexample_not_convergent :
     ¬dahlquistCounterexample.IsConvergent := by
