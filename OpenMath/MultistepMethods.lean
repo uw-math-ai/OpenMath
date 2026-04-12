@@ -671,8 +671,46 @@ theorem bdf4_zeroStable : bdf4.IsZeroStable where
     · have : ξ = 1 := by linear_combination h0
       rw [this]; simp
     · -- Cubic 25ξ³-23ξ²+13ξ-3=0: all roots are inside unit disk.
-      -- Requires Schur-Cohn / Jury stability criterion not available in Mathlib.
-      sorry
+      -- Proof: decompose ξ = ⟨a,b⟩, extract real/imaginary parts, show a²+b² ≤ 1.
+      -- Real case (b=0): p is strictly increasing, p(-1)<0<p(1), so root ∈ (-1,1).
+      -- Complex case (b≠0): from Im=0 get b²=(75a²-46a+13)/25, then cubic in a.
+      -- Polynomial division shows 100a²-46a-12 < 0 when a < 2/5 (from cubic bound).
+      set a := ξ.re; set b := ξ.im
+      have hξ_eq : ξ = ⟨a, b⟩ := (Complex.eta ξ).symm
+      rw [hξ_eq] at h1
+      suffices h_sq : a ^ 2 + b ^ 2 ≤ 1 by
+        rw [hξ_eq, Complex.norm_def, Complex.normSq_mk,
+            show a * a + b * b = a ^ 2 + b ^ 2 from by ring]
+        exact Real.sqrt_le_one.mpr h_sq
+      have hp2 : (⟨a, b⟩ : ℂ) ^ 2 = ⟨a * a - b * b, a * b + b * a⟩ := by rw [sq]; rfl
+      have hp3 : (⟨a, b⟩ : ℂ) ^ 3 = ⟨(a * a - b * b) * a - (a * b + b * a) * b,
+          (a * a - b * b) * b + (a * b + b * a) * a⟩ := by
+        rw [show (3 : ℕ) = 2 + 1 from rfl, pow_succ, hp2]; rfl
+      obtain ⟨h_re, h_im⟩ := Complex.ext_iff.mp h1
+      simp only [Complex.zero_re, Complex.zero_im] at h_re h_im
+      rw [hp2, hp3] at h_re h_im; simp at h_re h_im
+      rcases eq_or_ne b 0 with hb0 | hb_ne
+      · -- Real case: b = 0
+        rw [hb0]; simp
+        rw [hb0] at h_re; simp at h_re
+        rw [abs_le]; constructor
+        · by_contra h; push_neg at h; nlinarith [sq_nonneg (a + 1), sq_nonneg a]
+        · by_contra h; push_neg at h; nlinarith [sq_nonneg (a - 1), sq_nonneg a]
+      · -- Complex case: b ≠ 0
+        have h_quad_b : 75 * a ^ 2 - 25 * b ^ 2 - 46 * a + 13 = 0 := by
+          have : b * (75 * a ^ 2 - 25 * b ^ 2 - 46 * a + 13) = 0 := by nlinarith
+          exact (mul_eq_zero.mp this).resolve_left hb_ne
+        have hb_sq : b ^ 2 = (75 * a ^ 2 - 46 * a + 13) / 25 := by linarith
+        have h_cubic_a : 1250 * a ^ 3 - 1150 * a ^ 2 + 427 * a - 56 = 0 := by
+          nlinarith [sq_nonneg a, sq_nonneg b]
+        have ha_lt : a < 2 / 5 := by
+          by_contra h; push_neg at h
+          nlinarith [sq_nonneg a, sq_nonneg (a - 2 / 5)]
+        have h_target : 100 * a ^ 2 - 46 * a - 12 < 0 := by
+          have h_div : (100 * a ^ 2 - 46 * a - 12) * (50 * a - 23) = 500 - 1250 * a := by
+            nlinarith
+          by_contra h_ge; push_neg at h_ge; nlinarith
+        rw [hb_sq]; linarith
   unit_roots_simple := by
     intro ξ hξ habs
     simp only [LMM.rhoCDeriv, bdf4]
@@ -684,10 +722,44 @@ theorem bdf4_zeroStable : bdf4.IsZeroStable where
     · have hξ1 : ξ = 1 := by linear_combination h0
       rw [hξ1]
       simp [Fin.sum_univ_five]; norm_num
-    · -- Cubic has no roots on the unit circle.
-      -- Proof outline: eliminate between p(ξ)=0 and conjugate/reversed equation,
-      -- derive quadratic 32z²-67z+77=0 whose solutions have |z|²=77/32≠1.
-      sorry
+    · -- Cubic has no roots on the unit circle: conjugate elimination proof.
+      -- From p(ξ)=0 and |ξ|=1, derive reversed equation, combine to get ξ²=1,
+      -- then check ξ=±1 both give p(ξ)≠0.
+      exfalso
+      have hξ_ne : ξ ≠ 0 := by intro h; rw [h] at habs; simp at habs
+      have h_nsq : Complex.normSq ξ = 1 := by
+        rw [Complex.normSq_eq_norm_sq, habs]; norm_num
+      have h_mc : ξ * starRingEnd ℂ ξ = 1 := by
+        rw [Complex.mul_conj, ← Complex.ofReal_one, Complex.ofReal_inj]; exact h_nsq
+      have h_conj_eq : starRingEnd ℂ ξ = ξ⁻¹ := eq_inv_of_mul_eq_one_right h_mc
+      -- Conjugate h1 and substitute conj ξ = ξ⁻¹
+      have h1_conj : 25 * ξ⁻¹ ^ 3 - 23 * ξ⁻¹ ^ 2 + 13 * ξ⁻¹ - 3 = 0 := by
+        have := congr_arg (starRingEnd ℂ) h1
+        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at this
+        rwa [h_conj_eq] at this
+      -- Multiply by ξ³ to get reversed polynomial
+      have h_rev : -3 * ξ ^ 3 + 13 * ξ ^ 2 - 23 * ξ + 25 = 0 := by
+        have h := congr_arg (starRingEnd ℂ) h1
+        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
+        rw [h_conj_eq] at h; field_simp at h; linear_combination h
+      -- Combine to eliminate ξ³: 32ξ²-67ξ+77=0
+      have h_quad : 32 * ξ ^ 2 - 67 * ξ + 77 = 0 := by
+        linear_combination 3 / 8 * h1 + 25 / 8 * h_rev
+      -- Reverse the quadratic: 77ξ²-67ξ+32=0
+      have h_quad_rev : 77 * ξ ^ 2 - 67 * ξ + 32 = 0 := by
+        have h := congr_arg (starRingEnd ℂ) h_quad
+        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
+        rw [h_conj_eq] at h; field_simp at h; linear_combination h
+      -- Subtract: ξ²=1
+      have h_sq : ξ ^ 2 = 1 := by
+        have : -45 * ξ ^ 2 + 45 = 0 := by linear_combination h_quad - h_quad_rev
+        linear_combination -this / 45
+      -- Substitute ξ²=1 into h1: 38ξ-26=0, ξ=13/19
+      have hξ_val : ξ = 13 / 19 := by
+        have : 25 * ξ * ξ ^ 2 - 23 * ξ ^ 2 + 13 * ξ - 3 = 0 := by ring_nf; linear_combination h1
+        rw [h_sq] at this; linear_combination this / 38
+      -- But (13/19)²≠1
+      rw [hξ_val] at h_sq; norm_num at h_sq
 
 /-! ## Dahlquist's Second Barrier
 
