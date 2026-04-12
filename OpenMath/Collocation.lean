@@ -505,6 +505,18 @@ theorem rkGaussLegendre2_C2 : rkGaussLegendre2.SatisfiesC 2 := by
 theorem rkGaussLegendre2_order3' : rkGaussLegendre2.HasOrderGe3 :=
   HasOrderGe3_of_B3_C2 _ (rkGaussLegendre2_B4.mono (by omega)) rkGaussLegendre2_C2
 
+/-- GL2 satisfies D(1): ∑ᵢ bᵢ aᵢⱼ = bⱼ(1 − cⱼ). -/
+theorem rkGaussLegendre2_D1 : rkGaussLegendre2.SatisfiesD 1 := by
+  intro k hk1 hk2 j
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases j <;> simp [rkGaussLegendre2, Fin.sum_univ_two] <;> nlinarith [sqrt3_sq']
+
+/-- **GL2 has order ≥ 4 via simplifying assumptions B(4) ∧ C(2) ∧ D(1).**
+  This avoids needing C(3) (which requires s ≥ 3) by using D(1) instead.
+  Reference: Hairer–Nørsett–Wanner, Theorem IV.5.1. -/
+theorem rkGaussLegendre2_order4' : rkGaussLegendre2.HasOrderGe4 :=
+  HasOrderGe4_of_B4_C2_D1 _ rkGaussLegendre2_B4 rkGaussLegendre2_C2 rkGaussLegendre2_D1
+
 end GaussLegendre2
 
 end ButcherTableau
