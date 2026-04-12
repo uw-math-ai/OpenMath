@@ -42,7 +42,11 @@
   - [x] `not_stableRecurrence_of_root_outside_disk`: root with |ξ| > 1 → unstable
   - [x] `not_stableRecurrence_of_double_root_on_circle`: double root on |ξ| = 1 → unstable
   - [x] `zeroStable_of_stableRecurrence`: stable recurrence → zero-stable (proved)
-  - [ ] `stableRecurrence_of_zeroStable`: zero-stable → stable recurrence (1 sorry — needs general solution theory for linear recurrences)
+  - [~] `stableRecurrence_of_zeroStable`: zero-stable → stable recurrence (proved modulo spectral bound)
+    - [x] `toLinearRecurrence`: connect LMM to Mathlib's `LinearRecurrence`
+    - [x] `satisfiesRecurrence_iff_isSolution`: equivalence of solution predicates
+    - [x] `tupleSucc_iterate_eq_mkSol`: state vector = tupleSucc^n(init)
+    - [ ] `uniformly_bounded_tupleSucc_iterates`: spectral bound (1 sorry — needs Jordan NF or generalized eigenspace)
   - [x] `dahlquist_equivalence`: full equivalence theorem (modulo above sorry)
   - [x] Convergence verified for all standard methods (Euler, trapezoidal, AB2, AM2, BDF2)
   - [x] `dahlquistCounterexample_not_convergent`: counterexample is not convergent

@@ -187,27 +187,144 @@ theorem zeroStable_of_stableRecurrence (m : LMM s)
     intro ξ hρ _habs hρ'
     exact not_stableRecurrence_of_double_root_on_circle m ξ hρ _habs hρ' h_stable
 
+/-! ### Connection to Mathlib's LinearRecurrence
+
+We connect the LMM's characteristic recurrence to Mathlib's `LinearRecurrence` theory.
+The companion operator `tupleSucc` maps state vectors (y_n, ..., y_{n+s-1}) to
+(y_{n+1}, ..., y_{n+s}), and iterating it n times gives the state at time n.
+
+## Structure
+1. `toLinearRecurrence`: convert LMM recurrence to `LinearRecurrence ℂ`.
+2. `satisfiesRecurrence_iff_isSolution`: equivalence of solution predicates.
+3. `tupleSucc_iterate_eq_mkSol`: state evolution via companion operator.
+4. `uniformly_bounded_tupleSucc_iterates`: spectral bound (the key sorry).
+5. `stableRecurrence_of_zeroStable`: combine everything. -/
+
+/-- Convert an LMM's characteristic recurrence to a `LinearRecurrence` over ℂ.
+  The recurrence ∑_{j=0}^s α_j y_{n+j} = 0 with α_s = 1 becomes
+  y_{n+s} = ∑_{j<s} (-α_j) · y_{n+j}. -/
+noncomputable def toLinearRecurrence (m : LMM s) : LinearRecurrence ℂ where
+  order := s
+  coeffs := fun i => -(m.α (Fin.castSucc i) : ℂ)
+
+/-- The LMM's `SatisfiesRecurrence` is equivalent to `LinearRecurrence.IsSolution`
+  for the associated `LinearRecurrence`. -/
+theorem satisfiesRecurrence_iff_isSolution (m : LMM s) (y : ℕ → ℂ) :
+    m.SatisfiesRecurrence y ↔ m.toLinearRecurrence.IsSolution y := by
+  simp only [SatisfiesRecurrence, LinearRecurrence.IsSolution, toLinearRecurrence]
+  constructor
+  · -- Forward: ∑ α_j y_{n+j} = 0 → y_{n+s} = ∑ (-α_j) y_{n+j}
+    intro h n
+    have hn := h n
+    rw [Fin.sum_univ_castSucc] at hn
+    simp only [Fin.val_castSucc, Fin.val_last, m.normalized, Complex.ofReal_one, one_mul] at hn
+    -- hn : (∑ i, (α_i : ℂ) * y(n+i)) + y(n+s) = 0
+    -- Extract y(n+s) = -(∑ α_i * y_i)
+    have key : y (n + s) = -(∑ i : Fin s,
+        (↑(m.α (Fin.castSucc i)) : ℂ) * y (n + ↑i)) := by
+      have := neg_eq_of_add_eq_zero_left hn
+      rwa [neg_eq_iff_eq_neg] at this
+    rw [key, ← Finset.sum_neg_distrib]
+    congr 1; ext i; ring
+  · -- Backward: y_{n+s} = ∑ (-α_j) y_{n+j} → ∑ α_j y_{n+j} = 0
+    intro h n
+    rw [Fin.sum_univ_castSucc]
+    simp only [Fin.val_castSucc, Fin.val_last, m.normalized, Complex.ofReal_one, one_mul]
+    rw [h n, ← Finset.sum_add_distrib, Finset.sum_eq_zero]
+    intro i _; ring
+
+/-- The state vector at time n equals `tupleSucc` iterated n times on initial conditions:
+  `(tupleSucc^[n] init) i = mkSol init (n + i)`. This connects the linear recurrence
+  solution to iteration of the companion operator. -/
+theorem tupleSucc_iterate_eq_mkSol (E : LinearRecurrence ℂ) (init : Fin E.order → ℂ)
+    (n : ℕ) (i : Fin E.order) :
+    (E.tupleSucc^[n]) init i = E.mkSol init (n + ↑i) := by
+  induction n generalizing i with
+  | zero =>
+    simp only [Function.iterate_zero, id_eq, Nat.zero_add]
+    exact (E.mkSol_eq_init init i).symm
+  | succ n ih =>
+    simp only [Function.iterate_succ', Function.comp_apply]
+    set v := (E.tupleSucc^[n]) init with hv_def
+    show E.tupleSucc v i = E.mkSol init (n + 1 + ↑i)
+    simp only [LinearRecurrence.tupleSucc, LinearMap.coe_mk, AddHom.coe_mk]
+    split_ifs with h
+    · -- Case: ↑i + 1 < E.order, so tupleSucc shifts: result is v(i+1)
+      have := ih ⟨↑i + 1, h⟩
+      simp at this
+      rw [this]; congr 1; omega
+    · -- Case: i is the last index, tupleSucc applies the recurrence
+      have hi_eq : (↑i : ℕ) + 1 = E.order := by have := i.isLt; omega
+      have h_sum : ∀ j : Fin E.order,
+          E.coeffs j * v j = E.coeffs j * E.mkSol init (n + ↑j) := by
+        intro j; congr 1; exact ih j
+      simp_rw [h_sum, show n + 1 + (↑i : ℕ) = n + E.order from by omega]
+      exact (E.is_sol_mkSol init n).symm
+
 /-! ### Zero-stability implies stable recurrence
 
 The converse direction: if ρ satisfies the root condition, then every solution
-of the characteristic recurrence is bounded. This requires the general solution
-theory of linear recurrences: every solution is a linear combination of
-ξ_i^n, n·ξ_i^n, ..., n^{k_i-1}·ξ_i^n where ξ_i are the roots of ρ with
-multiplicities k_i. The root condition ensures all such terms are bounded. -/
+of the characteristic recurrence is bounded. We decompose this into:
+1. Every solution is `mkSol init` for its initial conditions.
+2. The solution value at time n is a component of `tupleSucc^n(init)`.
+3. The spectral bound: zero-stability implies `tupleSucc^n` is uniformly bounded. -/
+
+/-- **Spectral bound**: Under zero-stability, the companion operator `tupleSucc`
+  has uniformly bounded iterates: ‖tupleSucc^n(v)‖ ≤ M·‖v‖ for all n, v.
+
+  The characteristic polynomial of `tupleSucc` equals ρ (the first characteristic
+  polynomial of the LMM). Zero-stability ensures all eigenvalues have |λ| ≤ 1
+  with semisimple unit eigenvalues. This implies the operator powers are bounded.
+
+  The proof requires either Jordan normal form or the generalized eigenspace
+  decomposition over ℂ, which are not yet fully available in Mathlib. -/
+theorem uniformly_bounded_tupleSucc_iterates (m : LMM s) (hzs : m.IsZeroStable) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (v : Fin s → ℂ),
+      ‖(m.toLinearRecurrence.tupleSucc^[n]) v‖ ≤ M * ‖v‖ := by
+  sorry
 
 /-- **Zero-stability implies stable recurrence.**
   If all roots of ρ lie in the closed unit disk with simple unit-circle roots,
   then every solution of the characteristic recurrence is bounded.
-  Proof: the general solution is a linear combination of ξ^n, n·ξ^n, etc.
-  for roots ξ of ρ. With |ξ| < 1, these decay. With |ξ| = 1 and simple,
-  only ξ^n appears, which has |ξ^n| = 1. -/
+
+  Proof:
+  1. Convert to `LinearRecurrence` via `toLinearRecurrence`.
+  2. Every solution equals `mkSol init` for its initial conditions.
+  3. `mkSol init n` is a component of `tupleSucc^n(init)` (by `tupleSucc_iterate_eq_mkSol`).
+  4. The spectral bound gives ‖tupleSucc^n(init)‖ ≤ M·‖init‖. -/
 theorem stableRecurrence_of_zeroStable (m : LMM s)
     (hzs : m.IsZeroStable) : m.HasStableRecurrence := by
-  -- This requires the general solution theory for linear recurrences:
-  -- every solution is a linear combination of ξ_k^n, n·ξ_k^n, ...,
-  -- n^{m_k-1}·ξ_k^n over all roots ξ_k of multiplicity m_k.
-  -- The root condition (zero-stability) ensures all such terms are bounded.
-  sorry
+  intro y hy
+  by_cases hs : s = 0
+  · -- s = 0: the recurrence α₀·y_n = 0 with α₀ = 1 forces y_n = 0
+    subst hs; use 0; intro n
+    suffices h : y n = 0 by rw [h]; simp
+    have hn := hy n
+    -- The sum over Fin 1 has a single term
+    have h1 : (∑ j : Fin 1, (↑(m.α j) : ℂ) * y (n + ↑j)) =
+        (↑(m.α 0) : ℂ) * y n := by
+      simp
+    rw [h1] at hn
+    have h2 : (0 : Fin 1) = Fin.last 0 := by ext; simp [Fin.last]
+    rw [h2, show (↑(m.α (Fin.last 0)) : ℂ) = 1 from by
+      exact_mod_cast m.normalized, one_mul] at hn
+    exact hn
+  · -- s > 0: use companion operator / LinearRecurrence infrastructure
+    have hs_pos : 0 < s := Nat.pos_of_ne_zero hs
+    let E := m.toLinearRecurrence
+    have hy_lr : E.IsSolution y := (satisfiesRecurrence_iff_isSolution m y).mp hy
+    let init : Fin s → ℂ := fun i => y ↑i
+    have hy_eq : y = E.mkSol init :=
+      E.eq_mk_of_is_sol_of_eq_init' hy_lr (fun _ => rfl)
+    obtain ⟨M, _, hM⟩ := uniformly_bounded_tupleSucc_iterates m hzs
+    use M * ‖init‖; intro n; rw [hy_eq]
+    -- mkSol init n = (tupleSucc^[n] init)(0)
+    have h_iter := tupleSucc_iterate_eq_mkSol E init n ⟨0, hs_pos⟩
+    simp only [add_zero] at h_iter
+    rw [← h_iter]
+    calc ‖(E.tupleSucc^[n]) init ⟨0, hs_pos⟩‖
+        ≤ ‖(E.tupleSucc^[n]) init‖ := norm_le_pi_norm _ _
+      _ ≤ M * ‖init‖ := hM n init
 
 /-- **Algebraic Dahlquist equivalence**: zero-stability is equivalent to the
   characteristic recurrence having only bounded solutions. -/

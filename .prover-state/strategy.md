@@ -7,23 +7,32 @@ removable singularity theory and L'Hôpital-type arguments for complex polynomia
 that are beyond current Mathlib tooling. **Do NOT work on these.** They have consumed 14+ cycles
 with zero progress. An issue file has been written.
 
-## Completed: Dahlquist equivalence theorem (Cycle 35)
+## Dahlquist equivalence theorem (Cycles 35-36)
 
 The Dahlquist equivalence theorem is formalized in `OpenMath/DahlquistEquivalence.lean`.
-**1 sorry remains**: `stableRecurrence_of_zeroStable` (zero-stable → stable recurrence).
+`stableRecurrence_of_zeroStable` has been decomposed into structured sub-lemmas using
+Mathlib's `LinearRecurrence` infrastructure.
 
-## Current target: Close `stableRecurrence_of_zeroStable` OR advance to new material
+**1 sorry remains**: `uniformly_bounded_tupleSucc_iterates` — the spectral bound on the
+companion operator `tupleSucc`. This requires: under the root condition (zero-stability),
+‖tupleSucc^n(v)‖ ≤ M·‖v‖ for all n, v.
 
-### Option A: Close the remaining sorry
-The sorry `stableRecurrence_of_zeroStable` requires proving that the root condition on ρ
-implies all solutions of the characteristic recurrence are bounded. This needs:
-1. Define the **companion matrix** of ρ (s×s matrix).
-2. Show solutions y_n correspond to A^n · y₀.
-3. Prove ‖A^n‖ is uniformly bounded under the root condition (spectral radius ≤ 1 with
-   semisimple unit eigenvalues).
+**Proved in Cycle 36**:
+- `toLinearRecurrence`: LMM → `LinearRecurrence ℂ`
+- `satisfiesRecurrence_iff_isSolution`: equivalence of solution predicates
+- `tupleSucc_iterate_eq_mkSol`: state vector at time n = tupleSucc^n(init)
+- `stableRecurrence_of_zeroStable`: fully proved modulo spectral bound
 
-Alternative: use **polynomial factorization** / induction on the degree of ρ to decompose
-solutions into generalized eigensolutions ξ^n, n·ξ^n, etc.
+## Current target: Close `uniformly_bounded_tupleSucc_iterates` OR advance to new material
+
+### Option A: Close the spectral bound
+The sorry needs: spectral radius ≤ 1 with semisimple unit eigenvalues → bounded operator powers.
+Possible approaches:
+1. **Cayley-Hamilton**: `aeval_self_charpoly` expresses tupleSucc^n mod charpoly as
+   polynomial of degree < s in tupleSucc. Bound the coefficients under the root condition.
+2. **Generalized eigenspace decomposition**: Mathlib has `Module.End.genEigenspace`.
+   Decompose tupleSucc and bound each component.
+3. **Direct companion matrix**: Define the s×s matrix, relate charpoly to ρ, bound powers.
 
 ### Option B: Move to new material
 - **Chapter 4: Stiff equations** — L-stability, algebraic stability, stiff decay.
@@ -31,7 +40,7 @@ solutions into generalized eigensolutions ξ^n, n·ξ^n, etc.
 - **Higher-order Gauss-Legendre** — 3-stage GL method, order 6.
 
 ### If blocked:
-Write an issue file documenting the blocker and move to Option B.
+Write an issue file and move to Option B.
 
 ## Rules reminder
 - Sorry-first: write full proof structure with sorry, verify compilation, then close sorrys.
