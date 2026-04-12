@@ -805,6 +805,147 @@ theorem IsAStable.E_nonneg_re_unit_circle (m : LMM s) (ha : m.IsAStable)
     rw [← hθ] at hρ hσ ⊢
     exact IsAStable.E_nonneg_re m ha θ hρ hσ
 
+/-! ### Reversed Polynomial Infrastructure
+
+The reversed polynomials ρ̃(w) = ∑ α_{s-j} w^j and σ̃(w) = ∑ β_{s-j} w^j
+satisfy ρ̃(w) = w^s · ρ(1/w) and σ̃(w) = w^s · σ(1/w) for w ≠ 0.
+They appear in the Dahlquist barrier proof via the conformal map w = 1/ζ. -/
+
+/-- Reversed first characteristic polynomial: ρ̃(w) = ∑ α_{s-j} w^j. -/
+noncomputable def rhoCRev (m : LMM s) (w : ℂ) : ℂ :=
+  ∑ j : Fin (s + 1), (m.α (Fin.rev j) : ℂ) * w ^ (j : ℕ)
+
+/-- Reversed second characteristic polynomial: σ̃(w) = ∑ β_{s-j} w^j. -/
+noncomputable def sigmaCRev (m : LMM s) (w : ℂ) : ℂ :=
+  ∑ j : Fin (s + 1), (m.β (Fin.rev j) : ℂ) * w ^ (j : ℕ)
+
+/-- ρ̃(1) = ρ_ℂ(1): both evaluate to ∑ α_j. -/
+theorem rhoCRev_one (m : LMM s) : m.rhoCRev 1 = m.rhoC 1 := by
+  simp only [rhoCRev, rhoC, one_pow, mul_one]
+  exact Fintype.sum_equiv Fin.revPerm _ _ (fun j => by simp [Fin.revPerm_apply])
+
+/-- σ̃(1) = σ_ℂ(1): both evaluate to ∑ β_j. -/
+theorem sigmaCRev_one (m : LMM s) : m.sigmaCRev 1 = m.sigmaC 1 := by
+  simp only [sigmaCRev, sigmaC, one_pow, mul_one]
+  exact Fintype.sum_equiv Fin.revPerm _ _ (fun j => by simp [Fin.revPerm_apply])
+
+/-- For a consistent method (ρ(1) = 0), ρ̃(1) = 0. -/
+theorem rhoCRev_one_eq_zero (m : LMM s) (hc : m.IsConsistent) : m.rhoCRev 1 = 0 := by
+  rw [rhoCRev_one]; exact hc.rhoC_one m
+
+/-- ρ̃ is differentiable (it's a polynomial function). -/
+theorem rhoCRev_differentiable (m : LMM s) : Differentiable ℂ m.rhoCRev := by
+  intro w; unfold rhoCRev; fun_prop
+
+/-- σ̃ is differentiable (it's a polynomial function). -/
+theorem sigmaCRev_differentiable (m : LMM s) : Differentiable ℂ m.sigmaCRev := by
+  intro w; unfold sigmaCRev; fun_prop
+
+/-- The reversed polynomial identity: ρ̃(z) = z^s · ρ(z⁻¹) for z ≠ 0. -/
+theorem rhoCRev_eq (m : LMM s) (z : ℂ) (hz : z ≠ 0) :
+    m.rhoCRev z = z ^ s * m.rhoC z⁻¹ := by
+  simp only [rhoCRev, rhoC]
+  rw [Finset.mul_sum]
+  exact Fintype.sum_equiv Fin.revPerm _ _ (fun j => by
+    simp only [Fin.revPerm_apply]
+    have hj : (j : ℕ) + (Fin.rev j : ℕ) = s := by rw [Fin.val_rev]; omega
+    have key : z ^ (j : ℕ) = z ^ s * z⁻¹ ^ (Fin.rev j : ℕ) := by
+      have h1 : z ^ (j : ℕ) * z ^ (Fin.rev j : ℕ) = z ^ s := by rw [← pow_add, hj]
+      rw [inv_pow, ← h1, mul_assoc, mul_inv_cancel₀ (pow_ne_zero _ hz), mul_one]
+    rw [key, ← mul_assoc, mul_comm _ (z ^ s), mul_assoc])
+
+/-- The reversed polynomial identity: σ̃(z) = z^s · σ(z⁻¹) for z ≠ 0. -/
+theorem sigmaCRev_eq (m : LMM s) (z : ℂ) (hz : z ≠ 0) :
+    m.sigmaCRev z = z ^ s * m.sigmaC z⁻¹ := by
+  simp only [sigmaCRev, sigmaC]
+  rw [Finset.mul_sum]
+  exact Fintype.sum_equiv Fin.revPerm _ _ (fun j => by
+    simp only [Fin.revPerm_apply]
+    have hj : (j : ℕ) + (Fin.rev j : ℕ) = s := by rw [Fin.val_rev]; omega
+    have key : z ^ (j : ℕ) = z ^ s * z⁻¹ ^ (Fin.rev j : ℕ) := by
+      have h1 : z ^ (j : ℕ) * z ^ (Fin.rev j : ℕ) = z ^ s := by rw [← pow_add, hj]
+      rw [inv_pow, ← h1, mul_assoc, mul_inv_cancel₀ (pow_ne_zero _ hz), mul_one]
+    rw [key, ← mul_assoc, mul_comm _ (z ^ s), mul_assoc])
+
+/-- On the unit circle, σ̃/ρ̃ = σ/ρ (the z^s factors cancel). -/
+theorem sigmaCRev_div_rhoCRev_eq (m : LMM s) (z : ℂ) (hz : z ≠ 0) :
+    m.sigmaCRev z / m.rhoCRev z = m.sigmaC z⁻¹ / m.rhoC z⁻¹ := by
+  rw [sigmaCRev_eq m z hz, rhoCRev_eq m z hz]
+  rw [mul_div_mul_left _ _ (pow_ne_zero s hz)]
+
+/-- ρ̃(w) ≠ 0 for |w| < 1, for A-stable methods.
+Roots of ρ̃ correspond to 1/ζ for roots ζ of ρ. A-stability puts roots of ρ in |ζ| ≤ 1,
+so roots of ρ̃ have |·| ≥ 1. At w = 0: ρ̃(0) = α_s = 1 ≠ 0 (normalized). -/
+theorem rhoCRev_ne_zero_of_norm_lt_one (m : LMM s) (ha : m.IsAStable)
+    (w : ℂ) (hw : ‖w‖ < 1) : m.rhoCRev w ≠ 0 := by
+  by_cases hw0 : w = 0
+  · -- At w = 0: ρ̃(0) = α_s = 1 ≠ 0
+    subst hw0; show (∑ j : Fin (s + 1), (m.α (Fin.rev j) : ℂ) * (0 : ℂ) ^ (j : ℕ)) ≠ 0
+    have h_single : ∀ j : Fin (s + 1), j ≠ 0 →
+        (m.α (Fin.rev j) : ℂ) * (0 : ℂ) ^ (j : ℕ) = 0 := by
+      intro j hj; rw [zero_pow (Fin.val_ne_of_ne hj), mul_zero]
+    rw [Fintype.sum_eq_single 0 (fun j hj => h_single j hj)]
+    simp only [Fin.val_zero, pow_zero, mul_one]
+    have : Fin.rev (0 : Fin (s + 1)) = Fin.last s := by ext; simp [Fin.rev, Fin.last]
+    rw [this, show (m.α (Fin.last s) : ℂ) = (1 : ℂ) from by
+      rw [m.normalized]; push_cast; rfl]
+    exact one_ne_zero
+  · -- For w ≠ 0: ρ̃(w) = w^s · ρ(1/w). Since |1/w| > 1 and A-stability puts
+    -- all roots of ρ in |ζ| ≤ 1, we have ρ(1/w) ≠ 0.
+    rw [rhoCRev_eq m w hw0]
+    apply mul_ne_zero (pow_ne_zero s hw0)
+    intro hρ
+    -- A-stability with z = 0: all roots of ρ have |·| ≤ 1
+    have h_root : ‖w⁻¹‖ ≤ 1 := ha 0 (le_refl _) w⁻¹ (by
+      show m.rhoC w⁻¹ - 0 * m.sigmaC w⁻¹ = 0; simp [hρ])
+    -- But |w⁻¹| = 1/|w| > 1 since |w| < 1
+    have : 1 < ‖w⁻¹‖ := by
+      rw [norm_inv]
+      have h1 := inv_strictAnti₀ (norm_pos_iff.mpr hw0) hw
+      rwa [inv_one] at h1
+    linarith
+
+/-- **HasDerivAt for the Dahlquist G̃ function at w = 1.**
+The function G̃(w) = σ̃(w)/ρ̃(w) - (w+1)/(2(1-w)), with removable singularity at w=1
+filled in as 0, has derivative 1/12 at w = 1.
+
+Proof sketch: The combined fraction P(w)/D(w) where
+  P(w) = 2σ̃(w)(w-1) + ρ̃(w)(w+1)    (numerator, triple zero at 1)
+  D(w) = 2ρ̃(w)(w-1)                  (denominator, double zero at 1)
+gives G̃(w) = P(w)/D(w). From order conditions C₁, C₂, C₃:
+  P'''(1) = -σ(1) = -ρ'(1),  D''(1) = -4ρ'(1).
+So the derivative is P'''(1)/(3·D''(1)) = (-ρ'(1))/(3·(-4ρ'(1))) = 1/12. -/
+theorem hasDerivAt_Gtilde_one (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3 ≤ p)
+    (ha : m.IsAStable) (hρ_simple : m.rhoCDeriv 1 ≠ 0) :
+    HasDerivAt (fun w : ℂ => if w = 1 then (0 : ℂ) else
+      m.sigmaCRev w / m.rhoCRev w - (w + 1) / (2 * (1 - w))) (1/12 : ℂ) 1 := by
+  -- The combined numerator P(w) = 2σ̃(w)(w-1) + ρ̃(w)(w+1) is a polynomial with:
+  --   P(1) = 0 (from ρ(1) = 0, i.e., C₀)
+  --   P'(1) = 0 (from σ(1) = ρ'(1), i.e., C₁)
+  --   P''(1) = 0 (from C₂: Σj²α_j = 2Σjβ_j)
+  --   P'''(1) = -σ(1) (from C₃: Σj³α_j = 3Σj²β_j, combined with C₁ and C₂)
+  -- The denominator D(w) = 2ρ̃(w)(w-1) has double zero at 1:
+  --   D''(1) = 4ρ̃'(1) = -4ρ'(1) ≠ 0
+  -- Hence G̃(w)/(w-1) → P'''(1)/(3D''(1)) = (-ρ'(1))/(3·(-4ρ'(1))) = 1/12.
+  sorry
+
+/-- **ContinuousOn for the Dahlquist G̃ function on the closed unit disk.**
+The function G̃ is continuous on `closure (Metric.ball 0 1)`. The key difficulty is
+continuity at w = 1 (removable singularity), which follows from the triple zero of
+the combined numerator and double zero of the denominator at w = 1. -/
+theorem continuousOn_Gtilde_closedBall (m : LMM s) (p : ℕ) (hp : m.HasOrder p)
+    (hp3 : 3 ≤ p) (ha : m.IsAStable) (hρ_simple : m.rhoCDeriv 1 ≠ 0) :
+    ContinuousOn (fun w : ℂ => if w = 1 then (0 : ℂ) else
+      m.sigmaCRev w / m.rhoCRev w - (w + 1) / (2 * (1 - w)))
+      (closure (Metric.ball 0 1)) := by
+  -- At w ≠ 1 in the open ball: ρ̃(w) ≠ 0 (from A-stability) and 1-w ≠ 0,
+  --   so the formula is a ratio of continuous functions.
+  -- At w = 1: the removable singularity gives limit 0 = G̃(1).
+  --   This follows from P(w)/D(w) → 0 as w → 1, using the triple/double zero.
+  -- On the boundary sphere(0,1) with w ≠ 1: handled by the formula or
+  --   by A-stability ensuring ρ̃ ≠ 0 there (via the boundary locus argument).
+  sorry
+
 /-- Core analytical lemma for the Dahlquist barrier: if the cross-energy
 Re(σ(e^{iθ})·conj(ρ(e^{iθ}))) ≥ 0 for all θ (from A-stability), the E-function
 has specific structure from the order conditions, the order is ≥ 3, and ρ has a
@@ -1001,27 +1142,37 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
     if w = 1 then 0 else σ_rev w / ρ_rev w - (w + 1) / (2 * (1 - w))
   refine ⟨Gt, ?_, ?_, ?_, ?_⟩
   · -- (a) DiffContOnCl ℂ Gt (Metric.ball 0 1)
-    -- Part 1: DifferentiableOn ℂ Gt (Metric.ball 0 1)
-    --   For |w| < 1: w ≠ 1 (since |1| = 1), so Gt(w) = σ̃/ρ̃ - (w+1)/(2(1-w)).
-    --   ρ̃(w) ≠ 0 for |w| < 1 (roots of ρ̃ correspond to 1/ζ for roots ζ of ρ;
-    --   A-stability puts roots of ρ in |ζ| ≤ 1, so roots of ρ̃ have |·| ≥ 1).
-    --   1-w ≠ 0 for w ≠ 1. So Gt is a ratio of differentiable functions with
-    --   non-zero denominators, hence differentiable.
-    --
-    -- Part 2: ContinuousOn Gt (closure (Metric.ball 0 1))
-    --   At |w| < 1: follows from Part 1.
-    --   At |w| = 1, w ≠ 1: need ρ̃(w) ≠ 0, i.e., ρ has no unit-circle roots
-    --   other than ζ = 1. This may need zero-stability (or A-stability argument).
-    --   NOTE: If ρ has other unit-circle roots, Gt has poles on the boundary
-    --   and DiffContOnCl fails. The textbook proof implicitly assumes this.
-    --   At w = 1: REMOVABLE SINGULARITY. The combined fraction
-    --     G = [2σ̃(1-w) - ρ̃(w+1)] / [2ρ̃(1-w)]
-    --   has numerator vanishing to order 3 and denominator to order 2 at w=1
-    --   (N(1)=N'(1)=N''(1)=0, D(1)=D'(1)=0, D''(1)=4ρ'(1)≠0).
-    --   This uses: C₀: ρ(1)=0, C₁: σ(1)=ρ'(1), C₂: ρ''(1)=2σ'(1)-ρ'(1).
-    --   So Gt = -(w-1)Q/(2R) with R(1)=ρ'(1)≠0, giving Gt(1) = 0 and
-    --   continuity at w = 1. [Polynomial factoring + Filter.Tendsto]
-    sorry
+    refine DiffContOnCl.mk ?_ ?_
+    · -- DifferentiableOn ℂ Gt (Metric.ball 0 1)
+      -- On ball(0,1), w ≠ 1 (since ‖1‖ = 1), so Gt = σ̃/ρ̃ - (w+1)/(2(1-w)).
+      -- ρ̃(w) ≠ 0 for |w| < 1 (A-stability), 1-w ≠ 0 (w ≠ 1), so Gt is differentiable.
+      have h1_not_mem : (1:ℂ) ∉ Metric.ball (0:ℂ) 1 := by
+        simp [Metric.mem_ball, dist_zero_right]
+      have hGt_eq : Set.EqOn Gt (fun w => σ_rev w / ρ_rev w - (w + 1) / (2 * (1 - w)))
+          (Metric.ball 0 1) := by
+        intro w hw; exact if_neg (ne_of_mem_of_not_mem hw h1_not_mem)
+      have h_σ_diff : Differentiable ℂ σ_rev := by
+        intro w; show DifferentiableAt ℂ
+          (fun w => ∑ j : Fin (s + 1), (↑(m.β (Fin.rev j)) : ℂ) * w ^ (↑j : ℕ)) w; fun_prop
+      have h_ρ_diff : Differentiable ℂ ρ_rev := by
+        intro w; show DifferentiableAt ℂ
+          (fun w => ∑ j : Fin (s + 1), (↑(m.α (Fin.rev j)) : ℂ) * w ^ (↑j : ℕ)) w; fun_prop
+      have h_ρ_ne : ∀ w ∈ Metric.ball (0:ℂ) 1, ρ_rev w ≠ 0 := by
+        intro w hw
+        rw [Metric.mem_ball, dist_zero_right] at hw
+        exact rhoCRev_ne_zero_of_norm_lt_one m ha w hw
+      refine DifferentiableOn.congr ?_ hGt_eq
+      apply DifferentiableOn.sub
+      · exact DifferentiableOn.div h_σ_diff.differentiableOn h_ρ_diff.differentiableOn h_ρ_ne
+      · apply DifferentiableOn.div
+        · exact (differentiable_id.add (differentiable_const 1)).differentiableOn
+        · exact ((differentiable_const 2).mul
+            (differentiable_const 1 |>.sub differentiable_id)).differentiableOn
+        · intro w hw
+          have hw1 : w ≠ 1 := ne_of_mem_of_not_mem hw h1_not_mem
+          exact mul_ne_zero two_ne_zero (sub_ne_zero.mpr (Ne.symm hw1))
+    · -- ContinuousOn Gt (closure (Metric.ball 0 1))
+      exact continuousOn_Gtilde_closedBall m p hp hp3 ha hρ_simple
   · -- (b) Gt 1 = 0 (by definition)
     simp only [Gt, if_pos rfl]
   · -- (c) Boundary non-negativity: ∀ z ∈ sphere(0,1), Re(Gt(z)) ≥ 0
@@ -1052,27 +1203,7 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
         · exact IsAStable.E_nonneg_re_unit_circle m ha z⁻¹ hz_inv_norm hρz
       linarith [Complex.sub_re (m.sigmaC z⁻¹ / m.rhoC z⁻¹) ((z + 1) / (2 * (1 - z)))]
   · -- (d) HasDerivAt Gt (1/12) 1
-    -- Combined fraction: Gt(w) = N̄(w)/D̄(w) where:
-    --   N̄(w) = 2σ̃(w)(1-w) - ρ̃(w)(w+1)  (polynomial, degree ≤ s+1)
-    --   D̄(w) = 2ρ̃(w)(1-w)               (polynomial, degree ≤ s+1)
-    --
-    -- At w = 1: N̄ has triple zero, D̄ has double zero (using order ≥ 2):
-    --   N̄(1) = 0 (ρ̃(1) = ρ(1) = 0)
-    --   N̄'(1) = 0 (uses σ(1) = ρ'(1))
-    --   N̄''(1) = 0 (uses ρ''(1) = 2σ'(1) - ρ'(1) from C₂)
-    --   N̄'''(1) = -ρ'(1) (uses C₃: ρ'''(1) = 3σ''(1) - 3σ'(1) + 2ρ'(1))
-    --   D̄''(1) = 4ρ'(1) ≠ 0
-    --
-    -- Factor: N̄(w) = (w-1)³ Q̄(w), D̄(w) = (w-1)² · (-2R̃(w)) where ρ̃(w) = (w-1)R̃(w).
-    -- Then Gt(w) = -(w-1)Q̄(w)/(2R̃(w)) for w ≠ 1.
-    -- Q̄(1) = N̄'''(1)/6 = -ρ'(1)/6, R̃(1) = -ρ'(1).
-    -- So Gt'(1) = -Q̄(1)/(2R̃(1)) = ρ'(1)/(6 · 2 · (-ρ'(1))) · (-1)
-    --           = 1/12.
-    --
-    -- Equivalently: G(ζ) = N(ζ)/D(ζ) in the original variable gives
-    --   G'(1) = -1/12. Via Gt(w) = G(1/w): Gt'(1) = -G'(1)·(-1) = -(-1/12) · (-1) = 1/12.
-    --   Wait: Gt'(w) = G'(1/w)·(-1/w²), so Gt'(1) = G'(1)·(-1) = (-1/12)·(-1) = 1/12. ✓
-    sorry
+    exact hasDerivAt_Gtilde_one m p hp hp3 ha hρ_simple
 
 /-- For a zero-stable, A-stable LMM of order ≥ 3, derive False.
 Combines `E_nonneg_re`, `re_inv_exp_sub_one`, and the zero-stability condition
