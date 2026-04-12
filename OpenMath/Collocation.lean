@@ -337,6 +337,117 @@ theorem HasOrderGe4_of_B4_C2_D1 (t : ButcherTableau s) (hB : t.SatisfiesB 4)
     conv_lhs => arg 2; ext i; rw [step2 i]
     rw [← Finset.mul_sum, h4c]; ring
 
+theorem SatisfiesD.mono {t : ButcherTableau s} {r r' : ℕ} (h : t.SatisfiesD r) (hr : r' ≤ r) :
+    t.SatisfiesD r' :=
+  fun k hk1 hk2 j => h k hk1 (le_trans hk2 hr) j
+
+/-- **B(4) ∧ C(1) ∧ D(2) → order ≥ 4.**
+
+This alternative uses D(2) to compensate for only having C(1) (row-sum).
+The key insights:
+- order3b: swap sums, apply D(1) to get ∑ bⱼcⱼ(1-cⱼ) = 1/2 - 1/3 = 1/6
+- order4b: swap sums, apply D(2) to get ∑ bⱼcⱼ(1-cⱼ²)/2 = (1/2-1/4)/2 = 1/8
+- order4c: swap sums, apply D(1) to get ∑ bⱼcⱼ²(1-cⱼ) = 1/3 - 1/4 = 1/12
+- order4d: apply D(1) then D(2) to reduce to B-sums
+
+This is needed for Lobatto IIIB 3-stage which satisfies C(1) and D(2) but not C(2).
+Reference: Hairer–Nørsett–Wanner, Theorem IV.5.1. -/
+theorem HasOrderGe4_of_B4_C1_D2 (t : ButcherTableau s) (hB : t.SatisfiesB 4)
+    (hC : t.SatisfiesC 1) (hD : t.SatisfiesD 2) : t.HasOrderGe4 := by
+  -- Extract D(1) from D(2)
+  have hD1 : ∀ j : Fin s, ∑ i, t.b i * t.A i j = t.b j * (1 - t.c j) := by
+    intro j; have h := hD 1 (by omega) (by omega) j; simpa using h
+  have hD2 : ∀ j : Fin s, ∑ i, t.b i * t.c i * t.A i j = t.b j / 2 * (1 - t.c j ^ 2) := by
+    intro j; have h := hD 2 (by omega) le_rfl j; simpa using h
+  -- Extract B-sums
+  have hB2 : ∑ i : Fin s, t.b i * t.c i = 1 / 2 := by
+    have h := hB 2 (by omega) (by omega); simpa using h
+  have hB3 : ∑ i : Fin s, t.b i * t.c i ^ 2 = 1 / 3 := by
+    have h := hB 3 (by omega) (by omega); simpa using h
+  have hB4 : ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4 := by
+    have h := hB 4 (by omega) le_rfl; simpa using h
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- order1
+    have h := hB 1 (by omega) (by omega); rw [order1]; simpa using h
+  · -- order2
+    simp only [order2]; linarith [hB2]
+  · -- order3a: ∑ bᵢ cᵢ² = 1/3
+    simp only [order3a]; linarith [hB3]
+  · -- order3b: ∑ᵢⱼ bᵢ aᵢⱼ cⱼ = 1/6, using D(1)
+    simp only [order3b]
+    rw [Finset.sum_comm]
+    have step : ∀ j : Fin s,
+        ∑ i, t.b i * t.A i j * t.c j = t.c j * ∑ i, t.b i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [step j, hD1 j]
+    have pw : ∀ j : Fin s, t.c j * (t.b j * (1 - t.c j)) =
+        t.b j * t.c j - t.b j * t.c j ^ 2 := by intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, hB2, hB3]; ring
+  · -- order4a: ∑ bᵢ cᵢ³ = 1/4
+    simp only [order4a]; linarith [hB4]
+  · -- order4b: ∑ bᵢ cᵢ (∑ aᵢⱼ cⱼ) = 1/8, using D(2) (swap sums)
+    simp only [order4b]
+    -- Expand product into sum, swap, factor, apply D(2)
+    have expand : ∀ i : Fin s, t.b i * t.c i * ∑ j, t.A i j * t.c j =
+        ∑ j, t.b i * t.c i * t.A i j * t.c j := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [expand i]
+    rw [Finset.sum_comm]
+    have factor : ∀ j : Fin s, ∑ i, t.b i * t.c i * t.A i j * t.c j =
+        t.c j * ∑ i, t.b i * t.c i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [factor j, hD2 j]
+    -- Close using pointwise ring + B-sums
+    have pw : ∀ j : Fin s, t.c j * (t.b j / 2 * (1 - t.c j ^ 2)) =
+        1 / 2 * (t.b j * t.c j) - 1 / 2 * (t.b j * t.c j ^ 3) := by intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, ← Finset.mul_sum, hB2, hB4]; ring
+  · -- order4c: ∑ bᵢ aᵢⱼ cⱼ² = 1/12, using D(1)
+    simp only [order4c]
+    rw [Finset.sum_comm]
+    have step : ∀ j : Fin s,
+        ∑ i, t.b i * t.A i j * t.c j ^ 2 = t.c j ^ 2 * ∑ i, t.b i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [step j, hD1 j]
+    have pw : ∀ j : Fin s, t.c j ^ 2 * (t.b j * (1 - t.c j)) =
+        t.b j * t.c j ^ 2 - t.b j * t.c j ^ 3 := by intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, hB3, hB4]; ring
+  · -- order4d: ∑ᵢⱼₖ bᵢ aᵢⱼ aⱼₖ cₖ = 1/24, using D(1) + D(2)
+    simp only [order4d]
+    -- Step 1: collapse inner sum, swap, factor, apply D(1)
+    have step1 : ∀ i j : Fin s,
+        ∑ k, t.b i * t.A i j * t.A j k * t.c k =
+        t.b i * t.A i j * ∑ k, t.A j k * t.c k := by
+      intro i j; rw [Finset.mul_sum]; congr 1; ext k; ring
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step1 i j]
+    rw [Finset.sum_comm]
+    have step2 : ∀ j : Fin s, ∑ i, t.b i * t.A i j * ∑ k, t.A j k * t.c k =
+        (∑ i, t.b i * t.A i j) * ∑ k, t.A j k * t.c k := by
+      intro j; rw [← Finset.sum_mul]
+    conv_lhs => arg 2; ext j; rw [step2 j, hD1 j]
+    -- Step 2: expand product, swap, apply D(1) and D(2)
+    have step3 : ∀ j : Fin s, t.b j * (1 - t.c j) * ∑ k, t.A j k * t.c k =
+        ∑ k, (t.b j * t.A j k * t.c k - t.b j * t.c j * t.A j k * t.c k) := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext k; ring
+    conv_lhs => arg 2; ext j; rw [step3 j]
+    rw [Finset.sum_comm]
+    have step4 : ∀ k : Fin s,
+        ∑ j, (t.b j * t.A j k * t.c k - t.b j * t.c j * t.A j k * t.c k) =
+        t.c k * (∑ j, t.b j * t.A j k - ∑ j, t.b j * t.c j * t.A j k) := by
+      intro k; rw [← Finset.sum_sub_distrib, Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext k; rw [step4 k]
+    have step5 : ∀ k : Fin s,
+        t.c k * (∑ j, t.b j * t.A j k - ∑ j, t.b j * t.c j * t.A j k) =
+        t.c k * (t.b k * (1 - t.c k) - t.b k / 2 * (1 - t.c k ^ 2)) := by
+      intro k; congr 1; rw [hD1 k, hD2 k]
+    conv_lhs => arg 2; ext k; rw [step5 k]
+    -- Close using pointwise ring + B-sums
+    have pw : ∀ k : Fin s,
+        t.c k * (t.b k * (1 - t.c k) - t.b k / 2 * (1 - t.c k ^ 2)) =
+        1 / 2 * (t.b k * t.c k) - t.b k * t.c k ^ 2 +
+        1 / 2 * (t.b k * t.c k ^ 3) := by intro k; ring
+    simp_rw [pw, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+             ← Finset.mul_sum, hB2, hB3, hB4]; ring
+
 /-! ## Verification for Standard Methods -/
 
 section BackwardEuler
