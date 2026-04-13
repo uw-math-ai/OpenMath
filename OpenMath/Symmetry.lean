@@ -127,6 +127,202 @@ theorem IsSymmetric.order2_of_consistent {t : ButcherTableau s}
     congr 1; ext i; rw [← mul_add, hs.symm_nodes i, mul_one]
   linarith
 
+/-! ## Symmetric + Order 3 implies Order 4 (Nørsett's Even-Order Theorem)
+
+The key identity: for a symmetric, row-sum consistent method,
+  f(i) := ∑ⱼ aᵢⱼcⱼ satisfies f(rev(i)) = f(i) − cᵢ + 1/2.
+This follows from the tableau symmetry A[i][j] + A[rev(i)][rev(j)] = b[j]
+combined with the node symmetry c[rev(i)] = 1 − c[i].
+
+Using this identity and the pairing trick i ↔ rev(i), all four fourth-order
+conditions can be derived from the third-order conditions.
+
+Reference: Iserles, Theorem 2.8; Hairer–Nørsett–Wanner, Theorem II.8.4. -/
+
+/-- Helper: for a symmetric method, c[rev(i)] = 1 − c[i]. -/
+theorem IsSymmetric.c_rev {t : ButcherTableau s} (hs : t.IsSymmetric) (i : Fin s) :
+    t.c i.rev = 1 - t.c i := by
+  linarith [hs.symm_nodes i]
+
+/-- Helper: for a symmetric, row-sum consistent method with order ≥ 2,
+  the "Ac sum" satisfies the antisymmetry relation
+  ∑ⱼ A[rev(i)][j]·cⱼ = (∑ⱼ A[i][j]·cⱼ) − cᵢ + 1/2.
+  This is the crucial identity for deriving fourth-order conditions. -/
+private lemma symm_Ac_rev {t : ButcherTableau s} (hs : t.IsSymmetric)
+    (hrc : t.IsRowSumConsistent) (h2 : t.order2) (i : Fin s) :
+    ∑ j : Fin s, t.A i.rev j * t.c j =
+    (∑ j : Fin s, t.A i j * t.c j) - t.c i + 1 / 2 := by
+  have hsymm : ∀ j : Fin s, t.A i j = t.b j - t.A i.rev j.rev := by
+    intro j; linarith [hs.symm_tableau i j]
+  have hfi : ∑ j, t.A i j * t.c j = ∑ j, (t.b j - t.A i.rev j.rev) * t.c j := by
+    congr 1; ext j; rw [hsymm]
+  rw [hfi, Finset.sum_sub_distrib]
+  have hreindex : ∑ j, t.A i.rev j.rev * t.c j = ∑ k, t.A i.rev k * t.c k.rev := by
+    rw [← Fin.revPerm.sum_comp (fun k => t.A i.rev k * t.c k.rev)]
+    congr 1; ext k; simp [Fin.revPerm]
+  rw [hreindex]
+  simp_rw [hs.c_rev, mul_sub, mul_one, Finset.sum_sub_distrib]
+  have hrs : ∑ k, t.A i.rev k = 1 - t.c i := by rw [← hrc i.rev, hs.c_rev]
+  simp only [order2] at h2; linarith [hrs, h2]
+
+/-- Helper: the "Ac²" sums satisfy g(i) + g(rev(i)) = 1/3 − cᵢ + 2f(i). -/
+private lemma symm_Ac2_sum {t : ButcherTableau s} (hs : t.IsSymmetric)
+    (hrc : t.IsRowSumConsistent) (h2 : t.order2) (h3a : t.order3a) (i : Fin s) :
+    (∑ j, t.A i j * t.c j ^ 2) + (∑ j, t.A i.rev j * t.c j ^ 2) =
+    1 / 3 - t.c i + 2 * ∑ j, t.A i j * t.c j := by
+  have hsymm : ∀ j : Fin s, t.A i j = t.b j - t.A i.rev j.rev := by
+    intro j; linarith [hs.symm_tableau i j]
+  have hgi : ∑ j, t.A i j * t.c j ^ 2 =
+      ∑ j, t.b j * t.c j ^ 2 - ∑ j, t.A i.rev j.rev * t.c j ^ 2 := by
+    rw [← Finset.sum_sub_distrib]; congr 1; ext j; rw [hsymm]; ring
+  have hreindex : ∑ j, t.A i.rev j.rev * t.c j ^ 2 =
+      ∑ k, t.A i.rev k * t.c k.rev ^ 2 := by
+    rw [← Fin.revPerm.sum_comp (fun k => t.A i.rev k * t.c k.rev ^ 2)]
+    congr 1; ext k; simp [Fin.revPerm]
+  have hcrev2 : ∑ k, t.A i.rev k * t.c k.rev ^ 2 =
+      ∑ k, t.A i.rev k * (1 - 2 * t.c k + t.c k ^ 2) := by
+    congr 1; ext k; rw [hs.c_rev]; ring
+  rw [hgi, hreindex, hcrev2]
+  simp_rw [mul_add, mul_sub, mul_one, Finset.sum_add_distrib, Finset.sum_sub_distrib]
+  have hrs : ∑ k, t.A i.rev k = 1 - t.c i := by rw [← hrc i.rev, hs.c_rev]
+  simp only [order3a] at h3a; linarith [hrs, h3a]
+
+/-- Helper: D(j) + D(rev(j)) = b[j] where D(j) = ∑ᵢ bᵢaᵢⱼ. -/
+private lemma symm_D_pair {t : ButcherTableau s} (hs : t.IsSymmetric)
+    (h1 : t.order1) (j : Fin s) :
+    (∑ i, t.b i * t.A i j) + (∑ i, t.b i * t.A i j.rev) = t.b j := by
+  have h_symm_sum : ∑ i, t.b i * t.A i j + ∑ i, t.b i * t.A i.rev j.rev = t.b j := by
+    rw [← Finset.sum_add_distrib]
+    have : ∀ i, t.b i * t.A i j + t.b i * t.A i.rev j.rev = t.b i * t.b j := by
+      intro i; rw [← mul_add]; congr 1; exact hs.symm_tableau i j
+    simp_rw [this, ← Finset.sum_mul]
+    simp only [order1] at h1; rw [h1, one_mul]
+  have h_reindex : ∑ i, t.b i * t.A i.rev j.rev =
+      ∑ i, t.b i * t.A i j.rev := by
+    conv_lhs => rw [← Fin.revPerm.sum_comp (fun k => t.b k * t.A k j.rev)]
+    congr 1; ext k; simp only [Fin.revPerm_apply]; rw [← hs.symm_weights k]
+  linarith
+
+/-- **Symmetric methods of order 3 have order ≥ 4.**
+  If a symmetric, row-sum consistent RK method satisfies all order conditions
+  through order 3, then it also satisfies all fourth-order conditions.
+  This is the key step in Nørsett's theorem that symmetric methods have even order.
+  Reference: Iserles, Theorem 2.8; Hairer–Nørsett–Wanner, Theorem II.8.4. -/
+theorem IsSymmetric.order4_of_order3 {t : ButcherTableau s}
+    (hs : t.IsSymmetric) (hrc : t.IsRowSumConsistent) (h3 : t.HasOrderGe3) :
+    t.HasOrderGe4 := by
+  obtain ⟨h1, h2, h3a, h3b⟩ := h3
+  refine ⟨h1, h2, h3a, h3b, ?_, ?_, ?_, ?_⟩
+  -- order4a: ∑ bᵢcᵢ³ = 1/4
+  -- Proof: 2·∑ bᵢcᵢ³ = ∑ bᵢ[cᵢ³ + (1−cᵢ)³] = ∑ bᵢ(1 − 3cᵢ + 3cᵢ²) = 1/2
+  · show ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4
+    have hpair : ∑ i : Fin s, t.b i * t.c i ^ 3 =
+        ∑ i : Fin s, t.b i * (1 - t.c i) ^ 3 := by
+      conv_lhs => rw [(Fin.revPerm.sum_comp (fun i => t.b i * t.c i ^ 3)).symm]
+      congr 1; ext i; simp only [Fin.revPerm_apply]
+      rw [← hs.symm_weights i]; congr 1; rw [hs.c_rev]
+    have h2sum : 2 * ∑ i : Fin s, t.b i * t.c i ^ 3 =
+        ∑ i : Fin s, t.b i * (1 - 3 * t.c i + 3 * t.c i ^ 2) := by
+      rw [two_mul, hpair, ← Finset.sum_add_distrib]; congr 1; ext i; ring
+    have hexpand : ∑ i : Fin s, t.b i * (1 - 3 * t.c i + 3 * t.c i ^ 2) =
+        ∑ i, t.b i - 3 * ∑ i, t.b i * t.c i + 3 * ∑ i, t.b i * t.c i ^ 2 := by
+      simp_rw [mul_sub, mul_add, Finset.sum_sub_distrib, Finset.sum_add_distrib,
+               ← Finset.mul_sum]; ring
+    simp only [order1] at h1; simp only [order2] at h2; simp only [order3a] at h3a
+    linarith [h2sum, hexpand]
+  -- order4b: ∑ bᵢcᵢ(∑ⱼ aᵢⱼcⱼ) = 1/8
+  -- Proof: pair i ↔ rev(i) using f(rev(i)) = f(i) − cᵢ + 1/2
+  · show ∑ i : Fin s, t.b i * t.c i * (∑ j : Fin s, t.A i j * t.c j) = 1 / 8
+    set f := fun i : Fin s => ∑ j : Fin s, t.A i j * t.c j with hf_def
+    have hpair : ∑ i, t.b i * t.c i * f i =
+        ∑ i, t.b i * (1 - t.c i) * (f i - t.c i + 1 / 2) := by
+      conv_lhs => rw [(Fin.revPerm.sum_comp (fun i => t.b i * t.c i * f i)).symm]
+      congr 1; ext i; simp only [Fin.revPerm_apply]
+      rw [← hs.symm_weights i, hs.c_rev, hf_def, symm_Ac_rev hs hrc h2]
+    have h2sum : 2 * ∑ i, t.b i * t.c i * f i =
+        ∑ i, t.b i * (f i + t.c i ^ 2 - 3 / 2 * t.c i + 1 / 2) := by
+      rw [two_mul, hpair, ← Finset.sum_add_distrib]; congr 1; ext i; ring
+    have hexpand : ∑ i, t.b i * (f i + t.c i ^ 2 - 3 / 2 * t.c i + 1 / 2) =
+        ∑ i, t.b i * f i + ∑ i, t.b i * t.c i ^ 2 -
+        3 / 2 * ∑ i, t.b i * t.c i + 1 / 2 * ∑ i, t.b i := by
+      simp_rw [mul_add, mul_sub, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+               ← Finset.mul_sum]; ring
+    have hbf : ∑ i, t.b i * f i = 1 / 6 := by
+      simp only [order3b, hf_def] at h3b ⊢; convert h3b using 1
+      congr 1; ext i; ring
+    simp only [order1] at h1; simp only [order2] at h2; simp only [order3a] at h3a
+    linarith [h2sum, hexpand, hbf]
+  -- order4c: ∑ bᵢ(∑ⱼ aᵢⱼcⱼ²) = 1/12
+  -- Proof: 2·∑ bᵢg(i) = ∑ bᵢ(1/3 − cᵢ + 2f(i)) = 1/6
+  · show ∑ i : Fin s, ∑ j : Fin s, t.b i * t.A i j * t.c j ^ 2 = 1 / 12
+    set g := fun i : Fin s => ∑ j : Fin s, t.A i j * t.c j ^ 2 with hg_def
+    set f := fun i : Fin s => ∑ j : Fin s, t.A i j * t.c j with hf_def
+    have hconv : ∀ i, ∑ j, t.b i * t.A i j * t.c j ^ 2 = t.b i * g i := by
+      intro i; rw [hg_def, ← Finset.mul_sum]; congr 1; ext j; ring
+    simp_rw [hconv]
+    have hpair : ∑ i, t.b i * g i = ∑ i, t.b i * g i.rev := by
+      conv_lhs => rw [(Fin.revPerm.sum_comp (fun i => t.b i * g i)).symm]
+      congr 1; ext i; simp only [Fin.revPerm_apply]; rw [← hs.symm_weights i]
+    have h2sum : 2 * ∑ i, t.b i * g i =
+        ∑ i, t.b i * (1 / 3 - t.c i + 2 * f i) := by
+      rw [two_mul, hpair, ← Finset.sum_add_distrib]
+      congr 1; ext i; rw [← mul_add, hg_def, hf_def]
+      congr 1; exact symm_Ac2_sum hs hrc h2 h3a i
+    have hexpand : ∑ i, t.b i * (1 / 3 - t.c i + 2 * f i) =
+        1 / 3 * ∑ i, t.b i - ∑ i, t.b i * t.c i + 2 * ∑ i, t.b i * f i := by
+      simp_rw [mul_add, mul_sub, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+               ← Finset.mul_sum]; ring
+    have hbf : ∑ i, t.b i * f i = 1 / 6 := by
+      simp only [order3b, hf_def] at h3b ⊢; convert h3b using 1
+      congr 1; ext i; ring
+    simp only [order1] at h1; simp only [order2] at h2
+    linarith [h2sum, hexpand, hbf]
+  -- order4d: ∑∑∑ bᵢaᵢⱼaⱼₖcₖ = 1/24
+  -- Proof: rewrite as ∑ⱼ D(j)f(j), pair j ↔ rev(j)
+  · show ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+        t.b i * t.A i j * t.A j k * t.c k = 1 / 24
+    set f := fun j : Fin s => ∑ k : Fin s, t.A j k * t.c k with hf_def
+    set D := fun j : Fin s => ∑ i : Fin s, t.b i * t.A i j with hD_def
+    have hrewrite : ∑ i, ∑ j, ∑ k, t.b i * t.A i j * t.A j k * t.c k =
+        ∑ j, D j * f j := by
+      simp only [hD_def, hf_def]; simp_rw [Finset.mul_sum, Finset.sum_mul]
+      rw [Finset.sum_comm]; congr 1; ext j; rw [Finset.sum_comm]
+      congr 1; ext i; congr 1; ext k; ring
+    rw [hrewrite]
+    have hpair : ∑ j, D j * f j = ∑ j, D j.rev * f j.rev := by
+      conv_lhs => rw [(Fin.revPerm.sum_comp (fun j => D j * f j)).symm]
+      congr 1; ext j; simp [Fin.revPerm]
+    have hpair2 : ∑ j, D j.rev * f j.rev =
+        ∑ j, (t.b j - D j) * (f j - t.c j + 1 / 2) := by
+      congr 1; ext j; congr 1
+      · linarith [symm_D_pair hs h1 j]
+      · exact symm_Ac_rev hs hrc h2 j
+    have h2Q : 2 * ∑ j, D j * f j =
+        ∑ j, (t.b j * f j - t.b j * t.c j + t.b j / 2 +
+               D j * t.c j - D j / 2) := by
+      rw [two_mul, hpair, hpair2, ← Finset.sum_add_distrib]
+      congr 1; ext j; ring
+    have hexpand : ∑ j, (t.b j * f j - t.b j * t.c j + t.b j / 2 +
+               D j * t.c j - D j / 2) =
+        ∑ j, t.b j * f j - ∑ j, t.b j * t.c j + (1 / 2) * ∑ j, t.b j +
+        ∑ j, D j * t.c j - (1 / 2) * ∑ j, D j := by
+      simp_rw [Finset.sum_sub_distrib, Finset.sum_add_distrib, ← Finset.mul_sum]; ring
+    have hbf : ∑ j, t.b j * f j = 1 / 6 := by
+      simp only [order3b, hf_def] at h3b ⊢; convert h3b using 1
+      congr 1; ext i; ring
+    have hDc : ∑ j, D j * t.c j = 1 / 6 := by
+      simp only [hD_def, Finset.sum_mul]; rw [Finset.sum_comm]
+      simp only [order3b] at h3b; convert h3b using 1
+      congr 1; ext i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    have hDsum : ∑ j, D j = 1 / 2 := by
+      simp only [hD_def]; rw [Finset.sum_comm]
+      have : ∑ i, ∑ j, t.b i * t.A i j = ∑ i, t.b i * ∑ j, t.A i j := by
+        congr 1; ext i; rw [Finset.mul_sum]
+      rw [this]; simp_rw [fun i => (hrc i).symm]
+      simp only [order2] at h2; exact h2
+    simp only [order1] at h1; simp only [order2] at h2
+    linarith [h2Q, hexpand, hbf, hDc, hDsum]
+
 end ButcherTableau
 
 /-! ## Implicit Midpoint is Symmetric -/
