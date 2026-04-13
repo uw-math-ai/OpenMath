@@ -8,3 +8,4 @@ import OpenMath.RadauIIA3
 import OpenMath.LobattoIIIC
 import OpenMath.LobattoIIIA
 import OpenMath.LobattoIIIB
+import OpenMath.StiffAccuracy

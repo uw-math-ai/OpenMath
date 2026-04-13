@@ -294,3 +294,49 @@ theorem rkSDIRK2_not_algStable : ¬rkSDIRK2.IsAlgStable := by
   simp [ButcherTableau.algStabMatrix, rkSDIRK2] at h
   -- h: 0 ≤ (1-λ)(3λ-1) which is false
   nlinarith [sdirk2Lambda_char, sdirk2Lambda_pos, sdirk2Lambda_lt_one]
+
+/-! ## Simplifying Assumptions for SDIRK2
+
+The 2-stage SDIRK satisfies B(2), C(1), and D(1), consistent with its order 2.
+It does NOT satisfy B(3), C(2), or D(2), showing these are tight bounds.
+The stage order (largest q with C(q)) is exactly 1, reflecting the lower-triangular
+structure of SDIRK methods. -/
+
+/-- SDIRK2 satisfies B(2): weights integrate linear functions exactly. -/
+theorem rkSDIRK2_B2 : rkSDIRK2.SatisfiesB 2 := by
+  intro k hk1 hk2
+  interval_cases k <;> simp [rkSDIRK2, Fin.sum_univ_two]
+  · linarith [sdirk2Lambda_pos]
+  · nlinarith [sdirk2Lambda_char]
+
+/-- SDIRK2 satisfies C(1): the row-sum condition cᵢ = ∑ⱼ aᵢⱼ. -/
+theorem rkSDIRK2_C1 : rkSDIRK2.SatisfiesC 1 := by
+  rw [ButcherTableau.satisfiesC_one_iff]
+  exact rkSDIRK2_consistent.row_sum
+
+/-- SDIRK2 satisfies D(1): ∑ᵢ bᵢ aᵢⱼ = bⱼ(1 − cⱼ). -/
+theorem rkSDIRK2_D1 : rkSDIRK2.SatisfiesD 1 := by
+  intro k hk1 hk2 j
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases j <;> simp [rkSDIRK2, Fin.sum_univ_two]
+  · nlinarith [sdirk2Lambda_char]
+  · nlinarith [sdirk2Lambda_char]
+
+/-- SDIRK2 does NOT satisfy B(3): ∑ bᵢ cᵢ² ≠ 1/3.
+  This shows the quadrature order is exactly 2 (consistent with order 2). -/
+theorem rkSDIRK2_not_B3 : ¬rkSDIRK2.SatisfiesB 3 := by
+  intro hB
+  have h := hB 3 (by omega) le_rfl
+  simp [rkSDIRK2, Fin.sum_univ_two] at h
+  -- h: (1-λ)λ² + λ = 1/3, but with λ² = 2λ-1/2 this gives 5λ/2-1 = 1/3 → λ = 8/15
+  -- which contradicts λ = 1-√2/2 ≈ 0.293
+  nlinarith [sdirk2Lambda_char, sdirk2Lambda_pos, sdirk2Lambda_lt_one]
+
+/-- SDIRK2 does NOT satisfy C(2): the stage order is exactly 1.
+  This is typical for SDIRK methods — the lower-triangular structure limits stage order. -/
+theorem rkSDIRK2_not_C2 : ¬rkSDIRK2.SatisfiesC 2 := by
+  intro hC
+  have h := hC 2 (by omega) le_rfl 0
+  simp [rkSDIRK2, Fin.sum_univ_two] at h
+  -- h: λ·λ = λ²/2, i.e., λ² = λ²/2, i.e., λ = 0
+  nlinarith [sdirk2Lambda_pos]

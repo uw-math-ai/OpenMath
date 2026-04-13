@@ -1243,11 +1243,36 @@ theorem rkGaussLegendre2_D1 : rkGaussLegendre2.SatisfiesD 1 := by
   have hk : k = 1 := le_antisymm hk2 hk1
   subst hk; fin_cases j <;> simp [rkGaussLegendre2, Fin.sum_univ_two] <;> nlinarith [sqrt3_sq']
 
+/-- GL2 satisfies D(2): the maximal D condition for 2 stages.
+  ∑ᵢ bᵢ cᵢ^{k-1} aᵢⱼ = bⱼ(1 − cⱼ^k)/k for k = 1, 2 and all j.
+  This is the maximal D condition: Gauss methods with s stages satisfy D(s). -/
+theorem rkGaussLegendre2_D2 : rkGaussLegendre2.SatisfiesD 2 := by
+  intro k hk1 hk2 j
+  interval_cases k <;> fin_cases j <;>
+    simp [rkGaussLegendre2, Fin.sum_univ_two] <;> nlinarith [sqrt3_sq']
+
 /-- **GL2 has order ≥ 4 via simplifying assumptions B(4) ∧ C(2) ∧ D(1).**
   This avoids needing C(3) (which requires s ≥ 3) by using D(1) instead.
   Reference: Hairer–Nørsett–Wanner, Theorem IV.5.1. -/
 theorem rkGaussLegendre2_order4' : rkGaussLegendre2.HasOrderGe4 :=
   HasOrderGe4_of_B4_C2_D1 _ rkGaussLegendre2_B4 rkGaussLegendre2_C2 rkGaussLegendre2_D1
+
+/-- GL2 does NOT satisfy B(5): ∑ bᵢ cᵢ⁴ = 7/120 ≠ 1/5.
+  The 2-point Gauss quadrature is exact only up to degree 2s−1 = 3. -/
+theorem rkGaussLegendre2_not_B5 : ¬rkGaussLegendre2.SatisfiesB 5 := by
+  intro hB
+  have h := hB 5 (by omega) le_rfl
+  simp [rkGaussLegendre2, Fin.sum_univ_two] at h
+  nlinarith [sqrt3_sq']
+
+/-- GL2 does NOT satisfy C(3): for a 2-stage method, C(q) with q ≥ 3 is impossible
+  (the system is overdetermined). In particular, ∑ⱼ a₁ⱼ cⱼ² ≠ c₁³/3.
+  This shows the stage order of GL2 is exactly 2. -/
+theorem rkGaussLegendre2_not_C3 : ¬rkGaussLegendre2.SatisfiesC 3 := by
+  intro hC
+  have h := hC 3 (by omega) le_rfl 0
+  simp [rkGaussLegendre2, Fin.sum_univ_two] at h
+  nlinarith [sqrt3_sq']
 
 end GaussLegendre2
 

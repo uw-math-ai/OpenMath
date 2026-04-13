@@ -257,3 +257,24 @@ theorem rkGaussLegendre3_algStable : rkGaussLegendre3.IsAlgStable where
                sq_nonneg (v 0 + v 2 - 2 * v 1),
                sq_nonneg (Real.sqrt 15 * (v 0 - v 2)),
                sqrt15_sq, sqrt15_pos]
+
+/-! ## Stage Order and Quadrature Order Bounds
+
+GL3 has stage order = s = 3 (C(3) but NOT C(4)) and quadrature order = 2s = 6
+(B(6) but NOT B(7)). These are the maximal values for s-stage Gauss methods. -/
+
+/-- GL3 does NOT satisfy C(4): the stage order is exactly 3 (= s).
+  For a Gauss method with s stages, C(s) holds but C(s+1) is overdetermined. -/
+theorem rkGaussLegendre3_not_C4 : ¬rkGaussLegendre3.SatisfiesC 4 := by
+  intro hC
+  have h := hC 4 (by omega) le_rfl 1  -- check at i=1 (middle node c₂ = 1/2)
+  simp [rkGaussLegendre3, Fin.sum_univ_three] at h
+  nlinarith [sqrt15_sq]
+
+/-- GL3 does NOT satisfy B(7): the quadrature order is exactly 2s = 6.
+  The 3-point Gauss–Legendre quadrature integrates polynomials of degree ≤ 2s−1 = 5. -/
+theorem rkGaussLegendre3_not_B7 : ¬rkGaussLegendre3.SatisfiesB 7 := by
+  intro hB
+  have h := hB 7 (by omega) le_rfl
+  simp [rkGaussLegendre3, Fin.sum_univ_three] at h
+  nlinarith [sqrt15_sq]

@@ -164,6 +164,34 @@ theorem rkRadauIIA2_C2 : rkRadauIIA2.SatisfiesC 2 := by
   interval_cases k <;> fin_cases i <;>
     simp [rkRadauIIA2, Fin.sum_univ_two] <;> norm_num
 
+/-- Radau IIA 2-stage satisfies D(1): ∑ᵢ bᵢ aᵢⱼ = bⱼ(1 − cⱼ). -/
+theorem rkRadauIIA2_D1 : rkRadauIIA2.SatisfiesD 1 := by
+  intro k hk1 hk2 j
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases j <;> simp [rkRadauIIA2, Fin.sum_univ_two] <;> norm_num
+
+/-- Radau IIA 2-stage satisfies D(2): ∑ᵢ bᵢ cᵢ^{k-1} aᵢⱼ = bⱼ(1−cⱼ^k)/k
+  for k = 1, 2 and all j. -/
+theorem rkRadauIIA2_D2 : rkRadauIIA2.SatisfiesD 2 := by
+  intro k hk1 hk2 j
+  interval_cases k <;> fin_cases j <;>
+    simp [rkRadauIIA2, Fin.sum_univ_two] <;> norm_num
+
+/-- Radau IIA 2-stage does NOT satisfy B(4): the Radau quadrature with 2 nodes
+  integrates polynomials of degree ≤ 2s−2 = 2, not degree 3.
+  Specifically, ∑ bᵢ cᵢ³ = 1/4 would need c₁³b₁ + c₂³b₂ = 1/4, which fails. -/
+theorem rkRadauIIA2_not_B4 : ¬rkRadauIIA2.SatisfiesB 4 := by
+  intro hB
+  have h := hB 4 (by omega) le_rfl
+  simp [rkRadauIIA2, Fin.sum_univ_two] at h; norm_num at h
+
+/-- Radau IIA 2-stage does NOT satisfy C(3): for a 2-stage method, C(q) with q ≥ 3
+  is overdetermined. This shows the stage order is exactly 2. -/
+theorem rkRadauIIA2_not_C3 : ¬rkRadauIIA2.SatisfiesC 3 := by
+  intro hC
+  have h := hC 3 (by omega) le_rfl 0
+  simp [rkRadauIIA2, Fin.sum_univ_two] at h; norm_num at h
+
 /-- Radau IIA 2-stage has order ≥ 3 via B(3) ∧ C(2). -/
 theorem rkRadauIIA2_order3' : rkRadauIIA2.HasOrderGe3 :=
   ButcherTableau.HasOrderGe3_of_B3_C2 _ rkRadauIIA2_B3 rkRadauIIA2_C2

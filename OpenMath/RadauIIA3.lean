@@ -323,3 +323,31 @@ theorem rkRadauIIA3_algStable : rkRadauIIA3.IsAlgStable where
                sq_nonneg ((v 0 - v 1) * Real.sqrt 6),
                sq_nonneg ((v 0 - v 2) * Real.sqrt 6),
                sq_nonneg ((v 1 - v 2) * Real.sqrt 6)]
+
+/-! ## Stage Order and Quadrature Order Bounds
+
+Radau IIA 3-stage has stage order = s = 3 (C(3) but NOT C(4)) and
+quadrature order = 2s−1 = 5 (B(5) but NOT B(6)).
+These are the maximal values for s-stage Radau methods. -/
+
+/-- Radau IIA 3-stage does NOT satisfy C(4): the stage order is exactly s = 3.
+  For Radau collocation with s nodes, C(s) holds but C(s+1) is overdetermined. -/
+theorem rkRadauIIA3_not_C4 : ¬rkRadauIIA3.SatisfiesC 4 := by
+  intro hC
+  have h := hC 4 (by omega) le_rfl 1
+  simp [rkRadauIIA3, Fin.sum_univ_three] at h
+  nlinarith [sqrt6_sq]
+
+/-- Radau IIA 3-stage does NOT satisfy B(6): the quadrature order is exactly 2s−1 = 5.
+  The s-point Radau quadrature integrates polynomials of degree ≤ 2s−2 = 4 exactly. -/
+theorem rkRadauIIA3_not_B6 : ¬rkRadauIIA3.SatisfiesB 6 := by
+  intro hB
+  have h := hB 6 (by omega) le_rfl
+  simp [rkRadauIIA3, Fin.sum_univ_three] at h
+  nlinarith [sqrt6_sq]
+
+/-- Radau IIA 3-stage satisfies D(2): the maximal D condition exceeds D(1). -/
+theorem rkRadauIIA3_D2 : rkRadauIIA3.SatisfiesD 2 := by
+  intro k hk1 hk2 j
+  interval_cases k <;> fin_cases j <;>
+    simp [rkRadauIIA3, Fin.sum_univ_three] <;> nlinarith [sqrt6_sq]

@@ -498,3 +498,59 @@ theorem rkSDIRK3_not_algStable : ¬rkSDIRK3.IsAlgStable := by
   have hlt1 := sdirk3Lambda_lt_one
   field_simp [hne] at h
   nlinarith [sq_nonneg sdirk3Lambda, sq_nonneg (1 - sdirk3Lambda)]
+
+/-! ## Simplifying Assumptions for SDIRK3
+
+The 3-stage SDIRK satisfies B(3), C(1), and D(1), consistent with its order 3.
+It does NOT satisfy B(4), C(2), or D(2).
+The stage order is exactly 1, typical for SDIRK methods. -/
+
+/-- SDIRK3 satisfies B(3): weights integrate quadratic functions exactly.
+  This follows from the order 3 conditions: ∑ bᵢ = 1, ∑ bᵢcᵢ = 1/2, ∑ bᵢcᵢ² = 1/3. -/
+theorem rkSDIRK3_B3 : rkSDIRK3.SatisfiesB 3 := by
+  intro k hk1 hk2
+  interval_cases k
+  · -- k=1: ∑ bᵢ = 1
+    simp [rkSDIRK3, Fin.sum_univ_three]
+    field_simp [one_sub_sdirk3Lambda_ne_zero]; ring
+  · -- k=2: ∑ bᵢcᵢ = 1/2
+    simp [rkSDIRK3, Fin.sum_univ_three]
+    field_simp [one_sub_sdirk3Lambda_ne_zero]
+    nlinarith [sdirk3Lambda_char]
+  · -- k=3: ∑ bᵢcᵢ² = 1/3
+    simp [rkSDIRK3, Fin.sum_univ_three]
+    field_simp [one_sub_sdirk3Lambda_ne_zero]
+    nlinarith [sdirk3Lambda_char, sdirk3Lambda_pos, one_sub_sdirk3Lambda_pos]
+
+/-- SDIRK3 satisfies C(1): the row-sum condition cᵢ = ∑ⱼ aᵢⱼ. -/
+theorem rkSDIRK3_C1 : rkSDIRK3.SatisfiesC 1 := by
+  rw [ButcherTableau.satisfiesC_one_iff]
+  exact rkSDIRK3_consistent.row_sum
+
+/-- SDIRK3 does NOT satisfy C(2): the stage order is exactly 1.
+  For i=0: ∑ⱼ a₀ⱼcⱼ = λ² ≠ λ²/2 since λ > 0.
+  This is typical for SDIRK methods — the lower-triangular structure limits stage order. -/
+theorem rkSDIRK3_not_C2 : ¬rkSDIRK3.SatisfiesC 2 := by
+  intro hC
+  have h := hC 2 (by omega) le_rfl 0
+  simp [rkSDIRK3, Fin.sum_univ_three] at h
+  nlinarith [sdirk3Lambda_pos]
+
+/-- SDIRK3 does NOT satisfy B(4): ∑ bᵢcᵢ³ ≠ 1/4.
+  This is consistent with the method having order exactly 3, not 4. -/
+theorem rkSDIRK3_not_B4 : ¬rkSDIRK3.SatisfiesB 4 := by
+  intro hB
+  have h := hB 4 (by omega) le_rfl
+  simp [rkSDIRK3, Fin.sum_univ_three] at h
+  have hne := one_sub_sdirk3Lambda_ne_zero
+  field_simp [hne] at h
+  nlinarith [sdirk3Lambda_char, sdirk3Lambda_pos, sdirk3Lambda_lt, one_sub_sdirk3Lambda_pos]
+
+/-- SDIRK3 satisfies D(1): ∑ᵢ bᵢ aᵢⱼ = bⱼ(1 − cⱼ).
+  This holds because SDIRK3 is stiffly accurate (bᵢ = a₃ᵢ) and consistent. -/
+theorem rkSDIRK3_D1 : rkSDIRK3.SatisfiesD 1 := by
+  intro k hk1 hk2 j
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases j <;> simp [rkSDIRK3, Fin.sum_univ_three] <;>
+    field_simp [one_sub_sdirk3Lambda_ne_zero] <;>
+    nlinarith [sdirk3Lambda_char, sdirk3Lambda_pos, one_sub_sdirk3Lambda_pos]
