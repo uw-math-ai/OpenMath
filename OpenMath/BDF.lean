@@ -83,6 +83,94 @@ theorem backwardEuler_aAlphaStable {α : ℝ} (hα : 0 ≤ α) (hα2 : α ≤ π
     backwardEuler.IsAAlphaStable α :=
   backwardEuler_aStable.toAAlphaStable hα hα2
 
+/-! ## BDF2: A-stable
+
+BDF2 is A-stable (the last A-stable BDF): all roots of the stability polynomial
+ρ(ξ) − zσ(ξ) = (1 − 2z/3)ξ² − (4/3)ξ + 1/3 lie in the closed unit disk when Re(z) ≤ 0.
+
+**Proof outline.** By contraposition: if |ξ| > 1, show Re(z) > 0.
+From the stability polynomial, 2zξ² = 3ξ² − 4ξ + 1. Multiply by conj(ξ²) and take Re:
+  2 Re(z) · |ξ|⁴ = 2(Re(ξ) − |ξ|²)² + |ξ|²(|ξ|² − 1) > 0.
+
+Reference: Iserles, Section 4.5. -/
+
+/-- **BDF2 is A-stable**: all roots of the stability polynomial lie in the closed unit disk
+  when Re(z) ≤ 0.
+
+  Proof: By contrapositive. If |ξ| > 1, solve for z from π(ξ,z) = 0:
+    z = 3(ξ-1)(ξ-1/3)/(2ξ²)
+  Setting w = 1/ξ with |w| < 1, this becomes z = (3/2)(1-w)(1-w/3).
+  Write w = a+bi with a²+b² < 1. Then
+    Re(z) = (3-4a+a²-b²)/2 = (2(a-1)² + (1-a²-b²))/2 > 0
+  since a²+b² < 1 and (a-1)² ≥ 0. This contradicts Re(z) ≤ 0.
+
+  Reference: Iserles, Theorem 3.5. -/
+theorem bdf2_aStable : bdf2.IsAStable := by
+  intro z hz ξ hξ
+  simp only [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, bdf2] at hξ
+  simp [Fin.sum_univ_three] at hξ
+  -- hξ : equation involving z and ξ with rational coefficients
+  -- Goal : ‖ξ‖ ≤ 1
+  by_contra hgt
+  push_neg at hgt -- hgt : 1 < ‖ξ‖
+  -- Decompose ξ into real and imaginary parts
+  set a := ξ.re with ha_def
+  set b := ξ.im with hb_def
+  have hξ_eq : ξ = ⟨a, b⟩ := (Complex.eta ξ).symm
+  -- |ξ|² > 1
+  have hr2 : 1 < a ^ 2 + b ^ 2 := by
+    have h1 : 1 < ‖ξ‖ ^ 2 := one_lt_sq_iff_one_lt_abs.mpr hgt
+    rwa [Complex.sq_norm, Complex.normSq_apply, hξ_eq,
+         show (⟨a, b⟩ : ℂ).re * (⟨a, b⟩ : ℂ).re +
+              (⟨a, b⟩ : ℂ).im * (⟨a, b⟩ : ℂ).im = a ^ 2 + b ^ 2 from by ring] at h1
+  -- ξ ≠ 0
+  have hξ_ne : ξ ≠ 0 := by intro heq; rw [heq] at hgt; simp at hgt
+  -- Compute ξ² parts
+  have hp2 : (⟨a, b⟩ : ℂ) ^ 2 = ⟨a * a - b * b, a * b + b * a⟩ := by rw [sq]; rfl
+  -- Extract real and imaginary parts of hξ
+  rw [hξ_eq] at hξ
+  rw [hp2] at hξ
+  -- Split the complex equation into Re and Im parts
+  obtain ⟨hξ_re, hξ_im⟩ := Complex.ext_iff.mp hξ
+  simp only [Complex.zero_re, Complex.zero_im,
+    Complex.add_re, Complex.add_im, Complex.sub_re, Complex.sub_im,
+    Complex.mul_re, Complex.mul_im, Complex.neg_re, Complex.neg_im,
+    Complex.ofReal_re, Complex.ofReal_im, Complex.mk_re, Complex.mk_im,
+    Complex.one_re, Complex.one_im] at hξ_re hξ_im
+  -- hξ_re/hξ_im are now real equations in a, b, z.re, z.im
+  -- Multiply hξ_re by (a²-b²) and hξ_im by 2ab, add to eliminate z.im:
+  -- This yields: z.re * (2/3) * ((a²-b²)² + (2ab)²) = [RHS]
+  -- Note (a²-b²)² + (2ab)² = (a²+b²)² = r⁴
+  set r2 := a ^ 2 + b ^ 2 with hr2_def
+  -- Key: 2 * z.re * r2 ^ 2 = 3 * r2 ^ 2 - 4 * r2 * a + 2 * a ^ 2 - r2
+  -- This is derived from the Re/Im equations above.
+  have hzre : 2 * z.re * r2 ^ 2 = 3 * r2 ^ 2 - 4 * r2 * a + 2 * a ^ 2 - r2 := by
+    have h1 : (a * a - b * b) ^ 2 + (a * b + b * a) ^ 2 = r2 ^ 2 := by
+      rw [hr2_def]; ring
+    -- From hξ_re and hξ_im, eliminate z.im:
+    -- hξ_re * (a*a-b*b) + hξ_im * (a*b+b*a) eliminates z.im terms
+    nlinarith [hξ_re, hξ_im, sq_nonneg a, sq_nonneg b,
+               mul_comm a b, sq_nonneg (a * a - b * b),
+               sq_nonneg (a * b + b * a)]
+  -- Now show z.re > 0
+  -- Key algebraic identity: 3r⁴ - 4r²a + 2a² - r² = 2(r²-a)² + r²(r²-1)
+  have hpos : 0 < 3 * r2 ^ 2 - 4 * r2 * a + 2 * a ^ 2 - r2 := by
+    have h1 : 3 * r2 ^ 2 - 4 * r2 * a + 2 * a ^ 2 - r2 =
+      2 * (r2 - a) ^ 2 + r2 * (r2 - 1) := by ring
+    rw [h1]
+    have : 0 < r2 * (r2 - 1) := by positivity
+    have : 0 ≤ 2 * (r2 - a) ^ 2 := by positivity
+    linarith
+  have hr2_pos : (0 : ℝ) < r2 ^ 2 := by positivity
+  -- From hzre and hpos: z.re > 0
+  have : 0 < z.re := by nlinarith
+  linarith -- contradicts hz : z.re ≤ 0
+
+/-- BDF2 is A(α)-stable for any α ∈ [0, π/2]. -/
+theorem bdf2_aAlphaStable {α : ℝ} (hα : 0 ≤ α) (hα2 : α ≤ π / 2) :
+    bdf2.IsAAlphaStable α :=
+  bdf2_aStable.toAAlphaStable hα hα2
+
 /-! ## BDF3 and BDF4: NOT A-stable
 
 These follow immediately from Dahlquist's second barrier: a zero-stable,
