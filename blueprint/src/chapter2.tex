@@ -1,0 +1,60 @@
+\chapter{Numerical Differential Equation Methods}
+
+
+\section{Analysis of the Euler Method}
+
+\begin{theorem}[212A]
+
+  \label{thm:212A}
+  \lean{Butcher.Ch2.Thm212A}
+  \uses{def:110A, thm:110C}
+Assuming that \( f \) satisfies a Lipschitz condition, with constant \( L \), the global error satisfies the bound
+\[
+\| y(x) - \widehat{y}(x) \| \leq 
+\begin{cases}
+\| y(x_0) - \widehat{y}(x_0) \| + Hm(x - x_0), & L = 0, \\[6pt]
+\exp((x - x_0)L) \| y(x_0) - \widehat{y}(x_0) \| + \dfrac{\exp((x - x_0)L) - 1}{L} Hm, & L > 0.
+\end{cases}
+\]
+\end{theorem}
+
+\begin{theorem}[213A]
+
+  \label{thm:213A}
+  \lean{Butcher.Ch2.Thm213A}
+  \uses{thm:212A}
+Under the conditions stated in the above discussion, $D_n \to 0$ as $n \to \infty$.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:213A}
+  \uses{thm:212A}
+This result follows immediately from the bound on accumulated errors given by Theorem~\ref{thm:212A}.
+
+The property expressed in this theorem is known as `convergence'. In searching for other numerical methods that are suitable for solving initial value problems, attention is usually limited to convergent methods. The reason for this is clear: a non-convergent method is likely to give increasingly meaningless results as greater computational effort is expended through the use of smaller stepsizes.
+
+Because the bound used in the proof of Theorem~\ref{thm:213A} holds not only for $x = \overline{x}$, but also for all $x \in [x_0, \overline{x}]$, we can state a uniform version of this result.
+\end{proof}
+
+\begin{theorem}[213B]
+
+  \label{thm:213B}
+  \lean{Butcher.Ch2.Thm213B}
+  \uses{thm:213A}
+Under the conditions of Theorem 213A,
+\[
+\sup_{x\in[x_0,\overline{x}]} \bigl| y(x) - y_n(x) \bigr| \to 0
+\]
+as $n \to \infty$.
+\end{theorem}
+
+
+\section{Linear Multistep Methods}
+
+\begin{theorem}[243A]
+
+  \label{thm:243A}
+  \lean{Butcher.Ch2.Thm243A}
+  \uses{def:402A, def:403A, def:404B, thm:405A, thm:405C, thm:406D}
+A linear multistep method is convergent if and only if it is stable and consistent.
+\end{theorem}
