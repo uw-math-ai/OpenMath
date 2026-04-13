@@ -3,3 +3,17 @@
 /.lake
 /lakefile.olean
 *.pdf
+
+# Local agent state
+.env
+.claude/
+.codex
+.mcp.json
+
+# Runtime files (change every cycle)
+.prover-state/run.lock
+.prover-state/monitor.lock
+.prover-state/loop.log
+.prover-state/monitor.log
+.prover-state/loop.pid
+.prover-state/cycle
