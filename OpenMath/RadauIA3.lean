@@ -99,6 +99,20 @@ theorem rkRadauIA3_D3 : rkRadauIA3.SatisfiesD 3 := by
   interval_cases k <;> fin_cases j <;>
     simp [rkRadauIA3, Fin.sum_univ_three] <;> nlinarith [sqrt6_sq]
 
+/-- Radau IA 3-stage does NOT satisfy B(6): quadrature order is exactly 2s−1 = 5 (not 6). -/
+theorem rkRadauIA3_not_B6 : ¬rkRadauIA3.SatisfiesB 6 := by
+  intro h
+  have := h 6 (by omega) (by omega)
+  simp [rkRadauIA3, Fin.sum_univ_three] at this
+  nlinarith [sqrt6_sq]
+
+/-- Radau IA 3-stage does NOT satisfy C(3): stage order is exactly s−1 = 2 (not 3). -/
+theorem rkRadauIA3_not_C3 : ¬rkRadauIA3.SatisfiesC 3 := by
+  intro h
+  have := h 3 (by omega) (by omega) 0
+  simp [rkRadauIA3, Fin.sum_univ_three] at this
+  nlinarith [sqrt6_sq]
+
 /-! ## Order ≥ 5
 
 Radau IA 3-stage has order ≥ 5 via B(5) ∧ C(2) ∧ D(2). In fact Radau IA 3-stage

@@ -183,6 +183,43 @@ theorem lobIIIA_not_stiffDecay :
   intro h_zero
   exact absurd (tendsto_nhds_unique h_zero lobIIIA_stabilityFn_tendsto_neg_one) (by norm_num)
 
+/-! ## Simplifying Assumptions B/C/D -/
+
+/-- Lobatto IIIA 2-stage satisfies B(2): trapezoidal quadrature integrates polynomials
+of degree ≤ 1 exactly. -/
+theorem rkLobattoIIIA2_B2 : rkLobattoIIIA2.SatisfiesB 2 := by
+  intro k hk1 hk2
+  interval_cases k <;> simp [rkLobattoIIIA2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIA 2-stage satisfies C(2): the collocation condition holds at nodes 0 and 1. -/
+theorem rkLobattoIIIA2_C2 : rkLobattoIIIA2.SatisfiesC 2 := by
+  intro k hk1 hk2 i
+  interval_cases k <;> fin_cases i <;>
+    simp [rkLobattoIIIA2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIA 2-stage does NOT satisfy B(3): quadrature order is exactly 2 (not 3).
+  ∑ b_i c_i² = 1/2 ≠ 1/3. -/
+theorem rkLobattoIIIA2_not_B3 : ¬rkLobattoIIIA2.SatisfiesB 3 := by
+  intro h
+  have := h 3 (by omega) (by omega)
+  simp [rkLobattoIIIA2, Fin.sum_univ_two] at this
+  linarith
+
+/-- Lobatto IIIA 2-stage does NOT satisfy C(3): stage order is exactly 2 (not 3). -/
+theorem rkLobattoIIIA2_not_C3 : ¬rkLobattoIIIA2.SatisfiesC 3 := by
+  intro h
+  have := h 3 (by omega) (by omega) 1
+  simp [rkLobattoIIIA2, Fin.sum_univ_two] at this
+  linarith
+
+/-- Lobatto IIIA 2-stage does NOT satisfy D(1):
+  ∑_i b_i a_{i,0} = 1/4 ≠ b_0(1-c_0) = 1/2. -/
+theorem rkLobattoIIIA2_not_D1 : ¬rkLobattoIIIA2.SatisfiesD 1 := by
+  intro h
+  have := h 1 (by omega) (by omega) 0
+  simp [rkLobattoIIIA2, Fin.sum_univ_two] at this
+  linarith
+
 /-! ## NOT Algebraically Stable -/
 
 /-- **Lobatto IIIA 2-stage is NOT algebraically stable.**

@@ -108,6 +108,52 @@ theorem lobIIIB_not_stiffDecay :
     ¬Tendsto (fun x : ℝ => lobIIIAStabilityFn (↑x)) atBot (nhds 0) :=
   lobIIIA_not_stiffDecay
 
+/-! ## Simplifying Assumptions B/C/D -/
+
+/-- Lobatto IIIB 2-stage satisfies B(2): the quadrature weights integrate
+polynomials of degree ≤ 1 exactly. -/
+theorem rkLobattoIIIB2_B2 : rkLobattoIIIB2.SatisfiesB 2 := by
+  intro k hk1 hk2
+  interval_cases k <;> simp [rkLobattoIIIB2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIB 2-stage does NOT satisfy B(3): quadrature order is exactly 2.
+  ∑ b_i c_i² = 1/2 ≠ 1/3. -/
+theorem rkLobattoIIIB2_not_B3 : ¬rkLobattoIIIB2.SatisfiesB 3 := by
+  intro h
+  have := h 3 (by omega) (by omega)
+  simp [rkLobattoIIIB2, Fin.sum_univ_two] at this
+  linarith
+
+/-- Lobatto IIIB 2-stage does NOT satisfy C(1): the row-sum condition fails.
+  ∑_j a_{0,j} = 1/2 ≠ 0 = c_0.
+  This reflects the fact that IIIB is NOT row-sum consistent. -/
+theorem rkLobattoIIIB2_not_C1 : ¬rkLobattoIIIB2.SatisfiesC 1 := by
+  intro h
+  have := h 1 (by omega) (by omega) 0
+  simp [rkLobattoIIIB2, Fin.sum_univ_two] at this
+  linarith
+
+/-- Lobatto IIIB 2-stage satisfies D(1): ∑_i b_i a_{i,j} = b_j(1 − c_j). -/
+theorem rkLobattoIIIB2_D1 : rkLobattoIIIB2.SatisfiesD 1 := by
+  intro k hk1 hk2 j
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases j <;>
+    simp [rkLobattoIIIB2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIB 2-stage satisfies D(2): ∑_i b_i c_i a_{i,j} = b_j(1−c_j²)/2. -/
+theorem rkLobattoIIIB2_D2 : rkLobattoIIIB2.SatisfiesD 2 := by
+  intro k hk1 hk2 j
+  interval_cases k <;> fin_cases j <;>
+    simp [rkLobattoIIIB2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIB 2-stage does NOT satisfy D(3):
+  the third-order D condition fails. -/
+theorem rkLobattoIIIB2_not_D3 : ¬rkLobattoIIIB2.SatisfiesD 3 := by
+  intro h
+  have := h 3 (by omega) (by omega) 0
+  simp [rkLobattoIIIB2, Fin.sum_univ_two] at this
+  linarith
+
 /-! ## NOT Algebraically Stable -/
 
 /-- **Lobatto IIIB 2-stage is NOT algebraically stable.**

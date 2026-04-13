@@ -70,6 +70,51 @@ theorem rkLobattoIIIC2_stifflyAccurate :
     ∀ i : Fin 2, rkLobattoIIIC2.b i = rkLobattoIIIC2.A 1 i := by
   intro i; fin_cases i <;> simp [rkLobattoIIIC2]
 
+/-! ## Simplifying Assumptions B/C/D -/
+
+/-- Lobatto IIIC 2-stage satisfies B(2): the quadrature weights integrate
+polynomials of degree ≤ 1 exactly. -/
+theorem rkLobattoIIIC2_B2 : rkLobattoIIIC2.SatisfiesB 2 := by
+  intro k hk1 hk2
+  interval_cases k <;> simp [rkLobattoIIIC2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIC 2-stage does NOT satisfy B(3): quadrature order is exactly 2.
+  ∑ b_i c_i² = 1/2 ≠ 1/3. -/
+theorem rkLobattoIIIC2_not_B3 : ¬rkLobattoIIIC2.SatisfiesB 3 := by
+  intro h
+  have := h 3 (by omega) (by omega)
+  simp [rkLobattoIIIC2, Fin.sum_univ_two] at this
+  linarith
+
+/-- Lobatto IIIC 2-stage satisfies C(1): the row-sum condition holds. -/
+theorem rkLobattoIIIC2_C1 : rkLobattoIIIC2.SatisfiesC 1 := by
+  intro k hk1 hk2 i
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases i <;>
+    simp [rkLobattoIIIC2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIC 2-stage does NOT satisfy C(2): stage order is exactly 1.
+  ∑_j a_{0,j} c_j = -1/2 ≠ 0 = c_0²/2. -/
+theorem rkLobattoIIIC2_not_C2 : ¬rkLobattoIIIC2.SatisfiesC 2 := by
+  intro h
+  have := h 2 (by omega) (by omega) 0
+  simp [rkLobattoIIIC2, Fin.sum_univ_two] at this
+  linarith
+
+/-- Lobatto IIIC 2-stage satisfies D(1): ∑_i b_i a_{i,j} = b_j(1 − c_j). -/
+theorem rkLobattoIIIC2_D1 : rkLobattoIIIC2.SatisfiesD 1 := by
+  intro k hk1 hk2 j
+  have hk : k = 1 := le_antisymm hk2 hk1
+  subst hk; fin_cases j <;>
+    simp [rkLobattoIIIC2, Fin.sum_univ_two] <;> norm_num
+
+/-- Lobatto IIIC 2-stage does NOT satisfy D(2). -/
+theorem rkLobattoIIIC2_not_D2 : ¬rkLobattoIIIC2.SatisfiesD 2 := by
+  intro h
+  have := h 2 (by omega) (by omega) 1
+  simp [rkLobattoIIIC2, Fin.sum_univ_two] at this
+  linarith
+
 /-! ## Stability Function
 
 The stability function of Lobatto IIIC 2-stage is R(z) = 2/(z² - 2z + 2).
