@@ -67,6 +67,10 @@ theorem SatisfiesC.mono {t : ButcherTableau s} {q q' : ℕ} (h : t.SatisfiesC q)
     t.SatisfiesC q' :=
   fun k hk1 hk2 i => h k hk1 (le_trans hk2 hq) i
 
+theorem SatisfiesD.mono {t : ButcherTableau s} {r r' : ℕ} (h : t.SatisfiesD r) (hr : r' ≤ r) :
+    t.SatisfiesD r' :=
+  fun k hk1 hk2 j => h k hk1 (le_trans hk2 hr) j
+
 /-! ## Equivalences with Existing Definitions -/
 
 /-- C(1) is equivalent to the row-sum condition: cᵢ = ∑ⱼ aᵢⱼ. -/
