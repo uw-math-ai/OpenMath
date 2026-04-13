@@ -184,6 +184,139 @@ def HasOrderGe5 (t : ButcherTableau s) : Prop :=
   t.order5a ∧ t.order5b ∧ t.order5c ∧ t.order5d ∧ t.order5e ∧
   t.order5f ∧ t.order5g ∧ t.order5h ∧ t.order5i
 
+/-! ### Sixth-Order Conditions
+
+The 20 sixth-order conditions correspond to the 20 rooted trees of order 6.
+Reference: Hairer–Nørsett–Wanner, *Solving ODEs I*, Table II.2.1;
+Butcher, *Numerical Methods for ODEs*, Chapter 3.
+-/
+
+/-- **Sixth-order condition (τ₁)**: ∑ bᵢ cᵢ⁵ = 1/6. Tree: [•⁵]. -/
+def order6a (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i ^ 5 = 1 / 6
+
+/-- **Sixth-order condition (τ₂)**: ∑ bᵢ cᵢ³ (∑ aᵢⱼ cⱼ) = 1/12.
+Tree: [•³,[•]]. -/
+def order6b (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i ^ 3 * (∑ j : Fin s, t.A i j * t.c j) = 1 / 12
+
+/-- **Sixth-order condition (τ₃)**: ∑ bᵢ cᵢ (∑ aᵢⱼ cⱼ)² = 1/24.
+Tree: [•,[•]²]. -/
+def order6c (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i * (∑ j : Fin s, t.A i j * t.c j) ^ 2 = 1 / 24
+
+/-- **Sixth-order condition (τ₄)**: ∑ bᵢ cᵢ² (∑ aᵢⱼ cⱼ²) = 1/18.
+Tree: [•²,[•²]]. -/
+def order6d (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i ^ 2 * (∑ j : Fin s, t.A i j * t.c j ^ 2) = 1 / 18
+
+/-- **Sixth-order condition (τ₅)**: ∑ bᵢ cᵢ² (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ cₖ)) = 1/36.
+Tree: [•²,[[•]]]. -/
+def order6e (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i ^ 2 *
+    (∑ j : Fin s, t.A i j * (∑ k : Fin s, t.A j k * t.c k)) = 1 / 36
+
+/-- **Sixth-order condition (τ₆)**: ∑ bᵢ (∑ aᵢⱼ cⱼ)(∑ aᵢⱼ cⱼ²) = 1/36.
+Tree: [[•],[•²]]. -/
+def order6f (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * (∑ j : Fin s, t.A i j * t.c j) *
+    (∑ j : Fin s, t.A i j * t.c j ^ 2) = 1 / 36
+
+/-- **Sixth-order condition (τ₇)**: ∑ bᵢ (∑ aᵢⱼ cⱼ)(∑ⱼ aᵢⱼ (∑ₖ aⱼₖ cₖ)) = 1/72.
+Tree: [[•],[[•]]]. -/
+def order6g (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * (∑ j : Fin s, t.A i j * t.c j) *
+    (∑ j : Fin s, t.A i j * (∑ k : Fin s, t.A j k * t.c k)) = 1 / 72
+
+/-- **Sixth-order condition (τ₈)**: ∑ bᵢ cᵢ (∑ aᵢⱼ cⱼ³) = 1/24.
+Tree: [•,[•³]]. -/
+def order6h (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i * (∑ j : Fin s, t.A i j * t.c j ^ 3) = 1 / 24
+
+/-- **Sixth-order condition (τ₉)**: ∑ bᵢ cᵢ (∑ⱼ aᵢⱼ cⱼ (∑ₖ aⱼₖ cₖ)) = 1/48.
+Tree: [•,[•,[•]]]. -/
+def order6i (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i *
+    (∑ j : Fin s, t.A i j * t.c j * (∑ k : Fin s, t.A j k * t.c k)) = 1 / 48
+
+/-- **Sixth-order condition (τ₁₀)**: ∑ bᵢ cᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ cₖ²)) = 1/72.
+Tree: [•,[[•²]]]. -/
+def order6j (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i *
+    (∑ j : Fin s, t.A i j * (∑ k : Fin s, t.A j k * t.c k ^ 2)) = 1 / 72
+
+/-- **Sixth-order condition (τ₁₁)**: ∑ bᵢ cᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ (∑ₗ aₖₗ cₗ))) = 1/144.
+Tree: [•,[[[•]]]]. -/
+def order6k (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, t.b i * t.c i *
+    (∑ j : Fin s, t.A i j * (∑ k : Fin s, t.A j k *
+      (∑ l : Fin s, t.A k l * t.c l))) = 1 / 144
+
+/-- **Sixth-order condition (τ₁₂)**: ∑∑ bᵢ aᵢⱼ cⱼ⁴ = 1/30. Tree: [[•⁴]]. -/
+def order6l (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s, t.b i * t.A i j * t.c j ^ 4 = 1 / 30
+
+/-- **Sixth-order condition (τ₁₃)**: ∑∑ bᵢ aᵢⱼ cⱼ² (∑ aⱼₖ cₖ) = 1/60.
+Tree: [[•²,[•]]]. -/
+def order6m (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * t.c j ^ 2 * (∑ k : Fin s, t.A j k * t.c k) = 1 / 60
+
+/-- **Sixth-order condition (τ₁₄)**: ∑∑ bᵢ aᵢⱼ (∑ aⱼₖ cₖ)² = 1/120.
+Tree: [[[•]²]]. -/
+def order6n (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * (∑ k : Fin s, t.A j k * t.c k) ^ 2 = 1 / 120
+
+/-- **Sixth-order condition (τ₁₅)**: ∑∑ bᵢ aᵢⱼ cⱼ (∑ aⱼₖ cₖ²) = 1/90.
+Tree: [[•,[•²]]]. -/
+def order6o (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * t.c j * (∑ k : Fin s, t.A j k * t.c k ^ 2) = 1 / 90
+
+/-- **Sixth-order condition (τ₁₆)**: ∑∑ bᵢ aᵢⱼ (∑ₖ aⱼₖ cₖ³) = 1/120.
+Tree: [[[•³]]]. -/
+def order6p (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * (∑ k : Fin s, t.A j k * t.c k ^ 3) = 1 / 120
+
+/-- **Sixth-order condition (τ₁₇)**: ∑∑ bᵢ aᵢⱼ cⱼ (∑ₖ aⱼₖ (∑ₗ aₖₗ cₗ)) = 1/180.
+Tree: [[•,[[•]]]]. -/
+def order6q (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * t.c j * (∑ k : Fin s, t.A j k *
+      (∑ l : Fin s, t.A k l * t.c l)) = 1 / 180
+
+/-- **Sixth-order condition (τ₁₈)**: ∑∑ bᵢ aᵢⱼ (∑ₖ aⱼₖ cₖ (∑ₗ aₖₗ cₗ)) = 1/240.
+Tree: [[[•,[•]]]]. -/
+def order6r (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * (∑ k : Fin s, t.A j k * t.c k *
+      (∑ l : Fin s, t.A k l * t.c l)) = 1 / 240
+
+/-- **Sixth-order condition (τ₁₉)**: ∑∑ bᵢ aᵢⱼ (∑ₖ aⱼₖ (∑ₗ aₖₗ cₗ²)) = 1/360.
+Tree: [[[[•²]]]]. -/
+def order6s (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s,
+    t.b i * t.A i j * (∑ k : Fin s, t.A j k *
+      (∑ l : Fin s, t.A k l * t.c l ^ 2)) = 1 / 360
+
+/-- **Sixth-order condition (τ₂₀)**: ∑∑ bᵢ aᵢⱼ (∑ₖ aⱼₖ (∑ₗ aₖₗ (∑ₘ aₗₘ cₘ))) = 1/720.
+Tree: [[[[[•]]]]]. -/
+def order6t (t : ButcherTableau s) : Prop :=
+  ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+    t.b i * t.A i j * t.A j k * (∑ l : Fin s, t.A k l *
+      (∑ m : Fin s, t.A l m * t.c m)) = 1 / 720
+
+/-- A method has **order at least 6** if it satisfies all order conditions through
+sixth order (37 conditions total: 17 from order 5 + 20 new). -/
+def HasOrderGe6 (t : ButcherTableau s) : Prop :=
+  t.HasOrderGe5 ∧
+  t.order6a ∧ t.order6b ∧ t.order6c ∧ t.order6d ∧ t.order6e ∧
+  t.order6f ∧ t.order6g ∧ t.order6h ∧ t.order6i ∧ t.order6j ∧
+  t.order6k ∧ t.order6l ∧ t.order6m ∧ t.order6n ∧ t.order6o ∧
+  t.order6p ∧ t.order6q ∧ t.order6r ∧ t.order6s ∧ t.order6t
+
 /-- A consistent method has order at least 1. -/
 theorem IsConsistent.hasOrderGe1 {t : ButcherTableau s} (h : t.IsConsistent) :
     t.HasOrderGe1 :=

@@ -600,6 +600,582 @@ theorem HasOrderGe5_of_B5_C3_D1 (t : ButcherTableau s) (hB : t.SatisfiesB 5)
     conv_lhs => arg 2; ext i; rw [step4 i]
     rw [← Finset.mul_sum, h5e]; ring
 
+/-- **B(5) ∧ C(2) ∧ D(2) → order ≥ 5.**
+
+This alternative to `HasOrderGe5_of_B5_C3_D1` uses C(2) and D(2) instead of C(3) and D(1).
+The key insights:
+- Conditions 1–3: C(2) collapses inner sums, then B(5).
+- Condition 4: swap sums, apply D(2): ∑ bⱼcⱼ²(1−cⱼ²)/2 = (B(3)−B(5))/2.
+- Condition 5: swap sums, apply D(1): ∑ bⱼcⱼ³(1−cⱼ) = B(4)−B(5).
+- Condition 6: C(2) on inner, then reduces to (1/2)·condition 4.
+- Condition 7: C(2) on inner, then (1/2)·condition 5.
+- Condition 8: D(1)+D(2) double application: ∑ bₖcₖ²(1−cₖ)²/2 = (B(3)−2B(4)+B(5))/2.
+- Condition 9: C(2) on inner, then (1/2)·condition 8.
+
+This is needed for Radau IA 3-stage which satisfies B(5), C(2), and D(3) ⊇ D(2).
+Reference: Hairer–Nørsett–Wanner, Theorem IV.5.1. -/
+theorem HasOrderGe5_of_B5_C2_D2 (t : ButcherTableau s) (hB : t.SatisfiesB 5)
+    (hC : t.SatisfiesC 2) (hD : t.SatisfiesD 2) : t.HasOrderGe5 := by
+  have hOrd4 := HasOrderGe4_of_B4_C2_D1 t (hB.mono (by omega)) hC (hD.mono (by omega))
+  -- Extract B-sums
+  have hB3 : ∑ i : Fin s, t.b i * t.c i ^ 2 = 1 / 3 := by
+    have h := hB 3 (by omega) (by omega); simpa using h
+  have hB4 : ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4 := by
+    have h := hB 4 (by omega) (by omega); simpa using h
+  have hB5 : ∑ i : Fin s, t.b i * t.c i ^ 4 = 1 / 5 := by
+    have h := hB 5 (by omega) le_rfl; simpa using h
+  -- Extract C/D conditions
+  have hC2 : ∀ i : Fin s, ∑ j, t.A i j * t.c j = t.c i ^ 2 / 2 := by
+    intro i; have h := hC 2 (by omega) le_rfl i; simpa using h
+  have hD1 : ∀ j : Fin s, ∑ i, t.b i * t.A i j = t.b j * (1 - t.c j) := by
+    intro j; have h := hD 1 (by omega) (by omega) j; simpa using h
+  have hD2 : ∀ j : Fin s, ∑ i, t.b i * t.c i * t.A i j = t.b j / 2 * (1 - t.c j ^ 2) := by
+    intro j; have h := hD 2 (by omega) le_rfl j; simpa using h
+  -- Prove condition 5e first (used by conditions 7 and 9)
+  have h5e : ∑ i : Fin s, ∑ j, t.b i * t.A i j * t.c j ^ 3 = 1 / 20 := by
+    rw [Finset.sum_comm]
+    have step : ∀ j : Fin s,
+        ∑ i, t.b i * t.A i j * t.c j ^ 3 = t.c j ^ 3 * ∑ i, t.b i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [step j, hD1 j]
+    have pw : ∀ j : Fin s, t.c j ^ 3 * (t.b j * (1 - t.c j)) =
+        t.b j * t.c j ^ 3 - t.b j * t.c j ^ 4 := by intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, hB4, hB5]; ring
+  -- Prove condition 5h (used by condition 9)
+  have h5h : ∑ i : Fin s, ∑ j, t.b i * t.A i j *
+      (∑ k, t.A j k * t.c k ^ 2) = 1 / 60 := by
+    -- Step 1: swap outer sum, apply D(1) to column j
+    rw [Finset.sum_comm]
+    have step1 : ∀ j : Fin s,
+        ∑ i, t.b i * t.A i j * (∑ k, t.A j k * t.c k ^ 2) =
+        (∑ i, t.b i * t.A i j) * (∑ k, t.A j k * t.c k ^ 2) := by
+      intro j; rw [← Finset.sum_mul]
+    conv_lhs => arg 2; ext j; rw [step1 j, hD1 j]
+    -- Step 2: expand product, swap inner sum
+    have step2 : ∀ j : Fin s,
+        t.b j * (1 - t.c j) * ∑ k, t.A j k * t.c k ^ 2 =
+        ∑ k, (t.b j * t.A j k * t.c k ^ 2 - t.b j * t.c j * t.A j k * t.c k ^ 2) := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext k; ring
+    conv_lhs => arg 2; ext j; rw [step2 j]
+    rw [Finset.sum_comm]
+    have step3 : ∀ k : Fin s,
+        ∑ j, (t.b j * t.A j k * t.c k ^ 2 - t.b j * t.c j * t.A j k * t.c k ^ 2) =
+        t.c k ^ 2 * (∑ j, t.b j * t.A j k - ∑ j, t.b j * t.c j * t.A j k) := by
+      intro k; rw [← Finset.sum_sub_distrib, Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext k; rw [step3 k]
+    -- Step 3: apply D(1) and D(2) to inner sums
+    have step4 : ∀ k : Fin s,
+        t.c k ^ 2 * (∑ j, t.b j * t.A j k - ∑ j, t.b j * t.c j * t.A j k) =
+        t.c k ^ 2 * (t.b k * (1 - t.c k) - t.b k / 2 * (1 - t.c k ^ 2)) := by
+      intro k; congr 1; rw [hD1 k, hD2 k]
+    conv_lhs => arg 2; ext k; rw [step4 k]
+    -- Simplify: bₖ(1-cₖ) - bₖ(1-cₖ²)/2 = bₖ(1-cₖ)²/2
+    have pw : ∀ k : Fin s,
+        t.c k ^ 2 * (t.b k * (1 - t.c k) - t.b k / 2 * (1 - t.c k ^ 2)) =
+        1 / 2 * (t.b k * t.c k ^ 2) - t.b k * t.c k ^ 3 +
+        1 / 2 * (t.b k * t.c k ^ 4) := by intro k; ring
+    simp_rw [pw, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+             ← Finset.mul_sum, hB3, hB4, hB5]; ring
+  refine ⟨hOrd4, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- order5a: ∑ bᵢcᵢ⁴ = 1/5, from B(5)
+    simp only [order5a]; linarith [hB5]
+  · -- order5b: ∑ bᵢcᵢ²(∑ aᵢⱼcⱼ) = 1/10, using C(2)
+    simp only [order5b]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i ^ 2 * ∑ j, t.A i j * t.c j =
+        t.b i * t.c i ^ 2 * (t.c i ^ 2 / 2) := by
+      intro i; rw [hC2 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * t.c i ^ 2 * (t.c i ^ 2 / 2) =
+        (1 / 2) * ∑ i : Fin s, t.b i * t.c i ^ 4 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB5]; ring
+  · -- order5c: ∑ bᵢ(∑ aᵢⱼcⱼ)² = 1/20, using C(2)
+    simp only [order5c]
+    have step : ∀ i : Fin s,
+        t.b i * (∑ j, t.A i j * t.c j) ^ 2 =
+        t.b i * (t.c i ^ 2 / 2) ^ 2 := by
+      intro i; rw [hC2 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * (t.c i ^ 2 / 2) ^ 2 =
+        (1 / 4) * ∑ i : Fin s, t.b i * t.c i ^ 4 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB5]; ring
+  · -- order5d: ∑ bᵢcᵢ(∑ aᵢⱼcⱼ²) = 1/15, using D(2)
+    -- Swap sums, apply D(2): ∑ⱼ cⱼ²(∑ᵢ bᵢcᵢaᵢⱼ) = ∑ⱼ cⱼ² bⱼ(1-cⱼ²)/2
+    simp only [order5d]
+    have expand : ∀ i : Fin s, t.b i * t.c i * ∑ j, t.A i j * t.c j ^ 2 =
+        ∑ j, t.b i * t.c i * t.A i j * t.c j ^ 2 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [expand i]
+    rw [Finset.sum_comm]
+    have factor : ∀ j : Fin s, ∑ i, t.b i * t.c i * t.A i j * t.c j ^ 2 =
+        t.c j ^ 2 * ∑ i, t.b i * t.c i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [factor j, hD2 j]
+    have pw : ∀ j : Fin s, t.c j ^ 2 * (t.b j / 2 * (1 - t.c j ^ 2)) =
+        1 / 2 * (t.b j * t.c j ^ 2) - 1 / 2 * (t.b j * t.c j ^ 4) := by
+      intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, ← Finset.mul_sum, hB3, hB5]; ring
+  · -- order5e: ∑∑ bᵢaᵢⱼcⱼ³ = 1/20, using D(1)
+    exact h5e
+  · -- order5f: ∑ bᵢcᵢ(∑ⱼ aᵢⱼ(∑ₖ aⱼₖcₖ)) = 1/30
+    -- C(2) on inner: ∑ₖ aⱼₖcₖ = cⱼ²/2, then reduces to (1/2)·order5d
+    simp only [order5f]
+    have inner : ∀ i : Fin s,
+        ∑ j, t.A i j * (∑ k, t.A j k * t.c k) = ∑ j, t.A i j * (t.c j ^ 2 / 2) := by
+      intro i; congr 1; ext j; rw [hC2 j]
+    conv_lhs => arg 2; ext i; rw [show t.b i * t.c i *
+        (∑ j, t.A i j * (∑ k, t.A j k * t.c k)) =
+        t.b i * t.c i * (∑ j, t.A i j * (∑ k, t.A j k * t.c k)) from rfl, inner i]
+    -- Factor out 1/2
+    have factor : ∀ i : Fin s,
+        t.b i * t.c i * ∑ j, t.A i j * (t.c j ^ 2 / 2) =
+        (1 / 2) * (t.b i * t.c i * ∑ j, t.A i j * t.c j ^ 2) := by
+      intro i; rw [Finset.mul_sum, Finset.mul_sum]; congr 1
+      rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [factor i]
+    -- Now (1/2) · ∑ bᵢcᵢ(∑ aᵢⱼcⱼ²) = (1/2) · 1/15 = 1/30
+    -- Reprove order5d inline
+    rw [← Finset.mul_sum]
+    have expand : ∀ i : Fin s, t.b i * t.c i * ∑ j, t.A i j * t.c j ^ 2 =
+        ∑ j, t.b i * t.c i * t.A i j * t.c j ^ 2 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; arg 2; ext i; rw [expand i]
+    rw [Finset.sum_comm]
+    have factor2 : ∀ j : Fin s, ∑ i, t.b i * t.c i * t.A i j * t.c j ^ 2 =
+        t.c j ^ 2 * ∑ i, t.b i * t.c i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; arg 2; ext j; rw [factor2 j, hD2 j]
+    have pw : ∀ j : Fin s, t.c j ^ 2 * (t.b j / 2 * (1 - t.c j ^ 2)) =
+        1 / 2 * (t.b j * t.c j ^ 2) - 1 / 2 * (t.b j * t.c j ^ 4) := by
+      intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, ← Finset.mul_sum, hB3, hB5]; ring
+  · -- order5g: ∑∑ bᵢaᵢⱼcⱼ(∑ₖ aⱼₖcₖ) = 1/40
+    -- C(2) on inner: ∑ₖ aⱼₖcₖ = cⱼ²/2, then (1/2)·condition 5e
+    simp only [order5g]
+    have step : ∀ i j : Fin s,
+        t.b i * t.A i j * t.c j * ∑ k, t.A j k * t.c k =
+        t.b i * t.A i j * t.c j * (t.c j ^ 2 / 2) := by
+      intro i j; rw [hC2 j]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step i j]
+    have step2 : ∀ i : Fin s, ∑ j, t.b i * t.A i j * t.c j * (t.c j ^ 2 / 2) =
+        (1 / 2) * ∑ j, t.b i * t.A i j * t.c j ^ 3 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step2 i]
+    rw [← Finset.mul_sum, h5e]; ring
+  · -- order5h: ∑∑ bᵢaᵢⱼ(∑ₖ aⱼₖcₖ²) = 1/60
+    exact h5h
+  · -- order5i: ∑∑∑ bᵢaᵢⱼaⱼₖ(∑ₗ aₖₗcₗ) = 1/120
+    -- C(2) on innermost: ∑ₗ aₖₗcₗ = cₖ²/2, then (1/2)·condition 8
+    simp only [order5i]
+    have step1 : ∀ i j k : Fin s,
+        t.b i * t.A i j * t.A j k * ∑ l, t.A k l * t.c l =
+        t.b i * t.A i j * t.A j k * (t.c k ^ 2 / 2) := by
+      intro i j k; rw [hC2 k]
+    conv_lhs => arg 2; ext i; arg 2; ext j; arg 2; ext k; rw [step1 i j k]
+    -- Factor out 1/2, collapse to ∑ aⱼₖcₖ²
+    have step2 : ∀ i j : Fin s,
+        ∑ k, t.b i * t.A i j * t.A j k * (t.c k ^ 2 / 2) =
+        (1 / 2) * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 2) := by
+      intro i j
+      rw [Finset.mul_sum, Finset.mul_sum]
+      apply Finset.sum_congr rfl; intro k _; ring
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step2 i j]
+    -- Factor out 1/2 from double sum
+    have step3 : ∀ i : Fin s,
+        ∑ j, 1 / 2 * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 2) =
+        (1 / 2) * ∑ j, t.b i * t.A i j * (∑ k, t.A j k * t.c k ^ 2) := by
+      intro i; rw [Finset.mul_sum]
+    conv_lhs => arg 2; ext i; rw [step3 i]
+    rw [← Finset.mul_sum, h5h]; ring
+
+/-- **B(6) ∧ C(3) ∧ D(2) → order ≥ 6.**
+
+All 20 sixth-order conditions follow from B(6), C(3), and D(2).
+The proof strategy:
+- Conditions 6a–6g: C(2)/C(3) collapse inner sums, reducing to B(6).
+- Condition 6h: D(2) swaps sums, reducing to B(4)−B(6).
+- Conditions 6i–6k: C collapses to a constant times 6h.
+- Condition 6l: D(1) swaps sums: B(5)−B(6).
+- Conditions 6m–6o, 6q: C collapses to constants times 6l.
+- Condition 6p: D(1)+D(2): (B(4)−B(5))−(B(4)−B(6))/2.
+- Conditions 6r–6t: C collapses to constants times 6p.
+
+Reference: Hairer–Nørsett–Wanner, Theorem IV.7.4 (p ≤ η+ζ+1, p ≤ 2η+2). -/
+theorem HasOrderGe6_of_B6_C3_D2 (t : ButcherTableau s) (hB : t.SatisfiesB 6)
+    (hC : t.SatisfiesC 3) (hD : t.SatisfiesD 2) : t.HasOrderGe6 := by
+  have hOrd5 := HasOrderGe5_of_B5_C3_D1 t (hB.mono (by omega)) hC (hD.mono (by omega))
+  -- Extract B-sums
+  have hB4 : ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4 := by
+    have h := hB 4 (by omega) (by omega); simpa using h
+  have hB5 : ∑ i : Fin s, t.b i * t.c i ^ 4 = 1 / 5 := by
+    have h := hB 5 (by omega) (by omega); simpa using h
+  have hB6 : ∑ i : Fin s, t.b i * t.c i ^ 5 = 1 / 6 := by
+    have h := hB 6 (by omega) le_rfl; simpa using h
+  -- Extract C conditions
+  have hC2 : ∀ i : Fin s, ∑ j, t.A i j * t.c j = t.c i ^ 2 / 2 := by
+    intro i; have h := hC 2 (by omega) (by omega) i; simpa using h
+  have hC3 : ∀ i : Fin s, ∑ j, t.A i j * t.c j ^ 2 = t.c i ^ 3 / 3 := by
+    intro i; have h := hC 3 (by omega) le_rfl i; simpa using h
+  -- Extract D conditions
+  have hD1 : ∀ j : Fin s, ∑ i, t.b i * t.A i j = t.b j * (1 - t.c j) := by
+    intro j; have h := hD 1 (by omega) (by omega) j; simpa using h
+  have hD2 : ∀ j : Fin s, ∑ i, t.b i * t.c i * t.A i j = t.b j / 2 * (1 - t.c j ^ 2) := by
+    intro j; have h := hD 2 (by omega) le_rfl j; simpa using h
+  -- Derived: ∑ⱼ aᵢⱼ(∑ₖ aⱼₖcₖ) = cᵢ³/6 (C(2) then C(3))
+  have h_inner2 : ∀ i : Fin s,
+      ∑ j, t.A i j * (∑ k, t.A j k * t.c k) = t.c i ^ 3 / 6 := by
+    intro i
+    conv_lhs => arg 2; ext j; rw [hC2 j]
+    have : ∑ j : Fin s, t.A i j * (t.c j ^ 2 / 2) =
+        (1 / 2) * ∑ j, t.A i j * t.c j ^ 2 := by
+      rw [Finset.mul_sum]; congr 1; ext j; ring
+    rw [this, hC3 i]; ring
+  -- Key intermediate: h6h_val — ∑ bᵢcᵢ(∑ aᵢⱼcⱼ³) = 1/24
+  -- Strategy: swap sums, apply D(2)
+  have h6h_val : ∑ i : Fin s, t.b i * t.c i *
+      (∑ j, t.A i j * t.c j ^ 3) = 1 / 24 := by
+    have expand : ∀ i : Fin s, t.b i * t.c i * ∑ j, t.A i j * t.c j ^ 3 =
+        ∑ j, t.b i * t.c i * t.A i j * t.c j ^ 3 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [expand i]
+    rw [Finset.sum_comm]
+    have factor : ∀ j : Fin s, ∑ i, t.b i * t.c i * t.A i j * t.c j ^ 3 =
+        t.c j ^ 3 * ∑ i, t.b i * t.c i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [factor j, hD2 j]
+    have pw : ∀ j : Fin s, t.c j ^ 3 * (t.b j / 2 * (1 - t.c j ^ 2)) =
+        1 / 2 * (t.b j * t.c j ^ 3) - 1 / 2 * (t.b j * t.c j ^ 5) := by intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, ← Finset.mul_sum, hB4, hB6]; ring
+  -- Key intermediate: h6l_val — ∑∑ bᵢaᵢⱼcⱼ⁴ = 1/30
+  -- Strategy: swap sums, apply D(1)
+  have h6l_val : ∑ i : Fin s, ∑ j, t.b i * t.A i j * t.c j ^ 4 = 1 / 30 := by
+    rw [Finset.sum_comm]
+    have step : ∀ j : Fin s,
+        ∑ i, t.b i * t.A i j * t.c j ^ 4 = t.c j ^ 4 * ∑ i, t.b i * t.A i j := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext i; ring
+    conv_lhs => arg 2; ext j; rw [step j, hD1 j]
+    have pw : ∀ j : Fin s, t.c j ^ 4 * (t.b j * (1 - t.c j)) =
+        t.b j * t.c j ^ 4 - t.b j * t.c j ^ 5 := by intro j; ring
+    simp_rw [pw, Finset.sum_sub_distrib, hB5, hB6]; ring
+  -- Key intermediate: h6p_val — ∑∑ bᵢaᵢⱼ(∑ aⱼₖcₖ³) = 1/120
+  -- Strategy: D(1) on outer, then D(1)+D(2) on inner
+  have h6p_val : ∑ i : Fin s, ∑ j,
+      t.b i * t.A i j * (∑ k, t.A j k * t.c k ^ 3) = 1 / 120 := by
+    rw [Finset.sum_comm]
+    have step1 : ∀ j : Fin s,
+        ∑ i, t.b i * t.A i j * (∑ k, t.A j k * t.c k ^ 3) =
+        (∑ i, t.b i * t.A i j) * (∑ k, t.A j k * t.c k ^ 3) := by
+      intro j; rw [← Finset.sum_mul]
+    conv_lhs => arg 2; ext j; rw [step1 j, hD1 j]
+    -- Expand bⱼ(1-cⱼ) · (∑ₖ aⱼₖcₖ³)
+    have step2 : ∀ j : Fin s, t.b j * (1 - t.c j) * ∑ k, t.A j k * t.c k ^ 3 =
+        ∑ k, (t.b j * t.A j k * t.c k ^ 3 - t.b j * t.c j * t.A j k * t.c k ^ 3) := by
+      intro j; rw [Finset.mul_sum]; congr 1; ext k; ring
+    conv_lhs => arg 2; ext j; rw [step2 j]
+    rw [Finset.sum_comm]
+    have step3 : ∀ k : Fin s,
+        ∑ j, (t.b j * t.A j k * t.c k ^ 3 - t.b j * t.c j * t.A j k * t.c k ^ 3) =
+        t.c k ^ 3 * (∑ j, t.b j * t.A j k - ∑ j, t.b j * t.c j * t.A j k) := by
+      intro k; rw [← Finset.sum_sub_distrib, Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext k; rw [step3 k]
+    have step4 : ∀ k : Fin s,
+        t.c k ^ 3 * (∑ j, t.b j * t.A j k - ∑ j, t.b j * t.c j * t.A j k) =
+        t.c k ^ 3 * (t.b k * (1 - t.c k) - t.b k / 2 * (1 - t.c k ^ 2)) := by
+      intro k; congr 1; rw [hD1 k, hD2 k]
+    conv_lhs => arg 2; ext k; rw [step4 k]
+    have pw : ∀ k : Fin s,
+        t.c k ^ 3 * (t.b k * (1 - t.c k) - t.b k / 2 * (1 - t.c k ^ 2)) =
+        1 / 2 * (t.b k * t.c k ^ 3) - t.b k * t.c k ^ 4 +
+        1 / 2 * (t.b k * t.c k ^ 5) := by intro k; ring
+    simp_rw [pw, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+             ← Finset.mul_sum, hB4, hB5, hB6]; ring
+  refine ⟨hOrd5, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- order6a: ∑ bᵢcᵢ⁵ = 1/6, from B(6)
+    simp only [order6a]; linarith [hB6]
+  · -- order6b: ∑ bᵢcᵢ³(∑ aᵢⱼcⱼ) = 1/12, C(2): inner = cᵢ²/2
+    simp only [order6b]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i ^ 3 * ∑ j, t.A i j * t.c j =
+        t.b i * t.c i ^ 3 * (t.c i ^ 2 / 2) := by
+      intro i; rw [hC2 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * t.c i ^ 3 * (t.c i ^ 2 / 2) =
+        (1 / 2) * ∑ i : Fin s, t.b i * t.c i ^ 5 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB6]; ring
+  · -- order6c: ∑ bᵢcᵢ(∑ aᵢⱼcⱼ)² = 1/24, C(2): inner = cᵢ²/2
+    simp only [order6c]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i * (∑ j, t.A i j * t.c j) ^ 2 =
+        t.b i * t.c i * (t.c i ^ 2 / 2) ^ 2 := by
+      intro i; rw [hC2 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * t.c i * (t.c i ^ 2 / 2) ^ 2 =
+        (1 / 4) * ∑ i : Fin s, t.b i * t.c i ^ 5 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB6]; ring
+  · -- order6d: ∑ bᵢcᵢ²(∑ aᵢⱼcⱼ²) = 1/18, C(3): inner = cᵢ³/3
+    simp only [order6d]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i ^ 2 * ∑ j, t.A i j * t.c j ^ 2 =
+        t.b i * t.c i ^ 2 * (t.c i ^ 3 / 3) := by
+      intro i; rw [hC3 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * t.c i ^ 2 * (t.c i ^ 3 / 3) =
+        (1 / 3) * ∑ i : Fin s, t.b i * t.c i ^ 5 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB6]; ring
+  · -- order6e: ∑ bᵢcᵢ²(∑ aᵢⱼ(∑ aⱼₖcₖ)) = 1/36, using h_inner2 = cᵢ³/6
+    simp only [order6e]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i ^ 2 * (∑ j, t.A i j * (∑ k, t.A j k * t.c k)) =
+        t.b i * t.c i ^ 2 * (t.c i ^ 3 / 6) := by
+      intro i; rw [h_inner2 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * t.c i ^ 2 * (t.c i ^ 3 / 6) =
+        (1 / 6) * ∑ i : Fin s, t.b i * t.c i ^ 5 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB6]; ring
+  · -- order6f: ∑ bᵢ(∑ aᵢⱼcⱼ)(∑ aᵢⱼcⱼ²) = 1/36, C(2)·C(3)
+    simp only [order6f]
+    have step : ∀ i : Fin s,
+        t.b i * (∑ j, t.A i j * t.c j) * (∑ j, t.A i j * t.c j ^ 2) =
+        t.b i * (t.c i ^ 2 / 2) * (t.c i ^ 3 / 3) := by
+      intro i; rw [hC2 i, hC3 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * (t.c i ^ 2 / 2) * (t.c i ^ 3 / 3) =
+        (1 / 6) * ∑ i : Fin s, t.b i * t.c i ^ 5 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB6]; ring
+  · -- order6g: ∑ bᵢ(∑ aᵢⱼcⱼ)(∑ aᵢⱼ(∑ aⱼₖcₖ)) = 1/72, C(2)·h_inner2
+    simp only [order6g]
+    have step : ∀ i : Fin s,
+        t.b i * (∑ j, t.A i j * t.c j) *
+        (∑ j, t.A i j * (∑ k, t.A j k * t.c k)) =
+        t.b i * (t.c i ^ 2 / 2) * (t.c i ^ 3 / 6) := by
+      intro i; rw [hC2 i, h_inner2 i]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have : ∑ i : Fin s, t.b i * (t.c i ^ 2 / 2) * (t.c i ^ 3 / 6) =
+        (1 / 12) * ∑ i : Fin s, t.b i * t.c i ^ 5 := by
+      rw [Finset.mul_sum]; congr 1; ext i; ring
+    rw [this, hB6]; ring
+  · -- order6h: ∑ bᵢcᵢ(∑ aᵢⱼcⱼ³) = 1/24
+    exact h6h_val
+  · -- order6i: ∑ bᵢcᵢ(∑ aᵢⱼcⱼ(∑ aⱼₖcₖ)) = 1/48
+    -- C(2) on inner: ∑ₖ aⱼₖcₖ = cⱼ²/2, then = (1/2)·h6h
+    simp only [order6i]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i * (∑ j, t.A i j * t.c j * (∑ k, t.A j k * t.c k)) =
+        t.b i * t.c i * (∑ j, t.A i j * t.c j * (t.c j ^ 2 / 2)) := by
+      intro i; congr 1; congr 1; ext j; rw [hC2 j]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have step2 : ∀ i : Fin s,
+        t.b i * t.c i * ∑ j, t.A i j * t.c j * (t.c j ^ 2 / 2) =
+        (1 / 2) * (t.b i * t.c i * ∑ j, t.A i j * t.c j ^ 3) := by
+      intro i; rw [Finset.mul_sum, Finset.mul_sum]; congr 1
+      rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step2 i]
+    rw [← Finset.mul_sum, h6h_val]; ring
+  · -- order6j: ∑ bᵢcᵢ(∑ aᵢⱼ(∑ aⱼₖcₖ²)) = 1/72
+    -- C(3): inner = cⱼ³/3, then = (1/3)·h6h
+    simp only [order6j]
+    have step : ∀ i : Fin s,
+        t.b i * t.c i * (∑ j, t.A i j * (∑ k, t.A j k * t.c k ^ 2)) =
+        t.b i * t.c i * (∑ j, t.A i j * (t.c j ^ 3 / 3)) := by
+      intro i; congr 1; congr 1; ext j; rw [hC3 j]
+    conv_lhs => arg 2; ext i; rw [step i]
+    have step2 : ∀ i : Fin s,
+        t.b i * t.c i * ∑ j, t.A i j * (t.c j ^ 3 / 3) =
+        (1 / 3) * (t.b i * t.c i * ∑ j, t.A i j * t.c j ^ 3) := by
+      intro i; rw [Finset.mul_sum, Finset.mul_sum]; congr 1
+      rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step2 i]
+    rw [← Finset.mul_sum, h6h_val]; ring
+  · -- order6k: ∑ bᵢcᵢ(∑ aᵢⱼ(∑ aⱼₖ(∑ aₖₗcₗ))) = 1/144
+    -- C(2) on innermost, then C(3), then = (1/6)·h6h
+    simp only [order6k]
+    -- Step 1: C(2) on innermost: ∑ₗ aₖₗcₗ = cₖ²/2
+    have step1 : ∀ i : Fin s,
+        t.b i * t.c i * (∑ j, t.A i j * (∑ k, t.A j k * (∑ l, t.A k l * t.c l))) =
+        t.b i * t.c i * (∑ j, t.A i j * (∑ k, t.A j k * (t.c k ^ 2 / 2))) := by
+      intro i; congr 1; congr 1; ext j; congr 1; congr 1; ext k; congr 1; rw [hC2 k]
+    conv_lhs => arg 2; ext i; rw [step1 i]
+    -- Step 2: ∑ₖ aⱼₖ(cₖ²/2) = (1/2)·∑ₖ aⱼₖcₖ² = (1/2)·cⱼ³/3 = cⱼ³/6
+    have step2 : ∀ j : Fin s,
+        ∑ k, t.A j k * (t.c k ^ 2 / 2) = t.c j ^ 3 / 6 := by
+      intro j
+      have : ∑ k : Fin s, t.A j k * (t.c k ^ 2 / 2) =
+          (1 / 2) * ∑ k, t.A j k * t.c k ^ 2 := by
+        rw [Finset.mul_sum]; congr 1; ext k; ring
+      rw [this, hC3 j]; ring
+    have step3 : ∀ i : Fin s,
+        t.b i * t.c i * (∑ j, t.A i j * (∑ k, t.A j k * (t.c k ^ 2 / 2))) =
+        t.b i * t.c i * (∑ j, t.A i j * (t.c j ^ 3 / 6)) := by
+      intro i; congr 1; congr 1; ext j; rw [step2 j]
+    conv_lhs => arg 2; ext i; rw [step3 i]
+    -- Step 3: factor to (1/6)·h6h
+    have step4 : ∀ i : Fin s,
+        t.b i * t.c i * ∑ j, t.A i j * (t.c j ^ 3 / 6) =
+        (1 / 6) * (t.b i * t.c i * ∑ j, t.A i j * t.c j ^ 3) := by
+      intro i; rw [Finset.mul_sum, Finset.mul_sum]; congr 1
+      rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step4 i]
+    rw [← Finset.mul_sum, h6h_val]; ring
+  · -- order6l: ∑∑ bᵢaᵢⱼcⱼ⁴ = 1/30
+    exact h6l_val
+  · -- order6m: ∑∑ bᵢaᵢⱼcⱼ²(∑ aⱼₖcₖ) = 1/60
+    -- C(2): inner = cⱼ²/2, so cⱼ²·(cⱼ²/2) = cⱼ⁴/2, then (1/2)·h6l
+    simp only [order6m]
+    have step : ∀ i j : Fin s,
+        t.b i * t.A i j * t.c j ^ 2 * (∑ k, t.A j k * t.c k) =
+        t.b i * t.A i j * t.c j ^ 2 * (t.c j ^ 2 / 2) := by
+      intro i j; rw [hC2 j]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step i j]
+    have step2 : ∀ i : Fin s,
+        ∑ j, t.b i * t.A i j * t.c j ^ 2 * (t.c j ^ 2 / 2) =
+        (1 / 2) * ∑ j, t.b i * t.A i j * t.c j ^ 4 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step2 i]
+    rw [← Finset.mul_sum, h6l_val]; ring
+  · -- order6n: ∑∑ bᵢaᵢⱼ(∑ aⱼₖcₖ)² = 1/120
+    -- C(2): (∑ aⱼₖcₖ)² = (cⱼ²/2)² = cⱼ⁴/4, then (1/4)·h6l
+    simp only [order6n]
+    have step : ∀ i j : Fin s,
+        t.b i * t.A i j * (∑ k, t.A j k * t.c k) ^ 2 =
+        t.b i * t.A i j * (t.c j ^ 2 / 2) ^ 2 := by
+      intro i j; rw [hC2 j]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step i j]
+    have step2 : ∀ i : Fin s,
+        ∑ j, t.b i * t.A i j * (t.c j ^ 2 / 2) ^ 2 =
+        (1 / 4) * ∑ j, t.b i * t.A i j * t.c j ^ 4 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step2 i]
+    rw [← Finset.mul_sum, h6l_val]; ring
+  · -- order6o: ∑∑ bᵢaᵢⱼcⱼ(∑ aⱼₖcₖ²) = 1/90
+    -- C(3): inner = cⱼ³/3, then cⱼ·(cⱼ³/3) = cⱼ⁴/3, then (1/3)·h6l
+    simp only [order6o]
+    have step : ∀ i j : Fin s,
+        t.b i * t.A i j * t.c j * (∑ k, t.A j k * t.c k ^ 2) =
+        t.b i * t.A i j * t.c j * (t.c j ^ 3 / 3) := by
+      intro i j; rw [hC3 j]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step i j]
+    have step2 : ∀ i : Fin s,
+        ∑ j, t.b i * t.A i j * t.c j * (t.c j ^ 3 / 3) =
+        (1 / 3) * ∑ j, t.b i * t.A i j * t.c j ^ 4 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step2 i]
+    rw [← Finset.mul_sum, h6l_val]; ring
+  · -- order6p: ∑∑ bᵢaᵢⱼ(∑ aⱼₖcₖ³) = 1/120
+    exact h6p_val
+  · -- order6q: ∑∑ bᵢaᵢⱼcⱼ(∑ aⱼₖ(∑ aₖₗcₗ)) = 1/180
+    -- C(2) on innermost, then C(3), net: cⱼ·(cⱼ³/6) = cⱼ⁴/6, then (1/6)·h6l
+    simp only [order6q]
+    -- Step 1: C(2) on innermost
+    have step1 : ∀ i j : Fin s,
+        t.b i * t.A i j * t.c j * (∑ k, t.A j k * (∑ l, t.A k l * t.c l)) =
+        t.b i * t.A i j * t.c j * (∑ k, t.A j k * (t.c k ^ 2 / 2)) := by
+      intro i j; congr 1; congr 1; ext k; rw [hC2 k]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step1 i j]
+    -- Step 2: ∑ₖ aⱼₖ(cₖ²/2) = cⱼ³/6
+    have step2 : ∀ j : Fin s,
+        ∑ k, t.A j k * (t.c k ^ 2 / 2) = t.c j ^ 3 / 6 := by
+      intro j
+      have : ∑ k : Fin s, t.A j k * (t.c k ^ 2 / 2) =
+          (1 / 2) * ∑ k, t.A j k * t.c k ^ 2 := by
+        rw [Finset.mul_sum]; congr 1; ext k; ring
+      rw [this, hC3 j]; ring
+    have step3 : ∀ i j : Fin s,
+        t.b i * t.A i j * t.c j * (∑ k, t.A j k * (t.c k ^ 2 / 2)) =
+        t.b i * t.A i j * t.c j * (t.c j ^ 3 / 6) := by
+      intro i j; rw [step2 j]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step3 i j]
+    -- Step 3: factor to (1/6)·h6l
+    have step4 : ∀ i : Fin s,
+        ∑ j, t.b i * t.A i j * t.c j * (t.c j ^ 3 / 6) =
+        (1 / 6) * ∑ j, t.b i * t.A i j * t.c j ^ 4 := by
+      intro i; rw [Finset.mul_sum]; congr 1; ext j; ring
+    conv_lhs => arg 2; ext i; rw [step4 i]
+    rw [← Finset.mul_sum, h6l_val]; ring
+  · -- order6r: ∑∑ bᵢaᵢⱼ(∑ aⱼₖcₖ(∑ aₖₗcₗ)) = 1/240
+    -- C(2): inner = cₖ²/2, so cₖ·(cₖ²/2) = cₖ³/2, then (1/2)·h6p
+    simp only [order6r]
+    have step : ∀ i j : Fin s,
+        t.b i * t.A i j * (∑ k, t.A j k * t.c k * (∑ l, t.A k l * t.c l)) =
+        t.b i * t.A i j * (∑ k, t.A j k * t.c k * (t.c k ^ 2 / 2)) := by
+      intro i j; congr 1; congr 1; ext k; rw [hC2 k]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step i j]
+    have step2 : ∀ i j : Fin s,
+        t.b i * t.A i j * ∑ k, t.A j k * t.c k * (t.c k ^ 2 / 2) =
+        (1 / 2) * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 3) := by
+      intro i j; rw [Finset.mul_sum, Finset.mul_sum]; congr 1
+      rw [Finset.mul_sum]; congr 1; ext k; ring
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step2 i j]
+    have step3 : ∀ i : Fin s,
+        ∑ j, 1 / 2 * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 3) =
+        (1 / 2) * ∑ j, t.b i * t.A i j * (∑ k, t.A j k * t.c k ^ 3) := by
+      intro i; rw [Finset.mul_sum]
+    conv_lhs => arg 2; ext i; rw [step3 i]
+    rw [← Finset.mul_sum, h6p_val]; ring
+  · -- order6s: ∑∑ bᵢaᵢⱼ(∑ aⱼₖ(∑ aₖₗcₗ²)) = 1/360
+    -- C(3): inner = cₖ³/3, then (1/3)·h6p
+    simp only [order6s]
+    have step : ∀ i j : Fin s,
+        t.b i * t.A i j * (∑ k, t.A j k * (∑ l, t.A k l * t.c l ^ 2)) =
+        t.b i * t.A i j * (∑ k, t.A j k * (t.c k ^ 3 / 3)) := by
+      intro i j; congr 1; congr 1; ext k; rw [hC3 k]
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step i j]
+    have step2 : ∀ i j : Fin s,
+        t.b i * t.A i j * ∑ k, t.A j k * (t.c k ^ 3 / 3) =
+        (1 / 3) * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 3) := by
+      intro i j; rw [Finset.mul_sum, Finset.mul_sum]; congr 1
+      rw [Finset.mul_sum]; congr 1; ext k; ring
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step2 i j]
+    have step3 : ∀ i : Fin s,
+        ∑ j, 1 / 3 * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 3) =
+        (1 / 3) * ∑ j, t.b i * t.A i j * (∑ k, t.A j k * t.c k ^ 3) := by
+      intro i; rw [Finset.mul_sum]
+    conv_lhs => arg 2; ext i; rw [step3 i]
+    rw [← Finset.mul_sum, h6p_val]; ring
+  · -- order6t: ∑∑∑ bᵢaᵢⱼaⱼₖ(∑ₗ aₖₗ(∑ₘ aₗₘcₘ)) = 1/720
+    -- C(2) on innermost, then C(3), net: (1/6)·h6p
+    simp only [order6t]
+    -- Step 1: C(2) on innermost sum
+    have step1 : ∀ i j k : Fin s,
+        t.b i * t.A i j * t.A j k * (∑ l, t.A k l * (∑ m, t.A l m * t.c m)) =
+        t.b i * t.A i j * t.A j k * (∑ l, t.A k l * (t.c l ^ 2 / 2)) := by
+      intro i j k; congr 1; congr 1; ext l; rw [hC2 l]
+    conv_lhs => arg 2; ext i; arg 2; ext j; arg 2; ext k; rw [step1 i j k]
+    -- Step 2: ∑ₗ aₖₗ(cₗ²/2) = cₖ³/6
+    have inner6 : ∀ k : Fin s,
+        ∑ l, t.A k l * (t.c l ^ 2 / 2) = t.c k ^ 3 / 6 := by
+      intro k
+      have : ∑ l : Fin s, t.A k l * (t.c l ^ 2 / 2) =
+          (1 / 2) * ∑ l, t.A k l * t.c l ^ 2 := by
+        rw [Finset.mul_sum]; congr 1; ext l; ring
+      rw [this, hC3 k]; ring
+    have step2 : ∀ i j k : Fin s,
+        t.b i * t.A i j * t.A j k * (∑ l, t.A k l * (t.c l ^ 2 / 2)) =
+        t.b i * t.A i j * t.A j k * (t.c k ^ 3 / 6) := by
+      intro i j k; rw [inner6 k]
+    conv_lhs => arg 2; ext i; arg 2; ext j; arg 2; ext k; rw [step2 i j k]
+    -- Step 3: factor (1/6) out, collapse ∑ₖ aⱼₖ(cₖ³/6) = (1/6)·∑ₖ aⱼₖcₖ³
+    have step3 : ∀ i j : Fin s,
+        ∑ k, t.b i * t.A i j * t.A j k * (t.c k ^ 3 / 6) =
+        (1 / 6) * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 3) := by
+      intro i j
+      rw [Finset.mul_sum, Finset.mul_sum]
+      apply Finset.sum_congr rfl; intro k _; ring
+    conv_lhs => arg 2; ext i; arg 2; ext j; rw [step3 i j]
+    -- Step 4: factor out 1/6 from double sum
+    have step4 : ∀ i : Fin s,
+        ∑ j, 1 / 6 * (t.b i * t.A i j * ∑ k, t.A j k * t.c k ^ 3) =
+        (1 / 6) * ∑ j, t.b i * t.A i j * (∑ k, t.A j k * t.c k ^ 3) := by
+      intro i; rw [Finset.mul_sum]
+    conv_lhs => arg 2; ext i; rw [step4 i]
+    rw [← Finset.mul_sum, h6p_val]; ring
+
 /-! ## Verification for Standard Methods -/
 
 section BackwardEuler

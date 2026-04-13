@@ -23,7 +23,7 @@ The nodes are the three Gauss–Legendre quadrature points on [0,1]:
 
 ## Key Properties
 
-- **Order ≥ 4** (proven): via B(4) ∧ C(3) simplifying assumptions
+- **Order 6** (proven): the maximum 2s for s=3, via B(6) ∧ C(3) ∧ D(2)
 - **A-stable**: stability function is the (3,3)-diagonal Padé approximant to eᶻ
 - **NOT L-stable**: R(z) → −1 as z → −∞
 - **Algebraically stable**: Gauss methods are always algebraically stable
@@ -99,14 +99,21 @@ theorem rkGaussLegendre3_D3 : rkGaussLegendre3.SatisfiesD 3 := by
   interval_cases k <;> fin_cases j <;>
     simp [rkGaussLegendre3, Fin.sum_univ_three] <;> nlinarith [sqrt15_sq]
 
-/-! ## Order ≥ 5
+/-! ## Order
 
-GL3 has order ≥ 5 via B(5) ∧ C(3) ∧ D(1). In fact GL3 has order 6 (= 2s),
-but proving order ≥ 6 requires defining the 20 sixth-order conditions. -/
+GL3 has order 6 = 2s, the maximum for any s-stage RK method.
+We prove this via B(6) ∧ C(3) ∧ D(2), building on the simplifying assumptions framework. -/
 
 theorem rkGaussLegendre3_order5 : rkGaussLegendre3.HasOrderGe5 :=
   ButcherTableau.HasOrderGe5_of_B5_C3_D1 _
     (rkGaussLegendre3_B6.mono (by omega)) rkGaussLegendre3_C3 rkGaussLegendre3_D1
+
+/-- **GL3 has order at least 6** (= 2s for s=3), the maximum possible for any
+s-stage Runge–Kutta method. Proved via B(6) ∧ C(3) ∧ D(2) ⊆ D(3).
+Reference: Iserles, Theorem 2.6; Hairer–Nørsett–Wanner, Theorem IV.7.4. -/
+theorem rkGaussLegendre3_order6 : rkGaussLegendre3.HasOrderGe6 :=
+  ButcherTableau.HasOrderGe6_of_B6_C3_D2 _
+    rkGaussLegendre3_B6 rkGaussLegendre3_C3 (rkGaussLegendre3_D3.mono (by omega))
 
 /-! ## Stability Function
 
