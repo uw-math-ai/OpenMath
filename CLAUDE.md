@@ -8,16 +8,17 @@ Semi-autonomous formalization of *A First Course in the Numerical Analysis of Di
 
 1. **Read `.prover-state/strategy.md`** for what to work on this cycle.
 2. **Sorry-first (ABSOLUTE RULE)**: When formalizing new content, write the full proof structure with `sorry` at every step. Verify it compiles (`lake env lean <file>`). Then close sorry's one by one.
-3. **Prove**: Use Lean LSP tools (`lean_goal`, `lean_multi_attempt`, search tools). Decompose hard sorry's into sub-lemmas. Submit truly hard lemmas to Aristotle.
-4. **Write results**: Before finishing, write `.prover-state/task_results/cycle_<NNN>.md` documenting what you tried, what worked, what failed, and suggested next steps. If blocked, write an issue file in `.prover-state/issues/`.
-5. **Commit**: Verify all modified files compile, then commit and push.
+3. **Aristotle-first (MANDATORY)**: After writing the sorry-first structure, batch-submit ~5 sorry's/sub-lemmas to Aristotle (free compute!). Sleep 30 minutes. Check results, incorporate proofs, fix partials. Only manually prove what Aristotle failed on.
+4. **Prove remaining**: Use Lean LSP tools (`lean_goal`, `lean_multi_attempt`, search tools) for what Aristotle didn't solve.
+5. **Write results**: Before finishing, write `.prover-state/task_results/cycle_<NNN>.md` documenting what you tried, what worked, what failed, and suggested next steps. If blocked, write an issue file in `.prover-state/issues/`.
+6. **Commit**: Verify all modified files compile, then commit and push.
 
 ## Rules
 
 - **Follow the strategy.** Do not cherry-pick easy goals or freelance.
 - If Mathlib is missing something, **build it yourself** as a helper lemma. "Mathlib gap" is never a final answer.
 - **Never increase `maxHeartbeats`** above 200000. Decompose the proof instead.
-- Do not poll Aristotle repeatedly. Submit jobs, then work on proofs yourself.
+- **Maximize Aristotle usage.** It is free compute. Submit ~5 jobs per cycle in batch, sleep 30 min, then process results. Do not poll repeatedly — one check after 30 min is enough.
 - A cycle with zero changes is **unacceptable**. At minimum, decompose a sorry or write an issue.
 - If stuck on a sorry, write a structured issue file in `.prover-state/issues/` explaining **WHY** (not just "it's hard").
 - Prefer `lake env lean OpenMath/Foo.lean` to check individual files over `lake build`.

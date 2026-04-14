@@ -413,8 +413,123 @@ def check_build(files: list = None) -> bool:
 
 # ─── Agent sessions ──────────────────────────────────────────────────────────
 
+# Path to Aristotle CLI (installed via uv)
+ARISTOTLE_BIN = str(ROOT / ".uv-tools" / "aristotle-mcp" / "bin" / "aristotle")
+ARISTOTLE_RESULTS_DIR = STATE / "aristotle_results"
+
 # Path to codex binary (installed in conda env)
 CODEX_BIN = "/gscratch/amath/vilin/conda/envs/codex/bin/codex"
+
+# ─── Aristotle ────────────────────────────────────────────────────────────────
+
+def aristotle_check_completed() -> List[Dict]:
+    """Check for completed Aristotle jobs. Returns list of completed projects."""
+    api_key = os.environ.get("ARISTOTLE_API_KEY", "")
+    if not api_key:
+        log("Aristotle: no API key configured, skipping check")
+        return []
+
+    completed = []
+    for status in ["COMPLETE", "COMPLETE_WITH_ERRORS"]:
+        try:
+            r = subprocess.run(
+                [ARISTOTLE_BIN, "list", "--api-key", api_key,
+                 "--status", status, "--limit", "20"],
+                cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True, timeout=30)
+            if r.returncode != 0:
+                log(f"Aristotle list ({status}) failed: {r.stderr[:200]}")
+                continue
+            # Parse output — aristotle list prints project info
+            output = r.stdout.strip()
+            if output:
+                # Extract project IDs (UUIDs) from output
+                ids = re.findall(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', output)
+                for pid in ids:
+                    completed.append({"project_id": pid, "status": status})
+        except subprocess.TimeoutExpired:
+            log(f"Aristotle list ({status}) timed out")
+        except Exception as e:
+            log(f"Aristotle list ({status}) error: {e}")
+
+    return completed
+
+
+def aristotle_download_result(project_id: str) -> Optional[str]:
+    """Download result for a completed Aristotle project. Returns destination path or None."""
+    api_key = os.environ.get("ARISTOTLE_API_KEY", "")
+    if not api_key:
+        return None
+
+    dest = ARISTOTLE_RESULTS_DIR / project_id
+    dest.mkdir(parents=True, exist_ok=True)
+
+    try:
+        r = subprocess.run(
+            [ARISTOTLE_BIN, "result", project_id,
+             "--api-key", api_key, "--destination", str(dest)],
+            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=60)
+        if r.returncode != 0:
+            log(f"Aristotle result {project_id[:8]} failed: {r.stderr[:200]}")
+            return None
+        log(f"Aristotle result {project_id[:8]} downloaded to {dest}")
+        return str(dest)
+    except Exception as e:
+        log(f"Aristotle result {project_id[:8]} error: {e}")
+        return None
+
+
+def aristotle_harvest() -> str:
+    """Check for and download all completed Aristotle results.
+
+    Returns a summary string for the worker to use.
+    """
+    completed = aristotle_check_completed()
+    if not completed:
+        log("Aristotle: no completed jobs found")
+        return ""
+
+    log(f"Aristotle: found {len(completed)} completed job(s)")
+    summaries = []
+
+    # Track which projects we've already harvested
+    harvested_file = STATE / "aristotle_harvested.txt"
+    already_harvested = set()
+    if harvested_file.exists():
+        already_harvested = set(harvested_file.read_text().strip().splitlines())
+
+    new_results = []
+    for job in completed:
+        pid = job["project_id"]
+        if pid in already_harvested:
+            continue
+
+        dest = aristotle_download_result(pid)
+        if dest:
+            # List files in the result directory
+            result_files = list(Path(dest).rglob("*.lean"))
+            file_list = ", ".join(f.name for f in result_files[:10])
+            summaries.append(
+                f"- Project {pid[:8]}… ({job['status']}): "
+                f"{len(result_files)} Lean file(s) [{file_list}] → {dest}"
+            )
+            new_results.append(pid)
+        else:
+            summaries.append(f"- Project {pid[:8]}… ({job['status']}): download failed")
+
+    # Mark as harvested
+    if new_results:
+        with open(harvested_file, "a") as f:
+            for pid in new_results:
+                f.write(pid + "\n")
+
+    if summaries:
+        summary = "## Aristotle results ready for incorporation\n" + "\n".join(summaries)
+        log(f"Aristotle harvest: {len(new_results)} new result(s)")
+        return summary
+    return ""
+
 
 def run_claude(prompt: str, model: str = None, timeout: int = 1800,
                json_output: bool = False) -> str:
@@ -510,7 +625,7 @@ def get_worker_engine(cycle: int) -> str:
 
 # ─── Components ───────────────────────────────────────────────────────────────
 
-def run_planner(cycle: int) -> str:
+def run_planner(cycle: int, aristotle_summary: str = "") -> str:
     """Run the planner to generate strategy.md."""
     sorry_locations = get_sorry_locations()
     plan = read_file(PLAN_FILE, "No plan.md found.")
@@ -562,13 +677,17 @@ Your job: write strategy.md with concrete instructions for the worker.
 ## Task results from last cycle
 {latest_task_result}
 
+## Completed Aristotle results (ready for incorporation)
+{aristotle_summary or "No pending Aristotle results."}
+
 ## Your job
 Write `.prover-state/strategy.md` with:
-1. Which sorry/theorem to work on (highest priority, not cherry-picking easy ones)
-2. What approach to use (specific, not "try harder")
-3. What NOT to try (explicitly list failed approaches from attempts)
-4. If an issue reports a blocker, assign infrastructure work before proof work
-5. If there are no sorry's and no theorems in progress, pick the next theorem from plan.md
+1. If Aristotle results are available, prioritize incorporating them first
+2. Which sorry/theorem to work on (highest priority, not cherry-picking easy ones)
+3. What approach to use (specific, not "try harder")
+4. What NOT to try (explicitly list failed approaches from attempts)
+5. If an issue reports a blocker, assign infrastructure work before proof work
+6. If there are no sorry's and no theorems in progress, pick the next theorem from plan.md
 
 Be concrete and actionable. The worker will follow your instructions literally.
 Write the file now using the Write tool.
@@ -578,27 +697,45 @@ Write the file now using the Write tool.
     return output
 
 
-def run_worker(cycle: int) -> str:
+def run_worker(cycle: int, aristotle_summary: str = "") -> str:
     """Run the worker to make progress on the formalization."""
     engine = get_worker_engine(cycle)
     strategy = read_file(STRATEGY_FILE, "No strategy file. Work on the next theorem in plan.md.")
     sorry_locations = get_sorry_locations()
 
+    aristotle_section = ""
+    if aristotle_summary:
+        aristotle_section = f"""
+## Aristotle results from previous cycles (INCORPORATE THESE FIRST)
+{aristotle_summary}
+
+**IMPORTANT**: Before starting new work, check these Aristotle results. Read the Lean files
+in the result directories, and incorporate any successful proofs into the codebase. Fix partial
+proofs if they need minor edits. This is free work — do not ignore it.
+"""
+
     prompt = f"""You are the worker for cycle {cycle} of an autonomous Lean 4 formalization project.
 
 ## Your strategy (from the planner — FOLLOW THIS)
 {strategy}
-
+{aristotle_section}
 ## Current sorry locations
 {sorry_locations}
 
 ## Instructions
 1. Follow the strategy above. Do not freelance or cherry-pick easy goals.
 2. Use sorry-first workflow: write proof structure with sorry, verify it compiles, then close sorry's.
-3. Use lean LSP tools (lean_goal, lean_multi_attempt, lean_leansearch, lean_loogle) to find lemmas and prove goals.
-4. If truly stuck on a lemma, submit it to Aristotle (submit_file tool).
+3. **Aristotle-first workflow (MANDATORY)**: Aristotle is FREE compute — use it aggressively.
+   a. After setting up the sorry-first structure, identify ~5 sorry's or sub-lemmas suitable for Aristotle.
+   b. Submit ALL of them to Aristotle in batch (use submit_file tool for each).
+   c. Sleep for 30 minutes (`sleep 1800`) to let Aristotle work.
+   d. Check all Aristotle results.
+   e. Incorporate whatever Aristotle proved.
+   f. Fix partial proofs from Aristotle if they need minor edits.
+   g. Only manually prove what Aristotle completely failed on.
+4. Use lean LSP tools (lean_goal, lean_multi_attempt, lean_leansearch, lean_loogle) to find lemmas and prove goals that Aristotle didn't solve.
 5. Verify your changes compile: run `lake env lean <file>` before committing.
-6. Write `.prover-state/task_results/cycle_{cycle:03d}.md` documenting what you did.
+6. Write `.prover-state/task_results/cycle_{cycle:03d}.md` documenting what you did (include Aristotle job results).
 7. If blocked, write an issue file in `.prover-state/issues/`.
 8. Commit and push your changes with a descriptive message.
 9. A cycle with zero changes is unacceptable. At minimum, decompose a sorry or write an issue.
@@ -853,6 +990,10 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     if ci_failing:
         log(f"CI FAILING: {ci['details'][:500]}")
 
+    # ── Aristotle Harvest ──
+    log("── Checking Aristotle results ──")
+    aristotle_summary = aristotle_harvest()
+
     # Pre-cycle state
     pre_sorry_count = count_sorries()
     log(f"Pre-cycle sorry count: {pre_sorry_count}")
@@ -877,7 +1018,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     # ── Planner ──
     elif not worker_only and not skip_planner:
         log("── Running Planner ──")
-        run_planner(cycle)
+        run_planner(cycle, aristotle_summary=aristotle_summary)
     elif not STRATEGY_FILE.exists():
         # Write a default strategy if none exists
         STRATEGY_FILE.write_text(
@@ -887,7 +1028,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
 
     # ── Worker ──
     log("── Running Worker ──")
-    worker_output = run_worker(cycle)
+    worker_output = run_worker(cycle, aristotle_summary=aristotle_summary)
 
     # Post-cycle state
     post_sorry_count = count_sorries()
@@ -1030,6 +1171,7 @@ def main():
     # Ensure state directories exist
     TASK_RESULTS.mkdir(parents=True, exist_ok=True)
     ISSUES.mkdir(parents=True, exist_ok=True)
+    ARISTOTLE_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # File lock
     lock_fd = open(LOCK_FILE, "w")
