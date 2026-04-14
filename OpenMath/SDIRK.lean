@@ -1,4 +1,5 @@
 import OpenMath.StiffEquations
+import OpenMath.Collocation
 
 /-!
 # SDIRK Methods (Section 4.3)

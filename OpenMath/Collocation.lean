@@ -341,10 +341,6 @@ theorem HasOrderGe4_of_B4_C2_D1 (t : ButcherTableau s) (hB : t.SatisfiesB 4)
     conv_lhs => arg 2; ext i; rw [step2 i]
     rw [← Finset.mul_sum, h4c]; ring
 
-theorem SatisfiesD.mono {t : ButcherTableau s} {r r' : ℕ} (h : t.SatisfiesD r) (hr : r' ≤ r) :
-    t.SatisfiesD r' :=
-  fun k hk1 hk2 j => h k hk1 (le_trans hk2 hr) j
-
 /-- **B(4) ∧ C(1) ∧ D(2) → order ≥ 4.**
 
 This alternative uses D(2) to compensate for only having C(1) (row-sum).

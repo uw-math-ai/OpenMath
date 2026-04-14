@@ -1,4 +1,5 @@
 import OpenMath.StiffEquations
+import OpenMath.Collocation
 
 /-!
 # Lobatto IIIA 2-Stage Method (Section 4.2)

@@ -42,7 +42,7 @@ ENV_FILE = ROOT / ".env"
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 
-DEFAULT_COOLDOWN = 120  # seconds between cycles
+DEFAULT_COOLDOWN = 300  # seconds between cycles (5 min, enough for CI to finish)
 STUCK_THRESHOLD = 4     # consecutive stalls before consultant
 BUDGET_CAP = 8          # consecutive stalls on same sorry before abandoning
 RESTRUCTURING_BUDGET = 2  # max cycles with increasing sorry count
@@ -272,6 +272,60 @@ def git_pull():
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
     except Exception as e:
         log(f"git pull failed: {e}")
+
+
+def check_ci_status() -> dict:
+    """Check the CI status of the latest commit on main.
+
+    Returns dict with 'status' ('success', 'failure', 'pending', 'unknown')
+    and 'details' (error messages if failed).
+    """
+    try:
+        r = subprocess.run(
+            ["gh", "run", "list", "--branch", "main", "--limit", "1",
+             "--json", "conclusion,status,name,headSha,databaseId"],
+            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=30)
+        if r.returncode != 0:
+            return {"status": "unknown", "details": f"gh failed: {r.stderr[:200]}"}
+
+        runs = json.loads(r.stdout)
+        if not runs:
+            return {"status": "unknown", "details": "No CI runs found"}
+
+        run = runs[0]
+        if run.get("status") != "completed":
+            return {"status": "pending", "details": f"CI run {run.get('databaseId')} in progress"}
+
+        conclusion = run.get("conclusion", "unknown")
+        if conclusion == "success":
+            return {"status": "success", "details": ""}
+
+        # Get failure details
+        run_id = run.get("databaseId")
+        details = f"CI run {run_id} failed"
+        try:
+            r2 = subprocess.run(
+                ["gh", "run", "view", str(run_id), "--log-failed"],
+                cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True, timeout=30)
+            # Extract error lines
+            errors = [
+                line.split("\t")[-1].strip()
+                for line in r2.stdout.splitlines()
+                if "error:" in line.lower()
+                and "exited" not in line.lower()
+                and "failed" not in line.lower()
+            ]
+            if errors:
+                details += ":\n" + "\n".join(errors[:20])
+        except Exception:
+            pass
+
+        return {"status": "failure", "details": details}
+
+    except Exception as e:
+        return {"status": "unknown", "details": str(e)}
 
 
 def git_diff_stat() -> str:
@@ -792,12 +846,36 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     # Pull latest
     git_pull()
 
+    # ── CI Check ──
+    ci = check_ci_status()
+    log(f"CI status: {ci['status']}")
+    ci_failing = ci["status"] == "failure"
+    if ci_failing:
+        log(f"CI FAILING: {ci['details'][:500]}")
+
     # Pre-cycle state
     pre_sorry_count = count_sorries()
     log(f"Pre-cycle sorry count: {pre_sorry_count}")
 
+    # If CI is failing, override strategy to fix it first
+    if ci_failing:
+        ci_strategy = (
+            "# Strategy — CI FIX REQUIRED\n\n"
+            "**The CI build is broken.** This is the top priority. "
+            "Fix the build errors before doing ANY other work.\n\n"
+            "## CI errors\n"
+            f"```\n{ci['details']}\n```\n\n"
+            "## Instructions\n"
+            "1. Read the failing files and fix the errors\n"
+            "2. Verify each fix compiles: `lake env lean OpenMath/Foo.lean`\n"
+            "3. Commit and push the fix\n"
+            "4. Only after CI is fixed, proceed with normal strategy\n"
+        )
+        STRATEGY_FILE.write_text(ci_strategy)
+        log("Wrote CI-fix strategy override")
+
     # ── Planner ──
-    if not worker_only and not skip_planner:
+    elif not worker_only and not skip_planner:
         log("── Running Planner ──")
         run_planner(cycle)
     elif not STRATEGY_FILE.exists():
