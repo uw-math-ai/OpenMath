@@ -204,14 +204,12 @@ theorem rkLobattoIIIA2_not_B3 : ¬rkLobattoIIIA2.SatisfiesB 3 := by
   intro h
   have := h 3 (by omega) (by omega)
   simp [rkLobattoIIIA2, Fin.sum_univ_two] at this
-  linarith
 
 /-- Lobatto IIIA 2-stage does NOT satisfy C(3): stage order is exactly 2 (not 3). -/
 theorem rkLobattoIIIA2_not_C3 : ¬rkLobattoIIIA2.SatisfiesC 3 := by
   intro h
   have := h 3 (by omega) (by omega) 1
   simp [rkLobattoIIIA2, Fin.sum_univ_two] at this
-  linarith
 
 /-- Lobatto IIIA 2-stage does NOT satisfy D(1):
   ∑_i b_i a_{i,0} = 1/4 ≠ b_0(1-c_0) = 1/2. -/
@@ -219,7 +217,6 @@ theorem rkLobattoIIIA2_not_D1 : ¬rkLobattoIIIA2.SatisfiesD 1 := by
   intro h
   have := h 1 (by omega) (by omega) 0
   simp [rkLobattoIIIA2, Fin.sum_univ_two] at this
-  linarith
 
 /-! ## NOT Algebraically Stable -/
 

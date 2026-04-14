@@ -307,21 +307,20 @@ structure of SDIRK methods. -/
 theorem rkSDIRK2_B2 : rkSDIRK2.SatisfiesB 2 := by
   intro k hk1 hk2
   interval_cases k <;> simp [rkSDIRK2, Fin.sum_univ_two]
-  · linarith [sdirk2Lambda_pos]
-  · nlinarith [sdirk2Lambda_char]
+  nlinarith [sdirk2Lambda_char]
 
 /-- SDIRK2 satisfies C(1): the row-sum condition cᵢ = ∑ⱼ aᵢⱼ. -/
 theorem rkSDIRK2_C1 : rkSDIRK2.SatisfiesC 1 := by
   rw [ButcherTableau.satisfiesC_one_iff]
   exact rkSDIRK2_consistent.row_sum
 
-/-- SDIRK2 satisfies D(1): ∑ᵢ bᵢ aᵢⱼ = bⱼ(1 − cⱼ). -/
-theorem rkSDIRK2_D1 : rkSDIRK2.SatisfiesD 1 := by
-  intro k hk1 hk2 j
-  have hk : k = 1 := le_antisymm hk2 hk1
-  subst hk; fin_cases j <;> simp [rkSDIRK2, Fin.sum_univ_two]
-  · nlinarith [sdirk2Lambda_char]
-  · nlinarith [sdirk2Lambda_char]
+/-- SDIRK2 does NOT satisfy D(1): SDIRK methods generally don't satisfy D conditions
+  because the lower-triangular structure prevents the D identity from holding. -/
+theorem rkSDIRK2_not_D1 : ¬rkSDIRK2.SatisfiesD 1 := by
+  intro h
+  have := h 1 (by omega) le_rfl 1
+  simp [rkSDIRK2, Fin.sum_univ_two] at this
+  nlinarith [sdirk2Lambda_pos]
 
 /-- SDIRK2 does NOT satisfy B(3): ∑ bᵢ cᵢ² ≠ 1/3.
   This shows the quadrature order is exactly 2 (consistent with order 2). -/

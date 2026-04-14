@@ -277,4 +277,6 @@ theorem rkGaussLegendre3_not_B7 : ¬rkGaussLegendre3.SatisfiesB 7 := by
   intro hB
   have h := hB 7 (by omega) le_rfl
   simp [rkGaussLegendre3, Fin.sum_univ_three] at h
-  nlinarith [sqrt15_sq]
+  have s4 : Real.sqrt 15 ^ 4 = 225 := by nlinarith [sqrt15_sq]
+  have s6 : Real.sqrt 15 ^ 6 = 3375 := by nlinarith [sqrt15_sq, s4]
+  nlinarith [sqrt15_sq, s4, s6]

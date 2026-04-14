@@ -336,7 +336,8 @@ theorem rkRadauIIA3_not_C4 : ¬rkRadauIIA3.SatisfiesC 4 := by
   intro hC
   have h := hC 4 (by omega) le_rfl 1
   simp [rkRadauIIA3, Fin.sum_univ_three] at h
-  nlinarith [sqrt6_sq]
+  have s4 : Real.sqrt 6 ^ 4 = 36 := by nlinarith [sqrt6_sq]
+  nlinarith [sqrt6_sq, s4]
 
 /-- Radau IIA 3-stage does NOT satisfy B(6): the quadrature order is exactly 2s−1 = 5.
   The s-point Radau quadrature integrates polynomials of degree ≤ 2s−2 = 4 exactly. -/
@@ -344,7 +345,19 @@ theorem rkRadauIIA3_not_B6 : ¬rkRadauIIA3.SatisfiesB 6 := by
   intro hB
   have h := hB 6 (by omega) le_rfl
   simp [rkRadauIIA3, Fin.sum_univ_three] at h
-  nlinarith [sqrt6_sq]
+  have s4 : Real.sqrt 6 ^ 4 = 36 := by nlinarith [sqrt6_sq]
+  have s6 : Real.sqrt 6 ^ 6 = 216 := by nlinarith [sqrt6_sq, s4]
+  nlinarith [sqrt6_sq, s4, s6]
+
+/-- **Radau IIA 3-stage does NOT have order 6**: since B(6) fails (∑ bᵢcᵢ⁵ ≠ 1/6),
+  the first sixth-order condition (order6a) fails. The order is exactly 2s−1 = 5. -/
+theorem rkRadauIIA3_not_order6 : ¬rkRadauIIA3.HasOrderGe6 := by
+  intro ⟨_, h6a, _⟩
+  -- order6a is ∑ bᵢcᵢ⁵ = 1/6, same as SatisfiesB 6 at k=6
+  simp [ButcherTableau.order6a, rkRadauIIA3, Fin.sum_univ_three] at h6a
+  have s4 : Real.sqrt 6 ^ 4 = 36 := by nlinarith [sqrt6_sq]
+  have s6 : Real.sqrt 6 ^ 6 = 216 := by nlinarith [sqrt6_sq, s4]
+  nlinarith [sqrt6_sq, s4, s6]
 
 /-- Radau IIA 3-stage satisfies D(2): the maximal D condition exceeds D(1). -/
 theorem rkRadauIIA3_D2 : rkRadauIIA3.SatisfiesD 2 := by

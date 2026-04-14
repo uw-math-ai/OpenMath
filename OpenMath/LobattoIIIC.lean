@@ -85,7 +85,6 @@ theorem rkLobattoIIIC2_not_B3 : ¬rkLobattoIIIC2.SatisfiesB 3 := by
   intro h
   have := h 3 (by omega) (by omega)
   simp [rkLobattoIIIC2, Fin.sum_univ_two] at this
-  linarith
 
 /-- Lobatto IIIC 2-stage satisfies C(1): the row-sum condition holds. -/
 theorem rkLobattoIIIC2_C1 : rkLobattoIIIC2.SatisfiesC 1 := by
@@ -100,7 +99,6 @@ theorem rkLobattoIIIC2_not_C2 : ¬rkLobattoIIIC2.SatisfiesC 2 := by
   intro h
   have := h 2 (by omega) (by omega) 0
   simp [rkLobattoIIIC2, Fin.sum_univ_two] at this
-  linarith
 
 /-- Lobatto IIIC 2-stage satisfies D(1): ∑_i b_i a_{i,j} = b_j(1 − c_j). -/
 theorem rkLobattoIIIC2_D1 : rkLobattoIIIC2.SatisfiesD 1 := by
@@ -114,7 +112,6 @@ theorem rkLobattoIIIC2_not_D2 : ¬rkLobattoIIIC2.SatisfiesD 2 := by
   intro h
   have := h 2 (by omega) (by omega) 1
   simp [rkLobattoIIIC2, Fin.sum_univ_two] at this
-  linarith
 
 /-! ## Stability Function
 
