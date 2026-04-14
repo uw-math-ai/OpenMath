@@ -285,11 +285,16 @@ def git_diff_stat() -> str:
 
 
 def git_diff() -> str:
-    """Get full git diff."""
+    """Get git diff (stat + full patch)."""
     try:
-        r = subprocess.run(["git", "diff"], cwd=ROOT,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=30)
-        return r.stdout[:10000]  # truncate for context
+        stat = subprocess.run(["git", "diff", "--stat"], cwd=ROOT,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              universal_newlines=True, timeout=30)
+        full = subprocess.run(["git", "diff"], cwd=ROOT,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              universal_newlines=True, timeout=30)
+        result = stat.stdout + "\n" + full.stdout
+        return result[:200000]  # generous limit — Claude context is large
     except Exception:
         return ""
 
@@ -396,6 +401,8 @@ def run_claude(prompt: str, model: str = None, timeout: int = 1800,
         return f"[ERROR: {e}]"
 
 
+CODEX_CONDA_ENV = "/gscratch/amath/vilin/conda/envs/codex"
+
 def run_codex(prompt: str, timeout: int = 1800) -> str:
     """Run a fresh Codex CLI session with the given prompt.
 
@@ -405,6 +412,12 @@ def run_codex(prompt: str, timeout: int = 1800) -> str:
         CODEX_BIN, "exec",
         "--dangerously-bypass-approvals-and-sandbox",
     ]
+
+    # Codex is a Node.js app — node must be on PATH.
+    # Prepend the conda env's bin dir so node (and other deps) are found.
+    env = os.environ.copy()
+    conda_bin = os.path.join(CODEX_CONDA_ENV, "bin")
+    env["PATH"] = conda_bin + ":" + env.get("PATH", "")
 
     log(f"Running codex session (timeout={timeout}s)")
     log(f"Prompt preview: {prompt[:200]}...")
@@ -417,6 +430,7 @@ def run_codex(prompt: str, timeout: int = 1800) -> str:
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             universal_newlines=True,
             timeout=timeout,
+            env=env,
         )
         output = r.stdout
         if r.returncode != 0:
@@ -505,7 +519,7 @@ Write `.prover-state/strategy.md` with:
 Be concrete and actionable. The worker will follow your instructions literally.
 Write the file now using the Write tool.
 """
-    output = run_claude(prompt, timeout=600)
+    output = run_claude(prompt, timeout=1800)
     log(f"Planner done. Output length: {len(output)}")
     return output
 
@@ -566,8 +580,8 @@ Assess the worker's progress in cycle {cycle}.
 ## Sorry count change
 Before: {pre_sorry_count} → After: {post_sorry_count}
 
-## Git diff (truncated)
-{diff[:5000]}
+## Git diff
+{diff}
 
 ## Task result written by worker
 {task_result}
@@ -578,8 +592,8 @@ Before: {pre_sorry_count} → After: {post_sorry_count}
 ## Recent evaluation history
 {history_summary}
 
-## Worker output (truncated)
-{worker_output[:3000]}
+## Worker output
+{worker_output[:50000]}
 
 ## Your job
 Output a JSON object with these fields:
@@ -596,7 +610,7 @@ Output a JSON object with these fields:
 
 Respond with ONLY the JSON object, no other text.
 """
-    output = run_claude(prompt, model="sonnet", timeout=300, json_output=False)
+    output = run_claude(prompt, model="sonnet", timeout=1800, json_output=False)
 
     # Parse JSON from output
     try:
@@ -668,7 +682,7 @@ Please suggest:
 
 Write your advice to `.prover-state/issues/consultant_advice_cycle_{cycle:03d}.md`.
 """
-    output = run_claude(prompt, timeout=900)
+    output = run_claude(prompt, timeout=3600)
     log(f"Consultant done. Output length: {len(output)}")
     return output
 
@@ -719,6 +733,50 @@ def check_budget_cap() -> Optional[str]:
         # Check if they're all about the same thing (rough check)
         if len(set(stuck_topics)) <= 2:  # same 1-2 topics
             return stuck_topics[-1]
+    return None
+
+
+def check_strategy_compliance(cycle: int) -> Optional[str]:
+    """Check if the worker touched files mentioned in strategy.md.
+
+    Returns a warning string if the worker deviated, None if compliant.
+    """
+    strategy = read_file(STRATEGY_FILE, "")
+    if not strategy:
+        return None
+
+    # Extract file paths mentioned in strategy (OpenMath/Foo.lean patterns)
+    target_files = set(re.findall(r'(OpenMath/\w+\.lean)', strategy))
+    if not target_files:
+        return None
+
+    # Check which files the worker actually modified
+    try:
+        r = subprocess.run(
+            ["git", "diff", "--name-only"],
+            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=30)
+        changed_files = set(r.stdout.strip().splitlines())
+    except Exception:
+        return None
+
+    # Also check committed-but-not-pushed changes from this cycle
+    try:
+        r = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD~1"],
+            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=30)
+        changed_files.update(r.stdout.strip().splitlines())
+    except Exception:
+        pass
+
+    touched_targets = target_files & changed_files
+    if not touched_targets and target_files:
+        return (
+            f"STRATEGY DEVIATION: Strategy mentioned {target_files} "
+            f"but worker only touched {changed_files or 'nothing'}. "
+            f"Worker may be freelancing instead of following the plan."
+        )
     return None
 
 
@@ -805,6 +863,21 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
                 f"BUDGET CAP: Abandon '{budget_stuck}' temporarily. "
                 f"Work on something else and return later."
             )
+
+        # Strategy compliance
+        deviation = check_strategy_compliance(cycle)
+        if deviation:
+            log(f"Strategy compliance: {deviation}")
+            evaluation["strategy_deviation"] = deviation
+            # Cap score at 0 if worker ignored strategy — good work doesn't
+            # count if it's not what was asked for.
+            if evaluation.get("progress_score", 0) > 0:
+                log("Capping score to 0 due to strategy deviation")
+                evaluation["progress_score"] = 0
+                evaluation["summary"] = (
+                    f"OFF-STRATEGY: {evaluation.get('summary', '')} "
+                    f"[Worker ignored assigned files]"
+                )
 
         # ── Consultant ──
         consecutive_stalls = 0

@@ -407,23 +407,208 @@ def detect_stuck(history):
     return result
 
 
-def take_corrective_action(stuck_info, process_info):
-    """Take corrective action based on stuck level. Returns description of action taken."""
+def detect_patterns(history):
+    """Detect repeating patterns in recent history. Returns list of pattern descriptions."""
+    patterns = []
+    if len(history) < 3:
+        return patterns
+
+    recent = history[-12:]  # look at last 12 cycles
+
+    # Pattern: high timeout rate
+    timeout_count = sum(
+        1 for h in recent
+        if "timed out" in h.get("summary", "").lower()
+        or "timeout" in h.get("summary", "").lower()
+        or h.get("progress_score", 0) == -1
+        and "zero code changes" in h.get("summary", "").lower()
+    )
+    if timeout_count >= len(recent) * 0.4:
+        patterns.append(
+            "HIGH_TIMEOUT_RATE: {n}/{total} recent cycles timed out or produced nothing"
+            .format(n=timeout_count, total=len(recent)))
+
+    # Pattern: strategy deviation (producing work but ignoring assigned targets)
+    deviation_count = sum(
+        1 for h in recent
+        if h.get("strategy_deviation")
+        or "deviat" in h.get("summary", "").lower()
+        or "off-strategy" in h.get("summary", "").lower()
+        or "ignoring" in h.get("summary", "").lower()
+    )
+    if deviation_count >= 3:
+        patterns.append(
+            "STRATEGY_DEVIATION: {n} recent cycles deviated from strategy"
+            .format(n=deviation_count))
+
+    # Pattern: CLAUDE.md violations (no task result written)
+    violation_count = sum(
+        1 for h in recent
+        if "violation" in h.get("summary", "").lower()
+        or "did not write" in h.get("summary", "").lower()
+        or "no task result" in h.get("summary", "").lower()
+    )
+    if violation_count >= 3:
+        patterns.append(
+            "DOCUMENTATION_VIOLATIONS: {n} recent cycles failed to write task results"
+            .format(n=violation_count))
+
+    # Pattern: sorry regressions (VeriRefine reverts)
+    revert_count = sum(
+        1 for h in recent
+        if "REVERTED" in h.get("summary", "")
+    )
+    if revert_count >= 3:
+        patterns.append(
+            "FREQUENT_REVERTS: {n} recent cycles had sorry regressions and were reverted"
+            .format(n=revert_count))
+
+    # Pattern: same engine failing
+    for engine in ("claude", "codex"):
+        engine_cycles = [h for h in recent if h.get("engine") == engine]
+        if len(engine_cycles) >= 3:
+            engine_fails = sum(
+                1 for h in engine_cycles
+                if h.get("progress_score", 0) <= 0
+            )
+            if engine_fails == len(engine_cycles):
+                patterns.append(
+                    "ENGINE_FAILING: all {n} recent {engine} cycles scored <= 0"
+                    .format(n=len(engine_cycles), engine=engine))
+
+    return patterns
+
+
+def run_diagnostic_agent(history, stuck_info, patterns, infra):
+    """Run a Claude session to investigate issues and produce fixes.
+
+    The agent can modify strategy.md, write issue files, and adjust
+    the autonomous_loop.py configuration. Returns a summary of actions taken.
+    """
+    recent = history[-15:]
+    history_text = "\n".join(
+        "Cycle {c} [{eng}] score={s}: {summary}{stuck}".format(
+            c=h.get("cycle", "?"),
+            eng=h.get("engine", "?"),
+            s=h.get("progress_score", "?"),
+            summary=h.get("summary", "N/A"),
+            stuck=" | stuck_on: " + h["stuck_on"] if h.get("stuck_on") else ""
+        )
+        for h in recent
+    )
+
+    pattern_text = "\n".join("- " + p for p in patterns) if patterns else "None detected."
+    stuck_text = (
+        "Level {lvl}: {detail}".format(lvl=stuck_info["level"], detail=stuck_info["detail"])
+        if stuck_info["level"] > 0 else "Not stuck."
+    )
+    infra_text = "\n".join(
+        "  {k}: {v}".format(k=k, v=v) for k, v in infra.items()
+    )
+
+    # Read current strategy and attempts for context
+    strategy = ""
+    if STRATEGY_FILE.exists():
+        strategy = STRATEGY_FILE.read_text()
+    attempts = ""
+    if ATTEMPTS_FILE.exists():
+        attempts = ATTEMPTS_FILE.read_text()[-5000:]  # last 5KB
+
+    prompt = """You are the diagnostic agent for an autonomous Lean 4 formalization system.
+The system runs in a loop: Planner → Worker → Evaluator. You are called by the 12-hour
+monitor when repeating issues are detected.
+
+Your job: investigate the patterns below, determine root causes, and TAKE ACTION to fix them.
+
+## Recent cycle history (last 15 cycles)
+{history}
+
+## Detected patterns
+{patterns}
+
+## Stuck status
+{stuck}
+
+## Infrastructure
+{infra}
+
+## Current strategy.md
+{strategy}
+
+## Recent attempts (last 5KB)
+{attempts}
+
+## Actions you can take
+1. **Write a new strategy.md** — to redirect the worker to productive work
+2. **Write an issue file** in `.prover-state/issues/` — to document blockers
+3. **Read and modify `scripts/autonomous_loop.py`** — to fix configuration issues
+   (e.g., adjust timeouts, fix engine selection, modify worker prompts)
+4. **Read any project file** to investigate (e.g., Lean files with sorrys, task results)
+
+## Rules
+- DO NOT just report findings. Take concrete action to fix the problems.
+- If workers are ignoring strategy, make the strategy more forceful and specific.
+- If an engine (claude/codex) consistently fails, investigate why (read logs, check config).
+- If timeouts are frequent, check if the worker prompt is too broad or if lake build is hanging.
+- Write a brief summary of what you investigated and what you changed to stdout.
+- Be surgical — make the minimum changes needed to unblock progress.
+""".format(
+        history=history_text,
+        patterns=pattern_text,
+        stuck=stuck_text,
+        infra=infra_text,
+        strategy=strategy or "(no strategy file)",
+        attempts=attempts or "(no attempts file)",
+    )
+
+    log("Running diagnostic agent...")
+    try:
+        cmd = ["claude", "-p", prompt, "--allowedTools",
+               "Read,Edit,Write,Bash,Grep,Glob"]
+        r = subprocess.run(
+            cmd, cwd=str(ROOT),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=3600,
+        )
+        output = r.stdout.strip()
+        log("Diagnostic agent done. Output length: {n}".format(n=len(output)))
+        if output:
+            log("Diagnostic summary: {s}".format(s=output[:1000]))
+        return output[:2000] if output else "Agent produced no output"
+    except subprocess.TimeoutExpired:
+        log("Diagnostic agent timed out (3600s)")
+        return "Diagnostic agent timed out"
+    except Exception as e:
+        log("Diagnostic agent failed: {e}".format(e=e))
+        return "Diagnostic agent error: {e}".format(e=e)
+
+
+def take_corrective_action(stuck_info, process_info, history, infra):
+    """Take corrective action based on stuck level and detected patterns.
+
+    Uses an LLM diagnostic agent for investigation when patterns are detected.
+    Returns description of action taken.
+    """
     level = stuck_info["level"]
     actions = []
 
     if level == 0:
-        return "none"
+        # Even at level 0, check for patterns that need attention
+        patterns = detect_patterns(history)
+        if not patterns:
+            return "none"
+        # Fall through to diagnostic agent below
 
+    patterns = detect_patterns(history) if level == 0 else detect_patterns(history)
+
+    # Level 1+: basic corrective actions (fast, no LLM)
     if level >= 1:
-        # Delete strategy.md to force fresh strategy
         if STRATEGY_FILE.exists():
             STRATEGY_FILE.unlink()
             actions.append("strategy reset")
             log("Deleted strategy.md (stall level {level})".format(level=level))
 
     if level >= 2:
-        # Escalate to full planner mode
         if process_info and process_info.get("skip_planner"):
             kill_loop(process_info["pid"])
             time.sleep(5)
@@ -433,46 +618,7 @@ def take_corrective_action(stuck_info, process_info):
             else:
                 actions.append("escalation restart FAILED")
 
-    if level >= 3:
-        # Write override strategy
-        topic = stuck_info.get("stuck_on", "unknown topic")
-        override = (
-            "# Strategy Override (Monitor)\n\n"
-            "## SKIP: {topic}\n\n"
-            "The system has been stuck on this for {cap} cycles.\n"
-            "**Abandon this target temporarily.** Pick a different theorem from plan.md.\n"
-            "Return to this topic later with fresh insight.\n\n"
-            "## Instructions\n"
-            "1. Choose the next unformalized theorem from plan.md\n"
-            "2. Follow the sorry-first workflow\n"
-            "3. Do NOT return to '{topic}' this cycle\n"
-        ).format(topic=topic, cap=BUDGET_CAP)
-
-        STRATEGY_FILE.write_text(override)
-        actions.append("wrote override strategy (skip '{topic}')".format(topic=topic))
-
-        # Write issue file
-        slug = re.sub(r'[^a-z0-9_]', '_', topic.lower()[:40])
-        issue_file = ISSUES / "budget_cap_{slug}.md".format(slug=slug)
-        issue_file.write_text(
-            "# Issue: Budget cap hit on {topic}\n\n"
-            "## Blocker\n"
-            "The autonomous loop has been stuck on '{topic}' for {cap} consecutive cycles.\n"
-            "The monitor has triggered a budget cap override to skip this target.\n\n"
-            "## Context\n"
-            "This issue was auto-generated by the monitoring script.\n"
-            "Review the last {cap} entries in history.jsonl for details.\n\n"
-            "## Possible solutions\n"
-            "- Manual intervention to provide a proof hint\n"
-            "- Submit the problem to Aristotle for external help\n"
-            "- Decompose the theorem differently\n"
-            "- Check if Mathlib has new lemmas that could help\n"
-            .format(topic=topic, cap=BUDGET_CAP)
-        )
-        actions.append("wrote budget cap issue file")
-
     if level >= 4:
-        # Revert uncommitted changes
         try:
             subprocess.run(["git", "checkout", "--", "."], cwd=str(ROOT),
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
@@ -480,6 +626,13 @@ def take_corrective_action(stuck_info, process_info):
             log("Reverted uncommitted changes (negative regression)")
         except Exception as e:
             log("Failed to revert: {e}".format(e=e))
+
+    # Run diagnostic agent when patterns are detected or stuck level >= 2
+    if patterns or level >= 2:
+        log("Patterns detected: {p}".format(p=patterns))
+        log("Launching diagnostic agent for investigation and fixes...")
+        diag_summary = run_diagnostic_agent(history, stuck_info, patterns, infra)
+        actions.append("diagnostic agent: " + diag_summary[:500])
 
     return "; ".join(actions) if actions else "none"
 
@@ -620,9 +773,14 @@ def main():
             ind=stuck_info["indicators"] or "none"))
 
         action_taken = "none"
-        if stuck_info["level"] > 0 and not restarted:
+        patterns = detect_patterns(history)
+        if patterns:
+            log("  Patterns detected: {p}".format(p=patterns))
+
+        if (stuck_info["level"] > 0 or patterns) and not restarted:
             log("  Taking corrective action...")
-            action_taken = take_corrective_action(stuck_info, process_info)
+            action_taken = take_corrective_action(
+                stuck_info, process_info, history, infra)
             log("  Actions: {a}".format(a=action_taken))
             # Re-find process after possible restart
             process_info = find_loop_process()
