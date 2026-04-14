@@ -122,7 +122,6 @@ theorem rkLobattoIIIB2_not_B3 : ¬rkLobattoIIIB2.SatisfiesB 3 := by
   intro h
   have := h 3 (by omega) (by omega)
   simp [rkLobattoIIIB2, Fin.sum_univ_two] at this
-  linarith
 
 /-- Lobatto IIIB 2-stage does NOT satisfy C(1): the row-sum condition fails.
   ∑_j a_{0,j} = 1/2 ≠ 0 = c_0.
@@ -131,7 +130,6 @@ theorem rkLobattoIIIB2_not_C1 : ¬rkLobattoIIIB2.SatisfiesC 1 := by
   intro h
   have := h 1 (by omega) (by omega) 0
   simp [rkLobattoIIIB2, Fin.sum_univ_two] at this
-  linarith
 
 /-- Lobatto IIIB 2-stage satisfies D(1): ∑_i b_i a_{i,j} = b_j(1 − c_j). -/
 theorem rkLobattoIIIB2_D1 : rkLobattoIIIB2.SatisfiesD 1 := by

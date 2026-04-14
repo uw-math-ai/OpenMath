@@ -104,7 +104,9 @@ theorem rkRadauIA3_not_B6 : ¬rkRadauIA3.SatisfiesB 6 := by
   intro h
   have := h 6 (by omega) (by omega)
   simp [rkRadauIA3, Fin.sum_univ_three] at this
-  nlinarith [sqrt6_sq]
+  have s4 : Real.sqrt 6 ^ 4 = 36 := by nlinarith [sqrt6_sq]
+  have s6 : Real.sqrt 6 ^ 6 = 216 := by nlinarith [sqrt6_sq, s4]
+  nlinarith [sqrt6_sq, s4, s6]
 
 /-- Radau IA 3-stage does NOT satisfy C(3): stage order is exactly s−1 = 2 (not 3). -/
 theorem rkRadauIA3_not_C3 : ¬rkRadauIA3.SatisfiesC 3 := by
@@ -125,6 +127,15 @@ Butcher theorem (Hairer–Nørsett–Wanner IV.5.1). -/
 theorem rkRadauIA3_order5 : rkRadauIA3.HasOrderGe5 :=
   ButcherTableau.HasOrderGe5_of_B5_C2_D2 _
     rkRadauIA3_B5 rkRadauIA3_C2 (rkRadauIA3_D3.mono (by omega))
+
+/-- **Radau IA 3-stage does NOT have order 6**: since B(6) fails (∑ bᵢcᵢ⁵ ≠ 1/6),
+  the first sixth-order condition (order6a) fails. The order is exactly 2s−1 = 5. -/
+theorem rkRadauIA3_not_order6 : ¬rkRadauIA3.HasOrderGe6 := by
+  intro ⟨_, h6a, _⟩
+  simp [ButcherTableau.order6a, rkRadauIA3, Fin.sum_univ_three] at h6a
+  have s4 : Real.sqrt 6 ^ 4 = 36 := by nlinarith [sqrt6_sq]
+  have s6 : Real.sqrt 6 ^ 6 = 216 := by nlinarith [sqrt6_sq, s4]
+  nlinarith [sqrt6_sq, s4, s6]
 
 /-! ## Stability Function
 
