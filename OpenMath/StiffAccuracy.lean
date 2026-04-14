@@ -80,11 +80,6 @@ theorem IsStifflyAccurate.last_node_eq_one {t : ButcherTableau (n + 1)}
     Finset.sum_congr rfl (fun j _ => (hsa j).symm)] at hrow
   linarith [hc.weights_sum]
 
-/-- Stiffly accurate methods satisfy D(1) automatically when consistent.
-  More precisely: if bᵢ = a_{s,i} and the method is consistent, then
-  ∑ᵢ bᵢ aᵢⱼ ≥ 0 for appropriate j. This is a partial result toward the
-  general theorem that stiff accuracy implies benign stability properties. -/
-
 end ButcherTableau
 
 /-! ## Comprehensive Survey -/
@@ -111,7 +106,7 @@ theorem rkGaussLegendre2_not_stifflyAccurate : ¬rkGaussLegendre2.IsStifflyAccur
 theorem rkGaussLegendre3_not_stifflyAccurate : ¬rkGaussLegendre3.IsStifflyAccurate := by
   intro h; have := h 0
   simp [rkGaussLegendre3] at this
-  nlinarith [Real.sqrt_pos_of_pos (show (15 : ℝ) > 0 by norm_num)]
+  nlinarith [Real.sq_sqrt (show (15 : ℝ) ≥ 0 by norm_num)]
 
 /-! ### SDIRK2 (2-stage) -/
 
@@ -157,7 +152,7 @@ theorem rkLobattoIIIA3_stifflyAccurate' : rkLobattoIIIA3.IsStifflyAccurate := by
 /-! ### Lobatto IIIB 2-stage -/
 
 theorem rkLobattoIIIB2_not_stifflyAccurate : ¬rkLobattoIIIB2.IsStifflyAccurate := by
-  intro h; have := h 0; simp [rkLobattoIIIB2] at this
+  intro h; have := h 1; simp [rkLobattoIIIB2] at this
 
 /-! ### Lobatto IIIB 3-stage — already proven in LobattoIIIB3.lean -/
 
