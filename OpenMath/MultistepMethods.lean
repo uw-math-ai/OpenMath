@@ -761,6 +761,81 @@ theorem bdf4_zeroStable : bdf4.IsZeroStable where
       -- But (13/19)²≠1
       rw [hξ_val] at h_sq; norm_num at h_sq
 
+/-! ## BDF5 (Backward Differentiation Formula, 5-step)
+
+The BDF5 method:
+  y_{n+5} - (300/137)y_{n+4} + (300/137)y_{n+3} - (200/137)y_{n+2}
+  + (75/137)y_{n+1} - (12/137)y_n = (60/137)h·f_{n+5}.
+
+It is implicit, has order 5, and is zero-stable (the last stable BDF method
+that is also A(α)-stable with α ≈ 51.8°).
+
+Reference: Iserles, Section 4.5; Hairer–Wanner, Section V.1.
+-/
+
+/-- **BDF5** (Backward Differentiation Formula, 5-step):
+  y_{n+5} - (300/137)y_{n+4} + ... = (60/137)h·f_{n+5}.
+  Coefficients: α = [-12/137, 75/137, -200/137, 300/137, -300/137, 1],
+  β = [0, 0, 0, 0, 0, 60/137]. -/
+noncomputable def bdf5 : LMM 5 where
+  α := ![-12/137, 75/137, -200/137, 300/137, -300/137, 1]
+  β := ![0, 0, 0, 0, 0, 60/137]
+  normalized := by simp [Fin.last]
+
+/-- BDF5 is consistent. -/
+theorem bdf5_consistent : bdf5.IsConsistent :=
+  ⟨by simp [LMM.rho, bdf5, Fin.sum_univ_succ]; norm_num,
+   by simp [LMM.sigma, bdf5, Fin.sum_univ_succ]; norm_num⟩
+
+/-- BDF5 has order 5. -/
+theorem bdf5_order_five : bdf5.HasOrder 5 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, bdf5, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, bdf5, Fin.sum_univ_succ]; norm_num
+
+/-- BDF5 is implicit (β₅ = 60/137 ≠ 0). -/
+theorem bdf5_implicit : bdf5.IsImplicit := by
+  simp [LMM.IsImplicit, bdf5, Fin.last]
+
+/-! ## BDF6 (Backward Differentiation Formula, 6-step)
+
+The BDF6 method:
+  y_{n+6} - (360/147)y_{n+5} + (450/147)y_{n+4} - (400/147)y_{n+3}
+  + (225/147)y_{n+2} - (72/147)y_{n+1} + (10/147)y_n = (60/147)h·f_{n+6}.
+
+It is implicit and has order 6 — the highest-order zero-stable BDF method.
+BDF7 and higher are zero-unstable (Dahlquist's first barrier for BDF).
+
+Reference: Iserles, Section 4.5; Hairer–Wanner, Section V.1.
+-/
+
+/-- **BDF6** (Backward Differentiation Formula, 6-step):
+  Coefficients: α = [10/147, -72/147, 225/147, -400/147, 450/147, -360/147, 1],
+  β = [0, 0, 0, 0, 0, 0, 60/147]. -/
+noncomputable def bdf6 : LMM 6 where
+  α := ![10/147, -72/147, 225/147, -400/147, 450/147, -360/147, 1]
+  β := ![0, 0, 0, 0, 0, 0, 60/147]
+  normalized := by simp [Fin.last]
+
+/-- BDF6 is consistent. -/
+theorem bdf6_consistent : bdf6.IsConsistent :=
+  ⟨by simp [LMM.rho, bdf6, Fin.sum_univ_succ]; norm_num,
+   by simp [LMM.sigma, bdf6, Fin.sum_univ_succ]; norm_num⟩
+
+/-- BDF6 has order 6. -/
+theorem bdf6_order_six : bdf6.HasOrder 6 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, bdf6, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, bdf6, Fin.sum_univ_succ]; norm_num
+
+/-- BDF6 is implicit (β₆ = 60/147 ≠ 0). -/
+theorem bdf6_implicit : bdf6.IsImplicit := by
+  simp [LMM.IsImplicit, bdf6, Fin.last]
+
 /-! ## Dahlquist's Second Barrier
 
 No A-stable LMM can have order greater than 2. The trapezoidal rule achieves this bound.

@@ -93,7 +93,7 @@ theorem isSymmetric_iff_eq_adjoint (t : ButcherTableau s) :
 /-- The adjoint of the adjoint recovers the original tableau entries. -/
 theorem adjoint_adjoint (t : ButcherTableau s) :
     ∀ i j : Fin s, (t.adjoint.adjoint).A i j = t.A i j := by
-  intro i j; simp only [adjoint, Fin.rev_rev]
+  intro i j; simp only [adjoint, Fin.rev_rev]; ring
 
 /-! ## Symmetry Implies Even Order
 
@@ -117,14 +117,16 @@ theorem IsSymmetric.order2_of_consistent {t : ButcherTableau s}
   --               = ∑ bᵢ · 1 = 1
   have step1 : ∑ i : Fin s, t.b i * t.c i =
       ∑ i : Fin s, t.b i.rev * t.c i.rev :=
-    (Fin.revPerm.sum_comp (fun i => t.b i * t.c i)).symm
+    (Equiv.sum_comp Fin.revPerm (fun i => t.b i * t.c i)).symm
   have step2 : ∑ i : Fin s, t.b i.rev * t.c i.rev =
       ∑ i : Fin s, t.b i * t.c i.rev := by
     congr 1; ext i; rw [← hs.symm_weights i]
   have step3 : 2 * ∑ i : Fin s, t.b i * t.c i = 1 := by
-    rw [two_mul, step1, step2, ← Finset.sum_add_distrib]
-    conv_rhs => rw [← hc]
-    congr 1; ext i; rw [← mul_add, hs.symm_nodes i, mul_one]
+    have : ∑ i : Fin s, t.b i * t.c i + ∑ i : Fin s, t.b i * t.c i.rev = 1 := by
+      rw [← Finset.sum_add_distrib]
+      conv_rhs => rw [← hc]
+      congr 1; ext i; rw [← mul_add, hs.symm_nodes i, mul_one]
+    linarith [step1, step2]
   linarith
 
 /-! ## Symmetric + Order 3 implies Order 4 (Nørsett's Even-Order Theorem)
@@ -154,16 +156,21 @@ private lemma symm_Ac_rev {t : ButcherTableau s} (hs : t.IsSymmetric)
     (∑ j : Fin s, t.A i j * t.c j) - t.c i + 1 / 2 := by
   have hsymm : ∀ j : Fin s, t.A i j = t.b j - t.A i.rev j.rev := by
     intro j; linarith [hs.symm_tableau i j]
-  have hfi : ∑ j, t.A i j * t.c j = ∑ j, (t.b j - t.A i.rev j.rev) * t.c j := by
-    congr 1; ext j; rw [hsymm]
-  rw [hfi, Finset.sum_sub_distrib]
+  have hfi : ∑ j, t.A i j * t.c j = ∑ j, (t.b j * t.c j - t.A i.rev j.rev * t.c j) := by
+    congr 1; ext j; rw [hsymm]; ring
+  have hfi' : ∑ j, t.A i j * t.c j = ∑ j, t.b j * t.c j - ∑ j, t.A i.rev j.rev * t.c j := by
+    rw [hfi, Finset.sum_sub_distrib]
   have hreindex : ∑ j, t.A i.rev j.rev * t.c j = ∑ k, t.A i.rev k * t.c k.rev := by
-    rw [← Fin.revPerm.sum_comp (fun k => t.A i.rev k * t.c k.rev)]
+    rw [← Equiv.sum_comp Fin.revPerm (fun k => t.A i.rev k * t.c k.rev)]
     congr 1; ext k; simp [Fin.revPerm]
-  rw [hreindex]
-  simp_rw [hs.c_rev, mul_sub, mul_one, Finset.sum_sub_distrib]
+  have hcrev_expand : ∑ k, t.A i.rev k * t.c k.rev =
+      ∑ k, (t.A i.rev k - t.A i.rev k * t.c k) := by
+    congr 1; ext k; rw [hs.c_rev]; ring
+  have hcrev_split : ∑ k, (t.A i.rev k - t.A i.rev k * t.c k) =
+      ∑ k, t.A i.rev k - ∑ k, t.A i.rev k * t.c k := Finset.sum_sub_distrib ..
   have hrs : ∑ k, t.A i.rev k = 1 - t.c i := by rw [← hrc i.rev, hs.c_rev]
-  simp only [order2] at h2; linarith [hrs, h2]
+  simp only [order2] at h2
+  linarith [hfi', hreindex, hcrev_expand, hcrev_split, hrs, h2]
 
 /-- Helper: the "Ac²" sums satisfy g(i) + g(rev(i)) = 1/3 − cᵢ + 2f(i). -/
 private lemma symm_Ac2_sum {t : ButcherTableau s} (hs : t.IsSymmetric)
@@ -177,15 +184,28 @@ private lemma symm_Ac2_sum {t : ButcherTableau s} (hs : t.IsSymmetric)
     rw [← Finset.sum_sub_distrib]; congr 1; ext j; rw [hsymm]; ring
   have hreindex : ∑ j, t.A i.rev j.rev * t.c j ^ 2 =
       ∑ k, t.A i.rev k * t.c k.rev ^ 2 := by
-    rw [← Fin.revPerm.sum_comp (fun k => t.A i.rev k * t.c k.rev ^ 2)]
+    rw [← Equiv.sum_comp Fin.revPerm (fun k => t.A i.rev k * t.c k.rev ^ 2)]
     congr 1; ext k; simp [Fin.revPerm]
   have hcrev2 : ∑ k, t.A i.rev k * t.c k.rev ^ 2 =
       ∑ k, t.A i.rev k * (1 - 2 * t.c k + t.c k ^ 2) := by
     congr 1; ext k; rw [hs.c_rev]; ring
-  rw [hgi, hreindex, hcrev2]
-  simp_rw [mul_add, mul_sub, mul_one, Finset.sum_add_distrib, Finset.sum_sub_distrib]
+  have hexpand_sub : ∑ k, t.A i.rev k * (1 - 2 * t.c k + t.c k ^ 2) =
+      ∑ k, (t.A i.rev k - t.A i.rev k * (2 * t.c k) + t.A i.rev k * t.c k ^ 2) := by
+    congr 1; ext k; ring
+  have hsplit_a : ∑ k, (t.A i.rev k - t.A i.rev k * (2 * t.c k) + t.A i.rev k * t.c k ^ 2) =
+      ∑ k, (t.A i.rev k - t.A i.rev k * (2 * t.c k)) + ∑ k, t.A i.rev k * t.c k ^ 2 := by
+    rw [← Finset.sum_add_distrib]
+  have hsplit_b : ∑ k, (t.A i.rev k - t.A i.rev k * (2 * t.c k)) =
+      ∑ k, t.A i.rev k - ∑ k, t.A i.rev k * (2 * t.c k) :=
+    Finset.sum_sub_distrib ..
+  have h2factor : ∑ k, t.A i.rev k * (2 * t.c k) = 2 * ∑ k, t.A i.rev k * t.c k := by
+    have : ∑ k, t.A i.rev k * (2 * t.c k) = ∑ k, 2 * (t.A i.rev k * t.c k) := by
+      congr 1; ext k; ring
+    rw [this, ← Finset.mul_sum]
   have hrs : ∑ k, t.A i.rev k = 1 - t.c i := by rw [← hrc i.rev, hs.c_rev]
-  simp only [order3a] at h3a; linarith [hrs, h3a]
+  have hAc_rev := symm_Ac_rev hs hrc h2 i
+  simp only [order3a] at h3a
+  linarith [hgi, hreindex, hcrev2, hexpand_sub, hsplit_a, hsplit_b, h2factor, hrs, h3a, hAc_rev]
 
 /-- Helper: D(j) + D(rev(j)) = b[j] where D(j) = ∑ᵢ bᵢaᵢⱼ. -/
 private lemma symm_D_pair {t : ButcherTableau s} (hs : t.IsSymmetric)
@@ -199,8 +219,11 @@ private lemma symm_D_pair {t : ButcherTableau s} (hs : t.IsSymmetric)
     simp only [order1] at h1; rw [h1, one_mul]
   have h_reindex : ∑ i, t.b i * t.A i.rev j.rev =
       ∑ i, t.b i * t.A i j.rev := by
-    conv_lhs => rw [← Fin.revPerm.sum_comp (fun k => t.b k * t.A k j.rev)]
-    congr 1; ext k; simp only [Fin.revPerm_apply]; rw [← hs.symm_weights k]
+    have hstep : ∀ i : Fin s, t.b i * t.A i.rev j.rev =
+        (fun k => t.b k * t.A k j.rev) (Fin.revPerm i) := by
+      intro i; simp [Fin.revPerm, hs.symm_weights i]
+    simp_rw [hstep]
+    exact Equiv.sum_comp Fin.revPerm (fun k => t.b k * t.A k j.rev)
   linarith
 
 /-- **Symmetric methods of order 3 have order ≥ 4.**
@@ -218,65 +241,112 @@ theorem IsSymmetric.order4_of_order3 {t : ButcherTableau s}
   · show ∑ i : Fin s, t.b i * t.c i ^ 3 = 1 / 4
     have hpair : ∑ i : Fin s, t.b i * t.c i ^ 3 =
         ∑ i : Fin s, t.b i * (1 - t.c i) ^ 3 := by
-      conv_lhs => rw [(Fin.revPerm.sum_comp (fun i => t.b i * t.c i ^ 3)).symm]
+      conv_lhs => rw [(Equiv.sum_comp Fin.revPerm (fun i => t.b i * t.c i ^ 3)).symm]
       congr 1; ext i; simp only [Fin.revPerm_apply]
       rw [← hs.symm_weights i]; congr 1; rw [hs.c_rev]
     have h2sum : 2 * ∑ i : Fin s, t.b i * t.c i ^ 3 =
         ∑ i : Fin s, t.b i * (1 - 3 * t.c i + 3 * t.c i ^ 2) := by
-      rw [two_mul, hpair, ← Finset.sum_add_distrib]; congr 1; ext i; ring
-    have hexpand : ∑ i : Fin s, t.b i * (1 - 3 * t.c i + 3 * t.c i ^ 2) =
-        ∑ i, t.b i - 3 * ∑ i, t.b i * t.c i + 3 * ∑ i, t.b i * t.c i ^ 2 := by
-      simp_rw [mul_sub, mul_add, Finset.sum_sub_distrib, Finset.sum_add_distrib,
-               ← Finset.mul_sum]; ring
+      have hcomb : ∑ i : Fin s, t.b i * t.c i ^ 3 +
+          ∑ i : Fin s, t.b i * (1 - t.c i) ^ 3 =
+          ∑ i : Fin s, t.b i * (1 - 3 * t.c i + 3 * t.c i ^ 2) := by
+        rw [← Finset.sum_add_distrib]; congr 1; ext i; ring
+      linarith [hpair]
+    have hstep : ∑ i : Fin s, t.b i * (1 - 3 * t.c i + 3 * t.c i ^ 2) =
+        ∑ i, (t.b i - 3 * (t.b i * t.c i) + 3 * (t.b i * t.c i ^ 2)) := by
+      congr 1; ext i; ring
+    have hfact1 : ∑ i, (3 * (t.b i * t.c i)) = 3 * ∑ i, t.b i * t.c i := by
+      rw [← Finset.mul_sum]
+    have hfact2 : ∑ i, (3 * (t.b i * t.c i ^ 2)) = 3 * ∑ i, t.b i * t.c i ^ 2 := by
+      rw [← Finset.mul_sum]
     simp only [order1] at h1; simp only [order2] at h2; simp only [order3a] at h3a
-    linarith [h2sum, hexpand]
+    linarith [h2sum, hstep,
+      Finset.sum_sub_distrib (f := fun i => t.b i) (g := fun i => 3 * (t.b i * t.c i))
+        (s := Finset.univ),
+      Finset.sum_add_distrib (f := fun i => t.b i - 3 * (t.b i * t.c i))
+        (g := fun i => 3 * (t.b i * t.c i ^ 2)) (s := Finset.univ),
+      hfact1, hfact2]
   -- order4b: ∑ bᵢcᵢ(∑ⱼ aᵢⱼcⱼ) = 1/8
   -- Proof: pair i ↔ rev(i) using f(rev(i)) = f(i) − cᵢ + 1/2
   · show ∑ i : Fin s, t.b i * t.c i * (∑ j : Fin s, t.A i j * t.c j) = 1 / 8
     set f := fun i : Fin s => ∑ j : Fin s, t.A i j * t.c j with hf_def
     have hpair : ∑ i, t.b i * t.c i * f i =
         ∑ i, t.b i * (1 - t.c i) * (f i - t.c i + 1 / 2) := by
-      conv_lhs => rw [(Fin.revPerm.sum_comp (fun i => t.b i * t.c i * f i)).symm]
+      conv_lhs => rw [(Equiv.sum_comp Fin.revPerm (fun i => t.b i * t.c i * f i)).symm]
       congr 1; ext i; simp only [Fin.revPerm_apply]
-      rw [← hs.symm_weights i, hs.c_rev, hf_def, symm_Ac_rev hs hrc h2]
+      rw [← hs.symm_weights i, hs.c_rev]
+      simp only [hf_def]
+      rw [symm_Ac_rev hs hrc h2]
     have h2sum : 2 * ∑ i, t.b i * t.c i * f i =
         ∑ i, t.b i * (f i + t.c i ^ 2 - 3 / 2 * t.c i + 1 / 2) := by
-      rw [two_mul, hpair, ← Finset.sum_add_distrib]; congr 1; ext i; ring
-    have hexpand : ∑ i, t.b i * (f i + t.c i ^ 2 - 3 / 2 * t.c i + 1 / 2) =
-        ∑ i, t.b i * f i + ∑ i, t.b i * t.c i ^ 2 -
-        3 / 2 * ∑ i, t.b i * t.c i + 1 / 2 * ∑ i, t.b i := by
-      simp_rw [mul_add, mul_sub, Finset.sum_add_distrib, Finset.sum_sub_distrib,
-               ← Finset.mul_sum]; ring
+      have hcomb : ∑ i, t.b i * t.c i * f i +
+          ∑ i, t.b i * (1 - t.c i) * (f i - t.c i + 1 / 2) =
+          ∑ i, t.b i * (f i + t.c i ^ 2 - 3 / 2 * t.c i + 1 / 2) := by
+        rw [← Finset.sum_add_distrib]; congr 1; ext i; ring
+      linarith [hpair]
+    have hstep4b : ∑ i, t.b i * (f i + t.c i ^ 2 - 3 / 2 * t.c i + 1 / 2) =
+        ∑ i, (t.b i * f i + t.b i * t.c i ^ 2 - 3 / 2 * (t.b i * t.c i) +
+              1 / 2 * t.b i) := by
+      congr 1; ext i; ring
+    have hfact3 : ∑ i, (3 / 2 * (t.b i * t.c i)) = 3 / 2 * ∑ i, t.b i * t.c i := by
+      rw [← Finset.mul_sum]
+    have hfact4 : ∑ i, (1 / 2 * t.b i) = 1 / 2 * ∑ i, t.b i := by
+      rw [← Finset.mul_sum]
     have hbf : ∑ i, t.b i * f i = 1 / 6 := by
       simp only [order3b, hf_def] at h3b ⊢; convert h3b using 1
-      congr 1; ext i; ring
+      congr 1; ext i; rw [Finset.mul_sum]; congr 1; ext j; ring
     simp only [order1] at h1; simp only [order2] at h2; simp only [order3a] at h3a
-    linarith [h2sum, hexpand, hbf]
+    linarith [h2sum, hstep4b, hbf, hfact3, hfact4,
+      Finset.sum_add_distrib
+        (f := fun i => t.b i * f i + t.b i * t.c i ^ 2 - 3 / 2 * (t.b i * t.c i))
+        (g := fun i => 1 / 2 * t.b i) (s := Finset.univ),
+      Finset.sum_sub_distrib
+        (f := fun i => t.b i * f i + t.b i * t.c i ^ 2)
+        (g := fun i => 3 / 2 * (t.b i * t.c i)) (s := Finset.univ),
+      Finset.sum_add_distrib
+        (f := fun i => t.b i * f i)
+        (g := fun i => t.b i * t.c i ^ 2) (s := Finset.univ)]
   -- order4c: ∑ bᵢ(∑ⱼ aᵢⱼcⱼ²) = 1/12
   -- Proof: 2·∑ bᵢg(i) = ∑ bᵢ(1/3 − cᵢ + 2f(i)) = 1/6
   · show ∑ i : Fin s, ∑ j : Fin s, t.b i * t.A i j * t.c j ^ 2 = 1 / 12
     set g := fun i : Fin s => ∑ j : Fin s, t.A i j * t.c j ^ 2 with hg_def
     set f := fun i : Fin s => ∑ j : Fin s, t.A i j * t.c j with hf_def
     have hconv : ∀ i, ∑ j, t.b i * t.A i j * t.c j ^ 2 = t.b i * g i := by
-      intro i; rw [hg_def, ← Finset.mul_sum]; congr 1; ext j; ring
+      intro i; simp only [hg_def]
+      have : ∀ j, t.b i * t.A i j * t.c j ^ 2 = t.b i * (t.A i j * t.c j ^ 2) := by
+        intro j; ring
+      simp_rw [this]; rw [← Finset.mul_sum]
     simp_rw [hconv]
     have hpair : ∑ i, t.b i * g i = ∑ i, t.b i * g i.rev := by
-      conv_lhs => rw [(Fin.revPerm.sum_comp (fun i => t.b i * g i)).symm]
+      conv_lhs => rw [(Equiv.sum_comp Fin.revPerm (fun i => t.b i * g i)).symm]
       congr 1; ext i; simp only [Fin.revPerm_apply]; rw [← hs.symm_weights i]
     have h2sum : 2 * ∑ i, t.b i * g i =
         ∑ i, t.b i * (1 / 3 - t.c i + 2 * f i) := by
-      rw [two_mul, hpair, ← Finset.sum_add_distrib]
-      congr 1; ext i; rw [← mul_add, hg_def, hf_def]
-      congr 1; exact symm_Ac2_sum hs hrc h2 h3a i
-    have hexpand : ∑ i, t.b i * (1 / 3 - t.c i + 2 * f i) =
-        1 / 3 * ∑ i, t.b i - ∑ i, t.b i * t.c i + 2 * ∑ i, t.b i * f i := by
-      simp_rw [mul_add, mul_sub, Finset.sum_add_distrib, Finset.sum_sub_distrib,
-               ← Finset.mul_sum]; ring
+      have hcomb : ∑ i, t.b i * g i + ∑ i, t.b i * g i.rev =
+          ∑ i, t.b i * (1 / 3 - t.c i + 2 * f i) := by
+        rw [← Finset.sum_add_distrib]
+        congr 1; ext i
+        rw [← mul_add]; congr 1
+        simp only [hg_def, hf_def]
+        exact symm_Ac2_sum hs hrc h2 h3a i
+      linarith [hpair]
+    have hstep4c : ∑ i, t.b i * (1 / 3 - t.c i + 2 * f i) =
+        ∑ i, (1 / 3 * t.b i - t.b i * t.c i + 2 * (t.b i * f i)) := by
+      congr 1; ext i; ring
+    have hfact5 : ∑ i, (1 / 3 * t.b i) = 1 / 3 * ∑ i, t.b i := by
+      rw [← Finset.mul_sum]
+    have hfact6 : ∑ i, (2 * (t.b i * f i)) = 2 * ∑ i, t.b i * f i := by
+      rw [← Finset.mul_sum]
     have hbf : ∑ i, t.b i * f i = 1 / 6 := by
       simp only [order3b, hf_def] at h3b ⊢; convert h3b using 1
-      congr 1; ext i; ring
+      congr 1; ext i; rw [Finset.mul_sum]; congr 1; ext j; ring
     simp only [order1] at h1; simp only [order2] at h2
-    linarith [h2sum, hexpand, hbf]
+    linarith [h2sum, hstep4c, hbf, hfact5, hfact6,
+      Finset.sum_sub_distrib
+        (f := fun i => 1 / 3 * t.b i)
+        (g := fun i => t.b i * t.c i) (s := Finset.univ),
+      Finset.sum_add_distrib
+        (f := fun i => 1 / 3 * t.b i - t.b i * t.c i)
+        (g := fun i => 2 * (t.b i * f i)) (s := Finset.univ)]
   -- order4d: ∑∑∑ bᵢaᵢⱼaⱼₖcₖ = 1/24
   -- Proof: rewrite as ∑ⱼ D(j)f(j), pair j ↔ rev(j)
   · show ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
@@ -289,31 +359,38 @@ theorem IsSymmetric.order4_of_order3 {t : ButcherTableau s}
       rw [Finset.sum_comm]; congr 1; ext j; rw [Finset.sum_comm]
       congr 1; ext i; congr 1; ext k; ring
     rw [hrewrite]
-    have hpair : ∑ j, D j * f j = ∑ j, D j.rev * f j.rev := by
-      conv_lhs => rw [(Fin.revPerm.sum_comp (fun j => D j * f j)).symm]
-      congr 1; ext j; simp [Fin.revPerm]
-    have hpair2 : ∑ j, D j.rev * f j.rev =
+    have hpair : ∑ j : Fin s, D j * f j = ∑ j : Fin s, D j.rev * f j.rev := by
+      have := (Equiv.sum_comp Fin.revPerm (fun j => D j * f j)).symm
+      simp only [Fin.revPerm_apply] at this; exact this
+    have hpair2 : ∑ j : Fin s, D j.rev * f j.rev =
         ∑ j, (t.b j - D j) * (f j - t.c j + 1 / 2) := by
       congr 1; ext j; congr 1
-      · linarith [symm_D_pair hs h1 j]
-      · exact symm_Ac_rev hs hrc h2 j
+      · simp only [hD_def]; linarith [symm_D_pair hs h1 j]
+      · simp only [hf_def]; exact symm_Ac_rev hs hrc h2 j
     have h2Q : 2 * ∑ j, D j * f j =
         ∑ j, (t.b j * f j - t.b j * t.c j + t.b j / 2 +
                D j * t.c j - D j / 2) := by
-      rw [two_mul, hpair, hpair2, ← Finset.sum_add_distrib]
-      congr 1; ext j; ring
-    have hexpand : ∑ j, (t.b j * f j - t.b j * t.c j + t.b j / 2 +
+      have hcomb : ∑ j, D j * f j +
+          ∑ j, (t.b j - D j) * (f j - t.c j + 1 / 2) =
+          ∑ j, (t.b j * f j - t.b j * t.c j + t.b j / 2 +
+               D j * t.c j - D j / 2) := by
+        rw [← Finset.sum_add_distrib]; congr 1; ext j; ring
+      linarith [hpair, hpair2]
+    have hstep4d : ∑ j, (t.b j * f j - t.b j * t.c j + t.b j / 2 +
                D j * t.c j - D j / 2) =
-        ∑ j, t.b j * f j - ∑ j, t.b j * t.c j + (1 / 2) * ∑ j, t.b j +
-        ∑ j, D j * t.c j - (1 / 2) * ∑ j, D j := by
-      simp_rw [Finset.sum_sub_distrib, Finset.sum_add_distrib, ← Finset.mul_sum]; ring
+        ∑ j, (t.b j * f j - t.b j * t.c j + 1 / 2 * t.b j +
+               D j * t.c j - 1 / 2 * D j) := by
+      congr 1; ext j; ring
+    have hfact_b : ∑ j, (1 / 2 * t.b j) = 1 / 2 * ∑ j, t.b j := by
+      rw [← Finset.mul_sum]
+    have hfact_D : ∑ j, (1 / 2 * D j) = 1 / 2 * ∑ j, D j := by
+      rw [← Finset.mul_sum]
     have hbf : ∑ j, t.b j * f j = 1 / 6 := by
       simp only [order3b, hf_def] at h3b ⊢; convert h3b using 1
-      congr 1; ext i; ring
+      congr 1; ext i; rw [Finset.mul_sum]; congr 1; ext j; ring
     have hDc : ∑ j, D j * t.c j = 1 / 6 := by
       simp only [hD_def, Finset.sum_mul]; rw [Finset.sum_comm]
-      simp only [order3b] at h3b; convert h3b using 1
-      congr 1; ext i; rw [Finset.mul_sum]; congr 1; ext j; ring
+      simp only [order3b] at h3b; exact h3b
     have hDsum : ∑ j, D j = 1 / 2 := by
       simp only [hD_def]; rw [Finset.sum_comm]
       have : ∑ i, ∑ j, t.b i * t.A i j = ∑ i, t.b i * ∑ j, t.A i j := by
@@ -321,7 +398,28 @@ theorem IsSymmetric.order4_of_order3 {t : ButcherTableau s}
       rw [this]; simp_rw [fun i => (hrc i).symm]
       simp only [order2] at h2; exact h2
     simp only [order1] at h1; simp only [order2] at h2
-    linarith [h2Q, hexpand, hbf, hDc, hDsum]
+    -- The goal is ∑ D*f = 1/24. We have 2*∑D*f = ∑(bf - bc + b/2 + Dc - D/2)
+    -- = ∑bf - ∑bc + (1/2)∑b + ∑Dc - (1/2)∑D = 1/6 - 1/2 + 1/2 + 1/6 - 1/4 = 1/12
+    -- Need: ∑(bf - bc + b/2 + Dc - D/2) = ∑bf - ∑bc + (1/2)∑b + ∑Dc - (1/2)∑D
+    -- = 1/6 - 1/2 + 1/2 + 1/6 - 1/4 = 1/12, so ∑Df = 1/24
+    have hsub_bc : ∑ j, (t.b j * f j - t.b j * t.c j) =
+        ∑ j, t.b j * f j - ∑ j, t.b j * t.c j := Finset.sum_sub_distrib ..
+    have hadd_b : ∑ j, (t.b j * f j - t.b j * t.c j + 1 / 2 * t.b j) =
+        ∑ j, (t.b j * f j - t.b j * t.c j) + ∑ j, (1 / 2 * t.b j) := by
+      rw [← Finset.sum_add_distrib]
+    have hadd_Dc : ∑ j, (t.b j * f j - t.b j * t.c j + 1 / 2 * t.b j + D j * t.c j) =
+        ∑ j, (t.b j * f j - t.b j * t.c j + 1 / 2 * t.b j) + ∑ j, D j * t.c j := by
+      rw [← Finset.sum_add_distrib]
+    have hsub_D : ∑ j, (t.b j * f j - t.b j * t.c j + 1 / 2 * t.b j + D j * t.c j - 1 / 2 * D j) =
+        ∑ j, (t.b j * f j - t.b j * t.c j + 1 / 2 * t.b j + D j * t.c j) -
+        ∑ j, (1 / 2 * D j) := by
+      rw [← Finset.sum_sub_distrib]
+    have hfact_b' : ∑ j, (1 / 2 * t.b j) = 1 / 2 * ∑ j, t.b j := by
+      rw [← Finset.mul_sum]
+    have hfact_D' : ∑ j, (1 / 2 * D j) = 1 / 2 * ∑ j, D j := by
+      rw [← Finset.mul_sum]
+    linarith [h2Q, hstep4d, hbf, hDc, hDsum,
+      hsub_bc, hadd_b, hadd_Dc, hsub_D, hfact_b', hfact_D']
 
 end ButcherTableau
 
@@ -333,9 +431,9 @@ end ButcherTableau
   Reference: Iserles, Section 2.5. -/
 theorem rkImplicitMidpoint_symmetric : rkImplicitMidpoint.IsSymmetric where
   symm_weights := by intro i; fin_cases i; simp [rkImplicitMidpoint]
-  symm_nodes := by intro i; fin_cases i; simp [rkImplicitMidpoint]
+  symm_nodes := by intro i; fin_cases i; simp [rkImplicitMidpoint]; norm_num
   symm_tableau := by
-    intro i j; fin_cases i <;> fin_cases j <;> simp [rkImplicitMidpoint]
+    intro i j; fin_cases i; fin_cases j; simp [rkImplicitMidpoint]; norm_num
 
 /-! ## Backward Euler is NOT Symmetric -/
 
@@ -387,7 +485,7 @@ theorem rkLobattoIIIA2_symmetric : rkLobattoIIIA2.IsSymmetric where
   symm_weights := by intro i; fin_cases i <;> simp [rkLobattoIIIA2]
   symm_nodes := by intro i; fin_cases i <;> simp [rkLobattoIIIA2]
   symm_tableau := by
-    intro i j; fin_cases i <;> fin_cases j <;> simp [rkLobattoIIIA2] <;> norm_num
+    intro i j; fin_cases i <;> fin_cases j <;> simp [rkLobattoIIIA2]
 
 /-! ## Lobatto IIIA 3-Stage is Symmetric -/
 
@@ -396,7 +494,7 @@ theorem rkLobattoIIIA2_symmetric : rkLobattoIIIA2.IsSymmetric where
   The tableau satisfies A[i][j] + A[2−i][2−j] = b[j]. -/
 theorem rkLobattoIIIA3_symmetric : rkLobattoIIIA3.IsSymmetric where
   symm_weights := by intro i; fin_cases i <;> simp [rkLobattoIIIA3]
-  symm_nodes := by intro i; fin_cases i <;> simp [rkLobattoIIIA3] <;> norm_num
+  symm_nodes := by intro i; fin_cases i <;> simp [rkLobattoIIIA3]; norm_num
   symm_tableau := by
     intro i j; fin_cases i <;> fin_cases j <;> simp [rkLobattoIIIA3] <;> norm_num
 
@@ -409,7 +507,7 @@ theorem rkLobattoIIIB2_symmetric : rkLobattoIIIB2.IsSymmetric where
   symm_weights := by intro i; fin_cases i <;> simp [rkLobattoIIIB2]
   symm_nodes := by intro i; fin_cases i <;> simp [rkLobattoIIIB2]
   symm_tableau := by
-    intro i j; fin_cases i <;> fin_cases j <;> simp [rkLobattoIIIB2] <;> norm_num
+    intro i j; fin_cases i <;> fin_cases j <;> simp [rkLobattoIIIB2]
 
 /-! ## Lobatto IIIB 3-Stage is Symmetric -/
 
@@ -418,7 +516,7 @@ theorem rkLobattoIIIB2_symmetric : rkLobattoIIIB2.IsSymmetric where
   satisfies A[i][j] + A[2−i][2−j] = b[j]. -/
 theorem rkLobattoIIIB3_symmetric : rkLobattoIIIB3.IsSymmetric where
   symm_weights := by intro i; fin_cases i <;> simp [rkLobattoIIIB3]
-  symm_nodes := by intro i; fin_cases i <;> simp [rkLobattoIIIB3] <;> norm_num
+  symm_nodes := by intro i; fin_cases i <;> simp [rkLobattoIIIB3]; norm_num
   symm_tableau := by
     intro i j; fin_cases i <;> fin_cases j <;> simp [rkLobattoIIIB3] <;> norm_num
 
@@ -439,7 +537,6 @@ theorem rkLobattoIIIC3_not_symmetric : ¬rkLobattoIIIC3.IsSymmetric := by
   intro ⟨_, _, ht⟩
   have h := ht 0 0
   simp [rkLobattoIIIC3, Fin.rev] at h
-  norm_num at h
 
 /-! ## Radau Methods are NOT Symmetric -/
 
@@ -448,12 +545,14 @@ theorem rkRadauIIA2_not_symmetric : ¬rkRadauIIA2.IsSymmetric := by
   intro ⟨hw, _, _⟩
   have h := hw 0
   simp [rkRadauIIA2, Fin.rev] at h
+  norm_num at h
 
 /-- **Radau IA 2-stage is NOT symmetric**: b₀ = 1/4 ≠ 3/4 = b₁. -/
 theorem rkRadauIA2_not_symmetric : ¬rkRadauIA2.IsSymmetric := by
   intro ⟨hw, _, _⟩
   have h := hw 0
   simp [rkRadauIA2, Fin.rev] at h
+  norm_num at h
 
 private theorem sqrt6_sq' : Real.sqrt 6 ^ 2 = 6 :=
   Real.sq_sqrt (by norm_num : (6 : ℝ) ≥ 0)
@@ -496,7 +595,7 @@ theorem lobattoIIIA2_IIIB2_adjoint :
       rkLobattoIIIA2.b j * rkLobattoIIIB2.A j i =
       rkLobattoIIIA2.b i * rkLobattoIIIA2.b j := by
   intro i j; fin_cases i <;> fin_cases j <;>
-    simp [rkLobattoIIIA2, rkLobattoIIIB2] <;> norm_num
+    simp [rkLobattoIIIA2, rkLobattoIIIB2]
 
 /-- **Lobatto IIIA 3-stage and IIIB 3-stage are adjoint.** -/
 theorem lobattoIIIA3_IIIB3_adjoint :

@@ -129,6 +129,14 @@ theorem rkLobattoIIIC3_not_B5 : ¬rkLobattoIIIC3.SatisfiesB 5 := by
   simp [rkLobattoIIIC3, Fin.sum_univ_three] at h5
   norm_num at h5
 
+/-- **Lobatto IIIC 3-stage does NOT have order 5**: since B(5) fails,
+  the first fifth-order condition (order5a: ∑ bᵢcᵢ⁴ = 1/5) fails.
+  The order is exactly 2s−2 = 4. -/
+theorem rkLobattoIIIC3_not_order5 : ¬rkLobattoIIIC3.HasOrderGe5 := by
+  intro ⟨_, h5a, _⟩
+  simp [ButcherTableau.order5a, rkLobattoIIIC3, Fin.sum_univ_three] at h5a
+  norm_num at h5a
+
 /-! ## Stability Function
 
 The stability function of Lobatto IIIC 3-stage is:
