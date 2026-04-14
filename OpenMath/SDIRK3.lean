@@ -242,9 +242,90 @@ theorem sdirk3_denom_ne_zero (z : ℂ) (hz : z.re ≤ 0) : sdirk3Denom z ≠ 0 :
 
 /-- **SDIRK3 has stiff decay**: R(x) → 0 as x → −∞.
   Since deg(N) = 2 < deg(D) = 3, this follows from elementary bounds. -/
+private theorem sdirk3_num_coeff1_abs_lt : |1 - 3 * sdirk3Lambda| < 1 := by
+  rw [abs_lt]; constructor
+  · linarith [sdirk3Lambda_lt]
+  · linarith [sdirk3Lambda_gt]
+
+private theorem sdirk3_num_coeff2_abs_lt :
+    |1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2| < 1 := by
+  rw [abs_lt]; constructor
+  · nlinarith [sdirk3Lambda_pos, sdirk3Lambda_lt, sq_nonneg sdirk3Lambda]
+  · nlinarith [sdirk3Lambda_gt, sdirk3Lambda_lt, sq_nonneg (sdirk3Lambda - 1/2)]
+
 theorem sdirk3_stiffDecay :
     Tendsto (fun x : ℝ => sdirk3StabilityFn (↑x)) atBot (nhds 0) := by
-  sorry -- TODO: stiff decay proof needs fixing (API changes in norm/pow lemmas)
+  apply NormedAddCommGroup.tendsto_nhds_zero.mpr
+  intro ε hε
+  have hlam_pos := sdirk3Lambda_pos
+  have hlam3_pos : (0 : ℝ) < sdirk3Lambda ^ 3 := by positivity
+  have helam3_pos : (0 : ℝ) < ε * sdirk3Lambda ^ 3 := mul_pos hε hlam3_pos
+  filter_upwards [eventually_lt_atBot (min (-1)
+    (-4 / (ε * sdirk3Lambda ^ 3)))] with x hx
+  have ⟨hx_neg', hx_bound⟩ := lt_min_iff.mp hx
+  have hx_neg : x < -1 := hx_neg'
+  have hnx_pos : (0 : ℝ) < -x := by linarith
+  have hx_large : -x > 4 / (ε * sdirk3Lambda ^ 3) := by
+    rw [gt_iff_lt, ← neg_lt_neg_iff]; simp only [neg_neg]
+    linarith [neg_div_neg_eq (4 : ℝ) (ε * sdirk3Lambda ^ 3)]
+  have h1_minus_lx : 0 < 1 - sdirk3Lambda * x := by nlinarith
+  simp only [sdirk3StabilityFn, sdirk3Num, sdirk3Denom]
+  -- Cast the complex expression to a real division
+  rw [show (1 : ℂ) + (1 - 3 * ↑sdirk3Lambda) * (↑x : ℂ) +
+        (1/2 - 3 * ↑sdirk3Lambda + 3 * ↑sdirk3Lambda ^ 2) * (↑x : ℂ) ^ 2 =
+      ((1 + (1 - 3 * sdirk3Lambda) * x +
+        (1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2 : ℝ) : ℂ) from by
+      push_cast; ring,
+    show ((1 : ℂ) - ↑sdirk3Lambda * (↑x : ℂ)) ^ 3 =
+      ((((1 - sdirk3Lambda * x) ^ 3 : ℝ)) : ℂ) from by push_cast; ring,
+    show ((1 + (1 - 3 * sdirk3Lambda) * x +
+        (1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2 : ℝ) : ℂ) /
+        (((1 - sdirk3Lambda * x) ^ 3 : ℝ) : ℂ) =
+      (((1 + (1 - 3 * sdirk3Lambda) * x +
+        (1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2) /
+        (1 - sdirk3Lambda * x) ^ 3 : ℝ) : ℂ) from by push_cast; ring,
+    Complex.norm_real, Real.norm_eq_abs]
+  -- Now everything is real: bound |N/D| < ε
+  have hD_pos : (0 : ℝ) < (1 - sdirk3Lambda * x) ^ 3 := by positivity
+  -- Bound |numerator| ≤ 3x²
+  have hx2 : 1 ≤ x ^ 2 := by nlinarith
+  have hN_bound : |1 + (1 - 3 * sdirk3Lambda) * x +
+      (1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2| ≤ 3 * x ^ 2 := by
+    have h1 : |(1 - 3 * sdirk3Lambda) * x| ≤ x ^ 2 := by
+      rw [abs_mul, abs_of_neg (by linarith : x < 0)]
+      nlinarith [sdirk3_num_coeff1_abs_lt]
+    have h2 : |(1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2| ≤ x ^ 2 := by
+      rw [abs_mul, abs_of_nonneg (sq_nonneg x)]
+      nlinarith [sdirk3_num_coeff2_abs_lt]
+    have tri1 := abs_add_le (1 : ℝ) ((1 - 3 * sdirk3Lambda) * x)
+    have tri2 := abs_add_le (1 + (1 - 3 * sdirk3Lambda) * x)
+      ((1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2)
+    simp only [abs_one] at tri1
+    linarith
+  -- Bound denominator: (1-λx)³ ≥ (λ(-x))³
+  have h1lx_ge : 1 - sdirk3Lambda * x ≥ sdirk3Lambda * (-x) := by nlinarith
+  calc |(1 + (1 - 3 * sdirk3Lambda) * x +
+        (1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2) /
+        (1 - sdirk3Lambda * x) ^ 3|
+      = |1 + (1 - 3 * sdirk3Lambda) * x +
+          (1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2| /
+        |(1 - sdirk3Lambda * x) ^ 3| := abs_div _ _
+    _ = |1 + (1 - 3 * sdirk3Lambda) * x +
+          (1/2 - 3 * sdirk3Lambda + 3 * sdirk3Lambda ^ 2) * x ^ 2| /
+        (1 - sdirk3Lambda * x) ^ 3 := by rw [abs_of_pos hD_pos]
+    _ ≤ 3 * x ^ 2 / (1 - sdirk3Lambda * x) ^ 3 := by
+        apply div_le_div_of_nonneg_right hN_bound (by linarith)
+    _ ≤ 3 * x ^ 2 / (sdirk3Lambda * (-x)) ^ 3 := by
+        apply div_le_div_of_nonneg_left (by positivity) (by positivity)
+        gcongr
+    _ = 3 / (sdirk3Lambda ^ 3 * (-x)) := by field_simp
+    _ < ε := by
+        rw [div_lt_iff₀ (by positivity : (0 : ℝ) < sdirk3Lambda ^ 3 * (-x))]
+        have : ε * sdirk3Lambda ^ 3 * (-x) > 4 := by
+          have := mul_lt_mul_of_pos_right hx_large helam3_pos
+          rw [div_mul_cancel₀ 4 (ne_of_gt helam3_pos)] at this
+          linarith
+        linarith
 
 /-! ### A-Stability -/
 
@@ -255,7 +336,7 @@ private theorem sdirk3_poly_ineq (x y : ℝ) (hx : x ≤ 0) :
     (1 + (1 - 3*L)*x + (1/2 - 3*L + 3*L^2)*(x^2 - y^2))^2 +
     ((1 - 3*L)*y + 2*(1/2 - 3*L + 3*L^2)*x*y)^2 ≤
     ((1 - L*x)^2 + (L*y)^2)^3 := by
-  sorry -- TODO: polynomial inequality proof needs decomposition (timeout)
+  sorry -- TODO: polynomial inequality, degree 6, needs SOS decomposition
 
 /-- Key norm inequality: |N(z)|² ≤ |D(z)|² for Re(z) ≤ 0.
   The difference |D|² − |N|² factors as (−2x)·P(x,y,λ) where P ≥ 0 for x ≤ 0. -/
