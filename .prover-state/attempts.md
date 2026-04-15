@@ -166,3 +166,9 @@ Cycle 74: Worker timed out with zero code changes and zero new content. No task 
 
 ### Cycle 75
 Cycle 75: Worker timed out with zero code changes and no task result written (sixth consecutive CLAUDE.md violation in current streak). Complete inaction — no new content, no sorry closures, no documentation. Pattern: cycles 74-75 are pure timeouts after strategy-deviation phase (cycles 70-73) exhausted itself. BDF4 sorrys in MultistepMethods.lean untouched since cycle 39.
+
+### Cycle 77
+Cycle 77: sdirk3_stiffDecay proved successfully via SDIRK2 template (helper lemmas bounding |1-3λ|<1 and |1/2-3λ+3λ²|<1, then |N(x)|≤3x², |D(x)|≥(λ(-x))³, conclude |R(x)|→0). sdirk3_poly_ineq blocked: nlinarith times out on degree-6 polynomial even with witnesses; x does NOT factor out of |D|²-|N|²; key identity 3λ²-a²+2b=0 means y²-coefficient vanishes, diff starts at y⁴; submitted to Aristotle (32aa0177) at 6% progress when worker timed out.
+
+### Cycle 78
+Cycle 78: Proved 3 sub-lemmas for Dahlquist equivalence theorem (aeval_tupleSucc_charPoly_eq_zero, charPoly_eval_eq_rhoC, tupleSucc_eigenvalue_is_rhoC_root). Phase 2 decomposition: s=0 case closed via Subsingleton; s>0 case has eigenvalue bound + minpoly divisibility + eigenspace decomposition set up, sorry remains for spectral→power bound. Key techniques: Module.End.coe_pow for T^k→T^[k], Module.End.aeval_apply_of_hasEigenvector for eigenvector polynomial evaluation. Dead ends: ext v j produces LinearMap.single terms (use LinearMap.ext + funext instead), abel fails on double negation in sums, omega fails on Fin.val coercion commutativity. Submitted main theorem to Aristotle (086b0ae4).

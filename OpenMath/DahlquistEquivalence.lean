@@ -261,6 +261,66 @@ theorem tupleSucc_iterate_eq_mkSol (E : LinearRecurrence ℂ) (init : Fin E.orde
       simp_rw [h_sum, show n + 1 + (↑i : ℕ) = n + E.order from by omega]
       exact (E.is_sol_mkSol init n).symm
 
+/-! ### Characteristic polynomial infrastructure
+
+We establish three key lemmas connecting the characteristic polynomial of the
+linear recurrence to the LMM's first characteristic polynomial ρ:
+1. `aeval_tupleSucc_charPoly_eq_zero`: the companion operator satisfies its charPoly.
+2. `charPoly_eval_eq_rhoC`: charPoly evaluation equals ρ_ℂ.
+3. `tupleSucc_eigenvalue_is_rhoC_root`: eigenvalues of tupleSucc are roots of ρ. -/
+
+/-- The companion operator `tupleSucc` satisfies its own characteristic polynomial:
+  `p(T) = 0` where `p = charPoly`. This is the Cayley-Hamilton theorem for the
+  companion matrix of a linear recurrence. -/
+lemma aeval_tupleSucc_charPoly_eq_zero (E : LinearRecurrence ℂ) :
+    Polynomial.aeval E.tupleSucc E.charPoly = 0 := by
+  refine LinearMap.ext (fun v => funext (fun j => ?_))
+  simp only [LinearMap.zero_apply, Pi.zero_apply]
+  -- Expand charPoly = X^order - ∑ coeffs_i * X^i under aeval
+  simp only [LinearRecurrence.charPoly, map_sub, map_sum, Polynomial.aeval_monomial,
+    LinearMap.sub_apply, LinearMap.sum_apply, Module.End.mul_apply,
+    Module.algebraMap_end_apply, one_smul]
+  -- Convert (T^k v) j to mkSol v (k + ↑j)
+  have conv : ∀ k, ((E.tupleSucc ^ k) v) j = E.mkSol v (k + ↑j) := by
+    intro k
+    change ((⇑(E.tupleSucc ^ k)) v) j = _
+    rw [Module.End.coe_pow]
+    exact tupleSucc_iterate_eq_mkSol E v k j
+  -- Push index j inside the subtraction and sum
+  simp only [Pi.sub_apply, Finset.sum_apply, Pi.smul_apply, smul_eq_mul, conv]
+  -- Goal: mkSol v (order + ↑j) - ∑ x, coeffs x * mkSol v (↑x + ↑j) = 0
+  have h_sol := E.is_sol_mkSol v (↑j : ℕ)
+  rw [show E.order + (↑j : ℕ) = (↑j : ℕ) + E.order from by omega, h_sol]
+  simp only [sub_eq_zero]
+  simp_rw [Nat.add_comm (↑j)]
+
+/-- The characteristic polynomial of the linear recurrence equals the first
+  characteristic polynomial ρ of the LMM: `charPoly.eval μ = ρ_ℂ(μ)`. -/
+theorem charPoly_eval_eq_rhoC (m : LMM s) (μ : ℂ) :
+    m.toLinearRecurrence.charPoly.eval μ = m.rhoC μ := by
+  simp only [LinearRecurrence.charPoly, toLinearRecurrence, rhoC,
+    Polynomial.eval_sub, Polynomial.eval_finset_sum, Polynomial.eval_monomial, one_mul, neg_mul]
+  rw [Fin.sum_univ_castSucc]
+  simp only [Fin.val_last, Fin.val_castSucc, m.normalized, Complex.ofReal_one, one_mul]
+  -- Goal: μ^s - ∑ x, -(α_x * μ^x) = ∑ x, α_x * μ^x + μ^s
+  rw [Finset.sum_neg_distrib, sub_neg_eq_add, add_comm]
+
+/-- Every eigenvalue of the companion operator `tupleSucc` is a root of ρ.
+  Combined with zero-stability, this constrains the spectral radius. -/
+theorem tupleSucc_eigenvalue_is_rhoC_root (m : LMM s) (μ : ℂ)
+    (hμ : Module.End.HasEigenvalue m.toLinearRecurrence.tupleSucc μ) : m.rhoC μ = 0 := by
+  set E := m.toLinearRecurrence
+  set T := E.tupleSucc
+  obtain ⟨v, hv⟩ := hμ.exists_hasEigenvector
+  -- aeval T charPoly = 0, so (aeval T charPoly) v = 0
+  have h_zero : (Polynomial.aeval T E.charPoly) v = 0 := by
+    rw [aeval_tupleSucc_charPoly_eq_zero]; simp
+  -- By eigenvector property: (aeval T p) v = p.eval μ • v
+  rw [Module.End.aeval_apply_of_hasEigenvector hv] at h_zero
+  -- charPoly.eval μ • v = 0 with v ≠ 0 implies charPoly.eval μ = 0
+  rw [← charPoly_eval_eq_rhoC]
+  exact (smul_eq_zero.mp h_zero).resolve_right hv.2
+
 /-! ### Zero-stability implies stable recurrence
 
 The converse direction: if ρ satisfies the root condition, then every solution
@@ -272,16 +332,35 @@ of the characteristic recurrence is bounded. We decompose this into:
 /-- **Spectral bound**: Under zero-stability, the companion operator `tupleSucc`
   has uniformly bounded iterates: ‖tupleSucc^n(v)‖ ≤ M·‖v‖ for all n, v.
 
-  The characteristic polynomial of `tupleSucc` equals ρ (the first characteristic
-  polynomial of the LMM). Zero-stability ensures all eigenvalues have |λ| ≤ 1
-  with semisimple unit eigenvalues. This implies the operator powers are bounded.
-
-  The proof requires either Jordan normal form or the generalized eigenspace
-  decomposition over ℂ, which are not yet fully available in Mathlib. -/
+  Zero-stability ensures all eigenvalues of `tupleSucc` satisfy |λ| ≤ 1
+  (by `tupleSucc_eigenvalue_is_rhoC_root`) with semisimple unit eigenvalues
+  (since unit-circle roots of ρ are simple). -/
 theorem uniformly_bounded_tupleSucc_iterates (m : LMM s) (hzs : m.IsZeroStable) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (v : Fin s → ℂ),
       ‖(m.toLinearRecurrence.tupleSucc^[n]) v‖ ≤ M * ‖v‖ := by
-  sorry
+  by_cases hs : s = 0
+  · -- s = 0: the space Fin 0 → ℂ is trivial (subsingleton)
+    subst hs
+    have : Subsingleton (Fin m.toLinearRecurrence.order → ℂ) := by
+      simp only [toLinearRecurrence]; infer_instance
+    refine ⟨1, le_of_lt one_pos, fun n v => ?_⟩
+    have heq : (m.toLinearRecurrence.tupleSucc^[n]) v = v := Subsingleton.elim _ _
+    rw [heq, one_mul]
+  · -- s > 0: use eigenvalue analysis
+    set E := m.toLinearRecurrence
+    set T := E.tupleSucc
+    -- All eigenvalues of T are roots of ρ (sub-lemma 3)
+    -- and hence satisfy |μ| ≤ 1 (zero-stability)
+    have h_eigbound : ∀ μ, Module.End.HasEigenvalue T μ → ‖μ‖ ≤ 1 :=
+      fun μ hμ => hzs.roots_in_disk μ (tupleSucc_eigenvalue_is_rhoC_root m μ hμ)
+    -- T satisfies its charPoly (sub-lemma 1), so minpoly | charPoly
+    have h_mp_dvd : minpoly ℂ T ∣ E.charPoly :=
+      minpoly.dvd ℂ T (aeval_tupleSucc_charPoly_eq_zero E)
+    -- Decomposition over ℂ (algebraically closed):
+    -- ⨆ μ, T.maxGenEigenspace μ = ⊤
+    have h_decomp := Module.End.iSup_maxGenEigenspace_eq_top T
+    -- Remaining: combine eigenvalue bounds with decomposition to get ‖T^n‖ ≤ M
+    sorry
 
 /-- **Zero-stability implies stable recurrence.**
   If all roots of ρ lie in the closed unit disk with simple unit-circle roots,

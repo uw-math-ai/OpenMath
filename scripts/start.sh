@@ -94,17 +94,35 @@ if [ -d "$LAKE_DIR/packages/mathlib/.lake/build/lib/lean/Mathlib" ]; then
 else
     mkdir -p "$LAKE_DIR"
 
-    # Fix curl symlink before fetching cache
-    CURL_SYMLINK="$HOME/.cache/mathlib/curl-7.88.1"
+    # Fix curl used by `lake exe cache get`.
+    # The static curl-7.88.1 (OpenSSL 3.0.8) breaks on EL8 (GLIBC_2.28 / OpenSSL "unregistered scheme").
+    # Replace it with the working conda curl at all possible HOME-resolved cache dirs.
     if [ -n "$CONDA_CURL" ] && [ -e "$CONDA_CURL" ]; then
-        mkdir -p "$(dirname "$CURL_SYMLINK")"
-        ln -sfn "$CONDA_CURL" "$CURL_SYMLINK"
+        for cache_base in "$HOME/.cache/mathlib" "/gscratch/amath/vilin/.cache/mathlib"; do
+            [ -z "$cache_base" ] && continue
+            # Remove broken symlink at the directory path (e.g. from wiped /tmp)
+            if [ -L "$cache_base" ] && [ ! -e "$cache_base" ]; then
+                rm "$cache_base"
+            fi
+            mkdir -p "$cache_base" 2>/dev/null || true
+            ln -sfn "$CONDA_CURL" "$cache_base/curl-7.88.1"
+        done
     fi
 
     export PATH="/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH"
+    # Use system gcc — the bundled clang requires GLIBC_2.29 but EL8 has 2.28
+    # Also add toolchain lib to linker search path for libc++, libgmp, libuv
+    export LEAN_CC=/usr/bin/gcc
+    export LIBRARY_PATH="/tmp/lean4-toolchain/lib:${LIBRARY_PATH:-}"
     echo "  Fetching Mathlib cache (this takes a few minutes)..."
-    lake exe cache get
-    echo "  [OK] Mathlib cache restored"
+    lake exe cache get || true
+    # Verify the cache actually has oleans despite possible non-zero exit
+    if [ -d "$LAKE_DIR/packages/mathlib/.lake/build/lib/lean/Mathlib" ]; then
+        echo "  [OK] Mathlib cache restored"
+    else
+        echo "  [ERROR] Mathlib oleans not found after cache get"
+        exit 1
+    fi
 fi
 
 # ─── Step 4: Verify ─────────────────────────────────────────────────────────
