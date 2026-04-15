@@ -336,7 +336,43 @@ private theorem sdirk3_poly_ineq (x y : ℝ) (hx : x ≤ 0) :
     (1 + (1 - 3*L)*x + (1/2 - 3*L + 3*L^2)*(x^2 - y^2))^2 +
     ((1 - 3*L)*y + 2*(1/2 - 3*L + 3*L^2)*x*y)^2 ≤
     ((1 - L*x)^2 + (L*y)^2)^3 := by
-  sorry -- TODO: polynomial inequality, degree 6, needs SOS decomposition
+  have := sdirk3Lambda_gt
+  have := sdirk3Lambda_lt
+  ring_nf at *
+  norm_num at *
+  have h_simp : sdirk3Lambda ^ 3 = (18 * sdirk3Lambda ^ 2 - 9 * sdirk3Lambda + 1) / 6 := by
+    linarith [sdirk3Lambda_char]
+  rw [h_simp]
+  ring_nf at *
+  norm_num at *
+  rw [show sdirk3Lambda ^ 6 = (sdirk3Lambda ^ 3) ^ 2 by ring,
+    show sdirk3Lambda ^ 5 = (sdirk3Lambda ^ 3) * sdirk3Lambda ^ 2 by ring,
+    show sdirk3Lambda ^ 4 = (sdirk3Lambda ^ 3) * sdirk3Lambda by ring, h_simp]
+  ring_nf at *
+  norm_num at *
+  rw [show sdirk3Lambda ^ 4 = sdirk3Lambda ^ 3 * sdirk3Lambda by ring, h_simp]
+  ring_nf at *
+  norm_num at *
+  rw [h_simp]
+  ring_nf at *
+  norm_num at *
+  have h_sq : sdirk3Lambda ^ 2 < 1 / 4 := by
+    nlinarith only [this, ‹2 / 5 < sdirk3Lambda›]
+  have h_cube : sdirk3Lambda ^ 3 > 0 := by
+    exact pow_pos (by linarith) _
+  have h_four : sdirk3Lambda ^ 4 > 0 := by
+    exact pow_pos (by linarith) _
+  have h_five : sdirk3Lambda ^ 5 > 0 := by
+    exact pow_pos (by linarith) _
+  have h_six : sdirk3Lambda ^ 6 > 0 := by
+    positivity
+  norm_num at *
+  nlinarith [sq_nonneg (x * y ^ 2), sq_nonneg (x ^ 2 * y), sq_nonneg (x ^ 3), sq_nonneg (y ^ 3),
+    mul_le_mul_of_nonneg_left hx (sq_nonneg x),
+    mul_le_mul_of_nonneg_left hx (sq_nonneg y),
+    mul_le_mul_of_nonneg_left hx (sq_nonneg (x * y)),
+    mul_le_mul_of_nonneg_left hx (sq_nonneg (x ^ 2)),
+    mul_le_mul_of_nonneg_left hx (sq_nonneg (y ^ 2))]
 
 /-- Key norm inequality: |N(z)|² ≤ |D(z)|² for Re(z) ≤ 0.
   The difference |D|² − |N|² factors as (−2x)·P(x,y,λ) where P ≥ 0 for x ≤ 0. -/

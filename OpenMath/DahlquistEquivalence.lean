@@ -1,4 +1,5 @@
 import OpenMath.MultistepMethods
+import Mathlib.Topology.MetricSpace.Bounded
 
 /-!
 # Dahlquist Equivalence Theorem
@@ -320,6 +321,59 @@ theorem tupleSucc_eigenvalue_is_rhoC_root (m : LMM s) (μ : ℂ)
   -- charPoly.eval μ • v = 0 with v ≠ 0 implies charPoly.eval μ = 0
   rw [← charPoly_eval_eq_rhoC]
   exact (smul_eq_zero.mp h_zero).resolve_right hv.2
+
+/-- Evaluating the derivative of the companion characteristic polynomial agrees
+  with the formal derivative `ρ'_ℂ` of the LMM's first characteristic polynomial. -/
+theorem charPoly_derivative_eval_eq_rhoCDeriv (m : LMM s) (μ : ℂ) :
+    (m.toLinearRecurrence.charPoly.derivative).eval μ = m.rhoCDeriv μ := by
+  simp only [LinearRecurrence.charPoly, toLinearRecurrence, rhoCDeriv, Polynomial.eval_sub,
+    Polynomial.eval_finset_sum, Polynomial.eval_monomial, Polynomial.derivative_sub,
+    Polynomial.derivative_sum, Polynomial.derivative_monomial, one_mul, neg_mul]
+  rw [Fin.sum_univ_castSucc]
+  simp only [Fin.val_last, Fin.val_castSucc, m.normalized, Complex.ofReal_one]
+  rw [sub_eq_add_neg, Finset.sum_neg_distrib]
+  have hsum :
+      ∑ x : Fin s, ↑(m.α x.castSucc) * ((↑x : ℕ) : ℂ) * μ ^ ((↑x : ℕ) - 1) =
+        ∑ x : Fin s, ((↑x : ℕ) : ℂ) * ↑(m.α x.castSucc) * μ ^ ((↑x : ℕ) - 1) := by
+    refine Finset.sum_congr rfl ?_
+    intro x hx
+    ring
+  simpa [neg_neg, one_mul, add_assoc, add_left_comm, add_comm] using
+    congrArg (fun t => (↑s : ℂ) * μ ^ (s - 1) + t) hsum
+
+/-- A unit-circle root of the companion characteristic polynomial is simple. -/
+lemma charPoly_rootMultiplicity_of_unit_root (m : LMM s) (hzs : m.IsZeroStable) (μ : ℂ)
+    (hroot : m.rhoC μ = 0) (hunit : ‖μ‖ = 1) :
+    (m.toLinearRecurrence.charPoly).rootMultiplicity μ = 1 := by
+  let p := m.toLinearRecurrence.charPoly
+  have hp0 : p ≠ 0 := (m.toLinearRecurrence.charPoly_monic).ne_zero
+  have hp_root : p.IsRoot μ := by
+    rw [Polynomial.IsRoot.def, charPoly_eval_eq_rhoC, hroot]
+  have hp_pos : 0 < p.rootMultiplicity μ := (Polynomial.rootMultiplicity_pos hp0).2 hp_root
+  have hderiv_ne : p.derivative.eval μ ≠ 0 := by
+    rw [show p.derivative.eval μ = m.rhoCDeriv μ by
+      simpa [p] using charPoly_derivative_eval_eq_rhoCDeriv m μ]
+    exact hzs.unit_roots_simple μ hroot hunit
+  have hnot_gt : ¬ 1 < p.rootMultiplicity μ := by
+    intro hgt
+    have hroot_deriv : p.derivative.IsRoot μ :=
+      (Polynomial.one_lt_rootMultiplicity_iff_isRoot hp0).1 hgt |>.2
+    exact hderiv_ne hroot_deriv
+  exact le_antisymm (Nat.le_of_not_gt hnot_gt) (Nat.succ_le_of_lt hp_pos)
+
+/-- A polynomial factor times a geometric decay sequence is uniformly bounded. -/
+lemma bounded_pow_geom_decay (k : ℕ) (r : ℝ) (hr0 : 0 ≤ r) (hr1 : r < 1) :
+    ∃ C : ℝ, 0 ≤ C ∧ ∀ n : ℕ, (n : ℝ) ^ k * r ^ n ≤ C := by
+  let a : ℕ → ℝ := fun n => (n : ℝ) ^ k * r ^ n
+  have h_tendsto : Filter.Tendsto a Filter.atTop (nhds 0) := by
+    simpa [a, abs_of_nonneg hr0] using
+      tendsto_pow_const_mul_const_pow_of_abs_lt_one k (show |r| < 1 by simpa [abs_of_nonneg hr0] using hr1)
+  obtain ⟨C, hC⟩ := (Metric.isBounded_range_of_tendsto a h_tendsto).bddAbove
+  refine ⟨max C 0, le_max_right _ _, fun n => ?_⟩
+  calc
+    (n : ℝ) ^ k * r ^ n = a n := rfl
+    _ ≤ C := hC (Set.mem_range_self n)
+    _ ≤ max C 0 := le_max_left _ _
 
 /-! ### Zero-stability implies stable recurrence
 
