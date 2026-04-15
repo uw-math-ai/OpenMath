@@ -1,0 +1,80 @@
+{
+  "id": "thm:405C",
+  "kind": "theorem",
+  "number": "405C",
+  "name": "Convergent Linear Multistep Implies Consistency",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "405",
+  "subsection_title": "Necessity of conditions for convergence",
+  "page": 344,
+  "statement_text": "A convergent linear multistep is consistent.",
+  "statement_latex": "\\begin{theorem}[405C]\nA convergent linear multistep method is consistent.\n\\end{theorem}",
+  "proof_text": "Proof. We note first that\n\n                            α1 + 2α2 + · · · + kαk \u0004= 0,\n\nsince, if the expression were zero, the method would not be stable. Define the\nsequence η by\n\n                        β0 + β1 + · · · + βk\n                ηi =                          i,       i = 0, 1, 2, . . . .\n                       α1 + 2α2 + · · · + kαk\n\nConsider the numerical solution of the initial value problem\n\n                              y \u0002 (x) = 1,       y(0) = 0,\n\nwith the output computed at x = 1, and with n steps computed with stepsize\nh = 1/n. Choose starting approximations as\n\n                                              1\n                                      yi =      ηi ,                          (405a)\n                                              n\nfor i = 0, 1, 2, . . . , k − 1, so that these values converge to zero as n → ∞. We\nverify that the computed solution for all values of i = 0, 1, 2, . . . , n is given\nalso by (405a), and it follows that the approximation at x = 1 is\n\n                                β0 + β1 + · · · + βk\n                                                      ,\n                               α1 + 2α2 + · · · + kαk\n\nindependent of n. Because convergence implies that the limit of this is 1, it\nfollows that\n                β0 + β1 + · · · + βk = α1 + 2α2 + · · · + kαk .",
+  "proof_latex": "\\begin{proof}\nWe note first that\n\\[\n\\alpha_1 + 2\\alpha_2 + \\cdots + k\\alpha_k \\neq 0,\n\\]\nsince, if the expression were zero, the method would not be stable. Define the sequence $\\eta$ by\n\\[\n\\eta_i = \\frac{\\beta_0 + \\beta_1 + \\cdots + \\beta_k}{\\alpha_1 + 2\\alpha_2 + \\cdots + k\\alpha_k} \\, i, \\qquad i = 0, 1, 2, \\dots .\n\\]\nConsider the numerical solution of the initial value problem\n\\[\ny'(x) = 1, \\qquad y(0) = 0,\n\\]\nwith the output computed at $x = 1$, and with $n$ steps computed with stepsize $h = 1/n$. Choose starting approximations as\n\\[\ny_i = \\frac{1}{n} \\eta_i, \\qquad i = 0, 1, 2, \\dots, k-1, \\tag{405a}\n\\]\nso that these values converge to zero as $n \\to \\infty$. We verify that the computed solution for all values of $i = 0, 1, 2, \\dots, n$ is given also by \\eqref{eq:405a}, and it follows that the approximation at $x = 1$ is\n\\[\n\\frac{\\beta_0 + \\beta_1 + \\cdots + \\beta_k}{\\alpha_1 + 2\\alpha_2 + \\cdots + k\\alpha_k},\n\\]\nindependent of $n$. Because convergence implies that the limit of this is $1$, it follows that\n\\[\n\\beta_0 + \\beta_1 + \\cdots + \\beta_k = \\alpha_1 + 2\\alpha_2 + \\cdots + k\\alpha_k. \\qedhere\n\\]\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe context involves linear multistep methods, their convergence, and preconsistency. Theorem 405B states that a convergent linear multistep method is preconsistent, which is used in the proof of Theorem 405C. Preconsistency is defined by the condition $1 - \\alpha_1 - \\alpha_2 - \\dots - \\alpha_k = 0$.\n\nVariables:\n\\begin{itemize}\n    \\item $\\alpha_i$: coefficients of the linear multistep method, part of the method's definition.\n    \\item $k$: step number of the linear multistep method.\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "α_i",
+      "definition": "coefficients of the linear multistep method, part of the method's definition"
+    },
+    {
+      "name": "k",
+      "definition": "step number of the linear multistep method"
+    }
+  ],
+  "equations": [],
+  "preamble": "The context involves linear multistep methods, their convergence, and preconsistency. Theorem 405B states that a convergent linear multistep method is preconsistent, which is used in the proof of Theorem 405C. Preconsistency is defined by the condition 1 - α1 - α2 - ... - αk = 0.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:402A",
+      "kind": "definition",
+      "number": "402A",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    },
+    {
+      "id": "def:404B",
+      "kind": "definition",
+      "number": "404B",
+      "name": "consistent",
+      "edge_type": "uses_concept",
+      "context": "consistent"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B"
+  ],
+  "dependents": [
+    "thm:405A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

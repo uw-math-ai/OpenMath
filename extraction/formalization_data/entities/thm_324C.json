@@ -1,0 +1,111 @@
+{
+  "id": "thm:324C",
+  "kind": "theorem",
+  "number": "324C",
+  "name": "Explicit Runge Kutta Order Stage Lower Bound",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "32",
+  "subsection": "324",
+  "subsection_title": "Order barriers",
+  "page": 209,
+  "statement_text": "For any positive integer p, an explicit Runge–Kutta method\nexists with order p and s stages, where\n                          \u001a 2\n                              3p −10p+24\n                                    8     , p even,\n                      s=      3p2 −4p+9\n                                   8    ,   p odd.",
+  "statement_latex": "\\begin{theorem}\nFor any positive integer $p$, an explicit Runge--Kutta method exists with order $p$ and $s$ stages, where\n\\[\ns = \\begin{cases}\n\\dfrac{3p^2 - 10p + 24}{8}, & p \\text{ even}, \\\\[8pt]\n\\dfrac{3p^2 - 4p + 9}{8},   & p \\text{ odd}.\n\\end{cases}\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. We consider the case of p odd, but allow for generalized order\nconditions. If p = 1 + 2m, we construct first an implicit Runge–Kutta method\nwith 1 + m stages, using (case I) standard order conditions and (case II)\ngeneralized order conditions. For case I, the order condition associated with\nthe tree t is, as usual,\n                                          1\n                                 Φ(t) =       .\n                                         γ(t)\nIn case II, this condition is replaced by\n\n                                            1\n                            Φ(t) =                  .\n                                     (r(t) + 1)γ(t)\n\n  For the implicit method, the abscissae are at the zeros of the polynomial\n                              dm m+1\n                                 x   (x − 1)m , in case I,\n                             dxm\n                          dm m+1\n                             x   (x − 1)m+1 , in case II,\n                         dxm\n\n\nwith the zero x = 1 omitted in case II. It is clear that x = 0 is a zero in both\ncases and that the remaining zeros are distinct and lie in the interval [0, 1).\nDenote the positive zeros by ξi , i = 1, 2, . . . , m. We now construct methods\nwith abscissae chosen from the successive rows of the following table:\n\n                      row 0                 0\n                      row 1                 ξ1\n                      row 2                 ξ1     ξ2\n                      row 3                 ξ1     ξ2     ξ3\n                                             ..     ..     ..        ..\n                                              .      .      .             .\n                      row m                 ξ1     ξ2     ξ3         ···      ξm\n                      row m + 1             ξ1     ξ2     ξ3         ···      ξm\n                                              ..     ..     ..                 ..\n                                               .      .      .                  .\n                      row 2m                ξ1     ξ2     ξ3         ···      ξm\n\nwhere there are exactly m + 1 repetitions of the rows with m members. The\ntotal number of stages will then be\n               \u0003                     \u0004            1\n      s = 1 + 1 + 2 + · · · + (m − 1) + (m + 1)m = (3m2 + m + 2).\n                                                  2\n                    \u0003                          \u0004\nHaving chosen c = 0 ξ1 ξ1 ξ2 · · · ξm , we construct b with all\ncomponents zero except the first component and the final m components.\nThe non-zero components are chosen so that\n                       \u001a\n          \u0014m\n                            1,         case I\n     b1 +     bs−m+i =      1\n          i=1               2,         case II\n                             \u001a                             /\n      \u0014\n                                 k,            case I\n            bs−m+i ξik−1 =          1                            ,    k = 1, 2, . . . , 2m + 1.\n      i=1                        k(k+1) ,      case II\n\n   The possibility that the non-zero b components can be found to satisfy these\nconditions follows from the theory of Gaussian quadrature. The final step in\nthe construction of the method is choosing the elements of the matrix A. For\ni corresponding to a member of row k for k = 1, 2, . . . , m, the only non-zero\n\naij are for j = 1 and for j corresponding to a member of row k − 1. Thus, the\nquadrature formula associated with this row has the form\n                     \u0010 ci                        \u0014\n                                                 k−1\n                            φ(x)dx ≈ w0 φ(0) +         wj φ(ξj )\n                      0                          j=1\n\nand the coefficients are chosen to make this exact for φ a polynomial of degree\nk − 1. For i a member of row k = m + 1, m + 2, . . . , 2m, the non-zero aij are\nfound in a similar way based on the quadrature formula\n                    \u0010 ci                    \u0014m\n                         φ(x)dx ≈ w0 φ(0) +     wj φ(ξj ).\n                      0                          j=1\n\nThe method constructed in this way has order, or generalized order,\nrespectively, equal to p = 2m + 1. To see this, let Y\u0019i denote the approximation\nto y(xn−1 + hξi ) in stage 1 + i of the order 2m + 1 Radau I method (in case\nI) or the order 2m + 2 Lobatto method (in case II). It is easy to see that\nthe stages corresponding to row k approximate the Y\u0019 quantities to within\nO(hk+1 ). Thus the full method has order 2m + 1 in case I and generalized\norder 2m + 1 in case II. Add one more stage to the case II methods, as in",
+  "proof_latex": "\\begin{proof}\nWe consider the case of $p$ odd, but allow for generalized order conditions. If $p = 1 + 2m$, we construct first an implicit Runge--Kutta method with $1 + m$ stages, using (case I) standard order conditions and (case II) generalized order conditions. For case I, the order condition associated with the tree $t$ is, as usual,\n\\[\n\\Phi(t) = \\frac{1}{\\gamma(t)}.\n\\]\nIn case II, this condition is replaced by\n\\[\n\\Phi(t) = \\frac{1}{(r(t) + 1)\\gamma(t)}.\n\\]\n\nFor the implicit method, the abscissae are at the zeros of the polynomial\n\\[\n\\frac{d^m}{dx^m} x^{m+1}(x - 1)^m, \\quad \\text{in case I},\n\\]\n\\[\n\\frac{d^m}{dx^m} x^{m+1}(x - 1)^{m+1}, \\quad \\text{in case II},\n\\]\nwith the zero $x = 1$ omitted in case II. It is clear that $x = 0$ is a zero in both cases and that the remaining zeros are distinct and lie in the interval $[0, 1)$. Denote the positive zeros by $\\xi_i$, $i = 1, 2, \\dots, m$. We now construct methods with abscissae chosen from the successive rows of the following table:\n\\[\n\\begin{array}{ccccccc}\n\\text{row } 0 & 0 \\\\\n\\text{row } 1 & \\xi_1 \\\\\n\\text{row } 2 & \\xi_1 & \\xi_2 \\\\\n\\text{row } 3 & \\xi_1 & \\xi_2 & \\xi_3 \\\\\n\\vdots & \\vdots & \\vdots & \\vdots & \\ddots \\\\\n\\text{row } m & \\xi_1 & \\xi_2 & \\xi_3 & \\cdots & \\xi_m \\\\\n\\text{row } m + 1 & \\xi_1 & \\xi_2 & \\xi_3 & \\cdots & \\xi_m \\\\\n\\vdots & \\vdots & \\vdots & \\vdots & & \\vdots \\\\\n\\text{row } 2m & \\xi_1 & \\xi_2 & \\xi_3 & \\cdots & \\xi_m\n\\end{array}\n\\]\nwhere there are exactly $m + 1$ repetitions of the rows with $m$ members. The total number of stages will then be\n\\[\ns = 1 + \\bigl[1 + 2 + \\cdots + (m - 1)\\bigr] + (m + 1)m = \\frac{1}{2}(3m^2 + m + 2).\n\\]\n\nHaving chosen $c = \\begin{bmatrix} 0 & \\xi_1 & \\xi_1 & \\xi_2 & \\cdots & \\xi_m \\end{bmatrix}^\\top$, we construct $b$ with all components zero except the first component and the final $m$ components. The non-zero components are chosen so that\n\\[\nb_1 + \\sum_{i=1}^m b_{s-m+i} = \\begin{cases}\n1, & \\text{case I}, \\\\[4pt]\n\\dfrac{1}{2}, & \\text{case II},\n\\end{cases}\n\\]\n\\[\n\\sum_{i=1}^m b_{s-m+i} \\xi_i^{k-1} = \\begin{cases}\n\\dfrac{1}{k}, & \\text{case I}, \\\\[8pt]\n\\dfrac{1}{k(k+1)}, & \\text{case II},\n\\end{cases} \\quad k = 1, 2, \\dots, 2m + 1.\n\\]\n\nThe possibility that the non-zero $b$ components can be found to satisfy these conditions follows from the theory of Gaussian quadrature. The final step in the construction of the method is choosing the elements of the matrix $A$. For $i$ corresponding to a member of row $k$ for $k = 1, 2, \\dots, m$, the only non-zero $a_{ij}$ are for $j = 1$ and for $j$ corresponding to a member of row $k - 1$. Thus, the quadrature formula associated with this row has the form\n\\[\n\\int_0^{c_i} \\varphi(x) \\, dx \\approx w_0 \\varphi(0) + \\sum_{j=1}^{k-1} w_j \\varphi(\\xi_j)\n\\]\nand the coefficients are chosen to make this exact for $\\varphi$ a polynomial of degree $k - 1$. For $i$ a member of row $k = m + 1, m + 2, \\dots, 2m$, the non-zero $a_{ij}$ are found in a similar way based on the quadrature formula\n\\[\n\\int_0^{c_i} \\varphi(x) \\, dx \\approx w_0 \\varphi(0) + \\sum_{j=1}^m w_j \\varphi(\\xi_j).\n\\]\n\nThe method constructed in this way has order, or generalized order, respectively, equal to $p = 2m + 1$. To see this, let $\\widehat{Y}_i$ denote the approximation to $y(x_{n-1} + h\\xi_i)$ in stage $1 + i$ of the order $2m + 1$ Radau I method (in case I) or the order $2m + 2$ Lobatto method (in case II). It is easy to see that the stages corresponding to row $k$ approximate the $\\widehat{Y}$ quantities to within $O(h^{k+1})$. Thus the full method has order $2m + 1$ in case I and generalized order $2m + 1$ in case II. Add one more stage to the case II methods, as in\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns the existence of explicit Runge--Kutta methods with order $p$ and $s$ stages, providing a formula for the minimum number of stages required as a function of $p$. The preceding text discusses bounds on $s-p$ for various $p$ and references related theorems and constructions. Here, $p$ denotes the order of the explicit Runge--Kutta method and $s$ denotes the number of stages.",
+  "variables": [
+    {
+      "name": "p",
+      "definition": "order of the explicit Runge-Kutta method"
+    },
+    {
+      "name": "s",
+      "definition": "number of stages in the explicit Runge-Kutta method"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns the existence of explicit Runge-Kutta methods with order p and s stages, providing a formula for the minimum number of stages required as a function of p. The preceding text discusses bounds on s - p for various p and references related theorems and constructions.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:315A",
+      "kind": "theorem",
+      "number": "315A",
+      "name": "Conditions for order",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "lem:342A",
+      "kind": "lemma",
+      "number": "342A",
+      "name": "Methods based on Gaussian quadrature",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "lem:342B",
+      "kind": "lemma",
+      "number": "342B",
+      "name": "Gaussian quadrature exactness degree",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:342C",
+      "kind": "theorem",
+      "number": "342C",
+      "name": "Gaussian Quadrature Order Conditions Equivalence",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "cor:342D",
+      "kind": "corollary",
+      "number": "342D",
+      "name": "Gaussian Quadrature Runge Kutta Order Condition",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:344A",
+      "kind": "theorem",
+      "number": "344A",
+      "name": "Methods based on Radau and Lobatto quadrature",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "cor:356D",
+    "def:110A",
+    "def:310A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "lem:310B",
+    "lem:311A",
+    "lem:313A",
+    "lem:342A",
+    "lem:342B",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:311C",
+    "thm:311D",
+    "thm:313B",
+    "thm:315A",
+    "thm:342C",
+    "thm:344A",
+    "thm:356C"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

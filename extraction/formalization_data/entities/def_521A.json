@@ -1,0 +1,82 @@
+{
+  "id": "def:521A",
+  "kind": "definition",
+  "number": "521A",
+  "name": "Methods with maximal stability order",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "521",
+  "subsection_title": "Methods with maximal stability order",
+  "page": 420,
+  "statement_text": "A method with stability function Φ(w, z) has ‘stability\norder’ p\u0019 if\n                    Φ(exp(z), z) = O(z p\u0002+1 ).\n\n  Suppose the stability function is given by\n\n                                          \u0014\n                                          k               \u0014\n                                                          νj\n                                                    k−j\n                          Φ(w, z) =             w               αjl z j ,\n                                          j=0             l=0\n\n\nwhere k is the w-degree of Φ and νj is the z-degree of the coefficient of wk−j .\nWe can regard the sequence of integers\n\n                                 ν = [ν0 , ν1 , . . . , νk ],\n\nas representing the complexity of the stability function Φ. To include all\nsensible cases without serious redundancies, we always assume that νj ≥ −1\nfor j = 0, 1, 2, . . . , k with strict inequality in the cases j = 0 and j = k.\n  It is interesting to ask the question: ‘For a given sequence ν, what is the\nhighest possible stability order?’. The question can be looked at in two parts.\nFirst, there is the question of determining for what p\u0019 it is possible to find\na function Φ with a given complexity and with stability order p\u0019. Secondly,\nthere is the question of finding a general linear method corresponding to a\ngiven Φ, with order p as close as possible to p\u0019. The first half of the question\ncan be firmly answered and is interesting since it gives rise to speculations\nabout possible generalizations of the Ehle results on rational approximations\nto the exponential function. The definitive result that we have referred to is\nas follows:",
+  "statement_latex": "\\begin{definition}\nA method with stability function $\\Phi(w, z)$ has `stability order' $p^*$ if\n\\[\n\\Phi(\\exp(z), z) = O(z^{p^*+1}).\n\\]\n\nSuppose the stability function is given by\n\\[\n\\Phi(w, z) = \\sum_{j=0}^{k} w^{k-j} \\sum_{l=0}^{\\nu_j} \\alpha_{jl} z^{j},\n\\]\nwhere $k$ is the $w$-degree of $\\Phi$ and $\\nu_j$ is the $z$-degree of the coefficient of $w^{k-j}$.\nWe can regard the sequence of integers\n\\[\n\\nu = [\\nu_0, \\nu_1, \\dots, \\nu_k],\n\\]\nas representing the complexity of the stability function $\\Phi$. To include all sensible cases without serious redundancies, we always assume that $\\nu_j \\geq -1$ for $j = 0, 1, 2, \\dots, k$ with strict inequality in the cases $j = 0$ and $j = k$.\n\nIt is interesting to ask the question: `For a given sequence $\\nu$, what is the highest possible stability order?'. The question can be looked at in two parts. First, there is the question of determining for what $p^*$ it is possible to find a function $\\Phi$ with a given complexity and with stability order $p^*$. Secondly, there is the question of finding a general linear method corresponding to a given $\\Phi$, with order $p$ as close as possible to $p^*$. The first half of the question can be firmly answered and is interesting since it gives rise to speculations about possible generalizations of the Ehle results on rational approximations to the exponential function. The definitive result that we have referred to is as follows:\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe text discusses stability properties (A-stability, L-stability) of general linear methods for ODEs, defined via a stability function $\\Phi(w,z)$ and stability matrix $M(z)$. The focus is on the relationship between stability and order. Variables: $\\Phi(w, z)$: stability function of the method; $M(z)$: stability matrix of the general linear method; $\\rho(M(\\infty))$: spectral radius of $M(\\infty)$.",
+  "variables": [
+    {
+      "name": "Φ(w, z)",
+      "definition": "stability function of the method"
+    },
+    {
+      "name": "M(z)",
+      "definition": "stability matrix of the general linear method"
+    },
+    {
+      "name": "ρ(M(∞))",
+      "definition": "spectral radius of M(∞)"
+    }
+  ],
+  "equations": [],
+  "preamble": "The text discusses stability properties (A-stability, L-stability) of general linear methods for ODEs, defined via a stability function Φ(w,z) and stability matrix M(z). The focus is on the relationship between stability and order.",
+  "introduces": [
+    "stability order",
+    "complexity of the stability function"
+  ],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "uses_concept",
+      "context": "stability function"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "thm:521B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

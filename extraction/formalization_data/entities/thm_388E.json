@@ -1,0 +1,80 @@
+{
+  "id": "thm:388E",
+  "kind": "theorem",
+  "number": "388E",
+  "name": "C is a normal subgroup of G1",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "388",
+  "subsection_title": "Some subgroups and quotient groups",
+  "page": 322,
+  "statement_text": "The set C(ξ) is a normal subgroup of G1 .\n\nA proof of this result, and of Theorem 388G below, is given in Butcher (1972).\n  The D(ξ) condition is also represented by a subset of G1 , which is also\nknown to generate a normal subgroup.",
+  "statement_latex": "\\begin{theorem}\nThe set $C(\\xi)$ is a normal subgroup of $G_1$.\n\nA proof of this result, and of Theorem~\\ref{thm:388G} below, is given in Butcher (1972).\nThe $D(\\xi)$ condition is also represented by a subset of $G_1$, which is also known to generate a normal subgroup.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:388G",
+      "kind": "theorem",
+      "number": "388G",
+      "name": "D is normal subgroup of G1",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 388G"
+    },
+    {
+      "id": "def:388D",
+      "kind": "definition",
+      "number": "388D",
+      "name": "Consistency Condition for Group Element",
+      "edge_type": "uses_concept",
+      "context": "c(ξ)"
+    },
+    {
+      "id": "def:388F",
+      "kind": "definition",
+      "number": "388F",
+      "name": "Algebraic condition for group commutators",
+      "edge_type": "uses_concept",
+      "context": "d(ξ)"
+    },
+    {
+      "id": "thm:388A",
+      "kind": "theorem",
+      "number": "388A",
+      "name": "Some subgroups and quotient groups",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:388D",
+    "def:388F",
+    "thm:301A",
+    "thm:356C",
+    "thm:388A",
+    "thm:388B",
+    "thm:388C",
+    "thm:388G"
+  ],
+  "dependents": [
+    "def:370A",
+    "lem:389A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

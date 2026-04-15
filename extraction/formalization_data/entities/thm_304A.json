@@ -1,0 +1,76 @@
+{
+  "id": "thm:304A",
+  "kind": "theorem",
+  "number": "304A",
+  "name": "Enumerating non-rooted trees",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "30",
+  "subsection": "304",
+  "subsection_title": "Enumerating non-rooted trees",
+  "page": 167,
+  "statement_text": "The generating functions for trees and non-superfluous trees\nare\n                               x                \u0002\n                φ(x) = θ(x) −     θ(x)2 − θ(x2 ) ,               (304b)\n                               2                \u0002\n                               x\n                ψ(x) = θ(x) −     θ(x)2 + θ(x2 ) .               (304c)\n                               2",
+  "statement_latex": "\\begin{theorem}\nThe generating functions for trees and non-superfluous trees are\n\\[\n\\varphi(x) = \\theta(x) - \\frac{x}{2} \\left( \\theta(x)^2 - \\theta(x^2) \\right), \\tag{304b}\n\\]\n\\[\n\\psi(x) = \\theta(x) - \\frac{x}{2} \\left( \\theta(x)^2 + \\theta(x^2) \\right). \\tag{304c}\n\\]\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe theorem gives generating functions for trees and non-superfluous trees, building on combinatorial counting of rooted trees and their symmetries. The preceding text derives expressions for the number of trees by subtracting pairs with unequal orders and handling special cases for even and odd orders, leading to formula (304a).\n\nVariables:\n\\begin{itemize}\n    \\item $\\theta(x)$: generating function for rooted trees\n    \\item $\\phi(x)$: generating function for trees\n    \\item $\\psi(x)$: generating function for non-superfluous trees\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n    \\theta(x) - \\frac{x}{2} \\theta(x)^{2} \\mp \\theta(x^{2})\n    \\tag{304a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "θ(x)",
+      "definition": "generating function for rooted trees"
+    },
+    {
+      "name": "φ(x)",
+      "definition": "generating function for trees"
+    },
+    {
+      "name": "ψ(x)",
+      "definition": "generating function for non-superfluous trees"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "304a",
+      "content": "θ(x) − (x/2) θ(x)^2 ∓ θ(x^2)"
+    }
+  ],
+  "preamble": "The theorem gives generating functions for trees and non-superfluous trees, building on combinatorial counting of rooted trees and their symmetries. The preceding text derives expressions for the number of trees by subtracting pairs with unequal orders and handling special cases for even and odd orders, leading to formula (304a).",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:302B",
+      "kind": "theorem",
+      "number": "302B",
+      "name": "Rooted Tree Generating Function Identity",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:302C",
+      "kind": "theorem",
+      "number": "302C",
+      "name": "Rooted Tree Enumeration Formulas",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "thm:301A",
+    "thm:302A",
+    "thm:302B",
+    "thm:302C",
+    "thm:356C"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

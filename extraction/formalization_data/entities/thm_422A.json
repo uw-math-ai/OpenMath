@@ -1,0 +1,61 @@
+{
+  "id": "thm:422A",
+  "kind": "theorem",
+  "number": "422A",
+  "name": "The underlying one-step method",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "42",
+  "subsection": "422",
+  "subsection_title": "The underlying one-step method",
+  "page": 358,
+  "statement_text": "For any preconsistent, stable linear multistep method [α, β],\nthere exists a member of the group G1 satisfying (422a).\n\n                             \"",
+  "statement_latex": "\\begin{theorem}\nFor any preconsistent, stable linear multistep method $[\\alpha, \\beta]$, there exists a member of the group $G_1$ satisfying \\eqref{eq:422a}.\n\\end{theorem}",
+  "proof_text": "Proof. By preconsistency, ki=1 αi = 1. Hence, (422a) is satisfied in the case\nof t = ∅, in the sense that if both sides are evaluated for the empty tree, then\nthey each evaluate to zero. Now consider a tree t with r(t) > 0 and assume\n\nthat\n\n  1(u) − α1 η −1 (u) − α2 η −2 (u) − · · · − αk η −k (u)\n                − β0 D(u) − β1 η −1 D(u) − β2 η −2 D(u) − · · · − βk η −k D(u) = 0,\nis satisfied for every tree u satisfying r(u) < r(t). We will prove that there\nexists a value of η(t) such that this equation is also satisfied if u is replaced by\nt. The coefficient of η(t) in η −i (t) is equal to i(−1)r(t) and there are no other\nterms in η −i (t) with orders greater than r(t) − 1. Furthermore, all terms on\nthe right-hand side contain only terms with orders less than r(t). Hence, to\nsatisfy (422a), with both sides evaluated at t, it is only necessary to solve the\nequation\n                                       \u0014 k\n                           (−1)r(t)−1      iαi η(t) = C,\n                                           i=1\nwhere C depends only on lower order trees. The proof by induction on r(t) is\nnow complete, because the coefficient of η(t) is non-zero, by the stability of\nthe method.",
+  "proof_latex": "\\begin{proof}\nBy preconsistency, $\\sum_{i=1}^k \\alpha_i = 1$. Hence, \\eqref{eq:422a} is satisfied in the case of $t = \\emptyset$, in the sense that if both sides are evaluated for the empty tree, then they each evaluate to zero. Now consider a tree $t$ with $r(t) > 0$ and assume that\n\\[\n1(u) - \\alpha_1 \\eta^{-1}(u) - \\alpha_2 \\eta^{-2}(u) - \\cdots - \\alpha_k \\eta^{-k}(u) - \\beta_0 D(u) - \\beta_1 \\eta^{-1} D(u) - \\beta_2 \\eta^{-2} D(u) - \\cdots - \\beta_k \\eta^{-k} D(u) = 0,\n\\]\nis satisfied for every tree $u$ satisfying $r(u) < r(t)$. We will prove that there exists a value of $\\eta(t)$ such that this equation is also satisfied if $u$ is replaced by $t$. The coefficient of $\\eta(t)$ in $\\eta^{-i}(t)$ is equal to $i(-1)^{r(t)}$ and there are no other terms in $\\eta^{-i}(t)$ with orders greater than $r(t) - 1$. Furthermore, all terms on the right-hand side contain only terms with orders less than $r(t)$. Hence, to satisfy \\eqref{eq:422a}, with both sides evaluated at $t$, it is only necessary to solve the equation\n\\[\n(-1)^{r(t)-1} \\sum_{i=1}^k i \\alpha_i \\, \\eta(t) = C,\n\\]\nwhere $C$ depends only on lower order trees. The proof by induction on $r(t)$ is now complete, because the coefficient of $\\eta(t)$ is non-zero, by the stability of the method.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:404A",
+      "kind": "definition",
+      "number": "404A",
+      "name": "preconsistent",
+      "edge_type": "uses_concept",
+      "context": "preconsistent"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "def:422B",
+      "kind": "definition",
+      "number": "422B",
+      "name": "underlying one-step method",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:381B",
+    "def:403A",
+    "def:404A",
+    "def:422B"
+  ],
+  "dependents": [
+    "thm:422C",
+    "thm:535A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

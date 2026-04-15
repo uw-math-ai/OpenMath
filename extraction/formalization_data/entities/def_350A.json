@@ -1,0 +1,113 @@
+{
+  "id": "def:350A",
+  "kind": "definition",
+  "number": "350A",
+  "name": "A-stability, A(α)-stability and L-stability",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "350",
+  "subsection_title": "A-stability, A(α)-stability and L-stability",
+  "page": 251,
+  "statement_text": "Let α denote an angle satisfying α ∈ (0, π) and let S(α)\ndenote the set of points x + iy in the complex plane such that x ≤ 0 and\n− tan(α)|x| ≤ y ≤ tan(α)|x|. A Runge–Kutta method with stability function\nR(z) is A(α)-stable if |R(z)| ≤ 1 for all z ∈ S(α).\n\nThe region S(α) is illustrated in Figure 350(i) in the case of the Runge–Kutta\nmethod\n\n        λ              λ                     0                 0\n       1+λ             1−λ\n        2               2                    λ                 0\n                              2\n                                      2(1−λ)(1−6λ+6λ2 )\n                                                                           (350c)\n        1     − (1−λ)(1−9λ+6λ\n                   1−3λ+6λ2\n                                )\n                                          1−3λ+6λ2             λ       ,\n                      1+3λ                 2(1−3λ)          1−3λ+6λ2\n                    6(1−λ)2                3(1−λ)2           6(1−λ)2\n\nwhere λ ≈ 0.158984 is a zero of 6λ3 − 18λ2 + 9λ − 1. This value of λ was\nchosen to ensure that (350b) holds, even though the method is not A-stable.\nIt is, in fact, A(α)-stable with α ≈ 1.31946 ≈ 75.5996◦ .",
+  "statement_latex": "\\textbf{Definition 350A} Let $\\alpha$ denote an angle satisfying $\\alpha \\in (0, \\pi)$ and let $S(\\alpha)$ denote the set of points $x + iy$ in the complex plane such that $x \\leq 0$ and $-\\tan(\\alpha)|x| \\leq y \\leq \\tan(\\alpha)|x|$. A Runge--Kutta method with stability function $R(z)$ is $A(\\alpha)$-stable if $|R(z)| \\leq 1$ for all $z \\in S(\\alpha)$.\n\nThe region $S(\\alpha)$ is illustrated in Figure 350(i) in the case of the Runge--Kutta method\n\\[\n\\left[\\begin{array}{cccc}\n0 & 0 & 0 & 0 \\\\\n\\lambda & \\lambda & 0 & 0 \\\\\n\\frac{1+\\lambda}{2} & \\frac{1-\\lambda}{2} & \\lambda & 0 \\\\\n1 & -\\frac{(1-\\lambda)(1-9\\lambda+6\\lambda^{2})}{1-3\\lambda+6\\lambda^{2}} & \\frac{2(1-\\lambda)(1-6\\lambda+6\\lambda^{2})}{1-3\\lambda+6\\lambda^{2}} & \\lambda\n\\end{array}\\right]\n\\]\n\\[\n\\begin{array}{cccc}\n\\frac{1+3\\lambda}{6(1-\\lambda)^{2}} & \\frac{2(1-3\\lambda)}{3(1-\\lambda)^{2}} & \\frac{1}{6(1-\\lambda)^{2}}\n\\end{array},\n\\]\nwhere $\\lambda \\approx 0.158984$ is a zero of $6\\lambda^{3} - 18\\lambda^{2} + 9\\lambda - 1$. This value of $\\lambda$ was chosen to ensure that (350b) holds, even though the method is not $A$-stable. It is, in fact, $A(\\alpha)$-stable with $\\alpha \\approx 1.31946 \\approx 75.5996^{\\circ}$.",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe stability function $R(z)$ for a Runge--Kutta method is defined, and $A$-stability ($|R(z)| \\le 1$ for $\\operatorname{Re}(z) \\le 0$) and $L$-stability ($A$-stable with $R(\\infty)=0$) are introduced. The context is the stability analysis of implicit Runge--Kutta methods for stiff ODEs.\n\nVariables:\n\\begin{itemize}\n    \\item $R(z)$: stability function for a Runge--Kutta method, $R(z) = 1 + z\\mathbf{b}^\\top (I - zA)^{-1} \\mathbf{1}$\n    \\item $A$: coefficient matrix of the Runge--Kutta method\n    \\item $\\mathbf{b}$: weights vector of the Runge--Kutta method\n    \\item $\\mathbf{1}$: vector of ones\n\\end{itemize}\n\nReferenced equation:\n\\begin{equation}\nR(z) = 1 + z\\mathbf{b}^\\top (I - zA)^{-1} \\mathbf{1}\n\\tag{350a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "R(z)",
+      "definition": "stability function for a Runge–Kutta method, R(z) = 1 + zb (I − zA)^{-1} 1"
+    },
+    {
+      "name": "A",
+      "definition": "coefficient matrix of the Runge–Kutta method"
+    },
+    {
+      "name": "b",
+      "definition": "weights vector of the Runge–Kutta method"
+    },
+    {
+      "name": "1",
+      "definition": "vector of ones"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "350a",
+      "content": "R(z) = 1 + zb (I − zA)^{-1} 1"
+    }
+  ],
+  "preamble": "The stability function R(z) for a Runge–Kutta method is defined, and A-stability (|R(z)| ≤ 1 for Re(z) ≤ 0) and L-stability (A-stable with R(∞) = 0) are introduced. The context is the stability analysis of implicit Runge–Kutta methods for stiff ODEs.",
+  "introduces": [
+    "A(α)-stable",
+    "S(α)"
+  ],
+  "dependencies": [
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "uses_concept",
+      "context": "stability function"
+    },
+    {
+      "id": "def:442A",
+      "kind": "definition",
+      "number": "442A",
+      "name": "principal sheet",
+      "edge_type": "uses_concept",
+      "context": "a-stable"
+    },
+    {
+      "id": "def:520E",
+      "kind": "definition",
+      "number": "520E",
+      "name": "A-stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:520F",
+      "kind": "definition",
+      "number": "520F",
+      "name": "L Stability Condition for Linear Methods",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:355A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:520F",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:356C"
+  ],
+  "dependents": [
+    "def:357A",
+    "lem:351A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,54 @@
+{
+  "id": "thm:123B",
+  "kind": "theorem",
+  "number": "123B",
+  "name": "Area invariance for Hamiltonian parallelograms",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "12",
+  "subsection": "123",
+  "subsection_title": "Further Hamiltonian problems",
+  "page": 57,
+  "statement_text": "u Jv is invariant with time.\n\n  In the special case of a two-dimensional Hamiltonian problem, the value of\n( u) J( v) can be interpreted as the area of the infinitesimal parallelogram\nwith sides in the directions u and v. As the solution evolves, u and v might\nchange, but the area u Jv remains invariant. This is illustrated in Figure\n123(i) for the two problems H(p, q) = p2 /2 + q 2 /2 and H(p, q) = p2 /2 − cos(q)\nrespectively.",
+  "statement_latex": "\\begin{theorem}\nIn the special case of a two-dimensional Hamiltonian problem, the value of \\( ( \\mathbf{u} )^{\\top} J ( \\mathbf{v} ) \\) can be interpreted as the area of the infinitesimal parallelogram with sides in the directions \\( \\mathbf{u} \\) and \\( \\mathbf{v} \\). As the solution evolves, \\( \\mathbf{u} \\) and \\( \\mathbf{v} \\) might change, but the area \\( \\mathbf{u}^{\\top} J \\mathbf{v} \\) remains invariant. This is illustrated in Figure~\\ref{fig:123i} for the two problems \\( H(p, q) = p^{2}/2 + q^{2}/2 \\) and \\( H(p, q) = p^{2}/2 - \\cos(q) \\) respectively.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns a Hamiltonian system $y' = J\\nabla H(y)$. Perturbations $u$ and $v$ to the initial condition evolve according to $v'(x) = JW(y)v(x)$, where $W$ is the Hessian of $H$. The scalar quantity $u^\\mathsf{T}Jv$ is shown to be invariant.\n\nVariables:\n\\begin{itemize}\n    \\item $u$: a perturbation vector satisfying $v'(x) = JW(y)v(x)$\n    \\item $v$: a perturbation vector satisfying $v'(x) = JW(y)v(x)$\n    \\item $J$: the $2N \\times 2N$ matrix $\\begin{bmatrix}0 & -I \\\\ I & 0\\end{bmatrix}$, where $I$ is the $N \\times N$ identity matrix\n    \\item $W$: the Wronskian matrix with $(i, j)$ element $\\partial^2 H/\\partial y_i \\partial y_j$\n    \\item $H$: the Hamiltonian function $H(y)$\n    \\item $y$: the solution to the Hamiltonian system $y' = J\\nabla H(y)$\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "u",
+      "definition": "a perturbation vector satisfying v'(x) = JW(y)v(x)"
+    },
+    {
+      "name": "v",
+      "definition": "a perturbation vector satisfying v'(x) = JW(y)v(x)"
+    },
+    {
+      "name": "J",
+      "definition": "the 2N × 2N matrix [[0, -I], [I, 0]], where I is the N × N identity matrix"
+    },
+    {
+      "name": "W",
+      "definition": "the Wronskian matrix with (i, j) element ∂²H/∂y_i ∂y_j"
+    },
+    {
+      "name": "H",
+      "definition": "the Hamiltonian function H(y)"
+    },
+    {
+      "name": "y",
+      "definition": "the solution to the Hamiltonian system y' = J∇H(y)"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns a Hamiltonian system y' = J∇H(y). Perturbations u and v to the initial condition evolve according to v'(x) = JW(y)v(x), where W is the Hessian of H. The scalar quantity uᵀJv is shown to be invariant.",
+  "introduces": [],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "thm:123A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

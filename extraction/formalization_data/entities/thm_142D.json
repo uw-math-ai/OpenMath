@@ -1,0 +1,85 @@
+{
+  "id": "thm:142D",
+  "kind": "theorem",
+  "number": "142D",
+  "name": "Convergence Equivalence for Matrix Powers",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "14",
+  "subsection": "142",
+  "subsection_title": "Powers of matrices",
+  "page": 68,
+  "statement_text": "Let A denote an m × m matrix. The following statements\nare equivalent\n   (i) A is convergent.\n  (ii) The minimal polynomial of A has all its zeros in the open unit disc.\n (iii) The Jordan canonical form of A has all its diagonal elements in the\n        open unit disc.\n  (iv) There exists a non-singular matrix S such that S −1 AS ∞ < 1.",
+  "statement_latex": "\\begin{theorem}\nLet \\( A \\) denote an \\( m \\times m \\) matrix. The following statements are equivalent:\n\\begin{enumerate}\n    \\item[(i)] \\( A \\) is convergent.\n    \\item[(ii)] The minimal polynomial of \\( A \\) has all its zeros in the open unit disc.\n    \\item[(iii)] The Jordan canonical form of \\( A \\) has all its diagonal elements in the open unit disc.\n    \\item[(iv)] There exists a non-singular matrix \\( S \\) such that \\( \\| S^{-1} A S \\|_{\\infty} < 1 \\).\n\\end{enumerate}\n\\end{theorem}",
+  "proof_text": "Proof. We again prove that (i) ⇒ (ii) ⇒ (iii) ⇒ (iv) ⇒ (i). If A is convergent\nbut (ii) is not true, then there exist λ and u \u0004= 0 such that λ ≥ 1 and Au = λu.\nHence, An u = λn u and therefore An ≥ |λ|n , which does not converge to\nzero. Given (ii), it is not possible that the conditions of (iii) are not satisfied,\nbecause the minimal polynomial of any of the Jordan blocks, and therefore\nof A itself, would have factors that contradict (ii). If (iii) is true, then S can\nbe chosen to form J, the Jordan canonical form of A, with the off-diagonal\nelements chosen sufficiently small so that J ∞ < 1. Finally, if (iv) is true then\nAn = S(S −1 AS)n S −1 so that An ≤ S · S −1 · S −1 AS n → 0.",
+  "proof_latex": "\\begin{proof}\nWe again prove that (i) \\(\\Rightarrow\\) (ii) \\(\\Rightarrow\\) (iii) \\(\\Rightarrow\\) (iv) \\(\\Rightarrow\\) (i). If \\( A \\) is convergent but (ii) is not true, then there exist \\( \\lambda \\) and \\( u \\neq 0 \\) such that \\( |\\lambda| \\geq 1 \\) and \\( Au = \\lambda u \\). Hence, \\( A^{n} u = \\lambda^{n} u \\) and therefore \\( \\| A^{n} \\| \\geq |\\lambda|^{n} \\), which does not converge to zero. Given (ii), it is not possible that the conditions of (iii) are not satisfied, because the minimal polynomial of any of the Jordan blocks, and therefore of \\( A \\) itself, would have factors that contradict (ii). If (iii) is true, then \\( S \\) can be chosen to form \\( J \\), the Jordan canonical form of \\( A \\), with the off-diagonal elements chosen sufficiently small so that \\( \\| J \\|_{\\infty} < 1 \\). Finally, if (iv) is true then \\( A^{n} = S (S^{-1} A S)^{n} S^{-1} \\) so that \\( \\| A^{n} \\| \\leq \\| S \\| \\cdot \\| S^{-1} \\| \\cdot \\| S^{-1} A S \\|^{n} \\to 0 \\).\n\nWhile the two results we have presented here are related to the convergence of difference equation solutions, the next is introduced only because of its application in later chapters.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThis theorem concerns the equivalence of several conditions for a square matrix \\(A\\) to be convergent (i.e., \\(A^{n} \\to 0\\) as \\(n\\to\\infty\\)). The preceding theorem (142C) gives analogous conditions for matrix stability, which is related but distinct. The context assumes familiarity with matrix norms, eigenvalues, and Jordan canonical form.\n\nVariables:\n\\begin{itemize}\n    \\item \\(A\\): an \\(m \\times m\\) matrix.\n    \\item \\textbf{convergent}: A square matrix \\(A\\) is \\emph{convergent} if \\(\\lim_{n\\to\\infty} A^{n} = 0\\).\n    \\item \\textbf{minimal polynomial}: The minimal polynomial of a matrix \\(A\\) is the monic polynomial of least degree such that \\(p(A) = 0\\).\n    \\item \\textbf{Jordan canonical form}: A representation of a matrix as a block diagonal matrix with Jordan blocks, where each block corresponds to an eigenvalue.\n    \\item \\(S\\): a non-singular matrix used for similarity transformations.\n    \\item \\(\\|\\cdot\\|_{\\infty}\\): The matrix norm induced by the vector \\(\\infty\\)-norm, defined as \\(\\|A\\|_{\\infty} = \\max_{i} \\sum_{j} |a_{ij}|\\).\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "A",
+      "definition": "an m × m matrix"
+    },
+    {
+      "name": "convergent",
+      "definition": "A square matrix A is 'convergent' if lim_{n→∞} A^n = 0"
+    },
+    {
+      "name": "minimal polynomial",
+      "definition": "The minimal polynomial of a matrix A is the monic polynomial of least degree such that p(A) = 0"
+    },
+    {
+      "name": "Jordan canonical form",
+      "definition": "A representation of a matrix as a block diagonal matrix with Jordan blocks, where each block corresponds to an eigenvalue"
+    },
+    {
+      "name": "S",
+      "definition": "a non-singular matrix used for similarity transformations"
+    },
+    {
+      "name": "||·||_∞",
+      "definition": "The matrix norm induced by the vector ∞-norm, defined as ||A||_∞ = max_i ∑_j |a_{ij}|"
+    }
+  ],
+  "equations": [],
+  "preamble": "This theorem is about the equivalence of several conditions for a square matrix A to be convergent (i.e., A^n → 0 as n→∞). The preceding theorem (142C) gives analogous conditions for matrix stability, which is related but distinct. The context assumes familiarity with matrix norms, eigenvalues, and Jordan canonical form.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "def:142B",
+      "kind": "definition",
+      "number": "142B",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:142B",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:402A",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:142C",
+    "thm:142E"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

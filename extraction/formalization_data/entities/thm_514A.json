@@ -1,0 +1,82 @@
+{
+  "id": "thm:514A",
+  "kind": "theorem",
+  "number": "514A",
+  "name": "The necessity of consistency",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "514",
+  "subsection_title": "The necessity of consistency",
+  "page": 410,
+  "statement_text": "Let (A, U, B, V ) denote a convergent method which is,\nmoreover, covariant with preconsistency vector u. Then there exists a vector\nv ∈ Rr , such that (510c) holds.",
+  "statement_latex": "\\begin{theorem}\nLet $(A, U, B, V)$ denote a convergent method which is, moreover, covariant with preconsistency vector $u$. Then there exists a vector $v \\in \\mathbb{R}^r$, such that \\eqref{eq:510c} holds.\n\\end{theorem}",
+  "proof_text": "Proof. Consider the initial value problem\n\n                              y \u0002 (x) = 1,       y(0) = 0,\n\nwith constant starting values φ(h) = 0 and x = 1. The sequence of\napproximations, when n steps are to be taken with h = 1/n, is given by\n                            1\n                  y [i] =     B1 + V y [i−1] ,         i = 1, 2, . . . , n.\n                            n\nThis means that the error vector, after the n steps have been completed, is\ngiven by\n                        1\u0003                            \u0004\n             y [n] − u =   I + V + V 2 + · · · + V n−1 B1 − u\n                        n\n                        1\u0003                            \u0004\n                      =    I + V + V 2 + · · · + V n−1 (B1 − u).\n                        n\nBecause V has bounded powers, it can be written in the form\n\n                               V = S −1                    S,\n                                             0   W\n\nwhere I is r\u0019× r\u0019 for r\u0019 ≤ r and W is power-bounded and is such that 1 \u0004∈ σ(W ).\nThis means that\n\n          y [n] − u = S −1                    −1\n                                                                      S(B1 − u),\n                                    n (I − W ) (I − W )\n                               0\n\nwhose limit as n → ∞ is\n                           S −1              S(B1 − u).\n                                   0   0\n\nIf y [n] − u is to converge to 0 as n → ∞, then S(B1 − u) has only zero in its\nfirst r\u0019 components. Write this vector in the form\n                                            0\n                      S(B1 − u) =\n                                        (I − W )\u0019\n                                                v\n                                                          !\n                                   =   I−                     Sv\n                                               0   W\n\n                                   = S(I − V )v,\nwhere\n                                               0\n                                  v = S −1         .\n                                              v\u0019\nThus B1 + V v = u + v.",
+  "proof_latex": "\\begin{proof}\nConsider the initial value problem\n\\[\ny'(x) = 1, \\quad y(0) = 0,\n\\]\nwith constant starting values $\\phi(h) = 0$ and $x = 1$. The sequence of approximations, when $n$ steps are to be taken with $h = 1/n$, is given by\n\\[\ny^{[i]} = \\frac{1}{n} B\\mathbf{1} + V y^{[i-1]}, \\quad i = 1, 2, \\dots, n.\n\\]\nThis means that the error vector, after the $n$ steps have been completed, is given by\n\\begin{align*}\ny^{[n]} - u &= \\frac{1}{n} \\left[ I + V + V^2 + \\cdots + V^{n-1} \\right] B\\mathbf{1} - u \\\\\n&= \\frac{1}{n} \\left[ I + V + V^2 + \\cdots + V^{n-1} \\right] (B\\mathbf{1} - u).\n\\end{align*}\nBecause $V$ has bounded powers, it can be written in the form\n\\[\nV = S^{-1} \\begin{pmatrix} I & 0 \\\\ 0 & W \\end{pmatrix} S,\n\\]\nwhere $I$ is $r' \\times r'$ for $r' \\leq r$ and $W$ is power-bounded and is such that $1 \\notin \\sigma(W)$. This means that\n\\[\ny^{[n]} - u = S^{-1} \\begin{pmatrix} I & 0 \\\\ 0 & \\frac{1}{n}(I - W)^{-1}(I - W^n) \\end{pmatrix} S(B\\mathbf{1} - u),\n\\]\nwhose limit as $n \\to \\infty$ is\n\\[\nS^{-1} \\begin{pmatrix} I & 0 \\\\ 0 & 0 \\end{pmatrix} S(B\\mathbf{1} - u).\n\\]\nIf $y^{[n]} - u$ is to converge to $0$ as $n \\to \\infty$, then $S(B\\mathbf{1} - u)$ has only zero in its first $r'$ components. Write this vector in the form\n\\begin{align*}\nS(B\\mathbf{1} - u) &= \\begin{pmatrix} 0 \\\\ (I - W) v' \\end{pmatrix} \\\\\n&= \\begin{pmatrix} I & 0 \\\\ 0 & I - W \\end{pmatrix} \\begin{pmatrix} 0 \\\\ v' \\end{pmatrix} \\\\\n&= S(I - V)v,\n\\end{align*}\nwhere\n\\[\nv = S^{-1} \\begin{pmatrix} 0 \\\\ v' \\end{pmatrix}.\n\\]\nThus $B\\mathbf{1} + Vv = u + v$.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:510A",
+      "kind": "definition",
+      "number": "510A",
+      "name": "preconsistency vector",
+      "edge_type": "uses_concept",
+      "context": "preconsistency vector"
+    },
+    {
+      "id": "def:512A",
+      "kind": "definition",
+      "number": "512A",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    },
+    {
+      "id": "def:510B",
+      "kind": "definition",
+      "number": "510B",
+      "name": "consistent",
+      "edge_type": "uses_equation_from",
+      "context": "(510c) owned by def:510B"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:513A",
+      "kind": "theorem",
+      "number": "513A",
+      "name": "The necessity of stability",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:512A",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:513A"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

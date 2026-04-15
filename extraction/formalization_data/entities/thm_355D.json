@@ -1,0 +1,41 @@
+{
+  "id": "thm:355D",
+  "kind": "theorem",
+  "number": "355D",
+  "name": "Down arrow zero up arrow pole inequality",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "355",
+  "subsection_title": "Order arrows and the Ehle barrier",
+  "page": 265,
+  "statement_text": "Let R be a rational approximation to exp of order p with\nnumerator degree n and denominator degree d. Let \u0018  n denote the number of\ndown arrows terminating at zeros and d\u0018 the number of up arrows terminating\nat poles of R. Then\n                                n + d\u0018 ≥ p.\n                                \u0018",
+  "statement_latex": "\\begin{theorem}\nLet \\( R \\) be a rational approximation to \\( \\exp \\) of order \\( p \\) with numerator degree \\( n \\) and denominator degree \\( d \\). Let \\( \\tilde{n} \\) denote the number of down arrows terminating at zeros and \\( \\tilde{d} \\) the number of up arrows terminating at poles of \\( R \\). Then\n\\[\nn + \\tilde{d} \\geq p.\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. There are p + 1 − n \u0018 down arrows and p + 1 − d\u0018 up arrows terminating\nat +∞ and −∞, respectively. Let θ and φ be the minimum angles with the\nproperties that all the down arrows which terminate at +∞ lie within θ on\neither side of the positive real axis and all the up arrows which terminate at\n−∞ lie within an angle φ on either side of the negative real axis. Hence\n\n                            (p − \u0018\n                                 n)2π                 \u0018\n                                                 (p − d)2π\n                     2θ ≥             ,   2φ ≥             .\n                              p+1                  p+1\nBecause up arrows and down arrows cannot cross and, because there is a\nwedge with angle equal to at least π/(p + 1) between the last down arrow and\nthe first up arrow, it follows that 2θ + 2φ + 2π/(p + 1) ≤ 2π. Hence we obtain\nthe inequality\n                            2p + 1 − \u0018n − d\u0018\n                                            2π ≤ 2π,\n                                 p+1\nand the result follows.",
+  "proof_latex": "\\begin{proof}\nThere are \\( p + 1 - \\tilde{n} \\) down arrows and \\( p + 1 - \\tilde{d} \\) up arrows terminating at \\( +\\infty \\) and \\( -\\infty \\), respectively. Let \\( \\theta \\) and \\( \\varphi \\) be the minimum angles with the properties that all the down arrows which terminate at \\( +\\infty \\) lie within \\( \\theta \\) on either side of the positive real axis and all the up arrows which terminate at \\( -\\infty \\) lie within an angle \\( \\varphi \\) on either side of the negative real axis. Hence\n\\[\n2\\theta \\geq \\frac{(p - \\tilde{n})2\\pi}{p+1}, \\quad 2\\varphi \\geq \\frac{(p - \\tilde{d})2\\pi}{p+1}.\n\\]\nBecause up arrows and down arrows cannot cross and, because there is a wedge with angle equal to at least \\( \\pi/(p + 1) \\) between the last down arrow and the first up arrow, it follows that \\( 2\\theta + 2\\varphi + 2\\pi/(p + 1) \\leq 2\\pi \\). Hence we obtain the inequality\n\\[\n\\frac{2p + 1 - \\tilde{n} - \\tilde{d}}{p+1} \\, 2\\pi \\leq 2\\pi,\n\\]\nand the result follows.\n\nFor Pad\\'e approximations we can obtain precise values of \\( \\tilde{n} \\) and \\( \\tilde{d} \\).\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "down arrows"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:355A"
+  ],
+  "dependents": [
+    "thm:355E",
+    "thm:443A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

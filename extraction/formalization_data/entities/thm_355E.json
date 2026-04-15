@@ -1,0 +1,84 @@
+{
+  "id": "thm:355E",
+  "kind": "theorem",
+  "number": "355E",
+  "name": "Pade approximation arrow termination theorem",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "355",
+  "subsection_title": "Order arrows and the Ehle barrier",
+  "page": 265,
+  "statement_text": "Let R(z) denote a Padé approximation to exp(z), with\ndegrees n (numerator) and d (denominator). Then n of the down arrows\nterminate at zeros and d of the up arrows terminate at poles.",
+  "statement_latex": "\\begin{theorem}[355E]\nLet \\( R(z) \\) denote a Pad\\'{e} approximation to \\( \\exp(z) \\), with degrees \\( n \\) (numerator) and \\( d \\) (denominator). Then \\( n \\) of the down arrows terminate at zeros and \\( d \\) of the up arrows terminate at poles.\n\\end{theorem}",
+  "proof_text": "Proof. Because p = n + d, n ≥ \u0019         \u0019 it follows from Theorem 355D\n                              n and d ≥ d,\nthat\n                         p=n+d≥ \u0019   n + d\u0019 ≥ p\n                    \u0019) + (d − \u0019\nand hence that (n − n         d) = 0. Since both terms are non-negative they\nmust be zero and the result follows.",
+  "proof_latex": "\\begin{proof}\nBecause \\( p = n + d \\), \\( n \\geq \\widehat{n} \\) and \\( d \\geq \\widehat{d} \\), it follows from Theorem~\\ref{thm:355D} that\n\\[\np = n + d \\geq \\widehat{n} + \\widehat{d} \\geq p\n\\]\nand hence that \\( (n - \\widehat{n}) + (d - \\widehat{d}) = 0 \\). Since both terms are non-negative they must be zero and the result follows.\n\nBefore proving the `Ehle barrier', we establish a criterion for A-stability based on the up arrows that terminate at poles.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nOrder star analysis of Pad\\'e approximations $R(z)$ to $\\exp(z)$, with $\\deg(\\text{numerator})=n$, $\\deg(\\text{denominator})=d$, and $p=n+d$. Down arrows: $|R(z)|>|\\exp(z)|$; up arrows: $|R(z)|<|\\exp(z)|$. Let $\\tilde{n}$ be the number of down arrows terminating at zeros of $R$, and $\\tilde{d}$ the number of up arrows terminating at poles of $R$.",
+  "variables": [
+    {
+      "name": "R(z)",
+      "definition": "a Padé approximation to exp(z), with degrees n (numerator) and d (denominator)"
+    },
+    {
+      "name": "n",
+      "definition": "numerator degree of R(z)"
+    },
+    {
+      "name": "d",
+      "definition": "denominator degree of R(z)"
+    },
+    {
+      "name": "p",
+      "definition": "p = n + d"
+    },
+    {
+      "name": "down arrows",
+      "definition": "arrows in the order star of R, representing directions where |R(z)| > |exp(z)|"
+    },
+    {
+      "name": "up arrows",
+      "definition": "arrows in the order star of R, representing directions where |R(z)| < |exp(z)|"
+    },
+    {
+      "name": "ñ",
+      "definition": "number of down arrows terminating at zeros of R"
+    },
+    {
+      "name": "d̃",
+      "definition": "number of up arrows terminating at poles of R"
+    }
+  ],
+  "equations": [],
+  "preamble": "The context involves the order star analysis of Padé approximations to exp(z), where arrows (down and up) represent regions where the approximation's magnitude is greater or less than exp(z). The theorem relates the counts of arrows terminating at zeros and poles to the degrees of the numerator and denominator.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:355D",
+      "kind": "theorem",
+      "number": "355D",
+      "name": "Down arrow zero up arrow pole inequality",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 355D"
+    },
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "down arrows"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:355A",
+    "thm:355D"
+  ],
+  "dependents": [
+    "thm:352B",
+    "thm:355G",
+    "thm:443A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

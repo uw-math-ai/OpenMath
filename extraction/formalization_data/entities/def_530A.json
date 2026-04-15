@@ -1,0 +1,55 @@
+{
+  "id": "def:530A",
+  "kind": "definition",
+  "number": "530A",
+  "name": "non-degenerate",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "530",
+  "subsection_title": "Possible definitions of order",
+  "page": 432,
+  "statement_text": "A starting method S defined by the generalized Runge–\n                                                                   (i)\nKutta methods (530a), for i = 1, 2, . . . , r, is ‘degenerate’ if b0 = 0, for\ni = 1, 2, . . . , r, and ‘non-degenerate’ otherwise.",
+  "statement_latex": "\\begin{definition}\nA starting method $S$ defined by the generalized Runge--Kutta methods \\eqref{eq:530a}, for $i = 1, 2, \\dots, r$, is `degenerate' if $b_0^{(i)} = 0$, for $i = 1, 2, \\dots, r$, and `non-degenerate' otherwise.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nA starting method $S$ is a sequence of $r$ generalized Runge--Kutta methods used to initialize a general linear method. Degeneracy depends on whether all these methods have a zero coefficient $b_0^{(i)}$.\n\nVariables:\n\\begin{itemize}\n    \\item $S$: a starting method, defined as a sequence $S_1, S_2, \\dots, S_r$ of generalized Runge--Kutta methods.\n    \\item $r$: the number of generalized Runge--Kutta methods in $S$.\n    \\item $S_i$: the $i$-th generalized Runge--Kutta method in $S$, for $i = 1, 2, \\dots, r$.\n    \\item $b_0^{(i)}$: a coefficient for the $i$-th method $S_i$.\n\\end{itemize}\n\nReferenced equations:\n\\begin{itemize}\n    \\item (530a): the definition of the generalized Runge--Kutta methods constituting $S$.\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "S",
+      "definition": "a starting method, defined as a sequence of r generalized Runge–Kutta methods S1, S2, ..., Sr"
+    },
+    {
+      "name": "r",
+      "definition": "the number of generalized Runge–Kutta methods in the starting method S"
+    },
+    {
+      "name": "S_i",
+      "definition": "the i-th generalized Runge–Kutta method in the starting method S, for i = 1, 2, ..., r"
+    },
+    {
+      "name": "b0^{(i)}",
+      "definition": "a coefficient (presumably from the generalized Runge–Kutta method definition) for the i-th method S_i"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "530a",
+      "content": "the definition of the generalized Runge–Kutta methods that constitute the starting method S (exact form not provided in the preceding text, but referenced as the methods defining S)"
+    }
+  ],
+  "preamble": "A starting method S is a sequence of r generalized Runge–Kutta methods used to initialize a general linear method. Degeneracy depends on whether all these methods have a zero coefficient b0^{(i)}.",
+  "introduces": [
+    "degenerate",
+    "non-degenerate"
+  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "def:530B",
+    "def:530C"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

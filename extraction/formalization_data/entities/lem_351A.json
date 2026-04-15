@@ -1,0 +1,101 @@
+{
+  "id": "lem:351A",
+  "kind": "lemma",
+  "number": "351A",
+  "name": "Criteria for A-stability",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "351",
+  "subsection_title": "Criteria for A-stability",
+  "page": 251,
+  "statement_text": "Let (A, b, c) denote a Runge–Kutta method. Then its stability\nfunction is given by\n                                    det (I + z(1b − A))\n                           R(z) =                       .\n                                         det(I − zA)\n\n\n                               40i\n\n\n\n\n                          α\n\n                          α                            50\n\n\n\n\n                               −40i\n\n\n          Figure 350(i)   A(α) stability region for the method (350c)",
+  "statement_latex": "\\begin{lemma}\nLet $(A, b, c)$ denote a Runge--Kutta method. Then its stability function is given by\n\\[\nR(z) = \\frac{\\det\\bigl(I + z(\\mathbf{1}b^{\\top} - A)\\bigr)}{\\det(I - zA)}.\n\\]\n\\end{lemma}",
+  "proof_text": "Proof. Because a rank 1 s × s matrix uv has characteristic polynomial\ndet(Iw − uv ) = ws−1 (w − v u), a matrix of the form I + uv has characteristic\npolynomial (w−1)s−1 (w−1−v u) and determinant of the form 1+v u. Hence,\n              \u0003                    \u0004\n          det I + z1b (I − zA)−1 = 1 + zb (I − zA)−1 1 = R(z).\n\nWe now note that\n                             \u0003                  \u0004\n              I + z(1b − A) = I + z1b (I − zA)−1 (I − zA),\n\nso that\n                   det (I + z(1b − A)) = R(z) det(I − zA).",
+  "proof_latex": "\\begin{proof}\nBecause a rank~1 $s \\times s$ matrix $uv^{\\top}$ has characteristic polynomial\n\\[\n\\det(I w - uv^{\\top}) = w^{s-1}(w - v^{\\top}u),\n\\]\na matrix of the form $I + uv^{\\top}$ has characteristic polynomial $(w-1)^{s-1}(w-1-v^{\\top}u)$ and determinant of the form $1+v^{\\top}u$. Hence,\n\\[\n\\det\\Bigl(I + z\\mathbf{1}b^{\\top}(I - zA)^{-1}\\Bigr) = 1 + zb^{\\top}(I - zA)^{-1}\\mathbf{1} = R(z).\n\\]\nWe now note that\n\\[\nI + z(\\mathbf{1}b^{\\top} - A) = \\Bigl(I + z\\mathbf{1}b^{\\top}(I - zA)^{-1}\\Bigr)(I - zA),\n\\]\nso that\n\\[\n\\det\\bigl(I + z(\\mathbf{1}b^{\\top} - A)\\bigr) = R(z) \\det(I - zA).\n\\]\nNow write the stability function of a Runge--Kutta method as the ratio of two polynomials\n\\[\nR(z) = \\frac{N(z)}{D(z)}\n\\]\nand define the $E$-polynomial by\n\\[\nE(y) = D(iy)D(-iy) - N(iy)N(-iy).\n\\]\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe stability function \\(R(z)\\) of a Runge--Kutta method with coefficients \\((A,b,c)\\) is a rational function.  Lemma~351A gives an alternative expression for \\(R(z)\\).",
+  "variables": [
+    {
+      "name": "R(z)",
+      "definition": "stability function of a Runge–Kutta method"
+    },
+    {
+      "name": "(A, b, c)",
+      "definition": "Runge–Kutta method with coefficient matrix A, weight vector b, and node vector c"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "350a",
+      "content": "Rational function for stability function (referenced earlier in the text, but not explicitly shown in the provided excerpt; it is the general form of R(z) for a Runge–Kutta method)"
+    }
+  ],
+  "preamble": "The text discusses stability properties of Runge–Kutta methods, introducing A-stability and A(α)-stability. The stability function R(z) is a rational function characterizing the method's stability. Lemma 351A provides an alternative expression for R(z) in terms of the method's coefficients.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "uses_concept",
+      "context": "stability region"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "def:350A",
+      "kind": "definition",
+      "number": "350A",
+      "name": "A-stability, A(α)-stability and L-stability",
+      "edge_type": "uses_equation_from",
+      "context": "(350c) owned by def:350A"
+    },
+    {
+      "id": "thm:351B",
+      "kind": "theorem",
+      "number": "351B",
+      "name": "A Stability Criterion for Runge Kutta Methods",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:350A",
+    "def:355A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:520F",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:351B",
+    "thm:356C"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

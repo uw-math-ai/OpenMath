@@ -1,0 +1,79 @@
+{
+  "id": "lem:312B",
+  "kind": "lemma",
+  "number": "312B",
+  "name": "Elementary Weight Summation Formula",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "31",
+  "subsection": "312",
+  "subsection_title": "Elementary weights",
+  "page": 179,
+  "statement_text": "Denote the vertex set V of the tree t by the set of index\nsymbols V = {j, k, l, . . . }, where j is the root of t. Let the corresponding edge\nset be E. Form the expression\n\n                                   bj             akl                                  (312e)\n                                        (k,l)∈E\n\n\nand sum this over each member of V ranging over the index set {1, 2, . . . , s}.\n\nThe resulting sum is the value of Φ(t). A similar formula for Φi (t), where i\nis not a member of V , is found by replacing (312e) by\n\n                                          aij             akl                     (312f)\n                                                (k,l)∈E\n\n\nand summing this as for Φ(t).\n\n   Note that, although c does explicitly appear in Definition\"    312A or Lemma\n312B, it is usually convenient to carry out the summations sl=1 akl to yield\na result ck if l denotes a leaf (terminal vertex) of V . This is possible because\nl occurs only once in (312e) and (312f).\n   We illustrate the relationship between the trees and the corresponding\nelementary weights in Table 312(I). For each of the four trees, we write Φ(t)\nin the form given directly by Lemma 312B, and also with the summation\nover leaves explicitly carried out. Finally, we present in Table 312(II) the\nelementary weights up to order 5.",
+  "statement_latex": "\\begin{lemma}\nDenote the vertex set $V$ of the tree $t$ by the set of index symbols $V = \\{j, k, l, \\dots\\}$, where $j$ is the root of $t$. Let the corresponding edge set be $E$. Form the expression\n\\[\nb_{j} \\prod_{(k,l) \\in E} a_{kl} \\tag{312e}\n\\]\nand sum this over each member of $V$ ranging over the index set $\\{1, 2, \\dots, s\\}$.\n\nThe resulting sum is the value of $\\Phi(t)$. A similar formula for $\\Phi_{i}(t)$, where $i$ is not a member of $V$, is found by replacing \\eqref{eq:312e} by\n\\[\na_{ij} \\prod_{(k,l) \\in E} a_{kl} \\tag{312f}\n\\]\nand summing this as for $\\Phi(t)$.\n\nNote that, although $c$ does explicitly appear in Definition~\\ref{def:312A} or Lemma~\\ref{lem:312B}, it is usually convenient to carry out the summations $\\sum_{l=1}^{s} a_{kl}$ to yield a result $c_{k}$ if $l$ denotes a leaf (terminal vertex) of $V$. This is possible because $l$ occurs only once in \\eqref{eq:312e} and \\eqref{eq:312f}.\n\nWe illustrate the relationship between the trees and the corresponding elementary weights in Table~\\ref{tab:312I}. For each of the four trees, we write $\\Phi(t)$ in the form given directly by Lemma~\\ref{lem:312B}, and also with the summation over leaves explicitly carried out. Finally, we present in Table~\\ref{tab:312II} the elementary weights up to order 5.\n\\end{lemma}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe lemma provides an alternative formula for the elementary weight $\\Phi(t)$ associated with a rooted tree $t$ in the context of Butcher series for Runge--Kutta methods. The tree $t$ has vertex set $V$ (with root $j$) and edge set $E$. The summations are over indices from $1$ to $s$, where $s$ is the number of stages.\n\nVariables:\n\\begin{itemize}\n    \\item $s$: number of stages in the Runge--Kutta method\n    \\item $a_{ij}$: Runge--Kutta matrix coefficients\n    \\item $b_i$: Runge--Kutta weights\n    \\item $c_i$: Runge--Kutta nodes, typically $c_i = \\sum_{j=1}^s a_{ij}$\n    \\item $\\Phi(t)$: elementary weight associated with a rooted tree $t$ in Butcher series\n    \\item $\\Phi_i(t)$: elementary weight associated with a rooted tree $t$ and vertex $i$ (not in $V$) in Butcher series\n\\end{itemize}\n\nReferenced equations:\n\\begin{align}\n    \\Phi(t) &= b_j \\prod_{(k,l)\\in E} a_{kl} \\tag{312e}\\\\\n    \\Phi_i(t) &= a_{ij} \\prod_{(k,l)\\in E} a_{kl} \\tag{312f}\n\\end{align}",
+  "variables": [
+    {
+      "name": "s",
+      "definition": "number of stages in the Runge-Kutta method"
+    },
+    {
+      "name": "a_{ij}",
+      "definition": "Runge-Kutta matrix coefficients"
+    },
+    {
+      "name": "b_i",
+      "definition": "Runge-Kutta weights"
+    },
+    {
+      "name": "c_i",
+      "definition": "Runge-Kutta nodes, typically c_i = sum_{j=1}^s a_{ij}"
+    },
+    {
+      "name": "Φ(t)",
+      "definition": "elementary weight associated with a rooted tree t in Butcher series"
+    },
+    {
+      "name": "Φ_i(t)",
+      "definition": "elementary weight associated with a rooted tree t and vertex i (not in V) in Butcher series"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "312e",
+      "content": "b_j ∏_{(k,l)∈E} a_{kl}"
+    },
+    {
+      "tag": "312f",
+      "content": "a_{ij} ∏_{(k,l)∈E} a_{kl}"
+    }
+  ],
+  "preamble": "The lemma provides an alternative formula for the elementary weight Φ(t) associated with a rooted tree t in the context of Butcher series for Runge-Kutta methods. The tree t has vertex set V (with root j) and edge set E. The summations are over indices from 1 to s, where s is the number of stages.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "lem:310B",
+      "kind": "lemma",
+      "number": "310B",
+      "name": "Elementary Differential Weight Formula",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:310A",
+    "lem:310B",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B"
+  ],
+  "dependents": [
+    "def:312A",
+    "thm:384A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

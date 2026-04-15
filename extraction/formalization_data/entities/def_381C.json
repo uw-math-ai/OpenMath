@@ -1,0 +1,62 @@
+{
+  "id": "def:381C",
+  "kind": "definition",
+  "number": "381C",
+  "name": "0-reduced method",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "380",
+  "subsection_title": "Motivation",
+  "page": 303,
+  "statement_text": "A Runge–Kutta method (A, b , c) is ‘0-reducible’ if the\nstage index set can be partitioned into two subsets {1, 2, . . . , s} = P0 ∪ P1\nsuch that bi = 0 for all i ∈ P0 and such that aij = 0 if i ∈ P1 and j ∈ P0 .\nThe method formed by deleting all stages indexed by members of P0 is known\nas the ‘0-reduced method’.",
+  "statement_latex": "\\begin{definition}\nA Runge--Kutta method $(A, b, c)$ is `0-reducible' if the stage index set can be partitioned into two subsets $\\{1, 2, \\dots, s\\} = P_0 \\cup P_1$ such that $b_i = 0$ for all $i \\in P_0$ and such that $a_{ij} = 0$ if $i \\in P_1$ and $j \\in P_0$. The method formed by deleting all stages indexed by members of $P_0$ is known as the `0-reduced method'.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nConsider a Runge--Kutta method with $s$ stages, coefficient matrix $A\\in\\mathbb{R}^{s\\times s}$, weight vector $b\\in\\mathbb{R}^{s}$ and node vector $c\\in\\mathbb{R}^{s}$.  \nThree equivalence relations are defined: equivalence, $\\Phi$-equivalence and $P$-equivalence.  \n$P$-equivalence involves reducibility, where a method can be simplified by eliminating or combining stages.  \n$0$-reducibility formalizes one type of reducibility.",
+  "variables": [
+    {
+      "name": "A",
+      "definition": "Runge–Kutta coefficient matrix"
+    },
+    {
+      "name": "b",
+      "definition": "Runge–Kutta weights vector"
+    },
+    {
+      "name": "c",
+      "definition": "Runge–Kutta nodes vector"
+    },
+    {
+      "name": "s",
+      "definition": "number of stages in the Runge–Kutta method"
+    }
+  ],
+  "equations": [],
+  "preamble": "The text defines three equivalence relations for Runge–Kutta methods: equivalence, Φ-equivalence, and P-equivalence. P-equivalence involves the concept of reducibility, where a method can be simplified by eliminating or combining stages. The definition of 0-reducibility formalizes one type of reducibility.",
+  "introduces": [
+    "0-reducible",
+    "0-reduced method"
+  ],
+  "dependencies": [
+    {
+      "id": "def:381D",
+      "kind": "definition",
+      "number": "381D",
+      "name": "P -reducible",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:381D"
+  ],
+  "dependents": [
+    "def:370A",
+    "def:381A",
+    "def:381E"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

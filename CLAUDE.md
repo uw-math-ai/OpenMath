@@ -40,6 +40,12 @@ Follow the textbook chapter by chapter. The current target is in `plan.md`. Each
 - Proved in full (no sorry's in committed code, unless mid-restructuring)
 - Documented with a reference to the textbook section
 
+Per-theorem context (statement, LaTeX, dependencies, prior-formalization status) is available in `extraction/formalization_data/entities/<id>.json`. See `extraction/formalization_data/README.md` for the schema.
+
+## Adding new entities
+
+If you discover a textbook theorem the extractor missed, OR you need a reusable helper lemma not in Butcher, **read [`extraction/EXTENSIBILITY.md`](extraction/EXTENSIBILITY.md) before doing anything**. Hand-edit only files under `extraction/extensions/`; never edit `extraction/raw_text/` or `extraction/formalization_data/entities/` (both are regenerated). When you finish formalizing an entity in Lean, update its row in `extraction/formalization_data/lean_status.json`.
+
 ## Task Results Format
 
 Write to `.prover-state/task_results/cycle_<NNN>.md`:

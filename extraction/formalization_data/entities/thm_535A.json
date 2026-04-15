@@ -1,0 +1,143 @@
+{
+  "id": "thm:535A",
+  "kind": "theorem",
+  "number": "535A",
+  "name": "The underlying one-step method",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "535",
+  "subsection_title": "The underlying one-step method",
+  "page": 439,
+  "statement_text": "Let (A, U, B, V ) denote a consistent general linear method\nsuch that u = e1 and such that\n\n                                       \u0019 ],                 1 v\u0019\n                          U = [1       U          V =                     ,\n                                                            0 V\u0019\n\nwhere 1 \u0004∈ σ(V\u0019 ). Then there exists a unique solution to (535a) and (535b) for\nwhich ξ1 = 1.",
+  "statement_latex": "\\begin{theorem}[535A]\nLet $(A, U, B, V)$ denote a consistent general linear method such that $u = e_1$ and such that\n\\[\nU = \\begin{bmatrix} 1 & \\widehat{U} \\end{bmatrix}, \\quad V = \\begin{bmatrix} 1 & v^\\top \\\\ 0 & \\widehat{V} \\end{bmatrix},\n\\]\nwhere $1 \\notin \\sigma(\\widehat{V})$. Then there exists a unique solution to \\eqref{eq:535a} and \\eqref{eq:535b} for which $\\xi_1 = 1$.\n\\end{theorem}",
+  "proof_text": "Proof. By carrying out a further transformation if necessary, we may assume\nwithout loss of generality that V\u0019 is lower triangular. The conditions satisfied\nby ξi (t) (i = 2, 3, . . . , r), ηi (t) (i = 1, 2, . . . , s) and θ(t) can now be written in\nthe form\n                                    \u0014\n                                    s                     \u0014\n                                                          i−1\n             (1 − V\u0019i,i )ξi (t) =         bij (ηD)(t) +         V\u0019i−1,j−1 ξj (t),\n                                    j=1                   j=2\n\n                                    \u0014\n                                    s                               \u0014\n                                                                    r\n                        ηi (t) =          aij (ηD)(t) + 1(t) +            \u0019i,j−1 ξj (t),\n                                                                          U\n                                    j=1                             j=2\n\n                                    \u0014\n                                    s                               \u0014\n                                                                    r\n                          θ(t) =          b1j (ηD)(t) + 1(t) +            v\u0019j−1 ξj (t).\n                                    j=1                             j=2\n\nIn each of these equations, the right-hand sides involve only trees with order\nlower than r(t) or terms with order r(t) which have already been evaluated.\nHence, the result follows by induction on r(t).",
+  "proof_latex": "\\begin{proof}\nBy carrying out a further transformation if necessary, we may assume without loss of generality that $\\widehat{V}$ is lower triangular. The conditions satisfied by $\\xi_i(t)$ ($i = 2, 3, \\dots, r$), $\\eta_i(t)$ ($i = 1, 2, \\dots, s$) and $\\theta(t)$ can now be written in the form\n\\begin{align*}\n(1 - \\widehat{V}_{i,i}) \\xi_i(t) &= \\sum_{j=1}^{s} b_{ij} (\\eta D)(t) + \\sum_{j=2}^{i-1} \\widehat{V}_{i-1,j-1} \\xi_j(t), \\\\\n\\eta_i(t) &= \\sum_{j=1}^{s} a_{ij} (\\eta D)(t) + \\mathbf{1}(t) + \\sum_{j=2}^{r} \\widehat{U}_{i,j-1} \\xi_j(t), \\\\\n\\theta(t) &= \\sum_{j=1}^{s} b_{1j} (\\eta D)(t) + \\mathbf{1}(t) + \\sum_{j=2}^{r} \\widehat{v}_{j-1} \\xi_j(t).\n\\end{align*}\nIn each of these equations, the right-hand sides involve only trees with order lower than $r(t)$ or terms with order $r(t)$ which have already been evaluated. Hence, the result follows by induction on $r(t)$. $\\square$\n\nThe extension of the concept of underlying one-step method to general linear methods was introduced in Stoffer (1993).\n\nAlthough the underlying one-step method is an abstract structure, it has practical consequences. For a method in which $\\rho(\\widehat{V}) < 1$, the performance of a large number of steps, using constant stepsize, forces the local errors to conform to Theorem~\\ref{thm:535A}. When the stepsize needs to be altered, in accordance with the behaviour of the computed solution, it is desirable to commence the step following the change, with input approximations consistent with what the method would have expected if the new stepsize had been used for many preceding steps. Although this cannot be done precisely, it is possible for some of the most dominant terms in the error expansion to be adjusted in accordance with this requirement. With this adjustment in place, it becomes possible to make use of information from the input vectors, as well as information computed within the step, in the estimation of local truncation errors. It also becomes possible to obtain reliable information that can be used to assess the relative advantages of continuing the integration with an existing method or of moving onto a higher order method. These ideas have already been used to good effect in Butcher and Jackiewicz (2003) and further developments are the subject of ongoing investigations.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nConsider a consistent general linear method $(A,U,B,V)$ with $u=e_1$, where $U$ and $V$ have block structures\n\\[\nU=\\begin{bmatrix}1&0\\\\0&U_{22}\\end{bmatrix},\\qquad V=\\begin{bmatrix}1&0\\\\0&V_{22}\\end{bmatrix}.\n\\]\nLet $e_1$ be the first natural basis vector in $\\mathbb{R}^r$. For a given underlying one‑step method $\\theta$, define $\\eta$ and $\\xi$ by\n\\begin{align}\n\\eta(t) &= A(\\eta D)(t) + U\\xi(t), \\tag{535a}\\\\\n(\\theta\\xi)(t) &= B(\\eta D)(t) + V\\xi(t). \\tag{535b}\n\\end{align}\nThe theorem concerns the unique solution with $\\xi_1=1$. Denote by $\\sigma(\\widetilde{V})$ the spectrum of $\\widetilde{V}$.",
+  "variables": [
+    {
+      "name": "A",
+      "definition": "Part of the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "U",
+      "definition": "Part of the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "B",
+      "definition": "Part of the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "V",
+      "definition": "Part of the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "u",
+      "definition": "First column of U, equal to e1 (first natural basis vector in R^r)"
+    },
+    {
+      "name": "e1",
+      "definition": "First member of the natural basis for R^r"
+    },
+    {
+      "name": "ξ",
+      "definition": "A function (or vector) appearing in the method equations"
+    },
+    {
+      "name": "ξ1",
+      "definition": "First component of ξ"
+    },
+    {
+      "name": "η",
+      "definition": "A function appearing in the method equations"
+    },
+    {
+      "name": "θ",
+      "definition": "Represents the underlying one-step method"
+    },
+    {
+      "name": "σ(Ṽ)",
+      "definition": "Spectrum (set of eigenvalues) of the matrix Ṽ"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "535a",
+      "content": "η(t) = A(ηD)(t) + U ξ(t)"
+    },
+    {
+      "tag": "535b",
+      "content": "(θξ)(t) = B(ηD)(t) + V ξ(t)"
+    }
+  ],
+  "preamble": "The theorem concerns a consistent general linear method (A, U, B, V) with u = e1, where U and V have specific block structures. The equations (535a) and (535b) define relationships involving η, ξ, and the method components, and the goal is to find a unique solution with ξ1 = 1.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:510B",
+      "kind": "definition",
+      "number": "510B",
+      "name": "consistent",
+      "edge_type": "uses_concept",
+      "context": "consistent"
+    },
+    {
+      "id": "def:510A",
+      "kind": "definition",
+      "number": "510A",
+      "name": "preconsistency vector",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:422A",
+      "kind": "theorem",
+      "number": "422A",
+      "name": "The underlying one-step method",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:422B",
+      "kind": "definition",
+      "number": "422B",
+      "name": "underlying one-step method",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:381B",
+    "def:403A",
+    "def:404A",
+    "def:422B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:422A"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

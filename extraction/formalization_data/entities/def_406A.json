@@ -1,0 +1,95 @@
+{
+  "id": "def:406A",
+  "kind": "definition",
+  "number": "406A",
+  "name": "local truncation error",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "406",
+  "subsection_title": "Sufficiency of conditions for convergence",
+  "page": 345,
+  "statement_text": "Let [α, β] be a consistent linear multistep method. The\n‘local truncation error’ associated with a differentiable function y at a point x\nwith stepsize h is the value of\n\n                                 \u0014\n                                 k                        \u0014\n                                                          k\n           L(y, x, h) = y(x) −         αi y(x − ih) − h         βi y \u0002 (x − ih).\n                                 i=1                      i=0\n\n   We estimate the value of L(y, x, h) when y is the exact solution to (406a),\nand where not only x but also each x − hi, for i = 1, 2, . . . , k, lies in the\ninterval [x0 , x].",
+  "statement_latex": "\\begin{definition}\nLet $[\\alpha, \\beta]$ be a consistent linear multistep method. The `local truncation error' associated with a differentiable function $y$ at a point $x$ with stepsize $h$ is the value of\n\\[\nL(y, x, h) = y(x) - \\sum_{i=1}^{k} \\alpha_i y(x - ih) - h \\sum_{i=0}^{k} \\beta_i y'(x - ih).\n\\]\nWe estimate the value of $L(y, x, h)$ when $y$ is the exact solution to \\eqref{eq:406a}, and where not only $x$ but also each $x - hi$, for $i = 1, 2, \\dots, k$, lies in the interval $[x_0, x]$.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe standard initial value problem is an autonomous ODE (406a) on $[x_0, x]$ with given initial value at $x_0$, using positive stepsize $h$. The method is a consistent linear multistep method with coefficients $\\alpha_i$ and $\\beta_i$.\n\nVariables:\n\\begin{itemize}\n    \\item $y$: exact solution to the differential equation (406a)\n    \\item $x$: point in the interval $[x_0, x]$ where the solution is approximated\n    \\item $x_0$: initial point where initial value information is given\n    \\item $h$: positive stepsize\n    \\item $k$: number of steps in the linear multistep method (implied by the method coefficients)\n    \\item $\\alpha_i$, $\\beta_i$: coefficients of the linear multistep method, with $i$ from $0$ to $k$\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n    y'(x) = f(y(x)) \\quad \\text{(autonomous ODE)}, \\quad \\text{with } f \\text{ Lipschitz continuous}\n    \\tag{406a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "y",
+      "definition": "exact solution to the differential equation (406a)"
+    },
+    {
+      "name": "x",
+      "definition": "point in the interval [x0, x] where the solution is approximated"
+    },
+    {
+      "name": "x0",
+      "definition": "initial point where initial value information is given"
+    },
+    {
+      "name": "h",
+      "definition": "positive stepsize"
+    },
+    {
+      "name": "k",
+      "definition": "number of steps in the linear multistep method (implied by the method coefficients)"
+    },
+    {
+      "name": "α_i, β_i",
+      "definition": "coefficients of the linear multistep method, with i from 0 to k"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "406a",
+      "content": "y'(x) = f(y(x)) (autonomous ODE), with f Lipschitz continuous"
+    }
+  ],
+  "preamble": "The standard initial value problem is an autonomous ODE (406a) on [x0, x] with given initial value at x0, using positive stepsize h. The method is a consistent linear multistep method with coefficients α_i and β_i.",
+  "introduces": [
+    "local truncation error"
+  ],
+  "dependencies": [
+    {
+      "id": "def:404B",
+      "kind": "definition",
+      "number": "404B",
+      "name": "consistent",
+      "edge_type": "uses_concept",
+      "context": "consistent"
+    },
+    {
+      "id": "def:404A",
+      "kind": "definition",
+      "number": "404A",
+      "name": "preconsistent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:310A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B"
+  ],
+  "dependents": [
+    "def:542A",
+    "lem:406B",
+    "thm:319B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,81 @@
+{
+  "id": "thm:306A",
+  "kind": "theorem",
+  "number": "306A",
+  "name": "Taylor’s theorem",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "30",
+  "subsection": "306",
+  "subsection_title": "Taylor’s theorem",
+  "page": 170,
+  "statement_text": "\u0014\n                               m   \u0002  \u0014                    1 (#I)\n                          f a+   δi =                          f  (a)δI .\n                                    i=1\n                                                          σ(I)\n                                                  I∈Im",
+  "statement_latex": "\\begin{theorem}\n\\[\nf\\left(a+\\sum_{i=1}^m \\delta_i\\right)=\\sum_{I\\in\\mathcal{I}_m}\\frac{1}{\\sigma(I)}f^{(#I)}(a)\\delta^I.\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. Continue to write ki for the number of occurrences of i in I, so that\n                                          (#I)\nσ(I)\n  %m                \"m The coefficient of f\n     is given by (306b).                        (a)δI is equal%to the coefficient\nof i=1 x in exp ( i=1 xi ). This equals the coefficient of m\n           ki\n                                                                i=1 x\n                                                                      ki\n                                                                         in\n    \u0003          1         \u0004\u0003        1          \u0004     \u0003           1           \u0004\n     1 + x1 + x21 + · · · 1 + x2 + x22 + · · · · · · 1 + xm + x2m + · · ·\n                  2!                             2!                                    2!\nand is equal to 1/σ(I).",
+  "proof_latex": "\\begin{proof}\nContinue to write $k_i$ for the number of occurrences of $i$ in $I$, so that $\\sigma(I)=\\prod_{i=1}^m k_i!$. The coefficient of $f^{(#I)}(a)\\delta^I$ is given by \\eqref{eq:306b}. This equals the coefficient of $\\prod_{i=1}^m x_i^{k_i}$ in $\\exp\\left(\\sum_{i=1}^m x_i\\right)$. This equals the coefficient of $\\prod_{i=1}^m x_i^{k_i}$ in\n\\[\n\\left(1+x_1+\\frac{1}{2!}x_1^2+\\cdots\\right)\\left(1+x_2+\\frac{1}{2!}x_2^2+\\cdots\\right)\\cdots\\left(1+x_m+\\frac{1}{2!}x_m^2+\\cdots\\right)\n\\]\nand is equal to $1/\\sigma(I)$.\n\nWe illustrate this result by applying Theorem~\\ref{thm:306A} to the case $m=2$, using Table~\\ref{tab:306I}:\n\\begin{align*}\nf(a+\\delta_1+\\delta_2) &= f(a)+f'(a)\\delta_1+f'(a)\\delta_2+\\frac{1}{2}f''(a)(\\delta_1,\\delta_1) \\\\\n&\\quad +f''(a)(\\delta_1,\\delta_2)+\\frac{1}{2}f''(a)(\\delta_2,\\delta_2)+\\frac{1}{6}f'''(a)(\\delta_1,\\delta_1,\\delta_1) \\\\\n&\\quad +\\frac{1}{2}f'''(a)(\\delta_1,\\delta_1,\\delta_2)+\\frac{1}{2}f'''(a)(\\delta_1,\\delta_2,\\delta_2) \\\\\n&\\quad +\\frac{1}{6}f'''(a)(\\delta_2,\\delta_2,\\delta_2)+\\cdots.\n\\end{align*}\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nLet $f$ be analytic near $a$, and let $\\delta_1,\\dots,\\delta_m$ be small vectors.  \nLet $I=(i_1,\\dots,i_k)$ be a sequence with each $i_j\\in\\{1,\\dots,m\\}$, and let $\\mathcal{I}_m$ be the set of all such sequences.  \nFor $I$, denote by $k_i$ the number of occurrences of $i$ in $I$, and define its symmetry factor\n\\[\n\\sigma(I)=k_1!\\,k_2!\\cdots k_m! \\qquad\\text{(306b)}.\n\\]\nWrite $\\delta_I=(\\delta_{i_1},\\dots,\\delta_{i_k})$ and let $f^{(\\#I)}(a)$ be the multilinear derivative of order $\\#I$ at $a$.",
+  "variables": [
+    {
+      "name": "f",
+      "definition": "analytic function in a neighbourhood of a"
+    },
+    {
+      "name": "a",
+      "definition": "point in the domain of f"
+    },
+    {
+      "name": "δ_i",
+      "definition": "small vectors, i = 1, 2, ..., m"
+    },
+    {
+      "name": "I",
+      "definition": "sequence of integers from {1, 2, ..., m}"
+    },
+    {
+      "name": "Im",
+      "definition": "set of all such sequences I"
+    },
+    {
+      "name": "σ(I)",
+      "definition": "symmetry of I, defined as k1! k2! ... km! where ki is the number of occurrences of i in I"
+    },
+    {
+      "name": "δI",
+      "definition": "quantity (δ_i1, δ_i2, ..., δ_im) for I = (i1, i2, ..., ik), used as operand for multilinear operators"
+    },
+    {
+      "name": "f^{(#I)}(a)",
+      "definition": "multilinear operator (derivative of order #I evaluated at a)"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "306b",
+      "content": "σ(I) = k1! k2! ··· km!"
+    }
+  ],
+  "preamble": "The theorem gives a Taylor expansion for f at a plus a sum of m small vectors δ_i. The sum is over sequences I of indices, with each term involving a multilinear derivative f^{(#I)}(a) applied to δI, divided by the symmetry factor σ(I).",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:311B",
+      "kind": "theorem",
+      "number": "311B",
+      "name": "Taylor expansion exact solution formula",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:310A",
+    "thm:301A",
+    "thm:311B"
+  ],
+  "dependents": [
+    "def:404B",
+    "lem:310B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

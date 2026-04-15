@@ -1,0 +1,48 @@
+{
+  "id": "def:110A",
+  "kind": "definition",
+  "number": "110A",
+  "name": "Lipschitz condition in its second variable",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "11",
+  "subsection": "110",
+  "subsection_title": "Existence and uniqueness of solutions",
+  "page": 43,
+  "statement_text": "The function f : [a, b] × RN → RN is said to satisfy\na ‘Lipschitz condition in its second variable’ if there exists a constant L,\nknown as a ‘Lipschitz constant’, such that for any x ∈ [a, b] and Y, Z ∈ RN ,\n f (x, Y ) − f (x, Z) ≤ L Y − Z .\n  We need a basic lemma on metric spaces known as the ‘contraction mapping\nprinciple’. We present this without proof.",
+  "statement_latex": "\\begin{definition}\nThe function $f : [a, b] \\times \\mathbb{R}^N \\to \\mathbb{R}^N$ is said to satisfy a \\emph{Lipschitz condition in its second variable} if there exists a constant $L$, known as a \\emph{Lipschitz constant}, such that for any $x \\in [a, b]$ and $Y, Z \\in \\mathbb{R}^N$,\n\\[\n\\| f(x, Y) - f(x, Z) \\| \\leq L \\| Y - Z \\|.\n\\]\nWe need a basic lemma on metric spaces known as the \\emph{contraction mapping principle}. We present this without proof.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe context discusses the existence and uniqueness of solutions for initial value problems in differential equations, focusing on the concept of a Lipschitz condition as a key criterion. Consider a function\n\\[\nf : [a, b] \\times \\mathbb{R}^N \\to \\mathbb{R}^N.\n\\]",
+  "variables": [
+    {
+      "name": "f",
+      "definition": "f : [a, b] × R^N → R^N"
+    }
+  ],
+  "equations": [],
+  "preamble": "The context discusses the existence and uniqueness of solutions for initial value problems in differential equations, focusing on the concept of a Lipschitz condition as a key criterion.",
+  "introduces": [
+    "Lipschitz condition in its second variable",
+    "Lipschitz constant",
+    "contraction mapping principle"
+  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "def:112A",
+    "def:381A",
+    "def:402A",
+    "def:512A",
+    "lem:110B",
+    "lem:319A",
+    "lem:515A",
+    "thm:110C",
+    "thm:212A",
+    "thm:382A",
+    "thm:406C"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,127 @@
+{
+  "id": "cor:359B",
+  "kind": "corollary",
+  "number": "359B",
+  "name": "W transformation preserves orthogonality conditions",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "359",
+  "subsection_title": "The V and W transformations",
+  "page": 278,
+  "statement_text": "Let (A, b, c) denote a Runge–Kutta method for which B =\ndiag(b) is positive definite and for which the abscissae are distinct. Define\nW by (359b) and X by X = W BAW . Then Xkl = (XG )kl , as long as\nk + l ≤ p + 1.\n\n The W transformation is related in an interesting way to the C(m) and\nD(m) conditions, which can be written in the equivalent forms\n              \u0014 s                \u0010 ci\n   C(m) :         aij Pk−1 (cj )=     Pk−1 (x)dx, k≤m, i=1, 2, . . . , s,\n                     j=1                         0\n                   \u0014\n                   s                                 \u0010 1\n     D(m) :              bi Pk−1 (ci )aij =bj              Pk−1 (x)dx, k≤m, j=1, 2, . . . , s.\n                   i=1                                cj\n\nIt follows from these observations that, if B(m) and C(m) are true, then the\nfirst m columns of X will be the same as for XG . Similarly, if B(m) and D(m),\nthen the first m rows of X and XG will agree.\n   Amongst the methods known to be algebraically stable, we have already\nencountered the Gauss and Radau IIA methods. We can extend this list to\ninclude further methods.",
+  "statement_latex": "\\begin{corollary}\nLet $(A, b, c)$ denote a Runge--Kutta method for which $B = \\operatorname{diag}(b)$ is positive definite and for which the abscissae are distinct. Define $W$ by \\eqref{eq:359b} and $X$ by $X = W B A W$. Then $X_{kl} = (X_G)_{kl}$, as long as $k + l \\leq p + 1$.\n\nThe $W$ transformation is related in an interesting way to the $C(m)$ and $D(m)$ conditions, which can be written in the equivalent forms\n\\[\nC(m): \\quad \\sum_{j=1}^{s} a_{ij} P_{k-1}(c_j) = \\int_{0}^{c_i} P_{k-1}(x) \\, dx, \\quad k \\leq m, \\; i = 1, 2, \\dots, s,\n\\]\n\\[\nD(m): \\quad \\sum_{i=1}^{s} b_i P_{k-1}(c_i) a_{ij} = b_j \\int_{c_j}^{1} P_{k-1}(x) \\, dx, \\quad k \\leq m, \\; j = 1, 2, \\dots, s.\n\\]\n\nIt follows from these observations that, if $B(m)$ and $C(m)$ are true, then the first $m$ columns of $X$ will be the same as for $X_G$. Similarly, if $B(m)$ and $D(m)$, then the first $m$ rows of $X$ and $X_G$ will agree.\n\nAmongst the methods known to be algebraically stable, we have already encountered the Gauss and Radau IIA methods. We can extend this list to include further methods.\n\\end{corollary}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe W transformation for Runge--Kutta methods is defined via orthogonal polynomials, with $X = W BAW$. The Gauss method matrix $X_G$ serves as a reference. Variables: $W$ is defined by (359b), $X = W BAW$ where $B=\\operatorname{diag}(b)$ and $A$ is the Runge--Kutta matrix, $X_G$ is the matrix for the Gauss method, and $p$ is the order (or polynomial degree).",
+  "variables": [
+    {
+      "name": "W",
+      "definition": "W is defined by (359b) (not fully shown here, but it is a transformation matrix related to orthogonal polynomials)"
+    },
+    {
+      "name": "X",
+      "definition": "X = W BAW, where B = diag(b) and A is the Runge-Kutta matrix"
+    },
+    {
+      "name": "X_G",
+      "definition": "X_G is the matrix for the Gauss method, with elements computed via orthogonal polynomials"
+    },
+    {
+      "name": "p",
+      "definition": "p is the order of the Runge-Kutta method (or related to the degree of polynomials considered)"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "359b",
+      "content": "Definition of W (not fully given in the excerpt, but it is a transformation matrix based on orthogonal polynomials)"
+    }
+  ],
+  "preamble": "The text discusses the W transformation for Runge-Kutta methods, where W is defined via orthogonal polynomials, and X = W BAW. The Gauss method matrix X_G is used as a reference, and the preceding computation shows specific elements of X_G.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:357B",
+      "kind": "definition",
+      "number": "357B",
+      "name": "algebraically stable",
+      "edge_type": "uses_concept",
+      "context": "algebraically stable"
+    },
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "lem:359A",
+      "kind": "lemma",
+      "number": "359A",
+      "name": "The V and W transformations",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:342C",
+      "kind": "theorem",
+      "number": "342C",
+      "name": "Gaussian Quadrature Order Conditions Equivalence",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "cor:342D",
+      "kind": "corollary",
+      "number": "342D",
+      "name": "Gaussian Quadrature Runge Kutta Order Condition",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:350A",
+    "def:355A",
+    "def:356A",
+    "def:356B",
+    "def:357A",
+    "def:357B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:520F",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "lem:342A",
+    "lem:342B",
+    "lem:359A",
+    "thm:342C",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:359C",
+    "thm:363A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

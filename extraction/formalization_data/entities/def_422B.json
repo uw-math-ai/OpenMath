@@ -1,0 +1,78 @@
+{
+  "id": "def:422B",
+  "kind": "definition",
+  "number": "422B",
+  "name": "underlying one-step method",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "42",
+  "subsection": "422",
+  "subsection_title": "The underlying one-step method",
+  "page": 359,
+  "statement_text": "Corresponding to a linear multistep method [α, β], the\nmember of G1 represents the ‘underlying one-step method’.\n  As we have already remarked, the mapping Φ in (422b), if it exists in more\nthan a notional sense, is really the object of interest and this really is the\nunderlying one-step method.",
+  "statement_latex": "\\begin{definition}\nCorresponding to a linear multistep method $[\\alpha, \\beta]$, the member of $\\mathcal{G}_1$ represents the `underlying one-step method'.  \nAs we have already remarked, the mapping $\\Phi$ in \\eqref{eq:422b}, if it exists in more than a notional sense, is really the object of interest and this really is the underlying one-step method.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe preceding text discusses the existence of a mapping $\\eta$ in the group $G_1$ that satisfies equation (422a) for a preconsistent and stable linear multistep method $[\\alpha, \\beta]$. This mapping is constructed inductively on the order of trees, and it represents the underlying one-step method of the multistep method.\n\nVariables:\n\\begin{itemize}\n    \\item $G_1$: the group of mappings from trees to real numbers, representing the underlying one-step method\n    \\item $[\\alpha, \\beta]$: a linear multistep method with coefficients $\\alpha$ and $\\beta$\n    \\item $\\eta$: a mapping from trees to real numbers, representing the underlying one-step method in $G_1$\n    \\item $r(t)$: the order (or rank) of a tree $t$\n    \\item $D$: an operator on trees, likely related to differentiation or tree operations\n    \\item $\\Phi$: the mapping representing the underlying one-step method, related to $\\eta$\n\\end{itemize}\n\nReferenced equations:\n\\begin{align}\n    &1(u) - \\alpha_1 \\eta^{-1}(u) - \\alpha_2 \\eta^{-2}(u) - \\cdots - \\alpha_k \\eta^{-k}(u) \\nonumber \\\\\n    &- \\beta_0 D(u) - \\beta_1 \\eta^{-1} D(u) - \\beta_2 \\eta^{-2} D(u) - \\cdots - \\beta_k \\eta^{-k} D(u) = 0 \\tag{422a}\n\\end{align}\n(422b): The mapping $\\Phi$ that represents the underlying one-step method.",
+  "variables": [
+    {
+      "name": "G1",
+      "definition": "the group of mappings from trees to real numbers, representing the underlying one-step method"
+    },
+    {
+      "name": "[α, β]",
+      "definition": "a linear multistep method with coefficients α and β"
+    },
+    {
+      "name": "η",
+      "definition": "a mapping from trees to real numbers, representing the underlying one-step method in G1"
+    },
+    {
+      "name": "r(t)",
+      "definition": "the order (or rank) of a tree t"
+    },
+    {
+      "name": "D",
+      "definition": "an operator on trees, likely related to differentiation or tree operations"
+    },
+    {
+      "name": "Φ",
+      "definition": "the mapping representing the underlying one-step method, related to η"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "422a",
+      "content": "1(u) − α1 η^{−1}(u) − α2 η^{−2}(u) − · · · − αk η^{−k}(u) − β0 D(u) − β1 η^{−1} D(u) − β2 η^{−2} D(u) − · · · − βk η^{−k} D(u) = 0"
+    },
+    {
+      "tag": "422b",
+      "content": "Not fully given in the text, but referenced as the mapping Φ that represents the underlying one-step method."
+    }
+  ],
+  "preamble": "The preceding text discusses the existence of a mapping η in the group G1 that satisfies equation (422a) for a preconsistent and stable linear multistep method [α, β]. This mapping is constructed inductively on the order of trees, and it represents the underlying one-step method of the multistep method.",
+  "introduces": [
+    "underlying one-step method"
+  ],
+  "dependencies": [
+    {
+      "id": "def:381B",
+      "kind": "definition",
+      "number": "381B",
+      "name": "Φ-equivalent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:381B"
+  ],
+  "dependents": [
+    "thm:422A",
+    "thm:422C",
+    "thm:535A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

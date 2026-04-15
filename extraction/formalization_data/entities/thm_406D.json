@@ -1,0 +1,154 @@
+{
+  "id": "thm:406D",
+  "kind": "theorem",
+  "number": "406D",
+  "name": "Convergence from Stability and Consistency",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "406",
+  "subsection_title": "Sufficiency of conditions for convergence",
+  "page": 347,
+  "statement_text": "A stable consistent linear multistep method is convergent.",
+  "statement_latex": "\\begin{theorem}\nA stable consistent linear multistep method is convergent.\n\\end{theorem}",
+  "proof_text": "Proof. Write (406c) in the form\n\n                                         \u0014\n                                         k\n\n                                 n =           αi n−i + ψn ,\n                                         i=1\n\nwhere, according to Theorem 406C,\n                                               k\n                            ψn ≤ Ch max             n−i   + Dh2 ,\n                                           i=1\n\nfor h sufficiently small. Define θ1 , θ2 , . . . as in Subsection 141, and note that,\nbecause the method is convergent, the θ sequence is bounded. From Theorem\n141A, we have\n                             \u0014\n                             k−1               \u0014n\n                         n =      θ     \u0019\n                                    n−i i   +      θn−i ψi ,\n                                       i=0           i=k\n\nwhere \u0019i , for i = 0, 1, . . . , k − 1, are linear combinations of the errors in yi and\ntend to zero as h → 0. Hence we have\n\n                           \u0014\n                           k−1                     \u0014\n                                                   n−1\n\n                  n   ≤Θ          \u0019i + ΘChk                i   + ΘD(n − k)h2 ,       (406g)\n                           i=0                     i=k\n\nwhere Θ = sup∞i=1 |θi | and the factor k is introduced in the second summation\nin (406g) because the same maximum value of n−i may arise in up to k\nadjacent terms. We rewrite (406g) in the form\n\n                                         \u0014\n                                         n−1\n              n   ≤ φ(h) + ΘChk                i   + ΘDnh2 ,          0   ≤ φ(h),\n                                         i=1\n\nwhere φ(h) takes positive values and will converge to zero as h → 0. It now\nfollows that n ≤ un , where the sequence u is defined by\n\n                                 \u0014\n                                 n−1\n                 un = ΘChk             ui + ΘDnh2 + φ(h),          u0 = φ(h).        (406h)\n                                 i=1\n\nBy subtracting (406h) with n replaced by n − 1, we find that\n                                         \u000e            \u000f\n                       Dh                          Dh\n                  un +     = (1 + ΘChk) un−1 +          ,\n                       Ck                          Ck\n\nwhich leads to the bound\n                                                                                Dh\n             n    ≤ un = (1 + ΘChk)n φ(h) + ((1 + ΘChk)n − 1)\n                                                                                Ck\n                                                                             Dh\n                       ≤ exp(ΘCknh)φ(h) + (exp(ΘCknh) − 1)                      .\n                                                                             Ck\nTo complete the proof, substitute n = m where mh = x − x0 , so that the error\nin the approximation at x = x using m steps with stepsize h is bounded by\n\n                                                                      Dh\n             exp(ΘCk(x − x0 ))φ(h) + exp(ΘCk(x − x0 ))                   → 0.",
+  "proof_latex": "\\begin{proof}\nWrite \\eqref{eq:406c} in the form\n\\[\n\\epsilon_n = \\sum_{i=1}^k \\alpha_i \\epsilon_{n-i} + \\psi_n,\n\\]\nwhere, according to Theorem~\\ref{thm:406C},\n\\[\n\\|\\psi_n\\| \\leq C h \\max_{i=1}^k \\|\\epsilon_{n-i}\\| + D h^2,\n\\]\nfor $h$ sufficiently small. Define $\\theta_1, \\theta_2, \\dots$ as in Subsection~\\ref{subsec:141}, and note that, because the method is convergent, the $\\theta$ sequence is bounded. From Theorem~\\ref{thm:141A}, we have\n\\[\n\\epsilon_n = \\sum_{i=0}^{k-1} \\theta_{n-i} \\zeta_i + \\sum_{i=k}^n \\theta_{n-i} \\psi_i,\n\\]\nwhere $\\zeta_i$, for $i = 0, 1, \\dots, k-1$, are linear combinations of the errors in $y_i$ and tend to zero as $h \\to 0$. Hence we have\n\\begin{equation} \\label{eq:406g}\n\\|\\epsilon_n\\| \\leq \\Theta \\sum_{i=0}^{k-1} \\|\\zeta_i\\| + \\Theta C h k \\sum_{i=k}^{n-1} \\|\\epsilon_i\\| + \\Theta D (n-k) h^2,\n\\end{equation}\nwhere $\\Theta = \\sup_{i=1}^\\infty |\\theta_i|$ and the factor $k$ is introduced in the second summation in \\eqref{eq:406g} because the same maximum value of $\\|\\epsilon_{n-i}\\|$ may arise in up to $k$ adjacent terms. We rewrite \\eqref{eq:406g} in the form\n\\[\n\\|\\epsilon_n\\| \\leq \\varphi(h) + \\Theta C h k \\sum_{i=1}^{n-1} \\|\\epsilon_i\\| + \\Theta D n h^2, \\qquad 0 \\leq \\varphi(h),\n\\]\nwhere $\\varphi(h)$ takes positive values and will converge to zero as $h \\to 0$. It now follows that $\\|\\epsilon_n\\| \\leq u_n$, where the sequence $u$ is defined by\n\\begin{equation} \\label{eq:406h}\nu_n = \\Theta C h k \\sum_{i=1}^{n-1} u_i + \\Theta D n h^2 + \\varphi(h), \\qquad u_0 = \\varphi(h).\n\\end{equation}\nBy subtracting \\eqref{eq:406h} with $n$ replaced by $n-1$, we find that\n\\[\nu_n + \\frac{D h}{C k} = (1 + \\Theta C h k) \\left( u_{n-1} + \\frac{D h}{C k} \\right),\n\\]\nwhich leads to the bound\n\\begin{align*}\n\\|\\epsilon_n\\| &\\leq u_n = (1 + \\Theta C h k)^n \\varphi(h) + \\left( (1 + \\Theta C h k)^n - 1 \\right) \\frac{D h}{C k} \\\\\n&\\leq \\exp(\\Theta C k n h) \\varphi(h) + \\left( \\exp(\\Theta C k n h) - 1 \\right) \\frac{D h}{C k}.\n\\end{align*}\nTo complete the proof, substitute $n = m$ where $m h = x - x_0$, so that the error in the approximation at $x = x$ using $m$ steps with stepsize $h$ is bounded by\n\\[\n\\exp(\\Theta C k (x - x_0)) \\varphi(h) + \\exp(\\Theta C k (x - x_0)) \\frac{D h}{C k} \\to 0. \\qedhere\n\\]\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns convergence of linear multistep methods for ODEs. The global error is $\\varepsilon_n = y(x_n) - y_n$, with method coefficients $\\alpha_i$, $\\beta_i$, step size $h$, and $f$ satisfying a Lipschitz condition. The proof uses the error equation\n\\[\n\\varepsilon_n - \\sum_{i=1}^k \\alpha_i \\varepsilon_{n-i} = T_1 + T_2 + T_3,\n\\]\nwhere\n\\begin{align*}\nT_1 &= h|\\beta_0|\\,|f(y(x_n)) - f(y_n)| \\le hL|\\beta_0|\\,|\\varepsilon_n|,\\\\\nT_2 &= h\\Bigl|\\sum_{i=1}^k \\beta_i \\bigl(f(y(x_{n-i})) - f(y_{n-i})\\bigr)\\Bigr| \\le hL \\sum_{i=1}^k |\\beta_i| \\max_{i=1}^k |\\varepsilon_{n-i}|.\n\\end{align*}\nHere $L$ is the Lipschitz constant for $f$.",
+  "variables": [
+    {
+      "name": "h",
+      "definition": "step size"
+    },
+    {
+      "name": "α_i",
+      "definition": "coefficients for past solution values in the linear multistep method"
+    },
+    {
+      "name": "β_i",
+      "definition": "coefficients for past derivative values in the linear multistep method"
+    },
+    {
+      "name": "k",
+      "definition": "number of steps in the linear multistep method"
+    },
+    {
+      "name": "y(x_n)",
+      "definition": "exact solution at x_n"
+    },
+    {
+      "name": "y_n",
+      "definition": "numerical approximation at x_n"
+    },
+    {
+      "name": "ε_n",
+      "definition": "global error y(x_n) - y_n"
+    },
+    {
+      "name": "f",
+      "definition": "function defining the ODE y' = f(x, y)"
+    },
+    {
+      "name": "L",
+      "definition": "Lipschitz constant for f"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "406d",
+      "content": "ε_n - Σ_{i=1}^k α_i ε_{n-i} = T_1 + T_2 + T_3"
+    },
+    {
+      "tag": "406e",
+      "content": "T_1 = h|β_0| |f(y(x_n)) - f(y_n)| ≤ hL|β_0|·|ε_n|"
+    },
+    {
+      "tag": "406f",
+      "content": "T_2 = h|Σ_{i=1}^k β_i (f(y(x_{n-i})) - f(y_{n-i}))| ≤ hL Σ_{i=1}^k |β_i| max_{i=1}^k |ε_{n-i}|"
+    }
+  ],
+  "preamble": "The theorem is about convergence of linear multistep methods for ODEs. The preceding text analyzes the global error ε_n = y(x_n) - y_n, using the method's coefficients α_i, β_i, step size h, and the Lipschitz condition on f. The proof manipulates an error equation (406d) to bound ε_n.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:406C",
+      "kind": "theorem",
+      "number": "406C",
+      "name": "Global error bound for linear multistep methods",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 406C"
+    },
+    {
+      "id": "thm:141A",
+      "kind": "theorem",
+      "number": "141A",
+      "name": "Constant coefficients",
+      "edge_type": "uses_theorem",
+      "context": "Theorem\n141A"
+    },
+    {
+      "id": "def:404B",
+      "kind": "definition",
+      "number": "404B",
+      "name": "consistent",
+      "edge_type": "uses_concept",
+      "context": "consistent"
+    },
+    {
+      "id": "def:402A",
+      "kind": "definition",
+      "number": "402A",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:406A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "lem:110B",
+    "lem:406B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A",
+    "thm:141A",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:356C",
+    "thm:406C",
+    "thm:520B"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

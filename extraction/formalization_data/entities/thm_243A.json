@@ -1,0 +1,96 @@
+{
+  "id": "thm:243A",
+  "kind": "theorem",
+  "number": "243A",
+  "name": "Consistency, stability and convergence",
+  "is_helper": false,
+  "chapter": 2,
+  "section": "22",
+  "subsection": "243",
+  "subsection_title": "Consistency, stability and convergence",
+  "page": 130,
+  "statement_text": "A linear multistep method is convergent if and only if it is\nstable and consistent.",
+  "statement_latex": "\\begin{theorem}\nA linear multistep method is convergent if and only if it is stable and consistent.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:142B",
+      "kind": "definition",
+      "number": "142B",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    },
+    {
+      "id": "def:404B",
+      "kind": "definition",
+      "number": "404B",
+      "name": "consistent",
+      "edge_type": "uses_concept",
+      "context": "consistent"
+    },
+    {
+      "id": "def:142A",
+      "kind": "definition",
+      "number": "142A",
+      "name": "power-boundedness",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:402A",
+      "kind": "definition",
+      "number": "402A",
+      "name": "convergent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:515D",
+      "kind": "theorem",
+      "number": "515D",
+      "name": "Stability and Consistency Imply Convergence",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:142B",
+    "def:310A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:512A",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:515D"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

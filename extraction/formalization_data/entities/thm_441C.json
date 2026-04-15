@@ -1,0 +1,63 @@
+{
+  "id": "thm:441C",
+  "kind": "theorem",
+  "number": "441C",
+  "name": "Maximum order bound for stable linear multistep methods",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "44",
+  "subsection": "441",
+  "subsection_title": "Maximum order for a convergent k-step method",
+  "page": 376,
+  "statement_text": "Let [α, β] denote a stable linear multistep method with order\np. Then                    \u001a\n                             k + 1, k odd,\n                      p≤\n                             k + 2, k even.",
+  "statement_latex": "\\begin{theorem}[441C]\nLet $[\\alpha, \\beta]$ denote a stable linear multistep method with order $p$. Then\n\\[\np \\leq \n\\begin{cases}\nk + 1, & k \\text{ odd}, \\\\\nk + 2, & k \\text{ even}.\n\\end{cases}\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. Consider first the case k odd and evaluate the coefficient of z k+1 in\n(441b). This equals\n                       ak c2 + ak−2 c4 + · · · + a1 ck+1\nand, because no term is positive, the total can be zero only if each term is zero.\nHowever, this would mean that a1 = 0, which is inconsistent with stability.\n  In the case k even, we evaluate the coefficient of z k+2 in (441b). This is\n\n                        ak−1 c4 + ak−3 c6 + · · · + a1 ck+2 .\n\nAgain, every term is non-positive and because the total is zero, it again follows\nthat a1 = 0 which contradicts the assumption of stability.",
+  "proof_latex": "\\begin{proof}\nConsider first the case $k$ odd and evaluate the coefficient of $z^{k+1}$ in \\eqref{eq:441b}. This equals\n\\[\na_k c_2 + a_{k-2} c_4 + \\cdots + a_1 c_{k+1}\n\\]\nand, because no term is positive, the total can be zero only if each term is zero. However, this would mean that $a_1 = 0$, which is inconsistent with stability.\n\nIn the case $k$ even, we evaluate the coefficient of $z^{k+2}$ in \\eqref{eq:441b}. This is\n\\[\na_{k-1} c_4 + a_{k-3} c_6 + \\cdots + a_1 c_{k+2}.\n\\]\nAgain, every term is non-positive and because the total is zero, it again follows that $a_1 = 0$ which contradicts the assumption of stability.\n\nThere is some interest in the methods with maximal order $2k + 2$, for $k$ even. For these methods, $\\alpha$ has all its zeros on the unit circle. This evidently gives the methods a symmetry that suggests it might be advantageous to use them for problems whose behaviour is dominated by linear terms with purely imaginary eigenvalues. Against this possible advantage is the observation that the stability regions necessarily have empty interiors.\n\nIn their historic paper, Wanner, Hairer and Nørsett (1978) introduced order stars on Riemann surfaces. Suppose that $\\Phi(w, z)$ is a polynomial function of two complex variables, $w \\in W$ and $z \\in Z$. We assume that $Z = W = \\mathbb{C}$. The subset $R_\\Phi$ of $W \\times Z$ defined by the relation $\\Phi(w, z) = 0$ is a Riemann surface. Suppose that $\\Phi$ has degree $r$ in $w$ and $s$ in $z$. We may interpret $R$ as a mapping from the $Z$ plane which takes $z \\in Z$ to the set of zeros of the equation $\\Phi(w, z) = 0$ or as a mapping which takes $w \\in W$ to the set of zeros of this same equation, but with $z$ now the unknown. The main interpretation will be that $\\Phi(w, z)$ is the characteristic polynomial $\\det(wI - M(z))$ of the stability matrix of a multivalue method. If this method has order $p$ then $\\Phi(\\exp(z), z) = O(z^{p+1})$. For ease of notation, we carry over concepts such as $A$-stability from multivalue methods, such as linear multistep methods, to the functions $\\Phi$ used to characterize their stability.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns the order of stable linear multistep methods. The preceding text discusses properties of coefficients related to stability and order, leading to the Dahlquist barrier result. Variables: $k$: the number of steps in the linear multistep method; $p$: the order of the linear multistep method; $[\\alpha, \\beta]$: a stable linear multistep method, where $\\alpha$ and $\\beta$ are the coefficient vectors defining the method.",
+  "variables": [
+    {
+      "name": "k",
+      "definition": "the number of steps in the linear multistep method"
+    },
+    {
+      "name": "p",
+      "definition": "the order of the linear multistep method"
+    },
+    {
+      "name": "[α, β]",
+      "definition": "a stable linear multistep method, where α and β are the coefficient vectors defining the method"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns the order of stable linear multistep methods. The preceding text discusses properties of coefficients related to stability and order, leading to the Dahlquist barrier result.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "lem:441B",
+      "kind": "lemma",
+      "number": "441B",
+      "name": "Maximum order coefficients negativity",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:403A",
+    "lem:441B"
+  ],
+  "dependents": [
+    "lem:441A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,79 @@
+{
+  "id": "thm:324A",
+  "kind": "theorem",
+  "number": "324A",
+  "name": "Order barriers",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "32",
+  "subsection": "324",
+  "subsection_title": "Order barriers",
+  "page": 208,
+  "statement_text": "If an explicit s-stage Runge–Kutta method has order p, then\ns ≥ p.",
+  "statement_latex": "\\begin{theorem}\nIf an explicit $s$-stage Runge--Kutta method has order $p$, then\n$s \\geq p$.\n\\end{theorem}",
+  "proof_text": "Proof. Let t = [[· · · [t] · · · ]] such that r(t) = p > s. The order condition\nassociated with this tree is Φ(t) = 1/γ(t), where γ(t) = p! and Φ(t) = b Ap−1 1.\nBecause A is strictly lower triangular, Ap = 0. Hence, the order condition\nbecomes 0 = 1/p!, which has no solution.",
+  "proof_latex": "\\begin{proof}\nLet $t = [\\cdots[t]\\cdots]$ such that $r(t) = p > s$. The order condition\nassociated with this tree is $\\Phi(t) = 1/\\gamma(t)$, where $\\gamma(t) = p!$ and $\\Phi(t) = b A^{p-1} 1$.\nBecause $A$ is strictly lower triangular, $A^{p} = 0$. Hence, the order condition\nbecomes $0 = 1/p!$, which has no solution.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns explicit Runge--Kutta methods, where $s$ is the number of stages and $p$ is the order. The preceding text discusses constructing explicit methods with $s = p$ for $p$ up to $4$, and notes that $s < p$ is impossible.",
+  "variables": [
+    {
+      "name": "s",
+      "definition": "number of stages in an explicit Runge–Kutta method"
+    },
+    {
+      "name": "p",
+      "definition": "order of an explicit Runge–Kutta method"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns explicit Runge–Kutta methods, where s is the number of stages and p is the order. The preceding text discusses constructing explicit methods with s = p for p up to 4, and notes that s < p is impossible.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:323A",
+      "kind": "definition",
+      "number": "323A",
+      "name": "internal order q",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:315A",
+      "kind": "theorem",
+      "number": "315A",
+      "name": "Conditions for order",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:310A",
+    "def:312A",
+    "def:323A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "lem:310B",
+    "lem:311A",
+    "lem:312B",
+    "lem:313A",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:311C",
+    "thm:311D",
+    "thm:313B",
+    "thm:315A",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:324B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

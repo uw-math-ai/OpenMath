@@ -1,0 +1,95 @@
+{
+  "id": "def:520C",
+  "kind": "definition",
+  "number": "520C",
+  "name": "stability function",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "520",
+  "subsection_title": "Introduction",
+  "page": 419,
+  "statement_text": "Let (A, U, B, V ) denote a general linear method and M (z)\nthe corresponding stability matrix. The ‘stability function’ for the method is\nthe polynomial Φ(w, z) given by\n                           Φ(w, z) = det(wI − M (z)),\nand the ‘stability region’ is the subset of the complex plane such that if z is in\nthis subset, then\n                                 ∞\n                                sup M (z)n < ∞.\n                               n=1\n\n  We refer to the ‘instability region’ as the complement of the stability region.\n  Note that in applications of these definitions, Φ(w, z) may be a rational\nfunction. Quite often, the essential properties will be contained in just the\nnumerator of this expression. We equally refer to the numerator of this rational\nfunction as the stability function.\n  We state the following obvious result without proof.",
+  "statement_latex": "\\begin{definition}\nLet $(A, U, B, V)$ denote a general linear method and $M(z)$ the corresponding stability matrix. The `stability function' for the method is the polynomial $\\Phi(w, z)$ given by\n\\[\n\\Phi(w, z) = \\det(wI - M(z)),\n\\]\nand the `stability region' is the subset of the complex plane such that if $z$ is in this subset, then\n\\[\n\\sup_{n=1}^{\\infty} \\| M(z)^n \\| < \\infty.\n\\]\n\nWe refer to the `instability region' as the complement of the stability region.\n\nNote that in applications of these definitions, $\\Phi(w, z)$ may be a rational function. Quite often, the essential properties will be contained in just the numerator of this expression. We equally refer to the numerator of this rational function as the stability function.\n\nWe state the following obvious result without proof.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nConsider a general linear method $(A, U, B, V)$ applied to the linear test problem\n\\begin{equation}\n    y' = qy, \\quad q \\in \\mathbb{C}. \\tag{520a}\n\\end{equation}\nLet $z = hq$, where $h$ is the stepsize. The numerical solution propagates as\n\\begin{equation}\n    y^{[n]} = M(z) y^{[n-1]}, \\tag{520b}\n\\end{equation}\nwhere $M(z)$ is the $r \\times r$ stability matrix. The stability function and region are defined via the characteristic polynomial of $M(z)$ and the boundedness of its powers.",
+  "variables": [
+    {
+      "name": "M(z)",
+      "definition": "stability matrix, an r × r matrix-valued function of the complex variable z"
+    },
+    {
+      "name": "(A, U, B, V)",
+      "definition": "a general linear method"
+    },
+    {
+      "name": "z",
+      "definition": "z = hq, where h is the stepsize and q is a complex parameter from the linear differential equation"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "520b",
+      "content": "y^{[n]} = M(z) y^{[n-1]}"
+    },
+    {
+      "tag": "520a",
+      "content": "y' = qy"
+    }
+  ],
+  "preamble": "The context involves general linear methods for solving linear differential equations, where the stability matrix M(z) describes the propagation of numerical solutions from step to step. The stability function and region are defined in terms of the characteristic polynomial and boundedness of powers of M(z).",
+  "introduces": [
+    "stability function",
+    "stability region",
+    "instability region"
+  ],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:520A",
+      "kind": "definition",
+      "number": "520A",
+      "name": "Introduction",
+      "edge_type": "uses_concept",
+      "context": "stability matrix"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "def:350A",
+    "def:442A",
+    "def:520E",
+    "def:521A",
+    "def:542A",
+    "lem:351A",
+    "thm:351B",
+    "thm:355F",
+    "thm:355G",
+    "thm:431A",
+    "thm:520B",
+    "thm:520D",
+    "thm:521B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

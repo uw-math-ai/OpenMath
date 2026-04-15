@@ -1,0 +1,51 @@
+{
+  "id": "thm:388C",
+  "kind": "theorem",
+  "number": "388C",
+  "name": "One plus Hp is normal in G1",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "388",
+  "subsection_title": "Some subgroups and quotient groups",
+  "page": 322,
+  "statement_text": "The subgroup 1 + Hp is a normal subgroup of G1 .",
+  "statement_latex": "\\begin{theorem}\nThe subgroup \\(1 + H_p\\) is a normal subgroup of \\(G_1\\).\n\\end{theorem}",
+  "proof_text": "Proof. Theorem 388B is equally true if (388b) is replaced by α = (1 + Hp )β.\nHence, for any β ∈ G1 , (1 + Hp )β = β(1 + Hp ).",
+  "proof_latex": "\\begin{proof}\nTheorem~\\ref{thm:388B} is equally true if \\eqref{eq:388b} is replaced by \\(\\alpha = (1 + H_p)\\beta\\).\nHence, for any \\(\\beta \\in G_1\\), \\((1 + H_p)\\beta = \\beta(1 + H_p)\\).\n\nQuotient groups of the form \\(G_1/(1 + H_p)\\) can be formed, and we consider\ntheir significance in the description of numerical methods. Suppose that \\(m\\) and\n\\(\\widehat{m}\\) are Runge--Kutta methods with corresponding elementary weight functions\n\\(\\alpha\\) and \\(\\widehat{\\alpha}\\). If \\(m\\) and \\(\\widehat{m}\\) are related by the requirement that for any smooth\nproblem the results computed by these methods in a single step differ by\n\\(O(h^{p+1})\\), then this means that \\(\\alpha(t) = \\widehat{\\alpha}(t)\\), whenever \\(r(t) \\leq p\\). However, this\nis identical to the statement that\n\\[\n\\widehat{\\alpha} \\in (1 + H_p)\\alpha,\n\\]\nwhich means that \\(\\alpha\\) and \\(\\widehat{\\alpha}\\) map canonically into the same member of the\nquotient group \\(G_1/(1 + H_p)\\).\n\nBecause we also have the ideal \\(H_p\\) at our disposal, this interpretation of\nequivalent computations modulo \\(O(h^{p+1})\\) can be extended to approximations\nrepresented by members of \\(G\\), and not just of \\(G_1\\).\n\nThe \\(C(\\xi)\\) and \\(D(\\xi)\\) conditions can also be represented using subgroups.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:388B",
+      "kind": "theorem",
+      "number": "388B",
+      "name": "Equivalence of Additive and Multiplicative Perturbations",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 388B"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "thm:356C",
+    "thm:388B"
+  ],
+  "dependents": [
+    "def:370A",
+    "def:388D",
+    "thm:388A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

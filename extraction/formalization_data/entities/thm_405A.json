@@ -1,0 +1,72 @@
+{
+  "id": "thm:405A",
+  "kind": "theorem",
+  "number": "405A",
+  "name": "Necessity of conditions for convergence",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "405",
+  "subsection_title": "Necessity of conditions for convergence",
+  "page": 343,
+  "statement_text": "A convergent linear multistep method is stable.",
+  "statement_latex": "\\begin{theorem}\nA convergent linear multistep method is stable.\n\\end{theorem}",
+  "proof_text": "Proof. If the method were not stable, there would exist an unbounded\nsequence η satisfying the difference equation\n\n                    ηn = α1 ηn−1 + α2 ηn−2 + · · · + αk ηn−k .\n\nDefine the sequence ζ by\n                                         n\n                                  ζn = max |ηi |,\n                                        i=0\n\nso that ζ converges monotonically to ∞. Consider the solution of the initial\nvalue problem\n                         y \u0002 (x) = 0,  y(0) = 0,\nwith x = 1. Assuming that n steps are to be performed, we use a stepsize\nh = 1/n and initial values yi = ηi /ζn , for i = 0, 1, . . . , k − 1. The condition\nthat yi → 0 for 0 ≤ i ≤ k − 1 is satisfied because ζn → ∞. The approximation\ncomputed for y(x) is equal to ηn /ζn . Because the ζ sequence is unbounded,\nthere will be an infinite number of values of n for which |ζn | is greater than\nthe greatest magnitude amongst previous members of this sequence. For such\nvalues of n, |ηn /ζn | = 1, and therefore the sequence n → ηn /ζn cannot\nconverge to 0.",
+  "proof_latex": "\\begin{proof}\nIf the method were not stable, there would exist an unbounded sequence $\\eta$ satisfying the difference equation\n\\[\n\\eta_n = \\alpha_1 \\eta_{n-1} + \\alpha_2 \\eta_{n-2} + \\cdots + \\alpha_k \\eta_{n-k}.\n\\]\nDefine the sequence $\\zeta$ by\n\\[\n\\zeta_n = \\max_{i=0}^n |\\eta_i|,\n\\]\nso that $\\zeta$ converges monotonically to $\\infty$. Consider the solution of the initial value problem\n\\[\ny'(x) = 0, \\quad y(0) = 0,\n\\]\nwith $x = 1$. Assuming that $n$ steps are to be performed, we use a stepsize $h = 1/n$ and initial values $y_i = \\eta_i / \\zeta_n$, for $i = 0, 1, \\dots, k - 1$. The condition that $y_i \\to 0$ for $0 \\le i \\le k - 1$ is satisfied because $\\zeta_n \\to \\infty$. The approximation computed for $y(x)$ is equal to $\\eta_n / \\zeta_n$. Because the $\\zeta$ sequence is unbounded, there will be an infinite number of values of $n$ for which $|\\zeta_n|$ is greater than the greatest magnitude amongst previous members of this sequence. For such values of $n$, $|\\eta_n / \\zeta_n| = 1$, and therefore the sequence $n \\to \\eta_n / \\zeta_n$ cannot converge to $0$.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:402A",
+      "kind": "definition",
+      "number": "402A",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    },
+    {
+      "id": "thm:405C",
+      "kind": "theorem",
+      "number": "405C",
+      "name": "Convergent Linear Multistep Implies Consistency",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:405C"
+  ],
+  "dependents": [
+    "thm:405B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

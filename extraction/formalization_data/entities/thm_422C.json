@@ -1,0 +1,89 @@
+{
+  "id": "thm:422C",
+  "kind": "theorem",
+  "number": "422C",
+  "name": "Convergence of Linear Multistep Methods",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "42",
+  "subsection": "422",
+  "subsection_title": "The underlying one-step method",
+  "page": 359,
+  "statement_text": "Let [α, β] denote a preconsistent, stable linear multistep\nmethod and let η denote a solution of (422a). Suppose that yi is represented\nby η i for i = 0, 1, 2, . . . , k − 1; then yi is represented by η i for i = k, k + 1, . . . .",
+  "statement_latex": "\\begin{theorem}[422C]\nLet $[\\alpha, \\beta]$ denote a preconsistent, stable linear multistep method and let $\\eta$ denote a solution of \\eqref{eq:422a}. Suppose that $y_i$ is represented by $\\eta^i$ for $i = 0, 1, 2, \\dots, k - 1$; then $y_i$ is represented by $\\eta^i$ for $i = k, k + 1, \\dots$.\n\\end{theorem}",
+  "proof_text": "Proof. The proof is by induction, and it will only be necessary to show that\nyk is represented by η k , since this is a typical case. Multiply (422a) on the left\nby η k and we find that\n\n  η k − α1 η k−1 − α2 η k−2 − · · · − αk\n                              − β0 η k D − β1 η k−1 D − β2 η k−2 D − · · · − βk D = 0,\nso that yk is represented by η k .",
+  "proof_latex": "\\begin{proof}\nThe proof is by induction, and it will only be necessary to show that $y_k$ is represented by $\\eta^k$, since this is a typical case. Multiply \\eqref{eq:422a} on the left by $\\eta^k$ and we find that\n\\[\n\\eta^k - \\alpha_1 \\eta^{k-1} - \\alpha_2 \\eta^{k-2} - \\cdots - \\alpha_k - \\beta_0 \\eta^k D - \\beta_1 \\eta^{k-1} D - \\beta_2 \\eta^{k-2} D - \\cdots - \\beta_k D = 0,\n\\]\nso that $y_k$ is represented by $\\eta^k$.\n\nThe concept of an underlying one-step method was introduced by Kirchgraber (1986). Although the underlying method cannot be represented as a Runge--Kutta method, it can be represented as a B-series or, what is equivalent, in the manner that has been introduced here. Of more recent developments, the extension to general linear methods (Stoffer, 1993) is of particular interest. This generalization will be considered in Subsection 535.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nPreamble: The context involves a preconsistent, stable linear multistep method $[\\alpha, \\beta]$ and a solution $\\eta$ to a functional equation (422a) defined on trees, where $\\eta$ is interpreted as the underlying one-step method in the group $G_1$. The notation $\\eta^i$ represents the $i$th power of $\\eta$ in this group, and $y_i$ is the numerical solution represented by $\\eta^i$.\n\nVariables:\n\\begin{itemize}\n    \\item $[\\alpha, \\beta]$: a linear multistep method, with $\\alpha$ and $\\beta$ being coefficient vectors\n    \\item $\\eta$: a solution to equation (422a), representing a mapping from trees to real numbers (a member of $G_1$), interpreted as the underlying one-step method\n    \\item $y_i$: the numerical solution at step $i$, represented by $\\eta^i$ (the $i$th power of $\\eta$ in the group $G_1$)\n    \\item $k$: the number of steps in the linear multistep method\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n1(u) - \\alpha_1 \\eta^{-1}(u) - \\alpha_2 \\eta^{-2}(u) - \\cdots - \\alpha_k \\eta^{-k}(u) - \\beta_0 D(u) - \\beta_1 \\eta^{-1} D(u) - \\beta_2 \\eta^{-2} D(u) - \\cdots - \\beta_k \\eta^{-k} D(u) = 0, \\quad \\text{for all trees } u\n\\tag{422a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "[α, β]",
+      "definition": "a linear multistep method, with α and β being coefficient vectors"
+    },
+    {
+      "name": "η",
+      "definition": "a solution to equation (422a), representing a mapping from trees to real numbers (a member of G1), interpreted as the underlying one-step method"
+    },
+    {
+      "name": "yi",
+      "definition": "the numerical solution at step i, represented by η^i (the i-th power of η in the group G1)"
+    },
+    {
+      "name": "k",
+      "definition": "the number of steps in the linear multistep method"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "422a",
+      "content": "1(u) − α1 η^{−1}(u) − α2 η^{−2}(u) − ··· − αk η^{−k}(u) − β0 D(u) − β1 η^{−1} D(u) − β2 η^{−2} D(u) − ··· − βk η^{−k} D(u) = 0, for all trees u"
+    }
+  ],
+  "preamble": "The context involves a preconsistent, stable linear multistep method [α, β] and a solution η to a functional equation (422a) defined on trees, where η is interpreted as the underlying one-step method in the group G1. The notation η^i represents the i-th power of η in this group, and yi is the numerical solution represented by η^i.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:404A",
+      "kind": "definition",
+      "number": "404A",
+      "name": "preconsistent",
+      "edge_type": "uses_concept",
+      "context": "preconsistent"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    },
+    {
+      "id": "thm:422A",
+      "kind": "theorem",
+      "number": "422A",
+      "name": "The underlying one-step method",
+      "edge_type": "uses_equation_from",
+      "context": "(422a) owned by thm:422A"
+    },
+    {
+      "id": "def:422B",
+      "kind": "definition",
+      "number": "422B",
+      "name": "underlying one-step method",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:381B",
+    "def:403A",
+    "def:404A",
+    "def:422B",
+    "thm:422A"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,72 @@
+{
+  "chapter": 2,
+  "title": "Numerical Differential Equation Methods",
+  "entity_count": 4,
+  "n_unformalized": 4,
+  "sections": [
+    {
+      "section": "20",
+      "title": "The Euler Method",
+      "subsections": []
+    },
+    {
+      "section": "21",
+      "title": "Analysis of the Euler Method",
+      "subsections": [
+        {
+          "subsection": "212",
+          "title": "Global truncation error",
+          "entities": [
+            "thm:212A"
+          ]
+        },
+        {
+          "subsection": "213",
+          "title": "Convergence of the Euler method",
+          "entities": [
+            "thm:213A",
+            "thm:213B"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "22",
+      "title": "Generalizations of the Euler Method",
+      "subsections": [
+        {
+          "subsection": "243",
+          "title": "Consistency, stability and convergence",
+          "entities": [
+            "thm:243A"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "23",
+      "title": "Runge–Kutta Methods",
+      "subsections": []
+    },
+    {
+      "section": "24",
+      "title": "Linear Multistep Methods",
+      "subsections": []
+    },
+    {
+      "section": "25",
+      "title": "Taylor Series Methods",
+      "subsections": []
+    },
+    {
+      "section": "26",
+      "title": "Hybrid Methods",
+      "subsections": []
+    },
+    {
+      "section": "27",
+      "title": "Introduction to Implementation",
+      "subsections": []
+    }
+  ]
+}

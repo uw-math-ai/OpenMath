@@ -1,0 +1,40 @@
+{
+  "id": "cor:356D",
+  "kind": "corollary",
+  "number": "356D",
+  "name": "Positive weights for DJ irreducible methods",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "356",
+  "subsection_title": "AN-stability",
+  "page": 269,
+  "statement_text": "Under the same conditions of Theorem 356C, with the\nadditional assumption that the method is DJ-irreducible,\n\n                             bj > 0,      j = 1, 2, . . . , s.",
+  "statement_latex": "\\begin{corollary}\nUnder the same conditions of Theorem~\\ref{thm:356C}, with the additional assumption that the method is DJ-irreducible,\n\\[\nb_j > 0, \\qquad j = 1, 2, \\dots, s.\n\\]\n\\end{corollary}",
+  "proof_text": "Proof. Suppose that for i ≤ s, bi > 0, but that for i > s, bi = 0. In this case,\nM can be written in partitioned form as\n\n                                          M      N\n                                 M=\n\nand this cannot be positive semi-definite unless N = 0. This implies that\n\n                        aij = 0,       whenever i ≤ s < j,\nimplying that the method is reducible to a method with only s stages.",
+  "proof_latex": "\\begin{proof}\nSuppose that for \\( i \\leq s \\), \\( b_i > 0 \\), but that for \\( i > s \\), \\( b_i = 0 \\). In this case, \\( M \\) can be written in partitioned form as\n\\[\nM = \\begin{pmatrix}\nM_{11} & M_{12} \\\\\nM_{21} & M_{22}\n\\end{pmatrix}\n\\]\nand this cannot be positive semi-definite unless \\( M_{12} = 0 \\). This implies that\n\\[\na_{ij} = 0, \\qquad \\text{whenever } i \\leq s < j,\n\\]\nimplying that the method is reducible to a method with only \\( s \\) stages.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:356C",
+      "kind": "theorem",
+      "number": "356C",
+      "name": "AN stability necessary conditions",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 356C"
+    }
+  ],
+  "transitive_dependencies": [
+    "thm:356C"
+  ],
+  "dependents": [
+    "def:356B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

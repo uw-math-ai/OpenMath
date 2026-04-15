@@ -1,0 +1,78 @@
+{
+  "id": "def:381E",
+  "kind": "definition",
+  "number": "381E",
+  "name": "reduced method",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "380",
+  "subsection_title": "Motivation",
+  "page": 303,
+  "statement_text": "A Runge–Kutta method is ‘irreducible’ if it is neither\n0-reducible nor P -reducible. The method formed from a method by first\ncarrying out a P -reduction and then carrying out a 0-reduction is said to\nbe the ‘reduced method’.",
+  "statement_latex": "\\begin{definition}\nA Runge--Kutta method is `irreducible' if it is neither $0$-reducible nor $P$-reducible. The method formed from a method by first carrying out a $P$-reduction and then carrying out a $0$-reduction is said to be the `reduced method'.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nA Runge--Kutta method is defined by coefficients $(A,b,c)$, where $A\\in\\mathbb{R}^{s\\times s}$ is the matrix of stage coupling coefficients, $b\\in\\mathbb{R}^{s}$ is the vector of weights, and $c\\in\\mathbb{R}^{s}$ is the vector of nodes.  \nThe method is \\emph{0-reducible} if the stage index set $\\{1,\\dots,s\\}=P_{0}\\cup P_{1}$ can be partitioned such that $b_i=0$ for all $i\\in P_{0}$ and $a_{ij}=0$ whenever $i\\in P_{1},\\;j\\in P_{0}$.  \nThe \\emph{0-reduced method} is obtained by deleting all stages indexed by $P_{0}$.  \n\nThe method is \\emph{P-reducible} if $\\{1,\\dots,s\\}=P_{1}\\cup\\cdots\\cup P_{\\bar{s}}$ can be partitioned so that for every $I,J=1,\\dots,\\bar{s}$,\n\\[\n\\sum_{j\\in P_{J}} a_{ij} \\quad \\text{is constant for all } i\\in P_{I}.\n\\]\nThe \\emph{P-reduced method} has $\\bar{s}$ stages with coefficients\n\\[\na_{IJ}= \\sum_{j\\in P_{J}} a_{ij}\\;(i\\in P_{I}),\\qquad\nb_{I}= \\sum_{i\\in P_{I}} b_{i},\\qquad\nc_{I}= c_{i}\\;(i\\in P_{I}).\n\\]",
+  "variables": [
+    {
+      "name": "Runge–Kutta method",
+      "definition": "A method defined by coefficients (A, b, c), where A is the matrix of stage coupling coefficients, b is the vector of weights, and c is the vector of nodes."
+    },
+    {
+      "name": "0-reducible",
+      "definition": "A Runge–Kutta method (A, b, c) is 0-reducible if the stage index set can be partitioned into two subsets {1, 2, ..., s} = P0 ∪ P1 such that bi = 0 for all i ∈ P0 and such that aij = 0 if i ∈ P1 and j ∈ P0."
+    },
+    {
+      "name": "P-reducible",
+      "definition": "A Runge–Kutta method (A, b, c) is P-reducible if the stage index set can be partitioned into {1, 2, ..., s} = P1 ∪ P2 ∪ ... ∪ Ps and if, for all I, J = 1, 2, ..., s, the sum over j in PJ of aij is constant for all i in PI."
+    },
+    {
+      "name": "0-reduced method",
+      "definition": "The method formed by deleting all stages indexed by members of P0 from a 0-reducible method."
+    },
+    {
+      "name": "P-reduced method",
+      "definition": "The method formed from a P-reducible method with s stages, where aIJ = sum over j in PJ of aij for i in PI, bI = sum over i in PI of bi, and cI = ci for i in PI."
+    }
+  ],
+  "equations": [],
+  "preamble": "The text defines Φ-equivalence of Runge–Kutta methods based on equality of elementary weights. It then introduces reducibility concepts: 0-reducibility (eliminating stages with zero weight that do not affect other stages) and P-reducibility (combining stages that are essentially the same).",
+  "introduces": [
+    "irreducible",
+    "reduced method"
+  ],
+  "dependencies": [
+    {
+      "id": "def:381D",
+      "kind": "definition",
+      "number": "381D",
+      "name": "P -reducible",
+      "edge_type": "uses_concept",
+      "context": "p -reducible"
+    },
+    {
+      "id": "def:381C",
+      "kind": "definition",
+      "number": "381C",
+      "name": "0-reduced method",
+      "edge_type": "uses_concept",
+      "context": "0-reducible"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:381C",
+    "def:381D"
+  ],
+  "dependents": [
+    "def:356B",
+    "def:370A",
+    "def:381A",
+    "def:381F",
+    "thm:357D",
+    "thm:381G"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

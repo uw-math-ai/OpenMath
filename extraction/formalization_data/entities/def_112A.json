@@ -1,0 +1,60 @@
+{
+  "id": "def:112A",
+  "kind": "definition",
+  "number": "112A",
+  "name": "one-sided Lipschitz condition",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "11",
+  "subsection": "112",
+  "subsection_title": "Stiff differential equations",
+  "page": 47,
+  "statement_text": "The function f satisfies a ‘one-sided Lipschitz condition’,\nwith ‘one-sided Lipschitz constant’ l if for all x ∈ [a, b] and all u, v ∈ RN ,\n                        \u000ef (x, u) − f (x, v), u − v\u000f ≤ l u − v 2 .\nIt is possible that the function f could have a very large Lipschitz constant\nbut a moderately sized, or even negative, one-sided Lipschitz constant. The\nadvantage of this is seen in the following result.",
+  "statement_latex": "\\begin{definition}\nThe function $f$ satisfies a `one-sided Lipschitz condition',\nwith `one-sided Lipschitz constant' $l$ if for all $x \\in [a, b]$ and all $u, v \\in \\mathbb{R}^N$,\n\\[\n\\langle f(x, u) - f(x, v), u - v \\rangle \\leq l \\| u - v \\|^2.\n\\]\nIt is possible that the function $f$ could have a very large Lipschitz constant\nbut a moderately sized, or even negative, one-sided Lipschitz constant. The\nadvantage of this is seen in the following result.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nConsider a differential equation system posed on an inner product space $\\mathbb{R}^N$, with inner product $\\langle \\cdot, \\cdot \\rangle$ and induced norm $\\|u\\|^2 = \\langle u, u \\rangle$. The function $f$ defines the system, and a one-sided Lipschitz condition is introduced to analyze stiff problems. The variables are:\n\\begin{itemize}\n    \\item $f : [a, b] \\times \\mathbb{R}^N \\to \\mathbb{R}^N$, the function defining the differential equation,\n    \\item $a, b$: endpoints of the interval $[a, b]$,\n    \\item $N$: dimension of the space $\\mathbb{R}^N$.\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "f",
+      "definition": "f : [a, b] × R^N → R^N, the function defining the differential equation system"
+    },
+    {
+      "name": "a, b",
+      "definition": "endpoints of the interval [a, b] on which the differential equation is posed"
+    },
+    {
+      "name": "N",
+      "definition": "dimension of the space R^N, where the solution and function values lie"
+    },
+    {
+      "name": "⟨u, v⟩",
+      "definition": "inner product on R^N, with induced norm ‖u‖^2 = ⟨u, u⟩"
+    }
+  ],
+  "equations": [],
+  "preamble": "The context considers differential equation systems posed on an inner product space R^N, with inner product ⟨·,·⟩ and norm defined from it. The function f defines the system, and the one-sided Lipschitz condition is introduced to analyze stiff problems.",
+  "introduces": [
+    "one-sided Lipschitz condition",
+    "one-sided Lipschitz constant"
+  ],
+  "dependencies": [
+    {
+      "id": "def:110A",
+      "kind": "definition",
+      "number": "110A",
+      "name": "Lipschitz condition in its second variable",
+      "edge_type": "uses_concept",
+      "context": "lipschitz constant"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A"
+  ],
+  "dependents": [
+    "thm:112B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

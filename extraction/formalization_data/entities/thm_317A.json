@@ -1,0 +1,79 @@
+{
+  "id": "thm:317A",
+  "kind": "theorem",
+  "number": "317A",
+  "name": "Independence of elementary weights",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "31",
+  "subsection": "317",
+  "subsection_title": "Independence of elementary weights",
+  "page": 184,
+  "statement_text": "Given a finite subset T0 , of T and a mapping φ : T0 → R,\nthere exists a Runge–Kutta method such that the elementary weights satisfy\n\n                         Φ(t) = φ(t),           for all t ∈ T0 .",
+  "statement_latex": "\\begin{theorem}\nGiven a finite subset \\( T_{0} \\) of \\( T \\) and a mapping \\( \\varphi : T_{0} \\to \\mathbb{R} \\),\nthere exists a Runge--Kutta method such that the elementary weights satisfy\n\\[\n\\Phi(t) = \\varphi(t), \\quad \\text{for all } t \\in T_{0}.\n\\]\n\n\\textbf{Proof.}\nLet \\( \\#T_{0} = n \\). The set of possible values that can be taken by the\nvector of \\( \\Phi(t) \\) values, for all \\( t \\in T_{0} \\), is a vector space. To see why this is the\ncase, consider Runge--Kutta methods given by the tableaux\n\\[\n\\begin{array}{ccc}\nc & A \\\\\n& b\n\\end{array}\n\\quad \\text{and} \\quad\n\\begin{array}{ccc}\nc & A \\\\\n& b\n\\end{array}\n\\tag{317a}\n\\]\nwith \\( s \\) and \\( \\widehat{s} \\) stages, respectively. If the elementary weight functions for these\ntwo Runge--Kutta methods are \\( \\Phi \\) and \\( \\widehat{\\Phi} \\), then the method given by the tableau\n\\[\n\\begin{array}{ccc}\nc & A & 0 \\\\\n\\widehat{c} & 0 & \\widehat{A} \\\\\n& \\theta b & \\widehat{\\theta}\\widehat{b}\n\\end{array}\n\\]\nhas elementary weight function \\( \\theta\\Phi + \\widehat{\\theta}\\widehat{\\Phi} \\). Let \\( V \\subset \\mathbb{R}^{n} \\) denote\n\\end{theorem}",
+  "proof_text": "Proof. Let #T0 = n. The set of possible values that can be taken by the\nvector of Φ(t) values, for all t ∈ T0 , is a vector space. To see why this is the\ncase, consider Runge–Kutta methods given by the tableaux\n                              c   A                      c   A\n                                             and                                   (317a)\n                                  b                          b\nwith s and s stages, respectively. If the elementary weight functions for these\ntwo Runge–Kutta methods are Φ and Φ, then the method given by the tableau\n                                      c      A      0\n                                      c      0      A\n                                            θb     θb\n\nhas elementary weight function θΦ+θΦ. Let V ⊂ Rn denote this vector space.\nWe complete the proof by showing that V = Rn . If this were      \" not the case, there\nwould exist a non-zero function ψ : T0 → R such that t∈T0 ψ(t)Φ(t) = 0,\nfor all Runge–Kutta methods. Because every coefficient in a Runge–Kutta\ntableau can be multiplied by an arbitrary scalar θ to give a new method for\nwhich Φ(t) is replaced by θr(t) Φ(t), we may assume that every non-zero value\nof ψ corresponds to trees with the same order k. This is impossible for k = 1,\nbecause in this case there is only a single tree τ . Suppose the impossibility\nof this has been proved for all orders less\"than k, but that there exist trees\nt1 , t2 , . . . , tm , each of order k, such that m\n                                                  i=1 ψ(ti )Φ(ti ) = 0, for all Runge–\nKutta methods with ψ(ti ) \u0004= 0, for i = 1, 2, . . . , m. Write ti = [tli1i1 tli2i2 · · · ],\nfor i = 1, 2, . . . , m. Let t̂ denote a tree appearing amongst the tij which does\nnot occur with the same exponent in each of the ti . Construct an s-stage\nRunge–Kutta method\n                                            c A\n                                                b\nfor which each of Φ(tij ) = 1, except for Φ(t̂) = θ. Define second Runge–Kutta\ntableau with s + 1 stages of the form\n                                       c A         0\n                                       1 b         0 .\n                                         0         1\n\nIf qi is the exponent of t̂ in ti , then it follows that\n                                   \u0014\n                                   m\n                                          ψ(ti )θ qi = 0.\n                                    i=1\n\nSince θ can take any value and since qi is not constant, it is not possible that\nψ is never zero.",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe discussion involves order conditions for Runge-Kutta methods, expressed in terms of elementary weights $\\Phi(t)$ for trees $t \\in T$. The coefficients $b_i$, $a_{ij}$, $c_i$ define the method.\n\nVariables:\n\\begin{itemize}\n    \\item $T$: the set of rooted trees\n    \\item $\\Phi(t)$: elementary weight associated with tree $t$\n    \\item $b_i$, $a_{ij}$, $c_i$: coefficients of a Runge-Kutta method, where $b_i$ are weights, $a_{ij}$ are matrix coefficients, and $c_i$ are nodes\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n    \\Phi(t_2) = \\sum b_i a_{ij} c_j a_{jk} c_k = \\frac{1}{\\gamma(t_2)} = \\frac{1}{40}\n    \\tag{316b}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "T",
+      "definition": "the set of rooted trees"
+    },
+    {
+      "name": "Φ(t)",
+      "definition": "elementary weight associated with tree t"
+    },
+    {
+      "name": "bi, aij, ci",
+      "definition": "coefficients of a Runge-Kutta method, where bi are weights, aij are matrix coefficients, and ci are nodes"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "(316b)",
+      "content": "Φ(t2) = ∑ bi aij cj ajk ck = 1/γ(t2) = 1/40"
+    }
+  ],
+  "preamble": "The discussion involves order conditions for Runge-Kutta methods, expressed in terms of elementary weights Φ(t) for trees t in T. The coefficients bi, aij, ci define the method.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:310A",
+      "kind": "definition",
+      "number": "310A",
+      "name": "elementary differential",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "lem:310B",
+      "kind": "lemma",
+      "number": "310B",
+      "name": "Elementary Differential Weight Formula",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:314A",
+      "kind": "theorem",
+      "number": "314A",
+      "name": "Independence of the elementary differentials",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:310A",
+    "lem:310B",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:314A"
+  ],
+  "dependents": [
+    "thm:324B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

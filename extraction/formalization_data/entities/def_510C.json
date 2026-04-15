@@ -1,0 +1,111 @@
+{
+  "id": "def:510C",
+  "kind": "definition",
+  "number": "510C",
+  "name": "stable",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "510",
+  "subsection_title": "Definitions of consistency and stability",
+  "page": 407,
+  "statement_text": "A general linear method (A, U, B, V ) is ‘stable’ if there\nexists a constant C such that, for all n = 1, 2, . . . , V n ≤ C.",
+  "statement_latex": "\\begin{definition}\nA general linear method $(A, U, B, V)$ is `stable' if there exists a constant $C$ such that, for all $n = 1, 2, \\dots$, $\\|V^n\\| \\leq C$.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nGeneral linear methods are defined by matrices $(A,U,B,V)$.\nPreconsistency requires a vector $u$ satisfying\n\\begin{equation}\nV u = u, \\qquad U u = 1.\n\\end{equation}\nConsistency requires a vector $v$ such that\n\\begin{equation}\nB\\mathbf{1} + V v = u + v.\n\\end{equation}\nStability is defined by the power-boundedness of $V$.",
+  "variables": [
+    {
+      "name": "V",
+      "definition": "V is the matrix from the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "A",
+      "definition": "A is one of the four defining matrices of a general linear method"
+    },
+    {
+      "name": "U",
+      "definition": "U is one of the four defining matrices of a general linear method"
+    },
+    {
+      "name": "B",
+      "definition": "B is one of the four defining matrices of a general linear method"
+    },
+    {
+      "name": "u",
+      "definition": "preconsistency vector satisfying V u = u and U u = 1"
+    },
+    {
+      "name": "v",
+      "definition": "vector such that B1 + V v = u + v for a consistent method"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "510a",
+      "content": "V u = u"
+    },
+    {
+      "tag": "510b",
+      "content": "U u = 1"
+    },
+    {
+      "tag": "510c",
+      "content": "B1 + V v = u + v"
+    }
+  ],
+  "preamble": "The text discusses general linear methods defined by four matrices (A, U, B, V). Preconsistency and consistency conditions are defined using vectors u and v. Stability is defined in terms of the power-boundedness of the matrix V.",
+  "introduces": [
+    "stable"
+  ],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    },
+    {
+      "id": "def:142A",
+      "kind": "definition",
+      "number": "142A",
+      "name": "power-boundedness",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:403A",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "def:510B",
+    "def:512A",
+    "def:520A",
+    "def:542A",
+    "def:551A",
+    "lem:515B",
+    "thm:513A",
+    "thm:514A",
+    "thm:515D",
+    "thm:523A",
+    "thm:535A",
+    "thm:551B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

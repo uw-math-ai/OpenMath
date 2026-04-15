@@ -1,0 +1,94 @@
+{
+  "id": "thm:521B",
+  "kind": "theorem",
+  "number": "521B",
+  "name": "Maximum stability order for given steps",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "521",
+  "subsection_title": "Methods with maximal stability order",
+  "page": 420,
+  "statement_text": "For given ν, the maximum possible stability order is given\nby\n                            \u0014\n                            k\n                       p\u0019 =   (νj + 1) − 2.                      (521a)\n                                        j=0",
+  "statement_latex": "\\begin{theorem}\nFor given $\\nu$, the maximum possible stability order is given by\n\\[\np^* = \\sum_{j=0}^{k} (\\nu_j + 1) - 2. \\tag{521a}\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. If order higher than p\u0019 given by (521a) is possible, then\n\n          \u0014\n          k                     \u0014\n                                νj\n                exp((k − j)z)         αjl z l = Cp\u0002+2 z p\u0002+2 + Cp\u0002+3 z p\u0002+3 + · · · ,\n          j=0                   l=0\n\nwhere the right-hand side is convergent for any z. Differentiate νk + 1 times\nand multiply the result by exp(−z). We now have a stability function with\ncomplexity [ν0 , ν1 , . . . , νk−1 ], where the w-degree can be reduced even further\nif νk−1 = −1. Furthermore, the new approximation also has a stability order\ncontrary to the bound we are trying to prove. Thus, by an induction argument\n\nwe reduce to the case k = 0, and it remains to prove that there does not exist\na non-zero polynomial P of degree ν0 such that\n\n                                P (z) = O(z ν0 +1 ).\n\nTo show that an approximation with stability order p\u0019 given by (521a) exists, it\nis possible to reverse the non-existence argument and to construct the required\nstability function recursively, but we use a different approach.\n   Consider the rational function\n\n\n                                         k\n                             φ(t) =          (t + j)−νj −1 ,                (521b)\n                                         j=0\n\nwith partial fraction expansion which can be written in the form\n\n                                       \u0014\u0014\n                                       k νj\n                                                    l!αjl\n                           φ(t) =                           .\n                                       j=0 l=0\n                                                 (j + t)l+1\n\nCalculate the integral             5\n                              1\n                                         φ(t) expp\u0002(tz)dt,                  (521c)\n                             2πi     C\n\nwhere\n                                                 \u0002\n                                                 \u0014\n                                                 p\n                                                   zj\n                                expp\u0002(z) =\n                                                 j=0\n                                                       j!\n\nis the polynomial of degree p\u0019 approximating the exponential function to within\nO(z p\u0002+1 ) and C is a circular counter-clockwise contour, centred at 0 and with\nradius R > k. Using the partial fraction form of φ, (521c) is found to be\n\n                           \u0014\n                           k \u0014\n                             νj\n                                       αjl z l expp\u0002−l (−zj),               (521d)\n                           j=0 l=0\n\n\nbut using (521b), the integral can be bounded in terms of R−1 for large R, and\nis therefore zero. Use the fact that z l expp\u0002−l (−zj) = z l exp(−zj) + O(z p\u0002+1 )\nand the result follows.",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns the stability function $\\Phi(w,z)$ of a general linear method, parameterized by a complexity sequence $\\nu=[\\nu_0,\\nu_1,\\dots,\\nu_k]$, where $\\nu_j$ is the $z$-degree of the coefficient of $w^{k-j}$. The goal is to determine the maximum stability order $p^*$ achievable for a given $\\nu$.\n\nVariables:\n\\begin{itemize}\n    \\item $\\nu$: $\\nu=[\\nu_0,\\nu_1,\\dots,\\nu_k]$, representing the complexity of $\\Phi$, where $\\nu_j$ is the $z$-degree of the coefficient of $w^{k-j}$ in $\\Phi$.\n    \\item $\\Phi$: $\\Phi(w,z)=\\sum_{j=0}^k w^{k-j} \\sum_{l=0}^{\\nu_j} \\alpha_{jl} z^l$, the stability function, with $k$ as the $w$-degree and $\\nu_j$ as the $z$-degree of the coefficient of $w^{k-j}$.\n    \\item $k$: the $w$-degree of $\\Phi$.\n    \\item $\\nu_j$: for $j=0,1,\\dots,k$, the $z$-degree of the coefficient of $w^{k-j}$ in $\\Phi$, assumed $\\nu_j \\ge -1$ with strict inequality for $j=0$ and $j=k$.\n    \\item $p^*$: the highest possible stability order for a given $\\nu$.\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n    p^* = \\sum_{j=0}^k (\\nu_j + 1) - 2\n    \\tag{521a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "ν",
+      "definition": "ν = [ν0, ν1, ..., νk], representing the complexity of the stability function Φ, where νj is the z-degree of the coefficient of w^{k-j} in Φ"
+    },
+    {
+      "name": "Φ",
+      "definition": "Φ(w, z) = Σ_{j=0}^k w^{k-j} Σ_{l=0}^{νj} α_{jl} z^l, the stability function, with k as the w-degree and νj as the z-degree of the coefficient of w^{k-j}"
+    },
+    {
+      "name": "k",
+      "definition": "the w-degree of the stability function Φ"
+    },
+    {
+      "name": "νj",
+      "definition": "for j = 0, 1, ..., k, the z-degree of the coefficient of w^{k-j} in Φ, assumed to be ≥ -1 with strict inequality for j = 0 and j = k"
+    },
+    {
+      "name": "p*",
+      "definition": "the highest possible stability order for a given sequence ν"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "521a",
+      "content": "p* = Σ_{j=0}^k (νj + 1) - 2"
+    }
+  ],
+  "preamble": "The theorem concerns the stability function Φ(w, z) of a general linear method, parameterized by a complexity sequence ν = [ν0, ν1, ..., νk], where νj is the z-degree of the coefficient of w^{k-j}. The goal is to determine the maximum stability order p* achievable for a given ν.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "uses_concept",
+      "context": "stability function"
+    },
+    {
+      "id": "def:521A",
+      "kind": "definition",
+      "number": "521A",
+      "name": "Methods with maximal stability order",
+      "edge_type": "uses_concept",
+      "context": "stability order"
+    },
+    {
+      "id": "def:512A",
+      "kind": "definition",
+      "number": "512A",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:512A",
+    "def:520A",
+    "def:520C",
+    "def:521A",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

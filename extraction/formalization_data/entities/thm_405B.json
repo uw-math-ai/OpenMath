@@ -1,0 +1,79 @@
+{
+  "id": "thm:405B",
+  "kind": "theorem",
+  "number": "405B",
+  "name": "Convergent linear multistep method is preconsistent",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "405",
+  "subsection_title": "Necessity of conditions for convergence",
+  "page": 343,
+  "statement_text": "A convergent linear multistep method is preconsistent.",
+  "statement_latex": "\\begin{theorem}\nA convergent linear multistep method is preconsistent.\n\\end{theorem}",
+  "proof_text": "Proof. By Theorem 405A, we can assume that the method is stable. Let η\nbe defined as the solution to the difference equation\n\n                    ηn = α1 ηn−1 + α2 ηn−2 + · · · + αk ηn−k ,\n\nwith initial values η0 = η1 = · · · = ηk−1 = 1. The computed solution of the\nproblem\n                      y \u0002 (x) = 0,   y(0) = 1,    x = 1,\nusing n steps, is equal to yn = ηn . Since this converges to 1 as n → ∞, it\nfollows that, for any > 0, there exists an n sufficiently large so that |yi −1| ≤\n\nfor i = n − k, n − k + 1, . . . , n. Hence,\n\n        &                         & &        \u0014\n                                             k         &      \u0014",
+  "proof_latex": "\\begin{proof}\nBy Theorem~\\ref{thm:405A}, we can assume that the method is stable. Let $\\eta$ be defined as the solution to the difference equation\n\\[\n\\eta_n = \\alpha_1 \\eta_{n-1} + \\alpha_2 \\eta_{n-2} + \\cdots + \\alpha_k \\eta_{n-k},\n\\]\nwith initial values $\\eta_0 = \\eta_1 = \\cdots = \\eta_{k-1} = 1$. The computed solution of the problem\n\\[\ny'(x) = 0, \\quad y(0) = 1, \\quad x = 1,\n\\]\nusing $n$ steps, is equal to $y_n = \\eta_n$. Since this converges to $1$ as $n \\to \\infty$, it follows that, for any $\\epsilon > 0$, there exists an $n$ sufficiently large so that $|y_i - 1| \\leq \\epsilon$ for $i = n - k, n - k + 1, \\dots, n$. Hence,\n\\[\n\\begin{aligned}\n|1 - \\alpha_1 - \\alpha_2 - \\cdots - \\alpha_k| &\\leq \\left| \\eta_n - \\sum_{i=1}^k \\alpha_i \\eta_{n-i} \\right| + \\left( 1 + \\sum_{i=1}^k |\\alpha_i| \\right) \\epsilon \\\\\n&= \\left( 1 + \\sum_{i=1}^k |\\alpha_i| \\right) \\epsilon.\n\\end{aligned}\n\\]\nBecause this can be arbitrarily small, it follows that\n\\[\n1 - \\alpha_1 - \\alpha_2 - \\cdots - \\alpha_k = 0. \\qedhere\n\\]\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:405A",
+      "kind": "theorem",
+      "number": "405A",
+      "name": "Necessity of conditions for convergence",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 405A"
+    },
+    {
+      "id": "def:404A",
+      "kind": "definition",
+      "number": "404A",
+      "name": "preconsistent",
+      "edge_type": "uses_concept",
+      "context": "preconsistent"
+    },
+    {
+      "id": "def:402A",
+      "kind": "definition",
+      "number": "402A",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:405A",
+    "thm:405C"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

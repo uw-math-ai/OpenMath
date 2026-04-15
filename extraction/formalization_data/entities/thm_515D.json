@@ -1,0 +1,109 @@
+{
+  "id": "thm:515D",
+  "kind": "theorem",
+  "number": "515D",
+  "name": "Stability and Consistency Imply Convergence",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "515",
+  "subsection_title": "Stability and consistency imply convergence",
+  "page": 417,
+  "statement_text": "A stable and consistent general linear method is convergent.",
+  "statement_latex": "\\begin{theorem}\nA stable and consistent general linear method is convergent.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe preceding text analyzes error bounds for a general linear method, deriving a difference equation for $\\eta_i$ that bounds the error $E[i]$. The proof uses stability and consistency assumptions to show convergence as $h \\to 0$.\n\nVariables:\n\\begin{itemize}\n    \\item $E$: error vector or error quantity at step $i$, $E[i]$\n    \\item $h$: step size\n    \\item $C$: stability constant\n    \\item $\\alpha$: constant related to method coefficients\n    \\item $\\beta$: constant related to truncation error\n    \\item $\\eta_i$: bound on $E[i]$ defined recursively\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "E",
+      "definition": "error vector or error quantity at step i, E[i]"
+    },
+    {
+      "name": "h",
+      "definition": "step size"
+    },
+    {
+      "name": "C",
+      "definition": "stability constant"
+    },
+    {
+      "name": "α",
+      "definition": "constant related to method coefficients"
+    },
+    {
+      "name": "β",
+      "definition": "constant related to truncation error"
+    },
+    {
+      "name": "η_i",
+      "definition": "bound on E[i] defined recursively"
+    }
+  ],
+  "equations": [],
+  "preamble": "The preceding text analyzes error bounds for a general linear method, deriving a difference equation for η_i that bounds the error E[i]. The proof uses stability and consistency assumptions to show convergence as h → 0.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:510B",
+      "kind": "definition",
+      "number": "510B",
+      "name": "consistent",
+      "edge_type": "uses_concept",
+      "context": "consistent"
+    },
+    {
+      "id": "def:512A",
+      "kind": "definition",
+      "number": "512A",
+      "name": "convergent",
+      "edge_type": "uses_concept",
+      "context": "convergent"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    },
+    {
+      "id": "def:510A",
+      "kind": "definition",
+      "number": "510A",
+      "name": "preconsistency vector",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:512A",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "lem:515A",
+    "thm:243A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,139 @@
+{
+  "id": "thm:358A",
+  "kind": "theorem",
+  "number": "358A",
+  "name": "BN-stability of collocation methods",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "358",
+  "subsection_title": "BN-stability of collocation methods",
+  "page": 275,
+  "statement_text": "A collocation Runge–Kutta method is algebraically stable if\nand only if the abscissae are zeros of a polynomial of the form\n\n                                     Ps∗ − θPs−1\n                                             ∗\n                                                 ,                             (358b)\n\nwhere θ ≥ 0.",
+  "statement_latex": "\\begin{theorem}\nA collocation Runge--Kutta method is algebraically stable if and only if the abscissae are zeros of a polynomial of the form\n\\[\nP_s^* - \\theta P_{s-1}^*,\n\\]\nwhere $\\theta \\geq 0$.\n\\end{theorem}",
+  "proof_text": "Proof. Because     i = 0 for i = 1, 2, . . . , 2s − 1, it follows that\n\n                               \u0010 1\n                                     P (x)φ(x)dx = 0,                          (358c)\n                                 0\n\n\nwhere φ(x) is a polynomial of degree s, with positive leading coefficient\nand zeros c1 , c2 , . . . , cs and P is any polynomial of degree not exceeding\ns − 2. Furthermore, if P is a polynomial of degree s − 1 and positive leading\ncoefficient, the integral in (358c) has the same sign as − 2s . Because of the\northogonality of φ and polynomials of degree less than s − 1, φ is a positive\nconstant multiple of (358b). Apart from a positive factor, we can now evaluate\n                                         ∗\nthe integral in (358c), with P (x) = Ps−1   (x),\n\n           \u0010 1                                           \u0010 1\n                  ∗\n                 Ps−1 (x)(Ps∗ (x) − θPs−1\n                                      ∗\n                                          (x))dx = −θ           ∗\n                                                               Ps−1 (x)2 dx,\n            0                                              0\n\n\nwhich has the opposite sign to θ.",
+  "proof_latex": "\\begin{proof}\nBecause $\\int_0^1 x^i \\varphi(x) \\, dx = 0$ for $i = 1, 2, \\dots, 2s - 1$, it follows that\n\\[\n\\int_0^1 P(x) \\varphi(x) \\, dx = 0,\n\\]\nwhere $\\varphi(x)$ is a polynomial of degree $s$, with positive leading coefficient and zeros $c_1, c_2, \\dots, c_s$ and $P$ is any polynomial of degree not exceeding $s - 2$. Furthermore, if $P$ is a polynomial of degree $s - 1$ and positive leading coefficient, the integral in \\eqref{eq:358c} has the same sign as $-\\theta$. Because of the orthogonality of $\\varphi$ and polynomials of degree less than $s - 1$, $\\varphi$ is a positive constant multiple of \\eqref{eq:358b}. Apart from a positive factor, we can now evaluate the integral in \\eqref{eq:358c}, with $P(x) = P_{s-1}^*(x)$,\n\\[\n\\int_0^1 P_{s-1}^*(x) \\bigl( P_s^*(x) - \\theta P_{s-1}^*(x) \\bigr) \\, dx = -\\theta \\int_0^1 \\bigl( P_{s-1}^*(x) \\bigr)^2 \\, dx,\n\\]\nwhich has the opposite sign to $\\theta$.\n\nA consequence of this result is that both Gauss and Radau IIA methods are algebraically stable. Many other methods used for the solution of stiff problems have stage order lower than $s$ and are therefore not collocation methods. A general characterization of algebraic stable methods is found by using a transformation based not on the Vandermonde matrix $V$, but on a generalized Vandermonde matrix based on the polynomials that are essentially the same as $P_i^*$, for $i = 0, 1, 2, \\dots, s - 1$.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns algebraic stability of collocation Runge--Kutta methods. The preceding analysis involves a matrix $M$ that must be positive semi-definite, leading to conditions on the abscissae (collocation points). Variables: $M$ is a matrix from stability analysis; $V$ is a transformation matrix; $e_s$ is a standard basis vector in $\\mathbb{R}^s$; $P_s^*$, $P_{s-1}^*$ are shifted Legendre polynomials orthogonal on $[0,1]$. Referenced equation:\n\\begin{equation}\n2s \\ge 0 \\tag{358a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "M",
+      "definition": "M is a matrix related to the collocation Runge-Kutta method, likely from a stability analysis."
+    },
+    {
+      "name": "V",
+      "definition": "V is a matrix used in the transformation V^T M V, possibly related to basis functions or quadrature."
+    },
+    {
+      "name": "e_s",
+      "definition": "e_s is a standard basis vector, likely in R^s, with a 1 in the s-th position."
+    },
+    {
+      "name": "P_s^*",
+      "definition": "P_s^* is the shifted Legendre polynomial of degree s, orthogonal on [0,1]."
+    },
+    {
+      "name": "P_{s-1}^*",
+      "definition": "P_{s-1}^* is the shifted Legendre polynomial of degree s-1."
+    }
+  ],
+  "equations": [
+    {
+      "tag": "(358a)",
+      "content": "2s ≥ 0 (a condition derived from positive semi-definiteness of M)."
+    }
+  ],
+  "preamble": "The theorem concerns algebraic stability of collocation Runge-Kutta methods. The preceding analysis involves a matrix M that must be positive semi-definite, leading to conditions on the abscissae (collocation points).",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:357B",
+      "kind": "definition",
+      "number": "357B",
+      "name": "algebraically stable",
+      "edge_type": "uses_concept",
+      "context": "algebraically stable"
+    },
+    {
+      "id": "lem:342A",
+      "kind": "lemma",
+      "number": "342A",
+      "name": "Methods based on Gaussian quadrature",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "lem:342B",
+      "kind": "lemma",
+      "number": "342B",
+      "name": "Gaussian quadrature exactness degree",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:342C",
+      "kind": "theorem",
+      "number": "342C",
+      "name": "Gaussian Quadrature Order Conditions Equivalence",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "cor:342D",
+      "kind": "corollary",
+      "number": "342D",
+      "name": "Gaussian Quadrature Runge Kutta Order Condition",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:357C",
+      "kind": "theorem",
+      "number": "357C",
+      "name": "Algebraic Stability Implies BN Stability",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:350A",
+    "def:355A",
+    "def:356A",
+    "def:356B",
+    "def:357A",
+    "def:357B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:520F",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "lem:342A",
+    "lem:342B",
+    "thm:342C",
+    "thm:356C",
+    "thm:357C",
+    "thm:357D"
+  ],
+  "dependents": [
+    "thm:359C"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

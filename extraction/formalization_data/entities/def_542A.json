@@ -1,0 +1,188 @@
+{
+  "id": "def:542A",
+  "kind": "definition",
+  "number": "542A",
+  "name": "annihilation conditions",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "54",
+  "subsection": "542",
+  "subsection_title": "Runge–Kutta stability",
+  "page": 445,
+  "statement_text": "A general linear method (A, U, B, V ) has ‘Runge–Kutta\nstability’ if the characteristic polynomial given by (542a) has the form\n\n                         Φ(w, z) = wr−1 (w − R(z)).\n\nFor a method with Runge–Kutta stability, the rational function R(z) is known\nas the ‘stability function’ of the method.\n\n  We will usually abbreviate ‘Runge–Kutta stability’ by ‘RK stability’. We\npresent two examples of methods satisfying this condition with p = q = r =\ns = 2 and with c = [ 0 1 ] . The first is of type 1 and is assumed to have the\nform                                                      \n                                  0     0       1      0\n                               a                      1 \n                  A U          21 0            0          \n                             =                            .\n                  B V          b11 b12 1 − V12 V12 \n                                  b11   b12   1 − V12   V12\nThe assumption that U = I is not a serious restriction because, if U is non-\nsingular, an equivalent method can be constructed with U = I and B and V\nreplaced by U B and U V U −1 , respectively. The form chosen for V makes it of\nrank 1 and preconsistent for the vector c = [ 1 1 ] .\n   By the stage order conditions, it is found that\n\n                                                    1\n            φ(z) = (I − zA) exp(cz) =                                .\n                                          1 + (1 − a21 )z + 12 z 2\n\nTo find B, we have\n\n                  Bz exp(cz) = (exp(z)I − V )φ(z) + O(z 3 ).\n\nWrite the coefficients of z and z 2 in separate columns and we deduce that\n                                 1 − V12 + a21 V12               2 (1 − V12 )\n                                                                 1\n                  1 0\n          B             =                                                             ,\n                  1 1         2 − V12 − a21 + a21 V12          2 − a21 − 12 V12\nso that\n                            2 − 2 V12 + a21 V12       2 (1 − V12 )\n                            1      1                  1\n                   B=                                                          .\n                              − 12 V12 + a21 V12    2 − a21 − 12 V12\nTo achieve RK stability, impose the requirement that the stability function\nV + zB(I − zA)−1 has zero determinant and it is found that a21 = 2 and\nV12 = 12 .\n  This gives the method\n                                                  \n                                    0     0 1 0\n                                   2     0 0 1 \n                       A U                        \n                               = 5              1 \n                                                     .               (542b)\n                       B V          4\n                                           1\n                                           4\n                                              1\n                                              2  2\n                                                   \n                                     3\n                                     4  − 14 12 12\n  To derive a type 2 method with RK stability, carry out a similar calculation\nbut with\n                                    λ 0\n                             A=               .\n                                   a21 λ\nIn this case, the method is\n                                                                                        \n                                λ                    0                  1            0\n                            2\n                                                                                     1 \n      A       U                                     λ                  0                \n                   =  5−2λ+12λ\n                           1+2λ\n                                2\n                                  +8λ3                                                   ,\n      B       V           4+8λ                    4 −λ\n                                                   1    2             1\n                                                                      2 +λ\n                                                                                   1\n                                                                                   2 − λ \n                        3−2λ+20λ2 +8λ3      −1+10λ−12λ2 −8λ3\n                                                                                   2 −λ\n                                                                      1            1\n                            4+8λ                 4+8λ                 2 +λ\n                   √\nor, with λ = 1 − 12 2, for L-stability,\n                              √                                           \n                           1 − √22       0√              1           0\n                        6+2 2                                          \n            A U                      1 −   2\n                                                         0           1  \n                     =       7 √       √ 2                √      √     .                (542c)\n                        73−34 2       4 2−5            3− 2        2−1 \n            B V             28     √    4  √             2√      √2    \n                               87−48 2    34 2−45       3− 2         2−1\n                                  28         28           2          2\n\n  Type 3 and type 4 methods do not exist with RK stability, and will not be\nexplored in detail in this section. We do, however, give a single example of\neach. For the type 3 method we have\n                                                      \n                                      0    0    1 0\n                                   0           0 1 \n                      A U                 0           \n                                = 3                   .             (542d)\n                      B V          − 8 − 38 − 34 74 \n                                          − 78      9\n                                                    8   − 34     7\n                                                                 4\n\nThis method is designed for parallel computation in the sense that the two\nstages do not depend on each other, because A = 0, and hence they can be\nevaluated in parallel. Is there any advantage in the use of methods like this?\nOf course, the answer will depend on the specific coefficients in the method\nbut, in the case of (542d), we might wish to compare it with the type 1 method\ngiven by (542b) whose error constant has magnitude 16 . In contrast, (542d) has\nerror constant 19                           19\n                24 which is equivalent to 96 when adjusted for the sequential\ncost of one f evaluation per step. Thus, in this case, the type 3 method is less\nefficient even under the assumption of perfect speed-up.\n  The type 4 method\n                               √                              \n                              3− 3\n                                          0      1        0\n                               2         √                    \n             A U               0       3− 3\n                                                 0        1    \n                       =  18−11\n                                  √\n                                    3 7\n                                       √2\n                                         3−12  3−2\n                                                  √\n                                                    3   2\n                                                         √\n                                                           3−1\n                                                               \n                                                                        (542e)\n             B V               √\n                                4     √   4      √\n                                                 2      √ 2    \n                           22−13 3   9 3−12   3−2 3    2 3−1\n                              4         4       2        2\n\nis found to be A-stable with the additional property that its stability matrix\nhas zero spectral radius at infinity. Just as for the type 3 method we have\nintroduced, while the advantages of this type of method are not clear, results\nfound by Singh (1999) are encouraging.\n   For type 1 and 2 methods, increasing order presents great challenges in the\nsolution of the order conditions combined with RK stability requirements. For\nan account of the techniques used to find particular methods of orders up to\n8, see Butcher and Jackiewicz (1996, 1998).\n\nThe characteristic feature of explicit Runge–Kutta methods, that only\nminimal information computed in a step is passed on as input to the next\nstep, is a great advantage of this type of method but it is also a perceived\ndisadvantage. The advantage lies in excellent stability properties, while the\ndisadvantage lies in the low stage order to which the second and later stages\nare restricted. Almost Runge–Kutta methods (ARK) are an attempt to retain\nthe advantage but overcome some of the disadvantages.\n  Recall the method (505a). Evaluate its stability matrix and we find\n\n M (z) = V + zB(I − zA)−1 U\n                                                                       \n     1 + 56 z + 13 z 2 + 48\n                          1 3\n                            z    1   1      7 2    1 3\n                                 6 + 6 z + 48 z + 48 z\n                                                            1 2     1 3\n                                                           48 z + 96 z\n                                                                   1 4 \n=  z + 56 z 2 + 13 z 3 + 48\n                           1 4\n                             z 1     1 2     7 3    1 4\n                               6 z + 6 z + 48 z + 48 z     48 z + 96 z \n                                                            1 3\n                                                                          .\n    z + 2 z + 12 z + 24 z −1 + 2 z − 12 z + 24 z + 24 z\n        1 2       7 3      1 4     1     1 2    5 3    1 4      1 4\n                                                               48 z\n\nThe eigenvalues of this matrix are\n                          ;                            <\n                                   1  1      1\n              σ(M (z)) = 1 + z + z 2 + z 3 + z 4 , 0, 0 ,\n                                   2  6     24\n\nTable 543(I)        Calculation of stages and stage derivatives for the method (505a)\n\n                                                 \u0003 \u0004                    \u0003 \u0004        \u0003       \u0004        \u0002\n       α     α(∅) α( ) α( ) α( )             α         α( )         α          α               α\n       1        1      0     0         0      0             0           0          0               0\n      D         0      1     0         0      0             0           0          0               0\n      ξ3        0      0     1         θ3     θ4            θ5          θ6         θ7              θ8\n                             1         θ3     θ4            θ5        θ6          θ7              θ8\n      η1        1      1     2         2       2            2          2           2               2\n                                               1                       1          θ3              θ4\n     η1 D       0      1     1         1       2            1          2           2               2\n                       1     1        1+θ3   1+2θ4      1+θ5        1+2θ6      θ3 +2θ7         θ4 +2θ8\n      η2        1      2     8         16     32         16           32          32              32\n                             1          1      1          1            1        1+θ3           1+2θ4\n     η2 D       0      1     2          4      8          8           16          16              32\n      η3        1      1     1\n                             2\n                                      1−θ3\n                                        4\n                                             1−2θ4\n                                               8       − θ45        − θ46       1−2θ7\n                                                                                   8\n                                                                                                1−4θ8\n                                                                                                  16\n                                               1                       1        1−θ3            1−2θ4\n     η3 D       0      1     1         1       2            1          2           4               8\n                             1         1       1            1          1           1               1\n      η4        1      1     2         3       6            4          8          12              24\n                                               1                       1           1               1\n     η4 D       0      1     1         1       2            1          2           3               6\n     E ξ\u00181      1      1     1\n                             2\n                                       1\n                                       3\n                                               1\n                                               6\n                                                            1\n                                                            4\n                                                                       1\n                                                                       8\n                                                                                   1\n                                                                                  12\n                                                                                                   1\n                                                                                                  24\n     E ξ\u00182      0      1     1     1           1\n                                               2            1          1\n                                                                       2\n                                                                                   1\n                                                                                   3\n                                                                                                   1\n                                                                                                   6\n     E ξ\u00183      0      0     1     1           1\n                                               2            1          1\n                                                                       2\n                                                                                   1\n                                                                                   2\n                                                                                                   1\n                                                                                                   4\n      ξ\u00181       1      0     0     0             0          0           0          0               0\n      ξ\u00182       0      1     0     0             0          0           0          0               0\n      ξ\u00183       0      0     1    −1         − 12           1           1\n                                                                        2\n                                                                                       1\n                                                                                       2\n                                                                                                   1\n                                                                                                   4\n\n\nso that it is RK stable. Other features of the method are that the minimal\ninformation passed between steps is enough to push the stage order up to\n2, and that the third input and output vector need not be evaluated to\ngreat accuracy because of what will be called ‘annihilation conditions’. These\n                                                               [n−1]\nconditions ensure that errors like O(h3 ) in the input vector y3     only affect\nthe output results by O(h5 ).\n   Assume that the three input approximations are represented by ξ1 = 1,\nξ2 = D and ξ3 , where we assume only that\n                       ξ3 (∅) = ξ3 ( ) = 0           and         ξ3 ( ) = 1.\n\n                                    = hy \u0002 (xn−1 ), y3  = h2 y \u0002\u0002 (xn−1 ) + O(h3 ). The\n        [n−1]                 [n−1]                        [n−1]\nThus, y1          = y(xn−1 ), y2\noutput approximations are computed by first evaluating the representations\nof the stage values and stage derivatives. Since we are only working to order\n5 accuracy in the output results, it will be sufficient to evaluate the stages\nonly up to order 4. Denote the representations of the four stage values by ηi ,\ni = 1, 2, 3, 4. Also, denote the values of ξ3 (t) for trees of orders 3 and 4 by θi ,\ni = 3, 4, . . . , 8. Details of the calculation of stage values are shown in Table\n543(I).\n\nTable 543(II)             Output and input values for (505a) evaluated at fifth order trees\n\n                                                   \u0002                                  \u0002          \u0002       \u000e \u000f\n                      \u0003     \u0004        \u0003   \u0004                  \u0003     \u0004       \u0003   \u0004\n   α      α(     )α              α            α         α             α           α         α           α\n   ξ3      θ9         θ10          θ11          θ12      θ13            θ14         θ15      θ16         θ17\n   ξ\u00181      1\n           120\n                       1\n                      240       − 1+5θ\n                                   240\n                                       3\n                                             − 1+10θ\n                                                480\n                                                    4        1\n                                                            480       − 120\n                                                                          1\n                                                                                  − 240\n                                                                                      1     1+5θ3\n                                                                                             240\n                                                                                                        1+10θ4\n                                                                                                         480\n   ξ\u00182     0          0             0            0          0            0           0          0           0\n   ξ\u00183    −1      − 12            − 13         − 16     − 14           − 12        − 14     − 14        − 18\n\n\n  The output results are intended to represent approximations to Eξ1 , Eξ2\nand Eξ3 . Write the representation of yi by E ξ\u0018i , for i = 1, 2, 3. We calculate ξ\u0018i\n                                                  [n]\n\nup to order 5 trees so that we not only verify fourth order behaviour, but also\nobtain information on the principal terms in the local truncation error. As a\nfirst step in this analysis, we note that, to order 4, E ξ\u00181 = E and hence ξ\u00181 = 1.\nSimilarly ξ\u00182 = D to fourth order. Up to fourth order, we have calculated the\nvalue of E ξ\u00183 = − 13 η1 D − 23 η3 D + 2η4 D − ξ2 and ξ\u00183 is also given in Table\n543(I).\n  If the calculations are repeated using the specific values [θ3 , θ4 , θ5 , θ6 , θ7 , θ8 ]\n= [−1, − 12 , 1, 12 , 12 , 14 ], then we have ξ\u0018i = ξi + H4 so that, relative to a starting\nmethod defined by ξi , i = 1, 2, 3, the method has order 4. However, a starting\nvalue defined for arbitrary values of θ3 , θ4 , . . . , θ8 produces the specific choice\ngiven by the components of ξ\u00183 after a single step. To investigate this method\nmore precisely, the values of ξ\u00181 , ξ\u00182 and ξ\u00183 have been calculated also for fifth\norder trees and these are shown in Table 543(II).\n  A reading of this table suggests that the method not only exhibits fourth\norder behaviour but also has reliable behaviour in its principal error terms.\nThis is in spite of the fact that the starting method provides incorrect\ncontributions of third and higher order elementary differentials, because these\ninaccuracies have no long term effect. The components of the error terms in\nthe first output component depend on θ3 and θ4 after a single step, but this\neffect disappears in later steps.\n  In Subsection 544 we consider order 3 ARK methods, and we then return\nin Subsection 545 to a more detailed study of order 4 methods. However, we\nfirst discuss some questions which apply to both orders.\n  Because we will require methods in these families to have stage order 2, the\nmatrix U will need to be of the form\n                                     U = [ 1 c − A1         2 c − Ac\n                                                            1 2\n                                                                     ]                                  (543a)\nand we will assume this throughout. We also note that the stability matrix\nM (z) = V +zB(I −zA)−1 U is always singular because ze1 −e2 is an eigenvalue\nof this matrix. We see this by observing that zep (I − zA) = (−ze1 + e2 )B and\n(ze1 − e2 )V = zep U .",
+  "statement_latex": "\\begin{definition}\nA general linear method $(A, U, B, V)$ has \\emph{Runge--Kutta stability} (RK stability) if its characteristic polynomial, given by $\\Phi(w,z)=\\det(wI-V-zB(I-zA)^{-1}U)$, has the form\n\\[\n\\Phi(w,z) = w^{r-1}\\bigl(w - R(z)\\bigr).\n\\]\nThe rational function $R(z)$ is the \\emph{stability function} of the method.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe context discusses the stability properties of general linear methods, introducing the stability matrix \\(M(z)\\) and its characteristic polynomial \\(\\Phi(w, z)\\). The goal is to design methods whose stability resembles that of Runge-Kutta methods.\n\nVariables:\n\\begin{itemize}\n    \\item \\(M(z)\\): stability matrix for a general linear method, \\(M(z) = V + zB(I - zA)^{-1} U\\)\n    \\item \\(\\Phi(w, z)\\): characteristic polynomial of \\(M(z)\\), \\(\\Phi(w, z) = \\det(wI - M(z))\\)\n    \\item \\(R(z)\\): stability function (a rational function)\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n\\Phi(w, z) = \\det(wI - M(z)) \\tag{542a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "M(z)",
+      "definition": "stability matrix for a general linear method, M(z) = V + zB(I - zA)^{-1} U"
+    },
+    {
+      "name": "Φ(w, z)",
+      "definition": "characteristic polynomial of M(z), Φ(w, z) = det(wI - M(z))"
+    },
+    {
+      "name": "R(z)",
+      "definition": "stability function (a rational function)"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "542a",
+      "content": "Φ(w, z) = det(wI - M(z))"
+    }
+  ],
+  "preamble": "The context discusses the stability properties of general linear methods, introducing the stability matrix M(z) and its characteristic polynomial Φ(w, z). The goal is to design methods whose stability resembles that of Runge-Kutta methods.",
+  "introduces": [
+    "stability function",
+    "Runge–Kutta stability",
+    "RK stability",
+    "annihilation conditions"
+  ],
+  "dependencies": [
+    {
+      "id": "def:310A",
+      "kind": "definition",
+      "number": "310A",
+      "name": "elementary differential",
+      "edge_type": "uses_concept",
+      "context": "elementary differentials"
+    },
+    {
+      "id": "def:406A",
+      "kind": "definition",
+      "number": "406A",
+      "name": "local truncation error",
+      "edge_type": "uses_concept",
+      "context": "local truncation error"
+    },
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "uses_concept",
+      "context": "stability function"
+    },
+    {
+      "id": "def:520A",
+      "kind": "definition",
+      "number": "520A",
+      "name": "Introduction",
+      "edge_type": "uses_concept",
+      "context": "stability matrix"
+    },
+    {
+      "id": "def:510A",
+      "kind": "definition",
+      "number": "510A",
+      "name": "preconsistency vector",
+      "edge_type": "uses_concept",
+      "context": "preconsistent"
+    },
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "def:520E",
+      "kind": "definition",
+      "number": "520E",
+      "name": "A-stable",
+      "edge_type": "uses_concept",
+      "context": "a-stable"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    },
+    {
+      "id": "def:510B",
+      "kind": "definition",
+      "number": "510B",
+      "name": "consistent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:512A",
+      "kind": "definition",
+      "number": "512A",
+      "name": "convergent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:520B",
+      "kind": "theorem",
+      "number": "520B",
+      "name": "Stability Matrix for Linear Differential Equation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:406A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:512A",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:356C",
+    "thm:520B"
+  ],
+  "dependents": [
+    "def:551A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

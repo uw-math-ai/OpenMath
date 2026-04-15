@@ -1,0 +1,97 @@
+{
+  "id": "thm:443B",
+  "kind": "theorem",
+  "number": "443B",
+  "name": "A stability error constant upper bound",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "44",
+  "subsection": "441",
+  "subsection_title": "Maximum order for a convergent k-step method",
+  "page": 381,
+  "statement_text": "Let C denote the error constant for an A-stable second order\nlinear multistep method. Then\n                                          1\n                                      C≤−    ,\n                                          12\nwith equality only in the case of the second order Adams–Moulton method.",
+  "statement_latex": "\\begin{theorem}[443B]\nLet \\( C \\) denote the error constant for an A-stable second order linear multistep method. Then\n\\[\nC \\leq -\\frac{1}{12},\n\\]\nwith equality only in the case of the second order Adams--Moulton method.\n\\end{theorem}",
+  "proof_text": "Proof. Consider the relation\n                                \u000e              \u000f\n                                   1 + 12 z\n                               Φ w          , z = 0.\n                                   1 − 12 z\nOn the principal sheet, w = 1 − (C + 12  1\n                                           )z 3 + O(z 4 ). It is not possible that\n      1\nC + 12 = 0, because there would then be at least four up arrows emanating\nfrom 0 and, as in the proof of Theorem 443A, this is impossible because there\n                                                                           1\nis at most one pole in the right half-plane. On the other hand, if C + 12     > 0,\nthere would be at least two up arrows emanating from zero in the positive\ndirection and these must cross the imaginary axis.",
+  "proof_latex": "\\begin{proof}\nConsider the relation\n\\[\n\\Phi\\left( w \\frac{1 + \\frac{1}{2}z}{1 - \\frac{1}{2}z}, z \\right) = 0.\n\\]\nOn the principal sheet, \\( w = 1 - \\left( C + \\frac{1}{12} \\right) z^3 + O(z^4) \\). It is not possible that \\( C + \\frac{1}{12} = 0 \\), because there would then be at least four up arrows emanating from 0 and, as in the proof of Theorem~\\ref{thm:443A}, this is impossible because there is at most one pole in the right half-plane. On the other hand, if \\( C + \\frac{1}{12} > 0 \\), there would be at least two up arrows emanating from zero in the positive direction and these must cross the imaginary axis.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns $A$-stable second order linear multistep methods. The preceding text discusses error constants and specifically mentions the second order Adams--Moulton method, which has error constant $-1/12$, and uses the stability function $(1 + \\frac{1}{2}z)/(1 - \\frac{1}{2}z)$ as a reference. Let $C$ denote the error constant for an $A$-stable second order linear multistep method.",
+  "variables": [
+    {
+      "name": "C",
+      "definition": "error constant for an A-stable second order linear multistep method"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns A-stable second order linear multistep methods. The preceding text discusses error constants and specifically mentions the second order Adams–Moulton method, which has error constant -1/12, and uses the stability function (1 + 1/2 z)/(1 - 1/2 z) as a reference.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:443A",
+      "kind": "theorem",
+      "number": "443A",
+      "name": "Order arrows for linear multistep methods",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 443A"
+    },
+    {
+      "id": "def:442A",
+      "kind": "definition",
+      "number": "442A",
+      "name": "principal sheet",
+      "edge_type": "uses_concept",
+      "context": "principal sheet"
+    },
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "up arrows"
+    },
+    {
+      "id": "thm:355C",
+      "kind": "theorem",
+      "number": "355C",
+      "name": "Arrow Termination at Poles Zeros or Infinity",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:355A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:351B",
+    "thm:355B",
+    "thm:355C",
+    "thm:355D",
+    "thm:355E",
+    "thm:355F",
+    "thm:355G",
+    "thm:356C",
+    "thm:443A"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

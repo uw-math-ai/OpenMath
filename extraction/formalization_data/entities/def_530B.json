@@ -1,0 +1,68 @@
+{
+  "id": "def:530B",
+  "kind": "definition",
+  "number": "530B",
+  "name": "Order relative to starting method",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "530",
+  "subsection_title": "Possible definitions of order",
+  "page": 432,
+  "statement_text": "Consider a general linear method M and a non-degenerate\nstarting method S. The method M has order p relative to S if the results found\nfrom SM and ES agree to within O(p+1 ).",
+  "statement_latex": "\\begin{definition}\nConsider a general linear method $\\mathcal{M}$ and a non-degenerate starting method $\\mathcal{S}$. The method $\\mathcal{M}$ has order $p$ relative to $\\mathcal{S}$ if the results found from $\\mathcal{S}\\mathcal{M}$ and $\\mathcal{E}\\mathcal{S}$ agree to within $O(h^{p+1})$.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe context involves analyzing the order of a general linear method $M$ when used with a starting method $S$. $S$ is defined by generalized Runge--Kutta methods, and non-degeneracy requires at least one $b_{0}^{(i)} \\neq 0$. $SM$ and $ES$ are vectors of approximations whose Taylor expansions are compared to define order.\n\nVariables:\n\\begin{itemize}\n    \\item $M$: a general linear method\n    \\item $S$: a starting method defined by generalized Runge--Kutta methods (530a) for $i = 1,2,\\dots,r$\n    \\item $SM$: vector of results from carrying out a step of $M$ based on initial approximations computed using $S$\n    \\item $ES$: vector of approximations formed by advancing the exact solution forward a time step $h$ and then applying each member of $S$ to the result\n    \\item $p$: order of the method (a non-negative integer)\n\\end{itemize}\n\nReferenced equations:\n\\begin{itemize}\n    \\item (530a): generalized Runge--Kutta methods defining the starting method $S$, with coefficients including $b_{0}^{(i)}$\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "M",
+      "definition": "a general linear method"
+    },
+    {
+      "name": "S",
+      "definition": "a starting method defined by generalized Runge-Kutta methods (530a) for i = 1,2,...,r"
+    },
+    {
+      "name": "SM",
+      "definition": "vector of results from carrying out a step of M based on initial approximations computed using S"
+    },
+    {
+      "name": "ES",
+      "definition": "vector of approximations formed by advancing the exact solution forward a time step h and then applying each member of S to the result"
+    },
+    {
+      "name": "p",
+      "definition": "order of the method (a non-negative integer)"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "530a",
+      "content": "generalized Runge-Kutta methods defining the starting method S, with coefficients including b0^{(i)}"
+    }
+  ],
+  "preamble": "The context involves analyzing the order of a general linear method M when used with a starting method S. S is defined by generalized Runge-Kutta methods, and non-degeneracy requires at least one b0^{(i)} ≠ 0. SM and ES are vectors of approximations whose Taylor expansions are compared to define order.",
+  "introduces": [
+    "order relative to a starting method"
+  ],
+  "dependencies": [
+    {
+      "id": "def:530A",
+      "kind": "definition",
+      "number": "530A",
+      "name": "non-degenerate",
+      "edge_type": "uses_concept",
+      "context": "non-degenerate"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:530A"
+  ],
+  "dependents": [
+    "def:530C"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

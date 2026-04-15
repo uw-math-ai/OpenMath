@@ -1,0 +1,113 @@
+{
+  "id": "thm:111A",
+  "kind": "theorem",
+  "number": "111A",
+  "name": "inhomogeneous term",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "11",
+  "subsection": "111",
+  "subsection_title": "Linear systems of differential equations",
+  "page": 45,
+  "statement_text": "If y\u0018 is a solution to (111a) and y1 , y2 , . . . , yk are solutions\nto (111b), then for any constants α1 , α2 , . . . , αk , the function y given by\n\n                                            \u0014\n                                            k\n                           y(x) = y\u0018(x) +         αi yi (x),\n                                            i=1\n\nis a solution to (111a).\nThe way this result is used is to attempt to find the solution which matches\na given initial value, by combining known solutions.\n  Many linear problems are naturally formulated in the form of a single high\norder differential equation\n\n Y (m) (x) − C1 (x)Y (m−1) (x) − C2 (x)Y (m−2) (x) − · · · − Cm (x)Y (x) = g(x).\n                                                                           (111c)\n\n  By identifying Y (x) = y1 (x), Y \u0002 (x) = y2 (x), . . . , Y (m−1) = ym (x), we can\nrewrite the system in the form\n                                                     \n                        y1 (x)               y1 (x)\n                   d                     y (x) \n                      y2 (x)             2           \n                          ..   = A(x)        ..       + φ(x),\n                  dx       .                  .      \n                        ym (x)               ym (x)\nwhere the ‘companion matrix’ A(x) and the ‘inhomogeneous term’ φ(x) are\ngiven by\n                                                                 \n             0       1         0      ···     0                  0\n            0       0         1      ···     0              0 \n                                                                 \n            0       0         0      ···     0              0 \n                                                                 \nA(x) =      ..      ..        ..             ..  , φ(x) =  ..  .\n             .       .         .              .             . \n            0       0         0      ···     1              0 \n           Cm (x) Cm−1 (x) Cm−2 (x) · · ·            C1 (x)                 g(x)\nWhen A(x) = A in (111b) is constant, then to each eigenvalue λ of A, with\ncorresponding eigenvector v, there exists a solution given by\n                                 y(x) = exp(λx)v.                            (111d)\nWhen a complete set of eigenvectors does not exist, but corresponding to λ\nthere is a chain of generalized eigenvectors\n      Av1 = λv1 + v,     Av2 = λv2 + v1 ,     ...,    Avk−1 = λvk−1 + vk−2 ,\nthen there is a chain of additional independent solutions to append to (111d):\n  y1 = x exp(λx)v1 ,    y2 = x2 exp(λx)v2 ,    ...,     yk−1 = xk−1 exp(λx)vk−1 .\nIn the special case in which A is a companion matrix, so that the system is\nequivalent to a high order equation in a single variable, as in (111c), with\nC1 (x) = C1 , C2 (x) = C2 , . . . , Cm (x) = Cm , each a constant, the characteristic\npolynomial of A is\n               P (λ) = λm − C1 λm−1 − C2 λm−2 − · · · − Cm = 0.\nFor this special case, P (λ) is also the minimal polynomial, and repeated\nzeros always correspond to incomplete eigenvector spaces and the need\nto use generalized eigenvectors. Also, in this special case, the eigenvector\ncorresponding to λ, together with the generalized eigenvectors if they exist,\nare\n                                                               \n          1                     0                         0\n       λ                     1                       0         \n                                                               \n v=     λ  2               2λ                       1         , . . . .\n           .   , v1 =         .       , v2 =           .        \n          ..                 ..                       ..       \n                                                   (m−1)(m−2) m−3\n        λ m−1\n                          (m − 1)λ  m−2\n                                                        2     λ",
+  "statement_latex": "\\begin{theorem}\nIf $\\hat{y}$ is a solution to \\eqref{eq:111a} and $y_1, y_2, \\dots, y_k$ are solutions to \\eqref{eq:111b}, then for any constants $\\alpha_1, \\alpha_2, \\dots, \\alpha_k$, the function $y$ given by\n\\[\ny(x) = \\hat{y}(x) + \\sum_{i=1}^{k} \\alpha_i y_i(x),\n\\]\nis a solution to \\eqref{eq:111a}.\n\nThe way this result is used is to attempt to find the solution which matches a given initial value, by combining known solutions.\n\nMany linear problems are naturally formulated in the form of a single high order differential equation\n\\[\nY^{(m)}(x) - C_1(x) Y^{(m-1)}(x) - C_2(x) Y^{(m-2)}(x) - \\cdots - C_m(x) Y(x) = g(x). \\tag{111c}\n\\]\n\nBy identifying $Y(x) = y_1(x)$, $Y'(x) = y_2(x)$, $\\dots$, $Y^{(m-1)} = y_m(x)$, we can rewrite the system in the form\n\\[\n\\frac{d}{dx} \\begin{bmatrix} y_1(x) \\\\ y_2(x) \\\\ \\vdots \\\\ y_m(x) \\end{bmatrix} = A(x) \\begin{bmatrix} y_1(x) \\\\ y_2(x) \\\\ \\vdots \\\\ y_m(x) \\end{bmatrix} + \\phi(x),\n\\]\nwhere the `companion matrix' $A(x)$ and the `inhomogeneous term' $\\phi(x)$ are given by\n\\[\nA(x) = \\begin{bmatrix}\n0 & 1 & 0 & \\cdots & 0 \\\\\n0 & 0 & 1 & \\cdots & 0 \\\\\n0 & 0 & 0 & \\cdots & 0 \\\\\n\\vdots & \\vdots & \\vdots & & \\vdots \\\\\n0 & 0 & 0 & \\cdots & 1 \\\\\nC_m(x) & C_{m-1}(x) & C_{m-2}(x) & \\cdots & C_1(x)\n\\end{bmatrix}, \\quad \\phi(x) = \\begin{bmatrix} 0 \\\\ 0 \\\\ 0 \\\\ \\vdots \\\\ 0 \\\\ g(x) \\end{bmatrix}.\n\\]\n\nWhen $A(x) = A$ in \\eqref{eq:111b} is constant, then to each eigenvalue $\\lambda$ of $A$, with corresponding eigenvector $v$, there exists a solution given by\n\\[\ny(x) = \\exp(\\lambda x) v. \\tag{111d}\n\\]\n\nWhen a complete set of eigenvectors does not exist, but corresponding to $\\lambda$ there is a chain of generalized eigenvectors\n\\[\nA v_1 = \\lambda v_1 + v, \\quad A v_2 = \\lambda v_2 + v_1, \\quad \\dots, \\quad A v_{k-1} = \\lambda v_{k-1} + v_{k-2},\n\\]\nthen there is a chain of additional independent solutions to append to \\eqref{eq:111d}:\n\\[\ny_1 = x \\exp(\\lambda x) v_1, \\quad y_2 = x^2 \\exp(\\lambda x) v_2, \\quad \\dots, \\quad y_{k-1} = x^{k-1} \\exp(\\lambda x) v_{k-1}.\n\\]\n\nIn the special case in which $A$ is a companion matrix, so that the system is equivalent to a high order equation in a single variable, as in \\eqref{eq:111c}, with $C_1(x) = C_1$, $C_2(x) = C_2$, $\\dots$, $C_m(x) = C_m$, each a constant, the characteristic polynomial of $A$ is\n\\[\nP(\\lambda) = \\lambda^m - C_1 \\lambda^{m-1} - C_2 \\lambda^{m-2} - \\cdots - C_m = 0.\n\\]\n\nFor this special case, $P(\\lambda)$ is also the minimal polynomial, and repeated zeros always correspond to incomplete eigenvector spaces and the need to use generalized eigenvectors. Also, in this special case, the eigenvector corresponding to $\\lambda$, together with the generalized eigenvectors if they exist, are\n\\[\nv = \\begin{bmatrix} 1 \\\\ \\lambda \\\\ \\lambda^2 \\\\ \\vdots \\\\ \\lambda^{m-1} \\end{bmatrix}, \\quad v_1 = \\begin{bmatrix} 0 \\\\ 1 \\\\ 2\\lambda \\\\ \\vdots \\\\ (m-1)\\lambda^{m-2} \\end{bmatrix}, \\quad v_2 = \\begin{bmatrix} 0 \\\\ 0 \\\\ 1 \\\\ \\vdots \\\\ \\frac{(m-1)(m-2)}{2} \\lambda^{m-3} \\end{bmatrix}, \\dots .\n\\]\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns linear differential equation systems. The standard form is an inhomogeneous system \\eqref{111a}, and its corresponding homogeneous system is \\eqref{111b}. The superposition principle allows combining solutions.\n\nVariables:\n\\begin{itemize}\n    \\item $\\tilde{y}$: a particular solution to the inhomogeneous linear differential equation system \\eqref{111a}\n    \\item $y_i$: solutions to the homogeneous linear differential equation system \\eqref{111b}, for $i = 1, 2, \\dots, k$\n    \\item $\\alpha_i$: constants, for $i = 1, 2, \\dots, k$\n\\end{itemize}\n\nReferenced equations:\n\\begin{align}\n    \\frac{dy}{dx} &= A(x)y + \\phi(x) \\label{111a} \\\\\n    \\frac{dy}{dx} &= A(x)y \\label{111b}\n\\end{align}",
+  "variables": [
+    {
+      "name": "ỹ",
+      "definition": "a particular solution to the inhomogeneous linear differential equation system (111a)"
+    },
+    {
+      "name": "y_i",
+      "definition": "solutions to the homogeneous linear differential equation system (111b), for i = 1, 2, ..., k"
+    },
+    {
+      "name": "α_i",
+      "definition": "constants, for i = 1, 2, ..., k"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "111a",
+      "content": "dy/dx = A(x)y + φ(x), the standard form of a linear differential equation system"
+    },
+    {
+      "tag": "111b",
+      "content": "dy/dx = A(x)y, the corresponding homogeneous system"
+    }
+  ],
+  "preamble": "The theorem concerns linear differential equation systems. The standard form is an inhomogeneous system (111a), and its corresponding homogeneous system is (111b). The superposition principle allows combining solutions.",
+  "introduces": [
+    "companion matrix",
+    "inhomogeneous term"
+  ],
+  "dependencies": [
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "thm:110C",
+      "kind": "theorem",
+      "number": "110C",
+      "name": "Existence and uniqueness of solutions",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:520A",
+      "kind": "definition",
+      "number": "520A",
+      "name": "Introduction",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:520B",
+      "kind": "theorem",
+      "number": "520B",
+      "name": "Stability Matrix for Linear Differential Equation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "lem:110B",
+    "thm:110C",
+    "thm:356C",
+    "thm:520B"
+  ],
+  "dependents": [
+    "thm:140A",
+    "thm:550B",
+    "thm:553A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

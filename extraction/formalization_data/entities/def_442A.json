@@ -1,0 +1,115 @@
+{
+  "id": "def:442A",
+  "kind": "definition",
+  "number": "442A",
+  "name": "principal sheet",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "44",
+  "subsection": "441",
+  "subsection_title": "Maximum order for a convergent k-step method",
+  "page": 377,
+  "statement_text": "The function Φ is A-stable if RΦ has no intersection with\nthe product set\n\n                   {w ∈ C : |w| > 1} × {z ∈ C : Re(z) ≤ 0}.\n\nThis definition is equivalent to the requirement that for any z in the left half\ncomplex plane, all eigenvalues of the stability matrix are in the closed unit\ndisc. Just as in the case of Runge–Kutta methods, for which the Riemann\nsurface has only a single sheet, scaling the eigenvalues by exp(−z) does not\naffect the behaviour on the imaginary axis or introduce or remove any poles.\n\n\n\n\n         Figure 442(i)     Order star for the second order BDF method\n\n\n\n\n          Figure 442(ii)    Order star for the third order BDF method\n\n\nHence we can consider a modified Riemann surface based on the function\nΦ(w exp(z), z). Just as for the Runge–Kutta case, one of the sheets, known as\nthe ‘principal sheet’, behaves like w = 1 + O(z p+1 ) and order stars appear.\n  We illustrate this by considering the case of the second order backward\ndifference method, for which\n                                  2 \u0002                4           1\n           Φ(w exp(z), z) = 1 − z exp(2z)w2 − exp(z)w + ,\n                                   3                  3           3\nand the third order backward difference method, for which\n                       6 \u0002             18               9          2\n Φ(w exp(z), z) = 1 − z exp(3z)w3 −        exp(2z)w2 +     exp(z)w − .\n                       11               11              11          11\nFor the second order case, shown in Figure 442(i), a pole at z = 32 is marked,\ntogether with a branch point at z = − 12 . Note that for z ∈ (∞, − 21 ), the two\nroots of the equation Φ(w exp(z), z) = 0, for all z in this real interval, have\nequal magnitudes. In this figure, light shading grey indicates that a region\n\nhas exactly one of the sheets with magnitude greater than 1. A darker grey is\nused to indicate that both sheets have magnitudes greater than 1.\n   This method is A-stable, as we already know. This can be seen from the\norder star by noting that the only pole is in the right half-plane, and that the\nfingers do not intersect the imaginary axis. On the other hand, the third order\nmethod (Figure 442(ii)) is not A-stable because, in this case, the intersection\nof the imaginary axis with one the fingers is now not empty. Note that for\nthe third order case, there is a single pole at z = 116 and that three shades\nof grey are used to distinguish regions where one, two or three sheets have\nmagnitudes greater than 1.\n   Although A-stable Runge–Kutta methods can have arbitrarily high orders,\nthe order of A-stable linear multistep methods is restricted to 2. This was first\nproved using order stars (Wanner, Hairer and Nørsett, 1978), but we will use\nthe closely related approach of order arrows (Butcher, 2002). These will be\nintroduced in the Riemann surface case in the next subsection.\n\nGiven a relationship between complex numbers z and w defined by an equation\nof the form\n                              Φ(w exp(z), z) = 0,\n\nwe can define order arrows as the set of points for which w is real and positive.\nIn particular, the order arrows that emanate from zero correspond to w with\nincreasing real parts (the up arrows) and, on these arrows, w ∈ (1, ∞), or\ndecreasing real parts (the down arrows) and for which w ∈ [0, 1).\n   Order arrows on Riemann surfaces are illustrated for the BDF2 method\n(Figure 443(i)) and for the BDF3 method (Figure 443(ii)). Just as for Runge–\nKutta methods, the up arrows either terminate at the pole z = β0−1 or at −∞,\nand down arrows terminate at the zero z = −αk βk−1 or at +∞. In interpreting\nthese remarks, we need to allow for the possibility that the path traced out by\nan up or down arrow meets another arrow at a branch point of the Riemann\nsurface. However, this special case is easily included in the general rule with a\npossible freedom to choose between two continuations of the incoming arrow.\n   The ‘principal sheet’ of the Riemann surface will refer to a neighbourhood\nof (0, 1) for which the relationship between z and w is injective; that is,\nit behaves as though w is a function of z. As long as Φ(w, 0) has only a\nsingle zero with value w = 1, this idea makes sense. On the principal sheet,\nw exp(z) = exp(z) + O(z p+1 ), and the behaviour at zero is similar to what\nhappens for one-step methods. These simple ideas are enough to prove the\nDahlquist second order bound:",
+  "statement_latex": "\\begin{definition}\nThe function $\\Phi$ is \\textit{A-stable} if $R_\\Phi$ has no intersection with the product set\n\\[\n\\{w \\in \\mathbb{C} : |w| > 1\\} \\times \\{z \\in \\mathbb{C} : \\operatorname{Re}(z) \\leq 0\\}.\n\\]\nThis definition is equivalent to the requirement that for any $z$ in the left half complex plane, all eigenvalues of the stability matrix are in the closed unit disc. Just as in the case of Runge--Kutta methods, for which the Riemann surface has only a single sheet, scaling the eigenvalues by $\\exp(-z)$ does not affect the behaviour on the imaginary axis or introduce or remove any poles.\n\n\\begin{center}\n\\textbf{Figure 442(i)} \\quad Order star for the second order BDF method\n\n\\textbf{Figure 442(ii)} \\quad Order star for the third order BDF method\n\\end{center}\n\nHence we can consider a modified Riemann surface based on the function $\\Phi(w \\exp(z), z)$. Just as for the Runge--Kutta case, one of the sheets, known as the `principal sheet', behaves like $w = 1 + O(z^{p+1})$ and order stars appear.\n\nWe illustrate this by considering the case of the second order backward difference method, for which\n\\[\n\\Phi(w \\exp(z), z) = \\left(1 - \\frac{2}{3}z\\right) \\exp(2z) w^{2} - \\frac{4}{3} \\exp(z) w + \\frac{1}{3},\n\\]\nand the third order backward difference method, for which\n\\[\n\\Phi(w \\exp(z), z) = \\left(1 - \\frac{6}{11}z\\right) \\exp(3z) w^{3} - \\frac{18}{11} \\exp(2z) w^{2} + \\frac{9}{11} \\exp(z) w - \\frac{2}{11}.\n\\]\nFor the second order case, shown in Figure~\\ref{fig:442i}, a pole at $z = \\frac{3}{2}$ is marked, together with a branch point at $z = -\\frac{1}{2}$. Note that for $z \\in (-\\infty, -\\frac{1}{2})$, the two roots of the equation $\\Phi(w \\exp(z), z) = 0$, for all $z$ in this real interval, have equal magnitudes. In this figure, light shading grey indicates that a region has exactly one of the sheets with magnitude greater than $1$. A darker grey is used to indicate that both sheets have magnitudes greater than $1$.\n\nThis method is A-stable, as we already know. This can be seen from the order star by noting that the only pole is in the right half-plane, and that the fingers do not intersect the imaginary axis. On the other hand, the third order method (Figure~\\ref{fig:442ii}) is not A-stable because, in this case, the intersection of the imaginary axis with one the fingers is now not empty. Note that for the third order case, there is a single pole at $z = \\frac{11}{6}$ and that three shades of grey are used to distinguish regions where one, two or three sheets have magnitudes greater than $1$.\n\nAlthough A-stable Runge--Kutta methods can have arbitrarily high orders, the order of A-stable linear multistep methods is restricted to $2$. This was first proved using order stars (Wanner, Hairer and Nørsett, 1978), but we will use the closely related approach of order arrows (Butcher, 2002). These will be introduced in the Riemann surface case in the next subsection.\n\nGiven a relationship between complex numbers $z$ and $w$ defined by an equation of the form\n\\[\n\\Phi(w \\exp(z), z) = 0,\n\\]\nwe can define order arrows as the set of points for which $w$ is real and positive. In particular, the order arrows that emanate from zero correspond to $w$ with increasing real parts (the up arrows) and, on these arrows, $w \\in (1, \\infty)$, or decreasing real parts (the down arrows) and for which $w \\in [0, 1)$.\n\nOrder arrows on Riemann surfaces are illustrated for the BDF2 method (Figure~\\ref{fig:443i}) and for the BDF3 method (Figure~\\ref{fig:443ii}). Just as for Runge--Kutta methods, the up arrows either terminate at the pole $z = \\beta_0^{-1}$ or at $-\\infty$, and down arrows terminate at the zero $z = -\\alpha_k \\beta_k^{-1}$ or at $+\\infty$. In interpreting these remarks, we need to allow for the possibility that the path traced out by an up or down arrow meets another arrow at a branch point of the Riemann surface. However, this special case is easily included in the general rule with a possible freedom to choose between two continuations of the incoming arrow.\n\nThe `principal sheet' of the Riemann surface will refer to a neighbourhood of $(0, 1)$ for which the relationship between $z$ and $w$ is injective; that is, it behaves as though $w$ is a function of $z$. As long as $\\Phi(w, 0)$ has only a single zero with value $w = 1$, this idea makes sense. On the principal sheet, $w \\exp(z) = \\exp(z) + O(z^{p+1})$, and the behaviour at zero is similar to what happens for one-step methods. These simple ideas are enough to prove the Dahlquist second order bound.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe order star is defined on the Riemann surface $\\mathcal{R}_\\Phi$ for linear multistep methods, where $\\Phi(w,z)$ is the characteristic polynomial of the stability matrix. The Riemann surface $\\mathcal{R}_\\Phi$ is defined by $\\Phi(w,z)=0$. The method has order $p$ if $\\Phi(e^{z},z)=O(z^{p+1})$.\n\nVariables:\n\\begin{itemize}\n    \\item $\\Phi$: $\\Phi(w,z)$ is a polynomial function of two complex variables, $w \\in W$ and $z \\in Z$, with $Z=W=\\mathbb{C}$; it is the characteristic polynomial $\\det(wI - M(z))$ of the stability matrix of a multivalue method.\n    \\item $\\mathcal{R}_\\Phi$: the subset of $W \\times Z$ defined by $\\Phi(w,z)=0$; it is a Riemann surface.\n    \\item $p$: the order of the multivalue method, such that $\\Phi(e^{z},z)=O(z^{p+1})$.\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "Φ",
+      "definition": "Φ(w, z) is a polynomial function of two complex variables, w ∈ W and z ∈ Z, with Z = W = C; it is the characteristic polynomial det(wI − M(z)) of the stability matrix of a multivalue method"
+    },
+    {
+      "name": "RΦ",
+      "definition": "the subset of W × Z defined by the relation Φ(w, z) = 0; it is a Riemann surface"
+    },
+    {
+      "name": "p",
+      "definition": "the order of the multivalue method, such that Φ(exp(z), z) = O(z^{p+1})"
+    }
+  ],
+  "equations": [],
+  "preamble": "The text introduces order stars on Riemann surfaces for linear multistep methods, where Φ(w, z) is the characteristic polynomial of the stability matrix. The Riemann surface RΦ is defined by Φ(w, z) = 0, and the method has order p if Φ(exp(z), z) = O(z^{p+1}).",
+  "introduces": [
+    "principal sheet",
+    "A-stable"
+  ],
+  "dependencies": [
+    {
+      "id": "def:520A",
+      "kind": "definition",
+      "number": "520A",
+      "name": "Introduction",
+      "edge_type": "uses_concept",
+      "context": "stability matrix"
+    },
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "down arrows"
+    },
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "def:520E",
+      "kind": "definition",
+      "number": "520E",
+      "name": "A-stable",
+      "edge_type": "uses_concept",
+      "context": "a-stable"
+    },
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:355A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:356C"
+  ],
+  "dependents": [
+    "def:350A",
+    "thm:351B",
+    "thm:355F",
+    "thm:355G",
+    "thm:443A",
+    "thm:443B",
+    "thm:454A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

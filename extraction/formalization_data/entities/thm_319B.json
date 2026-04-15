@@ -1,0 +1,112 @@
+{
+  "id": "thm:319B",
+  "kind": "theorem",
+  "number": "319B",
+  "name": "Global truncation error bound via local error accumulation",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "31",
+  "subsection": "319",
+  "subsection_title": "Global truncation error",
+  "page": 190,
+  "statement_text": "Let h0 and L\u0007 be such that the local truncation error at step\nk = 1, 2, . . . , n is bounded by\n\n                           δk ≤ Chp+1 ,            h ≤ h0 .\n\nThen the global truncation error is bounded by\n                              \u001a\n                                   exp(L (x−x0 ))−1\n                                         L         Chp ,        L\u0007 > 0,\n              y(xn ) − yn ≤\n                                   (x − x0 )Ch ,p\n                                                                 L\u0007 = 0.",
+  "statement_latex": "\\begin{theorem}[319B]\nLet $h_0$ and $L$ be such that the local truncation error at step $k = 1, 2, \\dots, n$ is bounded by\n\\[\n\\delta_k \\leq C h^{p+1}, \\quad h \\leq h_0.\n\\]\nThen the global truncation error is bounded by\n\\[\n\\| y(x_n) - y_n \\| \\leq \n\\begin{cases}\n\\dfrac{\\exp(L(x_n - x_0)) - 1}{L} C h^p, & L > 0, \\\\\n(x_n - x_0) C h^p, & L = 0.\n\\end{cases}\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. Use Figure 319(ii) and obtain the estimate\n\n                                                   \u0014\n                                                   n\n                     y(xn ) − yn ≤ Chp+1               (1 + hL\u0007 )k .\n                                                   k=1\n\nThe case L\u0007 = 0 is obvious. For the case L\u0007 > 0, calculate the sum and use\nthe bound\n               (1 + hL\u0007 )n ≤ exp(L\u0007 hn) = exp(L\u0007 (x − x0 )).",
+  "proof_latex": "\\begin{proof}\nUse Figure 319(ii) and obtain the estimate\n\\[\n\\| y(x_n) - y_n \\| \\leq C h^{p+1} \\sum_{k=1}^{n} (1 + h L)^k.\n\\]\nThe case $L = 0$ is obvious. For the case $L > 0$, calculate the sum and use the bound\n\\[\n(1 + h L)^n \\leq \\exp(L h n) = \\exp(L (x_n - x_0)).\n\\]\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nPreamble: The theorem provides a bound on the global truncation error for a numerical method applied to an ODE. It uses a local truncation error bound per step, defined by comparing the exact solution at a step point with the numerical result computed over a single step using the exact initial value from the previous step. The growth of errors is analyzed using a Lipschitz constant \\(L'\\).\n\nVariables: \\(h\\): step size; \\(L'\\): Lipschitz constant; \\(C\\): constant in the local truncation error bound; \\(p\\): order of the method; \\(x_0\\): initial independent variable; \\(x_n\\): independent variable at step \\(n\\); \\(y(x_n)\\): exact solution; \\(y_n\\): numerical solution; \\(\\delta_k\\): local truncation error at step \\(k\\); \\(\\Delta_k\\): contribution to the global error from \\(\\delta_k\\).\n\nReferenced equations:\n\\begin{equation}\n\\text{(110c)}: \\quad \\text{Bound on perturbation growth involving factor with } L'.\n\\end{equation}",
+  "variables": [
+    {
+      "name": "h",
+      "definition": "step size"
+    },
+    {
+      "name": "L'",
+      "definition": "Lipschitz constant for the ODE function f, possibly modified or specific to the context of local truncation error growth"
+    },
+    {
+      "name": "C",
+      "definition": "constant in the local truncation error bound"
+    },
+    {
+      "name": "p",
+      "definition": "order of the numerical method"
+    },
+    {
+      "name": "x0",
+      "definition": "initial value of the independent variable"
+    },
+    {
+      "name": "xn",
+      "definition": "value of the independent variable at step n"
+    },
+    {
+      "name": "y(xn)",
+      "definition": "exact solution at xn"
+    },
+    {
+      "name": "yn",
+      "definition": "numerical solution at xn"
+    },
+    {
+      "name": "δk",
+      "definition": "local truncation error at step k, defined as the difference between the exact solution at xk and the numerically computed result over a single step with initial value y(xk-1)"
+    },
+    {
+      "name": "Δk",
+      "definition": "contribution to the global error resulting from the local error δk"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "110c",
+      "content": "bound on how much a perturbation in the exact solution can grow, involving a growth factor with L (or L')"
+    }
+  ],
+  "preamble": "The theorem provides a bound on the global truncation error for a numerical method applied to an ODE. It uses a local truncation error bound per step, defined by comparing the exact solution at a step point with the numerical result computed over a single step using the exact initial value from the previous step. The growth of errors is analyzed using a Lipschitz constant L'.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:406A",
+      "kind": "definition",
+      "number": "406A",
+      "name": "local truncation error",
+      "edge_type": "uses_concept",
+      "context": "local truncation error"
+    },
+    {
+      "id": "lem:319A",
+      "kind": "lemma",
+      "number": "319A",
+      "name": "Global truncation error",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:406A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "lem:110B",
+    "lem:319A",
+    "thm:110C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B"
+  ],
+  "dependents": [
+    "thm:212A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

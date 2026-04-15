@@ -1,0 +1,54 @@
+{
+  "id": "def:355A",
+  "kind": "definition",
+  "number": "355A",
+  "name": "down arrows",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "355",
+  "subsection_title": "Order arrows and the Ehle barrier",
+  "page": 264,
+  "statement_text": "The locus of points in the complex plane for which φ(z) =\nR(z) exp(−z) is real and positive is said to be the ‘order web’ for the rational\nfunction R. The part of the order web connected to 0 is the ‘principal order\nweb’. The rays emanating from 0 with increasing value of φ are ‘up arrows’\nand those emanating from 0 with decreasing φ are ‘down arrows’.\nThe up and down arrows leave the origin in a systematic pattern:",
+  "statement_latex": "\\begin{definition}\nThe locus of points in the complex plane for which $\\varphi(z) = R(z) \\exp(-z)$ is real and positive is said to be the `order web' for the rational function $R$. The part of the order web connected to $0$ is the `principal order web'. The rays emanating from $0$ with increasing value of $\\varphi$ are `up arrows' and those emanating from $0$ with decreasing $\\varphi$ are `down arrows'.\nThe up and down arrows leave the origin in a systematic pattern:\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe text discusses order star theory and introduces `order arrows' as an alternative tool for studying stability. The context involves a stability function $R(z)$ of order $p$, and the function $\\phi(z) = R(z)\\exp(-z)$ which is used to define geometric structures in the complex plane.\n\nVariables:\n\\begin{itemize}\n    \\item $R(z)$: stability function of a Runge-Kutta method\n    \\item $p$: order of the stability function $R(z)$\n    \\item $\\phi(z)$: $\\phi(z) = R(z) \\exp(-z)$\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "R(z)",
+      "definition": "stability function of a Runge-Kutta method"
+    },
+    {
+      "name": "p",
+      "definition": "order of the stability function R(z)"
+    },
+    {
+      "name": "φ(z)",
+      "definition": "φ(z) = R(z) exp(−z)"
+    }
+  ],
+  "equations": [],
+  "preamble": "The text discusses order star theory and introduces 'order arrows' as an alternative tool for studying stability. The context involves a stability function R(z) of order p, and the function φ(z) = R(z)exp(−z) which is used to define geometric structures in the complex plane.",
+  "introduces": [
+    "order web",
+    "up arrows",
+    "down arrows"
+  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "def:442A",
+    "thm:355B",
+    "thm:355C",
+    "thm:355D",
+    "thm:355E",
+    "thm:355F",
+    "thm:355G",
+    "thm:443A",
+    "thm:443B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

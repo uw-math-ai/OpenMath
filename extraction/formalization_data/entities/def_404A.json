@@ -1,0 +1,66 @@
+{
+  "id": "def:404A",
+  "kind": "definition",
+  "number": "404A",
+  "name": "preconsistent",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "404",
+  "subsection_title": "Consistency",
+  "page": 341,
+  "statement_text": "A linear multistep method satisfying (404a) is said to be\n‘preconsistent’.\n\n  Now consider the differential equation\n\n                             y \u0002 (x) = 1,        y(x0 ) = 0,\n\nwith exact solution at the step values\n\n                                        yi = hi.\n\nIf this solution has been found for i = n − k, n − k + 1, . . . , n − 1, then it is\nalso correct for i = n if and only if\n                                                         \u0003                      \u0004\n nh = α1 (n − 1)h + α2 (n − 2)h + · · · + αk (n − k)h + h β0 + β1 + · · · + βk .\n\nAssuming the method is preconsistent, the factor h can be cancelled and then\nn times (404a) can be subtracted. We then find\n\n                   α1 + 2α2 + · · · + kαk = β0 + β1 + · · · + βk .                (404b)\n\nThis leads to the following definition:",
+  "statement_latex": "\\begin{definition}\nA linear multistep method satisfying \\eqref{eq:404a} is said to be `preconsistent'.\n\nNow consider the differential equation\n\\[\ny'(x) = 1, \\qquad y(x_0) = 0,\n\\]\nwith exact solution at the step values\n\\[\ny_i = hi.\n\\]\nIf this solution has been found for $i = n - k, n - k + 1, \\dots, n - 1$, then it is also correct for $i = n$ if and only if\n\\[\nnh = \\alpha_1 (n-1)h + \\alpha_2 (n-2)h + \\cdots + \\alpha_k (n-k)h + h \\bigl( \\beta_0 + \\beta_1 + \\cdots + \\beta_k \\bigr).\n\\]\nAssuming the method is preconsistent, the factor $h$ can be cancelled and then $n$ times \\eqref{eq:404a} can be subtracted. We then find\n\\[\n\\alpha_1 + 2\\alpha_2 + \\cdots + k\\alpha_k = \\beta_0 + \\beta_1 + \\cdots + \\beta_k. \\tag{404b}\n\\]\nThis leads to the following definition:\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nLinear multistep methods for the ODE $y' = f(x,y)$ are defined by coefficients $\\alpha_i$ and $\\beta_i$. For a $k$-step method with step size $h$, the numerical approximation $y_n$ satisfies\n\\[\n\\sum_{i=0}^k \\alpha_i y_{n-i} = h \\sum_{i=0}^k \\beta_i f(x_{n-i}, y_{n-i}),\n\\]\nwith $\\alpha_0 = -1$. Preconsistency ensures the exact solution for the trivial ODE $y'=0$, leading to the condition\n\\begin{equation}\n\\label{404a}\n1 = \\alpha_1 + \\alpha_2 + \\dots + \\alpha_k.\n\\end{equation}",
+  "variables": [
+    {
+      "name": "α_i",
+      "definition": "coefficients for past solution values in the linear multistep method"
+    },
+    {
+      "name": "β_i",
+      "definition": "coefficients for past derivative values in the linear multistep method"
+    },
+    {
+      "name": "k",
+      "definition": "number of steps in the linear multistep method"
+    },
+    {
+      "name": "h",
+      "definition": "step size"
+    },
+    {
+      "name": "y_n",
+      "definition": "numerical approximation to the solution at step n"
+    },
+    {
+      "name": "f",
+      "definition": "function defining the ODE: y'(x) = f(x, y(x))"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "404a",
+      "content": "1 = α_1 + α_2 + ... + α_k"
+    }
+  ],
+  "preamble": "The context discusses linear multistep methods for ODEs, defined by coefficients α_i and β_i. Preconsistency is a property ensuring exact solution for a trivial ODE, leading to condition (404a).",
+  "introduces": [
+    "preconsistent"
+  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "def:404B",
+    "def:406A",
+    "def:510A",
+    "thm:405B",
+    "thm:422A",
+    "thm:422C"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

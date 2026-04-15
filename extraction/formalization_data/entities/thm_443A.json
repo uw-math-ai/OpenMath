@@ -1,0 +1,158 @@
+{
+  "id": "thm:443A",
+  "kind": "theorem",
+  "number": "443A",
+  "name": "Order arrows for linear multistep methods",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "44",
+  "subsection": "441",
+  "subsection_title": "Maximum order for a convergent k-step method",
+  "page": 379,
+  "statement_text": "An A-stable linear multistep method cannot have order\ngreater than 2.\n\n\n\n\n             Figure 443(i)    Order arrows for order 2 BDF method\n\n\n\n\n            Figure 443(ii)     Order arrows for order 3 BDF method",
+  "statement_latex": "\\begin{theorem}\nAn A-stable linear multistep method cannot have order greater than 2.\n\\end{theorem}",
+  "proof_text": "Proof. If the order were greater than 2, there would be more than three up\narrows emanating from the origin. At least three of these up arrows would\ncome out in the positive direction (or possibly would be tangential to the\nimaginary axis). Since there is only one pole, at least two of these arrows\nwould cross the imaginary axis (or be tangential to it). Hence, the stability\nregion does not include all of the imaginary axis and the method is not A-\nstable.",
+  "proof_latex": "\\begin{proof}\nIf the order were greater than 2, there would be more than three up arrows emanating from the origin. At least three of these up arrows would come out in the positive direction (or possibly would be tangential to the imaginary axis). Since there is only one pole, at least two of these arrows would cross the imaginary axis (or be tangential to it). Hence, the stability region does not include all of the imaginary axis and the method is not A-stable.\n\nWe can make this result more precise by obtaining a bound on the error constant for second order A-stable methods. The result yields an optimal role for the second order Adams--Moulton method, for which the error constant is $-\\frac{1}{12}$, because\n\\[\n\\exp(z) - \\frac{1 + \\frac{1}{2}z}{1 - \\frac{1}{2}z} = -\\frac{1}{12}z^{3} + O(z^{4}).\n\\]\nIt is not possible to obtain a positive error constant amongst A-stable second order methods, and it is not possible to obtain an error constant smaller in magnitude than for the one-step Adams--Moulton method. To prove the result we use, in place of $\\exp(z)$, the special stability function $(1 + \\frac{1}{2}z)/(1 - \\frac{1}{2}z)$ in forming a relative stability function.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context} The theorem concerns linear multistep methods, where stability and order are analyzed via a complex relation \\(\\Phi(w e^{z}, z) = 0\\). Order arrows and the principal sheet of the Riemann surface are used to study behavior near zero, analogous to one-step methods, leading to a bound on order for A-stable methods.\n\nVariables:\n\\begin{itemize}\n    \\item \\(\\Phi\\): \\(\\Phi(w e^{z}, z) = 0\\) defines a relationship between complex numbers \\(z\\) and \\(w\\).\n    \\item \\(w\\): complex number related to \\(z\\) via \\(\\Phi(w e^{z}, z) = 0\\); on order arrows, \\(w\\) is real and positive.\n    \\item \\(z\\): complex number related to \\(w\\) via \\(\\Phi(w e^{z}, z) = 0\\).\n    \\item order arrows: set of points for which \\(w\\) is real and positive; up arrows have \\(w \\in (1, \\infty)\\), down arrows have \\(w \\in [0, 1)\\).\n    \\item principal sheet: neighbourhood of \\((0, 1)\\) where the relationship between \\(z\\) and \\(w\\) is injective, behaving as though \\(w\\) is a function of \\(z\\).\n    \\item \\(p\\): order of the method; on the principal sheet, \\(w e^{z} = e^{z} + O(z^{p+1})\\).\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "Φ",
+      "definition": "Φ(w exp(z), z) = 0 defines a relationship between complex numbers z and w"
+    },
+    {
+      "name": "w",
+      "definition": "complex number related to z via Φ(w exp(z), z) = 0; on order arrows, w is real and positive"
+    },
+    {
+      "name": "z",
+      "definition": "complex number related to w via Φ(w exp(z), z) = 0"
+    },
+    {
+      "name": "order arrows",
+      "definition": "set of points for which w is real and positive; up arrows have w ∈ (1, ∞), down arrows have w ∈ [0, 1)"
+    },
+    {
+      "name": "principal sheet",
+      "definition": "neighbourhood of (0, 1) where the relationship between z and w is injective, behaving as though w is a function of z"
+    },
+    {
+      "name": "p",
+      "definition": "order of the method; on the principal sheet, w exp(z) = exp(z) + O(z^{p+1})"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns linear multistep methods, where stability and order are analyzed via a complex relation Φ(w exp(z), z) = 0. Order arrows and the principal sheet of the Riemann surface are used to study behavior near zero, analogous to one-step methods, leading to a bound on order for A-stable methods.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "up arrows"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "def:442A",
+      "kind": "definition",
+      "number": "442A",
+      "name": "principal sheet",
+      "edge_type": "uses_concept",
+      "context": "a-stable"
+    },
+    {
+      "id": "thm:355B",
+      "kind": "theorem",
+      "number": "355B",
+      "name": "Order arrow tangency directions theorem",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:355C",
+      "kind": "theorem",
+      "number": "355C",
+      "name": "Arrow Termination at Poles Zeros or Infinity",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:355D",
+      "kind": "theorem",
+      "number": "355D",
+      "name": "Down arrow zero up arrow pole inequality",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:355E",
+      "kind": "theorem",
+      "number": "355E",
+      "name": "Pade approximation arrow termination theorem",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:355F",
+      "kind": "theorem",
+      "number": "355F",
+      "name": "A stability condition for Runge Kutta methods",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:355G",
+      "kind": "theorem",
+      "number": "355G",
+      "name": "A-stability Pade approximation order restriction",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:355A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:351B",
+    "thm:355B",
+    "thm:355C",
+    "thm:355D",
+    "thm:355E",
+    "thm:355F",
+    "thm:355G",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:443B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

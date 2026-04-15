@@ -1,0 +1,41 @@
+{
+  "id": "def:142A",
+  "kind": "definition",
+  "number": "142A",
+  "name": "power-boundedness",
+  "is_helper": false,
+  "chapter": 1,
+  "section": "14",
+  "subsection": "142",
+  "subsection_title": "Powers of matrices",
+  "page": 67,
+  "statement_text": "A square matrix A is ‘stable’ if there exists a constant C\nsuch that for all n = 0, 1, 2, . . . , An ≤ C.\n\n     This property is often referred to as ‘power-boundedness’.",
+  "statement_latex": "\\begin{definition}\nA square matrix $A$ is \\emph{stable} if there exists a constant $C$ such that for all $n = 0, 1, 2, \\dots$, $\\|A^{n}\\| \\leq C$.\n\nThis property is often referred to as \\emph{power-boundedness}.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [
+    "stable",
+    "power-boundedness"
+  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "def:142B",
+    "def:403A",
+    "def:510B",
+    "def:510C",
+    "def:520E",
+    "thm:142C",
+    "thm:142E",
+    "thm:142F",
+    "thm:243A",
+    "thm:357D"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

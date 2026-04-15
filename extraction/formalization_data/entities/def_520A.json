@@ -1,0 +1,123 @@
+{
+  "id": "def:520A",
+  "kind": "definition",
+  "number": "520A",
+  "name": "Introduction",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "520",
+  "subsection_title": "Introduction",
+  "page": 418,
+  "statement_text": "For a general linear method (A, U, B, V ), the ‘stability\nmatrix’ M (z) is defined by\n\n                         M (z) = V + zB(I − zA)−1 U.\n\nAs we have anticipated, we have the following result:",
+  "statement_latex": "\\begin{definition}\nFor a general linear method $(A, U, B, V)$, the `stability matrix' $M(z)$ is defined by\n\\[\nM(z) = V + zB(I - zA)^{-1}U.\n\\]\nAs we have anticipated, we have the following result:\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe definition concerns the stability matrix \\(M(z)\\) for a general linear method \\((A, U, B, V)\\) applied to the linear test equation\n\\[\ny'(x) = qy(x) \\quad (520a),\n\\]\nwhere \\(z = hq\\). The method transforms an incoming vector \\(y^{[n-1]}\\) to an outgoing vector \\(y^{[n]}\\) via \\(M(z)\\):\n\\[\ny^{[n]} = M(z)y^{[n-1]} \\quad (520b).\n\\]\nVariables: \\(A, U, B, V\\) are the coefficient matrices of the method; \\(z = hq\\) with stepsize \\(h\\); \\(M(z)\\) is an \\(r \\times r\\) matrix function.",
+  "variables": [
+    {
+      "name": "A",
+      "definition": "A is the coefficient matrix in the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "U",
+      "definition": "U is the coefficient matrix in the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "B",
+      "definition": "B is the coefficient matrix in the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "V",
+      "definition": "V is the coefficient matrix in the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "z",
+      "definition": "z = hq, where h is the stepsize and q is the parameter in the test equation y'(x) = qy(x)"
+    },
+    {
+      "name": "M(z)",
+      "definition": "M(z) is an r × r matrix-valued function of z that relates the incoming vector y^{[n-1]} to the outgoing vector y^{[n]} via y^{[n]} = M(z)y^{[n-1]}"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "520a",
+      "content": "y'(x) = qy(x)"
+    },
+    {
+      "tag": "520b",
+      "content": "y^{[n]} = M(z)y^{[n-1]}"
+    }
+  ],
+  "preamble": "The definition concerns the stability matrix M(z) for a general linear method (A, U, B, V) applied to the linear test equation y' = qy, where z = hq. The method transforms an incoming vector y^{[n-1]} to an outgoing vector y^{[n]} via M(z).",
+  "introduces": [
+    "stability matrix"
+  ],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "def:510A",
+      "kind": "definition",
+      "number": "510A",
+      "name": "preconsistency vector",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:510B",
+      "kind": "definition",
+      "number": "510B",
+      "name": "consistent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "def:442A",
+    "def:520C",
+    "def:520F",
+    "def:525A",
+    "def:542A",
+    "thm:111A",
+    "thm:520B",
+    "thm:551B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

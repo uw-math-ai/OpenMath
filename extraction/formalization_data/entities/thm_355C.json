@@ -1,0 +1,50 @@
+{
+  "id": "thm:355C",
+  "kind": "theorem",
+  "number": "355C",
+  "name": "Arrow Termination at Poles Zeros or Infinity",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "355",
+  "subsection_title": "Order arrows and the Ehle barrier",
+  "page": 264,
+  "statement_text": "The up arrows terminate either at poles of R or at −∞.\nThe down arrows terminate either at zeros of R or at +∞.",
+  "statement_latex": "\\begin{theorem}\nThe up arrows terminate either at poles of $R$ or at $-\\infty$.\nThe down arrows terminate either at zeros of $R$ or at $+\\infty$.\n\\end{theorem}",
+  "proof_text": "Proof. Consider a point on an up arrow for which |z| is sufficiently large\nto ensure that it is not possible that z is a pole or that z is real with\n(d/dz)(R(z) exp(−z)) = 0. In this case we can assume without loss of\ngenerality that Im(z) ≥ 0. Write R(z) = Kz n + O(|z|n−1 ) and assume that\nK > 0 (if K < 0, a slight change is required in the details which follow). If\nz = x + iy = r exp(iθ), then\n\n        w(z) = R(z) exp(−z)\n                           \u0003            \u0004   \u0003                    \u0004\n             = Kr n exp(−x) 1 + O(r −1 ) exp i(nθ − y + O(r −1 )) .\n\nBecause θ cannot leave the interval [0, π], then for w to remain real, y is\nbounded as z → ∞. Furthermore, w → ∞ implies that x → −∞.\n  The result for the down arrows is proved in a similar way.",
+  "proof_latex": "\\begin{proof}\nConsider a point on an up arrow for which $|z|$ is sufficiently large\nto ensure that it is not possible that $z$ is a pole or that $z$ is real with\n$(d/dz)(R(z) \\exp(-z)) = 0$. In this case we can assume without loss of\ngenerality that $\\operatorname{Im}(z) \\geq 0$. Write $R(z) = Kz^{n} + O(|z|^{n-1})$ and assume that\n$K > 0$ (if $K < 0$, a slight change is required in the details which follow). If\n$z = x + iy = r \\exp(i\\theta)$, then\n\\[\n\\begin{aligned}\nw(z) &= R(z) \\exp(-z) \\\\\n     &= K r^{n} \\exp(-x) \\left[ 1 + O(r^{-1}) \\right] \\exp\\left( i\\left( n\\theta - y + O(r^{-1}) \\right) \\right).\n\\end{aligned}\n\\]\nBecause $\\theta$ cannot leave the interval $[0, \\pi]$, then for $w$ to remain real, $y$ is\nbounded as $z \\to \\infty$. Furthermore, $w \\to \\infty$ implies that $x \\to -\\infty$.\n\nThe result for the down arrows is proved in a similar way.\n\nWe can obtain more details about the fate of the arrows from the following\nresult.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "down arrows"
+    },
+    {
+      "id": "thm:355B",
+      "kind": "theorem",
+      "number": "355B",
+      "name": "Order arrow tangency directions theorem",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:355A",
+    "thm:355B"
+  ],
+  "dependents": [
+    "thm:443A",
+    "thm:443B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

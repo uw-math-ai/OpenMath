@@ -1,0 +1,72 @@
+{
+  "id": "thm:302B",
+  "kind": "theorem",
+  "number": "302B",
+  "name": "Rooted Tree Generating Function Identity",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "30",
+  "subsection": "302",
+  "subsection_title": "Some combinatorial questions",
+  "page": 163,
+  "statement_text": "Let θk , k = 1, 2, 3, . . . denote the number of rooted trees\nwith exactly k vertices. Then,\n\n      θ1 + θ2 x + θ3 x2 + · · · = (1 − x)−θ1 (1 − x2 )−θ2 (1 − x3 )−θ3 · · · .              (302c)\n\nBefore proving this result, we consider how (302c) is to be interpreted. The\nright-hand side can be formally expanded as a power series, and it can be seen\nthat the coefficient of xk depends only on θ1 , θ2 , . . . , θk (and is independent of\nany of θ1 , θ2 , . . . if k = 0). Equate this to the coefficient of xk on the left-hand\nside and the result is a formula for θk+1 in terms of previous members of the\nθ sequence. In particular, k = 0 gives θ1 = 1. We now turn to the justification\nof the result.",
+  "statement_latex": "\\begin{theorem}\nLet $\\theta_k$, $k = 1, 2, 3, \\dots$ denote the number of rooted trees with exactly $k$ vertices. Then,\n\\[\n\\theta_1 + \\theta_2 x + \\theta_3 x^2 + \\cdots = (1 - x)^{-\\theta_1} (1 - x^2)^{-\\theta_2} (1 - x^3)^{-\\theta_3} \\cdots. \\tag{302c}\n\\]\nBefore proving this result, we consider how (302c) is to be interpreted. The right-hand side can be formally expanded as a power series, and it can be seen that the coefficient of $x^k$ depends only on $\\theta_1, \\theta_2, \\dots, \\theta_k$ (and is independent of any of $\\theta_1, \\theta_2, \\dots$ if $k = 0$). Equate this to the coefficient of $x^k$ on the left-hand side and the result is a formula for $\\theta_{k+1}$ in terms of previous members of the $\\theta$ sequence. In particular, $k = 0$ gives $\\theta_1 = 1$. We now turn to the justification of the result.\n\\end{theorem}",
+  "proof_text": "Proof. Let Θk (U ) denote the number of trees of order k that can be formed\nusing the operation (t1 , t2 , . . . , tn ) → [t1 , t2 , . . . , tn ], where t1 , t2 , . . . , tn are\nall members of U which is assumed to be a subset of T . In particular, Θk (T )\nis identical to θk . Let V denote the set U ∪ {t̂}, where t̂ \u0004∈ U . Every tree of the\nform [t̂m , . . . ], with order k, is included in a set with Θk (V )−Θk (U ) members.\nHowever, there are the same number of members of this set as there are trees\nof order k − r(t̂) of the form [t̂m−1 , . . . ]. Thus, Θk (V ) − Θk (U ) = Θk−r(t̂) (V ),\nwhich is equivalent to\n\n      Θ1 (U ) + Θ2 (U )x + · · · = (1 − xr(t̂) )(Θ1 (V ) + Θ2 (V )x + · · · ).              (302d)\n\nSince\n                                Θ1 (U ) + Θ2 (U )x + · · · = 1,\nwhen U is the empty set, we can successively compute the value of this\nexpression when U = {t1 , t2 , . . . , tn } using (302d) as\n\n                                                        n\n                      Θ1 (U ) + Θ2 (U )x + · · · =          (1 − xr(tk ) )−1 .              (302e)\n                                                       k=1\n\nNow assume that t1 , t2 , . . . consist of all trees of orders up to some integer p,\nand we can write (302e) as\n\n\n                                                         p\n                       Θ1 (U ) + Θ2 (U )x + · · · =          (1 − xk )−θk .\n                                                         k=1\n                                                                                         %p\nSince Θi (U ) = θi if i ≤ p + 1, we obtain the result by replacing\n%                                                                                          k=1 by\n  ∞\n  k=1 .",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns the enumeration of rooted trees, where $\\theta_k$ counts rooted trees with $k$ vertices. The preceding text defines $\\alpha(t)$ and $\\beta(t)$ for labelling trees, but the theorem statement is self-contained regarding $\\theta_k$.\n\nVariables:\n\\begin{itemize}\n    \\item $\\theta_k$: $\\theta_k$ denotes the number of rooted trees with exactly $k$ vertices.\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "θ_k",
+      "definition": "θ_k denotes the number of rooted trees with exactly k vertices."
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns the enumeration of rooted trees, where θ_k counts rooted trees with k vertices. The preceding text defines α(t) and β(t) for labelling trees, but the theorem statement is self-contained regarding θ_k.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "thm:302A",
+      "kind": "theorem",
+      "number": "302A",
+      "name": "Some combinatorial questions",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:302C",
+      "kind": "theorem",
+      "number": "302C",
+      "name": "Rooted Tree Enumeration Formulas",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "thm:301A",
+    "thm:302A",
+    "thm:302C",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:304A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

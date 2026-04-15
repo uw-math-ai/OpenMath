@@ -1,0 +1,97 @@
+{
+  "id": "def:451A",
+  "kind": "definition",
+  "number": "451A",
+  "name": "G-stable",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "45",
+  "subsection": "451",
+  "subsection_title": "The concept of G-stability",
+  "page": 385,
+  "statement_text": "A one-leg method [α, β] is ‘G-stable’ if M given by (451e)\nis positive semi-definite.\n\n  We present the example of the BDF2 method with\n                                     4   1      2\u0002\n                    [α(z), β(z)] = 1 − z + z 2 ,   .\n                                      3   3      3\nWrite\n                                          g11     g12\n                                   G=\n                                          g12     g22\nand we find                                                          \n                                  3 − g11      − 89 − g12\n                                  4                              2\n                                                                 9\n                                                                   \n                     M =        − 89 − g12    g11 − g22        g12  ,\n                                      2\n                                      9            g12          g22\nwhich is positive semi-definite if and only if G is the positive definite matrix\n                                           10\n                                             9    − 94\n                                 G=                         .\n                                          − 49      2\n                                                    9\n\n\nDenote the point at which the derivative is calculated in step n of a one-leg\nmethod by y\u0018n . Also denote the corresponding x argument as x  \u0018n . Hence, we\nhave\n                             \"k\n                                   iβi\n                  x\u0018n = xn − \"i=0\n                                k\n                                       h,                              (452a)\n                                i=0 βi\n                         \u000e\u0014k    \u000f−1 \u0014k\n                   y\u0018n =     βi         βi yn−i ,                      (452b)\n                             i=0          i=0\n                           \u0014\n                           k                    \u000e\u0014\n                                                 k         \u000f\n                    yn =         αn−i yn−i +                   xn , y\u0018n ).\n                                                         βi f (\u0018             (452c)\n                           i=1                   i=0\n\nForm a linear combination of y\u0018n−i , i = 0, 1, . . . , k, given by (452b), based on\nthe coefficients in the α polynomial, and note that the operators α(E −1 ) and\nβ(E −1 ) are commutative. We have\n\n                                   \u0014\n                                   k                     \u0014\n                                                         k\n                           y\u0018n −         αi y\u0018n−i = h                xn , y\u0018n ).\n                                                               βi f (\u0018                   (452d)\n                                   i=1                   i=1\n\n\nThe relationship between the y and y\u0018 sequences given by (452b) and (452d)\nwas suggested by Dahlquist (1976) as an indication that stability questions\nfor a linear multistep method can be replaced by similar questions for the\ncorresponding one-leg method.",
+  "statement_latex": "\\begin{definition}\nA one-leg method $[\\alpha, \\beta]$ is `G-stable' if $M$ given by \\eqref{eq:451e} is positive semi-definite.\n\nWe present the example of the BDF2 method with\n\\[\n[\\alpha(z), \\beta(z)] = \\left( 1 - \\frac{4}{3}z + \\frac{1}{3}z^{2}, \\frac{2}{3} \\right).\n\\]\nWrite\n\\[\nG = \\begin{pmatrix}\ng_{11} & g_{12} \\\\\ng_{12} & g_{22}\n\\end{pmatrix}\n\\]\nand we find\n\\[\nM = \\begin{bmatrix}\n\\frac{3}{4} - g_{11} & -\\frac{8}{9} - g_{12} & \\frac{2}{9} \\\\[2pt]\n-\\frac{8}{9} - g_{12} & g_{11} - g_{22} & g_{12} \\\\[2pt]\n\\frac{2}{9} & g_{12} & g_{22}\n\\end{bmatrix},\n\\]\nwhich is positive semi-definite if and only if $G$ is the positive definite matrix\n\\[\nG = \\begin{pmatrix}\n\\frac{10}{9} & -\\frac{4}{9} \\\\[2pt]\n-\\frac{4}{9} & \\frac{2}{9}\n\\end{pmatrix}.\n\\]\n\nDenote the point at which the derivative is calculated in step $n$ of a one-leg method by $\\widehat{y}_{n}$. Also denote the corresponding $x$ argument as $\\widehat{x}_{n}$. Hence, we have\n\\begin{align}\n\\widehat{x}_{n} &= x_{n} - \\frac{\\sum_{i=0}^{k} i\\beta_{i}}{\\sum_{i=0}^{k} \\beta_{i}} h, \\label{eq:452a} \\\\\n\\widehat{y}_{n} &= \\left( \\sum_{i=0}^{k} \\beta_{i} \\right)^{-1} \\sum_{i=0}^{k} \\beta_{i} y_{n-i}, \\label{eq:452b} \\\\\ny_{n} &= \\sum_{i=1}^{k} \\alpha_{n-i} y_{n-i} + \\left( \\sum_{i=0}^{k} \\beta_{i} \\right) f(\\widehat{x}_{n}, \\widehat{y}_{n}). \\label{eq:452c}\n\\end{align}\n\nForm a linear combination of $\\widehat{y}_{n-i}$, $i = 0, 1, \\dots, k$, given by \\eqref{eq:452b}, based on the coefficients in the $\\alpha$ polynomial, and note that the operators $\\alpha(E^{-1})$ and $\\beta(E^{-1})$ are commutative. We have\n\\[\n\\widehat{y}_{n} - \\sum_{i=1}^{k} \\alpha_{i} \\widehat{y}_{n-i} = h \\sum_{i=1}^{k} \\beta_{i} f(\\widehat{x}_{n}, \\widehat{y}_{n}). \\label{eq:452d}\n\\]\n\nThe relationship between the $y$ and $\\widehat{y}$ sequences given by \\eqref{eq:452b} and \\eqref{eq:452d} was suggested by Dahlquist (1976) as an indication that stability questions for a linear multistep method can be replaced by similar questions for the corresponding one-leg method.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe definition concerns $G$-stability for one-leg methods applied to nonlinear ODEs. The matrix $M$ arises from an identity comparing differences between numerical solutions $y_n$ and $z_n$, and its positive semi-definiteness ensures stability.\n\nVariables:\n\\begin{itemize}\n    \\item $M$: matrix defined by equation (451e)\n    \\item $[\\alpha, \\beta]$: one-leg method defined by generating polynomials $\\alpha(z)$ and $\\beta(z)$\n    \\item $G$: positive definite matrix used in the norm $\\|\\cdot\\|_G$\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n    M = [m_{ij}], \\quad \\text{where } m_{ij} \\text{ are coefficients from the identity involving } G, \\alpha_i, \\beta_i\n    \\tag{451e}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "M",
+      "definition": "matrix defined by equation (451e)"
+    },
+    {
+      "name": "[α, β]",
+      "definition": "one-leg method defined by generating polynomials α(z) and β(z)"
+    },
+    {
+      "name": "G",
+      "definition": "positive definite matrix used in the norm ||·||_G"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "451e",
+      "content": "M = [m_{ij}] where m_{ij} are coefficients from the identity involving G, α_i, β_i"
+    }
+  ],
+  "preamble": "The definition concerns G-stability for one-leg methods applied to nonlinear ODEs. The matrix M arises from an identity comparing differences between numerical solutions yn and zn, and its positive semi-definiteness ensures stability.",
+  "introduces": [
+    "G-stable"
+  ],
+  "dependencies": [
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "thm:523B",
+      "kind": "theorem",
+      "number": "523B",
+      "name": "Nonlinear Stability via Positive Semidefiniteness",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:350A",
+    "def:355A",
+    "def:356A",
+    "def:356B",
+    "def:357A",
+    "def:357B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:520F",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:356C",
+    "thm:523A",
+    "thm:523B"
+  ],
+  "dependents": [
+    "thm:454A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

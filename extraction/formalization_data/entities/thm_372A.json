@@ -1,0 +1,123 @@
+{
+  "id": "thm:372A",
+  "kind": "theorem",
+  "number": "372A",
+  "name": "Order conditions",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "372",
+  "subsection_title": "Order conditions",
+  "page": 299,
+  "statement_text": "Let (A, b , c) be a symplectic Runge–Kutta method. The\nmethod has order p if and only if for each non-superfluous tree and any vertex\nin this tree as root, Φ(t) = 1/γ(t), where t is the rooted tree with this vertex.",
+  "statement_latex": "\\begin{theorem}\nLet $(A, b, c)$ be a symplectic Runge--Kutta method. The method has order $p$ if and only if for each non-superfluous tree and any vertex in this tree as root, $\\Phi(t) = 1/\\gamma(t)$, where $t$ is the rooted tree with this vertex.\n\\end{theorem}",
+  "proof_text": "Proof. We need only to prove the sufficiency of this criterion. If two rooted\ntrees belong to the same tree but have vertices v0 , v\u0018 say, then there is a\nsequence of vertices v0 , v1 , . . . , vm = v\u0018, such that vi−1 and vi are adjacent\nfor i = 1, 2, . . . , m. This mean that rooted trees t, u exist such that tu is the\nrooted tree with root vi−1 and ut is the rooted tree with root vi . We are\nimplicitly using induction on the order of trees and hence we can assume that\nΦ(t) = 1/γ(t) and Φ(u) = 1/γ(u). Hence, if one of the order conditions for the\ntrees tu and ut is satisfied, then the other is. By working along the chain of\npossible roots v0 , v1 , . . . , vm , we see that the order condition associated with\nthe root v0 is equivalent to the condition for v\u0018. In the case of superfluous\ntrees, one choice of adjacent vertices would imply that t = u. Hence, (372a) is\nequivalent to 2Φ(tt) = 2/γ(tt) so that the order condition associated with tt\nis satisfied and all rooted trees belonging to the same tree are also satisfied.",
+  "proof_latex": "\\begin{proof}\nWe need only to prove the sufficiency of this criterion. If two rooted trees belong to the same tree but have vertices $v_0$, $v_1$ say, then there is a sequence of vertices $v_0, v_1, \\dots, v_m = v_1$, such that $v_{i-1}$ and $v_i$ are adjacent for $i = 1, 2, \\dots, m$. This means that rooted trees $t$, $u$ exist such that $tu$ is the rooted tree with root $v_{i-1}$ and $ut$ is the rooted tree with root $v_i$. We are implicitly using induction on the order of trees and hence we can assume that $\\Phi(t) = 1/\\gamma(t)$ and $\\Phi(u) = 1/\\gamma(u)$. Hence, if one of the order conditions for the trees $tu$ and $ut$ is satisfied, then the other is. By working along the chain of possible roots $v_0, v_1, \\dots, v_m$, we see that the order condition associated with the root $v_0$ is equivalent to the condition for $v_1$. In the case of superfluous trees, one choice of adjacent vertices would imply that $t = u$. Hence, \\eqref{eq:372a} is equivalent to $2\\Phi(tt) = 2/\\gamma(tt)$ so that the order condition associated with $tt$ is satisfied and all rooted trees belonging to the same tree are also satisfied.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns symplectic Runge--Kutta methods and order conditions expressed via elementary weights $\\Phi(t)$ for rooted trees $t$, where $\\Phi(t)$ must equal $1/\\gamma(t)$ for the method to have a certain order. The preceding text derives a key relation (372a) for products of trees under symplecticity.\n\nVariables:\n$\\Phi$: $\\Phi(t) = \\sum_{i=1}^s b_i \\phi_i$, where $t$ is a rooted tree, $\\phi_i$ is the elementary weight for tree $t$ at stage $i$, and $b_i$ are the weights of the Runge--Kutta method.\n$\\gamma(t)$: $\\gamma(t)$ is the density of the rooted tree $t$ (a combinatorial factor).\n$A$, $b$, $c$: $A$ is the Runge--Kutta matrix, $b$ is the vector of weights, $c$ is the vector of nodes, defining a symplectic Runge--Kutta method.\n\nReferenced equations:\n\\begin{equation}\n\\Phi(tu) - \\frac{1}{\\gamma(tu)} + \\Phi(ut) - \\frac{1}{\\gamma(ut)} = 0,\n\\qquad \\text{assuming } \\Phi(t) = \\frac{1}{\\gamma(t)} \\text{ and } \\Phi(u) = \\frac{1}{\\gamma(u)}.\n\\tag{372a}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "Φ",
+      "definition": "Φ(t) = Σ_{i=1}^s b_i φ_i, where t is a rooted tree, φ_i is the elementary weight for tree t at stage i, and b_i are the weights of the Runge–Kutta method"
+    },
+    {
+      "name": "γ(t)",
+      "definition": "γ(t) is the density of the rooted tree t (a combinatorial factor)"
+    },
+    {
+      "name": "A, b, c",
+      "definition": "A is the Runge–Kutta matrix, b is the vector of weights, c is the vector of nodes, defining a symplectic Runge–Kutta method"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "372a",
+      "content": "Φ(tu) - 1/γ(tu) + Φ(ut) - 1/γ(ut) = 0, assuming Φ(t) = 1/γ(t) and Φ(u) = 1/γ(u)"
+    }
+  ],
+  "preamble": "The theorem concerns symplectic Runge–Kutta methods and order conditions expressed via elementary weights Φ(t) for rooted trees t, where Φ(t) must equal 1/γ(t) for the method to have a certain order. The preceding text derives a key relation (372a) for products of trees under symplecticity.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:370A",
+      "kind": "definition",
+      "number": "370A",
+      "name": "Maintaining quadratic invariants",
+      "edge_type": "uses_concept",
+      "context": "symplectic"
+    },
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "thm:315A",
+      "kind": "theorem",
+      "number": "315A",
+      "name": "Conditions for order",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:301A",
+      "kind": "theorem",
+      "number": "301A",
+      "name": "Functions on trees",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:310A",
+    "def:356B",
+    "def:370A",
+    "def:381A",
+    "def:381B",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:388D",
+    "def:388F",
+    "lem:310B",
+    "lem:311A",
+    "lem:312B",
+    "lem:313A",
+    "lem:383A",
+    "lem:383B",
+    "lem:383C",
+    "lem:383D",
+    "lem:389A",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:311C",
+    "thm:311D",
+    "thm:313B",
+    "thm:314A",
+    "thm:315A",
+    "thm:356C",
+    "thm:381G",
+    "thm:381H",
+    "thm:382A",
+    "thm:382B",
+    "thm:384A",
+    "thm:386A",
+    "thm:387A",
+    "thm:388A",
+    "thm:388B",
+    "thm:388C",
+    "thm:388E",
+    "thm:388G",
+    "thm:388H"
+  ],
+  "dependents": [],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

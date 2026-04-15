@@ -1,0 +1,64 @@
+{
+  "id": "thm:406C",
+  "kind": "theorem",
+  "number": "406C",
+  "name": "Global error bound for linear multistep methods",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "406",
+  "subsection_title": "Sufficiency of conditions for convergence",
+  "page": 347,
+  "statement_text": "Let           n denote the vector\n\n\n                                       n = y(xn ) − yn .\n\n\nThen for h0 sufficiently small so that h0 |β0 |L < 1 and h < h0 , there exist\nconstants C and D such that\n                      \u0017    \u0014        \u0017\n                      \u0017    k\n                                    \u0017\n                      \u0017 n−   αi n−i \u0017\n                                            k\n                      \u0017             \u0017 ≤ Ch max\n                                           i=1\n                                                           n−i       + Dh2 .              (406c)\n                           i=1\n\n                          \"                \"",
+  "statement_latex": "\\begin{theorem}\nLet $\\mathbf{n}$ denote the vector\n\\[\n\\mathbf{n} = y(x_n) - y_n.\n\\]\nThen for $h_0$ sufficiently small so that $h_0 |\\beta_0| L < 1$ and $h < h_0$, there exist constants $C$ and $D$ such that\n\\[\n\\left\\| \\mathbf{n} - \\sum_{i=1}^k \\alpha_i \\mathbf{n}_{-i} \\right\\| \\leq C h \\max_{i=1}^k \\| \\mathbf{n}_{-i} \\| + D h^2. \\tag{406c}\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. The value of n − ki=1 αi n−i − h ki=0 βi (f (y(xn−i )) − f (yn−i )) is\nthe difference of two terms, of which the first can be bounded by a constant\ntimes h2 , by Theorem 406B, and the second is zero. This means that\n\n                                 \u0014\n                                 k\n\n                           n−          αi n−i = T1 + T2 + T3 ,                            (406d)\n                                 i=1\n\nwhere\n\n      T1 = h|β0 | f (y(xn )) − f (yn )                ≤ hL|β0 | ·       n   ,             (406e)\n              \u0017\u0014                               \u0017      \u0014\n              \u0017 k                              \u0017      k\n      T2      \u0017\n           = h\u0017   βi (f (y(xn−i )) − f (yn−i ))\u0017 ≤ hL\n                                                               k\n                                                        |βi | max                     ,   (406f)\n                                               \u0017                         i=1\n                                                                                n−i\n                i=1                                            i=1\n\nand T3 can be bounded in terms of a constant times h2 . We now use (406d)\ntwice. First, assuming h ≤ h0 , obtain a bound on (1 − hL|β0 |) n in terms\nof maxki=1 n−i and terms that are bounded by a constant times h2 . Hence,\nobtain a bound on n . Then, by inserting this preliminary result in the\nbound on T1 , we obtain the result of the theorem.",
+  "proof_latex": "\\begin{proof}\nThe value of $\\mathbf{n} - \\sum_{i=1}^k \\alpha_i \\mathbf{n}_{-i} - h \\sum_{i=0}^k \\beta_i \\big( f(y(x_{n-i})) - f(y_{n-i}) \\big)$ is the difference of two terms, of which the first can be bounded by a constant times $h^2$, by Theorem~\\ref{thm:406B}, and the second is zero. This means that\n\\[\n\\mathbf{n} - \\sum_{i=1}^k \\alpha_i \\mathbf{n}_{-i} = T_1 + T_2 + T_3, \\tag{406d}\n\\]\nwhere\n\\begin{align*}\nT_1 &= h|\\beta_0| \\big( f(y(x_n)) - f(y_n) \\big) \\leq h L |\\beta_0| \\cdot \\| \\mathbf{n} \\|, \\tag{406e} \\\\\nT_2 &= h \\left\\| \\sum_{i=1}^k \\beta_i \\big( f(y(x_{n-i})) - f(y_{n-i}) \\big) \\right\\| \\leq h L \\sum_{i=1}^k |\\beta_i| \\max_{i=1}^k \\| \\mathbf{n}_{-i} \\|, \\tag{406f}\n\\end{align*}\nand $T_3$ can be bounded in terms of a constant times $h^2$. We now use \\eqref{eq:406d} twice. First, assuming $h \\leq h_0$, obtain a bound on $(1 - h L |\\beta_0|) \\| \\mathbf{n} \\|$ in terms of $\\max_{i=1}^k \\| \\mathbf{n}_{-i} \\|$ and terms that are bounded by a constant times $h^2$. Hence, obtain a bound on $\\| \\mathbf{n} \\|$. Then, by inserting this preliminary result in the bound on $T_1$, we obtain the result of the theorem.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "lem:406B",
+      "kind": "lemma",
+      "number": "406B",
+      "name": "Convergence condition sufficiency bound",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:110A",
+      "kind": "definition",
+      "number": "110A",
+      "name": "Lipschitz condition in its second variable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:406A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "lem:406B",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B"
+  ],
+  "dependents": [
+    "thm:406D"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

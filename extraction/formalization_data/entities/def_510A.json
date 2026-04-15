@@ -1,0 +1,94 @@
+{
+  "id": "def:510A",
+  "kind": "definition",
+  "number": "510A",
+  "name": "preconsistency vector",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "510",
+  "subsection_title": "Definitions of consistency and stability",
+  "page": 406,
+  "statement_text": "A general linear method (A, U, B, V ) is ‘preconsistent’ if\nthere exists a vector u such that\n                                       V u = u,                              (510a)\n                                       U u = 1.                              (510b)\nThe vector u is the ‘preconsistency vector’.",
+  "statement_latex": "\\begin{definition}\nA general linear method $(A, U, B, V)$ is `preconsistent' if there exists a vector $u$ such that\n\\[\nV u = u, \\tag{510a}\n\\]\n\\[\nU u = 1. \\tag{510b}\n\\]\nThe vector $u$ is the `preconsistency vector'.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nA general linear method is defined by four matrices $A$, $U$, $B$, $V$ and operates on a vector of approximations from the previous step. The method's behavior is characterized by vectors $u$ and $v$, where $u$ relates to the representation of the solution and its derivative in the input approximations. Here $h$ is the step size and $y^{[n-1]}$ is the vector of approximations from the preceding step. The $i$th subvector in $y^{[n-1]}$ represents $u_i y(x_{n-1}) + v_i h y'(x_{n-1}) + O(h^2)$.",
+  "variables": [
+    {
+      "name": "A",
+      "definition": "One of the four defining matrices of a general linear method"
+    },
+    {
+      "name": "U",
+      "definition": "One of the four defining matrices of a general linear method"
+    },
+    {
+      "name": "B",
+      "definition": "One of the four defining matrices of a general linear method"
+    },
+    {
+      "name": "V",
+      "definition": "One of the four defining matrices of a general linear method"
+    },
+    {
+      "name": "u",
+      "definition": "A vector characteristic of the method, such that the ith subvector in y^{[n-1]} represents u_i y(x_{n-1}) + v_i h y'(x_{n-1}) + O(h^2)"
+    },
+    {
+      "name": "v",
+      "definition": "A vector characteristic of the method, related to u and the method matrices"
+    },
+    {
+      "name": "h",
+      "definition": "Step size"
+    },
+    {
+      "name": "y^{[n-1]}",
+      "definition": "Vector of approximations from the preceding step"
+    }
+  ],
+  "equations": [],
+  "preamble": "A general linear method is defined by four matrices (A, U, B, V) and operates on a vector of approximations from the previous step. The method's behavior is characterized by vectors u and v, where u relates to the representation of the solution and its derivative in the input approximations.",
+  "introduces": [
+    "preconsistent",
+    "preconsistency vector"
+  ],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:404A",
+      "kind": "definition",
+      "number": "404A",
+      "name": "preconsistent",
+      "edge_type": "uses_concept",
+      "context": "preconsistent"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:404A",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "def:510B",
+    "def:512A",
+    "def:520A",
+    "def:542A",
+    "lem:515B",
+    "thm:514A",
+    "thm:515D",
+    "thm:535A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,99 @@
+{
+  "id": "thm:352A",
+  "kind": "theorem",
+  "number": "352A",
+  "name": "Padé approximations to the exponential function",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "352",
+  "subsection_title": "Padé approximations to the exponential function",
+  "page": 254,
+  "statement_text": "Let l, m ≥ 0 be integers and define polynomials Nlm and\nDlm by\n\n                                  l!   \u0014 (l + m − i)!\n                                        l\n                  Nlm (z) =                           zi ,             (352b)\n                              (l + m)! i=0 i!(l − i)!\n                                 m! \u0014 (l + m − i)!\n                                       m\n                  Dlm (z) =                           (−z)i .          (352c)\n                              (l + m)! i=0 i!(m − i)!\n\nAlso define\n                                            l!m!\n                     Clm = (−1)m                         .\n                                    (l + m)!(l + m + 1)!\nThen\n                                     m+1\n Nlm (z)−exp(z)Dlm (z)+Clm z l+m+1+ l+m+2 Clm z l+m+2 = O(z l+m+3 ). (352d)",
+  "statement_latex": "\\begin{theorem}\nLet $l, m \\geq 0$ be integers and define polynomials $N_{lm}$ and $D_{lm}$ by\n\\[\nN_{lm}(z) = \\frac{l!}{(l+m)!} \\sum_{i=0}^{l} \\frac{(l+m-i)!}{i!\\,(l-i)!} z^{i}, \\tag{352b}\n\\]\n\\[\nD_{lm}(z) = \\frac{m!}{(l+m)!} \\sum_{i=0}^{m} \\frac{(l+m-i)!}{i!\\,(m-i)!} (-z)^{i}. \\tag{352c}\n\\]\nAlso define\n\\[\nC_{lm} = (-1)^{m} \\frac{l!\\,m!}{(l+m)!\\,(l+m+1)!}.\n\\]\nThen\n\\[\nN_{lm}(z) - \\exp(z) D_{lm}(z) + C_{lm} z^{l+m+1} + \\frac{m+1}{l+m+2} C_{lm} z^{l+m+2} = O(z^{l+m+3}). \\tag{352d}\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. In the case m = 0, the result is equivalent to the Taylor series for\nexp(z); by multiplying both sides of (352d) by exp(−z) we find that the result\nis also equivalent to the Taylor series for exp(−z) in the case l = 0. We now\nsuppose that l ≥ 1 and m ≥ 1, and that (352d) has been proved if l is replaced\nby l − 1 or m replaced is by m − 1. We deduce the result for the given values\nof l and m so that the theorem follows by induction.\n   Because the result holds with l replaced by l − 1 or with m replaced by\nm − 1, we have\n                                                \u0002",
+  "proof_latex": "\\begin{proof}\nIn the case $m = 0$, the result is equivalent to the Taylor series for $\\exp(z)$; by multiplying both sides of \\eqref{eq:352d} by $\\exp(-z)$ we find that the result is also equivalent to the Taylor series for $\\exp(-z)$ in the case $l = 0$. We now suppose that $l \\geq 1$ and $m \\geq 1$, and that \\eqref{eq:352d} has been proved if $l$ is replaced by $l - 1$ or $m$ is replaced by $m - 1$. We deduce the result for the given values of $l$ and $m$ so that the theorem follows by induction.\n\nBecause the result holds with $l$ replaced by $l - 1$ or with $m$ replaced by $m - 1$, we have\n\\begin{align}\nN_{l-1,m}(z) - \\exp(z) D_{l-1,m}(z) + \\left(1 + \\frac{m+1}{l+m+1} z\\right) C_{l-1,m} z^{l+m} &= O(z^{l+m+2}), \\tag{352e} \\\\\nN_{l,m-1}(z) - \\exp(z) D_{l,m-1}(z) + \\left(1 + \\frac{m}{l+m+1} z\\right) C_{l,m-1} z^{l+m} &= O(z^{l+m+2}). \\tag{352f}\n\\end{align}\n\nMultiply \\eqref{eq:352e} by $l/(l+m)$ and \\eqref{eq:352f} by $m/(l+m)$, and we find that the coefficient of $z^{l+m}$ has the value\n\\[\n\\frac{l}{l+m} C_{l-1,m} + \\frac{m}{l+m} C_{l,m-1} = 0.\n\\]\nThe coefficient of $z^{l+m+1}$ is found to be equal to $C_{lm}$. Next we verify that\n\\begin{align}\n\\frac{l}{l+m} N_{l-1,m}(z) + \\frac{m}{l+m} N_{l,m-1}(z) - N_{lm}(z) &= 0, \\tag{352g} \\\\\n\\frac{l}{l+m} D_{l-1,m}(z) + \\frac{m}{l+m} D_{l,m-1}(z) - D_{lm}(z) &= 0. \\tag{352h}\n\\end{align}\nThe coefficient of $z^{i}$ in \\eqref{eq:352g} is\n\\[\n\\frac{(l-1)!\\,(l+m-i-1)!}{(l+m)!\\,i!\\,(l-i)!} \\left[ l(l-i) + ml - l(l+m-i) \\right] = 0,\n\\]\nso that \\eqref{eq:352g} follows. The verification of \\eqref{eq:352h} is similar and will be omitted.\n\nIt now follows that\n\\[\nN_{lm}(z) - \\exp(z) D_{lm}(z) + \\widetilde{C}_{lm} z^{l+m+1} + \\frac{m+1}{l+m+2} \\widetilde{C}_{lm} z^{l+m+2} = O(z^{l+m+3}), \\tag{352i}\n\\]\nand we finally need to prove that $\\widetilde{C}_{lm} = C_{lm}$. Operate on both sides of \\eqref{eq:352i} with the operator $(d/dz)^{l+1}$ and multiply the result by $\\exp(-z)$. This gives\n\\[\nP(z) + \\left( \\frac{m+1}{l+m+2} \\frac{(l+m+2)!}{(m+1)!} \\widetilde{C}_{lm} - \\frac{(l+m+1)!}{m!} C_{lm} \\right) z^{m+1} = O(z^{m+2}), \\tag{352j}\n\\]\nwhere $P$ is the polynomial of degree $m$ given by\n\\[\nP(z) = \\frac{(l+m+1)!}{m!} C_{lm} z^{m} - \\left(1 + \\frac{d}{dz}\\right)^{l+1} D_{lm}(z).\n\\]\nIt follows from \\eqref{eq:352j} that $\\widetilde{C}_{lm} = C_{lm}$.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns Pad\\'e approximations, specifically for the exponential function. The $(l, m)$ Pad\\'e approximation to a function $f$ is a rational function $N_{lm}(z)/D_{lm}(z)$ such that $f(z) = N_{lm}(z)/D_{lm}(z) + O(z^{l+m+1})$. The normalization $N(0)=D(0)=1$ is used.\n\nVariables:\n\\begin{itemize}\n    \\item $N_{lm}$: numerator polynomial of the $(l, m)$ Pad\\'e approximation to $f$\n    \\item $D_{lm}$: denominator polynomial of the $(l, m)$ Pad\\'e approximation to $f$\n    \\item $f$: function for which Pad\\'e approximations are considered, specifically the exponential function in this context\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\nf(z) = 1 + \\sin(z) \\approx 1 + z - \\frac{1}{6}z^{3} + \\dots\n\\tag{352a}\n\\end{equation}\n(example of a function where Pad\\'e approximation may not exist for specific $l, m$)",
+  "variables": [
+    {
+      "name": "Nlm",
+      "definition": "numerator polynomial of the (l, m) Padé approximation to f"
+    },
+    {
+      "name": "Dlm",
+      "definition": "denominator polynomial of the (l, m) Padé approximation to f"
+    },
+    {
+      "name": "f",
+      "definition": "function for which Padé approximations are considered, specifically the exponential function in this context"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "352a",
+      "content": "f(z) = 1 + sin(z) ≈ 1 + z - (1/6)z^3 + ... (example of a function where Padé approximation may not exist for specific l, m)"
+    }
+  ],
+  "preamble": "The theorem concerns Padé approximations, specifically for the exponential function. The (l, m) Padé approximation to a function f is a rational function Nlm(z)/Dlm(z) such that f(z) = Nlm(z)/Dlm(z) + O(z^{l+m+1}). The normalization N(0)=D(0)=1 is used.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "thm:352C",
+      "kind": "theorem",
+      "number": "352C",
+      "name": "Pade approximant recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:352D",
+      "kind": "theorem",
+      "number": "352D",
+      "name": "Pade approximation recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:352E",
+      "kind": "theorem",
+      "number": "352E",
+      "name": "V function recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "cor:356D",
+    "def:110A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "lem:342A",
+    "lem:342B",
+    "lem:359A",
+    "thm:342C",
+    "thm:352C",
+    "thm:352D",
+    "thm:352E",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:352B",
+    "thm:353A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

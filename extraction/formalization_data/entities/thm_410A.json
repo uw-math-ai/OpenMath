@@ -1,0 +1,63 @@
+{
+  "id": "thm:410A",
+  "kind": "theorem",
+  "number": "410A",
+  "name": "Criteria for order",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "410",
+  "subsection_title": "Criteria for order",
+  "page": 350,
+  "statement_text": "The constants C0 , C1 , C2 , . . . in (410b) are given by\n\n         α(exp(−z)) − zβ(exp(−z)) = C0 + C1 z + C2 z 2 + · · · .                  (410c)",
+  "statement_latex": "\\begin{theorem}\nThe constants $C_0, C_1, C_2, \\dotsc$ in \\eqref{eq:410b} are given by\n\\[\n\\alpha(\\exp(-z)) - z\\beta(\\exp(-z)) = C_0 + C_1 z + C_2 z^2 + \\cdots. \\tag{410c}\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. The coefficient of y(xn ) in the Taylor expansion of (410a) is equal to\n    \"\n1 − ki=1 αi , and this equals the constant term in the Taylor expansion of\nα(exp(−z)) − zβ(exp(−z)). Now suppose that j = 1, 2, . . . and calculate the\ncoefficient of y (j) (xn ) in the Taylor expansion of (410a). This equals\n\n                               \u0014\n                               k\n                                          (−i)j \u0014 (−i)j−1 ,\n                                                  k\n                           −         αi        −     βi\n                               i=1\n                                            j!   i=0\n                                                        (j − 1)!\n\nwhere the coefficient of β0 is −1 if j = 1 and zero for j > 1. This is identical\nto the coefficient of z j in the Taylor expansion of α(exp(−z)) − zβ(exp(−z)).",
+  "proof_latex": "\\begin{proof}\nThe coefficient of $y(x_n)$ in the Taylor expansion of \\eqref{eq:410a} is equal to\n$1 - \\sum_{i=1}^k \\alpha_i$, and this equals the constant term in the Taylor expansion of\n$\\alpha(\\exp(-z)) - z\\beta(\\exp(-z))$. Now suppose that $j = 1, 2, \\dotsc$ and calculate the\ncoefficient of $y^{(j)}(x_n)$ in the Taylor expansion of \\eqref{eq:410a}. This equals\n\\[\n-\\sum_{i=1}^k \\alpha_i \\frac{(-i)^j}{j!} - \\sum_{i=0}^k \\beta_i \\frac{(-i)^{j-1}}{(j-1)!},\n\\]\nwhere the coefficient of $\\beta_0$ is $-1$ if $j = 1$ and zero for $j > 1$. This is identical\nto the coefficient of $z^j$ in the Taylor expansion of $\\alpha(\\exp(-z)) - z\\beta(\\exp(-z))$.\n\nAltering the expression in \\eqref{eq:410c} slightly, we can state without proof a\ncriterion for order:\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:410B",
+      "kind": "theorem",
+      "number": "410B",
+      "name": "Order Condition for Linear Multistep Methods",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:410C",
+      "kind": "theorem",
+      "number": "410C",
+      "name": "Order condition via generating functions",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:310A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:410B",
+    "thm:410C"
+  ],
+  "dependents": [
+    "thm:410D"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

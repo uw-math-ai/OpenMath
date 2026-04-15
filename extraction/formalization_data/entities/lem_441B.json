@@ -1,0 +1,47 @@
+{
+  "id": "lem:441B",
+  "kind": "lemma",
+  "number": "441B",
+  "name": "Maximum order coefficients negativity",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "44",
+  "subsection": "441",
+  "subsection_title": "Maximum order for a convergent k-step method",
+  "page": 376,
+  "statement_text": "The coefficients c2 , c4 , . . . are all negative.\n                               \u0003                  \u0004",
+  "statement_latex": "\\begin{lemma}\nThe coefficients $c_2, c_4, \\dots$ are all negative.\n\\end{lemma}",
+  "proof_text": "Proof. Using the series for log (1 + z)/(1 − z) /z, we see that c0 , c2 , c4 , . . .\nsatisfy\n            \u0003    2       2         \u0004\n              2 + z 2 + z 4 + · · · (c0 + c2 z 2 + c4 z 4 + · · · ) = 1.  (441c)\n                 3       5\nIt follows that c0 = 12 , c2 = − 16 . We prove c2n < 0 by induction for n = 2,\nn = 3, . . . . If c2i < 0 for i = 1, 2, . . . , n − 1 then we multiply (441c) by\n2n + 1 − (2n − 1)z 2 . We find\n                    ∞\n                    \u0014               ∞\n                                    \u0014\n                          d2i z ·\n                              2i\n                                          c2i z 2i = 2n + 1 − (2n − 1)z 2 ,   (441d)\n                    i=0             i=0\n\nwhere, for i = 1, 2, . . . , n,\n\n                        2(2n + 1) 2(2n − 1)        8(n − i)\n                d2i =            −          =−                  ,\n                          2i + 1    2i − 1     (2i + 1)(2i − 1)\n\nso that d2i < 0, for i = 1, 2, . . . , n − 1, and d2n = 0. Equate the coefficients of\nz 2n in (441d) and we find that\n\n                            c2 d2n−2 + c4 d2n−4 + · · · + c2n−2 d2\n                  c2n = −                                          < 0.",
+  "proof_latex": "\\begin{proof}\nUsing the series for $\\log(1+z)/(1-z)/z$, we see that $c_0, c_2, c_4, \\dots$ satisfy\n\\[\n\\left(2 + \\frac{2}{3}z^2 + \\frac{2}{5}z^4 + \\cdots \\right)(c_0 + c_2 z^2 + c_4 z^4 + \\cdots) = 1. \\tag{441c}\n\\]\nIt follows that $c_0 = \\frac{1}{2}$, $c_2 = -\\frac{1}{6}$. We prove $c_{2n} < 0$ by induction for $n = 2$, $n = 3, \\dots$. If $c_{2i} < 0$ for $i = 1, 2, \\dots, n-1$ then we multiply \\eqref{eq:441c} by $2n + 1 - (2n-1)z^2$. We find\n\\[\n\\left( \\sum_{i=0}^{\\infty} d_{2i} z^{2i} \\right) \\left( \\sum_{i=0}^{\\infty} c_{2i} z^{2i} \\right) = 2n + 1 - (2n-1)z^2, \\tag{441d}\n\\]\nwhere, for $i = 1, 2, \\dots, n$,\n\\[\nd_{2i} = \\frac{2(2n+1)}{2i+1} - \\frac{2(2n-1)}{2i-1} = -\\frac{8(n-i)}{(2i+1)(2i-1)},\n\\]\nso that $d_{2i} < 0$, for $i = 1, 2, \\dots, n-1$, and $d_{2n} = 0$. Equate the coefficients of $z^{2n}$ in \\eqref{eq:441d} and we find that\n\\[\nc_{2n} = -\\frac{c_2 d_{2n-2} + c_4 d_{2n-4} + \\cdots + c_{2n-2} d_2}{d_0} < 0. \\qedhere\n\\]\nWe are now in a position to prove the Dahlquist barrier result.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe lemma concerns the polynomial $a(z)$ derived from the characteristic polynomial $\\rho(z)$ of a linear multistep method. The preceding text shows that $a(z)$ has non-negative coefficients (with $a_1>0$) due to its zeros having non-positive real parts. The statement refers to specific coefficients $c_2,c_4,\\dots$ in the expansion of $a(z)$ (or a related function). Here,\n\\[\n\\rho(z)=z^k-\\alpha_1 z^{k-1}-\\alpha_2 z^{k-2}-\\cdots-\\alpha_k,\n\\]\nand\n\\[\na(z)=(1+z)^k-\\alpha_1(1+z)^{k-1}(1-z)-\\alpha_2(1+z)^{k-2}(1-z)^2-\\cdots-\\alpha_k(1-z)^k.\n\\]\nThe coefficients $c_2,c_4,\\dots$ appear in the expansion $a(z)=c_0+c_1z+c_2z^2+c_4z^4+\\cdots$ (odd terms may be zero).",
+  "variables": [
+    {
+      "name": "c2, c4, ...",
+      "definition": "Coefficients in the expansion of the polynomial a(z) (or related polynomial) as a power series in z, likely from a(z) = c0 + c1 z + c2 z^2 + c4 z^4 + ... (with odd terms possibly zero)."
+    },
+    {
+      "name": "a(z)",
+      "definition": "A polynomial defined as a(z) = (1+z)^k − α1 (1+z)^(k−1)(1−z) − α2 (1+z)^(k−2)(1−z)^2 − · · · − αk (1−z)^k, related to the characteristic polynomial ρ(z) = z^k − α1 z^(k−1) − α2 z^(k−2) − · · · − αk."
+    },
+    {
+      "name": "α1, α2, ..., αk",
+      "definition": "Coefficients of the linear multistep method's characteristic polynomial ρ(z) = z^k − α1 z^(k−1) − α2 z^(k−2) − · · · − αk."
+    },
+    {
+      "name": "ρ(z)",
+      "definition": "The characteristic polynomial of a linear multistep method: ρ(z) = z^k − α1 z^(k−1) − α2 z^(k−2) − · · · − αk."
+    }
+  ],
+  "equations": [],
+  "preamble": "The lemma concerns the polynomial a(z) derived from the characteristic polynomial ρ(z) of a linear multistep method. The preceding text shows that a(z) has non-negative coefficients (with a1 > 0) due to its zeros having non-positive real parts. The statement refers to specific coefficients c2, c4, ... in the expansion of a(z) (or a related function).",
+  "introduces": [],
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "lem:441A",
+    "thm:441C"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

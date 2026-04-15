@@ -1,0 +1,80 @@
+{
+  "id": "def:388F",
+  "kind": "definition",
+  "number": "388F",
+  "name": "Algebraic condition for group commutators",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "388",
+  "subsection_title": "Some subgroups and quotient groups",
+  "page": 322,
+  "statement_text": "A member α of G1 is a member of D(ξ) if\n\n                               α(tu) + α(ut) = α(t)α(u),                            (388d)\n\nwhenever t, u ∈ T and r(t) ≤ ξ.",
+  "statement_latex": "\\begin{definition}\nA member $\\alpha$ of $G_1$ is a member of $D(\\xi)$ if\n\\[\n\\alpha(tu) + \\alpha(ut) = \\alpha(t)\\alpha(u),\n\\]\nwhenever $t, u \\in T$ and $r(t) \\leq \\xi$.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nLet $T$ be the set of rooted trees and $r(t)$ the order (number of vertices) of $t\\in T$. Let $G_1$ be the group of elementary weight functions $\\alpha$ corresponding to Runge--Kutta methods. For a parameter $\\xi\\in\\mathbb{Z}$, define the subset $D(\\xi)\\subset G_1$ by the condition: for all $t,u\\in T$,\n\\[\n\\alpha(t)\\alpha(u)=\\alpha(t\\sqcup u)\n\\]\nwhenever $r(t)+r(u)\\le\\xi$.",
+  "variables": [
+    {
+      "name": "α",
+      "definition": "elementary weight function corresponding to a Runge–Kutta method, a member of G1"
+    },
+    {
+      "name": "G1",
+      "definition": "group of elementary weight functions for Runge–Kutta methods"
+    },
+    {
+      "name": "T",
+      "definition": "set of trees (rooted trees)"
+    },
+    {
+      "name": "r(t)",
+      "definition": "order (or number of vertices) of a tree t"
+    },
+    {
+      "name": "ξ",
+      "definition": "parameter (integer) defining the condition, likely related to order"
+    }
+  ],
+  "equations": [],
+  "preamble": "The context involves algebraic structures (groups and subgroups) based on elementary weight functions α of Runge–Kutta methods, with trees t, u ∈ T and order function r(t). The definition characterizes a subset D(ξ) of G1 via a relation on products of trees.",
+  "introduces": [
+    "D(ξ)"
+  ],
+  "dependencies": [
+    {
+      "id": "def:388D",
+      "kind": "definition",
+      "number": "388D",
+      "name": "Consistency Condition for Group Element",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:388D",
+    "thm:301A",
+    "thm:356C",
+    "thm:388A",
+    "thm:388B",
+    "thm:388C"
+  ],
+  "dependents": [
+    "def:370A",
+    "lem:389A",
+    "thm:388E",
+    "thm:388G",
+    "thm:388H"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -1,0 +1,56 @@
+{
+  "id": "thm:388G",
+  "kind": "theorem",
+  "number": "388G",
+  "name": "D is normal subgroup of G1",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "388",
+  "subsection_title": "Some subgroups and quotient groups",
+  "page": 322,
+  "statement_text": "The set D(ξ) is a normal subgroup of G1 .\n\n   The importance of these semi-groups is that E is a member of each of them\nand methods can be constructed which also lie in them. We first prove the\nfollowing result:",
+  "statement_latex": "\\begin{theorem}\nThe set $D(\\xi)$ is a normal subgroup of $G_1$.\n\nThe importance of these semi-groups is that $E$ is a member of each of them and methods can be constructed which also lie in them. We first prove the following result:\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:388F",
+      "kind": "definition",
+      "number": "388F",
+      "name": "Algebraic condition for group commutators",
+      "edge_type": "uses_concept",
+      "context": "d(ξ)"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:388D",
+    "def:388F",
+    "thm:301A",
+    "thm:356C",
+    "thm:388A",
+    "thm:388B",
+    "thm:388C"
+  ],
+  "dependents": [
+    "def:370A",
+    "lem:389A",
+    "thm:388E"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

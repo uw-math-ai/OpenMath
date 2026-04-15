@@ -1,0 +1,81 @@
+{
+  "id": "thm:523A",
+  "kind": "theorem",
+  "number": "523A",
+  "name": "Non-linear stability",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "523",
+  "subsection_title": "Non-linear stability",
+  "page": 427,
+  "statement_text": "Let Y denote the vector of stage values, F the vector of\nstage derivatives and y [n−1] and y [n] the input and output respectively from\na single step of a general linear method (A, U, B, V ). Assume that M is a\npositive semi-definite (s + r) × (s + r) matrix, where\n\n                               DA + A D − B GB                DU − B GV\n                    M=                                                       ,            (523b)\n                                 U D − V GB                   G − V GV\nwith G a positive semi-definite r × r matrix and D a positive semi-definite\ndiagonal s × s matrix. Then\n                  y [n] 2G = y [n−1] 2G + 2\u000ehF, Y \u000fD − hF ⊕ y [n−1] 2M .",
+  "statement_latex": "\\begin{theorem}\nLet $Y$ denote the vector of stage values, $F$ the vector of stage derivatives and $y^{[n-1]}$ and $y^{[n]}$ the input and output respectively from a single step of a general linear method $(A, U, B, V)$. Assume that $M$ is a positive semi-definite $(s + r) \\times (s + r)$ matrix, where\n\\[\nM = \\begin{pmatrix}\nDA + A^\\top D - B^\\top G B & D U - B^\\top G V \\\\\nU^\\top D - V^\\top G B & G - V^\\top G V\n\\end{pmatrix},\n\\tag{523b}\n\\]\nwith $G$ a positive semi-definite $r \\times r$ matrix and $D$ a positive semi-definite diagonal $s \\times s$ matrix. Then\n\\[\n\\| y^{[n]} \\|_G^2 = \\| y^{[n-1]} \\|_G^2 + 2 \\langle hF, Y \\rangle_D - \\| hF \\oplus y^{[n-1]} \\|_M^2.\n\\]\n\\end{theorem}",
+  "proof_text": "Proof. The result is equivalent to the identity\n\n                   0     0   B            #        $  D #            $  A          #      $\n           M=              −             G B      V +    A          U +             D    0 .",
+  "proof_latex": "\\begin{proof}\nThe result is equivalent to the identity\n\\[\nM = \\begin{pmatrix} 0 & 0 \\\\ 0 & G \\end{pmatrix} - \\begin{pmatrix} B^\\top \\\\ V^\\top \\end{pmatrix} G \\begin{pmatrix} B & V \\end{pmatrix} + \\begin{pmatrix} D & 0 \\\\ 0 & 0 \\end{pmatrix} \\begin{pmatrix} A & U \\end{pmatrix} + \\begin{pmatrix} A^\\top \\\\ U^\\top \\end{pmatrix} \\begin{pmatrix} D & 0 \\end{pmatrix}.\n\\]\nWe are now in a position to extend the algebraic stability concept to the general linear case.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "def:510B",
+      "kind": "definition",
+      "number": "510B",
+      "name": "consistent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:523B"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

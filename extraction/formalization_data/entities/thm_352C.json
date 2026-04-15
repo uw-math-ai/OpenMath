@@ -1,0 +1,69 @@
+{
+  "id": "thm:352C",
+  "kind": "theorem",
+  "number": "352C",
+  "name": "Pade approximant recurrence relation",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "352",
+  "subsection_title": "Padé approximations to the exponential function",
+  "page": 257,
+  "statement_text": "If l, m ≥ 2 then\n\n                           m−l           \u0002\n  Vlm (z) = 1 +                          z Vl−1,m−1 (z)\n                      (l + m)(l + m − 2)\n                                       (l − 1)(m − 1)\n                           +                                     z 2 Vl−2,m−2 (z).\n                             (l + m − 1)(l + m − 2)2 (l + m − 3)\n\n\n         Table 352(IV) Second sub-diagonal members of the Padé table\n                     Nm−2,m /Dm−2,m for m = 2, 3, . . . , 7\n\n                                             Nm−2,m\n    m\n                                             Dm−2,m\n                                                  1\n     2\n                                           1 − z + 12 z 2\n                                               1 + 14 z\n     3\n                                      1 − 34 z + 14 z 2 − 241 3\n                                                              z\n                                               1        1 2\n                                         1 + 3 z + 30 z\n     4\n                                1 − 23 z + 15 z 2 − 301 3\n                                                         z + 360 1 4\n                                                                    z\n                                         3        3 2       1 3\n                                     1 + 8 z + 56 z + 336 z\n     5\n                        1 − 58 z + 28   z − 168\n                                      5 2        5 3\n                                                   z + 336    z − 6720\n                                                            1 4         1\n                                                                           z5\n                                    2      1 2        1 3         1    4\n                             1 + 5 z + 15 z + 180 z + 5040 z\n     6\n                   1 − 35 z + 16 z 2 − 36\n                                        1 3\n                                          z + 336  1 4\n                                                      z − 5040 1            1\n                                                                   z 5 + 151200 z6\n                            5         5 2       1 3         1    4       1    5\n                      1 + 12 z + 66 z + 132 z + 2376 z + 95040 z\n     7\n          1 − 12 z + 44 z − 264\n               7      7 2        7 3\n                                    z + 2376 7\n                                                z 4 − 31680\n                                                          7             1\n                                                              z 5 + 95040  z 6 − 3991680\n                                                                                    1\n                                                                                         z7",
+  "statement_latex": "\\begin{theorem}\nIf \\( l, m \\geq 2 \\) then\n\\[\nV_{lm}(z) = \\left( 1 + \\frac{m-l}{(l+m)(l+m-2)} z \\right) V_{l-1,m-1}(z)\n+ \\frac{(l-1)(m-1)}{(l+m-1)(l+m-2)^2(l+m-3)} z^2 V_{l-2,m-2}(z).\n\\]\n\n\\begin{center}\n\\textbf{Table 352(IV) Second sub-diagonal members of the Pad\\'e table} \\\\\n\\( N_{m-2,m} / D_{m-2,m} \\) for \\( m = 2, 3, \\dots, 7 \\)\n\\[\n\\begin{array}{ccc}\nm & & \\dfrac{N_{m-2,m}}{D_{m-2,m}} \\\\[6pt]\n2 & & 1 - z + \\dfrac{1}{2}z^2 \\\\[6pt]\n3 & & \\dfrac{1 + \\frac{1}{4}z}{1 - \\frac{3}{4}z + \\frac{1}{4}z^2 - \\frac{1}{24}z^3} \\\\[6pt]\n4 & & \\dfrac{1 + \\frac{1}{3}z + \\frac{1}{30}z^2}{1 - \\frac{2}{3}z + \\frac{1}{5}z^2 - \\frac{1}{30}z^3 + \\frac{1}{360}z^4} \\\\[6pt]\n5 & & \\dfrac{1 + \\frac{3}{8}z + \\frac{3}{56}z^2 + \\frac{1}{336}z^3}{1 - \\frac{5}{8}z + \\frac{5}{28}z^2 - \\frac{5}{168}z^3}\n\\end{array}\n\\]\n\\end{center}\n\\end{theorem}",
+  "proof_text": "Proof. Let\n                                 m−l            \u0002",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nLet $V_{lm}(z)$ denote the two-dimensional vector\n\\[\nV_{lm}(z)=\\begin{pmatrix} N_{lm}(z) \\\\ D_{lm}(z) \\end{pmatrix},\n\\]\nwhere $N_{lm}(z)$ and $D_{lm}(z)$ are the numerator and denominator, respectively, of the Padé approximant with indices $l,m$ (both non‑negative integers). The theorem provides a recurrence relation for these vectors along sub‑diagonals of the Padé table.",
+  "variables": [
+    {
+      "name": "V_{lm}(z)",
+      "definition": "two-dimensional vector whose first component is N_{lm}(z) and second component is D_{lm}(z), representing a Padé approximant"
+    },
+    {
+      "name": "l",
+      "definition": "non-negative integer, likely related to numerator or denominator degree in Padé table"
+    },
+    {
+      "name": "m",
+      "definition": "non-negative integer, likely related to numerator or denominator degree in Padé table"
+    }
+  ],
+  "equations": [],
+  "preamble": "The context involves Padé approximants and their table representation. V_{lm}(z) denotes a vector containing the numerator N_{lm}(z) and denominator D_{lm}(z) of the Padé approximant with indices l and m. The theorem gives a recurrence relation between Padé vectors along sub-diagonals of the Padé table.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:352D",
+      "kind": "theorem",
+      "number": "352D",
+      "name": "Pade approximation recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:352E",
+      "kind": "theorem",
+      "number": "352E",
+      "name": "V function recurrence relation",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:342D",
+    "lem:342A",
+    "lem:342B",
+    "lem:359A",
+    "thm:342C",
+    "thm:352D",
+    "thm:352E"
+  ],
+  "dependents": [
+    "thm:352A",
+    "thm:352B",
+    "thm:353A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

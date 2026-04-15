@@ -1,0 +1,76 @@
+{
+  "id": "thm:520D",
+  "kind": "theorem",
+  "number": "520D",
+  "name": "Instability Region Boundary Characterization",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "520",
+  "subsection_title": "Introduction",
+  "page": 419,
+  "statement_text": "The instability region for (A, U, B, V ) is a subset of the set\nof points z, such that Φ(w, z) = 0, where |w| ≥ 1. The instability region is a\nsuperset of the points defined by Φ(w, z) = 0, where |w| > 1.\n   The unanswered question in this result is: ‘Which points on the boundary\nof the stability region are actually members of it?’ This is not always a crucial\nquestion, and we quite often interpret the stability region as the ‘strict stability\nregion’, consisting of those z for which\n                                lim M (z)n = 0.\n                               n→∞\n\nThis will correspond to the set of z values such that |w| < 1, for any w\nsatisfying Φ(w, z) = 0.\n  In particular, we can define A-stability.",
+  "statement_latex": "\\begin{theorem}\nThe instability region for $(A, U, B, V)$ is a subset of the set of points $z$, such that $\\Phi(w, z) = 0$, where $|w| \\geq 1$. The instability region is a superset of the points defined by $\\Phi(w, z) = 0$, where $|w| > 1$.\n\nThe unanswered question in this result is: `Which points on the boundary of the stability region are actually members of it?' This is not always a crucial question, and we quite often interpret the stability region as the `strict stability region', consisting of those $z$ for which\n\\[\n\\lim_{n \\to \\infty} M(z)^n = 0.\n\\]\nThis will correspond to the set of $z$ values such that $|w| < 1$, for any $w$ satisfying $\\Phi(w, z) = 0$.\n\nIn particular, we can define $A$-stability.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns the stability region of a general linear method defined by $(A, U, B, V)$, where $M(z)$ is the stability matrix and $\\Phi(w, z)$ is the stability polynomial (or rational function). The stability region consists of complex $z$ such that the powers of $M(z)$ are bounded.\n\nVariables:\n\\begin{itemize}\n    \\item $M(z)$: stability matrix for the general linear method $(A, U, B, V)$\n    \\item $\\Phi(w, z)$: stability function, defined as $\\det(wI - M(z))$ (or its numerator if rational)\n\\end{itemize}",
+  "variables": [
+    {
+      "name": "M(z)",
+      "definition": "stability matrix for the general linear method (A, U, B, V)"
+    },
+    {
+      "name": "Φ(w, z)",
+      "definition": "stability function, defined as det(wI - M(z)) (or its numerator if rational)"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns the stability region of a general linear method defined by (A, U, B, V), where M(z) is the stability matrix and Φ(w, z) is the stability polynomial (or rational function). The stability region consists of complex z such that the powers of M(z) are bounded.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "uses_concept",
+      "context": "instability region"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "def:520E",
+      "kind": "definition",
+      "number": "520E",
+      "name": "A-stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "thm:431A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

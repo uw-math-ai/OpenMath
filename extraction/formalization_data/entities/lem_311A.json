@@ -1,0 +1,78 @@
+{
+  "id": "lem:311A",
+  "kind": "lemma",
+  "number": "311A",
+  "name": "The Taylor expansion of the exact solution",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "31",
+  "subsection": "311",
+  "subsection_title": "The Taylor expansion of the exact solution",
+  "page": 174,
+  "statement_text": "Let S = S0 ∪ {s} be an ordered set, where every member of\nS0 is less than s. Let t be a member of TS∗0 . Then\n                                      d\n                                        F (|t|)(y(x))\n                                     dx\nis the sum of F (|u|)(y(x)) over all u ∈ TS∗ such that the subtree formed by\nremoving s from the set of vertices is t.",
+  "statement_latex": "\\begin{lemma}\nLet $S = S_0 \\cup \\{s\\}$ be an ordered set, where every member of $S_0$ is less than $s$. Let $t$ be a member of $T_{S_0}^*$. Then\n\\[\n\\frac{d}{dx} F(|t|)(y(x))\n\\]\nis the sum of $F(|u|)(y(x))$ over all $u \\in T_S^*$ such that the subtree formed by removing $s$ from the set of vertices is $t$.\n\\end{lemma}",
+  "proof_text": "Proof. If S = {s0 , s}, then the result is equivalent to\n                             d\n                               f (y(x)) = f \u0002 (y(x))f (y(x)).\n                            dx\nWe now complete the proof by induction in the case S = {s0 } ∪ S1 ∪ S2 ∪ · · · ∪\nSk ∪ {s}, where {s0 }, S1 , S2 , . . . , Sk , {s} are disjoint subsets of the ordered\nset S. By the induction hypothesis, assume that the result of the lemma is\ntrue, when S is replaced by Si , i = 1, 2, . . . , k. If t ∈ TS∗0 , then\n                                |t| = [|t1 | |t2 | · · · |tk |],\nwhere ti ∈ TS∗i , i = 1, 2, . . . , k. Differentiate\n\n  F (|t|)(y(x))\n                        \u0003                                                         \u0004\n           = f (k)(y(x)) F (|t1 |)(y(x)), F (|t2 |)(y(x)), . . . , F (|tk |)(y(x)) , (311a)\n\nto obtain\n                                  Q0 + Q1 + Q2 + · · · + Qk ,\nwhere\n                    \u0003                                                                    \u0004\n Q0 = f (k+1) (y(x)) F (|t1 |)(y(x)), F (|t2 |)(y(x)), . . . , F (|tk |)(y(x)), f (y(x))\nand, for i = 1, 2, . . . , k,\n                       \u0003                         d                                       \u0004\n      Qi = f (k) (y(x)) F (|t1 |)(y(x)), . . . , F (|ti |)(y(x)), . . . , F (|tk |)(y(x)) .\n                                                dx\nThe value of Q0 is\n                                F ([|t1 | |t2 | · · · |tk | |t0 |])(y(x)),\nwhere |t0 | is τ labelled with the single label s. For i = 1, 2, . . . , k, the value\nof Qi is the sum of all terms of the form (311a), with F (|ti |)(y(x)) replaced\nby terms of the form F (|ui |)(y(x)), where ui is formed from ti by adding an\nadditional leaf labelled by s. The result of the lemma follows by combining\nall terms contributing to the derivative of (311a).",
+  "proof_latex": "\\begin{proof}\nIf $S = \\{s_0, s\\}$, then the result is equivalent to\n\\[\n\\frac{d}{dx} f(y(x)) = f'(y(x)) f(y(x)).\n\\]\nWe now complete the proof by induction in the case $S = \\{s_0\\} \\cup S_1 \\cup S_2 \\cup \\cdots \\cup S_k \\cup \\{s\\}$, where $\\{s_0\\}, S_1, S_2, \\dots, S_k, \\{s\\}$ are disjoint subsets of the ordered set $S$. By the induction hypothesis, assume that the result of the lemma is true, when $S$ is replaced by $S_i$, $i = 1, 2, \\dots, k$. If $t \\in T_{S_0}^*$, then\n\\[\n|t| = [|t_1| |t_2| \\cdots |t_k|],\n\\]\nwhere $t_i \\in T_{S_i}^*$, $i = 1, 2, \\dots, k$. Differentiate\n\\[\nF(|t|)(y(x)) = f^{(k)}(y(x)) \\bigl( F(|t_1|)(y(x)), F(|t_2|)(y(x)), \\dots, F(|t_k|)(y(x)) \\bigr), \\tag{311a}\n\\]\nto obtain\n\\[\nQ_0 + Q_1 + Q_2 + \\cdots + Q_k,\n\\]\nwhere\n\\[\nQ_0 = f^{(k+1)}(y(x)) \\bigl( F(|t_1|)(y(x)), F(|t_2|)(y(x)), \\dots, F(|t_k|)(y(x)), f(y(x)) \\bigr)\n\\]\nand, for $i = 1, 2, \\dots, k$,\n\\[\nQ_i = f^{(k)}(y(x)) \\bigl( F(|t_1|)(y(x)), \\dots, \\frac{d}{dx} F(|t_i|)(y(x)), \\dots, F(|t_k|)(y(x)) \\bigr).\n\\]\nThe value of $Q_0$ is\n\\[\nF([|t_1| |t_2| \\cdots |t_k| |t_0|])(y(x)),\n\\]\nwhere $|t_0|$ is $\\tau$ labelled with the single label $s$. For $i = 1, 2, \\dots, k$, the value of $Q_i$ is the sum of all terms of the form \\eqref{eq:311a}, with $F(|t_i|)(y(x))$ replaced by terms of the form $F(|u_i|)(y(x))$, where $u_i$ is formed from $t_i$ by adding an additional leaf labelled by $s$. The result of the lemma follows by combining all terms contributing to the derivative of \\eqref{eq:311a}.\n\\end{proof}",
+  "context_latex": "",
+  "variables": [],
+  "equations": [],
+  "preamble": "",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:381A",
+      "kind": "definition",
+      "number": "381A",
+      "name": "equivalent",
+      "edge_type": "uses_concept",
+      "context": "equivalent"
+    },
+    {
+      "id": "def:310A",
+      "kind": "definition",
+      "number": "310A",
+      "name": "elementary differential",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "lem:310B",
+      "kind": "lemma",
+      "number": "310B",
+      "name": "Elementary Differential Weight Formula",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:311B",
+      "kind": "theorem",
+      "number": "311B",
+      "name": "Taylor expansion exact solution formula",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:310A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "lem:310B",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:311C",
+    "thm:315A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

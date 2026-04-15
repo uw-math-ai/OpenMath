@@ -1,0 +1,70 @@
+{
+  "id": "thm:355B",
+  "kind": "theorem",
+  "number": "355B",
+  "name": "Order arrow tangency directions theorem",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "36",
+  "subsection": "355",
+  "subsection_title": "Order arrows and the Ehle barrier",
+  "page": 264,
+  "statement_text": "Let R be a rational approximation to exp of exact order p,\nso that\n                R(z) = exp(z) − Cz p+1 + O(z p+2 ),\nwhere the error constant C is non-zero. If C < 0 (C > 0) there are up\n(down) arrows tangential at 0 to the rays with arguments k2πi/(p + 1),\nk = 0, 1, . . . , p, and down (up) arrows tangential at 0 to the rays with\narguments (2k + 1)πi/(p + 1), k = 0, 1, . . . , p.",
+  "statement_latex": "\\begin{theorem}[355B]\nLet \\( R \\) be a rational approximation to \\( \\exp \\) of exact order \\( p \\), so that\n\\[\nR(z) = \\exp(z) - C z^{p+1} + O(z^{p+2}),\n\\]\nwhere the error constant \\( C \\) is non-zero. If \\( C < 0 \\) (\\( C > 0 \\)) there are up (down) arrows tangential at \\( 0 \\) to the rays with arguments \\( \\frac{k 2\\pi i}{p + 1} \\), \\( k = 0, 1, \\dots, p \\), and down (up) arrows tangential at \\( 0 \\) to the rays with arguments \\( \\frac{(2k + 1)\\pi i}{p + 1} \\), \\( k = 0, 1, \\dots, p \\).\n\\end{theorem}",
+  "proof_text": "Proof. If, for example, C < 0, consider the set {r exp(iθ) : r > 0, θ ∈\n[k2πi/(p + 1) − , k2πi/(p + 1) + }, where and r are both small and\nk ∈ {0, 1, 2, . . . , p}. We have\n\n           R(z) exp(−z) = 1 + (−C)r p+1 exp((p + 1)θ) + O(r p+2 ).\n\nFor r sufficiently small, the last term is negligible and, for sufficiently\nsmall, the real part of (−C)r p+1 exp((p + 1)θ)) is positive. The imaginary\npart changes sign so that an up arrow lies in this wedge. The cases of the\ndown arrows and for C > 0 are proved in a similar manner.",
+  "proof_latex": "\\begin{proof}\nIf, for example, \\( C < 0 \\), consider the set \\( \\{ r \\exp(i\\theta) : r > 0, \\theta \\in [\\frac{k 2\\pi i}{p + 1} - \\epsilon, \\frac{k 2\\pi i}{p + 1} + \\epsilon] \\} \\), where \\( \\epsilon \\) and \\( r \\) are both small and \\( k \\in \\{0, 1, 2, \\dots, p\\} \\). We have\n\\[\nR(z) \\exp(-z) = 1 + (-C) r^{p+1} \\exp((p+1)\\theta) + O(r^{p+2}).\n\\]\nFor \\( r \\) sufficiently small, the last term is negligible and, for \\( \\epsilon \\) sufficiently small, the real part of \\( (-C) r^{p+1} \\exp((p+1)\\theta) \\) is positive. The imaginary part changes sign so that an up arrow lies in this wedge. The cases of the down arrows and for \\( C > 0 \\) are proved in a similar manner.\n\nWhere the arrows leaving the origin terminate is of crucial importance.\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nLet \\(R(z)\\) be a rational approximation to \\(e^{z}\\) of exact order \\(p\\), with error constant \\(C\\) defined by\n\\[\nR(z)=e^{z}-Cz^{p+1}+O(z^{p+2}).\n\\]\nDefine \\(\\varphi(z)=R(z)e^{-z}\\). The principal order web is the part of the locus where \\(\\varphi(z)\\) is real and positive that is connected to the origin. Rays emanating from \\(0\\) along which \\(\\varphi\\) is real and positive are called order arrows; those with \\(\\varphi\\) increasing from \\(1\\) are up arrows, those with \\(\\varphi\\) decreasing from \\(1\\) are down arrows.",
+  "variables": [
+    {
+      "name": "R(z)",
+      "definition": "a rational approximation to exp(z) of exact order p"
+    },
+    {
+      "name": "p",
+      "definition": "the order of the rational approximation R(z) to exp(z)"
+    },
+    {
+      "name": "C",
+      "definition": "the error constant in the expansion R(z) = exp(z) - Cz^{p+1} + O(z^{p+2})"
+    },
+    {
+      "name": "φ(z)",
+      "definition": "R(z) exp(-z)"
+    },
+    {
+      "name": "up arrows",
+      "definition": "rays emanating from 0 in the principal order web with increasing value of φ"
+    },
+    {
+      "name": "down arrows",
+      "definition": "rays emanating from 0 in the principal order web with decreasing value of φ"
+    },
+    {
+      "name": "principal order web",
+      "definition": "the part of the order web (locus where φ(z) is real and positive) connected to 0"
+    }
+  ],
+  "equations": [],
+  "preamble": "The theorem concerns a rational approximation R(z) to exp(z) of exact order p, with error constant C. It describes the pattern of 'order arrows' (rays along which φ(z)=R(z)exp(-z) is real and positive) emanating from the origin, specifically their tangents at 0 based on the sign of C.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:355A",
+      "kind": "definition",
+      "number": "355A",
+      "name": "down arrows",
+      "edge_type": "uses_concept",
+      "context": "down arrows"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:355A"
+  ],
+  "dependents": [
+    "thm:355C",
+    "thm:443A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

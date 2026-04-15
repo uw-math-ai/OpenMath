@@ -1,0 +1,89 @@
+{
+  "id": "thm:520B",
+  "kind": "theorem",
+  "number": "520B",
+  "name": "Stability Matrix for Linear Differential Equation",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "520",
+  "subsection_title": "Introduction",
+  "page": 418,
+  "statement_text": "Let M (z) denote the stability matrix for a general linear\nmethod. Then, for a linear differential equation (520a), (520b) holds with\nz = hq.",
+  "statement_latex": "\\begin{theorem}\nLet \\( M(z) \\) denote the stability matrix for a general linear method. Then, for a linear differential equation \\eqref{eq:520a}, \\eqref{eq:520b} holds with \\( z = hq \\).\n\\end{theorem}",
+  "proof_text": "Proof. For the special problem defined by f (y) = qy, the vector of stage\nderivatives F is related to the vector of stage values Y by F = qY . Hence,\n(500c) reduces to the form\n\n                          Y             A    U         zY\n                                  =                            .\n                         y [n]          B    V       y [n−1]\n\nIt follows that Y = (I − zA)−1 U y [n−1] , and that\n\n                     y [n] = zBY + V y [n−1] = M (z)y [n−1] .",
+  "proof_latex": "\\begin{proof}\nFor the special problem defined by \\( f(y) = qy \\), the vector of stage derivatives \\( F \\) is related to the vector of stage values \\( Y \\) by \\( F = qY \\). Hence, \\eqref{eq:500c} reduces to the form\n\\[\n\\begin{pmatrix} Y \\\\ y^{[n]} \\end{pmatrix} = \\begin{pmatrix} A & U \\\\ B & V \\end{pmatrix} \\begin{pmatrix} zY \\\\ y^{[n-1]} \\end{pmatrix}.\n\\]\nIt follows that \\( Y = (I - zA)^{-1} U y^{[n-1]} \\), and that\n\\[\ny^{[n]} = zBY + V y^{[n-1]} = M(z) y^{[n-1]}.\n\\]\n\nIf the method is stable, in the sense of Section~51, then \\( M(0) = V \\) will be power-bounded. The idea now is to extend this to values of \\( z \\) in the complex plane where \\( M(z) \\) has bounded powers.\n\nJust as for Runge--Kutta and linear multistep methods, associated with each method is a stability region. This, in turn, is related to the characteristic polynomial of \\( M(z) \\).\n\\end{proof}",
+  "context_latex": "\\paragraph{Context}\nThe theorem concerns stability analysis of general linear methods applied to the linear test equation\n\\begin{equation}\ny'(x)=qy(x). \\tag{520a}\n\\end{equation}\nLet \\(z=hq\\) where \\(h\\) is the step size. For a method defined by matrices \\((A,U,B,V)\\), the stability matrix is\n\\[\nM(z)=V+zB(I-zA)^{-1}U.\n\\]\nApplying one step yields the relation\n\\begin{equation}\ny^{[n]}=M(z)y^{[n-1]}, \\tag{520b}\n\\end{equation}\nwhere \\(y^{[n-1]}\\) and \\(y^{[n]}\\) are the incoming and output vectors of approximations.",
+  "variables": [
+    {
+      "name": "M(z)",
+      "definition": "stability matrix for a general linear method, defined as M(z) = V + zB(I - zA)^{-1}U"
+    },
+    {
+      "name": "z",
+      "definition": "z = hq, where h is the step size and q is the parameter from the linear test equation"
+    },
+    {
+      "name": "y^{[n-1]}",
+      "definition": "incoming vector of approximations at step n-1"
+    },
+    {
+      "name": "y^{[n]}",
+      "definition": "output vector of approximations at step n"
+    },
+    {
+      "name": "(A, U, B, V)",
+      "definition": "matrices defining the general linear method"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "520a",
+      "content": "y'(x) = qy(x)"
+    },
+    {
+      "tag": "520b",
+      "content": "y^{[n]} = M(z)y^{[n-1]}"
+    }
+  ],
+  "preamble": "The theorem concerns the stability analysis of general linear methods applied to the linear test equation y' = qy. The stability matrix M(z) is defined from the method's coefficients, and the theorem asserts that applying one step of the method yields the relation (520b) with z = hq.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:520A",
+      "kind": "definition",
+      "number": "520A",
+      "name": "Introduction",
+      "edge_type": "uses_concept",
+      "context": "stability matrix"
+    },
+    {
+      "id": "def:520C",
+      "kind": "definition",
+      "number": "520C",
+      "name": "stability function",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:403A",
+    "def:404A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:530A",
+    "def:530B",
+    "def:530C"
+  ],
+  "dependents": [
+    "def:542A",
+    "thm:111A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

@@ -65,6 +65,10 @@ def main() -> None:
     from pipeline.verify import main as verify_main
     run_phase("Phase 7: Verification", verify_main)
 
+    # Phase 8: Formalization-ready data layout
+    from pipeline.build_formalization_data import main as build_form_data_main
+    run_phase("Phase 8: Formalization Data", build_form_data_main)
+
     total_elapsed = time.time() - overall_start
     print(f"\n{'='*60}")
     print(f"Pipeline complete in {total_elapsed:.1f}s")

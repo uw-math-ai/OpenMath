@@ -1,0 +1,149 @@
+{
+  "id": "def:551A",
+  "kind": "definition",
+  "number": "551A",
+  "name": "Inherent Runge–Kutta stability",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "55",
+  "subsection": "551",
+  "subsection_title": "Inherent Runge–Kutta stability",
+  "page": 460,
+  "statement_text": "A general linear method (A, U, B, V ) is ‘inherently Runge–\nKutta stable’ if V is of the form (551a) and the two matrices\n\n                  BA − XB         and         BU − XV + V X\n\nare zero except for their first rows, where X is some matrix.\n\n  The significance of this definition is expressed in the following.",
+  "statement_latex": "\\begin{definition}\nA general linear method $(A, U, B, V)$ is `inherently Runge--Kutta stable' if $V$ is of the form \\eqref{eq:551a} and the two matrices\n\\[\nBA - XB \\quad \\text{and} \\quad BU - XV + VX\n\\]\nare zero except for their first rows, where $X$ is some matrix.\n\nThe significance of this definition is expressed in the following.\n\\end{definition}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe definition concerns a general linear method with matrices $(A, U, B, V)$. Assume $p = q$ and $s = r = p + 1$, with $A$ diagonally implicit and $V$ having the structure\n\\[\nV = \\begin{bmatrix} 1 & v \\\\ 0 & \\dot{V} \\end{bmatrix},\n\\]\nwhere $\\rho(\\dot{V}) = 0$. The concept of inherent Runge--Kutta stability imposes conditions on $BA - XB$ and $BU - XV + VX$.",
+  "variables": [
+    {
+      "name": "A",
+      "definition": "coefficient matrix of the general linear method, assumed to have a diagonally implicit form with λ ≥ 0 on the diagonal"
+    },
+    {
+      "name": "U",
+      "definition": "coefficient matrix of the general linear method"
+    },
+    {
+      "name": "B",
+      "definition": "coefficient matrix of the general linear method"
+    },
+    {
+      "name": "V",
+      "definition": "coefficient matrix of the general linear method, assumed to be of the form (551a)"
+    },
+    {
+      "name": "p",
+      "definition": "order of the method, assumed equal to q"
+    },
+    {
+      "name": "q",
+      "definition": "stage order, assumed equal to p"
+    },
+    {
+      "name": "s",
+      "definition": "number of stages, assumed equal to r = p + 1"
+    },
+    {
+      "name": "r",
+      "definition": "number of pieces of information passed between steps, assumed equal to s = p + 1"
+    },
+    {
+      "name": "V̇",
+      "definition": "submatrix of V such that ρ(V̇) = 0, where ρ denotes spectral radius"
+    },
+    {
+      "name": "X",
+      "definition": "some matrix (not explicitly defined in the preceding text, but introduced in the definition)"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "551a",
+      "content": "V = [[1, v], [0, V̇]]"
+    }
+  ],
+  "preamble": "The definition concerns a general linear method represented by matrices (A, U, B, V). The method is assumed to have p = q and s = r = p + 1, with A being diagonally implicit and V having a specific block structure. The concept of inherent Runge-Kutta stability imposes conditions on the matrices BA - XB and BU - XV + VX.",
+  "introduces": [
+    "inherently Runge--Kutta stable"
+  ],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "uses_concept",
+      "context": "stable"
+    },
+    {
+      "id": "def:542A",
+      "kind": "definition",
+      "number": "542A",
+      "name": "annihilation conditions",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:550A",
+      "kind": "theorem",
+      "number": "550A",
+      "name": "Doubly companion matrices",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "cor:550C",
+    "def:110A",
+    "def:142A",
+    "def:310A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:402A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:406A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:512A",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "def:542A",
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:356C",
+    "thm:520B",
+    "thm:550A",
+    "thm:550B"
+  ],
+  "dependents": [
+    "thm:551B",
+    "thm:553A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

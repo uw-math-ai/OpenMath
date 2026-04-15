@@ -1,0 +1,92 @@
+{
+  "id": "thm:311C",
+  "kind": "theorem",
+  "number": "311C",
+  "name": "Taylor expansion via Picard iteration",
+  "is_helper": false,
+  "chapter": 3,
+  "section": "31",
+  "subsection": "311",
+  "subsection_title": "The Taylor expansion of the exact solution",
+  "page": 175,
+  "statement_text": "\u0014\n                            y (n) (y(x)) =             α(t)F (t)(y(x)).\n                                                t∈Tn\n\n  The alternative approach to finding the Taylor coefficients is based on the\nPicard integral equation\n                                         \u0010 ξ\n                 y(x0 + hξ) = y(x0 ) + h     f (y(x0 + hξ))dξ,\n                                                           0\n\nwhich, written in terms of Picard iterations, becomes\n                                        \u0010 ξ\n              yn (x0 + hξ) = y(x0 ) + h     f (yn−1 (x0 + hξ))dξ,                      (311b)\n                                                       0\n\nwhere the initial iterate is given by\n                                         y0 (x + hξ) = y(x0 ).                       (311c)\nFor n = 1, 2, . . . , we expand yn (x0 + hξ) for ξ ∈ [0, 1], omitting terms that are\nO(hn+1 ).",
+  "statement_latex": "\\begin{theorem}[311C]\n\\[\ny^{(n)}(y(x)) = \\sum_{t \\in T_n} \\alpha(t) F(t)(y(x)).\n\\]\n\nThe alternative approach to finding the Taylor coefficients is based on the Picard integral equation\n\\[\ny(x_0 + h\\xi) = y(x_0) + h \\int_0^\\xi f(y(x_0 + h\\xi)) \\, d\\xi,\n\\]\nwhich, written in terms of Picard iterations, becomes\n\\[\ny_n(x_0 + h\\xi) = y(x_0) + h \\int_0^\\xi f(y_{n-1}(x_0 + h\\xi)) \\, d\\xi, \\tag{311b}\n\\]\nwhere the initial iterate is given by\n\\[\ny_0(x_0 + h\\xi) = y(x_0). \\tag{311c}\n\\]\nFor $n = 1, 2, \\dots$, we expand $y_n(x_0 + h\\xi)$ for $\\xi \\in [0, 1]$, omitting terms that are $O(h^{n+1})$.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nThe preceding text discusses the representation of derivatives of the solution $y(x)$ of an ODE using elementary differentials $F(t)$ associated with rooted trees. Lemma 311A relates derivatives of products of elementary differentials to sums over trees with additional labels. Theorem 311B expresses the $S$-th derivative of $y$ in terms of labelled trees, and Theorem 311C rewrites this in terms of unlabelled trees using symmetry coefficients $\\alpha(t)$.\n\nVariables:\n\\begin{itemize}\n    \\item $y$: the solution function, $y' = f(y)$.\n    \\item $f$: the function defining the ODE.\n    \\item $F(t)$: elementary differential for tree $t$.\n    \\item $\\alpha(t)$: symmetry coefficient of unlabelled tree $t$.\n    \\item $T_S$: set of rooted trees labelled with ordered set $S$.\n    \\item $T_n$: set of unlabelled rooted trees of order $n$.\n\\end{itemize}\n\nReferenced equations:\n\\begin{equation}\n    \\text{(311a): An expression for a derivative term involving elementary differentials, used in Lemma 311A.}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "y",
+      "definition": "y is the solution function of an ordinary differential equation, typically y' = f(y)."
+    },
+    {
+      "name": "f",
+      "definition": "f is the function defining the ODE, such that y' = f(y)."
+    },
+    {
+      "name": "F(t)",
+      "definition": "F(t) is an elementary differential associated with a tree t, defined recursively from f and its derivatives."
+    },
+    {
+      "name": "α(t)",
+      "definition": "α(t) is the symmetry coefficient (or density) of an unlabelled tree t, equal to the number of distinct monotonic labellings of t."
+    },
+    {
+      "name": "TS",
+      "definition": "TS is the set of rooted trees labelled with members of the ordered set S."
+    },
+    {
+      "name": "Tn",
+      "definition": "Tn is the set of unlabelled rooted trees of order n (with n vertices)."
+    }
+  ],
+  "equations": [
+    {
+      "tag": "311a",
+      "content": "An expression for a derivative term involving elementary differentials, used in Lemma 311A."
+    }
+  ],
+  "preamble": "The preceding text discusses the representation of derivatives of the solution y(x) of an ODE using elementary differentials F(t) associated with rooted trees. Lemma 311A relates derivatives of products of elementary differentials to sums over trees with additional labels. Theorem 311B expresses the #S-th derivative of y in terms of labelled trees, and Theorem 311C rewrites this in terms of unlabelled trees using symmetry coefficients α(t).",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "lem:311A",
+      "kind": "lemma",
+      "number": "311A",
+      "name": "The Taylor expansion of the exact solution",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "thm:311B",
+      "kind": "theorem",
+      "number": "311B",
+      "name": "Taylor expansion exact solution formula",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:310A",
+    "def:356B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "lem:310B",
+    "lem:311A",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:356C"
+  ],
+  "dependents": [
+    "thm:311D"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

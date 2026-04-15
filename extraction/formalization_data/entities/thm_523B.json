@@ -1,0 +1,154 @@
+{
+  "id": "thm:523B",
+  "kind": "theorem",
+  "number": "523B",
+  "name": "Nonlinear Stability via Positive Semidefiniteness",
+  "is_helper": false,
+  "chapter": 5,
+  "section": "51",
+  "subsection": "523",
+  "subsection_title": "Non-linear stability",
+  "page": 428,
+  "statement_text": "If M given by (523b) is positive semi-definite, then\n                                         y [n] 2G ≤ y [n−1] 2G .\n\n\nWe consider the possibility of analysing the possible non-linear stability of\nlinear multistep methods without using one-leg methods. First note that a\nlinear k-step method, written as a general linear method with r = 2k inputs,\nis reducible to a method with only k inputs. For the standard k-step method\nwritten in the form (400b), we interpret hf (xn−i , yn−i ), i = 1, 2, . . . , k, as\nhaving already been evaluated from the corresponding yn−i . Define the input\nvector y [n−1] by\n\n       [n−1]\n                   \u0014\n                   k\n                     \u0003                                              \u0004\n      yi       =            αj yn−j+i−1 + βj hf (xn−j+i , yn−j+i−1 ) ,       i = 1, 2, . . . , k,\n                   j=i\n\nso that the single stage Y = yn satisfies\n                                                               [n−1]\n                                     Y = hβ0 f (xn , Y ) + y1\nand the output vector can be found from\n                         [n]         [n−1]      [n]\n                       yi      = αi y1       + yi+1 + (β0 αi + βi )hf (xn , Y ),\n                            [n]\nwhere the term yi+1 is omitted when i = k. The reduced method has the\ndefining matrices\n                                                          \n                         β0          1   0 0 ··· 0 0\n                  β α +β                1 0 ··· 0 0 \n                      0 1    1     α1                     \n                                                          \n                  β0 α2 + β2       α    0  1  · · · 0  0  \n                                      2                   \n       A U        β α +β           α          · · ·       \n               =      0 3    3        3 0  0        0  0  ,  (524a)\n      B V                .          .   .   .       .   . \n                         ..         ..  .. ..       .. .. \n                                                          \n                                                          \n                  β0 αk−1 + βk−1 αk−1 0 0 · · · 0 1 \n                                   β0 αk + βk          αk    0 0 ···       0 0\nand was shown in Butcher and Hill (2006) to be algebraically stable if it is\nA-stable.",
+  "statement_latex": "\\begin{theorem}[523B]\nIf $M$ given by \\eqref{eq:523b} is positive semi-definite, then\n\\[\n\\|y^{[n]}\\|_G^2 \\leq \\|y^{[n-1]}\\|_G^2.\n\\]\n\nWe consider the possibility of analysing the possible non-linear stability of linear multistep methods without using one-leg methods. First note that a linear $k$-step method, written as a general linear method with $r = 2k$ inputs, is reducible to a method with only $k$ inputs. For the standard $k$-step method written in the form \\eqref{eq:400b}, we interpret $hf(x_{n-i}, y_{n-i})$, $i = 1, 2, \\dots, k$, as having already been evaluated from the corresponding $y_{n-i}$. Define the input vector $y^{[n-1]}$ by\n\\[\ny_i^{[n-1]} = \\sum_{j=i}^{k} \\bigl[ \\alpha_j y_{n-j+i-1} + \\beta_j hf(x_{n-j+i}, y_{n-j+i-1}) \\bigr], \\qquad i = 1, 2, \\dots, k,\n\\]\nso that the single stage $Y = y_n$ satisfies\n\\[\nY = h\\beta_0 f(x_n, Y) + y_1^{[n-1]}\n\\]\nand the output vector can be found from\n\\[\ny_i^{[n]} = \\alpha_i y_1^{[n-1]} + y_{i+1}^{[n]} + (\\beta_0\\alpha_i + \\beta_i)hf(x_n, Y),\n\\]\nwhere the term $y_{i+1}^{[n]}$ is omitted when $i = k$. The reduced method has the defining matrices\n\\[\n\\begin{bmatrix}\nA & U \\\\\nB & V\n\\end{bmatrix}\n=\n\\begin{bmatrix}\n\\beta_0 & 1 & 0 & 0 & \\cdots & 0 & 0 \\\\\n\\beta_0\\alpha_1 + \\beta_1 & \\alpha_1 & 1 & 0 & \\cdots & 0 & 0 \\\\\n\\beta_0\\alpha_2 + \\beta_2 & \\alpha_2 & 0 & 1 & \\cdots & 0 & 0 \\\\\n\\beta_0\\alpha_3 + \\beta_3 & \\alpha_3 & 0 & 0 & \\cdots & 0 & 0 \\\\\n\\vdots & \\vdots & \\vdots & \\vdots & \\ddots & \\vdots & \\vdots \\\\\n\\beta_0\\alpha_{k-1} + \\beta_{k-1} & \\alpha_{k-1} & 0 & 0 & \\cdots & 0 & 1 \\\\\n\\beta_0\\alpha_k + \\beta_k & \\alpha_k & 0 & 0 & \\cdots & 0 & 0\n\\end{bmatrix},\n\\tag{524a}\n\\]\nand was shown in Butcher and Hill (2006) to be algebraically stable if it is $A$-stable.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context} The theorem concerns a general linear method defined by matrices $(A, U, B, V)$, with stage values $Y$, stage derivatives $F$, input $y^{[n-1]}$, and output $y^{[n]}$. The matrix $M$ is constructed from these matrices along with positive semi-definite matrices $G$ and $D$ as in (523b). The norm $\\|\\cdot\\|_G$ and inner product $\\langle\\cdot,\\cdot\\rangle_D$ are used.\n\nVariables: $M$: positive semi-definite $(s + r) \\times (s + r)$ matrix defined by (523b); $G$: positive semi-definite $r \\times r$ matrix; $D$: positive semi-definite diagonal $s \\times s$ matrix; $y^{[n-1]}$: input vector; $y^{[n]}$: output vector; $Y$: vector of stage values; $F$: vector of stage derivatives; $A, U, B, V$: coefficient matrices; $\\|\\cdot\\|_G$: norm $\\|x\\|_G^2 = \\langle x, x\\rangle_G = x^T G x$; $\\langle\\cdot,\\cdot\\rangle_D$: inner product $\\sum_{i=1}^s d_i \\langle U_i, V_i\\rangle$ for diagonal $D$ with elements $d_i$.\n\nReferenced equations:\n\\begin{equation}\nM = \\begin{bmatrix}\nD A + A^T D - B^T G B & D U - B^T G V \\\\\nU^T D - V^T G B & G - V^T G V\n\\end{bmatrix}\n\\tag{523b}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "M",
+      "definition": "positive semi-definite (s + r) × (s + r) matrix defined by (523b)"
+    },
+    {
+      "name": "G",
+      "definition": "positive semi-definite r × r matrix"
+    },
+    {
+      "name": "D",
+      "definition": "positive semi-definite diagonal s × s matrix"
+    },
+    {
+      "name": "y^{[n-1]}",
+      "definition": "input vector to a single step of a general linear method"
+    },
+    {
+      "name": "y^{[n]}",
+      "definition": "output vector from a single step of a general linear method"
+    },
+    {
+      "name": "Y",
+      "definition": "vector of stage values"
+    },
+    {
+      "name": "F",
+      "definition": "vector of stage derivatives"
+    },
+    {
+      "name": "A, U, B, V",
+      "definition": "coefficient matrices defining a general linear method"
+    },
+    {
+      "name": "||·||_G",
+      "definition": "norm defined by ||x||_G^2 = <x, x>_G = x^T G x"
+    },
+    {
+      "name": "<·,·>_D",
+      "definition": "inner product defined as sum_{i=1}^s d_i <U_i, V_i> for diagonal D with elements d_i"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "523b",
+      "content": "M = [[D A + A^T D - B^T G B, D U - B^T G V]; [U^T D - V^T G B, G - V^T G V]]"
+    }
+  ],
+  "preamble": "The theorem concerns a general linear method defined by matrices (A, U, B, V), with stage values Y, stage derivatives F, input y^{[n-1]}, and output y^{[n]}. The matrix M is constructed from these matrices along with positive semi-definite matrices G and D as in (523b). The norm ||·||_G and inner product <·,·>_D are used.",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "def:530C",
+      "kind": "definition",
+      "number": "530C",
+      "name": "Order relative to starting method",
+      "edge_type": "uses_concept",
+      "context": "general linear method"
+    },
+    {
+      "id": "def:357B",
+      "kind": "definition",
+      "number": "357B",
+      "name": "algebraically stable",
+      "edge_type": "uses_concept",
+      "context": "algebraically stable"
+    },
+    {
+      "id": "def:356B",
+      "kind": "definition",
+      "number": "356B",
+      "name": "reduced method",
+      "edge_type": "uses_concept",
+      "context": "reduced method"
+    },
+    {
+      "id": "def:403A",
+      "kind": "definition",
+      "number": "403A",
+      "name": "stability in the sense of Dahlquist",
+      "edge_type": "uses_concept",
+      "context": "stability"
+    },
+    {
+      "id": "def:520E",
+      "kind": "definition",
+      "number": "520E",
+      "name": "A-stable",
+      "edge_type": "uses_concept",
+      "context": "a-stable"
+    },
+    {
+      "id": "thm:523A",
+      "kind": "theorem",
+      "number": "523A",
+      "name": "Non-linear stability",
+      "edge_type": "uses_equation_from",
+      "context": "(523b) owned by thm:523A"
+    }
+  ],
+  "transitive_dependencies": [
+    "cor:356D",
+    "def:110A",
+    "def:142A",
+    "def:350A",
+    "def:355A",
+    "def:356A",
+    "def:356B",
+    "def:357A",
+    "def:357B",
+    "def:381A",
+    "def:381C",
+    "def:381D",
+    "def:381E",
+    "def:381F",
+    "def:403A",
+    "def:404A",
+    "def:442A",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:520A",
+    "def:520C",
+    "def:520E",
+    "def:520F",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:356C",
+    "thm:523A"
+  ],
+  "dependents": [
+    "def:451A"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}

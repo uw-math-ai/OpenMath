@@ -1,0 +1,81 @@
+{
+  "id": "thm:410C",
+  "kind": "theorem",
+  "number": "410C",
+  "name": "Order condition via generating functions",
+  "is_helper": false,
+  "chapter": 4,
+  "section": "40",
+  "subsection": "410",
+  "subsection_title": "Criteria for order",
+  "page": 351,
+  "statement_text": "A linear multistep method (ρ, σ) has order p if and only if\n\n                     ρ(exp(z)) − zσ(exp(z)) = O(z p+1 ).\n\n  Return now to Theorem 410B and replace exp(z) by (1 + z)−1 . It is found\nthat\n              α((1 + z)−1 ) − log(1 + z)β((1 + z)−1 ) = O(z p+1 ),     (410d)\n\nwhere log(1 + z) is defined only in {z ∈ C : |z| < 1} by its power series\n\n                     log(1 + z) = z − 12 z 2 + 13 z 3 − · · · .\n\nBecause both α(1 + z) and log(1 + z) vanish when z = 0, it is possible to\nrearrange (410d) in the form given in the following result, which we present\nwithout further proof.",
+  "statement_latex": "\\begin{theorem}\nA linear multistep method $(\\rho, \\sigma)$ has order $p$ if and only if\n\\[\n\\rho(\\exp(z)) - z\\sigma(\\exp(z)) = O(z^{p+1}).\n\\]\n\nReturn now to Theorem~\\ref{thm:410B} and replace $\\exp(z)$ by $(1 + z)^{-1}$. It is found that\n\\[\n\\alpha((1 + z)^{-1}) - \\log(1 + z)\\beta((1 + z)^{-1}) = O(z^{p+1}), \\tag{410d}\n\\]\nwhere $\\log(1 + z)$ is defined only in $\\{z \\in \\mathbb{C} : |z| < 1\\}$ by its power series\n\\[\n\\log(1 + z) = z - \\frac{1}{2}z^{2} + \\frac{1}{3}z^{3} - \\cdots .\n\\]\n\nBecause both $\\alpha(1 + z)$ and $\\log(1 + z)$ vanish when $z = 0$, it is possible to rearrange \\eqref{eq:410d} in the form given in the following result, which we present without further proof.\n\\end{theorem}",
+  "proof_text": "",
+  "proof_latex": "",
+  "context_latex": "\\paragraph{Context}\nLinear multistep methods for ODEs are given in two notations: the $[\\alpha,\\beta]$ formulation and the traditional $(\\rho,\\sigma)$ formulation. The order condition follows from Taylor expansions of the method's difference equation, relating it to the generating polynomials evaluated at $e^{z}$.\n\nVariables:\n\\begin{itemize}\n    \\item $\\alpha$: generating polynomial $\\alpha(z)=\\alpha_k z^k+\\alpha_{k-1}z^{k-1}+\\dots+\\alpha_0$\n    \\item $\\beta$: generating polynomial $\\beta(z)=\\beta_k z^k+\\beta_{k-1}z^{k-1}+\\dots+\\beta_0$\n    \\item $\\rho$: characteristic polynomial $\\rho(z)=\\alpha_k z^k+\\alpha_{k-1}z^{k-1}+\\dots+\\alpha_0$\n    \\item $\\sigma$: second characteristic polynomial $\\sigma(z)=\\beta_k z^k+\\beta_{k-1}z^{k-1}+\\dots+\\beta_0$\n    \\item $p$: order of the method\n\\end{itemize}\n\nReferenced equation:\n\\begin{equation}\n\\alpha(e^{-z})-z\\beta(e^{-z})=C_0+C_1z+C_2z^2+\\cdots\n\\tag{410c}\n\\end{equation}",
+  "variables": [
+    {
+      "name": "α",
+      "definition": "α is the generating polynomial for the coefficients α_i of the linear multistep method, typically α(z) = α_k z^k + α_{k-1} z^{k-1} + ... + α_0"
+    },
+    {
+      "name": "β",
+      "definition": "β is the generating polynomial for the coefficients β_i of the linear multistep method, typically β(z) = β_k z^k + β_{k-1} z^{k-1} + ... + β_0"
+    },
+    {
+      "name": "ρ",
+      "definition": "ρ is the characteristic polynomial of the linear multistep method, typically ρ(z) = α_k z^k + α_{k-1} z^{k-1} + ... + α_0"
+    },
+    {
+      "name": "σ",
+      "definition": "σ is the second characteristic polynomial of the linear multistep method, typically σ(z) = β_k z^k + β_{k-1} z^{k-1} + ... + β_0"
+    },
+    {
+      "name": "p",
+      "definition": "p is the order of the linear multistep method"
+    }
+  ],
+  "equations": [
+    {
+      "tag": "410c",
+      "content": "α(exp(−z)) − zβ(exp(−z)) = C0 + C1 z + C2 z^2 + ···"
+    }
+  ],
+  "preamble": "The context involves linear multistep methods for ODEs, represented in two notations: the [α, β] formulation and the traditional (ρ, σ) formulation. The order condition is derived from Taylor expansions of the method's difference equation, relating it to the generating polynomials evaluated at exp(z).",
+  "introduces": [],
+  "dependencies": [
+    {
+      "id": "thm:410B",
+      "kind": "theorem",
+      "number": "410B",
+      "name": "Order Condition for Linear Multistep Methods",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 410B"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:142A",
+    "def:310A",
+    "def:403A",
+    "def:404A",
+    "def:404B",
+    "def:510A",
+    "def:510B",
+    "def:510C",
+    "def:530A",
+    "def:530B",
+    "def:530C",
+    "thm:301A",
+    "thm:306A",
+    "thm:311B",
+    "thm:410B"
+  ],
+  "dependents": [
+    "thm:410A",
+    "thm:410D"
+  ],
+  "lean_file": null,
+  "lean_symbol": null,
+  "formalization_status": "unformalized"
+}
