@@ -1,9 +1,8 @@
 \chapter{Linear Multistep Methods}
 
-
 \section{Preliminaries}
 
-\begin{definition}[402A]
+\begin{definition}[convergent (402A)]
 
   \label{def:402A}
   \lean{Butcher.Ch4.Def402A}
@@ -14,21 +13,39 @@ Y_m - y(x) \to 0, \quad \text{as } m \to \infty.
 \]
 \end{definition}
 
-\begin{definition}[403A]
+\noindent\textbf{Context.}
+The definition concerns a linear multistep method $[\alpha, \beta]$ applied to an initial value problem. For the specific one-dimensional problem where $f(x, y) = 0$, the method reduces to the linear difference equation (403a). The method has coefficients $\alpha = (\alpha_1, \alpha_2, \dots, \alpha_k)$ and $\beta = (\beta_0, \beta_1, \dots, \beta_k)$. Here, $y_n$ denotes the computed solution at step $n$, and $k$ is the number of steps.
+\begin{equation}
+y_n = \alpha_1 y_{n-1} + \alpha_2 y_{n-2} + \cdots + \alpha_k y_{n-k}
+\tag{403a}
+\end{equation}
+
+\begin{definition}[stability in the sense of Dahlquist (403A)]
 
   \label{def:403A}
   \lean{Butcher.Ch4.Def403A}
-  \uses{}
+  \uses{def:142A}
 A linear multistep method $[\alpha, \beta]$ is `stable' if the difference equation \eqref{eq:403a} has only bounded solutions.
 
 Because stability concepts of one sort or another abound in the theory of initial value problems, `stability' is often referred to as `zero-stability' -- for example, in Lambert (1991) -- or as `stability in the sense of Dahlquist'.
 \end{definition}
 
-\begin{definition}[404A]
+\noindent\textbf{Context.}
+Linear multistep methods for the ODE $y' = f(x,y)$ are defined by coefficients $\alpha_i$ and $\beta_i$. For a $k$-step method with step size $h$, the numerical approximation $y_n$ satisfies
+\[
+\sum_{i=0}^k \alpha_i y_{n-i} = h \sum_{i=0}^k \beta_i f(x_{n-i}, y_{n-i}),
+\]
+with $\alpha_0 = -1$. Preconsistency ensures the exact solution for the trivial ODE $y'=0$, leading to the condition
+\begin{equation}
+\label{404a}
+1 = \alpha_1 + \alpha_2 + \dots + \alpha_k.
+\end{equation}
+
+\begin{definition}[preconsistent (404A)]
 
   \label{def:404A}
   \lean{Butcher.Ch4.Def404A}
-  \uses{def:510A}
+  \uses{}
 A linear multistep method satisfying \eqref{eq:404a} is said to be `preconsistent'.
 
 Now consider the differential equation
@@ -50,11 +67,25 @@ Assuming the method is preconsistent, the factor $h$ can be cancelled and then $
 This leads to the following definition:
 \end{definition}
 
-\begin{definition}[404B]
+\noindent\textbf{Context.}
+The linear multistep method for $y'=f(x,y)$ uses $k$ past steps:
+\[
+y_n = \sum_{i=1}^k \alpha_i y_{n-i} + h\sum_{i=0}^k \beta_i f(x_{n-i},y_{n-i}).
+\]
+Preconsistency (404a) for $y'=0$, $y=1$ gives
+\[
+1 = \alpha_1 + \alpha_2 + \dots + \alpha_k.
+\]
+Consistency adds condition (404b) from $y'=1$, $y=0$:
+\[
+\alpha_1 + 2\alpha_2 + \dots + k\alpha_k = \beta_0 + \beta_1 + \dots + \beta_k.
+\]
+
+\begin{definition}[consistent (404B)]
 
   \label{def:404B}
   \lean{Butcher.Ch4.Def404B}
-  \uses{def:404A}
+  \uses{def:404A, def:510B, thm:306A}
 A linear multistep method satisfying \eqref{eq:404a} and \eqref{eq:404b} is said to be `consistent'.
 
 Another way of looking at the consistency conditions is to suppose that $y_i = y(x_i) + O(h^2)$ and that $f(x_i, y_i) = y'(x_i) + O(h)$, for $i = n-k, n-k+1, \dots, n-1$, and to consider the computation of $y_n$ using the equation
@@ -92,17 +123,17 @@ and
 Hence, we can view the two requirements of consistency as criteria that the computed solution is capable of maintaining accuracy to within $O(h^2)$ over one step, and therefore over several steps.
 \end{definition}
 
-\begin{theorem}[405A]
+\begin{theorem}[Necessity of conditions for convergence (405A)]
 
   \label{thm:405A}
   \lean{Butcher.Ch4.Thm405A}
-  \uses{def:403A, def:404B}
+  \uses{def:402A, def:403A, thm:405C}
 A convergent linear multistep method is stable.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:405A}
-  \uses{def:403A, def:404B}
+  \uses{def:402A, def:403A, thm:405C}
 If the method were not stable, there would exist an unbounded sequence $\eta$ satisfying the difference equation
 \[
 \eta_n = \alpha_1 \eta_{n-1} + \alpha_2 \eta_{n-2} + \cdots + \alpha_k \eta_{n-k}.
@@ -118,17 +149,17 @@ y'(x) = 0, \quad y(0) = 0,
 with $x = 1$. Assuming that $n$ steps are to be performed, we use a stepsize $h = 1/n$ and initial values $y_i = \eta_i / \zeta_n$, for $i = 0, 1, \dots, k - 1$. The condition that $y_i \to 0$ for $0 \le i \le k - 1$ is satisfied because $\zeta_n \to \infty$. The approximation computed for $y(x)$ is equal to $\eta_n / \zeta_n$. Because the $\zeta$ sequence is unbounded, there will be an infinite number of values of $n$ for which $|\zeta_n|$ is greater than the greatest magnitude amongst previous members of this sequence. For such values of $n$, $|\eta_n / \zeta_n| = 1$, and therefore the sequence $n \to \eta_n / \zeta_n$ cannot converge to $0$.
 \end{proof}
 
-\begin{theorem}[405B]
+\begin{theorem}[Convergent linear multistep method is preconsistent (405B)]
 
   \label{thm:405B}
   \lean{Butcher.Ch4.Thm405B}
-  \uses{def:404A, def:510A, thm:405A}
+  \uses{def:402A, def:403A, def:404A, thm:405A}
 A convergent linear multistep method is preconsistent.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:405B}
-  \uses{def:404A, def:510A, thm:405A}
+  \uses{def:402A, def:403A, def:404A, thm:405A}
 By Theorem~\ref{thm:405A}, we can assume that the method is stable. Let $\eta$ be defined as the solution to the difference equation
 \[
 \eta_n = \alpha_1 \eta_{n-1} + \alpha_2 \eta_{n-2} + \cdots + \alpha_k \eta_{n-k},
@@ -150,17 +181,26 @@ Because this can be arbitrarily small, it follows that
 \]
 \end{proof}
 
-\begin{theorem}[405C]
+\noindent\textbf{Context.}
+The context involves linear multistep methods, their convergence, and preconsistency. Theorem 405B states that a convergent linear multistep method is preconsistent, which is used in the proof of Theorem 405C. Preconsistency is defined by the condition $1 - \alpha_1 - \alpha_2 - \dots - \alpha_k = 0$.
+
+Variables:
+\begin{itemize}
+    \item $\alpha_i$: coefficients of the linear multistep method, part of the method's definition.
+    \item $k$: step number of the linear multistep method.
+\end{itemize}
+
+\begin{theorem}[Convergent Linear Multistep Implies Consistency (405C)]
 
   \label{thm:405C}
   \lean{Butcher.Ch4.Thm405C}
-  \uses{def:403A, def:404B, thm:405A, thm:405B}
+  \uses{def:402A, def:403A, def:404B}
 A convergent linear multistep method is consistent.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:405C}
-  \uses{def:403A, def:404B, thm:405A, thm:405B}
+  \uses{def:402A, def:403A, def:404B}
 We note first that
 \[
 \alpha_1 + 2\alpha_2 + \cdots + k\alpha_k \neq 0,
@@ -187,11 +227,30 @@ independent of $n$. Because convergence implies that the limit of this is $1$, i
 \]
 \end{proof}
 
-\begin{definition}[406A]
+\noindent\textbf{Context.}
+The standard initial value problem is an autonomous ODE (406a) on $[x_0, x]$ with given initial value at $x_0$, using positive stepsize $h$. The method is a consistent linear multistep method with coefficients $\alpha_i$ and $\beta_i$.
+
+Variables:
+\begin{itemize}
+    \item $y$: exact solution to the differential equation (406a)
+    \item $x$: point in the interval $[x_0, x]$ where the solution is approximated
+    \item $x_0$: initial point where initial value information is given
+    \item $h$: positive stepsize
+    \item $k$: number of steps in the linear multistep method (implied by the method coefficients)
+    \item $\alpha_i$, $\beta_i$: coefficients of the linear multistep method, with $i$ from $0$ to $k$
+\end{itemize}
+
+Referenced equations:
+\begin{equation}
+    y'(x) = f(y(x)) \quad \text{(autonomous ODE)}, \quad \text{with } f \text{ Lipschitz continuous}
+    \tag{406a}
+\end{equation}
+
+\begin{definition}[local truncation error (406A)]
 
   \label{def:406A}
   \lean{Butcher.Ch4.Def406A}
-  \uses{def:404B}
+  \uses{def:404A, def:404B}
 Let $[\alpha, \beta]$ be a consistent linear multistep method. The `local truncation error' associated with a differentiable function $y$ at a point $x$ with stepsize $h$ is the value of
 \[
 L(y, x, h) = y(x) - \sum_{i=1}^{k} \alpha_i y(x - ih) - h \sum_{i=0}^{k} \beta_i y'(x - ih).
@@ -199,11 +258,11 @@ L(y, x, h) = y(x) - \sum_{i=1}^{k} \alpha_i y(x - ih) - h \sum_{i=0}^{k} \beta_i
 We estimate the value of $L(y, x, h)$ when $y$ is the exact solution to \eqref{eq:406a}, and where not only $x$ but also each $x - hi$, for $i = 1, 2, \dots, k$, lies in the interval $[x_0, x]$.
 \end{definition}
 
-\begin{lemma}[406B]
+\begin{lemma}[Convergence condition sufficiency bound (406B)]
 
   \label{lem:406B}
   \lean{Butcher.Ch4.Lem406B}
-  \uses{def:110A, def:406A}
+  \uses{def:403A, def:404B, def:406A}
 If $y$ is the exact solution to the standard initial value problem and $x \in [x_0 + kh, \bar{x}]$, then
 \[
 L(y, x, h) \leq \left( \frac{1}{2} \sum_{i=1}^{k} i^2 |\alpha_i| + \sum_{i=1}^{k} i|i\alpha_i - \beta_i| \right) L M h^2.
@@ -212,7 +271,7 @@ L(y, x, h) \leq \left( \frac{1}{2} \sum_{i=1}^{k} i^2 |\alpha_i| + \sum_{i=1}^{k
 
 \begin{proof}
   \proves{lem:406B}
-  \uses{def:110A, def:406A}
+  \uses{def:403A, def:404B, def:406A}
 We first estimate $y(x) - y(x - ih) - ihy'(x)$ using the identity
 \[
 y(x) - y(x - ih) - hiy'(x) = h \int_{-i}^{0} \big( f(y(x + h\xi)) - f(y(x)) \big) \, d\xi,
@@ -245,7 +304,7 @@ this is bounded by
 and the result follows.
 \end{proof}
 
-\begin{theorem}[406C]
+\begin{theorem}[Global error bound for linear multistep methods (406C)]
 
   \label{thm:406C}
   \lean{Butcher.Ch4.Thm406C}
@@ -275,17 +334,29 @@ T_2 &= h \left\| \sum_{i=1}^k \beta_i \big( f(y(x_{n-i})) - f(y_{n-i}) \big) \ri
 and $T_3$ can be bounded in terms of a constant times $h^2$. We now use \eqref{eq:406d} twice. First, assuming $h \leq h_0$, obtain a bound on $(1 - h L |\beta_0|) \| \mathbf{n} \|$ in terms of $\max_{i=1}^k \| \mathbf{n}_{-i} \|$ and terms that are bounded by a constant times $h^2$. Hence, obtain a bound on $\| \mathbf{n} \|$. Then, by inserting this preliminary result in the bound on $T_1$, we obtain the result of the theorem.
 \end{proof}
 
-\begin{theorem}[406D]
+\noindent\textbf{Context.}
+The theorem concerns convergence of linear multistep methods for ODEs. The global error is $\varepsilon_n = y(x_n) - y_n$, with method coefficients $\alpha_i$, $\beta_i$, step size $h$, and $f$ satisfying a Lipschitz condition. The proof uses the error equation
+\[
+\varepsilon_n - \sum_{i=1}^k \alpha_i \varepsilon_{n-i} = T_1 + T_2 + T_3,
+\]
+where
+\begin{align*}
+T_1 &= h|\beta_0|\,|f(y(x_n)) - f(y_n)| \le hL|\beta_0|\,|\varepsilon_n|,\\
+T_2 &= h\Bigl|\sum_{i=1}^k \beta_i \bigl(f(y(x_{n-i})) - f(y_{n-i})\bigr)\Bigr| \le hL \sum_{i=1}^k |\beta_i| \max_{i=1}^k |\varepsilon_{n-i}|.
+\end{align*}
+Here $L$ is the Lipschitz constant for $f$.
+
+\begin{theorem}[Convergence from Stability and Consistency (406D)]
 
   \label{thm:406D}
   \lean{Butcher.Ch4.Thm406D}
-  \uses{def:403A, def:404B, def:406A, thm:141A, thm:406C}
+  \uses{def:402A, def:403A, def:404B, thm:141A, thm:406C}
 A stable consistent linear multistep method is convergent.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:406D}
-  \uses{def:403A, def:404B, def:406A, thm:141A, thm:406C}
+  \uses{def:402A, def:403A, def:404B, thm:141A, thm:406C}
 Write \eqref{eq:406c} in the form
 \[
 \epsilon_n = \sum_{i=1}^k \alpha_i \epsilon_{n-i} + \psi_n,
@@ -325,14 +396,13 @@ To complete the proof, substitute $n = m$ where $m h = x - x_0$, so that the err
 \]
 \end{proof}
 
-
 \section{The Order of Linear Multistep Methods}
 
-\begin{theorem}[410A]
+\begin{theorem}[Criteria for order (410A)]
 
   \label{thm:410A}
   \lean{Butcher.Ch4.Thm410A}
-  \uses{def:406A}
+  \uses{thm:410B, thm:410C}
 The constants $C_0, C_1, C_2, \dotsc$ in \eqref{eq:410b} are given by
 \[
 \alpha(\exp(-z)) - z\beta(\exp(-z)) = C_0 + C_1 z + C_2 z^2 + \cdots. \tag{410c}
@@ -341,7 +411,7 @@ The constants $C_0, C_1, C_2, \dotsc$ in \eqref{eq:410b} are given by
 
 \begin{proof}
   \proves{thm:410A}
-  \uses{def:406A}
+  \uses{thm:410B, thm:410C}
 The coefficient of $y(x_n)$ in the Taylor expansion of \eqref{eq:410a} is equal to
 $1 - \sum_{i=1}^k \alpha_i$, and this equals the constant term in the Taylor expansion of
 $\alpha(\exp(-z)) - z\beta(\exp(-z))$. Now suppose that $j = 1, 2, \dotsc$ and calculate the
@@ -356,11 +426,11 @@ Altering the expression in \eqref{eq:410c} slightly, we can state without proof 
 criterion for order:
 \end{proof}
 
-\begin{theorem}[410B]
+\begin{theorem}[Order Condition for Linear Multistep Methods (410B)]
 
   \label{thm:410B}
   \lean{Butcher.Ch4.Thm410B}
-  \uses{def:403A, def:404B, def:406A}
+  \uses{def:404B}
 A linear multistep method $[\alpha, \beta]$ has order $p$ (or higher) if and only if
 \[
 \alpha(\exp(z)) + z\beta(\exp(z)) = O(z^{p+1}).
@@ -368,7 +438,25 @@ A linear multistep method $[\alpha, \beta]$ has order $p$ (or higher) if and onl
 Because we have departed from the traditional $(\rho, \sigma)$ formulation for linear multistep methods, we restate this result in that standard notation:
 \end{theorem}
 
-\begin{theorem}[410C]
+\noindent\textbf{Context.}
+Linear multistep methods for ODEs are given in two notations: the $[\alpha,\beta]$ formulation and the traditional $(\rho,\sigma)$ formulation. The order condition follows from Taylor expansions of the method's difference equation, relating it to the generating polynomials evaluated at $e^{z}$.
+
+Variables:
+\begin{itemize}
+    \item $\alpha$: generating polynomial $\alpha(z)=\alpha_k z^k+\alpha_{k-1}z^{k-1}+\dots+\alpha_0$
+    \item $\beta$: generating polynomial $\beta(z)=\beta_k z^k+\beta_{k-1}z^{k-1}+\dots+\beta_0$
+    \item $\rho$: characteristic polynomial $\rho(z)=\alpha_k z^k+\alpha_{k-1}z^{k-1}+\dots+\alpha_0$
+    \item $\sigma$: second characteristic polynomial $\sigma(z)=\beta_k z^k+\beta_{k-1}z^{k-1}+\dots+\beta_0$
+    \item $p$: order of the method
+\end{itemize}
+
+Referenced equation:
+\begin{equation}
+\alpha(e^{-z})-z\beta(e^{-z})=C_0+C_1z+C_2z^2+\cdots
+\tag{410c}
+\end{equation}
+
+\begin{theorem}[Order condition via generating functions (410C)]
 
   \label{thm:410C}
   \lean{Butcher.Ch4.Thm410C}
@@ -390,31 +478,37 @@ where $\log(1 + z)$ is defined only in $\{z \in \mathbb{C} : |z| < 1\}$ by its p
 Because both $\alpha(1 + z)$ and $\log(1 + z)$ vanish when $z = 0$, it is possible to rearrange \eqref{eq:410d} in the form given in the following result, which we present without further proof.
 \end{theorem}
 
-\begin{theorem}[410D]
+\noindent\textbf{Context.}
+The theorem concerns the order condition for a linear multistep method $[\alpha, \beta]$. The preceding text derives an alternative form of the order condition by substituting $\exp(z)$ with $(1+z)^{-1}$ and using the power series for $\log(1+z)$. Here, $\alpha$ and $\beta$ are the polynomials associated with the method, typically $\alpha(z) = \alpha_k z^k + \alpha_{k-1} z^{k-1} + \dots + \alpha_0$ and $\beta(z) = \beta_k z^k + \beta_{k-1} z^{k-1} + \dots + \beta_0$. The order of the method is $p$. For $|z|<1$, $\log(1+z)$ is defined by its power series: $\log(1+z) = z - \frac{1}{2}z^2 + \frac{1}{3}z^3 - \dotsb$. The derived condition is
+\begin{equation}
+\alpha\!\big((1+z)^{-1}\big) - \log(1+z)\,\beta\!\big((1+z)^{-1}\big) = O(z^{p+1}).
+\tag{410d}
+\end{equation}
+
+\begin{theorem}[Order Condition for Linear Multistep Methods (410D)]
 
   \label{thm:410D}
   \lean{Butcher.Ch4.Thm410D}
-  \uses{def:404B, def:406A, thm:410C}
+  \uses{thm:410A, thm:410B, thm:410C}
 A linear multistep formula $[\alpha, \beta]$ has order $p$ if and only if
 \[
 \frac{z}{\log(1 + z)} \alpha(1 + z) + \beta(1 + z) = O(z^{p}).
 \]
 \end{theorem}
 
-
 \section{Errors and Error Growth}
 
-\begin{theorem}[422A]
+\begin{theorem}[The underlying one-step method (422A)]
 
   \label{thm:422A}
   \lean{Butcher.Ch4.Thm422A}
-  \uses{def:403A, def:404A, def:510A}
+  \uses{def:403A, def:404A, def:422B}
 For any preconsistent, stable linear multistep method $[\alpha, \beta]$, there exists a member of the group $G_1$ satisfying \eqref{eq:422a}.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:422A}
-  \uses{def:403A, def:404A, def:510A}
+  \uses{def:403A, def:404A, def:422B}
 By preconsistency, $\sum_{i=1}^k \alpha_i = 1$. Hence, \eqref{eq:422a} is satisfied in the case of $t = \emptyset$, in the sense that if both sides are evaluated for the empty tree, then they each evaluate to zero. Now consider a tree $t$ with $r(t) > 0$ and assume that
 \[
 1(u) - \alpha_1 \eta^{-1}(u) - \alpha_2 \eta^{-2}(u) - \cdots - \alpha_k \eta^{-k}(u) - \beta_0 D(u) - \beta_1 \eta^{-1} D(u) - \beta_2 \eta^{-2} D(u) - \cdots - \beta_k \eta^{-k} D(u) = 0,
@@ -426,26 +520,63 @@ is satisfied for every tree $u$ satisfying $r(u) < r(t)$. We will prove that the
 where $C$ depends only on lower order trees. The proof by induction on $r(t)$ is now complete, because the coefficient of $\eta(t)$ is non-zero, by the stability of the method.
 \end{proof}
 
-\begin{definition}[422B]
+\noindent\textbf{Context.}
+The preceding text discusses the existence of a mapping $\eta$ in the group $G_1$ that satisfies equation (422a) for a preconsistent and stable linear multistep method $[\alpha, \beta]$. This mapping is constructed inductively on the order of trees, and it represents the underlying one-step method of the multistep method.
+
+Variables:
+\begin{itemize}
+    \item $G_1$: the group of mappings from trees to real numbers, representing the underlying one-step method
+    \item $[\alpha, \beta]$: a linear multistep method with coefficients $\alpha$ and $\beta$
+    \item $\eta$: a mapping from trees to real numbers, representing the underlying one-step method in $G_1$
+    \item $r(t)$: the order (or rank) of a tree $t$
+    \item $D$: an operator on trees, likely related to differentiation or tree operations
+    \item $\Phi$: the mapping representing the underlying one-step method, related to $\eta$
+\end{itemize}
+
+Referenced equations:
+\begin{align}
+    &1(u) - \alpha_1 \eta^{-1}(u) - \alpha_2 \eta^{-2}(u) - \cdots - \alpha_k \eta^{-k}(u) \nonumber \\
+    &- \beta_0 D(u) - \beta_1 \eta^{-1} D(u) - \beta_2 \eta^{-2} D(u) - \cdots - \beta_k \eta^{-k} D(u) = 0 \tag{422a}
+\end{align}
+(422b): The mapping $\Phi$ that represents the underlying one-step method.
+
+\begin{definition}[underlying one-step method (422B)]
 
   \label{def:422B}
   \lean{Butcher.Ch4.Def422B}
-  \uses{thm:422A}
+  \uses{def:381B}
 Corresponding to a linear multistep method $[\alpha, \beta]$, the member of $\mathcal{G}_1$ represents the `underlying one-step method'.  
 As we have already remarked, the mapping $\Phi$ in \eqref{eq:422b}, if it exists in more than a notional sense, is really the object of interest and this really is the underlying one-step method.
 \end{definition}
 
-\begin{theorem}[422C]
+\noindent\textbf{Context.}
+Preamble: The context involves a preconsistent, stable linear multistep method $[\alpha, \beta]$ and a solution $\eta$ to a functional equation (422a) defined on trees, where $\eta$ is interpreted as the underlying one-step method in the group $G_1$. The notation $\eta^i$ represents the $i$th power of $\eta$ in this group, and $y_i$ is the numerical solution represented by $\eta^i$.
+
+Variables:
+\begin{itemize}
+    \item $[\alpha, \beta]$: a linear multistep method, with $\alpha$ and $\beta$ being coefficient vectors
+    \item $\eta$: a solution to equation (422a), representing a mapping from trees to real numbers (a member of $G_1$), interpreted as the underlying one-step method
+    \item $y_i$: the numerical solution at step $i$, represented by $\eta^i$ (the $i$th power of $\eta$ in the group $G_1$)
+    \item $k$: the number of steps in the linear multistep method
+\end{itemize}
+
+Referenced equations:
+\begin{equation}
+1(u) - \alpha_1 \eta^{-1}(u) - \alpha_2 \eta^{-2}(u) - \cdots - \alpha_k \eta^{-k}(u) - \beta_0 D(u) - \beta_1 \eta^{-1} D(u) - \beta_2 \eta^{-2} D(u) - \cdots - \beta_k \eta^{-k} D(u) = 0, \quad \text{for all trees } u
+\tag{422a}
+\end{equation}
+
+\begin{theorem}[Convergence of Linear Multistep Methods (422C)]
 
   \label{thm:422C}
   \lean{Butcher.Ch4.Thm422C}
-  \uses{def:403A, def:404A, def:422B, def:510A, thm:422A}
+  \uses{def:403A, def:404A, def:422B, thm:422A}
 Let $[\alpha, \beta]$ denote a preconsistent, stable linear multistep method and let $\eta$ denote a solution of \eqref{eq:422a}. Suppose that $y_i$ is represented by $\eta^i$ for $i = 0, 1, 2, \dots, k - 1$; then $y_i$ is represented by $\eta^i$ for $i = k, k + 1, \dots$.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:422C}
-  \uses{def:403A, def:404A, def:422B, def:510A, thm:422A}
+  \uses{def:403A, def:404A, def:422B, thm:422A}
 The proof is by induction, and it will only be necessary to show that $y_k$ is represented by $\eta^k$, since this is a typical case. Multiply \eqref{eq:422a} on the left by $\eta^k$ and we find that
 \[
 \eta^k - \alpha_1 \eta^{k-1} - \alpha_2 \eta^{k-2} - \cdots - \alpha_k - \beta_0 \eta^k D - \beta_1 \eta^{k-1} D - \beta_2 \eta^{k-2} D - \cdots - \beta_k D = 0,
@@ -455,14 +586,18 @@ so that $y_k$ is represented by $\eta^k$.
 The concept of an underlying one-step method was introduced by Kirchgraber (1986). Although the underlying method cannot be represented as a Runge--Kutta method, it can be represented as a B-series or, what is equivalent, in the manner that has been introduced here. Of more recent developments, the extension to general linear methods (Stoffer, 1993) is of particular interest. This generalization will be considered in Subsection 535.
 \end{proof}
 
-
 \section{Stability Characteristics}
 
-\begin{theorem}[431A]
+\noindent\textbf{Context.}
+The theorem concerns strong stability of polynomials, defined in the context of stability regions for linear multistep methods. A polynomial is strongly stable if all its zeros lie inside the open unit disc.
+
+Let $P$ be a polynomial of degree $n$; its type is a triple $(n_{1}, n_{2}, n_{3})$ where $n_{1}$ is the number of zeros in the open unit disc, $n_{2}$ on the unit circle, $n_{3}$ outside the closed unit disc. A polynomial is \emph{strongly stable} if it has type $(n, 0, 0)$, meaning all zeros are in the open unit disc.
+
+\begin{theorem}[Stability regions (431A)]
 
   \label{thm:431A}
   \lean{Butcher.Ch4.Thm431A}
-  \uses{}
+  \uses{def:403A, def:520C, thm:520D}
 A polynomial $P_n$, given by
 \[
 P_n(w) = a_0 w^n + a_1 w^{n-1} + \cdots + a_{n-1} w + a_n,
@@ -478,8 +613,7 @@ P_{n-1}(w) = (a_0 \overline{a_0} - a_n \overline{a_n})w^{n-1} + (a_0 \overline{a
 
 \begin{proof}
   \proves{thm:431A}
-
-  \proves{thm:431A}
+  \uses{def:403A, def:520C, thm:520D}
 First note that (431e) is necessary for strong stability because if it were not true, the product of the zeros could not have a magnitude less than 1. Hence, we assume that this is the case and it remains to prove that $P_n$ is strongly stable if and only if the same property holds for $P_{n-1}$. It is easy to verify that
 \[
 wP_{n-1}(w) = a_0 P_n(w) - a_n w^n P_n(w^{-1}).
@@ -495,21 +629,37 @@ The result of this theorem is often referred to as the Schur criterion. In the c
 \]
 \end{proof}
 
-
 \section{Order and Stability Barriers}
 
-\begin{lemma}[441A]
+\noindent\textbf{Context.}
+The lemma concerns a stable linear multistep method for ODEs, where \(a(z)\) and \(b(z)\) are polynomials of degree \(k\) derived from the generating polynomials \(\alpha\) and \(\beta\). The coefficients \(a_i\) are defined via the expansion of \(a(z)\).
+
+Variables:
+\begin{itemize}
+    \item \(a(z) = a_0 + a_1 z + a_2 z^2 + \dots + a_k z^k = (1+z)^k \alpha\!\left(\frac{1-z}{1+z}\right)\)
+    \item \(b(z) = b_0 + b_1 z + b_2 z^2 + \dots + b_k z^k = (1+z)^k \beta\!\left(\frac{1-z}{1+z}\right)\)
+    \item \(a_0, a_1, \dots, a_k\): coefficients of the polynomial \(a(z)\)
+    \item \(k\): degree of the polynomials \(a(z)\) and \(b(z)\)
+    \item \(p\): order of the method, such that certain expressions are \(O(z^p)\)
+\end{itemize}
+
+Referenced equation:
+\begin{equation}
+(1+z)^k \alpha\!\left(\frac{1-z}{1+z}\right) \cdot \frac{z}{\log\!\left(\frac{1+z}{1-z}\right)} - (1+z)^k \beta\!\left(\frac{1-z}{1+z}\right) = O(z^p) \tag{441a}
+\end{equation}
+
+\begin{lemma}[Maximum order for a convergent k-step method (441A)]
 
   \label{lem:441A}
   \lean{Butcher.Ch4.Lem441A}
-  \uses{def:403A}
+  \uses{def:403A, def:404B, lem:441B, thm:441C}
 If the method under consideration is stable then $a_1 > 0$ and
 $a_i \ge 0$, for $i = 2, 3, \dots, k$.
 \end{lemma}
 
 \begin{proof}
   \proves{lem:441A}
-  \uses{def:403A}
+  \uses{def:403A, def:404B, lem:441B, thm:441C}
 Write the polynomial $a$ in the form
 \[
 a(z) = (1+z)^k - \alpha_1 (1+z)^{k-1}(1-z) - \alpha_2 (1+z)^{k-2}(1-z)^2 - \cdots - \alpha_k (1-z)^k.
@@ -544,17 +694,29 @@ with coefficients of the same sign, and accordingly this also holds for $a$ itse
 These coefficients must in fact be non-negative because $a_1 > 0$.
 \end{proof}
 
-\begin{lemma}[441B]
+\noindent\textbf{Context.}
+The lemma concerns the polynomial $a(z)$ derived from the characteristic polynomial $\rho(z)$ of a linear multistep method. The preceding text shows that $a(z)$ has non-negative coefficients (with $a_1>0$) due to its zeros having non-positive real parts. The statement refers to specific coefficients $c_2,c_4,\dots$ in the expansion of $a(z)$ (or a related function). Here,
+\[
+\rho(z)=z^k-\alpha_1 z^{k-1}-\alpha_2 z^{k-2}-\cdots-\alpha_k,
+\]
+and
+\[
+a(z)=(1+z)^k-\alpha_1(1+z)^{k-1}(1-z)-\alpha_2(1+z)^{k-2}(1-z)^2-\cdots-\alpha_k(1-z)^k.
+\]
+The coefficients $c_2,c_4,\dots$ appear in the expansion $a(z)=c_0+c_1z+c_2z^2+c_4z^4+\cdots$ (odd terms may be zero).
+
+\begin{lemma}[Maximum order coefficients negativity (441B)]
 
   \label{lem:441B}
   \lean{Butcher.Ch4.Lem441B}
-  \uses{lem:441A}
+  \uses{}
 The coefficients $c_2, c_4, \dots$ are all negative.
 \end{lemma}
 
 \begin{proof}
   \proves{lem:441B}
-  \uses{lem:441A}
+
+  \proves{lem:441B}
 Using the series for $\log(1+z)/(1-z)/z$, we see that $c_0, c_2, c_4, \dots$ satisfy
 \[
 \left(2 + \frac{2}{3}z^2 + \frac{2}{5}z^4 + \cdots \right)(c_0 + c_2 z^2 + c_4 z^4 + \cdots) = 1. \tag{441c}
@@ -574,11 +736,14 @@ c_{2n} = -\frac{c_2 d_{2n-2} + c_4 d_{2n-4} + \cdots + c_{2n-2} d_2}{d_0} < 0. \
 We are now in a position to prove the Dahlquist barrier result.
 \end{proof}
 
-\begin{theorem}[441C]
+\noindent\textbf{Context.}
+The theorem concerns the order of stable linear multistep methods. The preceding text discusses properties of coefficients related to stability and order, leading to the Dahlquist barrier result. Variables: $k$: the number of steps in the linear multistep method; $p$: the order of the linear multistep method; $[\alpha, \beta]$: a stable linear multistep method, where $\alpha$ and $\beta$ are the coefficient vectors defining the method.
+
+\begin{theorem}[Maximum order bound for stable linear multistep methods (441C)]
 
   \label{thm:441C}
   \lean{Butcher.Ch4.Thm441C}
-  \uses{def:403A, lem:441A, lem:441B}
+  \uses{def:403A, lem:441B}
 Let $[\alpha, \beta]$ denote a stable linear multistep method with order $p$. Then
 \[
 p \leq 
@@ -591,7 +756,7 @@ k + 2, & k \text{ even}.
 
 \begin{proof}
   \proves{thm:441C}
-  \uses{def:403A, lem:441A, lem:441B}
+  \uses{def:403A, lem:441B}
 Consider first the case $k$ odd and evaluate the coefficient of $z^{k+1}$ in \eqref{eq:441b}. This equals
 \[
 a_k c_2 + a_{k-2} c_4 + \cdots + a_1 c_{k+1}
@@ -609,11 +774,21 @@ There is some interest in the methods with maximal order $2k + 2$, for $k$ even.
 In their historic paper, Wanner, Hairer and Nørsett (1978) introduced order stars on Riemann surfaces. Suppose that $\Phi(w, z)$ is a polynomial function of two complex variables, $w \in W$ and $z \in Z$. We assume that $Z = W = \mathbb{C}$. The subset $R_\Phi$ of $W \times Z$ defined by the relation $\Phi(w, z) = 0$ is a Riemann surface. Suppose that $\Phi$ has degree $r$ in $w$ and $s$ in $z$. We may interpret $R$ as a mapping from the $Z$ plane which takes $z \in Z$ to the set of zeros of the equation $\Phi(w, z) = 0$ or as a mapping which takes $w \in W$ to the set of zeros of this same equation, but with $z$ now the unknown. The main interpretation will be that $\Phi(w, z)$ is the characteristic polynomial $\det(wI - M(z))$ of the stability matrix of a multivalue method. If this method has order $p$ then $\Phi(\exp(z), z) = O(z^{p+1})$. For ease of notation, we carry over concepts such as $A$-stability from multivalue methods, such as linear multistep methods, to the functions $\Phi$ used to characterize their stability.
 \end{proof}
 
-\begin{definition}[442A]
+\noindent\textbf{Context.}
+The order star is defined on the Riemann surface $\mathcal{R}_\Phi$ for linear multistep methods, where $\Phi(w,z)$ is the characteristic polynomial of the stability matrix. The Riemann surface $\mathcal{R}_\Phi$ is defined by $\Phi(w,z)=0$. The method has order $p$ if $\Phi(e^{z},z)=O(z^{p+1})$.
+
+Variables:
+\begin{itemize}
+    \item $\Phi$: $\Phi(w,z)$ is a polynomial function of two complex variables, $w \in W$ and $z \in Z$, with $Z=W=\mathbb{C}$; it is the characteristic polynomial $\det(wI - M(z))$ of the stability matrix of a multivalue method.
+    \item $\mathcal{R}_\Phi$: the subset of $W \times Z$ defined by $\Phi(w,z)=0$; it is a Riemann surface.
+    \item $p$: the order of the multivalue method, such that $\Phi(e^{z},z)=O(z^{p+1})$.
+\end{itemize}
+
+\begin{definition}[principal sheet (442A)]
 
   \label{def:442A}
   \lean{Butcher.Ch4.Def442A}
-  \uses{def:355A, def:520A, def:520E}
+  \uses{def:355A, def:381A, def:520A, def:520C, def:520E}
 The function $\Phi$ is \textit{A-stable} if $R_\Phi$ has no intersection with the product set
 \[
 \{w \in \mathbb{C} : |w| > 1\} \times \{z \in \mathbb{C} : \operatorname{Re}(z) \leq 0\}.
@@ -653,17 +828,29 @@ Order arrows on Riemann surfaces are illustrated for the BDF2 method (Figure~\re
 The `principal sheet' of the Riemann surface will refer to a neighbourhood of $(0, 1)$ for which the relationship between $z$ and $w$ is injective; that is, it behaves as though $w$ is a function of $z$. As long as $\Phi(w, 0)$ has only a single zero with value $w = 1$, this idea makes sense. On the principal sheet, $w \exp(z) = \exp(z) + O(z^{p+1})$, and the behaviour at zero is similar to what happens for one-step methods. These simple ideas are enough to prove the Dahlquist second order bound.
 \end{definition}
 
-\begin{theorem}[443A]
+\noindent\textbf{Context.} The theorem concerns linear multistep methods, where stability and order are analyzed via a complex relation \(\Phi(w e^{z}, z) = 0\). Order arrows and the principal sheet of the Riemann surface are used to study behavior near zero, analogous to one-step methods, leading to a bound on order for A-stable methods.
+
+Variables:
+\begin{itemize}
+    \item \(\Phi\): \(\Phi(w e^{z}, z) = 0\) defines a relationship between complex numbers \(z\) and \(w\).
+    \item \(w\): complex number related to \(z\) via \(\Phi(w e^{z}, z) = 0\); on order arrows, \(w\) is real and positive.
+    \item \(z\): complex number related to \(w\) via \(\Phi(w e^{z}, z) = 0\).
+    \item order arrows: set of points for which \(w\) is real and positive; up arrows have \(w \in (1, \infty)\), down arrows have \(w \in [0, 1)\).
+    \item principal sheet: neighbourhood of \((0, 1)\) where the relationship between \(z\) and \(w\) is injective, behaving as though \(w\) is a function of \(z\).
+    \item \(p\): order of the method; on the principal sheet, \(w e^{z} = e^{z} + O(z^{p+1})\).
+\end{itemize}
+
+\begin{theorem}[Order arrows for linear multistep methods (443A)]
 
   \label{thm:443A}
   \lean{Butcher.Ch4.Thm443A}
-  \uses{def:355A, def:442A, def:520C, def:520E, def:542A, thm:355D, thm:355F}
+  \uses{def:355A, def:403A, def:442A, thm:355B, thm:355C, thm:355D, thm:355E, thm:355F, thm:355G}
 An A-stable linear multistep method cannot have order greater than 2.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:443A}
-  \uses{def:355A, def:442A, def:520C, def:520E, def:542A, thm:355D, thm:355F}
+  \uses{def:355A, def:403A, def:442A, thm:355B, thm:355C, thm:355D, thm:355E, thm:355F, thm:355G}
 If the order were greater than 2, there would be more than three up arrows emanating from the origin. At least three of these up arrows would come out in the positive direction (or possibly would be tangential to the imaginary axis). Since there is only one pole, at least two of these arrows would cross the imaginary axis (or be tangential to it). Hence, the stability region does not include all of the imaginary axis and the method is not A-stable.
 
 We can make this result more precise by obtaining a bound on the error constant for second order A-stable methods. The result yields an optimal role for the second order Adams--Moulton method, for which the error constant is $-\frac{1}{12}$, because
@@ -673,11 +860,14 @@ We can make this result more precise by obtaining a bound on the error constant 
 It is not possible to obtain a positive error constant amongst A-stable second order methods, and it is not possible to obtain an error constant smaller in magnitude than for the one-step Adams--Moulton method. To prove the result we use, in place of $\exp(z)$, the special stability function $(1 + \frac{1}{2}z)/(1 - \frac{1}{2}z)$ in forming a relative stability function.
 \end{proof}
 
-\begin{theorem}[443B]
+\noindent\textbf{Context.}
+The theorem concerns $A$-stable second order linear multistep methods. The preceding text discusses error constants and specifically mentions the second order Adams--Moulton method, which has error constant $-1/12$, and uses the stability function $(1 + \frac{1}{2}z)/(1 - \frac{1}{2}z)$ as a reference. Let $C$ denote the error constant for an $A$-stable second order linear multistep method.
+
+\begin{theorem}[A stability error constant upper bound (443B)]
 
   \label{thm:443B}
   \lean{Butcher.Ch4.Thm443B}
-  \uses{def:355A, def:442A, def:520E, thm:443A}
+  \uses{def:355A, def:442A, thm:355C, thm:443A}
 Let \( C \) denote the error constant for an A-stable second order linear multistep method. Then
 \[
 C \leq -\frac{1}{12},
@@ -687,7 +877,7 @@ with equality only in the case of the second order Adams--Moulton method.
 
 \begin{proof}
   \proves{thm:443B}
-  \uses{def:355A, def:442A, def:520E, thm:443A}
+  \uses{def:355A, def:442A, thm:355C, thm:443A}
 Consider the relation
 \[
 \Phi\left( w \frac{1 + \frac{1}{2}z}{1 - \frac{1}{2}z}, z \right) = 0.
@@ -695,14 +885,29 @@ Consider the relation
 On the principal sheet, \( w = 1 - \left( C + \frac{1}{12} \right) z^3 + O(z^4) \). It is not possible that \( C + \frac{1}{12} = 0 \), because there would then be at least four up arrows emanating from 0 and, as in the proof of Theorem~\ref{thm:443A}, this is impossible because there is at most one pole in the right half-plane. On the other hand, if \( C + \frac{1}{12} > 0 \), there would be at least two up arrows emanating from zero in the positive direction and these must cross the imaginary axis.
 \end{proof}
 
-
 \section{One-Leg Methods and G-stability}
 
-\begin{definition}[451A]
+\noindent\textbf{Context.}
+The definition concerns $G$-stability for one-leg methods applied to nonlinear ODEs. The matrix $M$ arises from an identity comparing differences between numerical solutions $y_n$ and $z_n$, and its positive semi-definiteness ensures stability.
+
+Variables:
+\begin{itemize}
+    \item $M$: matrix defined by equation (451e)
+    \item $[\alpha, \beta]$: one-leg method defined by generating polynomials $\alpha(z)$ and $\beta(z)$
+    \item $G$: positive definite matrix used in the norm $\|\cdot\|_G$
+\end{itemize}
+
+Referenced equations:
+\begin{equation}
+    M = [m_{ij}], \quad \text{where } m_{ij} \text{ are coefficients from the identity involving } G, \alpha_i, \beta_i
+    \tag{451e}
+\end{equation}
+
+\begin{definition}[G-stable (451A)]
 
   \label{def:451A}
   \lean{Butcher.Ch4.Def451A}
-  \uses{}
+  \uses{def:403A, thm:523B}
 A one-leg method $[\alpha, \beta]$ is `G-stable' if $M$ given by \eqref{eq:451e} is positive semi-definite.
 
 We present the example of the BDF2 method with
@@ -747,17 +952,20 @@ Form a linear combination of $\widehat{y}_{n-i}$, $i = 0, 1, \dots, k$, given by
 The relationship between the $y$ and $\widehat{y}$ sequences given by \eqref{eq:452b} and \eqref{eq:452d} was suggested by Dahlquist (1976) as an indication that stability questions for a linear multistep method can be replaced by similar questions for the corresponding one-leg method.
 \end{definition}
 
-\begin{theorem}[454A]
+\noindent\textbf{Context.}
+The theorem concerns linear multistep methods and their stability properties. The preceding text introduces notation for analyzing order and local error. The theorem statement is self-contained, referring only to the standard definitions of G-stability and A-stability for numerical methods for ODEs.
+
+\begin{theorem}[Concluding remarks on G-stability (454A)]
 
   \label{thm:454A}
   \lean{Butcher.Ch4.Thm454A}
-  \uses{def:442A, def:451A, def:520E}
+  \uses{def:442A, def:451A}
 A $G$-stable linear multistep method is $A$-stable.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:454A}
-  \uses{def:442A, def:451A, def:520E}
+  \uses{def:442A, def:451A}
 We use the criterion that if $|w| < 1$, then $z = \alpha(w)/\beta(w)$ is in the right half-plane. Form the inner product $W^* M W$, where $M$ is the matrix given by \eqref{eq:451e} and
 \[
 W = \begin{bmatrix}
@@ -774,3 +982,7 @@ We find that
 \]
 so that $\operatorname{Re}\bigl( \alpha(w)/\beta(w) \bigr) > 0$.
 \end{proof}
+
+\section{Implementation Issues}
+
+% Section 46 has no formal statements in the textbook.

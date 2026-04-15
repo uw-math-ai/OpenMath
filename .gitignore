@@ -17,3 +17,20 @@
 .prover-state/monitor.log
 .prover-state/loop.pid
 .prover-state/cycle
+
+# macOS
+.DS_Store
+
+# Blueprint build artifacts
+blueprint/web/
+blueprint/src/web/
+blueprint/src/web.paux
+blueprint/lean_decls
+
+# Extraction pipeline artifacts (keep raw_text, knowledge_base, graph)
+extraction/__pycache__/
+extraction/pipeline/__pycache__/
+extraction/raw_text/references_llm.old.json
+
+# Experimental
+self_experiment/

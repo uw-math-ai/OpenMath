@@ -1,0 +1,2396 @@
+Chapter 1
+
+Differential and Difference
+Equations
+10    Differential Equation Problems
+100   Introduction to differential equations
+As essential tools in scientific modelling, differential equations are familiar to
+every educated person. In this introductory discussion we do not attempt to
+restate what is already known, but rather to express commonly understood
+ideas in the style that will be used for the rest of this book.
+   The aim will always be to understand, as much as possible, what we expect
+to happen to a quantity which satisfies a differential equation. At the most
+obvious level, this means predicting the value this quantity will have at some
+future time. However, we are also interested in more general questions such
+as the adherence to possible conservation laws or perhaps stability of the
+long-term solution. Since we emphasize numerical methods, we often discuss
+problems with known solutions mainly to illustrate qualitative and numerical
+behaviour.
+   Even though we sometimes refer to ‘time’ as the independent variable, that
+is, as the variable on which the value of the ‘solution’ depends, there is no
+reason for insisting on this interpretation. However, we generally use x to
+denote the ‘independent’ or ‘time’ variable and y to denote the ‘dependent
+variable’. Hence, differential equations will typically be written in the form
+
+                                 y  (x) = f (x, y(x)),                  (100a)
+
+where
+                                             dy
+                                      y =      .
+                                             dx
+Sometimes, for convenience, we omit the x in y(x).
+  The terminology used in (100a) is misleadingly simple, because y could be
+a vector-valued function. Thus, if we are working in RN, and x is permitted
+to take on any real value, then the domain and range of the function f which
+
+Numerical Methods for Ordinary Differential Equations J. C. Butcher
+
+c 2008 John Wiley & Sons, Ltd
+2     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+defines a differential equation and the solution to this equation are given by
+
+                                 f : R × R N → RN ,
+                                  y : R → RN .
+
+Since we might be interested in time values that lie only in some interval [a, b], we
+sometimes consider problems in which y : [a, b] → RN , and f : [a, b]×RN → RN .
+When dealing with specific problems, it is often convenient to focus, not on the
+vector-valued functions f and y, but on individual components. Thus, instead
+of writing a differential equation system in the form of (100a), we can write
+coupled equations for the individual components:
+
+                           y1 (x) = f1 (x, y1 , y2 , . . . , yN ),
+                           y2 (x) = f2 (x, y1 , y2 , . . . , yN ),
+                               ..            ..                              (100b)
+                                .             .
+                           
+                          yN (x) = fN (x, y1 , y2 , . . . , yN ).
+
+   A differential equation for which f is a function not of x, but of y only,
+is said to be ‘autonomous’. Some equations arising in physical modelling are
+more naturally expressed in one form or the other, but we emphasize that
+it is always possible to write a non-autonomous equation in an equivalent
+autonomous form. All we need to do to change the formulation is to introduce
+an additional component yN +1 into the y vector, and ensure that this can
+always maintain the same value as x, by associating it with the differential
+           
+equation yN  +1 = 1. Thus, the modified system is
+
+                          y1 (x) = f1 (yN +1 , y1 , y2 , . . . , yN ),
+                          y2 (x) = f2 (yN +1 , y1 , y2 , . . . , yN ),
+                              ..            ..                                (100c)
+                               .             .
+                          
+                         yN   (x) = fN (yN +1 , y1 , y2 , . . . , yN ),
+                       
+                      yN +1 (x) = 1.
+
+   A system of differential equations alone does not generally define a unique
+solution, and it is necessary to add to the formulation of the problem a number
+of additional conditions. These are either ‘boundary conditions’, if further
+information is given at two or more values of x, or ‘initial conditions’, if all
+components of y are specified at a single value of x.
+   If the value of y(x0 ) = y0 is given, then the pair of equations
+
+                       y  (x) = f (x, y(x)),          y(x0 ) = y0 ,         (100d)
+
+is known as an ‘initial value problem’. Our main interest in this book is with
+exactly this problem, where the aim is to obtain approximate values of y(x)
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                                       3
+
+for specific values of x, usually with x > x0 , corresponding to the prediction
+of the future states of a differential equation system.
+   Note that for an N -dimensional system, the individual components of an
+initial value vector need to be given specific values. Thus, we might write
+
+                               y0 = [ η1      η2     ···     ηN ] .
+
+When the problem is formally converted to autonomous form (100c), the value
+of ηN +1 must be identical to x0 , otherwise the requirement that yN +1 (x)
+should always equal x would not be satisfied.
+  For many naturally occurring phenomena, the most appropriate form in
+which to express a differential equation is as a high order system. For example,
+an equation might be of the form
+                                                                 
+                      y (n) = φ x, y, y  , y  , . . . , y (n−1) ,     (100e)
+
+with initial values given for y(x0 ), y  (x0 ), y  (x0 ), . . . , y (n−1) (x0 ). Especially
+important in the modelling of the motion of physical systems subject to forces
+are equation systems of the form
+
+                               y1 (x) = f1 (y1 , y2 , . . . , yN ),
+                               y2 (x) = f2 (y1 , y2 , . . . , yN ),
+                                    ..             ..                                 (100f)
+                                     .              .
+                               
+                              yN (x) = fN (y1 , y2 , . . . , yN ),
+
+where the equations, though second order, do have the advantages of being
+autonomous and without y1 , y2 , . . . , yN
+                                            
+                                              occurring amongst the arguments of
+f1 , f2 , . . . , fN .
+   To write (100f) in what will become our standard first order system form,
+we can introduce additional components yN +1 , yN +2 , . . . , y2N . The differential
+equation system (100f) can now be written as the first order system
+
+                                y1 (x) = yN +1 ,
+                                y2 (x) = yN +2 ,
+                                     ..    ..
+                                      .     .
+                                 
+                               yN (x) = y2N ,
+                                                                                     (100g)
+                            yN +1 (x) = f1 (y1 , y2 , . . . , yN ),
+                             
+                            yN +2 (x) = f2 (y1 , y2 , . . . , yN ),
+                                    ..            ..
+                                     .             .
+                               
+                             y2N    (x) = fN (y1 , y2 , . . . , yN ).
+4     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+101   The Kepler problem
+The problems discussed in this section are selected from the enormous
+range of possible scientific applications. The first example problem describes
+the motion of a single planet about a heavy sun. By this we mean that,
+although the sun exerts a gravitational attraction on the planet, we regard the
+corresponding attraction of the planet on the sun as negligible, and that the
+sun will be treated as being stationary. This approximation to the physical
+system can be interpreted in another way: even though both bodies are in
+motion about their centre of mass, the motion of the planet relative to the
+sun can be modelled using the simplification we have described. We also make
+a further assumption, that the motion of the planet is confined to a plane.
+   Let y1 (x) and y2 (x) denote rectangular coordinates centred at the sun,
+specifying at time x the position of the planet. Also let y3 (x) and y4 (x) denote
+the components of velocity in the y1 and y2 directions, respectively. If M
+denotes the mass of the sun, γ the gravitational constant and m the mass of
+the planet, then the attractive force on the planet will have magnitude
+                                     γM m
+                                              .
+                                    y12 + y22
+Resolving this force in the coordinate directions, we find that the components
+of acceleration of the planet, due to this attraction, are −γM y1 (y12 + y22 )−3/2
+and −γM y2 (y12 + y22 )−3/2 , where the negative sign denotes the inward
+direction of the acceleration.
+   We can now write the equations of motion:
+                             dy1
+                                 = y3 ,
+                             dx
+                             dy2
+                                 = y4 ,
+                             dx
+                             dy3        γM y1
+                                 =− 2               ,
+                             dx      (y1 + y22 )3/2
+                             dy4        γM y2
+                                 =− 2               .
+                             dx      (y1 + y22 )3/2
+By adjusting the scales of the variables, the factor γM can be removed from
+the formulation, and we arrive at the equations
+                             dy1
+                                 = y3 ,                                    (101a)
+                             dx
+                             dy2
+                                 = y4 ,                                    (101b)
+                             dx
+                             dy3          y1
+                                 =− 2               ,                      (101c)
+                             dx      (y1 + y22 )3/2
+                             dy4          y2
+                                 =− 2               .                      (101d)
+                             dx      (y1 + y22 )3/2
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                             5
+
+   The solutions of this system are known to be conic sections, that is, ellipses,
+parabolas or hyperbolas, if we ignore the possibility that the trajectory is a
+straight line directed either towards or away from the sun. We investigate
+this further after we have shown that two ‘first integrals’, or invariants, of the
+solution exist.
+Theorem 101A The quantities
+                     1 2       
+                H=      y3 + y42 − (y12 + y22 )−1/2 ,
+                     2
+                A = y1 y4 − y2 y3
+are constant.
+
+Proof. We verify that the values of dH/dx and dA/dx are zero if y satisfies
+(101a)–(101d). We have
+      dH      dy3        dy4      dy1 2                    dy2 2
+         = y3      + y4      + y1     (y + y22 )−3/2 + y2      (y + y22 )−3/2
+      dx       dx         dx      dx 1                      dx 1
+                  y1 y3            y2 y4            y1 y3            y2 y4
+         =− 2                − 2             + 2               + 2
+              (y1 + y22 )3/2  (y1 + y22 )3/2    (y1 + y22 )3/2   (y1 + y22 )3/2
+          =0
+and
+                dA      dy4     dy1          dy3   dy2
+                   = y1      +       y4 − y2     −      y3
+                dx       dx     dx           dx     dx
+                            y1 y2                    y2 y1
+                   =− 2                + y3 y4 + 2              − y4 y3
+                        (y1 + y22 )3/2           (y1 + y22 )3/2
+                    = 0.                                                          
+   The quantities H and A are the ‘Hamiltonian’ and    ‘angular
+                                                               momentum’,
+respectively. Note that H = T + V , where T = 12 y32 + y42 is the kinetic
+energy and V = −(y12 + y22 )−1/2 is the potential energy.
+   A further property of this problem is its invariance under changes of scale
+of the variables:
+                                    y1 = α−2 y 1 ,
+                                    y2 = α−2 y 2 ,
+                                    y3 = αy 3 ,
+                                    y4 = αy 4 ,
+                                     x = α−3 x.
+The Hamiltonian and angular momentum get scaled to
+                     1 2       
+                H=      y + y 24 − (y 21 + y 22 )−1/2 = α−2 H,
+                     2 3
+                A = y1 y4 − y2 y3                     = αA.
+6     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+  A second type of transformation is based on a two-dimensional orthogonal
+transformation (that is, a rotation or a reflection or a composition of these)
+Q, where Q−1 = Q . The time variable x is invariant, and the position and
+velocity variables get transformed to
+                                                 
+                           y1                    y1
+                          y        Q 0           
+                          2                 y2 
+                              =                  .
+                          y3        0 Q  y3 
+                           y4                    y4
+   It is easy to see that A = 0 implies that the trajectory lies entirely in a
+subspace defined by cos(θ)y1 = sin(θ)y2 , cos(θ)y3 = sin(θ)y4 for some fixed
+angle θ. We move on from this simple case and assume that A = 0. The sign
+of H is of crucial importance: if H ≥ 0 then it is possible to obtain arbitrarily
+high values of y12 + y22 without y32 + y42 vanishing. We exclude this case for the
+present discussion and assume that H < 0. Scale H so that it has a value
+− 12 and at the same time A takes on a positive value. This value cannot
+exceed 1 because we can easily verify an identity involving the derivative of
+r = y12 + y22 . This identity is
+                       2
+                     dr
+                   r       = 2Hr 2 + 2r − A2 = −r 2 + 2r − A2 .             (101e)
+                     dx
+Since the left-hand side cannot be negative, the quadratic function in r on
+the right-hand
+     √          side must have real roots. This implies that A ≤ 1. Write
+A = 1 − e2 , for e ≥ 0, where we see that e is the eccentricity of an ellipse
+on which the orbit lies. The minimum and maximum values of r are found to
+be 1 − e and 1 + e, respectively. Rotate axes so that when r = 1 − e, which
+we take as the starting point of time, y1 = 1 − e and y2 = 0. At this point we
+find that y3 = 0 and y4 = (1 + e)/(1 − e).
+  Change to polar coordinates by writing y1 = r cos(θ), y2 = r sin(θ). It is
+found that
+                            dy1   dr            dθ
+                      y3 =      =    cos(θ) − r    sin(θ),
+                             dx   dx            dx
+                            dy2   dr            dθ
+                      y4 =      =    sin(θ) + r    cos(θ),
+                             dx   dx            dx
+                                √
+so that, because y1 y4 − y2 y3 = 1 − e2 , we find that
+                                    dθ
+                               r2      =   1 − e2 .                        (101f)
+                                    dx
+From (101e) and (101f) we find a differential equation for the path traced out
+by the orbit
+                    2
+                      dr        1                    
+                           =         r 2 e2 − (1 − r)2 ,
+                      dθ      1 − e2
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                                      7
+
+and we can verify that this is satisfied by
+                              1 − e2
+                                     = 1 + e cos(θ).
+                                r
+If we change back to Cartesian coordinates, we find that all points on the
+trajectory lie on the ellipse
+                                                y22
+                                (y1 + e)2 +          = 1,
+                                              1 − e2
+with centre (−e, 0), eccentricity e, and major and minor axis lengths 1 and
+√
+  1 − e2 respectively.
+   As we have seen, a great deal is known about this problem. However, much
+less is known about the motion of a many-body gravitational system.
+   One of the aims of modern numerical analysis is to understand the behaviour
+of various geometrical properties. In some cases it is possible to preserve the
+value of quantities that are invariant in the exact solution. In other situations,
+such as problems where the Hamiltonian is theoretically conserved, it may be
+preferable to conserve other properties, such as what is known as ‘symplectic
+behaviour’.
+   We consider further gravitational problems in Subsection 120.
+
+102    A problem arising from the method of lines
+The second initial value problem we consider is based on an approximation
+to a partial differential equation. Consider the parabolic system
+                      ∂u    ∂2u
+                          =       ,      (x, t) ∈ [0, 1] × [0, ∞),                    (102a)
+                      ∂t    ∂x2
+where we have used t to represent time, x to represent distance and u(x, t) to
+represent some quantity, such as temperature, which diffuses with time. For
+this problem it is necessary to impose conditions on the boundaries x = 0 and
+x = 1 as well as at the initial time t = 0. We may interpret the solution as
+the distribution of the temperature at points in a conducting rod, given that
+the temperature is specified at the ends of the rod. In this case the boundary
+conditions would be of the form u(0, t) = α(t) and u(1, t) = β(t). Equation
+(102a) is known as the heat or diffusion equation, and the conditions given at
+x = 0 and x = 1 are known as Dirichlet boundary values. This is in contrast
+to Neumann conditions, in which the values of ∂u/∂x are given at the ends
+of the x interval.
+   To convert this problem into an ordinary differential equation system, which
+mimics the behaviour of the parabolic equation, let y1 (t), y2 (t), . . . , yN (t),
+denote the values of u( N1+1 , t), u( N2+1 , t), . . . , u( NN+1 , t), respectively. That is,
+                                     
+                               j
+               yj (t) = u           ,t ,         j = 0, 1, 2, . . . , N + 1,
+                            N +1
+8     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+where we have included y0 (t) = u(0, t), yN +1 (t) = u(1, t) for convenience.
+   For j = 1, 2, . . . , N , ∂ 2 u/∂x2 , evaluated at x = j/(N + 1), is approximately
+equal to (N + 1)2 (yj−1 − 2yj + yj+1 ). Hence, the vector of derivatives of
+y1 , y2 , . . . , yN is given by
+
+                 dy1 (t)                                   
+                         = (N + 1)2 α(t) − 2y1 (t) + y2 (t) ,
+                     dt
+                 dy2 (t)                                    
+                         = (N + 1)2 y1 (t) − 2y2 (t) + y3 (t) ,
+                     dt
+                 dy3 (t)                                    
+                         = (N + 1)2 y2 (t) − 2y3 (t) + y4 (t) ,
+                     dt
+                  ..                 ..
+                   .                  .
+              dyN −1 (t)                                          
+                         = (N + 1)2 yN −2 (t) − 2yN −1 (t) + yN (t) ,
+                 dt
+                dyN (t)                                        
+                         = (N + 1)2 yN −1 (t) − 2yN (t) + β(t) .
+                    dt
+
+This system can be written in vector–matrix form as
+
+                               y  (t) = Ay(t) + v(t),                       (102b)
+
+where
+                                                                             
+              −2  1  0 ···                    0  0  0                      α(t)
+             1 −2   1 ···                          0                    0 
+                                             0  0                            
+                                                                             
+             0   1 −2 · · ·                  0  0  0                    0 
+                                                                             
+           2  .. .. ..                       .. .. ..                2  .. 
+A = (N + 1)  .                                         , v = (N + 1)         .
+                  .  .                        .  .  .                   . 
+             0         ···                  −2                               
+                 0  0                           1  0                    0 
+                                                                             
+             0   0  0 ···                    1 −2  1                    0 
+               0  0  0 ···                    0  1 −2                      β(t)
+
+  The original problem is ‘dissipative’ in the sense that, if u and v are each
+solutions to the diffusion equation, which have identical boundary values but
+different initial values, then
+                                    1
+                               1                          2
+                       W (t) =            u(x, t) − v(x, t) dx
+                               2    0
+
+
+is non-increasing as t increases. We can verify this by differentiating with
+respect to t and by showing, using integration by parts, that the result found
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                                9
+
+cannot be positive. We have
+
+          dW
+                  1                     ∂u(x, t) ∂v(x, t) 
+              =       u(x, t) − v(x, t)              −            dx
+           dt     0                            ∂t         ∂t
+                  1                     
+                                         ∂ 2 u(x, t) ∂ 2 v(x, t) 
+               =      u(x, t) − v(x, t)               −             dx
+                  0                           ∂x2          ∂x2
+                                   ∂u(x, t) ∂v(x, t) 1
+               = u(x, t) − v(x, t)                −
+                                            ∂x         ∂x       0
+                                1                      2
+                                     ∂u(x, t) ∂v(x, t)
+                            −                  −             dx
+                                0       ∂x          ∂x
+                    1                       2
+                        ∂u(x, t) ∂v(x, t)
+               =−                 −               dx
+                    0       ∂x           ∂x
+               ≤ 0.
+
+   Even though the approximation of (102a) by (102b) is not exact, it is an
+advantage of the discretization we have used, that the qualitative property is
+still present. Let y and z be two solutions to the ordinary differential equation
+system. Consider the nature of
+
+                                         N
+                                (t) = 1
+                               W             (yj − zj )2 .
+                                       2 j=1
+
+  We have
+
+         N                        
+    dW                     dyj   dzj
+        =     (yj − zj )       −
+     dt   i=1
+                            dt    dt
+                      
+                      N
+        = (N + 1)2          (yj − zj ) (yj−1 − 2yj + yj+1 − zj−1 + 2zj − zj+1 )
+                      j=1
+
+                       
+                       N −1                                          
+                                                                     N
+        = 2(N + 1)2           (yj − zj )(yj+1 − zj+1 ) − 2(N + 1)2     (yj − zj )2
+                       j=1                                           j=1
+
+                       
+                       N
+        = −(N + 1)2           (yj+1 − yj − zj+1 + zj )2
+                       j=0
+
+        ≤ 0.
+
+  Another aspect of the discretization that might be explored is the spectrum
+of the matrix A, in comparison with the spectrum of the linear operator
+      2
+u → ddxu2 on the space of C 2 functions on [0, 1] for which u(0) = u(1) = 0.
+The eigenfunctions for the continuous problem are of the form sin(kπx), for
+10     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+k = 1, 2, 3, . . . , and the corresponding eigenvalues are −k2 π 2 . For the discrete
+problem, we need to find the solutions to the problem
+                                             
+                                           v1
+                                             
+                                          v2 
+                                         
+                                (A − λI)  .  = 0,                          (102c)
+                                          .. 
+                                           vN
+
+where v1 , v2 , . . . , vN are not all zero. Introducing also v0 = vN +1 = 0, we
+find that it is possible to write (102c) in the form
+
+                    vj−1 − qvj + vj+1 = 0,           j = 1, 2, . . . , N,    (102d)
+
+where q = 2 + λ/(N + 1)2 . The difference equation (102d) has solution of the
+form vi = C(µi − µ−i ), where µ + µ−1 = q, unless q = ±2 (which is easily
+seen to be impossible). Because vN +1 = 0, it follows that λ2N +2 = 2. Because
+µ = ±1, it follows that
+                                          
+                                     kπi
+                      µ = exp                  ,   k = 1, 2, . . . , N,
+                                    N +1
+           √
+with i =       −1. Hence,
+                                                             
+                                kπ                           kπ
+      λ = −2(N + 1)2 1 − cos           = −4(N + 1)2 sin2            .
+                               N +1                        2N + 2
+
+  For N much larger than k, we can use the approximation sin(ξ) ≈ ξ, for
+small ξ, to give eigenvalue number k as λk ≈ −k2 π 2 . On the other hand, for
+k small, the eigenvalue number N + 1 − k is λN +1−k ≈ −4(N + 1)2 + k2 π 2 .
+
+103    The simple pendulum
+Formulation as a differential-algebraic equation
+Consider a small mass m attached to a light inelastic string of length l, with
+the other end attached to the origin of coordinates, which can swing back and
+forth in a vertical plane. Let X, measured in a rightwards direction, and Y ,
+measured in a downward direction, be the coordinates. Because the string is
+inelastic, the tension T in the string always matches other forces resolved in
+the direction of the string so as to guarantee that the length does not change.
+   The way these forces act on the mass is shown in Figure 103(i). Also shown
+is the angle θ defined by X = l sin(θ), Y = l cos(θ).
+   We denote by U and V , respectively, the velocity components in the X and
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                        11
+
+
+
+
+                                       θ
+                                 Y               l
+
+
+                                             X         T
+
+                                                           mg
+
+                       Figure 103(i)       Simple pendulum
+
+
+
+Y directions. The motion of the pendulum is governed by the equations
+
+                                dX
+                                     = U,                                (103a)
+                                dx
+                                dY
+                                     = V,                                (103b)
+                                 dx
+                                dU        TX
+                              m      =−       ,                          (103c)
+                                 dx         l
+                                dV        TY
+                              m      =−       + mg,                      (103d)
+                                 dx         l
+                           X 2 + Y 2 = l2 ,                              (103e)
+
+where, in addition to four differential equations (103a)–(103d), the constraint
+(103e) expresses the constancy of the length of the string. The tension T acts
+as a control variable, forcing this constraint to remain satisfied. By rescaling
+variables in a suitable way, the ‘differential-algebraic’ equation system (103a)–
+(103e) can be rewritten with the constants m, g and l replaced by 1 in each
+case. In the rescaled formulation write y1 = X, y2 = Y , y3 = U , y4 = V and
+y5 = T , and we arrive at the system
+
+                                  dy1
+                                       = y3 ,                            (103f)
+                                  dx
+                                  dy2
+                                       = y4 ,                            (103g)
+                                  dx
+                                  dy3
+                                       = −y1 y5 ,                        (103h)
+                                  dx
+                                  dy4
+                                       = −y2 y5 + 1,                     (103i)
+                                  dx
+                             y12 + y22 = 1.                              (103j)
+
+It will be convenient to choose initial values defined in terms of θ = Θ, with
+12      NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+the velocity equal to zero. That is,
+
+     y1 (0) = sin(Θ),   y2 (0) = cos(Θ),    y3 (0) = y4 (0) = 0,   y5 (0) = cos(Θ).
+
+The five variables are governed by four differential equations (103f)–(103i),
+together with the single algebraic constraint (103j). We will say more about
+this below, but first we consider the classical way of simplifying the problem.
+
+Formulation as a single second order equation
+Make the substitutions y1 = sin(θ), y2 = cos(θ). Because (103j) is
+automatically satisfied, the value of y5 loses its interest and we eliminate this
+by taking a linear combination of (103h) and (103i). This gives the equation
+system
+                                                dθ
+                                           cos(θ)  = y3 ,                     (103k)
+                                                dx
+                                                dθ
+                                       − sin(θ)    = y4 ,                      (103l)
+                                                dx
+                                  dy3          dy4
+                         − cos(θ)     + sin(θ)     = sin(θ).                  (103m)
+                                  dx           dx
+Differentiate (103k) and (103l) and substitute into (103m) and we obtain the
+well-known single-equation formulation of the simple pendulum:
+
+                                  d2 θ
+                                       + sin(θ) = 0,                          (103n)
+                                  dx2
+with initial values
+                              θ(0) = Θ,        θ  (0) = 0.
+     It can be shown that the period of the pendulum is given by
+                                π/2
+                                              dφ
+                         T =4        
+                                0       1 − sin2 φ sin2 Θ
+                                                        2
+
+and some values are given in Table 103(I).
+  The value for 0◦ can be interpreted as the period for small amplitudes. The
+fact that T increases slowly as Θ increases is the characteristic property of a
+simple pendulum which makes it of practical value in measuring time.
+
+Formulation as a Hamiltonian problem
+In the formulation (103n), write the H as the ‘Hamiltonian’
+
+                              H(p, q) = 12 p2 − cos(q),
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                         13
+
+       Table 103(I)    Period of simple pendulum for various amplitudes
+
+                                  Θ            T
+                                  0◦     6.2831853072
+                                  3◦     6.2842620831
+                                  6◦     6.2874944421
+                                  9◦     6.2928884880
+                                 12◦     6.3004544311
+                                 15◦     6.3102066431
+                                 18◦     6.3221637356
+                                 21◦     6.3363486630
+                                 24◦     6.3527888501
+                                 27◦     6.3715163462
+                                 30◦     6.3925680085
+
+
+where q = θ and p = dθ/dx. The second order equation (103n) is now
+equivalent to the first order system
+
+                          p             0   −1        ∂H
+                                                       ∂p
+                                  =                         .
+                          q             1    0        ∂H
+                                                       ∂q
+
+
+Differential index and index reduction
+Carry out three steps, of which the first is to differentiate (103j) and substitute
+from (103f) and (103g) to give the result
+
+                                  y1 y3 + y2 y4 = 0.                      (103o)
+
+The second step is to differentiate (103o) and to make various substitutions
+from (103f)–(103i) to arrive at the equation
+
+                               y2 + y32 + y42 − y5 = 0.                   (103p)
+
+The third and final step is to differentiate (103p) and make various
+substitutions to arrive at the result
+     dy5   y2       dy3       dy4
+         =    + 2y3     + 2y4     = y4 + 2y3 (−y1 y5 ) + 2y4 (−y2 y5 + 1),
+     dx    dx       dx        dx
+which simplifies to
+                                       dy5
+                                           = 3y4 .                        (103q)
+                                       dx
+14    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+Given that consistent initial values are used, it seems that the equations
+(103f)–(103i) together with any of (103j), (103o), (103p) or (103q) give
+identical solutions.
+   Which of the possible formulations should be used? From the point of
+view of physical modelling, it seems to be essential to require that the
+length constraint (103j) should hold exactly. On the other hand, when it
+comes to numerical approximations to solutions, it is found that the use
+of this constraint in the problem description creates serious computational
+difficulties. It also seems desirable from a modelling point of view to insist
+that (103o) should hold exactly, since this simply states that the direction of
+motion is tangential to the arc on which it is constrained to lie.
+
+104   A chemical kinetics problem
+We next consider a model of a chemical process consisting of three species,
+which we denote by A, B and C. The three reactions are
+
+                                    A → B,                                  (104a)
+                                B + C → A + C,                              (104b)
+                                B + B → C.                                  (104c)
+
+Let y1 , y2 and y3 denote the concentrations of A, B and C, respectively. We
+assume these are scaled so that the total of the three concentrations is 1, and
+that each of three constituent reactions will add to the concentration of any of
+the species exactly at the expense of corresponding amounts of the reactants.
+The reaction rate of (104a) will be denoted by k1 . This means that the rate
+at which y1 decreases, and at which y2 increases, because of this reaction, will
+be equal to k1 y1 . In the second reaction (104b), C acts as a catalyst in the
+production of A from B and the reaction rate will be written as k2 , meaning
+that the increase of y1 , and the decrease of y3 , in this reaction will have a rate
+equal to k2 y2 y3 . Finally, the production of C from B will have a rate constant
+equal to k3 , meaning that the rate at which this reaction takes place will be
+k3 y22 . Putting all these elements of the process together, we find the system of
+differential equations for the variation with time of the three concentrations
+to be
+                          dy1
+                              = −k1 y1 + k2 y2 y3 ,                         (104d)
+                          dx
+                          dy2
+                              = k1 y1 − k2 y2 y3 − k3 y22 ,                  (104e)
+                          dx
+                          dy3
+                              = k3 y22 .                                     (104f)
+                          dx
+If the three reaction rates are moderately small numbers, and not greatly
+different in magnitude, then this is a straightforward problem. However,
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                           15
+
+vastly different magnitudes amongst k1 , k2 and k3 can make this problem
+complicated to understand as a chemical model. Also, as we shall see,
+the problem then becomes difficult to solve numerically. This problem was
+popularized by Robertson (1966), who used the reaction rates
+
+                  k1 = 0.04,       k2 = 104 ,      k3 = 3 × 107 .
+
+   Before looking at the problem further we note that, even though it is written
+as a three-dimensional system, it would be a simple matter to rewrite it in
+two dimensions, because y1 + y2 + y3 is an invariant and is usually set to a
+value of 1, by an appropriate choice of the initial values. We always assume
+this value for y1 + y2 + y3 . Furthermore, if the initial value has non-negative
+values for each of the three components, then this situation is maintained for
+all positive times. To see why this is the case, write (104d), (104e) and (104f)
+in the forms
+                       d(exp(k1 x)y1 )
+                                        = exp(k1 x)k2 y2 y3 ,
+                            dx  
+               d exp max(k2 , k3 )x y2                       
+                                        = exp max(k2 , k3 )x F,
+                       dx
+                                    dy3
+                                        = k3 y22 ,
+                                    dx
+where
+                                                                          
+F = k1 y1 +max(k2 , k3 )y1 y2 + max(k2 , k3 ) − k2 y2 y3 + max(k2 , k3 ) − k3 y22 ,
+
+so that each of exp(k1 x)y1 , exp(max(k2 , k3 )x)y2 and y3 is non-decreasing.
+  An interesting feature of this problem is that a small perturbation that does
+not disturb the invariance of y1 + y2 + y3 is damped out rapidly. To see why
+this is the case, eliminate y1 so that the differential equation system in the
+remaining two components becomes
+
+                    dy2
+                        = k1 (1 − y2 − y3 ) − k2 y2 y3 − k3 y22 ,           (104g)
+                    dx
+                    dy3
+                        = k3 y22 .                                          (104h)
+                    dx
+The Jacobian matrix, the matrix of partial derivatives, is given by
+
+                           −k1 − k2 y3 − 2k3 y2     −k1 − k2 y2
+                J(x) =                                              ,
+                                 2k3 y2                 0
+
+and the characteristic polynomial is
+
+                λ2 + (k1 + k2 y3 + 2k3 y2 )λ + 2k3 y2 (k1 + k2 y2 ).        (104i)
+16    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+
+       1.0                                                                    −0.0×104
+
+                                                                              −0.2×104
+       0.5
+
+                                                                              −0.4×104
+ y    10−1                                                         y1                    λ
+      10−2
+                                 y3                                           −0.6×104
+      10−3
+      10−4
+                                 y2                         λ                 −0.8×104
+      10−5
+         0                                                                    −1.0×104
+             0   0.2 0.5 1   2        5   10 20   50 102     103        104
+                                                  x
+Figure 104(i)       Solution and most negative eigenvalue for the Robertson problem
+
+
+
+An analysis of the discriminant of (104i) indicates that for y2 , y3 ∈ (0, 1], both
+zeros are real and negative. Along the actual trajectory, one of the eigenvalues
+of J(x), denoted by λ, rapidly jumps to a very negative value, with the second
+eigenvalue retaining a small negative value. Consider a small perturbation z to
+the solution, so that the solution becomes y + z. Because the two components
+of z are small we can approximate f (y + z) by f (y) + (∂f /∂y)z. Hence, the
+perturbation itself satisfies the equation
+                                   
+                               dz2
+                             dx               z2
+                                    = J(x)
+                               dz3              z3
+                                dx
+and the negative eigenvalues of J(x) guarantee the decay of the components
+of z.
+   The solution to this problem, together with the value of λ, is shown in
+Figure 104(i).
+
+
+105    The Van der Pol equation and limit cycles
+The simple pendulum, which we considered in Subsection 103, is a non-linear
+variant of the ‘harmonic oscillator’ problem y  = −y. We now consider another
+non-linear generalization of this problem, by adding a term µ(1 − y 2 )y  , where
+µ is a positive constant, to obtain the ‘Van der Pol equation’
+
+                             y  (x) = µ(1 − y(x)2 )y  (x) − y(x).
+
+This problem was originally introduced by Van der Pol (1926) in the study
+of electronic circuits. If µ is small and the initial values correspond to what
+would be oscillations of amplitude less than 1, if µ had in fact been zero, it
+might be expected that the values of y(x) would remain small for all time.
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                            17
+
+                                        y
+                                             2
+
+                                             1
+                                                                y
+                       −2         −1         0     1        2
+                                       −1
+
+                                       −2
+
+
+                  Figure 105(i)   Van der Pol problem with µ = 1
+
+
+                                             y
+                                        6
+
+                                        4
+
+                                        2
+                                             0          1             2
+             −2             −1                                            y
+                                             −2
+
+                                             −4
+
+                                             −6
+
+                Figure 105(ii)    Van der Pol problem with µ = 3
+
+
+However, the non-linear term has the effect of injecting more ‘energy’ into the
+system, as we see by calculating the rate of change of E = 12 y  (x)2 + 12 y(x)2 .
+This is found to be
+                                   
+              d 1  2 1
+                    y (x) + y(x)2 = µ(1 − y(x)2 )y  (x)2 > 0,
+             dx 2            2
+
+as long as |y| < 1.
+   Similarly, if |y| starts with a high value, then E will decrease until |y| = 1.
+It is possible to show that the path, traced out in the (y, y  ) plane, loops round
+the origin in a clockwise direction forever, and that it converges to a ‘limit
+cycle’ – a periodic orbit. In Figure 105(i), this is illustrated for µ = 1. The
+path traced out in the (y, y  ) plane moves rapidly towards the limit cycle and
+18    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+          8
+
+
+          6
+      v
+          4
+
+
+          2
+
+
+          0
+            0                  2         u          4                  6
+Figure 106(i)    Phase diagram for Lotka–Volterra solution with (u0 , v0 ) = (2, 2),
+                     together with seven alternative orbits
+
+
+is soon imperceptibly close to it. In Figure 105(ii), the case µ = 3 is presented.
+   Of special interest in this problem, especially for large values of µ, is
+the fact that numerical methods attempting to solve this problem need to
+adjust their behaviour to take account of varying conditions, as the value of
+1 − |y(x)|2 changes. The sharp change of direction of the path traced out
+near (y, y  ) = (±2, 0) for the µ = 3 case, a phenomenon which becomes
+more pronounced as µ is further increased, is part of the numerical difficulty
+associated with this problem.
+
+
+106   The Lotka–Volterra problem and periodic orbits
+In the modelling of the two-species ‘predator–prey’ problem, differential
+equation systems of the following type arise:
+                                   u = u(2 − v),                            (106a)
+                                    
+                                   v = v(u − 1),                             (106b)
+where the factors 2 − v and u − 1 can be generalized in various ways. This
+model was proposed independently by Lotka (1925) and Volterra (1926). The
+two variables represent the time-dependent populations, of which v is the
+population of predators which feed on prey whose population is denoted by u.
+It is assumed that u would have been able to grow exponentially without limit,
+if the predator had not been present, and that the factor 2 − v represents the
+modification to its growth rate because of harvesting by the predator. The
+predator in turn, in the absence of prey, would die out exponentially, and
+requires at least a prey population of u = 1 to feed upon to be able to grow.
+Of the two stationary solutions, (u, v) = (0, 0) and (u, v) = (1, 2), the second
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                             19
+
+      Table 106(I)     Approximations to the period T , given by (106d) for
+                               (u0 , v0 ) = (2, 2)
+
+                               n Approximate integral
+                              10  4.62974838287860
+                              20  4.61430252126987
+                              40  4.61487057379480
+                              80  4.61487051945097
+                             160  4.61487051945103
+                             320  4.61487051945103
+
+
+is more interesting because small perturbations from this point will lead to
+periodic orbits around the stationary point. By dividing (106a) by (106b), we
+obtain a differential equation for the path traced out by (u, v). The solution
+is that I(u, v) is constant, where
+
+                       I(u, v) = log(u) + 2 log(v) − u − v.
+
+  It is interesting to try to calculate values of the period T , for a given starting
+point (u0 , v0 ). To calculate T , change to polar coordinates centred at the
+stationary point
+
+                      u = 1 + r cos(θ),         v = 2 + r sin(θ)
+                              2π
+and calculate the integral    0     φ(θ)dθ, where
+
+                                                1
+                          φ(θ) =                             .                (106c)
+                                     v cos2 (θ) + u sin2 (θ)
+
+Starting values (u0 , v0 ) = (2, 2) lead to the orbit featured in Figure 106(i).
+Orbits with various other starting values are also shown. The period, based on
+the integral of (106c), has been calculated with a varying number n of equally
+spaced values of θ ∈ [0, 2π], using the trapezoidal rule. It is known that for
+certain smooth functions, the error of this type of calculation will behave, not
+like a power of n−1 , but like exp(−αn), for some problem-specific parameter
+α. This super-convergence is evidently realized for the present problem, where
+the observed approximations
+                             2π                                   
+                                               2π 
+                                                    n−1
+                                                              2πk
+                      T =           φ(θ)dθ ≈        φ                         (106d)
+                             0                  n              n
+                                                    k=0
+
+are shown in Table 106(I) for n = 10, 20, 40, . . . , 320. Evidently, to full machine
+accuracy, the approximations have converged to T = 4.61487051945103. An
+20     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+
+     Algorithm 106α    Computation of orbit and period for the Lotka–Volterra
+                                   problem
+
+
+     theta = linspace(0,2*pi,n+1);
+     co = cos(theta);
+     si = sin(theta);
+     C = u0*v0 2*exp(-u0-v0);
+     r = ones(size(theta));
+     u = 1+r.*co;
+     v = 2+r.*si;
+     carryon=1;
+     while carryon
+        f = u.*v. 2-C*exp(u+v);
+        df = -v.*r.*(v.*co. 2+u.*si. 2);
+        dr = f./df;
+        r = r-dr;
+        u = 1+r.*co;
+        v = 2+r.*si;
+        carryon = norm(dr,inf) > 0.000000001;
+     end
+     phi = 1./(v.*co. 2+u.*si. 2);
+     period = (2*pi/n)*sum(phi(1:n));
+
+
+explanation of the phenomenon of rapid convergence of the trapezoidal rule for
+periodic functions can be found in Davis and Rabinowitz (1984), and in papers
+referenced in that book.
+   In Algorithm 106α, MATLAB statements are presented to carry out the
+computations that were used to generate Figure 106(i) and Table 106(I). To
+compute the value of r for each θ, the equation f (r) = 0 is solved, where
+
+
+          f (r) = (exp(I(u, v)) − C) exp(u + v) = uv 2 − C exp(u + v),
+
+
+with C = u0 v02 exp(−u0 − v0 ). Note that the statement u.v. 2-C*exp(u+v)
+evaluates a vector with element number i equal to ui vi2 − C exp(ui + vi ),
+and that linspace(0,2*pi,n+1) generates a vector with n + 1 components,
+equally spaced in [0, 2π].
+
+107    The Euler equations of rigid body rotation
+For a rigid body on which no moments are acting, the three components of
+angular velocity, in terms of the principal directions of inertia fixed in the
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                             21
+
+body, satisfy the Euler equations:
+
+                               dw1
+                            I1     = (I2 − I3 )w2 w3 ,
+                                dt
+                               dw2
+                            I2     = (I3 − I1 )w3 w1 ,                        (107a)
+                                dt
+                               dw3
+                            I3     = (I1 − I2 )w1 w2 ,
+                                dt
+
+where the ‘principal moments of inertia’ I1 , I2 and I3 are positive. Denote the
+kinetic energy by 12 E and the squared norm of the angular momentum by F .
+That is,
+
+                           E = I1 w12 + I2 w22 + I3 w32 ,                     (107b)
+                           F = I12 w12 + I22 w22 + I32 w32 .                  (107c)
+
+Differentiate these expressions and substitute in dwi /dt, i = 1, 2, 3, to obtain
+a zero result in each case. Hence, E and F are invariants of the solution to
+(107a). This observation provides useful tests on numerical methods for this
+problem because there is in general no reason why these invariants should be
+maintained in a numerical approximation.
+
+                                  Exercises 10
+
+10.1 You are given the initial value problem
+
+      u (x) − 3u (x) + 2u(x)u (x) = 0,     u(1) = 2, u (1) = −1, u (1) = 4.
+
+     Show how to reformulate this problem in the form
+
+                           y  (x) = f (y(x)),       y(x0 ) = y0 ,
+
+     where f : R3 → R3 .
+
+10.2 You are given the non-autonomous initial value problem
+
+                           u = xu + x2 v,             u(0) = 3,
+                           v  = u − v + 2xw,          v(0) = 2,
+                                       v
+                           w = u +        ,           w(0) = 5.
+                                     1+x
+
+     Show how to write this as an autonomous problem.
+22    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+10.3 The matrix
+                                                                
+                             −1  1  0            ···    0  0  0
+                            1 −2                ···          0 
+                                   1                   0  0     
+                                                                
+                            0   1 −2            ···    0  0  0 
+                                                                
+                          2  .. .. ..                  .. .. .. 
+               A = (N − 1)    .  .  .                   .  .  . 
+                                                                
+                            0                   ···   −2     0 
+                                0  0                      1     
+                                                                
+                            0   0  0            ···    1 −2  1 
+                              0  0  0            ···    0  1 −1
+
+      arises in the numerical solution of the heat equation, but with Neumann
+      boundary conditions. Find the eigenvalues of A.
+10.4 Calculate the period of an orbit of the Lotka–Volterra problem which
+     passes through the point (3, 2).
+
+11    Differential Equation Theory
+110   Existence and uniqueness of solutions
+A fundamental question that arises in scientific modelling is whether a given
+differential equation, together with initial conditions, can be reliably used
+to predict the behaviour of the trajectory at later times. We loosely use the
+expression ‘well-posed’ to describe a problem that is acceptable from this point
+of view. The three attributes of an initial value problem that have to be taken
+into account are whether there actually exists a solution, whether the solution,
+if it exists, is unique, and how sensitive the solution is to small perturbations
+to the initial information. Even though there are many alternative criteria
+for answering these questions in a satisfactory manner, we focus here on
+the existence of a Lipschitz condition. This is especially convenient because
+the same type of condition can be used to study the behaviour of numerical
+approximations.
+Definition 110A The function f : [a, b] × RN → RN is said to satisfy
+a ‘Lipschitz condition in its second variable’ if there exists a constant L,
+known as a ‘Lipschitz constant’, such that for any x ∈ [a, b] and Y, Z ∈ RN ,
+ f (x, Y ) − f (x, Z) ≤ L Y − Z .
+  We need a basic lemma on metric spaces known as the ‘contraction mapping
+principle’. We present this without proof.
+
+Lemma 110B Let M denote a complete metric space with metric ρ and let
+φ : M → M denote a mapping which is a contraction, in the sense that
+there exists a number k, satisfying 0 ≤ k < 1, such that, for any η, ζ ∈ M ,
+ρ(φ(η), φ(ζ)) ≤ kρ(η, ζ). Then there exists a unique ξ ∈ M such that φ(ξ) = ξ.
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                             23
+
+  We can now state our main result.
+
+Theorem 110C Consider an initial value problem
+
+                               y  (x) = f (x, y(x)),                       (110a)
+                                y(a) = y0 ,                                 (110b)
+
+where f : [a, b] × RN → RN is continuous in its first variable and satisfies a
+Lipschitz condition in its second variable. Then there exists a unique solution
+to this problem.
+
+Proof. Let M denote the complete metric space of continuous functions
+y : [a, b] → RN , such that y(a) = y0 . The metric is defined by
+
+                ρ(y, z) = sup exp(−K(x − a)) y(x) − z(x) ,
+                          x∈[a,b]
+
+where K > L. For given y ∈ M , define φ(y) as the solution Y on [a, b] to the
+initial value problem
+
+                              Y  (x) = f (x, Y (x)),
+                              Y (a) = y0 .
+
+This problem is solvable by integration as
+                                       x
+                      φ(y)(x) = y0 +       f (s, y(s))ds.
+                                           a
+
+This is a contraction because for any two y, z ∈ M , we have
+                                          x                                 
+                                                                          
+   ρ(φ(y), φ(z)) ≤ sup exp(−K(x − a))           f (s, y(s)) − f (s, z(s)) ds
+                                                                              
+                    x∈[a,b]
+                                          x a
+
+                 ≤ sup exp(−K(x − a))           f (s, y(s)) − f (s, z(s)) ds
+                    x∈[a,b]                a
+                                             x
+                 ≤ L sup exp(−K(x − a))            y(s) − z(s) ds
+                      x∈[a,b]                 a
+                                                      x
+                 ≤ Lρ(y, z) sup exp(−K(x − a))           exp(K(s − a))ds
+                             x∈[a,b]                    a
+                  L
+                 ≤ ρ(y, z).
+                  K
+The unique function y that therefore exists satisfying φ(y) = y, is evidently
+the unique solution to the initial value problem given by (110a), (110b). 
+
+
+  The third requirement for being well-posed, that the solution is not overly
+sensitive to the initial condition, can be readily assessed for problems satisfying
+24    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+a Lipschitz condition. If y and z each satisfy (110a) with y(a) = y0 and
+z(a) = z0 , then
+                      d
+                         y(x) − z(x) ≤ L y(x) − z(x) .
+                     dx
+Multiply both sides by exp(−Lx) and deduce that
+                        d                      
+                            exp(−Lx) y(x) − z(x) ≤ 0,
+                       dx
+implying that
+                                                     
+                    y(x) − z(x) ≤ y0 − z0 exp L(x − a) .                   (110c)
+
+This bound on the growth of initial perturbations may be too pessimistic in
+particular circumstances. Sometimes it can be improved upon by the use of
+‘one-sided Lipschitz conditions’. This will be discussed in Subsection 112.
+
+111   Linear systems of differential equations
+Linear differential equations are important because of the availability of a
+superposition principle. That is, it is possible for a linear differential equation
+system to combine known solutions to construct new solutions. The standard
+form of a linear system is
+                              dy
+                                 = A(x)y + φ(x),                           (111a)
+                              dx
+where A(x) is a possibly time-dependent linear operator. The corresponding
+‘homogeneous’ system is
+                                dy
+                                   = A(x)y.                             (111b)
+                                dx
+  The superposition principle, which is trivial to verify, states that:
+Theorem 111A If y is a solution to (111a) and y1 , y2 , . . . , yk are solutions
+to (111b), then for any constants α1 , α2 , . . . , αk , the function y given by
+
+                                            
+                                            k
+                           y(x) = y(x) +         αi yi (x),
+                                            i=1
+
+is a solution to (111a).
+The way this result is used is to attempt to find the solution which matches
+a given initial value, by combining known solutions.
+  Many linear problems are naturally formulated in the form of a single high
+order differential equation
+
+ Y (m) (x) − C1 (x)Y (m−1) (x) − C2 (x)Y (m−2) (x) − · · · − Cm (x)Y (x) = g(x).
+                                                                           (111c)
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                              25
+
+  By identifying Y (x) = y1 (x), Y  (x) = y2 (x), . . . , Y (m−1) = ym (x), we can
+rewrite the system in the form
+                                                     
+                        y1 (x)               y1 (x)
+                   d                     y (x) 
+                      y2 (x)             2           
+                          ..   = A(x)        ..       + φ(x),
+                  dx       .                  .      
+                        ym (x)               ym (x)
+where the ‘companion matrix’ A(x) and the ‘inhomogeneous term’ φ(x) are
+given by
+                                                                 
+             0       1         0      ···     0                  0
+            0       0         1      ···     0              0 
+                                                                 
+            0       0         0      ···     0              0 
+                                                                 
+A(x) =      ..      ..        ..             ..  , φ(x) =  ..  .
+             .       .         .              .             . 
+            0       0         0      ···     1              0 
+           Cm (x) Cm−1 (x) Cm−2 (x) · · ·            C1 (x)                 g(x)
+When A(x) = A in (111b) is constant, then to each eigenvalue λ of A, with
+corresponding eigenvector v, there exists a solution given by
+                                 y(x) = exp(λx)v.                            (111d)
+When a complete set of eigenvectors does not exist, but corresponding to λ
+there is a chain of generalized eigenvectors
+      Av1 = λv1 + v,     Av2 = λv2 + v1 ,     ...,    Avk−1 = λvk−1 + vk−2 ,
+then there is a chain of additional independent solutions to append to (111d):
+  y1 = x exp(λx)v1 ,    y2 = x2 exp(λx)v2 ,    ...,     yk−1 = xk−1 exp(λx)vk−1 .
+In the special case in which A is a companion matrix, so that the system is
+equivalent to a high order equation in a single variable, as in (111c), with
+C1 (x) = C1 , C2 (x) = C2 , . . . , Cm (x) = Cm , each a constant, the characteristic
+polynomial of A is
+               P (λ) = λm − C1 λm−1 − C2 λm−2 − · · · − Cm = 0.
+For this special case, P (λ) is also the minimal polynomial, and repeated
+zeros always correspond to incomplete eigenvector spaces and the need
+to use generalized eigenvectors. Also, in this special case, the eigenvector
+corresponding to λ, together with the generalized eigenvectors if they exist,
+are
+                                                               
+          1                     0                         0
+       λ                     1                       0         
+                                                               
+ v=     λ  2               2λ                       1         , . . . .
+           .   , v1 =         .       , v2 =           .        
+          ..                 ..                       ..       
+                                                   (m−1)(m−2) m−3
+        λ m−1
+                          (m − 1)λ  m−2
+                                                        2     λ
+26    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+112   Stiff differential equations
+Many differential equation systems of practical importance in scientific
+modelling exhibit a distressing behaviour when solved by classical numerical
+methods. This behaviour is distressing because these systems are characterized
+by very high stability, which can turn into very high instability when
+approximated by standard numerical methods. We have already seen examples
+of stiff problems, in Subsections 102 and 104, and of course there are many
+more such examples. The concept of the ‘one-sided Lipschitz condition’ was
+mentioned in Subsection 110 without any explanation. Stiff problems typically
+have large Lipschitz constants, but many have more manageable one-sided
+Lipschitz constants, and this can be an aid in obtaining realistic growth
+estimates for the effect of perturbations.
+   We confine ourselves to problems posed on an inner product space. Thus
+we assume that there exists an inner product on RN denoted by u, v, and
+that the norm is defined by u 2 = u, u.
+Definition 112A The function f satisfies a ‘one-sided Lipschitz condition’,
+with ‘one-sided Lipschitz constant’ l if for all x ∈ [a, b] and all u, v ∈ RN ,
+                        f (x, u) − f (x, v), u − v ≤ l u − v 2 .
+It is possible that the function f could have a very large Lipschitz constant
+but a moderately sized, or even negative, one-sided Lipschitz constant. The
+advantage of this is seen in the following result.
+Theorem 112B If f satisfies a one-sided Lipschitz condition with constant
+l, and y and z are each solutions of
+                                  y  (x) = f (x, y(x)),
+then for all x ≥ x0 ,
+                 y(x) − z(x) ≤ exp(l(x − x0 )) y(x0 ) − z(x0 ) .
+Proof. We have
+           d                  d
+             y(x) − z(x) 2 =    y(x) − z(x), y(x) − z(x)
+          dx                 dx
+                           = 2f (x, y(x)) − f (x, z(x)), y(x) − z(x)
+                         ≤ 2l y(x) − z(x) 2 .
+                            
+Multiply by exp − 2l(x − x0 ) and it follows that
+                d                                 
+                    exp − 2l(x − x0 ) y(x) − z(x) 2 ≤ 0,
+               dx
+                        
+so that exp − 2l(x − x0 ) y(x) − z(x) 2 is non-increasing.                   
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                             27
+
+   Note that the problem described in Subsection 102 possesses the one-sided
+Lipschitz condition with l = 0.
+   Even though stiff differential equation systems are typically non-linear,
+there is a natural way in which a linear system arises from a given non-linear
+system. Since stiffness is associated with the behaviour of perturbations to
+a given solution, we suppose that there is a small perturbation Y (x) to a
+solution y(x). The parameter is small, in the sense that we are interested only
+in asymptotic behaviour of the perturbed solution as this quantity approaches
+zero. If y(x) is replaced by y(x) + Y (x) in the differential equation
+                              y  (x) = f (x, y(x)),                          (112a)
+                                                               2
+and the solution expanded in a series in powers of , with          and higher powers
+replaced by zero, we obtain the system
+                                                       ∂f
+                   y  (x) + Y  (x) = f (x, y(x)) +      Y (x).             (112b)
+                                                       ∂y
+Subtract (112a) from (112b) and cancel out , and we arrive at the equation
+governing the behaviour of the perturbation,
+                                    ∂f
+                        Y  (x) =      Y (x) = J(x)Y (x),
+                                    ∂y
+say. The ‘Jacobian matrix’ J(x) has a crucial role in the understanding of
+problems of this type; in fact its spectrum is sometimes used to characterize
+stiffness. In a time interval ∆x, chosen so that there is a moderate change
+in the value of the solution to (112a), and very little change in J(x),
+the eigenvalues of J(x) determine the growth rate of components of the
+perturbation. The existence of one or more large and negative values of λ∆x,
+for λ ∈ σ(J(x)), the spectrum of J(x), is a sign that stiffness is almost
+certainly present. If J(x) possesses complex eigenvalues, then we interpret
+this test for stiffness as the existence of a λ = Reλ + iImλ ∈ σ(J(x)) such
+that Reλ∆x is negative with large magnitude.
+
+                                 Exercises 11
+11.1 Show how to modify Theorem 110C so that the Lipschitz condition holds
+     only in a neighbourhood of y0 and where the solution is only required
+     to exist on [a, b], where b satisfies a < b ≤ b.
+11.2 By finding two vectors α and β so that the system
+                                                     
+                              0 1 0              sin(x)
+                  y  (x) =  1 0 0  y(x) +       0   ,
+                              0 0 1              cos(x)
+     has a solution of the form y(x) = sin(x)α + cos(x)β, find the general
+     solution to this problem.
+28    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+12    Further Evolutionary Problems
+120   Many-body gravitational problems
+We consider a more general gravitational problem involving n mutually
+attracting masses M1 , M2 , . . . , Mn at position vectors y1 (x), y2 (x), . . . , yn (x),
+satisfying the 3n-dimensional second order differential equation system
+                             γMj (yi − yj )
+               yi (x) = −                    ,    i = 1, 2, . . . , n.
+                                    yi − yj 3
+                             j=i
+
+Reformulated as a first order system, the problem is 6n-dimensional because
+each of the yi has three components and the velocity vectors yi also have three
+components.
+   To reduce this problem to a manageable level in situations of practical
+interest, some simplifications can be made. For example, in models of the solar
+system, the most massive planets, Jupiter, Uranus, Neptune and Saturn, are
+typically regarded as the only bodies capable of influencing the motion of the
+sun and of each other. The four small planets closest to the sun, Mercury,
+Venus, Earth and Mars, are, in this model, regarded as part of the sun in
+the sense that they add to its mass in attracting the heavy outer planets
+towards the centre of the solar system. To study the motion of the small
+planets or of asteroids, they can be regarded as massless particles, moving in
+the gravitation fields of the sun and the four large planets, but not at the
+same time influencing their motion.
+   Another model, involving only three bodies, is useful for studying the
+motion of an Earth–Moon satellite or of an asteroid close enough to the Earth
+to be strongly influenced by it as well as by the Sun. This system, known as
+the restricted three–body problem, regards the two heavy bodies as revolving
+in fixed orbits about their common centre of mass and the small body as
+attracted by the two larger bodies but not affecting their motion in any way.
+If it is possible to approximate the large-body orbits as circles, then a further
+simplification can be made by working in a frame of reference that moves with
+them. Thus, we would regard the two large bodies as being fixed in space with
+their rotation in the original frame of reference translated into a modification
+of the equations of gravitational motion.
+   To simplify this discussion, we use units scaled to reduce a number of constants
+to unit value. We scale the masses of the two larger bodies to 1 − µ and µ and
+their positions relative to the moving reference frame by the vectors (µ − 1)e1
+and µe1 , so that their centre of mass is at the origin of coordinates. Write y1 , y2
+and y3 as the scalar variables representing the position coordinates of the small
+body and y4 , y5 and y6 as the corresponding velocity coordinates. Under these
+assumptions, the equations of motion become
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                                           29
+
+
+
+
+                                                    0                   1
+
+
+
+
+         Figure 120(i)      A solution to the restricted three-body problem
+
+
+
+
+ y1 = y4 ,
+ y2 = y5 ,
+ y3 = y6 ,
+                               µ(y1 + µ − 1)                      (1 − µ)(y1 + µ)
+ y4 = 2y5 + y1 −                                 3/2
+                                                         −                            3/2
+                                                                                            ,
+                     (y22 + y32 + (y1 + µ − 1)2 )            (y22 + y32 + (y1 + µ)2 )
+
+                                     µy2                               (1 − µ)y2
+ y5 = −2y4 + y2 −                                  3/2
+                                                           −                            3/2
+                                                                                                ,
+                       (y22 + y32 + (y1 + µ − 1)2 )            (y22 + y32 + (y1 + µ)2 )
+
+                         µy3                              (1 − µ)y3
+ y6 = −                                3/2
+                                              −                            3/2
+                                                                                 .
+           (y22 + y32 + (y1 + µ − 1)2 )           (y22 + y32 + (y1 + µ)2 )
+
+   Planar motion is possible; that is, solutions in which y3 = y6 = 0 at all
+times. One of these is shown in Figure 120(i), with the values of (y1 , y2 )
+plotted as the orbit evolves. The heavier mass is at the point (µ, 0) and the
+lighter mass is at (1 − µ, 0), where (0, 0) is marked 0 and (1, 0) is marked 1.
+For this calculation the value of µ = 1/81.45 was selected, corresponding
+to the Earth-Moon system. The initial values for this computation were
+(y1 , y2 , y3 , y4 , y5 , y6 ) = (0.994, 0, 0, 0, −2.0015851063790825224, 0) and the
+period was 17.06521656015796.
+30           NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+
+
+
+                                               0                           1
+
+
+
+
+         Figure 120(ii)      A second solution to the restricted three-body problem
+
+
+
+                                                                            
+                                                                                   
+                                                         
+                                                                                       
+
+                                                                                          
+
+                                                                                       
+                                                         
+                                                                                   
+                                                                            
+
+
+
+
+                  Figure 120(iii)   A figure-of-eight orbit for three equal masses
+
+
+
+   A second solution, identical except for the initial value (y1 , y2 , y3 , y4 , y5 , y6 )
+= (0.87978, 0, 0, 0, −0.3797, 0) and a period 19.14045706162071, is shown in
+Figure 120(ii).
+   If the three masses are comparable in value, then the restriction to a simpler
+system that we have considered is not available. However, in the case of a
+number of equal masses, other symmetries are possible. We consider just a
+single example, in which three equal, mutually attracting masses move in a
+figure-of-eight orbit. This is shown in Figure 120(iii).
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                               31
+
+                                                    A(x)
+                                  1
+                                                π               2π
+                        x
+                    y
+                      =
+                                  −1
+                                                       y(x)
+
+
+           Figure 121(i)        Solution to delay differential equation (121b)
+
+
+
+121   Delay problems and discontinuous solutions
+A functional differential equation is one in which the rate of change of y(x)
+depends not just on the values of y for the same time value, but also on time
+values less than x. In the simplest case, this has the form
+
+                            y  (x) = f (x, y(x), y(x − τ )),                   (121a)
+
+where τ is a constant delay. Note that this cannot be cast as an initial value
+problem with the hope of actually defining a unique solution, because at an
+initial point x0 , the derivative depends on the value of y(x0 − τ ). What we
+will need to do in the case of (121a) is to specify the value of y on an initial
+interval [x0 − τ, x0 ].
+
+A linear delay differential equation
+We consider the problem given by
+
+       y  (x) = −y(x − π2 ),     x > 0,      y(x) = x,       x ∈ [− π2 , 0].   (121b)
+
+For x in the interval [0, π2 ] we find
+                                  x
+                     y(x) = −        (x − π2 )dx = 12 x(π − x),
+                                      0
+
+with y( π2 ) = 18 π 2 . This process can be repeated over the sequence of intervals
+                2 ], . . . to obtain values of y(x) shown in Figure 121(i) for x ≤ 4π.
+[ π2 , π], [π, 3π
+     It appears that the solution is attempting to approximate sinusoidal
+behaviour as time increases. We can verify this by estimating a local amplitude
+defined by
+                                                             1
+                                  A(x) = (y(x)2 + y  (x)2 ) 2 .
+This function is also shown in Figure 121(i) and we note the discontinuity
+at x = 0, corresponding to the discontinuity in the value of y  (x). Such
+discontinuities are to be expected because the right-derivative is given by
+32    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+                        102
+
+
+
+
+                         10
+
+
+
+                                                     1+ √         2+ √   1+
+                                           √                2 √            2 √
+                                           2            2     2      2       2
+                          1
+                              0        1         2            3             4
+       Figure 121(ii)    Solution to neutral delay differential equation (121c)
+
+
+
+the formula for y  (x) for x positive and the left-derivative is found from
+the derivative of the initial function. For each positive integral multiple of
+1
+2 π, there will always be an inherited non-smooth behaviour but this will be
+represented by a discontinuity in increasingly higher derivatives.
+   We will now consider a problem with two delays.
+
+An example with persistent discontinuities
+A delay differential equation of ‘neutral type’ is one in which delayed values
+of y  also occur in the formulation. An example of this type of problem is
+                                             √
+            y  (x) = 12 y  (x − 1) + ay(x − 2),  x > 0,
+                                                          √                (121c)
+             y(x) = 1,                             x ∈ [− 2, 0],
+                                             √         √
+where the constant is given by a = exp( 2)− 12 exp( 2−1) and was contrived
+to ensure that exp(x) would have been a solution, if the initial information
+had been defined in terms of that function.
+   The solution is shown in Figure 121(ii) and we see that it seems to be
+approximating exponential behaviour more and more closely as x increases.
+However, there is a discontinuity in y  (x) at every positive integer value of x.
+Specifically, for each n there is a jump given by
+                         lim y  (x) − lim y  (x) = 2−n a.
+                        x→n+          x→n−
+
+
+122   Problems evolving on a sphere
+Given a function H(y), we will explore situations in which solutions to
+y  (x) = f (y) preserve the value of H(y(x)). In the special case in which
+H(y) = 12 y 2 , this will correspond to motion on a sphere. We recall the
+standard notation
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                            33
+
+                                          ∂H
+                                                   
+                                           ∂y1
+                                          ∂H      
+                                                  
+                              ∇(H) = 
+                                           ∂y2
+                                                   
+                                           ..     
+                                            .     
+                                           ∂H
+                                           ∂yN
+
+and consider problems of the ‘Poisson’ form
+
+                               y  = L(x, y)∇(y),                            (122a)
+
+where L(x, y) is always a skew-symmetric matrix. For such problems H(y(x))
+is invariant. To verify this, calculate
+
+             d            ∂H
+                          N
+               H(y(x)) =         yi (x) = ∇(H) L(x, y)∇(y) = 0,
+            dx           i=1
+                             ∂yi
+
+
+because of the skew-symmetry of L.
+   The Euler equations, discussed in Subsection 107, provide two examples of
+this. To show that E(w) is invariant write H(w) = 12 E(w), and to show that
+F (w) is invariant write H(w) = 12 F (w). The problem reverts to the form of
+(122a), with y replaced by w, where L(x, w) is given by
+                                                                          
+             0     I3 w3
+                    I1 I2   − II21wI32             0     − Iw1 I32    w2
+                                                                     I1 I3
+       I3 w3                 I1 w1                                        
+       − I1 I2        0       I2 I3 
+                                         and  Iw1 I32       0     − Iw2 I13  ,
+           I2 w2
+           I1 I3 − II12wI31       0            − Iw1 I23    w1
+                                                           I2 I3       0
+
+respectively.
+  We now revert to the special case H(x) = 12 y y, for which (122a) becomes
+
+                                y  = L(x, y)y.                              (122b)
+
+An example is the contrived problem
+                                                           
+       y1        0 −y1 − sin(x)     y1                  y1 (0)       1
+                                                          
+      y2  =  y1      0     −1   y2 ,              y2 (0)  =  0 ,   (122c)
+       y3     sin(x) 1        0     y3                  y3 (0)       0
+
+with solution y1 (x) = cos(x), y2 (x) = cos(x) sin(x), y3 (x) = sin2 (x). The
+solution values for x ∈ [0, 1.4π] are shown in Figure 122(i).
+  Problems of the form (122b) are a special case of
+
+                                Y  = L(x, Y )Y,                             (122d)
+
+where Y has a number of columns. In this case the inner product of two
+specific columns will be invariant. In particular, if Y (x) is a square matrix,
+34      NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+                                                y2
+
+
+
+
+                                                                      y1
+
+
+
+
+     Figure 122(i)       Solution to problem (122c) with y3 pointing out of the page
+
+
+
+initially orthogonal, and L(x, Y ) is always skew-symmetric, then Y (x) will
+remain orthogonal. Denote the elements of Y by yij . An example problem of
+this type is
+
+                                                    
+                        0         −1       µy21
+                                                    
+          Y  (x) =    1          0      −µy11       Y,     Y (0) = I,         (122e)
+                      −µy21       µy11      0
+
+
+with µ a real parameter. The solution to (122e) is
+
+                                                                           
+                    cos(x) − sin(x) cos(µx)                sin(x) sin(µx)
+                                                                           
+          Y (x) =  sin(x)  cos(x) cos(µx)               − cos(x) sin(µx)   .
+                       0        sin(µx)                       cos(µx)
+
+
+123     Further Hamiltonian problems
+In the Hamiltonian formulation of classical mechanics, generalized coordinates
+q1 , q2 , . . . , qN and generalized momenta p1 , p2 , . . . , pN are used to represent
+the state of a mechanical system. The equations of motion are defined in terms
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                                     35
+
+of a ‘Hamiltonian’ function H(p1 , p2 , . . . , pN , q1 , q2 , . . . , qN ) by the equations
+                                              ∂H
+                                       pi = −     ,
+                                              ∂qi
+                                             ∂H
+                                       qi =     .
+                                             ∂pi
+Write y(x) as a vector variable, made up from N momenta followed by the N
+coordinates. That is,
+                           
+                              pi ,      1 ≤ i ≤ N,
+                      yi =
+                              qi−N , N + 1 ≤ i ≤ 2N.
+
+With the understanding that H is regarded as a function of y, the differential
+equations can be written in the form y  = f (y), where
+
+                                                        0   −I
+                       f (y) = J∇(H),            J=                ,
+                                                        I    0
+
+in which I is the N × N unit matrix.
+Theorem 123A H(y(x)) is invariant.
+Proof. Calculate ∂H/∂y to obtain the result
+                         ∇(H) J∇(H) = 0.                                                  
+
+
+  The Jacobian of this problem is equal to
+                          ∂          ∂
+                             f (y) =    (J∇(H)) = JW (y),
+                          ∂y         ∂y
+where W is the ‘Wronskian’ matrix defined as the 2N × 2N matrix with (i, j)
+element equal to ∂ 2 H/∂yi ∂yj .
+   If the initial value y0 = y(x0 ) is perturbed by a small number multiplied by
+a fixed vector v0 , then, to within O( 2 ), the solution is modified by v + O( 2 )
+where
+                                     ∂f
+                           v  (x) =    v(x) = JW (y)v(x).
+                                     ∂y
+For two such perturbations u and v, it is interesting to consider the value of
+the scalar u Jv.
+  This satisfies the differential equation
+             d
+               u Jv = u JJW v + (JW u) Jv = −u W v + u W v = 0.
+            dx
+Hence we have:
+36    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+
+
+
+Figure 123(i) Illustration of symplectic behaviour for H(p, q) = p2 /2+q 2 /2 (left)
+and H(p, q) = p2 /2 − cos(q) (right). The underlying image depicts the North Island
+brown kiwi, Apteryx mantelli.
+
+Theorem 123B u Jv is invariant with time.
+
+  In the special case of a two-dimensional Hamiltonian problem, the value of
+( u) J( v) can be interpreted as the area of the infinitesimal parallelogram
+with sides in the directions u and v. As the solution evolves, u and v might
+change, but the area u Jv remains invariant. This is illustrated in Figure
+123(i) for the two problems H(p, q) = p2 /2 + q 2 /2 and H(p, q) = p2 /2 − cos(q)
+respectively.
+
+124   Further differential-algebraic problems
+Consider the initial value problem
+
+                                 y  = y + z,                                (124a)
+                                  0 = z + z − y,
+                                            3
+                                                                             (124b)
+                               y(0) = 2,   z(0) = 1.                         (124c)
+
+This is an index 1 problem, because a single differentiation of (124b) and
+a substitution from (124a) converts this to a differential equation system
+consisting of (124b) together with z  = (y + z)/(1 + 3z 2 ). However, this
+reduction does not do justice to the original formulation in the sense that
+a solution with slightly perturbed initial values has little to do with the
+original index 1 problem. This emphasizes the fact that initial conditions for
+the differential-algebraic equation formulation must be consistent with the
+algebraic constraint for it to be well-posed. A more appropriate reduction is
+to replace (124a) by y  = y + φ(y), where φ(y) is the real value of z which
+satisfies (124b).
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                               37
+
+  We next introduce an initial value problem comprising two differential
+equations and a single algebraic constraint:
+
+                          y1 = − sin(z),                                       (124d)
+                          y2 = 2 cos(z) − y1 ,                                 (124e)
+                           0 = y12 + y22 − 1,                                   (124f)
+                       y1 (0) = 1,    y2 (0) = 0,       z(0) = 0.               (124g)
+
+An attempt to reduce this to an ordinary differential equation system by
+differentiating (124f) and substituting from (124d) and (124e), leads to a new
+algebraic constraint
+
+                        −y1 sin(z) + y2 (2 cos(z) − y1 ) = 0,                   (124h)
+
+and it is clear that this will be satisfied by the solution to the original problem.
+However, this so-called ‘hidden constraint’ introduces a new complexity into
+this type of problem. That is, for initial values to be consistent, (124h) must
+be satisfied at the initial time. If, for example, the initial values y1 (0) = 1 and
+y2 (0) = 0 are retained, but the initial value z(0) is perturbed slightly, (124h)
+will not be satisfied and no genuine solution exists. But the hidden constraint,
+as the problem has actually been posed, is satisfied, and we can take the
+reduction towards an ordinary differential equation system to completion.
+Differentiate (124h) and substitute from (124d) and (124e) and we finally
+arrive at
+
+     z  (cos2 (z) + 2 sin2 (z)) = sin2 (z) + y2 sin(z) + (2 cos(z) − y1 )2 .   (124i)
+
+Because two differentiation steps were required to reach this equation, the
+original system is referred to as an index 2 problem. In summary, the original
+index 2 problem, comprising (124d), (124e), (124f) has been reduced, first
+to an index 1 formulation (124d), (124e), (124h), and then to an ordinary
+differential equation system (124d), (124e), (124i).
+
+                                     Exercises 12
+
+12.1 Show that a problem of the form
+
+                                     u = −α (v)γ(u, v),
+                                     v  = β  (u)γ(u, v),
+
+      satisfies the assumptions of (122a) with a suitable choice of H(u, v).
+12.2 Write the Lotka–Volterra equations (106a), (106b) in the form given in
+     Exercise 12.1.
+38     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+13     Difference Equation Problems
+130    Introduction to difference equations
+While differential equations deal with functions of a continuous variable,
+difference equations deal with functions of a discrete variable. Instead of a
+formula for the derivative of a function written in terms of the function
+itself, we have to consider sequences for which each member is related in
+some specific way to its immediate predecessor or several of its most recent
+predecessors. Thus we may write
+
+                          xn = φn (xn−1 , xn−2 , . . . , xn−k ),
+
+where k is the ‘order’ of this difference equation. This equation, in which
+xn depends on k previous values, can be recast in a vector setting in which
+members of the sequence lie not in R but in Rk, and depend only on one
+previous value. Thus if                    
+                                       xn
+                                           
+                                   xn−1 
+                            Xn =          ,
+                                        ..  
+                                        .  
+                                     xn−k+1
+then                                                              
+                                  φn (xn−1 , xn−2 , . . . , xn−k )
+                                                                  
+                                             xn−1                 
+                                                                  
+              Xn = Φn (Xn−1 ) =              xn−2                 .
+                                                                  
+                                               ..                 
+                                                .                 
+                                            xn−k+1
+Just as for differential equations, we can use either formulation as we please.
+
+131    A linear problem
+Consider the difference equation
+
+                            yn = 3yn−1 − 2yn−2 + Cθ n ,                 (131a)
+
+where C and θ are constants. We do not specify an initial value, but aim
+instead to find the family of all solutions. As a first step, we look at the
+special case in which C = 0. In this case, the equation becomes linear in
+the sense that known solutions can be combined by linear combinations. The
+simplified equation in matrix–vector form is
+
+                           yn             3   −2        yn−1
+                                    =                              ,
+                          yn−1            1    0        yn−2
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                            39
+
+which can be rewritten as
+
+                 yn − yn−1             2 0          yn−1 − yn−2
+                                 =                                       ,
+                −yn + 2yn−1            0 1         −yn−1 + 2yn−2
+
+with solution defined by
+
+                                yn − yn−1 = A2n−1 ,
+                             −yn + 2yn−1 = B,
+
+for constants A and B. By eliminating yn−1 , we find
+
+                                 yn = A2n + B
+
+for the general solution. The fact that this combines powers of 2 and 1, the
+eigenvalues of the matrix
+                                      3   −2
+                                               ,                             (131b)
+                                      1    0
+
+suggests that we can look for solutions for the original formulation in the
+form λn without transforming to the matrix–vector formulation. Substitute
+this trial solution into (131a), with C = 0, and we find, apart from a factor
+λn−2 , that the condition on λ is
+
+                                λ2 − 3λ + 2 = 0.
+
+This is the characteristic polynomial of the matrix (131b), but it can be read
+off immediately from the coefficients in (131a).
+   To find the general solution to (131a), if C = 0, it is easy to see that we
+only need to find one special solution to which we can add the terms A2n + B
+to obtain all possible solutions. A special solution is easily found, if θ = 1 and
+θ = 2, in the form
+                                        Cθ n+2
+                              yn =                 .
+                                    (θ − 1)(θ − 2)
+This type of special solution is not available if θ equals either 1 or 2. In these
+cases a special solution can be found as a multiple of n or n2n , respectively.
+Combining these cases, we write the general solution as
+                   
+                   
+                    A2 + B − Cn,
+                       n
+                                                      θ = 1,
+              yn =   A2n + B + 2Cn2n ,                 θ = 2,
+                   
+                                 Cθ 2
+                    A2n + B +                     n
+                                                       θ = 1, θ = 2.
+                                     (θ−1)(θ−2) θ ,
+40    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+132   The Fibonacci difference equation
+The initial value difference equation
+
+                   yn = yn−1 + yn−2 ,           y0 = 0,      y1 = 1,     (132a)
+
+is famous because of the mathematical, biological and even numerological
+significance attached to the solution values
+
+                     1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, . . . .
+
+To find the general solution, solve the polynomial equation
+
+                                  λ2 − λ − 1 = 0,
+
+to find the terms λn1 and λn2 , where
+                                √                  √
+                     λ1 = 1+2 5 ,       λ2 = 1−2 5 = −λ−1
+                                                       1 .
+
+To find the coefficients A and B in the general solution
+                           √ n         √ −n
+                    yn = A 1+2 5 + B − 1+2 5    ,
+
+substitute n = 0 and n = 1, to find A = −B = 5−1/2, and therefore the
+specific solution to the initial value problem (132a),
+                               √ n            √ −n 
+                                 1+ 5          1+ 5
+                    yn = √1        2      −  −   2       .
+                            5
+
+
+133   Three quadratic problems
+We consider the solutions to the problems
+                                        2
+                                  yn = yn−1 ,                            (133a)
+                                        2
+                                  yn = yn−1 − 2,                         (133b)
+                                  yn = yn−1 yn−2 .                       (133c)
+
+If zn = ln(yn ) in (133a), then zn = 2zn−1 with solution zn = 2n z0 . Hence, the
+general solution to (133a) is
+                                            n
+                                    yn = y02 .
+To solve (133b), substitute yn = zn + zn−1 , so that
+
+                                     1    2      1
+                            zn +       = zn−1 + 2 ,
+                                    zn         zn−1
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                          41
+
+                                              2
+and this is satisfied by any solution to zn = zn−1 . Hence, using the known
+solution of (133a), we find
+                                           n       n
+                               yn = z02 + z0−2 ,
+where z0 is one of the solutions to the equation
+                                           1
+                                    z0 +      = y0 .
+                                           z0
+Finally, to solve (133c), substitute zn = ln(yn ), and we find that
+                              zn = zn−1 + zn−2 .
+The general solution to this is found from the Fibonacci equation, so that
+substituting back in terms of yn , we find
+                                1
+                                       √       n   1
+                                                       √     n
+                       yn = A( 2 (1+ 5)) · B ( 2 (1− 5)) ,
+with A and B determined from the initial values.
+
+134   Iterative solutions of a polynomial equation
+We discuss the possible solution of the polynomial equation
+                                     x2 − 2 = 0.
+Of course this is only an example, and a similar discussion would be possible
+with other polynomial equations. Consider the difference equations
+                           1 2
+                yn = yn−1 − yn−1 + 1,              y0 = 0,                 (134a)
+                           2
+                           1 2
+                yn = yn−1 − yn−1 + 1,              y0 = 4,                 (134b)
+                           2
+                                                       3
+                yn = yn−1 − yn−1
+                             2
+                                 + 2,              y0 = ,                  (134c)
+                                                       2
+                     yn−1      1
+                yn =       +      ,                y0 = 100,               (134d)
+                       2     yn−1
+                     yn−1 yn−2 + 2
+                yn =               ,               y0 = 0,       y1 = 1.   (134e)
+                      yn−1 + yn−2
+                                                   √
+Note that each of these difference equations
+                                          √ has 2 as a stationary point.
+That is, each of them is satisfied by yn = 2, for every n. Before commenting
+further, it is interesting to see what happens if a few values are evaluated
+numerically for each sequence. These are shown in√Table 134(I).
+  Note that (134a) seems to be converging to 2, whereas (134b) seems
+to have no hope of ever doing so. Of course the starting value, y0 , is the
+distinguishing feature, and we can perhaps investigate which values converge
+and which ones do not. It can be shown that the fate of the iterates for various
+starting values can be summarized as follows:
+42     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+ Table 134(I)     The first few terms in the solutions of some difference equations
+
+     Equation (134a)   Equation (134b) Equation (134c) Equation (134d) Equation (134e)
+y0 0.0000000000 4.0000000000 1.5000000000 1.000000×102 0.0000000000
+y1 1.0000000000 −3.0000000000 1.2500000000 5.001000×10 1.0000000000
+y2 1.5000000000 −6.5000000000 1.6875000000 2.502500×10 2.0000000000
+y3 1.3750000000 −2.662500×10 0.8398437500 1.255246×10 1.3333333333
+y4 1.4296875000 −3.800703×102 2.1345062256 6.3558946949 1.4000000000
+y5 1.4076843262 −7.260579×104 −0.4216106015 3.3352816093 1.4146341463
+y6 1.4168967451 −2.635873×109 1.4006338992 1.9674655622 1.4142114385
+
+
+                        √      √                              √
+                y0 ∈ {− 2, 2 + 2}:        Convergence to x = − 2
+                        √      √                             √
+                y0 ∈ (− 2, 2 + 2):        Convergence to x = 2
+                        √      √
+                y0 ∈ [− 2, 2 + 2]:       Divergence
+                                    √
+Note that the starting value y0 = − 2, while it is a fixed point of the mapping
+given by (134a), is unstable; that is, any small perturbation from this √initial
+value will send the sequence either√into instability or convergence to + 2.√A
+similar remark applies to y0 = 2 + 2, which maps √   immediately to y1 = − 2.
+  The difference equation (134c) converges to ± 2 in a finite number of
+steps for y0 in a certain countable set; otherwise the sequence formed from
+this equation diverges.                                                     √
+  Equation (134d) is the Newton method and converges quadratically  √    to 2
+            √ y0 . By quadratic convergence, we mean that |yn − 2| divided
+for any positive
+by |yn−1 − 2|2 is bounded. In fact, in the limit as n → ∞,
+                                     √        √
+                                yn − 2           2
+                                      √     →      .
+                             (yn−1 − 2)  2     4
+
+   The iteration scheme given by (134e) is based on the secant method for
+solving non-linear equations. To solve φ(y) = 0, yn is found by fitting a
+straight line through the two points (yn−2 , φ(yn−2 )) and (yn−1 , φ(yn−1 )) and
+defining yn as the point where this line crosses the horizontal axis. In the case
+φ(y) = y 2 − 2, this results in (134e).
+   It is interesting to ask if there exists an ‘order’ k for this sequence. In other
+words, assuming that convergence is actually achieved, does k ≥ 1 exist such
+that                                         √
+                                      |yn − 2|
+                                             √
+                                    |yn−1 − 2|k
+
+                  √ as n → ∞? For the secant method k does exist, and has
+has a limiting value
+the value k = 12 ( 5 + 1).
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                             43
+
+135   The arithmetic-geometric mean
+Let a0 and b0 be real numbers chosen so that 0 < b0 < a0 , and define the
+sequence of (an , bn ) pairs by the formulae
+
+                   an = 12 (an−1 + bn−1 ),
+                                                          n = 1, 2, . . . .   (135a)
+                    bn =      an−1 bn−1 ,
+
+We can verify (i) that bn−1 < bn < an < an−1 for all n ≥ 1 and (ii) that the
+sequence a0 −b0 , a1 −b1 , a2 −b2 , . . . converges to zero. The truth of (i) follows
+from elementary properties of arithmetic and geometric means. Furthermore,
+(ii) can be proved from the identity
+
+                                    (an−1 − bn−1 )2
+                         an − bn = √        √      2 .
+                                  2 an−1 + bn−1
+
+The common limit of the an and bn sequences is known as the ‘arithmetic-
+geometric mean’ of a0 and b0 . We present a single application.
+  The quantities
+                          π/2
+                                2                       −1/2
+              F (a, b) =        a cos2 (θ) + b2 sin2 (θ)       dθ,
+                              0
+                              π/2
+                                      2                       1/2
+                E(a, b) =             a cos2 (θ) + b2 sin2 (θ)      dθ,
+                              0
+
+are known as ‘complete elliptic integrals’ of the first and second kind,
+respectively. The value of 4E(a, b) is the length of the circumference of the
+ellipse
+                                x2     y2
+                                   +      = 1.
+                                a2     b2
+Use a0 = a and b0 = b as starting values for the computation of the sequences
+defined by (135a), and denote by a∞ the arithmetic-geometric mean of a0 and
+b0 . Then it can be shown that
+
+                                  F (a0 , b0 ) = F (a1 , b1 ),
+
+and therefore that
+                                                              π
+                           F (a0 , b0 ) = F (a∞ , a∞ ) =         .
+                                                             2a∞
+The value of E(a0 , b0 ) can also be found from the sequences that lead to the
+arithmetic-geometric mean. In fact
+                π  2                                                           
+ E(a0 , b0 ) =      a − 2a1 (a0 − a1 ) − 4a2 (a1 − a2 ) − 8a3 (a2 − a3 ) − · · · .
+               2a∞ 0
+44    NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+                                 Exercises 13
+
+13.1 Write the difference equation given by (134e) in the form
+
+                                       zn = φ(zn−1 ),
+
+      with z0 a given initial value.
+13.2 Write the difference equation system
+
+                           un = un−1 + vn−1 ,           u0 = 2,
+                                         2
+                           vn = 2un−1 + vn−1 ,          v0 = 1,
+
+      in the form yn = φ(yn−1 , yn−2 ), with y0 and y1 given initial values.
+13.3 Use the formula for the error in linear interpolation together with the
+     solution to (133c) to verify the order of convergence of (134e).
+                √
+13.4 Calculate 2 by applying the Newton method to the equation
+
+                                       2x−2 − 1 = 0.
+                              √
+13.5 Calculate the value of    3 by applying the secant method to
+
+                                        x2 − 3 = 0.
+
+13.6 Calculate the circumference of the ellipse
+
+                                       x2   y2
+                                          +    = 1,
+                                       9    4
+      using the arithmetic-geometric mean.
+
+
+14    Difference Equation Theory
+140   Linear difference equations
+The standard form for linear difference equation systems is
+
+                              Xn = An Xn−1 + φn ,                        (140a)
+
+which becomes an initial value problem if the value of the initial vector
+X0 is specified. The corresponding system in which φn is omitted is the
+‘homogeneous part’.
+  Many linear difference equations are more naturally formulated as
+
+               yn = αn1 yn−1 + αn2 yn−2 + · · · + αnk yn−k + ψn ,
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                               45
+
+but these are easily recast in the form (140a) by writing
+                                                                               
+                                   αn1          αn2     ···   αnk            ψn
+                yn                  1                                        0 
+                                                0      ···    0             
+              yn−1                                                           
+  Xn =                 ,    An =   0            1      ···    0 ,        
+                                                                        φn =   0 .
+                ..                                                            
+                 .                ..            ..            ..          .. 
+                                    .              .             .          . 
+              yn−k+1
+                                      0            0      ···   0               0
+
+  To solve (140a) as an initial value problem, we need to use products of the
+form
+                       n
+                           Ai = An An−1 · · · Am+1 Am .
+                             i=m
+
+We have:
+Theorem 140A The problem (140a), with initial value X0 given, has the
+unique solution
+              n
+                            
+                             n           
+                                         n
+      yn =          Ai X0 +     Ai φ1 +     Ai φ2 + · · · + An φn−1 + φn .
+              i=1               i=2                 i=3
+
+
+Proof. The result holds for n = 0, and the general case follows by induction.
+                                                                           
+
+
+
+141    Constant coefficients
+We consider the solution of a linear difference equation with constant
+coefficients:
+              yn = α1 yn−1 + α2 yn−2 + · · · + αk yn−k + ψn .  (141a)
+The solution is found in terms of the solution to the canonical problem in
+which the initial information is given in the form
+                                                 
+                                        y0       1
+                                            0 
+                                      y−1   
+                                        ..  . 
+                                           =  . .
+                                         .  . 
+                                            
+                                    y−k+2   0 
+                                     y−k+1       0
+
+Denote the solution to this problem at step m by
+
+                             ym = θm ,        m = 0, 1, 2, . . . , n,
+46      NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+with θm = 0 for m < 0. Given the difference equation (141a) with initial
+values y0 , y1 , . . . , yk−1 , define linear combinations of this data by
+                                                          −1       
+         yk−1     1 θ1          θ2      ···   θk−2     θk−1       yk−1
+                                                                   
+        yk−2   0 1           θ1      ···   θk−3     θk−2   yk−2 
+                                                                   
+        yk−3   0 0                   ···   θk−4     θk−3          
+                              1                             yk−3 
+        . = . .                ..             ..       ..   .. 
+                                                                        .               (141b)
+        ..   .. ..                                      .   . 
+                                .              .                     
+                                                                   
+        y1   0 0             0       ···     1       θ1   y1 
+           y0     0 0           0       ···     0        1         y0
+
+     We are now in a position to write down the solution to (141a).
+
+Theorem 141A Using the notation introduced in this subsection, the
+solution to (141a) with given initial values y0 , y1 , . . . , yk−1 is given by
+
+                                   
+                                   k−1                
+                                                      n
+                            yn =         θn−i yi +         θn−i ψi .                     (141c)
+                                   i=0                i=k
+
+
+Proof. Substitute n = m, for m = 0, 1, 2, . . . , k −1, into (141c), and we obtain
+the value
+
+            ym = ym + θ1 ym−1 + · · · + θm y0 ,          m = 0, 1, 2, . . . , k − 1.
+
+This is equal to ym if (141b) holds. Add the contribution to the solution from
+each of m = k, k + 1, . . . , n and the result follows.                      
+
+
+
+142     Powers of matrices
+We are interested in powers of a matrix A in terms of two questions: when
+is the sequence of powers bounded, and when does the sequence converge to
+the zero matrix? There are various equivalent formulations of the criteria for
+these properties of A, and we state the most widely accessible of these.
+
+Definition 142A A square matrix A is ‘stable’ if there exists a constant C
+such that for all n = 0, 1, 2, . . . , An ≤ C.
+
+     This property is often referred to as ‘power-boundedness’.
+
+Definition 142B A square matrix A is ‘convergent’ if limn→∞ An = 0.
+
+Theorem 142C Let A denote an m × m matrix. The following statements
+are equivalent:
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                           47
+
+   (i)   A is stable.
+  (ii)   The minimal polynomial of A has all its zeros in the closed unit disc
+         and all its multiple zeros in the open unit disc.
+ (iii)   The Jordan canonical form of A has all its eigenvalues in the closed
+         unit disc with all eigenvalues of magnitude 1 lying in 1 × 1 blocks.
+ (iv)    There exists a non-singular matrix S such that S −1 AS ∞ ≤ 1.
+
+Proof. We prove that (i) ⇒ (ii) ⇒ (iii) ⇒ (iv) ⇒ (i). If A is stable but
+(ii) is not true, then either there exist λ and v = 0 such that |λ| > 1 and
+Av = λv, or there exist λ, u = 0 and v such that |λ| = 1 and Av = λv + u,
+with Au = λu. In the first case, An v = λn v and therefore An ≥ |λ|n
+which is not bounded. In the second case, An v = λn v + nλn−1 u and therefore
+ An ≥ n u / v − 1, which also is not bounded. Given (ii), it is not possible
+that the conditions of (iii) are not satisfied, because the minimal polynomial
+of any of the Jordan blocks, and therefore of A itself, would have factors that
+contradict (ii). If (iii) is true, then S can be chosen to form J, the Jordan
+canonical form of A, with the off-diagonal elements chosen sufficiently small
+so that J ∞ ≤ 1. Finally, if (iv) is true then An = S(S −1 AS)n S −1 so that
+ An ≤ S · S −1 AS n · S −1 ≤ S · S −1 .                                      
+
+
+Theorem 142D Let A denote an m × m matrix. The following statements
+are equivalent
+   (i) A is convergent.
+  (ii) The minimal polynomial of A has all its zeros in the open unit disc.
+ (iii) The Jordan canonical form of A has all its diagonal elements in the
+        open unit disc.
+  (iv) There exists a non-singular matrix S such that S −1 AS ∞ < 1.
+
+Proof. We again prove that (i) ⇒ (ii) ⇒ (iii) ⇒ (iv) ⇒ (i). If A is convergent
+but (ii) is not true, then there exist λ and u = 0 such that λ ≥ 1 and Au = λu.
+Hence, An u = λn u and therefore An ≥ |λ|n , which does not converge to
+zero. Given (ii), it is not possible that the conditions of (iii) are not satisfied,
+because the minimal polynomial of any of the Jordan blocks, and therefore
+of A itself, would have factors that contradict (ii). If (iii) is true, then S can
+be chosen to form J, the Jordan canonical form of A, with the off-diagonal
+elements chosen sufficiently small so that J ∞ < 1. Finally, if (iv) is true then
+An = S(S −1 AS)n S −1 so that An ≤ S · S −1 · S −1 AS n → 0.                     
+
+  While the two results we have presented here are related to the convergence
+of difference equation solutions, the next is introduced only because of its
+application in later chapters.
+48     NUMERICAL METHODS FOR ORDINARY DIFFERENTIAL EQUATIONS
+
+Theorem 142E If A is a stable m × m matrix and B an arbitrary m × m
+matrix, then there exists a real C such that
+                                      n 
+                                          
+                              A + 1 B  ≤ C,
+                                    n     
+
+for n = 1, 2, . . . .
+
+Proof. Without loss of generality, assume that · denotes the norm                             ·   ∞.
+Because S exists so that S −1 AS ≤ 1, we have
+                   n                                 n 
+                                                           
+          A + 1 B  ≤ S · S −1 ·  S −1 AS + 1 S −1 BS 
+                n                               n          
+                                                     n
+                                              1 −1
+                          ≤ S · S −1 · 1 +      S BS
+                                              n
+                              ≤ S · S −1 exp( S −1 BS ).                                          
+   In applying this result to sequences of vectors, the term represented by the
+matrix B can be replaced by a non-linear function which satisfies suitable
+conditions. To widen the applicability of the result a non-homogeneous term
+is included.
+Theorem 142F Let A be a stable m × m matrix and φ : Rm → Rm
+be such that φ(x) ≤ L x , for L a positive constant and x ∈ Rm . If
+w = (w1 , w2 , . . . , wn ) and v = (v0 , v1 , . . . , vn ) are sequences related by
+                                   1
+                    vi = Avi−1 +     φ(vi−1 ) + wi ,     i = 1, 2, . . . , n,                (142a)
+                                   n
+then                                                          !
+                                                   
+                                                   n
+                            vn ≤ C        v0 +           wi       ,
+                                                   i=1
+where C is independent of n.
+Proof. Let S be the matrix introduced in the proof of Theorem 142C. From
+(142a), it follows that
+                                                   1 −1
+            (S −1 vi ) = (S −1 AS)(S −1 vi−1 ) +     (S φ(vi−1 )) + (S −1 wi )
+                                                   n
+and hence
+                                                   1 −1
+           S −1 vi ≤ S −1 AS · S −1 vi−1 +           S φ(vi−1 ) + S −1 wi ,
+                                                   n
+leading to the bound
+                                                                                     !
+                                                                     
+                                                                       n
+                             −1
+            vn ≤ S · S            exp L S · S −1              v0 +              wi       .        
+                                                                       i=1
+DIFFERENTIAL AND DIFFERENCE EQUATIONS                                        49
+
+                               Exercises 14
+
+14.1 Find a constant C such that An ∞ ≤ C, for all n = 0, 1, . . . , where
+
+                                          1   1
+                                A=        2   2       .
+                                       − 31   4
+                                              3
+
+
+14.2 For what values of the complex number θ is the matrix A stable, where
+
+                                        θ 1
+                                 A=               .
+                                        0 1

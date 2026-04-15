@@ -1,0 +1,4731 @@
+[
+  {
+    "variables": [
+      {
+        "name": "y1",
+        "definition": "first component of position, scaled such that γM = 1"
+      },
+      {
+        "name": "y2",
+        "definition": "second component of position, scaled such that γM = 1"
+      },
+      {
+        "name": "y3",
+        "definition": "first component of velocity, equal to dy1/dx"
+      },
+      {
+        "name": "y4",
+        "definition": "second component of velocity, equal to dy2/dx"
+      },
+      {
+        "name": "x",
+        "definition": "independent variable (time-like)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "101a",
+        "content": "dy1/dx = y3"
+      },
+      {
+        "tag": "101b",
+        "content": "dy2/dx = y4"
+      },
+      {
+        "tag": "101c",
+        "content": "dy3/dx = -y1 / (y1^2 + y2^2)^(3/2)"
+      },
+      {
+        "tag": "101d",
+        "content": "dy4/dx = -y2 / (y1^2 + y2^2)^(3/2)"
+      }
+    ],
+    "preamble": "The theorem concerns a scaled two-body problem (e.g., planet orbiting a sun) modeled by a system of four first-order ODEs (101a-101d) for position components y1, y2 and velocity components y3, y4. The independent variable is x.",
+    "number": "101A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "f : [a, b] × R^N → R^N"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context discusses the existence and uniqueness of solutions for initial value problems in differential equations, focusing on the concept of a Lipschitz condition as a key criterion.",
+    "number": "110A",
+    "kind": "definition"
+  },
+  {
+    "variables": [],
+    "equations": [],
+    "preamble": "The lemma is a self-contained statement about the contraction mapping principle in a complete metric space, independent of the preceding discussion on Lipschitz conditions and differential equations.",
+    "number": "110B",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "f : [a, b] × R^N → R^N, continuous in its first variable and satisfies a Lipschitz condition in its second variable"
+      },
+      {
+        "name": "L",
+        "definition": "Lipschitz constant such that for any x ∈ [a, b] and Y, Z ∈ R^N, ||f(x, Y) - f(x, Z)|| ≤ L ||Y - Z||"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "110a",
+        "content": "y'(x) = f(x, y(x))"
+      },
+      {
+        "tag": "110b",
+        "content": "y(a) = y0"
+      }
+    ],
+    "preamble": "The theorem concerns an initial value problem for an ODE. The function f is defined on a product of an interval and R^N, and must satisfy a Lipschitz condition in its second variable, ensuring well-posedness via existence, uniqueness, and sensitivity.",
+    "number": "110C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "ỹ",
+        "definition": "a particular solution to the inhomogeneous linear differential equation system (111a)"
+      },
+      {
+        "name": "y_i",
+        "definition": "solutions to the homogeneous linear differential equation system (111b), for i = 1, 2, ..., k"
+      },
+      {
+        "name": "α_i",
+        "definition": "constants, for i = 1, 2, ..., k"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "111a",
+        "content": "dy/dx = A(x)y + φ(x), the standard form of a linear differential equation system"
+      },
+      {
+        "tag": "111b",
+        "content": "dy/dx = A(x)y, the corresponding homogeneous system"
+      }
+    ],
+    "preamble": "The theorem concerns linear differential equation systems. The standard form is an inhomogeneous system (111a), and its corresponding homogeneous system is (111b). The superposition principle allows combining solutions.",
+    "number": "111A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "f : [a, b] × R^N → R^N, the function defining the differential equation system"
+      },
+      {
+        "name": "a, b",
+        "definition": "endpoints of the interval [a, b] on which the differential equation is posed"
+      },
+      {
+        "name": "N",
+        "definition": "dimension of the space R^N, where the solution and function values lie"
+      },
+      {
+        "name": "⟨u, v⟩",
+        "definition": "inner product on R^N, with induced norm ‖u‖^2 = ⟨u, u⟩"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context considers differential equation systems posed on an inner product space R^N, with inner product ⟨·,·⟩ and norm defined from it. The function f defines the system, and the one-sided Lipschitz condition is introduced to analyze stiff problems.",
+    "number": "112A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "f : [a, b] × R^N → R^N, satisfies a one-sided Lipschitz condition with constant l"
+      },
+      {
+        "name": "l",
+        "definition": "one-sided Lipschitz constant, a real number such that for all x ∈ [a, b] and all u, v ∈ R^N, ⟨f(x, u) - f(x, v), u - v⟩ ≤ l ||u - v||^2"
+      },
+      {
+        "name": "⟨·, ·⟩",
+        "definition": "inner product on R^N, with norm defined by ||u||^2 = ⟨u, u⟩"
+      },
+      {
+        "name": "||·||",
+        "definition": "norm induced by the inner product, ||u|| = sqrt(⟨u, u⟩)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The problem is posed on an inner product space R^N. The function f satisfies a one-sided Lipschitz condition with constant l. Solutions y and z satisfy the differential equation y'(x) = f(x, y(x)).",
+    "number": "112B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "H",
+        "definition": "Hamiltonian function H(p1, p2, ..., pN, q1, q2, ..., qN), regarded as a function of y"
+      },
+      {
+        "name": "y",
+        "definition": "vector variable y(x) made up from N momenta followed by N coordinates: yi = pi for 1 ≤ i ≤ N, yi = qi-N for N+1 ≤ i ≤ 2N"
+      },
+      {
+        "name": "J",
+        "definition": "matrix J = [[0, -I], [I, 0]], where I is the N×N unit matrix"
+      },
+      {
+        "name": "∇(H)",
+        "definition": "gradient of H with respect to y"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "y' = f(y)",
+        "content": "y' = f(y) where f(y) = J∇(H)"
+      }
+    ],
+    "preamble": "The system is in Hamiltonian form, where y is a vector combining momenta and coordinates, and the dynamics are given by y' = J∇(H). The theorem states that the Hamiltonian H is invariant along solutions y(x).",
+    "number": "123A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "u",
+        "definition": "a perturbation vector satisfying v'(x) = JW(y)v(x)"
+      },
+      {
+        "name": "v",
+        "definition": "a perturbation vector satisfying v'(x) = JW(y)v(x)"
+      },
+      {
+        "name": "J",
+        "definition": "the 2N × 2N matrix [[0, -I], [I, 0]], where I is the N × N identity matrix"
+      },
+      {
+        "name": "W",
+        "definition": "the Wronskian matrix with (i, j) element ∂²H/∂y_i ∂y_j"
+      },
+      {
+        "name": "H",
+        "definition": "the Hamiltonian function H(y)"
+      },
+      {
+        "name": "y",
+        "definition": "the solution to the Hamiltonian system y' = J∇H(y)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns a Hamiltonian system y' = J∇H(y). Perturbations u and v to the initial condition evolve according to v'(x) = JW(y)v(x), where W is the Hessian of H. The scalar quantity uᵀJv is shown to be invariant.",
+    "number": "123B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "X0",
+        "definition": "initial value for the difference equation system"
+      },
+      {
+        "name": "Xn",
+        "definition": "state vector defined as Xn = [yn, yn-1, ..., yn-k+1]^T"
+      },
+      {
+        "name": "An",
+        "definition": "coefficient matrix in the linear difference equation system"
+      },
+      {
+        "name": "φn",
+        "definition": "inhomogeneous term vector in the difference equation system"
+      },
+      {
+        "name": "yn",
+        "definition": "solution of the linear difference equation at step n"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "140a",
+        "content": "Xn = An Xn-1 + φn"
+      }
+    ],
+    "preamble": "The theorem solves a linear difference equation system (140a) written in state-space form, where Xn is the state vector, An is a matrix, and φn is an inhomogeneous term. The solution is expressed using products of the matrices Ai.",
+    "number": "140A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "k",
+        "definition": "order of the difference equation (141a)"
+      },
+      {
+        "name": "n",
+        "definition": "step index for the solution"
+      },
+      {
+        "name": "y_m",
+        "definition": "solution at step m, with y_m = θ_m for m = 0,1,2,...,n"
+      },
+      {
+        "name": "θ_m",
+        "definition": "solution to a specific problem (with zero initial conditions for m < 0)"
+      },
+      {
+        "name": "y_i",
+        "definition": "given initial values for i = 0,1,...,k-1"
+      },
+      {
+        "name": "y'_i",
+        "definition": "linear combinations of initial data defined via (141b) for i = 0,1,...,k-1"
+      },
+      {
+        "name": "ψ_i",
+        "definition": "terms from the difference equation (141a) for i ≥ k"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "141a",
+        "content": "The difference equation (not fully shown, but referenced as the problem being solved)"
+      },
+      {
+        "tag": "141b",
+        "content": "Definition of y'_i as linear combinations of initial values y_0,...,y_{k-1} via a matrix equation"
+      }
+    ],
+    "preamble": "The theorem provides the solution to a linear difference equation (141a) of order k with given initial values y_0,...,y_{k-1}. The solution involves θ_m (the solution to a related problem) and transformed initial data y'_i defined via (141b).",
+    "number": "141A",
+    "kind": "theorem"
+  },
+  {
+    "number": "142A",
+    "kind": "definition",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "A square matrix"
+      },
+      {
+        "name": "A^n",
+        "definition": "The nth power of the matrix A"
+      },
+      {
+        "name": "||.||",
+        "definition": "A matrix norm"
+      }
+    ],
+    "equations": [],
+    "preamble": "The subsection discusses properties of powers of a matrix A, focusing on when the sequence of powers is bounded and when it converges to zero. The definitions are given in terms of matrix norms and limits.",
+    "number": "142B",
+    "kind": "definition"
+  },
+  {
+    "number": "142C",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "an m × m matrix"
+      },
+      {
+        "name": "convergent",
+        "definition": "A square matrix A is 'convergent' if lim_{n→∞} A^n = 0"
+      },
+      {
+        "name": "minimal polynomial",
+        "definition": "The minimal polynomial of a matrix A is the monic polynomial of least degree such that p(A) = 0"
+      },
+      {
+        "name": "Jordan canonical form",
+        "definition": "A representation of a matrix as a block diagonal matrix with Jordan blocks, where each block corresponds to an eigenvalue"
+      },
+      {
+        "name": "S",
+        "definition": "a non-singular matrix used for similarity transformations"
+      },
+      {
+        "name": "||·||_∞",
+        "definition": "The matrix norm induced by the vector ∞-norm, defined as ||A||_∞ = max_i ∑_j |a_{ij}|"
+      }
+    ],
+    "equations": [],
+    "preamble": "This theorem is about the equivalence of several conditions for a square matrix A to be convergent (i.e., A^n → 0 as n→∞). The preceding theorem (142C) gives analogous conditions for matrix stability, which is related but distinct. The context assumes familiarity with matrix norms, eigenvalues, and Jordan canonical form.",
+    "number": "142D",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "an m × m matrix"
+      },
+      {
+        "name": "B",
+        "definition": "an arbitrary m × m matrix"
+      },
+      {
+        "name": "C",
+        "definition": "a real constant"
+      },
+      {
+        "name": "n",
+        "definition": "positive integer (n = 1, 2, ...)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns matrix stability and convergence, building on prior results about matrix norms and the equivalence of conditions for a matrix to be convergent (e.g., Theorem 142D). The notation ||·|| denotes a matrix norm (implied from context).",
+    "number": "142E",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "stable m × m matrix"
+      },
+      {
+        "name": "φ",
+        "definition": "φ : R^m → R^m such that φ(x) ≤ L ‖x‖ for L a positive constant and x ∈ R^m"
+      },
+      {
+        "name": "L",
+        "definition": "positive constant"
+      },
+      {
+        "name": "m",
+        "definition": "dimension of the matrix A and vectors in R^m"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "142a",
+        "content": "v_i = A v_{i-1} + (1/n) φ(v_{i-1}) + w_i, i = 1, 2, ..., n"
+      }
+    ],
+    "preamble": "The theorem is about sequences of vectors related by a recurrence involving a stable matrix A and a Lipschitz-like nonlinear function φ. The preceding theorem (142E) established a bound for powers of a perturbed stable matrix, which is applied here to sequences with a nonlinear term and a non-homogeneous term w_i.",
+    "number": "142F",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "the function defining the differential equation, assumed to satisfy a Lipschitz condition with constant L"
+      },
+      {
+        "name": "y(x)",
+        "definition": "the exact solution of the differential equation"
+      },
+      {
+        "name": "ŷ(x)",
+        "definition": "the numerical approximation to the solution"
+      },
+      {
+        "name": "H",
+        "definition": "maximum step size used in the numerical method"
+      },
+      {
+        "name": "m",
+        "definition": "a bound related to the local truncation error, likely defined earlier in the subsection"
+      },
+      {
+        "name": "L",
+        "definition": "Lipschitz constant for f"
+      },
+      {
+        "name": "x0",
+        "definition": "initial point"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "212a",
+        "content": "likely defines α(x) = ||y(x) - ŷ(x)|| or similar global error measure"
+      },
+      {
+        "tag": "212b",
+        "content": "likely relates β(x) to α(x), possibly β(x) = α'(x) or a difference"
+      },
+      {
+        "tag": "212c",
+        "content": "likely gives an expression for E(x) or a bound involving m"
+      },
+      {
+        "tag": "212d",
+        "content": "likely gives a bound like |β(x)| ≤ L α(x)"
+      },
+      {
+        "tag": "212e",
+        "content": "likely an alternative expression for α(x) involving β and E"
+      }
+    ],
+    "preamble": "The theorem provides a bound on the global error y(x) - ŷ(x) for a numerical method applied to an ODE. The analysis uses a function α(x) measuring the error, a bound m for local truncation errors, and a maximum step size H. The preceding text derives inequalities leading to this bound by considering cases L=0 and L>0.",
+    "number": "212A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "y(x)",
+        "definition": "exact solution of the differential equation"
+      },
+      {
+        "name": "y_n(x)",
+        "definition": "approximation number n computed by the Euler method"
+      },
+      {
+        "name": "D_n",
+        "definition": "global error for approximation n, defined as y(x) - y_n(x)"
+      },
+      {
+        "name": "H_n",
+        "definition": "greatest stepsize in approximation n"
+      },
+      {
+        "name": "K_n",
+        "definition": "bound on the initial error y(x0) - y_n(x0) for approximation n"
+      },
+      {
+        "name": "f",
+        "definition": "function defining the ODE, assumed to satisfy a Lipschitz condition"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns the convergence of the Euler method for solving an ODE. A sequence of approximations y_n(x) is computed using the Euler method with stepsize bounded by H_n and initial error bounded by K_n, where H_n and K_n tend to zero as n increases. The global error D_n is defined as the difference between the exact solution y(x) and the approximation y_n(x).",
+    "number": "213A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "y",
+        "definition": "the exact solution to the initial value problem"
+      },
+      {
+        "name": "y_n",
+        "definition": "approximation number n, computed using the Euler method starting from an approximation to y(x0) with a sequence of positive steps"
+      },
+      {
+        "name": "x0",
+        "definition": "initial x-value for the ODE"
+      },
+      {
+        "name": "x",
+        "definition": "the final x-value (or a generic point in the interval, but in the theorem it appears as the endpoint of the interval [x0, x])"
+      },
+      {
+        "name": "f",
+        "definition": "the function in the ODE y' = f(x, y), assumed to satisfy a Lipschitz condition"
+      },
+      {
+        "name": "H_n",
+        "definition": "an upper bound on the greatest stepsize for approximation n, with H_n → 0 as n → ∞"
+      },
+      {
+        "name": "K_n",
+        "definition": "a bound on the initial error ||y(x0) - y_n(x0)||, with K_n → 0 as n → ∞"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns the convergence of the Euler method for solving an initial value problem. A sequence of approximations y_n is constructed using the Euler method with stepsizes bounded by H_n and initial errors bounded by K_n, both tending to zero as n increases. The function f satisfies a Lipschitz condition.",
+    "number": "213B",
+    "kind": "theorem"
+  },
+  {
+    "number": "243A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "t",
+        "definition": "a tree, possibly constructed as t = [t1^m1 t2^m2 ... tk^mk] where t1, t2, ..., tk are distinct trees"
+      },
+      {
+        "name": "r(t)",
+        "definition": "the order (number of vertices) of the tree t"
+      },
+      {
+        "name": "σ(t)",
+        "definition": "the symmetry (order of the symmetry group) of the tree t"
+      },
+      {
+        "name": "γ(t)",
+        "definition": "the density of the tree t, defined as the product over all vertices of the order of the subtree rooted at that vertex"
+      },
+      {
+        "name": "τ",
+        "definition": "the elementary tree (single vertex)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem provides recursive formulas for the order r(t), symmetry σ(t), and density γ(t) of a tree t, where t is constructed from distinct subtrees t1,...,tk with multiplicities m1,...,mk. The base case for the elementary tree τ is given.",
+    "number": "301A",
+    "kind": "theorem"
+  },
+  {
+    "number": "302A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "θ_k",
+        "definition": "θ_k denotes the number of rooted trees with exactly k vertices."
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns the enumeration of rooted trees, where θ_k counts rooted trees with k vertices. The preceding text defines α(t) and β(t) for labelling trees, but the theorem statement is self-contained regarding θ_k.",
+    "number": "302B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "α(t)",
+        "definition": "the number of ways of monotonically labelling a rooted tree t"
+      },
+      {
+        "name": "β(t)",
+        "definition": "the number of ways of fully labelling a rooted tree t"
+      },
+      {
+        "name": "r(t)",
+        "definition": "the order (number of vertices) of a rooted tree t"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns sums over rooted trees of order n. The sums involve α(t) (monotonically labelled trees) and β(t) (fully labelled trees), as defined in the preceding text and table.",
+    "number": "302C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "θ(x)",
+        "definition": "generating function for rooted trees"
+      },
+      {
+        "name": "φ(x)",
+        "definition": "generating function for trees"
+      },
+      {
+        "name": "ψ(x)",
+        "definition": "generating function for non-superfluous trees"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "304a",
+        "content": "θ(x) − (x/2) θ(x)^2 ∓ θ(x^2)"
+      }
+    ],
+    "preamble": "The theorem gives generating functions for trees and non-superfluous trees, building on combinatorial counting of rooted trees and their symmetries. The preceding text derives expressions for the number of trees by subtracting pairs with unequal orders and handling special cases for even and odd orders, leading to formula (304a).",
+    "number": "304A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "analytic function in a neighbourhood of a"
+      },
+      {
+        "name": "a",
+        "definition": "point in the domain of f"
+      },
+      {
+        "name": "δ_i",
+        "definition": "small vectors, i = 1, 2, ..., m"
+      },
+      {
+        "name": "I",
+        "definition": "sequence of integers from {1, 2, ..., m}"
+      },
+      {
+        "name": "Im",
+        "definition": "set of all such sequences I"
+      },
+      {
+        "name": "σ(I)",
+        "definition": "symmetry of I, defined as k1! k2! ... km! where ki is the number of occurrences of i in I"
+      },
+      {
+        "name": "δI",
+        "definition": "quantity (δ_i1, δ_i2, ..., δ_im) for I = (i1, i2, ..., ik), used as operand for multilinear operators"
+      },
+      {
+        "name": "f^{(#I)}(a)",
+        "definition": "multilinear operator (derivative of order #I evaluated at a)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "306b",
+        "content": "σ(I) = k1! k2! ··· km!"
+      }
+    ],
+    "preamble": "The theorem gives a Taylor expansion for f at a plus a sum of m small vectors δ_i. The sum is over sequences I of indices, with each term involving a multilinear derivative f^{(#I)}(a) applied to δI, divided by the symmetry factor σ(I).",
+    "number": "306A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "f : R^N → R^N, analytic in a neighbourhood of y"
+      },
+      {
+        "name": "y",
+        "definition": "y(x), the solution function of the ODE"
+      },
+      {
+        "name": "f^{(m)}",
+        "definition": "m-th derivative of f, a tensor"
+      },
+      {
+        "name": "f_{j_1, j_2, ..., j_m}^i",
+        "definition": "Component notation for the m-th derivative tensor f^{(m)}"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context involves representing derivatives of the ODE solution y(x) using trees and elementary differentials. Trees t are built from vertices and edges, with specific trees corresponding to terms in derivatives of y. The notation f, f', f'' abbreviates f(y(x)), f'(y(x)), f''(y(x)).",
+    "number": "310A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "F",
+        "definition": "F(t) is the elementary differential associated with the tree t"
+      },
+      {
+        "name": "y0",
+        "definition": "initial condition for the ODE"
+      },
+      {
+        "name": "h",
+        "definition": "step size"
+      },
+      {
+        "name": "T",
+        "definition": "set of rooted trees"
+      },
+      {
+        "name": "r(t)",
+        "definition": "order of the tree t"
+      },
+      {
+        "name": "σ(t)",
+        "definition": "symmetry of the tree t"
+      },
+      {
+        "name": "τ",
+        "definition": "the elementary tree (a single node)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "310i",
+        "content": "the formal series expression being evaluated"
+      }
+    ],
+    "preamble": "The lemma evaluates a formal series (310i) expressed in terms of rooted trees. The notation involves elementary differentials F(t) and tree functions like order r(t) and symmetry σ(t). The function θ is defined recursively on tree structures.",
+    "number": "310B",
+    "kind": "lemma"
+  },
+  {
+    "number": "311A",
+    "kind": "lemma",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "S",
+        "definition": "a finite ordered set"
+      },
+      {
+        "name": "TS",
+        "definition": "set of trees derived from S (defined in preceding context)"
+      },
+      {
+        "name": "|t|",
+        "definition": "symmetry of tree t (defined in preceding context)"
+      },
+      {
+        "name": "F(|t|)",
+        "definition": "elementary differential associated with tree t (defined in preceding context)"
+      },
+      {
+        "name": "y",
+        "definition": "solution function y(x) (implicit from context)"
+      },
+      {
+        "name": "y0",
+        "definition": "y(x0), initial value"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem relates the (#S)-th derivative of the solution y at y0 to a sum over trees in TS of elementary differentials F(|t|) evaluated at y0. The preceding text discusses differentiation of elementary differentials and combinatorial structures of trees labelled by S.",
+    "number": "311B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "y",
+        "definition": "y is the solution function of an ordinary differential equation, typically y' = f(y)."
+      },
+      {
+        "name": "f",
+        "definition": "f is the function defining the ODE, such that y' = f(y)."
+      },
+      {
+        "name": "F(t)",
+        "definition": "F(t) is an elementary differential associated with a tree t, defined recursively from f and its derivatives."
+      },
+      {
+        "name": "α(t)",
+        "definition": "α(t) is the symmetry coefficient (or density) of an unlabelled tree t, equal to the number of distinct monotonic labellings of t."
+      },
+      {
+        "name": "TS",
+        "definition": "TS is the set of rooted trees labelled with members of the ordered set S."
+      },
+      {
+        "name": "Tn",
+        "definition": "Tn is the set of unlabelled rooted trees of order n (with n vertices)."
+      }
+    ],
+    "equations": [
+      {
+        "tag": "311a",
+        "content": "An expression for a derivative term involving elementary differentials, used in Lemma 311A."
+      }
+    ],
+    "preamble": "The preceding text discusses the representation of derivatives of the solution y(x) of an ODE using elementary differentials F(t) associated with rooted trees. Lemma 311A relates derivatives of products of elementary differentials to sums over trees with additional labels. Theorem 311B expresses the #S-th derivative of y in terms of labelled trees, and Theorem 311C rewrites this in terms of unlabelled trees using symmetry coefficients α(t).",
+    "number": "311C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "y",
+        "definition": "solution of the differential equation, y(x) or y(x0 + hξ)"
+      },
+      {
+        "name": "y_n",
+        "definition": "n-th Picard iterate defined by (311b) and (311c)"
+      },
+      {
+        "name": "y(x0)",
+        "definition": "initial value at x0"
+      },
+      {
+        "name": "h",
+        "definition": "step size parameter"
+      },
+      {
+        "name": "ξ",
+        "definition": "variable in [0,1] for the Picard integral equation"
+      },
+      {
+        "name": "f",
+        "definition": "vector field f(y) defining the ODE y' = f(y)"
+      },
+      {
+        "name": "F(t)",
+        "definition": "elementary differential associated with tree t"
+      },
+      {
+        "name": "σ(t)",
+        "definition": "symmetry of tree t (number of equivalent labellings)"
+      },
+      {
+        "name": "γ(t)",
+        "definition": "density of tree t (combinatorial factor)"
+      },
+      {
+        "name": "T_i",
+        "definition": "set of unlabelled trees of order i"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "311b",
+        "content": "y_n(x0 + hξ) = y(x0) + h ∫_0^ξ f(y_{n-1}(x0 + hξ)) dξ"
+      },
+      {
+        "tag": "311c",
+        "content": "y_0(x0 + hξ) = y(x0)"
+      }
+    ],
+    "preamble": "The theorem gives the Taylor expansion of the n-th Picard iterate y_n for solving y' = f(y) via the Picard integral equation, using elementary differentials F(t) over trees t of order i, with combinatorial factors σ(t) and γ(t).",
+    "number": "311D",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge–Kutta method"
+      },
+      {
+        "name": "c",
+        "definition": "vector of abscissae (c_i) for the Runge–Kutta method"
+      },
+      {
+        "name": "A",
+        "definition": "matrix of coefficients (a_{ij}) for the Runge–Kutta method"
+      },
+      {
+        "name": "b",
+        "definition": "vector of weights (b_i) for the Runge–Kutta method"
+      },
+      {
+        "name": "T",
+        "definition": "set of rooted trees"
+      },
+      {
+        "name": "τ",
+        "definition": "the unique tree with a single vertex (the root)"
+      },
+      {
+        "name": "[t1 t2 ... tk]",
+        "definition": "tree formed by joining the roots of trees t1, t2, ..., tk to a new root"
+      }
+    ],
+    "equations": [],
+    "preamble": "The definition introduces elementary weights, internal weights, and derivative weights for a Runge–Kutta method using its tableau (c, A, b). These weights are defined recursively over rooted trees t in T, with base case for the tree τ.",
+    "number": "312A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge-Kutta method"
+      },
+      {
+        "name": "a_{ij}",
+        "definition": "Runge-Kutta matrix coefficients"
+      },
+      {
+        "name": "b_i",
+        "definition": "Runge-Kutta weights"
+      },
+      {
+        "name": "c_i",
+        "definition": "Runge-Kutta nodes, typically c_i = sum_{j=1}^s a_{ij}"
+      },
+      {
+        "name": "Φ(t)",
+        "definition": "elementary weight associated with a rooted tree t in Butcher series"
+      },
+      {
+        "name": "Φ_i(t)",
+        "definition": "elementary weight associated with a rooted tree t and vertex i (not in V) in Butcher series"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "312e",
+        "content": "b_j ∏_{(k,l)∈E} a_{kl}"
+      },
+      {
+        "tag": "312f",
+        "content": "a_{ij} ∏_{(k,l)∈E} a_{kl}"
+      }
+    ],
+    "preamble": "The lemma provides an alternative formula for the elementary weight Φ(t) associated with a rooted tree t in the context of Butcher series for Runge-Kutta methods. The tree t has vertex set V (with root j) and edge set E. The summations are over indices from 1 to s, where s is the number of stages.",
+    "number": "312B",
+    "kind": "lemma"
+  },
+  {
+    "number": "313A",
+    "kind": "lemma",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "313B",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "U",
+        "definition": "a set of rooted trees, assumed to contain all subtrees of its members"
+      },
+      {
+        "name": "N",
+        "definition": "the number of members of U"
+      },
+      {
+        "name": "ti",
+        "definition": "a tree in U, defined recursively as ti = [t_{j1}, t_{j2}, ..., t_{jk}]"
+      },
+      {
+        "name": "yi",
+        "definition": "component of an m-dimensional differential equation system corresponding to tree ti"
+      },
+      {
+        "name": "F(ti)",
+        "definition": "elementary differential associated with tree ti"
+      },
+      {
+        "name": "ei",
+        "definition": "natural basis vector in R^N"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "314a",
+        "content": "ti = [t_{j1}, t_{j2}, ..., t_{jk}]"
+      },
+      {
+        "tag": "314b",
+        "content": "y_i' = ∏_{j=1}^k (y_j^{m_j} / m_j!)"
+      }
+    ],
+    "preamble": "A set U of rooted trees is considered, where each tree ti is defined recursively. An m-dimensional differential equation system is constructed such that each component yi' corresponds to a tree ti via a product formula. The initial conditions are yi(0)=0 for all i.",
+    "number": "314A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "Φ",
+        "definition": "Φ : T → R, the elementary weight function mapping trees to real numbers"
+      },
+      {
+        "name": "T",
+        "definition": "the set of rooted trees"
+      },
+      {
+        "name": "r(t)",
+        "definition": "the order (number of vertices) of tree t"
+      },
+      {
+        "name": "γ(t)",
+        "definition": "the density (or symmetry factor) of tree t"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "311d",
+        "content": "Taylor expansion of the exact solution"
+      },
+      {
+        "tag": "313e",
+        "content": "Taylor expansion of the computed (numerical) solution"
+      }
+    ],
+    "preamble": "The theorem gives conditions for a Runge–Kutta method to have order p, based on comparing Taylor expansions of the exact and numerical solutions. The elementary weight function Φ assigns a real number to each rooted tree t, and γ(t) is the density of the tree.",
+    "number": "315A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "T",
+        "definition": "the set of rooted trees"
+      },
+      {
+        "name": "Φ(t)",
+        "definition": "elementary weight associated with tree t"
+      },
+      {
+        "name": "bi, aij, ci",
+        "definition": "coefficients of a Runge-Kutta method, where bi are weights, aij are matrix coefficients, and ci are nodes"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "(316b)",
+        "content": "Φ(t2) = ∑ bi aij cj ajk ck = 1/γ(t2) = 1/40"
+      }
+    ],
+    "preamble": "The discussion involves order conditions for Runge-Kutta methods, expressed in terms of elementary weights Φ(t) for trees t in T. The coefficients bi, aij, ci define the method.",
+    "number": "317A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge-Kutta method coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge-Kutta method weight vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge-Kutta method node vector"
+      },
+      {
+        "name": "|A|",
+        "definition": "matrix A with every term replaced by its magnitude"
+      },
+      {
+        "name": "|b|",
+        "definition": "vector b with every term replaced by its magnitude"
+      }
+    ],
+    "equations": [],
+    "preamble": "The lemma concerns a Runge-Kutta method defined by coefficients (A, b, c). The notation |A| and |b| denotes taking componentwise absolute values. The context involves analyzing error propagation in numerical ODE solutions.",
+    "number": "319A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "h",
+        "definition": "step size"
+      },
+      {
+        "name": "L'",
+        "definition": "Lipschitz constant for the ODE function f, possibly modified or specific to the context of local truncation error growth"
+      },
+      {
+        "name": "C",
+        "definition": "constant in the local truncation error bound"
+      },
+      {
+        "name": "p",
+        "definition": "order of the numerical method"
+      },
+      {
+        "name": "x0",
+        "definition": "initial value of the independent variable"
+      },
+      {
+        "name": "xn",
+        "definition": "value of the independent variable at step n"
+      },
+      {
+        "name": "y(xn)",
+        "definition": "exact solution at xn"
+      },
+      {
+        "name": "yn",
+        "definition": "numerical solution at xn"
+      },
+      {
+        "name": "δk",
+        "definition": "local truncation error at step k, defined as the difference between the exact solution at xk and the numerically computed result over a single step with initial value y(xk-1)"
+      },
+      {
+        "name": "Δk",
+        "definition": "contribution to the global error resulting from the local error δk"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "110c",
+        "content": "bound on how much a perturbation in the exact solution can grow, involving a growth factor with L (or L')"
+      }
+    ],
+    "preamble": "The theorem provides a bound on the global truncation error for a numerical method applied to an ODE. It uses a local truncation error bound per step, defined by comparing the exact solution at a step point with the numerical result computed over a single step using the exact initial value from the previous step. The growth of errors is analyzed using a Lipschitz constant L'.",
+    "number": "319B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [],
+    "equations": [],
+    "preamble": "The lemma is a standalone linear algebra statement about 3x3 matrices P and Q, independent of the specific order condition calculations for Runge-Kutta methods discussed earlier.",
+    "number": "322A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "Runge-Kutta method",
+        "definition": "A method given by a tableau with c (vector of abscissae), A (matrix of coefficients), and b (vector of weights)."
+      },
+      {
+        "name": "tableau",
+        "definition": "A representation of a Runge-Kutta method as c A / b^T."
+      },
+      {
+        "name": "c",
+        "definition": "Vector of abscissae (c_i) for the Runge-Kutta method."
+      },
+      {
+        "name": "A",
+        "definition": "Matrix of coefficients (a_{ij}) for the Runge-Kutta method."
+      },
+      {
+        "name": "b",
+        "definition": "Vector of weights (b_i) for the Runge-Kutta method."
+      },
+      {
+        "name": "tree t",
+        "definition": "A rooted tree used in the theory of Runge-Kutta order conditions."
+      },
+      {
+        "name": "Φ_i(t)",
+        "definition": "Elementary weight associated with tree t for stage i, defined for a specific tableau."
+      },
+      {
+        "name": "r(t)",
+        "definition": "Order (or number of vertices) of the tree t."
+      },
+      {
+        "name": "γ(t)",
+        "definition": "Density (or symmetry factor) of the tree t."
+      },
+      {
+        "name": "C(q)",
+        "definition": "Condition on the Runge-Kutta coefficients ensuring certain order properties for the stages."
+      },
+      {
+        "name": "Y_i",
+        "definition": "Value computed in stage i of the Runge-Kutta method."
+      },
+      {
+        "name": "y(x)",
+        "definition": "Exact solution of the ODE being solved."
+      },
+      {
+        "name": "h",
+        "definition": "Step size in the numerical method."
+      },
+      {
+        "name": "e_i",
+        "definition": "Standard basis vector with 1 in the i-th position, used to modify the tableau."
+      }
+    ],
+    "equations": [],
+    "preamble": "The text discusses order conditions for Runge-Kutta methods, using rooted trees and elementary weights. The definition introduces the concept of 'internal order q' for a stage i, based on comparing elementary weights to a specific formula involving the abscissa c_i and tree properties. The significance is that internal order q implies the stage approximates the exact solution at a shifted argument to order q+1.",
+    "number": "323A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge-Kutta method"
+      },
+      {
+        "name": "c",
+        "definition": "vector of abscissae (c_1, ..., c_s) in a Runge-Kutta tableau"
+      },
+      {
+        "name": "A",
+        "definition": "s × s matrix of Runge-Kutta coefficients"
+      },
+      {
+        "name": "b",
+        "definition": "vector of weights (b_1, ..., b_s) in a Runge-Kutta tableau"
+      },
+      {
+        "name": "Φ_i(t)",
+        "definition": "elementary weight associated with tree t for stage i"
+      },
+      {
+        "name": "r(t)",
+        "definition": "order (number of vertices) of tree t"
+      },
+      {
+        "name": "γ(t)",
+        "definition": "density of tree t (a combinatorial factor)"
+      },
+      {
+        "name": "internal order q",
+        "definition": "stage i has internal order q if for all trees with r(t) ≤ q, Φ_i(t) = c_i^{r(t)} / γ(t)"
+      },
+      {
+        "name": "C(q) condition",
+        "definition": "condition necessary and sufficient for every stage to have internal order q"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns extending a Runge-Kutta method with s-1 stages and order p-1 to an s-stage method with order p. It uses the concept of internal order q for stages, where a stage has internal order q if its elementary weights match those of the exact solution up to order q. The theorem gives conditions on the new stage's coefficients to achieve order p.",
+    "number": "323B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "s",
+        "definition": "number of stages in an explicit Runge–Kutta method"
+      },
+      {
+        "name": "p",
+        "definition": "order of an explicit Runge–Kutta method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns explicit Runge–Kutta methods, where s is the number of stages and p is the order. The preceding text discusses constructing explicit methods with s = p for p up to 4, and notes that s < p is impossible.",
+    "number": "324A",
+    "kind": "theorem"
+  },
+  {
+    "number": "324B",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "p",
+        "definition": "order of the explicit Runge-Kutta method"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the explicit Runge-Kutta method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns the existence of explicit Runge-Kutta methods with order p and s stages, providing a formula for the minimum number of stages required as a function of p. The preceding text discusses bounds on s - p for various p and references related theorems and constructions.",
+    "number": "324C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "B",
+        "definition": "bs+1, the coefficient for the additional stage in the embedded method pair"
+      },
+      {
+        "name": "Φ(t)",
+        "definition": "elementary weights computed using the artificial tableau (333c)"
+      },
+      {
+        "name": "r(t)",
+        "definition": "order of the tree t, with r(t) ≤ p+1"
+      },
+      {
+        "name": "γ(t)",
+        "definition": "density of the tree t (standard in Butcher tree theory)"
+      },
+      {
+        "name": "cs",
+        "definition": "the last abscissa in the Runge-Kutta method (333b)"
+      },
+      {
+        "name": "bs+1",
+        "definition": "coefficient for the (s+1)-th stage in the full method (333a)"
+      },
+      {
+        "name": "as+1,j",
+        "definition": "Runge-Kutta matrix entries for the (s+1)-th stage, j=1,...,s"
+      },
+      {
+        "name": "bj",
+        "definition": "weights for the output in method (333b), j=1,...,s"
+      },
+      {
+        "name": "aij",
+        "definition": "Runge-Kutta matrix entries for stages i,j in method (333b)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "(333a)",
+        "content": "the full (s+1)-stage method with order p+1"
+      },
+      {
+        "tag": "(333b)",
+        "content": "the s-stage method with order p"
+      },
+      {
+        "tag": "(333c)",
+        "content": "artificial tableau used to compute elementary weights Φ(t)"
+      }
+    ],
+    "preamble": "The theorem concerns an embedded Runge-Kutta method pair: (333b) is an s-stage method of order p, and (333a) is an (s+1)-stage method of order p+1, where the additional stage reuses derivative calculations. The artificial tableau (333c) is introduced to simplify order conditions, with B = bs+1 and elementary weights Φ(t).",
+    "number": "333A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "Pn*",
+        "definition": "Legendre polynomials on the interval [0, 1]"
+      },
+      {
+        "name": "Pn",
+        "definition": "Legendre polynomials on the standard symmetric interval [-1, 1]"
+      }
+    ],
+    "equations": [],
+    "preamble": "The preceding text introduces Legendre polynomials Pn* on [0,1], related to the standard Legendre polynomials Pn by Pn*(x) = Pn(2x-1). The lemma states properties of these polynomials, including orthogonality, normalization at x=1, symmetry, norm, Rodrigues formula, and recurrence relation.",
+    "number": "342A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "Ps*",
+        "definition": "the shifted Legendre polynomial of degree s"
+      },
+      {
+        "name": "ci",
+        "definition": "the zeros of Ps*, i = 1, 2, ..., s"
+      }
+    ],
+    "equations": [],
+    "preamble": "The lemma concerns a Runge-Kutta method construction based on the zeros of the shifted Legendre polynomial Ps*. The preceding text discusses properties of these polynomials, including orthogonality and recurrence relations.",
+    "number": "342B",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "G(η)",
+        "definition": "represents that a given Runge–Kutta method has order η"
+      },
+      {
+        "name": "B(2s)",
+        "definition": "order conditions for Runge–Kutta methods, specifically the quadrature conditions up to order 2s"
+      },
+      {
+        "name": "C(s)",
+        "definition": "simplifying conditions related to the internal stages of the Runge–Kutta method"
+      },
+      {
+        "name": "D(s)",
+        "definition": "simplifying conditions related to the internal stages of the Runge–Kutta method"
+      },
+      {
+        "name": "E(s, s)",
+        "definition": "a condition given by equation (321c) that links C(s) and D(s)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "321c",
+        "content": "equation defining E(s, s) (exact form not provided in the preceding text, but it is referenced as the link between C(s) and D(s))"
+      }
+    ],
+    "preamble": "The theorem concerns relationships between order conditions for Runge–Kutta methods. The notation G(η) indicates a method of order η, while B, C, D, and E are specific sets of simplifying conditions. The context involves analyzing whether C(s) and D(s) can be satisfied simultaneously given quadrature conditions.",
+    "number": "342C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge-Kutta method"
+      },
+      {
+        "name": "c_i",
+        "definition": "abscissae (or nodes) of the Runge-Kutta method, i = 1, 2, ..., s"
+      },
+      {
+        "name": "b_i",
+        "definition": "weights of the Runge-Kutta method, i = 1, 2, ..., s"
+      },
+      {
+        "name": "a_{ij}",
+        "definition": "Runge-Kutta matrix coefficients, i, j = 1, 2, ..., s"
+      },
+      {
+        "name": "P_s^*",
+        "definition": "shifted Legendre polynomial of degree s"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "B(s)",
+        "content": "The condition that the quadrature formula with nodes c_i and weights b_i is exact for polynomials of degree up to s-1 (or sometimes higher)."
+      },
+      {
+        "tag": "C(s)",
+        "content": "The condition that for each i, ∑_{j=1}^s a_{ij} c_j^{k-1} = c_i^k / k for k = 1, 2, ..., s."
+      }
+    ],
+    "preamble": "The context involves Runge-Kutta methods with s stages, characterized by coefficients a_{ij}, b_i, and c_i. The preceding text discusses order conditions, specifically the E(s, s) conditions, and references Theorem 342C, which relates to achieving order 2s. The corollary provides a construction recipe based on properties of shifted Legendre polynomials and standard order conditions.",
+    "number": "342D",
+    "kind": "corollary"
+  },
+  {
+    "variables": [
+      {
+        "name": "reflection",
+        "definition": "Given a Runge-Kutta method with tableau (c, A, b), its reflection is defined by the tableau with coefficients b_j - c_i and b_i - a_{ij}."
+      },
+      {
+        "name": "simplifying assumptions",
+        "definition": "Conditions such as B(η), C(η), D(η), and E(η, ζ) introduced in Subsection 321, which relate to order conditions for Runge-Kutta methods."
+      },
+      {
+        "name": "B(η), C(η), D(η), E(η, ζ)",
+        "definition": "Notations for the simplifying assumptions (e.g., order conditions) for a Runge-Kutta method."
+      },
+      {
+        "name": "B̂(η), Ĉ(η), D̂(η), Ê(η, ζ)",
+        "definition": "The same simplifying assumptions but applied to the reflected method."
+      }
+    ],
+    "equations": [
+      {
+        "tag": "343a",
+        "content": "The tableau for the reflection of a Runge-Kutta method, with entries b_j - c_i and b_i - a_{ij}."
+      }
+    ],
+    "preamble": "The text discusses the reflection of a Runge-Kutta method, defined by transforming its tableau coefficients. The theorem states that reflecting a method twice returns the original method, and considers how simplifying assumptions (like order conditions) transfer to the reflected method.",
+    "number": "343A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "B(η)",
+        "definition": "Simplifying assumption B(η) for a Runge–Kutta method (order condition related to quadrature)"
+      },
+      {
+        "name": "C(η)",
+        "definition": "Simplifying assumption C(η) for a Runge–Kutta method (order condition related to stage order)"
+      },
+      {
+        "name": "D(η)",
+        "definition": "Simplifying assumption D(η) for a Runge–Kutta method (order condition related to stage order)"
+      },
+      {
+        "name": "E(η, ζ)",
+        "definition": "Simplifying assumption E(η, ζ) for a Runge–Kutta method (order condition related to trees)"
+      },
+      {
+        "name": "B̂(η)",
+        "definition": "Simplifying assumption B(η) but for the reflected method"
+      },
+      {
+        "name": "Ĉ(η)",
+        "definition": "Simplifying assumption C(η) but for the reflected method"
+      },
+      {
+        "name": "D̂(η)",
+        "definition": "Simplifying assumption D(η) but for the reflected method"
+      },
+      {
+        "name": "Ê(η, ζ)",
+        "definition": "Simplifying assumption E(η, ζ) but for the reflected method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns properties of the 'reflection' of a Runge–Kutta method, which is a transformation of its coefficients (given by a tableau). Simplifying assumptions B, C, D, E are order conditions for the method, and their hatted versions denote the same conditions applied to the reflected method.",
+    "number": "343B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "s",
+        "definition": "number of stages (or abscissae) in the quadrature formula"
+      },
+      {
+        "name": "c_i",
+        "definition": "abscissae (quadrature nodes) in [0,1], i=1,...,s"
+      },
+      {
+        "name": "b_i",
+        "definition": "quadrature weights, i=1,...,s"
+      },
+      {
+        "name": "P_s^*(x)",
+        "definition": "shifted Legendre polynomial of degree s on [0,1]"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "344a",
+        "content": "∫_0^1 φ(x) dx = Σ_{i=1}^s b_i φ(c_i)"
+      }
+    ],
+    "preamble": "The theorem concerns interpolational quadrature formulae on [0,1] based on zeros of combinations of shifted Legendre polynomials, known as Radau I, Radau II, and Lobatto formulae. These are chosen to achieve high polynomial exactness under constraints on the endpoints (c1=0 and/or cs=1).",
+    "number": "344A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "stability function for a Runge–Kutta method, R(z) = 1 + zb (I − zA)^{-1} 1"
+      },
+      {
+        "name": "A",
+        "definition": "coefficient matrix of the Runge–Kutta method"
+      },
+      {
+        "name": "b",
+        "definition": "weights vector of the Runge–Kutta method"
+      },
+      {
+        "name": "1",
+        "definition": "vector of ones"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "350a",
+        "content": "R(z) = 1 + zb (I − zA)^{-1} 1"
+      }
+    ],
+    "preamble": "The stability function R(z) for a Runge–Kutta method is defined, and A-stability (|R(z)| ≤ 1 for Re(z) ≤ 0) and L-stability (A-stable with R(∞) = 0) are introduced. The context is the stability analysis of implicit Runge–Kutta methods for stiff ODEs.",
+    "number": "350A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "stability function of a Runge–Kutta method"
+      },
+      {
+        "name": "(A, b, c)",
+        "definition": "Runge–Kutta method with coefficient matrix A, weight vector b, and node vector c"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "350a",
+        "content": "Rational function for stability function (referenced earlier in the text, but not explicitly shown in the provided excerpt; it is the general form of R(z) for a Runge–Kutta method)"
+      }
+    ],
+    "preamble": "The text discusses stability properties of Runge–Kutta methods, introducing A-stability and A(α)-stability. The stability function R(z) is a rational function characterizing the method's stability. Lemma 351A provides an alternative expression for R(z) in terms of the method's coefficients.",
+    "number": "351A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "stability function of a Runge–Kutta method, expressed as R(z) = N(z)/D(z)"
+      },
+      {
+        "name": "N(z)",
+        "definition": "numerator polynomial of the stability function R(z)"
+      },
+      {
+        "name": "D(z)",
+        "definition": "denominator polynomial of the stability function R(z)"
+      },
+      {
+        "name": "E(y)",
+        "definition": "E-polynomial defined by E(y) = D(iy)D(−iy) − N(iy)N(−iy)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns A-stability of a Runge–Kutta method, where the stability function R(z) is expressed as a ratio of polynomials N(z)/D(z). The E-polynomial is defined in terms of D and N evaluated at imaginary arguments.",
+    "number": "351B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "Nlm",
+        "definition": "numerator polynomial of the (l, m) Padé approximation to f"
+      },
+      {
+        "name": "Dlm",
+        "definition": "denominator polynomial of the (l, m) Padé approximation to f"
+      },
+      {
+        "name": "f",
+        "definition": "function for which Padé approximations are considered, specifically the exponential function in this context"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "352a",
+        "content": "f(z) = 1 + sin(z) ≈ 1 + z - (1/6)z^3 + ... (example of a function where Padé approximation may not exist for specific l, m)"
+      }
+    ],
+    "preamble": "The theorem concerns Padé approximations, specifically for the exponential function. The (l, m) Padé approximation to a function f is a rational function Nlm(z)/Dlm(z) such that f(z) = Nlm(z)/Dlm(z) + O(z^{l+m+1}). The normalization N(0)=D(0)=1 is used.",
+    "number": "352A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "N_{lm}",
+        "definition": "numerator polynomial of the (l, m) Padé approximation to exp(z)"
+      },
+      {
+        "name": "D_{lm}",
+        "definition": "denominator polynomial of the (l, m) Padé approximation to exp(z)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "(352b)",
+        "content": "definition of N_{lm}"
+      },
+      {
+        "tag": "(352c)",
+        "content": "definition of D_{lm}"
+      }
+    ],
+    "preamble": "The theorem concerns the uniqueness of the (l, m) Padé approximation to the exponential function exp(z). The preceding text derives and verifies properties of the polynomials N_{lm} and D_{lm} defined by specific formulas.",
+    "number": "352B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "V_{lm}(z)",
+        "definition": "two-dimensional vector whose first component is N_{lm}(z) and second component is D_{lm}(z), representing a Padé approximant"
+      },
+      {
+        "name": "l",
+        "definition": "non-negative integer, likely related to numerator or denominator degree in Padé table"
+      },
+      {
+        "name": "m",
+        "definition": "non-negative integer, likely related to numerator or denominator degree in Padé table"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context involves Padé approximants and their table representation. V_{lm}(z) denotes a vector containing the numerator N_{lm}(z) and denominator D_{lm}(z) of the Padé approximant with indices l and m. The theorem gives a recurrence relation between Padé vectors along sub-diagonals of the Padé table.",
+    "number": "352C",
+    "kind": "theorem"
+  },
+  {
+    "number": "352D",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "V_{lm}(z)",
+        "definition": "A function (or coefficient) depending on indices l, m and variable z, likely related to generating functions or recurrence coefficients for numerical methods."
+      }
+    ],
+    "equations": [],
+    "preamble": "The preceding text includes tables of coefficients (likely related to error constants or generating functions) and Theorem 352D, which gives a recurrence for V_{lm}(z) with conditions on l and m. Theorem 352E provides another recurrence relation for V_{lm}(z) under different index conditions, continuing the analysis of these functions.",
+    "number": "352E",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "the (s-d, s) member of the Padé table for the exponential function, expressed as a rational function N(z)/D(z)"
+      },
+      {
+        "name": "s",
+        "definition": "a positive integer, likely the order or a parameter related to the Padé approximation"
+      },
+      {
+        "name": "d",
+        "definition": "an integer taking values 0, 1, or 2, indicating the diagonal (d=0) or first two sub-diagonals (d=1,2) of the Padé table"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns the A-stability of methods (like Gauss, Radau IA/IIA, Lobatto IIIC) whose stability functions are specific Padé approximations to the exponential function, taken from the diagonal and first two sub-diagonals of the Padé table.",
+    "number": "353A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "stability function of a Runge-Kutta method"
+      },
+      {
+        "name": "p",
+        "definition": "order of the stability function R(z)"
+      },
+      {
+        "name": "φ(z)",
+        "definition": "φ(z) = R(z) exp(−z)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text discusses order star theory and introduces 'order arrows' as an alternative tool for studying stability. The context involves a stability function R(z) of order p, and the function φ(z) = R(z)exp(−z) which is used to define geometric structures in the complex plane.",
+    "number": "355A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "a rational approximation to exp(z) of exact order p"
+      },
+      {
+        "name": "p",
+        "definition": "the order of the rational approximation R(z) to exp(z)"
+      },
+      {
+        "name": "C",
+        "definition": "the error constant in the expansion R(z) = exp(z) - Cz^{p+1} + O(z^{p+2})"
+      },
+      {
+        "name": "φ(z)",
+        "definition": "R(z) exp(-z)"
+      },
+      {
+        "name": "up arrows",
+        "definition": "rays emanating from 0 in the principal order web with increasing value of φ"
+      },
+      {
+        "name": "down arrows",
+        "definition": "rays emanating from 0 in the principal order web with decreasing value of φ"
+      },
+      {
+        "name": "principal order web",
+        "definition": "the part of the order web (locus where φ(z) is real and positive) connected to 0"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns a rational approximation R(z) to exp(z) of exact order p, with error constant C. It describes the pattern of 'order arrows' (rays along which φ(z)=R(z)exp(-z) is real and positive) emanating from the origin, specifically their tangents at 0 based on the sign of C.",
+    "number": "355B",
+    "kind": "theorem"
+  },
+  {
+    "number": "355C",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "355D",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "a Padé approximation to exp(z), with degrees n (numerator) and d (denominator)"
+      },
+      {
+        "name": "n",
+        "definition": "numerator degree of R(z)"
+      },
+      {
+        "name": "d",
+        "definition": "denominator degree of R(z)"
+      },
+      {
+        "name": "p",
+        "definition": "p = n + d"
+      },
+      {
+        "name": "down arrows",
+        "definition": "arrows in the order star of R, representing directions where |R(z)| > |exp(z)|"
+      },
+      {
+        "name": "up arrows",
+        "definition": "arrows in the order star of R, representing directions where |R(z)| < |exp(z)|"
+      },
+      {
+        "name": "ñ",
+        "definition": "number of down arrows terminating at zeros of R"
+      },
+      {
+        "name": "d̃",
+        "definition": "number of up arrows terminating at poles of R"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context involves the order star analysis of Padé approximations to exp(z), where arrows (down and up) represent regions where the approximation's magnitude is greater or less than exp(z). The theorem relates the counts of arrows terminating at zeros and poles to the degrees of the numerator and denominator.",
+    "number": "355E",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "R(z)",
+        "definition": "stability function of a Runge–Kutta method"
+      },
+      {
+        "name": "up arrow",
+        "definition": "a graphical element in the order web, representing a direction associated with poles of R(z)"
+      },
+      {
+        "name": "order web",
+        "definition": "a graphical construction used to analyze stability properties"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context involves analyzing A-stability of Runge–Kutta methods using the order web, where up arrows are associated with poles of the stability function R(z).",
+    "number": "355F",
+    "kind": "theorem"
+  },
+  {
+    "number": "355G",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge–Kutta coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge–Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge–Kutta stage abscissae vector"
+      },
+      {
+        "name": "Z",
+        "definition": "diag(z1, z2, ..., zs), where zi = hq(x_{n-1} + hc_i), with q from the non-autonomous problem y' = q(x)y"
+      },
+      {
+        "name": "R(Z)",
+        "definition": "1 + b^T Z (I - AZ)^{-1} 1, the non-autonomous generalization of the linear stability function"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "356a",
+        "content": "y' = q(x)y, a non-autonomous linear scalar ODE"
+      }
+    ],
+    "preamble": "The context involves a Runge–Kutta method applied to the non-autonomous linear test problem y' = q(x)y, leading to a stability function R(Z) where Z is a diagonal matrix with entries hq(x_{n-1} + hc_i). AN-stability is defined to ensure the numerical solution does not grow when the real parts of these entries are non-positive.",
+    "number": "356A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge–Kutta matrix (coefficients a_ij)"
+      },
+      {
+        "name": "b",
+        "definition": "Runge–Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge–Kutta nodes vector"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge–Kutta method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context is about Runge–Kutta methods and their stability properties, specifically AN-stability and reducibility. The preceding text introduces AN-stability and DJ-irreducibility, noting that a method is DJ-reducible if it can be simplified by deleting certain stages without affecting the computed result.",
+    "number": "356B",
+    "kind": "definition"
+  },
+  {
+    "number": "356C",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "356D",
+    "kind": "corollary",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "357A",
+    "kind": "definition",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge-Kutta coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge-Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge-Kutta nodes vector"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge-Kutta method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "357d",
+        "content": "M = diag(b)A + A diag(b) - bb'"
+      }
+    ],
+    "preamble": "The context discusses BN-stability and AN-stability for Runge-Kutta methods applied to non-autonomous ODEs satisfying a dissipativity condition. The definition of algebraic stability provides a sufficient condition for these stability properties.",
+    "number": "357B",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge-Kutta coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge-Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge-Kutta nodes vector"
+      },
+      {
+        "name": "M",
+        "definition": "Matrix defined by M = diag(b)A + A diag(b) - bb^T"
+      },
+      {
+        "name": "f",
+        "definition": "Function f(x, y) defining the ODE y'(x) = f(x, y(x))"
+      },
+      {
+        "name": "yn",
+        "definition": "Computed solution approximation at step n"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "357d",
+        "content": "M = diag(b)A + A diag(b) - bb^T"
+      }
+    ],
+    "preamble": "The theorem concerns Runge-Kutta methods (A, b, c) for non-autonomous ODEs y'(x) = f(x, y(x)). BN-stability means that for problems satisfying ⟨f(x, u), u⟩ ≤ 0, the computed solutions satisfy ||y_n|| ≤ ||y_{n-1}||. Algebraic stability is defined by b_i > 0 and M positive semi-definite.",
+    "number": "357C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "BN-stable",
+        "definition": "BN-stability is a stability concept for Runge-Kutta methods, defined in terms of a quasi-inner product over real numbers, related to dissipativity properties of the method."
+      },
+      {
+        "name": "AN-stable",
+        "definition": "AN-stability is a stability concept for Runge-Kutta methods, related to the test problem y'(x) = q(x)y(x) with Re(q(x)) ≤ 0."
+      },
+      {
+        "name": "irreducible non-confluent Runge-Kutta method",
+        "definition": "A Runge-Kutta method that is irreducible (cannot be simplified) and non-confluent (distinct abscissae)."
+      }
+    ],
+    "equations": [
+      {
+        "tag": "356a",
+        "content": "y'(x) = q(x)y(x), where q is a complex-valued function with Re(q(x)) ≤ 0, used as the test problem for AN-stability."
+      }
+    ],
+    "preamble": "The discussion connects AN-stability and BN-stability by showing the AN-stability test problem is an instance of the BN-stability test problem, using a transformation to a real dissipative system via real and imaginary parts of q(x) and y(x).",
+    "number": "357D",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "M",
+        "definition": "M is a matrix related to the collocation Runge-Kutta method, likely from a stability analysis."
+      },
+      {
+        "name": "V",
+        "definition": "V is a matrix used in the transformation V^T M V, possibly related to basis functions or quadrature."
+      },
+      {
+        "name": "e_s",
+        "definition": "e_s is a standard basis vector, likely in R^s, with a 1 in the s-th position."
+      },
+      {
+        "name": "P_s^*",
+        "definition": "P_s^* is the shifted Legendre polynomial of degree s, orthogonal on [0,1]."
+      },
+      {
+        "name": "P_{s-1}^*",
+        "definition": "P_{s-1}^* is the shifted Legendre polynomial of degree s-1."
+      }
+    ],
+    "equations": [
+      {
+        "tag": "(358a)",
+        "content": "2s ≥ 0 (a condition derived from positive semi-definiteness of M)."
+      }
+    ],
+    "preamble": "The theorem concerns algebraic stability of collocation Runge-Kutta methods. The preceding analysis involves a matrix M that must be positive semi-definite, leading to conditions on the abscissae (collocation points).",
+    "number": "358A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "W",
+        "definition": "matrix such that its columns are orthonormal polynomials P0, P1, ..., Ps-1 on [0,1]"
+      },
+      {
+        "name": "A",
+        "definition": "coefficient matrix of the Runge-Kutta method"
+      },
+      {
+        "name": "B",
+        "definition": "diag(b), diagonal matrix with weights b from the Runge-Kutta method"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the Gauss method"
+      },
+      {
+        "name": "XG",
+        "definition": "W BAW, a transformed matrix for the Gauss method"
+      },
+      {
+        "name": "e1",
+        "definition": "first standard basis vector"
+      }
+    ],
+    "equations": [],
+    "preamble": "The lemma concerns the Gauss Runge-Kutta method of order 2s. The matrix XG = W BAW is defined using the method's coefficient matrix A, weight matrix B = diag(b), and a matrix W whose columns are orthonormal polynomials. The preceding text shows that for the Gauss method, XG - (1/2)e1 e1^T is skew-symmetric.",
+    "number": "359A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "W",
+        "definition": "W is defined by (359b) (not fully shown here, but it is a transformation matrix related to orthogonal polynomials)"
+      },
+      {
+        "name": "X",
+        "definition": "X = W BAW, where B = diag(b) and A is the Runge-Kutta matrix"
+      },
+      {
+        "name": "X_G",
+        "definition": "X_G is the matrix for the Gauss method, with elements computed via orthogonal polynomials"
+      },
+      {
+        "name": "p",
+        "definition": "p is the order of the Runge-Kutta method (or related to the degree of polynomials considered)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "359b",
+        "content": "Definition of W (not fully given in the excerpt, but it is a transformation matrix based on orthogonal polynomials)"
+      }
+    ],
+    "preamble": "The text discusses the W transformation for Runge-Kutta methods, where W is defined via orthogonal polynomials, and X = W BAW. The Gauss method matrix X_G is used as a reference, and the preceding computation shows specific elements of X_G.",
+    "number": "359B",
+    "kind": "corollary"
+  },
+  {
+    "number": "359C",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "T",
+        "definition": "matrix with (i, j) element t_ij = L_{j-1}(ξ_i), i, j = 1, 2, ..., s"
+      },
+      {
+        "name": "A",
+        "definition": "coefficient matrix of the singly implicit method"
+      },
+      {
+        "name": "ξ_i",
+        "definition": "zeros of Laguerre polynomials, given in Table 363(II)"
+      },
+      {
+        "name": "L_k",
+        "definition": "Laguerre polynomial of degree k"
+      },
+      {
+        "name": "s",
+        "definition": "degree/stage number of the method"
+      },
+      {
+        "name": "λ",
+        "definition": "ξ - 1, a scalar parameter related to stability"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns singly implicit Runge-Kutta methods, where T is a transformation matrix built from Laguerre polynomials evaluated at the zeros ξ_i. The goal is to analyze the structure of the transformed coefficient matrix Â = T^{-1}AT.",
+    "number": "363A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge-Kutta coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge-Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge-Kutta nodes vector"
+      },
+      {
+        "name": "M",
+        "definition": "Matrix defined as M = diag(b)A + A diag(b) - bb^T"
+      },
+      {
+        "name": "Q",
+        "definition": "Symmetric matrix defining a quadratic invariant y^T Q y"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "370a",
+        "content": "m_{ij} = b_i a_{ij} + b_j a_{ji} - b_i b_j"
+      }
+    ],
+    "preamble": "The context involves Runge-Kutta methods applied to ODEs with quadratic invariants, where the matrix M arises from analyzing the preservation of these invariants. A method is symplectic if M is the zero matrix, ensuring conservation of quadratic forms like y^T Q y.",
+    "number": "370A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "Φ",
+        "definition": "Φ(t) = Σ_{i=1}^s b_i φ_i, where t is a rooted tree, φ_i is the elementary weight for tree t at stage i, and b_i are the weights of the Runge–Kutta method"
+      },
+      {
+        "name": "γ(t)",
+        "definition": "γ(t) is the density of the rooted tree t (a combinatorial factor)"
+      },
+      {
+        "name": "A, b, c",
+        "definition": "A is the Runge–Kutta matrix, b is the vector of weights, c is the vector of nodes, defining a symplectic Runge–Kutta method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "372a",
+        "content": "Φ(tu) - 1/γ(tu) + Φ(ut) - 1/γ(ut) = 0, assuming Φ(t) = 1/γ(t) and Φ(u) = 1/γ(u)"
+      }
+    ],
+    "preamble": "The theorem concerns symplectic Runge–Kutta methods and order conditions expressed via elementary weights Φ(t) for rooted trees t, where Φ(t) must equal 1/γ(t) for the method to have a certain order. The preceding text derives a key relation (372a) for products of trees under symplecticity.",
+    "number": "372A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "f",
+        "definition": "autonomous function f (right-hand side of ODE) satisfying a Lipschitz condition"
+      },
+      {
+        "name": "y0",
+        "definition": "initial value"
+      },
+      {
+        "name": "h",
+        "definition": "step size"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text discusses equivalence classes of Runge–Kutta methods, introducing three equivalence relations: 'equivalence', 'Φ-equivalence', and 'P-equivalence'. The definition given is for the first of these, termed 'equivalence', which compares the computed results of two methods for autonomous ODEs with Lipschitz conditions.",
+    "number": "381A",
+    "kind": "definition"
+  },
+  {
+    "number": "381B",
+    "kind": "definition",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge–Kutta coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge–Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge–Kutta nodes vector"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge–Kutta method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text defines three equivalence relations for Runge–Kutta methods: equivalence, Φ-equivalence, and P-equivalence. P-equivalence involves the concept of reducibility, where a method can be simplified by eliminating or combining stages. The definition of 0-reducibility formalizes one type of reducibility.",
+    "number": "381C",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge-Kutta coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge-Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge-Kutta nodes vector"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge-Kutta method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text discusses equivalence relations for Runge-Kutta methods, including 'P-equivalence', which involves the concept of reducibility. A Runge-Kutta method is represented as (A, b, c) with s stages. The stage index set is {1, 2, ..., s}.",
+    "number": "381D",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "Runge–Kutta method",
+        "definition": "A method defined by coefficients (A, b, c), where A is the matrix of stage coupling coefficients, b is the vector of weights, and c is the vector of nodes."
+      },
+      {
+        "name": "0-reducible",
+        "definition": "A Runge–Kutta method (A, b, c) is 0-reducible if the stage index set can be partitioned into two subsets {1, 2, ..., s} = P0 ∪ P1 such that bi = 0 for all i ∈ P0 and such that aij = 0 if i ∈ P1 and j ∈ P0."
+      },
+      {
+        "name": "P-reducible",
+        "definition": "A Runge–Kutta method (A, b, c) is P-reducible if the stage index set can be partitioned into {1, 2, ..., s} = P1 ∪ P2 ∪ ... ∪ Ps and if, for all I, J = 1, 2, ..., s, the sum over j in PJ of aij is constant for all i in PI."
+      },
+      {
+        "name": "0-reduced method",
+        "definition": "The method formed by deleting all stages indexed by members of P0 from a 0-reducible method."
+      },
+      {
+        "name": "P-reduced method",
+        "definition": "The method formed from a P-reducible method with s stages, where aIJ = sum over j in PJ of aij for i in PI, bI = sum over i in PI of bi, and cI = ci for i in PI."
+      }
+    ],
+    "equations": [],
+    "preamble": "The text defines Φ-equivalence of Runge–Kutta methods based on equality of elementary weights. It then introduces reducibility concepts: 0-reducibility (eliminating stages with zero weight that do not affect other stages) and P-reducibility (combining stages that are essentially the same).",
+    "number": "381E",
+    "kind": "definition"
+  },
+  {
+    "number": "381F",
+    "kind": "definition",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Runge-Kutta coefficient matrix"
+      },
+      {
+        "name": "b",
+        "definition": "Runge-Kutta weights vector"
+      },
+      {
+        "name": "c",
+        "definition": "Runge-Kutta nodes vector"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the Runge-Kutta method"
+      },
+      {
+        "name": "Yi",
+        "definition": "stage value for stage i in the Runge-Kutta method"
+      },
+      {
+        "name": "Yj",
+        "definition": "stage value for stage j in the Runge-Kutta method"
+      },
+      {
+        "name": "Φi(t)",
+        "definition": "elementary weight associated with stage i and tree t"
+      },
+      {
+        "name": "Φj(t)",
+        "definition": "elementary weight associated with stage j and tree t"
+      },
+      {
+        "name": "T",
+        "definition": "set of rooted trees (used in Butcher series analysis)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns an irreducible Runge-Kutta method (A, b, c) with s stages, where irreducible means neither 0-reducible nor P-reducible as defined previously. The theorem asserts that for any two distinct stage indices i and j, there exists a differential equation system for which the stage values Yi and Yj differ, and there exists a tree t in the set of rooted trees T for which the elementary weights Φi(t) and Φj(t) differ.",
+    "number": "381G",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "Φ",
+        "definition": "Φ_i(t) is the elementary weight associated with tree t and stage i"
+      },
+      {
+        "name": "P",
+        "definition": "P is a partition of the set of stages {1,2,...,s}"
+      },
+      {
+        "name": "A",
+        "definition": "A is the algebra generated by the vectors of stage weights"
+      },
+      {
+        "name": "T",
+        "definition": "T is the set of rooted trees"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text discusses equivalence concepts for Runge-Kutta methods, specifically P-equivalence (based on partition of stages) and Φ-equivalence (based on equality of elementary weights for all trees). The theorem interrelates these with general equivalence.",
+    "number": "381H",
+    "kind": "theorem"
+  },
+  {
+    "number": "382A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "m",
+        "definition": "a Runge–Kutta method, typically represented as a tableau (A, b, c) with s stages"
+      },
+      {
+        "name": "m^{-1}",
+        "definition": "the inverse Runge–Kutta method constructed from m via a specific tableau transformation that undoes the work of m"
+      },
+      {
+        "name": "[·]",
+        "definition": "equivalence class of Runge–Kutta methods under the equivalence relation defined earlier in the text (e.g., methods that produce identical numerical results for sufficiently small step sizes h for Lipschitz continuous problems)"
+      },
+      {
+        "name": "1",
+        "definition": "the identity equivalence class, containing any method that maps an initial value to an equal value for sufficiently small h"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text defines an algebraic structure on equivalence classes of Runge–Kutta methods, including a multiplicative operation (·), an identity class 1, and an inverse method m^{-1} constructed from m. The theorem states that the equivalence class of the product of a method and its inverse equals the identity class.",
+    "number": "382B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "α",
+        "definition": "multiplicative mapping from forests to real numbers"
+      },
+      {
+        "name": "β",
+        "definition": "multiplicative mapping from forests to real numbers"
+      },
+      {
+        "name": "αβ",
+        "definition": "product mapping defined by (αβ)(S) = Σ_{R ≤ S} α(S \\ R)β(R)"
+      },
+      {
+        "name": "S",
+        "definition": "a forest (represented by a single letter)"
+      },
+      {
+        "name": "R",
+        "definition": "a forest such that R ≤ S"
+      },
+      {
+        "name": "S \\ R",
+        "definition": "the forest induced by the difference of the vertex sets of S and R"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "383a",
+        "content": "(αβ)(S) = Σ_{R ≤ S} α(S \\ R)β(R)"
+      }
+    ],
+    "preamble": "Forests (rooted trees) are denoted by single letters; a relation R ≤ S indicates R is a sub-forest of S. Multiplicative mappings from forests to reals are extended multiplicatively from trees to forests. The product of two such mappings α and β is defined via a sum over sub-forests.",
+    "number": "383A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "α, β, γ",
+        "definition": "multiplicative mappings from forests to real numbers"
+      },
+      {
+        "name": "αβ",
+        "definition": "product of multiplicative mappings α and β, defined by (αβ)(S) = Σ_{R ≤ S} α(S \\ R)β(R)"
+      },
+      {
+        "name": "βγ",
+        "definition": "product of multiplicative mappings β and γ, defined analogously to αβ"
+      },
+      {
+        "name": "R ≤ S",
+        "definition": "R is a subforest of S, meaning the vertex set and edge set of R are subsets of those of S, with the condition that if an edge is in R, both its vertices are in R"
+      },
+      {
+        "name": "S \\ R",
+        "definition": "the forest induced by the difference of the vertex sets of S and R"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "383a",
+        "content": "(αβ)(S) = Σ_{R ≤ S} α(S \\ R)β(R)"
+      }
+    ],
+    "preamble": "The context involves forests (graphs that are disjoint unions of trees) and multiplicative mappings from forests to real numbers. A product of two such mappings α and β is defined via a sum over subforests R of S, using the forest difference S \\ R.",
+    "number": "383B",
+    "kind": "lemma"
+  },
+  {
+    "number": "383C",
+    "kind": "lemma",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "α",
+        "definition": "α ∈ G1, an element of the group G1 (presumably a mapping on trees)"
+      },
+      {
+        "name": "G1",
+        "definition": "A group (or algebraic structure) related to trees, likely defined earlier in the text"
+      },
+      {
+        "name": "t",
+        "definition": "t ∈ T, a tree in the set T of trees"
+      },
+      {
+        "name": "T",
+        "definition": "The set of trees (rooted trees, as typical in Butcher series context)"
+      },
+      {
+        "name": "S",
+        "definition": "A tree t written in the form (V, E), where V is the set of vertices and E is the set of edges"
+      },
+      {
+        "name": "P(S)",
+        "definition": "The set of all partitions of S; a partition P ∈ P(S) is a forest formed by possibly removing some edges from E, with components being trees (Vi, Ei)"
+      },
+      {
+        "name": "#P",
+        "definition": "The number of components (trees) in the partition P"
+      },
+      {
+        "name": "ti",
+        "definition": "The tree represented by (Vi, Ei), which is a component of the partition P"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "383b",
+        "content": "α^{-1}(t) = Σ_{P ∈ P(S)} Π_{i=1}^{#P} (-α(ti))"
+      }
+    ],
+    "preamble": "The context involves the group G1 of mappings on trees, where α is an element with an inverse α^{-1}. Trees are represented as (V, E), and partitions of a tree S are forests obtained by removing edges, with components ti. The formula gives α^{-1}(t) as a sum over all partitions of S, each term being a product over the components of the partition.",
+    "number": "383D",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "Φ",
+        "definition": "Φ : T → R, the elementary weight function associated with a Runge–Kutta method"
+      },
+      {
+        "name": "Φ̃",
+        "definition": "Φ̃ : T → R, the elementary weight function associated with another Runge–Kutta method"
+      },
+      {
+        "name": "T",
+        "definition": "set of trees (or related combinatorial objects) used in the analysis of Runge–Kutta methods"
+      },
+      {
+        "name": "R",
+        "definition": "real numbers"
+      },
+      {
+        "name": "(A, b, c)",
+        "definition": "parameters of a Runge–Kutta method (Butcher tableau)"
+      },
+      {
+        "name": "(Ã, b̃, c̃)",
+        "definition": "parameters of another Runge–Kutta method"
+      },
+      {
+        "name": "product method",
+        "definition": "the product of two Runge–Kutta methods, represented by (382a)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "382a",
+        "content": "the representation of the product method (not fully given in the provided text, but referenced as the product method's Butcher tableau)"
+      }
+    ],
+    "preamble": "The theorem concerns homomorphisms between groups of Runge–Kutta methods, where each method is associated with an elementary weight function Φ : T → R. The product of two methods corresponds to the product of their elementary weight functions.",
+    "number": "384A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "G",
+        "definition": "the set of mappings from trees T to real numbers, representing elementary weights or related functionals"
+      },
+      {
+        "name": "G1",
+        "definition": "a subset of G consisting of mappings that satisfy certain conditions (e.g., related to Runge-Kutta methods)"
+      },
+      {
+        "name": "α",
+        "definition": "an element of G1"
+      },
+      {
+        "name": "β",
+        "definition": "an element of G"
+      },
+      {
+        "name": "t",
+        "definition": "a tree in the set T"
+      },
+      {
+        "name": "∅",
+        "definition": "the empty tree"
+      },
+      {
+        "name": "λ",
+        "definition": "a function λ : G1 × T → G* defined recursively by λ(α, τ) = τ̂ and λ(α, tu) = λ(α, t)λ(α, u) + α(u)λ(α, t)"
+      },
+      {
+        "name": "τ",
+        "definition": "a specific tree (likely the tree with a single node)"
+      },
+      {
+        "name": "u",
+        "definition": "a tree in T"
+      },
+      {
+        "name": "G*",
+        "definition": "the vector space spanned by linear functionals on G, specifically including the set T̂"
+      },
+      {
+        "name": "T̂",
+        "definition": "the set of functionals t̂ : G1 → R defined by t̂(α) = α(t) for t ∈ T"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem provides a recursive formula for the product αβ in the context of trees and functionals related to Runge-Kutta methods. The product is defined on G1 × G → G, with λ defined recursively to generate expressions for αβ. The notation involves trees (T), function spaces (G, G1, G*), and specific functionals (T̂).",
+    "number": "386A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "E",
+        "definition": "E is an element of G1 (the group of mappings from trees to real numbers) representing the exact solution of a differential equation through one unit step h; E(t) gives the elementary weight for tree t."
+      },
+      {
+        "name": "E^{(θ)}",
+        "definition": "E^{(θ)} represents the solution at a general point θh advanced from the initial point; defined by E^{(θ)}(t) = θ^{r(t)} E(t) for all t ∈ T, where r(t) is the order of the tree t."
+      },
+      {
+        "name": "T_k",
+        "definition": "T_k are elements of G1 (or mappings from trees to real numbers) appearing in the series expansion of E; specifically, E = 1 + sum_{k=1}^∞ (1/k!) T_k."
+      },
+      {
+        "name": "G1",
+        "definition": "G1 is the group of mappings from the set of trees T to the real numbers, with a specific group operation (not fully detailed here but implied from context)."
+      },
+      {
+        "name": "τ",
+        "definition": "τ is the unique tree of order 1 (the single node tree)."
+      },
+      {
+        "name": "α^{(m)}",
+        "definition": "For α in G1 and integer m, α^{(m)} is defined analogously to E^{(θ)}: α^{(m)}(t) = m^{r(t)} α(t) for all t ∈ T, where r(t) is the order of the tree t."
+      },
+      {
+        "name": "α^m",
+        "definition": "For α in G1 and integer m, α^m denotes the m-th power of α under the group operation in G1."
+      }
+    ],
+    "equations": [
+      {
+        "tag": "387d",
+        "content": "E = 1 + sum_{k=1}^∞ (1/k!) T_k, interpreted as E(t) = 1(t) + sum_{k=1}^∞ (1/k!) T_k(t) for any t ∈ T."
+      }
+    ],
+    "preamble": "The context involves the group G1 of mappings from trees to reals, with E representing the exact solution operator for ODEs. The notation α^{(m)} denotes scaling by m^{r(t)} on tree t, while α^m denotes group exponentiation. The theorem characterizes E by a property involving these operations for integers m not in {0,1,-1}.",
+    "number": "387A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "G",
+        "definition": "the group (or algebra) of elementary weight functions for Runge-Kutta methods"
+      },
+      {
+        "name": "Hp",
+        "definition": "linear subspace of G defined by Hp = {α ∈ G : α(t) = 0, whenever r(t) ≤ p}"
+      },
+      {
+        "name": "α, β, γ, δ",
+        "definition": "elements of G (elementary weight functions)"
+      },
+      {
+        "name": "α = β + Hp",
+        "definition": "means α − β ∈ Hp, i.e., α and β agree up to trees of order > p"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem is about the ideal structure in the group G of elementary weight functions. Hp is an ideal in G, meaning it absorbs multiplication from G. The notation α = β + Hp indicates equivalence modulo Hp.",
+    "number": "388A",
+    "kind": "theorem"
+  },
+  {
+    "number": "388B",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "388C",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "G1",
+        "definition": "the group of elementary weight functions corresponding to Runge–Kutta methods"
+      },
+      {
+        "name": "Hp",
+        "definition": "an ideal in the algebra of trees, related to trees of order > p"
+      },
+      {
+        "name": "α",
+        "definition": "a member of G1, representing an elementary weight function"
+      },
+      {
+        "name": "γ(t)",
+        "definition": "a function of a tree t, defined as the product of the orders of the trees in its representation"
+      },
+      {
+        "name": "r(t)",
+        "definition": "the order (number of vertices) of a tree t"
+      },
+      {
+        "name": "τ",
+        "definition": "the unique tree of order 1"
+      },
+      {
+        "name": "T",
+        "definition": "the set of all trees"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context involves the group G1 of elementary weight functions for Runge–Kutta methods, with operations defined on trees. The ideal Hp and quotient groups G1/(1+Hp) characterize equivalence of methods up to O(h^{p+1}). The notation uses trees t, their order r(t), and the function γ(t).",
+    "number": "388D",
+    "kind": "definition"
+  },
+  {
+    "number": "388E",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "α",
+        "definition": "elementary weight function corresponding to a Runge–Kutta method, a member of G1"
+      },
+      {
+        "name": "G1",
+        "definition": "group of elementary weight functions for Runge–Kutta methods"
+      },
+      {
+        "name": "T",
+        "definition": "set of trees (rooted trees)"
+      },
+      {
+        "name": "r(t)",
+        "definition": "order (or number of vertices) of a tree t"
+      },
+      {
+        "name": "ξ",
+        "definition": "parameter (integer) defining the condition, likely related to order"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context involves algebraic structures (groups and subgroups) based on elementary weight functions α of Runge–Kutta methods, with trees t, u ∈ T and order function r(t). The definition characterizes a subset D(ξ) of G1 via a relation on products of trees.",
+    "number": "388F",
+    "kind": "definition"
+  },
+  {
+    "number": "388G",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "E",
+        "definition": "E is the elementary weight function (or the exact flow map) associated with the exact solution of an ODE, often used in the context of B-series or rooted trees."
+      },
+      {
+        "name": "E^{(θ)}",
+        "definition": "E^{(θ)} is a specific member of the group G1 (or a related structure) parameterized by a real θ, representing a numerical method or transformation related to the exact solution."
+      },
+      {
+        "name": "C(ξ)",
+        "definition": "C(ξ) is a subset of G1 defined by conditions on rooted trees up to order ξ, specifically satisfying equations (388c) and a relation involving α(t) and γ(t)."
+      },
+      {
+        "name": "D(ξ)",
+        "definition": "D(ξ) is a subset of G1 defined by a condition (388d) on rooted trees t and u where the order of t is at most ξ."
+      },
+      {
+        "name": "G1",
+        "definition": "G1 is a group (or algebraic structure) whose members are functions on rooted trees, used to represent numerical methods for ODEs via B-series."
+      },
+      {
+        "name": "ξ",
+        "definition": "ξ is a positive integer representing an order or bound on the size of trees considered in the conditions C(ξ) and D(ξ)."
+      },
+      {
+        "name": "θ",
+        "definition": "θ is a real parameter indexing the family E^{(θ)}."
+      }
+    ],
+    "equations": [
+      {
+        "tag": "388c",
+        "content": "α([t t1 t2 ··· tm]) = (1/γ(t)) α([τ^{r(t)} t1 t2 ··· tm])"
+      },
+      {
+        "tag": "388d",
+        "content": "α(tu) + α(ut) = α(t)α(u)"
+      }
+    ],
+    "preamble": "The context involves algebraic structures (like G1) based on rooted trees to analyze numerical methods for ODEs. C(ξ) and D(ξ) are normal subgroups of G1 defined by specific conditions on tree functions, with E^{(θ)} being a particular element of interest.",
+    "number": "388H",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "α",
+        "definition": "group element corresponding to a Runge–Kutta method"
+      },
+      {
+        "name": "β",
+        "definition": "group element corresponding to a perturbing Runge–Kutta method"
+      },
+      {
+        "name": "E",
+        "definition": "group element corresponding to the exact solution method"
+      },
+      {
+        "name": "G1",
+        "definition": "group of Runge–Kutta methods"
+      },
+      {
+        "name": "Hp",
+        "definition": "subgroup of G1 such that G1/(1+Hp) consists of cosets of methods agreeing to O(h^{p+1}) in a single step"
+      },
+      {
+        "name": "p",
+        "definition": "order or effective order of a method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "389a",
+        "content": "βαβ^{-1} ∈ E(1 + Hp)"
+      }
+    ],
+    "preamble": "The text uses group theory to analyze effective order of Runge–Kutta methods. The group G1/(1+Hp) has cosets representing methods that agree to O(h^{p+1}) in one step, with E(1+Hp) being the coset of methods that match the exact solution to that order. A method with group element α has effective order p if there exists a perturbing method β such that the conjugacy condition βαβ^{-1} ∈ E(1+Hp) holds.",
+    "number": "389A",
+    "kind": "lemma"
+  },
+  {
+    "number": "402A",
+    "kind": "definition",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "[α, β]",
+        "definition": "linear multistep method with coefficients α = (α1, α2, ..., αk) and β = (β0, β1, ..., βk)"
+      },
+      {
+        "name": "yn",
+        "definition": "computed solution at step n"
+      },
+      {
+        "name": "k",
+        "definition": "number of steps in the linear multistep method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "403a",
+        "content": "yn = α1 yn−1 + α2 yn−2 + · · · + αk yn−k"
+      }
+    ],
+    "preamble": "The definition concerns a linear multistep method [α, β] applied to an initial value problem. For the specific one-dimensional problem where f(x, y) = 0, the method reduces to the linear difference equation (403a).",
+    "number": "403A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "α_i",
+        "definition": "coefficients for past solution values in the linear multistep method"
+      },
+      {
+        "name": "β_i",
+        "definition": "coefficients for past derivative values in the linear multistep method"
+      },
+      {
+        "name": "k",
+        "definition": "number of steps in the linear multistep method"
+      },
+      {
+        "name": "h",
+        "definition": "step size"
+      },
+      {
+        "name": "y_n",
+        "definition": "numerical approximation to the solution at step n"
+      },
+      {
+        "name": "f",
+        "definition": "function defining the ODE: y'(x) = f(x, y(x))"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "404a",
+        "content": "1 = α_1 + α_2 + ... + α_k"
+      }
+    ],
+    "preamble": "The context discusses linear multistep methods for ODEs, defined by coefficients α_i and β_i. Preconsistency is a property ensuring exact solution for a trivial ODE, leading to condition (404a).",
+    "number": "404A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "k",
+        "definition": "order or number of steps of the linear multistep method"
+      },
+      {
+        "name": "α_i",
+        "definition": "coefficients for past solution values in the linear multistep method, for i = 1,...,k"
+      },
+      {
+        "name": "β_i",
+        "definition": "coefficients for past derivative values in the linear multistep method, for i = 0,...,k"
+      },
+      {
+        "name": "h",
+        "definition": "step size"
+      },
+      {
+        "name": "y_n",
+        "definition": "numerical approximation to the solution y(x) at x = x_n"
+      },
+      {
+        "name": "f",
+        "definition": "function defining the ODE: y'(x) = f(x, y(x))"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "404a",
+        "content": "1 = α_1 + α_2 + ... + α_k"
+      },
+      {
+        "tag": "404b",
+        "content": "α_1 + 2α_2 + ... + kα_k = β_0 + β_1 + ... + β_k"
+      }
+    ],
+    "preamble": "The context defines a linear multistep method for solving an ODE y' = f(x,y). The method uses k past steps with coefficients α_i and β_i. Preconsistency (404a) ensures exact solution for y'=0, y=1. Consistency adds condition (404b) from analyzing y'=1, y=0.",
+    "number": "404B",
+    "kind": "definition"
+  },
+  {
+    "number": "405A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "405B",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "α_i",
+        "definition": "coefficients of the linear multistep method, part of the method's definition"
+      },
+      {
+        "name": "k",
+        "definition": "step number of the linear multistep method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The context involves linear multistep methods, their convergence, and preconsistency. Theorem 405B states that a convergent linear multistep method is preconsistent, which is used in the proof of Theorem 405C. Preconsistency is defined by the condition 1 - α1 - α2 - ... - αk = 0.",
+    "number": "405C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "y",
+        "definition": "exact solution to the differential equation (406a)"
+      },
+      {
+        "name": "x",
+        "definition": "point in the interval [x0, x] where the solution is approximated"
+      },
+      {
+        "name": "x0",
+        "definition": "initial point where initial value information is given"
+      },
+      {
+        "name": "h",
+        "definition": "positive stepsize"
+      },
+      {
+        "name": "k",
+        "definition": "number of steps in the linear multistep method (implied by the method coefficients)"
+      },
+      {
+        "name": "α_i, β_i",
+        "definition": "coefficients of the linear multistep method, with i from 0 to k"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "406a",
+        "content": "y'(x) = f(y(x)) (autonomous ODE), with f Lipschitz continuous"
+      }
+    ],
+    "preamble": "The standard initial value problem is an autonomous ODE (406a) on [x0, x] with given initial value at x0, using positive stepsize h. The method is a consistent linear multistep method with coefficients α_i and β_i.",
+    "number": "406A",
+    "kind": "definition"
+  },
+  {
+    "number": "406B",
+    "kind": "lemma",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "406C",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "h",
+        "definition": "step size"
+      },
+      {
+        "name": "α_i",
+        "definition": "coefficients for past solution values in the linear multistep method"
+      },
+      {
+        "name": "β_i",
+        "definition": "coefficients for past derivative values in the linear multistep method"
+      },
+      {
+        "name": "k",
+        "definition": "number of steps in the linear multistep method"
+      },
+      {
+        "name": "y(x_n)",
+        "definition": "exact solution at x_n"
+      },
+      {
+        "name": "y_n",
+        "definition": "numerical approximation at x_n"
+      },
+      {
+        "name": "ε_n",
+        "definition": "global error y(x_n) - y_n"
+      },
+      {
+        "name": "f",
+        "definition": "function defining the ODE y' = f(x, y)"
+      },
+      {
+        "name": "L",
+        "definition": "Lipschitz constant for f"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "406d",
+        "content": "ε_n - Σ_{i=1}^k α_i ε_{n-i} = T_1 + T_2 + T_3"
+      },
+      {
+        "tag": "406e",
+        "content": "T_1 = h|β_0| |f(y(x_n)) - f(y_n)| ≤ hL|β_0|·|ε_n|"
+      },
+      {
+        "tag": "406f",
+        "content": "T_2 = h|Σ_{i=1}^k β_i (f(y(x_{n-i})) - f(y_{n-i}))| ≤ hL Σ_{i=1}^k |β_i| max_{i=1}^k |ε_{n-i}|"
+      }
+    ],
+    "preamble": "The theorem is about convergence of linear multistep methods for ODEs. The preceding text analyzes the global error ε_n = y(x_n) - y_n, using the method's coefficients α_i, β_i, step size h, and the Lipschitz condition on f. The proof manipulates an error equation (406d) to bound ε_n.",
+    "number": "406D",
+    "kind": "theorem"
+  },
+  {
+    "number": "410A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "410B",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "α",
+        "definition": "α is the generating polynomial for the coefficients α_i of the linear multistep method, typically α(z) = α_k z^k + α_{k-1} z^{k-1} + ... + α_0"
+      },
+      {
+        "name": "β",
+        "definition": "β is the generating polynomial for the coefficients β_i of the linear multistep method, typically β(z) = β_k z^k + β_{k-1} z^{k-1} + ... + β_0"
+      },
+      {
+        "name": "ρ",
+        "definition": "ρ is the characteristic polynomial of the linear multistep method, typically ρ(z) = α_k z^k + α_{k-1} z^{k-1} + ... + α_0"
+      },
+      {
+        "name": "σ",
+        "definition": "σ is the second characteristic polynomial of the linear multistep method, typically σ(z) = β_k z^k + β_{k-1} z^{k-1} + ... + β_0"
+      },
+      {
+        "name": "p",
+        "definition": "p is the order of the linear multistep method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "410c",
+        "content": "α(exp(−z)) − zβ(exp(−z)) = C0 + C1 z + C2 z^2 + ···"
+      }
+    ],
+    "preamble": "The context involves linear multistep methods for ODEs, represented in two notations: the [α, β] formulation and the traditional (ρ, σ) formulation. The order condition is derived from Taylor expansions of the method's difference equation, relating it to the generating polynomials evaluated at exp(z).",
+    "number": "410C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "α",
+        "definition": "α is the polynomial associated with the linear multistep method, typically α(z) = α_k z^k + α_{k-1} z^{k-1} + ... + α_0"
+      },
+      {
+        "name": "β",
+        "definition": "β is the polynomial associated with the linear multistep method, typically β(z) = β_k z^k + β_{k-1} z^{k-1} + ... + β_0"
+      },
+      {
+        "name": "p",
+        "definition": "p is the order of the linear multistep method"
+      },
+      {
+        "name": "log(1+z)",
+        "definition": "log(1+z) is defined for |z|<1 by its power series: log(1+z) = z - (1/2)z^2 + (1/3)z^3 - ..."
+      }
+    ],
+    "equations": [
+      {
+        "tag": "410d",
+        "content": "α((1+z)^{-1}) - log(1+z) β((1+z)^{-1}) = O(z^{p+1})"
+      }
+    ],
+    "preamble": "The theorem concerns the order condition for a linear multistep method [α, β]. The preceding text derives an alternative form of the order condition by substituting exp(z) with (1+z)^{-1} and using the power series for log(1+z).",
+    "number": "410D",
+    "kind": "theorem"
+  },
+  {
+    "number": "422A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "G1",
+        "definition": "the group of mappings from trees to real numbers, representing the underlying one-step method"
+      },
+      {
+        "name": "[α, β]",
+        "definition": "a linear multistep method with coefficients α and β"
+      },
+      {
+        "name": "η",
+        "definition": "a mapping from trees to real numbers, representing the underlying one-step method in G1"
+      },
+      {
+        "name": "r(t)",
+        "definition": "the order (or rank) of a tree t"
+      },
+      {
+        "name": "D",
+        "definition": "an operator on trees, likely related to differentiation or tree operations"
+      },
+      {
+        "name": "Φ",
+        "definition": "the mapping representing the underlying one-step method, related to η"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "422a",
+        "content": "1(u) − α1 η^{−1}(u) − α2 η^{−2}(u) − · · · − αk η^{−k}(u) − β0 D(u) − β1 η^{−1} D(u) − β2 η^{−2} D(u) − · · · − βk η^{−k} D(u) = 0"
+      },
+      {
+        "tag": "422b",
+        "content": "Not fully given in the text, but referenced as the mapping Φ that represents the underlying one-step method."
+      }
+    ],
+    "preamble": "The preceding text discusses the existence of a mapping η in the group G1 that satisfies equation (422a) for a preconsistent and stable linear multistep method [α, β]. This mapping is constructed inductively on the order of trees, and it represents the underlying one-step method of the multistep method.",
+    "number": "422B",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "[α, β]",
+        "definition": "a linear multistep method, with α and β being coefficient vectors"
+      },
+      {
+        "name": "η",
+        "definition": "a solution to equation (422a), representing a mapping from trees to real numbers (a member of G1), interpreted as the underlying one-step method"
+      },
+      {
+        "name": "yi",
+        "definition": "the numerical solution at step i, represented by η^i (the i-th power of η in the group G1)"
+      },
+      {
+        "name": "k",
+        "definition": "the number of steps in the linear multistep method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "422a",
+        "content": "1(u) − α1 η^{−1}(u) − α2 η^{−2}(u) − ··· − αk η^{−k}(u) − β0 D(u) − β1 η^{−1} D(u) − β2 η^{−2} D(u) − ··· − βk η^{−k} D(u) = 0, for all trees u"
+      }
+    ],
+    "preamble": "The context involves a preconsistent, stable linear multistep method [α, β] and a solution η to a functional equation (422a) defined on trees, where η is interpreted as the underlying one-step method in the group G1. The notation η^i represents the i-th power of η in this group, and yi is the numerical solution represented by η^i.",
+    "number": "422C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "P",
+        "definition": "a polynomial of degree n; its type is a triple (n1, n2, n3) where n1 is the number of zeros in the open unit disc, n2 on the unit circle, n3 outside the closed unit disc"
+      },
+      {
+        "name": "strongly stable",
+        "definition": "a polynomial with type (n, 0, 0), meaning all zeros are in the open unit disc"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns strong stability of polynomials, which is defined in the context of stability regions for linear multistep methods. A polynomial is strongly stable if all its zeros lie inside the open unit disc.",
+    "number": "431A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "a(z)",
+        "definition": "a(z) = a0 + a1 z + a2 z^2 + ... + ak z^k = (1+z)^k α((1-z)/(1+z))"
+      },
+      {
+        "name": "b(z)",
+        "definition": "b(z) = b0 + b1 z + b2 z^2 + ... + bk z^k = (1+z)^k β((1-z)/(1+z))"
+      },
+      {
+        "name": "a0, a1, ..., ak",
+        "definition": "coefficients of the polynomial a(z)"
+      },
+      {
+        "name": "k",
+        "definition": "degree of the polynomials a(z) and b(z)"
+      },
+      {
+        "name": "p",
+        "definition": "order of the method, such that certain expressions are O(z^p)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "441a",
+        "content": "(1+z)^k α((1-z)/(1+z)) * (z / log((1+z)/(1-z))) - (1+z)^k β((1-z)/(1+z)) = O(z^p)"
+      }
+    ],
+    "preamble": "The lemma concerns a stable linear multistep method for ODEs, where a(z) and b(z) are polynomials of degree k derived from the generating polynomials α and β. The coefficients a_i are defined via the expansion of a(z).",
+    "number": "441A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "c2, c4, ...",
+        "definition": "Coefficients in the expansion of the polynomial a(z) (or related polynomial) as a power series in z, likely from a(z) = c0 + c1 z + c2 z^2 + c4 z^4 + ... (with odd terms possibly zero)."
+      },
+      {
+        "name": "a(z)",
+        "definition": "A polynomial defined as a(z) = (1+z)^k − α1 (1+z)^(k−1)(1−z) − α2 (1+z)^(k−2)(1−z)^2 − · · · − αk (1−z)^k, related to the characteristic polynomial ρ(z) = z^k − α1 z^(k−1) − α2 z^(k−2) − · · · − αk."
+      },
+      {
+        "name": "α1, α2, ..., αk",
+        "definition": "Coefficients of the linear multistep method's characteristic polynomial ρ(z) = z^k − α1 z^(k−1) − α2 z^(k−2) − · · · − αk."
+      },
+      {
+        "name": "ρ(z)",
+        "definition": "The characteristic polynomial of a linear multistep method: ρ(z) = z^k − α1 z^(k−1) − α2 z^(k−2) − · · · − αk."
+      }
+    ],
+    "equations": [],
+    "preamble": "The lemma concerns the polynomial a(z) derived from the characteristic polynomial ρ(z) of a linear multistep method. The preceding text shows that a(z) has non-negative coefficients (with a1 > 0) due to its zeros having non-positive real parts. The statement refers to specific coefficients c2, c4, ... in the expansion of a(z) (or a related function).",
+    "number": "441B",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "k",
+        "definition": "the number of steps in the linear multistep method"
+      },
+      {
+        "name": "p",
+        "definition": "the order of the linear multistep method"
+      },
+      {
+        "name": "[α, β]",
+        "definition": "a stable linear multistep method, where α and β are the coefficient vectors defining the method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns the order of stable linear multistep methods. The preceding text discusses properties of coefficients related to stability and order, leading to the Dahlquist barrier result.",
+    "number": "441C",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "Φ",
+        "definition": "Φ(w, z) is a polynomial function of two complex variables, w ∈ W and z ∈ Z, with Z = W = C; it is the characteristic polynomial det(wI − M(z)) of the stability matrix of a multivalue method"
+      },
+      {
+        "name": "RΦ",
+        "definition": "the subset of W × Z defined by the relation Φ(w, z) = 0; it is a Riemann surface"
+      },
+      {
+        "name": "p",
+        "definition": "the order of the multivalue method, such that Φ(exp(z), z) = O(z^{p+1})"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text introduces order stars on Riemann surfaces for linear multistep methods, where Φ(w, z) is the characteristic polynomial of the stability matrix. The Riemann surface RΦ is defined by Φ(w, z) = 0, and the method has order p if Φ(exp(z), z) = O(z^{p+1}).",
+    "number": "442A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "Φ",
+        "definition": "Φ(w exp(z), z) = 0 defines a relationship between complex numbers z and w"
+      },
+      {
+        "name": "w",
+        "definition": "complex number related to z via Φ(w exp(z), z) = 0; on order arrows, w is real and positive"
+      },
+      {
+        "name": "z",
+        "definition": "complex number related to w via Φ(w exp(z), z) = 0"
+      },
+      {
+        "name": "order arrows",
+        "definition": "set of points for which w is real and positive; up arrows have w ∈ (1, ∞), down arrows have w ∈ [0, 1)"
+      },
+      {
+        "name": "principal sheet",
+        "definition": "neighbourhood of (0, 1) where the relationship between z and w is injective, behaving as though w is a function of z"
+      },
+      {
+        "name": "p",
+        "definition": "order of the method; on the principal sheet, w exp(z) = exp(z) + O(z^{p+1})"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns linear multistep methods, where stability and order are analyzed via a complex relation Φ(w exp(z), z) = 0. Order arrows and the principal sheet of the Riemann surface are used to study behavior near zero, analogous to one-step methods, leading to a bound on order for A-stable methods.",
+    "number": "443A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "C",
+        "definition": "error constant for an A-stable second order linear multistep method"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns A-stable second order linear multistep methods. The preceding text discusses error constants and specifically mentions the second order Adams–Moulton method, which has error constant -1/12, and uses the stability function (1 + 1/2 z)/(1 - 1/2 z) as a reference.",
+    "number": "443B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "M",
+        "definition": "matrix defined by equation (451e)"
+      },
+      {
+        "name": "[α, β]",
+        "definition": "one-leg method defined by generating polynomials α(z) and β(z)"
+      },
+      {
+        "name": "G",
+        "definition": "positive definite matrix used in the norm ||·||_G"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "451e",
+        "content": "M = [m_{ij}] where m_{ij} are coefficients from the identity involving G, α_i, β_i"
+      }
+    ],
+    "preamble": "The definition concerns G-stability for one-leg methods applied to nonlinear ODEs. The matrix M arises from an identity comparing differences between numerical solutions yn and zn, and its positive semi-definiteness ensures stability.",
+    "number": "451A",
+    "kind": "definition"
+  },
+  {
+    "variables": [],
+    "equations": [],
+    "preamble": "The theorem is about linear multistep methods and their stability properties. The preceding text introduces notation for analyzing order and local error, but the theorem statement itself is self-contained, referring only to the definitions of G-stability and A-stability, which are standard concepts in the context of numerical methods for ODEs.",
+    "number": "454A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "One of the four defining matrices of a general linear method"
+      },
+      {
+        "name": "U",
+        "definition": "One of the four defining matrices of a general linear method"
+      },
+      {
+        "name": "B",
+        "definition": "One of the four defining matrices of a general linear method"
+      },
+      {
+        "name": "V",
+        "definition": "One of the four defining matrices of a general linear method"
+      },
+      {
+        "name": "u",
+        "definition": "A vector characteristic of the method, such that the ith subvector in y^{[n-1]} represents u_i y(x_{n-1}) + v_i h y'(x_{n-1}) + O(h^2)"
+      },
+      {
+        "name": "v",
+        "definition": "A vector characteristic of the method, related to u and the method matrices"
+      },
+      {
+        "name": "h",
+        "definition": "Step size"
+      },
+      {
+        "name": "y^{[n-1]}",
+        "definition": "Vector of approximations from the preceding step"
+      }
+    ],
+    "equations": [],
+    "preamble": "A general linear method is defined by four matrices (A, U, B, V) and operates on a vector of approximations from the previous step. The method's behavior is characterized by vectors u and v, where u relates to the representation of the solution and its derivative in the input approximations.",
+    "number": "510A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "U",
+        "definition": "matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "B",
+        "definition": "matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "V",
+        "definition": "matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "u",
+        "definition": "preconsistency vector, an eigenvector of V with eigenvalue 1 satisfying U u = 1"
+      },
+      {
+        "name": "v",
+        "definition": "vector related to the method's accuracy, satisfying B1 + V v = u + v"
+      },
+      {
+        "name": "1",
+        "definition": "vector of all ones"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "510a",
+        "content": "V u = u"
+      },
+      {
+        "tag": "510b",
+        "content": "U u = 1"
+      }
+    ],
+    "preamble": "The text discusses general linear methods defined by matrices (A, U, B, V) for solving ODEs, focusing on conditions for preconsistency and consistency. Preconsistency requires a vector u such that V u = u and U u = 1, ensuring the method can solve y' = 1 exactly. Consistency adds a vector v satisfying B1 + V v = u + v, related to second-order accuracy.",
+    "number": "510B",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "V",
+        "definition": "V is the matrix from the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "A",
+        "definition": "A is one of the four defining matrices of a general linear method"
+      },
+      {
+        "name": "U",
+        "definition": "U is one of the four defining matrices of a general linear method"
+      },
+      {
+        "name": "B",
+        "definition": "B is one of the four defining matrices of a general linear method"
+      },
+      {
+        "name": "u",
+        "definition": "preconsistency vector satisfying V u = u and U u = 1"
+      },
+      {
+        "name": "v",
+        "definition": "vector such that B1 + V v = u + v for a consistent method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "510a",
+        "content": "V u = u"
+      },
+      {
+        "tag": "510b",
+        "content": "U u = 1"
+      },
+      {
+        "tag": "510c",
+        "content": "B1 + V v = u + v"
+      }
+    ],
+    "preamble": "The text discusses general linear methods defined by four matrices (A, U, B, V). Preconsistency and consistency conditions are defined using vectors u and v. Stability is defined in terms of the power-boundedness of the matrix V.",
+    "number": "510C",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "u",
+        "definition": "a non-zero vector in R^r"
+      },
+      {
+        "name": "φ",
+        "definition": "φ(h) is the starting approximation associated with the method and with a given initial value problem, mapping (0, ∞) → R^r"
+      },
+      {
+        "name": "y(x)",
+        "definition": "the exact solution to the initial value problem y'(x) = f(y(x)), y(x0) = y0"
+      },
+      {
+        "name": "f",
+        "definition": "f is the function defining the ODE y'(x) = f(y(x)), satisfying a Lipschitz condition"
+      },
+      {
+        "name": "y0",
+        "definition": "the initial value y(x0)"
+      },
+      {
+        "name": "x0",
+        "definition": "the initial point"
+      },
+      {
+        "name": "r",
+        "definition": "the number of stages or components in the general linear method (implied by the dimension of vectors in R^r)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "512a",
+        "content": "uy(x) = [u1 y(x); u2 y(x); ...; ur y(x)]^T, the desired limit of the approximation"
+      }
+    ],
+    "preamble": "The definition concerns convergence of a general linear method (A, U, B, V) for solving an initial value problem. The method uses a starting procedure φ(h) to produce an initial approximation vector in R^r, which should approach u y(x0) as h→0, where u is a fixed non-zero vector. The computed approximations y^{[n]} are obtained over n steps with stepsize h = (x - x0)/n, starting from y^{[0]} = φ(h).",
+    "number": "512A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "A, U, B, V",
+        "definition": "matrices defining a general linear method"
+      },
+      {
+        "name": "r",
+        "definition": "integer, dimension of vectors in the method (implied from context of u ∈ R^r)"
+      },
+      {
+        "name": "u",
+        "definition": "non-zero vector in R^r associated with the method"
+      },
+      {
+        "name": "φ(h)",
+        "definition": "starting procedure, φ : (0, ∞) → R^r, for the method"
+      },
+      {
+        "name": "y(x)",
+        "definition": "exact solution to the initial value problem y'(x) = f(y(x)), y(x0) = y0"
+      },
+      {
+        "name": "f",
+        "definition": "function defining the ODE, satisfying a Lipschitz condition"
+      },
+      {
+        "name": "y[n]",
+        "definition": "sequence of vectors computed by the method over n steps with stepsize h"
+      }
+    ],
+    "equations": [],
+    "preamble": "A general linear method is defined by matrices (A, U, B, V). Convergence is defined in Definition 512A, requiring that for any Lipschitz ODE, with appropriate starting procedure φ(h) and vector u, the computed vectors y[n] converge to uy(x).",
+    "number": "513A",
+    "kind": "theorem"
+  },
+  {
+    "number": "514A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "h",
+        "definition": "step size"
+      },
+      {
+        "name": "h0",
+        "definition": "upper bound on step size, h ∈ (0, h0]"
+      },
+      {
+        "name": "L",
+        "definition": "Lipschitz constant for f, also bounds derivative of solution"
+      },
+      {
+        "name": "A",
+        "definition": "s × s matrix of coefficients in the general linear method"
+      },
+      {
+        "name": "U",
+        "definition": "r × s matrix of coefficients in the general linear method"
+      },
+      {
+        "name": "v",
+        "definition": "r-vector of coefficients in the general linear method"
+      },
+      {
+        "name": "c",
+        "definition": "s-vector of stage abscissae, c = A1 + U v"
+      },
+      {
+        "name": "ui, vi",
+        "definition": "coefficients for input approximations, i = 1,...,r"
+      },
+      {
+        "name": "y(x)",
+        "definition": "exact solution of the initial value problem"
+      },
+      {
+        "name": "f",
+        "definition": "function defining the ODE, satisfies Lipschitz condition with constant L"
+      },
+      {
+        "name": "M",
+        "definition": "bound such that ||y(x)|| ≤ M and ||f(y)|| ≤ LM"
+      },
+      {
+        "name": "S",
+        "definition": "closed set in R^N containing all trajectory values of y(x)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The lemma analyzes the local truncation error for a general linear method applied to an ODE. The method uses internal stages Yi and input/output approximations combining y(x) and hy'(x). The problem assumes a Lipschitz condition on f and boundedness of the solution and its derivative.",
+    "number": "515A",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "y_i^[n]",
+        "definition": "exact solution at stage i of step n"
+      },
+      {
+        "name": "\\tilde{y}_i^[n]",
+        "definition": "computed solution at stage i of step n"
+      },
+      {
+        "name": "V_{ij}",
+        "definition": "coefficients in the error propagation relation (from Lemma 515A)"
+      },
+      {
+        "name": "L",
+        "definition": "Lipschitz constant for the function f"
+      },
+      {
+        "name": "\\eta_i",
+        "definition": "quantities defined in the preceding text, used to bound local truncation errors"
+      },
+      {
+        "name": "h",
+        "definition": "step size"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "515A",
+        "content": "Lemma 515A (conditions referenced but not fully stated here) provides conditions on the numerical method and error propagation."
+      },
+      {
+        "tag": "515c",
+        "content": "An inequality bounding the difference between exact and computed stage values, derived earlier in the subsection."
+      }
+    ],
+    "preamble": "The text analyzes the local truncation error for a Runge-Kutta-like method. It involves comparing exact stage values y_i^[n] and computed stage values \\tilde{y}_i^[n] over steps, using Lipschitz conditions and previous error bounds. Lemma 515B relates the errors at step n to errors at step n-1 plus a local term K^[n].",
+    "number": "515B",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "h",
+        "definition": "stepsize, h = (x - x0)/n"
+      },
+      {
+        "name": "n",
+        "definition": "number of steps"
+      },
+      {
+        "name": "x",
+        "definition": "final x value"
+      },
+      {
+        "name": "x0",
+        "definition": "initial x value"
+      },
+      {
+        "name": "r",
+        "definition": "number of subvectors in the method (size of external stages or history)"
+      },
+      {
+        "name": "y[i]_j",
+        "definition": "approximate solution component j at step i"
+      },
+      {
+        "name": "y_tilde[i]_j",
+        "definition": "perturbed or exact solution component j at step i"
+      },
+      {
+        "name": "V",
+        "definition": "matrix in the method (from stability analysis)"
+      },
+      {
+        "name": "alpha",
+        "definition": "parameter from stability bound (likely from V matrix power bound)"
+      },
+      {
+        "name": "beta",
+        "definition": "parameter from local truncation error bound"
+      }
+    ],
+    "equations": [],
+    "preamble": "The lemma provides a global error bound for a general linear method after n steps from x0 to x with stepsize h. The error vector E[i] collects differences between perturbed and base numerical solutions across r components at step i. The bound involves constants C (supremum of matrix norms V^i), alpha (exponential growth parameter), and beta (local error scaling).",
+    "number": "515C",
+    "kind": "lemma"
+  },
+  {
+    "variables": [
+      {
+        "name": "E",
+        "definition": "error vector or error quantity at step i, E[i]"
+      },
+      {
+        "name": "h",
+        "definition": "step size"
+      },
+      {
+        "name": "C",
+        "definition": "stability constant"
+      },
+      {
+        "name": "α",
+        "definition": "constant related to method coefficients"
+      },
+      {
+        "name": "β",
+        "definition": "constant related to truncation error"
+      },
+      {
+        "name": "η_i",
+        "definition": "bound on E[i] defined recursively"
+      }
+    ],
+    "equations": [],
+    "preamble": "The preceding text analyzes error bounds for a general linear method, deriving a difference equation for η_i that bounds the error E[i]. The proof uses stability and consistency assumptions to show convergence as h → 0.",
+    "number": "515D",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "A is the coefficient matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "U",
+        "definition": "U is the coefficient matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "B",
+        "definition": "B is the coefficient matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "V",
+        "definition": "V is the coefficient matrix in the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "z",
+        "definition": "z = hq, where h is the stepsize and q is the parameter in the test equation y'(x) = qy(x)"
+      },
+      {
+        "name": "M(z)",
+        "definition": "M(z) is an r × r matrix-valued function of z that relates the incoming vector y^{[n-1]} to the outgoing vector y^{[n]} via y^{[n]} = M(z)y^{[n-1]}"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "520a",
+        "content": "y'(x) = qy(x)"
+      },
+      {
+        "tag": "520b",
+        "content": "y^{[n]} = M(z)y^{[n-1]}"
+      }
+    ],
+    "preamble": "The definition concerns the stability matrix M(z) for a general linear method (A, U, B, V) applied to the linear test equation y' = qy, where z = hq. The method transforms an incoming vector y^{[n-1]} to an outgoing vector y^{[n]} via M(z).",
+    "number": "520A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "M(z)",
+        "definition": "stability matrix for a general linear method, defined as M(z) = V + zB(I - zA)^{-1}U"
+      },
+      {
+        "name": "z",
+        "definition": "z = hq, where h is the step size and q is the parameter from the linear test equation"
+      },
+      {
+        "name": "y^{[n-1]}",
+        "definition": "incoming vector of approximations at step n-1"
+      },
+      {
+        "name": "y^{[n]}",
+        "definition": "output vector of approximations at step n"
+      },
+      {
+        "name": "(A, U, B, V)",
+        "definition": "matrices defining the general linear method"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "520a",
+        "content": "y'(x) = qy(x)"
+      },
+      {
+        "tag": "520b",
+        "content": "y^{[n]} = M(z)y^{[n-1]}"
+      }
+    ],
+    "preamble": "The theorem concerns the stability analysis of general linear methods applied to the linear test equation y' = qy. The stability matrix M(z) is defined from the method's coefficients, and the theorem asserts that applying one step of the method yields the relation (520b) with z = hq.",
+    "number": "520B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "M(z)",
+        "definition": "stability matrix, an r × r matrix-valued function of the complex variable z"
+      },
+      {
+        "name": "(A, U, B, V)",
+        "definition": "a general linear method"
+      },
+      {
+        "name": "z",
+        "definition": "z = hq, where h is the stepsize and q is a complex parameter from the linear differential equation"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "520b",
+        "content": "y^{[n]} = M(z) y^{[n-1]}"
+      },
+      {
+        "tag": "520a",
+        "content": "y' = qy"
+      }
+    ],
+    "preamble": "The context involves general linear methods for solving linear differential equations, where the stability matrix M(z) describes the propagation of numerical solutions from step to step. The stability function and region are defined in terms of the characteristic polynomial and boundedness of powers of M(z).",
+    "number": "520C",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "M(z)",
+        "definition": "stability matrix for the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "Φ(w, z)",
+        "definition": "stability function, defined as det(wI - M(z)) (or its numerator if rational)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns the stability region of a general linear method defined by (A, U, B, V), where M(z) is the stability matrix and Φ(w, z) is the stability polynomial (or rational function). The stability region consists of complex z such that the powers of M(z) are bounded.",
+    "number": "520D",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "M(z)",
+        "definition": "stability matrix, a matrix function of z"
+      },
+      {
+        "name": "Φ(w, z)",
+        "definition": "stability function, given by Φ(w, z) = det(wI − M(z))"
+      },
+      {
+        "name": "stability region",
+        "definition": "subset of the complex plane such that if z is in this subset, then sup_{n=1}^{∞} ||M(z)^n|| < ∞"
+      },
+      {
+        "name": "instability region",
+        "definition": "complement of the stability region"
+      },
+      {
+        "name": "power-bounded",
+        "definition": "a matrix M is power-bounded if sup_{n≥1} ||M^n|| < ∞"
+      }
+    ],
+    "equations": [],
+    "preamble": "The discussion concerns stability properties of general linear methods for ODEs, focusing on the stability matrix M(z) and the stability function Φ(w,z). The stability region is defined in terms of boundedness of powers of M(z).",
+    "number": "520E",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "M(z)",
+        "definition": "the stability matrix of the general linear method, a function of the complex parameter z"
+      },
+      {
+        "name": "ρ(M(∞))",
+        "definition": "the spectral radius of M(z) as z → ∞"
+      }
+    ],
+    "equations": [],
+    "preamble": "The discussion concerns stability properties of general linear methods for ODEs. A-stability is defined as power-boundedness of M(z) for all z in the left half-plane. L-stability is a stronger property that additionally requires the spectral radius to vanish at infinity.",
+    "number": "520F",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "Φ(w, z)",
+        "definition": "stability function of the method"
+      },
+      {
+        "name": "M(z)",
+        "definition": "stability matrix of the general linear method"
+      },
+      {
+        "name": "ρ(M(∞))",
+        "definition": "spectral radius of M(∞)"
+      }
+    ],
+    "equations": [],
+    "preamble": "The text discusses stability properties (A-stability, L-stability) of general linear methods for ODEs, defined via a stability function Φ(w,z) and stability matrix M(z). The focus is on the relationship between stability and order.",
+    "number": "521A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "ν",
+        "definition": "ν = [ν0, ν1, ..., νk], representing the complexity of the stability function Φ, where νj is the z-degree of the coefficient of w^{k-j} in Φ"
+      },
+      {
+        "name": "Φ",
+        "definition": "Φ(w, z) = Σ_{j=0}^k w^{k-j} Σ_{l=0}^{νj} α_{jl} z^l, the stability function, with k as the w-degree and νj as the z-degree of the coefficient of w^{k-j}"
+      },
+      {
+        "name": "k",
+        "definition": "the w-degree of the stability function Φ"
+      },
+      {
+        "name": "νj",
+        "definition": "for j = 0, 1, ..., k, the z-degree of the coefficient of w^{k-j} in Φ, assumed to be ≥ -1 with strict inequality for j = 0 and j = k"
+      },
+      {
+        "name": "p*",
+        "definition": "the highest possible stability order for a given sequence ν"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "521a",
+        "content": "p* = Σ_{j=0}^k (νj + 1) - 2"
+      }
+    ],
+    "preamble": "The theorem concerns the stability function Φ(w, z) of a general linear method, parameterized by a complexity sequence ν = [ν0, ν1, ..., νk], where νj is the z-degree of the coefficient of w^{k-j}. The goal is to determine the maximum stability order p* achievable for a given ν.",
+    "number": "521B",
+    "kind": "theorem"
+  },
+  {
+    "number": "523A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Invalid control character at: line 5 column 88 (char 131)"
+  },
+  {
+    "variables": [
+      {
+        "name": "M",
+        "definition": "positive semi-definite (s + r) × (s + r) matrix defined by (523b)"
+      },
+      {
+        "name": "G",
+        "definition": "positive semi-definite r × r matrix"
+      },
+      {
+        "name": "D",
+        "definition": "positive semi-definite diagonal s × s matrix"
+      },
+      {
+        "name": "y^{[n-1]}",
+        "definition": "input vector to a single step of a general linear method"
+      },
+      {
+        "name": "y^{[n]}",
+        "definition": "output vector from a single step of a general linear method"
+      },
+      {
+        "name": "Y",
+        "definition": "vector of stage values"
+      },
+      {
+        "name": "F",
+        "definition": "vector of stage derivatives"
+      },
+      {
+        "name": "A, U, B, V",
+        "definition": "coefficient matrices defining a general linear method"
+      },
+      {
+        "name": "||·||_G",
+        "definition": "norm defined by ||x||_G^2 = <x, x>_G = x^T G x"
+      },
+      {
+        "name": "<·,·>_D",
+        "definition": "inner product defined as sum_{i=1}^s d_i <U_i, V_i> for diagonal D with elements d_i"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "523b",
+        "content": "M = [[D A + A^T D - B^T G B, D U - B^T G V]; [U^T D - V^T G B, G - V^T G V]]"
+      }
+    ],
+    "preamble": "The theorem concerns a general linear method defined by matrices (A, U, B, V), with stage values Y, stage derivatives F, input y^{[n-1]}, and output y^{[n]}. The matrix M is constructed from these matrices along with positive semi-definite matrices G and D as in (523b). The norm ||·||_G and inner product <·,·>_D are used.",
+    "number": "523B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "M",
+        "definition": "matrix given by (523b) (not fully defined in the provided text, but referenced as arising from non-linear stability and symplectic behavior studies)"
+      },
+      {
+        "name": "G",
+        "definition": "positive semi-definite symmetric r × r matrix (introduced in the definition as part of the condition for G-symplecticity)"
+      },
+      {
+        "name": "D",
+        "definition": "s × s diagonal matrix (introduced in the definition as part of the condition for G-symplecticity)"
+      },
+      {
+        "name": "A, U, B, V",
+        "definition": "submatrices making up a general linear method (not explicitly defined in the provided text, but standard notation for such methods)"
+      },
+      {
+        "name": "r",
+        "definition": "number of rows/columns in G and V (implicitly the dimension related to the method's structure)"
+      },
+      {
+        "name": "s",
+        "definition": "number of rows/columns in D, A, and B (implicitly the number of stages or similar in the method)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "(523b)",
+        "content": "M = [some expression involving A, U, B, V] (not fully defined in the provided text, but referenced as the matrix used in the characterization of symplectic behavior)"
+      },
+      {
+        "tag": "(357d)",
+        "content": "matrix M for Runge–Kutta methods (not fully defined in the provided text, but referenced in the context of non-linear stability and symplectic behavior)"
+      }
+    ],
+    "preamble": "The definition concerns general linear methods represented by matrices (A, U, B, V), building on prior discussions of symplectic behavior and the matrix M from non-linear stability analysis. The goal is to define G-symplecticity as an extension of symplectic properties when M = 0, using additional matrices G and D.",
+    "number": "525A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "S",
+        "definition": "a starting method, defined as a sequence of r generalized Runge–Kutta methods S1, S2, ..., Sr"
+      },
+      {
+        "name": "r",
+        "definition": "the number of generalized Runge–Kutta methods in the starting method S"
+      },
+      {
+        "name": "S_i",
+        "definition": "the i-th generalized Runge–Kutta method in the starting method S, for i = 1, 2, ..., r"
+      },
+      {
+        "name": "b0^{(i)}",
+        "definition": "a coefficient (presumably from the generalized Runge–Kutta method definition) for the i-th method S_i"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "530a",
+        "content": "the definition of the generalized Runge–Kutta methods that constitute the starting method S (exact form not provided in the preceding text, but referenced as the methods defining S)"
+      }
+    ],
+    "preamble": "A starting method S is a sequence of r generalized Runge–Kutta methods used to initialize a general linear method. Degeneracy depends on whether all these methods have a zero coefficient b0^{(i)}.",
+    "number": "530A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "M",
+        "definition": "a general linear method"
+      },
+      {
+        "name": "S",
+        "definition": "a starting method defined by generalized Runge-Kutta methods (530a) for i = 1,2,...,r"
+      },
+      {
+        "name": "SM",
+        "definition": "vector of results from carrying out a step of M based on initial approximations computed using S"
+      },
+      {
+        "name": "ES",
+        "definition": "vector of approximations formed by advancing the exact solution forward a time step h and then applying each member of S to the result"
+      },
+      {
+        "name": "p",
+        "definition": "order of the method (a non-negative integer)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "530a",
+        "content": "generalized Runge-Kutta methods defining the starting method S, with coefficients including b0^{(i)}"
+      }
+    ],
+    "preamble": "The context involves analyzing the order of a general linear method M when used with a starting method S. S is defined by generalized Runge-Kutta methods, and non-degeneracy requires at least one b0^{(i)} ≠ 0. SM and ES are vectors of approximations whose Taylor expansions are compared to define order.",
+    "number": "530B",
+    "kind": "definition"
+  },
+  {
+    "number": "530C",
+    "kind": "definition",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "variables": [
+      {
+        "name": "M",
+        "definition": "M = (A, U, B, V) denotes a general linear method"
+      },
+      {
+        "name": "S",
+        "definition": "S is a starting method"
+      },
+      {
+        "name": "ξ",
+        "definition": "ξ is the algebraic representation of the starting method S"
+      },
+      {
+        "name": "η",
+        "definition": "η is a vector defined by η = AηD + Uξ in G/Hp"
+      },
+      {
+        "name": "E",
+        "definition": "E is an operator (likely related to shifting or advancing the method)"
+      },
+      {
+        "name": "D",
+        "definition": "D is a differentiation operator"
+      },
+      {
+        "name": "G",
+        "definition": "G is a space (likely of functions or series)"
+      },
+      {
+        "name": "Hp",
+        "definition": "Hp is a subspace of G, with G/Hp denoting a quotient space"
+      },
+      {
+        "name": "p",
+        "definition": "p is an integer related to the order of truncation or the space Hp"
+      },
+      {
+        "name": "r(t)",
+        "definition": "r(t) is a function (likely the order of a tree t) used in Taylor expansions"
+      },
+      {
+        "name": "σ(t)",
+        "definition": "σ(t) is a symmetry coefficient for a tree t"
+      },
+      {
+        "name": "F(t)",
+        "definition": "F(t) is an elementary differential associated with a tree t"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "532e",
+        "content": "η = AηD + Uξ, interpreted in G/Hp"
+      },
+      {
+        "tag": "532f",
+        "content": "Eξ = BηD + Vξ, interpreted in G/Hp"
+      }
+    ],
+    "preamble": "The theorem concerns a general linear method M with algebraic representation ξ of a starting method S. Equations (532e) and (532f) hold in the quotient space G/Hp, where p relates to truncation order. The expression Eξ - BηD - Vξ in G represents a local truncation error-like quantity.",
+    "number": "532A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Coefficient matrix for the general linear method, part of the partitioned matrix [A U; B V]"
+      },
+      {
+        "name": "U",
+        "definition": "Coefficient matrix for the general linear method, part of the partitioned matrix [A U; B V]"
+      },
+      {
+        "name": "B",
+        "definition": "Coefficient matrix for the general linear method, part of the partitioned matrix [A U; B V]"
+      },
+      {
+        "name": "V",
+        "definition": "Coefficient matrix for the general linear method, part of the partitioned matrix [A U; B V]"
+      },
+      {
+        "name": "G-symplectic method",
+        "definition": "A type of general linear method that preserves symplectic structure when applied to Hamiltonian problems, with a specific matrix G"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "502b",
+        "content": "A Runge-Kutta method used to motivate the construction of the new method, referenced in the starting procedure"
+      },
+      {
+        "tag": "525d",
+        "content": "An example of a G-symplectic method mentioned as the second example in the subsection"
+      }
+    ],
+    "preamble": "The theorem presents a general linear method defined by a partitioned matrix [A U; B V], where A, U, B, V are coefficient matrices. The context discusses G-symplectic methods and their order analysis, with references to specific methods like (525d) and starting procedures involving Runge-Kutta methods.",
+    "number": "534A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "Part of the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "U",
+        "definition": "Part of the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "B",
+        "definition": "Part of the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "V",
+        "definition": "Part of the general linear method (A, U, B, V)"
+      },
+      {
+        "name": "u",
+        "definition": "First column of U, equal to e1 (first natural basis vector in R^r)"
+      },
+      {
+        "name": "e1",
+        "definition": "First member of the natural basis for R^r"
+      },
+      {
+        "name": "ξ",
+        "definition": "A function (or vector) appearing in the method equations"
+      },
+      {
+        "name": "ξ1",
+        "definition": "First component of ξ"
+      },
+      {
+        "name": "η",
+        "definition": "A function appearing in the method equations"
+      },
+      {
+        "name": "θ",
+        "definition": "Represents the underlying one-step method"
+      },
+      {
+        "name": "σ(Ṽ)",
+        "definition": "Spectrum (set of eigenvalues) of the matrix Ṽ"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "535a",
+        "content": "η(t) = A(ηD)(t) + U ξ(t)"
+      },
+      {
+        "tag": "535b",
+        "content": "(θξ)(t) = B(ηD)(t) + V ξ(t)"
+      }
+    ],
+    "preamble": "The theorem concerns a consistent general linear method (A, U, B, V) with u = e1, where U and V have specific block structures. The equations (535a) and (535b) define relationships involving η, ξ, and the method components, and the goal is to find a unique solution with ξ1 = 1.",
+    "number": "535A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "p",
+        "definition": "order and stage order of the method"
+      },
+      {
+        "name": "q",
+        "definition": "order and stage order of the method (here p = q)"
+      },
+      {
+        "name": "r",
+        "definition": "dimension of the vector φ(z), likely related to the number of external stages or the structure of the method"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages in the method"
+      },
+      {
+        "name": "A",
+        "definition": "matrix in the method definition, part of the coefficient matrix"
+      },
+      {
+        "name": "U",
+        "definition": "matrix in the method definition, part of the coefficient matrix"
+      },
+      {
+        "name": "B",
+        "definition": "matrix in the method definition, part of the coefficient matrix"
+      },
+      {
+        "name": "V",
+        "definition": "matrix in the method definition, part of the coefficient matrix"
+      },
+      {
+        "name": "c",
+        "definition": "vector of abscissae for the stages, with components c_i"
+      }
+    ],
+    "equations": [],
+    "preamble": "The theorem concerns DIMSIM methods (diagonally implicit multistage integration methods) with equal order and stage order p. The method is represented by a partitioned matrix with blocks A, U, B, V, where A is typically diagonal for parallel evaluation. The context discusses types of DIMSIM methods based on λ (diagonal element of A) for stiff/non-stiff problems.",
+    "number": "541A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "M(z)",
+        "definition": "stability matrix for a general linear method, M(z) = V + zB(I - zA)^{-1} U"
+      },
+      {
+        "name": "Φ(w, z)",
+        "definition": "characteristic polynomial of M(z), Φ(w, z) = det(wI - M(z))"
+      },
+      {
+        "name": "R(z)",
+        "definition": "stability function (a rational function)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "542a",
+        "content": "Φ(w, z) = det(wI - M(z))"
+      }
+    ],
+    "preamble": "The context discusses the stability properties of general linear methods, introducing the stability matrix M(z) and its characteristic polynomial Φ(w, z). The goal is to design methods whose stability resembles that of Runge-Kutta methods.",
+    "number": "542A",
+    "kind": "definition"
+  },
+  {
+    "variables": [
+      {
+        "name": "n",
+        "definition": "dimension of the matrix X, a positive integer"
+      },
+      {
+        "name": "X",
+        "definition": "n × n doubly companion matrix defined in (550a)"
+      },
+      {
+        "name": "α(z)",
+        "definition": "polynomial α(z) = 1 + α₁z + ··· + αₙzⁿ"
+      },
+      {
+        "name": "β(z)",
+        "definition": "polynomial β(z) = 1 + β₁z + ··· + βₙzⁿ"
+      },
+      {
+        "name": "α_i",
+        "definition": "coefficients of α(z), for i = 1,...,n"
+      },
+      {
+        "name": "β_i",
+        "definition": "coefficients of β(z), for i = 1,...,n"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "550a",
+        "content": "X = [[-α₁, -α₂, ..., -α_{n-1}, -α_n - β_n], [1, 0, ..., 0, -β_{n-1}], [0, 1, ..., 0, -β_{n-2}], ..., [0, 0, ..., 1, -β₁]]"
+      }
+    ],
+    "preamble": "The theorem concerns the characteristic polynomial of an n×n doubly companion matrix X, defined in terms of two given polynomials α(z) and β(z) of degree n. The matrix X is constructed from the coefficients α_i and β_i as shown in (550a).",
+    "number": "550A",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "X",
+        "definition": "doubly companion matrix"
+      },
+      {
+        "name": "φ(z)",
+        "definition": "vector given by (550b) with λ replaced by z"
+      },
+      {
+        "name": "λ",
+        "definition": "single n-fold eigenvalue of X"
+      },
+      {
+        "name": "α(z)",
+        "definition": "polynomial part of the condition (550d)"
+      },
+      {
+        "name": "β(z)",
+        "definition": "polynomial part of the condition (550d)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "(550b)",
+        "content": "V = [ v_{n-1} v_{n-2} ... 1 ]"
+      },
+      {
+        "tag": "(550d)",
+        "content": "α(z)β(z) = (1 - λz)^n + O(z^{n+1})"
+      }
+    ],
+    "preamble": "X is a doubly companion matrix with a single n-fold eigenvalue λ, satisfying condition (550d). The vector φ(z) is defined via (550b) with λ replaced by z.",
+    "number": "550B",
+    "kind": "theorem"
+  },
+  {
+    "variables": [
+      {
+        "name": "Ψ",
+        "definition": "A matrix (likely the eigenvector/generalized eigenvector matrix) such that Ψ^{-1}XΨ is a Jordan block with eigenvalue λ."
+      },
+      {
+        "name": "X",
+        "definition": "A companion matrix (or similar matrix) associated with a polynomial, as implied by the preceding derivation."
+      },
+      {
+        "name": "λ",
+        "definition": "An eigenvalue of the matrix X."
+      },
+      {
+        "name": "α1, α2, ..., αn-1",
+        "definition": "Coefficients appearing in the polynomial defining the companion matrix X (or related to its characteristic polynomial)."
+      },
+      {
+        "name": "n",
+        "definition": "The dimension of the matrix X (and thus of Ψ)."
+      },
+      {
+        "name": "χ(λ)",
+        "definition": "A row vector function of λ, defined as [1, λ+α1, λ^2+α1λ+α2, ..., λ^{n-1}+α1λ^{n-2}+...+α_{n-1}]."
+      }
+    ],
+    "equations": [],
+    "preamble": "The preceding text discusses the Jordan decomposition of a companion matrix X via a matrix Ψ whose columns are the eigenvector and generalized eigenvectors of X corresponding to eigenvalue λ. The corollary gives an explicit formula for the inverse of Ψ in terms of derivatives of a specific row vector χ(λ).",
+    "number": "550C",
+    "kind": "corollary"
+  },
+  {
+    "variables": [
+      {
+        "name": "A",
+        "definition": "coefficient matrix of the general linear method, assumed to have a diagonally implicit form with λ ≥ 0 on the diagonal"
+      },
+      {
+        "name": "U",
+        "definition": "coefficient matrix of the general linear method"
+      },
+      {
+        "name": "B",
+        "definition": "coefficient matrix of the general linear method"
+      },
+      {
+        "name": "V",
+        "definition": "coefficient matrix of the general linear method, assumed to be of the form (551a)"
+      },
+      {
+        "name": "p",
+        "definition": "order of the method, assumed equal to q"
+      },
+      {
+        "name": "q",
+        "definition": "stage order, assumed equal to p"
+      },
+      {
+        "name": "s",
+        "definition": "number of stages, assumed equal to r = p + 1"
+      },
+      {
+        "name": "r",
+        "definition": "number of pieces of information passed between steps, assumed equal to s = p + 1"
+      },
+      {
+        "name": "V̇",
+        "definition": "submatrix of V such that ρ(V̇) = 0, where ρ denotes spectral radius"
+      },
+      {
+        "name": "X",
+        "definition": "some matrix (not explicitly defined in the preceding text, but introduced in the definition)"
+      }
+    ],
+    "equations": [
+      {
+        "tag": "551a",
+        "content": "V = [[1, v], [0, V̇]]"
+      }
+    ],
+    "preamble": "The definition concerns a general linear method represented by matrices (A, U, B, V). The method is assumed to have p = q and s = r = p + 1, with A being diagonally implicit and V having a specific block structure. The concept of inherent Runge-Kutta stability imposes conditions on the matrices BA - XB and BU - XV + VX.",
+    "number": "551A",
+    "kind": "definition"
+  },
+  {
+    "number": "551B",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  },
+  {
+    "number": "553A",
+    "kind": "theorem",
+    "variables": [],
+    "equations": [],
+    "preamble": "",
+    "error": "Expecting value: line 1 column 1 (char 0)"
+  }
+]
