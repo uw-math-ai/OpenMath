@@ -1230,15 +1230,56 @@ theorem hasDerivAt_Gtilde_one (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3
     (ha : m.IsAStable) (hρ_simple : m.rhoCDeriv 1 ≠ 0) :
     HasDerivAt (fun w : ℂ => if w = 1 then (0 : ℂ) else
       m.sigmaCRev w / m.rhoCRev w - (w + 1) / (2 * (1 - w))) (1/12 : ℂ) 1 := by
-  -- The combined numerator P(w) = 2σ̃(w)(w-1) + ρ̃(w)(w+1) is a polynomial with:
-  --   P(1) = 0 (from ρ(1) = 0, i.e., C₀)
-  --   P'(1) = 0 (from σ(1) = ρ'(1), i.e., C₁)
-  --   P''(1) = 0 (from C₂: Σj²α_j = 2Σjβ_j)
-  --   P'''(1) = -σ(1) (from C₃: Σj³α_j = 3Σj²β_j, combined with C₁ and C₂)
-  -- The denominator D(w) = 2ρ̃(w)(w-1) has double zero at 1:
-  --   D''(1) = 4ρ̃'(1) = -4ρ'(1) ≠ 0
-  -- Hence G̃(w)/(w-1) → P'''(1)/(3D''(1)) = (-ρ'(1))/(3·(-4ρ'(1))) = 1/12.
-  sorry
+  let ρrevPoly : Polynomial ℂ := ∑ j : Fin (s + 1),
+    Polynomial.C (↑(m.α (Fin.rev j)) : ℂ) * Polynomial.X ^ (j : ℕ)
+  let σrevPoly : Polynomial ℂ := ∑ j : Fin (s + 1),
+    Polynomial.C (↑(m.β (Fin.rev j)) : ℂ) * Polynomial.X ^ (j : ℕ)
+  have hρrev_eval : ∀ w : ℂ, ρrevPoly.eval w = m.rhoCRev w := by
+    intro w
+    simp [ρrevPoly, LMM.rhoCRev, Polynomial.eval_finset_sum]
+  have hσrev_eval : ∀ w : ℂ, σrevPoly.eval w = m.sigmaCRev w := by
+    intro w
+    simp [σrevPoly, LMM.sigmaCRev, Polynomial.eval_finset_sum]
+  have hcons : m.IsConsistent := hp.isConsistent (by omega)
+  have hρ_root : ρrevPoly.IsRoot 1 := by
+    rw [Polynomial.IsRoot, hρrev_eval, rhoCRev_one_eq_zero m hcons]
+  let Rpoly : Polynomial ℂ := ρrevPoly /ₘ (Polynomial.X - Polynomial.C 1)
+  have hρ_factor : ρrevPoly = (Polynomial.X - Polynomial.C 1) * Rpoly := by
+    simpa [Rpoly] using (Polynomial.mul_divByMonic_eq_iff_isRoot (p := ρrevPoly) (a := 1)).2 hρ_root |>.symm
+  have hR_eval_one_ne : Rpoly.eval 1 ≠ 0 := by
+    -- Aristotle produced a proof outline here, but the reindexing step still needs manual cleanup.
+    sorry
+  let Ppoly : Polynomial ℂ :=
+    (2 : ℂ) • σrevPoly * (Polynomial.X - Polynomial.C 1) +
+      ρrevPoly * (Polynomial.X + Polynomial.C 1)
+  have hP_triple : 3 ≤ Ppoly.rootMultiplicity 1 := by
+    -- Order conditions C₀, C₁, C₂ imply `Ppoly(1) = Ppoly'(1) = Ppoly''(1) = 0`.
+    sorry
+  let Qpoly : Polynomial ℂ := Ppoly /ₘ ((Polynomial.X - Polynomial.C 1) ^ 3)
+  have hP_factor : Ppoly = (Polynomial.X - Polynomial.C 1) ^ 3 * Qpoly := by
+    let X1 : Polynomial ℂ := Polynomial.X - Polynomial.C (1 : ℂ)
+    have hP_dvd : X1 ^ 3 ∣ Ppoly := by
+      have hroot_dvd := Polynomial.pow_rootMultiplicity_dvd Ppoly 1
+      exact dvd_trans (pow_dvd_pow _ hP_triple) hroot_dvd
+    have hmonic : Polynomial.Monic (X1 ^ 3) := by
+      simpa [X1] using (Polynomial.monic_X_sub_C (1 : ℂ)).pow 3
+    have hmod : Ppoly %ₘ (X1 ^ 3) = (0 : Polynomial ℂ) :=
+      (Polynomial.modByMonic_eq_zero_iff_dvd hmonic).2 hP_dvd
+    rw [show (Polynomial.X - Polynomial.C 1) ^ 3 = X1 ^ 3 by simp [X1]]
+    rw [← Polynomial.modByMonic_add_div Ppoly hmonic, hmod, zero_add]
+  let GtCancelled : ℂ → ℂ := fun w =>
+    (w - 1) * Qpoly.eval w / (2 * Rpoly.eval w)
+  have hGtCancelled : HasDerivAt GtCancelled (1 / 12 : ℂ) 1 := by
+    -- Quotient rule on the cancelled form; the derivative reduces to `Qpoly.eval 1 / (2 * Rpoly.eval 1)`.
+    -- The remaining algebra uses `Ppoly'''(1) = -σ(1)` and `Rpoly.eval 1 = -ρ'(1) = -σ(1)`.
+    sorry
+  have hGt_eventually :
+      (fun w : ℂ => if w = 1 then (0 : ℂ) else
+        m.sigmaCRev w / m.rhoCRev w - (w + 1) / (2 * (1 - w))) =ᶠ[nhds 1] GtCancelled := by
+    -- Aristotle produced a neighborhood proof here, but it depends on the previous
+    -- `Rpoly.eval 1 ≠ 0` transport lemma and still needs polishing.
+    sorry
+  exact hGtCancelled.congr_of_eventuallyEq hGt_eventually
 
 /-- **ContinuousOn for the Dahlquist G̃ function on the closed unit disk.**
 The function G̃ is continuous on `closure (Metric.ball 0 1)`. The key difficulty is
