@@ -375,6 +375,43 @@ lemma bounded_pow_geom_decay (k : ℕ) (r : ℝ) (hr0 : 0 ≤ r) (hr1 : r < 1) :
     _ ≤ C := hC (Set.mem_range_self n)
     _ ≤ max C 0 := le_max_left _ _
 
+private lemma tupleSucc_minpoly_rootMultiplicity_eq_one_of_unit_eigenvalue
+    (m : LMM s) (hzs : m.IsZeroStable) (μ : ℂ)
+    (hμ : Module.End.HasEigenvalue m.toLinearRecurrence.tupleSucc μ) (hunit : ‖μ‖ = 1) :
+    (minpoly ℂ m.toLinearRecurrence.tupleSucc).rootMultiplicity μ = 1 := by
+  let E := m.toLinearRecurrence
+  let T := E.tupleSucc
+  have hroot : m.rhoC μ = 0 := tupleSucc_eigenvalue_is_rhoC_root m μ hμ
+  have hchar_one : E.charPoly.rootMultiplicity μ = 1 :=
+    charPoly_rootMultiplicity_of_unit_root m hzs μ hroot hunit
+  have h_mp_dvd : minpoly ℂ T ∣ E.charPoly :=
+    minpoly.dvd ℂ T (aeval_tupleSucc_charPoly_eq_zero E)
+  have hle : (minpoly ℂ T).rootMultiplicity μ ≤ E.charPoly.rootMultiplicity μ := by
+    have hpow :
+        (Polynomial.X - Polynomial.C μ) ^ (minpoly ℂ T).rootMultiplicity μ ∣ E.charPoly :=
+      dvd_trans (Polynomial.pow_rootMultiplicity_dvd (minpoly ℂ T) μ) h_mp_dvd
+    rw [Polynomial.le_rootMultiplicity_iff E.charPoly_monic.ne_zero]
+    exact hpow
+  have hpos : 0 < (minpoly ℂ T).rootMultiplicity μ := by
+    have hroot_mp : (minpoly ℂ T).IsRoot μ := Module.End.isRoot_of_hasEigenvalue hμ
+    exact (Polynomial.rootMultiplicity_pos (minpoly.ne_zero (Algebra.IsIntegral.isIntegral T))).2
+      hroot_mp
+  exact le_antisymm (by simpa [hchar_one] using hle) (Nat.succ_le_of_lt hpos)
+
+private lemma tupleSucc_eq_smul_on_unit_eigenspace
+    (m : LMM s) (hzs : m.IsZeroStable) (μ : ℂ) (hroot : m.rhoC μ = 0) (hunit : ‖μ‖ = 1)
+    (v : Module.End.maxGenEigenspace m.toLinearRecurrence.tupleSucc μ) :
+    m.toLinearRecurrence.tupleSucc v = μ • v := by
+  sorry
+
+private lemma tupleSucc_pow_bounded_on_disk_eigenspace
+    (m : LMM s) (hzs : m.IsZeroStable) (μ : ℂ) (hroot : m.rhoC μ = 0) (hdisk : ‖μ‖ < 1) :
+    ∃ C : ℝ, 0 ≤ C ∧ ∀ (n : ℕ)
+      (v : Module.End.maxGenEigenspace m.toLinearRecurrence.tupleSucc μ),
+      ‖(m.toLinearRecurrence.tupleSucc ^ n) v‖
+        ≤ C * ‖v‖ := by
+  sorry
+
 /-! ### Zero-stability implies stable recurrence
 
 The converse direction: if ρ satisfies the root condition, then every solution
