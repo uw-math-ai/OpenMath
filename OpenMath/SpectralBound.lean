@@ -67,7 +67,33 @@ lemma exists_bound_binom_geom (μ : ℂ) (hμ : ‖μ‖ < 1) (k : ℕ) :
 
 /-! ## Binomial expansion for commuting operators -/
 
-set_option maxHeartbeats 800000 in
+/-- Helper: applying `T` to the binomial expansion gives two shifted sums.
+Pure algebra, no hypothesis on `v` needed. -/
+lemma T_apply_binom_sum {V : Type*} [AddCommGroup V] [Module ℂ V]
+    (T : Module.End ℂ V) (μ : ℂ) (k n : ℕ) (v : V) :
+    T (∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n - j) • ((T - μ • 1) ^ j) v) =
+      ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n + 1 - j) • ((T - μ • 1) ^ j) v +
+      ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n - j) • ((T - μ • 1) ^ (j + 1)) v := by
+  simp +decide [ pow_succ', mul_assoc, mul_left_comm, Finset.mul_sum _ _ _, Finset.sum_add_distrib, sub_smul, smul_sub ]
+  simp +decide [ sub_eq_add_neg, add_assoc, add_left_comm, add_comm, Finset.sum_add_distrib, smul_smul, pow_succ' ]
+  rw [ neg_add_eq_zero ]
+  refine' Finset.sum_congr rfl fun x hx => _
+  by_cases h : n < x <;> simp_all +decide [ Nat.succ_sub, pow_succ, mul_assoc ]
+  simp +decide [ Nat.choose_eq_zero_of_lt h ]
+
+/-- Helper: Pascal-triangle re-folding of the two shifted sums into `range (k+1)` minus a
+boundary term. Pure algebra. -/
+lemma pascal_recombination_genEigenspace {V : Type*} [AddCommGroup V] [Module ℂ V]
+    (T : Module.End ℂ V) (μ : ℂ) (k n : ℕ) (v : V) :
+    ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n + 1 - j) • ((T - μ • 1) ^ j) v +
+      ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n - j) • ((T - μ • 1) ^ (j + 1)) v =
+      ∑ j ∈ Finset.range (k + 1), ((Nat.choose (n + 1) j) : ℂ) • μ ^ (n + 1 - j) • ((T - μ • 1) ^ j) v -
+      ((Nat.choose n k) : ℂ) • μ ^ (n + 1 - k) • ((T - μ • 1) ^ k) v := by
+  simp +decide [ Finset.sum_range_succ', Nat.choose_succ_succ ]
+  have := Finset.sum_range_sub ( fun x => ( n.choose x : ℂ ) • μ ^ ( n + 1 - x ) • ( ( T - μ • 1 ) ^ x ) v ) k
+  simp_all +decide [ add_smul, Finset.sum_add_distrib, pow_succ, mul_assoc, mul_left_comm, Finset.mul_sum _ _ _, Finset.sum_mul ]
+  grind
+
 /-- If (T - μ)^k v = 0, then T^n v = ∑_{j<k} C(n,j) μ^{n-j} (T-μ)^j v. -/
 lemma pow_apply_eq_sum_of_genEigenspace {V : Type*} [AddCommGroup V] [Module ℂ V]
     (T : Module.End ℂ V) (μ : ℂ) (k : ℕ) (v : V)
@@ -77,18 +103,8 @@ lemma pow_apply_eq_sum_of_genEigenspace {V : Type*} [AddCommGroup V] [Module ℂ
   introv
   induction' n with n ih generalizing v
   · cases k <;> simp_all +decide [ Finset.sum_range_succ' ]
-  · have h_expand_step : T (∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n - j) • ((T - μ • 1) ^ j) v) = ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n + 1 - j) • ((T - μ • 1) ^ j) v + ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n - j) • ((T - μ • 1) ^ (j + 1)) v := by
-      simp +decide [ pow_succ', mul_assoc, mul_left_comm, Finset.mul_sum _ _ _, Finset.sum_add_distrib, sub_smul, smul_sub ]
-      simp +decide [ sub_eq_add_neg, add_assoc, add_left_comm, add_comm, Finset.sum_add_distrib, smul_smul, pow_succ' ]
-      rw [ neg_add_eq_zero ]
-      refine' Finset.sum_congr rfl fun x hx => _
-      by_cases h : n < x <;> simp_all +decide [ Nat.succ_sub, pow_succ, mul_assoc ]
-      simp +decide [ Nat.choose_eq_zero_of_lt h ]
-    have h_expand_step : ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n + 1 - j) • ((T - μ • 1) ^ j) v + ∑ j ∈ Finset.range k, ((Nat.choose n j) : ℂ) • μ ^ (n - j) • ((T - μ • 1) ^ (j + 1)) v = ∑ j ∈ Finset.range (k + 1), ((Nat.choose (n + 1) j) : ℂ) • μ ^ (n + 1 - j) • ((T - μ • 1) ^ j) v - ((Nat.choose n k) : ℂ) • μ ^ (n + 1 - k) • ((T - μ • 1) ^ k) v := by
-      simp +decide [ Finset.sum_range_succ', Nat.choose_succ_succ ]
-      have := Finset.sum_range_sub ( fun x => ( n.choose x : ℂ ) • μ ^ ( n + 1 - x ) • ( ( T - μ • 1 ) ^ x ) v ) k
-      simp_all +decide [ add_smul, Finset.sum_add_distrib, pow_succ, mul_assoc, mul_left_comm, Finset.mul_sum _ _ _, Finset.sum_mul ]
-      grind
+  · have h_expand_step := T_apply_binom_sum T μ k n v
+    have h_expand_step := pascal_recombination_genEigenspace T μ k n v
     simp_all +decide [ pow_succ', mul_assoc, mul_left_comm, Finset.sum_range_succ ]
     simp_all +decide [ Module.End.mem_genEigenspace_nat ]
 
@@ -191,6 +207,57 @@ lemma maxGenEigenspace_le_one_of_charPoly_simple
   simp_all +decide [ Module.End.mem_genEigenspace, LinearMap.ext_iff ]
   obtain ⟨ l, hl ⟩ := hv; specialize h_inj l v l le_rfl hl; aesop
 
+/-! ## Per-component bound on maxGenEigenspace -/
+
+/-- For a vector in the maximal generalized eigenspace of `μ`, the iterates of `T` are
+uniformly bounded (relative to `‖w‖`). Handles three cases:
+* `‖μ‖ = 1` and `μ` is a simple eigenvalue: `w` is in the eigenspace, `T^n w = μ^n • w`.
+* `‖μ‖ < 1`: use `norm_pow_le_on_maxGenEigenspace`.
+* `μ` is not an eigenvalue: `w = 0`. -/
+lemma bound_on_maxGenEigenspace_component
+    {V : Type*} [NormedAddCommGroup V] [NormedSpace ℂ V] [FiniteDimensional ℂ V]
+    (T : Module.End ℂ V)
+    (h_norm : ∀ μ : ℂ, T.HasEigenvalue μ → ‖μ‖ ≤ 1)
+    (h_simple : ∀ μ : ℂ, T.HasEigenvalue μ → ‖μ‖ = 1 →
+      T.maxGenEigenspace μ = T.eigenspace μ)
+    (μ : ℂ) (w : V) (hw : w ∈ T.maxGenEigenspace μ) :
+    ∃ C : ℝ, 0 ≤ C ∧ ∀ n : ℕ, ‖(T ^ n) w‖ ≤ C * ‖w‖ := by
+  -- Destructure maxGenEigenspace membership into an explicit k
+  obtain ⟨k, hk⟩ := (Module.End.mem_maxGenEigenspace T μ w).mp hw
+  have hv_in : w ∈ (T.genEigenspace μ) (k : ℕ∞) := by
+    rw [Module.End.mem_genEigenspace_nat]; exact hk
+  by_cases hμ_eigen : T.HasEigenvalue μ
+  · by_cases hμ_norm : ‖μ‖ = 1
+    · -- ‖μ‖ = 1: w is in eigenspace (by simplicity), so T^n w = μ^n • w, ‖T^n w‖ = ‖w‖
+      have h_eig : w ∈ T.eigenspace μ := by
+        rw [← h_simple μ hμ_eigen hμ_norm]; exact hw
+      refine ⟨1, zero_le_one, fun n => ?_⟩
+      have h_pow : (T ^ n) w = μ ^ n • w := by
+        induction n with
+        | zero => simp
+        | succ n ih =>
+          rw [pow_succ, Module.End.mul_apply, Module.End.mem_eigenspace_iff.mp h_eig, map_smul,
+              ih, smul_smul, pow_succ, mul_comm]
+      rw [h_pow, norm_smul, norm_pow, hμ_norm, one_pow, one_mul]
+    · -- ‖μ‖ < 1: use norm_pow_le_on_maxGenEigenspace
+      exact norm_pow_le_on_maxGenEigenspace T μ (h_norm μ hμ_eigen) k w hv_in
+        (fun h_eq => absurd h_eq hμ_norm)
+  · -- μ is not an eigenvalue: w = 0 (since (T - μ • 1) is injective, so is its k-th power)
+    have h_eig_bot : T.eigenspace μ = ⊥ := by
+      by_contra h_ne
+      exact hμ_eigen (Module.End.hasEigenvalue_iff.mpr h_ne)
+    have h_ker_bot : LinearMap.ker (T - μ • 1) = ⊥ := by
+      rw [← Module.End.eigenspace_def]; exact h_eig_bot
+    have h_inj : Function.Injective ((T - μ • 1) : V →ₗ[ℂ] V) :=
+      LinearMap.ker_eq_bot.mp h_ker_bot
+    have h_pow_inj : Function.Injective (⇑((T - μ • 1) ^ k) : V → V) := by
+      rw [Module.End.coe_pow]; exact h_inj.iterate k
+    have h_zero : w = 0 := by
+      have heq : ((T - μ • 1) ^ k) w = ((T - μ • 1) ^ k) 0 := by rw [hk, map_zero]
+      exact h_pow_inj heq
+    refine ⟨0, le_refl 0, fun n => ?_⟩
+    rw [h_zero, map_zero, norm_zero, zero_mul]
+
 /-! ## Main spectral bound theorem -/
 
 /-
@@ -198,7 +265,6 @@ On a finite-dimensional complex normed space, if every eigenvalue of T has
     ‖μ‖ ≤ 1 and every eigenvalue with ‖μ‖ = 1 has maxGenEigenspace = eigenspace,
     then T has uniformly bounded iterates.
 -/
-set_option maxHeartbeats 1600000 in
 lemma uniformly_bounded_iterates_of_spectral_bound
     {V : Type*} [NormedAddCommGroup V] [NormedSpace ℂ V] [FiniteDimensional ℂ V]
     (T : Module.End ℂ V)
@@ -218,43 +284,16 @@ lemma uniformly_bounded_iterates_of_spectral_bound
       rw [ Submodule.mem_iSup_iff_exists_finsupp ] at h_decomp;
       obtain ⟨ f, hf₁, hf₂ ⟩ := h_decomp; exact ⟨ f.support, fun μ => f μ, hf₂.symm, fun μ hμ => hf₁ μ ⟩ ;
     obtain ⟨ μs, v, hv₁, hv₂ ⟩ := h_decomp
-    have h_bound_v : ∀ μ ∈ μs, ∃ C_μ : ℝ, 0 ≤ C_μ ∧ ∀ n : ℕ, ‖(T ^ n) (v μ)‖ ≤ C_μ * ‖v μ‖ := by
-      intro μ hμ
-      by_cases hμ_eigen : T.HasEigenvalue μ
-      generalize_proofs at *; (
-      by_cases hμ_norm : ‖μ‖ = 1 <;> simp_all +decide [ Module.End.HasUnifEigenvector ];
-      · have h_eigenspace : v μ ∈ T.eigenspace μ := by
-          have heq := h_simple μ hμ_eigen hμ_norm
-          have h_in_max : v μ ∈ T.maxGenEigenspace μ :=
-            (Module.End.mem_maxGenEigenspace T μ (v μ)).mpr (hv₂ μ hμ)
-          rw [heq] at h_in_max
-          exact h_in_max
-        generalize_proofs at *; (
-        use 1; simp [h_eigenspace];
-        intro n; induction' n with n ih <;> simp_all +decide [ pow_succ', Module.End.mem_eigenspace_iff ] ;
-        -- Since $T$ is linear, we have $T((T^n)(v μ)) = (T^n)(T(v μ))$.
-        have h_linear : T ((T ^ n) (v μ)) = (T ^ n) (T (v μ)) := by
-          exact Nat.recOn n ( by simp +decide ) fun n ihn => by simp +decide [ *, pow_succ' ] ;
-        generalize_proofs at *; (
-        simp_all +decide [ norm_smul ]));
-      · have := norm_pow_le_on_maxGenEigenspace T μ ( h_norm μ hμ_eigen ) ( Classical.choose ( hv₂ μ hμ ) ) ( v μ ) ( by
-          have := Classical.choose_spec ( hv₂ μ hμ ) ; simp_all +decide [ Module.End.genEigenspace ] ;
-          exact Submodule.mem_iSup_of_mem ( Classical.choose ( hv₂ μ hμ ) ) ( Submodule.mem_iSup_of_mem le_rfl this ) ) ( by
-          intro h_eq; exfalso; exact hμ_norm h_eq )
-        generalize_proofs at *; (
-        exact this));
-      simp_all +decide [ Module.End.HasUnifEigenvector ];
-      obtain ⟨ k, hk ⟩ := hv₂ μ hμ
-      have h_zero : v μ = 0 := by
-        contrapose! hμ_eigen; simp_all +decide [ Module.End.HasUnifEigenvalue ] ;
-        simp_all +decide [ Submodule.eq_bot_iff ];
-        induction' k with k ih generalizing v <;> simp_all +decide [ pow_succ', sub_smul ];
-        grind
-      use 0
-      simp [h_zero]
-    generalize_proofs at *; (
-    choose! C hC₁ hC₂ using h_bound_v; use ∑ μ ∈ μs, C μ * ‖v μ‖; simp_all +decide [ Finset.sum_mul _ _ _ ] ;
-    exact ⟨ Finset.sum_nonneg fun μ hμ => mul_nonneg ( hC₁ μ hμ ) ( norm_nonneg _ ), fun n => le_trans ( norm_sum_le _ _ ) ( Finset.sum_le_sum fun μ hμ => hC₂ μ hμ n ) ⟩);
+    have h_bound_v : ∀ μ ∈ μs, ∃ C_μ : ℝ, 0 ≤ C_μ ∧ ∀ n : ℕ, ‖(T ^ n) (v μ)‖ ≤ C_μ * ‖v μ‖ :=
+      fun μ hμ => bound_on_maxGenEigenspace_component T h_norm h_simple μ (v μ) (hv₂ μ hμ)
+    choose! C hC₁ hC₂ using h_bound_v
+    refine ⟨∑ μ ∈ μs, C μ * ‖v μ‖, Finset.sum_nonneg fun μ hμ => mul_nonneg (hC₁ μ hμ) (norm_nonneg _),
+      fun n => ?_⟩
+    calc ‖(T ^ n) (basis i)‖
+        = ‖(T ^ n) (∑ μ ∈ μs, v μ)‖ := by rw [hv₁]
+      _ = ‖∑ μ ∈ μs, (T ^ n) (v μ)‖ := by rw [map_sum]
+      _ ≤ ∑ μ ∈ μs, ‖(T ^ n) (v μ)‖ := norm_sum_le _ _
+      _ ≤ ∑ μ ∈ μs, C μ * ‖v μ‖ := Finset.sum_le_sum fun μ hμ => hC₂ μ hμ n
   choose C hC_nonneg hC_bound using h_bound_basis;
   -- By the properties of the norm, we can bound the norm of $T^n v$ by the sum of the norms of $T^n b_i$.
   have h_norm_bound : ∀ n : ℕ, ∀ v : V, ‖(T ^ n) v‖ ≤ ∑ i : Fin (Module.finrank ℂ V), ‖(basis.repr v) i‖ * C i := by
