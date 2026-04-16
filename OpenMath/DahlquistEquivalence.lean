@@ -1,4 +1,5 @@
 import OpenMath.MultistepMethods
+import OpenMath.SpectralBound
 import Mathlib.Topology.MetricSpace.Bounded
 
 /-!
@@ -652,21 +653,25 @@ theorem uniformly_bounded_tupleSucc_iterates (m : LMM s) (hzs : m.IsZeroStable) 
     refine ⟨1, le_of_lt one_pos, fun n v => ?_⟩
     have heq : (m.toLinearRecurrence.tupleSucc^[n]) v = v := Subsingleton.elim _ _
     rw [heq, one_mul]
-  · -- s > 0: use eigenvalue analysis
-    set E := m.toLinearRecurrence
-    set T := E.tupleSucc
-    -- All eigenvalues of T are roots of ρ (sub-lemma 3)
-    -- and hence satisfy |μ| ≤ 1 (zero-stability)
-    have h_eigbound : ∀ μ, Module.End.HasEigenvalue T μ → ‖μ‖ ≤ 1 :=
-      fun μ hμ => hzs.roots_in_disk μ (tupleSucc_eigenvalue_is_rhoC_root m μ hμ)
-    -- T satisfies its charPoly (sub-lemma 1), so minpoly | charPoly
-    have h_mp_dvd : minpoly ℂ T ∣ E.charPoly :=
-      minpoly.dvd ℂ T (aeval_tupleSucc_charPoly_eq_zero E)
-    -- Decomposition over ℂ (algebraically closed):
-    -- ⨆ μ, T.maxGenEigenspace μ = ⊤
-    have h_decomp := Module.End.iSup_maxGenEigenspace_eq_top T
-    -- Remaining: combine eigenvalue bounds with decomposition to get ‖T^n‖ ≤ M
-    sorry
+  · -- s > 0: apply the spectral bound from SpectralBound.lean
+    obtain ⟨M, hM_nonneg, hM_bound⟩ := uniformly_bounded_iterates_of_spectral_bound
+      (m.toLinearRecurrence.tupleSucc)
+      (fun μ hμ => hzs.roots_in_disk μ (tupleSucc_eigenvalue_is_rhoC_root m μ hμ))
+      (fun μ hμ hμ' => by
+        -- μ has ‖μ‖ = 1, so it's a simple root of charPoly by zero-stability
+        have h_root : m.rhoC μ = 0 := tupleSucc_eigenvalue_is_rhoC_root m μ hμ
+        have h_mult : m.toLinearRecurrence.charPoly.rootMultiplicity μ = 1 :=
+          charPoly_rootMultiplicity_of_unit_root m hzs μ h_root hμ'
+        apply le_antisymm
+        · intro v hv
+          exact maxGenEigenspace_le_one_of_charPoly_simple
+            m.toLinearRecurrence.tupleSucc m.toLinearRecurrence.charPoly
+            (aeval_tupleSucc_charPoly_eq_zero m.toLinearRecurrence) μ h_mult v hv
+        · exact Module.End.eigenspace_le_maxGenEigenspace)
+    refine ⟨M, hM_nonneg, fun n v => ?_⟩
+    -- Connect tupleSucc^[n] (function iteration) to tupleSucc^n (LinearMap power)
+    have := hM_bound n v
+    rwa [Module.End.coe_pow] at this
 
 /-- **Zero-stability implies stable recurrence.**
   If all roots of ρ lie in the closed unit disk with simple unit-circle roots,
