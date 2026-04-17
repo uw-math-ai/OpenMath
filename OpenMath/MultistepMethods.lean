@@ -1355,19 +1355,18 @@ private lemma reversed_poly_C2_condition (m : LMM s) (hp : m.HasOrder p) (hp2 : 
   linear_combination (↑s : ℂ) ^ 2 * hC₀ - 2 * (↑s : ℂ) * hC₁ + hV₂
 
 /-- The C₃ order condition via reversed polynomials:
-  3σ̃''(1) + ρ̃'''(1) + 3ρ̃''(1) = 0 for methods of order ≥ 3.
+  6σ̃''(1) + 2ρ̃'''(1) + 3ρ̃''(1) - ρ̃'(1) = 0 for methods of order ≥ 3.
 This is the third-order identity needed in the cancelled derivative computation. -/
 private lemma reversed_poly_C3_condition (m : LMM s) (hp : m.HasOrder p) (hp3 : 3 ≤ p) :
     let ρrevPoly := ∑ j : Fin (s + 1), Polynomial.C (↑(m.α (Fin.rev j)) : ℂ) *
       Polynomial.X ^ (j : ℕ)
     let σrevPoly := ∑ j : Fin (s + 1), Polynomial.C (↑(m.β (Fin.rev j)) : ℂ) *
       Polynomial.X ^ (j : ℕ)
-    3 * σrevPoly.derivative.derivative.eval (1 : ℂ) +
-      ρrevPoly.derivative.derivative.derivative.eval (1 : ℂ) +
-      3 * ρrevPoly.derivative.derivative.eval (1 : ℂ) = 0 := by
+    6 * σrevPoly.derivative.derivative.eval (1 : ℂ) +
+      2 * ρrevPoly.derivative.derivative.derivative.eval (1 : ℂ) +
+      3 * ρrevPoly.derivative.derivative.eval (1 : ℂ) -
+      ρrevPoly.derivative.eval (1 : ℂ) = 0 := by
   intro ρrevPoly σrevPoly
-  -- This is the C₃ analogue of `reversed_poly_C2_condition`.
-  -- The proof is deferred while the derivative scaffold is set up for Aristotle/manual completion.
   sorry
 
 /-- **HasDerivAt for the Dahlquist G̃ function at w = 1.**
@@ -1502,10 +1501,8 @@ theorem hasDerivAt_Gtilde_one (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3
     have hd_ne : d 1 ≠ 0 := by
       dsimp [d]
       exact mul_ne_zero two_ne_zero hR_eval_one_ne
-    have hdiv : HasDerivAt GtCancelled (Qpoly.eval 1 / (2 * Rpoly.eval 1)) 1 := by
-      -- This is the quotient-rule reduction from the cancelled form to the scalar ratio
-      -- `Qpoly.eval 1 / (2 * Rpoly.eval 1)`.
-      sorry
+    have hdiv : HasDerivAt GtCancelled (Qpoly.eval 1 / (2 * Rpoly.eval 1)) 1 :=
+      (hn.div hd hd_ne).congr_deriv (by dsimp [n, d]; simp [sub_self]; field_simp [mul_ne_zero two_ne_zero hR_eval_one_ne])
     have hQpoly_eq_Q₃ : Qpoly = Q₃ := by
       have hX1pow : Ppoly = X1 ^ 3 * Q₃ := by
         rw [hPpoly_eq, hQ₂, hQ₃]
@@ -1527,7 +1524,61 @@ theorem hasDerivAt_Gtilde_one (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3
       apply (eq_div_iff two_ne_zero).2
       simpa [two_mul, mul_comm, add_comm, add_left_comm, add_assoc] using hderiv.symm
     have hQ₁pp : Q₁.derivative.derivative.eval 1 = -m.rhoCDeriv 1 / 3 := by
-      sorry
+      have hC3 := reversed_poly_C3_condition m hp hp3
+      have hR_eq : Rpoly.eval 1 = ρrevPoly.derivative.eval 1 := by
+        conv_rhs => rw [hρ_factor, Polynomial.derivative_mul]
+        simp [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+          Polynomial.eval_X, Polynomial.eval_one,
+          Polynomial.derivative_sub, Polynomial.derivative_X]
+      have hR'_eq : 2 * Rpoly.derivative.eval 1 = ρrevPoly.derivative.derivative.eval 1 := by
+        conv_rhs => rw [hρ_factor]
+        simp [Polynomial.derivative_mul, Polynomial.derivative_add, Polynomial.derivative_sub,
+          Polynomial.derivative_X,
+          Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+          Polynomial.eval_X, Polynomial.eval_one]
+        ring
+      have hR''_eq : 3 * Rpoly.derivative.derivative.eval 1 =
+          ρrevPoly.derivative.derivative.derivative.eval 1 := by
+        conv_rhs => rw [hρ_factor]
+        simp [Polynomial.derivative_mul, Polynomial.derivative_add, Polynomial.derivative_sub,
+          Polynomial.derivative_X,
+          Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+          Polynomial.eval_X, Polynomial.eval_one]
+        ring
+      have hQ₁pp_expand :
+          3 * Q₁.derivative.derivative.eval 1 =
+            6 * σrevPoly.derivative.derivative.eval 1 +
+              6 * Rpoly.derivative.derivative.eval 1 +
+              6 * Rpoly.derivative.eval 1 := by
+        rw [hQ₁_def]
+        simp [Polynomial.derivative_add, Polynomial.derivative_mul,
+          Polynomial.derivative_X,
+          Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_smul,
+          Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+        ring
+      have hmain : 3 * Q₁.derivative.derivative.eval 1 = -m.rhoCDeriv 1 := by
+        have hQ₁pp_expand' :
+            3 * Q₁.derivative.derivative.eval 1 =
+              6 * σrevPoly.derivative.derivative.eval 1 +
+                2 * ρrevPoly.derivative.derivative.derivative.eval 1 +
+                3 * ρrevPoly.derivative.derivative.eval 1 := by
+          have hR''_eq' : 6 * Rpoly.derivative.derivative.eval 1 =
+              2 * ρrevPoly.derivative.derivative.derivative.eval 1 := by
+            linear_combination (2 : ℂ) * hR''_eq
+          have hR'_eq' : 6 * Rpoly.derivative.eval 1 =
+              3 * ρrevPoly.derivative.derivative.eval 1 := by
+            linear_combination (3 : ℂ) * hR'_eq
+          rw [hQ₁pp_expand, hR''_eq', hR'_eq']
+        calc
+          3 * Q₁.derivative.derivative.eval 1
+              = 6 * σrevPoly.derivative.derivative.eval 1 +
+                  2 * ρrevPoly.derivative.derivative.derivative.eval 1 +
+                  3 * ρrevPoly.derivative.derivative.eval 1 := hQ₁pp_expand'
+          _ = ρrevPoly.derivative.eval 1 := by
+            linear_combination hC3
+          _ = -m.rhoCDeriv 1 := rhoCRev_poly_derivative_eval_one m hcons
+      apply (eq_div_iff (by norm_num : (3 : ℂ) ≠ 0)).2
+      simpa [mul_comm] using hmain
     have hscalar : Qpoly.eval 1 / (2 * Rpoly.eval 1) = (1 / 12 : ℂ) := by
       rw [hQpoly_eq_Q₃, hQ₃_val, hQ₂'_val, hQ₁pp, hR_val]
       field_simp [hρ_simple]
