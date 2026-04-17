@@ -325,9 +325,9 @@
     "status": "unformalized"
   },
   "def:355A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/OrderStars.lean",
+    "lean_symbol": "orderStarPlus",
+    "status": "done"
   },
   "thm:355B": {
     "lean_file": null,
