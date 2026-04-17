@@ -5,6 +5,7 @@
 #   1. Restores NVMe toolchain + Mathlib cache (if /tmp was wiped)
 #   2. Sets up the crontab for the 12h monitor
 #   3. Starts the autonomous loop in the background
+#   4. Starts the watchdog to auto-restart the loop if it dies
 #
 # Usage:
 #   bash scripts/start.sh           # full setup + start loop
@@ -152,8 +153,8 @@ fi
 # ─── Step 6: Start the loop ─────────────────────────────────────────────────
 echo "=== Step 6: Starting Loop ==="
 
-if pgrep -f "autonomous_loop.py" > /dev/null 2>&1; then
-    echo "  [SKIP] Loop already running (PID $(pgrep -f autonomous_loop.py | head -1))"
+if pgrep -f "autonomous_loop.py --loop" > /dev/null 2>&1; then
+    echo "  [SKIP] Loop already running (PID $(pgrep -f 'autonomous_loop.py --loop' | head -1))"
 else
     mkdir -p "$LOG_DIR/task_results" "$LOG_DIR/issues"
     nohup python3 "$PROJECT_ROOT/scripts/autonomous_loop.py" --loop \
@@ -169,8 +170,27 @@ else
     fi
 fi
 
+# ─── Step 7: Start the watchdog ────────────────────────────────────────────
+echo "=== Step 7: Starting Watchdog ==="
+
+if pgrep -f "autonomous_loop.py --watchdog" > /dev/null 2>&1; then
+    echo "  [SKIP] Watchdog already running (PID $(pgrep -f 'autonomous_loop.py --watchdog' | head -1))"
+else
+    nohup python3 "$PROJECT_ROOT/scripts/autonomous_loop.py" --watchdog \
+        >> /tmp/autonomous_watchdog.log 2>&1 &
+    WD_PID=$!
+    sleep 1
+    if kill -0 $WD_PID 2>/dev/null; then
+        echo "  [OK] Watchdog started (PID $WD_PID)"
+        echo "  Logs: /tmp/autonomous_watchdog.log"
+    else
+        echo "  [ERROR] Watchdog failed to start — check /tmp/autonomous_watchdog.log"
+    fi
+fi
+
 echo ""
 echo "=== All done ==="
 echo "Monitor: cron every 12h"
 echo "Loop: running (cooldown 5min between cycles)"
+echo "Watchdog: running (check every 5min, max 10 restarts)"
 echo "Telegram alerts: $([ -f "$PROJECT_ROOT/.env" ] && grep -q TELEGRAM "$PROJECT_ROOT/.env" && echo 'configured' || echo 'not configured')"

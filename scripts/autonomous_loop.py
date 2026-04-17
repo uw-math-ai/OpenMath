@@ -9,6 +9,7 @@ Usage:
     python scripts/autonomous_loop.py --loop           # run continuously
     python scripts/autonomous_loop.py --once           # run one cycle
     python scripts/autonomous_loop.py --worker-only    # Phase 1: worker only
+    python scripts/autonomous_loop.py --watchdog       # monitor & restart loop
 """
 
 import argparse
@@ -36,6 +37,8 @@ HISTORY_FILE = STATE / "history.jsonl"
 STRATEGY_FILE = STATE / "strategy.md"
 ATTEMPTS_FILE = STATE / "attempts.md"
 LOCK_FILE = STATE / "run.lock"
+HEARTBEAT_FILE = STATE / "heartbeat.json"
+WATCHDOG_LOG = STATE / "watchdog.log"
 PLAN_FILE = ROOT / "plan.md"
 CLAUDE_FILE = ROOT / "CLAUDE.md"
 ENV_FILE = ROOT / ".env"
@@ -60,7 +63,7 @@ def load_env():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, _, value = line.partition("=")
-                os.environ.setdefault(key.strip(), value.strip())
+                os.environ[key.strip()] = value.strip()
 
 load_env()
 
@@ -144,7 +147,20 @@ def telegram_send(message: str):
         with urllib.request.urlopen(req, timeout=10) as resp:
             resp.read()
     except Exception as e:
-        log(f"Telegram send failed: {e}")
+        log(f"Telegram send failed (Markdown): {e}")
+        # Retry without Markdown parse_mode (special chars may break it)
+        try:
+            payload = json.dumps({
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": message,
+            }).encode()
+            req = urllib.request.Request(url, data=payload,
+                                         headers={"Content-Type": "application/json"},
+                                         method="POST")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp.read()
+        except Exception as e2:
+            log(f"Telegram send failed (plain): {e2}")
 
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
@@ -152,6 +168,123 @@ def telegram_send(message: str):
 def log(msg: str):
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     print(f"[{ts}] {msg}", flush=True)
+
+
+# ─── Heartbeat ───────────────────────────────────────────────────────────────
+
+def write_heartbeat(cycle: int, phase: str):
+    """Write heartbeat file so the watchdog can monitor liveness."""
+    now = datetime.now(timezone.utc)
+    data = {
+        "pid": os.getpid(),
+        "cycle": cycle,
+        "phase": phase,
+        "timestamp": now.isoformat(),
+        "epoch": now.timestamp(),
+    }
+    tmp = HEARTBEAT_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data))
+    tmp.rename(HEARTBEAT_FILE)
+
+
+def read_heartbeat() -> Optional[dict]:
+    """Read heartbeat file. Returns None if missing or corrupt."""
+    try:
+        if HEARTBEAT_FILE.exists():
+            return json.loads(HEARTBEAT_FILE.read_text())
+    except (json.JSONDecodeError, OSError):
+        pass
+    return None
+
+
+def _pid_alive(pid: int) -> bool:
+    """Check if a process is running."""
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def watchdog_log(msg: str):
+    """Append a line to the watchdog log."""
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    line = f"[{ts}] {msg}\n"
+    with open(WATCHDOG_LOG, "a") as f:
+        f.write(line)
+    print(line, end="", flush=True)
+
+
+def run_watchdog(interval: int = 300, max_restarts: int = 10):
+    """Monitor the autonomous loop and restart it if it dies.
+
+    Checks heartbeat every `interval` seconds. If the orchestrator PID is dead,
+    attempts to restart up to `max_restarts` times. Sends Telegram alerts on
+    failure and when max restarts are exhausted.
+    """
+    watchdog_log("Watchdog starting")
+    telegram_discover_chat_id()
+    restart_count = 0
+    loop_proc = None  # subprocess.Popen if we started the loop ourselves
+
+    while True:
+        hb = read_heartbeat()
+        if hb is None:
+            watchdog_log("Watchdog: no heartbeat file found, waiting...")
+            time.sleep(interval)
+            continue
+
+        pid = hb.get("pid", 0)
+        cycle = hb.get("cycle", "?")
+        phase = hb.get("phase", "?")
+        epoch = hb.get("epoch", 0)
+        age = time.time() - epoch if epoch else float("inf")
+
+        alive = _pid_alive(pid) if pid else False
+
+        if alive:
+            watchdog_log(f"Watchdog: healthy (cycle {cycle}, phase={phase}, age={int(age)}s)")
+            restart_count = 0  # reset on healthy check
+            time.sleep(interval)
+            continue
+
+        # Orchestrator is dead
+        watchdog_log(f"Watchdog: UNHEALTHY — orchestrator pid {pid} is dead")
+
+        if restart_count >= max_restarts:
+            msg = (f"🚨 *Watchdog: max restarts ({max_restarts}) exhausted*\n"
+                   f"Loop is dead (last cycle {cycle}, phase {phase}).\n"
+                   f"Manual intervention required.")
+            watchdog_log(f"Watchdog: max restarts ({max_restarts}) reached, alerting and exiting")
+            telegram_send(msg)
+            sys.exit(1)
+
+        restart_count += 1
+        watchdog_log(f"Watchdog: restarting loop (attempt {restart_count}/{max_restarts})")
+
+        # Remove stale lock file so the new process can acquire it
+        if LOCK_FILE.exists():
+            try:
+                LOCK_FILE.unlink()
+                watchdog_log("Watchdog: removed stale lock file")
+            except OSError as e:
+                watchdog_log(f"Watchdog: failed to remove lock file: {e}")
+
+        # Start a new loop process
+        try:
+            loop_proc = subprocess.Popen(
+                [sys.executable, str(ROOT / "scripts" / "autonomous_loop.py"), "--loop"],
+                cwd=ROOT,
+                stdout=open("/tmp/autonomous_loop.log", "a"),
+                stderr=subprocess.STDOUT,
+            )
+            watchdog_log(f"Watchdog: started new loop (PID {loop_proc.pid})")
+            telegram_send(f"🔄 *Watchdog: restarted loop* (attempt {restart_count}/{max_restarts}, PID {loop_proc.pid})")
+        except Exception as e:
+            watchdog_log(f"Watchdog: failed to start loop: {e}")
+            telegram_send(f"🚨 *Watchdog: restart failed*\n`{str(e)[:200]}`")
+
+        time.sleep(interval)
 
 
 # ─── File helpers ─────────────────────────────────────────────────────────────
@@ -461,20 +594,32 @@ def aristotle_download_result(project_id: str) -> Optional[str]:
     if not api_key:
         return None
 
-    dest = ARISTOTLE_RESULTS_DIR / project_id
-    dest.mkdir(parents=True, exist_ok=True)
+    dest_dir = ARISTOTLE_RESULTS_DIR / project_id
+    # If a previous run left a flat file (not a dir) at this path, remove it
+    if dest_dir.exists() and not dest_dir.is_dir():
+        dest_dir.unlink()
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    # CLI --destination expects a file path (writes tar.gz), not a directory
+    dest_file = dest_dir / "result.tar.gz"
 
     try:
         r = subprocess.run(
             [ARISTOTLE_BIN, "result", project_id,
-             "--api-key", api_key, "--destination", str(dest)],
+             "--api-key", api_key, "--destination", str(dest_file)],
             cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             universal_newlines=True, timeout=60)
         if r.returncode != 0:
             log(f"Aristotle result {project_id[:8]} failed: {r.stderr[:200]}")
             return None
-        log(f"Aristotle result {project_id[:8]} downloaded to {dest}")
-        return str(dest)
+        # Extract the tar.gz
+        import tarfile
+        if dest_file.exists() and tarfile.is_tarfile(str(dest_file)):
+            with tarfile.open(str(dest_file), "r:gz") as tf:
+                tf.extractall(path=str(dest_dir))
+            log(f"Aristotle result {project_id[:8]} extracted to {dest_dir}")
+        else:
+            log(f"Aristotle result {project_id[:8]} downloaded to {dest_dir}")
+        return str(dest_dir)
     except Exception as e:
         log(f"Aristotle result {project_id[:8]} error: {e}")
         return None
@@ -976,6 +1121,7 @@ def check_strategy_compliance(cycle: int) -> Optional[str]:
 def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False):
     """Run one full cycle of the autonomous loop."""
     log(f"═══ Starting cycle {cycle} ═══")
+    write_heartbeat(cycle, "starting")
 
     # Discover Telegram chat_id if needed
     telegram_discover_chat_id()
@@ -1018,6 +1164,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     # ── Planner ──
     elif not worker_only and not skip_planner:
         log("── Running Planner ──")
+        write_heartbeat(cycle, "planner")
         run_planner(cycle, aristotle_summary=aristotle_summary)
     elif not STRATEGY_FILE.exists():
         # Write a default strategy if none exists
@@ -1028,6 +1175,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
 
     # ── Worker ──
     log("── Running Worker ──")
+    write_heartbeat(cycle, "worker")
     worker_output = run_worker(cycle, aristotle_summary=aristotle_summary)
 
     # Post-cycle state
@@ -1053,6 +1201,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     else:
         # ── Evaluator ──
         log("── Running Evaluator ──")
+        write_heartbeat(cycle, "evaluator")
         evaluation = run_evaluator(cycle, pre_sorry_count, post_sorry_count,
                                    worker_output)
 
@@ -1108,6 +1257,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
 
         if consecutive_stalls >= STUCK_THRESHOLD:
             log(f"── Running Consultant (stuck for {consecutive_stalls} cycles) ──")
+            write_heartbeat(cycle, "consultant")
             run_consultant(cycle)
 
     # ── Record history ──
@@ -1162,7 +1312,18 @@ def main():
                         help=f"Cooldown between cycles in seconds (default: {DEFAULT_COOLDOWN})")
     parser.add_argument("--skip-planner", action="store_true",
                         help="Skip planner (use existing strategy.md)")
+    parser.add_argument("--watchdog", action="store_true",
+                        help="Run as watchdog: monitor loop health and restart if dead")
+    parser.add_argument("--watchdog-interval", type=int, default=300,
+                        help="Watchdog check interval in seconds (default: 300)")
+    parser.add_argument("--watchdog-max-restarts", type=int, default=10,
+                        help="Max consecutive restart attempts before giving up (default: 10)")
     args = parser.parse_args()
+
+    if args.watchdog:
+        run_watchdog(interval=args.watchdog_interval,
+                     max_restarts=args.watchdog_max_restarts)
+        return
 
     if not args.loop and not args.once:
         parser.print_help()
@@ -1209,6 +1370,7 @@ def main():
                     traceback.print_exc()
 
                 log(f"Cooling down for {args.interval}s...")
+                write_heartbeat(cycle, "cooldown")
                 time.sleep(args.interval)
     except KeyboardInterrupt:
         log("Interrupted by user")
