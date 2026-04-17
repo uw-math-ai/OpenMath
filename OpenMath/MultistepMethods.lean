@@ -1367,7 +1367,107 @@ private lemma reversed_poly_C3_condition (m : LMM s) (hp : m.HasOrder p) (hp3 : 
       3 * ρrevPoly.derivative.derivative.eval (1 : ℂ) -
       ρrevPoly.derivative.eval (1 : ℂ) = 0 := by
   intro ρrevPoly σrevPoly
-  sorry
+  -- Step 1: Expand derivatives and evaluate at 1 (same simp set as C₂)
+  simp only [show ρrevPoly = ∑ j : Fin (s + 1), Polynomial.C (↑(m.α (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ) from rfl,
+    show σrevPoly = ∑ j : Fin (s + 1), Polynomial.C (↑(m.β (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ) from rfl,
+    map_sum, Polynomial.derivative_C_mul, Polynomial.derivative_pow,
+    Polynomial.derivative_X, mul_one, Polynomial.eval_finset_sum, Polynomial.eval_mul,
+    Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X, one_pow]
+  -- Step 2: Per-element identity for α: 2*x*(x-1)*(x-1-1) + 3*x*(x-1) - x = 2*x³ - 3*x²
+  have h_nat_cube : ∀ x : Fin (s + 1),
+      2 * ((↑(m.α x.rev) : ℂ) * (((x : ℕ) : ℂ) * ((((x : ℕ) - 1 : ℕ) : ℂ) * ((((x : ℕ) - 1 - 1 : ℕ) : ℂ))))) +
+      3 * ((↑(m.α x.rev) : ℂ) * (((x : ℕ) : ℂ) * (((x : ℕ) - 1 : ℕ) : ℂ))) -
+      (↑(m.α x.rev) : ℂ) * ((x : ℕ) : ℂ) =
+      (↑(m.α x.rev) : ℂ) * (2 * ((x : ℕ) : ℂ) ^ 3 - 3 * ((x : ℕ) : ℂ) ^ 2) := by
+    intro x
+    rcases Nat.lt_or_ge (x : ℕ) 2 with hlt | hge
+    · interval_cases (x : ℕ) <;> simp <;> ring
+    · have h1 : 1 ≤ (x : ℕ) := by omega
+      have h12 : 1 ≤ (x : ℕ) - 1 := by omega
+      rw [show ((x : ℕ) - 1 - 1 : ℕ) = (x : ℕ) - 2 from by omega]
+      push_cast [Nat.cast_sub h1, Nat.cast_sub hge, Nat.cast_sub h12]
+      ring
+  -- Step 3: Per-element identity for β: 6*x*(x-1) = 6*x² - 6*x
+  have h_nat_sq_beta : ∀ x : Fin (s + 1),
+      6 * ((↑(m.β x.rev) : ℂ) * (((x : ℕ) : ℂ) * (((x : ℕ) - 1 : ℕ) : ℂ))) =
+      (↑(m.β x.rev) : ℂ) * (6 * ((x : ℕ) : ℂ) ^ 2 - 6 * ((x : ℕ) : ℂ)) := by
+    intro x
+    rcases Nat.lt_or_ge (x : ℕ) 1 with hlt | hge
+    · simp [Nat.lt_one_iff.mp hlt]
+    · push_cast [Nat.cast_sub hge]
+      ring
+  -- Step 4: Combine sums using per-element identities
+  have h_combined_α :
+      2 * (∑ x : Fin (s + 1), (↑(m.α x.rev) : ℂ) * (((x : ℕ) : ℂ) * ((((x : ℕ) - 1 : ℕ) : ℂ) * (((x : ℕ) - 1 - 1 : ℕ) : ℂ)))) +
+      3 * (∑ x : Fin (s + 1), (↑(m.α x.rev) : ℂ) * (((x : ℕ) : ℂ) * (((x : ℕ) - 1 : ℕ) : ℂ))) -
+      (∑ x : Fin (s + 1), (↑(m.α x.rev) : ℂ) * ((x : ℕ) : ℂ)) =
+      ∑ x : Fin (s + 1), (↑(m.α x.rev) : ℂ) * (2 * ((x : ℕ) : ℂ) ^ 3 - 3 * ((x : ℕ) : ℂ) ^ 2) := by
+    rw [Finset.mul_sum, Finset.mul_sum, ← Finset.sum_add_distrib, ← Finset.sum_sub_distrib]
+    exact Finset.sum_congr rfl (fun x _ => h_nat_cube x)
+  have h_combined_β :
+      6 * (∑ x : Fin (s + 1), (↑(m.β x.rev) : ℂ) * (((x : ℕ) : ℂ) * (((x : ℕ) - 1 : ℕ) : ℂ))) =
+      ∑ x : Fin (s + 1), (↑(m.β x.rev) : ℂ) * (6 * ((x : ℕ) : ℂ) ^ 2 - 6 * ((x : ℕ) : ℂ)) := by
+    rw [Finset.mul_sum]
+    exact Finset.sum_congr rfl (fun x _ => h_nat_sq_beta x)
+  -- Step 5: Suffices with combined form
+  suffices hsuff :
+      (∑ x : Fin (s + 1), (↑(m.α x.rev) : ℂ) * (2 * ((x : ℕ) : ℂ) ^ 3 - 3 * ((x : ℕ) : ℂ) ^ 2)) +
+      (∑ x : Fin (s + 1), (↑(m.β x.rev) : ℂ) * (6 * ((x : ℕ) : ℂ) ^ 2 - 6 * ((x : ℕ) : ℂ))) = 0 by
+    linear_combination h_combined_β + h_combined_α + hsuff
+  -- Step 6: Reindex both sums via Fin.revPerm
+  rw [Fintype.sum_equiv Fin.revPerm
+    (fun x => (↑(m.α x.rev) : ℂ) * (2 * ((x : ℕ) : ℂ) ^ 3 - 3 * ((x : ℕ) : ℂ) ^ 2))
+    (fun k => (↑(m.α k) : ℂ) * (2 * ((Fin.rev k : ℕ) : ℂ) ^ 3 - 3 * ((Fin.rev k : ℕ) : ℂ) ^ 2))
+    (fun k => by simp [Fin.revPerm_apply, Fin.rev_rev])]
+  rw [Fintype.sum_equiv Fin.revPerm
+    (fun x => (↑(m.β x.rev) : ℂ) * (6 * ((x : ℕ) : ℂ) ^ 2 - 6 * ((x : ℕ) : ℂ)))
+    (fun k => (↑(m.β k) : ℂ) * (6 * ((Fin.rev k : ℕ) : ℂ) ^ 2 - 6 * ((Fin.rev k : ℕ) : ℂ)))
+    (fun k => by simp [Fin.revPerm_apply, Fin.rev_rev])]
+  -- Step 7: Use rev(k) = s - k (same as C₂)
+  have hrev_add : ∀ k : Fin (s + 1),
+      ((Fin.rev k : ℕ) : ℂ) + ((k : ℕ) : ℂ) = (s : ℂ) := fun k => by
+    rw [← Nat.cast_add]; congr 1; simp [Fin.val_rev]; omega
+  have hrev_eq : ∀ k : Fin (s + 1),
+      ((Fin.rev k : ℕ) : ℂ) = (s : ℂ) - ((k : ℕ) : ℂ) := fun k => by
+    have := hrev_add k; linear_combination this
+  simp_rw [hrev_eq]
+  -- Step 8: Expand (s-k)^3 and (s-k)^2 per element, distributing αₖ and βₖ
+  have h_α_exp : ∀ k : Fin (s + 1),
+      (↑(m.α k) : ℂ) * (2 * ((↑s : ℂ) - ((k : ℕ) : ℂ)) ^ 3 - 3 * ((↑s : ℂ) - ((k : ℕ) : ℂ)) ^ 2) =
+      (2 * (↑s : ℂ) ^ 3 - 3 * (↑s : ℂ) ^ 2) * (↑(m.α k) : ℂ) +
+      (-(6 * (↑s : ℂ) ^ 2 - 6 * (↑s : ℂ))) * (((k : ℕ) : ℂ) * (↑(m.α k) : ℂ)) +
+      (6 * (↑s : ℂ) - 3) * (((k : ℕ) : ℂ) ^ 2 * (↑(m.α k) : ℂ)) +
+      (-2) * (((k : ℕ) : ℂ) ^ 3 * (↑(m.α k) : ℂ)) := fun k => by ring
+  have h_β_exp : ∀ k : Fin (s + 1),
+      (↑(m.β k) : ℂ) * (6 * ((↑s : ℂ) - ((k : ℕ) : ℂ)) ^ 2 - 6 * ((↑s : ℂ) - ((k : ℕ) : ℂ))) =
+      (6 * (↑s : ℂ) ^ 2 - 6 * (↑s : ℂ)) * (↑(m.β k) : ℂ) +
+      (-(12 * (↑s : ℂ) - 6)) * (((k : ℕ) : ℂ) * (↑(m.β k) : ℂ)) +
+      6 * (((k : ℕ) : ℂ) ^ 2 * (↑(m.β k) : ℂ)) := fun k => by ring
+  simp_rw [h_α_exp, h_β_exp]
+  simp only [Finset.sum_add_distrib, ← Finset.mul_sum]
+  -- Step 9: Get order conditions
+  have hcons := hp.isConsistent (by omega)
+  have hC₀ : (∑ k : Fin (s + 1), (↑(m.α k) : ℂ)) = 0 := by
+    have h := hcons.rhoC_one m; simp only [rhoC, one_pow, mul_one] at h; exact h
+  have hC₁ : (∑ k : Fin (s + 1), ((k : ℕ) : ℂ) * (↑(m.α k) : ℂ)) =
+      (∑ k : Fin (s + 1), (↑(m.β k) : ℂ)) := by
+    have h := hcons.sigmaC_one_eq_rhoCDeriv_one m
+    simp only [sigmaC, rhoCDeriv, one_pow, mul_one] at h; exact h.symm
+  have hV₂ : (m.orderCondVal 2 : ℂ) = 0 := by
+    rw [hp.conditions_hold 2 (by omega)]; simp
+  simp only [orderCondVal] at hV₂
+  push_cast at hV₂
+  simp only [pow_one] at hV₂
+  have hV₃ : (m.orderCondVal 3 : ℂ) = 0 := by
+    rw [hp.conditions_hold 3 hp3]; simp
+  simp only [orderCondVal] at hV₃
+  push_cast at hV₃
+  -- Step 10: Close with linear_combination
+  linear_combination (2 * (↑s : ℂ) ^ 3 - 3 * (↑s : ℂ) ^ 2) * hC₀ -
+    (6 * (↑s : ℂ) ^ 2 - 6 * (↑s : ℂ)) * hC₁ +
+    (6 * (↑s : ℂ) - 3) * hV₂ - 2 * hV₃
 
 /-- **HasDerivAt for the Dahlquist G̃ function at w = 1.**
 The function G̃(w) = σ̃(w)/ρ̃(w) - (w+1)/(2(1-w)), with removable singularity at w=1
@@ -1639,22 +1739,65 @@ theorem hasDerivAt_Gtilde_one (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3
       linear_combination (1 - w) * h_key
   exact hGtCancelled.congr_of_eventuallyEq hGt_eventually
 
+/-- Helper: `rhoCRev w ≠ 0` for `‖w‖ ≤ 1` with `w ≠ 1`, given that the only
+unit-circle root of `rhoC` is `1`. Combines the interior case (A-stability) with the
+boundary case (`h_unit`). -/
+theorem rhoCRev_ne_zero_of_closedBall_ne_one (m : LMM s) (ha : m.IsAStable)
+    (h_unit : ∀ ζ : ℂ, m.rhoC ζ = 0 → ‖ζ‖ = 1 → ζ = 1)
+    (w : ℂ) (hw : ‖w‖ ≤ 1) (hw1 : w ≠ 1) : m.rhoCRev w ≠ 0 := by
+  by_cases hw2 : w = 0
+  · simp +decide [hw2, LMM.rhoCRev]
+    simp +decide [Fin.sum_univ_succ, m.normalized]
+  · by_cases hw3 : ‖w‖ = 1
+    · contrapose! h_unit
+      refine' ⟨w⁻¹, _, _, _⟩ <;> simp_all +decide [LMM.rhoCRev_eq]
+    · exact rhoCRev_ne_zero_of_norm_lt_one m ha w (lt_of_le_of_ne hw hw3)
+
 /-- **ContinuousOn for the Dahlquist G̃ function on the closed unit disk.**
 The function G̃ is continuous on `closure (Metric.ball 0 1)`. The key difficulty is
 continuity at w = 1 (removable singularity), which follows from the triple zero of
-the combined numerator and double zero of the denominator at w = 1. -/
+the combined numerator and double zero of the denominator at w = 1.
+
+The hypothesis `h_unit` asserts that every unit-circle root of `rhoC` equals `1`.
+This is needed to ensure `rhoCRev` is nonvanishing on the boundary circle away
+from `w = 1`, so that the quotient `σ̃/ρ̃` remains continuous there. -/
 theorem continuousOn_Gtilde_closedBall (m : LMM s) (p : ℕ) (hp : m.HasOrder p)
-    (hp3 : 3 ≤ p) (ha : m.IsAStable) (hρ_simple : m.rhoCDeriv 1 ≠ 0) :
+    (hp3 : 3 ≤ p) (ha : m.IsAStable) (hρ_simple : m.rhoCDeriv 1 ≠ 0)
+    (h_unit : ∀ ζ : ℂ, m.rhoC ζ = 0 → ‖ζ‖ = 1 → ζ = 1) :
     ContinuousOn (fun w : ℂ => if w = 1 then (0 : ℂ) else
       m.sigmaCRev w / m.rhoCRev w - (w + 1) / (2 * (1 - w)))
       (closure (Metric.ball 0 1)) := by
-  -- At w ≠ 1 in the open ball: ρ̃(w) ≠ 0 (from A-stability) and 1-w ≠ 0,
-  --   so the formula is a ratio of continuous functions.
-  -- At w = 1: the removable singularity gives limit 0 = G̃(1).
-  --   This follows from P(w)/D(w) → 0 as w → 1, using the triple/double zero.
-  -- On the boundary sphere(0,1) with w ≠ 1: handled by the formula or
-  --   by A-stability ensuring ρ̃ ≠ 0 there (via the boundary locus argument).
-  sorry
+  refine' continuousOn_iff_continuous_restrict.mpr _
+  refine' continuous_iff_continuousAt.mpr _
+  intro x
+  by_cases hx : x.val = 1
+  · have h_cont_at_1 : ContinuousAt (fun w : ℂ => if w = 1 then (0 : ℂ) else
+        m.sigmaCRev w / m.rhoCRev w - (w + 1) / (2 * (1 - w))) 1 := by
+      convert hasDerivAt_Gtilde_one m p hp hp3 ha hρ_simple |> HasDerivAt.continuousAt using 1
+    rw [ContinuousAt] at *
+    convert h_cont_at_1.comp (show Filter.Tendsto
+        (fun w : ↑(closure (Metric.ball 0 1)) => (w : ℂ)) (nhds x) (nhds 1) from ?_) using 2
+    · aesop
+    · exact Continuous.tendsto' (by continuity) _ _ hx
+  · -- At x.val ≠ 1: the if-then-else is locally equal to the formula
+    apply ContinuousAt.congr
+    · show ContinuousAt (fun w : ↑(closure (Metric.ball (0:ℂ) 1)) =>
+          m.sigmaCRev w.val / m.rhoCRev w.val - (w.val + 1) / (2 * (1 - w.val))) x
+      apply ContinuousAt.sub
+      · apply ContinuousAt.div
+        · exact (m.sigmaCRev_differentiable.continuous.comp continuous_subtype_val).continuousAt
+        · exact (m.rhoCRev_differentiable.continuous.comp continuous_subtype_val).continuousAt
+        · exact rhoCRev_ne_zero_of_closedBall_ne_one m ha h_unit x.val
+            (closure_minimal (fun x hx => by simpa using hx.out.le)
+              (isClosed_le continuous_norm continuous_const) x.2) hx
+      · apply ContinuousAt.div
+        · exact (continuous_subtype_val.add continuous_const).continuousAt
+        · exact (continuous_const.mul
+            (continuous_const.sub continuous_subtype_val)).continuousAt
+        · exact mul_ne_zero two_ne_zero (sub_ne_zero_of_ne (Ne.symm hx))
+    · filter_upwards [IsOpen.mem_nhds
+          (isOpen_compl_singleton.preimage continuous_subtype_val) hx] with w hw
+      exact (if_neg (by simpa using hw)).symm
 
 /-- Core analytical lemma for the Dahlquist barrier: if the cross-energy
 Re(σ(e^{iθ})·conj(ρ(e^{iθ}))) ≥ 0 for all θ (from A-stability), the E-function
@@ -1675,6 +1818,8 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
     (hp3 : 3 ≤ p) (ha : m.IsAStable)
     -- Zero-stability gives a simple root at ζ = 1:
     (hρ_simple : m.rhoCDeriv 1 ≠ 0)
+    -- The only unit-circle root of ρ is 1 (needed for boundary continuity of G̃):
+    (h_unit : ∀ ζ : ℂ, m.rhoC ζ = 0 → ‖ζ‖ = 1 → ζ = 1)
     -- The established facts:
     (hE_nonneg : ∀ θ : ℝ, ∀ hρ : m.rhoC (Complex.exp (↑θ * Complex.I)) ≠ 0,
       ∀ hσ : m.sigmaC (Complex.exp (↑θ * Complex.I)) ≠ 0,
@@ -1882,7 +2027,7 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
           have hw1 : w ≠ 1 := ne_of_mem_of_not_mem hw h1_not_mem
           exact mul_ne_zero two_ne_zero (sub_ne_zero.mpr (Ne.symm hw1))
     · -- ContinuousOn Gt (closure (Metric.ball 0 1))
-      exact continuousOn_Gtilde_closedBall m p hp hp3 ha hρ_simple
+      exact continuousOn_Gtilde_closedBall m p hp hp3 ha hρ_simple h_unit
   · -- (b) Gt 1 = 0 (by definition)
     simp only [Gt, if_pos rfl]
   · -- (c) Boundary non-negativity: ∀ z ∈ sphere(0,1), Re(Gt(z)) ≥ 0
@@ -1915,30 +2060,43 @@ theorem order_ge_three_not_aStable_core (m : LMM s) (p : ℕ) (hp : m.HasOrder p
   · -- (d) HasDerivAt Gt (1/12) 1
     exact hasDerivAt_Gtilde_one m p hp hp3 ha hρ_simple
 
-/-- For a zero-stable, A-stable LMM of order ≥ 3, derive False.
+/-- For a zero-stable, A-stable LMM of order ≥ 3 whose only unit-circle
+root of ρ is 1, derive `False`.
 Combines `E_nonneg_re`, `re_inv_exp_sub_one`, and the zero-stability condition
 (simple root of ρ at ζ = 1) to invoke `order_ge_three_not_aStable_core`.
-Reference: Iserles, proof of Theorem 3.4. -/
+Reference: Iserles, proof of Theorem 3.4.
+
+The hypothesis `h_unit` (∀ ζ, ρ(ζ) = 0 → |ζ| = 1 → ζ = 1) excludes
+parasitic common roots of ρ and σ on the unit circle other than 1.
+This is satisfied by all standard methods (BDF, Adams, trapezoidal, etc.). -/
 theorem order_ge_three_not_aStable (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3 ≤ p)
-    (ha : m.IsAStable) (hzs : m.IsZeroStable) : False := by
-  have hρ1 : m.rhoC 1 = 0 := (hp.isConsistent (by omega)).rhoC_one m
+    (ha : m.IsAStable) (hzs : m.IsZeroStable)
+    (h_unit : ∀ ζ : ℂ, m.rhoC ζ = 0 → ‖ζ‖ = 1 → ζ = 1) : False := by
+  have hcons := hp.isConsistent (by omega)
+  have hρ1 : m.rhoC 1 = 0 := hcons.rhoC_one m
   exact order_ge_three_not_aStable_core m p hp hp3 ha
     (hzs.unit_roots_simple 1 hρ1 (by simp))
+    h_unit
     (fun θ hρ hσ => IsAStable.E_nonneg_re m ha θ hρ hσ)
     (fun θ hne => re_inv_exp_sub_one θ hne)
 
 /-- **Dahlquist's Second Barrier** (Iserles, Theorem 3.4):
-An A-stable, zero-stable linear multistep method has order at most 2.
+An A-stable, zero-stable linear multistep method whose only unit-circle root
+of ρ is 1 has order at most 2.
 
 NOTE: Zero-stability is necessary. See `dahlquistCounterexample` for a method
 that is A-stable with order 3 but not zero-stable (ρ has a double root at ζ = 1).
 The standard textbook statement "A-stable ⟹ order ≤ 2" implicitly assumes
-zero-stability (which is needed for convergence anyway). -/
+zero-stability (which is needed for convergence anyway).
+
+The hypothesis `h_unit` rules out parasitic common roots of ρ and σ on the
+unit circle away from 1; it is satisfied by all standard methods. -/
 theorem dahlquist_second_barrier {s : ℕ} (m : LMM s) (p : ℕ)
-    (hp : m.HasOrder p) (ha : m.IsAStable) (hzs : m.IsZeroStable) : p ≤ 2 := by
+    (hp : m.HasOrder p) (ha : m.IsAStable) (hzs : m.IsZeroStable)
+    (h_unit : ∀ ζ : ℂ, m.rhoC ζ = 0 → ‖ζ‖ = 1 → ζ = 1) : p ≤ 2 := by
   by_contra h
   push_neg at h
-  exact order_ge_three_not_aStable m p hp h ha hzs
+  exact order_ge_three_not_aStable m p hp h ha hzs h_unit
 
 /-! ## Counterexample: A-stable order-3 method without zero-stability
 

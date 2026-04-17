@@ -172,3 +172,9 @@ Cycle 77: sdirk3_stiffDecay proved successfully via SDIRK2 template (helper lemm
 
 ### Cycle 78
 Cycle 78: Proved 3 sub-lemmas for Dahlquist equivalence theorem (aeval_tupleSucc_charPoly_eq_zero, charPoly_eval_eq_rhoC, tupleSucc_eigenvalue_is_rhoC_root). Phase 2 decomposition: s=0 case closed via Subsingleton; s>0 case has eigenvalue bound + minpoly divisibility + eigenspace decomposition set up, sorry remains for spectral→power bound. Key techniques: Module.End.coe_pow for T^k→T^[k], Module.End.aeval_apply_of_hasEigenvector for eigenvector polynomial evaluation. Dead ends: ext v j produces LinearMap.single terms (use LinearMap.ext + funext instead), abel fails on double negation in sums, omega fails on Fin.val coercion commutativity. Submitted main theorem to Aristotle (086b0ae4).
+
+### Cycle 88
+Cycle 88: Closed hdiv (quotient-rule HasDerivAt) via `(hn.div hd hd_ne).congr_deriv (by dsimp [n, d]; simp [sub_self]; field_simp [...])` — clean one-liner. Worker hit 32000-token API output limit before attempting reversed_poly_C3_condition or hQ₁pp. No task result written. Strategy.md updated with detailed cycle 88/89 plans.
+
+### Cycle 89
+Cycle 89: Closed hQ₁pp by correcting the C₃ condition — old statement 3σ̃''(1)+ρ̃'''(1)+3ρ̃''(1)=0 is FALSE for bdf3; correct usable identity is 6σ̃''(1)+2ρ̃'''(1)+3ρ̃''(1)−ρ̃'(1)=0. With the corrected C₃ condition, hQ₁pp follows cleanly by expanding Q₁''(1), deriving ρ̃'''(1)=3R''(1) and ρ̃''(1)=2R'(1), then linear_combination. reversed_poly_C3_condition proof still sorry — low-level Fin.rev reindexed sum normalization blocks the linear_combination step; recommend explicit moment-sum abbreviations before combining.
