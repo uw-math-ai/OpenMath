@@ -1216,6 +1216,160 @@ theorem rhoCRev_ne_zero_of_norm_lt_one (m : LMM s) (ha : m.IsAStable)
       rwa [inv_one] at h1
     linarith
 
+/-- The derivative of ρ̃ (as a polynomial) evaluated at 1 equals -ρ'(1) for consistent methods.
+This follows from reindexing: ∑ j·α_{s-j} = ∑(s-k)·α_k = s·∑α_k - ∑k·α_k = -ρ'(1). -/
+private lemma rhoCRev_poly_derivative_eval_one (m : LMM s) (hc : m.IsConsistent) :
+    (∑ j : Fin (s + 1), Polynomial.C (↑(m.α (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ)).derivative.eval (1 : ℂ) = -m.rhoCDeriv (1 : ℂ) := by
+  -- Step 1: Expand derivative and evaluate at 1
+  simp only [map_sum, Polynomial.derivative_C_mul, Polynomial.derivative_pow,
+    Polynomial.derivative_X, mul_one, Polynomial.eval_finset_sum, Polynomial.eval_mul,
+    Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X, one_pow, rhoCDeriv]
+  -- Goal: ∑ x, ↑(m.α x.rev) * ↑↑x = -(∑ x, ↑↑x * ↑(m.α x))
+  -- Suffices to show the two sums add to zero
+  suffices h : (∑ x : Fin (s + 1), (↑(m.α (Fin.rev x)) : ℂ) * ((x : ℕ) : ℂ)) +
+    (∑ x : Fin (s + 1), ((x : ℕ) : ℂ) * (↑(m.α x) : ℂ)) = 0 by linear_combination h
+  -- Reindex the first sum via Fin.revPerm: ∑ α(rev x)*x = ∑ α(k)*rev(k)
+  rw [Fintype.sum_equiv Fin.revPerm
+    (fun x => (↑(m.α (Fin.rev x)) : ℂ) * ((x : ℕ) : ℂ))
+    (fun k => (↑(m.α k) : ℂ) * ((Fin.rev k : ℕ) : ℂ))
+    (fun k => by simp [Fin.revPerm_apply, Fin.rev_rev])]
+  -- Combine into one sum: ∑ (α(k)*rev(k) + k*α(k))
+  rw [← Finset.sum_add_distrib]
+  -- Each term simplifies: α(k)*rev(k) + k*α(k) = α(k)*(rev(k) + k) = α(k)*s
+  have hrev_add : ∀ k : Fin (s + 1),
+      ((Fin.rev k : ℕ) : ℂ) + ((k : ℕ) : ℂ) = (s : ℂ) := fun k => by
+    rw [← Nat.cast_add]; congr 1; simp [Fin.val_rev]; omega
+  simp_rw [show ∀ k : Fin (s + 1),
+    (↑(m.α k) : ℂ) * ((Fin.rev k : ℕ) : ℂ) + ((k : ℕ) : ℂ) * (↑(m.α k) : ℂ) =
+    (↑(m.α k) : ℂ) * (s : ℂ) from fun k => by
+      rw [mul_comm ((k : ℕ) : ℂ), ← mul_add, hrev_add]]
+  -- Factor: ∑ α(k)*s = (∑ α(k)) * s
+  rw [← Finset.sum_mul]
+  -- Consistency: ∑ α(k) = rhoC(1) = 0
+  have h0 : (∑ k : Fin (s + 1), (↑(m.α k) : ℂ)) = 0 := by
+    have h := hc.rhoC_one m; simp only [rhoC, one_pow, mul_one] at h; exact h
+  rw [h0, zero_mul]
+
+/-- The C₂ order condition via reversed polynomials:
+  2σ̃'(1) + ρ̃''(1) + ρ̃'(1) = 0 for methods of order ≥ 2.
+This is used to show the triple-zero divisibility of the combined numerator. -/
+private lemma reversed_poly_C2_condition (m : LMM s) (hp : m.HasOrder p) (hp2 : 2 ≤ p) :
+    let ρrevPoly := ∑ j : Fin (s + 1), Polynomial.C (↑(m.α (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ)
+    let σrevPoly := ∑ j : Fin (s + 1), Polynomial.C (↑(m.β (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ)
+    2 * σrevPoly.derivative.eval (1 : ℂ) +
+      ρrevPoly.derivative.derivative.eval (1 : ℂ) +
+      ρrevPoly.derivative.eval (1 : ℂ) = 0 := by
+  intro ρrevPoly σrevPoly
+  -- Expand first and second derivatives and evaluate at 1
+  simp only [show ρrevPoly = ∑ j : Fin (s + 1), Polynomial.C (↑(m.α (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ) from rfl,
+    show σrevPoly = ∑ j : Fin (s + 1), Polynomial.C (↑(m.β (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ) from rfl,
+    map_sum, Polynomial.derivative_C_mul, Polynomial.derivative_pow,
+    Polynomial.derivative_X, mul_one, Polynomial.eval_finset_sum, Polynomial.eval_mul,
+    Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X, one_pow]
+  -- Goal: 2 * ∑ β(rev x)*x + ∑ α(rev x)*(x*(x-1:ℕ)) + ∑ α(rev x)*x = 0
+  -- Combine the two α sums: x*(x-1:ℕ) + x = x² in ℕ
+  have h_nat_sq : ∀ x : Fin (s + 1),
+      (↑(m.α (Fin.rev x)) : ℂ) * ((↑(x : ℕ) : ℂ) * (↑((x : ℕ) - 1) : ℂ)) +
+      (↑(m.α (Fin.rev x)) : ℂ) * (↑(x : ℕ) : ℂ) =
+      (↑(m.α (Fin.rev x)) : ℂ) * (↑(x : ℕ) : ℂ) ^ 2 := by
+    intro ⟨n, hn⟩; simp only [Fin.val_mk]
+    rw [← mul_add, ← Nat.cast_mul, ← Nat.cast_add, ← Nat.cast_pow]
+    congr 1
+    cases n with | zero => rfl | succ n => rw [Nat.succ_sub_one]; ring
+  -- Combine the two α sums into one using h_nat_sq
+  have h_combined :
+      (∑ x : Fin (s + 1), (↑(m.α (Fin.rev x)) : ℂ) * ((↑(x : ℕ) : ℂ) * ↑((x : ℕ) - 1))) +
+      (∑ x : Fin (s + 1), (↑(m.α (Fin.rev x)) : ℂ) * ↑(x : ℕ)) =
+      ∑ x : Fin (s + 1), (↑(m.α (Fin.rev x)) : ℂ) * (↑(x : ℕ) : ℂ) ^ 2 := by
+    rw [← Finset.sum_add_distrib]
+    exact Finset.sum_congr rfl (fun x _ => h_nat_sq x)
+  -- Step 1: Get the C₂ order condition in ℂ
+  have hV₂ : (m.orderCondVal 2 : ℂ) = 0 := by
+    rw [hp.conditions_hold 2 hp2]; simp
+  simp only [orderCondVal, Nat.sub_self, pow_one, pow_zero, mul_one] at hV₂
+  push_cast at hV₂
+  -- hV₂ : ∑ k, ((k:ℕ):ℂ)^2 * (αₖ:ℂ) - 2 * ∑ k, ((k:ℕ):ℂ) * (βₖ:ℂ) = 0
+  -- i.e., ∑ k, ((k:ℕ):ℂ)^2 * (αₖ:ℂ) = 2 * ∑ k, ((k:ℕ):ℂ) * (βₖ:ℂ)
+  -- Step 2: Also get C₀ and C₁ in ℂ
+  have hcons := hp.isConsistent (by omega)
+  have hC₀ : (∑ k : Fin (s + 1), (↑(m.α k) : ℂ)) = 0 := by
+    have h := hcons.rhoC_one m; simp only [rhoC, one_pow, mul_one] at h; exact h
+  have hC₁ : (∑ k : Fin (s + 1), ((k : ℕ) : ℂ) * (↑(m.α k) : ℂ)) =
+      (∑ k : Fin (s + 1), (↑(m.β k) : ℂ)) := by
+    have h := hcons.sigmaC_one_eq_rhoCDeriv_one m
+    simp only [sigmaC, rhoCDeriv, one_pow, mul_one] at h; exact h.symm
+  -- Step 3: Combine the α derivative sums: j*(j-1) + j = j²
+  -- suffices: ∑ α(rev j)*j² + 2*∑ β(rev j)*j = 0
+  suffices hsuff :
+      (∑ x : Fin (s + 1), (↑(m.α (Fin.rev x)) : ℂ) * ((x : ℕ) : ℂ) ^ 2) +
+      2 * (∑ x : Fin (s + 1), (↑(m.β (Fin.rev x)) : ℂ) * ((x : ℕ) : ℂ)) = 0 by
+    linear_combination hsuff + h_combined
+  -- Step 4: Reindex both sums via Fin.revPerm
+  rw [Fintype.sum_equiv Fin.revPerm
+    (fun x => (↑(m.α (Fin.rev x)) : ℂ) * ((x : ℕ) : ℂ) ^ 2)
+    (fun k => (↑(m.α k) : ℂ) * ((Fin.rev k : ℕ) : ℂ) ^ 2)
+    (fun k => by simp [Fin.revPerm_apply, Fin.rev_rev])]
+  rw [Fintype.sum_equiv Fin.revPerm
+    (fun x => (↑(m.β (Fin.rev x)) : ℂ) * ((x : ℕ) : ℂ))
+    (fun k => (↑(m.β k) : ℂ) * ((Fin.rev k : ℕ) : ℂ))
+    (fun k => by simp [Fin.revPerm_apply, Fin.rev_rev])]
+  -- Step 5: Use rev(k) + k = s to expand (rev k)² and (rev k)
+  have hrev_add : ∀ k : Fin (s + 1),
+      ((Fin.rev k : ℕ) : ℂ) + ((k : ℕ) : ℂ) = (s : ℂ) := fun k => by
+    rw [← Nat.cast_add]; congr 1; simp [Fin.val_rev]; omega
+  have hrev_eq : ∀ k : Fin (s + 1),
+      ((Fin.rev k : ℕ) : ℂ) = (s : ℂ) - ((k : ℕ) : ℂ) := fun k => by
+    have := hrev_add k; linear_combination this
+  -- Rewrite (rev k)² = (s - k)² = s² - 2sk + k²
+  simp_rw [hrev_eq]
+  -- Expand (s - k)²
+  simp_rw [sub_sq]
+  -- Distribute: ∑ αₖ * (s² - 2sk + k²) + 2 * ∑ βₖ * (s - k) = 0
+  simp_rw [mul_add, mul_sub]
+  simp only [Finset.sum_add_distrib, Finset.sum_sub_distrib]
+  -- Factor and normalize each sum to match hypothesis forms
+  have hS1 : ∑ x : Fin (s + 1), (↑(m.α x) : ℂ) * (↑s : ℂ) ^ 2 =
+      (∑ x : Fin (s + 1), (↑(m.α x) : ℂ)) * (↑s : ℂ) ^ 2 :=
+    (Finset.sum_mul Finset.univ _ _).symm
+  have hS2 : ∑ x : Fin (s + 1), (↑(m.α x) : ℂ) * (2 * (↑s : ℂ) * (↑↑x : ℂ)) =
+      2 * (↑s : ℂ) * ∑ x : Fin (s + 1), (↑↑x : ℂ) * (↑(m.α x) : ℂ) := by
+    simp_rw [show ∀ x : Fin (s + 1), (↑(m.α x) : ℂ) * (2 * (↑s : ℂ) * ↑↑x) =
+      2 * (↑s : ℂ) * ((↑↑x : ℂ) * ↑(m.α x)) from fun x => by ring]
+    exact (Finset.mul_sum ..).symm
+  have hS3 : ∑ x : Fin (s + 1), (↑(m.α x) : ℂ) * (↑↑x : ℂ) ^ 2 =
+      ∑ x : Fin (s + 1), (↑↑x : ℂ) ^ 2 * (↑(m.α x) : ℂ) :=
+    Finset.sum_congr rfl (fun x _ => mul_comm _ _)
+  have hS4 : ∑ x : Fin (s + 1), (↑(m.β x) : ℂ) * (↑s : ℂ) =
+      (∑ x : Fin (s + 1), (↑(m.β x) : ℂ)) * (↑s : ℂ) :=
+    (Finset.sum_mul Finset.univ _ _).symm
+  have hS5 : ∑ x : Fin (s + 1), (↑(m.β x) : ℂ) * (↑↑x : ℂ) =
+      ∑ x : Fin (s + 1), (↑↑x : ℂ) * (↑(m.β x) : ℂ) :=
+    Finset.sum_congr rfl (fun x _ => mul_comm _ _)
+  rw [hS1, hS2, hS3, hS4, hS5]
+  simp only [pow_one] at hV₂
+  linear_combination (↑s : ℂ) ^ 2 * hC₀ - 2 * (↑s : ℂ) * hC₁ + hV₂
+
+/-- The C₃ order condition via reversed polynomials:
+  3σ̃''(1) + ρ̃'''(1) + 3ρ̃''(1) = 0 for methods of order ≥ 3.
+This is the third-order identity needed in the cancelled derivative computation. -/
+private lemma reversed_poly_C3_condition (m : LMM s) (hp : m.HasOrder p) (hp3 : 3 ≤ p) :
+    let ρrevPoly := ∑ j : Fin (s + 1), Polynomial.C (↑(m.α (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ)
+    let σrevPoly := ∑ j : Fin (s + 1), Polynomial.C (↑(m.β (Fin.rev j)) : ℂ) *
+      Polynomial.X ^ (j : ℕ)
+    3 * σrevPoly.derivative.derivative.eval (1 : ℂ) +
+      ρrevPoly.derivative.derivative.derivative.eval (1 : ℂ) +
+      3 * ρrevPoly.derivative.derivative.eval (1 : ℂ) = 0 := by
+  intro ρrevPoly σrevPoly
+  -- This is the C₃ analogue of `reversed_poly_C2_condition`.
+  -- The proof is deferred while the derivative scaffold is set up for Aristotle/manual completion.
+  sorry
+
 /-- **HasDerivAt for the Dahlquist G̃ function at w = 1.**
 The function G̃(w) = σ̃(w)/ρ̃(w) - (w+1)/(2(1-w)), with removable singularity at w=1
 filled in as 0, has derivative 1/12 at w = 1.
@@ -1247,38 +1401,191 @@ theorem hasDerivAt_Gtilde_one (m : LMM s) (p : ℕ) (hp : m.HasOrder p) (hp3 : 3
   have hρ_factor : ρrevPoly = (Polynomial.X - Polynomial.C 1) * Rpoly := by
     simpa [Rpoly] using (Polynomial.mul_divByMonic_eq_iff_isRoot (p := ρrevPoly) (a := 1)).2 hρ_root |>.symm
   have hR_eval_one_ne : Rpoly.eval 1 ≠ 0 := by
-    -- Aristotle produced a proof outline here, but the reindexing step still needs manual cleanup.
-    sorry
+    -- ρ̃'(1) = R(1) from the factored form, and ρ̃'(1) = -ρ'(1) ≠ 0
+    have hderiv_eq : ρrevPoly.derivative.eval 1 = Rpoly.eval 1 := by
+      conv_lhs => rw [hρ_factor, Polynomial.derivative_mul]
+      simp [Polynomial.derivative_sub, Polynomial.derivative_X, Polynomial.derivative_C,
+        Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+        Polynomial.eval_X, Polynomial.eval_C, Polynomial.eval_one]
+    rw [← hderiv_eq, rhoCRev_poly_derivative_eval_one m hcons]
+    exact neg_ne_zero.mpr hρ_simple
   let Ppoly : Polynomial ℂ :=
     (2 : ℂ) • σrevPoly * (Polynomial.X - Polynomial.C 1) +
       ρrevPoly * (Polynomial.X + Polynomial.C 1)
-  have hP_triple : 3 ≤ Ppoly.rootMultiplicity 1 := by
-    -- Order conditions C₀, C₁, C₂ imply `Ppoly(1) = Ppoly'(1) = Ppoly''(1) = 0`.
-    sorry
-  let Qpoly : Polynomial ℂ := Ppoly /ₘ ((Polynomial.X - Polynomial.C 1) ^ 3)
+  -- Prove (X - 1)³ | Ppoly by factoring out (X-1) three times
+  -- using the order conditions C₀, C₁, C₂.
+  let X1 : Polynomial ℂ := Polynomial.X - Polynomial.C (1 : ℂ)
+  -- Step 1: Ppoly = (X-1) * Q₁ where Q₁ = 2•σ̃ + R*(X+1)
+  have hPpoly_eq : Ppoly = X1 * ((2 : ℂ) • σrevPoly + Rpoly * (Polynomial.X + Polynomial.C 1)) := by
+    show (2 : ℂ) • σrevPoly * (Polynomial.X - Polynomial.C 1) +
+      ρrevPoly * (Polynomial.X + Polynomial.C 1) =
+      X1 * ((2 : ℂ) • σrevPoly + Rpoly * (Polynomial.X + Polynomial.C 1))
+    rw [hρ_factor]; ring
+  set Q₁ := (2 : ℂ) • σrevPoly + Rpoly * (Polynomial.X + Polynomial.C 1) with hQ₁_def
+  -- Rpoly.eval 1 = -ρ'(1) (needed for both Q₁ and Q₂ steps)
+  have hR_val : Rpoly.eval 1 = -m.rhoCDeriv 1 := by
+    have hderiv_eq : ρrevPoly.derivative.eval 1 = Rpoly.eval 1 := by
+      conv_lhs => rw [hρ_factor, Polynomial.derivative_mul]
+      simp [Polynomial.derivative_sub, Polynomial.derivative_X, Polynomial.derivative_C,
+        Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+        Polynomial.eval_X, Polynomial.eval_C, Polynomial.eval_one]
+    rw [← hderiv_eq]; exact rhoCRev_poly_derivative_eval_one m hcons
+  -- Step 2: Q₁ has root at 1 (from C₁: σ(1) = ρ'(1))
+  have hQ₁_root : Q₁.IsRoot 1 := by
+    rw [Polynomial.IsRoot]
+    simp only [Q₁, Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_smul,
+      Polynomial.eval_X, Polynomial.eval_C, smul_eq_mul]
+    rw [hσrev_eval, sigmaCRev_one, hcons.sigmaC_one_eq_rhoCDeriv_one m, hR_val]
+    ring
+  -- Step 3: (X-1) | Q₁
+  obtain ⟨Q₂, hQ₂⟩ := (Polynomial.dvd_iff_isRoot.mpr hQ₁_root : X1 ∣ Q₁)
+  -- Step 4: Q₂ has root at 1 (from C₂)
+  -- By derivative-at-root: Q₁'(1) = Q₂(1), and Q₁'(1) = 0 using the C₂ condition.
+  have hQ₂_root : Q₂.IsRoot 1 := by
+    -- Derivative-at-root: Q₁ = (X-1) * Q₂ → Q₁'(1) = Q₂(1)
+    have hQ₂_eq_deriv : Q₁.derivative.eval 1 = Q₂.eval 1 := by
+      conv_lhs => rw [hQ₂, Polynomial.derivative_mul]
+      simp [Polynomial.derivative_sub, Polynomial.derivative_X, Polynomial.derivative_C,
+        Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+        Polynomial.eval_X, Polynomial.eval_C, Polynomial.eval_one]
+    rw [Polynomial.IsRoot, ← hQ₂_eq_deriv]
+    -- Q₁'(1) = 2σ̃'(1) + 2R'(1) + R(1) = 2σ̃'(1) + ρ̃''(1) + ρ̃'(1) = 0 by C₂
+    have hC2 := reversed_poly_C2_condition m hp (by omega : 2 ≤ p)
+    have hR_eq : Rpoly.eval 1 = ρrevPoly.derivative.eval 1 := by
+      conv_rhs => rw [hρ_factor, Polynomial.derivative_mul]
+      simp [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+        Polynomial.eval_X, Polynomial.eval_one,
+        Polynomial.derivative_sub, Polynomial.derivative_X]
+    have hR'_eq : 2 * Rpoly.derivative.eval 1 = ρrevPoly.derivative.derivative.eval 1 := by
+      conv_rhs => rw [hρ_factor]
+      simp [Polynomial.derivative_mul, Polynomial.derivative_add, Polynomial.derivative_sub,
+        Polynomial.derivative_X,
+        Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_sub,
+        Polynomial.eval_X, Polynomial.eval_one]
+      ring
+    have hQ1_expand : Q₁.derivative.eval 1 =
+        2 * σrevPoly.derivative.eval 1 + 2 * Rpoly.derivative.eval 1 + Rpoly.eval 1 := by
+      rw [hQ₁_def]
+      simp [Polynomial.derivative_add, Polynomial.derivative_mul,
+        Polynomial.derivative_X,
+        Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_smul,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+      ring
+    rw [hQ1_expand, hR'_eq, hR_eq]
+    exact hC2
+  -- Step 5: (X-1) | Q₂
+  obtain ⟨Q₃, hQ₃⟩ := (Polynomial.dvd_iff_isRoot.mpr hQ₂_root : X1 ∣ Q₂)
+  -- Step 6: Combine (X-1)³ | Ppoly
+  have hP_dvd : X1 ^ 3 ∣ Ppoly :=
+    ⟨Q₃, by rw [hPpoly_eq, hQ₂, hQ₃]; ring⟩
+  let Qpoly : Polynomial ℂ := Ppoly /ₘ (X1 ^ 3)
   have hP_factor : Ppoly = (Polynomial.X - Polynomial.C 1) ^ 3 * Qpoly := by
-    let X1 : Polynomial ℂ := Polynomial.X - Polynomial.C (1 : ℂ)
-    have hP_dvd : X1 ^ 3 ∣ Ppoly := by
-      have hroot_dvd := Polynomial.pow_rootMultiplicity_dvd Ppoly 1
-      exact dvd_trans (pow_dvd_pow _ hP_triple) hroot_dvd
     have hmonic : Polynomial.Monic (X1 ^ 3) := by
       simpa [X1] using (Polynomial.monic_X_sub_C (1 : ℂ)).pow 3
     have hmod : Ppoly %ₘ (X1 ^ 3) = (0 : Polynomial ℂ) :=
       (Polynomial.modByMonic_eq_zero_iff_dvd hmonic).2 hP_dvd
-    rw [show (Polynomial.X - Polynomial.C 1) ^ 3 = X1 ^ 3 by simp [X1]]
+    rw [show (Polynomial.X - Polynomial.C 1) ^ 3 = X1 ^ 3 from by simp [X1]]
     rw [← Polynomial.modByMonic_add_div Ppoly hmonic, hmod, zero_add]
   let GtCancelled : ℂ → ℂ := fun w =>
     (w - 1) * Qpoly.eval w / (2 * Rpoly.eval w)
   have hGtCancelled : HasDerivAt GtCancelled (1 / 12 : ℂ) 1 := by
-    -- Quotient rule on the cancelled form; the derivative reduces to `Qpoly.eval 1 / (2 * Rpoly.eval 1)`.
-    -- The remaining algebra uses `Ppoly'''(1) = -σ(1)` and `Rpoly.eval 1 = -ρ'(1) = -σ(1)`.
-    sorry
+    let n : ℂ → ℂ := fun w => (w - 1) * Qpoly.eval w
+    let d : ℂ → ℂ := fun w => 2 * Rpoly.eval w
+    have hn : HasDerivAt n (Qpoly.eval 1) 1 := by
+      dsimp [n]
+      simpa using
+        ((hasDerivAt_id (𝕜 := ℂ) 1).sub (hasDerivAt_const 1 (1 : ℂ))).mul
+          (Polynomial.hasDerivAt Qpoly 1)
+    have hd : HasDerivAt d (2 * Rpoly.derivative.eval 1) 1 := by
+      dsimp [d]
+      simpa using ((hasDerivAt_const 1 (2 : ℂ)).mul (Polynomial.hasDerivAt Rpoly 1))
+    have hd_ne : d 1 ≠ 0 := by
+      dsimp [d]
+      exact mul_ne_zero two_ne_zero hR_eval_one_ne
+    have hdiv : HasDerivAt GtCancelled (Qpoly.eval 1 / (2 * Rpoly.eval 1)) 1 := by
+      -- This is the quotient-rule reduction from the cancelled form to the scalar ratio
+      -- `Qpoly.eval 1 / (2 * Rpoly.eval 1)`.
+      sorry
+    have hQpoly_eq_Q₃ : Qpoly = Q₃ := by
+      have hX1pow : Ppoly = X1 ^ 3 * Q₃ := by
+        rw [hPpoly_eq, hQ₂, hQ₃]
+        ring
+      have hmonic : Polynomial.Monic (X1 ^ 3) := by
+        simpa [X1] using (Polynomial.monic_X_sub_C (1 : ℂ)).pow 3
+      change Ppoly /ₘ (X1 ^ 3) = Q₃
+      rw [hX1pow, Polynomial.mul_divByMonic_cancel_left _ hmonic]
+    have hQ₃_val : Q₃.eval 1 = Q₂.derivative.eval 1 := by
+      have hderiv := congrArg Polynomial.derivative hQ₃
+      have heval := congrArg (Polynomial.eval (1 : ℂ)) hderiv
+      simp [Polynomial.derivative_mul, Polynomial.eval_add, Polynomial.eval_mul,
+        Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C] at heval
+      simpa [mul_comm, mul_left_comm, mul_assoc] using heval.symm
+    have hQ₂'_val : Q₂.derivative.eval 1 = Q₁.derivative.derivative.eval 1 / 2 := by
+      have hderiv := congrArg (fun p : Polynomial ℂ => p.derivative.derivative.eval (1 : ℂ)) hQ₂
+      simp [Polynomial.derivative_mul, Polynomial.eval_add, Polynomial.eval_mul,
+        Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C] at hderiv
+      apply (eq_div_iff two_ne_zero).2
+      simpa [two_mul, mul_comm, add_comm, add_left_comm, add_assoc] using hderiv.symm
+    have hQ₁pp : Q₁.derivative.derivative.eval 1 = -m.rhoCDeriv 1 / 3 := by
+      sorry
+    have hscalar : Qpoly.eval 1 / (2 * Rpoly.eval 1) = (1 / 12 : ℂ) := by
+      rw [hQpoly_eq_Q₃, hQ₃_val, hQ₂'_val, hQ₁pp, hR_val]
+      field_simp [hρ_simple]
+      ring
+    exact hdiv.congr_deriv hscalar
   have hGt_eventually :
       (fun w : ℂ => if w = 1 then (0 : ℂ) else
         m.sigmaCRev w / m.rhoCRev w - (w + 1) / (2 * (1 - w))) =ᶠ[nhds 1] GtCancelled := by
-    -- Aristotle produced a neighborhood proof here, but it depends on the previous
-    -- `Rpoly.eval 1 ≠ 0` transport lemma and still needs polishing.
-    sorry
+    -- Rpoly.eval is continuous and nonzero at 1, so nonzero in a neighborhood
+    have hR_ev : ∀ᶠ w in nhds (1 : ℂ), Rpoly.eval w ≠ 0 :=
+      (Polynomial.continuousAt Rpoly).eventually_ne hR_eval_one_ne
+    apply hR_ev.mono
+    intro w hRw
+    simp only [GtCancelled]
+    by_cases hw : w = 1
+    · -- At w = 1: LHS = 0 (by if), RHS = (1-1)*Q(1)/(2*R(1)) = 0
+      subst hw; simp
+    · -- At w ≠ 1: algebraic identity
+      simp only [if_neg hw]
+      -- From hρ_factor: ρrevPoly.eval w = (w - 1) * Rpoly.eval w
+      have hρ_eval : m.rhoCRev w = (w - 1) * Rpoly.eval w := by
+        rw [← hρrev_eval]
+        have := congr_arg (Polynomial.eval w) hρ_factor
+        simp [Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_X,
+              Polynomial.eval_C] at this
+        exact this
+      -- From hP_factor: Ppoly.eval w = (w - 1)^3 * Qpoly.eval w
+      have hP_eval : (Polynomial.eval w Ppoly) = (w - 1) ^ 3 * Qpoly.eval w := by
+        have := congr_arg (Polynomial.eval w) hP_factor
+        simp [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_sub,
+              Polynomial.eval_X, Polynomial.eval_C] at this
+        exact this
+      -- Ppoly definition evaluated: Ppoly.eval w = 2 * σ̃(w) * (w-1) + ρ̃(w) * (w+1)
+      have hP_def : (Polynomial.eval w Ppoly) =
+          2 * m.sigmaCRev w * (w - 1) + m.rhoCRev w * (w + 1) := by
+        change Polynomial.eval w ((2 : ℂ) • σrevPoly * (Polynomial.X - Polynomial.C 1) +
+          ρrevPoly * (Polynomial.X + Polynomial.C 1)) = _
+        simp [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_smul,
+              Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_C,
+              hρrev_eval, hσrev_eval]
+        ring
+      -- Key: w - 1 ≠ 0
+      have hw1 : w - 1 ≠ 0 := sub_ne_zero.mpr hw
+      -- Dividing by (w-1): 2*σ̃(w) + R(w)*(w+1) = (w-1)^2 * Q(w)
+      have h_key : 2 * m.sigmaCRev w + Rpoly.eval w * (w + 1) =
+          (w - 1) ^ 2 * Qpoly.eval w := by
+        have h_combined : (w - 1) ^ 3 * Qpoly.eval w =
+            2 * m.sigmaCRev w * (w - 1) + (w - 1) * Rpoly.eval w * (w + 1) := by
+          rw [← hρ_eval, ← hP_def, hP_eval]
+        have h2 : (w - 1) * ((w - 1) ^ 2 * Qpoly.eval w) =
+            (w - 1) * (2 * m.sigmaCRev w + Rpoly.eval w * (w + 1)) := by
+          linear_combination h_combined
+        exact (mul_left_cancel₀ hw1 h2).symm
+      -- Now prove the algebraic identity
+      rw [hρ_eval]
+      have h1w : (1 : ℂ) - w ≠ 0 := by rwa [sub_ne_zero, ne_comm]
+      field_simp [hw1, hRw, h1w]
+      linear_combination (1 - w) * h_key
   exact hGtCancelled.congr_of_eventuallyEq hGt_eventually
 
 /-- **ContinuousOn for the Dahlquist G̃ function on the closed unit disk.**
