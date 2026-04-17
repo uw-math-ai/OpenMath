@@ -1,5 +1,6 @@
 import Mathlib.Analysis.ODE.PicardLindelof
 import Mathlib.Analysis.ODE.Gronwall
+import Mathlib.Analysis.Normed.Group.Bounded
 
 /-!
 # Picard–Lindelöf Existence and Uniqueness Theorem
@@ -26,6 +27,7 @@ bounds).
 -/
 
 open Set Metric MeasureTheory Real Filter
+open scoped NNReal
 
 /-! ## Definition: Lipschitz condition in the second variable (def:110A) -/
 
@@ -175,6 +177,86 @@ section Existence
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
+private lemma exists_solution_small {f : ℝ → E → E} {L : ℝ} {a b : ℝ} {y₀ : E}
+    (hab : a < b) (hf_cont : Continuous (fun p : ℝ × E => f p.1 p.2))
+    (hf_lip : IsLipschitzInSecondVar f L a b) (hL : 0 ≤ L) (hLδ : L * (b - a) < 1) :
+    ∃ y : ℝ → E, y a = y₀ ∧ ContinuousOn y (Icc a b) ∧
+      ∀ t ∈ Icc a b, HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
+  have hpair_cont : Continuous (fun t : ℝ => (t, y₀)) := by
+    fun_prop
+  have hy0_cont : ContinuousOn (fun t => f t y₀) (Icc a b) :=
+    (hf_cont.comp hpair_cont).continuousOn
+  obtain ⟨C, hC⟩ := isCompact_Icc.exists_bound_of_continuousOn hy0_cont
+  have hC0 : 0 ≤ C := by
+    have hCa := hC a (left_mem_Icc.mpr (le_of_lt hab))
+    exact le_trans (norm_nonneg _) hCa
+  let δ : ℝ := b - a
+  have hδnonneg : 0 ≤ δ := sub_nonneg.mpr (le_of_lt hab)
+  have hden : 0 < 1 - L * δ := sub_pos.mpr (by simpa [δ] using hLδ)
+  let R : ℝ := C * δ / (1 - L * δ)
+  have hRnonneg : 0 ≤ R := by
+    dsimp [R]
+    exact div_nonneg (mul_nonneg hC0 hδnonneg) (le_of_lt hden)
+  let K : ℝ≥0 := ⟨L, hL⟩
+  let Rn : ℝ≥0 := ⟨R, hRnonneg⟩
+  let B : ℝ := C + L * R
+  have hBnonneg : 0 ≤ B := by
+    dsimp [B]
+    positivity
+  let Bn : ℝ≥0 := ⟨B, hBnonneg⟩
+  let t0 : Icc a b := ⟨a, left_mem_Icc.mpr (le_of_lt hab)⟩
+  have hcont_ball : ∀ x ∈ closedBall y₀ R, ContinuousOn (fun t => f t x) (Icc a b) := by
+    intro x hx
+    have hpair_cont' : Continuous (fun t : ℝ => (t, x)) := by
+      fun_prop
+    exact (hf_cont.comp hpair_cont').continuousOn
+  have hnorm : ∀ t ∈ Icc a b, ∀ x ∈ closedBall y₀ R, ‖f t x‖ ≤ B := by
+    intro t ht x hx
+    have h1 := hC t ht
+    have h2 := hf_lip t ht x y₀
+    have hx' : ‖x - y₀‖ ≤ R := by
+      simpa [mem_closedBall, dist_eq_norm, sub_eq_add_neg] using hx
+    calc
+      ‖f t x‖ ≤ ‖f t x - f t y₀‖ + ‖f t y₀‖ := by
+        simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using
+          norm_add_le (f t x - f t y₀) (f t y₀)
+      _ ≤ L * ‖x - y₀‖ + C := by
+        gcongr
+      _ ≤ L * R + C := by
+        gcongr
+      _ = B := by
+        ring
+  have hmul : B * max (b - (t0 : ℝ)) ((t0 : ℝ) - a) ≤ R - (0 : ℝ) := by
+    dsimp [t0, R, B, δ]
+    simp [max_eq_left (sub_nonneg.mpr (le_of_lt hab))]
+    have hne : 1 - L * (b - a) ≠ 0 := ne_of_gt hden
+    field_simp [hne]
+    ring_nf
+    exact le_rfl
+  have hpl : IsPicardLindelof f t0 y₀ Rn (0 : ℝ≥0) Bn K := by
+    refine IsPicardLindelof.mk ?_ hcont_ball ?_ ?_
+    · intro t ht
+      exact (hf_lip.lipschitzWith hL ht).lipschitzOnWith
+    · simpa using hnorm
+    · simpa [K, Rn, Bn] using hmul
+  obtain ⟨α, hα, hαcont⟩ :=
+    IsPicardLindelof.exists_forall_mem_closedBall_eq_hasDerivWithinAt_continuousOn hpl
+  let y : ℝ → E := fun t => α (y₀, t)
+  have hy0mem : y₀ ∈ closedBall y₀ (0 : ℝ) := by
+    simpa using mem_closedBall_self (show (0 : ℝ) ≤ 0 by simp)
+  have hy_init : y a = y₀ := by
+    simpa [y, t0] using (hα y₀ hy0mem).1
+  have hy_cont : ContinuousOn y (Icc a b) := by
+    have hp : ContinuousOn (fun t : ℝ => (y₀, t)) (Icc a b) := by
+      fun_prop
+    refine hαcont.comp hp ?_
+    intro t ht
+    exact ⟨by simpa [mem_closedBall, dist_eq_norm] using hy0mem, ht⟩
+  have hy_deriv : ∀ t ∈ Icc a b, HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
+    intro t ht
+    simpa [y] using (hα y₀ hy0mem).2 t ht
+  exact ⟨y, hy_init, hy_cont, hy_deriv⟩
+
 /-- **Picard–Lindelöf existence** (Iserles Theorem 1.1, existence part).
 If `f` is continuous and Lipschitz in its second variable on `[a, b]`, then
 the IVP `y' = f(x, y(x)), y(a) = y₀` has a solution on `[a, b]`.
@@ -189,7 +271,14 @@ theorem exists_solution {f : ℝ → E → E} {L : ℝ} {a b : ℝ} {y₀ : E}
     (hL : 0 ≤ L) :
     ∃ y : ℝ → E, y a = y₀ ∧ ContinuousOn y (Icc a b) ∧
       ∀ t ∈ Icc a b, HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
-  sorry
+  by_cases hLδ : L * (b - a) < 1
+  · exact exists_solution_small hab hf_cont hf_lip hL hLδ
+  · /-
+    General case: subdivide `[a,b]` into finitely many subintervals of length `δ`
+    with `L * δ < 1`, solve on each piece using `exists_solution_small`, then glue
+    the solutions using `unique`.
+    -/
+    sorry
 
 /-- **Picard–Lindelöf theorem** (Iserles Theorem 1.1, thm:110C).
 Combining existence and uniqueness: if `f` is continuous and Lipschitz in `y`,

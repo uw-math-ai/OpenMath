@@ -1,44 +1,56 @@
-# Cycle 95 Results
+# Cycle 095 Results
 
 ## Worked on
-Picard-Lindelof existence and uniqueness theorem (Iserles §1.1, thm:110C) and Lipschitz condition definition (def:110A). New file `OpenMath/PicardLindelof.lean`.
+- `OpenMath/PicardLindelof.lean`, specifically `PicardLindelof.exists_solution`
+- Small-interval Picard-Lindelof existence helper
+- Subdivision/gluing support via Aristotle batch jobs
 
 ## Approach
-Sorry-first workflow: wrote full file structure with all definitions and theorem statements, compiled, then closed sorrys one by one using Mathlib wrappers.
-
-- **Uniqueness**: Wrapped `ODE_solution_unique_of_mem_Icc_right` with `s := fun _ => univ`
-- **Continuous dependence**: Wrapped `dist_le_of_trajectories_ODE_of_mem` with NNReal conversion
-- **Perturbation bound**: Wrapped `dist_le_of_approx_trajectories_ODE_of_mem` with `εf := 0`
-- **HasDerivWithinAt conversion**: Proved `hasDerivWithinAt_Icc_to_Ici` using `Icc_mem_nhdsGE` at left endpoint and `Icc_mem_nhds` at interior
-- **Existence**: Submitted to Aristotle (project da85ce79-426b-46f8-b1a8-5fc85c94c090). Aristotle stuck at 3% after 30+ minutes. The proof requires interval subdivision for general `L*(b-a) >= 1` which is ~200 lines. Accepted sorry.
+- Read the current strategy and `OpenMath/PicardLindelof.lean`.
+- Checked the previously listed Aristotle result directories; they were unrelated to `PicardLindelof.lean`, consistent with the planner note that they were already superseded.
+- Searched Mathlib's ODE API and confirmed the usable existence entry points are based on `IsPicardLindelof`.
+- Proved a new private helper `exists_solution_small` for the case `L * (b - a) < 1` by:
+  - bounding `t ↦ f t y₀` on `Icc a b`,
+  - choosing a radius `R = C * (b - a) / (1 - L * (b - a))`,
+  - constructing `IsPicardLindelof` with `t₀ = a` and `r = 0`,
+  - extracting a solution and `ContinuousOn` from Mathlib's flow theorem.
+- Replaced the old monolithic `exists_solution` sorry with a two-branch structure:
+  - small-interval branch closed by `exists_solution_small`,
+  - general subdivision branch left as the remaining sorry.
+- Submitted 5 Aristotle jobs after the sorry-first restructuring:
+  - `36cd6ffc-81c3-4441-83df-70ab410df0b1` — small-interval existence
+  - `28be6fdd-b7d1-4424-af32-7bc151a77449` — subdivision count
+  - `f8fd17f4-dea5-46b0-af9b-7a366ce05bf2` — grid membership
+  - `ef7474f5-1f31-4f3f-8ca0-5aa9b477a792` — piecewise gluing
+  - `54cb7170-f748-46c1-8dd7-64db449d94ab` — full chaining proof
+- Slept 30 minutes, then refreshed status once and inspected the completed outputs.
 
 ## Result
-PARTIAL SUCCESS — 6 theorems proved, 1 sorry remaining (`exists_solution`).
-
-Proved (sorry-free):
-1. `IsLipschitzInSecondVar` — definition (def:110A)
-2. `IsLipschitzInSecondVar.lipschitzWith` — conversion to Mathlib LipschitzWith
-3. `IsLipschitzInSecondVar.lipschitzOnWith` — conversion to LipschitzOnWith
-4. `PicardLindelof.unique` — uniqueness (thm:110C uniqueness part)
-5. `PicardLindelof.continuous_dependence` — exponential bound on solution difference
-6. `PicardLindelof.perturbation_bound` — gronwallBound for approximate solutions
-7. `PicardLindelof.hasDerivWithinAt_Icc_to_Ici` — filter conversion helper
-8. `PicardLindelof.exists_unique` — combined existence+uniqueness (depends on sorry)
-
-Sorry remaining:
-1. `PicardLindelof.exists_solution` — existence part. Needs `IsPicardLindelof` construction with interval subdivision.
+- SUCCESS: `exists_solution_small` is now proved in the codebase and `OpenMath/PicardLindelof.lean` compiles.
+- PARTIAL: `exists_solution` is decomposed, but the general interval-subdivision branch still has one `sorry`.
+- Aristotle status after the mandated wait:
+  - `36cd6ffc...` COMPLETE
+  - `28be6fdd...` COMPLETE
+  - `f8fd17f4...` COMPLETE
+  - `ef7474f5...` COMPLETE
+  - `54cb7170...` IN_PROGRESS at the time of the single post-wait check
 
 ## Dead ends
-- Direct `IsPicardLindelof` construction fails for general `L*(b-a)` because Mathlib requires `M * (b-a) <= R` (ball radius constraint), which is only satisfiable when `L*(b-a) < 1`.
-- `lean_multi_attempt` with `exact?`, `aesop`, `simp` could not close the existence sorry.
-- Aristotle job submitted but still in progress at 3% after 30+ minutes.
+- There is no hidden global-Lipschitz finite-interval existence wrapper in Mathlib that bypasses the subdivision argument for this theorem statement.
+- The Aristotle gluing result used `set_option maxHeartbeats 800000`, which violates project rules, so it was not directly usable.
+- The full chaining Aristotle job did not finish within the mandated 30-minute window, so it could not be incorporated this cycle.
 
 ## Discovery
-- Mathlib's Gronwall module provides excellent wrappers for uniqueness and continuous dependence — just need `s := fun _ => univ` and NNReal coercion handling.
-- `Icc_mem_nhdsGE` (not `Icc_mem_nhdsWithin_Ici`) is the correct name for the filter inclusion at left endpoints.
-- `HasDerivWithinAt.mono_of_mem_nhdsWithin` (not `HasFDerivAtFilter.mono_of_mem`) is the correct filter monotonicity lemma.
-- General Picard-Lindelof existence requires interval subdivision (~200 lines) because `IsPicardLindelof` only handles the case where the Picard iteration contracts on a single ball.
+- The local existence proof is substantially simpler using
+  `IsPicardLindelof.exists_forall_mem_closedBall_eq_hasDerivWithinAt_continuousOn`
+  than reconstructing continuity from derivative facts afterward.
+- The remaining difficulty is not local existence but the finite recursive assembly of local solutions into a single global function on `Icc a b`.
+- Arithmetic support for the subdivision count and grid-point membership is now available in Aristotle outputs and can be ported if needed next cycle.
 
 ## Suggested next approach
-- Close `exists_solution` in a dedicated cycle: subdivide `[a,b]` into `n` subintervals with `L*(b-a)/n < 1`, construct `IsPicardLindelof` on each, chain solutions using `unique`. This is ~200 lines of careful interval arithmetic.
-- Alternatively, accept the sorry and move to Chapter 4 targets (convergence theory for multistep methods).
+- Introduce explicit helper lemmas in `OpenMath/PicardLindelof.lean` for:
+  - existence of a positive `N` with `L * ((b - a) / N) < 1`,
+  - membership of grid points `a + k * h` in `Icc a b`,
+  - gluing continuity/derivative data across adjacent subintervals.
+- Build the global solution by finite recursion on subinterval index, using `unique` to prove compatibility at joins.
+- Avoid any gluing proof that requires `maxHeartbeats > 200000`; if the derivative gluing lemma is expensive, break it into endpoint/interior cases.
