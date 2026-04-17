@@ -57,6 +57,124 @@ def SatisfiesD (t : ButcherTableau s) (r : ℕ) : Prop :=
     ∀ j : Fin s, ∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j =
       t.b j / (k : ℝ) * (1 - t.c j ^ k)
 
+/-- **Simplifying assumption E(η,ζ)**: for k = 1,...,η and l = 1,...,ζ,
+∑ᵢⱼ bᵢ cᵢ^{k-1} aᵢⱼ cⱼ^{l-1} = 1 / (l (k + l)).
+This is equation (321c) in Iserles, and equivalently the monomial form of
+Theorem 343B, equation (343k). -/
+def SatisfiesE (t : ButcherTableau s) (η ζ : ℕ) : Prop :=
+  ∀ k l : ℕ, 1 ≤ k → k ≤ η → 1 ≤ l → l ≤ ζ →
+    ∑ i : Fin s, ∑ j : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1) =
+      1 / ((l : ℝ) * ((k + l : ℕ) : ℝ))
+
+/-- **B(2s) ∧ C(s) ⇒ E(s,s)**, the implication (342m) from Theorem 342C. -/
+theorem SatisfiesE_of_B_C (t : ButcherTableau s) (hB : t.SatisfiesB (2 * s))
+    (hC : t.SatisfiesC s) : t.SatisfiesE s s := by
+  intro k l hk1 hk2 hl1 hl2
+  have hC_l : ∀ i : Fin s, ∑ j : Fin s, t.A i j * t.c j ^ (l - 1) = t.c i ^ l / (l : ℝ) := by
+    intro i
+    exact hC l hl1 hl2 i
+  have hB_kl : ∑ i : Fin s, t.b i * t.c i ^ (k + l - 1) = 1 / ((k + l : ℕ) : ℝ) := by
+    exact hB (k + l) (by omega) (by omega)
+  have hfactor : ∀ i : Fin s,
+      ∑ j : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1) =
+        t.b i * t.c i ^ (k - 1) * (∑ j : Fin s, t.A i j * t.c j ^ (l - 1)) := by
+    intro i
+    calc
+      ∑ j : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1)
+          = ∑ j : Fin s, (t.b i * t.c i ^ (k - 1)) * (t.A i j * t.c j ^ (l - 1)) := by
+              refine sum_congr rfl ?_
+              intro j hj
+              ring
+      _ = t.b i * t.c i ^ (k - 1) * (∑ j : Fin s, t.A i j * t.c j ^ (l - 1)) := by
+            rw [mul_sum]
+  calc
+    ∑ i : Fin s, ∑ j : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1)
+        = ∑ i : Fin s, t.b i * t.c i ^ (k - 1) * (∑ j : Fin s, t.A i j * t.c j ^ (l - 1)) := by
+            simp [hfactor]
+    _ = ∑ i : Fin s, t.b i * t.c i ^ (k - 1) * (t.c i ^ l / (l : ℝ)) := by
+          simp [hC_l]
+    _ = (1 / (l : ℝ)) * ∑ i : Fin s, t.b i * t.c i ^ (k + l - 1) := by
+          rw [mul_sum]
+          refine sum_congr rfl ?_
+          intro i hi
+          have hkll : k - 1 + l = k + l - 1 := by omega
+          calc
+            t.b i * t.c i ^ (k - 1) * (t.c i ^ l / (l : ℝ))
+                = (1 / (l : ℝ)) * (t.b i * (t.c i ^ (k - 1) * t.c i ^ l)) := by ring
+            _ = (1 / (l : ℝ)) * (t.b i * t.c i ^ (k + l - 1)) := by
+                  rw [← pow_add, hkll]
+    _ = (1 / (l : ℝ)) * (1 / ((k + l : ℕ) : ℝ)) := by rw [hB_kl]
+    _ = 1 / ((l : ℝ) * ((k + l : ℕ) : ℝ)) := by
+          ring_nf
+
+/-- **B(2s) ∧ D(s) ⇒ E(s,s)**, the implication (342o) from Theorem 342C. -/
+theorem SatisfiesE_of_B_D (t : ButcherTableau s) (hB : t.SatisfiesB (2 * s))
+    (hD : t.SatisfiesD s) : t.SatisfiesE s s := by
+  intro k l hk1 hk2 hl1 hl2
+  have hD_k : ∀ j : Fin s, ∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j =
+      t.b j / (k : ℝ) * (1 - t.c j ^ k) := by
+    intro j
+    exact hD k hk1 hk2 j
+  have hB_l : ∑ j : Fin s, t.b j * t.c j ^ (l - 1) = 1 / (l : ℝ) := by
+    exact hB l hl1 (by omega)
+  have hB_kl : ∑ j : Fin s, t.b j * t.c j ^ (k + l - 1) = 1 / ((k + l : ℕ) : ℝ) := by
+    exact hB (k + l) (by omega) (by omega)
+  have hfactor : ∀ j : Fin s,
+      ∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1) =
+        (∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) * t.c j ^ (l - 1) := by
+    intro j
+    calc
+      ∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1)
+          = ∑ i : Fin s, (t.b i * t.c i ^ (k - 1) * t.A i j) * t.c j ^ (l - 1) := by
+              refine sum_congr rfl ?_
+              intro i hi
+              ring
+      _ = (∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) * t.c j ^ (l - 1) := by
+            rw [sum_mul]
+  have hsplit : ∀ j : Fin s,
+      (t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l - 1) =
+        (1 / (k : ℝ)) * (t.b j * t.c j ^ (l - 1)) -
+          (1 / (k : ℝ)) * (t.b j * t.c j ^ (k + l - 1)) := by
+    intro j
+    have hkll : k + (l - 1) = k + l - 1 := by omega
+    calc
+      (t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l - 1)
+          = (t.b j / (k : ℝ)) * t.c j ^ (l - 1) -
+              (t.b j / (k : ℝ)) * (t.c j ^ k * t.c j ^ (l - 1)) := by
+                ring
+      _ = (1 / (k : ℝ)) * (t.b j * t.c j ^ (l - 1)) -
+            (1 / (k : ℝ)) * (t.b j * t.c j ^ (k + l - 1)) := by
+              rw [← pow_add, hkll]
+              ring
+  calc
+    ∑ i : Fin s, ∑ j : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l - 1)
+        = ∑ j : Fin s, (∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) * t.c j ^ (l - 1) := by
+            rw [sum_comm]
+            simp [hfactor]
+    _ = ∑ j : Fin s, (t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l - 1) := by
+          simp [hD_k]
+    _ = (1 / (k : ℝ)) *
+          (∑ j : Fin s, t.b j * t.c j ^ (l - 1) - ∑ j : Fin s, t.b j * t.c j ^ (k + l - 1)) := by
+            calc
+              ∑ j : Fin s, (t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l - 1)
+                  = ∑ j : Fin s,
+                      ((1 / (k : ℝ)) * (t.b j * t.c j ^ (l - 1)) -
+                        (1 / (k : ℝ)) * (t.b j * t.c j ^ (k + l - 1))) := by
+                          simp [hsplit]
+              _ = (∑ j : Fin s, (1 / (k : ℝ)) * (t.b j * t.c j ^ (l - 1))) -
+                    ∑ j : Fin s, (1 / (k : ℝ)) * (t.b j * t.c j ^ (k + l - 1)) := by
+                      rw [sum_sub_distrib]
+              _ = (1 / (k : ℝ)) *
+                    (∑ j : Fin s, t.b j * t.c j ^ (l - 1) - ∑ j : Fin s, t.b j * t.c j ^ (k + l - 1)) := by
+                      rw [mul_sub, mul_sum, mul_sum]
+    _ = (1 / (k : ℝ)) * (1 / (l : ℝ) - 1 / ((k + l : ℕ) : ℝ)) := by
+          rw [hB_l, hB_kl]
+    _ = 1 / ((l : ℝ) * ((k + l : ℕ) : ℝ)) := by
+          have hk0 : (k : ℝ) ≠ 0 := by positivity
+          have hl0 : (l : ℝ) ≠ 0 := by positivity
+          field_simp [hk0, hl0]
+          norm_num [Nat.cast_add]
+
 /-! ## Monotonicity: B(p) implies B(p') for p' ≤ p, etc. -/
 
 theorem SatisfiesB.mono {t : ButcherTableau s} {p p' : ℕ} (h : t.SatisfiesB p) (hp : p' ≤ p) :

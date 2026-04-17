@@ -17,7 +17,7 @@
   "thm:110C": {
     "lean_file": "OpenMath/PicardLindelof.lean",
     "lean_symbol": "PicardLindelof.exists_unique",
-    "status": "in_progress"
+    "status": "done"
   },
   "thm:111A": {
     "lean_file": null,
@@ -85,14 +85,14 @@
     "status": "unformalized"
   },
   "thm:212A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Basic.lean",
+    "lean_symbol": "theorem_212A",
+    "status": "done"
   },
   "thm:213A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/EulerConvergence.lean",
+    "lean_symbol": "euler_convergence_order1",
+    "status": "done"
   },
   "thm:213B": {
     "lean_file": null,
@@ -255,9 +255,9 @@
     "status": "unformalized"
   },
   "thm:342C": {
-    "lean_file": null,
+    "lean_file": "OpenMath/Collocation.lean",
     "lean_symbol": null,
-    "status": "unformalized"
+    "status": "in_progress"
   },
   "cor:342D": {
     "lean_file": null,

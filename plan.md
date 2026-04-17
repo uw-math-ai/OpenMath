@@ -102,6 +102,10 @@
 - [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
 - [x] **Definition**: Embedded RK pairs (`OpenMath/EmbeddedRK.lean`)
 - [x] **Definition**: Stiff accuracy (`OpenMath/StiffAccuracy.lean`)
+- [~] **Theorem 342C**: Gaussian quadrature order-condition equivalence (`OpenMath/Collocation.lean`)
+  - [x] Defined `SatisfiesE (η, ζ)` from equation (321c)
+  - [x] Proved `B(2s) ∧ C(s) ⇒ E(s,s)` and `B(2s) ∧ D(s) ⇒ E(s,s)`
+  - [ ] Converse implications `B(2s) ∧ E(s,s) ⇒ C(s), D(s)` still need a Gaussian quadrature uniqueness/distinct-node argument
 
 ### BDF Methods (Section 4.5)
 - [x] **BDF1-2**: backward Euler and BDF2 (`OpenMath/MultistepMethods.lean`)
@@ -122,8 +126,8 @@
 **BDF family complete (BDF1–6: definitions, consistency, order, zero-stability, convergence).**
 
 Next targets:
-1. **Convergence theorem for one-step methods** (Section 1.3) — classical convergence result
-2. **Chapter 4 targets** — convergence theory for multistep methods
+1. **Finish Theorem 342C** — prove the converse `B(2s) ∧ E(s,s) ⇒ C(s), D(s)` implications
+2. **Theorem 301A** — rooted-tree infrastructure for the remaining Chapter 3 order-condition results
 
 ## Sorry locations
 None — the project is sorry-free as of cycle 96.
