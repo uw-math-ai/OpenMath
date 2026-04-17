@@ -100,6 +100,11 @@
 - [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
 - [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
+- [~] **Theorem 352C/352D**: Padé recurrence infrastructure (`OpenMath/Pade.lean`)
+  - [x] Added general `padeP`, `padeQ`, `padeR` families
+  - [x] Proved diagonal symmetry and specialization lemmas `padeQ_diagonal_eq_padeP_neg`, `padeP_one_one`, `padeQ_two_two`
+  - [x] Proved pair packaging theorem `padePQ_pair_recurrence`
+  - [ ] Remaining coefficient recurrences `padeQ_succ_left`, `padeP_succ_right` need a clean factorial-sum proof
 - [x] **Definition**: Embedded RK pairs (`OpenMath/EmbeddedRK.lean`)
 - [x] **Definition**: Stiff accuracy (`OpenMath/StiffAccuracy.lean`)
 - [x] **Theorem 342C**: Gaussian quadrature order-condition equivalence (`OpenMath/Collocation.lean`)
@@ -133,9 +138,9 @@
 **BDF family complete (BDF1–6: definitions, consistency, order, zero-stability, convergence).**
 
 Next targets:
-1. **Theorem 301A** — finish rooted-tree infrastructure by replacing the `List` fallback with an unordered multiplicity model and proving the final recursion formulas
-2. **Theorem 342C** remaining implications (342j, 342k, 342l) — require tree infrastructure from 301A
-3. **Definition 355A** — order stars/arrows (independent branch using complex analysis)
+1. **Theorem 352D** — finish the factorial-sum proofs of `padeQ_succ_left` and `padeP_succ_right` in `OpenMath/Pade.lean`
+2. **Theorem 301A** — finish rooted-tree infrastructure by replacing the `List` fallback with an unordered multiplicity model and proving the final recursion formulas
+3. **Theorem 342C** remaining implications (342j, 342k, 342l) — require tree infrastructure from 301A
 
 ## Sorry locations
 None — the project is sorry-free as of cycle 96.

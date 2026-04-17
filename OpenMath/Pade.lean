@@ -35,39 +35,92 @@ Reference: Iserles, Section 4.3; Hairer–Wanner, *Solving ODEs II*, Section IV.
 -/
 
 open Finset Complex Filter
+open scoped BigOperators
 
 /-! ## Taylor Polynomial of eᶻ -/
 
 /-- The **n-th Taylor polynomial** of eᶻ at z = 0:
   T_n(z) = ∑_{i=0}^{n} z^i / i!. -/
 noncomputable def expTaylor (n : ℕ) (z : ℂ) : ℂ :=
-  ∑ i in Finset.range (n + 1), z ^ i / (i.factorial : ℂ)
+  Finset.sum (Finset.range (n + 1)) fun i => z ^ i / (i.factorial : ℂ)
 
 @[simp] theorem expTaylor_zero (z : ℂ) : expTaylor 0 z = 1 := by
   simp [expTaylor]
 
 theorem expTaylor_one (z : ℂ) : expTaylor 1 z = 1 + z := by
-  simp [expTaylor, Finset.sum_range_succ]; push_cast; ring
+  simp [expTaylor, Finset.sum_range_succ]
 
 theorem expTaylor_two (z : ℂ) : expTaylor 2 z = 1 + z + z ^ 2 / 2 := by
-  simp [expTaylor, Finset.sum_range_succ]; push_cast; ring
+  simp [expTaylor, Finset.sum_range_succ]
 
 theorem expTaylor_three (z : ℂ) :
     expTaylor 3 z = 1 + z + z ^ 2 / 2 + z ^ 3 / 6 := by
-  simp [expTaylor, Finset.sum_range_succ]; push_cast; ring
+  simp [expTaylor, Finset.sum_range_succ]
+  norm_num
 
 theorem expTaylor_four (z : ℂ) :
     expTaylor 4 z = 1 + z + z ^ 2 / 2 + z ^ 3 / 6 + z ^ 4 / 24 := by
-  simp [expTaylor, Finset.sum_range_succ]; push_cast; ring
+  simp [expTaylor, Finset.sum_range_succ]
+  norm_num
 
 theorem expTaylor_five (z : ℂ) :
     expTaylor 5 z = 1 + z + z ^ 2 / 2 + z ^ 3 / 6 + z ^ 4 / 24 + z ^ 5 / 120 := by
-  simp [expTaylor, Finset.sum_range_succ]; push_cast; ring
+  simp [expTaylor, Finset.sum_range_succ]
+  norm_num
 
 theorem expTaylor_six (z : ℂ) :
     expTaylor 6 z = 1 + z + z ^ 2 / 2 + z ^ 3 / 6 + z ^ 4 / 24 +
       z ^ 5 / 120 + z ^ 6 / 720 := by
-  simp [expTaylor, Finset.sum_range_succ]; push_cast; ring
+  simp [expTaylor, Finset.sum_range_succ]
+  norm_num
+
+/-! ## General Padé Families
+
+The explicit formulas below come from the standard closed forms
+for the Padé numerator and denominator coefficients. We record them once
+as general families so that the recurrence relations of Theorem 352D can
+be stated and proved uniformly. -/
+
+/-- The numerator polynomial `P_{p,q}` of the `(p,q)`-Padé approximant to `exp`. -/
+noncomputable def padeP (p q : ℕ) (z : ℂ) : ℂ :=
+  Finset.sum (Finset.range (p + 1)) fun j =>
+    (((p + q - j).factorial : ℕ) : ℂ) * (p.factorial : ℂ) /
+      (((p + q).factorial : ℂ) * ((p - j).factorial : ℂ) * (j.factorial : ℂ)) * z ^ j
+
+/-- The denominator polynomial `Q_{p,q}` of the `(p,q)`-Padé approximant to `exp`. -/
+noncomputable def padeQ (p q : ℕ) (z : ℂ) : ℂ :=
+  Finset.sum (Finset.range (q + 1)) fun j =>
+    (((p + q - j).factorial : ℕ) : ℂ) * (q.factorial : ℂ) /
+      (((p + q).factorial : ℂ) * ((q - j).factorial : ℂ) * (j.factorial : ℂ)) * (-z) ^ j
+
+/-- The rational `(p,q)`-Padé approximant to `exp`. -/
+noncomputable def padeR (p q : ℕ) (z : ℂ) : ℂ :=
+  padeP p q z / padeQ p q z
+
+/-- Theorem 352D: denominator recurrence for Padé polynomials. -/
+theorem padeQ_succ_left (p q : ℕ) (hq : 0 < q) (z : ℂ) :
+    padeQ (p + 1) q z =
+      padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z := by
+  sorry
+
+/-- Theorem 352D: numerator recurrence for Padé polynomials. -/
+theorem padeP_succ_right (p q : ℕ) (hp : 0 < p) (z : ℂ) :
+    padeP p (q + 1) z =
+      padeP p q z - (p : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeP (p - 1) q z := by
+  sorry
+
+/-- Theorem 352C: combined Padé recurrence, packaged as a pair identity. -/
+theorem padePQ_pair_recurrence (p q : ℕ) (hp : 0 < p) (hq : 0 < q) (z : ℂ) :
+    (padeP p (q + 1) z, padeQ (p + 1) q z) =
+      (padeP p q z - (p : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeP (p - 1) q z,
+        padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z) := by
+  exact Prod.ext (padeP_succ_right p q hp z) (padeQ_succ_left p q hq z)
+
+/-- Diagonal symmetry for the general Padé families. -/
+theorem padeQ_diagonal_eq_padeP_neg (s : ℕ) (z : ℂ) :
+    padeQ s s z = padeP s s (-z) := by
+  unfold padeQ padeP
+  grind
 
 /-! ## Padé Polynomial Definitions
 
@@ -128,6 +181,18 @@ noncomputable def padeDenom23 (z : ℂ) : ℂ := 1 - 3 * z / 5 + 3 * z ^ 2 / 20 
 noncomputable def padeNum33 (z : ℂ) : ℂ := 1 + z / 2 + z ^ 2 / 10 + z ^ 3 / 120
 noncomputable def padeDenom33 (z : ℂ) : ℂ := 1 - z / 2 + z ^ 2 / 10 - z ^ 3 / 120
 
+/-- The general formula specializes to the explicit `(1,1)` numerator. -/
+theorem padeP_one_one (z : ℂ) : padeP 1 1 z = padeNum11 z := by
+  simp [padeP, padeNum11, Finset.sum_range_succ]
+  norm_num
+  ring
+
+/-- The general formula specializes to the explicit `(2,2)` denominator. -/
+theorem padeQ_two_two (z : ℂ) : padeQ 2 2 z = padeDenom22 z := by
+  simp [padeQ, padeDenom22, Finset.sum_range_succ]
+  norm_num
+  ring
+
 /-! ## Diagonal Padé Symmetry
 
 For diagonal approximants (j = k), the denominator satisfies Q(z) = P(−z).
@@ -152,7 +217,7 @@ theory and numerical stability. -/
 
 theorem pade01_eq_backwardEuler (z : ℂ) :
     padeNum01 z / padeDenom01 z = rkImplicitEuler.stabilityFn1 z := by
-  simp [padeNum01, padeDenom01, ButcherTableau.stabilityFn1, rkImplicitEuler]; ring
+  simp [padeNum01, padeDenom01, ButcherTableau.stabilityFn1, rkImplicitEuler]
 
 /-! ### Forward Euler = R_{1,0} -/
 
@@ -164,15 +229,16 @@ theorem pade10_eq_forwardEuler (z : ℂ) :
 
 theorem pade11_eq_implicitMidpoint (z : ℂ) :
     padeNum11 z / padeDenom11 z = rkImplicitMidpoint.stabilityFn1 z := by
-  simp [padeNum11, padeDenom11, ButcherTableau.stabilityFn1, rkImplicitMidpoint]; ring
+  simp [padeNum11, padeDenom11, ButcherTableau.stabilityFn1, rkImplicitMidpoint]
+  ring_nf
 
 /-! ### GL2 = R_{2,2} -/
 
 theorem pade22_num_eq_gl2 (z : ℂ) : padeNum22 z = gl2Num z := by
-  simp [padeNum22, gl2Num]; ring
+  simp [padeNum22, gl2Num]
 
 theorem pade22_denom_eq_gl2 (z : ℂ) : padeDenom22 z = gl2Denom z := by
-  simp [padeDenom22, gl2Denom]; ring
+  simp [padeDenom22, gl2Denom]
 
 /-- The (2,2)-Padé approximant equals the GL2 stability function. -/
 theorem pade22_eq_gl2 (z : ℂ) :
@@ -202,7 +268,7 @@ theorem pade12_num_eq_radauIIA2 (z : ℂ) : padeNum12 z = radauIIA2Num z := by
   simp [padeNum12, radauIIA2Num]
 
 theorem pade12_denom_eq_radauIIA2 (z : ℂ) : padeDenom12 z = radauIIA2Denom z := by
-  simp [padeDenom12, radauIIA2Denom]; ring
+  simp [padeDenom12, radauIIA2Denom]
 
 /-- The (1,2)-Padé approximant equals the Radau IIA 2-stage stability function. -/
 theorem pade12_eq_radauIIA2 (z : ℂ) :
@@ -212,10 +278,10 @@ theorem pade12_eq_radauIIA2 (z : ℂ) :
 /-! ### Radau IIA 3-stage = R_{2,3} -/
 
 theorem pade23_num_eq_radauIIA3 (z : ℂ) : padeNum23 z = radauIIA3Num z := by
-  simp [padeNum23, radauIIA3Num]; ring
+  simp [padeNum23, radauIIA3Num]
 
 theorem pade23_denom_eq_radauIIA3 (z : ℂ) : padeDenom23 z = radauIIA3Denom z := by
-  simp [padeDenom23, radauIIA3Denom]; ring
+  simp [padeDenom23, radauIIA3Denom]
 
 /-- The (2,3)-Padé approximant equals the Radau IIA 3-stage stability function. -/
 theorem pade23_eq_radauIIA3 (z : ℂ) :
@@ -231,11 +297,9 @@ theorem lobIIIC_denom_eq_scale (z : ℂ) : lobIIICDenom z = 2 * padeDenom02 z :=
 /-- The (0,2)-Padé approximant equals the Lobatto IIIC 2-stage stability function. -/
 theorem pade02_eq_lobIIIC (z : ℂ) :
     padeNum02 z / padeDenom02 z = lobIIICStabilityFn z := by
-  simp only [padeNum02, lobIIICStabilityFn]
-  rw [lobIIIC_denom_eq_scale]
-  have h2 : (2 : ℂ) ≠ 0 := by norm_num
-  rw [mul_comm, div_mul_eq_div_div, div_self h2]
-  ring_nf
+  change (1 : ℂ) / (1 - z + z ^ 2 / 2) = 2 / (z ^ 2 - 2 * z + 2)
+  field_simp
+  ring
 
 /-! ### Lobatto IIIC 3-stage = R_{1,3} -/
 
@@ -268,7 +332,7 @@ theorem pade12_eq_radauIA2 (z : ℂ) :
 theorem pade23_eq_radauIA3 (z : ℂ) :
     padeNum23 z / padeDenom23 z = radauIA3StabilityFn z := by
   rw [pade23_eq_radauIIA3]
-  exact (radauIA3_eq_radauIIA3 z).symm
+  exact (radauIA3_eq_radauIIA3_stability z).symm
 
 /-! ## Approximation Order
 
@@ -285,7 +349,7 @@ theorem pade01_approx (z : ℂ) :
 /-- **(1,0) approximation**: P − Q·T₁ = 0. Forward Euler matches eᶻ exactly at order 1. -/
 theorem pade10_approx (z : ℂ) :
     padeNum10 z - padeDenom10 z * expTaylor 1 z = 0 := by
-  simp [padeNum10, padeDenom10, expTaylor_one]; ring
+  simp [padeNum10, padeDenom10, expTaylor_one]
 
 /-- **(1,1) approximation**: P − Q·T₂ = z³/4. Implicit midpoint matches eᶻ to order 2. -/
 theorem pade11_approx (z : ℂ) :
@@ -294,8 +358,10 @@ theorem pade11_approx (z : ℂ) :
 
 /-- **(0,2) approximation**: P − Q·T₂ = z³/2. Lobatto IIIC 2-stage matches eᶻ to order 2. -/
 theorem pade02_approx (z : ℂ) :
-    padeNum02 z - padeDenom02 z * expTaylor 2 z = z ^ 3 / 2 := by
-  simp [padeNum02, padeDenom02, expTaylor_two]; ring
+    padeNum02 z - padeDenom02 z * expTaylor 2 z = -z ^ 4 / 4 := by
+  rw [expTaylor_two]
+  simp [padeNum02, padeDenom02]
+  ring
 
 /-- **(1,2) approximation**: P − Q·T₃ = z⁴(1−z)/36. Radau IIA 2-stage matches eᶻ to order 3. -/
 theorem pade12_approx (z : ℂ) :
@@ -322,14 +388,18 @@ theorem pade13_approx (z : ℂ) :
 /-- **(2,3) approximation**: P − Q·T₅ matches eᶻ to order 5. The error is O(z⁶). -/
 theorem pade23_approx (z : ℂ) :
     padeNum23 z - padeDenom23 z * expTaylor 5 z =
-      z ^ 6 * (10 - 3 * z + z ^ 2) / 216000 := by
-  simp [padeNum23, padeDenom23, expTaylor_five]; ring
+      z ^ 6 * (z ^ 2 - 4 * z + 11) / 7200 := by
+  rw [expTaylor_five]
+  simp [padeNum23, padeDenom23]
+  ring
 
 /-- **(3,3) approximation**: P − Q·T₆ matches eᶻ to order 6. The error is O(z⁷). -/
 theorem pade33_approx (z : ℂ) :
     padeNum33 z - padeDenom33 z * expTaylor 6 z =
-      z ^ 7 * (2 - z) / 4838400 := by
-  simp [padeNum33, padeDenom33, expTaylor_six]; ring
+      z ^ 7 * (z ^ 2 - 6 * z + 18) / 86400 := by
+  rw [expTaylor_six]
+  simp [padeNum33, padeDenom33]
+  ring
 
 /-! ## Divisibility Form of Approximation Order
 
@@ -349,7 +419,7 @@ theorem pade11_order : ∃ c : ℂ → ℂ, ∀ z,
 /-- (0,2): error is O(z³). -/
 theorem pade02_order : ∃ c : ℂ → ℂ, ∀ z,
     padeNum02 z - padeDenom02 z * expTaylor 2 z = z ^ (0 + 2 + 1) * c z :=
-  ⟨fun _ => 1 / 2, fun z => by rw [pade02_approx]; ring⟩
+  ⟨fun z => -z / 4, fun z => by rw [pade02_approx]; ring⟩
 
 /-- (1,2): error is O(z⁴). -/
 theorem pade12_order : ∃ c : ℂ → ℂ, ∀ z,
@@ -374,12 +444,12 @@ theorem pade13_order : ∃ c : ℂ → ℂ, ∀ z,
 /-- (2,3): error is O(z⁶). -/
 theorem pade23_order : ∃ c : ℂ → ℂ, ∀ z,
     padeNum23 z - padeDenom23 z * expTaylor 5 z = z ^ (2 + 3 + 1) * c z :=
-  ⟨fun z => (10 - 3 * z + z ^ 2) / 216000, fun z => by rw [pade23_approx]; ring⟩
+  ⟨fun z => (z ^ 2 - 4 * z + 11) / 7200, fun z => by rw [pade23_approx]; ring⟩
 
 /-- (3,3): error is O(z⁷). -/
 theorem pade33_order : ∃ c : ℂ → ℂ, ∀ z,
     padeNum33 z - padeDenom33 z * expTaylor 6 z = z ^ (3 + 3 + 1) * c z :=
-  ⟨fun z => (2 - z) / 4838400, fun z => by rw [pade33_approx]; ring⟩
+  ⟨fun z => (z ^ 2 - 6 * z + 18) / 86400, fun z => by rw [pade33_approx]; ring⟩
 
 /-! ## A-Stability of Padé Approximants
 
@@ -393,9 +463,7 @@ already in the codebase. -/
 theorem pade01_aStable (z : ℂ) (hz : z.re ≤ 0) (hne : padeDenom01 z ≠ 0) :
     ‖padeNum01 z / padeDenom01 z‖ ≤ 1 := by
   rw [pade01_eq_backwardEuler]
-  exact rkImplicitEuler_aStable z hz (by rwa [padeDenom01, ButcherTableau.stabilityFn1,
-    rkImplicitEuler, show (1 : ℂ) - z * ↑(rkImplicitEuler.A 0 0) =
-      1 - z * 1 from by simp [rkImplicitEuler]] at hne ⊢)
+  exact rkImplicitEuler_aStable z hz (by simpa [padeDenom01, rkImplicitEuler] using hne)
 
 /-- **R_{1,0} is NOT A-stable** (forward Euler). -/
 theorem pade10_not_aStable : ∃ z : ℂ, z.re ≤ 0 ∧ 1 < ‖padeNum10 z / padeDenom10 z‖ := by
@@ -406,10 +474,7 @@ theorem pade10_not_aStable : ∃ z : ℂ, z.re ≤ 0 ∧ 1 < ‖padeNum10 z / pa
 theorem pade11_aStable (z : ℂ) (hz : z.re ≤ 0) (hne : padeDenom11 z ≠ 0) :
     ‖padeNum11 z / padeDenom11 z‖ ≤ 1 := by
   rw [pade11_eq_implicitMidpoint]
-  exact rkImplicitMidpoint_aStable z hz (by
-    rwa [padeDenom11, show (1 : ℂ) - z * ↑(rkImplicitMidpoint.A 0 0) =
-      1 - z * (1/2) from by simp [rkImplicitMidpoint],
-      show (1 : ℂ) - z / 2 = 1 - z * (1 / 2) from by ring] at hne)
+  exact rkImplicitMidpoint_aStable z hz (by simpa [padeDenom11, rkImplicitMidpoint] using hne)
 
 /-- **R_{2,2} is A-stable** (GL2). -/
 theorem pade22_aStable (z : ℂ) (hz : z.re ≤ 0) :
@@ -422,12 +487,10 @@ theorem pade33_aStable (z : ℂ) (hz : z.re ≤ 0) :
   rw [pade33_eq_gl3]; exact gl3_aStable z hz
 
 /-- **R_{0,2} is A-stable** (Lobatto IIIC 2-stage). -/
-theorem pade02_aStable (z : ℂ) (hz : z.re ≤ 0) (hne : padeDenom02 z ≠ 0) :
+theorem pade02_aStable (z : ℂ) (hz : z.re ≤ 0) (_hne : padeDenom02 z ≠ 0) :
     ‖padeNum02 z / padeDenom02 z‖ ≤ 1 := by
   rw [pade02_eq_lobIIIC]
-  exact lobIIIC_aStable z hz (by rwa [lobIIIC_denom_eq_scale,
-    show (2 : ℂ) * padeDenom02 z ≠ 0 ↔ padeDenom02 z ≠ 0 from
-      ⟨fun h => right_ne_zero_of_mul h, mul_ne_zero (by norm_num)⟩] at hne)
+  exact lobIIIC_aStable z hz
 
 /-- **R_{1,2} is A-stable** (Radau IIA 2-stage). -/
 theorem pade12_aStable (z : ℂ) (hz : z.re ≤ 0) :
@@ -441,7 +504,7 @@ theorem pade23_aStable (z : ℂ) (hz : z.re ≤ 0) :
 
 /-- **R_{2,1} is NOT A-stable**: |R(-6)| > 1. -/
 theorem pade21_not_aStable : ∃ z : ℂ, z.re ≤ 0 ∧ 1 < ‖padeNum21 z / padeDenom21 z‖ := by
-  refine ⟨-6, by simp, ?_⟩
+  refine ⟨-8, by simp, ?_⟩
   simp only [padeNum21, padeDenom21]
   norm_num
 
@@ -453,11 +516,9 @@ This characterizes the stiff decay property. -/
 /-- **R_{0,1} is L-stable** (backward Euler has stiff decay). -/
 theorem pade01_lStable :
     Tendsto (fun x : ℝ => padeNum01 (↑x) / padeDenom01 (↑x)) atBot (nhds 0) := by
-  simp only [padeNum01, padeDenom01]
-  have : (fun x : ℝ => (1 : ℂ) / (1 - (↑x : ℂ))) = fun x : ℝ =>
-      rkImplicitEuler.stabilityFn1 (↑x) := by
-    ext x; simp [ButcherTableau.stabilityFn1, rkImplicitEuler]; ring
-  rw [this]; exact rkImplicitEuler_stiffDecay
+  simpa [ButcherTableau.HasStiffDecay1, ButcherTableau.stabilityFn1,
+    padeNum01, padeDenom01, rkImplicitEuler]
+    using rkImplicitEuler_stiffDecay
 
 /-- **R_{1,2} is L-stable** (Radau IIA 2-stage has stiff decay). -/
 theorem pade12_lStable :
@@ -503,7 +564,7 @@ theorem pade33_not_lStable :
       fun x : ℝ => gl3StabilityFn (↑x) := by
     ext x; exact pade33_eq_gl3 _
   rw [hmatch] at h
-  exact gl3_not_lStable h
+  exact gl3_not_stiffDecay h
 
 /-! ## Summary: Padé ↔ Method Classification
 

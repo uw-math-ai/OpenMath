@@ -305,14 +305,14 @@
     "status": "unformalized"
   },
   "thm:352C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Pade.lean",
+    "lean_symbol": "padePQ_pair_recurrence",
+    "status": "in_progress"
   },
   "thm:352D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Pade.lean",
+    "lean_symbol": "padeQ_succ_left",
+    "status": "in_progress"
   },
   "thm:352E": {
     "lean_file": null,
