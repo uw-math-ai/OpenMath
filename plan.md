@@ -23,33 +23,30 @@
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: A-stability implies roots of ρ in unit disk (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier — A-stable + zero-stable ⟹ order ≤ 2 (2 sorrys remain in `order_ge_three_not_aStable_core`)
+- [x] **Theorem**: Dahlquist's second barrier — A-stable + zero-stable ⟹ order ≤ 2 (`OpenMath/MultistepMethods.lean`)
   - [x] `E_nonneg_re`: Re(σ/ρ) ≥ 0 on unit circle for A-stable methods
   - [x] `re_inv_exp_sub_one`: Re(1/(e^{iθ}-1)) = -1/2 on the unit circle
   - [x] `sigmaC_one_eq_rhoCDeriv_one`: σ_ℂ(1) = ρ'_ℂ(1) for consistent methods
   - [x] `sigmaC_one_ne_zero`: σ(1) ≠ 0 for zero-stable consistent methods
-  - [x] `dahlquistCounterexample`: counterexample showing barrier is FALSE without zero-stability (order 3, A-stable, not zero-stable)
+  - [x] `dahlquistCounterexample`: counterexample (order 3, A-stable, not zero-stable)
   - [x] Reversed polynomial identity: ρ̃(w) = w^s · ρ(1/w) via `Fin.revPerm`
   - [x] Boundary non-negativity: Re(Gt(z)) ≥ 0 for |z| = 1
-  - [ ] `DiffContOnCl ℂ Gt (Metric.ball 0 1)`: removable singularity + boundary regularity
-  - [ ] `HasDerivAt Gt (1/12) 1`: polynomial algebra for derivative at removable singularity
-- [~] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence) (`OpenMath/DahlquistEquivalence.lean`)
-  - [x] Definition: `SatisfiesRecurrence` — characteristic recurrence of LMM
-  - [x] Definition: `HasStableRecurrence` — all solutions bounded
-  - [x] Definition: `IsConvergent` — consistency + stable recurrence
-  - [x] `geometric_satisfies_iff`: ξ^n satisfies recurrence iff ρ(ξ) = 0
-  - [x] `linear_geometric_satisfies`: n·ξ^n satisfies recurrence when ξ is double root
-  - [x] `not_stableRecurrence_of_root_outside_disk`: root with |ξ| > 1 → unstable
-  - [x] `not_stableRecurrence_of_double_root_on_circle`: double root on |ξ| = 1 → unstable
-  - [x] `zeroStable_of_stableRecurrence`: stable recurrence → zero-stable (proved)
-  - [~] `stableRecurrence_of_zeroStable`: zero-stable → stable recurrence (proved modulo spectral bound)
-    - [x] `toLinearRecurrence`: connect LMM to Mathlib's `LinearRecurrence`
-    - [x] `satisfiesRecurrence_iff_isSolution`: equivalence of solution predicates
-    - [x] `tupleSucc_iterate_eq_mkSol`: state vector = tupleSucc^n(init)
-    - [ ] `uniformly_bounded_tupleSucc_iterates`: spectral bound (1 sorry — needs Jordan NF or generalized eigenspace)
-  - [x] `dahlquist_equivalence`: full equivalence theorem (modulo above sorry)
-  - [x] Convergence verified for all standard methods (Euler, trapezoidal, AB2, AM2, BDF2)
-  - [x] `dahlquistCounterexample_not_convergent`: counterexample is not convergent
+  - [x] `DiffContOnCl ℂ Gt (Metric.ball 0 1)`: removable singularity + boundary regularity
+  - [x] `HasDerivAt Gt (1/12) 1`: polynomial algebra for derivative at removable singularity
+  - [x] `continuousOn_Gtilde_closedBall`: continuity on closed unit disk
+- [x] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence) (`OpenMath/DahlquistEquivalence.lean`)
+  - [x] `SatisfiesRecurrence`, `HasStableRecurrence`, `IsConvergent` definitions
+  - [x] `geometric_satisfies_iff`, `linear_geometric_satisfies`
+  - [x] `not_stableRecurrence_of_root_outside_disk`, `not_stableRecurrence_of_double_root_on_circle`
+  - [x] `zeroStable_of_stableRecurrence`: stable recurrence → zero-stable
+  - [x] `stableRecurrence_of_zeroStable`: zero-stable → stable recurrence
+    - [x] `aeval_tupleSucc_charPoly_eq_zero`: Cayley-Hamilton for companion
+    - [x] `charPoly_eval_eq_rhoC`: charPoly evaluation = ρ_ℂ
+    - [x] `tupleSucc_eigenvalue_is_rhoC_root`: eigenvalue → ρ-root
+    - [x] `uniformly_bounded_tupleSucc_iterates`: spectral bound via generalized eigenspace decomposition (`OpenMath/SpectralBound.lean`)
+  - [x] `dahlquist_equivalence`: full equivalence theorem
+  - [x] Convergence for Euler, trapezoidal, AB2, AM2, BDF2, BDF3
+  - [x] `dahlquistCounterexample_not_convergent`
 
 ### 1.3 Order and Convergence
 - [ ] **Theorem**: Convergence theorem for one-step methods
@@ -61,43 +58,73 @@
 - [x] **Definition**: Consistency, explicit RK, order conditions up to order 4 (`OpenMath/RungeKutta.lean`)
 - [x] **Example**: Forward Euler, explicit midpoint, Heun's method as RK (`OpenMath/RungeKutta.lean`)
 - [x] **Example**: Classical RK4 method — consistency, explicit, order 4 (`OpenMath/RungeKutta.lean`)
+- [x] **Theorem**: Explicit RK order barriers (s-stage explicit ⟹ order ≤ s for s ≤ 4) (`OpenMath/OrderBarriers.lean`)
+- [x] **Theorem**: Explicit methods cannot satisfy C(2) with distinct nodes (`OpenMath/OrderBarriers.lean`)
 
 ### 2.2 Implicit Runge–Kutta Methods
 - [x] **Definition**: Implicit RK methods (implicit Euler, implicit midpoint) (`OpenMath/RungeKutta.lean`)
 - [x] **Definition**: Stability function R(z) for 1-stage RK methods (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: A-stability of implicit Euler and implicit midpoint (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Forward Euler (RK) is NOT A-stable (`OpenMath/RungeKutta.lean`)
-- [x] **Example**: Gauss–Legendre 2-stage method — Butcher tableau, consistency, not explicit (`OpenMath/RungeKutta.lean`)
-- [x] **Definition**: GL2 stability function R(z) = (1+z/2+z²/12)/(1-z/2+z²/12) (`OpenMath/RungeKutta.lean`)
-- [x] **Theorem**: A-stability of GL2 method (`gl2_aStable`) (`OpenMath/RungeKutta.lean`)
-- [x] **Theorem**: GL2 has order 4 (`rkGaussLegendre2_order4`) (`OpenMath/RungeKutta.lean`)
+- [x] **Example**: Gauss–Legendre 2-stage — Butcher tableau, consistency, A-stability, order 4 (`OpenMath/RungeKutta.lean`)
+- [x] **Example**: Gauss–Legendre 3-stage — order ≥ 5, B(6), D(3) (`OpenMath/GaussLegendre3.lean`)
+- [x] **Example**: Radau IA 2-stage — order 3, A/L-stability, algebraic stability (`OpenMath/RadauIA2.lean`)
+- [x] **Example**: Radau IA 3-stage (`OpenMath/RadauIA3.lean`)
+- [x] **Example**: Radau IIA 3-stage — order ≥ 5, algebraic stability (`OpenMath/RadauIIA3.lean`)
+- [x] **Definition**: B(p), C(q), D(r) simplifying assumptions (`OpenMath/Collocation.lean`)
+- [x] **Theorem**: B(p)∧C(q) ⟹ order ≥ p, various combinations (`OpenMath/Collocation.lean`)
+- [x] **Theorem**: Nørsett's even-order theorem: symmetric + order ≥ 3 ⟹ order ≥ 4 (`OpenMath/Symmetry.lean`)
+- [x] **Definition**: Self-adjoint / adjoint pair (`OpenMath/Adjoint.lean`)
+
+### 2.3 Lobatto Methods
+- [x] **Example**: Lobatto IIIA 2-stage and 3-stage (`OpenMath/LobattoIIIA.lean`, `OpenMath/LobattoIIIA3.lean`)
+- [x] **Example**: Lobatto IIIB 2-stage and 3-stage (`OpenMath/LobattoIIIB.lean`, `OpenMath/LobattoIIIB3.lean`)
+- [x] **Example**: Lobatto IIIC 2-stage and 3-stage (`OpenMath/LobattoIIIC.lean`, `OpenMath/LobattoIIIC3.lean`)
 
 ## Chapter 3: Stiff Equations
 
 - [ ] **Definition**: Stiffness
 - [x] **Theorem**: A-stability of backward Euler and trapezoidal rule (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Forward Euler is not A-stable (`OpenMath/MultistepMethods.lean`)
-- [~] **Theorem**: Dahlquist's second barrier (A-stable + zero-stable ⟹ order ≤ 2) — 1 sorry remains (`order_ge_three_not_aStable_core`)
+- [x] **Theorem**: Dahlquist's second barrier (A-stable + zero-stable ⟹ order ≤ 2) (`OpenMath/MultistepMethods.lean`)
 - [x] **Counterexample**: A-stable order-3 method without zero-stability (`dahlquistCounterexample`)
+- [x] **Definition**: L-stability (`OpenMath/StiffEquations.lean`)
+- [x] **Theorem**: L-stability of backward Euler, Radau IIA, SDIRK2, SDIRK3 (`OpenMath/StiffEquations.lean`, `OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
+- [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
+- [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
+- [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
+- [x] **Definition**: Embedded RK pairs (`OpenMath/EmbeddedRK.lean`)
+- [x] **Definition**: Stiff accuracy (`OpenMath/StiffAccuracy.lean`)
 
 ### BDF Methods (Section 4.5)
-- [x] **BDF3** (3-step backward differentiation formula) (`OpenMath/MultistepMethods.lean`)
-  - [x] Definition: α = [-2/11, 9/11, -18/11, 1], β = [0, 0, 0, 6/11]
-  - [x] Consistency, order 3, implicit
-  - [x] Zero-stability (triangle inequality + factoring ρ)
-  - [x] Convergence via Dahlquist equivalence (`OpenMath/DahlquistEquivalence.lean`)
-- [~] **BDF4** (4-step backward differentiation formula) (`OpenMath/MultistepMethods.lean`)
-  - [x] Definition: α = [3/25, -16/25, 36/25, -48/25, 1], β = [0, 0, 0, 0, 12/25]
-  - [x] Consistency, order 4, implicit
-  - [ ] Zero-stability (2 sorrys: cubic root analysis needs Schur-Cohn criterion)
+- [x] **BDF1-2**: backward Euler and BDF2 (`OpenMath/MultistepMethods.lean`)
+- [x] **BDF3**: consistency, order 3, zero-stability, convergence (`OpenMath/MultistepMethods.lean`)
+- [x] **BDF4**: consistency, order 4, zero-stability (`OpenMath/MultistepMethods.lean`)
+- [x] **BDF5**: consistency, order 5, not A-stable (`OpenMath/MultistepMethods.lean`, `OpenMath/BDF.lean`)
+- [x] **BDF6**: consistency, order 6, not A-stable (`OpenMath/MultistepMethods.lean`, `OpenMath/BDF.lean`)
+- [x] **A(α)-stability**: sector definition, monotonicity, A-stable ↔ A(π/2)-stable (`OpenMath/BDF.lean`)
+- [x] **Theorem**: BDF3-6 are NOT A-stable (via Dahlquist barrier) (`OpenMath/BDF.lean`)
+- [x] **BDF5 zero-stability**: roots in disk via w=1/ξ substitution + nlinarith (`OpenMath/MultistepMethods.lean`)
+- [x] **BDF6 zero-stability**: roots in disk via w=1/ξ substitution + nlinarith, unit roots via real/imaginary decomposition (`OpenMath/MultistepMethods.lean`)
+- [x] **BDF4 convergence**: consistent + zero-stable → convergent (`OpenMath/DahlquistEquivalence.lean`)
+- [x] **BDF5 convergence**: consistent + zero-stable → convergent (`OpenMath/DahlquistEquivalence.lean`)
+- [x] **BDF6 convergence**: consistent + zero-stable → convergent; BDF6 is the highest-order convergent BDF method (`OpenMath/DahlquistEquivalence.lean`)
 
 ## Current Target
 
-**Next: Close BDF4 zero-stability or advance to new material**
+**BDF family complete (BDF1–6: definitions, consistency, order, zero-stability, convergence).**
 
-Options:
-- Close BDF4 `roots_in_disk` and `unit_roots_simple` sorrys: needs Schur-Cohn stability criterion or explicit root analysis of 25ξ³-23ξ²+13ξ-3.
-- Add BDF5, BDF6 definitions and properties.
-- Add A(α)-stability definitions and prove BDF3-6 are A(α)-stable.
-- Add SDIRK methods (Section 4.3): singly-diagonally-implicit RK, L-stability.
-- Collocation methods (Section 2.3): define collocation RK framework.
+Next targets:
+1. **Definition: Stiffness** (Chapter 3) — formalize the textbook definition
+2. **Convergence theorem for one-step methods** (Section 1.3) — classical convergence result
+3. **Chapter 4 targets** — convergence theory for multistep methods
+
+## Sorry locations
+No sorry's found.
+
+## Recent git history
+b696343 Finish BDF5 zero-stability proof
+e9b65f8 cycle 90: close all sorrys in MultistepMethods.lean
+2b88e99 cycle 89: close hQ1pp
+0ac9f11 cycle 87: decompose dahlquist barrier derivative proof
+64c2d11 cycle 85: restructure Gtilde derivative proof

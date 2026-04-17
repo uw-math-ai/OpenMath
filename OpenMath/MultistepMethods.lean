@@ -938,11 +938,45 @@ theorem bdf6_implicit : bdf6.IsImplicit := by
   simp [LMM.IsImplicit, bdf6, Fin.last]
 
 /-- Helper: every root of Q₅ = 147ξ⁵-213ξ⁴+237ξ³-163ξ²+62ξ-10 has ‖ξ‖ ≤ 1.
-  Proof by Möbius transform z = (ξ-1)/(ξ+1), analogous to BDF5. -/
+  Proof: assume ‖ξ‖ > 1, set w = ξ⁻¹ with ‖w‖ < 1, derive reciprocal polynomial in w,
+  decompose w = a + bi with a²+b² < 1, then nlinarith on real/imaginary parts. -/
 private theorem bdf6_quintic_roots_in_disk (ξ : ℂ)
     (h1 : 147 * ξ ^ 5 - 213 * ξ ^ 4 + 237 * ξ ^ 3 - 163 * ξ ^ 2 + 62 * ξ - 10 = 0) :
     ‖ξ‖ ≤ 1 := by
-  sorry
+  by_contra h_contra
+  push_neg at h_contra
+  have h_ne : ξ ≠ 0 := by intro h; rw [h, norm_zero] at h_contra; linarith
+  have hw_norm : ‖ξ⁻¹‖ < 1 := by
+    rw [norm_inv]; exact inv_lt_one_of_one_lt₀ h_contra
+  have hw1 : (10 : ℂ) * ξ⁻¹ ^ 5 - 62 * ξ⁻¹ ^ 4 + 163 * ξ⁻¹ ^ 3 - 237 * ξ⁻¹ ^ 2 +
+      213 * ξ⁻¹ - 147 = 0 := by
+    rw [inv_pow]; have h5 : ξ ^ 5 ≠ 0 := pow_ne_zero 5 h_ne; field_simp; linear_combination -h1
+  set w := ξ⁻¹; set a := w.re; set b := w.im
+  have hab : a ^ 2 + b ^ 2 < 1 := by
+    rw [show w = ↑a + ↑b * Complex.I from (Complex.re_add_im w).symm,
+      Complex.norm_add_mul_I] at hw_norm
+    by_contra h; push_neg at h; linarith [Real.one_le_sqrt.mpr h]
+  rw [show w = ↑a + ↑b * Complex.I from (Complex.re_add_im w).symm] at hw1
+  norm_num [Complex.ext_iff, pow_succ, Complex.add_re, Complex.add_im,
+    Complex.mul_re, Complex.mul_im, Complex.ofReal_re, Complex.ofReal_im,
+    Complex.I_re, Complex.I_im] at hw1
+  obtain ⟨h_re, h_im⟩ := hw1
+  ring_nf at h_re h_im
+  by_cases hb : b = 0
+  · simp only [hb] at h_re; ring_nf at h_re
+    nlinarith [sq_nonneg a, sq_nonneg (a - 1), sq_nonneg (a + 1), sq_nonneg (a ^ 2 - 1),
+      sq_nonneg (a ^ 2), sq_nonneg (a ^ 2 - a), mul_self_nonneg (a ^ 2 - a)]
+  · have h_im2 : b * (-(a * 474) + a * b ^ 2 * 248 + a ^ 2 * 489 - a ^ 2 * b ^ 2 * 100 -
+        a ^ 3 * 248 + a ^ 4 * 50 + 213 - b ^ 2 * 163 + b ^ 4 * 10) = 0 := by linarith
+    have h_im3 : -(a * 474) + a * b ^ 2 * 248 + a ^ 2 * 489 - a ^ 2 * b ^ 2 * 100 -
+        a ^ 3 * 248 + a ^ 4 * 50 + 213 - b ^ 2 * 163 + b ^ 4 * 10 = 0 := by
+      rcases mul_eq_zero.mp h_im2 with h | h
+      · exact absurd h hb
+      · exact h
+    nlinarith [sq_nonneg a, sq_nonneg b, sq_nonneg (a - 1), sq_nonneg (a + 1), sq_nonneg (b ^ 2),
+      sq_nonneg (a ^ 2 + b ^ 2), sq_nonneg (a * b), sq_nonneg (a ^ 2 - a), sq_nonneg (a * b ^ 2),
+      sq_nonneg (b ^ 2 - a), sq_nonneg (a ^ 2 * b), mul_self_nonneg (a ^ 2 - a),
+      mul_self_nonneg (b ^ 2 + a - 1), sq_nonneg (a ^ 2 + b ^ 2 - 1)]
 
 /-- Helper: Q₅ has no roots on the unit circle.
   Proof: from q(ξ)=0 and |ξ|=1, derive the reciprocal polynomial (via conjugation),
