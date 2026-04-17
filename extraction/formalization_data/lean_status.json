@@ -25,14 +25,14 @@
     "status": "unformalized"
   },
   "def:112A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Stiffness.lean",
+    "lean_symbol": "IsOneSidedLipschitz",
+    "status": "formalized"
   },
   "thm:112B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Stiffness.lean",
+    "lean_symbol": "oneSidedLipschitz_solution_bound",
+    "status": "formalized"
   },
   "thm:123A": {
     "lean_file": null,

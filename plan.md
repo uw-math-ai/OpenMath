@@ -83,7 +83,7 @@
 
 ## Chapter 3: Stiff Equations
 
-- [ ] **Definition**: Stiffness
+- [x] **Definition**: Stiffness (`OpenMath/Stiffness.lean`)
 - [x] **Theorem**: A-stability of backward Euler and trapezoidal rule (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Forward Euler is not A-stable (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Dahlquist's second barrier (A-stable + zero-stable ⟹ order ≤ 2) (`OpenMath/MultistepMethods.lean`)
@@ -115,9 +115,8 @@
 **BDF family complete (BDF1–6: definitions, consistency, order, zero-stability, convergence).**
 
 Next targets:
-1. **Definition: Stiffness** (Chapter 3) — formalize the textbook definition
-2. **Convergence theorem for one-step methods** (Section 1.3) — classical convergence result
-3. **Chapter 4 targets** — convergence theory for multistep methods
+1. **Convergence theorem for one-step methods** (Section 1.3) — classical convergence result
+2. **Chapter 4 targets** — convergence theory for multistep methods
 
 ## Sorry locations
 No sorry's found.
