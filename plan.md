@@ -12,12 +12,12 @@
 
 ### 1.1 The Picard–Lindelöf Theorem and Euler Method
 - [x] **Definition 110A**: Lipschitz condition in second variable (`OpenMath/PicardLindelof.lean`)
-- [~] **Theorem 110C**: Picard–Lindelöf existence and uniqueness (`OpenMath/PicardLindelof.lean`)
+- [x] **Theorem 110C**: Picard–Lindelöf existence and uniqueness (`OpenMath/PicardLindelof.lean`)
   - [x] Uniqueness via Gronwall (`PicardLindelof.unique`)
   - [x] Continuous dependence on initial data (`PicardLindelof.continuous_dependence`)
   - [x] Perturbation bound (`PicardLindelof.perturbation_bound`)
-  - [x] Combined exists_unique (modulo existence sorry)
-  - [ ] Existence via IsPicardLindelof (needs interval subdivision)
+  - [x] Combined exists_unique
+  - [x] Existence via bisection induction (`PicardLindelof.exists_solution`)
 - [x] **Theorem 212A**: Global truncation error bound for Euler method (`OpenMath/Basic.lean`)
 - [x] **Theorem 213A**: Convergence of the Euler method (`OpenMath/EulerConvergence.lean`)
   - Statement: If f is Lipschitz and sufficiently smooth, the Euler method converges with order 1
@@ -126,7 +126,7 @@ Next targets:
 2. **Chapter 4 targets** — convergence theory for multistep methods
 
 ## Sorry locations
-- `OpenMath/PicardLindelof.lean`: `PicardLindelof.exists_solution` — existence part of Picard–Lindelöf (needs interval subdivision for general L*(b-a) >= 1)
+None — the project is sorry-free as of cycle 96.
 
 ## Recent git history
 b696343 Finish BDF5 zero-stability proof

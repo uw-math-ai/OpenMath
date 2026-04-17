@@ -57,6 +57,12 @@ lemma IsLipschitzInSecondVar.lipschitzOnWith {f : ℝ → E → E} {L : ℝ} {a 
     LipschitzOnWith ⟨L, hL⟩ (f x) s :=
   (hf.lipschitzWith hL hx).lipschitzOnWith
 
+/-- Restriction of the Lipschitz condition to a sub-interval `[c, d] ⊆ [a, b]`. -/
+lemma IsLipschitzInSecondVar.mono_Icc {f : ℝ → E → E} {L : ℝ} {a b c d : ℝ}
+    (hf : IsLipschitzInSecondVar f L a b) (hca : a ≤ c) (hdb : d ≤ b) :
+    IsLipschitzInSecondVar f L c d :=
+  fun x hx y z => hf x ⟨le_trans hca hx.1, le_trans hx.2 hdb⟩ y z
+
 end LipschitzDef
 
 /-! ## Picard–Lindelöf: Uniqueness, Existence, and Continuous Dependence -/
@@ -257,13 +263,138 @@ private lemma exists_solution_small {f : ℝ → E → E} {L : ℝ} {a b : ℝ} 
     simpa [y] using (hα y₀ hy0mem).2 t ht
   exact ⟨y, hy_init, hy_cont, hy_deriv⟩
 
+private lemma exists_solution_short {f : ℝ → E → E} {L : ℝ} {a b : ℝ} {y₀ : E}
+    (hab : a ≤ b)
+    (hLab : L * (b - a) < 1)
+    (hf_cont : Continuous (fun p : ℝ × E => f p.1 p.2))
+    (hf_lip : IsLipschitzInSecondVar f L a b)
+    (hL : 0 ≤ L) :
+    ∃ y : ℝ → E, y a = y₀ ∧ ContinuousOn y (Icc a b) ∧
+      ∀ t ∈ Icc a b, HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
+  obtain ⟨M₀, M₀_mem, hM₀⟩ : ∃ M₀ ∈ Set.Icc a b, ∀ t ∈ Set.Icc a b, ‖f t y₀‖ ≤ ‖f M₀ y₀‖ := by
+    exact (IsCompact.exists_isMaxOn CompactIccSpace.isCompact_Icc
+      ⟨a, Set.left_mem_Icc.mpr hab⟩
+      (show ContinuousOn (fun t => ‖f t y₀‖) (Set.Icc a b) from
+        hf_cont.norm.comp_continuousOn (continuousOn_id.prodMk continuousOn_const)))
+  set R_real := ‖f M₀ y₀‖ * (b - a) / (1 - L * (b - a))
+  set M_real := ‖f M₀ y₀‖ / (1 - L * (b - a))
+  have h_data : ∃ (R_nn : NNReal) (M_nn K_nn : NNReal),
+      IsPicardLindelof f ⟨a, left_mem_Icc.mpr hab⟩ y₀ R_nn 0 M_nn K_nn := by
+    refine' ⟨⟨R_real, div_nonneg (mul_nonneg (norm_nonneg _) (sub_nonneg.mpr hab))
+      (sub_nonneg.mpr hLab.le)⟩, ⟨M_real, div_nonneg (norm_nonneg _)
+      (sub_nonneg.mpr hLab.le)⟩, ⟨L, hL⟩, _, _, _, _⟩ <;> norm_num
+    · exact fun t ht₁ ht₂ => hf_lip.lipschitzOnWith hL ⟨ht₁, ht₂⟩ _
+    · exact fun x hx => hf_cont.comp_continuousOn (continuousOn_id.prodMk continuousOn_const)
+    · intro t ht₁ ht₂ x hx
+      have h_dist : ‖f t x - f t y₀‖ ≤ L * ‖x - y₀‖ := by
+        exact hf_lip t ⟨ht₁, ht₂⟩ x y₀
+      rw [dist_eq_norm] at hx
+      rw [le_div_iff₀] at * <;> nlinarith [norm_sub_norm_le (f t x) (f t y₀), hM₀ t ⟨ht₁, ht₂⟩]
+    · rw [max_eq_left (by linarith), div_mul_eq_mul_div, div_le_div_iff_of_pos_right]; linarith
+  obtain ⟨R_nn, M_nn, K_nn, h⟩ := h_data
+  obtain ⟨α, hα₁, hα₂⟩ := h.exists_eq_forall_mem_Icc_hasDerivWithinAt₀
+  exact ⟨α, hα₁, fun t ht => (hα₂ t ht |> HasDerivWithinAt.continuousWithinAt), hα₂⟩
+
+private lemma exists_solution_concat {f : ℝ → E → E} {a b c : ℝ} {y₀ : E}
+    (hac : a ≤ c) (hcb : c ≤ b)
+    (h1 : ∃ y : ℝ → E, y a = y₀ ∧ ContinuousOn y (Icc a c) ∧
+      ∀ t ∈ Icc a c, HasDerivWithinAt y (f t (y t)) (Icc a c) t)
+    (h2 : ∀ w : E, ∃ z : ℝ → E, z c = w ∧ ContinuousOn z (Icc c b) ∧
+      ∀ t ∈ Icc c b, HasDerivWithinAt z (f t (z t)) (Icc c b) t) :
+    ∃ y : ℝ → E, y a = y₀ ∧ ContinuousOn y (Icc a b) ∧
+      ∀ t ∈ Icc a b, HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
+  obtain ⟨y, hy₀, hy_cont, hy_deriv⟩ := h1
+  obtain ⟨z, hz₀, hz_cont, hz_deriv⟩ := h2 (y c)
+  refine' ⟨fun t => if t ≤ c then y t else z t, _, _, _⟩
+  · grind +locals
+  · refine' ContinuousOn.if _ _ _
+    · erw [frontier_Iic]; aesop
+    · refine' hy_cont.mono _
+      simp +decide [Set.subset_def, Set.Iic_def]
+      exact fun x hx₁ hx₂ hx₃ => ⟨hx₁, hx₃⟩
+    · refine' hz_cont.mono _
+      simp +decide [Set.subset_def, Set.Icc_def, Set.Ioi_def]
+      exact fun x hx₁ hx₂ hx₃ => ⟨hx₃, hx₂⟩
+  · intro t ht
+    by_cases htc : t = c
+    · have h_deriv_c : HasDerivWithinAt (fun t => if t ≤ c then y t else z t)
+          (f c (y c)) (Icc a c) c ∧ HasDerivWithinAt (fun t => if t ≤ c then y t else z t)
+          (f c (z c)) (Icc c b) c := by
+        constructor
+        · have := hy_deriv c ⟨by linarith, by linarith⟩
+          exact this.congr (fun x hx => by aesop) (by aesop)
+        · have h_deriv_c : HasDerivWithinAt z (f c (z c)) (Icc c b) c := by
+            exact hz_deriv c ⟨le_rfl, hcb⟩
+          refine' h_deriv_c.congr _ _
+          · grind
+          · simp +decide [hz₀]
+      simp_all +decide [Set.Icc_union_Icc_eq_Icc hac hcb]
+      convert h_deriv_c.1.union h_deriv_c.2 using 1; ext; aesop
+    · by_cases htc : t < c
+      · have h_deriv_y : HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
+          have := hy_deriv t ⟨ht.1, htc.le⟩
+          apply this.mono_of_mem_nhdsWithin
+          rw [mem_nhdsWithin_iff_exists_mem_nhds_inter]
+          exact ⟨Set.Iio c, Iio_mem_nhds htc,
+            fun x hx => ⟨hx.2.1, hx.1.out.le⟩⟩
+        simp +zetaDelta at *
+        convert h_deriv_y.congr_of_eventuallyEq _ _ using 1
+        · rw [if_pos htc.le]
+        · filter_upwards [self_mem_nhdsWithin,
+            mem_nhdsWithin_of_mem_nhds (Iio_mem_nhds htc)] with x hx₁ hx₂
+            using if_pos hx₂.out.le
+        · rw [if_pos htc.le]
+      · have hz_deriv_t : HasDerivWithinAt z (f t (z t)) (Icc c b) t := by
+          exact hz_deriv t ⟨by linarith [ht.1], by linarith [ht.2]⟩
+        have hz_deriv_t : HasDerivWithinAt (fun t => if t ≤ c then y t else z t)
+            (f t (z t)) (Icc c b) t := by
+          refine' hz_deriv_t.congr _ _
+          · grind
+          · rw [if_neg (by linarith [lt_of_le_of_ne (le_of_not_gt htc) (Ne.symm ‹_›)])]
+        have hz_deriv_t : HasDerivWithinAt (fun t => if t ≤ c then y t else z t)
+            (f t (z t)) (Icc a b) t := by
+          refine' hz_deriv_t.mono_of_mem_nhdsWithin _
+          rw [mem_nhdsWithin_iff_exists_mem_nhds_inter]
+          exact ⟨Set.Ioi c, Ioi_mem_nhds
+            (lt_of_le_of_ne (le_of_not_gt htc) (Ne.symm ‹_›)),
+            fun x hx => ⟨by linarith [hx.1.out], by linarith [hx.2.2]⟩⟩
+        grind
+
+private lemma exists_solution_induct {f : ℝ → E → E} {L : ℝ} (n : ℕ)
+    (hL : 0 ≤ L) (hf_cont : Continuous (fun p : ℝ × E => f p.1 p.2)) :
+    ∀ {a b : ℝ} {y₀ : E} (hab : a ≤ b) (hLab : L * (b - a) < ↑n + 1)
+      (hf_lip : IsLipschitzInSecondVar f L a b),
+      ∃ y : ℝ → E, y a = y₀ ∧ ContinuousOn y (Icc a b) ∧
+        ∀ t ∈ Icc a b, HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
+  induction n with
+  | zero =>
+    intro a b y₀ hab hLab hf_lip
+    exact exists_solution_short hab (by push_cast at hLab; linarith) hf_cont hf_lip hL
+  | succ n ih =>
+    intro a b y₀ hab hLab hf_lip
+    by_cases h : L * (b - a) < 1
+    · exact exists_solution_short hab h hf_cont hf_lip hL
+    · set c := (a + b) / 2 with hc_def
+      have hac : a ≤ c := by linarith
+      have hcb : c ≤ b := by linarith
+      have hba_half : c - a = (b - a) / 2 := by ring
+      have hba_half' : b - c = (b - a) / 2 := by ring
+      have hn_nn : (0 : ℝ) ≤ n := Nat.cast_nonneg n
+      have hL_half : L * (c - a) < ↑n + 1 := by
+        rw [hba_half]; push_cast at hLab ⊢; nlinarith
+      have hL_half' : L * (b - c) < ↑n + 1 := by
+        rw [hba_half']; push_cast at hLab ⊢; nlinarith
+      exact exists_solution_concat hac hcb
+        (ih hac hL_half (hf_lip.mono_Icc le_rfl hcb))
+        (fun w => ih hcb hL_half' (hf_lip.mono_Icc hac le_rfl))
+
 /-- **Picard–Lindelöf existence** (Iserles Theorem 1.1, existence part).
 If `f` is continuous and Lipschitz in its second variable on `[a, b]`, then
 the IVP `y' = f(x, y(x)), y(a) = y₀` has a solution on `[a, b]`.
 
-The proof constructs Mathlib's `IsPicardLindelof` data on subintervals where
-`L * δ < 1`, then chains solutions via uniqueness. The details are deferred
-to a future cycle; the well-typed sorry preserves the proof structure. -/
+The proof uses bisection induction: subdivide `[a,b]` until each piece has
+`L * δ < 1`, solve locally via `IsPicardLindelof`, then glue via
+`exists_solution_concat`. -/
 theorem exists_solution {f : ℝ → E → E} {L : ℝ} {a b : ℝ} {y₀ : E}
     (hab : a < b)
     (hf_cont : Continuous (fun p : ℝ × E => f p.1 p.2))
@@ -271,14 +402,8 @@ theorem exists_solution {f : ℝ → E → E} {L : ℝ} {a b : ℝ} {y₀ : E}
     (hL : 0 ≤ L) :
     ∃ y : ℝ → E, y a = y₀ ∧ ContinuousOn y (Icc a b) ∧
       ∀ t ∈ Icc a b, HasDerivWithinAt y (f t (y t)) (Icc a b) t := by
-  by_cases hLδ : L * (b - a) < 1
-  · exact exists_solution_small hab hf_cont hf_lip hL hLδ
-  · /-
-    General case: subdivide `[a,b]` into finitely many subintervals of length `δ`
-    with `L * δ < 1`, solve on each piece using `exists_solution_small`, then glue
-    the solutions using `unique`.
-    -/
-    sorry
+  obtain ⟨n, hn⟩ := exists_nat_gt (L * (b - a))
+  exact exists_solution_induct n hL hf_cont (le_of_lt hab) (by linarith) hf_lip
 
 /-- **Picard–Lindelöf theorem** (Iserles Theorem 1.1, thm:110C).
 Combining existence and uniqueness: if `f` is continuous and Lipschitz in `y`,
