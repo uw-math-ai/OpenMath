@@ -108,6 +108,11 @@
   - [x] Proved `B(2s) ∧ E(s,s) ⇒ C(s)` (342n, requires distinct nodes + nonzero weights) via Vandermonde uniqueness
   - [x] Proved `B(2s) ∧ E(s,s) ⇒ D(s)` (342p, requires distinct nodes) via Vandermonde uniqueness
   - [ ] Remaining implications (342j, 342k, 342l) require rooted tree infrastructure from thm:301A
+- [~] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`)
+  - [x] Defined `BTree`
+  - [x] Defined `order`, `symmetry`, `density`
+  - [x] Added basic examples of orders `1` through `3`
+  - [ ] Upgrade child representation from `List` fallback to the intended unordered multiplicity model
 
 ### BDF Methods (Section 4.5)
 - [x] **BDF1-2**: backward Euler and BDF2 (`OpenMath/MultistepMethods.lean`)
@@ -128,7 +133,7 @@
 **BDF family complete (BDF1–6: definitions, consistency, order, zero-stability, convergence).**
 
 Next targets:
-1. **Theorem 301A** — rooted-tree infrastructure (RootedTree, order, symmetry, density) for remaining Chapter 3 results
+1. **Theorem 301A** — finish rooted-tree infrastructure by replacing the `List` fallback with an unordered multiplicity model and proving the final recursion formulas
 2. **Theorem 342C** remaining implications (342j, 342k, 342l) — require tree infrastructure from 301A
 3. **Definition 355A** — order stars/arrows (independent branch using complex analysis)
 

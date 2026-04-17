@@ -105,9 +105,9 @@
     "status": "unformalized"
   },
   "thm:301A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/RootedTree.lean",
+    "lean_symbol": "BTree.order_node",
+    "status": "in_progress"
   },
   "thm:302A": {
     "lean_file": null,
