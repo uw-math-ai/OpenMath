@@ -102,10 +102,12 @@
 - [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
 - [x] **Definition**: Embedded RK pairs (`OpenMath/EmbeddedRK.lean`)
 - [x] **Definition**: Stiff accuracy (`OpenMath/StiffAccuracy.lean`)
-- [~] **Theorem 342C**: Gaussian quadrature order-condition equivalence (`OpenMath/Collocation.lean`)
+- [x] **Theorem 342C**: Gaussian quadrature order-condition equivalence (`OpenMath/Collocation.lean`)
   - [x] Defined `SatisfiesE (η, ζ)` from equation (321c)
-  - [x] Proved `B(2s) ∧ C(s) ⇒ E(s,s)` and `B(2s) ∧ D(s) ⇒ E(s,s)`
-  - [ ] Converse implications `B(2s) ∧ E(s,s) ⇒ C(s), D(s)` still need a Gaussian quadrature uniqueness/distinct-node argument
+  - [x] Proved `B(2s) ∧ C(s) ⇒ E(s,s)` (342m) and `B(2s) ∧ D(s) ⇒ E(s,s)` (342o)
+  - [x] Proved `B(2s) ∧ E(s,s) ⇒ C(s)` (342n, requires distinct nodes + nonzero weights) via Vandermonde uniqueness
+  - [x] Proved `B(2s) ∧ E(s,s) ⇒ D(s)` (342p, requires distinct nodes) via Vandermonde uniqueness
+  - [ ] Remaining implications (342j, 342k, 342l) require rooted tree infrastructure from thm:301A
 
 ### BDF Methods (Section 4.5)
 - [x] **BDF1-2**: backward Euler and BDF2 (`OpenMath/MultistepMethods.lean`)
@@ -126,8 +128,9 @@
 **BDF family complete (BDF1–6: definitions, consistency, order, zero-stability, convergence).**
 
 Next targets:
-1. **Finish Theorem 342C** — prove the converse `B(2s) ∧ E(s,s) ⇒ C(s), D(s)` implications
-2. **Theorem 301A** — rooted-tree infrastructure for the remaining Chapter 3 order-condition results
+1. **Theorem 301A** — rooted-tree infrastructure (RootedTree, order, symmetry, density) for remaining Chapter 3 results
+2. **Theorem 342C** remaining implications (342j, 342k, 342l) — require tree infrastructure from 301A
+3. **Definition 355A** — order stars/arrows (independent branch using complex analysis)
 
 ## Sorry locations
 None — the project is sorry-free as of cycle 96.

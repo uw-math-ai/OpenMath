@@ -1,4 +1,5 @@
 import OpenMath.RungeKutta
+import Mathlib.LinearAlgebra.Vandermonde
 
 /-!
 # Collocation Methods and Simplifying Assumptions
@@ -174,6 +175,187 @@ theorem SatisfiesE_of_B_D (t : ButcherTableau s) (hB : t.SatisfiesB (2 * s))
           have hl0 : (l : ℝ) ≠ 0 := by positivity
           field_simp [hk0, hl0]
           norm_num [Nat.cast_add]
+
+/-- **B(2s) ∧ E(s,s) ⇒ C(s)**, the implication (342n) from Theorem 342C.
+    Requires distinct nodes (injective c) and nonzero weights. -/
+theorem SatisfiesC_of_B_E (t : ButcherTableau s) (hB : t.SatisfiesB (2 * s))
+    (hE : t.SatisfiesE s s) (hc_inj : Function.Injective t.c)
+    (hb_ne : ∀ i : Fin s, t.b i ≠ 0) : t.SatisfiesC s := by
+  intro l hl1 hl2 i
+  -- Define v_i = b_i * (∑_j A_{ij} c_j^{l-1} - c_i^l / l)  (C-defect weighted by b_i)
+  -- Show v = 0 via Vandermonde, then divide by b_i ≠ 0.
+  suffices hzero : ∀ i' : Fin s,
+      t.b i' * ((∑ j : Fin s, t.A i' j * t.c j ^ (l - 1)) - t.c i' ^ l / (l : ℝ)) = 0 by
+    have := hzero i
+    have hbi : t.b i ≠ 0 := hb_ne i
+    have := mul_eq_zero.mp this
+    cases this with
+    | inl h => exact absurd h hbi
+    | inr h => linarith
+  -- Apply Vandermonde: show the weighted defect vector is zero
+  have hvan := @Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero ℝ _ s _
+    t.c (fun i' => t.b i' * ((∑ j : Fin s, t.A i' j * t.c j ^ (l - 1)) -
+      t.c i' ^ l / (l : ℝ))) hc_inj
+  suffices hsum : ∀ m : Fin s,
+      ∑ i' : Fin s, (t.b i' * ((∑ j : Fin s, t.A i' j * t.c j ^ (l - 1)) -
+        t.c i' ^ l / (l : ℝ))) * t.c i' ^ (m : ℕ) = 0 by
+    intro i'
+    have := hvan hsum
+    exact congr_fun this i'
+  intro m
+  -- Distribute: b * (X - Y) * c^m = b * c^m * X - b * c^m * Y
+  have hdist : ∀ i' : Fin s,
+      (t.b i' * ((∑ j : Fin s, t.A i' j * t.c j ^ (l - 1)) -
+        t.c i' ^ l / (l : ℝ))) * t.c i' ^ (m : ℕ) =
+      t.b i' * t.c i' ^ (m : ℕ) * (∑ j : Fin s, t.A i' j * t.c j ^ (l - 1)) -
+        t.b i' * t.c i' ^ (m : ℕ) * (t.c i' ^ l / (l : ℝ)) := by
+    intro i'; ring
+  simp_rw [hdist]
+  rw [Finset.sum_sub_distrib]
+  -- First sum = E(m+1, l) = 1/(l(m+1+l))
+  -- Second sum = (1/l) * B(m+1+l) = (1/l) * 1/(m+1+l) = 1/(l(m+1+l))
+  set m' := (m : ℕ) + 1 with hm'_def
+  have hm'1 : 1 ≤ m' := by omega
+  have hm'2 : m' ≤ s := by omega
+  have hm'exp : m' - 1 = (m : ℕ) := by omega
+  -- First sum: ∑_i b_i c_i^m * (∑_j A_{ij} c_j^{l-1})
+  -- = ∑_i ∑_j b_i c_i^{m'-1} A_{ij} c_j^{l-1} = E(m', l)
+  have hE_val : ∑ i' : Fin s, ∑ j : Fin s,
+      t.b i' * t.c i' ^ (m : ℕ) * t.A i' j * t.c j ^ (l - 1) =
+        1 / ((l : ℝ) * ((m' + l : ℕ) : ℝ)) := by
+    have := hE m' l hm'1 hm'2 hl1 hl2
+    rw [hm'exp] at this
+    exact this
+  have hsum1 : ∑ i' : Fin s, t.b i' * t.c i' ^ (m : ℕ) *
+      (∑ j : Fin s, t.A i' j * t.c j ^ (l - 1)) =
+        1 / ((l : ℝ) * ((m' + l : ℕ) : ℝ)) := by
+    rw [← hE_val]
+    refine Finset.sum_congr rfl ?_
+    intro i' _
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    ring
+  -- Second sum: ∑_i b_i c_i^m * c_i^l / l = (1/l) * ∑_i b_i c_i^{m+l}
+  -- = (1/l) * B(m+l+1) = (1/l) * 1/(m+l+1) = 1/(l(m+l+1))
+  -- Note: m + l = m' - 1 + l = m' + l - 1
+  have hB_ml : ∑ i' : Fin s, t.b i' * t.c i' ^ ((m : ℕ) + l) =
+      1 / ((m' + l : ℕ) : ℝ) := by
+    have := hB (m' + l) (by omega) (by omega)
+    have hexp : m' + l - 1 = (m : ℕ) + l := by omega
+    rw [hexp] at this
+    exact this
+  have hsum2 : ∑ i' : Fin s, t.b i' * t.c i' ^ (m : ℕ) *
+      (t.c i' ^ l / (l : ℝ)) =
+        1 / ((l : ℝ) * ((m' + l : ℕ) : ℝ)) := by
+    have hl0 : (l : ℝ) ≠ 0 := by positivity
+    calc ∑ i' : Fin s, t.b i' * t.c i' ^ (m : ℕ) * (t.c i' ^ l / (l : ℝ))
+        = (1 / (l : ℝ)) * ∑ i' : Fin s, t.b i' * t.c i' ^ ((m : ℕ) + l) := by
+          rw [Finset.mul_sum]
+          refine Finset.sum_congr rfl ?_
+          intro i' _
+          have : t.c i' ^ (m : ℕ) * t.c i' ^ l = t.c i' ^ ((m : ℕ) + l) := by
+            rw [pow_add]
+          rw [← this]; ring
+      _ = (1 / (l : ℝ)) * (1 / ((m' + l : ℕ) : ℝ)) := by
+          rw [hB_ml]
+      _ = 1 / ((l : ℝ) * ((m' + l : ℕ) : ℝ)) := by ring
+  linarith [hsum1, hsum2]
+
+/-- **B(2s) ∧ E(s,s) ⇒ D(s)**, the implication (342p) from Theorem 342C.
+    Requires distinct nodes (injective c). -/
+theorem SatisfiesD_of_B_E (t : ButcherTableau s) (hB : t.SatisfiesB (2 * s))
+    (hE : t.SatisfiesE s s) (hc_inj : Function.Injective t.c) : t.SatisfiesD s := by
+  intro k hk1 hk2 j
+  -- Define the defect vector: u_j = (∑_i b_i c_i^{k-1} A_{ij}) - b_j/k * (1 - c_j^k)
+  -- We show u = 0 via Vandermonde uniqueness.
+  -- Step 1: Show ∀ l : Fin s, ∑ j, u_j * c_j^l = 0
+  -- where u_j := (∑ i, b i * c i ^ (k-1) * A i j) - b j / k * (1 - c j ^ k)
+  suffices h : ∀ j : Fin s,
+      (∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) -
+        t.b j / (k : ℝ) * (1 - t.c j ^ k) = 0 by
+    linarith [h j]
+  -- Apply Vandermonde: show defect vector is zero
+  have hvan := @Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero ℝ _ s _
+    t.c (fun j => (∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) -
+      t.b j / (k : ℝ) * (1 - t.c j ^ k)) hc_inj
+  -- Need: ∀ l : Fin s, ∑ j, u_j * c_j ^ ↑l = 0
+  suffices hsum : ∀ l : Fin s,
+      ∑ j : Fin s, ((∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) -
+        t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l : ℕ) = 0 by
+    intro j'
+    have := hvan hsum
+    exact congr_fun this j'
+  intro l
+  -- Distribute: (a - b) * c = a*c - b*c, then split sum
+  have hsplit : ∀ j : Fin s,
+      ((∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) -
+        t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l : ℕ) =
+      (∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) * t.c j ^ (l : ℕ) -
+        (t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l : ℕ) := by
+    intro j; ring
+  simp_rw [hsplit]
+  rw [Finset.sum_sub_distrib]
+  -- Both parts equal 1/((l+1)(k+l+1)), so they cancel.
+  have hl1 : 1 ≤ (l : ℕ) + 1 := by omega
+  have hl2 : (l : ℕ) + 1 ≤ s := by omega
+  -- First sum: ∑_j (∑_i b_i c_i^{k-1} A_{ij}) * c_j^l
+  -- = ∑_i ∑_j b_i c_i^{k-1} A_{ij} c_j^l = E(k, l+1)
+  -- The l-th Vandermonde equation: exponent is ↑l = 0,...,s-1, corresponding to B/E index l+1
+  set l' := (l : ℕ) + 1 with hl'_def
+  have hl'1 : 1 ≤ l' := by omega
+  have hl'2 : l' ≤ s := by omega
+  have hl'exp : l' - 1 = (l : ℕ) := by omega
+  have hE_val : ∑ i : Fin s, ∑ j : Fin s,
+      t.b i * t.c i ^ (k - 1) * t.A i j * t.c j ^ (l : ℕ) =
+        1 / ((l' : ℝ) * ((k + l' : ℕ) : ℝ)) := by
+    have := hE k l' hk1 hk2 hl'1 hl'2
+    rw [hl'exp] at this
+    exact this
+  have hsum1 : ∑ j : Fin s, (∑ i : Fin s, t.b i * t.c i ^ (k - 1) * t.A i j) *
+      t.c j ^ (l : ℕ) =
+        1 / ((l' : ℝ) * ((k + l' : ℕ) : ℝ)) := by
+    rw [← hE_val]
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [Finset.sum_mul]
+  -- Second sum: ∑_j (b_j / k * (1 - c_j^k)) * c_j^l
+  -- = (1/k) * (∑_j b_j c_j^l - ∑_j b_j c_j^{k+l})
+  -- = (1/k) * (B(l+1) - B(k+l+1))
+  -- = (1/k) * (1/(l+1) - 1/(k+l+1))
+  -- = 1/((l+1)(k+l+1))
+  have hB_l' : ∑ j : Fin s, t.b j * t.c j ^ (l : ℕ) = 1 / (l' : ℝ) := by
+    have := hB l' hl'1 (by omega)
+    rw [hl'exp] at this
+    exact this
+  have hB_kl' : ∑ j : Fin s, t.b j * t.c j ^ (k + (l : ℕ)) =
+      1 / ((k + l' : ℕ) : ℝ) := by
+    have := hB (k + l') (by omega) (by omega)
+    have hexp : k + l' - 1 = k + (l : ℕ) := by omega
+    rw [hexp] at this
+    exact this
+  have hsum2 : ∑ j : Fin s, (t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l : ℕ) =
+      1 / ((l' : ℝ) * ((k + l' : ℕ) : ℝ)) := by
+    have hk0 : (k : ℝ) ≠ 0 := by positivity
+    have hl0 : (l' : ℝ) ≠ 0 := by positivity
+    calc ∑ j : Fin s, (t.b j / (k : ℝ) * (1 - t.c j ^ k)) * t.c j ^ (l : ℕ)
+        = ∑ j : Fin s, (1 / (k : ℝ)) * (t.b j * t.c j ^ (l : ℕ) -
+            t.b j * t.c j ^ (k + (l : ℕ))) := by
+          refine Finset.sum_congr rfl ?_
+          intro j _
+          have : t.c j ^ k * t.c j ^ (l : ℕ) = t.c j ^ (k + (l : ℕ)) := by
+            rw [pow_add]
+          rw [← this]; ring
+      _ = (1 / (k : ℝ)) * (∑ j : Fin s, t.b j * t.c j ^ (l : ℕ) -
+            ∑ j : Fin s, t.b j * t.c j ^ (k + (l : ℕ))) := by
+          rw [← Finset.sum_sub_distrib, Finset.mul_sum]
+      _ = (1 / (k : ℝ)) * (1 / (l' : ℝ) - 1 / ((k + l' : ℕ) : ℝ)) := by
+          rw [hB_l', hB_kl']
+      _ = 1 / ((l' : ℝ) * ((k + l' : ℕ) : ℝ)) := by
+          field_simp [hk0, hl0]
+          norm_num [Nat.cast_add]
+  linarith [hsum1, hsum2]
 
 /-! ## Monotonicity: B(p) implies B(p') for p' ≤ p, etc. -/
 

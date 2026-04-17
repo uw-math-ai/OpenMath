@@ -256,7 +256,7 @@
   },
   "thm:342C": {
     "lean_file": "OpenMath/Collocation.lean",
-    "lean_symbol": null,
+    "lean_symbol": "ButcherTableau.SatisfiesC_of_B_E",
     "status": "in_progress"
   },
   "cor:342D": {
