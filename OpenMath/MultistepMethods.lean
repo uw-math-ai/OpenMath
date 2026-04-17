@@ -799,6 +799,23 @@ theorem bdf5_order_five : bdf5.HasOrder 5 := by
 theorem bdf5_implicit : bdf5.IsImplicit := by
   simp [LMM.IsImplicit, bdf5, Fin.last]
 
+/-- If `ξ` satisfies the BDF5 quartic factor and the auxiliary quadratic factor,
+then `ξ = 5 / 4`. -/
+private lemma bdf5_quartic_eq_five_fourths (ξ : ℂ)
+    (hq : 125 * ξ ^ 2 - 100 * ξ + 125 = 0)
+    (h1 : 137 * ξ ^ 4 - 163 * ξ ^ 3 + 137 * ξ ^ 2 - 63 * ξ + 12 = 0) :
+    ξ = 5 / 4 := by
+  have h4 : 125 * ξ ^ 4 - 100 * ξ ^ 3 + 125 * ξ ^ 2 = 0 := by
+    linear_combination ξ ^ 2 * hq
+  have h3 : 125 * ξ ^ 3 - 100 * ξ ^ 2 + 125 * ξ = 0 := by
+    linear_combination ξ * hq
+  have hlin : (136800 : ℂ) * ξ = 171000 := by
+    linear_combination (-3125 : ℂ) * h1 + 3425 * h4 + (-1335) * h3 + (-1068) * hq
+  have h136800 : (136800 : ℂ) ≠ 0 := by
+    norm_num
+  exact mul_left_cancel₀ h136800 <| by
+    linear_combination hlin : (136800 : ℂ) * ξ = 136800 * (5 / 4)
+
 /-- BDF5 is zero-stable: `ρ(ξ) = ξ⁵ - (300/137)ξ⁴ + (300/137)ξ³ - (200/137)ξ²
   + (75/137)ξ - 12/137`.
   Factoring: `137·ρ(ξ) = (ξ - 1) (137ξ⁴ - 163ξ³ + 137ξ² - 63ξ + 12)`.
@@ -860,42 +877,28 @@ theorem bdf5_zeroStable : bdf5.IsZeroStable where
         rw [h_conj_eq] at h
         field_simp at h
         linear_combination h
-      have h_cubic : 267 * ξ ^ 3 - 685 * ξ ^ 2 + 863 * ξ - 745 = 0 := by
-        have : 6675 * ξ ^ 3 - 17125 * ξ ^ 2 + 21575 * ξ - 18625 = 0 := by
-          linear_combination 12 * h1 - 137 * h_rev
-        have h25 : 25 * (267 * ξ ^ 3 - 685 * ξ ^ 2 + 863 * ξ - 745) = 0 := by
-          linear_combination this
-        exact (mul_eq_zero.mp h25).resolve_left (by norm_num)
-      have h_cubic_rev : -745 * ξ ^ 3 + 863 * ξ ^ 2 - 685 * ξ + 267 = 0 := by
-        have h := congr_arg (starRingEnd ℂ) h_cubic
-        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
-        rw [h_conj_eq] at h
-        field_simp at h
-        linear_combination h
-      have h_quad : 34988 * ξ ^ 2 - 57505 * ξ + 60467 = 0 := by
-        have : -279904 * ξ ^ 2 + 460040 * ξ - 483736 = 0 := by
-          linear_combination 745 * h_cubic + 267 * h_cubic_rev
-        have h8 : 8 * (34988 * ξ ^ 2 - 57505 * ξ + 60467) = 0 := by
-          linear_combination -this
-        exact (mul_eq_zero.mp h8).resolve_left (by norm_num)
-      have h_quad_rev : 60467 * ξ ^ 2 - 57505 * ξ + 34988 = 0 := by
-        have h := congr_arg (starRingEnd ℂ) h_quad
-        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
-        rw [h_conj_eq] at h
-        field_simp at h
-        linear_combination h
-      have h_sq : ξ ^ 2 = 1 := by
-        have : -25479 * ξ ^ 2 + 25479 = 0 := by
-          linear_combination h_quad - h_quad_rev
-        linear_combination -this / 25479
-      have hξ_val : ξ = 143 / 113 := by
-        have : 137 * (ξ ^ 2) ^ 2 - 163 * ξ * ξ ^ 2 + 137 * ξ ^ 2 - 63 * ξ + 12 = 0 := by
-          ring_nf
-          linear_combination h1
-        rw [h_sq] at this
-        linear_combination -this / 226
-      rw [hξ_val] at h_sq
-      norm_num at h_sq
+      have h_diff0 : 125 * ξ ^ 4 - 100 * ξ ^ 3 + 100 * ξ - 125 = 0 := by
+        linear_combination h1 - h_rev
+      have h_diff : (ξ - 1) * (ξ + 1) * (125 * ξ ^ 2 - 100 * ξ + 125) = 0 := by
+        have hfact :
+            (ξ - 1) * (ξ + 1) * (125 * ξ ^ 2 - 100 * ξ + 125) =
+              125 * ξ ^ 4 - 100 * ξ ^ 3 + 100 * ξ - 125 := by
+          ring
+        rw [hfact]
+        exact h_diff0
+      rcases mul_eq_zero.mp h_diff with hpm | hq
+      · rcases mul_eq_zero.mp hpm with h_one | h_neg
+        · have : ξ = 1 := by
+            linear_combination h_one
+          subst this
+          norm_num at h1
+        · have : ξ = -1 := by
+            linear_combination h_neg
+          subst this
+          norm_num at h1
+      · have hξ_val : ξ = 5 / 4 := bdf5_quartic_eq_five_fourths ξ hq h1
+        rw [hξ_val] at habs
+        norm_num at habs
 
 /-! ## BDF6 (Backward Differentiation Formula, 6-step)
 
