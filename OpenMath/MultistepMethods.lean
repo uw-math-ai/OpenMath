@@ -799,6 +799,104 @@ theorem bdf5_order_five : bdf5.HasOrder 5 := by
 theorem bdf5_implicit : bdf5.IsImplicit := by
   simp [LMM.IsImplicit, bdf5, Fin.last]
 
+/-- BDF5 is zero-stable: `ρ(ξ) = ξ⁵ - (300/137)ξ⁴ + (300/137)ξ³ - (200/137)ξ²
+  + (75/137)ξ - 12/137`.
+  Factoring: `137·ρ(ξ) = (ξ - 1) (137ξ⁴ - 163ξ³ + 137ξ² - 63ξ + 12)`.
+  Root `ξ = 1` is simple. The quartic factor has all roots strictly inside the unit disk,
+  so every root of `ρ` lies in `‖ξ‖ ≤ 1` and every unit root is simple. -/
+theorem bdf5_zeroStable : bdf5.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp only [LMM.rhoC, bdf5] at hξ
+    simp [Fin.sum_univ_succ] at hξ
+    have h137 : (ξ - 1) * (137 * ξ ^ 4 - 163 * ξ ^ 3 + 137 * ξ ^ 2 - 63 * ξ + 12) = 0 := by
+      linear_combination 137 * hξ
+    rcases mul_eq_zero.mp h137 with h0 | h1
+    · have : ξ = 1 := by
+        linear_combination h0
+      rw [this]
+      simp
+    ·
+      norm_num [Complex.ext_iff, pow_succ] at *
+      norm_num [Complex.normSq, Complex.norm_def]
+      by_cases h_im : ξ.im = 0
+      · norm_num [h_im] at *
+        nlinarith [sq_nonneg (ξ.re - 1 / 2), sq_nonneg (ξ.re - 1), sq_nonneg (ξ.re - 3 / 2)]
+      · by_contra h_contra
+        nlinarith [mul_self_pos.mpr h_im,
+          mul_le_mul_of_nonneg_left (le_of_not_ge h_contra) (sq_nonneg ξ.re),
+          mul_le_mul_of_nonneg_left (le_of_not_ge h_contra) (sq_nonneg ξ.im),
+          mul_le_mul_of_nonneg_left (le_of_not_ge h_contra) (sq_nonneg (ξ.re ^ 2)),
+          mul_le_mul_of_nonneg_left (le_of_not_ge h_contra) (sq_nonneg (ξ.im ^ 2))]
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp only [LMM.rhoCDeriv, bdf5]
+    simp only [LMM.rhoC, bdf5] at hξ
+    simp [Fin.sum_univ_succ] at hξ
+    have h137 : (ξ - 1) * (137 * ξ ^ 4 - 163 * ξ ^ 3 + 137 * ξ ^ 2 - 63 * ξ + 12) = 0 := by
+      linear_combination 137 * hξ
+    rcases mul_eq_zero.mp h137 with h0 | h1
+    · have hξ1 : ξ = 1 := by
+        linear_combination h0
+      rw [hξ1]
+      simp [Fin.sum_univ_succ]
+      norm_num
+    · -- Quartic has no roots on the unit circle: conjugate elimination proof.
+      exfalso
+      have hξ_ne : ξ ≠ 0 := by
+        intro h
+        rw [h] at habs
+        simp at habs
+      have h_nsq : Complex.normSq ξ = 1 := by
+        rw [Complex.normSq_eq_norm_sq, habs]
+        norm_num
+      have h_mc : ξ * starRingEnd ℂ ξ = 1 := by
+        rw [Complex.mul_conj, ← Complex.ofReal_one, Complex.ofReal_inj]
+        exact h_nsq
+      have h_conj_eq : starRingEnd ℂ ξ = ξ⁻¹ := eq_inv_of_mul_eq_one_right h_mc
+      have h_rev : 12 * ξ ^ 4 - 63 * ξ ^ 3 + 137 * ξ ^ 2 - 163 * ξ + 137 = 0 := by
+        have h := congr_arg (starRingEnd ℂ) h1
+        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
+        rw [h_conj_eq] at h
+        field_simp at h
+        linear_combination h
+      have h_cubic : 267 * ξ ^ 3 - 685 * ξ ^ 2 + 863 * ξ - 745 = 0 := by
+        have : 6675 * ξ ^ 3 - 17125 * ξ ^ 2 + 21575 * ξ - 18625 = 0 := by
+          linear_combination 12 * h1 - 137 * h_rev
+        have h25 : 25 * (267 * ξ ^ 3 - 685 * ξ ^ 2 + 863 * ξ - 745) = 0 := by
+          linear_combination this
+        exact (mul_eq_zero.mp h25).resolve_left (by norm_num)
+      have h_cubic_rev : -745 * ξ ^ 3 + 863 * ξ ^ 2 - 685 * ξ + 267 = 0 := by
+        have h := congr_arg (starRingEnd ℂ) h_cubic
+        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
+        rw [h_conj_eq] at h
+        field_simp at h
+        linear_combination h
+      have h_quad : 34988 * ξ ^ 2 - 57505 * ξ + 60467 = 0 := by
+        have : -279904 * ξ ^ 2 + 460040 * ξ - 483736 = 0 := by
+          linear_combination 745 * h_cubic + 267 * h_cubic_rev
+        have h8 : 8 * (34988 * ξ ^ 2 - 57505 * ξ + 60467) = 0 := by
+          linear_combination -this
+        exact (mul_eq_zero.mp h8).resolve_left (by norm_num)
+      have h_quad_rev : 60467 * ξ ^ 2 - 57505 * ξ + 34988 = 0 := by
+        have h := congr_arg (starRingEnd ℂ) h_quad
+        simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
+        rw [h_conj_eq] at h
+        field_simp at h
+        linear_combination h
+      have h_sq : ξ ^ 2 = 1 := by
+        have : -25479 * ξ ^ 2 + 25479 = 0 := by
+          linear_combination h_quad - h_quad_rev
+        linear_combination -this / 25479
+      have hξ_val : ξ = 143 / 113 := by
+        have : 137 * (ξ ^ 2) ^ 2 - 163 * ξ * ξ ^ 2 + 137 * ξ ^ 2 - 63 * ξ + 12 = 0 := by
+          ring_nf
+          linear_combination h1
+        rw [h_sq] at this
+        linear_combination -this / 226
+      rw [hξ_val] at h_sq
+      norm_num at h_sq
+
 /-! ## BDF6 (Backward Differentiation Formula, 6-step)
 
 The BDF6 method:
