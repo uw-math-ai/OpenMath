@@ -1,48 +1,45 @@
 # Cycle 093 Results
 
 ## Worked on
-- `OpenMath/Stiffness.lean`
-- `def:112A` one-sided Lipschitz condition
-- `thm:112B` exponential bound on solution differences
-- Supporting lemmas: `lipschitzWith_implies_oneSidedLipschitz`, `oneSidedLipschitz_nonpos_implies_contractive`
+- `OpenMath/OneStepConvergence.lean`
+- Closed the placeholder `one_step_convergence` sorry by replacing the `True` placeholder with the real convergence theorem.
+- Added `euler_isConvergent` as the Euler corollary.
+- Updated `plan.md` to mark the one-step convergence theorem complete.
 
 ## Approach
-- Added a new stiffness file over real inner product spaces.
-- Used the sorry-first workflow to lay out five proof obligations and verified the skeleton with `lake env lean OpenMath/Stiffness.lean`.
-- Submitted five Aristotle jobs targeting the five sorry sites:
-  - `6c151f42-536a-41c0-991c-343671e0f458`
-  - `e87e0c66-50ee-4c23-af20-7f1e3cfcba98`
-  - `a958d9ac-4d70-4a47-a88f-82c3c8720bf6`
-  - `36e5d061-84fe-4614-8c3f-fd15dd5e6014`
-  - `75b314d9-824b-48e4-bea1-007983b98dd5`
-- Proved the results manually by defining the weighted energy
-  `exp (-2 l (x - x0)) * ‖y x - z x‖^2`, showing its derivative is nonpositive on the interval,
-  using `antitoneOn_of_hasDerivWithinAt_nonpos`, then extracting the textbook exponential bound.
+- Read `.prover-state/strategy.md` and followed the cycle target for the one-step convergence theorem.
+- Applied the sorry-first workflow:
+  - Restated `one_step_convergence` as `IsConvergent m a b L`.
+  - Added `euler_isConvergent` with a `sorry`.
+  - Verified the sorry-bearing file compiled with `lake env lean OpenMath/OneStepConvergence.lean`.
+- Submitted five Aristotle jobs on focused subproblems:
+  - `826e1cfc-223a-46a2-9e0e-05109a45e8bb` — main convergence theorem
+  - `adbdfcdf-ab9d-4386-881d-6bef4a50d2a0` — Euler corollary
+  - `5be33a6d-d093-41a9-a890-b8653a4e348a` — grid-membership helper
+  - `1849a943-03ac-4327-8319-308b43fee263` — upper-bound tends to zero
+  - `972db942-e7e6-4799-9fc0-8ecb57f229f5` — squeeze helper
+- After the wait/check step, Aristotle still had all five jobs in `QUEUED`, so I completed the proof manually.
+- Proved convergence by:
+  - deriving interval membership for intermediate grid points from `a ≤ x0`, `0 ≤ hseq k`, and `x0 + N_k h_k ≤ b`,
+  - applying `one_step_global_error_bound_exp` pointwise at `n = Nseq k`,
+  - proving the upper bound tends to `0` via `Tendsto.div_const` and `Tendsto.mul_const`,
+  - finishing with `squeeze_zero`.
+- Proved `euler_isConvergent` by direct application of `one_step_convergence`.
 
 ## Result
-- SUCCESS
-- `OpenMath/Stiffness.lean` now compiles sorry-free.
-- `plan.md` was updated to mark the Chapter 3 stiffness definition target complete.
-- `extraction/formalization_data/lean_status.json` now marks `def:112A` and `thm:112B` as formalized.
+- SUCCESS — `one_step_convergence` is now the actual convergence theorem and is fully proved.
+- SUCCESS — `euler_isConvergent` was added and proved.
+- SUCCESS — `plan.md` now marks the one-step convergence theorem as complete.
 
 ## Dead ends
-- The existing Mathlib Gronwall API is set up for bounds of the form `‖u'‖ ≤ K‖u‖ + ε`, which does not directly match the one-sided inner-product inequality.
-- A direct Gronwall proof was more awkward than the weighted-energy monotonicity argument.
+- Aristotle did not return usable output during the single check; all submitted jobs were still queued.
+- `positivity` did not automatically infer `0 ≤ (n : ℝ) * hseq k` from the sequence hypothesis, so that step had to be written explicitly with `mul_nonneg`.
 
 ## Discovery
-- The clean Lean proof route is:
-  1. Differentiate `‖y - z‖^2` via `HasDerivAt.inner`.
-  2. Differentiate the weighted quantity `exp (-2 l (x - x0)) * ‖y - z‖^2`.
-  3. Prove antitonicity on `Icc x0 x1` using `antitoneOn_of_hasDerivWithinAt_nonpos`.
-  4. Convert the squared estimate back to a norm estimate with `le_of_sq_le_sq`.
-- Aristotle status after a single refresh:
-  - `e87e0c66-50ee-4c23-af20-7f1e3cfcba98`: `COMPLETE`
-  - `6c151f42-536a-41c0-991c-343671e0f458`: `COMPLETE_WITH_ERRORS`
-  - `a958d9ac-4d70-4a47-a88f-82c3c8720bf6`: `IN_PROGRESS`
-  - `36e5d061-84fe-4614-8c3f-fd15dd5e6014`: `IN_PROGRESS`
-  - `75b314d9-824b-48e4-bea1-007983b98dd5`: `IN_PROGRESS`
-- No Aristotle output was incorporated because the manual proofs had already closed all sorrys before the jobs completed.
+- The existing infrastructure in `OpenMath/OneStepConvergence.lean` was already sufficient; no new helper theorem was needed in the committed file.
+- `IsConvergent` is already quantified in the right way, so the main theorem only needs the exponential global error bound plus a sequence-level squeeze argument.
+- The Euler corollary is immediate once the generic one-step theorem is available.
 
 ## Suggested next approach
-- Move to the next planner target: the one-step convergence theorem from Section 1.3.
-- If Chapter 3 is extended next, build on `OpenMath/Stiffness.lean` rather than redoing the perturbation estimate infrastructure.
+- If the Aristotle queue clears later, compare its output against the manual proof to see whether any helper lemmas are worth upstreaming into the file for readability.
+- Consider cleaning the older unused-variable warning at `OpenMath/OneStepConvergence.lean:81` in a future maintenance cycle.

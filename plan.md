@@ -49,7 +49,7 @@
   - [x] `dahlquistCounterexample_not_convergent`
 
 ### 1.3 Order and Convergence
-- [ ] **Theorem**: Convergence theorem for one-step methods
+- [x] **Theorem**: Convergence theorem for one-step methods (`OpenMath/OneStepConvergence.lean`)
 
 ## Chapter 2: Runge–Kutta Methods
 
