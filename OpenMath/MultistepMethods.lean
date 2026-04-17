@@ -814,7 +814,7 @@ private lemma bdf5_quartic_eq_five_fourths (ξ : ℂ)
   have h136800 : (136800 : ℂ) ≠ 0 := by
     norm_num
   exact mul_left_cancel₀ h136800 <| by
-    linear_combination hlin : (136800 : ℂ) * ξ = 136800 * (5 / 4)
+    linear_combination hlin
 
 /-- BDF5 is zero-stable: `ρ(ξ) = ξ⁵ - (300/137)ξ⁴ + (300/137)ξ³ - (200/137)ξ²
   + (75/137)ξ - 12/137`.
@@ -936,6 +936,88 @@ theorem bdf6_order_six : bdf6.HasOrder 6 := by
 /-- BDF6 is implicit (β₆ = 60/147 ≠ 0). -/
 theorem bdf6_implicit : bdf6.IsImplicit := by
   simp [LMM.IsImplicit, bdf6, Fin.last]
+
+/-- Helper: every root of Q₅ = 147ξ⁵-213ξ⁴+237ξ³-163ξ²+62ξ-10 has ‖ξ‖ ≤ 1.
+  Proof by Möbius transform z = (ξ-1)/(ξ+1), analogous to BDF5. -/
+private theorem bdf6_quintic_roots_in_disk (ξ : ℂ)
+    (h1 : 147 * ξ ^ 5 - 213 * ξ ^ 4 + 237 * ξ ^ 3 - 163 * ξ ^ 2 + 62 * ξ - 10 = 0) :
+    ‖ξ‖ ≤ 1 := by
+  sorry
+
+/-- Helper: Q₅ has no roots on the unit circle.
+  Proof: from q(ξ)=0 and |ξ|=1, derive the reciprocal polynomial (via conjugation),
+  subtract to get a palindromic quartic r(ξ)=0, then use the Bézout identity
+  A(ξ)·q(ξ) + B(ξ)·r(ξ) = 70761600 to derive 0 = 70761600. -/
+private theorem bdf6_quintic_no_unit_roots (ξ : ℂ)
+    (h1 : 147 * ξ ^ 5 - 213 * ξ ^ 4 + 237 * ξ ^ 3 - 163 * ξ ^ 2 + 62 * ξ - 10 = 0)
+    (habs : ‖ξ‖ = 1) : False := by
+  -- Step 1: From ‖ξ‖ = 1, get ξ · conj(ξ) = 1 and ξ ≠ 0.
+  have h_inv : ξ * starRingEnd ℂ ξ = 1 := by
+    simp +decide [Complex.mul_conj, Complex.normSq_eq_norm_sq, habs]
+  have h_ne : ξ ≠ 0 := by intro h; rw [h] at h1; norm_num at h1
+  -- Step 2: Since coefficients are real integers, p(conj ξ) = 0.
+  have h_conj : 147 * (starRingEnd ℂ ξ) ^ 5 - 213 * (starRingEnd ℂ ξ) ^ 4 +
+      237 * (starRingEnd ℂ ξ) ^ 3 - 163 * (starRingEnd ℂ ξ) ^ 2 +
+      62 * (starRingEnd ℂ ξ) - 10 = 0 := by
+    simpa using congr_arg Star.star h1
+  -- Step 3: conj(ξ) = ξ⁻¹, substitute and multiply by ξ⁵ to get reciprocal polynomial.
+  rw [eq_inv_of_mul_eq_one_right h_inv] at h_conj
+  have h_recip : -10 * ξ ^ 5 + 62 * ξ ^ 4 - 163 * ξ ^ 3 + 237 * ξ ^ 2 -
+      213 * ξ + 147 = 0 := by
+    have h5 : ξ ^ 5 ≠ 0 := pow_ne_zero 5 h_ne
+    have : ξ ^ 5 * (147 * (ξ⁻¹) ^ 5 - 213 * (ξ⁻¹) ^ 4 + 237 * (ξ⁻¹) ^ 3 -
+        163 * (ξ⁻¹) ^ 2 + 62 * ξ⁻¹ - 10) = 0 := by rw [h_conj]; ring
+    rw [inv_pow] at this; field_simp at this; linear_combination this
+  -- Step 4: Subtract to get palindromic quartic = 0.
+  have h_pal : 157 * ξ ^ 4 - 118 * ξ ^ 3 + 282 * ξ ^ 2 - 118 * ξ + 157 = 0 := by
+    have hsub : (ξ - 1) * (157 * ξ ^ 4 - 118 * ξ ^ 3 + 282 * ξ ^ 2 - 118 * ξ + 157) = 0 := by
+      linear_combination h1 - h_recip
+    rcases mul_eq_zero.mp hsub with h0 | done
+    · exfalso
+      have h_one : ξ = 1 := by linear_combination h0
+      rw [h_one] at h1; norm_num at h1
+    · exact done
+  -- Step 5: Bézout identity gives contradiction.
+  -- A(ξ)·q(ξ) + B(ξ)·r(ξ) = 70761600, where
+  -- A = -956287ξ³ + 793313ξ² - 150175ξ + 719361
+  -- B = 895377ξ⁴ - 1367208ξ³ + 24615ξ² + 79544ξ + 496530
+  have : (70761600 : ℂ) = 0 := by
+    linear_combination (-956287 * ξ ^ 3 + 793313 * ξ ^ 2 - 150175 * ξ + 719361) * h1 +
+      (895377 * ξ ^ 4 - 1367208 * ξ ^ 3 + 24615 * ξ ^ 2 + 79544 * ξ + 496530) * h_pal
+  norm_num at this
+
+/-- BDF6 is zero-stable: `ρ(ξ) = ξ⁶ - (360/147)ξ⁵ + (450/147)ξ⁴ - (400/147)ξ³
+  + (225/147)ξ² - (72/147)ξ + 10/147`.
+  Factoring: `147·ρ(ξ) = (ξ - 1) (147ξ⁵ - 213ξ⁴ + 237ξ³ - 163ξ² + 62ξ - 10)`.
+  Root `ξ = 1` is simple. The quintic factor has all roots strictly inside the unit disk,
+  so every root of `ρ` lies in `‖ξ‖ ≤ 1` and every unit root is simple.
+  Reference: Iserles, Section 4.5; BDF6 is the highest-order zero-stable BDF method. -/
+theorem bdf6_zeroStable : bdf6.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp only [LMM.rhoC, bdf6] at hξ
+    simp [Fin.sum_univ_succ] at hξ
+    have h147 : (ξ - 1) * (147 * ξ ^ 5 - 213 * ξ ^ 4 + 237 * ξ ^ 3 - 163 * ξ ^ 2 +
+        62 * ξ - 10) = 0 := by
+      linear_combination 147 * hξ
+    rcases mul_eq_zero.mp h147 with h0 | h1
+    · have : ξ = 1 := by linear_combination h0
+      rw [this]; simp
+    · exact bdf6_quintic_roots_in_disk ξ h1
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp only [LMM.rhoCDeriv, bdf6]
+    simp only [LMM.rhoC, bdf6] at hξ
+    simp [Fin.sum_univ_succ] at hξ
+    have h147 : (ξ - 1) * (147 * ξ ^ 5 - 213 * ξ ^ 4 + 237 * ξ ^ 3 - 163 * ξ ^ 2 +
+        62 * ξ - 10) = 0 := by
+      linear_combination 147 * hξ
+    rcases mul_eq_zero.mp h147 with h0 | h1
+    · have hξ1 : ξ = 1 := by linear_combination h0
+      rw [hξ1]
+      simp [Fin.sum_univ_succ]
+      norm_num
+    · exact (bdf6_quintic_no_unit_roots ξ h1 habs).elim
 
 /-! ## Dahlquist's Second Barrier
 

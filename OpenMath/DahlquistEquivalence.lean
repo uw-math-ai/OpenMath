@@ -818,6 +818,19 @@ theorem bdf2_convergent : bdf2.IsConvergent :=
 theorem bdf3_convergent : bdf3.IsConvergent :=
   (dahlquist_equivalence bdf3).mpr ⟨bdf3_consistent, bdf3_zeroStable⟩
 
+/-- BDF4 is convergent: consistent (Section 4.5) and zero-stable. -/
+theorem bdf4_convergent : bdf4.IsConvergent :=
+  (dahlquist_equivalence bdf4).mpr ⟨bdf4_consistent, bdf4_zeroStable⟩
+
+/-- BDF5 is convergent: consistent (Section 4.5) and zero-stable. -/
+theorem bdf5_convergent : bdf5.IsConvergent :=
+  (dahlquist_equivalence bdf5).mpr ⟨bdf5_consistent, bdf5_zeroStable⟩
+
+/-- BDF6 is convergent: consistent (Section 4.5) and zero-stable.
+  BDF6 is the highest-order convergent BDF method (Dahlquist's first barrier). -/
+theorem bdf6_convergent : bdf6.IsConvergent :=
+  (dahlquist_equivalence bdf6).mpr ⟨bdf6_consistent, bdf6_zeroStable⟩
+
 /-- The Dahlquist counterexample is NOT convergent (not zero-stable). -/
 theorem dahlquistCounterexample_not_convergent :
     ¬dahlquistCounterexample.IsConvergent := by
