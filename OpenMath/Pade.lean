@@ -97,17 +97,160 @@ noncomputable def padeQ (p q : ℕ) (z : ℂ) : ℂ :=
 noncomputable def padeR (p q : ℕ) (z : ℂ) : ℂ :=
   padeP p q z / padeQ p q z
 
+/-- Auxiliary: the key factorial coefficient identity for the Padé Q recurrence.
+After clearing denominators, this is `(p+q-j)·(p+q-j-1)!·q·(q-1)! = … `, trivial ring. -/
+private lemma padeQ_coeff_step (p q j : ℕ) (hjq : j < q) :
+    (((p + 1 + q - (j + 1)).factorial : ℕ) : ℂ) * ↑q.factorial /
+      (↑(p + 1 + q).factorial * ↑(q - (j + 1)).factorial * ↑(j + 1).factorial) =
+    ↑(p + q - (j + 1)).factorial * ↑q.factorial /
+      (↑(p + q).factorial * ↑(q - (j + 1)).factorial * ↑(j + 1).factorial) +
+    ↑q / (↑(p + q) * (↑p + ↑q + 1)) *
+      (↑(p + (q - 1) - j).factorial * ↑(q - 1).factorial /
+        (↑(p + (q - 1)).factorial * ↑(q - 1 - j).factorial * ↑j.factorial)) *
+      (-1) := by
+  -- Natural number simplifications
+  have h1 : p + 1 + q - (j + 1) = p + q - j := by omega
+  have h2 : p + q - (j + 1) = p + q - j - 1 := by omega
+  have h3 : p + (q - 1) - j = p + q - j - 1 := by omega
+  have h4 : q - 1 - j = q - (j + 1) := by omega
+  have h5 : p + (q - 1) = p + q - 1 := by omega
+  have h6 : p + 1 + q = p + q + 1 := by omega
+  rw [h1, h2, h3, h4, h5, h6]
+  -- Normalize ↑p + ↑q + 1 → ↑(p + q + 1) for field_simp
+  rw [show (↑p : ℂ) + ↑q + 1 = (↑(p + q + 1) : ℂ) from by push_cast; ring]
+  -- Factorial step relations (rewrite in goal only, before field_simp)
+  rw [show (((p + q - j).factorial : ℕ) : ℂ) = ↑(p + q - j) * ↑((p + q - j - 1).factorial) from by
+    rw [show p + q - j = (p + q - j - 1) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show (((p + q + 1).factorial : ℕ) : ℂ) = ↑(p + q + 1) * ↑((p + q).factorial) from by
+    rw [show p + q + 1 = (p + q) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show ((q.factorial : ℕ) : ℂ) = ↑q * ↑((q - 1).factorial) from by
+    rw [show q = (q - 1) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show (((p + q).factorial : ℕ) : ℂ) = ↑(p + q) * ↑((p + q - 1).factorial) from by
+    rw [show p + q = (p + q - 1) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show (((j + 1).factorial : ℕ) : ℂ) = (↑j + 1) * ↑(j.factorial) from by
+    rw [Nat.factorial_succ]; push_cast; ring]
+  -- Now all denominators are products of Nat.cast terms and smaller factorials
+  have hfact : ∀ n : ℕ, (↑(n.factorial) : ℂ) ≠ 0 :=
+    fun n => Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'
+  have hne : ∀ n : ℕ, 0 < n → (↑n : ℂ) ≠ 0 := fun n hn => Nat.cast_ne_zero.mpr (by omega)
+  have hj1 : (↑j : ℂ) + 1 ≠ 0 := by
+    rw [show (↑j : ℂ) + 1 = ↑(j + 1) from by push_cast; ring]; exact hne _ (by omega)
+  have hpq_sum : (↑p : ℂ) + ↑q ≠ 0 := by
+    rw [show (↑p : ℂ) + ↑q = ↑(p + q) from by push_cast; ring]; exact hne _ (by omega)
+  have hpq1_sum : (1 : ℂ) + ↑p + ↑q ≠ 0 := by
+    rw [show (1 : ℂ) + ↑p + ↑q = ↑(p + q + 1) from by push_cast; ring]; exact hne _ (by omega)
+  field_simp [hfact, hne _ (show 0 < p + q from by omega), hne _ (show 0 < p + q + 1 from by omega),
+    hne _ (show 0 < p + q - j from by omega), hne _ (show 0 < q from by omega), hj1,
+    hpq_sum, hpq1_sum]
+  rw [show (↑(p + q - j) : ℂ) = ↑p + ↑q - ↑j from by
+    push_cast [Nat.cast_sub (show j ≤ p + q from by omega)]; ring]
+  have hpq1_ne : (↑(p + q + 1) : ℂ) ≠ 0 := hne _ (by omega)
+  field_simp [hpq1_ne]
+  push_cast
+  ring
+
 /-- Theorem 352D: denominator recurrence for Padé polynomials. -/
 theorem padeQ_succ_left (p q : ℕ) (hq : 0 < q) (z : ℂ) :
     padeQ (p + 1) q z =
       padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z := by
-  sorry
+  simp only [padeQ]
+  rw [show q - 1 + 1 = q from by omega]
+  -- Peel off j=0 from both sums over range (q+1)
+  rw [Finset.sum_range_succ', Finset.sum_range_succ']
+  -- Simplify j=0 base terms
+  simp only [Nat.sub_zero, pow_zero, mul_one, Nat.factorial_zero, Nat.cast_one, mul_one]
+  -- j=0 terms are a*b/(a*b) = 1
+  have hdiv_self : ∀ a b : ℂ, a ≠ 0 → b ≠ 0 → a * b / (a * b) = 1 :=
+    fun a b ha hb => div_self (mul_ne_zero ha hb)
+  have hfact_ne : ∀ n : ℕ, (↑(n.factorial) : ℂ) ≠ 0 :=
+    fun n => Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'
+  rw [hdiv_self _ _ (hfact_ne _) (hfact_ne _), hdiv_self _ _ (hfact_ne _) (hfact_ne _)]
+  -- Distribute C·z into the second sum
+  rw [Finset.mul_sum]
+  -- Rearrange RHS: ∑ B + 1 + ∑ C → (∑ B + ∑ C) + 1, then cancel +1
+  conv_rhs => rw [add_assoc, add_comm (1 : ℂ), ← add_assoc]
+  simp only [add_right_cancel_iff]
+  -- Combine the two sums over range q
+  rw [← Finset.sum_add_distrib]
+  -- Term-by-term equality: use coefficient identity then match z-powers
+  apply Finset.sum_congr rfl
+  intro j hj
+  have hjq : j < q := Finset.mem_range.mp hj
+  -- Rewrite LHS coefficient using the recurrence identity
+  rw [padeQ_coeff_step p q j hjq]
+  -- (-z)^(j+1) = (-z)^j * (-z), then ring-normalize
+  rw [pow_succ]
+  ring
+
+/-- Auxiliary: the key factorial coefficient identity for the Padé P recurrence. -/
+private lemma padeP_coeff_step (p q j : ℕ) (hjp : j < p) :
+    (((p + (q + 1) - (j + 1)).factorial : ℕ) : ℂ) * ↑p.factorial /
+      (↑(p + (q + 1)).factorial * ↑(p - (j + 1)).factorial * ↑(j + 1).factorial) =
+    ↑(p + q - (j + 1)).factorial * ↑p.factorial /
+      (↑(p + q).factorial * ↑(p - (j + 1)).factorial * ↑(j + 1).factorial) -
+    ↑p / (↑(p + q) * (↑p + ↑q + 1)) *
+      (↑((p - 1) + q - j).factorial * ↑(p - 1).factorial /
+        (↑((p - 1) + q).factorial * ↑((p - 1) - j).factorial * ↑j.factorial)) := by
+  have h1 : p + (q + 1) - (j + 1) = p + q - j := by omega
+  have h2 : p + q - (j + 1) = p + q - j - 1 := by omega
+  have h3 : (p - 1) + q - j = p + q - j - 1 := by omega
+  have h4 : (p - 1) - j = p - (j + 1) := by omega
+  have h5 : (p - 1) + q = p + q - 1 := by omega
+  have h6 : p + (q + 1) = p + q + 1 := by omega
+  rw [h1, h2, h3, h4, h5, h6]
+  rw [show (↑p : ℂ) + ↑q + 1 = (↑(p + q + 1) : ℂ) from by push_cast; ring]
+  rw [show (((p + q - j).factorial : ℕ) : ℂ) = ↑(p + q - j) * ↑((p + q - j - 1).factorial) from by
+    rw [show p + q - j = (p + q - j - 1) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show (((p + q + 1).factorial : ℕ) : ℂ) = ↑(p + q + 1) * ↑((p + q).factorial) from by
+    rw [show p + q + 1 = (p + q) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show ((p.factorial : ℕ) : ℂ) = ↑p * ↑((p - 1).factorial) from by
+    rw [show p = (p - 1) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show (((p + q).factorial : ℕ) : ℂ) = ↑(p + q) * ↑((p + q - 1).factorial) from by
+    rw [show p + q = (p + q - 1) + 1 from by omega, Nat.factorial_succ]; push_cast; ring]
+  rw [show (((j + 1).factorial : ℕ) : ℂ) = (↑j + 1) * ↑(j.factorial) from by
+    rw [Nat.factorial_succ]; push_cast; ring]
+  have hfact : ∀ n : ℕ, (↑(n.factorial) : ℂ) ≠ 0 :=
+    fun n => Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'
+  have hne : ∀ n : ℕ, 0 < n → (↑n : ℂ) ≠ 0 := fun n hn => Nat.cast_ne_zero.mpr (by omega)
+  have hj1 : (↑j : ℂ) + 1 ≠ 0 := by
+    rw [show (↑j : ℂ) + 1 = ↑(j + 1) from by push_cast; ring]; exact hne _ (by omega)
+  have hpq_sum : (↑p : ℂ) + ↑q ≠ 0 := by
+    rw [show (↑p : ℂ) + ↑q = ↑(p + q) from by push_cast; ring]; exact hne _ (by omega)
+  have hpq1_sum : (1 : ℂ) + ↑p + ↑q ≠ 0 := by
+    rw [show (1 : ℂ) + ↑p + ↑q = ↑(p + q + 1) from by push_cast; ring]; exact hne _ (by omega)
+  field_simp [hfact, hne _ (show 0 < p + q from by omega), hne _ (show 0 < p + q + 1 from by omega),
+    hne _ (show 0 < p + q - j from by omega), hne _ (show 0 < p from by omega), hj1,
+    hpq_sum, hpq1_sum]
+  rw [show (↑(p + q - j) : ℂ) = ↑p + ↑q - ↑j from by
+    push_cast [Nat.cast_sub (show j ≤ p + q from by omega)]; ring]
+  have hpq1_ne : (↑(p + q + 1) : ℂ) ≠ 0 := hne _ (by omega)
+  field_simp [hpq1_ne]
+  push_cast
+  ring
 
 /-- Theorem 352D: numerator recurrence for Padé polynomials. -/
 theorem padeP_succ_right (p q : ℕ) (hp : 0 < p) (z : ℂ) :
     padeP p (q + 1) z =
       padeP p q z - (p : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeP (p - 1) q z := by
-  sorry
+  simp only [padeP]
+  rw [show p - 1 + 1 = p from by omega]
+  rw [Finset.sum_range_succ', Finset.sum_range_succ']
+  simp only [Nat.sub_zero, pow_zero, mul_one, Nat.factorial_zero, Nat.cast_one, mul_one]
+  have hdiv_self : ∀ a b : ℂ, a ≠ 0 → b ≠ 0 → a * b / (a * b) = 1 :=
+    fun a b ha hb => div_self (mul_ne_zero ha hb)
+  have hfact_ne : ∀ n : ℕ, (↑(n.factorial) : ℂ) ≠ 0 :=
+    fun n => Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'
+  rw [hdiv_self _ _ (hfact_ne _) (hfact_ne _), hdiv_self _ _ (hfact_ne _) (hfact_ne _)]
+  rw [Finset.mul_sum]
+  conv_rhs => rw [add_sub_right_comm]
+  simp only [add_right_cancel_iff]
+  rw [← Finset.sum_sub_distrib]
+  apply Finset.sum_congr rfl
+  intro j hj
+  have hjp : j < p := Finset.mem_range.mp hj
+  rw [padeP_coeff_step p q j hjp]
+  rw [pow_succ]
+  ring
 
 /-- Theorem 352C: combined Padé recurrence, packaged as a pair identity. -/
 theorem padePQ_pair_recurrence (p q : ℕ) (hp : 0 < p) (hq : 0 < q) (z : ℂ) :
