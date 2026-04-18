@@ -516,6 +516,12 @@ theorem trapezoidal_imagAxis_not_orderStarPlus (y : ℝ) :
   simpa [trapezoidalR, ButcherTableau.stabilityFn1, rkImplicitMidpoint] using
     rkImplicitMidpoint_aStable z hz (one_sub_half_mul_ne_zero_of_nonpos_re z hz)
 
+/-- **Theorem 355F** specialized to GL2 (Gauss–Legendre 2-stage): the imaginary axis does not
+    meet `𝒜⁺`. -/
+theorem gl2_imagAxis_not_orderStarPlus (y : ℝ) :
+    (↑y * I) ∉ orderStarPlus gl2StabilityFn :=
+  aStable_imagAxis_not_orderStarPlus gl2StabilityFn gl2_aStable y
+
 /-! ## Theorem 355B: Arrow Tangency Directions (General Statement)
 
 For a rational approximation `R` to `exp` of exact order `p`, the order-star

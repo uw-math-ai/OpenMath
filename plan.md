@@ -105,13 +105,14 @@
   - [x] Proved `bⱼ ≥ 0` direction: det formula, stability function formula, norm bound
   - [x] Proved M positive semidefinite direction via the imaginary-basis perturbation argument
 - [x] **Theorem 357C**: algebraic stability implies BN-stability (`OpenMath/BNStability.lean`)
+- [x] **Theorem 357D**: BN-stability implies AN-stability for irreducible non-confluent methods (`OpenMath/BNImpliesAN.lean`)
 - [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
 - [x] **Theorem 353A**: Padé approximation order (`OpenMath/PadeOrder.lean`)
-- [~] **Theorem 352C/352D**: Padé recurrence infrastructure (`OpenMath/Pade.lean`)
+- [x] **Theorem 352C/352D**: Padé recurrence infrastructure (`OpenMath/Pade.lean`)
   - [x] Added general `padeP`, `padeQ`, `padeR` families
   - [x] Proved diagonal symmetry and specialization lemmas `padeQ_diagonal_eq_padeP_neg`, `padeP_one_one`, `padeQ_two_two`
   - [x] Proved pair packaging theorem `padePQ_pair_recurrence`
-  - [ ] Remaining coefficient recurrences `padeQ_succ_left`, `padeP_succ_right` need a clean factorial-sum proof
+  - [x] Proved coefficient recurrences `padeQ_succ_left`, `padeP_succ_right`
 - [x] **Definition**: Embedded RK pairs (`OpenMath/EmbeddedRK.lean`)
 - [x] **Definition**: Stiff accuracy (`OpenMath/StiffAccuracy.lean`)
 - [x] **Theorem 342C**: Gaussian quadrature order-condition equivalence (`OpenMath/Collocation.lean`)
@@ -142,15 +143,15 @@
 
 ## Current Target
 
-**Chapter 3 stability theory in progress. Section 356 DJ-reducibility is now formalized.**
+**Chapter 3 stability theory in progress. Full stability equivalence chain formalized: AN-stable ⟹ algebraically stable (356C) ⟹ BN-stable (357C) ⟹ AN-stable (357D).**
 
 Next targets:
 1. **Order star infrastructure / Theorem 355A+** — assess `OpenMath/OrderStars.lean` and continue the Ehle-barrier setup
-2. **Theorem 352D** — finish the factorial-sum proofs of `padeQ_succ_left` and `padeP_succ_right` in `OpenMath/Pade.lean`
+2. **Theorem 343A** — reflected methods and B/C/D condition transfer
 3. **Theorem 301A** — finish rooted-tree infrastructure
 
 ## Sorry locations
-- `OpenMath/ANStability.lean`: 1 sorry in `norm_stabilityFn_imagBasis_gt_one` (requires Taylor expansion argument for |R(iτv)|² = 1 - τ²v'Mv + O(τ³))
+None — 0 sorry's project-wide.
 
 ## Recent git history
 969bc8a Close Pade approximation order polynomial proof

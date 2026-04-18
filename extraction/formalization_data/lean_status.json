@@ -307,12 +307,12 @@
   "thm:352C": {
     "lean_file": "OpenMath/Pade.lean",
     "lean_symbol": "padePQ_pair_recurrence",
-    "status": "in_progress"
+    "status": "done"
   },
   "thm:352D": {
     "lean_file": "OpenMath/Pade.lean",
     "lean_symbol": "padeQ_succ_left",
-    "status": "in_progress"
+    "status": "done"
   },
   "thm:352E": {
     "lean_file": null,
@@ -395,9 +395,9 @@
     "status": "done"
   },
   "thm:357D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/BNImpliesAN.lean",
+    "lean_symbol": "ButcherTableau.bnStable_implies_anStable",
+    "status": "done"
   },
   "thm:358A": {
     "lean_file": null,
