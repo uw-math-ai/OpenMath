@@ -100,10 +100,11 @@
 - [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
-- [~] **Theorem 356C**: AN-stability implies algebraic stability (`OpenMath/ANStability.lean`)
+- [x] **Theorem 356C**: AN-stability implies algebraic stability (`OpenMath/ANStability.lean`)
   - [x] Defined AN-stability (`IsANStable`) and diagonal stability function (`stabilityFnDiag`)
   - [x] Proved `bⱼ ≥ 0` direction: det formula, stability function formula, norm bound
-  - [~] Proved M positive semidefinite direction (1 sorry: Taylor expansion of |R(iτv)|²)
+  - [x] Proved M positive semidefinite direction via the imaginary-basis perturbation argument
+- [x] **Theorem 357C**: algebraic stability implies BN-stability (`OpenMath/BNStability.lean`)
 - [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
 - [x] **Theorem 353A**: Padé approximation order (`OpenMath/PadeOrder.lean`)
 - [~] **Theorem 352C/352D**: Padé recurrence infrastructure (`OpenMath/Pade.lean`)
@@ -141,13 +142,12 @@
 
 ## Current Target
 
-**Chapter 3 stability theory in progress.**
+**Chapter 3 stability theory in progress. Section 356 DJ-reducibility is now formalized.**
 
 Next targets:
-1. **Theorem 356C** — close the last sorry in `OpenMath/ANStability.lean` (`norm_stabilityFn_imagBasis_gt_one`: Taylor expansion of |R(iτv)|² for the M-PSD direction)
-2. **Theorem 357C** — algebraic stability implies BN-stability (the other direction of the stability equivalence chain)
-3. **Theorem 352D** — finish the factorial-sum proofs of `padeQ_succ_left` and `padeP_succ_right` in `OpenMath/Pade.lean`
-4. **Theorem 301A** — finish rooted-tree infrastructure
+1. **Order star infrastructure / Theorem 355A+** — assess `OpenMath/OrderStars.lean` and continue the Ehle-barrier setup
+2. **Theorem 352D** — finish the factorial-sum proofs of `padeQ_succ_left` and `padeP_succ_right` in `OpenMath/Pade.lean`
+3. **Theorem 301A** — finish rooted-tree infrastructure
 
 ## Sorry locations
 - `OpenMath/ANStability.lean`: 1 sorry in `norm_stabilityFn_imagBasis_gt_one` (requires Taylor expansion argument for |R(iτv)|² = 1 - τ²v'Mv + O(τ³))

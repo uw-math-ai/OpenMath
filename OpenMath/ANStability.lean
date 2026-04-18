@@ -270,6 +270,78 @@ theorem IsANStable.algStabMatrix_psd {t : ButcherTableau s} (h : t.IsANStable) :
   obtain ⟨τ, hτ, hdet, hgt⟩ := norm_stabilityFn_imagBasis_gt_one t v hv
   exact absurd (h _ (imagBasis_re_le v hτ.le) hdet) (not_le.mpr hgt)
 
+/-! ## DJ-reducibility and Corollary 356D -/
+
+/-- A Runge–Kutta method is DJ-reducible if there is a nonempty set of stages
+whose weights vanish and which receive no contributions from the remaining stages. -/
+def IsDJReducible (t : ButcherTableau s) : Prop :=
+  ∃ S₀ : Finset (Fin s),
+    S₀.Nonempty ∧
+    (∀ j ∈ S₀, t.b j = 0) ∧
+    (∀ i, i ∉ S₀ → ∀ j ∈ S₀, t.A i j = 0)
+
+/-- DJ-irreducibility is the negation of DJ-reducibility. -/
+def IsDJIrreducible (t : ButcherTableau s) : Prop :=
+  ¬ t.IsDJReducible
+
+private lemma algStabMatrix_diag_eq_zero_of_weight_zero {t : ButcherTableau s}
+    {j : Fin s} (hbj : t.b j = 0) :
+    t.algStabMatrix j j = 0 := by
+  simp [ButcherTableau.algStabMatrix, hbj]
+
+private lemma algStabMatrix_col_eq_zero_of_diag_zero {t : ButcherTableau s}
+    (ht : t.IsAlgStable) {j : Fin s} (hjj : t.algStabMatrix j j = 0) :
+    ∀ i : Fin s, t.algStabMatrix i j = 0 := by
+  intro i
+  by_cases hij : i = j
+  · simpa [hij] using hjj
+  · have hMii : 0 ≤ t.algStabMatrix i i := by
+      have hq := ht.posdef_M (Pi.single i (1 : ℝ))
+      simpa [Pi.single_apply] using hq
+    by_contra hij0
+    have hMij_ne : t.algStabMatrix i j ≠ 0 := hij0
+    have hne : 2 * t.algStabMatrix i j ≠ 0 := by
+      exact mul_ne_zero two_ne_zero hMij_ne
+    have hq := ht.posdef_M
+      ((Pi.single i 1 : Fin s → ℝ) +
+        Pi.single j (-(t.algStabMatrix i i + 1) / (2 * t.algStabMatrix i j)))
+    simp [Pi.single_apply, Finset.sum_add_distrib, hjj, mul_add, add_mul] at hq
+    rw [t.algStabMatrix_symm j i] at hq
+    field_simp [hne] at hq
+    nlinarith
+
+/-- **Corollary 356D**: an AN-stable DJ-irreducible method has strictly positive weights. -/
+theorem cor_356D {t : ButcherTableau s} (hAN : t.IsANStable) (hirr : t.IsDJIrreducible) :
+    ∀ i : Fin s, 0 < t.b i := by
+  let hAlg : t.IsAlgStable :=
+    { nonneg_weights := hAN.hasNonNegWeights
+      posdef_M := hAN.algStabMatrix_psd }
+  intro i
+  have hbi_nonneg : 0 ≤ t.b i := hAN.hasNonNegWeights i
+  by_contra hbi_pos
+  have hbi_le : t.b i ≤ 0 := by linarith
+  have hbi : t.b i = 0 := le_antisymm hbi_le hbi_nonneg
+  let S₀ : Finset (Fin s) := Finset.univ.filter (fun j => t.b j = 0)
+  have hi_mem : i ∈ S₀ := by
+    simp [S₀, hbi]
+  have hS₀_nonempty : S₀.Nonempty := ⟨i, hi_mem⟩
+  have hweights : ∀ j ∈ S₀, t.b j = 0 := by
+    intro j hj
+    simp [S₀] at hj
+    exact hj
+  have hAzero : ∀ k, k ∉ S₀ → ∀ j ∈ S₀, t.A k j = 0 := by
+    intro k hk j hj
+    have hbj : t.b j = 0 := hweights j hj
+    have hjj : t.algStabMatrix j j = 0 := algStabMatrix_diag_eq_zero_of_weight_zero hbj
+    have hMkj : t.algStabMatrix k j = 0 := algStabMatrix_col_eq_zero_of_diag_zero hAlg hjj k
+    have hbk_ne : t.b k ≠ 0 := by
+      intro hbk
+      exact hk (by simp [S₀, hbk])
+    have hMul : t.b k * t.A k j = 0 := by
+      simpa [ButcherTableau.algStabMatrix, hbj] using hMkj
+    exact (mul_eq_zero.mp hMul).resolve_left hbk_ne
+  exact hirr ⟨S₀, hS₀_nonempty, hweights, hAzero⟩
+
 /-! ## Main theorem -/
 
 theorem an_stable_implies_alg_stable {t : ButcherTableau s} (h : t.IsANStable) :

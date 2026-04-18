@@ -320,9 +320,9 @@
     "status": "unformalized"
   },
   "thm:353A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/PadeOrder.lean",
+    "lean_symbol": "pade_approximation_order",
+    "status": "done"
   },
   "def:355A": {
     "lean_file": "OpenMath/OrderStars.lean",
@@ -365,19 +365,19 @@
     "status": "unformalized"
   },
   "def:356B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/ANStability.lean",
+    "lean_symbol": "ButcherTableau.IsDJReducible",
+    "status": "done"
   },
   "thm:356C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/ANStability.lean",
+    "lean_symbol": "an_stable_implies_alg_stable",
+    "status": "done"
   },
   "cor:356D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/ANStability.lean",
+    "lean_symbol": "ButcherTableau.cor_356D",
+    "status": "done"
   },
   "def:357A": {
     "lean_file": null,
@@ -390,9 +390,9 @@
     "status": "unformalized"
   },
   "thm:357C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/BNStability.lean",
+    "lean_symbol": "alg_stable_implies_bn_stable",
+    "status": "done"
   },
   "thm:357D": {
     "lean_file": null,
