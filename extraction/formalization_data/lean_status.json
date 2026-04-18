@@ -326,13 +326,13 @@
   },
   "def:355A": {
     "lean_file": "OpenMath/OrderStars.lean",
-    "lean_symbol": "orderStarPlus",
+    "lean_symbol": "IsUpArrowDir",
     "status": "done"
   },
   "thm:355B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/OrderStars.lean",
+    "lean_symbol": "forwardEuler_isDownArrowDir_zero",
+    "status": "in_progress"
   },
   "thm:355C": {
     "lean_file": null,

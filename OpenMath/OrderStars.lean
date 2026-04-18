@@ -246,3 +246,206 @@ theorem pade21_not_inEhleWedge : ¬InEhleWedge 2 1 := by
 /-- Known non-A-stable pair `(1,0)` violates the Ehle wedge. -/
 theorem pade10_not_inEhleWedge : ¬InEhleWedge 1 0 := by
   intro ⟨h1, _⟩; omega
+
+/-! ## Order Arrows (Definition 355A)
+
+For a stability function `R`, the **order web** is the locus where `φ(z) = R(z)·e⁻ᶻ`
+is real and positive. **Order arrows** are rays emanating from the origin along which
+`φ` is real and positive: "up arrows" have `φ` increasing (so `‖φ(z)‖ > 1` near 0)
+and "down arrows" have `φ` decreasing (`‖φ(z)‖ < 1` near 0).
+
+Reference: Iserles, Definition 355A.
+-/
+
+/-- The **order web**: locus where `φ(z) = R(z)·exp(-z)` is real and positive. -/
+def orderWeb (R : ℂ → ℂ) : Set ℂ := {z | ∃ r : ℝ, 0 < r ∧ R z * exp (-z) = ↑r}
+
+/-- A ray direction `θ` from the origin is an **up-arrow direction** if
+    `t ↦ ‖R(t·exp(iθ))·exp(-t·exp(iθ))‖` exceeds 1 for small positive `t`. -/
+def IsUpArrowDir (R : ℂ → ℂ) (θ : ℝ) : Prop :=
+  ∃ ε > 0, ∀ t ∈ Set.Ioo (0 : ℝ) ε,
+    1 < ‖R (↑t * exp (↑θ * I)) * exp (-(↑t * exp (↑θ * I)))‖
+
+/-- A ray direction `θ` from the origin is a **down-arrow direction** if
+    `t ↦ ‖R(t·exp(iθ))·exp(-t·exp(iθ))‖` is below 1 for small positive `t`. -/
+def IsDownArrowDir (R : ℂ → ℂ) (θ : ℝ) : Prop :=
+  ∃ ε > 0, ∀ t ∈ Set.Ioo (0 : ℝ) ε,
+    ‖R (↑t * exp (↑θ * I)) * exp (-(↑t * exp (↑θ * I)))‖ < 1
+
+/-- Up and down arrow directions are mutually exclusive. -/
+theorem not_isUpArrowDir_and_isDownArrowDir (R : ℂ → ℂ) (θ : ℝ) :
+    ¬(IsUpArrowDir R θ ∧ IsDownArrowDir R θ) := by
+  intro ⟨⟨ε₁, hε₁, h₁⟩, ⟨ε₂, hε₂, h₂⟩⟩
+  have hε : 0 < min ε₁ ε₂ := lt_min hε₁ hε₂
+  have hm₁ : min ε₁ ε₂ / 2 ∈ Set.Ioo (0 : ℝ) ε₁ := by
+    constructor <;> [linarith [min_le_left ε₁ ε₂]; linarith [min_le_left ε₁ ε₂]]
+  have hm₂ : min ε₁ ε₂ / 2 ∈ Set.Ioo (0 : ℝ) ε₂ := by
+    constructor <;> [linarith [min_le_right ε₁ ε₂]; linarith [min_le_right ε₁ ε₂]]
+  linarith [h₁ _ hm₁, h₂ _ hm₂]
+
+/-- Up-arrow directions land in `𝒜⁺` near the origin. -/
+theorem isUpArrowDir_subset_orderStarPlus (R : ℂ → ℂ) (θ : ℝ)
+    (h : IsUpArrowDir R θ) :
+    ∃ ε > 0, ∀ t ∈ Set.Ioo (0 : ℝ) ε,
+      (↑t * exp (↑θ * I) : ℂ) ∈ orderStarPlus R := by
+  obtain ⟨ε, hε, hup⟩ := h
+  exact ⟨ε, hε, fun t ht => hup t ht⟩
+
+/-- Down-arrow directions land in `𝒜⁻` near the origin. -/
+theorem isDownArrowDir_subset_orderStarMinus (R : ℂ → ℂ) (θ : ℝ)
+    (h : IsDownArrowDir R θ) :
+    ∃ ε > 0, ∀ t ∈ Set.Ioo (0 : ℝ) ε,
+      (↑t * exp (↑θ * I) : ℂ) ∈ orderStarMinus R := by
+  obtain ⟨ε, hε, hdn⟩ := h
+  exact ⟨ε, hε, fun t ht => hdn t ht⟩
+
+/-- The origin lies on the order web when `R(0) = 1`. -/
+theorem mem_orderWeb_zero (R : ℂ → ℂ) (h : R 0 = 1) :
+    (0 : ℂ) ∈ orderWeb R := by
+  refine ⟨1, one_pos, ?_⟩
+  simp [h]
+
+/-! ## Theorem 355B: Arrow Tangency Directions
+
+Let `R` be a rational approximation to `exp` of exact order `p`, meaning
+`R(z) = exp(z) - C·z^{p+1} + O(z^{p+2})` with `C ≠ 0`.
+
+The key identity: for `z = t·exp(iθ)` with `t` small,
+```
+  R(z)·exp(-z) = 1 - C·t^{p+1}·exp(i(p+1)θ) + O(t^{p+2})
+```
+So `‖R(z)·exp(-z)‖² ≈ 1 - 2C·t^{p+1}·cos((p+1)θ)`.
+
+At angles `θ = 2kπ/(p+1)`, `cos((p+1)θ) = 1`, so:
+- `C < 0` ⟹ `‖φ‖² > 1` ⟹ up arrow
+- `C > 0` ⟹ `‖φ‖² < 1` ⟹ down arrow
+
+Reference: Iserles, Theorem 355B.
+-/
+
+/-- **Forward Euler** (`R(z) = 1 + z`, order `p = 1`, error constant `C = 1/2 > 0`):
+    `θ = 0` is a down-arrow direction. On the positive real axis near the origin,
+    `‖(1+t)·e⁻ᵗ‖ < 1` for small `t > 0`. -/
+theorem forwardEuler_isDownArrowDir_zero :
+    IsDownArrowDir forwardEulerR 0 := by
+  refine ⟨1, one_pos, fun t ht => ?_⟩
+  simp only [forwardEulerR, ofReal_zero, zero_mul, Complex.exp_zero, mul_one]
+  rw [orderStar_norm_eq]
+  have ht0 : (0 : ℝ) < t := ht.1
+  rw [show ‖1 + (↑t : ℂ)‖ = 1 + t from by
+    rw [show (1 : ℂ) + ↑t = ↑((1 : ℝ) + t) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg (by linarith)]]
+  calc (1 + t) * rexp (-t)
+      _ < rexp t * rexp (-t) := by
+          apply mul_lt_mul_of_pos_right _ (Real.exp_pos _)
+          linarith [Real.add_one_lt_exp (ne_of_gt ht0)]
+      _ = 1 := by rw [← Real.exp_add, add_neg_cancel, Real.exp_zero]
+
+/-- **Forward Euler**: `θ = π` is a down-arrow direction.
+    On the negative real axis near the origin, `‖(1 - t)·eᵗ‖ < 1` for small `t > 0`. -/
+theorem forwardEuler_isDownArrowDir_pi :
+    IsDownArrowDir forwardEulerR π := by
+  refine ⟨1/2, by positivity, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  simp only [forwardEulerR]
+  rw [show (↑π : ℂ) * I = ↑Real.pi * I from by norm_cast, Complex.exp_pi_mul_I]
+  simp only [mul_neg, mul_one, neg_neg]
+  rw [norm_mul, Complex.norm_exp]
+  simp only [Complex.ofReal_re]
+  have ht1 : t < 1/2 := ht.2
+  rw [show ‖1 + -(↑t : ℂ)‖ = 1 - t from by
+    rw [show (1 : ℂ) + -((↑t : ℂ)) = ↑((1 : ℝ) - t) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg (by linarith)]]
+  calc (1 - t) * rexp t
+      _ < rexp (-t) * rexp t := by
+          apply mul_lt_mul_of_pos_right _ (Real.exp_pos _)
+          linarith [Real.one_sub_lt_exp_neg (ne_of_gt ht0)]
+      _ = 1 := by rw [← Real.exp_add, neg_add_cancel, Real.exp_zero]
+
+/-- **Backward Euler** stability function: `R(z) = 1/(1 - z)`. -/
+noncomputable def backwardEulerR (z : ℂ) : ℂ := (1 - z)⁻¹
+
+theorem backwardEulerR_zero : backwardEulerR 0 = 1 := by
+  simp [backwardEulerR]
+
+/-- **Backward Euler** (`R(z) = 1/(1-z)`, order `p = 1`, error constant `C = -1/2 < 0`):
+    `θ = 0` is an up-arrow direction. On the positive real axis near the origin,
+    `‖(1-t)⁻¹·e⁻ᵗ‖ > 1` for small `t > 0`. -/
+theorem backwardEuler_isUpArrowDir_zero :
+    IsUpArrowDir backwardEulerR 0 := by
+  refine ⟨1/2, by positivity, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  have ht1 : t < 1/2 := ht.2
+  simp only [backwardEulerR, ofReal_zero, zero_mul, Complex.exp_zero, mul_one]
+  rw [norm_mul, Complex.norm_exp, Complex.neg_re, Complex.ofReal_re]
+  rw [show ‖(1 - (↑t : ℂ))⁻¹‖ = (1 - t)⁻¹ from by
+    rw [norm_inv]
+    rw [show (1 : ℂ) - ↑t = ↑((1 : ℝ) - t) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg (by linarith)]]
+  have h1t : (0 : ℝ) < 1 - t := by linarith
+  rw [show (1 - t)⁻¹ * rexp (-t) = rexp (-t) * (1 - t)⁻¹ from mul_comm _ _]
+  rw [← div_eq_mul_inv, one_lt_div h1t]
+  linarith [Real.one_sub_lt_exp_neg (ne_of_gt ht0)]
+
+/-- **Backward Euler**: `θ = π` is an up-arrow direction. -/
+theorem backwardEuler_isUpArrowDir_pi :
+    IsUpArrowDir backwardEulerR π := by
+  refine ⟨1, one_pos, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  simp only [backwardEulerR]
+  rw [show (↑π : ℂ) * I = ↑Real.pi * I from by norm_cast, Complex.exp_pi_mul_I]
+  simp only [mul_neg, mul_one, neg_neg]
+  rw [show (1 : ℂ) - -↑t = 1 + ↑t from by ring]
+  rw [norm_mul, Complex.norm_exp, Complex.ofReal_re]
+  rw [show ‖(1 + (↑t : ℂ))⁻¹‖ = (1 + t)⁻¹ from by
+    rw [norm_inv]
+    rw [show (1 : ℂ) + ↑t = ↑((1 : ℝ) + t) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg (by linarith)]]
+  have h1t : (0 : ℝ) < 1 + t := by linarith
+  rw [show (1 + t)⁻¹ * rexp t = rexp t * (1 + t)⁻¹ from mul_comm _ _]
+  rw [← div_eq_mul_inv, one_lt_div h1t]
+  linarith [Real.add_one_lt_exp (ne_of_gt ht0)]
+
+/-- **Trapezoidal rule** stability function: `R(z) = (1 + z/2)/(1 - z/2)`. -/
+noncomputable def trapezoidalR (z : ℂ) : ℂ := (1 + z / 2) / (1 - z / 2)
+
+theorem trapezoidalR_zero : trapezoidalR 0 = 1 := by
+  simp [trapezoidalR]
+
+/-- **Trapezoidal rule** (`R(z) = (1+z/2)/(1-z/2)`, order `p = 2`, `C = -1/12 < 0`):
+    `θ = 0` is an up-arrow direction. -/
+private theorem trapezoidal_key_ineq {t : ℝ} (ht0 : 0 < t) (ht1 : t ≤ 1/4) :
+    rexp t < (2 + t) / (2 - t) := by
+  have h2t : (0 : ℝ) < 2 - t := by linarith
+  suffices h : (2 - t) * rexp t < 2 + t by rwa [lt_div_iff₀' h2t]
+  have hle : rexp t ≤ ∑ m ∈ Finset.range 3, t ^ m / ↑m.factorial +
+      t ^ 3 * (↑3 + 1) / (↑(Nat.factorial 3) * ↑3) :=
+    Real.exp_bound' (le_of_lt ht0) (by linarith) (by norm_num : (0 : ℕ) < 3)
+  norm_num [Finset.sum_range_succ, Nat.factorial] at hle
+  have httt : 0 < t ^ 3 := pow_pos ht0 3
+  have h4 : 0 ≤ t ^ 4 := pow_nonneg ht0.le 4
+  calc (2 - t) * rexp t
+      _ ≤ (2 - t) * (1 + t + t ^ 2 / 2 + t ^ 3 * 4 / 18) :=
+          mul_le_mul_of_nonneg_left hle h2t.le
+      _ = 2 + t - t ^ 3 / 18 - t ^ 4 * 2 / 9 := by ring
+      _ < 2 + t := by nlinarith
+
+theorem trapezoidal_isUpArrowDir_zero :
+    IsUpArrowDir trapezoidalR 0 := by
+  refine ⟨1/4, by positivity, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  have ht1 : t < 1/4 := ht.2
+  simp only [trapezoidalR, ofReal_zero, zero_mul, Complex.exp_zero, mul_one]
+  rw [norm_mul, Complex.norm_exp, Complex.neg_re, Complex.ofReal_re]
+  have h2t : (0 : ℝ) < 2 - t := by linarith
+  rw [show ‖(1 + (↑t : ℂ) / 2) / (1 - (↑t : ℂ) / 2)‖ = (2 + t) / (2 - t) from by
+    rw [show (1 + (↑t : ℂ) / 2) / (1 - (↑t : ℂ) / 2) = ↑((2 + t) / (2 - t)) from by
+      push_cast; field_simp]
+    rw [Complex.norm_real, Real.norm_of_nonneg (div_nonneg (by linarith) h2t.le)]]
+  have hkey := trapezoidal_key_ineq ht0 (le_of_lt ht1)
+  -- hkey : rexp t < (2 + t) / (2 - t)
+  -- Goal: 1 < (2 + t) / (2 - t) * rexp (-t)
+  have hexp_pos := Real.exp_pos t
+  calc (1 : ℝ) = rexp t * rexp (-t) := by rw [← Real.exp_add, add_neg_cancel, Real.exp_zero]
+    _ < (2 + t) / (2 - t) * rexp (-t) := by
+        apply mul_lt_mul_of_pos_right hkey (Real.exp_pos (-t))
