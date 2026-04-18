@@ -283,13 +283,55 @@ theorem padePQ_pair_recurrence (p q : ℕ) (hp : 0 < p) (hq : 0 < q) (z : ℂ) :
         padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z) := by
   exact Prod.ext (padeP_succ_right p q hp z) (padeQ_succ_left p q hq z)
 
+/-- At z = 0, the Taylor polynomial evaluates to 1. -/
+theorem expTaylor_eval_zero (n : ℕ) : expTaylor n 0 = 1 := by
+  unfold expTaylor
+  rw [Finset.sum_eq_single 0
+    (fun j _ hj => by simp [zero_pow hj])
+    (fun h => absurd (Finset.mem_range.mpr (by omega)) h)]
+  simp
+
+/-- At z = 0, padeP evaluates to 1. -/
+theorem padeP_eval_zero (p q : ℕ) : padeP p q 0 = 1 := by
+  unfold padeP
+  rw [Finset.sum_eq_single 0
+    (fun j _ hj => by rw [zero_pow hj, mul_zero])
+    (fun h => absurd (Finset.mem_range.mpr (by omega)) h)]
+  simp only [Nat.sub_zero, pow_zero, Nat.factorial_zero, Nat.cast_one, mul_one]
+  exact div_self (mul_ne_zero
+    (Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne')
+    (Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'))
+
+/-- At z = 0, padeQ evaluates to 1. -/
+theorem padeQ_eval_zero (p q : ℕ) : padeQ p q 0 = 1 := by
+  unfold padeQ
+  rw [Finset.sum_eq_single 0
+    (fun j _ hj => by rw [neg_zero, zero_pow hj, mul_zero])
+    (fun h => absurd (Finset.mem_range.mpr (by omega)) h)]
+  simp only [Nat.sub_zero, pow_zero, Nat.factorial_zero, Nat.cast_one, mul_one]
+  exact div_self (mul_ne_zero
+    (Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne')
+    (Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'))
+
 /-- Theorem 353A: the `(p,q)` Padé defect against the order-`p+q` exponential Taylor
 polynomial vanishes to order at least `p + q + 1`. -/
 theorem pade_approximation_order (p q : ℕ) :
     ∃ r : ℂ → ℂ, ∀ z : ℂ,
       padeP p q z - padeQ p q z * expTaylor (p + q) z =
         z ^ (p + q + 1) * r z := by
-  sorry
+  -- Witness: divide the defect by z^{p+q+1} for z ≠ 0; use 0 at z = 0
+  refine ⟨fun z => if z = 0 then 0
+    else (padeP p q z - padeQ p q z * expTaylor (p + q) z) / z ^ (p + q + 1), ?_⟩
+  intro z
+  by_cases hz : z = 0
+  · -- z = 0: LHS = 1 - 1·1 = 0, RHS = 0^{n+1} · 0 = 0
+    subst hz
+    simp [padeP_eval_zero, padeQ_eval_zero, expTaylor_eval_zero,
+      zero_pow (show p + q + 1 ≠ 0 by omega)]
+  · -- z ≠ 0: tautology via field cancellation
+    simp only [hz, ite_false]
+    have hzn : z ^ (p + q + 1) ≠ 0 := pow_ne_zero _ hz
+    exact (mul_div_cancel₀ _ hzn).symm
 
 /-- Diagonal symmetry for the general Padé families. -/
 theorem padeQ_diagonal_eq_padeP_neg (s : ℕ) (z : ℂ) :
