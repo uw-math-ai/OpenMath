@@ -1,54 +1,43 @@
 # Cycle 119 Results
 
 ## Worked on
-- Theorem 355F: A-stability criterion via order stars
-- Theorem 355B: Arrow tangency directions (general statement)
-- Metadata updates in lean_status.json
+- Theorem 355F follow-up corollaries in `OpenMath/OrderStars.lean`
+- Aristotle batch submission for the new imaginary-axis corollaries
+- Cycle 119 bookkeeping review (`history.jsonl`, stale planner state, verification path)
 
 ## Approach
-### Theorem 355F
-Three forms proved in OrderStars.lean:
-1. `aStable_imagAxis_not_orderStarPlus` — core result: A-stable ⟹ iy ∉ 𝒜⁺(R)
-2. `aStable_imagAxis_mem_minus_or_bdry` — positive form: iy ∈ 𝒜⁻ ∪ 𝒜⁰
-3. `not_aStable_of_imagAxis_orderStarPlus` — contrapositive
-
-All proofs use `orderStarPlus_imaginaryAxis` (|exp(-iy)|=1 reduces to |R(iy)| bound).
-
-### Theorem 355B (general)
-Four lemmas proved in OrderStars.lean:
-1. `norm_ofReal_mul_exp_I` — ‖t·e^{iθ}‖ = t for t ≥ 0
-2. `pow_ray_even_angle` — (t·e^{i·2kπ/(p+1)})^{p+1} = t^{p+1} (uses `Complex.exp_nat_mul_two_pi_mul_I`)
-3. `arrow_up_of_neg_errorConst` — C < 0 ⟹ θ=2kπ/(p+1) is up-arrow direction
-4. `arrow_down_of_pos_errorConst` — C > 0 ⟹ θ=2kπ/(p+1) is down-arrow direction
-
-The general statement uses an explicit error-bound hypothesis:
-`∀ z, ‖z‖ < δ₀ → ‖R(z)·e^{-z} - (1 - C·z^{p+1})‖ ≤ K·‖z‖^{p+2}`
-
-Proofs use triangle inequality + choosing ε = min(δ₀, |C|/(2K)).
-
-### Metadata
-Updated lean_status.json for: thm:355F, thm:355B, def:356A, def:357A, def:357B.
+- First checked `.prover-state/strategy.md` and the cycle 118 Aristotle result directories. The planner snapshot was stale: `OrderStars.lean` already contained the core 355F theorem and the general 355B development, and the cycle 118 Aristotle proofs matched the checked-in code.
+- Added two concrete 355F corollaries instead of re-proving the already-landed theorem:
+  - `backwardEuler_imagAxis_not_orderStarPlus`
+  - `trapezoidal_imagAxis_not_orderStarPlus`
+- Added two private denominator nonvanishing lemmas on `Re z ≤ 0` so the corollaries can reuse the existing A-stability proofs `rkImplicitEuler_aStable` and `rkImplicitMidpoint_aStable`.
+- Because `lake env lean OpenMath/OrderStars.lean` is currently blocked by a broken local toolchain/cache setup (`Mathlib` cache missing, `lake exe cache get` failing during C compilation under `/tmp/lean4-toolchain/bin/clang`), verified the new declarations with `lean_run_code` imports and standalone proof snippets instead.
+- Created `.prover-state/aristotle/cycle_119_imag_axis_corollaries.lean` with 5 sorries and submitted it to Aristotle as project `7a7e98b7-8ada-4f35-8a35-c0aa211f67e1`.
 
 ## Result
-SUCCESS — 7 new theorems, all fully proved (0 sorry), file compiles clean.
+SUCCESS
+
+New proved declarations added to `OpenMath/OrderStars.lean`:
+- `backwardEuler_imagAxis_not_orderStarPlus`
+- `trapezoidal_imagAxis_not_orderStarPlus`
+
+Verification completed:
+- `lean_run_code` successfully imported `OpenMath.OrderStars`
+- `#check backwardEuler_imagAxis_not_orderStarPlus`
+- `#check trapezoidal_imagAxis_not_orderStarPlus`
+
+Aristotle status at end of cycle work:
+- `7a7e98b7-8ada-4f35-8a35-c0aa211f67e1`: `IN_PROGRESS`
 
 ## Dead ends
-None — the proofs were straightforward once the right Mathlib lemmas were identified.
-Key Mathlib lemma: `Complex.exp_nat_mul_two_pi_mul_I` for the periodicity of exp.
+- `lake env lean OpenMath/OrderStars.lean` did not work in this environment because `.lake/packages/mathlib/.lake/build/lib/lean` was missing and `lake exe cache get` failed while compiling cache helper C files against `/tmp/lean4-toolchain`. This blocked normal file-level build verification.
 
 ## Discovery
-- The explicit error-bound hypothesis for 355B avoids any need for `Asymptotics.IsBigO`.
-  Future theorems can instantiate this with concrete Padé error bounds.
-- The odd-angle cases (θ = (2k+1)π/(p+1)) are NOT yet formalized — they would
-  need similar proofs but with cos((p+1)θ) = -1 instead of 1.
-- `lt_div_iff₀` is the key lemma for division-based ε arguments in Lean.
+- The planner’s “main target” for cycle 119 was already merged in the current branch before this run: `aStable_imagAxis_not_orderStarPlus`, its companion forms, and the general 355B development are present in `OpenMath/OrderStars.lean`.
+- `lean_status.json` was already aligned for the entities the planner marked stale: `def:355A`, `thm:355B`, `thm:355F`, `def:356A`, and `def:357A` are already marked done.
+- `thm:301A` should stay `in_progress`: `OpenMath/RootedTree.lean` still uses the fallback list-based tree representation rather than the textbook multiplicity quotient.
 
 ## Suggested next approach
-1. **Theorem 355B odd angles**: prove arrow directions at (2k+1)π/(p+1) — mirror of even-angle proofs
-2. **Connect 355B to concrete methods**: instantiate the general statement for
-   Forward/Backward Euler and Trapezoidal by providing the explicit error bound
-3. **Theorem 357D** (BN-stable + irreducible ⟹ AN-stable): requires embedding
-   complex scalar ODE into real dissipative system — textbook proof is missing,
-   substantial formalization effort needed
-4. **Theorem 355D** (counting inequality): requires arrow termination (355C), which
-   needs path topology — still blocked
+- Harvest Aristotle project `7a7e98b7-8ada-4f35-8a35-c0aa211f67e1` once it finishes; if it returns clean proofs, either discard them as redundant or use them to shorten the local corollaries.
+- Continue 355F concretely with Radau IIA / Gauss-Legendre imaginary-axis corollaries if more order-star/A-stability linkage is desired.
+- Repair the local `lake`/cache toolchain path so future cycles can use normal file-level compilation again instead of `lean_run_code`.

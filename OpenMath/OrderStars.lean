@@ -484,6 +484,38 @@ theorem not_aStable_of_imagAxis_orderStarPlus (R : ℂ → ℂ) (y : ℝ)
     ∃ z : ℂ, z.re ≤ 0 ∧ 1 < ‖R z‖ :=
   ⟨↑y * I, by simp [Complex.mul_re], (orderStarPlus_imaginaryAxis R y).mp h⟩
 
+private theorem one_sub_ne_zero_of_nonpos_re (z : ℂ) (hz : z.re ≤ 0) :
+    (1 : ℂ) - z ≠ 0 := by
+  intro h
+  have hre : ((1 : ℂ) - z).re = 0 := by simpa [h]
+  simp [Complex.sub_re] at hre
+  linarith
+
+private theorem one_sub_half_mul_ne_zero_of_nonpos_re (z : ℂ) (hz : z.re ≤ 0) :
+    (1 : ℂ) - z * (1 / 2 : ℂ) ≠ 0 := by
+  intro h
+  have hre : ((1 : ℂ) - z * (1 / 2 : ℂ)).re = 0 := by simpa [h]
+  simp [Complex.sub_re, Complex.mul_re] at hre
+  norm_num at hre
+  linarith
+
+/-- **Theorem 355F** specialized to backward Euler: the imaginary axis does not meet `𝒜⁺`. -/
+theorem backwardEuler_imagAxis_not_orderStarPlus (y : ℝ) :
+    (↑y * I) ∉ orderStarPlus backwardEulerR := by
+  apply aStable_imagAxis_not_orderStarPlus
+  intro z hz
+  simpa [backwardEulerR, ButcherTableau.stabilityFn1, rkImplicitEuler] using
+    rkImplicitEuler_aStable z hz (one_sub_ne_zero_of_nonpos_re z hz)
+
+/-- **Theorem 355F** specialized to the trapezoidal rule: the imaginary axis does not
+    meet `𝒜⁺`. -/
+theorem trapezoidal_imagAxis_not_orderStarPlus (y : ℝ) :
+    (↑y * I) ∉ orderStarPlus trapezoidalR := by
+  apply aStable_imagAxis_not_orderStarPlus
+  intro z hz
+  simpa [trapezoidalR, ButcherTableau.stabilityFn1, rkImplicitMidpoint] using
+    rkImplicitMidpoint_aStable z hz (one_sub_half_mul_ne_zero_of_nonpos_re z hz)
+
 /-! ## Theorem 355B: Arrow Tangency Directions (General Statement)
 
 For a rational approximation `R` to `exp` of exact order `p`, the order-star
