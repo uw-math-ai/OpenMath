@@ -290,9 +290,9 @@
     "status": "unformalized"
   },
   "thm:351B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/AStabilityCriterion.lean",
+    "lean_symbol": "aStable_with_nonvanishing_iff",
+    "status": "done"
   },
   "thm:352A": {
     "lean_file": null,
