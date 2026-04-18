@@ -265,14 +265,14 @@
     "status": "unformalized"
   },
   "thm:343A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/ReflectedMethods.lean",
+    "lean_symbol": "ButcherTableau.reflect_reflect",
+    "status": "in_progress"
   },
   "thm:343B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/ReflectedMethods.lean",
+    "lean_symbol": "ButcherTableau.reflect_satisfiesB",
+    "status": "in_progress"
   },
   "thm:344A": {
     "lean_file": null,
