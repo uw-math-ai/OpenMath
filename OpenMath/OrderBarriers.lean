@@ -236,7 +236,8 @@ theorem explicit_not_C2_distinct (t : ButcherTableau (s + 2)) (hE : t.IsExplicit
     by_cases hj0 : j = 0
     · subst hj0; simp [hc0]
     · have hj_ge : (1 : Fin (s + 2)) ≤ j := by
-        apply Fin.mk_le_mk.mpr; omega
+        apply Fin.mk_le_mk.mpr
+        exact Nat.succ_le_of_lt <| Nat.pos_of_ne_zero fun h => hj0 (Fin.ext h)
       simp [hE 1 j hj_ge]
   rw [lhs_zero] at hC2_1
   -- So c₁²/2 = 0, hence c₁ = 0

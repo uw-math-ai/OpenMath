@@ -97,6 +97,30 @@ noncomputable def padeQ (p q : ℕ) (z : ℂ) : ℂ :=
 noncomputable def padeR (p q : ℕ) (z : ℂ) : ℂ :=
   padeP p q z / padeQ p q z
 
+/-- For `q = 0`, the Padé denominator is the constant polynomial `1`. -/
+theorem padeQ_zero_right (p : ℕ) (z : ℂ) : padeQ p 0 z = 1 := by
+  unfold padeQ
+  norm_num
+  positivity
+
+/-- For `q = 0`, the Padé numerator is the Taylor polynomial of matching degree. -/
+theorem padeP_zero_right (p : ℕ) (z : ℂ) : padeP p 0 z = expTaylor p z := by
+  unfold padeP expTaylor
+  refine Finset.sum_congr rfl fun k hk => ?_
+  rw [div_mul_eq_mul_div, div_eq_div_iff]
+  · ring
+  · simp [Nat.factorial_ne_zero]
+  · simp [Nat.factorial_ne_zero]
+
+/-- Base case of theorem 353A when `q = 0`. -/
+theorem pade_approximation_order_q0 (p : ℕ) :
+    ∃ r : ℂ → ℂ, ∀ z : ℂ,
+      padeP p 0 z - padeQ p 0 z * expTaylor p z =
+        z ^ (p + 1) * r z := by
+  refine ⟨fun _ => 0, ?_⟩
+  intro z
+  simp [padeP_zero_right, padeQ_zero_right]
+
 /-- Auxiliary: the key factorial coefficient identity for the Padé Q recurrence.
 After clearing denominators, this is `(p+q-j)·(p+q-j-1)!·q·(q-1)! = … `, trivial ring. -/
 private lemma padeQ_coeff_step (p q j : ℕ) (hjq : j < q) :
@@ -258,6 +282,14 @@ theorem padePQ_pair_recurrence (p q : ℕ) (hp : 0 < p) (hq : 0 < q) (z : ℂ) :
       (padeP p q z - (p : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeP (p - 1) q z,
         padeQ p q z + (q : ℂ) * z / (((p + q : ℕ) : ℂ) * (p + q + 1 : ℂ)) * padeQ p (q - 1) z) := by
   exact Prod.ext (padeP_succ_right p q hp z) (padeQ_succ_left p q hq z)
+
+/-- Theorem 353A: the `(p,q)` Padé defect against the order-`p+q` exponential Taylor
+polynomial vanishes to order at least `p + q + 1`. -/
+theorem pade_approximation_order (p q : ℕ) :
+    ∃ r : ℂ → ℂ, ∀ z : ℂ,
+      padeP p q z - padeQ p q z * expTaylor (p + q) z =
+        z ^ (p + q + 1) * r z := by
+  sorry
 
 /-- Diagonal symmetry for the general Padé families. -/
 theorem padeQ_diagonal_eq_padeP_neg (s : ℕ) (z : ℂ) :

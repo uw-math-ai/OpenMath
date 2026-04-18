@@ -122,7 +122,6 @@ theorem rkMidpoint_not_D1 : ¬rkMidpoint.SatisfiesD 1 := by
   intro hD
   have h := hD 1 (by omega) le_rfl 0
   simp [rkMidpoint, Fin.sum_univ_two] at h
-  linarith
 
 /-- Explicit midpoint is NOT order 3: ∑ bᵢ cᵢ² = 1/4 ≠ 1/3. -/
 theorem rkMidpoint_not_order3 : ¬rkMidpoint.HasOrderGe3 := by
@@ -135,14 +134,12 @@ theorem rkMidpoint_not_symmetric : ¬rkMidpoint.IsSymmetric := by
   intro ⟨_, hn, _⟩
   have h := hn 0
   simp [rkMidpoint, Fin.rev] at h
-  linarith
 
 /-- Explicit midpoint is NOT stiffly accurate: b₁ = 0 ≠ a₂₁ = 1/2. -/
 theorem rkMidpoint_not_stifflyAccurate : ¬rkMidpoint.IsStifflyAccurate := by
   intro hsa
   have h := hsa 0
   simp [rkMidpoint] at h
-  linarith
 
 end ExplicitMidpoint
 
@@ -173,7 +170,6 @@ theorem rkHeun_not_B3 : ¬rkHeun.SatisfiesB 3 := by
   intro hB
   have h := hB 3 (by omega) le_rfl
   simp [rkHeun, Fin.sum_univ_two] at h
-  linarith
 
 /-- Heun's method does NOT satisfy C(2):
   ∑ⱼ a₂ⱼ cⱼ = 1·0 + 0·1 = 0 ≠ c₂²/2 = 1/2. -/
@@ -181,7 +177,6 @@ theorem rkHeun_not_C2 : ¬rkHeun.SatisfiesC 2 := by
   intro hC
   have h := hC 2 (by omega) le_rfl 1
   simp [rkHeun, Fin.sum_univ_two] at h
-  linarith
 
 /-- Heun's method does NOT satisfy D(2):
   k=2, j=0: ∑ bᵢ cᵢ aᵢ₁ = (1/2)·0·0 + (1/2)·1·1 = 1/2 ≠ b₁(1-c₁²)/2 = 1/4. -/
@@ -195,21 +190,18 @@ theorem rkHeun_not_D2 : ¬rkHeun.SatisfiesD 2 := by
 theorem rkHeun_not_order3 : ¬rkHeun.HasOrderGe3 := by
   intro ⟨_, _, h3a, _⟩
   simp [order3a, rkHeun, Fin.sum_univ_two] at h3a
-  linarith
 
 /-- Heun's method is NOT symmetric: A[0][0] + A[1][1] = 0 + 0 = 0 ≠ b[0] = 1/2. -/
 theorem rkHeun_not_symmetric : ¬rkHeun.IsSymmetric := by
   intro ⟨_, _, ht⟩
   have h := ht 0 0
   simp [rkHeun, Fin.rev] at h
-  linarith
 
 /-- Heun's method is NOT stiffly accurate: b₁ = 1/2 ≠ a₂₁ = 1. -/
 theorem rkHeun_not_stifflyAccurate : ¬rkHeun.IsStifflyAccurate := by
   intro hsa
   have h := hsa 0
   simp [rkHeun] at h
-  linarith
 
 end Heun
 
@@ -266,21 +258,19 @@ theorem rk4_not_order5 : ¬rk4.HasOrderGe5 := by
 
 /-- RK4 has order ≥ 3 (extracted from the order 4 proof). -/
 theorem rk4_order3 : rk4.HasOrderGe3 :=
-  ⟨rk4_order4.1, rk4_order4.2.1, rk4_order4.2.2.1, rk4_order4.2.2.2⟩
+  ⟨rk4_order4.1, rk4_order4.2.1, rk4_order4.2.2.1, rk4_order4.2.2.2.1⟩
 
 /-- Classical RK4 is NOT symmetric: A[0][0] + A[3][3] = 0 + 0 = 0 ≠ b[0] = 1/6. -/
 theorem rk4_not_symmetric : ¬rk4.IsSymmetric := by
   intro ⟨_, _, ht⟩
   have h := ht 0 0
   simp [rk4, Fin.rev] at h
-  linarith
 
 /-- Classical RK4 is NOT stiffly accurate: b₁ = 1/6 ≠ a₄₁ = 0. -/
 theorem rk4_not_stifflyAccurate : ¬rk4.IsStifflyAccurate := by
   intro hsa
   have h := hsa 0
   simp [rk4] at h
-  linarith
 
 end RK4
 

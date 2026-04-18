@@ -119,12 +119,22 @@ theorem bdf2_aStable : bdf2.IsAStable := by
   have hξ_eq : ξ = ⟨a, b⟩ := (Complex.eta ξ).symm
   -- |ξ|² > 1
   have hr2 : 1 < a ^ 2 + b ^ 2 := by
-    have h1 : 1 < ‖ξ‖ ^ 2 := one_lt_sq_iff_one_lt_abs.mpr hgt
-    rwa [Complex.sq_norm, Complex.normSq_apply, hξ_eq,
-         show (⟨a, b⟩ : ℂ).re * (⟨a, b⟩ : ℂ).re +
-              (⟨a, b⟩ : ℂ).im * (⟨a, b⟩ : ℂ).im = a ^ 2 + b ^ 2 from by ring] at h1
+    have h1 : 1 < ‖ξ‖ ^ 2 := by
+      nlinarith [hgt, norm_nonneg ξ]
+    have hnorm : ‖ξ‖ ^ 2 = a ^ 2 + b ^ 2 := by
+      calc
+        ‖ξ‖ ^ 2 = Complex.normSq ξ := by
+          symm
+          exact Complex.normSq_eq_norm_sq ξ
+        _ = a ^ 2 + b ^ 2 := by
+          rw [Complex.normSq_apply, hξ_eq]
+          ring_nf
+    nlinarith [h1]
   -- ξ ≠ 0
-  have hξ_ne : ξ ≠ 0 := by intro heq; rw [heq] at hgt; simp at hgt
+  have hξ_ne : ξ ≠ 0 := by
+    intro heq
+    rw [heq, norm_zero] at hgt
+    linarith
   -- Compute ξ² parts
   have hp2 : (⟨a, b⟩ : ℂ) ^ 2 = ⟨a * a - b * b, a * b + b * a⟩ := by rw [sq]; rfl
   -- Extract real and imaginary parts of hξ
@@ -135,8 +145,8 @@ theorem bdf2_aStable : bdf2.IsAStable := by
   simp only [Complex.zero_re, Complex.zero_im,
     Complex.add_re, Complex.add_im, Complex.sub_re, Complex.sub_im,
     Complex.mul_re, Complex.mul_im, Complex.neg_re, Complex.neg_im,
-    Complex.ofReal_re, Complex.ofReal_im, Complex.mk_re, Complex.mk_im,
-    Complex.one_re, Complex.one_im] at hξ_re hξ_im
+    Complex.ofReal_im, Complex.one_re, Complex.one_im] at hξ_re hξ_im
+  norm_num at hξ_re hξ_im
   -- hξ_re/hξ_im are now real equations in a, b, z.re, z.im
   -- Multiply hξ_re by (a²-b²) and hξ_im by 2ab, add to eliminate z.im:
   -- This yields: z.re * (2/3) * ((a²-b²)² + (2ab)²) = [RHS]
@@ -147,21 +157,27 @@ theorem bdf2_aStable : bdf2.IsAStable := by
   have hzre : 2 * z.re * r2 ^ 2 = 3 * r2 ^ 2 - 4 * r2 * a + 2 * a ^ 2 - r2 := by
     have h1 : (a * a - b * b) ^ 2 + (a * b + b * a) ^ 2 = r2 ^ 2 := by
       rw [hr2_def]; ring
+    ring_nf at hξ_re hξ_im ⊢
+    have hcomb :
+        z.re * a ^ 2 * b ^ 2 * (-4 / 3) + z.re * a ^ 4 * (-2 / 3) +
+            z.re * b ^ 4 * (-2 / 3) + a * b ^ 2 * (-4 / 3) + a ^ 2 * (1 / 3) +
+            a ^ 2 * b ^ 2 * 2 + a ^ 3 * (-4 / 3) + a ^ 4 + b ^ 2 * (-1 / 3) + b ^ 4 = 0 := by
+      linear_combination (a * a - b * b) * hξ_re + (a * b + b * a) * hξ_im
     -- From hξ_re and hξ_im, eliminate z.im:
     -- hξ_re * (a*a-b*b) + hξ_im * (a*b+b*a) eliminates z.im terms
-    nlinarith [hξ_re, hξ_im, sq_nonneg a, sq_nonneg b,
-               mul_comm a b, sq_nonneg (a * a - b * b),
-               sq_nonneg (a * b + b * a)]
+    nlinarith [hcomb, h1]
   -- Now show z.re > 0
   -- Key algebraic identity: 3r⁴ - 4r²a + 2a² - r² = 2(r²-a)² + r²(r²-1)
   have hpos : 0 < 3 * r2 ^ 2 - 4 * r2 * a + 2 * a ^ 2 - r2 := by
     have h1 : 3 * r2 ^ 2 - 4 * r2 * a + 2 * a ^ 2 - r2 =
       2 * (r2 - a) ^ 2 + r2 * (r2 - 1) := by ring
     rw [h1]
-    have : 0 < r2 * (r2 - 1) := by positivity
-    have : 0 ≤ 2 * (r2 - a) ^ 2 := by positivity
+    have hmul : 0 < r2 * (r2 - 1) := by
+      nlinarith
+    have hsq : 0 ≤ 2 * (r2 - a) ^ 2 := by positivity
     linarith
-  have hr2_pos : (0 : ℝ) < r2 ^ 2 := by positivity
+  have hr2_pos : (0 : ℝ) < r2 ^ 2 := by
+    nlinarith
   -- From hzre and hpos: z.re > 0
   have : 0 < z.re := by nlinarith
   linarith -- contradicts hz : z.re ≤ 0
@@ -182,97 +198,83 @@ Reference: Iserles, Theorem 3.4. -/
 /-- **BDF3 is NOT A-stable**: order 3 > 2 contradicts Dahlquist's second barrier. -/
 theorem bdf3_not_aStable : ¬bdf3.IsAStable := by
   intro ha
-  have := LMM.dahlquist_second_barrier bdf3 3 bdf3_order_three ha bdf3_zeroStable
-  omega
+  have hbarrier : 3 ≤ 2 := LMM.dahlquist_second_barrier bdf3 3 bdf3_order_three ha bdf3_zeroStable
+    (by
+      intro ζ hζ hunit
+      simp only [LMM.rhoC, bdf3] at hζ
+      simp [Fin.sum_univ_four] at hζ
+      have h11 : (ζ - 1) * (11 * ζ ^ 2 - 7 * ζ + 2) = 0 := by
+        linear_combination 11 * hζ
+      rcases mul_eq_zero.mp h11 with h0 | h1
+      · linear_combination h0
+      · exfalso
+        have h_eq : (11 : ℂ) * ζ ^ 2 = 7 * ζ - 2 := by
+          linear_combination h1
+        have h_norm_eq : 11 * ‖ζ‖ ^ 2 = ‖7 * ζ - 2‖ := by
+          have := congrArg norm h_eq
+          rwa [norm_mul, norm_pow, show ‖(11 : ℂ)‖ = 11 by norm_num] at this
+        have h_tri : ‖(7 : ℂ) * ζ - 2‖ ≤ 7 * ‖ζ‖ + 2 := by
+          calc
+            ‖(7 : ℂ) * ζ - 2‖ ≤ ‖(7 : ℂ) * ζ‖ + ‖(2 : ℂ)‖ := norm_sub_le _ _
+            _ = 7 * ‖ζ‖ + 2 := by rw [norm_mul]; norm_num
+        rw [hunit] at h_norm_eq h_tri
+        linarith)
+  norm_num at hbarrier
 
 /-- **BDF4 is NOT A-stable**: order 4 > 2 contradicts Dahlquist's second barrier. -/
 theorem bdf4_not_aStable : ¬bdf4.IsAStable := by
   intro ha
-  have := LMM.dahlquist_second_barrier bdf4 4 bdf4_order_four ha bdf4_zeroStable
-  omega
+  have hbarrier : 4 ≤ 2 := LMM.dahlquist_second_barrier bdf4 4 bdf4_order_four ha bdf4_zeroStable
+    (by
+      intro ζ hζ hunit
+      simp only [LMM.rhoC, bdf4] at hζ
+      simp [Fin.sum_univ_five] at hζ
+      have h25 : (ζ - 1) * (25 * ζ ^ 3 - 23 * ζ ^ 2 + 13 * ζ - 3) = 0 := by
+        linear_combination 25 * hζ
+      rcases mul_eq_zero.mp h25 with h0 | h1
+      · linear_combination h0
+      · exfalso
+        have hζ_ne : ζ ≠ 0 := by
+          intro h
+          rw [h] at hunit
+          simp at hunit
+        have h_nsq : Complex.normSq ζ = 1 := by
+          rw [Complex.normSq_eq_norm_sq, hunit]
+          norm_num
+        have h_mc : ζ * starRingEnd ℂ ζ = 1 := by
+          rw [Complex.mul_conj, ← Complex.ofReal_one, Complex.ofReal_inj]
+          exact h_nsq
+        have h_conj_eq : starRingEnd ℂ ζ = ζ⁻¹ := eq_inv_of_mul_eq_one_right h_mc
+        have h_rev : -3 * ζ ^ 3 + 13 * ζ ^ 2 - 23 * ζ + 25 = 0 := by
+          have h := congr_arg (starRingEnd ℂ) h1
+          simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
+          rw [h_conj_eq] at h
+          field_simp at h
+          linear_combination h
+        have h_quad : 32 * ζ ^ 2 - 67 * ζ + 77 = 0 := by
+          linear_combination 3 / 8 * h1 + 25 / 8 * h_rev
+        have h_quad_rev : 77 * ζ ^ 2 - 67 * ζ + 32 = 0 := by
+          have h := congr_arg (starRingEnd ℂ) h_quad
+          simp only [map_sub, map_mul, map_pow, map_add, map_ofNat, map_zero] at h
+          rw [h_conj_eq] at h
+          field_simp at h
+          linear_combination h
+        have h_sq : ζ ^ 2 = 1 := by
+          have : -45 * ζ ^ 2 + 45 = 0 := by
+            linear_combination h_quad - h_quad_rev
+          linear_combination -this / 45
+        have hζ_val : ζ = 13 / 19 := by
+          have : 25 * ζ * ζ ^ 2 - 23 * ζ ^ 2 + 13 * ζ - 3 = 0 := by
+            ring_nf
+            linear_combination h1
+          rw [h_sq] at this
+          linear_combination this / 38
+        rw [hζ_val] at h_sq
+        norm_num at h_sq)
+  norm_num at hbarrier
 
-/-! ## BDF5 (Backward Differentiation Formula, 5-step)
+/-! ## Higher BDF Methods
 
-The BDF5 method:
-  137y_{n+5} - 300y_{n+4} + 300y_{n+3} - 200y_{n+2} + 75y_{n+1} - 12y_n = 60h·f_{n+5}
-
-After normalization (α₅ = 1):
-  α = [-12/137, 75/137, -200/137, 300/137, -300/137, 1]
-  β = [0, 0, 0, 0, 0, 60/137]
-
-Order 5, implicit, NOT A-stable.
-
-Reference: Iserles, Section 4.5, Table 4.1. -/
-
-/-- **BDF5** (Backward Differentiation Formula, 5-step). -/
-noncomputable def bdf5 : LMM 5 where
-  α := ![-12/137, 75/137, -200/137, 300/137, -300/137, 1]
-  β := ![0, 0, 0, 0, 0, 60/137]
-  normalized := by simp [Fin.last]
-
-/-- BDF5 is consistent: ρ(1) = 0 and ρ'(1) = σ(1). -/
-theorem bdf5_consistent : bdf5.IsConsistent :=
-  ⟨by simp [LMM.rho, bdf5, Fin.sum_univ_succ]; norm_num,
-   by simp [LMM.sigma, bdf5, Fin.sum_univ_succ]; norm_num⟩
-
-/-- BDF5 has order 5. -/
-theorem bdf5_order_five : bdf5.HasOrder 5 := by
-  refine ⟨?_, ?_⟩
-  · intro q hq
-    interval_cases q <;>
-      simp [LMM.orderCondVal, bdf5, Fin.sum_univ_succ] <;> norm_num
-  · simp [LMM.orderCondVal, bdf5, Fin.sum_univ_succ]; norm_num
-
-/-- BDF5 is implicit (β₅ = 60/137 ≠ 0). -/
-theorem bdf5_implicit : bdf5.IsImplicit := by
-  simp [LMM.IsImplicit, bdf5, Fin.last]
-
-/-- **BDF5 is NOT A-stable** (conditional on zero-stability):
-  order 5 > 2 contradicts Dahlquist's second barrier. -/
-theorem bdf5_not_aStable (hzs : bdf5.IsZeroStable) : ¬bdf5.IsAStable := by
-  intro ha
-  have := LMM.dahlquist_second_barrier bdf5 5 bdf5_order_five ha hzs
-  omega
-
-/-! ## BDF6 (Backward Differentiation Formula, 6-step)
-
-The BDF6 method:
-  147y_{n+6} - 360y_{n+5} + 450y_{n+4} - 400y_{n+3} + 225y_{n+2} - 72y_{n+1} + 10y_n = 60h·f_{n+6}
-
-After normalization (α₆ = 1):
-  α = [10/147, -72/147, 225/147, -400/147, 450/147, -360/147, 1]
-  β = [0, 0, 0, 0, 0, 0, 60/147]
-
-Order 6, implicit, NOT A-stable.
-
-Reference: Iserles, Section 4.5, Table 4.1. -/
-
-/-- **BDF6** (Backward Differentiation Formula, 6-step). -/
-noncomputable def bdf6 : LMM 6 where
-  α := ![10/147, -72/147, 225/147, -400/147, 450/147, -360/147, 1]
-  β := ![0, 0, 0, 0, 0, 0, 60/147]
-  normalized := by simp [Fin.last]
-
-/-- BDF6 is consistent: ρ(1) = 0 and ρ'(1) = σ(1). -/
-theorem bdf6_consistent : bdf6.IsConsistent :=
-  ⟨by simp [LMM.rho, bdf6, Fin.sum_univ_succ]; norm_num,
-   by simp [LMM.sigma, bdf6, Fin.sum_univ_succ]; norm_num⟩
-
-/-- BDF6 has order 6. -/
-theorem bdf6_order_six : bdf6.HasOrder 6 := by
-  refine ⟨?_, ?_⟩
-  · intro q hq
-    interval_cases q <;>
-      simp [LMM.orderCondVal, bdf6, Fin.sum_univ_succ] <;> norm_num
-  · simp [LMM.orderCondVal, bdf6, Fin.sum_univ_succ]; norm_num
-
-/-- BDF6 is implicit (β₆ = 60/147 ≠ 0). -/
-theorem bdf6_implicit : bdf6.IsImplicit := by
-  simp [LMM.IsImplicit, bdf6, Fin.last]
-
-/-- **BDF6 is NOT A-stable** (conditional on zero-stability):
-  order 6 > 2 contradicts Dahlquist's second barrier. -/
-theorem bdf6_not_aStable (hzs : bdf6.IsZeroStable) : ¬bdf6.IsAStable := by
-  intro ha
-  have := LMM.dahlquist_second_barrier bdf6 6 bdf6_order_six ha hzs
-  omega
+`bdf5`, `bdf6`, their consistency/order facts, and zero-stability proofs are
+defined in `OpenMath.MultistepMethods`. This file focuses on the A-stability
+story and reuses those imported definitions. -/
