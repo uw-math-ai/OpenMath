@@ -112,6 +112,12 @@ theorem padeP_zero_right (p : ℕ) (z : ℂ) : padeP p 0 z = expTaylor p z := by
   · simp [Nat.factorial_ne_zero]
   · simp [Nat.factorial_ne_zero]
 
+/-- For `p = 0`, the Padé numerator is the constant polynomial `1`. -/
+theorem padeP_zero_left (q : ℕ) (z : ℂ) : padeP 0 q z = 1 := by
+  unfold padeP
+  norm_num
+  positivity
+
 /-- Base case of theorem 353A when `q = 0`. -/
 theorem pade_approximation_order_q0 (p : ℕ) :
     ∃ r : ℂ → ℂ, ∀ z : ℂ,
@@ -338,6 +344,74 @@ theorem padeQ_diagonal_eq_padeP_neg (s : ℕ) (z : ℂ) :
     padeQ s s z = padeP s s (-z) := by
   unfold padeQ padeP
   grind
+
+/-! ## Self-Adjointness Defect
+
+For the Padé rational function `R_{l,m}(z) = P_{l,m}(z) / Q_{l,m}(z)`, the
+self-adjointness condition `R(z) * R(-z) = 1` is equivalent to
+`P_{l,m}(z) * P_{l,m}(-z) = Q_{l,m}(z) * Q_{l,m}(-z)`. We package the
+polynomial defect in the quantity `padeV`. -/
+
+/-- The self-adjointness defect of the `(l,m)`-Padé approximant. -/
+noncomputable def padeV (l m : ℕ) (z : ℂ) : ℂ :=
+  padeP l m z * padeP l m (-z) - padeQ l m z * padeQ l m (-z)
+
+/-- At `z = 0`, the self-adjointness defect vanishes. -/
+theorem padeV_eval_zero (l m : ℕ) : padeV l m 0 = 0 := by
+  simp [padeV, padeP_eval_zero, padeQ_eval_zero]
+
+/-- For `m = 0`, the self-adjointness defect compares the Taylor polynomial with `1`. -/
+theorem padeV_zero_right (l : ℕ) (z : ℂ) :
+    padeV l 0 z = expTaylor l z * expTaylor l (-z) - 1 := by
+  simp [padeV, padeP_zero_right, padeQ_zero_right]
+
+/-- For `l = 0`, the self-adjointness defect compares the denominator polynomial with `1`. -/
+theorem padeV_zero_left (m : ℕ) (z : ℂ) :
+    padeV 0 m z = 1 - padeQ 0 m z * padeQ 0 m (-z) := by
+  simp [padeV, padeP_zero_left]
+
+/-- Explicit denominator formula on the right edge `m = 1`. -/
+theorem padeQ_one_right (l : ℕ) (z : ℂ) :
+    padeQ l 1 z = 1 - z / (l + 1 : ℂ) := by
+  unfold padeQ
+  rw [Finset.sum_range_succ', Finset.sum_range_succ']
+  simp
+  rw [show (((l + 1).factorial : ℕ) : ℂ) = (l + 1 : ℂ) * (l.factorial : ℂ) by
+    rw [Nat.factorial_succ]
+    push_cast
+    ring]
+  field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos l).ne',
+    Nat.cast_ne_zero.mpr (Nat.succ_ne_zero l)]
+  ring
+
+/-- Explicit numerator formula on the right edge `m = 1`. -/
+theorem padeP_one_right (l : ℕ) (hl : 0 < l) (z : ℂ) :
+    padeP l 1 z = expTaylor l z - z / (l + 1 : ℂ) * expTaylor (l - 1) z := by
+  have hlc : (l : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.ne_of_gt hl)
+  have hcoeff : (l : ℂ) * z / ((l : ℂ) * (l + 1 : ℂ)) = z / (l + 1 : ℂ) := by
+    field_simp [hlc]
+  calc
+    padeP l 1 z
+        = padeP l 0 z - (l : ℂ) * z / (((l + 0 : ℕ) : ℂ) * (l + 0 + 1 : ℂ)) * padeP (l - 1) 0 z := by
+            simpa using padeP_succ_right l 0 hl z
+    _ = expTaylor l z - (l : ℂ) * z / ((l : ℂ) * (l + 1 : ℂ)) * expTaylor (l - 1) z := by
+          simp [padeP_zero_right]
+    _ = expTaylor l z - z / (l + 1 : ℂ) * expTaylor (l - 1) z := by rw [hcoeff]
+
+/-- Explicit self-adjointness defect on the right edge `m = 1`. -/
+theorem padeV_one_right (l : ℕ) (hl : 0 < l) (z : ℂ) :
+    padeV l 1 z =
+      (expTaylor l z - z / (l + 1 : ℂ) * expTaylor (l - 1) z) *
+        (expTaylor l (-z) + z / (l + 1 : ℂ) * expTaylor (l - 1) (-z)) -
+      (1 - z / (l + 1 : ℂ)) * (1 + z / (l + 1 : ℂ)) := by
+  rw [padeV, padeP_one_right l hl z, padeP_one_right l hl (-z), padeQ_one_right, padeQ_one_right]
+  ring
+
+/-- Diagonal Padé approximants are self-adjoint. -/
+theorem padeV_diagonal_zero (s : ℕ) (z : ℂ) : padeV s s z = 0 := by
+  unfold padeV
+  rw [padeQ_diagonal_eq_padeP_neg s z, padeQ_diagonal_eq_padeP_neg s (-z)]
+  ring
 
 /-! ## Padé Polynomial Definitions
 
