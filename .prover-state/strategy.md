@@ -1,128 +1,150 @@
-# Strategy — Cycle 118
+# Strategy — Cycle 119
 
 ## Status
 - **0 sorry's project-wide** (maintained since cycle 116)
-- Aristotle results from cycle 117 (4 projects) are already incorporated — the manual proofs done in cycle 117 match or supersede all returned results. No incorporation needed.
-- Next formalization target per `plan.md`: Order star infrastructure / Theorem 355A+
+- Aristotle results from cycle 118 (Forward/Backward Euler arrows) are already incorporated — the manual proofs done in cycle 118 match the returned results. No incorporation needed.
+- Order arrow infrastructure (def:355A) and 5 concrete instances are complete.
+- Plan.md lists order star continuation and two in-progress items: Padé recurrences (352D), rooted trees (301A).
 
-## Priority 1: Order Arrow Definitions and Theorem 355B (~60 min)
+## Priority 1: Theorem 355F — A-stability criterion via order stars (~40 min)
 
 ### Why this target
-- Plan.md lists "Order star infrastructure / Theorem 355A+" as the #1 next target
-- `OpenMath/OrderStars.lean` has basic order-star definitions (𝒜⁺, 𝒜⁻, 𝒜⁰) and properties but is MISSING the order arrow infrastructure (def:355A) needed for the Ehle barrier chain
-- The tangent directions theorem (thm:355B) has a local proof (Taylor expansion near origin) that is achievable in Lean
-- This is the foundational step toward the Ehle barrier (thm:355G)
+- This is the next theorem in the 355 chain after the infrastructure completed in cycle 118
+- The proof is SHORT and self-contained (see textbook proof below)
+- It connects order star geometry to the existing A-stability framework
+- It is the key necessary condition that feeds into the Ehle barrier (355G)
 
-### Step 1a: Add order arrow definitions (def:355A)
+### What the theorem says (textbook)
+A Runge-Kutta method is A-stable **only if**:
+1. All poles of R(z) lie in the open right half-plane, AND
+2. No up arrow of the order web intersects or is tangential to the imaginary axis.
 
-Read `extraction/formalization_data/entities/def_355A.json` for context.
+### Proof approach
+The textbook proof is elementary:
+- Condition (1) is obvious (if R has a pole at z₀ with Re(z₀) ≤ 0, then |R(z)| → ∞ near z₀).
+- Condition (2): if an up arrow intersects the imaginary axis at some point iy, then |R(iy)·exp(-iy)| > 1. Since |exp(-iy)| = 1, this gives |R(iy)| > 1, contradicting A-stability.
 
-Add to `OpenMath/OrderStars.lean`:
+### Lean formalization plan
+
+**Statement:**
+```lean
+/-- **Theorem 355F**: A-stability requires no up arrows touch the imaginary axis.
+    If R is A-stable (‖R(z)‖ ≤ 1 for Re(z) ≤ 0), then for any pure imaginary z = iy,
+    z ∉ orderStarPlus R (equivalently, z ∈ orderStarMinus R ∪ orderStarBdry R). -/
+theorem aStable_imagAxis_not_orderStarPlus (R : ℂ → ℂ)
+    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
+    (y : ℝ) : (↑y * I) ∉ orderStarPlus R
+```
+
+**Proof sketch:**
+1. Unfold `orderStarPlus`: need to show ¬(1 < ‖R(iy) * exp(-iy)‖)
+2. Use `orderStar_norm_eq` or `Complex.norm_exp_ofReal_mul_I` to get `‖exp(-iy)‖ = 1`
+3. So `‖R(iy) * exp(-iy)‖ = ‖R(iy)‖ · 1 = ‖R(iy)‖`
+4. By A-stability hypothesis (Re(iy) = 0 ≤ 0): `‖R(iy)‖ ≤ 1`
+5. `¬(1 < 1)`
+
+This should be a 5-line proof using existing infrastructure.
+
+**Also state the pole condition as a separate lemma:**
+```lean
+/-- A-stable methods have no poles in the closed left half-plane. -/
+theorem aStable_no_pole_left_half (R : ℂ → ℂ) (hR : Continuous R)
+    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
+    (z : ℂ) (hz : z.re ≤ 0) : R z ≠ 0 → True  -- not needed as a separate statement
+```
+
+Actually, the pole condition is automatically captured since A-stability bounds ‖R‖ ≤ 1 on Re ≤ 0. For rational R, this means no poles in the closed left half-plane. State it simply:
 
 ```lean
-/-- The **order web**: locus where φ(z) = R(z)exp(-z) is real and positive. -/
-def orderWeb (R : ℂ → ℂ) : Set ℂ := {z | ∃ r : ℝ, 0 < r ∧ R z * exp (-z) = ↑r}
-
-/-- A ray direction θ from the origin is an **up-arrow direction** if
-    t ↦ ‖R(t·exp(iθ))·exp(-t·exp(iθ))‖ is increasing at t = 0⁺. -/
-def IsUpArrowDir (R : ℂ → ℂ) (θ : ℝ) : Prop :=
-  ∃ ε > 0, ∀ t ∈ Set.Ioo 0 ε, 1 < ‖R (↑t * exp (↑θ * I)) * exp (-(↑t * exp (↑θ * I)))‖
-
-/-- A ray direction θ from the origin is a **down-arrow direction** if
-    t ↦ ‖R(t·exp(iθ))·exp(-t·exp(iθ))‖ is decreasing at t = 0⁺. -/
-def IsDownArrowDir (R : ℂ → ℂ) (θ : ℝ) : Prop :=
-  ∃ ε > 0, ∀ t ∈ Set.Ioo 0 ε, ‖R (↑t * exp (↑θ * I)) * exp (-(↑t * exp (↑θ * I)))‖ < 1
+/-- A-stable stability functions are bounded on the closed left half-plane,
+    hence have no poles there (for meromorphic R). -/
+theorem aStable_bounded_left_half (R : ℂ → ℂ)
+    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
+    (z : ℂ) (hz : z.re ≤ 0) : ‖R z‖ ≤ 1 := hA z hz
 ```
 
-**Note:** The textbook defines arrows as full paths, not just directions at the origin. However, the tangency theorem (355B) only concerns directions at 0, so direction-only definitions suffice for now. Full path definitions can be added later if needed.
+### After 355F: Prove Theorem 355D (counting inequality)
 
-### Step 1b: Prove Theorem 355B (arrow tangency directions)
+**Theorem 355D**: For a rational approximation to exp of order p with numerator degree n and denominator degree d, the number of down arrows terminating at zeros (n̂) and up arrows terminating at poles (d̂) satisfy n̂ + d̂ ≥ p.
 
-Read `extraction/formalization_data/entities/thm_355B.json` for the statement.
+This requires formalizing the concept of "arrows terminating at poles/zeros" (355C), which is more involved. **Skip 355D unless 355F is done quickly.**
 
-**Theorem 355B**: Let R be a rational approximation to exp of exact order p, so that `R(z) = exp(z) - C·z^{p+1} + O(z^{p+2})` with `C ≠ 0`. Then:
-- If C < 0: up-arrow directions at the rays `2kπ/(p+1)` for k = 0, ..., p
-- If C > 0: down-arrow directions at the rays `2kπ/(p+1)` for k = 0, ..., p
+### Sorry-first approach
+1. Write the theorem statement for 355F, verify it compiles
+2. Prove it immediately (should be short)
+3. Add corollary: for concrete methods, compute which imaginary-axis points are NOT in 𝒜⁺
 
-**Proof approach for Lean:**
+## Priority 2: Theorem 355B — Arrow tangency directions (general statement) (~50 min)
 
-The key identity is: for z = r·exp(iθ) with r small,
+### Why this target
+- Cycle 118 proved 5 concrete arrow instances but NOT the general theorem
+- The general statement with `Asymptotics` would be the cleanest formalization
+- However, the general proof requires working with `O(z^{p+2})` which needs `Asymptotics.IsLittleO` / `IsBigO`
+
+### Approach: State with explicit error hypothesis, prove for concrete Padé pairs
+
+**Statement (with explicit hypothesis):**
+```lean
+/-- **Theorem 355B**: If R(z) = exp(z) - C·z^{p+1} + O(z^{p+2}) with C ≠ 0,
+    then up arrows (C < 0) or down arrows (C > 0) in directions 2kπ/(p+1). -/
+theorem arrow_tangency_directions (R : ℂ → ℂ) (p : ℕ) (C : ℝ) (hC : C ≠ 0)
+    (hR : ∀ᶠ z in nhds 0, ‖R z - exp z + ↑C * z ^ (p+1)‖ ≤ ‖z‖ ^ (p+2) * someConstant)
+    (k : Fin (p + 1)) :
+    (C < 0 → IsUpArrowDir R (2 * ↑k * π / (↑p + 1))) ∧
+    (C > 0 → IsDownArrowDir R (2 * ↑k * π / (↑p + 1)))
 ```
-φ(z) = R(z)·exp(-z) = 1 - C·r^{p+1}·exp(i(p+1)θ) + O(r^{p+2})
+
+**Alternative: avoid Asymptotics entirely.** Instead, prove a version that takes a concrete polynomial remainder bound:
+
+```lean
+/-- For the (n,d)-Padé approximant with error constant C_{n+d+1}, the arrow
+    directions at the origin are determined by the sign of C. -/
+theorem pade_arrow_tangency (n d : ℕ) ...
 ```
 
-So `‖φ(z)‖² ≈ 1 - 2C·r^{p+1}·cos((p+1)θ) + O(r^{p+2})`.
+### Concrete instances to prove
+Build on the cycle 118 infrastructure:
+- **Gauss-Legendre 2** (R = padeR 2 2, p=4, C=-1/720 < 0): up arrows at θ = 0, 2π/5, 4π/5, 6π/5, 8π/5
+- **Radau IIA 2-stage** (R = padeR 1 2, p=3, C > 0): down arrows at θ = 0, π/2, π, 3π/2
 
-When `C < 0` and `θ = 2kπ/(p+1)`: `cos((p+1)θ) = cos(2kπ) = 1`, so `‖φ‖² ≈ 1 + 2|C|r^{p+1} > 1` → up arrow. ✓
+These verify the theory on non-trivial examples.
 
-**Concrete Lean proof structure:**
-1. Assume R has order p at 0: `R z = exp z - C * z^(p+1) + g z` where `g z = O(z^{p+2})`
-2. Compute `‖R(z)·exp(-z)‖²` near 0 using `1 - C·z^{p+1} + g(z)·exp(-z)`
-3. Show the dominant term in `‖φ‖² - 1` has sign `-2C·cos((p+1)θ)` at angle θ
-4. For specific angles `θ = 2kπ/(p+1)`, the cosine is 1, giving the arrow direction
+### What NOT to try
+- Do NOT attempt the full winding-number argument from 355C-355E
+- Do NOT try to formalize "arrows terminate at poles" — needs path topology
+- Do NOT use `Asymptotics.IsBigO` unless you're confident about the filter setup
 
-**Sorry-first:** Write the theorem statement with sorry, verify it compiles. Then submit to Aristotle. While waiting, prove the p=1 case (forward Euler) and p=2 case (trapezoidal/backward Euler) as concrete instances.
+## Priority 3: Update lean_status.json metadata (~10 min)
 
-### Step 1c: Prove concrete instances
+Many entities formalized in cycles 116-118 have stale metadata. Update:
+- `def:355A` → done (OrderStars.lean: orderWeb, IsUpArrowDir, IsDownArrowDir)
+- `thm:355B` → in_progress (concrete instances done, general statement TODO)
+- `def:356A` → done (ANStability.lean: IsDJReducible)
+- `def:357A` → done (BNStability.lean or ANStability.lean: depends on what 357A is)
+- Verify thm:301A status
 
-As sanity checks that also constitute standalone theorems:
+## Priority 4: Theorem 357D — BN-stability implies AN-stability for irreducible methods (~30 min)
 
-1. **Forward Euler** (R(z) = 1+z, p=1, C=1/2 > 0): down arrows at θ=0 and θ=π. The down arrow at θ=0 means ‖φ(r)‖ < 1 for small positive r (positive real axis is in 𝒜⁻). Already partially captured by `forwardEuler_neg3_mem_orderStarPlus`.
+Only if Priorities 1-2 are complete.
 
-2. **Backward Euler** (R(z) = 1/(1-z), p=1, C=-1/2 < 0): up arrows at θ=0 and θ=π.
+### What the theorem says
+If an irreducible non-confluent Runge-Kutta method is BN-stable, then it is AN-stable.
 
-3. **Trapezoidal** (R(z) = (1+z/2)/(1-z/2), p=2, C=-1/12 < 0): up arrows at θ = 0, 2π/3, 4π/3.
-
-These are nice concrete verifications that compile independently.
-
-### Step 1d: Aristotle submission
-
-After writing the sorry-first skeleton:
-1. Submit the full `OrderStars.lean` to Aristotle
-2. Submit the `355B` tangency proof as a standalone lemma
-3. Sleep 30 minutes, then check results once
-
-## Priority 2: Extend A-Stability Characterizations via Order Stars (~30 min)
-
-Only attempt after Priority 1 is complete or blocked.
-
-### Step 2a: Theorem 355F (A-stability criterion)
-
-Read `extraction/formalization_data/entities/thm_355F.json`.
-
-**Theorem 355F**: A Runge-Kutta method is A-stable iff no up arrow that terminates at a pole crosses the imaginary axis.
-
-This is hard to formalize without path topology, but a WEAKER version is achievable:
-
-**Weak version**: If all poles of R are in the open right half-plane and ‖R(iy)‖ ≤ 1 for all real y, then the method is A-stable.
-
-This is essentially Theorem 351B (already formalized in `AStabilityCriterion.lean`). Check if 355F adds anything beyond 351B. If not, document the connection and move on.
-
-### Step 2b: Ehle wedge concrete verification
-
-Verify the Ehle wedge for specific Padé pairs using existing infrastructure:
-- Show R_{2,1} is NOT A-stable (the denominator is linear, can find explicit z with Re(z) ≤ 0 and ‖R(z)‖ > 1)
-- Connect this to `pade21_not_inEhleWedge` already in OrderStars.lean
-
-## Priority 3: Rooted Tree Infrastructure (if time permits, ~20 min)
-
-Only attempt if Priorities 1-2 are complete.
-
-Read `OpenMath/RootedTree.lean` and assess:
-1. Can the `BTree` child representation be upgraded from `List` to `Multiset`?
-2. Are there concrete trees of order 4 already? (Yes, per the explore agent)
-3. Can `elementary_differential` and `weight` functions be defined?
-
-This unblocks Collocation implications (342j, 342k, 342l).
+### Approach
+- Read the textbook proof from `extraction/formalization_data/entities/thm_357D.json`
+- Check if the existing `IsDJReducible`, `IsANStable`, `IsBNStable` definitions suffice
+- The proof likely uses the result that algebraic stability + DJ-irreducibility → positive weights (cor:356D, already proved)
+- Sorry-first, submit to Aristotle
 
 ## What NOT to Try
 
-1. **Do NOT attempt the full Ehle barrier proof (thm:355G)** — it requires arrow path topology (termination at poles/zeros, 355C-355E) which needs winding numbers that Mathlib doesn't have.
-2. **Do NOT work on Padé recurrences** (352D) — blocked on factorial-sum algebra, dead end per cycles 103-106.
+1. **Do NOT attempt the full Ehle barrier (355G)** — requires arrow path topology (355C-355E) which needs winding numbers not in Mathlib.
+2. **Do NOT work on Padé recurrences (352D)** — blocked on factorial-sum algebra, dead end per issue file.
 3. **Do NOT increase maxHeartbeats** above 200000.
-4. **Do NOT try to formalize 355C (arrow termination)** — requires asymptotic analysis at infinity in the complex plane, well beyond current Mathlib.
-5. **Do NOT spend >30 min on any single sorry.** If stuck, submit to Aristotle and move on to the next task.
-6. **Do NOT re-attempt the Aristotle results from cycle 117.** They are already incorporated.
+4. **Do NOT attempt 355C (arrow termination)** — requires asymptotic analysis at infinity.
+5. **Do NOT spend >30 min on any single theorem.** If stuck, submit to Aristotle and move on.
+6. **Do NOT re-attempt Aristotle results from cycle 118** — they are already incorporated.
+7. **Do NOT attempt rooted tree upgrade (301A child representation)** — low priority, the current List-based representation works.
 
 ## Build Commands
 
@@ -135,8 +157,8 @@ If `lake` hangs, verify PATH starts with `/tmp/lake-bin:/tmp/lean4-toolchain/bin
 
 ## End-of-Cycle Checklist
 
-- [ ] All modified `.lean` files compile with 0 sorry's (or sorry's are documented with issue files)
-- [ ] Write `.prover-state/task_results/cycle_118.md`
-- [ ] Update `.prover-state/cycle` to `118`
+- [ ] All modified `.lean` files compile with 0 sorry's
+- [ ] Write `.prover-state/task_results/cycle_119.md`
+- [ ] Update `.prover-state/cycle` to `119`
 - [ ] Update `.prover-state/history.jsonl` with cycle summary
 - [ ] Commit and push all changes

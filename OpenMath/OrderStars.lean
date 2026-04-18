@@ -449,3 +449,165 @@ theorem trapezoidal_isUpArrowDir_zero :
   calc (1 : ℝ) = rexp t * rexp (-t) := by rw [← Real.exp_add, add_neg_cancel, Real.exp_zero]
     _ < (2 + t) / (2 - t) * rexp (-t) := by
         apply mul_lt_mul_of_pos_right hkey (Real.exp_pos (-t))
+
+/-! ## Theorem 355F: A-Stability Criterion via Order Stars
+
+A Runge–Kutta method is A-stable only if no up arrow of the order web intersects
+or is tangential to the imaginary axis. The proof is elementary: on the imaginary
+axis `|exp(-iy)| = 1`, so `|R(iy)·exp(-iy)| = |R(iy)|`, and A-stability forces
+`|R(iy)| ≤ 1`, ruling out `𝒜⁺` membership.
+
+Reference: Iserles, Theorem 355F.
+-/
+
+/-- **Theorem 355F**: An A-stable method has no `𝒜⁺` points on the imaginary axis.
+    If `‖R(z)‖ ≤ 1` for all `Re(z) ≤ 0`, then `iy ∉ 𝒜⁺(R)` for all `y : ℝ`. -/
+theorem aStable_imagAxis_not_orderStarPlus (R : ℂ → ℂ)
+    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
+    (y : ℝ) : (↑y * I) ∉ orderStarPlus R := by
+  rw [orderStarPlus_imaginaryAxis]
+  exact not_lt.mpr (hA _ (by simp [Complex.mul_re]))
+
+/-- **Theorem 355F** (positive form): A-stable methods have every imaginary axis
+    point in `𝒜⁻(R) ∪ 𝒜⁰(R)`. -/
+theorem aStable_imagAxis_mem_minus_or_bdry (R : ℂ → ℂ)
+    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
+    (y : ℝ) : (↑y * I) ∈ orderStarMinus R ∨ (↑y * I) ∈ orderStarBdry R := by
+  rw [orderStarMinus_imaginaryAxis, orderStarBdry_imaginaryAxis]
+  have h := hA (↑y * I) (by simp [Complex.mul_re])
+  exact h.lt_or_eq
+
+/-- **Theorem 355F** (contrapositive): if some imaginary axis point is in `𝒜⁺`,
+    the method is not A-stable. -/
+theorem not_aStable_of_imagAxis_orderStarPlus (R : ℂ → ℂ) (y : ℝ)
+    (h : (↑y * I) ∈ orderStarPlus R) :
+    ∃ z : ℂ, z.re ≤ 0 ∧ 1 < ‖R z‖ :=
+  ⟨↑y * I, by simp [Complex.mul_re], (orderStarPlus_imaginaryAxis R y).mp h⟩
+
+/-! ## Theorem 355B: Arrow Tangency Directions (General Statement)
+
+For a rational approximation `R` to `exp` of exact order `p`, the order-star
+amplitude `φ(z) = R(z)·exp(-z)` satisfies `φ(z) = 1 - C·z^{p+1} + O(|z|^{p+2})`
+near the origin, where `C` is the error constant. The sign of `C` determines whether
+each tangent ray is an up arrow or down arrow:
+- At even angles `θ = 2kπ/(p+1)`: up if `C < 0`, down if `C > 0`
+- At odd angles `θ = (2k+1)π/(p+1)`: down if `C < 0`, up if `C > 0`
+
+Reference: Iserles, Theorem 355B.
+-/
+
+/-- Norm of a point on a ray from the origin: `‖t·e^{iθ}‖ = t` for `t ≥ 0`. -/
+theorem norm_ofReal_mul_exp_I (t : ℝ) (θ : ℝ) (ht : 0 ≤ t) :
+    ‖(↑t : ℂ) * exp (↑θ * I)‖ = t := by
+  rw [norm_mul, Complex.norm_exp]
+  have : ((↑θ : ℂ) * I).re = 0 := by simp [Complex.mul_re]
+  rw [this, Real.exp_zero, mul_one, Complex.norm_real, Real.norm_of_nonneg ht]
+
+/-- At angle `θ = 2kπ/(p+1)`, the `(p+1)`-th power of `t·e^{iθ}` is real: `t^{p+1}`. -/
+theorem pow_ray_even_angle (t : ℝ) (p k : ℕ) :
+    ((↑t : ℂ) * exp (↑(2 * ↑k * π / (↑p + 1)) * I)) ^ (p + 1) =
+      ↑(t ^ (p + 1)) := by
+  rw [mul_pow, ← Complex.ofReal_pow]
+  suffices h : (Complex.exp (↑(2 * (↑k : ℝ) * π / ((↑p : ℝ) + 1)) * I)) ^ (p + 1) = 1 by
+    rw [h, mul_one]
+  rw [← Complex.exp_nsmul, nsmul_eq_mul]
+  have : (↑(p + 1 : ℕ) : ℂ) * (↑(2 * (↑k : ℝ) * π / ((↑p : ℝ) + 1)) * I) =
+      ↑k * (2 * ↑Real.pi * I) := by
+    push_cast; field_simp
+  rw [this]
+  exact Complex.exp_nat_mul_two_pi_mul_I k
+
+/-- **Theorem 355B** (C < 0, even angles): If the order-star amplitude has expansion
+    `φ(z) = 1 - C·z^{p+1} + O(|z|^{p+2})` near 0 with `C < 0`, then
+    `θ = 2kπ/(p+1)` is an up-arrow direction. -/
+theorem arrow_up_of_neg_errorConst (R : ℂ → ℂ) (p : ℕ) (C K δ₀ : ℝ)
+    (hC : C < 0) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2))
+    (k : ℕ) :
+    IsUpArrowDir R (2 * ↑k * π / (↑p + 1)) := by
+  set θ := 2 * (↑k : ℝ) * π / (↑p + 1)
+  set ε := min δ₀ ((-C) / (2 * K))
+  have hε : 0 < ε := lt_min hδ (div_pos (neg_pos.mpr hC) (mul_pos two_pos hK))
+  refine ⟨ε, hε, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  have htε : t < ε := ht.2
+  set z := (↑t : ℂ) * exp (↑θ * I) with hz_def
+  have hz_norm : ‖z‖ = t := norm_ofReal_mul_exp_I t θ ht0.le
+  have hz_pow : z ^ (p + 1) = ↑(t ^ (p + 1)) := pow_ray_even_angle t p k
+  -- Apply error bound
+  have hbd := hφ z (by rw [hz_norm]; exact lt_of_lt_of_le htε (min_le_left _ _))
+  rw [hz_pow, hz_norm] at hbd
+  -- Norm of the main term 1 - C·t^{p+1} (positive real since C < 0)
+  have h_main_norm : ‖(1 : ℂ) - ↑C * ↑(t ^ (p + 1))‖ = 1 - C * t ^ (p + 1) := by
+    rw [show (1 : ℂ) - ↑C * ↑(t ^ (p + 1)) = ↑(1 - C * t ^ (p + 1)) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg (by nlinarith [neg_pos.mpr hC, pow_pos ht0 (p + 1)])]
+  -- Triangle inequality: ‖φ(z)‖ ≥ ‖main term‖ - ‖error‖
+  have h_lower : 1 - C * t ^ (p + 1) - K * t ^ (p + 2) ≤ ‖R z * exp (-z)‖ := by
+    have h1 := norm_sub_norm_le ((1 : ℂ) - ↑C * ↑(t ^ (p + 1))) (R z * exp (-z))
+    rw [h_main_norm, norm_sub_rev] at h1; linarith
+  -- The bound exceeds 1 since t < (-C)/(2K)
+  have h1 : t < (-C) / (2 * K) := lt_of_lt_of_le htε (min_le_right _ _)
+  have h2 : K * t < -C / 2 := by
+    have h1' := (lt_div_iff₀ (mul_pos two_pos hK)).mp h1
+    linarith
+  have h3 : -C * t ^ (p + 1) - K * t ^ (p + 2) > 0 := by
+    have : -C * t ^ (p + 1) - K * t ^ (p + 2) = t ^ (p + 1) * (-C - K * t) := by ring
+    rw [this]; exact mul_pos (pow_pos ht0 _) (by linarith)
+  calc (1 : ℝ) < 1 - C * t ^ (p + 1) - K * t ^ (p + 2) := by linarith
+    _ ≤ ‖R z * exp (-z)‖ := h_lower
+
+/-- **Theorem 355B** (C > 0, even angles): If the order-star amplitude has expansion
+    `φ(z) = 1 - C·z^{p+1} + O(|z|^{p+2})` near 0 with `C > 0`, then
+    `θ = 2kπ/(p+1)` is a down-arrow direction. -/
+theorem arrow_down_of_pos_errorConst (R : ℂ → ℂ) (p : ℕ) (C K δ₀ : ℝ)
+    (hC : 0 < C) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2))
+    (k : ℕ) :
+    IsDownArrowDir R (2 * ↑k * π / (↑p + 1)) := by
+  set θ := 2 * (↑k : ℝ) * π / (↑p + 1)
+  set ε := min δ₀ (min (C / (2 * K)) (min 1 (1 / (2 * C))))
+  have hε : 0 < ε := by
+    apply lt_min hδ; apply lt_min (div_pos hC (mul_pos two_pos hK))
+    exact lt_min one_pos (div_pos one_pos (mul_pos two_pos hC))
+  refine ⟨ε, hε, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  have htε : t < ε := ht.2
+  have ht_δ : t < δ₀ := lt_of_lt_of_le htε (min_le_left _ _)
+  have ht_CK : t < C / (2 * K) := lt_of_lt_of_le htε
+    (le_trans (min_le_right _ _) (min_le_left _ _))
+  have ht_1 : t < 1 := lt_of_lt_of_le htε
+    (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_left _ _)))
+  have ht_2C : t < 1 / (2 * C) := lt_of_lt_of_le htε
+    (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_right _ _)))
+  set z := (↑t : ℂ) * exp (↑θ * I) with hz_def
+  have hz_norm : ‖z‖ = t := norm_ofReal_mul_exp_I t θ ht0.le
+  have hz_pow : z ^ (p + 1) = ↑(t ^ (p + 1)) := pow_ray_even_angle t p k
+  have hbd := hφ z (by rw [hz_norm]; exact ht_δ)
+  rw [hz_pow, hz_norm] at hbd
+  -- Key: C·t^{p+1} < 1/2, so 1 - C·t^{p+1} > 0
+  have h_tp_le_t : t ^ (p + 1) ≤ t := by
+    calc t ^ (p + 1) ≤ t ^ 1 :=
+          pow_le_pow_of_le_one ht0.le ht_1.le (by omega : 1 ≤ p + 1)
+      _ = t := pow_one t
+  have h_Ctp_lt : C * t ^ (p + 1) < 1 / 2 := by
+    calc C * t ^ (p + 1) ≤ C * t := by
+          exact mul_le_mul_of_nonneg_left h_tp_le_t hC.le
+      _ < C * (1 / (2 * C)) := by exact mul_lt_mul_of_pos_left ht_2C hC
+      _ = 1 / 2 := by field_simp
+  have h_main_pos : 0 < 1 - C * t ^ (p + 1) := by linarith
+  have h_main_norm : ‖(1 : ℂ) - ↑C * ↑(t ^ (p + 1))‖ = 1 - C * t ^ (p + 1) := by
+    rw [show (1 : ℂ) - ↑C * ↑(t ^ (p + 1)) = ↑(1 - C * t ^ (p + 1)) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg h_main_pos.le]
+  -- Triangle inequality: ‖φ(z)‖ ≤ ‖main‖ + ‖error‖
+  have h_upper : ‖R z * exp (-z)‖ ≤ 1 - C * t ^ (p + 1) + K * t ^ (p + 2) := by
+    have h1 := norm_add_le (((1 : ℂ) - ↑C * ↑(t ^ (p + 1))))
+      (R z * exp (-z) - ((1 : ℂ) - ↑C * ↑(t ^ (p + 1))))
+    rw [add_sub_cancel, h_main_norm] at h1; linarith
+  -- Final: K·t < C so the bound is < 1
+  have h1 := (lt_div_iff₀ (mul_pos two_pos hK)).mp ht_CK
+  have h3 : -C * t ^ (p + 1) + K * t ^ (p + 2) < 0 := by
+    have : -C * t ^ (p + 1) + K * t ^ (p + 2) = t ^ (p + 1) * (K * t - C) := by ring
+    rw [this]; exact mul_neg_of_pos_of_neg (pow_pos ht0 _) (by linarith)
+  linarith
