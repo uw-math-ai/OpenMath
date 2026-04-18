@@ -99,7 +99,13 @@
 - [x] **Theorem**: L-stability of backward Euler, Radau IIA, SDIRK2, SDIRK3 (`OpenMath/StiffEquations.lean`, `OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
 - [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
+- [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
+- [~] **Theorem 356C**: AN-stability implies algebraic stability (`OpenMath/ANStability.lean`)
+  - [x] Defined AN-stability (`IsANStable`) and diagonal stability function (`stabilityFnDiag`)
+  - [x] Proved `bⱼ ≥ 0` direction: det formula, stability function formula, norm bound
+  - [~] Proved M positive semidefinite direction (1 sorry: Taylor expansion of |R(iτv)|²)
 - [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
+- [x] **Theorem 353A**: Padé approximation order (`OpenMath/PadeOrder.lean`)
 - [~] **Theorem 352C/352D**: Padé recurrence infrastructure (`OpenMath/Pade.lean`)
   - [x] Added general `padeP`, `padeQ`, `padeR` families
   - [x] Proved diagonal symmetry and specialization lemmas `padeQ_diagonal_eq_padeP_neg`, `padeP_one_one`, `padeQ_two_two`
@@ -135,19 +141,20 @@
 
 ## Current Target
 
-**BDF family complete (BDF1–6: definitions, consistency, order, zero-stability, convergence).**
+**Chapter 3 stability theory in progress.**
 
 Next targets:
-1. **Theorem 352D** — finish the factorial-sum proofs of `padeQ_succ_left` and `padeP_succ_right` in `OpenMath/Pade.lean`
-2. **Theorem 301A** — finish rooted-tree infrastructure by replacing the `List` fallback with an unordered multiplicity model and proving the final recursion formulas
-3. **Theorem 342C** remaining implications (342j, 342k, 342l) — require tree infrastructure from 301A
+1. **Theorem 356C** — close the last sorry in `OpenMath/ANStability.lean` (`norm_stabilityFn_imagBasis_gt_one`: Taylor expansion of |R(iτv)|² for the M-PSD direction)
+2. **Theorem 357C** — algebraic stability implies BN-stability (the other direction of the stability equivalence chain)
+3. **Theorem 352D** — finish the factorial-sum proofs of `padeQ_succ_left` and `padeP_succ_right` in `OpenMath/Pade.lean`
+4. **Theorem 301A** — finish rooted-tree infrastructure
 
 ## Sorry locations
-None — the project is sorry-free as of cycle 96.
+- `OpenMath/ANStability.lean`: 1 sorry in `norm_stabilityFn_imagBasis_gt_one` (requires Taylor expansion argument for |R(iτv)|² = 1 - τ²v'Mv + O(τ³))
 
 ## Recent git history
-b696343 Finish BDF5 zero-stability proof
-e9b65f8 cycle 90: close all sorrys in MultistepMethods.lean
-2b88e99 cycle 89: close hQ1pp
-0ac9f11 cycle 87: decompose dahlquist barrier derivative proof
-64c2d11 cycle 85: restructure Gtilde derivative proof
+969bc8a Close Pade approximation order polynomial proof
+a2d0342 cycle 107: add Pade self-adjointness defect
+f585bb2 cycle 106: prove Theorem 353A (pade_approximation_order)
+a7aad0a cycle 105: fix RK/BDF drift and add Pade skeleton
+a5fd4cf cycle 104: complete Theorem 351B (A-stability criterion)
