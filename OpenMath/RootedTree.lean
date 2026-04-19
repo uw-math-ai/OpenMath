@@ -307,7 +307,7 @@ theorem order_node_perm {children₁ children₂ : List BTree}
   have hfold :
       children₁.foldr (fun t n => t.order + n) 0 =
         children₂.foldr (fun t n => t.order + n) 0 :=
-    hperm.foldr_eq 0
+    hperm.foldr_eq (lcomm := ⟨fun _ _ _ => by omega⟩) 0
   simp [order_node, hfold]
 
 private theorem foldr_density_pos (children : List BTree)
@@ -339,20 +339,19 @@ theorem density_node_prod (children : List BTree) :
     (BTree.node children).density =
       (BTree.node children).order * (children.map BTree.density).prod := by
   simp only [density_node]
+  congr 1
   induction children with
   | nil => simp
   | cons hd tl ih =>
-    simp [ih, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+    simp only [List.foldr, List.map, List.prod_cons]
+    rw [ih]
 
 /-- The density of a node depends only on the multiset of its children. -/
 theorem density_node_perm {children₁ children₂ : List BTree}
     (hperm : children₁.Perm children₂) :
     (BTree.node children₁).density = (BTree.node children₂).density := by
-  have horder := order_node_perm hperm
-  have hprod :
-      (children₁.map BTree.density).prod = (children₂.map BTree.density).prod := by
-    simpa using (hperm.map BTree.density).prod_eq
-  simp [density_node_prod, horder, hprod]
+  rw [density_node_prod, density_node_prod, order_node_perm hperm,
+      (hperm.map BTree.density).prod_eq]
 
 private theorem symmetryScan_pos (allChildren remaining : List BTree)
     (ih_sym : ∀ t ∈ allChildren, 0 < t.symmetry)
