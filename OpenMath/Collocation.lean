@@ -1864,6 +1864,232 @@ private theorem tree_cond_all_small (tab : ButcherTableau s)
     have hB_app := hB (BTree.node children).order (BTree.order_pos _) ht
     rw [hB_app, density_eq_order_mul_childDensityProd, Nat.cast_mul, div_div]
 
+/-- Helper for the one-big-child case of `gen_tree_cond`: by induction on the
+children list, peel off small children (shifting the exponent) until reaching
+the big child `tb`, then apply D(n) and the induction hypothesis. -/
+private theorem gen_tree_cond_big_child_aux (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ)
+    (hB : tab.SatisfiesB (2 * n)) (hC : tab.SatisfiesC n) (hD : tab.SatisfiesD n)
+    (m : ℕ)
+    (ih_outer : ∀ m' < m, ∀ (q' : ℕ) (u : BTree), u.order = m' → q' + u.order ≤ 2 * n →
+      ∑ i : Fin s, tab.b i * tab.c i ^ q' * tab.elementaryWeight u i =
+      ↑u.order / ((↑q' + ↑u.order) * ↑u.density))
+    (tb : BTree) (htb_big : n < tb.order) :
+    ∀ (L : List BTree) (q' : ℕ), tb ∈ L →
+    (∀ ch ∈ L, n < ch.order → ch = tb) →
+    (BTree.node L).order ≤ m →
+    q' + (BTree.node L).order ≤ 2 * n →
+    ∑ i : Fin s, tab.b i * tab.c i ^ q' *
+      L.foldr (fun t (acc : ℝ) => acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1 =
+    ↑(BTree.node L).order /
+      ((↑q' + ↑(BTree.node L).order) * ↑(BTree.node L).density) := by
+  intro L
+  induction L with
+  | nil => intro _ htb_mem; simp at htb_mem
+  | cons hd tl ih_list =>
+    intro q' htb_mem htb_unique hm hq'
+    simp only [List.foldr]
+    by_cases h_eq : hd = tb
+    · -- hd = tb: all of tl are small; main computation
+      have h_eq' : tb = hd := h_eq.symm
+      subst h_eq'
+      -- All tl elements have order ≤ n
+      have htl_small : ∀ ch ∈ tl, ch.order ≤ n := by
+        intro ch hch
+        by_contra hbig
+        push_neg at hbig
+        have heq := htb_unique ch (List.mem_cons_of_mem _ hch) hbig
+        -- ch = tb, so tb ∈ tl; then 2*tb.order ≤ node.order, contradicting bounds
+        have htb_in_tl : tb ∈ tl := by rw [← heq]; exact hch
+        have h_sum : tb.order ≤ tl.foldr (fun t n => t.order + n) 0 :=
+          single_mem_order_le_foldr htb_in_tl
+        have hord := BTree.order_node (tb :: tl)
+        have h_foldr : List.foldr (fun t n => t.order + n) 0 (tb :: tl) =
+            tb.order + List.foldr (fun t n => t.order + n) 0 tl := by simp [List.foldr]
+        omega
+      -- Simplify tl's foldr via foldr_ew_simplified (all children small)
+      have htl_simp : ∀ i : Fin s,
+          tl.foldr (fun t acc => acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1 =
+          tab.c i ^ tl.foldr (fun t n => t.order + n) 0 /
+          ↑(tl.foldr (fun t (n : ℕ) => t.density * n) 1) := by
+        intro i
+        apply foldr_ew_simplified
+        intro ch hch
+        have hch_le : ch.order ≤ n := htl_small ch hch
+        exact ew_factor_simplified tab hrc n hC ch hch_le (BTree.order_pos ch) i
+          (fun k => elementaryWeight_simplified_of_C tab hrc n hC ch (by omega) k)
+      simp_rw [htl_simp]
+      set S := tl.foldr (fun t n => t.order + n) 0 with hS_def
+      set D_sm := tl.foldr (fun t (n : ℕ) => t.density * n) 1 with hD_sm_def
+      set R := q' + S + 1 with hR_def
+      have hD_sm_pos : 0 < D_sm := foldr_density_prod_pos tl
+      have hD_sm_ne : (D_sm : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+      have htb_dens_ne : (tb.density : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.density_pos tb))
+      have hnode_order : (BTree.node (tb :: tl)).order = 1 + tb.order + S := by
+        simp [BTree.order_node, List.foldr]; omega
+      have hnode_dens_ne : ((BTree.node (tb :: tl)).density : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.density_pos _))
+      have htb_mem_cons : tb ∈ tb :: tl := List.mem_cons_self
+      have hR_le_n : R ≤ n := by
+        have := child_order_lt_of_mem htb_mem_cons; omega
+      have hR_ne : (R : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+      have htb_order_lt : tb.order < m := by
+        have := child_order_lt_of_mem htb_mem_cons; omega
+      -- Apply D(n) at index R
+      have hD_app : ∀ j : Fin s,
+          ∑ i : Fin s, tab.b i * tab.c i ^ (R - 1) * tab.A i j =
+          tab.b j / ↑R * (1 - tab.c j ^ R) := hD R (by omega) hR_le_n
+      have hR_sub : R - 1 = q' + S := by omega
+      -- Apply ih_outer at (0, tb) and (R, tb)
+      have hih0 : ∑ k : Fin s, tab.b k * tab.elementaryWeight tb k =
+          ↑tb.order / (↑tb.order * ↑tb.density) := by
+        have h := ih_outer tb.order htb_order_lt 0 tb rfl (by omega)
+        simp only [pow_zero, mul_one, Nat.cast_zero, zero_add] at h; exact h
+      have hihR : ∑ k : Fin s, tab.b k * tab.c k ^ R * tab.elementaryWeight tb k =
+          ↑tb.order / ((↑R + ↑tb.order) * ↑tb.density) :=
+        ih_outer tb.order htb_order_lt R tb rfl (by omega)
+      -- Density factoring: node.density = node.order * tb.density * D_sm
+      have hdens_eq : (BTree.node (tb :: tl)).density =
+          (BTree.node (tb :: tl)).order * (tb.density * D_sm) := by
+        simp [BTree.density_node, List.foldr, hD_sm_def]
+      have hqn_pos : (0 : ℝ) < ↑q' + ↑(BTree.node (tb :: tl)).order := by
+        have : 0 < q' + (BTree.node (tb :: tl)).order := by
+          have := BTree.order_pos (BTree.node (tb :: tl)); omega
+        exact_mod_cast this
+      -- Main algebraic computation
+      -- Step 1: Factor 1/D_sm, combine c^q' * c^S = c^(R-1)
+      have hstep1 : ∀ x : Fin s, tab.b x * tab.c x ^ q' *
+          (tab.c x ^ S / ↑D_sm * ∑ k, tab.A x k * tab.elementaryWeight tb k) =
+          tab.b x * tab.c x ^ (R - 1) *
+          (∑ k, tab.A x k * tab.elementaryWeight tb k) / ↑D_sm := by
+        intro x; rw [hR_sub, pow_add]; ring
+      simp_rw [hstep1, ← Finset.sum_div]
+      -- Step 2: Exchange sum order
+      have hsum_exchange : ∑ x : Fin s, tab.b x * tab.c x ^ (R - 1) *
+          (∑ k : Fin s, tab.A x k * tab.elementaryWeight tb k) =
+          ∑ k : Fin s, (∑ x : Fin s, tab.b x * tab.c x ^ (R - 1) * tab.A x k) *
+          tab.elementaryWeight tb k := by
+        calc
+          ∑ x : Fin s, tab.b x * tab.c x ^ (R - 1) *
+              (∑ k : Fin s, tab.A x k * tab.elementaryWeight tb k)
+              =
+              ∑ x : Fin s, ∑ k : Fin s,
+                (tab.b x * tab.c x ^ (R - 1) * tab.A x k) * tab.elementaryWeight tb k := by
+                  simp_rw [Finset.mul_sum]
+                  apply Finset.sum_congr rfl
+                  intro x hx
+                  apply Finset.sum_congr rfl
+                  intro k hk
+                  ring
+          _ = ∑ k : Fin s, ∑ x : Fin s,
+                (tab.b x * tab.c x ^ (R - 1) * tab.A x k) * tab.elementaryWeight tb k := by
+                  rw [Finset.sum_comm]
+          _ = ∑ k : Fin s, (∑ x : Fin s, tab.b x * tab.c x ^ (R - 1) * tab.A x k) *
+                tab.elementaryWeight tb k := by
+                  apply Finset.sum_congr rfl
+                  intro k hk
+                  rw [Finset.sum_mul]
+      rw [hsum_exchange]
+      -- Step 3: Apply D(n)
+      simp_rw [hD_app]
+      -- Step 4: Expand (b/R * (1 - c^R)) * ew and split sum
+      have hexpand : ∀ k : Fin s,
+          (tab.b k / ↑R * (1 - tab.c k ^ R)) * tab.elementaryWeight tb k =
+          tab.b k * tab.elementaryWeight tb k / ↑R -
+          tab.b k * tab.c k ^ R * tab.elementaryWeight tb k / ↑R := by
+        intro k; ring
+      simp_rw [hexpand, Finset.sum_sub_distrib, ← Finset.sum_div]
+      -- Step 5: Apply ih_outer at q=0 and q=R
+      rw [hih0, hihR]
+      -- Step 6: Algebraic cleanup
+      rw [hnode_order, hdens_eq]
+      have htb_order_ne : (tb.order : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.order_pos tb))
+      have hR_tb_ne : (↑R + ↑tb.order : ℝ) ≠ 0 := by
+        have : 0 < R + tb.order := by have := BTree.order_pos tb; omega
+        exact_mod_cast Nat.pos_iff_ne_zero.mp this
+      have hnode_order_ne : ((BTree.node (tb :: tl)).order : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.order_pos _))
+      push_cast
+      field_simp [hnode_order_ne]
+      rw [hnode_order, hR_def]
+      push_cast
+      ring
+    · -- hd ≠ tb: hd is small, simplify hd's factor, reduce to IH on tl
+      have htb_tl : tb ∈ tl := by
+        cases htb_mem with
+        | head => exact absurd rfl h_eq
+        | tail _ htl => exact htl
+      have hhd_small : hd.order ≤ n := by
+        by_contra hbig; push_neg at hbig
+        exact h_eq (htb_unique hd List.mem_cons_self hbig)
+      have hhd_ew : ∀ i : Fin s,
+          ∑ k : Fin s, tab.A i k * tab.elementaryWeight hd k =
+          tab.c i ^ hd.order / ↑hd.density :=
+        fun i => ew_simplified_of_C tab hrc n hC hd hhd_small i
+      simp_rw [hhd_ew]
+      have hhd_dens_ne : (hd.density : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.density_pos hd))
+      have hord_rel : (BTree.node (hd :: tl)).order = hd.order + (BTree.node tl).order := by
+        simp [BTree.order_node, List.foldr]; omega
+      have hnode_tl_ord_ne : ((BTree.node tl).order : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.order_pos _))
+      have hnode_tl_dens_ne : ((BTree.node tl).density : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.density_pos _))
+      -- Apply IH on tl at exponent q' + hd.order
+      have ih_app := ih_list (q' + hd.order) htb_tl
+        (fun ch hch hbig => htb_unique ch (List.mem_cons_of_mem _ hch) hbig)
+        (by omega) (by omega)
+      -- Main algebraic reduction
+      -- Step 1: Factor summand and combine powers
+      have hfact : ∀ x : Fin s, tab.b x * tab.c x ^ q' *
+          (List.foldr (fun t acc => acc * ∑ k, tab.A x k * tab.elementaryWeight t k) 1 tl *
+            (tab.c x ^ hd.order / ↑hd.density)) =
+          tab.b x * tab.c x ^ (q' + hd.order) *
+            List.foldr (fun t acc => acc * ∑ k, tab.A x k * tab.elementaryWeight t k) 1 tl /
+            ↑hd.density := fun x => by rw [pow_add]; ring
+      simp_rw [hfact]
+      rw [← Finset.sum_div, ih_app, hord_rel, div_div]
+      -- Step 2: Density relation (ℕ identity)
+      have hdens_key : (BTree.node (hd :: tl)).density * (BTree.node tl).order =
+          (BTree.node (hd :: tl)).order * (hd.density * (BTree.node tl).density) := by
+        simp only [BTree.density_node, BTree.order_node, List.foldr]; ring
+      -- Step 3: Clear fractions and verify
+      have hq_ord_pos : (0 : ℝ) < ↑(q' + hd.order) + ↑(BTree.node tl).order := by
+        have := BTree.order_pos (BTree.node tl); exact_mod_cast (by omega : 0 < q' + hd.order + (BTree.node tl).order)
+      have hq_ord_pos2 : (0 : ℝ) < ↑q' + ↑(hd.order + (BTree.node tl).order) := by
+        have htl_pos : 0 < (BTree.node tl).order := BTree.order_pos (BTree.node tl)
+        have hnat : 0 < q' + (hd.order + (BTree.node tl).order) := by omega
+        exact_mod_cast hnat
+      have hnode_dens_ne' : (↑(BTree.node (hd :: tl)).density : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.density_pos _))
+      have hq_cast : (↑(q' + hd.order) + ↑(BTree.node tl).order : ℝ) =
+          ↑q' + ↑(hd.order + (BTree.node tl).order) := by
+        push_cast
+        ring
+      have hdens_key_real :
+          (↑(BTree.node (hd :: tl)).density : ℝ) * ↑(BTree.node tl).order =
+            ↑(hd.order + (BTree.node tl).order) * (↑hd.density * ↑(BTree.node tl).density) := by
+        have htmp :
+            (↑(BTree.node (hd :: tl)).density : ℝ) * ↑(BTree.node tl).order =
+              ↑(BTree.node (hd :: tl)).order * (↑hd.density * ↑(BTree.node tl).density) := by
+          exact_mod_cast hdens_key
+        calc
+          (↑(BTree.node (hd :: tl)).density : ℝ) * ↑(BTree.node tl).order
+              = ↑(BTree.node (hd :: tl)).order * (↑hd.density * ↑(BTree.node tl).density) := htmp
+          _ = ↑(hd.order + (BTree.node tl).order) * (↑hd.density * ↑(BTree.node tl).density) := by
+              rw [hord_rel]
+      have hdenomL_ne :
+          ((↑(q' + hd.order) + ↑(BTree.node tl).order : ℝ) * ↑(BTree.node tl).density * ↑hd.density) ≠ 0 :=
+        mul_ne_zero (mul_ne_zero (ne_of_gt hq_ord_pos) hnode_tl_dens_ne) hhd_dens_ne
+      have hdenomR_ne :
+          ((↑q' + ↑(hd.order + (BTree.node tl).order) : ℝ) * ↑(BTree.node (hd :: tl)).density) ≠ 0 :=
+        mul_ne_zero (ne_of_gt hq_ord_pos2) hnode_dens_ne'
+      rw [div_eq_div_iff hdenomL_ne hdenomR_ne, ← hq_cast]
+      ring_nf
+      nlinarith [hdens_key_real]
+
 /-- Generalized tree condition: under B(2n), C(n), D(n), for any tree t and
 exponent q with q + t.order ≤ 2n, the q-weighted tree sum evaluates to
   r(t) / ((q + r(t)) · γ(t))
@@ -1956,7 +2182,10 @@ private theorem gen_tree_cond (tab : ButcherTableau s)
           ∑ i, tab.b i * tab.c i ^ q' * tab.elementaryWeight (BTree.node children) i =
             ↑(BTree.node children).order /
               ((↑q' + ↑(BTree.node children).order) * ↑(BTree.node children).density) := by
-        sorry
+        -- Unfold elementaryWeight to expose the foldr
+        simp only [elementaryWeight]
+        exact gen_tree_cond_big_child_aux tab hrc n hB hC hD m ih_gen
+          tb htb_big children q' htb_mem htb_unique (le_of_eq hu_eq) hq'u
       exact hmain
 
 /-- The remaining case of Theorem 342l: exactly one child of `t` can have order
