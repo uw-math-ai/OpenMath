@@ -504,8 +504,10 @@ theorem backwardEuler_imagAxis_not_orderStarPlus (y : ℝ) :
     (↑y * I) ∉ orderStarPlus backwardEulerR := by
   apply aStable_imagAxis_not_orderStarPlus
   intro z hz
-  simpa [backwardEulerR, ButcherTableau.stabilityFn1, rkImplicitEuler] using
-    rkImplicitEuler_aStable z hz (one_sub_ne_zero_of_nonpos_re z hz)
+  have hne : (1 : ℂ) - z * ↑(rkImplicitEuler.A 0 0) ≠ 0 := by
+    simpa [rkImplicitEuler] using one_sub_ne_zero_of_nonpos_re z hz
+  have hstable := rkImplicitEuler_aStable z hz hne
+  simpa [backwardEulerR, ButcherTableau.stabilityFn1, rkImplicitEuler] using hstable
 
 /-- **Theorem 355F** specialized to the trapezoidal rule: the imaginary axis does not
     meet `𝒜⁺`. -/
@@ -513,8 +515,10 @@ theorem trapezoidal_imagAxis_not_orderStarPlus (y : ℝ) :
     (↑y * I) ∉ orderStarPlus trapezoidalR := by
   apply aStable_imagAxis_not_orderStarPlus
   intro z hz
-  simpa [trapezoidalR, ButcherTableau.stabilityFn1, rkImplicitMidpoint] using
-    rkImplicitMidpoint_aStable z hz (one_sub_half_mul_ne_zero_of_nonpos_re z hz)
+  have hne : (1 : ℂ) - z * ↑(rkImplicitMidpoint.A 0 0) ≠ 0 := by
+    simpa [rkImplicitMidpoint] using one_sub_half_mul_ne_zero_of_nonpos_re z hz
+  have hstable := rkImplicitMidpoint_aStable z hz hne
+  simpa [trapezoidalR, ButcherTableau.stabilityFn1, rkImplicitMidpoint] using hstable
 
 /-- **Theorem 355F** specialized to GL2 (Gauss–Legendre 2-stage): the imaginary axis does not
     meet `𝒜⁺`. -/
@@ -554,6 +558,23 @@ theorem pow_ray_even_angle (t : ℝ) (p k : ℕ) :
     push_cast; field_simp
   rw [this]
   exact Complex.exp_nat_mul_two_pi_mul_I k
+
+/-- At angle `θ = (2k+1)π/(p+1)`, the `(p+1)`-th power of `t·e^{iθ}` is real: `-t^{p+1}`. -/
+theorem pow_ray_odd_angle (t : ℝ) (p k : ℕ) :
+    ((↑t : ℂ) * exp (↑((2 * ↑k + 1) * π / (↑p + 1)) * I)) ^ (p + 1) =
+      ↑(-(t ^ (p + 1))) := by
+  rw [mul_pow, ← Complex.ofReal_pow]
+  suffices h : (Complex.exp (↑((2 * ↑k + 1) * π / (↑p + 1)) * I)) ^ (p + 1) = -1 by
+    rw [h]
+    simp
+  rw [← Complex.exp_nsmul, nsmul_eq_mul]
+  have : (↑(p + 1 : ℕ) : ℂ) * (↑((2 * ↑k + 1) * π / (↑p + 1)) * I) =
+      (↑k : ℂ) * (2 * ↑Real.pi * I) + (↑Real.pi : ℂ) * I := by
+    push_cast
+    field_simp
+  rw [this, Complex.exp_add, Complex.exp_nat_mul_two_pi_mul_I]
+  rw [show (↑Real.pi : ℂ) * I = (Real.pi : ℂ) * I by norm_num]
+  simp [Complex.exp_pi_mul_I]
 
 /-- **Theorem 355B** (C < 0, even angles): If the order-star amplitude has expansion
     `φ(z) = 1 - C·z^{p+1} + O(|z|^{p+2})` near 0 with `C < 0`, then
@@ -649,3 +670,98 @@ theorem arrow_down_of_pos_errorConst (R : ℂ → ℂ) (p : ℕ) (C K δ₀ : �
     have : -C * t ^ (p + 1) + K * t ^ (p + 2) = t ^ (p + 1) * (K * t - C) := by ring
     rw [this]; exact mul_neg_of_pos_of_neg (pow_pos ht0 _) (by linarith)
   linarith
+
+/-- **Theorem 355B** (C < 0, odd angles): If the order-star amplitude has expansion
+    `φ(z) = 1 - C·z^{p+1} + O(|z|^{p+2})` near 0 with `C < 0`, then
+    `θ = (2k+1)π/(p+1)` is a down-arrow direction. -/
+theorem arrow_down_of_neg_errorConst_odd (R : ℂ → ℂ) (p : ℕ) (C K δ₀ : ℝ)
+    (hC : C < 0) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2))
+    (k : ℕ) :
+    IsDownArrowDir R ((2 * ↑k + 1) * π / (↑p + 1)) := by
+  set θ := (2 * (↑k : ℝ) + 1) * π / (↑p + 1)
+  set ε := min δ₀ (min ((-C) / (2 * K)) (min 1 (1 / (-2 * C))))
+  have hε : 0 < ε := by
+    apply lt_min hδ
+    apply lt_min (div_pos (neg_pos.mpr hC) (mul_pos two_pos hK))
+    exact lt_min one_pos (by have : 0 < -2 * C := by linarith; exact div_pos one_pos this)
+  refine ⟨ε, hε, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  have htε : t < ε := ht.2
+  have ht_δ : t < δ₀ := lt_of_lt_of_le htε (min_le_left _ _)
+  have ht_CK : t < (-C) / (2 * K) := lt_of_lt_of_le htε
+    (le_trans (min_le_right _ _) (min_le_left _ _))
+  have ht_1 : t < 1 := lt_of_lt_of_le htε
+    (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_left _ _)))
+  have ht_2C : t < 1 / (-2 * C) := lt_of_lt_of_le htε
+    (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_right _ _)))
+  set z := (↑t : ℂ) * exp (↑θ * I) with hz_def
+  have hz_norm : ‖z‖ = t := norm_ofReal_mul_exp_I t θ ht0.le
+  have hz_pow : z ^ (p + 1) = ↑(-(t ^ (p + 1))) := by
+    simpa [θ, hz_def] using pow_ray_odd_angle t p k
+  have hbd := hφ z (by rw [hz_norm]; exact ht_δ)
+  rw [hz_pow, hz_norm] at hbd
+  have h_tp_le_t : t ^ (p + 1) ≤ t := by
+    calc t ^ (p + 1) ≤ t ^ 1 :=
+          pow_le_pow_of_le_one ht0.le ht_1.le (by omega : 1 ≤ p + 1)
+      _ = t := pow_one t
+  have h_Ctp_lt : (-C) * t ^ (p + 1) < 1 / 2 := by
+    have hnegC : 0 < -C := neg_pos.mpr hC
+    calc (-C) * t ^ (p + 1) ≤ (-C) * t := by
+          exact mul_le_mul_of_nonneg_left h_tp_le_t hnegC.le
+      _ < (-C) * (1 / (-2 * C)) := by exact mul_lt_mul_of_pos_left ht_2C hnegC
+      _ = 1 / 2 := by field_simp
+  have h_main_pos : 0 < 1 + C * t ^ (p + 1) := by
+    have : C * t ^ (p + 1) = -((-C) * t ^ (p + 1)) := by ring
+    rw [this]
+    linarith
+  have h_main_norm : ‖(1 : ℂ) - ↑C * ↑(-(t ^ (p + 1)))‖ = 1 + C * t ^ (p + 1) := by
+    rw [show (1 : ℂ) - ↑C * ↑(-(t ^ (p + 1))) = ↑(1 + C * t ^ (p + 1)) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg h_main_pos.le]
+  have h_upper : ‖R z * exp (-z)‖ ≤ 1 + C * t ^ (p + 1) + K * t ^ (p + 2) := by
+    have h1 := norm_add_le (((1 : ℂ) - ↑C * ↑(-(t ^ (p + 1)))))
+      (R z * exp (-z) - ((1 : ℂ) - ↑C * ↑(-(t ^ (p + 1)))))
+    rw [add_sub_cancel, h_main_norm] at h1
+    linarith
+  have h3 : C * t ^ (p + 1) + K * t ^ (p + 2) < 0 := by
+    have : C * t ^ (p + 1) + K * t ^ (p + 2) = t ^ (p + 1) * (C + K * t) := by ring
+    rw [this]
+    exact mul_neg_of_pos_of_neg (pow_pos ht0 _) (by have h1 := (lt_div_iff₀ (mul_pos two_pos hK)).mp ht_CK; linarith)
+  linarith
+
+/-- **Theorem 355B** (C > 0, odd angles): If the order-star amplitude has expansion
+    `φ(z) = 1 - C·z^{p+1} + O(|z|^{p+2})` near 0 with `C > 0`, then
+    `θ = (2k+1)π/(p+1)` is an up-arrow direction. -/
+theorem arrow_up_of_pos_errorConst_odd (R : ℂ → ℂ) (p : ℕ) (C K δ₀ : ℝ)
+    (hC : 0 < C) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2))
+    (k : ℕ) :
+    IsUpArrowDir R ((2 * ↑k + 1) * π / (↑p + 1)) := by
+  set θ := (2 * (↑k : ℝ) + 1) * π / (↑p + 1)
+  set ε := min δ₀ (C / (2 * K))
+  have hε : 0 < ε := lt_min hδ (div_pos hC (mul_pos two_pos hK))
+  refine ⟨ε, hε, fun t ht => ?_⟩
+  have ht0 : (0 : ℝ) < t := ht.1
+  have htε : t < ε := ht.2
+  set z := (↑t : ℂ) * exp (↑θ * I) with hz_def
+  have hz_norm : ‖z‖ = t := norm_ofReal_mul_exp_I t θ ht0.le
+  have hz_pow : z ^ (p + 1) = ↑(-(t ^ (p + 1))) := by
+    simpa [θ, hz_def] using pow_ray_odd_angle t p k
+  have hbd := hφ z (by rw [hz_norm]; exact lt_of_lt_of_le htε (min_le_left _ _))
+  rw [hz_pow, hz_norm] at hbd
+  have h_main_norm : ‖(1 : ℂ) - ↑C * ↑(-(t ^ (p + 1)))‖ = 1 + C * t ^ (p + 1) := by
+    rw [show (1 : ℂ) - ↑C * ↑(-(t ^ (p + 1))) = ↑(1 + C * t ^ (p + 1)) from by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg (by nlinarith [hC, pow_pos ht0 (p + 1)])]
+  have h_lower : 1 + C * t ^ (p + 1) - K * t ^ (p + 2) ≤ ‖R z * exp (-z)‖ := by
+    have h1 := norm_sub_norm_le ((1 : ℂ) - ↑C * ↑(-(t ^ (p + 1)))) (R z * exp (-z))
+    rw [h_main_norm, norm_sub_rev] at h1
+    linarith
+  have h1 : t < C / (2 * K) := lt_of_lt_of_le htε (min_le_right _ _)
+  have h3 : C * t ^ (p + 1) - K * t ^ (p + 2) > 0 := by
+    have : C * t ^ (p + 1) - K * t ^ (p + 2) = t ^ (p + 1) * (C - K * t) := by ring
+    rw [this]
+    exact mul_pos (pow_pos ht0 _) (by have h1' := (lt_div_iff₀ (mul_pos two_pos hK)).mp h1; linarith)
+  calc (1 : ℝ) < 1 + C * t ^ (p + 1) - K * t ^ (p + 2) := by linarith
+    _ ≤ ‖R z * exp (-z)‖ := h_lower
