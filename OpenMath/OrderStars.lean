@@ -487,14 +487,16 @@ theorem not_aStable_of_imagAxis_orderStarPlus (R : ℂ → ℂ) (y : ℝ)
 private theorem one_sub_ne_zero_of_nonpos_re (z : ℂ) (hz : z.re ≤ 0) :
     (1 : ℂ) - z ≠ 0 := by
   intro h
-  have hre : ((1 : ℂ) - z).re = 0 := by simpa [h]
+  have hre : ((1 : ℂ) - z).re = 0 := by
+    simpa using congrArg Complex.re h
   simp [Complex.sub_re] at hre
   linarith
 
 private theorem one_sub_half_mul_ne_zero_of_nonpos_re (z : ℂ) (hz : z.re ≤ 0) :
     (1 : ℂ) - z * (1 / 2 : ℂ) ≠ 0 := by
   intro h
-  have hre : ((1 : ℂ) - z * (1 / 2 : ℂ)).re = 0 := by simpa [h]
+  have hre : ((1 : ℂ) - z * (1 / 2 : ℂ)).re = 0 := by
+    simpa using congrArg Complex.re h
   simp [Complex.sub_re, Complex.mul_re] at hre
   norm_num at hre
   linarith
@@ -518,7 +520,9 @@ theorem trapezoidal_imagAxis_not_orderStarPlus (y : ℝ) :
   have hne : (1 : ℂ) - z * ↑(rkImplicitMidpoint.A 0 0) ≠ 0 := by
     simpa [rkImplicitMidpoint] using one_sub_half_mul_ne_zero_of_nonpos_re z hz
   have hstable := rkImplicitMidpoint_aStable z hz hne
-  simpa [trapezoidalR, ButcherTableau.stabilityFn1, rkImplicitMidpoint] using hstable
+  norm_num [trapezoidalR, ButcherTableau.stabilityFn1, rkImplicitMidpoint,
+    div_eq_mul_inv, sub_eq_add_neg] at hstable ⊢
+  exact hstable
 
 /-- **Theorem 355F** specialized to GL2 (Gauss–Legendre 2-stage): the imaginary axis does not
     meet `𝒜⁺`. -/
@@ -685,7 +689,9 @@ theorem arrow_down_of_neg_errorConst_odd (R : ℂ → ℂ) (p : ℕ) (C K δ₀ 
   have hε : 0 < ε := by
     apply lt_min hδ
     apply lt_min (div_pos (neg_pos.mpr hC) (mul_pos two_pos hK))
-    exact lt_min one_pos (by have : 0 < -2 * C := by linarith; exact div_pos one_pos this)
+    refine lt_min one_pos ?_
+    have : 0 < -2 * C := by linarith
+    exact div_pos one_pos this
   refine ⟨ε, hε, fun t ht => ?_⟩
   have ht0 : (0 : ℝ) < t := ht.1
   have htε : t < ε := ht.2
@@ -708,10 +714,11 @@ theorem arrow_down_of_neg_errorConst_odd (R : ℂ → ℂ) (p : ℕ) (C K δ₀ 
       _ = t := pow_one t
   have h_Ctp_lt : (-C) * t ^ (p + 1) < 1 / 2 := by
     have hnegC : 0 < -C := neg_pos.mpr hC
+    have hCne : C ≠ 0 := by linarith
     calc (-C) * t ^ (p + 1) ≤ (-C) * t := by
           exact mul_le_mul_of_nonneg_left h_tp_le_t hnegC.le
       _ < (-C) * (1 / (-2 * C)) := by exact mul_lt_mul_of_pos_left ht_2C hnegC
-      _ = 1 / 2 := by field_simp
+      _ = 1 / 2 := by field_simp [hCne]
   have h_main_pos : 0 < 1 + C * t ^ (p + 1) := by
     have : C * t ^ (p + 1) = -((-C) * t ^ (p + 1)) := by ring
     rw [this]
@@ -765,3 +772,69 @@ theorem arrow_up_of_pos_errorConst_odd (R : ℂ → ℂ) (p : ℕ) (C K δ₀ : 
     exact mul_pos (pow_pos ht0 _) (by have h1' := (lt_div_iff₀ (mul_pos two_pos hK)).mp h1; linarith)
   calc (1 : ℝ) < 1 + C * t ^ (p + 1) - K * t ^ (p + 2) := by linarith
     _ ≤ ‖R z * exp (-z)‖ := h_lower
+
+/-! ## Arrow Termination Bookkeeping
+
+The textbook proofs of Theorems 355C and 355D use global order-arrow trajectories.
+Those trajectories are not yet formalized in Mathlib, but the downstream use in
+Theorem 355E is purely arithmetic once the arrow counts are available. We record
+that finite bookkeeping here so later topology work can plug into it directly.
+-/
+
+/-- Finite count data attached to the order arrows of a rational approximation. -/
+structure OrderArrowCountData where
+  order : ℕ
+  numeratorDegree : ℕ
+  denominatorDegree : ℕ
+  downArrowsAtZeros : ℕ
+  upArrowsAtPoles : ℕ
+  downArrowsAtZeros_le_numeratorDegree : downArrowsAtZeros ≤ numeratorDegree
+  upArrowsAtPoles_le_denominatorDegree : upArrowsAtPoles ≤ denominatorDegree
+
+/-- The inequality asserted by Theorem 355D, isolated as a reusable arithmetic predicate. -/
+def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=
+  data.order ≤ data.downArrowsAtZeros + data.upArrowsAtPoles
+
+/-- **Theorem 355E** in bookkeeping form: once the arrow-count inequality from
+    Theorem 355D is known and `p = n + d`, the zero/pole counts are forced to
+    equal the Padé numerator/denominator degrees. -/
+theorem pade_exact_arrow_counts_of_countInequality (data : OrderArrowCountData)
+    (hp : data.order = data.numeratorDegree + data.denominatorDegree)
+    (hineq : SatisfiesArrowCountInequality data) :
+    data.downArrowsAtZeros = data.numeratorDegree ∧
+      data.upArrowsAtPoles = data.denominatorDegree := by
+  dsimp [SatisfiesArrowCountInequality] at hineq
+  have hleft :
+      data.numeratorDegree + data.denominatorDegree ≤
+        data.downArrowsAtZeros + data.upArrowsAtPoles := by
+    simpa [hp] using hineq
+  have hright :
+      data.downArrowsAtZeros + data.upArrowsAtPoles ≤
+        data.numeratorDegree + data.denominatorDegree := by
+    exact add_le_add data.downArrowsAtZeros_le_numeratorDegree
+      data.upArrowsAtPoles_le_denominatorDegree
+  have hsum :
+      data.downArrowsAtZeros + data.upArrowsAtPoles =
+        data.numeratorDegree + data.denominatorDegree :=
+    le_antisymm hright hleft
+  constructor
+  · have hge : data.numeratorDegree ≤ data.downArrowsAtZeros := by
+      by_contra hlt
+      have hlt' : data.downArrowsAtZeros < data.numeratorDegree := Nat.lt_of_not_ge hlt
+      have hsum_lt :
+          data.downArrowsAtZeros + data.upArrowsAtPoles <
+            data.numeratorDegree + data.denominatorDegree :=
+        add_lt_add_of_lt_of_le hlt' data.upArrowsAtPoles_le_denominatorDegree
+      rw [hsum] at hsum_lt
+      exact Nat.lt_irrefl _ hsum_lt
+    exact le_antisymm data.downArrowsAtZeros_le_numeratorDegree hge
+  · have hge : data.denominatorDegree ≤ data.upArrowsAtPoles := by
+      by_contra hlt
+      have hlt' : data.upArrowsAtPoles < data.denominatorDegree := Nat.lt_of_not_ge hlt
+      have hsum_lt :
+          data.downArrowsAtZeros + data.upArrowsAtPoles <
+            data.numeratorDegree + data.denominatorDegree :=
+        add_lt_add_of_le_of_lt data.downArrowsAtZeros_le_numeratorDegree hlt'
+      rw [hsum] at hsum_lt
+      exact Nat.lt_irrefl _ hsum_lt
+    exact le_antisymm data.upArrowsAtPoles_le_denominatorDegree hge
