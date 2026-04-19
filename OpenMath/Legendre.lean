@@ -185,7 +185,18 @@ theorem gaussLegendre_B_double (t : ButcherTableau s)
     (hGL : t.HasGaussLegendreNodes)
     (hB : t.SatisfiesB s) :
     t.SatisfiesB (2 * s) := by
-  sorry
+  unfold SatisfiesB at hB ⊢
+  intro k hk1 hk2
+  by_cases hks : k ≤ s
+  · exact hB k hk1 hks
+  · have hsk : s < k := by omega
+    have hs_pos : 0 < s := by omega
+    obtain ⟨j, hjlt, hk_eq⟩ : ∃ j, j < s ∧ k = s + (j + 1) := by
+      refine ⟨k - s - 1, by omega, by omega⟩
+    rw [hk_eq]
+    -- The remaining range `k = s + (j + 1)` with `j < s` is the genuine
+    -- Gaussian quadrature step: use the orthogonality defect subtraction.
+    sorry
 
 /-- **Corollary 342D (backward direction)**: If the nodes are zeros of `P_s^*`,
 `B(s)` holds, and `C(s)` holds, then all the simplifying assumptions hold:
