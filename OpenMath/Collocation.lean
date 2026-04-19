@@ -1,4 +1,5 @@
 import OpenMath.RungeKutta
+import OpenMath.OrderConditions
 import Mathlib.LinearAlgebra.Vandermonde
 
 /-!
@@ -1475,6 +1476,199 @@ theorem HasOrderGe6_of_B6_C3_D2 (t : ButcherTableau s) (hB : t.SatisfiesB 6)
       intro i; rw [Finset.mul_sum]
     conv_lhs => arg 2; ext i; rw [step4 i]
     rw [← Finset.mul_sum, h6p_val]; ring
+
+/-! ## Tree-Based Order ↔ Simplifying Assumptions (Theorem 342C, equations j/k/l)
+
+The connection between tree-based order G(p) and the simplifying assumptions B, C, D, E.
+- 342j: G(p) ⇒ B(p) — tree-based order implies B
+- 342k: G(2n) ⇒ E(n,n) — tree-based order implies E
+- 342l: B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n) — simplifying assumptions imply tree-based order
+
+Reference: Iserles, Theorem 342C. -/
+
+/-- The bushy tree of order `k`: a root with `k-1` leaf children.
+For k ≤ 1, returns `.leaf` (order 1). For k ≥ 2, returns
+`.node (List.replicate (k-1) .leaf)` which has order k.
+
+This is the tree whose tree condition corresponds to B(k). -/
+private def bushyTree : ℕ → BTree
+  | 0 => .leaf
+  | 1 => .leaf
+  | (n + 2) => .node (List.replicate (n + 1) .leaf)
+
+private theorem foldr_order_replicate_leaf (n : ℕ) :
+    List.foldr (fun (t : BTree) (acc : ℕ) => t.order + acc) 0 (List.replicate n .leaf) = n := by
+  induction n with
+  | zero => simp
+  | succ n ih => simp [List.replicate, BTree.order_leaf, ih]; omega
+
+private theorem bushyTree_order (k : ℕ) (hk : 1 ≤ k) :
+    (bushyTree k).order = k := by
+  match k, hk with
+  | 1, _ => simp [bushyTree, BTree.order_leaf]
+  | k + 2, _ => simp [bushyTree, BTree.order_node, foldr_order_replicate_leaf]; omega
+
+private theorem foldr_density_replicate_leaf (n : ℕ) :
+    List.foldr (fun (t : BTree) (acc : ℕ) => t.density * acc) 1 (List.replicate n .leaf) = 1 := by
+  induction n with
+  | zero => simp
+  | succ n ih => simp [List.replicate, BTree.density_leaf, ih]
+
+private theorem bushyTree_density (k : ℕ) (hk : 1 ≤ k) :
+    (bushyTree k).density = k := by
+  match k, hk with
+  | 1, _ => simp [bushyTree, BTree.density_leaf]
+  | k + 2, _ =>
+    simp [bushyTree, BTree.density_node, BTree.order_node,
+          foldr_order_replicate_leaf, foldr_density_replicate_leaf]; omega
+
+private theorem foldr_ew_replicate_leaf (tab : ButcherTableau s) (n : ℕ) (i : Fin s) :
+    List.foldr (fun (t : BTree) (acc : ℝ) =>
+      acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1
+      (List.replicate n .leaf) = (∑ k : Fin s, tab.A i k) ^ n := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+    simp [List.replicate, elementaryWeight_leaf, ih]
+    ring
+
+private theorem bushyTree_ew (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent)
+    (k : ℕ) (hk : 2 ≤ k) (i : Fin s) :
+    tab.elementaryWeight (bushyTree k) i = tab.c i ^ (k - 1) := by
+  match k, hk with
+  | k + 2, _ =>
+    simp only [bushyTree, elementaryWeight]
+    rw [foldr_ew_replicate_leaf]
+    have : ∑ j : Fin s, tab.A i j = tab.c i := (hrc i).symm
+    rw [this, show k + 2 - 1 = k + 1 from by omega]
+
+private theorem satisfiesTreeCondition_bushyTree (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (k : ℕ) (hk : 1 ≤ k) :
+    tab.satisfiesTreeCondition (bushyTree k) ↔
+    ∑ i : Fin s, tab.b i * tab.c i ^ (k - 1) = 1 / (k : ℝ) := by
+  simp only [satisfiesTreeCondition, bushyTree_density k hk]
+  have hew : ∀ i : Fin s, tab.elementaryWeight (bushyTree k) i = tab.c i ^ (k - 1) := by
+    intro i
+    match k, hk with
+    | 1, _ => simp [bushyTree, elementaryWeight_leaf]
+    | k + 2, _ => exact bushyTree_ew tab hrc _ (by omega) i
+  simp_rw [hew]
+
+/-- **(342j)** `G(p) ⇒ B(p)`: tree-based order p implies B(p).
+Reference: Iserles, Theorem 342C, equation (342j). -/
+theorem SatisfiesB_of_hasTreeOrder (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (p : ℕ)
+    (hG : tab.hasTreeOrder p) : tab.SatisfiesB p := by
+  intro k hk1 hkp
+  have hord : (bushyTree k).order = k := bushyTree_order k hk1
+  have hle : (bushyTree k).order ≤ p := by omega
+  exact (satisfiesTreeCondition_bushyTree tab hrc k hk1).mp (hG (bushyTree k) hle)
+
+/-! ### 342k: G(2n) ⇒ E(n,n) -/
+
+/-- The branched tree for the E(k,l) condition: a root with k-1 leaf
+children and one bushy child of order l. Has order k+l. -/
+private def branchedTree (k l : ℕ) : BTree :=
+  .node (List.replicate (k - 1) .leaf ++ [bushyTree l])
+
+private theorem foldr_order_replicate_leaf_init (n init : ℕ) :
+    List.foldr (fun (t : BTree) (acc : ℕ) => t.order + acc) init
+      (List.replicate n .leaf) = n + init := by
+  induction n with
+  | zero => simp
+  | succ n ih => simp [List.replicate, BTree.order_leaf, ih]; omega
+
+private theorem branchedTree_order (k l : ℕ) (hk : 1 ≤ k) (hl : 1 ≤ l) :
+    (branchedTree k l).order = k + l := by
+  simp only [branchedTree, BTree.order_node, List.foldr_append, List.foldr_cons, List.foldr_nil,
+             bushyTree_order l hl, foldr_order_replicate_leaf_init]
+  omega
+
+private theorem foldr_density_replicate_leaf_init (n init : ℕ) :
+    List.foldr (fun (t : BTree) (acc : ℕ) => t.density * acc) init
+      (List.replicate n .leaf) = init := by
+  induction n with
+  | zero => simp
+  | succ n ih => simp [List.replicate, BTree.density_leaf, ih]
+
+private theorem branchedTree_density (k l : ℕ) (hk : 1 ≤ k) (hl : 1 ≤ l) :
+    (branchedTree k l).density = l * (k + l) := by
+  simp only [branchedTree, BTree.density_node, BTree.order_node,
+             List.foldr_append, List.foldr_cons, List.foldr_nil,
+             bushyTree_density l hl, bushyTree_order l hl,
+             foldr_order_replicate_leaf_init, foldr_density_replicate_leaf_init,
+             Nat.add_zero, Nat.mul_one]
+  have : 1 + (k - 1 + l) = k + l := by omega
+  rw [this]; ring
+
+private theorem foldr_ew_replicate_leaf_init (tab : ButcherTableau s)
+    (n : ℕ) (i : Fin s) (init : ℝ) :
+    List.foldr (fun (t : BTree) (acc : ℝ) =>
+      acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) init
+      (List.replicate n .leaf) = init * (∑ k : Fin s, tab.A i k) ^ n := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+    simp [List.replicate, elementaryWeight_leaf, ih]
+    ring
+
+private theorem branchedTree_ew (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent)
+    (k l : ℕ) (hk : 1 ≤ k) (hl : 1 ≤ l) (i : Fin s) :
+    tab.elementaryWeight (branchedTree k l) i =
+    tab.c i ^ (k - 1) * (∑ j : Fin s, tab.A i j * tab.c j ^ (l - 1)) := by
+  have hew : ∀ j : Fin s,
+      tab.elementaryWeight (bushyTree l) j = tab.c j ^ (l - 1) := by
+    intro j
+    match l, hl with
+    | 1, _ => simp [bushyTree, elementaryWeight_leaf]
+    | l + 2, _ => exact bushyTree_ew tab hrc _ (by omega) j
+  simp only [branchedTree, elementaryWeight]
+  rw [List.foldr_append]
+  simp only [List.foldr_cons, List.foldr_nil]
+  rw [foldr_ew_replicate_leaf_init]
+  simp only [(hrc i).symm]
+  simp_rw [hew]
+  ring
+
+private theorem satisfiesTreeCondition_branchedTree (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (k l : ℕ) (hk : 1 ≤ k) (hl : 1 ≤ l) :
+    tab.satisfiesTreeCondition (branchedTree k l) ↔
+    ∑ i : Fin s, ∑ j : Fin s,
+      tab.b i * tab.c i ^ (k - 1) * tab.A i j * tab.c j ^ (l - 1) =
+      1 / ((l : ℝ) * ((k + l : ℕ) : ℝ)) := by
+  simp only [satisfiesTreeCondition, branchedTree_density k l hk hl,
+             branchedTree_ew tab hrc k l hk hl]
+  have hsum : ∀ i : Fin s,
+      tab.b i * (tab.c i ^ (k - 1) * ∑ j, tab.A i j * tab.c j ^ (l - 1)) =
+      ∑ j, tab.b i * tab.c i ^ (k - 1) * tab.A i j * tab.c j ^ (l - 1) := by
+    intro i
+    rw [Finset.mul_sum, Finset.mul_sum]
+    refine Finset.sum_congr rfl fun j _ => ?_
+    ring
+  simp_rw [hsum]
+  push_cast [Nat.cast_mul]
+  exact Iff.rfl
+
+/-- **(342k)** `G(2n) ⇒ E(n,n)`: tree-based order 2n implies E(n,n).
+Reference: Iserles, Theorem 342C, equation (342k). -/
+theorem SatisfiesE_of_hasTreeOrder (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ)
+    (hG : tab.hasTreeOrder (2 * n)) : tab.SatisfiesE n n := by
+  intro k l hk1 hk2 hl1 hl2
+  have hord : (branchedTree k l).order = k + l := branchedTree_order k l hk1 hl1
+  have hle : (branchedTree k l).order ≤ 2 * n := by omega
+  exact (satisfiesTreeCondition_branchedTree tab hrc k l hk1 hl1).mp (hG (branchedTree k l) hle)
+
+/-! ### 342l: B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n) -/
+
+/-- **(342l)** `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)`: the simplifying assumptions
+together imply all tree-based order conditions up to order 2n.
+Reference: Iserles, Theorem 342C, equation (342l). -/
+theorem hasTreeOrder_of_B_C_D (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ)
+    (hB : tab.SatisfiesB (2 * n)) (hC : tab.SatisfiesC n) (hD : tab.SatisfiesD n) :
+    tab.hasTreeOrder (2 * n) := by
+  sorry
 
 /-! ## Verification for Standard Methods -/
 
