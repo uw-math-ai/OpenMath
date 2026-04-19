@@ -146,9 +146,14 @@
 
 ## Current Target
 
-**Theorems 355D/355E/355G in `OpenMath/OrderStars.lean`: complete the order-star arrow counting pipeline and the Ehle barrier.**
+**Gaussian quadrature infrastructure in `OpenMath/Legendre.lean`: finish the shifted Legendre / Gauss-Legendre pipeline from Lemma 342A to Corollary 342D.**
 
 Next targets:
-1. **Theorem 355D** — arrow-count inequality for rational approximations to exp (sorry: requires global trajectory topology)
-2. **Theorem 355E** — Padé exact arrow counts (provable from 355D + existing bookkeeping)
-3. **Theorem 355G** — Ehle barrier: A-stable Padé ⟹ n ≤ d ≤ n + 2 (sorry: requires 355E + A-stability pole arrangement)
+1. **`gaussLegendre_B_double`** — GL nodes + `B(s)` imply `B(2s)` (needs orthogonality infrastructure)
+2. **`gaussLegendreNodes_of_B_double`** — `B(2s)` forces the nodes to be zeros of `P_s^*`
+3. **Gauss-Legendre orthogonality infrastructure** — the missing bridge for both remaining Gaussian quadrature theorems
+
+## Sorry locations
+
+- `OpenMath/Legendre.lean:184` — `gaussLegendre_B_double`
+- `OpenMath/Legendre.lean:213` — `gaussLegendreNodes_of_B_double`
