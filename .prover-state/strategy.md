@@ -1,164 +1,163 @@
-# Strategy — Cycle 119
+# Strategy — Cycle 124
 
-## Status
-- **0 sorry's project-wide** (maintained since cycle 116)
-- Aristotle results from cycle 118 (Forward/Backward Euler arrows) are already incorporated — the manual proofs done in cycle 118 match the returned results. No incorporation needed.
-- Order arrow infrastructure (def:355A) and 5 concrete instances are complete.
-- Plan.md lists order star continuation and two in-progress items: Padé recurrences (352D), rooted trees (301A).
+## Situation
+- **1 sorry** in the entire project: `h_A_term` inside `reflect_satisfiesE` at `OpenMath/ReflectedMethods.lean:391`.
+- Aristotle project `9cc99ed3` COMPLETED with a full ℚ-based proof (extracted to `.prover-state/aristotle_results/9cc99ed3-e6ac-4582-8edb-fe07c5a30a01/`).
+- Five focused Aristotle jobs submitted at end of cycle 123 (a63c1035, b62cceee, 5870e46f, fd3966f1, 083e58a2) — status unknown.
 
-## Priority 1: Theorem 355F — A-stability criterion via order stars (~40 min)
+## Priority 1: Close `h_A_term` — the LAST sorry in the project
 
-### Why this target
-- This is the next theorem in the 355 chain after the infrastructure completed in cycle 118
-- The proof is SHORT and self-contained (see textbook proof below)
-- It connects order star geometry to the existing A-stability framework
-- It is the key necessary condition that feeds into the Ehle barrier (355G)
+### Step 0: Check the five new Aristotle jobs
 
-### What the theorem says (textbook)
-A Runge-Kutta method is A-stable **only if**:
-1. All poles of R(z) lie in the open right half-plane, AND
-2. No up arrow of the order web intersects or is tangential to the imaginary axis.
+Check status of jobs a63c1035, b62cceee, 5870e46f, fd3966f1, 083e58a2 using `mcp__aristotle__get_status`. If any completed, extract and incorporate. These target `h_A_term` directly over ℝ in the actual repo file — if any succeeded, they should be drop-in.
 
-### Proof approach
-The textbook proof is elementary:
-- Condition (1) is obvious (if R has a pole at z₀ with Re(z₀) ≤ 0, then |R(z)| → ∞ near z₀).
-- Condition (2): if an up arrow intersects the imaginary axis at some point iy, then |R(iy)·exp(-iy)| > 1. Since |exp(-iy)| = 1, this gives |R(iy)| > 1, contradicting A-stability.
+Sleep 30 minutes ONLY if all five are still IN_PROGRESS AND below 50% progress. If they are QUEUED or clearly not going to complete soon, skip waiting and go to Step 1.
 
-### Lean formalization plan
+### Step 1: Port the Aristotle ℚ proof to ℝ
 
-**Statement:**
-```lean
-/-- **Theorem 355F**: A-stability requires no up arrows touch the imaginary axis.
-    If R is A-stable (‖R(z)‖ ≤ 1 for Re(z) ≤ 0), then for any pure imaginary z = iy,
-    z ∉ orderStarPlus R (equivalently, z ∈ orderStarMinus R ∪ orderStarBdry R). -/
-theorem aStable_imagAxis_not_orderStarPlus (R : ℂ → ℂ)
-    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
-    (y : ℝ) : (↑y * I) ∉ orderStarPlus R
+The completed Aristotle proof at `.prover-state/aristotle_results/9cc99ed3-e6ac-4582-8edb-fe07c5a30a01/05_reflect_satisfiesE_aristotle/ReflectSatisfiesE.lean` contains three key helper lemmas that close the proof. Port them to ℝ in `OpenMath/ReflectedMethods.lean` as private helpers.
+
+#### Helper 1: `gen_alt_binom_sum` (the generalized identity)
+
+```
+∑_{m=0}^n C(n,m)(-1)^m / (m+a) = n! * (a-1)! / (n+a)!    for a ≥ 1
 ```
 
-**Proof sketch:**
-1. Unfold `orderStarPlus`: need to show ¬(1 < ‖R(iy) * exp(-iy)‖)
-2. Use `orderStar_norm_eq` or `Complex.norm_exp_ofReal_mul_I` to get `‖exp(-iy)‖ = 1`
-3. So `‖R(iy) * exp(-iy)‖ = ‖R(iy)‖ · 1 = ‖R(iy)‖`
-4. By A-stability hypothesis (Re(iy) = 0 ≤ 0): `‖R(iy)‖ ≤ 1`
-5. `¬(1 < 1)`
-
-This should be a 5-line proof using existing infrastructure.
-
-**Also state the pole condition as a separate lemma:**
-```lean
-/-- A-stable methods have no poles in the closed left half-plane. -/
-theorem aStable_no_pole_left_half (R : ℂ → ℂ) (hR : Continuous R)
-    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
-    (z : ℂ) (hz : z.re ≤ 0) : R z ≠ 0 → True  -- not needed as a separate statement
-```
-
-Actually, the pole condition is automatically captured since A-stability bounds ‖R‖ ≤ 1 on Re ≤ 0. For rational R, this means no poles in the closed left half-plane. State it simply:
+The Aristotle proof uses induction on n. Port to ℝ:
 
 ```lean
-/-- A-stable stability functions are bounded on the closed left half-plane,
-    hence have no poles there (for meromorphic R). -/
-theorem aStable_bounded_left_half (R : ℂ → ℂ)
-    (hA : ∀ z : ℂ, z.re ≤ 0 → ‖R z‖ ≤ 1)
-    (z : ℂ) (hz : z.re ≤ 0) : ‖R z‖ ≤ 1 := hA z hz
+private lemma gen_alt_binom_sum (n a : ℕ) (ha : 0 < a) :
+    ∑ m ∈ Finset.range (n + 1),
+      (n.choose m : ℝ) * (-1) ^ m / ((m : ℝ) + (a : ℝ)) =
+      ↑(n.factorial) * ↑((a - 1).factorial) / ↑((n + a).factorial) := by
 ```
 
-### After 355F: Prove Theorem 355D (counting inequality)
+**Base case** (n = 0): the sum is `1/a`, and the RHS is `1 * (a-1)! / a! = 1/a`. Use `cases a` + `norm_num` + `field_simp`.
 
-**Theorem 355D**: For a rational approximation to exp of order p with numerator degree n and denominator degree d, the number of down arrows terminating at zeros (n̂) and up arrows terminating at poles (d̂) satisfy n̂ + d̂ ≥ p.
+**Inductive step**: Split using Pascal's rule. The Aristotle proof's inductive step uses `simp_all +decide` and `grind`. Replace `grind` with `field_simp; ring` or explicit factorial algebra. The key recursion is:
+```
+f(n+1, a) = f(n, a) + f(n, a+1) * (-1) * ...
+```
+Actually the Aristotle proof line 40-47 is complex. A cleaner approach over ℝ: prove by induction on n, using the identity:
+```
+C(n+1,m) = C(n,m) + C(n,m-1)
+```
+and splitting the sum at the Pascal boundary.
 
-This requires formalizing the concept of "arrows terminating at poles/zeros" (355C), which is more involved. **Skip 355D unless 355F is done quickly.**
+**If `gen_alt_binom_sum` is too hard to port in 30 minutes**: skip it and try the direct approach in Step 2.
 
-### Sorry-first approach
-1. Write the theorem statement for 355F, verify it compiles
-2. Prove it immediately (should be short)
-3. Add corollary: for concrete methods, compute which imaginary-axis points are NOT in 𝒜⁺
+#### Helper 2: `double_binom_sum` (the double identity)
 
-## Priority 2: Theorem 355B — Arrow tangency directions (general statement) (~50 min)
+```
+∑_{α<r} ∑_{β<q} C(r-1,α)(-1)^α C(q-1,β)(-1)^β / ((β+1)(α+β+2))
+  = 1/(r*(q+r))
+```
 
-### Why this target
-- Cycle 118 proved 5 concrete arrow instances but NOT the general theorem
-- The general statement with `Asymptotics` would be the cleanest formalization
-- However, the general proof requires working with `O(z^{p+2})` which needs `Asymptotics.IsLittleO` / `IsBigO`
+The Aristotle proof first evaluates the inner sum over α using `gen_alt_binom_sum`, then simplifies the remaining single sum.
 
-### Approach: State with explicit error hypothesis, prove for concrete Padé pairs
+#### Helper 3: `cross_term_expand` (connecting h_A_term to the double sum)
 
-**Statement (with explicit hypothesis):**
+This expands both `(1-c)` powers, swaps sums, and applies `hE`:
 ```lean
-/-- **Theorem 355B**: If R(z) = exp(z) - C·z^{p+1} + O(z^{p+2}) with C ≠ 0,
-    then up arrows (C < 0) or down arrows (C > 0) in directions 2kπ/(p+1). -/
-theorem arrow_tangency_directions (R : ℂ → ℂ) (p : ℕ) (C : ℝ) (hC : C ≠ 0)
-    (hR : ∀ᶠ z in nhds 0, ‖R z - exp z + ↑C * z ^ (p+1)‖ ≤ ‖z‖ ^ (p+2) * someConstant)
-    (k : Fin (p + 1)) :
-    (C < 0 → IsUpArrowDir R (2 * ↑k * π / (↑p + 1))) ∧
-    (C > 0 → IsDownArrowDir R (2 * ↑k * π / (↑p + 1)))
+∑ i j, b_i (1-c_i)^{k-1} A_{ij} (1-c_j)^{l-1}
+  = ∑_α ∑_β C(k-1,α)(-1)^α C(l-1,β)(-1)^β / ((β+1)(α+β+2))
 ```
 
-**Alternative: avoid Asymptotics entirely.** Instead, prove a version that takes a concrete polynomial remainder bound:
+This mirrors the existing `reflect_satisfiesC` proof pattern already in the file.
 
+#### Assembly
+
+With all three helpers:
 ```lean
-/-- For the (n,d)-Padé approximant with error constant C_{n+d+1}, the arrow
-    directions at the origin are determined by the sign of C. -/
-theorem pade_arrow_tangency (n d : ℕ) ...
+have h_A_term := (cross_term_expand t hE l hl hlζ k hk hκη).trans
+  (double_binom_sum l k hl hk)
+-- double_binom_sum gives 1/(k*(l+k))
+-- convert to 1/(k*l) - 1/(l*(k+l)) by algebra
 ```
 
-### Concrete instances to prove
-Build on the cycle 118 infrastructure:
-- **Gauss-Legendre 2** (R = padeR 2 2, p=4, C=-1/720 < 0): up arrows at θ = 0, 2π/5, 4π/5, 6π/5, 8π/5
-- **Radau IIA 2-stage** (R = padeR 1 2, p=3, C > 0): down arrows at θ = 0, π/2, π, 3π/2
+### Step 2: Alternative approach if porting stalls
 
-These verify the theory on non-trivial examples.
+If `gen_alt_binom_sum` is too messy over ℝ, try proving `double_binom_sum` directly by **double induction on k and l**, using `alternating_binom_div_succ` (already proved in the file) as the base case tool.
+
+**Base case l=1**: Inner sum has only b=0 term. Reduces to:
+```
+∑_{a=0}^{k-1} C(k-1,a)(-1)^a / ((1)(a+2)) = 1/(k*(1+k))
+```
+Partial fraction: `1/(a+2) = 1 - 1/(a+1) + ...`. Actually simpler: use `gen_alt_binom_sum` at `a=2`:
+```
+∑ C(k-1,a)(-1)^a/(a+2) = (k-1)! * 1! / (k+1)! = 1/(k(k+1))
+```
+Or without `gen_alt_binom_sum`: partial fraction `1/((a+1)(a+2)) = 1/(a+1) - 1/(a+2)`, then two applications of `alternating_binom_div_succ` at different shifts.
+
+Wait — the base l=1 sum is `∑_a C(k-1,a)(-1)^a / (1*(a+2))` = `∑_a C(k-1,a)(-1)^a/(a+2)`. This is NOT `alternating_binom_div_succ` (which has `1/(a+1)`). So we need either `gen_alt_binom_sum` at `a=2`, or a telescoping argument.
+
+**Telescoping for the base case**: Write `1/(a+2) = 1/(a+1) - 1/((a+1)(a+2))` — no, that's wrong. Instead use:
+```
+1/(a+2) = (1/(a+1)) * (a+1)/(a+2)
+```
+This doesn't help either. The clean path is `gen_alt_binom_sum`.
+
+### Step 3: The nuclear option — prove `gen_alt_binom_sum` via the Beta function integral
+
+Over ℝ, the identity `∑ C(n,m)(-1)^m/(m+a) = B(n+1, a) = n!(a-1)!/(n+a)!` follows from the integral `∫₀¹ t^{a-1}(1-t)^n dt`. Mathlib has `intervalIntegral.integral_pow_mul_one_sub_pow` or similar Beta function infrastructure.
+
+The Aristotle proof actually uses this approach for `alternating_binom_sum` (lines 21-26) — it computes `∫₀¹ (1-x)^n dx`. The generalization uses `∫₀¹ x^{a-1}(1-x)^n dx = B(a, n+1)`.
+
+**Look for Mathlib's Beta function**: search for `betaIntegral`, `integral_pow_mul_one_sub_pow`, `Euler.betaIntegral`. If available, the proof is:
+1. `∫₀¹ x^{a-1}(1-x)^n dx = B(a, n+1) = Γ(a)Γ(n+1)/(Γ(n+a+1)) = (a-1)!n!/(n+a)!`
+2. Expand `(1-x)^n = ∑ C(n,m)(-1)^m x^m`
+3. Integrate termwise: `∑ C(n,m)(-1)^m ∫₀¹ x^{m+a-1} dx = ∑ C(n,m)(-1)^m/(m+a)`
+4. Equate.
 
 ### What NOT to try
-- Do NOT attempt the full winding-number argument from 355C-355E
-- Do NOT try to formalize "arrows terminate at poles" — needs path topology
-- Do NOT use `Asymptotics.IsBigO` unless you're confident about the filter setup
 
-## Priority 3: Update lean_status.json metadata (~10 min)
+1. **Do NOT try `ring`/`field_simp`/`norm_num` on the double sum** — it has symbolic parameters k, l.
+2. **Do NOT try `grind`** — it exists in Lean 4 but may not close factorial identities over ℝ.
+3. **Do NOT try to prove the double sum by direct algebraic manipulation** without helper lemmas — cycles 123 showed this doesn't work.
+4. **Do NOT abandon the E proof for other theorems** — this is the last sorry in the entire project.
+5. **Do NOT re-derive B/C/D proofs** — they are already done.
+6. **Do NOT use `maxHeartbeats` increases** — decompose instead.
+7. **Do NOT use integral representations unless Mathlib has explicit Beta integral infrastructure** — check first with `lean_loogle` or `lean_leansearch`.
 
-Many entities formalized in cycles 116-118 have stale metadata. Update:
-- `def:355A` → done (OrderStars.lean: orderWeb, IsUpArrowDir, IsDownArrowDir)
-- `thm:355B` → in_progress (concrete instances done, general statement TODO)
-- `def:356A` → done (ANStability.lean: IsDJReducible)
-- `def:357A` → done (BNStability.lean or ANStability.lean: depends on what 357A is)
-- Verify thm:301A status
+### Recommended execution order
 
-## Priority 4: Theorem 357D — BN-stability implies AN-stability for irreducible methods (~30 min)
+1. Check 5 Aristotle jobs (5 min)
+2. If any completed with working proof → incorporate and done
+3. Otherwise: search Mathlib for Beta integral / `betaIntegral` (5 min)
+4. If Beta integral exists → prove `gen_alt_binom_sum` via integral (20 min)
+5. Prove `double_binom_sum` using `gen_alt_binom_sum` (15 min)
+6. Prove `cross_term_expand` (wire up the expansion + hE application) (15 min)
+7. Close `h_A_term` by combining (5 min)
+8. Verify compilation (5 min)
+9. Write task result, commit (5 min)
 
-Only if Priorities 1-2 are complete.
+Total: ~75 min. If step 4 stalls at 30 min, submit the `gen_alt_binom_sum` lemma to Aristotle and work on `cross_term_expand` while waiting.
 
-### What the theorem says
-If an irreducible non-confluent Runge-Kutta method is BN-stable, then it is AN-stable.
-
-### Approach
-- Read the textbook proof from `extraction/formalization_data/entities/thm_357D.json`
-- Check if the existing `IsDJReducible`, `IsANStable`, `IsBNStable` definitions suffice
-- The proof likely uses the result that algebraic stability + DJ-irreducibility → positive weights (cor:356D, already proved)
-- Sorry-first, submit to Aristotle
-
-## What NOT to Try
-
-1. **Do NOT attempt the full Ehle barrier (355G)** — requires arrow path topology (355C-355E) which needs winding numbers not in Mathlib.
-2. **Do NOT work on Padé recurrences (352D)** — blocked on factorial-sum algebra, dead end per issue file.
-3. **Do NOT increase maxHeartbeats** above 200000.
-4. **Do NOT attempt 355C (arrow termination)** — requires asymptotic analysis at infinity.
-5. **Do NOT spend >30 min on any single theorem.** If stuck, submit to Aristotle and move on.
-6. **Do NOT re-attempt Aristotle results from cycle 118** — they are already incorporated.
-7. **Do NOT attempt rooted tree upgrade (301A child representation)** — low priority, the current List-based representation works.
-
-## Build Commands
+## Verification
 
 ```bash
-export PATH="/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH"
-lake env lean OpenMath/OrderStars.lean
+PATH=/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH lake env lean OpenMath/ReflectedMethods.lean
 ```
 
-If `lake` hangs, verify PATH starts with `/tmp/lake-bin:/tmp/lean4-toolchain/bin`.
+## Commit message (if sorry closed)
+
+```
+cycle 124: close reflect_satisfiesE — 0 sorry project-wide
+```
+
+## Priority 2: If E is closed, pick next target
+
+If the project reaches 0 sorry, the plan.md next targets are:
+1. **Order star / Ehle barrier** (Theorem 355A+) — assess `OpenMath/OrderStars.lean`
+2. **Rooted tree infrastructure** (Theorem 301A) — upgrade child representation
+3. **Theorem 342C remaining implications** (342j, 342k, 342l) — need rooted tree infrastructure
+
+Pick whichever is most tractable. The order star theory is the plan.md top priority.
 
 ## End-of-Cycle Checklist
 
-- [ ] All modified `.lean` files compile with 0 sorry's
-- [ ] Write `.prover-state/task_results/cycle_119.md`
-- [ ] Update `.prover-state/cycle` to `119`
+- [ ] All modified `.lean` files compile
+- [ ] Write `.prover-state/task_results/cycle_124.md`
+- [ ] Update `.prover-state/cycle` to `124`
 - [ ] Update `.prover-state/history.jsonl` with cycle summary
 - [ ] Commit and push all changes

@@ -322,6 +322,137 @@ theorem reflect_satisfiesD {t : ButcherTableau s} {η : ℕ}
   rw [Finset.sum_congr rfl h_hD, ← Finset.mul_sum, binom_one_sub_pow_div k hk (t.c j),
     mul_div_assoc]
 
+/-! ## ℚ combinatorial identities for cross-term evaluation -/
+
+/-- Generalized alternating binomial sum over ℚ:
+  `∑_{m=0}^n C(n,m)(-1)^m/(m+a) = n!*(a-1)!/(n+a)!` for `a ≥ 1`. -/
+private lemma gen_alt_binom_sum_Q (n a : ℕ) (ha : 0 < a) :
+    ∑ m ∈ Finset.range (n + 1),
+      (n.choose m : ℚ) * (-1) ^ m / ((m : ℚ) + (a : ℚ)) =
+      ↑(n.factorial) * ↑((a - 1).factorial) / ↑((n + a).factorial) := by
+  induction' n with n ih generalizing a
+  · cases a <;> norm_num [Nat.factorial] at *
+    rw [inv_eq_one_div, div_eq_div_iff] <;> ring <;> positivity
+  · have h_split : ∑ m ∈ Finset.range (n + 2),
+        Nat.choose (n + 1) m * (-1 : ℚ) ^ m / (m + a : ℚ) =
+      ∑ m ∈ Finset.range (n + 1), Nat.choose n m * (-1 : ℚ) ^ m / (m + a : ℚ) +
+      ∑ m ∈ Finset.range (n + 1),
+        Nat.choose n m * (-1 : ℚ) ^ (m + 1) / (m + a + 1 : ℚ) := by
+      rw [Finset.sum_range_succ']
+      rw [Finset.sum_range_succ]
+      norm_num [Nat.choose_succ_succ, add_comm, add_left_comm, add_assoc]
+      rw [Finset.sum_range_succ']
+      norm_num [Finset.sum_range_succ, pow_succ, div_eq_mul_inv]
+      ring
+      simpa only [Finset.sum_add_distrib] using by ring
+    have := ih (a + 1) (Nat.succ_pos _)
+    simp_all +decide [Finset.sum_add_distrib, add_assoc, pow_succ', div_eq_mul_inv]
+    rcases a <;> simp_all +decide [Nat.factorial, add_comm, add_left_comm, add_assoc]
+    grind
+
+/-- Partial alternating sum of binomial coefficients over ℚ:
+  `∑_{j=0}^k C(n,j)(-1)^j = (-1)^k * C(n-1,k)` for `n ≥ 1`, `k < n`. -/
+private lemma partial_alt_binom_sum_Q (n : ℕ) (k : ℕ) (hn : 0 < n) (hk : k < n) :
+    ∑ j ∈ Finset.range (k + 1),
+      (n.choose j : ℚ) * (-1 : ℚ) ^ j = (-1 : ℚ) ^ k * ((n - 1).choose k : ℚ) := by
+  induction' n with n ih generalizing k
+  · contradiction
+  · induction' k with k ihk <;>
+      simp_all +decide [Finset.sum_range_succ, pow_succ', Nat.choose_succ_succ]
+    linear_combination ihk hk.le
+
+/-- The double binomial sum identity over ℚ:
+  `∑_{α<r} ∑_{β<q} C(r-1,α)(-1)^α C(q-1,β)(-1)^β / ((β+1)(α+β+2)) = 1/(r(q+r))`. -/
+private lemma double_binom_sum_Q (q r : ℕ) (hq : 0 < q) (hr : 0 < r) :
+    ∑ α ∈ Finset.range r, ∑ β ∈ Finset.range q,
+      ((r - 1).choose α : ℚ) * (-1 : ℚ) ^ α *
+      (((q - 1).choose β : ℚ) * (-1 : ℚ) ^ β) /
+      (((β : ℚ) + 1) * ((α : ℚ) + (β : ℚ) + 2)) =
+    1 / ((r : ℚ) * ((q : ℚ) + (r : ℚ))) := by
+  have h_inner : ∀ β ∈ Finset.range q,
+      ∑ α ∈ Finset.range r, (Nat.choose (r - 1) α : ℚ) * (-1 : ℚ) ^ α /
+        ((α + β + 2) : ℚ) =
+      (Nat.factorial (r - 1) * Nat.factorial (β + 1)) / (Nat.factorial (r + β + 1)) := by
+    intro β hβ
+    have := gen_alt_binom_sum_Q (r - 1) (β + 2) (by linarith)
+    cases r <;> simp_all +decide [add_assoc, Nat.factorial]
+    norm_num [add_comm, add_left_comm, add_assoc, Nat.factorial]
+  have h_double_sum :
+      ∑ β ∈ Finset.range q, ∑ α ∈ Finset.range r,
+        (Nat.choose (r - 1) α : ℚ) * (-1 : ℚ) ^ α *
+        (Nat.choose (q - 1) β : ℚ) * (-1 : ℚ) ^ β /
+        ((β + 1) * (α + β + 2)) =
+      ∑ β ∈ Finset.range q,
+        (Nat.choose (q - 1) β : ℚ) * (-1 : ℚ) ^ β / (β + 1) *
+        (Nat.factorial (r - 1) * Nat.factorial (β + 1)) /
+        (Nat.factorial (r + β + 1)) := by
+    refine Finset.sum_congr rfl fun β hβ => ?_
+    convert congr_arg (fun x : ℚ => (Nat.choose (q - 1) β : ℚ) * (-1) ^ β / (β + 1) * x)
+      (h_inner β hβ) using 1 <;> ring
+    rw [Finset.mul_sum, Finset.sum_mul]
+    refine Finset.sum_congr rfl fun x hx => ?_; ring
+    grind
+  have h_simplify :
+      ∑ β ∈ Finset.range q,
+        (Nat.choose (q - 1) β : ℚ) * (-1 : ℚ) ^ β / (β + 1) *
+        (Nat.factorial (r - 1) * Nat.factorial (β + 1)) /
+        (Nat.factorial (r + β + 1)) =
+      (Nat.factorial (q - 1) * Nat.factorial (r - 1)) / (Nat.factorial (q + r)) *
+      (-1 : ℚ) ^ (q - 1) *
+      ∑ j ∈ Finset.range q, (Nat.choose (q + r) j : ℚ) * (-1 : ℚ) ^ j := by
+    have h_simplify : ∀ β ∈ Finset.range q,
+        (Nat.choose (q - 1) β : ℚ) * (-1 : ℚ) ^ β / (β + 1) *
+        (Nat.factorial (r - 1) * Nat.factorial (β + 1)) /
+        (Nat.factorial (r + β + 1)) =
+      (Nat.factorial (q - 1) * Nat.factorial (r - 1)) / (Nat.factorial (q + r)) *
+      (-1 : ℚ) ^ (q - 1) *
+      (Nat.choose (q + r) (q - 1 - β) : ℚ) * (-1 : ℚ) ^ (q - 1 - β) := by
+      intro β hβ; rw [Nat.cast_choose, Nat.cast_choose]
+      · field_simp
+        rw [show q + r - (q - 1 - β) = r + β + 1 by
+          exact Nat.sub_eq_of_eq_add <| by
+            linarith [Nat.sub_add_cancel <| show β ≤ q - 1 from
+              Nat.le_sub_one_of_lt <| Finset.mem_range.mp hβ,
+              Nat.sub_add_cancel <| show 1 ≤ q from hq]]
+        norm_num [Nat.factorial_succ]; ring
+        rw [show (-1 : ℚ) ^ (q - 1) = (-1 : ℚ) ^ (q - 1 - β) * (-1 : ℚ) ^ β by
+          rw [← pow_add, Nat.sub_add_cancel (show β ≤ q - 1 from
+            Nat.le_sub_one_of_lt (Finset.mem_range.mp hβ))]]
+        ring
+        norm_num [pow_mul']
+      · omega
+      · exact Nat.le_pred_of_lt <| Finset.mem_range.mp hβ
+    rw [Finset.mul_sum, Finset.sum_congr rfl h_simplify]
+    rw [← Finset.sum_range_reflect]
+    exact Finset.sum_congr rfl fun x hx => by
+      rw [tsub_tsub_cancel_of_le
+        (Nat.le_sub_one_of_lt (Finset.mem_range.mp hx))]; ring
+  have h_partial_sum :
+      ∑ j ∈ Finset.range q, (Nat.choose (q + r) j : ℚ) * (-1 : ℚ) ^ j =
+      (-1 : ℚ) ^ (q - 1) * (Nat.choose (q + r - 1) (q - 1) : ℚ) := by
+    convert partial_alt_binom_sum_Q (q + r) (q - 1) (by linarith) (by omega) using 1
+    cases q <;> aesop
+  convert h_double_sum.trans (h_simplify.trans (congr_arg _ h_partial_sum)) using 1
+  · exact Finset.sum_comm.trans
+      (Finset.sum_congr rfl fun _ _ => Finset.sum_congr rfl fun _ _ => by ring)
+  · rw [Nat.cast_choose] <;> try omega
+    field_simp
+    rcases q with (_ | q) <;> rcases r with (_ | r) <;> norm_num [Nat.factorial] at *
+    norm_num [add_assoc, add_tsub_assoc_of_le]; ring
+    norm_num [Nat.add_comm 1, Nat.add_assoc, Nat.factorial_succ]; ring
+
+/-- Cast the ℚ double binomial sum identity to ℝ. -/
+private lemma double_binom_sum_real (q r : ℕ) (hq : 0 < q) (hr : 0 < r) :
+    ∑ α ∈ Finset.range r, ∑ β ∈ Finset.range q,
+      ((r - 1).choose α : ℝ) * (-1 : ℝ) ^ α *
+      (((q - 1).choose β : ℝ) * (-1 : ℝ) ^ β) /
+      (((β : ℝ) + 1) * ((α : ℝ) + (β : ℝ) + 2)) =
+    1 / ((r : ℝ) * ((q : ℝ) + (r : ℝ))) := by
+  have hQ := double_binom_sum_Q q r hq hr
+  have cast_eq := congr_arg (Rat.cast (K := ℝ)) hQ
+  push_cast at cast_eq
+  convert cast_eq using 2
+
 /-- The reflected tableau preserves `E` under `B ∧ E`.
 Textbook Theorem 343B, equation (343g). -/
 theorem reflect_satisfiesE {t : ButcherTableau s} {η ζ : ℕ}
@@ -388,7 +519,64 @@ theorem reflect_satisfiesE {t : ButcherTableau s} {η ζ : ℕ}
       ∑ i : Fin s, ∑ j : Fin s,
           t.b i * (1 - t.c i) ^ (k - 1) * t.A i j * (1 - t.c j) ^ (l - 1) =
         1 / ((k : ℝ) * (l : ℝ)) - 1 / ((l : ℝ) * ((k + l : ℕ) : ℝ)) := by
-    sorry
+    -- Suffices to show LHS = double binomial sum, then evaluate
+    suffices h_eq : ∑ i : Fin s, ∑ j : Fin s,
+        t.b i * (1 - t.c i) ^ (k - 1) * t.A i j * (1 - t.c j) ^ (l - 1) =
+      ∑ α ∈ Finset.range k, ∑ β ∈ Finset.range l,
+        ((k - 1).choose α : ℝ) * (-1 : ℝ) ^ α *
+        (((l - 1).choose β : ℝ) * (-1 : ℝ) ^ β) /
+        (((β : ℝ) + 1) * ((α : ℝ) + (β : ℝ) + 2)) by
+      rw [h_eq, double_binom_sum_real l k hl hk]
+      have hk_ne : (k : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+      have hl_ne : (l : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+      field_simp; push_cast; ring
+    -- Reduce to double binomial sum: expand, swap sums, apply hE
+    have h_inner : ∀ (a : ℕ), a < k → ∀ (b : ℕ), b < l →
+        ∑ i : Fin s, ∑ j : Fin s,
+          t.b i * t.c i ^ a * t.A i j * t.c j ^ b =
+        1 / (((b : ℝ) + 1) * ((a : ℝ) + (b : ℝ) + 2)) := by
+      intro a ha b hb
+      have h_E := hE (a + 1) (b + 1) (by omega) (by omega) (by omega) (by omega)
+      simp only [Nat.add_sub_cancel] at h_E
+      convert h_E using 2 <;> push_cast <;> ring
+    -- Phase 1: expand (1-c_i)^(k-1) and pull ∑_α outside
+    simp_rw [h_expand_i]
+    conv_lhs =>
+      arg 2; ext i; arg 2; ext j
+      rw [show t.b i * (∑ a ∈ Finset.range k,
+          ((k - 1).choose a : ℝ) * (-1) ^ a * t.c i ^ a) *
+          t.A i j * (1 - t.c j) ^ (l - 1) =
+        ∑ a ∈ Finset.range k, ((k - 1).choose a : ℝ) * (-1) ^ a *
+          (t.b i * t.c i ^ a * t.A i j * (1 - t.c j) ^ (l - 1)) from by
+        rw [Finset.mul_sum]; simp_rw [Finset.sum_mul]; exact Finset.sum_congr rfl (fun a _ => by ring)]
+    conv_lhs => arg 2; ext i; rw [Finset.sum_comm (s := Finset.univ) (t := Finset.range k)]
+    rw [Finset.sum_comm (s := Finset.univ) (t := Finset.range k)]
+    simp_rw [← Finset.mul_sum]
+    -- Phase 2: for each α, expand (1-c_j)^(l-1) and pull ∑_β outside
+    refine Finset.sum_congr rfl fun α hα => ?_
+    have hα' := Finset.mem_range.mp hα
+    -- Phase 2: expand (1-c_j)^(l-1) inside, swap sums, apply hE
+    -- Work on the inner sum (after the scalar C_α*(-1)^α)
+    simp_rw [h_expand_j]
+    conv_lhs =>
+      arg 2; arg 2; ext i; arg 2; ext j
+      rw [show t.b i * t.c i ^ α * t.A i j *
+          (∑ b ∈ Finset.range l,
+            ((l - 1).choose b : ℝ) * (-1) ^ b * t.c j ^ b) =
+        ∑ b ∈ Finset.range l, ((l - 1).choose b : ℝ) * (-1) ^ b *
+          (t.b i * t.c i ^ α * t.A i j * t.c j ^ b) from by
+        rw [Finset.mul_sum]; exact Finset.sum_congr rfl (fun b _ => by ring)]
+    -- Swap sums: pull ∑_β outside ∑_i and ∑_j
+    conv_lhs =>
+      arg 2; arg 2; ext i; rw [Finset.sum_comm (s := Finset.univ) (t := Finset.range l)]
+    conv_lhs => arg 2; rw [Finset.sum_comm (s := Finset.univ) (t := Finset.range l)]
+    simp_rw [← Finset.mul_sum]
+    -- Apply h_inner to evaluate ∑_i ∑_j
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl fun β hβ => ?_
+    have hβ' := Finset.mem_range.mp hβ
+    rw [h_inner α hα' β hβ']
+    ring
   calc
     ∑ i : Fin s, ∑ j : Fin s,
         t.b i * (1 - t.c i) ^ (k - 1) * (t.b j - t.A i j) * (1 - t.c j) ^ (l - 1)

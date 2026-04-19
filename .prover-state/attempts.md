@@ -193,3 +193,9 @@ Cycle 92: Closed BDF6 roots_in_disk via w=1/ξ substitution + real/imaginary dec
 
 ### Cycle 93
 Cycle 93: formalized one-sided Lipschitz condition and exponential solution bound in OpenMath/Stiffness.lean. Clean proof route: differentiate ‖y-z‖² via HasDerivAt.inner, differentiate weighted energy exp(-2l(x-x₀))·‖y-z‖², prove antitonicity via antitoneOn_of_hasDerivWithinAt_nonpos, extract norm bound with le_of_sq_le_sq. Mathlib Gronwall API (gronwall_bound_of_norm_deriv_right_le) not used — it targets ‖u'‖≤K‖u‖+ε form, not inner-product inequality; weighted energy monotonicity is cleaner. Five Aristotle jobs submitted but not incorporated (manual proofs already closed all sorrys before results returned).
+
+### Cycle 122
+Cycle 122: Closed reflect_satisfiesB/C/D via binomial expansion + sum-swap + alternating sum identities (alternating_binom_div_succ and binom_one_sub_pow_div). Key technique: build shared private helper lemmas (choose_div_succ', alternating_choose_shift', weighted_binom_sum, bc_combined) before main theorems. Dead ends: Aristotle's B proof was over ℚ and required adaptation to ℝ; `ring` fights `↑(k+1)` vs `↑k + 1` — use push_cast; `conv ... ext i` fails for lambda bodies — use simp_rw instead. reflect_satisfiesE blocked on double binomial sum 1/((b+1)(a+b+2)) which doesn't factor into single-variable identities.
+
+### Cycle 123
+Cycle 123: Decomposed reflect_satisfiesE sorry into skeleton (hB_refl, h_expand_i, h_expand_j, h_split, h_b_term all constructed; single residual h_A_term sorry). Aristotle job 9cc99ed3 completed but proof is over ℚ with custom infrastructure—not directly mergeable to ℝ-based module. Five new focused jobs submitted. Key insight: h_A_term requires `∑_a ∑_b C(k-1,a)(-1)^a C(l-1,b)(-1)^b / ((a+1)(a+b+2)) = 1/(l*(k+l))`; can likely be proved by induction on l using Pascal's identity to reduce to two copies of alternating_binom_div_succ.
