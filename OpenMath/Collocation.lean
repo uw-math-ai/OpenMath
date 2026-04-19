@@ -1670,13 +1670,146 @@ private def childDensityProd : BTree → ℕ
   | .leaf => 1
   | .node children => children.foldr (fun t acc => t.density * acc) 1
 
+/-- For any tree, `density = order * childDensityProd`. -/
+private theorem density_eq_order_mul_childDensityProd (t : BTree) :
+    t.density = t.order * childDensityProd t := by
+  cases t with
+  | leaf => simp [childDensityProd]
+  | node children => simp [BTree.density_node, childDensityProd]
+
+/-- A child of a node has order strictly less than the node's order. -/
+private theorem child_order_lt_of_mem {children : List BTree} {ch : BTree}
+    (hmem : ch ∈ children) :
+    ch.order < (BTree.node children).order := by
+  simp only [BTree.order_node]
+  have : ch.order ≤ children.foldr (fun t n => t.order + n) 0 := by
+    induction children with
+    | nil => simp at hmem
+    | cons hd tl ih =>
+      simp only [List.foldr]
+      cases hmem with
+      | head => omega
+      | tail _ htl => have := ih htl; omega
+  omega
+
+/-- A member's order is at most the foldr order sum. -/
+private theorem single_mem_order_le_foldr {children : List BTree} {ch : BTree}
+    (hmem : ch ∈ children) :
+    ch.order ≤ children.foldr (fun t n => t.order + n) 0 := by
+  induction children with
+  | nil => simp at hmem
+  | cons hd tl ih =>
+    simp only [List.foldr]
+    cases hmem with
+    | head => omega
+    | tail _ htl => have := ih htl; omega
+
+/-- If two distinct elements are in a list, their orders sum to at most the foldr order sum. -/
+private theorem two_distinct_order_le_foldr {children : List BTree} {ch tb : BTree}
+    (hch : ch ∈ children) (htb : tb ∈ children) (hne : ch ≠ tb) :
+    ch.order + tb.order ≤ children.foldr (fun t n => t.order + n) 0 := by
+  induction children with
+  | nil => simp at hch
+  | cons hd tl ih =>
+    simp only [List.foldr]
+    simp only [List.mem_cons] at hch htb
+    rcases hch with rfl | hch_tl
+    · rcases htb with rfl | htb_tl
+      · exact absurd rfl hne
+      · have := single_mem_order_le_foldr htb_tl; omega
+    · rcases htb with rfl | htb_tl
+      · have := single_mem_order_le_foldr hch_tl; omega
+      · have := ih hch_tl htb_tl; omega
+
+/-- The childDensityProd is positive. -/
+private theorem childDensityProd_pos (t : BTree) : 0 < childDensityProd t := by
+  cases t with
+  | leaf => simp [childDensityProd]
+  | node children =>
+    simp only [childDensityProd]
+    induction children with
+    | nil => simp
+    | cons hd tl ih =>
+      simp only [List.foldr]
+      exact Nat.mul_pos (BTree.density_pos hd) ih
+
+/-- For each child, the IH-simplified A-weighted sum equals `cᵢ^(order) / density`. -/
+private theorem ew_factor_simplified (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ) (hC : tab.SatisfiesC n)
+    (ch : BTree) (hord : ch.order ≤ n) (hord_pos : 1 ≤ ch.order) (i : Fin s)
+    (hew : ∀ j : Fin s,
+      tab.elementaryWeight ch j = tab.c j ^ (ch.order - 1) / (childDensityProd ch : ℝ)) :
+    ∑ k : Fin s, tab.A i k * tab.elementaryWeight ch k =
+    tab.c i ^ ch.order / ch.density := by
+  simp_rw [hew, mul_div_assoc']
+  rw [← Finset.sum_div]
+  have hC_app := hC ch.order hord_pos hord i
+  rw [hC_app, density_eq_order_mul_childDensityProd ch, Nat.cast_mul, div_div]
+
+/-- Product of densities in a children list is positive. -/
+private theorem foldr_density_prod_pos (children : List BTree) :
+    0 < children.foldr (fun t n => t.density * n) 1 := by
+  induction children with
+  | nil => simp
+  | cons hd tl ih => simp only [List.foldr]; exact Nat.mul_pos (BTree.density_pos hd) ih
+
+/-- Product of ew-factors over a children list simplifies to a power / product of densities.
+    Each child's A-weighted ew sum is `cᵢ^(child.order) / child.density`. -/
+private theorem foldr_ew_simplified (tab : ButcherTableau s) (i : Fin s) (c_i : ℝ)
+    (children : List BTree)
+    (hfact : ∀ ch ∈ children,
+      ∑ k : Fin s, tab.A i k * tab.elementaryWeight ch k =
+      c_i ^ ch.order / (ch.density : ℝ)) :
+    children.foldr (fun t acc =>
+      acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k)) 1 =
+    c_i ^ (children.foldr (fun t n => t.order + n) 0) /
+    (↑(children.foldr (fun (t : BTree) (n : ℕ) => t.density * n) 1) : ℝ) := by
+  induction children with
+  | nil => simp
+  | cons hd tl ih =>
+    simp only [List.foldr]
+    have ih' := ih (fun ch hmem => hfact ch (List.mem_cons_of_mem hd hmem))
+    rw [ih']
+    have hhd := hfact hd (by simp)
+    rw [hhd]
+    rw [div_mul_div_comm, ← pow_add]
+    congr 1
+    · ring
+    · push_cast; ring
+
 /-- Elementary weights simplify to powers of `cᵢ` divided by the product of child
 densities under the `C(n)` simplifying assumption. -/
 private theorem elementaryWeight_simplified_of_C (tab : ButcherTableau s)
     (hrc : tab.IsRowSumConsistent) (n : ℕ) (hC : tab.SatisfiesC n)
     (t : BTree) (ht : t.order ≤ n + 1) (i : Fin s) :
     tab.elementaryWeight t i = tab.c i ^ (t.order - 1) / (childDensityProd t : ℝ) := by
-  sorry
+  refine Nat.strongRecOn (n := t.order)
+    (motive := fun m => ∀ u : BTree, u.order = m → u.order ≤ n + 1 → ∀ j : Fin s,
+      tab.elementaryWeight u j = tab.c j ^ (u.order - 1) / (childDensityProd u : ℝ))
+    ?_ t rfl ht i
+  intro m ih_ord u hu_eq hu_le j
+  cases u with
+  | leaf => simp [childDensityProd]
+  | node children =>
+    simp only [elementaryWeight, childDensityProd, BTree.order_node]
+    -- Simplify the exponent: 1 + ∑ orders - 1 = ∑ orders
+    have hexp : 1 + children.foldr (fun t n => t.order + n) 0 - 1 =
+        children.foldr (fun t n => t.order + n) 0 := by omega
+    rw [hexp]
+    -- Use foldr_ew_simplified
+    apply foldr_ew_simplified tab j (tab.c j) children
+    intro ch hmem
+    -- Need: ∑ k, A j k * ew ch k = c j ^ ch.order / ch.density
+    have hch_lt : ch.order < m := by
+      have := child_order_lt_of_mem hmem; omega
+    have hch_le_n : ch.order ≤ n := by omega
+    have hch_le_n1 : ch.order ≤ n + 1 := by omega
+    have hch_pos : 1 ≤ ch.order := BTree.order_pos ch
+    -- Apply IH to get elementaryWeight_simplified for the child
+    have hew_ch : ∀ k : Fin s,
+        tab.elementaryWeight ch k = tab.c k ^ (ch.order - 1) / (childDensityProd ch : ℝ) :=
+      fun k => ih_ord ch.order hch_lt ch rfl hch_le_n1 k
+    exact ew_factor_simplified tab hrc n hC ch hch_le_n hch_pos j hew_ch
 
 /-- Under `C(n)`, the tree kernel simplifies to `cᵢ^|t| / γ(t)` for all trees of
 order at most `n`. -/
@@ -1685,7 +1818,12 @@ private theorem ew_simplified_of_C (tab : ButcherTableau s)
     (t : BTree) (ht : t.order ≤ n) (i : Fin s) :
     ∑ k : Fin s, tab.A i k * tab.elementaryWeight t k =
     tab.c i ^ t.order / t.density := by
-  sorry
+  have hle : t.order ≤ n + 1 := by omega
+  simp_rw [elementaryWeight_simplified_of_C tab hrc n hC t hle, mul_div_assoc']
+  rw [← Finset.sum_div]
+  have hord_pos : 1 ≤ t.order := BTree.order_pos t
+  have hC_app := hC t.order hord_pos ht i
+  rw [hC_app, density_eq_order_mul_childDensityProd t, Nat.cast_mul, div_div]
 
 /-- If every child of `t` has order at most `n`, then `B(2n)` and `C(n)` imply the
 tree order condition for `t`. -/
@@ -1695,7 +1833,118 @@ private theorem tree_cond_all_small (tab : ButcherTableau s)
     (t : BTree) (ht : t.order ≤ 2 * n)
     (hsmall : ∀ u ∈ childrenOf t, u.order ≤ n) :
     tab.satisfiesTreeCondition t := by
-  sorry
+  cases t with
+  | leaf =>
+    simp only [satisfiesTreeCondition, elementaryWeight_leaf, BTree.density_leaf, Nat.cast_one]
+    simp only [BTree.order_leaf] at ht
+    simpa using hB 1 le_rfl ht
+  | node children =>
+    -- hsmall now gives: ∀ u ∈ children, u.order ≤ n
+    simp only [childrenOf] at hsmall
+    -- Each child's ew simplifies under C(n)
+    have hew_i : ∀ i : Fin s,
+        tab.elementaryWeight (.node children) i =
+        tab.c i ^ ((BTree.node children).order - 1) /
+        (childDensityProd (.node children) : ℝ) := by
+      intro i
+      simp only [elementaryWeight, childDensityProd, BTree.order_node]
+      have hexp : 1 + children.foldr (fun t n => t.order + n) 0 - 1 =
+          children.foldr (fun t n => t.order + n) 0 := by omega
+      rw [hexp]
+      apply foldr_ew_simplified tab i (tab.c i) children
+      intro ch hmem
+      have hch_le := hsmall ch hmem
+      exact ew_factor_simplified tab hrc n hC ch hch_le (BTree.order_pos ch) i
+        (fun k => elementaryWeight_simplified_of_C tab hrc n hC ch (by omega) k)
+    -- Now: ∑ b_i * ew(t, i) = (1/childDensityProd) * ∑ b_i * c_i^(t.order-1)
+    simp only [satisfiesTreeCondition]
+    simp_rw [hew_i, mul_div_assoc']
+    rw [← Finset.sum_div]
+    -- Apply B(t.order)
+    have hB_app := hB (BTree.node children).order (BTree.order_pos _) ht
+    rw [hB_app, density_eq_order_mul_childDensityProd, Nat.cast_mul, div_div]
+
+/-- Generalized tree condition: under B(2n), C(n), D(n), for any tree t and
+exponent q with q + t.order ≤ 2n, the q-weighted tree sum evaluates to
+  r(t) / ((q + r(t)) · γ(t))
+where r(t) = t.order and γ(t) = t.density.
+When q = 0 this reduces to the standard tree condition 1/γ(t). -/
+private theorem gen_tree_cond (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ)
+    (hB : tab.SatisfiesB (2 * n)) (hC : tab.SatisfiesC n) (hD : tab.SatisfiesD n)
+    (q : ℕ) (t : BTree) (hqt : q + t.order ≤ 2 * n) :
+    ∑ i : Fin s, tab.b i * tab.c i ^ q * tab.elementaryWeight t i =
+    (t.order : ℝ) / ((q + t.order) * (t.density : ℝ)) := by
+  refine Nat.strongRecOn (n := t.order)
+    (motive := fun m => ∀ (q' : ℕ) (u : BTree), u.order = m → q' + u.order ≤ 2 * n →
+      ∑ i : Fin s, tab.b i * tab.c i ^ q' * tab.elementaryWeight u i =
+      (u.order : ℝ) / ((q' + u.order) * (u.density : ℝ)))
+    ?_ q t rfl hqt
+  intro m ih_gen q' u hu_eq hq'u
+  cases u with
+  | leaf =>
+    -- ∑ bᵢ cᵢ^q' · 1 = 1 / ((q'+1) · 1) = 1/(q'+1)
+    simp only [elementaryWeight_leaf, mul_one, BTree.order_leaf, BTree.density_leaf,
+               Nat.cast_one, mul_one]
+    simp only [BTree.order_leaf] at hu_eq hq'u
+    have hq'_bound : q' + 1 ≤ 2 * n := by omega
+    have hB_app := hB (q' + 1) (by omega) hq'_bound
+    simp only [show q' + 1 - 1 = q' from by omega] at hB_app
+    convert hB_app using 1
+    simp [Nat.cast_add, Nat.cast_one]
+  | node children =>
+    simp only at *
+    -- Case split: all children small vs one big child
+    by_cases hall_small : ∀ ch ∈ children, ch.order ≤ n
+    · -- All children have order ≤ n: use ew simplification + B
+      have hew_i : ∀ j : Fin s,
+          tab.elementaryWeight (.node children) j =
+          tab.c j ^ ((BTree.node children).order - 1) /
+          (childDensityProd (.node children) : ℝ) := by
+        intro j
+        simp only [elementaryWeight, childDensityProd, BTree.order_node]
+        have hexp : 1 + children.foldr (fun t n => t.order + n) 0 - 1 =
+            children.foldr (fun t n => t.order + n) 0 := by omega
+        rw [hexp]
+        apply foldr_ew_simplified tab j (tab.c j) children
+        intro ch hmem
+        have hch_le := hall_small ch hmem
+        exact ew_factor_simplified tab hrc n hC ch hch_le (BTree.order_pos ch) j
+          (fun k => elementaryWeight_simplified_of_C tab hrc n hC ch (by omega) k)
+      simp_rw [hew_i, mul_div_assoc']
+      have hpow : ∀ j : Fin s, tab.b j * tab.c j ^ q' *
+          tab.c j ^ ((BTree.node children).order - 1) =
+          tab.b j * tab.c j ^ (q' + ((BTree.node children).order - 1)) := by
+        intro j; rw [mul_assoc, ← pow_add]
+      simp_rw [hpow]
+      rw [← Finset.sum_div]
+      have hord := BTree.order_pos (BTree.node children)
+      have hq'r_bound : q' + (BTree.node children).order ≤ 2 * n := by omega
+      have hkval : q' + ((BTree.node children).order - 1) =
+          q' + (BTree.node children).order - 1 := by omega
+      have hB_app := hB (q' + (BTree.node children).order) (by omega) hq'r_bound
+      rw [show q' + (BTree.node children).order - 1 = q' + ((BTree.node children).order - 1)
+        from by omega] at hB_app
+      rw [hB_app, density_eq_order_mul_childDensityProd, Nat.cast_mul]
+      have hord_ne : ((BTree.node children).order : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+      have hcdp_ne : (childDensityProd (.node children) : ℝ) ≠ 0 :=
+        Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (childDensityProd_pos _))
+      field_simp
+      push_cast
+      ring
+    · -- One big child case: use D(n) and recursive gen_tree_cond
+      push_neg at hall_small
+      obtain ⟨tb, htb_mem, htb_big⟩ := hall_small
+      -- Separate children into smalls and the big child tb
+      -- tb.order > n, all others have order ≤ n (since at most one child can have order > n)
+      have htb_unique : ∀ ch ∈ children, n < ch.order → ch = tb := by
+        intro ch hch hch_big
+        by_contra hne
+        have h_combined := two_distinct_order_le_foldr hch htb_mem hne
+        have hord_eq := BTree.order_node children
+        -- node.order = 1 + foldr ≥ 1 + ch.order + tb.order ≥ 1 + 2(n+1) = 2n+3 > 2n
+        omega
+      sorry  -- Main algebraic proof using D(n) and ih_gen
 
 /-- The remaining case of Theorem 342l: exactly one child of `t` can have order
 strictly larger than `n`, and this is where the `D(n)` simplification is used. -/
@@ -1704,12 +1953,23 @@ private theorem tree_cond_one_big (tab : ButcherTableau s)
     (hB : tab.SatisfiesB (2 * n)) (hC : tab.SatisfiesC n)
     (hD : tab.SatisfiesD n)
     (t : BTree)
-    (ih : ∀ u : BTree, u.order < t.order → u.order ≤ 2 * n →
+    (_ih : ∀ u : BTree, u.order < t.order → u.order ≤ 2 * n →
       tab.satisfiesTreeCondition u)
     (ht : t.order ≤ 2 * n)
     (hbig : ∃ u ∈ childrenOf t, n < u.order) :
     tab.satisfiesTreeCondition t := by
-  sorry
+  -- Use the generalized tree condition with q = 0
+  have hgen := gen_tree_cond tab hrc n hB hC hD 0 t (by omega)
+  simp only [pow_zero, mul_one] at hgen
+  simp only [satisfiesTreeCondition]
+  rw [hgen]
+  -- goal: ↑t.order / ((↑0 + ↑t.order) * ↑t.density) = 1 / ↑t.density
+  have hord_ne : (t.order : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.order_pos t))
+  have hdens_ne : (t.density : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp (BTree.density_pos t))
+  simp only [Nat.cast_zero, zero_add]
+  field_simp
 
 /-- **(342l)** `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)`: the simplifying assumptions
 together imply all tree-based order conditions up to order 2n.
