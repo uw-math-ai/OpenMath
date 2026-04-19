@@ -122,7 +122,7 @@
   - [x] Proved `B(2s) ∧ E(s,s) ⇒ D(s)` (342p, requires distinct nodes) via Vandermonde uniqueness
   - [x] Proved `G(p) ⇒ B(p)` (342j) via `bushyTree`
   - [x] Proved `G(2n) ⇒ E(n,n)` (342k) via `branchedTree`
-  - [~] `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)` (342l) decomposed into local sublemmas; one-big-child case still open
+  - [x] `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)` (342l) fully proved via gen_tree_cond_big_child_aux
 - [~] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`)
   - [x] Defined `BTree`
   - [x] Defined `order`, `symmetry`, `density`
@@ -146,22 +146,9 @@
 
 ## Current Target
 
-**Theorem 342l in `OpenMath/Collocation.lean`: finish the `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)` proof from the new sublemma decomposition.**
+**Theorems 355D/355E/355G in `OpenMath/OrderStars.lean`: complete the order-star arrow counting pipeline and the Ehle barrier.**
 
 Next targets:
-1. **Theorem 342l** — close `elementaryWeight_simplified_of_C`, `ew_simplified_of_C`, `tree_cond_all_small`, and the one-big-child `D(n)` reduction
-2. **Theorem 343A** — reflected methods and B/C/D condition transfer
-3. **Order star infrastructure / Theorem 355A+** — assess `OpenMath/OrderStars.lean` and continue the Ehle-barrier setup
-
-## Sorry locations
-- `OpenMath/Collocation.lean:1675` — `elementaryWeight_simplified_of_C`
-- `OpenMath/Collocation.lean:1683` — `ew_simplified_of_C`
-- `OpenMath/Collocation.lean:1692` — `tree_cond_all_small`
-- `OpenMath/Collocation.lean:1702` — `tree_cond_one_big`
-
-## Recent git history
-969bc8a Close Pade approximation order polynomial proof
-a2d0342 cycle 107: add Pade self-adjointness defect
-f585bb2 cycle 106: prove Theorem 353A (pade_approximation_order)
-a7aad0a cycle 105: fix RK/BDF drift and add Pade skeleton
-a5fd4cf cycle 104: complete Theorem 351B (A-stability criterion)
+1. **Theorem 355D** — arrow-count inequality for rational approximations to exp (sorry: requires global trajectory topology)
+2. **Theorem 355E** — Padé exact arrow counts (provable from 355D + existing bookkeeping)
+3. **Theorem 355G** — Ehle barrier: A-stable Padé ⟹ n ≤ d ≤ n + 2 (sorry: requires 355E + A-stability pole arrangement)

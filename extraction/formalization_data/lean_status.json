@@ -257,7 +257,7 @@
   "thm:342C": {
     "lean_file": "OpenMath/Collocation.lean",
     "lean_symbol": "ButcherTableau.SatisfiesC_of_B_E",
-    "status": "in_progress"
+    "status": "done"
   },
   "cor:342D": {
     "lean_file": null,
@@ -340,14 +340,14 @@
     "status": "unformalized"
   },
   "thm:355D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/OrderStars.lean",
+    "lean_symbol": "thm_355D",
+    "status": "in_progress"
   },
   "thm:355E": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/OrderStars.lean",
+    "lean_symbol": "thm_355E",
+    "status": "in_progress"
   },
   "thm:355F": {
     "lean_file": "OpenMath/OrderStars.lean",
@@ -355,9 +355,9 @@
     "status": "done"
   },
   "thm:355G": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/OrderStars.lean",
+    "lean_symbol": "ehle_barrier",
+    "status": "in_progress"
   },
   "def:356A": {
     "lean_file": "OpenMath/ANStability.lean",

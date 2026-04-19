@@ -199,3 +199,15 @@ Cycle 122: Closed reflect_satisfiesB/C/D via binomial expansion + sum-swap + alt
 
 ### Cycle 123
 Cycle 123: Decomposed reflect_satisfiesE sorry into skeleton (hB_refl, h_expand_i, h_expand_j, h_split, h_b_term all constructed; single residual h_A_term sorry). Aristotle job 9cc99ed3 completed but proof is over ℚ with custom infrastructure—not directly mergeable to ℝ-based module. Five new focused jobs submitted. Key insight: h_A_term requires `∑_a ∑_b C(k-1,a)(-1)^a C(l-1,b)(-1)^b / ((a+1)(a+b+2)) = 1/(l*(k+l))`; can likely be proved by induction on l using Pascal's identity to reduce to two copies of alternating_binom_div_succ.
+
+### Cycle 132
+Cycle 132: Closed 3/4 sorrys in Theorem 342l (B+C+D=>G): elementaryWeight_simplified_of_C via Nat.strongRecOn + C(n) condition; ew_simplified_of_C as corollary; tree_cond_all_small via ew simplification + B(2n). Introduced gen_tree_cond (generalized tree condition with exponent q) to handle one-big-child case. Dead ends: Aristotle cycle 131 jobs all returned 500 errors. Remaining gen_tree_cond one-big-child case requires `foldr_extract_mem` helper (factoring one element from multiplicative foldr) then 5-step: factor ew, simplify small via C(n), D(n) sum-swap, ih_gen telescoping, algebra.
+
+### Cycle 133
+Cycle 133: Restructured one-big-child branch of gen_tree_cond to isolate bounds (htb_order_lt, htb_q0, htb_qnode) and remaining algebra into single `hmain` sorry. Discovered that `List.erase tb` factorization requires occurrence-level uniqueness of tb in children, not just value-level uniqueness — `htb_unique` does not rule out duplicate tree values. Submitted file to Aristotle (8e40574b). Alternative: use `List.partition` on order ≤ n to avoid erase/BEq issues entirely.
+
+### Cycle 134
+Cycle 134: Closed the last sorry project-wide. Implemented gen_tree_cond_big_child_aux by direct induction on the children list (avoiding List.erase/BEq issues entirely). Big-child case (hd=tb): proved tl all-small, simplified tl's foldr via foldr_ew_simplified, applied D(n) at index R=q'+S+1, telescoped via ih_gen at q=0 and q=R, closed with field_simp+ring. Small-child case (hd≠tb): factored hd's simplified ew via ew_simplified_of_C, reduced to IH on tl at exponent q'+hd.order, closed with nlinarith on density/order relation. Worker timed out but changes are complete; task result not written (CLAUDE.md violation).
+
+### Cycle 135
+Cycle 135: Committed cycle 134's last-sorry closure (1ef5db0a18) and all housekeeping. Added OrderArrowCountData structure and pade_exact_arrow_counts_of_countInequality to OrderStars.lean as arithmetic scaffolding for 355D/355E. Blocker: global arrow-termination types (355C/355D) need continuous trajectory endpoints — local IsUpArrowDir/IsDownArrowDir API insufficient; recommend abstract ArrowEndpoint inductive type + sorry axiom for continuation theorem.
