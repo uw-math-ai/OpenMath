@@ -225,6 +225,141 @@ private theorem satisfiesTreeCondition_order_two (tab : ButcherTableau s) (t : B
   · intro h; convert h using 1; congr 1; ext i; congr 1; exact (ew_of_order_two tab t ht i).symm
   · intro h; convert h using 1; congr 1; ext i; congr 1; exact ew_of_order_two tab t ht i
 
+/-- Any order-3 tree is either a chain `[[τ]]` or a bushy tree `[τ²]`. -/
+private theorem order_three_cases (t : BTree) (ht : t.order = 3) :
+    (∃ c : BTree, t = .node [c] ∧ c.order = 2) ∨
+    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+    simp only [order_node] at ht
+    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 2 := by omega
+    cases children with
+    | nil => simp at hfoldr
+    | cons hd tl =>
+      simp only [List.foldr] at hfoldr
+      have hhd_pos := BTree.order_pos hd
+      cases tl with
+      | nil =>
+        left
+        refine ⟨hd, rfl, by simpa using hfoldr⟩
+      | cons hd2 tl2 =>
+        have hhd2_pos := BTree.order_pos hd2
+        have hhd : hd.order = 1 := by
+          simp only [List.foldr] at hfoldr
+          omega
+        have hrest : hd2.order + tl2.foldr (fun c n => c.order + n) 0 = 1 := by
+          simp only [List.foldr] at hfoldr
+          omega
+        cases tl2 with
+        | nil =>
+          right
+          refine ⟨hd, hd2, rfl, hhd, by simpa using hrest⟩
+        | cons hd3 tl3 =>
+          simp only [List.foldr] at hrest
+          have hhd3_pos := BTree.order_pos hd3
+          omega
+
+/-- Bushy order-3 trees have elementary weight `(∑ₖ aᵢₖ)^2`. -/
+private theorem ew_of_order_three_bushy (tab : ButcherTableau s) (t : BTree)
+    (hbushy : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i = (∑ k : Fin s, tab.A i k) ^ 2 := by
+  rcases hbushy with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one, hc₁, hc₂, pow_two]
+
+/-- Chain order-3 trees have elementary weight `∑ⱼ aᵢⱼ (∑ₖ aⱼₖ)`. -/
+private theorem ew_of_order_three_chain (tab : ButcherTableau s) (t : BTree)
+    (hchain : ∃ c : BTree, t = .node [c] ∧ c.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i = ∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) := by
+  rcases hchain with ⟨c, rfl, hc⟩
+  simp [elementaryWeight_singleton, ew_of_order_two, hc]
+
+/-- Bushy order-3 trees have density `3`. -/
+private theorem density_of_order_three_bushy (t : BTree)
+    (hbushy : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) :
+    t.density = 3 := by
+  rcases hbushy with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₁ hc₁, density_of_order_one c₂ hc₂, hc₁, hc₂]
+
+/-- Chain order-3 trees have density `6`. -/
+private theorem density_of_order_three_chain (t : BTree)
+    (hchain : ∃ c : BTree, t = .node [c] ∧ c.order = 2) :
+    t.density = 6 := by
+  rcases hchain with ⟨c, rfl, hc⟩
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_two c hc, hc]
+
+/-- Bushy order-3 trees satisfy the tree condition iff the bushy order-3 condition holds. -/
+private theorem satisfiesTreeCondition_order_three_bushy (tab : ButcherTableau s) (t : BTree)
+    (hbushy : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 2 = 1 / 3 := by
+  simp only [satisfiesTreeCondition, density_of_order_three_bushy t hbushy]
+  constructor
+  · intro h
+    convert h using 1
+    congr 1
+    ext i
+    congr 1
+    exact (ew_of_order_three_bushy tab t hbushy i).symm
+  · intro h
+    convert h using 1
+    congr 1
+    ext i
+    congr 1
+    exact ew_of_order_three_bushy tab t hbushy i
+
+/-- Chain order-3 trees satisfy the tree condition iff the chain order-3 condition holds. -/
+private theorem satisfiesTreeCondition_order_three_chain (tab : ButcherTableau s) (t : BTree)
+    (hchain : ∃ c : BTree, t = .node [c] ∧ c.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) = 1 / 6 := by
+  simp only [satisfiesTreeCondition, density_of_order_three_chain t hchain]
+  constructor
+  · intro h
+    convert h using 1
+    congr 1
+    ext i
+    congr 1
+    exact (ew_of_order_three_chain tab t hchain i).symm
+  · intro h
+    convert h using 1
+    congr 1
+    ext i
+    congr 1
+    exact ew_of_order_three_chain tab t hchain i
+
+private theorem order3a_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 2) =
+      ∑ i : Fin s, tab.b i * tab.c i ^ 2 := by
+  congr 1
+  ext i
+  congr 1
+  rw [hrc i]
+
+private theorem order3b_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) =
+      ∑ i : Fin s, ∑ j : Fin s, tab.b i * tab.A i j * tab.c j := by
+  calc
+    ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))
+        = ∑ i : Fin s, ∑ j : Fin s, tab.b i * (tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+            simp_rw [Finset.mul_sum]
+    _ = ∑ i : Fin s, ∑ j : Fin s, tab.b i * (tab.A i j * tab.c j) := by
+          congr 1
+          ext i
+          congr 1
+          ext j
+          rw [hrc j]
+    _ = ∑ i : Fin s, ∑ j : Fin s, tab.b i * tab.A i j * tab.c j := by
+          congr 1
+          ext i
+          congr 1
+          ext j
+          ring
+
 /-- Theorem 301A at order 2 (assuming row-sum consistency). -/
 theorem thm_301A_order2 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     tab.hasTreeOrder 2 ↔ tab.HasOrderGe2 := by
@@ -245,7 +380,42 @@ theorem thm_301A_order2 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
 /-- Theorem 301A at order 3 (assuming row-sum consistency). -/
 theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     tab.hasTreeOrder 3 ↔ tab.HasOrderGe3 := by
-  sorry
+  constructor
+  · intro h
+    refine ⟨(satisfiesTreeCondition_leaf tab).mp (h .leaf (by simp)),
+      (satisfiesTreeCondition_t2_of_consistent tab hrc).mp (h t2 (by native_decide)),
+      ?_, ?_⟩
+    · have ht3a : tab.satisfiesTreeCondition t3a := h t3a (by native_decide)
+      rw [satisfiesTreeCondition_order_three_bushy tab t3a
+        ⟨.leaf, .leaf, rfl, by simp, by simp⟩] at ht3a
+      rw [order3a]
+      simpa [order3a_sum_eq tab hrc] using ht3a
+    · have ht3b : tab.satisfiesTreeCondition t3b := h t3b (by native_decide)
+      rw [satisfiesTreeCondition_order_three_chain tab t3b
+        ⟨t2, rfl, by native_decide⟩] at ht3b
+      rw [order3b]
+      simpa [order3b_sum_eq tab hrc] using ht3b
+  · rintro ⟨h1, h2, h3a, h3b⟩ t ht
+    have hpos := BTree.order_pos t
+    by_cases hle1 : t.order ≤ 1
+    · exact (satisfiesTreeCondition_order_one tab t (by omega)).mpr h1
+    · by_cases hle2 : t.order ≤ 2
+      · have heq : t.order = 2 := by omega
+        rw [satisfiesTreeCondition_order_two tab t heq]
+        rw [order2] at h2
+        convert h2 using 1
+        congr 1
+        ext i
+        congr 1
+        exact (hrc i).symm
+      · have heq : t.order = 3 := by omega
+        rcases order_three_cases t heq with hchain | hbushy
+        · rw [satisfiesTreeCondition_order_three_chain tab t hchain]
+          rw [order3b] at h3b
+          simpa [order3b_sum_eq tab hrc] using h3b
+        · rw [satisfiesTreeCondition_order_three_bushy tab t hbushy]
+          rw [order3a] at h3a
+          simpa [order3a_sum_eq tab hrc] using h3a
 
 /-- Theorem 301A at order 4 (assuming row-sum consistency). -/
 theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
