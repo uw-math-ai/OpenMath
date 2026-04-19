@@ -12,7 +12,7 @@ This file defines:
 - `elementaryWeight`: the elementary weight Φᵢ(t) for a RK method
 - `satisfiesTreeCondition`: the order condition for a single tree
 - Connection lemmas showing equivalence with explicit order conditions
-- `Theorem_301A`: the master theorem (sorry, pending full proof)
+- `Theorem_301A`: the master theorem through order 5
 
 Reference: Iserles, Section 3.1; Butcher, Section 300.
 -/
@@ -417,14 +417,1156 @@ theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
           rw [order3a] at h3a
           simpa [order3a_sum_eq tab hrc] using h3a
 
+/-! ### Order 4 helpers -/
+
+/-- Any order-4 tree is one of: 3 leaves, 2 children summing to 3, or single order-3 child. -/
+private theorem order_four_cases (t : BTree) (ht : t.order = 4) :
+    (∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧ c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1) ∨
+    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
+      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1))) ∨
+    (∃ c : BTree, t = .node [c] ∧ c.order = 3) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+    simp only [order_node] at ht
+    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 3 := by omega
+    cases children with
+    | nil => simp at hfoldr
+    | cons hd tl =>
+      simp only [List.foldr] at hfoldr
+      have hhd_pos := BTree.order_pos hd
+      cases tl with
+      | nil =>
+        -- single child of order 3
+        right; right
+        exact ⟨hd, rfl, by simp only [List.foldr] at hfoldr; omega⟩
+      | cons hd2 tl2 =>
+        have hhd2_pos := BTree.order_pos hd2
+        simp only [List.foldr] at hfoldr
+        cases tl2 with
+        | nil =>
+          -- two children with orders summing to 3
+          right; left
+          have hsum : hd.order + hd2.order = 3 := by simpa using hfoldr
+          refine ⟨hd, hd2, rfl, hsum, ?_⟩
+          have : hd.order ≥ 1 := hhd_pos
+          have : hd2.order ≥ 1 := hhd2_pos
+          by_cases h1 : hd.order = 1
+          · exact Or.inl ⟨h1, by omega⟩
+          · exact Or.inr ⟨by omega, by omega⟩
+        | cons hd3 tl3 =>
+          have hhd3_pos := BTree.order_pos hd3
+          simp only [List.foldr] at hfoldr
+          cases tl3 with
+          | nil =>
+            -- three children, all must be order 1
+            left
+            have h1 : hd.order = 1 := by omega
+            have h2 : hd2.order = 1 := by omega
+            have h3 : hd3.order = 1 := by omega
+            exact ⟨hd, hd2, hd3, rfl, h1, h2, h3⟩
+          | cons hd4 tl4 =>
+            -- four+ children: impossible since all orders ≥ 1
+            exfalso
+            have hhd4_pos := BTree.order_pos hd4
+            simp only [List.foldr] at hfoldr
+            have : tl4.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
+            omega
+
+/-- Bushy order-4 tree (3 leaves): ew = (∑ₖ aᵢₖ)³. -/
+private theorem ew_of_order_four_bushy4 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧ c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i = (∑ k : Fin s, tab.A i k) ^ 3 := by
+  rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁, ew_of_order_one tab c₂ hc₂,
+        ew_of_order_one tab c₃ hc₃]
+  ring
+
+/-- Bushy order-4 tree has density 4. -/
+private theorem density_of_order_four_bushy4 (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧ c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1) :
+    t.density = 4 := by
+  rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₁ hc₁, density_of_order_one c₂ hc₂, density_of_order_one c₃ hc₃,
+      hc₁, hc₂, hc₃]
+
+/-- Mixed order-4 tree [order-1, order-2]: ew = (∑ₖ aᵢₖ)(∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)). -/
+private theorem ew_of_order_four_mixed12 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁, ew_of_order_two tab c₂ hc₂]
+  exact mul_comm _ _
+
+/-- Mixed order-4 tree [order-2, order-1]: ew same as [order-1, order-2] by commutativity. -/
+private theorem ew_of_order_four_mixed21 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₂ hc₂, ew_of_order_two tab c₁ hc₁]
+
+/-- Mixed order-4 tree [c₁,c₂] with orders summing to 3 has density 8. -/
+private theorem density_of_order_four_mixed (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
+      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1))) :
+    t.density = 8 := by
+  rcases h with ⟨c₁, c₂, rfl, _, hord⟩
+  rcases hord with ⟨hc₁, hc₂⟩ | ⟨hc₁, hc₂⟩
+  · simp only [density_node, order_node, List.foldr]
+    rw [density_of_order_one c₁ hc₁, density_of_order_two c₂ hc₂, hc₁, hc₂]
+  · simp only [density_node, order_node, List.foldr]
+    rw [density_of_order_two c₁ hc₁, density_of_order_one c₂ hc₂, hc₁, hc₂]
+
+/-- Order-4 via bushy-3 child: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)². -/
+private theorem ew_of_order_four_via_bushy3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧ ∃ c₁ c₂ : BTree,
+      c = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i = ∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2 := by
+  rcases h with ⟨c, rfl, c₁, c₂, hc, hc₁, hc₂⟩
+  simp [elementaryWeight_singleton, hc, elementaryWeight, List.foldr,
+        ew_of_order_one tab c₁ hc₁, ew_of_order_one tab c₂ hc₂, pow_two]
+
+/-- Order-4 via chain-3 child: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ)). -/
+private theorem ew_of_order_four_via_chain3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧ ∃ c' : BTree, c = .node [c'] ∧ c'.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      ∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)) := by
+  rcases h with ⟨c, rfl, c', hc, hc'⟩
+  simp [elementaryWeight_singleton, hc, elementaryWeight_singleton, ew_of_order_two tab c' hc']
+
+/-- Order-4 via bushy-3 child has density 12. -/
+private theorem density_of_order_four_via_bushy3 (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧ ∃ c₁ c₂ : BTree,
+      c = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) :
+    t.density = 12 := by
+  rcases h with ⟨c, rfl, c₁, c₂, hc, hc₁, hc₂⟩
+  subst hc
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₁ hc₁, density_of_order_one c₂ hc₂, hc₁, hc₂]
+
+/-- Order-4 via chain-3 child has density 24. -/
+private theorem density_of_order_four_via_chain3 (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧ ∃ c' : BTree, c = .node [c'] ∧ c'.order = 2) :
+    t.density = 24 := by
+  rcases h with ⟨c, rfl, c', hc, hc'⟩
+  subst hc
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_two c' hc', hc']
+
+/-- Convert bushy-4 ew sum from A-sums to c-notation. -/
+private theorem order4a_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 3) =
+      ∑ i : Fin s, tab.b i * tab.c i ^ 3 := by
+  congr 1; ext i; congr 1; rw [hrc i]
+
+/-- Convert mixed ew sum from A-sums to c-notation. -/
+private theorem order4b_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)))) =
+      ∑ i : Fin s, tab.b i * tab.c i * (∑ j : Fin s, tab.A i j * tab.c j) := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  congr 1; ext i; simp_rw [hrc']; ring
+
+/-- Convert via-bushy3 ew sum from A-sums to c-notation. -/
+private theorem order4c_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) =
+      ∑ i : Fin s, ∑ j : Fin s, tab.b i * tab.A i j * tab.c j ^ 2 := by
+  simp_rw [Finset.mul_sum]
+  congr 1; ext i; congr 1; ext j
+  rw [hrc j]; ring
+
+/-- Convert via-chain3 ew sum from A-sums to c-notation. -/
+private theorem order4d_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) =
+      ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+        tab.b i * tab.A i j * tab.A j k * tab.c k := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  simp_rw [hrc', Finset.mul_sum]
+  congr 1; ext i; congr 1; ext j; congr 1; ext k; ring
+
+/-- Bushy-4 satisfies tree condition iff ∑ bᵢ (∑ₖ aᵢₖ)³ = 1/4. -/
+private theorem satisfiesTreeCondition_order_four_bushy4 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧ c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 3 = 1 / 4 := by
+  simp only [satisfiesTreeCondition, density_of_order_four_bushy4 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_four_bushy4 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_four_bushy4 tab t h i
+
+/-- Mixed-4 (order-1, order-2) satisfies tree condition iff sum = 1/8. -/
+private theorem satisfiesTreeCondition_order_four_mixed12 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 8 := by
+  have hmixed : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
+      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1)) := by
+    rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+    exact ⟨c₁, c₂, rfl, by omega, Or.inl ⟨hc₁, hc₂⟩⟩
+  simp only [satisfiesTreeCondition, density_of_order_four_mixed t hmixed]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_four_mixed12 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_four_mixed12 tab t h i
+
+/-- Mixed-4 (order-2, order-1) satisfies tree condition iff sum = 1/8. -/
+private theorem satisfiesTreeCondition_order_four_mixed21 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 8 := by
+  have hmixed : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
+      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1)) := by
+    rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+    exact ⟨c₁, c₂, rfl, by omega, Or.inr ⟨hc₁, hc₂⟩⟩
+  simp only [satisfiesTreeCondition, density_of_order_four_mixed t hmixed]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_four_mixed21 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_four_mixed21 tab t h i
+
+/-- Via-bushy3 satisfies tree condition iff ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ)²) = 1/12. -/
+private theorem satisfiesTreeCondition_order_four_via_bushy3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧ ∃ c₁ c₂ : BTree,
+      c = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2) = 1 / 12 := by
+  simp only [satisfiesTreeCondition, density_of_order_four_via_bushy3 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_four_via_bushy3 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_four_via_bushy3 tab t h i
+
+/-- Via-chain3 satisfies tree condition iff ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ (∑ₗ aₖₗ))) = 1/24. -/
+private theorem satisfiesTreeCondition_order_four_via_chain3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧ ∃ c' : BTree, c = .node [c'] ∧ c'.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l))) = 1 / 24 := by
+  simp only [satisfiesTreeCondition, density_of_order_four_via_chain3 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_four_via_chain3 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_four_via_chain3 tab t h i
+
 /-- Theorem 301A at order 4 (assuming row-sum consistency). -/
 theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     tab.hasTreeOrder 4 ↔ tab.HasOrderGe4 := by
-  sorry
+  constructor
+  · intro h
+    have h3 : tab.HasOrderGe3 := (thm_301A_order3 tab hrc).mp (fun t ht => h t (by omega))
+    refine ⟨h3.1, h3.2.1, h3.2.2.1, h3.2.2.2, ?_, ?_, ?_, ?_⟩
+    · -- order4a: from t4a = [leaf, leaf, leaf]
+      have ht4a : tab.satisfiesTreeCondition t4a := h t4a (by native_decide)
+      rw [satisfiesTreeCondition_order_four_bushy4 tab t4a
+        ⟨.leaf, .leaf, .leaf, rfl, by simp, by simp, by simp⟩] at ht4a
+      rw [order4a]
+      simpa [order4a_sum_eq tab hrc] using ht4a
+    · -- order4b: from t4b = [leaf, t2]
+      have ht4b : tab.satisfiesTreeCondition t4b := h t4b (by native_decide)
+      rw [satisfiesTreeCondition_order_four_mixed12 tab t4b
+        ⟨.leaf, t2, rfl, by simp, by native_decide⟩] at ht4b
+      rw [order4b]
+      simpa [order4b_sum_eq tab hrc] using ht4b
+    · -- order4c: from t4c = [t3a] where t3a = [leaf, leaf]
+      have ht4c : tab.satisfiesTreeCondition t4c := h t4c (by native_decide)
+      rw [satisfiesTreeCondition_order_four_via_bushy3 tab t4c
+        ⟨t3a, rfl, .leaf, .leaf, rfl, by simp, by simp⟩] at ht4c
+      rw [order4c]
+      simpa [order4c_sum_eq tab hrc] using ht4c
+    · -- order4d: from t4d = [t3b] where t3b = [t2]
+      have ht4d : tab.satisfiesTreeCondition t4d := h t4d (by native_decide)
+      rw [satisfiesTreeCondition_order_four_via_chain3 tab t4d
+        ⟨t3b, rfl, t2, rfl, by native_decide⟩] at ht4d
+      rw [order4d]
+      simpa [order4d_sum_eq tab hrc] using ht4d
+  · rintro ⟨h1, h2, h3a, h3b, h4a, h4b, h4c, h4d⟩ t ht
+    have hpos := BTree.order_pos t
+    by_cases hle3 : t.order ≤ 3
+    · exact ((thm_301A_order3 tab hrc).mpr ⟨h1, h2, h3a, h3b⟩) t hle3
+    · have heq : t.order = 4 := by omega
+      rcases order_four_cases t heq with hbushy4 | hmixed | hsingle
+      · -- bushy-4: three leaves
+        rw [satisfiesTreeCondition_order_four_bushy4 tab t hbushy4]
+        rw [order4a] at h4a
+        simpa [order4a_sum_eq tab hrc] using h4a
+      · -- mixed: two children with orders {1,2}
+        rcases hmixed with ⟨c₁, c₂, rfl, _, hord⟩
+        rcases hord with ⟨hc₁, hc₂⟩ | ⟨hc₁, hc₂⟩
+        · rw [satisfiesTreeCondition_order_four_mixed12 tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
+          rw [order4b] at h4b
+          simpa [order4b_sum_eq tab hrc] using h4b
+        · rw [satisfiesTreeCondition_order_four_mixed21 tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
+          rw [order4b] at h4b
+          simpa [order4b_sum_eq tab hrc] using h4b
+      · -- single child of order 3: sub-case on shape
+        rcases hsingle with ⟨c, rfl, hc⟩
+        rcases order_three_cases c hc with hchain | hbushy
+        · -- child is chain-3
+          rcases hchain with ⟨c', hc_eq, hc'⟩
+          rw [satisfiesTreeCondition_order_four_via_chain3 tab _ ⟨c, rfl, c', hc_eq, hc'⟩]
+          rw [order4d] at h4d
+          simpa [order4d_sum_eq tab hrc] using h4d
+        · -- child is bushy-3
+          rcases hbushy with ⟨c₁, c₂, hc_eq, hc₁, hc₂⟩
+          rw [satisfiesTreeCondition_order_four_via_bushy3 tab _ ⟨c, rfl, c₁, c₂, hc_eq, hc₁, hc₂⟩]
+          rw [order4c] at h4c
+          simpa [order4c_sum_eq tab hrc] using h4c
+
+/-! ### Order 5 helpers -/
+
+/-- Any order-5 tree is one of: 4 leaves, 3 children summing to 4, 2 children summing to 4,
+or single order-4 child. -/
+private theorem order_five_cases (t : BTree) (ht : t.order = 5) :
+    (∃ c₁ c₂ c₃ c₄ : BTree, t = .node [c₁, c₂, c₃, c₄] ∧
+      c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1 ∧ c₄.order = 1) ∨
+    (∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order + c₂.order + c₃.order = 4) ∨
+    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 4) ∨
+    (∃ c : BTree, t = .node [c] ∧ c.order = 4) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+    simp only [order_node] at ht
+    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 4 := by omega
+    cases children with
+    | nil => simp at hfoldr
+    | cons hd tl =>
+      simp only [List.foldr] at hfoldr
+      have hhd_pos := BTree.order_pos hd
+      cases tl with
+      | nil =>
+        -- single child of order 4
+        right; right; right
+        exact ⟨hd, rfl, by simp only [List.foldr] at hfoldr; omega⟩
+      | cons hd2 tl2 =>
+        have hhd2_pos := BTree.order_pos hd2
+        simp only [List.foldr] at hfoldr
+        cases tl2 with
+        | nil =>
+          -- two children with orders summing to 4
+          right; right; left
+          exact ⟨hd, hd2, rfl, by simpa using hfoldr⟩
+        | cons hd3 tl3 =>
+          have hhd3_pos := BTree.order_pos hd3
+          simp only [List.foldr] at hfoldr
+          cases tl3 with
+          | nil =>
+            -- three children summing to 4
+            simp only [List.foldr] at hfoldr
+            right; left
+            exact ⟨hd, hd2, hd3, rfl, by omega⟩
+          | cons hd4 tl4 =>
+            have hhd4_pos := BTree.order_pos hd4
+            simp only [List.foldr] at hfoldr
+            cases tl4 with
+            | nil =>
+              -- four children, all must be order 1
+              left
+              have h1 : hd.order = 1 := by omega
+              have h2 : hd2.order = 1 := by omega
+              have h3 : hd3.order = 1 := by omega
+              have h4 : hd4.order = 1 := by omega
+              exact ⟨hd, hd2, hd3, hd4, rfl, h1, h2, h3, h4⟩
+            | cons hd5 tl5 =>
+              -- five+ children: impossible since all orders ≥ 1
+              exfalso
+              have hhd5_pos := BTree.order_pos hd5
+              simp only [List.foldr] at hfoldr
+              have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
+              omega
+
+/-- Bushy order-5 tree (4 leaves): ew = (∑ₖ aᵢₖ)⁴. -/
+private theorem ew_of_order_five_bushy5 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ c₄ : BTree, t = .node [c₁, c₂, c₃, c₄] ∧
+      c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1 ∧ c₄.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i = (∑ k : Fin s, tab.A i k) ^ 4 := by
+  rcases h with ⟨c₁, c₂, c₃, c₄, rfl, hc₁, hc₂, hc₃, hc₄⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁, ew_of_order_one tab c₂ hc₂,
+        ew_of_order_one tab c₃ hc₃, ew_of_order_one tab c₄ hc₄]
+  ring
+
+/-- 3-child [order-1, order-1, order-2]: ew = (∑ₖ aᵢₖ)² · (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)). -/
+private theorem ew_of_order_five_112 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) ^ 2 *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+  rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁,
+        ew_of_order_one tab c₂ hc₂, ew_of_order_two tab c₃ hc₃]
+  ring
+
+/-- 3-child [order-1, order-2, order-1]: same ew by commutativity. -/
+private theorem ew_of_order_five_121 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order = 1 ∧ c₂.order = 2 ∧ c₃.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) ^ 2 *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+  rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁,
+        ew_of_order_two tab c₂ hc₂, ew_of_order_one tab c₃ hc₃]
+  ring
+
+/-- 3-child [order-2, order-1, order-1]: same ew by commutativity. -/
+private theorem ew_of_order_five_211 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order = 2 ∧ c₂.order = 1 ∧ c₃.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) ^ 2 *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+  rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  simp only [elementaryWeight, List.foldr, ew_of_order_two tab c₁ hc₁,
+        ew_of_order_one tab c₂ hc₂, ew_of_order_one tab c₃ hc₃, mul_one, one_mul]
+  ring
+
+/-- 2-child [order-1, bushy-3]: ew = (∑ₖ aᵢₖ) · (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)²). -/
+private theorem ew_of_order_five_1_bushy3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      ∃ d₁ d₂ : BTree, c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2) := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, d₁, d₂, hc₂, hd₁, hd₂⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁, hc₂,
+        ew_of_order_one tab d₁ hd₁, ew_of_order_one tab d₂ hd₂, pow_two]
+  ring
+
+/-- 2-child [bushy-3, order-1]: same ew by commutativity. -/
+private theorem ew_of_order_five_bushy3_1 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
+      ∃ d₁ d₂ : BTree, c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2) := by
+  rcases h with ⟨c₁, c₂, rfl, hc₂, d₁, d₂, hc₁, hd₁, hd₂⟩
+  simp only [elementaryWeight, List.foldr, ew_of_order_one tab c₂ hc₂, hc₁,
+        ew_of_order_one tab d₁ hd₁, ew_of_order_one tab d₂ hd₂, mul_one, one_mul, pow_two]
+
+/-- 2-child [order-1, chain-3]: ew = (∑ₖ aᵢₖ) · (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ))). -/
+private theorem ew_of_order_five_1_chain3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      ∃ d : BTree, c₂ = .node [d] ∧ d.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l))) := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, d, hc₂, hd⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁, hc₂,
+        elementaryWeight_singleton, ew_of_order_two tab d hd]
+  ring
+
+/-- 2-child [chain-3, order-1]: same ew by commutativity. -/
+private theorem ew_of_order_five_chain3_1 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
+      ∃ d : BTree, c₁ = .node [d] ∧ d.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ k : Fin s, tab.A i k) *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l))) := by
+  rcases h with ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩
+  simp only [elementaryWeight, List.foldr, ew_of_order_one tab c₂ hc₂, hc₁,
+        elementaryWeight_singleton, ew_of_order_two tab d hd, mul_one, one_mul]
+
+/-- 2-child [order-2, order-2]: ew = (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ))². -/
+private theorem ew_of_order_five_22 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) ^ 2 := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+  simp [elementaryWeight, List.foldr, ew_of_order_two tab c₁ hc₁, ew_of_order_two tab c₂ hc₂,
+        pow_two]
+
+/-- Single child bushy-4: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)³. -/
+private theorem ew_of_order_five_via_bushy4 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ d₃ : BTree, c = .node [d₁, d₂, d₃] ∧
+        d₁.order = 1 ∧ d₂.order = 1 ∧ d₃.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      ∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 3 := by
+  rcases h with ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩
+  simp [elementaryWeight_singleton, hc, elementaryWeight, List.foldr,
+        ew_of_order_one tab d₁ hd₁, ew_of_order_one tab d₂ hd₂, ew_of_order_one tab d₃ hd₃]
+  congr 1; ext j; ring
+
+/-- Single child mixed [1,2]: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)(∑ₗ aⱼₗ(∑ₘ aₗₘ)). -/
+private theorem ew_of_order_five_via_mixed12 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      ∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m))) := by
+  rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
+  simp [elementaryWeight_singleton, hc, elementaryWeight, List.foldr,
+        ew_of_order_one tab d₁ hd₁, ew_of_order_two tab d₂ hd₂]
+  congr 1; ext j; ring
+
+/-- Single child mixed [2,1]: same ew by commutativity. -/
+private theorem ew_of_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 2 ∧ d₂.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      ∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m))) := by
+  rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
+  simp only [elementaryWeight_singleton, hc, elementaryWeight, List.foldr,
+        ew_of_order_two tab d₁ hd₁, ew_of_order_one tab d₂ hd₂, mul_one, one_mul]
+
+/-- Single child via-bushy3: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ)²). -/
+private theorem ew_of_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d : BTree, c = .node [d] ∧
+        ∃ e₁ e₂ : BTree, d = .node [e₁, e₂] ∧ e₁.order = 1 ∧ e₂.order = 1)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      ∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2) := by
+  rcases h with ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩
+  simp [elementaryWeight_singleton, hc, elementaryWeight_singleton, hd,
+        elementaryWeight, List.foldr,
+        ew_of_order_one tab e₁ he₁, ew_of_order_one tab e₂ he₂, pow_two]
+
+/-- Single child via-chain3: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ(∑ₘ aₗₘ))). -/
+private theorem ew_of_order_five_via_via_chain3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d : BTree, c = .node [d] ∧ ∃ e : BTree, d = .node [e] ∧ e.order = 2)
+    (i : Fin s) :
+    tab.elementaryWeight t i =
+      ∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m))) := by
+  rcases h with ⟨c, rfl, d, hc, e, hd, he⟩
+  simp [elementaryWeight_singleton, hc, elementaryWeight_singleton, hd,
+        elementaryWeight_singleton, ew_of_order_two tab e he]
+
+/-- Bushy-5 has density 5. -/
+private theorem density_of_order_five_bushy5 (t : BTree)
+    (h : ∃ c₁ c₂ c₃ c₄ : BTree, t = .node [c₁, c₂, c₃, c₄] ∧
+      c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1 ∧ c₄.order = 1) :
+    t.density = 5 := by
+  rcases h with ⟨c₁, c₂, c₃, c₄, rfl, hc₁, hc₂, hc₃, hc₄⟩
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₁ hc₁, density_of_order_one c₂ hc₂,
+      density_of_order_one c₃ hc₃, density_of_order_one c₄ hc₄, hc₁, hc₂, hc₃, hc₄]
+
+/-- 3-child with orders summing to 4 has density 10. -/
+private theorem density_of_order_five_3child (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order + c₂.order + c₃.order = 4) :
+    t.density = 10 := by
+  rcases h with ⟨c₁, c₂, c₃, rfl, hsum⟩
+  simp only [density_node, order_node, List.foldr]
+  have hc₁_pos := BTree.order_pos c₁
+  have hc₂_pos := BTree.order_pos c₂
+  have hc₃_pos := BTree.order_pos c₃
+  -- All orders ≥ 1 and sum = 4 with 3 children → exactly one is 2, others are 1
+  by_cases h1 : c₁.order = 1
+  · by_cases h2 : c₂.order = 1
+    · have h3 : c₃.order = 2 := by omega
+      rw [density_of_order_one c₁ h1, density_of_order_one c₂ h2,
+          density_of_order_two c₃ h3, h1, h2, h3]
+    · have h2' : c₂.order = 2 := by omega
+      have h3 : c₃.order = 1 := by omega
+      rw [density_of_order_one c₁ h1, density_of_order_two c₂ h2',
+          density_of_order_one c₃ h3, h1, h2', h3]
+  · have h1' : c₁.order = 2 := by omega
+    have h2 : c₂.order = 1 := by omega
+    have h3 : c₃.order = 1 := by omega
+    rw [density_of_order_two c₁ h1', density_of_order_one c₂ h2,
+        density_of_order_one c₃ h3, h1', h2, h3]
+
+/-- 2-child [order-1, order-3] has density determined by the order-3 shape. -/
+private theorem density_of_order_five_1_bushy3 (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      ∃ d₁ d₂ : BTree, c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) :
+    t.density = 15 := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, d₁, d₂, hc₂, hd₁, hd₂⟩
+  subst hc₂
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₁ hc₁, density_of_order_one d₁ hd₁,
+      density_of_order_one d₂ hd₂, hc₁, hd₁, hd₂]
+
+/-- 2-child [bushy-3, order-1] has density 15. -/
+private theorem density_of_order_five_bushy3_1 (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
+      ∃ d₁ d₂ : BTree, c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) :
+    t.density = 15 := by
+  rcases h with ⟨c₁, c₂, rfl, hc₂, d₁, d₂, hc₁, hd₁, hd₂⟩
+  subst hc₁
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₂ hc₂, density_of_order_one d₁ hd₁,
+      density_of_order_one d₂ hd₂, hc₂, hd₁, hd₂]
+
+/-- 2-child [order-1, chain-3] has density 30. -/
+private theorem density_of_order_five_1_chain3 (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      ∃ d : BTree, c₂ = .node [d] ∧ d.order = 2) :
+    t.density = 30 := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, d, hc₂, hd⟩
+  subst hc₂
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₁ hc₁, density_of_order_two d hd, hc₁, hd]
+
+/-- 2-child [chain-3, order-1] has density 30. -/
+private theorem density_of_order_five_chain3_1 (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
+      ∃ d : BTree, c₁ = .node [d] ∧ d.order = 2) :
+    t.density = 30 := by
+  rcases h with ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩
+  subst hc₁
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₂ hc₂, density_of_order_two d hd, hc₂, hd]
+
+/-- 2-child [order-2, order-2] has density 20. -/
+private theorem density_of_order_five_22 (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 2) :
+    t.density = 20 := by
+  rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_two c₁ hc₁, density_of_order_two c₂ hc₂, hc₁, hc₂]
+
+/-- Single bushy-4 child has density 20. -/
+private theorem density_of_order_five_via_bushy4 (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ d₃ : BTree, c = .node [d₁, d₂, d₃] ∧
+        d₁.order = 1 ∧ d₂.order = 1 ∧ d₃.order = 1) :
+    t.density = 20 := by
+  rcases h with ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩
+  subst hc
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one d₁ hd₁, density_of_order_one d₂ hd₂,
+      density_of_order_one d₃ hd₃, hd₁, hd₂, hd₃]
+
+/-- Single mixed child [1,2] has density 40. -/
+private theorem density_of_order_five_via_mixed (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order + d₂.order = 3 ∧
+        ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1))) :
+    t.density = 40 := by
+  rcases h with ⟨c, rfl, d₁, d₂, hc, _, hord⟩
+  subst hc
+  rcases hord with ⟨hd₁, hd₂⟩ | ⟨hd₁, hd₂⟩
+  · simp only [density_node, order_node, List.foldr]
+    rw [density_of_order_one d₁ hd₁, density_of_order_two d₂ hd₂, hd₁, hd₂]
+  · simp only [density_node, order_node, List.foldr]
+    rw [density_of_order_two d₁ hd₁, density_of_order_one d₂ hd₂, hd₁, hd₂]
+
+/-- Single via-bushy3 child has density 60. -/
+private theorem density_of_order_five_via_via_bushy3 (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d : BTree, c = .node [d] ∧
+        ∃ e₁ e₂ : BTree, d = .node [e₁, e₂] ∧ e₁.order = 1 ∧ e₂.order = 1) :
+    t.density = 60 := by
+  rcases h with ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩
+  subst hc; subst hd
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one e₁ he₁, density_of_order_one e₂ he₂, he₁, he₂]
+
+/-- Single via-chain3 child has density 120. -/
+private theorem density_of_order_five_via_via_chain3 (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d : BTree, c = .node [d] ∧ ∃ e : BTree, d = .node [e] ∧ e.order = 2) :
+    t.density = 120 := by
+  rcases h with ⟨c, rfl, d, hc, e, hd, he⟩
+  subst hc; subst hd
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_two e he, he]
+
+/-! #### Tree condition equivalences for order 5 -/
+
+/-- Bushy-5 tree condition: ∑ bᵢ (∑ₖ aᵢₖ)⁴ = 1/5. -/
+private theorem satisfiesTreeCondition_order_five_bushy5 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ c₄ : BTree, t = .node [c₁, c₂, c₃, c₄] ∧
+      c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1 ∧ c₄.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 4 = 1 / 5 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_bushy5 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_bushy5 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_bushy5 tab t h i
+
+/-- 3-child tree condition: ∑ bᵢ (∑ₖ aᵢₖ)² (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)) = 1/10. -/
+private theorem satisfiesTreeCondition_order_five_3child_112 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) ^ 2 *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
+  have h3 : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order + c₂.order + c₃.order = 4 := by
+    rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+    exact ⟨c₁, c₂, c₃, rfl, by omega⟩
+  simp only [satisfiesTreeCondition, density_of_order_five_3child t h3]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_112 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_112 tab t h i
+
+/-- 3-child [1,2,1] tree condition. -/
+private theorem satisfiesTreeCondition_order_five_3child_121 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order = 1 ∧ c₂.order = 2 ∧ c₃.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) ^ 2 *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
+  have h3 : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order + c₂.order + c₃.order = 4 := by
+    rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+    exact ⟨c₁, c₂, c₃, rfl, by omega⟩
+  simp only [satisfiesTreeCondition, density_of_order_five_3child t h3]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_121 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_121 tab t h i
+
+/-- 3-child [2,1,1] tree condition. -/
+private theorem satisfiesTreeCondition_order_five_3child_211 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order = 2 ∧ c₂.order = 1 ∧ c₃.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) ^ 2 *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
+  have h3 : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
+      c₁.order + c₂.order + c₃.order = 4 := by
+    rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+    exact ⟨c₁, c₂, c₃, rfl, by omega⟩
+  simp only [satisfiesTreeCondition, density_of_order_five_3child t h3]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_211 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_211 tab t h i
+
+/-- [1, bushy-3] tree condition: sum = 1/15. -/
+private theorem satisfiesTreeCondition_order_five_1_bushy3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      ∃ d₁ d₂ : BTree, c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_1_bushy3 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_1_bushy3 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_1_bushy3 tab t h i
+
+/-- [bushy-3, 1] tree condition: sum = 1/15. -/
+private theorem satisfiesTreeCondition_order_five_bushy3_1 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
+      ∃ d₁ d₂ : BTree, c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_bushy3_1 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_bushy3_1 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_bushy3_1 tab t h i
+
+/-- [1, chain-3] tree condition: sum = 1/30. -/
+private theorem satisfiesTreeCondition_order_five_1_chain3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      ∃ d : BTree, c₂ = .node [d] ∧ d.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_1_chain3 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_1_chain3 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_1_chain3 tab t h i
+
+/-- [chain-3, 1] tree condition: sum = 1/30. -/
+private theorem satisfiesTreeCondition_order_five_chain3_1 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
+      ∃ d : BTree, c₁ = .node [d] ∧ d.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_chain3_1 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_chain3_1 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_chain3_1 tab t h i
+
+/-- [order-2, order-2] tree condition: sum = 1/20. -/
+private theorem satisfiesTreeCondition_order_five_22 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) ^ 2 = 1 / 20 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_22 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_22 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_22 tab t h i
+
+/-- Via-bushy4 tree condition: sum = 1/20. -/
+private theorem satisfiesTreeCondition_order_five_via_bushy4 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ d₃ : BTree, c = .node [d₁, d₂, d₃] ∧
+        d₁.order = 1 ∧ d₂.order = 1 ∧ d₃.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 3) = 1 / 20 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_via_bushy4 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_via_bushy4 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_via_bushy4 tab t h i
+
+/-- Via-mixed12 tree condition: sum = 1/40. -/
+private theorem satisfiesTreeCondition_order_five_via_mixed12 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
+  have hmixed : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order + d₂.order = 3 ∧
+        ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) := by
+    rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
+    exact ⟨c, rfl, d₁, d₂, hc, by omega, Or.inl ⟨hd₁, hd₂⟩⟩
+  simp only [satisfiesTreeCondition, density_of_order_five_via_mixed t hmixed]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_via_mixed12 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_via_mixed12 tab t h i
+
+/-- Via-mixed21 tree condition: sum = 1/40. -/
+private theorem satisfiesTreeCondition_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 2 ∧ d₂.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
+  have hmixed : ∃ c : BTree, t = .node [c] ∧
+      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order + d₂.order = 3 ∧
+        ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) := by
+    rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
+    exact ⟨c, rfl, d₁, d₂, hc, by omega, Or.inr ⟨hd₁, hd₂⟩⟩
+  simp only [satisfiesTreeCondition, density_of_order_five_via_mixed t hmixed]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_via_mixed21 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_via_mixed21 tab t h i
+
+/-- Via-via-bushy3 tree condition: sum = 1/60. -/
+private theorem satisfiesTreeCondition_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d : BTree, c = .node [d] ∧
+        ∃ e₁ e₂ : BTree, d = .node [e₁, e₂] ∧ e₁.order = 1 ∧ e₂.order = 1) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2)) = 1 / 60 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_via_via_bushy3 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_via_via_bushy3 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_via_via_bushy3 tab t h i
+
+/-- Via-via-chain3 tree condition: sum = 1/120. -/
+private theorem satisfiesTreeCondition_order_five_via_via_chain3 (tab : ButcherTableau s) (t : BTree)
+    (h : ∃ c : BTree, t = .node [c] ∧
+      ∃ d : BTree, c = .node [d] ∧ ∃ e : BTree, d = .node [e] ∧ e.order = 2) :
+    tab.satisfiesTreeCondition t ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m)))) = 1 / 120 := by
+  simp only [satisfiesTreeCondition, density_of_order_five_via_via_chain3 t h]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_via_via_chain3 tab t h i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_via_via_chain3 tab t h i
+
+/-! #### Sum conversion helpers for order 5 -/
+
+/-- Convert bushy-5 sum: (∑ aᵢₖ)⁴ → cᵢ⁴. -/
+private theorem order5a_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 4) =
+      ∑ i : Fin s, tab.b i * tab.c i ^ 4 := by
+  congr 1; ext i; congr 1; rw [hrc i]
+
+/-- Convert 3-child sum: (∑ aᵢₖ)²·(∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)) → cᵢ²·(∑ aᵢⱼ cⱼ). -/
+private theorem order5b_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) ^ 2 *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)))) =
+      ∑ i : Fin s, tab.b i * tab.c i ^ 2 * (∑ j : Fin s, tab.A i j * tab.c j) := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  congr 1; ext i; simp_rw [hrc']; ring
+
+/-- Convert [2,2] sum: (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ))² → (∑ aᵢⱼ cⱼ)². -/
+private theorem order5c_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) ^ 2) =
+      ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * tab.c j) ^ 2 := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  congr 1; ext i; simp_rw [hrc']
+
+/-- Convert [1, bushy-3] sum: cᵢ·(∑ aᵢⱼ(∑ aⱼₖ)²) → cᵢ·(∑ aᵢⱼ cⱼ²). -/
+private theorem order5d_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2))) =
+      ∑ i : Fin s, tab.b i * tab.c i * (∑ j : Fin s, tab.A i j * tab.c j ^ 2) := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  congr 1; ext i; simp_rw [hrc']; ring
+
+/-- Convert via-bushy4 sum: ∑ bᵢ(∑ aᵢⱼ(∑ aⱼₖ)³) → ∑∑ bᵢ aᵢⱼ cⱼ³. -/
+private theorem order5e_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 3)) =
+      ∑ i : Fin s, ∑ j : Fin s, tab.b i * tab.A i j * tab.c j ^ 3 := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  simp_rw [Finset.mul_sum]
+  congr 1; ext i; congr 1; ext j; rw [hrc']; ring
+
+/-- Convert [1, chain-3] sum: cᵢ·(∑ aᵢⱼ(∑ aⱼₖ(∑ aₖₗ))) → cᵢ·(∑ aᵢⱼ(∑ aⱼₖ cₖ)). -/
+private theorem order5f_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l))))) =
+      ∑ i : Fin s, tab.b i * tab.c i *
+        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k)) := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  congr 1; ext i; simp_rw [hrc']; ring
+
+/-- Convert via-mixed sum: ∑ bᵢ(∑ aᵢⱼ(cⱼ·(∑ aⱼₗ(∑ aₗₘ)))) → ∑∑ bᵢ aᵢⱼ cⱼ (∑ aⱼₖ cₖ). -/
+private theorem order5g_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m))))) =
+      ∑ i : Fin s, ∑ j : Fin s,
+        tab.b i * tab.A i j * tab.c j * (∑ k : Fin s, tab.A j k * tab.c k) := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  congr 1; ext i; simp_rw [hrc', Finset.mul_sum]; congr 1; ext j; ring
+
+/-- Convert via-via-bushy3 sum: ∑ bᵢ(∑ aᵢⱼ(∑ aⱼₖ(∑ aₖₗ)²)) → ∑∑ bᵢ aᵢⱼ (∑ aⱼₖ cₖ²). -/
+private theorem order5h_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2))) =
+      ∑ i : Fin s, ∑ j : Fin s,
+        tab.b i * tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k ^ 2) := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  simp_rw [Finset.mul_sum]
+  congr 1; ext i; congr 1; ext j; simp_rw [hrc']; ring
+
+/-- Convert via-via-chain3 sum: ∑ bᵢ(∑ aᵢⱼ(∑ aⱼₖ(∑ aₖₗ(∑ aₗₘ)))) → ∑∑∑ bᵢ aᵢⱼ aⱼₖ (∑ aₖₗ cₗ). -/
+private theorem order5i_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
+    (∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m))))) =
+      ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+        tab.b i * tab.A i j * tab.A j k * (∑ l : Fin s, tab.A k l * tab.c l) := by
+  have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
+  congr 1; ext i; simp_rw [hrc', Finset.mul_sum]; congr 1; ext j; congr 1; ext k; ring
 
 /-- Theorem 301A at order 5 (assuming row-sum consistency). -/
 theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     tab.hasTreeOrder 5 ↔ tab.HasOrderGe5 := by
-  sorry
+  constructor
+  · -- Forward: hasTreeOrder 5 → HasOrderGe5
+    intro h
+    have h4 : tab.HasOrderGe4 := (thm_301A_order4 tab hrc).mp (fun t ht => h t (by omega))
+    refine ⟨h4, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · -- order5a from t5a = [leaf⁴]
+      have ht := h t5a (by native_decide)
+      rw [satisfiesTreeCondition_order_five_bushy5 tab t5a
+        ⟨.leaf, .leaf, .leaf, .leaf, rfl, by simp, by simp, by simp, by simp⟩] at ht
+      rw [order5a]; simpa [order5a_sum_eq tab hrc] using ht
+    · -- order5b from t5b = [leaf, leaf, t2]
+      have ht := h t5b (by native_decide)
+      rw [satisfiesTreeCondition_order_five_3child_112 tab t5b
+        ⟨.leaf, .leaf, t2, rfl, by simp, by simp, by native_decide⟩] at ht
+      rw [order5b]; simpa [order5b_sum_eq tab hrc] using ht
+    · -- order5c from t5e = [t2, t2]
+      have ht := h t5e (by native_decide)
+      rw [satisfiesTreeCondition_order_five_22 tab t5e
+        ⟨t2, t2, rfl, by native_decide, by native_decide⟩] at ht
+      rw [order5c]; simpa [order5c_sum_eq tab hrc] using ht
+    · -- order5d from t5c = [leaf, t3a]
+      have ht := h t5c (by native_decide)
+      rw [satisfiesTreeCondition_order_five_1_bushy3 tab t5c
+        ⟨.leaf, t3a, rfl, by simp, .leaf, .leaf, rfl, by simp, by simp⟩] at ht
+      rw [order5d]; simpa [order5d_sum_eq tab hrc] using ht
+    · -- order5e from t5f = [t4a] where t4a = [leaf, leaf, leaf]
+      have ht := h t5f (by native_decide)
+      rw [satisfiesTreeCondition_order_five_via_bushy4 tab t5f
+        ⟨t4a, rfl, .leaf, .leaf, .leaf, rfl, by simp, by simp, by simp⟩] at ht
+      rw [order5e]; simpa [order5e_sum_eq tab hrc] using ht
+    · -- order5f from t5d = [leaf, t3b]
+      have ht := h t5d (by native_decide)
+      rw [satisfiesTreeCondition_order_five_1_chain3 tab t5d
+        ⟨.leaf, t3b, rfl, by simp, t2, rfl, by native_decide⟩] at ht
+      rw [order5f]; simpa [order5f_sum_eq tab hrc] using ht
+    · -- order5g from t5g = [t4b] where t4b = [leaf, t2]
+      have ht := h t5g (by native_decide)
+      rw [satisfiesTreeCondition_order_five_via_mixed12 tab t5g
+        ⟨t4b, rfl, .leaf, t2, rfl, by simp, by native_decide⟩] at ht
+      rw [order5g]; simpa [order5g_sum_eq tab hrc] using ht
+    · -- order5h from t5h = [t4c] where t4c = [t3a] = [[leaf, leaf]]
+      have ht := h t5h (by native_decide)
+      rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab t5h
+        ⟨t4c, rfl, t3a, rfl, .leaf, .leaf, rfl, by simp, by simp⟩] at ht
+      rw [order5h]; simpa [order5h_sum_eq tab hrc] using ht
+    · -- order5i from t5i = [t4d] where t4d = [t3b] = [[t2]]
+      have ht := h t5i (by native_decide)
+      rw [satisfiesTreeCondition_order_five_via_via_chain3 tab t5i
+        ⟨t4d, rfl, t3b, rfl, t2, rfl, by native_decide⟩] at ht
+      rw [order5i]; simpa [order5i_sum_eq tab hrc] using ht
+  · -- Reverse: HasOrderGe5 → hasTreeOrder 5
+    rintro ⟨h4, h5a, h5b, h5c, h5d, h5e, h5f, h5g, h5h, h5i⟩ t ht
+    have hpos := BTree.order_pos t
+    by_cases hle4 : t.order ≤ 4
+    · exact ((thm_301A_order4 tab hrc).mpr h4) t hle4
+    · have heq : t.order = 5 := by omega
+      rcases order_five_cases t heq with hA | hB | hC | hD
+      · -- Case A: 4 leaves → order5a
+        rw [satisfiesTreeCondition_order_five_bushy5 tab t hA]
+        rw [order5a] at h5a; simpa [order5a_sum_eq tab hrc] using h5a
+      · -- Case B: 3 children summing to 4
+        rcases hB with ⟨c₁, c₂, c₃, rfl, hsum⟩
+        have hc₁_pos := BTree.order_pos c₁
+        have hc₂_pos := BTree.order_pos c₂
+        have hc₃_pos := BTree.order_pos c₃
+        by_cases h1 : c₁.order = 1
+        · by_cases h2 : c₂.order = 1
+          · have h3 : c₃.order = 2 := by omega
+            rw [satisfiesTreeCondition_order_five_3child_112 tab _
+              ⟨c₁, c₂, c₃, rfl, h1, h2, h3⟩]
+            rw [order5b] at h5b; simpa [order5b_sum_eq tab hrc] using h5b
+          · have h2' : c₂.order = 2 := by omega
+            have h3 : c₃.order = 1 := by omega
+            rw [satisfiesTreeCondition_order_five_3child_121 tab _
+              ⟨c₁, c₂, c₃, rfl, h1, h2', h3⟩]
+            rw [order5b] at h5b; simpa [order5b_sum_eq tab hrc] using h5b
+        · have h1' : c₁.order = 2 := by omega
+          have h2 : c₂.order = 1 := by omega
+          have h3 : c₃.order = 1 := by omega
+          rw [satisfiesTreeCondition_order_five_3child_211 tab _
+            ⟨c₁, c₂, c₃, rfl, h1', h2, h3⟩]
+          rw [order5b] at h5b; simpa [order5b_sum_eq tab hrc] using h5b
+      · -- Case C: 2 children summing to 4
+        rcases hC with ⟨c₁, c₂, rfl, hsum⟩
+        have hc₁_pos := BTree.order_pos c₁
+        have hc₂_pos := BTree.order_pos c₂
+        -- Sub-case on {1,3}, {3,1}, {2,2}
+        by_cases h22 : c₁.order = 2 ∧ c₂.order = 2
+        · -- {2,2}
+          rw [satisfiesTreeCondition_order_five_22 tab _ ⟨c₁, c₂, rfl, h22.1, h22.2⟩]
+          rw [order5c] at h5c; simpa [order5c_sum_eq tab hrc] using h5c
+        · by_cases h1 : c₁.order = 1
+          · -- c₁ order 1, c₂ order 3
+            have hc₂ : c₂.order = 3 := by omega
+            rcases order_three_cases c₂ hc₂ with hchain | hbushy
+            · -- c₂ is chain-3
+              rcases hchain with ⟨d, hd_eq, hd⟩
+              rw [satisfiesTreeCondition_order_five_1_chain3 tab _
+                ⟨c₁, c₂, rfl, h1, d, hd_eq, hd⟩]
+              rw [order5f] at h5f; simpa [order5f_sum_eq tab hrc] using h5f
+            · -- c₂ is bushy-3
+              rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
+              rw [satisfiesTreeCondition_order_five_1_bushy3 tab _
+                ⟨c₁, c₂, rfl, h1, d₁, d₂, hd_eq, hd₁, hd₂⟩]
+              rw [order5d] at h5d; simpa [order5d_sum_eq tab hrc] using h5d
+          · by_cases h2 : c₂.order = 1
+            · -- c₂ order 1, c₁ order 3
+              have hc₁ : c₁.order = 3 := by omega
+              rcases order_three_cases c₁ hc₁ with hchain | hbushy
+              · -- c₁ is chain-3
+                rcases hchain with ⟨d, hd_eq, hd⟩
+                rw [satisfiesTreeCondition_order_five_chain3_1 tab _
+                  ⟨c₁, c₂, rfl, h2, d, hd_eq, hd⟩]
+                rw [order5f] at h5f; simpa [order5f_sum_eq tab hrc] using h5f
+              · -- c₁ is bushy-3
+                rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
+                rw [satisfiesTreeCondition_order_five_bushy3_1 tab _
+                  ⟨c₁, c₂, rfl, h2, d₁, d₂, hd_eq, hd₁, hd₂⟩]
+                rw [order5d] at h5d; simpa [order5d_sum_eq tab hrc] using h5d
+            · -- remaining: both ≥ 2, not both 2, sum = 4 → impossible
+              exfalso; omega
+      · -- Case D: single order-4 child
+        rcases hD with ⟨c, rfl, hc⟩
+        rcases order_four_cases c hc with hbushy4 | hmixed | hsingle
+        · -- child is bushy-4 = [d₁, d₂, d₃] all order 1
+          rcases hbushy4 with ⟨d₁, d₂, d₃, hc_eq, hd₁, hd₂, hd₃⟩
+          rw [satisfiesTreeCondition_order_five_via_bushy4 tab _
+            ⟨c, rfl, d₁, d₂, d₃, hc_eq, hd₁, hd₂, hd₃⟩]
+          rw [order5e] at h5e; simpa [order5e_sum_eq tab hrc] using h5e
+        · -- child is mixed-4 = [d₁, d₂] with {1,2} or {2,1}
+          rcases hmixed with ⟨d₁, d₂, hc_eq, _, hord⟩
+          rcases hord with ⟨hd₁, hd₂⟩ | ⟨hd₁, hd₂⟩
+          · rw [satisfiesTreeCondition_order_five_via_mixed12 tab _
+              ⟨c, rfl, d₁, d₂, hc_eq, hd₁, hd₂⟩]
+            rw [order5g] at h5g; simpa [order5g_sum_eq tab hrc] using h5g
+          · rw [satisfiesTreeCondition_order_five_via_mixed21 tab _
+              ⟨c, rfl, d₁, d₂, hc_eq, hd₁, hd₂⟩]
+            rw [order5g] at h5g; simpa [order5g_sum_eq tab hrc] using h5g
+        · -- child is single order-3 child
+          rcases hsingle with ⟨d, hc_eq, hd⟩
+          rcases order_three_cases d hd with hchain | hbushy
+          · -- d is chain-3
+            rcases hchain with ⟨e, he_eq, he⟩
+            rw [satisfiesTreeCondition_order_five_via_via_chain3 tab _
+              ⟨c, rfl, d, hc_eq, e, he_eq, he⟩]
+            rw [order5i] at h5i; simpa [order5i_sum_eq tab hrc] using h5i
+          · -- d is bushy-3
+            rcases hbushy with ⟨e₁, e₂, he_eq, he₁, he₂⟩
+            rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab _
+              ⟨c, rfl, d, hc_eq, e₁, e₂, he_eq, he₁, he₂⟩]
+            rw [order5h] at h5h; simpa [order5h_sum_eq tab hrc] using h5h
 
 end ButcherTableau
