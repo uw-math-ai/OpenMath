@@ -1944,7 +1944,20 @@ private theorem gen_tree_cond (tab : ButcherTableau s)
         have hord_eq := BTree.order_node children
         -- node.order = 1 + foldr ≥ 1 + ch.order + tb.order ≥ 1 + 2(n+1) = 2n+3 > 2n
         omega
-      sorry  -- Main algebraic proof using D(n) and ih_gen
+      have htb_order_lt : tb.order < m := by
+        have hchild_lt : tb.order < (BTree.node children).order := child_order_lt_of_mem htb_mem
+        omega
+      have htb_q0 : 0 + tb.order ≤ 2 * n := by
+        omega
+      have htb_qnode : q' + tb.order ≤ 2 * n := by
+        have hchild_lt : tb.order < (BTree.node children).order := child_order_lt_of_mem htb_mem
+        omega
+      have hmain :
+          ∑ i, tab.b i * tab.c i ^ q' * tab.elementaryWeight (BTree.node children) i =
+            ↑(BTree.node children).order /
+              ((↑q' + ↑(BTree.node children).order) * ↑(BTree.node children).density) := by
+        sorry
+      exact hmain
 
 /-- The remaining case of Theorem 342l: exactly one child of `t` can have order
 strictly larger than `n`, and this is where the `D(n)` simplification is used. -/
