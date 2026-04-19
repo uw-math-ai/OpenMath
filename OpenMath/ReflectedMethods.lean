@@ -327,7 +327,80 @@ Textbook Theorem 343B, equation (343g). -/
 theorem reflect_satisfiesE {t : ButcherTableau s} {η ζ : ℕ}
     (hB : t.SatisfiesB (η + ζ)) (hE : t.SatisfiesE η ζ) :
     t.reflect.SatisfiesE η ζ := by
-  sorry
+  intro k l hk hκη hl hlζ
+  simp only [reflect_b, reflect_A, reflect_c]
+  have hB_refl : t.reflect.SatisfiesB (η + ζ) := reflect_satisfiesB hB
+  have h_expand_i : ∀ i : Fin s,
+      (1 - t.c i) ^ (k - 1) =
+        ∑ a ∈ Finset.range k, ((k - 1).choose a : ℝ) * (-1) ^ a * t.c i ^ a :=
+    by
+      intro i
+      simpa using one_sub_pow_expand k hk (t.c i)
+  have h_expand_j : ∀ j : Fin s,
+      (1 - t.c j) ^ (l - 1) =
+        ∑ b ∈ Finset.range l, ((l - 1).choose b : ℝ) * (-1) ^ b * t.c j ^ b :=
+    by
+      intro j
+      simpa using one_sub_pow_expand l hl (t.c j)
+  have h_split :
+      ∑ i : Fin s, ∑ j : Fin s,
+          t.b i * (1 - t.c i) ^ (k - 1) * (t.b j - t.A i j) * (1 - t.c j) ^ (l - 1) =
+        (∑ i : Fin s, ∑ j : Fin s,
+          t.b i * (1 - t.c i) ^ (k - 1) * t.b j * (1 - t.c j) ^ (l - 1)) -
+        (∑ i : Fin s, ∑ j : Fin s,
+          t.b i * (1 - t.c i) ^ (k - 1) * t.A i j * (1 - t.c j) ^ (l - 1)) := by
+    rw [← Finset.sum_sub_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [← Finset.sum_sub_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    ring
+  have h_b_term :
+      ∑ i : Fin s, ∑ j : Fin s,
+          t.b i * (1 - t.c i) ^ (k - 1) * t.b j * (1 - t.c j) ^ (l - 1) =
+        1 / ((k : ℝ) * (l : ℝ)) := by
+    have hkB : ∑ i : Fin s, t.b i * (1 - t.c i) ^ (k - 1) = 1 / (k : ℝ) := by
+      simpa only [reflect_b, reflect_c] using hB_refl k hk (by omega)
+    have hlB : ∑ j : Fin s, t.b j * (1 - t.c j) ^ (l - 1) = 1 / (l : ℝ) := by
+      simpa only [reflect_b, reflect_c] using hB_refl l hl (by omega)
+    have hfactor :
+        ∀ i : Fin s,
+          ∑ j : Fin s, t.b i * (1 - t.c i) ^ (k - 1) * t.b j * (1 - t.c j) ^ (l - 1) =
+            (t.b i * (1 - t.c i) ^ (k - 1)) *
+              (∑ j : Fin s, t.b j * (1 - t.c j) ^ (l - 1)) := by
+      intro i
+      conv_lhs =>
+        arg 2
+        ext j
+        rw [show t.b i * (1 - t.c i) ^ (k - 1) * t.b j * (1 - t.c j) ^ (l - 1) =
+          (t.b i * (1 - t.c i) ^ (k - 1)) * (t.b j * (1 - t.c j) ^ (l - 1)) from by ring]
+      rw [← Finset.mul_sum]
+    calc
+      ∑ i : Fin s, ∑ j : Fin s,
+          t.b i * (1 - t.c i) ^ (k - 1) * t.b j * (1 - t.c j) ^ (l - 1)
+          = (∑ i : Fin s, t.b i * (1 - t.c i) ^ (k - 1)) *
+              (∑ j : Fin s, t.b j * (1 - t.c j) ^ (l - 1)) := by
+              rw [Finset.sum_congr rfl (fun i _ => hfactor i), ← Finset.sum_mul]
+      _ = (1 / (k : ℝ)) * (1 / (l : ℝ)) := by rw [hkB, hlB]
+      _ = 1 / ((k : ℝ) * (l : ℝ)) := by ring
+  have h_A_term :
+      ∑ i : Fin s, ∑ j : Fin s,
+          t.b i * (1 - t.c i) ^ (k - 1) * t.A i j * (1 - t.c j) ^ (l - 1) =
+        1 / ((k : ℝ) * (l : ℝ)) - 1 / ((l : ℝ) * ((k + l : ℕ) : ℝ)) := by
+    sorry
+  calc
+    ∑ i : Fin s, ∑ j : Fin s,
+        t.b i * (1 - t.c i) ^ (k - 1) * (t.b j - t.A i j) * (1 - t.c j) ^ (l - 1)
+        = (∑ i : Fin s, ∑ j : Fin s,
+            t.b i * (1 - t.c i) ^ (k - 1) * t.b j * (1 - t.c j) ^ (l - 1)) -
+          (∑ i : Fin s, ∑ j : Fin s,
+            t.b i * (1 - t.c i) ^ (k - 1) * t.A i j * (1 - t.c j) ^ (l - 1)) := h_split
+    _ = 1 / ((k : ℝ) * (l : ℝ)) -
+          (1 / ((k : ℝ) * (l : ℝ)) - 1 / ((l : ℝ) * ((k + l : ℕ) : ℝ))) := by
+            rw [h_b_term, h_A_term]
+    _ = 1 / ((l : ℝ) * ((k + l : ℕ) : ℝ)) := by
+          ring
 
 end ButcherTableau
 
