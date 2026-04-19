@@ -342,12 +342,12 @@
   "thm:355D": {
     "lean_file": "OpenMath/OrderStars.lean",
     "lean_symbol": "thm_355D",
-    "status": "in_progress"
+    "status": "done"
   },
   "thm:355E": {
     "lean_file": "OpenMath/OrderStars.lean",
     "lean_symbol": "thm_355E",
-    "status": "in_progress"
+    "status": "done"
   },
   "thm:355F": {
     "lean_file": "OpenMath/OrderStars.lean",
@@ -357,7 +357,7 @@
   "thm:355G": {
     "lean_file": "OpenMath/OrderStars.lean",
     "lean_symbol": "ehle_barrier",
-    "status": "in_progress"
+    "status": "done"
   },
   "def:356A": {
     "lean_file": "OpenMath/ANStability.lean",

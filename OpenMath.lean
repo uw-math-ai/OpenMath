@@ -3,6 +3,7 @@ import OpenMath.EulerConvergence
 import OpenMath.MultistepMethods
 import OpenMath.DahlquistEquivalence
 import OpenMath.Collocation
+import OpenMath.CollocationBN
 import OpenMath.SDIRK
 import OpenMath.RadauIIA3
 import OpenMath.LobattoIIIC

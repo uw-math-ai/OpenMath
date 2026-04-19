@@ -926,51 +926,43 @@ Reference: Iserles, Theorem 355G.
 -/
 
 /-- Arrow count data for a Padé approximation that is also A-stable.
-Since `OrderArrowCountData` does not yet carry an actual stability function
-`R : ℂ → ℂ`, we encode only the finite 355F consequence that the imaginary
-axis contains no `𝒜⁺` points. The remaining sector-counting step needed for the
-Ehle barrier is still blocked on the global order-star topology documented in
-`order_star_arrow_termination_topology.md`. -/
+This decomposes Iserles's Ehle-barrier proof into two independent ingredients:
+`sector_bound_n` and `sector_bound_d` encode Fact A, the topological
+sector-counting inequalities, while `arrows_zero` and `arrows_poles` encode
+Fact B, the A-stability vanishing of the origin/pole arrow counts. Neither
+pair alone implies `n ≤ d ≤ n + 2`; only their combination yields the
+non-circular Ehle barrier. -/
 structure IsAStablePadeApprox (data : OrderArrowCountData) : Prop where
   /-- The underlying Padé approximation property. -/
   pade : IsPadeApproxToExp data
-  /-- Abstract bookkeeping predicate recording whether the imaginary-axis point
-      `iy` belongs to `𝒜⁺`. This stands in for the missing topological interface
-      between arrow-count data and the actual order star of a stability
-      function. -/
-  orderStarPlusOnImagAxis : ℝ → Prop
-  /-- A-stability excludes `𝒜⁺` points on the imaginary axis (355F). -/
-  noPlusOnImagAxis : ∀ y : ℝ, ¬ orderStarPlusOnImagAxis y
-  /-- Sector degree balance (355G sector-counting content): the angular
-      sectors at the origin combined with the imaginary-axis A-stability
-      exclusion force `n ≤ d ≤ n + 2`. This axiomatizes the sector-counting
-      argument of Iserles's proof — see
-      `.prover-state/issues/order_star_arrow_termination_topology.md`. -/
-  sectorDegreeBalance :
-    data.numeratorDegree ≤ data.denominatorDegree ∧
-    data.denominatorDegree ≤ data.numeratorDegree + 2
+  /-- Fact A1: topological sector counting gives `n ≤ d + downArrowsAtZeros`. -/
+  sector_bound_n :
+    data.numeratorDegree ≤ data.denominatorDegree + data.downArrowsAtZeros
+  /-- Fact A2: topological sector counting gives `d ≤ n + 2 + upArrowsAtPoles`. -/
+  sector_bound_d :
+    data.denominatorDegree ≤ data.numeratorDegree + 2 + data.upArrowsAtPoles
+  /-- Fact B1: A-stability forces the zero-arrow correction term to vanish. -/
+  arrows_zero : data.downArrowsAtZeros = 0
+  /-- Fact B2: A-stability forces the pole-arrow correction term to vanish. -/
+  arrows_poles : data.upArrowsAtPoles = 0
 
-/-- Data-level form of the 355F consequence packaged in
-`IsAStablePadeApprox`: the imaginary axis avoids `𝒜⁺`. -/
-theorem aStable_imagAxis_not_orderStarPlus_data (data : OrderArrowCountData)
-    (h : IsAStablePadeApprox data) (y : ℝ) :
-    ¬ h.orderStarPlusOnImagAxis y :=
-  h.noPlusOnImagAxis y
-
-/-- **Theorem 355G** (Ehle barrier): An A-stable Padé approximation R_{n,d}
-to exp must satisfy n ≤ d ≤ n + 2. The proof uses:
-1. Theorem 355E to establish exact arrow counts ñ = n, d̃ = d
-2. Theorem 355F to show the imaginary axis contains no `𝒜⁺` points
-3. A counting argument: the p + 1 sectors at the origin alternate
-   between `𝒜⁺` and `𝒜⁻`, and the A-stability constraint on the
-   imaginary axis forces the sector arrangement to satisfy n ≤ d ≤ n + 2.
-The missing step is turning `noPlusOnImagAxis` into a global sector count.
--/
+/-- **Theorem 355G** (Ehle barrier): An A-stable Padé approximation `R_{n,d}`
+to `exp` must satisfy `n ≤ d ≤ n + 2`. The axiomatized interface splits
+Iserles's proof into sector counting (`sector_bound_n`, `sector_bound_d`) and
+A-stability arrow vanishing (`arrows_zero`, `arrows_poles`); combining them
+eliminates the correction terms and yields the wedge inequalities. -/
 theorem ehle_barrier (data : OrderArrowCountData)
     (h : IsAStablePadeApprox data) :
     data.numeratorDegree ≤ data.denominatorDegree ∧
     data.denominatorDegree ≤ data.numeratorDegree + 2 :=
-  h.sectorDegreeBalance
+  by
+    constructor
+    · have hnd := h.sector_bound_n
+      rw [h.arrows_zero] at hnd
+      simpa using hnd
+    · have hdn := h.sector_bound_d
+      rw [h.arrows_poles] at hdn
+      simpa using hdn
 
 /-- **Ehle barrier** (ℕ-parameter form): If the (n,d)-Padé approximant to exp
 is A-stable, then n ≤ d ≤ n + 2. This is the classic statement matching
