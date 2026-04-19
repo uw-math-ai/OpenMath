@@ -194,8 +194,16 @@ theorem gaussLegendre_B_double (t : ButcherTableau s)
     obtain ⟨j, hjlt, hk_eq⟩ : ∃ j, j < s ∧ k = s + (j + 1) := by
       refine ⟨k - s - 1, by omega, by omega⟩
     rw [hk_eq]
+    have hp_lead_nz :
+        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff s ≠ 0 := by
+      rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+      simp [Nat.choose_self]
+      exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
     -- The remaining range `k = s + (j + 1)` with `j < s` is the genuine
-    -- Gaussian quadrature step: use the orthogonality defect subtraction.
+    -- Gaussian quadrature step. Mathlib's top-coefficient formula shows the
+    -- corresponding shifted Legendre polynomial has nonzero leading term; the
+    -- remaining blocker is connecting our recursive `shiftedLegendreP` to that
+    -- polynomial and then running the orthogonality/defect-subtraction argument.
     sorry
 
 /-- **Corollary 342D (backward direction)**: If the nodes are zeros of `P_s^*`,
