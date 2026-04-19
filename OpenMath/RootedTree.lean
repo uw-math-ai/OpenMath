@@ -173,4 +173,162 @@ example : t4d.symmetry = 1 := by native_decide
 
 example : t4d.density = 24 := by native_decide
 
+/-! ### Order-5 trees
+
+The 9 rooted trees of order 5 enumerate all order conditions at fifth order.
+Reference: Hairer–Nørsett–Wanner, Table II.2.1; Iserles, Section 2.3. -/
+
+/-- `[τ⁴]`: the bushy tree of order `5` (4 leaves). -/
+def t5a : BTree := .node [.leaf, .leaf, .leaf, .leaf]
+
+/-- `[τ², [τ]]`: two leaves plus a chain-2 subtree, order `5`. -/
+def t5b : BTree := .node [.leaf, .leaf, t2]
+
+/-- `[τ, [τ²]]`: leaf plus bushy-3 subtree, order `5`. -/
+def t5c : BTree := .node [.leaf, t3a]
+
+/-- `[τ, [[τ]]]`: leaf plus chain-3 subtree, order `5`. -/
+def t5d : BTree := .node [.leaf, t3b]
+
+/-- `[[τ], [τ]]`: two chain-2 subtrees, order `5`. -/
+def t5e : BTree := .node [t2, t2]
+
+/-- `[[τ³]]`: bushy-4 grafted to a new root, order `5`. -/
+def t5f : BTree := .node [t4a]
+
+/-- `[[τ, [τ]]]`: mixed-4 grafted to a new root, order `5`. -/
+def t5g : BTree := .node [t4b]
+
+/-- `[[[τ²]]]`: `t4c` grafted to a new root, order `5`. -/
+def t5h : BTree := .node [t4c]
+
+/-- `[[[[τ]]]]`: the chain of order `5`. -/
+def t5i : BTree := .node [t4d]
+
+-- Verify order, symmetry, density, beta, alpha for all order-5 trees.
+example : t5a.order = 5 := by native_decide
+example : t5a.symmetry = 24 := by native_decide
+example : t5a.density = 5 := by native_decide
+example : t5a.beta = 5 := by native_decide
+example : t5a.alpha = 1 := by native_decide
+
+example : t5b.order = 5 := by native_decide
+example : t5b.symmetry = 2 := by native_decide
+example : t5b.density = 10 := by native_decide
+example : t5b.beta = 60 := by native_decide
+example : t5b.alpha = 6 := by native_decide
+
+example : t5c.order = 5 := by native_decide
+example : t5c.symmetry = 2 := by native_decide
+example : t5c.density = 15 := by native_decide
+example : t5c.beta = 60 := by native_decide
+example : t5c.alpha = 4 := by native_decide
+
+example : t5d.order = 5 := by native_decide
+example : t5d.symmetry = 1 := by native_decide
+example : t5d.density = 30 := by native_decide
+example : t5d.beta = 120 := by native_decide
+example : t5d.alpha = 4 := by native_decide
+
+example : t5e.order = 5 := by native_decide
+example : t5e.symmetry = 2 := by native_decide
+example : t5e.density = 20 := by native_decide
+example : t5e.beta = 60 := by native_decide
+example : t5e.alpha = 3 := by native_decide
+
+example : t5f.order = 5 := by native_decide
+example : t5f.symmetry = 6 := by native_decide
+example : t5f.density = 20 := by native_decide
+example : t5f.beta = 20 := by native_decide
+example : t5f.alpha = 1 := by native_decide
+
+example : t5g.order = 5 := by native_decide
+example : t5g.symmetry = 1 := by native_decide
+example : t5g.density = 40 := by native_decide
+example : t5g.beta = 120 := by native_decide
+example : t5g.alpha = 3 := by native_decide
+
+example : t5h.order = 5 := by native_decide
+example : t5h.symmetry = 2 := by native_decide
+example : t5h.density = 60 := by native_decide
+example : t5h.beta = 60 := by native_decide
+example : t5h.alpha = 1 := by native_decide
+
+example : t5i.order = 5 := by native_decide
+example : t5i.symmetry = 1 := by native_decide
+example : t5i.density = 120 := by native_decide
+example : t5i.beta = 120 := by native_decide
+example : t5i.alpha = 1 := by native_decide
+
+/-! ### Structural Properties -/
+
+/-- The order (number of vertices) of any rooted tree is positive. -/
+theorem order_pos (t : BTree) : 0 < t.order := by
+  cases t with
+  | leaf => simp
+  | node children => simp only [order_node]; omega
+
+/-- Alternative characterization: the order of a node equals 1 plus the sum of child orders. -/
+theorem order_node_sum (children : List BTree) :
+    (BTree.node children).order = 1 + (children.map BTree.order).sum := by
+  simp only [order_node]
+  induction children with
+  | nil => simp
+  | cons hd tl ih =>
+    simp only [List.foldr, List.map, List.sum_cons]
+    omega
+
+private theorem foldr_density_pos (children : List BTree)
+    (ih : ∀ t ∈ children, 0 < t.density) :
+    0 < children.foldr (fun t n => t.density * n) 1 := by
+  induction children with
+  | nil => simp
+  | cons hd tl ih_list =>
+    simp only [List.foldr]
+    exact Nat.mul_pos (ih hd (.head ..))
+      (ih_list (fun t ht => ih t (.tail _ ht)))
+
+/-- The density of any rooted tree is positive. -/
+theorem density_pos : ∀ (t : BTree), 0 < t.density
+  | .leaf => by simp
+  | .node children => by
+    simp only [density_node]
+    exact Nat.mul_pos (order_pos _) (foldr_density_pos children fun t _ => density_pos t)
+termination_by t => sizeOf t
+decreasing_by
+  have hmem : sizeOf t < sizeOf children :=
+    List.sizeOf_lt_of_mem (by assumption)
+  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp
+  exact Nat.lt_trans hmem hnode
+
+private theorem symmetryScan_pos (allChildren remaining : List BTree)
+    (ih_sym : ∀ t ∈ allChildren, 0 < t.symmetry)
+    (hsub : ∀ t ∈ remaining, t ∈ allChildren) :
+    0 < symmetryScan allChildren remaining := by
+  induction remaining with
+  | nil => simp [symmetryScan]
+  | cons hd tl ih_list =>
+    simp only [symmetryScan]
+    split
+    · exact ih_list (fun t ht => hsub t (.tail _ ht))
+    · apply Nat.mul_pos
+      apply Nat.mul_pos
+      · exact Nat.factorial_pos _
+      · exact pow_pos (ih_sym hd (hsub hd (.head ..))) _
+      · exact ih_list (fun t ht => hsub t (.tail _ ht))
+
+/-- The symmetry of any rooted tree is positive. -/
+theorem symmetry_pos : ∀ (t : BTree), 0 < t.symmetry
+  | .leaf => by simp
+  | .node children => by
+    simp only [symmetry_node]
+    exact symmetryScan_pos children children
+      (fun t _ => symmetry_pos t) (fun t ht => ht)
+termination_by t => sizeOf t
+decreasing_by
+  have hmem : sizeOf t < sizeOf children :=
+    List.sizeOf_lt_of_mem (by assumption)
+  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp
+  exact Nat.lt_trans hmem hnode
+
 end BTree
