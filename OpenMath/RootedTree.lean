@@ -1,3 +1,4 @@
+import Mathlib.Data.Multiset.Basic
 import Mathlib.Data.Nat.Factorial.Basic
 import Mathlib.Tactic
 
@@ -13,6 +14,27 @@ inductive BTree : Type
   deriving BEq, Repr
 
 namespace BTree
+
+/-- The current ordered child list representation. -/
+def childrenList : BTree → List BTree
+  | .leaf => []
+  | .node children => children
+
+/-- Unordered child multiplicities for a rooted tree. This is the intended
+future interface; the current `List`-based representation is retained only as
+an implementation detail for recursive definitions. -/
+def childrenBag (t : BTree) : Multiset BTree :=
+  t.childrenList
+
+@[simp] theorem childrenList_leaf : BTree.leaf.childrenList = [] := rfl
+
+@[simp] theorem childrenList_node (children : List BTree) :
+    (BTree.node children).childrenList = children := rfl
+
+@[simp] theorem childrenBag_leaf : BTree.leaf.childrenBag = (0 : Multiset BTree) := rfl
+
+@[simp] theorem childrenBag_node (children : List BTree) :
+    (BTree.node children).childrenBag = (children : Multiset BTree) := rfl
 
 /-- Order `r(t)`: the number of vertices of the rooted tree `t`. -/
 def order : BTree → ℕ
@@ -278,6 +300,16 @@ theorem order_node_sum (children : List BTree) :
     simp only [List.foldr, List.map, List.sum_cons]
     omega
 
+/-- The order of a node depends only on the multiset of its children. -/
+theorem order_node_perm {children₁ children₂ : List BTree}
+    (hperm : children₁.Perm children₂) :
+    (BTree.node children₁).order = (BTree.node children₂).order := by
+  have hfold :
+      children₁.foldr (fun t n => t.order + n) 0 =
+        children₂.foldr (fun t n => t.order + n) 0 :=
+    hperm.foldr_eq 0
+  simp [order_node, hfold]
+
 private theorem foldr_density_pos (children : List BTree)
     (ih : ∀ t ∈ children, 0 < t.density) :
     0 < children.foldr (fun t n => t.density * n) 1 := by
@@ -300,6 +332,27 @@ decreasing_by
     List.sizeOf_lt_of_mem (by assumption)
   have hnode : sizeOf children < sizeOf (BTree.node children) := by simp
   exact Nat.lt_trans hmem hnode
+
+/-- Alternative characterization: the density of a node is its order times the
+product of its child densities. -/
+theorem density_node_prod (children : List BTree) :
+    (BTree.node children).density =
+      (BTree.node children).order * (children.map BTree.density).prod := by
+  simp only [density_node]
+  induction children with
+  | nil => simp
+  | cons hd tl ih =>
+    simp [ih, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+
+/-- The density of a node depends only on the multiset of its children. -/
+theorem density_node_perm {children₁ children₂ : List BTree}
+    (hperm : children₁.Perm children₂) :
+    (BTree.node children₁).density = (BTree.node children₂).density := by
+  have horder := order_node_perm hperm
+  have hprod :
+      (children₁.map BTree.density).prod = (children₂.map BTree.density).prod := by
+    simpa using (hperm.map BTree.density).prod_eq
+  simp [density_node_prod, horder, hprod]
 
 private theorem symmetryScan_pos (allChildren remaining : List BTree)
     (ih_sym : ∀ t ∈ allChildren, 0 < t.symmetry)

@@ -919,22 +919,37 @@ Reference: Iserles, Theorem 355G.
 -/
 
 /-- Arrow count data for a Padé approximation that is also A-stable.
-This packages the A-stability condition (no `𝒜⁺` on the imaginary axis)
-together with the Padé arrow-count structure. -/
+Since `OrderArrowCountData` does not yet carry an actual stability function
+`R : ℂ → ℂ`, we encode only the finite 355F consequence that the imaginary
+axis contains no `𝒜⁺` points. The remaining sector-counting step needed for the
+Ehle barrier is still blocked on the global order-star topology documented in
+`order_star_arrow_termination_topology.md`. -/
 structure IsAStablePadeApprox (data : OrderArrowCountData) : Prop where
   /-- The underlying Padé approximation property. -/
   pade : IsPadeApproxToExp data
-  /-- A-stability: no up arrow crosses the imaginary axis. Concretely,
-      the stability function satisfies ‖R(z)‖ ≤ 1 for Re(z) ≤ 0. -/
-  aStable : True  -- placeholder for the A-stability predicate on data
+  /-- Abstract bookkeeping predicate recording whether the imaginary-axis point
+      `iy` belongs to `𝒜⁺`. This stands in for the missing topological interface
+      between arrow-count data and the actual order star of a stability
+      function. -/
+  orderStarPlusOnImagAxis : ℝ → Prop
+  /-- A-stability excludes `𝒜⁺` points on the imaginary axis (355F). -/
+  noPlusOnImagAxis : ∀ y : ℝ, ¬ orderStarPlusOnImagAxis y
+
+/-- Data-level form of the 355F consequence packaged in
+`IsAStablePadeApprox`: the imaginary axis avoids `𝒜⁺`. -/
+theorem aStable_imagAxis_not_orderStarPlus_data (data : OrderArrowCountData)
+    (h : IsAStablePadeApprox data) (y : ℝ) :
+    ¬ h.orderStarPlusOnImagAxis y :=
+  h.noPlusOnImagAxis y
 
 /-- **Theorem 355G** (Ehle barrier): An A-stable Padé approximation R_{n,d}
 to exp must satisfy n ≤ d ≤ n + 2. The proof uses:
 1. Theorem 355E to establish exact arrow counts ñ = n, d̃ = d
-2. Theorem 355F to show no up arrow crosses the imaginary axis
+2. Theorem 355F to show the imaginary axis contains no `𝒜⁺` points
 3. A counting argument: the p + 1 sectors at the origin alternate
    between `𝒜⁺` and `𝒜⁻`, and the A-stability constraint on the
    imaginary axis forces the sector arrangement to satisfy n ≤ d ≤ n + 2.
+The missing step is turning `noPlusOnImagAxis` into a global sector count.
 -/
 theorem ehle_barrier (data : OrderArrowCountData)
     (h : IsAStablePadeApprox data) :
