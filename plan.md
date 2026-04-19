@@ -120,11 +120,14 @@
   - [x] Proved `B(2s) ∧ C(s) ⇒ E(s,s)` (342m) and `B(2s) ∧ D(s) ⇒ E(s,s)` (342o)
   - [x] Proved `B(2s) ∧ E(s,s) ⇒ C(s)` (342n, requires distinct nodes + nonzero weights) via Vandermonde uniqueness
   - [x] Proved `B(2s) ∧ E(s,s) ⇒ D(s)` (342p, requires distinct nodes) via Vandermonde uniqueness
-  - [ ] Remaining implications (342j, 342k, 342l) require rooted tree infrastructure from thm:301A
+  - [x] Proved `G(p) ⇒ B(p)` (342j) via `bushyTree`
+  - [x] Proved `G(2n) ⇒ E(n,n)` (342k) via `branchedTree`
+  - [~] `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)` (342l) decomposed into local sublemmas; one-big-child case still open
 - [~] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`)
   - [x] Defined `BTree`
   - [x] Defined `order`, `symmetry`, `density`
   - [x] Added basic examples of orders `1` through `3`
+  - [x] Proved tree-based order infrastructure through order `5` (`thm_301A_order1` ... `thm_301A_order5`)
   - [ ] Upgrade child representation from `List` fallback to the intended unordered multiplicity model
 
 ### BDF Methods (Section 4.5)
@@ -143,15 +146,18 @@
 
 ## Current Target
 
-**Chapter 3 stability theory in progress. Full stability equivalence chain formalized: AN-stable ⟹ algebraically stable (356C) ⟹ BN-stable (357C) ⟹ AN-stable (357D).**
+**Theorem 342l in `OpenMath/Collocation.lean`: finish the `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)` proof from the new sublemma decomposition.**
 
 Next targets:
-1. **Order star infrastructure / Theorem 355A+** — assess `OpenMath/OrderStars.lean` and continue the Ehle-barrier setup
+1. **Theorem 342l** — close `elementaryWeight_simplified_of_C`, `ew_simplified_of_C`, `tree_cond_all_small`, and the one-big-child `D(n)` reduction
 2. **Theorem 343A** — reflected methods and B/C/D condition transfer
-3. **Theorem 301A** — finish rooted-tree infrastructure
+3. **Order star infrastructure / Theorem 355A+** — assess `OpenMath/OrderStars.lean` and continue the Ehle-barrier setup
 
 ## Sorry locations
-None — 0 sorry's project-wide.
+- `OpenMath/Collocation.lean:1675` — `elementaryWeight_simplified_of_C`
+- `OpenMath/Collocation.lean:1683` — `ew_simplified_of_C`
+- `OpenMath/Collocation.lean:1692` — `tree_cond_all_small`
+- `OpenMath/Collocation.lean:1702` — `tree_cond_one_big`
 
 ## Recent git history
 969bc8a Close Pade approximation order polynomial proof

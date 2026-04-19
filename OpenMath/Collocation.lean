@@ -1661,6 +1661,56 @@ theorem SatisfiesE_of_hasTreeOrder (tab : ButcherTableau s)
 
 /-! ### 342l: B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n) -/
 
+private def childrenOf : BTree → List BTree
+  | .leaf => []
+  | .node children => children
+
+/-- Product of the child densities appearing in `density_node`. -/
+private def childDensityProd : BTree → ℕ
+  | .leaf => 1
+  | .node children => children.foldr (fun t acc => t.density * acc) 1
+
+/-- Elementary weights simplify to powers of `cᵢ` divided by the product of child
+densities under the `C(n)` simplifying assumption. -/
+private theorem elementaryWeight_simplified_of_C (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ) (hC : tab.SatisfiesC n)
+    (t : BTree) (ht : t.order ≤ n + 1) (i : Fin s) :
+    tab.elementaryWeight t i = tab.c i ^ (t.order - 1) / (childDensityProd t : ℝ) := by
+  sorry
+
+/-- Under `C(n)`, the tree kernel simplifies to `cᵢ^|t| / γ(t)` for all trees of
+order at most `n`. -/
+private theorem ew_simplified_of_C (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ) (hC : tab.SatisfiesC n)
+    (t : BTree) (ht : t.order ≤ n) (i : Fin s) :
+    ∑ k : Fin s, tab.A i k * tab.elementaryWeight t k =
+    tab.c i ^ t.order / t.density := by
+  sorry
+
+/-- If every child of `t` has order at most `n`, then `B(2n)` and `C(n)` imply the
+tree order condition for `t`. -/
+private theorem tree_cond_all_small (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ)
+    (hB : tab.SatisfiesB (2 * n)) (hC : tab.SatisfiesC n)
+    (t : BTree) (ht : t.order ≤ 2 * n)
+    (hsmall : ∀ u ∈ childrenOf t, u.order ≤ n) :
+    tab.satisfiesTreeCondition t := by
+  sorry
+
+/-- The remaining case of Theorem 342l: exactly one child of `t` can have order
+strictly larger than `n`, and this is where the `D(n)` simplification is used. -/
+private theorem tree_cond_one_big (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (n : ℕ)
+    (hB : tab.SatisfiesB (2 * n)) (hC : tab.SatisfiesC n)
+    (hD : tab.SatisfiesD n)
+    (t : BTree)
+    (ih : ∀ u : BTree, u.order < t.order → u.order ≤ 2 * n →
+      tab.satisfiesTreeCondition u)
+    (ht : t.order ≤ 2 * n)
+    (hbig : ∃ u ∈ childrenOf t, n < u.order) :
+    tab.satisfiesTreeCondition t := by
+  sorry
+
 /-- **(342l)** `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)`: the simplifying assumptions
 together imply all tree-based order conditions up to order 2n.
 Reference: Iserles, Theorem 342C, equation (342l). -/
@@ -1668,7 +1718,20 @@ theorem hasTreeOrder_of_B_C_D (tab : ButcherTableau s)
     (hrc : tab.IsRowSumConsistent) (n : ℕ)
     (hB : tab.SatisfiesB (2 * n)) (hC : tab.SatisfiesC n) (hD : tab.SatisfiesD n) :
     tab.hasTreeOrder (2 * n) := by
-  sorry
+  intro t ht
+  classical
+  refine Nat.strongRecOn (n := t.order)
+    (motive := fun m => ∀ u : BTree, u.order = m → u.order ≤ 2 * n →
+      tab.satisfiesTreeCondition u) ?_ t rfl ht
+  intro m ih u hu_eq hu_le
+  by_cases hbig : ∃ v ∈ childrenOf u, n < v.order
+  · exact tree_cond_one_big tab hrc n hB hC hD u
+      (fun v hvlt hvle => ih v.order (by simpa [hu_eq] using hvlt) v rfl hvle)
+      hu_le hbig
+  · refine tree_cond_all_small tab hrc n hB hC u hu_le ?_
+    intro v hv
+    by_contra hvgt
+    exact hbig ⟨v, hv, lt_of_not_ge hvgt⟩
 
 /-! ## Verification for Standard Methods -/
 
