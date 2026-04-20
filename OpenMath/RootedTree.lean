@@ -327,6 +327,17 @@ example : t5i.alpha = 1 := by native_decide
 
 /-! ### Structural Properties -/
 
+/-- Child bags agree for any permutation of the ordered fallback representation. -/
+theorem node_childrenBag_eq_of_perm {children₁ children₂ : List BTree}
+    (hperm : children₁.Perm children₂) :
+    (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag :=
+  Quot.sound hperm
+
+/-- Two-child nodes expose the same bag after swapping the ordered witnesses. -/
+theorem node_childrenBag_eq_swap (c₁ c₂ : BTree) :
+    (BTree.node [c₁, c₂]).childrenBag = (BTree.node [c₂, c₁]).childrenBag :=
+  node_childrenBag_eq_of_perm (List.Perm.swap _ _ _)
+
 /-- The order (number of vertices) of any rooted tree is positive. -/
 theorem order_pos (t : BTree) : 0 < t.order := by
   cases t with

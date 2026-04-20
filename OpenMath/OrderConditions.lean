@@ -668,22 +668,27 @@ private theorem satisfiesTreeCondition_order_four_mixed12 (tab : ButcherTableau 
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_four_mixed12 tab t h i
 
-/-- Mixed-4 (order-2, order-1) satisfies tree condition iff sum = 1/8. -/
-private theorem satisfiesTreeCondition_order_four_mixed21 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 1) :
-    tab.satisfiesTreeCondition t ↔
+/-- Mixed order-4 nodes are canonical up to swapping the ordered child witnesses. -/
+private theorem satisfiesTreeCondition_order_four_mixed_canonical (tab : ButcherTableau s)
+    (c₁ c₂ : BTree)
+    (hpair : (c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 8 := by
-  have hmixed : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
-      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1)) := by
-    rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
-    exact ⟨c₁, c₂, rfl, by omega, Or.inr ⟨hc₁, hc₂⟩⟩
-  simp only [satisfiesTreeCondition, density_of_order_four_mixed t hmixed]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_four_mixed21 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_four_mixed21 tab t h i
+  rcases hpair with ⟨hc₁, hc₂⟩ | ⟨hc₁, hc₂⟩
+  · simpa using
+      (satisfiesTreeCondition_order_four_mixed12 tab (.node [c₁, c₂])
+        ⟨c₁, c₂, rfl, hc₁, hc₂⟩)
+  · have hcanon :
+        tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔ tab.satisfiesTreeCondition (.node [c₂, c₁]) := by
+      simpa using
+        (satisfiesTreeCondition_eq_of_childrenBag_eq tab
+          (children₁ := [c₁, c₂]) (children₂ := [c₂, c₁])
+          (BTree.node_childrenBag_eq_swap c₁ c₂))
+    rw [hcanon]
+    simpa using
+      (satisfiesTreeCondition_order_four_mixed12 tab (.node [c₂, c₁])
+        ⟨c₂, c₁, rfl, hc₂, hc₁⟩)
 
 /-- Via-bushy3 satisfies tree condition iff ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ)²) = 1/12. -/
 private theorem satisfiesTreeCondition_order_four_via_bushy3 (tab : ButcherTableau s) (t : BTree)
@@ -754,13 +759,9 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         simpa [order4a_sum_eq tab hrc] using h4a
       · -- mixed: two children with orders {1,2}
         rcases hmixed with ⟨c₁, c₂, rfl, _, hord⟩
-        rcases hord with ⟨hc₁, hc₂⟩ | ⟨hc₁, hc₂⟩
-        · rw [satisfiesTreeCondition_order_four_mixed12 tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
-          rw [order4b] at h4b
-          simpa [order4b_sum_eq tab hrc] using h4b
-        · rw [satisfiesTreeCondition_order_four_mixed21 tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
-          rw [order4b] at h4b
-          simpa [order4b_sum_eq tab hrc] using h4b
+        rw [satisfiesTreeCondition_order_four_mixed_canonical tab c₁ c₂ hord]
+        rw [order4b] at h4b
+        simpa [order4b_sum_eq tab hrc] using h4b
       · -- single child of order 3: sub-case on shape
         rcases hsingle with ⟨c, rfl, hc⟩
         rcases order_three_cases c hc with hchain | hbushy
