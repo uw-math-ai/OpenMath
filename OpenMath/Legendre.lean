@@ -683,17 +683,22 @@ private lemma exists_unit_point_ne_zero_of_ne_zero (p : ℝ[X]) (hp : p ≠ 0) :
   push_neg at h
   exact hp (eval_eq_zero_on_Icc_imp_eq_zero p h)
 
+private lemma intervalIntegral_sq_eval_pos_of_exists (p : ℝ[X])
+    (hpt : ∃ x : ℝ, x ∈ Set.Icc (0 : ℝ) 1 ∧ p.eval x ≠ 0) :
+    0 < ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 := by
+  obtain ⟨x0, hx0_mem, hx0_ne⟩ := hpt
+  refine intervalIntegral.integral_pos zero_lt_one ?_ ?_ ?_
+  · exact (p.continuous.pow 2).continuousOn
+  · intro x hx
+    exact sq_nonneg (p.eval x)
+  · exact ⟨x0, hx0_mem, sq_pos_of_ne_zero hx0_ne⟩
+
 lemma poly_eq_zero_of_intervalIntegral_sq_zero (p : ℝ[X])
     (h : ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 = 0) :
     p = 0 := by
   by_contra hp
-  obtain ⟨x0, hx0_mem, hx0_ne⟩ := exists_unit_point_ne_zero_of_ne_zero p hp
-  have hpos : 0 < ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 := by
-    refine intervalIntegral.integral_pos zero_lt_one ?_ ?_ ?_
-    · exact (p.continuous.pow 2).continuousOn
-    · intro x hx
-      exact sq_nonneg (p.eval x)
-    · exact ⟨x0, hx0_mem, sq_pos_of_ne_zero hx0_ne⟩
+  have hpos : 0 < ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 :=
+    intervalIntegral_sq_eval_pos_of_exists p (exists_unit_point_ne_zero_of_ne_zero p hp)
   linarith
 
 /-- Repackage the high-degree branch of `gaussLegendre_B_double` as
