@@ -961,6 +961,55 @@ theorem order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t)
       · rcases hbushy with ⟨e₁, e₂, hdeq, he₁, he₂⟩
         exact Or.inr ⟨e₁, e₂, hdeq, he₁, he₂⟩
 
+/-- Normalize the order-5 singleton-child family whose child has order `4`
+into the `bushy4` / `mixed4` / `viaChain3` / `viaBushy3` quartic trichotomy. -/
+inductive OrderFiveCaseDWitness (c : BTree) : Type where
+  | bushy4 (d₁ d₂ d₃ : BTree)
+      (hc : c = .node [d₁, d₂, d₃]) (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1)
+      (hd₃ : d₃.order = 1) :
+      OrderFiveCaseDWitness c
+  | mixed4 (d₁ d₂ : BTree)
+      (hc : c = .node [d₁, d₂])
+      (hpair : (d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) :
+      OrderFiveCaseDWitness c
+  | viaChain3 (d e : BTree)
+      (hc : c = .node [d]) (hd : d = .node [e]) (he : e.order = 2) :
+      OrderFiveCaseDWitness c
+  | viaBushy3 (d e₁ e₂ : BTree)
+      (hc : c = .node [d]) (hd : d = .node [e₁, e₂]) (he₁ : e₁.order = 1)
+      (he₂ : e₂.order = 1) :
+      OrderFiveCaseDWitness c
+
+/-- Package the order-5 singleton-child / Case D classification in rooted-tree
+form by recovering an exact shape from the public order-4 bag witness. -/
+theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4) :
+    Nonempty (OrderFiveCaseDWitness c) := by
+  have hw4 : OrderFourBagWitness c := order_four_bag_witness c hc
+  cases hw4 with
+  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
+      rcases order_four_bag_witness_recover
+          (.bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag) with
+        ⟨e₁, e₂, e₃, hceq, he₁, he₂, he₃⟩
+      exact ⟨.bushy4 e₁ e₂ e₃ hceq he₁ he₂ he₃⟩
+  | mixed4 children d₁ d₂ hcanon hbag =>
+      rcases order_four_bag_witness_recover (.mixed4 children d₁ d₂ hcanon hbag) with
+        ⟨e₁, e₂, hceq, hpair⟩
+      exact ⟨.mixed4 e₁ e₂ hceq hpair⟩
+  | single3 children d hw3 hbag =>
+      rcases order_four_bag_witness_recover (.single3 children d hw3 hbag) with
+        ⟨e, hdeq, he⟩ | ⟨e₁, e₂, hdeq, he₁, he₂⟩
+      · have hceq : BTree.node children = BTree.node [d] := by
+          simp [singleton_children_eq_of_childrenBag_eq hbag]
+        exact ⟨.viaChain3 d e hceq hdeq he⟩
+      · have hceq : BTree.node children = BTree.node [d] := by
+          simp [singleton_children_eq_of_childrenBag_eq hbag]
+        exact ⟨.viaBushy3 d e₁ e₂ hceq hdeq he₁ he₂⟩
+
+/-- Noncomputably choose the normalized order-5 singleton-child / Case D witness. -/
+noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
+    OrderFiveCaseDWitness c :=
+  Classical.choice (order_five_caseD_witness_nonempty c hc)
+
 theorem alpha_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
     (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
     (BTree.node children₁).alpha = (BTree.node children₂).alpha := by
