@@ -1805,21 +1805,13 @@ private theorem order_five_caseB_dispatch_shared (tab : ButcherTableau s)
     (tab.satisfiesTreeCondition (.node [c₁, c₂, c₃]) → order_five_caseB_target tab hwit) ∧
     (order_five_caseB_target tab hwit → tab.satisfiesTreeCondition (.node [c₁, c₂, c₃])) := by
   cases hwit with
-  | ord112 hc₁ hc₂ hc₃ =>
-      rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃
-        (Or.inl ⟨hc₁, hc₂, hc₃⟩)]
-      constructor <;> intro h <;>
-        simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using h
-  | ord121 hc₁ hc₂ hc₃ =>
-      rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃
-        (Or.inr <| Or.inl ⟨hc₁, hc₂, hc₃⟩)]
-      constructor <;> intro h <;>
-        simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using h
-  | ord211 hc₁ hc₂ hc₃ =>
-      rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃
-        (Or.inr <| Or.inr ⟨hc₁, hc₂, hc₃⟩)]
-      constructor <;> intro h <;>
-        simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using h
+  | bag112 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃ =>
+      have h :=
+        satisfiesTreeCondition_order_five_3child_eq_of_childrenBag_eq tab
+          d₁ d₂ d₃ c₁ c₂ c₃ ⟨hd₁, hd₂, hd₃⟩ hbag
+      constructor <;> intro ht
+      · simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using h.mp ht
+      · exact h.mpr (by simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using ht)
 
 /-- Convert [2,2] sum: (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ))² → (∑ aᵢⱼ cⱼ)². -/
 private theorem order5c_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
@@ -2009,7 +2001,7 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
     · -- order5b from t5b = [leaf, leaf, t2]
       have ht := h t5b (by native_decide)
       have hCaseB : BTree.OrderFiveCaseBWitness .leaf .leaf t2 :=
-        .ord112 (by simp) (by simp) (by native_decide)
+        .bag112 .leaf .leaf t2 rfl (by simp) (by simp) (by native_decide)
       have htarget :=
         (order_five_caseB_dispatch_shared tab hrc
           (c₁ := .leaf) (c₂ := .leaf) (c₃ := t2) hCaseB).1

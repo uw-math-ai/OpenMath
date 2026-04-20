@@ -884,14 +884,12 @@ noncomputable def order_five_caseC_witness (c₁ c₂ : BTree)
     OrderFiveCaseCWitness c₁ c₂ :=
   Classical.choice (order_five_caseC_witness_nonempty c₁ c₂ hsum)
 
-/-- Normalize the order-5 three-child family with child-order sum `4` into the
-`{1,1,2}` trichotomy. -/
+/-- Normalize the order-5 three-child family with child-order sum `4` into a
+bag-first `{1,1,2}` witness. -/
 inductive OrderFiveCaseBWitness (c₁ c₂ c₃ : BTree) : Type where
-  | ord112 (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 2) :
-      OrderFiveCaseBWitness c₁ c₂ c₃
-  | ord121 (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 2) (hc₃ : c₃.order = 1) :
-      OrderFiveCaseBWitness c₁ c₂ c₃
-  | ord211 (hc₁ : c₁.order = 2) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) :
+  | bag112 (d₁ d₂ d₃ : BTree)
+      (hbag : (BTree.node [c₁, c₂, c₃]).childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag)
+      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) (hd₃ : d₃.order = 2) :
       OrderFiveCaseBWitness c₁ c₂ c₃
 
 /-- Package the order-5 three-child `sum = 4` classification in rooted-tree form. -/
@@ -903,9 +901,11 @@ theorem order_five_caseB_witness_nonempty (c₁ c₂ c₃ : BTree)
   have hc₃_pos := order_pos c₃
   by_cases h1 : c₁.order = 1
   · by_cases h2 : c₂.order = 1
-    · exact ⟨.ord112 h1 h2 (by omega)⟩
-    · exact ⟨.ord121 h1 (by omega) (by omega)⟩
-  · exact ⟨.ord211 (by omega) (by omega) (by omega)⟩
+    · exact ⟨.bag112 c₁ c₂ c₃ rfl h1 h2 (by omega)⟩
+    · exact ⟨.bag112 c₁ c₃ c₂ (BTree.node_childrenBag_eq_swap_right c₁ c₂ c₃)
+        h1 (by omega) (by omega)⟩
+  · exact ⟨.bag112 c₂ c₃ c₁ (BTree.node_childrenBag_eq_rotate_left c₁ c₂ c₃)
+      (by omega) (by omega) (by omega)⟩
 
 /-- Noncomputably choose the normalized order-5 three-child Case B witness. -/
 noncomputable def order_five_caseB_witness (c₁ c₂ c₃ : BTree)
