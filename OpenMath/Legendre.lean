@@ -677,7 +677,7 @@ private lemma eval_eq_zero_on_Icc_imp_eq_zero (p : ℝ[X])
       exact hzero x hx)
   exact (Set.Icc_infinite (show (0 : ℝ) < 1 by norm_num)) hIcc_finite
 
-private lemma exists_eval_ne_zero_on_Icc (p : ℝ[X]) (hp : p ≠ 0) :
+private lemma exists_unit_point_ne_zero_of_ne_zero (p : ℝ[X]) (hp : p ≠ 0) :
     ∃ x : ℝ, x ∈ Set.Icc (0 : ℝ) 1 ∧ p.eval x ≠ 0 := by
   by_contra h
   push_neg at h
@@ -687,7 +687,7 @@ lemma poly_eq_zero_of_intervalIntegral_sq_zero (p : ℝ[X])
     (h : ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 = 0) :
     p = 0 := by
   by_contra hp
-  obtain ⟨x0, hx0_mem, hx0_ne⟩ := exists_eval_ne_zero_on_Icc p hp
+  obtain ⟨x0, hx0_mem, hx0_ne⟩ := exists_unit_point_ne_zero_of_ne_zero p hp
   have hpos : 0 < ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 := by
     refine intervalIntegral.integral_pos zero_lt_one ?_ ?_ ?_
     · exact (p.continuous.pow 2).continuousOn
