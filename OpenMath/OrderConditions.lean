@@ -1631,16 +1631,7 @@ private theorem satisfiesTreeCondition_order_five_via_via_bushy3_canonical
       simp at hcBag
   | node children =>
       have hchildren : children = [d] := BTree.singleton_children_eq_of_childrenBag_eq hcBag
-      rcases (show ∃ f₁ f₂, d.childrenBag = (BTree.node [f₁, f₂]).childrenBag ∧ d = .node [f₁, f₂] from by
-        cases d with
-        | leaf =>
-            have hfalse : False := by
-              have hcard := congrArg Multiset.card hdBag
-              simpa using hcard
-            exact hfalse.elim
-        | node dChildren =>
-            rcases BTree.pair_children_exists_of_childrenBag_eq hdBag with ⟨f₁, f₂, hf⟩
-            exact ⟨f₁, f₂, by simpa [hf] using hdBag, by simp [hf]⟩) with ⟨f₁, f₂, hfBag, hd⟩
+      rcases BTree.pair_node_recover_of_childrenBag_eq hdBag with ⟨f₁, f₂, hfBag, hd⟩
       have hcanonBag : (BTree.node [f₁, f₂]).childrenBag = (BTree.node [e₁, e₂]).childrenBag := by
         simpa [hd] using hdBag
       simpa [hchildren, hd] using
@@ -1696,16 +1687,7 @@ private theorem satisfiesTreeCondition_order_five_via_via_chain3_canonical
       simp at hcBag
   | node children =>
       have hchildren : children = [d] := BTree.singleton_children_eq_of_childrenBag_eq hcBag
-      rcases (show ∃ f, d.childrenBag = (BTree.node [f]).childrenBag ∧ d = .node [f] from by
-        cases d with
-        | leaf =>
-            have hfalse : False := by
-              have hcard := congrArg Multiset.card hdBag
-              simpa using hcard
-            exact hfalse.elim
-        | node dChildren =>
-            have hdChildren : dChildren = [e] := BTree.singleton_children_eq_of_childrenBag_eq hdBag
-            exact ⟨e, by simpa [hdChildren] using hdBag, by simp [hdChildren]⟩) with ⟨f, hfBag, hd⟩
+      rcases BTree.singleton_node_recover_of_childrenBag_eq hdBag with ⟨f, hfBag, hd⟩
       have hcanonBag : (BTree.node [f]).childrenBag = (BTree.node [e]).childrenBag := by
         simpa [hd] using hdBag
       have hfeq : f = e := by

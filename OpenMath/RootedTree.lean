@@ -991,6 +991,36 @@ noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
     OrderFiveCaseDWitness c :=
   Classical.choice (order_five_caseD_witness_nonempty c hc)
 
+/-- Recover an exact singleton-node presentation from a bag-equality against a
+canonical singleton node. -/
+theorem singleton_node_recover_of_childrenBag_eq {t d : BTree}
+    (hbag : t.childrenBag = (BTree.node [d]).childrenBag) :
+    ∃ e, t.childrenBag = (BTree.node [e]).childrenBag ∧ t = .node [e] := by
+  cases t with
+  | leaf =>
+      have hfalse : False := by
+        have hcard := congrArg Multiset.card hbag
+        simp at hcard
+      exact hfalse.elim
+  | node children =>
+      have hchildren : children = [d] := singleton_children_eq_of_childrenBag_eq hbag
+      exact ⟨d, by simp [hchildren] at hbag ⊢, by simp [hchildren]⟩
+
+/-- Recover an exact pair-node presentation from a bag-equality against a
+canonical two-child node. -/
+theorem pair_node_recover_of_childrenBag_eq {t d₁ d₂ : BTree}
+    (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
+    ∃ e₁ e₂, t.childrenBag = (BTree.node [e₁, e₂]).childrenBag ∧ t = .node [e₁, e₂] := by
+  cases t with
+  | leaf =>
+      have hfalse : False := by
+        have hcard := congrArg Multiset.card hbag
+        simp at hcard
+      exact hfalse.elim
+  | node children =>
+      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
+      exact ⟨e₁, e₂, by simp [hchildren] at hbag ⊢, by simp [hchildren]⟩
+
 theorem alpha_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
     (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
     (BTree.node children₁).alpha = (BTree.node children₂).alpha := by
