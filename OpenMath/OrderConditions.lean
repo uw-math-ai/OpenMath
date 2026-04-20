@@ -1716,62 +1716,17 @@ private theorem order5i_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsi
   have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
   congr 1; ext i; simp_rw [hrc', Finset.mul_sum]; congr 1; ext j; congr 1; ext k; ring
 
-/-- Normalized witness for the order-5 two-child family with child-order sum `4`. -/
-private inductive OrderFiveCaseCWitness (c₁ c₂ : BTree) : Type where
-  | ord22 (hc₁ : c₁.order = 2) (hc₂ : c₂.order = 2) : OrderFiveCaseCWitness c₁ c₂
-  | chain3 (d : BTree)
-      (hpair : (c₁.order = 1 ∧ c₂ = .node [d] ∧ d.order = 2) ∨
-        (c₁ = .node [d] ∧ d.order = 2 ∧ c₂.order = 1)) :
-      OrderFiveCaseCWitness c₁ c₂
-  | bushy3 (d₁ d₂ : BTree)
-      (hpair : (c₁.order = 1 ∧ c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) ∨
-        (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) :
-      OrderFiveCaseCWitness c₁ c₂
-
-/-- Normalize the order-5 two-child `sum = 4` family into the `{2,2}` / chain-3 / bushy-3 trichotomy. -/
-private theorem order_five_caseC_witness_nonempty (c₁ c₂ : BTree)
-    (hsum : c₁.order + c₂.order = 4) :
-    Nonempty (OrderFiveCaseCWitness c₁ c₂) := by
-  have hc₁_pos := BTree.order_pos c₁
-  have hc₂_pos := BTree.order_pos c₂
-  by_cases h22 : c₁.order = 2 ∧ c₂.order = 2
-  · exact ⟨.ord22 h22.1 h22.2⟩
-  · have h13 :
-        (c₁.order = 1 ∧ c₂.order = 3) ∨ (c₁.order = 3 ∧ c₂.order = 1) := by
-      by_cases h1 : c₁.order = 1
-      · exact Or.inl ⟨h1, by omega⟩
-      · by_cases h2 : c₂.order = 1
-        · exact Or.inr ⟨by omega, h2⟩
-        · exfalso
-          omega
-    rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
-    · have hw3 : BTree.OrderThreeBagWitness c₂ := BTree.order_three_bag_witness c₂ hc₂
-      rcases BTree.order_three_bag_witness_recover hw3 with
-        ⟨d, hdnode, hdorder⟩ | ⟨d₁, d₂, hdnode, hd₁, hd₂⟩
-      · exact ⟨.chain3 d <| Or.inl ⟨h1, hdnode, hdorder⟩⟩
-      · exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, hdnode, hd₁, hd₂⟩⟩
-    · have hw3 : BTree.OrderThreeBagWitness c₁ := BTree.order_three_bag_witness c₁ hc₁
-      rcases BTree.order_three_bag_witness_recover hw3 with
-        ⟨d, hdnode, hdorder⟩ | ⟨d₁, d₂, hdnode, hd₁, hd₂⟩
-      · exact ⟨.chain3 d <| Or.inr ⟨hdnode, hdorder, h2⟩⟩
-      · exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨hdnode, hd₁, hd₂, h2⟩⟩
-
-/-- Noncomputably choose the normalized order-5 two-child Case C witness. -/
-private noncomputable def order_five_caseC_witness (c₁ c₂ : BTree)
-    (hsum : c₁.order + c₂.order = 4) :
-    OrderFiveCaseCWitness c₁ c₂ :=
-  Classical.choice (order_five_caseC_witness_nonempty c₁ c₂ hsum)
-
 /-- Branch-specific order condition selected by an order-5 two-child Case C witness. -/
 private def order_five_caseC_target (tab : ButcherTableau s) :
-    {c₁ c₂ : BTree} → OrderFiveCaseCWitness c₁ c₂ → Prop
+    {c₁ c₂ : BTree} → BTree.OrderFiveCaseCWitness c₁ c₂ → Prop
   | _, _, .ord22 _ _ => tab.order5c
   | _, _, .chain3 _ _ => tab.order5f
   | _, _, .bushy3 _ _ _ => tab.order5d
 
 /-- Shared forward/reverse dispatcher for the order-5 two-child / Case C witness families. -/
 private theorem order_five_caseC_dispatch_shared (tab : ButcherTableau s)
-    (hrc : tab.IsRowSumConsistent) {c₁ c₂ : BTree} (hwit : OrderFiveCaseCWitness c₁ c₂) :
+    (hrc : tab.IsRowSumConsistent) {c₁ c₂ : BTree}
+    (hwit : BTree.OrderFiveCaseCWitness c₁ c₂) :
     (tab.satisfiesTreeCondition (.node [c₁, c₂]) → order_five_caseC_target tab hwit) ∧
     (order_five_caseC_target tab hwit → tab.satisfiesTreeCondition (.node [c₁, c₂])) := by
   cases hwit with
@@ -1790,7 +1745,8 @@ private theorem order_five_caseC_dispatch_shared (tab : ButcherTableau s)
 
 /-- Canonical dispatcher for the order-5 two-child family with child-order sum `4`. -/
 private theorem satisfiesTreeCondition_order_five_caseC (tab : ButcherTableau s)
-    (hrc : tab.IsRowSumConsistent) (c₁ c₂ : BTree) (hwit : OrderFiveCaseCWitness c₁ c₂)
+    (hrc : tab.IsRowSumConsistent) (c₁ c₂ : BTree)
+    (hwit : BTree.OrderFiveCaseCWitness c₁ c₂)
     (h5c :
       ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * tab.c j) ^ 2 = 1 / 20)
     (h5d :
@@ -2111,7 +2067,8 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
       | caseC children c₁ c₂ hsum hbag =>
         -- Case C: 2 children summing to 4
-        have hCaseC : OrderFiveCaseCWitness c₁ c₂ := order_five_caseC_witness c₁ c₂ hsum
+        have hCaseC : BTree.OrderFiveCaseCWitness c₁ c₂ :=
+          BTree.order_five_caseC_witness c₁ c₂ hsum
         have htarget : order_five_caseC_target tab hCaseC := by
           cases hCaseC with
           | ord22 =>
