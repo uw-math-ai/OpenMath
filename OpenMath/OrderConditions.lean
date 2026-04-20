@@ -1804,6 +1804,37 @@ private inductive OrderFiveCaseCWitness (c₁ c₂ : BTree) : Type where
         (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) :
       OrderFiveCaseCWitness c₁ c₂
 
+private theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTree}
+    (hbag : (BTree.node children).childrenBag = (BTree.node [d]).childrenBag) :
+    children = [d] := by
+  have hperm : children.Perm [d] := Quotient.exact hbag
+  have hlen : children.length = 1 := by simpa using hperm.length_eq
+  cases children with
+  | nil => simp at hlen
+  | cons child rest =>
+      cases rest with
+      | nil =>
+          have hmem : d ∈ [child] := hperm.symm.subset (by simp)
+          have hd : d = child := by simpa using hmem
+          subst d
+          rfl
+      | cons child₂ rest₂ => simp at hlen
+
+private theorem pair_children_exists_of_childrenBag_eq {children : List BTree} {d₁ d₂ : BTree}
+    (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
+    ∃ e₁ e₂, children = [e₁, e₂] := by
+  have hperm : children.Perm [d₁, d₂] := Quotient.exact hbag
+  have hlen : children.length = 2 := by simpa using hperm.length_eq
+  simpa [List.length_eq_two] using hlen
+
+private theorem triple_children_exists_of_childrenBag_eq {children : List BTree}
+    {d₁ d₂ d₃ : BTree}
+    (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag) :
+    ∃ e₁ e₂ e₃, children = [e₁, e₂, e₃] := by
+  have hperm : children.Perm [d₁, d₂, d₃] := Quotient.exact hbag
+  have hlen : children.length = 3 := by simpa using hperm.length_eq
+  simpa [List.length_eq_three] using hlen
+
 /-- Normalize the order-5 two-child `sum = 4` family into the `{2,2}` / chain-3 / bushy-3 trichotomy. -/
 private theorem order_five_caseC_witness_nonempty (c₁ c₂ : BTree)
     (hsum : c₁.order + c₂.order = 4) :
@@ -1821,18 +1852,46 @@ private theorem order_five_caseC_witness_nonempty (c₁ c₂ : BTree)
         · exfalso
           omega
     rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
-    · have hw3 : BTree.OrderThreeWitness c₂ := BTree.order_three_witness c₂ hc₂
+    · have hw3 : BTree.OrderThreeBagWitness c₂ := BTree.order_three_bag_witness c₂ hc₂
       cases hw3 with
-      | chain3 d hd =>
-        exact ⟨.chain3 d <| Or.inl ⟨h1, rfl, hd⟩⟩
-      | bushy3 d₁ d₂ hd₁ hd₂ =>
-        exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, rfl, hd₁, hd₂⟩⟩
-    · have hw3 : BTree.OrderThreeWitness c₁ := BTree.order_three_witness c₁ hc₁
+      | chain3 children d hd hbag =>
+        have hchildren : children = [d] := singleton_children_eq_of_childrenBag_eq hbag
+        exact ⟨.chain3 d <| Or.inl ⟨h1, by simpa [hchildren], hd⟩⟩
+      | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
+        rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
+        have hsume : e₁.order + e₂.order = 2 := by
+          have horder : 1 + (e₁.order + e₂.order) = 3 := by
+            simpa [hchildren, BTree.order_node] using hc₂
+          omega
+        have he₁ : e₁.order = 1 := by
+          have he₁_pos := BTree.order_pos e₁
+          have he₂_pos := BTree.order_pos e₂
+          omega
+        have he₂ : e₂.order = 1 := by
+          have he₁_pos := BTree.order_pos e₁
+          have he₂_pos := BTree.order_pos e₂
+          omega
+        exact ⟨.bushy3 e₁ e₂ <| Or.inl ⟨h1, by simpa [hchildren], he₁, he₂⟩⟩
+    · have hw3 : BTree.OrderThreeBagWitness c₁ := BTree.order_three_bag_witness c₁ hc₁
       cases hw3 with
-      | chain3 d hd =>
-        exact ⟨.chain3 d <| Or.inr ⟨rfl, hd, h2⟩⟩
-      | bushy3 d₁ d₂ hd₁ hd₂ =>
-        exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨rfl, hd₁, hd₂, h2⟩⟩
+      | chain3 children d hd hbag =>
+        have hchildren : children = [d] := singleton_children_eq_of_childrenBag_eq hbag
+        exact ⟨.chain3 d <| Or.inr ⟨by simpa [hchildren], hd, h2⟩⟩
+      | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
+        rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
+        have hsume : e₁.order + e₂.order = 2 := by
+          have horder : 1 + (e₁.order + e₂.order) = 3 := by
+            simpa [hchildren, BTree.order_node] using hc₁
+          omega
+        have he₁ : e₁.order = 1 := by
+          have he₁_pos := BTree.order_pos e₁
+          have he₂_pos := BTree.order_pos e₂
+          omega
+        have he₂ : e₂.order = 1 := by
+          have he₁_pos := BTree.order_pos e₁
+          have he₂_pos := BTree.order_pos e₂
+          omega
+        exact ⟨.bushy3 e₁ e₂ <| Or.inr ⟨by simpa [hchildren], he₁, he₂, h2⟩⟩
 
 /-- Noncomputably choose the normalized order-5 two-child Case C witness. -/
 private noncomputable def order_five_caseC_witness (c₁ c₂ : BTree)
@@ -1964,19 +2023,56 @@ private inductive OrderFiveCaseDWitness (c : BTree) where
 /-- Normalize an order-4 child into the bushy-4 / mixed-4 / via-chain3 / via-bushy3 families. -/
 private theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4) :
     Nonempty (OrderFiveCaseDWitness c) := by
-  have hw4 : BTree.OrderFourWitness c := BTree.order_four_witness c hc
+  have hw4 : BTree.OrderFourBagWitness c := BTree.order_four_bag_witness c hc
   cases hw4 with
-  | bushy4 d₁ d₂ d₃ hd₁ hd₂ hd₃ =>
-    exact ⟨.bushy4 d₁ d₂ d₃ rfl hd₁ hd₂ hd₃⟩
-  | mixed4 d₁ d₂ hpair =>
-    exact ⟨.mixed4 d₁ d₂ rfl hpair⟩
-  | single3 d hd =>
-    have hw3 : BTree.OrderThreeWitness d := BTree.order_three_witness d hd
+  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
+    rcases triple_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, e₃, hchildren⟩
+    have hsume : e₁.order + e₂.order + e₃.order = 3 := by
+      have horder : 1 + (e₁.order + (e₂.order + e₃.order)) = 4 := by
+        simpa [hchildren, BTree.order_node] using hc
+      omega
+    have he₁_pos := BTree.order_pos e₁
+    have he₂_pos := BTree.order_pos e₂
+    have he₃_pos := BTree.order_pos e₃
+    have he₁ : e₁.order = 1 := by omega
+    have he₂ : e₂.order = 1 := by omega
+    have he₃ : e₃.order = 1 := by omega
+    exact ⟨.bushy4 e₁ e₂ e₃ (by simpa [hchildren]) he₁ he₂ he₃⟩
+  | mixed4 children d₁ d₂ hcanon hbag =>
+    rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
+    have hsume : e₁.order + e₂.order = 3 := by
+      have horder : 1 + (e₁.order + e₂.order) = 4 := by
+        simpa [hchildren, BTree.order_node] using hc
+      omega
+    have he₁_pos := BTree.order_pos e₁
+    have he₂_pos := BTree.order_pos e₂
+    have hpair : (e₁.order = 1 ∧ e₂.order = 2) ∨ (e₁.order = 2 ∧ e₂.order = 1) := by
+      by_cases he₁ : e₁.order = 1
+      · exact Or.inl ⟨he₁, by omega⟩
+      · exact Or.inr ⟨by omega, by omega⟩
+    exact ⟨.mixed4 e₁ e₂ (by simpa [hchildren]) hpair⟩
+  | single3 children d hw3 hbag =>
+    have hchildren : children = [d] := singleton_children_eq_of_childrenBag_eq hbag
     cases hw3 with
-    | chain3 e he =>
-      exact ⟨.viaChain3 (.node [e]) e rfl rfl he⟩
-    | bushy3 e₁ e₂ he₁ he₂ =>
-      exact ⟨.viaBushy3 (.node [e₁, e₂]) e₁ e₂ rfl rfl he₁ he₂⟩
+    | chain3 grandChildren e he hchildBag =>
+      have hgrandChildren : grandChildren = [e] := singleton_children_eq_of_childrenBag_eq hchildBag
+      exact ⟨.viaChain3 (BTree.node grandChildren) e (by simpa [hchildren])
+        (by simpa [hgrandChildren]) he⟩
+    | bushy3 grandChildren e₁ e₂ he₁ he₂ hchildBag =>
+      rcases pair_children_exists_of_childrenBag_eq hchildBag with ⟨f₁, f₂, hgrandChildren⟩
+      have hgrandOrder : (BTree.node grandChildren).order = 3 := by
+        refine (BTree.order_eq_of_childrenBag_eq hchildBag).trans ?_
+        simp [he₁, he₂, BTree.order_node]
+      have hsumf : f₁.order + f₂.order = 2 := by
+        have horder : 1 + (f₁.order + f₂.order) = 3 := by
+          simpa [hgrandChildren, BTree.order_node] using hgrandOrder
+        omega
+      have hf₁_pos := BTree.order_pos f₁
+      have hf₂_pos := BTree.order_pos f₂
+      have hf₁ : f₁.order = 1 := by omega
+      have hf₂ : f₂.order = 1 := by omega
+      exact ⟨.viaBushy3 (BTree.node grandChildren) f₁ f₂ (by simpa [hchildren])
+        (by simpa [hgrandChildren]) hf₁ hf₂⟩
 
 /-- Noncomputably choose the normalized order-4 singleton-child witness. -/
 private noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
