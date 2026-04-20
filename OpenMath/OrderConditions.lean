@@ -271,41 +271,6 @@ private theorem satisfiesTreeCondition_order_two (tab : ButcherTableau s) (t : B
   · intro h; convert h using 1; congr 1; ext i; congr 1; exact (ew_of_order_two tab t ht i).symm
   · intro h; convert h using 1; congr 1; ext i; congr 1; exact ew_of_order_two tab t ht i
 
-/-- Any order-3 tree is either a chain `[[τ]]` or a bushy tree `[τ²]`. -/
-private theorem order_three_cases (t : BTree) (ht : t.order = 3) :
-    (∃ c : BTree, t = .node [c] ∧ c.order = 2) ∨
-    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-    simp only [order_node] at ht
-    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 2 := by omega
-    cases children with
-    | nil => simp at hfoldr
-    | cons hd tl =>
-      simp only [List.foldr] at hfoldr
-      have hhd_pos := BTree.order_pos hd
-      cases tl with
-      | nil =>
-        left
-        refine ⟨hd, rfl, by simpa using hfoldr⟩
-      | cons hd2 tl2 =>
-        have hhd2_pos := BTree.order_pos hd2
-        have hhd : hd.order = 1 := by
-          simp only [List.foldr] at hfoldr
-          omega
-        have hrest : hd2.order + tl2.foldr (fun c n => c.order + n) 0 = 1 := by
-          simp only [List.foldr] at hfoldr
-          omega
-        cases tl2 with
-        | nil =>
-          right
-          refine ⟨hd, hd2, rfl, hhd, by simpa using hrest⟩
-        | cons hd3 tl3 =>
-          simp only [List.foldr] at hrest
-          have hhd3_pos := BTree.order_pos hd3
-          omega
-
 /-- Bushy order-3 trees have elementary weight `(∑ₖ aᵢₖ)^2`. -/
 private theorem ew_of_order_three_bushy (tab : ButcherTableau s) (t : BTree)
     (hbushy : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1)
@@ -455,69 +420,18 @@ theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         congr 1
         exact (hrc i).symm
       · have heq : t.order = 3 := by omega
-        rcases order_three_cases t heq with hchain | hbushy
-        · rw [satisfiesTreeCondition_order_three_chain tab t hchain]
+        have hw : BTree.OrderThreeWitness t := BTree.order_three_witness t heq
+        cases hw with
+        | chain3 c hc =>
+          rw [satisfiesTreeCondition_order_three_chain tab _ ⟨c, rfl, hc⟩]
           rw [order3b] at h3b
           simpa [order3b_sum_eq tab hrc] using h3b
-        · rw [satisfiesTreeCondition_order_three_bushy tab t hbushy]
+        | bushy3 c₁ c₂ hc₁ hc₂ =>
+          rw [satisfiesTreeCondition_order_three_bushy tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
           rw [order3a] at h3a
           simpa [order3a_sum_eq tab hrc] using h3a
 
 /-! ### Order 4 helpers -/
-
-/-- Any order-4 tree is one of: 3 leaves, 2 children summing to 3, or single order-3 child. -/
-private theorem order_four_cases (t : BTree) (ht : t.order = 4) :
-    (∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧ c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1) ∨
-    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
-      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1))) ∨
-    (∃ c : BTree, t = .node [c] ∧ c.order = 3) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-    simp only [order_node] at ht
-    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 3 := by omega
-    cases children with
-    | nil => simp at hfoldr
-    | cons hd tl =>
-      simp only [List.foldr] at hfoldr
-      have hhd_pos := BTree.order_pos hd
-      cases tl with
-      | nil =>
-        -- single child of order 3
-        right; right
-        exact ⟨hd, rfl, by simp only [List.foldr] at hfoldr; omega⟩
-      | cons hd2 tl2 =>
-        have hhd2_pos := BTree.order_pos hd2
-        simp only [List.foldr] at hfoldr
-        cases tl2 with
-        | nil =>
-          -- two children with orders summing to 3
-          right; left
-          have hsum : hd.order + hd2.order = 3 := by simpa using hfoldr
-          refine ⟨hd, hd2, rfl, hsum, ?_⟩
-          have : hd.order ≥ 1 := hhd_pos
-          have : hd2.order ≥ 1 := hhd2_pos
-          by_cases h1 : hd.order = 1
-          · exact Or.inl ⟨h1, by omega⟩
-          · exact Or.inr ⟨by omega, by omega⟩
-        | cons hd3 tl3 =>
-          have hhd3_pos := BTree.order_pos hd3
-          simp only [List.foldr] at hfoldr
-          cases tl3 with
-          | nil =>
-            -- three children, all must be order 1
-            left
-            have h1 : hd.order = 1 := by omega
-            have h2 : hd2.order = 1 := by omega
-            have h3 : hd3.order = 1 := by omega
-            exact ⟨hd, hd2, hd3, rfl, h1, h2, h3⟩
-          | cons hd4 tl4 =>
-            -- four+ children: impossible since all orders ≥ 1
-            exfalso
-            have hhd4_pos := BTree.order_pos hd4
-            simp only [List.foldr] at hfoldr
-            have : tl4.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
-            omega
 
 /-- Bushy order-4 tree (3 leaves): ew = (∑ₖ aᵢₖ)³. -/
 private theorem ew_of_order_four_bushy4 (tab : ButcherTableau s) (t : BTree)
@@ -777,27 +691,26 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
     by_cases hle3 : t.order ≤ 3
     · exact ((thm_301A_order3 tab hrc).mpr ⟨h1, h2, h3a, h3b⟩) t hle3
     · have heq : t.order = 4 := by omega
-      rcases order_four_cases t heq with hbushy4 | hmixed | hsingle
-      · -- bushy-4: three leaves
-        rw [satisfiesTreeCondition_order_four_bushy4 tab t hbushy4]
+      have hw4 : BTree.OrderFourWitness t := BTree.order_four_witness t heq
+      cases hw4 with
+      | bushy4 c₁ c₂ c₃ hc₁ hc₂ hc₃ =>
+        rw [satisfiesTreeCondition_order_four_bushy4 tab _ ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩]
         rw [order4a] at h4a
         simpa [order4a_sum_eq tab hrc] using h4a
-      · -- mixed: two children with orders {1,2}
-        rcases hmixed with ⟨c₁, c₂, rfl, _, hord⟩
-        rw [satisfiesTreeCondition_order_four_mixed_canonical tab c₁ c₂ hord]
+      | mixed4 leaf2 child2 hpair =>
+        rw [satisfiesTreeCondition_order_four_mixed_canonical tab leaf2 child2 hpair]
         rw [order4b] at h4b
         simpa [order4b_sum_eq tab hrc] using h4b
-      · -- single child of order 3: sub-case on shape
-        rcases hsingle with ⟨c, rfl, hc⟩
-        rcases order_three_cases c hc with hchain | hbushy
-        · -- child is chain-3
-          rcases hchain with ⟨c', hc_eq, hc'⟩
-          rw [satisfiesTreeCondition_order_four_via_chain3 tab _ ⟨c, rfl, c', hc_eq, hc'⟩]
+      | single3 child3 hchild3 =>
+        have hw3 : BTree.OrderThreeWitness child3 := BTree.order_three_witness child3 hchild3
+        cases hw3 with
+        | chain3 c' hc' =>
+          rw [satisfiesTreeCondition_order_four_via_chain3 tab _ ⟨.node [c'], rfl, c', rfl, hc'⟩]
           rw [order4d] at h4d
           simpa [order4d_sum_eq tab hrc] using h4d
-        · -- child is bushy-3
-          rcases hbushy with ⟨c₁, c₂, hc_eq, hc₁, hc₂⟩
-          rw [satisfiesTreeCondition_order_four_via_bushy3 tab _ ⟨c, rfl, c₁, c₂, hc_eq, hc₁, hc₂⟩]
+        | bushy3 c₁ c₂ hc₁ hc₂ =>
+          rw [satisfiesTreeCondition_order_four_via_bushy3 tab _
+            ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hc₁, hc₂⟩]
           rw [order4c] at h4c
           simpa [order4c_sum_eq tab hrc] using h4c
 
@@ -1887,16 +1800,18 @@ private theorem order_five_caseC_witness_nonempty (c₁ c₂ : BTree)
         · exfalso
           omega
     rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
-    · rcases order_three_cases c₂ hc₂ with hchain | hbushy
-      · rcases hchain with ⟨d, hd_eq, hd⟩
-        exact ⟨.chain3 d <| Or.inl ⟨h1, hd_eq, hd⟩⟩
-      · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
-        exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, hd_eq, hd₁, hd₂⟩⟩
-    · rcases order_three_cases c₁ hc₁ with hchain | hbushy
-      · rcases hchain with ⟨d, hd_eq, hd⟩
-        exact ⟨.chain3 d <| Or.inr ⟨hd_eq, hd, h2⟩⟩
-      · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
-        exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨hd_eq, hd₁, hd₂, h2⟩⟩
+    · have hw3 : BTree.OrderThreeWitness c₂ := BTree.order_three_witness c₂ hc₂
+      cases hw3 with
+      | chain3 d hd =>
+        exact ⟨.chain3 d <| Or.inl ⟨h1, rfl, hd⟩⟩
+      | bushy3 d₁ d₂ hd₁ hd₂ =>
+        exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, rfl, hd₁, hd₂⟩⟩
+    · have hw3 : BTree.OrderThreeWitness c₁ := BTree.order_three_witness c₁ hc₁
+      cases hw3 with
+      | chain3 d hd =>
+        exact ⟨.chain3 d <| Or.inr ⟨rfl, hd, h2⟩⟩
+      | bushy3 d₁ d₂ hd₁ hd₂ =>
+        exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨rfl, hd₁, hd₂, h2⟩⟩
 
 /-- Noncomputably choose the normalized order-5 two-child Case C witness. -/
 private noncomputable def order_five_caseC_witness (c₁ c₂ : BTree)
@@ -2028,17 +1943,19 @@ private inductive OrderFiveCaseDWitness (c : BTree) where
 /-- Normalize an order-4 child into the bushy-4 / mixed-4 / via-chain3 / via-bushy3 families. -/
 private theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4) :
     Nonempty (OrderFiveCaseDWitness c) := by
-  rcases order_four_cases c hc with hbushy4 | hmixed | hsingle
-  · rcases hbushy4 with ⟨d₁, d₂, d₃, hc_eq, hd₁, hd₂, hd₃⟩
-    exact ⟨.bushy4 d₁ d₂ d₃ hc_eq hd₁ hd₂ hd₃⟩
-  · rcases hmixed with ⟨d₁, d₂, hc_eq, _, hpair⟩
-    exact ⟨.mixed4 d₁ d₂ hc_eq hpair⟩
-  · rcases hsingle with ⟨d, hc_eq, hd⟩
-    rcases order_three_cases d hd with hchain | hbushy
-    · rcases hchain with ⟨e, hd_eq, he⟩
-      exact ⟨.viaChain3 d e hc_eq hd_eq he⟩
-    · rcases hbushy with ⟨e₁, e₂, hd_eq, he₁, he₂⟩
-      exact ⟨.viaBushy3 d e₁ e₂ hc_eq hd_eq he₁ he₂⟩
+  have hw4 : BTree.OrderFourWitness c := BTree.order_four_witness c hc
+  cases hw4 with
+  | bushy4 d₁ d₂ d₃ hd₁ hd₂ hd₃ =>
+    exact ⟨.bushy4 d₁ d₂ d₃ rfl hd₁ hd₂ hd₃⟩
+  | mixed4 d₁ d₂ hpair =>
+    exact ⟨.mixed4 d₁ d₂ rfl hpair⟩
+  | single3 d hd =>
+    have hw3 : BTree.OrderThreeWitness d := BTree.order_three_witness d hd
+    cases hw3 with
+    | chain3 e he =>
+      exact ⟨.viaChain3 (.node [e]) e rfl rfl he⟩
+    | bushy3 e₁ e₂ he₁ he₂ =>
+      exact ⟨.viaBushy3 (.node [e₁, e₂]) e₁ e₂ rfl rfl he₁ he₂⟩
 
 /-- Noncomputably choose the normalized order-4 singleton-child witness. -/
 private noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :

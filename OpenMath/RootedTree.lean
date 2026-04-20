@@ -327,6 +327,141 @@ example : t5i.alpha = 1 := by native_decide
 
 /-! ### Structural Properties -/
 
+/-- Normalized witness for order-3 rooted trees, packaging the unordered
+low-order child family instead of exposing ad hoc ordered-list case splits. -/
+inductive OrderThreeWitness : BTree → Type where
+  | chain3 (c : BTree) (hc : c.order = 2) :
+      OrderThreeWitness (.node [c])
+  | bushy3 (c₁ c₂ : BTree) (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) :
+      OrderThreeWitness (.node [c₁, c₂])
+
+/-- Bag-first witness for order-3 trees. -/
+theorem order_three_witness_nonempty (t : BTree) (ht : t.order = 3) :
+    Nonempty (OrderThreeWitness t) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+    simp only [order_node] at ht
+    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 2 := by omega
+    cases children with
+    | nil => simp at hfoldr
+    | cons hd tl =>
+      simp only [List.foldr] at hfoldr
+      have hhd_pos : 0 < hd.order := by
+        cases hd <;> simp [order_node]
+      cases tl with
+      | nil =>
+        exact ⟨.chain3 hd (by simpa using hfoldr)⟩
+      | cons hd2 tl2 =>
+        have hhd2_pos : 0 < hd2.order := by
+          cases hd2 <;> simp [order_node]
+        have hhd : hd.order = 1 := by
+          simp only [List.foldr] at hfoldr
+          omega
+        have hrest : hd2.order + tl2.foldr (fun c n => c.order + n) 0 = 1 := by
+          simp only [List.foldr] at hfoldr
+          omega
+        cases tl2 with
+        | nil =>
+          exact ⟨.bushy3 hd hd2 hhd (by simpa using hrest)⟩
+        | cons hd3 tl3 =>
+          simp only [List.foldr] at hrest
+          have hhd3_pos : 0 < hd3.order := by
+            cases hd3 <;> simp [order_node]
+          omega
+
+/-- Noncomputably choose the normalized order-3 witness. -/
+noncomputable def order_three_witness (t : BTree) (ht : t.order = 3) :
+    OrderThreeWitness t :=
+  Classical.choice (order_three_witness_nonempty t ht)
+
+/-- Compatibility wrapper for the older order-3 list classifier. -/
+theorem order_three_cases (t : BTree) (ht : t.order = 3) :
+    (∃ c : BTree, t = .node [c] ∧ c.order = 2) ∨
+    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) := by
+  have hw : OrderThreeWitness t := order_three_witness t ht
+  cases hw with
+  | chain3 c hc =>
+      exact Or.inl ⟨c, rfl, hc⟩
+  | bushy3 c₁ c₂ hc₁ hc₂ =>
+      exact Or.inr ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+
+/-- Normalized witness for order-4 rooted trees, packaging the canonical
+unordered low-order families. -/
+inductive OrderFourWitness : BTree → Type where
+  | bushy4 (c₁ c₂ c₃ : BTree)
+      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) :
+      OrderFourWitness (.node [c₁, c₂, c₃])
+  | mixed4 (c₁ c₂ : BTree)
+      (hpair : (c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1)) :
+      OrderFourWitness (.node [c₁, c₂])
+  | single3 (c : BTree) (hc : c.order = 3) :
+      OrderFourWitness (.node [c])
+
+/-- Bag-first witness for order-4 trees. -/
+theorem order_four_witness_nonempty (t : BTree) (ht : t.order = 4) :
+    Nonempty (OrderFourWitness t) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+    simp only [order_node] at ht
+    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 3 := by omega
+    cases children with
+    | nil => simp at hfoldr
+    | cons hd tl =>
+      simp only [List.foldr] at hfoldr
+      have hhd_pos : 0 < hd.order := by
+        cases hd <;> simp [order_node]
+      cases tl with
+      | nil =>
+        exact ⟨.single3 hd (by simp only [List.foldr] at hfoldr; omega)⟩
+      | cons hd2 tl2 =>
+        have hhd2_pos : 0 < hd2.order := by
+          cases hd2 <;> simp [order_node]
+        simp only [List.foldr] at hfoldr
+        cases tl2 with
+        | nil =>
+          have hsum : hd.order + hd2.order = 3 := by simpa using hfoldr
+          have hpair : (hd.order = 1 ∧ hd2.order = 2) ∨ (hd.order = 2 ∧ hd2.order = 1) := by
+            by_cases h1 : hd.order = 1
+            · exact Or.inl ⟨h1, by omega⟩
+            · exact Or.inr ⟨by omega, by omega⟩
+          exact ⟨.mixed4 hd hd2 hpair⟩
+        | cons hd3 tl3 =>
+          have hhd3_pos : 0 < hd3.order := by
+            cases hd3 <;> simp [order_node]
+          simp only [List.foldr] at hfoldr
+          cases tl3 with
+          | nil =>
+            exact ⟨.bushy4 hd hd2 hd3 (by omega) (by omega) (by omega)⟩
+          | cons hd4 tl4 =>
+            have hhd4_pos : 0 < hd4.order := by
+              cases hd4 <;> simp [order_node]
+            simp only [List.foldr] at hfoldr
+            have : tl4.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
+            omega
+
+/-- Noncomputably choose the normalized order-4 witness. -/
+noncomputable def order_four_witness (t : BTree) (ht : t.order = 4) :
+    OrderFourWitness t :=
+  Classical.choice (order_four_witness_nonempty t ht)
+
+/-- Compatibility wrapper for the older order-4 list classifier. -/
+theorem order_four_cases (t : BTree) (ht : t.order = 4) :
+    (∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧ c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1) ∨
+    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
+      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1))) ∨
+    (∃ c : BTree, t = .node [c] ∧ c.order = 3) := by
+  have hw : OrderFourWitness t := order_four_witness t ht
+  cases hw with
+  | bushy4 c₁ c₂ c₃ hc₁ hc₂ hc₃ =>
+      exact Or.inl ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  | mixed4 c₁ c₂ hpair =>
+      exact Or.inr <| Or.inl ⟨c₁, c₂, rfl, by
+        rcases hpair with ⟨hc₁, hc₂⟩ | ⟨hc₁, hc₂⟩ <;> omega, hpair⟩
+  | single3 c hc =>
+      exact Or.inr <| Or.inr ⟨c, rfl, hc⟩
+
 /-- Child bags agree for any permutation of the ordered fallback representation. -/
 theorem node_childrenBag_eq_of_perm {children₁ children₂ : List BTree}
     (hperm : children₁.Perm children₂) :
