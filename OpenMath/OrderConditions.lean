@@ -927,17 +927,20 @@ private theorem ew_of_order_five_1_chain3 (tab : ButcherTableau s) (t : BTree)
         elementaryWeight_singleton, ew_of_order_two tab d hd]
   ring
 
-/-- 2-child [chain-3, order-1]: same ew by commutativity. -/
-private theorem ew_of_order_five_chain3_1 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
-      ∃ d : BTree, c₁ = .node [d] ∧ d.order = 2)
+/-- Transport the canonical `{1, chain-3}` elementary weight formula across
+bag-equal two-child representations. -/
+private theorem ew_of_order_five_chain3_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ d : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂ = BTree.node [d] ∧ d.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag)
     (i : Fin s) :
-    tab.elementaryWeight t i =
+    tab.elementaryWeight (BTree.node [d₁, d₂]) i =
       (∑ k : Fin s, tab.A i k) *
       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l))) := by
-  rcases h with ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩
-  simp only [elementaryWeight, List.foldr, ew_of_order_one tab c₂ hc₂, hc₁,
-        elementaryWeight_singleton, ew_of_order_two tab d hd, mul_one, one_mul]
+  exact
+    (elementaryWeight_eq_of_childrenBag_eq tab hbag i).trans <|
+      ew_of_order_five_1_chain3 tab (BTree.node [c₁, c₂])
+        ⟨c₁, c₂, rfl, hcanon.1, d, hcanon.2.1, hcanon.2.2⟩ i
 
 /-- 2-child [order-2, order-2]: ew = (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ))². -/
 private theorem ew_of_order_five_22 (tab : ButcherTableau s) (t : BTree)
@@ -1081,15 +1084,17 @@ private theorem density_of_order_five_1_chain3 (t : BTree)
   simp only [density_node, order_node, List.foldr]
   rw [density_of_order_one c₁ hc₁, density_of_order_two d hd, hc₁, hd]
 
-/-- 2-child [chain-3, order-1] has density 30. -/
-private theorem density_of_order_five_chain3_1 (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
-      ∃ d : BTree, c₁ = .node [d] ∧ d.order = 2) :
-    t.density = 30 := by
-  rcases h with ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩
-  subst hc₁
-  simp only [density_node, order_node, List.foldr]
-  rw [density_of_order_one c₂ hc₂, density_of_order_two d hd, hc₂, hd]
+/-- Transport the canonical `{1, chain-3}` density formula across bag-equal
+two-child representations. -/
+private theorem density_of_order_five_chain3_eq_of_childrenBag_eq
+    (c₁ c₂ d₁ d₂ d : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂ = BTree.node [d] ∧ d.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+    (BTree.node [d₁, d₂]).density = 30 := by
+  exact
+    (BTree.density_eq_of_childrenBag_eq hbag).trans <|
+      density_of_order_five_1_chain3 (BTree.node [c₁, c₂])
+        ⟨c₁, c₂, rfl, hcanon.1, d, hcanon.2.1, hcanon.2.2⟩
 
 /-- 2-child [order-2, order-2] has density 20. -/
 private theorem density_of_order_five_22 (t : BTree)
@@ -1264,6 +1269,25 @@ private theorem satisfiesTreeCondition_order_five_1_chain3 (tab : ButcherTableau
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_five_1_chain3 tab t h i
 
+/-- Transport the canonical `{1, chain-3}` tree condition across bag-equal
+two-child representations. -/
+private theorem satisfiesTreeCondition_order_five_chain3_eq_of_childrenBag_eq
+    (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ d : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂ = BTree.node [d] ∧ d.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+    tab.satisfiesTreeCondition (BTree.node [d₁, d₂]) ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
+  simp only [satisfiesTreeCondition,
+    density_of_order_five_chain3_eq_of_childrenBag_eq c₁ c₂ d₁ d₂ d hcanon hbag]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_chain3_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ d hcanon hbag i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_chain3_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ d hcanon hbag i
+
 /-- [chain-3, 1] tree condition: sum = 1/30. -/
 private theorem satisfiesTreeCondition_order_five_chain3_1 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
@@ -1273,11 +1297,10 @@ private theorem satisfiesTreeCondition_order_five_chain3_1 (tab : ButcherTableau
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
   rcases h with ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩
-  exact
-    (satisfiesTreeCondition_eq_of_childrenBag_eq tab
-      (BTree.node_childrenBag_eq_swap c₁ c₂)).trans <|
-      satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₂, c₁])
-        ⟨c₂, c₁, rfl, hc₂, d, hc₁, hd⟩
+  simpa using
+    satisfiesTreeCondition_order_five_chain3_eq_of_childrenBag_eq tab
+      c₂ c₁ c₁ c₂ d ⟨hc₂, hc₁, hd⟩
+      (BTree.node_childrenBag_eq_swap c₁ c₂)
 
 /-- The `{1, chain-3}` family is canonical up to swapping the two top-level children. -/
 private theorem satisfiesTreeCondition_order_five_chain3_canonical (tab : ButcherTableau s)
@@ -1293,8 +1316,9 @@ private theorem satisfiesTreeCondition_order_five_chain3_canonical (tab : Butche
       (satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₁, c₂])
         ⟨c₁, c₂, rfl, hc₁, d, hc₂, hd⟩)
   · simpa [hc₁] using
-      (satisfiesTreeCondition_order_five_chain3_1 tab (.node [c₁, c₂])
-        ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩)
+      satisfiesTreeCondition_order_five_chain3_eq_of_childrenBag_eq tab
+        c₂ c₁ c₁ c₂ d ⟨hc₂, hc₁, hd⟩
+        (BTree.node_childrenBag_eq_swap c₁ c₂)
 
 /-- The `{1, bushy-3}` family is canonical up to swapping the two top-level children. -/
 private theorem satisfiesTreeCondition_order_five_bushy3_canonical (tab : ButcherTableau s)
