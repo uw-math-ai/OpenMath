@@ -1306,18 +1306,51 @@ private theorem satisfiesTreeCondition_order_five_3child_canonical (tab : Butche
 
 /-- [1, bushy-3] tree condition: sum = 1/15. -/
 private theorem satisfiesTreeCondition_order_five_1_bushy3 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
-      ∃ d₁ d₂ : BTree, c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) :
+    (h : ∃ c₁ c₂ d₁ d₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      c₂.childrenBag = (BTree.node [d₁, d₂]).childrenBag ∧ d₁.order = 1 ∧ d₂.order = 1) :
     tab.satisfiesTreeCondition t ↔
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
-  simp only [satisfiesTreeCondition, density_of_order_five_1_bushy3 t h]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_1_bushy3 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_1_bushy3 tab t h i
+  rcases h with ⟨c₁, c₂, d₁, d₂, rfl, hc₁, hc₂bag, hd₁, hd₂⟩
+  cases hc₂node : c₂ with
+  | leaf =>
+      exfalso
+      have hcard : 0 = 2 := by
+        simpa [hc₂node] using congrArg Multiset.card hc₂bag
+      omega
+  | node children =>
+      rcases BTree.pair_children_exists_of_childrenBag_eq hc₂bag with ⟨e₁, e₂, hchildren⟩
+      have hc₂ : c₂ = .node [e₁, e₂] := by
+        simpa [hc₂node] using congrArg BTree.node hchildren
+      have horder : (BTree.node [e₁, e₂]).order = (BTree.node [d₁, d₂]).order := by
+        simpa [hc₂] using BTree.order_eq_of_childrenBag_eq hc₂bag
+      have hsum : e₁.order + e₂.order = 2 := by
+        have horder' : 1 + (e₁.order + e₂.order) = 3 := by
+          simpa [BTree.order_node, Nat.add_assoc] using
+            horder.trans (by simp [hd₁, hd₂, BTree.order_node])
+        omega
+      have he₁ : e₁.order = 1 := by
+        have he₁_pos := BTree.order_pos e₁
+        have he₂_pos := BTree.order_pos e₂
+        omega
+      have he₂ : e₂.order = 1 := by
+        have he₁_pos := BTree.order_pos e₁
+        have he₂_pos := BTree.order_pos e₂
+        omega
+      have hchildren' : children = [e₁, e₂] := by
+        simpa [hc₂node] using hchildren
+      subst children
+      simp only [satisfiesTreeCondition,
+        density_of_order_five_1_bushy3 (.node [c₁, BTree.node [e₁, e₂]])
+          ⟨c₁, BTree.node [e₁, e₂], rfl, hc₁, e₁, e₂, rfl, he₁, he₂⟩]
+      constructor
+      · intro hh; convert hh using 1; congr 1; ext i; congr 1
+        exact (ew_of_order_five_1_bushy3 tab (.node [c₁, BTree.node [e₁, e₂]])
+          ⟨c₁, BTree.node [e₁, e₂], rfl, hc₁, e₁, e₂, rfl, he₁, he₂⟩ i).symm
+      · intro hh; convert hh using 1; congr 1; ext i; congr 1
+        exact ew_of_order_five_1_bushy3 tab (.node [c₁, BTree.node [e₁, e₂]])
+          ⟨c₁, BTree.node [e₁, e₂], rfl, hc₁, e₁, e₂, rfl, he₁, he₂⟩ i
 
 /-- Transport the canonical `{1, bushy-3}` tree condition across bag-equal
 two-child representations. -/
@@ -1340,18 +1373,32 @@ private theorem satisfiesTreeCondition_order_five_bushy3_eq_of_childrenBag_eq
 
 /-- [1, chain-3] tree condition: sum = 1/30. -/
 private theorem satisfiesTreeCondition_order_five_1_chain3 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
-      ∃ d : BTree, c₂ = .node [d] ∧ d.order = 2) :
+    (h : ∃ c₁ c₂ d : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
+      c₂.childrenBag = (BTree.node [d]).childrenBag ∧ d.order = 2) :
     tab.satisfiesTreeCondition t ↔
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
-  simp only [satisfiesTreeCondition, density_of_order_five_1_chain3 t h]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_1_chain3 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_1_chain3 tab t h i
+  rcases h with ⟨c₁, c₂, d, rfl, hc₁, hc₂bag, hd⟩
+  cases hc₂node : c₂ with
+  | leaf =>
+      exfalso
+      have hcard : 0 = 1 := by
+        simpa [hc₂node] using congrArg Multiset.card hc₂bag
+      omega
+  | node children =>
+      have hchildren : children = [d] := by
+        simpa [hc₂node] using BTree.singleton_children_eq_of_childrenBag_eq hc₂bag
+      subst children
+      simp only [satisfiesTreeCondition, density_of_order_five_1_chain3 (.node [c₁, BTree.node [d]])
+        ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩]
+      constructor
+      · intro hh; convert hh using 1; congr 1; ext i; congr 1
+        exact (ew_of_order_five_1_chain3 tab (.node [c₁, BTree.node [d]])
+          ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩ i).symm
+      · intro hh; convert hh using 1; congr 1; ext i; congr 1
+        exact ew_of_order_five_1_chain3 tab (.node [c₁, BTree.node [d]])
+          ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩ i
 
 /-- Transport the canonical `{1, chain-3}` tree condition across bag-equal
 two-child representations. -/
@@ -1382,33 +1429,15 @@ private theorem satisfiesTreeCondition_order_five_chain3_canonical (tab : Butche
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
   rcases hpair with ⟨hc₁, hc₂bag, hd⟩ | ⟨hc₁bag, hd, hc₂⟩
-  · cases hc₂node : c₂ with
-    | leaf =>
-        exfalso
-        have hcard : 0 = 1 := by
-          simpa [hc₂node] using congrArg Multiset.card hc₂bag
-        omega
-    | node children =>
-        have hchildren : children = [d] := by
-          simpa [hc₂node] using BTree.singleton_children_eq_of_childrenBag_eq hc₂bag
-        subst children
-        simpa using
-          (satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₁, BTree.node [d]])
-            ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩)
-  · cases hc₁node : c₁ with
-    | leaf =>
-        exfalso
-        have hcard : 0 = 1 := by
-          simpa [hc₁node] using congrArg Multiset.card hc₁bag
-        omega
-    | node children =>
-        have hchildren : children = [d] := by
-          simpa [hc₁node] using BTree.singleton_children_eq_of_childrenBag_eq hc₁bag
-        subst children
-        simpa using
-          satisfiesTreeCondition_order_five_chain3_eq_of_childrenBag_eq tab
-            c₂ (BTree.node [d]) (BTree.node [d]) c₂ d ⟨hc₂, rfl, hd⟩
-            (BTree.node_childrenBag_eq_swap (BTree.node [d]) c₂)
+  · simpa using
+      (satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₁, c₂])
+        ⟨c₁, c₂, d, rfl, hc₁, hc₂bag, hd⟩)
+  · have hswap :=
+      satisfiesTreeCondition_eq_of_childrenBag_eq tab (BTree.node_childrenBag_eq_swap c₁ c₂)
+    have hcanon :=
+      satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₂, c₁])
+        ⟨c₂, c₁, d, rfl, hc₂, hc₁bag, hd⟩
+    exact hswap.trans hcanon
 
 /-- The `{1, bushy-3}` family is canonical up to swapping the two top-level children. -/
 private theorem satisfiesTreeCondition_order_five_bushy3_canonical (tab : ButcherTableau s)
@@ -1422,71 +1451,15 @@ private theorem satisfiesTreeCondition_order_five_bushy3_canonical (tab : Butche
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
   rcases hpair with ⟨hc₁, hc₂bag, hd₁, hd₂⟩ | ⟨hc₁bag, hd₁, hd₂, hc₂⟩
-  · cases hc₂node : c₂ with
-    | leaf =>
-        exfalso
-        have hcard : 0 = 2 := by
-          simpa [hc₂node] using congrArg Multiset.card hc₂bag
-        omega
-    | node children =>
-        rcases BTree.pair_children_exists_of_childrenBag_eq hc₂bag with ⟨e₁, e₂, hchildren⟩
-        have hc₂ : c₂ = .node [e₁, e₂] := by simpa [hc₂node] using congrArg BTree.node hchildren
-        have horder : (BTree.node [e₁, e₂]).order = (BTree.node [d₁, d₂]).order := by
-          simpa [hc₂] using BTree.order_eq_of_childrenBag_eq hc₂bag
-        have hsum : e₁.order + e₂.order = 2 := by
-          have horder' : 1 + (e₁.order + e₂.order) = 3 := by
-            simpa [BTree.order_node, Nat.add_assoc] using
-              horder.trans (by simp [hd₁, hd₂, BTree.order_node])
-          omega
-        have he₁ : e₁.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        have he₂ : e₂.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        have hcanon :=
-          satisfiesTreeCondition_order_five_1_bushy3 tab (.node [c₁, BTree.node [e₁, e₂]])
-            ⟨c₁, BTree.node [e₁, e₂], rfl, hc₁, e₁, e₂, rfl, he₁, he₂⟩
-        have hchildren' : children = [e₁, e₂] := by
-          simpa [hc₂node] using hchildren
-        have hchildnode : BTree.node children = BTree.node [e₁, e₂] := by
-          simpa using congrArg BTree.node hchildren'
-        simpa [hchildnode] using hcanon
-  · cases hc₁node : c₁ with
-    | leaf =>
-        exfalso
-        have hcard : 0 = 2 := by
-          simpa [hc₁node] using congrArg Multiset.card hc₁bag
-        omega
-    | node children =>
-        rcases BTree.pair_children_exists_of_childrenBag_eq hc₁bag with ⟨e₁, e₂, hchildren⟩
-        have hc₁ : c₁ = .node [e₁, e₂] := by simpa [hc₁node] using congrArg BTree.node hchildren
-        have horder : (BTree.node [e₁, e₂]).order = (BTree.node [d₁, d₂]).order := by
-          simpa [hc₁] using BTree.order_eq_of_childrenBag_eq hc₁bag
-        have hsum : e₁.order + e₂.order = 2 := by
-          have horder' : 1 + (e₁.order + e₂.order) = 3 := by
-            simpa [BTree.order_node, Nat.add_assoc] using
-              horder.trans (by simp [hd₁, hd₂, BTree.order_node])
-          omega
-        have he₁ : e₁.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        have he₂ : e₂.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        have hcanon :=
-          satisfiesTreeCondition_order_five_bushy3_eq_of_childrenBag_eq tab
-            c₂ (BTree.node [e₁, e₂]) (BTree.node [e₁, e₂]) c₂ e₁ e₂ ⟨hc₂, rfl, he₁, he₂⟩
-            (BTree.node_childrenBag_eq_swap (BTree.node [e₁, e₂]) c₂)
-        have hchildren' : children = [e₁, e₂] := by
-          simpa [hc₁node] using hchildren
-        have hchildnode : BTree.node children = BTree.node [e₁, e₂] := by
-          simpa using congrArg BTree.node hchildren'
-        simpa [hchildnode] using hcanon
+  · simpa using
+      (satisfiesTreeCondition_order_five_1_bushy3 tab (.node [c₁, c₂])
+        ⟨c₁, c₂, d₁, d₂, rfl, hc₁, hc₂bag, hd₁, hd₂⟩)
+  · have hswap :=
+      satisfiesTreeCondition_eq_of_childrenBag_eq tab (BTree.node_childrenBag_eq_swap c₁ c₂)
+    have hcanon :=
+      satisfiesTreeCondition_order_five_1_bushy3 tab (.node [c₂, c₁])
+        ⟨c₂, c₁, d₁, d₂, rfl, hc₂, hc₁bag, hd₁, hd₂⟩
+    exact hswap.trans hcanon
 
 /-- [order-2, order-2] tree condition: sum = 1/20. -/
 private theorem satisfiesTreeCondition_order_five_22 (tab : ButcherTableau s) (t : BTree)
