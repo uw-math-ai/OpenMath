@@ -465,17 +465,6 @@ noncomputable def order_three_witness (t : BTree) (ht : t.order = 3) :
     OrderThreeWitness t :=
   Classical.choice (order_three_witness_nonempty t ht)
 
-/-- Compatibility wrapper for the older order-3 list classifier. -/
-theorem order_three_cases (t : BTree) (ht : t.order = 3) :
-    (∃ c : BTree, t = .node [c] ∧ c.order = 2) ∨
-    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) := by
-  have hw : OrderThreeWitness t := order_three_witness t ht
-  cases hw with
-  | chain3 c hc =>
-      exact Or.inl ⟨c, rfl, hc⟩
-  | bushy3 c₁ c₂ hc₁ hc₂ =>
-      exact Or.inr ⟨c₁, c₂, rfl, hc₁, hc₂⟩
-
 /-- Bag-first witness for order-4 rooted trees. The payload records the child
 bag together with canonical low-order representatives. -/
 inductive OrderFourBagWitness : BTree → Type where
@@ -604,22 +593,6 @@ theorem order_four_witness_nonempty (t : BTree) (ht : t.order = 4) :
 noncomputable def order_four_witness (t : BTree) (ht : t.order = 4) :
     OrderFourWitness t :=
   Classical.choice (order_four_witness_nonempty t ht)
-
-/-- Compatibility wrapper for the older order-4 list classifier. -/
-theorem order_four_cases (t : BTree) (ht : t.order = 4) :
-    (∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧ c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1) ∨
-    (∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
-      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1))) ∨
-    (∃ c : BTree, t = .node [c] ∧ c.order = 3) := by
-  have hw : OrderFourWitness t := order_four_witness t ht
-  cases hw with
-  | bushy4 c₁ c₂ c₃ hc₁ hc₂ hc₃ =>
-      exact Or.inl ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
-  | mixed4 c₁ c₂ hpair =>
-      exact Or.inr <| Or.inl ⟨c₁, c₂, rfl, by
-        rcases hpair with ⟨hc₁, hc₂⟩ | ⟨hc₁, hc₂⟩ <;> omega, hpair⟩
-  | single3 c hc =>
-      exact Or.inr <| Or.inr ⟨c, rfl, hc⟩
 
 /-- Compatibility witness for the older order-5 top-level ordered-list API. -/
 inductive OrderFiveWitness : BTree → Type where
