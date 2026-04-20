@@ -379,7 +379,7 @@ noncomputable def order_three_recovery_witness (t : BTree) (ht : t.order = 3) :
     OrderThreeRecoveryWitness t :=
   Classical.choice (order_three_recovery_witness_nonempty t ht)
 
-theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTree}
+private theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTree}
     (hbag : (BTree.node children).childrenBag = (BTree.node [d]).childrenBag) :
     children = [d] := by
   have hperm : children.Perm [d] := Quotient.exact hbag
@@ -394,13 +394,6 @@ theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTr
           subst d
           rfl
       | cons child₂ rest₂ => simp at hlen
-
-theorem pair_children_exists_of_childrenBag_eq {children : List BTree} {d₁ d₂ : BTree}
-    (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
-    ∃ e₁ e₂, children = [e₁, e₂] := by
-  have hperm : children.Perm [d₁, d₂] := Quotient.exact hbag
-  have hlen : children.length = 2 := by simpa using hperm.length_eq
-  simpa [List.length_eq_two] using hlen
 
 theorem triple_children_exists_of_childrenBag_eq {children : List BTree}
     {d₁ d₂ d₃ : BTree}
@@ -976,11 +969,18 @@ theorem order_five_node_classification (children : List BTree)
                       have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
                       omega
 
-/-- Recover an exact singleton-node presentation from a bag-equality against a
-canonical singleton node. -/
-theorem singleton_node_recover_of_childrenBag_eq {t d : BTree}
+/-- Bag-first recovery witness for a rooted tree with exactly one child. The
+list-backed equality is retained only as witness data so theorem code can
+rewrite the outer node once and then continue with bag transports. -/
+structure OneChildRecoveryWitness (t d : BTree) : Type where
+  hbag : t.childrenBag = (BTree.node [d]).childrenBag
+  hnode : t = .node [d]
+
+/-- Recover the unique singleton-child presentation from a bag-equality
+against a canonical singleton node. -/
+def one_child_recovery_witness_of_childrenBag_eq {t d : BTree}
     (hbag : t.childrenBag = (BTree.node [d]).childrenBag) :
-    ∃ e, t.childrenBag = (BTree.node [e]).childrenBag ∧ t = .node [e] := by
+    OneChildRecoveryWitness t d := by
   cases t with
   | leaf =>
       have hfalse : False := by
@@ -989,13 +989,31 @@ theorem singleton_node_recover_of_childrenBag_eq {t d : BTree}
       exact hfalse.elim
   | node children =>
       have hchildren : children = [d] := singleton_children_eq_of_childrenBag_eq hbag
-      exact ⟨d, by simp [hchildren] at hbag ⊢, by simp [hchildren]⟩
+      cases hchildren
+      exact ⟨rfl, rfl⟩
 
-/-- Recover an exact pair-node presentation from a bag-equality against a
-canonical two-child node. -/
-theorem pair_node_recover_of_childrenBag_eq {t d₁ d₂ : BTree}
+/-- Bag-first recovery witness for a rooted tree with exactly two children. The
+recovered ordered witnesses stay internal to the fallback representation, while
+the bag equality remains the public transport boundary. -/
+structure TwoChildRecoveryWitness (t : BTree) : Type where
+  left : BTree
+  right : BTree
+  hbag : t.childrenBag = (BTree.node [left, right]).childrenBag
+  hnode : t = .node [left, right]
+
+/-- Transport the recovered ordered two-child witnesses back to the canonical
+unordered bag presented in the input hypothesis. -/
+theorem TwoChildRecoveryWitness.canonicalBag_eq {t d₁ d₂ : BTree}
+    (hw : TwoChildRecoveryWitness t)
     (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
-    ∃ e₁ e₂, t.childrenBag = (BTree.node [e₁, e₂]).childrenBag ∧ t = .node [e₁, e₂] := by
+    (BTree.node [hw.left, hw.right]).childrenBag = (BTree.node [d₁, d₂]).childrenBag :=
+  hw.hbag.symm.trans hbag
+
+/-- Recover an exact two-child witness package from a bag-equality against a
+canonical two-child node. -/
+def two_child_recovery_witness_of_childrenBag_eq {t d₁ d₂ : BTree}
+    (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
+    TwoChildRecoveryWitness t := by
   cases t with
   | leaf =>
       have hfalse : False := by
@@ -1003,8 +1021,22 @@ theorem pair_node_recover_of_childrenBag_eq {t d₁ d₂ : BTree}
         simp at hcard
       exact hfalse.elim
   | node children =>
-      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
-      exact ⟨e₁, e₂, by simp [hchildren] at hbag ⊢, by simp [hchildren]⟩
+      have hperm : children.Perm [d₁, d₂] := Quotient.exact hbag
+      have hlen : children.length = 2 := by simpa using hperm.length_eq
+      cases children with
+      | nil =>
+          simp at hlen
+      | cons left rest =>
+          cases rest with
+          | nil =>
+              simp at hlen
+          | cons right rest' =>
+              cases rest' with
+              | nil =>
+                  refine ⟨left, right, ?_, rfl⟩
+                  rfl
+              | cons extra rest'' =>
+                  simp at hlen
 
 /-- Recover an exact triple-node presentation from a bag-equality against a
 canonical three-child node. -/

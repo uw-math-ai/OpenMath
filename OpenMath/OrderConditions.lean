@@ -1381,42 +1381,46 @@ private theorem satisfiesTreeCondition_order_five_1_bushy3 (tab : ButcherTableau
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
-  rcases BTree.pair_node_recover_of_childrenBag_eq hc₂bag with ⟨e₁, e₂, hebag, hc₂⟩
+  let hc₂ := BTree.two_child_recovery_witness_of_childrenBag_eq hc₂bag
   have hbag :
-      (BTree.node [e₁, e₂]).childrenBag = (BTree.node [d₁, d₂]).childrenBag :=
-    hebag.symm.trans hc₂bag
-  have horder : (BTree.node [e₁, e₂]).order = (BTree.node [d₁, d₂]).order :=
+      (BTree.node [hc₂.left, hc₂.right]).childrenBag = (BTree.node [d₁, d₂]).childrenBag :=
+    BTree.TwoChildRecoveryWitness.canonicalBag_eq hc₂ hc₂bag
+  have horder :
+      (BTree.node [hc₂.left, hc₂.right]).order = (BTree.node [d₁, d₂]).order :=
     BTree.order_eq_of_childrenBag_eq hbag
-  have hsum : e₁.order + e₂.order = 2 := by
-    have horder' : 1 + (e₁.order + e₂.order) = 3 := by
+  have hsum : hc₂.left.order + hc₂.right.order = 2 := by
+    have horder' : 1 + (hc₂.left.order + hc₂.right.order) = 3 := by
       simpa [BTree.order_node, Nat.add_assoc, hd₁, hd₂] using horder
     omega
-  have he₁ : e₁.order = 1 := by
-    have he₁_pos := BTree.order_pos e₁
-    have he₂_pos := BTree.order_pos e₂
+  have he₁ : hc₂.left.order = 1 := by
+    have he₁_pos := BTree.order_pos hc₂.left
+    have he₂_pos := BTree.order_pos hc₂.right
     omega
-  have he₂ : e₂.order = 1 := by
-    have he₁_pos := BTree.order_pos e₁
-    have he₂_pos := BTree.order_pos e₂
+  have he₂ : hc₂.right.order = 1 := by
+    have he₁_pos := BTree.order_pos hc₂.left
+    have he₂_pos := BTree.order_pos hc₂.right
     omega
-  simp only [hc₂, satisfiesTreeCondition,
-    density_of_order_five_1_bushy3 (.node [c₁, BTree.node [e₁, e₂]])
-      ⟨c₁, BTree.node [e₁, e₂], rfl, hc₁, e₁, e₂, rfl, he₁, he₂⟩]
+  simp only [hc₂.hnode, satisfiesTreeCondition,
+    density_of_order_five_1_bushy3 (.node [c₁, BTree.node [hc₂.left, hc₂.right]])
+      ⟨c₁, BTree.node [hc₂.left, hc₂.right], rfl, hc₁, hc₂.left, hc₂.right, rfl,
+        he₁, he₂⟩]
   constructor
   · intro hh
     convert hh using 1
     congr 1
     ext i
     congr 1
-    exact (ew_of_order_five_1_bushy3 tab (.node [c₁, BTree.node [e₁, e₂]])
-      ⟨c₁, BTree.node [e₁, e₂], rfl, hc₁, e₁, e₂, rfl, he₁, he₂⟩ i).symm
+    exact (ew_of_order_five_1_bushy3 tab (.node [c₁, BTree.node [hc₂.left, hc₂.right]])
+      ⟨c₁, BTree.node [hc₂.left, hc₂.right], rfl, hc₁, hc₂.left, hc₂.right, rfl,
+        he₁, he₂⟩ i).symm
   · intro hh
     convert hh using 1
     congr 1
     ext i
     congr 1
-    exact ew_of_order_five_1_bushy3 tab (.node [c₁, BTree.node [e₁, e₂]])
-      ⟨c₁, BTree.node [e₁, e₂], rfl, hc₁, e₁, e₂, rfl, he₁, he₂⟩ i
+    exact ew_of_order_five_1_bushy3 tab (.node [c₁, BTree.node [hc₂.left, hc₂.right]])
+      ⟨c₁, BTree.node [hc₂.left, hc₂.right], rfl, hc₁, hc₂.left, hc₂.right, rfl,
+        he₁, he₂⟩ i
 
 /-- Transport the canonical `{1, bushy-3}` tree condition across bag-equal
 two-child representations. -/
@@ -1446,33 +1450,25 @@ private theorem satisfiesTreeCondition_order_five_1_chain3 (tab : ButcherTableau
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
-  rcases BTree.singleton_node_recover_of_childrenBag_eq hc₂bag with ⟨e, hebag, hc₂⟩
-  have hbag : (BTree.node [e]).childrenBag = (BTree.node [d]).childrenBag :=
-    hebag.symm.trans hc₂bag
-  have horder : (BTree.node [e]).order = (BTree.node [d]).order :=
-    BTree.order_eq_of_childrenBag_eq hbag
-  have he : e.order = 2 := by
-    have horder' : 1 + e.order = 3 := by
-      simpa [BTree.order_node, hd] using horder
-    omega
-  simp only [hc₂, satisfiesTreeCondition,
-    density_of_order_five_1_chain3 (.node [c₁, BTree.node [e]])
-      ⟨c₁, BTree.node [e], rfl, hc₁, e, rfl, he⟩]
+  let hc₂ := BTree.one_child_recovery_witness_of_childrenBag_eq hc₂bag
+  simp only [hc₂.hnode, satisfiesTreeCondition,
+    density_of_order_five_1_chain3 (.node [c₁, BTree.node [d]])
+      ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩]
   constructor
   · intro hh
     convert hh using 1
     congr 1
     ext i
     congr 1
-    exact (ew_of_order_five_1_chain3 tab (.node [c₁, BTree.node [e]])
-      ⟨c₁, BTree.node [e], rfl, hc₁, e, rfl, he⟩ i).symm
+    exact (ew_of_order_five_1_chain3 tab (.node [c₁, BTree.node [d]])
+      ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩ i).symm
   · intro hh
     convert hh using 1
     congr 1
     ext i
     congr 1
-    exact ew_of_order_five_1_chain3 tab (.node [c₁, BTree.node [e]])
-      ⟨c₁, BTree.node [e], rfl, hc₁, e, rfl, he⟩ i
+    exact ew_of_order_five_1_chain3 tab (.node [c₁, BTree.node [d]])
+      ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩ i
 
 /-- Transport the canonical `{1, chain-3}` tree condition across bag-equal
 two-child representations. -/
@@ -1686,17 +1682,14 @@ private theorem satisfiesTreeCondition_order_five_via_via_bushy3_canonical
     ∑ i : Fin s, tab.b i *
       (∑ j : Fin s, tab.A i j *
         (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2)) = 1 / 60 := by
-  cases c with
-  | leaf =>
-      simp at hcBag
-  | node children =>
-      have hchildren : children = [d] := BTree.singleton_children_eq_of_childrenBag_eq hcBag
-      rcases BTree.pair_node_recover_of_childrenBag_eq hdBag with ⟨f₁, f₂, hfBag, hd⟩
-      have hcanonBag : (BTree.node [f₁, f₂]).childrenBag = (BTree.node [e₁, e₂]).childrenBag := by
-        simpa [hd] using hdBag
-      simpa [hchildren, hd] using
-        satisfiesTreeCondition_order_five_via_via_bushy3_eq_of_childrenBag_eq tab
-          e₁ e₂ f₁ f₂ ⟨he₁, he₂⟩ hcanonBag
+  let hc := BTree.one_child_recovery_witness_of_childrenBag_eq hcBag
+  let hd := BTree.two_child_recovery_witness_of_childrenBag_eq hdBag
+  have hcanonBag :
+      (BTree.node [hd.left, hd.right]).childrenBag = (BTree.node [e₁, e₂]).childrenBag :=
+    BTree.TwoChildRecoveryWitness.canonicalBag_eq hd hdBag
+  simpa [hc.hnode, hd.hnode] using
+    satisfiesTreeCondition_order_five_via_via_bushy3_eq_of_childrenBag_eq tab
+      e₁ e₂ hd.left hd.right ⟨he₁, he₂⟩ hcanonBag
 
 /-- Via-via-chain3 tree condition: sum = 1/120. -/
 private theorem satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq
@@ -1742,21 +1735,11 @@ private theorem satisfiesTreeCondition_order_five_via_via_chain3_canonical
     ∑ i : Fin s, tab.b i *
       (∑ j : Fin s, tab.A i j *
         (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m)))) = 1 / 120 := by
-  cases c with
-  | leaf =>
-      simp at hcBag
-  | node children =>
-      have hchildren : children = [d] := BTree.singleton_children_eq_of_childrenBag_eq hcBag
-      rcases BTree.singleton_node_recover_of_childrenBag_eq hdBag with ⟨f, hfBag, hd⟩
-      have hcanonBag : (BTree.node [f]).childrenBag = (BTree.node [e]).childrenBag := by
-        simpa [hd] using hdBag
-      have hfeq : f = e := by
-        have hsingle : [f] = [e] := BTree.singleton_children_eq_of_childrenBag_eq hcanonBag
-        simpa using hsingle
-      have hf : f.order = 2 := by simpa [hfeq] using he
-      simpa [hchildren, hd] using
-        satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq tab
-          e f he hcanonBag
+  let hc := BTree.one_child_recovery_witness_of_childrenBag_eq hcBag
+  let hd := BTree.one_child_recovery_witness_of_childrenBag_eq hdBag
+  simpa [hc.hnode, hd.hnode] using
+    satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq tab
+      e e he rfl
 
 /-! #### Sum conversion helpers for order 5 -/
 
