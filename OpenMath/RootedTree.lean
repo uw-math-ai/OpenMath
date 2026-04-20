@@ -409,6 +409,14 @@ theorem triple_children_exists_of_childrenBag_eq {children : List BTree}
   have hlen : children.length = 3 := by simpa using hperm.length_eq
   simpa [List.length_eq_three] using hlen
 
+theorem four_children_exists_of_childrenBag_eq {children : List BTree}
+    {d₁ d₂ d₃ d₄ : BTree}
+    (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂, d₃, d₄]).childrenBag) :
+    ∃ e₁ e₂ e₃ e₄, children = [e₁, e₂, e₃, e₄] := by
+  have hperm : children.Perm [d₁, d₂, d₃, d₄] := Quotient.exact hbag
+  have hlen : children.length = 4 := by simpa using hperm.length_eq
+  simpa [List.length_eq_four] using hlen
+
 private theorem order_eq_of_childrenBag_eq_local {children₁ children₂ : List BTree}
     (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
     (BTree.node children₁).order = (BTree.node children₂).order := by
@@ -534,6 +542,19 @@ noncomputable def order_four_bag_witness (t : BTree) (ht : t.order = 4) :
     OrderFourBagWitness t :=
   Classical.choice (order_four_bag_witness_nonempty t ht)
 
+theorem order_fourBagWitness_order_eq {t : BTree} (hw4 : OrderFourBagWitness t) :
+    t.order = 4 := by
+  cases hw4 with
+  | bushy4 children c₁ c₂ c₃ hc₁ hc₂ hc₃ hbag =>
+      have horder := order_eq_of_childrenBag_eq_local hbag
+      simpa [hc₁, hc₂, hc₃, Nat.add_assoc] using horder
+  | mixed4 children c₁ c₂ hcanon hbag =>
+      have horder := order_eq_of_childrenBag_eq_local hbag
+      simpa [hcanon.1, hcanon.2] using horder
+  | single3 children c hw3 hbag =>
+      have horder := order_eq_of_childrenBag_eq_local hbag
+      simpa [order_threeBagWitness_order_eq hw3] using horder
+
 /-- Compatibility witness for the older order-4 ordered-list API. -/
 inductive OrderFourWitness : BTree → Type where
   | bushy4 (c₁ c₂ c₃ : BTree)
@@ -594,6 +615,84 @@ noncomputable def order_four_witness (t : BTree) (ht : t.order = 4) :
     OrderFourWitness t :=
   Classical.choice (order_four_witness_nonempty t ht)
 
+/-- Bag-first witness for order-5 rooted trees. The payload records the child
+bag together with canonical low-order representatives. -/
+inductive OrderFiveBagWitness : BTree → Type where
+  | bushy5 (children : List BTree) (c₁ c₂ c₃ c₄ : BTree)
+      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) (hc₄ : c₄.order = 1)
+      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂, c₃, c₄]).childrenBag) :
+      OrderFiveBagWitness (.node children)
+  | caseB (children : List BTree) (c₁ c₂ c₃ : BTree)
+      (hsum : c₁.order + c₂.order + c₃.order = 4)
+      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂, c₃]).childrenBag) :
+      OrderFiveBagWitness (.node children)
+  | caseC (children : List BTree) (c₁ c₂ : BTree)
+      (hsum : c₁.order + c₂.order = 4)
+      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+      OrderFiveBagWitness (.node children)
+  | caseD (children : List BTree) (c : BTree)
+      (hw4 : OrderFourBagWitness c)
+      (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag) :
+      OrderFiveBagWitness (.node children)
+
+/-- Package the order-5 rooted-tree classification in bag-first form. -/
+theorem order_five_bag_witness_nonempty (t : BTree) (ht : t.order = 5) :
+    Nonempty (OrderFiveBagWitness t) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+    simp only [order_node] at ht
+    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 4 := by omega
+    cases children with
+    | nil => simp at hfoldr
+    | cons hd tl =>
+      simp only [List.foldr] at hfoldr
+      have hhd_pos : 0 < hd.order := by
+        cases hd <;> simp [order_node]
+      cases tl with
+      | nil =>
+        have hw4 : OrderFourBagWitness hd := order_four_bag_witness hd (by
+          simp only [List.foldr] at hfoldr
+          omega)
+        exact ⟨.caseD [hd] hd hw4 rfl⟩
+      | cons hd2 tl2 =>
+        have hhd2_pos : 0 < hd2.order := by
+          cases hd2 <;> simp [order_node]
+        simp only [List.foldr] at hfoldr
+        cases tl2 with
+        | nil =>
+          exact ⟨.caseC [hd, hd2] hd hd2 (by simpa using hfoldr) rfl⟩
+        | cons hd3 tl3 =>
+          have hhd3_pos : 0 < hd3.order := by
+            cases hd3 <;> simp [order_node]
+          simp only [List.foldr] at hfoldr
+          cases tl3 with
+          | nil =>
+            exact ⟨.caseB [hd, hd2, hd3] hd hd2 hd3 (by simpa [Nat.add_assoc] using hfoldr) rfl⟩
+          | cons hd4 tl4 =>
+            have hhd4_pos : 0 < hd4.order := by
+              cases hd4 <;> simp [order_node]
+            simp only [List.foldr] at hfoldr
+            cases tl4 with
+            | nil =>
+              have h1 : hd.order = 1 := by omega
+              have h2 : hd2.order = 1 := by omega
+              have h3 : hd3.order = 1 := by omega
+              have h4 : hd4.order = 1 := by omega
+              exact ⟨.bushy5 [hd, hd2, hd3, hd4] hd hd2 hd3 hd4 h1 h2 h3 h4 rfl⟩
+            | cons hd5 tl5 =>
+              exfalso
+              have hhd5_pos : 0 < hd5.order := by
+                cases hd5 <;> simp [order_node]
+              simp only [List.foldr] at hfoldr
+              have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
+              omega
+
+/-- Noncomputably choose the bag-first order-5 witness. -/
+noncomputable def order_five_bag_witness (t : BTree) (ht : t.order = 5) :
+    OrderFiveBagWitness t :=
+  Classical.choice (order_five_bag_witness_nonempty t ht)
+
 /-- Compatibility witness for the older order-5 top-level ordered-list API. -/
 inductive OrderFiveWitness : BTree → Type where
   | bushy5 (c₁ c₂ c₃ c₄ : BTree)
@@ -612,52 +711,50 @@ inductive OrderFiveWitness : BTree → Type where
 /-- Compatibility chooser for the older order-5 top-level ordered-list API. -/
 theorem order_five_witness_nonempty (t : BTree) (ht : t.order = 5) :
     Nonempty (OrderFiveWitness t) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-    simp only [order_node] at ht
-    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 4 := by omega
-    cases children with
-    | nil => simp at hfoldr
-    | cons hd tl =>
-      simp only [List.foldr] at hfoldr
-      have hhd_pos : 0 < hd.order := by
-        cases hd <;> simp [order_node]
-      cases tl with
-      | nil =>
-        exact ⟨.caseD hd (by simp only [List.foldr] at hfoldr; omega)⟩
-      | cons hd2 tl2 =>
-        have hhd2_pos : 0 < hd2.order := by
-          cases hd2 <;> simp [order_node]
-        simp only [List.foldr] at hfoldr
-        cases tl2 with
-        | nil =>
-          exact ⟨.caseC hd hd2 (by simpa using hfoldr)⟩
-        | cons hd3 tl3 =>
-          have hhd3_pos : 0 < hd3.order := by
-            cases hd3 <;> simp [order_node]
-          simp only [List.foldr] at hfoldr
-          cases tl3 with
-          | nil =>
-            exact ⟨.caseB hd hd2 hd3 (by simpa [Nat.add_assoc] using hfoldr)⟩
-          | cons hd4 tl4 =>
-            have hhd4_pos : 0 < hd4.order := by
-              cases hd4 <;> simp [order_node]
-            simp only [List.foldr] at hfoldr
-            cases tl4 with
-            | nil =>
-              have h1 : hd.order = 1 := by omega
-              have h2 : hd2.order = 1 := by omega
-              have h3 : hd3.order = 1 := by omega
-              have h4 : hd4.order = 1 := by omega
-              exact ⟨.bushy5 hd hd2 hd3 hd4 h1 h2 h3 h4⟩
-            | cons hd5 tl5 =>
-              exfalso
-              have hhd5_pos : 0 < hd5.order := by
-                cases hd5 <;> simp [order_node]
-              simp only [List.foldr] at hfoldr
-              have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
-              omega
+  have hw5 : OrderFiveBagWitness t := order_five_bag_witness t ht
+  cases hw5 with
+  | bushy5 children c₁ c₂ c₃ c₄ hc₁ hc₂ hc₃ hc₄ hbag =>
+      rcases four_children_exists_of_childrenBag_eq hbag with ⟨d₁, d₂, d₃, d₄, hchildren⟩
+      subst hchildren
+      have hsum : d₁.order + d₂.order + d₃.order + d₄.order = 4 := by
+        have horder := order_eq_of_childrenBag_eq_local hbag
+        have : 1 + (d₁.order + (d₂.order + (d₃.order + d₄.order))) = 5 := by
+          simpa [hc₁, hc₂, hc₃, hc₄, order_node, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using horder
+        omega
+      have hd₁_pos : 0 < d₁.order := by
+        cases d₁ <;> simp [order_node]
+      have hd₂_pos : 0 < d₂.order := by
+        cases d₂ <;> simp [order_node]
+      have hd₃_pos : 0 < d₃.order := by
+        cases d₃ <;> simp [order_node]
+      have hd₄_pos : 0 < d₄.order := by
+        cases d₄ <;> simp [order_node]
+      have hd₁ : d₁.order = 1 := by omega
+      have hd₂ : d₂.order = 1 := by omega
+      have hd₃ : d₃.order = 1 := by omega
+      have hd₄ : d₄.order = 1 := by omega
+      exact ⟨.bushy5 d₁ d₂ d₃ d₄ hd₁ hd₂ hd₃ hd₄⟩
+  | caseB children c₁ c₂ c₃ hsum hbag =>
+      rcases triple_children_exists_of_childrenBag_eq hbag with ⟨d₁, d₂, d₃, hchildren⟩
+      subst hchildren
+      have hsume : d₁.order + d₂.order + d₃.order = 4 := by
+        have horder := order_eq_of_childrenBag_eq_local hbag
+        have horder' : 1 + (d₁.order + (d₂.order + d₃.order)) = 1 + (c₁.order + (c₂.order + c₃.order)) := by
+          simpa [order_node, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using horder
+        omega
+      exact ⟨.caseB d₁ d₂ d₃ hsume⟩
+  | caseC children c₁ c₂ hsum hbag =>
+      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨d₁, d₂, hchildren⟩
+      subst hchildren
+      have hsume : d₁.order + d₂.order = 4 := by
+        have horder := order_eq_of_childrenBag_eq_local hbag
+        have : 1 + (d₁.order + d₂.order) = 5 := by simpa [hsum, order_node] using horder
+        omega
+      exact ⟨.caseC d₁ d₂ hsume⟩
+  | caseD children c hw4 hbag =>
+      have hchildren : children = [c] := singleton_children_eq_of_childrenBag_eq hbag
+      subst hchildren
+      exact ⟨.caseD c (order_fourBagWitness_order_eq hw4)⟩
 
 /-- Noncomputably choose the normalized order-5 top-level witness. -/
 noncomputable def order_five_witness (t : BTree) (ht : t.order = 5) :
