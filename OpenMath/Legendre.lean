@@ -137,7 +137,7 @@ as the leading behavior: P_n^* is a polynomial of degree n with leading
 coefficient (2n)! / (n!)². -/
 
 /-- The leading coefficient of `P_n^*` is `(2n)! / (n!)²`. -/
-theorem shiftedLegendreP_leading_coeff (n : ℕ) (x : ℝ) :
+theorem shiftedLegendreP_leading_coeff (n : ℕ) :
     ∃ q : ℝ → ℝ, ∀ x, shiftedLegendreP n x =
       ((2 * n).factorial : ℝ) / ((n.factorial : ℝ) ^ 2) * x ^ n + q x ∧
       -- q has degree < n (we don't formalize this, just state existence)
@@ -173,6 +173,20 @@ the zeros of the `s`-th shifted Legendre polynomial. -/
 def HasGaussLegendreNodes (t : ButcherTableau s) : Prop :=
   ∀ i : Fin s, shiftedLegendreP s (t.c i) = 0
 
+/-- The Gauss-Legendre node condition is definitionally the vanishing of
+`shiftedLegendreP s` at each tableau node. This is the usable local form of
+the Aristotle bridge artifact from project `32ecf6f7-...`. -/
+theorem hasGaussLegendreNodes_iff_eval_shiftedLegendreP_zero (t : ButcherTableau s) :
+    t.HasGaussLegendreNodes ↔ ∀ i : Fin s, shiftedLegendreP s (t.c i) = 0 := by
+  rfl
+
+/-- The top coefficient of Mathlib's shifted Legendre polynomial is nonzero. -/
+theorem shiftedLegendre_coeff_self_ne_zero (s : ℕ) :
+    (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff s ≠ 0 := by
+  rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+  simp [Nat.choose_self]
+  exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
+
 /-- **Lemma 342B**: If the nodes of an `s`-stage RK method are the zeros of
 `P_s^*` and `B(s)` holds, then `B(2s)` holds (Gaussian quadrature exactness).
 
@@ -194,16 +208,12 @@ theorem gaussLegendre_B_double (t : ButcherTableau s)
     obtain ⟨j, hjlt, hk_eq⟩ : ∃ j, j < s ∧ k = s + (j + 1) := by
       refine ⟨k - s - 1, by omega, by omega⟩
     rw [hk_eq]
-    have hp_lead_nz :
-        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff s ≠ 0 := by
-      rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
-      simp [Nat.choose_self]
-      exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
     -- The remaining range `k = s + (j + 1)` with `j < s` is the genuine
     -- Gaussian quadrature step. Mathlib's top-coefficient formula shows the
     -- corresponding shifted Legendre polynomial has nonzero leading term; the
     -- remaining blocker is connecting our recursive `shiftedLegendreP` to that
     -- polynomial and then running the orthogonality/defect-subtraction argument.
+    have hp_lead_nz := shiftedLegendre_coeff_self_ne_zero s
     sorry
 
 /-- **Corollary 342D (backward direction)**: If the nodes are zeros of `P_s^*`,
@@ -244,7 +254,7 @@ theorem implicitMidpoint_hasGL : ∀ i : Fin 1,
     shiftedLegendreP 1 (rkImplicitMidpoint.c i) = 0 := by
   intro ⟨i, hi⟩
   interval_cases i
-  simp [rkImplicitMidpoint, ButcherTableau.c, shiftedLegendreP]
+  simp [rkImplicitMidpoint, shiftedLegendreP]
 
 /-- The 2-stage Gauss-Legendre nodes c₁ = (3-√3)/6, c₂ = (3+√3)/6 are zeros
 of P_2^*(x) = 6x² - 6x + 1. -/
@@ -255,10 +265,10 @@ theorem gaussLegendre2_hasGL : ∀ i : Fin 2,
   have hsqrt : (Real.sqrt 3) ^ 2 = 3 := by
     rw [sq_sqrt (show (0 : ℝ) ≤ 3 by positivity)]
   interval_cases i
-  · simp [rkGaussLegendre2, ButcherTableau.c]
+  · simp [rkGaussLegendre2]
     field_simp [hsqrt]
     nlinarith [hsqrt]
-  · simp [rkGaussLegendre2, ButcherTableau.c]
+  · simp [rkGaussLegendre2]
     field_simp [hsqrt]
     nlinarith [hsqrt]
 
