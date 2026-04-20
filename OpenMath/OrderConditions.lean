@@ -995,7 +995,28 @@ private theorem ew_of_order_five_via_mixed12 (tab : ButcherTableau s) (t : BTree
         ew_of_order_one tab d₁ hd₁, ew_of_order_two tab d₂ hd₂]
   congr 1; ext j; ring
 
-/-- Single child mixed [2,1]: same ew by commutativity. -/
+/-- Transport the canonical unary mixed `{1,2}` elementary weight formula across
+bag-equal presentations of the inner two-child witness. -/
+private theorem ew_of_order_five_via_mixed_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag)
+    (i : Fin s) :
+    tab.elementaryWeight (.node [.node [d₁, d₂]]) i =
+      ∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m))) := by
+  have heq :
+      tab.elementaryWeight (.node [.node [d₁, d₂]]) i =
+        tab.elementaryWeight (.node [.node [c₁, c₂]]) i := by
+    rw [elementaryWeight_singleton, elementaryWeight_singleton]
+    congr 1
+    ext k
+    rw [elementaryWeight_eq_of_childrenBag_eq tab hbag k]
+  exact heq.trans <|
+    ew_of_order_five_via_mixed12 tab (.node [.node [c₁, c₂]])
+      ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hcanon.1, hcanon.2⟩ i
+
+/-- Single child mixed [2,1]: routed through the canonical `{1,2}` witness. -/
 private theorem ew_of_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
       ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 2 ∧ d₂.order = 1)
@@ -1004,8 +1025,11 @@ private theorem ew_of_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree
       ∑ j : Fin s, tab.A i j *
         ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m))) := by
   rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
-  simp only [elementaryWeight_singleton, hc, elementaryWeight, List.foldr,
-        ew_of_order_two tab d₁ hd₁, ew_of_order_one tab d₂ hd₂, mul_one, one_mul]
+  subst hc
+  simpa using
+    ew_of_order_five_via_mixed_eq_of_childrenBag_eq tab
+      d₂ d₁ d₁ d₂ ⟨hd₂, hd₁⟩
+      (BTree.node_childrenBag_eq_swap d₁ d₂) i
 
 /-- Single child via-bushy3: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ)²). -/
 private theorem ew_of_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
@@ -1472,6 +1496,23 @@ private theorem satisfiesTreeCondition_singleton_eq_of_childrenBag_eq (tab : But
       rw [← hew i]
     · simp [hparent_density]
 
+/-- Transport the canonical unary mixed `{1,2}` tree condition across bag-equal
+presentations of the inner two-child witness. -/
+private theorem satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq
+    (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+    tab.satisfiesTreeCondition (.node [.node [d₁, d₂]]) ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
+  exact
+    (satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab
+      (children₁ := [d₁, d₂]) (children₂ := [c₁, c₂]) hbag).trans <|
+      satisfiesTreeCondition_order_five_via_mixed12 tab (.node [.node [c₁, c₂]])
+        ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hcanon.1, hcanon.2⟩
+
 /-- Via-mixed21 tree condition: sum = 1/40. -/
 private theorem satisfiesTreeCondition_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
@@ -1482,17 +1523,10 @@ private theorem satisfiesTreeCondition_order_five_via_mixed21 (tab : ButcherTabl
         ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
   rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
   subst hc
-  have hswap :
-      tab.satisfiesTreeCondition (.node [.node [d₁, d₂]]) ↔
-        tab.satisfiesTreeCondition (.node [.node [d₂, d₁]]) := by
-    simpa using
-      (satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab
-        (children₁ := [d₁, d₂]) (children₂ := [d₂, d₁])
-        (BTree.node_childrenBag_eq_swap d₁ d₂))
-  rw [hswap]
   simpa using
-    (satisfiesTreeCondition_order_five_via_mixed12 tab (.node [.node [d₂, d₁]])
-      ⟨.node [d₂, d₁], rfl, d₂, d₁, rfl, hd₂, hd₁⟩)
+    satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq tab
+      d₂ d₁ d₁ d₂ ⟨hd₂, hd₁⟩
+      (BTree.node_childrenBag_eq_swap d₁ d₂)
 
 /-- Mixed order-5 singleton nodes are canonical up to swapping the ordered child witnesses. -/
 private theorem satisfiesTreeCondition_order_five_via_mixed_canonical (tab : ButcherTableau s)
@@ -1504,11 +1538,12 @@ private theorem satisfiesTreeCondition_order_five_via_mixed_canonical (tab : But
         ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
   rcases hpair with ⟨hd₁, hd₂⟩ | ⟨hd₁, hd₂⟩
   · simpa [hc] using
-      (satisfiesTreeCondition_order_five_via_mixed12 tab (.node [c])
-        ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩)
+      satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq tab
+        d₁ d₂ d₁ d₂ ⟨hd₁, hd₂⟩ rfl
   · simpa [hc] using
-      (satisfiesTreeCondition_order_five_via_mixed21 tab (.node [c])
-        ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩)
+      satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq tab
+        d₂ d₁ d₁ d₂ ⟨hd₂, hd₁⟩
+        (BTree.node_childrenBag_eq_swap d₁ d₂)
 
 /-- Via-via-bushy3 tree condition: sum = 1/60. -/
 private theorem satisfiesTreeCondition_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
