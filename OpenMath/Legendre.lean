@@ -668,7 +668,23 @@ lemma polyMomentN_eq_intervalIntegral_of_natDegree_lt
 lemma poly_eq_zero_of_intervalIntegral_sq_zero (p : ℝ[X])
     (h : ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 = 0) :
     p = 0 := by
-  sorry
+  have h_ae_zero :
+      ∀ᵐ x ∂MeasureTheory.Measure.restrict MeasureTheory.volume (Set.Icc (0 : ℝ) 1),
+        (p.eval x) ^ 2 = 0 := by
+    rw [intervalIntegral.integral_of_le zero_le_one] at h
+    rw [MeasureTheory.integral_eq_zero_iff_of_nonneg (fun x ↦ sq_nonneg _)] at h
+    · simpa only [MeasureTheory.Measure.restrict_congr_set MeasureTheory.Ioc_ae_eq_Icc] using h
+    · exact Continuous.integrableOn_Ioc (by exact p.continuous.pow 2)
+  simp_all +decide [MeasureTheory.ae_restrict_iff']
+  rw [Filter.eventually_inf_principal] at h_ae_zero
+  rw [MeasureTheory.ae_iff] at h_ae_zero
+  contrapose! h_ae_zero
+  have h_roots_finite : Set.Finite {x : ℝ | p.eval x = 0} := by
+    exact p.roots.toFinset.finite_toSet.subset fun x hx => by aesop
+  rw [show {a : ℝ | a ∈ Set.Icc 0 1 ∧ ¬eval a p = 0} = (Set.Icc 0 1) \ {x : ℝ | eval x p = 0} by
+        ext
+        aesop, MeasureTheory.measure_diff_null] <;>
+    norm_num [h_roots_finite.measure_zero]
 
 /-- Repackage the high-degree branch of `gaussLegendre_B_double` as
 `k = s + (j + 1)` with `j < s`. -/
