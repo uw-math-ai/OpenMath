@@ -1906,7 +1906,7 @@ private theorem satisfiesTreeCondition_order_five_caseC (tab : ButcherTableau s)
 
 /-- Witness for the bushy4 / mixed4 subfamilies of the order-5 singleton-child
 Case D. -/
-private inductive OrderFiveCaseD_BushyMixed (c : BTree) : Prop where
+private inductive OrderFiveCaseD_BushyMixed (c : BTree) where
   | bushy4 (d₁ d₂ d₃ : BTree)
       (hc : c = .node [d₁, d₂, d₃]) (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1)
       (hd₃ : d₃.order = 1) :
@@ -1915,6 +1915,30 @@ private inductive OrderFiveCaseD_BushyMixed (c : BTree) : Prop where
       (hc : c = .node [d₁, d₂])
       (hpair : (d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) :
       OrderFiveCaseD_BushyMixed c
+
+/-- Shared forward/reverse dispatcher for the bushy4 / mixed4 subfamilies of
+the order-5 singleton-child Case D. -/
+private def order_five_caseD_bushyMixed_target (tab : ButcherTableau s) :
+    {c : BTree} → OrderFiveCaseD_BushyMixed c → Prop
+  | _, .bushy4 _ _ _ _ _ _ _ => tab.order5e
+  | _, .mixed4 _ _ _ _ => tab.order5g
+
+/-- Shared forward/reverse dispatcher for the bushy4 / mixed4 subfamilies of
+the order-5 singleton-child Case D. -/
+private theorem order_five_caseD_bushyMixed_dispatch_shared (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) {c : BTree} (hwit : OrderFiveCaseD_BushyMixed c) :
+    (tab.satisfiesTreeCondition (.node [c]) → order_five_caseD_bushyMixed_target tab hwit) ∧
+    (order_five_caseD_bushyMixed_target tab hwit → tab.satisfiesTreeCondition (.node [c])) := by
+  cases hwit with
+  | bushy4 d₁ d₂ d₃ hc hd₁ hd₂ hd₃ =>
+    rw [satisfiesTreeCondition_order_five_via_bushy4 tab (.node [c])
+      ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩]
+    constructor <;> intro h <;>
+      simpa [order_five_caseD_bushyMixed_target, order5e, order5e_sum_eq tab hrc] using h
+  | mixed4 d₁ d₂ hc hpair =>
+    rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc hpair]
+    constructor <;> intro h <;>
+      simpa [order_five_caseD_bushyMixed_target, order5g, order5g_sum_eq tab hrc] using h
 
 /-- Local dispatcher for the bushy4 / mixed4 subfamilies of the order-5
 singleton-child Case D. -/
@@ -1926,16 +1950,15 @@ private theorem satisfiesTreeCondition_order_five_caseD_bushyMixed (tab : Butche
       ∑ i : Fin s, ∑ j : Fin s,
         tab.b i * tab.A i j * tab.c j * (∑ k : Fin s, tab.A j k * tab.c k) = 1 / 40) :
     tab.satisfiesTreeCondition (.node [c]) := by
-  cases hwit with
-  | bushy4 d₁ d₂ d₃ hc hd₁ hd₂ hd₃ =>
-      rw [satisfiesTreeCondition_order_five_via_bushy4 tab (.node [c])
-        ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩]
-      rw [order5e_sum_eq tab hrc]
-      exact h5e
-  | mixed4 d₁ d₂ hc hpair =>
-      rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc hpair]
-      rw [order5g_sum_eq tab hrc]
-      exact h5g
+  have htarget : order_five_caseD_bushyMixed_target tab hwit := by
+    cases hwit with
+    | bushy4 =>
+        rw [order_five_caseD_bushyMixed_target, order5e]
+        exact h5e
+    | mixed4 =>
+        rw [order_five_caseD_bushyMixed_target, order5g]
+        exact h5g
+  exact (order_five_caseD_bushyMixed_dispatch_shared tab hrc hwit).2 htarget
 
 /-- Normalized witness for the order-5 singleton-child family with an order-4 child. -/
 private inductive OrderFiveCaseDWitness (c : BTree) where
@@ -2022,23 +2045,12 @@ private theorem order_five_caseD_dispatch_shared (tab : ButcherTableau s)
     (order_five_caseD_target tab hwit → tab.satisfiesTreeCondition (.node [c])) := by
   cases hwit with
   | bushy4 d₁ d₂ d₃ hc hd₁ hd₂ hd₃ =>
-      constructor
-      · intro ht
-        rw [satisfiesTreeCondition_order_five_via_bushy4 tab (.node [c])
-          ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩] at ht
-        simpa [order_five_caseD_target, order5e, order5e_sum_eq tab hrc] using ht
-      · intro htarget
-        rw [satisfiesTreeCondition_order_five_via_bushy4 tab (.node [c])
-          ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩]
-        simpa [order_five_caseD_target, order5e, order5e_sum_eq tab hrc] using htarget
+      simpa [order_five_caseD_target, order_five_caseD_bushyMixed_target] using
+        (order_five_caseD_bushyMixed_dispatch_shared tab hrc
+          (.bushy4 d₁ d₂ d₃ hc hd₁ hd₂ hd₃))
   | mixed4 d₁ d₂ hc hpair =>
-      constructor
-      · intro ht
-        rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc hpair] at ht
-        simpa [order_five_caseD_target, order5g, order5g_sum_eq tab hrc] using ht
-      · intro htarget
-        rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc hpair]
-        simpa [order_five_caseD_target, order5g, order5g_sum_eq tab hrc] using htarget
+      simpa [order_five_caseD_target, order_five_caseD_bushyMixed_target] using
+        (order_five_caseD_bushyMixed_dispatch_shared tab hrc (.mixed4 d₁ d₂ hc hpair))
   | viaChain3 d e hc hd he =>
       constructor
       · intro ht
