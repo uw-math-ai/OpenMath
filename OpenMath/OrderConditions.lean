@@ -1689,6 +1689,26 @@ private theorem satisfiesTreeCondition_order_five_via_via_bushy3 (tab : ButcherT
     satisfiesTreeCondition_order_five_via_via_bushy3_eq_of_childrenBag_eq tab
       e₁ e₂ e₁ e₂ ⟨he₁, he₂⟩ rfl
 
+/-- Nested unary bushy-3 singleton nodes are canonical up to swapping the
+ordered inner child witnesses. -/
+private theorem satisfiesTreeCondition_order_five_via_via_bushy3_canonical
+    (tab : ButcherTableau s) (c d e₁ e₂ : BTree)
+    (hc : c = .node [d])
+    (hpair : (d = .node [e₁, e₂] ∧ e₁.order = 1 ∧ e₂.order = 1) ∨
+      (d = .node [e₁, e₂] ∧ e₂.order = 1 ∧ e₁.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c]) ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2)) = 1 / 60 := by
+  rcases hpair with ⟨hd, he₁, he₂⟩ | ⟨hd, he₂, he₁⟩
+  · simpa [hc, hd] using
+      satisfiesTreeCondition_order_five_via_via_bushy3_eq_of_childrenBag_eq tab
+        e₁ e₂ e₁ e₂ ⟨he₁, he₂⟩ rfl
+  · simpa [hc, hd] using
+      satisfiesTreeCondition_order_five_via_via_bushy3_eq_of_childrenBag_eq tab
+        e₂ e₁ e₁ e₂ ⟨he₂, he₁⟩
+        (by simpa [hd] using (BTree.node_childrenBag_eq_swap e₁ e₂))
+
 /-- Via-via-chain3 tree condition: sum = 1/120. -/
 private theorem satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq
     (tab : ButcherTableau s)
@@ -1719,6 +1739,19 @@ private theorem satisfiesTreeCondition_order_five_via_via_chain3 (tab : ButcherT
   subst hc
   subst hd
   simpa using
+    satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq tab
+      e e he rfl
+
+/-- Nested unary chain-3 singleton nodes are canonical at the unique
+order-2 inner child. -/
+private theorem satisfiesTreeCondition_order_five_via_via_chain3_canonical
+    (tab : ButcherTableau s) (c d e : BTree)
+    (hc : c = .node [d]) (hd : d = .node [e]) (he : e.order = 2) :
+    tab.satisfiesTreeCondition (.node [c]) ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m)))) = 1 / 120 := by
+  simpa [hc, hd] using
     satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq tab
       e e he rfl
 
@@ -1965,13 +1998,12 @@ private theorem satisfiesTreeCondition_order_five_caseD (tab : ButcherTableau s)
       exact satisfiesTreeCondition_order_five_caseD_bushyMixed tab hrc c
         (.mixed4 d₁ d₂ hc hpair) h5e h5g
   | viaChain3 d e hc hd he =>
-      rw [satisfiesTreeCondition_order_five_via_via_chain3 tab (.node [c])
-        ⟨c, rfl, d, hc, e, hd, he⟩]
+      rw [satisfiesTreeCondition_order_five_via_via_chain3_canonical tab c d e hc hd he]
       rw [order5i_sum_eq tab hrc]
       exact h5i
   | viaBushy3 d e₁ e₂ hc hd he₁ he₂ =>
-      rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab (.node [c])
-        ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩]
+      rw [satisfiesTreeCondition_order_five_via_via_bushy3_canonical tab c d e₁ e₂ hc
+        (Or.inl ⟨hd, he₁, he₂⟩)]
       rw [order5h_sum_eq tab hrc]
       exact h5h
 
@@ -2010,22 +2042,20 @@ private theorem order_five_caseD_dispatch_shared (tab : ButcherTableau s)
   | viaChain3 d e hc hd he =>
       constructor
       · intro ht
-        rw [satisfiesTreeCondition_order_five_via_via_chain3 tab (.node [c])
-          ⟨c, rfl, d, hc, e, hd, he⟩] at ht
+        rw [satisfiesTreeCondition_order_five_via_via_chain3_canonical tab c d e hc hd he] at ht
         simpa [order_five_caseD_target, order5i, order5i_sum_eq tab hrc] using ht
       · intro htarget
-        rw [satisfiesTreeCondition_order_five_via_via_chain3 tab (.node [c])
-          ⟨c, rfl, d, hc, e, hd, he⟩]
+        rw [satisfiesTreeCondition_order_five_via_via_chain3_canonical tab c d e hc hd he]
         simpa [order_five_caseD_target, order5i, order5i_sum_eq tab hrc] using htarget
   | viaBushy3 d e₁ e₂ hc hd he₁ he₂ =>
       constructor
       · intro ht
-        rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab (.node [c])
-          ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩] at ht
+        rw [satisfiesTreeCondition_order_five_via_via_bushy3_canonical tab c d e₁ e₂ hc
+          (Or.inl ⟨hd, he₁, he₂⟩)] at ht
         simpa [order_five_caseD_target, order5h, order5h_sum_eq tab hrc] using ht
       · intro htarget
-        rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab (.node [c])
-          ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩]
+        rw [satisfiesTreeCondition_order_five_via_via_bushy3_canonical tab c d e₁ e₂ hc
+          (Or.inl ⟨hd, he₁, he₂⟩)]
         simpa [order_five_caseD_target, order5h, order5h_sum_eq tab hrc] using htarget
 
 /-- Theorem 301A at order 5 (assuming row-sum consistency). -/
