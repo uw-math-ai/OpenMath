@@ -1913,66 +1913,6 @@ private inductive OrderFiveCaseDWitness (c : BTree) where
       (he₂ : e₂.order = 1) :
       OrderFiveCaseDWitness c
 
-/-- Normalize an order-4 child witness into the bushy-4 / mixed-4 /
-via-chain3 / via-bushy3 families. -/
-private theorem order_five_caseD_witness_nonempty (c : BTree) (hw4 : BTree.OrderFourBagWitness c) :
-    Nonempty (OrderFiveCaseDWitness c) := by
-  have hc : c.order = 4 := BTree.order_fourBagWitness_order_eq hw4
-  cases hw4 with
-  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
-    rcases BTree.triple_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, e₃, hchildren⟩
-    have hsume : e₁.order + e₂.order + e₃.order = 3 := by
-      have horder : 1 + (e₁.order + (e₂.order + e₃.order)) = 4 := by
-        simpa [hchildren, BTree.order_node] using hc
-      omega
-    have he₁_pos := BTree.order_pos e₁
-    have he₂_pos := BTree.order_pos e₂
-    have he₃_pos := BTree.order_pos e₃
-    have he₁ : e₁.order = 1 := by omega
-    have he₂ : e₂.order = 1 := by omega
-    have he₃ : e₃.order = 1 := by omega
-    exact ⟨.bushy4 e₁ e₂ e₃ (by simpa [hchildren]) he₁ he₂ he₃⟩
-  | mixed4 children d₁ d₂ hcanon hbag =>
-    rcases BTree.pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
-    have hsume : e₁.order + e₂.order = 3 := by
-      have horder : 1 + (e₁.order + e₂.order) = 4 := by
-        simpa [hchildren, BTree.order_node] using hc
-      omega
-    have he₁_pos := BTree.order_pos e₁
-    have he₂_pos := BTree.order_pos e₂
-    have hpair : (e₁.order = 1 ∧ e₂.order = 2) ∨ (e₁.order = 2 ∧ e₂.order = 1) := by
-      by_cases he₁ : e₁.order = 1
-      · exact Or.inl ⟨he₁, by omega⟩
-      · exact Or.inr ⟨by omega, by omega⟩
-    exact ⟨.mixed4 e₁ e₂ (by simpa [hchildren]) hpair⟩
-  | single3 children d hw3 hbag =>
-    have hchildren : children = [d] := BTree.singleton_children_eq_of_childrenBag_eq hbag
-    cases hw3 with
-    | chain3 grandChildren e he hchildBag =>
-      have hgrandChildren : grandChildren = [e] := BTree.singleton_children_eq_of_childrenBag_eq hchildBag
-      exact ⟨.viaChain3 (BTree.node grandChildren) e (by simpa [hchildren])
-        (by simpa [hgrandChildren]) he⟩
-    | bushy3 grandChildren e₁ e₂ he₁ he₂ hchildBag =>
-      rcases BTree.pair_children_exists_of_childrenBag_eq hchildBag with ⟨f₁, f₂, hgrandChildren⟩
-      have hgrandOrder : (BTree.node grandChildren).order = 3 := by
-        refine (BTree.order_eq_of_childrenBag_eq hchildBag).trans ?_
-        simp [he₁, he₂, BTree.order_node]
-      have hsumf : f₁.order + f₂.order = 2 := by
-        have horder : 1 + (f₁.order + f₂.order) = 3 := by
-          simpa [hgrandChildren, BTree.order_node] using hgrandOrder
-        omega
-      have hf₁_pos := BTree.order_pos f₁
-      have hf₂_pos := BTree.order_pos f₂
-      have hf₁ : f₁.order = 1 := by omega
-      have hf₂ : f₂.order = 1 := by omega
-      exact ⟨.viaBushy3 (BTree.node grandChildren) f₁ f₂ (by simpa [hchildren])
-        (by simpa [hgrandChildren]) hf₁ hf₂⟩
-
-/-- Noncomputably choose the normalized order-4 singleton-child witness. -/
-private noncomputable def order_five_caseD_witness (c : BTree) (hw4 : BTree.OrderFourBagWitness c) :
-    OrderFiveCaseDWitness c :=
-  Classical.choice (order_five_caseD_witness_nonempty c hw4)
-
 /-- Canonical dispatcher for the order-5 singleton-child family with an order-4 child. -/
 private theorem satisfiesTreeCondition_order_five_caseD (tab : ButcherTableau s)
     (hrc : tab.IsRowSumConsistent) (c : BTree) (hwit : OrderFiveCaseDWitness c)
@@ -2024,6 +1964,66 @@ private theorem satisfiesTreeCondition_order_five_caseD_viaBushy3_canonical
   rw [satisfiesTreeCondition_order_five_via_via_bushy3_canonical tab c d e₁ e₂ hc
     (Or.inl ⟨hd, he₁, he₂⟩)]
   constructor <;> intro h <;> simpa [order5h, order5h_sum_eq tab hrc] using h
+
+/-- Consume the public bag-first order-4 witness directly in the order-5
+singleton-child reverse branch, avoiding a theorem-side ordered recovery layer. -/
+private theorem satisfiesTreeCondition_order_five_caseD_of_orderFourBagWitness
+    (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) {c : BTree}
+    (hw4 : BTree.OrderFourBagWitness c)
+    (h5e :
+      ∑ i : Fin s, ∑ j : Fin s, tab.b i * tab.A i j * tab.c j ^ 3 = 1 / 20)
+    (h5g :
+      ∑ i : Fin s, ∑ j : Fin s,
+        tab.b i * tab.A i j * tab.c j * (∑ k : Fin s, tab.A j k * tab.c k) = 1 / 40)
+    (h5h :
+      ∑ i : Fin s, ∑ j : Fin s,
+        tab.b i * tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k ^ 2) = 1 / 60)
+    (h5i :
+      ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+        tab.b i * tab.A i j * tab.A j k * (∑ l : Fin s, tab.A k l * tab.c l) = 1 / 120) :
+    tab.satisfiesTreeCondition (.node [c]) := by
+  cases hw4 with
+  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
+      rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hbag]
+      rw [satisfiesTreeCondition_order_five_via_bushy4 tab (.node [.node [d₁, d₂, d₃]])
+        ⟨.node [d₁, d₂, d₃], rfl, d₁, d₂, d₃, rfl, hd₁, hd₂, hd₃⟩]
+      rw [order5e_sum_eq tab hrc]
+      exact h5e
+  | mixed4 children d₁ d₂ hcanon hbag =>
+      rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hbag]
+      rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab (.node [d₁, d₂]) d₁ d₂ rfl
+        (Or.inl hcanon)]
+      rw [order5g_sum_eq tab hrc]
+      exact h5g
+  | single3 children d hw3 hbag =>
+      rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hbag]
+      cases hw3 with
+      | chain3 grandChildren e he hchildBag =>
+          have hgrandChildren : grandChildren = [e] :=
+            BTree.singleton_children_eq_of_childrenBag_eq hchildBag
+          rw [hgrandChildren]
+          rw [satisfiesTreeCondition_order_five_via_via_chain3_canonical tab
+            (.node [.node [e]]) (.node [e]) e rfl rfl he]
+          rw [order5i_sum_eq tab hrc]
+          exact h5i
+      | bushy3 grandChildren e₁ e₂ he₁ he₂ hchildBag =>
+          rcases BTree.pair_children_exists_of_childrenBag_eq hchildBag with
+            ⟨f₁, f₂, hgrandChildren⟩
+          have horder : 1 + (f₁.order + f₂.order) = 3 := by
+            have hgrandOrder : (BTree.node grandChildren).order = 3 := by
+              refine (BTree.order_eq_of_childrenBag_eq hchildBag).trans ?_
+              simp [he₁, he₂, BTree.order_node]
+            simpa [hgrandChildren, BTree.order_node] using hgrandOrder
+          have hf₁_pos := BTree.order_pos f₁
+          have hf₂_pos := BTree.order_pos f₂
+          have hf₁ : f₁.order = 1 := by omega
+          have hf₂ : f₂.order = 1 := by omega
+          rw [hgrandChildren]
+          rw [satisfiesTreeCondition_order_five_via_via_bushy3_canonical tab
+            (.node [.node [f₁, f₂]]) (BTree.node [f₁, f₂]) f₁ f₂ rfl
+            (Or.inl ⟨rfl, hf₁, hf₂⟩)]
+          rw [order5h_sum_eq tab hrc]
+          exact h5h
 
 /-- Branch-specific order condition selected by an order-4 singleton-child witness. -/
 private def order_five_caseD_target (tab : ButcherTableau s) :
@@ -2166,19 +2166,9 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
       | caseD children c hw4 hbag =>
         -- Case D: single order-4 child
-        have hCaseD : OrderFiveCaseDWitness c := order_five_caseD_witness c hw4
-        have htarget : order_five_caseD_target tab hCaseD := by
-          cases hCaseD with
-          | bushy4 =>
-              simpa [order_five_caseD_target] using h5e
-          | mixed4 =>
-              simpa [order_five_caseD_target] using h5g
-          | viaChain3 =>
-              simpa [order_five_caseD_target] using h5i
-          | viaBushy3 =>
-              simpa [order_five_caseD_target] using h5h
         have hcanonical : tab.satisfiesTreeCondition (.node [c]) :=
-          (order_five_caseD_dispatch_shared tab hrc hCaseD).2 htarget
+          satisfiesTreeCondition_order_five_caseD_of_orderFourBagWitness tab hrc hw4
+            h5e h5g h5h h5i
         exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
 
 end ButcherTableau
