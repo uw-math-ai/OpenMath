@@ -755,8 +755,9 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       simpa [order4a_sum_eq tab hrc] using ht4a
     · -- order4b: from t4b = [leaf, t2]
       have ht4b : tab.satisfiesTreeCondition t4b := h t4b (by native_decide)
-      rw [satisfiesTreeCondition_order_four_mixed12 tab t4b
-        ⟨.leaf, t2, rfl, by simp, by native_decide⟩] at ht4b
+      change tab.satisfiesTreeCondition (.node [.leaf, t2]) at ht4b
+      rw [satisfiesTreeCondition_order_four_mixed_canonical tab .leaf t2
+        (Or.inl ⟨by simp, by native_decide⟩)] at ht4b
       rw [order4b]
       simpa [order4b_sum_eq tab hrc] using ht4b
     · -- order4c: from t4c = [t3a] where t3a = [leaf, leaf]
