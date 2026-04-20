@@ -1310,6 +1310,20 @@ private theorem satisfiesTreeCondition_order_five_bushy5 (tab : ButcherTableau s
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_five_bushy5 tab t h i
 
+/-- Transport the canonical bushy-5 order-5 tree condition across bag-equal
+four-child representations. -/
+private theorem satisfiesTreeCondition_order_five_bushy5_eq_of_childrenBag_eq
+    (tab : ButcherTableau s)
+    (children : List BTree) (c₁ c₂ c₃ c₄ : BTree)
+    (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) (hc₄ : c₄.order = 1)
+    (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂, c₃, c₄]).childrenBag) :
+    tab.satisfiesTreeCondition (BTree.node children) ↔
+    ∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 4 = 1 / 5 := by
+  exact
+    (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).trans <|
+      satisfiesTreeCondition_order_five_bushy5 tab (BTree.node [c₁, c₂, c₃, c₄])
+        ⟨c₁, c₂, c₃, c₄, rfl, hc₁, hc₂, hc₃, hc₄⟩
+
 /-- 3-child tree condition: ∑ bᵢ (∑ₖ aᵢₖ)² (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)) = 1/10. -/
 private theorem satisfiesTreeCondition_order_five_3child_112 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
@@ -2064,12 +2078,12 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       cases hw5 with
       | bushy5 children c₁ c₂ c₃ c₄ hc₁ hc₂ hc₃ hc₄ hbag =>
         -- Case A: 4 leaves → order5a
-        have hcanonical : tab.satisfiesTreeCondition (BTree.node [c₁, c₂, c₃, c₄]) := by
-          rw [satisfiesTreeCondition_order_five_bushy5 tab (BTree.node [c₁, c₂, c₃, c₄])
-            ⟨c₁, c₂, c₃, c₄, rfl, hc₁, hc₂, hc₃, hc₄⟩]
+        have hcanonical : tab.satisfiesTreeCondition (BTree.node children) := by
+          rw [satisfiesTreeCondition_order_five_bushy5_eq_of_childrenBag_eq tab
+            children c₁ c₂ c₃ c₄ hc₁ hc₂ hc₃ hc₄ hbag]
           rw [order5a] at h5a
           simpa [order5a_sum_eq tab hrc] using h5a
-        exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
+        simpa using hcanonical
       | caseB children c₁ c₂ c₃ hsum hbag =>
         -- Case B: 3 children summing to 4
         have hCaseB : BTree.OrderFiveCaseBWitness c₁ c₂ c₃ :=
