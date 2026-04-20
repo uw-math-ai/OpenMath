@@ -1565,6 +1565,71 @@ private theorem order5i_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsi
   have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
   congr 1; ext i; simp_rw [hrc', Finset.mul_sum]; congr 1; ext j; congr 1; ext k; ring
 
+/-- Normalized witness for the order-5 two-child family with child-order sum `4`. -/
+private inductive OrderFiveCaseCWitness (c₁ c₂ : BTree) : Prop where
+  | ord22 (hc₁ : c₁.order = 2) (hc₂ : c₂.order = 2) : OrderFiveCaseCWitness c₁ c₂
+  | chain3 (d : BTree)
+      (hpair : (c₁.order = 1 ∧ c₂ = .node [d] ∧ d.order = 2) ∨
+        (c₁ = .node [d] ∧ d.order = 2 ∧ c₂.order = 1)) :
+      OrderFiveCaseCWitness c₁ c₂
+  | bushy3 (d₁ d₂ : BTree)
+      (hpair : (c₁.order = 1 ∧ c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) ∨
+        (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) :
+      OrderFiveCaseCWitness c₁ c₂
+
+/-- Normalize the order-5 two-child `sum = 4` family into the `{2,2}` / chain-3 / bushy-3 trichotomy. -/
+private theorem order_five_caseC_witness (c₁ c₂ : BTree)
+    (hsum : c₁.order + c₂.order = 4) :
+    OrderFiveCaseCWitness c₁ c₂ := by
+  have hc₁_pos := BTree.order_pos c₁
+  have hc₂_pos := BTree.order_pos c₂
+  by_cases h22 : c₁.order = 2 ∧ c₂.order = 2
+  · exact .ord22 h22.1 h22.2
+  · have h13 :
+        (c₁.order = 1 ∧ c₂.order = 3) ∨ (c₁.order = 3 ∧ c₂.order = 1) := by
+      by_cases h1 : c₁.order = 1
+      · exact Or.inl ⟨h1, by omega⟩
+      · by_cases h2 : c₂.order = 1
+        · exact Or.inr ⟨by omega, h2⟩
+        · exfalso
+          omega
+    rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
+    · rcases order_three_cases c₂ hc₂ with hchain | hbushy
+      · rcases hchain with ⟨d, hd_eq, hd⟩
+        exact .chain3 d <| Or.inl ⟨h1, hd_eq, hd⟩
+      · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
+        exact .bushy3 d₁ d₂ <| Or.inl ⟨h1, hd_eq, hd₁, hd₂⟩
+    · rcases order_three_cases c₁ hc₁ with hchain | hbushy
+      · rcases hchain with ⟨d, hd_eq, hd⟩
+        exact .chain3 d <| Or.inr ⟨hd_eq, hd, h2⟩
+      · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
+        exact .bushy3 d₁ d₂ <| Or.inr ⟨hd_eq, hd₁, hd₂, h2⟩
+
+/-- Canonical dispatcher for the order-5 two-child family with child-order sum `4`. -/
+private theorem satisfiesTreeCondition_order_five_caseC (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (c₁ c₂ : BTree) (hwit : OrderFiveCaseCWitness c₁ c₂)
+    (h5c :
+      ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * tab.c j) ^ 2 = 1 / 20)
+    (h5d :
+      ∑ i : Fin s, tab.b i * tab.c i * (∑ j : Fin s, tab.A i j * tab.c j ^ 2) = 1 / 15)
+    (h5f :
+      ∑ i : Fin s, tab.b i * tab.c i *
+        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k)) = 1 / 30) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) := by
+  cases hwit with
+  | ord22 hc₁ hc₂ =>
+      rw [satisfiesTreeCondition_order_five_22 tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
+      rw [order5c_sum_eq tab hrc]
+      exact h5c
+  | chain3 d hpair =>
+      rw [satisfiesTreeCondition_order_five_chain3_canonical tab c₁ c₂ d hpair]
+      rw [order5f_sum_eq tab hrc]
+      exact h5f
+  | bushy3 d₁ d₂ hpair =>
+      rw [satisfiesTreeCondition_order_five_bushy3_canonical tab c₁ c₂ d₁ d₂ hpair]
+      rw [order5d_sum_eq tab hrc]
+      exact h5d
+
 /-- Theorem 301A at order 5 (assuming row-sum consistency). -/
 theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     tab.hasTreeOrder 5 ↔ tab.HasOrderGe5 := by
@@ -1647,8 +1712,11 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         simpa [order5b_sum_eq tab hrc] using h5b
       · -- Case C: 2 children summing to 4
         rcases hC with ⟨c₁, c₂, rfl, hsum⟩
-        have hc₁_pos := BTree.order_pos c₁
-        have hc₂_pos := BTree.order_pos c₂
+        have hCaseC : OrderFiveCaseCWitness c₁ c₂ := order_five_caseC_witness c₁ c₂ hsum
+        have h5c' :
+            ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * tab.c j) ^ 2 = 1 / 20 := by
+          rw [order5c] at h5c
+          simpa [order5c_sum_eq tab hrc] using h5c
         have h5d' :
             ∑ i : Fin s, tab.b i * tab.c i * (∑ j : Fin s, tab.A i j * tab.c j ^ 2) = 1 / 15 := by
           rw [order5d] at h5d
@@ -1658,41 +1726,7 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
               (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k)) = 1 / 30 := by
           rw [order5f] at h5f
           simpa [order5f_sum_eq tab hrc] using h5f
-        -- Sub-case on {1,3}, {3,1}, {2,2}
-        by_cases h22 : c₁.order = 2 ∧ c₂.order = 2
-        · -- {2,2}
-          rw [satisfiesTreeCondition_order_five_22 tab _ ⟨c₁, c₂, rfl, h22.1, h22.2⟩]
-          rw [order5c] at h5c; simpa [order5c_sum_eq tab hrc] using h5c
-        · have h13 :
-              (c₁.order = 1 ∧ c₂.order = 3) ∨ (c₁.order = 3 ∧ c₂.order = 1) := by
-            by_cases h1 : c₁.order = 1
-            · exact Or.inl ⟨h1, by omega⟩
-            · by_cases h2 : c₂.order = 1
-              · exact Or.inr ⟨by omega, h2⟩
-              · exfalso; omega
-          have h13_shape :
-              (∃ d : BTree,
-                (c₁.order = 1 ∧ c₂ = .node [d] ∧ d.order = 2) ∨
-                (c₁ = .node [d] ∧ d.order = 2 ∧ c₂.order = 1)) ∨
-              (∃ d₁ d₂ : BTree,
-                (c₁.order = 1 ∧ c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) ∨
-                (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) := by
-            rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
-            · rcases order_three_cases c₂ hc₂ with hchain | hbushy
-              · rcases hchain with ⟨d, hd_eq, hd⟩
-                exact Or.inl ⟨d, Or.inl ⟨h1, hd_eq, hd⟩⟩
-              · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
-                exact Or.inr ⟨d₁, d₂, Or.inl ⟨h1, hd_eq, hd₁, hd₂⟩⟩
-            · rcases order_three_cases c₁ hc₁ with hchain | hbushy
-              · rcases hchain with ⟨d, hd_eq, hd⟩
-                exact Or.inl ⟨d, Or.inr ⟨hd_eq, hd, h2⟩⟩
-              · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
-                exact Or.inr ⟨d₁, d₂, Or.inr ⟨hd_eq, hd₁, hd₂, h2⟩⟩
-          rcases h13_shape with ⟨d, hchain⟩ | ⟨d₁, d₂, hbushy⟩
-          · rw [satisfiesTreeCondition_order_five_chain3_canonical tab c₁ c₂ d hchain]
-            simpa [order5f_sum_eq tab hrc] using h5f'
-          · rw [satisfiesTreeCondition_order_five_bushy3_canonical tab c₁ c₂ d₁ d₂ hbushy]
-            simpa [order5d_sum_eq tab hrc] using h5d'
+        exact satisfiesTreeCondition_order_five_caseC tab hrc c₁ c₂ hCaseC h5c' h5d' h5f'
       · -- Case D: single order-4 child
         rcases hD with ⟨c, rfl, hc⟩
         rcases order_four_cases c hc with hbushy4 | hmixed | hsingle
