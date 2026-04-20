@@ -1379,6 +1379,22 @@ private theorem satisfiesTreeCondition_order_five_via_mixed21 (tab : ButcherTabl
     (satisfiesTreeCondition_order_five_via_mixed12 tab (.node [.node [d₂, d₁]])
       ⟨.node [d₂, d₁], rfl, d₂, d₁, rfl, hd₂, hd₁⟩)
 
+/-- Mixed order-5 singleton nodes are canonical up to swapping the ordered child witnesses. -/
+private theorem satisfiesTreeCondition_order_five_via_mixed_canonical (tab : ButcherTableau s)
+    (c d₁ d₂ : BTree) (hc : c = .node [d₁, d₂])
+    (hpair : (d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c]) ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
+  rcases hpair with ⟨hd₁, hd₂⟩ | ⟨hd₁, hd₂⟩
+  · simpa [hc] using
+      (satisfiesTreeCondition_order_five_via_mixed12 tab (.node [c])
+        ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩)
+  · simpa [hc] using
+      (satisfiesTreeCondition_order_five_via_mixed21 tab (.node [c])
+        ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩)
+
 /-- Via-via-bushy3 tree condition: sum = 1/60. -/
 private theorem satisfiesTreeCondition_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
@@ -1628,13 +1644,8 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
           rw [order5e] at h5e; simpa [order5e_sum_eq tab hrc] using h5e
         · -- child is mixed-4 = [d₁, d₂] with {1,2} or {2,1}
           rcases hmixed with ⟨d₁, d₂, hc_eq, _, hord⟩
-          rcases hord with ⟨hd₁, hd₂⟩ | ⟨hd₁, hd₂⟩
-          · rw [satisfiesTreeCondition_order_five_via_mixed12 tab _
-              ⟨c, rfl, d₁, d₂, hc_eq, hd₁, hd₂⟩]
-            rw [order5g] at h5g; simpa [order5g_sum_eq tab hrc] using h5g
-          · rw [satisfiesTreeCondition_order_five_via_mixed21 tab _
-              ⟨c, rfl, d₁, d₂, hc_eq, hd₁, hd₂⟩]
-            rw [order5g] at h5g; simpa [order5g_sum_eq tab hrc] using h5g
+          rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc_eq hord]
+          rw [order5g] at h5g; simpa [order5g_sum_eq tab hrc] using h5g
         · -- child is single order-3 child
           rcases hsingle with ⟨d, hc_eq, hd⟩
           rcases order_three_cases d hd with hchain | hbushy
