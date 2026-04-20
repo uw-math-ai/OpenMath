@@ -1,5 +1,4 @@
-import OpenMath.Legendre
-import Mathlib.RingTheory.Polynomial.ShiftedLegendre
+import Mathlib
 
 open Polynomial
 
@@ -9,7 +8,7 @@ namespace OpenMath
 Legendre polynomial yields a remainder of degree `< s`. Harvested from
 Aristotle project `679726ac-461a-49a9-be03-3a6f13dbb5fe` and adjusted to the
 OpenMath environment. -/
-theorem monomial_div_mod_shiftedLegendre {s k : ℕ}
+theorem monomial_div_mod_shiftedLegendre_aux {s k : ℕ}
     (hsk : s < k) (hk : k ≤ 2 * s) :
     ∃ q r : ℝ[X],
       X ^ (k - 1) =

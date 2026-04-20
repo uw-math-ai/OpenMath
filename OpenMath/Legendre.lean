@@ -1,4 +1,5 @@
 import OpenMath.Collocation
+import OpenMath.LegendreHelpers
 
 /-!
 # Shifted Legendre Polynomials and Gaussian Quadrature
@@ -243,6 +244,236 @@ theorem shiftedLegendreP_eq_eval_map_shiftedLegendre (n : ℕ) (x : ℝ) :
     norm_num [ih _ (Nat.lt_succ_self _), ih _ (Nat.lt_succ_of_lt (Nat.lt_succ_self _))] at hrec ⊢
     grind
 
+namespace OpenMath
+
+theorem monomial_div_mod_shiftedLegendre {s k : ℕ}
+    (hsk : s < k) (hk : k ≤ 2 * s) :
+    ∃ q r : ℝ[X],
+      X ^ (k - 1) =
+        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * q + r ∧
+      r.natDegree < s := by
+  set P : Polynomial ℝ := Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)
+  have hP_nonzero : P ≠ 0 := by
+    have hs : P.coeff s ≠ 0 := by
+      rw [show P = Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s) by rfl]
+      rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+      simp [Nat.choose_self]
+      exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
+    intro hP0
+    apply hs
+    simp [hP0]
+  refine ⟨X ^ (k - 1) / P, X ^ (k - 1) % P, ?_, ?_⟩
+  · simpa [add_comm] using (EuclideanDomain.div_add_mod (X ^ (k - 1)) P).symm
+  · have hdeg : (X ^ (k - 1) % P).degree < P.degree := EuclideanDomain.mod_lt _ hP_nonzero
+    by_cases hr : X ^ (k - 1) % P = 0
+    · simp [hr]
+      omega
+    · have hP_degree : P.degree = s := by
+        refine le_antisymm ?_ ?_
+        · rw [Polynomial.degree_le_iff_coeff_zero]
+          intro m hm
+          norm_cast at hm
+          rw [show P = Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s) by rfl]
+          rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+          simp [Nat.choose_eq_zero_of_lt hm]
+        · have hs : P.coeff s ≠ 0 := by
+            rw [show P = Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s) by rfl]
+            rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+            simp [Nat.choose_self]
+            exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
+          exact Polynomial.le_degree_of_ne_zero hs
+      have hP_natdeg : P.natDegree = s := Polynomial.natDegree_eq_of_degree_eq_some hP_degree
+      rw [← hP_natdeg]
+      exact Polynomial.natDegree_lt_natDegree hr hdeg
+
+end OpenMath
+
+noncomputable def polyMomentN (N : ℕ) (p : ℝ[X]) : ℝ :=
+  ∑ l ∈ Finset.range N, p.coeff l / ((l : ℝ) + 1)
+
+lemma polyMomentN_add (N : ℕ) (p q : ℝ[X]) :
+    polyMomentN N (p + q) = polyMomentN N p + polyMomentN N q := by
+  simp [polyMomentN, add_div, Finset.sum_add_distrib]
+
+lemma polyMomentN_C_mul (N : ℕ) (a : ℝ) (p : ℝ[X]) :
+    polyMomentN N (C a * p) = a * polyMomentN N p := by
+  simp [polyMomentN, Finset.mul_sum, mul_div_assoc, mul_assoc, mul_left_comm, mul_comm]
+
+lemma polyMomentN_mul_sum_C_mul_X_pow (N s : ℕ) (P q : ℝ[X]) :
+    polyMomentN N (P * ∑ i ∈ Finset.range s, C (q.coeff i) * X ^ i)
+      = ∑ i ∈ Finset.range s, q.coeff i * polyMomentN N (P * X ^ i) := by
+  induction s with
+  | zero =>
+      simp [polyMomentN]
+  | succ s ih =>
+      rw [Finset.sum_range_succ, Finset.sum_range_succ, mul_add, polyMomentN_add, ih]
+      rw [show P * (C (q.coeff s) * X ^ s) = C (q.coeff s) * (P * X ^ s) by ring]
+      rw [polyMomentN_C_mul]
+
+lemma polyMomentN_X_pow (N m : ℕ) (hm : m < N) :
+    polyMomentN N (X ^ m : ℝ[X]) = 1 / ((m : ℝ) + 1) := by
+  rw [polyMomentN, Finset.sum_eq_single m]
+  · simp [Polynomial.coeff_X_pow]
+  · intro x hx hxm
+    simp [Polynomial.coeff_X_pow, hxm]
+  · simp [hm]
+
+lemma polyMomentN_eq_of_natDegree_lt {N M : ℕ} (p : ℝ[X])
+    (hp : p.natDegree < N) (hNM : N ≤ M) :
+    polyMomentN M p = polyMomentN N p := by
+  rw [polyMomentN, ← Finset.sum_range_add_sum_Ico (fun l => p.coeff l / ((l : ℝ) + 1)) hNM,
+    polyMomentN]
+  suffices hIco : Finset.sum (Finset.Ico N M) (fun x => p.coeff x / ((x : ℝ) + 1)) = 0 by
+    simp [hIco]
+  refine Finset.sum_eq_zero ?_
+  intro x hx
+  have hxN : N ≤ x := (Finset.mem_Ico.mp hx).1
+  have hcoeff : p.coeff x = 0 := by
+    apply Polynomial.coeff_eq_zero_of_natDegree_lt
+    omega
+  simp [hcoeff]
+
+noncomputable def quadEvalPoly {s : ℕ} (t : ButcherTableau s) (p : ℝ[X]) : ℝ :=
+  ∑ i : Fin s, t.b i * p.eval (t.c i)
+
+lemma quadEvalPoly_add {s : ℕ} (t : ButcherTableau s) (p q : ℝ[X]) :
+    quadEvalPoly t (p + q) = quadEvalPoly t p + quadEvalPoly t q := by
+  simp [quadEvalPoly, add_mul, Finset.sum_add_distrib, Polynomial.eval_add,
+    left_distrib, right_distrib]
+
+lemma quadEvalPoly_exact_of_natDegree_lt {s : ℕ} (t : ButcherTableau s)
+    (hB : t.SatisfiesB s) (p : ℝ[X]) (hp : p.natDegree < s) :
+    quadEvalPoly t p = polyMomentN (2 * s) p := by
+  have hpEq := p.as_sum_range_C_mul_X_pow' hp
+  nth_rewrite 1 [hpEq]
+  calc
+    quadEvalPoly t (∑ i ∈ Finset.range s, C (p.coeff i) * X ^ i)
+        = ∑ i ∈ Finset.range s, p.coeff i * (∑ j : Fin s, t.b j * t.c j ^ i) := by
+            unfold quadEvalPoly
+            simp_rw [Polynomial.eval_finset_sum, Polynomial.eval_mul, Polynomial.eval_C,
+              Polynomial.eval_pow, Polynomial.eval_X]
+            calc
+              ∑ x : Fin s, t.b x * ∑ i ∈ Finset.range s, p.coeff i * t.c x ^ i
+                  = ∑ x : Fin s, ∑ i ∈ Finset.range s, t.b x * (p.coeff i * t.c x ^ i) := by
+                      simp [mul_sum]
+              _ = ∑ i ∈ Finset.range s, ∑ x : Fin s, t.b x * (p.coeff i * t.c x ^ i) := by
+                    rw [Finset.sum_comm]
+              _ = ∑ i ∈ Finset.range s, p.coeff i * ∑ j : Fin s, t.b j * t.c j ^ i := by
+                    refine Finset.sum_congr rfl ?_
+                    intro i hi
+                    simp [Finset.mul_sum, mul_left_comm]
+    _ = ∑ i ∈ Finset.range s, p.coeff i / ((i : ℝ) + 1) := by
+          refine Finset.sum_congr rfl ?_
+          intro j hj
+          have hj1 : 1 ≤ j + 1 := Nat.succ_le_succ (Nat.zero_le _)
+          have hj2 : j + 1 ≤ s := by simpa using hj
+          have hBj := hB (j + 1) hj1 hj2
+          have hBj' : ∑ i : Fin s, t.b i * t.c i ^ j = 1 / ((j : ℝ) + 1) := by
+            simpa using hBj
+          rw [hBj']
+          ring
+    _ = polyMomentN s p := by
+          rfl
+    _ = polyMomentN (2 * s) p := by
+          symm
+          exact polyMomentN_eq_of_natDegree_lt p hp (by omega)
+
+lemma coeff_shiftedLegendre_sum_zero (s j : ℕ) (hj : j < s) :
+    ∑ l ∈ Finset.range (s + 1),
+      (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff l /
+        ((l : ℝ) + j + 1) = 0 := by
+  have horth := orthogonality_sum_zero s j hj
+  have hs : (-1 : ℝ) ^ s ≠ 0 := by
+    exact pow_ne_zero _ (by norm_num)
+  have hmul : (-1 : ℝ) ^ s *
+      (∑ l ∈ Finset.range (s + 1),
+        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff l /
+          ((l : ℝ) + j + 1)) = 0 := by
+    simpa [shiftedLegCoeff, Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+      Finset.mul_sum, mul_div_assoc, mul_assoc, mul_left_comm, mul_comm, pow_add] using horth
+  exact (mul_eq_zero.mp hmul).resolve_left hs
+
+private lemma polyMomentN_shiftedLegendre_mul_X_pow_eq (s j : ℕ) (hj : j < s) :
+    polyMomentN (2 * s)
+      ((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * X ^ j)
+    = ∑ x ∈ Finset.range (s + 1),
+        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff x /
+          ((x : ℝ) + j + 1) := by
+  rw [polyMomentN]
+  have hsupp : s + j + 1 ≤ 2 * s := by
+    omega
+  have hsplit := Finset.sum_range_add_sum_Ico
+    (fun x =>
+      (((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * X ^ j).coeff x) /
+        ((x : ℝ) + 1)) hsupp
+  rw [← hsplit]
+  have htail : ∑ x ∈ Finset.Ico (s + j + 1) (2 * s),
+      (((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * X ^ j).coeff x) /
+        ((x : ℝ) + 1) = 0 := by
+    refine Finset.sum_eq_zero ?_
+    intro x hx
+    have hxge : s + j + 1 ≤ x := (Finset.mem_Ico.mp hx).1
+    have hxj : j ≤ x := by
+      exact le_trans (show j ≤ s + (j + 1) by omega) hxge
+    have hcoeff :
+        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff (x - j) = 0 := by
+      rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+      have hxsub : s + 1 ≤ x - j := by
+        exact (Nat.le_sub_iff_add_le hxj).2 (by simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using hxge)
+      have hlt : s < x - j := lt_of_lt_of_le (Nat.lt_succ_self s) hxsub
+      simp [Nat.choose_eq_zero_of_lt hlt]
+    rw [Polynomial.coeff_mul_X_pow', if_pos hxj, hcoeff]
+    simp
+  have hmain : ∑ x ∈ Finset.range (s + j + 1),
+      (((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * X ^ j).coeff x) /
+        ((x : ℝ) + 1)
+      = ∑ x ∈ Finset.range (s + 1),
+          (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff x /
+            ((x : ℝ) + j + 1) := by
+    have hsplit' := Finset.sum_range_add_sum_Ico
+      (fun x =>
+        (((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * X ^ j).coeff x) /
+          ((x : ℝ) + 1)) (show j ≤ s + j + 1 by omega)
+    rw [← hsplit']
+    have hlow : ∑ x ∈ Finset.range j,
+        (((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * X ^ j).coeff x) /
+          ((x : ℝ) + 1) = 0 := by
+      refine Finset.sum_eq_zero ?_
+      intro x hx
+      simp [Polynomial.coeff_mul_X_pow', Nat.not_le_of_lt (Finset.mem_range.mp hx)]
+    rw [hlow, zero_add]
+    rw [Finset.sum_Ico_eq_sum_range]
+    refine Finset.sum_congr ?_ ?_
+    · congr
+      omega
+    · intro x hx
+      have hxj : j ≤ j + x := Nat.le_add_right _ _
+      rw [Polynomial.coeff_mul_X_pow', if_pos hxj, Nat.add_sub_cancel_left]
+      congr 1
+      norm_num [Nat.cast_add, add_assoc, add_left_comm, add_comm]
+  rw [htail, add_zero]
+  exact hmain
+
+lemma polyMomentN_shiftedLegendre_mul_zero {s : ℕ} (q : ℝ[X]) (hq : q.natDegree < s) :
+    polyMomentN (2 * s)
+      ((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * q) = 0 := by
+  let P : ℝ[X] := Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)
+  have hqEq := q.as_sum_range_C_mul_X_pow' hq
+  nth_rewrite 1 [hqEq]
+  calc
+    polyMomentN (2 * s) (P * ∑ i ∈ Finset.range s, C (q.coeff i) * X ^ i)
+        = ∑ i ∈ Finset.range s, q.coeff i * polyMomentN (2 * s) (P * X ^ i) := by
+            exact polyMomentN_mul_sum_C_mul_X_pow (2 * s) s P q
+    _ = 0 := by
+          refine Finset.sum_eq_zero ?_
+          intro j hj
+          have hjlt : j < s := by
+            simpa using hj
+          have hshift : polyMomentN (2 * s) (P * X ^ j) = 0 := by
+            rw [polyMomentN_shiftedLegendre_mul_X_pow_eq s j hjlt]
+            simpa [P] using coeff_shiftedLegendre_sum_zero s j hjlt
+          simpa [hshift]
+
 /-! ## Gaussian Quadrature Exactness (Lemma 342B)
 
 If the nodes `c_i` of an `s`-stage RK method are the zeros of the `s`-th
@@ -294,6 +525,14 @@ theorem gaussLegendreNodes_eval_map_shiftedLegendre_zero (t : ButcherTableau s)
   rw [shiftedLegendreP_eq_eval_map_shiftedLegendre] at hi
   exact (mul_eq_zero.mp hi).resolve_left hs_ne
 
+lemma quadEvalPoly_shiftedLegendre_mul_zero (t : ButcherTableau s)
+    (hGL : t.HasGaussLegendreNodes) (q : ℝ[X]) :
+    quadEvalPoly t ((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * q) = 0 := by
+  refine Finset.sum_eq_zero ?_
+  intro i hi
+  have hPi := (t.gaussLegendreNodes_eval_map_shiftedLegendre_zero hGL) i
+  simp [quadEvalPoly, Polynomial.eval_mul, hPi]
+
 /-- Repackage the high-degree branch of `gaussLegendre_B_double` as
 `k = s + (j + 1)` with `j < s`. -/
 private theorem gaussLegendre_high_range {k : ℕ}
@@ -320,16 +559,84 @@ theorem gaussLegendre_B_double (t : ButcherTableau s)
   by_cases hks : k ≤ s
   · exact hB k hk1 hks
   · have hsk : s < k := by omega
+    obtain ⟨q, r, hdiv, hrdeg⟩ := OpenMath.monomial_div_mod_shiftedLegendre hsk hk2
     have hs_pos : 0 < s := by omega
-    obtain ⟨j, hjlt, hk_eq⟩ := gaussLegendre_high_range (s := s) hk2 hks
-    rw [hk_eq]
-    -- The remaining range `k = s + (j + 1)` with `j < s` is the genuine
-    -- Gaussian quadrature step. Mathlib's top-coefficient formula shows the
-    -- corresponding shifted Legendre polynomial has nonzero leading term; the
-    -- remaining blocker is connecting our recursive `shiftedLegendreP` to that
-    -- polynomial and then running the orthogonality/defect-subtraction argument.
-    have hp_lead_nz := shiftedLegendre_coeff_self_ne_zero s
-    sorry
+    have hP_nonzero :
+        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s) : ℝ[X]) ≠ 0 := by
+      have hs : (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s) : ℝ[X]).coeff s ≠ 0 := by
+        rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+        simp [Nat.choose_self]
+        exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
+      intro hP0
+      apply hs
+      simp [hP0]
+    have hqdeg : q.natDegree < s := by
+      by_cases hq0 : q = 0
+      · simp [hq0, hs_pos]
+      · have hmuldeg : ((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * q).natDegree < 2 * s := by
+          let P : ℝ[X] := Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)
+          have hprod_eq : P * q = (X ^ (k - 1) : ℝ[X]) - r := by
+            dsimp [P]
+            rw [hdiv]
+            ring
+          have hsub : (P * q).natDegree ≤ max (X ^ (k - 1) : ℝ[X]).natDegree r.natDegree := by
+            rw [hprod_eq]
+            have hsub' := Polynomial.natDegree_sub_le (X ^ (k - 1) : ℝ[X]) r
+            simpa [Polynomial.natDegree_X_pow] using hsub'
+          have hklt : (X ^ (k - 1) : ℝ[X]).natDegree < 2 * s := by
+            rw [Polynomial.natDegree_X_pow]
+            omega
+          have hrlt : r.natDegree < 2 * s := by
+            omega
+          exact lt_of_le_of_lt hsub (max_lt hklt hrlt)
+        have hmul_eq :
+            ((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * q).natDegree =
+              s + q.natDegree := by
+          have hmapdeg :
+              (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).natDegree = s := by
+            have hdeg :
+                (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).degree = s := by
+              refine le_antisymm ?_ ?_
+              · rw [Polynomial.degree_le_iff_coeff_zero]
+                intro m hm
+                norm_cast at hm
+                rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+                simp [Nat.choose_eq_zero_of_lt hm]
+              · have hs :
+                    (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).coeff s ≠ 0 := by
+                  rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+                  simp [Nat.choose_self]
+                  exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
+                exact Polynomial.le_degree_of_ne_zero hs
+            exact Polynomial.natDegree_eq_of_degree_eq_some hdeg
+          rw [Polynomial.natDegree_mul hP_nonzero hq0, hmapdeg]
+        rw [hmul_eq] at hmuldeg
+        omega
+    have hquad_div :
+        quadEvalPoly t
+          ((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * q) = 0 :=
+      t.quadEvalPoly_shiftedLegendre_mul_zero hGL q
+    have hquad_r : quadEvalPoly t (X ^ (k - 1) : ℝ[X]) = quadEvalPoly t r := by
+      rw [hdiv, quadEvalPoly_add, hquad_div, zero_add]
+    have hr_exact : quadEvalPoly t r = polyMomentN (2 * s) r :=
+      quadEvalPoly_exact_of_natDegree_lt t hB r hrdeg
+    have hmoment_div :
+        polyMomentN (2 * s)
+          ((Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)) * q) = 0 :=
+      polyMomentN_shiftedLegendre_mul_zero q hqdeg
+    have hmoment_r : polyMomentN (2 * s) (X ^ (k - 1) : ℝ[X]) = polyMomentN (2 * s) r := by
+      rw [hdiv, polyMomentN_add, hmoment_div, zero_add]
+    calc
+      ∑ i : Fin s, t.b i * t.c i ^ (k - 1)
+          = quadEvalPoly t (X ^ (k - 1) : ℝ[X]) := by
+              simp [quadEvalPoly, Polynomial.eval_pow]
+      _ = quadEvalPoly t r := hquad_r
+      _ = polyMomentN (2 * s) r := hr_exact
+      _ = polyMomentN (2 * s) (X ^ (k - 1) : ℝ[X]) := hmoment_r.symm
+      _ = 1 / (k : ℝ) := by
+          have hklt : k - 1 < 2 * s := by omega
+          simpa [Nat.cast_sub hk1, add_comm, add_left_comm, add_assoc] using
+            polyMomentN_X_pow (2 * s) (k - 1) hklt
 
 /-- **Corollary 342D (backward direction)**: If the nodes are zeros of `P_s^*`,
 `B(s)` holds, and `C(s)` holds, then all the simplifying assumptions hold:
