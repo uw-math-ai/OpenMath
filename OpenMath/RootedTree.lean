@@ -378,7 +378,7 @@ noncomputable def order_three_bag_witness (t : BTree) (ht : t.order = 3) :
     OrderThreeBagWitness t :=
   Classical.choice (order_three_bag_witness_nonempty t ht)
 
-private theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTree}
+theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTree}
     (hbag : (BTree.node children).childrenBag = (BTree.node [d]).childrenBag) :
     children = [d] := by
   have hperm : children.Perm [d] := Quotient.exact hbag
@@ -394,14 +394,14 @@ private theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} 
           rfl
       | cons child₂ rest₂ => simp at hlen
 
-private theorem pair_children_exists_of_childrenBag_eq {children : List BTree} {d₁ d₂ : BTree}
+theorem pair_children_exists_of_childrenBag_eq {children : List BTree} {d₁ d₂ : BTree}
     (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
     ∃ e₁ e₂, children = [e₁, e₂] := by
   have hperm : children.Perm [d₁, d₂] := Quotient.exact hbag
   have hlen : children.length = 2 := by simpa using hperm.length_eq
   simpa [List.length_eq_two] using hlen
 
-private theorem triple_children_exists_of_childrenBag_eq {children : List BTree}
+theorem triple_children_exists_of_childrenBag_eq {children : List BTree}
     {d₁ d₂ d₃ : BTree}
     (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag) :
     ∃ e₁ e₂ e₃, children = [e₁, e₂, e₃] := by
