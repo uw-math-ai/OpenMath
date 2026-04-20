@@ -378,6 +378,57 @@ noncomputable def order_three_bag_witness (t : BTree) (ht : t.order = 3) :
     OrderThreeBagWitness t :=
   Classical.choice (order_three_bag_witness_nonempty t ht)
 
+private theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTree}
+    (hbag : (BTree.node children).childrenBag = (BTree.node [d]).childrenBag) :
+    children = [d] := by
+  have hperm : children.Perm [d] := Quotient.exact hbag
+  have hlen : children.length = 1 := by simpa using hperm.length_eq
+  cases children with
+  | nil => simp at hlen
+  | cons child rest =>
+      cases rest with
+      | nil =>
+          have hmem : d ∈ [child] := hperm.symm.subset (by simp)
+          have hd : d = child := by simpa using hmem
+          subst d
+          rfl
+      | cons child₂ rest₂ => simp at hlen
+
+private theorem pair_children_exists_of_childrenBag_eq {children : List BTree} {d₁ d₂ : BTree}
+    (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
+    ∃ e₁ e₂, children = [e₁, e₂] := by
+  have hperm : children.Perm [d₁, d₂] := Quotient.exact hbag
+  have hlen : children.length = 2 := by simpa using hperm.length_eq
+  simpa [List.length_eq_two] using hlen
+
+private theorem triple_children_exists_of_childrenBag_eq {children : List BTree}
+    {d₁ d₂ d₃ : BTree}
+    (hbag : (BTree.node children).childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag) :
+    ∃ e₁ e₂ e₃, children = [e₁, e₂, e₃] := by
+  have hperm : children.Perm [d₁, d₂, d₃] := Quotient.exact hbag
+  have hlen : children.length = 3 := by simpa using hperm.length_eq
+  simpa [List.length_eq_three] using hlen
+
+private theorem order_eq_of_childrenBag_eq_local {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    (BTree.node children₁).order = (BTree.node children₂).order := by
+  have hperm : children₁.Perm children₂ := Quotient.exact hbag
+  have hfold :
+      children₁.foldr (fun t n => t.order + n) 0 =
+        children₂.foldr (fun t n => t.order + n) 0 :=
+    hperm.foldr_eq (lcomm := ⟨fun _ _ _ => by omega⟩) 0
+  simp [order_node, hfold]
+
+private theorem order_threeBagWitness_order_eq {t : BTree} (hw3 : OrderThreeBagWitness t) :
+    t.order = 3 := by
+  cases hw3 with
+  | chain3 children c hc hbag =>
+      have horder := order_eq_of_childrenBag_eq_local hbag
+      simpa [hc] using horder
+  | bushy3 children c₁ c₂ hc₁ hc₂ hbag =>
+      have horder := order_eq_of_childrenBag_eq_local hbag
+      simpa [hc₁, hc₂] using horder
+
 /-- Compatibility witness for the older order-3 ordered-list API. -/
 inductive OrderThreeWitness : BTree → Type where
   | chain3 (c : BTree) (hc : c.order = 2) :
@@ -388,37 +439,26 @@ inductive OrderThreeWitness : BTree → Type where
 /-- Compatibility chooser for the older order-3 ordered-list API. -/
 theorem order_three_witness_nonempty (t : BTree) (ht : t.order = 3) :
     Nonempty (OrderThreeWitness t) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-    simp only [order_node] at ht
-    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 2 := by omega
-    cases children with
-    | nil => simp at hfoldr
-    | cons hd tl =>
-      simp only [List.foldr] at hfoldr
-      have hhd_pos : 0 < hd.order := by
-        cases hd <;> simp [order_node]
-      cases tl with
-      | nil =>
-        exact ⟨.chain3 hd (by simpa using hfoldr)⟩
-      | cons hd2 tl2 =>
-        have hhd2_pos : 0 < hd2.order := by
-          cases hd2 <;> simp [order_node]
-        have hhd : hd.order = 1 := by
-          simp only [List.foldr] at hfoldr
-          omega
-        have hrest : hd2.order + tl2.foldr (fun c n => c.order + n) 0 = 1 := by
-          simp only [List.foldr] at hfoldr
-          omega
-        cases tl2 with
-        | nil =>
-          exact ⟨.bushy3 hd hd2 hhd (by simpa using hrest)⟩
-        | cons hd3 tl3 =>
-          simp only [List.foldr] at hrest
-          have hhd3_pos : 0 < hd3.order := by
-            cases hd3 <;> simp [order_node]
-          omega
+  have hw3 : OrderThreeBagWitness t := order_three_bag_witness t ht
+  cases hw3 with
+  | chain3 children c hc hbag =>
+      have hchildren : children = [c] := singleton_children_eq_of_childrenBag_eq hbag
+      subst hchildren
+      exact ⟨.chain3 c hc⟩
+  | bushy3 children c₁ c₂ hc₁ hc₂ hbag =>
+      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨d₁, d₂, hchildren⟩
+      subst hchildren
+      have hsum : d₁.order + d₂.order = 2 := by
+        have horder := order_eq_of_childrenBag_eq_local hbag
+        have : 1 + (d₁.order + d₂.order) = 3 := by simpa [hc₁, hc₂, order_node] using horder
+        omega
+      have hd₁_pos : 0 < d₁.order := by
+        cases d₁ <;> simp [order_node]
+      have hd₂_pos : 0 < d₂.order := by
+        cases d₂ <;> simp [order_node]
+      have hd₁ : d₁.order = 1 := by omega
+      have hd₂ : d₂.order = 1 := by omega
+      exact ⟨.bushy3 d₁ d₂ hd₁ hd₂⟩
 
 /-- Noncomputably choose the normalized order-3 witness. -/
 noncomputable def order_three_witness (t : BTree) (ht : t.order = 3) :
@@ -519,45 +559,46 @@ inductive OrderFourWitness : BTree → Type where
 /-- Compatibility chooser for the older order-4 ordered-list API. -/
 theorem order_four_witness_nonempty (t : BTree) (ht : t.order = 4) :
     Nonempty (OrderFourWitness t) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-    simp only [order_node] at ht
-    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 3 := by omega
-    cases children with
-    | nil => simp at hfoldr
-    | cons hd tl =>
-      simp only [List.foldr] at hfoldr
-      have hhd_pos : 0 < hd.order := by
-        cases hd <;> simp [order_node]
-      cases tl with
-      | nil =>
-        exact ⟨.single3 hd (by simp only [List.foldr] at hfoldr; omega)⟩
-      | cons hd2 tl2 =>
-        have hhd2_pos : 0 < hd2.order := by
-          cases hd2 <;> simp [order_node]
-        simp only [List.foldr] at hfoldr
-        cases tl2 with
-        | nil =>
-          have hsum : hd.order + hd2.order = 3 := by simpa using hfoldr
-          have hpair : (hd.order = 1 ∧ hd2.order = 2) ∨ (hd.order = 2 ∧ hd2.order = 1) := by
-            by_cases h1 : hd.order = 1
-            · exact Or.inl ⟨h1, by omega⟩
-            · exact Or.inr ⟨by omega, by omega⟩
-          exact ⟨.mixed4 hd hd2 hpair⟩
-        | cons hd3 tl3 =>
-          have hhd3_pos : 0 < hd3.order := by
-            cases hd3 <;> simp [order_node]
-          simp only [List.foldr] at hfoldr
-          cases tl3 with
-          | nil =>
-            exact ⟨.bushy4 hd hd2 hd3 (by omega) (by omega) (by omega)⟩
-          | cons hd4 tl4 =>
-            have hhd4_pos : 0 < hd4.order := by
-              cases hd4 <;> simp [order_node]
-            simp only [List.foldr] at hfoldr
-            have : tl4.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
-            omega
+  have hw4 : OrderFourBagWitness t := order_four_bag_witness t ht
+  cases hw4 with
+  | bushy4 children c₁ c₂ c₃ hc₁ hc₂ hc₃ hbag =>
+      rcases triple_children_exists_of_childrenBag_eq hbag with ⟨d₁, d₂, d₃, hchildren⟩
+      subst hchildren
+      have hsum : d₁.order + d₂.order + d₃.order = 3 := by
+        have horder := order_eq_of_childrenBag_eq_local hbag
+        have : 1 + (d₁.order + (d₂.order + d₃.order)) = 4 := by
+          simpa [hc₁, hc₂, hc₃, order_node, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using horder
+        omega
+      have hd₁_pos : 0 < d₁.order := by
+        cases d₁ <;> simp [order_node]
+      have hd₂_pos : 0 < d₂.order := by
+        cases d₂ <;> simp [order_node]
+      have hd₃_pos : 0 < d₃.order := by
+        cases d₃ <;> simp [order_node]
+      have hd₁ : d₁.order = 1 := by omega
+      have hd₂ : d₂.order = 1 := by omega
+      have hd₃ : d₃.order = 1 := by omega
+      exact ⟨.bushy4 d₁ d₂ d₃ hd₁ hd₂ hd₃⟩
+  | mixed4 children c₁ c₂ hcanon hbag =>
+      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨d₁, d₂, hchildren⟩
+      subst hchildren
+      have hsum : d₁.order + d₂.order = 3 := by
+        have horder := order_eq_of_childrenBag_eq_local hbag
+        have : 1 + (d₁.order + d₂.order) = 4 := by simpa [hcanon.1, hcanon.2, order_node] using horder
+        omega
+      have hd₁_pos : 0 < d₁.order := by
+        cases d₁ <;> simp [order_node]
+      have hd₂_pos : 0 < d₂.order := by
+        cases d₂ <;> simp [order_node]
+      have hpair : (d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1) := by
+        by_cases hd₁ : d₁.order = 1
+        · exact Or.inl ⟨hd₁, by omega⟩
+        · exact Or.inr ⟨by omega, by omega⟩
+      exact ⟨.mixed4 d₁ d₂ hpair⟩
+  | single3 children c hw3 hbag =>
+      have hchildren : children = [c] := singleton_children_eq_of_childrenBag_eq hbag
+      subst hchildren
+      exact ⟨.single3 c (order_threeBagWitness_order_eq hw3)⟩
 
 /-- Noncomputably choose the normalized order-4 witness. -/
 noncomputable def order_four_witness (t : BTree) (ht : t.order = 4) :
