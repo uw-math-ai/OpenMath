@@ -682,7 +682,9 @@ def run_claude(prompt: str, model: str = None, timeout: int = 1800,
 
     Returns stdout as a string.
     """
-    cmd = ["claude", "-p", "--dangerously-skip-permissions", "--verbose"]
+    cmd = ["claude", "-p", "--dangerously-skip-permissions"]
+    if not json_output:
+        cmd.append("--verbose")
     if model:
         cmd.extend(["--model", model])
     if json_output:
@@ -716,6 +718,26 @@ def run_claude(prompt: str, model: str = None, timeout: int = 1800,
 
 
 CODEX_CONDA_ENV = "/gscratch/amath/vilin/conda/envs/codex"
+
+
+def parse_evaluator_output(output: str) -> dict:
+    """Parse evaluator output from raw JSON or the Claude CLI JSON envelope."""
+    parsed = json.loads(output.strip())
+
+    if isinstance(parsed, dict) and parsed.get("type") == "result":
+        if parsed.get("is_error"):
+            raise ValueError(parsed.get("result", "Claude CLI returned an error"))
+        result = parsed.get("result")
+        if isinstance(result, dict):
+            return result
+        if isinstance(result, str):
+            return json.loads(result.strip())
+        raise ValueError("Claude CLI JSON output did not contain a JSON result payload")
+
+    if isinstance(parsed, dict):
+        return parsed
+
+    raise ValueError("Evaluator output was not a JSON object")
 
 def run_codex(prompt: str, timeout: int = 1800) -> str:
     """Run a fresh Codex CLI session with the given prompt.
@@ -946,17 +968,13 @@ Output a JSON object with these fields:
 
 Respond with ONLY the JSON object, no other text.
 """
-    output = run_claude(prompt, model="sonnet", timeout=1800, json_output=False)
+    output = run_claude(prompt, model="sonnet", timeout=1800, json_output=True)
 
     # Parse JSON from output
     try:
-        # Try to find JSON in the output
-        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', output, re.DOTALL)
-        if json_match:
-            result = json.loads(json_match.group())
-        else:
-            result = json.loads(output.strip())
-    except (json.JSONDecodeError, AttributeError):
+        result = parse_evaluator_output(output)
+    except (json.JSONDecodeError, AttributeError, ValueError) as e:
+        log(f"Failed to parse evaluator output as JSON: {e}")
         log(f"Failed to parse evaluator output as JSON: {output[:500]}")
         result = {
             "progress_score": 0,
