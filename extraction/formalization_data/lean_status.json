@@ -5,9 +5,9 @@
     "status": "unformalized"
   },
   "def:110A": {
-    "lean_file": "OpenMath/PicardLindelof.lean",
-    "lean_symbol": "IsLipschitzInSecondVar",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "lem:110B": {
     "lean_file": null,
@@ -15,9 +15,9 @@
     "status": "unformalized"
   },
   "thm:110C": {
-    "lean_file": "OpenMath/PicardLindelof.lean",
-    "lean_symbol": "PicardLindelof.exists_unique",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:111A": {
     "lean_file": null,
@@ -25,14 +25,14 @@
     "status": "unformalized"
   },
   "def:112A": {
-    "lean_file": "OpenMath/Stiffness.lean",
-    "lean_symbol": "IsOneSidedLipschitz",
-    "status": "formalized"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:112B": {
-    "lean_file": "OpenMath/Stiffness.lean",
-    "lean_symbol": "oneSidedLipschitz_solution_bound",
-    "status": "formalized"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:123A": {
     "lean_file": null,
@@ -85,14 +85,14 @@
     "status": "unformalized"
   },
   "thm:212A": {
-    "lean_file": "OpenMath/Basic.lean",
-    "lean_symbol": "theorem_212A",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:213A": {
-    "lean_file": "OpenMath/EulerConvergence.lean",
-    "lean_symbol": "euler_convergence_order1",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:213B": {
     "lean_file": null,
@@ -105,9 +105,9 @@
     "status": "unformalized"
   },
   "thm:301A": {
-    "lean_file": "OpenMath/RootedTree.lean",
-    "lean_symbol": "BTree.order_node",
-    "status": "in_progress"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:302A": {
     "lean_file": null,
@@ -255,9 +255,9 @@
     "status": "unformalized"
   },
   "thm:342C": {
-    "lean_file": "OpenMath/Collocation.lean",
-    "lean_symbol": "ButcherTableau.SatisfiesC_of_B_E",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "cor:342D": {
     "lean_file": null,
@@ -265,14 +265,14 @@
     "status": "unformalized"
   },
   "thm:343A": {
-    "lean_file": "OpenMath/ReflectedMethods.lean",
-    "lean_symbol": "ButcherTableau.reflect_reflect",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:343B": {
-    "lean_file": "OpenMath/ReflectedMethods.lean",
-    "lean_symbol": "ButcherTableau.reflect_satisfiesB",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:344A": {
     "lean_file": null,
@@ -290,9 +290,9 @@
     "status": "unformalized"
   },
   "thm:351B": {
-    "lean_file": "OpenMath/AStabilityCriterion.lean",
-    "lean_symbol": "aStable_with_nonvanishing_iff",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:352A": {
     "lean_file": null,
@@ -305,14 +305,14 @@
     "status": "unformalized"
   },
   "thm:352C": {
-    "lean_file": "OpenMath/Pade.lean",
-    "lean_symbol": "padePQ_pair_recurrence",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:352D": {
-    "lean_file": "OpenMath/Pade.lean",
-    "lean_symbol": "padeQ_succ_left",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:352E": {
     "lean_file": null,
@@ -320,19 +320,19 @@
     "status": "unformalized"
   },
   "thm:353A": {
-    "lean_file": "OpenMath/PadeOrder.lean",
-    "lean_symbol": "pade_approximation_order",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "def:355A": {
-    "lean_file": "OpenMath/OrderStars.lean",
-    "lean_symbol": "IsUpArrowDir",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:355B": {
-    "lean_file": "OpenMath/OrderStars.lean",
-    "lean_symbol": "arrow_up_of_neg_errorConst",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:355C": {
     "lean_file": null,
@@ -340,64 +340,64 @@
     "status": "unformalized"
   },
   "thm:355D": {
-    "lean_file": "OpenMath/OrderStars.lean",
-    "lean_symbol": "thm_355D",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:355E": {
-    "lean_file": "OpenMath/OrderStars.lean",
-    "lean_symbol": "thm_355E",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:355F": {
-    "lean_file": "OpenMath/OrderStars.lean",
-    "lean_symbol": "aStable_imagAxis_not_orderStarPlus",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:355G": {
-    "lean_file": "OpenMath/OrderStars.lean",
-    "lean_symbol": "ehle_barrier",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "def:356A": {
-    "lean_file": "OpenMath/ANStability.lean",
-    "lean_symbol": "ButcherTableau.IsANStable",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "def:356B": {
-    "lean_file": "OpenMath/ANStability.lean",
-    "lean_symbol": "ButcherTableau.IsDJReducible",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:356C": {
-    "lean_file": "OpenMath/ANStability.lean",
-    "lean_symbol": "an_stable_implies_alg_stable",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "cor:356D": {
-    "lean_file": "OpenMath/ANStability.lean",
-    "lean_symbol": "ButcherTableau.cor_356D",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "def:357A": {
-    "lean_file": "OpenMath/BNStability.lean",
-    "lean_symbol": "ButcherTableau.IsBNStable",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "def:357B": {
-    "lean_file": "OpenMath/StiffEquations.lean",
-    "lean_symbol": "ButcherTableau.IsAlgStable",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:357C": {
-    "lean_file": "OpenMath/BNStability.lean",
-    "lean_symbol": "alg_stable_implies_bn_stable",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:357D": {
-    "lean_file": "OpenMath/BNImpliesAN.lean",
-    "lean_symbol": "ButcherTableau.bnStable_implies_anStable",
-    "status": "done"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "thm:358A": {
     "lean_file": null,
