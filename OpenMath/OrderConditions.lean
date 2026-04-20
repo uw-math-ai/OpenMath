@@ -548,26 +548,42 @@ private theorem ew_of_order_four_mixed12 (tab : ButcherTableau s) (t : BTree)
   simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁, ew_of_order_two tab c₂ hc₂]
   exact mul_comm _ _
 
-/-- Mixed order-4 tree [order-2, order-1]: ew same as [order-1, order-2] by commutativity. -/
-private theorem ew_of_order_four_mixed21 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 1)
-    (i : Fin s) :
-    tab.elementaryWeight t i =
-      (∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
-  rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
-  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₂ hc₂, ew_of_order_two tab c₁ hc₁]
-
-/-- Mixed order-4 tree [c₁,c₂] with orders summing to 3 has density 8. -/
+/-- Mixed order-4 tree [order-1, order-2] has density 8. -/
 private theorem density_of_order_four_mixed (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
-      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1))) :
+    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 2) :
     t.density = 8 := by
-  rcases h with ⟨c₁, c₂, rfl, _, hord⟩
-  rcases hord with ⟨hc₁, hc₂⟩ | ⟨hc₁, hc₂⟩
-  · simp only [density_node, order_node, List.foldr]
-    rw [density_of_order_one c₁ hc₁, density_of_order_two c₂ hc₂, hc₁, hc₂]
-  · simp only [density_node, order_node, List.foldr]
-    rw [density_of_order_two c₁ hc₁, density_of_order_one c₂ hc₂, hc₁, hc₂]
+  rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+  simp only [density_node, order_node, List.foldr]
+  rw [density_of_order_one c₁ hc₁, density_of_order_two c₂ hc₂, hc₁, hc₂]
+
+/-- Transport the canonical mixed `{1,2}` elementary weight across bag-equal
+two-child representations. -/
+private theorem ew_of_order_four_mixed_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag)
+    (i : Fin s) :
+    tab.elementaryWeight (.node [d₁, d₂]) i =
+      (∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+  calc
+    tab.elementaryWeight (.node [d₁, d₂]) i =
+        tab.elementaryWeight (.node [c₁, c₂]) i :=
+      elementaryWeight_eq_of_childrenBag_eq tab hbag i
+    _ =
+        (∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) :=
+      ew_of_order_four_mixed12 tab (.node [c₁, c₂]) ⟨c₁, c₂, rfl, hcanon.1, hcanon.2⟩ i
+
+/-- Mixed order-4 density depends only on the unordered two-child witness. -/
+private theorem density_of_order_four_mixed_eq_of_childrenBag_eq
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+    (BTree.node [d₁, d₂]).density = 8 := by
+  calc
+    (BTree.node [d₁, d₂]).density = (BTree.node [c₁, c₂]).density :=
+      BTree.density_eq_of_childrenBag_eq hbag
+    _ = 8 :=
+      density_of_order_four_mixed (.node [c₁, c₂]) ⟨c₁, c₂, rfl, hcanon.1, hcanon.2⟩
 
 /-- Order-4 via bushy-3 child: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)². -/
 private theorem ew_of_order_four_via_bushy3 (tab : ButcherTableau s) (t : BTree)
@@ -657,16 +673,30 @@ private theorem satisfiesTreeCondition_order_four_mixed12 (tab : ButcherTableau 
     tab.satisfiesTreeCondition t ↔
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 8 := by
-  have hmixed : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order + c₂.order = 3 ∧
-      ((c₁.order = 1 ∧ c₂.order = 2) ∨ (c₁.order = 2 ∧ c₂.order = 1)) := by
-    rcases h with ⟨c₁, c₂, rfl, hc₁, hc₂⟩
-    exact ⟨c₁, c₂, rfl, by omega, Or.inl ⟨hc₁, hc₂⟩⟩
-  simp only [satisfiesTreeCondition, density_of_order_four_mixed t hmixed]
+  simp only [satisfiesTreeCondition, density_of_order_four_mixed t h]
   constructor
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact (ew_of_order_four_mixed12 tab t h i).symm
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_four_mixed12 tab t h i
+
+/-- Transport the canonical mixed `{1,2}` tree condition across bag-equal
+two-child representations. -/
+private theorem satisfiesTreeCondition_order_four_mixed_eq_of_childrenBag_eq
+    (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 2)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+    tab.satisfiesTreeCondition (BTree.node [d₁, d₂]) ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 8 := by
+  simp only [satisfiesTreeCondition,
+    density_of_order_four_mixed_eq_of_childrenBag_eq c₁ c₂ d₁ d₂ hcanon hbag]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_four_mixed_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ hcanon hbag i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_four_mixed_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ hcanon hbag i
 
 /-- Mixed order-4 nodes are canonical up to swapping the ordered child witnesses. -/
 private theorem satisfiesTreeCondition_order_four_mixed_canonical (tab : ButcherTableau s)
@@ -679,16 +709,10 @@ private theorem satisfiesTreeCondition_order_four_mixed_canonical (tab : Butcher
   · simpa using
       (satisfiesTreeCondition_order_four_mixed12 tab (.node [c₁, c₂])
         ⟨c₁, c₂, rfl, hc₁, hc₂⟩)
-  · have hcanon :
-        tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔ tab.satisfiesTreeCondition (.node [c₂, c₁]) := by
-      simpa using
-        (satisfiesTreeCondition_eq_of_childrenBag_eq tab
-          (children₁ := [c₁, c₂]) (children₂ := [c₂, c₁])
-          (BTree.node_childrenBag_eq_swap c₁ c₂))
-    rw [hcanon]
-    simpa using
-      (satisfiesTreeCondition_order_four_mixed12 tab (.node [c₂, c₁])
-        ⟨c₂, c₁, rfl, hc₂, hc₁⟩)
+  · simpa using
+      satisfiesTreeCondition_order_four_mixed_eq_of_childrenBag_eq tab
+        c₂ c₁ c₁ c₂ ⟨hc₂, hc₁⟩
+        (BTree.node_childrenBag_eq_swap c₁ c₂)
 
 /-- Via-bushy3 satisfies tree condition iff ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ)²) = 1/12. -/
 private theorem satisfiesTreeCondition_order_four_via_bushy3 (tab : ButcherTableau s) (t : BTree)
