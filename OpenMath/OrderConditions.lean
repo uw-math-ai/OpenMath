@@ -1263,12 +1263,12 @@ private theorem satisfiesTreeCondition_order_five_chain3_1 (tab : ButcherTableau
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
-  simp only [satisfiesTreeCondition, density_of_order_five_chain3_1 t h]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_chain3_1 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_chain3_1 tab t h i
+  rcases h with ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩
+  exact
+    (satisfiesTreeCondition_eq_of_childrenBag_eq tab
+      (BTree.node_childrenBag_eq_swap c₁ c₂)).trans <|
+      satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₂, c₁])
+        ⟨c₂, c₁, rfl, hc₂, d, hc₁, hd⟩
 
 /-- [order-2, order-2] tree condition: sum = 1/20. -/
 private theorem satisfiesTreeCondition_order_five_22 (tab : ButcherTableau s) (t : BTree)
