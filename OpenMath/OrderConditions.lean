@@ -1630,6 +1630,75 @@ private theorem satisfiesTreeCondition_order_five_caseC (tab : ButcherTableau s)
       rw [order5d_sum_eq tab hrc]
       exact h5d
 
+/-- Normalized witness for the order-5 singleton-child family with an order-4 child. -/
+private inductive OrderFiveCaseDWitness (c : BTree) : Prop where
+  | bushy4 (d₁ d₂ d₃ : BTree)
+      (hc : c = .node [d₁, d₂, d₃]) (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1)
+      (hd₃ : d₃.order = 1) :
+      OrderFiveCaseDWitness c
+  | mixed4 (d₁ d₂ : BTree)
+      (hc : c = .node [d₁, d₂])
+      (hpair : (d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) :
+      OrderFiveCaseDWitness c
+  | viaChain3 (d e : BTree)
+      (hc : c = .node [d]) (hd : d = .node [e]) (he : e.order = 2) :
+      OrderFiveCaseDWitness c
+  | viaBushy3 (d e₁ e₂ : BTree)
+      (hc : c = .node [d]) (hd : d = .node [e₁, e₂]) (he₁ : e₁.order = 1)
+      (he₂ : e₂.order = 1) :
+      OrderFiveCaseDWitness c
+
+/-- Normalize an order-4 child into the bushy-4 / mixed-4 / via-chain3 / via-bushy3 families. -/
+private theorem order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
+    OrderFiveCaseDWitness c := by
+  rcases order_four_cases c hc with hbushy4 | hmixed | hsingle
+  · rcases hbushy4 with ⟨d₁, d₂, d₃, hc_eq, hd₁, hd₂, hd₃⟩
+    exact .bushy4 d₁ d₂ d₃ hc_eq hd₁ hd₂ hd₃
+  · rcases hmixed with ⟨d₁, d₂, hc_eq, _, hpair⟩
+    exact .mixed4 d₁ d₂ hc_eq hpair
+  · rcases hsingle with ⟨d, hc_eq, hd⟩
+    rcases order_three_cases d hd with hchain | hbushy
+    · rcases hchain with ⟨e, hd_eq, he⟩
+      exact .viaChain3 d e hc_eq hd_eq he
+    · rcases hbushy with ⟨e₁, e₂, hd_eq, he₁, he₂⟩
+      exact .viaBushy3 d e₁ e₂ hc_eq hd_eq he₁ he₂
+
+/-- Canonical dispatcher for the order-5 singleton-child family with an order-4 child. -/
+private theorem satisfiesTreeCondition_order_five_caseD (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) (c : BTree) (hwit : OrderFiveCaseDWitness c)
+    (h5e :
+      ∑ i : Fin s, ∑ j : Fin s, tab.b i * tab.A i j * tab.c j ^ 3 = 1 / 20)
+    (h5g :
+      ∑ i : Fin s, ∑ j : Fin s,
+        tab.b i * tab.A i j * tab.c j * (∑ k : Fin s, tab.A j k * tab.c k) = 1 / 40)
+    (h5h :
+      ∑ i : Fin s, ∑ j : Fin s,
+        tab.b i * tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k ^ 2) = 1 / 60)
+    (h5i :
+      ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+        tab.b i * tab.A i j * tab.A j k * (∑ l : Fin s, tab.A k l * tab.c l) = 1 / 120) :
+    tab.satisfiesTreeCondition (.node [c]) := by
+  cases hwit with
+  | bushy4 d₁ d₂ d₃ hc hd₁ hd₂ hd₃ =>
+      rw [satisfiesTreeCondition_order_five_via_bushy4 tab (.node [c])
+        ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩]
+      rw [order5e_sum_eq tab hrc]
+      exact h5e
+  | mixed4 d₁ d₂ hc hpair =>
+      rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc hpair]
+      rw [order5g_sum_eq tab hrc]
+      exact h5g
+  | viaChain3 d e hc hd he =>
+      rw [satisfiesTreeCondition_order_five_via_via_chain3 tab (.node [c])
+        ⟨c, rfl, d, hc, e, hd, he⟩]
+      rw [order5i_sum_eq tab hrc]
+      exact h5i
+  | viaBushy3 d e₁ e₂ hc hd he₁ he₂ =>
+      rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab (.node [c])
+        ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩]
+      rw [order5h_sum_eq tab hrc]
+      exact h5h
+
 /-- Theorem 301A at order 5 (assuming row-sum consistency). -/
 theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     tab.hasTreeOrder 5 ↔ tab.HasOrderGe5 := by
@@ -1729,28 +1798,26 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         exact satisfiesTreeCondition_order_five_caseC tab hrc c₁ c₂ hCaseC h5c' h5d' h5f'
       · -- Case D: single order-4 child
         rcases hD with ⟨c, rfl, hc⟩
-        rcases order_four_cases c hc with hbushy4 | hmixed | hsingle
-        · -- child is bushy-4 = [d₁, d₂, d₃] all order 1
-          rcases hbushy4 with ⟨d₁, d₂, d₃, hc_eq, hd₁, hd₂, hd₃⟩
-          rw [satisfiesTreeCondition_order_five_via_bushy4 tab _
-            ⟨c, rfl, d₁, d₂, d₃, hc_eq, hd₁, hd₂, hd₃⟩]
-          rw [order5e] at h5e; simpa [order5e_sum_eq tab hrc] using h5e
-        · -- child is mixed-4 = [d₁, d₂] with {1,2} or {2,1}
-          rcases hmixed with ⟨d₁, d₂, hc_eq, _, hord⟩
-          rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc_eq hord]
-          rw [order5g] at h5g; simpa [order5g_sum_eq tab hrc] using h5g
-        · -- child is single order-3 child
-          rcases hsingle with ⟨d, hc_eq, hd⟩
-          rcases order_three_cases d hd with hchain | hbushy
-          · -- d is chain-3
-            rcases hchain with ⟨e, he_eq, he⟩
-            rw [satisfiesTreeCondition_order_five_via_via_chain3 tab _
-              ⟨c, rfl, d, hc_eq, e, he_eq, he⟩]
-            rw [order5i] at h5i; simpa [order5i_sum_eq tab hrc] using h5i
-          · -- d is bushy-3
-            rcases hbushy with ⟨e₁, e₂, he_eq, he₁, he₂⟩
-            rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab _
-              ⟨c, rfl, d, hc_eq, e₁, e₂, he_eq, he₁, he₂⟩]
-            rw [order5h] at h5h; simpa [order5h_sum_eq tab hrc] using h5h
+        have hCaseD : OrderFiveCaseDWitness c := order_five_caseD_witness c hc
+        have h5e' :
+            ∑ i : Fin s, ∑ j : Fin s, tab.b i * tab.A i j * tab.c j ^ 3 = 1 / 20 := by
+          rw [order5e] at h5e
+          exact h5e
+        have h5g' :
+            ∑ i : Fin s, ∑ j : Fin s,
+              tab.b i * tab.A i j * tab.c j * (∑ k : Fin s, tab.A j k * tab.c k) = 1 / 40 := by
+          rw [order5g] at h5g
+          exact h5g
+        have h5h' :
+            ∑ i : Fin s, ∑ j : Fin s,
+              tab.b i * tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k ^ 2) = 1 / 60 := by
+          rw [order5h] at h5h
+          exact h5h
+        have h5i' :
+            ∑ i : Fin s, ∑ j : Fin s, ∑ k : Fin s,
+              tab.b i * tab.A i j * tab.A j k * (∑ l : Fin s, tab.A k l * tab.c l) = 1 / 120 := by
+          rw [order5i] at h5i
+          simpa [order5i_sum_eq tab hrc] using h5i
+        exact satisfiesTreeCondition_order_five_caseD tab hrc c hCaseD h5e' h5g' h5h' h5i'
 
 end ButcherTableau
