@@ -844,12 +844,14 @@ theorem order_three_bag_witness_recover {t : BTree} (hw3 : OrderThreeBagWitness 
 inductive OrderFiveCaseCWitness (c₁ c₂ : BTree) : Type where
   | ord22 (hc₁ : c₁.order = 2) (hc₂ : c₂.order = 2) : OrderFiveCaseCWitness c₁ c₂
   | chain3 (d : BTree)
-      (hpair : (c₁.order = 1 ∧ c₂ = .node [d] ∧ d.order = 2) ∨
-        (c₁ = .node [d] ∧ d.order = 2 ∧ c₂.order = 1)) :
+      (hpair : (c₁.order = 1 ∧ c₂.childrenBag = (BTree.node [d]).childrenBag ∧ d.order = 2) ∨
+        (c₁.childrenBag = (BTree.node [d]).childrenBag ∧ d.order = 2 ∧ c₂.order = 1)) :
       OrderFiveCaseCWitness c₁ c₂
   | bushy3 (d₁ d₂ : BTree)
-      (hpair : (c₁.order = 1 ∧ c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) ∨
-        (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) :
+      (hpair : (c₁.order = 1 ∧ c₂.childrenBag = (BTree.node [d₁, d₂]).childrenBag ∧
+          d₁.order = 1 ∧ d₂.order = 1) ∨
+        (c₁.childrenBag = (BTree.node [d₁, d₂]).childrenBag ∧ d₁.order = 1 ∧
+          d₂.order = 1 ∧ c₂.order = 1)) :
       OrderFiveCaseCWitness c₁ c₂
 
 /-- Package the order-5 two-child `sum = 4` classification in rooted-tree form. -/
@@ -870,15 +872,17 @@ theorem order_five_caseC_witness_nonempty (c₁ c₂ : BTree)
           omega
     rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
     · have hw3 : OrderThreeBagWitness c₂ := order_three_bag_witness c₂ hc₂
-      rcases order_three_bag_witness_recover hw3 with
-        ⟨d, hdnode, hdorder⟩ | ⟨d₁, d₂, hdnode, hd₁, hd₂⟩
-      · exact ⟨.chain3 d <| Or.inl ⟨h1, hdnode, hdorder⟩⟩
-      · exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, hdnode, hd₁, hd₂⟩⟩
+      cases hw3 with
+      | chain3 _ d hdorder hbag =>
+          exact ⟨.chain3 d <| Or.inl ⟨h1, by simpa using hbag, hdorder⟩⟩
+      | bushy3 _ d₁ d₂ hd₁ hd₂ hbag =>
+          exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, by simpa using hbag, hd₁, hd₂⟩⟩
     · have hw3 : OrderThreeBagWitness c₁ := order_three_bag_witness c₁ hc₁
-      rcases order_three_bag_witness_recover hw3 with
-        ⟨d, hdnode, hdorder⟩ | ⟨d₁, d₂, hdnode, hd₁, hd₂⟩
-      · exact ⟨.chain3 d <| Or.inr ⟨hdnode, hdorder, h2⟩⟩
-      · exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨hdnode, hd₁, hd₂, h2⟩⟩
+      cases hw3 with
+      | chain3 _ d hdorder hbag =>
+          exact ⟨.chain3 d <| Or.inr ⟨by simpa using hbag, hdorder, h2⟩⟩
+      | bushy3 _ d₁ d₂ hd₁ hd₂ hbag =>
+          exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨by simpa using hbag, hd₁, hd₂, h2⟩⟩
 
 /-- Noncomputably choose the normalized order-5 two-child Case C witness. -/
 noncomputable def order_five_caseC_witness (c₁ c₂ : BTree)
