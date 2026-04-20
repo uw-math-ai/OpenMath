@@ -1735,6 +1735,38 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
   constructor
   · -- Forward: hasTreeOrder 5 → HasOrderGe5
     intro h
+    have extract_caseD_forward :
+        (∀ {c d₁ d₂ d₃ : BTree}, c = .node [d₁, d₂, d₃] →
+          d₁.order = 1 → d₂.order = 1 → d₃.order = 1 →
+          tab.satisfiesTreeCondition (.node [c]) → tab.order5e) ∧
+        (∀ {c d₁ d₂ : BTree}, c = .node [d₁, d₂] →
+          ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) →
+          tab.satisfiesTreeCondition (.node [c]) → tab.order5g) ∧
+        (∀ {c d e₁ e₂ : BTree}, c = .node [d] → d = .node [e₁, e₂] →
+          e₁.order = 1 → e₂.order = 1 →
+          tab.satisfiesTreeCondition (.node [c]) → tab.order5h) ∧
+        (∀ {c d e : BTree}, c = .node [d] → d = .node [e] → e.order = 2 →
+          tab.satisfiesTreeCondition (.node [c]) → tab.order5i) := by
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · intro c d₁ d₂ d₃ hc hd₁ hd₂ hd₃ ht
+        rw [satisfiesTreeCondition_order_five_via_bushy4 tab (.node [c])
+          ⟨c, rfl, d₁, d₂, d₃, hc, hd₁, hd₂, hd₃⟩] at ht
+        simp only [order5e]
+        simpa [order5e_sum_eq tab hrc] using ht
+      · intro c d₁ d₂ hc hpair ht
+        rw [satisfiesTreeCondition_order_five_via_mixed_canonical tab c d₁ d₂ hc hpair] at ht
+        simp only [order5g]
+        simpa [order5g_sum_eq tab hrc] using ht
+      · intro c d e₁ e₂ hc hd he₁ he₂ ht
+        rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab (.node [c])
+          ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩] at ht
+        simp only [order5h]
+        simpa [order5h_sum_eq tab hrc] using ht
+      · intro c d e hc hd he ht
+        rw [satisfiesTreeCondition_order_five_via_via_chain3 tab (.node [c])
+          ⟨c, rfl, d, hc, e, hd, he⟩] at ht
+        simp only [order5i]
+        simpa [order5i_sum_eq tab hrc] using ht
     have h4 : tab.HasOrderGe4 := (thm_301A_order4 tab hrc).mp (fun t ht => h t (by omega))
     refine ⟨h4, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · -- order5a from t5a = [leaf⁴]
@@ -1759,9 +1791,9 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       rw [order5d]; simpa [order5d_sum_eq tab hrc] using ht
     · -- order5e from t5f = [t4a] where t4a = [leaf, leaf, leaf]
       have ht := h t5f (by native_decide)
-      rw [satisfiesTreeCondition_order_five_via_bushy4 tab t5f
-        ⟨t4a, rfl, .leaf, .leaf, .leaf, rfl, by simp, by simp, by simp⟩] at ht
-      rw [order5e]; simpa [order5e_sum_eq tab hrc] using ht
+      simpa using extract_caseD_forward.1
+        (c := t4a) (d₁ := .leaf) (d₂ := .leaf) (d₃ := .leaf)
+        rfl (by simp) (by simp) (by simp) (by simpa using ht)
     · -- order5f from t5d = [leaf, t3b]
       have ht := h t5d (by native_decide)
       rw [satisfiesTreeCondition_order_five_1_chain3 tab t5d
@@ -1769,19 +1801,18 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       rw [order5f]; simpa [order5f_sum_eq tab hrc] using ht
     · -- order5g from t5g = [t4b] where t4b = [leaf, t2]
       have ht := h t5g (by native_decide)
-      rw [satisfiesTreeCondition_order_five_via_mixed12 tab t5g
-        ⟨t4b, rfl, .leaf, t2, rfl, by simp, by native_decide⟩] at ht
-      rw [order5g]; simpa [order5g_sum_eq tab hrc] using ht
+      simpa using extract_caseD_forward.2.1
+        (c := t4b) (d₁ := .leaf) (d₂ := t2) rfl
+        (Or.inl ⟨by simp, by native_decide⟩) (by simpa using ht)
     · -- order5h from t5h = [t4c] where t4c = [t3a] = [[leaf, leaf]]
       have ht := h t5h (by native_decide)
-      rw [satisfiesTreeCondition_order_five_via_via_bushy3 tab t5h
-        ⟨t4c, rfl, t3a, rfl, .leaf, .leaf, rfl, by simp, by simp⟩] at ht
-      rw [order5h]; simpa [order5h_sum_eq tab hrc] using ht
+      simpa using extract_caseD_forward.2.2.1
+        (c := t4c) (d := t3a) (e₁ := .leaf) (e₂ := .leaf)
+        rfl rfl (by simp) (by simp) (by simpa using ht)
     · -- order5i from t5i = [t4d] where t4d = [t3b] = [[t2]]
       have ht := h t5i (by native_decide)
-      rw [satisfiesTreeCondition_order_five_via_via_chain3 tab t5i
-        ⟨t4d, rfl, t3b, rfl, t2, rfl, by native_decide⟩] at ht
-      rw [order5i]; simpa [order5i_sum_eq tab hrc] using ht
+      simpa using extract_caseD_forward.2.2.2
+        (c := t4d) (d := t3b) (e := t2) rfl rfl (by native_decide) (by simpa using ht)
   · -- Reverse: HasOrderGe5 → hasTreeOrder 5
     rintro ⟨h4, h5a, h5b, h5c, h5d, h5e, h5f, h5g, h5h, h5i⟩ t ht
     have hpos := BTree.order_pos t
