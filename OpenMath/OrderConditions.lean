@@ -1746,45 +1746,15 @@ private theorem order_five_caseC_witness_nonempty (c₁ c₂ : BTree)
           omega
     rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
     · have hw3 : BTree.OrderThreeBagWitness c₂ := BTree.order_three_bag_witness c₂ hc₂
-      cases hw3 with
-      | chain3 children d hd hbag =>
-        have hchildren : children = [d] := BTree.singleton_children_eq_of_childrenBag_eq hbag
-        exact ⟨.chain3 d <| Or.inl ⟨h1, by simpa [hchildren], hd⟩⟩
-      | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
-        rcases BTree.pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
-        have hsume : e₁.order + e₂.order = 2 := by
-          have horder : 1 + (e₁.order + e₂.order) = 3 := by
-            simpa [hchildren, BTree.order_node] using hc₂
-          omega
-        have he₁ : e₁.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        have he₂ : e₂.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        exact ⟨.bushy3 e₁ e₂ <| Or.inl ⟨h1, by simpa [hchildren], he₁, he₂⟩⟩
+      rcases BTree.order_three_bag_witness_recover hw3 with
+        ⟨d, hdnode, hdorder⟩ | ⟨d₁, d₂, hdnode, hd₁, hd₂⟩
+      · exact ⟨.chain3 d <| Or.inl ⟨h1, hdnode, hdorder⟩⟩
+      · exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, hdnode, hd₁, hd₂⟩⟩
     · have hw3 : BTree.OrderThreeBagWitness c₁ := BTree.order_three_bag_witness c₁ hc₁
-      cases hw3 with
-      | chain3 children d hd hbag =>
-        have hchildren : children = [d] := BTree.singleton_children_eq_of_childrenBag_eq hbag
-        exact ⟨.chain3 d <| Or.inr ⟨by simpa [hchildren], hd, h2⟩⟩
-      | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
-        rcases BTree.pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
-        have hsume : e₁.order + e₂.order = 2 := by
-          have horder : 1 + (e₁.order + e₂.order) = 3 := by
-            simpa [hchildren, BTree.order_node] using hc₁
-          omega
-        have he₁ : e₁.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        have he₂ : e₂.order = 1 := by
-          have he₁_pos := BTree.order_pos e₁
-          have he₂_pos := BTree.order_pos e₂
-          omega
-        exact ⟨.bushy3 e₁ e₂ <| Or.inr ⟨by simpa [hchildren], he₁, he₂, h2⟩⟩
+      rcases BTree.order_three_bag_witness_recover hw3 with
+        ⟨d, hdnode, hdorder⟩ | ⟨d₁, d₂, hdnode, hd₁, hd₂⟩
+      · exact ⟨.chain3 d <| Or.inr ⟨hdnode, hdorder, h2⟩⟩
+      · exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨hdnode, hd₁, hd₂, h2⟩⟩
 
 /-- Noncomputably choose the normalized order-5 two-child Case C witness. -/
 private noncomputable def order_five_caseC_witness (c₁ c₂ : BTree)
