@@ -11,9 +11,52 @@ are distinct values in this fallback representation. -/
 inductive BTree : Type
   | leaf : BTree
   | node : List BTree → BTree
-  deriving BEq, Repr
+  deriving Repr
 
 namespace BTree
+
+mutual
+  private def beq : BTree → BTree → Bool
+    | .leaf, .leaf => true
+    | .node children₁, .node children₂ => beqList children₁ children₂
+    | _, _ => false
+
+  private def beqList : List BTree → List BTree → Bool
+    | [], [] => true
+    | t₁ :: ts₁, t₂ :: ts₂ => beq t₁ t₂ && beqList ts₁ ts₂
+    | _, _ => false
+end
+
+instance : BEq BTree := ⟨beq⟩
+
+mutual
+  private theorem beq_eq_true_iff : ∀ t₁ t₂ : BTree, beq t₁ t₂ = true ↔ t₁ = t₂
+    | .leaf, .leaf => by simp [beq]
+    | .leaf, .node _ => by simp [beq]
+    | .node _, .leaf => by simp [beq]
+    | .node children₁, .node children₂ => by
+        simpa [beq] using beqList_eq_true_iff children₁ children₂
+
+  private theorem beqList_eq_true_iff :
+      ∀ children₁ children₂ : List BTree, beqList children₁ children₂ = true ↔ children₁ = children₂
+    | [], [] => by simp [beqList]
+    | [], _ :: _ => by simp [beqList]
+    | _ :: _, [] => by simp [beqList]
+    | t₁ :: ts₁, t₂ :: ts₂ => by
+        simp [beqList, beq_eq_true_iff t₁ t₂, beqList_eq_true_iff ts₁ ts₂]
+end
+
+instance : ReflBEq BTree where
+  rfl := by
+    intro t
+    exact (beq_eq_true_iff t t).2 rfl
+
+instance : LawfulBEq BTree where
+  eq_of_beq := by
+    intro a b h
+    exact (beq_eq_true_iff a b).1 h
+
+noncomputable instance : DecidableEq BTree := Classical.decEq _
 
 /-- The current ordered child list representation. -/
 def childrenList : BTree → List BTree
@@ -352,6 +395,130 @@ theorem density_node_perm {children₁ children₂ : List BTree}
     (BTree.node children₁).density = (BTree.node children₂).density := by
   rw [density_node_prod, density_node_prod, order_node_perm hperm,
       (hperm.map BTree.density).prod_eq]
+
+private theorem symmetryScan_eq_foldr_dedup (allChildren remaining : List BTree) :
+    symmetryScan allChildren remaining =
+      remaining.dedup.foldr
+        (fun t n =>
+          (allChildren.count t).factorial * t.symmetry ^ (allChildren.count t) * n)
+        1 := by
+  classical
+  induction remaining with
+  | nil =>
+      simp [symmetryScan]
+  | cons hd tl ih =>
+      by_cases hcontains : tl.contains hd = true
+      · have hmem : hd ∈ tl := List.contains_iff_mem.mp hcontains
+        calc
+          symmetryScan allChildren (hd :: tl)
+              = symmetryScan allChildren tl := by
+                  rw [symmetryScan, if_pos hcontains]
+          _ = tl.dedup.foldr
+                (fun t n =>
+                  (allChildren.count t).factorial * t.symmetry ^ (allChildren.count t) * n)
+                1 := ih
+          _ = (hd :: tl).dedup.foldr
+                (fun t n =>
+                  (allChildren.count t).factorial * t.symmetry ^ (allChildren.count t) * n)
+                1 := by rw [List.dedup_cons_of_mem hmem]
+      · have hfalse : tl.contains hd = false := by
+          exact Bool.eq_false_iff.mpr hcontains
+        have hnotmem : hd ∉ tl := by
+          intro hmem
+          exact hcontains (List.contains_iff_mem.mpr hmem)
+        calc
+          symmetryScan allChildren (hd :: tl)
+              = (allChildren.count hd).factorial * hd.symmetry ^ (allChildren.count hd) *
+                  symmetryScan allChildren tl := by
+                    rw [symmetryScan, if_neg hcontains]
+          _ = (allChildren.count hd).factorial * hd.symmetry ^ (allChildren.count hd) *
+                tl.dedup.foldr
+                  (fun t n =>
+                    (allChildren.count t).factorial * t.symmetry ^ (allChildren.count t) * n)
+                  1 := by rw [ih]
+          _ = (hd :: tl).dedup.foldr
+                (fun t n =>
+                  (allChildren.count t).factorial * t.symmetry ^ (allChildren.count t) * n)
+                1 := by simp [List.dedup_cons_of_notMem hnotmem]
+
+/-- The symmetry of a node depends only on the multiset of its children. -/
+theorem symmetry_node_perm {children₁ children₂ : List BTree}
+    (hperm : children₁.Perm children₂) :
+    (BTree.node children₁).symmetry = (BTree.node children₂).symmetry := by
+  classical
+  rw [symmetry_node, symmetry_node,
+    symmetryScan_eq_foldr_dedup, symmetryScan_eq_foldr_dedup]
+  have hcount : ∀ t : BTree, children₂.count t = children₁.count t := by
+    intro t
+    exact (hperm.count_eq t).symm
+  simpa [hcount] using
+    (hperm.dedup.foldr_eq
+      (lcomm := ⟨fun a b c => by
+        ac_rfl
+      ⟩) 1)
+
+/-- Bag-first order invariant for node children. -/
+def orderBag (children : Multiset BTree) : ℕ :=
+  Quotient.liftOn children (fun listed : List BTree => (BTree.node listed).order)
+    (fun _ _ hperm => order_node_perm hperm)
+
+/-- Bag-first density invariant for node children. -/
+def densityBag (children : Multiset BTree) : ℕ :=
+  Quotient.liftOn children (fun listed : List BTree => (BTree.node listed).density)
+    (fun _ _ hperm => density_node_perm hperm)
+
+/-- Bag-first symmetry invariant for node children. -/
+def symmetryBag (children : Multiset BTree) : ℕ :=
+  Quotient.liftOn children (fun listed : List BTree => (BTree.node listed).symmetry)
+    (fun _ _ hperm => symmetry_node_perm hperm)
+
+/-- Bag-first `β` invariant for node children. -/
+def betaBag (children : Multiset BTree) : ℕ :=
+  (orderBag children).factorial / symmetryBag children
+
+/-- Bag-first `α` invariant for node children. -/
+def alphaBag (children : Multiset BTree) : ℕ :=
+  (orderBag children).factorial / (symmetryBag children * densityBag children)
+
+@[simp] theorem orderBag_childrenBag (children : List BTree) :
+    orderBag (BTree.node children).childrenBag = (BTree.node children).order := rfl
+
+@[simp] theorem densityBag_childrenBag (children : List BTree) :
+    densityBag (BTree.node children).childrenBag = (BTree.node children).density := rfl
+
+@[simp] theorem symmetryBag_childrenBag (children : List BTree) :
+    symmetryBag (BTree.node children).childrenBag = (BTree.node children).symmetry := rfl
+
+@[simp] theorem betaBag_childrenBag (children : List BTree) :
+    betaBag (BTree.node children).childrenBag = (BTree.node children).beta := rfl
+
+@[simp] theorem alphaBag_childrenBag (children : List BTree) :
+    alphaBag (BTree.node children).childrenBag = (BTree.node children).alpha := rfl
+
+theorem order_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    (BTree.node children₁).order = (BTree.node children₂).order := by
+  simpa only [childrenBag_node, orderBag_childrenBag] using congrArg orderBag hbag
+
+theorem density_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    (BTree.node children₁).density = (BTree.node children₂).density := by
+  simpa only [childrenBag_node, densityBag_childrenBag] using congrArg densityBag hbag
+
+theorem symmetry_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    (BTree.node children₁).symmetry = (BTree.node children₂).symmetry := by
+  simpa only [childrenBag_node, symmetryBag_childrenBag] using congrArg symmetryBag hbag
+
+theorem beta_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    (BTree.node children₁).beta = (BTree.node children₂).beta := by
+  simpa only [childrenBag_node, betaBag_childrenBag] using congrArg betaBag hbag
+
+theorem alpha_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    (BTree.node children₁).alpha = (BTree.node children₂).alpha := by
+  simpa only [childrenBag_node, alphaBag_childrenBag] using congrArg alphaBag hbag
 
 private theorem symmetryScan_pos (allChildren remaining : List BTree)
     (ih_sym : ∀ t ∈ allChildren, 0 < t.symmetry)

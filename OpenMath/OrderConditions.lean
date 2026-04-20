@@ -63,6 +63,52 @@ theorem elementaryWeight_singleton (tab : ButcherTableau s) (t : BTree) (i : Fin
     tab.elementaryWeight (.node [t]) i = ∑ k : Fin s, tab.A i k * tab.elementaryWeight t k := by
   simp [elementaryWeight, List.foldr]
 
+/-- Elementary weights for a node depend only on the multiset of its children. -/
+theorem elementaryWeight_node_perm (tab : ButcherTableau s) {children₁ children₂ : List BTree}
+    (hperm : children₁.Perm children₂) (i : Fin s) :
+    tab.elementaryWeight (.node children₁) i = tab.elementaryWeight (.node children₂) i := by
+  unfold elementaryWeight
+  simpa using hperm.foldr_eq
+    (f := fun t acc => acc * (∑ k : Fin s, tab.A i k * tab.elementaryWeight t k))
+    (lcomm := ⟨fun a b c => by ring⟩) 1
+
+/-- Bag-facing corollary of `elementaryWeight_node_perm`. -/
+theorem elementaryWeight_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag)
+    (i : Fin s) :
+    tab.elementaryWeight (.node children₁) i = tab.elementaryWeight (.node children₂) i := by
+  have hperm : children₁.Perm children₂ := Quotient.exact hbag
+  exact elementaryWeight_node_perm tab hperm i
+
+/-- The tree condition for a node depends only on the unordered child multiplicities. -/
+theorem satisfiesTreeCondition_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    tab.satisfiesTreeCondition (.node children₁) ↔ tab.satisfiesTreeCondition (.node children₂) := by
+  unfold satisfiesTreeCondition
+  have hden :
+      (BTree.node children₁).density = (BTree.node children₂).density :=
+    BTree.density_eq_of_childrenBag_eq hbag
+  have hew :
+      ∀ i : Fin s,
+        tab.elementaryWeight (.node children₁) i = tab.elementaryWeight (.node children₂) i := by
+    intro i
+    exact elementaryWeight_eq_of_childrenBag_eq tab hbag i
+  constructor
+  · intro h
+    convert h using 1
+    · congr 1
+      ext i
+      rw [hew i]
+    · simp [hden]
+  · intro h
+    convert h using 1
+    · congr 1
+      ext i
+      rw [← hew i]
+    · simp [hden]
+
 /-- The tree condition for τ (leaf) is equivalent to ∑ bᵢ = 1. -/
 theorem satisfiesTreeCondition_leaf (tab : ButcherTableau s) :
     tab.satisfiesTreeCondition .leaf ↔ tab.order1 := by
