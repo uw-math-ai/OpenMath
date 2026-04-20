@@ -149,6 +149,100 @@ theorem shiftedLegendreP_leading_coeff (n : ℕ) :
   · ring
   · trivial
 
+/-! ## Bridge to Mathlib's `Polynomial.shiftedLegendre` -/
+
+open Polynomial
+
+/-- Three-term recurrence for Mathlib's shifted Legendre polynomials, in the
+sign convention matching `shiftedLegendreP`. -/
+private lemma shiftedLegendre_recurrence (n : ℕ) :
+    (↑(n + 2) : ℤ[X]) * shiftedLegendre (n + 2) =
+      (↑(2 * n + 3) : ℤ[X]) * ((1 : ℤ[X]) - 2 * X) * shiftedLegendre (n + 1) -
+      (↑(n + 1) : ℤ[X]) * shiftedLegendre n := by
+  apply Polynomial.ext
+  intro k
+  have h_nat :
+      (n + 2) * ((n + 2).choose k) * ((n + 2 + k).choose (n + 2)) =
+        (2 * n + 3) *
+            ((n + 1).choose k * ((n + 1 + k).choose (n + 1)) +
+              2 * (if k > 0 then (n + 1).choose (k - 1) * ((n + k).choose (n + 1)) else 0)) -
+          (n + 1) * (n.choose k * ((n + k).choose n)) := by
+    rcases k with (_ | k)
+    · simp +arith +decide
+      omega
+    · simp +arith +decide [Nat.add_one_mul_choose_eq, Nat.choose_succ_succ, mul_assoc]
+      refine eq_tsub_of_add_eq ?_
+      have := Nat.add_one_mul_choose_eq n k
+      have := Nat.add_one_mul_choose_eq (n + 1) k
+      have := Nat.add_one_mul_choose_eq (n + k) n
+      have := Nat.add_one_mul_choose_eq (n + k + 1) n
+      have := Nat.add_one_mul_choose_eq (n + k) (n + 1)
+      have := Nat.add_one_mul_choose_eq (n + k + 1) (n + 1)
+      norm_num [Nat.choose_succ_succ] at *
+      nlinarith
+  have h_coeff :
+      (n + 2) * ((shiftedLegendre (n + 2)).coeff k) =
+        (2 * n + 3) *
+            ((shiftedLegendre (n + 1)).coeff k -
+              2 * (if k > 0 then (shiftedLegendre (n + 1)).coeff (k - 1) else 0)) -
+          (n + 1) * ((shiftedLegendre n).coeff k) := by
+    convert congr_arg (fun x : ℕ => (-1 : ℤ) ^ k * x) h_nat using 1 <;>
+      norm_num [Polynomial.coeff_shiftedLegendre]
+    · ring
+    · rw [Nat.cast_sub] <;> push_cast <;> ring
+      · cases k with
+        | zero =>
+            norm_num
+            ring_nf
+        | succ k =>
+            simp [pow_succ', mul_assoc, mul_left_comm, mul_comm]
+            ring
+      · rcases k with (_ | k) <;>
+          simp +arith +decide [Nat.choose_succ_succ, add_comm 1] at *
+        · linarith
+        · grind
+  have h_lhs :
+      ((↑(n + 2) : ℤ[X]) * shiftedLegendre (n + 2)).coeff k =
+        (↑(n + 2) : ℤ) * (shiftedLegendre (n + 2)).coeff k := by
+    simp [Nat.cast_add, add_mul, Polynomial.coeff_C_mul]
+  have h_rhs :
+      (((↑(2 * n + 3) : ℤ[X]) * ((1 : ℤ[X]) - 2 * X) * shiftedLegendre (n + 1)) -
+          (↑(n + 1) : ℤ[X]) * shiftedLegendre n).coeff k =
+        (2 * ↑n + 3) *
+          ((shiftedLegendre (n + 1)).coeff k -
+            2 * (if k > 0 then (shiftedLegendre (n + 1)).coeff (k - 1) else 0)) -
+        (↑(n + 1) : ℤ) * (shiftedLegendre n).coeff k := by
+    by_cases hk : k = 0
+    · subst hk
+      simp [Nat.cast_add, add_mul, sub_mul, Polynomial.coeff_C_mul,
+        mul_assoc, mul_left_comm, mul_comm]
+    · simp [Nat.cast_add, add_mul, sub_mul, Polynomial.coeff_C_mul,
+        mul_assoc, mul_left_comm, mul_comm]
+      rcases Nat.exists_eq_succ_of_ne_zero hk with ⟨k', rfl⟩
+      simp [Polynomial.coeff_X_mul]
+  exact h_lhs.trans (h_coeff.trans h_rhs.symm)
+
+/-- The recursive shifted Legendre polynomial agrees with Mathlib's
+`Polynomial.shiftedLegendre`, up to the sign convention `(-1)^n`. -/
+theorem shiftedLegendreP_eq_eval_map_shiftedLegendre (n : ℕ) (x : ℝ) :
+    shiftedLegendreP n x =
+      (-1 : ℝ) ^ n *
+        (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre n)).eval x := by
+  induction' n using Nat.strongRecOn with k ih generalizing x
+  rcases k with _ | _ | n
+  · norm_num [shiftedLegendreP, shiftedLegendre]
+  · norm_num [shiftedLegendreP, shiftedLegendre]
+    norm_num [Finset.sum_range_succ]
+    ring
+  · rw [show shiftedLegendreP (n + 2) x =
+      ((2 * (n : ℝ) + 3) * (2 * x - 1) * shiftedLegendreP (n + 1) x -
+        (n + 1) * shiftedLegendreP n x) / (n + 2) by rfl]
+    have hrec :=
+      congr_arg (Polynomial.eval x ∘ Polynomial.map (Int.castRingHom ℝ))
+        (shiftedLegendre_recurrence n)
+    norm_num [ih _ (Nat.lt_succ_self _), ih _ (Nat.lt_succ_of_lt (Nat.lt_succ_self _))] at hrec ⊢
+    grind
+
 /-! ## Gaussian Quadrature Exactness (Lemma 342B)
 
 If the nodes `c_i` of an `s`-stage RK method are the zeros of the `s`-th
@@ -188,20 +282,16 @@ theorem shiftedLegendre_coeff_self_ne_zero (s : ℕ) :
   exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
 
 /-- Convert the recursive Gauss-Legendre node hypothesis into vanishing of
-Mathlib's shifted Legendre polynomial, assuming the expected bridge theorem. -/
+Mathlib's shifted Legendre polynomial using the proved sign-correct bridge. -/
 theorem gaussLegendreNodes_eval_map_shiftedLegendre_zero (t : ButcherTableau s)
-    (hGL : t.HasGaussLegendreNodes)
-    (hbridge : ∀ x : ℝ,
-      shiftedLegendreP s x =
-        (-1 : ℝ) ^ s *
-          (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).eval x) :
+    (hGL : t.HasGaussLegendreNodes) :
     ∀ i : Fin s,
       (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).eval (t.c i) = 0 := by
   intro i
   have hs_ne : (-1 : ℝ) ^ s ≠ 0 := by
     exact pow_ne_zero _ (by norm_num)
   have hi := hGL i
-  rw [hbridge (t.c i)] at hi
+  rw [shiftedLegendreP_eq_eval_map_shiftedLegendre] at hi
   exact (mul_eq_zero.mp hi).resolve_left hs_ne
 
 /-- Repackage the high-degree branch of `gaussLegendre_B_double` as
