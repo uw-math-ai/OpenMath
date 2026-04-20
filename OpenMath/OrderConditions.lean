@@ -1210,6 +1210,27 @@ private theorem satisfiesTreeCondition_order_five_3child_211 (tab : ButcherTable
       satisfiesTreeCondition_order_five_3child_112 tab (.node [c₂, c₃, c₁])
         ⟨c₂, c₃, c₁, rfl, hc₂, hc₃, hc₁⟩
 
+/-- The `{1,1,2}` 3-child family is canonical up to the three child orientations. -/
+private theorem satisfiesTreeCondition_order_five_3child_canonical (tab : ButcherTableau s)
+    (c₁ c₂ c₃ : BTree)
+    (hord : (c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 2) ∨
+      (c₁.order = 1 ∧ c₂.order = 2 ∧ c₃.order = 1) ∨
+      (c₁.order = 2 ∧ c₂.order = 1 ∧ c₃.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂, c₃]) ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) ^ 2 *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
+  rcases hord with ⟨hc₁, hc₂, hc₃⟩ | ⟨hc₁, hc₂, hc₃⟩ | ⟨hc₁, hc₂, hc₃⟩
+  · simpa using
+      (satisfiesTreeCondition_order_five_3child_112 tab (.node [c₁, c₂, c₃])
+        ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩)
+  · simpa using
+      (satisfiesTreeCondition_order_five_3child_121 tab (.node [c₁, c₂, c₃])
+        ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩)
+  · simpa using
+      (satisfiesTreeCondition_order_five_3child_211 tab (.node [c₁, c₂, c₃])
+        ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩)
+
 /-- [1, bushy-3] tree condition: sum = 1/15. -/
 private theorem satisfiesTreeCondition_order_five_1_bushy3 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
@@ -1612,23 +1633,18 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         have hc₁_pos := BTree.order_pos c₁
         have hc₂_pos := BTree.order_pos c₂
         have hc₃_pos := BTree.order_pos c₃
-        by_cases h1 : c₁.order = 1
-        · by_cases h2 : c₂.order = 1
-          · have h3 : c₃.order = 2 := by omega
-            rw [satisfiesTreeCondition_order_five_3child_112 tab _
-              ⟨c₁, c₂, c₃, rfl, h1, h2, h3⟩]
-            rw [order5b] at h5b; simpa [order5b_sum_eq tab hrc] using h5b
-          · have h2' : c₂.order = 2 := by omega
-            have h3 : c₃.order = 1 := by omega
-            rw [satisfiesTreeCondition_order_five_3child_121 tab _
-              ⟨c₁, c₂, c₃, rfl, h1, h2', h3⟩]
-            rw [order5b] at h5b; simpa [order5b_sum_eq tab hrc] using h5b
-        · have h1' : c₁.order = 2 := by omega
-          have h2 : c₂.order = 1 := by omega
-          have h3 : c₃.order = 1 := by omega
-          rw [satisfiesTreeCondition_order_five_3child_211 tab _
-            ⟨c₁, c₂, c₃, rfl, h1', h2, h3⟩]
-          rw [order5b] at h5b; simpa [order5b_sum_eq tab hrc] using h5b
+        have h112_family :
+            (c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 2) ∨
+              (c₁.order = 1 ∧ c₂.order = 2 ∧ c₃.order = 1) ∨
+              (c₁.order = 2 ∧ c₂.order = 1 ∧ c₃.order = 1) := by
+          by_cases h1 : c₁.order = 1
+          · by_cases h2 : c₂.order = 1
+            · exact Or.inl ⟨h1, h2, by omega⟩
+            · exact Or.inr <| Or.inl ⟨h1, by omega, by omega⟩
+          · exact Or.inr <| Or.inr ⟨by omega, by omega, by omega⟩
+        rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃ h112_family]
+        rw [order5b] at h5b
+        simpa [order5b_sum_eq tab hrc] using h5b
       · -- Case C: 2 children summing to 4
         rcases hC with ⟨c₁, c₂, rfl, hsum⟩
         have hc₁_pos := BTree.order_pos c₁
