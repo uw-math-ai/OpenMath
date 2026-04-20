@@ -513,9 +513,9 @@ theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         cases t with
         | leaf => simp at heq
         | node children =>
-          have hw : BTree.OrderThreeBagWitness (.node children) :=
-            BTree.order_three_bag_witness (.node children) heq
-          cases BTree.order_three_bag_witness_recover hw with
+          have hw : BTree.OrderThreeRecoveryWitness (.node children) :=
+            BTree.order_three_recovery_witness (.node children) heq
+          cases hw with
           | chain3 c hbag hc =>
             rw [satisfiesTreeCondition_order_three_chain tab children c hbag hc]
             rw [order3b] at h3b
@@ -815,9 +815,9 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       cases t with
       | leaf => simp at heq
       | node children =>
-        have hw4 : BTree.OrderFourBagWitness (.node children) :=
-          BTree.order_four_bag_witness (.node children) heq
-        cases BTree.order_four_bag_witness_recover hw4 with
+        have hw4 : BTree.OrderFourRecoveryWitness (.node children) :=
+          BTree.order_four_recovery_witness (.node children) heq
+        cases hw4 with
         | bushy4 c₁ c₂ c₃ hbag hc₁ hc₂ hc₃ =>
           rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
           rw [satisfiesTreeCondition_order_four_bushy4 tab _ ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩]
@@ -2081,7 +2081,7 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       | caseD children c hw4 hbag =>
         -- Case D: single order-4 child
         have hCaseD : BTree.OrderFiveCaseDWitness c :=
-          BTree.order_five_caseD_witness c (BTree.order_fourBagWitness_order_eq hw4)
+          BTree.order_five_caseD_witness c (BTree.order_fourRecoveryWitness_order_eq hw4)
         have htarget : order_five_caseD_target tab hCaseD := by
           cases hCaseD with
           | bushy4 =>

@@ -327,20 +327,21 @@ example : t5i.alpha = 1 := by native_decide
 
 /-! ### Structural Properties -/
 
-/-- Bag-first witness for order-3 rooted trees. The payload records an unordered
-child family together with a canonical low-order representative. -/
-inductive OrderThreeBagWitness : BTree → Type where
-  | chain3 (children : List BTree) (c : BTree) (hc : c.order = 2)
-      (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag) :
-      OrderThreeBagWitness (.node children)
-  | bushy3 (children : List BTree) (c₁ c₂ : BTree)
-      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1)
-      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
-      OrderThreeBagWitness (.node children)
+/-- Bag-first recovery witness for the order-3 classifier. This records only
+the canonical child bag and the low-order facts needed downstream. -/
+inductive OrderThreeRecoveryWitness (t : BTree) : Type where
+  | chain3 (d : BTree)
+      (hbag : t.childrenBag = (BTree.node [d]).childrenBag)
+      (hd : d.order = 2) :
+      OrderThreeRecoveryWitness t
+  | bushy3 (d₁ d₂ : BTree)
+      (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
+      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) :
+      OrderThreeRecoveryWitness t
 
-/-- Package the order-3 rooted-tree classification in bag-first form. -/
-theorem order_three_bag_witness_nonempty (t : BTree) (ht : t.order = 3) :
-    Nonempty (OrderThreeBagWitness t) := by
+/-- Package the order-3 rooted-tree classification in recovery-first form. -/
+theorem order_three_recovery_witness_nonempty (t : BTree) (ht : t.order = 3) :
+    Nonempty (OrderThreeRecoveryWitness t) := by
   cases t with
   | leaf => simp at ht
   | node children =>
@@ -354,7 +355,7 @@ theorem order_three_bag_witness_nonempty (t : BTree) (ht : t.order = 3) :
         cases hd <;> simp [order_node]
       cases tl with
       | nil =>
-        exact ⟨.chain3 [hd] hd (by simpa using hfoldr) rfl⟩
+        exact ⟨.chain3 hd rfl (by simpa using hfoldr)⟩
       | cons hd2 tl2 =>
         have hhd2_pos : 0 < hd2.order := by
           cases hd2 <;> simp [order_node]
@@ -366,14 +367,52 @@ theorem order_three_bag_witness_nonempty (t : BTree) (ht : t.order = 3) :
           omega
         cases tl2 with
         | nil =>
-          exact ⟨.bushy3 [hd, hd2] hd hd2 hhd (by simpa using hrest) rfl⟩
+          exact ⟨.bushy3 hd hd2 rfl hhd (by simpa using hrest)⟩
         | cons hd3 tl3 =>
           simp only [List.foldr] at hrest
           have hhd3_pos : 0 < hd3.order := by
             cases hd3 <;> simp [order_node]
           omega
 
-/-- Noncomputably choose the bag-first order-3 witness. -/
+/-- Noncomputably choose the recovery-first order-3 witness. -/
+noncomputable def order_three_recovery_witness (t : BTree) (ht : t.order = 3) :
+    OrderThreeRecoveryWitness t :=
+  Classical.choice (order_three_recovery_witness_nonempty t ht)
+
+/-- Legacy list-payload witness for order-3 rooted trees. The payload records
+the exact ordered child list together with a canonical low-order representative. -/
+inductive OrderThreeBagWitness : BTree → Type where
+  | chain3 (children : List BTree) (c : BTree) (hc : c.order = 2)
+      (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag) :
+      OrderThreeBagWitness (.node children)
+  | bushy3 (children : List BTree) (c₁ c₂ : BTree)
+      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1)
+      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+      OrderThreeBagWitness (.node children)
+
+def order_three_bag_witness_recover {t : BTree} (hw3 : OrderThreeBagWitness t) :
+    OrderThreeRecoveryWitness t := by
+  cases hw3 with
+  | chain3 children d hd hbag =>
+      exact .chain3 d hbag hd
+  | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
+      exact .bushy3 d₁ d₂ hbag hd₁ hd₂
+
+/-- Recover the legacy list-payload order-3 witness from the recovery-first
+classifier. -/
+theorem order_three_bag_witness_nonempty (t : BTree) (ht : t.order = 3) :
+    Nonempty (OrderThreeBagWitness t) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+      rcases order_three_recovery_witness_nonempty (.node children) ht with ⟨hw3⟩
+      cases hw3 with
+      | chain3 d hbag hd =>
+          exact ⟨.chain3 children d hd hbag⟩
+      | bushy3 d₁ d₂ hbag hd₁ hd₂ =>
+          exact ⟨.bushy3 children d₁ d₂ hd₁ hd₂ hbag⟩
+
+/-- Noncomputably choose the legacy list-payload order-3 witness. -/
 noncomputable def order_three_bag_witness (t : BTree) (ht : t.order = 3) :
     OrderThreeBagWitness t :=
   Classical.choice (order_three_bag_witness_nonempty t ht)
@@ -427,18 +466,36 @@ private theorem order_eq_of_childrenBag_eq_local {children₁ children₂ : List
     hperm.foldr_eq (lcomm := ⟨fun _ _ _ => by omega⟩) 0
   simp [order_node, hfold]
 
-private theorem order_threeBagWitness_order_eq {t : BTree} (hw3 : OrderThreeBagWitness t) :
+private theorem order_threeRecoveryWitness_order_eq {t : BTree} (hw3 : OrderThreeRecoveryWitness t) :
     t.order = 3 := by
   cases hw3 with
-  | chain3 children c hc hbag =>
-      have horder := order_eq_of_childrenBag_eq_local hbag
-      simpa [hc] using horder
-  | bushy3 children c₁ c₂ hc₁ hc₂ hbag =>
-      have horder := order_eq_of_childrenBag_eq_local hbag
-      simpa [hc₁, hc₂] using horder
+  | chain3 d hbag hd =>
+      cases t with
+      | leaf =>
+          have hfalse : False := by
+            have hcard := congrArg Multiset.card hbag
+            simp at hcard
+          exact hfalse.elim
+      | node children =>
+          have horder := order_eq_of_childrenBag_eq_local hbag
+          simpa [hd] using horder
+  | bushy3 d₁ d₂ hbag hd₁ hd₂ =>
+      cases t with
+      | leaf =>
+          have hfalse : False := by
+            have hcard := congrArg Multiset.card hbag
+            simp at hcard
+          exact hfalse.elim
+      | node children =>
+          have horder := order_eq_of_childrenBag_eq_local hbag
+          simpa [hd₁, hd₂] using horder
 
-/-- Bag-first witness for order-4 rooted trees. The payload records the child
-bag together with canonical low-order representatives. -/
+private theorem order_threeBagWitness_order_eq {t : BTree} (hw3 : OrderThreeBagWitness t) :
+    t.order = 3 :=
+  order_threeRecoveryWitness_order_eq (order_three_bag_witness_recover hw3)
+
+/-- Legacy list-payload witness for order-4 rooted trees. The payload records
+the exact ordered child list together with canonical low-order representatives. -/
 inductive OrderFourBagWitness : BTree → Type where
   | bushy4 (children : List BTree) (c₁ c₂ c₃ : BTree)
       (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1)
@@ -449,13 +506,35 @@ inductive OrderFourBagWitness : BTree → Type where
       (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
       OrderFourBagWitness (.node children)
   | single3 (children : List BTree) (c : BTree)
-      (hw3 : OrderThreeBagWitness c)
+      (hw3 : OrderThreeRecoveryWitness c)
       (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag) :
       OrderFourBagWitness (.node children)
 
-/-- Package the order-4 rooted-tree classification in bag-first form. -/
-theorem order_four_bag_witness_nonempty (t : BTree) (ht : t.order = 4) :
-    Nonempty (OrderFourBagWitness t) := by
+/-- Bag-first recovery witness for the order-4 classifier. This keeps only the
+canonical child bags and low-order facts needed by theorem-side consumers. -/
+inductive OrderFourRecoveryWitness (t : BTree) : Type where
+  | bushy4 (d₁ d₂ d₃ : BTree)
+      (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag)
+      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) (hd₃ : d₃.order = 1) :
+      OrderFourRecoveryWitness t
+  | mixed4 (d₁ d₂ : BTree)
+      (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
+      (hcanon : d₁.order = 1 ∧ d₂.order = 2) :
+      OrderFourRecoveryWitness t
+  | singleChain3 (d e : BTree)
+      (htBag : t.childrenBag = (BTree.node [d]).childrenBag)
+      (hdBag : d.childrenBag = (BTree.node [e]).childrenBag)
+      (he : e.order = 2) :
+      OrderFourRecoveryWitness t
+  | singleBushy3 (d e₁ e₂ : BTree)
+      (htBag : t.childrenBag = (BTree.node [d]).childrenBag)
+      (hdBag : d.childrenBag = (BTree.node [e₁, e₂]).childrenBag)
+      (he₁ : e₁.order = 1) (he₂ : e₂.order = 1) :
+      OrderFourRecoveryWitness t
+
+/-- Package the order-4 rooted-tree classification in recovery-first form. -/
+theorem order_four_recovery_witness_nonempty (t : BTree) (ht : t.order = 4) :
+    Nonempty (OrderFourRecoveryWitness t) := by
   cases t with
   | leaf => simp at ht
   | node children =>
@@ -469,10 +548,14 @@ theorem order_four_bag_witness_nonempty (t : BTree) (ht : t.order = 4) :
         cases hd <;> simp [order_node]
       cases tl with
       | nil =>
-        have hw3 : OrderThreeBagWitness hd := order_three_bag_witness hd (by
+        have hw3 : OrderThreeRecoveryWitness hd := order_three_recovery_witness hd (by
           simp only [List.foldr] at hfoldr
           omega)
-        exact ⟨.single3 [hd] hd hw3 rfl⟩
+        cases hw3 with
+        | chain3 e hdBag he =>
+            exact ⟨.singleChain3 hd e rfl hdBag he⟩
+        | bushy3 e₁ e₂ hdBag he₁ he₂ =>
+            exact ⟨.singleBushy3 hd e₁ e₂ rfl hdBag he₁ he₂⟩
       | cons hd2 tl2 =>
         have hhd2_pos : 0 < hd2.order := by
           cases hd2 <;> simp [order_node]
@@ -485,15 +568,15 @@ theorem order_four_bag_witness_nonempty (t : BTree) (ht : t.order = 4) :
             · exact Or.inl ⟨h1, by omega⟩
             · exact Or.inr ⟨by omega, by omega⟩
           rcases hpair with ⟨h1, h2⟩ | ⟨h1, h2⟩
-          · exact ⟨.mixed4 [hd, hd2] hd hd2 ⟨h1, h2⟩ rfl⟩
-          · exact ⟨.mixed4 [hd, hd2] hd2 hd ⟨h2, h1⟩ (Quot.sound (List.Perm.swap _ _ _))⟩
+          · exact ⟨.mixed4 hd hd2 rfl ⟨h1, h2⟩⟩
+          · exact ⟨.mixed4 hd2 hd (Quot.sound (List.Perm.swap _ _ _)) ⟨h2, h1⟩⟩
         | cons hd3 tl3 =>
           have hhd3_pos : 0 < hd3.order := by
             cases hd3 <;> simp [order_node]
           simp only [List.foldr] at hfoldr
           cases tl3 with
           | nil =>
-            exact ⟨.bushy4 [hd, hd2, hd3] hd hd2 hd3 (by omega) (by omega) (by omega) rfl⟩
+            exact ⟨.bushy4 hd hd2 hd3 rfl (by omega) (by omega) (by omega)⟩
           | cons hd4 tl4 =>
             have hhd4_pos : 0 < hd4.order := by
               cases hd4 <;> simp [order_node]
@@ -501,23 +584,95 @@ theorem order_four_bag_witness_nonempty (t : BTree) (ht : t.order = 4) :
             have : tl4.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
             omega
 
-/-- Noncomputably choose the bag-first order-4 witness. -/
+/-- Noncomputably choose the recovery-first order-4 witness. -/
+noncomputable def order_four_recovery_witness (t : BTree) (ht : t.order = 4) :
+    OrderFourRecoveryWitness t :=
+  Classical.choice (order_four_recovery_witness_nonempty t ht)
+
+def order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t) :
+    OrderFourRecoveryWitness t := by
+  cases hw4 with
+  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
+      exact .bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃
+  | mixed4 children d₁ d₂ hcanon hbag =>
+      exact .mixed4 d₁ d₂ hbag hcanon
+  | single3 children d hw3 hbag =>
+      cases hw3 with
+      | chain3 e hdBag he =>
+          exact .singleChain3 d e hbag hdBag he
+      | bushy3 e₁ e₂ hdBag he₁ he₂ =>
+          exact .singleBushy3 d e₁ e₂ hbag hdBag he₁ he₂
+
+/-- Recover the legacy list-payload order-4 witness from the recovery-first
+classifier. -/
+theorem order_four_bag_witness_nonempty (t : BTree) (ht : t.order = 4) :
+    Nonempty (OrderFourBagWitness t) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+      rcases order_four_recovery_witness_nonempty (.node children) ht with ⟨hw4⟩
+      cases hw4 with
+      | bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃ =>
+          exact ⟨.bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag⟩
+      | mixed4 d₁ d₂ hbag hcanon =>
+          exact ⟨.mixed4 children d₁ d₂ hcanon hbag⟩
+      | singleChain3 d e htBag hdBag he =>
+          exact ⟨.single3 children d (.chain3 e hdBag he) htBag⟩
+      | singleBushy3 d e₁ e₂ htBag hdBag he₁ he₂ =>
+          exact ⟨.single3 children d (.bushy3 e₁ e₂ hdBag he₁ he₂) htBag⟩
+
+/-- Noncomputably choose the legacy list-payload order-4 witness. -/
 noncomputable def order_four_bag_witness (t : BTree) (ht : t.order = 4) :
     OrderFourBagWitness t :=
   Classical.choice (order_four_bag_witness_nonempty t ht)
 
-theorem order_fourBagWitness_order_eq {t : BTree} (hw4 : OrderFourBagWitness t) :
+theorem order_fourRecoveryWitness_order_eq {t : BTree} (hw4 : OrderFourRecoveryWitness t) :
     t.order = 4 := by
   cases hw4 with
-  | bushy4 children c₁ c₂ c₃ hc₁ hc₂ hc₃ hbag =>
-      have horder := order_eq_of_childrenBag_eq_local hbag
-      simpa [hc₁, hc₂, hc₃, Nat.add_assoc] using horder
-  | mixed4 children c₁ c₂ hcanon hbag =>
-      have horder := order_eq_of_childrenBag_eq_local hbag
-      simpa [hcanon.1, hcanon.2] using horder
-  | single3 children c hw3 hbag =>
-      have horder := order_eq_of_childrenBag_eq_local hbag
-      simpa [order_threeBagWitness_order_eq hw3] using horder
+  | bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃ =>
+      cases t with
+      | leaf =>
+          have hfalse : False := by
+            have hcard := congrArg Multiset.card hbag
+            simp at hcard
+          exact hfalse.elim
+      | node children =>
+          have horder := order_eq_of_childrenBag_eq_local hbag
+          simpa [hd₁, hd₂, hd₃, Nat.add_assoc] using horder
+  | mixed4 d₁ d₂ hbag hcanon =>
+      cases t with
+      | leaf =>
+          have hfalse : False := by
+            have hcard := congrArg Multiset.card hbag
+            simp at hcard
+          exact hfalse.elim
+      | node children =>
+          have horder := order_eq_of_childrenBag_eq_local hbag
+          simpa [hcanon.1, hcanon.2] using horder
+  | singleChain3 d e htBag hdBag he =>
+      cases t with
+      | leaf =>
+          have hfalse : False := by
+            have hcard := congrArg Multiset.card htBag
+            simp at hcard
+          exact hfalse.elim
+      | node children =>
+          have horder := order_eq_of_childrenBag_eq_local htBag
+          simpa [order_threeRecoveryWitness_order_eq (.chain3 e hdBag he)] using horder
+  | singleBushy3 d e₁ e₂ htBag hdBag he₁ he₂ =>
+      cases t with
+      | leaf =>
+          have hfalse : False := by
+            have hcard := congrArg Multiset.card htBag
+            simp at hcard
+          exact hfalse.elim
+      | node children =>
+          have horder := order_eq_of_childrenBag_eq_local htBag
+          simpa [order_threeRecoveryWitness_order_eq (.bushy3 e₁ e₂ hdBag he₁ he₂)] using horder
+
+theorem order_fourBagWitness_order_eq {t : BTree} (hw4 : OrderFourBagWitness t) :
+    t.order = 4 :=
+  order_fourRecoveryWitness_order_eq (order_four_bag_witness_recover hw4)
 
 /-- Bag-first witness for order-5 rooted trees. The payload records the child
 bag together with canonical low-order representatives. -/
@@ -535,7 +690,7 @@ inductive OrderFiveBagWitness : BTree → Type where
       (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
       OrderFiveBagWitness (.node children)
   | caseD (children : List BTree) (c : BTree)
-      (hw4 : OrderFourBagWitness c)
+      (hw4 : OrderFourRecoveryWitness c)
       (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag) :
       OrderFiveBagWitness (.node children)
 
@@ -555,7 +710,7 @@ theorem order_five_bag_witness_nonempty (t : BTree) (ht : t.order = 5) :
         cases hd <;> simp [order_node]
       cases tl with
       | nil =>
-        have hw4 : OrderFourBagWitness hd := order_four_bag_witness hd (by
+        have hw4 : OrderFourRecoveryWitness hd := order_four_recovery_witness hd (by
           simp only [List.foldr] at hfoldr
           omega)
         exact ⟨.caseD [hd] hd hw4 rfl⟩
@@ -813,26 +968,6 @@ theorem beta_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
     (BTree.node children₁).beta = (BTree.node children₂).beta := by
   simpa only [childrenBag_node, betaBag_childrenBag] using congrArg betaBag hbag
 
-/-- Bag-first recovery witness for the order-3 classifier. This records only
-the canonical child bag and the low-order facts needed downstream. -/
-inductive OrderThreeRecoveryWitness (t : BTree) : Type where
-  | chain3 (d : BTree)
-      (hbag : t.childrenBag = (BTree.node [d]).childrenBag)
-      (hd : d.order = 2) :
-      OrderThreeRecoveryWitness t
-  | bushy3 (d₁ d₂ : BTree)
-      (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
-      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) :
-      OrderThreeRecoveryWitness t
-
-def order_three_bag_witness_recover {t : BTree} (hw3 : OrderThreeBagWitness t) :
-    OrderThreeRecoveryWitness t := by
-  cases hw3 with
-  | chain3 children d hd hbag =>
-      exact .chain3 d hbag hd
-  | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
-      exact .bushy3 d₁ d₂ hbag hd₁ hd₂
-
 /-- Normalize the order-5 two-child family with child-order sum `4` into the
 `{2,2}` / `{1, chain3}` / `{1, bushy3}` trichotomy. -/
 inductive OrderFiveCaseCWitness (c₁ c₂ : BTree) : Type where
@@ -865,17 +1000,17 @@ theorem order_five_caseC_witness_nonempty (c₁ c₂ : BTree)
         · exfalso
           omega
     rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
-    · have hw3 : OrderThreeBagWitness c₂ := order_three_bag_witness c₂ hc₂
+    · have hw3 : OrderThreeRecoveryWitness c₂ := order_three_recovery_witness c₂ hc₂
       cases hw3 with
-      | chain3 _ d hdorder hbag =>
+      | chain3 d hbag hdorder =>
           exact ⟨.chain3 d <| Or.inl ⟨h1, by simpa using hbag, hdorder⟩⟩
-      | bushy3 _ d₁ d₂ hd₁ hd₂ hbag =>
+      | bushy3 d₁ d₂ hbag hd₁ hd₂ =>
           exact ⟨.bushy3 d₁ d₂ <| Or.inl ⟨h1, by simpa using hbag, hd₁, hd₂⟩⟩
-    · have hw3 : OrderThreeBagWitness c₁ := order_three_bag_witness c₁ hc₁
+    · have hw3 : OrderThreeRecoveryWitness c₁ := order_three_recovery_witness c₁ hc₁
       cases hw3 with
-      | chain3 _ d hdorder hbag =>
+      | chain3 d hbag hdorder =>
           exact ⟨.chain3 d <| Or.inr ⟨by simpa using hbag, hdorder, h2⟩⟩
-      | bushy3 _ d₁ d₂ hd₁ hd₂ hbag =>
+      | bushy3 d₁ d₂ hbag hd₁ hd₂ =>
           exact ⟨.bushy3 d₁ d₂ <| Or.inr ⟨by simpa using hbag, hd₁, hd₂, h2⟩⟩
 
 /-- Noncomputably choose the normalized order-5 two-child Case C witness. -/
@@ -913,42 +1048,6 @@ noncomputable def order_five_caseB_witness (c₁ c₂ c₃ : BTree)
     OrderFiveCaseBWitness c₁ c₂ c₃ :=
   Classical.choice (order_five_caseB_witness_nonempty c₁ c₂ c₃ hsum)
 
-/-- Bag-first recovery witness for the order-4 classifier. This keeps only the
-canonical child bags and low-order facts needed by theorem-side consumers. -/
-inductive OrderFourRecoveryWitness (t : BTree) : Type where
-  | bushy4 (d₁ d₂ d₃ : BTree)
-      (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag)
-      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) (hd₃ : d₃.order = 1) :
-      OrderFourRecoveryWitness t
-  | mixed4 (d₁ d₂ : BTree)
-      (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
-      (hcanon : d₁.order = 1 ∧ d₂.order = 2) :
-      OrderFourRecoveryWitness t
-  | singleChain3 (d e : BTree)
-      (htBag : t.childrenBag = (BTree.node [d]).childrenBag)
-      (hdBag : d.childrenBag = (BTree.node [e]).childrenBag)
-      (he : e.order = 2) :
-      OrderFourRecoveryWitness t
-  | singleBushy3 (d e₁ e₂ : BTree)
-      (htBag : t.childrenBag = (BTree.node [d]).childrenBag)
-      (hdBag : d.childrenBag = (BTree.node [e₁, e₂]).childrenBag)
-      (he₁ : e₁.order = 1) (he₂ : e₂.order = 1) :
-      OrderFourRecoveryWitness t
-
-def order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t) :
-    OrderFourRecoveryWitness t := by
-  cases hw4 with
-  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
-      exact .bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃
-  | mixed4 children d₁ d₂ hcanon hbag =>
-      exact .mixed4 d₁ d₂ hbag hcanon
-  | single3 children d hw3 hbag =>
-      cases order_three_bag_witness_recover hw3 with
-      | chain3 e hdBag he =>
-          exact .singleChain3 d e hbag hdBag he
-      | bushy3 e₁ e₂ hdBag he₁ he₂ =>
-          exact .singleBushy3 d e₁ e₂ hbag hdBag he₁ he₂
-
 /-- Normalize the order-5 singleton-child family whose child has order `4`
 into the `bushy4` / `mixed4` / `viaChain3` / `viaBushy3` quartic trichotomy. -/
 inductive OrderFiveCaseDWitness (c : BTree) : Type where
@@ -972,11 +1071,11 @@ inductive OrderFiveCaseDWitness (c : BTree) : Type where
       OrderFiveCaseDWitness c
 
 /-- Package the order-5 singleton-child / Case D classification in rooted-tree
-form by recovering an exact shape from the public order-4 bag witness. -/
+form from the recovery-first order-4 classifier. -/
 theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4) :
     Nonempty (OrderFiveCaseDWitness c) := by
-  have hw4 : OrderFourBagWitness c := order_four_bag_witness c hc
-  cases order_four_bag_witness_recover hw4 with
+  have hw4 : OrderFourRecoveryWitness c := order_four_recovery_witness c hc
+  cases hw4 with
   | bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃ =>
       exact ⟨.bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃⟩
   | mixed4 d₁ d₂ hbag hcanon =>
