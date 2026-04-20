@@ -1399,14 +1399,15 @@ private theorem satisfiesTreeCondition_order_five_1_bushy3_exact (tab : ButcherT
     exact ew_of_order_five_1_bushy3 tab (.node [c₁, BTree.node [d₁, d₂]])
       ⟨c₁, BTree.node [d₁, d₂], rfl, hc₁, d₁, d₂, rfl, hd₁, hd₂⟩ i
 
-private theorem satisfiesTreeCondition_order_five_1_bushy3 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ d₁ d₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
-      c₂.childrenBag = (BTree.node [d₁, d₂]).childrenBag ∧ d₁.order = 1 ∧ d₂.order = 1) :
-    tab.satisfiesTreeCondition t ↔
+private theorem satisfiesTreeCondition_order_five_1_bushy3 (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hc₁ : c₁.order = 1)
+    (hc₂bag : c₂.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
+    (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
-  rcases h with ⟨c₁, c₂, d₁, d₂, rfl, hc₁, hc₂bag, hd₁, hd₂⟩
   rcases BTree.pair_node_recover_of_childrenBag_eq hc₂bag with ⟨e₁, e₂, hebag, hc₂⟩
   have hbag :
       (BTree.node [e₁, e₂]).childrenBag = (BTree.node [d₁, d₂]).childrenBag :=
@@ -1472,14 +1473,15 @@ private theorem satisfiesTreeCondition_order_five_1_chain3_exact (tab : ButcherT
     exact ew_of_order_five_1_chain3 tab (.node [c₁, BTree.node [d]])
       ⟨c₁, BTree.node [d], rfl, hc₁, d, rfl, hd⟩ i
 
-private theorem satisfiesTreeCondition_order_five_1_chain3 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ d : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
-      c₂.childrenBag = (BTree.node [d]).childrenBag ∧ d.order = 2) :
-    tab.satisfiesTreeCondition t ↔
+private theorem satisfiesTreeCondition_order_five_1_chain3 (tab : ButcherTableau s)
+    (c₁ c₂ d : BTree)
+    (hc₁ : c₁.order = 1)
+    (hc₂bag : c₂.childrenBag = (BTree.node [d]).childrenBag)
+    (hd : d.order = 2) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
-  rcases h with ⟨c₁, c₂, d, rfl, hc₁, hc₂bag, hd⟩
   rcases BTree.singleton_node_recover_of_childrenBag_eq hc₂bag with ⟨e, hebag, hc₂⟩
   have hbag : (BTree.node [e]).childrenBag = (BTree.node [d]).childrenBag :=
     hebag.symm.trans hc₂bag
@@ -1522,13 +1524,11 @@ private theorem satisfiesTreeCondition_order_five_chain3_canonical (tab : Butche
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
   rcases hpair with ⟨hc₁, hc₂bag, hd⟩ | ⟨hc₁bag, hd, hc₂⟩
   · simpa using
-      (satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₁, c₂])
-        ⟨c₁, c₂, d, rfl, hc₁, hc₂bag, hd⟩)
+      (satisfiesTreeCondition_order_five_1_chain3 tab c₁ c₂ d hc₁ hc₂bag hd)
   · have hswap :=
       satisfiesTreeCondition_eq_of_childrenBag_eq tab (BTree.node_childrenBag_eq_swap c₁ c₂)
     have hcanon :=
-      satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₂, c₁])
-        ⟨c₂, c₁, d, rfl, hc₂, hc₁bag, hd⟩
+      satisfiesTreeCondition_order_five_1_chain3 tab c₂ c₁ d hc₂ hc₁bag hd
     exact hswap.trans hcanon
 
 /-- The `{1, bushy-3}` family is canonical up to swapping the two top-level children. -/
@@ -1544,13 +1544,11 @@ private theorem satisfiesTreeCondition_order_five_bushy3_canonical (tab : Butche
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
   rcases hpair with ⟨hc₁, hc₂bag, hd₁, hd₂⟩ | ⟨hc₁bag, hd₁, hd₂, hc₂⟩
   · simpa using
-      (satisfiesTreeCondition_order_five_1_bushy3 tab (.node [c₁, c₂])
-        ⟨c₁, c₂, d₁, d₂, rfl, hc₁, hc₂bag, hd₁, hd₂⟩)
+      (satisfiesTreeCondition_order_five_1_bushy3 tab c₁ c₂ d₁ d₂ hc₁ hc₂bag hd₁ hd₂)
   · have hswap :=
       satisfiesTreeCondition_eq_of_childrenBag_eq tab (BTree.node_childrenBag_eq_swap c₁ c₂)
     have hcanon :=
-      satisfiesTreeCondition_order_five_1_bushy3 tab (.node [c₂, c₁])
-        ⟨c₂, c₁, d₁, d₂, rfl, hc₂, hc₁bag, hd₁, hd₂⟩
+      satisfiesTreeCondition_order_five_1_bushy3 tab c₂ c₁ d₁ d₂ hc₂ hc₁bag hd₁ hd₂
     exact hswap.trans hcanon
 
 /-- [order-2, order-2] tree condition: sum = 1/20. -/
