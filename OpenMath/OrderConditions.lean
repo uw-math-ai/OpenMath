@@ -1318,6 +1318,45 @@ private theorem satisfiesTreeCondition_order_five_via_mixed12 (tab : ButcherTabl
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_five_via_mixed12 tab t h i
 
+/-- A unary parent preserves tree conditions across a bag-equivalent child swap. -/
+private theorem satisfiesTreeCondition_singleton_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    tab.satisfiesTreeCondition (.node [BTree.node children₁]) ↔
+      tab.satisfiesTreeCondition (.node [BTree.node children₂]) := by
+  unfold satisfiesTreeCondition
+  have horder :
+      (BTree.node children₁).order = (BTree.node children₂).order :=
+    BTree.order_eq_of_childrenBag_eq hbag
+  have hchild_density :
+      (BTree.node children₁).density = (BTree.node children₂).density :=
+    BTree.density_eq_of_childrenBag_eq hbag
+  have hparent_density :
+      (BTree.node [BTree.node children₁]).density = (BTree.node [BTree.node children₂]).density := by
+    simp [BTree.density_node, BTree.order_node, horder, hchild_density]
+  have hew :
+      ∀ i : Fin s,
+        tab.elementaryWeight (.node [BTree.node children₁]) i =
+          tab.elementaryWeight (.node [BTree.node children₂]) i := by
+    intro i
+    rw [elementaryWeight_singleton, elementaryWeight_singleton]
+    congr 1
+    ext k
+    rw [elementaryWeight_eq_of_childrenBag_eq tab hbag k]
+  constructor
+  · intro h
+    convert h using 1
+    · congr 1
+      ext i
+      rw [hew i]
+    · simp [hparent_density]
+  · intro h
+    convert h using 1
+    · congr 1
+      ext i
+      rw [← hew i]
+    · simp [hparent_density]
+
 /-- Via-mixed21 tree condition: sum = 1/40. -/
 private theorem satisfiesTreeCondition_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
@@ -1326,17 +1365,19 @@ private theorem satisfiesTreeCondition_order_five_via_mixed21 (tab : ButcherTabl
     ∑ i : Fin s, tab.b i *
       (∑ j : Fin s, tab.A i j *
         ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
-  have hmixed : ∃ c : BTree, t = .node [c] ∧
-      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order + d₂.order = 3 ∧
-        ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) := by
-    rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
-    exact ⟨c, rfl, d₁, d₂, hc, by omega, Or.inr ⟨hd₁, hd₂⟩⟩
-  simp only [satisfiesTreeCondition, density_of_order_five_via_mixed t hmixed]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_via_mixed21 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_via_mixed21 tab t h i
+  rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
+  subst hc
+  have hswap :
+      tab.satisfiesTreeCondition (.node [.node [d₁, d₂]]) ↔
+        tab.satisfiesTreeCondition (.node [.node [d₂, d₁]]) := by
+    simpa using
+      (satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab
+        (children₁ := [d₁, d₂]) (children₂ := [d₂, d₁])
+        (BTree.node_childrenBag_eq_swap d₁ d₂))
+  rw [hswap]
+  simpa using
+    (satisfiesTreeCondition_order_five_via_mixed12 tab (.node [.node [d₂, d₁]])
+      ⟨.node [d₂, d₁], rfl, d₂, d₁, rfl, hd₂, hd₁⟩)
 
 /-- Via-via-bushy3 tree condition: sum = 1/60. -/
 private theorem satisfiesTreeCondition_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
