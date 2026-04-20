@@ -8,7 +8,7 @@ Semi-autonomous formalization of *A First Course in the Numerical Analysis of Di
 
 1. **Read `.prover-state/strategy.md`** for what to work on this cycle.
 2. **Sorry-first (ABSOLUTE RULE)**: When formalizing new content, write the full proof structure with `sorry` at every step. Verify it compiles (`lake env lean <file>`). Then close sorry's one by one.
-3. **Claude-first then Aristotle (MANDATORY)**: First add the required Lean definitions/structures/predicates and formalized theorem statements locally, and verify they compile. Then batch-submit ~5 sorry's/sub-lemmas to Aristotle (free compute!). Sleep 30 minutes. Check results, incorporate proofs, fix partials. Only manually prove what Aristotle failed on.
+3. **Aristotle-first (MANDATORY)**: After writing the sorry-first structure, batch-submit ~5 sorry's/sub-lemmas to Aristotle (free compute!). Sleep 30 minutes. Check results, incorporate proofs, fix partials. Only manually prove what Aristotle failed on.
 4. **Prove remaining**: Use Lean LSP tools (`lean_goal`, `lean_multi_attempt`, search tools) for what Aristotle didn't solve.
 5. **Write results**: Before finishing, write `.prover-state/task_results/cycle_<NNN>.md` documenting what you tried, what worked, what failed, and suggested next steps. If blocked, write an issue file in `.prover-state/issues/`.
 6. **Commit**: Verify all modified files compile, then commit and push.
