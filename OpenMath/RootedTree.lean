@@ -813,31 +813,25 @@ theorem beta_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
     (BTree.node children₁).beta = (BTree.node children₂).beta := by
   simpa only [childrenBag_node, betaBag_childrenBag] using congrArg betaBag hbag
 
-theorem order_three_bag_witness_recover {t : BTree} (hw3 : OrderThreeBagWitness t) :
-    (∃ d, t = .node [d] ∧ d.order = 2) ∨
-      ∃ d₁ d₂, t = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 := by
+/-- Bag-first recovery witness for the order-3 classifier. This records only
+the canonical child bag and the low-order facts needed downstream. -/
+inductive OrderThreeRecoveryWitness (t : BTree) : Type where
+  | chain3 (d : BTree)
+      (hbag : t.childrenBag = (BTree.node [d]).childrenBag)
+      (hd : d.order = 2) :
+      OrderThreeRecoveryWitness t
+  | bushy3 (d₁ d₂ : BTree)
+      (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
+      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) :
+      OrderThreeRecoveryWitness t
+
+def order_three_bag_witness_recover {t : BTree} (hw3 : OrderThreeBagWitness t) :
+    OrderThreeRecoveryWitness t := by
   cases hw3 with
   | chain3 children d hd hbag =>
-      have hchildren : children = [d] := singleton_children_eq_of_childrenBag_eq hbag
-      exact Or.inl ⟨d, by simp [hchildren], hd⟩
+      exact .chain3 d hbag hd
   | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
-      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
-      have horder : (BTree.node children).order = 3 := by
-        refine (order_eq_of_childrenBag_eq hbag).trans ?_
-        simp [hd₁, hd₂, BTree.order_node]
-      have hsume : e₁.order + e₂.order = 2 := by
-        have horder' : 1 + (e₁.order + e₂.order) = 3 := by
-          simpa [hchildren, BTree.order_node, Nat.add_assoc] using horder
-        omega
-      have he₁ : e₁.order = 1 := by
-        have he₁_pos := order_pos e₁
-        have he₂_pos := order_pos e₂
-        omega
-      have he₂ : e₂.order = 1 := by
-        have he₁_pos := order_pos e₁
-        have he₂_pos := order_pos e₂
-        omega
-      exact Or.inr ⟨e₁, e₂, by simp [hchildren], he₁, he₂⟩
+      exact .bushy3 d₁ d₂ hbag hd₁ hd₂
 
 /-- Normalize the order-5 two-child family with child-order sum `4` into the
 `{2,2}` / `{1, chain3}` / `{1, bushy3}` trichotomy. -/
@@ -919,51 +913,41 @@ noncomputable def order_five_caseB_witness (c₁ c₂ c₃ : BTree)
     OrderFiveCaseBWitness c₁ c₂ c₃ :=
   Classical.choice (order_five_caseB_witness_nonempty c₁ c₂ c₃ hsum)
 
-theorem order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t) :
-    match hw4 with
-    | .bushy4 _ _ _ _ _ _ _ _ =>
-        ∃ d₁ d₂ d₃, t = .node [d₁, d₂, d₃] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ d₃.order = 1
-    | .mixed4 _ _ _ _ _ =>
-        ∃ d₁ d₂, t = .node [d₁, d₂] ∧
-          ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1))
-    | .single3 _ d _ _ =>
-        (∃ e, d = .node [e] ∧ e.order = 2) ∨
-          ∃ e₁ e₂, d = .node [e₁, e₂] ∧ e₁.order = 1 ∧ e₂.order = 1 := by
+/-- Bag-first recovery witness for the order-4 classifier. This keeps only the
+canonical child bags and low-order facts needed by theorem-side consumers. -/
+inductive OrderFourRecoveryWitness (t : BTree) : Type where
+  | bushy4 (d₁ d₂ d₃ : BTree)
+      (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag)
+      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) (hd₃ : d₃.order = 1) :
+      OrderFourRecoveryWitness t
+  | mixed4 (d₁ d₂ : BTree)
+      (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
+      (hcanon : d₁.order = 1 ∧ d₂.order = 2) :
+      OrderFourRecoveryWitness t
+  | singleChain3 (d e : BTree)
+      (htBag : t.childrenBag = (BTree.node [d]).childrenBag)
+      (hdBag : d.childrenBag = (BTree.node [e]).childrenBag)
+      (he : e.order = 2) :
+      OrderFourRecoveryWitness t
+  | singleBushy3 (d e₁ e₂ : BTree)
+      (htBag : t.childrenBag = (BTree.node [d]).childrenBag)
+      (hdBag : d.childrenBag = (BTree.node [e₁, e₂]).childrenBag)
+      (he₁ : e₁.order = 1) (he₂ : e₂.order = 1) :
+      OrderFourRecoveryWitness t
+
+def order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t) :
+    OrderFourRecoveryWitness t := by
   cases hw4 with
   | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
-      rcases triple_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, e₃, hchildren⟩
-      have horder : (BTree.node children).order = 4 := by
-        refine (order_eq_of_childrenBag_eq hbag).trans ?_
-        simp [hd₁, hd₂, hd₃, BTree.order_node]
-      have hsum : 1 + (e₁.order + (e₂.order + e₃.order)) = 4 := by
-        simpa [hchildren, BTree.order_node, Nat.add_assoc] using horder
-      have he₁_pos := order_pos e₁
-      have he₂_pos := order_pos e₂
-      have he₃_pos := order_pos e₃
-      have he₁ : e₁.order = 1 := by omega
-      have he₂ : e₂.order = 1 := by omega
-      have he₃ : e₃.order = 1 := by omega
-      exact ⟨e₁, e₂, e₃, by simp [hchildren], he₁, he₂, he₃⟩
+      exact .bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃
   | mixed4 children d₁ d₂ hcanon hbag =>
-      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
-      have horder : (BTree.node children).order = 4 := by
-        refine (order_eq_of_childrenBag_eq hbag).trans ?_
-        simp [hcanon.1, hcanon.2, BTree.order_node]
-      have hsum : 1 + (e₁.order + e₂.order) = 4 := by
-        simpa [hchildren, BTree.order_node, Nat.add_assoc] using horder
-      have he₁_pos := order_pos e₁
-      have he₂_pos := order_pos e₂
-      have hpair : (e₁.order = 1 ∧ e₂.order = 2) ∨ (e₁.order = 2 ∧ e₂.order = 1) := by
-        by_cases he₁ : e₁.order = 1
-        · exact Or.inl ⟨he₁, by omega⟩
-        · exact Or.inr ⟨by omega, by omega⟩
-      exact ⟨e₁, e₂, by simp [hchildren], hpair⟩
+      exact .mixed4 d₁ d₂ hbag hcanon
   | single3 children d hw3 hbag =>
-      rcases order_three_bag_witness_recover hw3 with hchain | hbushy
-      · rcases hchain with ⟨e, hdeq, he⟩
-        exact Or.inl ⟨e, hdeq, he⟩
-      · rcases hbushy with ⟨e₁, e₂, hdeq, he₁, he₂⟩
-        exact Or.inr ⟨e₁, e₂, hdeq, he₁, he₂⟩
+      cases order_three_bag_witness_recover hw3 with
+      | chain3 e hdBag he =>
+          exact .singleChain3 d e hbag hdBag he
+      | bushy3 e₁ e₂ hdBag he₁ he₂ =>
+          exact .singleBushy3 d e₁ e₂ hbag hdBag he₁ he₂
 
 /-- Normalize the order-5 singleton-child family whose child has order `4`
 into the `bushy4` / `mixed4` / `viaChain3` / `viaBushy3` quartic trichotomy. -/
@@ -992,19 +976,15 @@ form by recovering an exact shape from the public order-4 bag witness. -/
 theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4) :
     Nonempty (OrderFiveCaseDWitness c) := by
   have hw4 : OrderFourBagWitness c := order_four_bag_witness c hc
-  cases hw4 with
-  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
+  cases order_four_bag_witness_recover hw4 with
+  | bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃ =>
       exact ⟨.bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃⟩
-  | mixed4 children d₁ d₂ hcanon hbag =>
-      exact ⟨.mixed4 d₁ d₂ hbag <|
-        by
-          rcases hcanon with ⟨hd₁, hd₂⟩
-          exact Or.inl ⟨hd₁, hd₂⟩⟩
-  | single3 children d hw3 hbag =>
-      rcases order_four_bag_witness_recover (.single3 children d hw3 hbag) with
-        ⟨e, hdeq, he⟩ | ⟨e₁, e₂, hdeq, he₁, he₂⟩
-      · exact ⟨.viaChain3 d e hbag (by simpa [hdeq]) he⟩
-      · exact ⟨.viaBushy3 d e₁ e₂ hbag (by simpa [hdeq]) he₁ he₂⟩
+  | mixed4 d₁ d₂ hbag hcanon =>
+      exact ⟨.mixed4 d₁ d₂ hbag (Or.inl hcanon)⟩
+  | singleChain3 d e hcBag hdBag he =>
+      exact ⟨.viaChain3 d e hcBag hdBag he⟩
+  | singleBushy3 d e₁ e₂ hcBag hdBag he₁ he₂ =>
+      exact ⟨.viaBushy3 d e₁ e₂ hcBag hdBag he₁ he₂⟩
 
 /-- Noncomputably choose the normalized order-5 singleton-child / Case D witness. -/
 noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :

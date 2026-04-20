@@ -459,18 +459,22 @@ theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         congr 1
         exact (hrc i).symm
       · have heq : t.order = 3 := by omega
-        have hw : BTree.OrderThreeBagWitness t := BTree.order_three_bag_witness t heq
-        cases hw with
-        | chain3 children c hc hbag =>
-          rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-          rw [satisfiesTreeCondition_order_three_chain tab _ ⟨c, rfl, hc⟩]
-          rw [order3b] at h3b
-          simpa [order3b_sum_eq tab hrc] using h3b
-        | bushy3 children c₁ c₂ hc₁ hc₂ hbag =>
-          rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-          rw [satisfiesTreeCondition_order_three_bushy tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
-          rw [order3a] at h3a
-          simpa [order3a_sum_eq tab hrc] using h3a
+        cases t with
+        | leaf => simp at heq
+        | node children =>
+          have hw : BTree.OrderThreeBagWitness (.node children) :=
+            BTree.order_three_bag_witness (.node children) heq
+          cases BTree.order_three_bag_witness_recover hw with
+          | chain3 c hbag hc =>
+            rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
+            rw [satisfiesTreeCondition_order_three_chain tab _ ⟨c, rfl, hc⟩]
+            rw [order3b] at h3b
+            simpa [order3b_sum_eq tab hrc] using h3b
+          | bushy3 c₁ c₂ hbag hc₁ hc₂ =>
+            rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
+            rw [satisfiesTreeCondition_order_three_bushy tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
+            rw [order3a] at h3a
+            simpa [order3a_sum_eq tab hrc] using h3a
 
 /-! ### Order 4 helpers -/
 
@@ -732,32 +736,46 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
     by_cases hle3 : t.order ≤ 3
     · exact ((thm_301A_order3 tab hrc).mpr ⟨h1, h2, h3a, h3b⟩) t hle3
     · have heq : t.order = 4 := by omega
-      have hw4 : BTree.OrderFourBagWitness t := BTree.order_four_bag_witness t heq
-      cases hw4 with
-      | bushy4 children c₁ c₂ c₃ hc₁ hc₂ hc₃ hbag =>
-        rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-        rw [satisfiesTreeCondition_order_four_bushy4 tab _ ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩]
-        rw [order4a] at h4a
-        simpa [order4a_sum_eq tab hrc] using h4a
-      | mixed4 children c₁ c₂ hcanon hbag =>
-        rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-        rw [satisfiesTreeCondition_order_four_mixed12 tab _ ⟨c₁, c₂, rfl, hcanon.1, hcanon.2⟩]
-        rw [order4b] at h4b
-        simpa [order4b_sum_eq tab hrc] using h4b
-      | single3 children child3 hw3 hbag =>
-        rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-        cases hw3 with
-        | chain3 childChildren c' hc' hchildBag =>
-          rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
-          rw [satisfiesTreeCondition_order_four_via_chain3 tab _ ⟨.node [c'], rfl, c', rfl, hc'⟩]
-          rw [order4d] at h4d
-          simpa [order4d_sum_eq tab hrc] using h4d
-        | bushy3 childChildren c₁ c₂ hc₁ hc₂ hchildBag =>
-          rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
-          rw [satisfiesTreeCondition_order_four_via_bushy3 tab _
-            ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hc₁, hc₂⟩]
-          rw [order4c] at h4c
-          simpa [order4c_sum_eq tab hrc] using h4c
+      cases t with
+      | leaf => simp at heq
+      | node children =>
+        have hw4 : BTree.OrderFourBagWitness (.node children) :=
+          BTree.order_four_bag_witness (.node children) heq
+        cases BTree.order_four_bag_witness_recover hw4 with
+        | bushy4 c₁ c₂ c₃ hbag hc₁ hc₂ hc₃ =>
+          rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
+          rw [satisfiesTreeCondition_order_four_bushy4 tab _ ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩]
+          rw [order4a] at h4a
+          simpa [order4a_sum_eq tab hrc] using h4a
+        | mixed4 c₁ c₂ hbag hcanon =>
+          rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
+          rw [satisfiesTreeCondition_order_four_mixed12 tab _ ⟨c₁, c₂, rfl, hcanon.1, hcanon.2⟩]
+          rw [order4b] at h4b
+          simpa [order4b_sum_eq tab hrc] using h4b
+        | singleChain3 child3 c' hbag hchildBag hc' =>
+            rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
+            cases child3 with
+            | leaf =>
+                have hcard := congrArg Multiset.card hchildBag
+                simp at hcard
+            | node childChildren =>
+                rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
+                rw [satisfiesTreeCondition_order_four_via_chain3 tab _
+                  ⟨.node [c'], rfl, c', rfl, hc'⟩]
+                rw [order4d] at h4d
+                simpa [order4d_sum_eq tab hrc] using h4d
+        | singleBushy3 child3 c₁ c₂ hbag hchildBag hc₁ hc₂ =>
+            rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
+            cases child3 with
+            | leaf =>
+                have hcard := congrArg Multiset.card hchildBag
+                simp at hcard
+            | node childChildren =>
+                rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
+                rw [satisfiesTreeCondition_order_four_via_bushy3 tab _
+                  ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hc₁, hc₂⟩]
+                rw [order4c] at h4c
+                simpa [order4c_sum_eq tab hrc] using h4c
 
 /-! ### Order 5 helpers -/
 
