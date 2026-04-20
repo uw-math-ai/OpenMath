@@ -1913,10 +1913,11 @@ private inductive OrderFiveCaseDWitness (c : BTree) where
       (he₂ : e₂.order = 1) :
       OrderFiveCaseDWitness c
 
-/-- Normalize an order-4 child into the bushy-4 / mixed-4 / via-chain3 / via-bushy3 families. -/
-private theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4) :
+/-- Normalize an order-4 child witness into the bushy-4 / mixed-4 /
+via-chain3 / via-bushy3 families. -/
+private theorem order_five_caseD_witness_nonempty (c : BTree) (hw4 : BTree.OrderFourBagWitness c) :
     Nonempty (OrderFiveCaseDWitness c) := by
-  have hw4 : BTree.OrderFourBagWitness c := BTree.order_four_bag_witness c hc
+  have hc : c.order = 4 := BTree.order_fourBagWitness_order_eq hw4
   cases hw4 with
   | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
     rcases BTree.triple_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, e₃, hchildren⟩
@@ -1968,9 +1969,9 @@ private theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4)
         (by simpa [hgrandChildren]) hf₁ hf₂⟩
 
 /-- Noncomputably choose the normalized order-4 singleton-child witness. -/
-private noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
+private noncomputable def order_five_caseD_witness (c : BTree) (hw4 : BTree.OrderFourBagWitness c) :
     OrderFiveCaseDWitness c :=
-  Classical.choice (order_five_caseD_witness_nonempty c hc)
+  Classical.choice (order_five_caseD_witness_nonempty c hw4)
 
 /-- Canonical dispatcher for the order-5 singleton-child family with an order-4 child. -/
 private theorem satisfiesTreeCondition_order_five_caseD (tab : ButcherTableau s)
@@ -2165,13 +2166,7 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
       | caseD children c hw4 hbag =>
         -- Case D: single order-4 child
-        have hc : c.order = 4 := by
-          have horderNode : (BTree.node children).order = (BTree.node [c]).order :=
-            BTree.order_eq_of_childrenBag_eq hbag
-          have : (BTree.node [c]).order = 5 := by
-            simpa [heq] using horderNode.symm
-          simpa [BTree.order_node, BTree.order_fourBagWitness_order_eq hw4] using this
-        have hCaseD : OrderFiveCaseDWitness c := order_five_caseD_witness c hc
+        have hCaseD : OrderFiveCaseDWitness c := order_five_caseD_witness c hw4
         have htarget : order_five_caseD_target tab hCaseD := by
           cases hCaseD with
           | bushy4 =>
