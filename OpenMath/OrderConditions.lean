@@ -1565,19 +1565,22 @@ private theorem satisfiesTreeCondition_order_five_22 (tab : ButcherTableau s) (t
     exact ew_of_order_five_22 tab t h i
 
 /-- Via-bushy4 tree condition: sum = 1/20. -/
-private theorem satisfiesTreeCondition_order_five_via_bushy4_exact (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c : BTree, t = .node [c] ∧
-      ∃ d₁ d₂ d₃ : BTree, c = .node [d₁, d₂, d₃] ∧
-        d₁.order = 1 ∧ d₂.order = 1 ∧ d₃.order = 1) :
-    tab.satisfiesTreeCondition t ↔
+private theorem satisfiesTreeCondition_order_five_via_bushy4_exact (tab : ButcherTableau s)
+    (c d₁ d₂ d₃ : BTree) (hc : c = .node [d₁, d₂, d₃])
+    (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) (hd₃ : d₃.order = 1) :
+    tab.satisfiesTreeCondition (.node [c]) ↔
     ∑ i : Fin s, tab.b i *
       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 3) = 1 / 20 := by
-  simp only [satisfiesTreeCondition, density_of_order_five_via_bushy4 t h]
+  subst hc
+  simp only [satisfiesTreeCondition, density_of_order_five_via_bushy4 (.node [BTree.node [d₁, d₂, d₃]])
+    ⟨BTree.node [d₁, d₂, d₃], rfl, d₁, d₂, d₃, rfl, hd₁, hd₂, hd₃⟩]
   constructor
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_via_bushy4 tab t h i).symm
+    exact (ew_of_order_five_via_bushy4 tab (.node [BTree.node [d₁, d₂, d₃]])
+      ⟨BTree.node [d₁, d₂, d₃], rfl, d₁, d₂, d₃, rfl, hd₁, hd₂, hd₃⟩ i).symm
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_via_bushy4 tab t h i
+    exact ew_of_order_five_via_bushy4 tab (.node [BTree.node [d₁, d₂, d₃]])
+      ⟨BTree.node [d₁, d₂, d₃], rfl, d₁, d₂, d₃, rfl, hd₁, hd₂, hd₃⟩ i
 
 /-- Via-bushy4 tree condition depends only on the unordered inner three-child
 witness. -/
@@ -1590,28 +1593,30 @@ private theorem satisfiesTreeCondition_order_five_via_bushy4
       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 3) = 1 / 20 := by
   exact
     (satisfiesTreeCondition_singleton_eq_of_tree_childrenBag_eq tab hcBag).trans <|
-      satisfiesTreeCondition_order_five_via_bushy4_exact tab (.node [BTree.node [d₁, d₂, d₃]])
-        ⟨BTree.node [d₁, d₂, d₃], rfl, d₁, d₂, d₃, rfl, hd₁, hd₂, hd₃⟩
+      satisfiesTreeCondition_order_five_via_bushy4_exact tab
+        (BTree.node [d₁, d₂, d₃]) d₁ d₂ d₃ rfl hd₁ hd₂ hd₃
 
 /-- Via-mixed12 tree condition: sum = 1/40. -/
-private theorem satisfiesTreeCondition_order_five_via_mixed12_exact (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c : BTree, t = .node [c] ∧
-      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 2) :
-    tab.satisfiesTreeCondition t ↔
+private theorem satisfiesTreeCondition_order_five_via_mixed12_exact (tab : ButcherTableau s)
+    (c d₁ d₂ : BTree) (hc : c = .node [d₁, d₂])
+    (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 2) :
+    tab.satisfiesTreeCondition (.node [c]) ↔
     ∑ i : Fin s, tab.b i *
       (∑ j : Fin s, tab.A i j *
         ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
-  have hmixed : ∃ c : BTree, t = .node [c] ∧
+  subst hc
+  have hmixed : ∃ c : BTree, (.node [BTree.node [d₁, d₂]] : BTree) = .node [c] ∧
       ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order + d₂.order = 3 ∧
         ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) := by
-    rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
-    exact ⟨c, rfl, d₁, d₂, hc, by omega, Or.inl ⟨hd₁, hd₂⟩⟩
-  simp only [satisfiesTreeCondition, density_of_order_five_via_mixed t hmixed]
+    exact ⟨BTree.node [d₁, d₂], rfl, d₁, d₂, rfl, by omega, Or.inl ⟨hd₁, hd₂⟩⟩
+  simp only [satisfiesTreeCondition, density_of_order_five_via_mixed (.node [BTree.node [d₁, d₂]]) hmixed]
   constructor
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_via_mixed12 tab t h i).symm
+    exact (ew_of_order_five_via_mixed12 tab (.node [BTree.node [d₁, d₂]])
+      ⟨BTree.node [d₁, d₂], rfl, d₁, d₂, rfl, hd₁, hd₂⟩ i).symm
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_via_mixed12 tab t h i
+    exact ew_of_order_five_via_mixed12 tab (.node [BTree.node [d₁, d₂]])
+      ⟨BTree.node [d₁, d₂], rfl, d₁, d₂, rfl, hd₁, hd₂⟩ i
 
 /-- Via-mixed12 tree condition depends only on the unordered inner two-child
 witness. -/
@@ -1625,8 +1630,8 @@ private theorem satisfiesTreeCondition_order_five_via_mixed12
         ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
   exact
     (satisfiesTreeCondition_singleton_eq_of_tree_childrenBag_eq tab hcBag).trans <|
-      satisfiesTreeCondition_order_five_via_mixed12_exact tab (BTree.node [BTree.node [d₁, d₂]])
-        ⟨BTree.node [d₁, d₂], rfl, d₁, d₂, rfl, hd₁, hd₂⟩
+      satisfiesTreeCondition_order_five_via_mixed12_exact tab
+        (BTree.node [d₁, d₂]) d₁ d₂ rfl hd₁ hd₂
 
 /-- Transport the canonical unary mixed `{1,2}` tree condition across bag-equal
 presentations of the inner two-child witness. -/
