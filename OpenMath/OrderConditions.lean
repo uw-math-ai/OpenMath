@@ -958,20 +958,6 @@ private theorem ew_of_order_five_bushy3_eq_of_childrenBag_eq (tab : ButcherTable
       ew_of_order_five_1_bushy3 tab (BTree.node [c₁, c₂])
         ⟨c₁, c₂, rfl, hcanon.1, e₁, e₂, hcanon.2.1, hcanon.2.2.1, hcanon.2.2.2⟩ i
 
-/-- 2-child [bushy-3, order-1]: same ew by commutativity. -/
-private theorem ew_of_order_five_bushy3_1 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
-      ∃ d₁ d₂ : BTree, c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1)
-    (i : Fin s) :
-    tab.elementaryWeight t i =
-      (∑ k : Fin s, tab.A i k) *
-      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2) := by
-  rcases h with ⟨c₁, c₂, rfl, hc₂, d₁, d₂, hc₁, hd₁, hd₂⟩
-  simpa using
-    ew_of_order_five_bushy3_eq_of_childrenBag_eq tab
-      c₂ c₁ c₁ c₂ d₁ d₂ ⟨hc₂, hc₁, hd₁, hd₂⟩
-      (BTree.node_childrenBag_eq_swap c₁ c₂) i
-
 /-- 2-child [order-1, chain-3]: ew = (∑ₖ aᵢₖ) · (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ))). -/
 private theorem ew_of_order_five_1_chain3 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
@@ -1224,17 +1210,6 @@ private theorem density_of_order_five_bushy3_eq_of_childrenBag_eq
       density_of_order_five_1_bushy3 (BTree.node [c₁, c₂])
         ⟨c₁, c₂, rfl, hcanon.1, e₁, e₂, hcanon.2.1, hcanon.2.2.1, hcanon.2.2.2⟩
 
-/-- 2-child [bushy-3, order-1] has density 15. -/
-private theorem density_of_order_five_bushy3_1 (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
-      ∃ d₁ d₂ : BTree, c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) :
-    t.density = 15 := by
-  rcases h with ⟨c₁, c₂, rfl, hc₂, d₁, d₂, hc₁, hd₁, hd₂⟩
-  simpa using
-    density_of_order_five_bushy3_eq_of_childrenBag_eq
-      c₂ c₁ c₁ c₂ d₁ d₂ ⟨hc₂, hc₁, hd₁, hd₂⟩
-      (BTree.node_childrenBag_eq_swap c₁ c₂)
-
 /-- 2-child [order-1, chain-3] has density 30. -/
 private theorem density_of_order_five_1_chain3 (t : BTree)
     (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
@@ -1462,20 +1437,6 @@ private theorem satisfiesTreeCondition_order_five_bushy3_eq_of_childrenBag_eq
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_five_bushy3_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ e₁ e₂ hcanon hbag i
 
-/-- [bushy-3, 1] tree condition: sum = 1/15. -/
-private theorem satisfiesTreeCondition_order_five_bushy3_1 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
-      ∃ d₁ d₂ : BTree, c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) :
-    tab.satisfiesTreeCondition t ↔
-    ∑ i : Fin s, tab.b i *
-      ((∑ k : Fin s, tab.A i k) *
-       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
-  rcases h with ⟨c₁, c₂, rfl, hc₂, d₁, d₂, hc₁, hd₁, hd₂⟩
-  simpa using
-    satisfiesTreeCondition_order_five_bushy3_eq_of_childrenBag_eq tab
-      c₂ c₁ c₁ c₂ d₁ d₂ ⟨hc₂, hc₁, hd₁, hd₂⟩
-      (BTree.node_childrenBag_eq_swap c₁ c₂)
-
 /-- [1, chain-3] tree condition: sum = 1/30. -/
 private theorem satisfiesTreeCondition_order_five_1_chain3 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧
@@ -1509,20 +1470,6 @@ private theorem satisfiesTreeCondition_order_five_chain3_eq_of_childrenBag_eq
     exact (ew_of_order_five_chain3_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ d hcanon hbag i).symm
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_five_chain3_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ d hcanon hbag i
-
-/-- [chain-3, 1] tree condition: sum = 1/30. -/
-private theorem satisfiesTreeCondition_order_five_chain3_1 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₂.order = 1 ∧
-      ∃ d : BTree, c₁ = .node [d] ∧ d.order = 2) :
-    tab.satisfiesTreeCondition t ↔
-    ∑ i : Fin s, tab.b i *
-      ((∑ k : Fin s, tab.A i k) *
-       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
-  rcases h with ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩
-  simpa using
-    satisfiesTreeCondition_order_five_chain3_eq_of_childrenBag_eq tab
-      c₂ c₁ c₁ c₂ d ⟨hc₂, hc₁, hd⟩
-      (BTree.node_childrenBag_eq_swap c₁ c₂)
 
 /-- The `{1, chain-3}` family is canonical up to swapping the two top-level children. -/
 private theorem satisfiesTreeCondition_order_five_chain3_canonical (tab : ButcherTableau s)
@@ -2147,8 +2094,9 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       rw [order5c]; simpa [order5c_sum_eq tab hrc] using ht
     · -- order5d from t5c = [leaf, t3a]
       have ht := h t5c (by native_decide)
-      rw [satisfiesTreeCondition_order_five_1_bushy3 tab t5c
-        ⟨.leaf, t3a, rfl, by simp, .leaf, .leaf, rfl, by simp, by simp⟩] at ht
+      change tab.satisfiesTreeCondition (.node [.leaf, t3a]) at ht
+      rw [satisfiesTreeCondition_order_five_bushy3_canonical tab .leaf t3a .leaf .leaf
+        (Or.inl ⟨by simp, rfl, by simp, by simp⟩)] at ht
       rw [order5d]; simpa [order5d_sum_eq tab hrc] using ht
     · -- order5e from t5f = [t4a] where t4a = [leaf, leaf, leaf]
       have ht := h t5f (by native_decide)
@@ -2158,8 +2106,9 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       simpa [order_five_caseD_target] using htarget
     · -- order5f from t5d = [leaf, t3b]
       have ht := h t5d (by native_decide)
-      rw [satisfiesTreeCondition_order_five_1_chain3 tab t5d
-        ⟨.leaf, t3b, rfl, by simp, t2, rfl, by native_decide⟩] at ht
+      change tab.satisfiesTreeCondition (.node [.leaf, t3b]) at ht
+      rw [satisfiesTreeCondition_order_five_chain3_canonical tab .leaf t3b t2
+        (Or.inl ⟨by simp, rfl, by native_decide⟩)] at ht
       rw [order5f]; simpa [order5f_sum_eq tab hrc] using ht
     · -- order5g from t5g = [t4b] where t4b = [leaf, t2]
       have ht := h t5g (by native_decide)
