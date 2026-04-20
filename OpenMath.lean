@@ -3,6 +3,8 @@ import OpenMath.EulerConvergence
 import OpenMath.MultistepMethods
 import OpenMath.DahlquistEquivalence
 import OpenMath.Collocation
+import OpenMath.Legendre
+import OpenMath.ShiftedLegendreDivision
 import OpenMath.CollocationBN
 import OpenMath.SDIRK
 import OpenMath.RadauIIA3
