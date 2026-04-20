@@ -839,6 +839,52 @@ theorem order_three_bag_witness_recover {t : BTree} (hw3 : OrderThreeBagWitness 
         omega
       exact Or.inr ⟨e₁, e₂, by simp [hchildren], he₁, he₂⟩
 
+theorem order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t) :
+    match hw4 with
+    | .bushy4 _ _ _ _ _ _ _ _ =>
+        ∃ d₁ d₂ d₃, t = .node [d₁, d₂, d₃] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ d₃.order = 1
+    | .mixed4 _ _ _ _ _ =>
+        ∃ d₁ d₂, t = .node [d₁, d₂] ∧
+          ((d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1))
+    | .single3 _ d _ _ =>
+        (∃ e, d = .node [e] ∧ e.order = 2) ∨
+          ∃ e₁ e₂, d = .node [e₁, e₂] ∧ e₁.order = 1 ∧ e₂.order = 1 := by
+  cases hw4 with
+  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
+      rcases triple_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, e₃, hchildren⟩
+      have horder : (BTree.node children).order = 4 := by
+        refine (order_eq_of_childrenBag_eq hbag).trans ?_
+        simp [hd₁, hd₂, hd₃, BTree.order_node]
+      have hsum : 1 + (e₁.order + (e₂.order + e₃.order)) = 4 := by
+        simpa [hchildren, BTree.order_node, Nat.add_assoc] using horder
+      have he₁_pos := order_pos e₁
+      have he₂_pos := order_pos e₂
+      have he₃_pos := order_pos e₃
+      have he₁ : e₁.order = 1 := by omega
+      have he₂ : e₂.order = 1 := by omega
+      have he₃ : e₃.order = 1 := by omega
+      exact ⟨e₁, e₂, e₃, by simp [hchildren], he₁, he₂, he₃⟩
+  | mixed4 children d₁ d₂ hcanon hbag =>
+      rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
+      have horder : (BTree.node children).order = 4 := by
+        refine (order_eq_of_childrenBag_eq hbag).trans ?_
+        simp [hcanon.1, hcanon.2, BTree.order_node]
+      have hsum : 1 + (e₁.order + e₂.order) = 4 := by
+        simpa [hchildren, BTree.order_node, Nat.add_assoc] using horder
+      have he₁_pos := order_pos e₁
+      have he₂_pos := order_pos e₂
+      have hpair : (e₁.order = 1 ∧ e₂.order = 2) ∨ (e₁.order = 2 ∧ e₂.order = 1) := by
+        by_cases he₁ : e₁.order = 1
+        · exact Or.inl ⟨he₁, by omega⟩
+        · exact Or.inr ⟨by omega, by omega⟩
+      exact ⟨e₁, e₂, by simp [hchildren], hpair⟩
+  | single3 children d hw3 hbag =>
+      rcases order_three_bag_witness_recover hw3 with hchain | hbushy
+      · rcases hchain with ⟨e, hdeq, he⟩
+        exact Or.inl ⟨e, hdeq, he⟩
+      · rcases hbushy with ⟨e₁, e₂, hdeq, he₁, he₂⟩
+        exact Or.inr ⟨e₁, e₂, hdeq, he₁, he₂⟩
+
 theorem alpha_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
     (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
     (BTree.node children₁).alpha = (BTree.node children₂).alpha := by

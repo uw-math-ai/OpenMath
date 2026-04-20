@@ -1967,33 +1967,22 @@ private theorem satisfiesTreeCondition_order_five_caseD_of_orderFourBagWitness
       exact h5g
   | single3 children d hw3 hbag =>
       rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hbag]
-      cases hw3 with
-      | chain3 grandChildren e he hchildBag =>
-          have hgrandChildren : grandChildren = [e] :=
-            BTree.singleton_children_eq_of_childrenBag_eq hchildBag
-          rw [hgrandChildren]
-          rw [satisfiesTreeCondition_order_five_via_via_chain3_canonical tab
-            (.node [.node [e]]) (.node [e]) e rfl rfl he]
-          rw [order5i_sum_eq tab hrc]
-          exact h5i
-      | bushy3 grandChildren e₁ e₂ he₁ he₂ hchildBag =>
-          rcases BTree.pair_children_exists_of_childrenBag_eq hchildBag with
-            ⟨f₁, f₂, hgrandChildren⟩
-          have horder : 1 + (f₁.order + f₂.order) = 3 := by
-            have hgrandOrder : (BTree.node grandChildren).order = 3 := by
-              refine (BTree.order_eq_of_childrenBag_eq hchildBag).trans ?_
-              simp [he₁, he₂, BTree.order_node]
-            simpa [hgrandChildren, BTree.order_node] using hgrandOrder
-          have hf₁_pos := BTree.order_pos f₁
-          have hf₂_pos := BTree.order_pos f₂
-          have hf₁ : f₁.order = 1 := by omega
-          have hf₂ : f₂.order = 1 := by omega
-          rw [hgrandChildren]
-          rw [satisfiesTreeCondition_order_five_via_via_bushy3_canonical tab
-            (.node [.node [f₁, f₂]]) (BTree.node [f₁, f₂]) f₁ f₂ rfl
-            (Or.inl ⟨rfl, hf₁, hf₂⟩)]
-          rw [order5h_sum_eq tab hrc]
-          exact h5h
+      have hrecover :
+          (∃ e, d = .node [e] ∧ e.order = 2) ∨
+            ∃ e₁ e₂, d = .node [e₁, e₂] ∧ e₁.order = 1 ∧ e₂.order = 1 :=
+        BTree.order_four_bag_witness_recover (.single3 children d hw3 hbag)
+      rcases hrecover with ⟨e, hdeq, he⟩ | ⟨e₁, e₂, hdeq, he₁, he₂⟩
+      · rw [hdeq]
+        rw [satisfiesTreeCondition_order_five_via_via_chain3_canonical tab
+          (.node [.node [e]]) (.node [e]) e rfl rfl he]
+        rw [order5i_sum_eq tab hrc]
+        exact h5i
+      · rw [hdeq]
+        rw [satisfiesTreeCondition_order_five_via_via_bushy3_canonical tab
+          (.node [.node [e₁, e₂]]) (BTree.node [e₁, e₂]) e₁ e₂ rfl
+          (Or.inl ⟨rfl, he₁, he₂⟩)]
+        rw [order5h_sum_eq tab hrc]
+        exact h5h
 
 /-- Branch-specific order condition selected by an order-4 singleton-child witness. -/
 private def order_five_caseD_target (tab : ButcherTableau s) :
