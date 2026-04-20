@@ -621,6 +621,76 @@ theorem order_four_cases (t : BTree) (ht : t.order = 4) :
   | single3 c hc =>
       exact Or.inr <| Or.inr ⟨c, rfl, hc⟩
 
+/-- Compatibility witness for the older order-5 top-level ordered-list API. -/
+inductive OrderFiveWitness : BTree → Type where
+  | bushy5 (c₁ c₂ c₃ c₄ : BTree)
+      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) (hc₄ : c₄.order = 1) :
+      OrderFiveWitness (.node [c₁, c₂, c₃, c₄])
+  | caseB (c₁ c₂ c₃ : BTree)
+      (hsum : c₁.order + c₂.order + c₃.order = 4) :
+      OrderFiveWitness (.node [c₁, c₂, c₃])
+  | caseC (c₁ c₂ : BTree)
+      (hsum : c₁.order + c₂.order = 4) :
+      OrderFiveWitness (.node [c₁, c₂])
+  | caseD (c : BTree)
+      (hc : c.order = 4) :
+      OrderFiveWitness (.node [c])
+
+/-- Compatibility chooser for the older order-5 top-level ordered-list API. -/
+theorem order_five_witness_nonempty (t : BTree) (ht : t.order = 5) :
+    Nonempty (OrderFiveWitness t) := by
+  cases t with
+  | leaf => simp at ht
+  | node children =>
+    simp only [order_node] at ht
+    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 4 := by omega
+    cases children with
+    | nil => simp at hfoldr
+    | cons hd tl =>
+      simp only [List.foldr] at hfoldr
+      have hhd_pos : 0 < hd.order := by
+        cases hd <;> simp [order_node]
+      cases tl with
+      | nil =>
+        exact ⟨.caseD hd (by simp only [List.foldr] at hfoldr; omega)⟩
+      | cons hd2 tl2 =>
+        have hhd2_pos : 0 < hd2.order := by
+          cases hd2 <;> simp [order_node]
+        simp only [List.foldr] at hfoldr
+        cases tl2 with
+        | nil =>
+          exact ⟨.caseC hd hd2 (by simpa using hfoldr)⟩
+        | cons hd3 tl3 =>
+          have hhd3_pos : 0 < hd3.order := by
+            cases hd3 <;> simp [order_node]
+          simp only [List.foldr] at hfoldr
+          cases tl3 with
+          | nil =>
+            exact ⟨.caseB hd hd2 hd3 (by simpa [Nat.add_assoc] using hfoldr)⟩
+          | cons hd4 tl4 =>
+            have hhd4_pos : 0 < hd4.order := by
+              cases hd4 <;> simp [order_node]
+            simp only [List.foldr] at hfoldr
+            cases tl4 with
+            | nil =>
+              have h1 : hd.order = 1 := by omega
+              have h2 : hd2.order = 1 := by omega
+              have h3 : hd3.order = 1 := by omega
+              have h4 : hd4.order = 1 := by omega
+              exact ⟨.bushy5 hd hd2 hd3 hd4 h1 h2 h3 h4⟩
+            | cons hd5 tl5 =>
+              exfalso
+              have hhd5_pos : 0 < hd5.order := by
+                cases hd5 <;> simp [order_node]
+              simp only [List.foldr] at hfoldr
+              have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
+              omega
+
+/-- Noncomputably choose the normalized order-5 top-level witness. -/
+noncomputable def order_five_witness (t : BTree) (ht : t.order = 5) :
+    OrderFiveWitness t :=
+  Classical.choice (order_five_witness_nonempty t ht)
+
 /-- Child bags agree for any permutation of the ordered fallback representation. -/
 theorem node_childrenBag_eq_of_perm {children₁ children₂ : List BTree}
     (hperm : children₁.Perm children₂) :

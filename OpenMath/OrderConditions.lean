@@ -761,82 +761,6 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
 
 /-! ### Order 5 helpers -/
 
-/-- Normalized top-level witness for classifying any order-5 tree by its child-count
-boundary before entering the existing family dispatchers. -/
-private inductive OrderFiveTopWitness (t : BTree) : Type where
-  | bushy5 (c₁ c₂ c₃ c₄ : BTree)
-      (ht : t = .node [c₁, c₂, c₃, c₄])
-      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) (hc₄ : c₄.order = 1) :
-      OrderFiveTopWitness t
-  | caseB (c₁ c₂ c₃ : BTree)
-      (ht : t = .node [c₁, c₂, c₃])
-      (hsum : c₁.order + c₂.order + c₃.order = 4) :
-      OrderFiveTopWitness t
-  | caseC (c₁ c₂ : BTree)
-      (ht : t = .node [c₁, c₂])
-      (hsum : c₁.order + c₂.order = 4) :
-      OrderFiveTopWitness t
-  | caseD (c : BTree)
-      (ht : t = .node [c])
-      (hc : c.order = 4) :
-      OrderFiveTopWitness t
-
-/-- Package the top-level order-5 child-count classification as data in `Type`. -/
-private theorem order_five_witness_nonempty (t : BTree) (ht : t.order = 5) :
-    Nonempty (OrderFiveTopWitness t) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-    simp only [order_node] at ht
-    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 4 := by omega
-    cases children with
-    | nil => simp at hfoldr
-    | cons hd tl =>
-      simp only [List.foldr] at hfoldr
-      have hhd_pos := BTree.order_pos hd
-      cases tl with
-      | nil =>
-        -- single child of order 4
-        exact ⟨.caseD hd rfl (by simp only [List.foldr] at hfoldr; omega)⟩
-      | cons hd2 tl2 =>
-        have hhd2_pos := BTree.order_pos hd2
-        simp only [List.foldr] at hfoldr
-        cases tl2 with
-        | nil =>
-          -- two children with orders summing to 4
-          exact ⟨.caseC hd hd2 rfl (by simpa using hfoldr)⟩
-        | cons hd3 tl3 =>
-          have hhd3_pos := BTree.order_pos hd3
-          simp only [List.foldr] at hfoldr
-          cases tl3 with
-          | nil =>
-            -- three children summing to 4
-            simp only [List.foldr] at hfoldr
-            exact ⟨.caseB hd hd2 hd3 rfl (by omega)⟩
-          | cons hd4 tl4 =>
-            have hhd4_pos := BTree.order_pos hd4
-            simp only [List.foldr] at hfoldr
-            cases tl4 with
-            | nil =>
-              -- four children, all must be order 1
-              have h1 : hd.order = 1 := by omega
-              have h2 : hd2.order = 1 := by omega
-              have h3 : hd3.order = 1 := by omega
-              have h4 : hd4.order = 1 := by omega
-              exact ⟨.bushy5 hd hd2 hd3 hd4 rfl h1 h2 h3 h4⟩
-            | cons hd5 tl5 =>
-              -- five+ children: impossible since all orders ≥ 1
-              exfalso
-              have hhd5_pos := BTree.order_pos hd5
-              simp only [List.foldr] at hfoldr
-              have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
-              omega
-
-/-- Noncomputably choose the normalized top-level order-5 witness. -/
-private noncomputable def order_five_witness (t : BTree) (ht : t.order = 5) :
-    OrderFiveTopWitness t :=
-  Classical.choice (order_five_witness_nonempty t ht)
-
 /-- Bushy order-5 tree (4 leaves): ew = (∑ₖ aᵢₖ)⁴. -/
 private theorem ew_of_order_five_bushy5 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ c₃ c₄ : BTree, t = .node [c₁, c₂, c₃, c₄] ∧
@@ -2237,24 +2161,22 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
     by_cases hle4 : t.order ≤ 4
     · exact ((thm_301A_order4 tab hrc).mpr h4) t hle4
     · have heq : t.order = 5 := by omega
-      have hw5 : OrderFiveTopWitness t := order_five_witness t heq
+      have hw5 : BTree.OrderFiveWitness t := BTree.order_five_witness t heq
       cases hw5 with
-      | bushy5 c₁ c₂ c₃ c₄ ht hc₁ hc₂ hc₃ hc₄ =>
+      | bushy5 c₁ c₂ c₃ c₄ hc₁ hc₂ hc₃ hc₄ =>
         -- Case A: 4 leaves → order5a
-        rw [satisfiesTreeCondition_order_five_bushy5 tab t
-          ⟨c₁, c₂, c₃, c₄, ht, hc₁, hc₂, hc₃, hc₄⟩]
+        rw [satisfiesTreeCondition_order_five_bushy5 tab (.node [c₁, c₂, c₃, c₄])
+          ⟨c₁, c₂, c₃, c₄, rfl, hc₁, hc₂, hc₃, hc₄⟩]
         rw [order5a] at h5a; simpa [order5a_sum_eq tab hrc] using h5a
-      | caseB c₁ c₂ c₃ ht hsum =>
+      | caseB c₁ c₂ c₃ hsum =>
         -- Case B: 3 children summing to 4
-        subst ht
         have hCaseB : OrderFiveCaseBWitness c₁ c₂ c₃ :=
           order_five_caseB_witness c₁ c₂ c₃ hsum
         have htarget : order_five_caseB_target tab hCaseB := by
           simpa [order_five_caseB_target] using h5b
         exact (order_five_caseB_dispatch_shared tab hrc hCaseB).2 htarget
-      | caseC c₁ c₂ ht hsum =>
+      | caseC c₁ c₂ hsum =>
         -- Case C: 2 children summing to 4
-        subst ht
         have hCaseC : OrderFiveCaseCWitness c₁ c₂ := order_five_caseC_witness c₁ c₂ hsum
         have htarget : order_five_caseC_target tab hCaseC := by
           cases hCaseC with
@@ -2265,7 +2187,7 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
           | chain3 =>
               simpa [order_five_caseC_target] using h5f
         exact (order_five_caseC_dispatch_shared tab hrc hCaseC).2 htarget
-      | caseD c ht hc =>
+      | caseD c hc =>
         -- Case D: single order-4 child
         have dispatch_caseD : ∀ (c : BTree), c.order = 4 →
             tab.satisfiesTreeCondition (.node [c]) := by
@@ -2282,7 +2204,6 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
             | viaBushy3 =>
                 simpa [order_five_caseD_target] using h5h
           exact (order_five_caseD_dispatch_shared tab hrc hCaseD).2 htarget
-        subst ht
         exact dispatch_caseD c hc
 
 end ButcherTableau
