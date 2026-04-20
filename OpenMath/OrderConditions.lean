@@ -722,8 +722,8 @@ private theorem satisfiesTreeCondition_order_four_mixed_canonical (tab : Butcher
         c₂ c₁ c₁ c₂ ⟨hc₂, hc₁⟩
         (BTree.node_childrenBag_eq_swap c₁ c₂)
 
-/-- Via-bushy3 satisfies tree condition iff ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ)²) = 1/12. -/
-private theorem satisfiesTreeCondition_order_four_via_bushy3 (tab : ButcherTableau s) (t : BTree)
+/-- Exact-list helper for the via-bushy3 order-4 tree condition. -/
+private theorem satisfiesTreeCondition_order_four_via_bushy3_exact (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧ ∃ c₁ c₂ : BTree,
       c = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) :
     tab.satisfiesTreeCondition t ↔
@@ -735,8 +735,22 @@ private theorem satisfiesTreeCondition_order_four_via_bushy3 (tab : ButcherTable
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_four_via_bushy3 tab t h i
 
-/-- Via-chain3 satisfies tree condition iff ∑ bᵢ (∑ⱼ aᵢⱼ (∑ₖ aⱼₖ (∑ₗ aₖₗ))) = 1/24. -/
-private theorem satisfiesTreeCondition_order_four_via_chain3 (tab : ButcherTableau s) (t : BTree)
+/-- Via-bushy3 order-4 trees satisfy the tree condition iff the via-bushy3
+order-4 condition holds. -/
+private theorem satisfiesTreeCondition_order_four_via_bushy3 (tab : ButcherTableau s)
+    (children : List BTree) (c c₁ c₂ : BTree)
+    (htBag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag)
+    (hcBag : c.childrenBag = (BTree.node [c₁, c₂]).childrenBag)
+    (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) :
+    tab.satisfiesTreeCondition (.node children) ↔
+    ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2) = 1 / 12 := by
+  exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab htBag).trans <|
+    (satisfiesTreeCondition_singleton_eq_of_tree_childrenBag_eq tab hcBag).trans <|
+      satisfiesTreeCondition_order_four_via_bushy3_exact tab (.node [BTree.node [c₁, c₂]])
+        ⟨BTree.node [c₁, c₂], rfl, c₁, c₂, rfl, hc₁, hc₂⟩
+
+/-- Exact-list helper for the via-chain3 order-4 tree condition. -/
+private theorem satisfiesTreeCondition_order_four_via_chain3_exact (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧ ∃ c' : BTree, c = .node [c'] ∧ c'.order = 2) :
     tab.satisfiesTreeCondition t ↔
     ∑ i : Fin s, tab.b i *
@@ -747,6 +761,21 @@ private theorem satisfiesTreeCondition_order_four_via_chain3 (tab : ButcherTable
     exact (ew_of_order_four_via_chain3 tab t h i).symm
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_four_via_chain3 tab t h i
+
+/-- Via-chain3 order-4 trees satisfy the tree condition iff the via-chain3
+order-4 condition holds. -/
+private theorem satisfiesTreeCondition_order_four_via_chain3 (tab : ButcherTableau s)
+    (children : List BTree) (c c' : BTree)
+    (htBag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag)
+    (hcBag : c.childrenBag = (BTree.node [c']).childrenBag)
+    (hc' : c'.order = 2) :
+    tab.satisfiesTreeCondition (.node children) ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l))) = 1 / 24 := by
+  exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab htBag).trans <|
+    (satisfiesTreeCondition_singleton_eq_of_tree_childrenBag_eq tab hcBag).trans <|
+      satisfiesTreeCondition_order_four_via_chain3_exact tab (.node [BTree.node [c']])
+        ⟨BTree.node [c'], rfl, c', rfl, hc'⟩
 
 /-- Theorem 301A at order 4 (assuming row-sum consistency). -/
 theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
@@ -770,14 +799,16 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       simpa [order4b_sum_eq tab hrc] using ht4b
     · -- order4c: from t4c = [t3a] where t3a = [leaf, leaf]
       have ht4c : tab.satisfiesTreeCondition t4c := h t4c (by native_decide)
-      rw [satisfiesTreeCondition_order_four_via_bushy3 tab t4c
-        ⟨t3a, rfl, .leaf, .leaf, rfl, by simp, by simp⟩] at ht4c
+      change tab.satisfiesTreeCondition (.node [t3a]) at ht4c
+      rw [satisfiesTreeCondition_order_four_via_bushy3 tab [t3a] t3a .leaf .leaf
+        rfl rfl (by simp) (by simp)] at ht4c
       rw [order4c]
       simpa [order4c_sum_eq tab hrc] using ht4c
     · -- order4d: from t4d = [t3b] where t3b = [t2]
       have ht4d : tab.satisfiesTreeCondition t4d := h t4d (by native_decide)
-      rw [satisfiesTreeCondition_order_four_via_chain3 tab t4d
-        ⟨t3b, rfl, t2, rfl, by native_decide⟩] at ht4d
+      change tab.satisfiesTreeCondition (.node [t3b]) at ht4d
+      rw [satisfiesTreeCondition_order_four_via_chain3 tab [t3b] t3b t2
+        rfl rfl (by native_decide)] at ht4d
       rw [order4d]
       simpa [order4d_sum_eq tab hrc] using ht4d
   · rintro ⟨h1, h2, h3a, h3b, h4a, h4b, h4c, h4d⟩ t ht
@@ -803,28 +834,16 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
           simpa [order4b_sum_eq tab hrc] using h4b
         | singleChain3 child3 c' hbag hchildBag hc' =>
             rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-            cases child3 with
-            | leaf =>
-                have hcard := congrArg Multiset.card hchildBag
-                simp at hcard
-            | node childChildren =>
-                rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
-                rw [satisfiesTreeCondition_order_four_via_chain3 tab _
-                  ⟨.node [c'], rfl, c', rfl, hc'⟩]
-                rw [order4d] at h4d
-                simpa [order4d_sum_eq tab hrc] using h4d
+            rw [satisfiesTreeCondition_order_four_via_chain3 tab [child3] child3 c'
+              rfl hchildBag hc']
+            rw [order4d] at h4d
+            simpa [order4d_sum_eq tab hrc] using h4d
         | singleBushy3 child3 c₁ c₂ hbag hchildBag hc₁ hc₂ =>
             rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-            cases child3 with
-            | leaf =>
-                have hcard := congrArg Multiset.card hchildBag
-                simp at hcard
-            | node childChildren =>
-                rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
-                rw [satisfiesTreeCondition_order_four_via_bushy3 tab _
-                  ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hc₁, hc₂⟩]
-                rw [order4c] at h4c
-                simpa [order4c_sum_eq tab hrc] using h4c
+            rw [satisfiesTreeCondition_order_four_via_bushy3 tab [child3] child3 c₁ c₂
+              rfl hchildBag hc₁ hc₂]
+            rw [order4c] at h4c
+            simpa [order4c_sum_eq tab hrc] using h4c
 
 /-! ### Order 5 helpers -/
 
