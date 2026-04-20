@@ -379,44 +379,6 @@ noncomputable def order_three_recovery_witness (t : BTree) (ht : t.order = 3) :
     OrderThreeRecoveryWitness t :=
   Classical.choice (order_three_recovery_witness_nonempty t ht)
 
-/-- Legacy list-payload witness for order-3 rooted trees. The payload records
-the exact ordered child list together with a canonical low-order representative. -/
-inductive OrderThreeBagWitness : BTree → Type where
-  | chain3 (children : List BTree) (c : BTree) (hc : c.order = 2)
-      (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag) :
-      OrderThreeBagWitness (.node children)
-  | bushy3 (children : List BTree) (c₁ c₂ : BTree)
-      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1)
-      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
-      OrderThreeBagWitness (.node children)
-
-def order_three_bag_witness_recover {t : BTree} (hw3 : OrderThreeBagWitness t) :
-    OrderThreeRecoveryWitness t := by
-  cases hw3 with
-  | chain3 children d hd hbag =>
-      exact .chain3 d hbag hd
-  | bushy3 children d₁ d₂ hd₁ hd₂ hbag =>
-      exact .bushy3 d₁ d₂ hbag hd₁ hd₂
-
-/-- Recover the legacy list-payload order-3 witness from the recovery-first
-classifier. -/
-theorem order_three_bag_witness_nonempty (t : BTree) (ht : t.order = 3) :
-    Nonempty (OrderThreeBagWitness t) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-      rcases order_three_recovery_witness_nonempty (.node children) ht with ⟨hw3⟩
-      cases hw3 with
-      | chain3 d hbag hd =>
-          exact ⟨.chain3 children d hd hbag⟩
-      | bushy3 d₁ d₂ hbag hd₁ hd₂ =>
-          exact ⟨.bushy3 children d₁ d₂ hd₁ hd₂ hbag⟩
-
-/-- Noncomputably choose the legacy list-payload order-3 witness. -/
-noncomputable def order_three_bag_witness (t : BTree) (ht : t.order = 3) :
-    OrderThreeBagWitness t :=
-  Classical.choice (order_three_bag_witness_nonempty t ht)
-
 theorem singleton_children_eq_of_childrenBag_eq {children : List BTree} {d : BTree}
     (hbag : (BTree.node children).childrenBag = (BTree.node [d]).childrenBag) :
     children = [d] := by
@@ -489,26 +451,6 @@ private theorem order_threeRecoveryWitness_order_eq {t : BTree} (hw3 : OrderThre
       | node children =>
           have horder := order_eq_of_childrenBag_eq_local hbag
           simpa [hd₁, hd₂] using horder
-
-private theorem order_threeBagWitness_order_eq {t : BTree} (hw3 : OrderThreeBagWitness t) :
-    t.order = 3 :=
-  order_threeRecoveryWitness_order_eq (order_three_bag_witness_recover hw3)
-
-/-- Legacy list-payload witness for order-4 rooted trees. The payload records
-the exact ordered child list together with canonical low-order representatives. -/
-inductive OrderFourBagWitness : BTree → Type where
-  | bushy4 (children : List BTree) (c₁ c₂ c₃ : BTree)
-      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1)
-      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂, c₃]).childrenBag) :
-      OrderFourBagWitness (.node children)
-  | mixed4 (children : List BTree) (c₁ c₂ : BTree)
-      (hcanon : c₁.order = 1 ∧ c₂.order = 2)
-      (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
-      OrderFourBagWitness (.node children)
-  | single3 (children : List BTree) (c : BTree)
-      (hw3 : OrderThreeRecoveryWitness c)
-      (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag) :
-      OrderFourBagWitness (.node children)
 
 /-- Bag-first recovery witness for the order-4 classifier. This keeps only the
 canonical child bags and low-order facts needed by theorem-side consumers. -/
@@ -589,43 +531,6 @@ noncomputable def order_four_recovery_witness (t : BTree) (ht : t.order = 4) :
     OrderFourRecoveryWitness t :=
   Classical.choice (order_four_recovery_witness_nonempty t ht)
 
-def order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t) :
-    OrderFourRecoveryWitness t := by
-  cases hw4 with
-  | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
-      exact .bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃
-  | mixed4 children d₁ d₂ hcanon hbag =>
-      exact .mixed4 d₁ d₂ hbag hcanon
-  | single3 children d hw3 hbag =>
-      cases hw3 with
-      | chain3 e hdBag he =>
-          exact .singleChain3 d e hbag hdBag he
-      | bushy3 e₁ e₂ hdBag he₁ he₂ =>
-          exact .singleBushy3 d e₁ e₂ hbag hdBag he₁ he₂
-
-/-- Recover the legacy list-payload order-4 witness from the recovery-first
-classifier. -/
-theorem order_four_bag_witness_nonempty (t : BTree) (ht : t.order = 4) :
-    Nonempty (OrderFourBagWitness t) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-      rcases order_four_recovery_witness_nonempty (.node children) ht with ⟨hw4⟩
-      cases hw4 with
-      | bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃ =>
-          exact ⟨.bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag⟩
-      | mixed4 d₁ d₂ hbag hcanon =>
-          exact ⟨.mixed4 children d₁ d₂ hcanon hbag⟩
-      | singleChain3 d e htBag hdBag he =>
-          exact ⟨.single3 children d (.chain3 e hdBag he) htBag⟩
-      | singleBushy3 d e₁ e₂ htBag hdBag he₁ he₂ =>
-          exact ⟨.single3 children d (.bushy3 e₁ e₂ hdBag he₁ he₂) htBag⟩
-
-/-- Noncomputably choose the legacy list-payload order-4 witness. -/
-noncomputable def order_four_bag_witness (t : BTree) (ht : t.order = 4) :
-    OrderFourBagWitness t :=
-  Classical.choice (order_four_bag_witness_nonempty t ht)
-
 theorem order_fourRecoveryWitness_order_eq {t : BTree} (hw4 : OrderFourRecoveryWitness t) :
     t.order = 4 := by
   cases hw4 with
@@ -669,10 +574,6 @@ theorem order_fourRecoveryWitness_order_eq {t : BTree} (hw4 : OrderFourRecoveryW
       | node children =>
           have horder := order_eq_of_childrenBag_eq_local htBag
           simpa [order_threeRecoveryWitness_order_eq (.bushy3 e₁ e₂ hdBag he₁ he₂)] using horder
-
-theorem order_fourBagWitness_order_eq {t : BTree} (hw4 : OrderFourBagWitness t) :
-    t.order = 4 :=
-  order_fourRecoveryWitness_order_eq (order_four_bag_witness_recover hw4)
 
 /-- Bag-first witness for order-5 rooted trees. The payload records the child
 bag together with canonical low-order representatives. -/
