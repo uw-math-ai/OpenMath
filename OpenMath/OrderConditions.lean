@@ -2055,9 +2055,14 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       rw [order5a]; simpa [order5a_sum_eq tab hrc] using ht
     · -- order5b from t5b = [leaf, leaf, t2]
       have ht := h t5b (by native_decide)
-      rw [satisfiesTreeCondition_order_five_3child_112 tab t5b
-        ⟨.leaf, .leaf, t2, rfl, by simp, by simp, by native_decide⟩] at ht
-      rw [order5b]; simpa [order5b_sum_eq tab hrc] using ht
+      have ht' :
+          ∑ i : Fin s, tab.b i *
+            ((∑ k : Fin s, tab.A i k) ^ 2 *
+             (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
+        simpa [t5b] using
+          (satisfiesTreeCondition_order_five_3child_canonical tab .leaf .leaf t2
+            (Or.inl ⟨by simp, by simp, by native_decide⟩)).mp ht
+      rw [order5b]; simpa [order5b_sum_eq tab hrc] using ht'
     · -- order5c from t5e = [t2, t2]
       have ht := h t5e (by native_decide)
       rw [satisfiesTreeCondition_order_five_22 tab t5e
