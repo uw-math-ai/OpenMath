@@ -461,7 +461,7 @@ private lemma tupleSucc_eq_smul_on_unit_eigenspace
     have heq : ∀ w, (Polynomial.aeval T (Polynomial.X - Polynomial.C μ)) w =
         T w - μ • w := fun w => by
       simp [map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
-        Algebra.algebraMap_eq_smul_one, LinearMap.sub_apply, Module.algebraMap_end_apply]
+        Algebra.algebraMap_eq_smul_one, LinearMap.sub_apply]
     rw [heq] at h0
     exact sub_eq_zero.mp h0
   -- (aeval T (X-Cμ))(v) = (aeval T (X-Cμ))(b(T)(q(T) v))  [by hv_eq]
@@ -529,7 +529,7 @@ private lemma restrict_pow_coe {V : Type*} [AddCommGroup V] [Module ℂ V]
     congr 1
 
 private lemma tupleSucc_pow_bounded_on_disk_eigenspace
-    (m : LMM s) (hzs : m.IsZeroStable) (μ : ℂ) (hroot : m.rhoC μ = 0) (hdisk : ‖μ‖ < 1) :
+    (m : LMM s) (_hzs : m.IsZeroStable) (μ : ℂ) (_hroot : m.rhoC μ = 0) (hdisk : ‖μ‖ < 1) :
     ∃ C : ℝ, 0 ≤ C ∧ ∀ (n : ℕ)
       (v : Module.End.maxGenEigenspace m.toLinearRecurrence.tupleSucc μ),
       ‖(m.toLinearRecurrence.tupleSucc ^ n) v‖
@@ -595,7 +595,7 @@ private lemma tupleSucc_pow_bounded_on_disk_eigenspace
         -- T w' = μ w' + N w' for any w'
         have : T ((T ^ n') w) = μ • ((T ^ n') w) + N ((T ^ n') w) := by
           simp [N, LinearMap.sub_apply, Algebra.algebraMap_eq_smul_one,
-            Module.algebraMap_end_apply, add_sub_cancel]
+            add_sub_cancel]
         rw [this, comm_tupleSucc_sub_smul T μ n' w]
       rw [hstep]
       calc ‖μ • ((T ^ n') w) + (T ^ n') (N w)‖
