@@ -991,6 +991,49 @@ noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
     OrderFiveCaseDWitness c :=
   Classical.choice (order_five_caseD_witness_nonempty c hc)
 
+/-- Recovery-first top-level witness for order-5 rooted trees. This keeps the
+unordered top-level child bag and routes non-bushy branches through the
+normalized Case B/C/D family witnesses. -/
+inductive OrderFiveRecoveryWitness (t : BTree) : Type where
+  | bushy5 (c₁ c₂ c₃ c₄ : BTree)
+      (hbag : t.childrenBag = (BTree.node [c₁, c₂, c₃, c₄]).childrenBag)
+      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) (hc₄ : c₄.order = 1) :
+      OrderFiveRecoveryWitness t
+  | caseB (c₁ c₂ c₃ : BTree)
+      (hbag : t.childrenBag = (BTree.node [c₁, c₂, c₃]).childrenBag)
+      (hwit : OrderFiveCaseBWitness c₁ c₂ c₃) :
+      OrderFiveRecoveryWitness t
+  | caseC (c₁ c₂ : BTree)
+      (hbag : t.childrenBag = (BTree.node [c₁, c₂]).childrenBag)
+      (hwit : OrderFiveCaseCWitness c₁ c₂) :
+      OrderFiveRecoveryWitness t
+  | caseD (c : BTree)
+      (hbag : t.childrenBag = (BTree.node [c]).childrenBag)
+      (hwit : OrderFiveCaseDWitness c) :
+      OrderFiveRecoveryWitness t
+
+/-- Package the order-5 rooted-tree classification in recovery-first form. -/
+theorem order_five_recovery_witness_nonempty (t : BTree) (ht : t.order = 5) :
+    Nonempty (OrderFiveRecoveryWitness t) := by
+  have hw5 : OrderFiveBagWitness t := order_five_bag_witness t ht
+  cases hw5 with
+  | bushy5 _ c₁ c₂ c₃ c₄ hc₁ hc₂ hc₃ hc₄ hbag =>
+      exact ⟨.bushy5 c₁ c₂ c₃ c₄ (by simpa using hbag) hc₁ hc₂ hc₃ hc₄⟩
+  | caseB _ c₁ c₂ c₃ hsum hbag =>
+      exact ⟨.caseB c₁ c₂ c₃ (by simpa using hbag)
+        (order_five_caseB_witness c₁ c₂ c₃ hsum)⟩
+  | caseC _ c₁ c₂ hsum hbag =>
+      exact ⟨.caseC c₁ c₂ (by simpa using hbag)
+        (order_five_caseC_witness c₁ c₂ hsum)⟩
+  | caseD _ c hw4 hbag =>
+      exact ⟨.caseD c (by simpa using hbag)
+        (order_five_caseD_witness c (order_fourRecoveryWitness_order_eq hw4))⟩
+
+/-- Noncomputably choose the recovery-first order-5 witness. -/
+noncomputable def order_five_recovery_witness (t : BTree) (ht : t.order = 5) :
+    OrderFiveRecoveryWitness t :=
+  Classical.choice (order_five_recovery_witness_nonempty t ht)
+
 /-- Recover an exact singleton-node presentation from a bag-equality against a
 canonical singleton node. -/
 theorem singleton_node_recover_of_childrenBag_eq {t d : BTree}
