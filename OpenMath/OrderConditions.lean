@@ -863,6 +863,21 @@ private theorem ew_of_order_five_112 (tab : ButcherTableau s) (t : BTree)
         ew_of_order_one tab c₂ hc₂, ew_of_order_two tab c₃ hc₃]
   ring
 
+/-- Transport the canonical `{1,1,2}` elementary-weight formula across
+bag-equal three-child representations. -/
+private theorem ew_of_order_five_3child_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    (c₁ c₂ c₃ d₁ d₂ d₃ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 2)
+    (hbag : (BTree.node [d₁, d₂, d₃]).childrenBag = (BTree.node [c₁, c₂, c₃]).childrenBag)
+    (i : Fin s) :
+    tab.elementaryWeight (.node [d₁, d₂, d₃]) i =
+      (∑ k : Fin s, tab.A i k) ^ 2 *
+      (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
+  exact
+    (elementaryWeight_eq_of_childrenBag_eq tab hbag i).trans <|
+      ew_of_order_five_112 tab (.node [c₁, c₂, c₃])
+        ⟨c₁, c₂, c₃, rfl, hcanon.1, hcanon.2.1, hcanon.2.2⟩ i
+
 /-- 3-child [order-1, order-2, order-1]: same ew by commutativity. -/
 private theorem ew_of_order_five_121 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
@@ -872,9 +887,10 @@ private theorem ew_of_order_five_121 (tab : ButcherTableau s) (t : BTree)
       (∑ k : Fin s, tab.A i k) ^ 2 *
       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
   rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
-  simp [elementaryWeight, List.foldr, ew_of_order_one tab c₁ hc₁,
-        ew_of_order_two tab c₂ hc₂, ew_of_order_one tab c₃ hc₃]
-  ring
+  simpa using
+    ew_of_order_five_3child_eq_of_childrenBag_eq tab
+      c₃ c₁ c₂ c₁ c₂ c₃ ⟨hc₃, hc₁, hc₂⟩
+      (BTree.node_childrenBag_eq_rotate_right c₁ c₂ c₃) i
 
 /-- 3-child [order-2, order-1, order-1]: same ew by commutativity. -/
 private theorem ew_of_order_five_211 (tab : ButcherTableau s) (t : BTree)
@@ -885,9 +901,10 @@ private theorem ew_of_order_five_211 (tab : ButcherTableau s) (t : BTree)
       (∑ k : Fin s, tab.A i k) ^ 2 *
       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) := by
   rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
-  simp only [elementaryWeight, List.foldr, ew_of_order_two tab c₁ hc₁,
-        ew_of_order_one tab c₂ hc₂, ew_of_order_one tab c₃ hc₃, mul_one, one_mul]
-  ring
+  simpa using
+    ew_of_order_five_3child_eq_of_childrenBag_eq tab
+      c₂ c₃ c₁ c₁ c₂ c₃ ⟨hc₂, hc₃, hc₁⟩
+      (BTree.node_childrenBag_eq_rotate_left c₁ c₂ c₃) i
 
 /-- 2-child [order-1, bushy-3]: ew = (∑ₖ aᵢₖ) · (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ)²). -/
 private theorem ew_of_order_five_1_bushy3 (tab : ButcherTableau s) (t : BTree)

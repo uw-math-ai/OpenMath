@@ -349,6 +349,12 @@ theorem node_childrenBag_eq_rotate_left (c₁ c₂ c₃ : BTree) :
   node_childrenBag_eq_of_perm <|
     (List.Perm.swap _ _ _).trans (List.Perm.cons _ (List.Perm.swap _ _ _))
 
+/-- Three-child nodes expose the same bag after rotating the witnesses right. -/
+theorem node_childrenBag_eq_rotate_right (c₁ c₂ c₃ : BTree) :
+    (BTree.node [c₁, c₂, c₃]).childrenBag = (BTree.node [c₃, c₁, c₂]).childrenBag :=
+  node_childrenBag_eq_of_perm <|
+    (List.Perm.cons _ (List.Perm.swap _ _ _)).trans (List.Perm.swap _ _ _)
+
 /-- The order (number of vertices) of any rooted tree is positive. -/
 theorem order_pos (t : BTree) : 0 < t.order := by
   cases t with
