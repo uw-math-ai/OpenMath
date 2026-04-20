@@ -665,26 +665,36 @@ lemma polyMomentN_eq_intervalIntegral_of_natDegree_lt
             intro i hi
             exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
 
+private lemma eval_eq_zero_on_Icc_imp_eq_zero (p : ℝ[X])
+    (hzero : ∀ x ∈ Set.Icc (0 : ℝ) 1, p.eval x = 0) :
+    p = 0 := by
+  by_contra hp
+  have hfinite : Set.Finite {x : ℝ | p.eval x = 0} := by
+    simpa [Polynomial.IsRoot] using (Polynomial.finite_setOf_isRoot hp)
+  have hIcc_finite : (Set.Icc (0 : ℝ) 1).Finite :=
+    hfinite.subset (by
+      intro x hx
+      exact hzero x hx)
+  exact (Set.Icc_infinite (show (0 : ℝ) < 1 by norm_num)) hIcc_finite
+
+private lemma exists_eval_ne_zero_on_Icc (p : ℝ[X]) (hp : p ≠ 0) :
+    ∃ x : ℝ, x ∈ Set.Icc (0 : ℝ) 1 ∧ p.eval x ≠ 0 := by
+  by_contra h
+  push_neg at h
+  exact hp (eval_eq_zero_on_Icc_imp_eq_zero p h)
+
 lemma poly_eq_zero_of_intervalIntegral_sq_zero (p : ℝ[X])
     (h : ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 = 0) :
     p = 0 := by
-  have h_ae_zero :
-      ∀ᵐ x ∂MeasureTheory.Measure.restrict MeasureTheory.volume (Set.Icc (0 : ℝ) 1),
-        (p.eval x) ^ 2 = 0 := by
-    rw [intervalIntegral.integral_of_le zero_le_one] at h
-    rw [MeasureTheory.integral_eq_zero_iff_of_nonneg (fun x ↦ sq_nonneg _)] at h
-    · simpa only [MeasureTheory.Measure.restrict_congr_set MeasureTheory.Ioc_ae_eq_Icc] using h
-    · exact Continuous.integrableOn_Ioc (by exact p.continuous.pow 2)
-  simp_all +decide [MeasureTheory.ae_restrict_iff']
-  rw [Filter.eventually_inf_principal] at h_ae_zero
-  rw [MeasureTheory.ae_iff] at h_ae_zero
-  contrapose! h_ae_zero
-  have h_roots_finite : Set.Finite {x : ℝ | p.eval x = 0} := by
-    exact p.roots.toFinset.finite_toSet.subset fun x hx => by aesop
-  rw [show {a : ℝ | a ∈ Set.Icc 0 1 ∧ ¬eval a p = 0} = (Set.Icc 0 1) \ {x : ℝ | eval x p = 0} by
-        ext
-        aesop, MeasureTheory.measure_diff_null] <;>
-    norm_num [h_roots_finite.measure_zero]
+  by_contra hp
+  obtain ⟨x0, hx0_mem, hx0_ne⟩ := exists_eval_ne_zero_on_Icc p hp
+  have hpos : 0 < ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 := by
+    refine intervalIntegral.integral_pos zero_lt_one ?_ ?_ ?_
+    · exact (p.continuous.pow 2).continuousOn
+    · intro x hx
+      exact sq_nonneg (p.eval x)
+    · exact ⟨x0, hx0_mem, sq_pos_of_ne_zero hx0_ne⟩
+  linarith
 
 /-- Repackage the high-degree branch of `gaussLegendre_B_double` as
 `k = s + (j + 1)` with `j < s`. -/
