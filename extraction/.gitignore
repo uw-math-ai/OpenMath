@@ -1,6 +1,0 @@
-.env
-__pycache__/
-*.pyc
-
-# Large/regeneratable files (keep in git for reproducibility of analysis)
-# raw_text/, knowledge_base/, graph/ are tracked
