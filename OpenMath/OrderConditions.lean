@@ -1045,6 +1045,40 @@ private theorem ew_of_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BT
         elementaryWeight, List.foldr,
         ew_of_order_one tab e₁ he₁, ew_of_order_one tab e₂ he₂, pow_two]
 
+/-- Transport the canonical unary `via_via_bushy3` elementary-weight formula
+across bag-equal presentations of the inner bushy child. -/
+private theorem ew_of_order_five_via_via_bushy3_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 1)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag)
+    (i : Fin s) :
+    tab.elementaryWeight (.node [.node [.node [d₁, d₂]]]) i =
+      ∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2) := by
+  have hew :
+      ∀ j : Fin s,
+        tab.elementaryWeight (.node [.node [d₁, d₂]]) j =
+          tab.elementaryWeight (.node [.node [c₁, c₂]]) j := by
+    intro j
+    rw [elementaryWeight_singleton, elementaryWeight_singleton]
+    congr 1
+    ext k
+    rw [elementaryWeight_eq_of_childrenBag_eq tab hbag k]
+  calc
+    tab.elementaryWeight (.node [.node [.node [d₁, d₂]]]) i =
+      tab.elementaryWeight (.node [.node [.node [c₁, c₂]]]) i := by
+        rw [elementaryWeight_singleton, elementaryWeight_singleton]
+        congr 1
+        ext j
+        rw [hew j]
+    _ =
+      ∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2) := by
+        exact
+          ew_of_order_five_via_via_bushy3 tab (.node [.node [.node [c₁, c₂]]])
+            ⟨.node [.node [c₁, c₂]], rfl, .node [c₁, c₂], rfl,
+              c₁, c₂, rfl, hcanon.1, hcanon.2⟩ i
+
 /-- Single child via-chain3: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ(∑ₘ aₗₘ))). -/
 private theorem ew_of_order_five_via_via_chain3 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
@@ -1056,6 +1090,39 @@ private theorem ew_of_order_five_via_via_chain3 (tab : ButcherTableau s) (t : BT
   rcases h with ⟨c, rfl, d, hc, e, hd, he⟩
   simp [elementaryWeight_singleton, hc, elementaryWeight_singleton, hd,
         elementaryWeight_singleton, ew_of_order_two tab e he]
+
+/-- Transport the canonical unary `via_via_chain3` elementary-weight formula
+across bag-equal presentations of the inner chain child. -/
+private theorem ew_of_order_five_via_via_chain3_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    (c d : BTree)
+    (hcanon : c.order = 2)
+    (hbag : (BTree.node [d]).childrenBag = (BTree.node [c]).childrenBag)
+    (i : Fin s) :
+    tab.elementaryWeight (.node [.node [.node [d]]]) i =
+      ∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m))) := by
+  have hew :
+      ∀ j : Fin s,
+        tab.elementaryWeight (.node [.node [d]]) j =
+          tab.elementaryWeight (.node [.node [c]]) j := by
+    intro j
+    rw [elementaryWeight_singleton, elementaryWeight_singleton]
+    congr 1
+    ext k
+    rw [elementaryWeight_eq_of_childrenBag_eq tab hbag k]
+  calc
+    tab.elementaryWeight (.node [.node [.node [d]]]) i =
+      tab.elementaryWeight (.node [.node [.node [c]]]) i := by
+        rw [elementaryWeight_singleton, elementaryWeight_singleton]
+        congr 1
+        ext j
+        rw [hew j]
+    _ =
+      ∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m))) := by
+        exact
+          ew_of_order_five_via_via_chain3 tab (.node [.node [.node [c]]])
+            ⟨.node [.node [c]], rfl, .node [c], rfl, c, rfl, hcanon⟩ i
 
 /-- Bushy-5 has density 5. -/
 private theorem density_of_order_five_bushy5 (t : BTree)
@@ -1194,6 +1261,29 @@ private theorem density_of_order_five_via_via_bushy3 (t : BTree)
   simp only [density_node, order_node, List.foldr]
   rw [density_of_order_one e₁ he₁, density_of_order_one e₂ he₂, he₁, he₂]
 
+/-- Transport the canonical unary `via_via_bushy3` density across bag-equal
+presentations of the inner bushy child. -/
+private theorem density_of_order_five_via_via_bushy3_eq_of_childrenBag_eq
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 1)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+    (BTree.node [BTree.node [BTree.node [d₁, d₂]]]).density = 60 := by
+  have horder :
+      (BTree.node [d₁, d₂]).order = (BTree.node [c₁, c₂]).order :=
+    BTree.order_eq_of_childrenBag_eq hbag
+  have hden :
+      (BTree.node [d₁, d₂]).density = (BTree.node [c₁, c₂]).density :=
+    BTree.density_eq_of_childrenBag_eq hbag
+  calc
+    (BTree.node [BTree.node [BTree.node [d₁, d₂]]]).density =
+      (BTree.node [BTree.node [BTree.node [c₁, c₂]]]).density := by
+        simp [BTree.density_node, BTree.order_node, horder, hden]
+    _ = 60 := by
+        exact
+          density_of_order_five_via_via_bushy3 (.node [.node [.node [c₁, c₂]]])
+            ⟨.node [.node [c₁, c₂]], rfl, .node [c₁, c₂], rfl,
+              c₁, c₂, rfl, hcanon.1, hcanon.2⟩
+
 /-- Single via-chain3 child has density 120. -/
 private theorem density_of_order_five_via_via_chain3 (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
@@ -1203,6 +1293,26 @@ private theorem density_of_order_five_via_via_chain3 (t : BTree)
   subst hc; subst hd
   simp only [density_node, order_node, List.foldr]
   rw [density_of_order_two e he, he]
+
+/-- Transport the canonical unary `via_via_chain3` density across bag-equal
+presentations of the inner chain child. -/
+private theorem density_of_order_five_via_via_chain3_eq_of_childrenBag_eq
+    (c d : BTree)
+    (hcanon : c.order = 2)
+    (hbag : (BTree.node [d]).childrenBag = (BTree.node [c]).childrenBag) :
+    (BTree.node [BTree.node [BTree.node [d]]]).density = 120 := by
+  have horder : (BTree.node [d]).order = (BTree.node [c]).order :=
+    BTree.order_eq_of_childrenBag_eq hbag
+  have hden : (BTree.node [d]).density = (BTree.node [c]).density :=
+    BTree.density_eq_of_childrenBag_eq hbag
+  calc
+    (BTree.node [BTree.node [BTree.node [d]]]).density =
+      (BTree.node [BTree.node [BTree.node [c]]]).density := by
+        simp [BTree.density_node, BTree.order_node, horder, hden]
+    _ = 120 := by
+        exact
+          density_of_order_five_via_via_chain3 (.node [.node [.node [c]]])
+            ⟨.node [.node [c]], rfl, .node [c], rfl, c, rfl, hcanon⟩
 
 /-! #### Tree condition equivalences for order 5 -/
 
@@ -1546,6 +1656,24 @@ private theorem satisfiesTreeCondition_order_five_via_mixed_canonical (tab : But
         (BTree.node_childrenBag_eq_swap d₁ d₂)
 
 /-- Via-via-bushy3 tree condition: sum = 1/60. -/
+private theorem satisfiesTreeCondition_order_five_via_via_bushy3_eq_of_childrenBag_eq
+    (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hcanon : c₁.order = 1 ∧ c₂.order = 1)
+    (hbag : (BTree.node [d₁, d₂]).childrenBag = (BTree.node [c₁, c₂]).childrenBag) :
+    tab.satisfiesTreeCondition (.node [.node [.node [d₁, d₂]]]) ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2)) = 1 / 60 := by
+  simp only [satisfiesTreeCondition,
+    density_of_order_five_via_via_bushy3_eq_of_childrenBag_eq c₁ c₂ d₁ d₂ hcanon hbag]
+  constructor
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact (ew_of_order_five_via_via_bushy3_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ hcanon hbag i).symm
+  · intro hh; convert hh using 1; congr 1; ext i; congr 1
+    exact ew_of_order_five_via_via_bushy3_eq_of_childrenBag_eq tab c₁ c₂ d₁ d₂ hcanon hbag i
+
+/-- Via-via-bushy3 tree condition: sum = 1/60. -/
 private theorem satisfiesTreeCondition_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
       ∃ d : BTree, c = .node [d] ∧
@@ -1554,12 +1682,30 @@ private theorem satisfiesTreeCondition_order_five_via_via_bushy3 (tab : ButcherT
     ∑ i : Fin s, tab.b i *
       (∑ j : Fin s, tab.A i j *
         (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l) ^ 2)) = 1 / 60 := by
-  simp only [satisfiesTreeCondition, density_of_order_five_via_via_bushy3 t h]
+  rcases h with ⟨c, rfl, d, hc, e₁, e₂, hd, he₁, he₂⟩
+  subst hc
+  subst hd
+  simpa using
+    satisfiesTreeCondition_order_five_via_via_bushy3_eq_of_childrenBag_eq tab
+      e₁ e₂ e₁ e₂ ⟨he₁, he₂⟩ rfl
+
+/-- Via-via-chain3 tree condition: sum = 1/120. -/
+private theorem satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq
+    (tab : ButcherTableau s)
+    (c d : BTree)
+    (hcanon : c.order = 2)
+    (hbag : (BTree.node [d]).childrenBag = (BTree.node [c]).childrenBag) :
+    tab.satisfiesTreeCondition (.node [.node [.node [d]]]) ↔
+    ∑ i : Fin s, tab.b i *
+      (∑ j : Fin s, tab.A i j *
+        (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m)))) = 1 / 120 := by
+  simp only [satisfiesTreeCondition,
+    density_of_order_five_via_via_chain3_eq_of_childrenBag_eq c d hcanon hbag]
   constructor
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_via_via_bushy3 tab t h i).symm
+    exact (ew_of_order_five_via_via_chain3_eq_of_childrenBag_eq tab c d hcanon hbag i).symm
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_via_via_bushy3 tab t h i
+    exact ew_of_order_five_via_via_chain3_eq_of_childrenBag_eq tab c d hcanon hbag i
 
 /-- Via-via-chain3 tree condition: sum = 1/120. -/
 private theorem satisfiesTreeCondition_order_five_via_via_chain3 (tab : ButcherTableau s) (t : BTree)
@@ -1569,12 +1715,12 @@ private theorem satisfiesTreeCondition_order_five_via_via_chain3 (tab : ButcherT
     ∑ i : Fin s, tab.b i *
       (∑ j : Fin s, tab.A i j *
         (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l * (∑ m : Fin s, tab.A l m)))) = 1 / 120 := by
-  simp only [satisfiesTreeCondition, density_of_order_five_via_via_chain3 t h]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_via_via_chain3 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_via_via_chain3 tab t h i
+  rcases h with ⟨c, rfl, d, hc, e, hd, he⟩
+  subst hc
+  subst hd
+  simpa using
+    satisfiesTreeCondition_order_five_via_via_chain3_eq_of_childrenBag_eq tab
+      e e he rfl
 
 /-! #### Sum conversion helpers for order 5 -/
 
