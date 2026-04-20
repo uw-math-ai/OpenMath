@@ -1270,6 +1270,40 @@ private theorem satisfiesTreeCondition_order_five_chain3_1 (tab : ButcherTableau
       satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₂, c₁])
         ⟨c₂, c₁, rfl, hc₂, d, hc₁, hd⟩
 
+/-- The `{1, chain-3}` family is canonical up to swapping the two top-level children. -/
+private theorem satisfiesTreeCondition_order_five_chain3_canonical (tab : ButcherTableau s)
+    (c₁ c₂ d : BTree)
+    (hpair : (c₁.order = 1 ∧ c₂ = .node [d] ∧ d.order = 2) ∨
+      (c₁ = .node [d] ∧ d.order = 2 ∧ c₂.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * (∑ l : Fin s, tab.A k l)))) = 1 / 30 := by
+  rcases hpair with ⟨hc₁, hc₂, hd⟩ | ⟨hc₁, hd, hc₂⟩
+  · simpa [hc₂] using
+      (satisfiesTreeCondition_order_five_1_chain3 tab (.node [c₁, c₂])
+        ⟨c₁, c₂, rfl, hc₁, d, hc₂, hd⟩)
+  · simpa [hc₁] using
+      (satisfiesTreeCondition_order_five_chain3_1 tab (.node [c₁, c₂])
+        ⟨c₁, c₂, rfl, hc₂, d, hc₁, hd⟩)
+
+/-- The `{1, bushy-3}` family is canonical up to swapping the two top-level children. -/
+private theorem satisfiesTreeCondition_order_five_bushy3_canonical (tab : ButcherTableau s)
+    (c₁ c₂ d₁ d₂ : BTree)
+    (hpair : (c₁.order = 1 ∧ c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) ∨
+      (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔
+    ∑ i : Fin s, tab.b i *
+      ((∑ k : Fin s, tab.A i k) *
+       (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) ^ 2)) = 1 / 15 := by
+  rcases hpair with ⟨hc₁, hc₂, hd₁, hd₂⟩ | ⟨hc₁, hd₁, hd₂, hc₂⟩
+  · simpa [hc₂] using
+      (satisfiesTreeCondition_order_five_1_bushy3 tab (.node [c₁, c₂])
+        ⟨c₁, c₂, rfl, hc₁, d₁, d₂, hc₂, hd₁, hd₂⟩)
+  · simpa [hc₁] using
+      (satisfiesTreeCondition_order_five_bushy3_1 tab (.node [c₁, c₂])
+        ⟨c₁, c₂, rfl, hc₂, d₁, d₂, hc₁, hd₁, hd₂⟩)
+
 /-- [order-2, order-2] tree condition: sum = 1/20. -/
 private theorem satisfiesTreeCondition_order_five_22 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 2 ∧ c₂.order = 2) :
@@ -1599,41 +1633,50 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         rcases hC with ⟨c₁, c₂, rfl, hsum⟩
         have hc₁_pos := BTree.order_pos c₁
         have hc₂_pos := BTree.order_pos c₂
+        have h5d' :
+            ∑ i : Fin s, tab.b i * tab.c i * (∑ j : Fin s, tab.A i j * tab.c j ^ 2) = 1 / 15 := by
+          rw [order5d] at h5d
+          simpa [order5d_sum_eq tab hrc] using h5d
+        have h5f' :
+            ∑ i : Fin s, tab.b i * tab.c i *
+              (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k * tab.c k)) = 1 / 30 := by
+          rw [order5f] at h5f
+          simpa [order5f_sum_eq tab hrc] using h5f
         -- Sub-case on {1,3}, {3,1}, {2,2}
         by_cases h22 : c₁.order = 2 ∧ c₂.order = 2
         · -- {2,2}
           rw [satisfiesTreeCondition_order_five_22 tab _ ⟨c₁, c₂, rfl, h22.1, h22.2⟩]
           rw [order5c] at h5c; simpa [order5c_sum_eq tab hrc] using h5c
-        · by_cases h1 : c₁.order = 1
-          · -- c₁ order 1, c₂ order 3
-            have hc₂ : c₂.order = 3 := by omega
-            rcases order_three_cases c₂ hc₂ with hchain | hbushy
-            · -- c₂ is chain-3
-              rcases hchain with ⟨d, hd_eq, hd⟩
-              rw [satisfiesTreeCondition_order_five_1_chain3 tab _
-                ⟨c₁, c₂, rfl, h1, d, hd_eq, hd⟩]
-              rw [order5f] at h5f; simpa [order5f_sum_eq tab hrc] using h5f
-            · -- c₂ is bushy-3
-              rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
-              rw [satisfiesTreeCondition_order_five_1_bushy3 tab _
-                ⟨c₁, c₂, rfl, h1, d₁, d₂, hd_eq, hd₁, hd₂⟩]
-              rw [order5d] at h5d; simpa [order5d_sum_eq tab hrc] using h5d
-          · by_cases h2 : c₂.order = 1
-            · -- c₂ order 1, c₁ order 3
-              have hc₁ : c₁.order = 3 := by omega
-              rcases order_three_cases c₁ hc₁ with hchain | hbushy
-              · -- c₁ is chain-3
-                rcases hchain with ⟨d, hd_eq, hd⟩
-                rw [satisfiesTreeCondition_order_five_chain3_1 tab _
-                  ⟨c₁, c₂, rfl, h2, d, hd_eq, hd⟩]
-                rw [order5f] at h5f; simpa [order5f_sum_eq tab hrc] using h5f
-              · -- c₁ is bushy-3
-                rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
-                rw [satisfiesTreeCondition_order_five_bushy3_1 tab _
-                  ⟨c₁, c₂, rfl, h2, d₁, d₂, hd_eq, hd₁, hd₂⟩]
-                rw [order5d] at h5d; simpa [order5d_sum_eq tab hrc] using h5d
-            · -- remaining: both ≥ 2, not both 2, sum = 4 → impossible
-              exfalso; omega
+        · have h13 :
+              (c₁.order = 1 ∧ c₂.order = 3) ∨ (c₁.order = 3 ∧ c₂.order = 1) := by
+            by_cases h1 : c₁.order = 1
+            · exact Or.inl ⟨h1, by omega⟩
+            · by_cases h2 : c₂.order = 1
+              · exact Or.inr ⟨by omega, h2⟩
+              · exfalso; omega
+          have h13_shape :
+              (∃ d : BTree,
+                (c₁.order = 1 ∧ c₂ = .node [d] ∧ d.order = 2) ∨
+                (c₁ = .node [d] ∧ d.order = 2 ∧ c₂.order = 1)) ∨
+              (∃ d₁ d₂ : BTree,
+                (c₁.order = 1 ∧ c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) ∨
+                (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) := by
+            rcases h13 with ⟨h1, hc₂⟩ | ⟨hc₁, h2⟩
+            · rcases order_three_cases c₂ hc₂ with hchain | hbushy
+              · rcases hchain with ⟨d, hd_eq, hd⟩
+                exact Or.inl ⟨d, Or.inl ⟨h1, hd_eq, hd⟩⟩
+              · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
+                exact Or.inr ⟨d₁, d₂, Or.inl ⟨h1, hd_eq, hd₁, hd₂⟩⟩
+            · rcases order_three_cases c₁ hc₁ with hchain | hbushy
+              · rcases hchain with ⟨d, hd_eq, hd⟩
+                exact Or.inl ⟨d, Or.inr ⟨hd_eq, hd, h2⟩⟩
+              · rcases hbushy with ⟨d₁, d₂, hd_eq, hd₁, hd₂⟩
+                exact Or.inr ⟨d₁, d₂, Or.inr ⟨hd_eq, hd₁, hd₂, h2⟩⟩
+          rcases h13_shape with ⟨d, hchain⟩ | ⟨d₁, d₂, hbushy⟩
+          · rw [satisfiesTreeCondition_order_five_chain3_canonical tab c₁ c₂ d hchain]
+            simpa [order5f_sum_eq tab hrc] using h5f'
+          · rw [satisfiesTreeCondition_order_five_bushy3_canonical tab c₁ c₂ d₁ d₂ hbushy]
+            simpa [order5d_sum_eq tab hrc] using h5d'
       · -- Case D: single order-4 child
         rcases hD with ⟨c, rfl, hc⟩
         rcases order_four_cases c hc with hbushy4 | hmixed | hsingle
