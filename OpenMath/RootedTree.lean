@@ -1021,6 +1021,40 @@ theorem pair_node_recover_of_childrenBag_eq {t d₁ d₂ : BTree}
       rcases pair_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, hchildren⟩
       exact ⟨e₁, e₂, by simp [hchildren] at hbag ⊢, by simp [hchildren]⟩
 
+/-- Recover an exact triple-node presentation from a bag-equality against a
+canonical three-child node. -/
+theorem triple_node_recover_of_childrenBag_eq {t d₁ d₂ d₃ : BTree}
+    (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag) :
+    ∃ e₁ e₂ e₃,
+      t.childrenBag = (BTree.node [e₁, e₂, e₃]).childrenBag ∧
+      t = .node [e₁, e₂, e₃] := by
+  cases t with
+  | leaf =>
+      have hfalse : False := by
+        have hcard := congrArg Multiset.card hbag
+        simp at hcard
+      exact hfalse.elim
+  | node children =>
+      rcases triple_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, e₃, hchildren⟩
+      exact ⟨e₁, e₂, e₃, by simp [hchildren] at hbag ⊢, by simp [hchildren]⟩
+
+/-- Recover an exact four-child node presentation from a bag-equality against a
+canonical four-child node. -/
+theorem four_node_recover_of_childrenBag_eq {t d₁ d₂ d₃ d₄ : BTree}
+    (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃, d₄]).childrenBag) :
+    ∃ e₁ e₂ e₃ e₄,
+      t.childrenBag = (BTree.node [e₁, e₂, e₃, e₄]).childrenBag ∧
+      t = .node [e₁, e₂, e₃, e₄] := by
+  cases t with
+  | leaf =>
+      have hfalse : False := by
+        have hcard := congrArg Multiset.card hbag
+        simp at hcard
+      exact hfalse.elim
+  | node children =>
+      rcases four_children_exists_of_childrenBag_eq hbag with ⟨e₁, e₂, e₃, e₄, hchildren⟩
+      exact ⟨e₁, e₂, e₃, e₄, by simp [hchildren] at hbag ⊢, by simp [hchildren]⟩
+
 theorem alpha_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
     (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
     (BTree.node children₁).alpha = (BTree.node children₂).alpha := by
