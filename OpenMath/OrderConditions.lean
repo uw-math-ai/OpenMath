@@ -1043,21 +1043,6 @@ private theorem ew_of_order_five_via_mixed_eq_of_childrenBag_eq (tab : ButcherTa
     ew_of_order_five_via_mixed12 tab (.node [.node [c₁, c₂]])
       ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hcanon.1, hcanon.2⟩ i
 
-/-- Single child mixed [2,1]: routed through the canonical `{1,2}` witness. -/
-private theorem ew_of_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c : BTree, t = .node [c] ∧
-      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 2 ∧ d₂.order = 1)
-    (i : Fin s) :
-    tab.elementaryWeight t i =
-      ∑ j : Fin s, tab.A i j *
-        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m))) := by
-  rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
-  subst hc
-  simpa using
-    ew_of_order_five_via_mixed_eq_of_childrenBag_eq tab
-      d₂ d₁ d₁ d₂ ⟨hd₂, hd₁⟩
-      (BTree.node_childrenBag_eq_swap d₁ d₂) i
-
 /-- Single child via-bushy3: ew = ∑ⱼ aᵢⱼ(∑ₖ aⱼₖ(∑ₗ aₖₗ)²). -/
 private theorem ew_of_order_five_via_via_bushy3 (tab : ButcherTableau s) (t : BTree)
     (h : ∃ c : BTree, t = .node [c] ∧
@@ -1611,21 +1596,6 @@ private theorem satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq
       satisfiesTreeCondition_order_five_via_mixed12 tab (.node [.node [c₁, c₂]])
         ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hcanon.1, hcanon.2⟩
 
-/-- Via-mixed21 tree condition: sum = 1/40. -/
-private theorem satisfiesTreeCondition_order_five_via_mixed21 (tab : ButcherTableau s) (t : BTree)
-    (h : ∃ c : BTree, t = .node [c] ∧
-      ∃ d₁ d₂ : BTree, c = .node [d₁, d₂] ∧ d₁.order = 2 ∧ d₂.order = 1) :
-    tab.satisfiesTreeCondition t ↔
-    ∑ i : Fin s, tab.b i *
-      (∑ j : Fin s, tab.A i j *
-        ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
-  rcases h with ⟨c, rfl, d₁, d₂, hc, hd₁, hd₂⟩
-  subst hc
-  simpa using
-    satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq tab
-      d₂ d₁ d₁ d₂ ⟨hd₂, hd₁⟩
-      (BTree.node_childrenBag_eq_swap d₁ d₂)
-
 /-- Mixed order-5 singleton nodes are canonical up to swapping the ordered child witnesses. -/
 private theorem satisfiesTreeCondition_order_five_via_mixed_canonical (tab : ButcherTableau s)
     (c d₁ d₂ : BTree) (hc : c = .node [d₁, d₂])
@@ -1636,8 +1606,8 @@ private theorem satisfiesTreeCondition_order_five_via_mixed_canonical (tab : But
         ((∑ k : Fin s, tab.A j k) * (∑ l : Fin s, tab.A j l * (∑ m : Fin s, tab.A l m)))) = 1 / 40 := by
   rcases hpair with ⟨hd₁, hd₂⟩ | ⟨hd₁, hd₂⟩
   · simpa [hc] using
-      satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq tab
-        d₁ d₂ d₁ d₂ ⟨hd₁, hd₂⟩ rfl
+      satisfiesTreeCondition_order_five_via_mixed12 tab (.node [.node [d₁, d₂]])
+        ⟨.node [d₁, d₂], rfl, d₁, d₂, rfl, hd₁, hd₂⟩
   · simpa [hc] using
       satisfiesTreeCondition_order_five_via_mixed_eq_of_childrenBag_eq tab
         d₂ d₁ d₁ d₂ ⟨hd₂, hd₁⟩
