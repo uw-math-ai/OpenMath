@@ -969,19 +969,22 @@ theorem order_four_bag_witness_recover {t : BTree} (hw4 : OrderFourBagWitness t)
 into the `bushy4` / `mixed4` / `viaChain3` / `viaBushy3` quartic trichotomy. -/
 inductive OrderFiveCaseDWitness (c : BTree) : Type where
   | bushy4 (d₁ d₂ d₃ : BTree)
-      (hc : c = .node [d₁, d₂, d₃]) (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1)
-      (hd₃ : d₃.order = 1) :
+      (hbag : c.childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag)
+      (hd₁ : d₁.order = 1) (hd₂ : d₂.order = 1) (hd₃ : d₃.order = 1) :
       OrderFiveCaseDWitness c
   | mixed4 (d₁ d₂ : BTree)
-      (hc : c = .node [d₁, d₂])
+      (hbag : c.childrenBag = (BTree.node [d₁, d₂]).childrenBag)
       (hpair : (d₁.order = 1 ∧ d₂.order = 2) ∨ (d₁.order = 2 ∧ d₂.order = 1)) :
       OrderFiveCaseDWitness c
   | viaChain3 (d e : BTree)
-      (hc : c = .node [d]) (hd : d = .node [e]) (he : e.order = 2) :
+      (hcBag : c.childrenBag = (BTree.node [d]).childrenBag)
+      (hdBag : d.childrenBag = (BTree.node [e]).childrenBag)
+      (he : e.order = 2) :
       OrderFiveCaseDWitness c
   | viaBushy3 (d e₁ e₂ : BTree)
-      (hc : c = .node [d]) (hd : d = .node [e₁, e₂]) (he₁ : e₁.order = 1)
-      (he₂ : e₂.order = 1) :
+      (hcBag : c.childrenBag = (BTree.node [d]).childrenBag)
+      (hdBag : d.childrenBag = (BTree.node [e₁, e₂]).childrenBag)
+      (he₁ : e₁.order = 1) (he₂ : e₂.order = 1) :
       OrderFiveCaseDWitness c
 
 /-- Package the order-5 singleton-child / Case D classification in rooted-tree
@@ -991,23 +994,17 @@ theorem order_five_caseD_witness_nonempty (c : BTree) (hc : c.order = 4) :
   have hw4 : OrderFourBagWitness c := order_four_bag_witness c hc
   cases hw4 with
   | bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag =>
-      rcases order_four_bag_witness_recover
-          (.bushy4 children d₁ d₂ d₃ hd₁ hd₂ hd₃ hbag) with
-        ⟨e₁, e₂, e₃, hceq, he₁, he₂, he₃⟩
-      exact ⟨.bushy4 e₁ e₂ e₃ hceq he₁ he₂ he₃⟩
+      exact ⟨.bushy4 d₁ d₂ d₃ hbag hd₁ hd₂ hd₃⟩
   | mixed4 children d₁ d₂ hcanon hbag =>
-      rcases order_four_bag_witness_recover (.mixed4 children d₁ d₂ hcanon hbag) with
-        ⟨e₁, e₂, hceq, hpair⟩
-      exact ⟨.mixed4 e₁ e₂ hceq hpair⟩
+      exact ⟨.mixed4 d₁ d₂ hbag <|
+        by
+          rcases hcanon with ⟨hd₁, hd₂⟩
+          exact Or.inl ⟨hd₁, hd₂⟩⟩
   | single3 children d hw3 hbag =>
       rcases order_four_bag_witness_recover (.single3 children d hw3 hbag) with
         ⟨e, hdeq, he⟩ | ⟨e₁, e₂, hdeq, he₁, he₂⟩
-      · have hceq : BTree.node children = BTree.node [d] := by
-          simp [singleton_children_eq_of_childrenBag_eq hbag]
-        exact ⟨.viaChain3 d e hceq hdeq he⟩
-      · have hceq : BTree.node children = BTree.node [d] := by
-          simp [singleton_children_eq_of_childrenBag_eq hbag]
-        exact ⟨.viaBushy3 d e₁ e₂ hceq hdeq he₁ he₂⟩
+      · exact ⟨.viaChain3 d e hbag (by simpa [hdeq]) he⟩
+      · exact ⟨.viaBushy3 d e₁ e₂ hbag (by simpa [hdeq]) he₁ he₂⟩
 
 /-- Noncomputably choose the normalized order-5 singleton-child / Case D witness. -/
 noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
