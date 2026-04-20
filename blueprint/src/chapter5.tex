@@ -1,0 +1,1292 @@
+\chapter{General Linear Methods}
+
+\section{Representing Methods in General Linear Form}
+
+% Section 50 has no formal statements in the textbook.
+
+\section{Consistency, Stability and Convergence}
+
+\noindent\textbf{Context.}
+A general linear method is defined by four matrices $A$, $U$, $B$, $V$ and operates on a vector of approximations from the previous step. The method's behavior is characterized by vectors $u$ and $v$, where $u$ relates to the representation of the solution and its derivative in the input approximations. Here $h$ is the step size and $y^{[n-1]}$ is the vector of approximations from the preceding step. The $i$th subvector in $y^{[n-1]}$ represents $u_i y(x_{n-1}) + v_i h y'(x_{n-1}) + O(h^2)$.
+
+\begin{definition}[preconsistency vector (510A)]
+
+  \label{def:510A}
+  \lean{Butcher.Ch5.Def510A}
+  \uses{def:404A, def:530C}
+A general linear method $(A, U, B, V)$ is `preconsistent' if there exists a vector $u$ such that
+\[
+V u = u, \tag{510a}
+\]
+\[
+U u = 1. \tag{510b}
+\]
+The vector $u$ is the `preconsistency vector'.
+\end{definition}
+
+\noindent\textbf{Context.}
+General linear methods are defined by matrices $(A,U,B,V)$ for solving ODEs. Preconsistency requires a vector $u$ such that
+\begin{align}
+V u &= u, \tag{510a}\\
+U u &= \mathbf{1}, \tag{510b}
+\end{align}
+where $\mathbf{1}$ is the vector of all ones. Consistency adds a vector $v$ satisfying $B\mathbf{1} + V v = u + v$, related to second-order accuracy.
+
+\begin{definition}[consistent (510B)]
+
+  \label{def:510B}
+  \lean{Butcher.Ch5.Def510B}
+  \uses{def:142A, def:403A, def:510A, def:510C, def:530C}
+A general linear method $(A, U, B, V)$ is `consistent' if it is preconsistent with preconsistency vector $u$ and there exists a vector $v$ such that
+\[
+B\mathbf{1} + V v = u + v. \tag{510c}
+\]
+
+Just as for linear multistep methods, we need a concept of stability. In the general linear case this is defined in terms of the power-boundedness of $V$ and, as we shall see, is related to the solvability of the problem $y' = 0$.
+\end{definition}
+
+\noindent\textbf{Context.}
+General linear methods are defined by matrices $(A,U,B,V)$.
+Preconsistency requires a vector $u$ satisfying
+\begin{equation}
+V u = u, \qquad U u = 1.
+\end{equation}
+Consistency requires a vector $v$ such that
+\begin{equation}
+B\mathbf{1} + V v = u + v.
+\end{equation}
+Stability is defined by the power-boundedness of $V$.
+
+\begin{definition}[stable (510C)]
+
+  \label{def:510C}
+  \lean{Butcher.Ch5.Def510C}
+  \uses{def:142A, def:403A, def:530C}
+A general linear method $(A, U, B, V)$ is `stable' if there exists a constant $C$ such that, for all $n = 1, 2, \dots$, $\|V^n\| \leq C$.
+\end{definition}
+
+\noindent\textbf{Context.}
+The definition concerns convergence of a general linear method $(A, U, B, V)$ for solving an initial value problem. The method uses a starting procedure $\phi(h)$ to produce an initial approximation vector in $\mathbb{R}^r$, which should approach $u y(x_0)$ as $h\to0$, where $u$ is a fixed non-zero vector. The computed approximations $y^{[n]}$ are obtained over $n$ steps with stepsize $h = (x - x_0)/n$, starting from $y^{[0]} = \phi(h)$. Variables: $u\in\mathbb{R}^r\setminus\{0\}$, $\phi:(0,\infty)\to\mathbb{R}^r$, $y(x)$ is the exact solution to $y'(x)=f(y(x))$, $y(x_0)=y_0$, $f$ satisfies a Lipschitz condition. Referenced equation:
+\begin{equation}
+u y(x) = \begin{bmatrix} u_1 y(x) & u_2 y(x) & \dots & u_r y(x) \end{bmatrix}^T,
+\end{equation}
+the desired limit of the approximation.
+
+\begin{definition}[convergent (512A)]
+
+  \label{def:512A}
+  \lean{Butcher.Ch5.Def512A}
+  \uses{def:110A, def:402A, def:403A, def:510A, def:510B, def:510C, def:530C}
+A general linear method $(A, U, B, V)$, is `convergent' if for any initial value problem
+\[
+y'(x) = f(y(x)), \quad y(x_0) = y_0,
+\]
+subject to the Lipschitz condition $\|f(y) - f(z)\| \leq L \|y - z\|$, there exist a non-zero vector $u \in \mathbb{R}^r$, and a starting procedure $\phi : (0, \infty) \to \mathbb{R}^r$, such that for all $i = 1, 2, \dots, r$, $\lim_{h \to 0} \phi_i(h) = u_i y(x_0)$, and such that for any $x > x_0$, the sequence of vectors $y^{[n]}$, computed using $n$ steps with stepsize $h = (x - x_0)/n$ and using $y^{[0]} = \phi(h)$ in each case, converges to $u y(x)$.
+
+The necessity of stability and consistency, as essential properties of convergent methods, are proved in the next two subsections, and this is followed by the converse result that all stable and consistent methods are convergent.
+\end{definition}
+
+\noindent\textbf{Context.}
+A general linear method is defined by matrices $(A, U, B, V)$. Convergence is defined in Definition 512A, requiring that for any Lipschitz ODE, with appropriate starting procedure $\phi(h)$ and vector $u$, the computed vectors $y^{[n]}$ converge to $u y(x)$. Here $u \in \mathbb{R}^{r}$ is a non-zero vector, $\phi : (0, \infty) \to \mathbb{R}^{r}$ is the starting procedure, $y(x)$ is the exact solution to $y'(x) = f(y(x))$, $y(x_0) = y_0$, and $y^{[n]}$ are the computed vectors over $n$ steps with stepsize $h$.
+
+\begin{theorem}[The necessity of stability (513A)]
+
+  \label{thm:513A}
+  \lean{Butcher.Ch5.Thm513A}
+  \uses{def:510C, def:512A, def:530C}
+A general linear method $(A, U, B, V)$ is convergent only if it is stable.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:513A}
+  \uses{def:510C, def:512A, def:530C}
+Suppose, on the contrary, that $\{ V^{n} : n = 1, 2, 3, \dots \}$ is unbounded.
+This implies that there exists a sequence of vectors $w_{1}, w_{2}, w_{3}, \dots$ such that
+$\| w_{n} \| = 1$, for all $n = 1, 2, 3, \dots$, and such that the sequence $\{ V^{n} w_{n} : n = 1, 2, 3, \dots \}$ is unbounded.
+Consider the solution of the initial value problem
+\[
+y'(x) = 0, \quad y(0) = 0,
+\]
+using $(A, U, B, V)$, where $n$ steps are taken with stepsize $h = 1/n$, so that the
+solution is approximated at $x = 1$. Irrespective of the choice of the vector $u$
+in Definition~\ref{def:512A}, the convergence of the method implies that the sequence
+of approximations converges to zero. For the approximation carried out with
+$n$ steps, use as the starting approximation
+\[
+\phi\left( \frac{1}{n} \right) = \frac{1}{\max_{i=1}^{n} \| V^{i} w_{i} \|} w_{n}.
+\]
+This converges to zero, because $\| \phi(1/n) \| = \left( \max_{i=1}^{n} \| V^{i} w_{i} \| \right)^{-1}$. The result,
+computed after $n$ steps, will then be
+\[
+V^{n} \phi\left( \frac{1}{n} \right) = \frac{1}{\max_{i=1}^{n} \| V^{i} w_{i} \|} V^{n} w_{n},
+\]
+with norm
+\[
+\left\| V^{n} \phi\left( \frac{1}{n} \right) \right\| = \frac{\| V^{n} w_{n} \|}{\max_{i=1}^{n} \| V^{i} w_{i} \|}. \tag{513a}
+\]
+Because the sequence $n \to \| V^{n} w_{n} \|$ is unbounded, an infinite set of $n$ values
+will have the property that the maximum value of $\| V^{i} w_{i} \|$, for $i \leq n$, will
+occur with $i = n$. This means that \eqref{eq:513a} has value $1$ arbitrarily often, and
+hence is not convergent to zero as $n \to \infty$.
+\end{proof}
+
+\begin{theorem}[The necessity of consistency (514A)]
+
+  \label{thm:514A}
+  \lean{Butcher.Ch5.Thm514A}
+  \uses{def:510A, def:510B, def:510C, def:512A, thm:513A}
+Let $(A, U, B, V)$ denote a convergent method which is, moreover, covariant with preconsistency vector $u$. Then there exists a vector $v \in \mathbb{R}^r$, such that \eqref{eq:510c} holds.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:514A}
+  \uses{def:510A, def:510B, def:510C, def:512A, thm:513A}
+Consider the initial value problem
+\[
+y'(x) = 1, \quad y(0) = 0,
+\]
+with constant starting values $\phi(h) = 0$ and $x = 1$. The sequence of approximations, when $n$ steps are to be taken with $h = 1/n$, is given by
+\[
+y^{[i]} = \frac{1}{n} B\mathbf{1} + V y^{[i-1]}, \quad i = 1, 2, \dots, n.
+\]
+This means that the error vector, after the $n$ steps have been completed, is given by
+\begin{align*}
+y^{[n]} - u &= \frac{1}{n} \left[ I + V + V^2 + \cdots + V^{n-1} \right] B\mathbf{1} - u \\
+&= \frac{1}{n} \left[ I + V + V^2 + \cdots + V^{n-1} \right] (B\mathbf{1} - u).
+\end{align*}
+Because $V$ has bounded powers, it can be written in the form
+\[
+V = S^{-1} \begin{pmatrix} I & 0 \\ 0 & W \end{pmatrix} S,
+\]
+where $I$ is $r' \times r'$ for $r' \leq r$ and $W$ is power-bounded and is such that $1 \notin \sigma(W)$. This means that
+\[
+y^{[n]} - u = S^{-1} \begin{pmatrix} I & 0 \\ 0 & \frac{1}{n}(I - W)^{-1}(I - W^n) \end{pmatrix} S(B\mathbf{1} - u),
+\]
+whose limit as $n \to \infty$ is
+\[
+S^{-1} \begin{pmatrix} I & 0 \\ 0 & 0 \end{pmatrix} S(B\mathbf{1} - u).
+\]
+If $y^{[n]} - u$ is to converge to $0$ as $n \to \infty$, then $S(B\mathbf{1} - u)$ has only zero in its first $r'$ components. Write this vector in the form
+\begin{align*}
+S(B\mathbf{1} - u) &= \begin{pmatrix} 0 \\ (I - W) v' \end{pmatrix} \\
+&= \begin{pmatrix} I & 0 \\ 0 & I - W \end{pmatrix} \begin{pmatrix} 0 \\ v' \end{pmatrix} \\
+&= S(I - V)v,
+\end{align*}
+where
+\[
+v = S^{-1} \begin{pmatrix} 0 \\ v' \end{pmatrix}.
+\]
+Thus $B\mathbf{1} + Vv = u + v$.
+\end{proof}
+
+\noindent\textbf{Context.}
+Consider a general linear method for an ODE $y' = f(y)$ with step size $h \in (0, h_0]$. Let $L$ be the Lipschitz constant for $f$, and assume $\|y(x)\| \le M$, $\|f(y)\| \le LM$ for $y$ in a closed set $S$ containing the trajectory. The method uses $s$ internal stages $Y_i$ and $r$ input/output approximations combining $y(x)$ and $hy'(x)$. The coefficients are: $A \in \mathbb{R}^{s \times s}$, $U \in \mathbb{R}^{r \times s}$, $v \in \mathbb{R}^{r}$, and stage abscissae $c = A\mathbf{1} + U v$. Input approximations use coefficients $u_i$, $v_i$ for $i=1,\dots,r$.
+
+```latex
+\begin{lemma}[Stability and consistency imply convergence (515A)]
+
+  \label{lem:515A}
+  \lean{Butcher.Ch5.Lem515A}
+  \uses{def:110A, thm:515D}
+Assume $h \le h_0$, with $h_0 L \|A\|_\infty < 1$. Define $\phi \in \mathbb{R}^s$ by
+\[
+\sum_{j=1}^s (\delta_{ij} - h_0 L|a_{ij}|)\phi_j = \frac12 c_i^2 + \sum_{j=1}^s |a_{ij}c_j|.
+\]
+Let $y_i^{[n-1]} = u_i y(x_{n-1}) + v_i h y'(x_{n-1})$, $y_i^{[n]} = u_i y(x_n) + v_i h y'(x_n)$ for $i=1,\dots,r$, and $\widehat Y_i = y(x_{n-1}+hc_i)$ for $i=1,\dots,s$, where $c = A\mathbf{1} + Uv$. Let $\widehat Y_i^\ast$ be the value computed exactly from $y^{[n-1]}$. Assume $f$ is Lipschitz with constant $L$ and the exact solution satisfies $\|y(x)\| \le M$, $\|y'(x)\| \le LM$. Then
+\[
+\Bigl\| \widehat Y_i - h\sum_{j=1}^s a_{ij} f(\widehat Y_j) - \sum_{j=1}^r U_{ij} y_j^{[n-1]} \Bigr\|
+\le h^2 L^2 M \Bigl( \frac12 c_i^2 + \sum_{j=1}^s |a_{ij}c_j| \Bigr),
+\]
+\[
+\Bigl\| y_i^{[n]} - h\sum_{j=1}^s b_{ij} f(\widehat Y_j) - \sum_{j=1}^r V_{ij} y_j^{[n-1]} \Bigr\|
+\le h^2 L^2 M \Bigl( \frac12 |u_i| + |v_i| + \sum_{j=1}^s |b_{ij}c_j| \Bigr).
+\]
+\end{lemma}
+
+\noindent\textbf{Context.}
+The local truncation error for a Runge--Kutta-like method is analyzed. Let $y_i^{[n]}$ be the exact solution at stage $i$ of step $n$, and $\tilde{y}_i^{[n]}$ the computed solution. The errors are compared using a Lipschitz constant $L$ for $f$ and previous error bounds. Lemma 515B relates the errors at step $n$ to errors at step $n-1$ plus a local term $K^{[n]}$. Let $V_{ij}$ be coefficients from Lemma 515A, $h$ the step size, and $\eta_i$ quantities bounding local truncation errors. The inequality (515c) bounds $\|y_i^{[n]}-\tilde{y}_i^{[n]}\|$.
+
+\begin{lemma}[Stability and Consistency Imply Convergence (515B)]
+
+  \label{lem:515B}
+  \lean{Butcher.Ch5.Lem515B}
+  \uses{def:510A, def:510B, def:510C, def:512A, lem:515A}
+Under the conditions of Lemma~\ref{lem:515A}, the exact solution and the computed solution in a step are related by
+\[
+\tilde{y}_i^{[n]} - y_i^{[n]} = \sum_{j=1}^{r} V_{ij} \left( \tilde{y}_j^{[n-1]} - y_j^{[n-1]} \right) + K_i^{[n]}, \qquad i = 1, 2, \dots, r,
+\]
+where
+\[
+\|K^{[n]}\| \leq h \alpha \max_{i=1}^{r} \left| \tilde{y}_i^{[n-1]} - y_i^{[n-1]} \right| + \beta h^2,
+\]
+and $\alpha$ and $\beta$ are given by
+\[
+\alpha = L \max_{i=1}^{s} |\ell_i|,
+\]
+where $\ell$ is given by
+\[
+\sum_{j=1}^{s} (\delta_{ij} - h_0 L |a_{ij}|) \ell_j = \sum_{j=1}^{s} |U_{ij}|, \qquad i = 1, 2, \dots, s,
+\]
+and
+\[
+\beta = L^2 M \max_{i=1}^{s} \left( \frac{1}{2} |u_i| + |v_i| + \sum_{j=1}^{s} |b_{ij} c_j| + h_0 L \sum_{j=1}^{s} |b_{ij}| \ell_j \right),
+\]
+where $\ell$ is as in Lemma~\ref{lem:515A}.
+\end{lemma}
+
+\begin{proof}
+  \proves{lem:515B}
+  \uses{def:510A, def:510B, def:510C, def:512A, lem:515A}
+From \eqref{eq:515c}, and the relation
+\[
+y_i^{[n]} - h \sum_{j=1}^{s} b_{ij} f(Y_j) - \sum_{j=1}^{r} V_{ij} y_j^{[n-1]} = 0,
+\]
+we have
+\begin{align*}
+&\left| \tilde{y}_i^{[n]} - y_i^{[n]} - \sum_{j=1}^{r} V_{ij} \left( \tilde{y}_j^{[n-1]} - y_j^{[n-1]} \right) \right| \\
+&\quad \leq h \sum_{j=1}^{s} |b_{ij}| \left| f(\tilde{Y}_j) - f(Y_j) \right| \\
+&\qquad + h^2 L^2 M \left( \frac{1}{2} |u_i| + |v_i| + \sum_{j=1}^{s} |b_{ij} c_j| + h_0 L \sum_{j=1}^{s} |b_{ij}| \ell_j \right) \\
+&\quad \leq h L \sum_{j=1}^{s} |b_{ij}| \left| \tilde{Y}_j - Y_j \right| \\
+&\qquad + h^2 L^2 M \left( \frac{1}{2} |u_i| + |v_i| + \sum_{j=1}^{s} |b_{ij} c_j| + h_0 L \sum_{j=1}^{s} |b_{ij}| \ell_j \right). \tag{515d}
+\end{align*}
+Bound $\eta_j = \tilde{Y}_j - Y_j$ using the estimate
+\[
+\left| \tilde{Y}_j - Y_j - \sum_{k=1}^{r} U_{jk} \left( \tilde{y}_k^{[n-1]} - y_k^{[n-1]} \right) \right| \leq h L \sum_{k=1}^{s} |a_{jk}| \cdot \left| \tilde{Y}_k - Y_k \right|,
+\]
+which leads to
+\[
+\sum_{k=1}^{s} (\delta_{jk} - h_0 L |a_{jk}|) \eta_k \leq \sum_{k=1}^{r} |U_{jk}| \max_{k=1}^{r} \left| \tilde{y}_k^{[n-1]} - y_k^{[n-1]} \right|
+\]
+and to
+\[
+\left| \tilde{Y}_j - Y_j \right| \leq h \ell_j \max_{k=1}^{s} \left| \tilde{Y}_k - Y_k \right|.
+\]
+Substitute this bound into \eqref{eq:515d} and we obtain the required result.
+
+To complete the argument that stability and consistency imply convergence, we estimate the global error in the computation of $y(x)$ by carrying out $n$ steps from an initial value $y(x_0)$ using a stepsize equal to $h = (x - x_0)/n$.
+\end{proof}
+
+\noindent\textbf{Context.}
+Let $h = (x - x_0)/n$ be the stepsize, $n$ the number of steps, $x_0$ the initial value, $x$ the final value, and $r$ the number of subvectors in the method.  
+Denote by $y_{i}^{(j)}$ the approximate solution component $j$ at step $i$, and by $\tilde{y}_{i}^{(j)}$ the perturbed (or exact) solution component $j$ at step $i$.  
+Define the error vector $E_i = \bigl( \tilde{y}_{i}^{(1)} - y_{i}^{(1)},\dots, \tilde{y}_{i}^{(r)} - y_{i}^{(r)} \bigr)^T$.  
+Let $V$ be the matrix arising in the stability analysis of the method, and let  
+\[
+C = \sup_{i\ge 0} \|V^i\|, \qquad \alpha \ge 0, \qquad \beta \ge 0
+\]
+be constants such that $\|V^i\| \le C e^{\alpha i}$ and the local error satisfies a bound scaled by $\beta$.
+
+\begin{lemma}[Accumulated error estimate for multistep methods (515C)]
+
+  \label{lem:515C}
+  \lean{Butcher.Ch5.Lem515C}
+  \uses{lem:515B}
+Using notations already introduced in this subsection, together with
+\[
+E^{[i]} = \begin{bmatrix}
+y_1^{[i]} - y_1^{[i]} \\
+y_2^{[i]} - y_2^{[i]} \\
+\vdots \\
+y_r^{[i]} - y_r^{[i]}
+\end{bmatrix}, \quad i = 0, 1, 2, \dots, n,
+\]
+for the accumulated error in step $i$, we have the estimate
+\[
+\|E^{[n]}\| \leq 
+\begin{cases}
+\exp(\alpha C(x - x_0)) \|E^{[0]}\| + \dfrac{\beta h}{\alpha} (\exp(\alpha C(x - x_0)) - 1), & \alpha > 0, \\
+\exp(\alpha C(x - x_0)) \|E^{[0]}\| + \beta C(x - x_0) h, & \alpha = 0,
+\end{cases}
+\]
+where $C = \sup_{i=0,1,\dots} \|V^i\|_\infty$ and the norm of $E^{[n]}$ is defined as the maximum of the norms of its $r$ subvectors.
+\end{lemma}
+
+\begin{proof}
+  \proves{lem:515C}
+  \uses{lem:515B}
+The result of Lemma~\ref{lem:515B} can be written in the form
+\[
+E^{[i]} = (V \otimes I)E^{[i-1]} + K^{[i]},
+\]
+from which it follows that
+\[
+E^{[i]} = (V \otimes I)^i E^{[0]} + \sum_{j=1}^{i} (V^{j-1} \otimes I)K^{[i+1-j]},
+\]
+and hence that
+\[
+\|E^{[i]}\| \leq C \|E^{[0]}\| + \sum_{j=0}^{i-1} C \|K^{[i-j]}\|.
+\]
+Insert the known bounds on the terms on the right-hand side, and we find
+\[
+\|E^{[i]}\| \leq \alpha h C \sum_{j=0}^{i-1} \|E^{[j]}\| + C i \beta h^2 + C \|E^{[0]}\|.
+\]
+This means that $\|E^{[i]}\|$ is bounded by $\eta_i$ defined by
+\[
+\eta_i = \alpha h C \sum_{j=0}^{i-1} \eta_j + C i \beta h^2 + \eta_0, \quad \eta_0 = C \|E^{[0]}\|.
+\]
+To simplify this equation, find the difference of the formulae for $\eta_i$ and $\eta_{i-1}$ to give the difference equation
+\[
+\eta_i - \eta_{i-1} = \alpha h C \eta_{i-1} + C \beta h^2
+\]
+with solution
+\[
+\eta_i = (1 + h \alpha C)^i \eta_0 + \frac{\beta h}{\alpha} ((1 + h \alpha C)^i - 1),
+\]
+or, if $\alpha = 0$,
+\[
+\eta_i = \eta_0 + i C \beta h^2.
+\]
+Substitute $i = n$ and we complete the proof.
+\end{proof}
+
+\noindent\textbf{Context.}
+The preceding text analyzes error bounds for a general linear method, deriving a difference equation for $\eta_i$ that bounds the error $E[i]$. The proof uses stability and consistency assumptions to show convergence as $h \to 0$.
+
+Variables:
+\begin{itemize}
+    \item $E$: error vector or error quantity at step $i$, $E[i]$
+    \item $h$: step size
+    \item $C$: stability constant
+    \item $\alpha$: constant related to method coefficients
+    \item $\beta$: constant related to truncation error
+    \item $\eta_i$: bound on $E[i]$ defined recursively
+\end{itemize}
+
+\begin{theorem}[Stability and Consistency Imply Convergence (515D)]
+
+  \label{thm:515D}
+  \lean{Butcher.Ch5.Thm515D}
+  \uses{def:510A, def:510B, def:510C, def:512A, def:530C}
+A stable and consistent general linear method is convergent.
+\end{theorem}
+
+\section{The Stability of General Linear Methods}
+
+\noindent\textbf{Context.}
+The definition concerns the stability matrix \(M(z)\) for a general linear method \((A, U, B, V)\) applied to the linear test equation
+\[
+y'(x) = qy(x) \quad (520a),
+\]
+where \(z = hq\). The method transforms an incoming vector \(y^{[n-1]}\) to an outgoing vector \(y^{[n]}\) via \(M(z)\):
+\[
+y^{[n]} = M(z)y^{[n-1]} \quad (520b).
+\]
+Variables: \(A, U, B, V\) are the coefficient matrices of the method; \(z = hq\) with stepsize \(h\); \(M(z)\) is an \(r \times r\) matrix function.
+
+\begin{definition}[Introduction (520A)]
+
+  \label{def:520A}
+  \lean{Butcher.Ch5.Def520A}
+  \uses{def:403A, def:510A, def:510B, def:510C, def:530C}
+For a general linear method $(A, U, B, V)$, the `stability matrix' $M(z)$ is defined by
+\[
+M(z) = V + zB(I - zA)^{-1}U.
+\]
+As we have anticipated, we have the following result:
+\end{definition}
+
+\noindent\textbf{Context.}
+The theorem concerns stability analysis of general linear methods applied to the linear test equation
+\begin{equation}
+y'(x)=qy(x). \tag{520a}
+\end{equation}
+Let \(z=hq\) where \(h\) is the step size. For a method defined by matrices \((A,U,B,V)\), the stability matrix is
+\[
+M(z)=V+zB(I-zA)^{-1}U.
+\]
+Applying one step yields the relation
+\begin{equation}
+y^{[n]}=M(z)y^{[n-1]}, \tag{520b}
+\end{equation}
+where \(y^{[n-1]}\) and \(y^{[n]}\) are the incoming and output vectors of approximations.
+
+\begin{theorem}[Stability Matrix for Linear Differential Equation (520B)]
+
+  \label{thm:520B}
+  \lean{Butcher.Ch5.Thm520B}
+  \uses{def:520A, def:520C}
+Let \( M(z) \) denote the stability matrix for a general linear method. Then, for a linear differential equation \eqref{eq:520a}, \eqref{eq:520b} holds with \( z = hq \).
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:520B}
+  \uses{def:520A, def:520C}
+For the special problem defined by \( f(y) = qy \), the vector of stage derivatives \( F \) is related to the vector of stage values \( Y \) by \( F = qY \). Hence, \eqref{eq:500c} reduces to the form
+\[
+\begin{pmatrix} Y \\ y^{[n]} \end{pmatrix} = \begin{pmatrix} A & U \\ B & V \end{pmatrix} \begin{pmatrix} zY \\ y^{[n-1]} \end{pmatrix}.
+\]
+It follows that \( Y = (I - zA)^{-1} U y^{[n-1]} \), and that
+\[
+y^{[n]} = zBY + V y^{[n-1]} = M(z) y^{[n-1]}.
+\]
+
+If the method is stable, in the sense of Section~51, then \( M(0) = V \) will be power-bounded. The idea now is to extend this to values of \( z \) in the complex plane where \( M(z) \) has bounded powers.
+
+Just as for Runge--Kutta and linear multistep methods, associated with each method is a stability region. This, in turn, is related to the characteristic polynomial of \( M(z) \).
+\end{proof}
+
+\noindent\textbf{Context.}
+Consider a general linear method $(A, U, B, V)$ applied to the linear test problem
+\begin{equation}
+    y' = qy, \quad q \in \mathbb{C}. \tag{520a}
+\end{equation}
+Let $z = hq$, where $h$ is the stepsize. The numerical solution propagates as
+\begin{equation}
+    y^{[n]} = M(z) y^{[n-1]}, \tag{520b}
+\end{equation}
+where $M(z)$ is the $r \times r$ stability matrix. The stability function and region are defined via the characteristic polynomial of $M(z)$ and the boundedness of its powers.
+
+\begin{definition}[stability function (520C)]
+
+  \label{def:520C}
+  \lean{Butcher.Ch5.Def520C}
+  \uses{def:520A, def:530C}
+Let $(A, U, B, V)$ denote a general linear method and $M(z)$ the corresponding stability matrix. The `stability function' for the method is the polynomial $\Phi(w, z)$ given by
+\[
+\Phi(w, z) = \det(wI - M(z)),
+\]
+and the `stability region' is the subset of the complex plane such that if $z$ is in this subset, then
+\[
+\sup_{n=1}^{\infty} \| M(z)^n \| < \infty.
+\]
+
+We refer to the `instability region' as the complement of the stability region.
+
+Note that in applications of these definitions, $\Phi(w, z)$ may be a rational function. Quite often, the essential properties will be contained in just the numerator of this expression. We equally refer to the numerator of this rational function as the stability function.
+
+We state the following obvious result without proof.
+\end{definition}
+
+\noindent\textbf{Context.}
+The theorem concerns the stability region of a general linear method defined by $(A, U, B, V)$, where $M(z)$ is the stability matrix and $\Phi(w, z)$ is the stability polynomial (or rational function). The stability region consists of complex $z$ such that the powers of $M(z)$ are bounded.
+
+Variables:
+\begin{itemize}
+    \item $M(z)$: stability matrix for the general linear method $(A, U, B, V)$
+    \item $\Phi(w, z)$: stability function, defined as $\det(wI - M(z))$ (or its numerator if rational)
+\end{itemize}
+
+\begin{theorem}[Instability Region Boundary Characterization (520D)]
+
+  \label{thm:520D}
+  \lean{Butcher.Ch5.Thm520D}
+  \uses{def:403A, def:520C, def:520E}
+The instability region for $(A, U, B, V)$ is a subset of the set of points $z$, such that $\Phi(w, z) = 0$, where $|w| \geq 1$. The instability region is a superset of the points defined by $\Phi(w, z) = 0$, where $|w| > 1$.
+
+The unanswered question in this result is: `Which points on the boundary of the stability region are actually members of it?' This is not always a crucial question, and we quite often interpret the stability region as the `strict stability region', consisting of those $z$ for which
+\[
+\lim_{n \to \infty} M(z)^n = 0.
+\]
+This will correspond to the set of $z$ values such that $|w| < 1$, for any $w$ satisfying $\Phi(w, z) = 0$.
+
+In particular, we can define $A$-stability.
+\end{theorem}
+
+\noindent\textbf{Context.}
+The discussion concerns stability properties of general linear methods for ODEs, focusing on the stability matrix \(M(z)\) and the stability function \(\Phi(w,z)\). The stability region is defined in terms of boundedness of powers of \(M(z)\).
+
+\begin{itemize}
+    \item \(M(z)\): stability matrix, a matrix function of \(z\)
+    \item \(\Phi(w, z)\): stability function, given by \(\Phi(w, z) = \det(wI - M(z))\)
+    \item stability region: subset of the complex plane such that if \(z\) is in this subset, then \(\sup_{n=1}^{\infty} \|M(z)^n\| < \infty\)
+    \item instability region: complement of the stability region
+    \item power-bounded: a matrix \(M\) is power-bounded if \(\sup_{n \geq 1} \|M^n\| < \infty\)
+\end{itemize}
+
+\begin{definition}[A-stable (520E)]
+
+  \label{def:520E}
+  \lean{Butcher.Ch5.Def520E}
+  \uses{def:142A, def:520C, def:530C}
+A general linear method is `A-stable' if $M(z)$ is power-bounded for every $z$ in the left half complex plane.
+
+Just as for Runge--Kutta and linear multistep methods, A-stability is the ideal property for a method to possess for it to be applicable to stiff problems.
+
+Corresponding to the further requirement for Runge--Kutta methods that $R(\infty) = 0$, we have the generalization of L-stability to general linear methods.
+\end{definition}
+
+\noindent\textbf{Context.}
+The discussion concerns stability properties of general linear methods for ODEs. A-stability is defined as power-boundedness of \(M(z)\) for all \(z\) in the left half-plane. L-stability is a stronger property that additionally requires the spectral radius to vanish at infinity.
+
+Variables:
+\begin{itemize}
+    \item \(M(z)\): the stability matrix of the general linear method, a function of the complex parameter \(z\)
+    \item \(\rho(M(\infty))\): the spectral radius of \(M(z)\) as \(z \to \infty\)
+\end{itemize}
+
+\begin{definition}[L Stability Condition for Linear Methods (520F)]
+
+  \label{def:520F}
+  \lean{Butcher.Ch5.Def520F}
+  \uses{def:520A, def:520E, def:530C}
+A general linear method is \textit{L-stable} if it is A-stable and
+\[
+\rho(M(\infty)) = 0.
+\]
+\end{definition}
+
+\noindent\textbf{Context.}
+The text discusses stability properties (A-stability, L-stability) of general linear methods for ODEs, defined via a stability function $\Phi(w,z)$ and stability matrix $M(z)$. The focus is on the relationship between stability and order. Variables: $\Phi(w, z)$: stability function of the method; $M(z)$: stability matrix of the general linear method; $\rho(M(\infty))$: spectral radius of $M(\infty)$.
+
+\begin{definition}[Methods with maximal stability order (521A)]
+
+  \label{def:521A}
+  \lean{Butcher.Ch5.Def521A}
+  \uses{def:403A, def:520C, def:530C}
+A method with stability function $\Phi(w, z)$ has `stability order' $p^*$ if
+\[
+\Phi(\exp(z), z) = O(z^{p^*+1}).
+\]
+
+Suppose the stability function is given by
+\[
+\Phi(w, z) = \sum_{j=0}^{k} w^{k-j} \sum_{l=0}^{\nu_j} \alpha_{jl} z^{j},
+\]
+where $k$ is the $w$-degree of $\Phi$ and $\nu_j$ is the $z$-degree of the coefficient of $w^{k-j}$.
+We can regard the sequence of integers
+\[
+\nu = [\nu_0, \nu_1, \dots, \nu_k],
+\]
+as representing the complexity of the stability function $\Phi$. To include all sensible cases without serious redundancies, we always assume that $\nu_j \geq -1$ for $j = 0, 1, 2, \dots, k$ with strict inequality in the cases $j = 0$ and $j = k$.
+
+It is interesting to ask the question: `For a given sequence $\nu$, what is the highest possible stability order?'. The question can be looked at in two parts. First, there is the question of determining for what $p^*$ it is possible to find a function $\Phi$ with a given complexity and with stability order $p^*$. Secondly, there is the question of finding a general linear method corresponding to a given $\Phi$, with order $p$ as close as possible to $p^*$. The first half of the question can be firmly answered and is interesting since it gives rise to speculations about possible generalizations of the Ehle results on rational approximations to the exponential function. The definitive result that we have referred to is as follows:
+\end{definition}
+
+\noindent\textbf{Context.}
+The theorem concerns the stability function $\Phi(w,z)$ of a general linear method, parameterized by a complexity sequence $\nu=[\nu_0,\nu_1,\dots,\nu_k]$, where $\nu_j$ is the $z$-degree of the coefficient of $w^{k-j}$. The goal is to determine the maximum stability order $p^*$ achievable for a given $\nu$.
+
+Variables:
+\begin{itemize}
+    \item $\nu$: $\nu=[\nu_0,\nu_1,\dots,\nu_k]$, representing the complexity of $\Phi$, where $\nu_j$ is the $z$-degree of the coefficient of $w^{k-j}$ in $\Phi$.
+    \item $\Phi$: $\Phi(w,z)=\sum_{j=0}^k w^{k-j} \sum_{l=0}^{\nu_j} \alpha_{jl} z^l$, the stability function, with $k$ as the $w$-degree and $\nu_j$ as the $z$-degree of the coefficient of $w^{k-j}$.
+    \item $k$: the $w$-degree of $\Phi$.
+    \item $\nu_j$: for $j=0,1,\dots,k$, the $z$-degree of the coefficient of $w^{k-j}$ in $\Phi$, assumed $\nu_j \ge -1$ with strict inequality for $j=0$ and $j=k$.
+    \item $p^*$: the highest possible stability order for a given $\nu$.
+\end{itemize}
+
+Referenced equations:
+\begin{equation}
+    p^* = \sum_{j=0}^k (\nu_j + 1) - 2
+    \tag{521a}
+\end{equation}
+
+\begin{theorem}[Maximum stability order for given steps (521B)]
+
+  \label{thm:521B}
+  \lean{Butcher.Ch5.Thm521B}
+  \uses{def:512A, def:520C, def:521A}
+For given $\nu$, the maximum possible stability order is given by
+\[
+p^* = \sum_{j=0}^{k} (\nu_j + 1) - 2. \tag{521a}
+\]
+\end{theorem}
+
+\begin{theorem}[Non-linear stability (523A)]
+
+  \label{thm:523A}
+  \lean{Butcher.Ch5.Thm523A}
+  \uses{def:381A, def:510B, def:510C, def:530C}
+Let $Y$ denote the vector of stage values, $F$ the vector of stage derivatives and $y^{[n-1]}$ and $y^{[n]}$ the input and output respectively from a single step of a general linear method $(A, U, B, V)$. Assume that $M$ is a positive semi-definite $(s + r) \times (s + r)$ matrix, where
+\[
+M = \begin{pmatrix}
+DA + A^\top D - B^\top G B & D U - B^\top G V \\
+U^\top D - V^\top G B & G - V^\top G V
+\end{pmatrix},
+\tag{523b}
+\]
+with $G$ a positive semi-definite $r \times r$ matrix and $D$ a positive semi-definite diagonal $s \times s$ matrix. Then
+\[
+\| y^{[n]} \|_G^2 = \| y^{[n-1]} \|_G^2 + 2 \langle hF, Y \rangle_D - \| hF \oplus y^{[n-1]} \|_M^2.
+\]
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:523A}
+  \uses{def:381A, def:510B, def:510C, def:530C}
+The result is equivalent to the identity
+\[
+M = \begin{pmatrix} 0 & 0 \\ 0 & G \end{pmatrix} - \begin{pmatrix} B^\top \\ V^\top \end{pmatrix} G \begin{pmatrix} B & V \end{pmatrix} + \begin{pmatrix} D & 0 \\ 0 & 0 \end{pmatrix} \begin{pmatrix} A & U \end{pmatrix} + \begin{pmatrix} A^\top \\ U^\top \end{pmatrix} \begin{pmatrix} D & 0 \end{pmatrix}.
+\]
+We are now in a position to extend the algebraic stability concept to the general linear case.
+\end{proof}
+
+\noindent\textbf{Context.} The theorem concerns a general linear method defined by matrices $(A, U, B, V)$, with stage values $Y$, stage derivatives $F$, input $y^{[n-1]}$, and output $y^{[n]}$. The matrix $M$ is constructed from these matrices along with positive semi-definite matrices $G$ and $D$ as in (523b). The norm $\|\cdot\|_G$ and inner product $\langle\cdot,\cdot\rangle_D$ are used.
+
+Variables: $M$: positive semi-definite $(s + r) \times (s + r)$ matrix defined by (523b); $G$: positive semi-definite $r \times r$ matrix; $D$: positive semi-definite diagonal $s \times s$ matrix; $y^{[n-1]}$: input vector; $y^{[n]}$: output vector; $Y$: vector of stage values; $F$: vector of stage derivatives; $A, U, B, V$: coefficient matrices; $\|\cdot\|_G$: norm $\|x\|_G^2 = \langle x, x\rangle_G = x^T G x$; $\langle\cdot,\cdot\rangle_D$: inner product $\sum_{i=1}^s d_i \langle U_i, V_i\rangle$ for diagonal $D$ with elements $d_i$.
+
+Referenced equations:
+\begin{equation}
+M = \begin{bmatrix}
+D A + A^T D - B^T G B & D U - B^T G V \\
+U^T D - V^T G B & G - V^T G V
+\end{bmatrix}
+\tag{523b}
+\end{equation}
+
+\begin{theorem}[Nonlinear Stability via Positive Semidefiniteness (523B)]
+
+  \label{thm:523B}
+  \lean{Butcher.Ch5.Thm523B}
+  \uses{def:356B, def:357B, def:403A, def:520E, def:530C, thm:523A}
+If $M$ given by \eqref{eq:523b} is positive semi-definite, then
+\[
+\|y^{[n]}\|_G^2 \leq \|y^{[n-1]}\|_G^2.
+\]
+
+We consider the possibility of analysing the possible non-linear stability of linear multistep methods without using one-leg methods. First note that a linear $k$-step method, written as a general linear method with $r = 2k$ inputs, is reducible to a method with only $k$ inputs. For the standard $k$-step method written in the form \eqref{eq:400b}, we interpret $hf(x_{n-i}, y_{n-i})$, $i = 1, 2, \dots, k$, as having already been evaluated from the corresponding $y_{n-i}$. Define the input vector $y^{[n-1]}$ by
+\[
+y_i^{[n-1]} = \sum_{j=i}^{k} \bigl[ \alpha_j y_{n-j+i-1} + \beta_j hf(x_{n-j+i}, y_{n-j+i-1}) \bigr], \qquad i = 1, 2, \dots, k,
+\]
+so that the single stage $Y = y_n$ satisfies
+\[
+Y = h\beta_0 f(x_n, Y) + y_1^{[n-1]}
+\]
+and the output vector can be found from
+\[
+y_i^{[n]} = \alpha_i y_1^{[n-1]} + y_{i+1}^{[n]} + (\beta_0\alpha_i + \beta_i)hf(x_n, Y),
+\]
+where the term $y_{i+1}^{[n]}$ is omitted when $i = k$. The reduced method has the defining matrices
+\[
+\begin{bmatrix}
+A & U \\
+B & V
+\end{bmatrix}
+=
+\begin{bmatrix}
+\beta_0 & 1 & 0 & 0 & \cdots & 0 & 0 \\
+\beta_0\alpha_1 + \beta_1 & \alpha_1 & 1 & 0 & \cdots & 0 & 0 \\
+\beta_0\alpha_2 + \beta_2 & \alpha_2 & 0 & 1 & \cdots & 0 & 0 \\
+\beta_0\alpha_3 + \beta_3 & \alpha_3 & 0 & 0 & \cdots & 0 & 0 \\
+\vdots & \vdots & \vdots & \vdots & \ddots & \vdots & \vdots \\
+\beta_0\alpha_{k-1} + \beta_{k-1} & \alpha_{k-1} & 0 & 0 & \cdots & 0 & 1 \\
+\beta_0\alpha_k + \beta_k & \alpha_k & 0 & 0 & \cdots & 0 & 0
+\end{bmatrix},
+\tag{524a}
+\]
+and was shown in Butcher and Hill (2006) to be algebraically stable if it is $A$-stable.
+\end{theorem}
+
+\noindent\textbf{Context.}
+The definition concerns general linear methods represented by matrices $(A,U,B,V)$, building on prior discussions of symplectic behavior and the matrix $M$ from non-linear stability analysis. The goal is to define $G$-symplecticity as an extension of symplectic properties when $M = 0$, using additional matrices $G$ and $D$.
+
+Variables:
+\begin{itemize}
+    \item $M$: matrix given by (523b) (arising from non-linear stability and symplectic behavior studies).
+    \item $G$: positive semi-definite symmetric $r \times r$ matrix.
+    \item $D$: $s \times s$ diagonal matrix.
+    \item $A, U, B, V$: submatrices making up a general linear method.
+    \item $r$: number of rows/columns in $G$ and $V$.
+    \item $s$: number of rows/columns in $D$, $A$, and $B$.
+\end{itemize}
+
+Referenced equations:
+\begin{itemize}
+    \item (523b): $M = \begin{bmatrix} M_{11} & M_{12} \\ M_{21} & M_{22} \end{bmatrix}$ (expression involving $A,U,B,V$).
+    \item (357d): matrix $M$ for Runge--Kutta methods.
+\end{itemize}
+
+\begin{definition}[G-symplectic methods (525A)]
+
+  \label{def:525A}
+  \lean{Butcher.Ch5.Def525A}
+  \uses{def:520A, def:530C, thm:534A}
+A general linear method $(A, U, B, V)$ is $G$-symplectic if there exists a positive semi-definite symmetric $r \times r$ matrix $G$ and an $s \times s$ diagonal matrix $D$ such that
+\[
+G = V^{\top} G V, \tag{525a}
+\]
+\[
+D U = B^{\top} G V, \tag{525b}
+\]
+\[
+D A + A^{\top} D = B^{\top} G B. \tag{525c}
+\]
+
+The following example of a $G$-symplectic method was presented in Butcher (2006):
+\[
+\begin{pmatrix}
+A & U \\
+B & V
+\end{pmatrix}
+=
+\begin{bmatrix}
+\frac{3+\sqrt{3}}{6} & 0 & 1 & -\frac{3+2\sqrt{3}}{3} \\[4pt]
+-\sqrt{3} & \frac{3+\sqrt{3}}{6} & 1 & \frac{3+2\sqrt{3}}{3} \\[4pt]
+\frac{1}{2} & \frac{1}{2} & 1 & 0 \\[4pt]
+\frac{1}{2} & -\frac{1}{2} & 0 & -1
+\end{bmatrix}. \tag{525d}
+\]
+It can be verified that \eqref{eq:525d} satisfies \eqref{eq:525a}--\eqref{eq:525c} with $G = \operatorname{diag}\left(1, 1+\frac{2}{3}\sqrt{3}\right)$ and $D = \operatorname{diag}\left(\frac{1}{2}, \frac{1}{2}\right)$.
+
+Although this method is just one of a large family of such methods which the author, in collaboration with Laura Hewitt and Adrian Hill of Bath University, is trying to learn more about, it is chosen for special attention here. An analysis in Theorem~\ref{thm:534A} shows that it has order 4 and stage order 2. Although it is based on the same stage abscissae as for the order 4 Gauss Runge--Kutta method, it has a convenient structure in that $A$ is diagonally implicit.
+
+For the harmonic oscillator, the Hamiltonian is supposed to be conserved, and this happens almost exactly for solutions computed by this method for any number of steps. Write the problem in the form $y' = iy$ so that for stepsize $h$, $y^{[n]} = M(ih)y^{[n-1]}$ where $M$ is the stability matrix. Long term conservation requires that the characteristic polynomial of $M(ih)$ has both zeros on the unit circle. This characteristic polynomial is:
+\[
+w^{2}\left(1 - ih\frac{3+\sqrt{3}}{6}\right) + w\left(\frac{2}{3}i\sqrt{3}h - 1\right) + \left(1 + ih\frac{3+\sqrt{3}}{6}\right).
+\]
+Substitute
+\[
+w = \frac{1 + ih\frac{3+\sqrt{3}}{6}}{1 - ih\frac{3+\sqrt{3}}{6}} iW,
+\]
+and we see that
+\[
+W^{2} + h\frac{2\sqrt{3}}{3} \frac{1}{1 + h^{2}\left(\frac{3+\sqrt{3}}{6}\right)^{2}} W + 1.
+\]
+The coefficient of $W$ lies in $(-\sqrt{3}+1, \sqrt{3}-1)$ and the zeros of this equation are therefore on the unit circle for all real $h$. We can interpret this as saying that the two terms in
+\[
+\left(p_{1}^{[n]^{2}} + q_{1}^{[n]^{2}}\right) + \left(1 + \frac{2}{3}\sqrt{3}\right)\left(p_{2}^{[n]^{2}} + q_{2}^{[n]^{2}}\right)
+\]
+are not only conserved in total but are also approximately conserved individually, as long as there is no round-off error. The justification for this assertion is based on an analysis of the first component of $y_{1}$ as $n$ varies. Write the eigenvalues of $M(ih)$ as $\lambda(h) = 1 + O(h)$ and $\mu(h) = -1 + O(h)$ and suppose the corresponding eigenvectors, in each case scaled with first component equal to 1, are $u(h)$ and $v(h)$ respectively. If the input $y^{[0]}$ is $au(h) + bv(h)$ then $y_{1}^{[n]} = a\lambda(h)^{n} + b\mu(h)^{n}$ with absolute value
+\[
+|y_{1}^{[n]}| = \left(a^{2} + b^{2} + 2ab\operatorname{Re}\left((\lambda(h)\mu(h))^{n}\right)\right)^{1/2}.
+\]
+If $|b/a|$ is small, as it will be for small $h$ if a suitable starting method is used, $|y_{1}^{[n]}|$ will never depart very far from its initial value. This is illustrated in Figure~\ref{fig:525i} in the case $h = 0.1$.
+\end{definition}
+
+\section{The Order of General Linear Methods}
+
+\noindent\textbf{Context.}
+A starting method $S$ is a sequence of $r$ generalized Runge--Kutta methods used to initialize a general linear method. Degeneracy depends on whether all these methods have a zero coefficient $b_0^{(i)}$.
+
+Variables:
+\begin{itemize}
+    \item $S$: a starting method, defined as a sequence $S_1, S_2, \dots, S_r$ of generalized Runge--Kutta methods.
+    \item $r$: the number of generalized Runge--Kutta methods in $S$.
+    \item $S_i$: the $i$-th generalized Runge--Kutta method in $S$, for $i = 1, 2, \dots, r$.
+    \item $b_0^{(i)}$: a coefficient for the $i$-th method $S_i$.
+\end{itemize}
+
+Referenced equations:
+\begin{itemize}
+    \item (530a): the definition of the generalized Runge--Kutta methods constituting $S$.
+\end{itemize}
+
+\begin{definition}[non-degenerate (530A)]
+
+  \label{def:530A}
+  \lean{Butcher.Ch5.Def530A}
+  \uses{}
+A starting method $S$ defined by the generalized Runge--Kutta methods \eqref{eq:530a}, for $i = 1, 2, \dots, r$, is `degenerate' if $b_0^{(i)} = 0$, for $i = 1, 2, \dots, r$, and `non-degenerate' otherwise.
+\end{definition}
+
+\noindent\textbf{Context.}
+The context involves analyzing the order of a general linear method $M$ when used with a starting method $S$. $S$ is defined by generalized Runge--Kutta methods, and non-degeneracy requires at least one $b_{0}^{(i)} \neq 0$. $SM$ and $ES$ are vectors of approximations whose Taylor expansions are compared to define order.
+
+Variables:
+\begin{itemize}
+    \item $M$: a general linear method
+    \item $S$: a starting method defined by generalized Runge--Kutta methods (530a) for $i = 1,2,\dots,r$
+    \item $SM$: vector of results from carrying out a step of $M$ based on initial approximations computed using $S$
+    \item $ES$: vector of approximations formed by advancing the exact solution forward a time step $h$ and then applying each member of $S$ to the result
+    \item $p$: order of the method (a non-negative integer)
+\end{itemize}
+
+Referenced equations:
+\begin{itemize}
+    \item (530a): generalized Runge--Kutta methods defining the starting method $S$, with coefficients including $b_{0}^{(i)}$
+\end{itemize}
+
+\begin{definition}[Order relative to starting method (530B)]
+
+  \label{def:530B}
+  \lean{Butcher.Ch5.Def530B}
+  \uses{def:530A}
+Consider a general linear method $\mathcal{M}$ and a non-degenerate starting method $\mathcal{S}$. The method $\mathcal{M}$ has order $p$ relative to $\mathcal{S}$ if the results found from $\mathcal{S}\mathcal{M}$ and $\mathcal{E}\mathcal{S}$ agree to within $O(h^{p+1})$.
+\end{definition}
+
+\begin{definition}[Order relative to starting method (530C)]
+
+  \label{def:530C}
+  \lean{Butcher.Ch5.Def530C}
+  \uses{def:530A, def:530B}
+A general linear method $\mathbf{M}$ has order $p$ if there exists a non-degenerate starting method $\mathbf{S}$ such that $\mathbf{M}$ has order $p$ relative to $\mathbf{S}$.
+\end{definition}
+
+\noindent\textbf{Context.}
+The theorem concerns a general linear method $M=(A,U,B,V)$ with algebraic representation $\xi$ of a starting method $S$. Equations (532e) and (532f) hold in the quotient space $G/H_{p}$, where $p$ relates to truncation order. The expression $E\xi - B\eta D - V\xi$ in $G$ represents a local truncation error-like quantity. Here, $\eta$ is a vector defined by $\eta = A\eta D + U\xi$ in $G/H_{p}$, $E$ is an operator, $D$ is a differentiation operator, $G$ is a space, $H_{p}$ is a subspace of $G$, $p$ is an integer, and $r(t)$, $\sigma(t)$, $F(t)$ are functions associated with a tree $t$.
+
+Referenced equations:
+\begin{align}
+    \eta &= A\eta D + U\xi, \quad \text{in } G/H_{p}, \tag{532e}\\
+    E\xi &= B\eta D + V\xi, \quad \text{in } G/H_{p}. \tag{532f}
+\end{align}
+
+\begin{theorem}[Algebraic analysis of order (532A)]
+
+  \label{thm:532A}
+  \lean{Butcher.Ch5.Thm532A}
+  \uses{def:530C, thm:311B, thm:313B, thm:315A}
+Let $M = (A, U, B, V)$ denote a general linear method and let $\xi$ denote the algebraic representation of a starting method $S$. Assume that \eqref{eq:532e} and \eqref{eq:532f} hold in $G/H^p$. Denote
+\[
+\Gamma = E\xi - B\eta D - V\xi, \quad \text{in } G.
+\]
+Then the Taylor expansion of $S(y(x_0 + h)) - M(S(y(x_0)))$ is
+\[
+\sum_{r(t) \ge p} \frac{h^{r(t)}}{\sigma(t)} F(t)(y(x_0)). \tag{532g}
+\]
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:532A}
+  \uses{def:530C, thm:311B, thm:313B, thm:315A}
+We consider a single step from initial data given at $x_0$ and consider the Taylor expansion of various expressions about $x_0$. The input approximation, computed by $S$, has Taylor series represented by $\xi$. Suppose the Taylor expansions for the stage values are represented by $\eta$ so that the stage derivatives will be represented by $\eta D$ and these will be related by \eqref{eq:532e}. The Taylor expansion for the output approximations is represented by $B\eta D + V\xi$, and this will agree with the Taylor expansion of $S(y(x_0 + h))$ up to $h^p$ terms if \eqref{eq:532f} holds. The difference from the target value of $S(y(x_0 + h))$ is given by \eqref{eq:532g}.
+\end{proof}
+
+\noindent\textbf{Context.}
+The theorem presents a general linear method defined by a partitioned matrix $\begin{bmatrix} A & U \\ B & V \end{bmatrix}$, where $A$, $U$, $B$, $V$ are coefficient matrices. The context discusses $G$-symplectic methods and their order analysis. A $G$-symplectic method preserves symplectic structure when applied to Hamiltonian problems, with a specific matrix $G$. The starting procedure involves a Runge--Kutta method (502b). Method (525d) is an example of a $G$-symplectic method.
+
+\begin{theorem}[The order of a G-symplectic method (534A)]
+
+  \label{thm:534A}
+  \lean{Butcher.Ch5.Thm534A}
+  \uses{def:530C, thm:532A}
+The following method has order 4 and stage order 2:
+\[
+\begin{array}{c}
+A \quad U \\
+B \quad V
+\end{array}
+=
+\left[\begin{array}{cccc}
+\displaystyle \frac{3+\sqrt{3}}{6} & 0 & \displaystyle \frac{1}{3} & \displaystyle -\frac{3+2\sqrt{3}}{3} \\[6pt]
+\displaystyle -\frac{\sqrt{3}}{3} & \displaystyle -\frac{3+\sqrt{3}}{6} & \displaystyle \frac{1}{3} & \displaystyle \frac{3+2\sqrt{3}}{3} \\[6pt]
+\displaystyle \frac{1}{2} & \displaystyle \frac{1}{2} & 1 & 0 \\[6pt]
+\displaystyle \frac{1}{2} & \displaystyle -\frac{1}{2} & 0 & -1
+\end{array}\right]. \tag{534a}
+\]
+Before verifying this result we need to specify the nature of the starting method $S$ and the values of the stage abscissae, $c_1$ and $c_2$. From an initial point $(x_0, y_0)$, the starting value is given by
+\[
+\begin{aligned}
+y_1^{[0]} &= y_0, \\
+y_2 &= \frac{1}{2\sqrt{3}} h^2 y''(x_0) - \frac{\sqrt{3}}{108} h^4 y^{(4)}(x_0) + \frac{9+5\sqrt{3}}{18}.
+\end{aligned}
+\]
+\end{theorem}
+
+\noindent\textbf{Context.}
+Consider a consistent general linear method $(A,U,B,V)$ with $u=e_1$, where $U$ and $V$ have block structures
+\[
+U=\begin{bmatrix}1&0\\0&U_{22}\end{bmatrix},\qquad V=\begin{bmatrix}1&0\\0&V_{22}\end{bmatrix}.
+\]
+Let $e_1$ be the first natural basis vector in $\mathbb{R}^r$. For a given underlying one‑step method $\theta$, define $\eta$ and $\xi$ by
+\begin{align}
+\eta(t) &= A(\eta D)(t) + U\xi(t), \tag{535a}\\
+(\theta\xi)(t) &= B(\eta D)(t) + V\xi(t). \tag{535b}
+\end{align}
+The theorem concerns the unique solution with $\xi_1=1$. Denote by $\sigma(\widetilde{V})$ the spectrum of $\widetilde{V}$.
+
+\begin{theorem}[The underlying one-step method (535A)]
+
+  \label{thm:535A}
+  \lean{Butcher.Ch5.Thm535A}
+  \uses{def:422B, def:510A, def:510B, def:510C, def:530C, thm:422A}
+Let $(A, U, B, V)$ denote a consistent general linear method such that $u = e_1$ and such that
+\[
+U = \begin{bmatrix} 1 & \widehat{U} \end{bmatrix}, \quad V = \begin{bmatrix} 1 & v^\top \\ 0 & \widehat{V} \end{bmatrix},
+\]
+where $1 \notin \sigma(\widehat{V})$. Then there exists a unique solution to \eqref{eq:535a} and \eqref{eq:535b} for which $\xi_1 = 1$.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:535A}
+  \uses{def:422B, def:510A, def:510B, def:510C, def:530C, thm:422A}
+By carrying out a further transformation if necessary, we may assume without loss of generality that $\widehat{V}$ is lower triangular. The conditions satisfied by $\xi_i(t)$ ($i = 2, 3, \dots, r$), $\eta_i(t)$ ($i = 1, 2, \dots, s$) and $\theta(t)$ can now be written in the form
+\begin{align*}
+(1 - \widehat{V}_{i,i}) \xi_i(t) &= \sum_{j=1}^{s} b_{ij} (\eta D)(t) + \sum_{j=2}^{i-1} \widehat{V}_{i-1,j-1} \xi_j(t), \\
+\eta_i(t) &= \sum_{j=1}^{s} a_{ij} (\eta D)(t) + \mathbf{1}(t) + \sum_{j=2}^{r} \widehat{U}_{i,j-1} \xi_j(t), \\
+\theta(t) &= \sum_{j=1}^{s} b_{1j} (\eta D)(t) + \mathbf{1}(t) + \sum_{j=2}^{r} \widehat{v}_{j-1} \xi_j(t).
+\end{align*}
+In each of these equations, the right-hand sides involve only trees with order lower than $r(t)$ or terms with order $r(t)$ which have already been evaluated. Hence, the result follows by induction on $r(t)$. $\square$
+
+The extension of the concept of underlying one-step method to general linear methods was introduced in Stoffer (1993).
+
+Although the underlying one-step method is an abstract structure, it has practical consequences. For a method in which $\rho(\widehat{V}) < 1$, the performance of a large number of steps, using constant stepsize, forces the local errors to conform to Theorem~\ref{thm:535A}. When the stepsize needs to be altered, in accordance with the behaviour of the computed solution, it is desirable to commence the step following the change, with input approximations consistent with what the method would have expected if the new stepsize had been used for many preceding steps. Although this cannot be done precisely, it is possible for some of the most dominant terms in the error expansion to be adjusted in accordance with this requirement. With this adjustment in place, it becomes possible to make use of information from the input vectors, as well as information computed within the step, in the estimation of local truncation errors. It also becomes possible to obtain reliable information that can be used to assess the relative advantages of continuing the integration with an existing method or of moving onto a higher order method. These ideas have already been used to good effect in Butcher and Jackiewicz (2003) and further developments are the subject of ongoing investigations.
+\end{proof}
+
+\section{Methods with Runge–Kutta stability}
+
+\noindent\textbf{Context.}
+The theorem concerns DIMSIM methods (diagonally implicit multistage integration methods) with equal order and stage order $p$. The method is represented by a partitioned matrix with blocks $A$, $U$, $B$, $V$, where $A$ is typically diagonal for parallel evaluation. The context discusses types of DIMSIM methods based on $\lambda$ (diagonal element of $A$) for stiff/non-stiff problems.
+
+Variables: $p$: order and stage order; $q$: order and stage order (here $p = q$); $r$: dimension of the vector $\phi(z)$; $s$: number of stages; $A$, $U$, $B$, $V$: coefficient matrices; $c$: vector of abscissae $c_i$.
+
+\begin{theorem}[The types of DIMSIM methods (541A)]
+
+  \label{thm:541A}
+  \lean{Butcher.Ch5.Thm541A}
+  \uses{def:530C, thm:532A}
+A method
+\[
+\begin{pmatrix}
+A & U \\
+B & V
+\end{pmatrix},
+\]
+has order and stage order $p$ if and only if there exists a function
+\[
+\varphi : \mathbb{C} \to \mathbb{C}^{r},
+\]
+analytic in a neighbourhood of $0$, such that
+\begin{align}
+\exp(cz) &= zA \exp(cz) + U \varphi(z) + O(z^{p+1}), \label{eq:541a} \\
+\exp(z)\varphi(z) &= zB \exp(cz) + V \varphi(z) + O(z^{p+1}), \label{eq:541b}
+\end{align}
+where $\exp(cz)$ denotes the vector in $\mathbb{C}^{s}$ for which component $i$ is equal to $\exp(c_i z)$.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:541A}
+  \uses{def:530C, thm:532A}
+Assume that \eqref{eq:541a} and \eqref{eq:541b} are satisfied and that the components of $\varphi(z)$ have Taylor series
+\[
+\varphi_i(z) = \sum_{j=0}^{p} \alpha_{ij} z^j + O(z^{p+1}).
+\]
+Furthermore, suppose starting method $i$ is chosen to give the output
+\[
+\sum_{j=0}^{p} \alpha_{ij} h^j y^{(j)}(x_0) + O(h^{p+1}),
+\]
+where $y$ denotes the exact solution agreeing with a given initial value at $x_0$. Using this starting method, consider the value of
+\[
+y(x_0 + h c_k) - h \sum_{i=1}^{s} a_{ki} y'(x_0 + h c_i) - \sum_{i=1}^{r} U_{ki} \sum_{j=0}^{p} \alpha_{ij} h^j y^{(j)}(x_0). \tag{541c}
+\]
+If this is $O(h^{p+1})$ then it will follow that $Y_k - y(x_0 + h c_k) = O(h^{p+1})$. Expand (541c) about $x_0$, and it is seen that the coefficient of $h^j y^{(j)}(x_0)$ is
+\[
+\frac{1}{j!} c_k^j - \sum_{i=1}^{s} a_{ki} \frac{1}{(j-1)!} c_i^{j-1} - \sum_{i=1}^{r} U_{ki} \alpha_{ij}.
+\]
+However, this is exactly the same as the coefficient of $z^j$ in the Taylor expansion of the difference of the two sides of \eqref{eq:541a}. Given that the order of the stages is $p$, and therefore that $h f(Y_i) = h y'(x_0 + h c_i) + O(h^{p+1})$, we can carry out a similar analysis of the condition for the $k$th output vector to equal
+\[
+\sum_{j=0}^{p} \alpha_{kj} h^j y^{[j]}(x_0 + h) + O(h^{p+1}). \tag{541d}
+\]
+Carry out a Taylor expansion about $x_0$ and we find that (541d) can be written as
+\[
+\sum_{j=0}^{p} \sum_{i=j}^{p} \alpha_{kj} \frac{1}{(i-j)!} h^i y^{(i)}(x_0) + O(h^{p+1}). \tag{541e}
+\]
+The coefficient of $h^i$ in (541e) is identical to the coefficient of $z^i$ in $\exp(z)\varphi_k(z)$. Hence, combining this with the terms
+\[
+\sum_{i=1}^{s} b_{ki} \frac{1}{(j-1)!} c_i^{j-1} + \sum_{i=1}^{r} V_{ki} \alpha_{ij},
+\]
+we find \eqref{eq:541b}.
+
+To prove necessity, use the definition of order given by \eqref{eq:532e} and \eqref{eq:532f} and evaluate the two sides of each of these equations for the sequence of trees $t_0 = \emptyset$, $t_1 = \tau$, $t_2 = [t_1]$, $\dots$, $t_p = [t_{p-1}]$. Use the values of $\alpha_{ij}$ given by
+\[
+\alpha_{ij} = \xi_i(t_j),
+\]
+so that
+\[
+(E\xi_i)(t_j) = \sum_{k=0}^{j} \frac{1}{k!} \xi_i(t_{j-k}),
+\]
+which is the coefficient of $z^j$ in $\exp(z) \sum_{k=0}^{p} \alpha_{ik} z^k$. We also note that
+\[
+\eta_i(t_j) = \frac{1}{j!} c_i^j, \quad (\eta_i D)(t_j) = \frac{1}{(j-1)!} c_i^{j-1},
+\]
+which are, respectively, the $z^j$ coefficients in $\exp(c_i z)$ and in $z \exp(c_i z)$. Write $\varphi(z)$ as the vector-valued function with $i$th component equal to $\sum_{k=0}^{p} \alpha_{ik} z^k$, and we verify that coefficients of all powers of $z$ up to $z^p$ agree in the two sides of \eqref{eq:541a} and \eqref{eq:541b}.
+\end{proof}
+
+\noindent\textbf{Context.}
+The context discusses the stability properties of general linear methods, introducing the stability matrix \(M(z)\) and its characteristic polynomial \(\Phi(w, z)\). The goal is to design methods whose stability resembles that of Runge-Kutta methods.
+
+Variables:
+\begin{itemize}
+    \item \(M(z)\): stability matrix for a general linear method, \(M(z) = V + zB(I - zA)^{-1} U\)
+    \item \(\Phi(w, z)\): characteristic polynomial of \(M(z)\), \(\Phi(w, z) = \det(wI - M(z))\)
+    \item \(R(z)\): stability function (a rational function)
+\end{itemize}
+
+Referenced equations:
+\begin{equation}
+\Phi(w, z) = \det(wI - M(z)) \tag{542a}
+\end{equation}
+
+\begin{definition}[annihilation conditions (542A)]
+
+  \label{def:542A}
+  \lean{Butcher.Ch5.Def542A}
+  \uses{def:310A, def:381A, def:403A, def:406A, def:510A, def:510B, def:510C, def:512A, def:520A, def:520C, def:520E, def:530C, thm:520B}
+A general linear method $(A, U, B, V)$ has \emph{Runge--Kutta stability} (RK stability) if its characteristic polynomial, given by $\Phi(w,z)=\det(wI-V-zB(I-zA)^{-1}U)$, has the form
+\[
+\Phi(w,z) = w^{r-1}\bigl(w - R(z)\bigr).
+\]
+The rational function $R(z)$ is the \emph{stability function} of the method.
+\end{definition}
+
+\section{Methods with Inherent Runge–Kutta Stability}
+
+\noindent\textbf{Context.}
+The theorem concerns the characteristic polynomial of an $n\times n$ doubly companion matrix $X$, defined in terms of two given polynomials $\alpha(z)$ and $\beta(z)$ of degree $n$. The matrix $X$ is constructed from the coefficients $\alpha_i$ and $\beta_i$ as shown in (550a).
+
+Variables:
+\begin{itemize}
+    \item $n$: dimension of the matrix $X$, a positive integer
+    \item $X$: $n \times n$ doubly companion matrix defined in (550a)
+    \item $\alpha(z)$: polynomial $\alpha(z) = 1 + \alpha_1 z + \cdots + \alpha_n z^n$
+    \item $\beta(z)$: polynomial $\beta(z) = 1 + \beta_1 z + \cdots + \beta_n z^n$
+    \item $\alpha_i$: coefficients of $\alpha(z)$, for $i = 1,\dots,n$
+    \item $\beta_i$: coefficients of $\beta(z)$, for $i = 1,\dots,n$
+\end{itemize}
+
+Referenced equations:
+\begin{equation}\label{550a}
+X = \begin{bmatrix}
+-\alpha_1 & -\alpha_2 & \cdots & -\alpha_{n-1} & -\alpha_n - \beta_n \\
+1 & 0 & \cdots & 0 & -\beta_{n-1} \\
+0 & 1 & \cdots & 0 & -\beta_{n-2} \\
+\vdots & \vdots & \ddots & \vdots & \vdots \\
+0 & 0 & \cdots & 1 & -\beta_1
+\end{bmatrix}
+\end{equation}
+
+\begin{theorem}[Doubly companion matrices (550A)]
+
+  \label{thm:550A}
+  \lean{Butcher.Ch5.Thm550A}
+  \uses{thm:550B}
+The coefficients in the characteristic polynomial of \(X\),
+\[
+\det(wI - X) = w^n + \gamma_1 w^{n-1} + \gamma_2 w^{n-2} + \cdots + \gamma_n,
+\]
+are given by
+\[
+1 + \gamma_1 z + \gamma_2 z^2 + \cdots + \gamma_n z^n = \det(I - zX) = \alpha(z)\beta(z) + O(z^{n+1}).
+\]
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:550A}
+  \uses{thm:550B}
+We assume that the eigenvalues of \(X\) are distinct and non-zero. There is no loss of generality in this assumption because, for given values of the \(\alpha\) coefficients, the coefficients in the characteristic polynomial are continuous functions of the \(\beta\) coefficients; furthermore, choices of the \(\beta\) coefficients which lead to distinct non-zero eigenvalues form a dense set.
+
+Let \(\lambda\) denote an eigenvalue of \(X\), and let
+\[
+v_k = \lambda^k + \beta_1 \lambda^{k-1} + \beta_2 \lambda^{k-2} + \cdots + \beta_k, \quad k = 0, 1, 2, \dots, n.
+\]
+By comparing components numbered \(n\), \(n-1\), \dots, \(2\) of \(Xv\) and \(\lambda v\), where
+\[
+V = \begin{bmatrix} v_{n-1} & v_{n-2} & \cdots & 1 \end{bmatrix}, \tag{550b}
+\]
+we see that \(v\) is the eigenvector corresponding to \(\lambda\). Now compare the first components of \(\lambda v\) and \(Xv\) and it is found that
+\[
+\lambda v_n + \alpha_1 v_{n-1} + \cdots + \alpha_n = 0
+\]
+and contains all the terms with non-negative exponents in the product
+\[
+v_n (1 + \alpha_1 \lambda^{-1} + \cdots + \alpha_n \lambda^{-n}).
+\]
+Replace \(\lambda\) by \(z^{-1}\) and the result follows.
+
+Write \(\varphi(z)\) for the vector \eqref{eq:550b} with \(\lambda\) replaced by \(z\). We now note that
+\[
+z\varphi(z) - X\varphi(z) = \sum_{i=1}^n (z - \lambda_i) e_1, \tag{550c}
+\]
+because the expression vanishes identically except for the first component which is a monic polynomial of degree \(n\) which vanishes when \(z\) is an eigenvalue.
+
+We are especially interested in choices of \(\alpha\) and \(\beta\) such that \(X\) has a single \(n\)-fold eigenvalue, so that
+\[
+\alpha(z)\beta(z) = (1 - \lambda z)^n + O(z^{n+1}) \tag{550d}
+\]
+and so that the right-hand side of \eqref{eq:550c} becomes \((z - \lambda)^n e_1\). In this case it is possible to write down the similarity that transforms \(X\) to Jordan canonical form.
+\end{proof}
+
+\noindent\textbf{Context.}
+$X$ is a doubly companion matrix with a single $n$-fold eigenvalue $\lambda$, satisfying condition (550d). The vector $\varphi(z)$ is defined via (550b) with $\lambda$ replaced by $z$.
+
+Variables:
+\begin{itemize}
+    \item $X$: doubly companion matrix
+    \item $\varphi(z)$: vector given by (550b) with $\lambda$ replaced by $z$
+    \item $\lambda$: single $n$-fold eigenvalue of $X$
+    \item $\alpha(z)$: polynomial part of the condition (550d)
+    \item $\beta(z)$: polynomial part of the condition (550d)
+\end{itemize}
+
+Referenced equations:
+\begin{align}
+    (550b)&: \quad V = \begin{bmatrix} v_{n-1} & v_{n-2} & \dots & 1 \end{bmatrix},\\
+    (550d)&: \quad \alpha(z)\beta(z) = (1 - \lambda z)^n + O(z^{n+1}).
+\end{align}
+
+\begin{theorem}[Doubly companion matrix similarity transformation (550B)]
+
+  \label{thm:550B}
+  \lean{Butcher.Ch5.Thm550B}
+  \uses{cor:550C, thm:111A}
+Let the doubly companion matrix \(X\) be chosen so that
+\eqref{eq:550d} holds. Also let \(\varphi(z)\) denote the vector given by \eqref{eq:550b} with \(\lambda\) replaced
+by \(z\), and let \(\Psi\) the matrix given by
+\[
+\Psi = \begin{bmatrix}
+\frac{1}{(n-1)!} \varphi^{(n-1)}(\lambda) &
+\frac{1}{(n-2)!} \varphi^{(n-2)}(\lambda) &
+\cdots &
+\frac{1}{1!} \varphi'(\lambda) &
+\varphi(\lambda)
+\end{bmatrix}.
+\]
+Then
+\[
+\Psi^{-1} X \Psi = \begin{bmatrix}
+\lambda & 0 & 0 & \cdots & 0 & 0 \\
+1 & \lambda & 0 & \cdots & 0 & 0 \\
+0 & 1 & \lambda & \cdots & 0 & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots & \vdots \\
+0 & 0 & 0 & \cdots & 1 & \lambda
+\end{bmatrix}.
+\]
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:550B}
+  \uses{cor:550C, thm:111A}
+From the special case of \eqref{eq:550c}, we have
+\[
+X \varphi(z) = z \varphi(z) - (z - \lambda)^n e_1. \tag{550e}
+\]
+Differentiate \(k\) times, divide by \(k!\) and set \(z = \lambda\), for \(k = 1, 2, \dots, n - 1\). The
+result is
+\[
+X \frac{1}{k!} \varphi^{(k)}(\lambda) = \lambda I \frac{1}{k!} \varphi^{(k)}(\lambda) + \frac{1}{(k-1)!} \varphi^{(k-1)}(\lambda), \quad k = 1, 2, \dots, n - 1.
+\]
+Hence the vectors \(\varphi(\lambda), \frac{1}{1!} \varphi'(\lambda), \frac{1}{2!} \varphi''(\lambda), \dots, \frac{1}{(n-1)!} \varphi^{(n-1)}(\lambda)\) form a sequence
+of eigenvector and generalized eigenvectors, and the result follows.
+
+The inverse of \(\Psi\) is easy to evaluate by interchanging the roles of rows and
+columns of \(X\). We present the following result without further proof.
+\end{proof}
+
+\noindent\textbf{Context.}
+The matrix $\Psi$ satisfies $\Psi^{-1}X\Psi = J(\lambda)$, where $J(\lambda)$ is a Jordan block. The companion matrix $X$ has dimension $n$ and coefficients $\alpha_1,\dots,\alpha_{n-1}$. Define the row vector
+\[
+\chi(\lambda)=\begin{bmatrix}
+1, & \lambda+\alpha_1, & \lambda^2+\alpha_1\lambda+\alpha_2, & \dots, & \lambda^{n-1}+\alpha_1\lambda^{n-2}+\dots+\alpha_{n-1}
+\end{bmatrix}.
+\]
+
+\begin{corollary}[Inverse of companion matrix derivative basis (550C)]
+
+  \label{cor:550C}
+  \lean{Butcher.Ch5.Cor550C}
+  \uses{}
+If
+\[
+\chi(\lambda) = \begin{bmatrix}
+1 & \lambda + \alpha_1 & \lambda^2 + \alpha_1 \lambda + \alpha_2 & \cdots & \lambda^{n-1} + \alpha_1 \lambda^{n-2} + \cdots + \alpha_{n-1}
+\end{bmatrix},
+\]
+then
+\[
+\Psi^{-1} = \begin{bmatrix}
+\chi(\lambda) & \frac{1}{1!} \chi'(\lambda) & \cdots & \frac{1}{(n-2)!} \chi^{(n-2)}(\lambda) & \frac{1}{(n-1)!} \chi^{(n-1)}(\lambda)
+\end{bmatrix}.
+\]
+\end{corollary}
+
+\noindent\textbf{Context.}
+The definition concerns a general linear method with matrices $(A, U, B, V)$. Assume $p = q$ and $s = r = p + 1$, with $A$ diagonally implicit and $V$ having the structure
+\[
+V = \begin{bmatrix} 1 & v \\ 0 & \dot{V} \end{bmatrix},
+\]
+where $\rho(\dot{V}) = 0$. The concept of inherent Runge--Kutta stability imposes conditions on $BA - XB$ and $BU - XV + VX$.
+
+\begin{definition}[Inherent Runge–Kutta stability (551A)]
+
+  \label{def:551A}
+  \lean{Butcher.Ch5.Def551A}
+  \uses{def:510C, def:530C, def:542A, thm:550A}
+A general linear method $(A, U, B, V)$ is `inherently Runge--Kutta stable' if $V$ is of the form \eqref{eq:551a} and the two matrices
+\[
+BA - XB \quad \text{and} \quad BU - XV + VX
+\]
+are zero except for their first rows, where $X$ is some matrix.
+
+The significance of this definition is expressed in the following.
+\end{definition}
+
+\begin{theorem}[Single Non Zero Eigenvalue Stability (551B)]
+
+  \label{thm:551B}
+  \lean{Butcher.Ch5.Thm551B}
+  \uses{def:510C, def:520A, def:551A, thm:550B}
+Let $(A, U, B, V)$ denote an inherently RK stable general linear method. Then the stability matrix
+\[
+M(z) = V + zB(I - zA)^{-1}U
+\]
+has only a single non-zero eigenvalue.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:551B}
+  \uses{def:510C, def:520A, def:551A, thm:550B}
+Calculate the matrix
+\[
+(I - zX)M(z)(I - zX)^{-1},
+\]
+which has the same eigenvalues as $M(z)$. We use the notation $\equiv$ to denote equality of two matrices, except for the first rows. Because $BA \equiv XB$ and $BU \equiv XV - VX$, it follows that
+\begin{align*}
+(I - zX)B &\equiv B(I - zA), \\
+(I - zX)V &\equiv V(I - zX) - zBU,
+\end{align*}
+so that
+\[
+(I - zX)M(z) \equiv V(I - zX).
+\]
+Hence $(I - zX)M(z)(I - zX)^{-1}$ is identical to $V$, except for the first row. Thus the eigenvalues of this matrix are its $(1, 1)$ element together with the $p$ zero eigenvalues of $\dot{V}$.
+
+Since we are adopting, as standard $r = p + 1$ and a stage order $q = p$, it is possible to insist that the vector-valued function of $z$, representing the input approximations, comprises a full basis for polynomials of degree $p$. Thus, we will introduce the function $Z$ given by
+\[
+Z = \begin{bmatrix}
+1 \\ z \\ z^2 \\ \vdots \\ z^p
+\end{bmatrix}, \tag{551b}
+\]
+which represents the input vector
+\[
+y^{[n-1]} = \begin{bmatrix}
+y(x_{n-1}) \\
+hy'(x_{n-1}) \\
+h^2 y''(x_{n-1}) \\
+\vdots \\
+h^p y^{(p)}(x_{n-1})
+\end{bmatrix}. \tag{551c}
+\]
+This is identical, except for a simple rescaling by factorials, to the Nordsieck vector representation of input and output approximations, and it will be convenient to adopt this as standard.
+
+Assuming that this standard choice is adopted, the order conditions are
+\begin{align}
+\exp(cz) &= zA \exp(cz) + U Z + O(z^{p+1}), \tag{551d} \\
+\exp(z)Z &= zB \exp(cz) + V Z + O(z^{p+1}). \tag{551e}
+\end{align}
+This result, and generalizations of it, make it possible to derive stiff methods of quite high orders. Furthermore, Wright (2003) has shown how it is possible to derive explicit methods suitable for non-stiff problems which satisfy the same requirements. Following some more details of the derivation of these methods, some example methods will be given.
+\end{proof}
+
+\begin{theorem}[Derivation of methods with IRK stability (553A)]
+
+  \label{thm:553A}
+  \lean{Butcher.Ch5.Thm553A}
+  \uses{def:403A, def:530C, def:551A, thm:111A, thm:550A}
+If a general linear method with $p = q = r - 1 = s - 1$ has the property of IRK stability then the matrix $X$ in Definition~\ref{def:551A} is a $(p + 1) \times (p + 1)$ doubly companion matrix.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:553A}
+  \uses{def:403A, def:530C, def:551A, thm:111A, thm:550A}
+Substitute \eqref{eq:551d} into \eqref{eq:551e} and compare \eqref{eq:551d} with $zX$ multiplied on the left. We find
+\begin{align}
+    \exp(z)Z &= z^{2}BA\exp(cz) + zBU Z + V Z + O(z^{p+1}), \label{eq:553a} \\
+    z\exp(z)XZ &= z^{2}XB\exp(cz) + zXV Z + O(z^{p+1}). \label{eq:553b}
+\end{align}
+Because $BA \equiv XB$ and $BU \equiv XV - VX$, the difference of \eqref{eq:553a} and \eqref{eq:553b} implies that
+\[
+zXZ \equiv Z + O(z^{p+1}).
+\]
+Because $zJZ \equiv Z + O(z^{p+1})$, it now follows that
+\[
+(X - J)Z \equiv O(z^{p}),
+\]
+which implies that $X - J$ is zero except for the first row and last column.
+
+We will assume without loss of generality that $\beta_{p+1} = 0$.
+
+By choosing the first row of $X$ so that $\sigma(X) = \sigma(A)$, we can assume that the relation $BA = XB$ applies also to the first row. We can now rewrite the defining equations in Definition~\ref{def:551A} as
+\begin{align}
+    BA &= XB, \label{eq:553c} \\
+    BU &= XV - VX + e_{1}\xi^{\top}, \label{eq:553d}
+\end{align}
+where $\xi = [\xi_{1} \; \xi_{2} \; \cdots \; \xi_{p+1}]$ is a specific vector. We will also write $\xi(z) = \xi_{1}z + \xi_{2}z^{2} + \cdots + \xi_{p+1}z^{p+1}$. The transformed stability function in
+\end{proof}

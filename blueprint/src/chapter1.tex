@@ -1,0 +1,648 @@
+\chapter{Differential and Difference Equations}
+
+\section{Differential Equation Problems}
+
+\noindent\textbf{Context.}
+Scaled two-body problem modeled by four first-order ODEs for position components \(y_1, y_2\) and velocity components \(y_3, y_4\), with independent variable \(x\) (time-like). Scaling: \(\gamma M = 1\). Variables:
+\[
+y_1, y_2: \text{position components}, \quad 
+y_3 = \frac{dy_1}{dx}, \quad 
+y_4 = \frac{dy_2}{dx}.
+\]
+Equations:
+\begin{align}
+\frac{dy_1}{dx} &= y_3, \label{101a}\\
+\frac{dy_2}{dx} &= y_4, \label{101b}\\
+\frac{dy_3}{dx} &= -\frac{y_1}{(y_1^2 + y_2^2)^{3/2}}, \label{101c}\\
+\frac{dy_4}{dx} &= -\frac{y_2}{(y_1^2 + y_2^2)^{3/2}}. \label{101d}
+\end{align}
+
+\begin{theorem}[The Kepler problem (101A)]
+
+  \label{thm:101A}
+  \lean{Butcher.Ch1.Thm101A}
+  \uses{}
+The quantities
+\[
+H = \frac{1}{2} \left( y_3^2 + y_4^2 \right) - \left( y_1^2 + y_2^2 \right)^{-1/2}, \quad A = y_1 y_4 - y_2 y_3
+\]
+are constant.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:101A}
+
+  \proves{thm:101A}
+We verify that the values of $dH/dx$ and $dA/dx$ are zero if $y$ satisfies \eqref{eq:101a}--\eqref{eq:101d}. We have
+\begin{align*}
+\frac{dH}{dx} &= y_3 \frac{dy_3}{dx} + y_4 \frac{dy_4}{dx} + y_1 \frac{dy_1}{dx} \left( y_1^2 + y_2^2 \right)^{-3/2} + y_2 \frac{dy_2}{dx} \left( y_1^2 + y_2^2 \right)^{-3/2} \\
+&= -\frac{y_1 y_3}{\left( y_1^2 + y_2^2 \right)^{3/2}} - \frac{y_2 y_4}{\left( y_1^2 + y_2^2 \right)^{3/2}} + \frac{y_1 y_3}{\left( y_1^2 + y_2^2 \right)^{3/2}} + \frac{y_2 y_4}{\left( y_1^2 + y_2^2 \right)^{3/2}} \\
+&= 0
+\end{align*}
+and
+\begin{align*}
+\frac{dA}{dx} &= y_1 \frac{dy_4}{dx} + \frac{dy_1}{dx} y_4 - y_2 \frac{dy_3}{dx} - \frac{dy_2}{dx} y_3 \\
+&= -\frac{y_1 y_2}{\left( y_1^2 + y_2^2 \right)^{3/2}} + y_3 y_4 + \frac{y_2 y_1}{\left( y_1^2 + y_2^2 \right)^{3/2}} - y_4 y_3 \\
+&= 0.
+\end{align*}
+The quantities $H$ and $A$ are the `Hamiltonian' and `angular momentum', respectively. Note that $H = T + V$, where $T = \frac{1}{2} \left( y_3^2 + y_4^2 \right)$ is the kinetic energy and $V = -\left( y_1^2 + y_2^2 \right)^{-1/2}$ is the potential energy.
+
+A further property of this problem is its invariance under changes of scale of the variables:
+\[
+y_1 = \alpha^{-2} \overline{y}_1, \quad y_2 = \alpha^{-2} \overline{y}_2, \quad y_3 = \alpha \overline{y}_3, \quad y_4 = \alpha \overline{y}_4, \quad x = \alpha^{-3} \overline{x}.
+\]
+The Hamiltonian and angular momentum get scaled to
+\[
+H = \frac{1}{2} \left( \overline{y}_3^2 + \overline{y}_4^2 \right) - \left( \overline{y}_1^2 + \overline{y}_2^2 \right)^{-1/2} = \alpha^{-2} H, \quad A = \overline{y}_1 \overline{y}_4 - \overline{y}_2 \overline{y}_3 = \alpha A.
+\]
+
+A second type of transformation is based on a two-dimensional orthogonal transformation (that is, a rotation or a reflection or a composition of these) $Q$, where $Q^{-1} = Q^\top$. The time variable $x$ is invariant, and the position and velocity variables get transformed to
+\[
+\begin{bmatrix}
+y_1 \\ y_2 \\ y_3 \\ y_4
+\end{bmatrix}
+=
+\begin{bmatrix}
+Q & 0 \\ 0 & Q
+\end{bmatrix}
+\begin{bmatrix}
+\overline{y}_1 \\ \overline{y}_2 \\ \overline{y}_3 \\ \overline{y}_4
+\end{bmatrix}.
+\]
+
+It is easy to see that $A = 0$ implies that the trajectory lies entirely in a subspace defined by $\cos(\theta) y_1 = \sin(\theta) y_2$, $\cos(\theta) y_3 = \sin(\theta) y_4$ for some fixed angle $\theta$. We move on from this simple case and assume that $A \neq 0$. The sign of $H$ is of crucial importance: if $H \geq 0$ then it is possible to obtain arbitrarily high values of $y_1^2 + y_2^2$ without $y_3^2 + y_4^2$ vanishing. We exclude this case for the present discussion and assume that $H < 0$. Scale $H$ so that it has a value $-\frac{1}{2}$ and at the same time $A$ takes on a positive value. This value cannot exceed $1$ because we can easily verify an identity involving the derivative of $r = \sqrt{y_1^2 + y_2^2}$. This identity is
+\[
+r \left( \frac{dr}{dx} \right)^2 = 2H r^2 + 2r - A^2 = -r^2 + 2r - A^2. \tag{101e}
+\]
+Since the left-hand side cannot be negative, the quadratic function in $r$ on the right-hand side must have real roots. This implies that $A \leq 1$. Write $A = \sqrt{1 - e^2}$, for $e \geq 0$, where we see that $e$ is the eccentricity of an ellipse on which the orbit lies. The minimum and maximum values of $r$ are found to be $1 - e$ and $1 + e$, respectively. Rotate axes so that when $r = 1 - e$, which we take as the starting point of time, $y_1 = 1 - e$ and $y_2 = 0$. At this point we find that $y_3 = 0$ and $y_4 = \sqrt{(1 + e)/(1 - e)}$.
+
+Change to polar coordinates by writing $y_1 = r \cos(\theta)$, $y_2 = r \sin(\theta)$. It is found that
+\[
+y_3 = \frac{dy_1}{dx} = \frac{dr}{dx} \cos(\theta) - r \frac{d\theta}{dx} \sin(\theta), \quad y_4 = \frac{dy_2}{dx} = \frac{dr}{dx} \sin(\theta) + r \frac{d\theta}{dx} \cos(\theta),
+\]
+so that, because $y_1 y_4 - y_2 y_3 = \sqrt{1 - e^2}$, we find that
+\[
+r^2 \frac{d\theta}{dx} = \sqrt{1 - e^2}. \tag{101f}
+\]
+From \eqref{eq:101e} and \eqref{eq:101f} we find a differential equation for the path traced out by the orbit
+\[
+\left( \frac{dr}{d\theta} \right)^2 = \frac{1}{1 - e^2} \left[ r^2 e^2 - (1 - r)^2 \right],
+\]
+and we can verify that this is satisfied by
+\[
+\frac{1 - e^2}{r} = 1 + e \cos(\theta).
+\]
+If we change back to Cartesian coordinates, we find that all points on the trajectory lie on the ellipse
+\[
+(y_1 + e)^2 + \frac{y_2^2}{1 - e^2} = 1,
+\]
+with centre $(-e, 0)$, eccentricity $e$, and major and minor axis lengths $1$ and $\sqrt{1 - e^2}$ respectively.
+
+As we have seen, a great deal is known about this problem. However, much less is known about the motion of a many-body gravitational system.
+
+One of the aims of modern numerical analysis is to understand the behaviour of various geometrical properties. In some cases it is possible to preserve the value of quantities that are invariant in the exact solution. In other situations, such as problems where the Hamiltonian is theoretically conserved, it may be preferable to conserve other properties, such as what is known as `symplectic behaviour'.
+
+We consider further gravitational problems in Subsection~\ref{subsec:120}.
+\end{proof}
+
+\section{Differential Equation Theory}
+
+\noindent\textbf{Context.}
+The context discusses the existence and uniqueness of solutions for initial value problems in differential equations, focusing on the concept of a Lipschitz condition as a key criterion. Consider a function
+\[
+f : [a, b] \times \mathbb{R}^N \to \mathbb{R}^N.
+\]
+
+\begin{definition}[Lipschitz condition in its second variable (110A)]
+
+  \label{def:110A}
+  \lean{Butcher.Ch1.Def110A}
+  \uses{}
+The function $f : [a, b] \times \mathbb{R}^N \to \mathbb{R}^N$ is said to satisfy a \emph{Lipschitz condition in its second variable} if there exists a constant $L$, known as a \emph{Lipschitz constant}, such that for any $x \in [a, b]$ and $Y, Z \in \mathbb{R}^N$,
+\[
+\| f(x, Y) - f(x, Z) \| \leq L \| Y - Z \|.
+\]
+We need a basic lemma on metric spaces known as the \emph{contraction mapping principle}. We present this without proof.
+\end{definition}
+
+\noindent\textbf{Context.}
+The lemma is a self-contained statement about the contraction mapping principle in a complete metric space, independent of the preceding discussion on Lipschitz conditions and differential equations.
+
+\begin{lemma}[Contraction Mapping Fixed Point Existence (110B)]
+
+  \label{lem:110B}
+  \lean{Butcher.Ch1.Lem110B}
+  \uses{def:110A}
+Let \( M \) denote a complete metric space with metric \( \rho \) and let
+\( \varphi : M \to M \) denote a mapping which is a contraction, in the sense that
+there exists a number \( k \), satisfying \( 0 \leq k < 1 \), such that, for any \( \eta, \zeta \in M \),
+\[
+\rho(\varphi(\eta), \varphi(\zeta)) \leq k \rho(\eta, \zeta).
+\]
+Then there exists a unique \( \xi \in M \) such that \( \varphi(\xi) = \xi \).
+\end{lemma}
+
+\noindent\textbf{Context.}
+Consider the initial value problem for an ODE. The function \(f: [a, b] \times \mathbb{R}^N \to \mathbb{R}^N\) is continuous in its first variable and satisfies a Lipschitz condition in its second variable. There exists a constant \(L\) such that for any \(x \in [a, b]\) and \(Y, Z \in \mathbb{R}^N\),
+\[
+\|f(x, Y) - f(x, Z)\| \leq L \|Y - Z\|.
+\]
+The problem is given by
+\begin{align}
+    y'(x) &= f(x, y(x)), \tag{110a}\\
+    y(a)  &= y_0. \tag{110b}
+\end{align}
+
+\begin{theorem}[Existence and uniqueness of solutions (110C)]
+
+  \label{thm:110C}
+  \lean{Butcher.Ch1.Thm110C}
+  \uses{def:110A, lem:110B}
+Consider an initial value problem
+\[
+y'(x) = f(x, y(x)), \tag{110a}
+\]
+\[
+y(a) = y_0, \tag{110b}
+\]
+where \( f : [a, b] \times \mathbb{R}^N \to \mathbb{R}^N \) is continuous in its first variable and satisfies a Lipschitz condition in its second variable. Then there exists a unique solution to this problem.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:110C}
+  \uses{def:110A, lem:110B}
+Let \( M \) denote the complete metric space of continuous functions \( y : [a, b] \to \mathbb{R}^N \), such that \( y(a) = y_0 \). The metric is defined by
+\[
+\rho(y, z) = \sup_{x \in [a, b]} \exp(-K(x - a)) \| y(x) - z(x) \|,
+\]
+where \( K > L \). For given \( y \in M \), define \( \varphi(y) \) as the solution \( Y \) on \( [a, b] \) to the initial value problem
+\[
+Y'(x) = f(x, Y(x)), \quad Y(a) = y_0.
+\]
+This problem is solvable by integration as
+\[
+\varphi(y)(x) = y_0 + \int_a^x f(s, y(s)) \, ds.
+\]
+This is a contraction because for any two \( y, z \in M \), we have
+\begin{align*}
+\rho(\varphi(y), \varphi(z)) &\leq \sup_{x \in [a, b]} \exp(-K(x - a)) \left\| \int_a^x \bigl( f(s, y(s)) - f(s, z(s)) \bigr) \, ds \right\| \\
+&\leq \sup_{x \in [a, b]} \exp(-K(x - a)) \int_a^x \| f(s, y(s)) - f(s, z(s)) \| \, ds \\
+&\leq L \sup_{x \in [a, b]} \exp(-K(x - a)) \int_a^x \| y(s) - z(s) \| \, ds \\
+&\leq L \rho(y, z) \sup_{x \in [a, b]} \exp(-K(x - a)) \int_a^x \exp(K(s - a)) \, ds \\
+&\leq \frac{L}{K} \rho(y, z).
+\end{align*}
+The unique function \( y \) that therefore exists satisfying \( \varphi(y) = y \), is evidently the unique solution to the initial value problem given by \eqref{eq:110a}, \eqref{eq:110b}.
+
+The third requirement for being well-posed, that the solution is not overly sensitive to the initial condition, can be readily assessed for problems satisfying a Lipschitz condition. If \( y \) and \( z \) each satisfy \eqref{eq:110a} with \( y(a) = y_0 \) and \( z(a) = z_0 \), then
+\[
+\frac{d}{dx} \| y(x) - z(x) \| \leq L \| y(x) - z(x) \|.
+\]
+Multiply both sides by \( \exp(-Lx) \) and deduce that
+\[
+\frac{d}{dx} \left[ \exp(-Lx) \| y(x) - z(x) \| \right] \leq 0,
+\]
+implying that
+\[
+\| y(x) - z(x) \| \leq \| y_0 - z_0 \| \exp( L(x - a) ). \tag{110c}
+\]
+This bound on the growth of initial perturbations may be too pessimistic in particular circumstances. Sometimes it can be improved upon by the use of `one-sided Lipschitz conditions'. This will be discussed in Subsection 112.
+\end{proof}
+
+\noindent\textbf{Context.}
+The theorem concerns linear differential equation systems. The standard form is an inhomogeneous system \eqref{111a}, and its corresponding homogeneous system is \eqref{111b}. The superposition principle allows combining solutions.
+
+Variables:
+\begin{itemize}
+    \item $\tilde{y}$: a particular solution to the inhomogeneous linear differential equation system \eqref{111a}
+    \item $y_i$: solutions to the homogeneous linear differential equation system \eqref{111b}, for $i = 1, 2, \dots, k$
+    \item $\alpha_i$: constants, for $i = 1, 2, \dots, k$
+\end{itemize}
+
+Referenced equations:
+\begin{align}
+    \frac{dy}{dx} &= A(x)y + \phi(x) \label{111a} \\
+    \frac{dy}{dx} &= A(x)y \label{111b}
+\end{align}
+
+\begin{theorem}[inhomogeneous term (111A)]
+
+  \label{thm:111A}
+  \lean{Butcher.Ch1.Thm111A}
+  \uses{def:381A, def:520A, thm:110C, thm:520B}
+If $\hat{y}$ is a solution to \eqref{eq:111a} and $y_1, y_2, \dots, y_k$ are solutions to \eqref{eq:111b}, then for any constants $\alpha_1, \alpha_2, \dots, \alpha_k$, the function $y$ given by
+\[
+y(x) = \hat{y}(x) + \sum_{i=1}^{k} \alpha_i y_i(x),
+\]
+is a solution to \eqref{eq:111a}.
+
+The way this result is used is to attempt to find the solution which matches a given initial value, by combining known solutions.
+
+Many linear problems are naturally formulated in the form of a single high order differential equation
+\[
+Y^{(m)}(x) - C_1(x) Y^{(m-1)}(x) - C_2(x) Y^{(m-2)}(x) - \cdots - C_m(x) Y(x) = g(x). \tag{111c}
+\]
+
+By identifying $Y(x) = y_1(x)$, $Y'(x) = y_2(x)$, $\dots$, $Y^{(m-1)} = y_m(x)$, we can rewrite the system in the form
+\[
+\frac{d}{dx} \begin{bmatrix} y_1(x) \\ y_2(x) \\ \vdots \\ y_m(x) \end{bmatrix} = A(x) \begin{bmatrix} y_1(x) \\ y_2(x) \\ \vdots \\ y_m(x) \end{bmatrix} + \phi(x),
+\]
+where the `companion matrix' $A(x)$ and the `inhomogeneous term' $\phi(x)$ are given by
+\[
+A(x) = \begin{bmatrix}
+0 & 1 & 0 & \cdots & 0 \\
+0 & 0 & 1 & \cdots & 0 \\
+0 & 0 & 0 & \cdots & 0 \\
+\vdots & \vdots & \vdots & & \vdots \\
+0 & 0 & 0 & \cdots & 1 \\
+C_m(x) & C_{m-1}(x) & C_{m-2}(x) & \cdots & C_1(x)
+\end{bmatrix}, \quad \phi(x) = \begin{bmatrix} 0 \\ 0 \\ 0 \\ \vdots \\ 0 \\ g(x) \end{bmatrix}.
+\]
+
+When $A(x) = A$ in \eqref{eq:111b} is constant, then to each eigenvalue $\lambda$ of $A$, with corresponding eigenvector $v$, there exists a solution given by
+\[
+y(x) = \exp(\lambda x) v. \tag{111d}
+\]
+
+When a complete set of eigenvectors does not exist, but corresponding to $\lambda$ there is a chain of generalized eigenvectors
+\[
+A v_1 = \lambda v_1 + v, \quad A v_2 = \lambda v_2 + v_1, \quad \dots, \quad A v_{k-1} = \lambda v_{k-1} + v_{k-2},
+\]
+then there is a chain of additional independent solutions to append to \eqref{eq:111d}:
+\[
+y_1 = x \exp(\lambda x) v_1, \quad y_2 = x^2 \exp(\lambda x) v_2, \quad \dots, \quad y_{k-1} = x^{k-1} \exp(\lambda x) v_{k-1}.
+\]
+
+In the special case in which $A$ is a companion matrix, so that the system is equivalent to a high order equation in a single variable, as in \eqref{eq:111c}, with $C_1(x) = C_1$, $C_2(x) = C_2$, $\dots$, $C_m(x) = C_m$, each a constant, the characteristic polynomial of $A$ is
+\[
+P(\lambda) = \lambda^m - C_1 \lambda^{m-1} - C_2 \lambda^{m-2} - \cdots - C_m = 0.
+\]
+
+For this special case, $P(\lambda)$ is also the minimal polynomial, and repeated zeros always correspond to incomplete eigenvector spaces and the need to use generalized eigenvectors. Also, in this special case, the eigenvector corresponding to $\lambda$, together with the generalized eigenvectors if they exist, are
+\[
+v = \begin{bmatrix} 1 \\ \lambda \\ \lambda^2 \\ \vdots \\ \lambda^{m-1} \end{bmatrix}, \quad v_1 = \begin{bmatrix} 0 \\ 1 \\ 2\lambda \\ \vdots \\ (m-1)\lambda^{m-2} \end{bmatrix}, \quad v_2 = \begin{bmatrix} 0 \\ 0 \\ 1 \\ \vdots \\ \frac{(m-1)(m-2)}{2} \lambda^{m-3} \end{bmatrix}, \dots .
+\]
+\end{theorem}
+
+\noindent\textbf{Context.}
+Consider a differential equation system posed on an inner product space $\mathbb{R}^N$, with inner product $\langle \cdot, \cdot \rangle$ and induced norm $\|u\|^2 = \langle u, u \rangle$. The function $f$ defines the system, and a one-sided Lipschitz condition is introduced to analyze stiff problems. The variables are:
+\begin{itemize}
+    \item $f : [a, b] \times \mathbb{R}^N \to \mathbb{R}^N$, the function defining the differential equation,
+    \item $a, b$: endpoints of the interval $[a, b]$,
+    \item $N$: dimension of the space $\mathbb{R}^N$.
+\end{itemize}
+
+\begin{definition}[one-sided Lipschitz condition (112A)]
+
+  \label{def:112A}
+  \lean{Butcher.Ch1.Def112A}
+  \uses{def:110A}
+The function $f$ satisfies a `one-sided Lipschitz condition',
+with `one-sided Lipschitz constant' $l$ if for all $x \in [a, b]$ and all $u, v \in \mathbb{R}^N$,
+\[
+\langle f(x, u) - f(x, v), u - v \rangle \leq l \| u - v \|^2.
+\]
+It is possible that the function $f$ could have a very large Lipschitz constant
+but a moderately sized, or even negative, one-sided Lipschitz constant. The
+advantage of this is seen in the following result.
+\end{definition}
+
+\noindent\textbf{Context.}
+The problem is posed on an inner product space $\mathbb{R}^N$.
+The function $f$ satisfies a one-sided Lipschitz condition with constant $l$.
+Solutions $y$ and $z$ satisfy the differential equation $y'(x) = f(x, y(x))$.
+Variables:
+\begin{itemize}
+    \item $f: [a, b] \times \mathbb{R}^N \to \mathbb{R}^N$, satisfies a one-sided Lipschitz condition with constant $l$.
+    \item $l$: one-sided Lipschitz constant, a real number such that for all $x \in [a, b]$ and all $u, v \in \mathbb{R}^N$, $\langle f(x, u) - f(x, v), u - v \rangle \leq l \|u - v\|^2$.
+    \item $\langle \cdot, \cdot \rangle$: inner product on $\mathbb{R}^N$, with norm defined by $\|u\|^2 = \langle u, u \rangle$.
+    \item $\|\cdot\|$: norm induced by the inner product, $\|u\| = \sqrt{\langle u, u \rangle}$.
+\end{itemize}
+
+\begin{theorem}[One Sided Lipschitz Solution Difference Bound (112B)]
+
+  \label{thm:112B}
+  \lean{Butcher.Ch1.Thm112B}
+  \uses{def:112A}
+If \( f \) satisfies a one-sided Lipschitz condition with constant \( l \), and \( y \) and \( z \) are each solutions of
+\[
+y'(x) = f(x, y(x)),
+\]
+then for all \( x \geq x_0 \),
+\[
+\| y(x) - z(x) \| \leq \exp(l(x - x_0)) \| y(x_0) - z(x_0) \|.
+\]
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:112B}
+  \uses{def:112A}
+We have
+\[
+\frac{d}{dx} \| y(x) - z(x) \|^2 = \frac{d}{dx} \langle y(x) - z(x), y(x) - z(x) \rangle
+\]
+\[
+= 2 \langle f(x, y(x)) - f(x, z(x)), y(x) - z(x) \rangle
+\]
+\[
+\leq 2l \| y(x) - z(x) \|^2.
+\]
+Multiply by \( \exp(-2l(x - x_0)) \) and it follows that
+\[
+\frac{d}{dx} \left[ \exp(-2l(x - x_0)) \| y(x) - z(x) \|^2 \right] \leq 0,
+\]
+so that \( \exp(-2l(x - x_0)) \| y(x) - z(x) \|^2 \) is non-increasing.
+
+Note that the problem described in Subsection 102 possesses the one-sided Lipschitz condition with \( l = 0 \).
+
+Even though stiff differential equation systems are typically non-linear, there is a natural way in which a linear system arises from a given non-linear system. Since stiffness is associated with the behaviour of perturbations to a given solution, we suppose that there is a small perturbation \( \epsilon Y(x) \) to a solution \( y(x) \). The parameter \( \epsilon \) is small, in the sense that we are interested only in asymptotic behaviour of the perturbed solution as this quantity approaches zero. If \( y(x) \) is replaced by \( y(x) + \epsilon Y(x) \) in the differential equation
+\[
+y'(x) = f(x, y(x)), \tag{112a}
+\]
+and the solution expanded in a series in powers of \( \epsilon \), with \( \epsilon^2 \) and higher powers replaced by zero, we obtain the system
+\[
+y'(x) + \epsilon Y'(x) = f(x, y(x)) + \epsilon \frac{\partial f}{\partial y} Y(x). \tag{112b}
+\]
+Subtract \eqref{eq:112a} from \eqref{eq:112b} and cancel out \( \epsilon \), and we arrive at the equation governing the behaviour of the perturbation,
+\[
+Y'(x) = \frac{\partial f}{\partial y} Y(x) = J(x) Y(x),
+\]
+say. The `Jacobian matrix' \( J(x) \) has a crucial role in the understanding of problems of this type; in fact its spectrum is sometimes used to characterize stiffness. In a time interval \( \Delta x \), chosen so that there is a moderate change in the value of the solution to \eqref{eq:112a}, and very little change in \( J(x) \), the eigenvalues of \( J(x) \) determine the growth rate of components of the perturbation. The existence of one or more large and negative values of \( \lambda \Delta x \), for \( \lambda \in \sigma(J(x)) \), the spectrum of \( J(x) \), is a sign that stiffness is almost certainly present. If \( J(x) \) possesses complex eigenvalues, then we interpret this test for stiffness as the existence of a \( \lambda = \operatorname{Re} \lambda + i \operatorname{Im} \lambda \in \sigma(J(x)) \) such that \( \operatorname{Re} \lambda \, \Delta x \) is negative with large magnitude.
+\end{proof}
+
+\section{Further Evolutionary Problems}
+
+\noindent\textbf{Context.}
+The system is in Hamiltonian form, where $y$ is a vector combining momenta and coordinates. Let $H(p_1,\dots,p_N,q_1,\dots,q_N)$ be the Hamiltonian, regarded as a function of $y$. Define the vector $y(x) = (y_1,\dots,y_{2N})$ with $y_i = p_i$ for $1 \le i \le N$ and $y_i = q_{i-N}$ for $N+1 \le i \le 2N$. Let $J = \begin{pmatrix} 0 & -I \\ I & 0 \end{pmatrix}$, where $I$ is the $N \times N$ unit matrix, and let $\nabla H$ be the gradient of $H$ with respect to $y$. The dynamics are given by
+\begin{equation}
+y' = f(y), \quad \text{where } f(y) = J \nabla H.
+\end{equation}
+
+\begin{theorem}[Further Hamiltonian problems (123A)]
+
+  \label{thm:123A}
+  \lean{Butcher.Ch1.Thm123A}
+  \uses{thm:123B}
+$H(y(x))$ is invariant.
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:123A}
+  \uses{thm:123B}
+Calculate $\partial H/\partial y$ to obtain the result
+\[
+\nabla(H) J\nabla(H) = 0.
+\]
+
+The Jacobian of this problem is equal to
+\[
+\frac{\partial}{\partial y} f(y) = \frac{\partial}{\partial y} (J\nabla(H)) = J W(y),
+\]
+where $W$ is the `Wronskian' matrix defined as the $2N \times 2N$ matrix with $(i, j)$ element equal to $\partial^2 H/\partial y_i \partial y_j$.
+
+If the initial value $y_0 = y(x_0)$ is perturbed by a small number multiplied by a fixed vector $v_0$, then, to within $O(\epsilon^2)$, the solution is modified by $v + O(\epsilon^2)$ where
+\[
+v'(x) = \frac{\partial f}{\partial y} v(x) = J W(y) v(x).
+\]
+For two such perturbations $u$ and $v$, it is interesting to consider
+\end{proof}
+
+\noindent\textbf{Context.}
+The theorem concerns a Hamiltonian system $y' = J\nabla H(y)$. Perturbations $u$ and $v$ to the initial condition evolve according to $v'(x) = JW(y)v(x)$, where $W$ is the Hessian of $H$. The scalar quantity $u^\mathsf{T}Jv$ is shown to be invariant.
+
+Variables:
+\begin{itemize}
+    \item $u$: a perturbation vector satisfying $v'(x) = JW(y)v(x)$
+    \item $v$: a perturbation vector satisfying $v'(x) = JW(y)v(x)$
+    \item $J$: the $2N \times 2N$ matrix $\begin{bmatrix}0 & -I \\ I & 0\end{bmatrix}$, where $I$ is the $N \times N$ identity matrix
+    \item $W$: the Wronskian matrix with $(i, j)$ element $\partial^2 H/\partial y_i \partial y_j$
+    \item $H$: the Hamiltonian function $H(y)$
+    \item $y$: the solution to the Hamiltonian system $y' = J\nabla H(y)$
+\end{itemize}
+
+\begin{theorem}[Area invariance for Hamiltonian parallelograms (123B)]
+
+  \label{thm:123B}
+  \lean{Butcher.Ch1.Thm123B}
+  \uses{}
+In the special case of a two-dimensional Hamiltonian problem, the value of \( ( \mathbf{u} )^{\top} J ( \mathbf{v} ) \) can be interpreted as the area of the infinitesimal parallelogram with sides in the directions \( \mathbf{u} \) and \( \mathbf{v} \). As the solution evolves, \( \mathbf{u} \) and \( \mathbf{v} \) might change, but the area \( \mathbf{u}^{\top} J \mathbf{v} \) remains invariant. This is illustrated in Figure~\ref{fig:123i} for the two problems \( H(p, q) = p^{2}/2 + q^{2}/2 \) and \( H(p, q) = p^{2}/2 - \cos(q) \) respectively.
+\end{theorem}
+
+\section{Difference Equation Problems}
+
+% Section 13 has no formal statements in the textbook.
+
+\section{Difference Equation Theory}
+
+\noindent\textbf{Context.}
+The theorem solves a linear difference equation system (140a) written in state-space form, where $X_n$ is the state vector, $A_n$ is a matrix, and $\phi_n$ is an inhomogeneous term. The solution is expressed using products of the matrices $A_i$.
+
+Variables:
+\begin{itemize}
+    \item $X_0$: initial value for the difference equation system
+    \item $X_n$: state vector defined as $X_n = [y_n, y_{n-1}, \dots, y_{n-k+1}]^T$
+    \item $A_n$: coefficient matrix in the linear difference equation system
+    \item $\phi_n$: inhomogeneous term vector in the difference equation system
+    \item $y_n$: solution of the linear difference equation at step $n$
+\end{itemize}
+
+Referenced equation:
+\begin{equation}
+X_n = A_n X_{n-1} + \phi_n \tag{140a}
+\end{equation}
+
+\begin{theorem}[Linear difference equations (140A)]
+
+  \label{thm:140A}
+  \lean{Butcher.Ch1.Thm140A}
+  \uses{thm:111A}
+The problem \eqref{eq:140a}, with initial value $X_0$ given, has the unique solution
+\[
+y_n = \sum_{i=1}^{n} A_i X_0 + \sum_{i=2}^{n} A_i \varphi_1 + \sum_{i=3}^{n} A_i \varphi_2 + \cdots + A_n \varphi_{n-1} + \varphi_n.
+\]
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:140A}
+  \uses{thm:111A}
+The result holds for $n = 0$, and the general case follows by induction.
+\end{proof}
+
+\noindent\textbf{Context.}
+The theorem solves a linear difference equation (141a) of order $k$ with initial values $y_0,\dots,y_{k-1}$. The solution uses $\theta_m$ (the solution to a related problem) and transformed initial data $y'_i$ defined via (141b). Variables: $k$ (order), $n$ (step index), $y_m$ (solution at step $m$, with $y_m=\theta_m$ for $m=0,1,2,\dots,n$), $\theta_m$ (solution with zero initial conditions for $m<0$), $y_i$ (initial values for $i=0,1,\dots,k-1$), $y'_i$ (linear combinations of initial data via (141b) for $i=0,1,\dots,k-1$), $\psi_i$ (terms from (141a) for $i\ge k$). Equations: (141a) the difference equation; (141b) defines $y'_i$ via a matrix equation.
+
+\begin{theorem}[Constant coefficients (141A)]
+
+  \label{thm:141A}
+  \lean{Butcher.Ch1.Thm141A}
+  \uses{thm:140A}
+Using the notation introduced in this subsection, the solution to \eqref{eq:141a} with given initial values $y_0, y_1, \dots, y_{k-1}$ is given by
+\[
+y_n = \sum_{i=0}^{k-1} \theta_{n-i} y_i + \sum_{i=k}^{n} \theta_{n-i} \psi_i. \tag{141c}
+\]
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:141A}
+  \uses{thm:140A}
+Substitute $n = m$, for $m = 0, 1, 2, \dots, k-1$, into \eqref{eq:141c}, and we obtain the value
+\[
+y_m = y_m + \theta_1 y_{m-1} + \cdots + \theta_m y_0, \qquad m = 0, 1, 2, \dots, k-1.
+\]
+This is equal to $y_m$ if \eqref{eq:141b} holds. Add the contribution to the solution from each of $m = k, k+1, \dots, n$ and the result follows.
+\end{proof}
+
+\begin{definition}[power-boundedness (142A)]
+
+  \label{def:142A}
+  \lean{Butcher.Ch1.Def142A}
+  \uses{}
+A square matrix $A$ is \emph{stable} if there exists a constant $C$ such that for all $n = 0, 1, 2, \dots$, $\|A^{n}\| \leq C$.
+
+This property is often referred to as \emph{power-boundedness}.
+\end{definition}
+
+\noindent\textbf{Context.}
+The subsection discusses properties of powers of a matrix $A$, focusing on when the sequence of powers is bounded and when it converges to zero. The definitions are given in terms of matrix norms and limits.
+
+Variables:
+\begin{itemize}
+    \item $A$: A square matrix
+    \item $A^n$: The $n$th power of the matrix $A$
+    \item $\|\cdot\|$: A matrix norm
+\end{itemize}
+
+\begin{definition}[convergent (142B)]
+
+  \label{def:142B}
+  \lean{Butcher.Ch1.Def142B}
+  \uses{def:142A, def:402A}
+A square matrix $A$ is `convergent' if $\lim_{n \to \infty} A^n = 0$.
+\end{definition}
+
+\begin{theorem}[Stability and Minimal Polynomial Zeros Condition (142C)]
+
+  \label{thm:142C}
+  \lean{Butcher.Ch1.Thm142C}
+  \uses{def:142A, def:142B, def:381A, thm:142D, thm:142E}
+Let \( A \) denote an \( m \times m \) matrix. The following statements are equivalent:
+\begin{enumerate}
+\renewcommand{\labelenumi}{(\roman{enumi})}
+\item \( A \) is stable.
+\item The minimal polynomial of \( A \) has all its zeros in the closed unit disc and all its multiple zeros in the open unit disc.
+\item The Jordan canonical form of \( A \) has all its eigenvalues in the closed unit disc with all eigenvalues of magnitude \( 1 \) lying in \( 1 \times 1 \) blocks.
+\item There exists a non-singular matrix \( S \) such that \( \| S^{-1} A S \|_{\infty} \leq 1 \).
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:142C}
+  \uses{def:142A, def:142B, def:381A, thm:142D, thm:142E}
+We prove that (i) \(\Rightarrow\) (ii) \(\Rightarrow\) (iii) \(\Rightarrow\) (iv) \(\Rightarrow\) (i). If \( A \) is stable but (ii) is not true, then either there exist \( \lambda \) and \( v \neq 0 \) such that \( |\lambda| > 1 \) and \( Av = \lambda v \), or there exist \( \lambda \), \( u \neq 0 \) and \( v \) such that \( |\lambda| = 1 \) and \( Av = \lambda v + u \), with \( Au = \lambda u \). In the first case, \( A^{n} v = \lambda^{n} v \) and therefore \( \| A^{n} \| \geq |\lambda|^{n} \) which is not bounded. In the second case, \( A^{n} v = \lambda^{n} v + n \lambda^{n-1} u \) and therefore \( \| A^{n} \| \geq n \| u \| / \| v \| - 1 \), which also is not bounded. Given (ii), it is not possible that the conditions of (iii) are not satisfied, because the minimal polynomial of any of the Jordan blocks, and therefore of \( A \) itself, would have factors that contradict (ii). If (iii) is true, then \( S \) can be chosen to form \( J \), the Jordan canonical form of \( A \), with the off-diagonal elements chosen sufficiently small so that \( \| J \|_{\infty} \leq 1 \). Finally, if (iv) is true then \( A^{n} = S (S^{-1} A S)^{n} S^{-1} \) so that
+\[
+\| A^{n} \| \leq \| S \| \cdot \| S^{-1} A S \|^{n} \cdot \| S^{-1} \| \leq \| S \| \cdot \| S^{-1} \|.
+\]
+\end{proof}
+
+\noindent\textbf{Context.}
+This theorem concerns the equivalence of several conditions for a square matrix \(A\) to be convergent (i.e., \(A^{n} \to 0\) as \(n\to\infty\)). The preceding theorem (142C) gives analogous conditions for matrix stability, which is related but distinct. The context assumes familiarity with matrix norms, eigenvalues, and Jordan canonical form.
+
+Variables:
+\begin{itemize}
+    \item \(A\): an \(m \times m\) matrix.
+    \item \textbf{convergent}: A square matrix \(A\) is \emph{convergent} if \(\lim_{n\to\infty} A^{n} = 0\).
+    \item \textbf{minimal polynomial}: The minimal polynomial of a matrix \(A\) is the monic polynomial of least degree such that \(p(A) = 0\).
+    \item \textbf{Jordan canonical form}: A representation of a matrix as a block diagonal matrix with Jordan blocks, where each block corresponds to an eigenvalue.
+    \item \(S\): a non-singular matrix used for similarity transformations.
+    \item \(\|\cdot\|_{\infty}\): The matrix norm induced by the vector \(\infty\)-norm, defined as \(\|A\|_{\infty} = \max_{i} \sum_{j} |a_{ij}|\).
+\end{itemize}
+
+\begin{theorem}[Convergence Equivalence for Matrix Powers (142D)]
+
+  \label{thm:142D}
+  \lean{Butcher.Ch1.Thm142D}
+  \uses{def:142B, def:381A}
+Let \( A \) denote an \( m \times m \) matrix. The following statements are equivalent:
+\begin{enumerate}
+    \item[(i)] \( A \) is convergent.
+    \item[(ii)] The minimal polynomial of \( A \) has all its zeros in the open unit disc.
+    \item[(iii)] The Jordan canonical form of \( A \) has all its diagonal elements in the open unit disc.
+    \item[(iv)] There exists a non-singular matrix \( S \) such that \( \| S^{-1} A S \|_{\infty} < 1 \).
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:142D}
+  \uses{def:142B, def:381A}
+We again prove that (i) \(\Rightarrow\) (ii) \(\Rightarrow\) (iii) \(\Rightarrow\) (iv) \(\Rightarrow\) (i). If \( A \) is convergent but (ii) is not true, then there exist \( \lambda \) and \( u \neq 0 \) such that \( |\lambda| \geq 1 \) and \( Au = \lambda u \). Hence, \( A^{n} u = \lambda^{n} u \) and therefore \( \| A^{n} \| \geq |\lambda|^{n} \), which does not converge to zero. Given (ii), it is not possible that the conditions of (iii) are not satisfied, because the minimal polynomial of any of the Jordan blocks, and therefore of \( A \) itself, would have factors that contradict (ii). If (iii) is true, then \( S \) can be chosen to form \( J \), the Jordan canonical form of \( A \), with the off-diagonal elements chosen sufficiently small so that \( \| J \|_{\infty} < 1 \). Finally, if (iv) is true then \( A^{n} = S (S^{-1} A S)^{n} S^{-1} \) so that \( \| A^{n} \| \leq \| S \| \cdot \| S^{-1} \| \cdot \| S^{-1} A S \|^{n} \to 0 \).
+
+While the two results we have presented here are related to the convergence of difference equation solutions, the next is introduced only because of its application in later chapters.
+\end{proof}
+
+\noindent\textbf{Context.}
+The theorem concerns matrix stability and convergence, building on prior results about matrix norms and the equivalence of conditions for a matrix to be convergent (e.g., Theorem 142D). The notation $\|\cdot\|$ denotes a matrix norm (implied from context). Variables: $A$ an $m \times m$ matrix, $B$ an arbitrary $m \times m$ matrix, $C$ a real constant, $n$ a positive integer ($n = 1, 2, \dots$).
+
+\begin{theorem}[Stable Matrix Perturbation Power Bound (142E)]
+
+  \label{thm:142E}
+  \lean{Butcher.Ch1.Thm142E}
+  \uses{def:142A, thm:142D}
+If \( A \) is a stable \( m \times m \) matrix and \( B \) an arbitrary \( m \times m \) matrix, then there exists a real \( C \) such that
+\[
+\left\| \left( A + \frac{1}{n} B \right)^n \right\| \leq C,
+\]
+for \( n = 1, 2, \dots \).
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:142E}
+  \uses{def:142A, thm:142D}
+Without loss of generality, assume that \( \|\cdot\| \) denotes the norm \( \|\cdot\|_\infty \).
+Because \( S \) exists so that \( \| S^{-1} A S \| \leq 1 \), we have
+\begin{align*}
+\left\| \left( A + \frac{1}{n} B \right)^n \right\| &\leq \| S \| \cdot \| S^{-1} \| \cdot \left\| \left( S^{-1} A S + \frac{1}{n} S^{-1} B S \right)^n \right\| \\
+&\leq \| S \| \cdot \| S^{-1} \| \cdot \left( 1 + \frac{1}{n} \| S^{-1} B S \| \right)^n \\
+&\leq \| S \| \cdot \| S^{-1} \| \exp\left( \| S^{-1} B S \| \right).
+\end{align*}
+In applying this result to sequences of vectors, the term represented by the matrix \( B \) can be replaced by a non-linear function which satisfies suitable conditions. To widen the applicability of the result a non-homogeneous term is included.
+\end{proof}
+
+\noindent\textbf{Context.}
+Let $A$ be a stable $m \times m$ matrix and $\phi:\mathbb{R}^m\to\mathbb{R}^m$ satisfy $\|\phi(x)\|\le L\|x\|$ for all $x\in\mathbb{R}^m$, where $L>0$ is a constant. Consider the recurrence
+\begin{equation}
+v_i = A v_{i-1} + \frac{1}{n}\phi(v_{i-1}) + w_i, \qquad i=1,2,\dots,n,
+\tag{142a}
+\end{equation}
+where $w_i\in\mathbb{R}^m$. Theorem 142E provides a bound for powers of a perturbed stable matrix, which is applied here to sequences with the nonlinear term $\phi$ and the non‑homogeneous terms $w_i$.
+
+\begin{theorem}[Stable Matrix Perturbation Bound (142F)]
+
+  \label{thm:142F}
+  \lean{Butcher.Ch1.Thm142F}
+  \uses{def:142A, thm:142C}
+Let \( A \) be a stable \( m \times m \) matrix and \( \varphi : \mathbb{R}^m \to \mathbb{R}^m \) be such that \( \|\varphi(x)\| \leq L \|x\| \), for \( L \) a positive constant and \( x \in \mathbb{R}^m \). If \( w = (w_1, w_2, \dots, w_n) \) and \( v = (v_0, v_1, \dots, v_n) \) are sequences related by
+\[
+v_i = A v_{i-1} + \frac{1}{n} \varphi(v_{i-1}) + w_i, \quad i = 1, 2, \dots, n, \tag{142a}
+\]
+then
+\[
+\|v_n\| \leq C \left( \|v_0\| + \sum_{i=1}^n \|w_i\| \right),
+\]
+where \( C \) is independent of \( n \).
+\end{theorem}
+
+\begin{proof}
+  \proves{thm:142F}
+  \uses{def:142A, thm:142C}
+Let \( S \) be the matrix introduced in the proof of Theorem~\ref{thm:142C}. From \eqref{eq:142a}, it follows that
+\[
+(S^{-1} v_i) = (S^{-1} A S)(S^{-1} v_{i-1}) + \frac{1}{n} (S^{-1} \varphi(v_{i-1})) + (S^{-1} w_i)
+\]
+and hence
+\[
+\|S^{-1} v_i\| \leq \|S^{-1} A S\| \cdot \|S^{-1} v_{i-1}\| + \frac{1}{n} \|S^{-1} \varphi(v_{i-1})\| + \|S^{-1} w_i\|,
+\]
+leading to the bound
+\[
+\|v_n\| \leq \|S\| \cdot \|S^{-1}\| \exp\left( L \|S\| \cdot \|S^{-1}\| \right) \left( \|v_0\| + \sum_{i=1}^n \|w_i\| \right). \qedhere
+\]
+\end{proof}
