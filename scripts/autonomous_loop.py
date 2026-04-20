@@ -704,17 +704,39 @@ def run_claude(prompt: str, model: str = None, timeout: int = 1800,
             env={k: v for k, v in os.environ.items() if k != "CLAUDECODE"},
         )
         output = r.stdout
+        fallback_reason = None
         if r.returncode != 0:
             log(f"Claude session exited with code {r.returncode}")
             if r.stderr:
                 log(f"stderr: {r.stderr[:500]}")
+            fallback_reason = f"exit code {r.returncode}"
+
+        if json_output and output.strip():
+            try:
+                parsed = json.loads(output.strip())
+                if isinstance(parsed, dict) and parsed.get("type") == "result" and parsed.get("is_error"):
+                    fallback_reason = parsed.get("result", "Claude CLI returned an error")
+            except json.JSONDecodeError:
+                # Leave malformed output to the caller's parser.
+                pass
+
+        if not fallback_reason and output:
+            if "You've hit your limit" in output or "rate limit" in output.lower():
+                fallback_reason = "Claude usage unavailable"
+
+        if fallback_reason:
+            log(f"Claude unavailable, falling back to Codex: {fallback_reason}")
+            return run_codex(prompt, timeout=timeout)
+
         return output
     except subprocess.TimeoutExpired:
         log(f"Claude session timed out after {timeout}s")
-        return "[TIMEOUT]"
+        log("Claude timed out, falling back to Codex")
+        return run_codex(prompt, timeout=timeout)
     except Exception as e:
         log(f"Claude session failed: {e}")
-        return f"[ERROR: {e}]"
+        log("Claude failed, falling back to Codex")
+        return run_codex(prompt, timeout=timeout)
 
 
 CODEX_CONDA_ENV = "/gscratch/amath/vilin/conda/envs/codex"
