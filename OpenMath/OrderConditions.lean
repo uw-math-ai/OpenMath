@@ -1863,6 +1863,32 @@ private theorem satisfiesTreeCondition_order_five_caseC (tab : ButcherTableau s)
       rw [order5d_sum_eq tab hrc]
       exact h5d
 
+/-- The `{2,2}` Case C branch packaged directly as `order5c`. -/
+private theorem satisfiesTreeCondition_order_five_caseC_ord22
+    (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) (c₁ c₂ : BTree)
+    (hc₁ : c₁.order = 2) (hc₂ : c₂.order = 2) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔ tab.order5c := by
+  rw [satisfiesTreeCondition_order_five_22 tab (.node [c₁, c₂]) ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
+  constructor <;> intro h <;> simpa [order5c, order5c_sum_eq tab hrc] using h
+
+/-- The `{1, bushy-3}` Case C branch packaged directly as `order5d`. -/
+private theorem satisfiesTreeCondition_order_five_caseC_bushy3
+    (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) (c₁ c₂ d₁ d₂ : BTree)
+    (hpair : (c₁.order = 1 ∧ c₂ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1) ∨
+      (c₁ = .node [d₁, d₂] ∧ d₁.order = 1 ∧ d₂.order = 1 ∧ c₂.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔ tab.order5d := by
+  rw [satisfiesTreeCondition_order_five_bushy3_canonical tab c₁ c₂ d₁ d₂ hpair]
+  constructor <;> intro h <;> simpa [order5d, order5d_sum_eq tab hrc] using h
+
+/-- The `{1, chain-3}` Case C branch packaged directly as `order5f`. -/
+private theorem satisfiesTreeCondition_order_five_caseC_chain3
+    (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) (c₁ c₂ d : BTree)
+    (hpair : (c₁.order = 1 ∧ c₂ = .node [d] ∧ d.order = 2) ∨
+      (c₁ = .node [d] ∧ d.order = 2 ∧ c₂.order = 1)) :
+    tab.satisfiesTreeCondition (.node [c₁, c₂]) ↔ tab.order5f := by
+  rw [satisfiesTreeCondition_order_five_chain3_canonical tab c₁ c₂ d hpair]
+  constructor <;> intro h <;> simpa [order5f, order5f_sum_eq tab hrc] using h
+
 /-- Witness for the bushy4 / mixed4 subfamilies of the order-5 singleton-child
 Case D. -/
 private inductive OrderFiveCaseD_BushyMixed (c : BTree) where
@@ -2065,15 +2091,14 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       rw [order5b]; simpa [order5b_sum_eq tab hrc] using ht'
     · -- order5c from t5e = [t2, t2]
       have ht := h t5e (by native_decide)
-      rw [satisfiesTreeCondition_order_five_22 tab t5e
-        ⟨t2, t2, rfl, by native_decide, by native_decide⟩] at ht
-      rw [order5c]; simpa [order5c_sum_eq tab hrc] using ht
+      simpa [t5e] using
+        (satisfiesTreeCondition_order_five_caseC_ord22 tab hrc t2 t2
+          (by native_decide) (by native_decide)).mp ht
     · -- order5d from t5c = [leaf, t3a]
       have ht := h t5c (by native_decide)
-      change tab.satisfiesTreeCondition (.node [.leaf, t3a]) at ht
-      rw [satisfiesTreeCondition_order_five_bushy3_canonical tab .leaf t3a .leaf .leaf
-        (Or.inl ⟨by simp, rfl, by simp, by simp⟩)] at ht
-      rw [order5d]; simpa [order5d_sum_eq tab hrc] using ht
+      simpa [t5c] using
+        (satisfiesTreeCondition_order_five_caseC_bushy3 tab hrc .leaf t3a .leaf .leaf
+          (Or.inl ⟨by simp, rfl, by simp, by simp⟩)).mp ht
     · -- order5e from t5f = [t4a] where t4a = [leaf, leaf, leaf]
       have ht := h t5f (by native_decide)
       have htarget :=
@@ -2082,10 +2107,9 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       simpa [order_five_caseD_target] using htarget
     · -- order5f from t5d = [leaf, t3b]
       have ht := h t5d (by native_decide)
-      change tab.satisfiesTreeCondition (.node [.leaf, t3b]) at ht
-      rw [satisfiesTreeCondition_order_five_chain3_canonical tab .leaf t3b t2
-        (Or.inl ⟨by simp, rfl, by native_decide⟩)] at ht
-      rw [order5f]; simpa [order5f_sum_eq tab hrc] using ht
+      simpa [t5d] using
+        (satisfiesTreeCondition_order_five_caseC_chain3 tab hrc .leaf t3b t2
+          (Or.inl ⟨by simp, rfl, by native_decide⟩)).mp ht
     · -- order5g from t5g = [t4b] where t4b = [leaf, t2]
       have ht := h t5g (by native_decide)
       have htarget :=
