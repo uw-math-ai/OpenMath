@@ -299,6 +299,16 @@ lemma polyMomentN_C_mul (N : ℕ) (a : ℝ) (p : ℝ[X]) :
     polyMomentN N (C a * p) = a * polyMomentN N p := by
   simp [polyMomentN, Finset.mul_sum, mul_div_assoc, mul_assoc, mul_left_comm, mul_comm]
 
+lemma polyMomentN_neg (N : ℕ) (p : ℝ[X]) :
+    polyMomentN N (-p) = -polyMomentN N p := by
+  rw [show -p = Polynomial.C (-1 : ℝ) * p by simp [Polynomial.C_mul']]
+  rw [polyMomentN_C_mul]
+  ring
+
+lemma polyMomentN_sub (N : ℕ) (p q : ℝ[X]) :
+    polyMomentN N (p - q) = polyMomentN N p - polyMomentN N q := by
+  rw [sub_eq_add_neg, polyMomentN_add, polyMomentN_neg, sub_eq_add_neg]
+
 lemma polyMomentN_mul_sum_C_mul_X_pow (N s : ℕ) (P q : ℝ[X]) :
     polyMomentN N (P * ∑ i ∈ Finset.range s, C (q.coeff i) * X ^ i)
       = ∑ i ∈ Finset.range s, q.coeff i * polyMomentN N (P * X ^ i) := by
@@ -377,6 +387,38 @@ lemma quadEvalPoly_exact_of_natDegree_lt {s : ℕ} (t : ButcherTableau s)
     _ = polyMomentN (2 * s) p := by
           symm
           exact polyMomentN_eq_of_natDegree_lt p hp (by omega)
+
+lemma quadEvalPoly_exact_of_natDegree_lt_of_SatisfiesB {s N : ℕ} (t : ButcherTableau s)
+    (hB : t.SatisfiesB N) (p : ℝ[X]) (hp : p.natDegree < N) :
+    quadEvalPoly t p = polyMomentN N p := by
+  have hpEq := p.as_sum_range_C_mul_X_pow' hp
+  nth_rewrite 1 [hpEq]
+  calc
+    quadEvalPoly t (∑ i ∈ Finset.range N, C (p.coeff i) * X ^ i)
+        = ∑ i ∈ Finset.range N, p.coeff i * (∑ j : Fin s, t.b j * t.c j ^ i) := by
+            unfold quadEvalPoly
+            simp_rw [Polynomial.eval_finset_sum, Polynomial.eval_mul, Polynomial.eval_C,
+              Polynomial.eval_pow, Polynomial.eval_X]
+            calc
+              ∑ x : Fin s, t.b x * ∑ i ∈ Finset.range N, p.coeff i * t.c x ^ i
+                  = ∑ x : Fin s, ∑ i ∈ Finset.range N, t.b x * (p.coeff i * t.c x ^ i) := by
+                      simp [mul_sum]
+              _ = ∑ i ∈ Finset.range N, ∑ x : Fin s, t.b x * (p.coeff i * t.c x ^ i) := by
+                    rw [Finset.sum_comm]
+              _ = ∑ i ∈ Finset.range N, p.coeff i * ∑ j : Fin s, t.b j * t.c j ^ i := by
+                    refine Finset.sum_congr rfl ?_
+                    intro i hi
+                    simp [Finset.mul_sum, mul_left_comm]
+    _ = ∑ i ∈ Finset.range N, p.coeff i / ((i : ℝ) + 1) := by
+          refine Finset.sum_congr rfl ?_
+          intro j hj
+          have hBj := hB (j + 1) (by omega) (by simpa using hj)
+          have hBj' : ∑ i : Fin s, t.b i * t.c i ^ j = 1 / ((j : ℝ) + 1) := by
+            simpa using hBj
+          rw [hBj']
+          ring
+    _ = polyMomentN N p := by
+          rfl
 
 lemma coeff_shiftedLegendre_sum_zero (s j : ℕ) (hj : j < s) :
     ∑ l ∈ Finset.range (s + 1),
@@ -533,6 +575,101 @@ lemma quadEvalPoly_shiftedLegendre_mul_zero (t : ButcherTableau s)
   have hPi := (t.gaussLegendreNodes_eval_map_shiftedLegendre_zero hGL) i
   simp [quadEvalPoly, Polynomial.eval_mul, hPi]
 
+noncomputable def nodePoly (t : ButcherTableau s) : ℝ[X] :=
+  ∏ i : Fin s, (Polynomial.X - Polynomial.C (t.c i))
+
+lemma nodePoly_monic (t : ButcherTableau s) :
+    (nodePoly t).Monic := by
+  simpa [nodePoly] using
+    (Polynomial.monic_prod_of_monic (s := (Finset.univ : Finset (Fin s)))
+      (f := fun i => Polynomial.X - Polynomial.C (t.c i))
+      (fun i _ => Polynomial.monic_X_sub_C _))
+
+lemma nodePoly_natDegree (t : ButcherTableau s) :
+    (nodePoly t).natDegree = s := by
+  simpa [nodePoly] using
+    (Polynomial.natDegree_prod_of_monic
+      (s := (Finset.univ : Finset (Fin s)))
+      (f := fun i => Polynomial.X - Polynomial.C (t.c i))
+      (fun i _ => Polynomial.monic_X_sub_C _))
+
+lemma nodePoly_eval_node (t : ButcherTableau s) (i : Fin s) :
+    (nodePoly t).eval (t.c i) = 0 := by
+  apply (Polynomial.eval_eq_zero_of_dvd_of_eval_eq_zero
+    (p := Polynomial.X - Polynomial.C (t.c i)) (q := nodePoly t) (x := t.c i))
+  · simpa [nodePoly] using
+      (Finset.dvd_prod_of_mem
+        (s := (Finset.univ : Finset (Fin s)))
+        (f := fun j : Fin s => Polynomial.X - Polynomial.C (t.c j))
+        (Finset.mem_univ i))
+  · simp
+
+lemma nodePoly_mul_natDegree_lt (t : ButcherTableau s) (q : ℝ[X])
+    (hq : q.natDegree < s) :
+    ((nodePoly t) * q).natDegree < 2 * s := by
+  calc
+    ((nodePoly t) * q).natDegree ≤ (nodePoly t).natDegree + q.natDegree :=
+      Polynomial.natDegree_mul_le
+    _ < s + s := by
+      rw [nodePoly_natDegree]
+      omega
+    _ = 2 * s := by ring
+
+lemma quadEvalPoly_nodePoly_mul_eq_zero (t : ButcherTableau s) (q : ℝ[X])
+    (hq : q.natDegree < s) :
+    quadEvalPoly t ((nodePoly t) * q) = 0 := by
+  unfold quadEvalPoly
+  refine Finset.sum_eq_zero ?_
+  intro i hi
+  rw [Polynomial.eval_mul, nodePoly_eval_node]
+  simp
+
+lemma polyMomentN_nodePoly_mul_zero (t : ButcherTableau s)
+    (hB : t.SatisfiesB (2 * s)) (q : ℝ[X]) (hq : q.natDegree < s) :
+    polyMomentN (2 * s) ((nodePoly t) * q) = 0 := by
+  rw [← quadEvalPoly_exact_of_natDegree_lt_of_SatisfiesB t hB ((nodePoly t) * q)]
+  · exact quadEvalPoly_nodePoly_mul_eq_zero t q hq
+  · exact nodePoly_mul_natDegree_lt t q hq
+
+lemma polyMomentN_eq_intervalIntegral_of_natDegree_lt
+    {N : ℕ} (p : ℝ[X]) (hp : p.natDegree < N) :
+    polyMomentN N p = ∫ x in (0 : ℝ)..1, p.eval x := by
+  have hpEq := p.as_sum_range_C_mul_X_pow' hp
+  rw [hpEq, polyMomentN]
+  calc
+    ∑ l ∈ Finset.range N,
+        (∑ i ∈ Finset.range N, Polynomial.C (p.coeff i) * Polynomial.X ^ i).coeff l /
+          ((l : ℝ) + 1)
+        = ∑ i ∈ Finset.range N, p.coeff i / ((i : ℝ) + 1) := by
+            refine Finset.sum_congr rfl ?_
+            intro l hl
+            simp [Polynomial.coeff_X_pow, Finset.mem_range.mp hl]
+    _ = ∑ i ∈ Finset.range N,
+          ∫ x in (0 : ℝ)..1, (Polynomial.C (p.coeff i) * Polynomial.X ^ i).eval x := by
+            refine Finset.sum_congr rfl ?_
+            intro i hi
+            simp [intervalIntegral.integral_const_mul, integral_pow, div_eq_mul_inv]
+    _ = ∫ x in (0 : ℝ)..1,
+          (∑ i ∈ Finset.range N, Polynomial.C (p.coeff i) * Polynomial.X ^ i).eval x := by
+            symm
+            have hfun :
+                (fun x : ℝ =>
+                  (∑ i ∈ Finset.range N, Polynomial.C (p.coeff i) * Polynomial.X ^ i).eval x)
+                  =
+                fun x : ℝ =>
+                  ∑ i ∈ Finset.range N, (Polynomial.C (p.coeff i) * Polynomial.X ^ i).eval x := by
+                    funext x
+                    rw [Polynomial.eval_finset_sum]
+            rw [hfun]
+            refine intervalIntegral.integral_finset_sum ?_
+            intro i hi
+            exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+
+lemma poly_eq_zero_of_intervalIntegral_sq_zero (p : ℝ[X])
+    (h : ∫ x in (0 : ℝ)..1, (p.eval x) ^ 2 = 0) :
+    p = 0 := by
+  sorry
+
 /-- Repackage the high-degree branch of `gaussLegendre_B_double` as
 `k = s + (j + 1)` with `j < s`. -/
 private theorem gaussLegendre_high_range {k : ℕ}
@@ -664,7 +801,76 @@ Reference: Iserles, Corollary 342D (forward). -/
 theorem gaussLegendreNodes_of_B_double (t : ButcherTableau s)
     (hB : t.SatisfiesB (2 * s)) :
     t.HasGaussLegendreNodes := by
-  sorry
+  by_cases hs0 : s = 0
+  · subst hs0
+    intro i
+    exact Fin.elim0 i
+  · let P : ℝ[X] := Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)
+    have hP_natDegree : P.natDegree = s := by
+      have hdeg : P.degree = s := by
+        refine le_antisymm ?_ ?_
+        · rw [Polynomial.degree_le_iff_coeff_zero]
+          intro m hm
+          norm_cast at hm
+          rw [show P = Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s) by rfl]
+          rw [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+          simp [Nat.choose_eq_zero_of_lt hm]
+        · have hs : P.coeff s ≠ 0 := by
+            simpa [P] using shiftedLegendre_coeff_self_ne_zero s
+          exact Polynomial.le_degree_of_ne_zero hs
+      exact Polynomial.natDegree_eq_of_degree_eq_some hdeg
+    have hP_lc_ne : P.leadingCoeff ≠ 0 := by
+      simpa [Polynomial.leadingCoeff, hP_natDegree, P] using shiftedLegendre_coeff_self_ne_zero s
+    let Pm : ℝ[X] := Polynomial.C (P.leadingCoeff)⁻¹ * P
+    have hPm_monic : Pm.Monic := by
+      dsimp [Pm]
+      exact Polynomial.monic_C_mul_of_mul_leadingCoeff_eq_one (inv_mul_cancel₀ hP_lc_ne)
+    have hPm_natDegree : Pm.natDegree = s := by
+      dsimp [Pm]
+      rw [Polynomial.natDegree_C_mul (inv_ne_zero hP_lc_ne), hP_natDegree]
+    have hPm_orthog : ∀ q : ℝ[X], q.natDegree < s → polyMomentN (2 * s) (Pm * q) = 0 := by
+      intro q hq
+      dsimp [Pm]
+      rw [show Polynomial.C (P.leadingCoeff)⁻¹ * P * q =
+          Polynomial.C (P.leadingCoeff)⁻¹ * (P * q) by ring]
+      rw [polyMomentN_C_mul]
+      simp [P, polyMomentN_shiftedLegendre_mul_zero q hq]
+    let r : ℝ[X] := nodePoly t - Pm
+    have hr_natDegree : r.natDegree < s := by
+      exact Polynomial.IsMonicOfDegree.natDegree_sub_lt (n := s) hs0
+        ⟨nodePoly_natDegree t, nodePoly_monic t⟩ ⟨hPm_natDegree, hPm_monic⟩
+    have hr_orthog : ∀ q : ℝ[X], q.natDegree < s → polyMomentN (2 * s) (r * q) = 0 := by
+      intro q hq
+      rw [show r * q = (nodePoly t) * q - Pm * q by
+        dsimp [r]
+        ring]
+      rw [polyMomentN_sub, polyMomentN_nodePoly_mul_zero t hB q hq, hPm_orthog q hq, sub_zero]
+    have hrr_moment : polyMomentN (2 * s) (r * r) = 0 := by
+      exact hr_orthog r hr_natDegree
+    have hrr_integral : ∫ x in (0 : ℝ)..1, (r * r).eval x = 0 := by
+      rw [← polyMomentN_eq_intervalIntegral_of_natDegree_lt (N := 2 * s) (p := r * r)]
+      · exact hrr_moment
+      · have hmul : (r * r).natDegree < 2 * s := by
+          calc
+            (r * r).natDegree ≤ r.natDegree + r.natDegree := Polynomial.natDegree_mul_le
+            _ < s + s := by omega
+            _ = 2 * s := by ring
+        exact hmul
+    have hr_zero : r = 0 := by
+      apply poly_eq_zero_of_intervalIntegral_sq_zero
+      simpa [r, sq, Polynomial.eval_mul] using hrr_integral
+    have hnode_eq_Pm : nodePoly t = Pm := by
+      simpa [r] using sub_eq_zero.mp hr_zero
+    intro i
+    have hnode_zero : (nodePoly t).eval (t.c i) = 0 := nodePoly_eval_node t i
+    have hPm_zero : Pm.eval (t.c i) = 0 := by
+      rw [← hnode_eq_Pm]
+      exact hnode_zero
+    have hP_zero : P.eval (t.c i) = 0 := by
+      rw [show Pm = Polynomial.C (P.leadingCoeff)⁻¹ * P by rfl, Polynomial.eval_C_mul] at hPm_zero
+      exact (mul_eq_zero.mp hPm_zero).resolve_left (inv_ne_zero hP_lc_ne)
+    rw [shiftedLegendreP_eq_eval_map_shiftedLegendre]
+    simp [P, hP_zero]
 
 /-! ## Concrete GL node verification
 
