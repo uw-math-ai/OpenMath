@@ -1188,16 +1188,12 @@ private theorem satisfiesTreeCondition_order_five_3child_121 (tab : ButcherTable
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) ^ 2 *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
-  have h3 : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
-      c₁.order + c₂.order + c₃.order = 4 := by
-    rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
-    exact ⟨c₁, c₂, c₃, rfl, by omega⟩
-  simp only [satisfiesTreeCondition, density_of_order_five_3child t h3]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_121 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_121 tab t h i
+  rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  exact
+    (satisfiesTreeCondition_eq_of_childrenBag_eq tab
+      (BTree.node_childrenBag_eq_swap_right c₁ c₂ c₃)).trans <|
+      satisfiesTreeCondition_order_five_3child_112 tab (.node [c₁, c₃, c₂])
+        ⟨c₁, c₃, c₂, rfl, hc₁, hc₃, hc₂⟩
 
 /-- 3-child [2,1,1] tree condition. -/
 private theorem satisfiesTreeCondition_order_five_3child_211 (tab : ButcherTableau s) (t : BTree)
@@ -1207,16 +1203,12 @@ private theorem satisfiesTreeCondition_order_five_3child_211 (tab : ButcherTable
     ∑ i : Fin s, tab.b i *
       ((∑ k : Fin s, tab.A i k) ^ 2 *
        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
-  have h3 : ∃ c₁ c₂ c₃ : BTree, t = .node [c₁, c₂, c₃] ∧
-      c₁.order + c₂.order + c₃.order = 4 := by
-    rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
-    exact ⟨c₁, c₂, c₃, rfl, by omega⟩
-  simp only [satisfiesTreeCondition, density_of_order_five_3child t h3]
-  constructor
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact (ew_of_order_five_211 tab t h i).symm
-  · intro hh; convert hh using 1; congr 1; ext i; congr 1
-    exact ew_of_order_five_211 tab t h i
+  rcases h with ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩
+  exact
+    (satisfiesTreeCondition_eq_of_childrenBag_eq tab
+      (BTree.node_childrenBag_eq_rotate_left c₁ c₂ c₃)).trans <|
+      satisfiesTreeCondition_order_five_3child_112 tab (.node [c₂, c₃, c₁])
+        ⟨c₂, c₃, c₁, rfl, hc₂, hc₃, hc₁⟩
 
 /-- [1, bushy-3] tree condition: sum = 1/15. -/
 private theorem satisfiesTreeCondition_order_five_1_bushy3 (tab : ButcherTableau s) (t : BTree)
