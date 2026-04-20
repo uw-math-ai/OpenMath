@@ -1731,6 +1731,66 @@ private theorem order5b_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsi
   have hrc' : ∀ i : Fin s, (∑ k : Fin s, tab.A i k) = tab.c i := fun i => (hrc i).symm
   congr 1; ext i; simp_rw [hrc']; ring
 
+/-- Normalized witness for the order-5 three-child family with child-order
+multiset `{1,1,2}`. -/
+private inductive OrderFiveCaseBWitness (c₁ c₂ c₃ : BTree) : Type where
+  | ord112 (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 2) :
+      OrderFiveCaseBWitness c₁ c₂ c₃
+  | ord121 (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 2) (hc₃ : c₃.order = 1) :
+      OrderFiveCaseBWitness c₁ c₂ c₃
+  | ord211 (hc₁ : c₁.order = 2) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) :
+      OrderFiveCaseBWitness c₁ c₂ c₃
+
+/-- Normalize the order-5 three-child `sum = 4` family into the three
+`{1,1,2}` orderings. -/
+private theorem order_five_caseB_witness_nonempty (c₁ c₂ c₃ : BTree)
+    (hsum : c₁.order + c₂.order + c₃.order = 4) :
+    Nonempty (OrderFiveCaseBWitness c₁ c₂ c₃) := by
+  have hc₁_pos := BTree.order_pos c₁
+  have hc₂_pos := BTree.order_pos c₂
+  have hc₃_pos := BTree.order_pos c₃
+  by_cases h1 : c₁.order = 1
+  · by_cases h2 : c₂.order = 1
+    · exact ⟨.ord112 h1 h2 (by omega)⟩
+    · exact ⟨.ord121 h1 (by omega) (by omega)⟩
+  · exact ⟨.ord211 (by omega) (by omega) (by omega)⟩
+
+/-- Noncomputably choose the normalized order-5 three-child Case B witness. -/
+private noncomputable def order_five_caseB_witness (c₁ c₂ c₃ : BTree)
+    (hsum : c₁.order + c₂.order + c₃.order = 4) :
+    OrderFiveCaseBWitness c₁ c₂ c₃ :=
+  Classical.choice (order_five_caseB_witness_nonempty c₁ c₂ c₃ hsum)
+
+/-- Branch-specific order condition selected by an order-5 three-child Case B
+witness. -/
+private def order_five_caseB_target (tab : ButcherTableau s)
+    {c₁ c₂ c₃ : BTree} (_ : OrderFiveCaseBWitness c₁ c₂ c₃) : Prop :=
+  tab.order5b
+
+/-- Shared forward/reverse dispatcher for the order-5 three-child / Case B
+witness family. -/
+private theorem order_five_caseB_dispatch_shared (tab : ButcherTableau s)
+    (hrc : tab.IsRowSumConsistent) {c₁ c₂ c₃ : BTree}
+    (hwit : OrderFiveCaseBWitness c₁ c₂ c₃) :
+    (tab.satisfiesTreeCondition (.node [c₁, c₂, c₃]) → order_five_caseB_target tab hwit) ∧
+    (order_five_caseB_target tab hwit → tab.satisfiesTreeCondition (.node [c₁, c₂, c₃])) := by
+  cases hwit with
+  | ord112 hc₁ hc₂ hc₃ =>
+      rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃
+        (Or.inl ⟨hc₁, hc₂, hc₃⟩)]
+      constructor <;> intro h <;>
+        simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using h
+  | ord121 hc₁ hc₂ hc₃ =>
+      rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃
+        (Or.inr <| Or.inl ⟨hc₁, hc₂, hc₃⟩)]
+      constructor <;> intro h <;>
+        simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using h
+  | ord211 hc₁ hc₂ hc₃ =>
+      rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃
+        (Or.inr <| Or.inr ⟨hc₁, hc₂, hc₃⟩)]
+      constructor <;> intro h <;>
+        simpa [order_five_caseB_target, order5b, order5b_sum_eq tab hrc] using h
+
 /-- Convert [2,2] sum: (∑ⱼ aᵢⱼ(∑ₖ aⱼₖ))² → (∑ aᵢⱼ cⱼ)². -/
 private theorem order5c_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     (∑ i : Fin s, tab.b i *
@@ -2083,14 +2143,13 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       rw [order5a]; simpa [order5a_sum_eq tab hrc] using ht
     · -- order5b from t5b = [leaf, leaf, t2]
       have ht := h t5b (by native_decide)
-      have ht' :
-          ∑ i : Fin s, tab.b i *
-            ((∑ k : Fin s, tab.A i k) ^ 2 *
-             (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k))) = 1 / 10 := by
-        simpa [t5b] using
-          (satisfiesTreeCondition_order_five_3child_canonical tab .leaf .leaf t2
-            (Or.inl ⟨by simp, by simp, by native_decide⟩)).mp ht
-      rw [order5b]; simpa [order5b_sum_eq tab hrc] using ht'
+      have hCaseB : OrderFiveCaseBWitness .leaf .leaf t2 :=
+        .ord112 (by simp) (by simp) (by native_decide)
+      have htarget :=
+        (order_five_caseB_dispatch_shared tab hrc
+          (c₁ := .leaf) (c₂ := .leaf) (c₃ := t2) hCaseB).1
+          (by simpa [t5b] using ht)
+      simpa [order_five_caseB_target] using htarget
     · -- order5c from t5e = [t2, t2]
       have ht := h t5e (by native_decide)
       have htarget :=
@@ -2150,21 +2209,11 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         rw [order5a] at h5a; simpa [order5a_sum_eq tab hrc] using h5a
       · -- Case B: 3 children summing to 4
         rcases hB with ⟨c₁, c₂, c₃, rfl, hsum⟩
-        have hc₁_pos := BTree.order_pos c₁
-        have hc₂_pos := BTree.order_pos c₂
-        have hc₃_pos := BTree.order_pos c₃
-        have h112_family :
-            (c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 2) ∨
-              (c₁.order = 1 ∧ c₂.order = 2 ∧ c₃.order = 1) ∨
-              (c₁.order = 2 ∧ c₂.order = 1 ∧ c₃.order = 1) := by
-          by_cases h1 : c₁.order = 1
-          · by_cases h2 : c₂.order = 1
-            · exact Or.inl ⟨h1, h2, by omega⟩
-            · exact Or.inr <| Or.inl ⟨h1, by omega, by omega⟩
-          · exact Or.inr <| Or.inr ⟨by omega, by omega, by omega⟩
-        rw [satisfiesTreeCondition_order_five_3child_canonical tab c₁ c₂ c₃ h112_family]
-        rw [order5b] at h5b
-        simpa [order5b_sum_eq tab hrc] using h5b
+        have hCaseB : OrderFiveCaseBWitness c₁ c₂ c₃ :=
+          order_five_caseB_witness c₁ c₂ c₃ hsum
+        have htarget : order_five_caseB_target tab hCaseB := by
+          simpa [order_five_caseB_target] using h5b
+        exact (order_five_caseB_dispatch_shared tab hrc hCaseB).2 htarget
       · -- Case C: 2 children summing to 4
         rcases hC with ⟨c₁, c₂, rfl, hsum⟩
         have hCaseC : OrderFiveCaseCWitness c₁ c₂ := order_five_caseC_witness c₁ c₂ hsum
