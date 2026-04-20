@@ -343,6 +343,45 @@ private theorem satisfiesTreeCondition_order_three_chain (tab : ButcherTableau s
     congr 1
     exact ew_of_order_three_chain tab t hchain i
 
+/-- A unary parent preserves tree conditions across a bag-equivalent child swap. -/
+private theorem satisfiesTreeCondition_singleton_eq_of_childrenBag_eq (tab : ButcherTableau s)
+    {children₁ children₂ : List BTree}
+    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
+    tab.satisfiesTreeCondition (.node [BTree.node children₁]) ↔
+      tab.satisfiesTreeCondition (.node [BTree.node children₂]) := by
+  unfold satisfiesTreeCondition
+  have horder :
+      (BTree.node children₁).order = (BTree.node children₂).order :=
+    BTree.order_eq_of_childrenBag_eq hbag
+  have hchild_density :
+      (BTree.node children₁).density = (BTree.node children₂).density :=
+    BTree.density_eq_of_childrenBag_eq hbag
+  have hparent_density :
+      (BTree.node [BTree.node children₁]).density = (BTree.node [BTree.node children₂]).density := by
+    simp [BTree.density_node, BTree.order_node, horder, hchild_density]
+  have hew :
+      ∀ i : Fin s,
+        tab.elementaryWeight (.node [BTree.node children₁]) i =
+          tab.elementaryWeight (.node [BTree.node children₂]) i := by
+    intro i
+    rw [elementaryWeight_singleton, elementaryWeight_singleton]
+    congr 1
+    ext k
+    rw [elementaryWeight_eq_of_childrenBag_eq tab hbag k]
+  constructor
+  · intro h
+    convert h using 1
+    · congr 1
+      ext i
+      rw [hew i]
+    · simp [hparent_density]
+  · intro h
+    convert h using 1
+    · congr 1
+      ext i
+      rw [← hew i]
+    · simp [hparent_density]
+
 private theorem order3a_sum_eq (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) :
     (∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 2) =
       ∑ i : Fin s, tab.b i * tab.c i ^ 2 := by
@@ -420,13 +459,15 @@ theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
         congr 1
         exact (hrc i).symm
       · have heq : t.order = 3 := by omega
-        have hw : BTree.OrderThreeWitness t := BTree.order_three_witness t heq
+        have hw : BTree.OrderThreeBagWitness t := BTree.order_three_bag_witness t heq
         cases hw with
-        | chain3 c hc =>
+        | chain3 children c hc hbag =>
+          rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
           rw [satisfiesTreeCondition_order_three_chain tab _ ⟨c, rfl, hc⟩]
           rw [order3b] at h3b
           simpa [order3b_sum_eq tab hrc] using h3b
-        | bushy3 c₁ c₂ hc₁ hc₂ =>
+        | bushy3 children c₁ c₂ hc₁ hc₂ hbag =>
+          rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
           rw [satisfiesTreeCondition_order_three_bushy tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
           rw [order3a] at h3a
           simpa [order3a_sum_eq tab hrc] using h3a
@@ -691,24 +732,28 @@ theorem thm_301A_order4 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
     by_cases hle3 : t.order ≤ 3
     · exact ((thm_301A_order3 tab hrc).mpr ⟨h1, h2, h3a, h3b⟩) t hle3
     · have heq : t.order = 4 := by omega
-      have hw4 : BTree.OrderFourWitness t := BTree.order_four_witness t heq
+      have hw4 : BTree.OrderFourBagWitness t := BTree.order_four_bag_witness t heq
       cases hw4 with
-      | bushy4 c₁ c₂ c₃ hc₁ hc₂ hc₃ =>
+      | bushy4 children c₁ c₂ c₃ hc₁ hc₂ hc₃ hbag =>
+        rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
         rw [satisfiesTreeCondition_order_four_bushy4 tab _ ⟨c₁, c₂, c₃, rfl, hc₁, hc₂, hc₃⟩]
         rw [order4a] at h4a
         simpa [order4a_sum_eq tab hrc] using h4a
-      | mixed4 leaf2 child2 hpair =>
-        rw [satisfiesTreeCondition_order_four_mixed_canonical tab leaf2 child2 hpair]
+      | mixed4 children c₁ c₂ hcanon hbag =>
+        rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
+        rw [satisfiesTreeCondition_order_four_mixed12 tab _ ⟨c₁, c₂, rfl, hcanon.1, hcanon.2⟩]
         rw [order4b] at h4b
         simpa [order4b_sum_eq tab hrc] using h4b
-      | single3 child3 hchild3 =>
-        have hw3 : BTree.OrderThreeWitness child3 := BTree.order_three_witness child3 hchild3
+      | single3 children child3 hw3 hbag =>
+        rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
         cases hw3 with
-        | chain3 c' hc' =>
+        | chain3 childChildren c' hc' hchildBag =>
+          rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
           rw [satisfiesTreeCondition_order_four_via_chain3 tab _ ⟨.node [c'], rfl, c', rfl, hc'⟩]
           rw [order4d] at h4d
           simpa [order4d_sum_eq tab hrc] using h4d
-        | bushy3 c₁ c₂ hc₁ hc₂ =>
+        | bushy3 childChildren c₁ c₂ hc₁ hc₂ hchildBag =>
+          rw [satisfiesTreeCondition_singleton_eq_of_childrenBag_eq tab hchildBag]
           rw [satisfiesTreeCondition_order_four_via_bushy3 tab _
             ⟨.node [c₁, c₂], rfl, c₁, c₂, rfl, hc₁, hc₂⟩]
           rw [order4c] at h4c
@@ -1468,45 +1513,6 @@ private theorem satisfiesTreeCondition_order_five_via_mixed12 (tab : ButcherTabl
     exact (ew_of_order_five_via_mixed12 tab t h i).symm
   · intro hh; convert hh using 1; congr 1; ext i; congr 1
     exact ew_of_order_five_via_mixed12 tab t h i
-
-/-- A unary parent preserves tree conditions across a bag-equivalent child swap. -/
-private theorem satisfiesTreeCondition_singleton_eq_of_childrenBag_eq (tab : ButcherTableau s)
-    {children₁ children₂ : List BTree}
-    (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
-    tab.satisfiesTreeCondition (.node [BTree.node children₁]) ↔
-      tab.satisfiesTreeCondition (.node [BTree.node children₂]) := by
-  unfold satisfiesTreeCondition
-  have horder :
-      (BTree.node children₁).order = (BTree.node children₂).order :=
-    BTree.order_eq_of_childrenBag_eq hbag
-  have hchild_density :
-      (BTree.node children₁).density = (BTree.node children₂).density :=
-    BTree.density_eq_of_childrenBag_eq hbag
-  have hparent_density :
-      (BTree.node [BTree.node children₁]).density = (BTree.node [BTree.node children₂]).density := by
-    simp [BTree.density_node, BTree.order_node, horder, hchild_density]
-  have hew :
-      ∀ i : Fin s,
-        tab.elementaryWeight (.node [BTree.node children₁]) i =
-          tab.elementaryWeight (.node [BTree.node children₂]) i := by
-    intro i
-    rw [elementaryWeight_singleton, elementaryWeight_singleton]
-    congr 1
-    ext k
-    rw [elementaryWeight_eq_of_childrenBag_eq tab hbag k]
-  constructor
-  · intro h
-    convert h using 1
-    · congr 1
-      ext i
-      rw [hew i]
-    · simp [hparent_density]
-  · intro h
-    convert h using 1
-    · congr 1
-      ext i
-      rw [← hew i]
-    · simp [hparent_density]
 
 /-- Transport the canonical unary mixed `{1,2}` tree condition across bag-equal
 presentations of the inner two-child witness. -/
