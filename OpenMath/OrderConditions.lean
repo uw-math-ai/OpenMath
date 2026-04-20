@@ -2047,51 +2047,53 @@ theorem thm_301A_order5 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       cases t with
       | leaf => simp at heq
       | node children =>
-        have hw5 : BTree.OrderFiveRecoveryWitness (.node children) :=
-          BTree.order_five_recovery_witness (.node children) heq
-        cases hw5 with
-        | bushy5 c₁ c₂ c₃ c₄ hbag hc₁ hc₂ hc₃ hc₄ =>
-          -- Case A: 4 leaves → order5a
-          have hcanonical : tab.satisfiesTreeCondition (BTree.node children) := by
-            rw [satisfiesTreeCondition_order_five_bushy5_eq_of_childrenBag_eq tab
-              children c₁ c₂ c₃ c₄ hc₁ hc₂ hc₃ hc₄ hbag]
-            rw [order5a] at h5a
-            simpa [order5a_sum_eq tab hrc] using h5a
-          simpa using hcanonical
-        | caseB c₁ c₂ c₃ hbag hCaseB =>
-          -- Case B: 3 children summing to 4
-          have htarget : order_five_caseB_target tab hCaseB := by
-            simpa [order_five_caseB_target] using h5b
-          have hcanonical : tab.satisfiesTreeCondition (.node [c₁, c₂, c₃]) :=
-            (order_five_caseB_dispatch_shared tab hrc hCaseB).2 htarget
-          exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
-        | caseC c₁ c₂ hbag hCaseC =>
-          -- Case C: 2 children summing to 4
-          have htarget : order_five_caseC_target tab hCaseC := by
-            cases hCaseC with
-            | ord22 =>
-                simpa [order_five_caseC_target] using h5c
-            | bushy3 =>
-                simpa [order_five_caseC_target] using h5d
-            | chain3 =>
+        rcases BTree.order_five_node_classification children heq with
+          ⟨c₁, c₂, c₃, c₄, hbag, hc₁, hc₂, hc₃, hc₄⟩
+        | ⟨c₁, c₂, c₃, hCaseB, hbag⟩
+        | ⟨c₁, c₂, hCaseC, hbag⟩
+        | ⟨c, hCaseD, hbag⟩
+        ·
+            -- Case A: 4 leaves → order5a
+            have hcanonical : tab.satisfiesTreeCondition (BTree.node children) := by
+              rw [satisfiesTreeCondition_order_five_bushy5_eq_of_childrenBag_eq tab
+                children c₁ c₂ c₃ c₄ hc₁ hc₂ hc₃ hc₄ hbag]
+              rw [order5a] at h5a
+              simpa [order5a_sum_eq tab hrc] using h5a
+            simpa using hcanonical
+        ·
+            -- Case B: 3 children summing to 4
+            have htarget : order_five_caseB_target tab hCaseB := by
+              simpa [order_five_caseB_target] using h5b
+            have hcanonical : tab.satisfiesTreeCondition (.node [c₁, c₂, c₃]) :=
+              (order_five_caseB_dispatch_shared tab hrc hCaseB).2 htarget
+            exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
+        ·
+            -- Case C: 2 children summing to 4
+            have htarget : order_five_caseC_target tab hCaseC := by
+              cases hCaseC with
+              | ord22 =>
+                  simpa [order_five_caseC_target] using h5c
+              | bushy3 =>
+                  simpa [order_five_caseC_target] using h5d
+              | chain3 =>
                 simpa [order_five_caseC_target] using h5f
-          have hcanonical : tab.satisfiesTreeCondition (.node [c₁, c₂]) :=
-            (order_five_caseC_dispatch_shared tab hrc hCaseC).2 htarget
-          exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
-        | caseD c hbag hCaseD =>
-          -- Case D: single order-4 child
-          have htarget : order_five_caseD_target tab hCaseD := by
-            cases hCaseD with
-            | bushy4 =>
-                simpa [order_five_caseD_target] using h5e
-            | mixed4 =>
-                simpa [order_five_caseD_target] using h5g
-            | viaBushy3 =>
-                simpa [order_five_caseD_target] using h5h
-            | viaChain3 =>
-                simpa [order_five_caseD_target] using h5i
-          have hcanonical : tab.satisfiesTreeCondition (.node [c]) :=
-            (order_five_caseD_dispatch_shared tab hrc hCaseD).2 htarget
-          exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
+            have hcanonical : tab.satisfiesTreeCondition (.node [c₁, c₂]) :=
+              (order_five_caseC_dispatch_shared tab hrc hCaseC).2 htarget
+            exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
+        ·
+            -- Case D: single order-4 child
+            have htarget : order_five_caseD_target tab hCaseD := by
+              cases hCaseD with
+              | bushy4 =>
+                  simpa [order_five_caseD_target] using h5e
+              | mixed4 =>
+                  simpa [order_five_caseD_target] using h5g
+              | viaBushy3 =>
+                  simpa [order_five_caseD_target] using h5h
+              | viaChain3 =>
+                  simpa [order_five_caseD_target] using h5i
+            have hcanonical : tab.satisfiesTreeCondition (.node [c]) :=
+              (order_five_caseD_dispatch_shared tab hrc hCaseD).2 htarget
+            exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).2 hcanonical
 
 end ButcherTableau

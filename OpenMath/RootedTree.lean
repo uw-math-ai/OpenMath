@@ -913,83 +913,68 @@ noncomputable def order_five_caseD_witness (c : BTree) (hc : c.order = 4) :
     OrderFiveCaseDWitness c :=
   Classical.choice (order_five_caseD_witness_nonempty c hc)
 
-/-- Recovery-first top-level witness for order-5 rooted trees. This keeps the
-unordered top-level child bag and routes non-bushy branches through the
-normalized Case B/C/D family witnesses. -/
-inductive OrderFiveRecoveryWitness (t : BTree) : Type where
-  | bushy5 (c₁ c₂ c₃ c₄ : BTree)
-      (hbag : t.childrenBag = (BTree.node [c₁, c₂, c₃, c₄]).childrenBag)
-      (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) (hc₃ : c₃.order = 1) (hc₄ : c₄.order = 1) :
-      OrderFiveRecoveryWitness t
-  | caseB (c₁ c₂ c₃ : BTree)
-      (hbag : t.childrenBag = (BTree.node [c₁, c₂, c₃]).childrenBag)
-      (hwit : OrderFiveCaseBWitness c₁ c₂ c₃) :
-      OrderFiveRecoveryWitness t
-  | caseC (c₁ c₂ : BTree)
-      (hbag : t.childrenBag = (BTree.node [c₁, c₂]).childrenBag)
-      (hwit : OrderFiveCaseCWitness c₁ c₂) :
-      OrderFiveRecoveryWitness t
-  | caseD (c : BTree)
-      (hbag : t.childrenBag = (BTree.node [c]).childrenBag)
-      (hwit : OrderFiveCaseDWitness c) :
-      OrderFiveRecoveryWitness t
-
-/-- Package the order-5 rooted-tree classification in recovery-first form. -/
-theorem order_five_recovery_witness_nonempty (t : BTree) (ht : t.order = 5) :
-    Nonempty (OrderFiveRecoveryWitness t) := by
-  cases t with
-  | leaf => simp at ht
-  | node children =>
-    simp only [order_node] at ht
-    have hfoldr : children.foldr (fun c n => c.order + n) 0 = 4 := by omega
-    cases children with
-    | nil => simp at hfoldr
-    | cons hd tl =>
+/-- Direct top-level bag-first classification for order-5 nodes. This exposes
+the canonical top-level child bag immediately and routes the non-bushy
+branches through the existing Case B/C/D witness families. -/
+theorem order_five_node_classification (children : List BTree)
+    (ht : (BTree.node children).order = 5) :
+    (∃ c₁ c₂ c₃ c₄,
+        (BTree.node children).childrenBag = (BTree.node [c₁, c₂, c₃, c₄]).childrenBag ∧
+        c₁.order = 1 ∧ c₂.order = 1 ∧ c₃.order = 1 ∧ c₄.order = 1) ∨
+      (∃ c₁ c₂ c₃, ∃ _hwit : OrderFiveCaseBWitness c₁ c₂ c₃,
+        (BTree.node children).childrenBag = (BTree.node [c₁, c₂, c₃]).childrenBag) ∨
+      (∃ c₁ c₂, ∃ _hwit : OrderFiveCaseCWitness c₁ c₂,
+        (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag) ∨
+      ∃ c, ∃ _hwit : OrderFiveCaseDWitness c,
+        (BTree.node children).childrenBag = (BTree.node [c]).childrenBag := by
+  simp only [order_node] at ht
+  have hfoldr : children.foldr (fun c n => c.order + n) 0 = 4 := by omega
+  cases children with
+  | nil =>
+      simp at hfoldr
+  | cons hd tl =>
       simp only [List.foldr] at hfoldr
       have hhd_pos : 0 < hd.order := order_pos hd
       cases tl with
       | nil =>
-        have hhd : hd.order = 4 := by
-          simp only [List.foldr] at hfoldr
-          omega
-        exact ⟨.caseD hd rfl (order_five_caseD_witness hd hhd)⟩
-      | cons hd2 tl2 =>
-        have hhd2_pos : 0 < hd2.order := order_pos hd2
-        simp only [List.foldr] at hfoldr
-        cases tl2 with
-        | nil =>
-          have hsum : hd.order + hd2.order = 4 := by simpa using hfoldr
-          exact ⟨.caseC hd hd2 rfl (order_five_caseC_witness hd hd2 hsum)⟩
-        | cons hd3 tl3 =>
-          have hhd3_pos : 0 < hd3.order := order_pos hd3
-          simp only [List.foldr] at hfoldr
-          cases tl3 with
-          | nil =>
-            have hsum : hd.order + hd2.order + hd3.order = 4 := by
-              simpa [Nat.add_assoc] using hfoldr
-            exact ⟨.caseB hd hd2 hd3 rfl
-              (order_five_caseB_witness hd hd2 hd3 hsum)⟩
-          | cons hd4 tl4 =>
-            have hhd4_pos : 0 < hd4.order := order_pos hd4
+          have hhd : hd.order = 4 := by
             simp only [List.foldr] at hfoldr
-            cases tl4 with
-            | nil =>
-              have h1 : hd.order = 1 := by omega
-              have h2 : hd2.order = 1 := by omega
-              have h3 : hd3.order = 1 := by omega
-              have h4 : hd4.order = 1 := by omega
-              exact ⟨.bushy5 hd hd2 hd3 hd4 rfl h1 h2 h3 h4⟩
-            | cons hd5 tl5 =>
-              exfalso
-              have hhd5_pos : 0 < hd5.order := order_pos hd5
+            omega
+          exact Or.inr <| Or.inr <| Or.inr <|
+            ⟨hd, order_five_caseD_witness hd hhd, rfl⟩
+      | cons hd2 tl2 =>
+          have hhd2_pos : 0 < hd2.order := order_pos hd2
+          simp only [List.foldr] at hfoldr
+          cases tl2 with
+          | nil =>
+              have hsum : hd.order + hd2.order = 4 := by simpa using hfoldr
+              exact Or.inr <| Or.inr <| Or.inl <|
+                ⟨hd, hd2, order_five_caseC_witness hd hd2 hsum, rfl⟩
+          | cons hd3 tl3 =>
+              have hhd3_pos : 0 < hd3.order := order_pos hd3
               simp only [List.foldr] at hfoldr
-              have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
-              omega
-
-/-- Noncomputably choose the recovery-first order-5 witness. -/
-noncomputable def order_five_recovery_witness (t : BTree) (ht : t.order = 5) :
-    OrderFiveRecoveryWitness t :=
-  Classical.choice (order_five_recovery_witness_nonempty t ht)
+              cases tl3 with
+              | nil =>
+                  have hsum : hd.order + hd2.order + hd3.order = 4 := by
+                    simpa [Nat.add_assoc] using hfoldr
+                  exact Or.inr <| Or.inl <|
+                    ⟨hd, hd2, hd3, order_five_caseB_witness hd hd2 hd3 hsum, rfl⟩
+              | cons hd4 tl4 =>
+                  have hhd4_pos : 0 < hd4.order := order_pos hd4
+                  simp only [List.foldr] at hfoldr
+                  cases tl4 with
+                  | nil =>
+                      have h1 : hd.order = 1 := by omega
+                      have h2 : hd2.order = 1 := by omega
+                      have h3 : hd3.order = 1 := by omega
+                      have h4 : hd4.order = 1 := by omega
+                      exact Or.inl ⟨hd, hd2, hd3, hd4, rfl, h1, h2, h3, h4⟩
+                  | cons hd5 tl5 =>
+                      exfalso
+                      have hhd5_pos : 0 < hd5.order := order_pos hd5
+                      simp only [List.foldr] at hfoldr
+                      have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
+                      omega
 
 /-- Recover an exact singleton-node presentation from a bag-equality against a
 canonical singleton node. -/
