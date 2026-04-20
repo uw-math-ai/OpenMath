@@ -187,6 +187,32 @@ theorem shiftedLegendre_coeff_self_ne_zero (s : ℕ) :
   simp [Nat.choose_self]
   exact_mod_cast (Nat.choose_pos (Nat.le_add_left s s)).ne'
 
+/-- Convert the recursive Gauss-Legendre node hypothesis into vanishing of
+Mathlib's shifted Legendre polynomial, assuming the expected bridge theorem. -/
+theorem gaussLegendreNodes_eval_map_shiftedLegendre_zero (t : ButcherTableau s)
+    (hGL : t.HasGaussLegendreNodes)
+    (hbridge : ∀ x : ℝ,
+      shiftedLegendreP s x =
+        (-1 : ℝ) ^ s *
+          (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).eval x) :
+    ∀ i : Fin s,
+      (Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre s)).eval (t.c i) = 0 := by
+  intro i
+  have hs_ne : (-1 : ℝ) ^ s ≠ 0 := by
+    exact pow_ne_zero _ (by norm_num)
+  have hi := hGL i
+  rw [hbridge (t.c i)] at hi
+  exact (mul_eq_zero.mp hi).resolve_left hs_ne
+
+/-- Repackage the high-degree branch of `gaussLegendre_B_double` as
+`k = s + (j + 1)` with `j < s`. -/
+private theorem gaussLegendre_high_range {k : ℕ}
+    (hk2 : k ≤ 2 * s) (hks : ¬ k ≤ s) :
+    ∃ j, j < s ∧ k = s + (j + 1) := by
+  refine ⟨k - s - 1, ?_, ?_⟩
+  · omega
+  · omega
+
 /-- **Lemma 342B**: If the nodes of an `s`-stage RK method are the zeros of
 `P_s^*` and `B(s)` holds, then `B(2s)` holds (Gaussian quadrature exactness).
 
@@ -205,8 +231,7 @@ theorem gaussLegendre_B_double (t : ButcherTableau s)
   · exact hB k hk1 hks
   · have hsk : s < k := by omega
     have hs_pos : 0 < s := by omega
-    obtain ⟨j, hjlt, hk_eq⟩ : ∃ j, j < s ∧ k = s + (j + 1) := by
-      refine ⟨k - s - 1, by omega, by omega⟩
+    obtain ⟨j, hjlt, hk_eq⟩ := gaussLegendre_high_range (s := s) hk2 hks
     rw [hk_eq]
     -- The remaining range `k = s + (j + 1)` with `j < s` is the genuine
     -- Gaussian quadrature step. Mathlib's top-coefficient formula shows the
