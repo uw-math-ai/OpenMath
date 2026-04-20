@@ -303,8 +303,8 @@ private theorem density_of_order_three_chain (t : BTree)
   simp only [density_node, order_node, List.foldr]
   rw [density_of_order_two c hc, hc]
 
-/-- Bushy order-3 trees satisfy the tree condition iff the bushy order-3 condition holds. -/
-private theorem satisfiesTreeCondition_order_three_bushy (tab : ButcherTableau s) (t : BTree)
+/-- Exact-list helper for the bushy order-3 tree condition. -/
+private theorem satisfiesTreeCondition_order_three_bushy_exact (tab : ButcherTableau s) (t : BTree)
     (hbushy : ∃ c₁ c₂ : BTree, t = .node [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) :
     tab.satisfiesTreeCondition t ↔
     ∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 2 = 1 / 3 := by
@@ -323,8 +323,19 @@ private theorem satisfiesTreeCondition_order_three_bushy (tab : ButcherTableau s
     congr 1
     exact ew_of_order_three_bushy tab t hbushy i
 
-/-- Chain order-3 trees satisfy the tree condition iff the chain order-3 condition holds. -/
-private theorem satisfiesTreeCondition_order_three_chain (tab : ButcherTableau s) (t : BTree)
+/-- Bushy order-3 trees satisfy the tree condition iff the bushy order-3 condition holds. -/
+private theorem satisfiesTreeCondition_order_three_bushy (tab : ButcherTableau s)
+    (children : List BTree) (c₁ c₂ : BTree)
+    (hbag : (BTree.node children).childrenBag = (BTree.node [c₁, c₂]).childrenBag)
+    (hc₁ : c₁.order = 1) (hc₂ : c₂.order = 1) :
+    tab.satisfiesTreeCondition (.node children) ↔
+    ∑ i : Fin s, tab.b i * (∑ k : Fin s, tab.A i k) ^ 2 = 1 / 3 := by
+  exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).trans <|
+    satisfiesTreeCondition_order_three_bushy_exact tab (.node [c₁, c₂])
+      ⟨c₁, c₂, rfl, hc₁, hc₂⟩
+
+/-- Exact-list helper for the chain order-3 tree condition. -/
+private theorem satisfiesTreeCondition_order_three_chain_exact (tab : ButcherTableau s) (t : BTree)
     (hchain : ∃ c : BTree, t = .node [c] ∧ c.order = 2) :
     tab.satisfiesTreeCondition t ↔
     ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) = 1 / 6 := by
@@ -342,6 +353,16 @@ private theorem satisfiesTreeCondition_order_three_chain (tab : ButcherTableau s
     ext i
     congr 1
     exact ew_of_order_three_chain tab t hchain i
+
+/-- Chain order-3 trees satisfy the tree condition iff the chain order-3 condition holds. -/
+private theorem satisfiesTreeCondition_order_three_chain (tab : ButcherTableau s)
+    (children : List BTree) (c : BTree)
+    (hbag : (BTree.node children).childrenBag = (BTree.node [c]).childrenBag)
+    (hc : c.order = 2) :
+    tab.satisfiesTreeCondition (.node children) ↔
+    ∑ i : Fin s, tab.b i * (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) = 1 / 6 := by
+  exact (satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag).trans <|
+    satisfiesTreeCondition_order_three_chain_exact tab (.node [c]) ⟨c, rfl, hc⟩
 
 /-- A unary parent preserves tree conditions across a bag-equivalent child swap. -/
 private theorem satisfiesTreeCondition_singleton_eq_of_childrenBag_eq (tab : ButcherTableau s)
@@ -466,13 +487,13 @@ theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
       (satisfiesTreeCondition_t2_of_consistent tab hrc).mp (h t2 (by native_decide)),
       ?_, ?_⟩
     · have ht3a : tab.satisfiesTreeCondition t3a := h t3a (by native_decide)
-      rw [satisfiesTreeCondition_order_three_bushy tab t3a
-        ⟨.leaf, .leaf, rfl, by simp, by simp⟩] at ht3a
+      change tab.satisfiesTreeCondition (.node [.leaf, .leaf]) at ht3a
+      rw [satisfiesTreeCondition_order_three_bushy tab [.leaf, .leaf] .leaf .leaf rfl (by simp) (by simp)] at ht3a
       rw [order3a]
       simpa [order3a_sum_eq tab hrc] using ht3a
     · have ht3b : tab.satisfiesTreeCondition t3b := h t3b (by native_decide)
-      rw [satisfiesTreeCondition_order_three_chain tab t3b
-        ⟨t2, rfl, by native_decide⟩] at ht3b
+      change tab.satisfiesTreeCondition (.node [t2]) at ht3b
+      rw [satisfiesTreeCondition_order_three_chain tab [t2] t2 rfl (by native_decide)] at ht3b
       rw [order3b]
       simpa [order3b_sum_eq tab hrc] using ht3b
   · rintro ⟨h1, h2, h3a, h3b⟩ t ht
@@ -496,13 +517,11 @@ theorem thm_301A_order3 (tab : ButcherTableau s) (hrc : tab.IsRowSumConsistent) 
             BTree.order_three_bag_witness (.node children) heq
           cases BTree.order_three_bag_witness_recover hw with
           | chain3 c hbag hc =>
-            rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-            rw [satisfiesTreeCondition_order_three_chain tab _ ⟨c, rfl, hc⟩]
+            rw [satisfiesTreeCondition_order_three_chain tab children c hbag hc]
             rw [order3b] at h3b
             simpa [order3b_sum_eq tab hrc] using h3b
           | bushy3 c₁ c₂ hbag hc₁ hc₂ =>
-            rw [satisfiesTreeCondition_eq_of_childrenBag_eq tab hbag]
-            rw [satisfiesTreeCondition_order_three_bushy tab _ ⟨c₁, c₂, rfl, hc₁, hc₂⟩]
+            rw [satisfiesTreeCondition_order_three_bushy tab children c₁ c₂ hbag hc₁ hc₂]
             rw [order3a] at h3a
             simpa [order3a_sum_eq tab hrc] using h3a
 
