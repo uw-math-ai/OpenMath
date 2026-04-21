@@ -1218,6 +1218,48 @@ theorem thm_355E'_of_realizedInfinityBranchGerms
   apply thm_355E' data h_pade
   exact noArrowsEscapeToInfinity_of_noRealizedArrowInfinityBranches hreal hdown hup
 
+/-- Minimal concrete `R`-dependent interface for the remaining analytic gap:
+the only extra content needed beyond the cycle-276 bookkeeping seam is that the
+concrete rational approximation rules out realized escaping down/up branches. -/
+structure ConcreteRationalApproxToExp (R : ℂ → ℂ)
+    (data : OrderArrowTerminationData) : Prop where
+  noRealizedDownArrowInfinityBranch :
+    NoRealizedDownArrowInfinityBranch R
+  noRealizedUpArrowInfinityBranch :
+    NoRealizedUpArrowInfinityBranch R
+
+/-- A concrete `R`-dependent analytic contradiction boundary immediately yields
+the no-escape-to-infinity hypothesis needed by `thm_355D` / `thm_355E'`. -/
+theorem noArrowsEscapeToInfinity_of_concreteRationalApprox
+    {R : ℂ → ℂ} (data : OrderArrowTerminationData)
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hconcrete : ConcreteRationalApproxToExp R data) :
+    NoArrowsEscapeToInfinity data := by
+  exact noArrowsEscapeToInfinity_of_noRealizedArrowInfinityBranches hreal
+    hconcrete.noRealizedDownArrowInfinityBranch
+    hconcrete.noRealizedUpArrowInfinityBranch
+
+/-- 355D specialized to the new concrete `R`-dependent boundary. -/
+theorem thm_355D_of_concreteRationalApprox
+    {R : ℂ → ℂ} (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hconcrete : ConcreteRationalApproxToExp R data) :
+    SatisfiesArrowCountInequality data.toOrderArrowCountData := by
+  apply thm_355D data h_approx
+  exact noArrowsEscapeToInfinity_of_concreteRationalApprox data hreal hconcrete
+
+/-- 355E' specialized to the new concrete `R`-dependent boundary. -/
+theorem thm_355E'_of_concreteRationalApprox
+    {R : ℂ → ℂ} (data : OrderArrowTerminationData)
+    (h_pade : IsPadeApproxToExp data)
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hconcrete : ConcreteRationalApproxToExp R data) :
+    data.downArrowsAtZeros = data.numeratorDegree ∧
+    data.upArrowsAtPoles = data.denominatorDegree := by
+  apply thm_355E' data h_pade
+  exact noArrowsEscapeToInfinity_of_concreteRationalApprox data hreal hconcrete
+
 /-! ## Theorem 355G: Ehle Barrier via Arrow Counting
 
 The Ehle barrier constrains which Padé approximants to `eᶻ` can be A-stable.
