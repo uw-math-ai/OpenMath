@@ -276,6 +276,54 @@ theorem PadeREhleBarrierInput.ehle_barrier_nat
     InEhleWedge n d := by
   exact h.toNatInput.ehle_barrier_nat
 
+/-- Concrete zero-side 355G correction witness for the Padé/Ehle seam.
+This is the repaired 355G zero-side field specialized to the existing
+`IsAStablePadeApprox` bookkeeping: the sector-count inequality is already live,
+and A-stability kills the correction term by forcing it to be `0`. -/
+theorem padeR_zero_side_correction_of_aStable
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (_hnum : data.numeratorDegree = n)
+    (_hden : data.denominatorDegree = d)
+    (hA : IsAStablePadeApprox data) :
+    ∃ zeroCorrection : ℕ,
+      data.numeratorDegree ≤ data.denominatorDegree + zeroCorrection ∧
+      zeroCorrection = 0 := by
+  refine ⟨0, ?_, rfl⟩
+  simpa [hA.arrows_zero] using hA.sector_bound_n
+
+/-- Concrete pole-side 355G correction witness for the Padé/Ehle seam. -/
+theorem padeR_pole_side_correction_of_aStable
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (_hnum : data.numeratorDegree = n)
+    (_hden : data.denominatorDegree = d)
+    (hA : IsAStablePadeApprox data) :
+    ∃ poleCorrection : ℕ,
+      data.denominatorDegree ≤ data.numeratorDegree + 2 + poleCorrection ∧
+      poleCorrection = 0 := by
+  refine ⟨0, ?_, rfl⟩
+  simpa [hA.arrows_poles, Nat.add_assoc] using hA.sector_bound_d
+
+/-- Package the repaired 355G-side correction witnesses into the honest
+`EhleBarrierInput` consumed by the Ehle barrier. -/
+theorem ehleBarrierInput_of_padeR_aStable
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (hnum : data.numeratorDegree = n)
+    (hden : data.denominatorDegree = d)
+    (hA : IsAStablePadeApprox data) :
+    EhleBarrierInput data := by
+  refine ⟨hA.pade, ?_, ?_⟩
+  · exact padeR_zero_side_correction_of_aStable hnum hden hA
+  · exact padeR_pole_side_correction_of_aStable hnum hden hA
+
+/-- Direct Padé-side constructor for the minimal theorem-local Ehle seam. -/
+theorem padeREhleBarrierNatInput_of_padeR_aStable
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (hnum : data.numeratorDegree = n)
+    (hden : data.denominatorDegree = d)
+    (hA : IsAStablePadeApprox data) :
+    PadeREhleBarrierNatInput n d data := by
+  exact ⟨hnum, hden, ehleBarrierInput_of_padeR_aStable hnum hden hA⟩
+
 /-- The explicit theorem-local hypothesis still blocking a concrete Padé
 application of the Ehle barrier is the repaired 355G input itself. The heavier
 Padé bundle remains available for the sibling 355D/355E' consumers. -/
@@ -285,17 +333,27 @@ theorem ehle_barrier_nat_of_padeR_of_natInput
     InEhleWedge n d := by
   exact h.ehle_barrier_nat
 
-/-- First concrete Padé-side consumer of the repaired Ehle barrier boundary.
-What remains below the minimal theorem-local seam is to construct the repaired
-355G correction-term package `EhleBarrierInput data`; the stronger
-`PadeREhleBarrierInput` additionally carries the realized infinity branch germs
-and concrete no-infinity package needed only by the sibling 355D/355E'
-consumers. -/
-theorem ehle_barrier_nat_of_padeR
+/-- The original full Padé-local bundle still yields the Ehle wedge by forgetting
+its theorem-local extra fields and using the minimal seam. -/
+theorem ehle_barrier_nat_of_padeR_of_input
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeREhleBarrierInput n d data) :
     InEhleWedge n d := by
   exact ehle_barrier_nat_of_padeR_of_natInput h.toNatInput
+
+/-- First concrete Padé-side consumer of the repaired Ehle barrier boundary.
+For the wedge conclusion, the no-infinity and realized-branch data are not
+theorem-local inputs; the honest seam is just the degree bookkeeping together
+with the repaired 355G correction-term package built from
+`IsAStablePadeApprox`. -/
+theorem ehle_barrier_nat_of_padeR
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (hnum : data.numeratorDegree = n)
+    (hden : data.denominatorDegree = d)
+    (hA : IsAStablePadeApprox data) :
+    InEhleWedge n d := by
+  exact ehle_barrier_nat_of_padeR_of_natInput
+    (padeREhleBarrierNatInput_of_padeR_aStable hnum hden hA)
 
 /-- For Padé order webs, the exact coincidence exclusion is an honest consequence
 of the unit-level exclusion already exposed by `OrderStars`. The fully uniform
