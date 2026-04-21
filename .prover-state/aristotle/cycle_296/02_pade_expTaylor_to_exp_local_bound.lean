@@ -1,0 +1,17 @@
+import OpenMath.PadeOrderStars
+
+open Complex
+
+noncomputable section
+
+def padePhiErrorConst (n d : ℕ) : ℝ :=
+  ((-1 : ℝ) ^ d) * ((n.factorial : ℝ) * (d.factorial : ℝ)) /
+    (((n + d).factorial : ℝ) * ((n + d + 1).factorial : ℝ))
+
+theorem padeR_exp_neg_local_bound
+    (n d : ℕ) :
+    ∃ K δ₀ : ℝ, 0 < K ∧ 0 < δ₀ ∧
+      ∀ z : ℂ, ‖z‖ < δ₀ →
+        ‖padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))‖ ≤
+          K * ‖z‖ ^ (n + d + 2) := by
+  sorry

@@ -319,6 +319,59 @@ theorem padeQ_eval_zero (p q : ℕ) : padeQ p q 0 = 1 := by
     (Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne')
     (Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'))
 
+/-- The Padé denominator polynomial is continuous. -/
+theorem padeQ_continuous (p q : ℕ) : Continuous (padeQ p q) := by
+  unfold padeQ
+  fun_prop
+
+/-- The Padé denominator stays nonzero on a small punctured neighborhood of the origin. -/
+theorem padeQ_nonzero_near_zero (p q : ℕ) :
+    ∃ δ₀ : ℝ, 0 < δ₀ ∧
+      ∀ z : ℂ, ‖z‖ < δ₀ → padeQ p q z ≠ 0 := by
+  let s : Set ℂ := padeQ p q ⁻¹' ({0} : Set ℂ)ᶜ
+  have hs_open : IsOpen s := by
+    simpa [s] using
+      (isClosed_singleton.isOpen_compl.preimage (padeQ_continuous p q))
+  have h0_mem : (0 : ℂ) ∈ s := by
+    simp [s, padeQ_eval_zero]
+  rcases Metric.isOpen_iff.mp hs_open 0 h0_mem with ⟨δ₀, hδ₀_pos, hδ₀⟩
+  refine ⟨δ₀, hδ₀_pos, ?_⟩
+  intro z hz
+  have hz_mem : z ∈ Metric.ball (0 : ℂ) δ₀ := by
+    simpa [Metric.mem_ball, dist_eq_norm] using hz
+  simpa [s] using hδ₀ hz_mem
+
+/-- Near the origin, the reciprocal of the Padé denominator is uniformly bounded. -/
+theorem padeQ_inv_norm_le_two_near_zero (p q : ℕ) :
+    ∃ δ₀ : ℝ, 0 < δ₀ ∧
+      ∀ z : ℂ, ‖z‖ < δ₀ → ‖(padeQ p q z)⁻¹‖ ≤ 2 := by
+  let s : Set ℂ := padeQ p q ⁻¹' Metric.ball (1 : ℂ) (1 / 2 : ℝ)
+  have hs_open : IsOpen s := by
+    simpa [s] using
+      (Metric.isOpen_ball.preimage (padeQ_continuous p q))
+  have h0_mem : (0 : ℂ) ∈ s := by
+    simp [s, padeQ_eval_zero, Metric.mem_ball]
+  rcases Metric.isOpen_iff.mp hs_open 0 h0_mem with ⟨δ₀, hδ₀_pos, hδ₀⟩
+  refine ⟨δ₀, hδ₀_pos, ?_⟩
+  intro z hz
+  have hz_mem : z ∈ Metric.ball (0 : ℂ) δ₀ := by
+    simpa [Metric.mem_ball, dist_eq_norm] using hz
+  have hclose : ‖padeQ p q z - 1‖ < (1 / 2 : ℝ) := by
+    simpa [s, Metric.mem_ball, dist_eq_norm] using hδ₀ hz_mem
+  have hclose' : ‖1 - padeQ p q z‖ < (1 / 2 : ℝ) := by
+    simpa [norm_sub_rev] using hclose
+  have hbound : 1 - ‖padeQ p q z‖ ≤ ‖1 - padeQ p q z‖ := by
+    simpa [norm_sub_rev] using norm_sub_norm_le (1 : ℂ) (padeQ p q z)
+  have hnorm_half : (1 / 2 : ℝ) < ‖padeQ p q z‖ := by
+    linarith
+  have hnorm_pos : 0 < ‖padeQ p q z‖ := by
+    linarith
+  rw [norm_inv]
+  have hinv_lt : 1 / ‖padeQ p q z‖ < 2 := by
+    rw [div_lt_iff₀ hnorm_pos]
+    linarith
+  simpa [one_div] using le_of_lt hinv_lt
+
 /-- Theorem 353A: the `(p,q)` Padé defect against the order-`p+q` exponential Taylor
 polynomial vanishes to order at least `p + q + 1`. -/
 theorem pade_approximation_order (p q : ℕ) :
