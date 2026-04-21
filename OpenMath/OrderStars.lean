@@ -905,27 +905,56 @@ def HasFiniteEndpoint {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R)
     (endpoint : OrderArrowFiniteEndpoint) : Prop :=
   endpoint.point ∈ closure branch.support
 
-/-- Minimal branch-level dichotomy behind the 355C/355D global topology: a concrete
-down-arrow branch either accumulates at some finite endpoint or leaves every closed
-ball. -/
-theorem downArrowBranch_hasFiniteEndpoint_or_escapesToInfinity
-    (R : ℂ → ℂ) (branch : GlobalDownArrowBranch R) :
-    (∃ endpoint : OrderArrowFiniteEndpoint,
-      HasFiniteEndpoint branch.toGlobalOrderArrowBranch endpoint) ∨
-      EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
-  left
-  refine ⟨{ point := 0, kind := OrderArrowFiniteEndpointKind.ordinary }, ?_⟩
-  simpa [HasFiniteEndpoint] using branch.toGlobalOrderArrowBranch.origin_mem_closure
+/-- A genuine finite endpoint must be away from the origin. Since every global
+order-arrow branch already carries `0 ∈ closure support`, using `HasFiniteEndpoint`
+alone would make any endpoint-vs-infinity theorem vacuous. -/
+def HasNontrivialFiniteEndpoint {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R)
+    (endpoint : OrderArrowFiniteEndpoint) : Prop :=
+  endpoint.point ≠ 0 ∧ HasFiniteEndpoint branch endpoint
 
-/-- Up-arrow version of the minimal endpoint-vs-infinity dichotomy. -/
-theorem upArrowBranch_hasFiniteEndpoint_or_escapesToInfinity
-    (R : ℂ → ℂ) (branch : GlobalUpArrowBranch R) :
-    (∃ endpoint : OrderArrowFiniteEndpoint,
-      HasFiniteEndpoint branch.toGlobalOrderArrowBranch endpoint) ∨
-      EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
-  left
-  refine ⟨{ point := 0, kind := OrderArrowFiniteEndpointKind.ordinary }, ?_⟩
-  simpa [HasFiniteEndpoint] using branch.toGlobalOrderArrowBranch.origin_mem_closure
+/-- Truncated cone around the ray `t ↦ t * exp(i θ)` near the origin. Requiring a
+branch to meet every such cone is the explicit local-to-global continuation input
+missing from the current no-escape proof. -/
+def rayConeNearOrigin (θ aperture radius : ℝ) : Set ℂ :=
+  {z | ∃ t ∈ Set.Ioo (0 : ℝ) radius,
+    ‖z - (↑t * exp (↑θ * I) : ℂ)‖ < aperture * t}
+
+/-- A concrete global branch continues the local arrow germ with angle `θ` if its
+support meets every sufficiently small cone around that ray. This is stronger than
+remembering only the tangent angle, and it is the honest seam needed before any
+analytic no-escape contradiction can be stated. -/
+def BranchTracksRayNearOrigin {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R)
+    (θ : ℝ) : Prop :=
+  ∀ aperture > 0, ∀ radius > 0,
+    (branch.support ∩ rayConeNearOrigin θ aperture radius).Nonempty
+
+/-- Honest branch-termination predicate for later topology work: either the branch
+has a genuine finite endpoint away from the origin, or it escapes every closed
+ball. This is intentionally kept as a predicate rather than a theorem because the
+current file does not yet prove the required global topology. -/
+def HonestBranchTermination {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R) : Prop :=
+  (∃ endpoint : OrderArrowFiniteEndpoint, HasNontrivialFiniteEndpoint branch endpoint) ∨
+    EscapesEveryClosedBall branch
+
+/-- A realized escaping down-arrow branch consists of a concrete global branch
+whose support both escapes every closed ball and genuinely continues the local
+down-arrow germ near the origin. The remaining missing mathematics is an analytic
+contradiction showing that such a realized branch cannot exist for the relevant
+rational-approximation order webs. -/
+structure RealizedDownArrowInfinityBranch (R : ℂ → ℂ) where
+  branch : GlobalDownArrowBranch R
+  continuesLocalGerm :
+    BranchTracksRayNearOrigin branch.toGlobalOrderArrowBranch branch.tangentAngle
+  escapesEveryClosedBall :
+    EscapesEveryClosedBall branch.toGlobalOrderArrowBranch
+
+/-- Up-arrow analogue of `RealizedDownArrowInfinityBranch`. -/
+structure RealizedUpArrowInfinityBranch (R : ℂ → ℂ) where
+  branch : GlobalUpArrowBranch R
+  continuesLocalGerm :
+    BranchTracksRayNearOrigin branch.toGlobalOrderArrowBranch branch.tangentAngle
+  escapesEveryClosedBall :
+    EscapesEveryClosedBall branch.toGlobalOrderArrowBranch
 
 /-- Each counted down-arrow infinity endpoint must come from a concrete global
 down-arrow branch that leaves every closed ball. This is the only bridge needed from
@@ -947,6 +976,33 @@ structure RealizesInfinityCounts (R : ℂ → ℂ)
     (data : OrderArrowTerminationData) : Prop where
   downArrowInfinityWitnesses : DownArrowInfinityWitnesses R data
   upArrowInfinityWitnesses : UpArrowInfinityWitnesses R data
+
+/-- Stronger future seam between a concrete `R`, the abstract infinity counts, and
+the realized global branches of `orderWeb R`. In addition to the escaping witness
+content of `RealizesInfinityCounts`, each counted branch must now come with an
+explicit local-germ continuation statement near the origin. The next missing theorem
+is the analytic contradiction from this strengthened seam to
+`NoArrowsEscapeToInfinity data`. -/
+structure RealizesInfinityBranchGerms (R : ℂ → ℂ)
+    (data : OrderArrowTerminationData) where
+  downArrowInfinityWitnesses :
+    ∀ _ : Fin data.downArrowsAtInfinity, RealizedDownArrowInfinityBranch R
+  upArrowInfinityWitnesses :
+    ∀ _ : Fin data.upArrowsAtInfinity, RealizedUpArrowInfinityBranch R
+
+/-- The stronger germ-aware realization seam forgets back down to the older
+count-level interface by discarding the local-germ continuation fields. -/
+theorem RealizesInfinityBranchGerms.toRealizesInfinityCounts
+    {R : ℂ → ℂ} {data : OrderArrowTerminationData}
+    (hreal : RealizesInfinityBranchGerms R data) :
+    RealizesInfinityCounts R data := by
+  refine ⟨?_, ?_⟩
+  · intro i
+    let witness := hreal.downArrowInfinityWitnesses i
+    exact ⟨witness.branch, witness.escapesEveryClosedBall⟩
+  · intro i
+    let witness := hreal.upArrowInfinityWitnesses i
+    exact ⟨witness.branch, witness.escapesEveryClosedBall⟩
 
 /-- The inequality asserted by Theorem 355D, isolated as a reusable arithmetic predicate. -/
 def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=
