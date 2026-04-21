@@ -1714,6 +1714,34 @@ theorem realizedDownArrowInfinityBranch_contradiction
     exact hzero_not_mem_down_support branch (hz0 ▸ hz_mem)
   exact hno_nonzero_unit_points_on_orderWeb z hz_ne hz_orderWeb hz_unit
 
+/-- Down-arrow contradiction with the sharpened exact-coincidence hypothesis
+instead of the equivalent unit-level formulation. This is the theorem-local
+bridge needed by the concrete no-infinity package. -/
+theorem realizedDownArrowInfinityBranch_contradiction_of_no_nonzero_eq_exp
+    (R : ℂ → ℂ)
+    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hzero_not_mem_down_support :
+      ∀ branch : RealizedDownArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hno_nonzero_eq_exp :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → R z = exp z → False)
+    (hlocal_minus_near_down :
+      ∀ θ : ℝ, IsDownArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            ‖R z * exp (-z)‖ < 1)
+    (hfar_plus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        1 < ‖R z * exp (-z)‖)
+    (branch : RealizedDownArrowInfinityBranch R) :
+    False := by
+  apply realizedDownArrowInfinityBranch_contradiction R hcont
+    hzero_not_mem_down_support
+  · exact (no_nonzero_unit_points_on_orderWeb_iff_no_nonzero_eq_exp).2 hno_nonzero_eq_exp
+  · exact hlocal_minus_near_down
+  · exact hfar_plus_on_orderWeb
+  · exact branch
+
 /-- Up-arrow companion to `realizedDownArrowInfinityBranch_contradiction`. -/
 theorem realizedUpArrowInfinityBranch_contradiction
     (R : ℂ → ℂ)
@@ -1762,6 +1790,33 @@ theorem realizedUpArrowInfinityBranch_contradiction
     intro hz0
     exact hzero_not_mem_up_support branch (hz0 ▸ hz_mem)
   exact hno_nonzero_unit_points_on_orderWeb z hz_ne hz_orderWeb hz_unit
+
+/-- Up-arrow contradiction with the sharpened exact-coincidence hypothesis
+instead of the equivalent unit-level formulation. -/
+theorem realizedUpArrowInfinityBranch_contradiction_of_no_nonzero_eq_exp
+    (R : ℂ → ℂ)
+    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hzero_not_mem_up_support :
+      ∀ branch : RealizedUpArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hno_nonzero_eq_exp :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → R z = exp z → False)
+    (hlocal_plus_near_up :
+      ∀ θ : ℝ, IsUpArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            1 < ‖R z * exp (-z)‖)
+    (hfar_minus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        ‖R z * exp (-z)‖ < 1)
+    (branch : RealizedUpArrowInfinityBranch R) :
+    False := by
+  apply realizedUpArrowInfinityBranch_contradiction R hcont
+    hzero_not_mem_up_support
+  · exact (no_nonzero_unit_points_on_orderWeb_iff_no_nonzero_eq_exp).2 hno_nonzero_eq_exp
+  · exact hlocal_plus_near_up
+  · exact hfar_minus_on_orderWeb
+  · exact branch
 
 /-- Each counted down-arrow infinity endpoint must come from a concrete global
 down-arrow branch that leaves every closed ball. This is the only bridge needed from
@@ -2063,6 +2118,47 @@ theorem concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradiction
   · intro branch
     exact realizedUpArrowInfinityBranch_contradiction R hcont
       hzero_not_mem_up_support hno_nonzero_unit_points_on_orderWeb
+      hlocal_plus_near_up hfar_minus_on_orderWeb branch
+
+/-- Concrete no-infinity package using the sharpened exact-coincidence
+hypothesis directly. This removes the older unit-level assumption from the live
+interface while keeping the contradiction shape unchanged. -/
+theorem concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions_of_no_nonzero_eq_exp
+    {R : ℂ → ℂ} (data : OrderArrowTerminationData)
+    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hzero_not_mem_down_support :
+      ∀ branch : RealizedDownArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hzero_not_mem_up_support :
+      ∀ branch : RealizedUpArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hno_nonzero_eq_exp :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → R z = exp z → False)
+    (hlocal_minus_near_down :
+      ∀ θ : ℝ, IsDownArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            ‖R z * exp (-z)‖ < 1)
+    (hlocal_plus_near_up :
+      ∀ θ : ℝ, IsUpArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            1 < ‖R z * exp (-z)‖)
+    (hfar_plus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        1 < ‖R z * exp (-z)‖)
+    (hfar_minus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        ‖R z * exp (-z)‖ < 1) :
+    ConcreteRationalApproxToExp R data := by
+  refine ⟨?_, ?_⟩
+  · intro branch
+    exact realizedDownArrowInfinityBranch_contradiction_of_no_nonzero_eq_exp R hcont
+      hzero_not_mem_down_support hno_nonzero_eq_exp
+      hlocal_minus_near_down hfar_plus_on_orderWeb branch
+  · intro branch
+    exact realizedUpArrowInfinityBranch_contradiction_of_no_nonzero_eq_exp R hcont
+      hzero_not_mem_up_support hno_nonzero_eq_exp
       hlocal_plus_near_up hfar_minus_on_orderWeb branch
 
 /-- A concrete `R`-dependent analytic contradiction boundary immediately yields
