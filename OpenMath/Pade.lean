@@ -392,6 +392,263 @@ theorem pade_approximation_order (p q : ℕ) :
     have hzn : z ^ (p + q + 1) ≠ 0 := pow_ne_zero _ hz
     exact (mul_div_cancel₀ _ hzn).symm
 
+/-- Candidate leading error constant for `padeR n d z * exp (-z)` near `z = 0`. -/
+noncomputable def padePhiErrorConst (n d : ℕ) : ℝ :=
+  ((-1 : ℝ) ^ d) * ((n.factorial : ℝ) * (d.factorial : ℝ)) /
+    (((n + d).factorial : ℝ) * ((n + d + 1).factorial : ℝ))
+
+/-- `exp z` splits as its order-`m` Taylor polynomial plus the tail of the exponential
+series. -/
+private lemma exp_eq_expTaylor_add_tail (m : ℕ) (z : ℂ) :
+    exp z = expTaylor m z + ∑' (k : ℕ), z ^ (m + 1 + k) / ((m + 1 + k).factorial : ℂ) := by
+  simp +decide only [exp_eq_exp_ℂ, NormedSpace.exp_eq_tsum_div]
+  rw [← Summable.sum_add_tsum_nat_add]
+  · congr
+    ext n
+    ring_nf
+  ·
+    exact Summable.of_norm <| by
+      simpa using Real.summable_pow_div_factorial (Complex.normSq z |> Real.sqrt)
+
+/-- `1 - exp (-z)` is `z` times the shifted exponential tail. -/
+private lemma one_sub_exp_neg (z : ℂ) :
+    1 - exp (-z) = z * ∑' (j : ℕ), (-1 : ℂ) ^ j * z ^ j / ((j + 1).factorial : ℂ) := by
+  have h_exp_neg_z : Complex.exp (-z) = ∑' (j : ℕ), (-z) ^ j / (Nat.factorial j) := by
+    simp +decide [Complex.exp_eq_exp_ℂ, NormedSpace.exp_eq_tsum_div]
+  rw [h_exp_neg_z, Summable.tsum_eq_zero_add]
+  ·
+    norm_num [pow_succ', mul_assoc, mul_comm, mul_left_comm, div_eq_mul_inv, tsum_neg,
+      tsum_mul_left]
+    exact Or.inl (tsum_congr fun n => by ring)
+  ·
+    exact Summable.of_norm <| by
+      simpa using Real.summable_pow_div_factorial (Complex.normSq z |> Real.sqrt)
+
+/-- The exponential tail factors out its first power of `z`. -/
+private lemma tail_eq_zpow_mul (m : ℕ) (z : ℂ) :
+    ∑' (k : ℕ), z ^ (m + 1 + k) / ((m + 1 + k).factorial : ℂ) =
+      z ^ (m + 1) * ∑' (j : ℕ), z ^ j / ((m + 1 + j).factorial : ℂ) := by
+  rw [← tsum_mul_left]
+  congr
+  ext k
+  ring
+
+/-- Splitting off the first term of the shifted exponential tail. -/
+private lemma tsum_tail_split (m : ℕ) (z : ℂ) :
+    ∑' (j : ℕ), z ^ j / ((m + 1 + j).factorial : ℂ) =
+      1 / ((m + 1).factorial : ℂ) +
+        z * ∑' (j : ℕ), z ^ j / ((m + 2 + j).factorial : ℂ) := by
+  rw [Summable.tsum_eq_zero_add] <;> norm_num
+  ·
+    rw [← tsum_mul_left]
+    congr
+    ext
+    ring_nf
+  ·
+    have h_exp : Summable (fun j : ℕ => z ^ j / ((j.factorial : ℂ))) := by
+      exact Summable.of_norm <| by
+        simpa using Real.summable_pow_div_factorial (Complex.normSq z |> fun x => Real.sqrt x)
+    convert h_exp.norm.of_norm_bounded _ using 1
+    · infer_instance
+    ·
+      norm_num
+      exact fun i => by
+        gcongr
+        linarith
+
+/-- The explicit witness for the order-`m+2` remainder in
+`expTaylor m z * exp (-z)`. -/
+private noncomputable def expTaylorExpNegLeadingWitness (m : ℕ) (z : ℂ) : ℂ :=
+  (1 : ℂ) / ((m + 1).factorial : ℂ) *
+      ∑' (j : ℕ), (-1 : ℂ) ^ j * z ^ j / ((j + 1).factorial : ℂ) -
+    exp (-z) * ∑' (j : ℕ), z ^ j / ((m + 2 + j).factorial : ℂ)
+
+/-- The truncated exponential already has the expected first neglected term after
+multiplication by `exp (-z)`. -/
+theorem expTaylor_exp_neg_leading_term
+    (m : ℕ) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ,
+      expTaylor m z * exp (-z) -
+        (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1)) =
+      z ^ (m + 2) * h z := by
+  refine ⟨expTaylorExpNegLeadingWitness m, fun z => ?_⟩
+  have h1 :
+      expTaylor m z * Complex.exp (-z) =
+        1 - (∑' (k : ℕ), z ^ (m + 1 + k) / ((m + 1 + k).factorial : ℂ)) * Complex.exp (-z) := by
+    have hL :
+        expTaylor m z =
+          Complex.exp z - ∑' (k : ℕ), z ^ (m + 1 + k) / ((m + 1 + k).factorial : ℂ) := by
+      exact eq_sub_of_add_eq <| exp_eq_expTaylor_add_tail m z ▸ rfl
+    rw [hL, sub_mul, ← Complex.exp_add]
+    norm_num
+  rw [h1, tail_eq_zpow_mul, tsum_tail_split, expTaylorExpNegLeadingWitness]
+  ring_nf
+  have := one_sub_exp_neg z
+  simp_all +decide [div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm]
+  grind
+
+/-- Local norm control for the truncated exponential remainder after factoring out the
+first neglected term. -/
+theorem expTaylor_exp_neg_local_norm_bound
+    (m : ℕ) :
+    ∃ δ₀ K : ℝ, 0 < δ₀ ∧ 0 < K ∧
+      ∀ z : ℂ, ‖z‖ < δ₀ →
+        ‖expTaylor m z * exp (-z) -
+            (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1))‖ ≤
+          K * ‖z‖ ^ (m + 2) := by
+  use 1, Real.exp 1 * Real.exp 1 + Real.exp 1 / (m + 1).factorial
+  have hR_bound :
+      ∀ z : ℂ, ‖z‖ < 1 →
+        ‖(Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) -
+            z ^ (m + 1) / (m + 1).factorial‖ ≤
+          Real.exp 1 * ‖z‖ ^ (m + 2) := by
+    intro z hz
+    have hR_bound :
+        ‖(Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) -
+            z ^ (m + 1) / (m + 1).factorial‖ ≤
+          ∑' i, ‖z‖ ^ (i + m + 2) / (i + m + 2).factorial := by
+      have hR_series :
+          Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ) -
+              z ^ (m + 1) / (m + 1).factorial =
+            ∑' i : ℕ, z ^ (i + m + 2) / (i + m + 2).factorial := by
+        have hR_series : Complex.exp z = ∑' i : ℕ, z ^ i / (i.factorial : ℂ) := by
+          simp +decide [Complex.exp_eq_exp_ℂ, NormedSpace.exp_eq_tsum_div]
+        rw [hR_series, ← Summable.sum_add_tsum_nat_add (m + 2)]
+        · simp +decide [add_assoc, Finset.sum_range_succ]
+        ·
+          exact Summable.of_norm <| by
+            simpa using Real.summable_pow_div_factorial ‖z‖
+      convert norm_tsum_le_tsum_norm _ <;> norm_num
+      exact Real.summable_pow_div_factorial _ |>.comp_injective <| by aesop_cat
+    have h_series_bound :
+        ∑' i, ‖z‖ ^ (i + m + 2) / (i + m + 2).factorial ≤
+          ‖z‖ ^ (m + 2) * ∑' i, ‖z‖ ^ i / (i.factorial : ℝ) := by
+      rw [← tsum_mul_left]
+      refine Summable.tsum_le_tsum ?_ ?_ ?_
+      ·
+        intro i
+        rw [pow_add, mul_div]
+        ring_nf
+        exact mul_le_mul_of_nonneg_left
+          (inv_anti₀ (by positivity) (mod_cast Nat.factorial_le (by linarith))) (by positivity)
+      ·
+        exact Real.summable_pow_div_factorial _ |>.comp_injective <| by aesop_cat
+      · exact Summable.mul_left _ <| Real.summable_pow_div_factorial _
+    have h_exp_bound : ∑' i, ‖z‖ ^ i / (i.factorial : ℝ) = Real.exp ‖z‖ := by
+      simp +decide [Real.exp_eq_exp_ℝ, NormedSpace.exp_eq_tsum_div]
+    exact hR_bound.trans <| h_series_bound.trans <| by
+      rw [h_exp_bound, mul_comm]
+      exact mul_le_mul_of_nonneg_right (Real.exp_le_exp.mpr hz.le) <| by positivity
+  have h_combined_bound :
+      ∀ z : ℂ, ‖z‖ < 1 →
+        ‖(Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) *
+              Complex.exp (-z) -
+            z ^ (m + 1) / (m + 1).factorial * Complex.exp (-z)‖ ≤
+          Real.exp 1 * Real.exp 1 * ‖z‖ ^ (m + 2) := by
+    intro z hz
+    have h_exp_bound : ‖Complex.exp (-z)‖ ≤ Real.exp 1 := by
+      norm_num [Complex.norm_exp]
+      linarith [abs_le.mp (Complex.abs_re_le_norm z)]
+    convert le_trans
+      (norm_mul_le
+        (cexp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ) -
+          z ^ (m + 1) / (m + 1).factorial)
+        (cexp (-z)))
+      (mul_le_mul (hR_bound z hz) h_exp_bound (by positivity) (by positivity)) using 1
+    · ring
+    · ring
+  have h_exp_bound : ∀ z : ℂ, ‖z‖ < 1 → ‖Complex.exp (-z) - 1‖ ≤ Real.exp 1 * ‖z‖ := by
+    intro z hz
+    have h_exp_bound : ‖Complex.exp (-z) - 1‖ ≤ ‖z‖ * Real.exp ‖z‖ := by
+      have h_exp_neg_z :
+          Complex.exp (-z) - 1 = ∑' n : ℕ, (-z) ^ (n + 1) / (n + 1).factorial := by
+        rw [Complex.exp_eq_exp_ℂ]
+        norm_num [NormedSpace.exp_eq_tsum_div]
+        rw [Summable.tsum_eq_zero_add]
+        · norm_num
+        ·
+          exact Summable.of_norm <| by
+            simpa using Real.summable_pow_div_factorial ‖z‖
+      rw [h_exp_neg_z, Real.exp_eq_exp_ℝ]
+      have hsum_norm : Summable (fun i : ℕ => ‖(-z) ^ (i + 1) / ((i + 1).factorial : ℂ)‖) := by
+        have h :
+            Summable (fun i : ℕ => ‖z‖ ^ (i + 1) / ((i + 1).factorial : ℝ)) := by
+          simpa using summable_nat_add_iff 1 |>.2 <| Real.summable_pow_div_factorial ‖z‖
+        convert h using 1
+        ext i
+        rw [norm_div, norm_pow]
+        simp [norm_neg]
+      refine le_trans (norm_tsum_le_tsum_norm hsum_norm) ?_
+      ·
+        norm_num [NormedSpace.exp_eq_tsum_div]
+        rw [← tsum_mul_left]
+        exact Summable.tsum_le_tsum
+          (fun n => by
+            rw [pow_succ', mul_div_assoc]
+            gcongr
+            nlinarith)
+          (by
+            exact Summable.of_nonneg_of_le
+              (fun n => by positivity)
+              (fun n => by
+                rw [pow_succ', mul_div_assoc]
+                gcongr
+                nlinarith)
+              <| Summable.mul_left _ <| Real.summable_pow_div_factorial _)
+          (by exact Summable.mul_left _ <| Real.summable_pow_div_factorial _)
+    exact h_exp_bound.trans <| by
+      rw [mul_comm]
+      exact mul_le_mul_of_nonneg_right (Real.exp_le_exp.mpr hz.le) (norm_nonneg _)
+  have h_final_bound :
+      ∀ z : ℂ, ‖z‖ < 1 →
+        ‖(Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) *
+              Complex.exp (-z) -
+            z ^ (m + 1) / (m + 1).factorial‖ ≤
+          (Real.exp 1 * Real.exp 1 + Real.exp 1 / (m + 1).factorial) * ‖z‖ ^ (m + 2) := by
+    intro z hz
+    have h_combined :
+        ‖(Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) *
+              Complex.exp (-z) -
+            z ^ (m + 1) / (m + 1).factorial‖ ≤
+          ‖(Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) *
+                Complex.exp (-z) -
+              z ^ (m + 1) / (m + 1).factorial * Complex.exp (-z)‖ +
+            ‖z ^ (m + 1) / (m + 1).factorial * (Complex.exp (-z) - 1)‖ := by
+      convert norm_add_le
+        ((Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) *
+            Complex.exp (-z) -
+          z ^ (m + 1) / (m + 1).factorial * Complex.exp (-z))
+        (z ^ (m + 1) / (m + 1).factorial * (Complex.exp (-z) - 1)) using 2
+      ring
+    refine le_trans h_combined <| le_trans
+      (add_le_add
+        (h_combined_bound z hz)
+        (by
+          simpa [div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm] using
+            mul_le_mul_of_nonneg_left (h_exp_bound z hz) <|
+              show 0 ≤ ‖z‖ ^ (m + 1) / (m + 1).factorial from by positivity))
+      ?_
+    ring_nf
+    norm_num
+  refine ⟨by norm_num, by positivity, fun z hz => ?_⟩
+  have hnorm_eq :
+      ‖expTaylor m z * exp (-z) - (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1))‖ =
+        ‖(Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) *
+              Complex.exp (-z) -
+            z ^ (m + 1) / (m + 1).factorial‖ := by
+    have h_eq :
+        (Complex.exp z - ∑ i ∈ Finset.range (m + 1), z ^ i / (i.factorial : ℂ)) *
+              Complex.exp (-z) -
+            z ^ (m + 1) / (m + 1).factorial =
+          -(expTaylor m z * exp (-z) -
+            (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1))) := by
+      rw [Complex.exp_neg, expTaylor]
+      field_simp [Complex.exp_ne_zero z]
+      ring
+    rw [← norm_neg, ← h_eq]
+  rw [hnorm_eq]
+  exact h_final_bound z hz
+
 /-- Diagonal symmetry for the general Padé families. -/
 theorem padeQ_diagonal_eq_padeP_neg (s : ℕ) (z : ℂ) :
     padeQ s s z = padeP s s (-z) := by
