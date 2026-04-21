@@ -1671,6 +1671,55 @@ theorem realizedDownArrowInfinityBranch_contradiction
     exact hzero_not_mem_down_support branch (hz0 ▸ hz_mem)
   exact hno_nonzero_unit_points_on_orderWeb z hz_ne hz_orderWeb hz_unit
 
+/-- Up-arrow companion to `realizedDownArrowInfinityBranch_contradiction`. -/
+theorem realizedUpArrowInfinityBranch_contradiction
+    (R : ℂ → ℂ)
+    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hzero_not_mem_up_support :
+      ∀ branch : RealizedUpArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hno_nonzero_unit_points_on_orderWeb :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → ‖R z * exp (-z)‖ = 1 → False)
+    (hlocal_plus_near_up :
+      ∀ θ : ℝ, IsUpArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            1 < ‖R z * exp (-z)‖)
+    (hfar_minus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        ‖R z * exp (-z)‖ < 1)
+    (branch : RealizedUpArrowInfinityBranch R) :
+    False := by
+  obtain ⟨aperture, haperture, radius, hradius, hsmallCone⟩ :=
+    hlocal_plus_near_up branch.branch.tangentAngle branch.branch.tangentUp
+  obtain ⟨zSmall, hzSmall_mem, hzSmall_cone⟩ :=
+    exists_mem_inter_rayConeNearOrigin_of_branchTracksRayNearOrigin
+      branch.branch.toGlobalOrderArrowBranch branch.continuesLocalGerm
+      haperture hradius
+  have hzSmall_gt : 1 < ‖R zSmall * exp (-zSmall)‖ :=
+    hsmallCone zSmall hzSmall_cone
+  obtain ⟨largeRadius, hlargeRadius, hlarge⟩ := hfar_minus_on_orderWeb
+  obtain ⟨zLarge, hzLarge_mem, hzLarge_norm⟩ :=
+    exists_mem_support_norm_gt_of_escapesEveryClosedBall
+      branch.branch.toGlobalOrderArrowBranch branch.escapesEveryClosedBall
+      largeRadius hlargeRadius.le
+  have hzLarge_orderWeb : zLarge ∈ orderWeb R :=
+    mem_orderWeb_of_mem_globalOrderArrowBranch_support
+      branch.branch.toGlobalOrderArrowBranch hzLarge_mem
+  have hzLarge_lt : ‖R zLarge * exp (-zLarge)‖ < 1 :=
+    hlarge zLarge hzLarge_orderWeb (le_of_lt hzLarge_norm)
+  obtain ⟨z, hz_mem, hz_unit⟩ :=
+    exists_mem_support_unit_level_of_connected_orderWeb_branch
+      branch.branch.toGlobalOrderArrowBranch hcont
+      hzLarge_mem hzSmall_mem hzLarge_lt hzSmall_gt
+  have hz_orderWeb : z ∈ orderWeb R :=
+    mem_orderWeb_of_mem_globalOrderArrowBranch_support
+      branch.branch.toGlobalOrderArrowBranch hz_mem
+  have hz_ne : z ≠ 0 := by
+    intro hz0
+    exact hzero_not_mem_up_support branch (hz0 ▸ hz_mem)
+  exact hno_nonzero_unit_points_on_orderWeb z hz_ne hz_orderWeb hz_unit
+
 /-- Each counted down-arrow infinity endpoint must come from a concrete global
 down-arrow branch that leaves every closed ball. This is the only bridge needed from
 branch topology back to the abstract count `data.downArrowsAtInfinity`. -/
@@ -1932,6 +1981,46 @@ structure ConcreteRationalApproxToExp (R : ℂ → ℂ)
     NoRealizedDownArrowInfinityBranch R
   noRealizedUpArrowInfinityBranch :
     NoRealizedUpArrowInfinityBranch R
+
+/-- The theorem-local contradiction hypotheses package directly into the concrete
+`R`-dependent no-infinity interface used by the 355D/355E endpoint seam. -/
+theorem concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions
+    {R : ℂ → ℂ} (data : OrderArrowTerminationData)
+    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hzero_not_mem_down_support :
+      ∀ branch : RealizedDownArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hzero_not_mem_up_support :
+      ∀ branch : RealizedUpArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hno_nonzero_unit_points_on_orderWeb :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → ‖R z * exp (-z)‖ = 1 → False)
+    (hlocal_minus_near_down :
+      ∀ θ : ℝ, IsDownArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            ‖R z * exp (-z)‖ < 1)
+    (hlocal_plus_near_up :
+      ∀ θ : ℝ, IsUpArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            1 < ‖R z * exp (-z)‖)
+    (hfar_plus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        1 < ‖R z * exp (-z)‖)
+    (hfar_minus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        ‖R z * exp (-z)‖ < 1) :
+    ConcreteRationalApproxToExp R data := by
+  refine ⟨?_, ?_⟩
+  · intro branch
+    exact realizedDownArrowInfinityBranch_contradiction R hcont
+      hzero_not_mem_down_support hno_nonzero_unit_points_on_orderWeb
+      hlocal_minus_near_down hfar_plus_on_orderWeb branch
+  · intro branch
+    exact realizedUpArrowInfinityBranch_contradiction R hcont
+      hzero_not_mem_up_support hno_nonzero_unit_points_on_orderWeb
+      hlocal_plus_near_up hfar_minus_on_orderWeb branch
 
 /-- A concrete `R`-dependent analytic contradiction boundary immediately yields
 the no-escape-to-infinity hypothesis needed by `thm_355D` / `thm_355E'`. -/
