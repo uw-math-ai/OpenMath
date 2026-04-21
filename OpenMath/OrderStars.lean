@@ -773,6 +773,44 @@ theorem arrow_up_of_pos_errorConst_odd (R : ℂ → ℂ) (p : ℕ) (C K δ₀ : 
   calc (1 : ℝ) < 1 + C * t ^ (p + 1) - K * t ^ (p + 2) := by linarith
     _ ≤ ‖R z * exp (-z)‖ := h_lower
 
+/-- Quantitative continuity of `w ↦ w ^ n` at `w = 1`, used to thicken the
+exact 355B ray asymptotics into small cones around the ray. -/
+private theorem exists_pos_aperture_pow_sub_one_lt
+    (n : ℕ) (ε : ℝ) (hε : 0 < ε) :
+    ∃ aperture > 0, ∀ w : ℂ, ‖w - 1‖ < aperture → ‖w ^ n - 1‖ < ε := by
+  have hcont : ContinuousAt (fun w : ℂ => w ^ n) (1 : ℂ) := by
+    simpa using (continuous_pow n).continuousAt
+  have h := Metric.continuousAt_iff.mp hcont ε hε
+  simpa [dist_eq_norm] using h
+
+/-- If `w` stays within `1/4` of `1`, then the perturbed real main term
+`1 - a w` remains strictly inside the unit disk with a quantitative margin. -/
+private theorem norm_sub_mul_lt_one_of_close_to_one
+    (a : ℝ) (ha : 0 < a) (ha1 : a < 1) {w : ℂ}
+    (hw : ‖w - 1‖ < 1 / 4) :
+    ‖(1 : ℂ) - ↑a * w‖ < 1 - a / 2 := by
+  have h_eq : (1 : ℂ) - ↑a * w = ((1 : ℂ) - ↑a) - (↑a * (w - 1)) := by
+    ring
+  have habs : ‖(1 : ℂ) - ↑a‖ = 1 - a := by
+    rw [show (1 : ℂ) - ↑a = ↑(1 - a) by push_cast; ring]
+    rw [Complex.norm_real, Real.norm_of_nonneg]
+    nlinarith
+  have h_err_eq : ‖↑a * (w - 1)‖ = a * ‖w - 1‖ := by
+    rw [norm_mul, Complex.norm_real, Real.norm_eq_abs, abs_of_pos ha]
+  have h_err : ‖↑a * (w - 1)‖ < a / 4 := by
+    rw [h_err_eq]
+    nlinarith
+  have hmain : ‖(1 : ℂ) - ↑a * w‖ ≤ ‖(1 : ℂ) - ↑a‖ + ‖↑a * (w - 1)‖ := by
+    rw [h_eq]
+    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using
+      norm_sub_le ((1 : ℂ) - ↑a) (↑a * (w - 1))
+  have h_up : ‖(1 : ℂ) - ↑a * w‖ < (1 - a) + a / 4 := by
+    calc ‖(1 : ℂ) - ↑a * w‖
+      ≤ ‖(1 : ℂ) - ↑a‖ + ‖↑a * (w - 1)‖ := hmain
+      _ = (1 - a) + ‖↑a * (w - 1)‖ := by rw [habs]
+      _ < (1 - a) + a / 4 := by linarith
+  nlinarith
+
 /-! ## Arrow Termination Bookkeeping
 
 The textbook proofs of Theorems 355C and 355D use global order-arrow trajectories.
@@ -980,6 +1018,141 @@ theorem exists_mem_support_unit_level_of_connected_orderWeb_branch
     · exact le_of_lt hlarge
   rcases hIcc hmem with ⟨z, hz_support, hz_unit⟩
   exact ⟨z, hz_support, hz_unit⟩
+
+/-- Local cone-control version of the even-angle, positive-error-constant case
+of Theorem 355B. This matches the sign hypothesis needed by the cycle-278
+down-arrow contradiction, but now for a genuine neighborhood cone instead of
+only the exact ray. -/
+theorem local_minus_near_even_angle_of_pos_errorConst
+    (R : ℂ → ℂ) (p k : ℕ) (C K δ₀ : ℝ)
+    (hC : 0 < C) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2)) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin (2 * ↑k * π / (↑p + 1)) aperture radius →
+        ‖R z * exp (-z)‖ < 1 := by
+  obtain ⟨aperture, haperture, hapow⟩ :=
+    exists_pos_aperture_pow_sub_one_lt (p + 1) (1 / 4) (by norm_num)
+  let scale : ℝ := 1 + aperture
+  have hscale : 0 < scale := by
+    positivity
+  let radius : ℝ :=
+    min (δ₀ / scale) (min 1 (min (1 / C) (C / (4 * K * scale ^ (p + 2)))))
+  have hradius : 0 < radius := by
+    have hδscale : 0 < δ₀ / scale := div_pos hδ hscale
+    have hCinv : 0 < 1 / C := one_div_pos.mpr hC
+    have hCerr : 0 < C / (4 * K * scale ^ (p + 2)) := by
+      positivity
+    exact lt_min hδscale (lt_min one_pos (lt_min hCinv hCerr))
+  refine ⟨aperture, haperture, radius, hradius, ?_⟩
+  intro z hz
+  rcases hz with ⟨t, ht, hdist⟩
+  let center : ℂ := (↑t : ℂ) * exp (↑(2 * ↑k * π / (↑p + 1)) * I)
+  let w : ℂ := z / center
+  have hdist_center : ‖z - center‖ < aperture * t := by
+    simpa [center] using hdist
+  have hcenter_ne : center ≠ 0 := by
+    simp [center, ht.1.ne']
+  have hcenter_norm : ‖center‖ = t := by
+    simpa [center] using
+      norm_ofReal_mul_exp_I t (2 * ↑k * π / (↑p + 1)) ht.1.le
+  have hw_close : ‖w - 1‖ < aperture := by
+    have hw :
+        w - 1 = (z - center) / center := by
+      dsimp [w]
+      field_simp [hcenter_ne]
+    rw [hw, norm_div, hcenter_norm]
+    have h' := mul_lt_mul_of_pos_right hdist_center (one_div_pos.mpr ht.1)
+    simpa [div_eq_mul_inv, ht.1.ne', mul_assoc, mul_left_comm, mul_comm] using h'
+  have hwpow_close : ‖w ^ (p + 1) - 1‖ < 1 / 4 := hapow w hw_close
+  have hz_decomp : center * w = z := by
+    dsimp [w]
+    field_simp [hcenter_ne]
+  have hcenter_pow : center ^ (p + 1) = ↑(t ^ (p + 1)) := by
+    simpa [center] using pow_ray_even_angle t p k
+  have hz_pow : z ^ (p + 1) = ↑(t ^ (p + 1)) * w ^ (p + 1) := by
+    rw [← hz_decomp, mul_pow, hcenter_pow]
+  have hnorm_lt : ‖z‖ < scale * t := by
+    have hle : ‖z‖ ≤ ‖center‖ + ‖z - center‖ := by
+      have hsum : center + (z - center) = z := by ring
+      simpa [hsum] using (norm_add_le center (z - center))
+    rw [hcenter_norm] at hle
+    have hlt : ‖z‖ < t + aperture * t := by
+      exact lt_of_le_of_lt hle (by linarith [hdist_center])
+    nlinarith
+  have ht_delta : t < δ₀ / scale := by
+    exact lt_of_lt_of_le ht.2 (min_le_left _ _)
+  have hz_delta : ‖z‖ < δ₀ := by
+    have hscale_t := (lt_div_iff₀ hscale).mp ht_delta
+    exact lt_trans hnorm_lt (by simpa [mul_comm] using hscale_t)
+  have ht_one : t < 1 := by
+    exact lt_of_lt_of_le ht.2 (le_trans (min_le_right _ _) (min_le_left _ _))
+  have ht_C : t < 1 / C := by
+    exact lt_of_lt_of_le ht.2
+      (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_left _ _)))
+  have ht_err : t < C / (4 * K * scale ^ (p + 2)) := by
+    exact lt_of_lt_of_le ht.2
+      (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_right _ _)))
+  have htpow_le_t : t ^ (p + 1) ≤ t := by
+    calc t ^ (p + 1) ≤ t ^ 1 := by
+          exact pow_le_pow_of_le_one ht.1.le ht_one.le (by omega : 1 ≤ p + 1)
+      _ = t := by simp
+  have hmain_coeff_pos : 0 < C * t ^ (p + 1) := by
+    exact mul_pos hC (pow_pos ht.1 _)
+  have hmain_coeff_lt_one : C * t ^ (p + 1) < 1 := by
+    have hCt_lt := (lt_div_iff₀ hC).mp ht_C
+    calc C * t ^ (p + 1) ≤ C * t := by
+          exact mul_le_mul_of_nonneg_left htpow_le_t hC.le
+      _ < 1 := by simpa [mul_comm] using hCt_lt
+  have hmain_lt :
+      ‖(1 : ℂ) - ↑(C * t ^ (p + 1)) * w ^ (p + 1)‖ <
+        1 - (C * t ^ (p + 1)) / 2 := by
+    exact norm_sub_mul_lt_one_of_close_to_one
+      (C * t ^ (p + 1)) hmain_coeff_pos hmain_coeff_lt_one hwpow_close
+  have h_scalar :
+      K * scale ^ (p + 2) * t < C / 4 := by
+    have hden : 0 < 4 * K * scale ^ (p + 2) := by
+      positivity
+    have h' := (lt_div_iff₀ hden).mp ht_err
+    nlinarith
+  have h_err_bound :
+      K * (scale * t) ^ (p + 2) < C * t ^ (p + 1) / 4 := by
+    have htpow_pos : 0 < t ^ (p + 1) := pow_pos ht.1 _
+    calc K * (scale * t) ^ (p + 2)
+        = t ^ (p + 1) * (K * scale ^ (p + 2) * t) := by
+            rw [mul_pow]
+            ring
+      _ < t ^ (p + 1) * (C / 4) := by
+            exact mul_lt_mul_of_pos_left h_scalar htpow_pos
+      _ = C * t ^ (p + 1) / 4 := by
+            ring
+  have hzpow_le :
+      ‖z‖ ^ (p + 2) ≤ (scale * t) ^ (p + 2) := by
+    exact pow_le_pow_left₀ (norm_nonneg _) hnorm_lt.le _
+  have h_approx :
+      ‖R z * exp (-z) - ((1 : ℂ) - ↑(C * t ^ (p + 1)) * w ^ (p + 1))‖ ≤
+        K * ‖z‖ ^ (p + 2) := by
+    simpa [hz_pow, mul_assoc, mul_left_comm, mul_comm] using hφ z hz_delta
+  have h_err :
+      K * ‖z‖ ^ (p + 2) < C * t ^ (p + 1) / 4 := by
+    calc K * ‖z‖ ^ (p + 2) ≤ K * (scale * t) ^ (p + 2) := by
+          exact mul_le_mul_of_nonneg_left hzpow_le hK.le
+      _ < C * t ^ (p + 1) / 4 := h_err_bound
+  have h_upper :
+      ‖R z * exp (-z)‖ ≤
+        ‖(1 : ℂ) - ↑(C * t ^ (p + 1)) * w ^ (p + 1)‖ + K * ‖z‖ ^ (p + 2) := by
+    have htriangle :=
+      norm_add_le ((1 : ℂ) - ↑(C * t ^ (p + 1)) * w ^ (p + 1))
+        (R z * exp (-z) - ((1 : ℂ) - ↑(C * t ^ (p + 1)) * w ^ (p + 1)))
+    rw [add_sub_cancel] at htriangle
+    linarith
+  calc ‖R z * exp (-z)‖
+      ≤ ‖(1 : ℂ) - ↑(C * t ^ (p + 1)) * w ^ (p + 1)‖ + K * ‖z‖ ^ (p + 2) :=
+        h_upper
+    _ < (1 - (C * t ^ (p + 1)) / 2) + C * t ^ (p + 1) / 4 := by
+        linarith
+    _ < 1 := by
+        nlinarith [hmain_coeff_pos]
 
 /-- Honest branch-termination predicate for later topology work: either the branch
 has a genuine finite endpoint away from the origin, or it escapes every closed
