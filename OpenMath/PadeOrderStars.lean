@@ -1,7 +1,21 @@
 import OpenMath.Pade
+import OpenMath.PadeAsymptotics
 import OpenMath.OrderStars
 
 open Complex
+
+/-- Concrete Padé feeder from the new local asymptotic bound into the even-angle,
+positive-error-constant cone lemma from `OrderStars`. -/
+theorem padeR_local_minus_near_even_angle_of_pos_errorConst
+    (n d k : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin (2 * ↑k * Real.pi / (↑(n + d) + 1)) aperture radius →
+        ‖padeR n d z * exp (-z)‖ < 1 := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  exact
+    local_minus_near_even_angle_of_pos_errorConst
+      (R := padeR n d) (p := n + d) (k := k)
+      (C := padePhiErrorConst n d) K δ₀ hC hK hδ hφ
 
 abbrev PadeRRealizedDownArrowInfinityWitnessFamily
     (n d : ℕ) (data : OrderArrowTerminationData) :=

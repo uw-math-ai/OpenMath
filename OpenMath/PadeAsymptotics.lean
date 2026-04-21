@@ -640,3 +640,220 @@ theorem padeR_exp_neg_leading_term
   · subst hz
     simp [padeR, padeP_eval_zero, padeQ_eval_zero]
   · simp [hz, div_eq_mul_inv, mul_left_comm, mul_comm]
+
+/-- The Padé denominator stays nonzero on a neighborhood of the origin. -/
+theorem padeQ_ne_zero_nhds
+    (n d : ℕ) :
+    ∃ δ₀ : ℝ, 0 < δ₀ ∧
+      ∀ z : ℂ, ‖z‖ < δ₀ → padeQ n d z ≠ 0 := by
+  exact padeQ_nonzero_near_zero n d
+
+/-- Near the origin, the reciprocal Padé denominator is uniformly bounded. -/
+theorem padeQ_inv_bound
+    (n d : ℕ) :
+    ∃ δ₀ : ℝ, 0 < δ₀ ∧
+      ∀ z : ℂ, ‖z‖ < δ₀ → ‖(padeQ n d z)⁻¹‖ ≤ 2 := by
+  exact padeQ_inv_norm_le_two_near_zero n d
+
+/-- On the closed unit disk, `padeQ n d z - 1` grows at most linearly in `‖z‖`. -/
+theorem padeQ_sub_one_lipschitz
+    (n d : ℕ) :
+    ∃ C > 0, ∀ z : ℂ, ‖z‖ ≤ 1 → ‖padeQ n d z - 1‖ ≤ C * ‖z‖ := by
+  let p : Polynomial ℂ := PadeAsymptotics.padeQ_poly n d - 1
+  have hp_eval : ∀ z : ℂ, p.eval z = padeQ n d z - 1 := by
+    intro z
+    simp [p, PadeAsymptotics.padeQ_poly_eval]
+  have hp_zero : p.eval 0 = 0 := by
+    simp [hp_eval, padeQ_eval_zero]
+  have hp_root : p.IsRoot 0 := hp_zero
+  have hX_dvd : Polynomial.X ∣ p := by
+    simpa using (Polynomial.dvd_iff_isRoot.mpr hp_root)
+  obtain ⟨q, hq⟩ := hX_dvd
+  obtain ⟨B, hB⟩ :=
+    IsCompact.exists_bound_of_continuousOn
+      (ProperSpace.isCompact_closedBall (0 : ℂ) 1)
+      (q.continuous.continuousOn)
+  refine ⟨max B 1, by positivity, ?_⟩
+  intro z hz
+  have hzmem : z ∈ Metric.closedBall (0 : ℂ) 1 := mem_closedBall_zero_iff.mpr hz
+  have hqbound : ‖q.eval z‖ ≤ max B 1 := by
+    exact le_trans (hB z hzmem) (le_max_left _ _)
+  calc
+    ‖padeQ n d z - 1‖ = ‖p.eval z‖ := by rw [hp_eval]
+    _ = ‖(Polynomial.X * q).eval z‖ := by rw [hq]
+    _ = ‖z * q.eval z‖ := by simp
+    _ = ‖z‖ * ‖q.eval z‖ := norm_mul _ _
+    _ ≤ ‖z‖ * max B 1 := by gcongr
+    _ = max B 1 * ‖z‖ := by ring
+
+/-- Local quantitative defect bound for the Padé numerator seam needed by the
+order-star local cone arguments. -/
+theorem numerator_local_bound
+    (n d : ℕ) :
+    ∃ K δ : ℝ, 0 < K ∧ 0 < δ ∧
+      ∀ z : ℂ, ‖z‖ < δ →
+        ‖padeP n d z * exp (-z) - padeQ n d z +
+            (padePhiErrorConst n d : ℂ) * padeQ n d z * z ^ (n + d + 1)‖
+          ≤ K * ‖z‖ ^ (n + d + 2) := by
+  let m := n + d
+  let coeff : ℂ := (1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)
+  obtain ⟨KD, hKDpos, hD⟩ :
+      ∃ KD : ℝ, 0 < KD ∧
+        ∀ z : ℂ, ‖z‖ ≤ 1 →
+          ‖padeP n d z - padeQ n d z * expTaylor m z - coeff * z ^ (m + 1)‖ ≤
+            KD * ‖z‖ ^ (m + 2) := by
+    dsimp [m, coeff]
+    obtain ⟨g, hg⟩ := PadeAsymptotics.padeDefect_poly_sub_leading_X_pow_dvd n d
+    obtain ⟨B, hB⟩ :=
+      IsCompact.exists_bound_of_continuousOn
+        (ProperSpace.isCompact_closedBall (0 : ℂ) 1)
+        (g.continuous.continuousOn)
+    refine ⟨max B 1, by positivity, ?_⟩
+    intro z hz
+    have hzmem : z ∈ Metric.closedBall (0 : ℂ) 1 := mem_closedBall_zero_iff.mpr hz
+    have hgbound : ‖g.eval z‖ ≤ max B 1 := by
+      exact le_trans (hB z hzmem) (le_max_left _ _)
+    have hEval := congrArg (fun r : Polynomial ℂ => r.eval z) hg
+    have hEq :
+        padeP n d z - padeQ n d z * expTaylor (n + d) z -
+            ((1 / (((n + d + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+              z ^ (n + d + 1) =
+          z ^ (n + d + 2) * g.eval z := by
+      simpa [PadeAsymptotics.padeDefect_poly, PadeAsymptotics.padeP_poly_eval,
+        PadeAsymptotics.padeQ_poly_eval, PadeAsymptotics.expTaylor_poly_eval,
+        Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X] using hEval
+    rw [hEq, norm_mul, norm_pow]
+    calc
+      ‖z‖ ^ (n + d + 2) * ‖g.eval z‖ ≤ ‖z‖ ^ (n + d + 2) * max B 1 := by
+        exact mul_le_mul_of_nonneg_left hgbound (pow_nonneg (norm_nonneg z) _)
+      _ = max B 1 * ‖z‖ ^ (n + d + 2) := by ring
+  obtain ⟨δE, KE, hδE, hKE, hE⟩ := expTaylor_exp_neg_local_norm_bound m
+  obtain ⟨C, hCpos, hC⟩ := padeQ_sub_one_lipschitz n d
+  refine ⟨Real.exp 1 * KD + (C + 1) * KE + ‖coeff‖ * (C + 2), min δE 1,
+    by positivity, by positivity, ?_⟩
+  intro z hz
+  have hzE : ‖z‖ < δE := lt_of_lt_of_le hz (min_le_left _ _)
+  have hz1 : ‖z‖ < 1 := lt_of_lt_of_le hz (min_le_right _ _)
+  have hz1' : ‖z‖ ≤ 1 := le_of_lt hz1
+  have hQsub : ‖padeQ n d z - 1‖ ≤ C * ‖z‖ := hC z hz1'
+  have hQbound : ‖padeQ n d z‖ ≤ C + 1 := by
+    have hnorm : ‖padeQ n d z‖ ≤ ‖padeQ n d z - 1‖ + 1 := by
+      have := norm_add_le (padeQ n d z - 1) (1 : ℂ)
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using this
+    have hCnn : 0 ≤ C := le_of_lt hCpos
+    calc
+      ‖padeQ n d z‖ ≤ ‖padeQ n d z - 1‖ + 1 := hnorm
+      _ ≤ C * ‖z‖ + 1 := by gcongr
+      _ ≤ C + 1 := by nlinarith
+  have hExpNorm : ‖Complex.exp (-z)‖ ≤ Real.exp 1 := by
+    calc
+      ‖Complex.exp (-z)‖ ≤ Real.exp ‖-z‖ := Complex.norm_exp_le_exp_norm (-z)
+      _ = Real.exp ‖z‖ := by simp
+      _ ≤ Real.exp 1 := Real.exp_le_exp.mpr hz1'
+  have hDiff : ‖Complex.exp (-z) - padeQ n d z‖ ≤ (C + 2) * ‖z‖ := by
+    have hExpSub : ‖Complex.exp (-z) - 1‖ ≤ 2 * ‖z‖ := by
+      simpa [norm_neg] using
+        (Complex.norm_exp_sub_one_le (x := -z) (by simpa [norm_neg] using hz1'))
+    have hQsub' : ‖1 - padeQ n d z‖ ≤ C * ‖z‖ := by
+      simpa [norm_sub_rev] using hQsub
+    calc
+      ‖Complex.exp (-z) - padeQ n d z‖ =
+          ‖(Complex.exp (-z) - 1) + (1 - padeQ n d z)‖ := by ring_nf
+      _ ≤ ‖Complex.exp (-z) - 1‖ + ‖1 - padeQ n d z‖ := norm_add_le _ _
+      _ ≤ 2 * ‖z‖ + C * ‖z‖ := add_le_add hExpSub hQsub'
+      _ = (C + 2) * ‖z‖ := by ring
+  let defect : ℂ := padeP n d z - padeQ n d z * expTaylor m z - coeff * z ^ (m + 1)
+  let tail : ℂ :=
+    expTaylor m z * exp (-z) - (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1))
+  have hsplit :
+      padeP n d z * exp (-z) - padeQ n d z +
+          (padePhiErrorConst n d : ℂ) * padeQ n d z * z ^ (m + 1) =
+        defect * exp (-z) + padeQ n d z * tail +
+          coeff * z ^ (m + 1) * (exp (-z) - padeQ n d z) := by
+    simp [defect, tail, coeff, m]
+    ring
+  have hterm1 : ‖defect * exp (-z)‖ ≤ Real.exp 1 * KD * ‖z‖ ^ (m + 2) := by
+    calc
+      ‖defect * exp (-z)‖ = ‖defect‖ * ‖Complex.exp (-z)‖ := norm_mul _ _
+      _ ≤ (KD * ‖z‖ ^ (m + 2)) * Real.exp 1 := by
+        exact mul_le_mul (hD z hz1') hExpNorm (by positivity) (by positivity)
+      _ = Real.exp 1 * KD * ‖z‖ ^ (m + 2) := by ring
+  have hterm2 : ‖padeQ n d z * tail‖ ≤ (C + 1) * KE * ‖z‖ ^ (m + 2) := by
+    calc
+      ‖padeQ n d z * tail‖ = ‖padeQ n d z‖ * ‖tail‖ := norm_mul _ _
+      _ ≤ (C + 1) * (KE * ‖z‖ ^ (m + 2)) := by
+        exact mul_le_mul hQbound (hE z hzE) (by positivity) (by positivity)
+      _ = (C + 1) * KE * ‖z‖ ^ (m + 2) := by ring
+  have hterm3 :
+      ‖coeff * z ^ (m + 1) * (exp (-z) - padeQ n d z)‖ ≤
+        ‖coeff‖ * (C + 2) * ‖z‖ ^ (m + 2) := by
+    have hpow_nonneg : 0 ≤ ‖z‖ ^ (m + 1) := by positivity
+    have hcoeff_nonneg : 0 ≤ ‖coeff‖ := norm_nonneg _
+    have hinner :
+        ‖z‖ ^ (m + 1) * ‖exp (-z) - padeQ n d z‖ ≤
+          ‖z‖ ^ (m + 1) * ((C + 2) * ‖z‖) :=
+      mul_le_mul_of_nonneg_left hDiff hpow_nonneg
+    calc
+      ‖coeff * z ^ (m + 1) * (exp (-z) - padeQ n d z)‖ =
+          ‖coeff‖ * (‖z‖ ^ (m + 1) * ‖exp (-z) - padeQ n d z‖) := by
+            rw [norm_mul, norm_mul, norm_pow]
+            simp [mul_assoc]
+      _ ≤ ‖coeff‖ * (‖z‖ ^ (m + 1) * ((C + 2) * ‖z‖)) := by
+        exact mul_le_mul_of_nonneg_left hinner hcoeff_nonneg
+      _ = ‖coeff‖ * (C + 2) * ‖z‖ ^ (m + 2) := by
+        rw [show m + 2 = (m + 1) + 1 by omega, pow_succ']
+        ring
+  rw [hsplit]
+  calc
+    ‖defect * exp (-z) + padeQ n d z * tail + coeff * z ^ (m + 1) * (exp (-z) - padeQ n d z)‖
+      ≤ ‖defect * exp (-z)‖ + ‖padeQ n d z * tail‖ +
+          ‖coeff * z ^ (m + 1) * (exp (-z) - padeQ n d z)‖ := by
+            have h12 := norm_add_le (defect * exp (-z)) (padeQ n d z * tail)
+            have h123 := norm_add_le (defect * exp (-z) + padeQ n d z * tail)
+              (coeff * z ^ (m + 1) * (exp (-z) - padeQ n d z))
+            linarith
+    _ ≤ (Real.exp 1 * KD) * ‖z‖ ^ (m + 2) + ((C + 1) * KE) * ‖z‖ ^ (m + 2) +
+          (‖coeff‖ * (C + 2)) * ‖z‖ ^ (m + 2) := by
+            nlinarith [hterm1, hterm2, hterm3]
+    _ = (Real.exp 1 * KD + (C + 1) * KE + ‖coeff‖ * (C + 2)) * ‖z‖ ^ (m + 2) := by
+          ring
+
+/-- Honest local asymptotic control for `padeR n d z * exp (-z)` near the
+origin, with the explicit first neglected coefficient. -/
+theorem padeR_exp_neg_local_bound
+    (n d : ℕ) :
+    ∃ K δ₀ : ℝ, 0 < K ∧ 0 < δ₀ ∧
+      ∀ z : ℂ, ‖z‖ < δ₀ →
+        ‖padeR n d z * exp (-z) -
+            (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))‖
+          ≤ K * ‖z‖ ^ (n + d + 2) := by
+  obtain ⟨Knum, δnum, hKnum, hδnum, hnum⟩ := numerator_local_bound n d
+  obtain ⟨δinv, hδinv, hinv⟩ := padeQ_inv_bound n d
+  obtain ⟨δnz, hδnz, hnz⟩ := padeQ_ne_zero_nhds n d
+  refine ⟨2 * Knum, min δnum (min δinv δnz), by positivity, by positivity, ?_⟩
+  intro z hz
+  have hznum : ‖z‖ < δnum := lt_of_lt_of_le hz (min_le_left _ _)
+  have hzinv : ‖z‖ < δinv := lt_of_lt_of_le hz (le_trans (min_le_right _ _) (min_le_left _ _))
+  have hznz : ‖z‖ < δnz := lt_of_lt_of_le hz (le_trans (min_le_right _ _) (min_le_right _ _))
+  have hqne : padeQ n d z ≠ 0 := hnz z hznz
+  have hkey :
+      padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)) =
+        (padeP n d z * exp (-z) - padeQ n d z +
+            (padePhiErrorConst n d : ℂ) * padeQ n d z * z ^ (n + d + 1)) /
+          padeQ n d z := by
+    rw [padeR]
+    field_simp [hqne]
+    ring
+  rw [hkey, norm_div, div_eq_mul_inv]
+  calc
+    ‖padeP n d z * exp (-z) - padeQ n d z +
+        (padePhiErrorConst n d : ℂ) * padeQ n d z * z ^ (n + d + 1)‖ * ‖padeQ n d z‖⁻¹
+      ≤ (Knum * ‖z‖ ^ (n + d + 2)) * ‖padeQ n d z‖⁻¹ := by
+          gcongr
+          exact hnum z hznum
+    _ = (Knum * ‖z‖ ^ (n + d + 2)) * ‖(padeQ n d z)⁻¹‖ := by rw [norm_inv]
+    _ ≤ (Knum * ‖z‖ ^ (n + d + 2)) * 2 := by
+          gcongr
+          exact hinv z hzinv
+    _ = (2 * Knum) * ‖z‖ ^ (n + d + 2) := by ring
