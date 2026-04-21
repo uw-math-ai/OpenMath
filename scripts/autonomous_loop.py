@@ -315,6 +315,43 @@ def get_recent_history(n: int = 10) -> list:
     return [json.loads(l) for l in lines[-n:]]
 
 
+# ─── Formalization data helpers ───────────────────────────────────────────────
+
+FORMALIZATION_DATA = ROOT / "extraction" / "formalization_data"
+
+def get_entity_statement(entity_id: str) -> str:
+    """Return the textbook statement_latex for an entity, or empty string."""
+    safe_id = entity_id.replace(":", "_")
+    path = FORMALIZATION_DATA / "entities" / f"{safe_id}.json"
+    if not path.exists():
+        return ""
+    try:
+        data = json.loads(path.read_text())
+        return data.get("statement_latex", data.get("statement_text", ""))
+    except Exception:
+        return ""
+
+
+def get_entity_context(entity_id: str) -> str:
+    """Return a compact context block for a formalization entity."""
+    safe_id = entity_id.replace(":", "_")
+    path = FORMALIZATION_DATA / "entities" / f"{safe_id}.json"
+    if not path.exists():
+        return f"(entity {entity_id} not found in formalization_data)"
+    try:
+        data = json.loads(path.read_text())
+        lines = [
+            f"ID: {data.get('id', entity_id)}",
+            f"Name: {data.get('name', '?')}",
+            f"Kind: {data.get('kind', '?')}  Page: {data.get('page', '?')}",
+            f"Statement: {data.get('statement_text', '(none)')}",
+            f"Deps: {[d['id'] for d in data.get('dependencies', [])]}",
+        ]
+        return "\n".join(lines)
+    except Exception:
+        return f"(failed to read entity {entity_id})"
+
+
 # ─── Sorry counting ──────────────────────────────────────────────────────────
 
 def _strip_lean_comments(text: str) -> str:
@@ -394,6 +431,54 @@ def get_sorry_locations() -> str:
     if not locations:
         return "No sorry's found."
     return "\n".join(locations)
+
+
+# ─── Semantic sorry (tautology) detection ─────────────────────────────────────
+# Improvement #2 / #5 from loop_improvements.md:
+# Lean's type checker accepts tautologies and dishonest definitions. These
+# patterns flag proofs that are likely vacuous even though they compile.
+
+TAUTOLOGY_PATTERNS = [
+    (r':=\s*h_\w+\s*$',    "proof returns a hypothesis directly"),
+    (r':=\s*id\s*$',        "proof is identity function"),
+    (r'\bexact\s+h_\w+\s*$', "proof is 'exact <hypothesis>'"),
+]
+
+
+def count_semantic_sorries() -> int:
+    """Count suspected vacuous proofs in all Lean files under OpenMath/."""
+    count = 0
+    lean_dir = ROOT / "OpenMath"
+    if not lean_dir.exists():
+        return 0
+    for f in lean_dir.rglob("*.lean"):
+        code = _strip_lean_comments(f.read_text())
+        for line in code.splitlines():
+            stripped = line.strip()
+            for pattern, _ in TAUTOLOGY_PATTERNS:
+                if re.search(pattern, stripped):
+                    count += 1
+                    break
+    return count
+
+
+def get_tautology_locations() -> list:
+    """Return list of (rel_path, line_no, raw_line, reason) for suspected tautologies."""
+    locations = []
+    lean_dir = ROOT / "OpenMath"
+    if not lean_dir.exists():
+        return locations
+    for f in lean_dir.rglob("*.lean"):
+        raw_lines = f.read_text().splitlines()
+        code_lines = _strip_lean_comments('\n'.join(raw_lines)).splitlines()
+        for i, code_line in enumerate(code_lines, 1):
+            stripped = code_line.strip()
+            for pattern, reason in TAUTOLOGY_PATTERNS:
+                if re.search(pattern, stripped):
+                    rel = str(f.relative_to(ROOT))
+                    locations.append((rel, i, raw_lines[i - 1].strip(), reason))
+                    break
+    return locations
 
 
 # ─── Git helpers ──────────────────────────────────────────────────────────────
@@ -913,8 +998,15 @@ proofs if they need minor edits. This is free work — do not ignore it.
 
 ## Instructions
 1. Follow the strategy above. Do not freelance or cherry-pick easy goals.
-2. Use sorry-first workflow: write proof structure with sorry, verify it compiles, then close sorry's.
-3. **Aristotle-first workflow (MANDATORY)**: Aristotle is FREE compute — use it aggressively.
+2. **Load formalization data FIRST (MANDATORY — Improvement #6)**: Before writing any Lean code
+   for a target entity, read its JSON file at
+   `extraction/formalization_data/entities/<id>.json` (replace `:` with `_` in the ID).
+   Confirm your Lean statement matches the `statement_latex` field. If you cannot match it,
+   file an issue explaining the gap — do NOT silently weaken the statement or strengthen the
+   hypotheses. Also read the `dependencies` list and verify you are not assuming conclusions
+   from dependencies as hypotheses.
+3. Use sorry-first workflow: write proof structure with sorry, verify it compiles, then close sorry's.
+4. **Aristotle-first workflow (MANDATORY)**: Aristotle is FREE compute — use it aggressively.
    a. After setting up the sorry-first structure, identify ~5 sorry's or sub-lemmas suitable for Aristotle.
    b. Submit ALL of them to Aristotle in batch (use submit_file tool for each).
    c. Sleep for 30 minutes (`sleep 1800`) to let Aristotle work.
@@ -922,12 +1014,53 @@ proofs if they need minor edits. This is free work — do not ignore it.
    e. Incorporate whatever Aristotle proved.
    f. Fix partial proofs from Aristotle if they need minor edits.
    g. Only manually prove what Aristotle completely failed on.
-4. Use lean LSP tools (lean_goal, lean_multi_attempt, lean_leansearch, lean_loogle) to find lemmas and prove goals that Aristotle didn't solve.
-5. Verify your changes compile: run `lake env lean <file>` before committing.
-6. Write `.prover-state/task_results/cycle_{cycle:03d}.md` documenting what you did (include Aristotle job results).
-7. If blocked, write an issue file in `.prover-state/issues/`.
-8. Commit and push your changes with a descriptive message.
-9. A cycle with zero changes is unacceptable. At minimum, decompose a sorry or write an issue.
+5. Use lean LSP tools (lean_goal, lean_multi_attempt, lean_leansearch, lean_loogle) to find lemmas and prove goals that Aristotle didn't solve.
+6. Verify your changes compile: run `lake env lean <file>` before committing.
+7. **Pre-commit faithfulness checklist (MANDATORY — Improvement #3)**: Before committing:
+   a. TAUTOLOGY CHECK: does any theorem conclusion appear verbatim as one of its own hypotheses?
+      If yes, this is a bug — do not commit, file an issue instead.
+   b. IDENTITY CHECK: is any proof just `exact h`, `:= h_something`, or `:= id`?
+      If so, ask whether this theorem is doing real mathematical work. If it only re-exports
+      a hypothesis with a new name, it is vacuous — escalate to an issue.
+   c. DEFINITION SMUGGLING CHECK: does any `structure` have a `Prop` field that is supposed
+      to be a *consequence* of the other fields rather than an *input*? If so, it must be
+      proved inline or left as `sorry` with a comment — not silently assumed.
+   d. HYPOTHESIS STRENGTH CHECK: are any hypotheses stronger than the textbook requires?
+      Extra hypotheses not in the textbook statement must be documented with justification.
+8. Write `.prover-state/task_results/cycle_{cycle:03d}.md` with the format below.
+9. If blocked, write an issue file in `.prover-state/issues/`.
+10. Commit and push your changes with a descriptive message.
+11. A cycle with zero changes is unacceptable. At minimum, decompose a sorry or write an issue.
+
+## Required task_results format
+```markdown
+# Cycle {cycle:03d} Results
+
+## Worked on
+[which sorry / theorem / infrastructure]
+
+## Approach
+[what you tried]
+
+## Result
+[SUCCESS / FAILED — explanation]
+
+## Faithfulness check
+For each new `def` or `theorem` introduced this cycle:
+- Entity ID and textbook statement (quoted from formalization_data):
+  > ...
+- Lean statement captures: [same content / weaker / stronger / different]
+- If different: justification for divergence
+
+## Dead ends
+[approaches that didn't work and why]
+
+## Discovery
+[anything learned that's useful for future cycles]
+
+## Suggested next approach
+[what the planner should consider]
+```
 
 Work autonomously. Do not ask questions. Make progress.
 """
@@ -941,6 +1074,7 @@ Work autonomously. Do not ask questions. Make progress.
 
 
 def run_evaluator(cycle: int, pre_sorry_count: int, post_sorry_count: int,
+                  pre_semantic_count: int, post_semantic_count: int,
                   worker_output: str) -> dict:
     """Run the evaluator to assess progress. Returns structured evaluation."""
     task_result_file = TASK_RESULTS / f"cycle_{cycle:03d}.md"
@@ -954,11 +1088,26 @@ def run_evaluator(cycle: int, pre_sorry_count: int, post_sorry_count: int,
         for h in recent_history
     ) or "No history yet."
 
+    # Tautology locations for evaluator context
+    tautology_locs = get_tautology_locations()
+    tautology_section = ""
+    if tautology_locs:
+        tautology_section = "## Suspected vacuous proofs (tautology scan)\n" + "\n".join(
+            f"  {rel}:{ln}: `{line}` — {reason}"
+            for rel, ln, line, reason in tautology_locs[:20]
+        ) + "\n"
+
+    # Check for faithfulness section in task result
+    has_faithfulness = "## Faithfulness check" in task_result
+
     prompt = f"""You are the evaluator for an autonomous Lean 4 formalization project.
 Assess the worker's progress in cycle {cycle}.
 
 ## Sorry count change
 Before: {pre_sorry_count} → After: {post_sorry_count}
+
+## Semantic sorry count change (vacuous proof patterns)
+Before: {pre_semantic_count} → After: {post_semantic_count}
 
 ## Git diff
 {diff}
@@ -966,6 +1115,7 @@ Before: {pre_sorry_count} → After: {post_sorry_count}
 ## Task result written by worker
 {task_result}
 
+{tautology_section}
 ## Previous attempt history
 {attempts}
 
@@ -978,7 +1128,8 @@ Before: {pre_sorry_count} → After: {post_sorry_count}
 ## Your job
 Output a JSON object with these fields:
 - "progress_score": integer from -2 to +2
-  - -2: regression (build broken, sorry count increased without justification)
+  - -2: regression (build broken, sorry count increased without justification,
+        or semantic_sorry_count increased)
   - -1: stall with wasted effort (repeated failed approach)
   - 0: stall but reasonable (exploration, infrastructure)
   - +1: minor progress (decomposition, infrastructure, partial proof)
@@ -987,6 +1138,20 @@ Output a JSON object with these fields:
 - "stuck_on": what's blocking progress (empty string if not stuck)
 - "strategy_recommendation": what the planner should consider next cycle
 - "attempts_update": new entry for attempts.md (compact description of what was tried and failed, empty if nothing new to record)
+- "faithfulness_flags": list of strings, each being one of:
+  - "TAUTOLOGY:<location>" — theorem conclusion equals one of its own hypotheses
+  - "DEFINITION_MISMATCH:<name>" — a def of a named concept diverges from textbook without justification
+  - "SMUGGLED_HYPOTHESIS:<name>" — a structure field encodes what should be a derived conclusion
+  - "MISSING_FAITHFULNESS_CHECK" — task_result lacks the required ## Faithfulness check section
+  Leave as [] if none detected.
+
+## Faithfulness scoring rules (Improvements #4 and #5)
+- Each "TAUTOLOGY" flag: subtract 1 from progress_score
+- Each "DEFINITION_MISMATCH" flag: subtract 1 from progress_score
+- Each "SMUGGLED_HYPOTHESIS" flag: subtract 1 from progress_score
+- If semantic_sorry_count increased: set progress_score to at most -1
+- If task_result is missing ## Faithfulness check: add "MISSING_FAITHFULNESS_CHECK" flag
+  (do not penalize score for first occurrence, warn only)
 
 Respond with ONLY the JSON object, no other text.
 """
@@ -1004,16 +1169,21 @@ Respond with ONLY the JSON object, no other text.
             "stuck_on": "",
             "strategy_recommendation": "Continue with current strategy",
             "attempts_update": "",
+            "faithfulness_flags": [],
         }
 
     result["cycle"] = cycle
     result["engine"] = get_worker_engine(cycle)
     result["pre_sorry_count"] = pre_sorry_count
     result["post_sorry_count"] = post_sorry_count
+    result["pre_semantic_count"] = pre_semantic_count
+    result["post_semantic_count"] = post_semantic_count
     result["timestamp"] = datetime.now(timezone.utc).isoformat()
 
+    flags = result.get("faithfulness_flags", [])
     log(f"Evaluator: score={result.get('progress_score')}, "
-        f"engine={result.get('engine')}, summary={result.get('summary', 'N/A')}")
+        f"engine={result.get('engine')}, summary={result.get('summary', 'N/A')}, "
+        f"flags={flags}")
     return result
 
 
@@ -1112,6 +1282,35 @@ def check_budget_cap() -> Optional[str]:
     return None
 
 
+def tautology_gate(cycle: int) -> list:
+    """Scan for vacuous proofs introduced this cycle.
+
+    Returns list of warning strings (empty = clean). Improvement #2 from
+    loop_improvements.md: flags tautologies that Lean's type checker accepts.
+    """
+    locations = get_tautology_locations()
+    if not locations:
+        return []
+
+    # Only flag locations touched in this cycle's diff
+    try:
+        r = subprocess.run(
+            ["git", "diff", "HEAD~1", "--name-only"],
+            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=30)
+        changed = set(r.stdout.strip().splitlines())
+    except Exception:
+        changed = set()
+
+    warnings = []
+    for rel, lineno, raw_line, reason in locations:
+        if not changed or rel in changed:
+            warnings.append(
+                f"TAUTOLOGY? {rel}:{lineno}: `{raw_line}` ({reason})"
+            )
+    return warnings
+
+
 def check_strategy_compliance(cycle: int) -> Optional[str]:
     """Check if the worker touched files mentioned in strategy.md.
 
@@ -1182,7 +1381,8 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
 
     # Pre-cycle state
     pre_sorry_count = count_sorries()
-    log(f"Pre-cycle sorry count: {pre_sorry_count}")
+    pre_semantic_count = count_semantic_sorries()
+    log(f"Pre-cycle sorry count: {pre_sorry_count} (semantic: {pre_semantic_count})")
 
     # If CI is failing, override strategy to fix it first
     if ci_failing:
@@ -1220,7 +1420,9 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
 
     # Post-cycle state
     post_sorry_count = count_sorries()
+    post_semantic_count = count_semantic_sorries()
     log(f"Post-cycle sorry count: {post_sorry_count} (delta: {post_sorry_count - pre_sorry_count:+d})")
+    log(f"Post-cycle semantic sorry count: {post_semantic_count} (delta: {post_semantic_count - pre_semantic_count:+d})")
 
     engine = get_worker_engine(cycle)
 
@@ -1231,11 +1433,14 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
             "engine": engine,
             "pre_sorry_count": pre_sorry_count,
             "post_sorry_count": post_sorry_count,
+            "pre_semantic_count": pre_semantic_count,
+            "post_semantic_count": post_semantic_count,
             "progress_score": 1 if post_sorry_count < pre_sorry_count else 0,
             "summary": f"Sorry count: {pre_sorry_count}→{post_sorry_count}",
             "stuck_on": "",
             "strategy_recommendation": "",
             "attempts_update": "",
+            "faithfulness_flags": [],
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     else:
@@ -1243,6 +1448,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
         log("── Running Evaluator ──")
         write_heartbeat(cycle, "evaluator")
         evaluation = run_evaluator(cycle, pre_sorry_count, post_sorry_count,
+                                   pre_semantic_count, post_semantic_count,
                                    worker_output)
 
         # Update attempts.md
@@ -1263,6 +1469,21 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
                 f"REVERTED: sorry count increased {pre_sorry_count}→{post_sorry_count}"
             )
 
+        # Semantic sorry gate (Improvement #5): vacuous-proof increase is also a regression
+        if post_semantic_count > pre_semantic_count:
+            taut_warnings = tautology_gate(cycle)
+            if taut_warnings:
+                log(f"Tautology gate: {len(taut_warnings)} suspected vacuous proof(s)")
+                for w in taut_warnings:
+                    log(f"  {w}")
+                evaluation["tautology_warnings"] = taut_warnings
+                if evaluation.get("progress_score", 0) > -1:
+                    evaluation["progress_score"] = -1
+                    evaluation["summary"] = (
+                        f"SEMANTIC REGRESSION: {len(taut_warnings)} suspected vacuous proof(s) "
+                        f"introduced. " + evaluation.get("summary", "")
+                    )
+
         # Budget cap
         budget_stuck = check_budget_cap()
         if budget_stuck:
@@ -1277,8 +1498,6 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
         if deviation:
             log(f"Strategy compliance: {deviation}")
             evaluation["strategy_deviation"] = deviation
-            # Cap score at 0 if worker ignored strategy — good work doesn't
-            # count if it's not what was asked for.
             if evaluation.get("progress_score", 0) > 0:
                 log("Capping score to 0 due to strategy deviation")
                 evaluation["progress_score"] = 0
@@ -1288,6 +1507,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
                 )
 
         # ── Consultant ──
+        # Trigger 1: stuck for STUCK_THRESHOLD consecutive cycles (original)
         consecutive_stalls = 0
         for h in reversed(get_recent_history(STUCK_THRESHOLD)):
             if h.get("progress_score", 1) <= 0:
@@ -1295,7 +1515,18 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
             else:
                 break
 
-        if consecutive_stalls >= STUCK_THRESHOLD:
+        # Trigger 2: definition divergence flags (Improvement #7) — escalate immediately
+        faithfulness_flags = evaluation.get("faithfulness_flags", [])
+        divergence_flags = [
+            f for f in faithfulness_flags
+            if f.startswith("DEFINITION_MISMATCH") or f.startswith("SMUGGLED_HYPOTHESIS")
+        ]
+
+        if divergence_flags:
+            log(f"── Running Consultant (definition divergence: {divergence_flags}) ──")
+            write_heartbeat(cycle, "consultant")
+            run_consultant(cycle)
+        elif consecutive_stalls >= STUCK_THRESHOLD:
             log(f"── Running Consultant (stuck for {consecutive_stalls} cycles) ──")
             write_heartbeat(cycle, "consultant")
             run_consultant(cycle)
@@ -1330,9 +1561,16 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
             stuck_info = f" — stuck {consecutive} cycles"
 
     engine_tag = f" [{engine}]"
+    faithfulness_flags = evaluation.get("faithfulness_flags", [])
+    flags_info = ""
+    if faithfulness_flags:
+        flags_info = "\n⚠️ Flags: " + ", ".join(faithfulness_flags[:3])
+    semantic_delta = post_semantic_count - pre_semantic_count
+    semantic_info = f", semantic: {pre_semantic_count}→{post_semantic_count}" if semantic_delta != 0 else ""
     alert = (
-        f"{emoji} *Cycle {cycle}*{engine_tag} (sorry: {pre_sorry_count}→{post_sorry_count})"
-        f"{stuck_info}\n{summary}"
+        f"{emoji} *Cycle {cycle}*{engine_tag} "
+        f"(sorry: {pre_sorry_count}→{post_sorry_count}{semantic_info})"
+        f"{stuck_info}{flags_info}\n{summary}"
     )
     telegram_send(alert)
 
