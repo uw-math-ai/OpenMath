@@ -976,6 +976,28 @@ structure OneChildRecoveryWitness (t d : BTree) : Type where
   hbag : t.childrenBag = (BTree.node [d]).childrenBag
   hnode : t = .node [d]
 
+/-- Transport the recovered singleton witness back to any canonical singleton
+bag presentation of the input tree. -/
+theorem OneChildRecoveryWitness.canonicalBag_eq {t d e : BTree}
+    (hw : OneChildRecoveryWitness t d)
+    (hbag : t.childrenBag = (BTree.node [e]).childrenBag) :
+    (BTree.node [d]).childrenBag = (BTree.node [e]).childrenBag :=
+  hw.hbag.symm.trans hbag
+
+/-- Transport a recovered singleton child through a binary parent without
+exposing the exact node witness to downstream theorem code. -/
+theorem OneChildRecoveryWitness.binary_right_eq {t d c : BTree}
+    (hw : OneChildRecoveryWitness t d) :
+    BTree.node [c, t] = BTree.node [c, BTree.node [d]] := by
+  simp [hw.hnode]
+
+/-- Transport a recovered singleton child through two unary parents without
+exposing the exact node witness to downstream theorem code. -/
+theorem OneChildRecoveryWitness.nestedSingleton_eq {t d : BTree}
+    (hw : OneChildRecoveryWitness t d) :
+    BTree.node [BTree.node [t]] = BTree.node [BTree.node [BTree.node [d]]] := by
+  simp [hw.hnode]
+
 /-- Recover the unique singleton-child presentation from a bag-equality
 against a canonical singleton node. -/
 def one_child_recovery_witness_of_childrenBag_eq {t d : BTree}
@@ -1008,6 +1030,21 @@ theorem TwoChildRecoveryWitness.canonicalBag_eq {t d₁ d₂ : BTree}
     (hbag : t.childrenBag = (BTree.node [d₁, d₂]).childrenBag) :
     (BTree.node [hw.left, hw.right]).childrenBag = (BTree.node [d₁, d₂]).childrenBag :=
   hw.hbag.symm.trans hbag
+
+/-- Transport a recovered binary child through an outer binary parent without
+exposing the exact node witness to downstream theorem code. -/
+theorem TwoChildRecoveryWitness.binary_right_eq {t c : BTree}
+    (hw : TwoChildRecoveryWitness t) :
+    BTree.node [c, t] = BTree.node [c, BTree.node [hw.left, hw.right]] := by
+  simp [hw.hnode]
+
+/-- Transport a recovered binary child through two unary parents without
+exposing the exact node witness to downstream theorem code. -/
+theorem TwoChildRecoveryWitness.nestedSingleton_eq {t : BTree}
+    (hw : TwoChildRecoveryWitness t) :
+    BTree.node [BTree.node [t]] =
+      BTree.node [BTree.node [BTree.node [hw.left, hw.right]]] := by
+  simp [hw.hnode]
 
 /-- Recover an exact two-child witness package from a bag-equality against a
 canonical two-child node. -/
