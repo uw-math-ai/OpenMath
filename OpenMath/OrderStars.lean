@@ -1620,6 +1620,57 @@ def NoRealizedDownArrowInfinityBranch (R : ℂ → ℂ) : Prop :=
 def NoRealizedUpArrowInfinityBranch (R : ℂ → ℂ) : Prop :=
   RealizedUpArrowInfinityBranch R → False
 
+/-- Branch-level analytic contradiction for a realized escaping down-arrow germ,
+assuming the local cone-control bridge and the far-field sign control needed by
+the cycle-278 helper layer. -/
+theorem realizedDownArrowInfinityBranch_contradiction
+    (R : ℂ → ℂ)
+    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hzero_not_mem_down_support :
+      ∀ branch : RealizedDownArrowInfinityBranch R,
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hno_nonzero_unit_points_on_orderWeb :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → ‖R z * exp (-z)‖ = 1 → False)
+    (hlocal_minus_near_down :
+      ∀ θ : ℝ, IsDownArrowDir R θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            ‖R z * exp (-z)‖ < 1)
+    (hfar_plus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb R → radius ≤ ‖z‖ →
+        1 < ‖R z * exp (-z)‖)
+    (branch : RealizedDownArrowInfinityBranch R) :
+    False := by
+  obtain ⟨aperture, haperture, radius, hradius, hsmallCone⟩ :=
+    hlocal_minus_near_down branch.branch.tangentAngle branch.branch.tangentDown
+  obtain ⟨zSmall, hzSmall_mem, hzSmall_cone⟩ :=
+    exists_mem_inter_rayConeNearOrigin_of_branchTracksRayNearOrigin
+      branch.branch.toGlobalOrderArrowBranch branch.continuesLocalGerm
+      haperture hradius
+  have hzSmall_lt : ‖R zSmall * exp (-zSmall)‖ < 1 :=
+    hsmallCone zSmall hzSmall_cone
+  obtain ⟨largeRadius, hlargeRadius, hlarge⟩ := hfar_plus_on_orderWeb
+  obtain ⟨zLarge, hzLarge_mem, hzLarge_norm⟩ :=
+    exists_mem_support_norm_gt_of_escapesEveryClosedBall
+      branch.branch.toGlobalOrderArrowBranch branch.escapesEveryClosedBall
+      largeRadius hlargeRadius.le
+  have hzLarge_orderWeb : zLarge ∈ orderWeb R :=
+    mem_orderWeb_of_mem_globalOrderArrowBranch_support
+      branch.branch.toGlobalOrderArrowBranch hzLarge_mem
+  have hzLarge_gt : 1 < ‖R zLarge * exp (-zLarge)‖ :=
+    hlarge zLarge hzLarge_orderWeb (le_of_lt hzLarge_norm)
+  obtain ⟨z, hz_mem, hz_unit⟩ :=
+    exists_mem_support_unit_level_of_connected_orderWeb_branch
+      branch.branch.toGlobalOrderArrowBranch hcont
+      hzSmall_mem hzLarge_mem hzSmall_lt hzLarge_gt
+  have hz_orderWeb : z ∈ orderWeb R :=
+    mem_orderWeb_of_mem_globalOrderArrowBranch_support
+      branch.branch.toGlobalOrderArrowBranch hz_mem
+  have hz_ne : z ≠ 0 := by
+    intro hz0
+    exact hzero_not_mem_down_support branch (hz0 ▸ hz_mem)
+  exact hno_nonzero_unit_points_on_orderWeb z hz_ne hz_orderWeb hz_unit
+
 /-- Each counted down-arrow infinity endpoint must come from a concrete global
 down-arrow branch that leaves every closed ball. This is the only bridge needed from
 branch topology back to the abstract count `data.downArrowsAtInfinity`. -/
