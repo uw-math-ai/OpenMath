@@ -300,6 +300,106 @@ theorem alternating_choose_reciprocal_reflect (p q : ℕ) :
           (((p + q + 1).factorial : ℂ)) := by
             ring
 
+/-- Alternating Vandermonde convolution from the coefficient of
+`((X + 1) + (-X))^q * (X + 1)^p`. -/
+theorem alternating_vandermonde_choose (p q k : ℕ) :
+    (∑ j ∈ Finset.range (k + 1),
+      (q.choose j : ℂ) * (-1 : ℂ) ^ j * ((p + q - j).choose (k - j) : ℂ)) =
+        (p.choose k : ℂ) := by
+  let S : Polynomial ℂ :=
+    ∑ j ∈ Finset.range (q + 1),
+      Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (p + q - j)
+  have hadd :
+      ∑ j ∈ Finset.range (q + 1),
+        Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (q - j) =
+        ((-Polynomial.X) + (Polynomial.X + 1)) ^ q := by
+    simpa [Nat.cast_choose, mul_assoc, mul_left_comm, mul_comm] using
+      ((add_pow (-Polynomial.X) (Polynomial.X + 1) q).symm :
+        (∑ m ∈ Finset.range (q + 1),
+          (-Polynomial.X) ^ m * (Polynomial.X + 1) ^ (q - m) * (q.choose m : Polynomial ℂ)) =
+            ((-Polynomial.X) + (Polynomial.X + 1)) ^ q)
+  have hS : S = (Polynomial.X + 1 : Polynomial ℂ) ^ p := by
+    unfold S
+    calc
+      ∑ j ∈ Finset.range (q + 1),
+          Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (p + q - j)
+        = ∑ j ∈ Finset.range (q + 1),
+            (Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (q - j)) *
+              (Polynomial.X + 1) ^ p := by
+                refine Finset.sum_congr rfl ?_
+                intro j hj
+                have hjq : j ≤ q := Nat.le_of_lt_succ (Finset.mem_range.mp hj)
+                rw [show p + q - j = (q - j) + p by omega]
+                ring_nf
+      _ = (((-Polynomial.X) + (Polynomial.X + 1)) ^ q) * (Polynomial.X + 1) ^ p := by
+            rw [← hadd, Finset.sum_mul]
+      _ = (Polynomial.X + 1 : Polynomial ℂ) ^ p := by simp
+  have hterm :
+      ∀ j : ℕ,
+        (Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (p + q - j)).coeff
+            k =
+          if j ≤ k then (q.choose j : ℂ) * (-1 : ℂ) ^ j * ((p + q - j).choose (k - j) : ℂ) else 0 := by
+    intro j
+    rw [show (-Polynomial.X : Polynomial ℂ) ^ j = Polynomial.C ((-1 : ℂ) ^ j) * Polynomial.X ^ j by
+      rw [show (-Polynomial.X : Polynomial ℂ) = Polynomial.C (-1 : ℂ) * Polynomial.X by simp,
+        mul_pow, Polynomial.C_pow]]
+    rw [← mul_assoc, ← Polynomial.C_mul, mul_assoc]
+    rw [show Polynomial.C (↑(q.choose j) * (-1 : ℂ) ^ j) *
+        (Polynomial.X ^ j * (Polynomial.X + 1) ^ (p + q - j)) =
+        (Polynomial.C (↑(q.choose j) * (-1 : ℂ) ^ j) * (Polynomial.X + 1) ^ (p + q - j)) *
+          Polynomial.X ^ j by ring]
+    rw [Polynomial.coeff_mul_X_pow']
+    by_cases hjk : j ≤ k
+    · rw [if_pos hjk, Polynomial.coeff_C_mul]
+      have hpow : ((Polynomial.X + 1 : Polynomial ℂ) ^ (p + q - j)).coeff (k - j) =
+          ((p + q - j).choose (k - j) : ℂ) := by
+        simpa using (Polynomial.coeff_X_add_C_pow (1 : ℂ) (p + q - j) (k - j))
+      rw [hpow]
+      simp [hjk, mul_left_comm, mul_comm]
+    · rw [if_neg hjk]
+      simp [hjk]
+  have hcoeff_left : S.coeff k =
+      ∑ j ∈ Finset.range (k + 1),
+        (q.choose j : ℂ) * (-1 : ℂ) ^ j * ((p + q - j).choose (k - j) : ℂ) := by
+    have hsum :
+        (∑ j ∈ Finset.range (q + 1),
+          Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (p + q - j)).coeff
+            k =
+        ∑ j ∈ Finset.range (q + 1),
+          (Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (p + q - j)).coeff
+            k := by
+      simpa using (Finset.sum_apply k (Finset.range (q + 1)) fun j =>
+        Polynomial.C (q.choose j : ℂ) * (-Polynomial.X) ^ j * (Polynomial.X + 1) ^ (p + q - j))
+    unfold S
+    rw [hsum]
+    simp_rw [hterm]
+    by_cases hkq : k ≤ q
+    · rw [← Finset.sum_subset (Finset.range_mono (Nat.succ_le_succ hkq))]
+      · refine Finset.sum_congr rfl ?_
+        intro j hj
+        rw [if_pos]
+        exact Nat.le_of_lt_succ (Finset.mem_range.mp hj)
+      · intro j hjq' hjk'
+        rw [if_neg]
+        intro hjle
+        exact hjk' (Finset.mem_range.mpr (Nat.lt_succ_of_le hjle))
+    · have hqk : q < k := lt_of_not_ge hkq
+      have hsub : Finset.range (q + 1) ⊆ Finset.range (k + 1) :=
+        Finset.range_mono (Nat.succ_le_succ hqk.le)
+      rw [← Finset.sum_subset hsub]
+      · refine Finset.sum_congr rfl ?_
+        intro j hj
+        rw [if_pos]
+        exact le_trans (Nat.le_of_lt_succ (Finset.mem_range.mp hj)) hqk.le
+      · intro j hjk' hjq'
+        have hqj : q < j := by
+          by_contra hqj'
+          exact hjq' (Finset.mem_range.mpr (Nat.lt_succ_of_le (le_of_not_gt hqj')))
+        simp [Nat.choose_eq_zero_of_lt hqj]
+  have hcoeff_right : ((Polynomial.X + 1 : Polynomial ℂ) ^ p).coeff k = (p.choose k : ℂ) := by
+    simpa using (Polynomial.coeff_X_add_C_pow (1 : ℂ) p k)
+  rw [← hcoeff_left, hS, hcoeff_right]
+
 /-- The degree-`p+q+1` coefficient of `padeQ_poly * expTaylor_poly` reduces to a
 single reflected reciprocal sum. -/
 theorem padeQ_mul_expTaylor_coeff_succ (p q : ℕ) :
@@ -396,7 +496,66 @@ theorem padeQ_mul_expTaylor_coeff_succ (p q : ℕ) :
 /-- The Padé defect vanishes below degree `p + q + 1`. -/
 theorem padeDefect_poly_coeff_lt (p q k : ℕ) (hk : k < p + q + 1) :
     (padeDefect_poly p q).coeff k = 0 := by
-  sorry
+  have hk' : k ≤ p + q := by omega
+  have hconv :
+      (padeQ_poly p q * expTaylor_poly (p + q)).coeff k =
+        ∑ j ∈ Finset.range (k + 1),
+          (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (k - j) := by
+    rw [Polynomial.coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ_mk]
+  have hQ :
+      (padeQ_poly p q * expTaylor_poly (p + q)).coeff k =
+        ((((p + q - k).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+          (∑ j ∈ Finset.range (k + 1),
+            (q.choose j : ℂ) * (-1 : ℂ) ^ j * ((p + q - j).choose (k - j) : ℂ)) := by
+    rw [hconv]
+    have hterm : ∀ j ∈ Finset.range (k + 1),
+        (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (k - j) =
+          ((((p + q - k).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+            ((q.choose j : ℂ) * (-1 : ℂ) ^ j * ((p + q - j).choose (k - j) : ℂ)) := by
+      intro j hj
+      have hjk : j ≤ k := Nat.le_of_lt_succ (Finset.mem_range.mp hj)
+      rw [padeQ_poly_coeff, expTaylor_poly_coeff, if_pos (show k - j ≤ p + q by omega)]
+      have hscale :
+          ((((p + q - j).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+            (1 / ((k - j).factorial : ℂ)) =
+          ((((p + q - k).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+            ((p + q - j).choose (k - j) : ℂ) := by
+        have hchoose : ((((p + q - j).factorial : ℕ) : ℂ) * (1 / ((k - j).factorial : ℂ))) =
+            (((p + q - k).factorial : ℕ) : ℂ) * ((p + q - j).choose (k - j) : ℂ) := by
+          rw [Nat.cast_choose ℂ (show k - j ≤ p + q - j by omega)]
+          rw [show p + q - j - (k - j) = p + q - k by omega]
+          field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos (k - j)).ne',
+            Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q - k)).ne']
+        calc
+          ((((p + q - j).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) * (1 / ((k - j).factorial : ℂ))
+            = ((((p + q - j).factorial : ℕ) : ℂ) * (1 / ((k - j).factorial : ℂ))) /
+                (((p + q).factorial : ℂ)) := by ring
+          _ = ((((p + q - k).factorial : ℕ) : ℂ) * ((p + q - j).choose (k - j) : ℂ)) /
+                (((p + q).factorial : ℂ)) := by rw [hchoose]
+          _ = ((((p + q - k).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+                ((p + q - j).choose (k - j) : ℂ) := by ring
+      calc
+        ((((p + q - j).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) * (q.choose j : ℂ) *
+            (-1 : ℂ) ^ j * (1 / ((k - j).factorial : ℂ))
+          = (((((p + q - j).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+              (1 / ((k - j).factorial : ℂ))) * ((q.choose j : ℂ) * (-1 : ℂ) ^ j) := by ring
+        _ = (((((p + q - k).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+              ((p + q - j).choose (k - j) : ℂ)) * ((q.choose j : ℂ) * (-1 : ℂ) ^ j) := by
+                rw [hscale]
+        _ = ((((p + q - k).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+              ((q.choose j : ℂ) * (-1 : ℂ) ^ j * ((p + q - j).choose (k - j) : ℂ)) := by ring
+    have hsum :
+        (∑ j ∈ Finset.range (k + 1), (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (k - j)) =
+        ∑ j ∈ Finset.range (k + 1),
+          ((((p + q - k).factorial : ℕ) : ℂ) / (((p + q).factorial : ℂ))) *
+            ((q.choose j : ℂ) * (-1 : ℂ) ^ j * ((p + q - j).choose (k - j) : ℂ)) := by
+      refine Finset.sum_congr rfl ?_
+      intro j hj
+      exact hterm j hj
+    rw [hsum, ← Finset.mul_sum]
+  rw [padeDefect_poly, Polynomial.coeff_sub, padeP_poly_coeff, hQ,
+    alternating_vandermonde_choose]
+  ring
 
 /-- The exact degree-`p+q+1` coefficient of the Padé defect. -/
 theorem padeDefect_poly_coeff_succ (p q : ℕ) :
@@ -437,7 +596,16 @@ theorem padeDefect_poly_sub_leading_X_pow_dvd (p q : ℕ) :
         Polynomial.C
             ((1 / (((p + q + 1).factorial : ℂ))) - (padePhiErrorConst p q : ℂ)) *
           Polynomial.X ^ (p + q + 1)) := by
-  sorry
+  rw [Polynomial.X_pow_dvd_iff]
+  intro d hd
+  by_cases hlt : d < p + q + 1
+  · rw [Polynomial.coeff_sub, padeDefect_poly_coeff_lt _ _ _ hlt,
+      Polynomial.coeff_C_mul_X_pow]
+    simp [Nat.ne_of_lt hlt]
+  · have hdEq : d = p + q + 1 := by omega
+    subst hdEq
+    rw [Polynomial.coeff_sub, padeDefect_poly_coeff_succ, Polynomial.coeff_C_mul_X_pow]
+    simp
 
 /-- Function-level factorization of the Padé defect after removing the leading
 degree-`p+q+1` term. -/
@@ -447,7 +615,13 @@ theorem padeDefect_sub_leading_factorization (p q : ℕ) :
         ((1 / (((p + q + 1).factorial : ℂ))) - (padePhiErrorConst p q : ℂ)) *
           z ^ (p + q + 1) =
       z ^ (p + q + 2) * h z := by
-  sorry
+  obtain ⟨g, hg⟩ := padeDefect_poly_sub_leading_X_pow_dvd p q
+  refine ⟨fun z => g.eval z, ?_⟩
+  intro z
+  have hEval := congrArg (fun r : Polynomial ℂ => r.eval z) hg
+  simpa [padeDefect_poly, padeP_poly_eval, padeQ_poly_eval, expTaylor_poly_eval,
+    Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C,
+    Polynomial.eval_X] using hEval
 
 end PadeAsymptotics
 
@@ -458,4 +632,11 @@ theorem padeR_exp_neg_leading_term
       padeR n d z * exp (-z) -
         (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)) =
       z ^ (n + d + 2) * g z := by
-  sorry
+  refine ⟨fun z => if z = 0 then 0 else
+    (padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))) /
+      z ^ (n + d + 2), ?_⟩
+  intro z
+  by_cases hz : z = 0
+  · subst hz
+    simp [padeR, padeP_eval_zero, padeQ_eval_zero]
+  · simp [hz, div_eq_mul_inv, mul_left_comm, mul_comm]
