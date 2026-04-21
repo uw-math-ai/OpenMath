@@ -928,6 +928,59 @@ def BranchTracksRayNearOrigin {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch
   ∀ aperture > 0, ∀ radius > 0,
     (branch.support ∩ rayConeNearOrigin θ aperture radius).Nonempty
 
+/-- A point on the support of a global branch automatically lies on the order
+web because the support was recorded as a subset of `orderWeb R`. -/
+theorem mem_orderWeb_of_mem_globalOrderArrowBranch_support
+    {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R) {z : ℂ}
+    (hz : z ∈ branch.support) :
+    z ∈ orderWeb R :=
+  branch.support_subset_orderWeb hz
+
+/-- Unpack `EscapesEveryClosedBall` into a large-norm support point. -/
+theorem exists_mem_support_norm_gt_of_escapesEveryClosedBall
+    {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R)
+    (hescape : EscapesEveryClosedBall branch)
+    (r : ℝ) (hr : 0 ≤ r) :
+    ∃ z ∈ branch.support, r < ‖z‖ := by
+  obtain ⟨z, hz_support, hz_not_mem⟩ := hescape r hr
+  have hz_not_ge : ¬ ‖z‖ ≤ r := by
+    simpa [Metric.mem_closedBall, dist_eq_norm] using hz_not_mem
+  refine ⟨z, hz_support, ?_⟩
+  exact lt_of_not_ge hz_not_ge
+
+/-- Unpack `BranchTracksRayNearOrigin` at a concrete aperture/radius pair. -/
+theorem exists_mem_inter_rayConeNearOrigin_of_branchTracksRayNearOrigin
+    {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R) {θ aperture radius : ℝ}
+    (htrack : BranchTracksRayNearOrigin branch θ)
+    (haperture : 0 < aperture) (hradius : 0 < radius) :
+    (branch.support ∩ rayConeNearOrigin θ aperture radius).Nonempty :=
+  htrack aperture haperture radius hradius
+
+/-- A connected order-web branch whose amplitude is below `1` at one support
+point and above `1` at another must hit the unit level somewhere on its support. -/
+theorem exists_mem_support_unit_level_of_connected_orderWeb_branch
+    {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R)
+    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    {zSmall zLarge : ℂ}
+    (hzSmall : zSmall ∈ branch.support)
+    (hzLarge : zLarge ∈ branch.support)
+    (hsmall : ‖R zSmall * exp (-zSmall)‖ < 1)
+    (hlarge : 1 < ‖R zLarge * exp (-zLarge)‖) :
+    ∃ z ∈ branch.support, ‖R z * exp (-z)‖ = 1 := by
+  have hpre : IsPreconnected branch.support :=
+    branch.support_connected.isPreconnected
+  have hIcc :
+      Set.Icc (‖R zSmall * exp (-zSmall)‖) (‖R zLarge * exp (-zLarge)‖) ⊆
+        (fun z => ‖R z * exp (-z)‖) '' branch.support := by
+    exact hpre.intermediate_value hzSmall hzLarge hcont.continuousOn
+  have hmem :
+      (1 : ℝ) ∈ Set.Icc (‖R zSmall * exp (-zSmall)‖) (‖R zLarge * exp (-zLarge)‖) := by
+    constructor
+    · exact le_of_lt hsmall
+    · exact le_of_lt hlarge
+  rcases hIcc hmem with ⟨z, hz_support, hz_unit⟩
+  exact ⟨z, hz_support, hz_unit⟩
+
 /-- Honest branch-termination predicate for later topology work: either the branch
 has a genuine finite endpoint away from the origin, or it escapes every closed
 ball. This is intentionally kept as a predicate rather than a theorem because the
