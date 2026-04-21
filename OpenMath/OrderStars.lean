@@ -811,6 +811,28 @@ private theorem norm_sub_mul_lt_one_of_close_to_one
       _ < (1 - a) + a / 4 := by linarith
   nlinarith
 
+/-- If `w` stays within `1/4` of `1`, then the perturbed real main term
+`1 + a w` remains strictly outside the unit disk with a quantitative margin. -/
+private theorem norm_add_mul_gt_one_of_close_to_one
+    (a : ℝ) (ha : 0 < a) {w : ℂ}
+    (hw : ‖w - 1‖ < 1 / 4) :
+    1 + a / 2 < ‖(1 : ℂ) + ↑a * w‖ := by
+  have hre_diff : |w.re - 1| < 1 / 4 := by
+    calc
+      |w.re - 1| = |(w - 1).re| := by simp
+      _ ≤ ‖w - 1‖ := Complex.abs_re_le_norm (w - 1)
+      _ < 1 / 4 := hw
+  have hwre : 3 / 4 < w.re := by
+    have h := abs_lt.mp hre_diff
+    linarith
+  have hre_main : 1 + 3 * a / 4 < ((1 : ℂ) + ↑a * w).re := by
+    rw [show ((1 : ℂ) + ↑a * w).re = 1 + a * w.re by simp [Complex.mul_re]]
+    have hmul : a * (3 / 4 : ℝ) < a * w.re := by
+      exact mul_lt_mul_of_pos_left hwre ha
+    linarith
+  have hnorm : ((1 : ℂ) + ↑a * w).re ≤ ‖(1 : ℂ) + ↑a * w‖ := Complex.re_le_norm _
+  linarith
+
 /-! ## Arrow Termination Bookkeeping
 
 The textbook proofs of Theorems 355C and 355D use global order-arrow trajectories.
@@ -1150,6 +1172,412 @@ theorem local_minus_near_even_angle_of_pos_errorConst
       ≤ ‖(1 : ℂ) - ↑(C * t ^ (p + 1)) * w ^ (p + 1)‖ + K * ‖z‖ ^ (p + 2) :=
         h_upper
     _ < (1 - (C * t ^ (p + 1)) / 2) + C * t ^ (p + 1) / 4 := by
+        linarith
+    _ < 1 := by
+        nlinarith [hmain_coeff_pos]
+
+/-- Local cone-control version of the even-angle, negative-error-constant case
+of Theorem 355B. This is the up-arrow companion to
+`local_minus_near_even_angle_of_pos_errorConst`. -/
+theorem local_plus_near_even_angle_of_neg_errorConst
+    (R : ℂ → ℂ) (p k : ℕ) (C K δ₀ : ℝ)
+    (hC : C < 0) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2)) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin (2 * ↑k * π / (↑p + 1)) aperture radius →
+        1 < ‖R z * exp (-z)‖ := by
+  obtain ⟨aperture, haperture, hapow⟩ :=
+    exists_pos_aperture_pow_sub_one_lt (p + 1) (1 / 4) (by norm_num)
+  let scale : ℝ := 1 + aperture
+  have hscale : 0 < scale := by
+    positivity
+  let coeff : ℝ := -C
+  have hcoeff : 0 < coeff := by
+    simpa [coeff] using neg_pos.mpr hC
+  let radius : ℝ :=
+    min (δ₀ / scale) (min 1 (coeff / (4 * K * scale ^ (p + 2))))
+  have hradius : 0 < radius := by
+    have hδscale : 0 < δ₀ / scale := div_pos hδ hscale
+    have hcoefferr : 0 < coeff / (4 * K * scale ^ (p + 2)) := by
+      positivity
+    exact lt_min hδscale (lt_min one_pos hcoefferr)
+  refine ⟨aperture, haperture, radius, hradius, ?_⟩
+  intro z hz
+  rcases hz with ⟨t, ht, hdist⟩
+  let center : ℂ := (↑t : ℂ) * exp (↑(2 * ↑k * π / (↑p + 1)) * I)
+  let w : ℂ := z / center
+  have hdist_center : ‖z - center‖ < aperture * t := by
+    simpa [center] using hdist
+  have hcenter_ne : center ≠ 0 := by
+    simp [center, ht.1.ne']
+  have hcenter_norm : ‖center‖ = t := by
+    simpa [center] using
+      norm_ofReal_mul_exp_I t (2 * ↑k * π / (↑p + 1)) ht.1.le
+  have hw_close : ‖w - 1‖ < aperture := by
+    have hw :
+        w - 1 = (z - center) / center := by
+      dsimp [w]
+      field_simp [hcenter_ne]
+    rw [hw, norm_div, hcenter_norm]
+    have h' := mul_lt_mul_of_pos_right hdist_center (one_div_pos.mpr ht.1)
+    simpa [div_eq_mul_inv, ht.1.ne', mul_assoc, mul_left_comm, mul_comm] using h'
+  have hwpow_close : ‖w ^ (p + 1) - 1‖ < 1 / 4 := hapow w hw_close
+  have hz_decomp : center * w = z := by
+    dsimp [w]
+    field_simp [hcenter_ne]
+  have hcenter_pow : center ^ (p + 1) = ↑(t ^ (p + 1)) := by
+    simpa [center] using pow_ray_even_angle t p k
+  have hz_pow : z ^ (p + 1) = ↑(t ^ (p + 1)) * w ^ (p + 1) := by
+    rw [← hz_decomp, mul_pow, hcenter_pow]
+  have hnorm_lt : ‖z‖ < scale * t := by
+    have hle : ‖z‖ ≤ ‖center‖ + ‖z - center‖ := by
+      have hsum : center + (z - center) = z := by ring
+      simpa [hsum] using (norm_add_le center (z - center))
+    rw [hcenter_norm] at hle
+    have hlt : ‖z‖ < t + aperture * t := by
+      exact lt_of_le_of_lt hle (by linarith [hdist_center])
+    nlinarith
+  have ht_delta : t < δ₀ / scale := by
+    exact lt_of_lt_of_le ht.2 (min_le_left _ _)
+  have hz_delta : ‖z‖ < δ₀ := by
+    have hscale_t := (lt_div_iff₀ hscale).mp ht_delta
+    exact lt_trans hnorm_lt (by simpa [mul_comm] using hscale_t)
+  have ht_one : t < 1 := by
+    exact lt_of_lt_of_le ht.2 (le_trans (min_le_right _ _) (min_le_left _ _))
+  have ht_err : t < coeff / (4 * K * scale ^ (p + 2)) := by
+    exact lt_of_lt_of_le ht.2
+      (le_trans (min_le_right _ _) (min_le_right _ _))
+  have hmain_coeff_pos : 0 < coeff * t ^ (p + 1) := by
+    exact mul_pos hcoeff (pow_pos ht.1 _)
+  have hmain_gt :
+      1 + (coeff * t ^ (p + 1)) / 2 <
+        ‖(1 : ℂ) + ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)‖ := by
+    simpa using
+      (norm_add_mul_gt_one_of_close_to_one (coeff * t ^ (p + 1)) hmain_coeff_pos
+        (w := w ^ (p + 1)) hwpow_close)
+  have h_scalar :
+      K * scale ^ (p + 2) * t < coeff / 4 := by
+    have hden : 0 < 4 * K * scale ^ (p + 2) := by
+      positivity
+    have h' := (lt_div_iff₀ hden).mp ht_err
+    nlinarith
+  have h_err_bound :
+      K * (scale * t) ^ (p + 2) < coeff * t ^ (p + 1) / 4 := by
+    have htpow_pos : 0 < t ^ (p + 1) := pow_pos ht.1 _
+    calc K * (scale * t) ^ (p + 2)
+        = t ^ (p + 1) * (K * scale ^ (p + 2) * t) := by
+            rw [mul_pow]
+            ring
+      _ < t ^ (p + 1) * (coeff / 4) := by
+            exact mul_lt_mul_of_pos_left h_scalar htpow_pos
+      _ = coeff * t ^ (p + 1) / 4 := by
+            ring
+  have hzpow_le :
+      ‖z‖ ^ (p + 2) ≤ (scale * t) ^ (p + 2) := by
+    exact pow_le_pow_left₀ (norm_nonneg _) hnorm_lt.le _
+  have hmain_eq :
+      (1 - ↑C * (↑(t ^ (p + 1)) * w ^ (p + 1)) : ℂ) =
+        ((1 : ℂ) + ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)) := by
+    simp [coeff]
+    ring
+  have h_approx :
+      ‖R z * exp (-z) - ((1 : ℂ) + ↑(coeff * t ^ (p + 1)) * w ^ (p + 1))‖ ≤
+        K * ‖z‖ ^ (p + 2) := by
+    have h := hφ z hz_delta
+    rw [hz_pow, hmain_eq] at h
+    exact h
+  have h_err :
+      K * ‖z‖ ^ (p + 2) < coeff * t ^ (p + 1) / 4 := by
+    calc K * ‖z‖ ^ (p + 2) ≤ K * (scale * t) ^ (p + 2) := by
+          exact mul_le_mul_of_nonneg_left hzpow_le hK.le
+      _ < coeff * t ^ (p + 1) / 4 := h_err_bound
+  have h_lower :
+      ‖(1 : ℂ) + ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)‖ - K * ‖z‖ ^ (p + 2) ≤
+        ‖R z * exp (-z)‖ := by
+    have htriangle :=
+      norm_sub_norm_le ((1 : ℂ) + ↑(coeff * t ^ (p + 1)) * w ^ (p + 1))
+        (R z * exp (-z))
+    have hrev :
+        ‖((1 : ℂ) + ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)) - (R z * exp (-z))‖ ≤
+          K * ‖z‖ ^ (p + 2) := by
+      simpa [norm_sub_rev] using h_approx
+    linarith
+  have hmain_margin : 1 < ‖(1 : ℂ) + ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)‖ -
+      K * ‖z‖ ^ (p + 2) := by
+    linarith
+  exact lt_of_lt_of_le hmain_margin h_lower
+
+/-- Local cone-control version of the odd-angle, positive-error-constant case
+of Theorem 355B. This is the up-arrow companion to the odd 355B exact-ray
+classification. -/
+theorem local_plus_near_odd_angle_of_pos_errorConst
+    (R : ℂ → ℂ) (p k : ℕ) (C K δ₀ : ℝ)
+    (hC : 0 < C) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2)) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin ((2 * ↑k + 1) * π / (↑p + 1)) aperture radius →
+        1 < ‖R z * exp (-z)‖ := by
+  obtain ⟨aperture, haperture, hapow⟩ :=
+    exists_pos_aperture_pow_sub_one_lt (p + 1) (1 / 4) (by norm_num)
+  let scale : ℝ := 1 + aperture
+  have hscale : 0 < scale := by
+    positivity
+  let radius : ℝ :=
+    min (δ₀ / scale) (min 1 (C / (4 * K * scale ^ (p + 2))))
+  have hradius : 0 < radius := by
+    have hδscale : 0 < δ₀ / scale := div_pos hδ hscale
+    have hCerr : 0 < C / (4 * K * scale ^ (p + 2)) := by
+      positivity
+    exact lt_min hδscale (lt_min one_pos hCerr)
+  refine ⟨aperture, haperture, radius, hradius, ?_⟩
+  intro z hz
+  rcases hz with ⟨t, ht, hdist⟩
+  let center : ℂ := (↑t : ℂ) * exp (↑((2 * ↑k + 1) * π / (↑p + 1)) * I)
+  let w : ℂ := z / center
+  have hdist_center : ‖z - center‖ < aperture * t := by
+    simpa [center] using hdist
+  have hcenter_ne : center ≠ 0 := by
+    simp [center, ht.1.ne']
+  have hcenter_norm : ‖center‖ = t := by
+    simpa [center] using
+      norm_ofReal_mul_exp_I t ((2 * ↑k + 1) * π / (↑p + 1)) ht.1.le
+  have hw_close : ‖w - 1‖ < aperture := by
+    have hw :
+        w - 1 = (z - center) / center := by
+      dsimp [w]
+      field_simp [hcenter_ne]
+    rw [hw, norm_div, hcenter_norm]
+    have h' := mul_lt_mul_of_pos_right hdist_center (one_div_pos.mpr ht.1)
+    simpa [div_eq_mul_inv, ht.1.ne', mul_assoc, mul_left_comm, mul_comm] using h'
+  have hwpow_close : ‖w ^ (p + 1) - 1‖ < 1 / 4 := hapow w hw_close
+  have hz_decomp : center * w = z := by
+    dsimp [w]
+    field_simp [hcenter_ne]
+  have hcenter_pow : center ^ (p + 1) = ↑(-(t ^ (p + 1))) := by
+    simpa [center] using pow_ray_odd_angle t p k
+  have hz_pow : z ^ (p + 1) = ↑(-(t ^ (p + 1))) * w ^ (p + 1) := by
+    rw [← hz_decomp, mul_pow, hcenter_pow]
+  have hnorm_lt : ‖z‖ < scale * t := by
+    have hle : ‖z‖ ≤ ‖center‖ + ‖z - center‖ := by
+      have hsum : center + (z - center) = z := by ring
+      simpa [hsum] using (norm_add_le center (z - center))
+    rw [hcenter_norm] at hle
+    have hlt : ‖z‖ < t + aperture * t := by
+      exact lt_of_le_of_lt hle (by linarith [hdist_center])
+    nlinarith
+  have ht_delta : t < δ₀ / scale := by
+    exact lt_of_lt_of_le ht.2 (min_le_left _ _)
+  have hz_delta : ‖z‖ < δ₀ := by
+    have hscale_t := (lt_div_iff₀ hscale).mp ht_delta
+    exact lt_trans hnorm_lt (by simpa [mul_comm] using hscale_t)
+  have ht_one : t < 1 := by
+    exact lt_of_lt_of_le ht.2 (le_trans (min_le_right _ _) (min_le_left _ _))
+  have ht_err : t < C / (4 * K * scale ^ (p + 2)) := by
+    exact lt_of_lt_of_le ht.2
+      (le_trans (min_le_right _ _) (min_le_right _ _))
+  have hmain_coeff_pos : 0 < C * t ^ (p + 1) := by
+    exact mul_pos hC (pow_pos ht.1 _)
+  have hmain_gt :
+      1 + (C * t ^ (p + 1)) / 2 <
+        ‖(1 : ℂ) + ↑(C * t ^ (p + 1)) * w ^ (p + 1)‖ := by
+    simpa using
+      (norm_add_mul_gt_one_of_close_to_one (C * t ^ (p + 1)) hmain_coeff_pos
+        (w := w ^ (p + 1)) hwpow_close)
+  have h_scalar :
+      K * scale ^ (p + 2) * t < C / 4 := by
+    have hden : 0 < 4 * K * scale ^ (p + 2) := by
+      positivity
+    have h' := (lt_div_iff₀ hden).mp ht_err
+    nlinarith
+  have h_err_bound :
+      K * (scale * t) ^ (p + 2) < C * t ^ (p + 1) / 4 := by
+    have htpow_pos : 0 < t ^ (p + 1) := pow_pos ht.1 _
+    calc K * (scale * t) ^ (p + 2)
+        = t ^ (p + 1) * (K * scale ^ (p + 2) * t) := by
+            rw [mul_pow]
+            ring
+      _ < t ^ (p + 1) * (C / 4) := by
+            exact mul_lt_mul_of_pos_left h_scalar htpow_pos
+      _ = C * t ^ (p + 1) / 4 := by
+            ring
+  have hzpow_le :
+      ‖z‖ ^ (p + 2) ≤ (scale * t) ^ (p + 2) := by
+    exact pow_le_pow_left₀ (norm_nonneg _) hnorm_lt.le _
+  have hmain_eq :
+      (1 - ↑C * (↑(-(t ^ (p + 1))) * w ^ (p + 1)) : ℂ) =
+        ((1 : ℂ) + ↑(C * t ^ (p + 1)) * w ^ (p + 1)) := by
+    push_cast
+    ring
+  have h_approx :
+      ‖R z * exp (-z) - ((1 : ℂ) + ↑(C * t ^ (p + 1)) * w ^ (p + 1))‖ ≤
+        K * ‖z‖ ^ (p + 2) := by
+    have h := hφ z hz_delta
+    rw [hz_pow, hmain_eq] at h
+    exact h
+  have h_err :
+      K * ‖z‖ ^ (p + 2) < C * t ^ (p + 1) / 4 := by
+    calc K * ‖z‖ ^ (p + 2) ≤ K * (scale * t) ^ (p + 2) := by
+          exact mul_le_mul_of_nonneg_left hzpow_le hK.le
+      _ < C * t ^ (p + 1) / 4 := h_err_bound
+  have h_lower :
+      ‖(1 : ℂ) + ↑(C * t ^ (p + 1)) * w ^ (p + 1)‖ - K * ‖z‖ ^ (p + 2) ≤
+        ‖R z * exp (-z)‖ := by
+    have htriangle :=
+      norm_sub_norm_le ((1 : ℂ) + ↑(C * t ^ (p + 1)) * w ^ (p + 1))
+        (R z * exp (-z))
+    have hrev :
+        ‖((1 : ℂ) + ↑(C * t ^ (p + 1)) * w ^ (p + 1)) - (R z * exp (-z))‖ ≤
+          K * ‖z‖ ^ (p + 2) := by
+      simpa [norm_sub_rev] using h_approx
+    linarith
+  have hmain_margin : 1 < ‖(1 : ℂ) + ↑(C * t ^ (p + 1)) * w ^ (p + 1)‖ -
+      K * ‖z‖ ^ (p + 2) := by
+    linarith
+  exact lt_of_lt_of_le hmain_margin h_lower
+
+/-- Local cone-control version of the odd-angle, negative-error-constant case
+of Theorem 355B. This is the missing down-arrow companion to the live even-angle
+cone lemma. -/
+theorem local_minus_near_odd_angle_of_neg_errorConst
+    (R : ℂ → ℂ) (p k : ℕ) (C K δ₀ : ℝ)
+    (hC : C < 0) (hK : 0 < K) (hδ : 0 < δ₀)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖R z * exp (-z) - (1 - ↑C * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2)) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin ((2 * ↑k + 1) * π / (↑p + 1)) aperture radius →
+        ‖R z * exp (-z)‖ < 1 := by
+  obtain ⟨aperture, haperture, hapow⟩ :=
+    exists_pos_aperture_pow_sub_one_lt (p + 1) (1 / 4) (by norm_num)
+  let scale : ℝ := 1 + aperture
+  have hscale : 0 < scale := by
+    positivity
+  let coeff : ℝ := -C
+  have hcoeff : 0 < coeff := by
+    simpa [coeff] using neg_pos.mpr hC
+  let radius : ℝ :=
+    min (δ₀ / scale) (min 1 (min (1 / coeff) (coeff / (4 * K * scale ^ (p + 2)))))
+  have hradius : 0 < radius := by
+    have hδscale : 0 < δ₀ / scale := div_pos hδ hscale
+    have hcoeffinv : 0 < 1 / coeff := one_div_pos.mpr hcoeff
+    have hcoefferr : 0 < coeff / (4 * K * scale ^ (p + 2)) := by
+      positivity
+    exact lt_min hδscale (lt_min one_pos (lt_min hcoeffinv hcoefferr))
+  refine ⟨aperture, haperture, radius, hradius, ?_⟩
+  intro z hz
+  rcases hz with ⟨t, ht, hdist⟩
+  let center : ℂ := (↑t : ℂ) * exp (↑((2 * ↑k + 1) * π / (↑p + 1)) * I)
+  let w : ℂ := z / center
+  have hdist_center : ‖z - center‖ < aperture * t := by
+    simpa [center] using hdist
+  have hcenter_ne : center ≠ 0 := by
+    simp [center, ht.1.ne']
+  have hcenter_norm : ‖center‖ = t := by
+    simpa [center] using
+      norm_ofReal_mul_exp_I t ((2 * ↑k + 1) * π / (↑p + 1)) ht.1.le
+  have hw_close : ‖w - 1‖ < aperture := by
+    have hw :
+        w - 1 = (z - center) / center := by
+      dsimp [w]
+      field_simp [hcenter_ne]
+    rw [hw, norm_div, hcenter_norm]
+    have h' := mul_lt_mul_of_pos_right hdist_center (one_div_pos.mpr ht.1)
+    simpa [div_eq_mul_inv, ht.1.ne', mul_assoc, mul_left_comm, mul_comm] using h'
+  have hwpow_close : ‖w ^ (p + 1) - 1‖ < 1 / 4 := hapow w hw_close
+  have hz_decomp : center * w = z := by
+    dsimp [w]
+    field_simp [hcenter_ne]
+  have hcenter_pow : center ^ (p + 1) = ↑(-(t ^ (p + 1))) := by
+    simpa [center] using pow_ray_odd_angle t p k
+  have hz_pow : z ^ (p + 1) = ↑(-(t ^ (p + 1))) * w ^ (p + 1) := by
+    rw [← hz_decomp, mul_pow, hcenter_pow]
+  have hnorm_lt : ‖z‖ < scale * t := by
+    have hle : ‖z‖ ≤ ‖center‖ + ‖z - center‖ := by
+      have hsum : center + (z - center) = z := by ring
+      simpa [hsum] using (norm_add_le center (z - center))
+    rw [hcenter_norm] at hle
+    have hlt : ‖z‖ < t + aperture * t := by
+      exact lt_of_le_of_lt hle (by linarith [hdist_center])
+    nlinarith
+  have ht_delta : t < δ₀ / scale := by
+    exact lt_of_lt_of_le ht.2 (min_le_left _ _)
+  have hz_delta : ‖z‖ < δ₀ := by
+    have hscale_t := (lt_div_iff₀ hscale).mp ht_delta
+    exact lt_trans hnorm_lt (by simpa [mul_comm] using hscale_t)
+  have ht_one : t < 1 := by
+    exact lt_of_lt_of_le ht.2 (le_trans (min_le_right _ _) (min_le_left _ _))
+  have ht_coeff : t < 1 / coeff := by
+    exact lt_of_lt_of_le ht.2
+      (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_left _ _)))
+  have ht_err : t < coeff / (4 * K * scale ^ (p + 2)) := by
+    exact lt_of_lt_of_le ht.2 (le_trans (min_le_right _ _)
+      (le_trans (min_le_right _ _) (min_le_right _ _)))
+  have htpow_le_t : t ^ (p + 1) ≤ t := by
+    calc t ^ (p + 1) ≤ t ^ 1 := by
+          exact pow_le_pow_of_le_one ht.1.le ht_one.le (by omega : 1 ≤ p + 1)
+      _ = t := by simp
+  have hmain_coeff_pos : 0 < coeff * t ^ (p + 1) := by
+    exact mul_pos hcoeff (pow_pos ht.1 _)
+  have hmain_coeff_lt_one : coeff * t ^ (p + 1) < 1 := by
+    have hcoefft_lt := (lt_div_iff₀ hcoeff).mp ht_coeff
+    calc coeff * t ^ (p + 1) ≤ coeff * t := by
+          exact mul_le_mul_of_nonneg_left htpow_le_t hcoeff.le
+      _ < 1 := by simpa [mul_comm] using hcoefft_lt
+  have hmain_lt :
+      ‖(1 : ℂ) - ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)‖ <
+        1 - (coeff * t ^ (p + 1)) / 2 := by
+    exact norm_sub_mul_lt_one_of_close_to_one
+      (coeff * t ^ (p + 1)) hmain_coeff_pos hmain_coeff_lt_one hwpow_close
+  have h_scalar :
+      K * scale ^ (p + 2) * t < coeff / 4 := by
+    have hden : 0 < 4 * K * scale ^ (p + 2) := by
+      positivity
+    have h' := (lt_div_iff₀ hden).mp ht_err
+    nlinarith
+  have h_err_bound :
+      K * (scale * t) ^ (p + 2) < coeff * t ^ (p + 1) / 4 := by
+    have htpow_pos : 0 < t ^ (p + 1) := pow_pos ht.1 _
+    calc K * (scale * t) ^ (p + 2)
+        = t ^ (p + 1) * (K * scale ^ (p + 2) * t) := by
+            rw [mul_pow]
+            ring
+      _ < t ^ (p + 1) * (coeff / 4) := by
+            exact mul_lt_mul_of_pos_left h_scalar htpow_pos
+      _ = coeff * t ^ (p + 1) / 4 := by
+            ring
+  have hzpow_le :
+      ‖z‖ ^ (p + 2) ≤ (scale * t) ^ (p + 2) := by
+    exact pow_le_pow_left₀ (norm_nonneg _) hnorm_lt.le _
+  have hmain_eq :
+      (1 - ↑C * (↑(-(t ^ (p + 1))) * w ^ (p + 1)) : ℂ) =
+        ((1 : ℂ) - ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)) := by
+    push_cast
+    simp [coeff]
+    ring
+  have h_approx :
+      ‖R z * exp (-z) - ((1 : ℂ) - ↑(coeff * t ^ (p + 1)) * w ^ (p + 1))‖ ≤
+        K * ‖z‖ ^ (p + 2) := by
+    have h := hφ z hz_delta
+    rw [hz_pow, hmain_eq] at h
+    exact h
+  have h_err :
+      K * ‖z‖ ^ (p + 2) < coeff * t ^ (p + 1) / 4 := by
+    calc K * ‖z‖ ^ (p + 2) ≤ K * (scale * t) ^ (p + 2) := by
+          exact mul_le_mul_of_nonneg_left hzpow_le hK.le
+      _ < coeff * t ^ (p + 1) / 4 := h_err_bound
+  have h_upper :
+      ‖R z * exp (-z)‖ ≤
+        ‖(1 : ℂ) - ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)‖ + K * ‖z‖ ^ (p + 2) := by
+    have htriangle :=
+      norm_add_le ((1 : ℂ) - ↑(coeff * t ^ (p + 1)) * w ^ (p + 1))
+        (R z * exp (-z) - ((1 : ℂ) - ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)))
+    rw [add_sub_cancel] at htriangle
+    linarith
+  calc ‖R z * exp (-z)‖
+      ≤ ‖(1 : ℂ) - ↑(coeff * t ^ (p + 1)) * w ^ (p + 1)‖ + K * ‖z‖ ^ (p + 2) :=
+        h_upper
+    _ < (1 - (coeff * t ^ (p + 1)) / 2) + coeff * t ^ (p + 1) / 4 := by
         linarith
     _ < 1 := by
         nlinarith [hmain_coeff_pos]
