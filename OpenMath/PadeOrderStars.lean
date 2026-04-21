@@ -242,23 +242,60 @@ theorem PadeREhleBarrierInput.thm_355E'
     data.upArrowsAtPoles = data.denominatorDegree := by
   exact thm_355E'_of_padeR n d data h.pade h.realizesInfinityBranchGerms h.concrete
 
-theorem PadeREhleBarrierInput.ehle_barrier_nat
+/-- Minimal Padé-local input actually used by `ehle_barrier_nat_of_padeR`.
+The branch-realization and concrete no-infinity data are needed for the sibling
+355D/355E' wrappers, but the Ehle-barrier conclusion itself only depends on the
+degree bookkeeping together with `EhleBarrierInput data`. -/
+structure PadeREhleBarrierNatInput
+    (n d : ℕ) (data : OrderArrowTerminationData) : Prop where
+  numeratorDegree_eq : data.numeratorDegree = n
+  denominatorDegree_eq : data.denominatorDegree = d
+  ehle : EhleBarrierInput data
+
+/-- Forget the extra 355D/355E' Padé-side fields when the only downstream goal
+is the Ehle-barrier wedge conclusion. -/
+theorem PadeREhleBarrierInput.toNatInput
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeREhleBarrierInput n d data) :
+    PadeREhleBarrierNatInput n d data := by
+  exact ⟨h.numeratorDegree_eq, h.denominatorDegree_eq, h.ehle⟩
+
+/-- Honest theorem-local Padé boundary for the repaired Ehle barrier:
+`ehle_barrier_nat` needs only the degree equalities and the separate 355G
+correction-term package. -/
+theorem PadeREhleBarrierNatInput.ehle_barrier_nat
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeREhleBarrierNatInput n d data) :
     InEhleWedge n d := by
   exact _root_.ehle_barrier_nat n d
     ⟨data, h.numeratorDegree_eq, h.denominatorDegree_eq, h.ehle⟩
 
+theorem PadeREhleBarrierInput.ehle_barrier_nat
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeREhleBarrierInput n d data) :
+    InEhleWedge n d := by
+  exact h.toNatInput.ehle_barrier_nat
+
+/-- The explicit theorem-local hypothesis still blocking a concrete Padé
+application of the Ehle barrier is the repaired 355G input itself. The heavier
+Padé bundle remains available for the sibling 355D/355E' consumers. -/
+theorem ehle_barrier_nat_of_padeR_of_natInput
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeREhleBarrierNatInput n d data) :
+    InEhleWedge n d := by
+  exact h.ehle_barrier_nat
+
 /-- First concrete Padé-side consumer of the repaired Ehle barrier boundary.
-What remains below this theorem is to construct the three concrete inputs now
-made explicit by `PadeREhleBarrierInput`: realized infinity branch germs for
-`padeR n d`, the concrete no-infinity contradiction package, and the separate
-355G correction-term witnesses in `EhleBarrierInput`. -/
+What remains below the minimal theorem-local seam is to construct the repaired
+355G correction-term package `EhleBarrierInput data`; the stronger
+`PadeREhleBarrierInput` additionally carries the realized infinity branch germs
+and concrete no-infinity package needed only by the sibling 355D/355E'
+consumers. -/
 theorem ehle_barrier_nat_of_padeR
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeREhleBarrierInput n d data) :
     InEhleWedge n d := by
-  exact h.ehle_barrier_nat
+  exact ehle_barrier_nat_of_padeR_of_natInput h.toNatInput
 
 /-- For Padé order webs, the exact coincidence exclusion is an honest consequence
 of the unit-level exclusion already exposed by `OrderStars`. The fully uniform
