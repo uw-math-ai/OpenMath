@@ -3,6 +3,45 @@ import OpenMath.OrderStars
 
 open Complex
 
+abbrev PadeRRealizedDownArrowInfinityWitnessFamily
+    (n d : ℕ) (data : OrderArrowTerminationData) :=
+  ∀ _ : Fin data.downArrowsAtInfinity,
+    RealizedDownArrowInfinityBranch (padeR n d)
+
+abbrev PadeRRealizedUpArrowInfinityWitnessFamily
+    (n d : ℕ) (data : OrderArrowTerminationData) :=
+  ∀ _ : Fin data.upArrowsAtInfinity,
+    RealizedUpArrowInfinityBranch (padeR n d)
+
+/-- Padé-local packaging helper for the strengthened no-infinity seam.
+This makes the remaining concrete gap explicit: produce the down-arrow and
+up-arrow realized infinity witness families separately, then assemble them into
+`RealizesInfinityBranchGerms (padeR n d) data`. -/
+def realizesInfinityBranchGerms_of_padeR
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (hdown : PadeRRealizedDownArrowInfinityWitnessFamily n d data)
+    (hup : PadeRRealizedUpArrowInfinityWitnessFamily n d data) :
+    RealizesInfinityBranchGerms (padeR n d) data := by
+  exact ⟨hdown, hup⟩
+
+def realizesInfinityBranchGermsEquiv_of_padeR
+    {n d : ℕ} {data : OrderArrowTerminationData} :
+    RealizesInfinityBranchGerms (padeR n d) data ≃
+      (PadeRRealizedDownArrowInfinityWitnessFamily n d data ×
+        PadeRRealizedUpArrowInfinityWitnessFamily n d data) := by
+  refine
+    { toFun := fun hreal =>
+        ⟨hreal.downArrowInfinityWitnesses, hreal.upArrowInfinityWitnesses⟩
+      invFun := fun hreal => ⟨hreal.1, hreal.2⟩
+      left_inv := ?_
+      right_inv := ?_ }
+  · intro hreal
+    cases hreal
+    rfl
+  · intro hreal
+    cases hreal
+    rfl
+
 theorem thm_355D_of_padeR
     (n d : ℕ) (data : OrderArrowTerminationData)
     (happrox : IsRationalApproxToExp data)
