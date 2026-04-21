@@ -23,6 +23,8 @@ Semi-autonomous formalization of *A First Course in the Numerical Analysis of Di
 - If stuck on a sorry, write a structured issue file in `.prover-state/issues/` explaining **WHY** (not just "it's hard").
 - Prefer `lake env lean OpenMath/Foo.lean` to check individual files over `lake build`.
 - Keep proofs modular: one theorem per lemma, extract shared infrastructure into helper files.
+- Scratch Lean code, Aristotle scaffolding, and incomplete helper experiments belong under `.prover-state/`, not as tracked orphan modules in `OpenMath/`.
+- Do not commit a new tracked `OpenMath/*.lean` file with live `sorry` unless it is the active target, tied to the current plan, and intended to stay in the formalization tree.
 
 ## Build Commands
 
@@ -40,11 +42,19 @@ Follow the textbook chapter by chapter. The current target is in `plan.md`. Each
 - Proved in full (no sorry's in committed code, unless mid-restructuring)
 - Documented with a reference to the textbook section
 
-Per-theorem context (statement, LaTeX, dependencies, prior-formalization status) is available in `extraction/formalization_data/entities/<id>.json`. See `extraction/formalization_data/README.md` for the schema.
+The source of truth on `main` is the live Lean code, `plan.md`, recent
+`.prover-state/task_results/`, and `.prover-state/issues/`.
+
+The old `extraction/` pipeline was removed from `main`. Do not assume any
+`extraction/...` paths exist, and do not rely on stale Butcher-specific
+metadata when planning or formalizing work here.
 
 ## Adding new entities
 
-If you discover a textbook theorem the extractor missed, OR you need a reusable helper lemma not in Butcher, **read [`extraction/EXTENSIBILITY.md`](extraction/EXTENSIBILITY.md) before doing anything**. Hand-edit only files under `extraction/extensions/`; never edit `extraction/raw_text/` or `extraction/formalization_data/entities/` (both are regenerated). When you finish formalizing an entity in Lean, update its row in `extraction/formalization_data/lean_status.json`.
+If you discover a textbook theorem the current plan missed, update `plan.md`
+and document the gap in the current cycle's task result. If the gap blocks
+progress, write a focused issue in `.prover-state/issues/` explaining the
+missing theorem or helper lemma and why it is needed.
 
 ## Task Results Format
 

@@ -121,13 +121,61 @@ def get_cycle():
         return int(CYCLE_FILE.read_text().strip())
     return 0
 
-def count_sorries():
-    count = 0
+def get_tracked_lean_files():
+    try:
+        r = subprocess.run(
+            ["git", "ls-files", "OpenMath"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=30,
+        )
+        if r.returncode == 0:
+            files = []
+            for rel in r.stdout.strip().splitlines():
+                if rel.endswith(".lean"):
+                    path = ROOT / rel
+                    if path.exists():
+                        files.append(path)
+            if files:
+                return files
+    except Exception:
+        pass
+
     lean_dir = ROOT / "OpenMath"
     if not lean_dir.exists():
-        return 0
-    for f in lean_dir.rglob("*.lean"):
-        count += len(re.findall(r'\bsorry\b', f.read_text()))
+        return []
+    return sorted(lean_dir.rglob("*.lean"))
+
+def _strip_lean_comments(text):
+    result = []
+    i = 0
+    depth = 0
+    while i < len(text):
+        if text[i:i+2] == '/-':
+            depth += 1
+            i += 2
+        elif text[i:i+2] == '-/' and depth > 0:
+            depth -= 1
+            i += 2
+        elif depth == 0:
+            result.append(text[i])
+            i += 1
+        else:
+            i += 1
+    text = ''.join(result)
+    lines = text.splitlines()
+    stripped = []
+    for line in lines:
+        idx = line.find('--')
+        stripped.append(line[:idx] if idx >= 0 else line)
+    return '\n'.join(stripped)
+
+def count_sorries():
+    count = 0
+    for f in get_tracked_lean_files():
+        count += len(re.findall(r'\bsorry\b', _strip_lean_comments(f.read_text())))
     return count
 
 # ─── Phase 1: Infrastructure Health ──────────────────────────────────────────
@@ -272,7 +320,7 @@ def find_loop_process():
     return None
 
 
-def restart_loop(skip_planner=True):
+def restart_loop(skip_planner=False):
     """Restart the autonomous loop. Returns new PID or None."""
     # Clean up lock file
     if LOOP_LOCK.exists():
@@ -756,11 +804,11 @@ def main():
         if not process_info:
             log("  Attempting restart...")
             # Determine flags based on stuck detection (we'll refine after Phase 3)
-            new_pid = restart_loop(skip_planner=True)
+            new_pid = restart_loop(skip_planner=False)
             if new_pid:
                 restarted = True
                 process_info = {"pid": new_pid, "elapsed_sec": 0,
-                                "state": "S", "cmdline": "", "skip_planner": True}
+                                "state": "S", "cmdline": "", "skip_planner": False}
             else:
                 log("  Restart FAILED")
 

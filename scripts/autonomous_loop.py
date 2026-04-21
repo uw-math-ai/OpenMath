@@ -295,6 +295,14 @@ def read_file(path: Path, default: str = "") -> str:
     return default
 
 
+def read_recent_text(path: Path, max_chars: int, default: str = "") -> str:
+    """Read the tail of a text file, preserving the most recent context."""
+    text = read_file(path, default)
+    if len(text) <= max_chars:
+        return text
+    return text[-max_chars:]
+
+
 def get_cycle() -> int:
     return int(read_file(CYCLE_FILE, "0").strip())
 
@@ -313,6 +321,39 @@ def get_recent_history(n: int = 10) -> list:
         return []
     lines = HISTORY_FILE.read_text().strip().splitlines()
     return [json.loads(l) for l in lines[-n:]]
+
+
+def get_tracked_lean_files() -> List[Path]:
+    """Return git-tracked Lean files under OpenMath/.
+
+    This excludes untracked scratch files such as unfinished helper modules that
+    are not part of the live build or the committed formalization state.
+    """
+    try:
+        r = subprocess.run(
+            ["git", "ls-files", "OpenMath"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=30,
+        )
+        if r.returncode == 0:
+            files = []
+            for rel in r.stdout.strip().splitlines():
+                if rel.endswith(".lean"):
+                    path = ROOT / rel
+                    if path.exists():
+                        files.append(path)
+            if files:
+                return files
+    except Exception:
+        pass
+
+    lean_dir = ROOT / "OpenMath"
+    if not lean_dir.exists():
+        return []
+    return sorted(lean_dir.rglob("*.lean"))
 
 
 # ─── Sorry counting ──────────────────────────────────────────────────────────
@@ -346,12 +387,9 @@ def _strip_lean_comments(text: str) -> str:
 
 
 def count_sorries() -> int:
-    """Count sorry's in all Lean files under OpenMath/ (excluding comments)."""
+    """Count sorry's in tracked Lean files under OpenMath/ (excluding comments)."""
     count = 0
-    lean_dir = ROOT / "OpenMath"
-    if not lean_dir.exists():
-        return 0
-    for f in lean_dir.rglob("*.lean"):
+    for f in get_tracked_lean_files():
         text = f.read_text()
         code = _strip_lean_comments(text)
         count += len(re.findall(r'\bsorry\b', code))
@@ -359,12 +397,12 @@ def count_sorries() -> int:
 
 
 def get_sorry_locations() -> str:
-    """Get a list of sorry locations for context (excluding comments)."""
+    """Get tracked sorry locations for context (excluding comments)."""
     locations = []
-    lean_dir = ROOT / "OpenMath"
-    if not lean_dir.exists():
+    tracked_files = get_tracked_lean_files()
+    if not tracked_files:
         return "No sorry's found."
-    for f in lean_dir.rglob("*.lean"):
+    for f in tracked_files:
         text = f.read_text()
         lines = text.splitlines()
         # Track block comment depth
@@ -471,19 +509,191 @@ def git_diff_stat() -> str:
         return ""
 
 
-def git_diff() -> str:
-    """Get git diff (stat + full patch)."""
+def git_head() -> str:
+    """Return the current HEAD SHA, or empty string on failure."""
     try:
+        r = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=30,
+        )
+        if r.returncode == 0:
+            return r.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def git_status_short() -> str:
+    """Return `git status --short`, including untracked files."""
+    try:
+        r = subprocess.run(
+            ["git", "status", "--short"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=30,
+        )
+        return r.stdout.strip()
+    except Exception:
+        return ""
+
+
+def git_push() -> bool:
+    """Push the current branch. Returns True on success."""
+    try:
+        r = subprocess.run(
+            ["git", "push"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=120,
+        )
+        if r.returncode == 0:
+            return True
+        log(f"git push failed: {r.stderr[:500]}")
+    except Exception as e:
+        log(f"git push error: {e}")
+    return False
+
+
+def git_diff(base_rev: str = "") -> str:
+    """Get git diff information for this cycle.
+
+    If `base_rev` is provided, include committed changes from `base_rev..HEAD`
+    so evaluator/planner logic still sees real work after the worker commits.
+    """
+    try:
+        sections = []
+
+        current_head = git_head()
+        if base_rev and current_head and base_rev != current_head:
+            committed_stat = subprocess.run(
+                ["git", "diff", "--stat", f"{base_rev}..HEAD"],
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                timeout=30,
+            )
+            committed_full = subprocess.run(
+                ["git", "diff", f"{base_rev}..HEAD"],
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                timeout=30,
+            )
+            committed_text = (committed_stat.stdout + "\n" + committed_full.stdout).strip()
+            if committed_text:
+                sections.append(
+                    "## Committed changes since cycle start\n"
+                    f"base={base_rev}\nhead={current_head}\n\n{committed_text}"
+                )
+
         stat = subprocess.run(["git", "diff", "--stat"], cwd=ROOT,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               universal_newlines=True, timeout=30)
         full = subprocess.run(["git", "diff"], cwd=ROOT,
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                               universal_newlines=True, timeout=30)
-        result = stat.stdout + "\n" + full.stdout
-        return result[:200000]  # generous limit — Claude context is large
+        worktree_text = (stat.stdout + "\n" + full.stdout).strip()
+        if worktree_text:
+            sections.append("## Uncommitted worktree changes\n" + worktree_text)
+
+        status = git_status_short()
+        if status:
+            sections.append("## Git status\n" + status)
+
+        return "\n\n".join(s for s in sections if s)[:200000]
     except Exception:
         return ""
+
+
+def git_changed_files(base_rev: str = "") -> set:
+    """Return files changed this cycle, including committed and uncommitted work."""
+    changed = set()
+    commands = []
+    if base_rev:
+        commands.append(["git", "diff", "--name-only", f"{base_rev}..HEAD"])
+    commands.extend([
+        ["git", "diff", "--name-only"],
+        ["git", "diff", "--cached", "--name-only"],
+    ])
+
+    try:
+        for cmd in commands:
+            r = subprocess.run(
+                cmd,
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                timeout=30,
+            )
+            changed.update(line.strip() for line in r.stdout.splitlines() if line.strip())
+
+        status = git_status_short()
+        for line in status.splitlines():
+            if not line:
+                continue
+            # Porcelain format: XY path, or "?? path" for untracked files.
+            path = line[3:] if len(line) > 3 else ""
+            if path:
+                changed.add(path)
+    except Exception:
+        pass
+
+    return changed
+
+
+def git_revert_cycle_commits(base_rev: str, cycle: int) -> bool:
+    """Revert any committed changes made since `base_rev`.
+
+    This is used when a worker committed a regression before the mechanical
+    gates ran. We prefer `git revert` over history-rewriting commands so the
+    rollback is explicit and non-destructive.
+    """
+    current_head = git_head()
+    if not base_rev or not current_head or base_rev == current_head:
+        return False
+
+    try:
+        revs = subprocess.run(
+            ["git", "rev-list", "--reverse", f"{base_rev}..{current_head}"],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=30,
+        )
+        commits = [line.strip() for line in revs.stdout.splitlines() if line.strip()]
+        if not commits:
+            return False
+
+        r = subprocess.run(
+            ["git", "revert", "--no-edit", *commits],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=600,
+        )
+        if r.returncode != 0:
+            log(f"git revert failed for cycle {cycle}: {r.stderr[:500]}")
+            return False
+
+        log(f"Reverted {len(commits)} committed change(s) from cycle {cycle}")
+        git_push()
+        return True
+    except Exception as e:
+        log(f"git revert error for cycle {cycle}: {e}")
+        return False
 
 
 def git_log_recent(n: int = 5) -> str:
@@ -812,13 +1022,73 @@ def get_worker_engine(cycle: int) -> str:
     return "codex" if cycle % 2 == 1 else "claude"
 
 
+def extract_markdown_section(text: str, header: str) -> str:
+    """Extract a top-level markdown section beginning with `header`."""
+    lines = text.splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if line.strip() == header:
+            start = i
+            break
+    if start is None:
+        return ""
+
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        if lines[i].startswith("## "):
+            end = i
+            break
+    return "\n".join(lines[start:end]).strip()
+
+
+def extract_target_files(text: str) -> List[str]:
+    """Extract `OpenMath/Foo.lean` references from free-form text."""
+    return sorted(set(re.findall(r'(OpenMath/\w+\.lean)', text)))
+
+
+def get_recent_issue_text(limit: int = 12, preferred_files: Optional[List[str]] = None) -> str:
+    """Read the most recent non-consultant issue files."""
+    if not ISSUES.exists():
+        return "No open issues."
+
+    issue_files = [
+        p for p in ISSUES.glob("*.md")
+        if not p.stem.startswith("consultant_advice")
+    ]
+    preferred_names = set()
+    for path in preferred_files or []:
+        preferred_names.add(path)
+        preferred_names.add(Path(path).name)
+
+    def priority(p: Path):
+        try:
+            text = p.read_text()
+        except Exception:
+            text = ""
+        matches_target = any(name in text for name in preferred_names) if preferred_names else False
+        return (0 if matches_target else 1, -p.stat().st_mtime)
+
+    issue_files.sort(key=priority)
+    issue_files = issue_files[:limit]
+
+    if not issue_files:
+        return "No open issues."
+
+    chunks = []
+    for issue_file in issue_files:
+        chunks.append(f"\n### {issue_file.stem}\n{issue_file.read_text()}\n")
+    return "".join(chunks)
+
+
 # ─── Components ───────────────────────────────────────────────────────────────
 
 def run_planner(cycle: int, aristotle_summary: str = "") -> str:
     """Run the planner to generate strategy.md."""
     sorry_locations = get_sorry_locations()
     plan = read_file(PLAN_FILE, "No plan.md found.")
-    attempts = read_file(ATTEMPTS_FILE, "No previous attempts.")
+    plan_focus = extract_markdown_section(plan, "## Current Target")
+    plan_target_files = extract_target_files(plan_focus or plan)
+    attempts = read_recent_text(ATTEMPTS_FILE, 20000, "No previous attempts.")
     recent_history = get_recent_history(5)
     history_summary = "\n".join(
         f"  Cycle {h.get('cycle', '?')}: score={h.get('progress_score', '?')}, "
@@ -832,21 +1102,49 @@ def run_planner(cycle: int, aristotle_summary: str = "") -> str:
         prev = TASK_RESULTS / f"cycle_{cycle-1:03d}.md"
         latest_task_result = read_file(prev, "No task result from previous cycle.")
 
-    # Read open issues
-    issues_text = ""
-    if ISSUES.exists():
-        for issue_file in sorted(ISSUES.glob("*.md")):
-            issues_text += f"\n### {issue_file.stem}\n{issue_file.read_text()}\n"
-    if not issues_text:
-        issues_text = "No open issues."
+    issues_text = get_recent_issue_text(limit=12, preferred_files=plan_target_files)
+
+    latest_alignment = "No explicit target-file alignment check available."
+    if plan_target_files and latest_task_result:
+        target_mentions = []
+        for path in plan_target_files:
+            target_mentions.extend([path, Path(path).name])
+        if any(name in latest_task_result for name in target_mentions):
+            latest_alignment = (
+                "The previous cycle output mentions the current plan target files."
+            )
+        else:
+            latest_alignment = (
+                "The previous cycle output does not mention the current plan target files "
+                f"({', '.join(Path(p).name for p in plan_target_files)}); treat it as a side "
+                "investigation unless a blocker issue proves it is a prerequisite."
+            )
 
     git_recent = git_log_recent(10)
+    budget_stuck = check_budget_cap()
+    stall_note = (
+        f"The project has hit the budget cap on: {budget_stuck}. The next strategy must pivot away "
+        "from that blocker or attack a smaller prerequisite seam beneath it."
+        if budget_stuck else
+        "No active budget-cap blocker."
+    )
 
     prompt = f"""You are the planner for an autonomous Lean 4 formalization project.
 Your job: write strategy.md with concrete instructions for the worker.
 
+This repository's textbook on `main` is Arieh Iserles, *A First Course in the Numerical Analysis
+of Differential Equations*. The old `extraction/` pipeline was for a different book and has been
+removed from `main`; do not assume `extraction/` exists, and do not plan work around Butcher-only
+metadata.
+
 ## Current plan
 {plan}
+
+## Current plan focus
+{plan_focus or "No explicit Current Target section found in plan.md."}
+
+## Current target files
+{", ".join(plan_target_files) if plan_target_files else "No explicit target files extracted from the plan."}
 
 ## Sorry locations
 {sorry_locations}
@@ -863,8 +1161,14 @@ Your job: write strategy.md with concrete instructions for the worker.
 ## Open issues (blockers reported by previous workers)
 {issues_text}
 
+## Stall status
+{stall_note}
+
 ## Task results from last cycle
 {latest_task_result}
+
+## Latest-cycle alignment check
+{latest_alignment}
 
 ## Completed Aristotle results (ready for incorporation)
 {aristotle_summary or "No pending Aristotle results."}
@@ -877,6 +1181,14 @@ Write `.prover-state/strategy.md` with:
 4. What NOT to try (explicitly list failed approaches from attempts)
 5. If an issue reports a blocker, assign infrastructure work before proof work
 6. If there are no sorry's and no theorems in progress, pick the next theorem from plan.md
+7. If recent history shows repeated low-value cycles on the same blocker, pivot to a smaller
+   prerequisite seam or to the next unfinished target instead of reissuing the same plan
+8. Base the strategy on the live Lean files, `plan.md`, recent task results, and recent issues only
+9. Treat `plan.md`'s Current Target as the highest-priority source of truth; do not pivot to a
+   different theorem family unless an issue or task result shows it is an explicit prerequisite
+10. Do not promote a failed or off-target side investigation into the next main target by default
+11. Do not assign tracked scratch work in a new `OpenMath/*.lean` file unless it is clearly part
+    of the planned theorem path and intended to remain in the repo
 
 Be concrete and actionable. The worker will follow your instructions literally.
 Write the file now using the Write tool.
@@ -905,6 +1217,11 @@ proofs if they need minor edits. This is free work — do not ignore it.
 
     prompt = f"""You are the worker for cycle {cycle} of an autonomous Lean 4 formalization project.
 
+## Project ground truth
+- The live textbook on `main` is Arieh Iserles, *A First Course in the Numerical Analysis of Differential Equations*.
+- The old `extraction/` pipeline is gone from `main`; do not rely on `extraction/...` paths or Butcher-only metadata.
+- Treat `plan.md`, the live Lean files, recent task results, and recent issue files as the source of truth.
+
 ## Your strategy (from the planner — FOLLOW THIS)
 {strategy}
 {aristotle_section}
@@ -928,6 +1245,11 @@ proofs if they need minor edits. This is free work — do not ignore it.
 7. If blocked, write an issue file in `.prover-state/issues/`.
 8. Commit and push your changes with a descriptive message.
 9. A cycle with zero changes is unacceptable. At minimum, decompose a sorry or write an issue.
+10. Do not commit a new tracked `OpenMath/*.lean` file with live `sorry`s unless the strategy
+    explicitly requires that file and the proof path is part of the current plan target.
+11. If you need scratch Lean code or Aristotle scaffolding, keep it under `.prover-state/`,
+    not under `OpenMath/`.
+12. Do not leave tracked orphan helper modules on `main`.
 
 Work autonomously. Do not ask questions. Make progress.
 """
@@ -941,12 +1263,12 @@ Work autonomously. Do not ask questions. Make progress.
 
 
 def run_evaluator(cycle: int, pre_sorry_count: int, post_sorry_count: int,
-                  worker_output: str) -> dict:
+                  worker_output: str, base_rev: str = "") -> dict:
     """Run the evaluator to assess progress. Returns structured evaluation."""
     task_result_file = TASK_RESULTS / f"cycle_{cycle:03d}.md"
     task_result = read_file(task_result_file, "Worker did not write a task result file.")
-    attempts = read_file(ATTEMPTS_FILE, "No previous attempts.")
-    diff = git_diff()
+    attempts = read_recent_text(ATTEMPTS_FILE, 20000, "No previous attempts.")
+    diff = git_diff(base_rev=base_rev)
     recent_history = get_recent_history(5)
     history_summary = "\n".join(
         f"  Cycle {h.get('cycle', '?')}: score={h.get('progress_score', '?')}, "
@@ -974,6 +1296,11 @@ Before: {pre_sorry_count} → After: {post_sorry_count}
 
 ## Worker output
 {worker_output[:50000]}
+
+## Important bookkeeping note
+The orchestrator appends the current cycle to `history.jsonl` and advances
+`.prover-state/cycle` only after evaluation. Do NOT penalize the worker merely
+because those current-cycle bookkeeping updates are absent from the diff.
 
 ## Your job
 Output a JSON object with these fields:
@@ -1020,14 +1347,9 @@ Respond with ONLY the JSON object, no other text.
 def run_consultant(cycle: int) -> str:
     """Run the consultant for mathematical advice when stuck."""
     sorry_locations = get_sorry_locations()
-    attempts = read_file(ATTEMPTS_FILE, "No previous attempts.")
+    attempts = read_recent_text(ATTEMPTS_FILE, 20000, "No previous attempts.")
 
-    # Gather issue files
-    issues_text = ""
-    if ISSUES.exists():
-        for issue_file in sorted(ISSUES.glob("*.md")):
-            if not issue_file.stem.endswith("_advice"):
-                issues_text += f"\n### {issue_file.stem}\n{issue_file.read_text()}\n"
+    issues_text = get_recent_issue_text(limit=12)
 
     recent_history = get_recent_history(10)
     stuck_on = ""
@@ -1112,7 +1434,7 @@ def check_budget_cap() -> Optional[str]:
     return None
 
 
-def check_strategy_compliance(cycle: int) -> Optional[str]:
+def check_strategy_compliance(cycle: int, base_rev: str = "") -> Optional[str]:
     """Check if the worker touched files mentioned in strategy.md.
 
     Returns a warning string if the worker deviated, None if compliant.
@@ -1126,25 +1448,7 @@ def check_strategy_compliance(cycle: int) -> Optional[str]:
     if not target_files:
         return None
 
-    # Check which files the worker actually modified
-    try:
-        r = subprocess.run(
-            ["git", "diff", "--name-only"],
-            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            universal_newlines=True, timeout=30)
-        changed_files = set(r.stdout.strip().splitlines())
-    except Exception:
-        return None
-
-    # Also check committed-but-not-pushed changes from this cycle
-    try:
-        r = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD~1"],
-            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            universal_newlines=True, timeout=30)
-        changed_files.update(r.stdout.strip().splitlines())
-    except Exception:
-        pass
+    changed_files = git_changed_files(base_rev=base_rev)
 
     touched_targets = target_files & changed_files
     if not touched_targets and target_files:
@@ -1161,6 +1465,7 @@ def check_strategy_compliance(cycle: int) -> Optional[str]:
 def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False):
     """Run one full cycle of the autonomous loop."""
     log(f"═══ Starting cycle {cycle} ═══")
+    set_cycle(cycle)
     write_heartbeat(cycle, "starting")
 
     # Discover Telegram chat_id if needed
@@ -1213,6 +1518,8 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
             "Follow the sorry-first workflow.\n"
         )
 
+    cycle_base_rev = git_head()
+
     # ── Worker ──
     log("── Running Worker ──")
     write_heartbeat(cycle, "worker")
@@ -1243,13 +1550,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
         log("── Running Evaluator ──")
         write_heartbeat(cycle, "evaluator")
         evaluation = run_evaluator(cycle, pre_sorry_count, post_sorry_count,
-                                   worker_output)
-
-        # Update attempts.md
-        new_attempt = evaluation.get("attempts_update", "")
-        if new_attempt:
-            with open(ATTEMPTS_FILE, "a") as f:
-                f.write(f"\n### Cycle {cycle}\n{new_attempt}\n")
+                                   worker_output, base_rev=cycle_base_rev)
 
         # ── Mechanical Gates ──
         log("── Checking Mechanical Gates ──")
@@ -1257,11 +1558,16 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
         # VeriRefine
         if not verirefine_gate(pre_sorry_count, post_sorry_count, cycle):
             log("VeriRefine gate failed — reverting changes")
-            git_revert_changes()
+            raw_post_sorry_count = post_sorry_count
+            reverted = git_revert_cycle_commits(cycle_base_rev, cycle)
+            if not reverted:
+                git_revert_changes()
+            post_sorry_count = count_sorries()
             evaluation["progress_score"] = -2
             evaluation["summary"] = (
-                f"REVERTED: sorry count increased {pre_sorry_count}→{post_sorry_count}"
+                f"REVERTED: sorry count increased {pre_sorry_count}→{raw_post_sorry_count}"
             )
+            evaluation["post_sorry_count"] = post_sorry_count
 
         # Budget cap
         budget_stuck = check_budget_cap()
@@ -1273,7 +1579,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
             )
 
         # Strategy compliance
-        deviation = check_strategy_compliance(cycle)
+        deviation = check_strategy_compliance(cycle, base_rev=cycle_base_rev)
         if deviation:
             log(f"Strategy compliance: {deviation}")
             evaluation["strategy_deviation"] = deviation
@@ -1299,6 +1605,12 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
             log(f"── Running Consultant (stuck for {consecutive_stalls} cycles) ──")
             write_heartbeat(cycle, "consultant")
             run_consultant(cycle)
+
+        # Update attempts.md only after mechanical gates settle the final state.
+        new_attempt = evaluation.get("attempts_update", "")
+        if new_attempt:
+            with open(ATTEMPTS_FILE, "a") as f:
+                f.write(f"\n### Cycle {cycle}\n{new_attempt}\n")
 
     # ── Record history ──
     append_history(evaluation)

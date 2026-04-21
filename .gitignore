@@ -17,6 +17,20 @@
 .prover-state/monitor.log
 .prover-state/loop.pid
 .prover-state/cycle
+.prover-state/strategy.md
+.prover-state/history.jsonl
+.prover-state/attempts.md
+.prover-state/heartbeat.json
+.prover-state/watchdog.log
+.prover-state/aristotle_harvested.txt
+.prover-state/aristotle/
+.prover-state/aristotle_results/
+.prover-state/issues/consultant_advice_cycle_*.md
+*-aristotle.tar.gz
+
+# Local caches / staging
+.mathlib_staging/
+scripts/__pycache__/
 
 # macOS
 .DS_Store
