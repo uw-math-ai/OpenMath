@@ -52,6 +52,25 @@ theorem nonempty_padeR_realizedUpArrowInfinityWitnessFamily_iff
       (α := RealizedUpArrowInfinityBranch (padeR n d))
       data.upArrowsAtInfinity)
 
+private theorem padeR_mem_orderWeb_zero (n d : ℕ) :
+    (0 : ℂ) ∈ orderWeb (padeR n d) := by
+  exact mem_orderWeb_zero (R := padeR n d) (by
+    simp [padeR, padeP_eval_zero, padeQ_eval_zero])
+
+private theorem isConnected_union_zero_of_zero_mem_closure
+    {support : Set ℂ} (hsupport : IsConnected support)
+    (hzero : (0 : ℂ) ∈ closure support) :
+    IsConnected (support ∪ ({0} : Set ℂ)) := by
+  refine hsupport.subset_closure ?_ ?_
+  · intro z hz
+    exact Or.inl hz
+  · intro z hz
+    rcases hz with hz | hz
+    · exact subset_closure hz
+    · have hz0 : z = 0 := by simpa using hz
+      subst hz0
+      exact hzero
+
 theorem padeR_exists_orderWebBranchSupport_of_downArrowsAtInfinity_pos
     (n d : ℕ) (data : OrderArrowTerminationData)
     (_hpos : 0 < data.downArrowsAtInfinity) :
@@ -84,6 +103,92 @@ theorem padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos_of_exists
        origin_mem_closure := horigin_mem_closure
        tangentAngle := θ
        tangentDown := hθ }⟩
+
+/-- Cycle-300 truth audit: adjoining `{0}` to the support of a realized Padé
+down-arrow infinity branch preserves the realized-branch interface. -/
+private def padeR_realizedDownArrowInfinityBranch_withZeroSupport
+    {n d : ℕ}
+    (branch : RealizedDownArrowInfinityBranch (padeR n d)) :
+    RealizedDownArrowInfinityBranch (padeR n d) := by
+  refine
+    { branch :=
+        { support := branch.branch.toGlobalOrderArrowBranch.support ∪ ({0} : Set ℂ)
+          support_connected := ?_
+          support_subset_orderWeb := ?_
+          origin_mem_closure := ?_
+          tangentAngle := branch.branch.tangentAngle
+          tangentDown := branch.branch.tangentDown }
+      continuesLocalGerm := ?_
+      escapesEveryClosedBall := ?_ }
+  · exact isConnected_union_zero_of_zero_mem_closure
+      branch.branch.toGlobalOrderArrowBranch.support_connected
+      branch.branch.toGlobalOrderArrowBranch.origin_mem_closure
+  · intro z hz
+    rcases hz with hz | hz
+    · exact branch.branch.toGlobalOrderArrowBranch.support_subset_orderWeb hz
+    · have hz0 : z = 0 := by simpa using hz
+      subst hz0
+      exact padeR_mem_orderWeb_zero n d
+  · exact subset_closure (by simp : (0 : ℂ) ∈
+      (branch.branch.toGlobalOrderArrowBranch.support ∪ ({0} : Set ℂ)))
+  · intro aperture haperture radius hradius
+    rcases branch.continuesLocalGerm aperture haperture radius hradius with
+      ⟨z, hzsupport, hzcone⟩
+    exact ⟨z, Or.inl hzsupport, hzcone⟩
+  · intro r hr
+    rcases branch.escapesEveryClosedBall r hr with ⟨z, hzsupport, hzfar⟩
+    exact ⟨z, Or.inl hzsupport, hzfar⟩
+
+theorem padeR_exists_realizedDownArrowInfinityBranch_with_zero_mem_support
+    {n d : ℕ}
+    (branch : RealizedDownArrowInfinityBranch (padeR n d)) :
+    ∃ branch' : RealizedDownArrowInfinityBranch (padeR n d),
+      (0 : ℂ) ∈ branch'.branch.toGlobalOrderArrowBranch.support := by
+  refine ⟨padeR_realizedDownArrowInfinityBranch_withZeroSupport branch, ?_⟩
+  simp [padeR_realizedDownArrowInfinityBranch_withZeroSupport]
+
+/-- Cycle-300 truth audit: adjoining `{0}` to the support of a realized Padé
+up-arrow infinity branch preserves the realized-branch interface. -/
+private def padeR_realizedUpArrowInfinityBranch_withZeroSupport
+    {n d : ℕ}
+    (branch : RealizedUpArrowInfinityBranch (padeR n d)) :
+    RealizedUpArrowInfinityBranch (padeR n d) := by
+  refine
+    { branch :=
+        { support := branch.branch.toGlobalOrderArrowBranch.support ∪ ({0} : Set ℂ)
+          support_connected := ?_
+          support_subset_orderWeb := ?_
+          origin_mem_closure := ?_
+          tangentAngle := branch.branch.tangentAngle
+          tangentUp := branch.branch.tangentUp }
+      continuesLocalGerm := ?_
+      escapesEveryClosedBall := ?_ }
+  · exact isConnected_union_zero_of_zero_mem_closure
+      branch.branch.toGlobalOrderArrowBranch.support_connected
+      branch.branch.toGlobalOrderArrowBranch.origin_mem_closure
+  · intro z hz
+    rcases hz with hz | hz
+    · exact branch.branch.toGlobalOrderArrowBranch.support_subset_orderWeb hz
+    · have hz0 : z = 0 := by simpa using hz
+      subst hz0
+      exact padeR_mem_orderWeb_zero n d
+  · exact subset_closure (by simp : (0 : ℂ) ∈
+      (branch.branch.toGlobalOrderArrowBranch.support ∪ ({0} : Set ℂ)))
+  · intro aperture haperture radius hradius
+    rcases branch.continuesLocalGerm aperture haperture radius hradius with
+      ⟨z, hzsupport, hzcone⟩
+    exact ⟨z, Or.inl hzsupport, hzcone⟩
+  · intro r hr
+    rcases branch.escapesEveryClosedBall r hr with ⟨z, hzsupport, hzfar⟩
+    exact ⟨z, Or.inl hzsupport, hzfar⟩
+
+theorem padeR_exists_realizedUpArrowInfinityBranch_with_zero_mem_support
+    {n d : ℕ}
+    (branch : RealizedUpArrowInfinityBranch (padeR n d)) :
+    ∃ branch' : RealizedUpArrowInfinityBranch (padeR n d),
+      (0 : ℂ) ∈ branch'.branch.toGlobalOrderArrowBranch.support := by
+  refine ⟨padeR_realizedUpArrowInfinityBranch_withZeroSupport branch, ?_⟩
+  simp [padeR_realizedUpArrowInfinityBranch_withZeroSupport]
 
 /-- Padé-local packaging helper for the strengthened no-infinity seam.
 This makes the remaining concrete gap explicit: produce the down-arrow and
@@ -170,6 +275,17 @@ theorem concreteRationalApproxToExp_of_padeR
       hlocal_minus_near_down hlocal_plus_near_up
       hfar_plus_on_orderWeb hfar_minus_on_orderWeb)
 
+/-- Small Padé-local bundle isolating the cycle-300 blocker: excluding `0`
+from the supports of realized infinity branches is extra input, not something
+forced by the current realized-branch interface alone. -/
+structure PadeRZeroSupportExclusionInput (n d : ℕ) where
+  zero_not_mem_down_support :
+    ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
+      (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
+  zero_not_mem_up_support :
+    ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
+      (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
+
 /-- Minimal Padé-local boundary for the live no-escape seam.
 This exposes the exact remaining input below `ConcreteRationalApproxToExp`
 without changing the `OrderStars` interface: two realized infinity witness
@@ -205,6 +321,14 @@ structure PadeRConcreteNoEscapeInput
     ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
       ‖padeR n d z * exp (-z)‖ < 1
 
+def PadeRConcreteNoEscapeInput.zeroSupportExclusion
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRConcreteNoEscapeInput n d data) :
+    PadeRZeroSupportExclusionInput n d := by
+  exact
+    { zero_not_mem_down_support := h.zero_not_mem_down_support
+      zero_not_mem_up_support := h.zero_not_mem_up_support }
+
 def PadeRConcreteNoEscapeInput.realizesInfinityBranchGerms
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeRConcreteNoEscapeInput n d data) :
@@ -225,6 +349,42 @@ theorem PadeRConcreteNoEscapeInput.concrete
     h.local_plus_near_up
     h.far_plus_on_orderWeb
     h.far_minus_on_orderWeb
+
+def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExclusion
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (hreal : RealizesInfinityBranchGerms (padeR n d) data)
+    (hcont : Continuous (fun z => ‖padeR n d z * exp (-z)‖))
+    (hzero : PadeRZeroSupportExclusionInput n d)
+    (hno_nonzero_eq_exp :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False)
+    (hlocal_minus_near_down :
+      ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            ‖padeR n d z * exp (-z)‖ < 1)
+    (hlocal_plus_near_up :
+      ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            1 < ‖padeR n d z * exp (-z)‖)
+    (hfar_plus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+        1 < ‖padeR n d z * exp (-z)‖)
+    (hfar_minus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+        ‖padeR n d z * exp (-z)‖ < 1) :
+    PadeRConcreteNoEscapeInput n d data := by
+  exact
+    { downArrowInfinityWitnesses := hreal.downArrowInfinityWitnesses
+      upArrowInfinityWitnesses := hreal.upArrowInfinityWitnesses
+      cont := hcont
+      zero_not_mem_down_support := hzero.zero_not_mem_down_support
+      zero_not_mem_up_support := hzero.zero_not_mem_up_support
+      no_nonzero_eq_exp := hno_nonzero_eq_exp
+      local_minus_near_down := hlocal_minus_near_down
+      local_plus_near_up := hlocal_plus_near_up
+      far_plus_on_orderWeb := hfar_plus_on_orderWeb
+      far_minus_on_orderWeb := hfar_minus_on_orderWeb }
 
 def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     {n d : ℕ} {data : OrderArrowTerminationData}
@@ -255,17 +415,15 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
       ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
         ‖padeR n d z * exp (-z)‖ < 1) :
     PadeRConcreteNoEscapeInput n d data := by
-  exact
-    { downArrowInfinityWitnesses := hreal.downArrowInfinityWitnesses
-      upArrowInfinityWitnesses := hreal.upArrowInfinityWitnesses
-      cont := hcont
-      zero_not_mem_down_support := hzero_not_mem_down_support
-      zero_not_mem_up_support := hzero_not_mem_up_support
-      no_nonzero_eq_exp := hno_nonzero_eq_exp
-      local_minus_near_down := hlocal_minus_near_down
-      local_plus_near_up := hlocal_plus_near_up
-      far_plus_on_orderWeb := hfar_plus_on_orderWeb
-      far_minus_on_orderWeb := hfar_minus_on_orderWeb }
+  exact padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExclusion
+    hreal
+    hcont
+    ⟨hzero_not_mem_down_support, hzero_not_mem_up_support⟩
+    hno_nonzero_eq_exp
+    hlocal_minus_near_down
+    hlocal_plus_near_up
+    hfar_plus_on_orderWeb
+    hfar_minus_on_orderWeb
 
 /-- Honest Padé-local boundary for the repaired Ehle barrier seam.
 This bundles exactly the concrete hypotheses currently needed to apply the
