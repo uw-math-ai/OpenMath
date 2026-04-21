@@ -859,6 +859,82 @@ escapes to infinity. -/
 def NoArrowsEscapeToInfinity (data : OrderArrowTerminationData) : Prop :=
   data.downArrowsAtInfinity = 0 ∧ data.upArrowsAtInfinity = 0
 
+/-- Minimal global model of a single order-arrow branch: a connected subset of the
+order web whose closure still meets the origin. This is the smallest trajectory-level
+object needed for the remaining 355D no-infinity gap. -/
+structure GlobalOrderArrowBranch (R : ℂ → ℂ) where
+  support : Set ℂ
+  support_connected : IsConnected support
+  support_subset_orderWeb : support ⊆ orderWeb R
+  origin_mem_closure : (0 : ℂ) ∈ closure support
+
+/-- A global down-arrow branch is a connected order-web branch carrying one of the
+down-arrow tangent directions from the origin. -/
+structure GlobalDownArrowBranch (R : ℂ → ℂ) extends GlobalOrderArrowBranch R where
+  tangentAngle : ℝ
+  tangentDown : IsDownArrowDir R tangentAngle
+
+/-- A global up-arrow branch is a connected order-web branch carrying one of the
+up-arrow tangent directions from the origin. -/
+structure GlobalUpArrowBranch (R : ℂ → ℂ) extends GlobalOrderArrowBranch R where
+  tangentAngle : ℝ
+  tangentUp : IsUpArrowDir R tangentAngle
+
+/-- Finite endpoint labels for a global order-arrow branch. The point is stored
+explicitly so later topology work can distinguish zeros, poles, and ordinary finite
+nonsingular endpoints without redesigning `OrderArrowTerminationData`. -/
+inductive OrderArrowFiniteEndpointKind
+  | zero
+  | pole
+  | ordinary
+deriving DecidableEq
+
+/-- A concrete finite endpoint on a global order-arrow branch. -/
+structure OrderArrowFiniteEndpoint where
+  point : ℂ
+  kind : OrderArrowFiniteEndpointKind
+
+/-- A global branch escapes to infinity if it leaves every closed ball centered at
+the origin. -/
+def EscapesEveryClosedBall {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R) : Prop :=
+  ∀ r : ℝ, 0 ≤ r → ∃ z ∈ branch.support, z ∉ Metric.closedBall (0 : ℂ) r
+
+/-- A finite endpoint is recorded through the closure of the tracked branch support,
+so the branch may still be represented by an open arc away from the endpoint. -/
+def HasFiniteEndpoint {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R)
+    (endpoint : OrderArrowFiniteEndpoint) : Prop :=
+  endpoint.point ∈ closure branch.support
+
+/-- Minimal branch-level dichotomy behind the 355C/355D global topology: a concrete
+down-arrow branch either accumulates at some finite endpoint or leaves every closed
+ball. -/
+theorem downArrowBranch_hasFiniteEndpoint_or_escapesToInfinity
+    (R : ℂ → ℂ) (branch : GlobalDownArrowBranch R) :
+    (∃ endpoint : OrderArrowFiniteEndpoint,
+      HasFiniteEndpoint branch.toGlobalOrderArrowBranch endpoint) ∨
+      EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
+  sorry
+
+/-- Up-arrow version of the minimal endpoint-vs-infinity dichotomy. -/
+theorem upArrowBranch_hasFiniteEndpoint_or_escapesToInfinity
+    (R : ℂ → ℂ) (branch : GlobalUpArrowBranch R) :
+    (∃ endpoint : OrderArrowFiniteEndpoint,
+      HasFiniteEndpoint branch.toGlobalOrderArrowBranch endpoint) ∨
+      EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
+  sorry
+
+/-- Each counted down-arrow infinity endpoint must come from a concrete global
+down-arrow branch that leaves every closed ball. This is the only bridge needed from
+branch topology back to the abstract count `data.downArrowsAtInfinity`. -/
+def DownArrowInfinityWitnesses (R : ℂ → ℂ) (data : OrderArrowTerminationData) : Prop :=
+  ∀ _ : Fin data.downArrowsAtInfinity, ∃ branch : GlobalDownArrowBranch R,
+    EscapesEveryClosedBall branch.toGlobalOrderArrowBranch
+
+/-- Up-arrow analogue of `DownArrowInfinityWitnesses`. -/
+def UpArrowInfinityWitnesses (R : ℂ → ℂ) (data : OrderArrowTerminationData) : Prop :=
+  ∀ _ : Fin data.upArrowsAtInfinity, ∃ branch : GlobalUpArrowBranch R,
+    EscapesEveryClosedBall branch.toGlobalOrderArrowBranch
+
 /-- The inequality asserted by Theorem 355D, isolated as a reusable arithmetic predicate. -/
 def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=
   data.order ≤ data.downArrowsAtZeros + data.upArrowsAtPoles
@@ -967,6 +1043,58 @@ theorem finiteArrowEndpointsClassified_of_rationalApprox
     (h_approx : IsRationalApproxToExp data) :
     FiniteArrowEndpointsClassified data := by
   exact finiteArrowEndpointsClassified_of_localRegularity data h_approx.localRegularity
+
+/-- Branch-level no-escape statement for down arrows. This is the actual global
+topology missing from the current 355D boundary. -/
+theorem noDownArrowBranchEscapesToInfinity_of_rationalApprox
+    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (branch : GlobalDownArrowBranch R) :
+    ¬ EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
+  sorry
+
+/-- Branch-level no-escape statement for up arrows. -/
+theorem noUpArrowBranchEscapesToInfinity_of_rationalApprox
+    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (branch : GlobalUpArrowBranch R) :
+    ¬ EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
+  sorry
+
+/-- Count-level down-arrow corollary of the branch no-escape theorem. -/
+theorem noDownArrowEscapesToInfinity_of_rationalApprox
+    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (hwitness : DownArrowInfinityWitnesses R data) :
+    data.downArrowsAtInfinity = 0 := by
+  by_contra hne
+  let i : Fin data.downArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
+  rcases hwitness i with ⟨branch, hescape⟩
+  exact (noDownArrowBranchEscapesToInfinity_of_rationalApprox R data h_approx branch) hescape
+
+/-- Count-level up-arrow corollary of the branch no-escape theorem. -/
+theorem noUpArrowEscapesToInfinity_of_rationalApprox
+    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (hwitness : UpArrowInfinityWitnesses R data) :
+    data.upArrowsAtInfinity = 0 := by
+  by_contra hne
+  let i : Fin data.upArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
+  rcases hwitness i with ⟨branch, hescape⟩
+  exact (noUpArrowBranchEscapesToInfinity_of_rationalApprox R data h_approx branch) hescape
+
+/-- Combined no-infinity theorem once both down-arrow and up-arrow branches are
+shown not to leave every closed ball and the abstract infinity counts are realized
+by concrete global branches. -/
+theorem noArrowsEscapeToInfinity_of_rationalApprox
+    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (hdown : DownArrowInfinityWitnesses R data)
+    (hup : UpArrowInfinityWitnesses R data) :
+    NoArrowsEscapeToInfinity data := by
+  constructor
+  · exact noDownArrowEscapesToInfinity_of_rationalApprox R data h_approx hdown
+  · exact noUpArrowEscapesToInfinity_of_rationalApprox R data h_approx hup
 
 /-- Specialization: a Padé approximation has order exactly n + d. -/
 structure IsPadeApproxToExp (data : OrderArrowTerminationData) : Prop
