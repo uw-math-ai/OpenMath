@@ -217,7 +217,7 @@ theorem orderStarBdry_imaginaryAxis (R : ℂ → ℂ) (t : ℝ) :
 
 The Ehle barrier constrains which Padé approximants to `eᶻ` can be A-stable.
 The full proof requires winding number theory (not yet formalized), so we
-state the result with `sorry`.
+record the result as a separate theorem interface.
 
 **Theorem (Ehle, 1969)**: The `(p,q)`-Padé approximant `R_{p,q}(z)` to `eᶻ` is
 A-stable if and only if `p ≤ q ≤ p + 2`. Equivalently, an A-stable Padé
@@ -1031,16 +1031,12 @@ analysis (see `.prover-state/issues/order_star_arrow_termination_topology.md`).
 Reference: Iserles, Theorem 355D.
 -/
 
-/-- A rational function R of order p with deg(num) = n, deg(den) = d
-has arrow counts consistent with the order star of R · exp(-z).
-The `order_le` field records that the approximation order is at most n + d.
-The remaining topological input is now split into two sharper layers:
-ordinary finite nonsingular endpoints are ruled out by local continuation, while
-the no-infinity statement is supplied separately by a realization bridge tying a
-concrete order web `orderWeb R` to the abstract endpoint counts in `data`.
-This is the narrowed abstract interface for the content not yet formalized — see
-`.prover-state/issues/order_star_arrow_termination_topology.md` and
-`.prover-state/issues/order_star_branch_realization_gap.md`. -/
+/-- Abstract rational-approximation bookkeeping for 355D. The `order_le` field
+records the arithmetic order bound, while `localRegularity` packages the ordinary
+finite-point continuation input. The no-infinity statement is intentionally not
+built into this structure: `thm_355D` takes `NoArrowsEscapeToInfinity data` as a
+separate hypothesis, and `RealizesInfinityCounts` remains future infrastructure for
+discharging that hypothesis later. -/
 structure IsRationalApproxToExp (data : OrderArrowTerminationData) : Prop where
   /-- The order of approximation is at most the sum of degrees. -/
   order_le : data.order ≤ data.numeratorDegree + data.denominatorDegree
@@ -1056,79 +1052,23 @@ theorem finiteArrowEndpointsClassified_of_rationalApprox
     FiniteArrowEndpointsClassified data := by
   exact finiteArrowEndpointsClassified_of_localRegularity data h_approx.localRegularity
 
-/-- Isolated remaining global no-escape gap for 355D: once a counted infinity
-endpoint is realized by a concrete order-web branch, the missing analytic step is
-to show that such a branch cannot leave every closed ball for a genuine rational
-approximation to `exp`. -/
-theorem orderArrowBranch_not_escape_of_rationalApprox
-    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
-    (h_approx : IsRationalApproxToExp data)
-    (branch : GlobalOrderArrowBranch R)
-    (hescape : EscapesEveryClosedBall branch) : False := by
-  sorry
-
-/-- Count-level down-arrow no-escape theorem once the abstract rational-approximation
-data are tied to a concrete order web whose infinity endpoints are realized by
-global down-arrow branches. -/
-theorem noDownArrowEscapesToInfinity_of_rationalApprox
-    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
-    (h_approx : IsRationalApproxToExp data)
-    (hreal : RealizesInfinityCounts R data) :
-    data.downArrowsAtInfinity = 0 := by
-  by_contra hne
-  let i : Fin data.downArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
-  rcases hreal.downArrowInfinityWitnesses i with ⟨branch, hescape⟩
-  exact orderArrowBranch_not_escape_of_rationalApprox R data h_approx
-    branch.toGlobalOrderArrowBranch hescape
-
-/-- Count-level up-arrow no-escape theorem. -/
-theorem noUpArrowEscapesToInfinity_of_rationalApprox
-    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
-    (h_approx : IsRationalApproxToExp data)
-    (hreal : RealizesInfinityCounts R data) :
-    data.upArrowsAtInfinity = 0 := by
-  by_contra hne
-  let i : Fin data.upArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
-  rcases hreal.upArrowInfinityWitnesses i with ⟨branch, hescape⟩
-  exact orderArrowBranch_not_escape_of_rationalApprox R data h_approx
-    branch.toGlobalOrderArrowBranch hescape
-
-/-- Combined no-infinity theorem once both down-arrow and up-arrow branches are
-shown not to leave every closed ball and the abstract infinity counts are realized
-by concrete global branches. -/
-theorem noArrowsEscapeToInfinity_of_rationalApprox
-    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
-    (h_approx : IsRationalApproxToExp data)
-    (hreal : RealizesInfinityCounts R data) :
-    NoArrowsEscapeToInfinity data := by
-  constructor
-  · exact noDownArrowEscapesToInfinity_of_rationalApprox R data h_approx hreal
-  · exact noUpArrowEscapesToInfinity_of_rationalApprox R data h_approx hreal
-
 /-- Specialization: a Padé approximation has order exactly n + d. -/
 structure IsPadeApproxToExp (data : OrderArrowTerminationData) : Prop
     extends IsRationalApproxToExp data where
   /-- For Padé, the order equals the sum of degrees. -/
   order_eq : data.order = data.numeratorDegree + data.denominatorDegree
 
-/-- **Theorem 355D**: For any rational approximation to exp of order p
-with numerator degree n and denominator degree d, the arrow counts
-satisfy ñ ≤ n, d̃ ≤ d, and ñ + d̃ ≥ p.
-
-The proof uses the angular sector argument: the p + 1 order arrows
-emanating from the origin terminate at zeros (down arrows, ≤ n of them),
-poles (up arrows, ≤ d of them), or escape to ∞ along angular sectors.
-The sectors escaping to ∞ are constrained by the order star geometry
-to sum to at most 2π, and the non-escaping arrows give the inequality.
-
-This requires global arrow trajectory analysis — see the issue file
-`order_star_arrow_termination_topology.md`. -/
-theorem thm_355D (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+/-- **Theorem 355D** with the current honest boundary. The ordinary finite-point
+local regularity part is discharged by `IsRationalApproxToExp`, while the global
+no-infinity statement remains an explicit hypothesis. The realization bridge
+`RealizesInfinityCounts` is retained elsewhere in the file as future infrastructure
+for later discharging `hinfty`. -/
+theorem thm_355D
+    (data : OrderArrowTerminationData)
     (h_approx : IsRationalApproxToExp data)
-    (hreal : RealizesInfinityCounts R data) :
+    (hinfty : NoArrowsEscapeToInfinity data) :
     SatisfiesArrowCountInequality data.toOrderArrowCountData := by
-  exact thm_355D_of_localRegularity data h_approx.localRegularity
-    (noArrowsEscapeToInfinity_of_rationalApprox R data h_approx hreal)
+  exact thm_355D_of_localRegularity data h_approx.localRegularity hinfty
 
 /-- **Theorem 355E**: For Padé approximations with p = n + d, the arrow
 counts are forced to be exact: ñ = n and d̃ = d. This is a direct
@@ -1141,16 +1081,17 @@ theorem thm_355E (data : OrderArrowTerminationData)
     data.upArrowsAtPoles = data.denominatorDegree :=
   pade_exact_arrow_counts_of_countInequality data.toOrderArrowCountData h_pade.order_eq h_355D
 
-/-- **Theorem 355E** (combined form): For Padé approximations, the exact
-arrow counts follow from the rational approximation property alone,
-via 355D + the bookkeeping squeeze, once the abstract count data are realized by
-a concrete order web. -/
-theorem thm_355E' (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+/-- **Theorem 355E** (combined form) with the same repaired boundary as `thm_355D`.
+The Padé hypotheses discharge the local regularity and order bookkeeping, but the
+missing no-infinity content is still represented explicitly by
+`NoArrowsEscapeToInfinity data`. -/
+theorem thm_355E'
+    (data : OrderArrowTerminationData)
     (h_pade : IsPadeApproxToExp data)
-    (hreal : RealizesInfinityCounts R data) :
+    (hinfty : NoArrowsEscapeToInfinity data) :
     data.downArrowsAtZeros = data.numeratorDegree ∧
     data.upArrowsAtPoles = data.denominatorDegree :=
-  thm_355E data h_pade (thm_355D R data h_pade.toIsRationalApproxToExp hreal)
+  thm_355E data h_pade (thm_355D data h_pade.toIsRationalApproxToExp hinfty)
 
 /-! ## Theorem 355G: Ehle Barrier via Arrow Counting
 
