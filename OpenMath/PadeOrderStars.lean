@@ -249,8 +249,9 @@ theorem concreteRationalApproxToExp_of_padeR
     (hzero_not_mem_up_support :
       ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
-    (hno_nonzero_eq_exp :
-      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False)
+    (hno_nonzero_unit_points_on_orderWeb :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
+        ‖padeR n d z * exp (-z)‖ = 1 → False)
     (hlocal_minus_near_down :
       ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
         ∃ aperture > 0, ∃ radius > 0,
@@ -269,9 +270,10 @@ theorem concreteRationalApproxToExp_of_padeR
         ‖padeR n d z * exp (-z)‖ < 1) :
     ConcreteRationalApproxToExp (padeR n d) data := by
   simpa using
-    (concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions_of_no_nonzero_eq_exp
+    (concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions
       (R := padeR n d) data hcont
-      hzero_not_mem_down_support hzero_not_mem_up_support hno_nonzero_eq_exp
+      hzero_not_mem_down_support hzero_not_mem_up_support
+      hno_nonzero_unit_points_on_orderWeb
       hlocal_minus_near_down hlocal_plus_near_up
       hfar_plus_on_orderWeb hfar_minus_on_orderWeb)
 
@@ -302,8 +304,9 @@ structure PadeRConcreteNoEscapeInput
   zero_not_mem_up_support :
     ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
       (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
-  no_nonzero_eq_exp :
-    ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False
+  no_nonzero_unit_points_on_orderWeb :
+    ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
+      ‖padeR n d z * exp (-z)‖ = 1 → False
   local_minus_near_down :
     ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
       ∃ aperture > 0, ∃ radius > 0,
@@ -344,19 +347,29 @@ theorem PadeRConcreteNoEscapeInput.concrete
     h.cont
     h.zero_not_mem_down_support
     h.zero_not_mem_up_support
-    h.no_nonzero_eq_exp
+    h.no_nonzero_unit_points_on_orderWeb
     h.local_minus_near_down
     h.local_plus_near_up
     h.far_plus_on_orderWeb
     h.far_minus_on_orderWeb
+
+theorem PadeRConcreteNoEscapeInput.no_nonzero_eq_exp
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRConcreteNoEscapeInput n d data) :
+    ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
+      padeR n d z = exp z → False := by
+  exact
+    (no_nonzero_unit_points_on_orderWeb_iff_no_nonzero_eq_exp
+      (R := padeR n d)).1 h.no_nonzero_unit_points_on_orderWeb
 
 def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExclusion
     {n d : ℕ} {data : OrderArrowTerminationData}
     (hreal : RealizesInfinityBranchGerms (padeR n d) data)
     (hcont : Continuous (fun z => ‖padeR n d z * exp (-z)‖))
     (hzero : PadeRZeroSupportExclusionInput n d)
-    (hno_nonzero_eq_exp :
-      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False)
+    (hno_nonzero_unit_points_on_orderWeb :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
+        ‖padeR n d z * exp (-z)‖ = 1 → False)
     (hlocal_minus_near_down :
       ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
         ∃ aperture > 0, ∃ radius > 0,
@@ -380,7 +393,7 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExcl
       cont := hcont
       zero_not_mem_down_support := hzero.zero_not_mem_down_support
       zero_not_mem_up_support := hzero.zero_not_mem_up_support
-      no_nonzero_eq_exp := hno_nonzero_eq_exp
+      no_nonzero_unit_points_on_orderWeb := hno_nonzero_unit_points_on_orderWeb
       local_minus_near_down := hlocal_minus_near_down
       local_plus_near_up := hlocal_plus_near_up
       far_plus_on_orderWeb := hfar_plus_on_orderWeb
@@ -396,8 +409,9 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     (hzero_not_mem_up_support :
       ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
-    (hno_nonzero_eq_exp :
-      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False)
+    (hno_nonzero_unit_points_on_orderWeb :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
+        ‖padeR n d z * exp (-z)‖ = 1 → False)
     (hlocal_minus_near_down :
       ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
         ∃ aperture > 0, ∃ radius > 0,
@@ -419,7 +433,7 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     hreal
     hcont
     ⟨hzero_not_mem_down_support, hzero_not_mem_up_support⟩
-    hno_nonzero_eq_exp
+    hno_nonzero_unit_points_on_orderWeb
     hlocal_minus_near_down
     hlocal_plus_near_up
     hfar_plus_on_orderWeb
@@ -451,8 +465,9 @@ def padeREhleBarrierInput_of_padeR
     (hzero_not_mem_up_support :
       ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
-    (hno_nonzero_eq_exp :
-      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False)
+    (hno_nonzero_unit_points_on_orderWeb :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
+        ‖padeR n d z * exp (-z)‖ = 1 → False)
     (hlocal_minus_near_down :
       ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
         ∃ aperture > 0, ∃ radius > 0,
@@ -477,7 +492,7 @@ def padeREhleBarrierInput_of_padeR
     hcont
     hzero_not_mem_down_support
     hzero_not_mem_up_support
-    hno_nonzero_eq_exp
+    hno_nonzero_unit_points_on_orderWeb
     hlocal_minus_near_down
     hlocal_plus_near_up
     hfar_plus_on_orderWeb
