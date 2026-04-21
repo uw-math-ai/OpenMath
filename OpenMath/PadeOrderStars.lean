@@ -170,6 +170,103 @@ theorem concreteRationalApproxToExp_of_padeR
       hlocal_minus_near_down hlocal_plus_near_up
       hfar_plus_on_orderWeb hfar_minus_on_orderWeb)
 
+/-- Minimal Padé-local boundary for the live no-escape seam.
+This exposes the exact remaining input below `ConcreteRationalApproxToExp`
+without changing the `OrderStars` interface: two realized infinity witness
+families together with the analytic contradiction hypotheses that rule them
+out. -/
+structure PadeRConcreteNoEscapeInput
+    (n d : ℕ) (data : OrderArrowTerminationData) where
+  downArrowInfinityWitnesses : PadeRRealizedDownArrowInfinityWitnessFamily n d data
+  upArrowInfinityWitnesses : PadeRRealizedUpArrowInfinityWitnessFamily n d data
+  cont : Continuous (fun z => ‖padeR n d z * exp (-z)‖)
+  zero_not_mem_down_support :
+    ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
+      (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
+  zero_not_mem_up_support :
+    ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
+      (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
+  no_nonzero_eq_exp :
+    ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False
+  local_minus_near_down :
+    ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+      ∃ aperture > 0, ∃ radius > 0,
+        ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+          ‖padeR n d z * exp (-z)‖ < 1
+  local_plus_near_up :
+    ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+      ∃ aperture > 0, ∃ radius > 0,
+        ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+          1 < ‖padeR n d z * exp (-z)‖
+  far_plus_on_orderWeb :
+    ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+      1 < ‖padeR n d z * exp (-z)‖
+  far_minus_on_orderWeb :
+    ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+      ‖padeR n d z * exp (-z)‖ < 1
+
+def PadeRConcreteNoEscapeInput.realizesInfinityBranchGerms
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRConcreteNoEscapeInput n d data) :
+    RealizesInfinityBranchGerms (padeR n d) data := by
+  exact realizesInfinityBranchGerms_of_padeR
+    h.downArrowInfinityWitnesses h.upArrowInfinityWitnesses
+
+theorem PadeRConcreteNoEscapeInput.concrete
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRConcreteNoEscapeInput n d data) :
+    ConcreteRationalApproxToExp (padeR n d) data := by
+  exact concreteRationalApproxToExp_of_padeR
+    h.cont
+    h.zero_not_mem_down_support
+    h.zero_not_mem_up_support
+    h.no_nonzero_eq_exp
+    h.local_minus_near_down
+    h.local_plus_near_up
+    h.far_plus_on_orderWeb
+    h.far_minus_on_orderWeb
+
+def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (hreal : RealizesInfinityBranchGerms (padeR n d) data)
+    (hcont : Continuous (fun z => ‖padeR n d z * exp (-z)‖))
+    (hzero_not_mem_down_support :
+      ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hzero_not_mem_up_support :
+      ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
+        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
+    (hno_nonzero_eq_exp :
+      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) → padeR n d z = exp z → False)
+    (hlocal_minus_near_down :
+      ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            ‖padeR n d z * exp (-z)‖ < 1)
+    (hlocal_plus_near_up :
+      ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            1 < ‖padeR n d z * exp (-z)‖)
+    (hfar_plus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+        1 < ‖padeR n d z * exp (-z)‖)
+    (hfar_minus_on_orderWeb :
+      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+        ‖padeR n d z * exp (-z)‖ < 1) :
+    PadeRConcreteNoEscapeInput n d data := by
+  exact
+    { downArrowInfinityWitnesses := hreal.downArrowInfinityWitnesses
+      upArrowInfinityWitnesses := hreal.upArrowInfinityWitnesses
+      cont := hcont
+      zero_not_mem_down_support := hzero_not_mem_down_support
+      zero_not_mem_up_support := hzero_not_mem_up_support
+      no_nonzero_eq_exp := hno_nonzero_eq_exp
+      local_minus_near_down := hlocal_minus_near_down
+      local_plus_near_up := hlocal_plus_near_up
+      far_plus_on_orderWeb := hfar_plus_on_orderWeb
+      far_minus_on_orderWeb := hfar_minus_on_orderWeb }
+
 /-- Honest Padé-local boundary for the repaired Ehle barrier seam.
 This bundles exactly the concrete hypotheses currently needed to apply the
 Padé-side 355D/355E' wrappers together with `ehle_barrier_nat`, without
@@ -180,8 +277,7 @@ structure PadeREhleBarrierInput
   numeratorDegree_eq : data.numeratorDegree = n
   denominatorDegree_eq : data.denominatorDegree = d
   pade : IsPadeApproxToExp data
-  realizesInfinityBranchGerms : RealizesInfinityBranchGerms (padeR n d) data
-  concrete : ConcreteRationalApproxToExp (padeR n d) data
+  noEscape : PadeRConcreteNoEscapeInput n d data
   ehle : EhleBarrierInput data
 
 def padeREhleBarrierInput_of_padeR
@@ -217,8 +313,9 @@ def padeREhleBarrierInput_of_padeR
         ‖padeR n d z * exp (-z)‖ < 1)
     (hehle : EhleBarrierInput data) :
     PadeREhleBarrierInput n d data := by
-  refine ⟨hnum, hden, hpade, hreal, ?_, hehle⟩
-  exact concreteRationalApproxToExp_of_padeR
+  refine ⟨hnum, hden, hpade, ?_, hehle⟩
+  exact padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
+    hreal
     hcont
     hzero_not_mem_down_support
     hzero_not_mem_up_support
@@ -227,6 +324,18 @@ def padeREhleBarrierInput_of_padeR
     hlocal_plus_near_up
     hfar_plus_on_orderWeb
     hfar_minus_on_orderWeb
+
+def PadeREhleBarrierInput.realizesInfinityBranchGerms
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeREhleBarrierInput n d data) :
+    RealizesInfinityBranchGerms (padeR n d) data := by
+  exact h.noEscape.realizesInfinityBranchGerms
+
+theorem PadeREhleBarrierInput.concrete
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeREhleBarrierInput n d data) :
+    ConcreteRationalApproxToExp (padeR n d) data := by
+  exact h.noEscape.concrete
 
 theorem PadeREhleBarrierInput.thm_355D
     {n d : ℕ} {data : OrderArrowTerminationData}
