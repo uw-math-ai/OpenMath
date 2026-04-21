@@ -2213,7 +2213,11 @@ Reference: Iserles, Theorem 355G.
 This decomposes Iserles's Ehle-barrier proof into two independent ingredients:
 `sector_bound_n` and `sector_bound_d` encode Fact A, the topological
 sector-counting inequalities, while `arrows_zero` and `arrows_poles` encode
-Fact B, the A-stability vanishing of the origin/pole arrow counts. Neither
+Fact B, the A-stability vanishing used to erase the correction terms.
+At present these fields still live on the same endpoint-count coordinates as
+355E, so they are not yet an honest downstream interface for the explicit
+endpoint API; see
+`degrees_eq_zero_of_exact_endpoint_counts_and_aStablePadeApprox`. Neither
 pair alone implies `n ≤ d ≤ n + 2`; only their combination yields the
 non-circular Ehle barrier. -/
 structure IsAStablePadeApprox (data : OrderArrowTerminationData) : Prop where
@@ -2229,6 +2233,36 @@ structure IsAStablePadeApprox (data : OrderArrowTerminationData) : Prop where
   arrows_zero : data.downArrowsAtZeros = 0
   /-- Fact B2: A-stability forces the pole-arrow correction term to vanish. -/
   arrows_poles : data.upArrowsAtPoles = 0
+
+/-- The current 355G-side interface cannot be recovered from the explicit 355E
+endpoint counts except in the trivial zero-degree case. This records the live
+semantic mismatch: `IsAStablePadeApprox.arrows_zero` and
+`IsAStablePadeApprox.arrows_poles` are not compatible with the exact endpoint
+equalities produced by `thm_355E`. -/
+theorem degrees_eq_zero_of_exact_endpoint_counts_and_aStablePadeApprox
+    (data : OrderArrowTerminationData)
+    (h_exact :
+      data.downArrowsAtZeros = data.numeratorDegree ∧
+      data.upArrowsAtPoles = data.denominatorDegree)
+    (hA : IsAStablePadeApprox data) :
+    data.numeratorDegree = 0 ∧ data.denominatorDegree = 0 := by
+  rcases h_exact with ⟨hzeros, hpoles⟩
+  constructor
+  · simpa [hzeros] using hA.arrows_zero
+  · simpa [hpoles] using hA.arrows_poles
+
+/-- In particular, combining the current 355G-side interface with 355E exact
+endpoint counts forces the Padé degrees to vanish. This shows the downstream
+355E/355G seam still needs a replacement interface before `ehle_barrier` can be
+honestly derived from the explicit endpoint API. -/
+theorem degrees_eq_zero_of_thm_355E_and_aStablePadeApprox
+    (data : OrderArrowTerminationData)
+    (h_pade : IsPadeApproxToExp data)
+    (h_355D : SatisfiesArrowCountInequality data.toOrderArrowCountData)
+    (hA : IsAStablePadeApprox data) :
+    data.numeratorDegree = 0 ∧ data.denominatorDegree = 0 := by
+  exact degrees_eq_zero_of_exact_endpoint_counts_and_aStablePadeApprox data
+    (thm_355E data h_pade h_355D) hA
 
 /-- **Theorem 355G** (Ehle barrier): An A-stable Padé approximation `R_{n,d}`
 to `exp` must satisfy `n ≤ d ≤ n + 2`. The axiomatized interface splits
