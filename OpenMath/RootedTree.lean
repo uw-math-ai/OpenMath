@@ -1083,7 +1083,6 @@ structure ThreeChildRecoveryWitness (t : BTree) : Type where
   second : BTree
   third : BTree
   hbag : t.childrenBag = (BTree.node [first, second, third]).childrenBag
-  hnode : t = .node [first, second, third]
 
 /-- Transport the recovered ordered three-child witnesses back to the canonical
 unordered bag presented in the input hypothesis. -/
@@ -1094,7 +1093,7 @@ theorem ThreeChildRecoveryWitness.canonicalBag_eq {t d₁ d₂ d₃ : BTree}
       (BTree.node [d₁, d₂, d₃]).childrenBag := by
   exact hw.hbag.symm.trans hbag
 
-/-- Recover an exact three-child witness package from a bag-equality against a
+/-- Recover a three-child witness package from a bag-equality against a
 canonical three-child node. -/
 def three_child_recovery_witness_of_childrenBag_eq {t d₁ d₂ d₃ : BTree}
     (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag) :
@@ -1122,7 +1121,7 @@ def three_child_recovery_witness_of_childrenBag_eq {t d₁ d₂ d₃ : BTree}
               | cons third rest'' =>
                   cases rest'' with
                   | nil =>
-                      refine ⟨first, second, third, ?_, rfl⟩
+                      refine ⟨first, second, third, ?_⟩
                       rfl
                   | cons extra rest''' =>
                       simp at hlen
@@ -1136,7 +1135,6 @@ structure FourChildRecoveryWitness (t : BTree) : Type where
   third : BTree
   fourth : BTree
   hbag : t.childrenBag = (BTree.node [first, second, third, fourth]).childrenBag
-  hnode : t = .node [first, second, third, fourth]
 
 /-- Transport the recovered ordered four-child witnesses back to the canonical
 unordered bag presented in the input hypothesis. -/
@@ -1147,7 +1145,7 @@ theorem FourChildRecoveryWitness.canonicalBag_eq {t d₁ d₂ d₃ d₄ : BTree}
       (BTree.node [d₁, d₂, d₃, d₄]).childrenBag := by
   exact hw.hbag.symm.trans hbag
 
-/-- Recover an exact four-child witness package from a bag-equality against a
+/-- Recover a four-child witness package from a bag-equality against a
 canonical four-child node. -/
 def four_child_recovery_witness_of_childrenBag_eq {t d₁ d₂ d₃ d₄ : BTree}
     (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃, d₄]).childrenBag) :
@@ -1179,30 +1177,10 @@ def four_child_recovery_witness_of_childrenBag_eq {t d₁ d₂ d₃ d₄ : BTree
                   | cons fourth rest''' =>
                       cases rest''' with
                       | nil =>
-                          refine ⟨first, second, third, fourth, ?_, rfl⟩
+                          refine ⟨first, second, third, fourth, ?_⟩
                           rfl
                       | cons extra rest'''' =>
                           simp at hlen
-
-/-- Compatibility wrapper exposing the old exact three-child recovery data
-internally via the new bag-first witness API. -/
-private theorem triple_node_recover_of_childrenBag_eq {t d₁ d₂ d₃ : BTree}
-    (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃]).childrenBag) :
-    ∃ e₁ e₂ e₃,
-      t.childrenBag = (BTree.node [e₁, e₂, e₃]).childrenBag ∧
-      t = .node [e₁, e₂, e₃] := by
-  let hw := three_child_recovery_witness_of_childrenBag_eq hbag
-  exact ⟨hw.first, hw.second, hw.third, hw.hbag, hw.hnode⟩
-
-/-- Compatibility wrapper exposing the old exact four-child recovery data
-internally via the new bag-first witness API. -/
-private theorem four_node_recover_of_childrenBag_eq {t d₁ d₂ d₃ d₄ : BTree}
-    (hbag : t.childrenBag = (BTree.node [d₁, d₂, d₃, d₄]).childrenBag) :
-    ∃ e₁ e₂ e₃ e₄,
-      t.childrenBag = (BTree.node [e₁, e₂, e₃, e₄]).childrenBag ∧
-      t = .node [e₁, e₂, e₃, e₄] := by
-  let hw := four_child_recovery_witness_of_childrenBag_eq hbag
-  exact ⟨hw.first, hw.second, hw.third, hw.fourth, hw.hbag, hw.hnode⟩
 
 theorem alpha_eq_of_childrenBag_eq {children₁ children₂ : List BTree}
     (hbag : (BTree.node children₁).childrenBag = (BTree.node children₂).childrenBag) :
