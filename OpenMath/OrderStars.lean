@@ -793,15 +793,27 @@ structure OrderArrowCountData where
   downArrowsAtZeros_le_numeratorDegree : downArrowsAtZeros ≤ numeratorDegree
   upArrowsAtPoles_le_denominatorDegree : upArrowsAtPoles ≤ denominatorDegree
 
-/-- Global endpoint bookkeeping for order arrows: besides zeros and poles, a branch
-may in principle escape to infinity. This isolates the endpoint classification layer
-used by 355D without identifying it with the final count inequality. -/
+/-- Global endpoint bookkeeping for order arrows. Besides zeros and poles, a branch
+may in principle terminate at an ordinary finite nonsingular point or escape to
+infinity. The ordinary finite endpoint counts are kept separate so the missing
+finite-endpoint classification step can be stated explicitly rather than folded
+into the single no-infinity hypothesis. -/
 structure OrderArrowTerminationData extends OrderArrowCountData where
+  downArrowsAtOrdinaryFinitePoints : ℕ
+  upArrowsAtOrdinaryFinitePoints : ℕ
   downArrowsAtInfinity : ℕ
   upArrowsAtInfinity : ℕ
   order_le_allTerminals :
     order ≤ (downArrowsAtZeros + upArrowsAtPoles) +
-      (downArrowsAtInfinity + upArrowsAtInfinity)
+      ((downArrowsAtOrdinaryFinitePoints + upArrowsAtOrdinaryFinitePoints) +
+        (downArrowsAtInfinity + upArrowsAtInfinity))
+
+/-- Finite-endpoint classification layer of Theorems 355C/355D: no global order arrow
+terminates at an ordinary finite nonsingular point, so every finite endpoint is
+already accounted for by the zero and pole counts. -/
+def FiniteArrowEndpointsClassified (data : OrderArrowTerminationData) : Prop :=
+  data.downArrowsAtOrdinaryFinitePoints = 0 ∧
+    data.upArrowsAtOrdinaryFinitePoints = 0
 
 /-- The remaining global trajectory statement needed for 355D: no order-arrow branch
 escapes to infinity. -/
@@ -812,14 +824,18 @@ def NoArrowsEscapeToInfinity (data : OrderArrowTerminationData) : Prop :=
 def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=
   data.order ≤ data.downArrowsAtZeros + data.upArrowsAtPoles
 
-/-- If the only allowed endpoints are zeros and poles, the explicit termination
-bookkeeping collapses to the 355D arrow-count inequality. -/
-theorem satisfiesArrowCountInequality_of_noArrowsEscape
-    (data : OrderArrowTerminationData) (hfinite : NoArrowsEscapeToInfinity data) :
+/-- If ordinary finite endpoints are excluded and no branch escapes to infinity,
+the explicit termination bookkeeping collapses to the 355D arrow-count inequality. -/
+theorem satisfiesArrowCountInequality_of_endpointClassification
+    (data : OrderArrowTerminationData)
+    (hfinite : FiniteArrowEndpointsClassified data)
+    (hinfty : NoArrowsEscapeToInfinity data) :
     SatisfiesArrowCountInequality data.toOrderArrowCountData := by
-  rcases hfinite with ⟨hdown, hup⟩
+  rcases hfinite with ⟨hdownFinite, hupFinite⟩
+  rcases hinfty with ⟨hdownInf, hupInf⟩
   dsimp [SatisfiesArrowCountInequality]
-  simpa [NoArrowsEscapeToInfinity, hdown, hup] using data.order_le_allTerminals
+  simpa [FiniteArrowEndpointsClassified, NoArrowsEscapeToInfinity,
+    hdownFinite, hupFinite, hdownInf, hupInf] using data.order_le_allTerminals
 
 /-- **Theorem 355E** in bookkeeping form: once the arrow-count inequality from
     Theorem 355D is known and `p = n + d`, the zero/pole counts are forced to
@@ -879,13 +895,16 @@ Reference: Iserles, Theorem 355D.
 /-- A rational function R of order p with deg(num) = n, deg(den) = d
 has arrow counts consistent with the order star of R · exp(-z).
 The `order_le` field records that the approximation order is at most n + d.
-The endpoint classification itself now lives in `OrderArrowTerminationData`;
-the only abstract topological input kept here is that the infinity endpoint
-counts vanish. This is the narrowed interface for the content not yet
-formalized — see `.prover-state/issues/order_star_arrow_termination_topology.md`. -/
+The remaining topological input is now split into two sharper layers:
+finite endpoints are classified by zeros/poles, and infinity endpoints vanish.
+This is the narrowed interface for the content not yet formalized — see
+`.prover-state/issues/order_star_arrow_termination_topology.md`. -/
 structure IsRationalApproxToExp (data : OrderArrowTerminationData) : Prop where
   /-- The order of approximation is at most the sum of degrees. -/
   order_le : data.order ≤ data.numeratorDegree + data.denominatorDegree
+  /-- Missing local/global regularity bridge: a global order-arrow branch cannot
+      terminate at an ordinary finite nonsingular point. -/
+  finiteEndpointsClassified : FiniteArrowEndpointsClassified data
   /-- Global trajectory input still missing from the repo: no arrow branch
       contributes to the infinity endpoint counts. -/
   noArrowsEscapeToInfinity : NoArrowsEscapeToInfinity data
@@ -911,7 +930,8 @@ This requires global arrow trajectory analysis — see the issue file
 theorem thm_355D (data : OrderArrowTerminationData)
     (h_approx : IsRationalApproxToExp data) :
     SatisfiesArrowCountInequality data.toOrderArrowCountData :=
-  satisfiesArrowCountInequality_of_noArrowsEscape data h_approx.noArrowsEscapeToInfinity
+  satisfiesArrowCountInequality_of_endpointClassification data
+    h_approx.finiteEndpointsClassified h_approx.noArrowsEscapeToInfinity
 
 /-- **Theorem 355E**: For Padé approximations with p = n + d, the arrow
 counts are forced to be exact: ñ = n and d̃ = d. This is a direct
