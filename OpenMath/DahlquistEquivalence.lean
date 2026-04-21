@@ -1,6 +1,5 @@
 import OpenMath.MultistepMethods
 import OpenMath.SpectralBound
-import Mathlib.Topology.MetricSpace.Bounded
 
 /-!
 # Dahlquist Equivalence Theorem
@@ -199,7 +198,7 @@ The companion operator `tupleSucc` maps state vectors (y_n, ..., y_{n+s-1}) to
 1. `toLinearRecurrence`: convert LMM recurrence to `LinearRecurrence ℂ`.
 2. `satisfiesRecurrence_iff_isSolution`: equivalence of solution predicates.
 3. `tupleSucc_iterate_eq_mkSol`: state evolution via companion operator.
-4. `uniformly_bounded_tupleSucc_iterates`: spectral bound (the key sorry).
+4. `uniformly_bounded_tupleSucc_iterates`: spectral bound via `OpenMath.SpectralBound`.
 5. `stableRecurrence_of_zeroStable`: combine everything. -/
 
 /-- Convert an LMM's characteristic recurrence to a `LinearRecurrence` over ℂ.
@@ -362,272 +361,6 @@ lemma charPoly_rootMultiplicity_of_unit_root (m : LMM s) (hzs : m.IsZeroStable) 
     exact hderiv_ne hroot_deriv
   exact le_antisymm (Nat.le_of_not_gt hnot_gt) (Nat.succ_le_of_lt hp_pos)
 
-/-- A polynomial factor times a geometric decay sequence is uniformly bounded. -/
-lemma bounded_pow_geom_decay (k : ℕ) (r : ℝ) (hr0 : 0 ≤ r) (hr1 : r < 1) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ n : ℕ, (n : ℝ) ^ k * r ^ n ≤ C := by
-  let a : ℕ → ℝ := fun n => (n : ℝ) ^ k * r ^ n
-  have h_tendsto : Filter.Tendsto a Filter.atTop (nhds 0) := by
-    simpa [a, abs_of_nonneg hr0] using
-      tendsto_pow_const_mul_const_pow_of_abs_lt_one k (show |r| < 1 by simpa [abs_of_nonneg hr0] using hr1)
-  obtain ⟨C, hC⟩ := (Metric.isBounded_range_of_tendsto a h_tendsto).bddAbove
-  refine ⟨max C 0, le_max_right _ _, fun n => ?_⟩
-  calc
-    (n : ℝ) ^ k * r ^ n = a n := rfl
-    _ ≤ C := hC (Set.mem_range_self n)
-    _ ≤ max C 0 := le_max_left _ _
-
-private lemma tupleSucc_minpoly_rootMultiplicity_eq_one_of_unit_eigenvalue
-    (m : LMM s) (hzs : m.IsZeroStable) (μ : ℂ)
-    (hμ : Module.End.HasEigenvalue m.toLinearRecurrence.tupleSucc μ) (hunit : ‖μ‖ = 1) :
-    (minpoly ℂ m.toLinearRecurrence.tupleSucc).rootMultiplicity μ = 1 := by
-  let E := m.toLinearRecurrence
-  let T := E.tupleSucc
-  have hroot : m.rhoC μ = 0 := tupleSucc_eigenvalue_is_rhoC_root m μ hμ
-  have hchar_one : E.charPoly.rootMultiplicity μ = 1 :=
-    charPoly_rootMultiplicity_of_unit_root m hzs μ hroot hunit
-  have h_mp_dvd : minpoly ℂ T ∣ E.charPoly :=
-    minpoly.dvd ℂ T (aeval_tupleSucc_charPoly_eq_zero E)
-  have hle : (minpoly ℂ T).rootMultiplicity μ ≤ E.charPoly.rootMultiplicity μ := by
-    have hpow :
-        (Polynomial.X - Polynomial.C μ) ^ (minpoly ℂ T).rootMultiplicity μ ∣ E.charPoly :=
-      dvd_trans (Polynomial.pow_rootMultiplicity_dvd (minpoly ℂ T) μ) h_mp_dvd
-    rw [Polynomial.le_rootMultiplicity_iff E.charPoly_monic.ne_zero]
-    exact hpow
-  have hpos : 0 < (minpoly ℂ T).rootMultiplicity μ := by
-    have hroot_mp : (minpoly ℂ T).IsRoot μ := Module.End.isRoot_of_hasEigenvalue hμ
-    exact (Polynomial.rootMultiplicity_pos (minpoly.ne_zero (Algebra.IsIntegral.isIntegral T))).2
-      hroot_mp
-  exact le_antisymm (by simpa [hchar_one] using hle) (Nat.succ_le_of_lt hpos)
-
-private lemma tupleSucc_eq_smul_on_unit_eigenspace
-    (m : LMM s) (hzs : m.IsZeroStable) (μ : ℂ) (hroot : m.rhoC μ = 0) (hunit : ‖μ‖ = 1)
-    (v : Module.End.maxGenEigenspace m.toLinearRecurrence.tupleSucc μ) :
-    m.toLinearRecurrence.tupleSucc v = μ • v := by
-  let T := m.toLinearRecurrence.tupleSucc
-  let p := m.toLinearRecurrence.charPoly
-  -- charPoly(μ) = 0 (from rhoC)
-  have hp_root : p.IsRoot μ := by
-    rw [Polynomial.IsRoot.def, charPoly_eval_eq_rhoC]; exact hroot
-  -- charPoly has rootMultiplicity 1 at μ
-  have hrm : p.rootMultiplicity μ = 1 :=
-    charPoly_rootMultiplicity_of_unit_root m hzs μ hroot hunit
-  -- Factor: p = (X - C μ) * q
-  let q := p /ₘ (Polynomial.X - Polynomial.C μ)
-  have hfact : (Polynomial.X - Polynomial.C μ) * q = p :=
-    (Polynomial.mul_divByMonic_eq_iff_isRoot).mpr hp_root
-  -- q(μ) ≠ 0
-  have hq_ne : q.eval μ ≠ 0 := by
-    have := Polynomial.eval_divByMonic_pow_rootMultiplicity_ne_zero μ
-      (m.toLinearRecurrence.charPoly_monic.ne_zero)
-    rwa [hrm, pow_one] at this
-  -- Key: aeval T ((X - C μ) * q) = 0 (charPoly annihilates T)
-  have h_ann_map : Polynomial.aeval T ((Polynomial.X - Polynomial.C μ) * q) = 0 := by
-    show Polynomial.aeval T ((Polynomial.X - Polynomial.C μ) * q) = 0
-    rw [hfact]; exact aeval_tupleSucc_charPoly_eq_zero m.toLinearRecurrence
-  -- So for any w: (aeval T (X - C μ)) (aeval T q w) = 0
-  have h_ann : ∀ w, (Polynomial.aeval T (Polynomial.X - Polynomial.C μ))
-      (Polynomial.aeval T q w) = 0 := by
-    intro w
-    have h0 := LinearMap.congr_fun h_ann_map w
-    simp only [map_mul, Module.End.mul_apply, LinearMap.zero_apply] at h0
-    exact h0
-  -- v ∈ maxGenEigenspace: ∃ k, (T - μ • 1)^k v = 0
-  obtain ⟨k, hk⟩ := (Module.End.mem_maxGenEigenspace T μ (↑v)).mp v.property
-  -- (X - C μ) ∤ q (since q(μ) ≠ 0)
-  have hndvd : ¬(Polynomial.X - Polynomial.C μ) ∣ q :=
-    fun h => hq_ne (Polynomial.dvd_iff_isRoot.mp h)
-  -- IsCoprime (X - C μ)^k q (irreducible X - C μ, doesn't divide q)
-  have hcop : IsCoprime ((Polynomial.X - Polynomial.C μ) ^ k) q :=
-    ((Polynomial.irreducible_X_sub_C μ).isCoprime_or_dvd q).resolve_right hndvd |>.pow_left
-  -- Bezout identity: a * (X-Cμ)^k + b * q = 1
-  obtain ⟨a, b, hab⟩ := hcop
-  -- Apply aeval T to Bezout, evaluate at ↑v
-  -- v = a(T)·((T-μ)^k ↑v) + b(T)·(q(T) ↑v) = 0 + b(T)·(q(T) ↑v) = b(T)·(q(T) ↑v)
-  have hv_eq : v.val =
-      (Polynomial.aeval T b) (Polynomial.aeval T q v.val) := by
-    have hbez := LinearMap.congr_fun
-      (show Polynomial.aeval T (a * (Polynomial.X - Polynomial.C μ) ^ k + b * q) =
-        (1 : Module.End ℂ _) from by rw [hab, map_one]) v.val
-    simp only [map_add, map_mul, LinearMap.add_apply, Module.End.mul_apply] at hbez
-    have haeval_pow : Polynomial.aeval T ((Polynomial.X - Polynomial.C μ) ^ k) =
-        (T - μ • (1 : Module.End ℂ (Fin m.toLinearRecurrence.order → ℂ))) ^ k := by
-      rw [map_pow, map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
-        Algebra.algebraMap_eq_smul_one]
-    rw [haeval_pow, hk, map_zero, zero_add] at hbez
-    exact hbez.symm
-  -- Conclude: (aeval T (X - C μ)) v = T v - μ • v = 0
-  -- via hv_eq + commutativity + h_ann
-  suffices h0 : (Polynomial.aeval T (Polynomial.X - Polynomial.C μ)) v.val = 0 by
-    have heq : ∀ w, (Polynomial.aeval T (Polynomial.X - Polynomial.C μ)) w =
-        T w - μ • w := fun w => by
-      simp [map_sub, Polynomial.aeval_X, Polynomial.aeval_C,
-        Algebra.algebraMap_eq_smul_one, LinearMap.sub_apply]
-    rw [heq] at h0
-    exact sub_eq_zero.mp h0
-  -- (aeval T (X-Cμ))(v) = (aeval T (X-Cμ))(b(T)(q(T) v))  [by hv_eq]
-  -- = b(T)((aeval T (X-Cμ))(q(T) v))                        [commutativity]
-  -- = b(T)(0) = 0                                             [by h_ann]
-  rw [hv_eq]
-  have hcomm : ∀ w, (Polynomial.aeval T (Polynomial.X - Polynomial.C μ))
-      ((Polynomial.aeval T b) w) =
-      (Polynomial.aeval T b) ((Polynomial.aeval T (Polynomial.X - Polynomial.C μ)) w) := by
-    intro w
-    have := LinearMap.congr_fun
-      (show Polynomial.aeval T ((Polynomial.X - Polynomial.C μ) * b) =
-            Polynomial.aeval T (b * (Polynomial.X - Polynomial.C μ)) by rw [mul_comm])
-      w
-    simp only [map_mul, Module.End.mul_apply] at this
-    exact this
-  rw [hcomm, h_ann, map_zero]
-
--- Helper: any linear endomorphism of Fin s → ℂ is bounded (finite-dim → continuous)
-private lemma endomorphism_bound (f : Module.End ℂ (Fin s → ℂ)) :
-    ∃ M : ℝ, 0 ≤ M ∧ ∀ w : Fin s → ℂ, ‖f w‖ ≤ M * ‖w‖ := by
-  haveI : FiniteDimensional ℂ (Fin s → ℂ) := inferInstance
-  let fc : (Fin s → ℂ) →L[ℂ] (Fin s → ℂ) := LinearMap.toContinuousLinearMap f
-  exact ⟨‖fc‖, ContinuousLinearMap.opNorm_nonneg fc,
-    fun w => ContinuousLinearMap.le_opNorm fc w⟩
-
--- Helper: geometric recurrence a_{n+1} ≤ r * a_n + K with r < 1 gives uniform bound
-private lemma geom_recurrence_bound (a : ℕ → ℝ) (r K : ℝ)
-    (hr0 : 0 ≤ r) (hr1 : r < 1) (hK : 0 ≤ K) (ha_nn : ∀ n, 0 ≤ a n)
-    (ha_rec : ∀ n, a (n + 1) ≤ r * a n + K) :
-    ∀ n, a n ≤ a 0 + K / (1 - r) := by
-  intro n
-  induction n with
-  | zero => linarith [div_nonneg hK (by linarith : (0 : ℝ) ≤ 1 - r)]
-  | succ n ih =>
-    have h1r : (0 : ℝ) < 1 - r := by linarith
-    have h1r_ne : (1 : ℝ) - r ≠ 0 := ne_of_gt h1r
-    calc a (n + 1) ≤ r * a n + K := ha_rec n
-      _ ≤ r * (a 0 + K / (1 - r)) + K := by nlinarith [ha_nn n]
-      _ = r * a 0 + (r * (K / (1 - r)) + K) := by ring
-      _ = r * a 0 + K / (1 - r) := by
-          congr 1; field_simp; ring
-      _ ≤ a 0 + K / (1 - r) := by nlinarith [ha_nn 0]
-
--- Helper: T and N = T - μ commute, so T^n ∘ N = N ∘ T^n
-private lemma comm_tupleSucc_sub_smul (T : Module.End ℂ (Fin s → ℂ)) (μ : ℂ) :
-    ∀ n w, (T - algebraMap ℂ _ μ) ((T ^ n) w) = (T ^ n) ((T - algebraMap ℂ _ μ) w) := by
-  intro n w
-  have hc : Commute (T - algebraMap ℂ _ μ) T :=
-    ((Commute.refl T).sub_left (Algebra.commute_algebraMap_left μ T))
-  show ((T - algebraMap ℂ _ μ) * T ^ n) w = (T ^ n * (T - algebraMap ℂ _ μ)) w
-  rw [hc.pow_right n]
-
--- Helper: restriction commutes with pow (coercion version)
-private lemma restrict_pow_coe {V : Type*} [AddCommGroup V] [Module ℂ V]
-    {f : V →ₗ[ℂ] V} {p : Submodule ℂ V} {h : Set.MapsTo f p p}
-    (k : ℕ) (v : p) : ((f.restrict h ^ k) v : V) = (f ^ k) (v : V) := by
-  induction k generalizing v with
-  | zero => simp [pow_zero]
-  | succ k ih =>
-    rw [pow_succ, Module.End.mul_apply, pow_succ, Module.End.mul_apply]
-    -- Goal: ↑((f.restrict h ^ k) ((f.restrict h) v)) = (f ^ k) (f ↑v)
-    rw [ih ((f.restrict h) v)]
-    -- (f ^ k) ↑((f.restrict h) v) = (f ^ k) (f ↑v) — true by def of restrict
-    congr 1
-
-private lemma tupleSucc_pow_bounded_on_disk_eigenspace
-    (m : LMM s) (_hzs : m.IsZeroStable) (μ : ℂ) (_hroot : m.rhoC μ = 0) (hdisk : ‖μ‖ < 1) :
-    ∃ C : ℝ, 0 ≤ C ∧ ∀ (n : ℕ)
-      (v : Module.End.maxGenEigenspace m.toLinearRecurrence.tupleSucc μ),
-      ‖(m.toLinearRecurrence.tupleSucc ^ n) v‖
-        ≤ C * ‖v‖ := by
-  let T := m.toLinearRecurrence.tupleSucc
-  let N := T - algebraMap ℂ (Module.End ℂ (Fin m.toLinearRecurrence.order → ℂ)) μ
-  -- N restricted to maxGenEigenspace is nilpotent
-  have hN := Module.End.isNilpotent_restrict_maxGenEigenspace_sub_algebraMap T μ
-  obtain ⟨D, hD⟩ := hN
-  -- Operator bound for N
-  obtain ⟨Mn, hMn0, hMn⟩ := endomorphism_bound N
-  -- Key claim: ∀ k w, N^k w = 0 → ∀ n, ‖T^n w‖ ≤ Ck * ‖w‖
-  -- where Ck = (1 + Mn / (1 - ‖μ‖))^k
-  set Ck : ℕ → ℝ := fun k => (1 + Mn / (1 - ‖μ‖)) ^ k with hCk_def
-  have h1r : (0 : ℝ) < 1 - ‖μ‖ := by linarith
-  have hCk_base : 1 + Mn / (1 - ‖μ‖) ≥ 1 := by
-    linarith [div_nonneg hMn0 (le_of_lt h1r)]
-  have hCk_nn : ∀ k, 0 ≤ Ck k := fun k => by
-    apply pow_nonneg; linarith [div_nonneg hMn0 (le_of_lt h1r)]
-  suffices h_key : ∀ (k : ℕ) (w : Fin m.toLinearRecurrence.order → ℂ),
-      (N ^ k) w = 0 → ∀ n, ‖(T ^ n) w‖ ≤ Ck k * ‖w‖ by
-    -- Apply with D and v
-    refine ⟨Ck D, hCk_nn D, fun n v => ?_⟩
-    apply h_key D v.val
-    · -- N^D (↑v) = 0 from nilpotency of restriction
-      -- N = T - algebraMap ℂ _ μ, and hD says restriction^D = 0
-      -- hD : restriction^D = 0, so (restriction^D v).val = 0
-      -- and (restriction^D v).val = (N^D) v.val by restrict_pow_coe
-      have h_eq : (N ^ D) v.val =
-          (((T - algebraMap ℂ _ μ).restrict (Module.End.mapsTo_maxGenEigenspace_of_comm
-            (Algebra.mul_sub_algebraMap_commutes T μ) μ) ^ D) v :
-            Fin m.toLinearRecurrence.order → ℂ) :=
-        (restrict_pow_coe D v).symm
-      rw [h_eq]
-      simp [hD]
-  -- Prove h_key by induction on k
-  intro k
-  induction k with
-  | zero =>
-    intro w hw n
-    -- N^0 w = w = 0
-    simp [pow_zero] at hw; rw [hw, map_zero, norm_zero]; simp
-  | succ k ih =>
-    intro w hw n
-    -- N^{k+1} w = 0 means N^k (Nw) = 0
-    have hNw : (N ^ k) (N w) = 0 := by
-      have : (N ^ (k + 1)) w = (N ^ k) (N w) := by
-        rw [pow_succ, Module.End.mul_apply]
-      rw [← this]; exact hw
-    -- By IH: ‖T^n (Nw)‖ ≤ Ck k * ‖Nw‖ ≤ Ck k * Mn * ‖w‖
-    have ih_bound : ∀ n', ‖(T ^ n') (N w)‖ ≤ Ck k * Mn * ‖w‖ := by
-      intro n'
-      calc ‖(T ^ n') (N w)‖ ≤ Ck k * ‖N w‖ := ih (N w) hNw n'
-        _ ≤ Ck k * (Mn * ‖w‖) := by nlinarith [hMn w, hCk_nn k]
-        _ = Ck k * Mn * ‖w‖ := by ring
-    -- Recurrence: ‖T^{n+1} w‖ ≤ ‖μ‖ * ‖T^n w‖ + Ck k * Mn * ‖w‖
-    -- because T^{n+1} w = T(T^n w) = μ(T^n w) + N(T^n w) = μ(T^n w) + T^n(Nw)
-    have ha_rec : ∀ n', ‖(T ^ (n' + 1)) w‖ ≤ ‖μ‖ * ‖(T ^ n') w‖ + Ck k * Mn * ‖w‖ := by
-      intro n'
-      -- T^{n'+1} w = T (T^n' w) = (μ + N)(T^n' w) = μ(T^n' w) + N(T^n' w)
-      have hstep : (T ^ (n' + 1)) w = μ • ((T ^ n') w) + (T ^ n') (N w) := by
-        rw [pow_succ', Module.End.mul_apply]
-        -- T w' = μ w' + N w' for any w'
-        have : T ((T ^ n') w) = μ • ((T ^ n') w) + N ((T ^ n') w) := by
-          simp [N, LinearMap.sub_apply, Algebra.algebraMap_eq_smul_one,
-            add_sub_cancel]
-        rw [this, comm_tupleSucc_sub_smul T μ n' w]
-      rw [hstep]
-      calc ‖μ • ((T ^ n') w) + (T ^ n') (N w)‖
-          ≤ ‖μ • ((T ^ n') w)‖ + ‖(T ^ n') (N w)‖ := norm_add_le _ _
-        _ = ‖μ‖ * ‖(T ^ n') w‖ + ‖(T ^ n') (N w)‖ := by rw [norm_smul]
-        _ ≤ ‖μ‖ * ‖(T ^ n') w‖ + Ck k * Mn * ‖w‖ := by linarith [ih_bound n']
-    -- Apply geometric recurrence bound
-    have hbound := geom_recurrence_bound (fun n' => ‖(T ^ n') w‖) ‖μ‖ (Ck k * Mn * ‖w‖)
-      (norm_nonneg μ) hdisk
-      (mul_nonneg (mul_nonneg (hCk_nn k) hMn0) (norm_nonneg w))
-      (fun n' => norm_nonneg _) ha_rec n
-    -- hbound : ‖T^n w‖ ≤ ‖T^0 w‖ + Ck k * Mn * ‖w‖ / (1 - ‖μ‖)
-    -- hbound gives bound in terms of ‖(T^0) w‖, simplify via T^0 = 1
-    -- ‖(1 : End) w‖ = ‖w‖ since 1 acts as identity
-    have h1w : (1 : Module.End ℂ (Fin m.toLinearRecurrence.order → ℂ)) w = w := rfl
-    -- Need: 1 + Ck k * Mn / (1-‖μ‖) ≤ Ck(k+1) = (1+Mn/(1-‖μ‖))^{k+1}
-    -- This holds because 1 ≤ Ck k
-    have hbase_ge1 : (1 : ℝ) ≤ 1 + Mn / (1 - ‖μ‖) := by
-      linarith [div_nonneg hMn0 (le_of_lt h1r)]
-    have hCk_ge1 : ∀ j, (1 : ℝ) ≤ Ck j := fun j =>
-      one_le_pow₀ hbase_ge1
-    calc ‖(T ^ n) w‖ ≤ ‖(T ^ 0) w‖ + Ck k * Mn * ‖w‖ / (1 - ‖μ‖) := hbound
-      _ = ‖w‖ + Ck k * Mn * ‖w‖ / (1 - ‖μ‖) := by rw [pow_zero, h1w]
-      _ = (1 + Ck k * Mn / (1 - ‖μ‖)) * ‖w‖ := by ring
-      _ ≤ (Ck k + Ck k * (Mn / (1 - ‖μ‖))) * ‖w‖ := by
-          apply mul_le_mul_of_nonneg_right _ (norm_nonneg w)
-          have : Ck k * Mn / (1 - ‖μ‖) = Ck k * (Mn / (1 - ‖μ‖)) := mul_div_assoc _ _ _
-          linarith [hCk_ge1 k]
-      _ = Ck k * (1 + Mn / (1 - ‖μ‖)) * ‖w‖ := by ring
-      _ = (1 + Mn / (1 - ‖μ‖)) ^ (k + 1) * ‖w‖ := by
-          rw [show Ck k = (1 + Mn / (1 - ‖μ‖)) ^ k from rfl]; ring
-
 /-! ### Zero-stability implies stable recurrence
 
 The converse direction: if ρ satisfies the root condition, then every solution
@@ -641,7 +374,8 @@ of the characteristic recurrence is bounded. We decompose this into:
 
   Zero-stability ensures all eigenvalues of `tupleSucc` satisfy |λ| ≤ 1
   (by `tupleSucc_eigenvalue_is_rhoC_root`) with semisimple unit eigenvalues
-  (since unit-circle roots of ρ are simple). -/
+  (since unit-circle roots of ρ are simple), so `OpenMath.SpectralBound`
+  applies directly. -/
 theorem uniformly_bounded_tupleSucc_iterates (m : LMM s) (hzs : m.IsZeroStable) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (v : Fin s → ℂ),
       ‖(m.toLinearRecurrence.tupleSucc^[n]) v‖ ≤ M * ‖v‖ := by
