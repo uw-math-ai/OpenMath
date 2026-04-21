@@ -969,12 +969,26 @@ theorem order_five_node_classification (children : List BTree)
                       have : tl5.foldr (fun c n => c.order + n) 0 ≥ 0 := Nat.zero_le _
                       omega
 
-/-- Bag-first recovery witness for a rooted tree with exactly one child. The
-list-backed equality is retained only as witness data so theorem code can
-rewrite the outer node once and then continue with bag transports. -/
-structure OneChildRecoveryWitness (t d : BTree) : Type where
+/-- Internal singleton-child witness data. The exact outer-node equality stays
+private; theorem-facing code uses the public transport lemmas below. -/
+private structure OneChildRecoveryWitnessData (t d : BTree) : Type where
   hbag : t.childrenBag = (BTree.node [d]).childrenBag
   hnode : t = .node [d]
+
+/-- Bag-first recovery witness for a rooted tree with exactly one child. The
+exact outer-node equality is internalized inside `RootedTree.lean`; downstream
+theorem code only uses the bag-first transport API. -/
+abbrev OneChildRecoveryWitness (t d : BTree) : Type := OneChildRecoveryWitnessData t d
+
+theorem OneChildRecoveryWitness.hbag {t d : BTree}
+    (hw : OneChildRecoveryWitness t d) :
+    t.childrenBag = (BTree.node [d]).childrenBag :=
+  OneChildRecoveryWitnessData.hbag hw
+
+private theorem OneChildRecoveryWitness.hnode {t d : BTree}
+    (hw : OneChildRecoveryWitness t d) :
+    t = .node [d] :=
+  OneChildRecoveryWitnessData.hnode hw
 
 /-- Transport the recovered singleton witness back to any canonical singleton
 bag presentation of the input tree. -/
@@ -1014,14 +1028,37 @@ def one_child_recovery_witness_of_childrenBag_eq {t d : BTree}
       cases hchildren
       exact ⟨rfl, rfl⟩
 
-/-- Bag-first recovery witness for a rooted tree with exactly two children. The
-recovered ordered witnesses stay internal to the fallback representation, while
-the bag equality remains the public transport boundary. -/
-structure TwoChildRecoveryWitness (t : BTree) : Type where
+/-- Internal two-child witness data. The exact outer-node equality stays
+private; theorem-facing code uses only the recovered ordered children together
+with bag-first transport lemmas. -/
+private structure TwoChildRecoveryWitnessData (t : BTree) : Type where
   left : BTree
   right : BTree
   hbag : t.childrenBag = (BTree.node [left, right]).childrenBag
   hnode : t = .node [left, right]
+
+/-- Bag-first recovery witness for a rooted tree with exactly two children.
+The exact outer-node equality is internalized inside `RootedTree.lean`; the
+public API exposes only the recovered ordered children and bag transport data. -/
+abbrev TwoChildRecoveryWitness (t : BTree) : Type := TwoChildRecoveryWitnessData t
+
+def TwoChildRecoveryWitness.left {t : BTree}
+    (hw : TwoChildRecoveryWitness t) : BTree :=
+  TwoChildRecoveryWitnessData.left hw
+
+def TwoChildRecoveryWitness.right {t : BTree}
+    (hw : TwoChildRecoveryWitness t) : BTree :=
+  TwoChildRecoveryWitnessData.right hw
+
+theorem TwoChildRecoveryWitness.hbag {t : BTree}
+    (hw : TwoChildRecoveryWitness t) :
+    t.childrenBag = (BTree.node [hw.left, hw.right]).childrenBag :=
+  TwoChildRecoveryWitnessData.hbag hw
+
+private theorem TwoChildRecoveryWitness.hnode {t : BTree}
+    (hw : TwoChildRecoveryWitness t) :
+    t = .node [hw.left, hw.right] :=
+  TwoChildRecoveryWitnessData.hnode hw
 
 /-- Transport the recovered ordered two-child witnesses back to the canonical
 unordered bag presented in the input hypothesis. -/
