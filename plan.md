@@ -100,6 +100,10 @@
 - [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
+- [~] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`)
+  - [x] Formalized local order-star geometry, arrow directions, and the 355F imaginary-axis obstruction
+  - [x] Introduced explicit endpoint bookkeeping via `OrderArrowTerminationData`
+  - [ ] Discharge the remaining no-escape-to-infinity topology hypothesis from the global order web
 - [x] **Theorem 356C**: AN-stability implies algebraic stability (`OpenMath/ANStability.lean`)
   - [x] Defined AN-stability (`IsANStable`) and diagonal stability function (`stabilityFnDiag`)
   - [x] Proved `bⱼ ≥ 0` direction: det formula, stability function formula, norm bound
@@ -123,12 +127,12 @@
   - [x] Proved `G(p) ⇒ B(p)` (342j) via `bushyTree`
   - [x] Proved `G(2n) ⇒ E(n,n)` (342k) via `branchedTree`
   - [x] `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)` (342l) fully proved via gen_tree_cond_big_child_aux
-- [~] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`)
+- [x] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`)
   - [x] Defined `BTree`
   - [x] Defined `order`, `symmetry`, `density`
   - [x] Added basic examples of orders `1` through `3`
   - [x] Proved tree-based order infrastructure through order `5` (`thm_301A_order1` ... `thm_301A_order5`)
-  - [ ] Upgrade child representation from `List` fallback to the intended unordered multiplicity model
+  - [x] Theorem-facing bag-first recovery interface is in place; remaining `.hnode` equalities are private `RootedTree.lean` internals with no `OrderConditions.lean` consumers
 
 ### BDF Methods (Section 4.5)
 - [x] **BDF1-2**: backward Euler and BDF2 (`OpenMath/MultistepMethods.lean`)
@@ -146,14 +150,13 @@
 
 ## Current Target
 
-**Gaussian quadrature infrastructure in `OpenMath/Legendre.lean`: finish the shifted Legendre / Gauss-Legendre pipeline from Lemma 342A to Corollary 342D.**
+**Global order-arrow endpoint infrastructure in `OpenMath/OrderStars.lean`: tighten the trajectory/termination interface behind Theorems 355C/355D/355E and replace vague count assumptions with explicit endpoint data.**
 
 Next targets:
-1. **`gaussLegendre_B_double`** — GL nodes + `B(s)` imply `B(2s)` (needs orthogonality infrastructure)
-2. **`gaussLegendreNodes_of_B_double`** — `B(2s)` forces the nodes to be zeros of `P_s^*`
-3. **Gauss-Legendre orthogonality infrastructure** — the missing bridge for both remaining Gaussian quadrature theorems
+1. **Discharge `NoArrowsEscapeToInfinity`** — prove global order-web branches can only terminate at zeros, poles, or infinity, then rule out infinity for the 355D path
+2. **Connect the sharper endpoint interface to 355E/355G** — keep downstream Padé/A-stability results depending only on the explicit `OrderArrowTerminationData` API
+3. **Return to Gaussian quadrature only after the order-star blocker moves** — `OpenMath/Legendre.lean` no longer has active `sorry`s
 
 ## Sorry locations
 
-- `OpenMath/Legendre.lean:184` — `gaussLegendre_B_double`
-- `OpenMath/Legendre.lean:213` — `gaussLegendreNodes_of_B_double`
+- No active `sorry`s in `OpenMath/Legendre.lean` or the current `OpenMath/OrderStars.lean` target

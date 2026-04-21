@@ -779,6 +779,8 @@ The textbook proofs of Theorems 355C and 355D use global order-arrow trajectorie
 Those trajectories are not yet formalized in Mathlib, but the downstream use in
 Theorem 355E is purely arithmetic once the arrow counts are available. We record
 that finite bookkeeping here so later topology work can plug into it directly.
+The interface below makes infinity endpoints explicit, so the 355D inequality is
+derived from a named no-escape hypothesis rather than assumed wholesale.
 -/
 
 /-- Finite count data attached to the order arrows of a rational approximation. -/
@@ -791,9 +793,33 @@ structure OrderArrowCountData where
   downArrowsAtZeros_le_numeratorDegree : downArrowsAtZeros ≤ numeratorDegree
   upArrowsAtPoles_le_denominatorDegree : upArrowsAtPoles ≤ denominatorDegree
 
+/-- Global endpoint bookkeeping for order arrows: besides zeros and poles, a branch
+may in principle escape to infinity. This isolates the endpoint classification layer
+used by 355D without identifying it with the final count inequality. -/
+structure OrderArrowTerminationData extends OrderArrowCountData where
+  downArrowsAtInfinity : ℕ
+  upArrowsAtInfinity : ℕ
+  order_le_allTerminals :
+    order ≤ (downArrowsAtZeros + upArrowsAtPoles) +
+      (downArrowsAtInfinity + upArrowsAtInfinity)
+
+/-- The remaining global trajectory statement needed for 355D: no order-arrow branch
+escapes to infinity. -/
+def NoArrowsEscapeToInfinity (data : OrderArrowTerminationData) : Prop :=
+  data.downArrowsAtInfinity = 0 ∧ data.upArrowsAtInfinity = 0
+
 /-- The inequality asserted by Theorem 355D, isolated as a reusable arithmetic predicate. -/
 def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=
   data.order ≤ data.downArrowsAtZeros + data.upArrowsAtPoles
+
+/-- If the only allowed endpoints are zeros and poles, the explicit termination
+bookkeeping collapses to the 355D arrow-count inequality. -/
+theorem satisfiesArrowCountInequality_of_noArrowsEscape
+    (data : OrderArrowTerminationData) (hfinite : NoArrowsEscapeToInfinity data) :
+    SatisfiesArrowCountInequality data.toOrderArrowCountData := by
+  rcases hfinite with ⟨hdown, hup⟩
+  dsimp [SatisfiesArrowCountInequality]
+  simpa [NoArrowsEscapeToInfinity, hdown, hup] using data.order_le_allTerminals
 
 /-- **Theorem 355E** in bookkeeping form: once the arrow-count inequality from
     Theorem 355D is known and `p = n + d`, the zero/pole counts are forced to
@@ -853,21 +879,19 @@ Reference: Iserles, Theorem 355D.
 /-- A rational function R of order p with deg(num) = n, deg(den) = d
 has arrow counts consistent with the order star of R · exp(-z).
 The `order_le` field records that the approximation order is at most n + d.
-The `arrowTrajectoryComplete` field captures the conclusion of the global
-arrow-trajectory/topology argument (Theorem 355D): every order arrow
-terminates at a zero or pole, giving `p ≤ ñ + d̃`. This is the interface
-for the topological content not yet formalized — see
-`.prover-state/issues/order_star_arrow_termination_topology.md`. -/
-structure IsRationalApproxToExp (data : OrderArrowCountData) : Prop where
+The endpoint classification itself now lives in `OrderArrowTerminationData`;
+the only abstract topological input kept here is that the infinity endpoint
+counts vanish. This is the narrowed interface for the content not yet
+formalized — see `.prover-state/issues/order_star_arrow_termination_topology.md`. -/
+structure IsRationalApproxToExp (data : OrderArrowTerminationData) : Prop where
   /-- The order of approximation is at most the sum of degrees. -/
   order_le : data.order ≤ data.numeratorDegree + data.denominatorDegree
-  /-- Arrow trajectory completeness (355D content): the order arrows all
-      terminate at zeros or poles, so the total arrow count is at least p.
-      This axiomatizes the topological argument pending full formalization. -/
-  arrowTrajectoryComplete : data.order ≤ data.downArrowsAtZeros + data.upArrowsAtPoles
+  /-- Global trajectory input still missing from the repo: no arrow branch
+      contributes to the infinity endpoint counts. -/
+  noArrowsEscapeToInfinity : NoArrowsEscapeToInfinity data
 
 /-- Specialization: a Padé approximation has order exactly n + d. -/
-structure IsPadeApproxToExp (data : OrderArrowCountData) : Prop
+structure IsPadeApproxToExp (data : OrderArrowTerminationData) : Prop
     extends IsRationalApproxToExp data where
   /-- For Padé, the order equals the sum of degrees. -/
   order_eq : data.order = data.numeratorDegree + data.denominatorDegree
@@ -884,26 +908,26 @@ to sum to at most 2π, and the non-escaping arrows give the inequality.
 
 This requires global arrow trajectory analysis — see the issue file
 `order_star_arrow_termination_topology.md`. -/
-theorem thm_355D (data : OrderArrowCountData)
+theorem thm_355D (data : OrderArrowTerminationData)
     (h_approx : IsRationalApproxToExp data) :
-    SatisfiesArrowCountInequality data :=
-  h_approx.arrowTrajectoryComplete
+    SatisfiesArrowCountInequality data.toOrderArrowCountData :=
+  satisfiesArrowCountInequality_of_noArrowsEscape data h_approx.noArrowsEscapeToInfinity
 
 /-- **Theorem 355E**: For Padé approximations with p = n + d, the arrow
 counts are forced to be exact: ñ = n and d̃ = d. This is a direct
 corollary of 355D + the bookkeeping squeeze from
 `pade_exact_arrow_counts_of_countInequality`. -/
-theorem thm_355E (data : OrderArrowCountData)
+theorem thm_355E (data : OrderArrowTerminationData)
     (h_pade : IsPadeApproxToExp data)
-    (h_355D : SatisfiesArrowCountInequality data) :
+    (h_355D : SatisfiesArrowCountInequality data.toOrderArrowCountData) :
     data.downArrowsAtZeros = data.numeratorDegree ∧
     data.upArrowsAtPoles = data.denominatorDegree :=
-  pade_exact_arrow_counts_of_countInequality data h_pade.order_eq h_355D
+  pade_exact_arrow_counts_of_countInequality data.toOrderArrowCountData h_pade.order_eq h_355D
 
 /-- **Theorem 355E** (combined form): For Padé approximations, the exact
 arrow counts follow from the rational approximation property alone,
 via 355D + the bookkeeping squeeze. -/
-theorem thm_355E' (data : OrderArrowCountData)
+theorem thm_355E' (data : OrderArrowTerminationData)
     (h_pade : IsPadeApproxToExp data) :
     data.downArrowsAtZeros = data.numeratorDegree ∧
     data.upArrowsAtPoles = data.denominatorDegree :=
@@ -932,7 +956,7 @@ sector-counting inequalities, while `arrows_zero` and `arrows_poles` encode
 Fact B, the A-stability vanishing of the origin/pole arrow counts. Neither
 pair alone implies `n ≤ d ≤ n + 2`; only their combination yields the
 non-circular Ehle barrier. -/
-structure IsAStablePadeApprox (data : OrderArrowCountData) : Prop where
+structure IsAStablePadeApprox (data : OrderArrowTerminationData) : Prop where
   /-- The underlying Padé approximation property. -/
   pade : IsPadeApproxToExp data
   /-- Fact A1: topological sector counting gives `n ≤ d + downArrowsAtZeros`. -/
@@ -951,7 +975,7 @@ to `exp` must satisfy `n ≤ d ≤ n + 2`. The axiomatized interface splits
 Iserles's proof into sector counting (`sector_bound_n`, `sector_bound_d`) and
 A-stability arrow vanishing (`arrows_zero`, `arrows_poles`); combining them
 eliminates the correction terms and yields the wedge inequalities. -/
-theorem ehle_barrier (data : OrderArrowCountData)
+theorem ehle_barrier (data : OrderArrowTerminationData)
     (h : IsAStablePadeApprox data) :
     data.numeratorDegree ≤ data.denominatorDegree ∧
     data.denominatorDegree ≤ data.numeratorDegree + 2 :=
@@ -968,7 +992,7 @@ theorem ehle_barrier (data : OrderArrowCountData)
 is A-stable, then n ≤ d ≤ n + 2. This is the classic statement matching
 `InEhleWedge`. -/
 theorem ehle_barrier_nat (n d : ℕ)
-    (h : ∃ data : OrderArrowCountData,
+    (h : ∃ data : OrderArrowTerminationData,
       data.numeratorDegree = n ∧ data.denominatorDegree = d ∧
       IsAStablePadeApprox data) :
     InEhleWedge n d := by
@@ -980,9 +1004,9 @@ theorem ehle_barrier_nat (n d : ℕ)
 up arrows from the origin must terminate at poles in the open left or
 right half-planes, never touching the imaginary axis. Combined with
 355E, this means all d poles receive up arrows without crossing iℝ. -/
-theorem aStable_poles_avoid_imagAxis (data : OrderArrowCountData)
+theorem aStable_poles_avoid_imagAxis (data : OrderArrowTerminationData)
     (_h_pade : IsPadeApproxToExp data)
-    (_h_355D : SatisfiesArrowCountInequality data)
+    (_h_355D : SatisfiesArrowCountInequality data.toOrderArrowCountData)
     (h_exact : data.upArrowsAtPoles = data.denominatorDegree) :
     -- The d up arrows terminate at d poles, none on the imaginary axis.
     -- This is a structural consequence; the specific pole-location
