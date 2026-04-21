@@ -935,6 +935,15 @@ def UpArrowInfinityWitnesses (R : ℂ → ℂ) (data : OrderArrowTerminationData
   ∀ _ : Fin data.upArrowsAtInfinity, ∃ branch : GlobalUpArrowBranch R,
     EscapesEveryClosedBall branch.toGlobalOrderArrowBranch
 
+/-- Minimal realization bridge between a concrete order web `orderWeb R` and the
+abstract infinity counts in `data`. The only data needed downstream is that every
+counted infinity endpoint is witnessed by a concrete global branch of `orderWeb R`
+that leaves every closed ball. -/
+structure RealizesInfinityCounts (R : ℂ → ℂ)
+    (data : OrderArrowTerminationData) : Prop where
+  downArrowInfinityWitnesses : DownArrowInfinityWitnesses R data
+  upArrowInfinityWitnesses : UpArrowInfinityWitnesses R data
+
 /-- The inequality asserted by Theorem 355D, isolated as a reusable arithmetic predicate. -/
 def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=
   data.order ≤ data.downArrowsAtZeros + data.upArrowsAtPoles
@@ -1022,19 +1031,18 @@ Reference: Iserles, Theorem 355D.
 has arrow counts consistent with the order star of R · exp(-z).
 The `order_le` field records that the approximation order is at most n + d.
 The remaining topological input is now split into two sharper layers:
-ordinary finite nonsingular endpoints are ruled out by local continuation, and
-infinity endpoints vanish.
-This is the narrowed interface for the content not yet formalized — see
-`.prover-state/issues/order_star_arrow_termination_topology.md`. -/
+ordinary finite nonsingular endpoints are ruled out by local continuation, while
+the no-infinity statement is supplied separately by a realization bridge tying a
+concrete order web `orderWeb R` to the abstract endpoint counts in `data`.
+This is the narrowed abstract interface for the content not yet formalized — see
+`.prover-state/issues/order_star_arrow_termination_topology.md` and
+`.prover-state/issues/order_star_branch_realization_gap.md`. -/
 structure IsRationalApproxToExp (data : OrderArrowTerminationData) : Prop where
   /-- The order of approximation is at most the sum of degrees. -/
   order_le : data.order ≤ data.numeratorDegree + data.denominatorDegree
   /-- Missing local continuation input: away from zeros and poles, the order web
       continues through any ordinary finite nonsingular point. -/
   localRegularity : OrdinaryFinitePointLocalRegularity data
-  /-- Global trajectory input still missing from the repo: no arrow branch
-      contributes to the infinity endpoint counts. -/
-  noArrowsEscapeToInfinity : NoArrowsEscapeToInfinity data
 
 /-- The finite-endpoint part of the 355D boundary follows from the local
 regularity input carried by `IsRationalApproxToExp`. -/
@@ -1044,44 +1052,29 @@ theorem finiteArrowEndpointsClassified_of_rationalApprox
     FiniteArrowEndpointsClassified data := by
   exact finiteArrowEndpointsClassified_of_localRegularity data h_approx.localRegularity
 
-/-- Branch-level no-escape statement for down arrows. This is the actual global
-topology missing from the current 355D boundary. -/
-theorem noDownArrowBranchEscapesToInfinity_of_rationalApprox
-    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
-    (h_approx : IsRationalApproxToExp data)
-    (branch : GlobalDownArrowBranch R) :
-    ¬ EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
-  sorry
-
-/-- Branch-level no-escape statement for up arrows. -/
-theorem noUpArrowBranchEscapesToInfinity_of_rationalApprox
-    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
-    (h_approx : IsRationalApproxToExp data)
-    (branch : GlobalUpArrowBranch R) :
-    ¬ EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
-  sorry
-
-/-- Count-level down-arrow corollary of the branch no-escape theorem. -/
+/-- Count-level down-arrow no-escape theorem once the abstract rational-approximation
+data are tied to a concrete order web whose infinity endpoints are realized by
+global down-arrow branches. -/
 theorem noDownArrowEscapesToInfinity_of_rationalApprox
     (R : ℂ → ℂ) (data : OrderArrowTerminationData)
     (h_approx : IsRationalApproxToExp data)
-    (hwitness : DownArrowInfinityWitnesses R data) :
+    (hreal : RealizesInfinityCounts R data) :
     data.downArrowsAtInfinity = 0 := by
   by_contra hne
   let i : Fin data.downArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
-  rcases hwitness i with ⟨branch, hescape⟩
-  exact (noDownArrowBranchEscapesToInfinity_of_rationalApprox R data h_approx branch) hescape
+  rcases hreal.downArrowInfinityWitnesses i with ⟨branch, hescape⟩
+  sorry
 
-/-- Count-level up-arrow corollary of the branch no-escape theorem. -/
+/-- Count-level up-arrow no-escape theorem. -/
 theorem noUpArrowEscapesToInfinity_of_rationalApprox
     (R : ℂ → ℂ) (data : OrderArrowTerminationData)
     (h_approx : IsRationalApproxToExp data)
-    (hwitness : UpArrowInfinityWitnesses R data) :
+    (hreal : RealizesInfinityCounts R data) :
     data.upArrowsAtInfinity = 0 := by
   by_contra hne
   let i : Fin data.upArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
-  rcases hwitness i with ⟨branch, hescape⟩
-  exact (noUpArrowBranchEscapesToInfinity_of_rationalApprox R data h_approx branch) hescape
+  rcases hreal.upArrowInfinityWitnesses i with ⟨branch, hescape⟩
+  sorry
 
 /-- Combined no-infinity theorem once both down-arrow and up-arrow branches are
 shown not to leave every closed ball and the abstract infinity counts are realized
@@ -1089,12 +1082,11 @@ by concrete global branches. -/
 theorem noArrowsEscapeToInfinity_of_rationalApprox
     (R : ℂ → ℂ) (data : OrderArrowTerminationData)
     (h_approx : IsRationalApproxToExp data)
-    (hdown : DownArrowInfinityWitnesses R data)
-    (hup : UpArrowInfinityWitnesses R data) :
+    (hreal : RealizesInfinityCounts R data) :
     NoArrowsEscapeToInfinity data := by
   constructor
-  · exact noDownArrowEscapesToInfinity_of_rationalApprox R data h_approx hdown
-  · exact noUpArrowEscapesToInfinity_of_rationalApprox R data h_approx hup
+  · exact noDownArrowEscapesToInfinity_of_rationalApprox R data h_approx hreal
+  · exact noUpArrowEscapesToInfinity_of_rationalApprox R data h_approx hreal
 
 /-- Specialization: a Padé approximation has order exactly n + d. -/
 structure IsPadeApproxToExp (data : OrderArrowTerminationData) : Prop
@@ -1114,12 +1106,12 @@ to sum to at most 2π, and the non-escaping arrows give the inequality.
 
 This requires global arrow trajectory analysis — see the issue file
 `order_star_arrow_termination_topology.md`. -/
-theorem thm_355D (data : OrderArrowTerminationData)
-    (h_approx : IsRationalApproxToExp data) :
+theorem thm_355D (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (hreal : RealizesInfinityCounts R data) :
     SatisfiesArrowCountInequality data.toOrderArrowCountData := by
-  exact satisfiesArrowCountInequality_of_endpointClassification data
-    (finiteArrowEndpointsClassified_of_rationalApprox data h_approx)
-    h_approx.noArrowsEscapeToInfinity
+  exact thm_355D_of_localRegularity data h_approx.localRegularity
+    (noArrowsEscapeToInfinity_of_rationalApprox R data h_approx hreal)
 
 /-- **Theorem 355E**: For Padé approximations with p = n + d, the arrow
 counts are forced to be exact: ñ = n and d̃ = d. This is a direct
@@ -1134,12 +1126,14 @@ theorem thm_355E (data : OrderArrowTerminationData)
 
 /-- **Theorem 355E** (combined form): For Padé approximations, the exact
 arrow counts follow from the rational approximation property alone,
-via 355D + the bookkeeping squeeze. -/
-theorem thm_355E' (data : OrderArrowTerminationData)
-    (h_pade : IsPadeApproxToExp data) :
+via 355D + the bookkeeping squeeze, once the abstract count data are realized by
+a concrete order web. -/
+theorem thm_355E' (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_pade : IsPadeApproxToExp data)
+    (hreal : RealizesInfinityCounts R data) :
     data.downArrowsAtZeros = data.numeratorDegree ∧
     data.upArrowsAtPoles = data.denominatorDegree :=
-  thm_355E data h_pade (thm_355D data h_pade.toIsRationalApproxToExp)
+  thm_355E data h_pade (thm_355D R data h_pade.toIsRationalApproxToExp hreal)
 
 /-! ## Theorem 355G: Ehle Barrier via Arrow Counting
 
