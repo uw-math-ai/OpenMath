@@ -815,6 +815,45 @@ def FiniteArrowEndpointsClassified (data : OrderArrowTerminationData) : Prop :=
   data.downArrowsAtOrdinaryFinitePoints = 0 ∧
     data.upArrowsAtOrdinaryFinitePoints = 0
 
+/-- Minimal local regularity interface for ordinary finite nonsingular order-web
+points. It packages the missing geometric continuation statement separately for
+down and up arrows so the finite-endpoint classification step can be named
+explicitly instead of remaining an opaque field in the 355D boundary. -/
+structure OrdinaryFinitePointLocalRegularity (data : OrderArrowTerminationData) : Prop where
+  /-- Local continuation excludes terminal down-arrow branches at ordinary finite
+  nonsingular points. -/
+  downArrowLocalContinuation :
+    data.downArrowsAtOrdinaryFinitePoints = 0
+  /-- Local continuation excludes terminal up-arrow branches at ordinary finite
+  nonsingular points. -/
+  upArrowLocalContinuation :
+    data.upArrowsAtOrdinaryFinitePoints = 0
+
+/-- Down-arrow half of the missing local continuation theorem: an ordinary finite
+nonsingular order-web point cannot be a terminal point of a global down arrow. -/
+theorem noDownArrowTerminatesAtOrdinaryFinitePoint
+    (data : OrderArrowTerminationData)
+    (hlocal : OrdinaryFinitePointLocalRegularity data) :
+    data.downArrowsAtOrdinaryFinitePoints = 0 :=
+  hlocal.downArrowLocalContinuation
+
+/-- Up-arrow half of the missing local continuation theorem: an ordinary finite
+nonsingular order-web point cannot be a terminal point of a global up arrow. -/
+theorem noUpArrowTerminatesAtOrdinaryFinitePoint
+    (data : OrderArrowTerminationData)
+    (hlocal : OrdinaryFinitePointLocalRegularity data) :
+    data.upArrowsAtOrdinaryFinitePoints = 0 :=
+  hlocal.upArrowLocalContinuation
+
+/-- Local continuation at ordinary finite nonsingular points discharges the whole
+finite-endpoint classification layer of 355C/355D. -/
+theorem finiteArrowEndpointsClassified_of_localRegularity
+    (data : OrderArrowTerminationData)
+    (hlocal : OrdinaryFinitePointLocalRegularity data) :
+    FiniteArrowEndpointsClassified data :=
+  ⟨noDownArrowTerminatesAtOrdinaryFinitePoint data hlocal,
+    noUpArrowTerminatesAtOrdinaryFinitePoint data hlocal⟩
+
 /-- The remaining global trajectory statement needed for 355D: no order-arrow branch
 escapes to infinity. -/
 def NoArrowsEscapeToInfinity (data : OrderArrowTerminationData) : Prop :=
@@ -836,6 +875,17 @@ theorem satisfiesArrowCountInequality_of_endpointClassification
   dsimp [SatisfiesArrowCountInequality]
   simpa [FiniteArrowEndpointsClassified, NoArrowsEscapeToInfinity,
     hdownFinite, hupFinite, hdownInf, hupInf] using data.order_le_allTerminals
+
+/-- 355D reduction with the finite-endpoint part supplied by the local
+regularity bridge, leaving no-escape-to-infinity as the only remaining global
+trajectory hypothesis. -/
+theorem thm_355D_of_localRegularity
+    (data : OrderArrowTerminationData)
+    (hlocal : OrdinaryFinitePointLocalRegularity data)
+    (hinfty : NoArrowsEscapeToInfinity data) :
+    SatisfiesArrowCountInequality data.toOrderArrowCountData :=
+  satisfiesArrowCountInequality_of_endpointClassification data
+    (finiteArrowEndpointsClassified_of_localRegularity data hlocal) hinfty
 
 /-- **Theorem 355E** in bookkeeping form: once the arrow-count inequality from
     Theorem 355D is known and `p = n + d`, the zero/pole counts are forced to
@@ -896,18 +946,27 @@ Reference: Iserles, Theorem 355D.
 has arrow counts consistent with the order star of R · exp(-z).
 The `order_le` field records that the approximation order is at most n + d.
 The remaining topological input is now split into two sharper layers:
-finite endpoints are classified by zeros/poles, and infinity endpoints vanish.
+ordinary finite nonsingular endpoints are ruled out by local continuation, and
+infinity endpoints vanish.
 This is the narrowed interface for the content not yet formalized — see
 `.prover-state/issues/order_star_arrow_termination_topology.md`. -/
 structure IsRationalApproxToExp (data : OrderArrowTerminationData) : Prop where
   /-- The order of approximation is at most the sum of degrees. -/
   order_le : data.order ≤ data.numeratorDegree + data.denominatorDegree
-  /-- Missing local/global regularity bridge: a global order-arrow branch cannot
-      terminate at an ordinary finite nonsingular point. -/
-  finiteEndpointsClassified : FiniteArrowEndpointsClassified data
+  /-- Missing local continuation input: away from zeros and poles, the order web
+      continues through any ordinary finite nonsingular point. -/
+  localRegularity : OrdinaryFinitePointLocalRegularity data
   /-- Global trajectory input still missing from the repo: no arrow branch
       contributes to the infinity endpoint counts. -/
   noArrowsEscapeToInfinity : NoArrowsEscapeToInfinity data
+
+/-- The finite-endpoint part of the 355D boundary follows from the local
+regularity input carried by `IsRationalApproxToExp`. -/
+theorem finiteArrowEndpointsClassified_of_rationalApprox
+    (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data) :
+    FiniteArrowEndpointsClassified data := by
+  exact finiteArrowEndpointsClassified_of_localRegularity data h_approx.localRegularity
 
 /-- Specialization: a Padé approximation has order exactly n + d. -/
 structure IsPadeApproxToExp (data : OrderArrowTerminationData) : Prop
@@ -929,9 +988,10 @@ This requires global arrow trajectory analysis — see the issue file
 `order_star_arrow_termination_topology.md`. -/
 theorem thm_355D (data : OrderArrowTerminationData)
     (h_approx : IsRationalApproxToExp data) :
-    SatisfiesArrowCountInequality data.toOrderArrowCountData :=
-  satisfiesArrowCountInequality_of_endpointClassification data
-    h_approx.finiteEndpointsClassified h_approx.noArrowsEscapeToInfinity
+    SatisfiesArrowCountInequality data.toOrderArrowCountData := by
+  exact satisfiesArrowCountInequality_of_endpointClassification data
+    (finiteArrowEndpointsClassified_of_rationalApprox data h_approx)
+    h_approx.noArrowsEscapeToInfinity
 
 /-- **Theorem 355E**: For Padé approximations with p = n + d, the arrow
 counts are forced to be exact: ñ = n and d̃ = d. This is a direct
