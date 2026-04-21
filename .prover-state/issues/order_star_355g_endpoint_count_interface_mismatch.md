@@ -1,54 +1,61 @@
 # Issue: 355G interface reuses 355E endpoint counts as vanishing correction terms
 
 ## Blocker
-The current 355G-side interface is not semantically compatible with the
-explicit 355E endpoint API.
+The direct 355E-to-355G bridge is still missing, but the live Ehle-barrier
+boundary has now been repaired.
 
 - `thm_355E` / `thm_355E'` conclude
   `downArrowsAtZeros = numeratorDegree` and
   `upArrowsAtPoles = denominatorDegree`.
-- `IsAStablePadeApprox.arrows_zero` and `.arrows_poles` instead require
-  those same fields to be `0`.
+- The old `IsAStablePadeApprox.arrows_zero` and `.arrows_poles` fields instead
+  require those same endpoint-count coordinates to be `0`, so that structure
+  remains only as a legacy mismatch witness.
+- `ehle_barrier` / `ehle_barrier_nat` now use `EhleBarrierInput`, whose
+  zero-side and pole-side correction terms are separate existential natural
+  numbers, not `data.downArrowsAtZeros` or `data.upArrowsAtPoles`.
 
-So an honest bridge from `thm_355E'_of_padeR` into the current
-`ehle_barrier` / `ehle_barrier_nat` interface would force
-`numeratorDegree = 0` and `denominatorDegree = 0`. That is a real semantic
-mismatch, not just a missing wrapper theorem.
+What is still missing is a concrete theorem that produces those repaired
+correction-term inputs from Padé/A-stability/topology data. An honest bridge
+from `thm_355E'_of_padeR` into the legacy interface would still force
+`numeratorDegree = 0` and `denominatorDegree = 0`, so the old packaging must
+remain quarantined.
 
 ## Context
 - Live seam audited this cycle:
   - `OpenMath/OrderStars.lean`
+    - `thm_355E`
     - `thm_355E'`
     - `thm_355E'_of_concreteRationalApprox`
-    - `IsAStablePadeApprox`
+    - `IsAStablePadeApprox` (legacy quarantine)
+    - `degrees_eq_zero_of_exact_endpoint_counts_and_aStablePadeApprox`
+    - `degrees_eq_zero_of_thm_355E_and_aStablePadeApprox`
+    - `EhleBarrierInput`
     - `ehle_barrier`
     - `ehle_barrier_nat`
   - `OpenMath/PadeOrderStars.lean`
     - `thm_355E'_of_padeR`
-- New theorem added this cycle:
-  - `degrees_eq_zero_of_exact_endpoint_counts_and_aStablePadeApprox`
-  - `degrees_eq_zero_of_thm_355E_and_aStablePadeApprox`
-- These theorems formalize the mismatch directly: combining the exact 355E
-  endpoint counts with the current 355G vanishing fields collapses to the
-  trivial degree-zero case.
+- Use-site audit still shows no downstream consumers outside
+  `OrderStars.lean` / `PadeOrderStars.lean`, so the repaired boundary did not
+  need a compatibility wrapper.
+- `thm_355E'_of_padeR` continues to provide endpoint counts only; it does not
+  yet supply the separate correction-term vanishing hypotheses needed by
+  `EhleBarrierInput`.
 
 ## What was tried
-- Audited the exact 355E endpoint theorem chain and the 355G/Ehle-barrier
-  packaging before editing.
-- Checked whether the current fields
-  `IsAStablePadeApprox.arrows_zero` and `.arrows_poles` could honestly be
-  identified with the explicit endpoint counts from 355E.
-- Confirmed they cannot: the counts are equal to `n` and `d` after 355E, while
-  the 355G interface needs them to vanish.
-- Added the mismatch theorem in `OpenMath/OrderStars.lean` and recompiled the
-  file to record the boundary in live code rather than leaving it implicit.
+- Re-audited the exact 355E endpoint theorem chain and the local 355G
+  use-sites before editing.
+- Kept `IsAStablePadeApprox` in place only as the legacy mismatched interface
+  used by the existing collapse-to-degree-zero theorems.
+- Introduced `EhleBarrierInput` so the live Ehle-barrier boundary now carries
+  separate zero-side and pole-side correction terms.
+- Migrated `ehle_barrier` and `ehle_barrier_nat` to the repaired boundary.
+- Recompiled `OpenMath/OrderStars.lean` and `OpenMath/PadeOrderStars.lean`.
 
 ## Possible solutions
-- Replace the 355G-side vanishing fields by the actual A-stability correction
-  terms, distinct from `downArrowsAtZeros` and `upArrowsAtPoles`.
-- Keep the explicit 355E endpoint equalities, but build a new downstream bridge
-  theorem that consumes those equalities together with separate A-stability
-  topology inputs, bypassing the current `IsAStablePadeApprox` fields.
-- Until the correct correction terms are formalized, keep the Ehle-barrier side
-  theorem-local and do not pretend that `thm_355E'_of_padeR` feeds directly
-  into `ehle_barrier_nat`.
+- Prove a concrete A-stability/topology lemma that supplies the zero-side
+  `EhleBarrierInput` correction term for `padeR`.
+- Prove the analogous pole-side correction-term lemma.
+- Once both repaired inputs are available, derive a statement-correct bridge
+  from concrete Padé data to `ehle_barrier_nat`.
+- Keep the legacy mismatch theorems in place until that bridge exists, so the
+  old endpoint-count interface cannot silently re-enter the live theorem path.

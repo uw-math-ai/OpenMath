@@ -2209,7 +2209,7 @@ The proof combines:
 Reference: Iserles, Theorem 355G.
 -/
 
-/-- Arrow count data for a Padé approximation that is also A-stable.
+/-- Legacy arrow-count packaging for a Padé approximation that is also A-stable.
 This decomposes Iserles's Ehle-barrier proof into two independent ingredients:
 `sector_bound_n` and `sector_bound_d` encode Fact A, the topological
 sector-counting inequalities, while `arrows_zero` and `arrows_poles` encode
@@ -2219,7 +2219,9 @@ At present these fields still live on the same endpoint-count coordinates as
 endpoint API; see
 `degrees_eq_zero_of_exact_endpoint_counts_and_aStablePadeApprox`. Neither
 pair alone implies `n ≤ d ≤ n + 2`; only their combination yields the
-non-circular Ehle barrier. -/
+non-circular Ehle barrier. This structure is now quarantined as a legacy
+boundary: `ehle_barrier` and `ehle_barrier_nat` use
+`EhleBarrierInput` instead. -/
 structure IsAStablePadeApprox (data : OrderArrowTerminationData) : Prop where
   /-- The underlying Padé approximation property. -/
   pade : IsPadeApproxToExp data
@@ -2264,31 +2266,51 @@ theorem degrees_eq_zero_of_thm_355E_and_aStablePadeApprox
   exact degrees_eq_zero_of_exact_endpoint_counts_and_aStablePadeApprox data
     (thm_355E data h_pade h_355D) hA
 
+/-- Honest 355G-side boundary for the Ehle barrier.
+Unlike `IsAStablePadeApprox`, the correction terms here are separate theorem
+inputs rather than the 355E endpoint counts `downArrowsAtZeros` and
+`upArrowsAtPoles`. This keeps the exact endpoint data from 355E and the
+A-stability vanishing used in 355G on distinct coordinates until a concrete
+Padé bridge is proved. -/
+structure EhleBarrierInput (data : OrderArrowTerminationData) : Prop where
+  /-- The underlying Padé approximation property. -/
+  pade : IsPadeApproxToExp data
+  /-- Zero-side correction term coming from the 355G sector count. -/
+  zero_side :
+    ∃ zeroCorrection : ℕ,
+      data.numeratorDegree ≤ data.denominatorDegree + zeroCorrection ∧
+      zeroCorrection = 0
+  /-- Pole-side correction term coming from the 355G sector count. -/
+  pole_side :
+    ∃ poleCorrection : ℕ,
+      data.denominatorDegree ≤ data.numeratorDegree + 2 + poleCorrection ∧
+      poleCorrection = 0
+
 /-- **Theorem 355G** (Ehle barrier): An A-stable Padé approximation `R_{n,d}`
-to `exp` must satisfy `n ≤ d ≤ n + 2`. The axiomatized interface splits
-Iserles's proof into sector counting (`sector_bound_n`, `sector_bound_d`) and
-A-stability arrow vanishing (`arrows_zero`, `arrows_poles`); combining them
-eliminates the correction terms and yields the wedge inequalities. -/
+to `exp` must satisfy `n ≤ d ≤ n + 2`. The repaired interface keeps the
+355G correction terms separate from the 355E endpoint counts, so this theorem
+states only the honest boundary currently available downstream. -/
 theorem ehle_barrier (data : OrderArrowTerminationData)
-    (h : IsAStablePadeApprox data) :
+    (h : EhleBarrierInput data) :
     data.numeratorDegree ≤ data.denominatorDegree ∧
     data.denominatorDegree ≤ data.numeratorDegree + 2 :=
   by
+    rcases h.zero_side with ⟨zeroCorrection, hnd, hz⟩
+    rcases h.pole_side with ⟨poleCorrection, hdn, hp⟩
     constructor
-    · have hnd := h.sector_bound_n
-      rw [h.arrows_zero] at hnd
+    · rw [hz] at hnd
       simpa using hnd
-    · have hdn := h.sector_bound_d
-      rw [h.arrows_poles] at hdn
-      simpa using hdn
+    · rw [hp] at hdn
+      simpa [Nat.add_assoc] using hdn
 
 /-- **Ehle barrier** (ℕ-parameter form): If the (n,d)-Padé approximant to exp
-is A-stable, then n ≤ d ≤ n + 2. This is the classic statement matching
-`InEhleWedge`. -/
+is A-stable, then n ≤ d ≤ n + 2. This formulation is intentionally stated
+against the repaired 355G boundary and does not claim that 355E endpoint counts
+alone supply the needed correction-term vanishing. -/
 theorem ehle_barrier_nat (n d : ℕ)
     (h : ∃ data : OrderArrowTerminationData,
       data.numeratorDegree = n ∧ data.denominatorDegree = d ∧
-      IsAStablePadeApprox data) :
+      EhleBarrierInput data) :
     InEhleWedge n d := by
   obtain ⟨data, hn, hd, hA⟩ := h
   have ⟨h1, h2⟩ := ehle_barrier data hA
