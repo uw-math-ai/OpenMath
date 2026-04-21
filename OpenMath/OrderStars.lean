@@ -956,6 +956,16 @@ structure RealizedUpArrowInfinityBranch (R : ℂ → ℂ) where
   escapesEveryClosedBall :
     EscapesEveryClosedBall branch.toGlobalOrderArrowBranch
 
+/-- Explicit analytic contradiction boundary for escaping realized down-arrow
+branches. This remains `R`-dependent and branch-level, rather than being folded
+back into the abstract count bookkeeping. -/
+def NoRealizedDownArrowInfinityBranch (R : ℂ → ℂ) : Prop :=
+  RealizedDownArrowInfinityBranch R → False
+
+/-- Up-arrow analogue of `NoRealizedDownArrowInfinityBranch`. -/
+def NoRealizedUpArrowInfinityBranch (R : ℂ → ℂ) : Prop :=
+  RealizedUpArrowInfinityBranch R → False
+
 /-- Each counted down-arrow infinity endpoint must come from a concrete global
 down-arrow branch that leaves every closed ball. This is the only bridge needed from
 branch topology back to the abstract count `data.downArrowsAtInfinity`. -/
@@ -1003,6 +1013,39 @@ theorem RealizesInfinityBranchGerms.toRealizesInfinityCounts
   · intro i
     let witness := hreal.upArrowInfinityWitnesses i
     exact ⟨witness.branch, witness.escapesEveryClosedBall⟩
+
+/-- If every realized escaping down-arrow branch for `R` is analytically
+impossible, then the corresponding abstract infinity count must vanish. -/
+theorem downArrowsAtInfinity_eq_zero_of_noRealizedDownArrowInfinityBranch
+    {R : ℂ → ℂ} {data : OrderArrowTerminationData}
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hno : NoRealizedDownArrowInfinityBranch R) :
+    data.downArrowsAtInfinity = 0 := by
+  by_contra hne
+  have hpos : 0 < data.downArrowsAtInfinity := Nat.pos_of_ne_zero hne
+  exact hno (hreal.downArrowInfinityWitnesses ⟨0, hpos⟩)
+
+/-- Up-arrow analogue of
+`downArrowsAtInfinity_eq_zero_of_noRealizedDownArrowInfinityBranch`. -/
+theorem upArrowsAtInfinity_eq_zero_of_noRealizedUpArrowInfinityBranch
+    {R : ℂ → ℂ} {data : OrderArrowTerminationData}
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hno : NoRealizedUpArrowInfinityBranch R) :
+    data.upArrowsAtInfinity = 0 := by
+  by_contra hne
+  have hpos : 0 < data.upArrowsAtInfinity := Nat.pos_of_ne_zero hne
+  exact hno (hreal.upArrowInfinityWitnesses ⟨0, hpos⟩)
+
+/-- Branch-level analytic contradictions for both down and up escaping germs
+collapse the abstract infinity bookkeeping to `NoArrowsEscapeToInfinity data`. -/
+theorem noArrowsEscapeToInfinity_of_noRealizedArrowInfinityBranches
+    {R : ℂ → ℂ} {data : OrderArrowTerminationData}
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hdown : NoRealizedDownArrowInfinityBranch R)
+    (hup : NoRealizedUpArrowInfinityBranch R) :
+    NoArrowsEscapeToInfinity data := by
+  exact ⟨downArrowsAtInfinity_eq_zero_of_noRealizedDownArrowInfinityBranch hreal hdown,
+    upArrowsAtInfinity_eq_zero_of_noRealizedUpArrowInfinityBranch hreal hup⟩
 
 /-- The inequality asserted by Theorem 355D, isolated as a reusable arithmetic predicate. -/
 def SatisfiesArrowCountInequality (data : OrderArrowCountData) : Prop :=
@@ -1148,6 +1191,32 @@ theorem thm_355E'
     data.downArrowsAtZeros = data.numeratorDegree ∧
     data.upArrowsAtPoles = data.denominatorDegree :=
   thm_355E data h_pade (thm_355D data h_pade.toIsRationalApproxToExp hinfty)
+
+/-- 355D with the strengthened realization seam: if every realized escaping
+branch produced by `RealizesInfinityBranchGerms R data` is analytically ruled
+out, the unchanged theorem boundary `thm_355D` applies immediately. -/
+theorem thm_355D_of_realizedInfinityBranchGerms
+    {R : ℂ → ℂ} (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hdown : NoRealizedDownArrowInfinityBranch R)
+    (hup : NoRealizedUpArrowInfinityBranch R) :
+    SatisfiesArrowCountInequality data.toOrderArrowCountData := by
+  apply thm_355D data h_approx
+  exact noArrowsEscapeToInfinity_of_noRealizedArrowInfinityBranches hreal hdown hup
+
+/-- 355E' with the strengthened realization seam and explicit branch-level
+analytic contradiction hypotheses. -/
+theorem thm_355E'_of_realizedInfinityBranchGerms
+    {R : ℂ → ℂ} (data : OrderArrowTerminationData)
+    (h_pade : IsPadeApproxToExp data)
+    (hreal : RealizesInfinityBranchGerms R data)
+    (hdown : NoRealizedDownArrowInfinityBranch R)
+    (hup : NoRealizedUpArrowInfinityBranch R) :
+    data.downArrowsAtZeros = data.numeratorDegree ∧
+    data.upArrowsAtPoles = data.denominatorDegree := by
+  apply thm_355E' data h_pade
+  exact noArrowsEscapeToInfinity_of_noRealizedArrowInfinityBranches hreal hdown hup
 
 /-! ## Theorem 355G: Ehle Barrier via Arrow Counting
 
