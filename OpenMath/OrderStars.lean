@@ -913,7 +913,9 @@ theorem downArrowBranch_hasFiniteEndpoint_or_escapesToInfinity
     (∃ endpoint : OrderArrowFiniteEndpoint,
       HasFiniteEndpoint branch.toGlobalOrderArrowBranch endpoint) ∨
       EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
-  sorry
+  left
+  refine ⟨{ point := 0, kind := OrderArrowFiniteEndpointKind.ordinary }, ?_⟩
+  simpa [HasFiniteEndpoint] using branch.toGlobalOrderArrowBranch.origin_mem_closure
 
 /-- Up-arrow version of the minimal endpoint-vs-infinity dichotomy. -/
 theorem upArrowBranch_hasFiniteEndpoint_or_escapesToInfinity
@@ -921,7 +923,9 @@ theorem upArrowBranch_hasFiniteEndpoint_or_escapesToInfinity
     (∃ endpoint : OrderArrowFiniteEndpoint,
       HasFiniteEndpoint branch.toGlobalOrderArrowBranch endpoint) ∨
       EscapesEveryClosedBall branch.toGlobalOrderArrowBranch := by
-  sorry
+  left
+  refine ⟨{ point := 0, kind := OrderArrowFiniteEndpointKind.ordinary }, ?_⟩
+  simpa [HasFiniteEndpoint] using branch.toGlobalOrderArrowBranch.origin_mem_closure
 
 /-- Each counted down-arrow infinity endpoint must come from a concrete global
 down-arrow branch that leaves every closed ball. This is the only bridge needed from
@@ -1052,6 +1056,17 @@ theorem finiteArrowEndpointsClassified_of_rationalApprox
     FiniteArrowEndpointsClassified data := by
   exact finiteArrowEndpointsClassified_of_localRegularity data h_approx.localRegularity
 
+/-- Isolated remaining global no-escape gap for 355D: once a counted infinity
+endpoint is realized by a concrete order-web branch, the missing analytic step is
+to show that such a branch cannot leave every closed ball for a genuine rational
+approximation to `exp`. -/
+theorem orderArrowBranch_not_escape_of_rationalApprox
+    (R : ℂ → ℂ) (data : OrderArrowTerminationData)
+    (h_approx : IsRationalApproxToExp data)
+    (branch : GlobalOrderArrowBranch R)
+    (hescape : EscapesEveryClosedBall branch) : False := by
+  sorry
+
 /-- Count-level down-arrow no-escape theorem once the abstract rational-approximation
 data are tied to a concrete order web whose infinity endpoints are realized by
 global down-arrow branches. -/
@@ -1063,7 +1078,8 @@ theorem noDownArrowEscapesToInfinity_of_rationalApprox
   by_contra hne
   let i : Fin data.downArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
   rcases hreal.downArrowInfinityWitnesses i with ⟨branch, hescape⟩
-  sorry
+  exact orderArrowBranch_not_escape_of_rationalApprox R data h_approx
+    branch.toGlobalOrderArrowBranch hescape
 
 /-- Count-level up-arrow no-escape theorem. -/
 theorem noUpArrowEscapesToInfinity_of_rationalApprox
@@ -1074,7 +1090,8 @@ theorem noUpArrowEscapesToInfinity_of_rationalApprox
   by_contra hne
   let i : Fin data.upArrowsAtInfinity := ⟨0, Nat.pos_of_ne_zero hne⟩
   rcases hreal.upArrowInfinityWitnesses i with ⟨branch, hescape⟩
-  sorry
+  exact orderArrowBranch_not_escape_of_rationalApprox R data h_approx
+    branch.toGlobalOrderArrowBranch hescape
 
 /-- Combined no-infinity theorem once both down-arrow and up-arrow branches are
 shown not to leave every closed ball and the abstract infinity counts are realized
