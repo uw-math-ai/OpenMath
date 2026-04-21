@@ -632,7 +632,20 @@ def check_build(files: list = None) -> bool:
 # ─── Agent sessions ──────────────────────────────────────────────────────────
 
 # Path to Aristotle CLI (installed via uv)
-ARISTOTLE_BIN = str(ROOT / ".uv-tools" / "aristotle-mcp" / "bin" / "aristotle")
+def _find_aristotle_bin() -> str:
+    """Locate aristotle-mcp binary: project-local, poetry, or PATH."""
+    candidates = [
+        str(ROOT / ".uv-tools" / "aristotle-mcp" / "bin" / "aristotle"),
+        str(Path.home() / "poetry" / "bin" / "aristotle-mcp"),
+        str(Path.home() / ".local" / "bin" / "aristotle-mcp"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return "aristotle-mcp"  # fall back to PATH
+
+
+ARISTOTLE_BIN = _find_aristotle_bin()
 ARISTOTLE_RESULTS_DIR = STATE / "aristotle_results"
 
 # Path to codex binary (installed in conda env)
@@ -827,24 +840,38 @@ def run_claude(prompt: str, model: str = None, timeout: int = 1800,
 CODEX_CONDA_ENV = "/gscratch/amath/vilin/conda/envs/codex"
 
 
+def _strip_code_fence(s: str) -> str:
+    """Strip markdown ```json ... ``` or ``` ... ``` fences if present."""
+    s = s.strip()
+    if s.startswith("```"):
+        s = re.sub(r"^```[a-z]*\n?", "", s)
+        s = re.sub(r"\n?```$", "", s)
+    return s.strip()
+
+
 def parse_evaluator_output(output: str) -> dict:
-    """Parse evaluator output from raw JSON or the Claude CLI JSON envelope."""
-    parsed = json.loads(output.strip())
+    """Parse evaluator output from raw JSON, fenced JSON, or Claude CLI envelope."""
+    raw = output.strip()
 
-    if isinstance(parsed, dict) and parsed.get("type") == "result":
-        if parsed.get("is_error"):
-            raise ValueError(parsed.get("result", "Claude CLI returned an error"))
-        result = parsed.get("result")
-        if isinstance(result, dict):
-            return result
-        if isinstance(result, str):
-            return json.loads(result.strip())
-        raise ValueError("Claude CLI JSON output did not contain a JSON result payload")
+    # Try Claude CLI JSON envelope first
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict) and parsed.get("type") == "result":
+            if parsed.get("is_error"):
+                raise ValueError(parsed.get("result", "Claude CLI returned an error"))
+            result = parsed.get("result")
+            if isinstance(result, dict):
+                return result
+            if isinstance(result, str):
+                return json.loads(_strip_code_fence(result))
+            raise ValueError("Claude CLI JSON output did not contain a JSON result payload")
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
 
-    if isinstance(parsed, dict):
-        return parsed
-
-    raise ValueError("Evaluator output was not a JSON object")
+    # Try stripping markdown fences then parsing
+    return json.loads(_strip_code_fence(raw))
 
 def run_codex(prompt: str, timeout: int = 1800) -> str:
     """Run a fresh Codex CLI session with the given prompt.
@@ -892,9 +919,11 @@ def run_codex(prompt: str, timeout: int = 1800) -> str:
 def get_worker_engine(cycle: int) -> str:
     """Determine which engine to use for this cycle's worker.
 
-    Even cycles → claude, odd cycles → codex.
+    Prefer claude. Fall back to codex only if the binary exists.
     """
-    return "codex" if cycle % 2 == 1 else "claude"
+    if os.path.exists(CODEX_BIN) and cycle % 2 == 1:
+        return "codex"
+    return "claude"
 
 
 # ─── Components ───────────────────────────────────────────────────────────────
