@@ -59,6 +59,65 @@ theorem padeR_local_plus_near_even_angle_of_neg_errorConst
       (R := padeR n d) (p := n + d) (k := k)
       (C := padePhiErrorConst n d) K δ₀ hC hK hδ hφ
 
+private theorem padePhiErrorConst_pos_of_even
+    (n d : ℕ) (hd : Even d) :
+    0 < padePhiErrorConst n d := by
+  rcases hd with ⟨k, rfl⟩
+  have hpow : ((-1 : ℝ) ^ (k + k)) = 1 := by
+    rw [← two_mul, pow_mul]
+    norm_num
+  rw [padePhiErrorConst, hpow]
+  positivity
+
+private theorem padePhiErrorConst_neg_of_odd
+    (n d : ℕ) (hd : Odd d) :
+    padePhiErrorConst n d < 0 := by
+  rcases hd with ⟨k, rfl⟩
+  have hpow : ((-1 : ℝ) ^ (2 * k + 1)) = -1 := by
+    rw [pow_add, pow_mul]
+    norm_num
+  rw [padePhiErrorConst, hpow]
+  set A : ℝ := ((n.factorial : ℝ) * ((2 * k + 1).factorial : ℝ)) /
+      (((n + (2 * k + 1)).factorial : ℝ) * ((n + (2 * k + 1) + 1).factorial : ℝ))
+  have hpos : 0 < A := by
+    dsimp [A]
+    positivity
+  have hrewrite : (-1 : ℝ) * ((n.factorial : ℝ) * ((2 * k + 1).factorial : ℝ)) /
+      (((n + (2 * k + 1)).factorial : ℝ) * ((n + (2 * k + 1) + 1).factorial : ℝ)) = -A := by
+    dsimp [A]
+    ring
+  rw [hrewrite]
+  exact neg_neg_of_pos hpos
+
+theorem padeR_downArrowDir_of_pos_errorConst
+    (n d k : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    IsDownArrowDir (padeR n d) (2 * ↑k * Real.pi / (↑(n + d) + 1)) := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  simpa using
+    (arrow_down_of_pos_errorConst
+      (R := padeR n d) (p := n + d) (C := padePhiErrorConst n d)
+      K δ₀ hC hK hδ hφ k)
+
+theorem padeR_downArrowDir_of_neg_errorConst_oddAngle
+    (n d k : ℕ) (hC : padePhiErrorConst n d < 0) :
+    IsDownArrowDir (padeR n d) ((2 * ↑k + 1) * Real.pi / (↑(n + d) + 1)) := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  simpa using
+    (arrow_down_of_neg_errorConst_odd
+      (R := padeR n d) (p := n + d) (C := padePhiErrorConst n d)
+      K δ₀ hC hK hδ hφ k)
+
+theorem padeR_exists_downArrowDir
+    (n d : ℕ) :
+    ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ := by
+  rcases Nat.even_or_odd d with hd | hd
+  · refine ⟨2 * (↑(0 : ℕ) : ℝ) * Real.pi / (↑(n + d) + 1), ?_⟩
+    simpa using padeR_downArrowDir_of_pos_errorConst n d 0
+      (padePhiErrorConst_pos_of_even n d hd)
+  · refine ⟨(2 * (↑(0 : ℕ) : ℝ) + 1) * Real.pi / (↑(n + d) + 1), ?_⟩
+    simpa using padeR_downArrowDir_of_neg_errorConst_oddAngle n d 0
+      (padePhiErrorConst_neg_of_odd n d hd)
+
 abbrev PadeRRealizedDownArrowInfinityWitnessFamily
     (n d : ℕ) (data : OrderArrowTerminationData) :=
   ∀ _ : Fin data.downArrowsAtInfinity,
@@ -159,6 +218,16 @@ theorem padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos_of_exists
        origin_mem_closure := horigin_mem_closure
        tangentAngle := θ
        tangentDown := hθ }⟩
+
+theorem padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hpos : 0 < data.downArrowsAtInfinity) :
+    Nonempty (GlobalDownArrowBranch (padeR n d)) := by
+  have hdir : ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ := by
+    exact padeR_exists_downArrowDir n d
+  exact
+    padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos_of_exists_downArrowDir
+      n d data hpos hdir
 
 /-- Cycle-300 truth audit: adjoining `{0}` to the support of a realized Padé
 down-arrow infinity branch preserves the realized-branch interface. -/
