@@ -4,6 +4,35 @@ import OpenMath.OrderStars
 
 open Complex
 
+theorem padeQ_ne_zero_of_mem_orderWeb
+    {n d : ℕ} {z : ℂ}
+    (hz : z ∈ orderWeb (padeR n d)) :
+    padeQ n d z ≠ 0 := by
+  rcases hz with ⟨r, hrpos, hr_eq⟩
+  intro hq
+  have hr_zero : (r : ℂ) = 0 := by
+    calc
+      (r : ℂ) = padeR n d z * exp (-z) := hr_eq.symm
+      _ = 0 := by simp [padeR, hq]
+  have hr_zero' : r = 0 := by
+    simpa using congrArg Complex.re hr_zero
+  linarith
+
+theorem padeR_norm_exp_neg_continuousOn_orderWeb
+    (n d : ℕ) :
+    ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
+      (orderWeb (padeR n d)) := by
+  have hp : Continuous (padeP n d) := by
+    unfold padeP
+    fun_prop
+  have hq : Continuous (padeQ n d) := padeQ_continuous n d
+  have hR : ContinuousOn (padeR n d) (orderWeb (padeR n d)) := by
+    simpa [padeR] using hp.continuousOn.div hq.continuousOn
+      (fun z hz => padeQ_ne_zero_of_mem_orderWeb hz)
+  have hexp : Continuous (fun z : ℂ => exp (-z)) := by
+    fun_prop
+  simpa using (hR.mul hexp.continuousOn).norm
+
 /-- Concrete Padé feeder from the new local asymptotic bound into the even-angle,
 positive-error-constant cone lemma from `OrderStars`. -/
 theorem padeR_local_minus_near_even_angle_of_pos_errorConst
@@ -14,6 +43,19 @@ theorem padeR_local_minus_near_even_angle_of_pos_errorConst
   obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
   exact
     local_minus_near_even_angle_of_pos_errorConst
+      (R := padeR n d) (p := n + d) (k := k)
+      (C := padePhiErrorConst n d) K δ₀ hC hK hδ hφ
+
+/-- Padé companion to the even-angle, negative-error-constant cone lemma from
+`OrderStars`. -/
+theorem padeR_local_plus_near_even_angle_of_neg_errorConst
+    (n d k : ℕ) (hC : padePhiErrorConst n d < 0) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin (2 * ↑k * Real.pi / (↑(n + d) + 1)) aperture radius →
+        1 < ‖padeR n d z * exp (-z)‖ := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  exact
+    local_plus_near_even_angle_of_neg_errorConst
       (R := padeR n d) (p := n + d) (k := k)
       (C := padePhiErrorConst n d) K δ₀ hC hK hδ hφ
 
@@ -256,7 +298,9 @@ theorem thm_355E'_of_padeR
 
 theorem concreteRationalApproxToExp_of_padeR
     {n d : ℕ} {data : OrderArrowTerminationData}
-    (hcont : Continuous (fun z => ‖padeR n d z * exp (-z)‖))
+    (hcont_orderWeb :
+      ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
+        (orderWeb (padeR n d)))
     (hzero_not_mem_down_support :
       ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -285,7 +329,7 @@ theorem concreteRationalApproxToExp_of_padeR
     ConcreteRationalApproxToExp (padeR n d) data := by
   simpa using
     (concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions
-      (R := padeR n d) data hcont
+      (R := padeR n d) data hcont_orderWeb
       hzero_not_mem_down_support hzero_not_mem_up_support
       hno_nonzero_unit_points_on_orderWeb
       hlocal_minus_near_down hlocal_plus_near_up
@@ -311,7 +355,9 @@ structure PadeRConcreteNoEscapeInput
     (n d : ℕ) (data : OrderArrowTerminationData) where
   downArrowInfinityWitnesses : PadeRRealizedDownArrowInfinityWitnessFamily n d data
   upArrowInfinityWitnesses : PadeRRealizedUpArrowInfinityWitnessFamily n d data
-  cont : Continuous (fun z => ‖padeR n d z * exp (-z)‖)
+  cont_orderWeb :
+    ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
+      (orderWeb (padeR n d))
   zero_not_mem_down_support :
     ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
       (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
@@ -358,7 +404,7 @@ theorem PadeRConcreteNoEscapeInput.concrete
     (h : PadeRConcreteNoEscapeInput n d data) :
     ConcreteRationalApproxToExp (padeR n d) data := by
   exact concreteRationalApproxToExp_of_padeR
-    h.cont
+    h.cont_orderWeb
     h.zero_not_mem_down_support
     h.zero_not_mem_up_support
     h.no_nonzero_unit_points_on_orderWeb
@@ -379,7 +425,9 @@ theorem PadeRConcreteNoEscapeInput.no_nonzero_eq_exp
 def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExclusion
     {n d : ℕ} {data : OrderArrowTerminationData}
     (hreal : RealizesInfinityBranchGerms (padeR n d) data)
-    (hcont : Continuous (fun z => ‖padeR n d z * exp (-z)‖))
+    (hcont_orderWeb :
+      ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
+        (orderWeb (padeR n d)))
     (hzero : PadeRZeroSupportExclusionInput n d)
     (hno_nonzero_unit_points_on_orderWeb :
       ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
@@ -404,7 +452,7 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExcl
   exact
     { downArrowInfinityWitnesses := hreal.downArrowInfinityWitnesses
       upArrowInfinityWitnesses := hreal.upArrowInfinityWitnesses
-      cont := hcont
+      cont_orderWeb := hcont_orderWeb
       zero_not_mem_down_support := hzero.zero_not_mem_down_support
       zero_not_mem_up_support := hzero.zero_not_mem_up_support
       no_nonzero_unit_points_on_orderWeb := hno_nonzero_unit_points_on_orderWeb
@@ -416,7 +464,9 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExcl
 def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     {n d : ℕ} {data : OrderArrowTerminationData}
     (hreal : RealizesInfinityBranchGerms (padeR n d) data)
-    (hcont : Continuous (fun z => ‖padeR n d z * exp (-z)‖))
+    (hcont_orderWeb :
+      ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
+        (orderWeb (padeR n d)))
     (hzero_not_mem_down_support :
       ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -445,7 +495,7 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     PadeRConcreteNoEscapeInput n d data := by
   exact padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExclusion
     hreal
-    hcont
+    hcont_orderWeb
     ⟨hzero_not_mem_down_support, hzero_not_mem_up_support⟩
     hno_nonzero_unit_points_on_orderWeb
     hlocal_minus_near_down
@@ -472,7 +522,9 @@ def padeREhleBarrierInput_of_padeR
     (hden : data.denominatorDegree = d)
     (hpade : IsPadeApproxToExp data)
     (hreal : RealizesInfinityBranchGerms (padeR n d) data)
-    (hcont : Continuous (fun z => ‖padeR n d z * exp (-z)‖))
+    (hcont_orderWeb :
+      ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
+        (orderWeb (padeR n d)))
     (hzero_not_mem_down_support :
       ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -503,7 +555,7 @@ def padeREhleBarrierInput_of_padeR
   refine ⟨hnum, hden, hpade, ?_, hehle⟩
   exact padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     hreal
-    hcont
+    hcont_orderWeb
     hzero_not_mem_down_support
     hzero_not_mem_up_support
     hno_nonzero_unit_points_on_orderWeb

@@ -1020,7 +1020,7 @@ theorem exists_mem_inter_rayConeNearOrigin_of_branchTracksRayNearOrigin
 point and above `1` at another must hit the unit level somewhere on its support. -/
 theorem exists_mem_support_unit_level_of_connected_orderWeb_branch
     {R : ℂ → ℂ} (branch : GlobalOrderArrowBranch R)
-    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hcont : ContinuousOn (fun z => ‖R z * exp (-z)‖) (orderWeb R))
     {zSmall zLarge : ℂ}
     (hzSmall : zSmall ∈ branch.support)
     (hzLarge : zLarge ∈ branch.support)
@@ -1029,10 +1029,12 @@ theorem exists_mem_support_unit_level_of_connected_orderWeb_branch
     ∃ z ∈ branch.support, ‖R z * exp (-z)‖ = 1 := by
   have hpre : IsPreconnected branch.support :=
     branch.support_connected.isPreconnected
+  have hcont_support : ContinuousOn (fun z => ‖R z * exp (-z)‖) branch.support :=
+    hcont.mono branch.support_subset_orderWeb
   have hIcc :
       Set.Icc (‖R zSmall * exp (-zSmall)‖) (‖R zLarge * exp (-zLarge)‖) ⊆
         (fun z => ‖R z * exp (-z)‖) '' branch.support := by
-    exact hpre.intermediate_value hzSmall hzLarge hcont.continuousOn
+    exact hpre.intermediate_value hzSmall hzLarge hcont_support
   have hmem :
       (1 : ℝ) ∈ Set.Icc (‖R zSmall * exp (-zSmall)‖) (‖R zLarge * exp (-zLarge)‖) := by
     constructor
@@ -1668,7 +1670,7 @@ assuming the local cone-control bridge and the far-field sign control needed by
 the cycle-278 helper layer. -/
 theorem realizedDownArrowInfinityBranch_contradiction
     (R : ℂ → ℂ)
-    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hcont : ContinuousOn (fun z => ‖R z * exp (-z)‖) (orderWeb R))
     (hzero_not_mem_down_support :
       ∀ branch : RealizedDownArrowInfinityBranch R,
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -1719,7 +1721,7 @@ instead of the equivalent unit-level formulation. This is the theorem-local
 bridge needed by the concrete no-infinity package. -/
 theorem realizedDownArrowInfinityBranch_contradiction_of_no_nonzero_eq_exp
     (R : ℂ → ℂ)
-    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hcont : ContinuousOn (fun z => ‖R z * exp (-z)‖) (orderWeb R))
     (hzero_not_mem_down_support :
       ∀ branch : RealizedDownArrowInfinityBranch R,
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -1745,7 +1747,7 @@ theorem realizedDownArrowInfinityBranch_contradiction_of_no_nonzero_eq_exp
 /-- Up-arrow companion to `realizedDownArrowInfinityBranch_contradiction`. -/
 theorem realizedUpArrowInfinityBranch_contradiction
     (R : ℂ → ℂ)
-    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hcont : ContinuousOn (fun z => ‖R z * exp (-z)‖) (orderWeb R))
     (hzero_not_mem_up_support :
       ∀ branch : RealizedUpArrowInfinityBranch R,
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -1795,7 +1797,7 @@ theorem realizedUpArrowInfinityBranch_contradiction
 instead of the equivalent unit-level formulation. -/
 theorem realizedUpArrowInfinityBranch_contradiction_of_no_nonzero_eq_exp
     (R : ℂ → ℂ)
-    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hcont : ContinuousOn (fun z => ‖R z * exp (-z)‖) (orderWeb R))
     (hzero_not_mem_up_support :
       ∀ branch : RealizedUpArrowInfinityBranch R,
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -2084,7 +2086,7 @@ structure ConcreteRationalApproxToExp (R : ℂ → ℂ)
 `R`-dependent no-infinity interface used by the 355D/355E endpoint seam. -/
 theorem concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions
     {R : ℂ → ℂ} (data : OrderArrowTerminationData)
-    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hcont : ContinuousOn (fun z => ‖R z * exp (-z)‖) (orderWeb R))
     (hzero_not_mem_down_support :
       ∀ branch : RealizedDownArrowInfinityBranch R,
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
@@ -2125,7 +2127,7 @@ hypothesis directly. This removes the older unit-level assumption from the live
 interface while keeping the contradiction shape unchanged. -/
 theorem concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions_of_no_nonzero_eq_exp
     {R : ℂ → ℂ} (data : OrderArrowTerminationData)
-    (hcont : Continuous (fun z => ‖R z * exp (-z)‖))
+    (hcont : ContinuousOn (fun z => ‖R z * exp (-z)‖) (orderWeb R))
     (hzero_not_mem_down_support :
       ∀ branch : RealizedDownArrowInfinityBranch R,
         (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
