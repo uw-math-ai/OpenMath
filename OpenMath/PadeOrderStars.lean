@@ -52,6 +52,39 @@ theorem nonempty_padeR_realizedUpArrowInfinityWitnessFamily_iff
       (α := RealizedUpArrowInfinityBranch (padeR n d))
       data.upArrowsAtInfinity)
 
+theorem padeR_exists_orderWebBranchSupport_of_downArrowsAtInfinity_pos
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (_hpos : 0 < data.downArrowsAtInfinity) :
+    ∃ support : Set ℂ,
+      IsConnected support ∧
+        support ⊆ orderWeb (padeR n d) ∧
+        (0 : ℂ) ∈ closure support := by
+  refine ⟨{0}, ?_, ?_, ?_⟩
+  · simpa using isConnected_singleton
+  · intro z hz
+    have hz0 : z = 0 := by simpa using hz
+    subst hz0
+    exact mem_orderWeb_zero (R := padeR n d) (by
+      simp [padeR, padeP_eval_zero, padeQ_eval_zero])
+  · exact subset_closure (by simp : (0 : ℂ) ∈ ({0} : Set ℂ))
+
+theorem padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos_of_exists_downArrowDir
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hpos : 0 < data.downArrowsAtInfinity)
+    (hdir : ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ) :
+    Nonempty (GlobalDownArrowBranch (padeR n d)) := by
+  rcases
+      padeR_exists_orderWebBranchSupport_of_downArrowsAtInfinity_pos n d data hpos with
+    ⟨support, hsupport_connected, hsupport_subset_orderWeb, horigin_mem_closure⟩
+  rcases hdir with ⟨θ, hθ⟩
+  exact
+    ⟨{ support := support
+       support_connected := hsupport_connected
+       support_subset_orderWeb := hsupport_subset_orderWeb
+       origin_mem_closure := horigin_mem_closure
+       tangentAngle := θ
+       tangentDown := hθ }⟩
+
 /-- Padé-local packaging helper for the strengthened no-infinity seam.
 This makes the remaining concrete gap explicit: produce the down-arrow and
 up-arrow realized infinity witness families separately, then assemble them into
