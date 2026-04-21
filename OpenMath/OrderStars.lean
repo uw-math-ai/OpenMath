@@ -1620,6 +1620,49 @@ def NoRealizedDownArrowInfinityBranch (R : ℂ → ℂ) : Prop :=
 def NoRealizedUpArrowInfinityBranch (R : ℂ → ℂ) : Prop :=
   RealizedUpArrowInfinityBranch R → False
 
+/-- On the positive-real order web, unit norm forces the amplitude to be exactly `1`. -/
+theorem eq_one_of_mem_orderWeb_of_norm_eq_one
+    {R : ℂ → ℂ} {z : ℂ}
+    (hzWeb : z ∈ orderWeb R)
+    (hnorm : ‖R z * exp (-z)‖ = 1) :
+    R z * exp (-z) = 1 := by
+  rcases hzWeb with ⟨r, hrpos, hr⟩
+  have hrnorm : |r| = 1 := by
+    simpa [hr] using hnorm
+  have hr_eq_one : r = 1 := by
+    rw [abs_of_nonneg hrpos.le] at hrnorm
+    exact hrnorm
+  simp [hr, hr_eq_one]
+
+/-- A unit-level point on `orderWeb R` is exactly a coincidence point of `R` with `exp`. -/
+theorem eq_exp_of_mem_orderWeb_of_norm_eq_one
+    {R : ℂ → ℂ} {z : ℂ}
+    (hzWeb : z ∈ orderWeb R)
+    (hnorm : ‖R z * exp (-z)‖ = 1) :
+    R z = exp z := by
+  have hphi : R z * exp (-z) = 1 :=
+    eq_one_of_mem_orderWeb_of_norm_eq_one hzWeb hnorm
+  have hmul := congrArg (fun w : ℂ => exp z * w) hphi
+  simpa [mul_assoc, mul_left_comm, mul_comm, exp_mul_exp_neg] using hmul
+
+/-- The unit-level exclusion needed by the realized-branch contradiction is
+equivalent to excluding nonzero coincidence points of `R` with `exp` on the
+order web. This isolates the remaining concrete gap in exact, theorem-local
+terms. -/
+theorem no_nonzero_unit_points_on_orderWeb_iff_no_nonzero_eq_exp
+    {R : ℂ → ℂ} :
+    (∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → ‖R z * exp (-z)‖ = 1 → False) ↔
+      (∀ z : ℂ, z ≠ 0 → z ∈ orderWeb R → R z = exp z → False) := by
+  constructor
+  · intro h z hz_ne hz_web hz_eq
+    apply h z hz_ne hz_web
+    calc
+      ‖R z * exp (-z)‖ = ‖exp z * exp (-z)‖ := by simp [hz_eq]
+      _ = ‖(1 : ℂ)‖ := by rw [exp_mul_exp_neg]
+      _ = 1 := by simp
+  · intro h z hz_ne hz_web hz_unit
+    exact h z hz_ne hz_web (eq_exp_of_mem_orderWeb_of_norm_eq_one hz_web hz_unit)
+
 /-- Branch-level analytic contradiction for a realized escaping down-arrow germ,
 assuming the local cone-control bridge and the far-field sign control needed by
 the cycle-278 helper layer. -/
