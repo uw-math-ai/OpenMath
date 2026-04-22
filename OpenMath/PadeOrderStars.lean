@@ -478,6 +478,125 @@ def PadeRUpArrowSignBridge (n d : ℕ) : Prop :=
   ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
     padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) < 0
 
+private theorem exact_ray_mem_rayConeNearOrigin
+    (θ aperture radius t : ℝ)
+    (haperture : 0 < aperture)
+    (ht : t ∈ Set.Ioo (0 : ℝ) radius) :
+    ((↑t : ℂ) * exp (↑θ * I)) ∈ rayConeNearOrigin θ aperture radius := by
+  refine ⟨t, ht, ?_⟩
+  have hclose : 0 < aperture * t := mul_pos haperture ht.1
+  simpa using hclose
+
+/-- Exact remaining obstruction after the honest explicit-sign refactor:
+to upgrade the weak raywise bridge below to the strict sign bridge, one still
+has to exclude zero-cosine exact-ray arrows. -/
+def PadeRDownArrowZeroCosExclusion (n d : ℕ) : Prop :=
+  ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+    padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) ≠ 0
+
+/-- Up-arrow companion to `PadeRDownArrowZeroCosExclusion`. -/
+def PadeRUpArrowZeroCosExclusion (n d : ℕ) : Prop :=
+  ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+    padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) ≠ 0
+
+/-- Honest weakened bridge: a Padé down-arrow direction cannot have negative
+leading cosine sign, because the live explicit-sign `> 1` cone feeder would
+contradict the exact-ray `< 1` definition of `IsDownArrowDir`. The unresolved
+boundary case is exactly zero cosine sign. -/
+theorem padeR_nonneg_sign_of_downArrowDir
+    (n d : ℕ) :
+    ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+      0 ≤ padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) := by
+  intro θ hθ
+  by_contra hneg
+  have hneg' : padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) < 0 :=
+    lt_of_not_ge hneg
+  obtain ⟨aperture, haperture, radius, hradius, hplus⟩ :=
+    padeR_local_plus_near_of_errorConst_cos_neg n d θ hneg'
+  obtain ⟨ε, hε, hdown⟩ := hθ
+  let t : ℝ := min (ε / 2) (radius / 2)
+  have ht_mem_eps : t ∈ Set.Ioo (0 : ℝ) ε := by
+    refine ⟨?_, ?_⟩
+    · dsimp [t]
+      exact lt_min (half_pos hε) (half_pos hradius)
+    · dsimp [t]
+      have hhalf : ε / 2 < ε := by linarith
+      exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have ht_mem_radius : t ∈ Set.Ioo (0 : ℝ) radius := by
+    refine ⟨?_, ?_⟩
+    · dsimp [t]
+      exact lt_min (half_pos hε) (half_pos hradius)
+    · dsimp [t]
+      have hhalf : radius / 2 < radius := by linarith
+      exact lt_of_le_of_lt (min_le_right _ _) hhalf
+  let z : ℂ := (↑t : ℂ) * exp (↑θ * I)
+  have hz_cone : z ∈ rayConeNearOrigin θ aperture radius := by
+    simpa [z, t] using
+      exact_ray_mem_rayConeNearOrigin θ aperture radius t haperture ht_mem_radius
+  have hlt : ‖padeR n d z * exp (-z)‖ < 1 := by
+    simpa [z, t] using hdown t ht_mem_eps
+  have hgt : 1 < ‖padeR n d z * exp (-z)‖ := hplus z hz_cone
+  linarith
+
+/-- Up-arrow companion to `padeR_nonneg_sign_of_downArrowDir`. -/
+theorem padeR_nonpos_sign_of_upArrowDir
+    (n d : ℕ) :
+    ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+      padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) ≤ 0 := by
+  intro θ hθ
+  by_contra hpos
+  have hpos' : 0 < padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) :=
+    lt_of_not_ge hpos
+  obtain ⟨aperture, haperture, radius, hradius, hminus⟩ :=
+    padeR_local_minus_near_of_errorConst_cos_pos n d θ hpos'
+  obtain ⟨ε, hε, hup⟩ := hθ
+  let t : ℝ := min (ε / 2) (radius / 2)
+  have ht_mem_eps : t ∈ Set.Ioo (0 : ℝ) ε := by
+    refine ⟨?_, ?_⟩
+    · dsimp [t]
+      exact lt_min (half_pos hε) (half_pos hradius)
+    · dsimp [t]
+      have hhalf : ε / 2 < ε := by linarith
+      exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have ht_mem_radius : t ∈ Set.Ioo (0 : ℝ) radius := by
+    refine ⟨?_, ?_⟩
+    · dsimp [t]
+      exact lt_min (half_pos hε) (half_pos hradius)
+    · dsimp [t]
+      have hhalf : radius / 2 < radius := by linarith
+      exact lt_of_le_of_lt (min_le_right _ _) hhalf
+  let z : ℂ := (↑t : ℂ) * exp (↑θ * I)
+  have hz_cone : z ∈ rayConeNearOrigin θ aperture radius := by
+    simpa [z, t] using
+      exact_ray_mem_rayConeNearOrigin θ aperture radius t haperture ht_mem_radius
+  have hgt : 1 < ‖padeR n d z * exp (-z)‖ := by
+    simpa [z, t] using hup t ht_mem_eps
+  have hlt : ‖padeR n d z * exp (-z)‖ < 1 := hminus z hz_cone
+  linarith
+
+/-- The strict down-arrow sign bridge now reduces to the single remaining
+zero-cosine exclusion input. -/
+theorem padeR_downArrowSignBridge_of_zeroCosExclusion
+    {n d : ℕ}
+    (hzero : PadeRDownArrowZeroCosExclusion n d) :
+    PadeRDownArrowSignBridge n d := by
+  intro θ hθ
+  have hnonneg := padeR_nonneg_sign_of_downArrowDir n d θ hθ
+  have hne : padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) ≠ 0 :=
+    hzero θ hθ
+  exact lt_of_le_of_ne hnonneg hne.symm
+
+/-- Up-arrow companion to `padeR_downArrowSignBridge_of_zeroCosExclusion`. -/
+theorem padeR_upArrowSignBridge_of_zeroCosExclusion
+    {n d : ℕ}
+    (hzero : PadeRUpArrowZeroCosExclusion n d) :
+    PadeRUpArrowSignBridge n d := by
+  intro θ hθ
+  have hnonpos := padeR_nonpos_sign_of_upArrowDir n d θ hθ
+  have hne : padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) ≠ 0 :=
+    hzero θ hθ
+  exact lt_of_le_of_ne hnonpos hne
+
 theorem concreteRationalApproxToExp_of_padeR
     {n d : ℕ} {data : OrderArrowTerminationData}
     (hcont_orderWeb :
