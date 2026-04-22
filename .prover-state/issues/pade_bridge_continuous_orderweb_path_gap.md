@@ -1,85 +1,95 @@
-# Issue: `phaseSelection_of_bridgeWitnesses` is now the exact local blocker
+# Issue: bridge hypotheses still do not supply a radius-covering zero-set
 
 ## Blocker
-Cycle 333 incorporated the usable shape of the ready Aristotle result and proved
-the topological helper
+Cycle 334 narrowed the single live sorry in
+`OpenMath/PadeOrderStars.lean` into two theorem-local sorries:
 
 ```lean
-continuousOrderWebPath_of_phaseSelection
-```
-
-inside the `where` block of
-`padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge` in
-`OpenMath/PadeOrderStars.lean`.
-
-The original live sorry
-
-```lean
-continuousOrderWebPath_of_bridgeWitnesses
-```
-
-is now proved by reducing it to a new narrower local theorem:
-
-```lean
+connectedRadiusPhaseZeroSet_of_bridgeWitnesses
 phaseSelection_of_bridgeWitnesses
 ```
 
-So the blocker is no longer the path-topology step. The exact missing ingredient
-is the existence of explicit radius/phase-selection data for the chosen bridge
-witnesses.
+The first theorem is now the honest local continuation seam. The second is only
+the selector-packaging step from that connected zero set to a continuous phase
+function.
 
 ## Context
-- `z0` is still a fixed order-web witness in `rayConeNearOrigin θ 1 1`.
-- `z` is still a fixed order-web witness in `rayConeNearOrigin θ aperture radius`.
-- Cycle 333 added a fully proved helper showing:
-  if one already has a continuous phase selection `σ` on a radius interval
-  `[a,b]`, with
-  `w(r) = (↑r : ℂ) * exp (↑(θ + σ r) * I)`,
-  `Im (padeR n d (w r) * exp (-w r)) = 0`,
-  `0 < Re (padeR n d (w r) * exp (-w r))`,
-  and endpoint equalities tying `w(a)` and `w(b)` to `z0` and `z`,
-  then one gets the desired continuous order-web path on `Set.Icc (0 : ℝ) 1`.
-- The only remaining sorry is therefore the theorem that should produce exactly
-  those `a`, `b`, `η`, and `σ`.
+- `continuousOrderWebPath_of_phaseSelection` is already fully proved.
+- `continuousOrderWebPath_of_bridgeWitnesses` now depends only on
+  `phaseSelection_of_bridgeWitnesses`.
+- The new local helper asks for a connected subset `Z : Set (ℝ × ℝ)` in
+  radius-phase coordinates whose `Prod.fst` projection covers all radii in
+  `Set.Icc a b`, with zero imaginary part and positive real part throughout.
+- Once such a `Z` exists, the remaining gap is to turn it into a continuous
+  section `σ : ℝ → ℝ`.
 
-## Why the current hypotheses are insufficient
-- The bridge API is still only `∀ radius, ∃ witness`; it does not relate the
-  witness chosen at one radius to the witness chosen at another radius.
-- The current local theorem needs endpoint-specific data:
-  one interval `[a,b]`, one `η > 0`, and one continuous `σ : ℝ → ℝ` whose graph
-  stays in the zero set while keeping the real part positive.
-- The old generic `connectedComponentIn` route is now intentionally bypassed:
-  once the phase-selection data exists, the path and connected-support steps are
-  formalized already.
-- The endpoint sign estimates are still too weak to force the exact ray itself
-  into `orderWeb`; the same `O(t^(n+d+2))` vs. `O(t^(n+d+1) * s)` mismatch near
-  `s = 0` remains.
+## What was tried
+- Triaged the three ready Aristotle bundles from earlier cycles first. All
+  three were stale wrapper proofs targeting already-replaced theorem surfaces
+  (`referenceWitness_sameComponentContinuation`, `connectedSupport`, and
+  `continuousOrderWebPath`) and were rejected.
+- Narrowed the live code so the blocker is no longer phrased as an all-at-once
+  phase-selection theorem.
+- Submitted a fresh Aristotle batch on five cycle-334 surfaces:
+  connected zero set, full phase selection, selector from connected zero set,
+  and concrete even/odd uniform strip variants.
+- The two completed cycle-334 Aristotle outputs were also rejected. They solved
+  the goals only by redefining `PadeROrderWebArcPhaseBridgeNearOrigin` to
+  already contain the target conclusion, so they are not transplantable to the
+  live file.
+- A quick local Mathlib search found image/projection lemmas for connected sets
+  but no ready-made theorem giving a continuous section from a connected subset
+  of a rectangle with interval projection.
 
-## Precise continuation theorem still needed
-The current local sorry is exactly:
+## Why the previous theorem shape was still too coarse
+- The generic bridge hypothesis
 
 ```lean
-∃ a b η : ℝ, ∃ σ : ℝ → ℝ,
-  a ≤ b ∧
-  0 < η ∧
-  ContinuousOn σ (Set.Icc a b) ∧
-  (∀ r ∈ Set.Icc a b, σ r ∈ Set.Icc (-η) η) ∧
-  (∀ r ∈ Set.Icc a b,
-    let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
-    Complex.im (padeR n d w * exp (-w)) = 0) ∧
-  (∀ r ∈ Set.Icc a b,
-    let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
-    0 < Complex.re (padeR n d w * exp (-w))) ∧
-  z0 = ((↑a : ℂ) * exp (↑(θ + σ a) * I)) ∧
-  z = ((↑b : ℂ) * exp (↑(θ + σ b) * I))
+PadeROrderWebArcPhaseBridgeNearOrigin n d θ
 ```
 
-Any proof of this theorem closes the live blocker immediately.
+still only gives `∀ radius > 0, ∃ t ∈ Ioo 0 radius, ...`.
+- That is enough to produce one witness in each small cone, but not enough to
+  cover every radius in a compact interval `[a,b]`.
+- Therefore the new helper
+
+```lean
+connectedRadiusPhaseZeroSet_of_bridgeWitnesses
+```
+
+is exactly where the real mismatch sits: it asks for a radius-covering connected
+zero set, while the current bridge API only produces isolated radius witnesses.
+- Even if the connected zero set were available, a second nontrivial step
+  remains: extract a continuous selector `σ` from it. No existing theorem for
+  this was found in the current local search.
+
+## Exact local obstruction
+The live helper now asks for:
+
+```lean
+∃ a b η s0 s1 : ℝ, ∃ Z : Set (ℝ × ℝ),
+  a ≤ b ∧
+  0 < η ∧
+  s0 ∈ Set.Icc (-η) η ∧
+  s1 ∈ Set.Icc (-η) η ∧
+  z0 = ((↑a : ℂ) * exp (↑(θ + s0) * I)) ∧
+  z = ((↑b : ℂ) * exp (↑(θ + s1) * I)) ∧
+  IsConnected Z ∧
+  Z ⊆ {p : ℝ × ℝ | ... zero-imaginary and positive-real conditions ...} ∧
+  (a, s0) ∈ Z ∧
+  (b, s1) ∈ Z ∧
+  Set.Icc a b ⊆ Prod.fst '' Z
+```
+
+The missing bridge-to-zero-set upgrade is now explicit.
 
 ## Possible solutions
-- Prove a local implicit-function or continuation lemma for the zero set of the
-  imaginary part inside the positive-real strip.
-- Alternatively, prove a connected-zero-set / continuum theorem in the compact
-  radius-phase rectangle and then parameterize that connected subset.
-- Keep the proof local to `OpenMath/PadeOrderStars.lean`; the new path helper is
-  already the right theorem boundary.
+- Strengthen the generic bridge API to a uniform strip statement:
+  for all sufficiently small radii `r`, the whole short arc at radius `r` has
+  positive real part and opposite imaginary signs at its endpoints.
+- Bypass the generic bridge theorem and prove the connected-zero-set helper
+  directly from the concrete even/odd sign-control proofs, which appear capable
+  of yielding such a uniform strip.
+- After a connected zero set is obtained, prove a local theorem turning a
+  connected subset of `ℝ × ℝ` with full `Prod.fst` projection into a continuous
+  section over `Set.Icc a b`.

@@ -1839,6 +1839,34 @@ where
       exact mem_orderWeb_of_im_zero_of_re_pos
         (by simpa [w] using hσre (ρ u) huab)
         (by simpa [w] using hσzero (ρ u) huab)
+  connectedRadiusPhaseZeroSet_of_bridgeWitnesses
+      {z0 z : ℂ}
+      (_hz0web : z0 ∈ orderWeb (padeR n d))
+      (_hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
+      (aperture radius : ℝ)
+      (_hzweb : z ∈ orderWeb (padeR n d))
+      (_hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
+      ∃ a b η s0 s1 : ℝ, ∃ Z : Set (ℝ × ℝ),
+        a ≤ b ∧
+        0 < η ∧
+        s0 ∈ Set.Icc (-η) η ∧
+        s1 ∈ Set.Icc (-η) η ∧
+        z0 = ((↑a : ℂ) * exp (↑(θ + s0) * I)) ∧
+        z = ((↑b : ℂ) * exp (↑(θ + s1) * I)) ∧
+        IsConnected Z ∧
+        Z ⊆ {p : ℝ × ℝ |
+          p.1 ∈ Set.Icc a b ∧
+          p.2 ∈ Set.Icc (-η) η ∧
+          let w : ℂ := (↑p.1 : ℂ) * exp (↑(θ + p.2) * I)
+          Complex.im (padeR n d w * exp (-w)) = 0 ∧
+          0 < Complex.re (padeR n d w * exp (-w))} ∧
+        (a, s0) ∈ Z ∧
+        (b, s1) ∈ Z ∧
+        Set.Icc a b ⊆ Prod.fst '' Z := by
+    sorry
+  /-- The remaining theorem-local gap after reducing the bridge problem to a
+  connected zero set in radius-phase coordinates: extract a continuous phase
+  selector over the full radius interval. -/
   phaseSelection_of_bridgeWitnesses
       {z0 z : ℂ}
       (_hz0web : z0 ∈ orderWeb (padeR n d))
@@ -1859,6 +1887,29 @@ where
           0 < Complex.re (padeR n d w * exp (-w))) ∧
         z0 = ((↑a : ℂ) * exp (↑(θ + σ a) * I)) ∧
         z = ((↑b : ℂ) * exp (↑(θ + σ b) * I)) := by
+    rcases
+        connectedRadiusPhaseZeroSet_of_bridgeWitnesses
+          _hz0web _hz0cone aperture radius _hzweb _hzcone with
+      ⟨a, b, η, s0, s1, Z, hab, hη, hs0, hs1, hz0eq, hzeq, hZconn, hZsubset, hZ0, hZ1,
+        hproj⟩
+    have _hkeep :
+        a ≤ b ∧
+        0 < η ∧
+        s0 ∈ Set.Icc (-η) η ∧
+        s1 ∈ Set.Icc (-η) η ∧
+        z0 = ((↑a : ℂ) * exp (↑(θ + s0) * I)) ∧
+        z = ((↑b : ℂ) * exp (↑(θ + s1) * I)) ∧
+        IsConnected Z ∧
+        Z ⊆ {p : ℝ × ℝ |
+          p.1 ∈ Set.Icc a b ∧
+          p.2 ∈ Set.Icc (-η) η ∧
+          let w : ℂ := (↑p.1 : ℂ) * exp (↑(θ + p.2) * I)
+          Complex.im (padeR n d w * exp (-w)) = 0 ∧
+          0 < Complex.re (padeR n d w * exp (-w))} ∧
+        (a, s0) ∈ Z ∧
+        (b, s1) ∈ Z ∧
+        Set.Icc a b ⊆ Prod.fst '' Z := by
+      exact ⟨hab, hη, hs0, hs1, hz0eq, hzeq, hZconn, hZsubset, hZ0, hZ1, hproj⟩
     sorry
   continuousOrderWebPath_of_bridgeWitnesses
       {z0 z : ℂ}
