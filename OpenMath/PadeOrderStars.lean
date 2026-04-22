@@ -288,6 +288,112 @@ private theorem im_main_term_even_down_right
     im_one_sub_ofReal_mul_exp_pos (a := c * t ^ (p + 1))
       (x := ((↑(p + 1) : ℝ) * η))
 
+private theorem im_main_term_odd_down_left
+    (p : ℕ) (c t η : ℝ) :
+    Complex.im
+        ((1 : ℂ) - (c : ℂ) *
+          (((↑t : ℂ) *
+              exp (↑(Real.pi / ((↑(p + 1) : ℝ)) - η) * I)) ^ (p + 1))) =
+      (-c) * t ^ (p + 1) * Real.sin (((↑(p + 1) : ℝ) * η)) := by
+  let p1 : ℝ := ((↑(p + 1) : ℝ))
+  let θ0 : ℝ := Real.pi / p1
+  let α : ℝ := p1 * η
+  have hp1_pos : 0 < p1 := by
+    dsimp [p1]
+    positivity
+  have hp1_ne : p1 ≠ 0 := ne_of_gt hp1_pos
+  have hzpow :
+      (((↑t : ℂ) * exp (↑(θ0 - η) * I)) ^ (p + 1)) =
+        -((t ^ (p + 1) : ℝ) : ℂ) * exp (↑(-α) * I) := by
+    rw [mul_pow, Complex.ofReal_pow]
+    rw [← Complex.exp_nsmul, nsmul_eq_mul]
+    have hangle :
+        (↑(p + 1 : ℕ) : ℂ) * (↑(θ0 - η) * I) =
+          (↑Real.pi : ℂ) * I + (↑(-α) : ℂ) * I := by
+      have hθ0 : p1 * θ0 = Real.pi := by
+        dsimp [θ0]
+        field_simp [hp1_ne]
+      have hθ0c : (↑(p + 1 : ℕ) : ℂ) * (↑θ0 * I) = (↑Real.pi : ℂ) * I := by
+        simpa [p1, mul_assoc] using congrArg (fun x : ℝ => (x : ℂ) * I) hθ0
+      have hηc : (↑(p + 1 : ℕ) : ℂ) * (↑η * I) = (↑((↑(p + 1) : ℝ) * η) : ℂ) * I := by
+        push_cast
+        ring
+      calc
+        (↑(p + 1 : ℕ) : ℂ) * (↑(θ0 - η) * I)
+            = (↑(p + 1 : ℕ) : ℂ) * (↑θ0 * I) - (↑(p + 1 : ℕ) : ℂ) * (↑η * I) := by
+                push_cast
+                ring
+        _ = (↑Real.pi : ℂ) * I - (↑((↑(p + 1) : ℝ) * η) : ℂ) * I := by
+              rw [hθ0c, hηc]
+        _ = (↑Real.pi : ℂ) * I + (↑(-α) : ℂ) * I := by
+              dsimp [α, p1]
+              push_cast
+              ring_nf
+    rw [hangle, Complex.exp_add, Complex.exp_pi_mul_I]
+    ring
+  have him :
+      Complex.im
+          ((1 : ℂ) - ((-c * t ^ (p + 1) : ℝ) : ℂ) * exp (↑(-α) * I)) =
+        (-c) * t ^ (p + 1) * Real.sin α := by
+    simpa using
+      im_one_sub_ofReal_mul_exp_neg (a := -c * t ^ (p + 1)) (x := α)
+  rw [hzpow]
+  convert him using 2
+  push_cast
+  ring
+
+private theorem im_main_term_odd_down_right
+    (p : ℕ) (c t η : ℝ) :
+    Complex.im
+        ((1 : ℂ) - (c : ℂ) *
+          (((↑t : ℂ) *
+              exp (↑(Real.pi / ((↑(p + 1) : ℝ)) + η) * I)) ^ (p + 1))) =
+      -((-c) * t ^ (p + 1) * Real.sin (((↑(p + 1) : ℝ) * η))) := by
+  let p1 : ℝ := ((↑(p + 1) : ℝ))
+  let θ0 : ℝ := Real.pi / p1
+  let α : ℝ := p1 * η
+  have hp1_pos : 0 < p1 := by
+    dsimp [p1]
+    positivity
+  have hp1_ne : p1 ≠ 0 := ne_of_gt hp1_pos
+  have hzpow :
+      (((↑t : ℂ) * exp (↑(θ0 + η) * I)) ^ (p + 1)) =
+        -((t ^ (p + 1) : ℝ) : ℂ) * exp (↑α * I) := by
+    rw [mul_pow, Complex.ofReal_pow]
+    rw [← Complex.exp_nsmul, nsmul_eq_mul]
+    have hangle :
+        (↑(p + 1 : ℕ) : ℂ) * (↑(θ0 + η) * I) =
+          (↑Real.pi : ℂ) * I + (↑α : ℂ) * I := by
+      have hθ0 : p1 * θ0 = Real.pi := by
+        dsimp [θ0]
+        field_simp [hp1_ne]
+      have hθ0c : (↑(p + 1 : ℕ) : ℂ) * (↑θ0 * I) = (↑Real.pi : ℂ) * I := by
+        simpa [p1, mul_assoc] using congrArg (fun x : ℝ => (x : ℂ) * I) hθ0
+      have hηc : (↑(p + 1 : ℕ) : ℂ) * (↑η * I) = (↑((↑(p + 1) : ℝ) * η) : ℂ) * I := by
+        push_cast
+        ring
+      calc
+        (↑(p + 1 : ℕ) : ℂ) * (↑(θ0 + η) * I)
+            = (↑(p + 1 : ℕ) : ℂ) * (↑θ0 * I) + (↑(p + 1 : ℕ) : ℂ) * (↑η * I) := by
+                push_cast
+                ring
+        _ = (↑Real.pi : ℂ) * I + (↑((↑(p + 1) : ℝ) * η) : ℂ) * I := by
+              rw [hθ0c, hηc]
+        _ = (↑Real.pi : ℂ) * I + (↑α : ℂ) * I := by
+              dsimp [α]
+    rw [hangle, Complex.exp_add, Complex.exp_pi_mul_I]
+    ring
+  have him :
+      Complex.im
+          ((1 : ℂ) - ((-c * t ^ (p + 1) : ℝ) : ℂ) * exp (↑α * I)) =
+        -((-c) * t ^ (p + 1) * Real.sin α) := by
+    simpa using
+      im_one_sub_ofReal_mul_exp_pos (a := -c * t ^ (p + 1)) (x := α)
+  rw [hzpow]
+  convert him using 2
+  push_cast
+  ring
+
 /-- Next smaller analytic seam below raw cone-meeting: in every sufficiently small
 cone around the ray, a short exact-angle arc at fixed radius stays in the cone,
 the Padé order-star amplitude keeps positive real part on that arc, and the
@@ -457,6 +563,174 @@ private theorem padeR_even_downArrowArcEndpointSigns_of_pos_errorConst
   · have hright_bound :
         Complex.im (padeR n d zR * exp (-zR)) ≤
           -(padePhiErrorConst n d * t ^ (n + d + 1) * Real.sin α) + K * t ^ (n + d + 2) := by
+      have h' := abs_le.mp himdiffR
+      linarith [hmainR]
+    exact lt_of_le_of_lt hright_bound hright_core
+
+private theorem padeR_odd_downArrowArcEndpointSigns_of_neg_errorConst
+    (n d : ℕ) {η : ℝ}
+    (hC : padePhiErrorConst n d < 0)
+    (hη : 0 < η)
+    (hηpi : ((↑(n + d) + 1) : ℝ) * η < Real.pi) :
+    ∀ radius > 0,
+      ∃ t ∈ Set.Ioo (0 : ℝ) radius,
+        0 < Complex.im
+          (padeR n d
+              (((↑t : ℂ) *
+                  exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) - η) * I))) *
+            exp (-(((↑t : ℂ) *
+                exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) - η) * I))))) ∧
+        Complex.im
+          (padeR n d
+              (((↑t : ℂ) *
+                  exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + η) * I))) *
+            exp (-(((↑t : ℂ) *
+                exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + η) * I))))) < 0 := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  let p1 : ℝ := ((↑(n + d) + 1) : ℝ)
+  let θ0 : ℝ := Real.pi / p1
+  let α : ℝ := p1 * η
+  have hp1_pos : 0 < p1 := by
+    dsimp [p1]
+    positivity
+  have hαpos : 0 < α := by
+    dsimp [α]
+    positivity
+  have hsin : 0 < Real.sin α := Real.sin_pos_of_pos_of_lt_pi hαpos hηpi
+  let δsign : ℝ := (-padePhiErrorConst n d) * Real.sin α / (2 * K)
+  have hnegC : 0 < -padePhiErrorConst n d := by
+    linarith
+  have hδsign : 0 < δsign := by
+    dsimp [δsign]
+    exact div_pos (mul_pos hnegC hsin) (by positivity)
+  intro radius hradius
+  let t : ℝ := min (radius / 2) (min (δ₀ / 2) (δsign / 2))
+  have ht_mem : t ∈ Set.Ioo (0 : ℝ) radius := by
+    refine ⟨?_, ?_⟩
+    · dsimp [t]
+      exact lt_min (half_pos hradius) (lt_min (half_pos hδ) (half_pos hδsign))
+    · dsimp [t]
+      have hhalf : radius / 2 < radius := by
+        linarith
+      exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have ht_delta : t < δ₀ := by
+    have hle : t ≤ δ₀ / 2 := by
+      dsimp [t]
+      exact le_trans (min_le_right _ _) (min_le_left _ _)
+    have hhalf : δ₀ / 2 < δ₀ := by
+      linarith
+    exact lt_of_le_of_lt hle hhalf
+  have ht_sign : t < δsign := by
+    have hle : t ≤ δsign / 2 := by
+      dsimp [t]
+      exact le_trans (min_le_right _ _) (min_le_right _ _)
+    have hhalf : δsign / 2 < δsign := by
+      linarith
+    exact lt_of_le_of_lt hle hhalf
+  have hKt : K * t < (-padePhiErrorConst n d) * Real.sin α / 2 := by
+    have h := (lt_div_iff₀ (show 0 < 2 * K by positivity)).mp ht_sign
+    nlinarith
+  refine ⟨t, ht_mem, ?_⟩
+  let zL : ℂ := (↑t : ℂ) * exp (↑(θ0 - η) * I)
+  let zR : ℂ := (↑t : ℂ) * exp (↑(θ0 + η) * I)
+  have hzL_norm : ‖zL‖ = t := by
+    simpa [zL] using norm_ofReal_mul_exp_I t (θ0 - η) ht_mem.1.le
+  have hzR_norm : ‖zR‖ = t := by
+    simpa [zR] using norm_ofReal_mul_exp_I t (θ0 + η) ht_mem.1.le
+  have hzL_delta : ‖zL‖ < δ₀ := by
+    simpa [hzL_norm] using ht_delta
+  have hzR_delta : ‖zR‖ < δ₀ := by
+    simpa [hzR_norm] using ht_delta
+  have hboundL := hφ zL hzL_delta
+  have hboundR := hφ zR hzR_delta
+  have hmainL :
+      Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zL ^ (n + d + 1)) =
+        (-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α := by
+    simpa [zL, p1, θ0, α] using
+      (im_main_term_odd_down_left (p := n + d) (c := padePhiErrorConst n d) t η)
+  have hmainR :
+      Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zR ^ (n + d + 1)) =
+        -((-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α) := by
+    simpa [zR, p1, θ0, α] using
+      (im_main_term_odd_down_right (p := n + d) (c := padePhiErrorConst n d) t η)
+  have himdiffL :
+      abs
+        (Complex.im (padeR n d zL * exp (-zL)) -
+          Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zL ^ (n + d + 1))) ≤
+        K * t ^ (n + d + 2) := by
+    have him_le :
+        abs
+          (Complex.im (padeR n d zL * exp (-zL)) -
+            Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zL ^ (n + d + 1))) ≤
+          ‖padeR n d zL * exp (-zL) -
+            ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zL ^ (n + d + 1))‖ := by
+      simpa using
+        abs_im_sub_le_norm_sub
+          (a := padeR n d zL * exp (-zL))
+          (b := (1 : ℂ) - (padePhiErrorConst n d : ℂ) * zL ^ (n + d + 1))
+    have hboundL' :
+        ‖padeR n d zL * exp (-zL) -
+          ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zL ^ (n + d + 1))‖ ≤
+        K * t ^ (n + d + 2) := by
+      simpa [hzL_norm] using hboundL
+    exact le_trans him_le hboundL'
+  have himdiffR :
+      abs
+        (Complex.im (padeR n d zR * exp (-zR)) -
+          Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zR ^ (n + d + 1))) ≤
+        K * t ^ (n + d + 2) := by
+    have him_le :
+        abs
+          (Complex.im (padeR n d zR * exp (-zR)) -
+            Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zR ^ (n + d + 1))) ≤
+          ‖padeR n d zR * exp (-zR) -
+            ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zR ^ (n + d + 1))‖ := by
+      simpa using
+        abs_im_sub_le_norm_sub
+          (a := padeR n d zR * exp (-zR))
+          (b := (1 : ℂ) - (padePhiErrorConst n d : ℂ) * zR ^ (n + d + 1))
+    have hboundR' :
+        ‖padeR n d zR * exp (-zR) -
+          ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * zR ^ (n + d + 1))‖ ≤
+        K * t ^ (n + d + 2) := by
+      simpa [hzR_norm] using hboundR
+    exact le_trans him_le hboundR'
+  have hleft_core :
+      0 < (-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α -
+        K * t ^ (n + d + 2) := by
+    have hpow_pos : 0 < t ^ (n + d + 1) := pow_pos ht_mem.1 _
+    have hlin : 0 < (-padePhiErrorConst n d) * Real.sin α - K * t := by
+      nlinarith [hKt, hnegC, hsin]
+    have hrewrite :
+        (-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α - K * t ^ (n + d + 2) =
+          t ^ (n + d + 1) * ((-padePhiErrorConst n d) * Real.sin α - K * t) := by
+      ring
+    rw [hrewrite]
+    exact mul_pos hpow_pos hlin
+  have hright_core :
+      -((-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α) +
+        K * t ^ (n + d + 2) < 0 := by
+    have hpow_pos : 0 < t ^ (n + d + 1) := pow_pos ht_mem.1 _
+    have hlin : K * t - (-padePhiErrorConst n d) * Real.sin α < 0 := by
+      nlinarith [hKt, hnegC, hsin]
+    have hrewrite :
+        -((-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α) + K * t ^ (n + d + 2) =
+          t ^ (n + d + 1) * (K * t - (-padePhiErrorConst n d) * Real.sin α) := by
+      ring
+    rw [hrewrite]
+    exact mul_neg_of_pos_of_neg hpow_pos hlin
+  constructor
+  · have hleft_bound :
+        (-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α -
+            K * t ^ (n + d + 2) ≤
+          Complex.im (padeR n d zL * exp (-zL)) := by
+      have h' := abs_le.mp himdiffL
+      linarith [hmainL]
+    exact lt_of_lt_of_le hleft_core hleft_bound
+  · have hright_bound :
+        Complex.im (padeR n d zR * exp (-zR)) ≤
+          -((-padePhiErrorConst n d) * t ^ (n + d + 1) * Real.sin α) +
+            K * t ^ (n + d + 2) := by
       have h' := abs_le.mp himdiffR
       linarith [hmainR]
     exact lt_of_le_of_lt hright_bound hright_core
@@ -1313,6 +1587,68 @@ theorem padeRDownArrowOrderWebArcPhaseBridgeInput_of_pos_errorConst
   refine ⟨0, ?_, ?_⟩
   · simpa using padeR_downArrowDir_of_pos_errorConst n d 0 hC
   · simpa using padeR_even_downArrowArcPhaseBridge_of_pos_errorConst n d hC
+
+theorem padeR_odd_downArrowArcPhaseBridge_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    PadeROrderWebArcPhaseBridgeNearOrigin n d (Real.pi / ((↑(n + d) + 1) : ℝ)) := by
+  intro aperture haperture radius hradius
+  obtain ⟨δre, hδre_pos, hre_small⟩ := padeR_exp_neg_re_pos_of_small_norm n d
+  let p1 : ℝ := ((↑(n + d) + 1) : ℝ)
+  let θ0 : ℝ := Real.pi / p1
+  have hp1_pos : 0 < p1 := by
+    dsimp [p1]
+    positivity
+  let η : ℝ := min (aperture / 2) (1 / p1)
+  have hη_pos : 0 < η := by
+    refine lt_min (half_pos haperture) ?_
+    exact one_div_pos.mpr hp1_pos
+  have hη_lt_aperture : η < aperture := by
+    have hhalf : aperture / 2 < aperture := by
+      linarith
+    exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have hηpi : p1 * η < Real.pi := by
+    have hη_one : p1 * η ≤ 1 := by
+      have hη_le : η ≤ 1 / p1 := min_le_right _ _
+      have hmul := mul_le_mul_of_nonneg_left hη_le hp1_pos.le
+      have hp1_ne : p1 ≠ 0 := ne_of_gt hp1_pos
+      rw [show p1 * (1 / p1) = 1 by field_simp [hp1_ne]] at hmul
+      exact hmul
+    linarith [Real.pi_gt_three]
+  let radius' : ℝ := min radius δre
+  have hradius' : 0 < radius' := by
+    exact lt_min hradius hδre_pos
+  rcases
+      padeR_odd_downArrowArcEndpointSigns_of_neg_errorConst n d hC hη_pos hηpi radius' hradius' with
+    ⟨t, ht, him_left, him_right⟩
+  have ht_radius : t ∈ Set.Ioo (0 : ℝ) radius := by
+    refine ⟨ht.1, ?_⟩
+    exact lt_of_lt_of_le ht.2 (min_le_left _ _)
+  have ht_δre : t < δre := by
+    exact lt_of_lt_of_le ht.2 (min_le_right _ _)
+  refine ⟨t, ht_radius, η, hη_pos, ?_, ?_, ?_, ?_⟩
+  · exact exact_angle_arc_mem_rayConeNearOrigin θ0 aperture radius t η haperture ht_radius hη_lt_aperture
+  · intro s hs
+    apply hre_small
+    exact (norm_ofReal_mul_exp_I t (θ0 + s) ht_radius.1.le).trans_lt ht_δre
+  · exact him_left
+  · exact him_right
+
+theorem padeR_odd_downArrowOrderWebMeetsRayConeNearOrigin_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    PadeROrderWebMeetsRayConeNearOrigin n d (Real.pi / ((↑(n + d) + 1) : ℝ)) := by
+  exact
+    PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge
+      (padeR_odd_downArrowArcPhaseBridge_of_neg_errorConst n d hC)
+
+theorem padeRDownArrowOrderWebArcPhaseBridgeInput_of_neg_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : padePhiErrorConst n d < 0) :
+    PadeRDownArrowOrderWebArcPhaseBridgeInput n d data := by
+  refine ⟨?_⟩
+  intro _
+  refine ⟨Real.pi / ((↑(n + d) + 1) : ℝ), ?_, ?_⟩
+  · simpa using padeR_downArrowDir_of_neg_errorConst_oddAngle n d 0 hC
+  · simpa using padeR_odd_downArrowArcPhaseBridge_of_neg_errorConst n d hC
 
 /-- Exact remaining obstruction after the honest explicit-sign refactor:
 to upgrade the weak raywise bridge below to the strict sign bridge, one still
