@@ -1722,7 +1722,34 @@ private theorem padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBrid
         ∃ z : ℂ,
           z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
             z ∈ rayConeNearOrigin θ aperture radius := by
-  sorry
+  rcases
+      padeR_exists_referenceOrderWebWitness_of_arcPhaseBridge
+        (aperture := (1 : ℝ)) (radius := (1 : ℝ))
+        hbridge zero_lt_one zero_lt_one with
+    ⟨z0, hz0web, hz0cone⟩
+  refine ⟨z0, hz0web, hz0cone, ?_⟩
+  intro aperture haperture radius hradius
+  rcases
+      bridgeWitnesses_have_connectedSupport hz0web hz0cone aperture haperture radius hradius with
+    ⟨z, support, hsupport_conn, hsupport_web, hz0support, hzsupport, hzcone⟩
+  have hsubset_comp :
+      support ⊆ connectedComponentIn (orderWeb (padeR n d)) z0 :=
+    hsupport_conn.2.subset_connectedComponentIn hz0support hsupport_web
+  exact ⟨z, hsubset_comp hzsupport, hzcone⟩
+where
+  bridgeWitnesses_have_connectedSupport
+      {z0 : ℂ}
+      (hz0web : z0 ∈ orderWeb (padeR n d))
+      (hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
+      (aperture : ℝ) (haperture : 0 < aperture)
+      (radius : ℝ) (hradius : 0 < radius) :
+      ∃ z : ℂ, ∃ support : Set ℂ,
+        IsConnected support ∧
+        support ⊆ orderWeb (padeR n d) ∧
+        z0 ∈ support ∧
+        z ∈ support ∧
+        z ∈ rayConeNearOrigin θ aperture radius := by
+    sorry
 
 /-- Exact current theorem-local blocker beneath the concrete connected-component
 upgrade: the arc-phase bridge already produces order-web witnesses in every

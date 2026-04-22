@@ -101,6 +101,40 @@ Both reduce immediately to the single generic arc-phase bridge theorem above.
   - `3571269b...` at 37%
   - `7efec658...` at 34%
   - `9734460d...` at 34%
+- Cycle 330 first triaged the two newly ready Aristotle bundles required by the
+  planner:
+  - `0a294221-55c0-4239-8493-8ff15ab3c7a2`
+  - `42d317c0-1da1-44b9-924a-20c224187886`
+- Both bundles were rejected unchanged:
+  - each summary explicitly solved only the already-known even/positive path,
+  - each bundle depended on rebuilt stub `OpenMath.Pade`,
+    `OpenMath.PadeAsymptotics`, and `OpenMath.OrderStars` interfaces,
+  - neither addressed the live generic/private continuation blocker.
+- Cycle 330 then split the remaining theorem one level lower again inside the
+  live file:
+  - `padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge`
+    now fixes the unit-cone basepoint and is itself a wrapper,
+  - the only remaining `sorry` is the local nested helper
+    `bridgeWitnesses_have_connectedSupport`,
+    whose statement asks for an explicit connected subset of
+    `orderWeb (padeR n d)` containing the fixed reference witness `z0` and one
+    later bridge-produced witness `z`.
+- Both verification commands now succeed on this refactor:
+  - `PATH=/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH lake env lean OpenMath/PadeOrderStars.lean`
+  - `PATH=/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH lake build OpenMath.PadeOrderStars`
+- A fresh 5-job Aristotle batch was submitted against the narrowed helper:
+  - `27c30072-1ed3-429a-8b94-d490f8777f7e`
+  - `68f3c401-1f61-4212-bd9d-9472c54b6ea4`
+  - `f1b00f90-b52e-46a5-a93e-563eeb30311d`
+  - `f2191922-4215-4b9b-b4f1-dffb81079ef3`
+  - `97f3623d-2a14-4c3f-b9ed-7fda69056757`
+- After the mandated single 30-minute wait and single refresh, all five new
+  helper-focused jobs were still `IN_PROGRESS`:
+  - `27c30072...` at 48%
+  - `68f3c401...` at 32%
+  - `f1b00f90...` at 47%
+  - `f2191922...` at 35%
+  - `97f3623d...` at 28%
 
 ## What was learned
 - The remaining obstruction is not parity-specific anymore.
@@ -133,6 +167,22 @@ padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge
   their own. They would need a genuinely preconnected subset of
   `orderWeb (padeR n d)` containing both witnesses, and the current bridge data
   still does not provide that subset.
+- Cycle 330 sharpened the obstruction further. The remaining bridge data gives a
+  family of one-radius exact-angle arcs with:
+  - `0 < Complex.re (padeR n d z * exp (-z))` along each arc,
+  - opposite signs of `Complex.im (padeR n d z * exp (-z))` at the two
+    endpoints,
+  - hence one IVT-produced `orderWeb` witness on each chosen radius.
+- What is still missing is any theorem that these single-radius zeroes continue
+  coherently as the radius varies. In particular, the file still lacks either:
+  - a continuous choice of a zero of the imaginary part across a radius
+    interval, or
+  - a planar/rectangle zero-set continuum theorem showing that the union of the
+    sign-changing arcs contains a connected subset joining the two witness
+    radii inside the positive-real sector.
+- Without one of those two ingredients, the new local helper
+  `bridgeWitnesses_have_connectedSupport` cannot manufacture the explicit
+  connected subset demanded by `IsPreconnected.subset_connectedComponentIn`.
 
 ## Possible solutions
 - Work directly on
@@ -151,5 +201,16 @@ padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge
 - Another route is a local continuation theorem:
   show that the IVT witness on each small exact-angle arc can be chosen
   continuously in the radius parameter, giving a path in `orderWeb`.
+- More concretely after cycle 330, the next live theorem to target is the
+  nested helper:
+
+```lean
+bridgeWitnesses_have_connectedSupport
+```
+
+  inside
+  `padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge`.
+  A proof of that helper can stay entirely local to `OpenMath/PadeOrderStars.lean`
+  and would automatically close the public wrapper theorem.
 - Do not go back to the old support-constructor seam; that part is already
   resolved and no longer the blocker.
