@@ -224,6 +224,47 @@ theorem nonempty_padeR_realizedUpArrowInfinityWitnessFamily_iff
       (α := RealizedUpArrowInfinityBranch (padeR n d))
       data.upArrowsAtInfinity)
 
+/-- Honest theorem-local input for the current Padé infinity-branch seam:
+positive infinity counts do not themselves determine concrete escaping branch
+germs, so the live file has to ask separately for realized branch existence in
+each nonempty count case. -/
+structure PadeRInfinityBranchExistenceInput
+    (n d : ℕ) (data : OrderArrowTerminationData) where
+  downBranch_of_downArrowsAtInfinity_pos :
+    0 < data.downArrowsAtInfinity →
+      Nonempty (RealizedDownArrowInfinityBranch (padeR n d))
+  upBranch_of_upArrowsAtInfinity_pos :
+    0 < data.upArrowsAtInfinity →
+      Nonempty (RealizedUpArrowInfinityBranch (padeR n d))
+
+noncomputable def PadeRInfinityBranchExistenceInput.downArrowInfinityWitnesses
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRInfinityBranchExistenceInput n d data) :
+    PadeRRealizedDownArrowInfinityWitnessFamily n d data := by
+  intro i
+  have hpos : 0 < data.downArrowsAtInfinity := by
+    have h1 : 1 ≤ data.downArrowsAtInfinity := by
+      exact le_trans (Nat.succ_le_succ (Nat.zero_le i.1)) (Nat.succ_le_of_lt i.2)
+    exact Nat.succ_le_iff.mp h1
+  exact (h.downBranch_of_downArrowsAtInfinity_pos hpos).some
+
+noncomputable def PadeRInfinityBranchExistenceInput.upArrowInfinityWitnesses
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRInfinityBranchExistenceInput n d data) :
+    PadeRRealizedUpArrowInfinityWitnessFamily n d data := by
+  intro i
+  have hpos : 0 < data.upArrowsAtInfinity := by
+    have h1 : 1 ≤ data.upArrowsAtInfinity := by
+      exact le_trans (Nat.succ_le_succ (Nat.zero_le i.1)) (Nat.succ_le_of_lt i.2)
+    exact Nat.succ_le_iff.mp h1
+  exact (h.upBranch_of_upArrowsAtInfinity_pos hpos).some
+
+noncomputable def PadeRInfinityBranchExistenceInput.realizesInfinityBranchGerms
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRInfinityBranchExistenceInput n d data) :
+    RealizesInfinityBranchGerms (padeR n d) data := by
+  exact ⟨h.downArrowInfinityWitnesses, h.upArrowInfinityWitnesses⟩
+
 private theorem padeR_mem_orderWeb_zero (n d : ℕ) :
     (0 : ℂ) ∈ orderWeb (padeR n d) := by
   exact mem_orderWeb_zero (R := padeR n d) (by
