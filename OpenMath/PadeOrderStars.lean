@@ -574,6 +574,157 @@ theorem padeR_nonpos_sign_of_upArrowDir
   have hlt : ‖padeR n d z * exp (-z)‖ < 1 := hminus z hz_cone
   linarith
 
+private theorem padeR10_pi_div_four_radial_weight_hasDerivAt
+    (t : ℝ) :
+    HasDerivAt
+      (fun t : ℝ =>
+        (1 + Real.sqrt 2 * t + t ^ 2) * Real.exp (-(Real.sqrt 2 * t)))
+      (-(Real.sqrt 2) * t ^ 2 * Real.exp (-(Real.sqrt 2 * t))) t := by
+  have hf :
+      HasDerivAt (fun t : ℝ => 1 + Real.sqrt 2 * t + t ^ 2)
+        (Real.sqrt 2 + 2 * t) t := by
+    have htmp :=
+      (((hasDerivAt_const t 1).add ((hasDerivAt_id t).const_mul (Real.sqrt 2))).add
+        ((hasDerivAt_id t).mul (hasDerivAt_id t)))
+    convert htmp using 1
+    · funext x
+      simp [pow_two]
+    · simp [two_mul]
+  have hg :
+      HasDerivAt (fun t : ℝ => Real.exp (-(Real.sqrt 2 * t)))
+        (-(Real.sqrt 2) * Real.exp (-(Real.sqrt 2 * t))) t := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using
+      (show HasDerivAt (fun t : ℝ => Real.exp (-(Real.sqrt 2 * t)))
+          (Real.exp (-(Real.sqrt 2 * t)) * (-(Real.sqrt 2))) t from
+        (show HasDerivAt (fun t : ℝ => -(Real.sqrt 2 * t)) (-(Real.sqrt 2)) t from by
+          simpa [mul_comm, mul_left_comm, mul_assoc] using
+            ((hasDerivAt_id t).const_mul (Real.sqrt 2)).neg).exp)
+  have hderiv :
+      (Real.sqrt 2 + 2 * t) * Real.exp (-(Real.sqrt 2 * t)) +
+        (1 + Real.sqrt 2 * t + t ^ 2) *
+          (-(Real.sqrt 2) * Real.exp (-(Real.sqrt 2 * t))) =
+      -(Real.sqrt 2) * t ^ 2 * Real.exp (-(Real.sqrt 2 * t)) := by
+    have hsqrt : (Real.sqrt 2) ^ 2 = 2 := by
+      nlinarith [Real.sq_sqrt (show 0 ≤ (2 : ℝ) by positivity)]
+    ring_nf
+    rw [hsqrt]
+    ring
+  exact hderiv ▸ hf.mul hg
+
+private theorem padeR10_pi_div_four_radial_weight_lt_one
+    {t : ℝ} (ht : 0 < t) :
+    (1 + Real.sqrt 2 * t + t ^ 2) * Real.exp (-(Real.sqrt 2 * t)) < 1 := by
+  let f : ℝ → ℝ := fun t =>
+    (1 + Real.sqrt 2 * t + t ^ 2) * Real.exp (-(Real.sqrt 2 * t))
+  have hcont : ContinuousOn f (Set.Ici 0) := by
+    fun_prop
+  have hanti : StrictAntiOn f (Set.Ici 0) := by
+    apply strictAntiOn_of_deriv_neg (convex_Ici 0) hcont
+    intro x hx
+    have hx0 : 0 < x := by
+      simpa using hx
+    have hderiv :
+        deriv f x = -(Real.sqrt 2) * x ^ 2 * Real.exp (-(Real.sqrt 2 * x)) := by
+      simpa [f] using (padeR10_pi_div_four_radial_weight_hasDerivAt x).deriv
+    rw [hderiv]
+    have hpos :
+        0 < Real.sqrt 2 * x ^ 2 * Real.exp (-(Real.sqrt 2 * x)) := by
+      have hsqrt : 0 < Real.sqrt 2 := by positivity
+      have hx2 : 0 < x ^ 2 := sq_pos_of_ne_zero hx0.ne'
+      have hexp : 0 < Real.exp (-(Real.sqrt 2 * x)) := Real.exp_pos _
+      positivity
+    linarith
+  have hlt : f t < f 0 := hanti (by simp) (by simpa using ht.le) ht
+  simpa [f] using hlt
+
+private theorem padeR10_pi_div_four_normSq
+    (t : ℝ) :
+    Complex.normSq
+      (1 + ((↑t : ℂ) * exp (((Real.pi / 4 : ℝ) : ℂ) * I))) =
+      1 + Real.sqrt 2 * t + t ^ 2 := by
+  rw [Complex.normSq_apply]
+  rw [Complex.exp_mul_I, ← Complex.ofReal_cos, ← Complex.ofReal_sin]
+  simp [Real.cos_pi_div_four, Real.sin_pi_div_four, pow_two]
+  have hsqrt : (Real.sqrt 2) ^ 2 = 2 := by
+    nlinarith [Real.sq_sqrt (show 0 ≤ (2 : ℝ) by positivity)]
+  ring_nf
+  rw [hsqrt]
+  ring
+
+/-- The forward-Euler Padé witness already lies on the zero-cosine boundary. -/
+theorem padeR10_pi_div_four_zeroCos :
+    padePhiErrorConst 1 0 * Real.cos ((↑(1 + 0) + 1) * (Real.pi / 4)) = 0 := by
+  norm_num [padePhiErrorConst]
+  rw [show (2 : ℝ) * (Real.pi / 4) = Real.pi / 2 by ring]
+  norm_num [Real.cos_pi_div_two]
+
+/-- The exact ray `θ = π / 4` is nevertheless a live down-arrow direction for
+`padeR 1 0 = 1 + z`, so the remaining strict bridge target is false already in
+the forward-Euler case. -/
+theorem padeR10_pi_div_four_isDownArrowDir :
+    IsDownArrowDir (padeR 1 0) (Real.pi / 4) := by
+  refine ⟨1, one_pos, ?_⟩
+  intro t ht
+  let z : ℂ := (↑t : ℂ) * exp (((Real.pi / 4 : ℝ) : ℂ) * I)
+  have ht0 : 0 < t := ht.1
+  have hsq_real :
+      (1 + Real.sqrt 2 * t + t ^ 2) * Real.exp (-(Real.sqrt 2 * t)) < 1 :=
+    padeR10_pi_div_four_radial_weight_lt_one ht0
+  have hz_re : z.re = t * (Real.sqrt 2 / 2) := by
+    dsimp [z]
+    rw [Complex.exp_mul_I, ← Complex.ofReal_cos, ← Complex.ofReal_sin]
+    simp [Real.cos_pi_div_four, Real.sin_pi_div_four]
+  have hnorm : ‖(1 + z) * exp (-z)‖ = ‖1 + z‖ * Real.exp (-z.re) := by
+    simpa using (orderStar_norm_eq (fun w : ℂ => 1 + w) z)
+  have hnorm_sq_eq : ‖1 + z‖ ^ 2 = 1 + Real.sqrt 2 * t + t ^ 2 := by
+    rw [← Complex.normSq_eq_norm_sq]
+    simpa [z] using padeR10_pi_div_four_normSq t
+  have hexp_sq : (Real.exp (-z.re)) ^ 2 = Real.exp (-(Real.sqrt 2 * t)) := by
+    rw [hz_re, pow_two, ← Real.exp_add]
+    congr 1
+    ring
+  have hsq : (‖1 + z‖ * Real.exp (-z.re)) ^ 2 < 1 := by
+    calc
+      (‖1 + z‖ * Real.exp (-z.re)) ^ 2 = ‖1 + z‖ ^ 2 * (Real.exp (-z.re)) ^ 2 := by
+        ring
+      _ = (1 + Real.sqrt 2 * t + t ^ 2) * (Real.exp (-z.re)) ^ 2 := by
+        rw [hnorm_sq_eq]
+      _ = (1 + Real.sqrt 2 * t + t ^ 2) * Real.exp (-(Real.sqrt 2 * t)) := by
+        rw [hexp_sq]
+      _ < 1 := hsq_real
+  have hmain : ‖1 + z‖ * Real.exp (-z.re) < 1 := by
+    have hnonneg : 0 ≤ ‖1 + z‖ * Real.exp (-z.re) := by positivity
+    nlinarith
+  calc
+    ‖padeR 1 0 z * exp (-z)‖ = ‖(1 + z) * exp (-z)‖ := by
+      simp [z, padeR, padeP_zero_right, padeQ_zero_right, expTaylor_one]
+    _ = ‖1 + z‖ * Real.exp (-z.re) := hnorm
+    _ < 1 := hmain
+
+theorem not_padeRDownArrowZeroCosExclusion_one_zero :
+    ¬ PadeRDownArrowZeroCosExclusion 1 0 := by
+  intro hzero
+  have hne := hzero (Real.pi / 4) padeR10_pi_div_four_isDownArrowDir
+  have hzero' := padeR10_pi_div_four_zeroCos
+  norm_num at hne hzero' ⊢
+  rcases hzero' with hC | hcos
+  · exact hne.1 hC
+  · exact hne.2 hcos
+
+theorem not_padeRDownArrowSignBridge_one_zero :
+    ¬ PadeRDownArrowSignBridge 1 0 := by
+  intro hbridge
+  have hpos := hbridge (Real.pi / 4) padeR10_pi_div_four_isDownArrowDir
+  have hzero' := padeR10_pi_div_four_zeroCos
+  norm_num at hpos hzero' ⊢
+  rcases hzero' with hC | hcos
+  · have hnot : ¬ 0 < padePhiErrorConst 1 0 * Real.cos (2 * (Real.pi / 4)) := by
+      simp [hC]
+    exact hnot hpos
+  · have hnot : ¬ 0 < padePhiErrorConst 1 0 * Real.cos (2 * (Real.pi / 4)) := by
+      simp [hcos]
+    exact hnot hpos
+
 /-- The strict down-arrow sign bridge now reduces to the single remaining
 zero-cosine exclusion input. -/
 theorem padeR_downArrowSignBridge_of_zeroCosExclusion
@@ -623,8 +774,8 @@ theorem concreteRationalApproxToExp_of_padeR
         ∃ aperture > 0, ∃ radius > 0,
           ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
             1 < ‖padeR n d z * exp (-z)‖)
-    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
-    (hup_sign_of_dir : PadeRUpArrowSignBridge n d)
+    (hdown_zeroCosExclusion : PadeRDownArrowZeroCosExclusion n d)
+    (hup_zeroCosExclusion : PadeRUpArrowZeroCosExclusion n d)
     (hfar_plus_on_orderWeb :
       ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
         1 < ‖padeR n d z * exp (-z)‖)
@@ -638,14 +789,20 @@ theorem concreteRationalApproxToExp_of_padeR
           ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
             ‖padeR n d z * exp (-z)‖ < 1 := by
     intro θ hθ
-    exact hlocal_minus_near_of_sign θ (hdown_sign_of_dir θ hθ)
+    have hnonneg := padeR_nonneg_sign_of_downArrowDir n d θ hθ
+    have hne : padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) ≠ 0 :=
+      hdown_zeroCosExclusion θ hθ
+    exact hlocal_minus_near_of_sign θ (lt_of_le_of_ne hnonneg hne.symm)
   have hlocal_plus_near_up :
       ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
         ∃ aperture > 0, ∃ radius > 0,
           ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
             1 < ‖padeR n d z * exp (-z)‖ := by
     intro θ hθ
-    exact hlocal_plus_near_of_sign θ (hup_sign_of_dir θ hθ)
+    have hnonpos := padeR_nonpos_sign_of_upArrowDir n d θ hθ
+    have hne : padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) ≠ 0 :=
+      hup_zeroCosExclusion θ hθ
+    exact hlocal_plus_near_of_sign θ (lt_of_le_of_ne hnonpos hne)
   simpa using
     (concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions
       (R := padeR n d) data hcont_orderWeb
@@ -670,7 +827,7 @@ This exposes the exact remaining input below `ConcreteRationalApproxToExp`
 without changing the `OrderStars` interface: two realized infinity witness
 families together with the analytic contradiction hypotheses that rule them
 out and the honest explicit-sign local feeders currently available in the live
-Padé file. The remaining direction-to-sign bridge stays theorem-local
+Padé file. The remaining zero-cosine exact-ray exclusions stay theorem-local
 downstream. -/
 structure PadeRConcreteNoEscapeInput
     (n d : ℕ) (data : OrderArrowTerminationData) where
@@ -725,8 +882,8 @@ def PadeRConcreteNoEscapeInput.realizesInfinityBranchGerms
 theorem PadeRConcreteNoEscapeInput.concrete
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeRConcreteNoEscapeInput n d data)
-    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
-    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
+    (hdown_zeroCosExclusion : PadeRDownArrowZeroCosExclusion n d)
+    (hup_zeroCosExclusion : PadeRUpArrowZeroCosExclusion n d) :
     ConcreteRationalApproxToExp (padeR n d) data := by
   exact concreteRationalApproxToExp_of_padeR
     h.cont_orderWeb
@@ -735,8 +892,8 @@ theorem PadeRConcreteNoEscapeInput.concrete
     h.no_nonzero_unit_points_on_orderWeb
     h.local_minus_near_of_sign
     h.local_plus_near_of_sign
-    hdown_sign_of_dir
-    hup_sign_of_dir
+    hdown_zeroCosExclusion
+    hup_zeroCosExclusion
     h.far_plus_on_orderWeb
     h.far_minus_on_orderWeb
 
@@ -811,9 +968,10 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
 /-- Honest Padé-local boundary for the repaired Ehle barrier seam.
 This bundles exactly the concrete hypotheses currently needed to apply the
 Padé-side no-escape seam together with `ehle_barrier_nat`, while leaving the
-remaining direction-to-sign bridge for the 355D/355E' endpoint wrappers as a
-separate theorem-local input. This still avoids pretending that the explicit
-endpoint counts already supply the separate 355G correction-term witnesses. -/
+remaining zero-cosine exact-ray exclusions for the 355D/355E' endpoint
+wrappers as separate theorem-local inputs. This still avoids pretending that
+the explicit endpoint counts already supply the separate 355G correction-term
+witnesses. -/
 structure PadeREhleBarrierInput
     (n d : ℕ) (data : OrderArrowTerminationData) where
   numeratorDegree_eq : data.numeratorDegree = n
@@ -867,29 +1025,30 @@ def PadeREhleBarrierInput.realizesInfinityBranchGerms
 theorem PadeREhleBarrierInput.concrete
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeREhleBarrierInput n d data)
-    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
-    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
+    (hdown_zeroCosExclusion : PadeRDownArrowZeroCosExclusion n d)
+    (hup_zeroCosExclusion : PadeRUpArrowZeroCosExclusion n d) :
     ConcreteRationalApproxToExp (padeR n d) data := by
-  exact h.noEscape.concrete hdown_sign_of_dir hup_sign_of_dir
+  exact h.noEscape.concrete hdown_zeroCosExclusion hup_zeroCosExclusion
 
 theorem PadeREhleBarrierInput.thm_355D
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeREhleBarrierInput n d data)
-    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
-    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
+    (hdown_zeroCosExclusion : PadeRDownArrowZeroCosExclusion n d)
+    (hup_zeroCosExclusion : PadeRUpArrowZeroCosExclusion n d) :
     SatisfiesArrowCountInequality data.toOrderArrowCountData := by
   exact thm_355D_of_padeR n d data h.pade.toIsRationalApproxToExp
-    h.realizesInfinityBranchGerms (h.concrete hdown_sign_of_dir hup_sign_of_dir)
+    h.realizesInfinityBranchGerms
+    (h.concrete hdown_zeroCosExclusion hup_zeroCosExclusion)
 
 theorem PadeREhleBarrierInput.thm_355E'
     {n d : ℕ} {data : OrderArrowTerminationData}
     (h : PadeREhleBarrierInput n d data)
-    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
-    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
+    (hdown_zeroCosExclusion : PadeRDownArrowZeroCosExclusion n d)
+    (hup_zeroCosExclusion : PadeRUpArrowZeroCosExclusion n d) :
     data.downArrowsAtZeros = data.numeratorDegree ∧
     data.upArrowsAtPoles = data.denominatorDegree := by
   exact thm_355E'_of_padeR n d data h.pade h.realizesInfinityBranchGerms
-    (h.concrete hdown_sign_of_dir hup_sign_of_dir)
+    (h.concrete hdown_zeroCosExclusion hup_zeroCosExclusion)
 
 /-- Minimal Padé-local input actually used by `ehle_barrier_nat_of_padeR`.
 The branch-realization and concrete no-infinity data are needed for the sibling
