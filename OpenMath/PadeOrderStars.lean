@@ -1900,12 +1900,59 @@ theorem padeR_even_downArrowOrderWebSameComponentContinuation_of_pos_errorConst
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
 construction near `θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
+private theorem padeR_odd_downArrowSameComponentRadiusPhaseBound_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    ∃ z0 ∈ orderWeb (padeR n d), ∃ δ > 0,
+      ∀ r ∈ Set.Ioo (0 : ℝ) δ,
+        ∃ z : ℂ,
+          z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
+            ∃ s ∈ Set.Icc (-r) r,
+              z =
+                (↑r : ℂ) *
+                  exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + s) * I) := by
+  sorry
+
+/-- The remaining concrete continuation blocker after the cycle-335 refactor:
+the odd down-arrow case still needs a genuine uniform strip / connected-support
+construction near `θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
 private theorem padeR_odd_downArrowConnectedRayConeSupport_of_neg_errorConst
     (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
     Nonempty
       (PadeRConnectedRayConeOrderWebSupport n d
         (Real.pi / ((↑(n + d) + 1) : ℝ))) := by
-  sorry
+  obtain ⟨z0, hz0, δ, hδ, hcomponent⟩ :=
+    padeR_odd_downArrowSameComponentRadiusPhaseBound_of_neg_errorConst n d hC
+  let θ0 : ℝ := Real.pi / ((↑(n + d) + 1) : ℝ)
+  refine ⟨⟨connectedComponentIn (orderWeb (padeR n d)) z0,
+    isConnected_connectedComponentIn_iff.mpr hz0,
+    connectedComponentIn_subset _ _,
+    ?_⟩⟩
+  intro aperture haperture radius hradius
+  let r : ℝ := min (δ / 2) (min (radius / 2) (aperture / 2))
+  have hr_pos : 0 < r := by
+    dsimp [r]
+    exact lt_min (half_pos hδ) (lt_min (half_pos hradius) (half_pos haperture))
+  have hr_lt_δ : r < δ := by
+    dsimp [r]
+    have hhalf : δ / 2 < δ := by
+      linarith
+    exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have hr_lt_radius : r < radius := by
+    dsimp [r]
+    have hhalf : radius / 2 < radius := by
+      linarith
+    exact lt_of_le_of_lt (le_trans (min_le_right _ _) (min_le_left _ _)) hhalf
+  have hr_lt_aperture : r < aperture := by
+    dsimp [r]
+    have hhalf : aperture / 2 < aperture := by
+      linarith
+    exact lt_of_le_of_lt (le_trans (min_le_right _ _) (min_le_right _ _)) hhalf
+  rcases hcomponent r ⟨hr_pos, hr_lt_δ⟩ with
+    ⟨z, hzcomp, s, hs, rfl⟩
+  refine ⟨_, hzcomp, ?_⟩
+  simpa [θ0] using
+    exact_angle_arc_mem_rayConeNearOrigin θ0 aperture radius r r haperture
+      ⟨hr_pos, hr_lt_radius⟩ hr_lt_aperture s hs
 
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
