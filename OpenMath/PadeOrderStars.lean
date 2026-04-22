@@ -1951,6 +1951,225 @@ private theorem exists_clopen_of_no_connected_subset_meeting_both
     exists_clopen_separating_closed_sets_of_component_images_disjoint
       hA hB hdisj
 
+private noncomputable def oddDownArrowRadiusPhaseCenter (n d : ℕ) : ℝ :=
+  Real.pi / ((↑(n + d) + 1) : ℝ)
+
+private def oddDownArrowRadiusPhaseWedge (δ : ℝ) : Set (ℝ × ℝ) :=
+  {p : ℝ × ℝ |
+    p.1 ∈ Set.Icc (0 : ℝ) δ ∧
+      p.2 ∈ Set.Icc (-p.1) p.1}
+
+private noncomputable def oddDownArrowRadiusPhasePoint (n d : ℕ) (p : ℝ × ℝ) : ℂ :=
+  (↑p.1 : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + p.2) * I)
+
+private noncomputable def oddDownArrowRadiusPhaseValue (n d : ℕ) (p : ℝ × ℝ) : ℂ :=
+  padeR n d (oddDownArrowRadiusPhasePoint n d p) *
+    exp (-(oddDownArrowRadiusPhasePoint n d p))
+
+private noncomputable def oddDownArrowRadiusPhaseIm (n d : ℕ) (p : ℝ × ℝ) : ℝ :=
+  Complex.im (oddDownArrowRadiusPhaseValue n d p)
+
+private noncomputable def oddDownArrowRadiusPhaseZeroSet (n d : ℕ) (δ : ℝ) : Set (ℝ × ℝ) :=
+  {p : ℝ × ℝ |
+    p ∈ oddDownArrowRadiusPhaseWedge δ ∧
+      oddDownArrowRadiusPhaseIm n d p = 0}
+
+private theorem isClosed_oddDownArrowRadiusPhaseWedge (δ : ℝ) :
+    IsClosed (oddDownArrowRadiusPhaseWedge δ) := by
+  have hfst : IsClosed {p : ℝ × ℝ | p.1 ∈ Set.Icc (0 : ℝ) δ} :=
+    isClosed_Icc.preimage continuous_fst
+  have hleft : IsClosed {p : ℝ × ℝ | -p.1 ≤ p.2} :=
+    isClosed_le (continuous_fst.neg) continuous_snd
+  have hright : IsClosed {p : ℝ × ℝ | p.2 ≤ p.1} :=
+    isClosed_le continuous_snd continuous_fst
+  have hphase : IsClosed {p : ℝ × ℝ | -p.1 ≤ p.2 ∧ p.2 ≤ p.1} := hleft.inter hright
+  have hwedge :
+      oddDownArrowRadiusPhaseWedge δ =
+        {p : ℝ × ℝ | p.1 ∈ Set.Icc (0 : ℝ) δ} ∩
+          {p : ℝ × ℝ | -p.1 ≤ p.2 ∧ p.2 ≤ p.1} := by
+    ext p
+    simp [oddDownArrowRadiusPhaseWedge, Set.mem_Icc, and_left_comm, and_assoc, and_comm]
+  rw [hwedge]
+  exact hfst.inter hphase
+
+private theorem isCompact_oddDownArrowRadiusPhaseWedge {δ : ℝ} :
+    IsCompact (oddDownArrowRadiusPhaseWedge δ) := by
+  let box : Set (ℝ × ℝ) := Set.Icc (0 : ℝ) δ ×ˢ Set.Icc (-δ) δ
+  have hbox : IsCompact box := isCompact_Icc.prod isCompact_Icc
+  refine hbox.of_isClosed_subset (isClosed_oddDownArrowRadiusPhaseWedge δ) ?_
+  intro p hp
+  rcases hp with ⟨hp1, hp2⟩
+  rcases hp2 with ⟨hp2l, hp2r⟩
+  refine ⟨hp1, ?_⟩
+  refine ⟨?_, ?_⟩
+  · have hneg : -δ ≤ -p.1 := by linarith [hp1.2]
+    exact le_trans hneg hp2l
+  · exact le_trans hp2r hp1.2
+
+private theorem norm_oddDownArrowRadiusPhasePoint
+    (n d : ℕ) {p : ℝ × ℝ} (hp : 0 ≤ p.1) :
+    ‖oddDownArrowRadiusPhasePoint n d p‖ = p.1 := by
+  simpa [oddDownArrowRadiusPhasePoint, oddDownArrowRadiusPhaseCenter] using
+    norm_ofReal_mul_exp_I p.1 (oddDownArrowRadiusPhaseCenter n d + p.2) hp
+
+private theorem continuousOn_oddDownArrowRadiusPhaseValue
+    (n d : ℕ) {δ δQ : ℝ}
+    (hδQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hδltQ : δ < δQ) :
+    ContinuousOn (oddDownArrowRadiusPhaseValue n d) (oddDownArrowRadiusPhaseWedge δ) := by
+  have hpoint : Continuous (oddDownArrowRadiusPhasePoint n d) := by
+    change Continuous (fun p : ℝ × ℝ =>
+      (↑p.1 : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + p.2) * I))
+    continuity
+  have hp : Continuous (padeP n d) := by
+    unfold padeP
+    fun_prop
+  have hq : Continuous (padeQ n d) := padeQ_continuous n d
+  have hR :
+      ContinuousOn (fun p : ℝ × ℝ => padeR n d (oddDownArrowRadiusPhasePoint n d p))
+        (oddDownArrowRadiusPhaseWedge δ) := by
+    have hq_ne :
+        ∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+          padeQ n d (oddDownArrowRadiusPhasePoint n d p) ≠ 0 := by
+      intro p hpw
+      apply hδQ
+      have hp1_nonneg : 0 ≤ p.1 := hpw.1.1
+      have hp1_le : p.1 ≤ δ := hpw.1.2
+      have hnorm : ‖oddDownArrowRadiusPhasePoint n d p‖ = p.1 :=
+        norm_oddDownArrowRadiusPhasePoint n d hp1_nonneg
+      have hp1_lt : p.1 < δQ := lt_of_le_of_lt hp1_le hδltQ
+      simpa [hnorm] using hp1_lt
+    simpa [oddDownArrowRadiusPhaseValue, padeR] using
+      (hp.comp hpoint).continuousOn.div (hq.comp hpoint).continuousOn hq_ne
+  have hexp : Continuous (fun p : ℝ × ℝ => exp (-(oddDownArrowRadiusPhasePoint n d p))) := by
+    fun_prop
+  simpa [oddDownArrowRadiusPhaseValue] using hR.mul hexp.continuousOn
+
+private theorem continuousOn_oddDownArrowRadiusPhaseIm
+    (n d : ℕ) {δ δQ : ℝ}
+    (hδQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hδltQ : δ < δQ) :
+    ContinuousOn (oddDownArrowRadiusPhaseIm n d) (oddDownArrowRadiusPhaseWedge δ) := by
+  unfold oddDownArrowRadiusPhaseIm
+  intro p hp
+  have hcomp :
+      ContinuousWithinAt
+        ((fun z : ℂ => Complex.im z) ∘ oddDownArrowRadiusPhaseValue n d)
+        (oddDownArrowRadiusPhaseWedge δ) p :=
+    ContinuousWithinAt.comp (t := Set.univ)
+      Complex.continuous_im.continuousAt.continuousWithinAt
+      (continuousOn_oddDownArrowRadiusPhaseValue n d hδQ hδltQ p hp) (by
+        intro q hq
+        simp)
+  simpa [Function.comp] using hcomp
+
+private theorem isCompact_oddDownArrowRadiusPhaseZeroSet
+    (n d : ℕ) {δ δQ : ℝ}
+    (hδQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hδltQ : δ < δQ) :
+    IsCompact (oddDownArrowRadiusPhaseZeroSet n d δ) := by
+  have hwedge : IsCompact (oddDownArrowRadiusPhaseWedge δ) :=
+    isCompact_oddDownArrowRadiusPhaseWedge
+  have hzero_closed : IsClosed (oddDownArrowRadiusPhaseZeroSet n d δ) := by
+    simpa [oddDownArrowRadiusPhaseZeroSet] using
+      (continuousOn_oddDownArrowRadiusPhaseIm n d hδQ hδltQ).preimage_isClosed_of_isClosed
+        (isClosed_oddDownArrowRadiusPhaseWedge δ) isClosed_singleton
+  exact hwedge.of_isClosed_subset hzero_closed (by
+    intro p hp
+    exact hp.1)
+
+private theorem mem_oddDownArrowRadiusPhaseZeroSet_zero
+    (n d : ℕ) {δ : ℝ} (hδ : 0 ≤ δ) :
+    (0, 0) ∈ oddDownArrowRadiusPhaseZeroSet n d δ := by
+  refine ⟨?_, ?_⟩
+  · exact ⟨⟨le_rfl, hδ⟩, by simp⟩
+  · simp [oddDownArrowRadiusPhaseIm, oddDownArrowRadiusPhaseValue,
+      oddDownArrowRadiusPhasePoint, oddDownArrowRadiusPhaseCenter, padeR,
+      padeP_eval_zero, padeQ_eval_zero]
+
+private theorem isCompact_fstImage_connectedComponentIn_oddDownArrowRadiusPhaseZeroSet
+    (n d : ℕ) {δ δQ : ℝ} (hδ : 0 ≤ δ)
+    (hδQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hδltQ : δ < δQ) :
+    IsCompact
+      (Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0)) := by
+  let K := oddDownArrowRadiusPhaseZeroSet n d δ
+  have hK : IsCompact K := isCompact_oddDownArrowRadiusPhaseZeroSet n d hδQ hδltQ
+  have hzero : (0, 0) ∈ K := mem_oddDownArrowRadiusPhaseZeroSet_zero n d hδ
+  haveI : CompactSpace K := (isCompact_iff_compactSpace.mp hK)
+  have hconn_sub : IsCompact (connectedComponent (⟨(0, 0), hzero⟩ : K)) :=
+    isClosed_connectedComponent.isCompact
+  have hconnIn : IsCompact (connectedComponentIn K (0, 0)) := by
+    simpa [K, connectedComponentIn_eq_image hzero] using
+      hconn_sub.image continuous_subtype_val
+  simpa using hconnIn.image continuous_fst
+
+private theorem isClosed_fstImage_connectedComponentIn_oddDownArrowRadiusPhaseZeroSet
+    (n d : ℕ) {δ δQ : ℝ} (hδ : 0 ≤ δ)
+    (hδQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hδltQ : δ < δQ) :
+    IsClosed
+      (Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0)) :=
+  (isCompact_fstImage_connectedComponentIn_oddDownArrowRadiusPhaseZeroSet
+    n d hδ hδQ hδltQ).isClosed
+
+private theorem oddDownArrowRadiusPhaseRe_pos_on_wedge_of_small_norm
+    (n d : ℕ) {δ δre : ℝ}
+    (hre_small : ∀ z : ℂ, ‖z‖ < δre →
+      0 < Complex.re (padeR n d z * exp (-z)))
+    (hδlt : δ < δre) :
+    ∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+      0 < Complex.re (oddDownArrowRadiusPhaseValue n d p) := by
+  intro p hpw
+  apply hre_small
+  have hp1_nonneg : 0 ≤ p.1 := hpw.1.1
+  have hp1_le : p.1 ≤ δ := hpw.1.2
+  have hnorm : ‖oddDownArrowRadiusPhasePoint n d p‖ = p.1 :=
+    norm_oddDownArrowRadiusPhasePoint n d hp1_nonneg
+  have hp1_lt : p.1 < δre := lt_of_le_of_lt hp1_le hδlt
+  simpa [oddDownArrowRadiusPhaseValue, hnorm] using hp1_lt
+
+/-- Remaining no-stop seam: show that the connected component of `(0,0)` in the
+compact odd-wedge zero set projects onto the full radius interval. The compact
+zero-set and closed-projection infrastructure is now live above this theorem. -/
+private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
+    (n d : ℕ) (_hC : padePhiErrorConst n d < 0) :
+    ∃ δ > 0,
+      (∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+        0 < Complex.re (oddDownArrowRadiusPhaseValue n d p)) ∧
+      Set.Icc (0 : ℝ) δ ⊆
+        Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0) := by
+  obtain ⟨δre, hδre, hre_small⟩ := padeR_exp_neg_re_pos_of_small_norm n d
+  obtain ⟨δQ, hδQ, hQ⟩ := padeQ_nonzero_near_zero n d
+  let δ : ℝ := min (δre / 2) (δQ / 2)
+  have hδ : 0 < δ := by
+    dsimp [δ]
+    exact lt_min (half_pos hδre) (half_pos hδQ)
+  have hδlt_re : δ < δre := by
+    dsimp [δ]
+    have hhalf : δre / 2 < δre := by linarith
+    exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have hδlt_Q : δ < δQ := by
+    dsimp [δ]
+    have hhalf : δQ / 2 < δQ := by linarith
+    exact lt_of_le_of_lt (min_le_right _ _) hhalf
+  have hre_wedge :
+      ∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+        0 < Complex.re (oddDownArrowRadiusPhaseValue n d p) :=
+    oddDownArrowRadiusPhaseRe_pos_on_wedge_of_small_norm n d hre_small hδlt_re
+  have hprojClosed :
+      IsClosed
+        (Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0)) :=
+    isClosed_fstImage_connectedComponentIn_oddDownArrowRadiusPhaseZeroSet
+      n d hδ.le hQ hδlt_Q
+  have hzero :
+      (0, 0) ∈ oddDownArrowRadiusPhaseZeroSet n d δ :=
+    mem_oddDownArrowRadiusPhaseZeroSet_zero n d hδ.le
+  have hcompact :
+      IsCompact (oddDownArrowRadiusPhaseZeroSet n d δ) :=
+    isCompact_oddDownArrowRadiusPhaseZeroSet n d hQ hδlt_Q
+  sorry
+
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
 construction near `θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
@@ -1967,7 +2186,23 @@ private theorem padeR_odd_downArrowConnectedRadiusPhaseZeroSet_of_neg_errorConst
               Complex.im (padeR n d w * exp (-w)) = 0 ∧
                 0 < Complex.re (padeR n d w * exp (-w))} ∧
         Set.Icc (0 : ℝ) δ ⊆ Prod.fst '' Z := by
-  sorry
+  obtain ⟨δ, hδ, hre_wedge, hproj⟩ :=
+    oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst n d hC
+  let Z : Set (ℝ × ℝ) := connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0)
+  have hzero : (0, 0) ∈ oddDownArrowRadiusPhaseZeroSet n d δ :=
+    mem_oddDownArrowRadiusPhaseZeroSet_zero n d hδ.le
+  refine ⟨δ, hδ, Z, ?_, ?_, ?_⟩
+  · exact isConnected_connectedComponentIn_iff.mpr hzero
+  · intro p hpZ
+    have hpK : p ∈ oddDownArrowRadiusPhaseZeroSet n d δ :=
+      connectedComponentIn_subset _ _ hpZ
+    rcases hpK with ⟨hpw, hpim⟩
+    refine ⟨hpw.1, hpw.2, ?_, ?_⟩
+    · simpa [oddDownArrowRadiusPhaseIm, oddDownArrowRadiusPhaseValue,
+        oddDownArrowRadiusPhasePoint, oddDownArrowRadiusPhaseCenter] using hpim
+    · simpa [oddDownArrowRadiusPhaseValue, oddDownArrowRadiusPhasePoint,
+        oddDownArrowRadiusPhaseCenter] using hre_wedge p hpw
+  · simpa [Z] using hproj
 
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
