@@ -1897,6 +1897,60 @@ theorem padeR_even_downArrowOrderWebSameComponentContinuation_of_pos_errorConst
     hsupport_conn.2.subset_connectedComponentIn hz0support hsupport_web
   exact ⟨(↑r : ℂ), hsubset_comp hzsupport, hzcone⟩
 
+/-- Compact Whyburn-style separation seam: if two closed subsets land in
+different connected components, they can be separated by a clopen set. -/
+private theorem exists_clopen_separating_closed_sets_of_component_images_disjoint
+    {X : Type*} [TopologicalSpace X] [CompactSpace X] [T2Space X]
+    {A B : Set X} (hA : IsClosed A) (hB : IsClosed B)
+    (hdisj :
+      Disjoint ((ConnectedComponents.mk) '' A) ((ConnectedComponents.mk) '' B)) :
+    ∃ C : Set X, IsClopen C ∧ A ⊆ C ∧ B ⊆ Cᶜ := by
+  let A' : Set (ConnectedComponents X) := ConnectedComponents.mk '' A
+  let B' : Set (ConnectedComponents X) := ConnectedComponents.mk '' B
+  have hA' : IsClosed A' := by
+    exact (hA.isCompact.image ConnectedComponents.continuous_coe).isClosed
+  have hB' : IsClosed B' := by
+    exact (hB.isCompact.image ConnectedComponents.continuous_coe).isClosed
+  have hA_sub : A' ⊆ B'ᶜ := by
+    intro x hxA hxB
+    exact hdisj.le_bot ⟨hxA, hxB⟩
+  obtain ⟨D, hDclopen, hAD, hDB⟩ :=
+    exists_clopen_of_closed_subset_open hA' hB'.isOpen_compl hA_sub
+  refine ⟨ConnectedComponents.mk ⁻¹' D, ?_, ?_, ?_⟩
+  · exact (ConnectedComponents.isQuotientMap_coe.isClopen_preimage).2 hDclopen
+  · intro x hx
+    exact hAD ⟨x, hx, rfl⟩
+  · intro x hx hxC
+    have hxB' : ConnectedComponents.mk x ∈ B' := ⟨x, hx, rfl⟩
+    exact hDB hxC hxB'
+
+/-- If no connected subset meets two closed sets in a compact Hausdorff space,
+their points lie in different connected components, hence the previous clopen
+separation lemma applies. -/
+private theorem exists_clopen_of_no_connected_subset_meeting_both
+    {X : Type*} [TopologicalSpace X] [CompactSpace X] [T2Space X]
+    {A B : Set X} (hA : IsClosed A) (hB : IsClosed B)
+    (hAB :
+      ∀ S : Set X, IsConnected S → (S ∩ A).Nonempty → (S ∩ B).Nonempty → False) :
+    ∃ C : Set X, IsClopen C ∧ A ⊆ C ∧ B ⊆ Cᶜ := by
+  have hdisj : Disjoint ((ConnectedComponents.mk) '' A) ((ConnectedComponents.mk) '' B) := by
+    rw [Set.disjoint_left]
+    intro x hxA hxB
+    rcases hxA with ⟨a, haA, hax⟩
+    rcases hxB with ⟨b, hbB, hbx⟩
+    have hab : connectedComponent a = connectedComponent b := by
+      exact (ConnectedComponents.coe_eq_coe).mp (hax.trans hbx.symm)
+    have hconn : IsConnected (connectedComponent a) := isConnected_connectedComponent
+    have hneA : (connectedComponent a ∩ A).Nonempty := ⟨a, mem_connectedComponent, haA⟩
+    have hneB : (connectedComponent a ∩ B).Nonempty := by
+      refine ⟨b, ?_, hbB⟩
+      rw [hab]
+      exact mem_connectedComponent
+    exact hAB (connectedComponent a) hconn hneA hneB
+  exact
+    exists_clopen_separating_closed_sets_of_component_images_disjoint
+      hA hB hdisj
+
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
 construction near `θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
