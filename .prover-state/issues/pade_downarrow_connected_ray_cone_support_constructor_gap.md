@@ -72,6 +72,35 @@ Both reduce immediately to the single generic arc-phase bridge theorem above.
   from two concrete `sorry`s to one generic `sorry`.
 - The other four Aristotle jobs were still `IN_PROGRESS` after the single
   post-wait check, so they were not polled repeatedly.
+- Cycle 329 first triaged the now-ready Aristotle result
+  `e711d5f7-ae22-4994-8953-1c999de12768` and confirmed that it only contained
+  the already-landed refactor
+  `2 concrete sorrys -> 1 generic sorry`; no proof was transplanted.
+- Cycle 329 then moved the blocker one level lower in live code:
+  - proved the reference-witness extraction helper
+    `padeR_exists_referenceOrderWebWitness_of_arcPhaseBridge`
+  - introduced the narrower private helper
+    `padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge`
+  - rewrote
+    `PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge`
+    as a short wrapper around that helper
+- `PATH=/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH lake env lean OpenMath/PadeOrderStars.lean`
+  succeeds after this refactor; the only remaining warning is the intentional
+  `sorry` in the new helper.
+- A fresh 5-job Aristotle batch was submitted for the helper/generic-theorem
+  layer:
+  - `97a6af7e-45aa-47bf-bef1-265fb55c875f`
+  - `abdf875d-df5c-42c1-a284-49bc1359174c`
+  - `3571269b-efde-4a8e-8a47-185e36d3b0a7`
+  - `7efec658-a889-4088-8a4f-7feed697d422`
+  - `9734460d-7f32-4daf-9029-d2380415ac4e`
+- After the mandated single 30-minute wait and single refresh, all five new
+  jobs were still `IN_PROGRESS`:
+  - `97a6af7e...` at 26%
+  - `abdf875d...` at 23%
+  - `3571269b...` at 37%
+  - `7efec658...` at 34%
+  - `9734460d...` at 34%
 
 ## What was learned
 - The remaining obstruction is not parity-specific anymore.
@@ -90,15 +119,31 @@ PadeROrderWebArcPhaseBridgeNearOrigin n d θ
 - The exact missing mathematics is now isolated cleanly:
   prove that the order-web zeros produced by the IVT live on one continuing
   local branch inside the positive-real near-origin sector.
+- The blocker is now more precise than the old generic theorem statement:
+  the missing content is specifically the new private helper
+
+```lean
+padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge
+```
+
+  which fixes a bridge-produced basepoint in `rayConeNearOrigin θ 1 1` and asks
+  only for same-component continuation from that basepoint to witnesses in
+  smaller cones.
+- Generic `connectedComponentIn` lemmas from Mathlib do not close the gap on
+  their own. They would need a genuinely preconnected subset of
+  `orderWeb (padeR n d)` containing both witnesses, and the current bridge data
+  still does not provide that subset.
 
 ## Possible solutions
 - Work directly on
 
 ```lean
-PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
+padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge
 ```
 
-  and ignore the concrete even/odd wrappers until it is solved.
+  and keep the public theorem as the wrapper now present in live code.
+- Start from the fixed unit-cone basepoint already isolated by the helper shape,
+  not from the concrete even/odd wrappers.
 - A plausible route is to define a small sector where
   `Complex.re (padeR n d z * exp (-z)) > 0`, show this sector is open and
   path-connected, and then prove the order-web inside that sector is connected

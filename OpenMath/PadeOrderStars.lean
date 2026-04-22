@@ -1696,11 +1696,49 @@ theorem padeRDownArrowOrderWebArcPhaseBridgeInput_of_neg_errorConst
 upgrade: the arc-phase bridge already produces order-web witnesses in every
 small cone, but it still has to be upgraded to show that all such witnesses can
 be chosen inside one fixed connected component of the order web. -/
+private theorem padeR_exists_referenceOrderWebWitness_of_arcPhaseBridge
+    {n d : ℕ} {θ aperture radius : ℝ}
+    (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ)
+    (haperture : 0 < aperture) (hradius : 0 < radius) :
+    ∃ z : ℂ,
+      z ∈ orderWeb (padeR n d) ∧
+        z ∈ rayConeNearOrigin θ aperture radius := by
+  rcases
+      PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge
+        hbridge aperture haperture radius hradius with
+    ⟨z, hzweb, hzcone⟩
+  exact ⟨z, hzweb, hzcone⟩
+
+/-- Local component-continuation gap still missing beneath the generic
+arc-phase bridge theorem: after fixing one bridge-produced reference witness in
+the unit cone, every later bridge-produced witness should lie in the same
+connected component of the Padé order web. -/
+private theorem padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge
+    {n d : ℕ} {θ : ℝ}
+    (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ) :
+    ∃ z0 ∈ orderWeb (padeR n d),
+      z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1 ∧
+      ∀ aperture > 0, ∀ radius > 0,
+        ∃ z : ℂ,
+          z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
+            z ∈ rayConeNearOrigin θ aperture radius := by
+  sorry
+
+/-- Exact current theorem-local blocker beneath the concrete connected-component
+upgrade: the arc-phase bridge already produces order-web witnesses in every
+small cone, but it still has to be upgraded to show that all such witnesses can
+be chosen inside one fixed connected component of the order web. -/
 theorem PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
     {n d : ℕ} {θ : ℝ}
     (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ) :
     PadeROrderWebMeetsRayConeNearOriginInConnectedComponent n d θ := by
-  sorry
+  rcases
+      padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge hbridge with
+    ⟨z0, hz0, _, hmeets⟩
+  refine ⟨z0, hz0, ?_⟩
+  intro aperture haperture radius hradius
+  rcases hmeets aperture haperture radius hradius with ⟨z, hzcomp, hzcone⟩
+  exact ⟨z, ⟨hzcomp, hzcone⟩⟩
 
 /-- Exact current theorem-local gap below the concrete connected-component seam:
 choose one even-ray order-web basepoint whose connected component continues to
