@@ -198,6 +198,135 @@ def PadeROrderWebMeetsRayConeNearOrigin
   ∀ aperture > 0, ∀ radius > 0,
     (orderWeb (padeR n d) ∩ rayConeNearOrigin θ aperture radius).Nonempty
 
+/-- A complex value with positive real part and zero imaginary part is a point of
+the order web. -/
+private theorem mem_orderWeb_of_im_zero_of_re_pos
+    {R : ℂ → ℂ} {z : ℂ}
+    (hre : 0 < (R z * exp (-z)).re)
+    (him : (R z * exp (-z)).im = 0) :
+    z ∈ orderWeb R := by
+  refine ⟨(R z * exp (-z)).re, hre, ?_⟩
+  apply Complex.ext <;> simp [him]
+
+/-- The Padé order-star amplitude is continuous along a short exact angle arc once
+the Padé denominator is known to stay nonzero there. -/
+private theorem padeR_exp_neg_continuousOn_angleArc
+    (n d : ℕ) (θ t η δ : ℝ)
+    (htpos : 0 < t) (htδ : t < δ)
+    (hQ : ∀ z : ℂ, ‖z‖ < δ → padeQ n d z ≠ 0) :
+    ContinuousOn
+      (fun s : ℝ =>
+        padeR n d ((↑t : ℂ) * exp (↑(θ + s) * I)) *
+          exp (-((↑t : ℂ) * exp (↑(θ + s) * I))))
+      (Set.Icc (-η) η) := by
+  have hp : Continuous (padeP n d) := by
+    unfold padeP
+    fun_prop
+  have hq : Continuous (padeQ n d) := padeQ_continuous n d
+  have hgamma : Continuous (fun s : ℝ => ((↑t : ℂ) * exp (↑(θ + s) * I))) := by
+    fun_prop
+  have hq_ne : ∀ s ∈ Set.Icc (-η) η,
+      padeQ n d (((↑t : ℂ) * exp (↑(θ + s) * I))) ≠ 0 := by
+    intro s hs
+    apply hQ
+    simpa using (norm_ofReal_mul_exp_I t (θ + s) htpos.le).trans_lt htδ
+  have hR : ContinuousOn
+      (fun s : ℝ => padeR n d (((↑t : ℂ) * exp (↑(θ + s) * I))))
+      (Set.Icc (-η) η) := by
+    simpa [padeR] using
+      (hp.comp hgamma).continuousOn.div (hq.comp hgamma).continuousOn hq_ne
+  have hexp : Continuous (fun s : ℝ => exp (-(((↑t : ℂ) * exp (↑(θ + s) * I))))) := by
+    fun_prop
+  simpa using hR.mul hexp.continuousOn
+
+/-- Next smaller analytic seam below raw cone-meeting: in every sufficiently small
+cone around the ray, a short exact-angle arc at fixed radius stays in the cone,
+the Padé order-star amplitude keeps positive real part on that arc, and the
+imaginary part changes sign between the two endpoints. IVT then yields an
+`orderWeb` point in the cone. -/
+def PadeROrderWebArcPhaseBridgeNearOrigin
+    (n d : ℕ) (θ : ℝ) : Prop :=
+  ∀ aperture > 0, ∀ radius > 0,
+    ∃ t ∈ Set.Ioo (0 : ℝ) radius, ∃ η > 0,
+      (∀ s ∈ Set.Icc (-η) η,
+        ((↑t : ℂ) * exp (↑(θ + s) * I)) ∈ rayConeNearOrigin θ aperture radius) ∧
+      (∀ s ∈ Set.Icc (-η) η,
+        0 < Complex.re
+          (padeR n d (((↑t : ℂ) * exp (↑(θ + s) * I))) *
+            exp (-(((↑t : ℂ) * exp (↑(θ + s) * I)))))) ∧
+      Complex.im
+          (padeR n d (((↑t : ℂ) * exp (↑(θ - η) * I))) *
+            exp (-(((↑t : ℂ) * exp (↑(θ - η) * I))))) < 0 ∧
+      0 < Complex.im
+          (padeR n d (((↑t : ℂ) * exp (↑(θ + η) * I))) *
+            exp (-(((↑t : ℂ) * exp (↑(θ + η) * I)))))
+
+/-- A short exact-angle arc with positive real part and opposite imaginary signs
+at the endpoints already produces a raw order-web point in the cone. -/
+theorem PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge
+    {n d : ℕ} {θ : ℝ}
+    (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ) :
+    PadeROrderWebMeetsRayConeNearOrigin n d θ := by
+  intro aperture haperture radius hradius
+  obtain ⟨δQ, hδQ, hQ⟩ := padeQ_nonzero_near_zero n d
+  let radius' : ℝ := min radius (δQ / 2)
+  have hradius' : 0 < radius' := by
+    dsimp [radius']
+    exact lt_min hradius (half_pos hδQ)
+  rcases hbridge aperture haperture radius' hradius' with
+    ⟨t, ht, η, hη, hcone, hre, himneg, himpos⟩
+  have htδQ : t < δQ := by
+    have htlt : t < radius' := ht.2
+    exact lt_of_lt_of_le htlt (le_trans (min_le_right _ _) (by linarith [hδQ]))
+  have hcont_complex :
+      ContinuousOn
+        (fun s : ℝ =>
+          padeR n d ((↑t : ℂ) * exp (↑(θ + s) * I)) *
+            exp (-((↑t : ℂ) * exp (↑(θ + s) * I))))
+        (Set.Icc (-η) η) :=
+    padeR_exp_neg_continuousOn_angleArc n d θ t η δQ ht.1 htδQ hQ
+  have him_cont : ContinuousOn (fun z : ℂ => Complex.im z) Set.univ :=
+    Complex.continuous_im.continuousOn
+  have hcont_im :
+      ContinuousOn
+        (fun s : ℝ =>
+          Complex.im
+            (padeR n d ((↑t : ℂ) * exp (↑(θ + s) * I)) *
+              exp (-((↑t : ℂ) * exp (↑(θ + s) * I)))))
+        (Set.Icc (-η) η) := by
+    simpa [Function.comp] using
+      (him_cont.comp hcont_complex (by
+        intro x hx
+        simp))
+  have hzero_mem :
+      (0 : ℝ) ∈ Set.Icc
+        (Complex.im
+          (padeR n d ((↑t : ℂ) * exp (↑(θ - η) * I)) *
+            exp (-((↑t : ℂ) * exp (↑(θ - η) * I)))))
+        (Complex.im
+          (padeR n d ((↑t : ℂ) * exp (↑(θ + η) * I)) *
+            exp (-((↑t : ℂ) * exp (↑(θ + η) * I))))) := by
+    exact ⟨le_of_lt himneg, le_of_lt himpos⟩
+  have hpre : IsPreconnected (Set.Icc (-η) η) := by
+    simpa using isPreconnected_Icc
+  have himage :=
+    hpre.intermediate_value
+      (show -η ∈ Set.Icc (-η) η by simp [hη.le])
+      (show η ∈ Set.Icc (-η) η by simp [hη.le])
+      hcont_im
+  rcases himage hzero_mem with ⟨s, hsIcc, hszero⟩
+  let z : ℂ := (↑t : ℂ) * exp (↑(θ + s) * I)
+  have hzcone' : z ∈ rayConeNearOrigin θ aperture radius' := by
+    simpa [z] using hcone s hsIcc
+  have hzcone : z ∈ rayConeNearOrigin θ aperture radius := by
+    rcases hzcone' with ⟨u, hu, hudist⟩
+    exact ⟨u, ⟨hu.1, lt_of_lt_of_le hu.2 (min_le_left _ _)⟩, hudist⟩
+  have hrez : 0 < Complex.re (padeR n d z * exp (-z)) := by
+    simpa [z] using hre s hsIcc
+  have himz : Complex.im (padeR n d z * exp (-z)) = 0 := by
+    simpa [z] using hszero
+  exact ⟨z, mem_orderWeb_of_im_zero_of_re_pos hrez himz, hzcone⟩
+
 /-- Any set that meets every sufficiently small cone around a ray must
 accumulate at the origin. -/
 private theorem zero_mem_closure_of_meets_rayConeNearOrigin
@@ -398,12 +527,36 @@ theorem nonempty_padeR_realizedUpArrowInfinityWitnessFamily_iff
 itself meets every sufficiently small cone around a concrete down-arrow ray.
 Packaging those raw cone intersections into connected support is a separate
 downstream step. -/
+structure PadeRDownArrowOrderWebArcPhaseBridgeInput
+    (n d : ℕ) (data : OrderArrowTerminationData) where
+  downOrderWebArcPhaseBridge_of_downArrowsAtInfinity_pos :
+    0 < data.downArrowsAtInfinity →
+      ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
+        PadeROrderWebArcPhaseBridgeNearOrigin n d θ
+
+/-- Smallest live theorem-local blocker below
+`PadeRDownArrowRayTrackingSupportInput`: first show that the Padé order web
+itself meets every sufficiently small cone around a concrete down-arrow ray.
+Packaging those raw cone intersections into connected support is a separate
+downstream step. -/
 structure PadeRDownArrowOrderWebRayConeMeetInput
     (n d : ℕ) (data : OrderArrowTerminationData) where
   downOrderWebMeetsRayCone_of_downArrowsAtInfinity_pos :
     0 < data.downArrowsAtInfinity →
       ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
         PadeROrderWebMeetsRayConeNearOrigin n d θ
+
+/-- The arc-phase bridge is the next honest theorem-local input below raw
+cone-meeting. -/
+def PadeRDownArrowOrderWebArcPhaseBridgeInput.toOrderWebRayConeMeetInput
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRDownArrowOrderWebArcPhaseBridgeInput n d data) :
+    PadeRDownArrowOrderWebRayConeMeetInput n d data := by
+  refine ⟨?_⟩
+  intro hpos
+  rcases h.downOrderWebArcPhaseBridge_of_downArrowsAtInfinity_pos hpos with
+    ⟨θ, hθ, hbridge⟩
+  exact ⟨θ, hθ, PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge hbridge⟩
 
 /-- Intermediate honest seam between raw cone intersections and the current
 ray-tracking support input: a connected order-web support meeting every small
