@@ -180,6 +180,22 @@ abbrev PadeRRealizedDownArrowInfinityWitnessFamily
   ∀ _ : Fin data.downArrowsAtInfinity,
     RealizedDownArrowInfinityBranch (padeR n d)
 
+/-- The first genuinely missing down-arrow realization ingredient is not an
+escaping witness but a concrete global branch that actually tracks the local
+Padé down-arrow ray near the origin. This is strictly weaker than a full
+`RealizedDownArrowInfinityBranch`, which still needs the separate far-field
+escape input. -/
+abbrev PadeRTrackedDownArrowBranch (n d : ℕ) :=
+  { branch : GlobalDownArrowBranch (padeR n d) //
+      BranchTracksRayNearOrigin
+        branch.toGlobalOrderArrowBranch branch.tangentAngle }
+
+/-- Count-indexed family of down-arrow branches that already satisfy the local
+ray-tracking half of the realized-branch interface. -/
+abbrev PadeRTrackedDownArrowInfinityWitnessFamily
+    (n d : ℕ) (data : OrderArrowTerminationData) :=
+  ∀ _ : Fin data.downArrowsAtInfinity, PadeRTrackedDownArrowBranch n d
+
 abbrev PadeRRealizedUpArrowInfinityWitnessFamily
     (n d : ℕ) (data : OrderArrowTerminationData) :=
   ∀ _ : Fin data.upArrowsAtInfinity,
@@ -214,6 +230,16 @@ theorem nonempty_padeR_realizedDownArrowInfinityWitnessFamily_iff
       (α := RealizedDownArrowInfinityBranch (padeR n d))
       data.downArrowsAtInfinity)
 
+theorem nonempty_padeR_trackedDownArrowInfinityWitnessFamily_iff
+    (n d : ℕ) (data : OrderArrowTerminationData) :
+    Nonempty (PadeRTrackedDownArrowInfinityWitnessFamily n d data) ↔
+      data.downArrowsAtInfinity = 0 ∨
+        Nonempty (PadeRTrackedDownArrowBranch n d) := by
+  simpa [PadeRTrackedDownArrowInfinityWitnessFamily] using
+    (nonempty_finFunction_iff_zero_or_nonempty
+      (α := PadeRTrackedDownArrowBranch n d)
+      data.downArrowsAtInfinity)
+
 theorem nonempty_padeR_realizedUpArrowInfinityWitnessFamily_iff
     (n d : ℕ) (data : OrderArrowTerminationData) :
     Nonempty (PadeRRealizedUpArrowInfinityWitnessFamily n d data) ↔
@@ -223,6 +249,27 @@ theorem nonempty_padeR_realizedUpArrowInfinityWitnessFamily_iff
     (nonempty_finFunction_iff_zero_or_nonempty
       (α := RealizedUpArrowInfinityBranch (padeR n d))
       data.upArrowsAtInfinity)
+
+/-- Sharpened cycle-320 seam on the down-arrow side: the current `{0}`-support
+global-branch existence theorem does not even provide the local ray-tracking
+field of a realized escaping branch, so that theorem-local input has to be
+named explicitly before `EscapesEveryClosedBall` becomes relevant. -/
+structure PadeRDownArrowBranchTrackingInput
+    (n d : ℕ) (data : OrderArrowTerminationData) where
+  downTrackedBranch_of_downArrowsAtInfinity_pos :
+    0 < data.downArrowsAtInfinity →
+      Nonempty (PadeRTrackedDownArrowBranch n d)
+
+noncomputable def PadeRDownArrowBranchTrackingInput.downArrowInfinityWitnesses
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRDownArrowBranchTrackingInput n d data) :
+    PadeRTrackedDownArrowInfinityWitnessFamily n d data := by
+  intro i
+  have hpos : 0 < data.downArrowsAtInfinity := by
+    have h1 : 1 ≤ data.downArrowsAtInfinity := by
+      exact le_trans (Nat.succ_le_succ (Nat.zero_le i.1)) (Nat.succ_le_of_lt i.2)
+    exact Nat.succ_le_iff.mp h1
+  exact (h.downTrackedBranch_of_downArrowsAtInfinity_pos hpos).some
 
 /-- Honest theorem-local input for the current Padé infinity-branch seam:
 positive infinity counts do not themselves determine concrete escaping branch
