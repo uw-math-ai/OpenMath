@@ -1584,6 +1584,48 @@ theorem local_minus_near_odd_angle_of_neg_errorConst
     _ < 1 := by
         nlinarith [hmain_coeff_pos]
 
+/-- Quantitative inside-the-unit-disk bound for a main term `1 - a u` whose
+complex direction has uniformly positive real part. -/
+private theorem main_minus_bound_of_re_pos
+    (a μ : ℝ) {u : ℂ}
+    (ha : 0 < a) (hμ : 0 < μ) (hμ_half : μ ≤ 1 / 2) (ha_small : a < μ / 4)
+    (hure : μ < u.re) (hunorm : ‖u‖ < 2) :
+    ‖(1 : ℂ) - ↑a * u‖ < 1 - a * μ / 2 := by
+  have hsq_eq : ‖(1 : ℂ) - ↑a * u‖ ^ 2 = 1 - 2 * a * u.re + a ^ 2 * ‖u‖ ^ 2 := by
+    rw [Complex.sq_norm, Complex.normSq_apply, Complex.sq_norm, Complex.normSq_apply]
+    simp [pow_two]
+    ring_nf
+  have hsq : ‖(1 : ℂ) - ↑a * u‖ ^ 2 < (1 - a * μ / 2) ^ 2 := by
+    have hunorm_sq : ‖u‖ ^ 2 < 4 := by
+      nlinarith [hunorm, norm_nonneg u]
+    have hterm : a ^ 2 * ‖u‖ ^ 2 < a * μ := by
+      nlinarith [ha_small, hunorm_sq, ha]
+    calc
+      ‖(1 : ℂ) - ↑a * u‖ ^ 2 = 1 - 2 * a * u.re + a ^ 2 * ‖u‖ ^ 2 := hsq_eq
+      _ < 1 - 2 * a * μ + a * μ := by
+          nlinarith
+      _ = 1 - a * μ := by ring
+      _ < 1 - a * μ + (a * μ / 2) ^ 2 := by
+          have hsquare_pos : 0 < (a * μ / 2) ^ 2 := by positivity
+          linarith
+      _ = (1 - a * μ / 2) ^ 2 := by ring
+  have hnonneg : 0 ≤ ‖(1 : ℂ) - ↑a * u‖ := norm_nonneg _
+  have hrhs_nonneg : 0 ≤ 1 - a * μ / 2 := by
+    nlinarith [ha_small, hμ, hμ_half]
+  nlinarith
+
+/-- Quantitative outside-the-unit-disk bound for a main term `1 - a u` whose
+complex direction has uniformly negative real part. -/
+private theorem main_plus_bound_of_re_neg
+    (a μ : ℝ) {u : ℂ}
+    (ha : 0 < a) (hure : u.re < -μ) :
+    1 + a * μ < ‖(1 : ℂ) - ↑a * u‖ := by
+  have hre_main : 1 + a * μ < ((1 : ℂ) - ↑a * u).re := by
+    rw [show ((1 : ℂ) - ↑a * u).re = 1 - a * u.re by simp [Complex.mul_re]]
+    nlinarith
+  have hnorm : ((1 : ℂ) - ↑a * u).re ≤ ‖(1 : ℂ) - ↑a * u‖ := Complex.re_le_norm _
+  linarith
+
 /-- Honest branch-termination predicate for later topology work: either the branch
 has a genuine finite endpoint away from the origin, or it escapes every closed
 ball. This is intentionally kept as a predicate rather than a theorem because the
