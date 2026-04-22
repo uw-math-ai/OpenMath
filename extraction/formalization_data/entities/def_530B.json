@@ -2,7 +2,7 @@
   "id": "def:530B",
   "kind": "definition",
   "number": "530B",
-  "name": "Order relative to starting method",
+  "name": "Order relative to starting method (530B)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -44,7 +44,7 @@
   ],
   "preamble": "The context involves analyzing the order of a general linear method M when used with a starting method S. S is defined by generalized Runge-Kutta methods, and non-degeneracy requires at least one b0^{(i)} ≠ 0. SM and ES are vectors of approximations whose Taylor expansions are compared to define order.",
   "introduces": [
-    "order relative to a starting method"
+    "order of a general linear method relative to a starting method"
   ],
   "dependencies": [
     {
@@ -52,8 +52,8 @@
       "kind": "definition",
       "number": "530A",
       "name": "non-degenerate",
-      "edge_type": "uses_concept",
-      "context": "non-degenerate"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [

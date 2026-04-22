@@ -2,7 +2,7 @@
   "id": "lem:319A",
   "kind": "lemma",
   "number": "319A",
-  "name": "Global truncation error",
+  "name": "Global truncation error (RK)",
   "is_helper": false,
   "chapter": 3,
   "section": "31",
@@ -71,7 +71,6 @@
     "thm:110C"
   ],
   "dependents": [
-    "thm:212A",
     "thm:319B"
   ],
   "lean_file": null,

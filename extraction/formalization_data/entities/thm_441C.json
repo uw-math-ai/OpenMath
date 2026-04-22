@@ -38,24 +38,21 @@
       "number": "403A",
       "name": "stability in the sense of Dahlquist",
       "edge_type": "uses_concept",
-      "context": "stability"
-    },
-    {
-      "id": "lem:441B",
-      "kind": "lemma",
-      "number": "441B",
-      "name": "Maximum order coefficients negativity",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
+      "context": "stable linear multistep method"
     }
   ],
   "transitive_dependencies": [
+    "def:110A",
     "def:142A",
     "def:403A",
-    "lem:441B"
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A"
   ],
   "dependents": [
-    "lem:441A"
+    "lem:441A",
+    "lem:441B"
   ],
   "lean_file": null,
   "lean_symbol": null,

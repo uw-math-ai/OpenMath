@@ -3,6 +3,21 @@
 Comprehensive audit of all 75 concepts in the `introduces` field, identifying
 cases where direct string matching fails to find legitimate references.
 
+> **STATUS (2026-04-21):** The polysemy/homonym problem described in §5 is now
+> solved at the source. `pipeline/fix_introduces.py` re-extracts every entity's
+> `introduces` field via DeepSeek with a peer-aware prompt, producing
+> globally-unique qualified names (e.g. `def:142B` introduces
+> `"convergent matrix (spectral radius)"`, not bare `"convergent"`).
+> A regression assertion in `pipeline/build_formalization_data.py` fails
+> Phase 8 if any `uses_concept` edge ever links two entities sharing a
+> display name in `statement_names.json`. The chapter-proximity heuristic in
+> `extract_references.py` is still present and still used for non-homonym
+> alias matches, but it is no longer the disambiguation mechanism for
+> polysemic terms — qualified names are.
+>
+> The match counts in the tables below are from the *bare-name* era and are
+> retained as historical reference.
+
 ## Summary
 
 | Category | Count | Example |
@@ -174,25 +189,48 @@ already works. But **future-proofing**: generate both variants.
 **Solution**: for concepts ending with common nouns (method, condition,
 weight, differential, constant, tree), add the plural `+s` form.
 
-### 5. Polysemic Concepts (multi-definition)
+### 5. Polysemic Concepts (multi-definition) — RESOLVED via qualified names
 
-These concepts are introduced in multiple definitions across chapters.
-Chapter-proximity disambiguation handles the ambiguity:
+Several bare names are introduced by 2+ entities for genuinely distinct
+concepts (e.g. `convergent` is matrix-convergence in Ch.1, LMM-convergence
+in Ch.4, GLM-convergence in Ch.5). The previous attempt to handle this with
+chapter-proximity disambiguation **silently produced wrong edges** —
+e.g. `def:142B → def:402A` via `convergent`, structurally false.
 
-| Concept | Definitions | Resolution |
-|---------|-------------|-----------|
-| stable | def:142A (matrix, ch1), def:403A (LMM, ch4), def:510C (GLM, ch5) | chapter proximity |
-| convergent | def:142B (ch1), def:402A (ch4), def:512A (ch5) | chapter proximity |
-| consistent | def:404B (ch4), def:510B (ch5) | chapter proximity |
-| equivalent | def:381A (ch3) | single owner (though appears 25 times) |
-| preconsistent | def:404A (ch4), def:510A (ch5) | chapter proximity |
-| A-stable | def:442A (ch4), def:520E (ch5) | chapter proximity |
-| stability function | def:520C (ch5), def:542A (ch5) | tricky — same chapter |
-| reduced method | def:356B, def:381E | tricky |
+The fix lives in `pipeline/fix_introduces.py` (Phase post-2):
+1. **Pass 1** — for every entity, DeepSeek re-extracts `introduces` from
+   the full statement with an explicit instruction to qualify each name
+   with topical context ("matrix", "linear multistep method", etc.) so it
+   is globally unique within a numerical-ODE textbook.
+2. **Pass 2** — any term still appearing in 2+ entities after Pass 1 is
+   batched with its colliders and DeepSeek is asked to assign mutually
+   distinct qualified replacements. Iterates until convergence (≤5 rounds).
+3. Results cached by `(entity_id, statement_text_hash)` in
+   `raw_text/introduces_cache.json`. Re-runs are free unless underlying
+   text changes.
 
-**User guidance**: Do NOT ban these. They are fundamental concepts and
-legitimately appear in many statements. Use chapter-proximity to pick the
-right definition.
+After running, the 8 originally-known homonym groups now have unique
+qualified introduces (representative examples):
+
+| Original bare term | def:NNNX | Post-fix qualified name |
+|---|---|---|
+| `convergent` | def:142B | `convergent matrix (spectral radius)` |
+| `convergent` | def:402A | `convergent linear multistep method` |
+| `convergent` | def:512A | `convergent general linear method (definition)` |
+| `consistent` | def:404B | `consistent linear multistep method` |
+| `consistent` | def:510B | `consistent general linear method` |
+| `reduced method` | def:356B | `reduced method (from DJ-reduction)` |
+| `reduced method` | def:381E | `fully reduced Runge–Kutta method` |
+| `A-stable` | def:442A | `A-stable linear multistep method` |
+| `A-stable` | def:520E | `A-stable general linear method` |
+
+**Belt-and-suspenders**: `pipeline/build_formalization_data.py`
+(`_assert_no_homonym_concept_edges`) fails Phase 8 if any `uses_concept`
+edge has source/target sharing a `statement_names.json` display name. This
+prevents regressions when entities are added later via `extensions/`.
+
+**Do not** add bare polysemic names back to `introduces` — the matcher
+will re-create the wrong edges.
 
 ### 6. Overly Generic (special handling)
 

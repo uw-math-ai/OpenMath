@@ -23,17 +23,17 @@
       "id": "def:402A",
       "kind": "definition",
       "number": "402A",
-      "name": "convergent",
+      "name": "convergent (LMM)",
       "edge_type": "uses_concept",
-      "context": "convergent"
+      "context": "convergent linear multistep method"
     },
     {
       "id": "def:403A",
       "kind": "definition",
       "number": "403A",
       "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stable"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "thm:405C",
@@ -52,12 +52,10 @@
     "def:403A",
     "def:404A",
     "def:404B",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A",
     "thm:301A",
     "thm:306A",
     "thm:311B",

@@ -12,9 +12,10 @@ re-extraction. Everything else under `extraction/` is regenerated.
 |---|---|---|
 | `missing_statements.json` | Textbook entities the extractor missed | EXTENSIBILITY §2 |
 | `helper_entities.json` | Lean-side helpers (NOT in Butcher), `aux:` IDs | EXTENSIBILITY §3 |
-| `extra_references.json` | Manually-curated dependency edges | both recipes |
+| `extra_references.json` | Manually-**added** dependency edges | EXTENSIBILITY §4.1 |
+| `removed_references.json` | Manually-**denied** (wrong) auto-derived edges | EXTENSIBILITY §4.2 |
 
-All three start as empty arrays `[]`. Append objects; do not rewrite
+All four start as empty arrays `[]`. Append objects; do not rewrite
 the file structure.
 
 ## After editing

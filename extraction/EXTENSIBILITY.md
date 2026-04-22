@@ -8,15 +8,18 @@ definition, lemma, or helper.
 
 ## When to use this
 
-You are formalizing in Lean and you discover **one of two situations**:
+You are formalizing in Lean and you discover **one of three situations**:
 
 | Situation | Example | What to do |
 |---|---|---|
 | **A. Missed textbook entity** — the auto-extractor failed to capture a theorem/definition/lemma/corollary that appears in Butcher | "I'm proving `thm:212A` and it cites `Theorem 235B`, but `entities/thm_235B.json` doesn't exist" | §2 — add to `extensions/missing_statements.json` |
 | **B. New helper for formalization** — you need a lemma/definition that is NOT in Butcher but is genuinely useful for the Lean proof, possibly reusable | "I need a Grönwall-type bound to close `thm:212A`" | §3 — add to `extensions/helper_entities.json` |
+| **C. Wrong or missing dependency edge** — an auto-derived edge is mathematically wrong (LLM hallucination, homonym mis-target, parallel concepts) OR a legitimate reference is missing from the graph | "`thm:111A` (Ch.1) is listed as depending on `def:520A` (Ch.5), but they're unrelated" (drop) • "My proof cites `def:110A` but the graph has no edge" (add) | §4 — edit `extensions/extra_references.json` (add) or `extensions/removed_references.json` (remove) |
 
-If neither fits — STOP. Do not invent textbook entities; do not save
-single-use scaffolding to extensions. Helpers must be **reusable**.
+If none fit — STOP. Do not invent textbook entities; do not save
+single-use scaffolding to extensions; do not tweak the graph as a
+matter of taste. Helpers must be **reusable**; edge edits must be
+**mathematically justified**.
 
 ## Invariants (these never change)
 
@@ -37,15 +40,17 @@ single-use scaffolding to extensions. Helpers must be **reusable**.
 
 ```
 extraction/
-├── extensions/                   # ALL hand-curated content lives here
-│   ├── README.md                 # Brief pointer back to this file
-│   ├── missing_statements.json   # Textbook entities the extractor missed
-│   ├── helper_entities.json      # Lean-side helpers (aux: prefix)
-│   └── extra_references.json     # Manual dependency edges
-└── formalization_data/           # Generated; do not hand-edit
-    └── entities/
-        ├── thm_NNNX.json         # textbook (auto + missing)
-        └── aux_<slug>.json       # helpers
+├── extensions/                    # ALL hand-curated content lives here
+│   ├── README.md                  # Brief pointer back to this file
+│   ├── missing_statements.json    # Textbook entities the extractor missed  [§2]
+│   ├── helper_entities.json       # Lean-side helpers (aux: prefix)         [§3]
+│   ├── extra_references.json      # Manually-added dependency edges         [§4.1]
+│   └── removed_references.json    # Manually-denied (auto) dependency edges [§4.2]
+└── formalization_data/            # Generated; do not hand-edit
+    ├── entities/
+    │   ├── thm_NNNX.json          # textbook (auto + missing)
+    │   └── aux_<slug>.json        # helpers
+    └── references_final.json      # post-denylist, post-cycle-break edges
 ```
 
 ## §1 ID conventions
@@ -98,9 +103,11 @@ Required fields: `kind`, `number`, `chapter`, `section`, `subsection`,
 you provide, the less the next agent has to dig up).
 
 **Step 3.** If the new entity references other entities (or is referenced
-BY others), add edges in `extensions/extra_references.json`:
+BY others), add edges per [§4.1](#41-add-an-edge-extra_referencesjson). Short
+example:
 
 ```json
+// extensions/extra_references.json
 [
   {"source": "thm:235B", "target": "def:230A", "edge_type": "uses_definition", "context": "manual"},
   {"source": "thm:236A", "target": "thm:235B", "edge_type": "uses_theorem", "context": "manual"}
@@ -164,9 +171,11 @@ Required: `kind`, `number` (the slug), `name`, `motivation`,
 The build script also sets `subsection_title` to empty.
 
 **Step 3.** If the helper depends on other entities (or is used by
-existing entities), add edges in `extensions/extra_references.json`:
+existing entities), add edges per [§4.1](#41-add-an-edge-extra_referencesjson).
+Short example:
 
 ```json
+// extensions/extra_references.json
 [
   {"source": "thm:212A", "target": "aux:gronwall_exp_bound", "edge_type": "uses_lemma", "context": "manual"},
   {"source": "aux:gronwall_exp_bound", "target": "def:110A", "edge_type": "uses_concept", "context": "manual"}
@@ -179,7 +188,104 @@ The helper now appears in `entities/aux_gronwall_exp_bound.json`,
 the dependency graph, and the formalization queue. Tier-0 grows if the
 helper has no deps.
 
-## §4 Editing `lean_status.json`
+## §4 Recipe: Edit dependency edges
+
+The auto-derived dependency graph is built by three layers of extractors
+(regex, concept matching, LLM) and occasionally produces wrong edges, or
+misses real ones. Hand-curated corrections live in two parallel files —
+both in `extensions/`, both survive every pipeline re-run.
+
+### §4.1 Add an edge (`extra_references.json`)
+
+Use when: the graph is missing a legitimate cross-reference your proof
+actually depends on.
+
+```json
+// extensions/extra_references.json
+[
+  {"source": "thm:235B", "target": "def:230A", "edge_type": "uses_definition", "context": "manual: cites Def 230A in proof"}
+]
+```
+
+- **Required** fields: `source`, `target`, `edge_type`.
+- **Optional**: `context` (a short human note; recommended).
+- **Allowed `edge_type` values**: follow the auto-derived vocabulary —
+  `uses_definition`, `uses_theorem`, `uses_lemma`, `uses_corollary`,
+  `uses_concept`, `uses_equation_from`. Use the catch-all `"uses"` if
+  none fit (common for helpers).
+- Unknown IDs (source or target) produce a warning at build time and the
+  edge is silently dropped from the per-entity view. That's
+  intentional — it lets you add forward references to entities you plan
+  to add later.
+
+### §4.2 Remove a (wrong) auto-derived edge (`removed_references.json`)
+
+Use when: an auto-derived edge is mathematically wrong — typically an
+LLM hallucination, a homonym mis-target, or two parallel concepts being
+conflated. If you find yourself deleting the same phantom edge from the
+rendered graph twice, stop and denylist it.
+
+```json
+// extensions/removed_references.json
+[
+  {"source": "thm:111A", "target": "def:520A",
+   "reason": "Ch1 linear-ODE superposition theorem has no mathematical dep on Ch5 GLM stability matrix; LLM false positive"}
+]
+```
+
+- **Required** fields: `source`, `target`.
+- **Required for discipline**: `reason` — a one-line human-readable
+  justification. Missing reasons produce a build-time warning.
+  Unexplained denials rot: the next person who doesn't understand why
+  you denied the edge will quietly undo the denial.
+- The denylist is **pair-based**, not type-based — it drops every edge
+  between `source` and `target` regardless of `edge_type` (regex,
+  concept, LLM are all filtered the same way).
+- Unknown IDs produce a warning (not a failure); the entry is retained
+  in case the user has pre-denied an edge that a future re-extraction
+  will produce.
+- Rows that don't match any auto edge produce a `WARN: removed_references
+  row did not match any auto edge` at build time — this usually means
+  the edge has since disappeared (upstream extractor was improved) and
+  the row can be deleted.
+
+### §4.3 Precedence and edge cases
+
+- **Denylist is applied *before* the additive merge.** So `(A, B)`
+  present in *both* `removed_references.json` and `extra_references.json`
+  results in: the auto edge is dropped, the manual edge is then added
+  back (now with `context: "manual"`). Net: the manual edge wins. Useful
+  for overriding an auto-derived edge with a differently-annotated one.
+- **Cycle-breaking runs after both.** The denylist and additions both
+  feed into the cycle-break pass, so you cannot use `extra_references`
+  to force a cycle.
+- The final edge set that the blueprint and downstream consumers see is
+  serialized to `formalization_data/references_final.json` — inspect
+  this file rather than `raw_text/references_merged.json` when auditing
+  the graph.
+
+### §4.4 Rebuild and verify
+
+```bash
+cd extraction && python -m pipeline.build_formalization_data
+```
+
+Expected log lines for a working denylist:
+```
+  Extensions: +N missing statements, +M helpers, +X extra edges, −Y denied edges
+  Denylist: dropped Y edge(s) per removed_references.json
+```
+
+Failure modes and what they mean:
+- `WARN: removed_references row did not match any auto edge: A → B` —
+  `(A, B)` isn't in the current auto graph; consider removing it.
+- `WARNING: removed_references[i]: source 'X' is not a known auto-extracted ID` —
+  `X` isn't in either `raw_text/formal_statements.json` or
+  `extensions/missing_statements.json`/`helper_entities.json`; usually a typo.
+- `WARNING: removed_references[i] (A → B) has no 'reason'` — add a
+  one-line justification before committing.
+
+## §5 Editing `lean_status.json`
 
 When you finish formalizing an entity in Lean, update **only** the
 relevant row in `formalization_data/lean_status.json`:
@@ -197,7 +303,7 @@ Status values: `unformalized` | `in_progress` | `done`.
 This file is preserved across `build_formalization_data.py` re-runs
 (the build only adds rows for new IDs, never overwrites populated ones).
 
-## §5 Build pipeline behavior
+## §6 Build pipeline behavior
 
 For agents adding entities — you don't run any of this manually; just
 re-run Phase 8 (`python -m pipeline.build_formalization_data`) after
@@ -209,24 +315,37 @@ editing `extensions/*.json`. Here's what happens internally:
    — delete the manual entry) or duplicate manual entries.
 3. Load `extensions/helper_entities.json`; **fail loudly** on invalid
    slug, duplicate slug, or collision with auto-extracted ID.
-4. Load `extensions/extra_references.json`; append to the edge pool.
+4. Load `extensions/removed_references.json`; validate shape and IDs;
+   remove every matching `(source, target)` pair from the current edge
+   pool (applied **before** the additive merge, so a pair in both
+   `removed_references.json` and `extra_references.json` ends up as the
+   manual add). Warn on unmatched rows and unknown IDs.
+5. Load `extensions/extra_references.json`; append to the edge pool.
    Targets that name unknown IDs are kept in the file but **warn** at
    build time and dropped from the per-entity dependency view (so
    forward-references to entities you'll add later don't crash the build).
-5. Re-run cycle-breaking on the merged graph by calling
+6. Re-run cycle-breaking on the merged graph by calling
    `break_cycles.break_cycles(edges, page_map)`. Helpers without a page
    default to page 0 for the page-distance heuristic. The resulting
    audit log is written to `formalization_data/cycles_removed_merged.json`
    (the auto-only `raw_text/cycles_removed.json` from Phase 4c is also
    preserved as the pre-extension snapshot).
-6. Compute transitive closure, topological tiers, and write all
+7. Serialize the final edge set (auto minus denylist plus additions
+   minus cycle-break removals) to
+   `formalization_data/references_final.json`. Downstream consumers
+   such as `generate_blueprint.py` read this file — never
+   `raw_text/references_merged.json` — to see the corrected graph.
+8. Compute transitive closure, topological tiers, and write all
    output files. Helpers (chapter=None) are excluded from
    `by_chapter/*.json` but appear in `index.json`, `topo_order.json`,
    `entities/*.json`, and `lean_status.json`.
-7. `lean_status.json` rows for entities that no longer exist (e.g.
+9. `lean_status.json` rows for entities that no longer exist (e.g.
    you deleted a helper) are dropped, with a notice on stdout.
+10. Assert that no `uses_concept` edge links two entities sharing the
+    same display name in `statement_names.json` (Layer-1 regression
+    guard against the homonym bug). Build fails loudly if triggered.
 
-## §6 Blueprint integration
+## §7 Blueprint integration
 
 The LaTeX blueprint (`blueprint/src/`) currently renders only Butcher
 chapters. Helpers should still appear in the blueprint so the dep graph
@@ -239,7 +358,7 @@ block with `\uses{...}` reflecting its dependencies. Missing-statement
 additions slot into their normal Butcher chapter (no blueprint change
 needed beyond Phase 8 picking them up).
 
-## §7 Don'ts
+## §8 Don'ts
 
 - **Don't edit files in `raw_text/`.** They get clobbered.
 - **Don't edit files in `formalization_data/entities/`.** They get
@@ -253,11 +372,18 @@ needed beyond Phase 8 picking them up).
 - **Don't claim a helper exists when it doesn't.** Before adding
   `aux:gronwall_exp_bound`, grep `entities/aux_*.json` for similar
   names — the helper you want may already exist.
+- **Don't use `removed_references.json` for taste.** It is for
+  known-wrong auto-derived edges, not "edges I don't like". Every entry
+  removes real signal from the graph; justify it mathematically.
+- **Don't omit the `reason` on a denylist row.** Unexplained denials
+  rot — the next person who doesn't understand why you denied the edge
+  will silently un-deny it and the bug returns.
 
-## §8 Quick checklist for agents
+## §9 Quick checklist for agents
 
 ```
-[ ] Identified the situation: Missed textbook entity (§2) or new helper (§3)?
+[ ] Identified the situation: Missed textbook entity (§2), new helper (§3),
+    or wrong/missing dep edge (§4)?
 [ ] For helpers: confirmed reusability — at least two callers, or genuinely
     library-quality. Not single-use scaffolding.
 [ ] For missing textbook: confirmed it's actually in the PDF with page number.
@@ -266,9 +392,13 @@ needed beyond Phase 8 picking them up).
     already exist in entities/.
 [ ] Added the JSON entry to the right extensions/*.json file with all
     required fields.
-[ ] Added dependency edges to extensions/extra_references.json if relevant.
+[ ] Added missing dependency edges to extensions/extra_references.json (§4.1)
+    if the new entity references others.
+[ ] If I noticed a wrong auto-derived edge while working: added it to
+    extensions/removed_references.json with a mathematical reason (§4.2).
 [ ] Ran `python -m pipeline.build_formalization_data` and confirmed the new
-    entity file exists in formalization_data/entities/.
+    entity file exists in formalization_data/entities/; Denylist log line
+    matches what I expected; no unused-row warnings.
 [ ] When the Lean proof lands, updated lean_status.json with file/symbol/status.
 ```
 
@@ -281,10 +411,15 @@ needed beyond Phase 8 picking them up).
 | Re-runs cycle-breaking on the merged graph (imports `break_cycles.break_cycles`) | DONE |
 | Per-entity records carry `is_helper` flag, `motivation` field for helpers | DONE |
 | `lean_status.json` placeholders for new entities; drops rows for vanished entities | DONE |
-| `generate_blueprint.py` "Auxiliary Results" chapter for `aux:*` entities | TODO — see §6 |
+| Denylist mechanism (`removed_references.json`) in Phase 8, with precedence + warnings | DONE |
+| `formalization_data/references_final.json` emitted; `generate_blueprint.py` reads it | DONE |
+| Layer-1 regression assert (no `uses_concept` edge between homonyms) | DONE |
+| `generate_blueprint.py` "Auxiliary Results" chapter for `aux:*` entities | TODO — see §7 |
 | `CLAUDE.md` pointer to this file | DONE |
 
-The extension workflow is **active**. Add entries to
-`extensions/missing_statements.json` or `extensions/helper_entities.json`,
-re-run Phase 8, and they appear in `formalization_data/`. Blueprint
-rendering of helpers is the only remaining piece.
+The extension workflow is **active** across all four extension files
+(`missing_statements.json`, `helper_entities.json`, `extra_references.json`,
+`removed_references.json`). Re-run Phase 8 after any edit and the
+changes flow through per-entity JSONs, the topological order, the final
+edge list, and the blueprint. Blueprint rendering of `aux:*` helpers is
+the only remaining piece.

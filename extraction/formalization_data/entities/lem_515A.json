@@ -2,7 +2,7 @@
   "id": "lem:515A",
   "kind": "lemma",
   "number": "515A",
-  "name": "Stability and consistency imply convergence",
+  "name": "Stability and consistency imply convergence (515A)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -80,7 +80,7 @@
       "id": "thm:515D",
       "kind": "theorem",
       "number": "515D",
-      "name": "Stability and Consistency Imply Convergence",
+      "name": "Stability and Consistency Imply Convergence (515D)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     }
@@ -88,16 +88,11 @@
   "transitive_dependencies": [
     "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:512A",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "thm:515D"
   ],
   "dependents": [

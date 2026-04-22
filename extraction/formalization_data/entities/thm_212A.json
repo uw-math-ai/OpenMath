@@ -2,7 +2,7 @@
   "id": "thm:212A",
   "kind": "theorem",
   "number": "212A",
-  "name": "Global truncation error",
+  "name": "Global truncation error (Euler)",
   "is_helper": false,
   "chapter": 2,
   "section": "21",
@@ -76,45 +76,10 @@
       "name": "Lipschitz condition in its second variable",
       "edge_type": "uses_concept",
       "context": "lipschitz condition"
-    },
-    {
-      "id": "lem:319A",
-      "kind": "lemma",
-      "number": "319A",
-      "name": "Global truncation error",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    },
-    {
-      "id": "thm:319B",
-      "kind": "theorem",
-      "number": "319B",
-      "name": "Global truncation error bound via local error accumulation",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "def:110A",
-    "def:142A",
-    "def:310A",
-    "def:403A",
-    "def:404A",
-    "def:404B",
-    "def:406A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
-    "lem:110B",
-    "lem:319A",
-    "thm:110C",
-    "thm:301A",
-    "thm:306A",
-    "thm:311B",
-    "thm:319B"
+    "def:110A"
   ],
   "dependents": [
     "thm:213A"

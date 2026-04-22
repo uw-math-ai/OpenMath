@@ -35,57 +35,8 @@
   "equations": [],
   "preamble": "The theorem concerns A-stability of a Runge–Kutta method, where the stability function R(z) is expressed as a ratio of polynomials N(z)/D(z). The E-polynomial is defined in terms of D and N evaluated at imaginary arguments.",
   "introduces": [],
-  "dependencies": [
-    {
-      "id": "def:520C",
-      "kind": "definition",
-      "number": "520C",
-      "name": "stability function",
-      "edge_type": "uses_concept",
-      "context": "stability function"
-    },
-    {
-      "id": "def:442A",
-      "kind": "definition",
-      "number": "442A",
-      "name": "principal sheet",
-      "edge_type": "uses_concept",
-      "context": "a-stable"
-    },
-    {
-      "id": "def:520E",
-      "kind": "definition",
-      "number": "520E",
-      "name": "A-stable",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    }
-  ],
-  "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:142A",
-    "def:355A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
-    "def:404A",
-    "def:442A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:530A",
-    "def:530B",
-    "def:530C",
-    "thm:356C"
-  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
   "dependents": [
     "lem:351A",
     "thm:355F"

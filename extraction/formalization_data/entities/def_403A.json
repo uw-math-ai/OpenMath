@@ -36,34 +36,37 @@
   ],
   "preamble": "The definition concerns a linear multistep method [α, β] applied to an initial value problem. For the specific one-dimensional problem where f(x, y) = 0, the method reduces to the linear difference equation (403a).",
   "introduces": [
-    "stable",
-    "stability",
+    "stable linear multistep method",
     "zero-stability",
     "stability in the sense of Dahlquist"
   ],
   "dependencies": [
     {
+      "id": "thm:140A",
+      "kind": "theorem",
+      "number": "140A",
+      "name": "Linear difference equations",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
       "id": "def:142A",
       "kind": "definition",
       "number": "142A",
       "name": "power-boundedness",
-      "edge_type": "uses_concept",
-      "context": "stable"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "def:142A"
+    "def:110A",
+    "def:142A",
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A"
   ],
   "dependents": [
-    "def:357A",
-    "def:451A",
-    "def:510B",
-    "def:510C",
-    "def:512A",
-    "def:520A",
-    "def:521A",
-    "def:542A",
-    "lem:351A",
     "lem:406B",
     "lem:441A",
     "thm:243A",
@@ -73,12 +76,7 @@
     "thm:406D",
     "thm:422A",
     "thm:422C",
-    "thm:431A",
-    "thm:441C",
-    "thm:443A",
-    "thm:520D",
-    "thm:523B",
-    "thm:553A"
+    "thm:441C"
   ],
   "lean_file": null,
   "lean_symbol": null,

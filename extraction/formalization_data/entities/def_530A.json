@@ -40,8 +40,8 @@
   ],
   "preamble": "A starting method S is a sequence of r generalized Runge–Kutta methods used to initialize a general linear method. Degeneracy depends on whether all these methods have a zero coefficient b0^{(i)}.",
   "introduces": [
-    "degenerate",
-    "non-degenerate"
+    "degenerate starting method",
+    "non-degenerate starting method"
   ],
   "dependencies": [],
   "transitive_dependencies": [],

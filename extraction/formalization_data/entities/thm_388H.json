@@ -62,23 +62,22 @@
       "kind": "definition",
       "number": "388D",
       "name": "Consistency Condition for Group Element",
-      "edge_type": "uses_concept",
-      "context": "c(ξ)"
+      "edge_type": "uses_equation_from",
+      "context": "(388c) owned by def:388D"
     },
     {
       "id": "def:388F",
       "kind": "definition",
       "number": "388F",
       "name": "Algebraic condition for group commutators",
-      "edge_type": "uses_concept",
-      "context": "d(ξ)"
+      "edge_type": "uses_equation_from",
+      "context": "(388d) owned by def:388F"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
@@ -86,8 +85,7 @@
     "def:388D",
     "def:388F",
     "thm:301A",
-    "thm:356C",
-    "thm:388A",
+    "thm:381H",
     "thm:388B",
     "thm:388C"
   ],

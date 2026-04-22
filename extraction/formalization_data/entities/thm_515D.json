@@ -2,7 +2,7 @@
   "id": "thm:515D",
   "kind": "theorem",
   "number": "515D",
-  "name": "Stability and Consistency Imply Convergence",
+  "name": "Stability and Consistency Imply Convergence (515D)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -45,36 +45,12 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
       "id": "def:510B",
       "kind": "definition",
       "number": "510B",
-      "name": "consistent",
+      "name": "consistent (GLM)",
       "edge_type": "uses_concept",
-      "context": "consistent"
-    },
-    {
-      "id": "def:512A",
-      "kind": "definition",
-      "number": "512A",
-      "name": "convergent",
-      "edge_type": "uses_concept",
-      "context": "convergent"
-    },
-    {
-      "id": "def:510C",
-      "kind": "definition",
-      "number": "510C",
-      "name": "stable",
-      "edge_type": "uses_concept",
-      "context": "stable"
+      "context": "consistent general linear method"
     },
     {
       "id": "def:510A",
@@ -83,25 +59,35 @@
       "name": "preconsistency vector",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
+    },
+    {
+      "id": "def:510C",
+      "kind": "definition",
+      "number": "510C",
+      "name": "stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:512A",
+      "kind": "definition",
+      "number": "512A",
+      "name": "convergent (GLM)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
     "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
-    "def:512A",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:512A"
   ],
   "dependents": [
-    "lem:515A",
-    "thm:243A"
+    "lem:515A"
   ],
   "lean_file": null,
   "lean_symbol": null,

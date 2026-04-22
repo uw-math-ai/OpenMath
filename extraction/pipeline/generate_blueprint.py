@@ -78,11 +78,17 @@ def _load_data() -> tuple[list[dict], dict[str, str], dict[str, list[str]], dict
                 sid = _make_id(s["kind"], s["number"])
                 latex_map[sid] = s["latex"]
 
-    # Build dependency map from merged references
+    # Build dependency map. Prefer Phase 8's final edge set (post-denylist,
+    # post-cycle-break on the extension-merged graph). Fall back to the raw
+    # merged file if Phase 8 hasn't run yet.
     deps_map: dict[str, list[str]] = {}
-    refs_path = RAW_TEXT_DIR / "references_merged.json"
-    if not refs_path.exists():
-        refs_path = RAW_TEXT_DIR / "references.json"
+    final_refs = RAW_TEXT_DIR.parent / "formalization_data" / "references_final.json"
+    if final_refs.exists():
+        refs_path = final_refs
+    else:
+        refs_path = RAW_TEXT_DIR / "references_merged.json"
+        if not refs_path.exists():
+            refs_path = RAW_TEXT_DIR / "references.json"
     if refs_path.exists():
         with open(refs_path, encoding="utf-8") as f:
             edges = json.load(f)

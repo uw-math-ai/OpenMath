@@ -52,7 +52,7 @@
   ],
   "preamble": "The definition concerns general linear methods represented by matrices (A, U, B, V), building on prior discussions of symplectic behavior and the matrix M from non-linear stability analysis. The goal is to define G-symplecticity as an extension of symplectic properties when M = 0, using additional matrices G and D.",
   "introduces": [
-    "G-symplectic"
+    "G-symplectic general linear method"
   ],
   "dependencies": [
     {
@@ -67,36 +67,13 @@
       "id": "def:530C",
       "kind": "definition",
       "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
-      "id": "def:520A",
-      "kind": "definition",
-      "number": "520A",
-      "name": "Introduction",
-      "edge_type": "uses_concept",
-      "context": "stability matrix"
+      "name": "Order relative to starting method (530C)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:142A",
     "def:310A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
-    "def:404A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
     "def:530A",
     "def:530B",
     "def:530C",
@@ -110,7 +87,6 @@
     "thm:311D",
     "thm:313B",
     "thm:315A",
-    "thm:356C",
     "thm:532A",
     "thm:534A"
   ],

@@ -13,7 +13,7 @@ A general linear method is defined by four matrices $A$, $U$, $B$, $V$ and opera
 
   \label{def:510A}
   \lean{Butcher.Ch5.Def510A}
-  \uses{def:404A, def:530C}
+  \uses{def:404A}
 A general linear method $(A, U, B, V)$ is `preconsistent' if there exists a vector $u$ such that
 \[
 V u = u, \tag{510a}
@@ -32,11 +32,11 @@ U u &= \mathbf{1}, \tag{510b}
 \end{align}
 where $\mathbf{1}$ is the vector of all ones. Consistency adds a vector $v$ satisfying $B\mathbf{1} + V v = u + v$, related to second-order accuracy.
 
-\begin{definition}[consistent (510B)]
+\begin{definition}[consistent (GLM) (510B)]
 
   \label{def:510B}
   \lean{Butcher.Ch5.Def510B}
-  \uses{def:142A, def:403A, def:510A, def:510C, def:530C}
+  \uses{def:142A, def:510A, def:510C}
 A general linear method $(A, U, B, V)$ is `consistent' if it is preconsistent with preconsistency vector $u$ and there exists a vector $v$ such that
 \[
 B\mathbf{1} + V v = u + v. \tag{510c}
@@ -61,7 +61,7 @@ Stability is defined by the power-boundedness of $V$.
 
   \label{def:510C}
   \lean{Butcher.Ch5.Def510C}
-  \uses{def:142A, def:403A, def:530C}
+  \uses{def:142A}
 A general linear method $(A, U, B, V)$ is `stable' if there exists a constant $C$ such that, for all $n = 1, 2, \dots$, $\|V^n\| \leq C$.
 \end{definition}
 
@@ -72,11 +72,11 @@ u y(x) = \begin{bmatrix} u_1 y(x) & u_2 y(x) & \dots & u_r y(x) \end{bmatrix}^T,
 \end{equation}
 the desired limit of the approximation.
 
-\begin{definition}[convergent (512A)]
+\begin{definition}[convergent (GLM) (512A)]
 
   \label{def:512A}
   \lean{Butcher.Ch5.Def512A}
-  \uses{def:110A, def:402A, def:403A, def:510A, def:510B, def:510C, def:530C}
+  \uses{def:110A, def:510A, def:510B, def:510C}
 A general linear method $(A, U, B, V)$, is `convergent' if for any initial value problem
 \[
 y'(x) = f(y(x)), \quad y(x_0) = y_0,
@@ -93,13 +93,13 @@ A general linear method is defined by matrices $(A, U, B, V)$. Convergence is de
 
   \label{thm:513A}
   \lean{Butcher.Ch5.Thm513A}
-  \uses{def:510C, def:512A, def:530C}
+  \uses{def:510C, def:512A}
 A general linear method $(A, U, B, V)$ is convergent only if it is stable.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:513A}
-  \uses{def:510C, def:512A, def:530C}
+  \uses{def:510C, def:512A}
 Suppose, on the contrary, that $\{ V^{n} : n = 1, 2, 3, \dots \}$ is unbounded.
 This implies that there exists a sequence of vectors $w_{1}, w_{2}, w_{3}, \dots$ such that
 $\| w_{n} \| = 1$, for all $n = 1, 2, 3, \dots$, and such that the sequence $\{ V^{n} w_{n} : n = 1, 2, 3, \dots \}$ is unbounded.
@@ -183,7 +183,7 @@ Thus $B\mathbf{1} + Vv = u + v$.
 Consider a general linear method for an ODE $y' = f(y)$ with step size $h \in (0, h_0]$. Let $L$ be the Lipschitz constant for $f$, and assume $\|y(x)\| \le M$, $\|f(y)\| \le LM$ for $y$ in a closed set $S$ containing the trajectory. The method uses $s$ internal stages $Y_i$ and $r$ input/output approximations combining $y(x)$ and $hy'(x)$. The coefficients are: $A \in \mathbb{R}^{s \times s}$, $U \in \mathbb{R}^{r \times s}$, $v \in \mathbb{R}^{r}$, and stage abscissae $c = A\mathbf{1} + U v$. Input approximations use coefficients $u_i$, $v_i$ for $i=1,\dots,r$.
 
 ```latex
-\begin{lemma}[Stability and consistency imply convergence (515A)]
+\begin{lemma}[Stability and consistency imply convergence (515A) (515A)]
 
   \label{lem:515A}
   \lean{Butcher.Ch5.Lem515A}
@@ -206,7 +206,7 @@ Let $y_i^{[n-1]} = u_i y(x_{n-1}) + v_i h y'(x_{n-1})$, $y_i^{[n]} = u_i y(x_n) 
 \noindent\textbf{Context.}
 The local truncation error for a Runge--Kutta-like method is analyzed. Let $y_i^{[n]}$ be the exact solution at stage $i$ of step $n$, and $\tilde{y}_i^{[n]}$ the computed solution. The errors are compared using a Lipschitz constant $L$ for $f$ and previous error bounds. Lemma 515B relates the errors at step $n$ to errors at step $n-1$ plus a local term $K^{[n]}$. Let $V_{ij}$ be coefficients from Lemma 515A, $h$ the step size, and $\eta_i$ quantities bounding local truncation errors. The inequality (515c) bounds $\|y_i^{[n]}-\tilde{y}_i^{[n]}\|$.
 
-\begin{lemma}[Stability and Consistency Imply Convergence (515B)]
+\begin{lemma}[Stability and Consistency Imply Convergence (515B) (515B)]
 
   \label{lem:515B}
   \lean{Butcher.Ch5.Lem515B}
@@ -352,11 +352,11 @@ Variables:
     \item $\eta_i$: bound on $E[i]$ defined recursively
 \end{itemize}
 
-\begin{theorem}[Stability and Consistency Imply Convergence (515D)]
+\begin{theorem}[Stability and Consistency Imply Convergence (515D) (515D)]
 
   \label{thm:515D}
   \lean{Butcher.Ch5.Thm515D}
-  \uses{def:510A, def:510B, def:510C, def:512A, def:530C}
+  \uses{def:510A, def:510B, def:510C, def:512A}
 A stable and consistent general linear method is convergent.
 \end{theorem}
 
@@ -377,7 +377,7 @@ Variables: \(A, U, B, V\) are the coefficient matrices of the method; \(z = hq\)
 
   \label{def:520A}
   \lean{Butcher.Ch5.Def520A}
-  \uses{def:403A, def:510A, def:510B, def:510C, def:530C}
+  \uses{def:510A, def:510B, def:510C}
 For a general linear method $(A, U, B, V)$, the `stability matrix' $M(z)$ is defined by
 \[
 M(z) = V + zB(I - zA)^{-1}U.
@@ -440,7 +440,7 @@ where $M(z)$ is the $r \times r$ stability matrix. The stability function and re
 
   \label{def:520C}
   \lean{Butcher.Ch5.Def520C}
-  \uses{def:520A, def:530C}
+  \uses{def:520A}
 Let $(A, U, B, V)$ denote a general linear method and $M(z)$ the corresponding stability matrix. The `stability function' for the method is the polynomial $\Phi(w, z)$ given by
 \[
 \Phi(w, z) = \det(wI - M(z)),
@@ -470,7 +470,7 @@ Variables:
 
   \label{thm:520D}
   \lean{Butcher.Ch5.Thm520D}
-  \uses{def:403A, def:520C, def:520E}
+  \uses{def:520C}
 The instability region for $(A, U, B, V)$ is a subset of the set of points $z$, such that $\Phi(w, z) = 0$, where $|w| \geq 1$. The instability region is a superset of the points defined by $\Phi(w, z) = 0$, where $|w| > 1$.
 
 The unanswered question in this result is: `Which points on the boundary of the stability region are actually members of it?' This is not always a crucial question, and we quite often interpret the stability region as the `strict stability region', consisting of those $z$ for which
@@ -497,7 +497,7 @@ The discussion concerns stability properties of general linear methods for ODEs,
 
   \label{def:520E}
   \lean{Butcher.Ch5.Def520E}
-  \uses{def:142A, def:520C, def:530C}
+  \uses{def:142A, def:520C, thm:520D}
 A general linear method is `A-stable' if $M(z)$ is power-bounded for every $z$ in the left half complex plane.
 
 Just as for Runge--Kutta and linear multistep methods, A-stability is the ideal property for a method to possess for it to be applicable to stiff problems.
@@ -518,7 +518,7 @@ Variables:
 
   \label{def:520F}
   \lean{Butcher.Ch5.Def520F}
-  \uses{def:520A, def:520E, def:530C}
+  \uses{def:520A, def:520E}
 A general linear method is \textit{L-stable} if it is A-stable and
 \[
 \rho(M(\infty)) = 0.
@@ -532,7 +532,7 @@ The text discusses stability properties (A-stability, L-stability) of general li
 
   \label{def:521A}
   \lean{Butcher.Ch5.Def521A}
-  \uses{def:403A, def:520C, def:530C}
+  \uses{def:520C}
 A method with stability function $\Phi(w, z)$ has `stability order' $p^*$ if
 \[
 \Phi(\exp(z), z) = O(z^{p^*+1}).
@@ -574,7 +574,7 @@ Referenced equations:
 
   \label{thm:521B}
   \lean{Butcher.Ch5.Thm521B}
-  \uses{def:512A, def:520C, def:521A}
+  \uses{def:521A}
 For given $\nu$, the maximum possible stability order is given by
 \[
 p^* = \sum_{j=0}^{k} (\nu_j + 1) - 2. \tag{521a}
@@ -585,7 +585,7 @@ p^* = \sum_{j=0}^{k} (\nu_j + 1) - 2. \tag{521a}
 
   \label{thm:523A}
   \lean{Butcher.Ch5.Thm523A}
-  \uses{def:381A, def:510B, def:510C, def:530C}
+  \uses{def:510B, def:510C}
 Let $Y$ denote the vector of stage values, $F$ the vector of stage derivatives and $y^{[n-1]}$ and $y^{[n]}$ the input and output respectively from a single step of a general linear method $(A, U, B, V)$. Assume that $M$ is a positive semi-definite $(s + r) \times (s + r)$ matrix, where
 \[
 M = \begin{pmatrix}
@@ -602,7 +602,7 @@ with $G$ a positive semi-definite $r \times r$ matrix and $D$ a positive semi-de
 
 \begin{proof}
   \proves{thm:523A}
-  \uses{def:381A, def:510B, def:510C, def:530C}
+  \uses{def:510B, def:510C}
 The result is equivalent to the identity
 \[
 M = \begin{pmatrix} 0 & 0 \\ 0 & G \end{pmatrix} - \begin{pmatrix} B^\top \\ V^\top \end{pmatrix} G \begin{pmatrix} B & V \end{pmatrix} + \begin{pmatrix} D & 0 \\ 0 & 0 \end{pmatrix} \begin{pmatrix} A & U \end{pmatrix} + \begin{pmatrix} A^\top \\ U^\top \end{pmatrix} \begin{pmatrix} D & 0 \end{pmatrix}.
@@ -627,7 +627,7 @@ U^T D - V^T G B & G - V^T G V
 
   \label{thm:523B}
   \lean{Butcher.Ch5.Thm523B}
-  \uses{def:356B, def:357B, def:403A, def:520E, def:530C, thm:523A}
+  \uses{def:357B, thm:523A}
 If $M$ given by \eqref{eq:523b} is positive semi-definite, then
 \[
 \|y^{[n]}\|_G^2 \leq \|y^{[n-1]}\|_G^2.
@@ -689,7 +689,7 @@ Referenced equations:
 
   \label{def:525A}
   \lean{Butcher.Ch5.Def525A}
-  \uses{def:520A, def:530C, thm:534A}
+  \uses{def:530C, thm:534A}
 A general linear method $(A, U, B, V)$ is $G$-symplectic if there exists a positive semi-definite symmetric $r \times r$ matrix $G$ and an $s \times s$ diagonal matrix $D$ such that
 \[
 G = V^{\top} G V, \tag{525a}
@@ -785,7 +785,7 @@ Referenced equations:
     \item (530a): generalized Runge--Kutta methods defining the starting method $S$, with coefficients including $b_{0}^{(i)}$
 \end{itemize}
 
-\begin{definition}[Order relative to starting method (530B)]
+\begin{definition}[Order relative to starting method (530B) (530B)]
 
   \label{def:530B}
   \lean{Butcher.Ch5.Def530B}
@@ -793,7 +793,7 @@ Referenced equations:
 Consider a general linear method $\mathcal{M}$ and a non-degenerate starting method $\mathcal{S}$. The method $\mathcal{M}$ has order $p$ relative to $\mathcal{S}$ if the results found from $\mathcal{S}\mathcal{M}$ and $\mathcal{E}\mathcal{S}$ agree to within $O(h^{p+1})$.
 \end{definition}
 
-\begin{definition}[Order relative to starting method (530C)]
+\begin{definition}[Order relative to starting method (530C) (530C)]
 
   \label{def:530C}
   \lean{Butcher.Ch5.Def530C}
@@ -874,11 +874,11 @@ Let $e_1$ be the first natural basis vector in $\mathbb{R}^r$. For a given under
 \end{align}
 The theorem concerns the unique solution with $\xi_1=1$. Denote by $\sigma(\widetilde{V})$ the spectrum of $\widetilde{V}$.
 
-\begin{theorem}[The underlying one-step method (535A)]
+\begin{theorem}[The underlying one-step method (GLM) (535A)]
 
   \label{thm:535A}
   \lean{Butcher.Ch5.Thm535A}
-  \uses{def:422B, def:510A, def:510B, def:510C, def:530C, thm:422A}
+  \uses{def:422B, def:510A, def:510B, def:510C, thm:422A}
 Let $(A, U, B, V)$ denote a consistent general linear method such that $u = e_1$ and such that
 \[
 U = \begin{bmatrix} 1 & \widehat{U} \end{bmatrix}, \quad V = \begin{bmatrix} 1 & v^\top \\ 0 & \widehat{V} \end{bmatrix},
@@ -888,7 +888,7 @@ where $1 \notin \sigma(\widehat{V})$. Then there exists a unique solution to \eq
 
 \begin{proof}
   \proves{thm:535A}
-  \uses{def:422B, def:510A, def:510B, def:510C, def:530C, thm:422A}
+  \uses{def:422B, def:510A, def:510B, def:510C, thm:422A}
 By carrying out a further transformation if necessary, we may assume without loss of generality that $\widehat{V}$ is lower triangular. The conditions satisfied by $\xi_i(t)$ ($i = 2, 3, \dots, r$), $\eta_i(t)$ ($i = 1, 2, \dots, s$) and $\theta(t)$ can now be written in the form
 \begin{align*}
 (1 - \widehat{V}_{i,i}) \xi_i(t) &= \sum_{j=1}^{s} b_{ij} (\eta D)(t) + \sum_{j=2}^{i-1} \widehat{V}_{i-1,j-1} \xi_j(t), \\
@@ -1000,7 +1000,7 @@ Referenced equations:
 
   \label{def:542A}
   \lean{Butcher.Ch5.Def542A}
-  \uses{def:310A, def:381A, def:403A, def:406A, def:510A, def:510B, def:510C, def:512A, def:520A, def:520C, def:520E, def:530C, thm:520B}
+  \uses{def:310A, def:510A, def:510B, def:510C, def:512A, def:520C, thm:520B}
 A general linear method $(A, U, B, V)$ has \emph{Runge--Kutta stability} (RK stability) if its characteristic polynomial, given by $\Phi(w,z)=\det(wI-V-zB(I-zA)^{-1}U)$, has the form
 \[
 \Phi(w,z) = w^{r-1}\bigl(w - R(z)\bigr).
@@ -1189,7 +1189,7 @@ where $\rho(\dot{V}) = 0$. The concept of inherent Runge--Kutta stability impose
 
   \label{def:551A}
   \lean{Butcher.Ch5.Def551A}
-  \uses{def:510C, def:530C, def:542A, thm:550A}
+  \uses{def:542A, thm:550A}
 A general linear method $(A, U, B, V)$ is `inherently Runge--Kutta stable' if $V$ is of the form \eqref{eq:551a} and the two matrices
 \[
 BA - XB \quad \text{and} \quad BU - XV + VX
@@ -1203,7 +1203,7 @@ The significance of this definition is expressed in the following.
 
   \label{thm:551B}
   \lean{Butcher.Ch5.Thm551B}
-  \uses{def:510C, def:520A, def:551A, thm:550B}
+  \uses{def:520A, def:551A, thm:550B}
 Let $(A, U, B, V)$ denote an inherently RK stable general linear method. Then the stability matrix
 \[
 M(z) = V + zB(I - zA)^{-1}U
@@ -1213,7 +1213,7 @@ has only a single non-zero eigenvalue.
 
 \begin{proof}
   \proves{thm:551B}
-  \uses{def:510C, def:520A, def:551A, thm:550B}
+  \uses{def:520A, def:551A, thm:550B}
 Calculate the matrix
 \[
 (I - zX)M(z)(I - zX)^{-1},
@@ -1259,13 +1259,13 @@ This result, and generalizations of it, make it possible to derive stiff methods
 
   \label{thm:553A}
   \lean{Butcher.Ch5.Thm553A}
-  \uses{def:403A, def:530C, def:551A, thm:111A, thm:550A}
+  \uses{def:551A, thm:111A, thm:550A}
 If a general linear method with $p = q = r - 1 = s - 1$ has the property of IRK stability then the matrix $X$ in Definition~\ref{def:551A} is a $(p + 1) \times (p + 1)$ doubly companion matrix.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:553A}
-  \uses{def:403A, def:530C, def:551A, thm:111A, thm:550A}
+  \uses{def:551A, thm:111A, thm:550A}
 Substitute \eqref{eq:551d} into \eqref{eq:551e} and compare \eqref{eq:551d} with $zX$ multiplied on the left. We find
 \begin{align}
     \exp(z)Z &= z^{2}BA\exp(cz) + zBU Z + V Z + O(z^{p+1}), \label{eq:553a} \\

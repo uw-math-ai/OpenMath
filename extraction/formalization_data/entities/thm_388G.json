@@ -24,15 +24,14 @@
       "kind": "definition",
       "number": "388F",
       "name": "Algebraic condition for group commutators",
-      "edge_type": "uses_concept",
-      "context": "d(ξ)"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
@@ -40,8 +39,7 @@
     "def:388D",
     "def:388F",
     "thm:301A",
-    "thm:356C",
-    "thm:388A",
+    "thm:381H",
     "thm:388B",
     "thm:388C"
   ],

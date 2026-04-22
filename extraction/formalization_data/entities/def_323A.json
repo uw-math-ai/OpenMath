@@ -75,7 +75,7 @@
   "equations": [],
   "preamble": "The text discusses order conditions for Runge-Kutta methods, using rooted trees and elementary weights. The definition introduces the concept of 'internal order q' for a stage i, based on comparing elementary weights to a specific formula involving the abscissa c_i and tree properties. The significance is that internal order q implies the stage approximates the exact solution at a shifted argument to order q+1.",
   "introduces": [
-    "internal order q"
+    "internal order of a stage"
   ],
   "dependencies": [
     {
@@ -112,16 +112,8 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
     "def:310A",
     "def:312A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
     "lem:310B",
     "lem:311A",
     "lem:312B",
@@ -132,8 +124,7 @@
     "thm:311C",
     "thm:311D",
     "thm:313B",
-    "thm:315A",
-    "thm:356C"
+    "thm:315A"
   ],
   "dependents": [
     "thm:323B",

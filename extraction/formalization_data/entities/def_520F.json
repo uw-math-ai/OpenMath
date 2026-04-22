@@ -27,24 +27,16 @@
   "equations": [],
   "preamble": "The discussion concerns stability properties of general linear methods for ODEs. A-stability is defined as power-boundedness of M(z) for all z in the left half-plane. L-stability is a stronger property that additionally requires the spectral radius to vanish at infinity.",
   "introduces": [
-    "L-stable"
+    "L-stable general linear method"
   ],
   "dependencies": [
-    {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
     {
       "id": "def:520E",
       "kind": "definition",
       "number": "520E",
       "name": "A-stable",
-      "edge_type": "uses_concept",
-      "context": "a-stable"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "def:520A",
@@ -57,7 +49,6 @@
   ],
   "transitive_dependencies": [
     "def:142A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
@@ -65,13 +56,9 @@
     "def:520A",
     "def:520C",
     "def:520E",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "thm:520D"
   ],
-  "dependents": [
-    "def:350A"
-  ],
+  "dependents": [],
   "lean_file": null,
   "lean_symbol": null,
   "formalization_status": "unformalized"

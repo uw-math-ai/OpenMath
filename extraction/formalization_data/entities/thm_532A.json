@@ -81,9 +81,9 @@
       "id": "def:530C",
       "kind": "definition",
       "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
+      "name": "Order relative to starting method (530C)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "thm:311B",
@@ -111,15 +111,7 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
     "def:310A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
     "def:530A",
     "def:530B",
     "def:530C",
@@ -132,8 +124,7 @@
     "thm:311C",
     "thm:311D",
     "thm:313B",
-    "thm:315A",
-    "thm:356C"
+    "thm:315A"
   ],
   "dependents": [
     "thm:534A",

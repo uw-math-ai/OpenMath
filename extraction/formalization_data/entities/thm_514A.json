@@ -28,18 +28,10 @@
       "context": "preconsistency vector"
     },
     {
-      "id": "def:512A",
-      "kind": "definition",
-      "number": "512A",
-      "name": "convergent",
-      "edge_type": "uses_concept",
-      "context": "convergent"
-    },
-    {
       "id": "def:510B",
       "kind": "definition",
       "number": "510B",
-      "name": "consistent",
+      "name": "consistent (GLM)",
       "edge_type": "uses_equation_from",
       "context": "(510c) owned by def:510B"
     },
@@ -48,6 +40,14 @@
       "kind": "definition",
       "number": "510C",
       "name": "stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:512A",
+      "kind": "definition",
+      "number": "512A",
+      "name": "convergent (GLM)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -63,16 +63,11 @@
   "transitive_dependencies": [
     "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:512A",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "thm:513A"
   ],
   "dependents": [],

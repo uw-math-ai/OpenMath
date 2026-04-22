@@ -36,42 +36,22 @@
   ],
   "dependencies": [
     {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
       "id": "def:520C",
       "kind": "definition",
       "number": "520C",
       "name": "stability function",
-      "edge_type": "uses_concept",
-      "context": "stability function"
-    },
-    {
-      "id": "def:403A",
-      "kind": "definition",
-      "number": "403A",
-      "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stability"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
     "def:142A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:520A",
-    "def:520C",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:520C"
   ],
   "dependents": [
     "thm:521B"

@@ -228,7 +228,7 @@ Referenced equations:
 
   \label{thm:111A}
   \lean{Butcher.Ch1.Thm111A}
-  \uses{def:381A, def:520A, thm:110C, thm:520B}
+  \uses{thm:110C}
 If $\hat{y}$ is a solution to \eqref{eq:111a} and $y_1, y_2, \dots, y_k$ are solutions to \eqref{eq:111b}, then for any constants $\alpha_1, \alpha_2, \dots, \alpha_k$, the function $y$ given by
 \[
 y(x) = \hat{y}(x) + \sum_{i=1}^{k} \alpha_i y_i(x),
@@ -511,11 +511,11 @@ Variables:
     \item $\|\cdot\|$: A matrix norm
 \end{itemize}
 
-\begin{definition}[convergent (142B)]
+\begin{definition}[convergent (matrix) (142B)]
 
   \label{def:142B}
   \lean{Butcher.Ch1.Def142B}
-  \uses{def:142A, def:402A}
+  \uses{def:142A, thm:142D}
 A square matrix $A$ is `convergent' if $\lim_{n \to \infty} A^n = 0$.
 \end{definition}
 
@@ -523,7 +523,7 @@ A square matrix $A$ is `convergent' if $\lim_{n \to \infty} A^n = 0$.
 
   \label{thm:142C}
   \lean{Butcher.Ch1.Thm142C}
-  \uses{def:142A, def:142B, def:381A, thm:142D, thm:142E}
+  \uses{def:142A, def:142B, thm:142D, thm:142E}
 Let \( A \) denote an \( m \times m \) matrix. The following statements are equivalent:
 \begin{enumerate}
 \renewcommand{\labelenumi}{(\roman{enumi})}
@@ -536,7 +536,7 @@ Let \( A \) denote an \( m \times m \) matrix. The following statements are equi
 
 \begin{proof}
   \proves{thm:142C}
-  \uses{def:142A, def:142B, def:381A, thm:142D, thm:142E}
+  \uses{def:142A, def:142B, thm:142D, thm:142E}
 We prove that (i) \(\Rightarrow\) (ii) \(\Rightarrow\) (iii) \(\Rightarrow\) (iv) \(\Rightarrow\) (i). If \( A \) is stable but (ii) is not true, then either there exist \( \lambda \) and \( v \neq 0 \) such that \( |\lambda| > 1 \) and \( Av = \lambda v \), or there exist \( \lambda \), \( u \neq 0 \) and \( v \) such that \( |\lambda| = 1 \) and \( Av = \lambda v + u \), with \( Au = \lambda u \). In the first case, \( A^{n} v = \lambda^{n} v \) and therefore \( \| A^{n} \| \geq |\lambda|^{n} \) which is not bounded. In the second case, \( A^{n} v = \lambda^{n} v + n \lambda^{n-1} u \) and therefore \( \| A^{n} \| \geq n \| u \| / \| v \| - 1 \), which also is not bounded. Given (ii), it is not possible that the conditions of (iii) are not satisfied, because the minimal polynomial of any of the Jordan blocks, and therefore of \( A \) itself, would have factors that contradict (ii). If (iii) is true, then \( S \) can be chosen to form \( J \), the Jordan canonical form of \( A \), with the off-diagonal elements chosen sufficiently small so that \( \| J \|_{\infty} \leq 1 \). Finally, if (iv) is true then \( A^{n} = S (S^{-1} A S)^{n} S^{-1} \) so that
 \[
 \| A^{n} \| \leq \| S \| \cdot \| S^{-1} A S \|^{n} \cdot \| S^{-1} \| \leq \| S \| \cdot \| S^{-1} \|.
@@ -560,7 +560,7 @@ Variables:
 
   \label{thm:142D}
   \lean{Butcher.Ch1.Thm142D}
-  \uses{def:142B, def:381A}
+  \uses{}
 Let \( A \) denote an \( m \times m \) matrix. The following statements are equivalent:
 \begin{enumerate}
     \item[(i)] \( A \) is convergent.
@@ -572,7 +572,8 @@ Let \( A \) denote an \( m \times m \) matrix. The following statements are equi
 
 \begin{proof}
   \proves{thm:142D}
-  \uses{def:142B, def:381A}
+
+  \proves{thm:142D}
 We again prove that (i) \(\Rightarrow\) (ii) \(\Rightarrow\) (iii) \(\Rightarrow\) (iv) \(\Rightarrow\) (i). If \( A \) is convergent but (ii) is not true, then there exist \( \lambda \) and \( u \neq 0 \) such that \( |\lambda| \geq 1 \) and \( Au = \lambda u \). Hence, \( A^{n} u = \lambda^{n} u \) and therefore \( \| A^{n} \| \geq |\lambda|^{n} \), which does not converge to zero. Given (ii), it is not possible that the conditions of (iii) are not satisfied, because the minimal polynomial of any of the Jordan blocks, and therefore of \( A \) itself, would have factors that contradict (ii). If (iii) is true, then \( S \) can be chosen to form \( J \), the Jordan canonical form of \( A \), with the off-diagonal elements chosen sufficiently small so that \( \| J \|_{\infty} < 1 \). Finally, if (iv) is true then \( A^{n} = S (S^{-1} A S)^{n} S^{-1} \) so that \( \| A^{n} \| \leq \| S \| \cdot \| S^{-1} \| \cdot \| S^{-1} A S \|^{n} \to 0 \).
 
 While the two results we have presented here are related to the convergence of difference equation solutions, the next is introduced only because of its application in later chapters.

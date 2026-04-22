@@ -39,16 +39,16 @@
   "equations": [],
   "preamble": "The discussion concerns stability properties of general linear methods for ODEs, focusing on the stability matrix M(z) and the stability function Φ(w,z). The stability region is defined in terms of boundedness of powers of M(z).",
   "introduces": [
-    "A-stable"
+    "A-stable general linear method"
   ],
   "dependencies": [
     {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
+      "id": "thm:520D",
+      "kind": "theorem",
+      "number": "520D",
+      "name": "Instability Region Boundary Characterization",
       "edge_type": "uses_concept",
-      "context": "general linear methods"
+      "context": "a-stability"
     },
     {
       "id": "def:142A",
@@ -69,26 +69,16 @@
   ],
   "transitive_dependencies": [
     "def:142A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:520A",
     "def:520C",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "thm:520D"
   ],
   "dependents": [
-    "def:350A",
-    "def:442A",
-    "def:520F",
-    "def:542A",
-    "thm:351B",
-    "thm:355F",
-    "thm:520D",
-    "thm:523B"
+    "def:520F"
   ],
   "lean_file": null,
   "lean_symbol": null,

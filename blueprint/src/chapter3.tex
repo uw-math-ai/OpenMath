@@ -39,7 +39,7 @@ To verify \eqref{eq:301d}, calculate $r$, $\sigma$ and $\gamma$ for the single t
 
   \label{thm:302A}
   \lean{Butcher.Ch3.Thm302A}
-  \uses{def:381A, thm:301A}
+  \uses{thm:301A}
 \[
 \alpha(t) = \frac{r(t)!}{\sigma(t)\gamma(t)}, \tag{302a}
 \]
@@ -50,7 +50,7 @@ To verify \eqref{eq:301d}, calculate $r$, $\sigma$ and $\gamma$ for the single t
 
 \begin{proof}
   \proves{thm:302A}
-  \uses{def:381A, thm:301A}
+  \uses{thm:301A}
 The value of $\beta(t)$ is found by labelling the vertices of $t$ with all permutations and then dividing by $\sigma(t)$ so as to count, only once, sets of labellings which are equivalent under symmetry. In the case of $\alpha(t)$, we are restricted by the requirement that, of the labels assigned to any vertex $v$ and to its descendants, only the lowest may be assigned to $v$. The product of the factors that must be divided out to satisfy this constraint is $\gamma(t)$.
 
 We now look at the enumeration question of the number of rooted trees of various orders.
@@ -68,7 +68,7 @@ Variables:
 
   \label{thm:302B}
   \lean{Butcher.Ch3.Thm302B}
-  \uses{def:381A, thm:302A, thm:302C}
+  \uses{thm:302A, thm:302C}
 Let $\theta_k$, $k = 1, 2, 3, \dots$ denote the number of rooted trees with exactly $k$ vertices. Then,
 \[
 \theta_1 + \theta_2 x + \theta_3 x^2 + \cdots = (1 - x)^{-\theta_1} (1 - x^2)^{-\theta_2} (1 - x^3)^{-\theta_3} \cdots. \tag{302c}
@@ -265,7 +265,7 @@ where $I$ is the index set consisting of $m_1$ copies of $1$, $m_2$ copies of $2
 
   \label{lem:311A}
   \lean{Butcher.Ch3.Lem311A}
-  \uses{def:310A, def:381A, lem:310B, thm:311B}
+  \uses{def:310A, lem:310B, thm:311B}
 Let $S = S_0 \cup \{s\}$ be an ordered set, where every member of $S_0$ is less than $s$. Let $t$ be a member of $T_{S_0}^*$. Then
 \[
 \frac{d}{dx} F(|t|)(y(x))
@@ -275,7 +275,7 @@ is the sum of $F(|u|)(y(x))$ over all $u \in T_S^*$ such that the subtree formed
 
 \begin{proof}
   \proves{lem:311A}
-  \uses{def:310A, def:381A, lem:310B, thm:311B}
+  \uses{def:310A, lem:310B, thm:311B}
 If $S = \{s_0, s\}$, then the result is equivalent to
 \[
 \frac{d}{dx} f(y(x)) = f'(y(x)) f(y(x)).
@@ -675,7 +675,7 @@ Variables:
     \item $|b|$: vector $b$ with every term replaced by its magnitude
 \end{itemize}
 
-\begin{lemma}[Global truncation error (319A)]
+\begin{lemma}[Global truncation error (RK) (319A)]
 
   \label{lem:319A}
   \lean{Butcher.Ch3.Lem319A}
@@ -718,7 +718,7 @@ Referenced equations:
 
   \label{thm:319B}
   \lean{Butcher.Ch3.Thm319B}
-  \uses{def:406A, lem:319A}
+  \uses{lem:319A}
 Let $h_0$ and $L$ be such that the local truncation error at step $k = 1, 2, \dots, n$ is bounded by
 \[
 \delta_k \leq C h^{p+1}, \quad h \leq h_0.
@@ -735,7 +735,7 @@ Then the global truncation error is bounded by
 
 \begin{proof}
   \proves{thm:319B}
-  \uses{def:406A, lem:319A}
+  \uses{lem:319A}
 Use Figure 319(ii) and obtain the estimate
 \[
 \| y(x_n) - y_n \| \leq C h^{p+1} \sum_{k=1}^{n} (1 + h L)^k.
@@ -838,7 +838,7 @@ Variables:
 
   \label{thm:323B}
   \lean{Butcher.Ch3.Thm323B}
-  \uses{def:323A, def:381A, thm:315A}
+  \uses{def:323A, thm:315A}
 Let
 \[
 \begin{array}{ccc}
@@ -1029,7 +1029,7 @@ Embedded Runge-Kutta pair: method (333b) is an $s$-stage order $p$ method; metho
 
   \label{thm:333A}
   \lean{Butcher.Ch3.Thm333A}
-  \uses{def:381A, thm:315A, thm:323B}
+  \uses{thm:315A, thm:323B}
 If (333b) has order $p$ and (333a) has order $p+1$ and $B = b_{s+1}$, then
 \[
 \Phi(t) = \frac{1 - B r(t)}{\gamma(t)}, \quad r(t) \leq p+1. \tag{333d}
@@ -1198,7 +1198,7 @@ Denote the simplifying assumptions (order conditions) as $B(\eta)$, $C(\eta)$, $
 
   \label{thm:343A}
   \lean{Butcher.Ch3.Thm343A}
-  \uses{thm:343B}
+  \uses{}
 The reflection of the reflection of a Runge--Kutta method is the original method.
 
 If a method satisfies some of the simplifying assumptions introduced in Subsection 321, then we consider the possibility that the reflection of the method satisfies corresponding conditions. To enable us to express these connections conveniently, we write $\widehat{B}(\eta)$, $\widehat{C}(\eta)$, $\widehat{D}(\eta)$ and $\widehat{E}(\eta,\zeta)$ to represent $B(\eta)$, $C(\eta)$, $D(\eta)$ and $E(\eta,\zeta)$, respectively, but with reference to the reflected method. We then have:
@@ -1211,7 +1211,7 @@ The theorem concerns properties of the `reflection' of a Runge--Kutta method, wh
 
   \label{thm:343B}
   \lean{Butcher.Ch3.Thm343B}
-  \uses{def:323A, def:381A}
+  \uses{def:323A, thm:343A}
 If $\eta$ and $\zeta$ are positive integers, then
 \begin{align}
 B(\eta) &\Rightarrow \widehat{B(\eta)}, \tag{343d} \\
@@ -1223,7 +1223,7 @@ B(\eta + \zeta) \wedge E(\eta, \zeta) &\Rightarrow \widehat{E(\eta, \zeta)}. \ta
 
 \begin{proof}
   \proves{thm:343B}
-  \uses{def:323A, def:381A}
+  \uses{def:323A, thm:343A}
 Let $P$ and $Q$ be arbitrary polynomials of degrees less than $\eta$ and less than $\zeta$, respectively. By using the standard polynomial basis, we see that $B(\eta)$, $C(\eta)$, $D(\eta)$ and $E(\eta, \zeta)$ are equivalent respectively to the statements
 \begin{align}
 \sum_{j=1}^{s} b_j P(c_j) &= \int_{0}^{1} P(x) \, dx, \tag{343h} \\
@@ -1314,7 +1314,7 @@ R(z) = 1 + z\mathbf{b}^\top (I - zA)^{-1} \mathbf{1}
 
   \label{def:350A}
   \lean{Butcher.Ch3.Def350A}
-  \uses{def:442A, def:520C, def:520E, def:520F}
+  \uses{}
 \textbf{Definition 350A} Let $\alpha$ denote an angle satisfying $\alpha \in (0, \pi)$ and let $S(\alpha)$ denote the set of points $x + iy$ in the complex plane such that $x \leq 0$ and $-\tan(\alpha)|x| \leq y \leq \tan(\alpha)|x|$. A Runge--Kutta method with stability function $R(z)$ is $A(\alpha)$-stable if $|R(z)| \leq 1$ for all $z \in S(\alpha)$.
 
 The region $S(\alpha)$ is illustrated in Figure 350(i) in the case of the Runge--Kutta method
@@ -1340,7 +1340,7 @@ The stability function \(R(z)\) of a Runge--Kutta method with coefficients \((A,
 
   \label{lem:351A}
   \lean{Butcher.Ch3.Lem351A}
-  \uses{def:350A, def:403A, def:520C, thm:351B}
+  \uses{def:350A, thm:351B}
 Let $(A, b, c)$ denote a Runge--Kutta method. Then its stability function is given by
 \[
 R(z) = \frac{\det\bigl(I + z(\mathbf{1}b^{\top} - A)\bigr)}{\det(I - zA)}.
@@ -1349,7 +1349,7 @@ R(z) = \frac{\det\bigl(I + z(\mathbf{1}b^{\top} - A)\bigr)}{\det(I - zA)}.
 
 \begin{proof}
   \proves{lem:351A}
-  \uses{def:350A, def:403A, def:520C, thm:351B}
+  \uses{def:350A, thm:351B}
 Because a rank~1 $s \times s$ matrix $uv^{\top}$ has characteristic polynomial
 \[
 \det(I w - uv^{\top}) = w^{s-1}(w - v^{\top}u),
@@ -1391,7 +1391,7 @@ Variables:
 
   \label{thm:351B}
   \lean{Butcher.Ch3.Thm351B}
-  \uses{def:442A, def:520C, def:520E}
+  \uses{}
 A Runge--Kutta method with stability function $R(z) = N(z)/D(z)$ is A-stable if and only if
 \begin{enumerate}
     \item[(a)] all poles of $R$ (that is, all zeros of $D$) are in the right half-plane and
@@ -1401,7 +1401,8 @@ A Runge--Kutta method with stability function $R(z) = N(z)/D(z)$ is A-stable if 
 
 \begin{proof}
   \proves{thm:351B}
-  \uses{def:442A, def:520C, def:520E}
+
+  \proves{thm:351B}
 The necessity of (a) follows from the fact that if $z^*$ is a pole then
 $\lim_{z \to z^*} |R(z)| = \infty$, and hence $|R(z)| > 1$, for $z$ close enough to $z^*$. The
 necessity of (b) follows from the fact that $E(y) < 0$ implies that $|R(iy)| > 1$,
@@ -1432,7 +1433,7 @@ f(z) = 1 + \sin(z) \approx 1 + z - \frac{1}{6}z^{3} + \dots
 
   \label{thm:352A}
   \lean{Butcher.Ch3.Thm352A}
-  \uses{def:381A, thm:352C, thm:352D, thm:352E}
+  \uses{thm:352C, thm:352D, thm:352E}
 Let $l, m \geq 0$ be integers and define polynomials $N_{lm}$ and $D_{lm}$ by
 \[
 N_{lm}(z) = \frac{l!}{(l+m)!} \sum_{i=0}^{l} \frac{(l+m-i)!}{i!\,(l-i)!} z^{i}, \tag{352b}
@@ -1452,7 +1453,7 @@ N_{lm}(z) - \exp(z) D_{lm}(z) + C_{lm} z^{l+m+1} + \frac{m+1}{l+m+2} C_{lm} z^{l
 
 \begin{proof}
   \proves{thm:352A}
-  \uses{def:381A, thm:352C, thm:352D, thm:352E}
+  \uses{thm:352C, thm:352D, thm:352E}
 In the case $m = 0$, the result is equivalent to the Taylor series for $\exp(z)$; by multiplying both sides of \eqref{eq:352d} by $\exp(-z)$ we find that the result is also equivalent to the Taylor series for $\exp(-z)$ in the case $l = 0$. We now suppose that $l \geq 1$ and $m \geq 1$, and that \eqref{eq:352d} has been proved if $l$ is replaced by $l - 1$ or $m$ is replaced by $m - 1$. We deduce the result for the given values of $l$ and $m$ so that the theorem follows by induction.
 
 Because the result holds with $l$ replaced by $l - 1$ or with $m$ replaced by $m - 1$, we have
@@ -1656,7 +1657,7 @@ Variables:
 
   \label{def:355A}
   \lean{Butcher.Ch3.Def355A}
-  \uses{}
+  \uses{def:350A}
 The locus of points in the complex plane for which $\varphi(z) = R(z) \exp(-z)$ is real and positive is said to be the `order web' for the rational function $R$. The part of the order web connected to $0$ is the `principal order web'. The rays emanating from $0$ with increasing value of $\varphi$ are `up arrows' and those emanating from $0$ with decreasing $\varphi$ are `down arrows'.
 The up and down arrows leave the origin in a systematic pattern:
 \end{definition}
@@ -1672,7 +1673,7 @@ Define \(\varphi(z)=R(z)e^{-z}\). The principal order web is the part of the loc
 
   \label{thm:355B}
   \lean{Butcher.Ch3.Thm355B}
-  \uses{def:355A}
+  \uses{def:355A, thm:352A}
 Let \( R \) be a rational approximation to \( \exp \) of exact order \( p \), so that
 \[
 R(z) = \exp(z) - C z^{p+1} + O(z^{p+2}),
@@ -1682,7 +1683,7 @@ where the error constant \( C \) is non-zero. If \( C < 0 \) (\( C > 0 \)) there
 
 \begin{proof}
   \proves{thm:355B}
-  \uses{def:355A}
+  \uses{def:355A, thm:352A}
 If, for example, \( C < 0 \), consider the set \( \{ r \exp(i\theta) : r > 0, \theta \in [\frac{k 2\pi i}{p + 1} - \epsilon, \frac{k 2\pi i}{p + 1} + \epsilon] \} \), where \( \epsilon \) and \( r \) are both small and \( k \in \{0, 1, 2, \dots, p\} \). We have
 \[
 R(z) \exp(-z) = 1 + (-C) r^{p+1} \exp((p+1)\theta) + O(r^{p+2}).
@@ -1729,7 +1730,7 @@ result.
 
   \label{thm:355D}
   \lean{Butcher.Ch3.Thm355D}
-  \uses{def:355A}
+  \uses{def:355A, thm:355C}
 Let \( R \) be a rational approximation to \( \exp \) of order \( p \) with numerator degree \( n \) and denominator degree \( d \). Let \( \tilde{n} \) denote the number of down arrows terminating at zeros and \( \tilde{d} \) the number of up arrows terminating at poles of \( R \). Then
 \[
 n + \tilde{d} \geq p.
@@ -1738,7 +1739,7 @@ n + \tilde{d} \geq p.
 
 \begin{proof}
   \proves{thm:355D}
-  \uses{def:355A}
+  \uses{def:355A, thm:355C}
 There are \( p + 1 - \tilde{n} \) down arrows and \( p + 1 - \tilde{d} \) up arrows terminating at \( +\infty \) and \( -\infty \), respectively. Let \( \theta \) and \( \varphi \) be the minimum angles with the properties that all the down arrows which terminate at \( +\infty \) lie within \( \theta \) on either side of the positive real axis and all the up arrows which terminate at \( -\infty \) lie within an angle \( \varphi \) on either side of the negative real axis. Hence
 \[
 2\theta \geq \frac{(p - \tilde{n})2\pi}{p+1}, \quad 2\varphi \geq \frac{(p - \tilde{d})2\pi}{p+1}.
@@ -1759,13 +1760,13 @@ Order star analysis of Pad\'e approximations $R(z)$ to $\exp(z)$, with $\deg(\te
 
   \label{thm:355E}
   \lean{Butcher.Ch3.Thm355E}
-  \uses{def:355A, thm:355D}
+  \uses{thm:355D}
 Let \( R(z) \) denote a Pad\'{e} approximation to \( \exp(z) \), with degrees \( n \) (numerator) and \( d \) (denominator). Then \( n \) of the down arrows terminate at zeros and \( d \) of the up arrows terminate at poles.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:355E}
-  \uses{def:355A, thm:355D}
+  \uses{thm:355D}
 Because \( p = n + d \), \( n \geq \widehat{n} \) and \( d \geq \widehat{d} \), it follows from Theorem~\ref{thm:355D} that
 \[
 p = n + d \geq \widehat{n} + \widehat{d} \geq p
@@ -1782,13 +1783,13 @@ Analysis of A-stability of Runge--Kutta methods uses the order web, where up arr
 
   \label{thm:355F}
   \lean{Butcher.Ch3.Thm355F}
-  \uses{def:355A, def:442A, def:520C, def:520E, thm:351B}
+  \uses{def:355A, thm:351B}
 A Runge--Kutta method is A-stable only if all poles of the stability function $R(z)$ lie in the right half-plane and no up arrow of the order web intersects with or is tangential to the imaginary axis.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:355F}
-  \uses{def:355A, def:442A, def:520C, def:520E, thm:351B}
+  \uses{def:355A, thm:351B}
 The requirement on the poles is obvious. If an up arrow intersects or is tangential to the imaginary axis then there exists $y$ such that
 \[
 |R(iy) \exp(-iy)| > 1.
@@ -1802,13 +1803,13 @@ We are now in a position to prove the result formerly known as the Ehle conjectu
 
   \label{thm:355G}
   \lean{Butcher.Ch3.Thm355G}
-  \uses{def:355A, def:442A, def:520C, thm:355E, thm:355F}
+  \uses{def:355A, thm:355E, thm:355F}
 Let \( R(z) \) denote the stability function of a Runge--Kutta method. If \( R(z) \) is an \( (n, d) \) Pad\'e approximation to \( \exp(z) \) then the Runge--Kutta method is not A-stable unless \( d \leq n + 2 \).
 \end{theorem}
 
 \begin{proof}
   \proves{thm:355G}
-  \uses{def:355A, def:442A, def:520C, thm:355E, thm:355F}
+  \uses{def:355A, thm:355E, thm:355F}
 If \( d \geq n + 3 \) and \( p = n + d \), it follows that \( d \geq \frac{1}{2}(p + 3) \). By Theorem~355E, at least \( d \) up arrows terminate at poles. Suppose these leave zero in directions between \( -\theta \) and \( +\theta \) from the positive real axis. Then
 \[
 2\theta \geq \frac{2\pi(d - 1)}{p + 1} \geq \pi,
@@ -1834,7 +1835,7 @@ AN‑stability requires $|R(Z)| \le 1$ whenever $\operatorname{Re}(z_i) \le 0$ f
 
   \label{def:356A}
   \lean{Butcher.Ch3.Def356A}
-  \uses{def:356B}
+  \uses{def:356B, thm:356C}
 A Runge--Kutta method $(A, b, c)$ is `AN-stable' if the function
 \[
 R(Z) = 1 + b^\top Z (I - AZ)^{-1} \mathbf{1},
@@ -1847,11 +1848,11 @@ It is interesting that a simple necessary and sufficient condition exists for AN
 \noindent\textbf{Context.}
 The context concerns Runge‑Kutta methods and their stability properties, specifically AN‑stability and reducibility. The preceding text introduces AN‑stability and DJ‑irreducibility, noting that a method is DJ‑reducible if it can be simplified by deleting certain stages without affecting the computed result. Variables: $A$ (Runge–Kutta matrix with coefficients $a_{ij}$), $b$ (weight vector), $c$ (node vector), and $s$ (number of stages).
 
-\begin{definition}[reduced method (356B)]
+\begin{definition}[reduced method (356B) (356B)]
 
   \label{def:356B}
   \lean{Butcher.Ch3.Def356B}
-  \uses{cor:356D, def:381E, thm:356C}
+  \uses{cor:356D, thm:356C}
 A Runge--Kutta method is `DJ-reducible' if there exists a partition of the stages
 \[
 \{1, 2, \dots, s\} = S \cup S_0,
@@ -1939,7 +1940,7 @@ implying that the method is reducible to a method with only \( s \) stages.
 
   \label{def:357A}
   \lean{Butcher.Ch3.Def357A}
-  \uses{def:350A, def:356A, def:403A}
+  \uses{def:350A, def:356A}
 Definition 357A was first introduced, it was referred to as `B-stability', because it is one step more stringent than A-stability. In the non-autonomous form in which it seems to be a more useful concept, a more natural name is BN-stability.
 \end{definition}
 
@@ -2057,7 +2058,7 @@ The discussion connects AN-stability and BN-stability by showing the AN-stabilit
 
   \label{thm:357D}
   \lean{Butcher.Ch3.Thm357D}
-  \uses{def:142A, def:356A, def:356B, def:357A, def:357B, def:381E}
+  \uses{def:356A, def:356B, def:357A, def:357B}
 If an irreducible non-confluent Runge--Kutta method is BN-stable, then it is AN-stable.
 \end{theorem}
 
@@ -2165,7 +2166,7 @@ The W transformation for Runge--Kutta methods is defined via orthogonal polynomi
 
   \label{cor:359B}
   \lean{Butcher.Ch3.Cor359B}
-  \uses{cor:342D, def:357B, def:381A, lem:359A, thm:342C}
+  \uses{cor:342D, def:357B, lem:359A, thm:342C}
 Let $(A, b, c)$ denote a Runge--Kutta method for which $B = \operatorname{diag}(b)$ is positive definite and for which the abscissae are distinct. Define $W$ by \eqref{eq:359b} and $X$ by $X = W B A W$. Then $X_{kl} = (X_G)_{kl}$, as long as $k + l \leq p + 1$.
 
 The $W$ transformation is related in an interesting way to the $C(m)$ and $D(m)$ conditions, which can be written in the equivalent forms
@@ -2230,7 +2231,7 @@ For a singly implicit Runge--Kutta method, let $T$ be the transformation matrix 
 
   \label{thm:363A}
   \lean{Butcher.Ch3.Thm363A}
-  \uses{cor:342D, cor:359B, def:381A, lem:342A, lem:342B, lem:359A, thm:342C}
+  \uses{cor:342D, cor:359B, lem:342A, lem:342B, lem:359A, thm:342C}
 The $(i, j)$ element of $T^{-1}$ is equal to
 \[
 \frac{\xi_j}{s^2 L_{s-1}(\xi_j)^2} L_{i-1}(\xi_j). \tag{363d}
@@ -2301,13 +2302,13 @@ Referenced equations:
 
   \label{thm:372A}
   \lean{Butcher.Ch3.Thm372A}
-  \uses{def:370A, def:381A, thm:301A, thm:315A}
+  \uses{def:370A, thm:301A, thm:315A}
 Let $(A, b, c)$ be a symplectic Runge--Kutta method. The method has order $p$ if and only if for each non-superfluous tree and any vertex in this tree as root, $\Phi(t) = 1/\gamma(t)$, where $t$ is the rooted tree with this vertex.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:372A}
-  \uses{def:370A, def:381A, thm:301A, thm:315A}
+  \uses{def:370A, thm:301A, thm:315A}
 We need only to prove the sufficiency of this criterion. If two rooted trees belong to the same tree but have vertices $v_0$, $v_1$ say, then there is a sequence of vertices $v_0, v_1, \dots, v_m = v_1$, such that $v_{i-1}$ and $v_i$ are adjacent for $i = 1, 2, \dots, m$. This means that rooted trees $t$, $u$ exist such that $tu$ is the rooted tree with root $v_{i-1}$ and $ut$ is the rooted tree with root $v_i$. We are implicitly using induction on the order of trees and hence we can assume that $\Phi(t) = 1/\gamma(t)$ and $\Phi(u) = 1/\gamma(u)$. Hence, if one of the order conditions for the trees $tu$ and $ut$ is satisfied, then the other is. By working along the chain of possible roots $v_0, v_1, \dots, v_m$, we see that the order condition associated with the root $v_0$ is equivalent to the condition for $v_1$. In the case of superfluous trees, one choice of adjacent vertices would imply that $t = u$. Hence, \eqref{eq:372a} is equivalent to $2\Phi(tt) = 2/\gamma(tt)$ so that the order condition associated with $tt$ is satisfied and all rooted trees belonging to the same tree are also satisfied.
 \end{proof}
 
@@ -2320,7 +2321,7 @@ Consider an autonomous ODE $y' = f(y)$ with $f$ Lipschitz continuous. For two Ru
 
   \label{def:381A}
   \lean{Butcher.Ch3.Def381A}
-  \uses{def:110A, def:381C, def:381D, def:381E, def:381F}
+  \uses{def:110A, def:381B, def:381C, def:381D, def:381E, def:381F, thm:381H}
 Two Runge--Kutta methods are \emph{equivalent} if, for any initial value problem defined by an autonomous function $f$ satisfying a Lipschitz condition, and an initial value $y_0$, there exists $h_0 > 0$ such that the result computed by the first method is identical with the result computed by the second method, if $h \leq h_0$.
 \end{definition}
 
@@ -2344,7 +2345,7 @@ $0$-reducibility formalizes one type of reducibility.
 
   \label{def:381C}
   \lean{Butcher.Ch3.Def381C}
-  \uses{def:381D}
+  \uses{def:381B, def:381D, def:381E}
 A Runge--Kutta method $(A, b, c)$ is `0-reducible' if the stage index set can be partitioned into two subsets $\{1, 2, \dots, s\} = P_0 \cup P_1$ such that $b_i = 0$ for all $i \in P_0$ and such that $a_{ij} = 0$ if $i \in P_1$ and $j \in P_0$. The method formed by deleting all stages indexed by members of $P_0$ is known as the `0-reduced method'.
 \end{definition}
 
@@ -2375,11 +2376,11 @@ b_{I}= \sum_{i\in P_{I}} b_{i},\qquad
 c_{I}= c_{i}\;(i\in P_{I}).
 \]
 
-\begin{definition}[reduced method (381E)]
+\begin{definition}[reduced method (381E) (381E)]
 
   \label{def:381E}
   \lean{Butcher.Ch3.Def381E}
-  \uses{def:381C, def:381D}
+  \uses{def:381D}
 A Runge--Kutta method is `irreducible' if it is neither $0$-reducible nor $P$-reducible. The method formed from a method by first carrying out a $P$-reduction and then carrying out a $0$-reduction is said to be the `reduced method'.
 \end{definition}
 
@@ -2387,7 +2388,7 @@ A Runge--Kutta method is `irreducible' if it is neither $0$-reducible nor $P$-re
 
   \label{def:381F}
   \lean{Butcher.Ch3.Def381F}
-  \uses{def:356B, def:381E}
+  \uses{def:381E}
 Two Runge--Kutta methods are `$P$-equivalent' if each of them reduces to the same reduced method.
 \end{definition}
 
@@ -2424,13 +2425,13 @@ Consider a Runge--Kutta method with $s$ stages. Let $P$ be a partition of $\{1,2
 
   \label{thm:381H}
   \lean{Butcher.Ch3.Thm381H}
-  \uses{def:381A, def:381B, def:381D, def:381F}
+  \uses{def:381D, def:381F}
 Two Runge--Kutta methods are equivalent if and only if they are $P$-equivalent and if and only if they are $\Phi$-equivalent.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:381H}
-  \uses{def:381A, def:381B, def:381D, def:381F}
+  \uses{def:381D, def:381F}
 $P$-equivalence $\Rightarrow$ equivalence. It will be enough to prove that if $i, j \in P_I$, in any $P$-reducible Runge--Kutta method, where we have used the notation of
 \end{proof}
 
@@ -2459,7 +2460,7 @@ Let $\mathbf{1}$ be the identity equivalence class containing methods that map a
 
   \label{thm:382B}
   \lean{Butcher.Ch3.Thm382B}
-  \uses{def:381A, def:381D, lem:383D, thm:382A}
+  \uses{def:381A, lem:383D, thm:382A}
 Let $m$ denote a Runge--Kutta method. Then
 \[
 [m \cdot m^{-1}] = [m^{-1} \cdot m] = 1.
@@ -2467,7 +2468,7 @@ Let $m$ denote a Runge--Kutta method. Then
 
 \begin{proof}
   \proves{thm:382B}
-  \uses{def:381A, def:381D, lem:383D, thm:382A}
+  \uses{def:381A, lem:383D, thm:382A}
 The tableaux for the two composite methods $m \cdot m^{-1}$ and $m^{-1} \cdot m$
 are, respectively,
 \[
@@ -2573,13 +2574,14 @@ We can now restrict multiplication to trees, and we note that associativity stil
 
   \label{lem:383C}
   \lean{Butcher.Ch3.Lem383C}
-  \uses{lem:383A, lem:383D}
+  \uses{}
 Given $\alpha \in G_1$, there exist a left inverse and a right inverse.
 \end{lemma}
 
 \begin{proof}
   \proves{lem:383C}
-  \uses{lem:383A, lem:383D}
+
+  \proves{lem:383C}
 We show, by induction on the order of $t$, that it is possible to
 construct $\beta$ such that $(\alpha\beta)(t) = 0$ or $(\beta\alpha)(t) = 0$, for all $t \in T$. Because
 $(\alpha\beta)(\tau) = (\beta\alpha)(\tau) = \alpha(\tau) + \beta(\tau)$, the result is clear for order 1. Suppose the
@@ -2616,7 +2618,7 @@ Let $G_1$ be a group of mappings on trees, $\alpha\in G_1$ with inverse $\alpha^
 \begin{lemma}[Runge Kutta group inverse formula (383D)]
   \label{lem:383D}
   \lean{Butcher.Ch3.Lem383D}
-  \uses{lem:383A}
+  \uses{lem:383A, lem:383B, lem:383C}
 \label{lem:383D}
 Given $\alpha \in G_1$ and $t \in T$, written in the form $(V, E)$, then
 \[
@@ -2627,7 +2629,7 @@ Given $\alpha \in G_1$ and $t \in T$, written in the form $(V, E)$, then
 
 \begin{proof}
   \proves{lem:383D}
-  \uses{lem:383A}
+  \uses{lem:383A, lem:383B, lem:383C}
 Construct a mapping $\beta \in G_1$ equal to the right-hand side of \eqref{eq:383b}.
 We show that for any $t \in T$, $(\alpha\beta)(t) = 0$ so that $\alpha\beta = 1$. Let $t = (V, E)$.
 For any partition $P$ with components $(V_i, E_i)$, for $i = 1, 2, \dots, n$, we consider
@@ -2786,7 +2788,7 @@ For $\alpha, \beta, \gamma, \delta \in G$, the notation $\alpha = \beta + H_p$ m
 
   \label{thm:388A}
   \lean{Butcher.Ch3.Thm388A}
-  \uses{thm:388C}
+  \uses{thm:387A, thm:388C}
 Let \(\alpha \in G_1\), \(\beta \in G_1\), \(\gamma \in G\) and \(\delta \in G\) be such that
 \[
 \alpha = \beta + H_p \quad \text{and} \quad \gamma = \delta + H_p.
@@ -2796,7 +2798,7 @@ Then \(\alpha\gamma = \beta\delta + H_p\).
 
 \begin{proof}
   \proves{thm:388A}
-  \uses{thm:388C}
+  \uses{thm:387A, thm:388C}
 Two members of \(G\) differ by a member of \(H_p\) if and only if they take
 identical values for any \(t\) such that \(r(t) \leq p\). For any such \(t\), the formula
 for \((\alpha\gamma)(t)\) involves only values of \(\alpha(u)\) and \(\gamma(u)\) for \(r(u) < r(t)\). Hence,
@@ -2876,7 +2878,7 @@ G_1 \text{ (group of elementary weight functions)},\quad H_p \text{ (ideal for t
 
   \label{def:388D}
   \lean{Butcher.Ch3.Def388D}
-  \uses{thm:301A, thm:388A, thm:388C}
+  \uses{thm:301A, thm:388C}
 A member $\alpha$ of $G_1$ is in $C(\xi)$ if, for any tree $t$ such that $r(t) \leq \xi$, $\alpha(t) = \gamma(t)^{-1} \alpha(\tau)^{r(t)}$ and also
 \[
 \alpha([t\, t_1 t_2 \cdots t_m]) = \frac{1}{\gamma(t)} \alpha([\tau^{r(t)} t_1 t_2 \cdots t_m]), \tag{388c}
@@ -2888,7 +2890,7 @@ for any $t_1 t_2 \cdots t_m \in T$.
 
   \label{thm:388E}
   \lean{Butcher.Ch3.Thm388E}
-  \uses{def:388D, def:388F, thm:388A, thm:388G}
+  \uses{def:388D, thm:388G}
 The set $C(\xi)$ is a normal subgroup of $G_1$.
 
 A proof of this result, and of Theorem~\ref{thm:388G} below, is given in Butcher (1972).

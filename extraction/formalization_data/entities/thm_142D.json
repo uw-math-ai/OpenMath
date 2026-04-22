@@ -42,40 +42,13 @@
   ],
   "equations": [],
   "preamble": "This theorem is about the equivalence of several conditions for a square matrix A to be convergent (i.e., A^n → 0 as n→∞). The preceding theorem (142C) gives analogous conditions for matrix stability, which is related but distinct. The context assumes familiarity with matrix norms, eigenvalues, and Jordan canonical form.",
-  "introduces": [],
-  "dependencies": [
-    {
-      "id": "def:381A",
-      "kind": "definition",
-      "number": "381A",
-      "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
-    },
-    {
-      "id": "def:142B",
-      "kind": "definition",
-      "number": "142B",
-      "name": "convergent",
-      "edge_type": "uses_concept",
-      "context": "convergent"
-    }
+  "introduces": [
+    "convergent matrix (spectral radius equivalence)"
   ],
-  "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:142A",
-    "def:142B",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:402A",
-    "thm:356C"
-  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
   "dependents": [
+    "def:142B",
     "thm:142C",
     "thm:142E"
   ],

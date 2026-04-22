@@ -47,8 +47,9 @@
   "equations": [],
   "preamble": "The definition introduces elementary weights, internal weights, and derivative weights for a Runge–Kutta method using its tableau (c, A, b). These weights are defined recursively over rooted trees t in T, with base case for the tree τ.",
   "introduces": [
-    "internal weights",
-    "derivative weights"
+    "elementary weight for Runge-Kutta method",
+    "internal weight",
+    "derivative weight"
   ],
   "dependencies": [
     {

@@ -64,7 +64,7 @@
       "id": "lem:515B",
       "kind": "lemma",
       "number": "515B",
-      "name": "Stability and Consistency Imply Convergence",
+      "name": "Stability and Consistency Imply Convergence (515B)",
       "edge_type": "uses_lemma",
       "context": "Lemma 515B"
     }
@@ -72,16 +72,11 @@
   "transitive_dependencies": [
     "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:512A",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "lem:515A",
     "lem:515B",
     "thm:515D"

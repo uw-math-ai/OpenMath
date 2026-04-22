@@ -66,46 +66,21 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:406A",
-      "kind": "definition",
-      "number": "406A",
-      "name": "local truncation error",
-      "edge_type": "uses_concept",
-      "context": "local truncation error"
-    },
-    {
       "id": "lem:319A",
       "kind": "lemma",
       "number": "319A",
-      "name": "Global truncation error",
+      "name": "Global truncation error (RK)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
     "def:110A",
-    "def:142A",
-    "def:310A",
-    "def:403A",
-    "def:404A",
-    "def:404B",
-    "def:406A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "lem:110B",
     "lem:319A",
-    "thm:110C",
-    "thm:301A",
-    "thm:306A",
-    "thm:311B"
+    "thm:110C"
   ],
-  "dependents": [
-    "thm:212A"
-  ],
+  "dependents": [],
   "lean_file": null,
   "lean_symbol": null,
   "formalization_status": "unformalized"

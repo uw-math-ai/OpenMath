@@ -1,0 +1,380 @@
+{
+  "pass1": {
+    "thm:101A:794f109b26ac": [],
+    "def:110A:edc73c2d0f12": [
+      "Lipschitz condition in its second variable",
+      "Lipschitz constant"
+    ],
+    "lem:110B:eaec39678add": [],
+    "thm:110C:9039e6326ea2": [],
+    "thm:111A:f8cf01c81d92": [
+      "companion matrix",
+      "inhomogeneous term"
+    ],
+    "def:112A:188d689e18db": [
+      "one-sided Lipschitz condition",
+      "one-sided Lipschitz constant"
+    ],
+    "thm:112B:7fc9a4812b6b": [],
+    "thm:123A:73bc96c34b1f": [],
+    "thm:123B:61c65fb68fc8": [],
+    "thm:140A:40b1d588f647": [],
+    "thm:141A:cb06250c91a6": [],
+    "def:142A:84eee32843ce": [
+      "stable matrix",
+      "power-boundedness"
+    ],
+    "def:142B:134095e076c8": [
+      "convergent matrix"
+    ],
+    "thm:142C:7712e365d9b9": [],
+    "thm:142D:1a251f472b14": [
+      "convergent matrix"
+    ],
+    "thm:142E:59dcf441f739": [],
+    "thm:142F:ed508d8a29dc": [],
+    "thm:212A:fec7ef6add7d": [],
+    "thm:213A:57c1fa43413d": [],
+    "thm:213B:886a3a4508ef": [],
+    "thm:243A:8139662e1449": [],
+    "thm:301A:4a31bcc09e77": [],
+    "thm:302A:7a435b9cc4a7": [],
+    "thm:302B:973a55391864": [],
+    "thm:302C:004cc540405b": [],
+    "thm:304A:fa40deaa7f9b": [],
+    "thm:306A:c1ea294090f4": [],
+    "def:310A:ac03226ad68e": [
+      "elementary differential"
+    ],
+    "lem:310B:091df2afff15": [],
+    "lem:311A:1ff5489d9bc9": [],
+    "thm:311B:647ae1a53722": [],
+    "thm:311C:752d48692751": [],
+    "thm:311D:15d0d7ee8604": [],
+    "def:312A:9d80541913ae": [
+      "elementary weight",
+      "internal weight",
+      "derivative weight"
+    ],
+    "lem:312B:349f310bcacc": [],
+    "lem:313A:0fc5c9c4a6a8": [],
+    "thm:313B:d16433e3315b": [],
+    "thm:314A:96ab925181fe": [],
+    "thm:315A:a85639cb82f0": [],
+    "thm:317A:ec5dd47807af": [],
+    "lem:319A:4680f5c4dc61": [],
+    "thm:319B:15ca8a54fd19": [],
+    "lem:322A:bc4a781574e4": [],
+    "def:323A:d86853fbb0a3": [
+      "internal order of a stage"
+    ],
+    "thm:323B:9fcb7f5c43a2": [],
+    "thm:324A:231c68742388": [],
+    "thm:324B:f9b4d82508e9": [],
+    "thm:324C:bd776d316a81": [],
+    "thm:333A:ac2c911b1591": [],
+    "lem:342A:d4a130904082": [],
+    "lem:342B:a516683443a9": [],
+    "thm:342C:5f8cf3582cec": [],
+    "cor:342D:e11bf1a2d701": [],
+    "thm:343A:48e21fdfe0c5": [],
+    "thm:343B:49ec553ee4f0": [],
+    "thm:344A:4c98499994ca": [],
+    "def:350A:e4ef2fe4a51f": [
+      "A(α)-stable Runge–Kutta method"
+    ],
+    "lem:351A:dc790e9ba218": [],
+    "thm:351B:c2672239e7c5": [],
+    "thm:352A:f15f366c7fd6": [],
+    "thm:352B:b9a2256a22dc": [],
+    "thm:352C:e0b9d5ca3280": [],
+    "thm:352D:085e9b5536c8": [],
+    "thm:352E:31c87e08d131": [],
+    "thm:353A:320114262e9c": [],
+    "def:355A:9c2b15cd4932": [
+      "order web",
+      "principal order web",
+      "up arrow",
+      "down arrow"
+    ],
+    "thm:355B:672c3b03f5a4": [],
+    "thm:355C:58a9d629cfd8": [],
+    "thm:355D:10a2d4e3b79e": [],
+    "thm:355E:21f95a42859b": [],
+    "thm:355F:db431fbb0524": [],
+    "thm:355G:2224537c1bf5": [],
+    "def:356A:b571ee6b009e": [
+      "AN-stable Runge–Kutta method",
+      "DJ-irreducibility"
+    ],
+    "def:356B:97f16431a09a": [
+      "DJ-reducible Runge–Kutta method",
+      "reduced method (from DJ-reduction)"
+    ],
+    "thm:356C:b8fb651b8d6f": [],
+    "cor:356D:2cee132feeb9": [],
+    "def:357A:6ea10655a0a8": [
+      "BN-stability"
+    ],
+    "def:357B:c6f255813bde": [
+      "algebraically stable Runge–Kutta method"
+    ],
+    "thm:357C:2a253c58971b": [],
+    "thm:357D:69717d9fb86c": [],
+    "thm:358A:99d2959c91c5": [],
+    "lem:359A:7de9d1d4f430": [],
+    "cor:359B:ff3a3c0eb810": [],
+    "thm:359C:29575afea6c4": [],
+    "thm:363A:598ea301295c": [],
+    "def:370A:bf11909a93fe": [
+      "symplectic Runge–Kutta method"
+    ],
+    "thm:372A:94dca6dd7814": [],
+    "def:381A:0c4633e0be0b": [
+      "equivalent Runge–Kutta methods"
+    ],
+    "def:381B:67e63e46baf9": [
+      "Φ-equivalent Runge–Kutta methods",
+      "reducibility of a Runge–Kutta method"
+    ],
+    "def:381C:f03789030d0e": [
+      "0-reducible Runge–Kutta method",
+      "0-reduced method"
+    ],
+    "def:381D:ddda3d1f6493": [
+      "P-reducible Runge–Kutta method",
+      "P-reduced Runge–Kutta method"
+    ],
+    "def:381E:fb211cab23ac": [
+      "irreducible Runge–Kutta method",
+      "reduced method"
+    ],
+    "def:381F:9b0cdf669691": [
+      "P-equivalent Runge–Kutta methods"
+    ],
+    "thm:381G:9b526a2ce6e9": [],
+    "thm:381H:c0868eb00907": [],
+    "thm:382A:4c1099a199d4": [],
+    "thm:382B:bb1da8f86a1e": [],
+    "lem:383A:1155bef6316e": [],
+    "lem:383B:552574bc2e66": [],
+    "lem:383C:93e7a7007e50": [],
+    "lem:383D:6d1368f9c6e6": [],
+    "thm:384A:5913bc5bbc4c": [],
+    "thm:386A:d889377a872b": [],
+    "thm:387A:a9ded10b0db4": [],
+    "thm:388A:6f2d4273eb37": [],
+    "thm:388B:f4bd9a295db4": [],
+    "thm:388C:053c2b5f90cc": [],
+    "def:388D:5fc8e3be8628": [
+      "C(ξ) condition for elements of G₁"
+    ],
+    "thm:388E:8a3fbd6dd24f": [],
+    "def:388F:160895509ad3": [
+      "member of D(ξ)"
+    ],
+    "thm:388G:8638416eb7ed": [],
+    "thm:388H:cfbccd6f9fc9": [],
+    "lem:389A:1e31c8c317c5": [],
+    "def:402A:f913856c3c67": [
+      "convergent linear multistep method"
+    ],
+    "def:403A:62f7aa5045b2": [
+      "stable linear multistep method",
+      "zero-stability",
+      "stability in the sense of Dahlquist"
+    ],
+    "def:404A:8363b66e5dde": [
+      "preconsistent linear multistep method"
+    ],
+    "def:404B:b931c81da577": [
+      "consistent linear multistep method"
+    ],
+    "thm:405A:a6787eca53f3": [],
+    "thm:405B:eb160b4a1551": [],
+    "thm:405C:3d821efd186c": [],
+    "def:406A:9150ac73fc57": [
+      "local truncation error of a linear multistep method"
+    ],
+    "lem:406B:8d84cf7cc0b1": [],
+    "thm:406C:1f1f30bac540": [],
+    "thm:406D:7f61815ec1f1": [],
+    "thm:410A:9e3a5e287642": [],
+    "thm:410B:b2919f7a9ec3": [],
+    "thm:410C:011272cd0c19": [],
+    "thm:410D:36ecb2cd556d": [],
+    "thm:422A:3b3c4f1773ee": [],
+    "def:422B:13974133f889": [
+      "underlying one-step method"
+    ],
+    "thm:422C:638278c34979": [],
+    "thm:431A:6509aba4bc23": [
+      "strongly stable polynomial",
+      "Schur criterion"
+    ],
+    "lem:441A:ecff3dec17f0": [],
+    "lem:441B:08bae22683c6": [],
+    "thm:441C:1a87aa8b455a": [],
+    "def:442A:88d837ef7203": [
+      "A-stable function"
+    ],
+    "thm:443A:8f51cfd82fd7": [],
+    "thm:443B:6da0d1fa4ce9": [],
+    "def:451A:ef7cfe4e7d76": [
+      "G-stable one-leg method"
+    ],
+    "thm:454A:8e5056d944b3": [],
+    "def:510A:ef2a63abfe9c": [
+      "preconsistent general linear method",
+      "preconsistency vector"
+    ],
+    "def:510B:df5857b4660f": [
+      "consistent general linear method"
+    ],
+    "def:510C:8e227b3e27ab": [
+      "stable general linear method"
+    ],
+    "def:512A:473ded722123": [
+      "convergent general linear method"
+    ],
+    "thm:513A:2c31e6afd471": [],
+    "thm:514A:e590b7d5ebdf": [],
+    "lem:515A:cd3123afe7b8": [],
+    "lem:515B:541a39a95df0": [],
+    "lem:515C:b477c60baad1": [],
+    "thm:515D:187adc52d462": [],
+    "def:520A:87b442e256f4": [
+      "stability matrix of a general linear method"
+    ],
+    "thm:520B:80f1a56eb69c": [],
+    "def:520C:81fea1952f9e": [
+      "stability function for a general linear method",
+      "stability region for a general linear method",
+      "instability region for a general linear method"
+    ],
+    "thm:520D:af817d6ce22f": [
+      "strict stability region",
+      "A-stability"
+    ],
+    "def:520E:8eed34868e87": [
+      "A-stable general linear method"
+    ],
+    "def:520F:fc0f7cb9fcbd": [
+      "L-stable general linear method"
+    ],
+    "def:521A:17760e8cf085": [
+      "stability order",
+      "complexity of the stability function"
+    ],
+    "thm:521B:7ce9896d52b4": [],
+    "thm:523A:de43b35b0d24": [],
+    "thm:523B:cc22db6ececd": [],
+    "def:525A:c98d5f7b8717": [
+      "G-symplectic general linear method"
+    ],
+    "def:530A:d5b2f3952b1b": [
+      "degenerate starting method",
+      "non-degenerate starting method"
+    ],
+    "def:530B:c69764d8b107": [
+      "order of a general linear method relative to a starting method"
+    ],
+    "def:530C:efab0d1ad616": [
+      "order of a general linear method"
+    ],
+    "thm:532A:9f0a9190ae09": [],
+    "thm:534A:3de88dccc67d": [],
+    "thm:535A:8054830cfca2": [],
+    "thm:541A:fc780ecf889c": [],
+    "def:542A:1a93863d1a9d": [
+      "Runge–Kutta stability (RK stability) for a general linear method",
+      "stability function of a general linear method"
+    ],
+    "thm:550A:4f206029a8a0": [],
+    "thm:550B:8fddecb71749": [],
+    "cor:550C:ab1ae5f11f76": [],
+    "def:551A:77fe6e455142": [
+      "inherently Runge–Kutta stable general linear method"
+    ],
+    "thm:551B:659cfdf18f84": [],
+    "thm:553A:83d2d61e025e": []
+  },
+  "pass2": {
+    "19c5cfdbe2c7": {
+      "def:142B": [
+        "convergent matrix (spectral radius)"
+      ],
+      "thm:142D": [
+        "convergent matrix (spectral radius equivalence)"
+      ]
+    },
+    "929be7fc24a7": {
+      "def:381A": [
+        "equivalent Runge–Kutta methods (numerical solution equivalence)"
+      ],
+      "def:381B": [
+        "Φ-equivalent Runge–Kutta methods (elementary weight equivalence)"
+      ],
+      "def:381F": [
+        "P-equivalent Runge–Kutta methods (reducibility equivalence)"
+      ]
+    },
+    "e6e7e991e8ac": {
+      "def:110A": [
+        "Lipschitz constant for ordinary differential equations"
+      ],
+      "def:112A": [
+        "one-sided Lipschitz constant for ordinary differential equations"
+      ]
+    },
+    "548c281ffc7f": {
+      "def:530B": [
+        "order of a general linear method relative to a starting method"
+      ],
+      "def:530C": [
+        "order of a general linear method"
+      ]
+    },
+    "3b0b46d19cc5": {
+      "def:356B": [
+        "DJ-reduced Runge–Kutta method"
+      ],
+      "def:381C": [
+        "0-reduced Runge–Kutta method"
+      ],
+      "def:381E": [
+        "fully reduced Runge–Kutta method"
+      ]
+    },
+    "a547bd96abe1": {
+      "def:510C": [
+        "stable general linear method (matrix power boundedness)"
+      ],
+      "def:520E": [
+        "A-stable general linear method"
+      ],
+      "def:520F": [
+        "L-stable general linear method"
+      ],
+      "def:551A": [
+        "inherently Runge–Kutta stable general linear method"
+      ]
+    },
+    "0be73d0b0029": {
+      "def:312A": [
+        "elementary weight for Runge-Kutta method"
+      ],
+      "def:381B": [
+        "elementary weight for Φ-equivalence of Runge-Kutta methods"
+      ]
+    },
+    "6443418396c7": {
+      "def:110A": [
+        "Lipschitz constant for ordinary differential equations"
+      ],
+      "def:112A": [
+        "one-sided Lipschitz constant for ordinary differential equations"
+      ]
+    }
+  }
+}

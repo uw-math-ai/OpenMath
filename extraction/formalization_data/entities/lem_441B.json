@@ -35,11 +35,28 @@
   "equations": [],
   "preamble": "The lemma concerns the polynomial a(z) derived from the characteristic polynomial ρ(z) of a linear multistep method. The preceding text shows that a(z) has non-negative coefficients (with a1 > 0) due to its zeros having non-positive real parts. The statement refers to specific coefficients c2, c4, ... in the expansion of a(z) (or a related function).",
   "introduces": [],
-  "dependencies": [],
-  "transitive_dependencies": [],
-  "dependents": [
-    "lem:441A",
+  "dependencies": [
+    {
+      "id": "thm:441C",
+      "kind": "theorem",
+      "number": "441C",
+      "name": "Maximum order bound for stable linear multistep methods",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:110A",
+    "def:142A",
+    "def:403A",
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A",
     "thm:441C"
+  ],
+  "dependents": [
+    "lem:441A"
   ],
   "lean_file": null,
   "lean_symbol": null,

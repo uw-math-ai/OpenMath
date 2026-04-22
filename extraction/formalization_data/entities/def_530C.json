@@ -2,7 +2,7 @@
   "id": "def:530C",
   "kind": "definition",
   "number": "530C",
-  "name": "Order relative to starting method",
+  "name": "Order relative to starting method (530C)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -18,17 +18,14 @@
   "equations": [],
   "preamble": "",
   "introduces": [
-    "order",
-    "general linear method",
-    "non-degenerate starting method",
-    "order relative to a starting method"
+    "order of a general linear method"
   ],
   "dependencies": [
     {
       "id": "def:530B",
       "kind": "definition",
       "number": "530B",
-      "name": "Order relative to starting method",
+      "name": "Order relative to starting method (530B)",
       "edge_type": "uses_definition",
       "context": "Definition 530B"
     },
@@ -37,8 +34,8 @@
       "kind": "definition",
       "number": "530A",
       "name": "non-degenerate",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
+      "edge_type": "uses_concept",
+      "context": "non-degenerate starting method"
     }
   ],
   "transitive_dependencies": [
@@ -46,27 +43,10 @@
     "def:530B"
   ],
   "dependents": [
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:512A",
-    "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:520F",
-    "def:521A",
     "def:525A",
-    "def:542A",
-    "def:551A",
-    "thm:513A",
-    "thm:515D",
-    "thm:523A",
-    "thm:523B",
     "thm:532A",
     "thm:534A",
-    "thm:535A",
-    "thm:541A",
-    "thm:553A"
+    "thm:541A"
   ],
   "lean_file": null,
   "lean_symbol": null,

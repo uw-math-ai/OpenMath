@@ -2,7 +2,7 @@
   "id": "def:402A",
   "kind": "definition",
   "number": "402A",
-  "name": "convergent",
+  "name": "convergent (LMM)",
   "is_helper": false,
   "chapter": 4,
   "section": "40",
@@ -18,7 +18,7 @@
   "equations": [],
   "preamble": "",
   "introduces": [
-    "convergent"
+    "convergent linear multistep method"
   ],
   "dependencies": [
     {
@@ -34,8 +34,6 @@
     "def:110A"
   ],
   "dependents": [
-    "def:142B",
-    "def:512A",
     "thm:243A",
     "thm:405A",
     "thm:405B",

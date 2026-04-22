@@ -31,7 +31,7 @@
   "equations": [],
   "preamble": "The text discusses equivalence classes of Runge–Kutta methods, introducing three equivalence relations: 'equivalence', 'Φ-equivalence', and 'P-equivalence'. The definition given is for the first of these, termed 'equivalence', which compares the computed results of two methods for autonomous ODEs with Lipschitz conditions.",
   "introduces": [
-    "equivalent"
+    "equivalent Runge–Kutta methods (numerical solution equivalence)"
   ],
   "dependencies": [
     {
@@ -41,6 +41,14 @@
       "name": "Lipschitz condition in its second variable",
       "edge_type": "uses_concept",
       "context": "lipschitz condition"
+    },
+    {
+      "id": "def:381B",
+      "kind": "definition",
+      "number": "381B",
+      "name": "Φ-equivalent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "def:381C",
@@ -62,7 +70,7 @@
       "id": "def:381E",
       "kind": "definition",
       "number": "381E",
-      "name": "reduced method",
+      "name": "reduced method (381E)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -73,43 +81,33 @@
       "name": "P -equivalent",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
+    },
+    {
+      "id": "thm:381H",
+      "kind": "theorem",
+      "number": "381H",
+      "name": "Runge Kutta Equivalence Conditions",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
     "def:381F",
-    "thm:356C"
+    "thm:381H"
   ],
   "dependents": [
-    "cor:359B",
     "def:370A",
-    "def:442A",
-    "def:542A",
-    "lem:311A",
     "lem:383A",
     "lem:389A",
-    "thm:111A",
-    "thm:142C",
-    "thm:142D",
-    "thm:302A",
-    "thm:302B",
-    "thm:323B",
-    "thm:333A",
-    "thm:343B",
-    "thm:352A",
-    "thm:363A",
-    "thm:372A",
-    "thm:381H",
     "thm:382A",
     "thm:382B",
     "thm:384A",
-    "thm:388B",
-    "thm:523A"
+    "thm:388B"
   ],
   "lean_file": null,
   "lean_symbol": null,

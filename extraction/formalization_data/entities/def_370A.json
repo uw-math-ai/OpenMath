@@ -44,7 +44,7 @@
   ],
   "preamble": "The context involves Runge-Kutta methods applied to ODEs with quadratic invariants, where the matrix M arises from analyzing the preservation of these invariants. A method is symplectic if M is the zero matrix, ensuring conservation of quadratic forms like y^T Q y.",
   "introduces": [
-    "symplectic"
+    "symplectic Runge–Kutta method"
   ],
   "dependencies": [
     {
@@ -83,7 +83,7 @@
       "id": "def:381E",
       "kind": "definition",
       "number": "381E",
-      "name": "reduced method",
+      "name": "reduced method (381E)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -257,10 +257,8 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
     "def:310A",
-    "def:356B",
     "def:381A",
     "def:381B",
     "def:381C",
@@ -280,7 +278,6 @@
     "thm:306A",
     "thm:311B",
     "thm:314A",
-    "thm:356C",
     "thm:381G",
     "thm:381H",
     "thm:382A",

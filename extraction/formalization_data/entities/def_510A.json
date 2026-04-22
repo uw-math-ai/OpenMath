@@ -51,32 +51,21 @@
   "equations": [],
   "preamble": "A general linear method is defined by four matrices (A, U, B, V) and operates on a vector of approximations from the previous step. The method's behavior is characterized by vectors u and v, where u relates to the representation of the solution and its derivative in the input approximations.",
   "introduces": [
-    "preconsistent",
+    "preconsistent general linear method",
     "preconsistency vector"
   ],
   "dependencies": [
-    {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
     {
       "id": "def:404A",
       "kind": "definition",
       "number": "404A",
       "name": "preconsistent",
-      "edge_type": "uses_concept",
-      "context": "preconsistent"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "def:404A",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:404A"
   ],
   "dependents": [
     "def:510B",

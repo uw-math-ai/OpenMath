@@ -2,95 +2,53 @@
 
 This directory holds the pipeline that turns Butcher's *Numerical Methods
 for Ordinary Differential Equations* (PDF, 484 pages) into structured,
-formalization-ready data. **You are most likely here to consume that data
-for Lean formalization**, not to modify the pipeline. Start at §1.
+formalization-ready data. This file is a **dispatch document** — it tells
+you which deeper guide to open for what task.
 
-## §1 Consume extracted data (read this first)
+## §1 Consume extracted data → see [`FORMALIZATION_DATA_GUIDE.md`](FORMALIZATION_DATA_GUIDE.md)
 
-Per-theorem context lives in `formalization_data/entities/<id>.json`.
-Each file is **self-contained** — `json.load` it and you have everything
-needed to formalize one theorem in Lean.
+If you're a Lean formalization agent reading the extracted Butcher
+content, that guide is your primary reference: file layout, dependency-graph
+navigation, chapter-by-chapter order with the `thm:243A` Ch.2→Ch.4
+deferral, and sanity checks.
 
-```python
-import json, pathlib
-ROOT = pathlib.Path("extraction/formalization_data")
-ent = json.loads((ROOT / "entities" / "thm_110C.json").read_text())
-# Fields: statement_text, statement_latex, proof_text, proof_latex,
-# context_latex, variables, equations, preamble, dependencies (direct),
-# transitive_dependencies, dependents, name, page, subsection_title,
-# is_helper, lean_file, lean_symbol, formalization_status
-```
+The four files you'll touch most:
 
-**Schema reference:** [`formalization_data/README.md`](formalization_data/README.md) — what every field means, ID conventions, and full examples.
+| File | What it gives you |
+|---|---|
+| `formalization_data/entities/<id>.json` | one self-contained record per theorem/def/lemma/cor (175 total) |
+| `formalization_data/index.json` | flat scannable list — filter and count without opening 175 files |
+| `formalization_data/topo_order.json` | dependency-respecting linear order + Kahn tiers |
+| `formalization_data/lean_status.json` | the only file you edit — record what's formalized |
 
-### Picking what to formalize
+For exact field types and sources see
+[`formalization_data/README.md`](formalization_data/README.md) (the schema
+spec).
 
-```python
-topo = json.loads((ROOT / "topo_order.json").read_text())
-ready_now = topo["tiers"][0]["ids"]   # 16 entities with no formal deps
-```
-
-Tier `k` entities depend only on tiers `0..k-1`. Never assign a tier-`k`
-entity for formalization before everything in lower tiers is in Lean.
-
-### Browsing by location
-
-`by_chapter/ch0N.json` — hierarchical chapter → section → subsection →
-entity-IDs view, using config titles. Helpers (`aux:*`, no chapter) are
-excluded from this view; they appear in `index.json`.
-
-### Enumerating everything
-
-```python
-index = json.loads((ROOT / "index.json").read_text())
-# One row per entity: id, name, kind, chapter, page, n_deps,
-# n_dependents, has_proof, lean_file, formalization_status
-unformalized = [e for e in index if e["formalization_status"] == "unformalized"]
-```
-
-### Marking an entity as formalized
-
-When a Lean proof lands, edit the row in
-`formalization_data/lean_status.json` (and **only** that row):
-
-```json
-"thm:212A": {
-  "lean_file": "OpenMath/EulerConvergence.lean",
-  "lean_symbol": "EulerConvergence.global_error_bound",
-  "status": "done"
-}
-```
-
-Status values: `unformalized` | `in_progress` | `done`. Re-running
-Phase 8 preserves these edits and refreshes per-entity records.
-
-### ID conventions
-
-| Form | Use | Example |
-|---|---|---|
-| `thm:NNNX`, `def:NNNX`, `lem:NNNX`, `cor:NNNX` | Butcher textbook entity (3-digit subsection + uppercase letter) | `thm:110C`, `def:381A` |
-| `aux:<snake_case_slug>` | Lean-side helper, NOT in textbook | `aux:gronwall_exp_bound` |
-
-Filenames replace `:` with `_`: `entities/thm_110C.json`,
-`entities/aux_gronwall_exp_bound.json`.
-
-## §2 Add a new entity (missed textbook content OR reusable helper)
+## §2 Edit entities or dependency edges
 
 **Read [`EXTENSIBILITY.md`](EXTENSIBILITY.md) before doing anything.**
-It has step-by-step JSON examples, validation rules, an §8 quick
-checklist, and a §7 don'ts list.
+It has step-by-step JSON examples, validation rules, a §9 quick
+checklist, and a §8 don'ts list.
 
-The short version:
-- Missed Butcher entity (e.g. `Theorem 235B` is in the PDF but not
-  extracted) → append to `extensions/missing_statements.json`
-- New reusable Lean-side helper (e.g. a Grönwall-type bound used by
-  multiple theorems) → append to `extensions/helper_entities.json` with
-  an `aux:<slug>` ID
-- Manually-curated cross-references → append to `extensions/extra_references.json`
-- Then re-run Phase 8: `python -m pipeline.build_formalization_data`
+The short version (three situations — entities OR edges):
 
-Validation is strict (collisions, slug format, required fields all fail
-loudly). Dangling edge targets warn but don't crash.
+- **A. Missed Butcher entity** (e.g. `Theorem 235B` is in the PDF but
+  not extracted) → append to `extensions/missing_statements.json`
+  (EXTENSIBILITY §2).
+- **B. New reusable Lean-side helper** (e.g. a Grönwall-type bound used
+  by multiple theorems) → append to `extensions/helper_entities.json`
+  with an `aux:<slug>` ID (EXTENSIBILITY §3).
+- **C. Wrong or missing dependency edge** → edit
+  `extensions/extra_references.json` to **add** an edge, or
+  `extensions/removed_references.json` to **remove** an auto-derived
+  wrong edge. Both are pair-based; see EXTENSIBILITY §4.
+
+Then re-run Phase 8: `python -m pipeline.build_formalization_data`.
+
+Validation is strict (ID collisions, slug format, required fields all
+fail loudly). Dangling edge targets warn but don't crash. Denylist rows
+with missing `reason` or non-matching pairs also warn.
 
 ## §3 What to NEVER hand-edit
 
@@ -114,6 +72,7 @@ Edits only survive in:
 | 1b | `extract_html` | `raw_text/formatting.json` (bold tags) |
 | 2 | `extract_formal` | `raw_text/formal_statements.json` (175 entities) |
 | 3a | `extract_equations` | `raw_text/equations.json`, `equations_context.json` |
+| 2-fix | `fix_introduces` | overwrites `introduces` in `formal_statements.json` with peer-aware **qualified** names via DeepSeek (Pass 1 + Pass 2). Cached in `raw_text/introduces_cache.json`. Resolves bare-name homonyms like `convergent` (matrix vs LMM vs GLM). |
 | 4a | `extract_references` | `raw_text/references.json` (regex + concept + equation links) |
 | 4c | `break_cycles` | `raw_text/references_merged.json` (cycle-free DAG) |
 | 4b | `build_graph` | `graph/dependency_graph.{json,dot}`, `stats.json` |

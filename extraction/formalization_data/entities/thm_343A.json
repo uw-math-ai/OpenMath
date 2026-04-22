@@ -40,43 +40,11 @@
   ],
   "preamble": "The text discusses the reflection of a Runge-Kutta method, defined by transforming its tableau coefficients. The theorem states that reflecting a method twice returns the original method, and considers how simplifying assumptions (like order conditions) transfer to the reflected method.",
   "introduces": [],
-  "dependencies": [
-    {
-      "id": "thm:343B",
-      "kind": "theorem",
-      "number": "343B",
-      "name": "Reflected Order Conditions Preservation",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    }
+  "dependencies": [],
+  "transitive_dependencies": [],
+  "dependents": [
+    "thm:343B"
   ],
-  "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:310A",
-    "def:312A",
-    "def:323A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "lem:310B",
-    "lem:311A",
-    "lem:312B",
-    "lem:313A",
-    "thm:301A",
-    "thm:306A",
-    "thm:311B",
-    "thm:311C",
-    "thm:311D",
-    "thm:313B",
-    "thm:315A",
-    "thm:343B",
-    "thm:356C"
-  ],
-  "dependents": [],
   "lean_file": null,
   "lean_symbol": null,
   "formalization_status": "unformalized"

@@ -32,20 +32,30 @@
   "preamble": "The text discusses order star theory and introduces 'order arrows' as an alternative tool for studying stability. The context involves a stability function R(z) of order p, and the function φ(z) = R(z)exp(−z) which is used to define geometric structures in the complex plane.",
   "introduces": [
     "order web",
-    "up arrows",
-    "down arrows"
+    "principal order web",
+    "up arrow",
+    "down arrow"
   ],
-  "dependencies": [],
-  "transitive_dependencies": [],
+  "dependencies": [
+    {
+      "id": "def:350A",
+      "kind": "definition",
+      "number": "350A",
+      "name": "A-stability, A(α)-stability and L-stability",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    }
+  ],
+  "transitive_dependencies": [
+    "def:350A"
+  ],
   "dependents": [
     "def:442A",
     "thm:355B",
     "thm:355C",
     "thm:355D",
-    "thm:355E",
     "thm:355F",
     "thm:355G",
-    "thm:443A",
     "thm:443B"
   ],
   "lean_file": null,

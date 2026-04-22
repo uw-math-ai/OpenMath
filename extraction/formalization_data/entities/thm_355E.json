@@ -59,18 +59,22 @@
       "name": "Down arrow zero up arrow pole inequality",
       "edge_type": "uses_theorem",
       "context": "Theorem 355D"
-    },
-    {
-      "id": "def:355A",
-      "kind": "definition",
-      "number": "355A",
-      "name": "down arrows",
-      "edge_type": "uses_concept",
-      "context": "down arrows"
     }
   ],
   "transitive_dependencies": [
+    "cor:342D",
+    "def:350A",
     "def:355A",
+    "lem:342A",
+    "lem:342B",
+    "lem:359A",
+    "thm:342C",
+    "thm:352A",
+    "thm:352C",
+    "thm:352D",
+    "thm:352E",
+    "thm:355B",
+    "thm:355C",
     "thm:355D"
   ],
   "dependents": [

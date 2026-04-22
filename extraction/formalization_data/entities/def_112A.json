@@ -36,7 +36,8 @@
   "preamble": "The context considers differential equation systems posed on an inner product space R^N, with inner product ⟨·,·⟩ and norm defined from it. The function f defines the system, and the one-sided Lipschitz condition is introduced to analyze stiff problems.",
   "introduces": [
     "one-sided Lipschitz condition",
-    "one-sided Lipschitz constant"
+    "one-sided Lipschitz constant",
+    "one-sided Lipschitz constant for ordinary differential equations"
   ],
   "dependencies": [
     {
@@ -44,8 +45,8 @@
       "kind": "definition",
       "number": "110A",
       "name": "Lipschitz condition in its second variable",
-      "edge_type": "uses_concept",
-      "context": "lipschitz constant"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [

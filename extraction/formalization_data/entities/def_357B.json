@@ -40,7 +40,7 @@
   ],
   "preamble": "The context discusses BN-stability and AN-stability for Runge-Kutta methods applied to non-autonomous ODEs satisfying a dissipativity condition. The definition of algebraic stability provides a sufficient condition for these stability properties.",
   "introduces": [
-    "algebraically stable"
+    "algebraically stable Runge–Kutta method"
   ],
   "dependencies": [
     {
@@ -54,31 +54,10 @@
   ],
   "transitive_dependencies": [
     "cor:356D",
-    "def:110A",
-    "def:142A",
     "def:350A",
-    "def:355A",
     "def:356A",
     "def:356B",
     "def:357A",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
-    "def:404A",
-    "def:442A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:520F",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "thm:356C"
   ],
   "dependents": [

@@ -16,23 +16,13 @@ Semi-autonomous formalization of *A First Course in the Numerical Analysis of Di
 ## Rules
 
 - **Follow the strategy.** Do not cherry-pick easy goals or freelance.
-- **Before Aristotle submission, formalize locally first.** Write all required definitions, structures/predicates, and theorem statements in Lean, and verify they compile before sending subproblems to Aristotle.
 - If Mathlib is missing something, **build it yourself** as a helper lemma. "Mathlib gap" is never a final answer.
-- Do **not** introduce `axiom` or `constant` declarations. If a proof appears to require one, stop and write a blocker issue explaining why.
 - **Never increase `maxHeartbeats`** above 200000. Decompose the proof instead.
 - **Maximize Aristotle usage.** It is free compute. Submit ~5 jobs per cycle in batch, sleep 30 min, then process results. Do not poll repeatedly — one check after 30 min is enough.
-- At Aristotle submission time, consider all issue tickets in `.prover-state/issues/` and submit reasonable issue-scoped subproblems to Aristotle.
 - A cycle with zero changes is **unacceptable**. At minimum, decompose a sorry or write an issue.
 - If stuck on a sorry, write a structured issue file in `.prover-state/issues/` explaining **WHY** (not just "it's hard").
 - Prefer `lake env lean OpenMath/Foo.lean` to check individual files over `lake build`.
 - Keep proofs modular: one theorem per lemma, extract shared infrastructure into helper files.
-
-## Axiom and Assumption Safety
-
-Avoid both explicit axioms and hidden assumption creep:
-
-- For every new `class` or `structure`, include at least one concrete witness in the same cycle (for example, an `instance` or an explicit constructor-based `def`).
-- If a concrete witness cannot be provided yet, do not continue proving against that abstraction; write an issue documenting the missing non-vacuity evidence and what is needed to complete it.
 
 ## Build Commands
 
@@ -45,12 +35,14 @@ lake build                          # full build (uses cached .olean)
 
 ## What to Formalize
 
-Follow the textbook chapter by chapter. The current target is in `plan.md`. Each theorem should be:
+**Data guide: [`extraction/FORMALIZATION_DATA_GUIDE.md`](extraction/FORMALIZATION_DATA_GUIDE.md)** — explains the extracted Butcher content (file layout, per-entity JSON, dependency graph, chapter-by-chapter order with the `thm:243A` Ch.2→Ch.4 deferral, and `lean_status.json` semantics). Read this to understand what data is available; workflow is wired separately.
+
+Per-theorem content (statement, LaTeX, dependencies, prior-formalization status) is in `extraction/formalization_data/entities/<id>.json`. Schema spec: `extraction/formalization_data/README.md`. Each theorem should be:
 - Stated as closely to the textbook as possible
 - Proved in full (no sorry's in committed code, unless mid-restructuring)
 - Documented with a reference to the textbook section
 
-Per-theorem context (statement, LaTeX, dependencies, prior-formalization status) is available in `extraction/formalization_data/entities/<id>.json`. See `extraction/formalization_data/README.md` for the schema.
+The legacy `plan.md` (Iserles-based tracking, partially complete) is retained as a historical record of earlier formalization work in `OpenMath/*.lean` but is no longer the primary roadmap.
 
 ## Adding new entities
 

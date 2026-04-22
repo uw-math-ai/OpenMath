@@ -33,36 +33,12 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:520C",
-      "kind": "definition",
-      "number": "520C",
-      "name": "stability function",
-      "edge_type": "uses_concept",
-      "context": "stability function"
-    },
-    {
-      "id": "def:442A",
-      "kind": "definition",
-      "number": "442A",
-      "name": "principal sheet",
-      "edge_type": "uses_concept",
-      "context": "a-stable"
-    },
-    {
-      "id": "def:520E",
-      "kind": "definition",
-      "number": "520E",
-      "name": "A-stable",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    },
-    {
       "id": "def:355A",
       "kind": "definition",
       "number": "355A",
       "name": "down arrows",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
+      "edge_type": "uses_concept",
+      "context": "up arrow"
     },
     {
       "id": "thm:351B",
@@ -74,30 +50,9 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:142A",
+    "def:350A",
     "def:355A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
-    "def:404A",
-    "def:442A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:530A",
-    "def:530B",
-    "def:530C",
-    "thm:351B",
-    "thm:356C"
+    "thm:351B"
   ],
   "dependents": [
     "thm:355G",

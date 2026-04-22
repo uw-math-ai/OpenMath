@@ -2,7 +2,7 @@
   "id": "def:510B",
   "kind": "definition",
   "number": "510B",
-  "name": "consistent",
+  "name": "consistent (GLM)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -56,17 +56,9 @@
   ],
   "preamble": "The text discusses general linear methods defined by matrices (A, U, B, V) for solving ODEs, focusing on conditions for preconsistency and consistency. Preconsistency requires a vector u such that V u = u and U u = 1, ensuring the method can solve y' = 1 exactly. Consistency adds a vector v satisfying B1 + V v = u + v, related to second-order accuracy.",
   "introduces": [
-    "consistent"
+    "consistent general linear method"
   ],
   "dependencies": [
-    {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
     {
       "id": "def:510A",
       "kind": "definition",
@@ -84,14 +76,6 @@
       "context": "power-boundedness"
     },
     {
-      "id": "def:403A",
-      "kind": "definition",
-      "number": "403A",
-      "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stability"
-    },
-    {
       "id": "def:510C",
       "kind": "definition",
       "number": "510C",
@@ -102,16 +86,11 @@
   ],
   "transitive_dependencies": [
     "def:142A",
-    "def:403A",
     "def:404A",
     "def:510A",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:510C"
   ],
   "dependents": [
-    "def:404B",
     "def:512A",
     "def:520A",
     "def:542A",

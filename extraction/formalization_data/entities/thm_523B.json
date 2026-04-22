@@ -66,88 +66,38 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
-      "id": "def:357B",
-      "kind": "definition",
-      "number": "357B",
-      "name": "algebraically stable",
-      "edge_type": "uses_concept",
-      "context": "algebraically stable"
-    },
-    {
-      "id": "def:356B",
-      "kind": "definition",
-      "number": "356B",
-      "name": "reduced method",
-      "edge_type": "uses_concept",
-      "context": "reduced method"
-    },
-    {
-      "id": "def:403A",
-      "kind": "definition",
-      "number": "403A",
-      "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stability"
-    },
-    {
-      "id": "def:520E",
-      "kind": "definition",
-      "number": "520E",
-      "name": "A-stable",
-      "edge_type": "uses_concept",
-      "context": "a-stable"
-    },
-    {
       "id": "thm:523A",
       "kind": "theorem",
       "number": "523A",
       "name": "Non-linear stability",
       "edge_type": "uses_equation_from",
       "context": "(523b) owned by thm:523A"
+    },
+    {
+      "id": "def:357B",
+      "kind": "definition",
+      "number": "357B",
+      "name": "algebraically stable",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
     "cor:356D",
-    "def:110A",
     "def:142A",
     "def:350A",
-    "def:355A",
     "def:356A",
     "def:356B",
     "def:357A",
     "def:357B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
     "def:404A",
-    "def:442A",
     "def:510A",
     "def:510B",
     "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:520F",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "thm:356C",
     "thm:523A"
   ],
-  "dependents": [
-    "def:451A"
-  ],
+  "dependents": [],
   "lean_file": null,
   "lean_symbol": null,
   "formalization_status": "unformalized"

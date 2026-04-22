@@ -35,10 +35,19 @@
   "equations": [],
   "preamble": "The text defines three equivalence relations for Runge–Kutta methods: equivalence, Φ-equivalence, and P-equivalence. P-equivalence involves the concept of reducibility, where a method can be simplified by eliminating or combining stages. The definition of 0-reducibility formalizes one type of reducibility.",
   "introduces": [
-    "0-reducible",
-    "0-reduced method"
+    "0-reducible Runge–Kutta method",
+    "0-reduced method",
+    "0-reduced Runge–Kutta method"
   ],
   "dependencies": [
+    {
+      "id": "def:381B",
+      "kind": "definition",
+      "number": "381B",
+      "name": "Φ-equivalent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
     {
       "id": "def:381D",
       "kind": "definition",
@@ -46,15 +55,24 @@
       "name": "P -reducible",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
+    },
+    {
+      "id": "def:381E",
+      "kind": "definition",
+      "number": "381E",
+      "name": "reduced method (381E)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "def:381D"
+    "def:381B",
+    "def:381D",
+    "def:381E"
   ],
   "dependents": [
     "def:370A",
-    "def:381A",
-    "def:381E"
+    "def:381A"
   ],
   "lean_file": null,
   "lean_symbol": null,

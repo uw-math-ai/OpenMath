@@ -216,12 +216,6 @@
     "context": "Theorem 356C"
   },
   {
-    "source": "def:357A",
-    "target": "thm:520D",
-    "edge_type": "uses_concept",
-    "context": "a-stability"
-  },
-  {
     "source": "thm:357C",
     "target": "def:357B",
     "edge_type": "uses_equation_from",
@@ -582,18 +576,6 @@
     "context": "LLM-identified"
   },
   {
-    "source": "thm:111A",
-    "target": "def:520A",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "thm:111A",
-    "target": "thm:520B",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
     "source": "def:112A",
     "target": "def:110A",
     "edge_type": "llm_dependency",
@@ -672,18 +654,6 @@
     "context": "LLM-identified"
   },
   {
-    "source": "thm:212A",
-    "target": "lem:319A",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "thm:212A",
-    "target": "thm:319B",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
     "source": "thm:243A",
     "target": "def:403A",
     "edge_type": "llm_dependency",
@@ -698,12 +668,6 @@
   {
     "source": "thm:243A",
     "target": "def:402A",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "thm:243A",
-    "target": "thm:515D",
     "edge_type": "llm_dependency",
     "context": "LLM-identified"
   },
@@ -1020,32 +984,8 @@
     "context": "LLM-identified"
   },
   {
-    "source": "def:350A",
-    "target": "def:520E",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "def:350A",
-    "target": "def:520F",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "lem:351A",
-    "target": "def:520C",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
     "source": "lem:351A",
     "target": "thm:351B",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "thm:351B",
-    "target": "def:520E",
     "edge_type": "llm_dependency",
     "context": "LLM-identified"
   },
@@ -1160,12 +1100,6 @@
   {
     "source": "thm:355D",
     "target": "thm:355C",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "thm:355F",
-    "target": "def:520E",
     "edge_type": "llm_dependency",
     "context": "LLM-identified"
   },
@@ -1854,12 +1788,6 @@
     "context": "LLM-identified"
   },
   {
-    "source": "def:402A",
-    "target": "def:512A",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
     "source": "def:403A",
     "target": "thm:140A",
     "edge_type": "llm_dependency",
@@ -2040,18 +1968,6 @@
     "context": "LLM-identified"
   },
   {
-    "source": "thm:431A",
-    "target": "def:520C",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "thm:431A",
-    "target": "thm:520D",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
     "source": "lem:441A",
     "target": "def:403A",
     "edge_type": "llm_dependency",
@@ -2078,24 +1994,6 @@
   {
     "source": "lem:441B",
     "target": "thm:441C",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "def:442A",
-    "target": "def:520E",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "def:442A",
-    "target": "def:520C",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "def:442A",
-    "target": "def:520A",
     "edge_type": "llm_dependency",
     "context": "LLM-identified"
   },
@@ -2156,12 +2054,6 @@
   {
     "source": "thm:443B",
     "target": "thm:355C",
-    "edge_type": "llm_dependency",
-    "context": "LLM-identified"
-  },
-  {
-    "source": "def:451A",
-    "target": "thm:523B",
     "edge_type": "llm_dependency",
     "context": "LLM-identified"
   },

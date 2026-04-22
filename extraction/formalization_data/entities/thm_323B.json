@@ -61,16 +61,8 @@
       "kind": "definition",
       "number": "323A",
       "name": "internal order q",
-      "edge_type": "uses_concept",
-      "context": "internal order q"
-    },
-    {
-      "id": "def:381A",
-      "kind": "definition",
-      "number": "381A",
-      "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "thm:315A",
@@ -82,17 +74,9 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
     "def:310A",
     "def:312A",
     "def:323A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
     "lem:310B",
     "lem:311A",
     "lem:312B",
@@ -103,8 +87,7 @@
     "thm:311C",
     "thm:311D",
     "thm:313B",
-    "thm:315A",
-    "thm:356C"
+    "thm:315A"
   ],
   "dependents": [
     "thm:333A"

@@ -48,7 +48,7 @@
   ],
   "preamble": "The context discusses linear multistep methods for ODEs, defined by coefficients α_i and β_i. Preconsistency is a property ensuring exact solution for a trivial ODE, leading to condition (404a).",
   "introduces": [
-    "preconsistent"
+    "preconsistent linear multistep method"
   ],
   "dependencies": [],
   "transitive_dependencies": [],

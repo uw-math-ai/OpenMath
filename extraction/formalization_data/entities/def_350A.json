@@ -40,70 +40,12 @@
   ],
   "preamble": "The stability function R(z) for a Runge–Kutta method is defined, and A-stability (|R(z)| ≤ 1 for Re(z) ≤ 0) and L-stability (A-stable with R(∞) = 0) are introduced. The context is the stability analysis of implicit Runge–Kutta methods for stiff ODEs.",
   "introduces": [
-    "A(α)-stable",
-    "S(α)"
+    "A(α)-stable Runge–Kutta method"
   ],
-  "dependencies": [
-    {
-      "id": "def:520C",
-      "kind": "definition",
-      "number": "520C",
-      "name": "stability function",
-      "edge_type": "uses_concept",
-      "context": "stability function"
-    },
-    {
-      "id": "def:442A",
-      "kind": "definition",
-      "number": "442A",
-      "name": "principal sheet",
-      "edge_type": "uses_concept",
-      "context": "a-stable"
-    },
-    {
-      "id": "def:520E",
-      "kind": "definition",
-      "number": "520E",
-      "name": "A-stable",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    },
-    {
-      "id": "def:520F",
-      "kind": "definition",
-      "number": "520F",
-      "name": "L Stability Condition for Linear Methods",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    }
-  ],
-  "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:142A",
-    "def:355A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
-    "def:404A",
-    "def:442A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:520F",
-    "def:530A",
-    "def:530B",
-    "def:530C",
-    "thm:356C"
-  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
   "dependents": [
+    "def:355A",
     "def:357A",
     "lem:351A"
   ],

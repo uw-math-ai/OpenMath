@@ -2,7 +2,7 @@
   "id": "lem:515B",
   "kind": "lemma",
   "number": "515B",
-  "name": "Stability and Consistency Imply Convergence",
+  "name": "Stability and Consistency Imply Convergence (515B)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -57,7 +57,7 @@
       "id": "lem:515A",
       "kind": "lemma",
       "number": "515A",
-      "name": "Stability and consistency imply convergence",
+      "name": "Stability and consistency imply convergence (515A)",
       "edge_type": "uses_lemma",
       "context": "Lemma 515A"
     },
@@ -73,7 +73,7 @@
       "id": "def:510B",
       "kind": "definition",
       "number": "510B",
-      "name": "consistent",
+      "name": "consistent (GLM)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -89,7 +89,7 @@
       "id": "def:512A",
       "kind": "definition",
       "number": "512A",
-      "name": "convergent",
+      "name": "convergent (GLM)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     }
@@ -97,16 +97,11 @@
   "transitive_dependencies": [
     "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:512A",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "lem:515A",
     "thm:515D"
   ],

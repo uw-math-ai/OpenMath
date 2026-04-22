@@ -18,33 +18,22 @@
   "equations": [],
   "preamble": "",
   "introduces": [
-    "P -equivalent"
+    "P-equivalent Runge–Kutta methods",
+    "P-equivalent Runge–Kutta methods (reducibility equivalence)"
   ],
   "dependencies": [
-    {
-      "id": "def:356B",
-      "kind": "definition",
-      "number": "356B",
-      "name": "reduced method",
-      "edge_type": "uses_concept",
-      "context": "reduced method"
-    },
     {
       "id": "def:381E",
       "kind": "definition",
       "number": "381E",
-      "name": "reduced method",
+      "name": "reduced method (381E)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:356B",
-    "def:381C",
     "def:381D",
-    "def:381E",
-    "thm:356C"
+    "def:381E"
   ],
   "dependents": [
     "def:370A",

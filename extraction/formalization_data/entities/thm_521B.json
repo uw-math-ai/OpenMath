@@ -46,46 +46,23 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:520C",
-      "kind": "definition",
-      "number": "520C",
-      "name": "stability function",
-      "edge_type": "uses_concept",
-      "context": "stability function"
-    },
-    {
       "id": "def:521A",
       "kind": "definition",
       "number": "521A",
       "name": "Methods with maximal stability order",
       "edge_type": "uses_concept",
       "context": "stability order"
-    },
-    {
-      "id": "def:512A",
-      "kind": "definition",
-      "number": "512A",
-      "name": "convergent",
-      "edge_type": "uses_concept",
-      "context": "convergent"
     }
   ],
   "transitive_dependencies": [
-    "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
-    "def:512A",
     "def:520A",
     "def:520C",
-    "def:521A",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:521A"
   ],
   "dependents": [],
   "lean_file": null,

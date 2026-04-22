@@ -52,40 +52,27 @@
       "id": "def:512A",
       "kind": "definition",
       "number": "512A",
-      "name": "convergent",
+      "name": "convergent (GLM)",
       "edge_type": "uses_definition",
       "context": "Definition 512A"
-    },
-    {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
     },
     {
       "id": "def:510C",
       "kind": "definition",
       "number": "510C",
       "name": "stable",
-      "edge_type": "uses_concept",
-      "context": "stable"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
     "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
-    "def:512A",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:512A"
   ],
   "dependents": [
     "thm:514A"

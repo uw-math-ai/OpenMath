@@ -2,7 +2,7 @@
   "id": "thm:422A",
   "kind": "theorem",
   "number": "422A",
-  "name": "The underlying one-step method",
+  "name": "The underlying one-step method (LMM)",
   "is_helper": false,
   "chapter": 4,
   "section": "42",
@@ -20,20 +20,20 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:404A",
-      "kind": "definition",
-      "number": "404A",
-      "name": "preconsistent",
-      "edge_type": "uses_concept",
-      "context": "preconsistent"
-    },
-    {
       "id": "def:403A",
       "kind": "definition",
       "number": "403A",
       "name": "stability in the sense of Dahlquist",
       "edge_type": "uses_concept",
-      "context": "stability"
+      "context": "stable linear multistep method"
+    },
+    {
+      "id": "def:404A",
+      "kind": "definition",
+      "number": "404A",
+      "name": "preconsistent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "def:422B",
@@ -45,11 +45,16 @@
     }
   ],
   "transitive_dependencies": [
+    "def:110A",
     "def:142A",
     "def:381B",
     "def:403A",
     "def:404A",
-    "def:422B"
+    "def:422B",
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A"
   ],
   "dependents": [
     "thm:422C",

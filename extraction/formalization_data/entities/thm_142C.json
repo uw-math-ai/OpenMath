@@ -20,26 +20,18 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:381A",
-      "kind": "definition",
-      "number": "381A",
-      "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
-    },
-    {
       "id": "def:142A",
       "kind": "definition",
       "number": "142A",
       "name": "power-boundedness",
-      "edge_type": "uses_concept",
-      "context": "stable"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "def:142B",
       "kind": "definition",
       "number": "142B",
-      "name": "convergent",
+      "name": "convergent (matrix)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -61,20 +53,10 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
     "def:142A",
     "def:142B",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:402A",
     "thm:142D",
-    "thm:142E",
-    "thm:356C"
+    "thm:142E"
   ],
   "dependents": [
     "thm:142F"

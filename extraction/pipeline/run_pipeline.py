@@ -37,6 +37,11 @@ def main() -> None:
     from pipeline.extract_formal import main as extract_formal_main
     run_phase("Phase 2: Formal Statements", extract_formal_main)
 
+    # Phase 2b: Re-extract qualified 'introduces' (cache-only by default;
+    # pass --run-api when statement text changes to refresh)
+    from pipeline.fix_introduces import main as fix_introduces_main
+    run_phase("Phase 2b: Qualify Introduces", fix_introduces_main)
+
     # Phase 3a: Equation extraction
     from pipeline.extract_equations import main as extract_equations_main
     run_phase("Phase 3a: Equations", extract_equations_main)

@@ -18,11 +18,11 @@ Referenced equations:
 (212e)&\quad \alpha(x)=E(x)+\int_{x_{0}}^{x}\beta(\xi)d\xi.
 \end{align*}
 
-\begin{theorem}[Global truncation error (212A)]
+\begin{theorem}[Global truncation error (Euler) (212A)]
 
   \label{thm:212A}
   \lean{Butcher.Ch2.Thm212A}
-  \uses{def:110A, lem:319A, thm:319B}
+  \uses{def:110A}
 Assuming that \( f \) satisfies a Lipschitz condition, with constant \( L \), the global error satisfies the bound
 \[
 \| y(x) - \widehat{y}(x) \| \leq 
@@ -104,7 +104,7 @@ as $n \to \infty$.
 
   \label{thm:243A}
   \lean{Butcher.Ch2.Thm243A}
-  \uses{def:142A, def:142B, def:402A, def:403A, def:404B, thm:515D}
+  \uses{def:402A, def:403A, def:404B}
 A linear multistep method is convergent if and only if it is stable and consistent.
 \end{theorem}
 

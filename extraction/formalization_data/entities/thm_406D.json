@@ -89,51 +89,36 @@
       "id": "def:404B",
       "kind": "definition",
       "number": "404B",
-      "name": "consistent",
+      "name": "consistent (LMM)",
       "edge_type": "uses_concept",
-      "context": "consistent"
-    },
-    {
-      "id": "def:402A",
-      "kind": "definition",
-      "number": "402A",
-      "name": "convergent",
-      "edge_type": "uses_concept",
-      "context": "convergent"
+      "context": "consistent linear multistep method"
     },
     {
       "id": "def:403A",
       "kind": "definition",
       "number": "403A",
       "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stable"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
+      "id": "def:402A",
+      "kind": "definition",
+      "number": "402A",
+      "name": "convergent (LMM)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
     "def:142A",
     "def:310A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
     "def:402A",
     "def:403A",
     "def:404A",
     "def:404B",
     "def:406A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "lem:110B",
     "lem:406B",
     "thm:110C",
@@ -143,9 +128,7 @@
     "thm:301A",
     "thm:306A",
     "thm:311B",
-    "thm:356C",
-    "thm:406C",
-    "thm:520B"
+    "thm:406C"
   ],
   "dependents": [],
   "lean_file": null,

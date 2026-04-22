@@ -37,52 +37,30 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:381F",
-      "kind": "definition",
-      "number": "381F",
-      "name": "P -equivalent",
-      "edge_type": "uses_concept",
-      "context": "p -equivalent"
-    },
-    {
-      "id": "def:381B",
-      "kind": "definition",
-      "number": "381B",
-      "name": "Φ-equivalent",
-      "edge_type": "uses_concept",
-      "context": "φ-equivalent"
-    },
-    {
       "id": "def:381D",
       "kind": "definition",
       "number": "381D",
       "name": "P -reducible",
       "edge_type": "uses_concept",
-      "context": "p -reducible"
+      "context": "p -reducible runge–kutta method"
     },
     {
-      "id": "def:381A",
+      "id": "def:381F",
       "kind": "definition",
-      "number": "381A",
-      "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
+      "number": "381F",
+      "name": "P -equivalent",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:356B",
-    "def:381A",
-    "def:381B",
-    "def:381C",
     "def:381D",
     "def:381E",
-    "def:381F",
-    "thm:356C"
+    "def:381F"
   ],
   "dependents": [
-    "def:370A"
+    "def:370A",
+    "def:381A"
   ],
   "lean_file": null,
   "lean_symbol": null,

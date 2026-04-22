@@ -18,7 +18,7 @@
   "equations": [],
   "preamble": "",
   "introduces": [
-    "stable",
+    "stable matrix",
     "power-boundedness"
   ],
   "dependencies": [],
@@ -31,9 +31,7 @@
     "def:520E",
     "thm:142C",
     "thm:142E",
-    "thm:142F",
-    "thm:243A",
-    "thm:357D"
+    "thm:142F"
   ],
   "lean_file": null,
   "lean_symbol": null,

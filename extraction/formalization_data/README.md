@@ -1,5 +1,10 @@
 # `formalization_data/` — formalization-ready view of extraction outputs
 
+> **Reading the data?** For navigation, chapter ordering, the `thm:243A`
+> Ch.2→Ch.4 deferral rule, and worked examples, start with
+> [`../FORMALIZATION_DATA_GUIDE.md`](../FORMALIZATION_DATA_GUIDE.md).
+> **This file is the schema spec** — the exact field types and sources.
+
 This directory is the **single canonical, per-entity, easy-to-load** view of
 all 175 formal statements extracted from Butcher's textbook. It is designed
 for downstream consumers (Lean formalization workers, planners, dashboards)

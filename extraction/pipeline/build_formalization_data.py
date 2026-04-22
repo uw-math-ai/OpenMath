@@ -189,11 +189,46 @@ def _validate_helper(helper: dict, all_helper_slugs: set[str], auto_ids: set[str
     return sid
 
 
+def _validate_removed(raw: list, auto_ids: set[str]) -> tuple[list[dict], set[tuple[str, str]]]:
+    """Validate a removed_references.json list.
+
+    Returns (cleaned_rows, pair_set). Each row must have string 'source' and
+    'target'. 'reason' is optional but WARNED if missing. Unknown IDs WARN
+    but are retained (user may pre-deny an edge the extractor hasn't
+    produced yet — LLM runs are nondeterministic). Duplicates silently
+    deduplicated.
+    """
+    if not isinstance(raw, list):
+        raise ValueError("removed_references.json must contain a JSON array")
+
+    pair_set: set[tuple[str, str]] = set()
+    cleaned: list[dict] = []
+    for i, row in enumerate(raw):
+        if not isinstance(row, dict):
+            raise ValueError(f"removed_references[{i}]: entry must be an object")
+        for f in ("source", "target"):
+            if f not in row or not isinstance(row[f], str) or not row[f]:
+                raise ValueError(f"removed_references[{i}]: missing/invalid '{f}' (must be non-empty string)")
+        s, t = row["source"], row["target"]
+        if (s, t) in pair_set:
+            continue  # silent dedupe
+        if "reason" not in row or not row["reason"]:
+            print(f"  WARNING: removed_references[{i}] ({s} → {t}) has no 'reason' — add one so the denial doesn't rot")
+        for label, sid in (("source", s), ("target", t)):
+            if sid not in auto_ids:
+                print(f"  WARNING: removed_references[{i}]: {label} {sid!r} is not a known auto-extracted ID (kept anyway)")
+        pair_set.add((s, t))
+        cleaned.append(row)
+
+    return cleaned, pair_set
+
+
 def _load_extensions(auto_ids: set[str]) -> dict:
     """Load and validate hand-curated extensions. Raises on invalid input."""
     missing_raw = _read_extension("missing_statements.json", [])
     helper_raw = _read_extension("helper_entities.json", [])
     extra_edges = _read_extension("extra_references.json", [])
+    removed_raw = _read_extension("removed_references.json", [])
 
     if not isinstance(missing_raw, list) or not isinstance(helper_raw, list) or not isinstance(extra_edges, list):
         raise ValueError("extensions/*.json files must each contain a JSON array")
@@ -228,10 +263,15 @@ def _load_extensions(auto_ids: set[str]) -> dict:
                     f"extra_references[{i}]: missing required field '{f}'"
                 )
 
+    # Validate denylist
+    removed_edges, removed_pairs = _validate_removed(removed_raw, auto_ids)
+
     return {
         "missing_statements": missing_statements,
         "helpers": helpers,
         "extra_edges": extra_edges,
+        "removed_edges": removed_edges,
+        "removed_pairs": removed_pairs,
     }
 
 
@@ -300,6 +340,22 @@ def _merge_extensions_into_sources(sources: dict, ext: dict) -> tuple[dict, set[
             "equations": helper.get("equations", []) or [],
             "preamble": helper.get("preamble", "") or "",
         }
+
+    # Denylist: drop auto-derived edges that the user has marked wrong in
+    # extensions/removed_references.json (filter runs BEFORE the additive
+    # merge, so a pair in both files ends up as the manual add).
+    removed_pairs = ext.get("removed_pairs", set())
+    if removed_pairs:
+        before_pairs = {(e["source"], e["target"]) for e in sources["edges"]}
+        sources["edges"] = [e for e in sources["edges"]
+                            if (e["source"], e["target"]) not in removed_pairs]
+        matched = len(before_pairs & removed_pairs)
+        print(f"  Denylist: dropped {matched} edge(s) per removed_references.json")
+        unused = [r for r in ext["removed_edges"]
+                  if (r["source"], r["target"]) not in before_pairs]
+        for u in unused:
+            print(f"    WARN: removed_references row did not match any auto edge: "
+                  f"{u['source']} → {u['target']}")
 
     # Extra edges: append, then later cycle-break will run on the merged graph
     sources["edges"] = list(sources["edges"]) + list(ext["extra_edges"])
@@ -637,6 +693,51 @@ def _write_lean_status(known_ids: list[str], existing: dict[str, dict]) -> None:
     )
 
 
+# ── Regression assertion: no introducer-to-introducer concept edges ────
+
+
+def _assert_no_homonym_concept_edges(edges: list[dict], statements: list[dict]) -> None:
+    """Fail loudly if any uses_concept edge links two entities sharing a name.
+
+    After fix_introduces.py qualifies homonyms ("convergent" → "convergent
+    matrix" / "convergent linear multistep method"), these edges should be
+    impossible. This is a belt-and-suspenders guard against future
+    regressions when entities are added via extensions/.
+    """
+    names_path = RAW_TEXT_DIR / "statement_names.json"
+    if not names_path.exists():
+        return
+
+    raw_names = json.loads(names_path.read_text(encoding="utf-8"))
+    name_by_id: dict[str, str] = {}
+    for long_key, name in raw_names.items():
+        sid = _short_id_from_long(long_key)
+        if name and isinstance(name, str):
+            name_by_id[sid] = name.strip().lower()
+
+    bad = []
+    for e in edges:
+        if e.get("edge_type") != "uses_concept":
+            continue
+        s, t = e.get("source"), e.get("target")
+        ns, nt = name_by_id.get(s), name_by_id.get(t)
+        if ns and nt and ns == nt:
+            bad.append((s, t, ns, e.get("context")))
+
+    if bad:
+        msg_lines = [
+            f"Layer 1 regression: {len(bad)} uses_concept edge(s) link entities "
+            f"sharing a name (likely unqualified homonym in introduces field):"
+        ]
+        for s, t, n, ctx in bad:
+            msg_lines.append(f"  {s} → {t}  shared name={n!r}  context={ctx!r}")
+        msg_lines.append(
+            "Re-run `python -m pipeline.fix_introduces --run-api` to qualify the "
+            "homonyms, then re-run Phases 4a, 4c, build_graph, and Phase 8."
+        )
+        raise AssertionError("\n".join(msg_lines))
+
+
 # ── Main ───────────────────────────────────────────────────────────────
 
 
@@ -650,13 +751,15 @@ def main() -> None:
 
     # Merge extensions
     ext = _load_extensions(auto_ids)
-    n_missing, n_helpers, n_extra_edges = (
-        len(ext["missing_statements"]), len(ext["helpers"]), len(ext["extra_edges"]),
+    n_missing, n_helpers, n_extra_edges, n_removed = (
+        len(ext["missing_statements"]), len(ext["helpers"]),
+        len(ext["extra_edges"]), len(ext["removed_edges"]),
     )
-    if n_missing or n_helpers or n_extra_edges:
+    if n_missing or n_helpers or n_extra_edges or n_removed:
         print(
             f"  Extensions: +{n_missing} missing statements, "
-            f"+{n_helpers} helpers, +{n_extra_edges} extra edges"
+            f"+{n_helpers} helpers, +{n_extra_edges} extra edges, "
+            f"−{n_removed} denied edges"
         )
     sources, all_ids = _merge_extensions_into_sources(sources, ext)
 
@@ -688,6 +791,14 @@ def main() -> None:
 
     statements = sources["statements"]
     edges = sources["edges"]
+
+    # Emit the final, post-denylist, post-cycle-break edge set so downstream
+    # consumers (generate_blueprint, graph viz, etc.) don't re-apply edges we
+    # already decided to drop.
+    (OUT_DIR / "references_final.json").write_text(
+        json.dumps(edges, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
     known_ids = [_statement_id(s) for s in statements]
     known_ids_set = set(known_ids)
@@ -737,6 +848,9 @@ def main() -> None:
     print(f"  Textbook by chapter: {dict(sorted(by_chapter.items()))}")
     print(f"  Tiers: {len(tiers)} (tier-0 ready-to-formalize: {n_tier0})")
     print(f"  Unformalized: {n_unformalized} / With Lean: {n_with_lean}")
+
+    _assert_no_homonym_concept_edges(edges, statements)
+
     print(f"  Wrote {OUT_DIR}")
 
 

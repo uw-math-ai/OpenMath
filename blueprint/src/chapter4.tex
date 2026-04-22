@@ -2,7 +2,7 @@
 
 \section{Preliminaries}
 
-\begin{definition}[convergent (402A)]
+\begin{definition}[convergent (LMM) (402A)]
 
   \label{def:402A}
   \lean{Butcher.Ch4.Def402A}
@@ -24,7 +24,7 @@ y_n = \alpha_1 y_{n-1} + \alpha_2 y_{n-2} + \cdots + \alpha_k y_{n-k}
 
   \label{def:403A}
   \lean{Butcher.Ch4.Def403A}
-  \uses{def:142A}
+  \uses{def:142A, thm:140A}
 A linear multistep method $[\alpha, \beta]$ is `stable' if the difference equation \eqref{eq:403a} has only bounded solutions.
 
 Because stability concepts of one sort or another abound in the theory of initial value problems, `stability' is often referred to as `zero-stability' -- for example, in Lambert (1991) -- or as `stability in the sense of Dahlquist'.
@@ -81,11 +81,11 @@ Consistency adds condition (404b) from $y'=1$, $y=0$:
 \alpha_1 + 2\alpha_2 + \dots + k\alpha_k = \beta_0 + \beta_1 + \dots + \beta_k.
 \]
 
-\begin{definition}[consistent (404B)]
+\begin{definition}[consistent (LMM) (404B)]
 
   \label{def:404B}
   \lean{Butcher.Ch4.Def404B}
-  \uses{def:404A, def:510B, thm:306A}
+  \uses{def:404A, thm:306A}
 A linear multistep method satisfying \eqref{eq:404a} and \eqref{eq:404b} is said to be `consistent'.
 
 Another way of looking at the consistency conditions is to suppose that $y_i = y(x_i) + O(h^2)$ and that $f(x_i, y_i) = y'(x_i) + O(h)$, for $i = n-k, n-k+1, \dots, n-1$, and to consider the computation of $y_n$ using the equation
@@ -426,7 +426,7 @@ Altering the expression in \eqref{eq:410c} slightly, we can state without proof 
 criterion for order:
 \end{proof}
 
-\begin{theorem}[Order Condition for Linear Multistep Methods (410B)]
+\begin{theorem}[Order Condition for Linear Multistep Methods (410B) (410B)]
 
   \label{thm:410B}
   \lean{Butcher.Ch4.Thm410B}
@@ -485,7 +485,7 @@ The theorem concerns the order condition for a linear multistep method $[\alpha,
 \tag{410d}
 \end{equation}
 
-\begin{theorem}[Order Condition for Linear Multistep Methods (410D)]
+\begin{theorem}[Order Condition for Linear Multistep Methods (410D) (410D)]
 
   \label{thm:410D}
   \lean{Butcher.Ch4.Thm410D}
@@ -498,7 +498,7 @@ A linear multistep formula $[\alpha, \beta]$ has order $p$ if and only if
 
 \section{Errors and Error Growth}
 
-\begin{theorem}[The underlying one-step method (422A)]
+\begin{theorem}[The underlying one-step method (LMM) (422A)]
 
   \label{thm:422A}
   \lean{Butcher.Ch4.Thm422A}
@@ -597,7 +597,7 @@ Let $P$ be a polynomial of degree $n$; its type is a triple $(n_{1}, n_{2}, n_{3
 
   \label{thm:431A}
   \lean{Butcher.Ch4.Thm431A}
-  \uses{def:403A, def:520C, thm:520D}
+  \uses{}
 A polynomial $P_n$, given by
 \[
 P_n(w) = a_0 w^n + a_1 w^{n-1} + \cdots + a_{n-1} w + a_n,
@@ -613,7 +613,8 @@ P_{n-1}(w) = (a_0 \overline{a_0} - a_n \overline{a_n})w^{n-1} + (a_0 \overline{a
 
 \begin{proof}
   \proves{thm:431A}
-  \uses{def:403A, def:520C, thm:520D}
+
+  \proves{thm:431A}
 First note that (431e) is necessary for strong stability because if it were not true, the product of the zeros could not have a magnitude less than 1. Hence, we assume that this is the case and it remains to prove that $P_n$ is strongly stable if and only if the same property holds for $P_{n-1}$. It is easy to verify that
 \[
 wP_{n-1}(w) = a_0 P_n(w) - a_n w^n P_n(w^{-1}).
@@ -709,14 +710,13 @@ The coefficients $c_2,c_4,\dots$ appear in the expansion $a(z)=c_0+c_1z+c_2z^2+c
 
   \label{lem:441B}
   \lean{Butcher.Ch4.Lem441B}
-  \uses{}
+  \uses{thm:441C}
 The coefficients $c_2, c_4, \dots$ are all negative.
 \end{lemma}
 
 \begin{proof}
   \proves{lem:441B}
-
-  \proves{lem:441B}
+  \uses{thm:441C}
 Using the series for $\log(1+z)/(1-z)/z$, we see that $c_0, c_2, c_4, \dots$ satisfy
 \[
 \left(2 + \frac{2}{3}z^2 + \frac{2}{5}z^4 + \cdots \right)(c_0 + c_2 z^2 + c_4 z^4 + \cdots) = 1. \tag{441c}
@@ -743,7 +743,7 @@ The theorem concerns the order of stable linear multistep methods. The preceding
 
   \label{thm:441C}
   \lean{Butcher.Ch4.Thm441C}
-  \uses{def:403A, lem:441B}
+  \uses{def:403A}
 Let $[\alpha, \beta]$ denote a stable linear multistep method with order $p$. Then
 \[
 p \leq 
@@ -756,7 +756,7 @@ k + 2, & k \text{ even}.
 
 \begin{proof}
   \proves{thm:441C}
-  \uses{def:403A, lem:441B}
+  \uses{def:403A}
 Consider first the case $k$ odd and evaluate the coefficient of $z^{k+1}$ in \eqref{eq:441b}. This equals
 \[
 a_k c_2 + a_{k-2} c_4 + \cdots + a_1 c_{k+1}
@@ -788,7 +788,7 @@ Variables:
 
   \label{def:442A}
   \lean{Butcher.Ch4.Def442A}
-  \uses{def:355A, def:381A, def:520A, def:520C, def:520E}
+  \uses{def:355A}
 The function $\Phi$ is \textit{A-stable} if $R_\Phi$ has no intersection with the product set
 \[
 \{w \in \mathbb{C} : |w| > 1\} \times \{z \in \mathbb{C} : \operatorname{Re}(z) \leq 0\}.
@@ -844,13 +844,13 @@ Variables:
 
   \label{thm:443A}
   \lean{Butcher.Ch4.Thm443A}
-  \uses{def:355A, def:403A, def:442A, thm:355B, thm:355C, thm:355D, thm:355E, thm:355F, thm:355G}
+  \uses{def:442A, thm:355B, thm:355C, thm:355D, thm:355E, thm:355F, thm:355G}
 An A-stable linear multistep method cannot have order greater than 2.
 \end{theorem}
 
 \begin{proof}
   \proves{thm:443A}
-  \uses{def:355A, def:403A, def:442A, thm:355B, thm:355C, thm:355D, thm:355E, thm:355F, thm:355G}
+  \uses{def:442A, thm:355B, thm:355C, thm:355D, thm:355E, thm:355F, thm:355G}
 If the order were greater than 2, there would be more than three up arrows emanating from the origin. At least three of these up arrows would come out in the positive direction (or possibly would be tangential to the imaginary axis). Since there is only one pole, at least two of these arrows would cross the imaginary axis (or be tangential to it). Hence, the stability region does not include all of the imaginary axis and the method is not A-stable.
 
 We can make this result more precise by obtaining a bound on the error constant for second order A-stable methods. The result yields an optimal role for the second order Adams--Moulton method, for which the error constant is $-\frac{1}{12}$, because
@@ -907,7 +907,7 @@ Referenced equations:
 
   \label{def:451A}
   \lean{Butcher.Ch4.Def451A}
-  \uses{def:403A, thm:523B}
+  \uses{}
 A one-leg method $[\alpha, \beta]$ is `G-stable' if $M$ given by \eqref{eq:451e} is positive semi-definite.
 
 We present the example of the BDF2 method with

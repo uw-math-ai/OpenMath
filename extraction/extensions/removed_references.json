@@ -1,0 +1,92 @@
+[
+  {
+    "source": "def:357A",
+    "target": "thm:520D",
+    "reason": "def:357A references A-stability as background; A-stability was introduced in def:350A (Ch3), not thm:520D (Ch5). Matcher mis-targeted because thm:520D's introduces wrongly listed 'A-stability' (it only uses the concept)."
+  },
+  {
+    "source": "thm:111A",
+    "target": "def:520A",
+    "reason": "Ch1 linear-ODE superposition principle has no dep on Ch5 GLM stability matrix; LLM false positive."
+  },
+  {
+    "source": "thm:111A",
+    "target": "thm:520B",
+    "reason": "Ch1 linear-ODE superposition principle has no dep on Ch5 GLM stability result; LLM false positive."
+  },
+  {
+    "source": "thm:212A",
+    "target": "lem:319A",
+    "reason": "thm:212A (Ch2 Euler global error) uses Lipschitz defined in Ch1, not a Ch3 Runge-Kutta lemma; LLM false positive."
+  },
+  {
+    "source": "thm:212A",
+    "target": "thm:319B",
+    "reason": "Ch2 Euler theorem predates Ch3 Runge-Kutta truncation theorem; direction wrong."
+  },
+  {
+    "source": "thm:243A",
+    "target": "thm:515D",
+    "reason": "thm:515D (GLM: stability+consistency implies convergence) generalizes thm:243A (same for LMM); thm:243A does not depend on its own generalization."
+  },
+  {
+    "source": "def:350A",
+    "target": "def:520E",
+    "reason": "Parallel definitions: A(alpha)-stability for Runge-Kutta (Ch3) vs. A-stability for general linear methods (Ch5). Neither depends on the other."
+  },
+  {
+    "source": "def:350A",
+    "target": "def:520F",
+    "reason": "Parallel definitions: A(alpha)-stability for Runge-Kutta (Ch3) vs. L-stability for general linear methods (Ch5). No dependency."
+  },
+  {
+    "source": "lem:351A",
+    "target": "def:520C",
+    "reason": "Parallel concepts: stability function formula for Runge-Kutta (Ch3) vs. stability function definition for general linear methods (Ch5)."
+  },
+  {
+    "source": "thm:351B",
+    "target": "def:520E",
+    "reason": "Parallel concepts: A-stability criterion for Runge-Kutta (Ch3) vs. A-stability definition for general linear methods (Ch5)."
+  },
+  {
+    "source": "thm:355F",
+    "target": "def:520E",
+    "reason": "Parallel: Runge-Kutta A-stability order-stars result vs. GLM A-stability definition. No dependency."
+  },
+  {
+    "source": "def:402A",
+    "target": "def:512A",
+    "reason": "def:512A (convergent general linear method) generalizes def:402A (convergent LMM); direction wrong."
+  },
+  {
+    "source": "thm:431A",
+    "target": "def:520C",
+    "reason": "Parallel: LMM Schur criterion (Ch4) vs. GLM stability function definition (Ch5). No dependency."
+  },
+  {
+    "source": "thm:431A",
+    "target": "thm:520D",
+    "reason": "Parallel: LMM Schur criterion (Ch4) vs. GLM stability region result (Ch5). No dependency."
+  },
+  {
+    "source": "def:442A",
+    "target": "def:520E",
+    "reason": "def:442A's 'A-stable function' is an order-stars tool for LMM (Ch4); no dep on GLM A-stability definition (Ch5)."
+  },
+  {
+    "source": "def:442A",
+    "target": "def:520C",
+    "reason": "def:442A (Ch4 order-stars) has no dep on Ch5 GLM stability function."
+  },
+  {
+    "source": "def:442A",
+    "target": "def:520A",
+    "reason": "def:442A (Ch4 order-stars) has no dep on Ch5 GLM stability matrix."
+  },
+  {
+    "source": "def:451A",
+    "target": "thm:523B",
+    "reason": "thm:523B generalizes G-stability to general linear methods (Ch5); def:451A (G-stable one-leg, Ch4) predates and does not depend on the generalization."
+  }
+]

@@ -45,17 +45,9 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
     "def:310A",
     "def:312A",
     "def:323A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
     "lem:310B",
     "lem:311A",
     "lem:312B",
@@ -69,8 +61,7 @@
     "thm:314A",
     "thm:315A",
     "thm:317A",
-    "thm:324A",
-    "thm:356C"
+    "thm:324A"
   ],
   "dependents": [],
   "lean_file": null,

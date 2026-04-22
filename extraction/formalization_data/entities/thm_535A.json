@@ -2,7 +2,7 @@
   "id": "thm:535A",
   "kind": "theorem",
   "number": "535A",
-  "name": "The underlying one-step method",
+  "name": "The underlying one-step method (GLM)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -74,20 +74,12 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
       "id": "def:510B",
       "kind": "definition",
       "number": "510B",
-      "name": "consistent",
+      "name": "consistent (GLM)",
       "edge_type": "uses_concept",
-      "context": "consistent"
+      "context": "consistent general linear method"
     },
     {
       "id": "def:510A",
@@ -109,7 +101,7 @@
       "id": "thm:422A",
       "kind": "theorem",
       "number": "422A",
-      "name": "The underlying one-step method",
+      "name": "The underlying one-step method (LMM)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -123,6 +115,7 @@
     }
   ],
   "transitive_dependencies": [
+    "def:110A",
     "def:142A",
     "def:381B",
     "def:403A",
@@ -131,9 +124,10 @@
     "def:510A",
     "def:510B",
     "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
+    "lem:110B",
+    "thm:110C",
+    "thm:111A",
+    "thm:140A",
     "thm:422A"
   ],
   "dependents": [],

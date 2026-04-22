@@ -37,14 +37,6 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:381D",
-      "kind": "definition",
-      "number": "381D",
-      "name": "P -reducible",
-      "edge_type": "uses_concept",
-      "context": "p -reducible"
-    },
-    {
       "id": "def:381A",
       "kind": "definition",
       "number": "381A",
@@ -70,17 +62,18 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
     "def:381F",
     "lem:383A",
+    "lem:383B",
+    "lem:383C",
     "lem:383D",
-    "thm:356C",
+    "thm:381H",
     "thm:382A"
   ],
   "dependents": [

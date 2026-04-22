@@ -2,7 +2,7 @@
   "id": "def:142B",
   "kind": "definition",
   "number": "142B",
-  "name": "convergent",
+  "name": "convergent (matrix)",
   "is_helper": false,
   "chapter": 1,
   "section": "14",
@@ -31,17 +31,9 @@
   "equations": [],
   "preamble": "The subsection discusses properties of powers of a matrix A, focusing on when the sequence of powers is bounded and when it converges to zero. The definitions are given in terms of matrix norms and limits.",
   "introduces": [
-    "convergent"
+    "convergent matrix (spectral radius)"
   ],
   "dependencies": [
-    {
-      "id": "def:402A",
-      "kind": "definition",
-      "number": "402A",
-      "name": "convergent",
-      "edge_type": "uses_concept",
-      "context": "convergent"
-    },
     {
       "id": "def:142A",
       "kind": "definition",
@@ -49,17 +41,22 @@
       "name": "power-boundedness",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
+    },
+    {
+      "id": "thm:142D",
+      "kind": "theorem",
+      "number": "142D",
+      "name": "Convergence Equivalence for Matrix Powers",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "def:110A",
     "def:142A",
-    "def:402A"
+    "thm:142D"
   ],
   "dependents": [
-    "thm:142C",
-    "thm:142D",
-    "thm:243A"
+    "thm:142C"
   ],
   "lean_file": null,
   "lean_symbol": null,

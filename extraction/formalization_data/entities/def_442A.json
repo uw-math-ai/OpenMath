@@ -31,80 +31,23 @@
   "equations": [],
   "preamble": "The text introduces order stars on Riemann surfaces for linear multistep methods, where Φ(w, z) is the characteristic polynomial of the stability matrix. The Riemann surface RΦ is defined by Φ(w, z) = 0, and the method has order p if Φ(exp(z), z) = O(z^{p+1}).",
   "introduces": [
-    "principal sheet",
-    "A-stable"
+    "A-stable function"
   ],
   "dependencies": [
-    {
-      "id": "def:520A",
-      "kind": "definition",
-      "number": "520A",
-      "name": "Introduction",
-      "edge_type": "uses_concept",
-      "context": "stability matrix"
-    },
     {
       "id": "def:355A",
       "kind": "definition",
       "number": "355A",
       "name": "down arrows",
       "edge_type": "uses_concept",
-      "context": "down arrows"
-    },
-    {
-      "id": "def:381A",
-      "kind": "definition",
-      "number": "381A",
-      "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
-    },
-    {
-      "id": "def:520E",
-      "kind": "definition",
-      "number": "520E",
-      "name": "A-stable",
-      "edge_type": "uses_concept",
-      "context": "a-stable"
-    },
-    {
-      "id": "def:520C",
-      "kind": "definition",
-      "number": "520C",
-      "name": "stability function",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
+      "context": "down arrow"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:142A",
-    "def:355A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
-    "def:404A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:530A",
-    "def:530B",
-    "def:530C",
-    "thm:356C"
+    "def:350A",
+    "def:355A"
   ],
   "dependents": [
-    "def:350A",
-    "thm:351B",
-    "thm:355F",
-    "thm:355G",
     "thm:443A",
     "thm:443B",
     "thm:454A"

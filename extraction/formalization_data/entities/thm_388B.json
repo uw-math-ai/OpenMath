@@ -24,20 +24,19 @@
       "kind": "definition",
       "number": "381A",
       "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
     "def:381F",
-    "thm:356C"
+    "thm:381H"
   ],
   "dependents": [
     "def:370A",

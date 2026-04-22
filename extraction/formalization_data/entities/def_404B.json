@@ -2,7 +2,7 @@
   "id": "def:404B",
   "kind": "definition",
   "number": "404B",
-  "name": "consistent",
+  "name": "consistent (LMM)",
   "is_helper": false,
   "chapter": 4,
   "section": "40",
@@ -52,17 +52,9 @@
   ],
   "preamble": "The context defines a linear multistep method for solving an ODE y' = f(x,y). The method uses k past steps with coefficients α_i and β_i. Preconsistency (404a) ensures exact solution for y'=0, y=1. Consistency adds condition (404b) from analyzing y'=1, y=0.",
   "introduces": [
-    "consistent"
+    "consistent linear multistep method"
   ],
   "dependencies": [
-    {
-      "id": "def:510B",
-      "kind": "definition",
-      "number": "510B",
-      "name": "consistent",
-      "edge_type": "uses_concept",
-      "context": "consistent"
-    },
     {
       "id": "def:404A",
       "kind": "definition",
@@ -81,16 +73,8 @@
     }
   ],
   "transitive_dependencies": [
-    "def:142A",
     "def:310A",
-    "def:403A",
     "def:404A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "thm:301A",
     "thm:306A",
     "thm:311B"

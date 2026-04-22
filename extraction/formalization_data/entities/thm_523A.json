@@ -20,26 +20,10 @@
   "introduces": [],
   "dependencies": [
     {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
-      "id": "def:381A",
-      "kind": "definition",
-      "number": "381A",
-      "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
-    },
-    {
       "id": "def:510B",
       "kind": "definition",
       "number": "510B",
-      "name": "consistent",
+      "name": "consistent (GLM)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -53,24 +37,11 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
     "def:142A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
-    "thm:356C"
+    "def:510C"
   ],
   "dependents": [
     "thm:523B"

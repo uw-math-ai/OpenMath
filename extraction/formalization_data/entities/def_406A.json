@@ -48,16 +48,16 @@
   ],
   "preamble": "The standard initial value problem is an autonomous ODE (406a) on [x0, x] with given initial value at x0, using positive stepsize h. The method is a consistent linear multistep method with coefficients α_i and β_i.",
   "introduces": [
-    "local truncation error"
+    "local truncation error of a linear multistep method"
   ],
   "dependencies": [
     {
       "id": "def:404B",
       "kind": "definition",
       "number": "404B",
-      "name": "consistent",
+      "name": "consistent (LMM)",
       "edge_type": "uses_concept",
-      "context": "consistent"
+      "context": "consistent linear multistep method"
     },
     {
       "id": "def:404A",
@@ -69,25 +69,15 @@
     }
   ],
   "transitive_dependencies": [
-    "def:142A",
     "def:310A",
-    "def:403A",
     "def:404A",
     "def:404B",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "thm:301A",
     "thm:306A",
     "thm:311B"
   ],
   "dependents": [
-    "def:542A",
-    "lem:406B",
-    "thm:319B"
+    "lem:406B"
   ],
   "lean_file": null,
   "lean_symbol": null,

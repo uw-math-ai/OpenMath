@@ -18,40 +18,12 @@
   "equations": [],
   "preamble": "",
   "introduces": [],
-  "dependencies": [
-    {
-      "id": "lem:383A",
-      "kind": "lemma",
-      "number": "383A",
-      "name": "The Runge–Kutta group",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    },
-    {
-      "id": "lem:383D",
-      "kind": "lemma",
-      "number": "383D",
-      "name": "Runge Kutta group inverse formula",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    }
-  ],
-  "transitive_dependencies": [
-    "cor:356D",
-    "def:110A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "lem:383A",
-    "lem:383D",
-    "thm:356C"
-  ],
+  "dependencies": [],
+  "transitive_dependencies": [],
   "dependents": [
     "def:370A",
     "lem:383B",
+    "lem:383D",
     "thm:386A"
   ],
   "lean_file": null,

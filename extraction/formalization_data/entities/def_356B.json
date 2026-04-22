@@ -2,7 +2,7 @@
   "id": "def:356B",
   "kind": "definition",
   "number": "356B",
-  "name": "reduced method",
+  "name": "reduced method (356B)",
   "is_helper": false,
   "chapter": 3,
   "section": "36",
@@ -35,8 +35,9 @@
   "equations": [],
   "preamble": "The context is about Runge–Kutta methods and their stability properties, specifically AN-stability and reducibility. The preceding text introduces AN-stability and DJ-irreducibility, noting that a method is DJ-reducible if it can be simplified by deleting certain stages without affecting the computed result.",
   "introduces": [
-    "DJ-reducible",
-    "reduced method"
+    "DJ-reducible Runge–Kutta method",
+    "reduced method (from DJ-reduction)",
+    "DJ-reduced Runge–Kutta method"
   ],
   "dependencies": [
     {
@@ -54,28 +55,15 @@
       "name": "Positive weights for DJ irreducible methods",
       "edge_type": "uses_corollary",
       "context": "Corollary 356D"
-    },
-    {
-      "id": "def:381E",
-      "kind": "definition",
-      "number": "381E",
-      "name": "reduced method",
-      "edge_type": "uses_concept",
-      "context": "reduced method"
     }
   ],
   "transitive_dependencies": [
     "cor:356D",
-    "def:381C",
-    "def:381D",
-    "def:381E",
     "thm:356C"
   ],
   "dependents": [
     "def:356A",
-    "def:381F",
-    "thm:357D",
-    "thm:523B"
+    "thm:357D"
   ],
   "lean_file": null,
   "lean_symbol": null,

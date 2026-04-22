@@ -56,25 +56,9 @@
   ],
   "preamble": "The text discusses general linear methods defined by four matrices (A, U, B, V). Preconsistency and consistency conditions are defined using vectors u and v. Stability is defined in terms of the power-boundedness of the matrix V.",
   "introduces": [
-    "stable"
+    "stable general linear method (matrix power boundedness)"
   ],
   "dependencies": [
-    {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
-      "id": "def:403A",
-      "kind": "definition",
-      "number": "403A",
-      "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stable"
-    },
     {
       "id": "def:142A",
       "kind": "definition",
@@ -85,25 +69,19 @@
     }
   ],
   "transitive_dependencies": [
-    "def:142A",
-    "def:403A",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:142A"
   ],
   "dependents": [
     "def:510B",
     "def:512A",
     "def:520A",
     "def:542A",
-    "def:551A",
     "lem:515B",
     "thm:513A",
     "thm:514A",
     "thm:515D",
     "thm:523A",
-    "thm:535A",
-    "thm:551B"
+    "thm:535A"
   ],
   "lean_file": null,
   "lean_symbol": null,

@@ -35,7 +35,8 @@
   "equations": [],
   "preamble": "The text discusses equivalence relations for Runge-Kutta methods, including 'P-equivalence', which involves the concept of reducibility. A Runge-Kutta method is represented as (A, b, c) with s stages. The stage index set is {1, 2, ..., s}.",
   "introduces": [
-    "P -reducible"
+    "P-reducible Runge–Kutta method",
+    "P-reduced Runge–Kutta method"
   ],
   "dependencies": [],
   "transitive_dependencies": [],
@@ -44,8 +45,7 @@
     "def:381A",
     "def:381C",
     "def:381E",
-    "thm:381H",
-    "thm:382B"
+    "thm:381H"
   ],
   "lean_file": null,
   "lean_symbol": null,

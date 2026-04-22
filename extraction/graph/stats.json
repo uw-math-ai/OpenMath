@@ -1,7 +1,7 @@
 {
   "total_nodes": 175,
-  "total_formal_edges": 31,
-  "total_all_edges": 322,
+  "total_formal_edges": 86,
+  "total_all_edges": 95,
   "by_kind": {
     "theorem": 104,
     "definition": 45,
@@ -16,10 +16,11 @@
     "ch5": 35
   },
   "edge_types": {
-    "uses_equation": 272,
-    "uses_section": 19,
-    "uses_theorem": 21,
-    "uses_lemma": 5,
+    "uses_concept": 37,
+    "uses_theorem": 19,
+    "uses_equation_from": 21,
+    "uses_lemma": 4,
+    "uses_section": 9,
     "uses_definition": 4,
     "uses_corollary": 1
   }

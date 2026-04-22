@@ -47,7 +47,7 @@
   "equations": [],
   "preamble": "The context involves the group G1 of elementary weight functions for Runge–Kutta methods, with operations defined on trees. The ideal Hp and quotient groups G1/(1+Hp) characterize equivalence of methods up to O(h^{p+1}). The notation uses trees t, their order r(t), and the function γ(t).",
   "introduces": [
-    "C(ξ)"
+    "C(ξ) condition for elements of G₁"
   ],
   "dependencies": [
     {
@@ -55,14 +55,6 @@
       "kind": "theorem",
       "number": "301A",
       "name": "Functions on trees",
-      "edge_type": "llm_dependency",
-      "context": "LLM-identified"
-    },
-    {
-      "id": "thm:388A",
-      "kind": "theorem",
-      "number": "388A",
-      "name": "Some subgroups and quotient groups",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -76,17 +68,15 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
     "def:381F",
     "thm:301A",
-    "thm:356C",
-    "thm:388A",
+    "thm:381H",
     "thm:388B",
     "thm:388C"
   ],

@@ -6,76 +6,16 @@
     "context": "lipschitz condition in its second variable"
   },
   {
-    "source": "thm:111A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "def:112A",
-    "target": "def:110A",
-    "edge_type": "uses_concept",
-    "context": "lipschitz constant"
-  },
-  {
     "source": "thm:112B",
     "target": "def:112A",
     "edge_type": "uses_concept",
     "context": "one-sided lipschitz condition"
   },
   {
-    "source": "def:142A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "def:142B",
-    "target": "def:402A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:142C",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "thm:142C",
-    "target": "def:142A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "thm:142D",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "thm:142D",
-    "target": "def:142B",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:142E",
-    "target": "def:142A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
     "source": "thm:142F",
     "target": "thm:142C",
     "edge_type": "uses_theorem",
     "context": "Theorem 142C"
-  },
-  {
-    "source": "thm:142F",
-    "target": "def:142A",
-    "edge_type": "uses_concept",
-    "context": "stable"
   },
   {
     "source": "thm:212A",
@@ -96,36 +36,6 @@
     "context": "Theorem 213A"
   },
   {
-    "source": "thm:243A",
-    "target": "def:142B",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:243A",
-    "target": "def:404B",
-    "edge_type": "uses_concept",
-    "context": "consistent"
-  },
-  {
-    "source": "thm:243A",
-    "target": "def:142A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "thm:302A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "thm:302B",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
     "source": "lem:310B",
     "target": "thm:306A",
     "edge_type": "uses_theorem",
@@ -136,12 +46,6 @@
     "target": "def:310A",
     "edge_type": "uses_equation_from",
     "context": "(310i) owned by def:310A"
-  },
-  {
-    "source": "lem:311A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
   },
   {
     "source": "thm:311D",
@@ -192,30 +96,6 @@
     "context": "lipschitz condition"
   },
   {
-    "source": "thm:319B",
-    "target": "def:406A",
-    "edge_type": "uses_concept",
-    "context": "local truncation error"
-  },
-  {
-    "source": "thm:323B",
-    "target": "def:323A",
-    "edge_type": "uses_concept",
-    "context": "internal order q"
-  },
-  {
-    "source": "thm:323B",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "thm:333A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
     "source": "thm:342C",
     "target": "sec:321",
     "edge_type": "uses_section",
@@ -234,64 +114,16 @@
     "context": "Subsection 321"
   },
   {
-    "source": "thm:343B",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
     "source": "thm:344A",
     "target": "lem:342A",
     "edge_type": "uses_equation_from",
     "context": "(342b) owned by lem:342A"
   },
   {
-    "source": "def:350A",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability function"
-  },
-  {
-    "source": "def:350A",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
-  },
-  {
-    "source": "lem:351A",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability region"
-  },
-  {
-    "source": "lem:351A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
     "source": "lem:351A",
     "target": "def:350A",
     "edge_type": "uses_equation_from",
     "context": "(350c) owned by def:350A"
-  },
-  {
-    "source": "thm:351B",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability function"
-  },
-  {
-    "source": "thm:351B",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
-  },
-  {
-    "source": "thm:352A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
   },
   {
     "source": "thm:352B",
@@ -303,19 +135,19 @@
     "source": "thm:355B",
     "target": "def:355A",
     "edge_type": "uses_concept",
-    "context": "down arrows"
+    "context": "up arrow"
   },
   {
     "source": "thm:355C",
     "target": "def:355A",
     "edge_type": "uses_concept",
-    "context": "down arrows"
+    "context": "up arrow"
   },
   {
     "source": "thm:355D",
     "target": "def:355A",
     "edge_type": "uses_concept",
-    "context": "down arrows"
+    "context": "down arrow"
   },
   {
     "source": "thm:355E",
@@ -324,22 +156,10 @@
     "context": "Theorem 355D"
   },
   {
-    "source": "thm:355E",
+    "source": "thm:355F",
     "target": "def:355A",
     "edge_type": "uses_concept",
-    "context": "down arrows"
-  },
-  {
-    "source": "thm:355F",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability function"
-  },
-  {
-    "source": "thm:355F",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
+    "context": "up arrow"
   },
   {
     "source": "thm:355G",
@@ -355,21 +175,9 @@
   },
   {
     "source": "thm:355G",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability function"
-  },
-  {
-    "source": "thm:355G",
     "target": "def:355A",
     "edge_type": "uses_concept",
-    "context": "up arrows"
-  },
-  {
-    "source": "thm:355G",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
+    "context": "up arrow"
   },
   {
     "source": "def:356A",
@@ -408,18 +216,6 @@
     "context": "dj-irreducibility"
   },
   {
-    "source": "def:356B",
-    "target": "def:381E",
-    "edge_type": "uses_concept",
-    "context": "reduced method"
-  },
-  {
-    "source": "thm:356C",
-    "target": "def:356A",
-    "edge_type": "uses_concept",
-    "context": "an-stable"
-  },
-  {
     "source": "cor:356D",
     "target": "thm:356C",
     "edge_type": "uses_theorem",
@@ -427,15 +223,9 @@
   },
   {
     "source": "def:357A",
-    "target": "def:403A",
+    "target": "thm:520D",
     "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "thm:357C",
-    "target": "def:357B",
-    "edge_type": "uses_concept",
-    "context": "algebraically stable"
+    "context": "a-stability"
   },
   {
     "source": "thm:357C",
@@ -444,106 +234,22 @@
     "context": "(357d) owned by def:357B"
   },
   {
-    "source": "thm:357D",
-    "target": "def:381E",
-    "edge_type": "uses_concept",
-    "context": "irreducible"
-  },
-  {
-    "source": "thm:357D",
-    "target": "def:356A",
-    "edge_type": "uses_concept",
-    "context": "an-stable"
-  },
-  {
-    "source": "thm:357D",
-    "target": "def:142A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "thm:358A",
-    "target": "def:357B",
-    "edge_type": "uses_concept",
-    "context": "algebraically stable"
-  },
-  {
-    "source": "cor:359B",
-    "target": "def:357B",
-    "edge_type": "uses_concept",
-    "context": "algebraically stable"
-  },
-  {
-    "source": "cor:359B",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
     "source": "thm:359C",
     "target": "thm:358A",
     "edge_type": "uses_theorem",
     "context": "Theorem\n358A"
   },
   {
-    "source": "thm:359C",
-    "target": "def:357B",
-    "edge_type": "uses_concept",
-    "context": "algebraically stable"
-  },
-  {
-    "source": "thm:363A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
     "source": "thm:372A",
     "target": "def:370A",
     "edge_type": "uses_concept",
-    "context": "symplectic"
-  },
-  {
-    "source": "thm:372A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
+    "context": "symplectic runge–kutta method"
   },
   {
     "source": "def:381A",
     "target": "def:110A",
     "edge_type": "uses_concept",
     "context": "lipschitz condition"
-  },
-  {
-    "source": "def:381E",
-    "target": "def:356B",
-    "edge_type": "uses_concept",
-    "context": "reduced method"
-  },
-  {
-    "source": "def:381E",
-    "target": "def:381D",
-    "edge_type": "uses_concept",
-    "context": "p -reducible"
-  },
-  {
-    "source": "def:381E",
-    "target": "def:381C",
-    "edge_type": "uses_concept",
-    "context": "0-reducible"
-  },
-  {
-    "source": "def:381F",
-    "target": "def:356B",
-    "edge_type": "uses_concept",
-    "context": "reduced method"
-  },
-  {
-    "source": "thm:381G",
-    "target": "def:381E",
-    "edge_type": "uses_concept",
-    "context": "irreducible"
   },
   {
     "source": "thm:381G",
@@ -553,51 +259,15 @@
   },
   {
     "source": "thm:381H",
-    "target": "def:381F",
-    "edge_type": "uses_concept",
-    "context": "p -equivalent"
-  },
-  {
-    "source": "thm:381H",
-    "target": "def:381B",
-    "edge_type": "uses_concept",
-    "context": "φ-equivalent"
-  },
-  {
-    "source": "thm:381H",
     "target": "def:381D",
     "edge_type": "uses_concept",
-    "context": "p -reducible"
-  },
-  {
-    "source": "thm:381H",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
+    "context": "p -reducible runge–kutta method"
   },
   {
     "source": "thm:382A",
     "target": "def:110A",
     "edge_type": "uses_concept",
     "context": "lipschitz condition"
-  },
-  {
-    "source": "thm:382A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "thm:382B",
-    "target": "def:381D",
-    "edge_type": "uses_concept",
-    "context": "p -reducible"
-  },
-  {
-    "source": "thm:388B",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
   },
   {
     "source": "thm:388C",
@@ -618,36 +288,6 @@
     "context": "Theorem 388G"
   },
   {
-    "source": "thm:388E",
-    "target": "def:388D",
-    "edge_type": "uses_concept",
-    "context": "c(ξ)"
-  },
-  {
-    "source": "thm:388E",
-    "target": "def:388F",
-    "edge_type": "uses_concept",
-    "context": "d(ξ)"
-  },
-  {
-    "source": "thm:388G",
-    "target": "def:388F",
-    "edge_type": "uses_concept",
-    "context": "d(ξ)"
-  },
-  {
-    "source": "thm:388H",
-    "target": "def:388D",
-    "edge_type": "uses_concept",
-    "context": "c(ξ)"
-  },
-  {
-    "source": "thm:388H",
-    "target": "def:388F",
-    "edge_type": "uses_concept",
-    "context": "d(ξ)"
-  },
-  {
     "source": "thm:388H",
     "target": "def:388D",
     "edge_type": "uses_equation_from",
@@ -666,30 +306,6 @@
     "context": "lipschitz condition"
   },
   {
-    "source": "def:402A",
-    "target": "def:142B",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "def:403A",
-    "target": "def:142A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "def:404A",
-    "target": "def:510A",
-    "edge_type": "uses_concept",
-    "context": "preconsistent"
-  },
-  {
-    "source": "def:404B",
-    "target": "def:510B",
-    "edge_type": "uses_concept",
-    "context": "consistent"
-  },
-  {
     "source": "def:404B",
     "target": "def:404A",
     "edge_type": "uses_equation_from",
@@ -699,13 +315,7 @@
     "source": "thm:405A",
     "target": "def:402A",
     "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:405A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
+    "context": "convergent linear multistep method"
   },
   {
     "source": "thm:405B",
@@ -715,45 +325,15 @@
   },
   {
     "source": "thm:405B",
-    "target": "def:404A",
-    "edge_type": "uses_concept",
-    "context": "preconsistent"
-  },
-  {
-    "source": "thm:405B",
     "target": "def:402A",
     "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:405B",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "thm:405C",
-    "target": "def:402A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:405C",
-    "target": "def:404B",
-    "edge_type": "uses_concept",
-    "context": "consistent"
-  },
-  {
-    "source": "thm:405C",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
+    "context": "convergent linear multistep method"
   },
   {
     "source": "def:406A",
     "target": "def:404B",
     "edge_type": "uses_concept",
-    "context": "consistent"
+    "context": "consistent linear multistep method"
   },
   {
     "source": "thm:406D",
@@ -771,19 +351,7 @@
     "source": "thm:406D",
     "target": "def:404B",
     "edge_type": "uses_concept",
-    "context": "consistent"
-  },
-  {
-    "source": "thm:406D",
-    "target": "def:402A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:406D",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
+    "context": "consistent linear multistep method"
   },
   {
     "source": "thm:406D",
@@ -805,27 +373,9 @@
   },
   {
     "source": "thm:422A",
-    "target": "def:404A",
-    "edge_type": "uses_concept",
-    "context": "preconsistent"
-  },
-  {
-    "source": "thm:422A",
     "target": "def:403A",
     "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "thm:422C",
-    "target": "def:404A",
-    "edge_type": "uses_concept",
-    "context": "preconsistent"
-  },
-  {
-    "source": "thm:422C",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
+    "context": "stable linear multistep method"
   },
   {
     "source": "thm:422C",
@@ -834,64 +384,16 @@
     "context": "(422a) owned by thm:422A"
   },
   {
-    "source": "thm:431A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "lem:441A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
     "source": "thm:441C",
     "target": "def:403A",
     "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "def:442A",
-    "target": "def:520A",
-    "edge_type": "uses_concept",
-    "context": "stability matrix"
+    "context": "stable linear multistep method"
   },
   {
     "source": "def:442A",
     "target": "def:355A",
     "edge_type": "uses_concept",
-    "context": "down arrows"
-  },
-  {
-    "source": "def:442A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "def:442A",
-    "target": "def:520E",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
-  },
-  {
-    "source": "thm:443A",
-    "target": "def:355A",
-    "edge_type": "uses_concept",
-    "context": "up arrows"
-  },
-  {
-    "source": "thm:443A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "thm:443A",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
+    "context": "down arrow"
   },
   {
     "source": "thm:443B",
@@ -900,58 +402,10 @@
     "context": "Theorem 443A"
   },
   {
-    "source": "thm:443B",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "principal sheet"
-  },
-  {
-    "source": "thm:443B",
-    "target": "def:355A",
-    "edge_type": "uses_concept",
-    "context": "up arrows"
-  },
-  {
-    "source": "def:451A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "thm:454A",
-    "target": "def:451A",
-    "edge_type": "uses_concept",
-    "context": "g-stable"
-  },
-  {
-    "source": "thm:454A",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
-  },
-  {
     "source": "thm:454A",
     "target": "def:451A",
     "edge_type": "uses_equation_from",
     "context": "(451e) owned by def:451A"
-  },
-  {
-    "source": "def:510A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:510A",
-    "target": "def:404A",
-    "edge_type": "uses_concept",
-    "context": "preconsistent"
-  },
-  {
-    "source": "def:510B",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
   },
   {
     "source": "def:510B",
@@ -966,64 +420,10 @@
     "context": "power-boundedness"
   },
   {
-    "source": "def:510B",
-    "target": "def:404B",
-    "edge_type": "uses_concept",
-    "context": "consistent"
-  },
-  {
-    "source": "def:510B",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "def:510C",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:510C",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "def:512A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
     "source": "def:512A",
     "target": "def:110A",
     "edge_type": "uses_concept",
     "context": "lipschitz condition"
-  },
-  {
-    "source": "def:512A",
-    "target": "def:402A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "def:512A",
-    "target": "def:510B",
-    "edge_type": "uses_concept",
-    "context": "consistent"
-  },
-  {
-    "source": "def:512A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "def:512A",
-    "target": "def:510C",
-    "edge_type": "uses_concept",
-    "context": "stable"
   },
   {
     "source": "thm:513A",
@@ -1032,34 +432,10 @@
     "context": "Definition 512A"
   },
   {
-    "source": "thm:513A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "thm:513A",
-    "target": "def:512A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:513A",
-    "target": "def:510C",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
     "source": "thm:514A",
     "target": "def:510A",
     "edge_type": "uses_concept",
     "context": "preconsistency vector"
-  },
-  {
-    "source": "thm:514A",
-    "target": "def:512A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
   },
   {
     "source": "thm:514A",
@@ -1093,177 +469,21 @@
   },
   {
     "source": "thm:515D",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "thm:515D",
     "target": "def:510B",
     "edge_type": "uses_concept",
-    "context": "consistent"
-  },
-  {
-    "source": "thm:515D",
-    "target": "def:512A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:515D",
-    "target": "def:510C",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "def:520A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:520A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "thm:520B",
-    "target": "def:520A",
-    "edge_type": "uses_concept",
-    "context": "stability matrix"
-  },
-  {
-    "source": "def:520C",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:520C",
-    "target": "def:542A",
-    "edge_type": "uses_concept",
-    "context": "stability function"
-  },
-  {
-    "source": "def:520C",
-    "target": "def:520A",
-    "edge_type": "uses_concept",
-    "context": "stability matrix"
-  },
-  {
-    "source": "thm:520D",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "instability region"
-  },
-  {
-    "source": "thm:520D",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
+    "context": "consistent general linear method"
   },
   {
     "source": "def:520E",
-    "target": "def:530C",
+    "target": "thm:520D",
     "edge_type": "uses_concept",
-    "context": "general linear methods"
-  },
-  {
-    "source": "def:520E",
-    "target": "def:442A",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
-  },
-  {
-    "source": "def:520F",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:520F",
-    "target": "def:520E",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
-  },
-  {
-    "source": "def:521A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:521A",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability function"
-  },
-  {
-    "source": "def:521A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "thm:521B",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability function"
+    "context": "a-stability"
   },
   {
     "source": "thm:521B",
     "target": "def:521A",
     "edge_type": "uses_concept",
     "context": "stability order"
-  },
-  {
-    "source": "thm:521B",
-    "target": "def:512A",
-    "edge_type": "uses_concept",
-    "context": "convergent"
-  },
-  {
-    "source": "thm:523A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "thm:523A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "thm:523B",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "thm:523B",
-    "target": "def:357B",
-    "edge_type": "uses_concept",
-    "context": "algebraically stable"
-  },
-  {
-    "source": "thm:523B",
-    "target": "def:356B",
-    "edge_type": "uses_concept",
-    "context": "reduced method"
-  },
-  {
-    "source": "thm:523B",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "thm:523B",
-    "target": "def:520E",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
   },
   {
     "source": "thm:523B",
@@ -1278,30 +498,6 @@
     "context": "Theorem 534A"
   },
   {
-    "source": "def:525A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:525A",
-    "target": "def:520A",
-    "edge_type": "uses_concept",
-    "context": "stability matrix"
-  },
-  {
-    "source": "def:530B",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:530B",
-    "target": "def:530A",
-    "edge_type": "uses_concept",
-    "context": "non-degenerate"
-  },
-  {
     "source": "def:530C",
     "target": "def:530B",
     "edge_type": "uses_definition",
@@ -1309,9 +505,9 @@
   },
   {
     "source": "def:530C",
-    "target": "def:406A",
+    "target": "def:530A",
     "edge_type": "uses_concept",
-    "context": "local truncation error"
+    "context": "non-degenerate starting method"
   },
   {
     "source": "def:530C",
@@ -1320,22 +516,10 @@
     "context": "Subsection 532"
   },
   {
-    "source": "thm:532A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "thm:535A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
     "source": "thm:535A",
     "target": "def:510B",
     "edge_type": "uses_concept",
-    "context": "consistent"
+    "context": "consistent general linear method"
   },
   {
     "source": "thm:541A",
@@ -1348,60 +532,6 @@
     "target": "def:310A",
     "edge_type": "uses_concept",
     "context": "elementary differentials"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:406A",
-    "edge_type": "uses_concept",
-    "context": "local truncation error"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:520C",
-    "edge_type": "uses_concept",
-    "context": "stability function"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:520A",
-    "edge_type": "uses_concept",
-    "context": "stability matrix"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:510A",
-    "edge_type": "uses_concept",
-    "context": "preconsistent"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:381A",
-    "edge_type": "uses_concept",
-    "context": "equivalent"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:520E",
-    "edge_type": "uses_concept",
-    "context": "a-stable"
-  },
-  {
-    "source": "def:542A",
-    "target": "def:510C",
-    "edge_type": "uses_concept",
-    "context": "stable"
   },
   {
     "source": "def:542A",
@@ -1428,30 +558,6 @@
     "context": "companion matrix"
   },
   {
-    "source": "def:551A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "def:551A",
-    "target": "def:510C",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
-    "source": "thm:551B",
-    "target": "def:520A",
-    "edge_type": "uses_concept",
-    "context": "stability matrix"
-  },
-  {
-    "source": "thm:551B",
-    "target": "def:510C",
-    "edge_type": "uses_concept",
-    "context": "stable"
-  },
-  {
     "source": "thm:553A",
     "target": "def:551A",
     "edge_type": "uses_definition",
@@ -1459,20 +565,8 @@
   },
   {
     "source": "thm:553A",
-    "target": "def:530C",
-    "edge_type": "uses_concept",
-    "context": "general linear method"
-  },
-  {
-    "source": "thm:553A",
     "target": "thm:111A",
     "edge_type": "uses_concept",
     "context": "companion matrix"
-  },
-  {
-    "source": "thm:553A",
-    "target": "def:403A",
-    "edge_type": "uses_concept",
-    "context": "stability"
   }
 ]

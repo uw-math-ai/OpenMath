@@ -26,49 +26,31 @@
   ],
   "equations": [],
   "preamble": "The theorem concerns the stability region of a general linear method defined by (A, U, B, V), where M(z) is the stability matrix and Φ(w, z) is the stability polynomial (or rational function). The stability region consists of complex z such that the powers of M(z) are bounded.",
-  "introduces": [],
+  "introduces": [
+    "strict stability region",
+    "A-stability"
+  ],
   "dependencies": [
     {
       "id": "def:520C",
       "kind": "definition",
       "number": "520C",
       "name": "stability function",
-      "edge_type": "uses_concept",
-      "context": "instability region"
-    },
-    {
-      "id": "def:403A",
-      "kind": "definition",
-      "number": "403A",
-      "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stability"
-    },
-    {
-      "id": "def:520E",
-      "kind": "definition",
-      "number": "520E",
-      "name": "A-stable",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
     "def:142A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:520A",
-    "def:520C",
-    "def:520E",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:520C"
   ],
   "dependents": [
-    "thm:431A"
+    "def:520E"
   ],
   "lean_file": null,
   "lean_symbol": null,

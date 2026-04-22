@@ -18,15 +18,19 @@
   "equations": [],
   "preamble": "",
   "introduces": [
-    "Φ-equivalent"
+    "Φ-equivalent Runge–Kutta methods",
+    "reducibility of a Runge–Kutta method",
+    "Φ-equivalent Runge–Kutta methods (elementary weight equivalence)",
+    "elementary weight for Φ-equivalence of Runge-Kutta methods"
   ],
   "dependencies": [],
   "transitive_dependencies": [],
   "dependents": [
     "def:370A",
+    "def:381A",
+    "def:381C",
     "def:422B",
-    "thm:381G",
-    "thm:381H"
+    "thm:381G"
   ],
   "lean_file": null,
   "lean_symbol": null,

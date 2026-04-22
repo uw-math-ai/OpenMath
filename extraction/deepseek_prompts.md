@@ -143,52 +143,97 @@ Output ONLY valid JSON, no markdown fences, no explanations.
 
 ---
 
-## 4. Concept/Term Extraction (`fix_introduces.py`)
+## 4. Concept/Term Extraction (`fix_introduces.py`) — REWRITTEN 2026-04-21
 
-**Strategy**: For definitions/theorems missing the `introduces` field,
-ask DeepSeek to identify the named concepts/terms that the statement
-formally defines or introduces.
+**Strategy**: Re-extract every entity's `introduces` field from scratch with
+peer-aware DeepSeek prompts that produce **globally-unique qualified names**.
+Replaces the older Method A/B (LaTeX `\emph{}` parsing + DeepSeek fallback),
+which produced bare ambiguous terms like `"convergent"` for three different
+definitions in three chapters and caused structurally-false dependency edges.
 
-**Input**: LaTeX body (1500 chars)
-**Output**: JSON array of strings, e.g., `["Lipschitz condition", "Lipschitz constant"]`
+### Pass 1 — per-entity draft (175 calls)
 
-**Prompt** (system):
+**Input**: LaTeX body (≤2000 chars)
+**Output**: JSON array of qualified term strings
+
+**System**:
 ```
-You are a mathematical terminology extractor. Given a definition or theorem
-from a numerical methods textbook, identify the named concepts or terms
-that it introduces or formally defines.
-```
-
-**Prompt** (user):
-```
-Below is {kind} {number} from Butcher's "Numerical Methods for ODEs":
-
-{latex_body}
-
-List the specific named concepts or terms that this {kind} introduces or
-formally defines. These are typically:
-- Terms in single quotes ('term' or 'term')
-- Terms in italic emphasis (\emph{term} or \textit{term})
-- Proper names introduced by phrases like "is called X", "is said to be X",
-  "we define X", "is symplectic", "is L-stable"
-
-Do NOT include:
-- General mathematical objects used but not defined (variables like f, y, A)
-- Named theorems or references to other results
-- Generic descriptive words (method, property, condition)
-- Words that are used but not being defined here
-
-Return a JSON array of strings. If none, return [].
-Example: ["Lipschitz condition", "Lipschitz constant"]
+You are a mathematical terminology extractor for Butcher's "Numerical
+Methods for Ordinary Differential Equations". Given one statement,
+identify the named concepts it introduces, qualified by topic so each
+name is globally unambiguous within the textbook.
 ```
 
-**Two-method approach**:
-1. Method A: Parse `\emph{}` and `\textit{}` directly (zero cost, catches 6-10 cases)
-2. Method B: DeepSeek for definitions still missing after Method A (~$0.004)
+**User** (key instructions, abridged):
+```
+Identify ONLY the concepts that this {kind} CREATES or FORMALLY DEFINES
+— meaning the term receives its meaning here for the first time. Mere
+mention or use of an existing concept is NOT introduction.
 
-**Result**: 45/45 definitions now have `introduces` (was 34/45).
+Strong evidence that a concept is introduced here:
+- Term in single quotes (e.g., "A square matrix A is 'convergent' if …")
+- Term in italic emphasis (\emph{X} or \textit{X})
+- Phrases like "is called X", "is said to be X", "we define X to be …"
 
-**Cost**: ~$0.004 for ~10 DeepSeek calls.
+CRITICAL — kind matters:
+- Definitions are the primary place where new concepts are introduced.
+- Theorems, lemmas, and corollaries USUALLY introduce no new concepts;
+  they state properties of pre-existing concepts. Return [] for them
+  unless they explicitly define a new named concept (rare).
+
+CRITICAL — qualify with topic:
+The textbook reuses bare words like "convergent", "consistent", "stable",
+"order" across topics. Always qualify by topic.
+
+Examples:
+- A square matrix being 'convergent' → "convergent matrix"
+- A linear multistep method being 'convergent' → "convergent linear multistep method"
+- A general linear method being 'consistent' → "consistent general linear method"
+```
+
+### Pass 2 — collision resolution (1 call per remaining collision group)
+
+After Pass 1, scan all `introduces` for terms still appearing in 2+ entities
+(both exact and word-bounded substring overlaps). For each colliding group,
+ask DeepSeek for mutually-distinct qualified names. Iterate up to 5 rounds.
+
+**System**:
+```
+You are a mathematical terminology disambiguator for Butcher's textbook.
+Multiple statements have been tagged with the same concept name even
+though they are about distinct topics. For each, propose a uniquely
+qualified name.
+```
+
+**User** (template):
+```
+The following N statements all currently list `"<term>"` as a concept
+they introduce, but they are about distinct topics. For each, propose a
+unique qualified name that distinguishes it from the others.
+
+[id-tagged statement bodies, ≤1200 chars each]
+
+Return a JSON object {stmt_id: [qualified_names]}.
+```
+
+### Caching
+
+Both passes cache by content hash in `raw_text/introduces_cache.json`:
+- Pass 1 key: `(stmt_id, sha256(body)[:12])`
+- Pass 2 key: `sha256(term + "|" + sorted_member_id_text_hashes)[:12]`
+
+Re-runs are free unless underlying statement text changes. Delete the cache
+file after editing the prompt.
+
+**Result**: 49/175 statements have `introduces` (down from 174 — most
+theorems/lemmas correctly return `[]`); 80 total qualified concepts (down
+from 407 noisy entries); 0 remaining homonyms.
+
+**Cost**: ~$0.11 for full Pass 1 + Pass 2.
+
+**Regression guard**: `pipeline/build_formalization_data.py` fails Phase 8
+if any `uses_concept` edge links two entities sharing a `statement_names.json`
+display name.
 
 ---
 

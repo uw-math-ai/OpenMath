@@ -132,13 +132,24 @@ def _extract_concept_names(statements: list[dict]) -> dict[str, list[tuple[str, 
     is_full_name=True means the term matches the exact `introduces` entry;
     False means it was generated as an alias.
     """
-    # Minimal blocklist: only truly generic words that are NEVER introduced
+    # Minimal blocklist: words that are never a useful match target.
+    # Includes historically-polysemic bare words (convergent, stable, etc.)
+    # that fix_introduces.py now always qualifies topically — their unqualified
+    # forms only ever arise from over-aggressive alias stripping of qualified
+    # terms like "stability in the sense of Dahlquist" → "stability", and
+    # should not drive cross-chapter edges.
     GENERIC_TERMS = {
         "the", "that", "this", "a", "an",
         "method", "methods", "problem", "condition",
         "function", "equation", "system", "variable",
         # def:530C introduces "order" but it's too polysemic
         "order",
+        # Historically-polysemic bare words — fix_introduces.py emits
+        # qualified variants; bare forms are always ambiguous:
+        "stable", "stability",
+        "convergent", "convergence",
+        "consistent", "consistency",
+        "preconsistent",
     }
 
     concept_map: dict[str, list[tuple[str, int, bool]]] = {}

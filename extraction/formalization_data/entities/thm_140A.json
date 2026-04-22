@@ -55,32 +55,13 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:142A",
-    "def:356B",
-    "def:381A",
-    "def:381C",
-    "def:381D",
-    "def:381E",
-    "def:381F",
-    "def:403A",
-    "def:404A",
-    "def:510A",
-    "def:510B",
-    "def:510C",
-    "def:520A",
-    "def:520C",
-    "def:530A",
-    "def:530B",
-    "def:530C",
     "lem:110B",
     "thm:110C",
-    "thm:111A",
-    "thm:356C",
-    "thm:520B"
+    "thm:111A"
   ],
   "dependents": [
+    "def:403A",
     "thm:141A"
   ],
   "lean_file": null,

@@ -44,16 +44,23 @@
   ],
   "preamble": "The context involves a Runge–Kutta method applied to the non-autonomous linear test problem y' = q(x)y, leading to a stability function R(Z) where Z is a diagonal matrix with entries hq(x_{n-1} + hc_i). AN-stability is defined to ensure the numerical solution does not grow when the real parts of these entries are non-positive.",
   "introduces": [
-    "AN-stable",
-    "irreducibility in the sense of Dahlquist and Jeltsch",
+    "AN-stable Runge–Kutta method",
     "DJ-irreducibility"
   ],
   "dependencies": [
     {
+      "id": "thm:356C",
+      "kind": "theorem",
+      "number": "356C",
+      "name": "AN stability necessary conditions",
+      "edge_type": "uses_theorem",
+      "context": "Theorem 356C"
+    },
+    {
       "id": "def:356B",
       "kind": "definition",
       "number": "356B",
-      "name": "reduced method",
+      "name": "reduced method (356B)",
       "edge_type": "uses_definition",
       "context": "Definition 356B"
     }
@@ -61,9 +68,6 @@
   "transitive_dependencies": [
     "cor:356D",
     "def:356B",
-    "def:381C",
-    "def:381D",
-    "def:381E",
     "thm:356C"
   ],
   "dependents": [

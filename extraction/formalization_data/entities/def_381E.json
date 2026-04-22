@@ -2,7 +2,7 @@
   "id": "def:381E",
   "kind": "definition",
   "number": "381E",
-  "name": "reduced method",
+  "name": "reduced method (381E)",
   "is_helper": false,
   "chapter": 3,
   "section": "36",
@@ -39,8 +39,8 @@
   "equations": [],
   "preamble": "The text defines Φ-equivalence of Runge–Kutta methods based on equality of elementary weights. It then introduces reducibility concepts: 0-reducibility (eliminating stages with zero weight that do not affect other stages) and P-reducibility (combining stages that are essentially the same).",
   "introduces": [
-    "irreducible",
-    "reduced method"
+    "irreducible Runge–Kutta method",
+    "fully reduced Runge–Kutta method"
   ],
   "dependencies": [
     {
@@ -48,28 +48,18 @@
       "kind": "definition",
       "number": "381D",
       "name": "P -reducible",
-      "edge_type": "uses_concept",
-      "context": "p -reducible"
-    },
-    {
-      "id": "def:381C",
-      "kind": "definition",
-      "number": "381C",
-      "name": "0-reduced method",
-      "edge_type": "uses_concept",
-      "context": "0-reducible"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     }
   ],
   "transitive_dependencies": [
-    "def:381C",
     "def:381D"
   ],
   "dependents": [
-    "def:356B",
     "def:370A",
     "def:381A",
+    "def:381C",
     "def:381F",
-    "thm:357D",
     "thm:381G"
   ],
   "lean_file": null,

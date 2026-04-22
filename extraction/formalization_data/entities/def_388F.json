@@ -39,7 +39,7 @@
   "equations": [],
   "preamble": "The context involves algebraic structures (groups and subgroups) based on elementary weight functions α of Runge–Kutta methods, with trees t, u ∈ T and order function r(t). The definition characterizes a subset D(ξ) of G1 via a relation on products of trees.",
   "introduces": [
-    "D(ξ)"
+    "member of D(ξ)"
   ],
   "dependencies": [
     {
@@ -52,25 +52,22 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
     "def:381F",
     "def:388D",
     "thm:301A",
-    "thm:356C",
-    "thm:388A",
+    "thm:381H",
     "thm:388B",
     "thm:388C"
   ],
   "dependents": [
     "def:370A",
     "lem:389A",
-    "thm:388E",
     "thm:388G",
     "thm:388H"
   ],

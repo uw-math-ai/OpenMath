@@ -2,7 +2,7 @@
   "id": "def:512A",
   "kind": "definition",
   "number": "512A",
-  "name": "convergent",
+  "name": "convergent (GLM)",
   "is_helper": false,
   "chapter": 5,
   "section": "51",
@@ -52,17 +52,9 @@
   ],
   "preamble": "The definition concerns convergence of a general linear method (A, U, B, V) for solving an initial value problem. The method uses a starting procedure φ(h) to produce an initial approximation vector in R^r, which should approach u y(x0) as h→0, where u is a fixed non-zero vector. The computed approximations y^{[n]} are obtained over n steps with stepsize h = (x - x0)/n, starting from y^{[0]} = φ(h).",
   "introduces": [
-    "convergent"
+    "convergent general linear method"
   ],
   "dependencies": [
-    {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
     {
       "id": "def:110A",
       "kind": "definition",
@@ -72,42 +64,26 @@
       "context": "lipschitz condition"
     },
     {
-      "id": "def:402A",
+      "id": "def:510A",
       "kind": "definition",
-      "number": "402A",
-      "name": "convergent",
-      "edge_type": "uses_concept",
-      "context": "convergent"
+      "number": "510A",
+      "name": "preconsistency vector",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "def:510B",
       "kind": "definition",
       "number": "510B",
-      "name": "consistent",
-      "edge_type": "uses_concept",
-      "context": "consistent"
-    },
-    {
-      "id": "def:403A",
-      "kind": "definition",
-      "number": "403A",
-      "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stability"
+      "name": "consistent (GLM)",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "def:510C",
       "kind": "definition",
       "number": "510C",
       "name": "stable",
-      "edge_type": "uses_concept",
-      "context": "stable"
-    },
-    {
-      "id": "def:510A",
-      "kind": "definition",
-      "number": "510A",
-      "name": "preconsistency vector",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     }
@@ -115,23 +91,17 @@
   "transitive_dependencies": [
     "def:110A",
     "def:142A",
-    "def:402A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:510C"
   ],
   "dependents": [
     "def:542A",
     "lem:515B",
     "thm:513A",
     "thm:514A",
-    "thm:515D",
-    "thm:521B"
+    "thm:515D"
   ],
   "lean_file": null,
   "lean_symbol": null,

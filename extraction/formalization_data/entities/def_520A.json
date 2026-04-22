@@ -52,25 +52,9 @@
   ],
   "preamble": "The definition concerns the stability matrix M(z) for a general linear method (A, U, B, V) applied to the linear test equation y' = qy, where z = hq. The method transforms an incoming vector y^{[n-1]} to an outgoing vector y^{[n]} via M(z).",
   "introduces": [
-    "stability matrix"
+    "stability matrix of a general linear method"
   ],
   "dependencies": [
-    {
-      "id": "def:530C",
-      "kind": "definition",
-      "number": "530C",
-      "name": "Order relative to starting method",
-      "edge_type": "uses_concept",
-      "context": "general linear method"
-    },
-    {
-      "id": "def:403A",
-      "kind": "definition",
-      "number": "403A",
-      "name": "stability in the sense of Dahlquist",
-      "edge_type": "uses_concept",
-      "context": "stability"
-    },
     {
       "id": "def:510A",
       "kind": "definition",
@@ -83,7 +67,7 @@
       "id": "def:510B",
       "kind": "definition",
       "number": "510B",
-      "name": "consistent",
+      "name": "consistent (GLM)",
       "edge_type": "llm_dependency",
       "context": "LLM-identified"
     },
@@ -98,22 +82,14 @@
   ],
   "transitive_dependencies": [
     "def:142A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
-    "def:510C",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:510C"
   ],
   "dependents": [
-    "def:442A",
     "def:520C",
     "def:520F",
-    "def:525A",
-    "def:542A",
-    "thm:111A",
     "thm:520B",
     "thm:551B"
   ],

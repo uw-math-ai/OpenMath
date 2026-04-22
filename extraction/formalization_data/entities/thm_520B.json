@@ -54,8 +54,8 @@
       "kind": "definition",
       "number": "520A",
       "name": "Introduction",
-      "edge_type": "uses_concept",
-      "context": "stability matrix"
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
     },
     {
       "id": "def:520C",
@@ -68,20 +68,15 @@
   ],
   "transitive_dependencies": [
     "def:142A",
-    "def:403A",
     "def:404A",
     "def:510A",
     "def:510B",
     "def:510C",
     "def:520A",
-    "def:520C",
-    "def:530A",
-    "def:530B",
-    "def:530C"
+    "def:520C"
   ],
   "dependents": [
-    "def:542A",
-    "thm:111A"
+    "def:542A"
   ],
   "lean_file": null,
   "lean_symbol": null,

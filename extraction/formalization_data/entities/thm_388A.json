@@ -37,6 +37,14 @@
   "introduces": [],
   "dependencies": [
     {
+      "id": "thm:387A",
+      "kind": "theorem",
+      "number": "387A",
+      "name": "Some special elements of G",
+      "edge_type": "llm_dependency",
+      "context": "LLM-identified"
+    },
+    {
       "id": "thm:388C",
       "kind": "theorem",
       "number": "388C",
@@ -46,23 +54,31 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
     "def:381F",
-    "thm:356C",
+    "def:388D",
+    "def:388F",
+    "lem:383A",
+    "lem:383B",
+    "lem:383C",
+    "lem:383D",
+    "thm:301A",
+    "thm:381H",
+    "thm:382A",
+    "thm:386A",
+    "thm:387A",
     "thm:388B",
-    "thm:388C"
+    "thm:388C",
+    "thm:388H"
   ],
   "dependents": [
     "def:370A",
-    "def:388D",
-    "lem:389A",
-    "thm:388E"
+    "lem:389A"
   ],
   "lean_file": null,
   "lean_symbol": null,

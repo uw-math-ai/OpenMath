@@ -59,20 +59,18 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
-    "def:356B",
     "def:381A",
+    "def:381B",
     "def:381C",
     "def:381D",
     "def:381E",
     "def:381F",
-    "thm:356C"
+    "thm:381H"
   ],
   "dependents": [
     "def:370A",
     "lem:383B",
-    "lem:383C",
     "lem:383D",
     "thm:382A"
   ],

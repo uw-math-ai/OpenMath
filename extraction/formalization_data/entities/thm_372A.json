@@ -43,15 +43,7 @@
       "number": "370A",
       "name": "Maintaining quadratic invariants",
       "edge_type": "uses_concept",
-      "context": "symplectic"
-    },
-    {
-      "id": "def:381A",
-      "kind": "definition",
-      "number": "381A",
-      "name": "equivalent",
-      "edge_type": "uses_concept",
-      "context": "equivalent"
+      "context": "symplectic runge–kutta method"
     },
     {
       "id": "thm:315A",
@@ -71,10 +63,8 @@
     }
   ],
   "transitive_dependencies": [
-    "cor:356D",
     "def:110A",
     "def:310A",
-    "def:356B",
     "def:370A",
     "def:381A",
     "def:381B",
@@ -101,7 +91,6 @@
     "thm:313B",
     "thm:314A",
     "thm:315A",
-    "thm:356C",
     "thm:381G",
     "thm:381H",
     "thm:382A",
