@@ -1692,6 +1692,103 @@ theorem padeRDownArrowOrderWebArcPhaseBridgeInput_of_neg_errorConst
   · simpa using padeR_downArrowDir_of_neg_errorConst_oddAngle n d 0 hC
   · simpa using padeR_odd_downArrowArcPhaseBridge_of_neg_errorConst n d hC
 
+/-- Exact current theorem-local blocker beneath the concrete connected-component
+upgrade: the arc-phase bridge already produces order-web witnesses in every
+small cone, but it still has to be upgraded to show that all such witnesses can
+be chosen inside one fixed connected component of the order web. -/
+theorem PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
+    {n d : ℕ} {θ : ℝ}
+    (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ) :
+    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent n d θ := by
+  sorry
+
+/-- Exact current theorem-local gap below the concrete connected-component seam:
+choose one even-ray order-web basepoint whose connected component continues to
+meet every sufficiently small cone around `θ = 0`. -/
+theorem padeR_even_downArrowOrderWebSameComponentContinuation_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    ∃ z0 ∈ orderWeb (padeR n d),
+      ∀ aperture > 0, ∀ radius > 0,
+        ∃ z : ℂ,
+          z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
+            z ∈ rayConeNearOrigin 0 aperture radius := by
+  have hcomp :=
+    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
+      (padeR_even_downArrowArcPhaseBridge_of_pos_errorConst n d hC)
+  rcases hcomp with ⟨z0, hz0, hmeets⟩
+  refine ⟨z0, hz0, ?_⟩
+  intro aperture haperture radius hradius
+  rcases hmeets aperture haperture radius hradius with ⟨z, hzmem, hzcone⟩
+  exact ⟨z, hzmem, hzcone⟩
+
+/-- Exact current theorem-local gap below the concrete connected-component seam:
+choose one odd-ray order-web basepoint whose connected component continues to
+meet every sufficiently small cone around
+`θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
+theorem padeR_odd_downArrowOrderWebSameComponentContinuation_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    ∃ z0 ∈ orderWeb (padeR n d),
+      ∀ aperture > 0, ∀ radius > 0,
+        ∃ z : ℂ,
+          z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
+            z ∈ rayConeNearOrigin
+              (Real.pi / ((↑(n + d) + 1) : ℝ)) aperture radius := by
+  have hcomp :=
+    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
+      (padeR_odd_downArrowArcPhaseBridge_of_neg_errorConst n d hC)
+  rcases hcomp with ⟨z0, hz0, hmeets⟩
+  refine ⟨z0, hz0, ?_⟩
+  intro aperture haperture radius hradius
+  rcases hmeets aperture haperture radius hradius with ⟨z, hzmem, hzcone⟩
+  exact ⟨z, hzmem, hzcone⟩
+
+theorem padeR_even_downArrowOrderWebMeetsRayConeNearOriginInConnectedComponent_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent n d 0 := by
+  rcases
+      padeR_even_downArrowOrderWebSameComponentContinuation_of_pos_errorConst n d hC with
+    ⟨z0, hz0, hcontinue⟩
+  refine ⟨z0, hz0, ?_⟩
+  intro aperture haperture radius hradius
+  rcases hcontinue aperture haperture radius hradius with ⟨z, hzcomp, hzcone⟩
+  exact ⟨z, ⟨hzcomp, hzcone⟩⟩
+
+theorem padeR_odd_downArrowOrderWebMeetsRayConeNearOriginInConnectedComponent_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent n d
+      (Real.pi / ((↑(n + d) + 1) : ℝ)) := by
+  rcases
+      padeR_odd_downArrowOrderWebSameComponentContinuation_of_neg_errorConst n d hC with
+    ⟨z0, hz0, hcontinue⟩
+  refine ⟨z0, hz0, ?_⟩
+  intro aperture haperture radius hradius
+  rcases hcontinue aperture haperture radius hradius with ⟨z, hzcomp, hzcone⟩
+  exact ⟨z, ⟨hzcomp, hzcone⟩⟩
+
+theorem padeRDownArrowOrderWebConnectedComponentMeetInput_of_pos_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : 0 < padePhiErrorConst n d) :
+    PadeRDownArrowOrderWebConnectedComponentMeetInput n d data := by
+  refine ⟨?_⟩
+  intro _
+  refine ⟨0, ?_, ?_⟩
+  · simpa using padeR_downArrowDir_of_pos_errorConst n d 0 hC
+  · simpa using
+      padeR_even_downArrowOrderWebMeetsRayConeNearOriginInConnectedComponent_of_pos_errorConst
+        n d hC
+
+theorem padeRDownArrowOrderWebConnectedComponentMeetInput_of_neg_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : padePhiErrorConst n d < 0) :
+    PadeRDownArrowOrderWebConnectedComponentMeetInput n d data := by
+  refine ⟨?_⟩
+  intro _
+  refine ⟨Real.pi / ((↑(n + d) + 1) : ℝ), ?_, ?_⟩
+  · simpa using padeR_downArrowDir_of_neg_errorConst_oddAngle n d 0 hC
+  · simpa using
+      padeR_odd_downArrowOrderWebMeetsRayConeNearOriginInConnectedComponent_of_neg_errorConst
+        n d hC
+
 /-- Exact remaining obstruction after the honest explicit-sign refactor:
 to upgrade the weak raywise bridge below to the strict sign bridge, one still
 has to exclude zero-cosine exact-ray arrows. -/
