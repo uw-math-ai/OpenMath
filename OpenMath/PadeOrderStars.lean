@@ -884,6 +884,27 @@ theorem PadeRConnectedRayConeOrderWebSupport.orderWebMeetsRayConeNearOrigin
     ⟨z, hzsupport, hzcone⟩
   exact ⟨z, h.support_subset_orderWeb hzsupport, hzcone⟩
 
+/-- Honest compatibility strengthening of raw Padé order-web cone meeting: all
+small-cone witnesses can be chosen inside one fixed connected component of the
+order web. This is the missing content not recorded by the pointwise
+`PadeROrderWebMeetsRayConeNearOrigin` predicate alone. -/
+def PadeROrderWebMeetsRayConeNearOriginInConnectedComponent
+    (n d : ℕ) (θ : ℝ) : Prop :=
+  ∃ z0 ∈ orderWeb (padeR n d),
+    ∀ aperture > 0, ∀ radius > 0,
+      (connectedComponentIn (orderWeb (padeR n d)) z0 ∩
+        rayConeNearOrigin θ aperture radius).Nonempty
+
+theorem nonempty_connectedRayConeSupport_of_meetsRayConeNearOriginInConnectedComponent
+    {n d : ℕ} {θ : ℝ}
+    (hcomp : PadeROrderWebMeetsRayConeNearOriginInConnectedComponent n d θ) :
+    Nonempty (PadeRConnectedRayConeOrderWebSupport n d θ) := by
+  obtain ⟨z0, hz0, hmeets⟩ := hcomp
+  exact ⟨⟨connectedComponentIn (orderWeb (padeR n d)) z0,
+    isConnected_connectedComponentIn_iff.mpr hz0,
+    connectedComponentIn_subset _ _,
+    hmeets⟩⟩
+
 def PadeRConnectedRayConeOrderWebSupport.toRayTrackingOrderWebSupport
     {n d : ℕ} {θ : ℝ}
     (h : PadeRConnectedRayConeOrderWebSupport n d θ) :
@@ -1032,6 +1053,16 @@ def PadeRDownArrowOrderWebArcPhaseBridgeInput.toOrderWebRayConeMeetInput
     ⟨θ, hθ, hbridge⟩
   exact ⟨θ, hθ, PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge hbridge⟩
 
+/-- Honest theorem-local compatibility seam below
+`PadeRDownArrowConnectedRayConeSupportInput`: a concrete down-arrow ray whose
+small-cone order-web witnesses all lie in one connected component. -/
+structure PadeRDownArrowOrderWebConnectedComponentMeetInput
+    (n d : ℕ) (data : OrderArrowTerminationData) where
+  downOrderWebMeetsRayConeInConnectedComponent_of_downArrowsAtInfinity_pos :
+    0 < data.downArrowsAtInfinity →
+      ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
+        PadeROrderWebMeetsRayConeNearOriginInConnectedComponent n d θ
+
 /-- Intermediate honest seam between raw cone intersections and the current
 ray-tracking support input: a connected order-web support meeting every small
 cone around a concrete down-arrow ray. -/
@@ -1041,6 +1072,17 @@ structure PadeRDownArrowConnectedRayConeSupportInput
     0 < data.downArrowsAtInfinity →
       ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
         Nonempty (PadeRConnectedRayConeOrderWebSupport n d θ)
+
+def PadeRDownArrowOrderWebConnectedComponentMeetInput.toConnectedRayConeSupportInput
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRDownArrowOrderWebConnectedComponentMeetInput n d data) :
+    PadeRDownArrowConnectedRayConeSupportInput n d data := by
+  refine ⟨?_⟩
+  intro hpos
+  rcases h.downOrderWebMeetsRayConeInConnectedComponent_of_downArrowsAtInfinity_pos hpos with
+    ⟨θ, hθ, hcomp⟩
+  exact ⟨θ, hθ,
+    nonempty_connectedRayConeSupport_of_meetsRayConeNearOriginInConnectedComponent hcomp⟩
 
 /-- Honest one-level-lower seam beneath `PadeRDownArrowBranchTrackingInput`:
 positive down-arrow infinity counts would yield a tracked branch once the
