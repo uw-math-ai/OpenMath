@@ -1900,6 +1900,24 @@ theorem padeR_even_downArrowOrderWebSameComponentContinuation_of_pos_errorConst
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
 construction near `θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
+private theorem padeR_odd_downArrowConnectedRadiusPhaseZeroSet_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    ∃ δ > 0, ∃ Z : Set (ℝ × ℝ),
+      IsConnected Z ∧
+        Z ⊆ {p : ℝ × ℝ |
+          p.1 ∈ Set.Icc (0 : ℝ) δ ∧
+            p.2 ∈ Set.Icc (-p.1) p.1 ∧
+              let w : ℂ :=
+                (↑p.1 : ℂ) *
+                  exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + p.2) * I)
+              Complex.im (padeR n d w * exp (-w)) = 0 ∧
+                0 < Complex.re (padeR n d w * exp (-w))} ∧
+        Set.Icc (0 : ℝ) δ ⊆ Prod.fst '' Z := by
+  sorry
+
+/-- The remaining concrete continuation blocker after the cycle-335 refactor:
+the odd down-arrow case still needs a genuine uniform strip / connected-support
+construction near `θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
 private theorem padeR_odd_downArrowSameComponentRadiusPhaseBound_of_neg_errorConst
     (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
     ∃ z0 ∈ orderWeb (padeR n d), ∃ δ > 0,
@@ -1910,7 +1928,43 @@ private theorem padeR_odd_downArrowSameComponentRadiusPhaseBound_of_neg_errorCon
               z =
                 (↑r : ℂ) *
                   exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + s) * I) := by
-  sorry
+  obtain ⟨δ, hδ, Z, hZconn, hZsub, hZproj⟩ :=
+    padeR_odd_downArrowConnectedRadiusPhaseZeroSet_of_neg_errorConst n d hC
+  let θ0 : ℝ := Real.pi / ((↑(n + d) + 1) : ℝ)
+  let f : ℝ × ℝ → ℂ := fun p =>
+    (↑p.1 : ℂ) * exp (↑(θ0 + p.2) * I)
+  let support : Set ℂ := f '' Z
+  have hsupport_conn : IsConnected support := by
+    refine hZconn.image f ?_
+    exact Continuous.continuousOn (by
+      continuity : Continuous f)
+  have hsupport_web : support ⊆ orderWeb (padeR n d) := by
+    intro z hz
+    rcases hz with ⟨p, hpZ, rfl⟩
+    rcases hZsub hpZ with ⟨_hp1, _hp2, him, hre⟩
+    exact mem_orderWeb_of_im_zero_of_re_pos hre him
+  have hzero_fst : (0 : ℝ) ∈ Prod.fst '' Z := by
+    apply hZproj
+    exact Set.left_mem_Icc.mpr hδ.le
+  rcases hzero_fst with ⟨p0, hp0Z, hp0fst⟩
+  have hp0r : p0.1 = 0 := by
+    simpa using hp0fst
+  have hzero_support : (0 : ℂ) ∈ support := by
+    refine ⟨p0, hp0Z, ?_⟩
+    simp [f, hp0r]
+  have hsupport_comp :
+      support ⊆ connectedComponentIn (orderWeb (padeR n d)) (0 : ℂ) :=
+    hsupport_conn.2.subset_connectedComponentIn hzero_support hsupport_web
+  refine ⟨0, padeR_mem_orderWeb_zero n d, δ, hδ, ?_⟩
+  intro r hr
+  have hr_mem : r ∈ Set.Icc (0 : ℝ) δ := ⟨le_of_lt hr.1, le_of_lt hr.2⟩
+  rcases hZproj hr_mem with ⟨p, hpZ, hpfst⟩
+  have hpr : p.1 = r := by
+    simpa using hpfst
+  rcases hZsub hpZ with ⟨_hp1, hp2, _him, _hre⟩
+  refine ⟨f p, hsupport_comp ⟨p, hpZ, rfl⟩, p.2, ?_, ?_⟩
+  · simpa [hpr] using hp2
+  · simp [f, θ0, hpr]
 
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
