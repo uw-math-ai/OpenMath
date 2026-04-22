@@ -465,6 +465,19 @@ theorem thm_355E'_of_padeR
     (thm_355E'_of_concreteRationalApprox
       (R := padeR n d) data hpade hreal hconcrete)
 
+/-- Remaining theorem-local blocker after the explicit-sign seam repair:
+to feed the generic `OrderStars` contradiction theorem, a Padé down-arrow
+direction still has to imply the positive cosine sign consumed by the honest
+local cone feeder. -/
+def PadeRDownArrowSignBridge (n d : ℕ) : Prop :=
+  ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+    0 < padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ)
+
+/-- Up-arrow companion to `PadeRDownArrowSignBridge`. -/
+def PadeRUpArrowSignBridge (n d : ℕ) : Prop :=
+  ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+    padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) < 0
+
 theorem concreteRationalApproxToExp_of_padeR
     {n d : ℕ} {data : OrderArrowTerminationData}
     (hcont_orderWeb :
@@ -479,16 +492,20 @@ theorem concreteRationalApproxToExp_of_padeR
     (hno_nonzero_unit_points_on_orderWeb :
       ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
         ‖padeR n d z * exp (-z)‖ = 1 → False)
-    (hlocal_minus_near_down :
-      ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+    (hlocal_minus_near_of_sign :
+      ∀ θ : ℝ,
+        0 < padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) →
         ∃ aperture > 0, ∃ radius > 0,
           ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
             ‖padeR n d z * exp (-z)‖ < 1)
-    (hlocal_plus_near_up :
-      ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+    (hlocal_plus_near_of_sign :
+      ∀ θ : ℝ,
+        padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) < 0 →
         ∃ aperture > 0, ∃ radius > 0,
           ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
             1 < ‖padeR n d z * exp (-z)‖)
+    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
+    (hup_sign_of_dir : PadeRUpArrowSignBridge n d)
     (hfar_plus_on_orderWeb :
       ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
         1 < ‖padeR n d z * exp (-z)‖)
@@ -496,6 +513,20 @@ theorem concreteRationalApproxToExp_of_padeR
       ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
         ‖padeR n d z * exp (-z)‖ < 1) :
     ConcreteRationalApproxToExp (padeR n d) data := by
+  have hlocal_minus_near_down :
+      ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            ‖padeR n d z * exp (-z)‖ < 1 := by
+    intro θ hθ
+    exact hlocal_minus_near_of_sign θ (hdown_sign_of_dir θ hθ)
+  have hlocal_plus_near_up :
+      ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+        ∃ aperture > 0, ∃ radius > 0,
+          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
+            1 < ‖padeR n d z * exp (-z)‖ := by
+    intro θ hθ
+    exact hlocal_plus_near_of_sign θ (hup_sign_of_dir θ hθ)
   simpa using
     (concreteRationalApproxToExp_of_realizedArrowInfinityBranch_contradictions
       (R := padeR n d) data hcont_orderWeb
@@ -519,7 +550,9 @@ structure PadeRZeroSupportExclusionInput (n d : ℕ) where
 This exposes the exact remaining input below `ConcreteRationalApproxToExp`
 without changing the `OrderStars` interface: two realized infinity witness
 families together with the analytic contradiction hypotheses that rule them
-out. -/
+out and the honest explicit-sign local feeders currently available in the live
+Padé file. The remaining direction-to-sign bridge stays theorem-local
+downstream. -/
 structure PadeRConcreteNoEscapeInput
     (n d : ℕ) (data : OrderArrowTerminationData) where
   downArrowInfinityWitnesses : PadeRRealizedDownArrowInfinityWitnessFamily n d data
@@ -536,13 +569,15 @@ structure PadeRConcreteNoEscapeInput
   no_nonzero_unit_points_on_orderWeb :
     ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
       ‖padeR n d z * exp (-z)‖ = 1 → False
-  local_minus_near_down :
-    ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
+  local_minus_near_of_sign :
+    ∀ θ : ℝ,
+      0 < padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) →
       ∃ aperture > 0, ∃ radius > 0,
         ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
           ‖padeR n d z * exp (-z)‖ < 1
-  local_plus_near_up :
-    ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
+  local_plus_near_of_sign :
+    ∀ θ : ℝ,
+      padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) < 0 →
       ∃ aperture > 0, ∃ radius > 0,
         ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
           1 < ‖padeR n d z * exp (-z)‖
@@ -570,15 +605,19 @@ def PadeRConcreteNoEscapeInput.realizesInfinityBranchGerms
 
 theorem PadeRConcreteNoEscapeInput.concrete
     {n d : ℕ} {data : OrderArrowTerminationData}
-    (h : PadeRConcreteNoEscapeInput n d data) :
+    (h : PadeRConcreteNoEscapeInput n d data)
+    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
+    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
     ConcreteRationalApproxToExp (padeR n d) data := by
   exact concreteRationalApproxToExp_of_padeR
     h.cont_orderWeb
     h.zero_not_mem_down_support
     h.zero_not_mem_up_support
     h.no_nonzero_unit_points_on_orderWeb
-    h.local_minus_near_down
-    h.local_plus_near_up
+    h.local_minus_near_of_sign
+    h.local_plus_near_of_sign
+    hdown_sign_of_dir
+    hup_sign_of_dir
     h.far_plus_on_orderWeb
     h.far_minus_on_orderWeb
 
@@ -601,16 +640,6 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExcl
     (hno_nonzero_unit_points_on_orderWeb :
       ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
         ‖padeR n d z * exp (-z)‖ = 1 → False)
-    (hlocal_minus_near_down :
-      ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
-        ∃ aperture > 0, ∃ radius > 0,
-          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
-            ‖padeR n d z * exp (-z)‖ < 1)
-    (hlocal_plus_near_up :
-      ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
-        ∃ aperture > 0, ∃ radius > 0,
-          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
-            1 < ‖padeR n d z * exp (-z)‖)
     (hfar_plus_on_orderWeb :
       ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
         1 < ‖padeR n d z * exp (-z)‖)
@@ -625,8 +654,8 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExcl
       zero_not_mem_down_support := hzero.zero_not_mem_down_support
       zero_not_mem_up_support := hzero.zero_not_mem_up_support
       no_nonzero_unit_points_on_orderWeb := hno_nonzero_unit_points_on_orderWeb
-      local_minus_near_down := hlocal_minus_near_down
-      local_plus_near_up := hlocal_plus_near_up
+      local_minus_near_of_sign := padeR_local_minus_near_of_errorConst_cos_pos n d
+      local_plus_near_of_sign := padeR_local_plus_near_of_errorConst_cos_neg n d
       far_plus_on_orderWeb := hfar_plus_on_orderWeb
       far_minus_on_orderWeb := hfar_minus_on_orderWeb }
 
@@ -645,16 +674,6 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     (hno_nonzero_unit_points_on_orderWeb :
       ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
         ‖padeR n d z * exp (-z)‖ = 1 → False)
-    (hlocal_minus_near_down :
-      ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
-        ∃ aperture > 0, ∃ radius > 0,
-          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
-            ‖padeR n d z * exp (-z)‖ < 1)
-    (hlocal_plus_near_up :
-      ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
-        ∃ aperture > 0, ∃ radius > 0,
-          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
-            1 < ‖padeR n d z * exp (-z)‖)
     (hfar_plus_on_orderWeb :
       ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
         1 < ‖padeR n d z * exp (-z)‖)
@@ -667,16 +686,15 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     hcont_orderWeb
     ⟨hzero_not_mem_down_support, hzero_not_mem_up_support⟩
     hno_nonzero_unit_points_on_orderWeb
-    hlocal_minus_near_down
-    hlocal_plus_near_up
     hfar_plus_on_orderWeb
     hfar_minus_on_orderWeb
 
 /-- Honest Padé-local boundary for the repaired Ehle barrier seam.
 This bundles exactly the concrete hypotheses currently needed to apply the
-Padé-side 355D/355E' wrappers together with `ehle_barrier_nat`, without
-pretending that the explicit endpoint counts already supply the separate 355G
-correction-term witnesses. -/
+Padé-side no-escape seam together with `ehle_barrier_nat`, while leaving the
+remaining direction-to-sign bridge for the 355D/355E' endpoint wrappers as a
+separate theorem-local input. This still avoids pretending that the explicit
+endpoint counts already supply the separate 355G correction-term witnesses. -/
 structure PadeREhleBarrierInput
     (n d : ℕ) (data : OrderArrowTerminationData) where
   numeratorDegree_eq : data.numeratorDegree = n
@@ -703,16 +721,6 @@ def padeREhleBarrierInput_of_padeR
     (hno_nonzero_unit_points_on_orderWeb :
       ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
         ‖padeR n d z * exp (-z)‖ = 1 → False)
-    (hlocal_minus_near_down :
-      ∀ θ : ℝ, IsDownArrowDir (padeR n d) θ →
-        ∃ aperture > 0, ∃ radius > 0,
-          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
-            ‖padeR n d z * exp (-z)‖ < 1)
-    (hlocal_plus_near_up :
-      ∀ θ : ℝ, IsUpArrowDir (padeR n d) θ →
-        ∃ aperture > 0, ∃ radius > 0,
-          ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
-            1 < ‖padeR n d z * exp (-z)‖)
     (hfar_plus_on_orderWeb :
       ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
         1 < ‖padeR n d z * exp (-z)‖)
@@ -728,8 +736,6 @@ def padeREhleBarrierInput_of_padeR
     hzero_not_mem_down_support
     hzero_not_mem_up_support
     hno_nonzero_unit_points_on_orderWeb
-    hlocal_minus_near_down
-    hlocal_plus_near_up
     hfar_plus_on_orderWeb
     hfar_minus_on_orderWeb
 
@@ -741,23 +747,30 @@ def PadeREhleBarrierInput.realizesInfinityBranchGerms
 
 theorem PadeREhleBarrierInput.concrete
     {n d : ℕ} {data : OrderArrowTerminationData}
-    (h : PadeREhleBarrierInput n d data) :
+    (h : PadeREhleBarrierInput n d data)
+    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
+    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
     ConcreteRationalApproxToExp (padeR n d) data := by
-  exact h.noEscape.concrete
+  exact h.noEscape.concrete hdown_sign_of_dir hup_sign_of_dir
 
 theorem PadeREhleBarrierInput.thm_355D
     {n d : ℕ} {data : OrderArrowTerminationData}
-    (h : PadeREhleBarrierInput n d data) :
+    (h : PadeREhleBarrierInput n d data)
+    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
+    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
     SatisfiesArrowCountInequality data.toOrderArrowCountData := by
   exact thm_355D_of_padeR n d data h.pade.toIsRationalApproxToExp
-    h.realizesInfinityBranchGerms h.concrete
+    h.realizesInfinityBranchGerms (h.concrete hdown_sign_of_dir hup_sign_of_dir)
 
 theorem PadeREhleBarrierInput.thm_355E'
     {n d : ℕ} {data : OrderArrowTerminationData}
-    (h : PadeREhleBarrierInput n d data) :
+    (h : PadeREhleBarrierInput n d data)
+    (hdown_sign_of_dir : PadeRDownArrowSignBridge n d)
+    (hup_sign_of_dir : PadeRUpArrowSignBridge n d) :
     data.downArrowsAtZeros = data.numeratorDegree ∧
     data.upArrowsAtPoles = data.denominatorDegree := by
-  exact thm_355E'_of_padeR n d data h.pade h.realizesInfinityBranchGerms h.concrete
+  exact thm_355E'_of_padeR n d data h.pade h.realizesInfinityBranchGerms
+    (h.concrete hdown_sign_of_dir hup_sign_of_dir)
 
 /-- Minimal Padé-local input actually used by `ehle_barrier_nat_of_padeR`.
 The branch-realization and concrete no-infinity data are needed for the sibling
