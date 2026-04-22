@@ -73,6 +73,20 @@ theorem padeR_local_minus_near_of_errorConst_cos_pos
       (R := padeR n d) (p := n + d) (θ := θ)
       (C := padePhiErrorConst n d) K δ₀ hsign' hK.le hδ hφ
 
+theorem padeR_local_plus_near_of_errorConst_cos_neg
+    (n d : ℕ) (θ : ℝ)
+    (hsign : padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) < 0) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius ->
+        1 < ‖padeR n d z * exp (-z)‖ := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  have hsign' : padePhiErrorConst n d * Real.cos ((↑(n + d + 1) : ℝ) * θ) < 0 := by
+    simpa [Nat.cast_add, Nat.cast_one, add_assoc, add_left_comm, add_comm] using hsign
+  exact
+    local_plus_near_of_errorConst_cos_neg
+      (R := padeR n d) (p := n + d) (θ := θ)
+      (C := padePhiErrorConst n d) K δ₀ hsign' hK.le hδ hφ
+
 private theorem padePhiErrorConst_pos_of_even
     (n d : ℕ) (hd : Even d) :
     0 < padePhiErrorConst n d := by
