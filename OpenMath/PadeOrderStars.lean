@@ -303,12 +303,12 @@ def PadeROrderWebArcPhaseBridgeNearOrigin
         0 < Complex.re
           (padeR n d (((↑t : ℂ) * exp (↑(θ + s) * I))) *
             exp (-(((↑t : ℂ) * exp (↑(θ + s) * I)))))) ∧
-      Complex.im
-          (padeR n d (((↑t : ℂ) * exp (↑(θ - η) * I))) *
-            exp (-(((↑t : ℂ) * exp (↑(θ - η) * I))))) < 0 ∧
       0 < Complex.im
+          (padeR n d (((↑t : ℂ) * exp (↑(θ - η) * I))) *
+            exp (-(((↑t : ℂ) * exp (↑(θ - η) * I))))) ∧
+      Complex.im
           (padeR n d (((↑t : ℂ) * exp (↑(θ + η) * I))) *
-            exp (-(((↑t : ℂ) * exp (↑(θ + η) * I)))))
+            exp (-(((↑t : ℂ) * exp (↑(θ + η) * I))))) < 0
 
 private theorem padeR_even_downArrowArcEndpointSigns_of_pos_errorConst
     (n d : ℕ) {η : ℝ}
@@ -501,18 +501,18 @@ theorem PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge
   have hzero_mem :
       (0 : ℝ) ∈ Set.Icc
         (Complex.im
-          (padeR n d ((↑t : ℂ) * exp (↑(θ - η) * I)) *
-            exp (-((↑t : ℂ) * exp (↑(θ - η) * I)))))
-        (Complex.im
           (padeR n d ((↑t : ℂ) * exp (↑(θ + η) * I)) *
-            exp (-((↑t : ℂ) * exp (↑(θ + η) * I))))) := by
-    exact ⟨le_of_lt himneg, le_of_lt himpos⟩
+            exp (-((↑t : ℂ) * exp (↑(θ + η) * I)))))
+        (Complex.im
+          (padeR n d ((↑t : ℂ) * exp (↑(θ - η) * I)) *
+            exp (-((↑t : ℂ) * exp (↑(θ - η) * I))))) := by
+    exact ⟨le_of_lt himpos, le_of_lt himneg⟩
   have hpre : IsPreconnected (Set.Icc (-η) η) := by
     simpa using isPreconnected_Icc
   have himage :=
     hpre.intermediate_value
-      (show -η ∈ Set.Icc (-η) η by simp [hη.le])
       (show η ∈ Set.Icc (-η) η by simp [hη.le])
+      (show -η ∈ Set.Icc (-η) η by simp [hη.le])
       hcont_im
   rcases himage hzero_mem with ⟨s, hsIcc, hszero⟩
   let z : ℂ := (↑t : ℂ) * exp (↑(θ + s) * I)
@@ -1131,6 +1131,188 @@ private theorem exact_ray_mem_rayConeNearOrigin
   refine ⟨t, ht, ?_⟩
   have hclose : 0 < aperture * t := mul_pos haperture ht.1
   simpa using hclose
+
+private theorem exact_angle_arc_mem_rayConeNearOrigin
+    (θ aperture radius t η : ℝ)
+    (_haperture : 0 < aperture)
+    (ht : t ∈ Set.Ioo (0 : ℝ) radius)
+    (hη : η < aperture) :
+    ∀ s ∈ Set.Icc (-η) η,
+      ((↑t : ℂ) * exp (↑(θ + s) * I)) ∈ rayConeNearOrigin θ aperture radius := by
+  intro s hs
+  refine ⟨t, ht, ?_⟩
+  have hs_abs : |s| ≤ η := abs_le.mpr ⟨hs.1, hs.2⟩
+  have hs_bound : ‖exp (↑s * I) - (1 : ℂ)‖ < aperture := by
+    calc
+      ‖exp (↑s * I) - (1 : ℂ)‖ ≤ ‖s‖ := by
+        simpa [mul_comm] using (Real.norm_exp_I_mul_ofReal_sub_one_le (x := s))
+      _ = |s| := by simp
+      _ ≤ η := hs_abs
+      _ < aperture := hη
+  have hangle : ((↑(θ + s) : ℂ) * I) = I * ↑θ + I * ↑s := by
+    simp [mul_add, mul_comm]
+  have hexp :
+      exp (↑(θ + s) * I) = exp (↑θ * I) * exp (↑s * I) := by
+    rw [hangle, exp_add]
+    simp [mul_comm]
+  have hdist_eq :
+      (↑t : ℂ) * exp (↑(θ + s) * I) - (↑t : ℂ) * exp (↑θ * I) =
+        ((↑t : ℂ) * exp (↑θ * I)) * (exp (↑s * I) - 1) := by
+    rw [hexp]
+    ring
+  calc
+    ‖(↑t : ℂ) * exp (↑(θ + s) * I) - (↑t : ℂ) * exp (↑θ * I)‖
+        = ‖((↑t : ℂ) * exp (↑θ * I)) * (exp (↑s * I) - 1)‖ := by rw [hdist_eq]
+    _ = ‖(↑t : ℂ) * exp (↑θ * I)‖ * ‖exp (↑s * I) - 1‖ := norm_mul _ _
+    _ = t * ‖exp (↑s * I) - 1‖ := by rw [norm_ofReal_mul_exp_I t θ ht.1.le]
+    _ < t * aperture := mul_lt_mul_of_pos_left hs_bound ht.1
+    _ = aperture * t := by ring
+
+private theorem padeR_exp_neg_re_pos_of_small_norm
+    (n d : ℕ) :
+    ∃ δ > 0, ∀ z : ℂ, ‖z‖ < δ →
+      0 < Complex.re (padeR n d z * exp (-z)) := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  let Cabs : ℝ := |padePhiErrorConst n d|
+  let δ : ℝ := min (δ₀ / 2) (min 1 (1 / (4 * (Cabs + K))))
+  have hsum_pos : 0 < Cabs + K := by
+    dsimp [Cabs]
+    positivity
+  have hδpos : 0 < δ := by
+    refine lt_min (half_pos hδ) ?_
+    refine lt_min zero_lt_one ?_
+    positivity
+  refine ⟨δ, hδpos, ?_⟩
+  intro z hz
+  have hzδhalf : ‖z‖ < δ₀ / 2 := lt_of_lt_of_le hz (min_le_left _ _)
+  have hzδ₀ : ‖z‖ < δ₀ := by linarith
+  have hznorm_one : ‖z‖ < 1 := by
+    exact lt_of_lt_of_le hz (le_trans (min_le_right _ _) (min_le_left _ _))
+  have hznorm_small : ‖z‖ < 1 / (4 * (Cabs + K)) := by
+    exact lt_of_lt_of_le hz (le_trans (min_le_right _ _) (min_le_right _ _))
+  have hpow1_le : ‖z‖ ^ (n + d + 1) ≤ ‖z‖ := by
+    calc
+      ‖z‖ ^ (n + d + 1) ≤ ‖z‖ ^ 1 := by
+        exact pow_le_pow_of_le_one (norm_nonneg z) hznorm_one.le (by omega : 1 ≤ n + d + 1)
+      _ = ‖z‖ := by simp
+  have hpow2_le : ‖z‖ ^ (n + d + 2) ≤ ‖z‖ := by
+    calc
+      ‖z‖ ^ (n + d + 2) ≤ ‖z‖ ^ 1 := by
+        exact pow_le_pow_of_le_one (norm_nonneg z) hznorm_one.le (by omega : 1 ≤ n + d + 2)
+      _ = ‖z‖ := by simp
+  have hsum_le :
+      Cabs * ‖z‖ ^ (n + d + 1) + K * ‖z‖ ^ (n + d + 2) ≤ (Cabs + K) * ‖z‖ := by
+    have hterm1 : Cabs * ‖z‖ ^ (n + d + 1) ≤ Cabs * ‖z‖ := by
+      exact mul_le_mul_of_nonneg_left hpow1_le (by dsimp [Cabs]; positivity)
+    have hterm2 : K * ‖z‖ ^ (n + d + 2) ≤ K * ‖z‖ := by
+      exact mul_le_mul_of_nonneg_left hpow2_le hK.le
+    nlinarith
+  have hsum_lt :
+      Cabs * ‖z‖ ^ (n + d + 1) + K * ‖z‖ ^ (n + d + 2) < 1 / 4 := by
+    have hprod_lt : (Cabs + K) * ‖z‖ < 1 / 4 := by
+      have hden_pos : 0 < 4 * (Cabs + K) := by positivity
+      have htmp := (lt_div_iff₀ hden_pos).mp hznorm_small
+      nlinarith
+    exact lt_of_le_of_lt hsum_le hprod_lt
+  have hre_main_lower :
+      1 - Cabs * ‖z‖ ^ (n + d + 1) ≤
+        Complex.re ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)) := by
+    have hre_term :
+        Complex.re ((padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)) ≤
+          Cabs * ‖z‖ ^ (n + d + 1) := by
+      calc
+        Complex.re ((padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)) ≤
+            ‖(padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)‖ := Complex.re_le_norm _
+        _ = Cabs * ‖z‖ ^ (n + d + 1) := by
+          simp [Cabs, norm_pow]
+    rw [show Complex.re ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)) =
+        1 - Complex.re ((padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)) by simp]
+    linarith
+  have hre_diff :
+      abs
+        (Complex.re (padeR n d z * exp (-z)) -
+          Complex.re ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))) ≤
+        K * ‖z‖ ^ (n + d + 2) := by
+    have hre_le :
+        abs
+          (Complex.re (padeR n d z * exp (-z) -
+            ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)))) ≤
+          ‖padeR n d z * exp (-z) -
+            ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))‖ := by
+      simpa using
+        Complex.abs_re_le_norm
+          (padeR n d z * exp (-z) -
+            ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)))
+    have happrox := hφ z hzδ₀
+    simpa [Complex.sub_re] using le_trans hre_le happrox
+  have hre_lower :
+      1 - Cabs * ‖z‖ ^ (n + d + 1) - K * ‖z‖ ^ (n + d + 2) ≤
+        Complex.re (padeR n d z * exp (-z)) := by
+    have h' := abs_le.mp hre_diff
+    linarith
+  have hpos :
+      0 < 1 - Cabs * ‖z‖ ^ (n + d + 1) - K * ‖z‖ ^ (n + d + 2) := by
+    nlinarith
+  exact lt_of_lt_of_le hpos hre_lower
+
+theorem padeR_even_downArrowArcPhaseBridge_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    PadeROrderWebArcPhaseBridgeNearOrigin n d 0 := by
+  intro aperture haperture radius hradius
+  obtain ⟨δre, hδre_pos, hre_small⟩ := padeR_exp_neg_re_pos_of_small_norm n d
+  let p1 : ℝ := ((↑(n + d) + 1) : ℝ)
+  have hp1_pos : 0 < p1 := by
+    dsimp [p1]
+    positivity
+  let η : ℝ := min (aperture / 2) (1 / p1)
+  have hη_pos : 0 < η := by
+    refine lt_min (half_pos haperture) ?_
+    exact one_div_pos.mpr hp1_pos
+  have hη_lt_aperture : η < aperture := by
+    have hhalf : aperture / 2 < aperture := by linarith
+    exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have hηpi : p1 * η < Real.pi := by
+    have hη_one : p1 * η ≤ 1 := by
+      have hη_le : η ≤ 1 / p1 := min_le_right _ _
+      have hmul := mul_le_mul_of_nonneg_left hη_le hp1_pos.le
+      have hp1_ne : p1 ≠ 0 := ne_of_gt hp1_pos
+      rw [show p1 * (1 / p1) = 1 by field_simp [hp1_ne]] at hmul
+      exact hmul
+    linarith [Real.pi_gt_three]
+  let radius' : ℝ := min radius δre
+  have hradius' : 0 < radius' := by
+    exact lt_min hradius hδre_pos
+  rcases padeR_even_downArrowArcEndpointSigns_of_pos_errorConst n d hC hη_pos hηpi radius' hradius' with
+    ⟨t, ht, him_left, him_right⟩
+  have ht_radius : t ∈ Set.Ioo (0 : ℝ) radius := by
+    refine ⟨ht.1, ?_⟩
+    exact lt_of_lt_of_le ht.2 (min_le_left _ _)
+  have ht_δre : t < δre := by
+    exact lt_of_lt_of_le ht.2 (min_le_right _ _)
+  refine ⟨t, ht_radius, η, hη_pos, ?_, ?_, ?_, ?_⟩
+  · exact exact_angle_arc_mem_rayConeNearOrigin 0 aperture radius t η haperture ht_radius hη_lt_aperture
+  · intro s hs
+    apply hre_small
+    simpa using (norm_ofReal_mul_exp_I t s ht_radius.1.le).trans_lt ht_δre
+  · simpa using him_left
+  · simpa using him_right
+
+theorem padeR_even_downArrowOrderWebMeetsRayConeNearOrigin_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    PadeROrderWebMeetsRayConeNearOrigin n d 0 := by
+  exact
+    PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge
+      (padeR_even_downArrowArcPhaseBridge_of_pos_errorConst n d hC)
+
+theorem padeRDownArrowOrderWebArcPhaseBridgeInput_of_pos_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : 0 < padePhiErrorConst n d) :
+    PadeRDownArrowOrderWebArcPhaseBridgeInput n d data := by
+  refine ⟨?_⟩
+  intro _
+  refine ⟨0, ?_, ?_⟩
+  · simpa using padeR_downArrowDir_of_pos_errorConst n d 0 hC
+  · simpa using padeR_even_downArrowArcPhaseBridge_of_pos_errorConst n d hC
 
 /-- Exact remaining obstruction after the honest explicit-sign refactor:
 to upgrade the weak raywise bridge below to the strict sign bridge, one still
