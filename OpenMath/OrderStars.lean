@@ -1626,6 +1626,285 @@ private theorem main_plus_bound_of_re_neg
   have hnorm : ((1 : ℂ) - ↑a * u).re ≤ ‖(1 : ℂ) - ↑a * u‖ := Complex.re_le_norm _
   linarith
 
+private theorem normalized_errorPhase_norm_one
+    (C α : ℝ) (hC : C ≠ 0) :
+    ‖((((C / |C| : ℝ)) : ℂ) * Complex.exp ((α : ℂ) * I))‖ = 1 := by
+  have habsC : 0 < |C| := abs_pos.mpr hC
+  have hratio : ‖((((C / |C| : ℝ)) : ℂ))‖ = 1 := by
+    rw [Complex.norm_real, Real.norm_eq_abs, abs_div, abs_of_pos habsC]
+    exact div_self habsC.ne'
+  rw [norm_mul, hratio, Complex.norm_exp, Complex.mul_re]
+  simp
+
+private theorem normalized_errorPhase_re
+    (C α : ℝ) :
+    ((((C / |C| : ℝ)) : ℂ) * Complex.exp ((α : ℂ) * I)).re =
+      (C / |C|) * Real.cos α := by
+  rw [Complex.mul_re]
+  simp [Complex.exp_ofReal_mul_I_re, Complex.exp_ofReal_mul_I_im]
+
+private theorem local_minus_point_of_errorConst_cos_pos
+    (R : ℂ → ℂ) (p : ℕ) (θ C K Keff δ₀ μ eps aperture : ℝ)
+    (phase : ℂ)
+    (hphase_def :
+      phase = ((((C / |C| : ℝ)) : ℂ) *
+        Complex.exp (((((↑(p + 1) : ℝ) * θ : ℝ) : ℂ)) * I)))
+    (habsC : 0 < |C|)
+    (hμ_pos : 0 < μ) (hμ_half : μ ≤ 1 / 2)
+    (hphase_norm : ‖phase‖ = 1)
+    (_hphase_re_gt : μ < phase.re)
+    (heps_re : eps ≤ phase.re - μ)
+    (heps_half : eps ≤ 1 / 2)
+    (haperture : 0 < aperture)
+    (hapow : ∀ w : ℂ, ‖w - 1‖ < aperture → ‖w ^ (p + 1) - 1‖ < eps)
+    (hK_le : K ≤ Keff) (hKeff_pos : 0 < Keff) (_hδ : 0 < δ₀)
+    (hφ :
+      ∀ z : ℂ, ‖z‖ < δ₀ ->
+        ‖R z * exp (-z) - (1 - (C : ℂ) * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2))
+    {radius : ℝ}
+    (hδscale : radius ≤ δ₀ / (1 + aperture))
+    (hrone : radius ≤ 1)
+    (hrmain : radius ≤ μ / (4 * |C|))
+    (hrerr : radius ≤ |C| * μ / (4 * Keff * (1 + aperture) ^ (p + 2)))
+    {z : ℂ}
+    (hz : z ∈ rayConeNearOrigin θ aperture radius) :
+    ‖R z * exp (-z)‖ < 1 := by
+  let scale : ℝ := 1 + aperture
+  have hscale : 0 < scale := by
+    dsimp [scale]
+    linarith
+  rcases hz with ⟨t, ht, hdist⟩
+  let center : ℂ := (↑t : ℂ) * Complex.exp ((θ : ℂ) * I)
+  let w : ℂ := z / center
+  have hdist_center : ‖z - center‖ < aperture * t := by
+    simpa [center] using hdist
+  have hcenter_ne : center ≠ 0 := by
+    simp [center, ht.1.ne']
+  have hcenter_norm : ‖center‖ = t := by
+    simpa [center] using norm_ofReal_mul_exp_I t θ ht.1.le
+  have hw_close : ‖w - 1‖ < aperture := by
+    have hw :
+        w - 1 = (z - center) / center := by
+      dsimp [w]
+      field_simp [hcenter_ne]
+    rw [hw, norm_div, hcenter_norm]
+    have h' := mul_lt_mul_of_pos_right hdist_center (one_div_pos.mpr ht.1)
+    simpa [div_eq_mul_inv, ht.1.ne', mul_assoc, mul_left_comm, mul_comm] using h'
+  have hwpow_close : ‖w ^ (p + 1) - 1‖ < eps := hapow w hw_close
+  have hz_decomp : center * w = z := by
+    dsimp [w]
+    field_simp [hcenter_ne]
+  have hz_pow :
+      z ^ (p + 1) =
+        ((t ^ (p + 1) : ℝ) : ℂ) *
+          (Complex.exp (((((↑(p + 1) : ℝ) * θ : ℝ) : ℂ)) * I) * w ^ (p + 1)) := by
+    rw [← hz_decomp]
+    dsimp [center]
+    rw [mul_assoc, mul_pow, mul_pow, Complex.ofReal_pow]
+    rw [← Complex.exp_nsmul, nsmul_eq_mul]
+    congr 1
+    push_cast
+    ring
+  have hnorm_lt : ‖z‖ < scale * t := by
+    have hle : ‖z‖ ≤ ‖center‖ + ‖z - center‖ := by
+      have hsum : center + (z - center) = z := by ring
+      simpa [hsum] using (norm_add_le center (z - center))
+    rw [hcenter_norm] at hle
+    have hlt : ‖z‖ < t + aperture * t := by
+      exact lt_of_le_of_lt hle (by linarith [hdist_center])
+    nlinarith [scale]
+  have ht_delta : t < δ₀ / scale := lt_of_lt_of_le ht.2 hδscale
+  have hz_delta : ‖z‖ < δ₀ := by
+    have hscale_t := (lt_div_iff₀ hscale).mp ht_delta
+    exact lt_trans hnorm_lt (by simpa [scale, mul_comm] using hscale_t)
+  have ht_one : t < 1 := lt_of_lt_of_le ht.2 hrone
+  have ht_main : t < μ / (4 * |C|) := lt_of_lt_of_le ht.2 hrmain
+  have ht_err : t < |C| * μ / (4 * Keff * scale ^ (p + 2)) := by
+    simpa [scale] using (lt_of_lt_of_le ht.2 hrerr)
+  have htpow_le_t : t ^ (p + 1) ≤ t := by
+    calc
+      t ^ (p + 1) ≤ t ^ 1 := by
+        exact pow_le_pow_of_le_one ht.1.le ht_one.le (by omega : 1 ≤ p + 1)
+      _ = t := by simp
+  let a : ℝ := |C| * t ^ (p + 1)
+  have ha_pos : 0 < a := by
+    dsimp [a]
+    exact mul_pos habsC (pow_pos ht.1 _)
+  have ha_small : a < μ / 4 := by
+    have hmain' : |C| * t < μ / 4 := by
+      have h' := (lt_div_iff₀ (show 0 < 4 * |C| by positivity)).mp ht_main
+      nlinarith
+    dsimp [a]
+    calc
+      |C| * t ^ (p + 1) ≤ |C| * t := by
+        exact mul_le_mul_of_nonneg_left htpow_le_t (abs_nonneg C)
+      _ < μ / 4 := hmain'
+  let u : ℂ := phase * w ^ (p + 1)
+  have hu_close : ‖u - phase‖ < eps := by
+    have hu :
+        u - phase = phase * (w ^ (p + 1) - 1) := by
+      dsimp [u]
+      ring
+    rw [hu, norm_mul, hphase_norm]
+    simpa
+  have hu_re_gt : μ < u.re := by
+    have hclose_re : |u.re - phase.re| < eps := by
+      calc
+        |u.re - phase.re| = |(u - phase).re| := by simp
+        _ ≤ ‖u - phase‖ := Complex.abs_re_le_norm (u - phase)
+        _ < eps := hu_close
+    have hclose_margin : |u.re - phase.re| < phase.re - μ := lt_of_lt_of_le hclose_re heps_re
+    have hclose_margin' := abs_lt.mp hclose_margin
+    linarith
+  have hu_norm_lt_two : ‖u‖ < 2 := by
+    have hle : ‖u‖ ≤ ‖u - phase‖ + ‖phase‖ := by
+      have hsum : (u - phase) + phase = u := by ring
+      simpa [hsum] using (norm_add_le (u - phase) phase)
+    calc
+      ‖u‖ ≤ ‖u - phase‖ + ‖phase‖ := hle
+      _ < eps + 1 := by linarith [hu_close]
+      _ ≤ (1 / 2 : ℝ) + 1 := by
+        gcongr
+      _ < 2 := by norm_num [heps_half]
+  have hmain_eq :
+      (1 - (C : ℂ) * z ^ (p + 1) : ℂ) = (1 : ℂ) - (a : ℂ) * u := by
+    have hsplit : (C : ℂ) = ((((|C| * (C / |C|) : ℝ))) : ℂ) := by
+      congr 1
+      field_simp [habsC.ne']
+    rw [hz_pow, hsplit]
+    dsimp [u]
+    rw [hphase_def]
+    dsimp [a]
+    simp [mul_assoc, mul_left_comm, mul_comm]
+  have hmain_lt :
+      ‖(1 : ℂ) - (a : ℂ) * u‖ < 1 - a * μ / 2 := by
+    exact main_minus_bound_of_re_pos a μ ha_pos hμ_pos hμ_half ha_small hu_re_gt hu_norm_lt_two
+  have h_approx_K :
+      ‖R z * exp (-z) - ((1 : ℂ) - (a : ℂ) * u)‖ ≤ K * ‖z‖ ^ (p + 2) := by
+    simpa [hmain_eq] using hφ z hz_delta
+  have h_approx :
+      ‖R z * exp (-z) - ((1 : ℂ) - (a : ℂ) * u)‖ ≤ Keff * ‖z‖ ^ (p + 2) := by
+    calc
+      ‖R z * exp (-z) - ((1 : ℂ) - (a : ℂ) * u)‖ ≤ K * ‖z‖ ^ (p + 2) := h_approx_K
+      _ ≤ Keff * ‖z‖ ^ (p + 2) := by
+        exact mul_le_mul_of_nonneg_right hK_le (pow_nonneg (norm_nonneg _) _)
+  have h_scalar : Keff * scale ^ (p + 2) * t < |C| * μ / 4 := by
+    have hden : 0 < 4 * Keff * scale ^ (p + 2) := by positivity
+    have h' := (lt_div_iff₀ hden).mp ht_err
+    nlinarith
+  have h_err_bound :
+      Keff * (scale * t) ^ (p + 2) < a * μ / 4 := by
+    have htpow_pos : 0 < t ^ (p + 1) := pow_pos ht.1 _
+    calc
+      Keff * (scale * t) ^ (p + 2)
+          = t ^ (p + 1) * (Keff * scale ^ (p + 2) * t) := by
+              rw [mul_pow]
+              ring
+      _ < t ^ (p + 1) * (|C| * μ / 4) := by
+              exact mul_lt_mul_of_pos_left h_scalar htpow_pos
+      _ = a * μ / 4 := by
+              dsimp [a]
+              ring
+  have hzpow_le :
+      ‖z‖ ^ (p + 2) ≤ (scale * t) ^ (p + 2) := by
+    exact pow_le_pow_left₀ (norm_nonneg _) hnorm_lt.le _
+  have h_err :
+      Keff * ‖z‖ ^ (p + 2) < a * μ / 4 := by
+    calc
+      Keff * ‖z‖ ^ (p + 2) ≤ Keff * (scale * t) ^ (p + 2) := by
+        exact mul_le_mul_of_nonneg_left hzpow_le hKeff_pos.le
+      _ < a * μ / 4 := h_err_bound
+  have h_upper :
+      ‖R z * exp (-z)‖ ≤ ‖(1 : ℂ) - (a : ℂ) * u‖ + Keff * ‖z‖ ^ (p + 2) := by
+    have htriangle :=
+      norm_add_le ((1 : ℂ) - (a : ℂ) * u)
+        (R z * exp (-z) - ((1 : ℂ) - (a : ℂ) * u))
+    rw [add_sub_cancel] at htriangle
+    linarith
+  calc
+    ‖R z * exp (-z)‖
+        ≤ ‖(1 : ℂ) - (a : ℂ) * u‖ + Keff * ‖z‖ ^ (p + 2) := h_upper
+    _ < (1 - a * μ / 2) + a * μ / 4 := by linarith
+    _ < 1 := by nlinarith [ha_pos, hμ_pos]
+
+/-- Local cone-control under an explicit positive cosine-sign hypothesis.
+This is the honest replacement for the false direction-only feeder at
+zero-cosine rays. -/
+theorem local_minus_near_of_errorConst_cos_pos
+    (R : ℂ → ℂ) (p : ℕ) (θ C K δ₀ : ℝ)
+    (hsign : 0 < C * Real.cos ((↑(p + 1) : ℝ) * θ))
+    (_hK : 0 ≤ K) (hδ : 0 < δ₀)
+    (hφ :
+      ∀ z : ℂ, ‖z‖ < δ₀ ->
+        ‖R z * exp (-z) - (1 - (C : ℂ) * z ^ (p + 1))‖ ≤ K * ‖z‖ ^ (p + 2)) :
+    ∃ aperture > 0, ∃ radius > 0,
+      ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius ->
+        ‖R z * exp (-z)‖ < 1 := by
+  have hC_ne : C ≠ 0 := by
+    intro hC0
+    simp [hC0] at hsign
+  have habsC : 0 < |C| := abs_pos.mpr hC_ne
+  let α : ℝ := ((↑(p + 1) : ℝ) * θ)
+  let phase : ℂ := ((((C / |C| : ℝ)) : ℂ) * Complex.exp ((α : ℂ) * I))
+  have hphase_norm : ‖phase‖ = 1 := by
+    simpa [phase, α] using normalized_errorPhase_norm_one C α hC_ne
+  have hphase_re : phase.re = (C / |C|) * Real.cos α := by
+    simpa [phase, α] using normalized_errorPhase_re C α
+  have hphase_re_pos : 0 < phase.re := by
+    rw [hphase_re]
+    have hrewrite : (C / |C|) * Real.cos α = (C * Real.cos α) / |C| := by
+      field_simp [habsC.ne']
+    rw [hrewrite]
+    exact div_pos hsign habsC
+  let μ : ℝ := min (phase.re / 2) (1 / 2)
+  have hμ_pos : 0 < μ := by
+    refine lt_min ?_ (by norm_num)
+    linarith
+  have hμ_half : μ ≤ 1 / 2 := min_le_right _ _
+  have hμ_lt_phase : μ < phase.re := by
+    have hhalf_lt : phase.re / 2 < phase.re := by linarith
+    exact lt_of_le_of_lt (min_le_left _ _) hhalf_lt
+  let eps : ℝ := min (phase.re - μ) (1 / 2)
+  have heps_pos : 0 < eps := by
+    refine lt_min ?_ (by norm_num)
+    linarith
+  obtain ⟨aperture, haperture, hapow⟩ :=
+    exists_pos_aperture_pow_sub_one_lt (p + 1) eps heps_pos
+  let scale : ℝ := 1 + aperture
+  have hscale : 0 < scale := by
+    positivity
+  let Keff : ℝ := max K 1
+  have hKeff_pos : 0 < Keff := by
+    have hKeff_ge : (1 : ℝ) ≤ Keff := le_max_right K 1
+    linarith
+  let radius : ℝ :=
+    min (δ₀ / scale)
+      (min 1 (min (μ / (4 * |C|)) (|C| * μ / (4 * Keff * scale ^ (p + 2)))))
+  have hradius : 0 < radius := by
+    have hδscale : 0 < δ₀ / scale := div_pos hδ hscale
+    have hμC : 0 < μ / (4 * |C|) := by positivity
+    have herr : 0 < |C| * μ / (4 * Keff * scale ^ (p + 2)) := by positivity
+    exact lt_min hδscale (lt_min one_pos (lt_min hμC herr))
+  have hphase_def :
+      phase = ((((C / |C| : ℝ)) : ℂ) *
+        Complex.exp (((((↑(p + 1) : ℝ) * θ : ℝ) : ℂ)) * I)) := by
+    rfl
+  refine ⟨aperture, haperture, radius, hradius, ?_⟩
+  intro z hz
+  exact
+    local_minus_point_of_errorConst_cos_pos
+      (R := R) (p := p) (θ := θ) (C := C) (K := K) (Keff := Keff)
+      (δ₀ := δ₀) (μ := μ) (eps := eps) (aperture := aperture) phase
+      hphase_def habsC hμ_pos hμ_half hphase_norm hμ_lt_phase
+      (min_le_left _ _) (min_le_right _ _) haperture hapow
+      (le_max_left _ _) hKeff_pos hδ hφ
+      (radius := radius)
+      (min_le_left _ _)
+      (le_trans (min_le_right _ _) (min_le_left _ _))
+      (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_left _ _)))
+      (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_right _ _)))
+      hz
+
 /-- Honest branch-termination predicate for later topology work: either the branch
 has a genuine finite endpoint away from the origin, or it escapes every closed
 ball. This is intentionally kept as a predicate rather than a theorem because the
