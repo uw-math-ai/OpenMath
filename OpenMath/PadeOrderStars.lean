@@ -1784,6 +1784,82 @@ where
       simp [hγ0]
     · refine ⟨1, by simp, ?_⟩
       simp [hγ1]
+  continuousOrderWebPath_of_phaseSelection
+      {a b η : ℝ}
+      (hab : a ≤ b)
+      (σ : ℝ → ℝ)
+      (hσcont : ContinuousOn σ (Set.Icc a b))
+      (_hσmem : ∀ r ∈ Set.Icc a b, σ r ∈ Set.Icc (-η) η)
+      (hσzero :
+        ∀ r ∈ Set.Icc a b,
+          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
+          Complex.im (padeR n d w * exp (-w)) = 0)
+      (hσre :
+        ∀ r ∈ Set.Icc a b,
+          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
+          0 < Complex.re (padeR n d w * exp (-w)))
+      {z0 z : ℂ}
+      (hz0 :
+        z0 = ((↑a : ℂ) * exp (↑(θ + σ a) * I)))
+      (hz :
+        z = ((↑b : ℂ) * exp (↑(θ + σ b) * I))) :
+      ∃ γ : ℝ → ℂ,
+        ContinuousOn γ (Set.Icc (0 : ℝ) 1) ∧
+        γ 0 = z0 ∧
+        γ 1 = z ∧
+        ∀ u ∈ Set.Icc (0 : ℝ) 1, γ u ∈ orderWeb (padeR n d) := by
+    let w : ℝ → ℂ := fun r => (↑r : ℂ) * exp (↑(θ + σ r) * I)
+    have hwcont : ContinuousOn w (Set.Icc a b) := by
+      apply ContinuousOn.mul continuous_ofReal.continuousOn
+      apply ContinuousOn.cexp
+      apply ContinuousOn.mul
+      · exact continuous_ofReal.comp_continuousOn (continuousOn_const.add hσcont)
+      · exact continuousOn_const
+    let ρ : ℝ → ℝ := fun u => a + u * (b - a)
+    have hρmaps : Set.MapsTo ρ (Set.Icc (0 : ℝ) 1) (Set.Icc a b) := by
+      intro u hu
+      constructor
+      · dsimp [ρ]
+        nlinarith [hu.1, hu.2, hab]
+      · dsimp [ρ]
+        nlinarith [hu.1, hu.2, hab]
+    have hρcont : ContinuousOn ρ (Set.Icc (0 : ℝ) 1) := by
+      simpa [ρ] using
+        (show Continuous (fun u : ℝ => a + u * (b - a)) by
+          fun_prop).continuousOn
+    refine ⟨fun u => w (ρ u), hwcont.comp hρcont hρmaps, ?_, ?_, ?_⟩
+    · calc
+        w (ρ 0) = w a := by simp [ρ]
+        _ = z0 := by simpa [w] using hz0.symm
+    · calc
+        w (ρ 1) = w b := by simp [ρ]
+        _ = z := by simpa [w] using hz.symm
+    · intro u hu
+      have huab : ρ u ∈ Set.Icc a b := hρmaps hu
+      exact mem_orderWeb_of_im_zero_of_re_pos
+        (by simpa [w] using hσre (ρ u) huab)
+        (by simpa [w] using hσzero (ρ u) huab)
+  phaseSelection_of_bridgeWitnesses
+      {z0 z : ℂ}
+      (_hz0web : z0 ∈ orderWeb (padeR n d))
+      (_hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
+      (aperture radius : ℝ)
+      (_hzweb : z ∈ orderWeb (padeR n d))
+      (_hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
+      ∃ a b η : ℝ, ∃ σ : ℝ → ℝ,
+        a ≤ b ∧
+        0 < η ∧
+        ContinuousOn σ (Set.Icc a b) ∧
+        (∀ r ∈ Set.Icc a b, σ r ∈ Set.Icc (-η) η) ∧
+        (∀ r ∈ Set.Icc a b,
+          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
+          Complex.im (padeR n d w * exp (-w)) = 0) ∧
+        (∀ r ∈ Set.Icc a b,
+          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
+          0 < Complex.re (padeR n d w * exp (-w))) ∧
+        z0 = ((↑a : ℂ) * exp (↑(θ + σ a) * I)) ∧
+        z = ((↑b : ℂ) * exp (↑(θ + σ b) * I)) := by
+    sorry
   continuousOrderWebPath_of_bridgeWitnesses
       {z0 z : ℂ}
       (hz0web : z0 ∈ orderWeb (padeR n d))
@@ -1796,7 +1872,13 @@ where
         γ 0 = z0 ∧
         γ 1 = z ∧
         ∀ u ∈ Set.Icc (0 : ℝ) 1, γ u ∈ orderWeb (padeR n d) := by
-    sorry
+    rcases
+        phaseSelection_of_bridgeWitnesses
+          hz0web hz0cone aperture radius hzweb hzcone with
+      ⟨a, b, η, σ, hab, hη, hσcont, hσmem, hσzero, hσre, hz0eq, hzeq⟩
+    exact
+      continuousOrderWebPath_of_phaseSelection
+        hab σ hσcont hσmem hσzero hσre hz0eq hzeq
 
 /-- Exact current theorem-local blocker beneath the concrete connected-component
 upgrade: the arc-phase bridge already produces order-web witnesses in every
