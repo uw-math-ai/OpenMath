@@ -2129,6 +2129,70 @@ private theorem oddDownArrowRadiusPhaseRe_pos_on_wedge_of_small_norm
   have hp1_lt : p.1 < δre := lt_of_le_of_lt hp1_le hδlt
   simpa [oddDownArrowRadiusPhaseValue, hnorm] using hp1_lt
 
+private theorem mem_fstImage_connectedComponentIn_oddDownArrowRadiusPhaseZeroSet_of_connected_subset
+    (n d : ℕ) {δ : ℝ} {S : Set (ℝ × ℝ)}
+    (hSconn : IsConnected S)
+    (hSsub : S ⊆ oddDownArrowRadiusPhaseZeroSet n d δ)
+    (hzeroS : (0, 0) ∈ S)
+    {p : ℝ × ℝ} (hpS : p ∈ S) :
+    p.1 ∈ Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0) := by
+  have hScomp :
+      S ⊆ connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0) :=
+    hSconn.2.subset_connectedComponentIn hzeroS hSsub
+  exact ⟨p, hScomp hpS, rfl⟩
+
+private theorem exists_clopen_separating_origin_from_radiusSlice_in_oddDownArrowRadiusPhaseZeroSet
+    (n d : ℕ) {δ δQ : ℝ} (hδ : 0 ≤ δ)
+    (hδQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hδltQ : δ < δQ) {r : ℝ}
+    (hrmiss :
+      r ∉ Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0)) :
+    ∃ C : Set {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ},
+      IsClopen C ∧
+        ({⟨(0, 0), mem_oddDownArrowRadiusPhaseZeroSet_zero n d hδ⟩} :
+          Set {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ}) ⊆ C ∧
+        ({p : {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ} | p.1.1 = r}) ⊆ Cᶜ := by
+  let K : Set (ℝ × ℝ) := oddDownArrowRadiusPhaseZeroSet n d δ
+  let X := {p // p ∈ K}
+  have hcompact : IsCompact K := isCompact_oddDownArrowRadiusPhaseZeroSet n d hδQ hδltQ
+  haveI : CompactSpace X := isCompact_iff_compactSpace.mp hcompact
+  let x0 : X := ⟨(0, 0), mem_oddDownArrowRadiusPhaseZeroSet_zero n d hδ⟩
+  let A : Set X := {x0}
+  let B : Set X := {p : X | p.1.1 = r}
+  have hA : IsClosed A := isClosed_singleton
+  have hB : IsClosed B := by
+    have hcont : Continuous fun p : X => p.1.1 :=
+      continuous_fst.comp continuous_subtype_val
+    simpa [B] using isClosed_singleton.preimage hcont
+  have hAB :
+      ∀ S : Set X, IsConnected S → (S ∩ A).Nonempty → (S ∩ B).Nonempty → False := by
+    intro S hSconn hSA hSB
+    rcases hSA with ⟨a, haS, haA⟩
+    rcases Set.mem_singleton_iff.mp haA with rfl
+    rcases hSB with ⟨b, hbS, hbB⟩
+    let T : Set (ℝ × ℝ) := Subtype.val '' S
+    have hTconn : IsConnected T := by
+      simpa [T] using hSconn.image (fun p : X => (p : ℝ × ℝ)) continuous_subtype_val.continuousOn
+    have hTsub : T ⊆ K := by
+      intro p hp
+      rcases hp with ⟨q, hqS, rfl⟩
+      exact q.2
+    have hTzero : (0, 0) ∈ T := by
+      exact ⟨x0, haS, rfl⟩
+    have hbT : (b : ℝ × ℝ) ∈ T := ⟨b, hbS, rfl⟩
+    have hbmem :
+        b.1.1 ∈ Prod.fst '' connectedComponentIn K (0, 0) := by
+      simpa [K] using
+        mem_fstImage_connectedComponentIn_oddDownArrowRadiusPhaseZeroSet_of_connected_subset
+          n d hTconn hTsub hTzero hbT
+    have hrmem :
+        r ∈ Prod.fst '' connectedComponentIn K (0, 0) := by
+      rcases hbmem with ⟨q, hqK, hqfst⟩
+      refine ⟨q, hqK, ?_⟩
+      exact hqfst.trans hbB
+    exact hrmiss hrmem
+  simpa [A, B] using exists_clopen_of_no_connected_subset_meeting_both hA hB hAB
+
 /-- Remaining no-stop seam: show that the connected component of `(0,0)` in the
 compact odd-wedge zero set projects onto the full radius interval. The compact
 zero-set and closed-projection infrastructure is now live above this theorem. -/
@@ -2168,6 +2232,35 @@ private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
   have hcompact :
       IsCompact (oddDownArrowRadiusPhaseZeroSet n d δ) :=
     isCompact_oddDownArrowRadiusPhaseZeroSet n d hQ hδlt_Q
+  refine ⟨δ, hδ, hre_wedge, ?_⟩
+  intro r hr
+  by_contra hrmiss
+  let K : Set (ℝ × ℝ) := oddDownArrowRadiusPhaseZeroSet n d δ
+  let X := {p // p ∈ K}
+  let x0 : X := ⟨(0, 0), hzero⟩
+  rcases
+      exists_clopen_separating_origin_from_radiusSlice_in_oddDownArrowRadiusPhaseZeroSet
+        n d hδ.le hQ hδlt_Q hrmiss with
+    ⟨C, hCclopen, hx0C, hsliceC⟩
+  have hprojClosed' :
+      IsClosed (Prod.fst '' connectedComponentIn K (0, 0)) := by
+    simpa [K] using hprojClosed
+  have hcompact' : IsCompact K := by
+    simpa [K] using hcompact
+  haveI : CompactSpace X := isCompact_iff_compactSpace.mp hcompact'
+  have hx0C' : x0 ∈ C := hx0C (by simp [x0])
+  have hcoordCont : Continuous fun p : X => p.1.1 :=
+    continuous_fst.comp continuous_subtype_val
+  let L : Set ℝ := (fun p : X => p.1.1) '' C
+  let R : Set ℝ := (fun p : X => p.1.1) '' Cᶜ
+  have hLclosed : IsClosed L := by
+    have hCcompact : IsCompact C := hCclopen.isClosed.isCompact
+    simpa [L] using (hCcompact.image hcoordCont).isClosed
+  have hRclosed : IsClosed R := by
+    have hRcompact : IsCompact Cᶜ := hCclopen.compl.isClosed.isCompact
+    simpa [R] using (hRcompact.image hcoordCont).isClosed
+  have h0L : (0 : ℝ) ∈ L := by
+    exact ⟨x0, hx0C', rfl⟩
   sorry
 
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
