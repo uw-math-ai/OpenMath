@@ -1571,6 +1571,33 @@ private theorem padeR_exp_neg_re_pos_of_small_norm
     nlinarith
   exact lt_of_lt_of_le hpos hre_lower
 
+private theorem padeR_exp_neg_im_zero_on_real_axis
+    (n d : ℕ) (t : ℝ) :
+    Complex.im (padeR n d (↑t : ℂ) * exp (-((↑t : ℂ)))) = 0 := by
+  apply (Complex.conj_eq_iff_im).mp
+  rw [map_mul]
+  have hExp : (starRingEnd ℂ) (exp (-((↑t : ℂ)))) = exp (-((↑t : ℂ))) := by
+    simpa using (Complex.exp_conj (-((↑t : ℂ)))).symm
+  rw [hExp]
+  have hP : (starRingEnd ℂ) (padeP n d (↑t : ℂ)) = padeP n d (↑t : ℂ) := by
+    simp [padeP]
+  have hQ : (starRingEnd ℂ) (padeQ n d (↑t : ℂ)) = padeQ n d (↑t : ℂ) := by
+    simp [padeQ]
+  simp [padeR, map_div₀, hP, hQ]
+
+private theorem padeR_mem_orderWeb_on_posRealAxis_of_small_radius
+    (n d : ℕ) :
+    ∃ δ > 0, ∀ t ∈ Set.Ioo (0 : ℝ) δ, ((↑t : ℂ) ∈ orderWeb (padeR n d)) := by
+  obtain ⟨δ, hδpos, hre_small⟩ := padeR_exp_neg_re_pos_of_small_norm n d
+  refine ⟨δ, hδpos, ?_⟩
+  intro t ht
+  have hre : 0 < Complex.re (padeR n d (↑t : ℂ) * exp (-((↑t : ℂ)))) := by
+    apply hre_small
+    simpa [Real.norm_eq_abs, abs_of_pos ht.1] using ht.2
+  have him : Complex.im (padeR n d (↑t : ℂ) * exp (-((↑t : ℂ)))) = 0 :=
+    padeR_exp_neg_im_zero_on_real_axis n d t
+  exact mem_orderWeb_of_im_zero_of_re_pos hre him
+
 theorem padeR_even_downArrowArcPhaseBridge_of_pos_errorConst
     (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
     PadeROrderWebArcPhaseBridgeNearOrigin n d 0 := by
@@ -1692,284 +1719,68 @@ theorem padeRDownArrowOrderWebArcPhaseBridgeInput_of_neg_errorConst
   · simpa using padeR_downArrowDir_of_neg_errorConst_oddAngle n d 0 hC
   · simpa using padeR_odd_downArrowArcPhaseBridge_of_neg_errorConst n d hC
 
-/-- Exact current theorem-local blocker beneath the concrete connected-component
-upgrade: the arc-phase bridge already produces order-web witnesses in every
-small cone, but it still has to be upgraded to show that all such witnesses can
-be chosen inside one fixed connected component of the order web. -/
-private theorem padeR_exists_referenceOrderWebWitness_of_arcPhaseBridge
-    {n d : ℕ} {θ aperture radius : ℝ}
-    (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ)
-    (haperture : 0 < aperture) (hradius : 0 < radius) :
-    ∃ z : ℂ,
-      z ∈ orderWeb (padeR n d) ∧
-        z ∈ rayConeNearOrigin θ aperture radius := by
-  rcases
-      PadeROrderWebMeetsRayConeNearOrigin_of_arcPhaseBridge
-        hbridge aperture haperture radius hradius with
-    ⟨z, hzweb, hzcone⟩
-  exact ⟨z, hzweb, hzcone⟩
-
-/-- Local component-continuation gap still missing beneath the generic
-arc-phase bridge theorem: after fixing one bridge-produced reference witness in
-the unit cone, every later bridge-produced witness should lie in the same
-connected component of the Padé order web. -/
-private theorem padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge
-    {n d : ℕ} {θ : ℝ}
-    (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ) :
-    ∃ z0 ∈ orderWeb (padeR n d),
-      z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1 ∧
-      ∀ aperture > 0, ∀ radius > 0,
-        ∃ z : ℂ,
-          z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
-            z ∈ rayConeNearOrigin θ aperture radius := by
-  rcases
-      padeR_exists_referenceOrderWebWitness_of_arcPhaseBridge
-        (aperture := (1 : ℝ)) (radius := (1 : ℝ))
-        hbridge zero_lt_one zero_lt_one with
-    ⟨z0, hz0web, hz0cone⟩
-  refine ⟨z0, hz0web, hz0cone, ?_⟩
-  intro aperture haperture radius hradius
-  rcases
-      bridgeWitnesses_have_connectedSupport hz0web hz0cone aperture haperture radius hradius with
-    ⟨z, support, hsupport_conn, hsupport_web, hz0support, hzsupport, hzcone⟩
-  have hsubset_comp :
-      support ⊆ connectedComponentIn (orderWeb (padeR n d)) z0 :=
-    hsupport_conn.2.subset_connectedComponentIn hz0support hsupport_web
-  exact ⟨z, hsubset_comp hzsupport, hzcone⟩
-where
-  bridgeWitnesses_have_connectedSupport
-      {z0 : ℂ}
-      (hz0web : z0 ∈ orderWeb (padeR n d))
-      (hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
-      (aperture : ℝ) (haperture : 0 < aperture)
-      (radius : ℝ) (hradius : 0 < radius) :
-      ∃ z : ℂ, ∃ support : Set ℂ,
-        IsConnected support ∧
-        support ⊆ orderWeb (padeR n d) ∧
-        z0 ∈ support ∧
-        z ∈ support ∧
-        z ∈ rayConeNearOrigin θ aperture radius := by
-    rcases
-        padeR_exists_referenceOrderWebWitness_of_arcPhaseBridge
-          hbridge haperture hradius with
-      ⟨z, hzweb, hzcone⟩
-    rcases
-        connectedSupport_of_bridgeWitnesses
-          hz0web hz0cone aperture radius hzweb hzcone with
-      ⟨support, hsupport_conn, hsupport_web, hz0support, hzsupport⟩
-    exact ⟨z, support, hsupport_conn, hsupport_web, hz0support, hzsupport, hzcone⟩
-  connectedSupport_of_bridgeWitnesses
-      {z0 z : ℂ}
-      (hz0web : z0 ∈ orderWeb (padeR n d))
-      (hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
-      (aperture radius : ℝ)
-      (hzweb : z ∈ orderWeb (padeR n d))
-      (hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
-      ∃ support : Set ℂ,
-        IsConnected support ∧
-        support ⊆ orderWeb (padeR n d) ∧
-        z0 ∈ support ∧
-        z ∈ support := by
-    rcases
-        continuousOrderWebPath_of_bridgeWitnesses
-          hz0web hz0cone aperture radius hzweb hzcone with
-      ⟨γ, hγcont, hγ0, hγ1, hγweb⟩
-    refine ⟨γ '' Set.Icc (0 : ℝ) 1, ?_, ?_, ?_, ?_⟩
-    · exact (show IsConnected (γ '' Set.Icc (0 : ℝ) 1) from
-          (isConnected_Icc (show (0 : ℝ) ≤ 1 by norm_num)).image γ hγcont)
-    · intro w hw
-      rcases hw with ⟨u, huIcc, rfl⟩
-      exact hγweb u huIcc
-    · refine ⟨0, by simp, ?_⟩
-      simp [hγ0]
-    · refine ⟨1, by simp, ?_⟩
-      simp [hγ1]
-  continuousOrderWebPath_of_phaseSelection
-      {a b η : ℝ}
-      (hab : a ≤ b)
-      (σ : ℝ → ℝ)
-      (hσcont : ContinuousOn σ (Set.Icc a b))
-      (_hσmem : ∀ r ∈ Set.Icc a b, σ r ∈ Set.Icc (-η) η)
-      (hσzero :
-        ∀ r ∈ Set.Icc a b,
-          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
-          Complex.im (padeR n d w * exp (-w)) = 0)
-      (hσre :
-        ∀ r ∈ Set.Icc a b,
-          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
-          0 < Complex.re (padeR n d w * exp (-w)))
-      {z0 z : ℂ}
-      (hz0 :
-        z0 = ((↑a : ℂ) * exp (↑(θ + σ a) * I)))
-      (hz :
-        z = ((↑b : ℂ) * exp (↑(θ + σ b) * I))) :
-      ∃ γ : ℝ → ℂ,
-        ContinuousOn γ (Set.Icc (0 : ℝ) 1) ∧
-        γ 0 = z0 ∧
-        γ 1 = z ∧
-        ∀ u ∈ Set.Icc (0 : ℝ) 1, γ u ∈ orderWeb (padeR n d) := by
-    let w : ℝ → ℂ := fun r => (↑r : ℂ) * exp (↑(θ + σ r) * I)
-    have hwcont : ContinuousOn w (Set.Icc a b) := by
-      apply ContinuousOn.mul continuous_ofReal.continuousOn
-      apply ContinuousOn.cexp
-      apply ContinuousOn.mul
-      · exact continuous_ofReal.comp_continuousOn (continuousOn_const.add hσcont)
-      · exact continuousOn_const
-    let ρ : ℝ → ℝ := fun u => a + u * (b - a)
-    have hρmaps : Set.MapsTo ρ (Set.Icc (0 : ℝ) 1) (Set.Icc a b) := by
-      intro u hu
-      constructor
-      · dsimp [ρ]
-        nlinarith [hu.1, hu.2, hab]
-      · dsimp [ρ]
-        nlinarith [hu.1, hu.2, hab]
-    have hρcont : ContinuousOn ρ (Set.Icc (0 : ℝ) 1) := by
-      simpa [ρ] using
-        (show Continuous (fun u : ℝ => a + u * (b - a)) by
-          fun_prop).continuousOn
-    refine ⟨fun u => w (ρ u), hwcont.comp hρcont hρmaps, ?_, ?_, ?_⟩
-    · calc
-        w (ρ 0) = w a := by simp [ρ]
-        _ = z0 := by simpa [w] using hz0.symm
-    · calc
-        w (ρ 1) = w b := by simp [ρ]
-        _ = z := by simpa [w] using hz.symm
-    · intro u hu
-      have huab : ρ u ∈ Set.Icc a b := hρmaps hu
-      exact mem_orderWeb_of_im_zero_of_re_pos
-        (by simpa [w] using hσre (ρ u) huab)
-        (by simpa [w] using hσzero (ρ u) huab)
-  connectedRadiusPhaseZeroSet_of_bridgeWitnesses
-      {z0 z : ℂ}
-      (_hz0web : z0 ∈ orderWeb (padeR n d))
-      (_hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
-      (aperture radius : ℝ)
-      (_hzweb : z ∈ orderWeb (padeR n d))
-      (_hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
-      ∃ a b η s0 s1 : ℝ, ∃ Z : Set (ℝ × ℝ),
-        a ≤ b ∧
-        0 < η ∧
-        s0 ∈ Set.Icc (-η) η ∧
-        s1 ∈ Set.Icc (-η) η ∧
-        z0 = ((↑a : ℂ) * exp (↑(θ + s0) * I)) ∧
-        z = ((↑b : ℂ) * exp (↑(θ + s1) * I)) ∧
-        IsConnected Z ∧
-        Z ⊆ {p : ℝ × ℝ |
-          p.1 ∈ Set.Icc a b ∧
-          p.2 ∈ Set.Icc (-η) η ∧
-          let w : ℂ := (↑p.1 : ℂ) * exp (↑(θ + p.2) * I)
-          Complex.im (padeR n d w * exp (-w)) = 0 ∧
-          0 < Complex.re (padeR n d w * exp (-w))} ∧
-        (a, s0) ∈ Z ∧
-        (b, s1) ∈ Z ∧
-        Set.Icc a b ⊆ Prod.fst '' Z := by
-    sorry
-  /-- The remaining theorem-local gap after reducing the bridge problem to a
-  connected zero set in radius-phase coordinates: extract a continuous phase
-  selector over the full radius interval. -/
-  phaseSelection_of_bridgeWitnesses
-      {z0 z : ℂ}
-      (_hz0web : z0 ∈ orderWeb (padeR n d))
-      (_hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
-      (aperture radius : ℝ)
-      (_hzweb : z ∈ orderWeb (padeR n d))
-      (_hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
-      ∃ a b η : ℝ, ∃ σ : ℝ → ℝ,
-        a ≤ b ∧
-        0 < η ∧
-        ContinuousOn σ (Set.Icc a b) ∧
-        (∀ r ∈ Set.Icc a b, σ r ∈ Set.Icc (-η) η) ∧
-        (∀ r ∈ Set.Icc a b,
-          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
-          Complex.im (padeR n d w * exp (-w)) = 0) ∧
-        (∀ r ∈ Set.Icc a b,
-          let w : ℂ := (↑r : ℂ) * exp (↑(θ + σ r) * I)
-          0 < Complex.re (padeR n d w * exp (-w))) ∧
-        z0 = ((↑a : ℂ) * exp (↑(θ + σ a) * I)) ∧
-        z = ((↑b : ℂ) * exp (↑(θ + σ b) * I)) := by
-    rcases
-        connectedRadiusPhaseZeroSet_of_bridgeWitnesses
-          _hz0web _hz0cone aperture radius _hzweb _hzcone with
-      ⟨a, b, η, s0, s1, Z, hab, hη, hs0, hs1, hz0eq, hzeq, hZconn, hZsubset, hZ0, hZ1,
-        hproj⟩
-    have _hkeep :
-        a ≤ b ∧
-        0 < η ∧
-        s0 ∈ Set.Icc (-η) η ∧
-        s1 ∈ Set.Icc (-η) η ∧
-        z0 = ((↑a : ℂ) * exp (↑(θ + s0) * I)) ∧
-        z = ((↑b : ℂ) * exp (↑(θ + s1) * I)) ∧
-        IsConnected Z ∧
-        Z ⊆ {p : ℝ × ℝ |
-          p.1 ∈ Set.Icc a b ∧
-          p.2 ∈ Set.Icc (-η) η ∧
-          let w : ℂ := (↑p.1 : ℂ) * exp (↑(θ + p.2) * I)
-          Complex.im (padeR n d w * exp (-w)) = 0 ∧
-          0 < Complex.re (padeR n d w * exp (-w))} ∧
-        (a, s0) ∈ Z ∧
-        (b, s1) ∈ Z ∧
-        Set.Icc a b ⊆ Prod.fst '' Z := by
-      exact ⟨hab, hη, hs0, hs1, hz0eq, hzeq, hZconn, hZsubset, hZ0, hZ1, hproj⟩
-    sorry
-  continuousOrderWebPath_of_bridgeWitnesses
-      {z0 z : ℂ}
-      (hz0web : z0 ∈ orderWeb (padeR n d))
-      (hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
-      (aperture radius : ℝ)
-      (hzweb : z ∈ orderWeb (padeR n d))
-      (hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
-      ∃ γ : ℝ → ℂ,
-        ContinuousOn γ (Set.Icc (0 : ℝ) 1) ∧
-        γ 0 = z0 ∧
-        γ 1 = z ∧
-        ∀ u ∈ Set.Icc (0 : ℝ) 1, γ u ∈ orderWeb (padeR n d) := by
-    rcases
-        phaseSelection_of_bridgeWitnesses
-          hz0web hz0cone aperture radius hzweb hzcone with
-      ⟨a, b, η, σ, hab, hη, hσcont, hσmem, hσzero, hσre, hz0eq, hzeq⟩
-    exact
-      continuousOrderWebPath_of_phaseSelection
-        hab σ hσcont hσmem hσzero hσre hz0eq hzeq
-
-/-- Exact current theorem-local blocker beneath the concrete connected-component
-upgrade: the arc-phase bridge already produces order-web witnesses in every
-small cone, but it still has to be upgraded to show that all such witnesses can
-be chosen inside one fixed connected component of the order web. -/
-theorem PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
-    {n d : ℕ} {θ : ℝ}
-    (hbridge : PadeROrderWebArcPhaseBridgeNearOrigin n d θ) :
-    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent n d θ := by
-  rcases
-      padeR_referenceWitness_sameComponentContinuation_of_arcPhaseBridge hbridge with
-    ⟨z0, hz0, _, hmeets⟩
-  refine ⟨z0, hz0, ?_⟩
-  intro aperture haperture radius hradius
-  rcases hmeets aperture haperture radius hradius with ⟨z, hzcomp, hzcone⟩
-  exact ⟨z, ⟨hzcomp, hzcone⟩⟩
-
-/-- Exact current theorem-local gap below the concrete connected-component seam:
-choose one even-ray order-web basepoint whose connected component continues to
-meet every sufficiently small cone around `θ = 0`. -/
+/-- The even-ray continuation no longer needs the abstract bridge/selector
+scaffold: the exact positive real ray itself lies in the order web for all
+sufficiently small radii, so one connected component already meets every small
+cone around `θ = 0`. -/
 theorem padeR_even_downArrowOrderWebSameComponentContinuation_of_pos_errorConst
-    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    (n d : ℕ) (_hC : 0 < padePhiErrorConst n d) :
     ∃ z0 ∈ orderWeb (padeR n d),
       ∀ aperture > 0, ∀ radius > 0,
         ∃ z : ℂ,
           z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
             z ∈ rayConeNearOrigin 0 aperture radius := by
-  have hcomp :=
-    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
-      (padeR_even_downArrowArcPhaseBridge_of_pos_errorConst n d hC)
-  rcases hcomp with ⟨z0, hz0, hmeets⟩
-  refine ⟨z0, hz0, ?_⟩
+  let t0 : ℝ := min (1 / 2) (1 / 2)
+  obtain ⟨δ, hδpos, hreal_web⟩ := padeR_mem_orderWeb_on_posRealAxis_of_small_radius n d
+  let r0 : ℝ := min t0 (δ / 2)
+  have hr0_pos : 0 < r0 := by
+    dsimp [r0, t0]
+    exact lt_min (by norm_num) (half_pos hδpos)
+  have hr0_lt_δ : r0 < δ := by
+    have hhalf : δ / 2 < δ := by linarith
+    exact lt_of_le_of_lt (min_le_right _ _) hhalf
+  have hz0web : ((↑r0 : ℂ)) ∈ orderWeb (padeR n d) :=
+    hreal_web r0 ⟨hr0_pos, hr0_lt_δ⟩
+  refine ⟨(↑r0 : ℂ), hz0web, ?_⟩
   intro aperture haperture radius hradius
-  rcases hmeets aperture haperture radius hradius with ⟨z, hzmem, hzcone⟩
-  exact ⟨z, hzmem, hzcone⟩
+  let r : ℝ := min (radius / 2) (r0 / 2)
+  have hr_pos : 0 < r := by
+    dsimp [r]
+    exact lt_min (half_pos hradius) (half_pos hr0_pos)
+  have hr_lt_radius : r < radius := by
+    have hhalf : radius / 2 < radius := by linarith
+    exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have hr_le_r0 : r ≤ r0 := by
+    have hhalf : r0 / 2 ≤ r0 := by linarith
+    exact le_trans (min_le_right _ _) hhalf
+  have hr_lt_δ : r < δ := lt_of_le_of_lt hr_le_r0 hr0_lt_δ
+  have hzweb : ((↑r : ℂ)) ∈ orderWeb (padeR n d) :=
+    hreal_web r ⟨hr_pos, hr_lt_δ⟩
+  have hzcone : ((↑r : ℂ)) ∈ rayConeNearOrigin 0 aperture radius := by
+    simpa using
+      exact_ray_mem_rayConeNearOrigin 0 aperture radius r haperture ⟨hr_pos, hr_lt_radius⟩
+  let support : Set ℂ := (fun x : ℝ => (↑x : ℂ)) '' Set.Icc r r0
+  have hsupport_conn : IsConnected support := by
+    refine (isConnected_Icc hr_le_r0).image (fun x : ℝ => (↑x : ℂ)) ?_
+    exact continuous_ofReal.continuousOn
+  have hz0support : ((↑r0 : ℂ)) ∈ support := by
+    refine ⟨r0, ?_, by simp⟩
+    exact ⟨hr_le_r0, le_rfl⟩
+  have hzsupport : ((↑r : ℂ)) ∈ support := by
+    refine ⟨r, ?_, by simp⟩
+    exact ⟨le_rfl, hr_le_r0⟩
+  have hsupport_web : support ⊆ orderWeb (padeR n d) := by
+    intro z hz
+    rcases hz with ⟨x, hx, rfl⟩
+    exact hreal_web x ⟨lt_of_lt_of_le hr_pos hx.1, lt_of_le_of_lt hx.2 hr0_lt_δ⟩
+  have hsubset_comp :
+      support ⊆ connectedComponentIn (orderWeb (padeR n d)) (↑r0 : ℂ) :=
+    hsupport_conn.2.subset_connectedComponentIn hz0support hsupport_web
+  exact ⟨(↑r : ℂ), hsubset_comp hzsupport, hzcone⟩
 
-/-- Exact current theorem-local gap below the concrete connected-component seam:
-choose one odd-ray order-web basepoint whose connected component continues to
-meet every sufficiently small cone around
-`θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
+/-- The remaining concrete continuation blocker after the cycle-335 refactor:
+the odd down-arrow case still needs a genuine uniform strip / connected-support
+construction near `θ = Real.pi / ((↑(n + d) + 1) : ℝ)`. -/
 theorem padeR_odd_downArrowOrderWebSameComponentContinuation_of_neg_errorConst
     (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
     ∃ z0 ∈ orderWeb (padeR n d),
@@ -1978,14 +1789,7 @@ theorem padeR_odd_downArrowOrderWebSameComponentContinuation_of_neg_errorConst
           z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
             z ∈ rayConeNearOrigin
               (Real.pi / ((↑(n + d) + 1) : ℝ)) aperture radius := by
-  have hcomp :=
-    PadeROrderWebMeetsRayConeNearOriginInConnectedComponent_of_arcPhaseBridge
-      (padeR_odd_downArrowArcPhaseBridge_of_neg_errorConst n d hC)
-  rcases hcomp with ⟨z0, hz0, hmeets⟩
-  refine ⟨z0, hz0, ?_⟩
-  intro aperture haperture radius hradius
-  rcases hmeets aperture haperture radius hradius with ⟨z, hzmem, hzcone⟩
-  exact ⟨z, hzmem, hzcone⟩
+  sorry
 
 theorem padeR_even_downArrowOrderWebMeetsRayConeNearOriginInConnectedComponent_of_pos_errorConst
     (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
