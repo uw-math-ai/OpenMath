@@ -118,6 +118,35 @@ theorem padeR_exists_downArrowDir
     simpa using padeR_downArrowDir_of_neg_errorConst_oddAngle n d 0
       (padePhiErrorConst_neg_of_odd n d hd)
 
+theorem padeR_upArrowDir_of_neg_errorConst
+    (n d k : ℕ) (hC : padePhiErrorConst n d < 0) :
+    IsUpArrowDir (padeR n d) (2 * ↑k * Real.pi / (↑(n + d) + 1)) := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  simpa using
+    (arrow_up_of_neg_errorConst
+      (R := padeR n d) (p := n + d) (C := padePhiErrorConst n d)
+      K δ₀ hC hK hδ hφ k)
+
+theorem padeR_upArrowDir_of_pos_errorConst_oddAngle
+    (n d k : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    IsUpArrowDir (padeR n d) ((2 * ↑k + 1) * Real.pi / (↑(n + d) + 1)) := by
+  obtain ⟨K, δ₀, hK, hδ, hφ⟩ := padeR_exp_neg_local_bound n d
+  simpa using
+    (arrow_up_of_pos_errorConst_odd
+      (R := padeR n d) (p := n + d) (C := padePhiErrorConst n d)
+      K δ₀ hC hK hδ hφ k)
+
+theorem padeR_exists_upArrowDir
+    (n d : ℕ) :
+    ∃ θ : ℝ, IsUpArrowDir (padeR n d) θ := by
+  rcases Nat.even_or_odd d with hd | hd
+  · refine ⟨(2 * (↑(0 : ℕ) : ℝ) + 1) * Real.pi / (↑(n + d) + 1), ?_⟩
+    simpa using padeR_upArrowDir_of_pos_errorConst_oddAngle n d 0
+      (padePhiErrorConst_pos_of_even n d hd)
+  · refine ⟨2 * (↑(0 : ℕ) : ℝ) * Real.pi / (↑(n + d) + 1), ?_⟩
+    simpa using padeR_upArrowDir_of_neg_errorConst n d 0
+      (padePhiErrorConst_neg_of_odd n d hd)
+
 abbrev PadeRRealizedDownArrowInfinityWitnessFamily
     (n d : ℕ) (data : OrderArrowTerminationData) :=
   ∀ _ : Fin data.downArrowsAtInfinity,
@@ -227,6 +256,49 @@ theorem padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos
     exact padeR_exists_downArrowDir n d
   exact
     padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos_of_exists_downArrowDir
+      n d data hpos hdir
+
+theorem padeR_exists_orderWebBranchSupport_of_upArrowsAtInfinity_pos
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (_hpos : 0 < data.upArrowsAtInfinity) :
+    ∃ support : Set ℂ,
+      IsConnected support ∧
+        support ⊆ orderWeb (padeR n d) ∧
+        (0 : ℂ) ∈ closure support := by
+  refine ⟨{0}, ?_, ?_, ?_⟩
+  · simpa using isConnected_singleton
+  · intro z hz
+    have hz0 : z = 0 := by simpa using hz
+    subst hz0
+    exact mem_orderWeb_zero (R := padeR n d) (by
+      simp [padeR, padeP_eval_zero, padeQ_eval_zero])
+  · exact subset_closure (by simp : (0 : ℂ) ∈ ({0} : Set ℂ))
+
+theorem padeR_exists_globalUpArrowBranch_of_upArrowsAtInfinity_pos_of_exists_upArrowDir
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hpos : 0 < data.upArrowsAtInfinity)
+    (hdir : ∃ θ : ℝ, IsUpArrowDir (padeR n d) θ) :
+    Nonempty (GlobalUpArrowBranch (padeR n d)) := by
+  rcases
+      padeR_exists_orderWebBranchSupport_of_upArrowsAtInfinity_pos n d data hpos with
+    ⟨support, hsupport_connected, hsupport_subset_orderWeb, horigin_mem_closure⟩
+  rcases hdir with ⟨θ, hθ⟩
+  exact
+    ⟨{ support := support
+       support_connected := hsupport_connected
+       support_subset_orderWeb := hsupport_subset_orderWeb
+       origin_mem_closure := horigin_mem_closure
+       tangentAngle := θ
+       tangentUp := hθ }⟩
+
+theorem padeR_exists_globalUpArrowBranch_of_upArrowsAtInfinity_pos
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hpos : 0 < data.upArrowsAtInfinity) :
+    Nonempty (GlobalUpArrowBranch (padeR n d)) := by
+  have hdir : ∃ θ : ℝ, IsUpArrowDir (padeR n d) θ := by
+    exact padeR_exists_upArrowDir n d
+  exact
+    padeR_exists_globalUpArrowBranch_of_upArrowsAtInfinity_pos_of_exists_upArrowDir
       n d data hpos hdir
 
 /-- Cycle-300 truth audit: adjoining `{0}` to the support of a realized Padé
