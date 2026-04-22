@@ -1749,6 +1749,27 @@ where
         z0 ∈ support ∧
         z ∈ support ∧
         z ∈ rayConeNearOrigin θ aperture radius := by
+    rcases
+        padeR_exists_referenceOrderWebWitness_of_arcPhaseBridge
+          hbridge haperture hradius with
+      ⟨z, hzweb, hzcone⟩
+    rcases
+        connectedSupport_of_bridgeWitnesses
+          hz0web hz0cone aperture radius hzweb hzcone with
+      ⟨support, hsupport_conn, hsupport_web, hz0support, hzsupport⟩
+    exact ⟨z, support, hsupport_conn, hsupport_web, hz0support, hzsupport, hzcone⟩
+  connectedSupport_of_bridgeWitnesses
+      {z0 z : ℂ}
+      (hz0web : z0 ∈ orderWeb (padeR n d))
+      (hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
+      (aperture radius : ℝ)
+      (hzweb : z ∈ orderWeb (padeR n d))
+      (hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
+      ∃ support : Set ℂ,
+        IsConnected support ∧
+        support ⊆ orderWeb (padeR n d) ∧
+        z0 ∈ support ∧
+        z ∈ support := by
     sorry
 
 /-- Exact current theorem-local blocker beneath the concrete connected-component
