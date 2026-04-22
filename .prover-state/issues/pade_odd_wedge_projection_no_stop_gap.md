@@ -179,3 +179,83 @@ Fresh cycle-344 Aristotle jobs:
 - `861b766b-4677-4960-bb86-0294185f6a77`
 
 After the cycle’s single refresh, all five remained `QUEUED`.
+
+## Cycle 345 Addendum
+
+### What closed locally
+
+The denominator-side bookkeeping is no longer part of the blocker. Cycle 345
+added exact local factorization lemmas in `OpenMath/PadeOrderStars.lean`:
+
+- `exp_neg_sub_linear_factorization`
+- `padeQ_sub_linear_factorization`
+- `padeQ_inv_linear_factorization`
+- `exp_neg_div_padeQ_linear_factorization`
+
+So the local quotient expansion is now formalized:
+
+```lean
+exp (-z) / padeQ n d z = 1 - ((n : ℂ) / (n + d : ℂ)) * z + z ^ 2 * h z
+```
+
+whenever `padeQ n d z ≠ 0`.
+
+### Exact analytic blocker now remaining
+
+The true first seam is now exactly the new local theorem
+
+```lean
+private theorem padeR_exp_neg_second_order_factorization
+    (n d : ℕ) (hm : 0 < n + d) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ,
+      padeR n d z * exp (-z) -
+          (1
+            - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)
+            + (padeRExpNegSecondCoeff n d : ℂ) * z ^ (n + d + 2)) =
+        z ^ (n + d + 3) * h z
+```
+
+with
+
+```lean
+padeRExpNegSecondCoeff n d =
+  padePhiErrorConst n d *
+    ((n - d) * (n + d + 1)) / ((n + d) * (n + d + 2))
+```
+
+after the obvious casts.
+
+Because the quotient linear term is now closed, the exact missing substatement
+inside this theorem is the degree-`n + d + 2` coefficient / factorization of the
+Padé defect itself, not any further denominator control.
+
+### Exact topology blocker now remaining
+
+The second seam is now isolated as the local uniqueness theorem
+
+```lean
+private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    ∃ δmono > 0, ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono,
+      ∀ s₁ ∈ Set.Icc (-ρ) ρ,
+        ∀ s₂ ∈ Set.Icc (-ρ) ρ,
+          oddDownArrowRadiusPhaseIm n d (ρ, s₁) = 0 →
+          oddDownArrowRadiusPhaseIm n d (ρ, s₂) = 0 →
+          s₁ = s₂
+```
+
+and `oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both` is now
+blocked only on that theorem-local at-most-one-zero statement.
+
+### Aristotle status in cycle 345
+
+Cycle-345 jobs submitted after canceling the stale queued jobs:
+
+- `24895e30-89d4-4db8-8b95-d0f1001de8df`
+- `9f8f8368-8414-4974-a2ff-289bc0e70588`
+- `ad07f453-2f28-4cb2-bd45-b28a69adcc5f`
+- `b0eaefbd-dc77-4182-aea4-6e48663c16f0`
+- `5e6710c5-41f3-4122-9f2b-0e72b069a31b`
+
+The required `sleep 1800` wait was launched. The single post-wait refresh was
+still pending at the point this addendum was written.

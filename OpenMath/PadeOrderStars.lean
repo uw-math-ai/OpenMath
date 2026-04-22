@@ -2193,6 +2193,174 @@ private theorem exists_clopen_separating_origin_from_radiusSlice_in_oddDownArrow
     exact hrmiss hrmem
   simpa [A, B] using exists_clopen_of_no_connected_subset_meeting_both hA hB hAB
 
+private theorem exp_neg_sub_linear_factorization :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ,
+      exp (-z) - (1 - z) = z ^ 2 * h z := by
+  obtain ⟨h, hh⟩ := expTaylor_exp_neg_leading_term 0
+  refine ⟨h, ?_⟩
+  intro z
+  simpa [expTaylor, Finset.range_one] using hh z
+
+private theorem padeQ_sub_linear_factorization
+    (n d : ℕ) (hm : 0 < n + d) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ,
+      padeQ n d z - (1 - ((d : ℂ) / (n + d : ℂ)) * z) = z ^ 2 * h z := by
+  let m : ℕ := n + d
+  let lin : Polynomial ℂ := 1 - Polynomial.C ((d : ℂ) / (m : ℂ)) * Polynomial.X
+  let r : Polynomial ℂ :=
+    PadeAsymptotics.padeQ_poly n d -
+      lin
+  have hm_ne : (m : ℂ) ≠ 0 := by
+    exact_mod_cast (Nat.ne_of_gt hm)
+  have h0 : r.coeff 0 = 0 := by
+    rw [show r.coeff 0 =
+        (PadeAsymptotics.padeQ_poly n d).coeff 0 - lin.coeff 0 by
+          simp [r, Polynomial.coeff_sub]]
+    have hratio : ((((m).factorial : ℕ) : ℂ) / ((m.factorial : ℂ))) = 1 := by
+      field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos m).ne']
+    simp [lin, PadeAsymptotics.padeQ_poly_coeff, m, hratio]
+  have h1 : r.coeff 1 = 0 := by
+    have hm_fact :
+        (((m - 1).factorial : ℕ) : ℂ) / ((m.factorial : ℂ)) = 1 / (m : ℂ) := by
+      have hstep : (((m).factorial : ℕ) : ℂ) =
+          (m : ℂ) * (((m - 1).factorial : ℕ) : ℂ) := by
+        rw [show m = (m - 1) + 1 by omega, Nat.factorial_succ]
+        push_cast
+        ring
+      rw [hstep]
+      field_simp [hm_ne, Nat.cast_ne_zero.mpr (Nat.factorial_pos (m - 1)).ne']
+    have hq1 : (PadeAsymptotics.padeQ_poly n d).coeff 1 = -((d : ℂ) / (m : ℂ)) := by
+      rw [PadeAsymptotics.padeQ_poly_coeff]
+      simp [m, hm_fact, Nat.choose_one_right]
+      ring
+    rw [show r.coeff 1 =
+        (PadeAsymptotics.padeQ_poly n d).coeff 1 - lin.coeff 1 by
+          simp [r, Polynomial.coeff_sub], hq1]
+    have hconst : ((1 : Polynomial ℂ).coeff 1 : ℂ) = 0 := by
+      simpa using (Polynomial.coeff_one (R := ℂ) (n := 1))
+    simp [lin, hconst]
+  have hX2 : Polynomial.X ^ 2 ∣ r := by
+    rw [Polynomial.X_pow_dvd_iff]
+    intro k hk
+    have hk_cases : k = 0 ∨ k = 1 := by omega
+    rcases hk_cases with rfl | rfl
+    · exact h0
+    · exact h1
+  obtain ⟨g, hg⟩ := hX2
+  refine ⟨fun z => g.eval z, ?_⟩
+  intro z
+  have hlin_eval : lin.eval z = 1 - ((d : ℂ) / (m : ℂ)) * z := by
+    simp [lin]
+  have hEval := congrArg (fun p : Polynomial ℂ => p.eval z) hg
+  simpa [r, m, lin, hlin_eval, PadeAsymptotics.padeQ_poly_eval, Polynomial.eval_sub,
+    Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    using hEval
+
+private theorem padeQ_inv_linear_factorization
+    (n d : ℕ) (hm : 0 < n + d) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ, padeQ n d z ≠ 0 →
+      (padeQ n d z)⁻¹ - (1 + ((d : ℂ) / (n + d : ℂ)) * z) = z ^ 2 * h z := by
+  obtain ⟨k, hk⟩ := padeQ_sub_linear_factorization n d hm
+  let α : ℂ := (d : ℂ) / (n + d : ℂ)
+  refine ⟨fun z =>
+    if hq : padeQ n d z = 0 then 0
+    else ((-(α * z * k z) + (α ^ 2 - k z)) / padeQ n d z), ?_⟩
+  intro z hq
+  have hkz : padeQ n d z = 1 - α * z + z ^ 2 * k z := by
+    have hkz' : padeQ n d z = z ^ 2 * k z + (1 - α * z) := by
+      exact sub_eq_iff_eq_add.mp (by simpa [α] using hk z)
+    simpa [add_assoc, add_comm, add_left_comm] using hkz'
+  simp [hq, α]
+  calc
+    (padeQ n d z)⁻¹ - (1 + ↑d / (↑n + ↑d) * z)
+        = ((1 : ℂ) - (1 + ↑d / (↑n + ↑d) * z) * padeQ n d z) / padeQ n d z := by
+            field_simp [hq]
+    _ = (-z ^ 2 * (k z - (↑d / (↑n + ↑d)) ^ 2 + (↑d / (↑n + ↑d)) * z * k z)) /
+          padeQ n d z := by
+            rw [hkz]
+            ring
+    _ = z ^ 2 * (((-(↑d / (↑n + ↑d) * z * k z) + (((↑d / (↑n + ↑d)) ^ 2 - k z))) /
+          padeQ n d z)) := by
+            field_simp [hq]
+            ring
+
+private theorem exp_neg_div_padeQ_linear_factorization
+    (n d : ℕ) (hm : 0 < n + d) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ, padeQ n d z ≠ 0 →
+      exp (-z) / padeQ n d z - (1 - ((n : ℂ) / (n + d : ℂ)) * z) = z ^ 2 * h z := by
+  obtain ⟨hE, hhE⟩ := exp_neg_sub_linear_factorization
+  obtain ⟨hQ, hhQ⟩ := padeQ_inv_linear_factorization n d hm
+  let α : ℂ := (d : ℂ) / (n + d : ℂ)
+  refine ⟨fun z =>
+    if hq : padeQ n d z = 0 then 0
+    else hE z * (padeQ n d z)⁻¹ + (1 - z) * hQ z - α, ?_⟩
+  intro z hq
+  have hE_eq : exp (-z) = 1 - z + z ^ 2 * hE z := by
+    have hE_eq' := sub_eq_iff_eq_add.mp (hhE z)
+    simpa [add_assoc, add_comm, add_left_comm] using hE_eq'
+  have hQ_eq : (padeQ n d z)⁻¹ = 1 + α * z + z ^ 2 * hQ z := by
+    have hQ_eq' := sub_eq_iff_eq_add.mp (hhQ z hq)
+    simpa [add_assoc, add_comm, add_left_comm] using hQ_eq'
+  have hm_ne : ((n + d : ℕ) : ℂ) ≠ 0 := by
+    exact_mod_cast (Nat.ne_of_gt hm)
+  have hfrac : ((d : ℂ) / (n + d : ℂ)) + ((n : ℂ) / (n + d : ℂ)) = 1 := by
+    have hfrac' : (((d : ℂ) + (n : ℂ)) * ((n + d : ℂ))⁻¹) = 1 := by
+      have hcast : ((d : ℂ) + (n : ℂ)) = ((n + d : ℕ) : ℂ) := by
+        norm_num [Nat.cast_add, add_comm, add_left_comm, add_assoc]
+      rw [hcast]
+      simpa [hm_ne] using mul_inv_cancel₀ hm_ne
+    calc
+      ((d : ℂ) / (n + d : ℂ)) + ((n : ℂ) / (n + d : ℂ)) =
+          (((d : ℂ) + (n : ℂ)) * ((n + d : ℂ))⁻¹) := by
+            ring
+      _ = 1 := hfrac'
+  have hlin :
+      -z + z * ((d : ℂ) / (n + d : ℂ)) + z * ((n : ℂ) / (n + d : ℂ)) = 0 := by
+    calc
+      -z + z * ((d : ℂ) / (n + d : ℂ)) + z * ((n : ℂ) / (n + d : ℂ)) =
+          z * (((d : ℂ) / (n + d : ℂ)) + ((n : ℂ) / (n + d : ℂ)) - 1) := by
+            ring
+      _ = 0 := by
+            rw [hfrac]
+            ring
+  simp [hq, α, div_eq_mul_inv]
+  rw [hE_eq, hQ_eq]
+  calc
+    (1 - z + z ^ 2 * hE z) * (1 + α * z + z ^ 2 * hQ z) -
+        (1 - ((n : ℂ) / (n + d : ℂ)) * z) =
+      (-z + z * α + z * ((n : ℂ) / (n + d : ℂ))) +
+        (z ^ 2 * hE z - z ^ 2 * α + z ^ 2 * hQ z +
+          (z ^ 3 * hE z * α - z ^ 3 * hQ z) +
+          z ^ 4 * hE z * hQ z) := by
+            ring
+    _ = z ^ 2 * hE z - z ^ 2 * α + z ^ 2 * hQ z +
+        (z ^ 3 * hE z * α - z ^ 3 * hQ z) +
+        z ^ 4 * hE z * hQ z := by
+          rw [hlin]
+          simp
+    _ = z ^ 2 * (hE z * (1 + α * z + z ^ 2 * hQ z) + (1 - z) * hQ z - α) := by
+          ring
+
+/-- The explicit degree-`n + d + 2` coefficient in the odd down-arrow local
+expansion of `padeR n d z * exp (-z)` around `z = 0`. -/
+private noncomputable def padeRExpNegSecondCoeff (n d : ℕ) : ℝ :=
+  padePhiErrorConst n d *
+    (((n : ℝ) - d) * (((n + d : ℕ) : ℝ) + 1)) /
+      ((((n + d : ℕ) : ℝ)) * (((n + d : ℕ) : ℝ) + 2))
+
+/-- Cycle-345 analytic seam: one order beyond `padeR_exp_neg_leading_term`, with
+the explicit degree-`n + d + 2` coefficient isolated. This is kept local to the
+odd down-arrow continuation argument. -/
+private theorem padeR_exp_neg_second_order_factorization
+    (n d : ℕ) (hm : 0 < n + d) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ,
+      padeR n d z * exp (-z) -
+          (1
+            - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)
+            + (padeRExpNegSecondCoeff n d : ℂ) * z ^ (n + d + 2)) =
+        z ^ (n + d + 3) * h z := by
+  sorry
+
 /-- Remaining no-stop seam: show that the connected component of `(0,0)` in the
 compact odd-wedge zero set projects onto the full radius interval. The compact
 zero-set and closed-projection infrastructure is now live above this theorem. -/
@@ -2466,6 +2634,18 @@ private theorem oddDownArrowRadiusPhaseSliceZero_of_neg_errorConst
       simpa [oddDownArrowRadiusPhaseIm, oddDownArrowRadiusPhaseValue,
         oddDownArrowRadiusPhasePoint, oddDownArrowRadiusPhaseCenter, θ0] using hszero
     exact ⟨s, hsIcc, ⟨⟨hr, hsIcc⟩, hsZero⟩⟩
+
+/-- Cycle-345 topology seam sharpened to a fixed-radius uniqueness statement:
+for sufficiently small radii, the odd down-arrow true slice has at most one zero. -/
+private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    ∃ δmono > 0, ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono,
+      ∀ s₁ ∈ Set.Icc (-ρ) ρ,
+        ∀ s₂ ∈ Set.Icc (-ρ) ρ,
+          oddDownArrowRadiusPhaseIm n d (ρ, s₁) = 0 →
+          oddDownArrowRadiusPhaseIm n d (ρ, s₂) = 0 →
+          s₁ = s₂ := by
+  sorry
 
 private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
     (n d : ℕ) {δ ρ : ℝ}
