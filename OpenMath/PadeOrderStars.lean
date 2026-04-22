@@ -725,6 +725,179 @@ theorem not_padeRDownArrowSignBridge_one_zero :
       simp [hcos]
     exact hnot hpos
 
+private theorem padeR10_three_pi_div_four_radial_weight_hasDerivAt
+    (t : ℝ) :
+    HasDerivAt
+      (fun t : ℝ =>
+        (1 - Real.sqrt 2 * t + t ^ 2) * Real.exp (Real.sqrt 2 * t))
+      (Real.sqrt 2 * t ^ 2 * Real.exp (Real.sqrt 2 * t)) t := by
+  have hf :
+      HasDerivAt (fun t : ℝ => 1 - Real.sqrt 2 * t + t ^ 2)
+        (-Real.sqrt 2 + 2 * t) t := by
+    have htmp :=
+      (((hasDerivAt_const t 1).sub ((hasDerivAt_id t).const_mul (Real.sqrt 2))).add
+        ((hasDerivAt_id t).mul (hasDerivAt_id t)))
+    convert htmp using 1
+    · funext x
+      simp [pow_two]
+    · simp [two_mul]
+  have hg :
+      HasDerivAt (fun t : ℝ => Real.exp (Real.sqrt 2 * t))
+        (Real.sqrt 2 * Real.exp (Real.sqrt 2 * t)) t := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using
+      (show HasDerivAt (fun t : ℝ => Real.exp (Real.sqrt 2 * t))
+          (Real.exp (Real.sqrt 2 * t) * Real.sqrt 2) t from
+        (show HasDerivAt (fun t : ℝ => Real.sqrt 2 * t) (Real.sqrt 2) t from by
+          simpa [mul_comm, mul_left_comm, mul_assoc] using
+            (hasDerivAt_id t).const_mul (Real.sqrt 2)).exp)
+  have hderiv :
+      (-Real.sqrt 2 + 2 * t) * Real.exp (Real.sqrt 2 * t) +
+        (1 - Real.sqrt 2 * t + t ^ 2) *
+          (Real.sqrt 2 * Real.exp (Real.sqrt 2 * t)) =
+      Real.sqrt 2 * t ^ 2 * Real.exp (Real.sqrt 2 * t) := by
+    have hsqrt : (Real.sqrt 2) ^ 2 = 2 := by
+      nlinarith [Real.sq_sqrt (show 0 ≤ (2 : ℝ) by positivity)]
+    ring_nf
+    rw [hsqrt]
+    ring
+  exact hderiv ▸ hf.mul hg
+
+private theorem padeR10_three_pi_div_four_radial_weight_gt_one
+    {t : ℝ} (ht : 0 < t) :
+    1 < (1 - Real.sqrt 2 * t + t ^ 2) * Real.exp (Real.sqrt 2 * t) := by
+  let f : ℝ → ℝ := fun t =>
+    (1 - Real.sqrt 2 * t + t ^ 2) * Real.exp (Real.sqrt 2 * t)
+  have hcont : ContinuousOn f (Set.Ici 0) := by
+    fun_prop
+  have hmono : StrictMonoOn f (Set.Ici 0) := by
+    apply strictMonoOn_of_deriv_pos (convex_Ici 0) hcont
+    intro x hx
+    have hx0 : 0 < x := by
+      simpa using hx
+    have hderiv :
+        deriv f x = Real.sqrt 2 * x ^ 2 * Real.exp (Real.sqrt 2 * x) := by
+      simpa [f] using (padeR10_three_pi_div_four_radial_weight_hasDerivAt x).deriv
+    rw [hderiv]
+    have hsqrt : 0 < Real.sqrt 2 := by positivity
+    have hx2 : 0 < x ^ 2 := sq_pos_of_ne_zero hx0.ne'
+    have hexp : 0 < Real.exp (Real.sqrt 2 * x) := Real.exp_pos _
+    positivity
+  have hgt : f 0 < f t := by
+    exact hmono (by simp) (by simpa using ht.le) ht
+  simpa [f] using hgt
+
+private theorem padeR10_three_pi_div_four_normSq
+    (t : ℝ) :
+    Complex.normSq
+      (1 + ((↑t : ℂ) * exp ((((3 * Real.pi / 4 : ℝ)) : ℂ) * I))) =
+      1 - Real.sqrt 2 * t + t ^ 2 := by
+  rw [Complex.normSq_apply]
+  rw [Complex.exp_mul_I, ← Complex.ofReal_cos, ← Complex.ofReal_sin]
+  have hcos : Real.cos (3 * Real.pi / 4) = -(Real.sqrt 2 / 2) := by
+    rw [show (3 : ℝ) * Real.pi / 4 = Real.pi / 2 + Real.pi / 4 by ring]
+    have : Real.cos (Real.pi / 2 + Real.pi / 4) = -(Real.sqrt 2 / 2) := by
+      simp [Real.cos_add, Real.cos_pi_div_two, Real.sin_pi_div_two,
+        Real.cos_pi_div_four, Real.sin_pi_div_four]
+    exact this
+  have hsin : Real.sin (3 * Real.pi / 4) = Real.sqrt 2 / 2 := by
+    rw [show (3 : ℝ) * Real.pi / 4 = Real.pi / 2 + Real.pi / 4 by ring]
+    simp [Real.sin_add, Real.cos_pi_div_two, Real.sin_pi_div_two,
+      Real.cos_pi_div_four, Real.sin_pi_div_four]
+  simp [hcos, hsin, pow_two]
+  have hsqrt : (Real.sqrt 2) ^ 2 = 2 := by
+    nlinarith [Real.sq_sqrt (show 0 ≤ (2 : ℝ) by positivity)]
+  ring_nf
+  rw [hsqrt]
+  ring
+
+/-- The forward-Euler Padé up-arrow witness also lies on a zero-cosine exact
+ray. -/
+theorem padeR10_three_pi_div_four_zeroCos :
+    padePhiErrorConst 1 0 * Real.cos ((↑(1 + 0) + 1) * (3 * Real.pi / 4)) = 0 := by
+  norm_num [padePhiErrorConst]
+  rw [show (2 : ℝ) * (3 * Real.pi / 4) = 3 * Real.pi / 2 by ring]
+  have hcos : Real.cos (3 * Real.pi / 2) = 0 := by
+    rw [show (3 : ℝ) * Real.pi / 2 = Real.pi + Real.pi / 2 by ring]
+    simp [Real.cos_add, Real.cos_pi_div_two]
+  simp [hcos]
+
+/-- The exact ray `θ = 3π / 4` is a live up-arrow direction for
+`padeR 1 0 = 1 + z`, so the global up-arrow zero-cos / strict-sign bridge
+fails already in the forward-Euler case. -/
+theorem padeR10_three_pi_div_four_isUpArrowDir :
+    IsUpArrowDir (padeR 1 0) (3 * Real.pi / 4) := by
+  refine ⟨1, one_pos, ?_⟩
+  intro t ht
+  let z : ℂ := (↑t : ℂ) * exp ((((3 * Real.pi / 4 : ℝ)) : ℂ) * I)
+  have ht0 : 0 < t := ht.1
+  have hsq_real :
+      1 < (1 - Real.sqrt 2 * t + t ^ 2) * Real.exp (Real.sqrt 2 * t) := by
+    simpa using padeR10_three_pi_div_four_radial_weight_gt_one ht0
+  have hz_re : z.re = t * (-(Real.sqrt 2 / 2)) := by
+    dsimp [z]
+    rw [Complex.exp_mul_I, ← Complex.ofReal_cos, ← Complex.ofReal_sin]
+    have hcos : Real.cos (3 * Real.pi / 4) = -(Real.sqrt 2 / 2) := by
+      rw [show (3 : ℝ) * Real.pi / 4 = Real.pi / 2 + Real.pi / 4 by ring]
+      have : Real.cos (Real.pi / 2 + Real.pi / 4) = -(Real.sqrt 2 / 2) := by
+        simp [Real.cos_add, Real.cos_pi_div_two, Real.sin_pi_div_two,
+          Real.cos_pi_div_four, Real.sin_pi_div_four]
+      exact this
+    have hsin : Real.sin (3 * Real.pi / 4) = Real.sqrt 2 / 2 := by
+      rw [show (3 : ℝ) * Real.pi / 4 = Real.pi / 2 + Real.pi / 4 by ring]
+      simp [Real.sin_add, Real.cos_pi_div_two, Real.sin_pi_div_two,
+        Real.cos_pi_div_four, Real.sin_pi_div_four]
+    simp [hcos, hsin]
+  have hnorm : ‖(1 + z) * exp (-z)‖ = ‖1 + z‖ * Real.exp (-z.re) := by
+    simpa using (orderStar_norm_eq (fun w : ℂ => 1 + w) z)
+  have hnorm_sq_eq : ‖1 + z‖ ^ 2 = 1 - Real.sqrt 2 * t + t ^ 2 := by
+    rw [← Complex.normSq_eq_norm_sq]
+    simpa [z] using padeR10_three_pi_div_four_normSq t
+  have hexp_sq : (Real.exp (-z.re)) ^ 2 = Real.exp (Real.sqrt 2 * t) := by
+    rw [hz_re, pow_two, ← Real.exp_add]
+    congr 1
+    ring
+  have hsq : 1 < (‖1 + z‖ * Real.exp (-z.re)) ^ 2 := by
+    calc
+      (‖1 + z‖ * Real.exp (-z.re)) ^ 2 = ‖1 + z‖ ^ 2 * (Real.exp (-z.re)) ^ 2 := by
+        ring
+      _ = (1 - Real.sqrt 2 * t + t ^ 2) * (Real.exp (-z.re)) ^ 2 := by
+        rw [hnorm_sq_eq]
+      _ = (1 - Real.sqrt 2 * t + t ^ 2) * Real.exp (Real.sqrt 2 * t) := by
+        rw [hexp_sq]
+      _ > 1 := hsq_real
+  have hmain : 1 < ‖1 + z‖ * Real.exp (-z.re) := by
+    have hnonneg : 0 ≤ ‖1 + z‖ * Real.exp (-z.re) := by positivity
+    nlinarith
+  calc
+    1 < ‖1 + z‖ * Real.exp (-z.re) := hmain
+    _ = ‖(1 + z) * exp (-z)‖ := by rw [hnorm]
+    _ = ‖padeR 1 0 z * exp (-z)‖ := by
+      simp [z, padeR, padeP_zero_right, padeQ_zero_right, expTaylor_one]
+
+theorem not_padeRUpArrowZeroCosExclusion_one_zero :
+    ¬ PadeRUpArrowZeroCosExclusion 1 0 := by
+  intro hzero
+  have hne := hzero (3 * Real.pi / 4) padeR10_three_pi_div_four_isUpArrowDir
+  have hzero' := padeR10_three_pi_div_four_zeroCos
+  norm_num at hne hzero' ⊢
+  rcases hzero' with hC | hcos
+  · exact hne.1 hC
+  · exact hne.2 hcos
+
+theorem not_padeRUpArrowSignBridge_one_zero :
+    ¬ PadeRUpArrowSignBridge 1 0 := by
+  intro hbridge
+  have hneg := hbridge (3 * Real.pi / 4) padeR10_three_pi_div_four_isUpArrowDir
+  have hzero' := padeR10_three_pi_div_four_zeroCos
+  norm_num at hneg hzero' ⊢
+  rcases hzero' with hC | hcos
+  · have hnot : ¬ padePhiErrorConst 1 0 * Real.cos (2 * (3 * Real.pi / 4)) < 0 := by
+      simp [hC]
+    exact hnot hneg
+  · have hnot : ¬ padePhiErrorConst 1 0 * Real.cos (2 * (3 * Real.pi / 4)) < 0 := by
+      simp [hcos]
+    exact hnot hneg
+
 /-- The strict down-arrow sign bridge now reduces to the single remaining
 zero-cosine exclusion input. -/
 theorem padeR_downArrowSignBridge_of_zeroCosExclusion
