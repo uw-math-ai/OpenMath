@@ -41,6 +41,16 @@ show that the connected component of `(0,0)` projects onto all of
     are both closed,
   - `0 ∈ L`,
   - any zero-set point with first coordinate `r` is forced into `Cᶜ`.
+- Cycle 342 sharpened both remaining seams:
+  - new helper:
+    `oddDownArrowRadiusPhaseSliceZero_of_neg_errorConst`
+  - the no-stop theorem now additionally derives:
+    - `Prod.fst '' connectedComponentIn K (0, 0) ⊆ L`
+    - `r ∈ R`
+    - `Set.Icc (0 : ℝ) δ ⊆ L ∪ R`
+    - `ρ ∈ Set.Icc (0 : ℝ) δ ∩ (L ∩ R)`
+    - witnesses `xρL ∈ C` and `xρR ∈ Cᶜ` with
+      `xρL.1.1 = xρR.1.1`
 
 ## What was tried
 - Rejected the ready Aristotle bundle `187b14fd...` under the strict transplant
@@ -67,6 +77,31 @@ show that the connected component of `(0,0)` projects onto all of
   - `ce763ce4-2d6f-46fa-a1fb-06fc08298633`
   - `162237a7-c638-43e5-b582-71bcc5a3b8da`
 - Immediate status after submission: all five cycle-341 jobs were `QUEUED`.
+- Replaced the old single theorem-level `sorry` by a new slice-zero helper plus
+  a smaller final contradiction theorem.
+- Expanded `oddDownArrowRadiusPhaseSliceZero_of_neg_errorConst` into the
+  intended IVT proof shape on `Set.Icc (-r) r`, using:
+  - `padeQ_nonzero_near_zero`
+  - `padeR_exp_neg_continuousOn_angleArc`
+  - `padeR_odd_downArrowUniformRadiusPhaseStrip_of_neg_errorConst`
+- This reduced the helper to one exact inner subgoal after instantiating the
+  odd strip theorem with `η = r`:
+
+  ```lean
+  r ∈ Set.Ioo (0 : ℝ) δstrip
+  ```
+
+- Expanded the final theorem until the only remaining local contradiction is:
+  one fixed radius slice now has witnesses in both clopen pieces `C` and `Cᶜ`.
+- Submitted five new cycle-342 Aristotle jobs on the sharpened live file:
+  - `18580e2e-5da5-455f-bbe8-603cca8b44dd`
+  - `38635689-ea04-4733-b9cf-78c51cfb0775`
+  - `aedfa728-bd4f-4499-aeaf-ef3d0fb5f4e5`
+  - `ee0c93b2-eea9-4f82-b668-5b3b91989fa0`
+  - `482305f5-98e3-40db-b3d7-63c68318712e`
+- After the single allowed 30-minute wait and single refresh, all five
+  cycle-342 jobs were still `QUEUED`, so no theorem-local Aristotle fragment
+  was available to transplant.
 
 ## Possible solutions
 - Prove a theorem-local slice-zero lemma on the true wedge, then use
@@ -79,3 +114,12 @@ show that the connected component of `(0,0)` projects onto all of
 - If the exact slice-zero statement is still the hard part, it should become
   its own private helper theorem above the no-stop lemma rather than staying
   implicit inside the final contradiction.
+- Cycle-342 shows the sharper obstruction inside that helper:
+  the odd strip theorem does set up the intended phase-IVT proof, but the live
+  file still lacks a theorem-local reason that the returned strip radius
+  `δstrip` is larger than the same radius `r`.
+- The final contradiction is also sharper now:
+  after the interval-overlap step, the remaining missing fact is that one fixed
+  radius slice of the true wedge cannot meet both `C` and `Cᶜ`.
+  This likely needs a stronger slice-level theorem than mere nonemptiness, not
+  more generic connected-support scaffolding.

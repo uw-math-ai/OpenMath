@@ -2196,23 +2196,130 @@ private theorem exists_clopen_separating_origin_from_radiusSlice_in_oddDownArrow
 /-- Remaining no-stop seam: show that the connected component of `(0,0)` in the
 compact odd-wedge zero set projects onto the full radius interval. The compact
 zero-set and closed-projection infrastructure is now live above this theorem. -/
+private theorem oddDownArrowRadiusPhaseSliceZero_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
+    ∃ δ > 0,
+      (∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+        0 < Complex.re (oddDownArrowRadiusPhaseValue n d p)) ∧
+      (∀ r ∈ Set.Icc (0 : ℝ) δ,
+        ∃ s ∈ Set.Icc (-r) r,
+          (r, s) ∈ oddDownArrowRadiusPhaseZeroSet n d δ) := by
+  obtain ⟨δre, hδre, hre_small⟩ := padeR_exp_neg_re_pos_of_small_norm n d
+  obtain ⟨δQ, hδQ, hQ⟩ := padeQ_nonzero_near_zero n d
+  let p1 : ℝ := ((↑(n + d) + 1) : ℝ)
+  let δ : ℝ := min (δre / 2) (min (δQ / 2) (1 / p1))
+  have hp1_pos : 0 < p1 := by
+    dsimp [p1]
+    positivity
+  have hδ : 0 < δ := by
+    dsimp [δ]
+    exact lt_min (half_pos hδre) (lt_min (half_pos hδQ) (one_div_pos.mpr hp1_pos))
+  have hδlt_re : δ < δre := by
+    dsimp [δ]
+    have hhalf : δre / 2 < δre := by
+      linarith
+    exact lt_of_le_of_lt (min_le_left _ _) hhalf
+  have hδlt_Q : δ < δQ := by
+    dsimp [δ]
+    have hhalf : δQ / 2 < δQ := by
+      linarith
+    exact lt_of_le_of_lt (le_trans (min_le_right _ _) (min_le_left _ _)) hhalf
+  have hre_wedge :
+      ∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+        0 < Complex.re (oddDownArrowRadiusPhaseValue n d p) :=
+    oddDownArrowRadiusPhaseRe_pos_on_wedge_of_small_norm n d hre_small hδlt_re
+  refine ⟨δ, hδ, hre_wedge, ?_⟩
+  intro r hr
+  rcases eq_or_lt_of_le hr.1 with rfl | hrpos
+  · refine ⟨0, by simp, ?_⟩
+    simpa using mem_oddDownArrowRadiusPhaseZeroSet_zero n d hδ.le
+  · let θ0 : ℝ := oddDownArrowRadiusPhaseCenter n d
+    have hrδQ : r < δQ := lt_of_le_of_lt hr.2 hδlt_Q
+    have hr_inv : r ≤ 1 / p1 := by
+      exact le_trans hr.2 (le_trans (min_le_right _ _) (min_le_right _ _))
+    have hηpi : p1 * r < Real.pi := by
+      have hmul : p1 * r ≤ p1 * (1 / p1) := mul_le_mul_of_nonneg_left hr_inv hp1_pos.le
+      have hp1_ne : p1 ≠ 0 := ne_of_gt hp1_pos
+      have hp1r_le : p1 * r ≤ 1 := by
+        rw [show p1 * (1 / p1) = 1 by field_simp [hp1_ne]] at hmul
+        exact hmul
+      linarith [Real.pi_gt_three]
+    obtain ⟨δstrip, hδstrip, _hre_strip, him_left, him_right⟩ :=
+      padeR_odd_downArrowUniformRadiusPhaseStrip_of_neg_errorConst n d hC hrpos hηpi
+    -- The IVT route is set up; the remaining helper gap is to relate the strip
+    -- radius returned for `η = r` back to the same slice radius `r`.
+    have hr_strip : r ∈ Set.Ioo (0 : ℝ) δstrip := by
+      sorry
+    have hcont_complex :
+        ContinuousOn
+          (fun s : ℝ =>
+            padeR n d ((↑r : ℂ) * exp (↑(θ0 + s) * I)) *
+              exp (-((↑r : ℂ) * exp (↑(θ0 + s) * I))))
+          (Set.Icc (-r) r) :=
+      padeR_exp_neg_continuousOn_angleArc n d θ0 r r δQ hrpos hrδQ hQ
+    have him_cont : ContinuousOn (fun z : ℂ => Complex.im z) Set.univ :=
+      Complex.continuous_im.continuousOn
+    have hcont_im :
+        ContinuousOn
+          (fun s : ℝ =>
+            Complex.im
+              (padeR n d ((↑r : ℂ) * exp (↑(θ0 + s) * I)) *
+                exp (-((↑r : ℂ) * exp (↑(θ0 + s) * I)))))
+          (Set.Icc (-r) r) := by
+      simpa [Function.comp] using
+        (him_cont.comp hcont_complex (by
+          intro x hx
+          simp))
+    have him_left' :
+        0 < Complex.im
+          (padeR n d ((↑r : ℂ) * exp (↑(θ0 - r) * I)) *
+            exp (-((↑r : ℂ) * exp (↑(θ0 - r) * I)))) := by
+      simpa [θ0, oddDownArrowRadiusPhaseCenter] using him_left r hr_strip
+    have him_right' :
+        Complex.im
+            (padeR n d ((↑r : ℂ) * exp (↑(θ0 + r) * I)) *
+              exp (-((↑r : ℂ) * exp (↑(θ0 + r) * I)))) < 0 := by
+      simpa [θ0, oddDownArrowRadiusPhaseCenter] using him_right r hr_strip
+    have hzero_mem :
+        (0 : ℝ) ∈ Set.Icc
+          (Complex.im
+            (padeR n d ((↑r : ℂ) * exp (↑(θ0 + r) * I)) *
+              exp (-((↑r : ℂ) * exp (↑(θ0 + r) * I)))))
+          (Complex.im
+            (padeR n d ((↑r : ℂ) * exp (↑(θ0 - r) * I)) *
+              exp (-((↑r : ℂ) * exp (↑(θ0 - r) * I))))) := by
+      exact ⟨le_of_lt him_right', le_of_lt him_left'⟩
+    have hpre : IsPreconnected (Set.Icc (-r) r) := by
+      simpa using isPreconnected_Icc
+    have himage :=
+      hpre.intermediate_value
+        (show r ∈ Set.Icc (-r) r by simp [hrpos.le])
+        (show -r ∈ Set.Icc (-r) r by simp [hrpos.le])
+        hcont_im
+    rcases himage hzero_mem with ⟨s, hsIcc, hszero⟩
+    have hsZero :
+        oddDownArrowRadiusPhaseIm n d (r, s) = 0 := by
+      simpa [oddDownArrowRadiusPhaseIm, oddDownArrowRadiusPhaseValue,
+        oddDownArrowRadiusPhasePoint, oddDownArrowRadiusPhaseCenter, θ0] using hszero
+    exact ⟨s, hsIcc, ⟨⟨hr, hsIcc⟩, hsZero⟩⟩
+
+/-- Remaining no-stop seam: show that the connected component of `(0,0)` in the
+compact odd-wedge zero set projects onto the full radius interval. The compact
+zero-set and closed-projection infrastructure is now live above this theorem. -/
 private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
-    (n d : ℕ) (_hC : padePhiErrorConst n d < 0) :
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
     ∃ δ > 0,
       (∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
         0 < Complex.re (oddDownArrowRadiusPhaseValue n d p)) ∧
       Set.Icc (0 : ℝ) δ ⊆
         Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0) := by
-  obtain ⟨δre, hδre, hre_small⟩ := padeR_exp_neg_re_pos_of_small_norm n d
+  obtain ⟨δ0, hδ0, hre_wedge0, hsliceZero0⟩ :=
+    oddDownArrowRadiusPhaseSliceZero_of_neg_errorConst n d hC
   obtain ⟨δQ, hδQ, hQ⟩ := padeQ_nonzero_near_zero n d
-  let δ : ℝ := min (δre / 2) (δQ / 2)
+  let δ : ℝ := min δ0 (δQ / 2)
   have hδ : 0 < δ := by
     dsimp [δ]
-    exact lt_min (half_pos hδre) (half_pos hδQ)
-  have hδlt_re : δ < δre := by
-    dsimp [δ]
-    have hhalf : δre / 2 < δre := by linarith
-    exact lt_of_le_of_lt (min_le_left _ _) hhalf
+    exact lt_min hδ0 (half_pos hδQ)
   have hδlt_Q : δ < δQ := by
     dsimp [δ]
     have hhalf : δQ / 2 < δQ := by linarith
@@ -2220,7 +2327,20 @@ private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
   have hre_wedge :
       ∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
         0 < Complex.re (oddDownArrowRadiusPhaseValue n d p) :=
-    oddDownArrowRadiusPhaseRe_pos_on_wedge_of_small_norm n d hre_small hδlt_re
+    by
+      intro p hpw
+      exact hre_wedge0 p
+        ⟨⟨hpw.1.1, le_trans hpw.1.2 (min_le_left _ _)⟩, hpw.2⟩
+  have hsliceZero :
+      ∀ r ∈ Set.Icc (0 : ℝ) δ,
+        ∃ s ∈ Set.Icc (-r) r,
+          (r, s) ∈ oddDownArrowRadiusPhaseZeroSet n d δ := by
+    intro r hr
+    rcases hsliceZero0 r ⟨hr.1, le_trans hr.2 (min_le_left _ _)⟩ with
+      ⟨s, hs, hslice⟩
+    refine ⟨s, hs, ?_⟩
+    rcases hslice with ⟨_, hsIm⟩
+    exact ⟨⟨hr, hs⟩, hsIm⟩
   have hprojClosed :
       IsClosed
         (Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0)) :=
@@ -2261,6 +2381,46 @@ private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
     simpa [R] using (hRcompact.image hcoordCont).isClosed
   have h0L : (0 : ℝ) ∈ L := by
     exact ⟨x0, hx0C', rfl⟩
+  have hprojSubsetL : Prod.fst '' connectedComponentIn K (0, 0) ⊆ L := by
+    intro ρ hρ
+    rcases hρ with ⟨p, hpconn, rfl⟩
+    let xp : X := ⟨p, connectedComponentIn_subset _ _ hpconn⟩
+    have hxp_conn : xp ∈ connectedComponent x0 := by
+      have hpimg : p ∈ Subtype.val '' connectedComponent x0 := by
+        simpa [K, x0, connectedComponentIn_eq_image hzero] using hpconn
+      rcases hpimg with ⟨y, hy, hyval⟩
+      have hy_eq : y = xp := by
+        apply Subtype.ext
+        simpa using hyval
+      exact hy_eq ▸ hy
+    exact ⟨xp, hCclopen.connectedComponent_subset hx0C' hxp_conn, rfl⟩
+  have hrR : r ∈ R := by
+    rcases hsliceZero r hr with ⟨s, hs, hslice⟩
+    let xr : X := ⟨(r, s), hslice⟩
+    have hxrC : xr ∈ Cᶜ := hsliceC (by
+      change ((⟨(r, s), hslice⟩ : X).1.1 = r)
+      simp)
+    exact ⟨xr, hxrC, rfl⟩
+  have hcover : Set.Icc (0 : ℝ) δ ⊆ L ∪ R := by
+    intro ρ hρ
+    rcases hsliceZero ρ hρ with ⟨s, hs, hslice⟩
+    let xρ : X := ⟨(ρ, s), hslice⟩
+    by_cases hxρC : xρ ∈ C
+    · exact Or.inl ⟨xρ, hxρC, rfl⟩
+    · exact Or.inr ⟨xρ, by simpa using hxρC, rfl⟩
+  have hLR :
+      (Set.Icc (0 : ℝ) δ ∩ (L ∩ R)).Nonempty := by
+    have hpre : IsPreconnected (Set.Icc (0 : ℝ) δ) := isPreconnected_Icc
+    refine (isPreconnected_closed_iff.mp hpre) L R hLclosed hRclosed hcover ?_ ?_
+    · exact ⟨0, by simp [hδ.le, h0L]⟩
+    · exact ⟨r, by exact ⟨hr, hrR⟩⟩
+  rcases hLR with ⟨ρ, hρIcc, hρL, hρR⟩
+  rcases hρL with ⟨xρL, hxρLC, hρeqL⟩
+  rcases hρR with ⟨xρR, hxρRC, hρeqR⟩
+  have hsameRadius : xρL.1.1 = xρR.1.1 := by
+    simp [hρeqL, hρeqR]
+  -- The topological cover argument is exhausted; the remaining contradiction
+  -- must rule out a single radius slice meeting both clopen pieces.
   sorry
 
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
