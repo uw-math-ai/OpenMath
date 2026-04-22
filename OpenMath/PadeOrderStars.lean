@@ -190,6 +190,67 @@ abbrev PadeRTrackedDownArrowBranch (n d : ℕ) :=
       BranchTracksRayNearOrigin
         branch.toGlobalOrderArrowBranch branch.tangentAngle }
 
+/-- Smaller theorem-local support seam below `PadeRTrackedDownArrowBranch`: a
+connected subset of the Padé order web that already meets every sufficiently
+small cone around a fixed ray. This isolates the genuinely geometric support
+content still missing from the current `{0}`-support witness. -/
+structure PadeRRayTrackingOrderWebSupport (n d : ℕ) (θ : ℝ) where
+  support : Set ℂ
+  support_connected : IsConnected support
+  support_subset_orderWeb : support ⊆ orderWeb (padeR n d)
+  origin_mem_closure : (0 : ℂ) ∈ closure support
+  meets_rayConeNearOrigin :
+    ∀ aperture > 0, ∀ radius > 0,
+      (support ∩ rayConeNearOrigin θ aperture radius).Nonempty
+
+def PadeRRayTrackingOrderWebSupport.toGlobalOrderArrowBranch
+    {n d : ℕ} {θ : ℝ}
+    (h : PadeRRayTrackingOrderWebSupport n d θ) :
+    GlobalOrderArrowBranch (padeR n d) :=
+  { support := h.support
+    support_connected := h.support_connected
+    support_subset_orderWeb := h.support_subset_orderWeb
+    origin_mem_closure := h.origin_mem_closure }
+
+theorem PadeRRayTrackingOrderWebSupport.branchTracksRayNearOrigin
+    {n d : ℕ} {θ : ℝ}
+    (h : PadeRRayTrackingOrderWebSupport n d θ) :
+    BranchTracksRayNearOrigin h.toGlobalOrderArrowBranch θ :=
+  h.meets_rayConeNearOrigin
+
+def PadeRRayTrackingOrderWebSupport.toTrackedDownArrowBranch
+    {n d : ℕ} {θ : ℝ}
+    (h : PadeRRayTrackingOrderWebSupport n d θ)
+    (hθ : IsDownArrowDir (padeR n d) θ) :
+    PadeRTrackedDownArrowBranch n d :=
+  ⟨{ support := h.support
+     support_connected := h.support_connected
+     support_subset_orderWeb := h.support_subset_orderWeb
+     origin_mem_closure := h.origin_mem_closure
+     tangentAngle := θ
+     tangentDown := hθ }, h.branchTracksRayNearOrigin⟩
+
+def PadeRTrackedDownArrowBranch.toRayTrackingOrderWebSupport
+    {n d : ℕ} (branch : PadeRTrackedDownArrowBranch n d) :
+    PadeRRayTrackingOrderWebSupport n d branch.1.tangentAngle :=
+  { support := branch.1.support
+    support_connected := branch.1.support_connected
+    support_subset_orderWeb := branch.1.support_subset_orderWeb
+    origin_mem_closure := branch.1.origin_mem_closure
+    meets_rayConeNearOrigin := branch.2 }
+
+theorem nonempty_padeR_trackedDownArrowBranch_iff_exists_rayTrackingSupport
+    (n d : ℕ) :
+    Nonempty (PadeRTrackedDownArrowBranch n d) ↔
+      ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
+        Nonempty (PadeRRayTrackingOrderWebSupport n d θ) := by
+  constructor
+  · rintro ⟨branch⟩
+    exact ⟨branch.1.tangentAngle, branch.1.tangentDown,
+      ⟨branch.toRayTrackingOrderWebSupport⟩⟩
+  · rintro ⟨θ, hθ, ⟨support⟩⟩
+    exact ⟨support.toTrackedDownArrowBranch hθ⟩
+
 /-- Count-indexed family of down-arrow branches that already satisfy the local
 ray-tracking half of the realized-branch interface. -/
 abbrev PadeRTrackedDownArrowInfinityWitnessFamily
@@ -250,6 +311,27 @@ theorem nonempty_padeR_realizedUpArrowInfinityWitnessFamily_iff
       (α := RealizedUpArrowInfinityBranch (padeR n d))
       data.upArrowsAtInfinity)
 
+/-- Honest one-level-lower seam beneath `PadeRDownArrowBranchTrackingInput`:
+positive down-arrow infinity counts would yield a tracked branch once the
+missing geometric input is supplied as an order-web support that actually meets
+every sufficiently small cone around a concrete down-arrow ray. -/
+structure PadeRDownArrowRayTrackingSupportInput
+    (n d : ℕ) (data : OrderArrowTerminationData) where
+  downRayTrackingSupport_of_downArrowsAtInfinity_pos :
+    0 < data.downArrowsAtInfinity →
+      ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
+        Nonempty (PadeRRayTrackingOrderWebSupport n d θ)
+
+theorem padeR_exists_trackedDownArrowBranch_of_exists_rayTrackingSupport
+    {n d : ℕ}
+    (hexists :
+      ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
+        Nonempty (PadeRRayTrackingOrderWebSupport n d θ)) :
+    Nonempty (PadeRTrackedDownArrowBranch n d) := by
+  rcases hexists with ⟨θ, hθ, hsupport⟩
+  rcases hsupport with ⟨support⟩
+  exact ⟨support.toTrackedDownArrowBranch hθ⟩
+
 /-- Sharpened cycle-320 seam on the down-arrow side: the current `{0}`-support
 global-branch existence theorem does not even provide the local ray-tracking
 field of a realized escaping branch, so that theorem-local input has to be
@@ -259,6 +341,14 @@ structure PadeRDownArrowBranchTrackingInput
   downTrackedBranch_of_downArrowsAtInfinity_pos :
     0 < data.downArrowsAtInfinity →
       Nonempty (PadeRTrackedDownArrowBranch n d)
+
+def PadeRDownArrowRayTrackingSupportInput.toTrackingInput
+    {n d : ℕ} {data : OrderArrowTerminationData}
+    (h : PadeRDownArrowRayTrackingSupportInput n d data) :
+    PadeRDownArrowBranchTrackingInput n d data :=
+  ⟨fun hpos =>
+    padeR_exists_trackedDownArrowBranch_of_exists_rayTrackingSupport
+      (h.downRayTrackingSupport_of_downArrowsAtInfinity_pos hpos)⟩
 
 noncomputable def PadeRDownArrowBranchTrackingInput.downArrowInfinityWitnesses
     {n d : ℕ} {data : OrderArrowTerminationData}
