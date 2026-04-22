@@ -1,68 +1,99 @@
 # Issue: Padé down-arrow tracking still lacks cone-level order-web support
 
 ## Blocker
-The live seam in `OpenMath/PadeOrderStars.lean` is now isolated one level lower
-than `PadeRDownArrowBranchTrackingInput`, but the actual geometric theorem is
-still missing.
+The live blocker is now split one level lower than
+`PadeRDownArrowRayTrackingSupportInput`.
 
-What remains unproved is an existence statement of the form
+The current target theorem is still
 
 ```lean
 ∃ θ : ℝ, IsDownArrowDir (padeR n d) θ ∧
   Nonempty (PadeRRayTrackingOrderWebSupport n d θ)
 ```
 
-or equivalently
+but cycle 322 isolates two strictly smaller ingredients below it:
 
 ```lean
-Nonempty (PadeRTrackedDownArrowBranch n d)
+PadeROrderWebMeetsRayConeNearOrigin n d θ
 ```
 
-in the positive-count case.
+and
 
-The exact missing content is not the tangent direction and not far-field escape:
-it is a connected subset of `orderWeb (padeR n d)` whose support intersects
-every sufficiently small cone `rayConeNearOrigin θ aperture radius`.
+```lean
+Nonempty (PadeRConnectedRayConeOrderWebSupport n d θ)
+```
+
+The first asks only for raw `orderWeb (padeR n d)` points in every sufficiently
+small cone around the ray. The second packages those raw cone hits into a
+connected order-web support. Only after that packaging step does the existing
+`PadeRRayTrackingOrderWebSupport` interface follow.
 
 ## Context
-Relevant live additions in `OpenMath/PadeOrderStars.lean`:
+Relevant live declarations in `OpenMath/PadeOrderStars.lean`:
 
-- `PadeRRayTrackingOrderWebSupport`
-- `PadeRTrackedDownArrowBranch.toRayTrackingOrderWebSupport`
-- `nonempty_padeR_trackedDownArrowBranch_iff_exists_rayTrackingSupport`
+- `PadeROrderWebMeetsRayConeNearOrigin`
+- `PadeRConnectedRayConeOrderWebSupport`
+- `PadeRConnectedRayConeOrderWebSupport.toRayTrackingOrderWebSupport`
+- `PadeRDownArrowOrderWebRayConeMeetInput`
+- `PadeRDownArrowConnectedRayConeSupportInput`
+- `PadeRDownArrowConnectedRayConeSupportInput.toRayTrackingSupportInput`
 - `PadeRDownArrowRayTrackingSupportInput`
-- `PadeRDownArrowRayTrackingSupportInput.toTrackingInput`
 
-Relevant older theorems/definitions:
+Supporting facts already in the live file:
 
+- `padeR_exists_downArrowDir`
 - `padeR_exists_orderWebBranchSupport_of_downArrowsAtInfinity_pos`
-- `padeR_exists_globalDownArrowBranch_of_downArrowsAtInfinity_pos`
 - `padeR_local_minus_near_of_errorConst_cos_pos`
-- `BranchTracksRayNearOrigin`
+- `padeR_nonneg_sign_of_downArrowDir`
 - `rayConeNearOrigin`
+- `BranchTracksRayNearOrigin`
 
-The current positive-count support theorem still returns only `support = {0}`.
-That support cannot satisfy `BranchTracksRayNearOrigin`, because every
-`rayConeNearOrigin θ aperture radius` is built from `t ∈ (0, radius)` and so
-does not witness cone intersection using only the origin.
+Cycle 322 also proved a purely geometric helper:
+
+```lean
+zero_mem_closure_of_meets_rayConeNearOrigin
+```
+
+so once a connected support meets every small cone, the `0 ∈ closure support`
+field of `PadeRRayTrackingOrderWebSupport` is automatic.
 
 ## What was tried
-- Re-read the tracked-branch interface in `OpenMath/OrderStars.lean`.
-- Re-checked the Padé local cone sign theorems and the current
-  `{0}`-support branch constructor chain.
-- Added a smaller support-level seam:
-  `PadeRRayTrackingOrderWebSupport`.
-- Proved packaging lemmas showing this support-level seam is exactly equivalent
-  to `PadeRTrackedDownArrowBranch` once a matching `IsDownArrowDir` is supplied.
-- Added `PadeRDownArrowRayTrackingSupportInput` so the remaining gap is now
-  explicitly the cone-level order-web support theorem, not generic branch
-  existence.
+- Re-triaged the six ready Aristotle bundles first.
+- Rejected `TrackedFromCount`, `SupportFromCount`, `SupportFromDir`,
+  `EvenAngleSupport`, and `OddAngleSupport` again because they redefine the live
+  seam (`padeR`, support structures, or fake/default witnesses) instead of
+  proving theorem-local lemmas against the current interface.
+- Rejected `8418c228.../OrderStars.lean` as non-transplantable because it is a
+  wholesale alternate `OrderStars` file, not a tiny live helper.
+- Checked the current Padé-local sign-control lemmas against the support seam.
+- Added the lower cone-meeting and connected-support seams in
+  `OpenMath/PadeOrderStars.lean`.
+
+## Why the current hypotheses are still insufficient
+- `0 < data.downArrowsAtInfinity` is only a count statement. It does not
+  produce any concrete point of `orderWeb (padeR n d)` near the chosen ray.
+- `∃ θ, IsDownArrowDir (padeR n d) θ` only gives exact-ray `< 1` behavior for
+  points `t * exp(iθ)` with `t > 0` sufficiently small. Those ray points lie in
+  `orderStarMinus`, not automatically in `orderWeb`.
+- The live local sign-control lemmas
+  `padeR_local_minus_near_of_errorConst_cos_pos` and
+  `padeR_local_plus_near_of_errorConst_cos_neg` only control whether
+  `‖padeR n d z * exp (-z)‖` is `< 1` or `> 1` on cones. They do not create any
+  equality points `R z * exp(-z) = r > 0`, so they do not by themselves yield
+  members of `orderWeb`.
+- Even if raw `orderWeb` cone hits were available, there is still no theorem
+  connecting those scattered witnesses into a single connected support meeting
+  every small cone.
+- The current positive-count theorem still returns only `support = {0}`, and
+  `0` alone cannot witness cone intersection because `rayConeNearOrigin` uses
+  `t ∈ (0, radius)`.
 
 ## Possible solutions
-- Prove a Padé-local theorem that `orderWeb (padeR n d)` meets every
-  sufficiently small cone around a concrete down-arrow direction, and extract a
-  connected support from those witnesses.
-- Prove a stronger local continuation theorem: nearby `orderWeb` points continue
-  through the down-arrow germ, not just the `< 1` sign on the cone.
-- Use the existing local minus/plus cone inequalities only as feeders; by
-  themselves they do not create `orderWeb` points or connected branch support.
+- Prove the smallest missing analytic statement first:
+  `PadeROrderWebMeetsRayConeNearOrigin n d θ` for a concrete Padé down-arrow
+  angle.
+- Then prove a connected-component packaging lemma turning those raw cone hits
+  into `PadeRConnectedRayConeOrderWebSupport n d θ`.
+- If that packaging needs extra local continuation input, state that input
+  explicitly rather than jumping back to tracked branches or realized infinity
+  branches.
