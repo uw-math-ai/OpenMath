@@ -1770,6 +1770,32 @@ where
         support ⊆ orderWeb (padeR n d) ∧
         z0 ∈ support ∧
         z ∈ support := by
+    rcases
+        continuousOrderWebPath_of_bridgeWitnesses
+          hz0web hz0cone aperture radius hzweb hzcone with
+      ⟨γ, hγcont, hγ0, hγ1, hγweb⟩
+    refine ⟨γ '' Set.Icc (0 : ℝ) 1, ?_, ?_, ?_, ?_⟩
+    · exact (show IsConnected (γ '' Set.Icc (0 : ℝ) 1) from
+          (isConnected_Icc (show (0 : ℝ) ≤ 1 by norm_num)).image γ hγcont)
+    · intro w hw
+      rcases hw with ⟨u, huIcc, rfl⟩
+      exact hγweb u huIcc
+    · refine ⟨0, by simp, ?_⟩
+      simp [hγ0]
+    · refine ⟨1, by simp, ?_⟩
+      simp [hγ1]
+  continuousOrderWebPath_of_bridgeWitnesses
+      {z0 z : ℂ}
+      (hz0web : z0 ∈ orderWeb (padeR n d))
+      (hz0cone : z0 ∈ rayConeNearOrigin θ (1 : ℝ) 1)
+      (aperture radius : ℝ)
+      (hzweb : z ∈ orderWeb (padeR n d))
+      (hzcone : z ∈ rayConeNearOrigin θ aperture radius) :
+      ∃ γ : ℝ → ℂ,
+        ContinuousOn γ (Set.Icc (0 : ℝ) 1) ∧
+        γ 0 = z0 ∧
+        γ 1 = z ∧
+        ∀ u ∈ Set.Icc (0 : ℝ) 1, γ u ∈ orderWeb (padeR n d) := by
     sorry
 
 /-- Exact current theorem-local blocker beneath the concrete connected-component
