@@ -816,10 +816,8 @@ theorem padeR10_three_pi_div_four_zeroCos :
     padePhiErrorConst 1 0 * Real.cos ((↑(1 + 0) + 1) * (3 * Real.pi / 4)) = 0 := by
   norm_num [padePhiErrorConst]
   rw [show (2 : ℝ) * (3 * Real.pi / 4) = 3 * Real.pi / 2 by ring]
-  have hcos : Real.cos (3 * Real.pi / 2) = 0 := by
-    rw [show (3 : ℝ) * Real.pi / 2 = Real.pi + Real.pi / 2 by ring]
-    simp [Real.cos_add, Real.cos_pi_div_two]
-  simp [hcos]
+  rw [show (3 : ℝ) * Real.pi / 2 = Real.pi + Real.pi / 2 by ring]
+  simp [Real.cos_add, Real.cos_pi_div_two]
 
 /-- The exact ray `θ = 3π / 4` is a live up-arrow direction for
 `padeR 1 0 = 1 + z`, so the global up-arrow zero-cos / strict-sign bridge
@@ -995,13 +993,32 @@ structure PadeRZeroSupportExclusionInput (n d : ℕ) where
     ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
       (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
 
+/-- Honest Padé-local unit-level exclusion input. The fully uniform statement
+without this extra hypothesis is false already for `padeR 0 0 = 1`, so the
+nonzero unit-level exclusion must remain explicit at the no-escape seam. -/
+structure PadeRUnitLevelExclusionInput (n d : ℕ) where
+  no_nonzero_unit_points_on_orderWeb :
+    ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
+      ‖padeR n d z * exp (-z)‖ = 1 → False
+
+/-- Honest Padé-local far-field sign input. These large-radius sign controls
+are separate analytic feeders and are not forced by the realized-branch germ
+interface alone. -/
+structure PadeRFarFieldSignInput (n d : ℕ) where
+  far_plus_on_orderWeb :
+    ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+      1 < ‖padeR n d z * exp (-z)‖
+  far_minus_on_orderWeb :
+    ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
+      ‖padeR n d z * exp (-z)‖ < 1
+
 /-- Minimal Padé-local boundary for the live no-escape seam.
 This exposes the exact remaining input below `ConcreteRationalApproxToExp`
 without changing the `OrderStars` interface: two realized infinity witness
-families together with the analytic contradiction hypotheses that rule them
-out and the honest explicit-sign local feeders currently available in the live
-Padé file. The remaining zero-cosine exact-ray exclusions stay theorem-local
-downstream. -/
+families together with the explicit small Padé-local analytic bundles that
+rule them out and the honest explicit-sign local feeders currently available
+in the live Padé file. The remaining zero-cosine exact-ray exclusions stay
+theorem-local downstream. -/
 structure PadeRConcreteNoEscapeInput
     (n d : ℕ) (data : OrderArrowTerminationData) where
   downArrowInfinityWitnesses : PadeRRealizedDownArrowInfinityWitnessFamily n d data
@@ -1009,15 +1026,8 @@ structure PadeRConcreteNoEscapeInput
   cont_orderWeb :
     ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
       (orderWeb (padeR n d))
-  zero_not_mem_down_support :
-    ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
-      (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
-  zero_not_mem_up_support :
-    ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
-      (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support
-  no_nonzero_unit_points_on_orderWeb :
-    ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
-      ‖padeR n d z * exp (-z)‖ = 1 → False
+  zeroSupportExclusion : PadeRZeroSupportExclusionInput n d
+  unitLevelExclusion : PadeRUnitLevelExclusionInput n d
   local_minus_near_of_sign :
     ∀ θ : ℝ,
       0 < padePhiErrorConst n d * Real.cos ((↑(n + d) + 1) * θ) →
@@ -1030,20 +1040,7 @@ structure PadeRConcreteNoEscapeInput
       ∃ aperture > 0, ∃ radius > 0,
         ∀ z : ℂ, z ∈ rayConeNearOrigin θ aperture radius →
           1 < ‖padeR n d z * exp (-z)‖
-  far_plus_on_orderWeb :
-    ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-      1 < ‖padeR n d z * exp (-z)‖
-  far_minus_on_orderWeb :
-    ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-      ‖padeR n d z * exp (-z)‖ < 1
-
-def PadeRConcreteNoEscapeInput.zeroSupportExclusion
-    {n d : ℕ} {data : OrderArrowTerminationData}
-    (h : PadeRConcreteNoEscapeInput n d data) :
-    PadeRZeroSupportExclusionInput n d := by
-  exact
-    { zero_not_mem_down_support := h.zero_not_mem_down_support
-      zero_not_mem_up_support := h.zero_not_mem_up_support }
+  farFieldSign : PadeRFarFieldSignInput n d
 
 def PadeRConcreteNoEscapeInput.realizesInfinityBranchGerms
     {n d : ℕ} {data : OrderArrowTerminationData}
@@ -1060,15 +1057,15 @@ theorem PadeRConcreteNoEscapeInput.concrete
     ConcreteRationalApproxToExp (padeR n d) data := by
   exact concreteRationalApproxToExp_of_padeR
     h.cont_orderWeb
-    h.zero_not_mem_down_support
-    h.zero_not_mem_up_support
-    h.no_nonzero_unit_points_on_orderWeb
+    h.zeroSupportExclusion.zero_not_mem_down_support
+    h.zeroSupportExclusion.zero_not_mem_up_support
+    h.unitLevelExclusion.no_nonzero_unit_points_on_orderWeb
     h.local_minus_near_of_sign
     h.local_plus_near_of_sign
     hdown_zeroCosExclusion
     hup_zeroCosExclusion
-    h.far_plus_on_orderWeb
-    h.far_minus_on_orderWeb
+    h.farFieldSign.far_plus_on_orderWeb
+    h.farFieldSign.far_minus_on_orderWeb
 
 theorem PadeRConcreteNoEscapeInput.no_nonzero_eq_exp
     {n d : ℕ} {data : OrderArrowTerminationData}
@@ -1077,36 +1074,27 @@ theorem PadeRConcreteNoEscapeInput.no_nonzero_eq_exp
       padeR n d z = exp z → False := by
   exact
     (no_nonzero_unit_points_on_orderWeb_iff_no_nonzero_eq_exp
-      (R := padeR n d)).1 h.no_nonzero_unit_points_on_orderWeb
+      (R := padeR n d)).1 h.unitLevelExclusion.no_nonzero_unit_points_on_orderWeb
 
-def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExclusion
+def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_inputs
     {n d : ℕ} {data : OrderArrowTerminationData}
     (hreal : RealizesInfinityBranchGerms (padeR n d) data)
     (hcont_orderWeb :
       ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
         (orderWeb (padeR n d)))
     (hzero : PadeRZeroSupportExclusionInput n d)
-    (hno_nonzero_unit_points_on_orderWeb :
-      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
-        ‖padeR n d z * exp (-z)‖ = 1 → False)
-    (hfar_plus_on_orderWeb :
-      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-        1 < ‖padeR n d z * exp (-z)‖)
-    (hfar_minus_on_orderWeb :
-      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-        ‖padeR n d z * exp (-z)‖ < 1) :
+    (hunit : PadeRUnitLevelExclusionInput n d)
+    (hfar : PadeRFarFieldSignInput n d) :
     PadeRConcreteNoEscapeInput n d data := by
   exact
     { downArrowInfinityWitnesses := hreal.downArrowInfinityWitnesses
       upArrowInfinityWitnesses := hreal.upArrowInfinityWitnesses
       cont_orderWeb := hcont_orderWeb
-      zero_not_mem_down_support := hzero.zero_not_mem_down_support
-      zero_not_mem_up_support := hzero.zero_not_mem_up_support
-      no_nonzero_unit_points_on_orderWeb := hno_nonzero_unit_points_on_orderWeb
+      zeroSupportExclusion := hzero
+      unitLevelExclusion := hunit
       local_minus_near_of_sign := padeR_local_minus_near_of_errorConst_cos_pos n d
       local_plus_near_of_sign := padeR_local_plus_near_of_errorConst_cos_neg n d
-      far_plus_on_orderWeb := hfar_plus_on_orderWeb
-      far_minus_on_orderWeb := hfar_minus_on_orderWeb }
+      farFieldSign := hfar }
 
 def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     {n d : ℕ} {data : OrderArrowTerminationData}
@@ -1114,29 +1102,16 @@ def padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     (hcont_orderWeb :
       ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
         (orderWeb (padeR n d)))
-    (hzero_not_mem_down_support :
-      ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
-        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
-    (hzero_not_mem_up_support :
-      ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
-        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
-    (hno_nonzero_unit_points_on_orderWeb :
-      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
-        ‖padeR n d z * exp (-z)‖ = 1 → False)
-    (hfar_plus_on_orderWeb :
-      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-        1 < ‖padeR n d z * exp (-z)‖)
-    (hfar_minus_on_orderWeb :
-      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-        ‖padeR n d z * exp (-z)‖ < 1) :
+    (hzero : PadeRZeroSupportExclusionInput n d)
+    (hunit : PadeRUnitLevelExclusionInput n d)
+    (hfar : PadeRFarFieldSignInput n d) :
     PadeRConcreteNoEscapeInput n d data := by
-  exact padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_zeroSupportExclusion
+  exact padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms_of_inputs
     hreal
     hcont_orderWeb
-    ⟨hzero_not_mem_down_support, hzero_not_mem_up_support⟩
-    hno_nonzero_unit_points_on_orderWeb
-    hfar_plus_on_orderWeb
-    hfar_minus_on_orderWeb
+    hzero
+    hunit
+    hfar
 
 /-- Honest Padé-local boundary for the repaired Ehle barrier seam.
 This bundles exactly the concrete hypotheses currently needed to apply the
@@ -1162,32 +1137,18 @@ def padeREhleBarrierInput_of_padeR
     (hcont_orderWeb :
       ContinuousOn (fun z => ‖padeR n d z * exp (-z)‖)
         (orderWeb (padeR n d)))
-    (hzero_not_mem_down_support :
-      ∀ branch : RealizedDownArrowInfinityBranch (padeR n d),
-        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
-    (hzero_not_mem_up_support :
-      ∀ branch : RealizedUpArrowInfinityBranch (padeR n d),
-        (0 : ℂ) ∉ branch.branch.toGlobalOrderArrowBranch.support)
-    (hno_nonzero_unit_points_on_orderWeb :
-      ∀ z : ℂ, z ≠ 0 → z ∈ orderWeb (padeR n d) →
-        ‖padeR n d z * exp (-z)‖ = 1 → False)
-    (hfar_plus_on_orderWeb :
-      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-        1 < ‖padeR n d z * exp (-z)‖)
-    (hfar_minus_on_orderWeb :
-      ∃ radius > 0, ∀ z : ℂ, z ∈ orderWeb (padeR n d) → radius ≤ ‖z‖ →
-        ‖padeR n d z * exp (-z)‖ < 1)
+    (hzero : PadeRZeroSupportExclusionInput n d)
+    (hunit : PadeRUnitLevelExclusionInput n d)
+    (hfar : PadeRFarFieldSignInput n d)
     (hehle : EhleBarrierInput data) :
     PadeREhleBarrierInput n d data := by
   refine ⟨hnum, hden, hpade, ?_, hehle⟩
   exact padeRConcreteNoEscapeInput_of_realizesInfinityBranchGerms
     hreal
     hcont_orderWeb
-    hzero_not_mem_down_support
-    hzero_not_mem_up_support
-    hno_nonzero_unit_points_on_orderWeb
-    hfar_plus_on_orderWeb
-    hfar_minus_on_orderWeb
+    hzero
+    hunit
+    hfar
 
 def PadeREhleBarrierInput.realizesInfinityBranchGerms
     {n d : ℕ} {data : OrderArrowTerminationData}
