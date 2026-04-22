@@ -2648,7 +2648,7 @@ private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_er
   sorry
 
 private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
-    (n d : ℕ) {δ ρ : ℝ}
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0) {δ ρ : ℝ}
     (C : Set {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ})
     (_hCclopen : IsClopen C) :
     ∀ xL xR : {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ},
@@ -2775,7 +2775,7 @@ private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
   rcases hρR with ⟨xρR, hxρRC, hρeqR⟩
   exact
     oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
-      n d C hCclopen xρL xρR hxρLC hxρRC hρeqL hρeqR
+      n d hC C hCclopen xρL xρR hxρLC hxρRC hρeqL hρeqR
 
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support

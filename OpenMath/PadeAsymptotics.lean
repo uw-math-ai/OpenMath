@@ -493,6 +493,60 @@ theorem padeQ_mul_expTaylor_coeff_succ (p q : ℕ) :
     · omega
   rw [hconv, hsub]
 
+/-- The degree-`p+q+2` coefficient of `padeQ_poly * expTaylor_poly` reduces to a
+second reflected reciprocal sum after discarding the vanishing `j = 0, 1`
+Taylor terms. -/
+theorem padeQ_mul_expTaylor_coeff_succ_succ (p q : ℕ) :
+    (padeQ_poly p q * expTaylor_poly (p + q)).coeff (p + q + 2) =
+      ∑ j ∈ Finset.range (q + 1),
+        (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+          (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ)) -
+        1 / (((p + q + 2).factorial : ℂ)) +
+        ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) := by
+  have hconv :
+      (padeQ_poly p q * expTaylor_poly (p + q)).coeff (p + q + 2) =
+        ∑ j ∈ Finset.Icc 2 q,
+          (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (p + q + 2 - j) := by
+    rw [Polynomial.coeff_mul, Finset.Nat.sum_antidiagonal_eq_sum_range_succ_mk]
+    let f : ℕ → ℂ := fun j =>
+      (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (p + q + 2 - j)
+    change ∑ j ∈ Finset.range (p + q + 2 + 1), f j = ∑ j ∈ Finset.Icc 2 q, f j
+    symm
+    rw [Finset.sum_subset]
+    · intro j hjIcc
+      exact Finset.mem_range.mpr (by
+        have hj := Finset.mem_Icc.mp hjIcc
+        omega)
+    · intro j hjrange hjnot
+      dsimp [f]
+      have hjlt : j < p + q + 2 + 1 := Finset.mem_range.mp hjrange
+      have hjcases : j = 0 ∨ j = 1 ∨ q < j := by
+        by_cases htwo : 2 ≤ j
+        · have hnotle : ¬ j ≤ q := by
+            intro hjq
+            exact hjnot (Finset.mem_Icc.mpr ⟨htwo, hjq⟩)
+          exact Or.inr (Or.inr (lt_of_not_ge hnotle))
+        · have hjle1 : j ≤ 1 := by omega
+          omega
+      rcases hjcases with rfl | rfl | hqj
+      · rw [padeQ_poly_coeff, expTaylor_poly_coeff, if_neg (by omega)]
+        simp
+      · rw [padeQ_poly_coeff, expTaylor_poly_coeff, if_neg (by omega)]
+        simp
+      · rw [padeQ_poly_coeff]
+        rw [Nat.choose_eq_zero_of_lt hqj]
+        simp
+  have hsub :
+      (∑ j ∈ Finset.Icc 2 q,
+        (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (p + q + 2 - j)) =
+      ∑ j ∈ Finset.range (q + 1),
+        (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+          (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ)) -
+        1 / (((p + q + 2).factorial : ℂ)) +
+        ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) := by
+    sorry
+  rw [hconv, hsub]
+
 /-- The Padé defect vanishes below degree `p + q + 1`. -/
 theorem padeDefect_poly_coeff_lt (p q k : ℕ) (hk : k < p + q + 1) :
     (padeDefect_poly p q).coeff k = 0 := by
@@ -587,6 +641,137 @@ theorem padeDefect_poly_coeff_succ (p q : ℕ) :
   rw [hfact]
   norm_num [padePhiErrorConst]
   ring
+
+/-- The exact degree-`p+q+2` coefficient of the Padé defect. -/
+theorem padeDefect_poly_coeff_succ_succ (p q : ℕ) :
+    (padeDefect_poly p q).coeff (p + q + 2) =
+      (1 / (((p + q + 2).factorial : ℂ))) -
+        ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) -
+        (padePhiErrorConst p q : ℂ) * ((q + 1 : ℂ) / (p + q + 2 : ℂ)) := by
+  unfold padeDefect_poly
+  rw [Polynomial.coeff_sub, padeP_poly_coeff, padeQ_mul_expTaylor_coeff_succ_succ]
+  rw [Nat.choose_eq_zero_of_lt (by omega)]
+  let fullSum : ℂ :=
+    ∑ j ∈ Finset.range (q + 1),
+      (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+        (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ))
+  have hsplit :
+      fullSum =
+        (∑ j ∈ Finset.range (q + 1),
+          (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 1 - j : ℂ) /
+            (((p + q).factorial : ℂ)) ) -
+        (∑ j ∈ Finset.range (q + 1),
+          (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+            (((p + q).factorial : ℂ)) ) := by
+    rw [← Finset.sum_sub_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro j hj
+    have hjq : j ≤ q := Nat.le_of_lt_succ (Finset.mem_range.mp hj)
+    have hden1 : (p + q + 1 - j : ℂ) ≠ 0 := by
+      intro h
+      have hnat : (p + q + 1 : ℤ) - j = 0 := by exact_mod_cast h
+      omega
+    have hden2 : (p + q + 2 - j : ℂ) ≠ 0 := by
+      intro h
+      have hnat : (p + q + 2 : ℤ) - j = 0 := by exact_mod_cast h
+      omega
+    field_simp [hden1, hden2, Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q)).ne']
+    ring
+  have hsum1 :
+      ∑ j ∈ Finset.range (q + 1),
+        (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 1 - j : ℂ) /
+          (((p + q).factorial : ℂ)) =
+        (((-1 : ℂ) ^ q * ((p.factorial : ℂ) * (q.factorial : ℂ))) /
+          (((p + q + 1).factorial : ℂ))) / (((p + q).factorial : ℂ)) := by
+    rw [← Finset.sum_div]
+    rw [alternating_choose_reciprocal_reflect]
+  have hsum2 :
+      ∑ j ∈ Finset.range (q + 1),
+        (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+          (((p + q).factorial : ℂ)) =
+        (((-1 : ℂ) ^ q * (((p + 1).factorial : ℂ) * (q.factorial : ℂ))) /
+          (((p + q + 2).factorial : ℂ))) / (((p + q).factorial : ℂ)) := by
+    have hbase := alternating_choose_reciprocal_reflect (p + 1) q
+    have hdiv := congrArg (fun z : ℂ => z / (((p + q).factorial : ℂ))) hbase
+    have hnorm :
+        ∑ j ∈ Finset.range (q + 1),
+          (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+            (((p + q).factorial : ℂ)) =
+        ∑ i ∈ Finset.range (q + 1),
+          (q.choose i : ℂ) * (-1 : ℂ) ^ i / ((p + 1) + q + 1 - i : ℂ) /
+            (((p + q).factorial : ℂ)) := by
+      refine Finset.sum_congr rfl ?_
+      intro j hj
+      congr 1
+      ring_nf
+    rw [hnorm]
+    simpa [Finset.sum_div, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hdiv
+  have hfull :
+      (∑ j ∈ Finset.range (q + 1),
+        (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+          (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ))) = fullSum := by
+    rfl
+  have hcoeff :
+      ((((-1 : ℂ) ^ q * (((p + 1).factorial : ℂ) * (q.factorial : ℂ))) /
+          (((p + q + 2).factorial : ℂ))) / (((p + q).factorial : ℂ))) -
+        ((((-1 : ℂ) ^ q * ((p.factorial : ℂ) * (q.factorial : ℂ))) /
+          (((p + q + 1).factorial : ℂ))) / (((p + q).factorial : ℂ))) =
+      -(padePhiErrorConst p q : ℂ) * ((q + 1 : ℂ) / (p + q + 2 : ℂ)) := by
+    norm_num [padePhiErrorConst]
+    have hp1 :
+        (((p + 1).factorial : ℕ) : ℂ) =
+          (p + 1 : ℂ) * (((p).factorial : ℕ) : ℂ) := by
+      rw [Nat.factorial_succ]
+      push_cast
+      ring
+    have hm2 :
+        (((p + q + 2).factorial : ℕ) : ℂ) =
+          (p + q + 2 : ℂ) * (((p + q + 1).factorial : ℕ) : ℂ) := by
+      rw [show p + q + 2 = (p + q + 1) + 1 by omega, Nat.factorial_succ]
+      push_cast
+      ring
+    rw [hp1, hm2]
+    field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos p).ne',
+      Nat.cast_ne_zero.mpr (Nat.factorial_pos q).ne',
+      Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q)).ne',
+      Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q + 1)).ne',
+      Nat.cast_ne_zero.mpr (show p + q + 2 ≠ 0 by omega)]
+    have hneq : (↑p + ↑q + 2 : ℂ) ≠ 0 := by
+      exact_mod_cast (show p + q + 2 ≠ 0 by omega)
+    field_simp [hneq]
+    ring
+  simp
+  rw [hfull]
+  let A : ℂ :=
+    (((-1 : ℂ) ^ q * ((p.factorial : ℂ) * (q.factorial : ℂ))) /
+      (((p + q + 1).factorial : ℂ))) / (((p + q).factorial : ℂ))
+  let B : ℂ :=
+    (((-1 : ℂ) ^ q * (((p + 1).factorial : ℂ) * (q.factorial : ℂ))) /
+      (((p + q + 2).factorial : ℂ))) / (((p + q).factorial : ℂ))
+  have hcoeff' : B - A =
+      -(padePhiErrorConst p q : ℂ) * ((q + 1 : ℂ) / (p + q + 2 : ℂ)) := by
+    simpa [A, B] using hcoeff
+  have hmain :
+      (1 / (((p + q + 2).factorial : ℂ))) -
+          ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) - fullSum =
+        (1 / (((p + q + 2).factorial : ℂ))) -
+          ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) -
+          (padePhiErrorConst p q : ℂ) * ((q + 1 : ℂ) / (p + q + 2 : ℂ)) := by
+    calc
+      (1 / (((p + q + 2).factorial : ℂ))) -
+          ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) - fullSum =
+        (1 / (((p + q + 2).factorial : ℂ))) -
+          ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) +
+          (B - A) := by
+            rw [hsplit, hsum1, hsum2]
+            dsimp [A, B]
+            ring
+      _ = (1 / (((p + q + 2).factorial : ℂ))) -
+          ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) -
+          (padePhiErrorConst p q : ℂ) * ((q + 1 : ℂ) / (p + q + 2 : ℂ)) := by
+            rw [hcoeff']
+            ring
+  convert hmain using 1 <;> ring
 
 /-- After removing the explicit leading monomial, the Padé defect is divisible by
 `X^(p+q+2)`. -/
