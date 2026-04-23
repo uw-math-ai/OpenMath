@@ -4249,8 +4249,16 @@ private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_er
   · exact False.elim (hcontra hlt hs₁ hs₂ hs₁_zero hs₂_zero)
   · exact False.elim (hcontra hgt hs₂ hs₁ hs₂_zero hs₁_zero)
 
-private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
-    (n d : ℕ) (hC : padePhiErrorConst n d < 0) {δ ρ : ℝ}
+private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both_of_small_radius
+    (n d : ℕ) {δ ρ δmono : ℝ}
+    (hρsmall : ρ ∈ Set.Ioo (0 : ℝ) δmono)
+    (hatMostOne :
+      ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono,
+        ∀ s₁ ∈ Set.Icc (-ρ) ρ,
+        ∀ s₂ ∈ Set.Icc (-ρ) ρ,
+          oddDownArrowRadiusPhaseIm n d (ρ, s₁) = 0 →
+          oddDownArrowRadiusPhaseIm n d (ρ, s₂) = 0 →
+          s₁ = s₂)
     (C : Set {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ})
     (_hCclopen : IsClopen C) :
     ∀ xL xR : {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ},
@@ -4259,7 +4267,55 @@ private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
       xL.1.1 = ρ →
       xR.1.1 = ρ →
       False := by
-  sorry
+  intro xL xR hxLC hxRC hxLρ hxRρ
+  rcases xL.2 with ⟨hxLw, hxLzero⟩
+  rcases xR.2 with ⟨hxRw, hxRzero⟩
+  let sL : ℝ := xL.1.2
+  let sR : ℝ := xR.1.2
+  have hxLpair : xL.1 = (ρ, sL) := by
+    ext <;> simp [sL, hxLρ]
+  have hxRpair : xR.1 = (ρ, sR) := by
+    ext <;> simp [sR, hxRρ]
+  have hsL : sL ∈ Set.Icc (-ρ) ρ := by
+    simpa [sL, hxLρ] using hxLw.2
+  have hsR : sR ∈ Set.Icc (-ρ) ρ := by
+    simpa [sR, hxRρ] using hxRw.2
+  have hsLzero : oddDownArrowRadiusPhaseIm n d (ρ, sL) = 0 := by
+    simpa [hxLpair] using hxLzero
+  have hsRzero : oddDownArrowRadiusPhaseIm n d (ρ, sR) = 0 := by
+    simpa [hxRpair] using hxRzero
+  have hsEq : sL = sR :=
+    hatMostOne ρ hρsmall sL hsL sR hsR hsLzero hsRzero
+  have hxEq_val : xL.1 = xR.1 := by
+    apply Prod.ext
+    · exact hxLρ.trans hxRρ.symm
+    · simpa [sL, sR] using hsEq
+  have hxEq : xL = xR := by
+    apply Subtype.ext
+    simpa using hxEq_val
+  exact hxRC (hxEq ▸ hxLC)
+
+private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
+    (n d : ℕ) {δ ρ δmono : ℝ}
+    (hρsmall : ρ ∈ Set.Ioo (0 : ℝ) δmono)
+    (hatMostOne :
+      ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono,
+        ∀ s₁ ∈ Set.Icc (-ρ) ρ,
+        ∀ s₂ ∈ Set.Icc (-ρ) ρ,
+          oddDownArrowRadiusPhaseIm n d (ρ, s₁) = 0 →
+          oddDownArrowRadiusPhaseIm n d (ρ, s₂) = 0 →
+          s₁ = s₂)
+    (C : Set {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ})
+    (hCclopen : IsClopen C) :
+    ∀ xL xR : {p // p ∈ oddDownArrowRadiusPhaseZeroSet n d δ},
+      xL ∈ C →
+      xR ∈ Cᶜ →
+      xL.1.1 = ρ →
+      xR.1.1 = ρ →
+      False := by
+  exact
+    oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both_of_small_radius
+      n d hρsmall hatMostOne C hCclopen
 
 /-- Remaining no-stop seam: show that the connected component of `(0,0)` in the
 compact odd-wedge zero set projects onto the full radius interval. The compact
@@ -4274,14 +4330,24 @@ private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
   obtain ⟨δ0, hδ0, hre_wedge0, hsliceZero0⟩ :=
     oddDownArrowRadiusPhaseSliceZero_of_neg_errorConst n d hC
   obtain ⟨δQ, hδQ, hQ⟩ := padeQ_nonzero_near_zero n d
-  let δ : ℝ := min δ0 (δQ / 2)
+  obtain ⟨δmono, hδmono, hatMostOne⟩ :=
+    oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst n d hC
+  let δ : ℝ := min δ0 (min (δQ / 2) (δmono / 2))
   have hδ : 0 < δ := by
     dsimp [δ]
-    exact lt_min hδ0 (half_pos hδQ)
+    exact lt_min hδ0 (lt_min (half_pos hδQ) (half_pos hδmono))
   have hδlt_Q : δ < δQ := by
     dsimp [δ]
     have hhalf : δQ / 2 < δQ := by linarith
-    exact lt_of_le_of_lt (min_le_right _ _) hhalf
+    exact lt_of_le_of_lt
+      (le_trans (min_le_right _ _) (min_le_left _ _))
+      hhalf
+  have hδlt_mono : δ < δmono := by
+    dsimp [δ]
+    have hhalf : δmono / 2 < δmono := by linarith
+    exact lt_of_le_of_lt
+      (le_trans (min_le_right _ _) (min_le_right _ _))
+      hhalf
   have hre_wedge :
       ∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
         0 < Complex.re (oddDownArrowRadiusPhaseValue n d p) :=
@@ -4375,9 +4441,30 @@ private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst
   rcases hLR with ⟨ρ, hρIcc, hρL, hρR⟩
   rcases hρL with ⟨xρL, hxρLC, hρeqL⟩
   rcases hρR with ⟨xρR, hxρRC, hρeqR⟩
+  have hρpos : 0 < ρ := by
+    by_contra hρnpos
+    have hρzero : ρ = 0 := by
+      linarith [hρIcc.1]
+    have hxρR_snd_zero : xρR.1.2 = 0 := by
+      rcases xρR.2 with ⟨hxρRw, _hxρRzero⟩
+      have hsρR : xρR.1.2 ∈ Set.Icc (-ρ) ρ := by
+        simpa [hρeqR] using hxρRw.2
+      have hs0 : xρR.1.2 ∈ Set.Icc (0 : ℝ) 0 := by
+        simpa [hρzero] using hsρR
+      rcases hs0 with ⟨hs0_lo, hs0_hi⟩
+      linarith
+    have hxρR_eq_x0 : xρR = x0 := by
+      apply Subtype.ext
+      show xρR.1 = x0.1
+      apply Prod.ext
+      · simpa [x0, hρzero] using hρeqR
+      · simpa [x0] using hxρR_snd_zero
+    exact hxρRC (hxρR_eq_x0.symm ▸ hx0C')
+  have hρsmall : ρ ∈ Set.Ioo (0 : ℝ) δmono := by
+    exact ⟨hρpos, lt_of_le_of_lt hρIcc.2 hδlt_mono⟩
   exact
     oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
-      n d hC C hCclopen xρL xρR hxρLC hxρRC hρeqL hρeqR
+      n d hρsmall hatMostOne C hCclopen xρL xρR hxρLC hxρRC hρeqL hρeqR
 
 /-- The remaining concrete continuation blocker after the cycle-335 refactor:
 the odd down-arrow case still needs a genuine uniform strip / connected-support
