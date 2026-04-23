@@ -4960,6 +4960,70 @@ theorem padeRUpArrowBranchTrackingInput_of_neg_errorConst
   exact
     (padeRUpArrowRayTrackingSupportInput_of_neg_errorConst n d data hC).toTrackingInput
 
+private theorem padeR_odd_upArrowUniformRadiusPhaseStrip_of_pos_errorConst
+    (n d : ℕ) {η : ℝ}
+    (hC : 0 < padePhiErrorConst n d)
+    (hη : 0 < η)
+    (hηpi : ((↑(n + d) + 1) : ℝ) * η < Real.pi) :
+    ∃ δ > 0,
+      (∀ r ∈ Set.Ioo (0 : ℝ) δ, ∀ s ∈ Set.Icc (-η) η,
+        let w : ℂ :=
+          (↑r : ℂ) * exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + s) * I)
+        0 < Complex.re (padeR n d w * exp (-w))) ∧
+      (∀ r ∈ Set.Ioo (0 : ℝ) δ,
+        let w : ℂ :=
+          (↑r : ℂ) * exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) - η) * I)
+        Complex.im (padeR n d w * exp (-w)) < 0) ∧
+      (∀ r ∈ Set.Ioo (0 : ℝ) δ,
+        let w : ℂ :=
+          (↑r : ℂ) * exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + η) * I)
+        0 < Complex.im (padeR n d w * exp (-w))) := by
+  sorry
+
+private theorem padeR_odd_upArrowArcEndpointSigns_of_pos_errorConst
+    (n d : ℕ) {η : ℝ}
+    (hC : 0 < padePhiErrorConst n d)
+    (hη : 0 < η)
+    (hηpi : ((↑(n + d) + 1) : ℝ) * η < Real.pi) :
+    ∀ radius > 0,
+      ∃ t ∈ Set.Ioo (0 : ℝ) radius,
+        Complex.im
+          (padeR n d
+              (((↑t : ℂ) *
+                  exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) - η) * I))) *
+            exp (-(((↑t : ℂ) *
+                exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) - η) * I))))) < 0 ∧
+        0 < Complex.im
+          (padeR n d
+              (((↑t : ℂ) *
+                  exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + η) * I))) *
+            exp (-(((↑t : ℂ) *
+                exp (↑(Real.pi / ((↑(n + d) + 1) : ℝ) + η) * I))))) := by
+  sorry
+
+theorem padeR_odd_upArrowArcPhaseBridge_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    PadeROrderWebMeetsRayConeNearOrigin n d
+      (Real.pi / ((↑(n + d) + 1) : ℝ)) := by
+  sorry
+
+private theorem padeR_odd_upArrowConnectedRayConeSupport_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    Nonempty
+      (PadeRConnectedRayConeOrderWebSupport n d
+        (Real.pi / ((↑(n + d) + 1) : ℝ))) := by
+  sorry
+
+theorem padeR_odd_upArrowOrderWebSameComponentContinuation_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    ∃ z0 ∈ orderWeb (padeR n d),
+      ∀ aperture > 0, ∀ radius > 0,
+        ∃ z : ℂ,
+          z ∈ connectedComponentIn (orderWeb (padeR n d)) z0 ∧
+            z ∈ rayConeNearOrigin
+              (Real.pi / ((↑(n + d) + 1) : ℝ)) aperture radius := by
+  sorry
+
 /-- Exact remaining obstruction after the honest explicit-sign refactor:
 to upgrade the weak raywise bridge below to the strict sign bridge, one still
 has to exclude zero-cosine exact-ray arrows. -/
