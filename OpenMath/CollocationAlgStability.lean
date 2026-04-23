@@ -47,6 +47,30 @@ lemma nodePoly_leadingCoeff_pos (t : ButcherTableau s) :
   rw [(nodePoly_monic t).leadingCoeff]
   norm_num
 
+/-- The live `(358c)` zero statement extracted from the transformed matrix
+input behind algebraic stability.
+
+This is the actual theorem-local seam for Theorem 358A: once this interval form
+is proved from `hAlg.posdef_M`, the moment formulation below follows from the
+existing polynomial/integral bridge in `OpenMath.Legendre`. -/
+lemma nodePoly_interval_zero_aux_of_algStable
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
+    ∀ q : ℝ[X], q.natDegree < s - 1 →
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := by
+  sorry
+
+/-- The live `(358c)` sign statement for degree-`s - 1` test polynomials with
+positive leading coefficient.
+
+This is the one-sided companion to
+`nodePoly_interval_zero_aux_of_algStable`, and is the input needed later to
+extract `θ ≥ 0` from the boundary-polynomial description. -/
+lemma nodePoly_interval_nonpos_aux_of_algStable
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
+    ∀ q : ℝ[X], q.natDegree = s - 1 → 0 < q.leadingCoeff →
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x ≤ 0 := by
+  sorry
+
 /-- Matrix-to-polynomial bridge for Theorem 358A.
 
 Under the collocation and algebraic-stability hypotheses, the node polynomial is
@@ -55,14 +79,19 @@ orthogonal to every polynomial of degree at most `s - 2`, phrased via
 lemma nodePoly_polyMoment_orthogonal_of_algStable
     (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
     ∀ q : ℝ[X], q.natDegree < s - 1 → polyMomentN (2 * s) (nodePoly t * q) = 0 := by
-  sorry
+  intro q hq
+  have hq' : q.natDegree < s := by
+    omega
+  rw [polyMomentN_eq_intervalIntegral_of_natDegree_lt (N := 2 * s) (p := (nodePoly t * q))]
+  · exact nodePoly_interval_zero_aux_of_algStable t hcoll hAlg q hq
+  · exact nodePoly_mul_natDegree_lt t q hq'
 
 /-- Interval-integral form of the node-polynomial orthogonality bridge. -/
 lemma nodePoly_interval_orthogonal_of_algStable
     (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
     ∀ q : ℝ[X], q.natDegree < s - 1 →
       ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := by
-  sorry
+  exact nodePoly_interval_zero_aux_of_algStable t hcoll hAlg
 
 /-- A degree-`s` polynomial with positive leading coefficient and orthogonal to
 all polynomials of degree at most `s - 2` must be a positive multiple of
@@ -90,7 +119,21 @@ lemma boundary_theta_nonneg_of_algStable
 theorem thm_358A_only_if
     (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
     t.HasAlgStabilityBoundaryNodes := by
-  sorry
+  obtain ⟨θ, a, ha, hnode⟩ :
+      ∃ θ a : ℝ, 0 < a ∧ nodePoly t = Polynomial.C a * algStabilityBoundaryPoly s θ := by
+    apply orthogonal_degree_eq_boundaryPoly
+    · exact hcoll.1
+    · exact nodePoly_natDegree t
+    · exact nodePoly_leadingCoeff_pos t
+    · exact nodePoly_interval_orthogonal_of_algStable t hcoll hAlg
+  refine ⟨θ, boundary_theta_nonneg_of_algStable t hcoll hAlg ha hnode, ?_⟩
+  intro i
+  have hEval := congrArg (fun p : ℝ[X] => p.eval (t.c i)) hnode
+  have hEval' : 0 = a * (algStabilityBoundaryPoly s θ).eval (t.c i) := by
+    simpa [Polynomial.eval_mul, Polynomial.eval_C] using
+      (nodePoly_eval_node t i).symm.trans hEval
+  have ha_ne : a ≠ 0 := by linarith
+  exact (mul_eq_zero.mp hEval'.symm).resolve_left ha_ne
 
 /-- Theorem 358A, `if` direction. -/
 theorem thm_358A_if
