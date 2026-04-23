@@ -527,6 +527,89 @@ private lemma algStabMatrix_monomial_bilinear_zero
       omega
     exact algStabMatrix_monomial_bilinear_zero_main t hcoll hAlg hn hm hn2 (by omega)
 
+private lemma algStabMatrix_poly_bilinear_zero
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable)
+    (p r : ℝ[X]) (hp : p.natDegree < s) (hr : r.natDegree < s)
+    (hpr : p.natDegree + r.natDegree + 2 ≤ 2 * s - 1) :
+    ∑ i : Fin s, ∑ j : Fin s,
+      p.eval (t.c i) * t.algStabMatrix i j * r.eval (t.c j) = 0 := by
+  sorry
+
+private lemma sub_leading_term_natDegree_lt
+    (hs : 1 < s) (q : ℝ[X]) (hqtop : q.natDegree = s - 1) :
+    let r := q - Polynomial.C q.leadingCoeff * Polynomial.X ^ (s - 1)
+    r.natDegree < s - 1 := by
+  dsimp
+  have hs1 : 0 < s - 1 := by
+    omega
+  have hq_ne : q ≠ 0 := by
+    intro hq0
+    subst hq0
+    simp at hqtop
+    omega
+  have hlc_ne : q.leadingCoeff ≠ 0 := (Polynomial.leadingCoeff_ne_zero).2 hq_ne
+  have htop_deg :
+      (Polynomial.C q.leadingCoeff * Polynomial.X ^ (s - 1)).natDegree = s - 1 := by
+    simpa using Polynomial.natDegree_C_mul_X_pow (s - 1) q.leadingCoeff hlc_ne
+  have htop_ne : Polynomial.C q.leadingCoeff * Polynomial.X ^ (s - 1) ≠ 0 := by
+    exact mul_ne_zero (by simpa using hlc_ne) (pow_ne_zero _ Polynomial.X_ne_zero)
+  have hdeg_eq :
+      q.degree = (Polynomial.C q.leadingCoeff * Polynomial.X ^ (s - 1)).degree := by
+    rw [Polynomial.degree_eq_natDegree hq_ne, Polynomial.degree_eq_natDegree htop_ne, hqtop, htop_deg]
+  have hlc_eq :
+      q.leadingCoeff = (Polynomial.C q.leadingCoeff * Polynomial.X ^ (s - 1)).leadingCoeff := by
+    rw [Polynomial.leadingCoeff_C_mul_X_pow]
+  have hdeg_lt :
+      (q - (Polynomial.C q.leadingCoeff * Polynomial.X ^ (s - 1))).degree < q.degree := by
+    exact Polynomial.degree_sub_lt hdeg_eq hq_ne hlc_eq
+  by_cases hrzero : q - (Polynomial.C q.leadingCoeff * Polynomial.X ^ (s - 1)) = 0
+  · rw [hrzero]
+    simpa using hs1
+  · rwa [Polynomial.degree_eq_natDegree hrzero, Polynomial.degree_eq_natDegree hq_ne, hqtop,
+      Nat.cast_lt] at hdeg_lt
+
+private lemma algStabMatrix_top_monomial_eq_neg_integral
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
+    ∑ i : Fin s, ∑ j : Fin s,
+      t.c i ^ (s - 1) * t.algStabMatrix i j * t.c j ^ (s - 1) =
+      -2 * ((1 : ℝ) / (s : ℝ)) *
+        ∫ x in (0 : ℝ)..1, ((nodePoly t) * Polynomial.X ^ (s - 1)).eval x := by
+  sorry
+
+/-- Low-degree branch of `stabilityMatrix_quadForm_eq_neg_integral`. -/
+private lemma stabilityMatrix_quadForm_eq_neg_integral_of_lt
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable)
+    (q : ℝ[X]) (hqsmall : q.natDegree < s - 1)
+    (hzero : ∀ r : ℝ[X], r.natDegree < s - 1 →
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * r).eval x = 0) :
+    let v : Fin s → ℝ := fun i => q.eval (t.c i)
+    ∑ i : Fin s, ∑ j : Fin s, v i * t.algStabMatrix i j * v j =
+      -2 * (q.leadingCoeff / (s : ℝ)) *
+        ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x := by
+  dsimp
+  have hquad_zero :
+      ∑ i : Fin s, ∑ j : Fin s,
+        q.eval (t.c i) * t.algStabMatrix i j * q.eval (t.c j) = 0 := by
+    exact algStabMatrix_poly_bilinear_zero t hcoll hAlg q q (by omega) (by omega) (by omega)
+  have hint_zero : ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := hzero q hqsmall
+  rw [hquad_zero, hint_zero]
+  ring
+
+/-- Top-degree branch of `stabilityMatrix_quadForm_eq_neg_integral`.
+
+The remainder term is reduced to degree `< s - 1`, and every term except the
+pure `X^(s - 1)` defect should vanish. -/
+private lemma stabilityMatrix_quadForm_eq_neg_integral_of_eq
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable)
+    (q : ℝ[X]) (hqtop : q.natDegree = s - 1)
+    (hzero : ∀ r : ℝ[X], r.natDegree < s - 1 →
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * r).eval x = 0) :
+    let v : Fin s → ℝ := fun i => q.eval (t.c i)
+    ∑ i : Fin s, ∑ j : Fin s, v i * t.algStabMatrix i j * v j =
+      -2 * (q.leadingCoeff / (s : ℝ)) *
+        ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x := by
+  sorry
+
 /-- Second-stage sign helper for the transformed `(358c)` bridge.
 
 This packages the quadratic form from `hAlg.posdef_M` as the signed integral
@@ -543,7 +626,10 @@ lemma stabilityMatrix_quadForm_eq_neg_integral
     ∑ i : Fin s, ∑ j : Fin s, v i * t.algStabMatrix i j * v j =
       -2 * (q.leadingCoeff / (s : ℝ)) *
         ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x := by
-  sorry
+  by_cases hqsmall : q.natDegree < s - 1
+  · exact stabilityMatrix_quadForm_eq_neg_integral_of_lt t hcoll hAlg q hqsmall hzero
+  · have hqtop : q.natDegree = s - 1 := by omega
+    exact stabilityMatrix_quadForm_eq_neg_integral_of_eq t hcoll hAlg q hqtop hzero
 
 /-- The live `(358c)` sign statement for degree-`s - 1` test polynomials with
 positive leading coefficient.
