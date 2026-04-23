@@ -34,3 +34,10 @@ extraction/raw_text/references_llm.old.json
 
 # Experimental
 self_experiment/
+
+# Aristotle job artifacts
+*-aristotle.tar.gz
+*_aristotle/
+
+# Claude memory files
+memory/
