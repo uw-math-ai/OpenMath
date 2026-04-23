@@ -3747,6 +3747,73 @@ private theorem oddDownArrowRadiusPhaseSliceZero_of_neg_errorConst
         oddDownArrowRadiusPhasePoint, oddDownArrowRadiusPhaseCenter, θ0] using hszero
     exact ⟨s, hsIcc, ⟨⟨hr, hsIcc⟩, hsZero⟩⟩
 
+/-- If `f` is strictly anti-monotone on `[a, b]`, then `f` has at most one
+zero there. -/
+private theorem atMostOne_zero_of_strictAntiOn'
+    {f : ℝ → ℝ} {a b : ℝ}
+    (hanti : StrictAntiOn f (Set.Icc a b)) :
+    ∀ s₁ ∈ Set.Icc a b, ∀ s₂ ∈ Set.Icc a b,
+      f s₁ = 0 → f s₂ = 0 → s₁ = s₂ :=
+  fun s₁ hs₁ s₂ hs₂ h₁ h₂ => StrictAntiOn.injOn hanti hs₁ hs₂ <| h₁.trans h₂.symm
+
+/-- `cos(x) ≥ 1/2` when `|x| ≤ π/3`. -/
+private theorem cos_ge_half_of_abs_le' {x : ℝ} (hx : |x| ≤ Real.pi / 3) :
+    1 / 2 ≤ Real.cos x := by
+  rw [← Real.cos_abs x]
+  exact Real.cos_pi_div_three ▸
+    Real.cos_le_cos_of_nonneg_of_le_pi (by positivity)
+      (by linarith [abs_le.mp hx]) (by linarith [abs_le.mp hx])
+
+/-- A continuous function on `[-ρ, ρ]` with negative derivative on the interior
+is `StrictAntiOn` there. -/
+private theorem strictAntiOn_Icc_of_deriv_neg'
+    {f : ℝ → ℝ} {ρ : ℝ}
+    (hcont : ContinuousOn f (Set.Icc (-ρ) ρ))
+    (hderiv : ∀ s ∈ Set.Ioo (-ρ) ρ, deriv f s < 0) :
+    StrictAntiOn f (Set.Icc (-ρ) ρ) := by
+  apply strictAntiOn_of_deriv_neg
+  · exact convex_Icc _ _
+  · exact hcont
+  · aesop
+
+/-- If `f'` stays within `ε` of a negative constant `c_lead`, and `ε` is
+strictly smaller than `|c_lead|`, then `f' < 0`. -/
+private theorem deriv_neg_of_leading_neg_with_small_error'
+    {f : ℝ → ℝ} {ρ : ℝ} {c_lead ε : ℝ}
+    (_hc : c_lead < 0) (_hε : 0 ≤ ε) (hεsmall : ε < -c_lead)
+    (hderiv_bound : ∀ s ∈ Set.Ioo (-ρ) ρ,
+      |deriv f s - c_lead| ≤ ε) :
+    ∀ s ∈ Set.Ioo (-ρ) ρ, deriv f s < 0 :=
+  fun s hs => by linarith [abs_le.mp (hderiv_bound s hs)]
+
+/-- Convert a complex derivative at a real point into a real derivative for
+the imaginary part along the real axis. -/
+private theorem hasDerivAt_im_of_complex_ofReal'
+    {F : ℂ → ℂ} {F' : ℂ} {s : ℝ}
+    (hF : HasDerivAt F F' (s : ℂ)) :
+    HasDerivAt (fun t : ℝ => Complex.im (F (t : ℂ))) F'.im s := by
+  have h1 : HasDerivAt (fun w : ℂ => -I * F w) (-I * F') (s : ℂ) := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using hF.const_mul (-I)
+  have h2 :
+      HasDerivAt (fun t : ℝ => ((-I * F (t : ℂ)).re)) ((-I * F').re) s := by
+    exact HasDerivAt.real_of_complex (z := s) (e := fun w : ℂ => -I * F w) (e' := -I * F') h1
+  simpa [Complex.I_mul_re, mul_comm, mul_left_comm, mul_assoc] using h2
+
+/-- Derivative of the fixed-radius phase path with respect to the slice
+parameter. -/
+private theorem oddDownArrowRadiusPhasePoint_hasDerivAt_snd
+    (n d : ℕ) (ρ s : ℝ) :
+    HasDerivAt
+      (fun t : ℝ => oddDownArrowRadiusPhasePoint n d (ρ, t))
+      (oddDownArrowRadiusPhasePoint n d (ρ, s) * I) s := by
+  unfold oddDownArrowRadiusPhasePoint
+  have hinner :
+      HasDerivAt (fun t : ℝ => (↑(oddDownArrowRadiusPhaseCenter n d + t) : ℂ) * I) I s := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using
+      ((HasDerivAt.ofReal_comp
+          ((hasDerivAt_const s (oddDownArrowRadiusPhaseCenter n d)).add (hasDerivAt_id s))).mul_const I)
+  simpa [mul_assoc] using ((hinner.cexp).const_mul (ρ : ℂ))
+
 /-- Cycle-345 topology seam sharpened to a fixed-radius uniqueness statement:
 for sufficiently small radii, the odd down-arrow true slice has at most one zero. -/
 private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst
