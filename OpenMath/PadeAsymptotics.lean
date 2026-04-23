@@ -544,7 +544,167 @@ theorem padeQ_mul_expTaylor_coeff_succ_succ (p q : ℕ) :
           (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ)) -
         1 / (((p + q + 2).factorial : ℂ)) +
         ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) := by
-    sorry
+    have hIcc : Finset.Icc 2 q = Finset.Ico 2 (q + 1) := by
+      ext j
+      simp [Finset.mem_Icc, Finset.mem_Ico, Nat.succ_le_iff]
+    rw [hIcc]
+    by_cases hq0 : q = 0
+    · subst hq0
+      have hIco : Finset.Ico 2 1 = ∅ := by simp
+      rw [hIco]
+      simp only [Finset.sum_empty]
+      have hsmall0 :
+          (∑ j ∈ Finset.range 1,
+            (Nat.choose 0 j : ℂ) * (-1 : ℂ) ^ j / (p + 2 - j : ℂ) /
+              (p + 1 - j : ℂ) / (((p).factorial : ℂ))) =
+            1 / (((p + 2).factorial : ℂ)) := by
+        simp only [Finset.sum_range_one, Nat.choose_zero_right, Nat.cast_one,
+          Nat.cast_zero, zero_add, pow_zero, one_div]
+        have hfact :
+            (((p + 2).factorial : ℕ) : ℂ) =
+              (p + 2 : ℂ) * (p + 1 : ℂ) * (((p).factorial : ℕ) : ℂ) := by
+          rw [show p + 2 = (p + 1) + 1 by omega, Nat.factorial_succ]
+          rw [show p + 1 = p + 1 by rfl, Nat.factorial_succ]
+          push_cast
+          ring
+        rw [hfact]
+        field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos p).ne',
+          Nat.cast_ne_zero.mpr (show p + 1 ≠ 0 by omega),
+          Nat.cast_ne_zero.mpr (show p + 2 ≠ 0 by omega)]
+        ring_nf
+      have hsmall0' :
+          (∑ j ∈ Finset.range (0 + 1),
+            (Nat.choose 0 j : ℂ) * (-1 : ℂ) ^ j / (p + 0 + 2 - j : ℂ) /
+              (p + 0 + 1 - j : ℂ) / (((p + 0).factorial : ℂ))) =
+            1 / (((p + 0 + 2).factorial : ℂ)) := by
+        simpa using hsmall0
+      have hgoal :
+          0 =
+            (∑ j ∈ Finset.range (0 + 1),
+              (Nat.choose 0 j : ℂ) * (-1 : ℂ) ^ j / (p + 0 + 2 - j : ℂ) /
+                (p + 0 + 1 - j : ℂ) / (((p + 0).factorial : ℂ))) -
+              1 / (((p + 0 + 2).factorial : ℂ)) +
+              ((0 : ℂ) / (p + 0 : ℂ)) / (((p + 0 + 1).factorial : ℂ)) := by
+        calc
+          0 =
+              1 / (((p + 0 + 2).factorial : ℂ)) -
+                1 / (((p + 0 + 2).factorial : ℂ)) +
+                ((0 : ℂ) / (p + 0 : ℂ)) / (((p + 0 + 1).factorial : ℂ)) := by
+                  simp
+          _ =
+              (∑ j ∈ Finset.range (0 + 1),
+                (Nat.choose 0 j : ℂ) * (-1 : ℂ) ^ j / (p + 0 + 2 - j : ℂ) /
+                  (p + 0 + 1 - j : ℂ) / (((p + 0).factorial : ℂ))) -
+                1 / (((p + 0 + 2).factorial : ℂ)) +
+                ((0 : ℂ) / (p + 0 : ℂ)) / (((p + 0 + 1).factorial : ℂ)) := by
+                  rw [hsmall0']
+      simpa using hgoal
+    · have hqpos : 0 < q := Nat.pos_of_ne_zero hq0
+      have hformula :
+          ∀ j ∈ Finset.Ico 2 (q + 1),
+            (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (p + q + 2 - j) =
+              (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+                (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ)) := by
+        intro j hj
+        rw [padeQ_poly_coeff, expTaylor_poly_coeff]
+        have hjtwo : 2 ≤ j := (Finset.mem_Ico.mp hj).1
+        have hjle : j ≤ q := Nat.le_of_lt_succ (Finset.mem_Ico.mp hj).2
+        have hkj : p + q + 2 - j ≤ p + q := by omega
+        rw [if_pos hkj]
+        have hstep1 :
+            (((p + q + 2 - j).factorial : ℕ) : ℂ) =
+              (↑p + ↑q + 2 - ↑j : ℂ) * (((p + q + 1 - j).factorial : ℕ) : ℂ) := by
+          have hnat : p + q + 2 - j = (p + q + 1 - j) + 1 := by omega
+          rw [hnat, Nat.factorial_succ]
+          push_cast
+          have hcast : ((p + q + 1 - j : ℕ) : ℂ) + 1 = (↑p + ↑q + 2 - ↑j : ℂ) := by
+            rw [Nat.cast_sub (show j ≤ p + q + 1 by omega)]
+            have hpq1 : ((p + q + 1 : ℕ) : ℂ) = (↑p + ↑q + 1 : ℂ) := by norm_num
+            rw [hpq1]
+            ring
+          rw [hcast]
+        have hstep2 :
+            (((p + q + 1 - j).factorial : ℕ) : ℂ) =
+              (↑p + ↑q + 1 - ↑j : ℂ) * (((p + q - j).factorial : ℕ) : ℂ) := by
+          have hnat : p + q + 1 - j = (p + q - j) + 1 := by omega
+          rw [hnat, Nat.factorial_succ]
+          push_cast
+          have hcast : ((p + q - j : ℕ) : ℂ) + 1 = (↑p + ↑q + 1 - ↑j : ℂ) := by
+            rw [Nat.cast_sub (show j ≤ p + q by omega)]
+            have hpq : ((p + q : ℕ) : ℂ) = (↑p + ↑q : ℂ) := by norm_num
+            rw [hpq]
+            ring
+          rw [hcast]
+        have hden1 : (↑p + ↑q + 2 - ↑j : ℂ) ≠ 0 := by
+          intro h
+          have hnat : (p + q + 2 : ℤ) - j = 0 := by exact_mod_cast h
+          omega
+        have hden2 : (↑p + ↑q + 1 - ↑j : ℂ) ≠ 0 := by
+          intro h
+          have hnat : (p + q + 1 : ℤ) - j = 0 := by exact_mod_cast h
+          omega
+        rw [hstep1, hstep2]
+        field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q)).ne',
+          Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q - j)).ne', hden1, hden2]
+      have hsum :
+          (∑ j ∈ Finset.Ico 2 (q + 1),
+            (padeQ_poly p q).coeff j * (expTaylor_poly (p + q)).coeff (p + q + 2 - j)) =
+          ∑ j ∈ Finset.Ico 2 (q + 1),
+            (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+              (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ)) := by
+        refine Finset.sum_congr rfl ?_
+        intro j hj
+        exact hformula j hj
+      let f : ℕ → ℂ := fun j =>
+        (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+          (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ))
+      have hsmall0 :
+          f 0 = 1 / (((p + q + 2).factorial : ℂ)) := by
+        dsimp [f]
+        have hfact :
+            (((p + q + 2).factorial : ℕ) : ℂ) =
+              (p + q + 2 : ℂ) * (p + q + 1 : ℂ) * (((p + q).factorial : ℕ) : ℂ) := by
+          rw [show p + q + 2 = (p + q + 1) + 1 by omega, Nat.factorial_succ]
+          rw [show p + q + 1 = (p + q) + 1 by omega, Nat.factorial_succ]
+          push_cast
+          ring
+        rw [hfact]
+        simp only [Nat.choose_zero_right, Nat.cast_one, pow_zero]
+        field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q)).ne',
+          Nat.cast_ne_zero.mpr (show p + q + 1 ≠ 0 by omega),
+          Nat.cast_ne_zero.mpr (show p + q + 2 ≠ 0 by omega)]
+        ring_nf
+      have hsmall1 :
+          f 1 = -((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) := by
+        dsimp [f]
+        have hpq_ne : (p + q : ℂ) ≠ 0 := by
+          exact_mod_cast (show p + q ≠ 0 by omega)
+        have hfact :
+            (((p + q + 1).factorial : ℕ) : ℂ) =
+              (p + q + 1 : ℂ) * (((p + q).factorial : ℕ) : ℂ) := by
+          rw [show p + q + 1 = (p + q) + 1 by omega, Nat.factorial_succ]
+          push_cast
+          ring
+        rw [hfact]
+        rw [Nat.choose_one_right]
+        field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos (p + q)).ne',
+          Nat.cast_ne_zero.mpr (show p + q + 1 ≠ 0 by omega), hpq_ne]
+        ring
+      have hrange2 :
+          (∑ j ∈ Finset.range 2, f j) =
+            1 / (((p + q + 2).factorial : ℂ)) -
+              ((q : ℂ) / (p + q : ℂ)) / (((p + q + 1).factorial : ℂ)) := by
+        simp only [Finset.sum_range_succ, Finset.sum_range_one]
+        rw [hsmall0, hsmall1]
+        ring
+      rw [hsum, Finset.sum_Ico_eq_sub]
+      · rw [show (∑ j ∈ Finset.range 2,
+            (q.choose j : ℂ) * (-1 : ℂ) ^ j / (p + q + 2 - j : ℂ) /
+              (p + q + 1 - j : ℂ) / (((p + q).factorial : ℂ))) =
+            ∑ j ∈ Finset.range 2, f j by rfl]
+        rw [hrange2]
+        ring
+      · omega
   rw [hconv, hsub]
 
 /-- The Padé defect vanishes below degree `p + q + 1`. -/
