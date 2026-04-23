@@ -315,6 +315,218 @@ lemma nodePoly_interval_zero_aux_of_algStable
   rw [← quadEvalPoly_exact_of_natDegree_lt_of_SatisfiesB t hB2s1 ((nodePoly t) * q) hdeg]
   exact quadEvalPoly_nodePoly_mul_eq_zero t q hq_lt_s
 
+private lemma algStabMatrix_monomial_bilinear_zero_main
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable)
+    {a b : ℕ} (ha : a < s) (hb : b < s)
+    (ha2 : 2 * a + 2 ≤ 2 * s - 1) (hab2 : a + b + 2 ≤ 2 * s - 1) :
+    ∑ i : Fin s, ∑ j : Fin s,
+      t.c i ^ a * t.algStabMatrix i j * t.c j ^ b = 0 := by
+  have hB2s1 : t.SatisfiesB (2 * s - 1) :=
+    satisfiesB_two_mul_sub_one_of_algStable t hcoll hAlg
+  have hBa : ∑ i : Fin s, t.b i * t.c i ^ a = 1 / (((a + 1 : ℕ) : ℝ)) := by
+    exact hcoll.2.1 (a + 1) (by omega) (by omega)
+  have hBb : ∑ i : Fin s, t.b i * t.c i ^ b = 1 / (((b + 1 : ℕ) : ℝ)) := by
+    exact hcoll.2.1 (b + 1) (by omega) (by omega)
+  have hBab :
+      ∑ i : Fin s, t.b i * t.c i ^ (a + b + 1) =
+        1 / (((a + b + 2 : ℕ) : ℝ)) := by
+    exact hB2s1 (a + b + 2) (by omega) hab2
+  have hC_a :
+      ∀ j : Fin s,
+        ∑ i : Fin s, t.A j i * t.c i ^ a =
+          t.c j ^ (a + 1) / (((a + 1 : ℕ) : ℝ)) := by
+    intro j
+    exact hcoll.2.2.1 (a + 1) (by omega) (by omega) j
+  have hBhigh_a : t.SatisfiesB (2 * a + 2) :=
+    SatisfiesB.mono hB2s1 ha2
+  have hquad_zero_a :
+      ∑ i : Fin s, ∑ j : Fin s,
+        t.c i ^ a * t.algStabMatrix i j * t.c j ^ a = 0 := by
+    exact algStabMatrix_monomial_quadForm_zero
+      t hcoll.2.1 hcoll.2.2.1 ha hBhigh_a
+  have hD_a :
+      ∀ j : Fin s,
+        ∑ i : Fin s, t.b i * t.c i ^ a * t.A i j =
+          t.b j / (((a + 1 : ℕ) : ℝ)) * (1 - t.c j ^ (a + 1)) := by
+    exact monomialVec_D_of_algStable
+      t hAlg hcoll.2.1 hcoll.2.2.1 ha hquad_zero_a
+  let SD : ℝ :=
+    ∑ i : Fin s, ∑ j : Fin s,
+      t.c i ^ a * (t.b i * t.A i j) * t.c j ^ b
+  let SC : ℝ :=
+    ∑ i : Fin s, ∑ j : Fin s,
+      t.c i ^ a * (t.b j * t.A j i) * t.c j ^ b
+  let SB : ℝ :=
+    ∑ i : Fin s, ∑ j : Fin s,
+      t.c i ^ a * (t.b i * t.b j) * t.c j ^ b
+  have hsplit_direct :
+      ∑ i : Fin s, ∑ j : Fin s,
+        t.c i ^ a * t.algStabMatrix i j * t.c j ^ b =
+        (∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b i * t.A i j) * t.c j ^ b)
+          + (∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b j * t.A j i) * t.c j ^ b)
+          - (∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b i * t.b j) * t.c j ^ b) := by
+    calc
+      ∑ i : Fin s, ∑ j : Fin s,
+          t.c i ^ a * t.algStabMatrix i j * t.c j ^ b
+          = ∑ i : Fin s, ∑ j : Fin s,
+              (t.c i ^ a * (t.b i * t.A i j) * t.c j ^ b
+                + t.c i ^ a * (t.b j * t.A j i) * t.c j ^ b
+                - t.c i ^ a * (t.b i * t.b j) * t.c j ^ b) := by
+                  refine Finset.sum_congr rfl ?_
+                  intro i hi
+                  refine Finset.sum_congr rfl ?_
+                  intro j hj
+                  rw [algStabMatrix]
+                  ring
+      _ = (∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b i * t.A i j) * t.c j ^ b)
+            + (∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b j * t.A j i) * t.c j ^ b)
+            - (∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b i * t.b j) * t.c j ^ b) := by
+              simp_rw [sub_eq_add_neg, Finset.sum_add_distrib, Finset.sum_neg_distrib]
+  have hsplit :
+      ∑ i : Fin s, ∑ j : Fin s,
+        t.c i ^ a * t.algStabMatrix i j * t.c j ^ b =
+        SD + SC - SB := by
+    simpa [SD, SC, SB] using hsplit_direct
+  have hSD :
+      SD =
+        (1 / (((a + 1 : ℕ) : ℝ))) *
+          (∑ j : Fin s, t.b j * t.c j ^ b)
+        - (1 / (((a + 1 : ℕ) : ℝ))) *
+          (∑ j : Fin s, t.b j * t.c j ^ (a + b + 1)) := by
+    dsimp [SD]
+    calc
+      ∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b i * t.A i j) * t.c j ^ b
+          = ∑ j : Fin s, ∑ i : Fin s, t.c j ^ b * (t.b i * t.c i ^ a * t.A i j) := by
+              rw [Finset.sum_comm]
+              refine Finset.sum_congr rfl ?_
+              intro j hj
+              refine Finset.sum_congr rfl ?_
+              intro i hi
+              ring
+      _ = ∑ j : Fin s, t.c j ^ b * (∑ i : Fin s, t.b i * t.c i ^ a * t.A i j) := by
+            refine Finset.sum_congr rfl ?_
+            intro j hj
+            rw [Finset.mul_sum]
+      _ = ∑ j : Fin s,
+            t.c j ^ b * (t.b j / (((a + 1 : ℕ) : ℝ)) * (1 - t.c j ^ (a + 1))) := by
+            simp [hD_a]
+      _ = (1 / (((a + 1 : ℕ) : ℝ))) * (∑ j : Fin s, t.b j * t.c j ^ b)
+            - (1 / (((a + 1 : ℕ) : ℝ))) *
+                (∑ j : Fin s, t.b j * t.c j ^ (a + b + 1)) := by
+            calc
+              ∑ j : Fin s, t.c j ^ b *
+                  (t.b j / (((a + 1 : ℕ) : ℝ)) * (1 - t.c j ^ (a + 1)))
+                  = ∑ j : Fin s,
+                      ((1 / (((a + 1 : ℕ) : ℝ))) * (t.b j * t.c j ^ b)
+                        - (1 / (((a + 1 : ℕ) : ℝ))) *
+                            (t.b j * t.c j ^ (a + b + 1))) := by
+                              refine Finset.sum_congr rfl ?_
+                              intro j hj
+                              rw [pow_add]
+                              ring
+              _ = (∑ j : Fin s,
+                      (1 / (((a + 1 : ℕ) : ℝ))) * (t.b j * t.c j ^ b))
+                    - (∑ j : Fin s,
+                        (1 / (((a + 1 : ℕ) : ℝ))) *
+                          (t.b j * t.c j ^ (a + b + 1))) := by
+                      rw [Finset.sum_sub_distrib]
+              _ = (1 / (((a + 1 : ℕ) : ℝ))) * (∑ j : Fin s, t.b j * t.c j ^ b)
+                    - (1 / (((a + 1 : ℕ) : ℝ))) *
+                        (∑ j : Fin s, t.b j * t.c j ^ (a + b + 1)) := by
+                      rw [Finset.mul_sum, Finset.mul_sum]
+  have hSC :
+      SC =
+        (1 / (((a + 1 : ℕ) : ℝ))) *
+          (∑ j : Fin s, t.b j * t.c j ^ (a + b + 1)) := by
+    dsimp [SC]
+    calc
+      ∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b j * t.A j i) * t.c j ^ b
+          = ∑ j : Fin s, ∑ i : Fin s, (t.b j * t.c j ^ b) * (t.A j i * t.c i ^ a) := by
+              rw [Finset.sum_comm]
+              refine Finset.sum_congr rfl ?_
+              intro j hj
+              refine Finset.sum_congr rfl ?_
+              intro i hi
+              ring
+      _ = ∑ j : Fin s, t.b j * t.c j ^ b * (∑ i : Fin s, t.A j i * t.c i ^ a) := by
+            refine Finset.sum_congr rfl ?_
+            intro j hj
+            rw [Finset.mul_sum]
+      _ = ∑ j : Fin s,
+            t.b j * t.c j ^ b * (t.c j ^ (a + 1) / (((a + 1 : ℕ) : ℝ))) := by
+            simp [hC_a]
+      _ = (1 / (((a + 1 : ℕ) : ℝ))) *
+            (∑ j : Fin s, t.b j * t.c j ^ (a + b + 1)) := by
+            calc
+              ∑ j : Fin s,
+                  t.b j * t.c j ^ b * (t.c j ^ (a + 1) / (((a + 1 : ℕ) : ℝ)))
+                  = ∑ j : Fin s,
+                      (1 / (((a + 1 : ℕ) : ℝ))) *
+                        (t.b j * t.c j ^ (a + b + 1)) := by
+                          refine Finset.sum_congr rfl ?_
+                          intro j hj
+                          rw [show a + b + 1 = b + (a + 1) by omega, pow_add]
+                          ring
+              _ = (1 / (((a + 1 : ℕ) : ℝ))) *
+                    (∑ j : Fin s, t.b j * t.c j ^ (a + b + 1)) := by
+                      rw [Finset.mul_sum]
+  have hSB :
+      SB =
+        (∑ i : Fin s, t.b i * t.c i ^ a) *
+          (∑ j : Fin s, t.b j * t.c j ^ b) := by
+    dsimp [SB]
+    calc
+      ∑ i : Fin s, ∑ j : Fin s, t.c i ^ a * (t.b i * t.b j) * t.c j ^ b
+          = ∑ i : Fin s, ∑ j : Fin s,
+              (t.b i * t.c i ^ a) * (t.b j * t.c j ^ b) := by
+                refine Finset.sum_congr rfl ?_
+                intro i hi
+                refine Finset.sum_congr rfl ?_
+                intro j hj
+                ring
+      _ = (∑ i : Fin s, t.b i * t.c i ^ a) *
+            (∑ j : Fin s, t.b j * t.c j ^ b) := by
+              rw [← Finset.sum_mul_sum]
+  rw [hsplit, hSD, hSC, hSB, hBa, hBb, hBab]
+  have ha1_ne : (((a + 1 : ℕ) : ℝ)) ≠ 0 := by positivity
+  have hb1_ne : (((b + 1 : ℕ) : ℝ)) ≠ 0 := by positivity
+  have hab2_ne : (((a + b + 2 : ℕ) : ℝ)) ≠ 0 := by positivity
+  field_simp [ha1_ne, hb1_ne, hab2_ne]
+  ring
+
+private lemma algStabMatrix_monomial_bilinear_zero
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable)
+    {m n : ℕ} (hm : m < s) (hn : n < s) (hmn : m + n + 2 ≤ 2 * s - 1) :
+    ∑ i : Fin s, ∑ j : Fin s,
+      t.c i ^ m * t.algStabMatrix i j * t.c j ^ n = 0 := by
+  by_cases hmn_le : m ≤ n
+  · have hm2 : 2 * m + 2 ≤ 2 * s - 1 := by
+      omega
+    exact algStabMatrix_monomial_bilinear_zero_main t hcoll hAlg hm hn hm2 hmn
+  · have hswap :
+        ∑ i : Fin s, ∑ j : Fin s,
+          t.c i ^ m * t.algStabMatrix i j * t.c j ^ n =
+          ∑ i : Fin s, ∑ j : Fin s,
+            t.c i ^ n * t.algStabMatrix i j * t.c j ^ m := by
+      calc
+        ∑ i : Fin s, ∑ j : Fin s,
+            t.c i ^ m * t.algStabMatrix i j * t.c j ^ n
+            = ∑ i : Fin s, ∑ j : Fin s,
+                t.c j ^ m * t.algStabMatrix j i * t.c i ^ n := by
+                  rw [Finset.sum_comm]
+        _ = ∑ i : Fin s, ∑ j : Fin s,
+              t.c i ^ n * t.algStabMatrix i j * t.c j ^ m := by
+                refine Finset.sum_congr rfl ?_
+                intro i hi
+                refine Finset.sum_congr rfl ?_
+                intro j hj
+                rw [t.algStabMatrix_symm]
+                ring
+    rw [hswap]
+    have hn2 : 2 * n + 2 ≤ 2 * s - 1 := by
+      omega
+    exact algStabMatrix_monomial_bilinear_zero_main t hcoll hAlg hn hm hn2 (by omega)
+
 /-- Second-stage sign helper for the transformed `(358c)` bridge.
 
 This packages the quadratic form from `hAlg.posdef_M` as the signed integral
