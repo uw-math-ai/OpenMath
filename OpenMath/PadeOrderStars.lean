@@ -2505,7 +2505,94 @@ private theorem padeR_exp_neg_second_coeff_identity
         (((1 / (((n + d + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
           ((n : ℂ) / (n + d : ℂ))) =
       (padeRExpNegSecondCoeff n d : ℂ) := by
-  sorry
+  let m : ℕ := n + d
+  have hm_pos : 0 < m := by simpa [m] using hm
+  have hm_ne : (m : ℂ) ≠ 0 := by
+    exact_mod_cast (Nat.ne_of_gt hm_pos)
+  have hm2_ne_nat : m + 2 ≠ 0 := by omega
+  have hm2_ne : (m + 2 : ℂ) ≠ 0 := by
+    exact_mod_cast hm2_ne_nat
+  have hfact :
+      (((m + 2).factorial : ℕ) : ℂ) =
+        (m + 2 : ℂ) * (((m + 1).factorial : ℕ) : ℂ) := by
+    rw [show m + 2 = (m + 1) + 1 by omega, Nat.factorial_succ]
+    push_cast
+    ring
+  have hfactorial_cancel :
+      ((m + 1 : ℂ) / (((m + 2).factorial : ℂ))) +
+          (1 / (((m + 2).factorial : ℂ))) =
+        (1 / (((m + 1).factorial : ℂ))) := by
+    rw [hfact]
+    field_simp [hm2_ne,
+      Nat.cast_ne_zero.mpr (Nat.factorial_pos (m + 1)).ne']
+    ring
+  have hcoeff :
+      (1 / (((m + 1).factorial : ℂ))) -
+          ((d : ℂ) / (m : ℂ)) / (((m + 1).factorial : ℂ)) -
+          (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (m + 2 : ℂ)) -
+          (((1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+            ((n : ℂ) / (m : ℂ))) =
+        (padePhiErrorConst n d : ℂ) *
+          ((((n : ℂ) - d) * (m + 1 : ℂ)) / ((m : ℂ) * (m + 2 : ℂ))) := by
+    dsimp [m]
+    field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos (n + d + 1)).ne',
+      show ((n + d : ℂ)) ≠ 0 by exact_mod_cast (Nat.ne_of_gt hm),
+      show ((n + d + 2 : ℂ)) ≠ 0 by
+        exact_mod_cast (show n + d + 2 ≠ 0 by omega)]
+    push_cast
+    ring
+  have hstart :
+      expTaylorExpNegSecondCoeff (n + d) +
+          padeDefectSecondCoeff n d -
+          (((1 / (((n + d + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+            ((n : ℂ) / (n + d : ℂ))) =
+        ((m + 1 : ℂ) / (((m + 2).factorial : ℂ))) +
+          ((1 / (((m + 2).factorial : ℂ))) -
+            ((d : ℂ) / (m : ℂ)) / (((m + 1).factorial : ℂ)) -
+            (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (m + 2 : ℂ))) -
+          (((1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+            ((n : ℂ) / (m : ℂ))) := by
+    simp [m, padeDefectSecondCoeff, expTaylorExpNegSecondCoeff]
+  calc
+    expTaylorExpNegSecondCoeff (n + d) +
+          padeDefectSecondCoeff n d -
+          (((1 / (((n + d + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+            ((n : ℂ) / (n + d : ℂ))) =
+        ((m + 1 : ℂ) / (((m + 2).factorial : ℂ))) +
+          ((1 / (((m + 2).factorial : ℂ))) -
+            ((d : ℂ) / (m : ℂ)) / (((m + 1).factorial : ℂ)) -
+            (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (m + 2 : ℂ))) -
+          (((1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+            ((n : ℂ) / (m : ℂ))) := hstart
+    _ = (1 / (((m + 1).factorial : ℂ))) -
+          ((d : ℂ) / (m : ℂ)) / (((m + 1).factorial : ℂ)) -
+          (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (m + 2 : ℂ)) -
+          (((1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+            ((n : ℂ) / (m : ℂ))) := by
+          calc
+            ((m + 1 : ℂ) / (((m + 2).factorial : ℂ))) +
+                ((1 / (((m + 2).factorial : ℂ))) -
+                  ((d : ℂ) / (m : ℂ)) / (((m + 1).factorial : ℂ)) -
+                  (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (m + 2 : ℂ))) -
+                (((1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+                  ((n : ℂ) / (m : ℂ))) =
+              (((m + 1 : ℂ) / (((m + 2).factorial : ℂ))) +
+                  (1 / (((m + 2).factorial : ℂ)))) -
+                ((d : ℂ) / (m : ℂ)) / (((m + 1).factorial : ℂ)) -
+                (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (m + 2 : ℂ)) -
+                (((1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+                  ((n : ℂ) / (m : ℂ))) := by ring
+            _ = (1 / (((m + 1).factorial : ℂ))) -
+                ((d : ℂ) / (m : ℂ)) / (((m + 1).factorial : ℂ)) -
+                (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (m + 2 : ℂ)) -
+                (((1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+                  ((n : ℂ) / (m : ℂ))) := by rw [hfactorial_cancel]
+    _ =
+        (padePhiErrorConst n d : ℂ) *
+          ((((n : ℂ) - d) * (m + 1 : ℂ)) / ((m : ℂ) * (m + 2 : ℂ))) := hcoeff
+    _ = (padeRExpNegSecondCoeff n d : ℂ) := by
+        simp [m, padeRExpNegSecondCoeff]
+        ring
 
 /-- Cycle-345 analytic seam: one order beyond `padeR_exp_neg_leading_term`, with
 the explicit degree-`n + d + 2` coefficient isolated. This is kept local to the
