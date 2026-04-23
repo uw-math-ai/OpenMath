@@ -1263,6 +1263,47 @@ noncomputable def PadeRDownArrowBranchTrackingInput.downArrowInfinityWitnesses
     exact Nat.succ_le_iff.mp h1
   exact (h.downTrackedBranch_of_downArrowsAtInfinity_pos hpos).some
 
+theorem padeRDownArrowConnectedRayConeSupportInput_of_pos_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : 0 < padePhiErrorConst n d) :
+    PadeRDownArrowConnectedRayConeSupportInput n d data := by
+  sorry
+
+theorem padeRDownArrowConnectedRayConeSupportInput_of_neg_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : padePhiErrorConst n d < 0) :
+    PadeRDownArrowConnectedRayConeSupportInput n d data := by
+  sorry
+
+theorem padeRDownArrowRayTrackingSupportInput_of_pos_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : 0 < padePhiErrorConst n d) :
+    PadeRDownArrowRayTrackingSupportInput n d data := by
+  sorry
+
+theorem padeRDownArrowRayTrackingSupportInput_of_neg_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : padePhiErrorConst n d < 0) :
+    PadeRDownArrowRayTrackingSupportInput n d data := by
+  sorry
+
+theorem padeRDownArrowBranchTrackingInput_of_pos_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : 0 < padePhiErrorConst n d) :
+    PadeRDownArrowBranchTrackingInput n d data := by
+  sorry
+
+theorem padeRDownArrowBranchTrackingInput_of_neg_errorConst
+    (n d : ℕ) (data : OrderArrowTerminationData)
+    (hC : padePhiErrorConst n d < 0) :
+    PadeRDownArrowBranchTrackingInput n d data := by
+  sorry
+
+theorem padeRDownArrowBranchTrackingInput_of_even_or_odd
+    (n d : ℕ) (data : OrderArrowTerminationData) :
+    PadeRDownArrowBranchTrackingInput n d data := by
+  sorry
+
 /-- Honest theorem-local input for the current Padé infinity-branch seam:
 positive infinity counts do not themselves determine concrete escaping branch
 germs, so the live file has to ask separately for realized branch existence in
@@ -4665,59 +4706,6 @@ theorem padeRDownArrowOrderWebConnectedComponentMeetInput_of_neg_errorConst
   · simpa using
       padeR_odd_downArrowOrderWebMeetsRayConeNearOriginInConnectedComponent_of_neg_errorConst
         n d hC
-
-theorem padeRDownArrowConnectedRayConeSupportInput_of_pos_errorConst
-    (n d : ℕ) (data : OrderArrowTerminationData)
-    (hC : 0 < padePhiErrorConst n d) :
-    PadeRDownArrowConnectedRayConeSupportInput n d data := by
-  exact
-    (padeRDownArrowOrderWebConnectedComponentMeetInput_of_pos_errorConst n d data hC).toConnectedRayConeSupportInput
-
-theorem padeRDownArrowConnectedRayConeSupportInput_of_neg_errorConst
-    (n d : ℕ) (data : OrderArrowTerminationData)
-    (hC : padePhiErrorConst n d < 0) :
-    PadeRDownArrowConnectedRayConeSupportInput n d data := by
-  exact
-    (padeRDownArrowOrderWebConnectedComponentMeetInput_of_neg_errorConst n d data hC).toConnectedRayConeSupportInput
-
-theorem padeRDownArrowRayTrackingSupportInput_of_pos_errorConst
-    (n d : ℕ) (data : OrderArrowTerminationData)
-    (hC : 0 < padePhiErrorConst n d) :
-    PadeRDownArrowRayTrackingSupportInput n d data := by
-  exact
-    (padeRDownArrowConnectedRayConeSupportInput_of_pos_errorConst n d data hC).toRayTrackingSupportInput
-
-theorem padeRDownArrowRayTrackingSupportInput_of_neg_errorConst
-    (n d : ℕ) (data : OrderArrowTerminationData)
-    (hC : padePhiErrorConst n d < 0) :
-    PadeRDownArrowRayTrackingSupportInput n d data := by
-  exact
-    (padeRDownArrowConnectedRayConeSupportInput_of_neg_errorConst n d data hC).toRayTrackingSupportInput
-
-theorem padeRDownArrowBranchTrackingInput_of_pos_errorConst
-    (n d : ℕ) (data : OrderArrowTerminationData)
-    (hC : 0 < padePhiErrorConst n d) :
-    PadeRDownArrowBranchTrackingInput n d data := by
-  exact
-    (padeRDownArrowRayTrackingSupportInput_of_pos_errorConst n d data hC).toTrackingInput
-
-theorem padeRDownArrowBranchTrackingInput_of_neg_errorConst
-    (n d : ℕ) (data : OrderArrowTerminationData)
-    (hC : padePhiErrorConst n d < 0) :
-    PadeRDownArrowBranchTrackingInput n d data := by
-  exact
-    (padeRDownArrowRayTrackingSupportInput_of_neg_errorConst n d data hC).toTrackingInput
-
-theorem padeRDownArrowBranchTrackingInput_of_even_or_odd
-    (n d : ℕ) (data : OrderArrowTerminationData) :
-    PadeRDownArrowBranchTrackingInput n d data := by
-  rcases Nat.even_or_odd d with hd | hd
-  · exact
-      padeRDownArrowBranchTrackingInput_of_pos_errorConst n d data
-        (padePhiErrorConst_pos_of_even n d hd)
-  · exact
-      padeRDownArrowBranchTrackingInput_of_neg_errorConst n d data
-        (padePhiErrorConst_neg_of_odd n d hd)
 
 /-- Exact remaining obstruction after the honest explicit-sign refactor:
 to upgrade the weak raywise bridge below to the strict sign bridge, one still
