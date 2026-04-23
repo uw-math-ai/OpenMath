@@ -100,10 +100,15 @@
 - [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
-- [~] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`)
+- [x] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
   - [x] Formalized local order-star geometry, arrow directions, and the 355F imaginary-axis obstruction
   - [x] Introduced explicit endpoint bookkeeping via `OrderArrowTerminationData`
-  - [ ] Discharge the remaining no-escape-to-infinity topology hypothesis from the global order web
+  - [x] Closed the concrete no-escape seam via `noArrowsEscapeToInfinity_of_concreteRationalApprox`
+  - [x] Landed the concrete wrappers `thm_355D_of_concreteRationalApprox` and `thm_355E'_of_concreteRationalApprox`
+- [x] **Theorem 355G**: repaired Ehle barrier / Padé wedge boundary (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
+  - [x] Kept the honest downstream boundary separate as `EhleBarrierInput`
+  - [x] Built the concrete Padé constructor `ehleBarrierInput_of_padeR_aStable`
+  - [x] Closed `padeREhleBarrierNatInput_of_padeR_aStable` and `ehle_barrier_nat_of_padeR`
 - [x] **Theorem 356C**: AN-stability implies algebraic stability (`OpenMath/ANStability.lean`)
   - [x] Defined AN-stability (`IsANStable`) and diagonal stability function (`stabilityFnDiag`)
   - [x] Proved `bⱼ ≥ 0` direction: det formula, stability function formula, norm bound
@@ -150,13 +155,13 @@
 
 ## Current Target
 
-**Global order-arrow endpoint infrastructure in `OpenMath/OrderStars.lean`: tighten the trajectory/termination interface behind Theorems 355C/355D/355E and replace vague count assumptions with explicit endpoint data.**
+**Theorem 358A**: algebraic-stability characterization of collocation methods. Formalize that a collocation Runge–Kutta method is algebraically stable iff its abscissae are zeros of `P_s^* - θ P_{s-1}^*` for some `θ ≥ 0`.**
 
 Next targets:
-1. **Discharge `NoArrowsEscapeToInfinity`** — prove global order-web branches can only terminate at zeros, poles, or infinity, then rule out infinity for the 355D path
-2. **Connect the sharper endpoint interface to 355E/355G** — keep downstream Padé/A-stability results depending only on the explicit `OrderArrowTerminationData` API
-3. **Return to Gaussian quadrature only after the order-star blocker moves** — `OpenMath/Legendre.lean` no longer has active `sorry`s
+1. **State 358A against the actual shifted-Legendre boundary** — the target is the collocation/algebraic-stability characterization, not the already-landed BN-stability corollaries
+2. **Exploit the live Legendre/collocation infrastructure** — reuse the shifted-Legendre and Gaussian-quadrature tooling already in the repo instead of reopening the closed order-star seams
+3. **After 358A, move to its downstream dependent theorem** — the extracted dependency graph points next to `thm:359C`
 
 ## Sorry locations
 
-- No active `sorry`s in `OpenMath/Legendre.lean` or the current `OpenMath/OrderStars.lean` target
+- No active `sorry`s in the closed order-star / Padé-order-star package; current frontier is the unformalized `thm:358A`
