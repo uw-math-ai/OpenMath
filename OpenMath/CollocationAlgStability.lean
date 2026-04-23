@@ -47,131 +47,6 @@ lemma nodePoly_leadingCoeff_pos (t : ButcherTableau s) :
   rw [(nodePoly_monic t).leadingCoeff]
   norm_num
 
-/-- The theorem-local polynomial antiderivative used in the transformed `(358c)`
-argument. The range is truncated at `s`, which is sufficient under the degree
-hypotheses used below. -/
-private noncomputable def antiderivativePoly (s : ℕ) (q : ℝ[X]) : ℝ[X] :=
-  ∑ i ∈ Finset.range s,
-    Polynomial.C (q.coeff i / ((i : ℝ) + 1)) * Polynomial.X ^ (i + 1)
-
-private lemma antiderivativePoly_eval (q : ℝ[X]) (x : ℝ) :
-    (antiderivativePoly s q).eval x =
-      ∑ i ∈ Finset.range s, q.coeff i / ((i : ℝ) + 1) * x ^ (i + 1) := by
-  simp [antiderivativePoly, Polynomial.eval_finset_sum, Polynomial.eval_mul,
-    Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
-
-private lemma antiderivativePoly_eval_zero (q : ℝ[X]) :
-    (antiderivativePoly s q).eval (0 : ℝ) = 0 := by
-  simp [antiderivativePoly, Polynomial.eval_finset_sum, Polynomial.eval_mul,
-    Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
-
-private lemma antiderivativePoly_eval_one_eq_polyMoment (q : ℝ[X]) :
-    (antiderivativePoly s q).eval (1 : ℝ) = polyMomentN s q := by
-  simp [antiderivativePoly, polyMomentN, Polynomial.eval_finset_sum,
-    Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
-
-private lemma antiderivativePoly_eval_one_eq_intervalIntegral
-    (q : ℝ[X]) (hq : q.natDegree < s) :
-    (antiderivativePoly s q).eval (1 : ℝ) =
-      ∫ x in (0 : ℝ)..1, q.eval x := by
-  rw [antiderivativePoly_eval_one_eq_polyMoment]
-  exact polyMomentN_eq_intervalIntegral_of_natDegree_lt q hq
-
-private lemma antiderivativePoly_eval_one_eq_quadEval
-    (t : ButcherTableau s) (hB : t.SatisfiesB s) (q : ℝ[X]) (hq : q.natDegree < s) :
-    (antiderivativePoly s q).eval (1 : ℝ) = quadEvalPoly t q := by
-  rw [antiderivativePoly_eval_one_eq_polyMoment]
-  exact (quadEvalPoly_exact_of_natDegree_lt_of_SatisfiesB t hB q hq).symm
-
-private lemma antiderivativePoly_derivative
-    (q : ℝ[X]) (hq : q.natDegree < s) :
-    (antiderivativePoly s q).derivative = q := by
-  sorry
-
-private lemma antiderivativePoly_natDegree_lt
-    (hs : 0 < s) (q : ℝ[X]) (hq : q.natDegree < s - 1) :
-    (antiderivativePoly s q).natDegree < s := by
-  sorry
-
-private lemma antiderivativePoly_eval_mul_integral
-    (q : ℝ[X]) (hq : q.natDegree < s) :
-    ∫ x in (0 : ℝ)..1, (q * antiderivativePoly s q).eval x =
-      (antiderivativePoly s q).eval (1 : ℝ) ^ 2 / 2 := by
-  sorry
-
-private lemma antiderivativePoly_eval_node_eq_collocation
-    (t : ButcherTableau s) (hC : t.SatisfiesC s) (q : ℝ[X]) (hq : q.natDegree < s)
-    (i : Fin s) :
-    (antiderivativePoly s q).eval (t.c i) =
-      ∑ j : Fin s, t.A i j * q.eval (t.c j) := by
-  have hqEq := q.as_sum_range_C_mul_X_pow' hq
-  have hqEval : ∀ j : Fin s, q.eval (t.c j) = ∑ k ∈ Finset.range s, q.coeff k * t.c j ^ k := by
-    intro j
-    have hEval := congrArg (fun p : ℝ[X] => p.eval (t.c j)) hqEq
-    simpa [Polynomial.eval_finset_sum, Polynomial.eval_mul, Polynomial.eval_C,
-      Polynomial.eval_pow, Polynomial.eval_X] using hEval
-  calc
-    (antiderivativePoly s q).eval (t.c i)
-        = ∑ k ∈ Finset.range s, q.coeff k / ((k : ℝ) + 1) * t.c i ^ (k + 1) := by
-            simpa using antiderivativePoly_eval (s := s) q (t.c i)
-    _ = ∑ k ∈ Finset.range s, q.coeff k * (∑ j : Fin s, t.A i j * t.c j ^ k) := by
-          refine Finset.sum_congr rfl ?_
-          intro k hk
-          have hCk := hC (k + 1) (by omega) (by simpa using hk) i
-          have hCk' : ∑ j : Fin s, t.A i j * t.c j ^ k = t.c i ^ (k + 1) / ((k + 1 : ℕ) : ℝ) := by
-            simpa using hCk
-          calc
-            q.coeff k / ((k : ℝ) + 1) * t.c i ^ (k + 1)
-                = q.coeff k * (t.c i ^ (k + 1) / ((k + 1 : ℕ) : ℝ)) := by
-                    rw [div_eq_mul_inv, div_eq_mul_inv]
-                    simpa [Nat.cast_add, mul_assoc, mul_left_comm, mul_comm]
-            _ = q.coeff k * (∑ j : Fin s, t.A i j * t.c j ^ k) := by
-                  rw [hCk']
-    _ = ∑ j : Fin s, t.A i j * ∑ k ∈ Finset.range s, q.coeff k * t.c j ^ k := by
-          calc
-            ∑ k ∈ Finset.range s, q.coeff k * (∑ j : Fin s, t.A i j * t.c j ^ k)
-                = ∑ k ∈ Finset.range s, ∑ j : Fin s, q.coeff k * (t.A i j * t.c j ^ k) := by
-                    simp [Finset.mul_sum]
-            _ = ∑ j : Fin s, ∑ k ∈ Finset.range s, q.coeff k * (t.A i j * t.c j ^ k) := by
-                  rw [Finset.sum_comm]
-            _ = ∑ j : Fin s, t.A i j * ∑ k ∈ Finset.range s, q.coeff k * t.c j ^ k := by
-                refine Finset.sum_congr rfl ?_
-                intro j hj
-                calc
-                  ∑ k ∈ Finset.range s, q.coeff k * (t.A i j * t.c j ^ k)
-                      = ∑ k ∈ Finset.range s, t.A i j * (q.coeff k * t.c j ^ k) := by
-                          refine Finset.sum_congr rfl ?_
-                          intro k hk
-                          ring
-                  _ = t.A i j * ∑ k ∈ Finset.range s, q.coeff k * t.c j ^ k := by
-                        rw [Finset.mul_sum]
-    _ = ∑ j : Fin s, t.A i j * q.eval (t.c j) := by
-          refine Finset.sum_congr rfl ?_
-          intro j hj
-          rw [hqEval j]
-    _ = ∑ j : Fin s, t.A i j * q.eval (t.c j) := by rfl
-
-private lemma nodePoly_ne_one (t : ButcherTableau s) (hs : 0 < s) :
-    nodePoly t ≠ 1 := by
-  intro h
-  have hdeg := congrArg Polynomial.natDegree h
-  have hs0 : s = 0 := by
-    simpa [nodePoly_natDegree, Polynomial.natDegree_one] using hdeg
-  exact hs.ne' hs0
-
-private lemma modByMonic_nodePoly_natDegree_lt
-    (t : ButcherTableau s) (hs : 0 < s) (p : ℝ[X]) :
-    (p %ₘ nodePoly t).natDegree < s := by
-  simpa [nodePoly_natDegree] using
-    Polynomial.natDegree_modByMonic_lt p (nodePoly_monic t) (nodePoly_ne_one t hs)
-
-private lemma modByMonic_nodePoly_eval_eq
-    (t : ButcherTableau s) (p : ℝ[X]) (i : Fin s) :
-    (p %ₘ nodePoly t).eval (t.c i) = p.eval (t.c i) := by
-  have hsplit := Polynomial.modByMonic_add_div p (nodePoly_monic t)
-  have hEval := congrArg (fun r : ℝ[X] => r.eval (t.c i)) hsplit
-  simpa [Polynomial.eval_add, Polynomial.eval_mul, nodePoly_eval_node] using hEval
-
 private lemma algStabMatrix_quadForm_expand
     (t : ButcherTableau s) (v : Fin s → ℝ) :
     ∑ i : Fin s, ∑ j : Fin s, v i * t.algStabMatrix i j * v j =
@@ -194,42 +69,173 @@ private lemma algStabMatrix_quadForm_expand
       ∑ i : Fin s, ∑ j : Fin s, t.b i * v i * t.A i j * v j := Finset.sum_comm
   linarith [h_sq, h_sym]
 
-private lemma algStabMatrix_quadForm_eq_antiderivativePoly
-    (t : ButcherTableau s) (hcoll : t.IsCollocation) (q : ℝ[X]) (hq : q.natDegree < s) :
-    let Qpoly : ℝ[X] := antiderivativePoly s q
-    let v : Fin s → ℝ := fun i => q.eval (t.c i)
-    ∑ i : Fin s, ∑ j : Fin s, v i * t.algStabMatrix i j * v j =
-      2 * ∑ i : Fin s, t.b i * q.eval (t.c i) * Qpoly.eval (t.c i) -
-        (Qpoly.eval (1 : ℝ)) ^ 2 := by
-  dsimp
-  rw [algStabMatrix_quadForm_expand]
-  have hA :
-      ∑ i : Fin s, ∑ j : Fin s, t.b i * q.eval (t.c i) * t.A i j * q.eval (t.c j) =
-        ∑ i : Fin s, t.b i * q.eval (t.c i) * (antiderivativePoly s q).eval (t.c i) := by
-    refine Finset.sum_congr rfl ?_
-    intro i hi
-    calc
-      ∑ j : Fin s, t.b i * q.eval (t.c i) * t.A i j * q.eval (t.c j)
-          = t.b i * q.eval (t.c i) * ∑ j : Fin s, t.A i j * q.eval (t.c j) := by
-              rw [Finset.mul_sum]
-              refine Finset.sum_congr rfl ?_
-              intro j hj
-              ring
-      _ = t.b i * q.eval (t.c i) * (antiderivativePoly s q).eval (t.c i) := by
-            rw [← antiderivativePoly_eval_node_eq_collocation t hcoll.2.2.1 q hq i]
-  have hB :
-      ∑ i : Fin s, t.b i * q.eval (t.c i) = (antiderivativePoly s q).eval (1 : ℝ) := by
-    rw [show (∑ i : Fin s, t.b i * q.eval (t.c i)) = quadEvalPoly t q by rfl]
-    rw [← antiderivativePoly_eval_one_eq_quadEval t hcoll.2.1 q hq]
-  rw [hA, hB]
+private lemma algStabMatrix_monomial_inner_eq
+    (t : ButcherTableau s) (hC : t.SatisfiesC s) {k : ℕ} (hk : k < s) :
+    ∑ i : Fin s, ∑ j : Fin s, t.b i * t.c i ^ k * t.A i j * t.c j ^ k =
+      (1 / (((k + 1 : ℕ) : ℝ))) * (∑ i : Fin s, t.b i * t.c i ^ (2 * k + 1)) := by
+  have hCk : ∀ i : Fin s,
+      ∑ j : Fin s, t.A i j * t.c j ^ k = t.c i ^ (k + 1) / (((k + 1 : ℕ) : ℝ)) := by
+    intro i
+    exact hC (k + 1) (by omega) (by omega) i
+  calc
+    ∑ i : Fin s, ∑ j : Fin s, t.b i * t.c i ^ k * t.A i j * t.c j ^ k
+        = ∑ i : Fin s, t.b i * t.c i ^ k * (∑ j : Fin s, t.A i j * t.c j ^ k) := by
+            refine Finset.sum_congr rfl ?_
+            intro i hi
+            calc
+              ∑ j : Fin s, t.b i * t.c i ^ k * t.A i j * t.c j ^ k
+                  = ∑ j : Fin s, (t.b i * t.c i ^ k) * (t.A i j * t.c j ^ k) := by
+                      refine Finset.sum_congr rfl ?_
+                      intro j hj
+                      ring
+              _ = t.b i * t.c i ^ k * (∑ j : Fin s, t.A i j * t.c j ^ k) := by
+                    rw [Finset.mul_sum]
+    _ = ∑ i : Fin s, t.b i * t.c i ^ k * (t.c i ^ (k + 1) / (((k + 1 : ℕ) : ℝ))) := by
+          simp [hCk]
+    _ = (1 / (((k + 1 : ℕ) : ℝ))) * (∑ i : Fin s, t.b i * t.c i ^ (2 * k + 1)) := by
+          calc
+            ∑ i : Fin s, t.b i * t.c i ^ k * (t.c i ^ (k + 1) / (((k + 1 : ℕ) : ℝ)))
+                = ∑ i : Fin s, (1 / (((k + 1 : ℕ) : ℝ))) * (t.b i * t.c i ^ (2 * k + 1)) := by
+                    refine Finset.sum_congr rfl ?_
+                    intro i hi
+                    rw [show 2 * k + 1 = k + (k + 1) by omega, pow_add]
+                    ring
+            _ = (1 / (((k + 1 : ℕ) : ℝ))) * (∑ i : Fin s, t.b i * t.c i ^ (2 * k + 1)) := by
+                  rw [Finset.mul_sum]
 
-private lemma antiderivative_remainder_exact
-    (t : ButcherTableau s) (hcoll : t.IsCollocation) (q : ℝ[X]) (hq : q.natDegree ≤ s - 1) :
-    let Qpoly : ℝ[X] := antiderivativePoly s q
-    let r : ℝ[X] := Qpoly %ₘ nodePoly t
-    ∑ i : Fin s, t.b i * q.eval (t.c i) * r.eval (t.c i)
-      = ∫ x in (0 : ℝ)..1, (q * r).eval x := by
+private lemma algStabMatrix_monomial_quadForm_eq
+    (t : ButcherTableau s) (hB : t.SatisfiesB s) (hC : t.SatisfiesC s) {k : ℕ} (hk : k < s) :
+    ∑ i : Fin s, ∑ j : Fin s, t.c i ^ k * t.algStabMatrix i j * t.c j ^ k =
+      2 / (((k + 1 : ℕ) : ℝ)) * (∑ i : Fin s, t.b i * t.c i ^ (2 * k + 1)) -
+        1 / ((((k + 1 : ℕ) : ℝ)) ^ 2) := by
+  have hBk : ∑ i : Fin s, t.b i * t.c i ^ k = 1 / (((k + 1 : ℕ) : ℝ)) := by
+    exact hB (k + 1) (by omega) (by omega)
+  rw [algStabMatrix_quadForm_expand (v := fun i => t.c i ^ k),
+    algStabMatrix_monomial_inner_eq t hC hk, hBk]
+  ring
+
+private lemma algStabMatrix_monomial_quadForm_zero
+    (t : ButcherTableau s) (hB : t.SatisfiesB s) (hC : t.SatisfiesC s) {k : ℕ} (hk : k < s)
+    (hBhigh : t.SatisfiesB (2 * k + 2)) :
+    ∑ i : Fin s, ∑ j : Fin s, t.c i ^ k * t.algStabMatrix i j * t.c j ^ k = 0 := by
+  have hmoment : ∑ i : Fin s, t.b i * t.c i ^ (2 * k + 1) = 1 / (((2 * k + 2 : ℕ) : ℝ)) := by
+    exact hBhigh (2 * k + 2) (by omega) le_rfl
+  rw [algStabMatrix_monomial_quadForm_eq t hB hC hk, hmoment]
+  have hcast : (((2 * k + 2 : ℕ) : ℝ)) = 2 * (((k + 1 : ℕ) : ℝ)) := by
+    norm_num [Nat.cast_add, Nat.cast_mul]
+    ring
+  rw [hcast]
+  field_simp
+  ring
+
+private lemma algStabMatrix_row_eq_col
+    (t : ButcherTableau s) (v : Fin s → ℝ) (j : Fin s) :
+    ∑ i : Fin s, v i * t.algStabMatrix i j = ∑ i : Fin s, t.algStabMatrix j i * v i := by
+  refine Finset.sum_congr rfl ?_
+  intro i hi
+  rw [t.algStabMatrix_symm i j]
+  ring
+
+private lemma algStabMatrix_quadForm_shift_single
+    (t : ButcherTableau s) (v : Fin s → ℝ) (j : Fin s) (z : ℝ) :
+    ∑ i : Fin s, ∑ l : Fin s,
+        (v i + (Pi.single j z : Fin s → ℝ) i) * t.algStabMatrix i l *
+          (v l + (Pi.single j z : Fin s → ℝ) l)
+      = (∑ i : Fin s, ∑ l : Fin s, v i * t.algStabMatrix i l * v l)
+          + z * (∑ l : Fin s, t.algStabMatrix j l * v l)
+          + z * (∑ i : Fin s, v i * t.algStabMatrix i j)
+          + z ^ 2 * t.algStabMatrix j j := by
+  simp [Pi.single_apply, mul_add, add_mul, Finset.sum_add_distrib,
+    Finset.mul_sum, pow_two]
+  ring_nf
+
+private lemma algStabMatrix_mulVec_zero_of_psd_of_quadForm_zero
+    (t : ButcherTableau s) (hAlg : t.IsAlgStable) (v : Fin s → ℝ)
+    (hquad_zero : ∑ i : Fin s, ∑ l : Fin s, v i * t.algStabMatrix i l * v l = 0) :
+    ∀ j : Fin s, ∑ i : Fin s, t.algStabMatrix j i * v i = 0 := by
+  intro j
+  have hdiag_nonneg : 0 ≤ t.algStabMatrix j j := by
+    have h := hAlg.posdef_M (Pi.single j (1 : ℝ))
+    simpa [Pi.single_apply] using h
+  by_contra hrow_ne
+  let a : ℝ := ∑ i : Fin s, t.algStabMatrix j i * v i
+  let z : ℝ := -a / (t.algStabMatrix j j + 1)
+  have hz_neg : 2 * z * a + z ^ 2 * t.algStabMatrix j j < 0 := by
+    dsimp [z]
+    have hjj_pos : 0 < t.algStabMatrix j j + 1 := by linarith
+    have hjj_ne : t.algStabMatrix j j + 1 ≠ 0 := by linarith
+    field_simp [hjj_ne]
+    have ha2 : 0 < a ^ 2 := by
+      dsimp [a]
+      nlinarith [sq_pos_of_ne_zero hrow_ne]
+    have hfac : -(2 * (t.algStabMatrix j j + 1)) + t.algStabMatrix j j < 0 := by
+      nlinarith
+    nlinarith
+  have hpsd := hAlg.posdef_M (fun i => v i + (Pi.single j z : Fin s → ℝ) i)
+  rw [algStabMatrix_quadForm_shift_single t v j z, hquad_zero, algStabMatrix_row_eq_col t v j] at hpsd
+  dsimp [a] at hz_neg
+  linarith
+
+private lemma monomialVec_D_of_algStable
+    (t : ButcherTableau s) (hAlg : t.IsAlgStable) (hB : t.SatisfiesB s) (hC : t.SatisfiesC s)
+    {k : ℕ} (hk : k < s)
+    (hquad_zero : ∑ i : Fin s, ∑ l : Fin s,
+      t.c i ^ k * t.algStabMatrix i l * t.c l ^ k = 0) :
+    ∀ j : Fin s,
+      ∑ i : Fin s, t.b i * t.c i ^ k * t.A i j =
+        t.b j / (((k + 1 : ℕ) : ℝ)) * (1 - t.c j ^ (k + 1)) := by
   sorry
+
+private lemma moment_upgrade_from_D
+    (t : ButcherTableau s) (hs : 0 < s) (k : ℕ)
+    (hB : t.SatisfiesB s) (hC : t.SatisfiesC s)
+    (hD : ∀ j : Fin s,
+      ∑ i : Fin s, t.b i * t.c i ^ k * t.A i j =
+        t.b j / (((k + 1 : ℕ) : ℝ)) * (1 - t.c j ^ (k + 1))) :
+    ∑ i : Fin s, t.b i * t.c i ^ (k + s) = 1 / (((k + s + 1 : ℕ) : ℝ)) := by
+  have hC_s : ∀ i, ∑ j, t.A i j * t.c j ^ (s - 1) = t.c i ^ s / ((s : ℕ) : ℝ) := by
+    exact fun i => hC s hs le_rfl i
+  have h_sum :
+      ∑ j, (∑ i, t.b i * t.c i ^ k * t.A i j) * t.c j ^ (s - 1) =
+        ∑ i, t.b i * t.c i ^ k * (∑ j, t.A i j * t.c j ^ (s - 1)) := by
+    simpa [mul_assoc, Finset.mul_sum, Finset.sum_mul] using Finset.sum_comm
+  simp_all [div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm, Finset.mul_sum, pow_add]
+  simp_all [mul_sub, ← mul_assoc, ← pow_succ', ← Finset.mul_sum, ← Finset.sum_mul]
+  simp_all [mul_assoc, ← pow_add, ← Finset.mul_sum, ← Finset.sum_mul]
+  have hBs := hB (s - 1 + 1) (by omega) (by omega)
+  simp_all [Nat.sub_add_cancel hs]
+  field_simp at *
+  rw [show s - 1 + (k + 1) = s + k by omega] at h_sum
+  linarith
+
+private lemma satisfiesB_two_mul_sub_one_of_algStable
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
+    t.SatisfiesB (2 * s - 1) := by
+  have hind : ∀ k ≤ s - 1, t.SatisfiesB (s + k) := by
+    intro k hk
+    induction' k with k ih
+    · simpa using hcoll.2.1
+    · have hk' : k ≤ s - 2 := by omega
+      have hBk : t.SatisfiesB (s + k) := ih (by omega)
+      have hBhigh : t.SatisfiesB (2 * k + 2) := SatisfiesB.mono hBk (by omega)
+      have hquad_zero :
+          ∑ i : Fin s, ∑ j : Fin s, t.c i ^ k * t.algStabMatrix i j * t.c j ^ k = 0 := by
+        exact algStabMatrix_monomial_quadForm_zero t hcoll.2.1 hcoll.2.2.1 (by omega) hBhigh
+      have hD :
+          ∀ j : Fin s,
+            ∑ i : Fin s, t.b i * t.c i ^ k * t.A i j =
+              t.b j / (((k + 1 : ℕ) : ℝ)) * (1 - t.c j ^ (k + 1)) := by
+        exact monomialVec_D_of_algStable t hAlg hcoll.2.1 hcoll.2.2.1 (by omega) hquad_zero
+      have hmoment :
+          ∑ i : Fin s, t.b i * t.c i ^ (k + s) = 1 / (((k + s + 1 : ℕ) : ℝ)) := by
+        exact moment_upgrade_from_D t hcoll.1 k hcoll.2.1 hcoll.2.2.1 hD
+      intro n hn1 hn2
+      by_cases hle : n ≤ s + k
+      · exact hBk n hn1 hle
+      · have hn_eq : n = s + k + 1 := by omega
+        subst hn_eq
+        simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using hmoment
+  convert hind (s - 1) le_rfl using 1 <;> omega
 
 /-- The live `(358c)` zero statement extracted from the transformed matrix
 input behind algebraic stability.
@@ -242,66 +248,22 @@ lemma nodePoly_interval_zero_aux_of_algStable
     ∀ q : ℝ[X], q.natDegree < s - 1 →
       ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := by
   intro q hq
-  let Qpoly : ℝ[X] := antiderivativePoly s q
-  let r : ℝ[X] := Qpoly %ₘ nodePoly t
   have hq_lt_s : q.natDegree < s := by
     omega
-  have hr_natDegree : r.natDegree < s := by
-    dsimp [r]
-    exact modByMonic_nodePoly_natDegree_lt t hcoll.1 Qpoly
-  have hr_eval : ∀ i : Fin s, r.eval (t.c i) = Qpoly.eval (t.c i) := by
-    intro i
-    dsimp [r, Qpoly]
-    exact modByMonic_nodePoly_eval_eq t _ i
-  have hquad :
-      ∑ i : Fin s, ∑ j : Fin s,
-          q.eval (t.c i) * t.algStabMatrix i j * q.eval (t.c j) =
-        2 * ∑ i : Fin s, t.b i * q.eval (t.c i) * r.eval (t.c i) -
-          (Qpoly.eval (1 : ℝ)) ^ 2 := by
-    rw [algStabMatrix_quadForm_eq_antiderivativePoly t hcoll q hq_lt_s]
-    refine congrArg (fun z : ℝ => 2 * z - (Qpoly.eval (1 : ℝ)) ^ 2) ?_
-    refine Finset.sum_congr rfl ?_
-    intro i hi
-    rw [hr_eval i]
-  have hexact :
-      ∑ i : Fin s, t.b i * q.eval (t.c i) * r.eval (t.c i) =
-        ∫ x in (0 : ℝ)..1, (q * r).eval x := by
-    rw [antiderivative_remainder_exact t hcoll q (by omega)]
-  have hQ1 :
-      Qpoly.eval (1 : ℝ) = ∫ x in (0 : ℝ)..1, q.eval x := by
-    dsimp [Qpoly]
-    exact antiderivativePoly_eval_one_eq_intervalIntegral q hq_lt_s
-  have hquot_zero : Qpoly /ₘ nodePoly t = 0 := by
-    have hQdeg : Qpoly.natDegree < s := by
-      dsimp [Qpoly]
-      exact antiderivativePoly_natDegree_lt hcoll.1 q hq
-    rw [Polynomial.divByMonic_eq_zero_iff (nodePoly_monic t)]
-    have hQdegNode : Qpoly.natDegree < (nodePoly t).natDegree := by
-      simpa [nodePoly_natDegree] using hQdeg
-    exact Polynomial.degree_lt_degree hQdegNode
-  have hr_eq_Q : r = Qpoly := by
-    dsimp [r]
-    have hsplit := Polynomial.modByMonic_add_div Qpoly (nodePoly_monic t)
-    rw [hquot_zero, mul_zero, add_zero] at hsplit
-    exact hsplit
-  have hexactQ :
-      ∑ i : Fin s, t.b i * q.eval (t.c i) * Qpoly.eval (t.c i) =
-        ∫ x in (0 : ℝ)..1, (q * Qpoly).eval x := by
-    simpa [hr_eq_Q] using hexact
-  have hquadQ :
-      ∑ i : Fin s, ∑ j : Fin s,
-          q.eval (t.c i) * t.algStabMatrix i j * q.eval (t.c j) =
-        2 * ∑ i : Fin s, t.b i * q.eval (t.c i) * Qpoly.eval (t.c i) -
-          (Qpoly.eval (1 : ℝ)) ^ 2 := by
-    simpa [hr_eq_Q] using hquad
-  have hquad_zero : ∑ i : Fin s, ∑ j : Fin s,
-      q.eval (t.c i) * t.algStabMatrix i j * q.eval (t.c j) = 0 := by
-    rw [hquadQ, hexactQ, antiderivativePoly_eval_mul_integral q hq_lt_s]
-    ring
-  have hnode :
-      ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := by
-    sorry
-  exact hnode
+  have hB2s1 : t.SatisfiesB (2 * s - 1) :=
+    satisfiesB_two_mul_sub_one_of_algStable t hcoll hAlg
+  have hdeg :
+      ((nodePoly t) * q).natDegree < 2 * s - 1 := by
+    calc
+      ((nodePoly t) * q).natDegree ≤ (nodePoly t).natDegree + q.natDegree :=
+        Polynomial.natDegree_mul_le
+      _ < s + (s - 1) := by
+        rw [nodePoly_natDegree]
+        omega
+      _ = 2 * s - 1 := by omega
+  rw [← polyMomentN_eq_intervalIntegral_of_natDegree_lt (N := 2 * s - 1) ((nodePoly t) * q) hdeg]
+  rw [← quadEvalPoly_exact_of_natDegree_lt_of_SatisfiesB t hB2s1 ((nodePoly t) * q) hdeg]
+  exact quadEvalPoly_nodePoly_mul_eq_zero t q hq_lt_s
 
 /-- Second-stage sign helper for the transformed `(358c)` bridge.
 
