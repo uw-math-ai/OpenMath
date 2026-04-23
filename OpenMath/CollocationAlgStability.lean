@@ -1,5 +1,6 @@
 import OpenMath.Legendre
 import OpenMath.StiffEquations
+import Mathlib.Analysis.Calculus.Deriv.Polynomial
 
 /-!
 # Theorem 358A: Algebraic Stability of Collocation Methods
@@ -1353,12 +1354,907 @@ theorem thm_358A_only_if
   have ha_ne : a ≠ 0 := by linarith
   exact (mul_eq_zero.mp hEval'.symm).resolve_left ha_ne
 
+/-! ### Reverse-direction scaffold for Theorem 358A -/
+
+/-- The Lagrange basis polynomial `L_i` for the collocation nodes. -/
+noncomputable def lagrangeBasisPoly (t : ButcherTableau s) (i : Fin s) : ℝ[X] :=
+  Lagrange.basis (Finset.univ : Finset (Fin s)) t.c i
+
+/-- Under `B(s)`, the weight `b_i` is the integral of the i-th Lagrange basis polynomial. -/
+lemma weight_eq_integral_lagrange
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (i : Fin s) :
+    t.b i = ∫ x in (0 : ℝ)..1, (lagrangeBasisPoly t i).eval x := by
+  obtain ⟨hs, hB, hC, h_inj⟩ := hcoll
+  have h_sum : ∑ j : Fin s, t.b j * (t.lagrangeBasisPoly i).eval (t.c j) = t.b i := by
+    rw [Finset.sum_eq_single i]
+    · unfold ButcherTableau.lagrangeBasisPoly
+      rw [Lagrange.eval_basis_self] <;> aesop
+    · simp +decide [ButcherTableau.lagrangeBasisPoly, Lagrange.basis]
+      intro j hj
+      rw [Polynomial.eval_prod]
+      exact Or.inr <|
+        Finset.prod_eq_zero (Finset.mem_erase_of_ne_of_mem hj <| Finset.mem_univ _)
+          <| by simp +decide [Lagrange.basisDivisor]
+    · aesop
+  have h_poly_exact :
+      ∀ p : Polynomial ℝ, p.natDegree < s →
+        ∑ j : Fin s, t.b j * p.eval (t.c j) = ∫ x in (0 : ℝ)..1, p.eval x := by
+    intro p hp
+    have h_monomial :
+        ∀ k : ℕ, k < s →
+          ∑ j : Fin s, t.b j * (t.c j) ^ k = ∫ x in (0 : ℝ)..1, x ^ k := by
+      intro k hk
+      specialize hB (k + 1)
+      aesop
+    simp_all +decide [Polynomial.eval_eq_sum_range]
+    simp +decide [Finset.mul_sum, mul_assoc, mul_comm, mul_left_comm, Finset.sum_mul,
+      intervalIntegral.integral_finset_sum]
+    rw [Finset.sum_comm]
+    exact Finset.sum_congr rfl fun _ _ => by
+      rw [← h_monomial _ (by linarith [Finset.mem_range.mp ‹_›])]
+      simp +decide [mul_assoc, mul_comm, mul_left_comm, Finset.mul_sum]
+  rw [← h_sum, h_poly_exact]
+  rw [ButcherTableau.lagrangeBasisPoly]
+  rw [Lagrange.natDegree_basis] <;> aesop
+
+/-- Under `C(s)`, the coefficient `A i j` is the integral of the j-th Lagrange basis
+up to the i-th node. -/
+lemma A_eq_integral_lagrange
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (i j : Fin s) :
+    t.A i j = ∫ x in (0 : ℝ)..t.c i, (lagrangeBasisPoly t j).eval x := by
+  revert j
+  have h_poly_integral :
+      ∀ r : Polynomial ℝ, r.degree < s →
+        ∑ j : Fin s, t.A i j * r.eval (t.c j) = ∫ x in (0 : ℝ)..t.c i, r.eval x := by
+    intro r hr
+    have h_basis :
+        ∀ k : ℕ, k < s →
+          ∑ j : Fin s, t.A i j * (t.c j) ^ k = (t.c i) ^ (k + 1) / (k + 1) := by
+      exact fun k hk => by
+        simpa using hcoll.2.2.1 (k + 1) (by linarith) (by linarith) i
+    have h_integral_linear :
+        ∫ x in (0 : ℝ)..t.c i, r.eval x =
+          ∑ k ∈ r.support, r.coeff k * ∫ x in (0 : ℝ)..t.c i, x ^ k := by
+      simp +decide [Polynomial.eval_eq_sum, Polynomial.sum_def]
+      rw [intervalIntegral.integral_finset_sum] <;> aesop
+    simp_all +decide [Polynomial.eval_eq_sum, Polynomial.sum_def]
+    simp +decide only [Finset.mul_sum]
+    rw [Finset.sum_comm]
+    exact Finset.sum_congr rfl fun _ _ => by
+      rw [← h_basis _ (by
+        linarith [Polynomial.le_natDegree_of_mem_supp _ ‹_›,
+          (Polynomial.natDegree_lt_iff_degree_lt (by aesop)).2 hr])]
+      simp +decide [mul_assoc, mul_comm, mul_left_comm, Finset.mul_sum]
+  intro j
+  convert h_poly_integral (Lagrange.basis (Finset.univ : Finset (Fin s)) t.c j) _ using 1
+  · rw [Finset.sum_eq_single j]
+    · simp +decide [Lagrange.basis]
+      simp +decide [Polynomial.eval_prod, Finset.prod_eq_zero_iff, Lagrange.basisDivisor]
+      rw [Finset.prod_eq_one fun x hx => by
+        rw [inv_mul_cancel₀]
+        exact sub_ne_zero_of_ne <| by
+          intro h
+          have := hcoll.2.2.2
+          have := @this j x
+          aesop]
+      ring
+    · simp +contextual [Lagrange.basis]
+      intro k hk
+      rw [Polynomial.eval_prod]
+      exact Or.inr <|
+        Finset.prod_eq_zero (Finset.mem_erase_of_ne_of_mem hk <| Finset.mem_univ _)
+          <| by simp +decide [Lagrange.basisDivisor]
+    · aesop
+  · rw [Lagrange.degree_basis] <;> norm_num
+    · exact hcoll.1
+    · exact hcoll.2.2.2
+
+/-- `B(s)` gives quadrature exactness for polynomials of degree `< s`. -/
+lemma B_quadrature_exact
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (r : ℝ[X])
+    (hr : r.natDegree < s) :
+    ∑ i : Fin s, t.b i * r.eval (t.c i) =
+      ∫ x in (0 : ℝ)..1, r.eval x := by
+  have h_linear :
+      ∫ x in (0 : ℝ)..1, r.eval x =
+        ∑ k ∈ Finset.range (r.natDegree + 1), r.coeff k * ∫ x in (0 : ℝ)..1, x ^ k := by
+    norm_num [Polynomial.eval_eq_sum_range]
+    rw [intervalIntegral.integral_finset_sum] <;> norm_num
+  have h_linear_sum :
+      ∑ i, t.b i * r.eval (t.c i) =
+        ∑ k ∈ Finset.range (r.natDegree + 1), r.coeff k * ∑ i, t.b i * (t.c i) ^ k := by
+    simp +decide [Polynomial.eval_eq_sum_range, Finset.mul_sum, mul_assoc, mul_comm,
+      mul_left_comm]
+    exact Finset.sum_comm
+  have hB := hcoll.2.1
+  exact h_linear_sum.trans <| h_linear.symm ▸
+    Finset.sum_congr rfl fun k hk => by
+      have := hB (k + 1) (by linarith [Finset.mem_range.mp hk]) (by linarith [Finset.mem_range.mp hk])
+      aesop
+
+/-- Shifted Legendre orthogonality on `[0,1]` for the textbook-sign polynomials. -/
+lemma shiftedLegendre_orthogonal_integral
+    (n : ℕ) (q : ℝ[X]) (hq : q.natDegree < n) :
+    ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly n) * q).eval x = 0 := by
+  exact shiftedLegendreStarPoly_interval_orthogonal n q hq
+
+/-- The boundary polynomial is orthogonal to all polynomials of degree `≤ s - 2`. -/
+lemma boundary_poly_orthogonal
+    (θ : ℝ) (q : ℝ[X]) (hq : q.natDegree + 2 ≤ s) :
+    ∫ x in (0 : ℝ)..1, (algStabilityBoundaryPoly s θ * q).eval x = 0 := by
+  have hs :
+      ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly s) * q).eval x = 0 := by
+    exact shiftedLegendre_orthogonal_integral s q (by omega)
+  have hs_prev :
+      ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly (s - 1)) * q).eval x = 0 := by
+    exact shiftedLegendre_orthogonal_integral (s - 1) q (by omega)
+  have hfun :
+      (fun x : ℝ => (algStabilityBoundaryPoly s θ * q).eval x) =
+        fun x : ℝ =>
+          ((shiftedLegendreStarPoly s) * q).eval x -
+            θ * (((shiftedLegendreStarPoly (s - 1)) * q).eval x) := by
+    funext x
+    simp [algStabilityBoundaryPoly, Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_C]
+    ring
+  rw [hfun, intervalIntegral.integral_sub, intervalIntegral.integral_const_mul, hs, hs_prev]
+  · ring
+  · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+  · exact Continuous.intervalIntegrable
+      (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+
+/-- Under the boundary-node hypothesis, the node polynomial is a positive scalar multiple of
+the boundary polynomial. -/
+lemma nodePoly_eq_const_mul_boundary
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hroot : t.HasAlgStabilityBoundaryNodes) :
+    ∃ θ κ : ℝ, 0 ≤ θ ∧ 0 < κ ∧
+      nodePoly t = Polynomial.C κ * algStabilityBoundaryPoly s θ := by
+  obtain ⟨θ, hθ_nonneg, hθ_root⟩ := hroot
+  have hs_pos : 0 < s := hcoll.1
+  have hlower_deg :
+      (Polynomial.C θ * shiftedLegendreStarPoly (s - 1)).natDegree <
+        (shiftedLegendreStarPoly s).natDegree := by
+    calc
+      (Polynomial.C θ * shiftedLegendreStarPoly (s - 1)).natDegree
+          ≤ (shiftedLegendreStarPoly (s - 1)).natDegree := Polynomial.natDegree_C_mul_le _ _
+      _ = s - 1 := shiftedLegendreStarPoly_natDegree (s - 1)
+      _ < s := by omega
+      _ = (shiftedLegendreStarPoly s).natDegree := (shiftedLegendreStarPoly_natDegree s).symm
+  have hboundary_natDegree : (algStabilityBoundaryPoly s θ).natDegree = s := by
+    unfold algStabilityBoundaryPoly
+    rw [Polynomial.natDegree_sub_eq_left_of_natDegree_lt hlower_deg,
+      shiftedLegendreStarPoly_natDegree]
+  have hboundary_topCoeff :
+      (algStabilityBoundaryPoly s θ).coeff s = (shiftedLegendreStarPoly s).coeff s := by
+    unfold algStabilityBoundaryPoly
+    rw [Polynomial.coeff_sub]
+    have hzero :
+        (Polynomial.C θ * shiftedLegendreStarPoly (s - 1)).coeff s = 0 := by
+      apply Polynomial.coeff_eq_zero_of_natDegree_lt
+      calc
+        (Polynomial.C θ * shiftedLegendreStarPoly (s - 1)).natDegree
+            ≤ (shiftedLegendreStarPoly (s - 1)).natDegree := Polynomial.natDegree_C_mul_le _ _
+        _ = s - 1 := shiftedLegendreStarPoly_natDegree (s - 1)
+        _ < s := by omega
+    simp [hzero]
+  have hboundary_lc_pos : 0 < (algStabilityBoundaryPoly s θ).leadingCoeff := by
+    rw [← Polynomial.coeff_natDegree (p := algStabilityBoundaryPoly s θ), hboundary_natDegree,
+      hboundary_topCoeff]
+    simpa [Polynomial.leadingCoeff, shiftedLegendreStarPoly_natDegree] using
+      shiftedLegendreStarPoly_leadingCoeff_pos s
+  let κ : ℝ := 1 / (algStabilityBoundaryPoly s θ).leadingCoeff
+  have hκ_pos : 0 < κ := by
+    dsimp [κ]
+    exact one_div_pos.mpr hboundary_lc_pos
+  have hscaled_lc : (Polynomial.C κ * algStabilityBoundaryPoly s θ).leadingCoeff = 1 := by
+    rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C]
+    dsimp [κ]
+    exact one_div_mul_cancel (ne_of_gt hboundary_lc_pos)
+  have hscaled_ne : Polynomial.C κ * algStabilityBoundaryPoly s θ ≠ 0 := by
+    exact mul_ne_zero (by simpa using ne_of_gt hκ_pos) (by
+      intro hzero
+      simpa [hzero] using hboundary_lc_pos)
+  have hscaled_deg :
+      (Polynomial.C κ * algStabilityBoundaryPoly s θ).degree = s := by
+    rw [Polynomial.degree_eq_natDegree hscaled_ne, Polynomial.natDegree_C_mul (ne_of_gt hκ_pos),
+      hboundary_natDegree]
+  have hinj : Set.InjOn t.c (Finset.univ : Finset (Fin s)) := by
+    intro i _ j _ hij
+    exact hcoll.2.2.2 hij
+  have h_eval :
+      ∀ i ∈ (Finset.univ : Finset (Fin s)),
+        (nodePoly t).eval (t.c i) = (Polynomial.C κ * algStabilityBoundaryPoly s θ).eval (t.c i) := by
+    intro i hi
+    rw [nodePoly_eval_node]
+    simp [Polynomial.eval_mul, Polynomial.eval_C, hθ_root i]
+  refine ⟨θ, κ, hθ_nonneg, hκ_pos, ?_⟩
+  apply Polynomial.eq_of_degree_le_of_eval_index_eq (s := (Finset.univ : Finset (Fin s)))
+    (v := t.c) hinj
+  · simpa [Finset.card_univ] using
+      (show (nodePoly t).degree ≤ (s : WithBot ℕ) by
+        rw [Polynomial.degree_eq_natDegree (nodePoly_monic t).ne_zero, nodePoly_natDegree t])
+  · simpa [Finset.card_univ] using
+      (show (nodePoly t).degree = (Polynomial.C κ * algStabilityBoundaryPoly s θ).degree by
+        rw [Polynomial.degree_eq_natDegree (nodePoly_monic t).ne_zero, nodePoly_natDegree t,
+          hscaled_deg])
+  · simpa [(nodePoly_monic t).leadingCoeff, hscaled_lc]
+  · exact h_eval
+
+/-- Under the boundary-node hypothesis, the node polynomial is orthogonal to all polynomials
+of degree `≤ s - 2`. -/
+lemma nodePoly_orthogonal_low_degree
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hroot : t.HasAlgStabilityBoundaryNodes)
+    (q : ℝ[X]) (hq : q.natDegree + 2 ≤ s) :
+    ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := by
+  obtain ⟨θ, κ, hθ_nonneg, hκ_pos, hnode⟩ := nodePoly_eq_const_mul_boundary t hcoll hroot
+  rw [hnode]
+  have hfun :
+      (fun x : ℝ => ((Polynomial.C κ * algStabilityBoundaryPoly s θ) * q).eval x) =
+        fun x : ℝ => κ * ((algStabilityBoundaryPoly s θ * q).eval x) := by
+    funext x
+    simp [Polynomial.eval_mul, Polynomial.eval_C]
+    ring
+  rw [hfun, intervalIntegral.integral_const_mul, boundary_poly_orthogonal θ q hq]
+  ring
+
+/-- Boundary nodes upgrade the quadrature rule to exactness on degree `≤ 2s - 2`
+polynomials. -/
+lemma quadrature_exact_of_boundary
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hroot : t.HasAlgStabilityBoundaryNodes) (r : ℝ[X])
+    (hr : r.natDegree ≤ 2 * s - 2) :
+    ∑ i : Fin s, t.b i * r.eval (t.c i) =
+      ∫ x in (0 : ℝ)..1, r.eval x := by
+  set np := nodePoly t with hnp_def
+  set q := r /ₘ np with hq_def
+  set rem := r %ₘ np with hrem_def
+  have hmonic : np.Monic := nodePoly_monic t
+  have hs_pos : 0 < s := hcoll.1
+  have hnp_ne_one : np ≠ 1 := by
+    intro h
+    have hdeg := congrArg Polynomial.natDegree h
+    rw [nodePoly_natDegree] at hdeg
+    simp at hdeg
+    omega
+  have hdiv : rem + np * q = r := Polynomial.modByMonic_add_div r hmonic
+  have hrem_deg : rem.natDegree < s := by
+    calc
+      rem.natDegree < np.natDegree := Polynomial.natDegree_modByMonic_lt r hmonic hnp_ne_one
+      _ = s := nodePoly_natDegree t
+  have heval : ∀ i : Fin s, r.eval (t.c i) = rem.eval (t.c i) := by
+    intro i
+    have h := congrArg (fun p => p.eval (t.c i)) hdiv
+    simp only [Polynomial.eval_add, Polynomial.eval_mul] at h
+    rw [hnp_def, nodePoly_eval_node] at h
+    linarith
+  have hsum :
+      ∑ i : Fin s, t.b i * r.eval (t.c i) = ∑ i : Fin s, t.b i * rem.eval (t.c i) := by
+    congr 1
+    ext i
+    rw [heval]
+  have hrem_exact :
+      ∑ i : Fin s, t.b i * rem.eval (t.c i) = ∫ x in (0 : ℝ)..1, rem.eval x :=
+    B_quadrature_exact t hcoll rem hrem_deg
+  have horth : ∫ x in (0 : ℝ)..1, (np * q).eval x = 0 := by
+    by_cases hq_zero : q = 0
+    · simp [hq_zero]
+    · have hq_deg : q.natDegree + 2 ≤ s := by
+        have hr_nonzero : r ≠ 0 := by
+          intro hr_zero
+          apply hq_zero
+          simp [hq_def, hr_zero]
+        have hr_ge_s : s ≤ r.natDegree := by
+          by_contra hlt
+          apply hq_zero
+          rw [hq_def, (Polynomial.divByMonic_eq_zero_iff hmonic).2]
+          simpa [hnp_def, nodePoly_natDegree t,
+            Polynomial.degree_eq_natDegree hr_nonzero,
+            Polynomial.degree_eq_natDegree hmonic.ne_zero] using Nat.not_le.mp hlt
+        rw [hq_def, Polynomial.natDegree_divByMonic r hmonic, nodePoly_natDegree]
+        omega
+      exact nodePoly_orthogonal_low_degree t hcoll hroot q hq_deg
+  have hint_split :
+      ∫ x in (0 : ℝ)..1, r.eval x =
+        (∫ x in (0 : ℝ)..1, rem.eval x) + ∫ x in (0 : ℝ)..1, (np * q).eval x := by
+    have hfun : (fun x : ℝ => r.eval x) = fun x => rem.eval x + (np * q).eval x := by
+      ext x
+      have h := congrArg (fun p => p.eval x) hdiv
+      simp only [Polynomial.eval_add] at h
+      linarith
+    rw [hfun, intervalIntegral.integral_add
+      (Continuous.intervalIntegrable (Polynomial.continuous rem) _ _)
+      (Continuous.intervalIntegrable (Polynomial.continuous (np * q)) _ _)]
+  rw [hsum, hrem_exact, hint_split, horth]
+  simp
+
+/-- The collocation weights are nonnegative under the boundary-node hypothesis. -/
+lemma weights_nonneg_of_boundary
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hroot : t.HasAlgStabilityBoundaryNodes) :
+    ∀ i : Fin s, 0 ≤ t.b i := by
+  intro i
+  have h_sum : ∑ j, t.b j * (lagrangeBasisPoly t i).eval (t.c j) ^ 2 = t.b i := by
+    unfold ButcherTableau.lagrangeBasisPoly
+    rw [Finset.sum_eq_single i] <;> simp +contextual [Lagrange.basis]
+    · simp +decide [Lagrange.basisDivisor, Polynomial.eval_prod]
+      rw [Finset.prod_congr rfl fun x hx => by
+        rw [inv_mul_cancel₀]
+        exact sub_ne_zero_of_ne <| by
+          intro h
+          have := hcoll.2.2.2 h
+          aesop]
+      norm_num
+    · exact fun j hj => Or.inr <| by
+        rw [Polynomial.eval_prod]
+        exact Finset.prod_eq_zero (Finset.mem_erase_of_ne_of_mem hj <| Finset.mem_univ _)
+          <| by simp +decide [Lagrange.basisDivisor]
+  have h_integral :
+      ∑ j, t.b j * (lagrangeBasisPoly t i).eval (t.c j) ^ 2 =
+        ∫ x in (0 : ℝ)..1, (lagrangeBasisPoly t i).eval x ^ 2 := by
+    convert quadrature_exact_of_boundary t hcoll hroot ((lagrangeBasisPoly t i) ^ 2) _ using 1
+    · norm_num [Polynomial.eval_pow]
+    · norm_num
+    · rw [Polynomial.natDegree_pow,
+        show t.lagrangeBasisPoly i = Lagrange.basis (Finset.univ : Finset (Fin s)) t.c i from rfl]
+      rw [Lagrange.natDegree_basis] <;> norm_num [hcoll.2.2.2]
+      omega
+  exact h_sum ▸ h_integral ▸
+    intervalIntegral.integral_nonneg (by norm_num) fun x hx => sq_nonneg _
+
+/-- The mixed moment `∫ P_{s-1}^*(x) x^(s-1) dx` is positive. -/
+lemma shiftedLegendre_mul_Xpow_integral_pos (n : ℕ) :
+    0 <
+      ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly n) * (Polynomial.X ^ n)).eval x := by
+  rcases n with _ | n
+  · simp [shiftedLegendreStarPoly, shiftedLegendrePoly, Polynomial.shiftedLegendre]
+  · let P : ℝ[X] := shiftedLegendreStarPoly (n + 1)
+    let a : ℝ := 1 / P.leadingCoeff
+    let r : ℝ[X] := (Polynomial.X : ℝ[X]) ^ (n + 1) - Polynomial.C a * P
+    have hP_lc_pos : 0 < P.leadingCoeff := by
+      dsimp [P]
+      exact shiftedLegendreStarPoly_leadingCoeff_pos (n + 1)
+    have ha_pos : 0 < a := by
+      dsimp [a]
+      exact one_div_pos.mpr hP_lc_pos
+    have hscaled_ne : Polynomial.C a * P ≠ 0 := by
+      apply mul_ne_zero (by simpa using ne_of_gt ha_pos)
+      intro hP_zero
+      simpa [P, hP_zero] using hP_lc_pos
+    have hscaled_natDegree : (Polynomial.C a * P).natDegree = n + 1 := by
+      rw [Polynomial.natDegree_C_mul (ne_of_gt ha_pos)]
+      dsimp [P]
+      exact shiftedLegendreStarPoly_natDegree (n + 1)
+    have hlc_eq :
+        (((Polynomial.X : ℝ[X]) ^ (n + 1)).leadingCoeff) = (Polynomial.C a * P).leadingCoeff := by
+      rw [Polynomial.leadingCoeff_X_pow, Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C]
+      dsimp [a]
+      field_simp [ne_of_gt hP_lc_pos]
+    have hr_deg : r.natDegree < n + 1 := by
+      have hdeg_eq : ((Polynomial.X : ℝ[X]) ^ (n + 1)).degree = (Polynomial.C a * P).degree := by
+        rw [Polynomial.degree_eq_natDegree (pow_ne_zero _ Polynomial.X_ne_zero),
+          Polynomial.natDegree_X_pow, Polynomial.degree_eq_natDegree hscaled_ne, hscaled_natDegree]
+      have hdeg_lt : r.degree < ((Polynomial.X : ℝ[X]) ^ (n + 1)).degree := by
+        dsimp [r]
+        exact Polynomial.degree_sub_lt hdeg_eq (pow_ne_zero _ Polynomial.X_ne_zero) hlc_eq
+      by_cases hr_zero : r = 0
+      · rw [hr_zero]
+        simpa using Nat.succ_pos n
+      · dsimp [r] at hr_zero
+        rwa [Polynomial.degree_eq_natDegree hr_zero,
+          Polynomial.degree_eq_natDegree (pow_ne_zero _ Polynomial.X_ne_zero),
+          Polynomial.natDegree_X_pow, Nat.cast_lt] at hdeg_lt
+    have horth : ∫ x in (0 : ℝ)..1, (P * r).eval x = 0 := by
+      dsimp [P]
+      exact shiftedLegendreStarPoly_interval_orthogonal (n + 1) r hr_deg
+    have hsq_pos : 0 < ∫ x in (0 : ℝ)..1, (P * P).eval x := by
+      dsimp [P]
+      exact shiftedLegendreStarPoly_sq_intervalIntegral_pos (n + 1)
+    have hfun :
+        (fun x : ℝ => (P * ((Polynomial.X : ℝ[X]) ^ (n + 1))).eval x) =
+          fun x : ℝ => a * ((P * P).eval x) + (P * r).eval x := by
+      funext x
+      dsimp [r]
+      simp [Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_C]
+      ring
+    rw [hfun, intervalIntegral.integral_add, intervalIntegral.integral_const_mul, horth]
+    · have hpos : 0 < a * ∫ x in (0 : ℝ)..1, (P * P).eval x := mul_pos ha_pos hsq_pos
+      linarith
+    · exact Continuous.intervalIntegrable
+        (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+    · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+
+/-- For boundary nodes, the degree-`2s-1` quadrature error is nonnegative whenever the
+leading coefficient is nonnegative. This is the reverse-direction substitute for the
+overgeneralized artifact lemma. -/
+lemma quadrature_error_pQ_nonneg_of_boundary
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hroot : t.HasAlgStabilityBoundaryNodes) (r : ℝ[X])
+    (hr : r.natDegree ≤ 2 * s - 1) (hlc : 0 ≤ r.leadingCoeff) :
+    0 ≤ ∑ i : Fin s, t.b i * r.eval (t.c i) -
+      ∫ x in (0 : ℝ)..1, r.eval x := by
+  obtain ⟨θ, κ, hθ_nonneg, hκ_pos, hnode⟩ := nodePoly_eq_const_mul_boundary t hcoll hroot
+  have hs_pos : 0 < s := hcoll.1
+  set np := nodePoly t with hnp_def
+  set q := r /ₘ np with hq_def
+  set rem := r %ₘ np with hrem_def
+  have hmonic : np.Monic := by
+    simpa [hnp_def] using nodePoly_monic t
+  have hnp_ne_one : np ≠ 1 := by
+    intro h
+    have hdeg := congrArg Polynomial.natDegree h
+    rw [hnp_def, nodePoly_natDegree] at hdeg
+    simp at hdeg
+    omega
+  have hdiv : rem + np * q = r := Polynomial.modByMonic_add_div r hmonic
+  have hrem_deg : rem.natDegree < s := by
+    calc
+      rem.natDegree < np.natDegree := Polynomial.natDegree_modByMonic_lt r hmonic hnp_ne_one
+      _ = s := by simpa [hnp_def] using nodePoly_natDegree t
+  have heval : ∀ i : Fin s, r.eval (t.c i) = rem.eval (t.c i) := by
+    intro i
+    have h := congrArg (fun p => p.eval (t.c i)) hdiv
+    simp only [Polynomial.eval_add, Polynomial.eval_mul] at h
+    rw [hnp_def, nodePoly_eval_node] at h
+    linarith
+  have hsum :
+      ∑ i : Fin s, t.b i * r.eval (t.c i) = ∑ i : Fin s, t.b i * rem.eval (t.c i) := by
+    congr 1
+    ext i
+    rw [heval]
+  have hrem_exact :
+      ∑ i : Fin s, t.b i * rem.eval (t.c i) = ∫ x in (0 : ℝ)..1, rem.eval x :=
+    B_quadrature_exact t hcoll rem hrem_deg
+  have hint_split :
+      ∫ x in (0 : ℝ)..1, r.eval x =
+        (∫ x in (0 : ℝ)..1, rem.eval x) + ∫ x in (0 : ℝ)..1, (np * q).eval x := by
+    have hfun : (fun x : ℝ => r.eval x) = fun x => rem.eval x + (np * q).eval x := by
+      ext x
+      have h := congrArg (fun p => p.eval x) hdiv
+      simp only [Polynomial.eval_add] at h
+      linarith
+    rw [hfun, intervalIntegral.integral_add
+      (Continuous.intervalIntegrable (Polynomial.continuous rem) _ _)
+      (Continuous.intervalIntegrable (Polynomial.continuous (np * q)) _ _)]
+  have herr :
+      ∑ i : Fin s, t.b i * r.eval (t.c i) - ∫ x in (0 : ℝ)..1, r.eval x =
+        - ∫ x in (0 : ℝ)..1, (np * q).eval x := by
+    rw [hsum, hrem_exact, hint_split]
+    ring
+  have hq_deg_le : q.natDegree ≤ s - 1 := by
+    rw [hq_def, Polynomial.natDegree_divByMonic r hmonic]
+    rw [show np.natDegree = s by simpa [hnp_def] using nodePoly_natDegree t]
+    omega
+  by_cases hq_lt : q.natDegree < s - 1
+  · have horth : ∫ x in (0 : ℝ)..1, (np * q).eval x = 0 := by
+      exact nodePoly_orthogonal_low_degree t hcoll hroot q (by omega)
+    rw [herr, horth]
+    simp
+  · have hq_deg_eq : q.natDegree = s - 1 := by omega
+    by_cases hq_zero : q = 0
+    · rw [herr, hq_zero]
+      simp
+    have hq_ne : q ≠ 0 := hq_zero
+    have hnpq_ne : np * q ≠ 0 := mul_ne_zero hmonic.ne_zero hq_ne
+    have hnpq_natDegree : (np * q).natDegree = 2 * s - 1 := by
+      rw [hmonic.natDegree_mul' hq_ne, hq_deg_eq]
+      rw [show np.natDegree = s by simpa [hnp_def] using nodePoly_natDegree t]
+      omega
+    have hrem_lt_mul : rem.degree < (np * q).degree := by
+      by_cases hrem_zero : rem = 0
+      · rw [hrem_zero, Polynomial.degree_eq_natDegree hnpq_ne, hnpq_natDegree]
+        have hpos : 0 < 2 * s - 1 := by omega
+        simpa using hpos
+      · rw [Polynomial.degree_eq_natDegree hrem_zero, Polynomial.degree_eq_natDegree hnpq_ne,
+          hnpq_natDegree]
+        exact Nat.cast_lt.2 (by omega)
+    have hr_lc_eq : r.leadingCoeff = q.leadingCoeff := by
+      rw [hdiv.symm, Polynomial.leadingCoeff_add_of_degree_lt hrem_lt_mul,
+        Polynomial.leadingCoeff_mul]
+      simpa [hmonic.leadingCoeff]
+    have hqlc_nonneg : 0 ≤ q.leadingCoeff := by
+      simpa [hr_lc_eq] using hlc
+    let P : ℝ[X] := shiftedLegendreStarPoly (s - 1)
+    have hP_lc_pos : 0 < P.leadingCoeff := by
+      dsimp [P]
+      exact shiftedLegendreStarPoly_leadingCoeff_pos (s - 1)
+    let a : ℝ := q.leadingCoeff / P.leadingCoeff
+    let u : ℝ[X] := q - Polynomial.C a * P
+    have ha_nonneg : 0 ≤ a := by
+      dsimp [a]
+      exact div_nonneg hqlc_nonneg (le_of_lt hP_lc_pos)
+    have ha_ne : a ≠ 0 := by
+      dsimp [a]
+      exact div_ne_zero (Polynomial.leadingCoeff_ne_zero.2 hq_ne) (ne_of_gt hP_lc_pos)
+    have hscaled_ne : Polynomial.C a * P ≠ 0 := by
+      apply mul_ne_zero (by simpa using ha_ne)
+      intro hP_zero
+      simpa [P, hP_zero] using hP_lc_pos
+    have hscaled_natDegree : (Polynomial.C a * P).natDegree = s - 1 := by
+      rw [Polynomial.natDegree_C_mul ha_ne]
+      dsimp [P]
+      exact shiftedLegendreStarPoly_natDegree (s - 1)
+    have hscaled_lc :
+        q.leadingCoeff = (Polynomial.C a * P).leadingCoeff := by
+      rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C]
+      dsimp [a]
+      field_simp [ne_of_gt hP_lc_pos]
+    have hu_orth : ∫ x in (0 : ℝ)..1, (P * u).eval x = 0 := by
+      by_cases hu_zero : u = 0
+      · simp [hu_zero]
+      · have hu_deg : u.natDegree < s - 1 := by
+          have hdeg_eq : q.degree = (Polynomial.C a * P).degree := by
+            rw [Polynomial.degree_eq_natDegree hq_ne, hq_deg_eq,
+              Polynomial.degree_eq_natDegree hscaled_ne, hscaled_natDegree]
+          have hdeg_lt : u.degree < q.degree := by
+            dsimp [u]
+            exact Polynomial.degree_sub_lt hdeg_eq hq_ne hscaled_lc
+          dsimp [u] at hu_zero
+          rwa [Polynomial.degree_eq_natDegree hu_zero,
+            Polynomial.degree_eq_natDegree hq_ne, hq_deg_eq, Nat.cast_lt] at hdeg_lt
+        dsimp [P]
+        exact shiftedLegendreStarPoly_interval_orthogonal (s - 1) u hu_deg
+    have hPq :
+        ∫ x in (0 : ℝ)..1, (P * q).eval x =
+          a * ∫ x in (0 : ℝ)..1, (P * P).eval x := by
+      have hfun :
+          (fun x : ℝ => (P * q).eval x) =
+            fun x : ℝ => a * ((P * P).eval x) + (P * u).eval x := by
+        funext x
+        dsimp [u]
+        simp [Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_C]
+        ring
+      rw [hfun, intervalIntegral.integral_add, intervalIntegral.integral_const_mul, hu_orth]
+      · ring
+      · exact Continuous.intervalIntegrable
+          (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+      · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+    have hs_orth :
+        ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly s) * q).eval x = 0 := by
+      exact shiftedLegendreStarPoly_interval_orthogonal s q (by omega)
+    have hboundary_int :
+        ∫ x in (0 : ℝ)..1, (algStabilityBoundaryPoly s θ * q).eval x =
+          -θ * (a * ∫ x in (0 : ℝ)..1, (P * P).eval x) := by
+      have hfun :
+          (fun x : ℝ => (algStabilityBoundaryPoly s θ * q).eval x) =
+            fun x : ℝ =>
+              ((shiftedLegendreStarPoly s) * q).eval x -
+                θ * ((P * q).eval x) := by
+        funext x
+        dsimp [P]
+        simp [algStabilityBoundaryPoly, Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_C]
+        ring
+      rw [hfun, intervalIntegral.integral_sub, intervalIntegral.integral_const_mul, hs_orth, hPq]
+      · ring
+      · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+      · exact Continuous.intervalIntegrable
+          (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+    have hnode_int :
+        ∫ x in (0 : ℝ)..1, (np * q).eval x =
+          κ * (-θ * (a * ∫ x in (0 : ℝ)..1, (P * P).eval x)) := by
+      have hfun :
+          (fun x : ℝ => (np * q).eval x) =
+            fun x : ℝ => κ * ((algStabilityBoundaryPoly s θ * q).eval x) := by
+        funext x
+        rw [hnode]
+        simp [Polynomial.eval_mul, Polynomial.eval_C]
+        ring
+      rw [hfun, intervalIntegral.integral_const_mul, hboundary_int]
+    have hsq_pos : 0 < ∫ x in (0 : ℝ)..1, (P * P).eval x := by
+      dsimp [P]
+      exact shiftedLegendreStarPoly_sq_intervalIntegral_pos (s - 1)
+    have hfinal :
+        ∑ i : Fin s, t.b i * r.eval (t.c i) - ∫ x in (0 : ℝ)..1, r.eval x =
+          κ * (θ * (a * ∫ x in (0 : ℝ)..1, (P * P).eval x)) := by
+      rw [herr, hnode_int]
+      ring
+    rw [hfinal]
+    exact mul_nonneg (le_of_lt hκ_pos) <|
+      mul_nonneg hθ_nonneg <|
+        mul_nonneg ha_nonneg (le_of_lt hsq_pos)
+
+/-- Positive-semidefiniteness of the algebraic stability matrix under the boundary-node
+hypothesis. -/
+noncomputable def antiderivPoly (p : ℝ[X]) : ℝ[X] :=
+  Finset.sum (Finset.range (p.natDegree + 1)) fun k =>
+    Polynomial.monomial (k + 1) (p.coeff k / (k + 1))
+
+lemma antiderivPoly_eval
+    (p : ℝ[X]) (z : ℝ) :
+    (antiderivPoly p).eval z = ∫ x in (0 : ℝ)..z, p.eval x := by
+  rw [antiderivPoly]
+  rw [Polynomial.eval_finset_sum]
+  have hpeval : (fun x : ℝ => p.eval x) =
+      fun x => Finset.sum (Finset.range (p.natDegree + 1)) fun k => p.coeff k * x ^ k := by
+    funext x
+    simp [Polynomial.eval_eq_sum_range]
+  rw [hpeval, intervalIntegral.integral_finset_sum]
+  · refine Finset.sum_congr rfl ?_
+    intro k hk
+    rw [Polynomial.eval_monomial, intervalIntegral.integral_const_mul, integral_pow]
+    field_simp
+    ring
+  · intro i hi
+    exact Continuous.intervalIntegrable (Continuous.mul continuous_const (continuous_id.pow _)) _ _
+
+lemma antiderivPoly_derivative
+    (p : ℝ[X]) :
+    (antiderivPoly p).derivative = p := by
+  ext n
+  rw [antiderivPoly, Polynomial.derivative_sum]
+  simp [Polynomial.coeff_monomial]
+  by_cases h : n ≤ p.natDegree
+  · rw [if_pos h]
+    field_simp
+  · rw [if_neg h]
+    symm
+    exact Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_not_ge h)
+
+lemma antiderivPoly_natDegree_le
+    (p : ℝ[X]) :
+    (antiderivPoly p).natDegree ≤ p.natDegree + 1 := by
+  rw [Polynomial.natDegree_le_iff_degree_le]
+  have hsum := Polynomial.degree_sum_le (s := Finset.range (p.natDegree + 1))
+    (f := fun k => Polynomial.monomial (k + 1) (p.coeff k / (k + 1)))
+  rw [show antiderivPoly p = Finset.sum (Finset.range (p.natDegree + 1))
+      (fun k => Polynomial.monomial (k + 1) (p.coeff k / (k + 1))) by rfl]
+  refine le_trans hsum ?_
+  refine Finset.sup_le ?_
+  intro k hk
+  refine le_trans (Polynomial.degree_monomial_le _ _) ?_
+  show ((k + 1 : ℕ) : WithBot ℕ) ≤ ↑(p.natDegree + 1)
+  exact_mod_cast Nat.succ_le_of_lt (Finset.mem_range.mp hk)
+
+lemma antiderivPoly_leadingCoeff_of_natDegree_eq
+    (p : ℝ[X]) {n : ℕ} (hp : p.natDegree = n) :
+    (antiderivPoly p).leadingCoeff = p.leadingCoeff / (n + 1) := by
+  by_cases hp0 : p = 0
+  · simp [hp0, antiderivPoly]
+  have hcoeff_top : (antiderivPoly p).coeff (n + 1) = p.leadingCoeff / (n + 1) := by
+    rw [show antiderivPoly p = Finset.sum (Finset.range (p.natDegree + 1))
+        (fun k => Polynomial.monomial (k + 1) (p.coeff k / (k + 1))) by rfl]
+    simp
+    rw [Finset.sum_eq_single n]
+    · simpa [Polynomial.leadingCoeff, hp]
+    · intro k hk hkn
+      rw [Polynomial.coeff_monomial]
+      by_cases hks : k + 1 = n + 1
+      · omega
+      · rw [if_neg hks]
+    · have hn_mem : n ∈ Finset.range (p.natDegree + 1) := by
+        rw [hp]
+        exact Finset.mem_range.mpr (Nat.lt_succ_self n)
+      intro hn_not
+      exact (hn_not hn_mem).elim
+  have htop_ne : (antiderivPoly p).coeff (n + 1) ≠ 0 := by
+    rw [hcoeff_top]
+    have hlc_ne : p.leadingCoeff ≠ 0 := Polynomial.leadingCoeff_ne_zero.2 hp0
+    exact div_ne_zero hlc_ne (by positivity)
+  have hdeg_le : (antiderivPoly p).natDegree ≤ n + 1 := by
+    simpa [hp] using antiderivPoly_natDegree_le p
+  have hdeg_ge : n + 1 ≤ (antiderivPoly p).natDegree := by
+    by_contra hlt
+    have hzero := Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_not_ge hlt)
+    exact htop_ne hzero
+  have hdeg : (antiderivPoly p).natDegree = n + 1 := le_antisymm hdeg_le hdeg_ge
+  rw [Polynomial.leadingCoeff, hdeg, hcoeff_top]
+
+lemma algStabMatrix_quadForm_nonneg_of_boundary
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hroot : t.HasAlgStabilityBoundaryNodes) :
+    ∀ d : Fin s → ℝ,
+      0 ≤ ∑ i : Fin s, ∑ j : Fin s, d i * t.algStabMatrix i j * d j := by
+  intro d
+  let p : ℝ[X] := ∑ j : Fin s, Polynomial.C (d j) * lagrangeBasisPoly t j
+  have h_inj : Set.InjOn t.c (Finset.univ : Finset (Fin s)) := by
+    intro i hi j hj hij
+    exact hcoll.2.2.2 hij
+  have hp_eval : ∀ i : Fin s, p.eval (t.c i) = d i := by
+    intro i
+    dsimp [p]
+    rw [Polynomial.eval_finset_sum, Finset.sum_eq_single i]
+    · rw [Polynomial.eval_mul]
+      unfold ButcherTableau.lagrangeBasisPoly
+      rw [Lagrange.eval_basis_self h_inj (Finset.mem_univ i)]
+      simp
+    · intro j hj
+      intro hji
+      rw [Polynomial.eval_mul]
+      unfold ButcherTableau.lagrangeBasisPoly
+      rw [Lagrange.eval_basis_of_ne hji]
+      · ring
+      · exact Finset.mem_univ i
+    · aesop
+  have hp_deg : p.natDegree < s := by
+    have hs : 0 < s := hcoll.1
+    by_cases hp0 : p = 0
+    · rw [hp0]
+      simpa using hs
+    · rw [Polynomial.natDegree_lt_iff_degree_lt hp0]
+      have hdeg_le :
+          p.degree ≤
+            (Finset.univ : Finset (Fin s)).sup fun j =>
+              (Polynomial.C (d j) * lagrangeBasisPoly t j).degree := by
+        simpa [p] using
+          (Polynomial.degree_sum_le (s := (Finset.univ : Finset (Fin s)))
+            (f := fun j => Polynomial.C (d j) * lagrangeBasisPoly t j))
+      have hbot : (⊥ : WithBot ℕ) < (s : WithBot ℕ) := by
+        simpa using hs
+      have hsup_lt :
+          ((Finset.univ : Finset (Fin s)).sup fun j =>
+            (Polynomial.C (d j) * lagrangeBasisPoly t j).degree) < (s : WithBot ℕ) := by
+        refine (Finset.sup_lt_iff hbot).2 ?_
+        intro i hi
+        by_cases hdi : d i = 0
+        · simp [hdi, lagrangeBasisPoly]
+        · rw [Polynomial.degree_C_mul, lagrangeBasisPoly]
+          · rw [Lagrange.degree_basis (s := (Finset.univ : Finset (Fin s))) (v := t.c)
+              h_inj (Finset.mem_univ i)]
+            have hs_sub : s - 1 < s := by omega
+            simpa using (show ((s - 1 : ℕ) : WithBot ℕ) < (s : WithBot ℕ) by
+              exact_mod_cast hs_sub)
+          · simpa using hdi
+      exact lt_of_le_of_lt hdeg_le hsup_lt
+  have hp_expand_eval : ∀ x : ℝ,
+      p.eval x = ∑ j : Fin s, d j * (lagrangeBasisPoly t j).eval x := by
+    intro x
+    dsimp [p]
+    rw [Polynomial.eval_finset_sum]
+    refine Finset.sum_congr rfl ?_
+    intro j hj
+    rw [Polynomial.eval_mul, Polynomial.eval_C]
+  have hA_eval :
+      ∀ i : Fin s, ∑ j : Fin s, t.A i j * d j = ∫ x in (0 : ℝ)..t.c i, p.eval x := by
+    intro i
+    calc
+      ∑ j : Fin s, t.A i j * d j
+          = ∑ j : Fin s, d j * ∫ x in (0 : ℝ)..t.c i, (lagrangeBasisPoly t j).eval x := by
+              refine Finset.sum_congr rfl ?_
+              intro j hj
+              rw [A_eq_integral_lagrange t hcoll i j]
+              ring
+      _ = ∫ x in (0 : ℝ)..t.c i, ∑ j : Fin s, d j * (lagrangeBasisPoly t j).eval x := by
+            rw [intervalIntegral.integral_finset_sum]
+            · refine Finset.sum_congr rfl ?_
+              intro j hj
+              rw [intervalIntegral.integral_const_mul]
+            · intro j hj
+              exact Continuous.intervalIntegrable
+                (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+      _ = ∫ x in (0 : ℝ)..t.c i, p.eval x := by
+            congr with x
+            rw [hp_expand_eval]
+  let Q : ℝ[X] := antiderivPoly p
+  have hQ_eval : ∀ z : ℝ, Q.eval z = ∫ x in (0 : ℝ)..z, p.eval x := by
+    intro z
+    simpa [Q] using antiderivPoly_eval p z
+  have hsumA :
+      ∑ i : Fin s, ∑ j : Fin s, t.b i * d i * t.A i j * d j =
+        ∑ i : Fin s, t.b i * d i * Q.eval (t.c i) := by
+    refine Finset.sum_congr rfl ?_
+    intro i hi
+    calc
+      ∑ j : Fin s, t.b i * d i * t.A i j * d j
+          = t.b i * d i * (∑ j : Fin s, t.A i j * d j) := by
+              rw [Finset.mul_sum]
+              refine Finset.sum_congr rfl ?_
+              intro j hj
+              ring
+      _ = t.b i * d i * ∫ x in (0 : ℝ)..t.c i, p.eval x := by rw [hA_eval i]
+      _ = t.b i * d i * Q.eval (t.c i) := by rw [hQ_eval]
+  have hb_eval : ∑ i : Fin s, t.b i * d i = ∫ x in (0 : ℝ)..1, p.eval x := by
+    calc
+      ∑ i : Fin s, t.b i * d i = ∑ i : Fin s, t.b i * p.eval (t.c i) := by
+        refine Finset.sum_congr rfl ?_
+        intro i hi
+        rw [hp_eval]
+      _ = ∫ x in (0 : ℝ)..1, p.eval x := by
+        exact B_quadrature_exact t hcoll p hp_deg
+  have hprod_eval :
+      ∑ i : Fin s, t.b i * d i * Q.eval (t.c i) =
+        ∑ i : Fin s, t.b i * (p * Q).eval (t.c i) := by
+    refine Finset.sum_congr rfl ?_
+    intro i hi
+    calc
+      t.b i * d i * Q.eval (t.c i) = t.b i * p.eval (t.c i) * Q.eval (t.c i) := by
+            rw [hp_eval]
+      _ = t.b i * (p * Q).eval (t.c i) := by
+            simp [Polynomial.eval_mul]
+            ring
+  have hint_Q :
+      ∫ x in (0 : ℝ)..1, p.eval x * Q.eval x =
+        ∫ x in (0 : ℝ)..1, (p * Q).eval x := by
+    congr with x
+    simp [Polynomial.eval_mul]
+  have hQ_one : Q.eval 1 = ∫ x in (0 : ℝ)..1, p.eval x := by
+    rw [hQ_eval]
+  have hQ_zero : Q.eval 0 = 0 := by
+    simpa [Q] using hQ_eval 0
+  have hint_pQ :
+      ∫ x in (0 : ℝ)..1, p.eval x * Q.eval x =
+        (∫ x in (0 : ℝ)..1, p.eval x) ^ 2 / 2 := by
+    have hQcont : ContinuousOn (fun y : ℝ => (Q.eval y) ^ 2 / 2) (Set.uIcc (0 : ℝ) 1) := by
+      exact (Continuous.div_const ((Polynomial.continuous Q).pow 2) 2).continuousOn
+    have hderiv :
+        ∀ x ∈ Set.Ioo (min (0 : ℝ) 1) (max (0 : ℝ) 1),
+          HasDerivWithinAt (fun y : ℝ => (Q.eval y) ^ 2 / 2) (Q.eval x * p.eval x) (Set.Ioi x) x := by
+      intro x hx
+      have hQd : HasDerivAt (fun y : ℝ => Q.eval y) (p.eval x) x := by
+        simpa [Q, antiderivPoly_derivative] using (Q.hasDerivAt x)
+      have hsquare : HasDerivAt (fun y : ℝ => (Q.eval y) ^ 2) (2 * Q.eval x * p.eval x) x := by
+        simpa [pow_two, two_mul, mul_add, add_mul, mul_comm, mul_left_comm, mul_assoc] using
+          hQd.mul hQd
+      have hconst :
+          HasDerivAt (fun y : ℝ => ((Q.eval y) ^ 2) / 2) ((2 * Q.eval x * p.eval x) / 2) x :=
+        hsquare.div_const 2
+      simpa [mul_comm, mul_left_comm, mul_assoc] using hconst.hasDerivWithinAt
+    have hint_int :
+        IntervalIntegrable (fun x : ℝ => Q.eval x * p.eval x) MeasureTheory.volume 0 1 := by
+      exact Continuous.intervalIntegrable
+        (Continuous.mul (Polynomial.continuous Q) (Polynomial.continuous p)) _ _
+    have hmain :=
+      intervalIntegral.integral_eq_sub_of_hasDeriv_right hQcont hderiv hint_int
+    calc
+      ∫ x in (0 : ℝ)..1, p.eval x * Q.eval x
+          = ∫ x in (0 : ℝ)..1, Q.eval x * p.eval x := by
+              congr with x
+              ring
+      _ = (Q.eval 1) ^ 2 / 2 - (Q.eval 0) ^ 2 / 2 := hmain
+      _ = (Q.eval 1) ^ 2 / 2 := by rw [hQ_zero]; ring
+      _ = (∫ x in (0 : ℝ)..1, p.eval x) ^ 2 / 2 := by rw [hQ_one]
+  have hdeg_pQ : (p * Q).natDegree ≤ 2 * s - 1 := by
+    calc
+      (p * Q).natDegree ≤ p.natDegree + Q.natDegree := Polynomial.natDegree_mul_le
+      _ ≤ p.natDegree + (p.natDegree + 1) := by
+        gcongr
+        simpa [Q] using antiderivPoly_natDegree_le p
+      _ ≤ 2 * s - 1 := by
+        omega
+  have hlc_pQ : 0 ≤ (p * Q).leadingCoeff := by
+    by_cases hp0 : p = 0
+    · simp [hp0, Q]
+    · dsimp [Q]
+      rw [Polynomial.leadingCoeff_mul, antiderivPoly_leadingCoeff_of_natDegree_eq p rfl]
+      have hden : 0 < ((p.natDegree : ℝ) + 1) := by
+        positivity
+      have hrewrite :
+          p.leadingCoeff * (p.leadingCoeff / ((p.natDegree : ℝ) + 1)) =
+            p.leadingCoeff ^ 2 / ((p.natDegree : ℝ) + 1) := by
+        field_simp
+      have : 0 ≤ p.leadingCoeff ^ 2 / ((p.natDegree : ℝ) + 1) :=
+        div_nonneg (sq_nonneg _) (le_of_lt hden)
+      simpa [hrewrite] using this
+  have hquad_nonneg :
+      0 ≤ ∑ i : Fin s, t.b i * (p * Q).eval (t.c i) -
+        ∫ x in (0 : ℝ)..1, (p * Q).eval x := by
+    exact quadrature_error_pQ_nonneg_of_boundary t hcoll hroot (p * Q) hdeg_pQ hlc_pQ
+  have hident₁ :
+      ∑ i : Fin s, ∑ j : Fin s, d i * t.algStabMatrix i j * d j =
+        2 * (∑ i : Fin s, t.b i * (p * Q).eval (t.c i)) -
+          (∫ x in (0 : ℝ)..1, p.eval x) ^ 2 := by
+    rw [algStabMatrix_quadForm_expand (t := t) (v := d), hsumA, hprod_eval, hb_eval]
+  have hident₂ :
+      2 * (∑ i : Fin s, t.b i * (p * Q).eval (t.c i)) -
+        (∫ x in (0 : ℝ)..1, p.eval x) ^ 2 =
+          2 * (∑ i : Fin s, t.b i * (p * Q).eval (t.c i) -
+            ∫ x in (0 : ℝ)..1, (p * Q).eval x) := by
+    have hsq :
+        (∫ x in (0 : ℝ)..1, p.eval x) ^ 2 =
+          2 * ∫ x in (0 : ℝ)..1, p.eval x * Q.eval x := by
+      rw [hint_pQ]
+      ring
+    rw [hsq, hint_Q]
+    ring
+  rw [hident₁, hident₂]
+  exact mul_nonneg (by norm_num) hquad_nonneg
+
 /-- Theorem 358A, `if` direction. -/
 theorem thm_358A_if
     (t : ButcherTableau s) (hcoll : t.IsCollocation)
     (hroot : t.HasAlgStabilityBoundaryNodes) :
     t.IsAlgStable := by
-  sorry
+  exact ⟨weights_nonneg_of_boundary t hcoll hroot,
+    algStabMatrix_quadForm_nonneg_of_boundary t hcoll hroot⟩
 
 /-- **Theorem 358A**: a collocation Runge–Kutta method is algebraically stable
 iff its nodes are zeros of `P_s^* - θ P_{s-1}^*` for some `θ ≥ 0`. -/
