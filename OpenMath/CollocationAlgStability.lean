@@ -59,6 +59,24 @@ lemma nodePoly_interval_zero_aux_of_algStable
       ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := by
   sorry
 
+/-- Second-stage sign helper for the transformed `(358c)` bridge.
+
+This packages the quadratic form from `hAlg.posdef_M` as the signed integral
+needed for the degree-`s - 1` case, assuming the lower-degree zero statement is
+already available. The fundamental blocker remains
+`nodePoly_interval_zero_aux_of_algStable`; this helper is only the one-sided
+companion used after that zero theorem. -/
+lemma stabilityMatrix_quadForm_eq_neg_integral
+    (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable)
+    (q : ℝ[X]) (hq : q.natDegree ≤ s - 1)
+    (hzero : ∀ r : ℝ[X], r.natDegree < s - 1 →
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * r).eval x = 0) :
+    let v : Fin s → ℝ := fun i => q.eval (t.c i)
+    ∑ i : Fin s, ∑ j : Fin s, v i * t.algStabMatrix i j * v j =
+      -2 * (q.leadingCoeff / (s : ℝ)) *
+        ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x := by
+  sorry
+
 /-- The live `(358c)` sign statement for degree-`s - 1` test polynomials with
 positive leading coefficient.
 
@@ -69,7 +87,25 @@ lemma nodePoly_interval_nonpos_aux_of_algStable
     (t : ButcherTableau s) (hcoll : t.IsCollocation) (hAlg : t.IsAlgStable) :
     ∀ q : ℝ[X], q.natDegree = s - 1 → 0 < q.leadingCoeff →
       ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x ≤ 0 := by
-  sorry
+  intro q hq hlc
+  have hzero := nodePoly_interval_zero_aux_of_algStable t hcoll hAlg
+  have hident := stabilityMatrix_quadForm_eq_neg_integral t hcoll hAlg q
+    (by simpa [hq]) hzero
+  have hpsd := hAlg.posdef_M (fun i => q.eval (t.c i))
+  dsimp only at hident
+  rw [hident] at hpsd
+  have hs_pos : 0 < (s : ℝ) := Nat.cast_pos.mpr hcoll.1
+  have hscale_pos : 0 < 2 * (q.leadingCoeff / (s : ℝ)) := by
+    positivity
+  by_contra hint
+  push_neg at hint
+  have hneg : -2 * (q.leadingCoeff / (s : ℝ)) *
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x < 0 := by
+    have hprod : 0 < 2 * (q.leadingCoeff / (s : ℝ)) *
+        ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x := by
+      exact mul_pos hscale_pos hint
+    linarith
+  linarith
 
 /-- Matrix-to-polynomial bridge for Theorem 358A.
 
