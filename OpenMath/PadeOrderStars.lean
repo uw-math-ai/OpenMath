@@ -2348,6 +2348,165 @@ private noncomputable def padeRExpNegSecondCoeff (n d : ℕ) : ℝ :=
     (((n : ℝ) - d) * (((n + d : ℕ) : ℝ) + 1)) /
       ((((n + d : ℕ) : ℝ)) * (((n + d : ℕ) : ℝ) + 2))
 
+/-- The exact degree-`n + d + 2` coefficient of the Padé defect after the
+leading degree-`n + d + 1` term is removed. -/
+private noncomputable def padeDefectSecondCoeff (n d : ℕ) : ℂ :=
+  (1 / (((n + d + 2).factorial : ℂ))) -
+    ((d : ℂ) / (n + d : ℂ)) / (((n + d + 1).factorial : ℂ)) -
+    (padePhiErrorConst n d : ℂ) * ((d + 1 : ℂ) / (n + d + 2 : ℂ))
+
+/-- The exact degree-`m + 2` coefficient in
+`expTaylor m z * exp (-z)`. -/
+private noncomputable def expTaylorExpNegSecondCoeff (m : ℕ) : ℂ :=
+  ((m + 1 : ℂ) / (((m + 2).factorial : ℂ)))
+
+/-- Second-order Padé-defect factorization local to the odd down-arrow seam. -/
+private theorem padeDefect_sub_second_factorization
+    (n d : ℕ) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ,
+      padeP n d z - padeQ n d z * expTaylor (n + d) z -
+          ((1 / (((n + d + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+            z ^ (n + d + 1) -
+          padeDefectSecondCoeff n d * z ^ (n + d + 2) =
+        z ^ (n + d + 3) * h z := by
+  let r : Polynomial ℂ :=
+    PadeAsymptotics.padeDefect_poly n d -
+      Polynomial.C ((1 / (((n + d + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+        Polynomial.X ^ (n + d + 1) -
+      Polynomial.C (padeDefectSecondCoeff n d) * Polynomial.X ^ (n + d + 2)
+  have hX : Polynomial.X ^ (n + d + 3) ∣ r := by
+    rw [Polynomial.X_pow_dvd_iff]
+    intro k hk
+    by_cases hlt : k < n + d + 1
+    · rw [show r.coeff k =
+          (PadeAsymptotics.padeDefect_poly n d).coeff k -
+            (Polynomial.C ((1 / (((n + d + 1).factorial : ℂ))) -
+                (padePhiErrorConst n d : ℂ)) *
+              Polynomial.X ^ (n + d + 1)).coeff k -
+            (Polynomial.C (padeDefectSecondCoeff n d) *
+              Polynomial.X ^ (n + d + 2)).coeff k by
+            simp [r, Polynomial.coeff_sub]]
+      rw [PadeAsymptotics.padeDefect_poly_coeff_lt _ _ _ hlt,
+        Polynomial.coeff_C_mul_X_pow, Polynomial.coeff_C_mul_X_pow]
+      have hk1 : k ≠ n + d + 1 := Nat.ne_of_lt hlt
+      have hk2 : k ≠ n + d + 2 := by omega
+      simp [hk1, hk2]
+    · have hk_cases : k = n + d + 1 ∨ k = n + d + 2 := by omega
+      rcases hk_cases with rfl | rfl
+      · rw [show r.coeff (n + d + 1) =
+            (PadeAsymptotics.padeDefect_poly n d).coeff (n + d + 1) -
+              (Polynomial.C ((1 / (((n + d + 1).factorial : ℂ))) -
+                  (padePhiErrorConst n d : ℂ)) *
+                Polynomial.X ^ (n + d + 1)).coeff (n + d + 1) -
+              (Polynomial.C (padeDefectSecondCoeff n d) *
+                Polynomial.X ^ (n + d + 2)).coeff (n + d + 1) by
+              simp [r, Polynomial.coeff_sub]]
+        rw [PadeAsymptotics.padeDefect_poly_coeff_succ,
+          Polynomial.coeff_C_mul_X_pow, Polynomial.coeff_C_mul_X_pow]
+        simp
+      · rw [show r.coeff (n + d + 2) =
+            (PadeAsymptotics.padeDefect_poly n d).coeff (n + d + 2) -
+              (Polynomial.C ((1 / (((n + d + 1).factorial : ℂ))) -
+                  (padePhiErrorConst n d : ℂ)) *
+                Polynomial.X ^ (n + d + 1)).coeff (n + d + 2) -
+              (Polynomial.C (padeDefectSecondCoeff n d) *
+                Polynomial.X ^ (n + d + 2)).coeff (n + d + 2) by
+              simp [r, Polynomial.coeff_sub]]
+        rw [PadeAsymptotics.padeDefect_poly_coeff_succ_succ,
+          Polynomial.coeff_C_mul_X_pow, Polynomial.coeff_C_mul_X_pow]
+        simp [padeDefectSecondCoeff]
+  obtain ⟨g, hg⟩ := hX
+  refine ⟨fun z => g.eval z, ?_⟩
+  intro z
+  have hEval := congrArg (fun p : Polynomial ℂ => p.eval z) hg
+  simpa [r, PadeAsymptotics.padeDefect_poly, PadeAsymptotics.padeP_poly_eval,
+    PadeAsymptotics.padeQ_poly_eval, PadeAsymptotics.expTaylor_poly_eval,
+    Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C,
+    Polynomial.eval_X, padeDefectSecondCoeff] using hEval
+
+/-- Second-order truncated-exponential factorization at the origin. -/
+private theorem expTaylor_exp_neg_second_order_factorization
+    (m : ℕ) :
+    ∃ h : ℂ → ℂ, ∀ z : ℂ,
+      expTaylor m z * exp (-z) -
+          (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1) +
+            expTaylorExpNegSecondCoeff m * z ^ (m + 2)) =
+        z ^ (m + 3) * h z := by
+  obtain ⟨hNext, hhNext⟩ := expTaylor_exp_neg_leading_term (m + 1)
+  obtain ⟨hExp, hhExp⟩ :
+      ∃ h : ℂ → ℂ, ∀ z : ℂ, exp (-z) - (1 - z) = z ^ 2 * h z := by
+    obtain ⟨h, hh⟩ := expTaylor_exp_neg_leading_term 0
+    refine ⟨h, ?_⟩
+    intro z
+    simpa [expTaylor, Finset.range_one] using hh z
+  let a : ℂ := (1 : ℂ) / (((m + 2).factorial : ℂ))
+  have hcoeff :
+      (1 / (((m + 1).factorial : ℂ))) - a =
+        expTaylorExpNegSecondCoeff m := by
+    dsimp [a]
+    have hfact : (((m + 2).factorial : ℕ) : ℂ) =
+        (m + 2 : ℂ) * (((m + 1).factorial : ℕ) : ℂ) := by
+      rw [show m + 2 = (m + 1) + 1 by omega, Nat.factorial_succ]
+      push_cast
+      ring
+    rw [show expTaylorExpNegSecondCoeff m = ((m + 1 : ℂ) / (((m + 2).factorial : ℂ))) by rfl]
+    rw [hfact]
+    field_simp [Nat.cast_ne_zero.mpr (Nat.factorial_pos (m + 1)).ne',
+      Nat.cast_ne_zero.mpr (show m + 2 ≠ 0 by omega)]
+    calc
+      (1 : ℂ) - 1 / (m + 2 : ℂ) =
+          ((m + 2 : ℂ) / (m + 2 : ℂ)) - 1 / (m + 2 : ℂ) := by
+            field_simp [show (m + 2 : ℂ) ≠ 0 by
+              exact_mod_cast (show m + 2 ≠ 0 by omega)]
+      _ = ((m + 1 : ℂ) / (m + 2 : ℂ)) := by
+            ring
+  refine ⟨fun z => hNext z - ((1 : ℂ) / (((m + 1).factorial : ℂ))) * hExp z, ?_⟩
+  intro z
+  have hsplit :
+      expTaylor (m + 1) z =
+        expTaylor m z + z ^ (m + 1) / (((m + 1).factorial : ℂ)) := by
+    unfold expTaylor
+    rw [Finset.sum_range_succ]
+  have hNext_eq :
+      expTaylor (m + 1) z * exp (-z) =
+        1 - a * z ^ (m + 2) + z ^ (m + 3) * hNext z := by
+    have hNext_eq' := sub_eq_iff_eq_add.mp (hhNext z)
+    simpa [a, add_assoc, add_comm, add_left_comm] using hNext_eq'
+  have hExp_eq : exp (-z) = 1 - z + z ^ 2 * hExp z := by
+    have hExp_eq' := sub_eq_iff_eq_add.mp (hhExp z)
+    simpa [add_assoc, add_comm, add_left_comm] using hExp_eq'
+  calc
+    expTaylor m z * exp (-z) -
+        (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1) +
+          expTaylorExpNegSecondCoeff m * z ^ (m + 2)) =
+      (expTaylor (m + 1) z * exp (-z) -
+          (z ^ (m + 1) / (((m + 1).factorial : ℂ))) * exp (-z)) -
+        (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1) +
+          expTaylorExpNegSecondCoeff m * z ^ (m + 2)) := by
+            rw [hsplit]
+            ring
+    _ = (1 - a * z ^ (m + 2) + z ^ (m + 3) * hNext z -
+          (z ^ (m + 1) / (((m + 1).factorial : ℂ))) *
+            (1 - z + z ^ 2 * hExp z)) -
+        (1 - (1 : ℂ) / (((m + 1).factorial : ℂ)) * z ^ (m + 1) +
+          expTaylorExpNegSecondCoeff m * z ^ (m + 2)) := by
+            rw [hNext_eq, hExp_eq]
+    _ = z ^ (m + 3) * (hNext z - ((1 : ℂ) / (((m + 1).factorial : ℂ))) * hExp z) := by
+          rw [← hcoeff]
+          ring
+
+/-- The explicit degree-`n + d + 2` coefficient in the odd down-arrow seam
+comes from combining the truncated-exponential second coefficient with the
+Padé-defect second coefficient and the linear denominator correction. -/
+private theorem padeR_exp_neg_second_coeff_identity
+    (n d : ℕ) (hm : 0 < n + d) :
+    expTaylorExpNegSecondCoeff (n + d) +
+        padeDefectSecondCoeff n d -
+        (((1 / (((n + d + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)) *
+          ((n : ℂ) / (n + d : ℂ))) =
+      (padeRExpNegSecondCoeff n d : ℂ) := by
+  sorry
+
 /-- Cycle-345 analytic seam: one order beyond `padeR_exp_neg_leading_term`, with
 the explicit degree-`n + d + 2` coefficient isolated. This is kept local to the
 odd down-arrow continuation argument. -/
@@ -2359,7 +2518,75 @@ private theorem padeR_exp_neg_second_order_factorization
             - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)
             + (padeRExpNegSecondCoeff n d : ℂ) * z ^ (n + d + 2)) =
         z ^ (n + d + 3) * h z := by
-  sorry
+  let m : ℕ := n + d
+  let a : ℂ := (1 / (((m + 1).factorial : ℂ))) - (padePhiErrorConst n d : ℂ)
+  let b : ℂ := padeDefectSecondCoeff n d
+  let c : ℂ := expTaylorExpNegSecondCoeff m
+  obtain ⟨hD, hhD⟩ := padeDefect_sub_second_factorization n d
+  obtain ⟨hE, hhE⟩ := expTaylor_exp_neg_second_order_factorization m
+  obtain ⟨hQ, hhQ⟩ := exp_neg_div_padeQ_linear_factorization n d hm
+  have hcoeff :
+      c + b - a * ((n : ℂ) / (n + d : ℂ)) = (padeRExpNegSecondCoeff n d : ℂ) := by
+    simpa [m, a, b, c] using padeR_exp_neg_second_coeff_identity n d hm
+  refine ⟨fun z =>
+    if hz : z = 0 then 0 else
+    if hq : padeQ n d z = 0 then
+      (padeR n d z * exp (-z) -
+          (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1) +
+            (padeRExpNegSecondCoeff n d : ℂ) * z ^ (n + d + 2))) /
+        z ^ (n + d + 3)
+    else
+      hE z +
+        a * hQ z +
+        (-b * ((n : ℂ) / (n + d : ℂ))) +
+        z * b * hQ z +
+        hD z * (exp (-z) / padeQ n d z), ?_⟩
+  intro z
+  by_cases hz : z = 0
+  · subst hz
+    simp [padeRExpNegSecondCoeff, padeR, padeP_eval_zero, padeQ_eval_zero]
+  · by_cases hq : padeQ n d z = 0
+    · have hzpow : z ^ (n + d + 3) ≠ 0 := by
+        exact pow_ne_zero _ hz
+      simp [hz, hq]
+      field_simp [hzpow]
+    · have hsplit :
+          padeR n d z * exp (-z) =
+            expTaylor m z * exp (-z) +
+              (padeP n d z - padeQ n d z * expTaylor m z) *
+                (exp (-z) / padeQ n d z) := by
+        rw [padeR]
+        field_simp [hq]
+        simp [m]
+      simp [hz, hq]
+      have hD_eq :
+          padeP n d z - padeQ n d z * expTaylor m z =
+            a * z ^ (n + d + 1) +
+              b * z ^ (n + d + 2) +
+              z ^ (n + d + 3) * hD z := by
+        have hD_eq' := sub_eq_iff_eq_add.mp (hhD z)
+        have hD_eq'' := sub_eq_iff_eq_add.mp hD_eq'
+        simpa [m, a, b, add_assoc, add_comm, add_left_comm] using hD_eq''
+      have hE_eq :
+          expTaylor m z * exp (-z) =
+            1 - (1 : ℂ) / (((n + d + 1).factorial : ℂ)) * z ^ (n + d + 1) +
+              c * z ^ (n + d + 2) +
+              z ^ (n + d + 3) * hE z := by
+        have hE_eq' := sub_eq_iff_eq_add.mp (hhE z)
+        simpa [m, c, add_assoc, add_comm, add_left_comm] using hE_eq'
+      have hQ_eq :
+          exp (-z) / padeQ n d z =
+            1 - ((n : ℂ) / (n + d : ℂ)) * z + z ^ 2 * hQ z := by
+        have hQ_eq' := sub_eq_iff_eq_add.mp (hhQ z hq)
+        simpa [add_assoc, add_comm, add_left_comm] using hQ_eq'
+      have hcoeffz :
+          z ^ (n + d + 2) * (c + b - a * ((n : ℂ) / (n + d : ℂ))) =
+            z ^ (n + d + 2) * (padeRExpNegSecondCoeff n d : ℂ) := by
+        rw [hcoeff]
+      rw [hsplit, hD_eq, hE_eq, hQ_eq]
+      field_simp [hq]
+      rw [← hcoeffz]
+      ring
 
 /-- Remaining no-stop seam: show that the connected component of `(0,0)` in the
 compact odd-wedge zero set projects onto the full radius interval. The compact
