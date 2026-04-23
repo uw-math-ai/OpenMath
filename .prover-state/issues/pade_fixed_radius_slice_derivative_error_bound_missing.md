@@ -1,82 +1,87 @@
-# Issue: fixed-radius slice derivative error bound is still missing
+# Issue: fixed-radius uniqueness is proved, but the clopen wrapper is still too global
 
 ## Blocker
-The remaining theorem
+The derivative/error-bound seam is no longer the blocker.
+
+`oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst`
+is now proved in `OpenMath/PadeOrderStars.lean`, and the file compiles with only
+one remaining `sorry`:
 
 ```lean
-oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst
+oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
 ```
 
-is now blocked on a theorem-local derivative estimate for the fixed-radius slice
+The smallest remaining mismatch is that this wrapper theorem is stated for an
+arbitrary radius `ρ` inside an arbitrary zero set `oddDownArrowRadiusPhaseZeroSet n d δ`,
+while the proved uniqueness theorem only gives:
 
 ```lean
-gρ(s) := oddDownArrowRadiusPhaseIm n d (ρ, s)
+∃ δmono > 0, ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono, ...
 ```
 
-on `Set.Icc (-ρ) ρ`.
-
-The concrete missing statement is an estimate of the form
-
-```lean
-|deriv gρ s - leadρ(s)| ≤ errρ
-```
-
-for `s ∈ Set.Ioo (-ρ) ρ` and sufficiently small `ρ`, where `leadρ(s)` is the
-derivative of the explicit odd-angle leading term from the second-order local
-expansion.
-
-Without that bound, the cycle can set up the derivative path and the monotonicity
-wrappers, but cannot justify the key sign step `deriv gρ s < 0`.
+So the wrapper currently asks for same-radius uniqueness on all fibers, but the
+available theorem only covers sufficiently small radii.
 
 ## Context
-- The live file `OpenMath/PadeOrderStars.lean` now has only these two `sorry`s:
-  - `oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst`
-  - `oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both`
-- The following small helpers are now live near the seam:
-  - `atMostOne_zero_of_strictAntiOn'`
-  - `cos_ge_half_of_abs_le'`
-  - `strictAntiOn_Icc_of_deriv_neg'`
-  - `deriv_neg_of_leading_neg_with_small_error'`
-  - `hasDerivAt_im_of_complex_ofReal'`
-  - `oddDownArrowRadiusPhasePoint_hasDerivAt_snd`
-- The second-order value infrastructure already available in the live file is:
-  - `padeR_exp_neg_second_order_local_bound`
-  - `padeRExpNegSecondCoeff_abs_lt_half_main`
-  - `oddDownArrowRadiusPhaseEndpointSigns_on_trueSlice_of_neg_errorConst`
+- `PATH=/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH lake env lean OpenMath/PadeOrderStars.lean`
+  succeeds.
+- `PATH=/tmp/lake-bin:/tmp/lean4-toolchain/bin:$PATH lake build OpenMath.PadeOrderStars`
+  succeeds.
+- `rg -n "sorry" OpenMath/PadeOrderStars.lean` now reports only:
 
-## What was tried
-- Harvested the compatible helper lemmas from Aristotle bundle
-  `62abbffe-aaaf-4c79-81b8-297ae6998ae2` and landed them in the live file.
-- Rejected the stale or non-live bundles:
-  - `3980824d-da8c-4575-b492-7edde5876f29` — changes the uniqueness surface
-  - `3241ba9a-5c64-425e-8f48-34602d587987` — wrapper-only and adds helper `sorry`
-  - `1198ce13-65b1-4595-aa48-f07e782da0ff` — reopens the old endpoint-sign seam
-  - `12b957ac-de3c-4e64-aa75-20b5ee50320f` — stale artifact
-- Proved the local derivative setup needed for the slice parameter:
-  - complex-imaginary-part derivative transfer along `ℝ → ℂ`
-  - derivative of `oddDownArrowRadiusPhasePoint n d (ρ, ·)`
-- Submitted a fresh five-job Aristotle batch on the exact derivative-to-uniqueness seam:
-  - `cdef2118-ab6d-4d94-82cb-476c20c8c960`
-  - `7edd756f-0937-4f2a-a239-5e78c0c1cd90`
-  - `8fe174e3-e849-4612-b018-5474ec3d5cab`
-  - `7bc140f8-d504-443d-b583-fa648e106073`
-  - `01fb0f0c-73c6-4c03-b94c-0dd7a48f5d5f`
-- After the mandated 30-minute wait and the single allowed refresh, all five new
-  jobs were still `IN_PROGRESS`, so there was nothing to transplant this cycle.
-
-## Possible solutions
-- Rebuild the proof of `padeR_exp_neg_second_order_local_bound` at the derivative
-  level for the composed slice function `s ↦ padeR n d z(s) * exp (-z(s))`,
-  rather than trying to differentiate the already-final norm bound.
-- Introduce a theorem-local exact derivative decomposition for the explicit
-  second-order split used in the value proof, then bound each derivative term
-  separately on `Set.Icc (-ρ) ρ`.
-- If the full derivative error bound is too expensive, prove a weaker but still
-  sufficient sign theorem directly:
-
-```lean
-∀ s ∈ Set.Ioo (-ρ) ρ, deriv gρ s < 0
+```text
+OpenMath/PadeOrderStars.lean:4262:  sorry
 ```
 
-from an explicit main-term derivative plus a dominated remainder derivative,
-and use that immediately with `strictAntiOn_Icc_of_deriv_neg'`.
+- The proved uniqueness theorem is local-to-small-radius and was closed by a
+  theorem-local transplant from Aristotle bundle `a1c26af3-db00-4cf5-9b34-9d800c6a6ee7`,
+  plus live-file cleanup:
+  - `error_deriv_bound_at_of_padeQ_ne_zero`
+  - `error_lipschitz_on_ball_of_padeQ_ne_zero`
+  - `main_term_im_diff_bound_of_neg_errorConst`
+  - `arc_norm_sub_le_of_phase`
+
+## What was tried
+- Inspected the ready Aristotle bundle `a1c26af3...` first and transplanted only
+  the local theorem neighborhood around
+  `oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst`.
+- Inspected `cdef2118...` for theorem-local derivative setup, but the direct
+  closure came from `a1c26af3...`; no other module edits were transplanted.
+- Rebuilt the uniqueness proof against the live file by fixing:
+  - current `padeR_exp_neg_local_bound` tuple order,
+  - `Set.MapsTo`/Schwarz-lemma usage,
+  - the sine mean-value argument,
+  - the arc-norm and error-difference bookkeeping.
+- Tried to route the remaining clopen wrapper directly through the new
+  small-radius uniqueness theorem. That stalls because the wrapper theorem has
+  no hypothesis relating its ambient `δ` or its fiber radius `ρ` to the
+  produced `δmono`.
+
+## Possible solutions
+- Shrink the `δ` chosen in
+  `oddDownArrowRadiusPhaseProjectionNoStop_of_neg_errorConst`
+  to also include the uniqueness radius:
+
+```lean
+δ := min δ0 (min (δQ / 2) δmono)
+```
+
+  Then replace the current global wrapper by a theorem-local statement that is
+  only invoked on radii `ρ ∈ Set.Icc (0 : ℝ) δ`.
+
+- Equivalently, prove a localized replacement for the remaining wrapper:
+
+```lean
+∀ {δ ρ}, δ ≤ δmono → ...
+```
+
+  or
+
+```lean
+∀ {ρ}, ρ ∈ Set.Ioo (0 : ℝ) δmono → ...
+```
+
+  and feed that directly into the projection argument.
+
+- Do **not** spend another cycle trying to recover the deleted stronger global
+  theorem shape `∀ ρ, 0 < ρ → ...`; that was explicitly rejected by the plan.

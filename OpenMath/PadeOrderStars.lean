@@ -3814,17 +3814,440 @@ private theorem oddDownArrowRadiusPhasePoint_hasDerivAt_snd
           ((hasDerivAt_const s (oddDownArrowRadiusPhaseCenter n d)).add (hasDerivAt_id s))).mul_const I)
   simpa [mul_assoc] using ((hinner.cexp).const_mul (ρ : ℂ))
 
+/-- Cauchy derivative bound for the fixed-radius error term on a small ball. -/
+private theorem error_deriv_bound_at_of_padeQ_ne_zero
+    (n d : ℕ) {K δ₀ δQ ρ : ℝ}
+    (hK : 0 < K) (_hδ₀ : 0 < δ₀) (_hδQ : 0 < δQ) (hρ : 0 < ρ)
+    (h2ρ_δ₀ : 2 * ρ < δ₀) (h2ρ_δQ : 2 * ρ < δQ)
+    (hQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖padeR n d z * exp (-z) -
+        ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))‖ ≤
+      K * ‖z‖ ^ (n + d + 2))
+    (w : ℂ) (hw : w ∈ Metric.closedBall (0 : ℂ) ρ) :
+    ‖deriv (fun z => padeR n d z * exp (-z) -
+      ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))) w‖ ≤
+    K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) := by
+  have h_diff : DifferentiableOn ℂ
+      (fun z => padeR n d z * exp (-z) -
+        (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)))
+      (Metric.ball w ρ) := by
+    refine DifferentiableOn.sub ?_ (Differentiable.differentiableOn (by norm_num))
+    refine DifferentiableOn.mul ?_
+      (Complex.differentiable_exp.comp_differentiableOn differentiableOn_id.neg)
+    refine DifferentiableOn.div
+      ((by unfold padeP; fun_prop : Differentiable ℂ (padeP n d)).differentiableOn)
+      ((by unfold padeQ; fun_prop : Differentiable ℂ (padeQ n d)).differentiableOn)
+      (fun z hz => hQ z (by
+        have hzw : ‖z - w‖ < ρ := by
+          simpa [Metric.mem_ball, dist_eq_norm] using hz
+        have hw' : ‖w‖ ≤ ρ := by simpa using hw
+        calc
+          ‖z‖ ≤ ‖z - w‖ + ‖w‖ := by
+            simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using norm_add_le (z - w) w
+          _ < ρ + ρ := by linarith
+          _ < δQ := by linarith))
+  let F : ℂ → ℂ := fun z =>
+    padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))
+  have h_maps :
+      Set.MapsTo F
+        (Metric.ball w ρ)
+        (Metric.closedBall (F w)
+          (K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 2))) := by
+    intro z hz
+    have hz_norm : ‖z‖ < 2 * ρ := by
+      have hzw : ‖z - w‖ < ρ := by
+        simpa [Metric.mem_ball, dist_eq_norm] using hz
+      have hw' : ‖w‖ ≤ ρ := by simpa using hw
+      calc
+        ‖z‖ ≤ ‖z - w‖ + ‖w‖ := by
+          simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using norm_add_le (z - w) w
+        _ < ρ + ρ := by linarith
+        _ = 2 * ρ := by ring
+    have hw_norm : ‖w‖ ≤ ρ := by simpa using hw
+    have hz_bound :
+        ‖padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))‖ ≤
+          K * (2 * ρ) ^ (n + d + 2) := by
+      refine le_trans (hφ z (by linarith)) ?_
+      gcongr
+    have hw_bound :
+        ‖padeR n d w * exp (-w) - (1 - (padePhiErrorConst n d : ℂ) * w ^ (n + d + 1))‖ ≤
+          K * ρ ^ (n + d + 2) := by
+      refine le_trans (hφ w (by linarith)) ?_
+      gcongr
+    have hsum :
+        ‖(padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))) -
+            (padeR n d w * exp (-w) - (1 - (padePhiErrorConst n d : ℂ) * w ^ (n + d + 1)))‖ ≤
+          K * (2 * ρ) ^ (n + d + 2) + K * ρ ^ (n + d + 2) := by
+      calc
+        ‖(padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))) -
+            (padeR n d w * exp (-w) - (1 - (padePhiErrorConst n d : ℂ) * w ^ (n + d + 1)))‖
+            ≤ ‖padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))‖ +
+                ‖padeR n d w * exp (-w) - (1 - (padePhiErrorConst n d : ℂ) * w ^ (n + d + 1))‖ := by
+                  simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using
+                    norm_sub_le
+                      (padeR n d z * exp (-z) - (1 - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1)))
+                      (padeR n d w * exp (-w) - (1 - (padePhiErrorConst n d : ℂ) * w ^ (n + d + 1)))
+        _ ≤ K * (2 * ρ) ^ (n + d + 2) + K * ρ ^ (n + d + 2) := by linarith
+    have hpow_expand :
+        K * (2 * ρ) ^ (n + d + 2) + K * ρ ^ (n + d + 2) =
+          K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 2) := by
+      rw [show (2 * ρ) ^ (n + d + 2) = 2 ^ (n + d + 2) * ρ ^ (n + d + 2) by rw [mul_pow]]
+      ring
+    have hmem :
+        ‖F z - F w‖
+          ≤ K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 2) := by
+      simpa [hpow_expand]
+        using hsum
+    simpa [Metric.mem_closedBall, dist_eq_norm]
+      using hmem
+  have hderiv :=
+    Complex.norm_deriv_le_div_of_mapsTo_ball h_diff h_maps hρ
+  have hscale :
+      (K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 2)) / ρ =
+        K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) := by
+    rw [pow_succ']
+    field_simp [hρ.ne']
+    ring
+  simpa [hscale] using hderiv
+
+/-- Lipschitz control for the fixed-radius error term on a small ball. -/
+private theorem error_lipschitz_on_ball_of_padeQ_ne_zero
+    (n d : ℕ) {K δ₀ δQ ρ : ℝ}
+    (hK : 0 < K) (hδ₀ : 0 < δ₀) (hδQ : 0 < δQ) (hρ : 0 < ρ)
+    (h2ρ_δ₀ : 2 * ρ < δ₀) (h2ρ_δQ : 2 * ρ < δQ)
+    (hQ : ∀ z : ℂ, ‖z‖ < δQ → padeQ n d z ≠ 0)
+    (hφ : ∀ z : ℂ, ‖z‖ < δ₀ →
+      ‖padeR n d z * exp (-z) -
+        ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))‖ ≤
+      K * ‖z‖ ^ (n + d + 2))
+    (z₁ z₂ : ℂ) (hz₁ : z₁ ∈ Metric.closedBall (0 : ℂ) ρ)
+    (hz₂ : z₂ ∈ Metric.closedBall (0 : ℂ) ρ) :
+    ‖(padeR n d z₂ * exp (-z₂) -
+        ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₂ ^ (n + d + 1))) -
+      (padeR n d z₁ * exp (-z₁) -
+        ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₁ ^ (n + d + 1)))‖ ≤
+      K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ‖z₂ - z₁‖ := by
+  refine Convex.norm_image_sub_le_of_norm_deriv_le
+    (𝕜 := ℂ)
+    (f := fun z : ℂ =>
+      padeR n d z * exp (-z) -
+        ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z ^ (n + d + 1))) ?_ ?_
+    (convex_closedBall (0 : ℂ) ρ) hz₁ hz₂
+  · intro z hz
+    refine DifferentiableAt.sub ?_ (by fun_prop)
+    refine DifferentiableAt.mul ?_
+      (Complex.differentiableAt_exp.comp z differentiableAt_id.neg)
+    exact DifferentiableAt.div
+      ((by unfold padeP; fun_prop : Differentiable ℂ (padeP n d)).differentiableAt)
+      ((by unfold padeQ; fun_prop : Differentiable ℂ (padeQ n d)).differentiableAt)
+      (hQ z (by simpa using lt_of_le_of_lt (mem_closedBall_zero_iff.mp hz) (by linarith)))
+  · intro z hz
+    simpa using
+      error_deriv_bound_at_of_padeQ_ne_zero
+        n d hK hδ₀ hδQ hρ h2ρ_δ₀ h2ρ_δQ hQ hφ z hz
+
+/-- Lower bound for the main term variation along a fixed-radius arc. -/
+private theorem main_term_im_diff_bound_of_neg_errorConst
+    (n d : ℕ) (hC : padePhiErrorConst n d < 0)
+    {ρ s₁ s₂ : ℝ} (hρ : 0 < ρ) (hρ_small : (↑(n + d) + 1 : ℝ) * ρ ≤ Real.pi / 3)
+    (hs₁ : s₁ ∈ Set.Icc (-ρ) ρ) (hs₂ : s₂ ∈ Set.Icc (-ρ) ρ) (hlt : s₁ < s₂) :
+    let θ₀ := oddDownArrowRadiusPhaseCenter n d
+    let z₁ := (↑ρ : ℂ) * exp (↑(θ₀ + s₁) * I)
+    let z₂ := (↑ρ : ℂ) * exp (↑(θ₀ + s₂) * I)
+    Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₁ ^ (n + d + 1)) -
+      Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₂ ^ (n + d + 1)) ≥
+      (-padePhiErrorConst n d) * ((↑(n + d) + 1 : ℝ)) *
+        ρ ^ (n + d + 1) * (s₂ - s₁) / 2 := by
+  let A : ℝ := (n + d + 1 : ℝ)
+  have hmain₁ :
+      Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) *
+        (((↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + s₁) * I)) ^ (n + d + 1))) =
+        padePhiErrorConst n d * ρ ^ (n + d + 1) * Real.sin (A * s₁) := by
+    simpa [A, oddDownArrowRadiusPhaseCenter] using
+      (im_main_term_odd_down_right (p := n + d) (c := padePhiErrorConst n d) ρ s₁)
+  have hmain₂ :
+      Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) *
+        (((↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + s₂) * I)) ^ (n + d + 1))) =
+        padePhiErrorConst n d * ρ ^ (n + d + 1) * Real.sin (A * s₂) := by
+    simpa [A, oddDownArrowRadiusPhaseCenter] using
+      (im_main_term_odd_down_right (p := n + d) (c := padePhiErrorConst n d) ρ s₂)
+  have hρA : A * ρ ≤ Real.pi / 3 := by
+    simpa [A] using hρ_small
+  have hcont :
+      ContinuousOn (fun x : ℝ => Real.sin (A * x)) (Set.Icc s₁ s₂) := by
+    simpa [A, mul_comm] using
+      (Real.continuous_sin.comp (continuous_const.mul continuous_id)).continuousOn
+  have hdiff :
+      DifferentiableOn ℝ (fun x : ℝ => Real.sin (A * x)) (Set.Ioo s₁ s₂) := by
+    intro x hx
+    change DifferentiableWithinAt ℝ (fun y : ℝ => Real.sin (A * y)) (Set.Ioo s₁ s₂) x
+    exact
+      (((Real.hasDerivAt_sin (A * x)).comp x
+        ((hasDerivAt_const x A).mul (hasDerivAt_id x))).differentiableAt.differentiableWithinAt)
+  obtain ⟨c, hc, hcd⟩ :=
+    exists_deriv_eq_slope (f := fun x : ℝ => Real.sin (A * x)) hlt hcont hdiff
+  have hcIcc : c ∈ Set.Icc (-ρ) ρ := by
+    refine ⟨?_, ?_⟩
+    · linarith [hs₁.1, hs₂.1, hc.1, hc.2]
+    · linarith [hs₁.2, hs₂.2, hc.1, hc.2]
+  have hcmul_abs : |A * c| ≤ Real.pi / 3 := by
+    calc
+      |A * c| = A * |c| := by
+        rw [abs_mul, abs_of_nonneg (by positivity)]
+      _ ≤ A * ρ := by
+        gcongr
+        exact abs_le.mpr hcIcc
+      _ ≤ Real.pi / 3 := hρA
+  have h_cos_bound : (1 / 2 : ℝ) ≤ Real.cos (A * c) :=
+    cos_ge_half_of_abs_le' hcmul_abs
+  have hderiv :
+      deriv (fun x : ℝ => Real.sin (A * x)) c = A * Real.cos (A * c) := by
+    simpa [A, mul_assoc, mul_left_comm, mul_comm] using
+      (((Real.hasDerivAt_sin (A * c)).comp c
+        ((hasDerivAt_const c A).mul (hasDerivAt_id c))).deriv)
+  have hneq : s₂ - s₁ ≠ 0 := sub_ne_zero.mpr (ne_of_gt hlt)
+  have hratio :
+      Real.sin (A * s₂) - Real.sin (A * s₁) =
+        A * Real.cos (A * c) * (s₂ - s₁) := by
+    rw [hderiv] at hcd
+    field_simp [hneq] at hcd
+    linarith
+  have hsine_bound :
+      A * (s₂ - s₁) / 2 ≤ Real.sin (A * s₂) - Real.sin (A * s₁) := by
+    have hA_half : A / 2 ≤ A * Real.cos (A * c) := by
+      have hA_nonneg : 0 ≤ A := by positivity
+      nlinarith [h_cos_bound, hA_nonneg]
+    have hdiff_nonneg : 0 ≤ s₂ - s₁ := le_of_lt (sub_pos.mpr hlt)
+    calc
+      A * (s₂ - s₁) / 2 = (A / 2) * (s₂ - s₁) := by ring
+      _ ≤ (A * Real.cos (A * c)) * (s₂ - s₁) := by
+        gcongr
+      _ = Real.sin (A * s₂) - Real.sin (A * s₁) := by
+        symm
+        exact hratio
+  have hfac_nonneg : 0 ≤ (-padePhiErrorConst n d) * ρ ^ (n + d + 1) := by
+    have hnegC : 0 ≤ -padePhiErrorConst n d := by linarith
+    exact mul_nonneg hnegC (pow_nonneg hρ.le _)
+  simpa [A] using
+    (calc
+      Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) *
+          (((↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + s₁) * I)) ^ (n + d + 1))) -
+        Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) *
+          (((↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + s₂) * I)) ^ (n + d + 1)))
+          = (-padePhiErrorConst n d) * ρ ^ (n + d + 1) *
+              (Real.sin (A * s₂) - Real.sin (A * s₁)) := by
+                nlinarith [hmain₁, hmain₂]
+      _ ≥ (-padePhiErrorConst n d) * ρ ^ (n + d + 1) * (A * (s₂ - s₁) / 2) := by
+        gcongr
+      _ = (-padePhiErrorConst n d) * A * ρ ^ (n + d + 1) * (s₂ - s₁) / 2 := by
+        ring)
+
+/-- Chord-length bound along the fixed-radius arc. -/
+private theorem arc_norm_sub_le_of_phase
+    {ρ θ₀ s₁ s₂ : ℝ} (hρ : 0 ≤ ρ) :
+    ‖(↑ρ : ℂ) * exp (↑(θ₀ + s₂) * I) - (↑ρ : ℂ) * exp (↑(θ₀ + s₁) * I)‖ ≤
+      ρ * |s₂ - s₁| := by
+  have h1 :
+      (↑ρ : ℂ) * exp (↑(θ₀ + s₂) * I) - (↑ρ : ℂ) * exp (↑(θ₀ + s₁) * I) =
+        (↑ρ : ℂ) * (exp (↑(θ₀ + s₂) * I) - exp (↑(θ₀ + s₁) * I)) := by
+    ring
+  rw [h1, norm_mul, Complex.norm_real]
+  simp only [Real.norm_eq_abs, abs_of_nonneg hρ]
+  apply mul_le_mul_of_nonneg_left _ hρ
+  have h2 :
+      exp (↑(θ₀ + s₂) * I) - exp (↑(θ₀ + s₁) * I) =
+        exp (↑(θ₀ + s₁) * I) * (exp (↑(s₂ - s₁) * I) - 1) := by
+    rw [show (↑(θ₀ + s₂) * I : ℂ) = ↑(θ₀ + s₁) * I + ↑(s₂ - s₁) * I by push_cast; ring]
+    rw [exp_add]
+    ring
+  rw [h2, norm_mul, norm_exp_ofReal_mul_I, one_mul]
+  calc
+    ‖exp (↑(s₂ - s₁) * I) - 1‖ = ‖exp (I * ↑(s₂ - s₁)) - 1‖ := by rw [mul_comm]
+    _ ≤ ‖(s₂ - s₁ : ℝ)‖ := by
+      simpa [mul_comm] using (Real.norm_exp_I_mul_ofReal_sub_one_le (x := s₂ - s₁))
+    _ = |s₂ - s₁| := Real.norm_eq_abs _
+
 /-- Cycle-345 topology seam sharpened to a fixed-radius uniqueness statement:
 for sufficiently small radii, the odd down-arrow true slice has at most one zero. -/
 private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_neg_errorConst
     (n d : ℕ) (hC : padePhiErrorConst n d < 0) :
     ∃ δmono > 0, ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono,
       ∀ s₁ ∈ Set.Icc (-ρ) ρ,
-        ∀ s₂ ∈ Set.Icc (-ρ) ρ,
+      ∀ s₂ ∈ Set.Icc (-ρ) ρ,
           oddDownArrowRadiusPhaseIm n d (ρ, s₁) = 0 →
           oddDownArrowRadiusPhaseIm n d (ρ, s₂) = 0 →
           s₁ = s₂ := by
-  sorry
+  obtain ⟨K, δ₀, hK₀, hδ₀₀, hφ⟩ := padeR_exp_neg_local_bound n d
+  obtain ⟨δQ, hδQ₀, hQ⟩ := padeQ_nonzero_near_zero n d
+  obtain ⟨δmono, hδmono_pos, hδmono⟩ :
+      ∃ δmono > 0, ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono,
+        2 * ρ < δ₀ ∧ 2 * ρ < δQ ∧
+        (n + d + 1 : ℝ) * ρ ≤ Real.pi / 3 ∧
+        (-padePhiErrorConst n d) * (n + d + 1 : ℝ) >
+          4 * K * (2 ^ (n + d + 2) + 1) * ρ := by
+    let a : ℝ := δ₀ / 2
+    let b : ℝ := δQ / 2
+    let c : ℝ := (Real.pi / 3) / (n + d + 1 : ℝ)
+    let d' : ℝ :=
+      ((-padePhiErrorConst n d) * (n + d + 1 : ℝ)) /
+        (4 * K * (2 ^ (n + d + 2) + 1))
+    refine ⟨min a (min b (min c d')), ?_, ?_⟩
+    · have hnegC : 0 < -padePhiErrorConst n d := by linarith
+      dsimp [a, b, c, d']
+      refine lt_min (half_pos hδ₀₀) ?_
+      refine lt_min (half_pos hδQ₀) ?_
+      refine lt_min ?_ ?_
+      · positivity
+      · exact div_pos (by positivity [hnegC]) (by positivity)
+    · intro ρ hρ
+      have hρa : ρ < a := lt_of_lt_of_le hρ.2 (min_le_left _ _)
+      have hρb : ρ < b := lt_of_lt_of_le hρ.2 (le_trans (min_le_right _ _) (min_le_left _ _))
+      have hρc : ρ < c := lt_of_lt_of_le hρ.2
+        (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_left _ _)))
+      have hρd : ρ < d' := lt_of_lt_of_le hρ.2
+        (le_trans (min_le_right _ _) (le_trans (min_le_right _ _) (min_le_right _ _)))
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · dsimp [a] at hρa
+        linarith
+      · dsimp [b] at hρb
+        linarith
+      · dsimp [c] at hρc
+        have hnd : 0 < (n + d + 1 : ℝ) := by positivity
+        rw [lt_div_iff₀ hnd] at hρc
+        linarith
+      · dsimp [d'] at hρd
+        have hden : 0 < 4 * K * (2 ^ (n + d + 2) + 1) := by positivity
+        rw [lt_div_iff₀ hden] at hρd
+        linarith
+  refine ⟨δmono, hδmono_pos, ?_⟩
+  intro ρ hρ s₁ hs₁ s₂ hs₂ hs₁_zero hs₂_zero
+  by_cases h_eq : s₁ = s₂
+  · exact h_eq
+  have hρsmall' : (↑(n + d) + 1 : ℝ) * ρ ≤ Real.pi / 3 := by
+    simpa using (hδmono ρ hρ).2.2.1
+  have hcontra :
+      ∀ {a b : ℝ}, a < b →
+        a ∈ Set.Icc (-ρ) ρ →
+        b ∈ Set.Icc (-ρ) ρ →
+        oddDownArrowRadiusPhaseIm n d (ρ, a) = 0 →
+        oddDownArrowRadiusPhaseIm n d (ρ, b) = 0 →
+        False := by
+    intro a b hab ha hb hza hzb
+    have hmain :
+        Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) *
+            ((↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + a) * I)) ^ (n + d + 1)) -
+          Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) *
+            ((↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + b) * I)) ^ (n + d + 1)) ≥
+          (-padePhiErrorConst n d) * (↑(n + d) + 1 : ℝ) * ρ ^ (n + d + 1) * (b - a) / 2 := by
+      simpa using
+        main_term_im_diff_bound_of_neg_errorConst
+          n d hC hρ.1 hρsmall' ha hb hab
+    let z₁ : ℂ := (↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + a) * I)
+    let z₂ : ℂ := (↑ρ : ℂ) * exp (↑(oddDownArrowRadiusPhaseCenter n d + b) * I)
+    let M₁ : ℂ := (1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₁ ^ (n + d + 1)
+    let M₂ : ℂ := (1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₂ ^ (n + d + 1)
+    let E₁ : ℂ := padeR n d z₁ * exp (-z₁) - M₁
+    let E₂ : ℂ := padeR n d z₂ * exp (-z₂) - M₂
+    have herr :
+        ‖E₂ - E₁‖ ≤
+          K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * |b - a| := by
+      have hz₁mem : z₁ ∈ Metric.closedBall (0 : ℂ) ρ := by
+        have hz₁norm : ‖z₁‖ = ρ := by
+          simpa [z₁, oddDownArrowRadiusPhaseCenter] using
+            norm_ofReal_mul_exp_I ρ (oddDownArrowRadiusPhaseCenter n d + a) hρ.1.le
+        simpa [Metric.mem_closedBall, dist_eq_norm, hz₁norm]
+      have hz₂mem : z₂ ∈ Metric.closedBall (0 : ℂ) ρ := by
+        have hz₂norm : ‖z₂‖ = ρ := by
+          simpa [z₂, oddDownArrowRadiusPhaseCenter] using
+            norm_ofReal_mul_exp_I ρ (oddDownArrowRadiusPhaseCenter n d + b) hρ.1.le
+        simpa [Metric.mem_closedBall, dist_eq_norm, hz₂norm]
+      refine le_trans
+        (error_lipschitz_on_ball_of_padeQ_ne_zero
+          n d hK₀ hδ₀₀ hδQ₀ hρ.1 (hδmono ρ hρ).1 (hδmono ρ hρ).2.1 hQ hφ _ _
+          hz₁mem hz₂mem)
+        ?_
+      have hcoeff_nonneg :
+          0 ≤ K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) := by
+        exact mul_nonneg (mul_nonneg hK₀.le (by positivity)) (pow_nonneg hρ.1.le _)
+      refine le_trans
+        (mul_le_mul_of_nonneg_left
+          (arc_norm_sub_le_of_phase hρ.1.le)
+          hcoeff_nonneg)
+        ?_
+      ring_nf
+      gcongr
+    have himerr :
+        |Complex.im (E₂ - E₁)| ≤
+          K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * |b - a| := by
+      have himle : |Complex.im (E₂ - E₁)| ≤ ‖E₂ - E₁‖ := by
+        simpa using Complex.abs_im_le_norm (E₂ - E₁)
+      exact le_trans himle herr
+    have hz₁ : Complex.im (M₁ + E₁) = 0 := by
+      simpa [z₁, M₁, E₁, oddDownArrowRadiusPhaseIm, oddDownArrowRadiusPhaseValue,
+        oddDownArrowRadiusPhasePoint] using hza
+    have hz₂ : Complex.im (M₂ + E₂) = 0 := by
+      simpa [z₂, M₂, E₂, oddDownArrowRadiusPhaseIm, oddDownArrowRadiusPhaseValue,
+        oddDownArrowRadiusPhasePoint] using hzb
+    have hmain_eq : Complex.im M₁ - Complex.im M₂ = Complex.im (E₂ - E₁) := by
+      have hz₁' : Complex.im M₁ + Complex.im E₁ = 0 := by
+        simpa using hz₁
+      have hz₂' : Complex.im M₂ + Complex.im E₂ = 0 := by
+        simpa using hz₂
+      have himsub : Complex.im (E₂ - E₁) = Complex.im E₂ - Complex.im E₁ := by
+        simp [sub_eq_add_neg]
+      linarith
+    have hmain_abs :
+        |Complex.im M₁ - Complex.im M₂| ≤
+          K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * |b - a| := by
+      rw [hmain_eq]
+      exact himerr
+    have hsmall := (hδmono ρ hρ).2.2.2
+    have hpow : 0 < ρ ^ (n + d + 1) := pow_pos hρ.1 _
+    have hdist : 0 < b - a := sub_pos.mpr hab
+    have hbound_pos :
+        0 < K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * |b - a| := by
+      rw [abs_of_pos hdist]
+      have htwo : 0 < (2 ^ (n + d + 2) + 1 : ℝ) := by positivity
+      have hcoeff_pos : 0 < K * (2 ^ (n + d + 2) + 1 : ℝ) := by
+        exact mul_pos hK₀ htwo
+      exact mul_pos (mul_pos (mul_pos hcoeff_pos hpow) hρ.1) hdist
+    have hsmall_mul :
+        (-padePhiErrorConst n d * (↑(n + d) + 1 : ℝ)) * (ρ ^ (n + d + 1) * (b - a)) >
+          (4 * (K * (2 ^ (n + d + 2) + 1) * ρ)) * (ρ ^ (n + d + 1) * (b - a)) := by
+      simpa [mul_assoc, mul_left_comm, mul_comm] using
+        (mul_lt_mul_of_pos_right hsmall (mul_pos hpow hdist))
+    have hlead_gt :
+        K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * |b - a| <
+          (-padePhiErrorConst n d) * (↑(n + d) + 1 : ℝ) * ρ ^ (n + d + 1) * (b - a) / 2 := by
+      rw [abs_of_pos hdist]
+      have htmp := hsmall_mul
+      have hrew :
+          (4 * (K * (2 ^ (n + d + 2) + 1) * ρ)) * (ρ ^ (n + d + 1) * (b - a)) =
+            4 * (K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * (b - a)) := by
+        ring
+      rw [hrew] at htmp
+      let B : ℝ := K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * (b - a)
+      have hBpos : 0 < B := by
+        simpa [B, abs_of_pos hdist] using hbound_pos
+      have hBlt2B : B < 2 * B := by
+        nlinarith [hBpos]
+      have h2B : 2 * B <
+          (-padePhiErrorConst n d) * (↑(n + d) + 1 : ℝ) * ρ ^ (n + d + 1) * (b - a) / 2 := by
+        dsimp [B] at htmp ⊢
+        nlinarith [htmp]
+      exact lt_trans hBlt2B h2B
+    have hlead_pos :
+        K * (2 ^ (n + d + 2) + 1) * ρ ^ (n + d + 1) * ρ * |b - a| <
+          Complex.im M₁ - Complex.im M₂ := by
+      exact lt_of_lt_of_le hlead_gt hmain
+    have hmain_nonneg : 0 ≤ Complex.im M₁ - Complex.im M₂ := by
+      exact le_of_lt (lt_trans hbound_pos hlead_pos)
+    rw [abs_of_nonneg hmain_nonneg] at hmain_abs
+    linarith
+  rcases lt_or_gt_of_ne h_eq with hlt | hgt
+  · exact False.elim (hcontra hlt hs₁ hs₂ hs₁_zero hs₂_zero)
+  · exact False.elim (hcontra hgt hs₂ hs₁ hs₂_zero hs₁_zero)
 
 private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_not_meet_clopen_both
     (n d : ℕ) (hC : padePhiErrorConst n d < 0) {δ ρ : ℝ}
