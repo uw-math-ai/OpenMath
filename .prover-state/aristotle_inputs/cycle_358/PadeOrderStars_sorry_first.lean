@@ -5343,6 +5343,66 @@ theorem padeR_odd_upArrowOrderWebMeetsRayConeNearOrigin_of_pos_errorConst
     simpa [z] using hszero
   exact ⟨z, mem_orderWeb_of_im_zero_of_re_pos hrez himz, hzcone⟩
 
+private theorem oddDownArrowRadiusPhaseEndpointSigns_on_trueSlice_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    ∃ δ > 0,
+      ∀ r ∈ Set.Ioo (0 : ℝ) δ,
+        Complex.im
+          (padeR n d
+              (((↑r : ℂ) *
+                  exp (↑(oddDownArrowRadiusPhaseCenter n d - r) * I))) *
+            exp (-(((↑r : ℂ) *
+                exp (↑(oddDownArrowRadiusPhaseCenter n d - r) * I))))) < 0 ∧
+        0 < Complex.im
+          (padeR n d
+              (((↑r : ℂ) *
+                  exp (↑(oddDownArrowRadiusPhaseCenter n d + r) * I))) *
+            exp (-(((↑r : ℂ) *
+                exp (↑(oddDownArrowRadiusPhaseCenter n d + r) * I))))) := by
+  sorry
+
+private theorem oddDownArrowRadiusPhaseSliceZero_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    ∃ δ > 0,
+      (∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+        0 < Complex.re (oddDownArrowRadiusPhaseValue n d p)) ∧
+      (∀ r ∈ Set.Icc (0 : ℝ) δ,
+        ∃ s ∈ Set.Icc (-r) r,
+          (r, s) ∈ oddDownArrowRadiusPhaseZeroSet n d δ) := by
+  sorry
+
+private theorem main_term_im_diff_bound_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d)
+    {ρ s₁ s₂ : ℝ} (hρ : 0 < ρ) (hρ_small : (↑(n + d) + 1 : ℝ) * ρ ≤ Real.pi / 3)
+    (hs₁ : s₁ ∈ Set.Icc (-ρ) ρ) (hs₂ : s₂ ∈ Set.Icc (-ρ) ρ) (hlt : s₁ < s₂) :
+    let θ₀ := oddDownArrowRadiusPhaseCenter n d
+    let z₁ := (↑ρ : ℂ) * exp (↑(θ₀ + s₁) * I)
+    let z₂ := (↑ρ : ℂ) * exp (↑(θ₀ + s₂) * I)
+    Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₂ ^ (n + d + 1)) -
+      Complex.im ((1 : ℂ) - (padePhiErrorConst n d : ℂ) * z₁ ^ (n + d + 1)) ≥
+      padePhiErrorConst n d * ((↑(n + d) + 1 : ℝ)) *
+        ρ ^ (n + d + 1) * (s₂ - s₁) / 2 := by
+  sorry
+
+private theorem oddDownArrowRadiusPhaseFixedRadiusSlice_atMostOne_zero_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    ∃ δmono > 0, ∀ ρ ∈ Set.Ioo (0 : ℝ) δmono,
+      ∀ s₁ ∈ Set.Icc (-ρ) ρ,
+      ∀ s₂ ∈ Set.Icc (-ρ) ρ,
+          oddDownArrowRadiusPhaseIm n d (ρ, s₁) = 0 →
+          oddDownArrowRadiusPhaseIm n d (ρ, s₂) = 0 →
+          s₁ = s₂ := by
+  sorry
+
+private theorem oddDownArrowRadiusPhaseProjectionNoStop_of_pos_errorConst
+    (n d : ℕ) (hC : 0 < padePhiErrorConst n d) :
+    ∃ δ > 0,
+      (∀ p ∈ oddDownArrowRadiusPhaseWedge δ,
+        0 < Complex.re (oddDownArrowRadiusPhaseValue n d p)) ∧
+      Set.Icc (0 : ℝ) δ ⊆
+        Prod.fst '' connectedComponentIn (oddDownArrowRadiusPhaseZeroSet n d δ) (0, 0) := by
+  sorry
+
 /-- Exact remaining obstruction after the honest explicit-sign refactor:
 to upgrade the weak raywise bridge below to the strict sign bridge, one still
 has to exclude zero-cosine exact-ray arrows. -/
