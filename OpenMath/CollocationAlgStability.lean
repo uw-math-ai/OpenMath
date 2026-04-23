@@ -176,6 +176,31 @@ private lemma algStabMatrix_mulVec_zero_of_psd_of_quadForm_zero
   dsimp [a] at hz_neg
   linarith
 
+private lemma algStabMatrix_monomial_row_action
+    (t : ButcherTableau s) (j : Fin s) (k : ℕ) :
+    ∑ i : Fin s, t.algStabMatrix j i * t.c i ^ k =
+      t.b j * (∑ i : Fin s, t.A j i * t.c i ^ k)
+        + (∑ i : Fin s, t.b i * t.c i ^ k * t.A i j)
+        - t.b j * (∑ i : Fin s, t.b i * t.c i ^ k) := by
+  calc
+    ∑ i : Fin s, t.algStabMatrix j i * t.c i ^ k
+        = ∑ i : Fin s,
+            (t.b j * (t.A j i * t.c i ^ k)
+              + t.b i * t.c i ^ k * t.A i j
+              - t.b j * (t.b i * t.c i ^ k)) := by
+            refine Finset.sum_congr rfl ?_
+            intro i hi
+            rw [algStabMatrix]
+            ring
+    _ = (∑ i : Fin s, t.b j * (t.A j i * t.c i ^ k))
+          + (∑ i : Fin s, t.b i * t.c i ^ k * t.A i j)
+          - (∑ i : Fin s, t.b j * (t.b i * t.c i ^ k)) := by
+            rw [Finset.sum_sub_distrib, Finset.sum_add_distrib]
+    _ = t.b j * (∑ i : Fin s, t.A j i * t.c i ^ k)
+          + (∑ i : Fin s, t.b i * t.c i ^ k * t.A i j)
+          - t.b j * (∑ i : Fin s, t.b i * t.c i ^ k) := by
+            rw [← Finset.mul_sum, ← Finset.mul_sum]
+
 private lemma monomialVec_D_of_algStable
     (t : ButcherTableau s) (hAlg : t.IsAlgStable) (hB : t.SatisfiesB s) (hC : t.SatisfiesC s)
     {k : ℕ} (hk : k < s)
@@ -184,7 +209,32 @@ private lemma monomialVec_D_of_algStable
     ∀ j : Fin s,
       ∑ i : Fin s, t.b i * t.c i ^ k * t.A i j =
         t.b j / (((k + 1 : ℕ) : ℝ)) * (1 - t.c j ^ (k + 1)) := by
-  sorry
+  let v : Fin s → ℝ := fun i => t.c i ^ k
+  have hMv_zero :
+      ∀ j : Fin s, ∑ i : Fin s, t.algStabMatrix j i * v i = 0 := by
+    apply algStabMatrix_mulVec_zero_of_psd_of_quadForm_zero t hAlg v
+    simpa [v] using hquad_zero
+  have hB_piece : ∑ i : Fin s, t.b i * t.c i ^ k = 1 / (((k + 1 : ℕ) : ℝ)) := by
+    exact hB (k + 1) (by omega) (by omega)
+  intro j
+  have hC_piece : ∑ i : Fin s, t.A j i * t.c i ^ k = t.c j ^ (k + 1) / (((k + 1 : ℕ) : ℝ)) := by
+    exact hC (k + 1) (by omega) (by omega) j
+  have hrow_zero : ∑ i : Fin s, t.algStabMatrix j i * t.c i ^ k = 0 := by
+    simpa [v] using hMv_zero j
+  have hrow :
+      t.b j * (∑ i : Fin s, t.A j i * t.c i ^ k)
+        + (∑ i : Fin s, t.b i * t.c i ^ k * t.A i j)
+        - t.b j * (∑ i : Fin s, t.b i * t.c i ^ k) = 0 := by
+    rw [← algStabMatrix_monomial_row_action t j k]
+    exact hrow_zero
+  have hscalar :
+      t.b j * (t.c j ^ (k + 1) / (((k + 1 : ℕ) : ℝ)))
+        + (∑ i : Fin s, t.b i * t.c i ^ k * t.A i j)
+        - t.b j * (1 / (((k + 1 : ℕ) : ℝ))) = 0 := by
+    simpa [hC_piece, hB_piece] using hrow
+  have hk1_ne : (((k + 1 : ℕ) : ℝ)) ≠ 0 := by positivity
+  field_simp [hk1_ne] at hscalar ⊢
+  nlinarith
 
 private lemma moment_upgrade_from_D
     (t : ButcherTableau s) (hs : 0 < s) (k : ℕ)
