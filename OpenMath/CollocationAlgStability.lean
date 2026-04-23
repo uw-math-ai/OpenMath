@@ -26,9 +26,24 @@ variable {s : ℕ}
 noncomputable def shiftedLegendrePoly (n : ℕ) : ℝ[X] :=
   Polynomial.map (Int.castRingHom ℝ) (Polynomial.shiftedLegendre n)
 
-/-- The polynomial `P_s^* - θ P_{s-1}^*` in the polynomial model used for Theorem 358A. -/
+/-- The textbook-sign shifted Legendre polynomial in `ℝ[X]`. -/
+noncomputable def shiftedLegendreStarPoly (n : ℕ) : ℝ[X] :=
+  Polynomial.C ((-1 : ℝ) ^ n) * shiftedLegendrePoly n
+
+lemma shiftedLegendreStarPoly_eval (n : ℕ) (x : ℝ) :
+    (shiftedLegendreStarPoly n).eval x = shiftedLegendreP n x := by
+  simpa [shiftedLegendreStarPoly, Polynomial.eval_mul, Polynomial.eval_C,
+    mul_comm, mul_left_comm, mul_assoc] using
+    (shiftedLegendreP_eq_eval_map_shiftedLegendre n x).symm
+
+/-- The polynomial `P_s^* - θ P_{s-1}^*` in the polynomial model used for Theorem 358A.
+
+The ambient `shiftedLegendrePoly` uses Mathlib's `Polynomial.shiftedLegendre`,
+whose evaluation differs from the textbook `P_n^*` by the factor `(-1)^n`; the
+global `(-1)^s` below corrects that convention so the zero set and leading sign
+match the textbook boundary polynomial. -/
 noncomputable def algStabilityBoundaryPoly (s : ℕ) (θ : ℝ) : ℝ[X] :=
-  shiftedLegendrePoly s - Polynomial.C θ * shiftedLegendrePoly (s - 1)
+  shiftedLegendreStarPoly s - Polynomial.C θ * shiftedLegendreStarPoly (s - 1)
 
 /-- The theorem-local collocation interface used for Theorem 358A.
 
@@ -1013,6 +1028,148 @@ lemma nodePoly_interval_orthogonal_of_algStable
       ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x = 0 := by
   exact nodePoly_interval_zero_aux_of_algStable t hcoll hAlg
 
+private lemma shiftedLegendrePoly_natDegree (n : ℕ) :
+    (shiftedLegendrePoly n).natDegree = n := by
+  unfold shiftedLegendrePoly
+  rw [Polynomial.natDegree_map_eq_of_injective Int.cast_injective]
+  exact Polynomial.natDegree_shiftedLegendre n
+
+private lemma shiftedLegendreStarPoly_natDegree (n : ℕ) :
+    (shiftedLegendreStarPoly n).natDegree = n := by
+  unfold shiftedLegendreStarPoly
+  rw [Polynomial.natDegree_C_mul]
+  · exact shiftedLegendrePoly_natDegree n
+  · exact pow_ne_zero _ (by norm_num)
+
+private lemma shiftedLegendreStarPoly_leadingCoeff_pos (n : ℕ) :
+    0 < (shiftedLegendreStarPoly n).leadingCoeff := by
+  unfold shiftedLegendreStarPoly
+  rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C]
+  rw [Polynomial.leadingCoeff, shiftedLegendrePoly_natDegree, shiftedLegendrePoly,
+    Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre]
+  have hsign : ((-1 : ℝ) ^ n) * ((-1 : ℝ) ^ n) = 1 := by
+    rw [← pow_add]
+    simp
+  have hchoose : 0 < ((Nat.choose (n + n) n : ℕ) : ℝ) := by
+    exact_mod_cast Nat.choose_pos (Nat.le_add_left n n)
+  simpa [Nat.choose_self, mul_assoc, mul_left_comm, mul_comm, hsign] using hchoose
+
+private lemma shiftedLegendreStarPoly_interval_orthogonal (n : ℕ) :
+    ∀ q : ℝ[X], q.natDegree < n →
+      ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly n) * q).eval x = 0 := by
+  intro q hq
+  rw [← polyMomentN_eq_intervalIntegral_of_natDegree_lt (N := 2 * n)
+    (p := (shiftedLegendreStarPoly n) * q)]
+  · unfold shiftedLegendreStarPoly
+    rw [show Polynomial.C ((-1 : ℝ) ^ n) * shiftedLegendrePoly n * q =
+        Polynomial.C ((-1 : ℝ) ^ n) * (shiftedLegendrePoly n * q) by ring]
+    rw [polyMomentN_C_mul]
+    simpa [shiftedLegendrePoly] using (polyMomentN_shiftedLegendre_mul_zero (s := n) q hq)
+  · calc
+      ((shiftedLegendreStarPoly n) * q).natDegree
+          ≤ (shiftedLegendreStarPoly n).natDegree + q.natDegree := Polynomial.natDegree_mul_le
+      _ < n + n := by
+            rw [shiftedLegendreStarPoly_natDegree]
+            omega
+      _ = 2 * n := by ring
+
+private lemma shiftedLegendreStarPoly_sq_intervalIntegral_pos (n : ℕ) :
+    0 < ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly n) * (shiftedLegendreStarPoly n)).eval x := by
+  have hnonneg :
+      0 ≤ ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly n) * (shiftedLegendreStarPoly n)).eval x := by
+    simpa [sq, Polynomial.eval_mul] using
+      (intervalIntegral.integral_nonneg zero_le_one fun x hx =>
+        sq_nonneg ((shiftedLegendreStarPoly n).eval x))
+  by_contra hpos
+  have hzero :
+      ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly n) * (shiftedLegendreStarPoly n)).eval x = 0 := by
+    linarith
+  have hpoly_zero : shiftedLegendreStarPoly n = 0 := by
+    apply poly_eq_zero_of_intervalIntegral_sq_zero
+    simpa [sq, Polynomial.eval_mul] using hzero
+  have hlc_pos := shiftedLegendreStarPoly_leadingCoeff_pos n
+  simpa [hpoly_zero] using hlc_pos
+
+private lemma orthogonal_degree_eq_scaled_shiftedLegendreStarPoly
+    {n : ℕ} {φ : ℝ[X]}
+    (hdeg : φ.natDegree = n)
+    (horth : ∀ q : ℝ[X], q.natDegree < n →
+      ∫ x in (0 : ℝ)..1, (φ * q).eval x = 0) :
+    ∃ a : ℝ, φ = Polynomial.C a * shiftedLegendreStarPoly n := by
+  rcases n with _ | n
+  · have hconst : φ = Polynomial.C (φ.coeff 0) := by
+      exact Polynomial.eq_C_of_natDegree_le_zero (by simpa [hdeg])
+    refine ⟨φ.coeff 0, ?_⟩
+    calc
+      φ = Polynomial.C (φ.coeff 0) := hconst
+      _ = Polynomial.C (φ.coeff 0) * shiftedLegendreStarPoly 0 := by
+            simp [shiftedLegendreStarPoly, shiftedLegendrePoly, Polynomial.shiftedLegendre]
+  · have hφ_ne : φ ≠ 0 := by
+      intro hφ
+      subst hφ
+      simp at hdeg
+    let a : ℝ := φ.leadingCoeff / (shiftedLegendreStarPoly (n + 1)).leadingCoeff
+    let r : ℝ[X] := φ - Polynomial.C a * shiftedLegendreStarPoly (n + 1)
+    have hstar_ne : shiftedLegendreStarPoly (n + 1) ≠ 0 := by
+      intro hstar
+      simpa [hstar] using shiftedLegendreStarPoly_leadingCoeff_pos (n + 1)
+    have hstar_lc_ne : (shiftedLegendreStarPoly (n + 1)).leadingCoeff ≠ 0 := by
+      exact (Polynomial.leadingCoeff_ne_zero).2 hstar_ne
+    have ha_ne : a ≠ 0 := by
+      dsimp [a]
+      exact div_ne_zero ((Polynomial.leadingCoeff_ne_zero).2 hφ_ne) hstar_lc_ne
+    have hscaled_ne : Polynomial.C a * shiftedLegendreStarPoly (n + 1) ≠ 0 := by
+      exact mul_ne_zero (by simpa using ha_ne) hstar_ne
+    have hscaled_deg :
+        (Polynomial.C a * shiftedLegendreStarPoly (n + 1)).natDegree = n + 1 := by
+      rw [Polynomial.natDegree_C_mul_of_mul_ne_zero]
+      · rw [shiftedLegendreStarPoly_natDegree]
+      · exact mul_ne_zero ha_ne hstar_lc_ne
+    have hlc_eq :
+        φ.leadingCoeff = (Polynomial.C a * shiftedLegendreStarPoly (n + 1)).leadingCoeff := by
+      rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C]
+      dsimp [a]
+      rw [div_eq_mul_inv, mul_assoc, inv_mul_cancel₀ hstar_lc_ne, mul_one]
+    have hr_deg :
+        r.natDegree < n + 1 := by
+      have hdeg_eq :
+          φ.degree = (Polynomial.C a * shiftedLegendreStarPoly (n + 1)).degree := by
+        rw [Polynomial.degree_eq_natDegree hφ_ne, Polynomial.degree_eq_natDegree hscaled_ne,
+          hdeg, hscaled_deg]
+      have hdeg_lt :
+          (φ - Polynomial.C a * shiftedLegendreStarPoly (n + 1)).degree < φ.degree := by
+        exact Polynomial.degree_sub_lt hdeg_eq hφ_ne hlc_eq
+      by_cases hr_zero : r = 0
+      · rw [hr_zero]
+        simpa using Nat.succ_pos n
+      · dsimp [r] at hr_zero
+        rwa [Polynomial.degree_eq_natDegree hr_zero, Polynomial.degree_eq_natDegree hφ_ne,
+          hdeg, Nat.cast_lt] at hdeg_lt
+    have hr_orth :
+        ∀ q : ℝ[X], q.natDegree < n + 1 →
+          ∫ x in (0 : ℝ)..1, (r * q).eval x = 0 := by
+      intro q hq
+      have hfun :
+          (fun x : ℝ => (r * q).eval x) =
+            fun x : ℝ =>
+              (φ * q).eval x - a * ((shiftedLegendreStarPoly (n + 1) * q).eval x) := by
+        funext x
+        dsimp [r]
+        simp [Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_C]
+        ring
+      rw [hfun, intervalIntegral.integral_sub, intervalIntegral.integral_const_mul]
+      · rw [horth q hq, shiftedLegendreStarPoly_interval_orthogonal (n + 1) q hq]
+        ring
+      · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+      · exact Continuous.intervalIntegrable
+          (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+    have hr_zero : r = 0 := by
+      apply poly_eq_zero_of_intervalIntegral_sq_zero
+      simpa [sq, Polynomial.eval_mul] using hr_orth r hr_deg
+    refine ⟨a, ?_⟩
+    dsimp [r] at hr_zero
+    exact sub_eq_zero.mp hr_zero
+
 /-- A degree-`s` polynomial with positive leading coefficient and orthogonal to
 all polynomials of degree at most `s - 2` must be a positive multiple of
 `P_s^* - θ P_{s-1}^*`. -/
@@ -1022,7 +1179,92 @@ lemma orthogonal_degree_eq_boundaryPoly
     (horth : ∀ q : ℝ[X], q.natDegree < s - 1 →
       ∫ x in (0 : ℝ)..1, (φ * q).eval x = 0) :
     ∃ θ a : ℝ, 0 < a ∧ φ = Polynomial.C a * algStabilityBoundaryPoly s θ := by
-  sorry
+  let a : ℝ := φ.leadingCoeff / (shiftedLegendreStarPoly s).leadingCoeff
+  let r : ℝ[X] := φ - Polynomial.C a * shiftedLegendreStarPoly s
+  have hφ_ne : φ ≠ 0 := by
+    intro hφ
+    subst hφ
+    simp at hdeg
+    omega
+  have hstar_ne : shiftedLegendreStarPoly s ≠ 0 := by
+    intro hstar
+    simpa [hstar] using shiftedLegendreStarPoly_leadingCoeff_pos s
+  have hstar_lc_ne : (shiftedLegendreStarPoly s).leadingCoeff ≠ 0 := by
+    exact (Polynomial.leadingCoeff_ne_zero).2 hstar_ne
+  have ha_pos : 0 < a := by
+    dsimp [a]
+    exact div_pos hlc (shiftedLegendreStarPoly_leadingCoeff_pos s)
+  have ha_ne : a ≠ 0 := ne_of_gt ha_pos
+  have hscaled_ne : Polynomial.C a * shiftedLegendreStarPoly s ≠ 0 := by
+    exact mul_ne_zero (by simpa using ha_ne) hstar_ne
+  have hscaled_deg : (Polynomial.C a * shiftedLegendreStarPoly s).natDegree = s := by
+    rw [Polynomial.natDegree_C_mul_of_mul_ne_zero]
+    · rw [shiftedLegendreStarPoly_natDegree]
+    · exact mul_ne_zero ha_ne hstar_lc_ne
+  have hlc_eq :
+      φ.leadingCoeff = (Polynomial.C a * shiftedLegendreStarPoly s).leadingCoeff := by
+    rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C]
+    dsimp [a]
+    rw [div_eq_mul_inv, mul_assoc, inv_mul_cancel₀ hstar_lc_ne, mul_one]
+  have hr_deg_lt_s : r.natDegree < s := by
+    have hdeg_eq :
+        φ.degree = (Polynomial.C a * shiftedLegendreStarPoly s).degree := by
+      rw [Polynomial.degree_eq_natDegree hφ_ne, Polynomial.degree_eq_natDegree hscaled_ne,
+        hdeg, hscaled_deg]
+    have hdeg_lt :
+        (φ - Polynomial.C a * shiftedLegendreStarPoly s).degree < φ.degree := by
+      exact Polynomial.degree_sub_lt hdeg_eq hφ_ne hlc_eq
+    by_cases hr_zero : r = 0
+    · rw [hr_zero]
+      simpa using hs
+    · dsimp [r] at hr_zero
+      rwa [Polynomial.degree_eq_natDegree hr_zero, Polynomial.degree_eq_natDegree hφ_ne,
+        hdeg, Nat.cast_lt] at hdeg_lt
+  have hr_orth :
+      ∀ q : ℝ[X], q.natDegree < s - 1 →
+        ∫ x in (0 : ℝ)..1, (r * q).eval x = 0 := by
+    intro q hq
+    have hfun :
+        (fun x : ℝ => (r * q).eval x) =
+          fun x : ℝ =>
+            (φ * q).eval x - a * ((shiftedLegendreStarPoly s * q).eval x) := by
+      funext x
+      dsimp [r]
+      simp [Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_C]
+      ring
+    rw [hfun, intervalIntegral.integral_sub, intervalIntegral.integral_const_mul]
+    · rw [horth q hq, shiftedLegendreStarPoly_interval_orthogonal s q (by omega)]
+      ring
+    · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+    · exact Continuous.intervalIntegrable
+        (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+  by_cases hr_zero : r = 0
+  · refine ⟨0, a, ha_pos, ?_⟩
+    have hphi : φ = Polynomial.C a * shiftedLegendreStarPoly s := sub_eq_zero.mp (by
+      simpa [r] using hr_zero)
+    simpa [algStabilityBoundaryPoly] using hphi
+  · have hr_not_lt : ¬ r.natDegree < s - 1 := by
+      intro hr_lt
+      have hr_zero' : r = 0 := by
+        apply poly_eq_zero_of_intervalIntegral_sq_zero
+        simpa [sq, Polynomial.eval_mul] using hr_orth r hr_lt
+      exact hr_zero hr_zero'
+    have hr_deg : r.natDegree = s - 1 := by
+      omega
+    obtain ⟨b, hr_eq⟩ :=
+      orthogonal_degree_eq_scaled_shiftedLegendreStarPoly (hdeg := hr_deg) hr_orth
+    refine ⟨-b / a, a, ha_pos, ?_⟩
+    calc
+      φ = r + Polynomial.C a * shiftedLegendreStarPoly s := by
+            dsimp [r]
+            ring
+      _ = Polynomial.C b * shiftedLegendreStarPoly (s - 1) + Polynomial.C a * shiftedLegendreStarPoly s := by
+            rw [hr_eq]
+      _ = Polynomial.C a * algStabilityBoundaryPoly s (-b / a) := by
+            ext k
+            simp [algStabilityBoundaryPoly, ha_ne, mul_assoc, mul_left_comm, mul_comm]
+            field_simp [ha_ne]
+            ring
 
 /-- Sign extraction for the `θ` parameter in the boundary polynomial.
 
@@ -1033,7 +1275,63 @@ lemma boundary_theta_nonneg_of_algStable
     {θ a : ℝ} (ha : 0 < a)
     (hnode : nodePoly t = Polynomial.C a * algStabilityBoundaryPoly s θ) :
     0 ≤ θ := by
-  sorry
+  let q : ℝ[X] := shiftedLegendreStarPoly (s - 1)
+  have hq_deg : q.natDegree = s - 1 := by
+    dsimp [q]
+    exact shiftedLegendreStarPoly_natDegree (s - 1)
+  have hq_lc : 0 < q.leadingCoeff := by
+    dsimp [q]
+    exact shiftedLegendreStarPoly_leadingCoeff_pos (s - 1)
+  have hnode_nonpos :
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x ≤ 0 :=
+    nodePoly_interval_nonpos_aux_of_algStable t hcoll hAlg q hq_deg hq_lc
+  have horth :
+      ∫ x in (0 : ℝ)..1, ((shiftedLegendreStarPoly s) * q).eval x = 0 := by
+    dsimp [q]
+    have hq_lt : (shiftedLegendreStarPoly (s - 1)).natDegree < s := by
+      rw [shiftedLegendreStarPoly_natDegree]
+      simpa using Nat.sub_lt_of_pos_le (a := 1) (b := s) (by decide) (Nat.succ_le_of_lt hcoll.1)
+    exact shiftedLegendreStarPoly_interval_orthogonal s (shiftedLegendreStarPoly (s - 1)) hq_lt
+  have hboundary :
+      ∫ x in (0 : ℝ)..1, ((algStabilityBoundaryPoly s θ) * q).eval x =
+        -θ * ∫ x in (0 : ℝ)..1, (q * q).eval x := by
+    have hfun :
+        (fun x : ℝ => ((algStabilityBoundaryPoly s θ) * q).eval x) =
+          fun x : ℝ =>
+            ((shiftedLegendreStarPoly s) * q).eval x -
+              θ * ((q * q).eval x) := by
+      funext x
+      dsimp [q]
+      simp [algStabilityBoundaryPoly, Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_C]
+      ring
+    rw [hfun, intervalIntegral.integral_sub, intervalIntegral.integral_const_mul, horth]
+    · ring
+    · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+    · exact Continuous.intervalIntegrable
+        (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+  have hnode_int :
+      ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x =
+        a * (-θ * ∫ x in (0 : ℝ)..1, (q * q).eval x) := by
+    rw [hnode]
+    have hfun :
+        (fun x : ℝ => ((Polynomial.C a * algStabilityBoundaryPoly s θ) * q).eval x) =
+          fun x : ℝ => a * ((algStabilityBoundaryPoly s θ * q).eval x) := by
+      funext x
+      simp [Polynomial.eval_mul, Polynomial.eval_C]
+      ring
+    rw [hfun, intervalIntegral.integral_const_mul, hboundary]
+  have hsq_pos : 0 < ∫ x in (0 : ℝ)..1, (q * q).eval x := by
+    dsimp [q]
+    exact shiftedLegendreStarPoly_sq_intervalIntegral_pos (s - 1)
+  have hprod_nonneg : 0 ≤ a * θ * ∫ x in (0 : ℝ)..1, (q * q).eval x := by
+    linarith [hnode_nonpos, hnode_int]
+  by_contra hθ
+  push_neg at hθ
+  have hneg : a * θ * ∫ x in (0 : ℝ)..1, (q * q).eval x < 0 := by
+    have haθ_neg : a * θ < 0 := by
+      exact mul_neg_of_pos_of_neg ha hθ
+    exact mul_neg_of_neg_of_pos haθ_neg hsq_pos
+  linarith
 
 /-- Theorem 358A, `only if` direction. -/
 theorem thm_358A_only_if

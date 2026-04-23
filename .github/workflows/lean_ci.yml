@@ -20,4 +20,16 @@ jobs:
           lean --version
           lake --version
       - name: Build project
-        run: lake build
+        run: |
+          git config --global http.version HTTP/1.1
+          for attempt in 1 2 3; do
+            echo "lake build attempt ${attempt}/3"
+            if lake build; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            rm -rf .lake/packages
+            sleep 15
+          done
