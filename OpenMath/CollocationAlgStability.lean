@@ -533,7 +533,98 @@ private lemma algStabMatrix_poly_bilinear_zero
     (hpr : p.natDegree + r.natDegree + 2 ≤ 2 * s - 1) :
     ∑ i : Fin s, ∑ j : Fin s,
       p.eval (t.c i) * t.algStabMatrix i j * r.eval (t.c j) = 0 := by
-  sorry
+  have hpeval : ∀ i : Fin s, p.eval (t.c i) = ∑ m ∈ Finset.range s, p.coeff m * t.c i ^ m := by
+    intro i
+    simpa using (Polynomial.eval_eq_sum_range' (p := p) hp (t.c i))
+  have hreval : ∀ j : Fin s, r.eval (t.c j) = ∑ n ∈ Finset.range s, r.coeff n * t.c j ^ n := by
+    intro j
+    simpa using (Polynomial.eval_eq_sum_range' (p := r) hr (t.c j))
+  simp_rw [hpeval, hreval, Finset.sum_mul, Finset.mul_sum]
+  calc
+    ∑ x,
+        ∑ x_1,
+          ∑ x_2 ∈ Finset.range s,
+            ∑ i ∈ Finset.range s,
+              p.coeff x_2 * t.c x ^ x_2 * t.algStabMatrix x x_1 * (r.coeff i * t.c x_1 ^ i)
+      =
+        ∑ x,
+          ∑ x_2 ∈ Finset.range s,
+            ∑ x_1,
+              ∑ i ∈ Finset.range s,
+                p.coeff x_2 * t.c x ^ x_2 * t.algStabMatrix x x_1 * (r.coeff i * t.c x_1 ^ i) := by
+          refine Finset.sum_congr rfl ?_
+          intro x hx
+          rw [Finset.sum_comm]
+    _ =
+        ∑ x_2 ∈ Finset.range s,
+          ∑ x,
+            ∑ x_1,
+              ∑ i ∈ Finset.range s,
+                p.coeff x_2 * t.c x ^ x_2 * t.algStabMatrix x x_1 * (r.coeff i * t.c x_1 ^ i) := by
+          rw [Finset.sum_comm]
+    _ =
+        ∑ x_2 ∈ Finset.range s,
+          ∑ x,
+            ∑ i ∈ Finset.range s,
+              ∑ x_1,
+                p.coeff x_2 * t.c x ^ x_2 * t.algStabMatrix x x_1 * (r.coeff i * t.c x_1 ^ i) := by
+          refine Finset.sum_congr rfl ?_
+          intro x_2 hx_2
+          refine Finset.sum_congr rfl ?_
+          intro x hx
+          rw [Finset.sum_comm]
+    _ =
+        ∑ x_2 ∈ Finset.range s,
+          ∑ i ∈ Finset.range s,
+            ∑ x,
+              ∑ x_1,
+                p.coeff x_2 * t.c x ^ x_2 * t.algStabMatrix x x_1 * (r.coeff i * t.c x_1 ^ i) := by
+          refine Finset.sum_congr rfl ?_
+          intro x_2 hx_2
+          rw [Finset.sum_comm]
+    _ = 0 := by
+          refine Finset.sum_eq_zero ?_
+          intro m hm
+          refine Finset.sum_eq_zero ?_
+          intro n hn
+          by_cases hmdeg : m ≤ p.natDegree
+          · by_cases hndeg : n ≤ r.natDegree
+            · have hmn : m + n + 2 ≤ 2 * s - 1 := by
+                omega
+              rw [show
+                    ∑ x, ∑ x_1,
+                      p.coeff m * t.c x ^ m * t.algStabMatrix x x_1 * (r.coeff n * t.c x_1 ^ n)
+                    =
+                    p.coeff m * r.coeff n *
+                      (∑ x, ∑ x_1,
+                        t.c x ^ m * t.algStabMatrix x x_1 * t.c x_1 ^ n) by
+                    calc
+                      ∑ x, ∑ x_1,
+                          p.coeff m * t.c x ^ m * t.algStabMatrix x x_1 * (r.coeff n * t.c x_1 ^ n)
+                          =
+                          ∑ x, ∑ x_1,
+                            p.coeff m * r.coeff n *
+                              (t.c x ^ m * t.algStabMatrix x x_1 * t.c x_1 ^ n) := by
+                                refine Finset.sum_congr rfl ?_
+                                intro x hx
+                                refine Finset.sum_congr rfl ?_
+                                intro x_1 hx_1
+                                ring
+                      _ =
+                          p.coeff m * r.coeff n *
+                            (∑ x, ∑ x_1,
+                              t.c x ^ m * t.algStabMatrix x x_1 * t.c x_1 ^ n) := by
+                                simp_rw [Finset.mul_sum]
+                                ]
+              rw [algStabMatrix_monomial_bilinear_zero t hcoll hAlg
+                (Finset.mem_range.mp hm) (Finset.mem_range.mp hn) hmn]
+              ring
+            · have hcoeff : r.coeff n = 0 := by
+                exact Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_not_ge hndeg)
+              simp [hcoeff]
+          · have hcoeff : p.coeff m = 0 := by
+              exact Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_not_ge hmdeg)
+            simp [hcoeff]
 
 private lemma sub_leading_term_natDegree_lt
     (hs : 1 < s) (q : ℝ[X]) (hqtop : q.natDegree = s - 1) :
@@ -574,7 +665,109 @@ private lemma algStabMatrix_top_monomial_eq_neg_integral
       t.c i ^ (s - 1) * t.algStabMatrix i j * t.c j ^ (s - 1) =
       -2 * ((1 : ℝ) / (s : ℝ)) *
         ∫ x in (0 : ℝ)..1, ((nodePoly t) * Polynomial.X ^ (s - 1)).eval x := by
-  sorry
+  have hs : 0 < s := hcoll.1
+  let p : ℝ[X] := (nodePoly t) * Polynomial.X ^ (s - 1)
+  let lower : ℝ[X] := p - Polynomial.C p.leadingCoeff * Polynomial.X ^ (2 * s - 1)
+  have hplc : p.leadingCoeff = 1 := by
+    dsimp [p]
+    rw [Polynomial.leadingCoeff_mul, (nodePoly_monic t).leadingCoeff,
+      Polynomial.leadingCoeff_X_pow]
+    norm_num
+  have hpdeg : p.natDegree = 2 * s - 1 := by
+    dsimp [p]
+    rw [Polynomial.natDegree_mul' (by
+      simp [(nodePoly_monic t).leadingCoeff])]
+    · rw [nodePoly_natDegree t, Polynomial.natDegree_X_pow]
+      omega
+  have hlower_deg : lower.natDegree < 2 * s - 1 := by
+    dsimp [lower]
+    simpa [hpdeg, hplc] using
+      (sub_leading_term_natDegree_lt (s := 2 * s) (by omega) p (by simpa [hpdeg]))
+  have hB2s1 : t.SatisfiesB (2 * s - 1) :=
+    satisfiesB_two_mul_sub_one_of_algStable t hcoll hAlg
+  have hXdeg : (Polynomial.X ^ (s - 1) : ℝ[X]).natDegree < s := by
+    rw [Polynomial.natDegree_X_pow]
+    omega
+  have hquad_p : quadEvalPoly t p = 0 := by
+    dsimp [p]
+    exact quadEvalPoly_nodePoly_mul_eq_zero t (Polynomial.X ^ (s - 1)) hXdeg
+  have hquad_lower_integral : quadEvalPoly t lower = ∫ x in (0 : ℝ)..1, lower.eval x := by
+    rw [quadEvalPoly_exact_of_natDegree_lt_of_SatisfiesB t hB2s1 lower hlower_deg,
+      polyMomentN_eq_intervalIntegral_of_natDegree_lt lower hlower_deg]
+  have hquad_lower :
+      quadEvalPoly t lower = -∑ i : Fin s, t.b i * t.c i ^ (2 * s - 1) := by
+    calc
+      quadEvalPoly t lower
+          = quadEvalPoly t p -
+              quadEvalPoly t (Polynomial.C p.leadingCoeff * Polynomial.X ^ (2 * s - 1)) := by
+              unfold quadEvalPoly
+              simp [lower, sub_eq_add_neg, mul_add, Finset.sum_add_distrib, sub_eq_add_neg]
+      _ = -quadEvalPoly t (Polynomial.C p.leadingCoeff * Polynomial.X ^ (2 * s - 1)) := by
+            rw [hquad_p]
+            ring
+      _ = -∑ i : Fin s, t.b i * t.c i ^ (2 * s - 1) := by
+            rw [hplc]
+            simp [quadEvalPoly, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+              Polynomial.eval_X]
+  have hlower_integral :
+      ∫ x in (0 : ℝ)..1, lower.eval x = -∑ i : Fin s, t.b i * t.c i ^ (2 * s - 1) := by
+    rw [← hquad_lower_integral]
+    exact hquad_lower
+  have htop_integral :
+      ∫ x in (0 : ℝ)..1,
+        (Polynomial.C p.leadingCoeff * Polynomial.X ^ (2 * s - 1)).eval x =
+          (1 : ℝ) / (2 * s : ℝ) := by
+    rw [hplc]
+    rw [Polynomial.C_1, one_mul]
+    rw [show (fun x : ℝ => (Polynomial.X ^ (2 * s - 1)).eval x) = fun x : ℝ => x ^ (2 * s - 1) by
+      funext x
+      simp [Polynomial.eval_pow, Polynomial.eval_X]]
+    rw [integral_pow]
+    have hnat : (2 * s - 1) + 1 = 2 * s := by
+      omega
+    have hnatR : ((2 * s - 1 : ℕ) : ℝ) + 1 = (2 * s : ℕ) := by
+      exact_mod_cast hnat
+    simp
+    rw [hnatR]
+    have hs_ne : (s : ℝ) ≠ 0 := by positivity
+    field_simp [hs_ne]
+    norm_num [Nat.cast_mul]
+    ring
+  have hp_integral :
+      ∫ x in (0 : ℝ)..1, p.eval x =
+        (1 : ℝ) / (2 * s : ℝ) - ∑ i : Fin s, t.b i * t.c i ^ (2 * s - 1) := by
+    have hpeval_split :
+        (fun x : ℝ => p.eval x) =
+          fun x : ℝ =>
+            lower.eval x +
+              (Polynomial.C p.leadingCoeff * Polynomial.X ^ (2 * s - 1)).eval x := by
+      funext x
+      dsimp [lower]
+      rw [Polynomial.eval_sub]
+      ring
+    rw [hpeval_split, intervalIntegral.integral_add]
+    · rw [hlower_integral, htop_integral]
+      ring
+    · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+    · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+  have hmono :=
+    algStabMatrix_monomial_quadForm_eq t hcoll.2.1 hcoll.2.2.1 (show s - 1 < s by omega)
+  have hs_ne : (s : ℝ) ≠ 0 := by positivity
+  have hfinal :
+      ∑ i : Fin s, ∑ j : Fin s,
+          t.c i ^ (s - 1) * t.algStabMatrix i j * t.c j ^ (s - 1) =
+        -2 * ((1 : ℝ) / (s : ℝ)) * ∫ x in (0 : ℝ)..1, p.eval x := by
+    calc
+    ∑ i : Fin s, ∑ j : Fin s,
+        t.c i ^ (s - 1) * t.algStabMatrix i j * t.c j ^ (s - 1)
+      = 2 / (s : ℝ) * (∑ i : Fin s, t.b i * t.c i ^ (2 * s - 1)) - 1 / (s : ℝ) ^ 2 := by
+          simpa [Nat.sub_add_cancel hs, show 2 * (s - 1) + 1 = 2 * s - 1 by omega, pow_two]
+            using hmono
+    _ = -2 * ((1 : ℝ) / (s : ℝ)) * ∫ x in (0 : ℝ)..1, p.eval x := by
+          rw [hp_integral]
+          field_simp [hs_ne]
+          ring
+  simpa [p] using hfinal
 
 /-- Low-degree branch of `stabilityMatrix_quadForm_eq_neg_integral`. -/
 private lemma stabilityMatrix_quadForm_eq_neg_integral_of_lt
@@ -608,7 +801,144 @@ private lemma stabilityMatrix_quadForm_eq_neg_integral_of_eq
     ∑ i : Fin s, ∑ j : Fin s, v i * t.algStabMatrix i j * v j =
       -2 * (q.leadingCoeff / (s : ℝ)) *
         ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x := by
-  sorry
+  dsimp
+  by_cases hs1 : s = 1
+  · subst hs1
+    let a : ℝ := q.leadingCoeff
+    have hqC0 : q = Polynomial.C (q.coeff 0) :=
+      Polynomial.eq_C_of_natDegree_eq_zero (by simpa using hqtop)
+    have hlead0 : q.leadingCoeff = q.coeff 0 := by
+      rw [Polynomial.leadingCoeff, hqtop]
+    have hqC : q = Polynomial.C a := by
+      dsimp [a]
+      rwa [← hlead0] at hqC0
+    rw [hqC]
+    calc
+      ∑ i : Fin 1, ∑ j : Fin 1,
+          (Polynomial.C a).eval (t.c i) * t.algStabMatrix i j * (Polynomial.C a).eval (t.c j)
+        = a ^ 2 *
+            (∑ i : Fin 1, ∑ j : Fin 1,
+              t.c i ^ (1 - 1) * t.algStabMatrix i j * t.c j ^ (1 - 1)) := by
+            simp [Polynomial.eval_C]
+            ring
+      _ = a ^ 2 *
+            (-2 * ((1 : ℝ) / (1 : ℝ)) *
+              ∫ x in (0 : ℝ)..1, ((nodePoly t) * Polynomial.X ^ (1 - 1)).eval x) := by
+            rw [algStabMatrix_top_monomial_eq_neg_integral t hcoll hAlg]
+            norm_num
+      _ = -2 * ((Polynomial.C a).leadingCoeff / ((1 : ℕ) : ℝ)) *
+            ∫ x in (0 : ℝ)..1, ((nodePoly t) * Polynomial.C a).eval x := by
+            simp [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
+            ring
+  · have hs : 1 < s := by
+      have hs0 : 0 < s := hcoll.1
+      omega
+    let a : ℝ := q.leadingCoeff
+    let r : ℝ[X] := q - Polynomial.C a * Polynomial.X ^ (s - 1)
+    have hrsmall : r.natDegree < s - 1 := by
+      exact sub_leading_term_natDegree_lt hs q hqtop
+    have hXdeg : (Polynomial.X ^ (s - 1) : ℝ[X]).natDegree < s := by
+      rw [Polynomial.natDegree_X_pow]
+      omega
+    have hrr :
+        ∑ i : Fin s, ∑ j : Fin s,
+          r.eval (t.c i) * t.algStabMatrix i j * r.eval (t.c j) = 0 := by
+      exact algStabMatrix_poly_bilinear_zero t hcoll hAlg r r (by omega) (by omega) (by omega)
+    have hrX :
+        ∑ i : Fin s, ∑ j : Fin s,
+          r.eval (t.c i) * t.algStabMatrix i j * t.c j ^ (s - 1) = 0 := by
+      convert algStabMatrix_poly_bilinear_zero t hcoll hAlg r (Polynomial.X ^ (s - 1))
+        (by omega) hXdeg (by omega) using 1 <;>
+        simp [Polynomial.eval_pow, Polynomial.eval_X]
+    have hXr :
+        ∑ i : Fin s, ∑ j : Fin s,
+          t.c i ^ (s - 1) * t.algStabMatrix i j * r.eval (t.c j) = 0 := by
+      convert algStabMatrix_poly_bilinear_zero t hcoll hAlg (Polynomial.X ^ (s - 1)) r
+        hXdeg (by omega) (by omega) using 1 <;>
+        simp [Polynomial.eval_pow, Polynomial.eval_X]
+    have hqeval : ∀ i : Fin s, q.eval (t.c i) = r.eval (t.c i) + a * t.c i ^ (s - 1) := by
+      intro i
+      dsimp [r, a]
+      rw [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+        Polynomial.eval_X]
+      ring
+    have hquad :
+        ∑ i : Fin s, ∑ j : Fin s,
+          q.eval (t.c i) * t.algStabMatrix i j * q.eval (t.c j)
+          = a ^ 2 *
+              (∑ i : Fin s, ∑ j : Fin s,
+                t.c i ^ (s - 1) * t.algStabMatrix i j * t.c j ^ (s - 1)) := by
+      simp_rw [hqeval, add_mul, mul_add]
+      simp_rw [Finset.sum_add_distrib]
+      have hrXa :
+          ∑ x, ∑ x_1, r.eval (t.c x) * t.algStabMatrix x x_1 * (a * t.c x_1 ^ (s - 1)) =
+            a * ∑ x, ∑ x_1, r.eval (t.c x) * t.algStabMatrix x x_1 * t.c x_1 ^ (s - 1) := by
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x hx
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x_1 hx_1
+        ring
+      have hXaR :
+          ∑ x, ∑ x_1, a * t.c x ^ (s - 1) * t.algStabMatrix x x_1 * r.eval (t.c x_1) =
+            a * ∑ x, ∑ x_1, t.c x ^ (s - 1) * t.algStabMatrix x x_1 * r.eval (t.c x_1) := by
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x hx
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x_1 hx_1
+        ring
+      have hXaXa :
+          ∑ x, ∑ x_1, a * t.c x ^ (s - 1) * t.algStabMatrix x x_1 * (a * t.c x_1 ^ (s - 1)) =
+            a ^ 2 * ∑ x, ∑ x_1, t.c x ^ (s - 1) * t.algStabMatrix x x_1 * t.c x_1 ^ (s - 1) := by
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x hx
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro x_1 hx_1
+        ring
+      rw [hrXa, hXaR, hXaXa, hrr, hrX, hXr]
+      ring
+    have hqsplit : q = r + Polynomial.C a * Polynomial.X ^ (s - 1) := by
+      dsimp [r, a]
+      ring
+    have h_integral :
+        ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x =
+          a * ∫ x in (0 : ℝ)..1, ((nodePoly t) * Polynomial.X ^ (s - 1)).eval x := by
+      have hfun :
+          (fun x : ℝ => ((nodePoly t) * q).eval x) =
+            fun x : ℝ =>
+              ((nodePoly t) * r).eval x +
+                a * ((nodePoly t) * Polynomial.X ^ (s - 1)).eval x := by
+        funext x
+        rw [hqsplit]
+        simp [Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_C, Polynomial.eval_pow,
+          Polynomial.eval_X]
+        ring
+      rw [hfun, intervalIntegral.integral_add, intervalIntegral.integral_const_mul]
+      · rw [hzero r hrsmall]
+        ring
+      · exact Continuous.intervalIntegrable (Polynomial.continuous _) _ _
+      · exact Continuous.intervalIntegrable
+          (Continuous.mul continuous_const (Polynomial.continuous _)) _ _
+    calc
+      ∑ i : Fin s, ∑ j : Fin s,
+          q.eval (t.c i) * t.algStabMatrix i j * q.eval (t.c j)
+        = a ^ 2 *
+            (∑ i : Fin s, ∑ j : Fin s,
+              t.c i ^ (s - 1) * t.algStabMatrix i j * t.c j ^ (s - 1)) := hquad
+      _ = a ^ 2 *
+            (-2 * ((1 : ℝ) / (s : ℝ)) *
+              ∫ x in (0 : ℝ)..1, ((nodePoly t) * Polynomial.X ^ (s - 1)).eval x) := by
+            rw [algStabMatrix_top_monomial_eq_neg_integral t hcoll hAlg]
+      _ = -2 * (q.leadingCoeff / (s : ℝ)) *
+            ∫ x in (0 : ℝ)..1, ((nodePoly t) * q).eval x := by
+            rw [h_integral]
+            dsimp [a]
+            ring
 
 /-- Second-stage sign helper for the transformed `(358c)` bridge.
 
