@@ -99,6 +99,14 @@
 - [x] **Theorem**: L-stability of backward Euler, Radau IIA, SDIRK2, SDIRK3 (`OpenMath/StiffEquations.lean`, `OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
 - [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
 - [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
+- [x] **Theorem 358A**: algebraic-stability characterization of collocation methods (`OpenMath/CollocationAlgStability.lean`)
+  - [x] Forward direction: collocation + algebraically stable ⇒ nodes are zeros of `P_s^* − θ P_{s-1}^*` for some θ ≥ 0
+  - [x] Reverse direction: collocation + boundary nodes ⇒ algebraically stable (cycle 371, via `antiderivPoly` helper and Lagrange/quadrature route)
+- [x] **Theorem 359C**: classical collocation families are algebraically stable (`OpenMath/CollocationFamilies.lean`)
+  - [x] `gaussLegendreNodes_hasAlgStabilityBoundaryNodes`: GL nodes ⇒ θ=0 boundary nodes
+  - [x] `thm_359C_gaussLegendre`: any collocation method with GL nodes is algebraically stable (via 358A)
+  - [x] `thm_359C_radauI`: any collocation method on `P_s^* − P_{s-1}^*` zeros is algebraically stable (θ=1)
+  - [x] Concrete corollaries `rkGaussLegendre2_algStable_via_358A` and `rkGaussLegendre3_algStable_via_358A`
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
 - [x] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
   - [x] Formalized local order-star geometry, arrow directions, and the 355F imaginary-axis obstruction
@@ -155,13 +163,11 @@
 
 ## Current Target
 
-**Theorem 358A**: algebraic-stability characterization of collocation methods. Formalize that a collocation Runge–Kutta method is algebraically stable iff its abscissae are zeros of `P_s^* - θ P_{s-1}^*` for some `θ ≥ 0`.**
-
-Next targets:
-1. **State 358A against the actual shifted-Legendre boundary** — the target is the collocation/algebraic-stability characterization, not the already-landed BN-stability corollaries
-2. **Exploit the live Legendre/collocation infrastructure** — reuse the shifted-Legendre and Gaussian-quadrature tooling already in the repo instead of reopening the closed order-star seams
-3. **After 358A, move to its downstream dependent theorem** — the extracted dependency graph points next to `thm:359C`
+**Next theorem**: identify the next downstream dependent of 358A/359C from the Iserles §3.5 chain. Candidates:
+- **Theorem 359B** (Radau IIA family) — note θ < 0 so 358A does not apply directly; Radau IIA algebraic stability already exists concretely for s=3 in the repo.
+- **Theorem 359D / §3.5.10 corollaries** if present in the textbook section after 359C.
+- **Begin Chapter 4** (BDF / variable-step) downstream theorems if §3.5 is now closed in plan-relevant scope.
 
 ## Sorry locations
 
-- No active `sorry`s in the closed order-star / Padé-order-star package; current frontier is the unformalized `thm:358A`
+- No active `sorry`s. Frontier closed through Theorems 358A and 359C (Gauss–Legendre side).
