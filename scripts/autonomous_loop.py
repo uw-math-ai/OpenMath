@@ -17,14 +17,15 @@ import fcntl
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
 import urllib.request
 import urllib.error
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,9 @@ ATTEMPTS_FILE = STATE / "attempts.md"
 LOCK_FILE = STATE / "run.lock"
 HEARTBEAT_FILE = STATE / "heartbeat.json"
 WATCHDOG_LOG = STATE / "watchdog.log"
+ARISTOTLE_INPUTS_DIR = STATE / "aristotle_inputs"
+SWEEP_STAMP_FILE = STATE / "last_cleanup_sweep.txt"
+SWEEP_REPORTS_DIR = STATE / "cleanup_sweeps"
 PLAN_FILE = ROOT / "plan.md"
 CLAUDE_FILE = ROOT / "CLAUDE.md"
 ENV_FILE = ROOT / ".env"
@@ -49,6 +53,25 @@ DEFAULT_COOLDOWN = 300  # seconds between cycles (5 min, enough for CI to finish
 STUCK_THRESHOLD = 4     # consecutive stalls before consultant
 BUDGET_CAP = 8          # consecutive stalls on same sorry before abandoning
 RESTRUCTURING_BUDGET = 2  # max cycles with increasing sorry count
+
+# File-size caps for OpenMath/*.lean files. Large monolithic files hurt
+# compile time, editor responsiveness, and (empirically) encourage the worker
+# to keep accreting seam-style helpers instead of closing sorry's. When a
+# file is over the warn line, the planner prompt surfaces it. Over the hard
+# cap, the planner MUST schedule a split before new content is added, and
+# the evaluator penalizes commits that add lines to such files.
+FILE_SIZE_WARN = 3000   # surface in planner prompt as a caution
+FILE_SIZE_CAP = 6000    # split before adding more; evaluator penalty on growth
+
+# Cleanup sweep: runs inline at the end of run_cycle() when the last sweep was
+# >= SWEEP_INTERVAL_HOURS ago. Purely mechanical: prunes issue files whose
+# referenced theorem/file is already sorry-free, deletes old scaffolding
+# directories under .prover-state/aristotle_inputs/, and writes a markdown
+# report with oversized files and persistent sorry's. Never touches live
+# proof code (OpenMath/*.lean).
+SWEEP_INTERVAL_HOURS = 48
+ARISTOTLE_INPUTS_RETAIN = 30   # keep last N cycles of scaffolding
+PERSISTENT_SORRY_DAYS = 14     # flag sorry's whose blame is >= N days old
 
 # NVMe toolchain paths — GPFS lean toolchain is extremely slow on this cluster
 NVME_LEAN_TOOLCHAIN = "/tmp/lean4-toolchain/bin"
@@ -432,6 +455,389 @@ def get_sorry_locations() -> str:
     if not locations:
         return "No sorry's found."
     return "\n".join(locations)
+
+
+# ─── File-size tracking ──────────────────────────────────────────────────────
+
+def get_file_sizes() -> List[Tuple[str, int]]:
+    """Return [(relative_path, line_count)] for every OpenMath/*.lean file,
+    sorted descending by line count."""
+    entries: List[Tuple[str, int]] = []
+    for f in get_tracked_lean_files():
+        try:
+            n = sum(1 for _ in f.read_text().splitlines())
+        except Exception:
+            continue
+        entries.append((str(f.relative_to(ROOT)), n))
+    entries.sort(key=lambda kv: kv[1], reverse=True)
+    return entries
+
+
+def get_files_over_cap() -> List[Tuple[str, int]]:
+    """Return files currently over the hard size cap."""
+    return [(p, n) for p, n in get_file_sizes() if n >= FILE_SIZE_CAP]
+
+
+def get_file_size_report() -> str:
+    """Planner/worker-facing report of OpenMath/*.lean files that are near or
+    over size thresholds. Returns a short message when everything is fine."""
+    entries = get_file_sizes()
+    over_cap = [(p, n) for p, n in entries if n >= FILE_SIZE_CAP]
+    near_cap = [(p, n) for p, n in entries if FILE_SIZE_WARN <= n < FILE_SIZE_CAP]
+    if not over_cap and not near_cap:
+        return (f"All OpenMath/*.lean files under {FILE_SIZE_WARN} lines. "
+                "No action required.")
+    lines: List[str] = []
+    if over_cap:
+        lines.append(
+            f"HARD CAP EXCEEDED (>= {FILE_SIZE_CAP} lines). These files "
+            "MUST be split before new content is added. A split cycle is a "
+            "legitimate use of a full cycle — extract a cohesive sub-theory "
+            "into a new `OpenMath/<sub>.lean` module and update imports:"
+        )
+        for p, n in over_cap:
+            lines.append(f"  - {p} ({n} lines)")
+    if near_cap:
+        lines.append(
+            f"APPROACHING CAP (>= {FILE_SIZE_WARN} lines). Prefer extracting "
+            "helpers into a new module over adding more to these files:"
+        )
+        for p, n in near_cap:
+            lines.append(f"  - {p} ({n} lines)")
+    return "\n".join(lines)
+
+
+def file_size_growth_report(base_rev: str = "") -> str:
+    """Post-cycle: list OpenMath/*.lean files that are over the hard cap AND
+    grew this cycle (i.e. commits added more lines than they removed).
+    Used by the evaluator to flag accretion onto already-too-large files."""
+    if not base_rev:
+        return ""
+    over_cap = {p for p, _ in get_files_over_cap()}
+    if not over_cap:
+        return ""
+    try:
+        r = subprocess.run(
+            ["git", "diff", "--numstat", base_rev, "HEAD"],
+            cwd=ROOT, capture_output=True, text=True, timeout=30,
+        )
+    except Exception:
+        return ""
+    if r.returncode != 0:
+        return ""
+    offenders: List[str] = []
+    for line in r.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        added_s, removed_s, path = parts
+        if path not in over_cap:
+            continue
+        try:
+            added, removed = int(added_s), int(removed_s)
+        except ValueError:
+            continue
+        net = added - removed
+        if net > 0:
+            offenders.append(f"  - {path}: +{added}/-{removed} (net +{net})")
+    if not offenders:
+        return ""
+    return (
+        "FILE-SIZE ACCRETION: the worker added net lines to files already over "
+        f"the {FILE_SIZE_CAP}-line hard cap. Treat this as at most 0 progress "
+        "(score ≤ 0) unless the task result explicitly declares a split or "
+        "refactor is in progress (SPLITTING_IN_PROGRESS or REFACTOR_COMMIT):\n"
+        + "\n".join(offenders)
+    )
+
+
+# ─── Cleanup sweep (runs inline at end of run_cycle every SWEEP_INTERVAL_HOURS)
+
+_ISSUE_CYCLE_RE = re.compile(r"^cycle_(\d+)_.+\.md$")
+_LEAN_PATH_RE = re.compile(r"OpenMath/[A-Za-z0-9_/]+\.lean")
+
+
+def _files_with_live_sorries() -> set:
+    """Return {relative_path_str, ...} of tracked OpenMath/*.lean files that
+    still contain a live (non-commented) sorry."""
+    live = set()
+    for f in get_tracked_lean_files():
+        try:
+            text = f.read_text()
+        except Exception:
+            continue
+        if re.search(r"\bsorry\b", _strip_lean_comments(text)):
+            live.add(str(f.relative_to(ROOT)))
+    return live
+
+
+def sweep_stale_issues(current_cycle: int, live_sorry_files: set) -> List[Tuple[str, str]]:
+    """Delete `cycle_<N>_*.md` issue files where:
+      1. N is at least 30 cycles old (N <= current_cycle - ARISTOTLE_INPUTS_RETAIN), and
+      2. The issue mentions at least one `OpenMath/*.lean` path, and
+      3. None of the mentioned paths still has a live sorry.
+
+    Consultant advice files (`consultant_advice_cycle_*.md`) are skipped — they
+    are advice logs, not blockers.
+
+    Returns list of (relative_path, reason) for removed files."""
+    if not ISSUES.exists():
+        return []
+    removed: List[Tuple[str, str]] = []
+    cutoff = current_cycle - ARISTOTLE_INPUTS_RETAIN
+    for path in sorted(ISSUES.iterdir()):
+        if not path.is_file() or path.suffix != ".md":
+            continue
+        name = path.name
+        if name.startswith("consultant_advice_"):
+            continue
+        m = _ISSUE_CYCLE_RE.match(name)
+        if not m:
+            continue
+        try:
+            n = int(m.group(1))
+        except ValueError:
+            continue
+        if n > cutoff:
+            continue
+        try:
+            text = path.read_text()
+        except Exception:
+            continue
+        mentioned = set(_LEAN_PATH_RE.findall(text))
+        if not mentioned:
+            continue
+        still_blocking = mentioned & live_sorry_files
+        if still_blocking:
+            continue
+        try:
+            path.unlink()
+        except Exception as e:
+            log(f"sweep: failed to remove {name}: {e}")
+            continue
+        rel = str(path.relative_to(ROOT))
+        reason = f"cycle {n} <= {cutoff}; mentioned files sorry-free: {', '.join(sorted(mentioned))}"
+        removed.append((rel, reason))
+    return removed
+
+
+def sweep_old_aristotle_inputs(current_cycle: int) -> List[str]:
+    """Delete `.prover-state/aristotle_inputs/cycle_<N>/` directories where
+    N <= current_cycle - ARISTOTLE_INPUTS_RETAIN. Returns list of removed
+    relative paths."""
+    if not ARISTOTLE_INPUTS_DIR.exists():
+        return []
+    removed: List[str] = []
+    cutoff = current_cycle - ARISTOTLE_INPUTS_RETAIN
+    for path in sorted(ARISTOTLE_INPUTS_DIR.iterdir()):
+        if not path.is_dir():
+            continue
+        name = path.name
+        if not name.startswith("cycle_"):
+            continue
+        try:
+            n = int(name[len("cycle_"):])
+        except ValueError:
+            continue
+        if n > cutoff:
+            continue
+        try:
+            shutil.rmtree(path)
+        except Exception as e:
+            log(f"sweep: failed to remove {name}: {e}")
+            continue
+        removed.append(str(path.relative_to(ROOT)))
+    return removed
+
+
+def _blame_line_age_days(file_rel: str, line_no: int) -> Optional[int]:
+    """Return age in days of the commit that last touched file_rel:line_no,
+    or None on failure."""
+    try:
+        r = subprocess.run(
+            ["git", "log", "-1", "--format=%ct", "-L",
+             f"{line_no},{line_no}:{file_rel}"],
+            cwd=ROOT, capture_output=True, text=True, timeout=30,
+        )
+    except Exception:
+        return None
+    if r.returncode != 0:
+        return None
+    first = r.stdout.splitlines()[0].strip() if r.stdout.strip() else ""
+    if not first.isdigit():
+        return None
+    commit_ts = int(first)
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    return max(0, (now_ts - commit_ts) // 86400)
+
+
+def persistent_sorry_report() -> List[Tuple[str, int, int]]:
+    """Return [(relative_path, line_no, age_days)] for every live sorry in
+    OpenMath/*.lean whose last-touching commit is >= PERSISTENT_SORRY_DAYS old."""
+    entries: List[Tuple[str, int, int]] = []
+    for f in get_tracked_lean_files():
+        try:
+            text = f.read_text()
+        except Exception:
+            continue
+        rel = str(f.relative_to(ROOT))
+        lines = text.splitlines()
+        depth = 0
+        for i, line in enumerate(lines, 1):
+            j = 0
+            line_depth_start = depth
+            while j < len(line):
+                if line[j:j+2] == "/-":
+                    depth += 1
+                    j += 2
+                elif line[j:j+2] == "-/" and depth > 0:
+                    depth -= 1
+                    j += 2
+                else:
+                    j += 1
+            if line_depth_start > 0:
+                continue
+            idx = line.find("--")
+            code = line[:idx] if idx >= 0 else line
+            if not re.search(r"\bsorry\b", code):
+                continue
+            age = _blame_line_age_days(rel, i)
+            if age is None or age < PERSISTENT_SORRY_DAYS:
+                continue
+            entries.append((rel, i, age))
+    entries.sort(key=lambda x: (-x[2], x[0], x[1]))
+    return entries
+
+
+def oversized_files_report() -> List[Tuple[str, int]]:
+    """Return [(relative_path, line_count)] for files over FILE_SIZE_CAP,
+    sorted by size descending."""
+    return sorted(get_files_over_cap(), key=lambda x: -x[1])
+
+
+def format_cleanup_report(
+    date_str: str,
+    current_cycle: int,
+    removed_issues: List[Tuple[str, str]],
+    removed_aristotle: List[str],
+    oversized: List[Tuple[str, int]],
+    persistent: List[Tuple[str, int, int]],
+) -> str:
+    """Render the cleanup-sweep markdown report."""
+    lines = [f"# Cleanup sweep — {date_str} (cycle {current_cycle})", ""]
+
+    lines.append("## Removed stale issues")
+    if removed_issues:
+        for path, reason in removed_issues:
+            lines.append(f"- `{path}` — {reason}")
+    else:
+        lines.append("- (none)")
+    lines.append("")
+
+    lines.append(f"## Removed aristotle_inputs (> {ARISTOTLE_INPUTS_RETAIN} cycles old)")
+    if removed_aristotle:
+        for path in removed_aristotle:
+            lines.append(f"- `{path}`")
+    else:
+        lines.append("- (none)")
+    lines.append("")
+
+    lines.append(f"## Oversized files (>= {FILE_SIZE_CAP} lines)")
+    if oversized:
+        for path, n in oversized:
+            lines.append(f"- `{path}` — {n} lines (recommend split)")
+    else:
+        lines.append("- (none)")
+    lines.append("")
+
+    lines.append(f"## Persistent sorry's (untouched >= {PERSISTENT_SORRY_DAYS} days)")
+    if persistent:
+        for path, line_no, age in persistent:
+            lines.append(f"- `{path}:{line_no}` — {age} days old")
+    else:
+        lines.append("- (none)")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def _sweep_should_run() -> bool:
+    """True iff the last sweep was >= SWEEP_INTERVAL_HOURS ago (or never)."""
+    if not SWEEP_STAMP_FILE.exists():
+        return True
+    try:
+        last = datetime.fromisoformat(SWEEP_STAMP_FILE.read_text().strip())
+    except Exception:
+        return True
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+    age = datetime.now(tz=timezone.utc) - last
+    return age >= timedelta(hours=SWEEP_INTERVAL_HOURS)
+
+
+def _sweep_commit_and_push(report_rel: str):
+    """Stage any touched .prover-state/{issues,aristotle_inputs,cleanup_sweeps}
+    paths, commit if there's a diff, and push. Never touches OpenMath/."""
+    try:
+        subprocess.run(
+            ["git", "add", "-A", "--",
+             ".prover-state/issues",
+             ".prover-state/aristotle_inputs",
+             ".prover-state/cleanup_sweeps",
+             ".prover-state/last_cleanup_sweep.txt"],
+            cwd=ROOT, check=False, timeout=60,
+        )
+        diff = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=ROOT, timeout=30,
+        )
+        if diff.returncode == 0:
+            return
+        subprocess.run(
+            ["git", "commit", "-m",
+             f"chore: 48h cleanup sweep\n\nReport: {report_rel}"],
+            cwd=ROOT, check=False, timeout=60,
+        )
+        subprocess.run(
+            ["git", "push"],
+            cwd=ROOT, check=False, timeout=120,
+        )
+    except Exception as e:
+        log(f"sweep: commit/push failed: {e}")
+
+
+def maybe_run_cleanup_sweep(current_cycle: int) -> bool:
+    """If >= SWEEP_INTERVAL_HOURS has passed since the last sweep, run the
+    sweep and commit the results. Returns True iff the sweep actually ran."""
+    if not _sweep_should_run():
+        return False
+    log(f"── Cleanup sweep (every {SWEEP_INTERVAL_HOURS}h) ──")
+    SWEEP_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        live = _files_with_live_sorries()
+        removed_issues = sweep_stale_issues(current_cycle, live)
+        removed_aristotle = sweep_old_aristotle_inputs(current_cycle)
+        oversized = oversized_files_report()
+        persistent = persistent_sorry_report()
+        now = datetime.now(tz=timezone.utc)
+        date_tag = now.strftime("%Y-%m-%dT%H-%M-%SZ")
+        report = format_cleanup_report(
+            now.strftime("%Y-%m-%d %H:%M UTC"),
+            current_cycle, removed_issues, removed_aristotle,
+            oversized, persistent,
+        )
+        report_path = SWEEP_REPORTS_DIR / f"{date_tag}.md"
+        report_path.write_text(report)
+        log(f"sweep: wrote {report_path.relative_to(ROOT)}; "
+            f"removed {len(removed_issues)} issue(s), "
+            f"{len(removed_aristotle)} aristotle dir(s); "
+            f"{len(oversized)} oversized, {len(persistent)} persistent sorry(s)")
+        SWEEP_STAMP_FILE.write_text(now.isoformat())
+        _sweep_commit_and_push(str(report_path.relative_to(ROOT)))
+    except Exception as e:
+        log(f"sweep: unexpected failure: {e}")
+        return False
+    return True
 
 
 # ─── Git helpers ──────────────────────────────────────────────────────────────
@@ -1149,6 +1555,9 @@ metadata.
 ## Sorry locations
 {sorry_locations}
 
+## File size status
+{get_file_size_report()}
+
 ## Recent git history
 {git_recent}
 
@@ -1189,6 +1598,11 @@ Write `.prover-state/strategy.md` with:
 10. Do not promote a failed or off-target side investigation into the next main target by default
 11. Do not assign tracked scratch work in a new `OpenMath/*.lean` file unless it is clearly part
     of the planned theorem path and intended to remain in the repo
+12. If any file is over the hard size cap (see "File size status"), the highest-priority work is
+    a split of that file. Extract a cohesive sub-theory into a new module (e.g. split
+    `OpenMath/Foo.lean` into `OpenMath/Foo/Core.lean` + `OpenMath/Foo/Extras.lean`). Only skip
+    the split if the current Target theorem is one-to-two cycles away AND would be strictly
+    blocked by the split — state that tradeoff explicitly in strategy.md.
 
 Be concrete and actionable. The worker will follow your instructions literally.
 Write the file now using the Write tool.
@@ -1228,6 +1642,9 @@ proofs if they need minor edits. This is free work — do not ignore it.
 ## Current sorry locations
 {sorry_locations}
 
+## File size status
+{get_file_size_report()}
+
 ## Instructions
 1. Follow the strategy above. Do not freelance or cherry-pick easy goals.
 2. Use sorry-first workflow: write proof structure with sorry, verify it compiles, then close sorry's.
@@ -1250,6 +1667,12 @@ proofs if they need minor edits. This is free work — do not ignore it.
 11. If you need scratch Lean code or Aristotle scaffolding, keep it under `.prover-state/`,
     not under `OpenMath/`.
 12. Do not leave tracked orphan helper modules on `main`.
+13. Respect the file size cap. If any existing file is already over the hard cap ({FILE_SIZE_CAP}
+    lines, see "File size status"), do NOT add lines to it — instead, extract cohesive helpers
+    into a new sub-module and update imports. If the strategy does not already schedule a split,
+    treat the split as this cycle's work. If you are mid-refactor and legitimately need a
+    temporary net increase, record `SPLITTING_IN_PROGRESS` or `REFACTOR_COMMIT` in the task
+    result so the evaluator knows to allow it.
 
 Work autonomously. Do not ask questions. Make progress.
 """
@@ -1276,6 +1699,12 @@ def run_evaluator(cycle: int, pre_sorry_count: int, post_sorry_count: int,
         for h in recent_history
     ) or "No history yet."
 
+    size_growth = file_size_growth_report(base_rev=base_rev)
+    size_growth_section = (
+        f"\n## File-size accretion warning\n{size_growth}\n"
+        if size_growth else ""
+    )
+
     prompt = f"""You are the evaluator for an autonomous Lean 4 formalization project.
 Assess the worker's progress in cycle {cycle}.
 
@@ -1301,12 +1730,14 @@ Before: {pre_sorry_count} → After: {post_sorry_count}
 The orchestrator appends the current cycle to `history.jsonl` and advances
 `.prover-state/cycle` only after evaluation. Do NOT penalize the worker merely
 because those current-cycle bookkeeping updates are absent from the diff.
-
+{size_growth_section}
 ## Your job
 Output a JSON object with these fields:
 - "progress_score": integer from -2 to +2
   - -2: regression (build broken, sorry count increased without justification)
-  - -1: stall with wasted effort (repeated failed approach)
+  - -1: stall with wasted effort (repeated failed approach, OR net-adding lines to
+        a file already over the {FILE_SIZE_CAP}-line hard cap without a declared
+        split/refactor)
   - 0: stall but reasonable (exploration, infrastructure)
   - +1: minor progress (decomposition, infrastructure, partial proof)
   - +2: solid progress (sorry closed, significant advancement)
@@ -1647,6 +2078,14 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
         f"{stuck_info}\n{summary}"
     )
     telegram_send(alert)
+
+    # Cleanup sweep — runs at most once per SWEEP_INTERVAL_HOURS, from inside
+    # the pipeline so state access and logging stay local. Touches only
+    # `.prover-state/` subdirectories; never the OpenMath/ source tree.
+    try:
+        maybe_run_cleanup_sweep(cycle)
+    except Exception as e:
+        log(f"sweep: top-level failure: {e}")
 
     log(f"═══ Cycle {cycle} complete ═══\n")
     return evaluation
