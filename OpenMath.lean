@@ -17,3 +17,4 @@ import OpenMath.Adjoint
 import OpenMath.ReflectedMethods
 import OpenMath.EmbeddedRK
 import OpenMath.OrderConditions
+import OpenMath.PadeOrderStars
