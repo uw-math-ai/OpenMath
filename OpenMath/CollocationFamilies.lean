@@ -1,5 +1,6 @@
 import OpenMath.CollocationAlgStability
 import OpenMath.GaussLegendre3
+import OpenMath.RadauIIA3
 
 /-!
 # Theorem 359C: Algebraic Stability of Collocation Families
@@ -120,5 +121,75 @@ theorem rkGaussLegendre3_algStable_via_358A :
     rkGaussLegendre3.IsAlgStable :=
   thm_359C_gaussLegendre _ rkGaussLegendre3_isCollocation
     rkGaussLegendre3_hasGaussLegendreNodes
+
+/-! ## Theorem 359B: Radau IIA family-level algebraic stability
+
+Iserles §3.5.9, Theorem 359B: any collocation Runge–Kutta method whose
+abscissae are the Radau IIA quadrature points (the right-endpoint Radau
+nodes, with `c_s = 1`) is algebraically stable.
+
+The Radau IIA nodes on `[0, 1]` are the zeros of `P_s^* − P_{s-1}^*` —
+note that `P_n^*(1) = 1` in the textbook sign convention used in this
+project, so this combination automatically vanishes at `x = 1`. Feeding
+this through Theorem 358A with `θ = 1 ≥ 0` yields algebraic stability.
+-/
+
+/-- A Butcher tableau has **Radau IIA nodes** if its abscissae are the zeros
+of the boundary polynomial `algStabilityBoundaryPoly s 1 = P_s^* − P_{s-1}^*`.
+
+Under the textbook sign convention (`P_n^*(1) = 1`), this combination
+vanishes at `x = 1`, so the right endpoint is always a Radau IIA node. -/
+def HasRadauIIANodes (t : ButcherTableau s) : Prop :=
+  ∀ i : Fin s, (algStabilityBoundaryPoly s 1).eval (t.c i) = 0
+
+/-- Radau IIA nodes lie on the algebraic-stability boundary with `θ = 1 ≥ 0`. -/
+theorem radauIIANodes_hasAlgStabilityBoundaryNodes
+    (t : ButcherTableau s) (hRadau : t.HasRadauIIANodes) :
+    t.HasAlgStabilityBoundaryNodes :=
+  ⟨1, le_of_lt one_pos, hRadau⟩
+
+/-- **Theorem 359B (Radau IIA)**: any collocation Runge–Kutta method whose
+nodes are Radau IIA quadrature points is algebraically stable.
+
+Immediate corollary of Theorem 358A with `θ = 1`. -/
+theorem thm_359B_radauIIA
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hRadau : t.HasRadauIIANodes) :
+    t.IsAlgStable :=
+  thm_358A_if t hcoll (radauIIANodes_hasAlgStabilityBoundaryNodes t hRadau)
+
+/-! ## Concrete corollary: Radau IIA 3-stage -/
+
+private theorem sqrt6_sq' : Real.sqrt 6 ^ 2 = 6 :=
+  Real.sq_sqrt (by norm_num : (6 : ℝ) ≥ 0)
+
+/-- The nodes of `rkRadauIIA3` are zeros of `algStabilityBoundaryPoly 3 1`. -/
+theorem rkRadauIIA3_hasRadauIIANodes :
+    rkRadauIIA3.HasRadauIIANodes := by
+  intro ⟨i, hi⟩
+  simp only [algStabilityBoundaryPoly, eval_sub, eval_mul, eval_C, one_mul,
+    shiftedLegendreStarPoly_eval, shiftedLegendreP_three]
+  show (20 * (rkRadauIIA3.c ⟨i, hi⟩) ^ 3 - 30 * (rkRadauIIA3.c ⟨i, hi⟩) ^ 2 +
+    12 * (rkRadauIIA3.c ⟨i, hi⟩) - 1) - shiftedLegendreP 2 (rkRadauIIA3.c ⟨i, hi⟩) = 0
+  rw [shiftedLegendreP_two]
+  interval_cases i
+  · simp [rkRadauIIA3]
+    nlinarith [sqrt6_sq', Real.sqrt_pos_of_pos (show (6 : ℝ) > 0 by norm_num)]
+  · simp [rkRadauIIA3]
+    nlinarith [sqrt6_sq', Real.sqrt_pos_of_pos (show (6 : ℝ) > 0 by norm_num)]
+  · simp [rkRadauIIA3]; ring
+
+/-- `rkRadauIIA3` satisfies the collocation conditions `IsCollocation`. -/
+theorem rkRadauIIA3_isCollocation :
+    rkRadauIIA3.IsCollocation := by
+  refine ⟨by norm_num, rkRadauIIA3_B5.mono (by omega), rkRadauIIA3_C3, ?_⟩
+  intro i j hij
+  fin_cases i <;> fin_cases j <;> simp [rkRadauIIA3] at hij ⊢ <;>
+    nlinarith [sqrt6_sq', Real.sqrt_pos_of_pos (show (6 : ℝ) > 0 by norm_num)]
+
+/-- **Radau IIA 3-stage is algebraically stable** (via Theorem 359B / 358A). -/
+theorem rkRadauIIA3_algStable_via_358A :
+    rkRadauIIA3.IsAlgStable :=
+  thm_359B_radauIIA _ rkRadauIIA3_isCollocation rkRadauIIA3_hasRadauIIANodes
 
 end ButcherTableau

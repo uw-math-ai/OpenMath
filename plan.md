@@ -107,6 +107,11 @@
   - [x] `thm_359C_gaussLegendre`: any collocation method with GL nodes is algebraically stable (via 358A)
   - [x] `thm_359C_radauI`: any collocation method on `P_s^* − P_{s-1}^*` zeros is algebraically stable (θ=1)
   - [x] Concrete corollaries `rkGaussLegendre2_algStable_via_358A` and `rkGaussLegendre3_algStable_via_358A`
+- [x] **Theorem 359B**: Radau IIA family is algebraically stable (`OpenMath/CollocationFamilies.lean`, cycle 374)
+  - [x] `HasRadauIIANodes`: tableau abscissae are zeros of `P_s^* − P_{s-1}^*` (right-endpoint Radau, θ=1 under live sign convention)
+  - [x] `radauIIANodes_hasAlgStabilityBoundaryNodes`: Radau IIA nodes ⇒ algebraic-stability boundary nodes with θ = 1 ≥ 0
+  - [x] `thm_359B_radauIIA`: any collocation method with Radau IIA nodes is algebraically stable (via 358A)
+  - [x] Concrete corollary `rkRadauIIA3_algStable_via_358A`
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
 - [x] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
   - [x] Formalized local order-star geometry, arrow directions, and the 355F imaginary-axis obstruction
@@ -163,10 +168,12 @@
 
 ## Current Target
 
-**Next theorem**: identify the next downstream dependent of 358A/359C from the Iserles §3.5 chain. Candidates:
-- **Theorem 359B** (Radau IIA family) — note θ < 0 so 358A does not apply directly; Radau IIA algebraic stability already exists concretely for s=3 in the repo.
+**Next theorem**: identify the next downstream dependent of 358A/359B/359C from the Iserles §3.5 chain. Candidates:
+- **Theorem 359B (Radau IA family)** — symmetric to 359B Radau IIA but with the left-endpoint sign convention (`P_s^* + P_{s-1}^*`); requires either reflecting through `1 − x` or the Radau IA-side textbook normalization.
 - **Theorem 359D / §3.5.10 corollaries** if present in the textbook section after 359C.
 - **Begin Chapter 4** (BDF / variable-step) downstream theorems if §3.5 is now closed in plan-relevant scope.
+
+Note: in cycle 374, what the strategy called the Radau IIA "right-endpoint" case turned out to coincide with the existing `thm_359C_radauI` (θ=1) under the live sign convention `shiftedLegendreP n 1 = 1`. The new `thm_359B_radauIIA` is the semantically named wrapper plus the concrete corollary for `rkRadauIIA3`. The genuinely new family-level theorem still missing is the Radau IA (left-endpoint, `c_1 = 0`) case, which requires θ = -1 under this sign convention and so cannot use 358A directly.
 
 ## Sorry locations
 
