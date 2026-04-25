@@ -569,6 +569,11 @@ theorem adamsBashforth5_convergent : adamsBashforth5.IsConvergent :=
   (dahlquist_equivalence adamsBashforth5).mpr
     ⟨adamsBashforth5_consistent, adamsBashforth5_zeroStable⟩
 
+/-- Adams–Bashforth 6-step is convergent. -/
+theorem adamsBashforth6_convergent : adamsBashforth6.IsConvergent :=
+  (dahlquist_equivalence adamsBashforth6).mpr
+    ⟨adamsBashforth6_consistent, adamsBashforth6_zeroStable⟩
+
 /-- Adams–Moulton 5-step is convergent. -/
 theorem adamsMoulton5_convergent : adamsMoulton5.IsConvergent :=
   (dahlquist_equivalence adamsMoulton5).mpr
