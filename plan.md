@@ -29,6 +29,7 @@
 - [x] **Adams–Moulton 3-step**: consistency, order 4, implicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Bashforth 4-step**: consistency, order 4, explicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Moulton 4-step**: consistency, order 5, implicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Adams–Bashforth 5-step**: consistency, order 5, explicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -185,10 +186,16 @@
 
 ## Current Target
 
-**Next theorem**: Theorem 359D (concrete textbook statement) once the Iserles
-§3.5.10 reference is in hand; otherwise begin Chapter 4 BDF downstream. The
-cycle 376 §3.5.10 packaging corollaries above provide a clean BN-stability
-scaffold to plug a real 359D statement into.
+**Next mechanical Adams extension**: Adams–Moulton 5-step (AM5) — same shape as
+AB5 (cycle 384), implicit order-6 method with α = ![0,0,0,0,-1,1] and
+β = ![27/1440, -173/1440, 482/1440, -798/1440, 1427/1440, 475/1440] (signs to
+be re-checked against the live consistency convention before committing). The
+zero-stability proof transplants directly from AB5.
+
+**Next deep theorem**: Theorem 359D (concrete textbook statement) once the
+Iserles §3.5.10 reference is in hand; otherwise begin Chapter 4 BDF
+downstream. The cycle 376 §3.5.10 packaging corollaries above provide a clean
+BN-stability scaffold to plug a real 359D statement into.
 
 BDF downstream status: BDF7 zero-instability and the Dahlquist-equivalence
 `bdf7_not_convergent` wrapper are closed.
