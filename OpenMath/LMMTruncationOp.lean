@@ -324,4 +324,114 @@ theorem truncationOp_polyShiftDegSucc_eq_leading_of_HasOrder
   rw [← htrans]
   simpa [add_sub_cancel_right] using hpoly
 
+private lemma polynomial_eval_eq_finset_sum_of_natDegree_le
+    (P : Polynomial ℝ) {N : ℕ} (hdeg : P.natDegree ≤ N) (u : ℝ) :
+    P.eval u = ∑ k : Fin (N + 1), P.coeff (k : ℕ) * u ^ (k : ℕ) := by
+  rw [Polynomial.eval_eq_sum_range' (Nat.lt_succ_of_le hdeg)]
+  rw [← Fin.sum_univ_eq_sum_range
+    (fun k => P.coeff k * u ^ k) (N + 1)]
+
+private lemma derivative_eval_eq_finset_sum_of_natDegree_le
+    (P : Polynomial ℝ) {N : ℕ} (hdeg : P.natDegree ≤ N) (u : ℝ) :
+    P.derivative.eval u =
+      ∑ k : Fin (N + 1),
+        P.coeff (k : ℕ) * ((k : ℕ) : ℝ) * u ^ ((k : ℕ) - 1) := by
+  rw [Polynomial.derivative_eval]
+  rw [P.sum_over_range' (fun n => by simp) (N + 1) (Nat.lt_succ_of_le hdeg)]
+  rw [← Fin.sum_univ_eq_sum_range
+    (fun k => P.coeff k * (k : ℝ) * u ^ (k - 1)) (N + 1)]
+
+/-- For an order-`p` method, the truncation operator at `0` vanishes on the
+    test function given by evaluating a polynomial of `natDegree ≤ p`. -/
+theorem truncationOp_polynomial_eval_eq_zero_of_HasOrder
+    {m : LMM s} {p : ℕ} (h : ℝ) (hord : m.HasOrder p)
+    (P : Polynomial ℝ) (hdeg : P.natDegree ≤ p) :
+    m.truncationOp h
+        (fun u => P.eval u)
+        (fun u => P.derivative.eval u)
+        0 = 0 := by
+  let a : Fin (p + 1) → ℝ := fun k => P.coeff (k : ℕ)
+  have hy :
+      (fun u => P.eval u) =
+        (fun u => ∑ k : Fin (p + 1), a k * u ^ (k : ℕ)) := by
+    funext u
+    simp [a, polynomial_eval_eq_finset_sum_of_natDegree_le P hdeg u]
+  have hy' :
+      (fun u => P.derivative.eval u) =
+        (fun u => ∑ k : Fin (p + 1),
+          a k * ((k : ℕ) : ℝ) * u ^ ((k : ℕ) - 1)) := by
+    funext u
+    simp [a, derivative_eval_eq_finset_sum_of_natDegree_le P hdeg u]
+  rw [hy, hy']
+  exact m.truncationOp_polyCombination_eq_zero_of_HasOrder (h := h) hord a
+
+/-- For an order-`p` method, the truncation operator at `0` on the test
+    function given by evaluating a polynomial of `natDegree ≤ p + 1` reduces
+    to `coeff (p+1) · (p+1)! · errorConstant · h^(p+1)`. -/
+theorem truncationOp_polynomial_eval_eq_leading_of_HasOrder
+    {m : LMM s} {p : ℕ} (h : ℝ) (hord : m.HasOrder p)
+    (P : Polynomial ℝ) (hdeg : P.natDegree ≤ p + 1) :
+    m.truncationOp h
+        (fun u => P.eval u)
+        (fun u => P.derivative.eval u)
+        0
+      = P.coeff (p + 1)
+          * ((p + 1).factorial : ℝ) * m.errorConstant p * h ^ (p + 1) := by
+  let a : Fin (p + 2) → ℝ := fun k => P.coeff (k : ℕ)
+  have hy :
+      (fun u => P.eval u) =
+        (fun u => ∑ k : Fin (p + 2), a k * u ^ (k : ℕ)) := by
+    funext u
+    simpa [a, Nat.add_assoc] using
+      (polynomial_eval_eq_finset_sum_of_natDegree_le P hdeg u)
+  have hy' :
+      (fun u => P.derivative.eval u) =
+        (fun u => ∑ k : Fin (p + 2),
+          a k * ((k : ℕ) : ℝ) * u ^ ((k : ℕ) - 1)) := by
+    funext u
+    simpa [a, Nat.add_assoc] using
+      (derivative_eval_eq_finset_sum_of_natDegree_le P hdeg u)
+  rw [hy, hy']
+  simpa [a] using
+    m.truncationOp_polyDegSucc_eq_leading_of_HasOrder (h := h) hord a
+
+/-- Translated form of Task A: the truncation operator at evaluation point
+    `t` on `fun u => P.eval (u - t)` vanishes for an order-`p` LMM with
+    `P.natDegree ≤ p`. -/
+theorem truncationOp_polynomial_evalShift_eq_zero_of_HasOrder
+    {m : LMM s} {p : ℕ} (h t : ℝ) (hord : m.HasOrder p)
+    (P : Polynomial ℝ) (hdeg : P.natDegree ≤ p) :
+    m.truncationOp h
+        (fun u => P.eval (u - t))
+        (fun u => P.derivative.eval (u - t))
+        t = 0 := by
+  have hpoly := m.truncationOp_polynomial_eval_eq_zero_of_HasOrder
+    (h := h) hord P hdeg
+  have htrans := m.truncationOp_translation h t
+    (fun u => P.eval (u - t))
+    (fun u => P.derivative.eval (u - t))
+  rw [← htrans]
+  simpa [add_sub_cancel_right] using hpoly
+
+/-- Translated form of Task B: for an order-`p` LMM, the truncation operator
+    at evaluation point `t` on `fun u => P.eval (u - t)` with
+    `P.natDegree ≤ p + 1` equals
+    `P.coeff (p+1) · (p+1)! · errorConstant · h^(p+1)`. -/
+theorem truncationOp_polynomial_evalShift_eq_leading_of_HasOrder
+    {m : LMM s} {p : ℕ} (h t : ℝ) (hord : m.HasOrder p)
+    (P : Polynomial ℝ) (hdeg : P.natDegree ≤ p + 1) :
+    m.truncationOp h
+        (fun u => P.eval (u - t))
+        (fun u => P.derivative.eval (u - t))
+        t
+      = P.coeff (p + 1)
+          * ((p + 1).factorial : ℝ) * m.errorConstant p * h ^ (p + 1) := by
+  have hpoly := m.truncationOp_polynomial_eval_eq_leading_of_HasOrder
+    (h := h) hord P hdeg
+  have htrans := m.truncationOp_translation h t
+    (fun u => P.eval (u - t))
+    (fun u => P.derivative.eval (u - t))
+  rw [← htrans]
+  simpa [add_sub_cancel_right] using hpoly
+
 end LMM
