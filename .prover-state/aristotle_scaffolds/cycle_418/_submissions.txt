@@ -1,0 +1,16 @@
+Cycle 418 Aristotle batch (submitted 2026-04-25T18:50Z):
+
+Job A (iteratedDeriv 4 bounded on Icc):
+  b199f8ce-7690-4fac-9c43-1f0b71800784
+
+Job B (y_fourth_order_taylor_remainder):
+  16e061c6-b378-4b44-a168-03790f35b464
+
+Job C (derivY_third_order_taylor_remainder):
+  93418f8b-824f-4e2a-9fd7-f546332eacef
+
+Job D (ab3_pointwise_residual_bound):
+  0dd9f346-5325-4ec3-9f72-6ec9f4a827c5
+
+Job E (ab3_local_residual_bound):
+  ea0a7416-57a6-479f-8fc8-53b81203e295
