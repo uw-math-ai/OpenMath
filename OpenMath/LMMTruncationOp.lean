@@ -1212,4 +1212,291 @@ lemma lmm_error_bound_from_local_truncation
           + T * Real.exp (L * T) * C * h ^ p :=
   discrete_gronwall_exp_horizon hh hL hC he0 hstep n hn hnh
 
+/-! ### Forward Euler one-step error recurrence (Iserles §1.2)
+
+We instantiate the abstract recurrence consumed by
+`lmm_error_bound_from_local_truncation` for the simplest scalar 1-step LMM:
+explicit forward Euler applied to a Lipschitz scalar ODE
+`y' = f(t, y)`. -/
+
+/-- Forward Euler iteration for a scalar IVP `y' = f(t, y)`:
+`y_{n+1} = y_n + h · f(t₀ + n h, y_n)`. -/
+noncomputable def forwardEulerIter
+    (h : ℝ) (f : ℝ → ℝ → ℝ) (t₀ y₀ : ℝ) : ℕ → ℝ
+  | 0 => y₀
+  | n + 1 =>
+      forwardEulerIter h f t₀ y₀ n
+        + h * f (t₀ + (n : ℝ) * h) (forwardEulerIter h f t₀ y₀ n)
+
+@[simp] lemma forwardEulerIter_zero
+    (h : ℝ) (f : ℝ → ℝ → ℝ) (t₀ y₀ : ℝ) :
+    forwardEulerIter h f t₀ y₀ 0 = y₀ := rfl
+
+lemma forwardEulerIter_succ
+    (h : ℝ) (f : ℝ → ℝ → ℝ) (t₀ y₀ : ℝ) (n : ℕ) :
+    forwardEulerIter h f t₀ y₀ (n + 1)
+      = forwardEulerIter h f t₀ y₀ n
+        + h * f (t₀ + (n : ℝ) * h) (forwardEulerIter h f t₀ y₀ n) := rfl
+
+/-- Forward Euler local truncation operator reduces to the textbook
+one-step residual `y(t + h) - y(t) - h · y'(t)`. -/
+theorem forwardEuler_localTruncationError_eq
+    (h t : ℝ) (y : ℝ → ℝ) :
+    forwardEuler.localTruncationError h t y
+      = y (t + h) - y t - h * deriv y t := by
+  unfold localTruncationError truncationOp
+  simp [forwardEuler, Fin.sum_univ_two, iteratedDeriv_one,
+    iteratedDeriv_zero]
+  ring
+
+/-- One-step error recurrence for forward Euler applied to a scalar ODE
+with Lipschitz right-hand side and exact solution `y` satisfying
+`deriv y t = f t (y t)`.
+
+Letting `eN k := |forwardEulerIter h f t₀ y₀ k - y (t₀ + k h)|` and
+`τ_n := y (t₀ + (n+1) h) - y (t₀ + n h) - h · f (t₀ + n h, y (t₀ + n h))`
+be the one-step truncation residual,
+`eN (n+1) ≤ (1 + h · L) · eN n + |τ_n|`. -/
+theorem forwardEuler_one_step_error_bound
+    {h L : ℝ} (hh : 0 ≤ h) {f : ℝ → ℝ → ℝ}
+    (hf : ∀ t a b : ℝ, |f t a - f t b| ≤ L * |a - b|)
+    (t₀ y₀ : ℝ) (y : ℝ → ℝ) (n : ℕ) :
+    |forwardEulerIter h f t₀ y₀ (n + 1)
+        - y (t₀ + ((n : ℝ) + 1) * h)|
+      ≤ (1 + h * L)
+          * |forwardEulerIter h f t₀ y₀ n - y (t₀ + (n : ℝ) * h)|
+        + |y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+            - h * f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h))| := by
+  -- Abbreviations.
+  set yn : ℝ := forwardEulerIter h f t₀ y₀ n with hyn_def
+  set zn : ℝ := y (t₀ + (n : ℝ) * h) with hzn_def
+  set zn1 : ℝ := y (t₀ + ((n : ℝ) + 1) * h) with hzn1_def
+  set tn : ℝ := t₀ + (n : ℝ) * h with htn_def
+  -- Forward-Euler step formula.
+  have hstep : forwardEulerIter h f t₀ y₀ (n + 1)
+      = yn + h * f tn yn := by
+    simp [forwardEulerIter_succ, hyn_def, htn_def]
+  -- Algebraic decomposition of the global error increment.
+  have halg :
+      forwardEulerIter h f t₀ y₀ (n + 1) - zn1
+        = (yn - zn) + h * (f tn yn - f tn zn)
+            - (zn1 - zn - h * f tn zn) := by
+    rw [hstep]; ring
+  -- Lipschitz bound on the step error.
+  have hLip : |f tn yn - f tn zn| ≤ L * |yn - zn| := hf tn yn zn
+  -- Triangle inequality + Lipschitz step.
+  have h_h_abs : |h| = h := abs_of_nonneg hh
+  have hbound :
+      |(yn - zn) + h * (f tn yn - f tn zn)
+        - (zn1 - zn - h * f tn zn)|
+        ≤ (1 + h * L) * |yn - zn|
+          + |zn1 - zn - h * f tn zn| := by
+    -- The Lipschitz step gives |h * (f tn yn - f tn zn)| ≤ h * L * |yn - zn|.
+    have h_h_term : |h * (f tn yn - f tn zn)| = h * |f tn yn - f tn zn| := by
+      rw [abs_mul, h_h_abs]
+    have h_lip_h : h * |f tn yn - f tn zn| ≤ h * (L * |yn - zn|) :=
+      mul_le_mul_of_nonneg_left hLip hh
+    have h_step_abs : |h * (f tn yn - f tn zn)| ≤ h * (L * |yn - zn|) := by
+      rw [h_h_term]; exact h_lip_h
+    -- Triangle inequality on the inner sum.
+    have h_inner_tri :
+        |(yn - zn) + h * (f tn yn - f tn zn)|
+          ≤ |yn - zn| + |h * (f tn yn - f tn zn)| := abs_add_le _ _
+    have h_inner :
+        |(yn - zn) + h * (f tn yn - f tn zn)|
+          ≤ |yn - zn| + h * (L * |yn - zn|) := by
+      linarith [h_inner_tri, h_step_abs]
+    -- Triangle inequality on the outer subtraction.
+    have h_outer :
+        |(yn - zn) + h * (f tn yn - f tn zn)
+          - (zn1 - zn - h * f tn zn)|
+          ≤ |(yn - zn) + h * (f tn yn - f tn zn)|
+            + |zn1 - zn - h * f tn zn| := abs_sub _ _
+    -- Combine.
+    have h_combined :
+        |(yn - zn) + h * (f tn yn - f tn zn)
+          - (zn1 - zn - h * f tn zn)|
+          ≤ (|yn - zn| + h * (L * |yn - zn|))
+            + |zn1 - zn - h * f tn zn| := by
+      linarith [h_outer, h_inner]
+    have h_alg :
+        (|yn - zn| + h * (L * |yn - zn|))
+          + |zn1 - zn - h * f tn zn|
+          = (1 + h * L) * |yn - zn| + |zn1 - zn - h * f tn zn| := by ring
+    linarith [h_combined, h_alg]
+  calc |forwardEulerIter h f t₀ y₀ (n + 1) - zn1|
+      = |(yn - zn) + h * (f tn yn - f tn zn)
+          - (zn1 - zn - h * f tn zn)| := by rw [halg]
+    _ ≤ (1 + h * L) * |yn - zn|
+        + |zn1 - zn - h * f tn zn| := hbound
+
+/-- A `C^3` function has its second derivative bounded on every compact
+interval `[a, b]`. -/
+private theorem iteratedDeriv_two_bounded_on_Icc
+    {y : ℝ → ℝ} (hy : ContDiff ℝ 3 y) (a b : ℝ) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 2 y t| ≤ M := by
+  have h_cont_diff2 : ContDiff ℝ 2 (iteratedDeriv 1 y) := by
+    rw [iteratedDeriv_eq_iterate]
+    fun_prop
+  have h_cont_diff3 : Continuous (iteratedDeriv 2 y) := by
+    convert h_cont_diff2.continuous_deriv _ using 1
+    · norm_num [iteratedDeriv_succ']
+    · decide +revert
+  obtain ⟨M, hM⟩ :=
+    IsCompact.exists_bound_of_continuousOn (CompactIccSpace.isCompact_Icc)
+      h_cont_diff3.continuousOn
+  refine ⟨max M 0, le_max_right _ _, ?_⟩
+  intro t ht
+  exact (hM t ht).trans (le_max_left _ _)
+
+/-- Pointwise Taylor (Lagrange) remainder bound: if `y` is `C^3` and
+`|y''| ≤ M` on `[a, b]`, then for `t, t + h ∈ [a, b]` with `h ≥ 0`,
+`|y(t+h) - y(t) - h · y'(t)| ≤ M / 2 · h^2`. -/
+private theorem forwardEuler_pointwise_residual_bound
+    {y : ℝ → ℝ} (hy : ContDiff ℝ 3 y) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 2 y t| ≤ M)
+    {t h : ℝ} (ht : t ∈ Set.Icc a b) (hth : t + h ∈ Set.Icc a b)
+    (hh : 0 ≤ h) :
+    |y (t + h) - y t - h * deriv y t| ≤ M / 2 * h ^ 2 := by
+  by_cases hh' : h = 0
+  · subst hh'; simp
+  · obtain ⟨x', hx', hx''⟩ : ∃ x' ∈ Set.Ioo t (t + h),
+        y (t + h) - taylorWithinEval y 1 (Set.Icc t (t + h)) t (t + h)
+          = iteratedDeriv 2 y x' * h ^ 2 / 2 := by
+      have htlt : t < t + h := lt_add_of_pos_right _ (lt_of_le_of_ne hh (Ne.symm hh'))
+      have hcdo : ContDiffOn ℝ 2 y (Set.Icc t (t + h)) :=
+        hy.contDiffOn.of_le (by norm_num)
+      have := taylor_mean_remainder_lagrange_iteratedDeriv htlt hcdo
+      aesop
+    have h_taylor : taylorWithinEval y 1 (Set.Icc t (t + h)) t (t + h)
+        = y t + (t + h - t) * deriv y t := by
+      convert taylorWithinEval_succ y 0 (Set.Icc t (t + h)) t (t + h) using 1
+      · norm_num [taylorWithinEval_self]
+        rw [derivWithin]
+        rw [fderivWithin_eq_fderiv] <;> norm_num [hy.contDiffAt.differentiableAt]
+        exact uniqueDiffOn_Icc (by linarith [hx'.1, hx'.2]) t
+          (by constructor <;> linarith [hx'.1, hx'.2])
+    have h_x'_in : x' ∈ Set.Icc a b :=
+      ⟨by linarith [hx'.1, ht.1], by linarith [hx'.2, hth.2]⟩
+    have h_y_bound := abs_le.mp (hbnd x' h_x'_in)
+    refine abs_le.mpr ⟨?_, ?_⟩
+    · nlinarith [h_y_bound]
+    · nlinarith [h_y_bound]
+
+/-- Uniform bound on the forward-Euler one-step truncation residual on a
+finite horizon, given a `C^3` solution. Built from the pointwise Lagrange
+Taylor remainder and a uniform bound on `|y''|` over a compact interval. -/
+theorem forwardEuler_local_residual_bound
+    {y : ℝ → ℝ} (hy : ContDiff ℝ 3 y) (t₀ T : ℝ) (_hT : 0 < T) :
+    ∃ C δ : ℝ, 0 ≤ C ∧ 0 < δ ∧
+      ∀ {h : ℝ}, 0 < h → h ≤ δ → ∀ n : ℕ,
+        t₀ + (n : ℝ) * h ∈ Set.Icc t₀ (t₀ + T) →
+        |y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+            - h * deriv y (t₀ + (n : ℝ) * h)|
+          ≤ C * h ^ 2 := by
+  -- Choose a compact sample interval `[t₀, t₀ + T + 1]` containing every
+  -- relevant sample point and the next step `t + h` for `0 < h ≤ 1`.
+  obtain ⟨M, hM_nn, hM⟩ :=
+    iteratedDeriv_two_bounded_on_Icc hy t₀ (t₀ + T + 1)
+  refine ⟨M / 2, 1, by linarith, by norm_num, ?_⟩
+  intro h hh hh1 n hn_in
+  -- `t := t₀ + n*h ∈ [t₀, t₀+T] ⊆ [t₀, t₀+T+1]` and
+  -- `t + h ∈ [t₀, t₀+T+1]` (using `h ≤ 1`).
+  set t : ℝ := t₀ + (n : ℝ) * h with ht_def
+  have ht_mem : t ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨hn_in.1, ?_⟩
+    linarith [hn_in.2]
+  have hth_mem : t + h ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨by linarith [hn_in.1, hh.le], ?_⟩
+    linarith [hn_in.2, hh1]
+  -- Rewrite the textbook residual as `y(t+h) - y(t) - h * deriv y t`.
+  have heq :
+      y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+        - h * deriv y (t₀ + (n : ℝ) * h)
+        = y (t + h) - y t - h * deriv y t := by
+    have hadd : t + h = t₀ + ((n : ℝ) + 1) * h := by
+      simp [ht_def]; ring
+    rw [show t = t₀ + (n : ℝ) * h from rfl, hadd]
+  rw [heq]
+  exact forwardEuler_pointwise_residual_bound hy hM ht_mem hth_mem hh.le
+
+/-- Final assembly of the global forward-Euler error bound on a finite
+horizon `[t₀, t₀ + T]` from the one-step Lipschitz recurrence and the
+local truncation residual bound, via
+`lmm_error_bound_from_local_truncation`. -/
+theorem forwardEuler_global_error_bound
+    {y : ℝ → ℝ} (hy : ContDiff ℝ 3 y)
+    {f : ℝ → ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
+    (hf : ∀ t a b : ℝ, |f t a - f t b| ≤ L * |a - b|)
+    (hyf : ∀ t, deriv y t = f t (y t))
+    (t₀ T : ℝ) (hT : 0 < T) :
+    ∃ K δ : ℝ, 0 ≤ K ∧ 0 < δ ∧
+      ∀ {h : ℝ}, 0 < h → h ≤ δ → ∀ N : ℕ, (N : ℝ) * h ≤ T →
+        |forwardEulerIter h f t₀ (y t₀) N - y (t₀ + (N : ℝ) * h)|
+          ≤ K * h := by
+  obtain ⟨C, δ, hC_nn, hδ_pos, hresidual⟩ :=
+    forwardEuler_local_residual_bound hy t₀ T hT
+  refine ⟨T * Real.exp (L * T) * C, δ, ?_, hδ_pos, ?_⟩
+  · exact mul_nonneg
+      (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
+  intro h hh hδ_le N hNh
+  -- Error sequence.
+  set e : ℕ → ℝ :=
+    fun k => |forwardEulerIter h f t₀ (y t₀) k - y (t₀ + (k : ℝ) * h)|
+    with he_def
+  have he0_eq : e 0 = 0 := by
+    show |forwardEulerIter h f t₀ (y t₀) 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)| = 0
+    simp
+  have he0_nn : 0 ≤ e 0 := abs_nonneg _
+  -- One-step recurrence with forcing C * h^2.
+  have hstep : ∀ n, n < N →
+      e (n + 1) ≤ (1 + h * L) * e n + C * h ^ (1 + 1) := by
+    intro n hn_lt
+    have honestep :=
+      forwardEuler_one_step_error_bound (h := h) (L := L)
+        hh.le hf t₀ (y t₀) y n
+    -- Bridge `f` and `deriv y` along the trajectory.
+    have hbridge :
+        y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+            - h * f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h))
+          = y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+              - h * deriv y (t₀ + (n : ℝ) * h) := by
+      rw [hyf]
+    rw [hbridge] at honestep
+    -- Sample point lies in `[t₀, t₀ + T]`.
+    have hn_le : (n : ℝ) ≤ (N : ℝ) := by
+      exact_mod_cast Nat.le_of_lt hn_lt
+    have hnh_le_T : (n : ℝ) * h ≤ T :=
+      (mul_le_mul_of_nonneg_right hn_le hh.le).trans hNh
+    have hn_nn : (0 : ℝ) ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le n
+    have ht_in : t₀ + (n : ℝ) * h ∈ Set.Icc t₀ (t₀ + T) := by
+      refine ⟨?_, ?_⟩
+      · have := mul_nonneg hn_nn hh.le
+        linarith
+      · linarith
+    have hres := hresidual hh hδ_le n ht_in
+    -- LHS rewriting: `((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1`.
+    have hlhs_eq :
+        e (n + 1)
+          = |forwardEulerIter h f t₀ (y t₀) (n + 1)
+              - y (t₀ + ((n : ℝ) + 1) * h)| := by
+      show |_ - _| = |_ - _|
+      have : ((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1 := by push_cast; ring
+      rw [this]
+    have he_n_eq : e n
+          = |forwardEulerIter h f t₀ (y t₀) n - y (t₀ + (n : ℝ) * h)| :=
+      rfl
+    rw [hlhs_eq, he_n_eq]
+    have hpow : C * h ^ (1 + 1) = C * h ^ 2 := by norm_num
+    rw [hpow]
+    linarith [honestep, hres]
+  -- Apply the LMM Gronwall bridge with `p = 1`.
+  have hgronwall :=
+    lmm_error_bound_from_local_truncation
+      (h := h) (L := L) (C := C) (T := T) (p := 1) (e := e) (N := N)
+      hh.le hL hC_nn he0_nn hstep N le_rfl hNh
+  -- The initial error vanishes: `e 0 = 0`.
+  rw [he0_eq, mul_zero, zero_add, pow_one] at hgronwall
+  exact hgronwall
+
 end LMM
