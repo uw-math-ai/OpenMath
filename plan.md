@@ -23,13 +23,13 @@
   - Statement: If f is Lipschitz and sufficiently smooth, the Euler method converges with order 1
 
 ### 1.2 Multistep Methods
-- [x] **Definition**: General linear multistep method (Adams–Bashforth, Adams–Moulton) (`OpenMath/MultistepMethods.lean`)
-- [x] **Example**: Adams–Moulton 2-step method — consistency, order 3, implicit, zero-stable (`OpenMath/MultistepMethods.lean`)
-- [x] **Adams–Bashforth 3-step**: consistency, order 3, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Moulton 3-step**: consistency, order 4, implicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Bashforth 4-step**: consistency, order 4, explicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Moulton 4-step**: consistency, order 5, implicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Bashforth 5-step**: consistency, order 5, explicit, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Definition**: General linear multistep method infrastructure (`OpenMath/MultistepMethods.lean`); Adams–Bashforth and Adams–Moulton families (`OpenMath/AdamsMethods.lean`)
+- [x] **Example**: Adams–Moulton 2-step method — consistency, order 3, implicit, zero-stable (`OpenMath/AdamsMethods.lean`)
+- [x] **Adams–Bashforth 3-step**: consistency, order 3, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Adams–Moulton 3-step**: consistency, order 4, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Adams–Bashforth 4-step**: consistency, order 4, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Adams–Moulton 4-step**: consistency, order 5, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Adams–Bashforth 5-step**: consistency, order 5, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -186,8 +186,9 @@
 
 ## Current Target
 
-**Next mechanical Adams extension**: Adams–Moulton 5-step (AM5) — same shape as
-AB5 (cycle 384), implicit order-6 method with α = ![0,0,0,0,-1,1] and
+**Next mechanical Adams extension**: Adams–Moulton 5-step (AM5) in
+`OpenMath/AdamsMethods.lean` — same shape as AB5 (cycle 384), implicit order-6
+method with α = ![0,0,0,0,-1,1] and
 β = ![27/1440, -173/1440, 482/1440, -798/1440, 1427/1440, 475/1440] (signs to
 be re-checked against the live consistency convention before committing). The
 zero-stability proof transplants directly from AB5.

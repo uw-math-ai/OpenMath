@@ -1,4 +1,5 @@
 import OpenMath.MultistepMethods
+import OpenMath.AdamsMethods
 import OpenMath.SpectralBound
 
 /-!
