@@ -120,6 +120,16 @@ noncomputable def adamsMoulton2 : LMM 2 where
   β := ![-1/12, 8/12, 5/12]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Bashforth 3-step** method:
+y_{n+3} = y_{n+2} + h·(23/12·f_{n+2} - 16/12·f_{n+1} + 5/12·f_n).
+Coefficients: α = [0, 0, -1, 1], β = [5/12, -16/12, 23/12, 0].
+This is an explicit method of order 3.
+Reference: Iserles, Section 1.3. -/
+noncomputable def adamsBashforth3 : LMM 3 where
+  α := ![0, 0, -1, 1]
+  β := ![5/12, -16/12, 23/12, 0]
+  normalized := by simp [Fin.last]
+
 /-! ## Properties of Standard Methods -/
 
 /-- Forward Euler is consistent. -/
@@ -166,6 +176,15 @@ theorem adamsMoulton2_consistent : adamsMoulton2.IsConsistent :=
 /-- Adams–Moulton 2-step is implicit (β₂ = 5/12 ≠ 0). -/
 theorem adamsMoulton2_implicit : adamsMoulton2.IsImplicit := by
   simp [LMM.IsImplicit, adamsMoulton2, Fin.last]
+
+/-- Adams–Bashforth 3-step is consistent. -/
+theorem adamsBashforth3_consistent : adamsBashforth3.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsBashforth3, Fin.sum_univ_four],
+   by simp [LMM.sigma, adamsBashforth3, Fin.sum_univ_four]; norm_num⟩
+
+/-- Adams–Bashforth 3-step is explicit (β₃ = 0). -/
+theorem adamsBashforth3_explicit : adamsBashforth3.IsExplicit := by
+  simp [LMM.IsExplicit, adamsBashforth3, Fin.last]
 
 /-! ## Order of a Linear Multistep Method
 
@@ -264,6 +283,14 @@ theorem adamsMoulton2_order_three : adamsMoulton2.HasOrder 3 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsMoulton2, Fin.sum_univ_three] <;> norm_num
   · simp [LMM.orderCondVal, adamsMoulton2, Fin.sum_univ_three]; norm_num
+
+/-- Adams–Bashforth 3-step has order 3. -/
+theorem adamsBashforth3_order_three : adamsBashforth3.HasOrder 3 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsBashforth3, Fin.sum_univ_four] <;> norm_num
+  · simp [LMM.orderCondVal, adamsBashforth3, Fin.sum_univ_four]; norm_num
 
 /-! ## Zero-Stability
 
@@ -374,6 +401,34 @@ theorem adamsMoulton2_zeroStable : adamsMoulton2.IsZeroStable where
     have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
     rcases mul_eq_zero.mp h with h0 | h1
     · rw [h0] at habs; simp at habs
+    · have h1' : ξ = 1 := by linear_combination h1
+      rw [h1']; norm_num
+
+/-- Adams–Bashforth 3-step is zero-stable: ρ(ξ) = ξ³ - ξ² = ξ²(ξ - 1) has a double
+root at 0 (interior to the unit disk) and a simple root at 1 (on the unit circle,
+with ρ'(1) = 1 ≠ 0). -/
+theorem adamsBashforth3_zeroStable : adamsBashforth3.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, adamsBashforth3, Fin.sum_univ_four] at hξ
+    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have hξ0 : ξ = 0 := by
+        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
+        exact this.mp h0
+      rw [hξ0]; simp
+    · have : ξ = 1 := by linear_combination h1
+      rw [this]; simp
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp [LMM.rhoCDeriv, adamsBashforth3, Fin.sum_univ_four]
+    simp [LMM.rhoC, adamsBashforth3, Fin.sum_univ_four] at hξ
+    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have hξ0 : ξ = 0 := by
+        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
+        exact this.mp h0
+      rw [hξ0] at habs; simp at habs
     · have h1' : ξ = 1 := by linear_combination h1
       rw [h1']; norm_num
 

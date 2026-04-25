@@ -25,6 +25,7 @@
 ### 1.2 Multistep Methods
 - [x] **Definition**: General linear multistep method (Adams–Bashforth, Adams–Moulton) (`OpenMath/MultistepMethods.lean`)
 - [x] **Example**: Adams–Moulton 2-step method — consistency, order 3, implicit, zero-stable (`OpenMath/MultistepMethods.lean`)
+- [x] **Adams–Bashforth 3-step**: consistency, order 3, zero-stability, convergence (`OpenMath/MultistepMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
