@@ -112,6 +112,10 @@
   - [x] `radauIIANodes_hasAlgStabilityBoundaryNodes`: Radau IIA nodes ⇒ algebraic-stability boundary nodes with θ = 1 ≥ 0
   - [x] `thm_359B_radauIIA`: any collocation method with Radau IIA nodes is algebraically stable (via 358A)
   - [x] Concrete corollary `rkRadauIIA3_algStable_via_358A`
+- [ ] **Theorem 359B (Radau IA side)**: left-endpoint Radau algebraic-stability family (`OpenMath/CollocationFamilies.lean`, cycle 375 partial)
+  - [x] `HasRadauIANodes`: tableau abscissae are zeros of `P_s^* + P_{s-1}^*` (`algStabilityBoundaryPoly s (-1)`)
+  - [x] Concrete node certificates `rkRadauIA2_hasRadauIANodes` and `rkRadauIA3_hasRadauIANodes`
+  - [ ] Family-level bridge blocked: the requested `IsCollocation` + θ = -1 statement is false for the genuine 2-stage left-Radau collocation tableau; see `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
 - [x] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
   - [x] Formalized local order-star geometry, arrow directions, and the 355F imaginary-axis obstruction
@@ -168,12 +172,17 @@
 
 ## Current Target
 
-**Next theorem**: identify the next downstream dependent of 358A/359B/359C from the Iserles §3.5 chain. Candidates:
-- **Theorem 359B (Radau IA family)** — symmetric to 359B Radau IIA but with the left-endpoint sign convention (`P_s^* + P_{s-1}^*`); requires either reflecting through `1 − x` or the Radau IA-side textbook normalization.
-- **Theorem 359D / §3.5.10 corollaries** if present in the textbook section after 359C.
-- **Begin Chapter 4** (BDF / variable-step) downstream theorems if §3.5 is now closed in plan-relevant scope.
+**Next theorem**: Theorem 359D / §3.5.10 corollaries; otherwise begin Chapter 4 BDF downstream.
 
-Note: in cycle 374, what the strategy called the Radau IIA "right-endpoint" case turned out to coincide with the existing `thm_359C_radauI` (θ=1) under the live sign convention `shiftedLegendreP n 1 = 1`. The new `thm_359B_radauIIA` is the semantically named wrapper plus the concrete corollary for `rkRadauIIA3`. The genuinely new family-level theorem still missing is the Radau IA (left-endpoint, `c_1 = 0`) case, which requires θ = -1 under this sign convention and so cannot use 358A directly.
+Blocked side note:
+- The Radau IA left-endpoint family cannot be added with the cycle-375 statement
+  `IsCollocation ∧ HasRadauIANodes → IsAlgStable`: the project's `IsCollocation`
+  interface means `C(s)`, and the explicit 2-stage left-Radau collocation tableau
+  on nodes `{0, 2/3}` has `M₀₀ = -1/16`. Any future Radau IA family theorem should
+  use the Radau IA simplifying-assumption shape (`B(2s-1)`, `C(s-1)`, `D(s)`) or a
+  different adjoint/transpose interface, not the collocation theorem 358A bridge.
+
+Note: in cycle 374, what the strategy called the Radau IIA "right-endpoint" case turned out to coincide with the existing `thm_359C_radauI` (θ=1) under the live sign convention `shiftedLegendreP n 1 = 1`. The new `thm_359B_radauIIA` is the semantically named wrapper plus the concrete corollary for `rkRadauIIA3`. Cycle 375 added the Radau IA node predicate and concrete node certificates, but found that the proposed collocation-family bridge is false under the live `IsCollocation` interface.
 
 ## Sorry locations
 

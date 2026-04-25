@@ -1,5 +1,7 @@
 import OpenMath.CollocationAlgStability
 import OpenMath.GaussLegendre3
+import OpenMath.RadauIA2
+import OpenMath.RadauIA3
 import OpenMath.RadauIIA3
 
 /-!
@@ -191,5 +193,50 @@ theorem rkRadauIIA3_isCollocation :
 theorem rkRadauIIA3_algStable_via_358A :
     rkRadauIIA3.IsAlgStable :=
   thm_359B_radauIIA _ rkRadauIIA3_isCollocation rkRadauIIA3_hasRadauIIANodes
+
+/-! ## Radau IA boundary-node facts
+
+The left-endpoint Radau polynomial is `P_s^* + P_{s-1}^*`, represented here
+as `algStabilityBoundaryPoly s (-1)`. Unlike the Radau IIA side, this cannot
+be fed directly to Theorem 358A because that theorem requires `θ ≥ 0`.
+-/
+
+/-- A Butcher tableau has **Radau IA nodes** if its abscissae are zeros of
+`algStabilityBoundaryPoly s (-1) = P_s^* + P_{s-1}^*`.
+
+This is kept distinct from `HasRadauIIANodes`: the live proof of Theorem 358A
+only covers nonnegative boundary parameters. -/
+def HasRadauIANodes (t : ButcherTableau s) : Prop :=
+  ∀ i : Fin s, (algStabilityBoundaryPoly s (-1)).eval (t.c i) = 0
+
+/-- The nodes of `rkRadauIA2` are zeros of `algStabilityBoundaryPoly 2 (-1)`. -/
+theorem rkRadauIA2_hasRadauIANodes :
+    rkRadauIA2.HasRadauIANodes := by
+  intro ⟨i, hi⟩
+  simp only [algStabilityBoundaryPoly, eval_sub, eval_mul, eval_C, neg_mul,
+    shiftedLegendreStarPoly_eval, shiftedLegendreP_two]
+  rw [show 2 - 1 = 1 by norm_num]
+  ring_nf
+  rw [shiftedLegendreP_one]
+  interval_cases i
+  · simp [rkRadauIA2]
+  · simp [rkRadauIA2]
+    norm_num
+
+/-- The nodes of `rkRadauIA3` are zeros of `algStabilityBoundaryPoly 3 (-1)`. -/
+theorem rkRadauIA3_hasRadauIANodes :
+    rkRadauIA3.HasRadauIANodes := by
+  intro ⟨i, hi⟩
+  simp only [algStabilityBoundaryPoly, eval_sub, eval_mul, eval_C, neg_mul,
+    shiftedLegendreStarPoly_eval, shiftedLegendreP_three]
+  rw [show 3 - 1 = 2 by norm_num]
+  ring_nf
+  rw [shiftedLegendreP_two]
+  interval_cases i
+  · simp [rkRadauIA3]
+  · simp [rkRadauIA3]
+    nlinarith [sqrt6_sq', Real.sqrt_pos_of_pos (show (6 : ℝ) > 0 by norm_num)]
+  · simp [rkRadauIA3]
+    nlinarith [sqrt6_sq', Real.sqrt_pos_of_pos (show (6 : ℝ) > 0 by norm_num)]
 
 end ButcherTableau
