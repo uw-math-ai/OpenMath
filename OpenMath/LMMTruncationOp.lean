@@ -785,6 +785,65 @@ private lemma taylorPolyOf_derivative_eval
       Polynomial.eval_X]
   rw [hR_term, ← iteratedDeriv_succ']
 
+/-- Discrete Grönwall inequality (geometric form, unrolled-sum RHS).
+
+If a sequence `e : ℕ → ℝ` satisfies
+`e (n+1) ≤ (1 + a) * e n + b` for all `n < N`, with `0 ≤ a`, `0 ≤ b`,
+`0 ≤ e 0`, then for every `n ≤ N`,
+
+`e n ≤ (1 + a)^n * e 0 + (∑ k ∈ Finset.range n, (1+a)^k) * b`.
+
+This is the textbook discrete Grönwall lemma in the unrolled-sum form
+that the LMM global-error theorem will consume directly (avoiding the
+case split between `a = 0` and `a > 0` that the closed-form
+`((1+a)^n - 1) / a` would force). -/
+lemma discrete_gronwall_geometric
+    {N : ℕ} {a b : ℝ} {e : ℕ → ℝ}
+    (ha : 0 ≤ a) (hb : 0 ≤ b) (he0 : 0 ≤ e 0)
+    (hstep : ∀ n, n < N → e (n + 1) ≤ (1 + a) * e n + b) :
+    ∀ n, n ≤ N →
+      e n ≤ (1 + a) ^ n * e 0
+            + (Finset.range n).sum (fun k => (1 + a) ^ k) * b := by
+  have _hb := hb
+  have _he0 := he0
+  intro n
+  induction n with
+  | zero =>
+      intro _hn
+      simp
+  | succ n ih =>
+      intro hn
+      have hn_lt : n < N := Nat.succ_le_iff.mp hn
+      have hn_le : n ≤ N := Nat.le_of_lt hn_lt
+      have hone_add_nonneg : 0 ≤ 1 + a := add_nonneg zero_le_one ha
+      have hih := ih hn_le
+      have hmul :
+          (1 + a) * e n
+            ≤ (1 + a) *
+              ((1 + a) ^ n * e 0
+                + (Finset.range n).sum (fun k => (1 + a) ^ k) * b) :=
+        mul_le_mul_of_nonneg_left hih hone_add_nonneg
+      have hgeo :
+          (1 + a) * (Finset.range n).sum (fun k => (1 + a) ^ k) + 1
+            = (Finset.range (n + 1)).sum (fun k => (1 + a) ^ k) := by
+        rw [Finset.mul_sum, Finset.sum_range_succ']
+        simp only [pow_zero]
+        congr 1
+        apply Finset.sum_congr rfl
+        intro k _hk
+        rw [pow_succ]
+        ring
+      calc
+        e (n + 1) ≤ (1 + a) * e n + b := hstep n hn_lt
+        _ ≤ (1 + a) *
+              ((1 + a) ^ n * e 0
+                + (Finset.range n).sum (fun k => (1 + a) ^ k) * b) + b :=
+            by simpa [add_comm, add_left_comm, add_assoc] using add_le_add_right hmul b
+        _ = (1 + a) ^ (n + 1) * e 0
+              + (Finset.range (n + 1)).sum (fun k => (1 + a) ^ k) * b := by
+            rw [← hgeo, pow_succ]
+            ring
+
 /-- Pointwise Taylor derivative remainder bound, uniform over the compact
 sampling interval, for a globally smooth function. -/
 private lemma taylor_remainder_deriv_bound_uniform
