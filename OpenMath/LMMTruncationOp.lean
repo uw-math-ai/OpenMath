@@ -1,4 +1,5 @@
 import Mathlib.Analysis.Calculus.Taylor
+import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import OpenMath.MultistepMethods
 
 /-! ## Local Truncation Operator (Iserles §1.2 / eqn (2.6))
@@ -1496,6 +1497,273 @@ theorem forwardEuler_global_error_bound
       (h := h) (L := L) (C := C) (T := T) (p := 1) (e := e) (N := N)
       hh.le hL hC_nn he0_nn hstep N le_rfl hNh
   -- The initial error vanishes: `e 0 = 0`.
+  rw [he0_eq, mul_zero, zero_add, pow_one] at hgronwall
+  exact hgronwall
+
+/-! ### Vector-valued forward Euler -/
+
+/-- Forward Euler iteration for a vector-valued IVP `y' = f(t, y)`:
+`y_{n+1} = y_n + h • f(t₀ + n h, y_n)`. -/
+noncomputable def forwardEulerIterVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ : E) : ℕ → E
+  | 0 => y₀
+  | n + 1 =>
+      forwardEulerIterVec h f t₀ y₀ n
+        + h • f (t₀ + (n : ℝ) * h) (forwardEulerIterVec h f t₀ y₀ n)
+
+@[simp] lemma forwardEulerIterVec_zero
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ : E) :
+    forwardEulerIterVec h f t₀ y₀ 0 = y₀ := rfl
+
+lemma forwardEulerIterVec_succ
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ : E) (n : ℕ) :
+    forwardEulerIterVec h f t₀ y₀ (n + 1)
+      = forwardEulerIterVec h f t₀ y₀ n
+        + h • f (t₀ + (n : ℝ) * h)
+            (forwardEulerIterVec h f t₀ y₀ n) := rfl
+
+/-- One-step error recurrence for vector-valued forward Euler under a
+Lipschitz bound in the state variable. -/
+theorem forwardEulerVec_one_step_error_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {h L : ℝ} (hh : 0 ≤ h) {f : ℝ → E → E}
+    (hf : ∀ (t : ℝ) (a b : E), ‖f t a - f t b‖ ≤ L * ‖a - b‖)
+    (t₀ : ℝ) (y₀ : E) (y : ℝ → E) (n : ℕ) :
+    ‖forwardEulerIterVec h f t₀ y₀ (n + 1)
+        - y (t₀ + ((n : ℝ) + 1) * h)‖
+      ≤ (1 + h * L)
+          * ‖forwardEulerIterVec h f t₀ y₀ n - y (t₀ + (n : ℝ) * h)‖
+        + ‖y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+            - h • f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h))‖ := by
+  rw [show ((n : ℝ) + 1) * h = (n : ℝ) * h + h by ring]
+  have h_triangle :
+      ‖forwardEulerIterVec h f t₀ y₀ (n + 1)
+          - y (t₀ + ((n : ℝ) * h + h))‖
+        ≤ ‖(forwardEulerIterVec h f t₀ y₀ n - y (t₀ + (n : ℝ) * h))
+              + h • (f (t₀ + (n : ℝ) * h)
+                    (forwardEulerIterVec h f t₀ y₀ n)
+                  - f (t₀ + (n : ℝ) * h)
+                    (y (t₀ + (n : ℝ) * h)))‖
+          + ‖y (t₀ + ((n : ℝ) * h + h)) - y (t₀ + (n : ℝ) * h)
+              - h • f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h))‖ := by
+    convert norm_sub_le
+      ((forwardEulerIterVec h f t₀ y₀ n - y (t₀ + (n : ℝ) * h))
+        + h • (f (t₀ + (n : ℝ) * h) (forwardEulerIterVec h f t₀ y₀ n)
+          - f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h))))
+      (y (t₀ + ((n : ℝ) * h + h)) - y (t₀ + (n : ℝ) * h)
+        - h • f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h))) using 1
+    · rw [forwardEulerIterVec_succ]
+      simp only [smul_sub]
+      abel_nf
+  refine h_triangle.trans ?_
+  refine add_le_add ?_ le_rfl
+  calc
+    ‖(forwardEulerIterVec h f t₀ y₀ n - y (t₀ + (n : ℝ) * h))
+        + h • (f (t₀ + (n : ℝ) * h) (forwardEulerIterVec h f t₀ y₀ n)
+          - f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h)))‖
+        ≤ ‖forwardEulerIterVec h f t₀ y₀ n - y (t₀ + (n : ℝ) * h)‖
+            + ‖h • (f (t₀ + (n : ℝ) * h) (forwardEulerIterVec h f t₀ y₀ n)
+              - f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h)))‖ := norm_add_le _ _
+    _ ≤ (1 + h * L)
+          * ‖forwardEulerIterVec h f t₀ y₀ n - y (t₀ + (n : ℝ) * h)‖ := by
+      rw [norm_smul, Real.norm_of_nonneg hh]
+      nlinarith [hf (t₀ + (n : ℝ) * h) (forwardEulerIterVec h f t₀ y₀ n)
+        (y (t₀ + (n : ℝ) * h))]
+
+/-- A vector-valued `C^3` function has its second derivative bounded on
+every compact interval `[a, b]`. -/
+private theorem iteratedDeriv_two_bounded_on_Icc_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 3 y) (a b : ℝ) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 2 y t‖ ≤ M := by
+  have h_cont : Continuous (iteratedDeriv 2 y) :=
+    hy.continuous_iteratedDeriv 2 (by norm_num)
+  obtain ⟨M, hM⟩ :=
+    IsCompact.exists_bound_of_continuousOn isCompact_Icc h_cont.continuousOn
+  exact ⟨max M 0, le_max_right _ _, fun t ht => (hM t ht).trans (le_max_left _ _)⟩
+
+/-- Pointwise vector Taylor remainder bound for forward Euler. If
+`‖y''‖ ≤ M` on `[a, b]`, then
+`‖y(t+h) - y(t) - h • y'(t)‖ ≤ M / 2 · h^2`. -/
+private theorem forwardEulerVec_pointwise_residual_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 3 y) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 2 y t‖ ≤ M)
+    {t h : ℝ} (ht : t ∈ Set.Icc a b) (hth : t + h ∈ Set.Icc a b)
+    (hh : 0 ≤ h) :
+    ‖y (t + h) - y t - h • deriv y t‖ ≤ M / 2 * h ^ 2 := by
+  haveI : CompleteSpace E := FiniteDimensional.complete ℝ E
+  have hth_le : t ≤ t + h := by linarith
+  have h_deriv_bound :
+      ∀ s ∈ Set.Icc t (t + h), ‖deriv y s - deriv y t‖ ≤ M * (s - t) := by
+    intro s hs
+    have hts : t ≤ s := hs.1
+    have hdiff_deriv : Differentiable ℝ (deriv y) := by
+      exact (hy.of_le (by norm_num : (2 : WithTop ℕ∞) ≤ 3)).differentiable_deriv_two
+    have hderiv_on :
+        ∀ x ∈ Set.Icc t s,
+          HasDerivWithinAt (deriv y) (iteratedDeriv 2 y x) (Set.Icc t s) x := by
+      intro x hx
+      have hxderiv : HasDerivAt (deriv y) (iteratedDeriv 2 y x) x := by
+        convert (hdiff_deriv x).hasDerivAt using 1
+        norm_num [iteratedDeriv_succ']
+      exact hxderiv.hasDerivWithinAt
+    have hbound_seg : ∀ x ∈ Set.Ico t s, ‖iteratedDeriv 2 y x‖ ≤ M := by
+      intro x hx
+      have hx_ab : x ∈ Set.Icc a b := by
+        refine ⟨?_, ?_⟩
+        · linarith [ht.1, hx.1]
+        · linarith [hth.2, hs.2, hx.2]
+      exact hbnd x hx_ab
+    have hseg :=
+      norm_image_sub_le_of_norm_deriv_le_segment'
+        (f := deriv y) (f' := fun x => iteratedDeriv 2 y x)
+        (a := t) (b := s) hderiv_on hbound_seg s
+        (Set.right_mem_Icc.mpr hts)
+    simpa using hseg
+  have hderiv_cont : Continuous (deriv y) :=
+    hy.continuous_deriv (by norm_num)
+  have h_deriv_int : IntervalIntegrable (fun s => deriv y s) MeasureTheory.volume t (t + h) :=
+    hderiv_cont.intervalIntegrable _ _
+  have h_const_int : IntervalIntegrable (fun _ : ℝ => deriv y t) MeasureTheory.volume t (t + h) :=
+    intervalIntegrable_const
+  have h_ftc_y :
+      ∫ s in t..t + h, deriv y s = y (t + h) - y t := by
+    exact intervalIntegral.integral_deriv_eq_sub
+      (fun x _ => hy.contDiffAt.differentiableAt (by norm_num))
+      h_deriv_int
+  have h_residual_integral :
+      y (t + h) - y t - h • deriv y t
+        = ∫ s in t..t + h, (deriv y s - deriv y t) := by
+    rw [intervalIntegral.integral_sub h_deriv_int h_const_int, h_ftc_y]
+    simp
+  have h_bound_integral :
+      ‖∫ s in t..t + h, (deriv y s - deriv y t)‖
+        ≤ ∫ s in t..t + h, M * (s - t) := by
+    refine intervalIntegral.norm_integral_le_of_norm_le hth_le ?_ ?_
+    · exact Filter.Eventually.of_forall fun s hs => h_deriv_bound s ⟨hs.1.le, hs.2⟩
+    · exact (by fun_prop : Continuous fun s : ℝ => M * (s - t)).intervalIntegrable _ _
+  have h_integral_eval :
+      ∫ s in t..t + h, M * (s - t) = M / 2 * h ^ 2 := by
+    calc
+      ∫ s in t..t + h, M * (s - t)
+          = M * (∫ s in t..t + h, (s - t)) := by
+            rw [intervalIntegral.integral_const_mul]
+      _ = M / 2 * h ^ 2 := by
+        simp [intervalIntegral.integral_sub, integral_id,
+          intervalIntegral.integral_const]
+        ring
+  rw [h_residual_integral]
+  exact h_bound_integral.trans_eq h_integral_eval
+
+/-- Uniform bound on the vector forward-Euler one-step truncation residual
+on a finite horizon, given a `C^3` solution. -/
+theorem forwardEulerVec_local_residual_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 3 y) (t₀ T : ℝ) (_hT : 0 < T) :
+    ∃ C δ : ℝ, 0 ≤ C ∧ 0 < δ ∧
+      ∀ {h : ℝ}, 0 < h → h ≤ δ → ∀ n : ℕ,
+        t₀ + (n : ℝ) * h ∈ Set.Icc t₀ (t₀ + T) →
+        ‖y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+            - h • deriv y (t₀ + (n : ℝ) * h)‖
+          ≤ C * h ^ 2 := by
+  obtain ⟨M, hM_nn, hM⟩ :=
+    iteratedDeriv_two_bounded_on_Icc_vec hy t₀ (t₀ + T + 1)
+  refine ⟨M / 2, 1, by linarith, by norm_num, ?_⟩
+  intro h hh hh1 n hn_in
+  set t : ℝ := t₀ + (n : ℝ) * h with ht_def
+  have ht_mem : t ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨hn_in.1, ?_⟩
+    linarith [hn_in.2]
+  have hth_mem : t + h ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨by linarith [hn_in.1, hh.le], ?_⟩
+    linarith [hn_in.2, hh1]
+  have heq :
+      y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+        - h • deriv y (t₀ + (n : ℝ) * h)
+        = y (t + h) - y t - h • deriv y t := by
+    have hadd : t + h = t₀ + ((n : ℝ) + 1) * h := by
+      simp [ht_def]; ring
+    rw [show t = t₀ + (n : ℝ) * h from rfl, hadd]
+  rw [heq]
+  exact forwardEulerVec_pointwise_residual_bound hy hM ht_mem hth_mem hh.le
+
+/-- Final vector-valued forward-Euler global error bound on a finite
+horizon `[t₀, t₀ + T]`. -/
+theorem forwardEulerVec_global_error_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 3 y)
+    {f : ℝ → E → E} {L : ℝ} (hL : 0 ≤ L)
+    (hf : ∀ (t : ℝ) (a b : E), ‖f t a - f t b‖ ≤ L * ‖a - b‖)
+    (hyf : ∀ t, deriv y t = f t (y t))
+    (t₀ T : ℝ) (hT : 0 < T) :
+    ∃ K δ : ℝ, 0 ≤ K ∧ 0 < δ ∧
+      ∀ {h : ℝ}, 0 < h → h ≤ δ → ∀ N : ℕ, (N : ℝ) * h ≤ T →
+        ‖forwardEulerIterVec h f t₀ (y t₀) N - y (t₀ + (N : ℝ) * h)‖
+          ≤ K * h := by
+  obtain ⟨C, δ, hC_nn, hδ_pos, hresidual⟩ :=
+    forwardEulerVec_local_residual_bound hy t₀ T hT
+  refine ⟨T * Real.exp (L * T) * C, δ, ?_, hδ_pos, ?_⟩
+  · exact mul_nonneg
+      (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
+  intro h hh hδ_le N hNh
+  set e : ℕ → ℝ :=
+    fun k => ‖forwardEulerIterVec h f t₀ (y t₀) k - y (t₀ + (k : ℝ) * h)‖
+    with he_def
+  have he0_eq : e 0 = 0 := by
+    show ‖forwardEulerIterVec h f t₀ (y t₀) 0
+        - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ = 0
+    simp
+  have he0_nn : 0 ≤ e 0 := norm_nonneg _
+  have hstep : ∀ n, n < N →
+      e (n + 1) ≤ (1 + h * L) * e n + C * h ^ (1 + 1) := by
+    intro n hn_lt
+    have honestep :=
+      forwardEulerVec_one_step_error_bound (h := h) (L := L)
+        hh.le hf t₀ (y t₀) y n
+    have hbridge :
+        y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+            - h • f (t₀ + (n : ℝ) * h) (y (t₀ + (n : ℝ) * h))
+          = y (t₀ + ((n : ℝ) + 1) * h) - y (t₀ + (n : ℝ) * h)
+              - h • deriv y (t₀ + (n : ℝ) * h) := by
+      rw [hyf]
+    rw [hbridge] at honestep
+    have hn_le : (n : ℝ) ≤ (N : ℝ) := by
+      exact_mod_cast Nat.le_of_lt hn_lt
+    have hnh_le_T : (n : ℝ) * h ≤ T :=
+      (mul_le_mul_of_nonneg_right hn_le hh.le).trans hNh
+    have hn_nn : (0 : ℝ) ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le n
+    have ht_in : t₀ + (n : ℝ) * h ∈ Set.Icc t₀ (t₀ + T) := by
+      refine ⟨?_, ?_⟩
+      · have := mul_nonneg hn_nn hh.le
+        linarith
+      · linarith
+    have hres := hresidual hh hδ_le n ht_in
+    have hlhs_eq :
+        e (n + 1)
+          = ‖forwardEulerIterVec h f t₀ (y t₀) (n + 1)
+              - y (t₀ + ((n : ℝ) + 1) * h)‖ := by
+      show ‖_ - _‖ = ‖_ - _‖
+      have : ((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1 := by push_cast; ring
+      rw [this]
+    have he_n_eq : e n
+          = ‖forwardEulerIterVec h f t₀ (y t₀) n
+              - y (t₀ + (n : ℝ) * h)‖ :=
+      rfl
+    rw [hlhs_eq, he_n_eq]
+    have hpow : C * h ^ (1 + 1) = C * h ^ 2 := by norm_num
+    rw [hpow]
+    linarith [honestep, hres]
+  have hgronwall :=
+    lmm_error_bound_from_local_truncation
+      (h := h) (L := L) (C := C) (T := T) (p := 1) (e := e) (N := N)
+      hh.le hL hC_nn he0_nn hstep N le_rfl hNh
   rw [he0_eq, mul_zero, zero_add, pow_one] at hgronwall
   exact hgronwall
 
