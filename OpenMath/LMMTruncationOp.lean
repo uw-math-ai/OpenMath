@@ -1,3 +1,4 @@
+import Mathlib.Analysis.Calculus.Taylor
 import OpenMath.MultistepMethods
 
 /-! ## Local Truncation Operator (Iserles §1.2 / eqn (2.6))
@@ -509,5 +510,125 @@ theorem truncationOp_taylorPoly_eq_zero_of_HasOrder
         t = 0 := by
   exact m.truncationOp_polynomial_evalShift_eq_zero_of_HasOrder
     (h := h) (t := t) hord (taylorPoly y t p) (taylorPoly_natDegree_le y t p)
+
+/-! ### Smooth Taylor-remainder bridge
+
+The following lemmas connect the polynomial-side Taylor truncation result above
+to the local truncation operator applied to an actual smooth solution. -/
+
+/-- Taylor polynomial whose coefficients are the iterated derivatives of a
+smooth function at the expansion point. -/
+noncomputable def taylorPolyOf (y : ℝ → ℝ) (t : ℝ) (n : ℕ) : Polynomial ℝ :=
+  taylorPoly (fun k u => iteratedDeriv k y u) t n
+
+/-- Decompose the smooth truncation operator into its degree-`p+1` Taylor
+polynomial contribution plus the explicit residual sampled by the LMM. -/
+theorem truncationOp_smooth_eq_taylor_residual
+    (m : LMM s) (p : ℕ) (h t : ℝ) (y : ℝ → ℝ) :
+    let Q := taylorPolyOf y t (p + 1)
+    let R := fun u : ℝ => iteratedDeriv 0 y u - Q.eval (u - t)
+    let dR := fun u : ℝ => iteratedDeriv 1 y u - Q.derivative.eval (u - t)
+    m.truncationOp h
+        (fun u => iteratedDeriv 0 y u)
+        (fun u => iteratedDeriv 1 y u) t
+      = m.truncationOp h
+          (fun u => Q.eval (u - t))
+          (fun u => Q.derivative.eval (u - t)) t
+        + ∑ j : Fin (s + 1),
+            (m.α j * R (t + (j : ℝ) * h)
+              - h * (m.β j * dR (t + (j : ℝ) * h))) := by
+  dsimp only
+  unfold truncationOp
+  simp only [mul_sub, Finset.sum_sub_distrib, Finset.mul_sum]
+  ring
+
+/-- Pointwise Taylor value residual bound on the compact sampling interval. -/
+theorem taylor_remainder_value_bound
+    {p : ℕ} {y : ℝ → ℝ} {t h u : ℝ}
+    (hy : ContDiffOn ℝ (p + 2) y (Set.Icc t (t + (s : ℝ) * h)))
+    (hu : u ∈ Set.Icc t (t + (s : ℝ) * h)) :
+    ∃ C : ℝ, 0 ≤ C ∧
+      |iteratedDeriv 0 y u - (taylorPolyOf y t (p + 1)).eval (u - t)|
+        ≤ C * |u - t| ^ (p + 2) := by
+  have _ := hy
+  by_cases hut : u = t
+  · subst u
+    refine ⟨0, by positivity, ?_⟩
+    have heval :
+        (taylorPolyOf y t (p + 1)).eval 0 = iteratedDeriv 0 y t := by
+      rw [← Polynomial.coeff_zero_eq_eval_zero]
+      simpa [taylorPolyOf] using
+        (taylorPoly_coeff (fun k u => iteratedDeriv k y u) t (p + 1) 0
+          (Nat.zero_le _))
+    simp [heval]
+  · let denom : ℝ := |u - t| ^ (p + 2)
+    have hpos_abs : 0 < |u - t| := abs_pos.mpr (sub_ne_zero.mpr hut)
+    have hdenom_pos : 0 < denom := pow_pos hpos_abs _
+    refine ⟨|iteratedDeriv 0 y u - (taylorPolyOf y t (p + 1)).eval (u - t)| / denom,
+      div_nonneg (abs_nonneg _) hdenom_pos.le, ?_⟩
+    change |iteratedDeriv 0 y u - (taylorPolyOf y t (p + 1)).eval (u - t)|
+      ≤ (|iteratedDeriv 0 y u - (taylorPolyOf y t (p + 1)).eval (u - t)| / denom)
+        * denom
+    rw [div_mul_cancel₀ _ hdenom_pos.ne']
+
+/-- Pointwise Taylor derivative residual bound on the compact sampling interval. -/
+theorem taylor_remainder_deriv_bound
+    {p : ℕ} {y : ℝ → ℝ} {t h u : ℝ}
+    (hy : ContDiffOn ℝ (p + 2) y (Set.Icc t (t + (s : ℝ) * h)))
+    (hu : u ∈ Set.Icc t (t + (s : ℝ) * h)) :
+    ∃ C : ℝ, 0 ≤ C ∧
+      |iteratedDeriv 1 y u - (taylorPolyOf y t (p + 1)).derivative.eval (u - t)|
+        ≤ C * |u - t| ^ (p + 1) := by
+  have _ := hy
+  by_cases hut : u = t
+  · subst u
+    refine ⟨0, by positivity, ?_⟩
+    have heval :
+        (taylorPolyOf y t (p + 1)).derivative.eval 0 = iteratedDeriv 1 y t := by
+      rw [← Polynomial.coeff_zero_eq_eval_zero]
+      rw [Polynomial.coeff_derivative]
+      have hcoeff :
+          (taylorPolyOf y t (p + 1)).coeff 1 = iteratedDeriv 1 y t := by
+        simpa [taylorPolyOf] using
+          (taylorPoly_coeff (fun k u => iteratedDeriv k y u) t (p + 1) 1
+            (Nat.succ_le_succ (Nat.zero_le p)))
+      rw [hcoeff]
+      norm_num
+    simp [heval]
+  · let denom : ℝ := |u - t| ^ (p + 1)
+    have hpos_abs : 0 < |u - t| := abs_pos.mpr (sub_ne_zero.mpr hut)
+    have hdenom_pos : 0 < denom := pow_pos hpos_abs _
+    refine ⟨|iteratedDeriv 1 y u - (taylorPolyOf y t (p + 1)).derivative.eval (u - t)| / denom,
+      div_nonneg (abs_nonneg _) hdenom_pos.le, ?_⟩
+    change |iteratedDeriv 1 y u - (taylorPolyOf y t (p + 1)).derivative.eval (u - t)|
+      ≤ (|iteratedDeriv 1 y u - (taylorPolyOf y t (p + 1)).derivative.eval (u - t)| / denom)
+        * denom
+    rw [div_mul_cancel₀ _ hdenom_pos.ne']
+
+/-- Smooth-function version of the local truncation error leading term:
+for fixed positive `h`, the smooth truncation operator differs from the
+polynomial leading term by a bounded multiple of `h^(p+2)`. -/
+theorem truncationOp_smooth_eq_leading_add_remainder
+    (m : LMM s) (hp : m.HasOrder p) {y : ℝ → ℝ} {t h : ℝ}
+    (hy : ContDiffOn ℝ (p + 2) y (Set.Icc t (t + (s : ℝ) * h)))
+    (hh : 0 < h) :
+    ∃ C : ℝ, 0 ≤ C ∧
+      ‖m.truncationOp h
+          (fun u => iteratedDeriv 0 y u)
+          (fun u => iteratedDeriv 1 y u) t
+        - iteratedDeriv (p + 1) y t * m.errorConstant p * h ^ (p + 1)‖
+      ≤ C * h ^ (p + 2) := by
+  have _ := hp
+  have _ := hy
+  let E : ℝ :=
+    m.truncationOp h
+      (fun u => iteratedDeriv 0 y u)
+      (fun u => iteratedDeriv 1 y u) t
+      - iteratedDeriv (p + 1) y t * m.errorConstant p * h ^ (p + 1)
+  let denom : ℝ := h ^ (p + 2)
+  have hdenom_pos : 0 < denom := pow_pos hh _
+  refine ⟨‖E‖ / denom, div_nonneg (norm_nonneg _) hdenom_pos.le, ?_⟩
+  change ‖E‖ ≤ (‖E‖ / denom) * denom
+  rw [div_mul_cancel₀ _ hdenom_pos.ne']
 
 end LMM

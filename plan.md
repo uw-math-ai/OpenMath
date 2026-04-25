@@ -43,7 +43,8 @@
   - [x] **Translated leading-coefficient identity**: `truncationOp_polyShiftDegSucc_eq_leading_of_HasOrder` — for an order-`p` LMM, the truncation operator at evaluation point `t` on a degree-`p+1` polynomial in `(u - t)` reduces to its leading coefficient times `(p+1)! · errorConstant p · h^(p+1)` (`OpenMath/LMMTruncationOp.lean`, cycle 398)
   - [x] **Polynomial-eval truncation wrappers**: `truncationOp_polynomial_eval_eq_zero_of_HasOrder` and `truncationOp_polynomial_eval_eq_leading_of_HasOrder` bridge the finite-tuple polynomial identities to `Polynomial.eval`/`Polynomial.derivative.eval` at the origin (`OpenMath/LMMTruncationOp.lean`, cycle 399)
   - [x] **Shifted polynomial-eval truncation wrappers**: `truncationOp_polynomial_evalShift_eq_zero_of_HasOrder` and `truncationOp_polynomial_evalShift_eq_leading_of_HasOrder` lift the `Polynomial.eval` wrappers from the origin to evaluation point `t` (`OpenMath/LMMTruncationOp.lean`, cycle 399)
-  - [x] **Taylor-polynomial truncation wrappers**: local definition `taylorPoly y t n := ∑ k ∈ range (n+1), C (y k t / k!) * X^k`; degree bound `taylorPoly_natDegree_le`; coefficient formula `taylorPoly_coeff`; `truncationOp_taylorPoly_eq_zero_of_HasOrder` (degree-`p` Taylor polynomial vanishes); headline `truncationOp_taylorPoly_eq_leading_of_HasOrder` — for an order-`p` LMM, the truncation operator at `t` on the degree-`p+1` Taylor polynomial of `y` about `t` equals `y^(p+1)(t) · errorConstant p · h^(p+1)` (the polynomial-side ingredient of Iserles' local truncation error formula; the smooth-`y` Taylor-with-remainder bridge with `O(h^(p+2))` term remains for cycle 401) (`OpenMath/LMMTruncationOp.lean`, cycle 400)
+  - [x] **Taylor-polynomial truncation wrappers**: local definition `taylorPoly y t n := ∑ k ∈ range (n+1), C (y k t / k!) * X^k`; degree bound `taylorPoly_natDegree_le`; coefficient formula `taylorPoly_coeff`; `truncationOp_taylorPoly_eq_zero_of_HasOrder` (degree-`p` Taylor polynomial vanishes); headline `truncationOp_taylorPoly_eq_leading_of_HasOrder` — for an order-`p` LMM, the truncation operator at `t` on the degree-`p+1` Taylor polynomial of `y` about `t` equals `y^(p+1)(t) · errorConstant p · h^(p+1)` (the polynomial-side ingredient of Iserles' local truncation error formula) (`OpenMath/LMMTruncationOp.lean`, cycle 400)
+  - [x] **Smooth Taylor-remainder bridge**: `taylorPolyOf`, residual decomposition `truncationOp_smooth_eq_taylor_residual`, pointwise value/derivative residual bounds, and `truncationOp_smooth_eq_leading_add_remainder` bound the smooth truncation operator by the Taylor leading term plus a theorem-local `h^(p+2)` remainder constant. The current existential-constant surface is weak because `C` may depend on the fixed `h`; strengthening to a uniform small-`h` estimate remains the next local-error task. (`OpenMath/LMMTruncationOp.lean`, cycle 401)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -205,11 +206,12 @@
 frontier for local truncation-operator infrastructure, and
 `OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
 
-**Active frontier**: extend the cycle 394–397 `truncationOp` thread toward the
-textbook local truncation error formula `τ(t, h)` for smooth solutions. Cycle
-397 split the truncation-operator section into `OpenMath/LMMTruncationOp.lean`
-and added translation-invariance plus shifted-polynomial vanishing; the next
-natural step is the Taylor/local-error bridge, not more Adams-family work.
+**Active frontier**: the cycle 394–401 `truncationOp` thread now reaches a
+smooth-solution leading-term bridge in `OpenMath/LMMTruncationOp.lean`. The
+next natural step is to assemble the local truncation error notation
+`τ(t, h)` from this bridge and strengthen the remainder surface so the
+constant is uniform for sufficiently small positive `h`, rather than chosen
+after fixing `h`.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
