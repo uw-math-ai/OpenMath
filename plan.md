@@ -45,6 +45,7 @@
   - [x] **Shifted polynomial-eval truncation wrappers**: `truncationOp_polynomial_evalShift_eq_zero_of_HasOrder` and `truncationOp_polynomial_evalShift_eq_leading_of_HasOrder` lift the `Polynomial.eval` wrappers from the origin to evaluation point `t` (`OpenMath/LMMTruncationOp.lean`, cycle 399)
   - [x] **Taylor-polynomial truncation wrappers**: local definition `taylorPoly y t n := ∑ k ∈ range (n+1), C (y k t / k!) * X^k`; degree bound `taylorPoly_natDegree_le`; coefficient formula `taylorPoly_coeff`; `truncationOp_taylorPoly_eq_zero_of_HasOrder` (degree-`p` Taylor polynomial vanishes); headline `truncationOp_taylorPoly_eq_leading_of_HasOrder` — for an order-`p` LMM, the truncation operator at `t` on the degree-`p+1` Taylor polynomial of `y` about `t` equals `y^(p+1)(t) · errorConstant p · h^(p+1)` (the polynomial-side ingredient of Iserles' local truncation error formula) (`OpenMath/LMMTruncationOp.lean`, cycle 400)
   - [x] **Smooth Taylor-remainder bridge**: `taylorPolyOf`, residual decomposition `truncationOp_smooth_eq_taylor_residual`, pointwise value/derivative residual bounds, and `truncationOp_smooth_eq_leading_add_remainder` bound the smooth truncation operator by the Taylor leading term plus a theorem-local `h^(p+2)` remainder constant. The current existential-constant surface is weak because `C` may depend on the fixed `h`; strengthening to a uniform small-`h` estimate remains the next local-error task. (`OpenMath/LMMTruncationOp.lean`, cycle 401)
+  - [x] **Uniform local truncation error bridge**: `truncationOp_smooth_local_truncation_error` — for an order-`p` LMM acting on `ContDiff ℝ (p+2) y`, exhibits a uniform `(C, δ)` pair with `δ ≤ δ₀` such that `‖τ(t,h) − y^(p+1)(t) · errorConstant p · h^(p+1)‖ ≤ C · h^(p+2)` for **all** `h ∈ (0, δ]`, with `C` independent of `h`. Auxiliary infrastructure: `taylorWithinEval_eq_taylorPolyOf_eval`, `taylor_remainder_value_bound_uniform`, `taylor_remainder_deriv_bound_uniform`, and the polynomial identity `taylorPolyOf_derivative_eval`. The bridge is packaged via `localTruncationError` (= `truncationOp` applied to `(y, y')`) and `localTruncationError_leading_bound` (Iserles' textbook-form local truncation error statement). (`OpenMath/LMMTruncationOp.lean`, cycle 402)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -206,12 +207,15 @@
 frontier for local truncation-operator infrastructure, and
 `OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
 
-**Active frontier**: the cycle 394–401 `truncationOp` thread now reaches a
-smooth-solution leading-term bridge in `OpenMath/LMMTruncationOp.lean`. The
-next natural step is to assemble the local truncation error notation
-`τ(t, h)` from this bridge and strengthen the remainder surface so the
-constant is uniform for sufficiently small positive `h`, rather than chosen
-after fixing `h`.
+**Active frontier**: the cycle 394–402 `truncationOp` thread now reaches a
+uniform local truncation error bridge in `OpenMath/LMMTruncationOp.lean`:
+cycle 402 closed the uniform-`(C, δ)` step, packaged the local truncation
+error notation `τ(t, h)` as `localTruncationError`, and stated Iserles'
+textbook-form leading-order bound `localTruncationError_leading_bound`.
+The next natural step is to bootstrap from `‖τ‖ ≤ C h^(p+2)` to global
+convergence/error estimates over a finite time horizon (linking the local
+bound to the discrete-Grönwall / stability machinery used in Dahlquist
+equivalence).
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
