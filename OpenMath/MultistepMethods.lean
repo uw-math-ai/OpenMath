@@ -1053,6 +1053,70 @@ theorem bdf6_zeroStable : bdf6.IsZeroStable where
       norm_num
     · exact (bdf6_quintic_no_unit_roots ξ h1 habs).elim
 
+/-! ## BDF7 (Backward Differentiation Formula, 7-step)
+
+The BDF7 method is the first BDF method that is not zero-stable. Its
+characteristic polynomial has a nontrivial sextic factor with roots outside the
+unit disk.
+
+Reference: Iserles, Section 4.5; Hairer–Wanner, Section V.1.
+-/
+
+/-- **BDF7** (Backward Differentiation Formula, 7-step):
+  Coefficients normalized by `1089`:
+  `α = [-60, 490, -1764, 3675, -4900, 4410, -2940, 1089] / 1089`,
+  `β = [0, 0, 0, 0, 0, 0, 0, 420/1089]`. -/
+noncomputable def bdf7 : LMM 7 where
+  α := ![-60/1089, 490/1089, -1764/1089, 3675/1089,
+    -4900/1089, 4410/1089, -2940/1089, 1]
+  β := ![0, 0, 0, 0, 0, 0, 0, 420/1089]
+  normalized := by simp [Fin.last]
+
+/-- BDF7 is consistent. -/
+theorem bdf7_consistent : bdf7.IsConsistent :=
+  ⟨by simp [LMM.rho, bdf7, Fin.sum_univ_succ]; norm_num,
+   by simp [LMM.sigma, bdf7, Fin.sum_univ_succ]; norm_num⟩
+
+/-- BDF7 has order 7. -/
+theorem bdf7_order_seven : bdf7.HasOrder 7 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, bdf7, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, bdf7, Fin.sum_univ_succ]; norm_num
+
+/-- BDF7 is implicit (`β₇ = 420/1089 ≠ 0`). -/
+theorem bdf7_implicit : bdf7.IsImplicit := by
+  simp [LMM.IsImplicit, bdf7, Fin.last]
+
+/-- BDF7 characteristic factorization:
+`1089 ρ(ξ) = (ξ - 1) Q(ξ)`, where `Q` is the sextic factor. -/
+private theorem bdf7_rhoC_factor (ξ : ℂ) :
+    1089 * bdf7.rhoC ξ =
+      (ξ - 1) *
+        (1089 * ξ ^ 6 - 1851 * ξ ^ 5 + 2559 * ξ ^ 4 -
+          2341 * ξ ^ 3 + 1334 * ξ ^ 2 - 430 * ξ + 60) := by
+  simp [LMM.rhoC, bdf7, Fin.sum_univ_succ]
+  ring_nf
+
+/-- A root of the BDF7 sextic factor outside the unit disk contradicts
+zero-stability. -/
+private theorem bdf7_not_zeroStable_of_bad_root
+    {ξ : ℂ}
+    (hQ : 1089 * ξ ^ 6 - 1851 * ξ ^ 5 + 2559 * ξ ^ 4 -
+      2341 * ξ ^ 3 + 1334 * ξ ^ 2 - 430 * ξ + 60 = 0)
+    (hgt : 1 < ‖ξ‖) :
+    ¬ bdf7.IsZeroStable := by
+  intro hzs
+  have hscaled : 1089 * bdf7.rhoC ξ = 0 := by
+    rw [bdf7_rhoC_factor, hQ]
+    ring_nf
+  have h1089 : (1089 : ℂ) ≠ 0 := by norm_num
+  have hroot : bdf7.rhoC ξ = 0 :=
+    (mul_eq_zero.mp hscaled).resolve_left h1089
+  have hle := hzs.roots_in_disk ξ hroot
+  linarith
+
 /-! ## Dahlquist's Second Barrier
 
 No A-stable LMM can have order greater than 2. The trapezoidal rule achieves this bound.
