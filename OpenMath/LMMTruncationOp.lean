@@ -924,6 +924,68 @@ lemma discrete_gronwall_exp
         + (n : ℝ) * Real.exp (a * (n : ℝ)) * b := by ring
   linarith [hgeo, hcombined, hfinal.le]
 
+/-- Time-horizon form of the exponential discrete Grönwall inequality.
+
+If `e (n+1) ≤ (1 + h · L) * e n + C * h^(p+1)` and `n * h ≤ T`, then
+
+`e n ≤ exp(L · T) * e 0 + T * exp(L · T) * C * h^p`.
+
+This is the textbook shape used for global error bounds of one-step and
+linear multistep methods: `L` is the Lipschitz constant, `C` is the local
+truncation constant, `p` is the order, and `T` is the final time. -/
+lemma discrete_gronwall_exp_horizon
+    {N : ℕ} {h L C T : ℝ} {p : ℕ} {e : ℕ → ℝ}
+    (hh : 0 ≤ h) (hL : 0 ≤ L) (hC : 0 ≤ C) (he0 : 0 ≤ e 0)
+    (hstep : ∀ n, n < N → e (n + 1) ≤ (1 + h * L) * e n + C * h ^ (p + 1))
+    (n : ℕ) (hn : n ≤ N) (hnh : (n : ℝ) * h ≤ T) :
+    e n ≤ Real.exp (L * T) * e 0
+          + T * Real.exp (L * T) * C * h ^ p := by
+  have ha : 0 ≤ h * L := mul_nonneg hh hL
+  have hb : 0 ≤ C * h ^ (p + 1) := mul_nonneg hC (pow_nonneg hh _)
+  have hgronwall :=
+    discrete_gronwall_exp (N := N) (a := h * L) (b := C * h ^ (p + 1))
+      (e := e) ha hb he0 hstep n hn
+  have hexp : Real.exp ((h * L) * (n : ℝ)) ≤ Real.exp (L * T) := by
+    rw [show (h * L) * (n : ℝ) = L * ((n : ℝ) * h) by ring]
+    exact Real.exp_le_exp.mpr (mul_le_mul_of_nonneg_left hnh hL)
+  have hfirst :
+      Real.exp ((h * L) * (n : ℝ)) * e 0 ≤ Real.exp (L * T) * e 0 :=
+    mul_le_mul_of_nonneg_right hexp he0
+  have hpow : (n : ℝ) * h ^ (p + 1) ≤ T * h ^ p := by
+    have hhp : 0 ≤ h ^ p := pow_nonneg hh p
+    have htime := mul_le_mul_of_nonneg_right hnh hhp
+    calc
+      (n : ℝ) * h ^ (p + 1) = ((n : ℝ) * h) * h ^ p := by
+        rw [pow_succ]
+        ring
+      _ ≤ T * h ^ p := htime
+  have hfactor :
+      Real.exp ((h * L) * (n : ℝ)) * C ≤ Real.exp (L * T) * C :=
+    mul_le_mul_of_nonneg_right hexp hC
+  have hpow_nonneg : 0 ≤ (n : ℝ) * h ^ (p + 1) := by
+    exact mul_nonneg (by exact_mod_cast Nat.zero_le n) (pow_nonneg hh _)
+  have htarget_factor_nonneg : 0 ≤ Real.exp (L * T) * C :=
+    mul_nonneg (Real.exp_nonneg _) hC
+  have hsecond_aux₁ :
+      (Real.exp ((h * L) * (n : ℝ)) * C) * ((n : ℝ) * h ^ (p + 1))
+        ≤ (Real.exp (L * T) * C) * ((n : ℝ) * h ^ (p + 1)) :=
+    mul_le_mul_of_nonneg_right hfactor hpow_nonneg
+  have hsecond_aux₂ :
+      (Real.exp (L * T) * C) * ((n : ℝ) * h ^ (p + 1))
+        ≤ (Real.exp (L * T) * C) * (T * h ^ p) :=
+    mul_le_mul_of_nonneg_left hpow htarget_factor_nonneg
+  have hsecond :
+      (n : ℝ) * Real.exp ((h * L) * (n : ℝ)) * (C * h ^ (p + 1))
+        ≤ T * Real.exp (L * T) * C * h ^ p := by
+    calc
+      (n : ℝ) * Real.exp ((h * L) * (n : ℝ)) * (C * h ^ (p + 1))
+          = (Real.exp ((h * L) * (n : ℝ)) * C) * ((n : ℝ) * h ^ (p + 1)) := by
+            ring
+      _ ≤ (Real.exp (L * T) * C) * ((n : ℝ) * h ^ (p + 1)) := hsecond_aux₁
+      _ ≤ (Real.exp (L * T) * C) * (T * h ^ p) := hsecond_aux₂
+      _ = T * Real.exp (L * T) * C * h ^ p := by ring
+  exact hgronwall.trans (add_le_add hfirst hsecond)
+
 /-- Pointwise Taylor derivative remainder bound, uniform over the compact
 sampling interval, for a globally smooth function. -/
 private lemma taylor_remainder_deriv_bound_uniform
@@ -1132,5 +1194,22 @@ theorem localTruncationError_leading_bound
           - iteratedDeriv (p + 1) y t * m.errorConstant p * h ^ (p + 1)‖
         ≤ C * h ^ (p + 2) :=
   m.truncationOp_smooth_local_truncation_error hp hδ₀ hy
+
+/-- Consequence of the local truncation bound and exponential discrete
+Grönwall: any error sequence satisfying a Lipschitz forcing recurrence with
+forcing constant bounded by the local truncation leading term obeys the
+textbook `O(h^p)` global error bound on a finite horizon `[0, T]`.
+
+This packages `discrete_gronwall_exp_horizon` so that future cycles only
+have to supply the iteration recurrence; the analytic bound is already in
+place. -/
+lemma lmm_error_bound_from_local_truncation
+    {N : ℕ} {h L C T : ℝ} {p : ℕ} {e : ℕ → ℝ}
+    (hh : 0 ≤ h) (hL : 0 ≤ L) (hC : 0 ≤ C) (he0 : 0 ≤ e 0)
+    (hstep : ∀ n, n < N → e (n + 1) ≤ (1 + h * L) * e n + C * h ^ (p + 1))
+    (n : ℕ) (hn : n ≤ N) (hnh : (n : ℝ) * h ≤ T) :
+    e n ≤ Real.exp (L * T) * e 0
+          + T * Real.exp (L * T) * C * h ^ p :=
+  discrete_gronwall_exp_horizon hh hL hC he0 hstep n hn hnh
 
 end LMM
