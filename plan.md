@@ -33,6 +33,8 @@
 - [x] **Adams–Moulton 5-step**: consistency, order 6, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Bashforth 6-step**: consistency, order 6, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Moulton 6-step**: consistency, order 7, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Infrastructure**: Adams zero-stability proofs share the reusable characteristic-polynomial helper
+  `adams_zeroStable_of_rhoC_pow_mul` (`OpenMath/AdamsMethods.lean`, cycle 389)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -204,6 +206,15 @@ BN-stability scaffold to plug a real 359D statement into.
 
 BDF downstream status: BDF7 zero-instability and the Dahlquist-equivalence
 `bdf7_not_convergent` wrapper are closed.
+
+Cycle 389 source lookup note:
+- The accessible Iserles second-edition source places "Order and convergence of
+  multistep methods" in §2.2, not §1.3. The named theorem found there is Theorem
+  2.2, the Dahlquist equivalence theorem: starting errors tend to zero, and
+  convergence is equivalent to order `p ≥ 1` plus the root condition. No separate
+  quantitative `O(h^p)` starting-error theorem was located in the available source.
+- Cycle 389 therefore used the strategy fallback and consolidated the Adams
+  zero-stability proofs by extracting `adams_zeroStable_of_rhoC_pow_mul`.
 
 Blocked side note:
 - The Radau IA left-endpoint family cannot be added with the cycle-375 statement

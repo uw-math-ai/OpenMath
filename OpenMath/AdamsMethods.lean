@@ -301,267 +301,162 @@ theorem adamsMoulton6_order_seven : adamsMoulton6.HasOrder 7 := by
 
 /-! ## Zero-stability theorems -/
 
+/-- Any LMM whose first characteristic polynomial has the Adams form
+`ρ(ξ) = ξ^k(ξ - 1)`, with `k > 0` and a nonzero derivative at `1`, is zero-stable.
+
+All Adams--Bashforth and Adams--Moulton methods in this file share this
+characteristic polynomial shape; only the `β` coefficients differ. -/
+theorem adams_zeroStable_of_rhoC_pow_mul {s k : ℕ} (m : LMM s) (hk : 0 < k)
+    (hrho : ∀ ξ : ℂ, m.rhoC ξ = ξ ^ k * (ξ - 1))
+    (hderiv_one : m.rhoCDeriv 1 ≠ 0) :
+    m.IsZeroStable := by
+  refine ⟨?_, ?_⟩
+  · intro ξ hξ
+    have hroot : ξ ^ k * (ξ - 1) = 0 := by
+      simpa [hrho ξ] using hξ
+    rcases mul_eq_zero.mp hroot with hpow | hsub
+    · have hξ0 : ξ = 0 := by
+        exact (pow_eq_zero_iff (n := k) (a := ξ) (Nat.ne_of_gt hk)).mp hpow
+      rw [hξ0]
+      simp
+    · have hξ1 : ξ = 1 := sub_eq_zero.mp hsub
+      rw [hξ1]
+      simp
+  · intro ξ hξ habs
+    have hroot : ξ ^ k * (ξ - 1) = 0 := by
+      simpa [hrho ξ] using hξ
+    rcases mul_eq_zero.mp hroot with hpow | hsub
+    · have hξ0 : ξ = 0 := by
+        exact (pow_eq_zero_iff (n := k) (a := ξ) (Nat.ne_of_gt hk)).mp hpow
+      rw [hξ0] at habs
+      simp at habs
+    · have hξ1 : ξ = 1 := sub_eq_zero.mp hsub
+      rw [hξ1]
+      exact hderiv_one
+
 /-- Adams–Bashforth 2-step is zero-stable: ρ(ξ) = ξ² - ξ has roots 0 and 1,
 both in the closed unit disk, and the unit root ξ = 1 is simple (ρ'(1) = 1 ≠ 0). -/
-theorem adamsBashforth2_zeroStable : adamsBashforth2.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsBashforth2, Fin.sum_univ_three] at hξ
-    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · rw [h0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsBashforth2, Fin.sum_univ_three]
-    simp [LMM.rhoC, adamsBashforth2, Fin.sum_univ_three] at hξ
-    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · rw [h0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsBashforth2_zeroStable : adamsBashforth2.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth2 (by norm_num : 0 < 1)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth2, Fin.sum_univ_three]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth2, Fin.sum_univ_three]
+      norm_num)
 
 /-- Adams–Moulton 2-step is zero-stable: ρ(ξ) = ξ² - ξ has roots 0 and 1
 (same as Adams–Bashforth 2-step). -/
-theorem adamsMoulton2_zeroStable : adamsMoulton2.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsMoulton2, Fin.sum_univ_three] at hξ
-    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · rw [h0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsMoulton2, Fin.sum_univ_three]
-    simp [LMM.rhoC, adamsMoulton2, Fin.sum_univ_three] at hξ
-    have h : ξ * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · rw [h0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsMoulton2_zeroStable : adamsMoulton2.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsMoulton2 (by norm_num : 0 < 1)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsMoulton2, Fin.sum_univ_three]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsMoulton2, Fin.sum_univ_three]
+      norm_num)
 
 /-- Adams–Bashforth 3-step is zero-stable: ρ(ξ) = ξ³ - ξ² = ξ²(ξ - 1) has a double
 root at 0 (interior to the unit disk) and a simple root at 1 (on the unit circle,
 with ρ'(1) = 1 ≠ 0). -/
-theorem adamsBashforth3_zeroStable : adamsBashforth3.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsBashforth3, Fin.sum_univ_four] at hξ
-    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsBashforth3, Fin.sum_univ_four]
-    simp [LMM.rhoC, adamsBashforth3, Fin.sum_univ_four] at hξ
-    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsBashforth3_zeroStable : adamsBashforth3.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth3 (by norm_num : 0 < 2)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth3, Fin.sum_univ_four]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth3, Fin.sum_univ_four]
+      norm_num)
 
 /-- Adams–Moulton 3-step is zero-stable: it has the same first characteristic
 polynomial as Adams–Bashforth 3-step. -/
-theorem adamsMoulton3_zeroStable : adamsMoulton3.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsMoulton3, Fin.sum_univ_four] at hξ
-    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsMoulton3, Fin.sum_univ_four]
-    simp [LMM.rhoC, adamsMoulton3, Fin.sum_univ_four] at hξ
-    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsMoulton3_zeroStable : adamsMoulton3.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsMoulton3 (by norm_num : 0 < 2)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsMoulton3, Fin.sum_univ_four]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsMoulton3, Fin.sum_univ_four]
+      norm_num)
 
 /-- Adams–Bashforth 4-step is zero-stable: ρ(ξ) = ξ⁴ - ξ³ = ξ³(ξ - 1) has a triple
 root at 0 (interior to the unit disk) and a simple root at 1 (on the unit circle,
 with ρ'(1) = 1 ≠ 0). -/
-theorem adamsBashforth4_zeroStable : adamsBashforth4.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsBashforth4, Fin.sum_univ_five] at hξ
-    have h : ξ ^ 3 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 3) (a := ξ) (by norm_num : (3 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsBashforth4, Fin.sum_univ_five]
-    simp [LMM.rhoC, adamsBashforth4, Fin.sum_univ_five] at hξ
-    have h : ξ ^ 3 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 3) (a := ξ) (by norm_num : (3 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsBashforth4_zeroStable : adamsBashforth4.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth4 (by norm_num : 0 < 3)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth4, Fin.sum_univ_five]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth4, Fin.sum_univ_five]
+      norm_num)
 
 /-- Adams–Moulton 4-step is zero-stable: ρ(ξ) = ξ⁴ - ξ³ = ξ³(ξ - 1) has a triple
 root at 0 (interior to the unit disk) and a simple root at 1 (on the unit circle,
 with ρ'(1) = 1 ≠ 0). -/
-theorem adamsMoulton4_zeroStable : adamsMoulton4.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsMoulton4, Fin.sum_univ_five] at hξ
-    have h : ξ ^ 3 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 3) (a := ξ) (by norm_num : (3 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsMoulton4, Fin.sum_univ_five]
-    simp [LMM.rhoC, adamsMoulton4, Fin.sum_univ_five] at hξ
-    have h : ξ ^ 3 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 3) (a := ξ) (by norm_num : (3 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsMoulton4_zeroStable : adamsMoulton4.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsMoulton4 (by norm_num : 0 < 3)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsMoulton4, Fin.sum_univ_five]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsMoulton4, Fin.sum_univ_five]
+      norm_num)
 
 /-- Adams–Bashforth 5-step is zero-stable: ρ(ξ) = ξ⁵ - ξ⁴ = ξ⁴(ξ - 1) has a quadruple
 root at 0 (interior to the unit disk) and a simple root at 1 (on the unit circle,
 with ρ'(1) = 1 ≠ 0). -/
-theorem adamsBashforth5_zeroStable : adamsBashforth5.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsBashforth5, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 4 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 4) (a := ξ) (by norm_num : (4 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsBashforth5, Fin.sum_univ_succ]
-    simp [LMM.rhoC, adamsBashforth5, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 4 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 4) (a := ξ) (by norm_num : (4 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsBashforth5_zeroStable : adamsBashforth5.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth5 (by norm_num : 0 < 4)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth5, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth5, Fin.sum_univ_succ]
+      norm_num)
 
 /-- Adams–Bashforth 6-step is zero-stable: ρ(ξ) = ξ⁶ - ξ⁵ = ξ⁵(ξ - 1) has a
 quintuple root at 0 (interior to the unit disk) and a simple root at 1 (on the
 unit circle, with ρ'(1) = 1 ≠ 0). -/
-theorem adamsBashforth6_zeroStable : adamsBashforth6.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsBashforth6, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 5 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 5) (a := ξ) (by norm_num : (5 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsBashforth6, Fin.sum_univ_succ]
-    simp [LMM.rhoC, adamsBashforth6, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 5 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 5) (a := ξ) (by norm_num : (5 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsBashforth6_zeroStable : adamsBashforth6.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth6 (by norm_num : 0 < 5)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth6, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth6, Fin.sum_univ_succ]
+      norm_num)
 
 /-- Adams–Moulton 5-step is zero-stable: ρ(ξ) = ξ⁵ - ξ⁴ = ξ⁴(ξ - 1) has a quadruple
 root at 0 (interior to the unit disk) and a simple root at 1 (on the unit circle,
 with ρ'(1) = 1 ≠ 0). Same ρ as Adams–Bashforth 5-step. -/
-theorem adamsMoulton5_zeroStable : adamsMoulton5.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsMoulton5, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 4 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 4) (a := ξ) (by norm_num : (4 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsMoulton5, Fin.sum_univ_succ]
-    simp [LMM.rhoC, adamsMoulton5, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 4 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 4) (a := ξ) (by norm_num : (4 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsMoulton5_zeroStable : adamsMoulton5.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsMoulton5 (by norm_num : 0 < 4)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsMoulton5, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsMoulton5, Fin.sum_univ_succ]
+      norm_num)
 
 /-- Adams–Moulton 6-step is zero-stable: ρ(ξ) = ξ⁶ - ξ⁵ = ξ⁵(ξ - 1) has a
 quintuple root at 0 (interior to the unit disk) and a simple root at 1 (on the
 unit circle, with ρ'(1) = 1 ≠ 0). Same ρ as Adams–Bashforth 6-step. -/
-theorem adamsMoulton6_zeroStable : adamsMoulton6.IsZeroStable where
-  roots_in_disk := by
-    intro ξ hξ
-    simp [LMM.rhoC, adamsMoulton6, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 5 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 5) (a := ξ) (by norm_num : (5 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0]; simp
-    · have : ξ = 1 := by linear_combination h1
-      rw [this]; simp
-  unit_roots_simple := by
-    intro ξ hξ habs
-    simp [LMM.rhoCDeriv, adamsMoulton6, Fin.sum_univ_succ]
-    simp [LMM.rhoC, adamsMoulton6, Fin.sum_univ_succ] at hξ
-    have h : ξ ^ 5 * (ξ - 1) = 0 := by linear_combination hξ
-    rcases mul_eq_zero.mp h with h0 | h1
-    · have hξ0 : ξ = 0 := by
-        have := pow_eq_zero_iff (n := 5) (a := ξ) (by norm_num : (5 : ℕ) ≠ 0)
-        exact this.mp h0
-      rw [hξ0] at habs; simp at habs
-    · have h1' : ξ = 1 := by linear_combination h1
-      rw [h1']; norm_num
+theorem adamsMoulton6_zeroStable : adamsMoulton6.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsMoulton6 (by norm_num : 0 < 5)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsMoulton6, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsMoulton6, Fin.sum_univ_succ]
+      norm_num)
