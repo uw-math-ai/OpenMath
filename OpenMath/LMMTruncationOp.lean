@@ -434,4 +434,80 @@ theorem truncationOp_polynomial_evalShift_eq_leading_of_HasOrder
   rw [← htrans]
   simpa [add_sub_cancel_right] using hpoly
 
+/-! ### Taylor polynomial wrappers (Iserles §1.2: smooth-solution bridge)
+
+The polynomial-side ingredient of Iserles' local truncation error formula
+`τ(t, h) = y^(p+1)(t) · errorConstant · h^(p+1) + O(h^(p+2))`. The
+remainder bound for genuinely smooth `y` is the cycle-401 target. -/
+
+/-- The degree-`n` Taylor polynomial of a function `y : ℕ → ℝ → ℝ`
+    (interpreted as `y k = y^(k)`) about an evaluation point.
+    The polynomial is in the formal variable, so `Q.eval (u - t)` is the
+    usual Taylor expansion at `t`. -/
+noncomputable def taylorPoly (y : ℕ → ℝ → ℝ) (t : ℝ) (n : ℕ) : Polynomial ℝ :=
+  ∑ k ∈ Finset.range (n + 1),
+    Polynomial.C (y k t / (k.factorial : ℝ)) * Polynomial.X ^ k
+
+theorem taylorPoly_natDegree_le
+    (y : ℕ → ℝ → ℝ) (t : ℝ) (n : ℕ) :
+    (taylorPoly y t n).natDegree ≤ n := by
+  unfold taylorPoly
+  apply Polynomial.natDegree_sum_le_of_forall_le
+  intro k hk
+  have hkn : k ≤ n := Nat.lt_succ_iff.mp (Finset.mem_range.mp hk)
+  exact (Polynomial.natDegree_C_mul_X_pow_le _ _).trans hkn
+
+theorem taylorPoly_coeff
+    (y : ℕ → ℝ → ℝ) (t : ℝ) (n k : ℕ) (hk : k ≤ n) :
+    (taylorPoly y t n).coeff k = y k t / (k.factorial : ℝ) := by
+  unfold taylorPoly
+  rw [Polynomial.finset_sum_coeff]
+  have hkmem : k ∈ Finset.range (n + 1) :=
+    Finset.mem_range.mpr (Nat.lt_succ_of_le hk)
+  rw [Finset.sum_eq_single k]
+  · simp [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow]
+  · intro j hj hjne
+    simp [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, hjne.symm]
+  · intro hk'
+    exact (hk' hkmem).elim
+
+/-- For an order-`p` LMM, the truncation operator at `t` applied to the
+    degree-`p+1` Taylor polynomial of `y` about `t` equals
+    `y^(p+1)(t) · errorConstant p · h^(p+1)`.
+
+    This is the polynomial-side ingredient of Iserles' local truncation error
+    formula; the `O(h^(p+2))` remainder for genuinely smooth `y` will be
+    handled in a follow-up cycle. -/
+theorem truncationOp_taylorPoly_eq_leading_of_HasOrder
+    {m : LMM s} {p : ℕ} (h t : ℝ) (hord : m.HasOrder p)
+    (y : ℕ → ℝ → ℝ) :
+    m.truncationOp h
+        (fun u => (taylorPoly y t (p + 1)).eval (u - t))
+        (fun u => (taylorPoly y t (p + 1)).derivative.eval (u - t))
+        t
+      = y (p + 1) t * m.errorConstant p * h ^ (p + 1) := by
+  have hdeg : (taylorPoly y t (p + 1)).natDegree ≤ p + 1 :=
+    taylorPoly_natDegree_le y t (p + 1)
+  have hpoly := m.truncationOp_polynomial_evalShift_eq_leading_of_HasOrder
+    (h := h) (t := t) hord (taylorPoly y t (p + 1)) hdeg
+  have hcoeff : (taylorPoly y t (p + 1)).coeff (p + 1)
+      = y (p + 1) t / ((p + 1).factorial : ℝ) :=
+    taylorPoly_coeff y t (p + 1) (p + 1) le_rfl
+  rw [hpoly, hcoeff]
+  have hfact : ((p + 1).factorial : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero _)
+  field_simp
+
+/-- For an order-`p` LMM, the truncation operator at `t` applied to the
+    degree-`p` Taylor polynomial of `y` about `t` vanishes. -/
+theorem truncationOp_taylorPoly_eq_zero_of_HasOrder
+    {m : LMM s} {p : ℕ} (h t : ℝ) (hord : m.HasOrder p)
+    (y : ℕ → ℝ → ℝ) :
+    m.truncationOp h
+        (fun u => (taylorPoly y t p).eval (u - t))
+        (fun u => (taylorPoly y t p).derivative.eval (u - t))
+        t = 0 := by
+  exact m.truncationOp_polynomial_evalShift_eq_zero_of_HasOrder
+    (h := h) (t := t) hord (taylorPoly y t p) (taylorPoly_natDegree_le y t p)
+
 end LMM
