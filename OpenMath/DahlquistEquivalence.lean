@@ -548,6 +548,11 @@ theorem adamsBashforth3_convergent : adamsBashforth3.IsConvergent :=
   (dahlquist_equivalence adamsBashforth3).mpr
     ⟨adamsBashforth3_consistent, adamsBashforth3_zeroStable⟩
 
+/-- Adams–Moulton 3-step is convergent. -/
+theorem adamsMoulton3_convergent : adamsMoulton3.IsConvergent :=
+  (dahlquist_equivalence adamsMoulton3).mpr
+    ⟨adamsMoulton3_consistent, adamsMoulton3_zeroStable⟩
+
 /-- BDF2 is convergent. -/
 theorem bdf2_convergent : bdf2.IsConvergent :=
   (dahlquist_equivalence bdf2).mpr ⟨bdf2_consistent, bdf2_zeroStable⟩

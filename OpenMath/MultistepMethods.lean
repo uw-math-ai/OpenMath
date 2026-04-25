@@ -130,6 +130,17 @@ noncomputable def adamsBashforth3 : LMM 3 where
   β := ![5/12, -16/12, 23/12, 0]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Moulton 3-step** method:
+y_{n+3} = y_{n+2} + h·(9/24·f_{n+3} + 19/24·f_{n+2}
+  - 5/24·f_{n+1} + 1/24·f_n).
+Coefficients: α = [0, 0, -1, 1], β = [1/24, -5/24, 19/24, 9/24].
+This is an implicit method of order 4.
+Reference: Iserles, Section 1.2. -/
+noncomputable def adamsMoulton3 : LMM 3 where
+  α := ![0, 0, -1, 1]
+  β := ![1/24, -5/24, 19/24, 9/24]
+  normalized := by simp [Fin.last]
+
 /-! ## Properties of Standard Methods -/
 
 /-- Forward Euler is consistent. -/
@@ -185,6 +196,15 @@ theorem adamsBashforth3_consistent : adamsBashforth3.IsConsistent :=
 /-- Adams–Bashforth 3-step is explicit (β₃ = 0). -/
 theorem adamsBashforth3_explicit : adamsBashforth3.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth3, Fin.last]
+
+/-- Adams–Moulton 3-step is consistent. -/
+theorem adamsMoulton3_consistent : adamsMoulton3.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsMoulton3, Fin.sum_univ_four],
+   by simp [LMM.sigma, adamsMoulton3, Fin.sum_univ_four]; norm_num⟩
+
+/-- Adams–Moulton 3-step is implicit (β₃ = 9/24 ≠ 0). -/
+theorem adamsMoulton3_implicit : adamsMoulton3.IsImplicit := by
+  simp [LMM.IsImplicit, adamsMoulton3, Fin.last]
 
 /-! ## Order of a Linear Multistep Method
 
@@ -291,6 +311,14 @@ theorem adamsBashforth3_order_three : adamsBashforth3.HasOrder 3 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsBashforth3, Fin.sum_univ_four] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth3, Fin.sum_univ_four]; norm_num
+
+/-- Adams–Moulton 3-step has order 4. -/
+theorem adamsMoulton3_order_four : adamsMoulton3.HasOrder 4 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsMoulton3, Fin.sum_univ_four] <;> norm_num
+  · simp [LMM.orderCondVal, adamsMoulton3, Fin.sum_univ_four]; norm_num
 
 /-! ## Zero-Stability
 
@@ -423,6 +451,33 @@ theorem adamsBashforth3_zeroStable : adamsBashforth3.IsZeroStable where
     intro ξ hξ habs
     simp [LMM.rhoCDeriv, adamsBashforth3, Fin.sum_univ_four]
     simp [LMM.rhoC, adamsBashforth3, Fin.sum_univ_four] at hξ
+    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have hξ0 : ξ = 0 := by
+        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
+        exact this.mp h0
+      rw [hξ0] at habs; simp at habs
+    · have h1' : ξ = 1 := by linear_combination h1
+      rw [h1']; norm_num
+
+/-- Adams–Moulton 3-step is zero-stable: it has the same first characteristic
+polynomial as Adams–Bashforth 3-step. -/
+theorem adamsMoulton3_zeroStable : adamsMoulton3.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, adamsMoulton3, Fin.sum_univ_four] at hξ
+    have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have hξ0 : ξ = 0 := by
+        have := pow_eq_zero_iff (n := 2) (a := ξ) (by norm_num : (2 : ℕ) ≠ 0)
+        exact this.mp h0
+      rw [hξ0]; simp
+    · have : ξ = 1 := by linear_combination h1
+      rw [this]; simp
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp [LMM.rhoCDeriv, adamsMoulton3, Fin.sum_univ_four]
+    simp [LMM.rhoC, adamsMoulton3, Fin.sum_univ_four] at hξ
     have h : ξ ^ 2 * (ξ - 1) = 0 := by linear_combination hξ
     rcases mul_eq_zero.mp h with h0 | h1
     · have hξ0 : ξ = 0 := by
