@@ -844,6 +844,86 @@ lemma discrete_gronwall_geometric
             rw [← hgeo, pow_succ]
             ring
 
+/-- Power version of `Real.add_one_le_exp`: `(1 + a)^n ≤ exp (a · n)`
+for `0 ≤ a`. Used to convert the geometric Grönwall bound into the
+textbook exponential form `exp(a·n)·e₀ + n·exp(a·n)·b`. -/
+lemma pow_one_add_le_exp_mul {a : ℝ} (ha : 0 ≤ a) (n : ℕ) :
+    (1 + a) ^ n ≤ Real.exp (a * (n : ℝ)) := by
+  have h1 : (1 + a) ≤ Real.exp a := by
+    have := Real.add_one_le_exp a
+    linarith
+  have h0 : 0 ≤ 1 + a := add_nonneg zero_le_one ha
+  have hpow : (1 + a) ^ n ≤ (Real.exp a) ^ n :=
+    pow_le_pow_left₀ h0 h1 n
+  have hrw : (Real.exp a) ^ n = Real.exp (a * (n : ℝ)) := by
+    rw [← Real.exp_nat_mul]
+    ring_nf
+  exact hpow.trans hrw.le
+
+/-- Each summand `(1+a)^k` for `k < n` is bounded by `exp(a·n)`, so the
+geometric sum `∑_{k<n} (1+a)^k` is bounded by `n · exp(a·n)`. -/
+lemma geom_sum_le_nat_mul_exp_mul {a : ℝ} (ha : 0 ≤ a) (n : ℕ) :
+    (Finset.range n).sum (fun k => (1 + a) ^ k)
+      ≤ (n : ℝ) * Real.exp (a * (n : ℝ)) := by
+  have hbound : ∀ k ∈ Finset.range n,
+      (1 + a) ^ k ≤ Real.exp (a * (n : ℝ)) := by
+    intro k hk
+    have hkn : k ≤ n := Nat.le_of_lt (Finset.mem_range.mp hk)
+    have hk_le : a * (k : ℝ) ≤ a * (n : ℝ) :=
+      mul_le_mul_of_nonneg_left (by exact_mod_cast hkn) ha
+    have hk_pow : (1 + a) ^ k ≤ Real.exp (a * (k : ℝ)) :=
+      pow_one_add_le_exp_mul ha k
+    have hk_exp : Real.exp (a * (k : ℝ)) ≤ Real.exp (a * (n : ℝ)) :=
+      Real.exp_le_exp.mpr hk_le
+    exact hk_pow.trans hk_exp
+  have hsum : (Finset.range n).sum (fun k => (1 + a) ^ k)
+      ≤ (Finset.range n).sum (fun _ => Real.exp (a * (n : ℝ))) :=
+    Finset.sum_le_sum hbound
+  have hconst : (Finset.range n).sum (fun _ => Real.exp (a * (n : ℝ)))
+      = (n : ℝ) * Real.exp (a * (n : ℝ)) := by
+    rw [Finset.sum_const, Finset.card_range]
+    simp [nsmul_eq_mul]
+  exact hsum.trans hconst.le
+
+/-- Discrete Grönwall inequality, exponential form.
+
+Closed-form bound on the unrolled-sum factor returned by
+`discrete_gronwall_geometric`: under the hypotheses `0 ≤ a`, `0 ≤ b`,
+`0 ≤ e 0`, and `e (n+1) ≤ (1+a) e n + b`, we have
+
+`e n ≤ exp(a·n) · e 0 + n · exp(a·n) · b`.
+
+This is the textbook form that the LMM global-error theorem will plug
+into next: `a` becomes `h · L` (Lipschitz constant times step), `b`
+becomes the local truncation bound `C · h^(p+1)`, and `n · h ≤ T` then
+yields the global `O(h^p)` error. -/
+lemma discrete_gronwall_exp
+    {N : ℕ} {a b : ℝ} {e : ℕ → ℝ}
+    (ha : 0 ≤ a) (hb : 0 ≤ b) (he0 : 0 ≤ e 0)
+    (hstep : ∀ n, n < N → e (n + 1) ≤ (1 + a) * e n + b) :
+    ∀ n, n ≤ N →
+      e n ≤ Real.exp (a * (n : ℝ)) * e 0
+            + (n : ℝ) * Real.exp (a * (n : ℝ)) * b := by
+  intro n hn
+  have hgeo := discrete_gronwall_geometric ha hb he0 hstep n hn
+  have hpow : (1 + a) ^ n * e 0 ≤ Real.exp (a * (n : ℝ)) * e 0 :=
+    mul_le_mul_of_nonneg_right (pow_one_add_le_exp_mul ha n) he0
+  have hsum : (Finset.range n).sum (fun k => (1 + a) ^ k) * b
+      ≤ ((n : ℝ) * Real.exp (a * (n : ℝ))) * b :=
+    mul_le_mul_of_nonneg_right (geom_sum_le_nat_mul_exp_mul ha n) hb
+  have hcombined :
+      (1 + a) ^ n * e 0
+        + (Finset.range n).sum (fun k => (1 + a) ^ k) * b
+      ≤ Real.exp (a * (n : ℝ)) * e 0
+        + ((n : ℝ) * Real.exp (a * (n : ℝ))) * b :=
+    add_le_add hpow hsum
+  have hfinal :
+      Real.exp (a * (n : ℝ)) * e 0
+        + ((n : ℝ) * Real.exp (a * (n : ℝ))) * b
+      = Real.exp (a * (n : ℝ)) * e 0
+        + (n : ℝ) * Real.exp (a * (n : ℝ)) * b := by ring
+  linarith [hgeo, hcombined, hfinal.le]
+
 /-- Pointwise Taylor derivative remainder bound, uniform over the compact
 sampling interval, for a globally smooth function. -/
 private lemma taylor_remainder_deriv_bound_uniform
