@@ -1365,8 +1365,19 @@ def run_claude(prompt: str, model: str = None, timeout: int = 1800,
 CODEX_CONDA_ENV = "/gscratch/amath/vilin/conda/envs/codex"
 
 
+_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*\n(.*?)\n```\s*$", re.DOTALL)
+
+
+def _strip_code_fences(s: str) -> str:
+    """Strip a single ```json ... ``` (or plain ``` ... ```) fence if present."""
+    m = _FENCE_RE.match(s)
+    return m.group(1) if m else s
+
+
 def parse_evaluator_output(output: str) -> dict:
-    """Parse evaluator output from raw JSON or the Claude CLI JSON envelope."""
+    """Parse evaluator output from raw JSON or the Claude CLI JSON envelope.
+
+    Tolerates the model wrapping its JSON answer in a ```json fenced block."""
     parsed = json.loads(output.strip())
 
     if isinstance(parsed, dict) and parsed.get("type") == "result":
@@ -1376,7 +1387,7 @@ def parse_evaluator_output(output: str) -> dict:
         if isinstance(result, dict):
             return result
         if isinstance(result, str):
-            return json.loads(result.strip())
+            return json.loads(_strip_code_fences(result.strip()))
         raise ValueError("Claude CLI JSON output did not contain a JSON result payload")
 
     if isinstance(parsed, dict):
