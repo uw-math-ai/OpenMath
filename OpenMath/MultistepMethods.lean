@@ -2779,6 +2779,86 @@ theorem truncationOp_monomial_eq_zero_of_HasOrder
         0 = 0 := by
   rw [truncationOp_monomial_zero, hord.conditions_hold q hq, mul_zero]
 
+/-- If the zeroth order condition holds, the monomial order conditions vanish
+    through degree `p`, and the next order condition is nonzero, then the LMM
+    has order `p`. -/
+theorem hasOrder_of_orderCondVal_vanishing
+    (m : LMM s) (p : ℕ)
+    (hzero : m.orderCondVal 0 = 0)
+    (hmono : ∀ q : ℕ, 1 ≤ q → q ≤ p → m.orderCondVal q = 0)
+    (hnext : m.orderCondVal (p + 1) ≠ 0) :
+    m.HasOrder p := by
+  refine ⟨?_, hnext⟩
+  intro q hq
+  by_cases hq0 : q = 0
+  · subst q
+    exact hzero
+  · exact hmono q (Nat.succ_le_of_lt (Nat.pos_of_ne_zero hq0)) hq
+
+/-- Order `p` is equivalent to vanishing of the zeroth and monomial order
+    conditions through degree `p`, together with failure of the next order
+    condition. -/
+theorem hasOrder_iff_orderCondVal_vanishing
+    (m : LMM s) (p : ℕ) :
+    m.HasOrder p ↔
+      m.orderCondVal 0 = 0 ∧
+        (∀ q : ℕ, 1 ≤ q → q ≤ p → m.orderCondVal q = 0) ∧
+          m.orderCondVal (p + 1) ≠ 0 := by
+  constructor
+  · intro hord
+    exact ⟨hord.conditions_hold 0 (Nat.zero_le _),
+      (fun q _ hq => hord.conditions_hold q hq), hord.next_nonzero⟩
+  · rintro ⟨hzero, hmono, hnext⟩
+    exact m.hasOrder_of_orderCondVal_vanishing p hzero hmono hnext
+
+/-- A monomial-only sufficient condition for order stated through the
+    truncation operator.  Because `HasOrder` also records the zeroth condition
+    and failure of the next condition, those are supplied as the corresponding
+    `h = 1` truncation-operator facts. -/
+theorem hasOrder_of_truncationOp_vanishing_on_monomials
+    (m : LMM s) (p : ℕ)
+    (hzero :
+      m.truncationOp (1 : ℝ)
+        (fun t => t ^ (0 : ℕ))
+        (fun t => (0 : ℝ) * t ^ ((0 : ℕ) - 1))
+        0 = 0)
+    (hmono : ∀ q : ℕ, 1 ≤ q → q ≤ p → ∀ h : ℝ, h ≠ 0 →
+      m.truncationOp h
+        (fun t => t ^ q)
+        (fun t => (q : ℝ) * t ^ (q - 1))
+        0 = 0)
+    (hnext :
+      m.truncationOp (1 : ℝ)
+        (fun t => t ^ (p + 1))
+        (fun t => ((p + 1 : ℕ) : ℝ) * t ^ p)
+        0 ≠ 0) :
+    m.HasOrder p := by
+  refine m.hasOrder_of_orderCondVal_vanishing p ?_ ?_ ?_
+  · have hkey :
+        m.truncationOp (1 : ℝ)
+          (fun t => t ^ (0 : ℕ))
+          (fun t => (0 : ℝ) * t ^ ((0 : ℕ) - 1))
+          0 = (1 : ℝ) ^ (0 : ℕ) * m.orderCondVal 0 := by
+      simpa using m.truncationOp_monomial_zero (1 : ℝ) 0
+    rw [hkey] at hzero
+    simpa using hzero
+  · intro q hq1 hqp
+    have htrunc := hmono q hq1 hqp (1 : ℝ) (by norm_num)
+    have hkey := m.truncationOp_monomial_zero (1 : ℝ) q
+    rw [hkey] at htrunc
+    simpa using htrunc
+  · intro hvanish
+    apply hnext
+    have hkey :
+        m.truncationOp (1 : ℝ)
+          (fun t => t ^ (p + 1))
+          (fun t => ((p + 1 : ℕ) : ℝ) * t ^ p)
+          0 = (1 : ℝ) ^ (p + 1) * m.orderCondVal (p + 1) := by
+      have := m.truncationOp_monomial_zero (1 : ℝ) (p + 1)
+      simpa using this
+    rw [hkey, hvanish]
+    simp
+
 /-- For an order-`p` method, on the test monomial `y(t) = t^(p+1)`,
     the truncation operator at `t = 0` equals
     `(p+1)! · errorConstant p · h^(p+1)`. -/
