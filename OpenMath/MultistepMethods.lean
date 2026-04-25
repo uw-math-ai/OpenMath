@@ -187,6 +187,14 @@ theorem HasOrder.isConsistent {m : LMM s} {p : ℕ} (h : m.HasOrder p) (hp : 1 �
   rw [isConsistent_iff_orderCond]
   exact ⟨h.conditions_hold 0 (Nat.zero_le _), h.conditions_hold 1 hp⟩
 
+/-- The leading **error constant** of an LMM of order `p`:
+  `C_{p+1} := orderCondVal (p+1) / (p+1)!`.
+  For an order-`p` method, the local truncation error is
+  `C_{p+1} · h^(p+1) · y^(p+1)(t) + O(h^(p+2))`.
+  Reference: Iserles, Section 1.2. -/
+noncomputable def errorConstant (m : LMM s) (p : ℕ) : ℝ :=
+  m.orderCondVal (p + 1) / ((p + 1).factorial : ℝ)
+
 end LMM
 
 /-! ### Order of Standard Methods -/
@@ -213,6 +221,13 @@ theorem trapezoidalRule_order_two : trapezoidalRule.HasOrder 2 := by
     all_goals simp [LMM.orderCondVal, trapezoidalRule, Fin.sum_univ_two]
     all_goals norm_num
   · simp [LMM.orderCondVal, trapezoidalRule, Fin.sum_univ_two]; norm_num
+
+/-- Forward Euler has error constant `C_2 = 1/2`.
+Smoke test: `V_2 = ∑ j² α_j − 2 · ∑ j β_j = 1 − 0 = 1`, so `C_2 = 1/2! = 1/2`.
+Reference: Iserles, Section 1.2. -/
+theorem forwardEuler_errorConstant : forwardEuler.errorConstant 1 = 1 / 2 := by
+  unfold LMM.errorConstant LMM.orderCondVal forwardEuler
+  simp [Fin.sum_univ_two, Nat.factorial]
 
 /-! ## Zero-Stability
 

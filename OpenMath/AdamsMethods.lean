@@ -299,6 +299,41 @@ theorem adamsMoulton6_order_seven : adamsMoulton6.HasOrder 7 := by
       simp [LMM.orderCondVal, adamsMoulton6, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsMoulton6, Fin.sum_univ_succ]; norm_num
 
+/-! ## Error constants
+
+The leading error constant of an order-`p` LMM is
+`C_{p+1} = orderCondVal (p+1) / (p+1)!`. The values below are the standard
+Iserles §1.2 / §2.2 Adams error constants.
+-/
+
+/-- Adams–Bashforth 2-step has error constant `C_3 = 5/12`. -/
+theorem adamsBashforth2_errorConstant :
+    adamsBashforth2.errorConstant 2 = 5 / 12 := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsBashforth2
+  simp [Fin.sum_univ_three, Nat.factorial]
+  norm_num
+
+/-- Adams–Moulton 2-step has error constant `C_4 = -1/24`. -/
+theorem adamsMoulton2_errorConstant :
+    adamsMoulton2.errorConstant 3 = -(1 / 24) := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsMoulton2
+  simp [Fin.sum_univ_three, Nat.factorial]
+  norm_num
+
+/-- Adams–Bashforth 3-step has error constant `C_4 = 3/8`. -/
+theorem adamsBashforth3_errorConstant :
+    adamsBashforth3.errorConstant 3 = 3 / 8 := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsBashforth3
+  simp [Fin.sum_univ_four, Nat.factorial]
+  norm_num
+
+/-- Adams–Moulton 3-step has error constant `C_5 = -19/720`. -/
+theorem adamsMoulton3_errorConstant :
+    adamsMoulton3.errorConstant 4 = -(19 / 720) := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsMoulton3
+  simp [Fin.sum_univ_four, Nat.factorial]
+  norm_num
+
 /-! ## Zero-stability theorems -/
 
 /-- Any LMM whose first characteristic polynomial has the Adams form
