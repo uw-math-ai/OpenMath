@@ -37,6 +37,7 @@
   `adams_zeroStable_of_rhoC_pow_mul` (`OpenMath/AdamsMethods.lean`, cycle 389)
 - [x] **Error constants**: `LMM.errorConstant`; forward Euler = 1/2, backward Euler = −1/2, trapezoidal = −1/12; AB2 = 5/12, AM2 = −1/24, AB3 = 3/8, AM3 = −19/720, AB4 = 251/720, AM4 = −3/160, AB5 = 95/288, AM5 = −863/60480, AB6 = 19087/60480, AM6 = −275/24192; BDF2 = −2/9, BDF3 = −3/22, BDF4 = −12/125, BDF5 = −10/137, BDF6 = −20/343, BDF7 = −35/726 (computed despite zero-instability) (`OpenMath/MultistepMethods.lean`, `OpenMath/AdamsMethods.lean`, cycles 390–393)
 - [x] **Adams error-constant signs**: AB2–AB6 are strictly positive and AM2–AM6 are strictly negative (`OpenMath/AdamsMethods.lean`, cycle 393)
+- [x] **Truncation operator**: definition `LMM.truncationOp`, monomial identity `truncationOp_monomial_zero`, linearity, vanishing on order-`p` monomials, leading coefficient at `t^(p+1)` equals `(p+1)! · errorConstant p · h^(p+1)` (`OpenMath/MultistepMethods.lean`, cycle 394)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)

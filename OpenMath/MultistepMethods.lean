@@ -2702,3 +2702,103 @@ theorem dahlquistCounterexample_not_zeroStable :
   simp [rhoCDeriv, dahlquistCounterexample, Fin.sum_univ_three] at h
 
 end LMM
+
+/-! ## Local Truncation Operator (Iserles §1.2 / eqn (2.6))
+
+The local truncation operator `L[y, t, h]` of a linear multistep method
+applied to a smooth test function `y`. Here we pass the derivative `y'`
+explicitly, so the definition does not depend on a smoothness predicate
+and we can reason about it on monomials by direct computation. -/
+
+namespace LMM
+
+variable {s : ℕ}
+
+/-- The local truncation operator of a linear multistep method:
+    `L[y, t, h] = ∑_j α_j · y(t + j h) - h · ∑_j β_j · y'(t + j h)`.
+    The derivative is passed in explicitly as `y'`, so this definition
+    does not require any smoothness predicate.
+    Reference: Iserles, eqn (2.6) / §1.2. -/
+noncomputable def truncationOp
+    (m : LMM s) (h : ℝ) (y y' : ℝ → ℝ) (t : ℝ) : ℝ :=
+  (∑ j : Fin (s + 1), m.α j * y (t + (j : ℝ) * h))
+    - h * (∑ j : Fin (s + 1), m.β j * y' (t + (j : ℝ) * h))
+
+/-- Linearity in the test function pair `(y, y')`. -/
+theorem truncationOp_add
+    (m : LMM s) (h : ℝ) (y₁ y₁' y₂ y₂' : ℝ → ℝ) (t : ℝ) :
+    m.truncationOp h (fun u => y₁ u + y₂ u) (fun u => y₁' u + y₂' u) t
+      = m.truncationOp h y₁ y₁' t + m.truncationOp h y₂ y₂' t := by
+  unfold truncationOp
+  simp only [mul_add, Finset.sum_add_distrib]
+  ring
+
+/-- Scalar homogeneity. -/
+theorem truncationOp_smul
+    (m : LMM s) (h : ℝ) (c : ℝ) (y y' : ℝ → ℝ) (t : ℝ) :
+    m.truncationOp h (fun u => c * y u) (fun u => c * y' u) t
+      = c * m.truncationOp h y y' t := by
+  unfold truncationOp
+  have hα : ∀ j : Fin (s + 1),
+      m.α j * (c * y (t + (j : ℝ) * h)) = c * (m.α j * y (t + (j : ℝ) * h)) :=
+    fun j => by ring
+  have hβ : ∀ j : Fin (s + 1),
+      m.β j * (c * y' (t + (j : ℝ) * h)) = c * (m.β j * y' (t + (j : ℝ) * h)) :=
+    fun j => by ring
+  simp only [hα, hβ, ← Finset.mul_sum]
+  ring
+
+/-- On the monomial `y(t) = t^q` (with derivative `q · t^(q-1)`),
+    the truncation operator at `t = 0` reduces to `h^q · V_q`. -/
+theorem truncationOp_monomial_zero
+    (m : LMM s) (h : ℝ) (q : ℕ) :
+    m.truncationOp h
+        (fun t => t ^ q)
+        (fun t => (q : ℝ) * t ^ (q - 1))
+        0
+      = h ^ q * m.orderCondVal q := by
+  unfold truncationOp orderCondVal
+  rcases q with _ | q'
+  · simp
+  · simp only [Nat.add_sub_cancel, zero_add, mul_pow, pow_succ]
+    rw [mul_sub, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    rw [← Finset.sum_sub_distrib, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro j _
+    push_cast
+    ring
+
+/-- For an LMM of order `p`, the truncation operator vanishes on
+    monomials of degree `≤ p`. -/
+theorem truncationOp_monomial_eq_zero_of_HasOrder
+    {m : LMM s} {p : ℕ} (h : ℝ) (hord : m.HasOrder p)
+    {q : ℕ} (hq : q ≤ p) :
+    m.truncationOp h
+        (fun t => t ^ q)
+        (fun t => (q : ℝ) * t ^ (q - 1))
+        0 = 0 := by
+  rw [truncationOp_monomial_zero, hord.conditions_hold q hq, mul_zero]
+
+/-- For an order-`p` method, on the test monomial `y(t) = t^(p+1)`,
+    the truncation operator at `t = 0` equals
+    `(p+1)! · errorConstant p · h^(p+1)`. -/
+theorem truncationOp_monomial_leading_of_HasOrder
+    {m : LMM s} {p : ℕ} (h : ℝ) (_hord : m.HasOrder p) :
+    m.truncationOp h
+        (fun t => t ^ (p + 1))
+        (fun t => ((p + 1 : ℕ) : ℝ) * t ^ p)
+        0
+      = ((p + 1).factorial : ℝ) * m.errorConstant p * h ^ (p + 1) := by
+  have hfact : ((p + 1).factorial : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'
+  have hkey : m.truncationOp h
+        (fun t => t ^ (p + 1))
+        (fun t => ((p + 1 : ℕ) : ℝ) * t ^ p)
+        0 = h ^ (p + 1) * m.orderCondVal (p + 1) := by
+    have := m.truncationOp_monomial_zero h (p + 1)
+    simpa using this
+  rw [hkey]
+  unfold errorConstant
+  field_simp
+
+end LMM
