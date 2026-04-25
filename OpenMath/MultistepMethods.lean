@@ -1046,6 +1046,12 @@ noncomputable def bdf7 : LMM 7 where
   β := ![0, 0, 0, 0, 0, 0, 0, 420/1089]
   normalized := by simp [Fin.last]
 
+/-- BDF7 has error constant `C_8 = -35/726` despite zero-instability. -/
+theorem bdf7_errorConstant : bdf7.errorConstant 7 = -(35 / 726) := by
+  unfold LMM.errorConstant LMM.orderCondVal bdf7
+  simp [Fin.sum_univ_succ, Nat.factorial]
+  norm_num
+
 /-- BDF7 is consistent. -/
 theorem bdf7_consistent : bdf7.IsConsistent :=
   ⟨by simp [LMM.rho, bdf7, Fin.sum_univ_succ]; norm_num,

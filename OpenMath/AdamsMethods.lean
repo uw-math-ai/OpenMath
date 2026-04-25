@@ -376,6 +376,30 @@ theorem adamsMoulton6_errorConstant :
   simp [Fin.sum_univ_succ, Nat.factorial]
   norm_num
 
+/-- Adams–Bashforth error constants are strictly positive (AB2–AB6). -/
+theorem adamsBashforth_errorConstant_pos :
+    0 < adamsBashforth2.errorConstant 2 ∧
+    0 < adamsBashforth3.errorConstant 3 ∧
+    0 < adamsBashforth4.errorConstant 4 ∧
+    0 < adamsBashforth5.errorConstant 5 ∧
+    0 < adamsBashforth6.errorConstant 6 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [adamsBashforth2_errorConstant, adamsBashforth3_errorConstant,
+      adamsBashforth4_errorConstant, adamsBashforth5_errorConstant,
+      adamsBashforth6_errorConstant]
+
+/-- Adams–Moulton error constants are strictly negative (AM2–AM6). -/
+theorem adamsMoulton_errorConstant_neg :
+    adamsMoulton2.errorConstant 3 < 0 ∧
+    adamsMoulton3.errorConstant 4 < 0 ∧
+    adamsMoulton4.errorConstant 5 < 0 ∧
+    adamsMoulton5.errorConstant 6 < 0 ∧
+    adamsMoulton6.errorConstant 7 < 0 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;>
+    simp [adamsMoulton2_errorConstant, adamsMoulton3_errorConstant,
+      adamsMoulton4_errorConstant, adamsMoulton5_errorConstant,
+      adamsMoulton6_errorConstant]
+
 /-! ## Zero-stability theorems -/
 
 /-- Any LMM whose first characteristic polynomial has the Adams form
