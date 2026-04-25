@@ -762,17 +762,24 @@ def format_cleanup_report(
 
 
 def _sweep_should_run() -> bool:
-    """True iff the last sweep was >= SWEEP_INTERVAL_HOURS ago (or never)."""
+    """True iff the last sweep was >= SWEEP_INTERVAL_HOURS ago (or never).
+
+    Stamp file holds epoch seconds (float) for Python 3.6 compatibility —
+    `datetime.fromisoformat` is 3.7+ and the orchestrator runs under 3.6.8."""
     if not SWEEP_STAMP_FILE.exists():
         return True
+    raw = SWEEP_STAMP_FILE.read_text().strip()
     try:
-        last = datetime.fromisoformat(SWEEP_STAMP_FILE.read_text().strip())
-    except Exception:
-        return True
-    if last.tzinfo is None:
-        last = last.replace(tzinfo=timezone.utc)
-    age = datetime.now(tz=timezone.utc) - last
-    return age >= timedelta(hours=SWEEP_INTERVAL_HOURS)
+        last_epoch = float(raw)
+    except ValueError:
+        try:
+            last_epoch = datetime.strptime(
+                raw[:26], "%Y-%m-%dT%H:%M:%S.%f"
+            ).replace(tzinfo=timezone.utc).timestamp()
+        except Exception:
+            return True
+    age_hours = (time.time() - last_epoch) / 3600.0
+    return age_hours >= SWEEP_INTERVAL_HOURS
 
 
 def _sweep_commit_and_push(report_rel: str):
@@ -832,7 +839,7 @@ def maybe_run_cleanup_sweep(current_cycle: int) -> bool:
             f"removed {len(removed_issues)} issue(s), "
             f"{len(removed_aristotle)} aristotle dir(s); "
             f"{len(oversized)} oversized, {len(persistent)} persistent sorry(s)")
-        SWEEP_STAMP_FILE.write_text(now.isoformat())
+        SWEEP_STAMP_FILE.write_text(f"{now.timestamp():.6f}")
         _sweep_commit_and_push(str(report_path.relative_to(ROOT)))
     except Exception as e:
         log(f"sweep: unexpected failure: {e}")
