@@ -116,6 +116,12 @@
   - [x] `HasRadauIANodes`: tableau abscissae are zeros of `P_s^* + P_{s-1}^*` (`algStabilityBoundaryPoly s (-1)`)
   - [x] Concrete node certificates `rkRadauIA2_hasRadauIANodes` and `rkRadauIA3_hasRadauIANodes`
   - [ ] Family-level bridge blocked: the requested `IsCollocation` + θ = -1 statement is false for the genuine 2-stage left-Radau collocation tableau; see `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`
+- [x] **§3.5.10 packaging corollaries**: family-level BN-stability for collocation methods (`OpenMath/CollocationFamilies.lean`, cycle 376)
+  - [x] `thm_359C_gaussLegendre_bnStable`: `IsCollocation ∧ HasGaussLegendreNodes → IsBNStable`
+  - [x] `thm_359B_radauIIA_bnStable`: `IsCollocation ∧ HasRadauIIANodes → IsBNStable`
+  - [x] `thm_359C_radauI_bnStable`: `IsCollocation ∧ (zeros of P_s^* − P_{s-1}^*) → IsBNStable`
+  - [x] Concrete corollaries `rkGaussLegendre2_bnStable_via_358A`, `rkGaussLegendre3_bnStable_via_358A`, `rkRadauIIA3_bnStable_via_358A`
+  - [ ] Real Theorem 359D textbook statement still pending: requires Iserles §3.5.10 lookup to identify the named theorem after 359C
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
 - [x] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
   - [x] Formalized local order-star geometry, arrow directions, and the 355F imaginary-axis obstruction
@@ -172,7 +178,10 @@
 
 ## Current Target
 
-**Next theorem**: Theorem 359D / §3.5.10 corollaries; otherwise begin Chapter 4 BDF downstream.
+**Next theorem**: Theorem 359D (concrete textbook statement) once the Iserles
+§3.5.10 reference is in hand; otherwise begin Chapter 4 BDF downstream. The
+cycle 376 §3.5.10 packaging corollaries above provide a clean BN-stability
+scaffold to plug a real 359D statement into.
 
 Blocked side note:
 - The Radau IA left-endpoint family cannot be added with the cycle-375 statement

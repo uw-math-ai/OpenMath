@@ -1,3 +1,4 @@
+import OpenMath.BNStability
 import OpenMath.CollocationAlgStability
 import OpenMath.GaussLegendre3
 import OpenMath.RadauIA2
@@ -238,5 +239,59 @@ theorem rkRadauIA3_hasRadauIANodes :
     nlinarith [sqrt6_sq', Real.sqrt_pos_of_pos (show (6 : ℝ) > 0 by norm_num)]
   · simp [rkRadauIA3]
     nlinarith [sqrt6_sq', Real.sqrt_pos_of_pos (show (6 : ℝ) > 0 by norm_num)]
+
+/-! ## §3.5.10 packaging: family-level BN-stability corollaries
+
+The textbook §3.5.10 packaging of Theorems 358A, 359B, 359C, and 357C: every
+collocation Runge–Kutta method whose nodes are Gauss–Legendre or Radau IIA
+quadrature points is BN-stable. These compose `thm_359C_*` / `thm_359B_*`
+with `alg_stable_implies_bn_stable` (Theorem 357C). -/
+
+/-- **§3.5.10 (Gauss–Legendre case)**: any collocation Runge–Kutta method
+whose nodes are Gauss–Legendre quadrature points is BN-stable.
+
+Composition of Theorem 359C (Gauss–Legendre) with Theorem 357C. -/
+theorem thm_359C_gaussLegendre_bnStable
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hGL : t.HasGaussLegendreNodes) :
+    t.IsBNStable :=
+  alg_stable_implies_bn_stable (thm_359C_gaussLegendre t hcoll hGL)
+
+/-- **§3.5.10 (Radau IIA case)**: any collocation Runge–Kutta method whose
+nodes are Radau IIA quadrature points is BN-stable.
+
+Composition of Theorem 359B (Radau IIA) with Theorem 357C. -/
+theorem thm_359B_radauIIA_bnStable
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hRadau : t.HasRadauIIANodes) :
+    t.IsBNStable :=
+  alg_stable_implies_bn_stable (thm_359B_radauIIA t hcoll hRadau)
+
+/-- **§3.5.10 (Radau I / θ = 1 case)**: any collocation Runge–Kutta method
+whose nodes are zeros of `P_s^* − P_{s-1}^*` is BN-stable.
+
+Composition of Theorem 359C (Radau I, θ = 1) with Theorem 357C. -/
+theorem thm_359C_radauI_bnStable
+    (t : ButcherTableau s) (hcoll : t.IsCollocation)
+    (hRadauI : ∀ i, (algStabilityBoundaryPoly s 1).eval (t.c i) = 0) :
+    t.IsBNStable :=
+  alg_stable_implies_bn_stable (thm_359C_radauI t hcoll hRadauI)
+
+/-! ## §3.5.10 packaging: concrete BN-stability via 358A → 357C -/
+
+/-- **GL2 is BN-stable** (via Theorem 359C / 358A → Theorem 357C). -/
+theorem rkGaussLegendre2_bnStable_via_358A :
+    rkGaussLegendre2.IsBNStable :=
+  alg_stable_implies_bn_stable rkGaussLegendre2_algStable_via_358A
+
+/-- **GL3 is BN-stable** (via Theorem 359C / 358A → Theorem 357C). -/
+theorem rkGaussLegendre3_bnStable_via_358A :
+    rkGaussLegendre3.IsBNStable :=
+  alg_stable_implies_bn_stable rkGaussLegendre3_algStable_via_358A
+
+/-- **Radau IIA 3-stage is BN-stable** (via Theorem 359B / 358A → Theorem 357C). -/
+theorem rkRadauIIA3_bnStable_via_358A :
+    rkRadauIIA3.IsBNStable :=
+  alg_stable_implies_bn_stable rkRadauIIA3_algStable_via_358A
 
 end ButcherTableau
