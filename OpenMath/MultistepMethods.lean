@@ -2881,4 +2881,99 @@ theorem truncationOp_monomial_leading_of_HasOrder
   unfold errorConstant
   field_simp
 
+/-- Linearity of `truncationOp` over a finite sum of test-function pairs. -/
+theorem truncationOp_finset_sum
+    (m : LMM s) (h : ℝ) {ι : Type*} (S : Finset ι)
+    (f f' : ι → ℝ → ℝ) (t : ℝ) :
+    m.truncationOp h (fun u => ∑ k ∈ S, f k u) (fun u => ∑ k ∈ S, f' k u) t
+      = ∑ k ∈ S, m.truncationOp h (f k) (f' k) t := by
+  classical
+  simp only [truncationOp, Finset.mul_sum]
+  rw [Finset.sum_comm (s := Finset.univ) (t := S)]
+  rw [show (∑ j : Fin (s + 1), ∑ k ∈ S, h * (m.β j * f' k (t + (j : ℝ) * h)))
+        = ∑ k ∈ S, ∑ j : Fin (s + 1), h * (m.β j * f' k (t + (j : ℝ) * h)) from
+        Finset.sum_comm]
+  rw [← Finset.sum_sub_distrib]
+
+/-- Truncation operator on a finite linear combination of monomials,
+    via `truncationOp_add` / `truncationOp_smul`. -/
+theorem truncationOp_polyCombination_zero
+    (m : LMM s) (h : ℝ) (N : ℕ) (a : Fin (N + 1) → ℝ) :
+    m.truncationOp h
+        (fun t => ∑ k : Fin (N + 1), a k * t ^ (k : ℕ))
+        (fun t => ∑ k : Fin (N + 1), a k * ((k : ℕ) : ℝ) * t ^ ((k : ℕ) - 1))
+        0
+      = ∑ k : Fin (N + 1), a k * h ^ (k : ℕ) * m.orderCondVal (k : ℕ) := by
+  have hassoc :
+      (fun t => ∑ k : Fin (N + 1), a k * ((k : ℕ) : ℝ) * t ^ ((k : ℕ) - 1))
+        = (fun t => ∑ k : Fin (N + 1), a k * (((k : ℕ) : ℝ) * t ^ ((k : ℕ) - 1))) := by
+    funext t
+    apply Finset.sum_congr rfl
+    intro k _
+    ring
+  rw [hassoc]
+  rw [m.truncationOp_finset_sum h (Finset.univ : Finset (Fin (N + 1)))
+        (fun k t => a k * t ^ (k : ℕ))
+        (fun k t => a k * (((k : ℕ) : ℝ) * t ^ ((k : ℕ) - 1))) 0]
+  apply Finset.sum_congr rfl
+  intro k _
+  have hk := m.truncationOp_smul h (a k)
+      (fun t => t ^ (k : ℕ))
+      (fun t => ((k : ℕ) : ℝ) * t ^ ((k : ℕ) - 1)) 0
+  rw [hk]
+  rw [m.truncationOp_monomial_zero h (k : ℕ)]
+  ring
+
+/-- For an order-`p` method, the truncation operator vanishes on every
+    polynomial test function of degree `≤ p`. -/
+theorem truncationOp_polyCombination_eq_zero_of_HasOrder
+    {m : LMM s} {p : ℕ} (h : ℝ) (hord : m.HasOrder p)
+    (a : Fin (p + 1) → ℝ) :
+    m.truncationOp h
+        (fun t => ∑ k : Fin (p + 1), a k * t ^ (k : ℕ))
+        (fun t => ∑ k : Fin (p + 1), a k * ((k : ℕ) : ℝ) * t ^ ((k : ℕ) - 1))
+        0 = 0 := by
+  rw [m.truncationOp_polyCombination_zero h p a]
+  apply Finset.sum_eq_zero
+  intro k _
+  have hk : (k : ℕ) ≤ p := Nat.lt_succ_iff.mp k.isLt
+  rw [hord.conditions_hold (k : ℕ) hk]
+  ring
+
+/-- For an order-`p` method, the truncation operator on a polynomial of
+    degree `p + 1` reduces to its leading coefficient times
+    `(p+1)! · errorConstant · h^(p+1)`. -/
+theorem truncationOp_polyDegSucc_eq_leading_of_HasOrder
+    {m : LMM s} {p : ℕ} (h : ℝ) (hord : m.HasOrder p)
+    (a : Fin (p + 2) → ℝ) :
+    m.truncationOp h
+        (fun t => ∑ k : Fin (p + 2), a k * t ^ (k : ℕ))
+        (fun t => ∑ k : Fin (p + 2), a k * ((k : ℕ) : ℝ) * t ^ ((k : ℕ) - 1))
+        0
+      = a (Fin.last (p + 1))
+          * ((p + 1).factorial : ℝ) * m.errorConstant p * h ^ (p + 1) := by
+  rw [m.truncationOp_polyCombination_zero h (p + 1) a]
+  rw [Fin.sum_univ_castSucc]
+  have hlow :
+      (∑ k : Fin (p + 1),
+          a k.castSucc * h ^ ((k.castSucc : ℕ)) * m.orderCondVal ((k.castSucc : ℕ)))
+        = 0 := by
+    apply Finset.sum_eq_zero
+    intro k _
+    have hk : ((k.castSucc : Fin (p + 2)) : ℕ) = (k : ℕ) := by
+      simp
+    rw [hk]
+    have hkle : (k : ℕ) ≤ p := Nat.lt_succ_iff.mp k.isLt
+    rw [hord.conditions_hold (k : ℕ) hkle]
+    ring
+  rw [hlow]
+  have hlast : ((Fin.last (p + 1) : Fin (p + 2)) : ℕ) = p + 1 := by
+    simp
+  rw [hlast]
+  have hfact : ((p + 1).factorial : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.factorial_pos _).ne'
+  unfold errorConstant
+  field_simp
+  ring
+
 end LMM
