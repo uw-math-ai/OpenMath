@@ -32,6 +32,7 @@
 - [x] **Adams–Bashforth 5-step**: consistency, order 5, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Moulton 5-step**: consistency, order 6, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Bashforth 6-step**: consistency, order 6, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Adams–Moulton 6-step**: consistency, order 7, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -188,11 +189,13 @@
 
 ## Current Target
 
-**Next mechanical Adams extension**: Adams–Moulton 6-step (AM6) in
-`OpenMath/AdamsMethods.lean` — implicit order-7 6-step method with
-α = ![0,0,0,0,0,-1,1]. AM6 uses denominator 60480 and has nonzero β at the
-last index. AM6 is the highest-order convergent Adams–Moulton method to
-formalize before pivoting back to deep theorems.
+**Mechanical Adams family complete (AB2–AB6, AM2–AM6).** As of cycle 388,
+AM6 is closed in `OpenMath/AdamsMethods.lean` (consistency, order 7,
+implicit, zero-stability) with the convergence wrapper
+`adamsMoulton6_convergent` in `OpenMath/DahlquistEquivalence.lean`. The
+correct β coefficients (oldest-first, denominator 60480) are
+`[-863, 6312, -20211, 37504, -46461, 65112, 19087]` (verified by rational
+Lagrange interpolation; ∑β = 1).
 
 **Next deep theorem**: Theorem 359D (concrete textbook statement) once the
 Iserles §3.5.10 reference is in hand; otherwise begin Chapter 4 BDF

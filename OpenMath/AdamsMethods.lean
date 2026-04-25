@@ -108,6 +108,21 @@ noncomputable def adamsMoulton5 : LMM 5 where
   β := ![27/1440, -173/1440, 482/1440, -798/1440, 1427/1440, 475/1440]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Moulton 6-step** method:
+y_{n+6} = y_{n+5} + h·(19087/60480·f_{n+6} + 65112/60480·f_{n+5}
+  − 46461/60480·f_{n+4} + 37504/60480·f_{n+3}
+  − 20211/60480·f_{n+2} + 6312/60480·f_{n+1} − 863/60480·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, -1, 1],
+β = [-863/60480, 6312/60480, -20211/60480, 37504/60480, -46461/60480,
+     65112/60480, 19087/60480].
+This is an implicit method of order 7.
+Reference: Iserles, Section 1.2. -/
+noncomputable def adamsMoulton6 : LMM 6 where
+  α := ![0, 0, 0, 0, 0, -1, 1]
+  β := ![-863/60480, 6312/60480, -20211/60480, 37504/60480, -46461/60480,
+        65112/60480, 19087/60480]
+  normalized := by simp [Fin.last]
+
 /-! ## Consistency / explicitness / implicitness -/
 
 /-- Adams–Bashforth 2-step is consistent. -/
@@ -193,6 +208,16 @@ theorem adamsMoulton5_implicit : adamsMoulton5.β 5 ≠ 0 := by
   change (475 / 1440 : ℝ) ≠ 0
   norm_num
 
+/-- Adams–Moulton 6-step is consistent. -/
+theorem adamsMoulton6_consistent : adamsMoulton6.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsMoulton6, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsMoulton6, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Moulton 6-step is implicit (β₆ = 19087/60480 ≠ 0). -/
+theorem adamsMoulton6_implicit : adamsMoulton6.β 6 ≠ 0 := by
+  change (19087 / 60480 : ℝ) ≠ 0
+  norm_num
+
 /-! ## Order theorems -/
 
 /-- Adams–Bashforth 2-step has order 2. -/
@@ -265,6 +290,14 @@ theorem adamsMoulton5_order_six : adamsMoulton5.HasOrder 6 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsMoulton5, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsMoulton5, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Moulton 6-step has order 7. -/
+theorem adamsMoulton6_order_seven : adamsMoulton6.HasOrder 7 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsMoulton6, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsMoulton6, Fin.sum_univ_succ]; norm_num
 
 /-! ## Zero-stability theorems -/
 
@@ -500,6 +533,34 @@ theorem adamsMoulton5_zeroStable : adamsMoulton5.IsZeroStable where
     rcases mul_eq_zero.mp h with h0 | h1
     · have hξ0 : ξ = 0 := by
         have := pow_eq_zero_iff (n := 4) (a := ξ) (by norm_num : (4 : ℕ) ≠ 0)
+        exact this.mp h0
+      rw [hξ0] at habs; simp at habs
+    · have h1' : ξ = 1 := by linear_combination h1
+      rw [h1']; norm_num
+
+/-- Adams–Moulton 6-step is zero-stable: ρ(ξ) = ξ⁶ - ξ⁵ = ξ⁵(ξ - 1) has a
+quintuple root at 0 (interior to the unit disk) and a simple root at 1 (on the
+unit circle, with ρ'(1) = 1 ≠ 0). Same ρ as Adams–Bashforth 6-step. -/
+theorem adamsMoulton6_zeroStable : adamsMoulton6.IsZeroStable where
+  roots_in_disk := by
+    intro ξ hξ
+    simp [LMM.rhoC, adamsMoulton6, Fin.sum_univ_succ] at hξ
+    have h : ξ ^ 5 * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have hξ0 : ξ = 0 := by
+        have := pow_eq_zero_iff (n := 5) (a := ξ) (by norm_num : (5 : ℕ) ≠ 0)
+        exact this.mp h0
+      rw [hξ0]; simp
+    · have : ξ = 1 := by linear_combination h1
+      rw [this]; simp
+  unit_roots_simple := by
+    intro ξ hξ habs
+    simp [LMM.rhoCDeriv, adamsMoulton6, Fin.sum_univ_succ]
+    simp [LMM.rhoC, adamsMoulton6, Fin.sum_univ_succ] at hξ
+    have h : ξ ^ 5 * (ξ - 1) = 0 := by linear_combination hξ
+    rcases mul_eq_zero.mp h with h0 | h1
+    · have hξ0 : ξ = 0 := by
+        have := pow_eq_zero_iff (n := 5) (a := ξ) (by norm_num : (5 : ℕ) ≠ 0)
         exact this.mp h0
       rw [hξ0] at habs; simp at habs
     · have h1' : ξ = 1 := by linear_combination h1

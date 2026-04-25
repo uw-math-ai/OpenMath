@@ -579,6 +579,12 @@ theorem adamsMoulton5_convergent : adamsMoulton5.IsConvergent :=
   (dahlquist_equivalence adamsMoulton5).mpr
     ⟨adamsMoulton5_consistent, adamsMoulton5_zeroStable⟩
 
+/-- Adams–Moulton 6-step is convergent. AM6 is the highest-order convergent
+Adams–Moulton method covered by the mechanical Adams family in Iserles §1.2. -/
+theorem adamsMoulton6_convergent : adamsMoulton6.IsConvergent :=
+  (dahlquist_equivalence adamsMoulton6).mpr
+    ⟨adamsMoulton6_consistent, adamsMoulton6_zeroStable⟩
+
 /-- BDF2 is convergent. -/
 theorem bdf2_convergent : bdf2.IsConvergent :=
   (dahlquist_equivalence bdf2).mpr ⟨bdf2_consistent, bdf2_zeroStable⟩
