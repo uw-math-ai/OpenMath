@@ -55,6 +55,7 @@
   - [x] **Adams–Bashforth 3-step vector convergence chain**: `LMM.ab3IterVec`, `LMM.ab3VecResidual` + `LMM.ab3Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab3Vec_one_step_lipschitz` and `LMM.ab3Vec_one_step_error_bound` (3-window max-norm Lipschitz recurrence with effective constant `(11/3)·L`), private interval-integral Taylor helpers `iteratedDeriv_four_bounded_on_Icc_vec`, `y_fourth_order_taylor_remainder_vec`, `derivY_third_order_taylor_remainder_vec`, and `ab3Vec_pointwise_residual_bound` (same `7·M·h⁴` over-estimate as the scalar chain), `LMM.ab3Vec_local_residual_bound`, and the headline `LMM.ab3Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((11/3)·L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`) — vector mirror of the scalar AB3 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB3Convergence.lean`, cycle 419)
   - [x] **Adams–Bashforth 4-step scalar convergence chain**: `LMM.ab4Iter` (four starting samples, recurrence `y_{n+4} = y_{n+3} + h·((55/24)·f_{n+3} − (59/24)·f_{n+2} + (37/24)·f_{n+1} − (9/24)·f_n)`), `LMM.ab4_localTruncationError_eq` (textbook AB4 one-step residual = LMM truncation operator), `LMM.ab4_one_step_lipschitz` and `LMM.ab4_one_step_error_bound` (Lipschitz 4-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₄) ≤ (1+h·(20/3)L)·max(eₙ,…,eₙ₊₃) + |τ_n|` with effective Lipschitz constant `(55+59+37+9)/24 · L = 20L/3`), private helpers `iteratedDeriv_five_bounded_on_Icc`, `y_fifth_order_taylor_remainder`, `derivY_fourth_order_taylor_remainder`, `ab4_pointwise_residual_bound` (algebraic identity `R_y(4) − R_y(3) − (55h/24)·R_y'(3) + (59h/24)·R_y'(2) − (37h/24)·R_y'(1)` giving `20·M·h⁵` over-estimate from `57588/2880`), `LMM.ab4_local_residual_bound` (uniform `|τ_n| ≤ C·h⁵`), and the headline `LMM.ab4_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((20/3)·L·T)·ε₀ + K·h⁴` for `(N+3)·h ≤ T`) — the textbook AB4 `O(h⁴)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 4`. (`OpenMath/LMMAB4Convergence.lean`, cycle 420)
   - [x] **Adams–Bashforth 4-step vector convergence chain**: `LMM.ab4IterVec`, `LMM.ab4VecResidual` + `LMM.ab4Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab4Vec_one_step_lipschitz` and `LMM.ab4Vec_one_step_error_bound` (4-window max-norm Lipschitz recurrence with effective constant `(20/3)·L`), private interval-integral Taylor helpers `iteratedDeriv_five_bounded_on_Icc_vec`, `y_fifth_order_taylor_remainder_vec`, `derivY_fourth_order_taylor_remainder_vec`, and `ab4Vec_pointwise_residual_bound` (same `20·M·h⁵` over-estimate as the scalar chain), `LMM.ab4Vec_local_residual_bound`, and the headline `LMM.ab4Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((20/3)·L·T)·ε₀ + K·h⁴` for `(N+3)·h ≤ T`) — vector mirror of the scalar AB4 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB4Convergence.lean`, cycle 421)
+  - [x] **Adams–Bashforth 5-step scalar convergence chain**: `LMM.ab5Iter` (five starting samples, recurrence `y_{n+5} = y_{n+4} + h·((1901/720)·f_{n+4} − (2774/720)·f_{n+3} + (2616/720)·f_{n+2} − (1274/720)·f_{n+1} + (251/720)·f_n)`), `LMM.ab5_localTruncationError_eq` (textbook AB5 one-step residual = LMM truncation operator), `LMM.ab5_one_step_lipschitz` and `LMM.ab5_one_step_error_bound` (Lipschitz 5-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₅) ≤ (1+h·(551/45)L)·max(eₙ,…,eₙ₊₄) + |τ_n|` with effective Lipschitz constant `(1901+2774+2616+1274+251)/720 · L = 551L/45`), private helpers `iteratedDeriv_six_bounded_on_Icc`, `y_sixth_order_taylor_remainder`, `derivY_fifth_order_taylor_remainder`, `ab5_pointwise_residual_bound` (algebraic identity `R_y(5) − R_y(4) − (1901h/720)·R_y'(4) + (2774h/720)·R_y'(3) − (2616h/720)·R_y'(2) + (1274h/720)·R_y'(1)` giving `59·M·h⁶` over-estimate from `5072212/86400`), `LMM.ab5_local_residual_bound` (uniform `|τ_n| ≤ C·h⁶`), and the headline `LMM.ab5_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((551/45)·L·T)·ε₀ + K·h⁵` for `(N+4)·h ≤ T`) — the textbook AB5 `O(h⁵)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 5`. (`OpenMath/LMMAB5Convergence.lean`, cycle 422)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -218,14 +219,18 @@ truncation-operator infrastructure and forward-Euler convergence chains,
 and vector convergence chains, `OpenMath/LMMAB3Convergence.lean` hosts the
 Adams–Bashforth 3-step scalar and vector convergence chains,
 `OpenMath/LMMAB4Convergence.lean` hosts the Adams–Bashforth 4-step scalar
-and vector convergence chains, and `OpenMath/MultistepMethods.lean` still hosts the rest
-of the §1.2 LMM stack.
+and vector convergence chains, `OpenMath/LMMAB5Convergence.lean` hosts the
+Adams–Bashforth 5-step scalar convergence chain, and
+`OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
 
-**Active frontier**: AB2, AB3, and AB4 now all have closed scalar and vector
-quantitative convergence chains. The cycle 394–402 `truncationOp` bridge and
-the cycle 405 Grönwall wrapper remain the reusable infrastructure. The next
-natural frontier is a small generic Adams–Bashforth `s`-step convergence
-abstraction, using the concrete AB2/AB3/AB4 chains as data points.
+**Active frontier**: AB2, AB3, AB4 each have closed scalar and vector
+quantitative convergence chains; AB5 now has its closed scalar chain. The
+next concrete step is the AB5 vector convergence chain (mirror of AB4
+vector at `p = 5`). The cycle 394–402 `truncationOp` bridge and the cycle
+405 Grönwall wrapper remain the reusable infrastructure. With four concrete
+data points (AB2–AB5 scalar) plus three vector points (AB2–AB4 vector), a
+small generic Adams–Bashforth `s`-step convergence abstraction is the
+longer-horizon target once AB5 vector lands.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
