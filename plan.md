@@ -37,8 +37,9 @@
   `adams_zeroStable_of_rhoC_pow_mul` (`OpenMath/AdamsMethods.lean`, cycle 389)
 - [x] **Error constants**: `LMM.errorConstant`; forward Euler = 1/2, backward Euler = −1/2, trapezoidal = −1/12; AB2 = 5/12, AM2 = −1/24, AB3 = 3/8, AM3 = −19/720, AB4 = 251/720, AM4 = −3/160, AB5 = 95/288, AM5 = −863/60480, AB6 = 19087/60480, AM6 = −275/24192; BDF2 = −2/9, BDF3 = −3/22, BDF4 = −12/125, BDF5 = −10/137, BDF6 = −20/343, BDF7 = −35/726 (computed despite zero-instability) (`OpenMath/MultistepMethods.lean`, `OpenMath/AdamsMethods.lean`, cycles 390–393)
 - [x] **Adams error-constant signs**: AB2–AB6 are strictly positive and AM2–AM6 are strictly negative (`OpenMath/AdamsMethods.lean`, cycle 393)
-- [x] **Truncation operator**: definition `LMM.truncationOp`, monomial identity `truncationOp_monomial_zero`, linearity, vanishing on order-`p` monomials, converse/iff order-condition packaging, direct truncation-operator sufficient condition on monomials, leading coefficient at `t^(p+1)` equals `(p+1)! · errorConstant p · h^(p+1)` (`OpenMath/MultistepMethods.lean`, cycles 394–395)
-  - [x] **Polynomial-form truncation operator**: finset-sum linearity `truncationOp_finset_sum`, polynomial-combination identity `truncationOp_polyCombination_zero`, degree-`≤ p` vanishing for order-`p` methods `truncationOp_polyCombination_eq_zero_of_HasOrder`, degree-`p+1` leading-coefficient formula `truncationOp_polyDegSucc_eq_leading_of_HasOrder` (`OpenMath/MultistepMethods.lean`, cycle 396)
+- [x] **Truncation operator**: definition `LMM.truncationOp`, monomial identity `truncationOp_monomial_zero`, linearity, vanishing on order-`p` monomials, converse/iff order-condition packaging, direct truncation-operator sufficient condition on monomials, leading coefficient at `t^(p+1)` equals `(p+1)! · errorConstant p · h^(p+1)` (`OpenMath/LMMTruncationOp.lean`, cycles 394–395; split from `OpenMath/MultistepMethods.lean` in cycle 397)
+  - [x] **Polynomial-form truncation operator**: finset-sum linearity `truncationOp_finset_sum`, polynomial-combination identity `truncationOp_polyCombination_zero`, degree-`≤ p` vanishing for order-`p` methods `truncationOp_polyCombination_eq_zero_of_HasOrder`, degree-`p+1` leading-coefficient formula `truncationOp_polyDegSucc_eq_leading_of_HasOrder` (`OpenMath/LMMTruncationOp.lean`, cycle 396; split in cycle 397)
+  - [x] **Translation-invariant truncation operator**: `truncationOp_translation` and shifted-polynomial vanishing `truncationOp_polyShift_eq_zero_of_HasOrder` move the order-`p` polynomial vanishing theorem from the origin to evaluation point `t` for polynomials in `(u - t)` (`OpenMath/LMMTruncationOp.lean`, cycle 397)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -196,21 +197,21 @@
 
 ## Current Target
 
-**Mechanical Adams family complete (AB2–AB6, AM2–AM6).** As of cycle 388,
-AM6 is closed in `OpenMath/AdamsMethods.lean` (consistency, order 7,
-implicit, zero-stability) with the convergence wrapper
-`adamsMoulton6_convergent` in `OpenMath/DahlquistEquivalence.lean`. The
-correct β coefficients (oldest-first, denominator 60480) are
-`[-863, 6312, -20211, 37504, -46461, 65112, 19087]` (verified by rational
-Lagrange interpolation; ∑β = 1).
+**Current target files**: `OpenMath/LMMTruncationOp.lean` is the active
+frontier for local truncation-operator infrastructure, and
+`OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
 
-**Next deep theorem**: Theorem 359D (concrete textbook statement) once the
-Iserles §3.5.10 reference is in hand; otherwise begin Chapter 4 BDF
-downstream. The cycle 376 §3.5.10 packaging corollaries above provide a clean
-BN-stability scaffold to plug a real 359D statement into.
+**Active frontier**: extend the cycle 394–397 `truncationOp` thread toward the
+textbook local truncation error formula `τ(t, h)` for smooth solutions. Cycle
+397 split the truncation-operator section into `OpenMath/LMMTruncationOp.lean`
+and added translation-invariance plus shifted-polynomial vanishing; the next
+natural step is the Taylor/local-error bridge, not more Adams-family work.
 
-BDF downstream status: BDF7 zero-instability and the Dahlquist-equivalence
-`bdf7_not_convergent` wrapper are closed.
+**Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
+§3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
+clean BN-stability scaffold once that source is available. BDF7
+zero-instability and the Dahlquist-equivalence `bdf7_not_convergent` wrapper
+are closed.
 
 Cycle 389 source lookup note:
 - The accessible Iserles second-edition source places "Order and convergence of
