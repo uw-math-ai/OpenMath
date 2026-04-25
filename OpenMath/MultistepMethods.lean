@@ -229,6 +229,22 @@ theorem forwardEuler_errorConstant : forwardEuler.errorConstant 1 = 1 / 2 := by
   unfold LMM.errorConstant LMM.orderCondVal forwardEuler
   simp [Fin.sum_univ_two, Nat.factorial]
 
+/-- Backward Euler has error constant `C_2 = -1/2`.
+Smoke test: `V_2 = ∑ j² α_j − 2 · ∑ j β_j = 1 − 2 = -1`, so `C_2 = -1/2! = -1/2`.
+Reference: Iserles, Section 1.2. -/
+theorem backwardEuler_errorConstant : backwardEuler.errorConstant 1 = -(1/2) := by
+  unfold LMM.errorConstant LMM.orderCondVal backwardEuler
+  simp [Fin.sum_univ_two, Nat.factorial]
+  norm_num
+
+/-- The trapezoidal rule has error constant `C_3 = -1/12`.
+Smoke test: `V_3 = ∑ j³ α_j − 3 · ∑ j² β_j = 1 − 3·(1/2) = -1/2`, so `C_3 = -1/2 / 3! = -1/12`.
+Reference: Iserles, Section 1.2. -/
+theorem trapezoidalRule_errorConstant : trapezoidalRule.errorConstant 2 = -(1/12) := by
+  unfold LMM.errorConstant LMM.orderCondVal trapezoidalRule
+  simp [Fin.sum_univ_two, Nat.factorial]
+  norm_num
+
 /-! ## Zero-Stability
 
 A linear multistep method is zero-stable if all roots of its first characteristic
@@ -974,6 +990,42 @@ theorem bdf6_zeroStable : bdf6.IsZeroStable where
       simp [Fin.sum_univ_succ]
       norm_num
     · exact (bdf6_quintic_no_unit_roots ξ h1 habs).elim
+
+/-! ### Error Constants of BDF Methods
+
+Reference: Iserles, Section 4.5. The leading error constant of BDF s for s ≤ 6
+under the project normalization `α_s = 1`.
+-/
+
+/-- BDF2 has error constant `C_3 = -2/9`. -/
+theorem bdf2_errorConstant : bdf2.errorConstant 2 = -(2/9) := by
+  unfold LMM.errorConstant LMM.orderCondVal bdf2
+  simp [Fin.sum_univ_three, Nat.factorial]
+  norm_num
+
+/-- BDF3 has error constant `C_4 = -3/22`. -/
+theorem bdf3_errorConstant : bdf3.errorConstant 3 = -(3/22) := by
+  unfold LMM.errorConstant LMM.orderCondVal bdf3
+  simp [Fin.sum_univ_four, Nat.factorial]
+  norm_num
+
+/-- BDF4 has error constant `C_5 = -12/125`. -/
+theorem bdf4_errorConstant : bdf4.errorConstant 4 = -(12/125) := by
+  unfold LMM.errorConstant LMM.orderCondVal bdf4
+  simp [Fin.sum_univ_five, Nat.factorial]
+  norm_num
+
+/-- BDF5 has error constant `C_6 = -10/137`. -/
+theorem bdf5_errorConstant : bdf5.errorConstant 5 = -(10/137) := by
+  unfold LMM.errorConstant LMM.orderCondVal bdf5
+  simp [Fin.sum_univ_six, Nat.factorial]
+  norm_num
+
+/-- BDF6 has error constant `C_7 = -20/343`. -/
+theorem bdf6_errorConstant : bdf6.errorConstant 6 = -(20/343) := by
+  unfold LMM.errorConstant LMM.orderCondVal bdf6
+  simp [Fin.sum_univ_succ, Fin.sum_univ_zero, Nat.factorial]
+  norm_num
 
 /-! ## BDF7 (Backward Differentiation Formula, 7-step)
 
