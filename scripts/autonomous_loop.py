@@ -251,6 +251,15 @@ def run_watchdog(interval: int = 300, max_restarts: int = 10):
     loop_proc = None  # subprocess.Popen if we started the loop ourselves
 
     while True:
+        # Reap our own child if it has exited. Without this, a killed
+        # orchestrator lingers as a zombie under the watchdog, and
+        # `os.kill(pid, 0)` returns True for zombies — so the heartbeat
+        # check below would report "healthy" forever.
+        if loop_proc is not None and loop_proc.poll() is not None:
+            watchdog_log(f"Watchdog: child loop (PID {loop_proc.pid}) "
+                         f"exited with code {loop_proc.returncode}")
+            loop_proc = None
+
         hb = read_heartbeat()
         if hb is None:
             watchdog_log("Watchdog: no heartbeat file found, waiting...")
