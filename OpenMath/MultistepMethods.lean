@@ -1117,6 +1117,283 @@ private theorem bdf7_not_zeroStable_of_bad_root
   have hle := hzs.roots_in_disk ξ hroot
   linarith
 
+/-- Cayley algebraic identity (denominator-cleared form). After multiplying
+through by `(1 - w)^6`, the BDF7 sextic in `ξ = (1 + w)/(1 - w)` becomes
+the explicit transformed sextic in `w` with all positive integer
+coefficients. -/
+private lemma bdf7_cayley_identity (w : ℂ) (hw : w ≠ 1) :
+    (1 - w) ^ 6 *
+      (1089 * ((1 + w) / (1 - w)) ^ 6 - 1851 * ((1 + w) / (1 - w)) ^ 5
+        + 2559 * ((1 + w) / (1 - w)) ^ 4 - 2341 * ((1 + w) / (1 - w)) ^ 3
+        + 1334 * ((1 + w) / (1 - w)) ^ 2 - 430 * ((1 + w) / (1 - w)) + 60)
+      = 4 * (2416 * w ^ 6 + 3577 * w ^ 5 + 4431 * w ^ 4 + 3920 * w ^ 3
+              + 2240 * w ^ 2 + 735 * w + 105) := by
+  have h1w : (1 - w) ≠ 0 := sub_ne_zero.mpr (Ne.symm hw)
+  field_simp
+  ring
+
+/-- Cayley norm bridge: a complex `w` with positive real part has
+`(1 + w)/(1 - w)` of norm strictly greater than one. -/
+private lemma bdf7_cayley_norm_gt_one (w : ℂ) (hw : w ≠ 1)
+    (hre : 0 < w.re) : 1 < ‖(1 + w) / (1 - w)‖ := by
+  have h1w : (1 - w) ≠ 0 := sub_ne_zero.mpr (Ne.symm hw)
+  have hpos : 0 < ‖(1 - w : ℂ)‖ := norm_pos_iff.mpr h1w
+  rw [norm_div, lt_div_iff₀ hpos, one_mul, ← Real.sqrt_sq (norm_nonneg _),
+    ← Real.sqrt_sq (norm_nonneg (1 + w))]
+  apply Real.sqrt_lt_sqrt (by positivity)
+  rw [Complex.sq_norm, Complex.sq_norm,
+    Complex.normSq_apply, Complex.normSq_apply]
+  simp only [Complex.add_re, Complex.add_im, Complex.sub_re, Complex.sub_im,
+    Complex.one_re, Complex.one_im]
+  nlinarith [hre, sq_nonneg w.im, sq_nonneg w.re]
+
+/- The following private block gives an exact algebraic certificate for a
+quadratic factor of the Cayley-transformed BDF7 sextic. The real parameter `u`
+is isolated by IVT as a root of the displayed resultant; `v` is then recovered
+from a subresultant relation. -/
+
+private def bdf7ImageResultant (u : ℝ) : ℝ :=
+  82316074157080576 * u ^ 15 - 609363818832527360 * u ^ 14
+    + 2408261116841058304 * u ^ 13 - 6514870294422436352 * u ^ 12
+    + 13208207325027637552 * u ^ 11 - 20962474341486450521 * u ^ 10
+    + 26625931844901622940 * u ^ 9 - 27321870458885833894 * u ^ 8
+    + 22653334181508743132 * u ^ 7 - 15049863042340942732 * u ^ 6
+    + 7863204624637456640 * u ^ 5 - 3123094779618149560 * u ^ 4
+    + 886024688374571760 * u ^ 3 - 157041819655697760 * u ^ 2
+    + 11001221248248000 * u + 782187023520000
+
+private def bdf7ImageSubresA (u : ℝ) : ℝ :=
+  197432582144 * u ^ 6 - 584616180736 * u ^ 5 + 825162930368 * u ^ 4
+    - 650530820653 * u ^ 3 + 288832752026 * u ^ 2 - 64731237634 * u
+    + 2696803200
+
+private def bdf7ImageSubresB (u : ℝ) : ℝ :=
+  -70511636480 * u ^ 8 + 229670642432 * u ^ 7 - 402484358528 * u ^ 6
+    + 489402710482 * u ^ 5 - 452277012173 * u ^ 4 + 308142297337 * u ^ 3
+    - 138902038800 * u ^ 2 + 35521344110 * u - 3345073200
+
+private noncomputable def bdf7ImageFactorV (u : ℝ) : ℝ :=
+  - bdf7ImageSubresB u / bdf7ImageSubresA u
+
+private def bdf7ImageRemX (u v : ℝ) : ℝ :=
+  2416 * u ^ 5 - 3577 * u ^ 4 - 9664 * u ^ 3 * v + 4431 * u ^ 3
+    + 10731 * u ^ 2 * v - 3920 * u ^ 2 + 7248 * u * v ^ 2
+    - 8862 * u * v + 2240 * u - 3577 * v ^ 2 + 3920 * v - 735
+
+private def bdf7ImageRemC (u v : ℝ) : ℝ :=
+  2416 * u ^ 4 * v - 3577 * u ^ 3 * v - 7248 * u ^ 2 * v ^ 2
+    + 4431 * u ^ 2 * v + 7154 * u * v ^ 2 - 3920 * u * v
+    + 2416 * v ^ 3 - 4431 * v ^ 2 + 2240 * v - 105
+
+private def bdf7ImageSubresS (u v : ℝ) : ℝ :=
+  bdf7ImageSubresA u * v + bdf7ImageSubresB u
+
+private def bdf7ImageRemXQuot (u v : ℝ) : ℝ :=
+  -1396920132632576 * u ^ 9 + 5851506869583872 * u ^ 8
+    + 1430991355379712 * u ^ 7 * v - 12258799818924288 * u ^ 7
+    - 4943514424303616 * u ^ 6 * v + 16109480176228320 * u ^ 6
+    + 8071952997799936 * u ^ 5 * v - 14347717989788925 * u ^ 5
+    - 7666655190019280 * u ^ 4 * v + 8873459518514031 * u ^ 4
+    + 4420408532160229 * u ^ 3 * v - 3721422507792577 * u ^ 3
+    - 1502326764368234 * u ^ 2 * v + 980500716096748 * u ^ 2
+    + 251090066610418 * u * v - 126340583048610 * u
+    - 9646465046400 * v - 1393858292400
+
+private def bdf7ImageRemCMult (u : ℝ) : ℝ :=
+  4527384078639431680 * u ^ 9 - 22668334060570017792 * u ^ 8
+    + 52529295330860544000 * u ^ 7 - 72202285294233961216 * u ^ 6
+    + 63690444085273487552 * u ^ 5 - 36436090080185538778 * u ^ 4
+    + 12972794840039389999 * u ^ 3 - 2509303901071415098 * u ^ 2
+    + 145246584929007758 * u + 11705411018448000
+
+private def bdf7ImageRemCQuot (u v : ℝ) : ℝ :=
+  5285318880105353304866816 * u ^ 16
+    - 48373713994630708777189376 * u ^ 15
+    - 248890470899506637447364608 * u ^ 14 * v
+    + 224120608413704054266396672 * u ^ 14
+    + 1742876460100665242707558400 * u ^ 13 * v
+    - 687960369288710609830215680 * u ^ 13
+    + 94174772772786295250354176 * u ^ 12 * v ^ 2
+    - 6006026034865457109447737344 * u ^ 12 * v
+    + 1545140092754173728792211456 * u ^ 12
+    - 557720467232212877666418688 * u ^ 11 * v ^ 2
+    + 13283025506875155649187741696 * u ^ 11 * v
+    - 2655843488471489042840691200 * u ^ 11
+    + 1612931686419420184188026880 * u ^ 10 * v ^ 2
+    - 20853238637696456515689410560 * u ^ 10 * v
+    + 3571610905949829584488377360 * u ^ 10
+    - 2951576853084445664218972160 * u ^ 9 * v ^ 2
+    + 24390803819549434784674519040 * u ^ 9 * v
+    - 3793691735032030595782233565 * u ^ 9
+    + 3758246347965459157634613248 * u ^ 8 * v ^ 2
+    - 21760907319213177837100762992 * u ^ 8 * v
+    + 3185046990436800717483774155 * u ^ 8
+    - 3471455084050603574751332352 * u ^ 7 * v ^ 2
+    + 14930016929894569675230298450 * u ^ 7 * v
+    - 2097974434334251590281567851 * u ^ 7
+    + 2359487924308581197997045488 * u ^ 6 * v ^ 2
+    - 7842142369551192120402467231 * u ^ 6 * v
+    + 1065579406723227434699762339 * u ^ 6
+    - 1173620415317663547111711680 * u ^ 5 * v ^ 2
+    + 3097267064694145260621415180 * u ^ 5 * v
+    - 404041646129528444971599904 * u ^ 5
+    + 415779811851878776285630080 * u ^ 4 * v ^ 2
+    - 886259048365369479609317432 * u ^ 4 * v
+    + 107579755198903701755511148 * u ^ 4
+    - 98818531875636430491157888 * u ^ 3 * v ^ 2
+    + 171111508138954230605095072 * u ^ 3 * v
+    - 17615966323663653949097220 * u ^ 3
+    + 13887127666055201554204096 * u ^ 2 * v ^ 2
+    - 19225258859905121677932796 * u ^ 2 * v
+    + 1140838018929524447336700 * u ^ 2
+    - 843509719279714430361600 * u * v ^ 2
+    + 844468889054059142092800 * u * v
+    + 63730832790673342576800 * u
+    + 17570957958865059840000 * v ^ 2 - 10430798240672409600000 * v
+    + 3352752735036768000000
+
+private lemma bdf7ImageResultant_neg_left :
+    bdf7ImageResultant (-1 / 24) < 0 := by
+  norm_num [bdf7ImageResultant]
+
+private lemma bdf7ImageResultant_pos_right :
+    0 < bdf7ImageResultant (-1 / 25) := by
+  norm_num [bdf7ImageResultant]
+
+private lemma bdf7ImageSubresA_pos {u : ℝ} (hu : u < 0) :
+    0 < bdf7ImageSubresA u := by
+  unfold bdf7ImageSubresA
+  nlinarith [sq_nonneg (u ^ 3), sq_nonneg (u ^ 2), sq_nonneg u, hu]
+
+private lemma bdf7ImageRemX_zero {u : ℝ} (hR : bdf7ImageResultant u = 0)
+    (hA : bdf7ImageSubresA u ≠ 0) :
+    bdf7ImageRemX u (bdf7ImageFactorV u) = 0 := by
+  set v := bdf7ImageFactorV u with hv
+  have hS : bdf7ImageSubresS u v = 0 := by
+    rw [hv]
+    unfold bdf7ImageFactorV bdf7ImageSubresS
+    field_simp [hA]
+    ring
+  have hmul :
+      bdf7ImageSubresA u ^ 2 * bdf7ImageRemX u v
+          + (7248 * u - 3577) ^ 2 * bdf7ImageResultant u =
+        bdf7ImageRemXQuot u v * bdf7ImageSubresS u v := by
+    unfold bdf7ImageRemXQuot bdf7ImageSubresS bdf7ImageRemX bdf7ImageSubresA
+      bdf7ImageSubresB bdf7ImageResultant
+    ring
+  rw [hR, hS, mul_zero, mul_zero, add_zero] at hmul
+  exact (mul_eq_zero.mp hmul).resolve_left (pow_ne_zero 2 hA)
+
+private lemma bdf7ImageRemC_zero {u : ℝ} (hR : bdf7ImageResultant u = 0)
+    (hA : bdf7ImageSubresA u ≠ 0) :
+    bdf7ImageRemC u (bdf7ImageFactorV u) = 0 := by
+  set v := bdf7ImageFactorV u with hv
+  have hS : bdf7ImageSubresS u v = 0 := by
+    rw [hv]
+    unfold bdf7ImageFactorV bdf7ImageSubresS
+    field_simp [hA]
+    ring
+  have hmul :
+      bdf7ImageSubresA u ^ 3 * bdf7ImageRemC u v
+          - bdf7ImageRemCMult u * bdf7ImageResultant u =
+        bdf7ImageRemCQuot u v * bdf7ImageSubresS u v := by
+    unfold bdf7ImageRemCQuot bdf7ImageSubresS bdf7ImageRemCMult bdf7ImageRemC
+      bdf7ImageSubresA bdf7ImageSubresB bdf7ImageResultant
+    ring
+  rw [hR, hS, mul_zero, mul_zero, sub_zero] at hmul
+  exact (mul_eq_zero.mp hmul).resolve_left (pow_ne_zero 3 hA)
+
+private theorem bdf7ImageResultant_root_exists :
+    ∃ u : ℝ, u ∈ Set.Icc (-1 / 24) (-1 / 25) ∧ bdf7ImageResultant u = 0 := by
+  have hab : (-1 / 24 : ℝ) ≤ -1 / 25 := by norm_num
+  have hcont : ContinuousOn bdf7ImageResultant (Set.Icc (-1 / 24) (-1 / 25)) := by
+    unfold bdf7ImageResultant
+    fun_prop
+  have hmem : (0 : ℝ) ∈
+      Set.Icc (bdf7ImageResultant (-1 / 24)) (bdf7ImageResultant (-1 / 25)) := by
+    constructor
+    · linarith [bdf7ImageResultant_neg_left]
+    · linarith [bdf7ImageResultant_pos_right]
+  exact intermediate_value_Icc hab hcont hmem
+
+private lemma bdf7_quadratic_root_pos {u v : ℝ} (hu : u < 0) :
+    ∃ w : ℂ, w ^ 2 + (u : ℂ) * w + (v : ℂ) = 0 ∧ 0 < w.re := by
+  obtain ⟨s, hs⟩ :=
+    IsAlgClosed.exists_pow_nat_eq (((u : ℂ) ^ 2) / 4 - (v : ℂ)) (by norm_num : 0 < 2)
+  by_cases hsre : 0 ≤ s.re
+  · refine ⟨- (u : ℂ) / 2 + s, ?_, ?_⟩
+    · calc
+        (- (u : ℂ) / 2 + s) ^ 2 + (u : ℂ) * (- (u : ℂ) / 2 + s) + (v : ℂ)
+            = s ^ 2 - (u : ℂ) ^ 2 / 4 + (v : ℂ) := by ring
+        _ = 0 := by rw [hs]; ring
+    · norm_num [Complex.add_re, Complex.div_re, Complex.neg_re, Complex.normSq]
+      nlinarith
+  · refine ⟨- (u : ℂ) / 2 - s, ?_, ?_⟩
+    · calc
+        (- (u : ℂ) / 2 - s) ^ 2 + (u : ℂ) * (- (u : ℂ) / 2 - s) + (v : ℂ)
+            = s ^ 2 - (u : ℂ) ^ 2 / 4 + (v : ℂ) := by ring
+        _ = 0 := by rw [hs]; ring
+    · norm_num [Complex.sub_re, Complex.div_re, Complex.neg_re, Complex.normSq] at hsre ⊢
+      nlinarith
+
+private def bdf7ImageQuotC (u v w : ℂ) : ℂ :=
+  2416 * u ^ 4 - 2416 * u ^ 3 * w - 3577 * u ^ 3 - 7248 * u ^ 2 * v
+    + 2416 * u ^ 2 * w ^ 2 + 3577 * u ^ 2 * w + 4431 * u ^ 2
+    + 4832 * u * v * w + 7154 * u * v - 2416 * u * w ^ 3
+    - 3577 * u * w ^ 2 - 4431 * u * w - 3920 * u + 2416 * v ^ 2
+    - 2416 * v * w ^ 2 - 3577 * v * w - 4431 * v + 2416 * w ^ 4
+    + 3577 * w ^ 3 + 4431 * w ^ 2 + 3920 * w + 2240
+
+private lemma bdf7Image_factor_eval (u v : ℝ) (w : ℂ) :
+    2416 * w ^ 6 + 3577 * w ^ 5 + 4431 * w ^ 4 + 3920 * w ^ 3
+        + 2240 * w ^ 2 + 735 * w + 105 =
+      (w ^ 2 + (u : ℂ) * w + (v : ℂ)) * bdf7ImageQuotC (u : ℂ) (v : ℂ) w
+        - (bdf7ImageRemX u v : ℂ) * w - (bdf7ImageRemC u v : ℂ) := by
+  unfold bdf7ImageQuotC bdf7ImageRemX bdf7ImageRemC
+  norm_num
+  ring
+
+/-- The transformed sextic in `w` has a root with positive real part. -/
+private lemma bdf7_cayley_image_root :
+    ∃ w : ℂ, 2416 * w ^ 6 + 3577 * w ^ 5 + 4431 * w ^ 4 + 3920 * w ^ 3
+              + 2240 * w ^ 2 + 735 * w + 105 = 0 ∧ 0 < w.re := by
+  obtain ⟨u, hu_mem, hR⟩ := bdf7ImageResultant_root_exists
+  have hu_neg : u < 0 := by linarith [hu_mem.2]
+  have hA : bdf7ImageSubresA u ≠ 0 := ne_of_gt (bdf7ImageSubresA_pos hu_neg)
+  let v := bdf7ImageFactorV u
+  have hx : bdf7ImageRemX u v = 0 := by simpa [v] using bdf7ImageRemX_zero hR hA
+  have hc : bdf7ImageRemC u v = 0 := by simpa [v] using bdf7ImageRemC_zero hR hA
+  obtain ⟨w, hq, hwre⟩ := bdf7_quadratic_root_pos (u := u) (v := v) hu_neg
+  refine ⟨w, ?_, hwre⟩
+  rw [bdf7Image_factor_eval u v w, hq, hx, hc]
+  norm_num
+
+/-- The BDF7 sextic factor has a root outside the closed unit disk. -/
+private theorem bdf7_bad_root_exists :
+    ∃ ξ : ℂ,
+      1089 * ξ ^ 6 - 1851 * ξ ^ 5 + 2559 * ξ ^ 4 -
+        2341 * ξ ^ 3 + 1334 * ξ ^ 2 - 430 * ξ + 60 = 0 ∧ 1 < ‖ξ‖ := by
+  obtain ⟨w, hw_root, hw_re⟩ := bdf7_cayley_image_root
+  have hw_ne : w ≠ 1 := by
+    intro h
+    rw [h] at hw_root
+    norm_num at hw_root
+  refine ⟨(1 + w) / (1 - w), ?_, bdf7_cayley_norm_gt_one w hw_ne hw_re⟩
+  have h1w : (1 - w) ≠ 0 := sub_ne_zero.mpr (Ne.symm hw_ne)
+  have h1w6 : (1 - w) ^ 6 ≠ 0 := pow_ne_zero _ h1w
+  have hid := bdf7_cayley_identity w hw_ne
+  have hzero :
+      4 * (2416 * w ^ 6 + 3577 * w ^ 5 + 4431 * w ^ 4 + 3920 * w ^ 3
+            + 2240 * w ^ 2 + 735 * w + 105) = 0 := by
+    rw [hw_root]; ring
+  rw [hzero] at hid
+  exact (mul_eq_zero.mp hid).resolve_left h1w6
+
+/-- BDF7 is not zero-stable. -/
+theorem bdf7_not_zeroStable : ¬ bdf7.IsZeroStable := by
+  obtain ⟨ξ, hQ, hgt⟩ := bdf7_bad_root_exists
+  exact bdf7_not_zeroStable_of_bad_root hQ hgt
+
 /-! ## Dahlquist's Second Barrier
 
 No A-stable LMM can have order greater than 2. The trapezoidal rule achieves this bound.

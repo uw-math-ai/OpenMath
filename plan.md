@@ -176,7 +176,8 @@
 - [x] **BDF5 convergence**: consistent + zero-stable → convergent (`OpenMath/DahlquistEquivalence.lean`)
 - [x] **BDF6 convergence**: consistent + zero-stable → convergent; BDF6 is the highest-order convergent BDF method (`OpenMath/DahlquistEquivalence.lean`)
 - [x] **BDF7 infrastructure**: definition, consistency, order 7, implicitness, characteristic factorization, and bad-root reduction (`OpenMath/MultistepMethods.lean`, cycle 377)
-- [ ] **BDF7 zero-instability**: exact root certificate for the sextic factor still pending; see `.prover-state/issues/bdf7_zero_instability_root_certificate.md`
+- [x] **BDF7 zero-instability**: exact algebraic root certificate for the Cayley-transformed sextic (`OpenMath/MultistepMethods.lean`, cycle 379)
+- [x] **BDF7 non-convergence**: not zero-stable → not convergent via Dahlquist equivalence (`OpenMath/DahlquistEquivalence.lean`, cycle 379)
 
 ## Current Target
 
@@ -185,11 +186,8 @@
 cycle 376 §3.5.10 packaging corollaries above provide a clean BN-stability
 scaffold to plug a real 359D statement into.
 
-BDF downstream status: BDF7 infrastructure is in place. The remaining BDF7
-target is a rigorous root certificate for
-`1089 ξ^6 - 1851 ξ^5 + 2559 ξ^4 - 2341 ξ^3 + 1334 ξ^2 - 430 ξ + 60`, which
-will finish `bdf7_not_zeroStable` and then the Dahlquist-equivalence
-`bdf7_not_convergent` wrapper.
+BDF downstream status: BDF7 zero-instability and the Dahlquist-equivalence
+`bdf7_not_convergent` wrapper are closed.
 
 Blocked side note:
 - The Radau IA left-endpoint family cannot be added with the cycle-375 statement
@@ -203,4 +201,5 @@ Note: in cycle 374, what the strategy called the Radau IIA "right-endpoint" case
 
 ## Sorry locations
 
-- No active `sorry`s. Frontier closed through Theorems 358A and 359C (Gauss–Legendre side).
+- No active `sorry`s. Frontier closed through BDF7 zero-instability and the
+  BDF7 non-convergence wrapper.

@@ -565,6 +565,11 @@ theorem bdf5_convergent : bdf5.IsConvergent :=
 theorem bdf6_convergent : bdf6.IsConvergent :=
   (dahlquist_equivalence bdf6).mpr ⟨bdf6_consistent, bdf6_zeroStable⟩
 
+/-- BDF7 is not convergent because it is not zero-stable. -/
+theorem bdf7_not_convergent : ¬ bdf7.IsConvergent := by
+  intro hconv
+  exact bdf7_not_zeroStable ((dahlquist_equivalence bdf7).mp hconv).2
+
 /-- The Dahlquist counterexample is NOT convergent (not zero-stable). -/
 theorem dahlquistCounterexample_not_convergent :
     ¬dahlquistCounterexample.IsConvergent := by
