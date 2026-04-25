@@ -334,6 +334,48 @@ theorem adamsMoulton3_errorConstant :
   simp [Fin.sum_univ_four, Nat.factorial]
   norm_num
 
+/-- Adams–Bashforth 4-step has error constant `C_5 = 251/720`. -/
+theorem adamsBashforth4_errorConstant :
+    adamsBashforth4.errorConstant 4 = 251 / 720 := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsBashforth4
+  simp [Fin.sum_univ_five, Nat.factorial]
+  norm_num
+
+/-- Adams–Moulton 4-step has error constant `C_6 = -3/160`. -/
+theorem adamsMoulton4_errorConstant :
+    adamsMoulton4.errorConstant 5 = -(3 / 160) := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsMoulton4
+  simp [Fin.sum_univ_five, Nat.factorial]
+  norm_num
+
+/-- Adams–Bashforth 5-step has error constant `C_6 = 95/288`. -/
+theorem adamsBashforth5_errorConstant :
+    adamsBashforth5.errorConstant 5 = 95 / 288 := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsBashforth5
+  simp [Fin.sum_univ_succ, Nat.factorial]
+  norm_num
+
+/-- Adams–Moulton 5-step has error constant `C_7 = -863/60480`. -/
+theorem adamsMoulton5_errorConstant :
+    adamsMoulton5.errorConstant 6 = -(863 / 60480) := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsMoulton5
+  simp [Fin.sum_univ_succ, Nat.factorial]
+  norm_num
+
+/-- Adams–Bashforth 6-step has error constant `C_7 = 19087/60480`. -/
+theorem adamsBashforth6_errorConstant :
+    adamsBashforth6.errorConstant 6 = 19087 / 60480 := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsBashforth6
+  simp [Fin.sum_univ_succ, Nat.factorial]
+  norm_num
+
+/-- Adams–Moulton 6-step has error constant `C_8 = -275/24192`. -/
+theorem adamsMoulton6_errorConstant :
+    adamsMoulton6.errorConstant 7 = -(275 / 24192) := by
+  unfold LMM.errorConstant LMM.orderCondVal adamsMoulton6
+  simp [Fin.sum_univ_succ, Nat.factorial]
+  norm_num
+
 /-! ## Zero-stability theorems -/
 
 /-- Any LMM whose first characteristic polynomial has the Adams form

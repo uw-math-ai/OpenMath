@@ -35,7 +35,7 @@
 - [x] **Adams–Moulton 6-step**: consistency, order 7, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Infrastructure**: Adams zero-stability proofs share the reusable characteristic-polynomial helper
   `adams_zeroStable_of_rhoC_pow_mul` (`OpenMath/AdamsMethods.lean`, cycle 389)
-- [x] **Error constants**: `LMM.errorConstant`; AB2 = 5/12, AM2 = −1/24, AB3 = 3/8, AM3 = −19/720; forward Euler smoke test = 1/2 (`OpenMath/MultistepMethods.lean`, `OpenMath/AdamsMethods.lean`, cycle 390)
+- [x] **Error constants**: `LMM.errorConstant`; AB2 = 5/12, AM2 = −1/24, AB3 = 3/8, AM3 = −19/720, AB4 = 251/720, AM4 = −3/160, AB5 = 95/288, AM5 = −863/60480, AB6 = 19087/60480, AM6 = −275/24192; forward Euler smoke test = 1/2 (`OpenMath/MultistepMethods.lean`, `OpenMath/AdamsMethods.lean`, cycles 390–391)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
