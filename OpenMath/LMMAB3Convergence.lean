@@ -820,4 +820,1017 @@ theorem ab3_global_error_bound
               - y (t₀ + ((N' + 3 : ℕ) : ℝ) * h)| := rfl
     linarith [heN_le_EN, hgronwall, h_chain, heN_eq.symm.le, heN_eq.le]
 
+/-! ### Vector-valued Adams–Bashforth 3-step convergence chain
+
+Vector mirror of the scalar AB3 convergence chain above, in the same
+finite-dimensional normed vector setting used by the AB2 vector chain. -/
+
+/-- AB3 iteration in a normed vector space, with three starting samples
+`y₀, y₁, y₂`:
+`y_{n+3} = y_{n+2} + h • (23/12 • f_{n+2} − 16/12 • f_{n+1}
+  + 5/12 • f_n)`. -/
+noncomputable def ab3IterVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ y₂ : E) : ℕ → E
+  | 0 => y₀
+  | 1 => y₁
+  | 2 => y₂
+  | n + 3 =>
+      ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+        + h • ((23 / 12 : ℝ) • f (t₀ + ((n : ℝ) + 2) * h)
+                  (ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2))
+              - (16 / 12 : ℝ) • f (t₀ + ((n : ℝ) + 1) * h)
+                  (ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1))
+              + (5 / 12 : ℝ) • f (t₀ + (n : ℝ) * h)
+                  (ab3IterVec h f t₀ y₀ y₁ y₂ n))
+
+@[simp] lemma ab3IterVec_zero
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ y₂ : E) :
+    ab3IterVec h f t₀ y₀ y₁ y₂ 0 = y₀ := rfl
+
+@[simp] lemma ab3IterVec_one
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ y₂ : E) :
+    ab3IterVec h f t₀ y₀ y₁ y₂ 1 = y₁ := rfl
+
+@[simp] lemma ab3IterVec_two
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ y₂ : E) :
+    ab3IterVec h f t₀ y₀ y₁ y₂ 2 = y₂ := rfl
+
+lemma ab3IterVec_succ_succ_succ
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ y₂ : E) (n : ℕ) :
+    ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3)
+      = ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+          + h • ((23 / 12 : ℝ) • f (t₀ + ((n : ℝ) + 2) * h)
+                    (ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2))
+                - (16 / 12 : ℝ) • f (t₀ + ((n : ℝ) + 1) * h)
+                    (ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1))
+                + (5 / 12 : ℝ) • f (t₀ + (n : ℝ) * h)
+                    (ab3IterVec h f t₀ y₀ y₁ y₂ n)) := rfl
+
+/-- Textbook AB3 vector residual: the local one-step residual of the AB3
+method on a smooth vector trajectory. -/
+noncomputable def ab3VecResidual
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h t : ℝ) (y : ℝ → E) : E :=
+  y (t + 3 * h) - y (t + 2 * h)
+    - h • ((23 / 12 : ℝ) • deriv y (t + 2 * h)
+          - (16 / 12 : ℝ) • deriv y (t + h)
+          + (5 / 12 : ℝ) • deriv y t)
+
+/-- The vector AB3 residual unfolds to the textbook form
+`y(t+3h) − y(t+2h) − h • (23/12 • y'(t+2h) − 16/12 • y'(t+h)
+  + 5/12 • y'(t))`. -/
+theorem ab3Vec_localTruncationError_eq
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (h t : ℝ) (y : ℝ → E) :
+    ab3VecResidual h t y
+      = y (t + 3 * h) - y (t + 2 * h)
+          - h • ((23 / 12 : ℝ) • deriv y (t + 2 * h)
+                - (16 / 12 : ℝ) • deriv y (t + h)
+                + (5 / 12 : ℝ) • deriv y t) := rfl
+
+/-- One-step AB3 Lipschitz step in a normed vector space. A single linearised
+increment of the global error from steps `n, n+1, n+2` to `n+3`, with three
+Lipschitz contributions and additive `‖τ_n‖`. -/
+theorem ab3Vec_one_step_lipschitz
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {h L : ℝ} (hh : 0 ≤ h) {f : ℝ → E → E}
+    (hf : ∀ (t : ℝ) (a b : E), ‖f t a - f t b‖ ≤ L * ‖a - b‖)
+    (t₀ : ℝ) (y₀ y₁ y₂ : E) (y : ℝ → E)
+    (hyf : ∀ t : ℝ, deriv y t = f t (y t))
+    (n : ℕ) :
+    ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3)
+        - y (t₀ + ((n : ℝ) + 3) * h)‖
+      ≤ ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+            - y (t₀ + ((n : ℝ) + 2) * h)‖
+        + (23 / 12) * h * L
+            * ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+                - y (t₀ + ((n : ℝ) + 2) * h)‖
+        + (16 / 12) * h * L
+            * ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1)
+                - y (t₀ + ((n : ℝ) + 1) * h)‖
+        + (5 / 12) * h * L
+            * ‖ab3IterVec h f t₀ y₀ y₁ y₂ n - y (t₀ + (n : ℝ) * h)‖
+        + ‖ab3VecResidual h (t₀ + (n : ℝ) * h) y‖ := by
+  set yn : E := ab3IterVec h f t₀ y₀ y₁ y₂ n with hyn_def
+  set yn1 : E := ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1) with hyn1_def
+  set yn2 : E := ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2) with hyn2_def
+  set tn : ℝ := t₀ + (n : ℝ) * h with htn_def
+  set tn1 : ℝ := t₀ + ((n : ℝ) + 1) * h with htn1_def
+  set tn2 : ℝ := t₀ + ((n : ℝ) + 2) * h with htn2_def
+  set tn3 : ℝ := t₀ + ((n : ℝ) + 3) * h with htn3_def
+  set zn : E := y tn with hzn_def
+  set zn1 : E := y tn1 with hzn1_def
+  set zn2 : E := y tn2 with hzn2_def
+  set zn3 : E := y tn3 with hzn3_def
+  set τ : E := ab3VecResidual h tn y with hτ_def
+  have htn1_h : tn + h = tn1 := by simp [htn_def, htn1_def]; ring
+  have htn_2h : tn + 2 * h = tn2 := by simp [htn_def, htn2_def]; ring
+  have htn_3h : tn + 3 * h = tn3 := by simp [htn_def, htn3_def]; ring
+  have hτ_eq :
+      τ = zn3 - zn2
+            - h • ((23 / 12 : ℝ) • f tn2 zn2
+                  - (16 / 12 : ℝ) • f tn1 zn1
+                  + (5 / 12 : ℝ) • f tn zn) := by
+    show ab3VecResidual h tn y = _
+    unfold ab3VecResidual
+    rw [htn1_h, htn_2h, htn_3h, hyf tn2, hyf tn1, hyf tn]
+  have hstep : ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3)
+      = yn2 + h • ((23 / 12 : ℝ) • f tn2 yn2
+                    - (16 / 12 : ℝ) • f tn1 yn1
+                    + (5 / 12 : ℝ) • f tn yn) := by
+    show ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3) = _
+    rw [ab3IterVec_succ_succ_succ]
+  have halg : ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3) - zn3
+      = (yn2 - zn2)
+        + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+        - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))
+        + h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))
+        - τ := by
+    rw [hstep, hτ_eq]
+    simp only [smul_sub, smul_add]
+    abel
+  have hLip2 : ‖f tn2 yn2 - f tn2 zn2‖ ≤ L * ‖yn2 - zn2‖ := hf tn2 yn2 zn2
+  have hLip1 : ‖f tn1 yn1 - f tn1 zn1‖ ≤ L * ‖yn1 - zn1‖ := hf tn1 yn1 zn1
+  have hLip0 : ‖f tn yn - f tn zn‖ ≤ L * ‖yn - zn‖ := hf tn yn zn
+  have h23_nn : (0 : ℝ) ≤ 23 / 12 := by norm_num
+  have h16_nn : (0 : ℝ) ≤ 16 / 12 := by norm_num
+  have h5_nn : (0 : ℝ) ≤ 5 / 12 := by norm_num
+  have h23_norm :
+      ‖h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))‖
+        ≤ (23 / 12) * h * L * ‖yn2 - zn2‖ := by
+    rw [norm_smul, Real.norm_of_nonneg hh,
+        norm_smul, Real.norm_of_nonneg h23_nn]
+    have : h * ((23 / 12 : ℝ) * ‖f tn2 yn2 - f tn2 zn2‖)
+        ≤ h * ((23 / 12 : ℝ) * (L * ‖yn2 - zn2‖)) := by
+      apply mul_le_mul_of_nonneg_left _ hh
+      exact mul_le_mul_of_nonneg_left hLip2 h23_nn
+    nlinarith [this]
+  have h16_norm :
+      ‖h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))‖
+        ≤ (16 / 12) * h * L * ‖yn1 - zn1‖ := by
+    rw [norm_smul, Real.norm_of_nonneg hh,
+        norm_smul, Real.norm_of_nonneg h16_nn]
+    have : h * ((16 / 12 : ℝ) * ‖f tn1 yn1 - f tn1 zn1‖)
+        ≤ h * ((16 / 12 : ℝ) * (L * ‖yn1 - zn1‖)) := by
+      apply mul_le_mul_of_nonneg_left _ hh
+      exact mul_le_mul_of_nonneg_left hLip1 h16_nn
+    nlinarith [this]
+  have h5_norm :
+      ‖h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))‖
+        ≤ (5 / 12) * h * L * ‖yn - zn‖ := by
+    rw [norm_smul, Real.norm_of_nonneg hh,
+        norm_smul, Real.norm_of_nonneg h5_nn]
+    have : h * ((5 / 12 : ℝ) * ‖f tn yn - f tn zn‖)
+        ≤ h * ((5 / 12 : ℝ) * (L * ‖yn - zn‖)) := by
+      apply mul_le_mul_of_nonneg_left _ hh
+      exact mul_le_mul_of_nonneg_left hLip0 h5_nn
+    nlinarith [this]
+  have htri :
+      ‖(yn2 - zn2)
+        + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+        - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))
+        + h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))
+        - τ‖
+        ≤ ‖yn2 - zn2‖
+          + ‖h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))‖
+          + ‖h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))‖
+          + ‖h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))‖
+          + ‖τ‖ := by
+    have h1 :
+        ‖(yn2 - zn2)
+          + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+          - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))
+          + h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))
+          - τ‖
+          ≤ ‖(yn2 - zn2)
+              + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+              - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))
+              + h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))‖
+            + ‖τ‖ := norm_sub_le _ _
+    have h2 :
+        ‖(yn2 - zn2)
+          + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+          - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))
+          + h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))‖
+          ≤ ‖(yn2 - zn2)
+              + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+              - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))‖
+            + ‖h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))‖ := norm_add_le _ _
+    have h3 :
+        ‖(yn2 - zn2)
+          + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+          - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))‖
+          ≤ ‖(yn2 - zn2)
+              + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))‖
+            + ‖h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))‖ := norm_sub_le _ _
+    have h4 :
+        ‖(yn2 - zn2)
+          + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))‖
+          ≤ ‖yn2 - zn2‖
+            + ‖h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))‖ :=
+      norm_add_le _ _
+    linarith
+  calc
+    ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3) - zn3‖
+        = ‖(yn2 - zn2)
+            + h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))
+            - h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))
+            + h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))
+            - τ‖ := by rw [halg]
+    _ ≤ ‖yn2 - zn2‖
+          + ‖h • ((23 / 12 : ℝ) • (f tn2 yn2 - f tn2 zn2))‖
+          + ‖h • ((16 / 12 : ℝ) • (f tn1 yn1 - f tn1 zn1))‖
+          + ‖h • ((5 / 12 : ℝ) • (f tn yn - f tn zn))‖
+          + ‖τ‖ := htri
+    _ ≤ ‖yn2 - zn2‖
+          + (23 / 12) * h * L * ‖yn2 - zn2‖
+          + (16 / 12) * h * L * ‖yn1 - zn1‖
+          + (5 / 12) * h * L * ‖yn - zn‖
+          + ‖τ‖ := by linarith [h23_norm, h16_norm, h5_norm]
+
+/-- Max-norm one-step error recurrence for vector AB3 with Lipschitz constant
+`L`. With `eN k := ‖y_k − y(t_k)‖` and
+`EN k := max (max (eN k) (eN (k+1))) (eN (k+2))`,
+`EN (n+1) ≤ (1 + h · (11/3)L) · EN n + ‖τ_n‖`. -/
+theorem ab3Vec_one_step_error_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {h L : ℝ} (hh : 0 ≤ h) (hL : 0 ≤ L) {f : ℝ → E → E}
+    (hf : ∀ (t : ℝ) (a b : E), ‖f t a - f t b‖ ≤ L * ‖a - b‖)
+    (t₀ : ℝ) (y₀ y₁ y₂ : E) (y : ℝ → E)
+    (hyf : ∀ t : ℝ, deriv y t = f t (y t))
+    (n : ℕ) :
+    max (max
+          ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1)
+              - y (t₀ + ((n : ℝ) + 1) * h)‖
+          ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+              - y (t₀ + ((n : ℝ) + 2) * h)‖)
+        ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3)
+            - y (t₀ + ((n : ℝ) + 3) * h)‖
+      ≤ (1 + h * ((11 / 3) * L))
+            * max (max
+                  ‖ab3IterVec h f t₀ y₀ y₁ y₂ n
+                      - y (t₀ + (n : ℝ) * h)‖
+                  ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1)
+                      - y (t₀ + ((n : ℝ) + 1) * h)‖)
+                ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+                    - y (t₀ + ((n : ℝ) + 2) * h)‖
+        + ‖ab3VecResidual h (t₀ + (n : ℝ) * h) y‖ := by
+  set en : ℝ :=
+    ‖ab3IterVec h f t₀ y₀ y₁ y₂ n - y (t₀ + (n : ℝ) * h)‖ with hen_def
+  set en1 : ℝ :=
+    ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1)
+        - y (t₀ + ((n : ℝ) + 1) * h)‖ with hen1_def
+  set en2 : ℝ :=
+    ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+        - y (t₀ + ((n : ℝ) + 2) * h)‖ with hen2_def
+  set en3 : ℝ :=
+    ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3)
+        - y (t₀ + ((n : ℝ) + 3) * h)‖ with hen3_def
+  set τabs : ℝ := ‖ab3VecResidual h (t₀ + (n : ℝ) * h) y‖ with hτabs_def
+  have hen_nn : 0 ≤ en := norm_nonneg _
+  have hen1_nn : 0 ≤ en1 := norm_nonneg _
+  have hen2_nn : 0 ≤ en2 := norm_nonneg _
+  have hτ_nn : 0 ≤ τabs := norm_nonneg _
+  have hstep :
+      en3 ≤ en2 + (23 / 12) * h * L * en2
+                + (16 / 12) * h * L * en1
+                + (5 / 12) * h * L * en + τabs := by
+    have := ab3Vec_one_step_lipschitz hh hf t₀ y₀ y₁ y₂ y hyf n
+    show ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3)
+          - y (t₀ + ((n : ℝ) + 3) * h)‖
+        ≤ ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+              - y (t₀ + ((n : ℝ) + 2) * h)‖
+          + (23 / 12) * h * L
+              * ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+                  - y (t₀ + ((n : ℝ) + 2) * h)‖
+          + (16 / 12) * h * L
+              * ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1)
+                  - y (t₀ + ((n : ℝ) + 1) * h)‖
+          + (5 / 12) * h * L
+              * ‖ab3IterVec h f t₀ y₀ y₁ y₂ n
+                  - y (t₀ + (n : ℝ) * h)‖
+          + ‖ab3VecResidual h (t₀ + (n : ℝ) * h) y‖
+    exact this
+  set EN_n : ℝ := max (max en en1) en2 with hEN_n_def
+  have hen_le_EN : en ≤ EN_n :=
+    le_trans (le_max_left _ _) (le_max_left _ _)
+  have hen1_le_EN : en1 ≤ EN_n :=
+    le_trans (le_max_right _ _) (le_max_left _ _)
+  have hen2_le_EN : en2 ≤ EN_n := le_max_right _ _
+  have h23_nn : 0 ≤ (23 / 12) * h * L := by positivity
+  have h16_nn : 0 ≤ (16 / 12) * h * L := by positivity
+  have h5_nn : 0 ≤ (5 / 12) * h * L := by positivity
+  have hEN_nn : 0 ≤ EN_n := le_trans hen_nn hen_le_EN
+  have hcoef_nn : 0 ≤ h * ((11 / 3) * L) := by positivity
+  have hen3_bd : en3 ≤ (1 + h * ((11 / 3) * L)) * EN_n + τabs := by
+    have h1 : (23 / 12) * h * L * en2 ≤ (23 / 12) * h * L * EN_n :=
+      mul_le_mul_of_nonneg_left hen2_le_EN h23_nn
+    have h2 : (16 / 12) * h * L * en1 ≤ (16 / 12) * h * L * EN_n :=
+      mul_le_mul_of_nonneg_left hen1_le_EN h16_nn
+    have h3 : (5 / 12) * h * L * en ≤ (5 / 12) * h * L * EN_n :=
+      mul_le_mul_of_nonneg_left hen_le_EN h5_nn
+    have h_alg :
+        EN_n + (23 / 12) * h * L * EN_n
+              + (16 / 12) * h * L * EN_n
+              + (5 / 12) * h * L * EN_n + τabs
+          = (1 + h * ((11 / 3) * L)) * EN_n + τabs := by ring
+    linarith [hstep, hen2_le_EN, h1, h2, h3, h_alg.le]
+  have hEN_le_grow : EN_n ≤ (1 + h * ((11 / 3) * L)) * EN_n := by
+    have hone : (1 : ℝ) * EN_n ≤ (1 + h * ((11 / 3) * L)) * EN_n :=
+      mul_le_mul_of_nonneg_right (by linarith) hEN_nn
+    linarith
+  have hen1_bd : en1 ≤ (1 + h * ((11 / 3) * L)) * EN_n + τabs := by
+    linarith [hen1_le_EN, hEN_le_grow]
+  have hen2_bd : en2 ≤ (1 + h * ((11 / 3) * L)) * EN_n + τabs := by
+    linarith [hen2_le_EN, hEN_le_grow]
+  exact max_le (max_le hen1_bd hen2_bd) hen3_bd
+
+/-- A vector-valued `C^4` function has its fourth derivative bounded on every
+compact interval `[a, b]`. -/
+private theorem iteratedDeriv_four_bounded_on_Icc_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 4 y) (a b : ℝ) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 4 y t‖ ≤ M := by
+  have h_cont : Continuous (iteratedDeriv 4 y) :=
+    hy.continuous_iteratedDeriv 4 (by norm_num)
+  obtain ⟨M, hM⟩ :=
+    IsCompact.exists_bound_of_continuousOn isCompact_Icc h_cont.continuousOn
+  exact ⟨max M 0, le_max_right _ _, fun t ht => (hM t ht).trans (le_max_left _ _)⟩
+
+/-- Generic vector second-order Taylor remainder for `deriv g`, used as the
+recursive ingredient in the vector integral-form Taylor bounds below. -/
+private theorem deriv_second_order_taylor_remainder_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {g : ℝ → E} (hg : ContDiff ℝ 3 g) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 3 g t‖ ≤ M)
+    {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
+    (hr : 0 ≤ r) :
+    ‖deriv g (t + r) - deriv g t - r • iteratedDeriv 2 g t‖
+      ≤ M / 2 * r ^ 2 := by
+  haveI : CompleteSpace E := FiniteDimensional.complete ℝ E
+  have htr_le : t ≤ t + r := by linarith
+  have hdg : ContDiff ℝ 2 (deriv g) := hg.deriv'
+  have h_idd2_bound :
+      ∀ s ∈ Set.Icc t (t + r),
+        ‖iteratedDeriv 2 g s - iteratedDeriv 2 g t‖ ≤ M * (s - t) := by
+    intro s hs
+    have hts : t ≤ s := hs.1
+    have hdiff_idd2 : Differentiable ℝ (iteratedDeriv 2 g) :=
+      hg.differentiable_iteratedDeriv 2 (by norm_num)
+    have hderiv_on :
+        ∀ x ∈ Set.Icc t s,
+          HasDerivWithinAt (iteratedDeriv 2 g) (iteratedDeriv 3 g x)
+            (Set.Icc t s) x := by
+      intro x _hx
+      have hxderiv : HasDerivAt (iteratedDeriv 2 g) (iteratedDeriv 3 g x) x := by
+        have := (hdiff_idd2 x).hasDerivAt
+        convert this using 1
+        rw [iteratedDeriv_succ]
+      exact hxderiv.hasDerivWithinAt
+    have hbound_seg : ∀ x ∈ Set.Ico t s, ‖iteratedDeriv 3 g x‖ ≤ M := by
+      intro x hx
+      have hx_ab : x ∈ Set.Icc a b := by
+        refine ⟨?_, ?_⟩
+        · linarith [ht.1, hx.1]
+        · linarith [htr.2, hs.2, hx.2]
+      exact hbnd x hx_ab
+    have hseg :=
+      norm_image_sub_le_of_norm_deriv_le_segment'
+        (f := iteratedDeriv 2 g) (f' := fun x => iteratedDeriv 3 g x)
+        (a := t) (b := s) hderiv_on hbound_seg s
+        (Set.right_mem_Icc.mpr hts)
+    simpa using hseg
+  have h_idd2_cont : Continuous (iteratedDeriv 2 g) :=
+    hg.continuous_iteratedDeriv 2 (by norm_num)
+  have h_idd2_int :
+      IntervalIntegrable (fun s => iteratedDeriv 2 g s)
+        MeasureTheory.volume t (t + r) :=
+    h_idd2_cont.intervalIntegrable _ _
+  have h_const_int :
+      IntervalIntegrable (fun _ : ℝ => iteratedDeriv 2 g t)
+        MeasureTheory.volume t (t + r) := intervalIntegrable_const
+  have h_ftc :
+      ∫ s in t..t + r, iteratedDeriv 2 g s = deriv g (t + r) - deriv g t := by
+    have hderiv_at :
+        ∀ x ∈ Set.uIcc t (t + r),
+          HasDerivAt (deriv g) (iteratedDeriv 2 g x) x := by
+      intro x _hx
+      have hdiff : Differentiable ℝ (deriv g) := hdg.differentiable (by norm_num)
+      have h1 : HasDerivAt (deriv g) (deriv (deriv g) x) x :=
+        (hdiff x).hasDerivAt
+      have h2 : deriv (deriv g) x = iteratedDeriv 2 g x := by
+        rw [show iteratedDeriv 2 g = deriv (iteratedDeriv 1 g) from
+            iteratedDeriv_succ, iteratedDeriv_one]
+      rw [← h2]; exact h1
+    exact intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv_at h_idd2_int
+  have h_residual_integral :
+      deriv g (t + r) - deriv g t - r • iteratedDeriv 2 g t
+        = ∫ s in t..t + r, (iteratedDeriv 2 g s - iteratedDeriv 2 g t) := by
+    rw [intervalIntegral.integral_sub h_idd2_int h_const_int, h_ftc]
+    simp
+  have h_bound_integral :
+      ‖∫ s in t..t + r, (iteratedDeriv 2 g s - iteratedDeriv 2 g t)‖
+        ≤ ∫ s in t..t + r, M * (s - t) := by
+    refine intervalIntegral.norm_integral_le_of_norm_le htr_le ?_ ?_
+    · exact Filter.Eventually.of_forall fun s hs =>
+        h_idd2_bound s ⟨hs.1.le, hs.2⟩
+    · exact (by fun_prop : Continuous fun s : ℝ => M * (s - t)).intervalIntegrable _ _
+  have h_integral_eval :
+      ∫ s in t..t + r, M * (s - t) = M / 2 * r ^ 2 := by
+    calc
+      ∫ s in t..t + r, M * (s - t)
+          = M * (∫ s in t..t + r, (s - t)) := by
+            rw [intervalIntegral.integral_const_mul]
+      _ = M / 2 * r ^ 2 := by
+        simp [intervalIntegral.integral_sub, integral_id,
+          intervalIntegral.integral_const]
+        ring
+  rw [h_residual_integral]
+  exact h_bound_integral.trans_eq h_integral_eval
+
+/-- Generic vector third-order Taylor remainder, expressed in integral form. -/
+private theorem third_order_taylor_remainder_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {g : ℝ → E} (hg : ContDiff ℝ 3 g) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 3 g t‖ ≤ M)
+    {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
+    (hr : 0 ≤ r) :
+    ‖g (t + r) - g t - r • deriv g t - (r ^ 2 / 2) • iteratedDeriv 2 g t‖
+      ≤ M / 6 * r ^ 3 := by
+  haveI : CompleteSpace E := FiniteDimensional.complete ℝ E
+  have htr_le : t ≤ t + r := by linarith
+  have h_dg_bound :
+      ∀ s ∈ Set.Icc t (t + r),
+        ‖deriv g s - deriv g t - (s - t) • iteratedDeriv 2 g t‖
+          ≤ M / 2 * (s - t) ^ 2 := by
+    intro s hs
+    have hts : 0 ≤ s - t := by linarith [hs.1]
+    have hs_ab : s ∈ Set.Icc a b := by
+      refine ⟨?_, ?_⟩
+      · linarith [ht.1, hs.1]
+      · linarith [htr.2, hs.2]
+    have hsplit : t + (s - t) = s := by ring
+    have :=
+      deriv_second_order_taylor_remainder_vec hg hbnd ht
+        (by rw [hsplit]; exact hs_ab) hts
+    rw [hsplit] at this
+    exact this
+  have hdg_cont : Continuous (deriv g) := hg.continuous_deriv (by norm_num)
+  have h_dg_int :
+      IntervalIntegrable (fun s => deriv g s) MeasureTheory.volume t (t + r) :=
+    hdg_cont.intervalIntegrable _ _
+  have h_const_int :
+      IntervalIntegrable (fun _ : ℝ => deriv g t)
+        MeasureTheory.volume t (t + r) := intervalIntegrable_const
+  have h_lin_int :
+      IntervalIntegrable (fun s : ℝ => (s - t) • iteratedDeriv 2 g t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_ftc_g :
+      ∫ s in t..t + r, deriv g s = g (t + r) - g t := by
+    have hderiv_at :
+        ∀ x ∈ Set.uIcc t (t + r),
+          HasDerivAt g (deriv g x) x := by
+      intro x _hx
+      exact (hg.differentiable (by norm_num) x).hasDerivAt
+    exact intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv_at h_dg_int
+  have h_lin_eval :
+      ∫ s in t..t + r, (s - t) • iteratedDeriv 2 g t
+        = (r ^ 2 / 2) • iteratedDeriv 2 g t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) = r ^ 2 / 2 := by
+      simp [intervalIntegral.integral_sub, integral_id,
+        intervalIntegral.integral_const]
+      ring
+    rw [h_int_smul]
+  have h_residual_integral :
+      g (t + r) - g t - r • deriv g t - (r ^ 2 / 2) • iteratedDeriv 2 g t
+        = ∫ s in t..t + r,
+            (deriv g s - deriv g t - (s - t) • iteratedDeriv 2 g t) := by
+    rw [intervalIntegral.integral_sub
+        (h_dg_int.sub h_const_int) h_lin_int,
+      intervalIntegral.integral_sub h_dg_int h_const_int,
+      h_ftc_g, h_lin_eval]
+    have h_const_eval :
+        ∫ _ in t..t + r, deriv g t = r • deriv g t := by
+      rw [intervalIntegral.integral_const]
+      simp
+    rw [h_const_eval]
+  have h_bound_integral :
+      ‖∫ s in t..t + r,
+          (deriv g s - deriv g t - (s - t) • iteratedDeriv 2 g t)‖
+        ≤ ∫ s in t..t + r, M / 2 * (s - t) ^ 2 := by
+    refine intervalIntegral.norm_integral_le_of_norm_le htr_le ?_ ?_
+    · exact Filter.Eventually.of_forall fun s hs =>
+        h_dg_bound s ⟨hs.1.le, hs.2⟩
+    · exact (by fun_prop :
+        Continuous fun s : ℝ => M / 2 * (s - t) ^ 2).intervalIntegrable _ _
+  have h_integral_eval :
+      ∫ s in t..t + r, M / 2 * (s - t) ^ 2 = M / 6 * r ^ 3 := by
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 2 = r ^ 3 / 3 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 2
+            = ∫ s in (t - t)..(t + r - t), s ^ 2 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 2) t
+      rw [hsub]
+      rw [integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr : (t + r - t) = r := by ring
+      rw [hzero, hr]
+      ring
+    rw [intervalIntegral.integral_const_mul, h_inner]
+    ring
+  rw [h_residual_integral]
+  exact h_bound_integral.trans_eq h_integral_eval
+
+/-- Pointwise fourth-order Taylor remainder for a vector trajectory. -/
+private theorem y_fourth_order_taylor_remainder_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 4 y) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 4 y t‖ ≤ M)
+    {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
+    (hr : 0 ≤ r) :
+    ‖y (t + r) - y t - r • deriv y t
+        - (r ^ 2 / 2) • iteratedDeriv 2 y t
+        - (r ^ 3 / 6) • iteratedDeriv 3 y t‖
+      ≤ M / 24 * r ^ 4 := by
+  haveI : CompleteSpace E := FiniteDimensional.complete ℝ E
+  have htr_le : t ≤ t + r := by linarith
+  have hdy : ContDiff ℝ 3 (deriv y) := hy.deriv'
+  have hbnd_d :
+      ∀ s ∈ Set.Icc a b, ‖iteratedDeriv 3 (deriv y) s‖ ≤ M := by
+    intro s hs
+    have hidd_eq : iteratedDeriv 3 (deriv y) = iteratedDeriv 4 y := by
+      have : iteratedDeriv 4 y = iteratedDeriv 3 (deriv y) :=
+        iteratedDeriv_succ' (n := 3) (f := y)
+      exact this.symm
+    simpa [hidd_eq] using hbnd s hs
+  have h_dy_bound :
+      ∀ s ∈ Set.Icc t (t + r),
+        ‖deriv y s - deriv y t - (s - t) • iteratedDeriv 2 y t
+            - ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t‖
+          ≤ M / 6 * (s - t) ^ 3 := by
+    intro s hs
+    have hts : 0 ≤ s - t := by linarith [hs.1]
+    have hs_ab : s ∈ Set.Icc a b := by
+      refine ⟨?_, ?_⟩
+      · linarith [ht.1, hs.1]
+      · linarith [htr.2, hs.2]
+    have hsplit : t + (s - t) = s := by ring
+    have hrem :=
+      third_order_taylor_remainder_vec hdy hbnd_d ht
+        (by rw [hsplit]; exact hs_ab) hts
+    have hderiv2 : deriv (deriv y) t = iteratedDeriv 2 y t := by
+      rw [show iteratedDeriv 2 y = deriv (iteratedDeriv 1 y) from
+          iteratedDeriv_succ, iteratedDeriv_one]
+    have hiter2 : iteratedDeriv 2 (deriv y) t = iteratedDeriv 3 y t := by
+      have : iteratedDeriv 3 y = iteratedDeriv 2 (deriv y) :=
+        iteratedDeriv_succ' (n := 2) (f := y)
+      rw [this]
+    rw [hsplit] at hrem
+    simpa [hderiv2, hiter2] using hrem
+  have hdy_cont : Continuous (deriv y) := hy.continuous_deriv (by norm_num)
+  have h_dy_int :
+      IntervalIntegrable (fun s => deriv y s) MeasureTheory.volume t (t + r) :=
+    hdy_cont.intervalIntegrable _ _
+  have h_const_int :
+      IntervalIntegrable (fun _ : ℝ => deriv y t)
+        MeasureTheory.volume t (t + r) := intervalIntegrable_const
+  have h_lin_int :
+      IntervalIntegrable (fun s : ℝ => (s - t) • iteratedDeriv 2 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_quad_int :
+      IntervalIntegrable (fun s : ℝ => ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_ftc_y :
+      ∫ s in t..t + r, deriv y s = y (t + r) - y t := by
+    have hderiv_at :
+        ∀ x ∈ Set.uIcc t (t + r),
+          HasDerivAt y (deriv y x) x := by
+      intro x _hx
+      exact (hy.differentiable (by norm_num) x).hasDerivAt
+    exact intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv_at h_dy_int
+  have h_lin_eval :
+      ∫ s in t..t + r, (s - t) • iteratedDeriv 2 y t
+        = (r ^ 2 / 2) • iteratedDeriv 2 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) = r ^ 2 / 2 := by
+      simp [intervalIntegral.integral_sub, integral_id,
+        intervalIntegral.integral_const]
+      ring
+    rw [h_int_smul]
+  have h_quad_eval :
+      ∫ s in t..t + r, ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t
+        = (r ^ 3 / 6) • iteratedDeriv 3 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 2 = r ^ 3 / 3 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 2
+            = ∫ s in (t - t)..(t + r - t), s ^ 2 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 2) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 2 / 2)
+          = fun s : ℝ => (1 / 2 : ℝ) * (s - t) ^ 2 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 2 / 2 = r ^ 3 / 6 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_residual_integral :
+      y (t + r) - y t - r • deriv y t
+          - (r ^ 2 / 2) • iteratedDeriv 2 y t
+          - (r ^ 3 / 6) • iteratedDeriv 3 y t
+        = ∫ s in t..t + r,
+            (deriv y s - deriv y t - (s - t) • iteratedDeriv 2 y t
+              - ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t) := by
+    rw [intervalIntegral.integral_sub
+        ((h_dy_int.sub h_const_int).sub h_lin_int) h_quad_int,
+      intervalIntegral.integral_sub (h_dy_int.sub h_const_int) h_lin_int,
+      intervalIntegral.integral_sub h_dy_int h_const_int,
+      h_ftc_y, h_lin_eval, h_quad_eval]
+    have h_const_eval :
+        ∫ _ in t..t + r, deriv y t = r • deriv y t := by
+      rw [intervalIntegral.integral_const]
+      simp
+    rw [h_const_eval]
+  have h_bound_integral :
+      ‖∫ s in t..t + r,
+          (deriv y s - deriv y t - (s - t) • iteratedDeriv 2 y t
+            - ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t)‖
+        ≤ ∫ s in t..t + r, M / 6 * (s - t) ^ 3 := by
+    refine intervalIntegral.norm_integral_le_of_norm_le htr_le ?_ ?_
+    · exact Filter.Eventually.of_forall fun s hs =>
+        h_dy_bound s ⟨hs.1.le, hs.2⟩
+    · exact (by fun_prop :
+        Continuous fun s : ℝ => M / 6 * (s - t) ^ 3).intervalIntegrable _ _
+  have h_integral_eval :
+      ∫ s in t..t + r, M / 6 * (s - t) ^ 3 = M / 24 * r ^ 4 := by
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 3 = r ^ 4 / 4 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 3
+            = ∫ s in (t - t)..(t + r - t), s ^ 3 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 3) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    rw [intervalIntegral.integral_const_mul, h_inner]
+    ring
+  rw [h_residual_integral]
+  exact h_bound_integral.trans_eq h_integral_eval
+
+/-- Pointwise third-order Taylor remainder for the derivative of a vector
+trajectory. -/
+private theorem derivY_third_order_taylor_remainder_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 4 y) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 4 y t‖ ≤ M)
+    {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
+    (hr : 0 ≤ r) :
+    ‖deriv y (t + r) - deriv y t - r • iteratedDeriv 2 y t
+        - (r ^ 2 / 2) • iteratedDeriv 3 y t‖
+      ≤ M / 6 * r ^ 3 := by
+  have hdy : ContDiff ℝ 3 (deriv y) := hy.deriv'
+  have hbnd_d :
+      ∀ s ∈ Set.Icc a b, ‖iteratedDeriv 3 (deriv y) s‖ ≤ M := by
+    intro s hs
+    have hidd_eq : iteratedDeriv 3 (deriv y) = iteratedDeriv 4 y := by
+      have : iteratedDeriv 4 y = iteratedDeriv 3 (deriv y) :=
+        iteratedDeriv_succ' (n := 3) (f := y)
+      exact this.symm
+    simpa [hidd_eq] using hbnd s hs
+  have hrem := third_order_taylor_remainder_vec hdy hbnd_d ht htr hr
+  have hderiv2 : deriv (deriv y) t = iteratedDeriv 2 y t := by
+    rw [show iteratedDeriv 2 y = deriv (iteratedDeriv 1 y) from
+        iteratedDeriv_succ, iteratedDeriv_one]
+  have hiter2 : iteratedDeriv 2 (deriv y) t = iteratedDeriv 3 y t := by
+    have : iteratedDeriv 3 y = iteratedDeriv 2 (deriv y) :=
+      iteratedDeriv_succ' (n := 2) (f := y)
+    rw [this]
+  simpa [hderiv2, hiter2] using hrem
+
+/-- Pointwise vector AB3 truncation residual bound. -/
+private theorem ab3Vec_pointwise_residual_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 4 y) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 4 y t‖ ≤ M)
+    {t h : ℝ} (ht : t ∈ Set.Icc a b)
+    (hth : t + h ∈ Set.Icc a b)
+    (ht2h : t + 2 * h ∈ Set.Icc a b)
+    (ht3h : t + 3 * h ∈ Set.Icc a b)
+    (hh : 0 ≤ h) :
+    ‖y (t + 3 * h) - y (t + 2 * h)
+        - h • ((23 / 12 : ℝ) • deriv y (t + 2 * h)
+              - (16 / 12 : ℝ) • deriv y (t + h)
+              + (5 / 12 : ℝ) • deriv y t)‖
+      ≤ (7 : ℝ) * M * h ^ 4 := by
+  have h2h : 0 ≤ 2 * h := by linarith
+  have h3h : 0 ≤ 3 * h := by linarith
+  have hRy2 :=
+    y_fourth_order_taylor_remainder_vec hy hbnd ht ht2h h2h
+  have hRy3 :=
+    y_fourth_order_taylor_remainder_vec hy hbnd ht ht3h h3h
+  have hRyp1 :=
+    derivY_third_order_taylor_remainder_vec hy hbnd ht hth hh
+  have hRyp2 :=
+    derivY_third_order_taylor_remainder_vec hy hbnd ht ht2h h2h
+  set y0 : E := y t with hy0_def
+  set y2 : E := y (t + 2 * h) with hy2_def
+  set y3 : E := y (t + 3 * h) with hy3_def
+  set d0 : E := deriv y t with hd0_def
+  set d1 : E := deriv y (t + h) with hd1_def
+  set d2 : E := deriv y (t + 2 * h) with hd2_def
+  set dd : E := iteratedDeriv 2 y t with hdd_def
+  set ddd : E := iteratedDeriv 3 y t with hddd_def
+  have hLTE_eq :
+      y3 - y2 - h • ((23 / 12 : ℝ) • d2 - (16 / 12 : ℝ) • d1 + (5 / 12 : ℝ) • d0)
+        = (y3 - y0 - (3 * h) • d0
+              - ((3 * h) ^ 2 / 2) • dd - ((3 * h) ^ 3 / 6) • ddd)
+          - (y2 - y0 - (2 * h) • d0
+              - ((2 * h) ^ 2 / 2) • dd - ((2 * h) ^ 3 / 6) • ddd)
+          - (23 * h / 12 : ℝ)
+              • (d2 - d0 - (2 * h) • dd - ((2 * h) ^ 2 / 2) • ddd)
+          + (16 * h / 12 : ℝ)
+              • (d1 - d0 - h • dd - (h ^ 2 / 2) • ddd) := by
+    simp only [smul_sub, smul_add, smul_smul]
+    module
+  rw [hLTE_eq]
+  set A : E := y3 - y0 - (3 * h) • d0
+            - ((3 * h) ^ 2 / 2) • dd - ((3 * h) ^ 3 / 6) • ddd with hA_def
+  set B : E := y2 - y0 - (2 * h) • d0
+            - ((2 * h) ^ 2 / 2) • dd - ((2 * h) ^ 3 / 6) • ddd with hB_def
+  set C : E := d2 - d0 - (2 * h) • dd - ((2 * h) ^ 2 / 2) • ddd with hC_def
+  set D : E := d1 - d0 - h • dd - (h ^ 2 / 2) • ddd with hD_def
+  have htri : ‖A - B - (23 * h / 12 : ℝ) • C + (16 * h / 12 : ℝ) • D‖
+      ≤ ‖A‖ + ‖B‖ + ‖(23 * h / 12 : ℝ) • C‖
+          + ‖(16 * h / 12 : ℝ) • D‖ := by
+    have h1 : ‖A - B - (23 * h / 12 : ℝ) • C + (16 * h / 12 : ℝ) • D‖
+        ≤ ‖A - B - (23 * h / 12 : ℝ) • C‖
+          + ‖(16 * h / 12 : ℝ) • D‖ :=
+      norm_add_le _ _
+    have h2 : ‖A - B - (23 * h / 12 : ℝ) • C‖
+        ≤ ‖A - B‖ + ‖(23 * h / 12 : ℝ) • C‖ := norm_sub_le _ _
+    have h3 : ‖A - B‖ ≤ ‖A‖ + ‖B‖ := norm_sub_le _ _
+    linarith
+  have hA_bd : ‖A‖ ≤ M / 24 * (3 * h) ^ 4 := hRy3
+  have hB_bd : ‖B‖ ≤ M / 24 * (2 * h) ^ 4 := hRy2
+  have hC_bd : ‖C‖ ≤ M / 6 * (2 * h) ^ 3 := hRyp2
+  have hD_bd : ‖D‖ ≤ M / 6 * h ^ 3 := hRyp1
+  have h23h_nn : 0 ≤ (23 * h / 12 : ℝ) := by linarith
+  have h16h_nn : 0 ≤ (16 * h / 12 : ℝ) := by linarith
+  have h23C_bd :
+      ‖(23 * h / 12 : ℝ) • C‖
+        ≤ (23 * h / 12 : ℝ) * (M / 6 * (2 * h) ^ 3) := by
+    rw [norm_smul, Real.norm_of_nonneg h23h_nn]
+    exact mul_le_mul_of_nonneg_left hC_bd h23h_nn
+  have h16D_bd :
+      ‖(16 * h / 12 : ℝ) • D‖
+        ≤ (16 * h / 12 : ℝ) * (M / 6 * h ^ 3) := by
+    rw [norm_smul, Real.norm_of_nonneg h16h_nn]
+    exact mul_le_mul_of_nonneg_left hD_bd h16h_nn
+  have hbound_alg :
+      M / 24 * (3 * h) ^ 4 + M / 24 * (2 * h) ^ 4
+        + (23 * h / 12) * (M / 6 * (2 * h) ^ 3)
+        + (16 * h / 12) * (M / 6 * h ^ 3)
+        = (491 / 72 : ℝ) * M * h ^ 4 := by ring
+  have hMnn : 0 ≤ M := by
+    have := hbnd t ht
+    exact (norm_nonneg _).trans this
+  have hh4_nn : 0 ≤ h ^ 4 := by positivity
+  have hslack : (491 / 72 : ℝ) * M * h ^ 4 ≤ 7 * M * h ^ 4 := by
+    have : (491 / 72 : ℝ) ≤ 7 := by norm_num
+    nlinarith [hMnn, hh4_nn]
+  linarith [htri, hA_bd, hB_bd, h23C_bd, h16D_bd,
+    hbound_alg.le, hbound_alg.ge, hslack]
+
+/-- Uniform bound on the vector AB3 one-step truncation residual on a finite
+horizon, given a `C^4` exact solution. -/
+theorem ab3Vec_local_residual_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 4 y) (t₀ T : ℝ) (_hT : 0 < T) :
+    ∃ C δ : ℝ, 0 ≤ C ∧ 0 < δ ∧
+      ∀ {h : ℝ}, 0 < h → h ≤ δ → ∀ n : ℕ,
+        ((n : ℝ) + 3) * h ≤ T →
+        ‖ab3VecResidual h (t₀ + (n : ℝ) * h) y‖
+          ≤ C * h ^ 4 := by
+  obtain ⟨M, hM_nn, hM⟩ :=
+    iteratedDeriv_four_bounded_on_Icc_vec hy t₀ (t₀ + T + 1)
+  refine ⟨(7 : ℝ) * M, 1, by positivity, by norm_num, ?_⟩
+  intro h hh hh1 n hn
+  set t : ℝ := t₀ + (n : ℝ) * h with ht_def
+  have hn_nn : (0 : ℝ) ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le n
+  have hnh_nn : 0 ≤ (n : ℝ) * h := mul_nonneg hn_nn hh.le
+  have ht_mem : t ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨by linarith, ?_⟩
+    have hnh_le : (n : ℝ) * h ≤ T := by
+      have h1 : (n : ℝ) * h ≤ ((n : ℝ) + 3) * h :=
+        mul_le_mul_of_nonneg_right (by linarith) hh.le
+      linarith
+    linarith
+  have hth_mem : t + h ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨by linarith, ?_⟩
+    have h1 : (n : ℝ) * h + h ≤ ((n : ℝ) + 3) * h := by nlinarith
+    linarith
+  have ht2h_mem : t + 2 * h ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨by linarith, ?_⟩
+    have h1 : (n : ℝ) * h + 2 * h ≤ ((n : ℝ) + 3) * h := by nlinarith
+    linarith
+  have ht3h_mem : t + 3 * h ∈ Set.Icc t₀ (t₀ + T + 1) := by
+    refine ⟨by linarith, ?_⟩
+    have h1 : (n : ℝ) * h + 3 * h = ((n : ℝ) + 3) * h := by ring
+    linarith
+  show ‖ab3VecResidual h t y‖ ≤ 7 * M * h ^ 4
+  unfold ab3VecResidual
+  exact ab3Vec_pointwise_residual_bound hy hM ht_mem hth_mem ht2h_mem
+    ht3h_mem hh.le
+
+/-- Final vector AB3 global error bound on `[t₀, t₀ + T]`. Under Lipschitz
+`f`, a `C^4` exact solution `y` with `deriv y t = f t (y t)`, and starting
+errors bounded by `ε₀`, the AB3 iterate error obeys `O(ε₀ + h^3)`. -/
+theorem ab3Vec_global_error_bound
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 4 y)
+    {f : ℝ → E → E} {L : ℝ} (hL : 0 ≤ L)
+    (hf : ∀ (t : ℝ) (a b : E), ‖f t a - f t b‖ ≤ L * ‖a - b‖)
+    (hyf : ∀ t, deriv y t = f t (y t))
+    (t₀ T : ℝ) (hT : 0 < T) :
+    ∃ K δ : ℝ, 0 ≤ K ∧ 0 < δ ∧
+      ∀ {h : ℝ}, 0 < h → h ≤ δ →
+      ∀ {y₀ y₁ y₂ : E} {ε₀ : ℝ}, 0 ≤ ε₀ →
+      ‖y₀ - y t₀‖ ≤ ε₀ → ‖y₁ - y (t₀ + h)‖ ≤ ε₀ →
+      ‖y₂ - y (t₀ + 2 * h)‖ ≤ ε₀ →
+      ∀ N : ℕ, ((N : ℝ) + 2) * h ≤ T →
+      ‖ab3IterVec h f t₀ y₀ y₁ y₂ N - y (t₀ + (N : ℝ) * h)‖
+        ≤ Real.exp ((11 / 3) * L * T) * ε₀ + K * h ^ 3 := by
+  obtain ⟨C, δ, hC_nn, hδ_pos, hresidual⟩ :=
+    ab3Vec_local_residual_bound hy t₀ T hT
+  refine ⟨T * Real.exp ((11 / 3) * L * T) * C, δ, ?_, hδ_pos, ?_⟩
+  · exact mul_nonneg
+      (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
+  intro h hh hδ_le y₀ y₁ y₂ ε₀ hε₀ he0_bd he1_bd he2_bd N hNh
+  set eN : ℕ → ℝ :=
+    fun k => ‖ab3IterVec h f t₀ y₀ y₁ y₂ k - y (t₀ + (k : ℝ) * h)‖ with heN_def
+  set EN : ℕ → ℝ :=
+    fun k => max (max (eN k) (eN (k + 1))) (eN (k + 2)) with hEN_def
+  have heN_nn : ∀ k, 0 ≤ eN k := fun _ => norm_nonneg _
+  have hEN_nn : ∀ k, 0 ≤ EN k := fun k =>
+    le_max_of_le_left (le_max_of_le_left (heN_nn k))
+  have hEN0_le : EN 0 ≤ ε₀ := by
+    show max (max (eN 0) (eN 1)) (eN 2) ≤ ε₀
+    refine max_le (max_le ?_ ?_) ?_
+    · show ‖ab3IterVec h f t₀ y₀ y₁ y₂ 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ ≤ ε₀
+      simpa using he0_bd
+    · show ‖ab3IterVec h f t₀ y₀ y₁ y₂ 1 - y (t₀ + ((1 : ℕ) : ℝ) * h)‖ ≤ ε₀
+      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
+      rw [hcast]
+      simpa using he1_bd
+    · show ‖ab3IterVec h f t₀ y₀ y₁ y₂ 2 - y (t₀ + ((2 : ℕ) : ℝ) * h)‖ ≤ ε₀
+      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
+      rw [hcast]
+      simpa using he2_bd
+  have hLeff_nn : (0 : ℝ) ≤ (11 / 3) * L := by positivity
+  have hstep_general : ∀ n : ℕ, ((n : ℝ) + 3) * h ≤ T →
+      EN (n + 1) ≤ (1 + h * ((11 / 3) * L)) * EN n + C * h ^ 4 := by
+    intro n hnh_le
+    have honestep := ab3Vec_one_step_error_bound (h := h) (L := L)
+        hh.le hL hf t₀ y₀ y₁ y₂ y hyf n
+    have hres := hresidual hh hδ_le n hnh_le
+    have hcast1 : ((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1 := by push_cast; ring
+    have hcast2 : ((n + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 2 := by push_cast; ring
+    have hcast3 : ((n + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 3 := by push_cast; ring
+    have heq_eN_n : eN n
+        = ‖ab3IterVec h f t₀ y₀ y₁ y₂ n - y (t₀ + (n : ℝ) * h)‖ := rfl
+    have heq_eN_n1 : eN (n + 1)
+        = ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 1)
+              - y (t₀ + ((n : ℝ) + 1) * h)‖ := by
+      show ‖_ - _‖ = _
+      rw [hcast1]
+    have heq_eN_n2 : eN (n + 1 + 1)
+        = ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 2)
+              - y (t₀ + ((n : ℝ) + 2) * h)‖ := by
+      show ‖_ - _‖ = _
+      rw [hcast2]
+    have heq_eN_n3 : eN (n + 1 + 1 + 1)
+        = ‖ab3IterVec h f t₀ y₀ y₁ y₂ (n + 3)
+              - y (t₀ + ((n : ℝ) + 3) * h)‖ := by
+      show ‖_ - _‖ = _
+      rw [hcast3]
+    show max (max (eN (n + 1)) (eN (n + 1 + 1))) (eN (n + 1 + 1 + 1))
+        ≤ (1 + h * ((11 / 3) * L))
+            * max (max (eN n) (eN (n + 1))) (eN (n + 1 + 1))
+          + C * h ^ 4
+    rw [heq_eN_n, heq_eN_n1, heq_eN_n2, heq_eN_n3]
+    linarith [honestep, hres]
+  have hexp_ge : (1 : ℝ) ≤ Real.exp ((11 / 3) * L * T) :=
+    Real.one_le_exp_iff.mpr (by positivity)
+  have hKnn : 0 ≤ T * Real.exp ((11 / 3) * L * T) * C :=
+    mul_nonneg (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
+  have hh3_nn : 0 ≤ h ^ 3 := by positivity
+  have hexp_nn : 0 ≤ Real.exp ((11 / 3) * L * T) := Real.exp_nonneg _
+  have hbase_to_headline : ∀ q : ℝ, q ≤ ε₀ →
+      q ≤ Real.exp ((11 / 3) * L * T) * ε₀
+            + T * Real.exp ((11 / 3) * L * T) * C * h ^ 3 := by
+    intro q hq
+    have hexp_ε₀ : ε₀ ≤ Real.exp ((11 / 3) * L * T) * ε₀ := by
+      have hone : (1 : ℝ) * ε₀ ≤ Real.exp ((11 / 3) * L * T) * ε₀ :=
+        mul_le_mul_of_nonneg_right hexp_ge hε₀
+      linarith
+    have hKh3_nn : 0 ≤ T * Real.exp ((11 / 3) * L * T) * C * h ^ 3 :=
+      mul_nonneg hKnn hh3_nn
+    linarith
+  match N, hNh with
+  | 0, _ =>
+    have hbase : ‖ab3IterVec h f t₀ y₀ y₁ y₂ 0
+          - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
+      simpa using he0_bd
+    exact hbase_to_headline _ hbase
+  | 1, _ =>
+    have hbase : ‖ab3IterVec h f t₀ y₀ y₁ y₂ 1
+          - y (t₀ + ((1 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
+      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
+      rw [hcast]
+      simpa using he1_bd
+    exact hbase_to_headline _ hbase
+  | 2, _ =>
+    have hbase : ‖ab3IterVec h f t₀ y₀ y₁ y₂ 2
+          - y (t₀ + ((2 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
+      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
+      rw [hcast]
+      simpa using he2_bd
+    exact hbase_to_headline _ hbase
+  | N' + 3, hNh =>
+    have hcast : (((N' + 3 : ℕ) : ℝ)) = (N' : ℝ) + 3 := by push_cast; ring
+    have hN_hyp : ((N' : ℝ) + 3) * h ≤ T := by
+      have := hNh
+      rw [hcast] at this
+      linarith
+    have hgronwall_step : ∀ n, n < N' + 1 →
+        EN (n + 1) ≤ (1 + h * ((11 / 3) * L)) * EN n + C * h ^ (3 + 1) := by
+      intro n hn_lt
+      have hpow : C * h ^ (3 + 1) = C * h ^ 4 := by norm_num
+      rw [hpow]
+      apply hstep_general
+      have hn1_le_N' : (n : ℝ) + 1 ≤ (N' : ℝ) + 1 := by
+        have : (n : ℝ) ≤ (N' : ℝ) := by exact_mod_cast Nat.lt_succ_iff.mp hn_lt
+        linarith
+      have h_le_chain : (n : ℝ) + 3 ≤ (N' : ℝ) + 3 := by linarith
+      have h_mul : ((n : ℝ) + 3) * h ≤ ((N' : ℝ) + 3) * h :=
+        mul_le_mul_of_nonneg_right h_le_chain hh.le
+      linarith
+    have hN'1h_le_T : ((N' + 1 : ℕ) : ℝ) * h ≤ T := by
+      have hcast' : ((N' + 1 : ℕ) : ℝ) = (N' : ℝ) + 1 := by push_cast; ring
+      rw [hcast']
+      have : (N' : ℝ) + 1 ≤ (N' : ℝ) + 3 := by linarith
+      have := mul_le_mul_of_nonneg_right this hh.le
+      linarith
+    have hgronwall :=
+      lmm_error_bound_from_local_truncation
+        (h := h) (L := (11 / 3) * L) (C := C) (T := T) (p := 3)
+        (e := EN) (N := N' + 1)
+        hh.le hLeff_nn hC_nn (hEN_nn 0) hgronwall_step (N' + 1) le_rfl hN'1h_le_T
+    have heN_le_EN : eN (N' + 3) ≤ EN (N' + 1) := by
+      show eN (N' + 3) ≤ max (max (eN (N' + 1)) (eN (N' + 1 + 1))) (eN (N' + 1 + 2))
+      have heq : N' + 3 = N' + 1 + 2 := by ring
+      rw [heq]
+      exact le_max_right _ _
+    have h_chain :
+        Real.exp ((11 / 3) * L * T) * EN 0 ≤ Real.exp ((11 / 3) * L * T) * ε₀ :=
+      mul_le_mul_of_nonneg_left hEN0_le hexp_nn
+    show ‖ab3IterVec h f t₀ y₀ y₁ y₂ (N' + 3)
+          - y (t₀ + ((N' + 3 : ℕ) : ℝ) * h)‖
+        ≤ Real.exp ((11 / 3) * L * T) * ε₀
+          + T * Real.exp ((11 / 3) * L * T) * C * h ^ 3
+    have heN_eq :
+        eN (N' + 3)
+          = ‖ab3IterVec h f t₀ y₀ y₁ y₂ (N' + 3)
+              - y (t₀ + ((N' + 3 : ℕ) : ℝ) * h)‖ := rfl
+    linarith [heN_le_EN, hgronwall, h_chain, heN_eq.symm.le, heN_eq.le]
+
 end LMM

@@ -1,0 +1,5 @@
+job_a_iteratedDeriv_four_bounded_on_Icc_vec.lean 5da7319d-287a-4925-8a81-cbfe01406510 COMPLETE redundant_live_proof_closed
+job_b_y_fourth_order_taylor_remainder_vec.lean 87637e1a-7994-483a-8d45-ae41c2a22181 IN_PROGRESS percent=8
+job_c_derivY_third_order_taylor_remainder_vec.lean b0a28576-0064-4253-a105-309340518cf3 IN_PROGRESS percent=6
+job_d_ab3Vec_pointwise_residual_bound.lean 893afb82-6924-4c6b-8892-4546226311c8 IN_PROGRESS percent=10
+job_e_ab3Vec_one_step_error_bound.lean 6d62aa43-e081-447b-9775-b4e6dfb0eb7b IN_PROGRESS percent=10

@@ -52,6 +52,7 @@
   - [x] **Adams–Bashforth 2-step scalar convergence chain**: `LMM.ab2Iter` (two starting samples, recurrence `y_{n+2} = y_{n+1} + h(3/2 f_{n+1} − 1/2 f_n)`), `LMM.ab2_localTruncationError_eq` (textbook AB2 one-step residual `y(t+2h) − y(t+h) − h(3/2 y'(t+h) − 1/2 y'(t))` equals the LMM truncation operator), `LMM.ab2_one_step_lipschitz` and `LMM.ab2_one_step_error_bound` (Lipschitz max-norm one-step recurrence `max(eₙ₊₁,eₙ₊₂) ≤ (1+h·2L)·max(eₙ,eₙ₊₁) + |τ_n|`), private helpers `iteratedDeriv_three_bounded_on_Icc`, `y_third_order_taylor_remainder`, `derivY_second_order_taylor_remainder`, `ab2_pointwise_residual_bound` (combined Taylor remainders giving `9/4·M·h³`), `LMM.ab2_local_residual_bound` (uniform `|τ_n| ≤ C·h³`), and the headline `LMM.ab2_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(2L·T)·ε₀ + K·h²` for `(N+1)·h ≤ T`) — the textbook AB2 `O(h²)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 2` with effective Lipschitz constant `2L`. (`OpenMath/LMMAB2Convergence.lean`, cycle 408; extracted from `OpenMath/LMMTruncationOp.lean` in cycle 414)
   - [x] **Adams–Bashforth 2-step vector convergence chain**: `LMM.ab2IterVec`, `LMM.ab2VecResidual` + `LMM.ab2Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab2Vec_one_step_lipschitz` and `LMM.ab2Vec_one_step_error_bound` (max-norm Lipschitz recurrence `max(‖eₙ₊₁‖,‖eₙ₊₂‖) ≤ (1+h·2L)·max(‖eₙ‖,‖eₙ₊₁‖) + ‖τ_n‖`), private helpers `iteratedDeriv_three_bounded_on_Icc_vec`, `derivY_second_order_taylor_remainder_vec`, `y_third_order_taylor_remainder_vec`, `ab2Vec_pointwise_residual_bound` (combined `intervalIntegral` Taylor remainders giving `9/4·M·h³`), `LMM.ab2Vec_local_residual_bound`, and the headline `LMM.ab2Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(2L·T)·ε₀ + K·h²` for `(N+1)·h ≤ T`) — vector mirror of cycle 408 in finite-dimensional normed spaces, assembled via `lmm_error_bound_from_local_truncation` at `p = 2` with effective Lipschitz constant `2L`. (`OpenMath/LMMAB2Convergence.lean`, cycle 410; extracted from `OpenMath/LMMTruncationOp.lean` in cycle 414)
   - [x] **Adams–Bashforth 3-step scalar convergence chain**: `LMM.ab3Iter` (three starting samples, recurrence `y_{n+3} = y_{n+2} + h·(23/12·f_{n+2} − 16/12·f_{n+1} + 5/12·f_n)`), `LMM.ab3_localTruncationError_eq` (textbook AB3 one-step residual = LMM truncation operator), `LMM.ab3_one_step_lipschitz` and `LMM.ab3_one_step_error_bound` (Lipschitz 3-window max-norm one-step recurrence `max(eₙ₊₁,eₙ₊₂,eₙ₊₃) ≤ (1+h·(11/3)L)·max(eₙ,eₙ₊₁,eₙ₊₂) + |τ_n|` with effective Lipschitz constant `(23+16+5)/12 · L = 11L/3`), private helpers `iteratedDeriv_four_bounded_on_Icc`, `y_fourth_order_taylor_remainder`, `derivY_third_order_taylor_remainder`, `ab3_pointwise_residual_bound` (algebraic identity `R_y(3) − R_y(2) − (23h/12)·R_y'(2) + (16h/12)·R_y'(1)` giving `7·M·h⁴` over-estimate), `LMM.ab3_local_residual_bound` (uniform `|τ_n| ≤ C·h⁴`), and the headline `LMM.ab3_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((11/3)·L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`) — the textbook AB3 `O(h³)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 3`. (`OpenMath/LMMAB3Convergence.lean`, cycles 416 + 418)
+  - [x] **Adams–Bashforth 3-step vector convergence chain**: `LMM.ab3IterVec`, `LMM.ab3VecResidual` + `LMM.ab3Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab3Vec_one_step_lipschitz` and `LMM.ab3Vec_one_step_error_bound` (3-window max-norm Lipschitz recurrence with effective constant `(11/3)·L`), private interval-integral Taylor helpers `iteratedDeriv_four_bounded_on_Icc_vec`, `y_fourth_order_taylor_remainder_vec`, `derivY_third_order_taylor_remainder_vec`, and `ab3Vec_pointwise_residual_bound` (same `7·M·h⁴` over-estimate as the scalar chain), `LMM.ab3Vec_local_residual_bound`, and the headline `LMM.ab3Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((11/3)·L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`) — vector mirror of the scalar AB3 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB3Convergence.lean`, cycle 419)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -209,22 +210,19 @@
 
 ## Current Target
 
-**Current target files**: `OpenMath/LMMTruncationOp.lean` is the active
-frontier for local truncation-operator infrastructure (and the
-forward-Euler convergence chain), `OpenMath/LMMAB2Convergence.lean`
-hosts the Adams–Bashforth 2-step scalar and vector convergence chains
-(extracted in cycle 414), and `OpenMath/MultistepMethods.lean` still
-hosts the rest of the §1.2 LMM stack.
+**Current target files**: `OpenMath/LMMTruncationOp.lean` hosts the local
+truncation-operator infrastructure and forward-Euler convergence chains,
+`OpenMath/LMMAB2Convergence.lean` hosts the Adams–Bashforth 2-step scalar
+and vector convergence chains, `OpenMath/LMMAB3Convergence.lean` hosts the
+Adams–Bashforth 3-step scalar and vector convergence chains, and
+`OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
 
-**Active frontier**: the cycle 394–402 `truncationOp` thread now reaches a
-uniform local truncation error bridge in `OpenMath/LMMTruncationOp.lean`:
-cycle 402 closed the uniform-`(C, δ)` step, packaged the local truncation
-error notation `τ(t, h)` as `localTruncationError`, and stated Iserles'
-textbook-form leading-order bound `localTruncationError_leading_bound`.
-The next natural step is to bootstrap from `‖τ‖ ≤ C h^(p+2)` to global
-convergence/error estimates over a finite time horizon (linking the local
-bound to the discrete-Grönwall / stability machinery used in Dahlquist
-equivalence).
+**Active frontier**: AB2 and AB3 now both have closed scalar and vector
+quantitative convergence chains. The cycle 394–402 `truncationOp` bridge and
+the cycle 405 Grönwall wrapper remain the reusable infrastructure. The next
+natural frontier is either the Adams–Bashforth 4-step scalar chain at order
+`p = 4` or a small generic Adams–Bashforth `s`-step abstraction if the AB4
+duplication becomes worth factoring.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
