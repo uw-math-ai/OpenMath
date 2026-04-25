@@ -45,8 +45,13 @@ SUCCESS.
   project id `d418653c-871c-4f88-9f6c-33477d37ad7f`. Asks Aristotle for
   an *independent* proof of Task A that does not just compose
   `truncationOp_translation` with `truncationOp_polyDegSucc_eq_leading_of_HasOrder`.
-  The live theorem is already closed; this job is purely a cross-check
-  and is not awaited within this cycle.
+  After the mandated 30-min sleep, refreshed once: status was still
+  `IN_PROGRESS` at 3%. The live theorem is already closed, so this job
+  is purely a cross-check; left running for a later cycle to triage if
+  it produces a usable alternate proof. Per the strategy guard, any
+  returned proof that adds `sorry`, switches to `import Mathlib`,
+  redefines core LMM definitions, or raises `maxHeartbeats` should be
+  rejected.
 - Not submitting Task B per strategy ("Skip Task B if it would just
   restate Task A"): the wrapper would be `a ⟨p+1, …⟩` instead of
   `a (Fin.last (p+1))`, which is a notational shuffle.
