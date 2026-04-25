@@ -30,6 +30,7 @@
 - [x] **Adams–Bashforth 4-step**: consistency, order 4, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Moulton 4-step**: consistency, order 5, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Bashforth 5-step**: consistency, order 5, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Adams–Moulton 5-step**: consistency, order 6, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -186,12 +187,12 @@
 
 ## Current Target
 
-**Next mechanical Adams extension**: Adams–Moulton 5-step (AM5) in
-`OpenMath/AdamsMethods.lean` — same shape as AB5 (cycle 384), implicit order-6
-method with α = ![0,0,0,0,-1,1] and
-β = ![27/1440, -173/1440, 482/1440, -798/1440, 1427/1440, 475/1440] (signs to
-be re-checked against the live consistency convention before committing). The
-zero-stability proof transplants directly from AB5.
+**Next mechanical Adams extension**: Adams–Bashforth 6-step (AB6) in
+`OpenMath/AdamsMethods.lean` — explicit order-6 6-step method with
+α = ![0,0,0,0,0,-1,1]. AB6 β coefficients have multiple printings in the
+literature (denominators 60480 vs. 1440 vs. 720 normalizations) and require
+independent textbook cross-reference before commit. Zero-stability transplants
+from AB5/AM5 (same ρ shape: ξ⁵(ξ−1) → ξ⁶(ξ−1)).
 
 **Next deep theorem**: Theorem 359D (concrete textbook statement) once the
 Iserles §3.5.10 reference is in hand; otherwise begin Chapter 4 BDF
