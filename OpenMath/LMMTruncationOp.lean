@@ -302,4 +302,26 @@ theorem truncationOp_polyShift_eq_zero_of_HasOrder
   rw [← htrans]
   simpa [add_sub_cancel_right] using hpoly
 
+/-- For an order-`p` method, the truncation operator at evaluation point `t`
+    on a polynomial of degree `p + 1` in `(u - t)` reduces to its leading
+    coefficient times `(p+1)! · errorConstant · h^(p+1)`. -/
+theorem truncationOp_polyShiftDegSucc_eq_leading_of_HasOrder
+    {m : LMM s} {p : ℕ} (h t : ℝ) (hord : m.HasOrder p)
+    (a : Fin (p + 2) → ℝ) :
+    m.truncationOp h
+        (fun u => ∑ k : Fin (p + 2), a k * (u - t) ^ (k : ℕ))
+        (fun u => ∑ k : Fin (p + 2),
+            a k * ((k : ℕ) : ℝ) * (u - t) ^ ((k : ℕ) - 1))
+        t
+      = a (Fin.last (p + 1))
+          * ((p + 1).factorial : ℝ) * m.errorConstant p * h ^ (p + 1) := by
+  have hpoly := m.truncationOp_polyDegSucc_eq_leading_of_HasOrder
+    (h := h) hord a
+  have htrans := m.truncationOp_translation h t
+    (fun u => ∑ k : Fin (p + 2), a k * (u - t) ^ (k : ℕ))
+    (fun u => ∑ k : Fin (p + 2),
+      a k * ((k : ℕ) : ℝ) * (u - t) ^ ((k : ℕ) - 1))
+  rw [← htrans]
+  simpa [add_sub_cancel_right] using hpoly
+
 end LMM
