@@ -263,8 +263,15 @@ quantitative convergence chain, `OpenMath/LMMBDF1VectorConvergence.lean`
 hosts the BDF1 (backward Euler) vector quantitative convergence chain,
 `OpenMath/LMMBDF2Convergence.lean` hosts the BDF2 scalar quantitative
 convergence chain, `OpenMath/LMMBDF2VectorConvergence.lean` hosts the BDF2
-vector quantitative convergence chain, and `OpenMath/MultistepMethods.lean`
-still hosts the rest of the §1.2 LMM stack.
+vector quantitative convergence chain, `OpenMath/LMMBDF3Convergence.lean`
+hosts the BDF3 scalar quantitative convergence chain,
+`OpenMath/LMMBDF3VectorConvergence.lean` hosts the BDF3 vector quantitative
+convergence chain, `OpenMath/LMMBDF4Convergence.lean` hosts the BDF4 scalar
+truncation chain (LTE reduction, Lipschitz defect, fifth-order pointwise
+residual `|τ_n| ≤ 18·M·h⁵` from exact `6724/375 ≈ 17.93`, and finite-horizon
+local residual bound; the Lyapunov global theorem is deferred — see
+`.prover-state/issues/bdf4_lyapunov_gap.md`), and
+`OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
 
 **Active frontier**: AB2–AB7 now each have closed scalar and vector
 quantitative convergence chains. AM2–AM7 now each have closed scalar and
@@ -292,7 +299,24 @@ one-step recurrence `bdf3_one_step_error_bound`
 through an 8-scalar pure-algebra core), initial bound `W_0 ≤ 5·ε₀`,
 projection bound `|e_{n+2}| ≤ 2·W_n`, and the headline scalar quantitative
 convergence `LMM.bdf3_global_error_bound`
-(`|y_N − y(t₀+Nh)| ≤ 10·exp(6L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`).
+(`|y_N − y(t₀+Nh)| ≤ 10·exp(6L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`). Cycle 458
+opens **BDF4 scalar quantitative convergence** in
+`OpenMath/LMMBDF4Convergence.lean` with `LMM.IsBDF4Trajectory`,
+`LMM.bdf4_localTruncationError_eq`, `LMM.bdf4_one_step_lipschitz`
+(Lipschitz defect bound `(12/25)·h·L·|e_{n+4}| + |τ_n|`),
+`LMM.bdf4_pointwise_residual_bound` (`|τ_n| ≤ 18·M·h⁵`, from exact
+`6724/375 ≈ 17.93` via the public AB4 fifth-order Taylor helpers,
+extracted through a private `bdf4_pointwise_residual_alg` kernel-budget
+helper), and `LMM.bdf4_local_residual_bound`. The BDF4 Lyapunov global
+theorem is **blocked** by the spectral obstruction documented in
+`.prover-state/issues/bdf4_lyapunov_gap.md`: the cubic factor
+`25ζ³ − 23ζ² + 13ζ − 3` is irreducible over ℚ (no rational eigenvectors
+for BDF3-style decomposition), and the absolute companion matrix has
+Perron radius `≈ 2.58 > 1`, so weighted-ℓ¹ in error coordinates cannot
+yield the required `1 + h·G·L` step bound. **Active frontier**: a generic
+BDF Lyapunov framework (quadratic Lyapunov via discrete Lyapunov equation
+`A^T P A − P = −Q`) that closes BDF4–BDF6 uniformly without per-method
+eigenvector tuning.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
