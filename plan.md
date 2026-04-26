@@ -251,8 +251,10 @@ quantitative convergence chain, `OpenMath/LMMAM7VectorConvergence.lean`
 hosts the Adams–Moulton 7-step vector quantitative convergence chain,
 `OpenMath/LMMBDF1Convergence.lean` hosts the BDF1 (backward Euler) scalar
 quantitative convergence chain, `OpenMath/LMMBDF1VectorConvergence.lean`
-hosts the BDF1 (backward Euler) vector quantitative convergence chain, and
-`OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
+hosts the BDF1 (backward Euler) vector quantitative convergence chain,
+`OpenMath/LMMBDF2Convergence.lean` hosts the BDF2 scalar quantitative
+convergence chain, and `OpenMath/MultistepMethods.lean` still hosts the
+rest of the §1.2 LMM stack.
 
 **Active frontier**: AB2–AB6 now each have closed scalar and vector
 quantitative convergence chains. AM2–AM7 now each have closed scalar and
@@ -264,8 +266,18 @@ bound `2·M·h²` derived from forward-Euler Taylor plus a segment derivative
 bound on `|y'(t+h) − y'(t)|`. Cycle 447 adds
 `OpenMath/LMMBDF1VectorConvergence.lean`, the finite-dimensional vector mirror
 with the same effective growth `2L`, residual coefficient `2`, and
-`‖τ_n‖ ≤ C·h²` residual shape. The next §1.2 convergence frontier is
-**BDF2 scalar quantitative convergence**, with AB7/AM8 as the next
+`‖τ_n‖ ≤ C·h²` residual shape. Cycle 448 adds
+`OpenMath/LMMBDF2Convergence.lean`, the scalar BDF2 quantitative
+convergence chain. Because the BDF2 ρ-polynomial has |α₀|+|α₁| = 5/3 > 1,
+the trivial max-norm scheme has growth ≥ 5/3 even at h=0, so the chain
+uses a Lyapunov sum
+`W_n := |3/2·e_{n+1} − 1/2·e_n| + |3/2·(e_n − e_{n+1})|` over the
+eigen-coordinates of ρ's roots (1 and 1/3). Under the small-step regime
+`(2/3)·h·L ≤ 1/4`, this gives the clean recurrence
+`W_{n+1} ≤ (1 + h·(4L))·W_n + 6·|τ_n|`, effective growth `4L`, residual
+coefficient `6`, residual bound `3·M·h³` (slackened from 26/9), initial
+factor `5·ε₀`, and order-2 global bound. The next §1.2 convergence frontier
+is **BDF2 vector quantitative convergence**, with AB7/AM8 as the next
 Adams-family extension.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles

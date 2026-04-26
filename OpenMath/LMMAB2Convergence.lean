@@ -251,7 +251,7 @@ theorem ab2_one_step_error_bound
 
 /-- A `C^3` function has its third derivative bounded on every compact
 interval `[a, b]`. -/
-private theorem iteratedDeriv_three_bounded_on_Icc
+theorem iteratedDeriv_three_bounded_on_Icc
     {y : ℝ → ℝ} (hy : ContDiff ℝ 3 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 3 y t| ≤ M := by
   have h_cont : Continuous (iteratedDeriv 3 y) :=
@@ -267,7 +267,7 @@ private theorem iteratedDeriv_three_bounded_on_Icc
 `C^3` and `|iteratedDeriv 3 y| ≤ M` on `[a, b]`, then for `t, t + r ∈ [a, b]`
 with `r ≥ 0`,
 `|y(t+r) - y(t) - r·y'(t) - r²/2 · y''(t)| ≤ M/6 · r³`. -/
-private theorem y_third_order_taylor_remainder
+theorem y_third_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 3 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 3 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -339,7 +339,7 @@ private theorem y_third_order_taylor_remainder
 derivative: if `y` is `C^3` and `|iteratedDeriv 3 y| ≤ M` on `[a, b]`,
 then for `t, t + r ∈ [a, b]` with `r ≥ 0`,
 `|y'(t+r) - y'(t) - r·y''(t)| ≤ M/2 · r²`. -/
-private theorem derivY_second_order_taylor_remainder
+theorem derivY_second_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 3 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 3 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
