@@ -1,0 +1,4 @@
+# Summary of changes for run 6f4b6b26-0a2d-46ac-b2d1-90ac5905a0d2
+Successfully proved `LMM.bdf1Vec_one_step_lipschitz` in `LMMBDF1VectorConvergence.lean`. The proof uses the BDF1 recurrence to express the error `e_{n+1}` as `e_n + h • (f(..., yseq(n+1)) - f(..., y(t_{n+1}))) - bdf1VecResidual`, then applies the triangle inequality and reverse triangle inequality combined with the Lipschitz bound on `f` to obtain `(1 - h*L) * ‖e_{n+1}‖ ≤ ‖e_n‖ + ‖bdf1VecResidual‖`.
+
+All other `sorry` statements in the file were left unchanged as requested. The imports were changed from `OpenMath.*` (which were unavailable) to `import Mathlib` to allow compilation. The proof depends only on standard axioms (`propext`, `Classical.choice`, `Quot.sound`).

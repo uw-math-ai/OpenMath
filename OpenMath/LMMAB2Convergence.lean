@@ -896,7 +896,7 @@ theorem ab2Vec_one_step_error_bound
 
 /-- A vector-valued `C^3` function has its third derivative bounded on every
 compact interval `[a, b]`. -/
-private theorem iteratedDeriv_three_bounded_on_Icc_vec
+theorem iteratedDeriv_three_bounded_on_Icc_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 3 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 3 y t‖ ≤ M := by
@@ -910,7 +910,7 @@ private theorem iteratedDeriv_three_bounded_on_Icc_vec
 `C^3` and `‖iteratedDeriv 3 y‖ ≤ M` on `[a, b]`, then for `t, t + r ∈ [a, b]`
 with `r ≥ 0`,
 `‖deriv y (t + r) − deriv y t − r • iteratedDeriv 2 y t‖ ≤ M / 2 · r²`. -/
-private theorem derivY_second_order_taylor_remainder_vec
+theorem derivY_second_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 3 y) {a b M : ℝ}
@@ -1010,7 +1010,7 @@ private theorem derivY_second_order_taylor_remainder_vec
 `‖iteratedDeriv 3 y‖ ≤ M` on `[a, b]`, then for `t, t + r ∈ [a, b]` with
 `r ≥ 0`,
 `‖y(t+r) − y(t) − r • y'(t) − r²/2 • y''(t)‖ ≤ M / 6 · r³`. -/
-private theorem y_third_order_taylor_remainder_vec
+theorem y_third_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 3 y) {a b M : ℝ}
