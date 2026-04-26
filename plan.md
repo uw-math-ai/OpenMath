@@ -57,6 +57,7 @@
   - [x] **Adams–Bashforth 4-step vector convergence chain**: `LMM.ab4IterVec`, `LMM.ab4VecResidual` + `LMM.ab4Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab4Vec_one_step_lipschitz` and `LMM.ab4Vec_one_step_error_bound` (4-window max-norm Lipschitz recurrence with effective constant `(20/3)·L`), private interval-integral Taylor helpers `iteratedDeriv_five_bounded_on_Icc_vec`, `y_fifth_order_taylor_remainder_vec`, `derivY_fourth_order_taylor_remainder_vec`, and `ab4Vec_pointwise_residual_bound` (same `20·M·h⁵` over-estimate as the scalar chain), `LMM.ab4Vec_local_residual_bound`, and the headline `LMM.ab4Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((20/3)·L·T)·ε₀ + K·h⁴` for `(N+3)·h ≤ T`) — vector mirror of the scalar AB4 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB4Convergence.lean`, cycle 421)
   - [x] **Adams–Bashforth 5-step scalar convergence chain**: `LMM.ab5Iter` (five starting samples, recurrence `y_{n+5} = y_{n+4} + h·((1901/720)·f_{n+4} − (2774/720)·f_{n+3} + (2616/720)·f_{n+2} − (1274/720)·f_{n+1} + (251/720)·f_n)`), `LMM.ab5_localTruncationError_eq` (textbook AB5 one-step residual = LMM truncation operator), `LMM.ab5_one_step_lipschitz` and `LMM.ab5_one_step_error_bound` (Lipschitz 5-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₅) ≤ (1+h·(551/45)L)·max(eₙ,…,eₙ₊₄) + |τ_n|` with effective Lipschitz constant `(1901+2774+2616+1274+251)/720 · L = 551L/45`), private helpers `iteratedDeriv_six_bounded_on_Icc`, `y_sixth_order_taylor_remainder`, `derivY_fifth_order_taylor_remainder`, `ab5_pointwise_residual_bound` (algebraic identity `R_y(5) − R_y(4) − (1901h/720)·R_y'(4) + (2774h/720)·R_y'(3) − (2616h/720)·R_y'(2) + (1274h/720)·R_y'(1)` giving `59·M·h⁶` over-estimate from `5072212/86400`), `LMM.ab5_local_residual_bound` (uniform `|τ_n| ≤ C·h⁶`), and the headline `LMM.ab5_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((551/45)·L·T)·ε₀ + K·h⁵` for `(N+4)·h ≤ T`) — the textbook AB5 `O(h⁵)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 5`. (`OpenMath/LMMAB5Convergence.lean`, cycle 422)
   - [x] **Adams–Bashforth 5-step vector convergence chain**: `LMM.ab5IterVec`, `LMM.ab5VecResidual` + `LMM.ab5Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab5Vec_one_step_lipschitz` and `LMM.ab5Vec_one_step_error_bound` (5-window max-norm Lipschitz recurrence with effective constant `(551/45)·L`), private interval-integral Taylor helpers `iteratedDeriv_six_bounded_on_Icc_vec`, `y_sixth_order_taylor_remainder_vec`, `derivY_fifth_order_taylor_remainder_vec`, and `ab5Vec_pointwise_residual_bound` (same `59·M·h⁶` over-estimate as the scalar chain from `5072212/86400`), `LMM.ab5Vec_local_residual_bound`, and the headline `LMM.ab5Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((551/45)·L·T)·ε₀ + K·h⁵` for `(N+4)·h ≤ T`) — vector mirror of the scalar AB5 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB5Convergence.lean`, cycle 423)
+  - [x] **Adams–Bashforth 6-step scalar convergence chain**: `LMM.ab6Iter` (six starting samples, recurrence `y_{n+6} = y_{n+5} + h·((4277/1440)·f_{n+5} − (7923/1440)·f_{n+4} + (9982/1440)·f_{n+3} − (7298/1440)·f_{n+2} + (2877/1440)·f_{n+1} − (475/1440)·f_n)`), `LMM.ab6_localTruncationError_eq` (textbook AB6 one-step residual = LMM truncation operator), `LMM.ab6_one_step_lipschitz` and `LMM.ab6_one_step_error_bound` (Lipschitz 6-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₆) ≤ (1+h·(114/5)L)·max(eₙ,…,eₙ₊₅) + |τ_n|` with effective Lipschitz constant `(4277+7923+9982+7298+2877+475)/1440 · L = 114L/5`), private helpers `iteratedDeriv_seven_bounded_on_Icc`, `y_seventh_order_taylor_remainder`, `derivY_sixth_order_taylor_remainder`, `ab6_pointwise_residual_bound` (algebraic identity `R_y(6) − R_y(5) − (4277h/1440)·R_y'(5) + (7923h/1440)·R_y'(4) − (9982h/1440)·R_y'(3) + (7298h/1440)·R_y'(2) − (2877h/1440)·R_y'(1)` giving `175·M·h⁷` over-estimate from `1264800760/7257600`), `LMM.ab6_local_residual_bound` (uniform `|τ_n| ≤ C·h⁷`), and the headline `LMM.ab6_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((114/5)·L·T)·ε₀ + K·h⁶` for `(N+5)·h ≤ T`) — the textbook AB6 `O(h⁶)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 6`. (`OpenMath/LMMAB6Convergence.lean`, cycle 424)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -221,15 +222,20 @@ and vector convergence chains, `OpenMath/LMMAB3Convergence.lean` hosts the
 Adams–Bashforth 3-step scalar and vector convergence chains,
 `OpenMath/LMMAB4Convergence.lean` hosts the Adams–Bashforth 4-step scalar
 and vector convergence chains, `OpenMath/LMMAB5Convergence.lean` hosts the
-Adams–Bashforth 5-step scalar and vector convergence chains, and
-`OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
+Adams–Bashforth 5-step scalar and vector convergence chains,
+`OpenMath/LMMAB6Convergence.lean` hosts the Adams–Bashforth 6-step scalar
+convergence chain, and `OpenMath/MultistepMethods.lean` still hosts the
+rest of the §1.2 LMM stack.
 
 **Active frontier**: AB2, AB3, AB4, and AB5 now each have closed scalar
-and vector quantitative convergence chains. The cycle 394–402
-`truncationOp` bridge and the cycle 405 Grönwall wrapper remain the
-reusable infrastructure. With four concrete scalar and four concrete
-vector data points (AB2–AB5), a small generic Adams–Bashforth `s`-step
-convergence abstraction is the remaining §1.2 convergence frontier item.
+and vector quantitative convergence chains, and AB6 has the closed scalar
+chain (cycle 424). The next concrete step is the AB6 vector convergence
+chain mirroring the AB5 vector pattern. The cycle 394–402 `truncationOp`
+bridge and the cycle 405 Grönwall wrapper remain the reusable
+infrastructure. With four+1 concrete scalar and four concrete vector data
+points (AB2–AB6 scalar; AB2–AB5 vector), a small generic Adams–Bashforth
+`s`-step convergence abstraction remains the eventual §1.2 convergence
+frontier item, scheduled after AB6 vector lands.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
