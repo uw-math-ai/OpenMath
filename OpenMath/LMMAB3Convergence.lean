@@ -1354,7 +1354,7 @@ private theorem third_order_taylor_remainder_vec
   exact h_bound_integral.trans_eq h_integral_eval
 
 /-- Pointwise fourth-order Taylor remainder for a vector trajectory. -/
-private theorem y_fourth_order_taylor_remainder_vec
+theorem y_fourth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 4 y) {a b M : ℝ}
@@ -1505,7 +1505,7 @@ private theorem y_fourth_order_taylor_remainder_vec
 
 /-- Pointwise third-order Taylor remainder for the derivative of a vector
 trajectory. -/
-private theorem derivY_third_order_taylor_remainder_vec
+theorem derivY_third_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 4 y) {a b M : ℝ}
