@@ -455,7 +455,7 @@ theorem ab5_one_step_error_bound
 
 /-- A `C^6` function has its sixth derivative bounded on every compact
 interval `[a, b]`. -/
-private theorem iteratedDeriv_six_bounded_on_Icc
+theorem iteratedDeriv_six_bounded_on_Icc
     {y : ℝ → ℝ} (hy : ContDiff ℝ 6 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 6 y t| ≤ M := by
   have h_cont : Continuous (iteratedDeriv 6 y) :=
@@ -472,7 +472,7 @@ private theorem iteratedDeriv_six_bounded_on_Icc
 with `r ≥ 0`,
 `|y(t+r) - y(t) - r·y'(t) - r²/2·y''(t) - r³/6·y'''(t) - r⁴/24·y⁽⁴⁾(t)
   - r⁵/120·y⁽⁵⁾(t)| ≤ M/720 · r⁶`. -/
-private theorem y_sixth_order_taylor_remainder
+theorem y_sixth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 6 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 6 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -568,7 +568,7 @@ derivative: if `y` is `C^6` and `|iteratedDeriv 6 y| ≤ M` on `[a, b]`,
 then for `t, t + r ∈ [a, b]` with `r ≥ 0`,
 `|y'(t+r) - y'(t) - r·y''(t) - r²/2·y'''(t) - r³/6·y⁽⁴⁾(t) - r⁴/24·y⁽⁵⁾(t)|
   ≤ M/120 · r⁵`. -/
-private theorem derivY_fifth_order_taylor_remainder
+theorem derivY_fifth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 6 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 6 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
