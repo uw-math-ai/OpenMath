@@ -3,6 +3,7 @@ import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import OpenMath.MultistepMethods
 import OpenMath.AdamsMethods
 import OpenMath.LMMTruncationOp
+import OpenMath.LMMABGenericConvergence
 
 /-! ## Adams–Bashforth 6-step Scalar Convergence Chain (Iserles §1.2)
 
@@ -1140,6 +1141,162 @@ theorem ab6_local_residual_bound
   exact ab6_pointwise_residual_bound hy hM ht_mem hth_mem ht2h_mem
     ht3h_mem ht4h_mem ht5h_mem ht6h_mem hh.le
 
+/-! #### Generic AB scalar bridge
+
+Cycle 432 routes the scalar AB6 headline through the generic AB scaffold
+at `s = 6`, mirroring the AB5 scalar bridge. The coefficient tuple,
+Lipschitz constant lemma, iteration bridge, and residual bridge are
+introduced here so the scalar `ab6_global_error_bound` proof body can
+specialize `ab_global_error_bound_generic`. -/
+
+/-- AB6 coefficient vector for the generic AB scaffold, ordered from the
+oldest to newest sample in the six-step window. -/
+noncomputable def ab6GenericCoeff : Fin 6 → ℝ :=
+  ![-(475 : ℝ) / 1440, (2877 : ℝ) / 1440, -(7298 : ℝ) / 1440,
+    (9982 : ℝ) / 1440, -(7923 : ℝ) / 1440, (4277 : ℝ) / 1440]
+
+@[simp] lemma ab6GenericCoeff_zero :
+    ab6GenericCoeff 0 = -(475 : ℝ) / 1440 := rfl
+
+@[simp] lemma ab6GenericCoeff_one :
+    ab6GenericCoeff 1 = (2877 : ℝ) / 1440 := rfl
+
+@[simp] lemma ab6GenericCoeff_two :
+    ab6GenericCoeff 2 = -(7298 : ℝ) / 1440 := rfl
+
+@[simp] lemma ab6GenericCoeff_three :
+    ab6GenericCoeff 3 = (9982 : ℝ) / 1440 := rfl
+
+@[simp] lemma ab6GenericCoeff_four :
+    ab6GenericCoeff 4 = -(7923 : ℝ) / 1440 := rfl
+
+@[simp] lemma ab6GenericCoeff_five :
+    ab6GenericCoeff 5 = (4277 : ℝ) / 1440 := rfl
+
+/-- The effective Lipschitz constant for the generic AB scaffold at the
+AB6 coefficient tuple is `(114/5) · L`. -/
+lemma abLip_ab6GenericCoeff (L : ℝ) :
+    abLip 6 ab6GenericCoeff L = (114 / 5) * L := by
+  rw [abLip, Fin.sum_univ_six, ab6GenericCoeff_zero, ab6GenericCoeff_one,
+    ab6GenericCoeff_two, ab6GenericCoeff_three, ab6GenericCoeff_four,
+    ab6GenericCoeff_five]
+  rw [show |(-(475 : ℝ) / 1440)| = (475 : ℝ) / 1440 by norm_num,
+      show |((2877 : ℝ) / 1440)| = (2877 : ℝ) / 1440 by norm_num,
+      show |(-(7298 : ℝ) / 1440)| = (7298 : ℝ) / 1440 by norm_num,
+      show |((9982 : ℝ) / 1440)| = (9982 : ℝ) / 1440 by norm_num,
+      show |(-(7923 : ℝ) / 1440)| = (7923 : ℝ) / 1440 by norm_num,
+      show |((4277 : ℝ) / 1440)| = (4277 : ℝ) / 1440 by norm_num]
+  ring
+
+/-- Bridge: the AB6 scalar iteration is the generic AB iteration
+at `s = 6` with `α = ab6GenericCoeff` and starting samples
+`![y₀, y₁, y₂, y₃, y₄, y₅]`. -/
+lemma ab6Iter_eq_abIter
+    (h : ℝ) (f : ℝ → ℝ → ℝ) (t₀ y₀ y₁ y₂ y₃ y₄ y₅ : ℝ) (n : ℕ) :
+    ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ n
+      = abIter 6 ab6GenericCoeff h f t₀ ![y₀, y₁, y₂, y₃, y₄, y₅] n := by
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    match n with
+    | 0 =>
+      show ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 0 = _
+      rw [ab6Iter_zero]
+      unfold abIter
+      simp
+    | 1 =>
+      show ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 1 = _
+      rw [ab6Iter_one]
+      unfold abIter
+      simp
+    | 2 =>
+      show ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 2 = _
+      rw [ab6Iter_two]
+      unfold abIter
+      simp
+    | 3 =>
+      show ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 3 = _
+      rw [ab6Iter_three]
+      unfold abIter
+      simp
+    | 4 =>
+      show ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 4 = _
+      rw [ab6Iter_four]
+      unfold abIter
+      simp
+    | 5 =>
+      show ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 5 = _
+      rw [ab6Iter_five]
+      unfold abIter
+      simp
+    | k + 6 =>
+      rw [ab6Iter_succ_succ_succ_succ_succ_succ]
+      rw [abIter_step (s := 6) (by norm_num)
+          ab6GenericCoeff h f t₀ ![y₀, y₁, y₂, y₃, y₄, y₅] k]
+      rw [show (k + 6 - 1 : ℕ) = k + 5 from by omega]
+      rw [Fin.sum_univ_six]
+      have hval3 : ((3 : Fin 6) : ℕ) = 3 := rfl
+      have hval4 : ((4 : Fin 6) : ℕ) = 4 := rfl
+      have hval5 : ((5 : Fin 6) : ℕ) = 5 := rfl
+      simp only [ab6GenericCoeff_zero, ab6GenericCoeff_one, ab6GenericCoeff_two,
+        ab6GenericCoeff_three, ab6GenericCoeff_four, ab6GenericCoeff_five,
+        Fin.val_zero, Fin.val_one, Fin.val_two, hval3, hval4, hval5,
+        Nat.add_zero]
+      rw [← ih k (by omega), ← ih (k + 1) (by omega), ← ih (k + 2) (by omega),
+        ← ih (k + 3) (by omega), ← ih (k + 4) (by omega),
+        ← ih (k + 5) (by omega)]
+      rw [show ((k + 1 : ℕ) : ℝ) = (k : ℝ) + 1 by push_cast; ring,
+        show ((k + 2 : ℕ) : ℝ) = (k : ℝ) + 2 by push_cast; ring,
+        show ((k + 3 : ℕ) : ℝ) = (k : ℝ) + 3 by push_cast; ring,
+        show ((k + 4 : ℕ) : ℝ) = (k : ℝ) + 4 by push_cast; ring,
+        show ((k + 5 : ℕ) : ℝ) = (k : ℝ) + 5 by push_cast; ring]
+      ring
+
+/-- Bridge: the AB6 scalar truncation residual at base point `t₀ + n · h`
+equals the generic AB residual at index `n`. -/
+lemma ab6Residual_eq_abResidual
+    (h : ℝ) (y : ℝ → ℝ) (t₀ : ℝ) (n : ℕ) :
+    y (t₀ + (n : ℝ) * h + 6 * h) - y (t₀ + (n : ℝ) * h + 5 * h)
+        - h * ((4277 / 1440) * deriv y (t₀ + (n : ℝ) * h + 5 * h)
+              - (7923 / 1440) * deriv y (t₀ + (n : ℝ) * h + 4 * h)
+              + (9982 / 1440) * deriv y (t₀ + (n : ℝ) * h + 3 * h)
+              - (7298 / 1440) * deriv y (t₀ + (n : ℝ) * h + 2 * h)
+              + (2877 / 1440) * deriv y (t₀ + (n : ℝ) * h + h)
+              - (475 / 1440) * deriv y (t₀ + (n : ℝ) * h))
+      = abResidual 6 ab6GenericCoeff h y t₀ n := by
+  unfold abResidual
+  rw [Fin.sum_univ_six, ab6GenericCoeff_zero, ab6GenericCoeff_one,
+    ab6GenericCoeff_two, ab6GenericCoeff_three, ab6GenericCoeff_four,
+    ab6GenericCoeff_five]
+  have eA : t₀ + (n : ℝ) * h + 6 * h = t₀ + ((n + 6 : ℕ) : ℝ) * h := by
+    push_cast; ring
+  have eB :
+      t₀ + (n : ℝ) * h + 5 * h = t₀ + ((n + 6 - 1 : ℕ) : ℝ) * h := by
+    have hsub : (n + 6 - 1 : ℕ) = n + 5 := by omega
+    rw [hsub]; push_cast; ring
+  have eC : t₀ + (n : ℝ) * h
+      = t₀ + ((n + ((0 : Fin 6) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_zero]
+  have eD : t₀ + (n : ℝ) * h + h
+      = t₀ + ((n + ((1 : Fin 6) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_one]; ring
+  have eE : t₀ + (n : ℝ) * h + 2 * h
+      = t₀ + ((n + ((2 : Fin 6) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_two]; ring
+  have eF : t₀ + (n : ℝ) * h + 3 * h
+      = t₀ + ((n + ((3 : Fin 6) : ℕ) : ℕ) : ℝ) * h := by
+    have : ((3 : Fin 6) : ℕ) = 3 := rfl
+    rw [this]; push_cast; ring
+  have eG : t₀ + (n : ℝ) * h + 4 * h
+      = t₀ + ((n + ((4 : Fin 6) : ℕ) : ℕ) : ℝ) * h := by
+    have : ((4 : Fin 6) : ℕ) = 4 := rfl
+    rw [this]; push_cast; ring
+  have eH : t₀ + (n : ℝ) * h + 5 * h
+      = t₀ + ((n + ((5 : Fin 6) : ℕ) : ℕ) : ℝ) * h := by
+    have : ((5 : Fin 6) : ℕ) = 5 := rfl
+    rw [this]; push_cast; ring
+  rw [← eA, ← eB, ← eC, ← eD, ← eE, ← eF, ← eG, ← eH]
+  ring
+
 /-- Final AB6 global error bound on `[t₀, t₀ + T]`. Under Lipschitz `f`,
 `C^7` exact solution `y` with `deriv y t = f t (y t)`, and starting
 errors `|y_i - y(t_i)| ≤ ε₀` for `i = 0, 1, 2, 3, 4, 5`, the AB6 iterate
@@ -1168,246 +1325,128 @@ theorem ab6_global_error_bound
       (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
   intro h hh hδ_le y₀ y₁ y₂ y₃ y₄ y₅ ε₀ hε₀
     he0_bd he1_bd he2_bd he3_bd he4_bd he5_bd N hNh
-  -- Error sequence and 6-window max-norm sequence.
-  set eN : ℕ → ℝ :=
-    fun k => |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ k - y (t₀ + (k : ℝ) * h)|
-    with heN_def
-  set EN : ℕ → ℝ :=
-    fun k => max (max (max (max (max (eN k) (eN (k + 1))) (eN (k + 2)))
-                  (eN (k + 3))) (eN (k + 4))) (eN (k + 5))
-    with hEN_def
-  have heN_nn : ∀ k, 0 ≤ eN k := fun _ => abs_nonneg _
-  have hEN_nn : ∀ k, 0 ≤ EN k := fun k =>
-    le_max_of_le_left (le_max_of_le_left (le_max_of_le_left
-      (le_max_of_le_left (le_max_of_le_left (heN_nn k)))))
-  -- Initial bound: EN 0 ≤ ε₀.
-  have hEN0_le : EN 0 ≤ ε₀ := by
-    show max (max (max (max (max (eN 0) (eN 1)) (eN 2)) (eN 3)) (eN 4)) (eN 5)
-        ≤ ε₀
-    refine max_le (max_le (max_le (max_le (max_le ?_ ?_) ?_) ?_) ?_) ?_
-    · show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)|
-        ≤ ε₀
-      simpa using he0_bd
-    · show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 1 - y (t₀ + ((1 : ℕ) : ℝ) * h)|
-        ≤ ε₀
-      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
-      rw [hcast]
-      simpa using he1_bd
-    · show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 2 - y (t₀ + ((2 : ℕ) : ℝ) * h)|
-        ≤ ε₀
-      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he2_bd
-    · show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 3 - y (t₀ + ((3 : ℕ) : ℝ) * h)|
-        ≤ ε₀
-      have hcast : ((3 : ℕ) : ℝ) * h = 3 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he3_bd
-    · show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 4 - y (t₀ + ((4 : ℕ) : ℝ) * h)|
-        ≤ ε₀
-      have hcast : ((4 : ℕ) : ℝ) * h = 4 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he4_bd
-    · show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 5 - y (t₀ + ((5 : ℕ) : ℝ) * h)|
-        ≤ ε₀
-      have hcast : ((5 : ℕ) : ℝ) * h = 5 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he5_bd
-  have hLeff_nn : (0 : ℝ) ≤ (114 / 5) * L := by positivity
-  -- The general recurrence: when (n + 6) * h ≤ T,
-  -- EN (n+1) ≤ (1 + h*((114/5)*L)) * EN n + C * h^7.
-  have hstep_general : ∀ n : ℕ, ((n : ℝ) + 6) * h ≤ T →
-      EN (n + 1) ≤ (1 + h * ((114 / 5) * L)) * EN n + C * h ^ 7 := by
-    intro n hnh_le
-    have honestep := ab6_one_step_error_bound (h := h) (L := L)
-        hh.le hL hf t₀ y₀ y₁ y₂ y₃ y₄ y₅ y hyf n
-    have hres := hresidual hh hδ_le n hnh_le
-    have hcast1 : ((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1 := by push_cast; ring
-    have hcast2 : ((n + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 2 := by push_cast; ring
-    have hcast3 : ((n + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 3 := by push_cast; ring
-    have hcast4 : ((n + 1 + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 4 := by
-      push_cast; ring
-    have hcast5 : ((n + 1 + 1 + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 5 := by
-      push_cast; ring
-    have hcast6 : ((n + 1 + 1 + 1 + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 6 := by
-      push_cast; ring
-    have heq_eN_n1 : eN (n + 1)
-        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 1)
-            - y (t₀ + ((n : ℝ) + 1) * h)| := by
-      show |_ - _| = _
-      rw [hcast1]
-    have heq_eN_n2 : eN (n + 1 + 1)
-        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 2)
-            - y (t₀ + ((n : ℝ) + 2) * h)| := by
-      show |_ - _| = _
-      rw [hcast2]
-    have heq_eN_n3 : eN (n + 1 + 1 + 1)
-        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 3)
-            - y (t₀ + ((n : ℝ) + 3) * h)| := by
-      show |_ - _| = _
-      rw [hcast3]
-    have heq_eN_n4 : eN (n + 1 + 1 + 1 + 1)
-        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 4)
-            - y (t₀ + ((n : ℝ) + 4) * h)| := by
-      show |_ - _| = _
-      rw [hcast4]
-    have heq_eN_n5 : eN (n + 1 + 1 + 1 + 1 + 1)
-        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 5)
-            - y (t₀ + ((n : ℝ) + 5) * h)| := by
-      show |_ - _| = _
-      rw [hcast5]
-    have heq_eN_n6 : eN (n + 1 + 1 + 1 + 1 + 1 + 1)
-        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 6)
-            - y (t₀ + ((n : ℝ) + 6) * h)| := by
-      show |_ - _| = _
-      rw [hcast6]
-    show max (max (max (max (max (eN (n + 1)) (eN (n + 1 + 1)))
-            (eN (n + 1 + 1 + 1))) (eN (n + 1 + 1 + 1 + 1)))
-            (eN (n + 1 + 1 + 1 + 1 + 1)))
-            (eN (n + 1 + 1 + 1 + 1 + 1 + 1))
-        ≤ (1 + h * ((114 / 5) * L))
-            * max (max (max (max (max (eN n) (eN (n + 1))) (eN (n + 1 + 1)))
-                  (eN (n + 1 + 1 + 1))) (eN (n + 1 + 1 + 1 + 1)))
-                  (eN (n + 1 + 1 + 1 + 1 + 1))
-          + C * h ^ 7
-    rw [heq_eN_n1, heq_eN_n2, heq_eN_n3, heq_eN_n4, heq_eN_n5, heq_eN_n6]
-    show max (max (max (max (max
-              |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 1)
-                - y (t₀ + ((n : ℝ) + 1) * h)|
-              |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 2)
-                - y (t₀ + ((n : ℝ) + 2) * h)|)
-              |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 3)
-                - y (t₀ + ((n : ℝ) + 3) * h)|)
-              |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 4)
-                - y (t₀ + ((n : ℝ) + 4) * h)|)
-              |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 5)
-                - y (t₀ + ((n : ℝ) + 5) * h)|)
-              |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 6)
-                - y (t₀ + ((n : ℝ) + 6) * h)|
-        ≤ (1 + h * ((114 / 5) * L))
-            * max (max (max (max (max (eN n)
-                  |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 1)
-                    - y (t₀ + ((n : ℝ) + 1) * h)|)
-                  |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 2)
-                    - y (t₀ + ((n : ℝ) + 2) * h)|)
-                  |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 3)
-                    - y (t₀ + ((n : ℝ) + 3) * h)|)
-                  |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 4)
-                    - y (t₀ + ((n : ℝ) + 4) * h)|)
-                  |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (n + 5)
-                    - y (t₀ + ((n : ℝ) + 5) * h)|
-          + C * h ^ 7
-    linarith [honestep, hres]
-  have hexp_ge : (1 : ℝ) ≤ Real.exp ((114 / 5) * L * T) :=
-    Real.one_le_exp_iff.mpr (by positivity)
-  have hKnn : 0 ≤ T * Real.exp ((114 / 5) * L * T) * C :=
-    mul_nonneg (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
-  have hh6_nn : 0 ≤ h ^ 6 := by positivity
-  have hexp_nn : 0 ≤ Real.exp ((114 / 5) * L * T) := Real.exp_nonneg _
-  -- Helper: any base error ≤ ε₀ implies the headline bound.
-  have hbase_to_headline : ∀ q : ℝ, q ≤ ε₀ →
-      q ≤ Real.exp ((114 / 5) * L * T) * ε₀
-            + T * Real.exp ((114 / 5) * L * T) * C * h ^ 6 := by
-    intro q hq
-    have hexp_ε₀ : ε₀ ≤ Real.exp ((114 / 5) * L * T) * ε₀ := by
-      have hone : (1 : ℝ) * ε₀ ≤ Real.exp ((114 / 5) * L * T) * ε₀ :=
-        mul_le_mul_of_nonneg_right hexp_ge hε₀
+  set α : Fin 6 → ℝ := ab6GenericCoeff with hα_def
+  set y₀_sext : Fin 6 → ℝ := ![y₀, y₁, y₂, y₃, y₄, y₅] with hy_sext_def
+  have hs : (1 : ℕ) ≤ 6 := by norm_num
+  haveI : Nonempty (Fin 6) := ⟨⟨0, hs⟩⟩
+  have hiter0 : abIter 6 α h f t₀ y₀_sext 0 = y₀ := by
+    unfold abIter; simp [hy_sext_def]
+  have hiter1 : abIter 6 α h f t₀ y₀_sext 1 = y₁ := by
+    unfold abIter; simp [hy_sext_def]
+  have hiter2 : abIter 6 α h f t₀ y₀_sext 2 = y₂ := by
+    unfold abIter; simp [hy_sext_def]
+  have hiter3 : abIter 6 α h f t₀ y₀_sext 3 = y₃ := by
+    unfold abIter; simp [hy_sext_def]
+  have hiter4 : abIter 6 α h f t₀ y₀_sext 4 = y₄ := by
+    unfold abIter; simp [hy_sext_def]
+  have hiter5 : abIter 6 α h f t₀ y₀_sext 5 = y₅ := by
+    unfold abIter; simp [hy_sext_def]
+  have hstart : abErrWindow hs α h f t₀ y₀_sext y 0 ≤ ε₀ := by
+    unfold abErrWindow
+    apply Finset.sup'_le
+    intro j _
+    show abErr 6 α h f t₀ y₀_sext y (0 + (j : ℕ)) ≤ ε₀
+    unfold abErr
+    fin_cases j
+    · show |abIter 6 α h f t₀ y₀_sext 0
+          - y (t₀ + ((0 + (((0 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) * h)| ≤ ε₀
+      rw [hiter0]
+      have : ((0 + (((0 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) = 0 := by simp
+      rw [this, zero_mul, add_zero]; exact he0_bd
+    · show |abIter 6 α h f t₀ y₀_sext 1
+          - y (t₀ + ((0 + (((1 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) * h)| ≤ ε₀
+      rw [hiter1]
+      have : ((0 + (((1 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) = 1 := by simp
+      rw [this, one_mul]; exact he1_bd
+    · show |abIter 6 α h f t₀ y₀_sext 2
+          - y (t₀ + ((0 + (((2 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) * h)| ≤ ε₀
+      rw [hiter2]
+      have : ((0 + (((2 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) = 2 := by simp
+      rw [this]; exact he2_bd
+    · show |abIter 6 α h f t₀ y₀_sext 3
+          - y (t₀ + ((0 + (((3 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) * h)| ≤ ε₀
+      rw [hiter3]
+      have hval3 : ((3 : Fin 6) : ℕ) = 3 := rfl
+      have : ((0 + (((3 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) = 3 := by
+        rw [hval3]; push_cast; ring
+      rw [this]; exact he3_bd
+    · show |abIter 6 α h f t₀ y₀_sext 4
+          - y (t₀ + ((0 + (((4 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) * h)| ≤ ε₀
+      rw [hiter4]
+      have hval4 : ((4 : Fin 6) : ℕ) = 4 := rfl
+      have : ((0 + (((4 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) = 4 := by
+        rw [hval4]; push_cast; ring
+      rw [this]; exact he4_bd
+    · show |abIter 6 α h f t₀ y₀_sext 5
+          - y (t₀ + ((0 + (((5 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) * h)| ≤ ε₀
+      rw [hiter5]
+      have hval5 : ((5 : Fin 6) : ℕ) = 5 := rfl
+      have : ((0 + (((5 : Fin 6) : ℕ) : ℕ) : ℕ) : ℝ) = 5 := by
+        rw [hval5]; push_cast; ring
+      rw [this]; exact he5_bd
+  have hres_gen : ∀ n : ℕ, n < N →
+      |abResidual 6 α h y t₀ n| ≤ C * h ^ (6 + 1) := by
+    intro n hn_lt
+    have hcast : (n : ℝ) + 6 ≤ (N : ℝ) + 5 := by
+      have : (n : ℝ) + 1 ≤ (N : ℝ) := by
+        exact_mod_cast Nat.lt_iff_add_one_le.mp hn_lt
       linarith
-    have hKh6_nn : 0 ≤ T * Real.exp ((114 / 5) * L * T) * C * h ^ 6 :=
-      mul_nonneg hKnn hh6_nn
+    have hn6_le : ((n : ℝ) + 6) * h ≤ T := by
+      have hmul : ((n : ℝ) + 6) * h ≤ ((N : ℝ) + 5) * h :=
+        mul_le_mul_of_nonneg_right hcast hh.le
+      linarith
+    have hres := hresidual hh hδ_le n hn6_le
+    have hLTE_eq := ab6_localTruncationError_eq h (t₀ + (n : ℝ) * h) y
+    have hbridge := ab6Residual_eq_abResidual h y t₀ n
+    have hpow : C * h ^ (6 + 1) = C * h ^ 7 := by norm_num
+    rw [hα_def, ← hbridge]
+    have hreshape :
+        h * ((4277 / 1440) * deriv y (t₀ + (n : ℝ) * h + 5 * h)
+              - (7923 / 1440) * deriv y (t₀ + (n : ℝ) * h + 4 * h)
+              + (9982 / 1440) * deriv y (t₀ + (n : ℝ) * h + 3 * h)
+              - (7298 / 1440) * deriv y (t₀ + (n : ℝ) * h + 2 * h)
+              + (2877 / 1440) * deriv y (t₀ + (n : ℝ) * h + h)
+              - (475 / 1440) * deriv y (t₀ + (n : ℝ) * h))
+          = h * (4277 / 1440 * deriv y (t₀ + (n : ℝ) * h + 5 * h)
+                - 7923 / 1440 * deriv y (t₀ + (n : ℝ) * h + 4 * h)
+                + 9982 / 1440 * deriv y (t₀ + (n : ℝ) * h + 3 * h)
+                - 7298 / 1440 * deriv y (t₀ + (n : ℝ) * h + 2 * h)
+                + 2877 / 1440 * deriv y (t₀ + (n : ℝ) * h + h)
+                - 475 / 1440 * deriv y (t₀ + (n : ℝ) * h)) := by ring
+    rw [hreshape, ← hLTE_eq]
+    linarith [hres, hpow.symm.le, hpow.le]
+  have hNh' : (N : ℝ) * h ≤ T := by
+    have hmono : (N : ℝ) * h ≤ ((N : ℝ) + 5) * h := by
+      have h1 : (N : ℝ) ≤ (N : ℝ) + 5 := by linarith
+      exact mul_le_mul_of_nonneg_right h1 hh.le
     linarith
-  match N, hNh with
-  | 0, _ =>
-    have hbase : |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 0
-                - y (t₀ + ((0 : ℕ) : ℝ) * h)|
-        ≤ ε₀ := by simpa using he0_bd
-    exact hbase_to_headline _ hbase
-  | 1, _ =>
-    have hbase : |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 1
-                - y (t₀ + ((1 : ℕ) : ℝ) * h)|
-        ≤ ε₀ := by
-      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
-      rw [hcast]; simpa using he1_bd
-    exact hbase_to_headline _ hbase
-  | 2, _ =>
-    have hbase : |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 2
-                - y (t₀ + ((2 : ℕ) : ℝ) * h)|
-        ≤ ε₀ := by
-      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
-      rw [hcast]; simpa using he2_bd
-    exact hbase_to_headline _ hbase
-  | 3, _ =>
-    have hbase : |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 3
-                - y (t₀ + ((3 : ℕ) : ℝ) * h)|
-        ≤ ε₀ := by
-      have hcast : ((3 : ℕ) : ℝ) * h = 3 * h := by push_cast; ring
-      rw [hcast]; simpa using he3_bd
-    exact hbase_to_headline _ hbase
-  | 4, _ =>
-    have hbase : |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 4
-                - y (t₀ + ((4 : ℕ) : ℝ) * h)|
-        ≤ ε₀ := by
-      have hcast : ((4 : ℕ) : ℝ) * h = 4 * h := by push_cast; ring
-      rw [hcast]; simpa using he4_bd
-    exact hbase_to_headline _ hbase
-  | 5, _ =>
-    have hbase : |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ 5
-                - y (t₀ + ((5 : ℕ) : ℝ) * h)|
-        ≤ ε₀ := by
-      have hcast : ((5 : ℕ) : ℝ) * h = 5 * h := by push_cast; ring
-      rw [hcast]; simpa using he5_bd
-    exact hbase_to_headline _ hbase
-  | N' + 6, hNh =>
-    -- Apply Gronwall to EN at index N'+1, then use EN_{N'+1} ≥ e_{N'+6}.
-    have hcast : (((N' + 6 : ℕ) : ℝ)) = (N' : ℝ) + 6 := by push_cast; ring
-    have hN_hyp : ((N' : ℝ) + 6) * h ≤ T := by
-      have := hNh
-      rw [hcast] at this
-      linarith
-    have hgronwall_step : ∀ n, n < N' + 1 →
-        EN (n + 1) ≤ (1 + h * ((114 / 5) * L)) * EN n + C * h ^ (6 + 1) := by
-      intro n hn_lt
-      have hpow : C * h ^ (6 + 1) = C * h ^ 7 := by norm_num
-      rw [hpow]
-      apply hstep_general
-      have hn1_le_N' : (n : ℝ) + 1 ≤ (N' : ℝ) + 1 := by
-        have : (n : ℝ) ≤ (N' : ℝ) := by exact_mod_cast Nat.lt_succ_iff.mp hn_lt
-        linarith
-      have h_le_chain : (n : ℝ) + 6 ≤ (N' : ℝ) + 6 := by linarith
-      have h_mul : ((n : ℝ) + 6) * h ≤ ((N' : ℝ) + 6) * h :=
-        mul_le_mul_of_nonneg_right h_le_chain hh.le
-      linarith
-    have hN'1h_le_T : ((N' + 1 : ℕ) : ℝ) * h ≤ T := by
-      have hcast' : ((N' + 1 : ℕ) : ℝ) = (N' : ℝ) + 1 := by push_cast; ring
-      rw [hcast']
-      have : (N' : ℝ) + 1 ≤ (N' : ℝ) + 6 := by linarith
-      have := mul_le_mul_of_nonneg_right this hh.le
-      linarith
-    have hgronwall :=
-      lmm_error_bound_from_local_truncation
-        (h := h) (L := (114 / 5) * L) (C := C) (T := T) (p := 6)
-        (e := EN) (N := N' + 1)
-        hh.le hLeff_nn hC_nn (hEN_nn 0) hgronwall_step (N' + 1) le_rfl hN'1h_le_T
-    -- eN (N' + 6) ≤ EN (N' + 1).
-    have heN_le_EN : eN (N' + 6) ≤ EN (N' + 1) := by
-      show eN (N' + 6) ≤ max (max (max (max (max (eN (N' + 1)) (eN (N' + 1 + 1)))
-              (eN (N' + 1 + 2))) (eN (N' + 1 + 3))) (eN (N' + 1 + 4)))
-              (eN (N' + 1 + 5))
-      have heq : N' + 6 = N' + 1 + 5 := by ring
-      rw [heq]
-      exact le_max_right _ _
-    have h_chain :
-        Real.exp ((114 / 5) * L * T) * EN 0
-          ≤ Real.exp ((114 / 5) * L * T) * ε₀ :=
-      mul_le_mul_of_nonneg_left hEN0_le hexp_nn
-    show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (N' + 6)
-              - y (t₀ + ((N' + 6 : ℕ) : ℝ) * h)|
-        ≤ Real.exp ((114 / 5) * L * T) * ε₀
-          + T * Real.exp ((114 / 5) * L * T) * C * h ^ 6
-    have heN_eq :
-        eN (N' + 6)
-          = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ (N' + 6)
-              - y (t₀ + ((N' + 6 : ℕ) : ℝ) * h)| := rfl
-    linarith [heN_le_EN, hgronwall, h_chain, heN_eq.symm.le, heN_eq.le]
+  have hgeneric :=
+    ab_global_error_bound_generic (p := 6) hs α hh.le hL hC_nn hf t₀
+      y₀_sext y hyf hε₀ hstart N hNh' hres_gen
+  rw [show abLip 6 α L = (114 / 5) * L from by
+    rw [hα_def]; exact abLip_ab6GenericCoeff L] at hgeneric
+  have hwindow_ge : abErr 6 α h f t₀ y₀_sext y N
+      ≤ abErrWindow hs α h f t₀ y₀_sext y N := by
+    show abErr 6 α h f t₀ y₀_sext y (N + ((⟨0, hs⟩ : Fin 6) : ℕ))
+        ≤ abErrWindow hs α h f t₀ y₀_sext y N
+    unfold abErrWindow
+    exact Finset.le_sup' (b := ⟨0, hs⟩)
+      (f := fun j : Fin 6 => abErr 6 α h f t₀ y₀_sext y (N + (j : ℕ)))
+      (Finset.mem_univ _)
+  have hbridge :
+      abIter 6 α h f t₀ y₀_sext N
+        = ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ N := by
+    rw [hα_def, hy_sext_def]
+    exact (ab6Iter_eq_abIter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ N).symm
+  have habsErr :
+      abErr 6 α h f t₀ y₀_sext y N
+        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ N - y (t₀ + (N : ℝ) * h)| := by
+    show |abIter 6 α h f t₀ y₀_sext N - y (t₀ + (N : ℝ) * h)|
+        = |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ N - y (t₀ + (N : ℝ) * h)|
+    rw [hbridge]
+  show |ab6Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ N - y (t₀ + (N : ℝ) * h)|
+      ≤ Real.exp ((114 / 5) * L * T) * ε₀
+        + T * Real.exp ((114 / 5) * L * T) * C * h ^ 6
+  linarith [hwindow_ge, hgeneric, habsErr.symm.le, habsErr.le]
 
 end LMM
