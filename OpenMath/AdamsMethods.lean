@@ -154,6 +154,27 @@ noncomputable def adamsMoulton7 : LMM 7 where
         123133/120960, -121797/120960, 139849/120960, 36799/120960]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Moulton 8-step** method:
+y_{n+8} = y_{n+7} + h·(1070017/3628800·f_{n+8} + 4467094/3628800·f_{n+7}
+  − 4604594/3628800·f_{n+6} + 5595358/3628800·f_{n+5}
+  − 5033120/3628800·f_{n+4} + 3146338/3628800·f_{n+3}
+  − 1291214/3628800·f_{n+2} + 312874/3628800·f_{n+1}
+  − 33953/3628800·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [-33953/3628800, 312874/3628800, -1291214/3628800, 3146338/3628800,
+     -5033120/3628800, 5595358/3628800, -4604594/3628800, 4467094/3628800,
+     1070017/3628800].
+This is an implicit method of order 9.
+Reference: Iserles, Section 1.2 (k = 8 Adams–Moulton); coefficients
+verified against the Lagrange-interpolation-and-integrate construction on
+nodes 0,…,8 over the interval [7, 8] (denominator `10! = 3628800`). -/
+noncomputable def adamsMoulton8 : LMM 8 where
+  α := ![0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![-33953/3628800, 312874/3628800, -1291214/3628800, 3146338/3628800,
+        -5033120/3628800, 5595358/3628800, -4604594/3628800, 4467094/3628800,
+        1070017/3628800]
+  normalized := by simp [Fin.last]
+
 /-! ## Consistency / explicitness / implicitness -/
 
 /-- Adams–Bashforth 2-step is consistent. -/
