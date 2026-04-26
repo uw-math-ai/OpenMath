@@ -78,6 +78,7 @@
   - [x] **BDF3 scalar quantitative convergence chain**: builds on the cycle-453 declarations (`LMM.IsBDF3Trajectory`, `LMM.bdf3_localTruncationError_eq`, `LMM.bdf3_one_step_lipschitz`, `LMM.bdf3_pointwise_residual_bound` with `|τ_n| ≤ 7·M·h⁴`, and `LMM.bdf3_local_residual_bound`). Closes the Lyapunov-window step recurrence: `LMM.bdf3LyapU`, `LMM.bdf3LyapSigma`, `LMM.bdf3LyapTau` (eigen-coordinates from the factorization `ρ(ζ) = (ζ−1)(ζ²−(7/11)ζ+2/11)`), `LMM.bdf3LyapW = |u| + (1/11)(|σ| + 5|τ|)` (Lyapunov sum with γ=5), `LMM.bdf3LyapU_succ_eq` / `Sigma_succ_eq` / `Tau_succ_eq` (clean coordinate recurrences), and `LMM.bdf3_one_step_error_bound` (`W_{n+1} ≤ (1+h·6L)·W_n + 4·|τ_LTE|` under `(6/11)·h·L ≤ 1/4`, routed through a 8-scalar pure-algebra core `bdf3_one_step_lyapunov_alg` to keep kernel budget under 200000 heartbeats per cycle 442/444/450 pattern). Adds `LMM.bdf3LyapW_initial_bound` (`W_0 ≤ 5·ε₀` from `|e_0|, |e_1|, |e_2| ≤ ε₀`) and `LMM.bdf3_eIdx2_le_W` (`|e_{n+2}| ≤ 2·W_n` from the inversion `e_{n+2} = (11/6)·u + (-2/11)·σ + (7/11)·τ`). Headline `LMM.bdf3_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ 10·exp(6L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`, Grönwall via `lmm_error_bound_from_local_truncation` at `p = 3`, with N=0,1,2 cases handled directly and N≥3 via Lyapunov reduction). (`OpenMath/LMMBDF3Convergence.lean`, cycles 453, 456)
   - [x] **BDF3 vector quantitative convergence chain**: `LMM.IsBDF3TrajectoryVec`, `LMM.bdf3VecResidual`, `LMM.bdf3Vec_one_step_lipschitz`, `LMM.bdf3Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 7·M·h⁴` using the public AB3 vector fourth-order Taylor helpers), and `LMM.bdf3Vec_local_residual_bound` lift the BDF3 residual side to finite-dimensional normed vector spaces. The vector Lyapunov coordinates `LMM.bdf3VecLyapU`, `LMM.bdf3VecLyapSigma`, `LMM.bdf3VecLyapTau`, Lyapunov sum `LMM.bdf3VecLyapW`, coordinate recurrences, copied vector pure-algebra core, `LMM.bdf3Vec_one_step_error_bound`, `LMM.bdf3VecLyapW_initial_bound`, and `LMM.bdf3Vec_eIdx2_le_W` mirror the scalar BDF3 chain with norms. Headline `LMM.bdf3Vec_global_error_bound` gives `‖y_N − y(t₀+Nh)‖ ≤ 10·exp(6L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`. (`OpenMath/LMMBDF3VectorConvergence.lean`, cycle 457)
   - [x] **BDF4 vector truncation chain**: `LMM.IsBDF4TrajectoryVec`, `LMM.bdf4VecResidual`, `LMM.bdf4Vec_one_step_lipschitz`, private `LMM.bdf4Vec_pointwise_residual_alg`, `LMM.bdf4Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 18·M·h⁵` using the public AB4 vector fifth-order Taylor helpers), and `LMM.bdf4Vec_local_residual_bound` mirror the cycle-458 scalar BDF4 truncation side in finite-dimensional normed vector spaces. This is truncation only; the BDF4 Lyapunov/global theorem remains deferred per `.prover-state/issues/bdf4_lyapunov_gap.md`. (`OpenMath/LMMBDF4VectorConvergence.lean`, cycle 459)
+  - [x] **BDF5 scalar truncation chain**: `LMM.IsBDF5Trajectory` (supplied implicit trajectory satisfying the 5-step BDF recurrence), `LMM.bdf5_localTruncationError_eq`, `LMM.bdf5_one_step_lipschitz`, private `LMM.bdf5_pointwise_residual_alg`, `LMM.bdf5_pointwise_residual_bound` (`|τ_n| ≤ 48·M·h⁶` using the public AB5 sixth-order scalar Taylor helpers; exact coefficient `59075/1233 ≈ 47.91`), and `LMM.bdf5_local_residual_bound` close the BDF5 scalar truncation side. This is truncation only; the BDF5 Lyapunov/global theorem remains deferred by the same spectral obstruction documented for BDF4 in `.prover-state/issues/bdf4_lyapunov_gap.md`. (`OpenMath/LMMBDF5Convergence.lean`, cycle 461)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
 - [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
 - [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -275,21 +276,23 @@ local residual bound; the Lyapunov global theorem is deferred — see
 `OpenMath/LMMBDF4VectorConvergence.lean` hosts the BDF4 vector truncation
 chain (trajectory predicate, residual unfolding, Lipschitz defect,
 pointwise `‖τ_n‖ ≤ 18·M·h⁵`, and finite-horizon local residual bound; the
-same Lyapunov/global obstruction is deferred), and
+same Lyapunov/global obstruction is deferred),
+`OpenMath/LMMBDF5Convergence.lean` hosts the BDF5 scalar truncation chain
+(trajectory predicate, residual unfolding, Lipschitz defect, sixth-order
+pointwise residual `|τ_n| ≤ 48·M·h⁶`, and finite-horizon local residual
+bound; the Lyapunov global theorem is deferred by the same obstruction), and
 `OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
 
 **Active frontier**: AB2–AB7 have closed scalar and vector quantitative
 convergence chains. AM2–AM7 have closed scalar and vector quantitative
 convergence chains, and AM8 has a closed scalar quantitative convergence
 chain. BDF1–BDF3 have closed scalar and vector quantitative convergence
-chains. BDF4 now has closed scalar and vector truncation chains, but its
-Lyapunov/global theorem is blocked by the spectral obstruction documented
-in `.prover-state/issues/bdf4_lyapunov_gap.md`: the cubic factor
-`25ζ³ − 23ζ² + 13ζ − 3` is irreducible over ℚ and the absolute companion
-matrix has Perron radius `≈ 2.58 > 1`. The active frontier is a generic BDF
-Lyapunov framework, using a quadratic discrete Lyapunov equation
-`A^T P A − P = −Q`, to close BDF4–BDF6 uniformly without per-method
-eigenvector tuning.
+chains. BDF4 has closed scalar and vector truncation chains, and BDF5 now
+has a closed scalar truncation chain; their Lyapunov/global theorems remain
+deferred by the spectral obstruction documented in
+`.prover-state/issues/bdf4_lyapunov_gap.md`. The next concrete BDF target is
+the BDF6 truncation chain. The BDF7 zero-instability/non-convergence story
+is unchanged.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
