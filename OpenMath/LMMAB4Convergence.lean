@@ -1360,7 +1360,7 @@ theorem ab4Vec_one_step_error_bound
     linarith [hen3_le_EN, hEN_le_grow]
   exact max_le (max_le (max_le hen1_bd hen2_bd) hen3_bd) hen4_bd
 
-private theorem iteratedDeriv_five_bounded_on_Icc_vec
+theorem iteratedDeriv_five_bounded_on_Icc_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 5 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 5 y t‖ ≤ M := by
@@ -1706,7 +1706,7 @@ private theorem y_fourth_order_taylor_remainder_vec
   rw [h_residual_integral]
   exact h_bound_integral.trans_eq h_integral_eval
 
-private theorem y_fifth_order_taylor_remainder_vec
+theorem y_fifth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 5 y) {a b M : ℝ}
@@ -1895,7 +1895,7 @@ private theorem y_fifth_order_taylor_remainder_vec
   rw [h_residual_integral]
   exact h_bound_integral.trans_eq h_integral_eval
 
-private theorem derivY_fourth_order_taylor_remainder_vec
+theorem derivY_fourth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 5 y) {a b M : ℝ}
