@@ -123,6 +123,21 @@ noncomputable def adamsMoulton6 : LMM 6 where
         65112/60480, 19087/60480]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Bashforth 7-step** method:
+y_{n+7} = y_{n+6} + h·(198721/60480·f_{n+6} - 447288/60480·f_{n+5}
+  + 705549/60480·f_{n+4} - 688256/60480·f_{n+3}
+  + 407139/60480·f_{n+2} - 134472/60480·f_{n+1} + 19087/60480·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, -1, 1],
+β = [19087/60480, -134472/60480, 407139/60480, -688256/60480,
+     705549/60480, -447288/60480, 198721/60480, 0].
+This is an explicit method of order 7.
+Reference: Iserles, Section 1.2. -/
+noncomputable def adamsBashforth7 : LMM 7 where
+  α := ![0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![19087/60480, -134472/60480, 407139/60480, -688256/60480,
+        705549/60480, -447288/60480, 198721/60480, 0]
+  normalized := by simp [Fin.last]
+
 /-- **Adams–Moulton 7-step** method:
 y_{n+7} = y_{n+6} + h·(36799/120960·f_{n+7} + 139849/120960·f_{n+6}
   − 121797/120960·f_{n+5} + 123133/120960·f_{n+4}
@@ -214,6 +229,15 @@ theorem adamsBashforth6_consistent : adamsBashforth6.IsConsistent :=
 theorem adamsBashforth6_explicit : adamsBashforth6.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth6, Fin.last]
 
+/-- Adams–Bashforth 7-step is consistent. -/
+theorem adamsBashforth7_consistent : adamsBashforth7.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsBashforth7, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsBashforth7, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Bashforth 7-step is explicit (β₇ = 0). -/
+theorem adamsBashforth7_explicit : adamsBashforth7.IsExplicit := by
+  simp [LMM.IsExplicit, adamsBashforth7, Fin.last]
+
 /-- Adams–Moulton 5-step is consistent. -/
 theorem adamsMoulton5_consistent : adamsMoulton5.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton5, Fin.sum_univ_succ],
@@ -298,6 +322,14 @@ theorem adamsBashforth6_order_six : adamsBashforth6.HasOrder 6 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsBashforth6, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth6, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Bashforth 7-step has order 7. -/
+theorem adamsBashforth7_order_seven : adamsBashforth7.HasOrder 7 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsBashforth7, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsBashforth7, Fin.sum_univ_succ]; norm_num
 
 /-- Adams–Moulton 5-step has order 6. -/
 theorem adamsMoulton5_order_six : adamsMoulton5.HasOrder 6 := by

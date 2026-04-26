@@ -21,7 +21,7 @@ namespace LMM
 
 /-- A `C^8` function has its eighth derivative bounded on every compact
 interval `[a, b]`. -/
-private theorem iteratedDeriv_eight_bounded_on_Icc
+theorem iteratedDeriv_eight_bounded_on_Icc
     {y : ℝ → ℝ} (hy : ContDiff ℝ 8 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 8 y t| ≤ M := by
   have h_cont : Continuous (iteratedDeriv 8 y) :=
@@ -39,7 +39,7 @@ private theorem iteratedDeriv_eight_bounded_on_Icc
 `|y(t+r) - y(t) - r·y'(t) - r²/2·y''(t) - r³/6·y'''(t) - r⁴/24·y⁽⁴⁾(t)
   - r⁵/120·y⁽⁵⁾(t) - r⁶/720·y⁽⁶⁾(t) - r⁷/5040·y⁽⁷⁾(t)|
   ≤ M/40320 · r⁸`. -/
-private theorem y_eighth_order_taylor_remainder
+theorem y_eighth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 8 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 8 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -149,7 +149,7 @@ then for `t, t + r ∈ [a, b]` with `r ≥ 0`,
 `|y'(t+r) - y'(t) - r·y''(t) - r²/2·y'''(t) - r³/6·y⁽⁴⁾(t)
   - r⁴/24·y⁽⁵⁾(t) - r⁵/120·y⁽⁶⁾(t) - r⁶/720·y⁽⁷⁾(t)|
   ≤ M/5040 · r⁷`. -/
-private theorem derivY_seventh_order_taylor_remainder
+theorem derivY_seventh_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 8 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 8 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
