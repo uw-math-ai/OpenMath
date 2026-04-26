@@ -3,6 +3,7 @@ import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import OpenMath.MultistepMethods
 import OpenMath.AdamsMethods
 import OpenMath.LMMTruncationOp
+import OpenMath.LMMABGenericConvergence
 
 /-! ## Adams–Bashforth 5-step Convergence Chain (Iserles §1.2)
 
@@ -2641,6 +2642,174 @@ theorem ab5Vec_local_residual_bound
   exact ab5Vec_pointwise_residual_bound hy hM ht_mem hth_mem ht2h_mem
     ht3h_mem ht4h_mem ht5h_mem hh.le
 
+/-! #### Refactor through the generic vector AB scaffold
+
+Cycle 431 rewires the headline `ab5Vec_global_error_bound` through
+`LMM.ab_global_error_bound_generic_vec` at `s = 5`, using the AB5
+coefficient tuple `(251/720, -1274/720, 2616/720, -2774/720, 1901/720)`. -/
+
+/-- AB5 coefficient vector for the generic AB scaffold, ordered from the
+oldest to newest sample in the five-step window. -/
+noncomputable def ab5GenericCoeff : Fin 5 → ℝ :=
+  ![(251 : ℝ) / 720, -(1274 : ℝ) / 720, (2616 : ℝ) / 720,
+    -(2774 : ℝ) / 720, (1901 : ℝ) / 720]
+
+@[simp] lemma ab5GenericCoeff_zero :
+    ab5GenericCoeff 0 = (251 : ℝ) / 720 := rfl
+
+@[simp] lemma ab5GenericCoeff_one :
+    ab5GenericCoeff 1 = -(1274 : ℝ) / 720 := rfl
+
+@[simp] lemma ab5GenericCoeff_two :
+    ab5GenericCoeff 2 = (2616 : ℝ) / 720 := rfl
+
+@[simp] lemma ab5GenericCoeff_three :
+    ab5GenericCoeff 3 = -(2774 : ℝ) / 720 := rfl
+
+@[simp] lemma ab5GenericCoeff_four :
+    ab5GenericCoeff 4 = (1901 : ℝ) / 720 := rfl
+
+/-- The effective Lipschitz constant for the generic AB scaffold at the
+AB5 coefficient tuple is `(551/45) · L`. -/
+lemma abLip_ab5GenericCoeff (L : ℝ) :
+    abLip 5 ab5GenericCoeff L = (551 / 45) * L := by
+  rw [abLip, Fin.sum_univ_five, ab5GenericCoeff_zero, ab5GenericCoeff_one,
+    ab5GenericCoeff_two, ab5GenericCoeff_three, ab5GenericCoeff_four]
+  rw [show |((251 : ℝ) / 720)| = (251 : ℝ) / 720 by norm_num,
+      show |(-(1274 : ℝ) / 720)| = (1274 : ℝ) / 720 by norm_num,
+      show |((2616 : ℝ) / 720)| = (2616 : ℝ) / 720 by norm_num,
+      show |(-(2774 : ℝ) / 720)| = (2774 : ℝ) / 720 by norm_num,
+      show |((1901 : ℝ) / 720)| = (1901 : ℝ) / 720 by norm_num]
+  ring
+
+/-- Bridge: the AB5 vector iteration is the generic vector AB iteration
+at `s = 5` with `α = ab5GenericCoeff` and starting samples
+`![y₀, y₁, y₂, y₃, y₄]`. -/
+lemma ab5IterVec_eq_abIterVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ y₂ y₃ y₄ : E) (n : ℕ) :
+    ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ n
+      = abIterVec 5 ab5GenericCoeff h f t₀ ![y₀, y₁, y₂, y₃, y₄] n := by
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    match n with
+    | 0 =>
+      show ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 0 = _
+      rw [ab5IterVec_zero]
+      unfold abIterVec
+      simp
+    | 1 =>
+      show ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 1 = _
+      rw [ab5IterVec_one]
+      unfold abIterVec
+      simp
+    | 2 =>
+      show ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 2 = _
+      rw [ab5IterVec_two]
+      unfold abIterVec
+      simp
+    | 3 =>
+      show ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 3 = _
+      rw [ab5IterVec_three]
+      unfold abIterVec
+      simp
+    | 4 =>
+      show ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 4 = _
+      rw [ab5IterVec_four]
+      unfold abIterVec
+      simp
+    | k + 5 =>
+      rw [ab5IterVec_succ_succ_succ_succ_succ]
+      rw [abIterVec_step (s := 5) (by norm_num)
+          ab5GenericCoeff h f t₀ ![y₀, y₁, y₂, y₃, y₄] k]
+      rw [show (k + 5 - 1 : ℕ) = k + 4 from by omega]
+      rw [Fin.sum_univ_five]
+      have hval3 : ((3 : Fin 5) : ℕ) = 3 := rfl
+      have hval4 : ((4 : Fin 5) : ℕ) = 4 := rfl
+      simp only [ab5GenericCoeff_zero, ab5GenericCoeff_one, ab5GenericCoeff_two,
+        ab5GenericCoeff_three, ab5GenericCoeff_four, Fin.val_zero, Fin.val_one,
+        Fin.val_two, hval3, hval4, Nat.add_zero]
+      rw [← ih k (by omega), ← ih (k + 1) (by omega), ← ih (k + 2) (by omega),
+        ← ih (k + 3) (by omega), ← ih (k + 4) (by omega)]
+      rw [show ((k + 1 : ℕ) : ℝ) = (k : ℝ) + 1 by push_cast; ring,
+        show ((k + 2 : ℕ) : ℝ) = (k : ℝ) + 2 by push_cast; ring,
+        show ((k + 3 : ℕ) : ℝ) = (k : ℝ) + 3 by push_cast; ring,
+        show ((k + 4 : ℕ) : ℝ) = (k : ℝ) + 4 by push_cast; ring]
+      rw [show (-(1274 : ℝ) / 720) •
+              f (t₀ + ((k : ℝ) + 1) * h)
+                (ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (k + 1))
+            = -((1274 / 720 : ℝ) •
+              f (t₀ + ((k : ℝ) + 1) * h)
+                (ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (k + 1))) by
+        rw [show (-(1274 : ℝ) / 720) = -(1274 / 720 : ℝ) by ring]
+        exact neg_smul _ _]
+      rw [show (-(2774 : ℝ) / 720) •
+              f (t₀ + ((k : ℝ) + 3) * h)
+                (ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (k + 3))
+            = -((2774 / 720 : ℝ) •
+              f (t₀ + ((k : ℝ) + 3) * h)
+                (ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (k + 3))) by
+        rw [show (-(2774 : ℝ) / 720) = -(2774 / 720 : ℝ) by ring]
+        exact neg_smul _ _]
+      abel
+
+/-- Bridge: the AB5 vector residual at base point `t₀ + n · h` equals the
+generic AB vector residual at index `n`. -/
+lemma ab5VecResidual_eq_abResidualVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (h : ℝ) (y : ℝ → E) (t₀ : ℝ) (n : ℕ) :
+    ab5VecResidual h (t₀ + (n : ℝ) * h) y
+      = abResidualVec 5 ab5GenericCoeff h y t₀ n := by
+  unfold ab5VecResidual abResidualVec
+  rw [Fin.sum_univ_five, ab5GenericCoeff_zero, ab5GenericCoeff_one,
+    ab5GenericCoeff_two, ab5GenericCoeff_three, ab5GenericCoeff_four]
+  -- Align time-coordinate arguments.
+  have eA : t₀ + (n : ℝ) * h + 5 * h = t₀ + ((n + 5 : ℕ) : ℝ) * h := by
+    push_cast; ring
+  have eB :
+      t₀ + (n : ℝ) * h + 4 * h = t₀ + ((n + 5 - 1 : ℕ) : ℝ) * h := by
+    have hsub : (n + 5 - 1 : ℕ) = n + 4 := by omega
+    rw [hsub]; push_cast; ring
+  have eC : t₀ + (n : ℝ) * h
+      = t₀ + ((n + ((0 : Fin 5) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_zero]
+  have eD : t₀ + (n : ℝ) * h + h
+      = t₀ + ((n + ((1 : Fin 5) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_one]; ring
+  have eE : t₀ + (n : ℝ) * h + 2 * h
+      = t₀ + ((n + ((2 : Fin 5) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_two]; ring
+  have eF : t₀ + (n : ℝ) * h + 3 * h
+      = t₀ + ((n + ((3 : Fin 5) : ℕ) : ℕ) : ℝ) * h := by
+    have : ((3 : Fin 5) : ℕ) = 3 := rfl
+    rw [this]; push_cast; ring
+  have eG : t₀ + (n : ℝ) * h + 4 * h
+      = t₀ + ((n + ((4 : Fin 5) : ℕ) : ℕ) : ℝ) * h := by
+    have : ((4 : Fin 5) : ℕ) = 4 := rfl
+    rw [this]; push_cast; ring
+  rw [← eA, ← eB, ← eC, ← eD, ← eE, ← eF, ← eG]
+  -- Reorder the smul expression to match the generic coefficient order.
+  rw [show (-(1274 : ℝ) / 720) • deriv y (t₀ + (n : ℝ) * h + h)
+        = -((1274 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + h)) by
+    rw [show (-(1274 : ℝ) / 720) = -(1274 / 720 : ℝ) by ring]
+    exact neg_smul _ _]
+  rw [show (-(2774 : ℝ) / 720) • deriv y (t₀ + (n : ℝ) * h + 3 * h)
+        = -((2774 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 3 * h)) by
+    rw [show (-(2774 : ℝ) / 720) = -(2774 / 720 : ℝ) by ring]
+    exact neg_smul _ _]
+  rw [show (1901 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 4 * h)
+        - (2774 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 3 * h)
+        + (2616 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 2 * h)
+        - (1274 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + h)
+        + (251 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h)
+        = (251 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h)
+          + -((1274 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + h))
+          + (2616 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 2 * h)
+          + -((2774 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 3 * h))
+          + (1901 / 720 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 4 * h) by abel]
+
 theorem ab5Vec_global_error_bound
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
@@ -2665,212 +2834,125 @@ theorem ab5Vec_global_error_bound
   · exact mul_nonneg
       (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
   intro h hh hδ_le y₀ y₁ y₂ y₃ y₄ ε₀ hε₀ he0_bd he1_bd he2_bd he3_bd he4_bd N hNh
-  set eN : ℕ → ℝ :=
-    fun k => ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ k - y (t₀ + (k : ℝ) * h)‖
-    with heN_def
-  set EN : ℕ → ℝ :=
-    fun k => max (max (max (max (eN k) (eN (k + 1))) (eN (k + 2)))
-                  (eN (k + 3))) (eN (k + 4))
-    with hEN_def
-  have heN_nn : ∀ k, 0 ≤ eN k := fun _ => norm_nonneg _
-  have hEN_nn : ∀ k, 0 ≤ EN k := fun k =>
-    le_max_of_le_left (le_max_of_le_left (le_max_of_le_left
-      (le_max_of_le_left (heN_nn k))))
-  have hEN0_le : EN 0 ≤ ε₀ := by
-    show max (max (max (max (eN 0) (eN 1)) (eN 2)) (eN 3)) (eN 4) ≤ ε₀
-    refine max_le (max_le (max_le (max_le ?_ ?_) ?_) ?_) ?_
-    · show ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 0
-          - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      simpa using he0_bd
-    · show ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 1
-          - y (t₀ + ((1 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
-      rw [hcast]
-      simpa using he1_bd
-    · show ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 2
-          - y (t₀ + ((2 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he2_bd
-    · show ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 3
-          - y (t₀ + ((3 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      have hcast : ((3 : ℕ) : ℝ) * h = 3 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he3_bd
-    · show ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 4
-          - y (t₀ + ((4 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      have hcast : ((4 : ℕ) : ℝ) * h = 4 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he4_bd
-  have hLeff_nn : (0 : ℝ) ≤ (551 / 45) * L := by positivity
-  have hstep_general : ∀ n : ℕ, ((n : ℝ) + 5) * h ≤ T →
-      EN (n + 1) ≤ (1 + h * ((551 / 45) * L)) * EN n + C * h ^ 6 := by
-    intro n hnh_le
-    have honestep := ab5Vec_one_step_error_bound (h := h) (L := L)
-        hh.le hL hf t₀ y₀ y₁ y₂ y₃ y₄ y hyf n
-    have hres := hresidual hh hδ_le n hnh_le
-    have hcast1 : ((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1 := by push_cast; ring
-    have hcast2 : ((n + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 2 := by push_cast; ring
-    have hcast3 : ((n + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 3 := by push_cast; ring
-    have hcast4 : ((n + 1 + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 4 := by
-      push_cast; ring
-    have hcast5 : ((n + 1 + 1 + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 5 := by
-      push_cast; ring
-    have heq_eN_n1 : eN (n + 1)
-        = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 1)
-            - y (t₀ + ((n : ℝ) + 1) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast1]
-    have heq_eN_n2 : eN (n + 1 + 1)
-        = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 2)
-            - y (t₀ + ((n : ℝ) + 2) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast2]
-    have heq_eN_n3 : eN (n + 1 + 1 + 1)
-        = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 3)
-            - y (t₀ + ((n : ℝ) + 3) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast3]
-    have heq_eN_n4 : eN (n + 1 + 1 + 1 + 1)
-        = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 4)
-            - y (t₀ + ((n : ℝ) + 4) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast4]
-    have heq_eN_n5 : eN (n + 1 + 1 + 1 + 1 + 1)
-        = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 5)
-            - y (t₀ + ((n : ℝ) + 5) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast5]
-    show max (max (max (max (eN (n + 1)) (eN (n + 1 + 1)))
-            (eN (n + 1 + 1 + 1))) (eN (n + 1 + 1 + 1 + 1)))
-            (eN (n + 1 + 1 + 1 + 1 + 1))
-        ≤ (1 + h * ((551 / 45) * L))
-            * max (max (max (max (eN n) (eN (n + 1))) (eN (n + 1 + 1)))
-                  (eN (n + 1 + 1 + 1))) (eN (n + 1 + 1 + 1 + 1))
-          + C * h ^ 6
-    rw [heq_eN_n1, heq_eN_n2, heq_eN_n3, heq_eN_n4, heq_eN_n5]
-    show max (max (max (max
-              ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 1)
-                - y (t₀ + ((n : ℝ) + 1) * h)‖
-              ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 2)
-                - y (t₀ + ((n : ℝ) + 2) * h)‖)
-              ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 3)
-                - y (t₀ + ((n : ℝ) + 3) * h)‖)
-              ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 4)
-                - y (t₀ + ((n : ℝ) + 4) * h)‖)
-              ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 5)
-                - y (t₀ + ((n : ℝ) + 5) * h)‖
-        ≤ (1 + h * ((551 / 45) * L))
-            * max (max (max (max (eN n)
-                  ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 1)
-                    - y (t₀ + ((n : ℝ) + 1) * h)‖)
-                  ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 2)
-                    - y (t₀ + ((n : ℝ) + 2) * h)‖)
-                  ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 3)
-                    - y (t₀ + ((n : ℝ) + 3) * h)‖)
-                  ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (n + 4)
-                    - y (t₀ + ((n : ℝ) + 4) * h)‖
-          + C * h ^ 6
-    linarith [honestep, hres]
-  have hexp_ge : (1 : ℝ) ≤ Real.exp ((551 / 45) * L * T) :=
-    Real.one_le_exp_iff.mpr (by positivity)
-  have hKnn : 0 ≤ T * Real.exp ((551 / 45) * L * T) * C :=
-    mul_nonneg (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
-  have hh5_nn : 0 ≤ h ^ 5 := by positivity
-  have hexp_nn : 0 ≤ Real.exp ((551 / 45) * L * T) := Real.exp_nonneg _
-  have hbase_to_headline : ∀ q : ℝ, q ≤ ε₀ →
-      q ≤ Real.exp ((551 / 45) * L * T) * ε₀
-            + T * Real.exp ((551 / 45) * L * T) * C * h ^ 5 := by
-    intro q hq
-    have hexp_ε₀ : ε₀ ≤ Real.exp ((551 / 45) * L * T) * ε₀ := by
-      have hone : (1 : ℝ) * ε₀ ≤ Real.exp ((551 / 45) * L * T) * ε₀ :=
-        mul_le_mul_of_nonneg_right hexp_ge hε₀
+  -- Specialize the generic vector AB convergence theorem at s = 5, p = 5.
+  set α : Fin 5 → ℝ := ab5GenericCoeff with hα_def
+  set y₀_quint : Fin 5 → E := ![y₀, y₁, y₂, y₃, y₄] with hy_quint_def
+  have hs : (1 : ℕ) ≤ 5 := by norm_num
+  haveI : Nonempty (Fin 5) := ⟨⟨0, hs⟩⟩
+  -- (1) Starting bound on the window-max error.
+  have hiter0 : abIterVec 5 α h f t₀ y₀_quint 0 = y₀ := by
+    unfold abIterVec
+    simp [hy_quint_def]
+  have hiter1 : abIterVec 5 α h f t₀ y₀_quint 1 = y₁ := by
+    unfold abIterVec
+    simp [hy_quint_def]
+  have hiter2 : abIterVec 5 α h f t₀ y₀_quint 2 = y₂ := by
+    unfold abIterVec
+    simp [hy_quint_def]
+  have hiter3 : abIterVec 5 α h f t₀ y₀_quint 3 = y₃ := by
+    unfold abIterVec
+    simp [hy_quint_def]
+  have hiter4 : abIterVec 5 α h f t₀ y₀_quint 4 = y₄ := by
+    unfold abIterVec
+    simp [hy_quint_def]
+  have hstart : abErrWindowVec hs α h f t₀ y₀_quint y 0 ≤ ε₀ := by
+    unfold abErrWindowVec
+    apply Finset.sup'_le
+    intro j _
+    show abErrVec 5 α h f t₀ y₀_quint y (0 + (j : ℕ)) ≤ ε₀
+    unfold abErrVec
+    fin_cases j
+    · show ‖abIterVec 5 α h f t₀ y₀_quint 0
+          - y (t₀ + ((0 + (((0 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter0]
+      have : ((0 + (((0 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) = 0 := by simp
+      rw [this, zero_mul, add_zero]
+      exact he0_bd
+    · show ‖abIterVec 5 α h f t₀ y₀_quint 1
+          - y (t₀ + ((0 + (((1 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter1]
+      have : ((0 + (((1 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) = 1 := by simp
+      rw [this, one_mul]
+      exact he1_bd
+    · show ‖abIterVec 5 α h f t₀ y₀_quint 2
+          - y (t₀ + ((0 + (((2 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter2]
+      have : ((0 + (((2 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) = 2 := by simp
+      rw [this]
+      exact he2_bd
+    · show ‖abIterVec 5 α h f t₀ y₀_quint 3
+          - y (t₀ + ((0 + (((3 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter3]
+      have hval3 : ((3 : Fin 5) : ℕ) = 3 := rfl
+      have : ((0 + (((3 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) = 3 := by
+        rw [hval3]; push_cast; ring
+      rw [this]
+      exact he3_bd
+    · show ‖abIterVec 5 α h f t₀ y₀_quint 4
+          - y (t₀ + ((0 + (((4 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter4]
+      have hval4 : ((4 : Fin 5) : ℕ) = 4 := rfl
+      have : ((0 + (((4 : Fin 5) : ℕ) : ℕ) : ℕ) : ℝ) = 4 := by
+        rw [hval4]; push_cast; ring
+      rw [this]
+      exact he4_bd
+  -- (2) Residual bound for n < N, via the bridge.
+  have hres_gen : ∀ n : ℕ, n < N →
+      ‖abResidualVec 5 α h y t₀ n‖ ≤ C * h ^ (5 + 1) := by
+    intro n hn_lt
+    have hcast : (n : ℝ) + 5 ≤ (N : ℝ) + 4 := by
+      have : (n : ℝ) + 1 ≤ (N : ℝ) := by
+        exact_mod_cast Nat.lt_iff_add_one_le.mp hn_lt
       linarith
-    have hKh5_nn : 0 ≤ T * Real.exp ((551 / 45) * L * T) * C * h ^ 5 :=
-      mul_nonneg hKnn hh5_nn
+    have hn5_le : ((n : ℝ) + 5) * h ≤ T := by
+      have hmul : ((n : ℝ) + 5) * h ≤ ((N : ℝ) + 4) * h :=
+        mul_le_mul_of_nonneg_right hcast hh.le
+      linarith
+    have hres := hresidual hh hδ_le n hn5_le
+    have hbridge :=
+      ab5VecResidual_eq_abResidualVec (E := E) h y t₀ n
+    have hpow : C * h ^ (5 + 1) = C * h ^ 6 := by norm_num
+    rw [hα_def, ← hbridge]
+    linarith [hres, hpow.symm.le, hpow.le]
+  -- (3) (N : ℝ) * h ≤ T from ((N : ℝ) + 4) * h ≤ T and 0 ≤ h.
+  have hNh' : (N : ℝ) * h ≤ T := by
+    have hmono : (N : ℝ) * h ≤ ((N : ℝ) + 4) * h := by
+      have h1 : (N : ℝ) ≤ (N : ℝ) + 4 := by linarith
+      exact mul_le_mul_of_nonneg_right h1 hh.le
     linarith
-  match N, hNh with
-  | 0, _ =>
-    have hbase : ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 0
-          - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      simpa using he0_bd
-    exact hbase_to_headline _ hbase
-  | 1, _ =>
-    have hbase : ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 1
-          - y (t₀ + ((1 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
-      rw [hcast]
-      simpa using he1_bd
-    exact hbase_to_headline _ hbase
-  | 2, _ =>
-    have hbase : ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 2
-          - y (t₀ + ((2 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he2_bd
-    exact hbase_to_headline _ hbase
-  | 3, _ =>
-    have hbase : ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 3
-          - y (t₀ + ((3 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      have hcast : ((3 : ℕ) : ℝ) * h = 3 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he3_bd
-    exact hbase_to_headline _ hbase
-  | 4, _ =>
-    have hbase : ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ 4
-          - y (t₀ + ((4 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      have hcast : ((4 : ℕ) : ℝ) * h = 4 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he4_bd
-    exact hbase_to_headline _ hbase
-  | N' + 5, hNh =>
-    have hcast : (((N' + 5 : ℕ) : ℝ)) = (N' : ℝ) + 5 := by push_cast; ring
-    have hN_hyp : ((N' : ℝ) + 5) * h ≤ T := by
-      have := hNh
-      rw [hcast] at this
-      linarith
-    have hgronwall_step : ∀ n, n < N' + 1 →
-        EN (n + 1) ≤ (1 + h * ((551 / 45) * L)) * EN n + C * h ^ (5 + 1) := by
-      intro n hn_lt
-      have hpow : C * h ^ (5 + 1) = C * h ^ 6 := by norm_num
-      rw [hpow]
-      apply hstep_general
-      have hn1_le_N' : (n : ℝ) + 1 ≤ (N' : ℝ) + 1 := by
-        have : (n : ℝ) ≤ (N' : ℝ) := by exact_mod_cast Nat.lt_succ_iff.mp hn_lt
-        linarith
-      have h_le_chain : (n : ℝ) + 5 ≤ (N' : ℝ) + 5 := by linarith
-      have h_mul : ((n : ℝ) + 5) * h ≤ ((N' : ℝ) + 5) * h :=
-        mul_le_mul_of_nonneg_right h_le_chain hh.le
-      linarith
-    have hN'1h_le_T : ((N' + 1 : ℕ) : ℝ) * h ≤ T := by
-      have hcast' : ((N' + 1 : ℕ) : ℝ) = (N' : ℝ) + 1 := by push_cast; ring
-      rw [hcast']
-      have : (N' : ℝ) + 1 ≤ (N' : ℝ) + 5 := by linarith
-      have := mul_le_mul_of_nonneg_right this hh.le
-      linarith
-    have hgronwall :=
-      lmm_error_bound_from_local_truncation
-        (h := h) (L := (551 / 45) * L) (C := C) (T := T) (p := 5)
-        (e := EN) (N := N' + 1)
-        hh.le hLeff_nn hC_nn (hEN_nn 0) hgronwall_step (N' + 1) le_rfl hN'1h_le_T
-    have heN_le_EN : eN (N' + 5) ≤ EN (N' + 1) := by
-      show eN (N' + 5) ≤ max (max (max (max (eN (N' + 1)) (eN (N' + 1 + 1)))
-              (eN (N' + 1 + 2))) (eN (N' + 1 + 3))) (eN (N' + 1 + 4))
-      have heq : N' + 5 = N' + 1 + 4 := by ring
-      rw [heq]
-      exact le_max_right _ _
-    have h_chain :
-        Real.exp ((551 / 45) * L * T) * EN 0
-          ≤ Real.exp ((551 / 45) * L * T) * ε₀ :=
-      mul_le_mul_of_nonneg_left hEN0_le hexp_nn
-    show ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (N' + 5)
-          - y (t₀ + ((N' + 5 : ℕ) : ℝ) * h)‖
-        ≤ Real.exp ((551 / 45) * L * T) * ε₀
-          + T * Real.exp ((551 / 45) * L * T) * C * h ^ 5
-    have heN_eq :
-        eN (N' + 5)
-          = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ (N' + 5)
-              - y (t₀ + ((N' + 5 : ℕ) : ℝ) * h)‖ := rfl
-    linarith [heN_le_EN, hgronwall, h_chain, heN_eq.symm.le, heN_eq.le]
+  -- (4) Apply the generic theorem.
+  have hgeneric :=
+    ab_global_error_bound_generic_vec (p := 5) hs α hh.le hL hC_nn hf t₀
+      y₀_quint y hyf hε₀ hstart N hNh' hres_gen
+  -- (5) Replace abLip 5 α L with (551/45) * L.
+  rw [show abLip 5 α L = (551 / 45) * L from by
+    rw [hα_def]
+    exact abLip_ab5GenericCoeff L] at hgeneric
+  -- (6) Bound abErrVec at index N by the window-max bound.
+  have hwindow_ge : abErrVec 5 α h f t₀ y₀_quint y N
+      ≤ abErrWindowVec hs α h f t₀ y₀_quint y N := by
+    show abErrVec 5 α h f t₀ y₀_quint y (N + ((⟨0, hs⟩ : Fin 5) : ℕ))
+        ≤ abErrWindowVec hs α h f t₀ y₀_quint y N
+    unfold abErrWindowVec
+    exact Finset.le_sup' (b := ⟨0, hs⟩)
+      (f := fun j : Fin 5 => abErrVec 5 α h f t₀ y₀_quint y (N + (j : ℕ)))
+      (Finset.mem_univ _)
+  -- (7) Convert abErrVec at N to ‖ab5IterVec ... N - y(...)‖ via the iter bridge.
+  have hbridge :
+      abIterVec 5 α h f t₀ y₀_quint N
+        = ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ N := by
+    rw [hα_def, hy_quint_def]
+    exact (ab5IterVec_eq_abIterVec h f t₀ y₀ y₁ y₂ y₃ y₄ N).symm
+  have habsErr :
+      abErrVec 5 α h f t₀ y₀_quint y N
+        = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ N - y (t₀ + (N : ℝ) * h)‖ := by
+    show ‖abIterVec 5 α h f t₀ y₀_quint N - y (t₀ + (N : ℝ) * h)‖
+        = ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ N - y (t₀ + (N : ℝ) * h)‖
+    rw [hbridge]
+  -- Conclude.
+  show ‖ab5IterVec h f t₀ y₀ y₁ y₂ y₃ y₄ N - y (t₀ + (N : ℝ) * h)‖
+      ≤ Real.exp ((551 / 45) * L * T) * ε₀
+        + T * Real.exp ((551 / 45) * L * T) * C * h ^ 5
+  linarith [hwindow_ge, hgeneric, habsErr.symm.le, habsErr.le]
 
 end LMM
