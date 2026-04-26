@@ -25,6 +25,7 @@
 ### 1.2 Multistep Methods
 - [x] **Definition**: General linear multistep method infrastructure (`OpenMath/MultistepMethods.lean`); Adams–Bashforth and Adams–Moulton families (`OpenMath/AdamsMethods.lean`)
 - [x] **Example**: Adams–Moulton 2-step method — consistency, order 3, implicit, zero-stable (`OpenMath/AdamsMethods.lean`)
+  - [~] **Adams–Moulton 2-step scalar quantitative convergence chain**: `LMM.IsAM2Trajectory` parameterizes the implicit recurrence, `LMM.am2_localTruncationError_eq` proves the textbook AM2 residual equals the LMM truncation operator, and `LMM.am2_one_step_lipschitz` / `LMM.am2_one_step_error_bound` close the scalar implicit one-step estimates with effective constant `3L`; local residual and global `O(h^3)` bounds are scaffolded for the Taylor/fixed-point follow-up (`OpenMath/LMMAM2Convergence.lean`, cycle 433)
 - [x] **Adams–Bashforth 3-step**: consistency, order 3, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Moulton 3-step**: consistency, order 4, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
 - [x] **Adams–Bashforth 4-step**: consistency, order 4, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)

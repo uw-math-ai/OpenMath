@@ -1,0 +1,15 @@
+name = "RequestProject"
+defaultTargets = ["AB5ScalarBridge"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.28.0"
+
+[[lean_lib]]
+name = "OpenMath"
+globs = ["OpenMath.+"]
+
+[[lean_lib]]
+name = "AB5ScalarBridge"
+globs = ["AB5ScalarBridge"]
