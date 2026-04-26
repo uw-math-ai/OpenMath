@@ -71,6 +71,7 @@
   - [x] **Adams–Bashforth 5-step vector convergence chain**: `LMM.ab5IterVec`, `LMM.ab5VecResidual` + `LMM.ab5Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab5Vec_one_step_lipschitz` and `LMM.ab5Vec_one_step_error_bound` (5-window max-norm Lipschitz recurrence with effective constant `(551/45)·L`), private interval-integral Taylor helpers `iteratedDeriv_six_bounded_on_Icc_vec`, `y_sixth_order_taylor_remainder_vec`, `derivY_fifth_order_taylor_remainder_vec`, and `ab5Vec_pointwise_residual_bound` (same `59·M·h⁶` over-estimate as the scalar chain from `5072212/86400`), `LMM.ab5Vec_local_residual_bound`, and the headline `LMM.ab5Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((551/45)·L·T)·ε₀ + K·h⁵` for `(N+4)·h ≤ T`) — vector mirror of the scalar AB5 convergence chain in finite-dimensional normed spaces; cycle 431 adds `LMM.ab5GenericCoeff`, the iteration/residual bridges to `LMM.abIterVec`/`LMM.abResidualVec`, and rewires the headline theorem through `LMM.ab_global_error_bound_generic_vec`. (`OpenMath/LMMAB5Convergence.lean`, cycles 423 + 431)
   - [x] **Adams–Bashforth 6-step scalar convergence chain**: `LMM.ab6Iter` (six starting samples, recurrence `y_{n+6} = y_{n+5} + h·((4277/1440)·f_{n+5} − (7923/1440)·f_{n+4} + (9982/1440)·f_{n+3} − (7298/1440)·f_{n+2} + (2877/1440)·f_{n+1} − (475/1440)·f_n)`), `LMM.ab6_localTruncationError_eq` (textbook AB6 one-step residual = LMM truncation operator), `LMM.ab6_one_step_lipschitz` and `LMM.ab6_one_step_error_bound` (Lipschitz 6-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₆) ≤ (1+h·(114/5)L)·max(eₙ,…,eₙ₊₅) + |τ_n|` with effective Lipschitz constant `(4277+7923+9982+7298+2877+475)/1440 · L = 114L/5`), private helpers `iteratedDeriv_seven_bounded_on_Icc`, `y_seventh_order_taylor_remainder`, `derivY_sixth_order_taylor_remainder`, `ab6_pointwise_residual_bound` (algebraic identity `R_y(6) − R_y(5) − (4277h/1440)·R_y'(5) + (7923h/1440)·R_y'(4) − (9982h/1440)·R_y'(3) + (7298h/1440)·R_y'(2) − (2877h/1440)·R_y'(1)` giving `175·M·h⁷` over-estimate from `1264800760/7257600`), `LMM.ab6_local_residual_bound` (uniform `|τ_n| ≤ C·h⁷`), and the headline `LMM.ab6_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((114/5)·L·T)·ε₀ + K·h⁶` for `(N+5)·h ≤ T`) — the textbook AB6 `O(h⁶)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 6`. (`OpenMath/LMMAB6ScalarConvergence.lean`, cycle 424; split in cycle 425)
   - [x] **Adams–Bashforth 6-step vector convergence chain**: `LMM.ab6IterVec`, `LMM.ab6VecResidual` + `LMM.ab6Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab6Vec_one_step_lipschitz` and `LMM.ab6Vec_one_step_error_bound` (6-window max-norm Lipschitz recurrence with effective constant `(114/5)·L`), private interval-integral Taylor helpers `iteratedDeriv_seven_bounded_on_Icc_vec`, `y_seventh_order_taylor_remainder_vec`, `derivY_sixth_order_taylor_remainder_vec`, and `ab6Vec_pointwise_residual_bound` (same `175·M·h⁷` over-estimate as the scalar chain from `1264800760/7257600`), `LMM.ab6Vec_local_residual_bound`, and the headline `LMM.ab6Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((114/5)·L·T)·ε₀ + K·h⁶` for `(N+5)·h ≤ T`) — vector mirror of the scalar AB6 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB6VectorConvergence.lean`, cycle 425)
+  - [x] **Adams–Bashforth 7-step vector convergence chain**: `LMM.ab7IterVec`, `LMM.ab7VecResidual` + `LMM.ab7Vec_localTruncationError_eq`, `LMM.ab7Vec_one_step_lipschitz` and `LMM.ab7Vec_one_step_error_bound` (7-window max-norm Lipschitz recurrence with effective constant `(40633/945)·L`), private eighth-order vector Taylor helpers, extracted residual algebra/triangle helpers, `LMM.ab7Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 525·M·h⁸`, slacked from `159970508328/304819200`), `LMM.ab7Vec_local_residual_bound`, and the headline `LMM.ab7Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((40633/945)·L·T)·ε₀ + K·h⁷` for `(N+6)·h ≤ T`) — finite-dimensional vector mirror of the scalar AB7 chain, routed through `LMM.ab_global_error_bound_generic_vec` at `p = 7`. (`OpenMath/LMMAB7VectorConvergence.lean`, cycle 451)
   - [x] **BDF1 (backward Euler) scalar quantitative convergence chain**: `LMM.IsBDF1Trajectory` (supplied implicit one-step trajectory satisfying `y_{n+1} = y_n + h · f(t_{n+1}, y_{n+1})`), `LMM.bdf1_localTruncationError_eq` (textbook one-step residual `y(t+h) − y(t) − h · y'(t+h)` equals the LMM truncation operator for `backwardEuler`), `LMM.bdf1_one_step_lipschitz` and `LMM.bdf1_one_step_error_bound` (1-window implicit recurrence under `h·L ≤ 1/2`, slackened to growth `2L` and residual coefficient `2` after dividing out `(1 − h·L)`), `LMM.bdf1_pointwise_residual_bound` (forward-Euler Taylor remainder plus a segment derivative bound on `|y'(t+h) − y'(t)| ≤ M·h` giving `(3/2)·M·h²` slackened to `2·M·h²`), `LMM.bdf1_local_residual_bound` (`|τ_n| ≤ C·h²`), and the headline `LMM.bdf1_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(2L·T)·ε₀ + K·h` for `N·h ≤ T`) — the textbook BDF1 `O(h)` scalar convergence theorem for supplied implicit trajectories. (`OpenMath/LMMBDF1Convergence.lean`, cycle 446)
   - [x] **BDF1 (backward Euler) vector quantitative convergence chain**: `LMM.IsBDF1TrajectoryVec` (supplied implicit one-step vector trajectory satisfying `y_{n+1} = y_n + h • f(t_{n+1}, y_{n+1})`), `LMM.bdf1VecResidual` + `LMM.bdf1Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.bdf1Vec_one_step_lipschitz` and `LMM.bdf1Vec_one_step_error_bound` (1-window implicit norm recurrence under `h·L ≤ 1/2`, slackened to growth `2L` and residual coefficient `2` after dividing out `(1 − h·L)`), private vector Taylor helpers for `‖y'(t+h)-y'(t)‖ ≤ M·h` and `‖y(t+h)-y(t)-h•y'(t)‖ ≤ M/2·h²`, `LMM.bdf1Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h²`), and the headline `LMM.bdf1Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(2L·T)·ε₀ + K·h` for `N·h ≤ T`) — the finite-dimensional vector mirror of the scalar BDF1 quantitative convergence theorem. (`OpenMath/LMMBDF1VectorConvergence.lean`, cycle 447)
 - [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
@@ -241,6 +242,9 @@ Adams–Bashforth 5-step scalar and vector convergence chains,
 `OpenMath/LMMAB6ScalarConvergence.lean` hosts the Adams–Bashforth 6-step
 scalar convergence chain, `OpenMath/LMMAB6VectorConvergence.lean` hosts
 the Adams–Bashforth 6-step vector convergence chain,
+`OpenMath/LMMAB7Convergence.lean` hosts the Adams–Bashforth 7-step scalar
+quantitative convergence chain, `OpenMath/LMMAB7VectorConvergence.lean`
+hosts the Adams–Bashforth 7-step vector quantitative convergence chain,
 `OpenMath/LMMAM5VectorConvergence.lean` hosts the Adams–Moulton 5-step
 vector quantitative convergence chain, `OpenMath/LMMAM6Convergence.lean`
 hosts the Adams–Moulton 6-step scalar quantitative convergence chain,
@@ -253,32 +257,20 @@ hosts the Adams–Moulton 7-step vector quantitative convergence chain,
 quantitative convergence chain, `OpenMath/LMMBDF1VectorConvergence.lean`
 hosts the BDF1 (backward Euler) vector quantitative convergence chain,
 `OpenMath/LMMBDF2Convergence.lean` hosts the BDF2 scalar quantitative
-convergence chain, and `OpenMath/MultistepMethods.lean` still hosts the
-rest of the §1.2 LMM stack.
+convergence chain, `OpenMath/LMMBDF2VectorConvergence.lean` hosts the BDF2
+vector quantitative convergence chain, and `OpenMath/MultistepMethods.lean`
+still hosts the rest of the §1.2 LMM stack.
 
-**Active frontier**: AB2–AB6 now each have closed scalar and vector
+**Active frontier**: AB2–AB7 now each have closed scalar and vector
 quantitative convergence chains. AM2–AM7 now each have closed scalar and
-vector quantitative convergence chains. Cycle 446 added
-`OpenMath/LMMBDF1Convergence.lean` (BDF1 / backward Euler scalar quantitative
-convergence) using the AM2 implicit template at the simpler 1-step case,
-with effective growth `2L`, residual coefficient `2`, and pointwise residual
-bound `2·M·h²` derived from forward-Euler Taylor plus a segment derivative
-bound on `|y'(t+h) − y'(t)|`. Cycle 447 adds
-`OpenMath/LMMBDF1VectorConvergence.lean`, the finite-dimensional vector mirror
-with the same effective growth `2L`, residual coefficient `2`, and
-`‖τ_n‖ ≤ C·h²` residual shape. Cycle 448 adds
-`OpenMath/LMMBDF2Convergence.lean`, the scalar BDF2 quantitative
-convergence chain. Because the BDF2 ρ-polynomial has |α₀|+|α₁| = 5/3 > 1,
-the trivial max-norm scheme has growth ≥ 5/3 even at h=0, so the chain
-uses a Lyapunov sum
-`W_n := |3/2·e_{n+1} − 1/2·e_n| + |3/2·(e_n − e_{n+1})|` over the
-eigen-coordinates of ρ's roots (1 and 1/3). Under the small-step regime
-`(2/3)·h·L ≤ 1/4`, this gives the clean recurrence
-`W_{n+1} ≤ (1 + h·(4L))·W_n + 6·|τ_n|`, effective growth `4L`, residual
-coefficient `6`, residual bound `3·M·h³` (slackened from 26/9), initial
-factor `5·ε₀`, and order-2 global bound. The next §1.2 convergence frontier
-is **BDF2 vector quantitative convergence**, with AB7/AM8 as the next
-Adams-family extension.
+vector quantitative convergence chains. BDF1 and BDF2 now have closed scalar
+and vector quantitative convergence chains. Cycle 451 adds
+`OpenMath/LMMAB7VectorConvergence.lean`, the finite-dimensional vector mirror
+of the scalar AB7 chain, with effective growth `(40633/945)·L` and residual
+bound `525·M·h⁸` (slacked from `159970508328/304819200`). The next
+Adams-family target is **AM8 scalar quantitative convergence**, mirroring
+cycle 444's AM7 scalar implicit template at the next order. The alternate
+target, if AM8 stalls, is **BDF3 scalar quantitative convergence**.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
