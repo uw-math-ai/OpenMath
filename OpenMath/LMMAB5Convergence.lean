@@ -2142,7 +2142,7 @@ private theorem y_fifth_order_taylor_remainder_vec
   rw [h_residual_integral]
   exact h_bound_integral.trans_eq h_integral_eval
 
-private theorem y_sixth_order_taylor_remainder_vec
+theorem y_sixth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 6 y) {a b M : ℝ}

@@ -4,10 +4,10 @@ import OpenMath.MultistepMethods
 import OpenMath.AdamsMethods
 import OpenMath.LMMTruncationOp
 
-/-! ## Adams–Bashforth 6-step Convergence Chain (Iserles §1.2)
+/-! ## Adams–Bashforth 6-step Scalar Convergence Chain (Iserles §1.2)
 
 Order-6 explicit 6-step LMM convergence scaffold. Mirrors the AB5 chain
-in `OpenMath.LMMAB5Convergence` at the next order. The AB6 step takes
+in `OpenMath.LMMAB5Convergence` at the next order. This scalar half takes
 six starting samples and combines six prior `f` evaluations. The
 effective max-window Lipschitz constant is `(114/5) · L`, the residual
 is `O(h^7)` and the headline global error bound is `O(ε₀ + h^6)`. -/
