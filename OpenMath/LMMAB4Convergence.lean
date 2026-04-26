@@ -384,7 +384,7 @@ theorem ab4_one_step_error_bound
 
 /-- A `C^5` function has its fifth derivative bounded on every compact
 interval `[a, b]`. -/
-private theorem iteratedDeriv_five_bounded_on_Icc
+theorem iteratedDeriv_five_bounded_on_Icc
     {y : ℝ → ℝ} (hy : ContDiff ℝ 5 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 5 y t| ≤ M := by
   have h_cont : Continuous (iteratedDeriv 5 y) :=
@@ -401,7 +401,7 @@ private theorem iteratedDeriv_five_bounded_on_Icc
 with `r ≥ 0`,
 `|y(t+r) - y(t) - r·y'(t) - r²/2·y''(t) - r³/6·y'''(t) - r⁴/24·y⁽⁴⁾(t)|
   ≤ M/120 · r⁵`. -/
-private theorem y_fifth_order_taylor_remainder
+theorem y_fifth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 5 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 5 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -489,7 +489,7 @@ private theorem y_fifth_order_taylor_remainder
 derivative: if `y` is `C^5` and `|iteratedDeriv 5 y| ≤ M` on `[a, b]`,
 then for `t, t + r ∈ [a, b]` with `r ≥ 0`,
 `|y'(t+r) - y'(t) - r·y''(t) - r²/2·y'''(t) - r³/6·y⁽⁴⁾(t)| ≤ M/24 · r⁴`. -/
-private theorem derivY_fourth_order_taylor_remainder
+theorem derivY_fourth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 5 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 5 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
