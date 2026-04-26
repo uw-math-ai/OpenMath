@@ -508,7 +508,7 @@ theorem ab6Vec_one_step_error_bound
   exact max_le (max_le (max_le (max_le (max_le hen1_bd hen2_bd) hen3_bd)
     hen4_bd) hen5_bd) hen6_bd
 
-private theorem iteratedDeriv_seven_bounded_on_Icc_vec
+theorem iteratedDeriv_seven_bounded_on_Icc_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 7 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 7 y t‖ ≤ M := by
@@ -518,7 +518,7 @@ private theorem iteratedDeriv_seven_bounded_on_Icc_vec
     IsCompact.exists_bound_of_continuousOn isCompact_Icc h_cont.continuousOn
   exact ⟨max M 0, le_max_right _ _, fun t ht => (hM t ht).trans (le_max_left _ _)⟩
 
-private theorem y_seventh_order_taylor_remainder_vec
+theorem y_seventh_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 7 y) {a b M : ℝ}
@@ -790,7 +790,7 @@ private theorem y_seventh_order_taylor_remainder_vec
   rw [h_residual_integral]
   exact h_bound_integral.trans_eq h_integral_eval
 
-private theorem derivY_sixth_order_taylor_remainder_vec
+theorem derivY_sixth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 7 y) {a b M : ℝ}
