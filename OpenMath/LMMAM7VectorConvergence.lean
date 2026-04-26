@@ -747,6 +747,475 @@ theorem derivY_eighth_order_taylor_remainder_vec
     rw [this]
   simpa [hderiv2, hiter2, hiter3, hiter4, hiter5, hiter6, hiter7] using hrem
 
+theorem iteratedDeriv_ten_bounded_on_Icc_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 10 y) (a b : ℝ) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 10 y t‖ ≤ M := by
+  have h_cont : Continuous (iteratedDeriv 10 y) :=
+    hy.continuous_iteratedDeriv 10 (by norm_num)
+  obtain ⟨M, hM⟩ :=
+    IsCompact.exists_bound_of_continuousOn isCompact_Icc h_cont.continuousOn
+  exact ⟨max M 0, le_max_right _ _, fun t ht => (hM t ht).trans (le_max_left _ _)⟩
+
+theorem y_tenth_order_taylor_remainder_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 10 y) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 10 y t‖ ≤ M)
+    {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
+    (hr : 0 ≤ r) :
+    ‖y (t + r) - y t - r • deriv y t
+        - (r ^ 2 / 2) • iteratedDeriv 2 y t
+        - (r ^ 3 / 6) • iteratedDeriv 3 y t
+        - (r ^ 4 / 24) • iteratedDeriv 4 y t
+        - (r ^ 5 / 120) • iteratedDeriv 5 y t
+        - (r ^ 6 / 720) • iteratedDeriv 6 y t
+        - (r ^ 7 / 5040) • iteratedDeriv 7 y t
+        - (r ^ 8 / 40320) • iteratedDeriv 8 y t
+        - (r ^ 9 / 362880) • iteratedDeriv 9 y t‖
+      ≤ M / 3628800 * r ^ 10 := by
+  haveI : CompleteSpace E := FiniteDimensional.complete ℝ E
+  have htr_le : t ≤ t + r := by linarith
+  have h_dy_bound :
+      ∀ s ∈ Set.Icc t (t + r),
+        ‖deriv y s - deriv y t - (s - t) • iteratedDeriv 2 y t
+            - ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t
+            - ((s - t) ^ 3 / 6) • iteratedDeriv 4 y t
+            - ((s - t) ^ 4 / 24) • iteratedDeriv 5 y t
+            - ((s - t) ^ 5 / 120) • iteratedDeriv 6 y t
+            - ((s - t) ^ 6 / 720) • iteratedDeriv 7 y t
+            - ((s - t) ^ 7 / 5040) • iteratedDeriv 8 y t
+            - ((s - t) ^ 8 / 40320) • iteratedDeriv 9 y t‖
+          ≤ M / 362880 * (s - t) ^ 9 := by
+    intro s hs
+    have hts : 0 ≤ s - t := by linarith [hs.1]
+    have hs_ab : s ∈ Set.Icc a b := by
+      refine ⟨?_, ?_⟩
+      · linarith [ht.1, hs.1]
+      · linarith [htr.2, hs.2]
+    have hsplit : t + (s - t) = s := by ring
+    have hdy : ContDiff ℝ 9 (deriv y) := hy.deriv'
+    have hbnd_d :
+        ∀ u ∈ Set.Icc a b, ‖iteratedDeriv 9 (deriv y) u‖ ≤ M := by
+      intro u hu
+      have hidd_eq : iteratedDeriv 9 (deriv y) = iteratedDeriv 10 y := by
+        have : iteratedDeriv 10 y = iteratedDeriv 9 (deriv y) :=
+          iteratedDeriv_succ' (n := 9) (f := y)
+        exact this.symm
+      simpa [hidd_eq] using hbnd u hu
+    have hrem :=
+      y_ninth_order_taylor_remainder_vec hdy hbnd_d ht
+        (by rw [hsplit]; exact hs_ab) hts
+    have hderiv2 : deriv (deriv y) t = iteratedDeriv 2 y t := by
+      rw [show iteratedDeriv 2 y = deriv (iteratedDeriv 1 y) from
+          iteratedDeriv_succ, iteratedDeriv_one]
+    have hiter2 : iteratedDeriv 2 (deriv y) t = iteratedDeriv 3 y t := by
+      have : iteratedDeriv 3 y = iteratedDeriv 2 (deriv y) :=
+        iteratedDeriv_succ' (n := 2) (f := y)
+      rw [this]
+    have hiter3 : iteratedDeriv 3 (deriv y) t = iteratedDeriv 4 y t := by
+      have : iteratedDeriv 4 y = iteratedDeriv 3 (deriv y) :=
+        iteratedDeriv_succ' (n := 3) (f := y)
+      rw [this]
+    have hiter4 : iteratedDeriv 4 (deriv y) t = iteratedDeriv 5 y t := by
+      have : iteratedDeriv 5 y = iteratedDeriv 4 (deriv y) :=
+        iteratedDeriv_succ' (n := 4) (f := y)
+      rw [this]
+    have hiter5 : iteratedDeriv 5 (deriv y) t = iteratedDeriv 6 y t := by
+      have : iteratedDeriv 6 y = iteratedDeriv 5 (deriv y) :=
+        iteratedDeriv_succ' (n := 5) (f := y)
+      rw [this]
+    have hiter6 : iteratedDeriv 6 (deriv y) t = iteratedDeriv 7 y t := by
+      have : iteratedDeriv 7 y = iteratedDeriv 6 (deriv y) :=
+        iteratedDeriv_succ' (n := 6) (f := y)
+      rw [this]
+    have hiter7 : iteratedDeriv 7 (deriv y) t = iteratedDeriv 8 y t := by
+      have : iteratedDeriv 8 y = iteratedDeriv 7 (deriv y) :=
+        iteratedDeriv_succ' (n := 7) (f := y)
+      rw [this]
+    have hiter8 : iteratedDeriv 8 (deriv y) t = iteratedDeriv 9 y t := by
+      have : iteratedDeriv 9 y = iteratedDeriv 8 (deriv y) :=
+        iteratedDeriv_succ' (n := 8) (f := y)
+      rw [this]
+    rw [hsplit] at hrem
+    simpa [hderiv2, hiter2, hiter3, hiter4, hiter5, hiter6, hiter7, hiter8]
+      using hrem
+  have hdy_cont : Continuous (deriv y) := hy.continuous_deriv (by norm_num)
+  have h_dy_int :
+      IntervalIntegrable (fun s => deriv y s) MeasureTheory.volume t (t + r) :=
+    hdy_cont.intervalIntegrable _ _
+  have h_const_int :
+      IntervalIntegrable (fun _ : ℝ => deriv y t)
+        MeasureTheory.volume t (t + r) := intervalIntegrable_const
+  have h_lin_int :
+      IntervalIntegrable (fun s : ℝ => (s - t) • iteratedDeriv 2 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_quad_int :
+      IntervalIntegrable (fun s : ℝ => ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_cubic_int :
+      IntervalIntegrable (fun s : ℝ => ((s - t) ^ 3 / 6) • iteratedDeriv 4 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_quartic_int :
+      IntervalIntegrable (fun s : ℝ => ((s - t) ^ 4 / 24) • iteratedDeriv 5 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_quintic_int :
+      IntervalIntegrable (fun s : ℝ => ((s - t) ^ 5 / 120) • iteratedDeriv 6 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_sextic_int :
+      IntervalIntegrable (fun s : ℝ => ((s - t) ^ 6 / 720) • iteratedDeriv 7 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_septic_int :
+      IntervalIntegrable (fun s : ℝ => ((s - t) ^ 7 / 5040) • iteratedDeriv 8 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_octic_int :
+      IntervalIntegrable
+        (fun s : ℝ => ((s - t) ^ 8 / 40320) • iteratedDeriv 9 y t)
+        MeasureTheory.volume t (t + r) := by
+    apply Continuous.intervalIntegrable
+    fun_prop
+  have h_ftc_y :
+      ∫ s in t..t + r, deriv y s = y (t + r) - y t := by
+    have hderiv_at :
+        ∀ x ∈ Set.uIcc t (t + r),
+          HasDerivAt y (deriv y x) x := by
+      intro x _hx
+      exact (hy.differentiable (by norm_num) x).hasDerivAt
+    exact intervalIntegral.integral_eq_sub_of_hasDerivAt hderiv_at h_dy_int
+  have h_lin_eval :
+      ∫ s in t..t + r, (s - t) • iteratedDeriv 2 y t
+        = (r ^ 2 / 2) • iteratedDeriv 2 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) = r ^ 2 / 2 := by
+      simp [intervalIntegral.integral_sub, integral_id,
+        intervalIntegral.integral_const]
+      ring
+    rw [h_int_smul]
+  have h_quad_eval :
+      ∫ s in t..t + r, ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t
+        = (r ^ 3 / 6) • iteratedDeriv 3 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 2 = r ^ 3 / 3 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 2
+            = ∫ s in (t - t)..(t + r - t), s ^ 2 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 2) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 2 / 2)
+          = fun s : ℝ => (1 / 2 : ℝ) * (s - t) ^ 2 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 2 / 2 = r ^ 3 / 6 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_cubic_eval :
+      ∫ s in t..t + r, ((s - t) ^ 3 / 6) • iteratedDeriv 4 y t
+        = (r ^ 4 / 24) • iteratedDeriv 4 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 3 = r ^ 4 / 4 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 3
+            = ∫ s in (t - t)..(t + r - t), s ^ 3 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 3) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 3 / 6)
+          = fun s : ℝ => (1 / 6 : ℝ) * (s - t) ^ 3 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 3 / 6 = r ^ 4 / 24 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_quartic_eval :
+      ∫ s in t..t + r, ((s - t) ^ 4 / 24) • iteratedDeriv 5 y t
+        = (r ^ 5 / 120) • iteratedDeriv 5 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 4 = r ^ 5 / 5 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 4
+            = ∫ s in (t - t)..(t + r - t), s ^ 4 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 4) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 4 / 24)
+          = fun s : ℝ => (1 / 24 : ℝ) * (s - t) ^ 4 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 4 / 24 = r ^ 5 / 120 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_quintic_eval :
+      ∫ s in t..t + r, ((s - t) ^ 5 / 120) • iteratedDeriv 6 y t
+        = (r ^ 6 / 720) • iteratedDeriv 6 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 5 = r ^ 6 / 6 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 5
+            = ∫ s in (t - t)..(t + r - t), s ^ 5 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 5) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 5 / 120)
+          = fun s : ℝ => (1 / 120 : ℝ) * (s - t) ^ 5 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 5 / 120 = r ^ 6 / 720 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_sextic_eval :
+      ∫ s in t..t + r, ((s - t) ^ 6 / 720) • iteratedDeriv 7 y t
+        = (r ^ 7 / 5040) • iteratedDeriv 7 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 6 = r ^ 7 / 7 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 6
+            = ∫ s in (t - t)..(t + r - t), s ^ 6 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 6) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 6 / 720)
+          = fun s : ℝ => (1 / 720 : ℝ) * (s - t) ^ 6 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 6 / 720 = r ^ 7 / 5040 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_septic_eval :
+      ∫ s in t..t + r, ((s - t) ^ 7 / 5040) • iteratedDeriv 8 y t
+        = (r ^ 8 / 40320) • iteratedDeriv 8 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 7 = r ^ 8 / 8 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 7
+            = ∫ s in (t - t)..(t + r - t), s ^ 7 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 7) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 7 / 5040)
+          = fun s : ℝ => (1 / 5040 : ℝ) * (s - t) ^ 7 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 7 / 5040 = r ^ 8 / 40320 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_octic_eval :
+      ∫ s in t..t + r, ((s - t) ^ 8 / 40320) • iteratedDeriv 9 y t
+        = (r ^ 9 / 362880) • iteratedDeriv 9 y t := by
+    rw [intervalIntegral.integral_smul_const]
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 8 = r ^ 9 / 9 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 8
+            = ∫ s in (t - t)..(t + r - t), s ^ 8 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 8) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    have h_fun :
+        (fun s : ℝ => (s - t) ^ 8 / 40320)
+          = fun s : ℝ => (1 / 40320 : ℝ) * (s - t) ^ 8 := by
+      funext s
+      ring
+    have h_int_smul :
+        ∫ s in t..t + r, (s - t) ^ 8 / 40320 = r ^ 9 / 362880 := by
+      rw [h_fun, intervalIntegral.integral_const_mul, h_inner]
+      ring
+    rw [h_int_smul]
+  have h_residual_integral :
+      y (t + r) - y t - r • deriv y t
+          - (r ^ 2 / 2) • iteratedDeriv 2 y t
+          - (r ^ 3 / 6) • iteratedDeriv 3 y t
+          - (r ^ 4 / 24) • iteratedDeriv 4 y t
+          - (r ^ 5 / 120) • iteratedDeriv 5 y t
+          - (r ^ 6 / 720) • iteratedDeriv 6 y t
+          - (r ^ 7 / 5040) • iteratedDeriv 7 y t
+          - (r ^ 8 / 40320) • iteratedDeriv 8 y t
+          - (r ^ 9 / 362880) • iteratedDeriv 9 y t
+        = ∫ s in t..t + r,
+            (deriv y s - deriv y t - (s - t) • iteratedDeriv 2 y t
+              - ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t
+              - ((s - t) ^ 3 / 6) • iteratedDeriv 4 y t
+              - ((s - t) ^ 4 / 24) • iteratedDeriv 5 y t
+              - ((s - t) ^ 5 / 120) • iteratedDeriv 6 y t
+              - ((s - t) ^ 6 / 720) • iteratedDeriv 7 y t
+              - ((s - t) ^ 7 / 5040) • iteratedDeriv 8 y t
+              - ((s - t) ^ 8 / 40320) • iteratedDeriv 9 y t) := by
+    rw [intervalIntegral.integral_sub
+        ((((((((h_dy_int.sub h_const_int).sub h_lin_int).sub h_quad_int).sub
+          h_cubic_int).sub h_quartic_int).sub h_quintic_int).sub
+            h_sextic_int).sub h_septic_int) h_octic_int,
+      intervalIntegral.integral_sub
+        (((((((h_dy_int.sub h_const_int).sub h_lin_int).sub h_quad_int).sub
+          h_cubic_int).sub h_quartic_int).sub h_quintic_int).sub h_sextic_int)
+            h_septic_int,
+      intervalIntegral.integral_sub
+        ((((((h_dy_int.sub h_const_int).sub h_lin_int).sub h_quad_int).sub
+          h_cubic_int).sub h_quartic_int).sub h_quintic_int) h_sextic_int,
+      intervalIntegral.integral_sub
+        (((((h_dy_int.sub h_const_int).sub h_lin_int).sub h_quad_int).sub
+          h_cubic_int).sub h_quartic_int) h_quintic_int,
+      intervalIntegral.integral_sub
+        ((((h_dy_int.sub h_const_int).sub h_lin_int).sub h_quad_int).sub
+          h_cubic_int) h_quartic_int,
+      intervalIntegral.integral_sub
+        (((h_dy_int.sub h_const_int).sub h_lin_int).sub h_quad_int) h_cubic_int,
+      intervalIntegral.integral_sub
+        ((h_dy_int.sub h_const_int).sub h_lin_int) h_quad_int,
+      intervalIntegral.integral_sub (h_dy_int.sub h_const_int) h_lin_int,
+      intervalIntegral.integral_sub h_dy_int h_const_int,
+      h_ftc_y, h_lin_eval, h_quad_eval, h_cubic_eval, h_quartic_eval,
+      h_quintic_eval, h_sextic_eval, h_septic_eval, h_octic_eval]
+    have h_const_eval :
+        ∫ _ in t..t + r, deriv y t = r • deriv y t := by
+      rw [intervalIntegral.integral_const]
+      simp
+    rw [h_const_eval]
+  have h_bound_integral :
+      ‖∫ s in t..t + r,
+          (deriv y s - deriv y t - (s - t) • iteratedDeriv 2 y t
+            - ((s - t) ^ 2 / 2) • iteratedDeriv 3 y t
+            - ((s - t) ^ 3 / 6) • iteratedDeriv 4 y t
+            - ((s - t) ^ 4 / 24) • iteratedDeriv 5 y t
+            - ((s - t) ^ 5 / 120) • iteratedDeriv 6 y t
+            - ((s - t) ^ 6 / 720) • iteratedDeriv 7 y t
+            - ((s - t) ^ 7 / 5040) • iteratedDeriv 8 y t
+            - ((s - t) ^ 8 / 40320) • iteratedDeriv 9 y t)‖
+        ≤ ∫ s in t..t + r, M / 362880 * (s - t) ^ 9 := by
+    refine intervalIntegral.norm_integral_le_of_norm_le htr_le ?_ ?_
+    · exact Filter.Eventually.of_forall fun s hs =>
+        h_dy_bound s ⟨hs.1.le, hs.2⟩
+    · exact (by fun_prop :
+        Continuous fun s : ℝ => M / 362880 * (s - t) ^ 9).intervalIntegrable _ _
+  have h_integral_eval :
+      ∫ s in t..t + r, M / 362880 * (s - t) ^ 9 = M / 3628800 * r ^ 10 := by
+    have h_inner : ∫ s in t..t + r, (s - t) ^ 9 = r ^ 10 / 10 := by
+      have hsub :
+          ∫ s in t..t + r, (s - t) ^ 9
+            = ∫ s in (t - t)..(t + r - t), s ^ 9 :=
+        intervalIntegral.integral_comp_sub_right (fun u : ℝ => u ^ 9) t
+      rw [hsub, integral_pow]
+      have hzero : (t - t) = (0 : ℝ) := sub_self _
+      have hr' : (t + r - t) = r := by ring
+      rw [hzero, hr']
+      ring
+    rw [intervalIntegral.integral_const_mul, h_inner]
+    ring
+  rw [h_residual_integral]
+  exact h_bound_integral.trans_eq h_integral_eval
+
+theorem derivY_ninth_order_taylor_remainder_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {y : ℝ → E} (hy : ContDiff ℝ 10 y) {a b M : ℝ}
+    (hbnd : ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 10 y t‖ ≤ M)
+    {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
+    (hr : 0 ≤ r) :
+    ‖deriv y (t + r) - deriv y t - r • iteratedDeriv 2 y t
+        - (r ^ 2 / 2) • iteratedDeriv 3 y t
+        - (r ^ 3 / 6) • iteratedDeriv 4 y t
+        - (r ^ 4 / 24) • iteratedDeriv 5 y t
+        - (r ^ 5 / 120) • iteratedDeriv 6 y t
+        - (r ^ 6 / 720) • iteratedDeriv 7 y t
+        - (r ^ 7 / 5040) • iteratedDeriv 8 y t
+        - (r ^ 8 / 40320) • iteratedDeriv 9 y t‖
+      ≤ M / 362880 * r ^ 9 := by
+  have hdy : ContDiff ℝ 9 (deriv y) := hy.deriv'
+  have hbnd_d :
+      ∀ s ∈ Set.Icc a b, ‖iteratedDeriv 9 (deriv y) s‖ ≤ M := by
+    intro s hs
+    have hidd_eq : iteratedDeriv 9 (deriv y) = iteratedDeriv 10 y := by
+      have : iteratedDeriv 10 y = iteratedDeriv 9 (deriv y) :=
+        iteratedDeriv_succ' (n := 9) (f := y)
+      exact this.symm
+    simpa [hidd_eq] using hbnd s hs
+  have hrem := y_ninth_order_taylor_remainder_vec hdy hbnd_d ht htr hr
+  have hderiv2 : deriv (deriv y) t = iteratedDeriv 2 y t := by
+    rw [show iteratedDeriv 2 y = deriv (iteratedDeriv 1 y) from
+        iteratedDeriv_succ, iteratedDeriv_one]
+  have hiter2 : iteratedDeriv 2 (deriv y) t = iteratedDeriv 3 y t := by
+    have : iteratedDeriv 3 y = iteratedDeriv 2 (deriv y) :=
+      iteratedDeriv_succ' (n := 2) (f := y)
+    rw [this]
+  have hiter3 : iteratedDeriv 3 (deriv y) t = iteratedDeriv 4 y t := by
+    have : iteratedDeriv 4 y = iteratedDeriv 3 (deriv y) :=
+      iteratedDeriv_succ' (n := 3) (f := y)
+    rw [this]
+  have hiter4 : iteratedDeriv 4 (deriv y) t = iteratedDeriv 5 y t := by
+    have : iteratedDeriv 5 y = iteratedDeriv 4 (deriv y) :=
+      iteratedDeriv_succ' (n := 4) (f := y)
+    rw [this]
+  have hiter5 : iteratedDeriv 5 (deriv y) t = iteratedDeriv 6 y t := by
+    have : iteratedDeriv 6 y = iteratedDeriv 5 (deriv y) :=
+      iteratedDeriv_succ' (n := 5) (f := y)
+    rw [this]
+  have hiter6 : iteratedDeriv 6 (deriv y) t = iteratedDeriv 7 y t := by
+    have : iteratedDeriv 7 y = iteratedDeriv 6 (deriv y) :=
+      iteratedDeriv_succ' (n := 6) (f := y)
+    rw [this]
+  have hiter7 : iteratedDeriv 7 (deriv y) t = iteratedDeriv 8 y t := by
+    have : iteratedDeriv 8 y = iteratedDeriv 7 (deriv y) :=
+      iteratedDeriv_succ' (n := 7) (f := y)
+    rw [this]
+  have hiter8 : iteratedDeriv 8 (deriv y) t = iteratedDeriv 9 y t := by
+    have : iteratedDeriv 9 y = iteratedDeriv 8 (deriv y) :=
+      iteratedDeriv_succ' (n := 8) (f := y)
+    rw [this]
+  simpa [hderiv2, hiter2, hiter3, hiter4, hiter5, hiter6, hiter7, hiter8]
+    using hrem
+
 /-- AM7 vector trajectory predicate. The new value appears inside `f`, so
 existence of such a trajectory is a separate fixed-point problem. -/
 structure IsAM7TrajectoryVec
