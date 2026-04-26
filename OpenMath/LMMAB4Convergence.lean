@@ -3,6 +3,7 @@ import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import OpenMath.MultistepMethods
 import OpenMath.AdamsMethods
 import OpenMath.LMMTruncationOp
+import OpenMath.LMMABGenericConvergence
 
 /-! ## Adams–Bashforth 4-step Convergence Chain (Iserles §1.2)
 
@@ -2113,6 +2114,153 @@ theorem ab4Vec_local_residual_bound
   exact ab4Vec_pointwise_residual_bound hy hM ht_mem hth_mem ht2h_mem
     ht3h_mem ht4h_mem hh.le
 
+/-! #### Refactor through the generic vector AB scaffold
+
+Cycle 430 rewires the headline `ab4Vec_global_error_bound` through
+`LMM.ab_global_error_bound_generic_vec` at `s = 4`, using the AB4
+coefficient tuple `(-9/24, 37/24, -59/24, 55/24)`. -/
+
+/-- AB4 coefficient vector for the generic AB scaffold:
+`α 0 = -9/24`, `α 1 = 37/24`, `α 2 = -59/24`, `α 3 = 55/24`. -/
+noncomputable def ab4GenericCoeff : Fin 4 → ℝ :=
+  ![-(9 : ℝ) / 24, (37 : ℝ) / 24, -(59 : ℝ) / 24, (55 : ℝ) / 24]
+
+@[simp] lemma ab4GenericCoeff_zero :
+    ab4GenericCoeff 0 = -(9 : ℝ) / 24 := rfl
+
+@[simp] lemma ab4GenericCoeff_one :
+    ab4GenericCoeff 1 = (37 : ℝ) / 24 := rfl
+
+@[simp] lemma ab4GenericCoeff_two :
+    ab4GenericCoeff 2 = -(59 : ℝ) / 24 := rfl
+
+@[simp] lemma ab4GenericCoeff_three :
+    ab4GenericCoeff 3 = (55 : ℝ) / 24 := rfl
+
+/-- The effective Lipschitz constant for the generic AB scaffold at the
+AB4 coefficient tuple is `(20/3) · L`. -/
+lemma abLip_ab4GenericCoeff (L : ℝ) :
+    abLip 4 ab4GenericCoeff L = (20 / 3) * L := by
+  rw [abLip, Fin.sum_univ_four, ab4GenericCoeff_zero, ab4GenericCoeff_one,
+    ab4GenericCoeff_two, ab4GenericCoeff_three]
+  rw [show |(-(9 : ℝ) / 24)| = (9 : ℝ) / 24 by norm_num,
+      show |((37 : ℝ) / 24)| = (37 : ℝ) / 24 by norm_num,
+      show |(-(59 : ℝ) / 24)| = (59 : ℝ) / 24 by norm_num,
+      show |((55 : ℝ) / 24)| = (55 : ℝ) / 24 by norm_num]
+  ring
+
+/-- Bridge: the AB4 vector iteration is the generic vector AB iteration
+at `s = 4` with `α = ab4GenericCoeff` and starting samples
+`![y₀, y₁, y₂, y₃]`. -/
+lemma ab4IterVec_eq_abIterVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ y₂ y₃ : E) (n : ℕ) :
+    ab4IterVec h f t₀ y₀ y₁ y₂ y₃ n
+      = abIterVec 4 ab4GenericCoeff h f t₀ ![y₀, y₁, y₂, y₃] n := by
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    match n with
+    | 0 =>
+      show ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 0 = _
+      rw [ab4IterVec_zero]
+      unfold abIterVec
+      simp
+    | 1 =>
+      show ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 1 = _
+      rw [ab4IterVec_one]
+      unfold abIterVec
+      simp
+    | 2 =>
+      show ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 2 = _
+      rw [ab4IterVec_two]
+      unfold abIterVec
+      simp
+    | 3 =>
+      show ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 3 = _
+      rw [ab4IterVec_three]
+      unfold abIterVec
+      simp
+    | k + 4 =>
+      rw [ab4IterVec_succ_succ_succ_succ]
+      rw [abIterVec_step (s := 4) (by norm_num)
+          ab4GenericCoeff h f t₀ ![y₀, y₁, y₂, y₃] k]
+      rw [show (k + 4 - 1 : ℕ) = k + 3 from by omega]
+      rw [Fin.sum_univ_four]
+      have hval3 : ((3 : Fin 4) : ℕ) = 3 := rfl
+      simp only [ab4GenericCoeff_zero, ab4GenericCoeff_one, ab4GenericCoeff_two,
+        ab4GenericCoeff_three, Fin.val_zero, Fin.val_one, Fin.val_two,
+        hval3, Nat.add_zero]
+      rw [← ih k (by omega), ← ih (k + 1) (by omega), ← ih (k + 2) (by omega),
+        ← ih (k + 3) (by omega)]
+      rw [show ((k + 1 : ℕ) : ℝ) = (k : ℝ) + 1 by push_cast; ring,
+        show ((k + 2 : ℕ) : ℝ) = (k : ℝ) + 2 by push_cast; ring,
+        show ((k + 3 : ℕ) : ℝ) = (k : ℝ) + 3 by push_cast; ring]
+      rw [show (-(9 : ℝ) / 24) •
+              f (t₀ + (k : ℝ) * h) (ab4IterVec h f t₀ y₀ y₁ y₂ y₃ k)
+            = -((9 / 24 : ℝ) •
+              f (t₀ + (k : ℝ) * h) (ab4IterVec h f t₀ y₀ y₁ y₂ y₃ k)) by
+        rw [show (-(9 : ℝ) / 24) = -(9 / 24 : ℝ) by ring]
+        exact neg_smul _ _]
+      rw [show (-(59 : ℝ) / 24) •
+              f (t₀ + ((k : ℝ) + 2) * h) (ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (k + 2))
+            = -((59 / 24 : ℝ) •
+              f (t₀ + ((k : ℝ) + 2) * h)
+                (ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (k + 2))) by
+        rw [show (-(59 : ℝ) / 24) = -(59 / 24 : ℝ) by ring]
+        exact neg_smul _ _]
+      abel
+
+/-- Bridge: the AB4 vector residual at base point `t₀ + n · h` equals the
+generic AB vector residual at index `n`. -/
+lemma ab4VecResidual_eq_abResidualVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (h : ℝ) (y : ℝ → E) (t₀ : ℝ) (n : ℕ) :
+    ab4VecResidual h (t₀ + (n : ℝ) * h) y
+      = abResidualVec 4 ab4GenericCoeff h y t₀ n := by
+  unfold ab4VecResidual abResidualVec
+  rw [Fin.sum_univ_four, ab4GenericCoeff_zero, ab4GenericCoeff_one,
+    ab4GenericCoeff_two, ab4GenericCoeff_three]
+  -- Align time-coordinate arguments.
+  have eA : t₀ + (n : ℝ) * h + 4 * h = t₀ + ((n + 4 : ℕ) : ℝ) * h := by
+    push_cast; ring
+  have eB :
+      t₀ + (n : ℝ) * h + 3 * h = t₀ + ((n + 4 - 1 : ℕ) : ℝ) * h := by
+    have hsub : (n + 4 - 1 : ℕ) = n + 3 := by omega
+    rw [hsub]; push_cast; ring
+  have eC : t₀ + (n : ℝ) * h
+      = t₀ + ((n + ((0 : Fin 4) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_zero]
+  have eD : t₀ + (n : ℝ) * h + h
+      = t₀ + ((n + ((1 : Fin 4) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_one]; ring
+  have eE : t₀ + (n : ℝ) * h + 2 * h
+      = t₀ + ((n + ((2 : Fin 4) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_two]; ring
+  have eF : t₀ + (n : ℝ) * h + 3 * h
+      = t₀ + ((n + ((3 : Fin 4) : ℕ) : ℕ) : ℝ) * h := by
+    have : ((3 : Fin 4) : ℕ) = 3 := rfl
+    rw [this]; push_cast; ring
+  rw [← eA, ← eB, ← eC, ← eD, ← eE, ← eF]
+  -- Reorder the smul expression to match the generic coefficient order.
+  rw [show (-(9 : ℝ) / 24) • deriv y (t₀ + (n : ℝ) * h)
+        = -((9 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h)) by
+    rw [show (-(9 : ℝ) / 24) = -(9 / 24 : ℝ) by ring]
+    exact neg_smul _ _]
+  rw [show (-(59 : ℝ) / 24) • deriv y (t₀ + (n : ℝ) * h + 2 * h)
+        = -((59 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 2 * h)) by
+    rw [show (-(59 : ℝ) / 24) = -(59 / 24 : ℝ) by ring]
+    exact neg_smul _ _]
+  rw [show (55 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 3 * h)
+        - (59 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 2 * h)
+        + (37 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h + h)
+        - (9 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h)
+        = -((9 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h))
+          + (37 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h + h)
+          + -((59 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 2 * h))
+          + (55 / 24 : ℝ) • deriv y (t₀ + (n : ℝ) * h + 3 * h) by abel]
+
 theorem ab4Vec_global_error_bound
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
@@ -2136,185 +2284,113 @@ theorem ab4Vec_global_error_bound
   · exact mul_nonneg
       (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
   intro h hh hδ_le y₀ y₁ y₂ y₃ ε₀ hε₀ he0_bd he1_bd he2_bd he3_bd N hNh
-  set eN : ℕ → ℝ :=
-    fun k => ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ k - y (t₀ + (k : ℝ) * h)‖
-    with heN_def
-  set EN : ℕ → ℝ :=
-    fun k => max (max (max (eN k) (eN (k + 1))) (eN (k + 2))) (eN (k + 3))
-    with hEN_def
-  have heN_nn : ∀ k, 0 ≤ eN k := fun _ => norm_nonneg _
-  have hEN_nn : ∀ k, 0 ≤ EN k := fun k =>
-    le_max_of_le_left (le_max_of_le_left (le_max_of_le_left (heN_nn k)))
-  have hEN0_le : EN 0 ≤ ε₀ := by
-    show max (max (max (eN 0) (eN 1)) (eN 2)) (eN 3) ≤ ε₀
-    refine max_le (max_le (max_le ?_ ?_) ?_) ?_
-    · show ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 0
-          - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      simpa using he0_bd
-    · show ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 1
-          - y (t₀ + ((1 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
-      rw [hcast]
-      simpa using he1_bd
-    · show ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 2
-          - y (t₀ + ((2 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he2_bd
-    · show ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 3
-          - y (t₀ + ((3 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      have hcast : ((3 : ℕ) : ℝ) * h = 3 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he3_bd
-  have hLeff_nn : (0 : ℝ) ≤ (20 / 3) * L := by positivity
-  have hstep_general : ∀ n : ℕ, ((n : ℝ) + 4) * h ≤ T →
-      EN (n + 1) ≤ (1 + h * ((20 / 3) * L)) * EN n + C * h ^ 5 := by
-    intro n hnh_le
-    have honestep := ab4Vec_one_step_error_bound (h := h) (L := L)
-        hh.le hL hf t₀ y₀ y₁ y₂ y₃ y hyf n
-    have hres := hresidual hh hδ_le n hnh_le
-    have hcast1 : ((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1 := by push_cast; ring
-    have hcast2 : ((n + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 2 := by push_cast; ring
-    have hcast3 : ((n + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 3 := by push_cast; ring
-    have hcast4 : ((n + 1 + 1 + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 4 := by
-      push_cast; ring
-    have heq_eN_n1 : eN (n + 1)
-        = ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 1)
-            - y (t₀ + ((n : ℝ) + 1) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast1]
-    have heq_eN_n2 : eN (n + 1 + 1)
-        = ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 2)
-            - y (t₀ + ((n : ℝ) + 2) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast2]
-    have heq_eN_n3 : eN (n + 1 + 1 + 1)
-        = ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 3)
-            - y (t₀ + ((n : ℝ) + 3) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast3]
-    have heq_eN_n4 : eN (n + 1 + 1 + 1 + 1)
-        = ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 4)
-            - y (t₀ + ((n : ℝ) + 4) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast4]
-    show max (max (max (eN (n + 1)) (eN (n + 1 + 1))) (eN (n + 1 + 1 + 1)))
-            (eN (n + 1 + 1 + 1 + 1))
-        ≤ (1 + h * ((20 / 3) * L))
-            * max (max (max (eN n) (eN (n + 1))) (eN (n + 1 + 1)))
-                (eN (n + 1 + 1 + 1))
-          + C * h ^ 5
-    rw [heq_eN_n1, heq_eN_n2, heq_eN_n3, heq_eN_n4]
-    show max (max (max
-              ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 1)
-                - y (t₀ + ((n : ℝ) + 1) * h)‖
-              ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 2)
-                - y (t₀ + ((n : ℝ) + 2) * h)‖)
-              ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 3)
-                - y (t₀ + ((n : ℝ) + 3) * h)‖)
-              ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 4)
-                - y (t₀ + ((n : ℝ) + 4) * h)‖
-        ≤ (1 + h * ((20 / 3) * L))
-            * max (max (max (eN n)
-                  ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 1)
-                    - y (t₀ + ((n : ℝ) + 1) * h)‖)
-                  ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 2)
-                    - y (t₀ + ((n : ℝ) + 2) * h)‖)
-                  ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (n + 3)
-                    - y (t₀ + ((n : ℝ) + 3) * h)‖
-          + C * h ^ 5
-    linarith [honestep, hres]
-  have hexp_ge : (1 : ℝ) ≤ Real.exp ((20 / 3) * L * T) :=
-    Real.one_le_exp_iff.mpr (by positivity)
-  have hKnn : 0 ≤ T * Real.exp ((20 / 3) * L * T) * C :=
-    mul_nonneg (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
-  have hh4_nn : 0 ≤ h ^ 4 := by positivity
-  have hexp_nn : 0 ≤ Real.exp ((20 / 3) * L * T) := Real.exp_nonneg _
-  have hbase_to_headline : ∀ q : ℝ, q ≤ ε₀ →
-      q ≤ Real.exp ((20 / 3) * L * T) * ε₀
-            + T * Real.exp ((20 / 3) * L * T) * C * h ^ 4 := by
-    intro q hq
-    have hexp_ε₀ : ε₀ ≤ Real.exp ((20 / 3) * L * T) * ε₀ := by
-      have hone : (1 : ℝ) * ε₀ ≤ Real.exp ((20 / 3) * L * T) * ε₀ :=
-        mul_le_mul_of_nonneg_right hexp_ge hε₀
+  -- Specialize the generic vector AB convergence theorem at s = 4, p = 4.
+  set α : Fin 4 → ℝ := ab4GenericCoeff with hα_def
+  set y₀_quad : Fin 4 → E := ![y₀, y₁, y₂, y₃] with hy_quad_def
+  have hs : (1 : ℕ) ≤ 4 := by norm_num
+  haveI : Nonempty (Fin 4) := ⟨⟨0, hs⟩⟩
+  -- (1) Starting bound on the window-max error.
+  have hiter0 : abIterVec 4 α h f t₀ y₀_quad 0 = y₀ := by
+    unfold abIterVec
+    simp [hy_quad_def]
+  have hiter1 : abIterVec 4 α h f t₀ y₀_quad 1 = y₁ := by
+    unfold abIterVec
+    simp [hy_quad_def]
+  have hiter2 : abIterVec 4 α h f t₀ y₀_quad 2 = y₂ := by
+    unfold abIterVec
+    simp [hy_quad_def]
+  have hiter3 : abIterVec 4 α h f t₀ y₀_quad 3 = y₃ := by
+    unfold abIterVec
+    simp [hy_quad_def]
+  have hstart : abErrWindowVec hs α h f t₀ y₀_quad y 0 ≤ ε₀ := by
+    unfold abErrWindowVec
+    apply Finset.sup'_le
+    intro j _
+    show abErrVec 4 α h f t₀ y₀_quad y (0 + (j : ℕ)) ≤ ε₀
+    unfold abErrVec
+    fin_cases j
+    · show ‖abIterVec 4 α h f t₀ y₀_quad 0
+          - y (t₀ + ((0 + (((0 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter0]
+      have : ((0 + (((0 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) = 0 := by simp
+      rw [this, zero_mul, add_zero]
+      exact he0_bd
+    · show ‖abIterVec 4 α h f t₀ y₀_quad 1
+          - y (t₀ + ((0 + (((1 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter1]
+      have : ((0 + (((1 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) = 1 := by simp
+      rw [this, one_mul]
+      exact he1_bd
+    · show ‖abIterVec 4 α h f t₀ y₀_quad 2
+          - y (t₀ + ((0 + (((2 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter2]
+      have : ((0 + (((2 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) = 2 := by simp
+      rw [this]
+      exact he2_bd
+    · show ‖abIterVec 4 α h f t₀ y₀_quad 3
+          - y (t₀ + ((0 + (((3 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter3]
+      have hval3 : ((3 : Fin 4) : ℕ) = 3 := rfl
+      have : ((0 + (((3 : Fin 4) : ℕ) : ℕ) : ℕ) : ℝ) = 3 := by
+        rw [hval3]; push_cast; ring
+      rw [this]
+      exact he3_bd
+  -- (2) Residual bound for n < N, via the bridge.
+  have hres_gen : ∀ n : ℕ, n < N →
+      ‖abResidualVec 4 α h y t₀ n‖ ≤ C * h ^ (4 + 1) := by
+    intro n hn_lt
+    have hcast : (n : ℝ) + 4 ≤ (N : ℝ) + 3 := by
+      have : (n : ℝ) + 1 ≤ (N : ℝ) := by
+        exact_mod_cast Nat.lt_iff_add_one_le.mp hn_lt
       linarith
-    have hKh4_nn : 0 ≤ T * Real.exp ((20 / 3) * L * T) * C * h ^ 4 :=
-      mul_nonneg hKnn hh4_nn
+    have hn4_le : ((n : ℝ) + 4) * h ≤ T := by
+      have hmul : ((n : ℝ) + 4) * h ≤ ((N : ℝ) + 3) * h :=
+        mul_le_mul_of_nonneg_right hcast hh.le
+      linarith
+    have hres := hresidual hh hδ_le n hn4_le
+    have hbridge :=
+      ab4VecResidual_eq_abResidualVec (E := E) h y t₀ n
+    have hpow : C * h ^ (4 + 1) = C * h ^ 5 := by norm_num
+    rw [hα_def, ← hbridge]
+    linarith [hres, hpow.symm.le, hpow.le]
+  -- (3) (N : ℝ) * h ≤ T from ((N : ℝ) + 3) * h ≤ T and 0 ≤ h.
+  have hNh' : (N : ℝ) * h ≤ T := by
+    have hmono : (N : ℝ) * h ≤ ((N : ℝ) + 3) * h := by
+      have h1 : (N : ℝ) ≤ (N : ℝ) + 3 := by linarith
+      exact mul_le_mul_of_nonneg_right h1 hh.le
     linarith
-  match N, hNh with
-  | 0, _ =>
-    have hbase : ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 0
-          - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      simpa using he0_bd
-    exact hbase_to_headline _ hbase
-  | 1, _ =>
-    have hbase : ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 1
-          - y (t₀ + ((1 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      have hcast : ((1 : ℕ) : ℝ) * h = h := by push_cast; ring
-      rw [hcast]
-      simpa using he1_bd
-    exact hbase_to_headline _ hbase
-  | 2, _ =>
-    have hbase : ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 2
-          - y (t₀ + ((2 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      have hcast : ((2 : ℕ) : ℝ) * h = 2 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he2_bd
-    exact hbase_to_headline _ hbase
-  | 3, _ =>
-    have hbase : ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ 3
-          - y (t₀ + ((3 : ℕ) : ℝ) * h)‖ ≤ ε₀ := by
-      have hcast : ((3 : ℕ) : ℝ) * h = 3 * h := by push_cast; ring
-      rw [hcast]
-      simpa using he3_bd
-    exact hbase_to_headline _ hbase
-  | N' + 4, hNh =>
-    have hcast : (((N' + 4 : ℕ) : ℝ)) = (N' : ℝ) + 4 := by push_cast; ring
-    have hN_hyp : ((N' : ℝ) + 4) * h ≤ T := by
-      have := hNh
-      rw [hcast] at this
-      linarith
-    have hgronwall_step : ∀ n, n < N' + 1 →
-        EN (n + 1) ≤ (1 + h * ((20 / 3) * L)) * EN n + C * h ^ (4 + 1) := by
-      intro n hn_lt
-      have hpow : C * h ^ (4 + 1) = C * h ^ 5 := by norm_num
-      rw [hpow]
-      apply hstep_general
-      have hn1_le_N' : (n : ℝ) + 1 ≤ (N' : ℝ) + 1 := by
-        have : (n : ℝ) ≤ (N' : ℝ) := by exact_mod_cast Nat.lt_succ_iff.mp hn_lt
-        linarith
-      have h_le_chain : (n : ℝ) + 4 ≤ (N' : ℝ) + 4 := by linarith
-      have h_mul : ((n : ℝ) + 4) * h ≤ ((N' : ℝ) + 4) * h :=
-        mul_le_mul_of_nonneg_right h_le_chain hh.le
-      linarith
-    have hN'1h_le_T : ((N' + 1 : ℕ) : ℝ) * h ≤ T := by
-      have hcast' : ((N' + 1 : ℕ) : ℝ) = (N' : ℝ) + 1 := by push_cast; ring
-      rw [hcast']
-      have : (N' : ℝ) + 1 ≤ (N' : ℝ) + 4 := by linarith
-      have := mul_le_mul_of_nonneg_right this hh.le
-      linarith
-    have hgronwall :=
-      lmm_error_bound_from_local_truncation
-        (h := h) (L := (20 / 3) * L) (C := C) (T := T) (p := 4)
-        (e := EN) (N := N' + 1)
-        hh.le hLeff_nn hC_nn (hEN_nn 0) hgronwall_step (N' + 1) le_rfl hN'1h_le_T
-    have heN_le_EN : eN (N' + 4) ≤ EN (N' + 1) := by
-      show eN (N' + 4) ≤ max (max (max (eN (N' + 1)) (eN (N' + 1 + 1)))
-              (eN (N' + 1 + 2))) (eN (N' + 1 + 3))
-      have heq : N' + 4 = N' + 1 + 3 := by ring
-      rw [heq]
-      exact le_max_right _ _
-    have h_chain :
-        Real.exp ((20 / 3) * L * T) * EN 0 ≤ Real.exp ((20 / 3) * L * T) * ε₀ :=
-      mul_le_mul_of_nonneg_left hEN0_le hexp_nn
-    show ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (N' + 4)
-          - y (t₀ + ((N' + 4 : ℕ) : ℝ) * h)‖
-        ≤ Real.exp ((20 / 3) * L * T) * ε₀
-          + T * Real.exp ((20 / 3) * L * T) * C * h ^ 4
-    have heN_eq :
-        eN (N' + 4)
-          = ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ (N' + 4)
-              - y (t₀ + ((N' + 4 : ℕ) : ℝ) * h)‖ := rfl
-    linarith [heN_le_EN, hgronwall, h_chain, heN_eq.symm.le, heN_eq.le]
+  -- (4) Apply the generic theorem.
+  have hgeneric :=
+    ab_global_error_bound_generic_vec hs α hh.le hL hC_nn hf t₀ y₀_quad y hyf
+      hε₀ hstart N hNh' hres_gen
+  -- (5) Replace abLip 4 α L with (20/3) * L.
+  rw [show abLip 4 α L = (20 / 3) * L from by
+    rw [hα_def]
+    exact abLip_ab4GenericCoeff L] at hgeneric
+  -- (6) Bound abErrVec at index N by the window-max bound.
+  have hwindow_ge : abErrVec 4 α h f t₀ y₀_quad y N
+      ≤ abErrWindowVec hs α h f t₀ y₀_quad y N := by
+    show abErrVec 4 α h f t₀ y₀_quad y (N + ((⟨0, hs⟩ : Fin 4) : ℕ))
+        ≤ abErrWindowVec hs α h f t₀ y₀_quad y N
+    unfold abErrWindowVec
+    exact Finset.le_sup' (b := ⟨0, hs⟩)
+      (f := fun j : Fin 4 => abErrVec 4 α h f t₀ y₀_quad y (N + (j : ℕ)))
+      (Finset.mem_univ _)
+  -- (7) Convert abErrVec at N to ‖ab4IterVec ... N - y(...)‖ via the iter bridge.
+  have hbridge :
+      abIterVec 4 α h f t₀ y₀_quad N = ab4IterVec h f t₀ y₀ y₁ y₂ y₃ N := by
+    rw [hα_def, hy_quad_def]
+    exact (ab4IterVec_eq_abIterVec h f t₀ y₀ y₁ y₂ y₃ N).symm
+  have habsErr :
+      abErrVec 4 α h f t₀ y₀_quad y N
+        = ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ N - y (t₀ + (N : ℝ) * h)‖ := by
+    show ‖abIterVec 4 α h f t₀ y₀_quad N - y (t₀ + (N : ℝ) * h)‖
+        = ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ N - y (t₀ + (N : ℝ) * h)‖
+    rw [hbridge]
+  -- Conclude.
+  show ‖ab4IterVec h f t₀ y₀ y₁ y₂ y₃ N - y (t₀ + (N : ℝ) * h)‖
+      ≤ Real.exp ((20 / 3) * L * T) * ε₀
+        + T * Real.exp ((20 / 3) * L * T) * C * h ^ 4
+  linarith [hwindow_ge, hgeneric, habsErr.symm.le, habsErr.le]
 
 end LMM
