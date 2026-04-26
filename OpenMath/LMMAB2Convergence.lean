@@ -3,6 +3,7 @@ import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import OpenMath.MultistepMethods
 import OpenMath.AdamsMethods
 import OpenMath.LMMTruncationOp
+import OpenMath.LMMABGenericConvergence
 
 /-! ## Adams–Bashforth 2-step Convergence Chain (Iserles §1.2)
 
@@ -1228,10 +1229,102 @@ theorem ab2Vec_local_residual_bound
   unfold ab2VecResidual
   exact ab2Vec_pointwise_residual_bound hy hM ht_mem hth_mem ht2h_mem hh.le
 
+/-! #### Refactor through the generic vector AB scaffold
+
+The headline `ab2Vec_global_error_bound` is now obtained by specialising
+`LMM.ab_global_error_bound_generic_vec` (cycle 427) to `s = 2` with the
+AB2 coefficient tuple `(α 0, α 1) = (-1/2, 3/2)`. The per-step Taylor
+residual infrastructure above is reused unchanged. -/
+
+/-- AB2 coefficient vector for the generic AB scaffold:
+`α 0 = -1/2`, `α 1 = 3/2`. -/
+noncomputable def ab2GenericCoeff : Fin 2 → ℝ := ![-(1 / 2 : ℝ), (3 / 2 : ℝ)]
+
+@[simp] lemma ab2GenericCoeff_zero :
+    ab2GenericCoeff 0 = -(1 / 2 : ℝ) := rfl
+
+@[simp] lemma ab2GenericCoeff_one :
+    ab2GenericCoeff 1 = (3 / 2 : ℝ) := rfl
+
+/-- The effective Lipschitz constant for the generic AB scaffold at the
+AB2 coefficient tuple is `2 · L`. -/
+lemma abLip_ab2GenericCoeff (L : ℝ) :
+    abLip 2 ab2GenericCoeff L = 2 * L := by
+  rw [abLip, Fin.sum_univ_two, ab2GenericCoeff_zero, ab2GenericCoeff_one]
+  rw [show |(-(1 / 2 : ℝ))| = (1 / 2 : ℝ) by rw [abs_neg]; norm_num,
+      show |((3 / 2 : ℝ))| = (3 / 2 : ℝ) by norm_num]
+  ring
+
+/-- Bridge: the AB2 vector iteration is the generic vector AB iteration
+at `s = 2` with `α = ab2GenericCoeff` and starting samples `![y₀, y₁]`. -/
+lemma ab2IterVec_eq_abIterVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ y₁ : E) (n : ℕ) :
+    ab2IterVec h f t₀ y₀ y₁ n
+      = abIterVec 2 ab2GenericCoeff h f t₀ ![y₀, y₁] n := by
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    match n with
+    | 0 =>
+      rw [ab2IterVec_zero]
+      unfold abIterVec
+      simp
+    | 1 =>
+      rw [ab2IterVec_one]
+      unfold abIterVec
+      simp
+    | k + 2 =>
+      rw [ab2IterVec_succ_succ]
+      rw [abIterVec_step (s := 2) (by norm_num)
+          ab2GenericCoeff h f t₀ ![y₀, y₁] k]
+      rw [show (k + 2 - 1 : ℕ) = k + 1 from by omega]
+      rw [Fin.sum_univ_two]
+      simp only [ab2GenericCoeff_zero, ab2GenericCoeff_one,
+                 Fin.val_zero, Fin.val_one, Nat.add_zero]
+      rw [← ih k (by omega), ← ih (k + 1) (by omega)]
+      rw [show ((k + 1 : ℕ) : ℝ) = (k : ℝ) + 1 by push_cast; ring]
+      rw [neg_smul]
+      abel
+
+/-- Bridge: the AB2 vector residual at base point `t₀ + n · h` equals the
+generic AB vector residual at index `n`. -/
+lemma ab2VecResidual_eq_abResidualVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (h : ℝ) (y : ℝ → E) (t₀ : ℝ) (n : ℕ) :
+    ab2VecResidual h (t₀ + (n : ℝ) * h) y
+      = abResidualVec 2 ab2GenericCoeff h y t₀ n := by
+  unfold ab2VecResidual abResidualVec
+  rw [Fin.sum_univ_two, ab2GenericCoeff_zero, ab2GenericCoeff_one]
+  -- Align time-coordinate arguments.
+  have eA : t₀ + (n : ℝ) * h + 2 * h = t₀ + ((n + 2 : ℕ) : ℝ) * h := by
+    push_cast; ring
+  have eB : t₀ + (n : ℝ) * h + h = t₀ + ((n + 2 - 1 : ℕ) : ℝ) * h := by
+    have hsub : (n + 2 - 1 : ℕ) = n + 1 := by omega
+    rw [hsub]; push_cast; ring
+  have eC : t₀ + (n : ℝ) * h = t₀ + ((n + ((0 : Fin 2) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_zero]
+  have eD : t₀ + (n : ℝ) * h + h
+      = t₀ + ((n + ((1 : Fin 2) : ℕ) : ℕ) : ℝ) * h := by
+    simp [Fin.val_one]; ring
+  rw [← eA, ← eB, ← eC, ← eD]
+  -- Reorder the smul expression: (3/2)•B - (1/2)•A = (-(1/2))•A + (3/2)•B.
+  rw [show (-(1 / 2 : ℝ)) • deriv y (t₀ + (n : ℝ) * h)
+        = -((1 / 2 : ℝ) • deriv y (t₀ + (n : ℝ) * h)) from neg_smul _ _]
+  rw [show (3 / 2 : ℝ) • deriv y (t₀ + (n : ℝ) * h + h)
+        - (1 / 2 : ℝ) • deriv y (t₀ + (n : ℝ) * h)
+        = -((1 / 2 : ℝ) • deriv y (t₀ + (n : ℝ) * h))
+          + (3 / 2 : ℝ) • deriv y (t₀ + (n : ℝ) * h + h) by abel]
+
 /-- Final vector AB2 global error bound on `[t₀, t₀ + T]`. Under Lipschitz `f`,
 a `C^3` exact solution `y` with `deriv y t = f t (y t)`, and starting errors
 `‖y₀ − y t₀‖ ≤ ε₀`, `‖y₁ − y(t₀ + h)‖ ≤ ε₀`, the AB2 iterate error obeys
-`O(ε₀ + h^2)` on a finite horizon. -/
+`O(ε₀ + h^2)` on a finite horizon.
+
+Cycle 428: rewired through `LMM.ab_global_error_bound_generic_vec` via the
+bridge lemmas `ab2IterVec_eq_abIterVec` and `ab2VecResidual_eq_abResidualVec`.
+The public statement and hypothesis names are unchanged. -/
 theorem ab2Vec_global_error_bound
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
@@ -1253,90 +1346,89 @@ theorem ab2Vec_global_error_bound
   · exact mul_nonneg
       (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
   intro h hh hδ_le y₀ y₁ ε₀ hε₀ he0_bd he1_bd N hNh
-  set eN : ℕ → ℝ :=
-    fun k => ‖ab2IterVec h f t₀ y₀ y₁ k - y (t₀ + (k : ℝ) * h)‖ with heN_def
-  set EN : ℕ → ℝ := fun k => max (eN k) (eN (k + 1)) with hEN_def
-  have heN_nn : ∀ k, 0 ≤ eN k := fun _ => norm_nonneg _
-  have hEN_nn : ∀ k, 0 ≤ EN k := fun k =>
-    le_max_of_le_left (heN_nn k)
-  have hEN0_le : EN 0 ≤ ε₀ := by
-    show max (eN 0) (eN 1) ≤ ε₀
-    refine max_le ?_ ?_
-    · show ‖ab2IterVec h f t₀ y₀ y₁ 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      simpa using he0_bd
-    · show ‖ab2IterVec h f t₀ y₀ y₁ 1 - y (t₀ + ((1 : ℕ) : ℝ) * h)‖ ≤ ε₀
-      simpa using he1_bd
-  have h2L_nn : (0 : ℝ) ≤ 2 * L := by linarith
-  have hstep_general : ∀ n : ℕ, ((n : ℝ) + 2) * h ≤ T →
-      EN (n + 1) ≤ (1 + h * (2 * L)) * EN n + C * h ^ 3 := by
-    intro n hnh_le
-    have honestep := ab2Vec_one_step_error_bound (h := h) (L := L)
-        hh.le hL hf t₀ y₀ y₁ y hyf n
-    have hres := hresidual hh hδ_le n hnh_le
-    have hcast1 : ((n + 1 : ℕ) : ℝ) = (n : ℝ) + 1 := by push_cast; ring
-    have hcast2 : ((n + 1 + 1 : ℕ) : ℝ) = (n : ℝ) + 2 := by push_cast; ring
-    have heq_eN_n : eN n
-        = ‖ab2IterVec h f t₀ y₀ y₁ n - y (t₀ + (n : ℝ) * h)‖ := rfl
-    have heq_eN_n1 : eN (n + 1)
-        = ‖ab2IterVec h f t₀ y₀ y₁ (n + 1) - y (t₀ + ((n : ℝ) + 1) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast1]
-    have heq_eN_n2 : eN (n + 1 + 1)
-        = ‖ab2IterVec h f t₀ y₀ y₁ (n + 2) - y (t₀ + ((n : ℝ) + 2) * h)‖ := by
-      show ‖_ - _‖ = _
-      rw [hcast2]
-    show max (eN (n + 1)) (eN (n + 1 + 1))
-        ≤ (1 + h * (2 * L)) * max (eN n) (eN (n + 1)) + C * h ^ 3
-    rw [heq_eN_n, heq_eN_n1, heq_eN_n2]
-    linarith [honestep, hres]
-  rcases N with _ | N'
-  · show ‖ab2IterVec h f t₀ y₀ y₁ 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)‖
-        ≤ Real.exp (2 * L * T) * ε₀ + T * Real.exp (2 * L * T) * C * h ^ 2
-    have hbase : ‖ab2IterVec h f t₀ y₀ y₁ 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)‖
-        ≤ ε₀ := by simpa using he0_bd
-    have hexp_ge : (1 : ℝ) ≤ Real.exp (2 * L * T) :=
-      Real.one_le_exp_iff.mpr (by positivity)
-    have hKnn : 0 ≤ T * Real.exp (2 * L * T) * C :=
-      mul_nonneg (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
-    have hh2_nn : 0 ≤ h ^ 2 := by positivity
-    nlinarith [hbase, hexp_ge, hKnn, hh2_nn, hε₀]
-  · have hN_hyp : ((N' : ℝ) + 1 + 1) * h ≤ T := by
-      have hcast : (((N' + 1 : ℕ) : ℝ) + 1) = (N' : ℝ) + 1 + 1 := by
-        push_cast; ring
-      linarith [hcast.symm ▸ hNh]
-    have hgronwall_step : ∀ n, n < N' →
-        EN (n + 1) ≤ (1 + h * (2 * L)) * EN n + C * h ^ (2 + 1) := by
-      intro n hn_lt
-      have hpow : C * h ^ (2 + 1) = C * h ^ 3 := by norm_num
-      rw [hpow]
-      apply hstep_general
-      have hn1_le_N' : (n : ℝ) + 1 ≤ (N' : ℝ) := by
+  -- Specialize the generic vector AB convergence theorem at s = 2, p = 2.
+  set α : Fin 2 → ℝ := ab2GenericCoeff with hα_def
+  set y₀_pair : Fin 2 → E := ![y₀, y₁] with hy_pair_def
+  have hs : (1 : ℕ) ≤ 2 := by norm_num
+  haveI : Nonempty (Fin 2) := ⟨⟨0, hs⟩⟩
+  -- (1) Starting bound on the window-max error.
+  have hiter0 : abIterVec 2 α h f t₀ y₀_pair 0 = y₀ := by
+    unfold abIterVec
+    simp [hy_pair_def]
+  have hiter1 : abIterVec 2 α h f t₀ y₀_pair 1 = y₁ := by
+    unfold abIterVec
+    simp [hy_pair_def]
+  have hstart : abErrWindowVec hs α h f t₀ y₀_pair y 0 ≤ ε₀ := by
+    unfold abErrWindowVec
+    apply Finset.sup'_le
+    intro j _
+    show abErrVec 2 α h f t₀ y₀_pair y (0 + (j : ℕ)) ≤ ε₀
+    unfold abErrVec
+    fin_cases j
+    · show ‖abIterVec 2 α h f t₀ y₀_pair 0 - y (t₀ + ((0 + (((0 : Fin 2) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter0]
+      have : ((0 + (((0 : Fin 2) : ℕ) : ℕ) : ℕ) : ℝ) = 0 := by simp
+      rw [this, zero_mul, add_zero]
+      exact he0_bd
+    · show ‖abIterVec 2 α h f t₀ y₀_pair 1 - y (t₀ + ((0 + (((1 : Fin 2) : ℕ) : ℕ) : ℕ) : ℝ) * h)‖ ≤ ε₀
+      rw [hiter1]
+      have : ((0 + (((1 : Fin 2) : ℕ) : ℕ) : ℕ) : ℝ) = 1 := by simp
+      rw [this, one_mul]
+      exact he1_bd
+  -- (2) Residual bound for n < N, via the bridge.
+  have hres_gen : ∀ n : ℕ, n < N →
+      ‖abResidualVec 2 α h y t₀ n‖ ≤ C * h ^ (2 + 1) := by
+    intro n hn_lt
+    have hcast : (n : ℝ) + 2 ≤ (N : ℝ) + 1 := by
+      have : (n : ℝ) + 1 ≤ (N : ℝ) := by
         exact_mod_cast Nat.lt_iff_add_one_le.mp hn_lt
-      have h_le_chain : (n : ℝ) + 2 ≤ (N' : ℝ) + 1 + 1 := by linarith
-      have h_mul : ((n : ℝ) + 2) * h ≤ ((N' : ℝ) + 1 + 1) * h :=
-        mul_le_mul_of_nonneg_right h_le_chain hh.le
       linarith
-    have hN'h_le_T : (N' : ℝ) * h ≤ T := by
-      have h1 : (N' : ℝ) ≤ (N' : ℝ) + 1 + 1 := by linarith
-      have h2 := mul_le_mul_of_nonneg_right h1 hh.le
+    have hn2_le : ((n : ℝ) + 2) * h ≤ T := by
+      have hmul : ((n : ℝ) + 2) * h ≤ ((N : ℝ) + 1) * h :=
+        mul_le_mul_of_nonneg_right hcast hh.le
       linarith
-    have hgronwall :=
-      lmm_error_bound_from_local_truncation
-        (h := h) (L := 2 * L) (C := C) (T := T) (p := 2) (e := EN) (N := N')
-        hh.le h2L_nn hC_nn (hEN_nn 0) hgronwall_step N' le_rfl hN'h_le_T
-    have heN_le_EN : eN (N' + 1) ≤ EN N' := le_max_right _ _
-    have hexp_nn : 0 ≤ Real.exp (2 * L * T) := Real.exp_nonneg _
-    have h_chain :
-        Real.exp (2 * L * T) * EN 0 ≤ Real.exp (2 * L * T) * ε₀ :=
-      mul_le_mul_of_nonneg_left hEN0_le hexp_nn
-    show ‖ab2IterVec h f t₀ y₀ y₁ (N' + 1) - y (t₀ + ((N' + 1 : ℕ) : ℝ) * h)‖
-        ≤ Real.exp (2 * L * T) * ε₀ + T * Real.exp (2 * L * T) * C * h ^ 2
-    have heN_eq :
-        eN (N' + 1)
-          = ‖ab2IterVec h f t₀ y₀ y₁ (N' + 1)
-              - y (t₀ + ((N' + 1 : ℕ) : ℝ) * h)‖ :=
-      rfl
-    linarith [heN_le_EN, hgronwall, h_chain, heN_eq.symm.le, heN_eq.le]
+    have hres := hresidual hh hδ_le n hn2_le
+    have hbridge :=
+      ab2VecResidual_eq_abResidualVec (E := E) h y t₀ n
+    have hpow : C * h ^ (2 + 1) = C * h ^ 3 := by norm_num
+    rw [hα_def, ← hbridge]
+    linarith [hres, hpow.symm.le, hpow.le]
+  -- (3) (N : ℝ) * h ≤ T from ((N : ℝ) + 1) * h ≤ T and 0 ≤ h.
+  have hNh' : (N : ℝ) * h ≤ T := by
+    have hmono : (N : ℝ) * h ≤ ((N : ℝ) + 1) * h := by
+      have h1 : (N : ℝ) ≤ (N : ℝ) + 1 := by linarith
+      exact mul_le_mul_of_nonneg_right h1 hh.le
+    linarith
+  -- (4) Apply the generic theorem.
+  have hgeneric :=
+    ab_global_error_bound_generic_vec hs α hh.le hL hC_nn hf t₀ y₀_pair y hyf
+      hε₀ hstart N hNh' hres_gen
+  -- (5) Replace abLip 2 α L with 2 * L.
+  rw [show abLip 2 α L = 2 * L from abLip_ab2GenericCoeff L] at hgeneric
+  -- (6) Bound abErrVec at index N by the window-max bound.
+  have hwindow_ge : abErrVec 2 α h f t₀ y₀_pair y N
+      ≤ abErrWindowVec hs α h f t₀ y₀_pair y N := by
+    show abErrVec 2 α h f t₀ y₀_pair y (N + ((⟨0, hs⟩ : Fin 2) : ℕ))
+        ≤ abErrWindowVec hs α h f t₀ y₀_pair y N
+    unfold abErrWindowVec
+    exact Finset.le_sup' (b := ⟨0, hs⟩)
+      (f := fun j : Fin 2 => abErrVec 2 α h f t₀ y₀_pair y (N + (j : ℕ)))
+      (Finset.mem_univ _)
+  -- (7) Convert abErrVec at N to ‖ab2IterVec ... N - y(...)‖ via the iter bridge.
+  have hbridge :
+      abIterVec 2 α h f t₀ y₀_pair N = ab2IterVec h f t₀ y₀ y₁ N := by
+    rw [hα_def, hy_pair_def]
+    exact (ab2IterVec_eq_abIterVec h f t₀ y₀ y₁ N).symm
+  have habsErr :
+      abErrVec 2 α h f t₀ y₀_pair y N
+        = ‖ab2IterVec h f t₀ y₀ y₁ N - y (t₀ + (N : ℝ) * h)‖ := by
+    show ‖abIterVec 2 α h f t₀ y₀_pair N - y (t₀ + (N : ℝ) * h)‖
+        = ‖ab2IterVec h f t₀ y₀ y₁ N - y (t₀ + (N : ℝ) * h)‖
+    rw [hbridge]
+  -- Conclude.
+  show ‖ab2IterVec h f t₀ y₀ y₁ N - y (t₀ + (N : ℝ) * h)‖
+      ≤ Real.exp (2 * L * T) * ε₀ + T * Real.exp (2 * L * T) * C * h ^ 2
+  linarith [hwindow_ge, hgeneric, habsErr.symm.le, habsErr.le]
 
 
 end LMM
