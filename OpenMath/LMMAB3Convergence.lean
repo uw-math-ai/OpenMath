@@ -315,7 +315,7 @@ theorem ab3_one_step_error_bound
 
 /-- A `C^4` function has its fourth derivative bounded on every compact
 interval `[a, b]`. -/
-private theorem iteratedDeriv_four_bounded_on_Icc
+theorem iteratedDeriv_four_bounded_on_Icc
     {y : ℝ → ℝ} (hy : ContDiff ℝ 4 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 4 y t| ≤ M := by
   have h_cont : Continuous (iteratedDeriv 4 y) :=
@@ -331,7 +331,7 @@ private theorem iteratedDeriv_four_bounded_on_Icc
 `C^4` and `|iteratedDeriv 4 y| ≤ M` on `[a, b]`, then for `t, t + r ∈ [a, b]`
 with `r ≥ 0`,
 `|y(t+r) - y(t) - r·y'(t) - r²/2 · y''(t) - r³/6 · y'''(t)| ≤ M/24 · r⁴`. -/
-private theorem y_fourth_order_taylor_remainder
+theorem y_fourth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 4 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 4 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -412,7 +412,7 @@ private theorem y_fourth_order_taylor_remainder
 derivative: if `y` is `C^4` and `|iteratedDeriv 4 y| ≤ M` on `[a, b]`,
 then for `t, t + r ∈ [a, b]` with `r ≥ 0`,
 `|y'(t+r) - y'(t) - r·y''(t) - r²/2 · y'''(t)| ≤ M/6 · r³`. -/
-private theorem derivY_third_order_taylor_remainder
+theorem derivY_third_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 4 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 4 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -1153,7 +1153,7 @@ theorem ab3Vec_one_step_error_bound
 
 /-- A vector-valued `C^4` function has its fourth derivative bounded on every
 compact interval `[a, b]`. -/
-private theorem iteratedDeriv_four_bounded_on_Icc_vec
+theorem iteratedDeriv_four_bounded_on_Icc_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 4 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 4 y t‖ ≤ M := by
