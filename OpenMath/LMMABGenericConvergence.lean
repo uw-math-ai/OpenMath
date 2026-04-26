@@ -394,4 +394,379 @@ theorem ab_global_error_bound_generic
     mul_le_mul_of_nonneg_left hstart hexp_nn
   linarith
 
+/-! ### Finite-dimensional vector-valued mirror -/
+
+/-- Generic Adams–Bashforth `s`-step iteration in a normed vector space with
+`s` starting samples `y₀ : Fin s → E`:
+`y_{n+s} = y_{n+s-1} + h • ∑_{j : Fin s} α_j • f(t₀ + (n+j)h, y_{n+j})`.
+For `n < s` it returns the corresponding starting sample. For `s = 0` it
+returns `0`. -/
+noncomputable def abIterVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (s : ℕ) (α : Fin s → ℝ)
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ : Fin s → E) : ℕ → E
+  | n =>
+    if h_lt : n < s then y₀ ⟨n, h_lt⟩
+    else if hs : 0 < s then
+      let prev : Fin s → E := fun j =>
+        have hjs : (j : ℕ) < s := j.isLt
+        have h_le : s ≤ n := Nat.not_lt.mp h_lt
+        have hdec : n - s + (j : ℕ) < n := by omega
+        abIterVec s α h f t₀ y₀ (n - s + (j : ℕ))
+      prev ⟨s - 1, by omega⟩
+        + h • ∑ j : Fin s,
+            (α j) • f (t₀ + ((n - s + (j : ℕ) : ℕ) : ℝ) * h) (prev j)
+    else 0
+  termination_by n => n
+
+/-- One-step unfolding of the generic vector AB iteration at index `n + s`,
+exposing the explicit `s`-window recurrence in textbook form. -/
+theorem abIterVec_step
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (s : ℕ) (hs : 0 < s) (α : Fin s → ℝ)
+    (h : ℝ) (f : ℝ → E → E) (t₀ : ℝ) (y₀ : Fin s → E) (n : ℕ) :
+    abIterVec s α h f t₀ y₀ (n + s)
+      = abIterVec s α h f t₀ y₀ (n + s - 1)
+        + h • ∑ j : Fin s,
+            (α j) • f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+              (abIterVec s α h f t₀ y₀ (n + (j : ℕ))) := by
+  have h_lt : ¬ n + s < s := by omega
+  conv_lhs => rw [abIterVec]
+  rw [dif_neg h_lt, dif_pos hs]
+  have hidx : ∀ (j : ℕ), n + s - s + j = n + j := by intro j; omega
+  have hsm1 : n + (s - 1) = n + s - 1 := by omega
+  simp only [hidx, hsm1]
+
+/-- Pointwise normed error of the generic vector AB iterate against the exact
+solution. -/
+noncomputable def abErrVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (s : ℕ) (α : Fin s → ℝ) (h : ℝ) (f : ℝ → E → E)
+    (t₀ : ℝ) (y₀ : Fin s → E) (y : ℝ → E) (k : ℕ) : ℝ :=
+  ‖abIterVec s α h f t₀ y₀ k - y (t₀ + (k : ℝ) * h)‖
+
+lemma abErrVec_nonneg
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (s : ℕ) (α : Fin s → ℝ) (h : ℝ) (f : ℝ → E → E)
+    (t₀ : ℝ) (y₀ : Fin s → E) (y : ℝ → E) (k : ℕ) :
+    0 ≤ abErrVec s α h f t₀ y₀ y k := norm_nonneg _
+
+/-- The vector local truncation residual at step `n`:
+`τ_n = y(t₀ + (n+s)h) − y(t₀ + (n+s-1)h)
+  − h • ∑ α_j • y'(t₀ + (n+j)h)`. -/
+noncomputable def abResidualVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    (s : ℕ) (α : Fin s → ℝ) (h : ℝ) (y : ℝ → E)
+    (t₀ : ℝ) (n : ℕ) : E :=
+  y (t₀ + ((n + s : ℕ) : ℝ) * h) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h)
+    - h • ∑ j : Fin s, (α j) • deriv y (t₀ + ((n + j : ℕ) : ℝ) * h)
+
+/-- Vector window-max error sequence:
+`EN k = max_{j : Fin s} ‖y_{k+j} − y(t₀+(k+j)h)‖`. -/
+noncomputable def abErrWindowVec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {s : ℕ} (hs : 1 ≤ s) (α : Fin s → ℝ) (h : ℝ)
+    (f : ℝ → E → E) (t₀ : ℝ) (y₀ : Fin s → E) (y : ℝ → E) (k : ℕ) : ℝ :=
+  haveI : Nonempty (Fin s) := ⟨⟨0, hs⟩⟩
+  Finset.univ.sup' Finset.univ_nonempty
+    (fun j : Fin s => abErrVec s α h f t₀ y₀ y (k + (j : ℕ)))
+
+lemma abErrWindowVec_nonneg
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {s : ℕ} (hs : 1 ≤ s) (α : Fin s → ℝ) (h : ℝ)
+    (f : ℝ → E → E) (t₀ : ℝ) (y₀ : Fin s → E) (y : ℝ → E) (k : ℕ) :
+    0 ≤ abErrWindowVec hs α h f t₀ y₀ y k := by
+  haveI : Nonempty (Fin s) := ⟨⟨0, hs⟩⟩
+  unfold abErrWindowVec
+  exact (abErrVec_nonneg s α h f t₀ y₀ y (k + ((⟨0, hs⟩ : Fin s) : ℕ))).trans
+    (Finset.le_sup' (b := ⟨0, hs⟩)
+      (f := fun j : Fin s => abErrVec s α h f t₀ y₀ y (k + (j : ℕ)))
+      (Finset.mem_univ _))
+
+/-- Vector-facing alias of the generic finite-sum Lipschitz helper. The
+effective constant is still the scalar `abLip`; no duplicate `abLipVec`
+definition is needed. -/
+lemma abLip_window_bound_vec {s : ℕ} (α : Fin s → ℝ) (h L m : ℝ) :
+    h * (L * ∑ j : Fin s, |α j|) * m
+      = h * abLip s α L * m := by
+  simp [abLip]
+
+/-- Window-max one-step error recurrence for the generic vector AB iteration:
+with window size `s` and effective Lipschitz constant
+`Λ = L · ∑ |α_j|`, `EN (n + 1) ≤ (1 + h · Λ) · EN n + ‖τ_n‖`. -/
+theorem abIter_lipschitz_one_step_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {s : ℕ} (hs : 1 ≤ s) (α : Fin s → ℝ)
+    {h L : ℝ} (hh : 0 ≤ h) (hL : 0 ≤ L) {f : ℝ → E → E}
+    (hf : ∀ t : ℝ, ∀ a b : E, ‖f t a - f t b‖ ≤ L * ‖a - b‖)
+    (t₀ : ℝ) (y₀ : Fin s → E) (y : ℝ → E)
+    (hyf : ∀ t : ℝ, deriv y t = f t (y t))
+    (n : ℕ) :
+    abErrWindowVec hs α h f t₀ y₀ y (n + 1)
+      ≤ (1 + h * abLip s α L) * abErrWindowVec hs α h f t₀ y₀ y n
+        + ‖abResidualVec s α h y t₀ n‖ := by
+  haveI : Nonempty (Fin s) := ⟨⟨0, hs⟩⟩
+  set Λ : ℝ := abLip s α L with hΛ_def
+  have hΛ_nn : 0 ≤ Λ := abLip_nonneg hL
+  have hhΛ_nn : 0 ≤ h * Λ := mul_nonneg hh hΛ_nn
+  set EN_n : ℝ := abErrWindowVec hs α h f t₀ y₀ y n with hEN_n_def
+  have hEN_n_nn : 0 ≤ EN_n := abErrWindowVec_nonneg hs α h f t₀ y₀ y n
+  set τ : E := abResidualVec s α h y t₀ n with hτ_def
+  set τabs : ℝ := ‖τ‖ with hτabs_def
+  have hτabs_nn : 0 ≤ τabs := norm_nonneg _
+  -- Each in-window sample bounded by EN_n.
+  have h_eN_in_window : ∀ j : Fin s,
+      abErrVec s α h f t₀ y₀ y (n + (j : ℕ)) ≤ EN_n := by
+    intro j
+    show abErrVec s α h f t₀ y₀ y (n + (j : ℕ)) ≤ abErrWindowVec hs α h f t₀ y₀ y n
+    unfold abErrWindowVec
+    exact Finset.le_sup' (b := j)
+      (f := fun k : Fin s => abErrVec s α h f t₀ y₀ y (n + (k : ℕ)))
+      (Finset.mem_univ _)
+  -- One-step bound at the new point n + s.
+  have h_eN_ns_bound :
+      abErrVec s α h f t₀ y₀ y (n + s) ≤ (1 + h * Λ) * EN_n + τabs := by
+    -- Notation.
+    set yiter : ℕ → E := abIterVec s α h f t₀ y₀
+    -- AB step formula at index n + s.
+    have hstep := abIterVec_step s hs α h f t₀ y₀ n
+    -- τ in textbook form using `deriv y = f` along the trajectory.
+    have hτ_alt : τ
+        = y (t₀ + ((n + s : ℕ) : ℝ) * h)
+            - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h)
+            - h • ∑ j : Fin s, (α j) •
+                f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                    (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)) := by
+      show abResidualVec s α h y t₀ n = _
+      unfold abResidualVec
+      have hcong :
+          (fun j : Fin s => (α j) • deriv y
+              (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h))
+            = (fun j : Fin s => (α j) •
+                f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                    (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h))) := by
+        funext j; rw [hyf]
+      rw [hcong]
+    -- Set sum abbreviations.
+    set Sa : E := ∑ j : Fin s, (α j) •
+        f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+            (yiter (n + (j : ℕ))) with hSa_def
+    set Sy : E := ∑ j : Fin s, (α j) •
+        f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+            (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)) with hSy_def
+    -- Algebraic decomposition.
+    have halg :
+        yiter (n + s) - y (t₀ + ((n + s : ℕ) : ℝ) * h)
+          = (yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h))
+            + h • (Sa - Sy)
+            - τ := by
+      rw [hτ_alt]
+      have : yiter (n + s) = yiter (n + s - 1) + h • Sa := hstep
+      rw [this]
+      simp only [smul_sub]
+      abel
+    -- Bound on h • (Sa - Sy) via Lipschitz.
+    have hSa_sub_Sy :
+        Sa - Sy = ∑ j : Fin s, (α j) •
+          (f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+            - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h))) := by
+      rw [hSa_def, hSy_def, ← Finset.sum_sub_distrib]
+      apply Finset.sum_congr rfl
+      intro j _
+      rw [smul_sub]
+    -- Per-summand Lipschitz bound.
+    have h_diff_bound : ∀ j : Fin s,
+        ‖(α j) • (f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+              - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                  (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)))‖
+          ≤ |α j| * L * EN_n := by
+      intro j
+      have hLip := hf (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                      (yiter (n + (j : ℕ)))
+                      (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h))
+      have heN : abErrVec s α h f t₀ y₀ y (n + (j : ℕ)) ≤ EN_n :=
+        h_eN_in_window j
+      have heN_eq : abErrVec s α h f t₀ y₀ y (n + (j : ℕ))
+          = ‖yiter (n + (j : ℕ)) - y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)‖ := by
+        rfl
+      have hLip_EN :
+          ‖yiter (n + (j : ℕ)) - y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)‖
+            ≤ EN_n := by rw [← heN_eq]; exact heN
+      have hαj_nn : 0 ≤ |α j| := abs_nonneg _
+      have h_inner :
+          ‖f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+            - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h))‖
+          ≤ L * EN_n := by
+        refine hLip.trans ?_
+        exact mul_le_mul_of_nonneg_left hLip_EN hL
+      calc
+        ‖(α j) • (f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+              - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                  (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)))‖
+            = |α j| *
+                ‖f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+                  - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                      (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h))‖ := by
+                rw [norm_smul, Real.norm_eq_abs]
+        _ ≤ |α j| * (L * EN_n) :=
+            mul_le_mul_of_nonneg_left h_inner hαj_nn
+        _ = |α j| * L * EN_n := by ring
+    -- Sum bound.
+    have hSd_norm : ‖Sa - Sy‖ ≤ Λ * EN_n := by
+      rw [hSa_sub_Sy]
+      calc
+        ‖∑ j : Fin s, (α j) •
+            (f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+              - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                  (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)))‖
+            ≤ ∑ j : Fin s,
+                ‖(α j) •
+                  (f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+                    - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                        (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)))‖ := by
+              simpa using norm_sum_le (Finset.univ)
+                (fun j : Fin s => (α j) •
+                  (f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h) (yiter (n + (j : ℕ)))
+                    - f (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h)
+                        (y (t₀ + ((n + (j : ℕ) : ℕ) : ℝ) * h))))
+        _ ≤ ∑ j : Fin s, |α j| * L * EN_n :=
+              Finset.sum_le_sum (fun j _ => h_diff_bound j)
+        _ = (∑ j : Fin s, |α j|) * L * EN_n := by
+              rw [← Finset.sum_mul, ← Finset.sum_mul]
+        _ = Λ * EN_n := by rw [hΛ_def, abLip]; ring
+    -- Bound on ‖abIterVec (n+s-1) - y(tn+s-1)‖ via the (s-1)-th window slot.
+    have h_eN_nsm1 :
+        ‖yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h)‖ ≤ EN_n := by
+      have hs1 : (s - 1 : ℕ) < s := by omega
+      have h_in := h_eN_in_window ⟨s - 1, hs1⟩
+      have hidx : n + ((⟨s - 1, hs1⟩ : Fin s) : ℕ) = n + s - 1 := by
+        show n + (s - 1) = n + s - 1; omega
+      have hcoe : abErrVec s α h f t₀ y₀ y (n + ((⟨s - 1, hs1⟩ : Fin s) : ℕ))
+          = ‖yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h)‖ := by
+        show ‖yiter (n + ((⟨s - 1, hs1⟩ : Fin s) : ℕ))
+              - y (t₀ + ((n + ((⟨s - 1, hs1⟩ : Fin s) : ℕ) : ℕ) : ℝ) * h)‖
+              = _
+        rw [hidx]
+      linarith [hcoe.symm ▸ h_in]
+    -- Triangle inequality.
+    have htri :
+        ‖yiter (n + s) - y (t₀ + ((n + s : ℕ) : ℝ) * h)‖
+          ≤ ‖yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h)‖
+            + ‖h • (Sa - Sy)‖ + τabs := by
+      rw [halg]
+      have h1 :
+          ‖(yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h))
+              + h • (Sa - Sy) - τ‖
+            ≤ ‖(yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h))
+                + h • (Sa - Sy)‖ + ‖τ‖ := norm_sub_le _ _
+      have h2 :
+          ‖(yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h))
+              + h • (Sa - Sy)‖
+            ≤ ‖yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h)‖
+              + ‖h • (Sa - Sy)‖ := norm_add_le _ _
+      linarith
+    -- Bound h • (Sa - Sy) in norm.
+    have h_h_Sd : ‖h • (Sa - Sy)‖ ≤ h * (Λ * EN_n) := by
+      rw [norm_smul, Real.norm_of_nonneg hh]
+      exact mul_le_mul_of_nonneg_left hSd_norm hh
+    -- Combine.
+    have hfinal :
+        ‖yiter (n + s) - y (t₀ + ((n + s : ℕ) : ℝ) * h)‖
+          ≤ EN_n + h * Λ * EN_n + τabs := by
+      have h_alg : ‖yiter (n + s - 1) - y (t₀ + ((n + s - 1 : ℕ) : ℝ) * h)‖
+              + ‖h • (Sa - Sy)‖ + τabs
+            ≤ EN_n + h * (Λ * EN_n) + τabs := by linarith
+      have h_alg2 : EN_n + h * (Λ * EN_n) = EN_n + h * Λ * EN_n := by ring
+      linarith
+    -- Convert back to abErrVec.
+    show ‖yiter (n + s) - y (t₀ + ((n + s : ℕ) : ℝ) * h)‖
+        ≤ (1 + h * Λ) * EN_n + τabs
+    have h_one : (1 + h * Λ) * EN_n = EN_n + h * Λ * EN_n := by ring
+    linarith
+  -- Per-window bound on EN(n+1).
+  have h_per : ∀ j : Fin s,
+      abErrVec s α h f t₀ y₀ y (n + 1 + (j : ℕ))
+        ≤ (1 + h * Λ) * EN_n + τabs := by
+    intro j
+    by_cases hj : (j : ℕ) + 1 < s
+    · -- j + 1 < s: lies in the prior window.
+      have hwindow : abErrVec s α h f t₀ y₀ y (n + ((j : ℕ) + 1)) ≤ EN_n := by
+        have h_in := h_eN_in_window ⟨(j : ℕ) + 1, hj⟩
+        show abErrVec s α h f t₀ y₀ y (n + ((j : ℕ) + 1)) ≤ EN_n
+        rw [show (n + ((⟨(j : ℕ) + 1, hj⟩ : Fin s) : ℕ))
+            = n + ((j : ℕ) + 1) from rfl] at h_in
+        exact h_in
+      have hidx : n + 1 + (j : ℕ) = n + ((j : ℕ) + 1) := by omega
+      rw [hidx]
+      have h1 : EN_n ≤ (1 + h * Λ) * EN_n := by
+        have := mul_le_mul_of_nonneg_right
+          (show (1 : ℝ) ≤ 1 + h * Λ by linarith) hEN_n_nn
+        linarith
+      linarith
+    · -- (j : ℕ) + 1 ≥ s, so (j : ℕ) = s - 1.
+      have hidx : n + 1 + (j : ℕ) = n + s := by omega
+      rw [hidx]
+      exact h_eN_ns_bound
+  -- Conclude with Finset.sup'_le.
+  unfold abErrWindowVec
+  exact Finset.sup'_le _ _ (fun j _ => h_per j)
+
+/-- Headline generic vector AB convergence bound. Given a uniform vector
+residual bound `‖τ_n‖ ≤ K · h^(p+1)`, the window-max global error obeys the
+same Grönwall bound as the scalar generic theorem. -/
+theorem ab_global_error_bound_generic_vec
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    [FiniteDimensional ℝ E]
+    {s : ℕ} (hs : 1 ≤ s) (α : Fin s → ℝ)
+    {h L K T : ℝ} {p : ℕ}
+    (hh : 0 ≤ h) (hL : 0 ≤ L) (hK : 0 ≤ K)
+    {f : ℝ → E → E}
+    (hf : ∀ t : ℝ, ∀ a b : E, ‖f t a - f t b‖ ≤ L * ‖a - b‖)
+    (t₀ : ℝ) (y₀ : Fin s → E) (y : ℝ → E)
+    (hyf : ∀ t : ℝ, deriv y t = f t (y t))
+    {ε₀ : ℝ} (_hε₀ : 0 ≤ ε₀)
+    (hstart : abErrWindowVec hs α h f t₀ y₀ y 0 ≤ ε₀)
+    (N : ℕ) (hNh : ((N : ℝ)) * h ≤ T)
+    (hresidual : ∀ n : ℕ, n < N →
+      ‖abResidualVec s α h y t₀ n‖ ≤ K * h ^ (p + 1)) :
+    abErrWindowVec hs α h f t₀ y₀ y N
+      ≤ Real.exp (abLip s α L * T) * ε₀
+        + T * Real.exp (abLip s α L * T) * K * h ^ p := by
+  set EN : ℕ → ℝ := abErrWindowVec hs α h f t₀ y₀ y with hEN_def
+  have hΛ_nn : 0 ≤ abLip s α L := abLip_nonneg hL
+  have hEN_nn : ∀ k, 0 ≤ EN k := fun k =>
+    abErrWindowVec_nonneg hs α h f t₀ y₀ y k
+  -- Combine the window-max one-step bound with the residual bound.
+  have hstep : ∀ n, n < N →
+      EN (n + 1) ≤ (1 + h * abLip s α L) * EN n + K * h ^ (p + 1) := by
+    intro n hn
+    have honestep :=
+      abIter_lipschitz_one_step_vec hs α hh hL hf t₀ y₀ y hyf n
+    have hres := hresidual n hn
+    show abErrWindowVec hs α h f t₀ y₀ y (n + 1)
+        ≤ (1 + h * abLip s α L) * abErrWindowVec hs α h f t₀ y₀ y n
+          + K * h ^ (p + 1)
+    linarith
+  -- Apply the abstract Grönwall bridge from LMMTruncationOp.
+  have hgronwall :=
+    lmm_error_bound_from_local_truncation
+      (h := h) (L := abLip s α L) (C := K) (T := T) (p := p) (e := EN)
+      (N := N) hh hΛ_nn hK (hEN_nn 0) hstep N le_rfl hNh
+  have hexp_nn : 0 ≤ Real.exp (abLip s α L * T) := Real.exp_nonneg _
+  have h_chain :
+      Real.exp (abLip s α L * T) * EN 0
+        ≤ Real.exp (abLip s α L * T) * ε₀ :=
+    mul_le_mul_of_nonneg_left hstart hexp_nn
+  linarith
+
 end LMM
