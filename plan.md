@@ -278,7 +278,12 @@ K·h⁹` for `(N+7)·h ≤ T`, Grönwall via `lmm_error_bound_from_local_truncat
 at `p = 9`). The next Adams-family target is **AM8 vector quantitative
 convergence**, mirroring cycle 445's AM7 vector template at the next
 order. The alternate target, if AM8 vector stalls, is **BDF3 scalar
-quantitative convergence**.
+quantitative convergence**. Cycle 453 starts that fallback chain in
+`OpenMath/LMMBDF3Convergence.lean` with `LMM.IsBDF3Trajectory`,
+`LMM.bdf3_localTruncationError_eq`, `LMM.bdf3_one_step_lipschitz`,
+`LMM.bdf3_pointwise_residual_bound` (`|τ_n| ≤ 7·M·h⁴`, from exact
+`153/22`), and `LMM.bdf3_local_residual_bound`; the BDF3 Lyapunov-window
+recurrence and global quantitative theorem remain open.
 
 **Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
 §3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a

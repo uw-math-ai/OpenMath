@@ -15,7 +15,7 @@ fixed-point problem and is not part of this chain.
 
 namespace LMM
 
-private theorem iteratedDeriv_nine_bounded_on_Icc_vec
+theorem iteratedDeriv_nine_bounded_on_Icc_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 9 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, ‖iteratedDeriv 9 y t‖ ≤ M := by
@@ -25,7 +25,7 @@ private theorem iteratedDeriv_nine_bounded_on_Icc_vec
     IsCompact.exists_bound_of_continuousOn isCompact_Icc h_cont.continuousOn
   exact ⟨max M 0, le_max_right _ _, fun t ht => (hM t ht).trans (le_max_left _ _)⟩
 
-private theorem am7Vec_y_eighth_order_taylor_remainder_vec
+theorem am7Vec_y_eighth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 8 y) {a b M : ℝ}
@@ -338,7 +338,7 @@ private theorem am7Vec_y_eighth_order_taylor_remainder_vec
   rw [h_residual_integral]
   exact h_bound_integral.trans_eq h_integral_eval
 
-private theorem y_ninth_order_taylor_remainder_vec
+theorem y_ninth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 9 y) {a b M : ℝ}
@@ -693,7 +693,7 @@ private theorem y_ninth_order_taylor_remainder_vec
   rw [h_residual_integral]
   exact h_bound_integral.trans_eq h_integral_eval
 
-private theorem derivY_eighth_order_taylor_remainder_vec
+theorem derivY_eighth_order_taylor_remainder_vec
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     [FiniteDimensional ℝ E]
     {y : ℝ → E} (hy : ContDiff ℝ 9 y) {a b M : ℝ}
