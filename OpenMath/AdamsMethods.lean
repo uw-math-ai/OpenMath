@@ -123,6 +123,22 @@ noncomputable def adamsMoulton6 : LMM 6 where
         65112/60480, 19087/60480]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Moulton 7-step** method:
+y_{n+7} = y_{n+6} + h·(36799/120960·f_{n+7} + 139849/120960·f_{n+6}
+  − 121797/120960·f_{n+5} + 123133/120960·f_{n+4}
+  − 88547/120960·f_{n+3} + 41499/120960·f_{n+2}
+  − 11351/120960·f_{n+1} + 1375/120960·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, -1, 1],
+β = [1375/120960, -11351/120960, 41499/120960, -88547/120960,
+     123133/120960, -121797/120960, 139849/120960, 36799/120960].
+This is an implicit method of order 8.
+Reference: Iserles, Section 1.2. -/
+noncomputable def adamsMoulton7 : LMM 7 where
+  α := ![0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![1375/120960, -11351/120960, 41499/120960, -88547/120960,
+        123133/120960, -121797/120960, 139849/120960, 36799/120960]
+  normalized := by simp [Fin.last]
+
 /-! ## Consistency / explicitness / implicitness -/
 
 /-- Adams–Bashforth 2-step is consistent. -/
