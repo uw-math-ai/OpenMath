@@ -493,7 +493,7 @@ theorem ab6_one_step_error_bound
 
 /-- A `C^7` function has its seventh derivative bounded on every compact
 interval `[a, b]`. -/
-private theorem iteratedDeriv_seven_bounded_on_Icc
+theorem iteratedDeriv_seven_bounded_on_Icc
     {y : ℝ → ℝ} (hy : ContDiff ℝ 7 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 7 y t| ≤ M := by
   have h_cont : Continuous (iteratedDeriv 7 y) :=
@@ -510,7 +510,7 @@ private theorem iteratedDeriv_seven_bounded_on_Icc
 with `r ≥ 0`,
 `|y(t+r) - y(t) - r·y'(t) - r²/2·y''(t) - r³/6·y'''(t) - r⁴/24·y⁽⁴⁾(t)
   - r⁵/120·y⁽⁵⁾(t) - r⁶/720·y⁽⁶⁾(t)| ≤ M/5040 · r⁷`. -/
-private theorem y_seventh_order_taylor_remainder
+theorem y_seventh_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 7 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 7 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -614,7 +614,7 @@ derivative: if `y` is `C^7` and `|iteratedDeriv 7 y| ≤ M` on `[a, b]`,
 then for `t, t + r ∈ [a, b]` with `r ≥ 0`,
 `|y'(t+r) - y'(t) - r·y''(t) - r²/2·y'''(t) - r³/6·y⁽⁴⁾(t) - r⁴/24·y⁽⁵⁾(t)
   - r⁵/120·y⁽⁶⁾(t)| ≤ M/720 · r⁶`. -/
-private theorem derivY_sixth_order_taylor_remainder
+theorem derivY_sixth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 7 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 7 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
