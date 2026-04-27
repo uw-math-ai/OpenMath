@@ -366,6 +366,41 @@ noncomputable def adamsMoulton10 : LMM 10 where
         134211265/479001600]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Moulton 11-step** method:
+y_{n+11} = y_{n+10} + h·(262747265/958003200·f_{n+11}
+  + 1374799219/958003200·f_{n+10}
+  - 2092490673/958003200·f_{n+9}
+  + 3828828885/958003200·f_{n+8}
+  - 5519460582/958003200·f_{n+7}
+  + 6043521486/958003200·f_{n+6}
+  - 4963166514/958003200·f_{n+5}
+  + 3007739418/958003200·f_{n+4}
+  - 1305971115/958003200·f_{n+3}
+  + 384709327/958003200·f_{n+2}
+  - 68928781/958003200·f_{n+1}
+  + 5675265/958003200·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [5675265/958003200, -68928781/958003200,
+     384709327/958003200, -1305971115/958003200,
+     3007739418/958003200, -4963166514/958003200,
+     6043521486/958003200, -5519460582/958003200,
+     3828828885/958003200, -2092490673/958003200,
+     1374799219/958003200, 262747265/958003200].
+This is an implicit method of order 12.
+Reference: Iserles, Section 1.2 (k = 11 Adams–Moulton); coefficients
+verified by exact `Fraction` arithmetic from the Lagrange-interpolation-and-
+integrate construction on nodes 0,…,11 over `[10, 11]` (denominator
+`2·12! = 958003200`); the numerators sum to `958003200`. -/
+noncomputable def adamsMoulton11 : LMM 11 where
+  α := ![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![5675265/958003200, -68928781/958003200,
+        384709327/958003200, -1305971115/958003200,
+        3007739418/958003200, -4963166514/958003200,
+        6043521486/958003200, -5519460582/958003200,
+        3828828885/958003200, -2092490673/958003200,
+        1374799219/958003200, 262747265/958003200]
+  normalized := by simp [Fin.last]
+
 /-! ## Consistency / explicitness / implicitness -/
 
 /-- Adams–Bashforth 2-step is consistent. -/
@@ -533,6 +568,15 @@ theorem adamsMoulton10_consistent : adamsMoulton10.IsConsistent :=
 theorem adamsMoulton10_implicit : adamsMoulton10.IsImplicit := by
   simp [LMM.IsImplicit, adamsMoulton10, Fin.last]
 
+/-- Adams–Moulton 11-step is consistent. -/
+theorem adamsMoulton11_consistent : adamsMoulton11.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsMoulton11, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsMoulton11, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Moulton 11-step is implicit (β₁₁ = 262747265/958003200 ≠ 0). -/
+theorem adamsMoulton11_implicit : adamsMoulton11.IsImplicit := by
+  simp [LMM.IsImplicit, adamsMoulton11, Fin.last]
+
 /-! ## Order theorems -/
 
 /-- Adams–Bashforth 2-step has order 2. -/
@@ -677,6 +721,14 @@ theorem adamsMoulton10_order_eleven : adamsMoulton10.HasOrder 11 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsMoulton10, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsMoulton10, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Moulton 11-step has order 12. -/
+theorem adamsMoulton11_order_twelve : adamsMoulton11.HasOrder 12 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsMoulton11, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsMoulton11, Fin.sum_univ_succ]; norm_num
 
 /-! ## Error constants
 
@@ -1016,4 +1068,15 @@ theorem adamsMoulton10_zeroStable : adamsMoulton10.IsZeroStable :=
       ring)
     (by
       simp [LMM.rhoCDeriv, adamsMoulton10, Fin.sum_univ_succ]
+      norm_num)
+
+/-- Adams–Moulton 11-step is zero-stable: ρ(ξ) = ξ¹¹ - ξ¹⁰ = ξ¹⁰(ξ - 1). -/
+theorem adamsMoulton11_zeroStable : adamsMoulton11.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsMoulton11 (by norm_num : 0 < 10)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsMoulton11, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsMoulton11, Fin.sum_univ_succ]
       norm_num)
