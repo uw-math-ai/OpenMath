@@ -193,6 +193,30 @@ noncomputable def adamsBashforth9 : LMM 9 where
         -43125206/3628800, 14097247/3628800, 0]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Bashforth 10-step** method:
+y_{n+10} = y_{n+9} + h·(30277247/7257600·f_{n+9} - 104995189/7257600·f_{n+8}
+  + 265932680/7257600·f_{n+7} - 454661776/7257600·f_{n+6}
+  + 538363838/7257600·f_{n+5} - 444772162/7257600·f_{n+4}
+  + 252618224/7257600·f_{n+3} - 94307320/7257600·f_{n+2}
+  + 20884811/7257600·f_{n+1} - 2082753/7257600·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [-2082753/7257600, 20884811/7257600, -94307320/7257600,
+     252618224/7257600, -444772162/7257600, 538363838/7257600,
+     -454661776/7257600, 265932680/7257600, -104995189/7257600,
+     30277247/7257600, 0].
+This is an explicit method of order 10.
+Reference: Iserles, Section 1.2 (k = 10 Adams–Bashforth); coefficients
+verified against the Lagrange-interpolation-and-integrate construction on
+nodes 0,…,9 over the interval [9, 10] (denominator `2·10! = 7257600`);
+sums to 1 over the common denominator. -/
+noncomputable def adamsBashforth10 : LMM 10 where
+  α := ![0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![-2082753/7257600, 20884811/7257600, -94307320/7257600,
+        252618224/7257600, -444772162/7257600, 538363838/7257600,
+        -454661776/7257600, 265932680/7257600, -104995189/7257600,
+        30277247/7257600, 0]
+  normalized := by simp [Fin.last]
+
 /-- **Adams–Moulton 8-step** method:
 y_{n+8} = y_{n+7} + h·(1070017/3628800·f_{n+8} + 4467094/3628800·f_{n+7}
   − 4604594/3628800·f_{n+6} + 5595358/3628800·f_{n+5}
@@ -316,6 +340,15 @@ theorem adamsBashforth9_consistent : adamsBashforth9.IsConsistent :=
 theorem adamsBashforth9_explicit : adamsBashforth9.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth9, Fin.last]
 
+/-- Adams–Bashforth 10-step is consistent. -/
+theorem adamsBashforth10_consistent : adamsBashforth10.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsBashforth10, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsBashforth10, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Bashforth 10-step is explicit (β₁₀ = 0). -/
+theorem adamsBashforth10_explicit : adamsBashforth10.IsExplicit := by
+  simp [LMM.IsExplicit, adamsBashforth10, Fin.last]
+
 /-- Adams–Moulton 5-step is consistent. -/
 theorem adamsMoulton5_consistent : adamsMoulton5.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton5, Fin.sum_univ_succ],
@@ -424,6 +457,14 @@ theorem adamsBashforth9_order_nine : adamsBashforth9.HasOrder 9 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsBashforth9, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth9, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Bashforth 10-step has order 10. -/
+theorem adamsBashforth10_order_ten : adamsBashforth10.HasOrder 10 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsBashforth10, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsBashforth10, Fin.sum_univ_succ]; norm_num
 
 /-- Adams–Moulton 5-step has order 6. -/
 theorem adamsMoulton5_order_six : adamsMoulton5.HasOrder 6 := by
@@ -724,4 +765,15 @@ theorem adamsBashforth9_zeroStable : adamsBashforth9.IsZeroStable :=
       ring)
     (by
       simp [LMM.rhoCDeriv, adamsBashforth9, Fin.sum_univ_succ]
+      norm_num)
+
+/-- Adams–Bashforth 10-step is zero-stable: ρ(ξ) = ξ¹⁰ - ξ⁹ = ξ⁹(ξ - 1). -/
+theorem adamsBashforth10_zeroStable : adamsBashforth10.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth10 (by norm_num : 0 < 9)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth10, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth10, Fin.sum_univ_succ]
       norm_num)
