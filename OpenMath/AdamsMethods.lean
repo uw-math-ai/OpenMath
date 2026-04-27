@@ -251,6 +251,41 @@ noncomputable def adamsBashforth11 : LMM 11 where
         2132509567/479001600, 0]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Bashforth 12-step** method:
+y_{n+12} = y_{n+11} + h·(4527766399/958003200·f_{n+11}
+  - 19433810163/958003200·f_{n+10}
+  + 61633227185/958003200·f_{n+9}
+  - 135579356757/958003200·f_{n+8}
+  + 214139355366/958003200·f_{n+7}
+  - 247741639374/958003200·f_{n+6}
+  + 211103573298/958003200·f_{n+5}
+  - 131365867290/958003200·f_{n+4}
+  + 58189107627/958003200·f_{n+3}
+  - 17410248271/958003200·f_{n+2}
+  + 3158642445/958003200·f_{n+1}
+  - 262747265/958003200·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [-262747265/958003200, 3158642445/958003200,
+     -17410248271/958003200, 58189107627/958003200,
+     -131365867290/958003200, 211103573298/958003200,
+     -247741639374/958003200, 214139355366/958003200,
+     -135579356757/958003200, 61633227185/958003200,
+     -19433810163/958003200, 4527766399/958003200, 0].
+This is an explicit method of order 12.
+Reference: Iserles, Section 1.2 (k = 12 Adams–Bashforth); coefficients
+verified by exact `Fraction` arithmetic from the Lagrange-interpolation-and-
+integrate construction on nodes 0,…,11 over `[11, 12]` (smallest common
+denominator `958003200`); the numerators sum to `958003200`. -/
+noncomputable def adamsBashforth12 : LMM 12 where
+  α := ![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![-262747265/958003200, 3158642445/958003200,
+        -17410248271/958003200, 58189107627/958003200,
+        -131365867290/958003200, 211103573298/958003200,
+        -247741639374/958003200, 214139355366/958003200,
+        -135579356757/958003200, 61633227185/958003200,
+        -19433810163/958003200, 4527766399/958003200, 0]
+  normalized := by simp [Fin.last]
+
 /-- **Adams–Moulton 8-step** method:
 y_{n+8} = y_{n+7} + h·(1070017/3628800·f_{n+8} + 4467094/3628800·f_{n+7}
   − 4604594/3628800·f_{n+6} + 5595358/3628800·f_{n+5}
@@ -451,6 +486,15 @@ theorem adamsBashforth11_consistent : adamsBashforth11.IsConsistent :=
 theorem adamsBashforth11_explicit : adamsBashforth11.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth11, Fin.last]
 
+/-- Adams–Bashforth 12-step is consistent. -/
+theorem adamsBashforth12_consistent : adamsBashforth12.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsBashforth12, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsBashforth12, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Bashforth 12-step is explicit (β₁₂ = 0). -/
+theorem adamsBashforth12_explicit : adamsBashforth12.IsExplicit := by
+  simp [LMM.IsExplicit, adamsBashforth12, Fin.last]
+
 /-- Adams–Moulton 5-step is consistent. -/
 theorem adamsMoulton5_consistent : adamsMoulton5.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton5, Fin.sum_univ_succ],
@@ -593,6 +637,14 @@ theorem adamsBashforth11_order_eleven : adamsBashforth11.HasOrder 11 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsBashforth11, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth11, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Bashforth 12-step has order 12. -/
+theorem adamsBashforth12_order_twelve : adamsBashforth12.HasOrder 12 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsBashforth12, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsBashforth12, Fin.sum_univ_succ]; norm_num
 
 /-- Adams–Moulton 5-step has order 6. -/
 theorem adamsMoulton5_order_six : adamsMoulton5.HasOrder 6 := by
@@ -931,6 +983,17 @@ theorem adamsBashforth11_zeroStable : adamsBashforth11.IsZeroStable :=
       ring)
     (by
       simp [LMM.rhoCDeriv, adamsBashforth11, Fin.sum_univ_succ]
+      norm_num)
+
+/-- Adams–Bashforth 12-step is zero-stable: ρ(ξ) = ξ¹² - ξ¹¹ = ξ¹¹(ξ - 1). -/
+theorem adamsBashforth12_zeroStable : adamsBashforth12.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth12 (by norm_num : 0 < 11)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth12, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth12, Fin.sum_univ_succ]
       norm_num)
 
 /-- Adams–Moulton 9-step is zero-stable: ρ(ξ) = ξ⁹ - ξ⁸ = ξ⁸(ξ - 1). -/
