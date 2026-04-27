@@ -312,6 +312,12 @@ quantitative convergence chain,
 vector quantitative convergence chain,
 `OpenMath/LMMAB11Convergence.lean` hosts the Adams–Bashforth 11-step scalar
 quantitative convergence chain,
+`OpenMath/LMMAB13Convergence.lean` hosts the Adams–Bashforth 13-step scalar
+quantitative convergence chain (cycle 486 partial: method registered, generic
+coefficient bridge, one-step Lipschitz/error bounds, and surface declarations
+land sorry-first; the 14-witness packed-polynomial residual identity, the
+529729 pointwise residual bound, and the global error bound are pending — see
+`.prover-state/issues/ab13_residual_algebra.md`),
 `OpenMath/LMMBDF1Convergence.lean` hosts the BDF1 (backward Euler) scalar
 quantitative convergence chain, `OpenMath/LMMBDF1VectorConvergence.lean`
 hosts the BDF1 (backward Euler) vector quantitative convergence chain,
@@ -356,7 +362,10 @@ zero-unstable so no global theorem applies), and
 
 **Active frontier**: AB2–AB12 have closed scalar and vector quantitative
 convergence chains. AM2–AM12 have closed scalar and vector quantitative
-convergence chains. BDF1–BDF3 have closed scalar and vector quantitative convergence
+convergence chains. AB13 scalar is registered (`adamsBashforth13` plus its
+four structural lemmas) and has a partial convergence file (definitions,
+generic-bridge, one-step Lipschitz/error bounds) with the residual bound
+and global error bound deferred to a follow-up cycle. BDF1–BDF3 have closed scalar and vector quantitative convergence
 chains. BDF4, BDF5, BDF6, and BDF7 each have closed scalar and vector
 truncation chains; the BDF4–BDF6 Lyapunov/global theorems remain deferred by
 the spectral obstruction documented in

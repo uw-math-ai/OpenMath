@@ -286,6 +286,32 @@ noncomputable def adamsBashforth12 : LMM 12 where
         -19433810163/958003200, 4527766399/958003200, 0]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Bashforth 13-step** method. Coefficients
+α = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [703604254357/2615348736000, -9160551085734/2615348736000,
+     55060974662412/2615348736000, -202322913738370/2615348736000,
+     507140369728425/2615348736000, -915883387152444/2615348736000,
+     1226443086129408/2615348736000, -1233589244941764/2615348736000,
+     932884546055895/2615348736000, -524924579905150/2615348736000,
+     214696591002612/2615348736000, -61497552797274/2615348736000,
+     13064406523627/2615348736000, 0].
+This is an explicit method of order 13.
+Reference: Iserles, Section 1.2 (k = 13 Adams–Bashforth); coefficients
+verified by exact `Fraction` arithmetic from the Lagrange-interpolation-and-
+integrate construction on nodes 0,…,12 over `[12, 13]` (smallest common
+denominator `2615348736000 = 420 · 13!`); the numerators sum to
+`2615348736000`. -/
+noncomputable def adamsBashforth13 : LMM 13 where
+  α := ![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![703604254357/2615348736000, -9160551085734/2615348736000,
+        55060974662412/2615348736000, -202322913738370/2615348736000,
+        507140369728425/2615348736000, -915883387152444/2615348736000,
+        1226443086129408/2615348736000, -1233589244941764/2615348736000,
+        932884546055895/2615348736000, -524924579905150/2615348736000,
+        214696591002612/2615348736000, -61497552797274/2615348736000,
+        13064406523627/2615348736000, 0]
+  normalized := by simp [Fin.last]
+
 /-- **Adams–Moulton 8-step** method:
 y_{n+8} = y_{n+7} + h·(1070017/3628800·f_{n+8} + 4467094/3628800·f_{n+7}
   − 4604594/3628800·f_{n+6} + 5595358/3628800·f_{n+5}
@@ -555,6 +581,15 @@ theorem adamsBashforth12_consistent : adamsBashforth12.IsConsistent :=
 theorem adamsBashforth12_explicit : adamsBashforth12.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth12, Fin.last]
 
+/-- Adams–Bashforth 13-step is consistent. -/
+theorem adamsBashforth13_consistent : adamsBashforth13.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsBashforth13, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsBashforth13, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Bashforth 13-step is explicit (β₁₃ = 0). -/
+theorem adamsBashforth13_explicit : adamsBashforth13.IsExplicit := by
+  simp [LMM.IsExplicit, adamsBashforth13, Fin.last]
+
 /-- Adams–Moulton 5-step is consistent. -/
 theorem adamsMoulton5_consistent : adamsMoulton5.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton5, Fin.sum_univ_succ],
@@ -724,6 +759,14 @@ theorem adamsBashforth12_order_twelve : adamsBashforth12.HasOrder 12 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsBashforth12, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth12, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Bashforth 13-step has order 13. -/
+theorem adamsBashforth13_order_thirteen : adamsBashforth13.HasOrder 13 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsBashforth13, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsBashforth13, Fin.sum_univ_succ]; norm_num
 
 /-- Adams–Moulton 5-step has order 6. -/
 theorem adamsMoulton5_order_six : adamsMoulton5.HasOrder 6 := by
@@ -1089,6 +1132,17 @@ theorem adamsBashforth12_zeroStable : adamsBashforth12.IsZeroStable :=
       ring)
     (by
       simp [LMM.rhoCDeriv, adamsBashforth12, Fin.sum_univ_succ]
+      norm_num)
+
+/-- Adams–Bashforth 13-step is zero-stable: ρ(ξ) = ξ¹³ - ξ¹² = ξ¹²(ξ - 1). -/
+theorem adamsBashforth13_zeroStable : adamsBashforth13.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth13 (by norm_num : 0 < 12)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth13, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth13, Fin.sum_univ_succ]
       norm_num)
 
 /-- Adams–Moulton 9-step is zero-stable: ρ(ξ) = ξ⁹ - ξ⁸ = ξ⁸(ξ - 1). -/
