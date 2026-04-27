@@ -238,6 +238,31 @@ noncomputable def adamsMoulton8 : LMM 8 where
         1070017/3628800]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Moulton 9-step** method:
+y_{n+9} = y_{n+8} + h·(2082753/7257600·f_{n+9}
+  + 9449717/7257600·f_{n+8} − 11271304/7257600·f_{n+7}
+  + 16002320/7257600·f_{n+6} − 17283646/7257600·f_{n+5}
+  + 13510082/7257600·f_{n+4} − 7394032/7257600·f_{n+3}
+  + 2687864/7257600·f_{n+2} − 583435/7257600·f_{n+1}
+  + 57281/7257600·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [57281/7257600, -583435/7257600, 2687864/7257600,
+     -7394032/7257600, 13510082/7257600, -17283646/7257600,
+     16002320/7257600, -11271304/7257600, 9449717/7257600,
+     2082753/7257600].
+This is an implicit method of order 10.
+Reference: Iserles, Section 1.2 (k = 9 Adams–Moulton); coefficients
+verified against the Lagrange-interpolation-and-integrate construction on
+nodes 0,…,9 over the interval [8, 9] (denominator `2·10! = 7257600`);
+sums to 1 over the common denominator. -/
+noncomputable def adamsMoulton9 : LMM 9 where
+  α := ![0, 0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![57281/7257600, -583435/7257600, 2687864/7257600,
+        -7394032/7257600, 13510082/7257600, -17283646/7257600,
+        16002320/7257600, -11271304/7257600, 9449717/7257600,
+        2082753/7257600]
+  normalized := by simp [Fin.last]
+
 /-! ## Consistency / explicitness / implicitness -/
 
 /-- Adams–Bashforth 2-step is consistent. -/
@@ -369,6 +394,15 @@ theorem adamsMoulton6_implicit : adamsMoulton6.β 6 ≠ 0 := by
   change (19087 / 60480 : ℝ) ≠ 0
   norm_num
 
+/-- Adams–Moulton 9-step is consistent. -/
+theorem adamsMoulton9_consistent : adamsMoulton9.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsMoulton9, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsMoulton9, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Moulton 9-step is implicit (β₉ = 2082753/7257600 ≠ 0). -/
+theorem adamsMoulton9_implicit : adamsMoulton9.IsImplicit := by
+  simp [LMM.IsImplicit, adamsMoulton9, Fin.last]
+
 /-! ## Order theorems -/
 
 /-- Adams–Bashforth 2-step has order 2. -/
@@ -481,6 +515,14 @@ theorem adamsMoulton6_order_seven : adamsMoulton6.HasOrder 7 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsMoulton6, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsMoulton6, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Moulton 9-step has order 10. -/
+theorem adamsMoulton9_order_ten : adamsMoulton9.HasOrder 10 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsMoulton9, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsMoulton9, Fin.sum_univ_succ]; norm_num
 
 /-! ## Error constants
 
@@ -776,4 +818,15 @@ theorem adamsBashforth10_zeroStable : adamsBashforth10.IsZeroStable :=
       ring)
     (by
       simp [LMM.rhoCDeriv, adamsBashforth10, Fin.sum_univ_succ]
+      norm_num)
+
+/-- Adams–Moulton 9-step is zero-stable: ρ(ξ) = ξ⁹ - ξ⁸ = ξ⁸(ξ - 1). -/
+theorem adamsMoulton9_zeroStable : adamsMoulton9.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsMoulton9 (by norm_num : 0 < 8)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsMoulton9, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsMoulton9, Fin.sum_univ_succ]
       norm_num)
