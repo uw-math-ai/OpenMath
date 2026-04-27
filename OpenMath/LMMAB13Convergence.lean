@@ -267,11 +267,63 @@ theorem ab13_one_step_error_bound
 
 /-! ### Residual algebra and pointwise bound
 
-The residual algebra and pointwise bound at AB13 width require 14-witness
-packed-polynomial identities. These are stubbed via Aristotle (cycle 486):
-each `sorry` corresponds to an Aristotle job. -/
+The pointwise residual is proved through the generic Taylor-polynomial
+decomposition from `LMMTruncationOp`: the degree-13 Taylor polynomial
+contribution vanishes by `adamsBashforth13_order_thirteen`, and the remaining
+finite sum is bounded termwise by the value and derivative Taylor remainders. -/
 
--- Headline AB13 pointwise residual bound (sorry-first; awaiting Aristotle / next cycle).
+private lemma taylorPolyOf_eval_thirteen (y : ℝ → ℝ) (t r : ℝ) :
+    (taylorPolyOf y t 13).eval r
+      = y t + r * deriv y t
+        + r ^ 2 / 2 * iteratedDeriv 2 y t
+        + r ^ 3 / 6 * iteratedDeriv 3 y t
+        + r ^ 4 / 24 * iteratedDeriv 4 y t
+        + r ^ 5 / 120 * iteratedDeriv 5 y t
+        + r ^ 6 / 720 * iteratedDeriv 6 y t
+        + r ^ 7 / 5040 * iteratedDeriv 7 y t
+        + r ^ 8 / 40320 * iteratedDeriv 8 y t
+        + r ^ 9 / 362880 * iteratedDeriv 9 y t
+        + r ^ 10 / 3628800 * iteratedDeriv 10 y t
+        + r ^ 11 / 39916800 * iteratedDeriv 11 y t
+        + r ^ 12 / 479001600 * iteratedDeriv 12 y t
+        + r ^ 13 / 6227020800 * iteratedDeriv 13 y t := by
+  unfold taylorPolyOf taylorPoly
+  rw [Polynomial.eval_finset_sum]
+  simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X]
+  norm_num [Finset.sum_range_succ, iteratedDeriv_zero, iteratedDeriv_one]
+  ring
+
+private lemma taylorPolyOf_derivative_eval_thirteen (y : ℝ → ℝ) (t r : ℝ) :
+    (taylorPolyOf y t 13).derivative.eval r
+      = deriv y t
+        + r * iteratedDeriv 2 y t
+        + r ^ 2 / 2 * iteratedDeriv 3 y t
+        + r ^ 3 / 6 * iteratedDeriv 4 y t
+        + r ^ 4 / 24 * iteratedDeriv 5 y t
+        + r ^ 5 / 120 * iteratedDeriv 6 y t
+        + r ^ 6 / 720 * iteratedDeriv 7 y t
+        + r ^ 7 / 5040 * iteratedDeriv 8 y t
+        + r ^ 8 / 40320 * iteratedDeriv 9 y t
+        + r ^ 9 / 362880 * iteratedDeriv 10 y t
+        + r ^ 10 / 3628800 * iteratedDeriv 11 y t
+        + r ^ 11 / 39916800 * iteratedDeriv 12 y t
+        + r ^ 12 / 479001600 * iteratedDeriv 13 y t := by
+  unfold taylorPolyOf taylorPoly
+  rw [Polynomial.derivative_sum, Polynomial.eval_finset_sum]
+  simp only [Polynomial.derivative_mul, Polynomial.derivative_C, zero_mul]
+  norm_num [Finset.sum_range_succ, iteratedDeriv_zero, iteratedDeriv_one]
+  ring
+
+private lemma ab13_taylor_residual_sum_alg (Mb h : ℝ) :
+    (∑ j : Fin 14,
+        (|adamsBashforth13.α j| * (Mb / 87178291200 * (((j : ℕ) : ℝ) * h) ^ 14)
+          + h * (|adamsBashforth13.β j| *
+              (Mb / 6227020800 * (((j : ℕ) : ℝ) * h) ^ 13))))
+      = (5616577262114645115720677 / 10602754543180800000 : ℝ) * Mb * h ^ 14 := by
+  simp [adamsBashforth13, Fin.sum_univ_succ]
+  norm_num
+  ring
+
 theorem ab13_pointwise_residual_bound
     {y : ℝ → ℝ} (hy : ContDiff ℝ 14 y) {a b Mb t h : ℝ}
     (hbnd : ∀ u ∈ Set.Icc a b, |iteratedDeriv 14 y u| ≤ Mb)
@@ -291,7 +343,210 @@ theorem ab13_pointwise_residual_bound
     (ht13h : t + 13 * h ∈ Set.Icc a b)
     (hh : 0 ≤ h) :
     |adamsBashforth13.localTruncationError h t y| ≤ (529729 : ℝ) * Mb * h ^ 14 := by
-  sorry
+  have hmem : ∀ j : Fin 14, t + ((j : ℕ) : ℝ) * h ∈ Set.Icc a b := by
+    intro j
+    fin_cases j
+    · simpa using ht
+    · simpa [one_mul] using hth
+    · simpa using ht2h
+    · simpa using ht3h
+    · simpa using ht4h
+    · simpa using ht5h
+    · simpa using ht6h
+    · simpa using ht7h
+    · simpa using ht8h
+    · simpa using ht9h
+    · simpa using ht10h
+    · simpa using ht11h
+    · simpa using ht12h
+    · simpa using ht13h
+  have hr_nn : ∀ j : Fin 14, 0 ≤ ((j : ℕ) : ℝ) * h := by
+    intro j
+    exact mul_nonneg (by exact_mod_cast Nat.zero_le (j : ℕ)) hh
+  have hR : ∀ j : Fin 14,
+      |y (t + ((j : ℕ) : ℝ) * h)
+          - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t)|
+        ≤ Mb / 87178291200 * (((j : ℕ) : ℝ) * h) ^ 14 := by
+    intro j
+    set r : ℝ := ((j : ℕ) : ℝ) * h with hr_def
+    have hsub : t + r - t = r := by ring
+    have hTaylor :=
+      y_fourteenth_order_taylor_remainder hy hbnd ht
+        (by simpa [hr_def] using hmem j)
+        (by simpa [hr_def] using hr_nn j)
+    have hleft : y (t + r) - (taylorPolyOf y t 13).eval ((t + r) - t)
+        = y (t + r) - y t
+          - r * deriv y t
+          - r ^ 2 / 2 * iteratedDeriv 2 y t
+          - r ^ 3 / 6 * iteratedDeriv 3 y t
+          - r ^ 4 / 24 * iteratedDeriv 4 y t
+          - r ^ 5 / 120 * iteratedDeriv 5 y t
+          - r ^ 6 / 720 * iteratedDeriv 6 y t
+          - r ^ 7 / 5040 * iteratedDeriv 7 y t
+          - r ^ 8 / 40320 * iteratedDeriv 8 y t
+          - r ^ 9 / 362880 * iteratedDeriv 9 y t
+          - r ^ 10 / 3628800 * iteratedDeriv 10 y t
+          - r ^ 11 / 39916800 * iteratedDeriv 11 y t
+          - r ^ 12 / 479001600 * iteratedDeriv 12 y t
+          - r ^ 13 / 6227020800 * iteratedDeriv 13 y t := by
+      rw [hsub, taylorPolyOf_eval_thirteen]
+      ring
+    have hmain :
+        |y (t + r) - (taylorPolyOf y t 13).eval ((t + r) - t)|
+          ≤ Mb / 87178291200 * r ^ 14 := by
+      rw [hleft]
+      exact hTaylor
+    simpa [hr_def] using hmain
+  have hD : ∀ j : Fin 14,
+      |deriv y (t + ((j : ℕ) : ℝ) * h)
+          - (taylorPolyOf y t 13).derivative.eval ((t + ((j : ℕ) : ℝ) * h) - t)|
+        ≤ Mb / 6227020800 * (((j : ℕ) : ℝ) * h) ^ 13 := by
+    intro j
+    set r : ℝ := ((j : ℕ) : ℝ) * h with hr_def
+    have hsub : t + r - t = r := by ring
+    have hTaylor :=
+      derivY_thirteenth_order_taylor_remainder hy hbnd ht
+        (by simpa [hr_def] using hmem j)
+        (by simpa [hr_def] using hr_nn j)
+    have hleft : deriv y (t + r)
+          - (taylorPolyOf y t 13).derivative.eval ((t + r) - t)
+        = deriv y (t + r) - deriv y t
+          - r * iteratedDeriv 2 y t
+          - r ^ 2 / 2 * iteratedDeriv 3 y t
+          - r ^ 3 / 6 * iteratedDeriv 4 y t
+          - r ^ 4 / 24 * iteratedDeriv 5 y t
+          - r ^ 5 / 120 * iteratedDeriv 6 y t
+          - r ^ 6 / 720 * iteratedDeriv 7 y t
+          - r ^ 7 / 5040 * iteratedDeriv 8 y t
+          - r ^ 8 / 40320 * iteratedDeriv 9 y t
+          - r ^ 9 / 362880 * iteratedDeriv 10 y t
+          - r ^ 10 / 3628800 * iteratedDeriv 11 y t
+          - r ^ 11 / 39916800 * iteratedDeriv 12 y t
+          - r ^ 12 / 479001600 * iteratedDeriv 13 y t := by
+      rw [hsub, taylorPolyOf_derivative_eval_thirteen]
+      ring
+    have hmain :
+        |deriv y (t + r)
+            - (taylorPolyOf y t 13).derivative.eval ((t + r) - t)|
+          ≤ Mb / 6227020800 * r ^ 13 := by
+      rw [hleft]
+      exact hTaylor
+    simpa [hr_def] using hmain
+  have hτeq : adamsBashforth13.localTruncationError h t y =
+      ∑ j : Fin 14,
+        (adamsBashforth13.α j *
+            (y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t))
+          - h * (adamsBashforth13.β j *
+            (deriv y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).derivative.eval
+                  ((t + ((j : ℕ) : ℝ) * h) - t)))) := by
+    have hdecomp := adamsBashforth13.truncationOp_smooth_eq_taylor_residual 12 h t y
+    dsimp only at hdecomp
+    have hdecomp13 : adamsBashforth13.truncationOp h (fun u => y u) (fun u => deriv y u) t =
+        adamsBashforth13.truncationOp h
+          (fun u => (taylorPolyOf y t 13).eval (u - t))
+          (fun u => (taylorPolyOf y t 13).derivative.eval (u - t)) t
+        + ∑ j : Fin 14,
+          (adamsBashforth13.α j *
+              (y (t + ((j : ℕ) : ℝ) * h)
+                - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t))
+            - h * (adamsBashforth13.β j *
+              (deriv y (t + ((j : ℕ) : ℝ) * h)
+                - (taylorPolyOf y t 13).derivative.eval
+                    ((t + ((j : ℕ) : ℝ) * h) - t)))) := by
+      simpa [iteratedDeriv_zero, iteratedDeriv_one] using hdecomp
+    have hpoly0 := adamsBashforth13.truncationOp_taylorPoly_eq_zero_of_HasOrder
+      (p := 13) h t adamsBashforth13_order_thirteen (fun k u => iteratedDeriv k y u)
+    have hpoly0' : adamsBashforth13.truncationOp h
+        (fun u => (taylorPolyOf y t 13).eval (u - t))
+        (fun u => (taylorPolyOf y t 13).derivative.eval (u - t)) t = 0 := by
+      simpa [taylorPolyOf] using hpoly0
+    unfold localTruncationError
+    rw [show (fun u => iteratedDeriv 0 y u) = (fun u => y u) by
+      funext u
+      simp [iteratedDeriv_zero]]
+    rw [show (fun u => iteratedDeriv 1 y u) = (fun u => deriv y u) by
+      funext u
+      simp [iteratedDeriv_one]]
+    rw [hdecomp13, hpoly0']
+    ring
+  rw [hτeq]
+  have hterm : ∀ j : Fin 14,
+      |adamsBashforth13.α j *
+            (y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t))
+          - h * (adamsBashforth13.β j *
+            (deriv y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).derivative.eval
+                  ((t + ((j : ℕ) : ℝ) * h) - t)))|
+        ≤ |adamsBashforth13.α j| *
+            (Mb / 87178291200 * (((j : ℕ) : ℝ) * h) ^ 14)
+          + h * (|adamsBashforth13.β j| *
+            (Mb / 6227020800 * (((j : ℕ) : ℝ) * h) ^ 13)) := by
+    intro j
+    calc
+      |adamsBashforth13.α j *
+            (y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t))
+          - h * (adamsBashforth13.β j *
+            (deriv y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).derivative.eval
+                  ((t + ((j : ℕ) : ℝ) * h) - t)))|
+          ≤ |adamsBashforth13.α j *
+              (y (t + ((j : ℕ) : ℝ) * h)
+                - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t))|
+            + |h * (adamsBashforth13.β j *
+              (deriv y (t + ((j : ℕ) : ℝ) * h)
+                - (taylorPolyOf y t 13).derivative.eval
+                    ((t + ((j : ℕ) : ℝ) * h) - t)))| :=
+            abs_sub _ _
+      _ = |adamsBashforth13.α j| *
+              |y (t + ((j : ℕ) : ℝ) * h)
+                - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t)|
+            + h * (|adamsBashforth13.β j| *
+              |deriv y (t + ((j : ℕ) : ℝ) * h)
+                - (taylorPolyOf y t 13).derivative.eval
+                    ((t + ((j : ℕ) : ℝ) * h) - t)|) := by
+            rw [abs_mul, abs_mul, abs_mul, abs_of_nonneg hh]
+      _ ≤ |adamsBashforth13.α j| *
+            (Mb / 87178291200 * (((j : ℕ) : ℝ) * h) ^ 14)
+          + h * (|adamsBashforth13.β j| *
+            (Mb / 6227020800 * (((j : ℕ) : ℝ) * h) ^ 13)) := by
+            apply add_le_add
+            · exact mul_le_mul_of_nonneg_left (hR j) (abs_nonneg _)
+            · apply mul_le_mul_of_nonneg_left _ hh
+              exact mul_le_mul_of_nonneg_left (hD j) (abs_nonneg _)
+  have hsum_abs :
+      |∑ j : Fin 14,
+        (adamsBashforth13.α j *
+            (y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).eval ((t + ((j : ℕ) : ℝ) * h) - t))
+          - h * (adamsBashforth13.β j *
+            (deriv y (t + ((j : ℕ) : ℝ) * h)
+              - (taylorPolyOf y t 13).derivative.eval
+                  ((t + ((j : ℕ) : ℝ) * h) - t))))|
+        ≤ ∑ j : Fin 14,
+          (|adamsBashforth13.α j| *
+              (Mb / 87178291200 * (((j : ℕ) : ℝ) * h) ^ 14)
+            + h * (|adamsBashforth13.β j| *
+              (Mb / 6227020800 * (((j : ℕ) : ℝ) * h) ^ 13))) := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    exact Finset.sum_le_sum (fun j _ => hterm j)
+  have hMbnn : 0 ≤ Mb := by
+    have := hbnd t ht
+    exact (abs_nonneg _).trans this
+  have hMbh14_nn : 0 ≤ Mb * h ^ 14 := mul_nonneg hMbnn (by positivity)
+  have hslack :
+      (5616577262114645115720677 / 10602754543180800000 : ℝ) * Mb * h ^ 14
+        ≤ 529729 * Mb * h ^ 14 := by
+    rw [mul_assoc, mul_assoc (529729 : ℝ)]
+    have hle :
+        (5616577262114645115720677 / 10602754543180800000 : ℝ) ≤ 529729 := by
+      norm_num
+    exact mul_le_mul_of_nonneg_right hle hMbh14_nn
+  have hsum_eq := ab13_taylor_residual_sum_alg Mb h
+  linarith [hsum_abs, hsum_eq, hslack]
 
 theorem ab13_local_residual_bound
     {y : ℝ → ℝ} (hy : ContDiff ℝ 14 y) (t₀ T : ℝ) (_hT : 0 < T) :
@@ -421,6 +676,90 @@ theorem ab13_global_error_bound
       |ab13Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ y₆ y₇ y₈ y₉ y₁₀ y₁₁ y₁₂ N
           - y (t₀ + (N : ℝ) * h)|
         ≤ Real.exp ((1439788039057 / 638512875) * L * T) * ε₀ + K * h ^ 13 := by
-  sorry
+  obtain ⟨C, δ, hC_nn, hδ_pos, hresidual⟩ :=
+    ab13_local_residual_bound hy t₀ T hT
+  refine ⟨T * Real.exp ((1439788039057 / 638512875) * L * T) * C, δ,
+    ?_, hδ_pos, ?_⟩
+  · exact mul_nonneg
+      (mul_nonneg hT.le (Real.exp_nonneg _)) hC_nn
+  intro h hh hδ_le y₀ y₁ y₂ y₃ y₄ y₅ y₆ y₇ y₈ y₉ y₁₀ y₁₁ y₁₂ ε₀ hε₀
+    he0_bd he1_bd he2_bd he3_bd he4_bd he5_bd he6_bd he7_bd he8_bd he9_bd
+    he10_bd he11_bd he12_bd N hNh
+  set α : Fin 13 → ℝ := ab13GenericCoeff with hα_def
+  set y₀_non : Fin 13 → ℝ :=
+    ![y₀, y₁, y₂, y₃, y₄, y₅, y₆, y₇, y₈, y₉, y₁₀, y₁₁, y₁₂]
+    with hy_non_def
+  have hs : (1 : ℕ) ≤ 13 := by norm_num
+  haveI : Nonempty (Fin 13) := ⟨⟨0, hs⟩⟩
+  have hstart : abErrWindow hs α h f t₀ y₀_non y 0 ≤ ε₀ := by
+    unfold abErrWindow
+    apply Finset.sup'_le
+    intro j _
+    unfold abErr
+    fin_cases j <;> unfold abIter <;> simp [hy_non_def]
+    · simpa using he0_bd
+    · simpa using he1_bd
+    · simpa using he2_bd
+    · simpa using he3_bd
+    · simpa using he4_bd
+    · simpa using he5_bd
+    · simpa using he6_bd
+    · simpa using he7_bd
+    · simpa using he8_bd
+    · simpa using he9_bd
+    · simpa using he10_bd
+    · simpa using he11_bd
+    · simpa using he12_bd
+  have hres_gen : ∀ n : ℕ, n < N →
+      |abResidual 13 α h y t₀ n| ≤ C * h ^ (13 + 1) := by
+    intro n hn_lt
+    have hcast : (n : ℝ) + 13 ≤ (N : ℝ) + 12 := by
+      have : (n : ℝ) + 1 ≤ (N : ℝ) := by
+        exact_mod_cast Nat.lt_iff_add_one_le.mp hn_lt
+      linarith
+    have hn13_le : ((n : ℝ) + 13) * h ≤ T := by
+      have hmul : ((n : ℝ) + 13) * h ≤ ((N : ℝ) + 12) * h :=
+        mul_le_mul_of_nonneg_right hcast hh.le
+      linarith
+    have hres := hresidual hh hδ_le n hn13_le
+    rw [hα_def, ← ab13Residual_eq_abResidual h y t₀ n]
+    have hpow : C * h ^ (13 + 1) = C * h ^ 14 := by norm_num
+    rwa [hpow]
+  have hNh' : (N : ℝ) * h ≤ T := by
+    have hmono : (N : ℝ) * h ≤ ((N : ℝ) + 12) * h := by
+      have h1 : (N : ℝ) ≤ (N : ℝ) + 12 := by linarith
+      exact mul_le_mul_of_nonneg_right h1 hh.le
+    linarith
+  have hgeneric :=
+    ab_global_error_bound_generic (p := 13) hs α hh.le hL hC_nn hf t₀
+      y₀_non y hyf hε₀ hstart N hNh' hres_gen
+  rw [show abLip 13 α L = (1439788039057 / 638512875) * L from by
+    rw [hα_def]; exact abLip_ab13GenericCoeff L] at hgeneric
+  have hwindow_ge : abErr 13 α h f t₀ y₀_non y N
+      ≤ abErrWindow hs α h f t₀ y₀_non y N := by
+    show abErr 13 α h f t₀ y₀_non y (N + ((⟨0, hs⟩ : Fin 13) : ℕ))
+        ≤ abErrWindow hs α h f t₀ y₀_non y N
+    unfold abErrWindow
+    exact Finset.le_sup' (b := ⟨0, hs⟩)
+      (f := fun j : Fin 13 => abErr 13 α h f t₀ y₀_non y (N + (j : ℕ)))
+      (Finset.mem_univ _)
+  have hbridge :
+      abIter 13 α h f t₀ y₀_non N
+        = ab13Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ y₆ y₇ y₈ y₉ y₁₀ y₁₁ y₁₂ N := by
+    rw [hα_def, hy_non_def]
+    rfl
+  have habsErr :
+      abErr 13 α h f t₀ y₀_non y N
+        = |ab13Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ y₆ y₇ y₈ y₉ y₁₀ y₁₁ y₁₂ N
+            - y (t₀ + (N : ℝ) * h)| := by
+    show |abIter 13 α h f t₀ y₀_non N - y (t₀ + (N : ℝ) * h)|
+        = |ab13Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ y₆ y₇ y₈ y₉ y₁₀ y₁₁ y₁₂ N
+            - y (t₀ + (N : ℝ) * h)|
+    rw [hbridge]
+  show |ab13Iter h f t₀ y₀ y₁ y₂ y₃ y₄ y₅ y₆ y₇ y₈ y₉ y₁₀ y₁₁ y₁₂ N
+        - y (t₀ + (N : ℝ) * h)|
+      ≤ Real.exp ((1439788039057 / 638512875) * L * T) * ε₀
+        + T * Real.exp ((1439788039057 / 638512875) * L * T) * C * h ^ 13
+  linarith [hwindow_ge, hgeneric, habsErr.symm.le, habsErr.le]
 
 end LMM
