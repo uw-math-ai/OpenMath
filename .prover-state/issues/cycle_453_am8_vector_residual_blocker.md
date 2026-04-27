@@ -1,5 +1,15 @@
 # Issue: AM8 vector residual port needs a dedicated tenth-order Taylor ladder
 
+## Status
+RESOLVED (cycle 455). The AM8 vector quantitative convergence chain has
+been closed in `OpenMath/LMMAM8VectorConvergence.lean`, including the
+three tenth-order vector Taylor helpers
+(`iteratedDeriv_ten_bounded_on_Icc_vec`, `y_tenth_order_taylor_remainder_vec`,
+`derivY_ninth_order_taylor_remainder_vec`) and the headline
+`LMM.am8Vec_global_error_bound`. Resolution acknowledged in cycle 466
+while reusing the public AM7 ninth-order helpers for the AB8 scalar
+chain.
+
 ## Blocker
 The AM8 vector convergence file could not be closed safely in this cycle.  A
 direct mechanical rewrite of the AM7 vector residual section to AM8 is not

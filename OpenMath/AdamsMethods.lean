@@ -154,6 +154,24 @@ noncomputable def adamsMoulton7 : LMM 7 where
         123133/120960, -121797/120960, 139849/120960, 36799/120960]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Bashforth 8-step** method:
+y_{n+8} = y_{n+7} + h·(434241/120960·f_{n+7} - 1152169/120960·f_{n+6}
+  + 2183877/120960·f_{n+5} - 2664477/120960·f_{n+4}
+  + 2102243/120960·f_{n+3} - 1041723/120960·f_{n+2}
+  + 295767/120960·f_{n+1} - 36799/120960·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [-36799/120960, 295767/120960, -1041723/120960, 2102243/120960,
+     -2664477/120960, 2183877/120960, -1152169/120960, 434241/120960, 0].
+This is an explicit method of order 8.
+Reference: Iserles, Section 1.2 (k = 8 Adams–Bashforth); coefficients
+verified against the order conditions
+`Σ β_k · (k - 7)^j = 1/(j + 1)` for j = 0,…,7. -/
+noncomputable def adamsBashforth8 : LMM 8 where
+  α := ![0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![-36799/120960, 295767/120960, -1041723/120960, 2102243/120960,
+        -2664477/120960, 2183877/120960, -1152169/120960, 434241/120960, 0]
+  normalized := by simp [Fin.last]
+
 /-- **Adams–Moulton 8-step** method:
 y_{n+8} = y_{n+7} + h·(1070017/3628800·f_{n+8} + 4467094/3628800·f_{n+7}
   − 4604594/3628800·f_{n+6} + 5595358/3628800·f_{n+5}
@@ -259,6 +277,15 @@ theorem adamsBashforth7_consistent : adamsBashforth7.IsConsistent :=
 theorem adamsBashforth7_explicit : adamsBashforth7.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth7, Fin.last]
 
+/-- Adams–Bashforth 8-step is consistent. -/
+theorem adamsBashforth8_consistent : adamsBashforth8.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsBashforth8, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsBashforth8, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Bashforth 8-step is explicit (β₈ = 0). -/
+theorem adamsBashforth8_explicit : adamsBashforth8.IsExplicit := by
+  simp [LMM.IsExplicit, adamsBashforth8, Fin.last]
+
 /-- Adams–Moulton 5-step is consistent. -/
 theorem adamsMoulton5_consistent : adamsMoulton5.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton5, Fin.sum_univ_succ],
@@ -351,6 +378,14 @@ theorem adamsBashforth7_order_seven : adamsBashforth7.HasOrder 7 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsBashforth7, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth7, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Bashforth 8-step has order 8. -/
+theorem adamsBashforth8_order_eight : adamsBashforth8.HasOrder 8 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsBashforth8, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsBashforth8, Fin.sum_univ_succ]; norm_num
 
 /-- Adams–Moulton 5-step has order 6. -/
 theorem adamsMoulton5_order_six : adamsMoulton5.HasOrder 6 := by
@@ -629,4 +664,15 @@ theorem adamsMoulton6_zeroStable : adamsMoulton6.IsZeroStable :=
       ring)
     (by
       simp [LMM.rhoCDeriv, adamsMoulton6, Fin.sum_univ_succ]
+      norm_num)
+
+/-- Adams–Bashforth 8-step is zero-stable: ρ(ξ) = ξ⁸ - ξ⁷ = ξ⁷(ξ - 1). -/
+theorem adamsBashforth8_zeroStable : adamsBashforth8.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth8 (by norm_num : 0 < 7)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth8, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth8, Fin.sum_univ_succ]
       norm_num)

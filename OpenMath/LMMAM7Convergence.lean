@@ -22,7 +22,7 @@ namespace LMM
 
 /-- A `C^9` function has its ninth derivative bounded on every compact
 interval `[a, b]`. -/
-private theorem iteratedDeriv_nine_bounded_on_Icc
+theorem iteratedDeriv_nine_bounded_on_Icc
     {y : ℝ → ℝ} (hy : ContDiff ℝ 9 y) (a b : ℝ) :
     ∃ M : ℝ, 0 ≤ M ∧ ∀ t ∈ Set.Icc a b, |iteratedDeriv 9 y t| ≤ M := by
   have h_cont : Continuous (iteratedDeriv 9 y) :=
@@ -41,7 +41,7 @@ private theorem iteratedDeriv_nine_bounded_on_Icc
   - r⁵/120·y⁽⁵⁾(t) - r⁶/720·y⁽⁶⁾(t) - r⁷/5040·y⁽⁷⁾(t)
   - r⁸/40320·y⁽⁸⁾(t)|
   ≤ M/362880 · r⁹`. -/
-private theorem y_ninth_order_taylor_remainder
+theorem y_ninth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 9 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 9 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
@@ -157,7 +157,7 @@ then for `t, t + r ∈ [a, b]` with `r ≥ 0`,
   - r⁴/24·y⁽⁵⁾(t) - r⁵/120·y⁽⁶⁾(t) - r⁶/720·y⁽⁷⁾(t)
   - r⁷/5040·y⁽⁸⁾(t)|
   ≤ M/40320 · r⁸`. -/
-private theorem derivY_eighth_order_taylor_remainder
+theorem derivY_eighth_order_taylor_remainder
     {y : ℝ → ℝ} (hy : ContDiff ℝ 9 y) {a b M : ℝ}
     (hbnd : ∀ t ∈ Set.Icc a b, |iteratedDeriv 9 y t| ≤ M)
     {t r : ℝ} (ht : t ∈ Set.Icc a b) (htr : t + r ∈ Set.Icc a b)
