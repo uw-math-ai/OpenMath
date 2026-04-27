@@ -172,6 +172,27 @@ noncomputable def adamsBashforth8 : LMM 8 where
         -2664477/120960, 2183877/120960, -1152169/120960, 434241/120960, 0]
   normalized := by simp [Fin.last]
 
+/-- **Adams–Bashforth 9-step** method:
+y_{n+9} = y_{n+8} + h·(14097247/3628800·f_{n+8} - 43125206/3628800·f_{n+7}
+  + 95476786/3628800·f_{n+6} - 139855262/3628800·f_{n+5}
+  + 137968480/3628800·f_{n+4} - 91172642/3628800·f_{n+3}
+  + 38833486/3628800·f_{n+2} - 9664106/3628800·f_{n+1}
+  + 1070017/3628800·f_n).
+Coefficients: α = [0, 0, 0, 0, 0, 0, 0, 0, -1, 1],
+β = [1070017/3628800, -9664106/3628800, 38833486/3628800, -91172642/3628800,
+     137968480/3628800, -139855262/3628800, 95476786/3628800,
+     -43125206/3628800, 14097247/3628800, 0].
+This is an explicit method of order 9.
+Reference: Iserles, Section 1.2 (k = 9 Adams–Bashforth); coefficients
+verified against the Lagrange-interpolation-and-integrate construction on
+nodes 0,…,8 over the interval [8, 9] (denominator `10! = 3628800`). -/
+noncomputable def adamsBashforth9 : LMM 9 where
+  α := ![0, 0, 0, 0, 0, 0, 0, 0, -1, 1]
+  β := ![1070017/3628800, -9664106/3628800, 38833486/3628800, -91172642/3628800,
+        137968480/3628800, -139855262/3628800, 95476786/3628800,
+        -43125206/3628800, 14097247/3628800, 0]
+  normalized := by simp [Fin.last]
+
 /-- **Adams–Moulton 8-step** method:
 y_{n+8} = y_{n+7} + h·(1070017/3628800·f_{n+8} + 4467094/3628800·f_{n+7}
   − 4604594/3628800·f_{n+6} + 5595358/3628800·f_{n+5}
@@ -286,6 +307,15 @@ theorem adamsBashforth8_consistent : adamsBashforth8.IsConsistent :=
 theorem adamsBashforth8_explicit : adamsBashforth8.IsExplicit := by
   simp [LMM.IsExplicit, adamsBashforth8, Fin.last]
 
+/-- Adams–Bashforth 9-step is consistent. -/
+theorem adamsBashforth9_consistent : adamsBashforth9.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsBashforth9, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsBashforth9, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Bashforth 9-step is explicit (β₉ = 0). -/
+theorem adamsBashforth9_explicit : adamsBashforth9.IsExplicit := by
+  simp [LMM.IsExplicit, adamsBashforth9, Fin.last]
+
 /-- Adams–Moulton 5-step is consistent. -/
 theorem adamsMoulton5_consistent : adamsMoulton5.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton5, Fin.sum_univ_succ],
@@ -386,6 +416,14 @@ theorem adamsBashforth8_order_eight : adamsBashforth8.HasOrder 8 := by
     interval_cases q <;>
       simp [LMM.orderCondVal, adamsBashforth8, Fin.sum_univ_succ] <;> norm_num
   · simp [LMM.orderCondVal, adamsBashforth8, Fin.sum_univ_succ]; norm_num
+
+/-- Adams–Bashforth 9-step has order 9. -/
+theorem adamsBashforth9_order_nine : adamsBashforth9.HasOrder 9 := by
+  refine ⟨?_, ?_⟩
+  · intro q hq
+    interval_cases q <;>
+      simp [LMM.orderCondVal, adamsBashforth9, Fin.sum_univ_succ] <;> norm_num
+  · simp [LMM.orderCondVal, adamsBashforth9, Fin.sum_univ_succ]; norm_num
 
 /-- Adams–Moulton 5-step has order 6. -/
 theorem adamsMoulton5_order_six : adamsMoulton5.HasOrder 6 := by
@@ -675,4 +713,15 @@ theorem adamsBashforth8_zeroStable : adamsBashforth8.IsZeroStable :=
       ring)
     (by
       simp [LMM.rhoCDeriv, adamsBashforth8, Fin.sum_univ_succ]
+      norm_num)
+
+/-- Adams–Bashforth 9-step is zero-stable: ρ(ξ) = ξ⁹ - ξ⁸ = ξ⁸(ξ - 1). -/
+theorem adamsBashforth9_zeroStable : adamsBashforth9.IsZeroStable :=
+  adams_zeroStable_of_rhoC_pow_mul adamsBashforth9 (by norm_num : 0 < 8)
+    (by
+      intro ξ
+      simp [LMM.rhoC, adamsBashforth9, Fin.sum_univ_succ]
+      ring)
+    (by
+      simp [LMM.rhoCDeriv, adamsBashforth9, Fin.sum_univ_succ]
       norm_num)
