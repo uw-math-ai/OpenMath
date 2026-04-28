@@ -1423,6 +1423,80 @@ theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_singleton
           _ = coef child * t₂.weightsSum := by
             simp [ButcherTableau.weightsSum, Finset.mul_sum]
 
+/-- Powerset-form unfolding of the coefficient-parametric right-block
+auxiliary at a node, with the indexing set restated as the universal
+`Finset (Fin children.length)`. The summation index `S` records the
+children kept attached to the second method via `t₂.A`-twisted recursion;
+the complement `Sᶜ` records the children cut through `coef`. This is the
+§384 mirror of `ButcherProduct.rightAuxAt_node_eq_powerset_sum` with
+`coef` replacing `t₁.bSeries`. -/
+theorem ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, coef (children.get p)) *
+          (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j) := by
+  rw [ButcherProduct.rightAuxAtCoef_node, Finset.powerset_univ]
+
+/-- The stage-`b` weighted form of
+`ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum`, ready for the §384
+closed-form convolution: after choosing kept children `S`, the cut-side
+`coef` product is independent of the second-method stage sum. This is the
+`coef`-parametric mirror of
+`ButcherProduct.bSeries_natAdd_node_eq_powerset_sum`. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, coef (children.get p)) *
+          (∑ i : Fin t, t₂.b i *
+            (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j)) := by
+  classical
+  let cut : Finset (Fin children.length) → ℝ := fun S =>
+    ∏ p ∈ Sᶜ, coef (children.get p)
+  let keep : Fin t → Finset (Fin children.length) → ℝ := fun i S =>
+    ∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+      ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j
+  have hstage : ∀ i : Fin t,
+      ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i
+        = ∑ S : Finset (Fin children.length), cut S * keep i S := by
+    intro i
+    simpa [cut, keep] using
+      (ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum t₂ coef children i)
+  calc
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+        = ∑ i : Fin t, t₂.b i *
+            (∑ S : Finset (Fin children.length), cut S * keep i S) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          rw [hstage i]
+    _ = ∑ i : Fin t, ∑ S : Finset (Fin children.length),
+          t₂.b i * (cut S * keep i S) := by
+        simp_rw [Finset.mul_sum]
+    _ = ∑ S : Finset (Fin children.length), ∑ i : Fin t,
+          t₂.b i * (cut S * keep i S) := by
+        rw [Finset.sum_comm]
+    _ = ∑ S : Finset (Fin children.length),
+          cut S * (∑ i : Fin t, t₂.b i * keep i S) := by
+        refine Finset.sum_congr rfl ?_
+        intro S _
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        ring
+    _ = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, coef (children.get p)) *
+          (∑ i : Fin t, t₂.b i *
+            (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j)) := by
+        simp [cut, keep]
+
 theorem ButcherProduct.rightAuxAt_leaf_eq_coef
     {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin t) :
     ButcherProduct.rightAuxAt t₁ t₂ BTree.leaf i =

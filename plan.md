@@ -445,7 +445,12 @@ codebase.
   `ButcherProduct.bWeighted_rightAuxAtCoef_leaf`,
   `ButcherProduct.rightAuxAtCoef_node_singleton`, and
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_singleton`, pinning the
-  leaf base case and the one-child node cut/keep split.
+  leaf base case and the one-child node cut/keep split. Cycle 526
+  generalized the singleton-node form to arbitrary `node children`, adding
+  `ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum` (mirror of cycle
+  521's `rightAuxAt_node_eq_powerset_sum`) and its `b`-weighted closed
+  form `ButcherProduct.bWeighted_rightAuxAtCoef_node`, exposing the
+  powerset-indexed `(cut, kept)` decomposition at any tree node.
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
   general `(trunk, cuts)` closed form for
@@ -896,9 +901,15 @@ Concrete next steps:
   `ButcherProduct.rightAuxAtCoef_node_singleton`, and
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_singleton`, giving the
   leaf base case and one-child node cut/keep expansion for the
-  coefficient-parametric `b`-weighted auxiliary. The next seam is to
-  generalize this singleton layer to the closed `(trunk, cuts)`
-  identification of `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`.
+  coefficient-parametric `b`-weighted auxiliary. Cycle 526 generalized
+  the singleton-node identity to arbitrary `node children`, landing
+  `ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum` (mirror of cycle
+  521's `rightAuxAt_node_eq_powerset_sum` with `coef` replacing
+  `t₁.bSeries`) and the `b`-weighted closed form
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node`. The next seam is to
+  expose the second-method side one full structural layer deeper
+  (mirroring cycle 522's two-level expansion) so the §384 convolution
+  closes on bSeries-only data.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
