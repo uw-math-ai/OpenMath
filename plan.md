@@ -414,7 +414,11 @@ codebase.
   `ButcherProduct.rightAuxAt_node`) and the headline reduction
   `ButcherProduct.elementaryWeight_natAdd`, expressing the second-method
   block elementary weight as the recursive auxiliary in which `t₁`
-  enters only through `bSeries`. The non-tautological tree convolution
+  enters only through `bSeries`. Cycle 521 landed
+  `ButcherProduct.rightAuxAt_node_eq_powerset_sum` and
+  `ButcherProduct.bSeries_natAdd_node_eq_powerset_sum`, exposing the
+  `rightAuxAt` node recursion as the kept-child powerset sum and pulling
+  the `t₂.b` weighting through it. The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing
   `rightAuxAt` to the `(trunk, cuts)` closed form; see
   `.prover-state/issues/butcher_section384_convolution.md`.
