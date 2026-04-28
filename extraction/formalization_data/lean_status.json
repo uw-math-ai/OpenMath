@@ -40,9 +40,9 @@
     "status": "unformalized"
   },
   "thm:123B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section123.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section123.area_const",
+    "status": "formalized"
   },
   "thm:140A": {
     "lean_file": null,
