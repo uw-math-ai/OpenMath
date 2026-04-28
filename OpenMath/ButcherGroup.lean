@@ -138,6 +138,26 @@ theorem bSeriesHom_product_node_node_nil
          ButcherTableau.bSeries, ButcherTableau.weightsSum] using
     ButcherProduct.bSeries_node_node_nil_eq t₁ t₂
 
+/-- §384 lift of the cycle 542 all-leaves closed form to the quotient
+layer. The product `bSeriesHom` on `BTree.node (List.replicate n BTree.leaf)`
+decomposes into a powerset sum of bSeries-only summands. This is the first
+parametric (in `n`) `G1.mul`-direction product closed form at the quotient
+layer. -/
+theorem bSeriesHom_product_node_replicate_leaf
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) (n : ℕ) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n BTree.leaf))
+      = q.bSeriesHom (BTree.node (List.replicate n BTree.leaf))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (q.bSeriesHom BTree.leaf) ^ S.card *
+            r.bSeriesHom
+              (BTree.node (List.replicate (n - S.card) BTree.leaf)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_replicate_leaf_eq t₁ t₂ n
+
 end QuotEquiv
 
 /-! ### §387 raw and quotient powers
@@ -815,6 +835,59 @@ theorem product_congr_le_two
   · rw [QuotEquiv.bSeriesHom_product_node_node_nil,
       QuotEquiv.bSeriesHom_product_node_node_nil]
     rw [hq_singleton, hr_singleton, hr_weights, hq_node_nil]
+
+/-- Order of an all-leaves node: `(BTree.node (List.replicate n BTree.leaf)).order = n + 1`. -/
+private theorem order_node_replicate_leaf (n : ℕ) :
+    (BTree.node (List.replicate n BTree.leaf)).order = n + 1 := by
+  induction n with
+  | zero => simp
+  | succ m ih =>
+    rw [List.replicate_succ]
+    simp only [BTree.order_node, List.foldr, BTree.order_leaf]
+    have ihrw : (BTree.node (List.replicate m BTree.leaf)).order = m + 1 := ih
+    simp only [BTree.order_node] at ihrw
+    omega
+
+/-- Cycle 542 second tracked `G1.mul`-direction well-definedness deliverable:
+parametric in `n`, product preserves `G₁` equivalence on every all-leaves
+tree `BTree.node (List.replicate n BTree.leaf)` whose order is at most `p`.
+This covers one shape per order, all orders, and is the structural lift of
+the cycle 540 / 541 finite enumeration to the all-leaves family. -/
+theorem product_congr_node_replicate_leaf
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (n : ℕ) (hn : n + 1 ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n BTree.leaf))
+      = (q'.product r').bSeriesHom
+        (BTree.node (List.replicate n BTree.leaf)) := by
+  rw [QuotEquiv.bSeriesHom_product_node_replicate_leaf,
+      QuotEquiv.bSeriesHom_product_node_replicate_leaf]
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq; rw [BTree.order_leaf]; omega
+  have hnode_n :
+      q.bSeriesHom (BTree.node (List.replicate n BTree.leaf))
+        = q'.bSeriesHom (BTree.node (List.replicate n BTree.leaf)) := by
+    apply hq; rw [order_node_replicate_leaf]; omega
+  rw [hnode_n]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  have hS : S.card ≤ n := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin n)) :=
+      Finset.mem_powerset.mp ‹S ∈ _›
+    have := Finset.card_le_card hmem
+    simp at this
+    exact this
+  have hsub :
+      r.bSeriesHom (BTree.node (List.replicate (n - S.card) BTree.leaf))
+        = r'.bSeriesHom (BTree.node (List.replicate (n - S.card) BTree.leaf)) := by
+    apply hr
+    rw [order_node_replicate_leaf]
+    omega
+  rw [hleaf, hsub]
 
 end IsG1Equiv
 

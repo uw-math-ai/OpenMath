@@ -1143,6 +1143,22 @@ Concrete next steps:
   first concrete `G1.mul`-direction well-definedness deliverable in
   tracked code. The unrestricted `IsG1Equiv.product_congr` remains
   blocked on the full §384 `(trunk, cuts)` convolution closure.
+- Cycle 542 lifted cycle 540's single-shape closed form to the
+  parametric all-leaves family `BTree.node (List.replicate n BTree.leaf)`.
+  In `OpenMath/ButcherGroup/Section384.lean`,
+  `ButcherProduct.bConv_node_replicate_leaf_eq` and the corollary
+  `ButcherProduct.bSeries_node_replicate_leaf_eq` decompose the product
+  bSeries on every all-leaves tree into a powerset sum of bSeries-only
+  summands (one shape per order, all orders). In
+  `OpenMath/ButcherGroup.lean`,
+  `QuotEquiv.bSeriesHom_product_node_replicate_leaf` lifts the closed
+  form to quotient classes, and
+  `IsG1Equiv.product_congr_node_replicate_leaf` is the second tracked
+  `G1.mul`-direction well-definedness deliverable: product preserves
+  `G₁` equivalence on every all-leaves node whose order (= `n + 1`) is
+  at most `p`. The unrestricted `IsG1Equiv.product_congr` remains
+  blocked on the full §384 `(trunk, cuts)` convolution closure on
+  arbitrary trees.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

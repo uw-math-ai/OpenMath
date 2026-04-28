@@ -2103,4 +2103,68 @@ theorem ButcherProduct.bSeries_node_node_nil_eq
     rw [bSeries_leaf, bSeries_node_nil]
   rw [hleaf]
 
+/-! ### §384 all-leaves parametric closed form (cycle 542)
+
+Lifts the cycle 538 `bWeighted_convAt_node_all_leaves_eq` into a fully
+bSeries-only product closed form on the parametric all-leaves family
+`BTree.node (List.replicate n BTree.leaf)`. Unlike the cycle 540 / 541
+single-shape theorems, this covers one shape per order parametrically in
+`n`, so it is the first §384 product closed form that scales to every
+order. -/
+
+/-- §384 honest convolution closed form on the all-leaves family
+`BTree.node (List.replicate n BTree.leaf)`: the bSeries-side convolution
+`bConv` decomposes into a powerset sum where each summand multiplies
+`t₁.bSeries BTree.leaf` raised to the cut-set cardinality by the
+`t₂.bSeries` of a node of the remaining leaves. -/
+theorem ButcherProduct.bConv_node_replicate_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    ButcherProduct.bConv (t₁.bSeries) t₂
+        (BTree.node (List.replicate n BTree.leaf))
+      = t₁.bSeries (BTree.node (List.replicate n BTree.leaf))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries BTree.leaf) ^ S.card *
+            t₂.bSeries
+              (BTree.node (List.replicate (n - S.card) BTree.leaf)) := by
+  unfold ButcherProduct.bConv
+  have hAll : ∀ c ∈ List.replicate n BTree.leaf, c = BTree.leaf := by
+    intro c hc
+    exact List.eq_of_mem_replicate hc
+  rw [ButcherProduct.bWeighted_convAt_node_all_leaves_eq t₂ t₁.bSeries
+        (List.replicate n BTree.leaf) hAll]
+  have hlen : (List.replicate n BTree.leaf).length = n := List.length_replicate
+  classical
+  let e : Fin (List.replicate n BTree.leaf).length ≃ Fin n :=
+    { toFun := Fin.cast hlen
+      invFun := Fin.cast hlen.symm
+      left_inv := fun _ => by ext; rfl
+      right_inv := fun _ => by ext; rfl }
+  -- Powerset Finset bijection induced by `e`.
+  let φ : Finset (Fin (List.replicate n BTree.leaf).length) ≃ Finset (Fin n) :=
+    Equiv.finsetCongr e
+  congr 1
+  refine Finset.sum_equiv φ ?_ ?_
+  · intro S
+    simp [φ, e]
+  · intro S _
+    have hcard : (φ S).card = S.card := by
+      simp [φ]
+    rw [Finset.prod_const, hcard]
+    simp only [List.length_replicate]
+
+/-- Headline §384 corollary on the all-leaves family: the product
+`bSeries` on `BTree.node (List.replicate n BTree.leaf)` decomposes into a
+sum that mentions both `t₁` and `t₂` only through `bSeries`. -/
+theorem ButcherProduct.bSeries_node_replicate_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node (List.replicate n BTree.leaf))
+      = t₁.bSeries (BTree.node (List.replicate n BTree.leaf))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries BTree.leaf) ^ S.card *
+            t₂.bSeries
+              (BTree.node (List.replicate (n - S.card) BTree.leaf)) := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_node_replicate_leaf_eq]
+
 end ButcherTableau
