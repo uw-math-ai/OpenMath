@@ -834,6 +834,14 @@ def ButcherProduct.npowStages (s : ℕ) : ℕ → ℕ
     ButcherProduct.npowStages s (n + 1) =
       s + ButcherProduct.npowStages s n := rfl
 
+/-- Closed form for `npowStages`: it is just `n * s`. -/
+theorem ButcherProduct.npowStages_eq (s n : ℕ) :
+    ButcherProduct.npowStages s n = n * s := by
+  induction n with
+  | zero => simp
+  | succ n ih =>
+      rw [ButcherProduct.npowStages_succ, ih, Nat.succ_mul, Nat.add_comm]
+
 /-- Right-associated raw powers of a Butcher tableau under `ButcherProduct`. -/
 def ButcherProduct.npow {s : ℕ} (t : ButcherTableau s) :
     ∀ n : ℕ, ButcherTableau (ButcherProduct.npowStages s n)
@@ -957,6 +965,39 @@ theorem cSum_npow_one {s : ℕ} (q : QuotEquiv s) :
     (q.npow 1).cSum = q.cSum := by
   rw [cSum_npow_succ]
   simp
+
+/-- Closed form for the `n`-th power node-sum: `n * cSum + s * n*(n-1)/2`. -/
+theorem cSum_npow {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
+    (q.npow n).cSum =
+      (n : ℝ) * q.cSum + (s : ℝ) * ((n : ℝ) * ((n : ℝ) - 1) / 2) := by
+  induction n with
+  | zero =>
+      rw [cSum_npow_zero]
+      push_cast
+      ring
+  | succ n ih =>
+      rw [cSum_npow_succ, ih, ButcherProduct.npowStages_eq]
+      push_cast
+      ring
+
+/-- Alternate form of the weights-sum successor step in the right-associated
+    orientation. -/
+theorem weightsSum_npow_succ' {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
+    (q.npow (n + 1)).weightsSum =
+      q.weightsSum + (q.npow n).weightsSum := by
+  rw [weightsSum_npow_succ, add_comm]
+
+/-- `n = 2` instance of the closed-form `weightsSum_npow`. -/
+theorem weightsSum_npow_two {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 2).weightsSum = 2 * q.weightsSum := by
+  simpa using weightsSum_npow q 2
+
+/-- `n = 2` instance of the closed-form `cSum_npow`. -/
+theorem cSum_npow_two {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 2).cSum = 2 * q.cSum + (s : ℝ) := by
+  have h := cSum_npow q 2
+  push_cast at h
+  linarith
 
 end QuotEquiv
 

@@ -376,7 +376,12 @@ codebase.
   `butcherProduct_c_sum`, its quotient lift `QuotEquiv.product_cSum`,
   the successor identity `QuotEquiv.cSum_npow_succ` with offset
   `(ButcherProduct.npowStages s n : ℝ)`, and the simp corollaries
-  `QuotEquiv.weightsSum_npow_one` and `QuotEquiv.cSum_npow_one`. Inverse
+  `QuotEquiv.weightsSum_npow_one` and `QuotEquiv.cSum_npow_one`. Cycle 508
+  added the closed forms `ButcherProduct.npowStages_eq` (`= n * s`) and
+  `QuotEquiv.cSum_npow`
+  (`= n * cSum + s * (n*(n-1)/2)`), the alternate
+  `QuotEquiv.weightsSum_npow_succ'`, and the `n = 2` corollaries
+  `QuotEquiv.weightsSum_npow_two` / `QuotEquiv.cSum_npow_two`. Inverse
   and non-trivial power-homomorphism constructions remain open
   (the latter blocked by the §384 convolution gap).
 - [ ] **§388 Some subgroups and quotient groups**.
