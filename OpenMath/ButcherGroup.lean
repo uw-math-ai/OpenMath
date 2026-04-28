@@ -1357,6 +1357,72 @@ theorem ButcherProduct.rightAuxAt_node_eq_coef_one_level
   simpa using
     (ButcherProduct.rightAuxAt_node_eq_powerset_sum t₁ t₂ children i)
 
+/-- §384 right-block structural equivalence: the recursive auxiliary
+`rightAuxAt t₁ t₂` equals the closed-form `rightAuxAtCoef t₂ (t₁.bSeries)`,
+i.e., `t₁` enters the right-block recursion only through its
+`bSeries` values on subtrees. This is the structural witness Butcher's
+§384 homomorphism statement consumes. -/
+theorem ButcherProduct.rightAuxAt_eq_rightAuxAtCoef_bSeries
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAt t₁ t₂ τ i
+      = ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) τ i := by
+  classical
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin t,
+      ButcherProduct.rightAuxAt t₁ t₂ τ i
+        = ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) τ i)
+    (motive_2 := fun children => ∀ c ∈ children, ∀ j : Fin t,
+      ButcherProduct.rightAuxAt t₁ t₂ c j
+        = ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) c j)
+    ?leaf ?node ?nil ?cons τ
+  · intro i
+    exact ButcherProduct.rightAuxAt_leaf_eq_coef t₁ t₂ i
+  · intro children hchildren i
+    rw [ButcherProduct.rightAuxAt_node_eq_coef_one_level,
+        ButcherProduct.rightAuxAtCoef_node]
+    refine Finset.sum_congr rfl ?_
+    intro S _
+    congr 1
+    refine Finset.prod_congr rfl ?_
+    intro p _
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [hchildren (children.get p) (List.get_mem children p) j]
+  · intro c hc
+    simp at hc
+  · intro head tail ih_head ih_tail c hc j
+    rcases List.mem_cons.mp hc with rfl | hc'
+    · exact ih_head j
+    · exact ih_tail c hc' j
+
+/-- §384 elementary-weight corollary: the elementary weight of
+`ButcherProduct t₁ t₂` at a second-method stage `Fin.natAdd s i` equals
+the closed-form `rightAuxAtCoef t₂ (t₁.bSeries)`. This composes
+`elementaryWeight_natAdd` with the structural equivalence. -/
+theorem ButcherProduct.elementaryWeight_natAdd_eq_rightAuxAtCoef
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin t) :
+    (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.natAdd s i)
+      = ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) τ i := by
+  rw [ButcherProduct.elementaryWeight_natAdd,
+      ButcherProduct.rightAuxAt_eq_rightAuxAtCoef_bSeries]
+
+/-- §384 bSeries-level corollary: the second-method `b`-weighted stage
+sum of `ButcherProduct t₁ t₂` evaluated at any tree `τ` collapses to a
+sum of `rightAuxAtCoef`-values, mentioning `t₁` only through its
+`bSeries`. -/
+theorem ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (τ : BTree) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.natAdd s i))
+      = ∑ i : Fin t, t₂.b i *
+          ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) τ i := by
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [ButcherProduct.elementaryWeight_natAdd_eq_rightAuxAtCoef]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

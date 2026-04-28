@@ -432,9 +432,18 @@ codebase.
   `ButcherProduct.rightAuxAt_leaf_eq_coef`, and
   `ButcherProduct.rightAuxAt_node_eq_coef_one_level`, isolating the
   right-block recursion behind an arbitrary cut coefficient function.
+  Cycle 524 closed the structural equivalence
+  `ButcherProduct.rightAuxAt_eq_rightAuxAtCoef_bSeries`, plus its
+  elementary-weight corollary
+  `ButcherProduct.elementaryWeight_natAdd_eq_rightAuxAtCoef` and the
+  bSeries-level corollary
+  `ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef`. The right block of
+  `ButcherProduct.elementaryWeight` is now fully expressed as a recursion
+  that mentions `t₁` only through `t₁.bSeries`.
   The non-tautological tree convolution
-  for `QuotEquiv.bSeriesHom_product` is now reduced to closing
-  `rightAuxAt` to the `(trunk, cuts)` closed form; see
+  for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
+  `(trunk, cuts)` closed form for
+  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
@@ -866,7 +875,18 @@ Concrete next steps:
   `ButcherProduct.rightAuxAtCoef` with `rightAuxAtCoef_leaf` /
   `rightAuxAtCoef_node`, plus the specialisation bridge
   `ButcherProduct.rightAuxAt_leaf_eq_coef` and one-level restatement
-  `ButcherProduct.rightAuxAt_node_eq_coef_one_level`.
+  `ButcherProduct.rightAuxAt_node_eq_coef_one_level`. Cycle 524 closed
+  the structural equivalence between `rightAuxAt` and
+  `rightAuxAtCoef ∘ t₁.bSeries` via
+  `ButcherProduct.rightAuxAt_eq_rightAuxAtCoef_bSeries`, plus its
+  elementary-weight corollary
+  `ButcherProduct.elementaryWeight_natAdd_eq_rightAuxAtCoef` and
+  bSeries-level corollary
+  `ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef`. The right block of
+  `ButcherProduct.elementaryWeight` is now fully expressed as a
+  recursion that mentions `t₁` only through `t₁.bSeries`. The next
+  seam is the closed `(trunk, cuts)` identification of
+  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
