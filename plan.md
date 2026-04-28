@@ -316,11 +316,18 @@ codebase.
   `padRight_cSum`, the substantive
   `padRight_elementaryWeight_castAdd` (via `BTree.rec` with the cycle 497
   motive split), and the stretch lemma `padRight_bSeries`.
-  Cross-stage-count equivalence relation `IsRKEquivalentExt` (lifting
-  `padRight` to a `QuotEquiv` operation and declaring two tableaux of
-  different stage counts equivalent if their right-paddings to a common
-  stage count are relabel-equivalent) remains open and is the natural
-  next-cycle headline.
+  Cycle 511 lifted padding to quotients with `QuotEquiv.mk`,
+  `QuotEquiv.padRight`, `QuotEquiv.padRight_mk`, and quotient-level
+  preservation lemmas `QuotEquiv.padRight_weightsSum`,
+  `QuotEquiv.padRight_cSum`, `QuotEquiv.padRight_bSeries`, and
+  `QuotEquiv.padRight_bSeriesHom`. It also landed the cross-stage
+  equivalence relation `IsRKEquivalentExt` as the equivalence closure of
+  the padding-step relation `IsRKEquivalentExtStep` on
+  `Σ s, QuotEquiv s`, with `refl` / `symm` / `trans`,
+  `IsRKEquivalentExt.of_common_pad` for the common-padding witness shape,
+  and invariance lemmas
+  `IsRKEquivalentExt.weightsSum_eq`, `IsRKEquivalentExt.cSum_eq`, and
+  `IsRKEquivalentExt.bSeriesHom_eq`.
 - [~] **§382 The group of Runge–Kutta methods** — composition law on
   equivalence classes.
   - raw `ButcherProduct` and block-structure computation lemmas landed
