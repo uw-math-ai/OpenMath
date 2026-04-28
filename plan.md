@@ -370,7 +370,13 @@ codebase.
   `QuotEquiv.weightsSum_npow_succ`, the closed form
   `QuotEquiv.weightsSum_npow` (`= n * q.weightsSum`), the unit-power
   Butcher-series identity `QuotEquiv.bSeriesHom_npow_one`, and the
-  zero-power node-sum vanishing `QuotEquiv.cSum_npow_zero`. Inverse
+  zero-power node-sum vanishing `QuotEquiv.cSum_npow_zero`. Cycle 507
+  aligned the power recurrence with the right-associated product
+  `QuotEquiv.product q (q.npow n)` and added the node-sum block law
+  `butcherProduct_c_sum`, its quotient lift `QuotEquiv.product_cSum`,
+  the successor identity `QuotEquiv.cSum_npow_succ` with offset
+  `(ButcherProduct.npowStages s n : ℝ)`, and the simp corollaries
+  `QuotEquiv.weightsSum_npow_one` and `QuotEquiv.cSum_npow_one`. Inverse
   and non-trivial power-homomorphism constructions remain open
   (the latter blocked by the §384 convolution gap).
 - [ ] **§388 Some subgroups and quotient groups**.
