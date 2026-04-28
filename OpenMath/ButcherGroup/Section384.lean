@@ -2023,4 +2023,42 @@ theorem ButcherProduct.bWeighted_kept_node_all_leaves_summand_eq
   congr 1
   rw [Finset.prod_const, hcard]
 
+/-! ### §384 first fully bSeries-only product closed form
+
+Cycle 540: assemble the kept-leaf and singleton-node closed forms into the
+first bSeries-only closed form for the product `bSeries` on a non-leaf
+tree, namely the second-order rooted tree `BTree.node [BTree.leaf]`.
+The right-hand side mentions `t₁` only through `t₁.bSeries` values and
+mentions `t₂` only through `t₂.bSeries` values and `t₂.weightsSum`. -/
+
+/-- §384 honest convolution closed form on the second-order rooted tree
+`BTree.node [BTree.leaf]`: the bSeries-side convolution `bConv` evaluated
+at this tree decomposes into three bSeries-only summands. The cut-side
+contribution is `t₂.weightsSum * t₁.bSeries BTree.leaf`, and the kept-side
+inner term collapses (via `bWeighted_convAt_kept_leaf_eq`) to
+`t₂.bSeries (BTree.node [BTree.leaf])`. -/
+theorem ButcherProduct.bConv_singleton_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    ButcherProduct.bConv (t₁.bSeries) t₂ (BTree.node [BTree.leaf])
+      = t₁.bSeries (BTree.node [BTree.leaf])
+        + t₂.bSeries (BTree.node [BTree.leaf])
+        + t₂.weightsSum * t₁.bSeries BTree.leaf := by
+  unfold ButcherProduct.bConv
+  rw [ButcherProduct.bWeighted_convAt_singleton_node_eq t₂ t₁.bSeries BTree.leaf,
+      ButcherProduct.bWeighted_convAt_kept_leaf_eq t₂ t₁.bSeries]
+  ring
+
+/-- Headline §384 corollary: the product `bSeries` on the second-order
+rooted tree `BTree.node [BTree.leaf]` decomposes into a sum of three
+bSeries-only summands. This is the first §384 closed-form result that
+mentions both `t₁` and `t₂` only through `bSeries` and `weightsSum`. -/
+theorem ButcherProduct.bSeries_singleton_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (ButcherProduct t₁ t₂).bSeries (BTree.node [BTree.leaf])
+      = t₁.bSeries (BTree.node [BTree.leaf])
+        + t₂.bSeries (BTree.node [BTree.leaf])
+        + t₂.weightsSum * t₁.bSeries BTree.leaf := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_singleton_leaf_eq]
+
 end ButcherTableau

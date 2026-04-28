@@ -1099,6 +1099,24 @@ Concrete next steps:
   Next concrete seam: package the remaining recursive `(trunk, cuts)`
   closed form so arbitrary node children collapse by `BTree.rec`, then
   retry `IsG1Equiv.product_congr`.
+- Cycle 540 assembled the first fully bSeries-only product closed form
+  on a concrete tree. In `OpenMath/ButcherGroup/Section384.lean`:
+  `ButcherProduct.bConv_singleton_leaf_eq` and the headline corollary
+  `ButcherProduct.bSeries_singleton_leaf_eq` decompose
+  `(t₁.product t₂).bSeries (BTree.node [BTree.leaf])` into
+  `t₁.bSeries (node [leaf]) + t₂.bSeries (node [leaf]) +
+  t₂.weightsSum * t₁.bSeries leaf` — the first §384 closed form that
+  mentions `t₁` only through `bSeries` and `t₂` only through `bSeries`
+  and `weightsSum`. Cycle 540 also lifted the closed form to the
+  quotient layer in `OpenMath/ButcherGroup.lean` as
+  `QuotEquiv.bSeriesHom_product_singleton_leaf`. This is the bSeries-only
+  closed form needed by the eventual `IsG1Equiv.product_congr` proof on
+  the second-order rooted tree; the small-`p` version
+  `IsG1Equiv.product_congr_le_two` is deferred — it requires enumerating
+  every BTree of order ≤ 2 (`leaf`, `node []`, `node [leaf]`,
+  `node [node []]`), which needs a `BTree.order_le_two` characterization
+  helper plus `bSeries`-collapse lemmas for `node []` and
+  `node [node []]` that are not yet in the file.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

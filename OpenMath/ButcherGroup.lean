@@ -91,6 +91,22 @@ theorem bSeriesHom_assoc {s t u : ℕ}
       bSeriesHom (product q₁ (product q₂ q₃)) τ := by
   simpa [bSeriesHom] using product_bSeries_assoc q₁ q₂ q₃ τ
 
+/-- §384 lift of the cycle 540 closed form on the second-order rooted
+tree `BTree.node [BTree.leaf]` to the quotient layer. The product
+`bSeriesHom` decomposes into a sum of three bSeries-only / weightsSum-only
+summands. -/
+theorem bSeriesHom_product_singleton_leaf
+    {s t : ℕ} (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) :
+    (q₁.product q₂).bSeriesHom (BTree.node [BTree.leaf])
+      = q₁.bSeriesHom (BTree.node [BTree.leaf])
+        + q₂.bSeriesHom (BTree.node [BTree.leaf])
+        + q₂.weightsSum * q₁.bSeriesHom BTree.leaf := by
+  refine Quotient.inductionOn₂ q₁ q₂ ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product, weightsSum,
+         ButcherTableau.bSeries, ButcherTableau.weightsSum] using
+    ButcherProduct.bSeries_singleton_leaf_eq t₁ t₂
+
 end QuotEquiv
 
 /-! ### §387 raw and quotient powers
