@@ -356,8 +356,16 @@ codebase.
   product on tree-indexed coefficients.
 - [~] **§387 Some special elements of `G`** — identity, inverse, power.
   Cycle 498 landed the identity element: `trivialTableau : ButcherTableau 0`
-  and `trivialTableau_unique` in `OpenMath/ButcherGroup.lean`. Inverse and
-  integer-power constructions remain open.
+  and `trivialTableau_unique` in `OpenMath/ButcherGroup.lean`. Cycle 505
+  added right-associated raw and quotient powers:
+  `ButcherProduct.npowStages`, `ButcherProduct.npowStages_zero`,
+  `ButcherProduct.npowStages_succ`, `ButcherProduct.npow`,
+  `ButcherProduct.npow_zero`, `ButcherProduct.npow_succ`,
+  `ButcherProduct.npow_one`, `QuotEquiv.npow`, `QuotEquiv.npow_zero`,
+  `QuotEquiv.npow_succ`, `QuotEquiv.npow_mk`,
+  `QuotEquiv.bSeriesHom_npow_zero`, and
+  `QuotEquiv.weightsSum_npow_zero`. Inverse and non-trivial
+  power-homomorphism constructions remain open.
 - [ ] **§388 Some subgroups and quotient groups**.
 - [ ] **§389 An algebraic interpretation of effective order** — connects
   to §365 above.

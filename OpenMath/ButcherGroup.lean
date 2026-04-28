@@ -814,4 +814,78 @@ theorem bSeriesHom_assoc {s t u : ℕ}
 
 end QuotEquiv
 
+/-! ### §387 raw and quotient powers
+
+The raw power keeps the right-associated shape `(t^n) * t`, matching the
+orientation of the one-sided identity lemmas above. The stage count is written
+recursively instead of as multiplication so that the tableau type follows the
+same nested `ButcherProduct` shape by definitional reduction. -/
+
+/-- Stage count of the right-associated raw `n`th power of an `s`-stage
+tableau. -/
+def ButcherProduct.npowStages (s : ℕ) : ℕ → ℕ
+  | 0 => 0
+  | n + 1 => ButcherProduct.npowStages s n + s
+
+@[simp] theorem ButcherProduct.npowStages_zero (s : ℕ) :
+    ButcherProduct.npowStages s 0 = 0 := rfl
+
+@[simp] theorem ButcherProduct.npowStages_succ (s n : ℕ) :
+    ButcherProduct.npowStages s (n + 1) =
+      ButcherProduct.npowStages s n + s := rfl
+
+/-- Right-associated raw powers of a Butcher tableau under `ButcherProduct`. -/
+def ButcherProduct.npow {s : ℕ} (t : ButcherTableau s) :
+    ∀ n : ℕ, ButcherTableau (ButcherProduct.npowStages s n)
+  | 0 => trivialTableau
+  | n + 1 => ButcherProduct (ButcherProduct.npow t n) t
+
+@[simp] theorem ButcherProduct.npow_zero {s : ℕ} (t : ButcherTableau s) :
+    ButcherProduct.npow t 0 = trivialTableau := rfl
+
+@[simp] theorem ButcherProduct.npow_succ {s : ℕ}
+    (t : ButcherTableau s) (n : ℕ) :
+    ButcherProduct.npow t (n + 1) =
+      ButcherProduct (ButcherProduct.npow t n) t := rfl
+
+@[simp] theorem ButcherProduct.npow_one {s : ℕ} (t : ButcherTableau s) :
+    ButcherProduct.npow t 1 =
+      ButcherProduct trivialTableau t := rfl
+
+namespace QuotEquiv
+
+/-- Right-associated powers lifted to relabel-equivalence classes. -/
+noncomputable def npow {s : ℕ} (q : QuotEquiv s) :
+    ∀ n : ℕ, QuotEquiv (ButcherProduct.npowStages s n)
+  | 0 => Quotient.mk _ trivialTableau
+  | n + 1 => QuotEquiv.product (QuotEquiv.npow q n) q
+
+@[simp] theorem npow_zero {s : ℕ} (q : QuotEquiv s) :
+    npow q 0 = Quotient.mk _ trivialTableau := rfl
+
+@[simp] theorem npow_succ {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
+    npow q (n + 1) = product (npow q n) q := rfl
+
+@[simp] theorem npow_mk {s : ℕ} (t : ButcherTableau s) (n : ℕ) :
+    npow (Quotient.mk _ t) n =
+      Quotient.mk _ (ButcherProduct.npow t n) := by
+  induction n with
+  | zero =>
+      rfl
+  | succ n ih =>
+      change product (npow (Quotient.mk _ t) n) (Quotient.mk _ t) =
+        Quotient.mk _ (ButcherProduct (ButcherProduct.npow t n) t)
+      rw [ih]
+      rfl
+
+theorem bSeriesHom_npow_zero {s : ℕ} (q : QuotEquiv s) :
+    bSeriesHom (npow q 0) =
+      bSeriesHom (Quotient.mk _ trivialTableau) := rfl
+
+theorem weightsSum_npow_zero {s : ℕ} (q : QuotEquiv s) :
+    weightsSum (npow q 0) = 0 := by
+  simp [npow, weightsSum, trivialTableau]
+
+end QuotEquiv
+
 end ButcherTableau
