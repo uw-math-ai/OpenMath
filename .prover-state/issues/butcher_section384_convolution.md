@@ -82,3 +82,15 @@ formalize, the tree-indexed product.
    and prove it matches the current `List.foldr` elementary-weight recursion.
    This is more canonical for Butcher's group, but is a larger build-out than
    the local list-split expansion.
+
+## Status update
+
+Cycle 518 landed option (2): the list combinator
+`foldr_mul_add_eq_powerset_sum` (private, in `OpenMath/ButcherGroup.lean`)
+and the first node-level consumer
+`ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum`. Next layer:
+prove `(ButcherProduct t₁ t₂).elementaryWeight τ (Fin.castAdd t i)
+= t₁.elementaryWeight τ i` (upper-left block reduction by structural
+induction on `τ`) so the "cut" factor can be identified with
+`t₁.bSeries c`, then recurse on the "kept" children to expose the
+closed-form `(trunk, cuts)` decomposition.

@@ -392,8 +392,20 @@ codebase.
   Cycle 503 landed identity prep for `bSeries` under `QuotEquiv.product`:
   `ButcherProduct.bSeries_one_left`, `ButcherProduct.bSeries_one_right`,
   `QuotEquiv.product_bSeries_one_left`, and
-  `QuotEquiv.product_bSeries_one_right`. The non-tautological tree
-  convolution for `QuotEquiv.bSeriesHom_product` remains open; see
+  `QuotEquiv.product_bSeries_one_right`. Cycle 518 landed the
+  list-level convolution combinator
+  (`foldr_mul_add_eq_powerset_sum`, private) and its first node-level
+  consumer
+  `ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum`,
+  expressing the second-method-block elementary weight at a node as a
+  Finset.powerset-indexed sum over which children are "cut" via the
+  lower-left `t₁.b j₁` block versus "kept" via the lower-right
+  `t₂.A i j₂` block. The non-tautological tree convolution for
+  `QuotEquiv.bSeriesHom_product` still requires reducing the cut
+  factor to `t₁.bSeries` (via the upper-left
+  `(ButcherProduct t₁ t₂).elementaryWeight · (Fin.castAdd t i)
+   = t₁.elementaryWeight · i` block lemma) and then recursing on the
+  kept children; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
