@@ -309,8 +309,11 @@ codebase.
   `weights_sum_eq` are landed in `OpenMath/ButcherGroup.lean` (cycle 496);
   `c_sum_eq` landed in cycle 497.
   Cross-stage-count equivalence (embedding into `Fin (s ⊔ t)`) remains open.
-- [ ] **§382 The group of Runge–Kutta methods** — composition law on
+- [~] **§382 The group of Runge–Kutta methods** — composition law on
   equivalence classes.
+  - raw `ButcherProduct` and block-structure computation lemmas landed
+    in `OpenMath/ButcherGroup.lean` (cycle 500); associativity-modulo-
+    relabel on `QuotEquiv (s + t + u)` open.
 - [~] **§383 The Runge–Kutta group `G₁`** — elementary-weight
   homomorphism into the group of mappings on rooted trees. Prep layer
   landed in `OpenMath/ButcherGroup.lean` (cycle 497):
@@ -660,8 +663,14 @@ Concrete next steps:
   `elementaryWeight_eq`, `satisfiesTreeCondition_iff`, and
   `hasTreeOrder_iff` for `IsRKEquivalent`; cycles 498-499 added the
   quotient-facing `QuotEquiv` packaging, including the lifted Butcher-series
-  coefficient map `QuotEquiv.bSeries`. The homomorphism property remains
-  blocked on §382 composition.
+  coefficient map `QuotEquiv.bSeries`. Cycle 500 landed the raw
+  `ButcherProduct` definition plus block-structure computation lemmas
+  (`butcherProduct_b_castAdd` / `_natAdd`, `butcherProduct_c_castAdd` /
+  `_natAdd`) and the weights-sum sanity `butcherProduct_b_sum`. Next
+  step: lift `ButcherProduct` to `QuotEquiv s → QuotEquiv t → QuotEquiv (s + t)`
+  (well-definedness under simultaneous relabeling of both arguments) and
+  state/prove associativity on `QuotEquiv (s + t + u)`. The homomorphism
+  property remains blocked on the lifted §382 composition.
 - Cover §387 special elements: identity (zero-stage), inverse, integer
   power.
 - Defer §389 effective order to a separate `OpenMath/EffectiveOrder.lean`

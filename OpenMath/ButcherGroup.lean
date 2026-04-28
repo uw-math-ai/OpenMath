@@ -299,4 +299,75 @@ theorem trivialTableau_unique (t : ButcherTableau 0) : t = trivialTableau := by
     · funext i; exact Fin.elim0 i
     · funext i; exact Fin.elim0 i
 
+/-! ### §382 raw composition
+
+Concatenate the stages of two `ButcherTableau`s. The first `s` stages
+come from `t₁`; the next `t` stages come from `t₂`, scaled and offset
+to represent "run `t₁` for one step, then run `t₂` from the resulting
+state".
+
+The raw definition is *not* associative on the nose — the
+associativity issue is recorded in
+`.prover-state/issues/butcher_section382_composition.md` and is the
+target of a **future** cycle, not this one. -/
+
+/-- Butcher composition of two tableaux.
+
+* The first `s` stages are the stages of `t₁`.
+* The next `t` stages are the stages of `t₂`, but they see the result
+  of one full step of `t₁` first.
+* `b` is the concatenation of `t₁.b` and `t₂.b`.
+* `c` is `(t₁.c, 1 + t₂.c)` (the second method runs after one step
+  of length `1`).
+* `A` is block lower-triangular: upper-left `s × s` block is `t₁.A`,
+  lower-right `t × t` block is `t₂.A`, lower-left `t × s` block is
+  `t₁.b` broadcast across rows, upper-right `s × t` block is `0`. -/
+def ButcherProduct {s t : ℕ}
+    (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    ButcherTableau (s + t) where
+  A := fun i j =>
+    Fin.addCases
+      (fun i₁ =>
+        Fin.addCases
+          (fun j₁ => t₁.A i₁ j₁)
+          (fun _ => 0)
+          j)
+      (fun i₂ =>
+        Fin.addCases
+          (fun j₁ => t₁.b j₁)
+          (fun j₂ => t₂.A i₂ j₂)
+          j)
+      i
+  b := fun i =>
+    Fin.addCases (fun i₁ => t₁.b i₁) (fun i₂ => t₂.b i₂) i
+  c := fun i =>
+    Fin.addCases (fun i₁ => t₁.c i₁) (fun i₂ => 1 + t₂.c i₂) i
+
+@[simp] theorem butcherProduct_b_castAdd
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin s) :
+    (ButcherProduct t₁ t₂).b (Fin.castAdd t i) = t₁.b i := by
+  simp [ButcherProduct]
+
+@[simp] theorem butcherProduct_b_natAdd
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin t) :
+    (ButcherProduct t₁ t₂).b (Fin.natAdd s i) = t₂.b i := by
+  simp [ButcherProduct]
+
+@[simp] theorem butcherProduct_c_castAdd
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin s) :
+    (ButcherProduct t₁ t₂).c (Fin.castAdd t i) = t₁.c i := by
+  simp [ButcherProduct]
+
+@[simp] theorem butcherProduct_c_natAdd
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin t) :
+    (ButcherProduct t₁ t₂).c (Fin.natAdd s i) = 1 + t₂.c i := by
+  simp [ButcherProduct]
+
+theorem butcherProduct_b_sum
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (∑ i, (ButcherProduct t₁ t₂).b i)
+      = (∑ i, t₁.b i) + (∑ i, t₂.b i) := by
+  rw [Fin.sum_univ_add]
+  simp [ButcherProduct]
+
 end ButcherTableau
