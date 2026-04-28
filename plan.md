@@ -364,8 +364,15 @@ codebase.
   `ButcherProduct.npow_one`, `QuotEquiv.npow`, `QuotEquiv.npow_zero`,
   `QuotEquiv.npow_succ`, `QuotEquiv.npow_mk`,
   `QuotEquiv.bSeriesHom_npow_zero`, and
-  `QuotEquiv.weightsSum_npow_zero`. Inverse and non-trivial
-  power-homomorphism constructions remain open.
+  `QuotEquiv.weightsSum_npow_zero`. Cycle 506 extended the §387
+  surface with the successor-side weights-sum chain
+  `ButcherProduct.npow_succ_weightsSum`,
+  `QuotEquiv.weightsSum_npow_succ`, the closed form
+  `QuotEquiv.weightsSum_npow` (`= n * q.weightsSum`), the unit-power
+  Butcher-series identity `QuotEquiv.bSeriesHom_npow_one`, and the
+  zero-power node-sum vanishing `QuotEquiv.cSum_npow_zero`. Inverse
+  and non-trivial power-homomorphism constructions remain open
+  (the latter blocked by the §384 convolution gap).
 - [ ] **§388 Some subgroups and quotient groups**.
 - [ ] **§389 An algebraic interpretation of effective order** — connects
   to §365 above.

@@ -886,6 +886,42 @@ theorem weightsSum_npow_zero {s : ℕ} (q : QuotEquiv s) :
     weightsSum (npow q 0) = 0 := by
   simp [npow, weightsSum, trivialTableau]
 
+/-- Successor step for the raw weights-sum power chain. -/
+theorem _root_.ButcherProduct.npow_succ_weightsSum {s : ℕ}
+    (t : ButcherTableau s) (n : ℕ) :
+    (∑ i, (ButcherProduct.npow t n.succ).b i) =
+      (∑ i, (ButcherProduct.npow t n).b i) + (∑ i, t.b i) := by
+  simp [ButcherProduct.npow_succ, butcherProduct_b_sum]
+
+/-- Successor step for the quotient weights-sum power chain. -/
+theorem weightsSum_npow_succ {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
+    (npow q n.succ).weightsSum =
+      (npow q n).weightsSum + q.weightsSum := by
+  rw [npow_succ, product_weightsSum]
+
+/-- Closed form: `n`-th quotient power weights-sum is `n` times the base. -/
+theorem weightsSum_npow {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
+    (npow q n).weightsSum = (n : ℝ) * q.weightsSum := by
+  induction n with
+  | zero =>
+      rw [weightsSum_npow_zero, Nat.cast_zero, zero_mul]
+  | succ n ih =>
+      rw [weightsSum_npow_succ, ih]
+      push_cast
+      ring
+
+/-- Unit-power identity for the quotient Butcher-series homomorphism. -/
+theorem bSeriesHom_npow_one {s : ℕ} (q : QuotEquiv s) :
+    (npow q 1).bSeriesHom = q.bSeriesHom := by
+  funext τ
+  change bSeries (product (Quotient.mk _ trivialTableau) q) τ = bSeries q τ
+  exact product_bSeries_one_left q τ
+
+/-- Zero-power node-sum vanishes for the quotient Butcher product. -/
+theorem cSum_npow_zero {s : ℕ} (q : QuotEquiv s) :
+    cSum (npow q 0) = 0 := by
+  simp [npow, cSum, trivialTableau]
+
 end QuotEquiv
 
 end ButcherTableau
