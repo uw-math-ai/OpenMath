@@ -302,11 +302,14 @@ codebase.
 - [ ] **§373 Experiments with symplectic methods** — informal.
 
 ### §38 Algebraic Properties of Runge–Kutta Methods *(largest gap inside Ch 3 — Butcher's namesake)*
-- [ ] **§380 Motivation** — RK composition.
-- [ ] **§381 Equivalence classes of Runge–Kutta methods** — quotient by
-  re-labelling of stages.
+- [~] **§380 Motivation** — RK composition via
+  `ButcherProduct` (`OpenMath/ButcherGroup.lean`).
+- [~] **§381 Equivalence classes of Runge–Kutta methods** — quotient by
+  re-labelling of stages; `relabel`, `IsRKEquivalent`,
+  `IsRKEquivalent.refl/symm/trans` (`OpenMath/ButcherGroup.lean`).
 - [ ] **§382 The group of Runge–Kutta methods** — composition law on
-  equivalence classes.
+  equivalence classes. Deferred: `butcherProduct_assoc_modEquiv` is the
+  remaining planned sorry in `OpenMath/ButcherGroup.lean`.
 - [ ] **§383 The Runge–Kutta group `G₁`** — elementary-weight
   homomorphism into the group of mappings on rooted trees.
 - [ ] **§384 A homomorphism between two groups** — bridge from RK
@@ -314,7 +317,9 @@ codebase.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.
-- [ ] **§387 Some special elements of `G`** — identity, inverse, power.
+- [~] **§387 Some special elements of `G`** — zero-stage identity laws
+  `butcherProduct_identity_left/right` (`OpenMath/ButcherGroup.lean`);
+  inverse and power remain open.
 - [ ] **§388 Some subgroups and quotient groups**.
 - [ ] **§389 An algebraic interpretation of effective order** — connects
   to §365 above.
