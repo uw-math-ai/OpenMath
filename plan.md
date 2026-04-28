@@ -858,9 +858,9 @@ let the queue empty.
 
 ## Current Target
 
-**Butcher §38 — Butcher group (algebraic RK properties).** New file
-`OpenMath/ButcherGroup.lean`. Butcher's namesake topic and the single
-biggest remaining gap inside Chapter 3.
+**Butcher §38 — Butcher group (algebraic RK properties).** Module family
+rooted at `OpenMath/ButcherGroup.lean`. Butcher's namesake topic and the
+single biggest remaining gap inside Chapter 3.
 
 Concrete next steps:
 
@@ -1019,6 +1019,14 @@ Concrete next steps:
   becomes provable from that recursive form; see
   `.prover-state/issues/butcher_section384_convolution.md` and
   `.prover-state/issues/butcher_g1_mul_section384_blocker.md`.
+- Cycle 535 split the oversized `OpenMath/ButcherGroup.lean` into three
+  modules: `OpenMath/ButcherGroup/Core.lean` for the §381 / §382 /
+  §384-prep core, `OpenMath/ButcherGroup/Section384.lean` for the
+  §384 right-block convolution chain, and the umbrella
+  `OpenMath/ButcherGroup.lean` for the post-§384 quotient lifts, §387
+  powers, `IsRKEquivalentExt`, `IsG1Equiv`, and `G1`. The next §38 seam
+  is still the §384 convolution / `IsG1Equiv.product_congr` blocker
+  recorded in the two issue files above.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
