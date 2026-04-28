@@ -15,9 +15,9 @@
     "status": "formalized"
   },
   "thm:110C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section110.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section110.ode_existence_uniqueness",
+    "status": "formalized"
   },
   "thm:111A": {
     "lean_file": null,
