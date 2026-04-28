@@ -20,7 +20,6 @@ import OpenMath.Adjoint
 import OpenMath.ReflectedMethods
 import OpenMath.Hamiltonian
 import OpenMath.SymplecticRK
-import OpenMath.ButcherGroup
 import OpenMath.EmbeddedRK
 import OpenMath.OrderConditions
 import OpenMath.PadeOrderStars
