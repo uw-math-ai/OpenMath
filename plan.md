@@ -511,6 +511,21 @@ codebase.
   to define the bSeries-only convolution and assess whether
   `IsG1Equiv.product_congr` is provable; see
   `.prover-state/issues/butcher_section384_convolution.md`.
+  Cycle 536 landed the §384 honest bSeries-side convolution closed
+  form: the headline split
+  `ButcherProduct.bSeries_eq_split` (decomposing
+  `(t₁.product t₂).bSeries τ` into `t₁.bSeries τ + ∑ i, t₂.b i *
+  convAt t₂ t₁.bSeries τ i` via `Fin.sum_univ_add`,
+  `bSeries_castAdd`, and `bSeries_natAdd_eq_convAt`), the bSeries-only
+  honest convolution `ButcherProduct.bConv` (depending on `t₂.A`
+  through `convAt`, **not** just on `t₂.bSeries`) together with
+  `ButcherProduct.bSeries_eq_bConv`, and the per-tree-fixed `coef`-slot
+  congruence `ButcherProduct.convAt_congr_coef` (proved by `BTree.rec`
+  with the cycle 524 / 534 nested motive split, using a strict-decrease
+  helper `child_order_lt_of_mem_node` for the per-child IH at smaller
+  order). The next §38 seam is `IsG1Equiv.product_congr` on the `t₁`
+  slot (using `convAt_congr_coef`) plus the matching `t₂`-slot
+  `IsRKEquivalent`-side `convAt`-permutation invariance.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.
@@ -1024,9 +1039,15 @@ Concrete next steps:
   §384-prep core, `OpenMath/ButcherGroup/Section384.lean` for the
   §384 right-block convolution chain, and the umbrella
   `OpenMath/ButcherGroup.lean` for the post-§384 quotient lifts, §387
-  powers, `IsRKEquivalentExt`, `IsG1Equiv`, and `G1`. The next §38 seam
-  is still the §384 convolution / `IsG1Equiv.product_congr` blocker
-  recorded in the two issue files above.
+  powers, `IsRKEquivalentExt`, `IsG1Equiv`, and `G1`.
+- Cycle 536 added the §384 honest bSeries-side convolution closed form
+  to `OpenMath/ButcherGroup/Section384.lean`:
+  `ButcherProduct.bSeries_eq_split`, the bSeries-only convolution
+  `ButcherProduct.bConv` (with `bSeries_eq_bConv`), and the
+  per-tree-fixed `coef`-slot congruence
+  `ButcherProduct.convAt_congr_coef`. The next §38 seam is
+  `IsG1Equiv.product_congr` via `convAt_congr_coef` plus the matching
+  `t₂`-slot `IsRKEquivalent`-side `convAt` permutation invariance.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

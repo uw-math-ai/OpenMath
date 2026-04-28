@@ -1512,4 +1512,149 @@ theorem ButcherProduct.bSeries_natAdd_eq_convAt
   rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
       ButcherProduct.bWeighted_rightAuxAtCoef_eq_convAt_sum]
 
+/-- §384 closed-form for the product bSeries: split the `Fin (s+t)` stage
+sum into the upper-left `Fin s` block (which collapses to `t₁.bSeries τ`
+via the cycle 519 corollary `bSeries_castAdd`) and the lower-right `Fin t`
+block (which collapses to a `convAt` sum via the cycle 534 corollary
+`bSeries_natAdd_eq_convAt`). The right-hand side mentions `t₁` only
+through `t₁.bSeries` and `t₂` only through `t₂.A` / `t₂.b`. -/
+theorem ButcherProduct.bSeries_eq_split
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (τ : BTree) :
+    (ButcherProduct t₁ t₂).bSeries τ
+      = t₁.bSeries τ
+        + ∑ i : Fin t, t₂.b i *
+            ButcherProduct.convAt t₂ (t₁.bSeries) τ i := by
+  unfold bSeries
+  rw [Fin.sum_univ_add]
+  congr 1
+  · -- Upper-left block: `b (castAdd t i) = t₁.b i`, then `bSeries_castAdd`.
+    have h : ∀ i : Fin s,
+        (ButcherProduct t₁ t₂).b (Fin.castAdd t i) *
+            (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.castAdd t i)
+          = t₁.b i *
+            (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.castAdd t i) := by
+      intro i
+      rw [butcherProduct_b_castAdd]
+    simp only [h]
+    exact ButcherProduct.bSeries_castAdd t₁ t₂ τ
+  · -- Lower-right block: `b (natAdd s i) = t₂.b i`, then `bSeries_natAdd_eq_convAt`.
+    have h : ∀ i : Fin t,
+        (ButcherProduct t₁ t₂).b (Fin.natAdd s i) *
+            (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.natAdd s i)
+          = t₂.b i *
+            (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.natAdd s i) := by
+      intro i
+      rw [butcherProduct_b_natAdd]
+    simp only [h]
+    exact ButcherProduct.bSeries_natAdd_eq_convAt t₁ t₂ τ
+
+/-- §384 honest bSeries-side convolution: the product of a coefficient
+function `φ : BTree → ℝ` with the second tableau `t₂`. This is **not**
+tautological — `bConv φ t₂` reads `t₂.A` at every internal node through
+`convAt`, not just `t₂.bSeries`. By cycle 536's `bSeries_eq_bConv`,
+`(t₁.product t₂).bSeries = bConv t₁.bSeries t₂` on every tree. -/
+noncomputable def ButcherProduct.bConv
+    {t : ℕ} (φ : BTree → ℝ) (t₂ : ButcherTableau t) (τ : BTree) : ℝ :=
+  φ τ + ∑ i : Fin t, t₂.b i * ButcherProduct.convAt t₂ φ τ i
+
+/-- The `bConv` closed form computes the product bSeries: every product
+tableau's bSeries factors through the bSeries of its first factor and the
+honest tree-level convolution `bConv`. -/
+theorem ButcherProduct.bSeries_eq_bConv
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (τ : BTree) :
+    (ButcherProduct t₁ t₂).bSeries τ
+      = ButcherProduct.bConv t₁.bSeries t₂ τ := by
+  rw [ButcherProduct.bSeries_eq_split, ButcherProduct.bConv]
+
+/-- A child of `BTree.node children` has strictly smaller order than its
+parent. Local copy of the unnamed helper used elsewhere; needed by the
+`coef`-slot congruence below. -/
+private theorem child_order_lt_of_mem_node
+    {children : List BTree} {ch : BTree} (hmem : ch ∈ children) :
+    ch.order < (BTree.node children).order := by
+  simp only [BTree.order_node]
+  have hsum : ch.order ≤ children.foldr (fun t n => t.order + n) 0 := by
+    induction children with
+    | nil => simp at hmem
+    | cons hd tl ih =>
+      simp only [List.foldr]
+      rcases List.mem_cons.mp hmem with rfl | htl
+      · omega
+      · have := ih htl
+        omega
+  omega
+
+/-- `coef`-slot congruence for `convAt`: if two coefficient functions
+`coef`, `coef'` agree on every subtree of order at most `τ.order`, then
+`convAt t₂ coef τ i = convAt t₂ coef' τ i`. This is the per-tree-fixed
+agreement lemma needed for the next-cycle attempt at
+`IsG1Equiv.product_congr` on the `t₁` slot. -/
+theorem ButcherProduct.convAt_congr_coef
+    {t : ℕ} {coef coef' : BTree → ℝ}
+    (t₂ : ButcherTableau t) (τ : BTree)
+    (hcoef : ∀ σ : BTree, σ.order ≤ τ.order → coef σ = coef' σ)
+    (i : Fin t) :
+    ButcherProduct.convAt t₂ coef τ i
+      = ButcherProduct.convAt t₂ coef' τ i := by
+  classical
+  revert hcoef i
+  refine BTree.rec
+    (motive_1 := fun τ =>
+      (∀ σ : BTree, σ.order ≤ τ.order → coef σ = coef' σ) →
+      ∀ i : Fin t,
+      ButcherProduct.convAt t₂ coef τ i
+        = ButcherProduct.convAt t₂ coef' τ i)
+    (motive_2 := fun children => ∀ c ∈ children,
+      (∀ σ : BTree, σ.order ≤ c.order → coef σ = coef' σ) →
+      ∀ j : Fin t,
+      ButcherProduct.convAt t₂ coef c j
+        = ButcherProduct.convAt t₂ coef' c j)
+    ?leaf ?node ?nil ?cons τ
+  · intro _ i
+    simp
+  · intro children hchildren hcoef i
+    rw [ButcherProduct.convAt_node, ButcherProduct.convAt_node]
+    refine Finset.sum_congr rfl ?_
+    intro S _
+    -- For each `S`, the kept-side product agrees pointwise via `hcoef`,
+    -- and the cut-side product agrees via the per-child IH at strictly
+    -- smaller order.
+    have hcoef_child : ∀ p : Fin children.length,
+        coef (children.get p) = coef' (children.get p) := by
+      intro p
+      have hmem : children.get p ∈ children := List.get_mem children p
+      have hlt : (children.get p).order < (BTree.node children).order :=
+        child_order_lt_of_mem_node hmem
+      exact hcoef (children.get p) (Nat.le_of_lt hlt)
+    have hkept :
+        (∏ p ∈ S, coef (children.get p))
+          = ∏ p ∈ S, coef' (children.get p) := by
+      refine Finset.prod_congr rfl ?_
+      intro p _
+      exact hcoef_child p
+    have hcut :
+        (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef (children.get p) j)
+          = ∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef' (children.get p) j := by
+      refine Finset.prod_congr rfl ?_
+      intro p _
+      refine Finset.sum_congr rfl ?_
+      intro j _
+      have hmem : children.get p ∈ children := List.get_mem children p
+      have hlt : (children.get p).order < (BTree.node children).order :=
+        child_order_lt_of_mem_node hmem
+      have hcoef' : ∀ σ : BTree, σ.order ≤ (children.get p).order →
+          coef σ = coef' σ := by
+        intro σ hσ
+        exact hcoef σ (Nat.le_of_lt (Nat.lt_of_le_of_lt hσ hlt))
+      rw [hchildren (children.get p) hmem hcoef' j]
+    rw [hkept, hcut]
+  · intro c hc
+    simp at hc
+  · intro head tail ih_head ih_tail c hc hcoef j
+    rcases List.mem_cons.mp hc with rfl | hc'
+    · exact ih_head hcoef j
+    · exact ih_tail c hc' hcoef j
+
 end ButcherTableau
