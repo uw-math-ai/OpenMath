@@ -107,6 +107,37 @@ theorem bSeriesHom_product_singleton_leaf
          ButcherTableau.bSeries, ButcherTableau.weightsSum] using
     ButcherProduct.bSeries_singleton_leaf_eq t₁ t₂
 
+/-- The leaf bSeries hom coefficient is the lifted weights sum. -/
+theorem bSeriesHom_leaf {s : ℕ} (q : QuotEquiv s) :
+    q.bSeriesHom BTree.leaf = q.weightsSum := by
+  refine Quotient.inductionOn q ?_
+  intro t
+  simp [bSeriesHom, bSeries, weightsSum]
+
+/-- §384 lift of the product closed form on `BTree.node []`. -/
+theorem bSeriesHom_product_node_nil
+    {s t : ℕ} (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) :
+    (q₁.product q₂).bSeriesHom (BTree.node [])
+      = q₁.weightsSum + q₂.weightsSum := by
+  refine Quotient.inductionOn₂ q₁ q₂ ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product, weightsSum,
+         ButcherTableau.bSeries, ButcherTableau.weightsSum] using
+    ButcherProduct.bSeries_node_nil_eq t₁ t₂
+
+/-- §384 lift of the product closed form on `BTree.node [BTree.node []]`. -/
+theorem bSeriesHom_product_node_node_nil
+    {s t : ℕ} (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) :
+    (q₁.product q₂).bSeriesHom (BTree.node [BTree.node []])
+      = q₁.bSeriesHom (BTree.node [BTree.leaf])
+        + q₂.bSeriesHom (BTree.node [BTree.leaf])
+        + q₂.weightsSum * q₁.bSeriesHom (BTree.node []) := by
+  refine Quotient.inductionOn₂ q₁ q₂ ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product, weightsSum,
+         ButcherTableau.bSeries, ButcherTableau.weightsSum] using
+    ButcherProduct.bSeries_node_node_nil_eq t₁ t₂
+
 end QuotEquiv
 
 /-! ### §387 raw and quotient powers
@@ -742,6 +773,48 @@ theorem zero {s u : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u} :
   intro τ hτ
   have hpos := BTree.order_pos τ
   omega
+
+/-- The first tracked well-definedness slice for `G1.mul`: product preserves
+`G₁` equivalence through order two. -/
+theorem product_congr_le_two
+    {s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv 2 q q') (hr : IsG1Equiv 2 r r') :
+    IsG1Equiv 2 (q.product r) (q'.product r') := by
+  intro τ hτ
+  have hleaf_order : BTree.leaf.order ≤ 2 := by simp
+  have hnode_nil_order : (BTree.node []).order ≤ 2 := by native_decide
+  have hsingleton_order : (BTree.node [BTree.leaf]).order ≤ 2 := by native_decide
+  have hq_leaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf :=
+    hq BTree.leaf hleaf_order
+  have hr_leaf : r.bSeriesHom BTree.leaf = r'.bSeriesHom BTree.leaf :=
+    hr BTree.leaf hleaf_order
+  have hq_weights : q.weightsSum = q'.weightsSum := by
+    simpa [QuotEquiv.bSeriesHom_leaf] using hq_leaf
+  have hr_weights : r.weightsSum = r'.weightsSum := by
+    simpa [QuotEquiv.bSeriesHom_leaf] using hr_leaf
+  have hq_node_nil :
+      q.bSeriesHom (BTree.node []) = q'.bSeriesHom (BTree.node []) :=
+    hq (BTree.node []) hnode_nil_order
+  have hq_singleton :
+      q.bSeriesHom (BTree.node [BTree.leaf]) =
+        q'.bSeriesHom (BTree.node [BTree.leaf]) :=
+    hq (BTree.node [BTree.leaf]) hsingleton_order
+  have hr_singleton :
+      r.bSeriesHom (BTree.node [BTree.leaf]) =
+        r'.bSeriesHom (BTree.node [BTree.leaf]) :=
+    hr (BTree.node [BTree.leaf]) hsingleton_order
+  rcases (BTree.order_le_two_iff τ).1 hτ with rfl | rfl | rfl | rfl
+  · simp [QuotEquiv.bSeriesHom_leaf, QuotEquiv.product_weightsSum,
+      hq_weights, hr_weights]
+  · simp [QuotEquiv.bSeriesHom_product_node_nil, hq_weights, hr_weights]
+  · rw [QuotEquiv.bSeriesHom_product_singleton_leaf,
+      QuotEquiv.bSeriesHom_product_singleton_leaf]
+    rw [hq_singleton, hr_singleton, hr_weights, hq_leaf]
+  · rw [QuotEquiv.bSeriesHom_product_node_node_nil,
+      QuotEquiv.bSeriesHom_product_node_node_nil]
+    rw [hq_singleton, hr_singleton, hr_weights, hq_node_nil]
 
 end IsG1Equiv
 

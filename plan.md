@@ -160,7 +160,9 @@ codebase.
 ### §30 Preliminaries (rooted trees and Taylor expansion)
 - [x] **§300 Rooted trees** — `BTree`, `order`, `symmetry`, `density`,
   examples through order 5 (`OpenMath/RootedTree.lean`); statements
-  `thm_301A_order1` … `thm_301A_order5`.
+  `thm_301A_order1` … `thm_301A_order5`. Cycle 541 added
+  `BTree.order_le_two_iff`, the explicit four-case enumeration of trees
+  with `BTree.order ≤ 2`.
 - [x] **§301 Functions on trees** — elementary differentials and weights
   (`OpenMath/RootedTree.lean`, `OpenMath/OrderConditions.lean`).
 - [x] **§302–§306 Combinatorial / labelled-tree / differentiation /
@@ -386,6 +388,9 @@ codebase.
   wrappers `QuotEquiv.bSeriesHom_mk`, `IsG1Equiv.bSeriesHom_eq`,
   `G1.bSeriesHomAt_mk_apply`, `G1.hasTreeOrder_one_iff`,
   `G1.hasTreeOrder_zero_one`, and `G1.eq_one_iff`.
+  Cycle 541 landed `IsG1Equiv.product_congr_le_two`, the first tracked
+  order-restricted product-congruence slice toward `G1.mul`
+  well-definedness.
   The monoid/group structure on `G1 p`
   is open and now recorded as blocked on the §384 convolution gap;
   see `.prover-state/issues/butcher_g1_mul_section384_blocker.md`.
@@ -538,9 +543,20 @@ codebase.
   `ButcherProduct.bWeighted_convAt_node_kept_eq` and the bSeries-form
   specialization `ButcherProduct.bSeries_natAdd_node_kept_eq`, plus the
   depth-2 all-leaves-grandchildren summand collapse
-  `ButcherProduct.bWeighted_kept_node_all_leaves_summand_eq`. The next
-  §38 seam remains the full `(trunk, cuts)` convolution closure needed
-  before retrying `IsG1Equiv.product_congr`.
+  `ButcherProduct.bWeighted_kept_node_all_leaves_summand_eq`. Cycle 540
+  landed `ButcherProduct.bConv_singleton_leaf_eq`,
+  `ButcherProduct.bSeries_singleton_leaf_eq`, and the quotient lift
+  `QuotEquiv.bSeriesHom_product_singleton_leaf`, the first fully
+  bSeries-only product closed form on a concrete non-leaf tree. Cycle 541
+  added the small-tree collapse layer:
+  `ButcherTableau.bSeries_node_nil`,
+  `ButcherTableau.bSeries_node_node_nil`,
+  `ButcherProduct.bSeries_node_nil_eq`,
+  `ButcherProduct.bSeries_node_node_nil_eq`,
+  `QuotEquiv.bSeriesHom_product_node_nil`, and
+  `QuotEquiv.bSeriesHom_product_node_node_nil`. The next §38 seam
+  remains the full `(trunk, cuts)` convolution closure needed before
+  retrying unrestricted `IsG1Equiv.product_congr`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.
@@ -1111,12 +1127,22 @@ Concrete next steps:
   quotient layer in `OpenMath/ButcherGroup.lean` as
   `QuotEquiv.bSeriesHom_product_singleton_leaf`. This is the bSeries-only
   closed form needed by the eventual `IsG1Equiv.product_congr` proof on
-  the second-order rooted tree; the small-`p` version
-  `IsG1Equiv.product_congr_le_two` is deferred — it requires enumerating
-  every BTree of order ≤ 2 (`leaf`, `node []`, `node [leaf]`,
-  `node [node []]`), which needs a `BTree.order_le_two` characterization
-  helper plus `bSeries`-collapse lemmas for `node []` and
-  `node [node []]` that are not yet in the file.
+  the second-order rooted tree.
+- Cycle 541 closed the small-`p` mirror for order two. In
+  `OpenMath/RootedTree.lean`, `BTree.order_le_two_iff` enumerates every
+  tree with `BTree.order ≤ 2` as `leaf`, `node []`, `node [leaf]`, or
+  `node [node []]`. In `OpenMath/ButcherGroup/Section384.lean`,
+  `ButcherTableau.bSeries_node_nil` and
+  `ButcherTableau.bSeries_node_node_nil` collapse the two extra tree
+  shapes, while `ButcherProduct.bSeries_node_nil_eq` and
+  `ButcherProduct.bSeries_node_node_nil_eq` give the matching product
+  closed forms. In `OpenMath/ButcherGroup.lean`,
+  `QuotEquiv.bSeriesHom_product_node_nil` and
+  `QuotEquiv.bSeriesHom_product_node_node_nil` lift those closed forms
+  to quotient classes, and `IsG1Equiv.product_congr_le_two` proves the
+  first concrete `G1.mul`-direction well-definedness deliverable in
+  tracked code. The unrestricted `IsG1Equiv.product_congr` remains
+  blocked on the full §384 `(trunk, cuts)` convolution closure.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

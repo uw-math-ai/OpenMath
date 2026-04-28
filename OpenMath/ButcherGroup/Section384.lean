@@ -37,6 +37,28 @@ identities before quotienting. -/
 noncomputable def bSeries (tab : ButcherTableau s) (τ : BTree) : ℝ :=
   ∑ i, tab.b i * tab.elementaryWeight τ i
 
+/-- The leaf bSeries coefficient is the tableau weights sum. -/
+theorem bSeries_leaf (t : ButcherTableau s) :
+    t.bSeries BTree.leaf = t.weightsSum := by
+  simp [bSeries, weightsSum]
+
+/-- The empty-child node bSeries coefficient is the tableau weights sum. -/
+theorem bSeries_node_nil (t : ButcherTableau s) :
+    t.bSeries (BTree.node []) = t.weightsSum := by
+  simp [bSeries, weightsSum, ButcherTableau.elementaryWeight]
+
+/-- A singleton child `node []` has the same bSeries contribution as a
+singleton leaf. -/
+theorem bSeries_node_node_nil (t : ButcherTableau s) :
+    t.bSeries (BTree.node [BTree.node []])
+      = t.bSeries (BTree.node [BTree.leaf]) := by
+  unfold bSeries
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  congr 1
+  simp [ButcherTableau.elementaryWeight_singleton,
+    ButcherTableau.elementaryWeight]
+
 /-- The elementary weight of `ButcherProduct t₁ t₂` at an upper-left block
 stage is exactly the elementary weight of `t₁`. This is the cut-side
 reduction needed for the §384 convolution: once a child has crossed through
@@ -2060,5 +2082,25 @@ theorem ButcherProduct.bSeries_singleton_leaf_eq
         + t₂.weightsSum * t₁.bSeries BTree.leaf := by
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_singleton_leaf_eq]
+
+/-- Product bSeries closed form on the empty-child node. -/
+theorem ButcherProduct.bSeries_node_nil_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (ButcherProduct t₁ t₂).bSeries (BTree.node [])
+      = t₁.weightsSum + t₂.weightsSum := by
+  rw [bSeries_node_nil]
+  simp [weightsSum, butcherProduct_b_sum]
+
+/-- Product bSeries closed form on the singleton `node []` child. -/
+theorem ButcherProduct.bSeries_node_node_nil_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (ButcherProduct t₁ t₂).bSeries (BTree.node [BTree.node []])
+      = t₁.bSeries (BTree.node [BTree.leaf])
+        + t₂.bSeries (BTree.node [BTree.leaf])
+        + t₂.weightsSum * t₁.bSeries (BTree.node []) := by
+  rw [bSeries_node_node_nil, ButcherProduct.bSeries_singleton_leaf_eq]
+  have hleaf : t₁.bSeries BTree.leaf = t₁.bSeries (BTree.node []) := by
+    rw [bSeries_leaf, bSeries_node_nil]
+  rw [hleaf]
 
 end ButcherTableau

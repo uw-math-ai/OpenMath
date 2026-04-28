@@ -612,6 +612,73 @@ theorem order_node_sum (children : List BTree) :
     simp only [List.foldr, List.map, List.sum_cons]
     omega
 
+private theorem map_order_sum_eq_zero_iff (children : List BTree) :
+    (children.map BTree.order).sum = 0 ↔ children = [] := by
+  constructor
+  · intro h
+    cases children with
+    | nil => rfl
+    | cons c cs =>
+        have hc : 0 < c.order := order_pos c
+        simp only [List.map, List.sum_cons] at h
+        omega
+  · intro h
+    subst h
+    simp
+
+private theorem eq_nil_or_singleton_of_order_sum_le_one (children : List BTree)
+    (h : (children.map BTree.order).sum ≤ 1) :
+    children = [] ∨ ∃ c : BTree, children = [c] ∧ c.order = 1 := by
+  cases children with
+  | nil =>
+      exact Or.inl rfl
+  | cons c cs =>
+      right
+      have hcpos : 0 < c.order := order_pos c
+      have hsum : c.order + (cs.map BTree.order).sum ≤ 1 := by
+        simpa only [List.map, List.sum_cons] using h
+      have hc : c.order = 1 := by omega
+      have hcs_sum : (cs.map BTree.order).sum = 0 := by omega
+      have hcs : cs = [] := (map_order_sum_eq_zero_iff cs).1 hcs_sum
+      refine ⟨c, ?_, hc⟩
+      simp [hcs]
+
+/-- The rooted trees whose `BTree.order` is at most `2` in the current
+ordered-child representation. -/
+theorem order_le_two_iff (τ : BTree) :
+    τ.order ≤ 2 ↔
+      τ = BTree.leaf
+      ∨ τ = BTree.node []
+      ∨ τ = BTree.node [BTree.leaf]
+      ∨ τ = BTree.node [BTree.node []] := by
+  constructor
+  · intro hτ
+    cases τ with
+    | leaf =>
+        exact Or.inl rfl
+    | node children =>
+        have hsum : (children.map BTree.order).sum ≤ 1 := by
+          rw [order_node_sum] at hτ
+          omega
+        rcases eq_nil_or_singleton_of_order_sum_le_one children hsum with hnil | ⟨c, hchildren, hc⟩
+        · subst hnil
+          exact Or.inr (Or.inl rfl)
+        · subst hchildren
+          right
+          right
+          cases c with
+          | leaf =>
+              exact Or.inl rfl
+          | node gc =>
+              right
+              have hgc_sum : (gc.map BTree.order).sum = 0 := by
+                rw [order_node_sum] at hc
+                omega
+              have hgc : gc = [] := (map_order_sum_eq_zero_iff gc).1 hgc_sum
+              rw [hgc]
+  · intro hτ
+    rcases hτ with rfl | rfl | rfl | rfl <;> native_decide
+
 /-- The order of a node depends only on the multiset of its children. -/
 theorem order_node_perm {children₁ children₂ : List BTree}
     (hperm : children₁.Perm children₂) :
