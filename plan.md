@@ -316,14 +316,20 @@ codebase.
   landed in `OpenMath/ButcherGroup.lean` (cycle 497):
   `IsRKEquivalent.elementaryWeight_eq`,
   `IsRKEquivalent.satisfiesTreeCondition_iff`, and
-  `IsRKEquivalent.hasTreeOrder_iff`. The quotient-facing `G₁` definition
-  remains open.
+  `IsRKEquivalent.hasTreeOrder_iff`. Quotient-facing packaging landed
+  in cycle 498: `QuotEquiv` alias, `QuotEquiv.satisfiesTreeCondition`,
+  `QuotEquiv.hasTreeOrder`, sanity lifts `QuotEquiv.weightsSum` /
+  `QuotEquiv.cSum`, plus the `_mk` computation lemmas. The
+  homomorphism-into-tree-mapping side of `G₁` remains open.
 - [ ] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.
-- [ ] **§387 Some special elements of `G`** — identity, inverse, power.
+- [~] **§387 Some special elements of `G`** — identity, inverse, power.
+  Cycle 498 landed the identity element: `trivialTableau : ButcherTableau 0`
+  and `trivialTableau_unique` in `OpenMath/ButcherGroup.lean`. Inverse and
+  integer-power constructions remain open.
 - [ ] **§388 Some subgroups and quotient groups**.
 - [ ] **§389 An algebraic interpretation of effective order** — connects
   to §365 above.

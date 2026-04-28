@@ -192,4 +192,78 @@ theorem hasTreeOrder_iff {t₁ t₂ : ButcherTableau s}
 
 end IsRKEquivalent
 
+/-! ### §381/§383 quotient-facing packaging
+
+Lift the order-condition predicates and sanity sums onto the quotient
+`Quotient (isRKEquivalentSetoid s)` using the cycle-497 invariance lemmas
+as well-definedness witnesses. -/
+
+/-- Thin alias for the quotient of `ButcherTableau s` by relabel-equivalence. -/
+def QuotEquiv (s : ℕ) : Type := Quotient (isRKEquivalentSetoid s)
+
+namespace QuotEquiv
+
+variable {s : ℕ}
+
+/-- Tree order condition lifted to relabel-equivalence classes. -/
+noncomputable def satisfiesTreeCondition (q : QuotEquiv s) (τ : BTree) : Prop :=
+  Quotient.lift (fun t : ButcherTableau s => t.satisfiesTreeCondition τ)
+    (fun _ _ h => propext (IsRKEquivalent.satisfiesTreeCondition_iff h τ)) q
+
+/-- Tree-order-up-to-`p` lifted to relabel-equivalence classes. -/
+noncomputable def hasTreeOrder (q : QuotEquiv s) (p : ℕ) : Prop :=
+  Quotient.lift (fun t : ButcherTableau s => t.hasTreeOrder p)
+    (fun _ _ h => propext (IsRKEquivalent.hasTreeOrder_iff h p)) q
+
+/-- Computation lemma: the lifted order condition unfolds on a representative. -/
+@[simp] theorem satisfiesTreeCondition_mk (t : ButcherTableau s) (τ : BTree) :
+    satisfiesTreeCondition (Quotient.mk _ t) τ = t.satisfiesTreeCondition τ := rfl
+
+/-- Computation lemma: the lifted order predicate unfolds on a representative. -/
+@[simp] theorem hasTreeOrder_mk (t : ButcherTableau s) (p : ℕ) :
+    hasTreeOrder (Quotient.mk _ t) p = t.hasTreeOrder p := rfl
+
+/-- Sum of weights `∑ i, b i` lifted to relabel-equivalence classes. -/
+def weightsSum (q : QuotEquiv s) : ℝ :=
+  Quotient.lift (fun t : ButcherTableau s => ∑ i, t.b i)
+    (fun _ _ h => IsRKEquivalent.weights_sum_eq h) q
+
+/-- Sum of nodes `∑ i, c i` lifted to relabel-equivalence classes. -/
+def cSum (q : QuotEquiv s) : ℝ :=
+  Quotient.lift (fun t : ButcherTableau s => ∑ i, t.c i)
+    (fun _ _ h => IsRKEquivalent.c_sum_eq h) q
+
+/-- Computation lemma: the lifted weights-sum unfolds on a representative. -/
+@[simp] theorem weightsSum_mk (t : ButcherTableau s) :
+    weightsSum (Quotient.mk _ t) = ∑ i, t.b i := rfl
+
+/-- Computation lemma: the lifted node-sum unfolds on a representative. -/
+@[simp] theorem cSum_mk (t : ButcherTableau s) :
+    cSum (Quotient.mk _ t) = ∑ i, t.c i := rfl
+
+end QuotEquiv
+
+/-! ### §387 trivial element
+
+The zero-stage tableau is the group identity. Since `Fin 0` is empty, all
+fields are vacuous and any two zero-stage tableaux are definitionally equal. -/
+
+/-- The zero-stage Butcher tableau. All fields are functions out of `Fin 0`,
+defined vacuously by `Fin.elim0`. -/
+def trivialTableau : ButcherTableau 0 where
+  A := fun i => Fin.elim0 i
+  b := fun i => Fin.elim0 i
+  c := fun i => Fin.elim0 i
+
+/-- Uniqueness of the zero-stage tableau: there is only one inhabitant of
+`ButcherTableau 0`. -/
+theorem trivialTableau_unique (t : ButcherTableau 0) : t = trivialTableau := by
+  cases t with
+  | mk A b c =>
+    apply ButcherTableau.mk.injEq _ _ _ _ _ _ |>.mpr
+    refine ⟨?_, ?_, ?_⟩
+    · funext i; exact Fin.elim0 i
+    · funext i; exact Fin.elim0 i
+    · funext i; exact Fin.elim0 i
+
 end ButcherTableau
