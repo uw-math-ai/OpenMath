@@ -1716,6 +1716,54 @@ theorem ButcherProduct.bSeries_natAdd_node_two_level_eq_rightAuxAtCoef
   rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
       ButcherProduct.bWeighted_rightAuxAtCoef_node_two_level]
 
+/-- Leaf-level `b`-weighted closed form, restated as `weightsSum`. This is
+the cycle 528 `_eq` companion to `bWeighted_rightAuxAtCoef_leaf`, with the
+same statement, exposed under the rotation-naming convention used by the
+node-side closures. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_leaf_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef BTree.leaf i)
+      = t₂.weightsSum :=
+  ButcherProduct.bWeighted_rightAuxAtCoef_leaf t₂ coef
+
+/-- Leaf specialization of the right-block coefficient at `coef := t₁.bSeries`:
+the second-method `b`-weighted stage sum of the product tableau evaluated at
+`BTree.leaf` collapses to `t₂.weightsSum`. -/
+theorem ButcherProduct.bSeries_natAdd_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight BTree.leaf
+            (Fin.natAdd s i))
+      = t₂.weightsSum := by
+  rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
+      ButcherProduct.bWeighted_rightAuxAtCoef_leaf]
+
+/-- Trunk-recursion form of the `b`-weighted root sum at a node tree: the
+powerset sum is reindexed so that the chosen subset `S` records the children
+*cut* via `coef`, while the complement `Sᶜ` records the children kept
+attached through the second-method `t₂.A`-twisted recursion. This is the
+`S`/`Sᶜ` swap of `bWeighted_rightAuxAtCoef_node`, ready for the §384
+trunk-side closed form. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+          (∏ p ∈ S, coef (children.get p)) *
+            (∑ i : Fin t, t₂.b i *
+              (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+                  ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j)) := by
+  classical
+  rw [ButcherProduct.bWeighted_rightAuxAtCoef_node, Finset.powerset_univ]
+  refine Finset.sum_nbij' (fun S => Sᶜ) (fun S => Sᶜ) ?_ ?_ ?_ ?_ ?_
+  · intros S _; exact Finset.mem_univ _
+  · intros S _; exact Finset.mem_univ _
+  · intros S _; exact compl_compl S
+  · intros S _; exact compl_compl S
+  · intros S _; rw [compl_compl]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

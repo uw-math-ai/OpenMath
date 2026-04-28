@@ -456,7 +456,17 @@ codebase.
   weighted form `ButcherProduct.bWeighted_rightAuxAtCoef_node_two_level`,
   and the `coef = t₁.bSeries` bridge
   `ButcherProduct.bSeries_natAdd_node_two_level_eq_rightAuxAtCoef`, moving
-  the closed right-block auxiliary one full structural layer deeper.
+  the closed right-block auxiliary one full structural layer deeper. Cycle
+  528 added the leaf-side `b`-weighted closure
+  `ButcherProduct.bWeighted_rightAuxAtCoef_leaf_eq` (a `weightsSum`-form
+  alias of `bWeighted_rightAuxAtCoef_leaf`), the leaf specialization at
+  `coef = t₁.bSeries`
+  `ButcherProduct.bSeries_natAdd_leaf_eq` (which collapses the second-method
+  `b`-weighted stage sum at `BTree.leaf` to `t₂.weightsSum`), and the
+  trunk-side reindexing
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion`
+  (the `S` ↔ `Sᶜ` swap of `bWeighted_rightAuxAtCoef_node`, with `S` now
+  recording the cut children and `Sᶜ` the kept children).
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
   general `(trunk, cuts)` closed form for
@@ -917,9 +927,22 @@ Concrete next steps:
   `ButcherProduct.rightAuxAtCoef_node_two_level_eq_powerset_sum`, its
   weighted form `ButcherProduct.bWeighted_rightAuxAtCoef_node_two_level`,
   and the specialization bridge
-  `ButcherProduct.bSeries_natAdd_node_two_level_eq_rightAuxAtCoef`. The
-  next seam is the general `(trunk, cuts)` closed form for
-  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`, which should provide the
+  `ButcherProduct.bSeries_natAdd_node_two_level_eq_rightAuxAtCoef`.
+  Cycle 528 added the leaf-side `b`-weighted closure
+  `ButcherProduct.bWeighted_rightAuxAtCoef_leaf_eq` (alias of
+  `bWeighted_rightAuxAtCoef_leaf` under the rotation-naming
+  convention), the leaf specialization at `coef = t₁.bSeries`
+  `ButcherProduct.bSeries_natAdd_leaf_eq` (collapsing the
+  second-method `b`-weighted stage sum at `BTree.leaf` to
+  `t₂.weightsSum`), and the trunk-side reindexing
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion`
+  (the `S` ↔ `Sᶜ` swap of `bWeighted_rightAuxAtCoef_node`, with
+  `S` recording cut children and `Sᶜ` recording kept children).
+  The next seam is the trunk-side recursive decomposition that turns
+  the kept-side `(∏ p ∈ Sᶜ, ∑ j, t₂.A i j * rightAuxAtCoef ...)`
+  product into `t₂.bSeries`-only values on subtrees — i.e. the
+  honest `(trunk, cuts)` closed form for
+  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`, which provides the
   non-tautological coefficient product needed by
   `QuotEquiv.bSeriesHom_product`.
 - Cycle 516 also confirmed that the §38 group multiplication on
