@@ -303,8 +303,11 @@ codebase.
 
 ### §38 Algebraic Properties of Runge–Kutta Methods *(largest gap inside Ch 3 — Butcher's namesake)*
 - [ ] **§380 Motivation** — RK composition.
-- [ ] **§381 Equivalence classes of Runge–Kutta methods** — quotient by
-  re-labelling of stages.
+- [~] **§381 Equivalence classes of Runge–Kutta methods** — quotient by
+  re-labelling of stages. Relabeling-equivalence relation `IsRKEquivalent`
+  with `refl`/`symm`/`trans`, `Setoid` instance, and the sanity lemma
+  `weights_sum_eq` are landed in `OpenMath/ButcherGroup.lean` (cycle 496).
+  Cross-stage-count equivalence (embedding into `Fin (s ⊔ t)`) remains open.
 - [ ] **§382 The group of Runge–Kutta methods** — composition law on
   equivalence classes.
 - [ ] **§383 The Runge–Kutta group `G₁`** — elementary-weight
