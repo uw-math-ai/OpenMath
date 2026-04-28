@@ -20,9 +20,9 @@
     "status": "formalized"
   },
   "thm:111A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section111.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section111.solution_superposition",
+    "status": "formalized"
   },
   "def:112A": {
     "lean_file": "OpenMath/Chapter1/Section112.lean",
