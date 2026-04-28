@@ -16,6 +16,7 @@ import OpenMath.LobattoIIIB
 import OpenMath.StiffAccuracy
 import OpenMath.Adjoint
 import OpenMath.ReflectedMethods
+import OpenMath.Hamiltonian
 import OpenMath.EmbeddedRK
 import OpenMath.OrderConditions
 import OpenMath.PadeOrderStars
