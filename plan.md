@@ -367,9 +367,20 @@ codebase.
   Cycle 503 landed identity prep for `bSeries` under `QuotEquiv.product`:
   `ButcherProduct.bSeries_one_left`, `ButcherProduct.bSeries_one_right`,
   `QuotEquiv.product_bSeries_one_left`, and
-  `QuotEquiv.product_bSeries_one_right`. The non-tautological tree
-  convolution for `QuotEquiv.bSeriesHom_product` remains open; see
-  `.prover-state/issues/butcher_section384_convolution.md`.
+  `QuotEquiv.product_bSeries_one_right`. Cycle 512 opened the
+  §384 convolution seam in `OpenMath/ButcherGroup.lean`:
+  `bSeriesConv : (BTree → ℝ) → (BTree → ℝ) → BTree → ℝ` (leaf branch
+  concrete `β₁ .leaf + β₂ .leaf`; node branch a sorry placeholder
+  pending the right combinatorial body), the simp lemma
+  `bSeriesConv_leaf`, and the proven leaf compatibility lemmas
+  `QuotEquiv.bSeriesHom_product_leaf` and the bonus
+  `QuotEquiv.bSeriesHom_product_node_nil` (uses the same
+  `butcherProduct_b_sum` identity since `elementaryWeight (.node []) = 1`).
+  The headline `QuotEquiv.bSeriesHom_product` has its leaf branch closed
+  in-line via `bSeriesHom_product_leaf`; the node branch remains a single
+  sorry coupled to the `bSeriesConv` node body. See
+  `.prover-state/issues/butcher_section384_convolution.md` for the
+  candidate node-recursion body and the structural blocker analysis.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.

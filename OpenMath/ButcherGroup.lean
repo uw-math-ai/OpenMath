@@ -814,6 +814,65 @@ theorem bSeriesHom_assoc {s t u : ℕ}
 
 end QuotEquiv
 
+/-! ### §384 tree-coefficient convolution
+
+This is the §384 seam of Butcher's group construction: the homomorphism
+property of `bSeriesHom` for `QuotEquiv.product`. The convolution
+`bSeriesConv` is tree-recursive on `BTree`; the leaf branch is concrete
+(it is just additivity of the `b`-sum), and the node branch is the
+load-bearing combinatorial recursion which remains open. -/
+
+/-- §384 tree-indexed convolution on Butcher-series coefficient maps.
+
+The leaf branch follows from `butcherProduct_b_sum`:
+`(t₁ ⊗ t₂).b sum = t₁.b sum + t₂.b sum`. The node branch is the
+load-bearing combinatorial recursion. -/
+noncomputable def bSeriesConv (β₁ β₂ : BTree → ℝ) : BTree → ℝ
+  | .leaf => β₁ .leaf + β₂ .leaf
+  | .node _ => sorry
+
+@[simp] theorem bSeriesConv_leaf (β₁ β₂ : BTree → ℝ) :
+    bSeriesConv β₁ β₂ .leaf = β₁ .leaf + β₂ .leaf := rfl
+
+namespace QuotEquiv
+
+/-- Compatibility of `(q₁.product q₂).bSeriesHom` with `bSeriesConv` on the
+leaf tree. The reduction is `(t₁ ⊗ t₂).b sum = t₁.b sum + t₂.b sum`. -/
+theorem bSeriesHom_product_leaf {s t : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) :
+    (q₁.product q₂).bSeriesHom .leaf
+      = bSeriesConv q₁.bSeriesHom q₂.bSeriesHom .leaf := by
+  refine Quotient.inductionOn₂ q₁ q₂ ?_
+  intro t₁ t₂
+  simp [bSeriesHom, bSeries, product, bSeriesConv_leaf, butcherProduct_b_sum]
+
+/-- §384 compatibility on the empty-children node tree. Since
+`elementaryWeight (.node []) i = 1` (the empty `foldr`), this case reduces
+to the same b-sum identity as `bSeriesHom_product_leaf`. -/
+theorem bSeriesHom_product_node_nil {s t : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) :
+    (q₁.product q₂).bSeriesHom (.node []) =
+      q₁.bSeriesHom (.node []) + q₂.bSeriesHom (.node []) := by
+  refine Quotient.inductionOn₂ q₁ q₂ ?_
+  intro t₁ t₂
+  simp [bSeriesHom, bSeries, product, ButcherTableau.elementaryWeight,
+    butcherProduct_b_sum]
+
+/-- Headline §384 homomorphism: `bSeriesHom` carries `QuotEquiv.product`
+to `bSeriesConv`. The leaf branch is closed via `bSeriesHom_product_leaf`;
+the node branch is the load-bearing combinatorial step (depending on the
+node-branch of `bSeriesConv`, which is itself open) and remains a sorry —
+see `.prover-state/issues/butcher_section384_convolution.md`. -/
+theorem bSeriesHom_product {s t : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) (τ : BTree) :
+    (q₁.product q₂).bSeriesHom τ
+      = bSeriesConv q₁.bSeriesHom q₂.bSeriesHom τ := by
+  match τ with
+  | .leaf => exact bSeriesHom_product_leaf q₁ q₂
+  | .node _ => sorry
+
+end QuotEquiv
+
 /-! ### §387 raw and quotient powers
 
 The raw power keeps the right-associated shape `(t^n) * t`, matching the
