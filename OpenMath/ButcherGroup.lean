@@ -1243,6 +1243,10 @@ namespace QuotEquiv
 def mk {s : ℕ} (t : ButcherTableau s) : QuotEquiv s :=
   Quotient.mk _ t
 
+@[simp] theorem bSeriesHom_mk {s : ℕ} (t : ButcherTableau s) (τ : BTree) :
+    (mk t).bSeriesHom τ = ∑ i, t.b i * t.elementaryWeight τ i := by
+  rfl
+
 /-- Right-padding lifted to relabel-equivalence classes. -/
 def padRight {s : ℕ} (q : QuotEquiv s) (n : ℕ) : QuotEquiv (s + n) :=
   Quotient.lift (fun t : ButcherTableau s => mk (t.padRight n))
@@ -1425,6 +1429,11 @@ theorem trans {s u v p : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u} {q₃ : 
     IsG1Equiv p q₁ q₃ := by
   intro τ hτ; exact (h₁ τ hτ).trans (h₂ τ hτ)
 
+theorem bSeriesHom_eq {s u p : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (h : IsG1Equiv p q₁ q₂) {τ : BTree} (hτ : τ.order ≤ p) :
+    q₁.bSeriesHom τ = q₂.bSeriesHom τ := by
+  exact h τ hτ
+
 /-- `IsG1Equiv` is monotone in the order parameter: agreement up to a larger
 order implies agreement up to a smaller one. -/
 theorem mono {s u p q : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
@@ -1534,6 +1543,11 @@ noncomputable def hasTreeOrder {p : ℕ} : G1 p → Prop :=
     bSeriesHomAt p τ hτ (mk (p := p) q) = q.bSeriesHom τ := by
   rfl
 
+@[simp] theorem bSeriesHomAt_mk_apply {p s : ℕ}
+    (q : QuotEquiv s) (τ : BTree) (hτ : τ.order ≤ p) :
+    bSeriesHomAt p τ hτ (mk (p := p) q) = q.bSeriesHom τ := by
+  rfl
+
 @[simp] theorem satisfiesTreeCondition_mk {p s : ℕ} (q : QuotEquiv s)
     (τ : BTree) :
     satisfiesTreeCondition (mk (p := p) q) τ =
@@ -1609,6 +1623,24 @@ theorem hasTreeOrder_iff_forall {p : ℕ} (g : G1 p) :
     refine forall_congr' fun τ => ?_
     refine imp_congr_right fun hτ => ?_
     exact ⟨fun h _ => h, fun h => h hτ⟩
+
+theorem hasTreeOrder_one_iff (p : ℕ) :
+    hasTreeOrder (one p) ↔
+      ∀ τ : BTree, τ.order ≤ p → (0 : ℝ) = 1 / (τ.density : ℝ) := by
+  rw [hasTreeOrder_iff_forall]
+  simp [one, QuotEquiv.satisfiesTreeCondition_iff_bSeries, QuotEquiv.bSeries]
+
+theorem hasTreeOrder_zero_one : hasTreeOrder (one 0) := by
+  rw [hasTreeOrder_one_iff]
+  intro τ hτ
+  have hpos := BTree.order_pos τ
+  omega
+
+theorem eq_one_iff {p : ℕ} (g : G1 p) :
+    g = one p ↔ ∀ τ : BTree, (hτ : τ.order ≤ p) →
+      bSeriesHomAt p τ hτ g = 0 := by
+  rw [eq_iff_forall_bSeriesHomAt]
+  simp
 
 end G1
 

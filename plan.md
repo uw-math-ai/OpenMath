@@ -380,7 +380,11 @@ codebase.
   the extensionality principle `G1.ext` plus its iff form
   `G1.eq_iff_forall_bSeriesHomAt`, the class-equality bridge
   `G1.mk_eq_mk_iff_isG1Equiv`, and the tree-order characterization
-  `G1.hasTreeOrder_iff_forall`. The monoid/group structure on `G1 p`
+  `G1.hasTreeOrder_iff_forall`. Cycle 517 added the simp/identity-class
+  wrappers `QuotEquiv.bSeriesHom_mk`, `IsG1Equiv.bSeriesHom_eq`,
+  `G1.bSeriesHomAt_mk_apply`, `G1.hasTreeOrder_one_iff`,
+  `G1.hasTreeOrder_zero_one`, and `G1.eq_one_iff`.
+  The monoid/group structure on `G1 p`
   is open and now recorded as blocked on the §384 convolution gap;
   see `.prover-state/issues/butcher_g1_mul_section384_blocker.md`.
 - [~] **§384 A homomorphism between two groups** — bridge from RK
@@ -796,6 +800,10 @@ Concrete next steps:
   extensionality principle for `G1 p` (`G1.ext`,
   `G1.eq_iff_forall_bSeriesHomAt`, `G1.mk_eq_mk_iff_isG1Equiv`),
   and the tree-order characterization `G1.hasTreeOrder_iff_forall`.
+  Cycle 517 added the simp/identity-class wrappers
+  `QuotEquiv.bSeriesHom_mk`, `IsG1Equiv.bSeriesHom_eq`,
+  `G1.bSeriesHomAt_mk_apply`, `G1.hasTreeOrder_one_iff`,
+  `G1.hasTreeOrder_zero_one`, and `G1.eq_one_iff`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
