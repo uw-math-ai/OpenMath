@@ -439,10 +439,16 @@ codebase.
   bSeries-level corollary
   `ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef`. The right block of
   `ButcherProduct.elementaryWeight` is now fully expressed as a recursion
-  that mentions `t₁` only through `t₁.bSeries`.
+  that mentions `t₁` only through `t₁.bSeries`. Cycle 525 added the raw
+  tableau total-weight abbreviation `ButcherTableau.weightsSum` and the
+  first coefficient-parametric `b`-weighted reductions
+  `ButcherProduct.bWeighted_rightAuxAtCoef_leaf`,
+  `ButcherProduct.rightAuxAtCoef_node_singleton`, and
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_singleton`, pinning the
+  leaf base case and the one-child node cut/keep split.
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
-  `(trunk, cuts)` closed form for
+  general `(trunk, cuts)` closed form for
   `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
@@ -884,9 +890,15 @@ Concrete next steps:
   bSeries-level corollary
   `ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef`. The right block of
   `ButcherProduct.elementaryWeight` is now fully expressed as a
-  recursion that mentions `t₁` only through `t₁.bSeries`. The next
-  seam is the closed `(trunk, cuts)` identification of
-  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`.
+  recursion that mentions `t₁` only through `t₁.bSeries`. Cycle 525
+  added `ButcherTableau.weightsSum`,
+  `ButcherProduct.bWeighted_rightAuxAtCoef_leaf`,
+  `ButcherProduct.rightAuxAtCoef_node_singleton`, and
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_singleton`, giving the
+  leaf base case and one-child node cut/keep expansion for the
+  coefficient-parametric `b`-weighted auxiliary. The next seam is to
+  generalize this singleton layer to the closed `(trunk, cuts)`
+  identification of `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

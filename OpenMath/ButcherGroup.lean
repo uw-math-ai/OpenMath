@@ -24,6 +24,11 @@ namespace ButcherTableau
 
 variable {s : ℕ}
 
+/-- Raw tableau total weight, used before passing to relabel-equivalence
+classes. -/
+def weightsSum (t : ButcherTableau s) : ℝ :=
+  ∑ i : Fin s, t.b i
+
 /-- Two `ButcherTableau`s with the same stage count are **relabel-equivalent**
 if there is a permutation `σ` of the stage indices that carries one to the
 other. -/
@@ -1338,6 +1343,85 @@ theorem ButcherProduct.rightAuxAtCoef_node
           ∑ j : Fin t,
             t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j) := by
   rw [ButcherProduct.rightAuxAtCoef]
+
+/-- Leaf-level `b`-weighted reduction for the coefficient-parametric
+right-block auxiliary: leaves do not see the cut coefficient function. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_leaf
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef BTree.leaf i)
+      = t₂.weightsSum := by
+  simp [ButcherTableau.weightsSum]
+
+/-- One-child node specialization of the coefficient-parametric right-block
+auxiliary. It exposes the single `cut OR keep` branch. -/
+theorem ButcherProduct.rightAuxAtCoef_node_singleton
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (child : BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node [child]) i
+      = coef child +
+        ∑ j : Fin t,
+          t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef child j := by
+  simp [ButcherProduct.rightAuxAtCoef_node]
+  have hpowerset :
+      ({0} : Finset (Fin 1)).powerset =
+        ({∅, {0}} : Finset (Finset (Fin 1))) := by
+    ext S
+    simp [Finset.subset_singleton_iff]
+  have hcompl : ({0} : Finset (Fin 1))ᶜ = ∅ := by
+    ext x
+    fin_cases x
+    simp
+  rw [hpowerset]
+  simp [hcompl]
+
+/-- One-child `b`-weighted closed form for the coefficient-parametric
+right-block auxiliary. The cut term factors through `weightsSum`, while
+the kept term retains the `A`-twisted recursion. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_singleton
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (child : BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node [child]) i)
+      = coef child * t₂.weightsSum +
+        ∑ i : Fin t, t₂.b i *
+          ∑ j : Fin t,
+            t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef child j := by
+  calc
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node [child]) i)
+        = ∑ i : Fin t, t₂.b i *
+            (coef child +
+              ∑ j : Fin t,
+                t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef child j) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          rw [ButcherProduct.rightAuxAtCoef_node_singleton]
+    _ = ∑ i : Fin t,
+          (t₂.b i * coef child +
+            t₂.b i *
+              ∑ j : Fin t,
+                t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef child j) := by
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        ring
+    _ = (∑ i : Fin t, t₂.b i * coef child) +
+          ∑ i : Fin t, t₂.b i *
+            ∑ j : Fin t,
+              t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef child j := by
+        rw [Finset.sum_add_distrib]
+    _ = coef child * t₂.weightsSum +
+          ∑ i : Fin t, t₂.b i *
+            ∑ j : Fin t,
+              t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef child j := by
+        congr 1
+        calc
+          (∑ i : Fin t, t₂.b i * coef child)
+              = ∑ i : Fin t, coef child * t₂.b i := by
+            refine Finset.sum_congr rfl ?_
+            intro i _
+            ring
+          _ = coef child * t₂.weightsSum := by
+            simp [ButcherTableau.weightsSum, Finset.mul_sum]
 
 theorem ButcherProduct.rightAuxAt_leaf_eq_coef
     {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin t) :
