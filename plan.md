@@ -1057,6 +1057,22 @@ Concrete next steps:
   `ButcherProduct.bConv_isRKEquivalent_t2`, and
   `ButcherProduct.bSeries_product_isRKEquivalent_t2`). The next §38 seam
   is `IsG1Equiv.product_congr`.
+- Cycle 538 added the first concrete bSeries-only convolution closed
+  forms to `OpenMath/ButcherGroup/Section384.lean`:
+  `ButcherProduct.bWeighted_convAt_singleton_node_eq` (singleton-node
+  cut/keep split via `weightsSum`),
+  `ButcherProduct.bWeighted_convAt_kept_leaf_eq` (kept-leaf collapse to
+  `t₂.bSeries (BTree.node [BTree.leaf])`), and
+  `ButcherProduct.bWeighted_convAt_node_all_leaves_eq` (all-leaves
+  trunk/cut closed form: `(∑ i, t₂.b i * convAt t₂ coef (node children) i)
+  = ∑ S ∈ univ.powerset, (∏ p ∈ S, coef leaf) *
+  t₂.bSeries (node (replicate (length - S.card) leaf))`, with the
+  private helper `elementaryWeight_node_replicate_leaf` collapsing
+  `elementaryWeight (node (replicate n leaf)) i` to `(∑ k, A i k)^n`).
+  Next concrete seam: extend the closed form to the mixed-leaf/node
+  generalization toward the full `(trunk, cuts)` decomposition, where
+  cut subsets `S` index the children of the root and the kept side is
+  itself a `convAt` recursion through any node children.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

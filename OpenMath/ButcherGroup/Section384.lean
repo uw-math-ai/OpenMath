@@ -1773,4 +1773,140 @@ theorem ButcherProduct.bSeries_product_isRKEquivalent_t2
   rw [ButcherProduct.bSeries_eq_bConv, ButcherProduct.bSeries_eq_bConv]
   exact ButcherProduct.bConv_isRKEquivalent_t2 h t₁.bSeries τ
 
+/-! ### §384 honest bSeries-only convolution: closed forms on the
+b-weighted right block.
+
+Cycle 538: the first concrete lemmas in the closed form
+`∑ i, t₂.b i * convAt t₂ coef τ i` that mention `t₂` only through
+`t₂.bSeries` values on subtrees of `τ`. -/
+
+/-- Singleton-node closed form: the b-weighted right block at
+`BTree.node [c]` splits into a `weightsSum`-scaled cut term on `coef c`
+and a kept term that recurses one level into `convAt` at `c`. -/
+theorem ButcherProduct.bWeighted_convAt_singleton_node_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (c : BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef (BTree.node [c]) i)
+      = t₂.weightsSum * coef c
+        + ∑ i : Fin t, t₂.b i *
+            (∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef c j) := by
+  have hLHS :
+      (∑ i : Fin t, t₂.b i *
+          ButcherProduct.convAt t₂ coef (BTree.node [c]) i)
+        = ∑ i : Fin t, t₂.b i *
+            ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node [c]) i := by
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+  have hSing :
+      (∑ i : Fin t, t₂.b i *
+          ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node [c]) i)
+        = coef c * t₂.weightsSum +
+          ∑ i : Fin t, t₂.b i *
+            ∑ j : Fin t,
+              t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef c j :=
+    ButcherProduct.bWeighted_rightAuxAtCoef_node_singleton t₂ coef c
+  have hKept :
+      (∑ i : Fin t, t₂.b i *
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.rightAuxAtCoef t₂ coef c j)
+        = ∑ i : Fin t, t₂.b i *
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.convAt t₂ coef c j := by
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    refine congrArg _ ?_
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+  rw [hLHS, hSing, hKept, mul_comm (coef c) t₂.weightsSum]
+
+/-- Kept-leaf closed form: the inner kept term `∑ i, b i * (∑ j, A i j *
+convAt t₂ coef leaf j)` collapses to `t₂.bSeries (node [leaf])`.
+This is the smallest instance where the RHS mentions `t₂` only through
+`t₂.bSeries` applied to a subtree built from leaves. -/
+theorem ButcherProduct.bWeighted_convAt_kept_leaf_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    (∑ i : Fin t, t₂.b i *
+        (∑ j : Fin t, t₂.A i j *
+          ButcherProduct.convAt t₂ coef BTree.leaf j))
+      = t₂.bSeries (BTree.node [BTree.leaf]) := by
+  simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight_singleton,
+        ButcherProduct.convAt_leaf]
+
+/-- Helper: the elementary weight of a node whose children are `n` leaves
+collapses to the `n`-th power of the row sum `∑ k, A i k`. -/
+private theorem elementaryWeight_node_replicate_leaf
+    {s : ℕ} (tab : ButcherTableau s) (n : ℕ) (i : Fin s) :
+    tab.elementaryWeight (BTree.node (List.replicate n BTree.leaf)) i
+      = (∑ k : Fin s, tab.A i k) ^ n := by
+  induction n with
+  | zero =>
+    show tab.elementaryWeight (BTree.node []) i = _
+    simp [ButcherTableau.elementaryWeight]
+  | succ m ih =>
+    rw [List.replicate_succ]
+    have hfold :
+        tab.elementaryWeight
+            (BTree.node (BTree.leaf :: List.replicate m BTree.leaf)) i
+          = tab.elementaryWeight (BTree.node (List.replicate m BTree.leaf)) i *
+              (∑ k : Fin s, tab.A i k) := by
+      simp [ButcherTableau.elementaryWeight, List.foldr]
+    rw [hfold, ih, pow_succ]
+
+/-- All-leaves trunk/cut closed form: when every child of the root is a
+leaf, the b-weighted right block at `BTree.node children` decomposes
+into a sum over cut subsets `S`, where each summand multiplies the cut
+term `(∏ p ∈ S, coef BTree.leaf)` by the `bSeries` of a node of the
+remaining leaves. The RHS mentions `t₂` only through `t₂.bSeries`
+applied to leaf-only subtrees. -/
+theorem ButcherProduct.bWeighted_convAt_node_all_leaves_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree)
+    (hAll : ∀ c ∈ children, c = BTree.leaf) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+          (∏ _p ∈ S, coef BTree.leaf) *
+          t₂.bSeries
+            (BTree.node
+              (List.replicate (children.length - S.card) BTree.leaf)) := by
+  classical
+  have hLHS :
+      (∑ i : Fin t, t₂.b i *
+          ButcherProduct.convAt t₂ coef (BTree.node children) i)
+        = ∑ i : Fin t, t₂.b i *
+            ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i := by
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+  rw [hLHS,
+      ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq
+        t₂ t₂ coef children hAll]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  -- Goal: ∑ i, t₂.b i * ∏ _p ∈ Sᶜ, ∑ j, t₂.A i j
+  --     = t₂.bSeries (node (replicate (children.length - S.card) leaf))
+  have hcard : (Sᶜ : Finset (Fin children.length)).card
+      = children.length - S.card := by
+    rw [Finset.card_compl]
+    simp [Fintype.card_fin]
+  have hbSeries :
+      t₂.bSeries
+          (BTree.node
+            (List.replicate (children.length - S.card) BTree.leaf))
+        = ∑ i : Fin t, t₂.b i *
+            (∑ j : Fin t, t₂.A i j) ^ (children.length - S.card) := by
+    unfold ButcherTableau.bSeries
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [elementaryWeight_node_replicate_leaf]
+  rw [hbSeries]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  congr 1
+  rw [Finset.prod_const, hcard]
+
 end ButcherTableau
