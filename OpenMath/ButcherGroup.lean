@@ -1924,6 +1924,82 @@ theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_singleton_node_eq
       ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_eq
         t₂ (t₁.bSeries) children gc hChild]
 
+/-- Trunk-recursion unified kept-children simplification: each kept-side
+recursive auxiliary factor in the trunk recursion is simplified by
+case-splitting on whether the corresponding root child is a leaf or a node.
+A leaf kept-child contributes the plain row sum `∑ j, t₂.A i j`; a node
+kept-child contributes `∑ j, t₂.A i j *` times the inner powerset sum from
+`rightAuxAtCoef_node_eq_powerset_sum`. This generalizes
+`bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq` and
+`bWeighted_rightAuxAtCoef_node_trunk_kept_node_eq` to arbitrary mixes of
+leaves and nodes among the root's children. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (coef : BTree → ℝ) (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, coef (children.get p)) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ,
+                (match children.get p with
+                 | BTree.leaf => ∑ j : Fin t, t₂.A i j
+                 | BTree.node gc =>
+                     ∑ j : Fin t, t₂.A i j *
+                       (∑ T : Finset (Fin gc.length),
+                         (∏ q ∈ Tᶜ, coef (gc.get q)) *
+                         (∏ q ∈ T, ∑ k : Fin t, t₂.A j k *
+                           ButcherProduct.rightAuxAtCoef t₂ coef (gc.get q) k)))) := by
+  classical
+  have _ht₁ : t₁ = t₁ := rfl
+  rw [ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion,
+      Finset.powerset_univ]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  congr 1
+  refine Finset.prod_congr rfl ?_
+  intro p _
+  generalize children.get p = c
+  cases c with
+  | leaf =>
+    simp [ButcherProduct.rightAuxAtCoef_leaf]
+  | node gc =>
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum]
+
+/-- bSeries-form corollary of
+`ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq`: the
+second-method `b`-weighted stage sum of `ButcherProduct t₁ t₂` evaluated at
+`BTree.node children` is the trunk-recursion RHS specialized at
+`coef := t₁.bSeries`, with each kept-child factor simplified by
+case-splitting on whether the root child is a leaf or a node. -/
+theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight
+          (BTree.node children) (Fin.natAdd s i))
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, t₁.bSeries (children.get p)) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ,
+                (match children.get p with
+                 | BTree.leaf => ∑ j : Fin t, t₂.A i j
+                 | BTree.node gc =>
+                     ∑ j : Fin t, t₂.A i j *
+                       (∑ T : Finset (Fin gc.length),
+                         (∏ q ∈ Tᶜ, t₁.bSeries (gc.get q)) *
+                         (∏ q ∈ T, ∑ k : Fin t, t₂.A j k *
+                           ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries)
+                             (gc.get q) k)))) := by
+  rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
+      ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq
+        t₁ t₂ (t₁.bSeries) children]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

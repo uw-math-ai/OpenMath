@@ -484,6 +484,13 @@ codebase.
   using `rightAuxAtCoef_node_eq_powerset_sum` on each grandchild list
   `gc p`, and added the bSeries-form singleton-node corollary
   `ButcherProduct.bSeries_natAdd_node_trunk_kept_singleton_node_eq`.
+  Cycle 532 fused the kept-leaf and kept-node branches into a single
+  unified kept-children pass-through
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq`,
+  case-splitting each kept root child via an inline `match` on
+  `BTree`, and added the bSeries-form corollary
+  `ButcherProduct.bSeries_natAdd_node_trunk_kept_eq` (specializing at
+  `coef := t₁.bSeries`).
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
   general `(trunk, cuts)` closed form for
@@ -971,6 +978,13 @@ Concrete next steps:
   using `rightAuxAtCoef_node_eq_powerset_sum` on each grandchild list
   `gc p`, and added the bSeries-form singleton-node corollary
   `ButcherProduct.bSeries_natAdd_node_trunk_kept_singleton_node_eq`.
+  Cycle 532 fused the kept-leaf and kept-node branches into a single
+  unified kept-children pass-through
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq`
+  (case-split each kept root child via inline `match` on `BTree`),
+  and added the bSeries-form corollary
+  `ButcherProduct.bSeries_natAdd_node_trunk_kept_eq` (specializing at
+  `coef := t₁.bSeries`).
   The next seam is the trunk-side recursive decomposition that turns
   the kept-side `(∏ p ∈ Sᶜ, ∑ j, t₂.A i j * rightAuxAtCoef ...)`
   product into `t₂.bSeries`-only values on subtrees — i.e. the
