@@ -1497,6 +1497,116 @@ theorem ButcherProduct.bWeighted_rightAuxAtCoef_node
               ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j)) := by
         simp [cut, keep]
 
+/-- Two-level powerset expansion of the coefficient-parametric right-block
+auxiliary. Each kept child is case-split: leaves collapse to a row sum of
+`t₂.A`, while node children unfold into the inner powerset decomposition at
+the new parent stage. -/
+theorem ButcherProduct.rightAuxAtCoef_node_two_level_eq_powerset_sum
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, coef (children.get p)) *
+          (∏ p ∈ S,
+            (match children.get p with
+             | BTree.leaf => ∑ j : Fin t, t₂.A i j
+             | BTree.node gc =>
+                 ∑ j : Fin t, t₂.A i j *
+                   (∑ S' : Finset (Fin gc.length),
+                     (∏ q ∈ S'ᶜ, coef (gc.get q)) *
+                     (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                       ButcherProduct.rightAuxAtCoef t₂ coef (gc.get q) k)))) := by
+  rw [ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  refine Finset.prod_congr rfl ?_
+  intro p _
+  generalize children.get p = c
+  cases c with
+  | leaf =>
+    simp [ButcherProduct.rightAuxAtCoef_leaf]
+  | node gc =>
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum]
+
+/-- The stage-`b` weighted form of
+`ButcherProduct.rightAuxAtCoef_node_two_level_eq_powerset_sum`. The
+cut-side `coef` product factors through the second-method weighted stage
+sum, while each kept child is expanded one structural layer deeper. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_two_level
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, coef (children.get p)) *
+          (∑ i : Fin t, t₂.b i *
+            (∏ p ∈ S,
+              (match children.get p with
+               | BTree.leaf => ∑ j : Fin t, t₂.A i j
+               | BTree.node gc =>
+                   ∑ j : Fin t, t₂.A i j *
+                     (∑ S' : Finset (Fin gc.length),
+                       (∏ q ∈ S'ᶜ, coef (gc.get q)) *
+                       (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                         ButcherProduct.rightAuxAtCoef t₂ coef (gc.get q) k))))) := by
+  classical
+  let cut : Finset (Fin children.length) → ℝ := fun S =>
+    ∏ p ∈ Sᶜ, coef (children.get p)
+  let kept : Fin t → Finset (Fin children.length) → ℝ := fun i S =>
+    ∏ p ∈ S,
+      (match children.get p with
+       | BTree.leaf => ∑ j : Fin t, t₂.A i j
+       | BTree.node gc =>
+           ∑ j : Fin t, t₂.A i j *
+             (∑ S' : Finset (Fin gc.length),
+               (∏ q ∈ S'ᶜ, coef (gc.get q)) *
+               (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                 ButcherProduct.rightAuxAtCoef t₂ coef (gc.get q) k)))
+  have hstage : ∀ i : Fin t,
+      ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i
+        = ∑ S : Finset (Fin children.length), cut S * kept i S := by
+    intro i
+    simpa [cut, kept] using
+      (ButcherProduct.rightAuxAtCoef_node_two_level_eq_powerset_sum t₂ coef children i)
+  calc
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+        = ∑ i : Fin t, t₂.b i *
+            (∑ S : Finset (Fin children.length), cut S * kept i S) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          rw [hstage i]
+    _ = ∑ i : Fin t, ∑ S : Finset (Fin children.length),
+          t₂.b i * (cut S * kept i S) := by
+        simp_rw [Finset.mul_sum]
+    _ = ∑ S : Finset (Fin children.length), ∑ i : Fin t,
+          t₂.b i * (cut S * kept i S) := by
+        rw [Finset.sum_comm]
+    _ = ∑ S : Finset (Fin children.length),
+          cut S * (∑ i : Fin t, t₂.b i * kept i S) := by
+        refine Finset.sum_congr rfl ?_
+        intro S _
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        ring
+    _ = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, coef (children.get p)) *
+          (∑ i : Fin t, t₂.b i *
+            (∏ p ∈ S,
+              (match children.get p with
+               | BTree.leaf => ∑ j : Fin t, t₂.A i j
+               | BTree.node gc =>
+                   ∑ j : Fin t, t₂.A i j *
+                     (∑ S' : Finset (Fin gc.length),
+                       (∏ q ∈ S'ᶜ, coef (gc.get q)) *
+                       (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                         ButcherProduct.rightAuxAtCoef t₂ coef (gc.get q) k))))) := by
+        simp [cut, kept]
+
 theorem ButcherProduct.rightAuxAt_leaf_eq_coef
     {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin t) :
     ButcherProduct.rightAuxAt t₁ t₂ BTree.leaf i =
@@ -1580,6 +1690,31 @@ theorem ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef
   refine Finset.sum_congr rfl ?_
   intro i _
   rw [ButcherProduct.elementaryWeight_natAdd_eq_rightAuxAtCoef]
+
+/-- `bSeries`-level two-level right-block expansion, specialized from the
+coefficient-parametric auxiliary with `coef = t₁.bSeries`. This is the
+node-level bridge from the product tableau's second block to the closed
+coefficient-parametric §384 recursion one structural layer below the root. -/
+theorem ButcherProduct.bSeries_natAdd_node_two_level_eq_rightAuxAtCoef
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight
+          (BTree.node children) (Fin.natAdd s i))
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, t₁.bSeries (children.get p)) *
+          (∑ i : Fin t, t₂.b i *
+            (∏ p ∈ S,
+              (match children.get p with
+               | BTree.leaf => ∑ j : Fin t, t₂.A i j
+               | BTree.node gc =>
+                   ∑ j : Fin t, t₂.A i j *
+                     (∑ S' : Finset (Fin gc.length),
+                       (∏ q ∈ S'ᶜ, t₁.bSeries (gc.get q)) *
+                       (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                         ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) (gc.get q) k))))) := by
+  rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
+      ButcherProduct.bWeighted_rightAuxAtCoef_node_two_level]
 
 namespace QuotEquiv
 

@@ -450,7 +450,13 @@ codebase.
   `ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum` (mirror of cycle
   521's `rightAuxAt_node_eq_powerset_sum`) and its `b`-weighted closed
   form `ButcherProduct.bWeighted_rightAuxAtCoef_node`, exposing the
-  powerset-indexed `(cut, kept)` decomposition at any tree node.
+  powerset-indexed `(cut, kept)` decomposition at any tree node. Cycle 527
+  landed the coefficient-parametric two-level expansion
+  `ButcherProduct.rightAuxAtCoef_node_two_level_eq_powerset_sum`, its
+  weighted form `ButcherProduct.bWeighted_rightAuxAtCoef_node_two_level`,
+  and the `coef = t₁.bSeries` bridge
+  `ButcherProduct.bSeries_natAdd_node_two_level_eq_rightAuxAtCoef`, moving
+  the closed right-block auxiliary one full structural layer deeper.
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
   general `(trunk, cuts)` closed form for
@@ -906,10 +912,16 @@ Concrete next steps:
   `ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum` (mirror of cycle
   521's `rightAuxAt_node_eq_powerset_sum` with `coef` replacing
   `t₁.bSeries`) and the `b`-weighted closed form
-  `ButcherProduct.bWeighted_rightAuxAtCoef_node`. The next seam is to
-  expose the second-method side one full structural layer deeper
-  (mirroring cycle 522's two-level expansion) so the §384 convolution
-  closes on bSeries-only data.
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node`. Cycle 527 landed the
+  coefficient-parametric two-level expansion
+  `ButcherProduct.rightAuxAtCoef_node_two_level_eq_powerset_sum`, its
+  weighted form `ButcherProduct.bWeighted_rightAuxAtCoef_node_two_level`,
+  and the specialization bridge
+  `ButcherProduct.bSeries_natAdd_node_two_level_eq_rightAuxAtCoef`. The
+  next seam is the general `(trunk, cuts)` closed form for
+  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`, which should provide the
+  non-tautological coefficient product needed by
+  `QuotEquiv.bSeriesHom_product`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
