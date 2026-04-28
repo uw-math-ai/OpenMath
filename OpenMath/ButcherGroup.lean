@@ -178,6 +178,58 @@ theorem bSeriesHom_product_node_replicate_node_nil
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_replicate_node_nil_eq t₁ t₂ n
 
+/-- §384 lift of the finite mixed closure on
+`BTree.node [BTree.leaf, BTree.node []]`. -/
+theorem bSeriesHom_product_node_leaf_node_nil
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.leaf, BTree.node []])
+      = q.bSeriesHom (BTree.node [BTree.leaf, BTree.node []])
+        + ∑ S ∈ (Finset.univ : Finset (Fin 2)).powerset,
+            (q.bSeriesHom BTree.leaf) ^ S.card *
+            r.bSeriesHom
+              (BTree.node (List.replicate (2 - S.card) BTree.leaf)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_leaf_node_nil_eq t₁ t₂
+
+/-- §384 lift of the finite mixed closure on
+`BTree.node [BTree.node [], BTree.leaf]`. -/
+theorem bSeriesHom_product_node_node_nil_leaf
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.node [], BTree.leaf])
+      = q.bSeriesHom (BTree.node [BTree.node [], BTree.leaf])
+        + ∑ S ∈ (Finset.univ : Finset (Fin 2)).powerset,
+            (q.bSeriesHom BTree.leaf) ^ S.card *
+            r.bSeriesHom
+              (BTree.node (List.replicate (2 - S.card) BTree.leaf)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_node_nil_leaf_eq t₁ t₂
+
+/-- §384 lift of the finite mixed closure on
+`BTree.node [BTree.leaf, BTree.leaf, BTree.node []]`. -/
+theorem bSeriesHom_product_node_leaf_leaf_node_nil
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.node []])
+      = q.bSeriesHom
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.node []])
+        + ∑ S ∈ (Finset.univ : Finset (Fin 3)).powerset,
+            (q.bSeriesHom BTree.leaf) ^ S.card *
+            r.bSeriesHom
+              (BTree.node (List.replicate (3 - S.card) BTree.leaf)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_leaf_leaf_node_nil_eq t₁ t₂
+
 end QuotEquiv
 
 /-! ### §387 raw and quotient powers
@@ -970,6 +1022,137 @@ theorem product_congr_node_replicate_node_nil
     rw [order_node_replicate_node_nil]
     omega
   rw [hnode_nil, hsub]
+
+/-- Cycle 545 fallback slice: product preserves `G₁` equivalence on
+`BTree.node [BTree.leaf, BTree.node []]` when that tree has order at most
+`p`. -/
+theorem product_congr_node_leaf_node_nil
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (hτ : (BTree.node [BTree.leaf, BTree.node []]).order ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.leaf, BTree.node []])
+      = (q'.product r').bSeriesHom
+        (BTree.node [BTree.leaf, BTree.node []]) := by
+  rw [QuotEquiv.bSeriesHom_product_node_leaf_node_nil,
+      QuotEquiv.bSeriesHom_product_node_leaf_node_nil]
+  have hp3 : 3 ≤ p := by
+    simpa [BTree.order_node, List.foldr] using hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode :
+      q.bSeriesHom (BTree.node [BTree.leaf, BTree.node []])
+        = q'.bSeriesHom (BTree.node [BTree.leaf, BTree.node []]) :=
+    hq (BTree.node [BTree.leaf, BTree.node []]) hτ
+  rw [hnode]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S hS_mem
+  have hS : S.card ≤ 2 := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin 2)) :=
+      Finset.mem_powerset.mp hS_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have hsub :
+      r.bSeriesHom (BTree.node (List.replicate (2 - S.card) BTree.leaf))
+        = r'.bSeriesHom
+          (BTree.node (List.replicate (2 - S.card) BTree.leaf)) := by
+    apply hr
+    rw [order_node_replicate_leaf]
+    omega
+  rw [hleaf, hsub]
+
+/-- Cycle 545 fallback slice: product preserves `G₁` equivalence on
+`BTree.node [BTree.node [], BTree.leaf]` when that tree has order at most
+`p`. -/
+theorem product_congr_node_node_nil_leaf
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (hτ : (BTree.node [BTree.node [], BTree.leaf]).order ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.node [], BTree.leaf])
+      = (q'.product r').bSeriesHom
+        (BTree.node [BTree.node [], BTree.leaf]) := by
+  rw [QuotEquiv.bSeriesHom_product_node_node_nil_leaf,
+      QuotEquiv.bSeriesHom_product_node_node_nil_leaf]
+  have hp3 : 3 ≤ p := by
+    simpa [BTree.order_node, List.foldr] using hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode :
+      q.bSeriesHom (BTree.node [BTree.node [], BTree.leaf])
+        = q'.bSeriesHom (BTree.node [BTree.node [], BTree.leaf]) :=
+    hq (BTree.node [BTree.node [], BTree.leaf]) hτ
+  rw [hnode]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S hS_mem
+  have hS : S.card ≤ 2 := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin 2)) :=
+      Finset.mem_powerset.mp hS_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have hsub :
+      r.bSeriesHom (BTree.node (List.replicate (2 - S.card) BTree.leaf))
+        = r'.bSeriesHom
+          (BTree.node (List.replicate (2 - S.card) BTree.leaf)) := by
+    apply hr
+    rw [order_node_replicate_leaf]
+    omega
+  rw [hleaf, hsub]
+
+/-- Cycle 545 fallback slice: product preserves `G₁` equivalence on
+`BTree.node [BTree.leaf, BTree.leaf, BTree.node []]` when that tree has
+order at most `p`. -/
+theorem product_congr_node_leaf_leaf_node_nil
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (hτ :
+      (BTree.node [BTree.leaf, BTree.leaf, BTree.node []]).order ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.node []])
+      = (q'.product r').bSeriesHom
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.node []]) := by
+  rw [QuotEquiv.bSeriesHom_product_node_leaf_leaf_node_nil,
+      QuotEquiv.bSeriesHom_product_node_leaf_leaf_node_nil]
+  have hp4 : 4 ≤ p := by
+    simpa [BTree.order_node, List.foldr] using hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode :
+      q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf, BTree.node []])
+        = q'.bSeriesHom
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.node []]) :=
+    hq (BTree.node [BTree.leaf, BTree.leaf, BTree.node []]) hτ
+  rw [hnode]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S hS_mem
+  have hS : S.card ≤ 3 := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin 3)) :=
+      Finset.mem_powerset.mp hS_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have hsub :
+      r.bSeriesHom (BTree.node (List.replicate (3 - S.card) BTree.leaf))
+        = r'.bSeriesHom
+          (BTree.node (List.replicate (3 - S.card) BTree.leaf)) := by
+    apply hr
+    rw [order_node_replicate_leaf]
+    omega
+  rw [hleaf, hsub]
 
 end IsG1Equiv
 

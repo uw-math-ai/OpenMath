@@ -1416,6 +1416,22 @@ decreasing_by
     ButcherProduct.convAt t₂ coef BTree.leaf i = 1 := by
   simp [ButcherProduct.convAt]
 
+/-- A subtree is a §384 right-block convolution unit when its `convAt`
+value is stagewise `1`. This captures the common `convAt` behavior of
+`BTree.leaf` and `BTree.node []`; concrete mixed-shape closures below also
+use the corresponding elementary-weight fact for those two trees. -/
+def ButcherProduct.IsConvAtUnit
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (c : BTree) : Prop :=
+  ∀ j : Fin t, ButcherProduct.convAt t₂ coef c j = 1
+
+/-- Leaves are stagewise units for `convAt`. -/
+theorem ButcherProduct.IsConvAtUnit_leaf
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    ButcherProduct.IsConvAtUnit t₂ coef BTree.leaf := by
+  intro j
+  simp
+
 theorem ButcherProduct.convAt_node
     {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
     (children : List BTree) (i : Fin t) :
@@ -2187,6 +2203,13 @@ element of `Finset (Fin 0)` is `∅`, with empty product equal to 1. -/
         = {∅} from rfl]
   simp
 
+/-- Empty-child nodes are stagewise units for `convAt`. -/
+theorem ButcherProduct.IsConvAtUnit_node_nil
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    ButcherProduct.IsConvAtUnit t₂ coef (BTree.node []) := by
+  intro j
+  simp
+
 /-- The `rightAuxAtCoef` value at an empty-children node is 1, by
 `rightAuxAtCoef_eq_convAt` plus `convAt_node_nil`. -/
 private theorem rightAuxAtCoef_node_nil
@@ -2357,5 +2380,70 @@ theorem ButcherProduct.bSeries_node_replicate_node_nil_eq
                 (List.replicate (n - S.card) (BTree.node []))) := by
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_node_replicate_node_nil_eq]
+
+/-! ### §384 concrete mixed trivial-child fallback closures (cycle 545)
+
+These finite mixed-shape formulas reuse the all-leaves parametric closure:
+`BTree.leaf` and `BTree.node []` have the same elementary-weight value, so
+the exact mixed root shape transports to the all-leaves family of the same
+arity. They avoid the invalid weaker generalization from `convAt`-unit alone,
+which does not imply the elementary-weight unit needed on the `t₂.bSeries`
+kept side. -/
+
+/-- §384 finite mixed closure on `BTree.node [BTree.leaf, BTree.node []]`. -/
+theorem ButcherProduct.bSeries_node_leaf_node_nil_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node [BTree.leaf, BTree.node []])
+      = t₁.bSeries (BTree.node [BTree.leaf, BTree.node []])
+        + ∑ S ∈ (Finset.univ : Finset (Fin 2)).powerset,
+            (t₁.bSeries BTree.leaf) ^ S.card *
+            t₂.bSeries
+              (BTree.node (List.replicate (2 - S.card) BTree.leaf)) := by
+  have hp : (ButcherProduct t₁ t₂).bSeries
+        (BTree.node [BTree.leaf, BTree.node []])
+      = (ButcherProduct t₁ t₂).bSeries
+          (BTree.node (List.replicate 2 BTree.leaf)) := by
+    simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight, List.foldr]
+  rw [hp, ButcherProduct.bSeries_node_replicate_leaf_eq]
+  simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight, List.foldr]
+
+/-- §384 finite mixed closure on `BTree.node [BTree.node [], BTree.leaf]`. -/
+theorem ButcherProduct.bSeries_node_node_nil_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node [BTree.node [], BTree.leaf])
+      = t₁.bSeries (BTree.node [BTree.node [], BTree.leaf])
+        + ∑ S ∈ (Finset.univ : Finset (Fin 2)).powerset,
+            (t₁.bSeries BTree.leaf) ^ S.card *
+            t₂.bSeries
+              (BTree.node (List.replicate (2 - S.card) BTree.leaf)) := by
+  have hp : (ButcherProduct t₁ t₂).bSeries
+        (BTree.node [BTree.node [], BTree.leaf])
+      = (ButcherProduct t₁ t₂).bSeries
+          (BTree.node (List.replicate 2 BTree.leaf)) := by
+    simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight, List.foldr]
+  rw [hp, ButcherProduct.bSeries_node_replicate_leaf_eq]
+  simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight, List.foldr]
+
+/-- §384 finite mixed closure on
+`BTree.node [BTree.leaf, BTree.leaf, BTree.node []]`. -/
+theorem ButcherProduct.bSeries_node_leaf_leaf_node_nil_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.node []])
+      = t₁.bSeries
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.node []])
+        + ∑ S ∈ (Finset.univ : Finset (Fin 3)).powerset,
+            (t₁.bSeries BTree.leaf) ^ S.card *
+            t₂.bSeries
+              (BTree.node (List.replicate (3 - S.card) BTree.leaf)) := by
+  have hp : (ButcherProduct t₁ t₂).bSeries
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.node []])
+      = (ButcherProduct t₁ t₂).bSeries
+          (BTree.node (List.replicate 3 BTree.leaf)) := by
+    simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight, List.foldr]
+  rw [hp, ButcherProduct.bSeries_node_replicate_leaf_eq]
+  simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight, List.foldr]
 
 end ButcherTableau
