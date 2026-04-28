@@ -1,11 +1,20 @@
 # Formalization Plan
 
 ## Textbook
-*A First Course in the Numerical Analysis of Differential Equations* — Arieh Iserles (Cambridge, 2nd edition).
+*Numerical Methods for Ordinary Differential Equations* — J. C. Butcher
+(Wiley, 2nd edition, 2008). PDF copy: `.prover-state/textbook/butcher.pdf`;
+plain-text extraction: `.prover-state/textbook/butcher.txt`.
 
-This plan follows Iserles' chapter numbering exactly. Theorem labels of the form
-`NMS_n` (e.g. `212A`, `351B`, `358A`) are Iserles' own §N.M.S enumeration and are
-preserved verbatim.
+This plan follows Butcher's chapter and section numbering exactly. Theorem
+labels of the form `§NMS_letter` (e.g. `212A`, `351B`, `358A`) are
+Butcher's own §N.M.S enumeration and are preserved verbatim throughout the
+codebase.
+
+> **Scope.** Butcher's book covers only ODEs (5 chapters). The earlier
+> Iserles-flavoured stubs for linear algebra (LU/Cholesky/CG/GMRES) and PDEs
+> (FEM/spectral/multigrid) are out of scope here and have been removed.
+> A separate Iserles PDF is kept at `.prover-state/textbook/iserles.pdf`
+> for cross-reference only.
 
 ## Status Key
 - `[x]` Formalized (no live `sorry`)
@@ -15,536 +24,550 @@ preserved verbatim.
 
 ## Status Summary
 
-- **Part I, Chapters 1–4 (ODE theory and stability):** essentially closed.
-  Open items are blockers, not scheduled work.
-- **Part I, Chapter 5 (Geometric integration):** symmetry/adjoint/reflected
-  foundations exist; symplectic / Hamiltonian / Verlet content is **the
-  active frontier**.
-- **Part I, Chapter 6 (Error control):** embedded-RK infrastructure and two
-  embedded pairs exist; Milne device, Fehlberg, DOPRI, and step control are open.
-- **Part I, Chapter 7 (Nonlinear algebraic systems):** unstarted.
-- **Part II (Chs 8–11) and Part III (Chs 12–17):** unstarted, scoped here as
-  stubs so the planner has visible forward direction.
+- **Chapter 1 (Differential and Difference Equations):** §110 (existence /
+  uniqueness) closed; §111–§142 mostly background — items below are the
+  small remaining hooks.
+- **Chapter 2 (Numerical Differential Equation Methods):** §21 (Euler
+  analysis) and a large fragment of §24 (LMM survey) closed via the
+  Adams / BDF / Dahlquist work. Survey-level items in §25–§27 remain open.
+- **Chapter 3 (Runge–Kutta Methods):** §30–§35 essentially closed (rooted
+  trees, order conditions, low-order explicit, IRK, A-stability via Padé /
+  order stars / AN / BN / algebraic stability). §36 (implementable IRK,
+  DIRK, singly implicit) is partially closed (SDIRK2/3). **§37 (Symplectic
+  RK), §38 (Algebraic Properties / Butcher group), §39 (Implementation
+  Issues) are open** and §38 is **the single biggest remaining gap inside
+  Ch 3** — it is Butcher's namesake topic.
+- **Chapter 4 (Linear Multistep Methods):** §40–§44 essentially closed
+  (Dahlquist equivalence, both Dahlquist barriers, BDF1–BDF7
+  consistency / order / zero-stability, BDF7 zero-instability via algebraic
+  root certificate, BDF4 stable-block quadratic Lyapunov). §45 (One-Leg
+  Methods and G-stability) and §46 (implementation: Nordsieck etc.) are
+  open.
+- **Chapter 5 (General Linear Methods):** **completely open. This is the
+  active frontier and the largest real gap in the codebase.** Butcher's
+  Ch 5 unifies RK and LMM under a single multivalue-multistage framework
+  and is the part of Butcher's book that does not appear in any other
+  ODE textbook.
 
 ---
 
-## Chapter 1: Euler's Method and Beyond
+## Chapter 1: Differential and Difference Equations
 
-### 1.1 ODEs and the Lipschitz condition
-- [x] **Definition 110A**: Lipschitz condition in second variable (`OpenMath/PicardLindelof.lean`)
-- [x] **Theorem 110C**: Picard–Lindelöf existence and uniqueness (`OpenMath/PicardLindelof.lean`)
+### §10 Differential Equation Problems
+- §100–§107 are example problems (Kepler, MoL, pendulum, chemical
+  kinetics, Van der Pol, Lotka–Volterra, rigid body). No formal items;
+  these motivate later chapters.
+
+### §11 Differential Equation Theory
+- [x] **§110 Existence and uniqueness of solutions** —
+  Picard–Lindelöf with Lipschitz right-hand side
+  (`OpenMath/PicardLindelof.lean`):
+  - [x] Definition: Lipschitz condition in second variable
   - [x] Uniqueness via Gronwall (`PicardLindelof.unique`)
   - [x] Continuous dependence on initial data (`PicardLindelof.continuous_dependence`)
   - [x] Perturbation bound (`PicardLindelof.perturbation_bound`)
   - [x] Combined `exists_unique`
   - [x] Existence via bisection induction (`PicardLindelof.exists_solution`)
+- [ ] **§111 Linear systems of differential equations** — matrix
+  exponential form `y(x) = exp((x − x₀)A) y₀`. Likely a thin re-export of
+  Mathlib `Matrix.exp` (new file `OpenMath/LinearODE.lean`).
+- [x] **§112 Stiff differential equations** — informal definition
+  (`OpenMath/Stiffness.lean`, `OpenMath/StiffEquations.lean`).
 
-### 1.2 Euler's method
-- [x] **Theorem 212A**: Global truncation error bound for Euler (`OpenMath/Basic.lean`)
-- [x] **Theorem 213A**: Convergence of Euler with order 1 (`OpenMath/EulerConvergence.lean`)
+### §12 Further Evolutionary Problems
+- §120–§124 are again example problems (many-body gravitation,
+  delay equations, problems on the sphere, further Hamiltonians, DAEs).
+  No formal items at this level. The Hamiltonian-flow scaffold in
+  `.prover-state/scratch/Hamiltonian.lean` (carried over from the
+  cycle 491 attempt) targets §123 background and §370 motivation; it is
+  not currently on the active path.
 
-### 1.3 The trapezoidal rule
-- [x] Trapezoidal rule formalized as the 1-step Adams–Moulton method; A-stable;
-  error constant `−1/12` (cross-ref Ch 2 and Ch 4)
+### §13 Difference Equation Problems
+- §130–§135 are example difference-equation problems (Fibonacci,
+  arithmetic-geometric mean, etc.). No formal items.
 
-### 1.4 The theta method
-- [ ] **Definition**: θ-method `y_{n+1} = y_n + h(θ f_n + (1−θ) f_{n+1})` as a
-  one-parameter family unifying forward Euler (θ=1), backward Euler (θ=0), and
-  trapezoidal (θ=1/2) (new file `OpenMath/ThetaMethod.lean`)
-- [ ] **Theorem**: θ-method is consistent (`OpenMath/ThetaMethod.lean`)
-- [ ] **Theorem**: θ-method has order 1 in general, order 2 iff θ = 1/2
-  (`OpenMath/ThetaMethod.lean`)
-- [ ] **Theorem**: θ-method A-stability domain — A-stable iff θ ≤ 1/2
-  (`OpenMath/ThetaMethod.lean`)
-- [ ] **Theorem**: θ-method recovers forward Euler / backward Euler / trapezoidal
-  at θ ∈ {1, 0, 1/2} (`OpenMath/ThetaMethod.lean`)
+### §14 Difference Equation Theory
+- [ ] **§140–§142 Linear difference equations / constant coefficients /
+  powers of matrices** — closed-form solution and Jordan-block bound for
+  `‖Aⁿ‖`. Already implicitly used by `OpenMath/SpectralBound.lean` and the
+  Dahlquist equivalence proof. **Status: covered by existing infrastructure
+  in spirit; no dedicated standalone module.** Optional polish: extract a
+  named §142 theorem if it would be useful elsewhere.
 
 ---
 
-## Chapter 2: Multistep Methods
+## Chapter 2: Numerical Differential Equation Methods
 
-### 2.1 The Adams method
-- [x] **General LMM infrastructure** (`OpenMath/MultistepMethods.lean`)
-- [x] **Adams–Bashforth and Adams–Moulton families** (`OpenMath/AdamsMethods.lean`)
-- [x] **Adams convergence corollaries** for AB2–AB6 and AM2–AM6: consistency,
-  order, zero-stability, and convergence via Dahlquist
-  (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Reusable Adams zero-stability helper** `adams_zeroStable_of_rhoC_pow_mul`
-  (`OpenMath/AdamsMethods.lean`, cycle 389)
+### §20 The Euler Method (introduction by example)
+- §200–§204 are introductory experiments. No formal items.
 
-### 2.2 Order and convergence of multistep methods
-- [x] **Consistency, order, zero-stability** definitions (`OpenMath/MultistepMethods.lean`)
-- [x] **Error constants** `LMM.errorConstant`: forward Euler `1/2`, backward Euler `−1/2`,
-  trapezoidal `−1/12`, AB2 `5/12`, AM2 `−1/24`, …; AB2–AB6 strictly positive,
-  AM2–AM6 strictly negative (`OpenMath/AdamsMethods.lean`, cycle 388)
-- [x] **BDF error constants** computed: BDF2 `−2/9`, BDF3 `−3/22`, BDF4 `−12/125`,
-  BDF5 `−10/137`, BDF6 `−20/343`, BDF7 `−35/726` (cycles 392–393)
-- [x] **Truncation operator infrastructure** (`OpenMath/LMMTruncationOp.lean`,
-  cycles 394–399): definition `LMM.truncationOp`, monomial / polynomial / shifted /
-  Taylor-remainder identities, and the uniform local-truncation-error bridge
-  `truncationOp_smooth_local_truncation_error`
-- [x] **Discrete Gronwall for finite horizons** `discrete_gronwall_exp_horizon`
-  (`OpenMath/LMMTruncationOp.lean`)
-- [x] **Theorem (Dahlquist equivalence)**: consistency + zero-stability ⟺
-  convergence (`OpenMath/DahlquistEquivalence.lean`); includes spectral bound
-  via generalized eigenspace decomposition (`OpenMath/SpectralBound.lean`)
-- [x] **One-step convergence theorem** (`OpenMath/OneStepConvergence.lean`)
+### §21 Analysis of the Euler Method
+- [x] **§210 Formulation of the Euler method** (`OpenMath/Basic.lean`)
+- [x] **§211 Local truncation error** (`OpenMath/Basic.lean`)
+- [x] **§212 Global truncation error** (`OpenMath/Basic.lean`,
+  `thm_212A_global_truncation_error`)
+- [x] **§213 Convergence of the Euler method**
+  (`OpenMath/EulerConvergence.lean`)
+- [x] **§214 Order of convergence** — Euler has order 1
+  (`OpenMath/EulerConvergence.lean`)
+- [ ] **§215 Asymptotic error formula** — leading-order term `e_n ≈ h ψ(xₙ)`
+  with `ψ` solving the variational ODE. Open.
+- [x] **§216 Stability characteristics** — A-stability characterization
+  (`OpenMath/MultistepMethods.lean`); forward Euler not A-stable, backward
+  Euler A-stable.
+- [ ] **§217 Local truncation error estimation** (Richardson; covered in
+  §331 below).
+- [ ] **§218 Rounding error** — Wilkinson-style backward analysis. Out of
+  scope for now.
+
+### §22 Generalizations of the Euler Method
+- §220–§226 are a survey introducing RK / LMM / Taylor-series / hybrid
+  / implicit methods. The detailed treatments live in §23 / §24 / §25 /
+  §26 / §22.5 below.
+
+### §23 Runge–Kutta Methods (introductory survey)
+- See full treatment in Chapter 3.
+
+### §24 Linear Multistep Methods (introductory survey)
+- See full treatment in Chapter 4. Closed at the survey level via the
+  Adams / BDF infrastructure.
+
+### §25 Taylor Series Methods
+- [ ] **§250 Introduction to Taylor series methods** — fixed-order
+  truncation of the Taylor expansion of `y(x+h)` (new file
+  `OpenMath/TaylorSeriesMethod.lean`).
+- [ ] **§251 Manipulation of power series** — Cauchy product / power-series
+  ring lemmas (likely Mathlib re-export).
+- [ ] **§253 Other methods using higher derivatives** — Obreshkov-style
+  schemes; brief.
+- [ ] **§254 The use of f-derivatives** — the recursion
+  `y^(k) = (d/dx)^(k−1) f(x, y)`.
+
+### §26 Hybrid Methods
+- §260–§264 are the bridge into Chapter 5 (general linear methods). Open;
+  see Chapter 5 below.
+
+### §27 Introduction to Implementation
+- §270–§274 cover variable stepsize / interpolation / Kepler / discontinuous
+  problems at the survey level. Open and low priority.
+
+---
+
+## Chapter 3: Runge–Kutta Methods
+
+### §30 Preliminaries (rooted trees and Taylor expansion)
+- [x] **§300 Rooted trees** — `BTree`, `order`, `symmetry`, `density`,
+  examples through order 5 (`OpenMath/RootedTree.lean`); statements
+  `thm_301A_order1` … `thm_301A_order5`.
+- [x] **§301 Functions on trees** — elementary differentials and weights
+  (`OpenMath/RootedTree.lean`, `OpenMath/OrderConditions.lean`).
+- [x] **§302–§306 Combinatorial / labelled-tree / differentiation /
+  Taylor-theorem infrastructure** — used implicitly by the order-condition
+  derivation.
+
+### §31 Order Conditions
+- [x] **§310 Elementary differentials** (`OpenMath/OrderConditions.lean`)
+- [x] **§311 Taylor expansion of the exact solution**
+  (`OpenMath/OrderConditions.lean`)
+- [x] **§312 Elementary weights** (`OpenMath/OrderConditions.lean`)
+- [x] **§313 Taylor expansion of the approximate solution**
+  (`OpenMath/OrderConditions.lean`)
+- [x] **§315 Conditions for order** through order 5
+  (`OpenMath/OrderConditions.lean`, `OpenMath/RootedTree.lean`)
+- [x] **§318 Local truncation error / §319 Global truncation error**
+  (`OpenMath/OneStepConvergence.lean`)
+
+### §32 Low Order Explicit Methods
+- [x] **Butcher tableau** structure
+  (`OpenMath/RungeKutta.lean`, `OpenMath/ExplicitRK.lean`)
+- [x] **§320 Examples**: forward Euler / explicit midpoint / Heun /
+  classical RK4 with consistency and order conditions through order 4
+- [x] **§321 Simplifying assumptions `B(p)`, `C(q)`, `D(r)`**
+  (`OpenMath/Collocation.lean`)
+- [x] **§322 Methods of order 4** (RK4 family)
+- [x] **§324 Order barriers** — s-stage explicit ⟹ order ≤ s for s ≤ 4
+  (`OpenMath/OrderBarriers.lean`); explicit methods cannot satisfy `C(2)`
+  with distinct nodes
+- [ ] **§325–§327 Methods of order 5, 6, and >6** — concrete tableaux
+  open. Low priority.
+
+### §33 Runge–Kutta Methods with Error Estimates
+- [x] **`EmbeddedRKPair` structure**, `IsConsistent`, `IsExplicit`,
+  `errorWeights`, `HasFSAL` (`OpenMath/EmbeddedRK.lean`)
+- [x] **Heun–Euler 2(1)**: explicit, consistent, main order 2, embed
+  order 1, error-weight closure (`OpenMath/EmbeddedRK.lean`)
+- [x] **Bogacki–Shampine 3(2)**: explicit, consistent, main order 3,
+  embed order 2, stiffly accurate, FSAL, non-negative weights, `B(3)`,
+  `C(1)` (`OpenMath/EmbeddedRK.lean`)
+- [ ] **§334 Fehlberg 4(5) (RKF45)** embedded pair: tableau, consistency,
+  orders 4 and 5, error-weight closure (extend `OpenMath/EmbeddedRK.lean`).
+- [ ] **§335 Verner 6(5) / 7(8)** embedded pairs (low priority).
+- [ ] **§336 Dormand–Prince 5(4) (DOPRI5)** embedded pair: tableau,
+  consistency, orders 5 and 4, FSAL, error-weight closure.
+
+### §34 Implicit Runge–Kutta Methods
+- [x] **§340 Introduction**: implicit Euler / implicit midpoint
+  (`OpenMath/RungeKutta.lean`)
+- [ ] **§341 Solvability of implicit equations** — contraction-mapping
+  argument for `h · L · |a-coefficient bound| < 1`. Open (planned thin
+  wrapper over Mathlib `ContractingWith`).
+- [x] **§342 Methods based on Gaussian quadrature** —
+  Legendre / shifted-Legendre infrastructure (`OpenMath/Legendre.lean`,
+  `OpenMath/LegendreHelpers.lean`,
+  `OpenMath/ShiftedLegendreDivision.lean`,
+  `OpenMath/Collocation.lean`); 342C order-condition equivalence (342j /
+  342k / 342l / 342m / 342n / 342o / 342p).
+- [x] **§342 Concrete: Gauss–Legendre 2-stage / 3-stage**
+  (`OpenMath/RungeKutta.lean`, `OpenMath/GaussLegendre3.lean`).
+- [x] **§343 Reflected methods** — reflected RK tableau `(1−c, b−A, b)`
+  and transfer of `B`, `C`, `D`, `E` (`OpenMath/ReflectedMethods.lean`,
+  `OpenMath/Adjoint.lean`); symmetric methods and Nørsett's even-order
+  theorem (`OpenMath/Symmetry.lean`).
+- [x] **§344 Methods based on Radau and Lobatto quadrature** —
+  Radau IA 2/3-stage (`OpenMath/RadauIA{2,3}.lean`), Radau IIA 3-stage
+  (`OpenMath/RadauIIA3.lean`), Lobatto IIIA / IIIB / IIIC, 2-stage and
+  3-stage (`OpenMath/LobattoIIIA{,3}.lean`,
+  `OpenMath/LobattoIIIB{,3}.lean`,
+  `OpenMath/LobattoIIIC{,3}.lean`).
+
+### §35 Stability of Implicit Runge–Kutta Methods
+- [x] **§350 A-stability, A(α)-stability and L-stability** —
+  A-stability of implicit Euler / implicit midpoint
+  (`OpenMath/RungeKutta.lean`); L-stability of backward Euler /
+  Radau IIA / SDIRK2 / SDIRK3 (`OpenMath/StiffEquations.lean`,
+  `OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`); stiff accuracy for
+  implicit Euler / SDIRK2/3 / Radau IIA2/3 / Lobatto IIIA2/3 / IIIC2/3
+  (`OpenMath/StiffAccuracy.lean`).
+- [x] **§351B A-stability criterion** via E-function
+  (`OpenMath/AStabilityCriterion.lean`).
+- [x] **§352 Padé approximations to the exponential function** —
+  Padé recurrence, `padeP` / `padeQ` / `padeR` families, diagonal
+  symmetry, specialization, pair packaging, coefficient recurrences
+  (`OpenMath/Pade.lean`, `OpenMath/PadeAsymptotics.lean`,
+  `OpenMath/PadeUniqueness.lean`); Theorems 352C / 352D.
+- [x] **§353 A-stability of Gauss and related methods** — Theorem 353A
+  approximation order; concrete corollaries.
+- [x] **§354 Order stars** (`OpenMath/OrderStars.lean`,
+  `OpenMath/PadeOrderStars.lean`) — Theorems 355C / 355D / 355E
+  (trajectory bookkeeping, endpoint data, no-escape, concrete wrappers).
+- [x] **§355 Order arrows and the Ehle barrier** — Theorem 355G with
+  separate honest downstream `EhleBarrierInput` and concrete Padé
+  constructor.
+- [x] **§356 AN-stability** — Theorem 356C: AN ⇒ algebraic stability
+  (`OpenMath/ANStability.lean`).
+- [x] **§357 Non-linear stability** — Theorem 357C: algebraic ⇒ BN
+  (`OpenMath/BNStability.lean`); Theorem 357D: BN ⇒ AN for irreducible
+  non-confluent methods (`OpenMath/BNImpliesAN.lean`).
+- [x] **§358 BN-stability of collocation methods** — Theorem 358A:
+  algebraic-stability characterization of collocation methods, both
+  directions (`OpenMath/CollocationAlgStability.lean`).
+- [x] **§358/§359 Family-level stability** — Theorem 359B (Radau IIA):
+  collocation + Radau IIA nodes ⇒ algebraically stable
+  (`OpenMath/CollocationFamilies.lean`); Theorem 359C: classical
+  collocation families (Gauss–Legendre, Radau I/θ=1) algebraically
+  stable; concrete corollaries
+  `rkGaussLegendre{2,3}_algStable_via_358A`; §3.5.10 packaging
+  corollaries (family-level BN-stability for GL and Radau IIA
+  collocation).
+- [-] **§359B (Radau IA family bridge)**: blocked — see Blockers.
+- [-] **§359D**: pending — needs identification of the named theorem
+  after 359C in Butcher's text. See Blockers.
+
+### §36 Implementable Implicit Runge–Kutta Methods
+- [x] **§361 Diagonally implicit Runge–Kutta methods (SDIRK)** — SDIRK2
+  and SDIRK3 with A-stability and L-stability
+  (`OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`).
+- [x] **§362 The importance of high stage order** — partially via
+  `OpenMath/StiffAccuracy.lean` certificates.
+- [ ] **§363 Singly implicit methods** — open.
+- [ ] **§364 Generalizations of singly implicit methods** — open.
+- [ ] **§365 Effective order and DESIRE methods** — open. (Effective
+  order is also studied algebraically in §389.)
+
+### §37 Symplectic Runge–Kutta Methods *(closed, cycle 492)*
+- [x] **§370A Maintaining quadratic invariants** — `symplecticDefect i j` and
+  `IsSymplectic` predicates introduced; `IsSymplectic.preserves_quadInv`
+  proved in `OpenMath/SymplecticRK.lean` (Cooper 1987 / Sanz-Serna).
+- [x] **§371 Examples of symplectic methods** — Gauss–Legendre 1-stage
+  (implicit midpoint), 2-stage and 3-stage all proved symplectic
+  (`rkGaussLegendre1_isSymplectic`, `rkGaussLegendre2_isSymplectic`,
+  `rkGaussLegendre3_isSymplectic`).
+- [ ] **§372 Order conditions** — symplectic order conditions
+  (consequence of `M = 0` plus the standard order conditions; minor).
+- [ ] **§373 Experiments with symplectic methods** — informal.
+
+### §38 Algebraic Properties of Runge–Kutta Methods *(largest gap inside Ch 3 — Butcher's namesake)*
+- [ ] **§380 Motivation** — RK composition.
+- [ ] **§381 Equivalence classes of Runge–Kutta methods** — quotient by
+  re-labelling of stages.
+- [ ] **§382 The group of Runge–Kutta methods** — composition law on
+  equivalence classes.
+- [ ] **§383 The Runge–Kutta group `G₁`** — elementary-weight
+  homomorphism into the group of mappings on rooted trees.
+- [ ] **§384 A homomorphism between two groups** — bridge from RK
+  composition to the formal-power-series group on rooted trees.
+- [ ] **§385 A generalization of `G₁`** — including non-RK methods.
+- [ ] **§386 Recursive formula for the product** — explicit Butcher
+  product on tree-indexed coefficients.
+- [ ] **§387 Some special elements of `G`** — identity, inverse, power.
+- [ ] **§388 Some subgroups and quotient groups**.
+- [ ] **§389 An algebraic interpretation of effective order** — connects
+  to §365 above.
+
+  *Suggested file split:* `OpenMath/ButcherGroup.lean` (group structure,
+  §380–§387) and `OpenMath/EffectiveOrder.lean` (§365 / §389).
+
+### §39 Implementation Issues *(open; survey-level — low priority)*
+- [ ] §390–§395 (introduction, optimal sequences, accept / reject,
+  error per step vs error per unit step, control-theoretic considerations,
+  solving the implicit equations).
+
+---
+
+## Chapter 4: Linear Multistep Methods
+
+### §40 Preliminaries
+- [x] **§400 Fundamentals** — general LMM
+  `Σⱼ αⱼ y_{n+j} = h Σⱼ βⱼ f(x_{n+j}, y_{n+j})`
+  (`OpenMath/MultistepMethods.lean`).
+- [x] **§401 Starting methods** — implicit assumption that the first `k`
+  values are exact (used in every per-step convergence chain).
+- [x] **§402 Convergence / §403 Stability / §404 Consistency**
+  (`OpenMath/MultistepMethods.lean`,
+  `OpenMath/DahlquistEquivalence.lean`).
+- [x] **§405 Necessity of conditions for convergence /
+  §406 Sufficiency of conditions** — the **Dahlquist equivalence theorem**
+  (consistency + zero-stability ⟺ convergence)
+  (`OpenMath/DahlquistEquivalence.lean`); spectral bound via generalized
+  eigenspace decomposition (`OpenMath/SpectralBound.lean`); one-step
+  convergence (`OpenMath/OneStepConvergence.lean`).
+
+### §41 The Order of Linear Multistep Methods
+- [x] **§410 Criteria for order** — `LMM.errorConstant` and the
+  truncation operator (`OpenMath/MultistepMethods.lean`,
+  `OpenMath/LMMTruncationOp.lean`).
+- [x] **§411 Derivation of methods** — Adams family
+  (`OpenMath/AdamsMethods.lean`).
+- [x] **§412 Backward difference methods (BDF)** — BDF1–BDF7
+  consistency, order = step count, zero-stability via `w = 1/ξ`
+  substitution + `nlinarith` and unit-root reductions; BDF7
+  zero-instability via Cayley-transformed sextic algebraic root
+  certificate (`OpenMath/BDF.lean`,
+  `OpenMath/MultistepMethods.lean`).
+
+### §42 Errors and Error Growth
+- [x] **§420 Introduction** — error constants computed for forward
+  Euler `1/2`, backward Euler `−1/2`, trapezoidal `−1/12`, AB2 `5/12`,
+  AM2 `−1/24`, … BDF2 `−2/9`, BDF3 `−3/22`, BDF4 `−12/125`,
+  BDF5 `−10/137`, BDF6 `−20/343`, BDF7 `−35/726`
+  (`OpenMath/AdamsMethods.lean`,
+  `OpenMath/MultistepMethods.lean`).
+- [x] **§421 Further remarks on error growth** — discrete Gronwall
+  (`OpenMath/LMMTruncationOp.lean`,
+  `discrete_gronwall_exp_horizon`).
+- [x] **§423 Weakly stable methods** — covered implicitly by per-step
+  chains.
 
 #### Per-step quantitative convergence chains (covered)
-The following per-step `OpenMath/LMM*Convergence.lean` files each carry the
-trajectory predicate, residual unfolding, one-step Lipschitz/error bound,
-pointwise local-truncation-error bound, and finite-horizon global error
-bound for one specific scheme:
+The following per-step `OpenMath/LMM*Convergence.lean` files each carry
+the trajectory predicate, residual unfolding, one-step Lipschitz / error
+bound, pointwise local-truncation-error bound, and finite-horizon global
+error bound for one specific scheme:
 
 - Forward Euler (`OpenMath/LMMTruncationOp.lean`)
 - AB2 through AB13 (scalar and vector) — `OpenMath/LMMAB{2,…,13}{,Vector}Convergence.lean`
 - AM2 through AM12 (scalar and vector) — `OpenMath/LMMAM{2,…,12}{,Vector}Convergence.lean`
 - BDF1 through BDF3 (scalar and vector, full global theorem) —
   `OpenMath/LMMBDF{1,2,3}{,Vector}Convergence.lean`
-- BDF4 through BDF7 (scalar and vector truncation chains; global theorem deferred for
-  BDF4–BDF6, impossible for zero-unstable BDF7) —
-  `OpenMath/LMMBDF{4,5,6,7}{,Vector}Convergence.lean`
+- BDF4 (scalar and vector, full global theorem closed cycle 490 via the
+  stable-block quadratic Lyapunov certificate) —
+  `OpenMath/LMMBDF4{,Vector}Convergence.lean`,
+  `OpenMath/BDFQuadraticLyapunov.lean`
+- BDF5 / BDF6 (scalar and vector truncation chains; global theorem
+  deferred — see Blockers) — `OpenMath/LMMBDF{5,6}{,Vector}Convergence.lean`
+- BDF7 (truncation chain only; impossible to globally converge because
+  zero-unstable, proved) — `OpenMath/LMMBDF7{,Vector}Convergence.lean`
 
 > **Cap:** The per-step enumeration is closed. Do **not** add AB14, AM13,
 > or BDF8 quantitative convergence chains. Once the Dahlquist equivalence
-> (`OpenMath/DahlquistEquivalence.lean`) is in place, qualitative convergence
-> for any consistent zero-stable method follows; further quantitative
-> per-step files repeat the same template and are not in Iserles.
+> (`OpenMath/DahlquistEquivalence.lean`) is in place, qualitative
+> convergence for any consistent zero-stable method follows; further
+> quantitative per-step files repeat the same template and are not in
+> Butcher.
 
-### 2.3 Backward differentiation formulae
-- [x] **BDF1–BDF2** (`OpenMath/MultistepMethods.lean`)
-- [x] **BDF3–BDF6**: consistency, order = step count, zero-stability
-  (`OpenMath/MultistepMethods.lean`, `OpenMath/BDF.lean`)
-- [x] **BDF5 / BDF6 zero-stability** via `w = 1/ξ` substitution + `nlinarith`,
-  unit-root reductions for BDF6
-- [x] **BDF7 infrastructure**: definition, consistency, order 7, characteristic
-  factorization (`OpenMath/MultistepMethods.lean`, cycle 377)
-- [x] **BDF7 zero-instability** via exact algebraic root certificate for the
-  Cayley-transformed sextic (cycle 379)
-- [x] **BDF7 non-convergence** via Dahlquist equivalence (`OpenMath/DahlquistEquivalence.lean`)
-- [x] **BDF4–BDF6 convergence** via Dahlquist equivalence
+### §43 Stability Characteristics
+- [x] **§430–§434 Stability regions, boundary locus, Schur, P-C
+  stability** — A-stability characterization, A-stable iff roots of `ρ`
+  in unit disk; A-stability of backward Euler / trapezoidal; forward
+  Euler not A-stable (`OpenMath/MultistepMethods.lean`); A(α)-stability
+  sector definition, monotonicity, A-stable ↔ A(π/2)-stable
+  (`OpenMath/BDF.lean`); BDF3–6 are NOT A-stable via Dahlquist barrier.
 
----
-
-## Chapter 3: Runge–Kutta Methods
-
-### 3.0 Foundations: rooted trees and order conditions
-- [x] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`):
-  `BTree`, `order`, `symmetry`, `density`, examples through order 5,
-  `thm_301A_order1` … `thm_301A_order5`
-- [x] **Order conditions** through order 5 (`OpenMath/OrderConditions.lean`,
-  `OpenMath/RootedTree.lean`)
-
-### 3.1 Gaussian quadrature
-- [x] **Legendre / shifted Legendre infrastructure** (`OpenMath/Legendre.lean`,
-  `OpenMath/LegendreHelpers.lean`, `OpenMath/ShiftedLegendreDivision.lean`)
-- [x] **Theorem 342C**: Gaussian quadrature order-condition equivalence
-  (`OpenMath/Collocation.lean`)
-  - 342j (`G(p) ⇒ B(p)`), 342k (`G(2n) ⇒ E(n,n)`), 342l (`B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)`)
-  - 342m / 342n / 342o / 342p (`B(2s) ∧ C(s)/D(s) ⇔ E(s,s)` bidirections)
-
-### 3.2 Explicit Runge–Kutta schemes
-- [x] **Butcher tableau** (`OpenMath/RungeKutta.lean`, `OpenMath/ExplicitRK.lean`)
-- [x] **Examples**: forward Euler / explicit midpoint / Heun / classical RK4 as RK,
-  consistency, order conditions through order 4
-- [x] **Theorem (order barrier)**: s-stage explicit ⟹ order ≤ s for s ≤ 4
-  (`OpenMath/OrderBarriers.lean`)
-- [x] **Theorem**: explicit methods cannot satisfy `C(2)` with distinct nodes
-  (`OpenMath/OrderBarriers.lean`)
-
-### 3.3 Implicit Runge–Kutta schemes
-- [x] **Implicit Euler / implicit midpoint** (`OpenMath/RungeKutta.lean`)
-- [x] **Stability function `R(z)`** for 1-stage RK (`OpenMath/RungeKutta.lean`)
-- [x] **A-stability**: implicit Euler / implicit midpoint A-stable; forward Euler not
-- [x] **Gauss–Legendre 2-stage** — order 4, A-stable (`OpenMath/RungeKutta.lean`)
-- [x] **Gauss–Legendre 3-stage** — order ≥ 5, `B(6)`, `D(3)` (`OpenMath/GaussLegendre3.lean`)
-- [x] **Radau IA 2-stage / 3-stage** (`OpenMath/RadauIA2.lean`, `OpenMath/RadauIA3.lean`)
-- [x] **Radau IIA 3-stage** — order ≥ 5, algebraic stability (`OpenMath/RadauIIA3.lean`)
-- [x] **SDIRK2 / SDIRK3** (`OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
-- [x] **Lobatto IIIA / IIIB / IIIC, 2-stage and 3-stage**
-  (`OpenMath/LobattoIIIA{,3}.lean`, `OpenMath/LobattoIIIB{,3}.lean`,
-  `OpenMath/LobattoIIIC{,3}.lean`)
-
-### 3.4 Collocation and IRK
-- [x] **`B(p)`, `C(q)`, `D(r)` simplifying assumptions** (`OpenMath/Collocation.lean`)
-- [x] **Theorem**: `B(p) ∧ C(q) ⟹ order ≥ p`, plus assorted combinations
-- [x] **Symmetric methods, Nørsett's even-order theorem**
-  (symmetric + order ≥ 3 ⟹ order ≥ 4) (`OpenMath/Symmetry.lean`)
-- [x] **Self-adjoint / adjoint pair** (`OpenMath/Adjoint.lean`)
-- [x] **Reflected RK tableau** `(1−c, b−A, b)` and transfer of `B`, `C`, `D`, `E`
-  (`OpenMath/ReflectedMethods.lean`)
-- [x] **`CollocationBN` infrastructure** (`OpenMath/CollocationBN.lean`)
-
-### 3.5 Stability theory of RK methods (Padé, order stars, AN/BN/algebraic)
-- [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
-- [x] **Padé approximants and stability functions** (`OpenMath/Pade.lean`)
-- [x] **Theorems 352C / 352D**: Padé recurrence — `padeP`, `padeQ`, `padeR` families,
-  diagonal symmetry, specialization, pair packaging, coefficient recurrences
-- [x] **Theorem 353A**: Padé approximation order (`OpenMath/PadeOrder.lean` /
-  `OpenMath/PadeAsymptotics.lean`, `OpenMath/PadeUniqueness.lean`)
-- [x] **Theorems 355C / 355D / 355E**: order-arrow trajectory bookkeeping,
-  endpoint data, no-escape, concrete wrappers
-  (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
-- [x] **Theorem 355G**: Ehle barrier / Padé wedge boundary, with separate honest
-  downstream `EhleBarrierInput` and concrete Padé constructor
-- [x] **Theorem 356C**: AN-stability ⇒ algebraic stability (`OpenMath/ANStability.lean`)
-- [x] **Theorem 357C**: algebraic stability ⇒ BN-stability (`OpenMath/BNStability.lean`)
-- [x] **Theorem 357D**: BN-stability ⇒ AN-stability for irreducible non-confluent
-  methods (`OpenMath/BNImpliesAN.lean`)
-- [x] **Theorem 358A**: algebraic-stability characterization of collocation
-  methods (`OpenMath/CollocationAlgStability.lean`); both directions
-- [x] **Theorem 359B (Radau IIA family)**: collocation + Radau IIA nodes ⇒
-  algebraically stable (`OpenMath/CollocationFamilies.lean`, cycle 374)
-- [x] **Theorem 359C**: classical collocation families (Gauss–Legendre, Radau I/θ=1)
-  algebraically stable; concrete corollaries
-  `rkGaussLegendre{2,3}_algStable_via_358A` (`OpenMath/CollocationFamilies.lean`)
-- [-] **Theorem 359B (Radau IA side)**: blocked — see Blockers
-- [x] **§3.5.10 packaging corollaries**: family-level BN-stability for GL, Radau IIA
-  collocation (`OpenMath/CollocationFamilies.lean`, cycle 376)
-- [-] **Theorem 359D**: pending — needs Iserles §3.5.10 source statement (see Blockers)
-
----
-
-## Chapter 4: Stiff Equations
-
-### 4.1 What are stiff ODEs?
-- [x] **Definition**: stiffness (`OpenMath/Stiffness.lean`)
-
-### 4.2 Linear stability domain and A-stability
-- [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
-- [x] **A-stability ⇒ roots of `ρ` in unit disk** (`OpenMath/MultistepMethods.lean`)
-
-### 4.3 A-stability of Runge–Kutta methods
-- [x] Cross-ref Ch 3.5 (Padé, order stars, AN/BN/algebraic stability)
-- [x] **Definition**: stiff accuracy (`OpenMath/StiffAccuracy.lean`); concrete certs
-  for implicit Euler, SDIRK2/3, Radau IIA2/3, Lobatto IIIA2/3, Lobatto IIIC2/3
-- [x] **Definition**: L-stability (`OpenMath/StiffEquations.lean`); concrete certs
-  for backward Euler, Radau IIA, SDIRK2, SDIRK3
-  (`OpenMath/StiffEquations.lean`, `OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
-
-### 4.4 A-stability of multistep methods (Dahlquist barriers)
-- [x] **A-stability of backward Euler and trapezoidal rule** (`OpenMath/MultistepMethods.lean`)
-- [x] **Forward Euler is not A-stable** (`OpenMath/MultistepMethods.lean`)
-- [x] **Theorem (Dahlquist's second barrier)**: A-stable + zero-stable ⟹ order ≤ 2
+### §44 Order and Stability Barriers
+- [x] **§441 Maximum order for a convergent k-step method** — first
+  Dahlquist barrier consequence, plus the headline **Dahlquist's second
+  barrier** (A-stable + zero-stable ⟹ order ≤ 2)
   (`OpenMath/MultistepMethods.lean`); 9 supporting lemmas including
-  `E_nonneg_re`, `re_inv_exp_sub_one`, removable-singularity Gtilde proof,
-  and `dahlquistCounterexample` (order-3 A-stable but not zero-stable)
+  `E_nonneg_re`, `re_inv_exp_sub_one`, removable-singularity Gtilde
+  proof, and `dahlquistCounterexample` (order-3 A-stable but not
+  zero-stable).
+- [x] **§442 Order stars for linear multistep methods** — covered via
+  the RK side (`OpenMath/OrderStars.lean`,
+  `OpenMath/PadeOrderStars.lean`); the LMM specialization is by reduction.
+- [ ] **§443 Order arrows for linear multistep methods** — explicit
+  LMM-side restatement open.
 
-### 4.5 BDF methods (stability-side; defined in §2.3)
-- [x] **A(α)-stability sector**: definition, monotonicity, A-stable ↔ A(π/2)-stable
-  (`OpenMath/BDF.lean`)
-- [x] **BDF3–6 are NOT A-stable** via Dahlquist barrier (`OpenMath/BDF.lean`)
-- [x] **BDF4 stable-block quadratic Lyapunov certificate and forced one-step
-  recurrence** (`OpenMath/BDFQuadraticLyapunov.lean`): `bdf4RecDefect`,
-  `bdf4LyapU`, stable coordinates, `bdf4CubicQuad`, exact homogeneous decrease,
-  coercive bounds, `bdf4StableEnergy`, `bdf4LyapW`, forced energy/defect
-  recurrences, `bdf4_eIdx4_le_W_add_defect`,
-  `bdf4LyapW_one_step_error_bound` (cycles 458 / 488 / 489)
-- [-] **BDF4 / BDF5 / BDF6 global Lyapunov / quantitative convergence**: deferred
-  by spectral obstruction (see Blockers)
+### §45 One-Leg Methods and G-stability *(open, near-term target)*
+- [ ] **§450 One-leg counterpart** to a linear multistep method — define
+  the one-leg method and the bijection to its LMM (new file
+  `OpenMath/OneLegMethods.lean`).
+- [ ] **§451 G-stability** — define the `G`-norm associated to a positive
+  semi-definite `G`, the contractivity condition
+  `‖U_{n+1}‖_G² ≤ ‖U_n‖_G² + 2 h ⟨U_{n+1}, F⟩` and that A-stable
+  one-leg methods are G-stable for some `G` (new file
+  `OpenMath/GStability.lean`).
+- [ ] **§452 Transformations** between one-leg and LMM.
+- [ ] **§453 Effective order interpretation** of the transformation.
+- [ ] **§454 Concluding remarks**.
 
----
-
-## Chapter 5: Geometric Numerical Integration
-
-> **This is the active frontier.** Symmetry / adjoint / reflected foundations
-> already exist in Ch 3.4; the symplectic / Hamiltonian / Verlet content below
-> is open and is what cycle 491+ should pursue.
-
-### 5.1 Between quality and quantity
-- Motivational. No formal items.
-
-### 5.2 Monotone equations and algebraic stability
-- [x] Cross-reference Ch 3.5: 356C / 357C / 357D / 358A / 359B / 359C and the
-  GL / Radau IIA / Lobatto IIIC concrete algebraic-stability certificates.
-
-### 5.3 From here to eternity (long-time behavior; Hamiltonian systems)
-- [ ] **Definition**: Hamiltonian function `H : Fin (2*d) → ℝ` (or `H : EuclideanSpace ℝ (Fin (2*d)) → ℝ`),
-  separable form `H(q,p) = T(p) + V(q)` (new file `OpenMath/Hamiltonian.lean`)
-- [ ] **Definition**: Hamiltonian flow ODE `q' = ∂H/∂p`, `p' = −∂H/∂q`
-  (`OpenMath/Hamiltonian.lean`)
-- [ ] **Theorem**: the Hamiltonian is a first integral — `H` is constant along
-  Hamiltonian-flow trajectories (`OpenMath/Hamiltonian.lean`)
-
-### 5.4 Symplectic methods
-- [ ] **Definition**: canonical symplectic 2-form / matrix
-  `J = [[0, I_d], [−I_d, 0]]` on `ℝ^{2d}` (new file `OpenMath/Symplectic.lean`)
-- [ ] **Definition**: `IsSymplectic φ` for a smooth `φ : ℝ^{2d} → ℝ^{2d}` via
-  `(Dφ(x))ᵀ · J · (Dφ(x)) = J` for all `x` (`OpenMath/Symplectic.lean`)
-- [ ] **Lemma**: composition of symplectic maps is symplectic
-  (`OpenMath/Symplectic.lean`)
-- [ ] **Theorem**: the Hamiltonian flow is symplectic (`OpenMath/Symplectic.lean`)
-- [ ] **Definition**: symplectic Euler scheme for separable Hamiltonians:
-  `q_{n+1} = q_n + h ∂H/∂p(q_n, p_{n+1})`, `p_{n+1} = p_n − h ∂H/∂q(q_n, p_{n+1})`
-  (new file `OpenMath/SymplecticEuler.lean`)
-- [ ] **Theorem**: symplectic Euler is symplectic (`OpenMath/SymplecticEuler.lean`)
-- [x] Cross-reference: symmetric / self-adjoint RK methods (`OpenMath/Symmetry.lean`,
-  `OpenMath/Adjoint.lean`); reflected tableau (`OpenMath/ReflectedMethods.lean`).
-
-### 5.5 The symplectic Verlet (Störmer–Verlet) method
-- [ ] **Definition**: Störmer–Verlet method for separable Hamiltonians (new file
-  `OpenMath/Verlet.lean`)
-- [ ] **Theorem**: Störmer–Verlet is symplectic and time-reversible
-  (`OpenMath/Verlet.lean`)
-- [ ] **Theorem**: Störmer–Verlet has order 2 (`OpenMath/Verlet.lean`)
+### §46 Implementation Issues *(open; lower priority)*
+- [ ] **§460–§463** — survey, data representation, variable stepsize for
+  Nordsieck methods, local error estimation. Largely implementation;
+  the local-error-estimation §463 piece is the Milne device and is
+  worth a dedicated file
+  (`OpenMath/MilneDevice.lean`).
 
 ---
 
-## Chapter 6: Error Control
+## Chapter 5: General Linear Methods
 
-### 6.1 Numerical software vs numerical mathematics
-- Motivational. No formal items.
+> **The whole chapter is open.** This is the biggest real gap in the
+> codebase and is what cycle 491+ should pursue once Ch 3 §37 is done.
+> Butcher's Ch 5 unifies RK and LMM under a single multivalue-multistage
+> framework and is the part of the book that does not appear in any other
+> textbook.
 
-### 6.2 The Milne device
-- [ ] **Definition**: Milne device for matched predictor–corrector multistep pairs
-  (e.g. AB(p)/AM(p)) — local error estimate from `(y* − y) / (1 − error-constant ratio)`
-  (new file `OpenMath/MilneDevice.lean`)
-- [ ] **Theorem**: Milne estimate is asymptotically correct as `h → 0` for
-  matched-order pairs (`OpenMath/MilneDevice.lean`)
+### §50 Representing Methods in General Linear Form
+- [ ] **§500 Multivalue-multistage methods** — define a general linear
+  method by the four block matrices
+  `(A, U, B, V)` of sizes `s×s`, `s×r`, `r×s`, `r×r`, and the step
+  ```
+  Y = h (A ⊗ I) F(Y) + (U ⊗ I) y^{[n−1]}
+  y^{[n]} = h (B ⊗ I) F(Y) + (V ⊗ I) y^{[n−1]}
+  ```
+  on an `r`-vector of input quantities and `s`-vector of stages
+  (new file `OpenMath/GeneralLinearMethod.lean`).
+- [ ] **§501 Transformations of methods** — equivalence under
+  `T : (A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`.
+- [ ] **§502 Runge–Kutta methods as general linear methods** — embedding
+  `r = 1`, `U = 𝟙`, `V = 1`.
+- [ ] **§503 Linear multistep methods as general linear methods** —
+  `s = 1` embedding (Nordsieck-vector form).
+- [ ] **§504 Some known unconventional methods** — e.g. cyclic LMM and
+  Adams–Bashforth–Moulton predictor-corrector pairs as GLMs (low
+  priority).
+- [ ] **§505 Some recently discovered general linear methods** — DIMSIM,
+  ARK, IRKS examples (low priority; reuses §54 / §55 below).
 
-### 6.3 Embedded Runge–Kutta methods
-- [x] **`EmbeddedRKPair` structure**, `IsConsistent`, `IsExplicit`, `errorWeights`,
-  `HasFSAL`, weight-sum identities (`OpenMath/EmbeddedRK.lean`)
-- [x] **Heun–Euler 2(1)**: explicit, consistent, main order 2, embed order 1,
-  error-weight closure (`OpenMath/EmbeddedRK.lean`)
-- [x] **Bogacki–Shampine 3(2)**: explicit, consistent, main order 3, embed order 2,
-  stiffly accurate, FSAL, non-negative weights, `B(3)`, `C(1)` (`OpenMath/EmbeddedRK.lean`)
-- [ ] **Fehlberg 4(5) (RKF45)** embedded pair: tableau, consistency, orders 4 and 5,
-  error-weight closure (extends `OpenMath/EmbeddedRK.lean` or `OpenMath/RKF45.lean`)
-- [ ] **Dormand–Prince 5(4) (DOPRI5)** embedded pair: tableau, consistency,
-  orders 5 and 4, FSAL, error-weight closure (extends `OpenMath/EmbeddedRK.lean`
-  or `OpenMath/DOPRI5.lean`)
-- [ ] **Theorem**: error-weight estimate `h · Σᵢ (bᵢ − b̂ᵢ) kᵢ` agrees with the
-  true LTE difference of the two embedded methods up to higher-order terms
-- [ ] **Algorithm**: step-size adaptation via local error estimate (PI controller
-  or proportional rule)
+### §51 Consistency, Stability and Convergence
+- [ ] **§510 Definitions of consistency and stability** — analogue of
+  §40 for GLMs.
+- [ ] **§511 Covariance of methods** under the equivalence transformation
+  of §501.
+- [ ] **§512 Definition of convergence**.
+- [ ] **§513 Necessity of stability** for convergence.
+- [ ] **§514 Necessity of consistency** for convergence.
+- [ ] **§515 Stability and consistency imply convergence** — the GLM
+  analogue of the Dahlquist equivalence theorem
+  (`OpenMath/DahlquistEquivalence.lean` is a special case).
 
----
+### §52 The Stability of General Linear Methods
+- [ ] **§520 Introduction** — stability matrix `M(z) := V + z B (I − z A)⁻¹ U`.
+- [ ] **§521 Methods with maximal stability order** — Padé-like
+  conditions on `M(z)`.
+- [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
+  of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
+  out of scope for this cycle.)
+- [ ] **§523 Non-linear stability** — algebraic stability for GLMs.
+- [ ] **§524 Reducible linear multistep methods and G-stability** —
+  reuses §451.
+- [ ] **§525 G-symplectic methods** — symplectic GLMs (extends §37 to
+  the GLM setting).
 
-## Chapter 7: Nonlinear Algebraic Systems
+### §53 The Order of General Linear Methods
+- [ ] **§530 Possible definitions of order** — order via local
+  truncation error vs effective order.
+- [ ] **§531 Local and global truncation errors** for GLMs.
+- [ ] **§532 Algebraic analysis of order** — tree-based order conditions
+  (extends §31).
+- [ ] **§534 The order of a G-symplectic method**.
+- [ ] **§535 The underlying one-step method** of a GLM.
 
-### 7.1 Functional iteration
-- [ ] **Definition**: functional iteration in `ℝᵈ`; contraction-mapping predicate
-  (likely thin wrapper over Mathlib's `ContractingWith`) — new file
-  `OpenMath/FunctionalIteration.lean`
-- [ ] **Theorem**: Banach fixed-point theorem for contractions on a complete
-  metric space (probably re-export of `ContractingWith.fixedPoint_unique` etc.)
-- [ ] **Theorem**: functional iteration on the implicit RK / implicit LMM
-  fixed-point equation converges for `h · L · |a-coefficient bound| < 1`
-  (`OpenMath/FunctionalIteration.lean`)
+### §54 Methods with Runge–Kutta Stability
+- [ ] **§540 Design criteria for general linear methods**.
+- [ ] **§541 The types of DIMSIM methods** — Type 1/2/3/4 classification.
+- [ ] **§542 Runge–Kutta stability** — the condition `M(z)` has a single
+  non-zero eigenvalue.
+- [ ] **§543 Almost Runge–Kutta methods (ARK)**.
+- [ ] **§544–§546 Concrete ARK methods** (3-stage order 3,
+  4-stage order 4, 5-stage order 5).
+- [ ] **§547 ARK methods for stiff problems**.
 
-### 7.2 The Newton–Raphson method
-- [ ] **Definition**: Newton–Raphson iteration in `ℝᵈ` (`OpenMath/Newton.lean`)
-- [ ] **Theorem**: quadratic convergence near a simple root with Lipschitz
-  Jacobian (`OpenMath/Newton.lean`)
-- [ ] **Definition**: modified Newton (frozen Jacobian) (`OpenMath/Newton.lean`)
-- [ ] **Theorem**: linear convergence of modified Newton when the Jacobian is
-  refreshed sufficiently often (`OpenMath/Newton.lean`)
-
-### 7.3 Starting and stopping the iteration
-- [ ] **Definitions**: residual-based and increment-based stopping criteria
-  (`OpenMath/Newton.lean`)
-
----
-
-## Part II: Numerical Algebra (Chapters 8–11)
-
-> All chapters in Part II are unstarted. Items below are concrete `[ ]`
-> targets; the planner should reach for them only after Chs 5–7 close (or
-> if all of Chs 5–7 have hard blockers).
-
-### Chapter 8: Direct methods for linear algebraic systems
-- [ ] **Definition**: LU factorization of a square matrix `A = L · U`
-  (new file `OpenMath/LU.lean`)
-- [ ] **Theorem**: existence and uniqueness of LU when every leading principal
-  minor of `A` is non-singular (`OpenMath/LU.lean`)
-- [ ] **Definition**: forward and backward substitution (`OpenMath/LU.lean`)
-- [ ] **Theorem**: forward / backward substitution solves `L · x = b` /
-  `U · x = b` in `O(d²)` operations (`OpenMath/LU.lean`)
-- [ ] **Definition**: partial pivoting; permutation matrix `P` so that
-  `P · A = L · U` (`OpenMath/LU.lean`)
-- [ ] **Theorem**: every non-singular `A` admits an LU factorization with
-  partial pivoting (`OpenMath/LU.lean`)
-- [ ] **Definition**: Cholesky factorization `A = L · Lᵀ` for symmetric
-  positive-definite `A` (new file `OpenMath/Cholesky.lean`)
-- [ ] **Theorem**: existence and uniqueness of Cholesky for SPD `A`
-  (`OpenMath/Cholesky.lean`)
-- [ ] **Definition**: banded matrix; bandwidth (`OpenMath/LU.lean` or new
-  `OpenMath/Banded.lean`)
-- [ ] **Theorem**: LU of a banded matrix preserves bandwidth
-
-### Chapter 9: Iterative methods for sparse linear algebraic systems
-- [ ] **Definition**: linear one-step stationary iteration
-  `x_{n+1} = H · x_n + v` (new file `OpenMath/StationaryIteration.lean`)
-- [ ] **Theorem**: convergence iff spectral radius `ρ(H) < 1`
-  (`OpenMath/StationaryIteration.lean`)
-- [ ] **Theorem**: convergence rate is geometric with ratio `ρ(H)`
-- [ ] **Definitions**: Jacobi, Gauss–Seidel, SOR iterations from a matrix
-  splitting `A = L + D + U` (new file `OpenMath/JacobiSOR.lean`)
-- [ ] **Theorem**: Jacobi converges for strictly diagonally dominant `A`
-  (`OpenMath/JacobiSOR.lean`)
-- [ ] **Theorem**: Gauss–Seidel converges for SPD `A` (`OpenMath/JacobiSOR.lean`)
-- [ ] **Theorem (Ostrowski–Reich)**: SOR converges for SPD `A` iff
-  `0 < ω < 2` (`OpenMath/JacobiSOR.lean`)
-- [ ] **Theorem**: optimal SOR parameter `ω*` for the discrete Poisson
-  matrix (cross-ref Ch 15) (`OpenMath/JacobiSOR.lean`)
-
-### Chapter 10: The conjugate gradient method
-- [ ] **Definition**: Krylov subspace `K_n(A, r₀)` (new file
-  `OpenMath/Krylov.lean`)
-- [ ] **Definition**: conjugate gradient iteration on SPD systems
-  (new file `OpenMath/ConjugateGradient.lean`)
-- [ ] **Theorem**: CG residuals are mutually `A`-orthogonal
-  (`OpenMath/ConjugateGradient.lean`)
-- [ ] **Theorem**: CG terminates in at most `d` iterations in exact
-  arithmetic (`OpenMath/ConjugateGradient.lean`)
-- [ ] **Theorem**: CG error bound via condition number
-  `‖x_n − x*‖_A ≤ 2 · ((√κ − 1)/(√κ + 1))ⁿ · ‖x₀ − x*‖_A`
-  (`OpenMath/ConjugateGradient.lean`)
-- [ ] **Definition**: preconditioned CG (`OpenMath/ConjugateGradient.lean`)
-- [ ] **Definition**: Jacobi preconditioner; incomplete-Cholesky
-  preconditioner (`OpenMath/Preconditioners.lean`)
-
-### Chapter 11: Classical iterative methods for nonsymmetric systems
-- [ ] **Definition**: GMRES iteration (Arnoldi-based) on general non-singular
-  `A` (new file `OpenMath/GMRES.lean`)
-- [ ] **Theorem**: GMRES residual minimization in the Krylov subspace
-  (`OpenMath/GMRES.lean`)
-- [ ] **Theorem**: GMRES terminates in at most `d` iterations (exact
-  arithmetic) (`OpenMath/GMRES.lean`)
-- [ ] **Definition**: BiCGStab iteration (`OpenMath/BiCGStab.lean`)
-- [ ] **Theorem**: BiCGStab convergence on a model problem
-  (`OpenMath/BiCGStab.lean`)
-
----
-
-## Part III: Partial Differential Equations (Chapters 12–17)
-
-> Items below are concrete `[ ]` targets. Some Mathlib infrastructure (Sobolev
-> spaces, weak derivatives) may need to be vendored or imported on demand.
-
-### Chapter 12: Finite difference schemes for PDEs
-- [ ] **Definition**: discrete grid; finite-difference operators (forward,
-  backward, central) (new file `OpenMath/FiniteDifference.lean`)
-- [ ] **Theorem**: order of the central second-difference operator approximating
-  `∂²/∂x²` is 2 (`OpenMath/FiniteDifference.lean`)
-- [ ] **Definition**: explicit / implicit / Crank–Nicolson schemes for the
-  1D heat equation (new file `OpenMath/HeatEquationFD.lean`)
-- [ ] **Theorem**: von Neumann stability analysis for the explicit heat scheme;
-  CFL condition `μ = h_t / h_x² ≤ 1/2` (`OpenMath/HeatEquationFD.lean`)
-- [ ] **Theorem**: Crank–Nicolson is unconditionally stable
-  (`OpenMath/HeatEquationFD.lean`)
-- [ ] **Theorem (Lax equivalence)**: for a consistent linear scheme,
-  stability ⟺ convergence (new file `OpenMath/LaxEquivalence.lean`)
-- [ ] **Definition**: explicit / implicit / leapfrog schemes for the 1D wave
-  equation (new file `OpenMath/WaveEquationFD.lean`)
-- [ ] **Theorem**: CFL condition for the explicit wave scheme — `c · h_t ≤ h_x`
-  (`OpenMath/WaveEquationFD.lean`)
-
-### Chapter 13: The finite element method
-- [ ] **Definition**: weak formulation of the 1D Poisson problem
-  `−u'' = f` on `(0,1)` with Dirichlet BCs (new file `OpenMath/FEM.lean`)
-- [ ] **Definition**: hat-function basis on a uniform mesh (`OpenMath/FEM.lean`)
-- [ ] **Definition**: Galerkin discretization (`OpenMath/FEM.lean`)
-- [ ] **Theorem (Lax–Milgram)**: existence and uniqueness of weak solution
-  for a coercive bounded bilinear form on a Hilbert space
-  (likely a wrapper over Mathlib) (`OpenMath/LaxMilgram.lean`)
-- [ ] **Theorem (Céa's lemma)**: Galerkin error bounded by best approximation
-  error (`OpenMath/FEM.lean`)
-- [ ] **Theorem**: piecewise-linear FEM has `O(h²)` energy-norm error
-  for `H²` solutions of the 1D Poisson problem (`OpenMath/FEM.lean`)
-- [ ] **Definition**: stiffness and mass matrices; their assembly
-  (`OpenMath/FEM.lean`)
-
-### Chapter 14: Spectral methods
-- [ ] **Definition**: Fourier collocation on a periodic grid (new file
-  `OpenMath/FourierSpectral.lean`)
-- [ ] **Theorem**: spectral convergence — Fourier truncation error decays faster
-  than any algebraic rate for `C^∞` periodic functions
-  (`OpenMath/FourierSpectral.lean`)
-- [ ] **Definition**: Chebyshev collocation on `[−1, 1]` (new file
-  `OpenMath/ChebyshevSpectral.lean`)
-- [ ] **Theorem**: Chebyshev spectral derivative matrix construction
-  (`OpenMath/ChebyshevSpectral.lean`)
-
-### Chapter 15: Gauss–Seidel and SOR for elliptic PDEs
-- [ ] **Definition**: discrete 2D Poisson matrix on a uniform `N × N` grid
-  (new file `OpenMath/PoissonDiscrete.lean`)
-- [ ] **Theorem**: discrete Poisson matrix is symmetric positive-definite
-  (`OpenMath/PoissonDiscrete.lean`)
-- [ ] **Theorem**: Jacobi spectral radius for discrete Poisson is
-  `cos(π/(N+1))` (`OpenMath/PoissonDiscrete.lean`)
-- [ ] **Theorem**: optimal SOR parameter for discrete Poisson is
-  `ω* = 2 / (1 + sin(π/(N+1)))` (`OpenMath/PoissonDiscrete.lean`)
-
-### Chapter 16: The multigrid technique
-- [ ] **Definition**: restriction and prolongation operators between fine and
-  coarse grids (new file `OpenMath/Multigrid.lean`)
-- [ ] **Definition**: V-cycle on a hierarchy of grids (`OpenMath/Multigrid.lean`)
-- [ ] **Theorem**: smoothing property — Jacobi / Gauss–Seidel reduces
-  high-frequency error components (`OpenMath/Multigrid.lean`)
-- [ ] **Theorem**: V-cycle convergence rate is bounded independently of
-  mesh size for the discrete Poisson problem (`OpenMath/Multigrid.lean`)
-
-### Chapter 17: Fast Poisson solvers
-- [ ] **Definition**: discrete Fourier transform (likely re-export from Mathlib)
-  (`OpenMath/FastPoisson.lean`)
-- [ ] **Theorem**: discrete Poisson on a periodic / Dirichlet rectangle is
-  diagonalized by the discrete sine / Fourier transform
-  (`OpenMath/FastPoisson.lean`)
-- [ ] **Algorithm**: FFT-based Poisson solver in `O(d² log d)`
-  (`OpenMath/FastPoisson.lean`)
-- [ ] **Definition**: cyclic-reduction Poisson solver for tri-diagonal block
-  systems (`OpenMath/CyclicReduction.lean`)
+### §55 Methods with Inherent Runge–Kutta Stability
+- [ ] **§550–§558** — doubly companion matrices, IRKS, derivation,
+  property F, non-stiff / stiff examples, scale-and-modify. Lower
+  priority within Ch 5.
 
 ---
 
 ## Active Frontier
 
-- **Chapters 1–4 are essentially closed.** The only remaining items are the
-  three blockers below and (low priority) the θ-method definition in §1.4.
-- **Active work:** Chapter 5 (Geometric Numerical Integration). First three
-  files are listed in **Current Target** below.
-- **Next after Ch 5:** Chapter 6 missing items (Milne device, Fehlberg 4(5),
-  DOPRI 5(4), step-size adaptation), then Chapter 7 (functional iteration,
-  Newton–Raphson).
+- **Chapters 1–4 are essentially closed** modulo the three Blockers
+  below and small low-priority survey items.
+- **Highest-value gaps inside the existing chapters:**
+  - §37 Symplectic RK (small, builds on existing RK / `Collocation.lean`,
+    natural Aristotle target).
+  - §38 Algebraic Properties / Butcher group (Butcher's namesake topic;
+    medium-sized).
+  - §45 One-Leg Methods and G-stability (medium-sized).
+- **Largest real gap:** **Chapter 5 (General Linear Methods)** —
+  completely open and the part of Butcher that is not duplicated
+  elsewhere.
 
 ---
 
 ## Current Target
 
-**Highest priority for the next planner cycle: start Chapter 5 (Geometric
-Numerical Integration).** Concrete first goals, in order:
+**§37 (Symplectic RK) closed in cycle 492** — `OpenMath/SymplecticRK.lean`
+contains the `symplecticDefect` / `IsSymplectic` predicates, the §370A
+quadratic-invariant preservation theorem (`IsSymplectic.preserves_quadInv`),
+and §371 examples for Gauss–Legendre 1/2/3-stage. §372 (the trivial
+order-condition corollary) and §373 (informal experiments) remain open
+as low-priority follow-ups.
 
-1. **`OpenMath/Hamiltonian.lean`** — define a Hamiltonian
-   `H : EuclideanSpace ℝ (Fin (2*d)) → ℝ` together with the separable form
-   `H(q,p) = T(p) + V(q)`, the Hamiltonian flow ODE
-   `q' = ∂H/∂p, p' = −∂H/∂q`, and the energy-conservation theorem
-   "`H` is constant along trajectories of the Hamiltonian flow".
+**Highest priority for the next planner cycle: close Butcher §45
+(One-Leg Methods and G-stability)** — define the one-leg counterpart
+of an LMM in `OpenMath/OneLegMethods.lean`, define the `G`-norm and
+G-stability predicate in `OpenMath/GStability.lean`, and prove that
+the trapezoidal rule (one-leg `θ = 1/2` method) is G-stable with
+`G = 1`.
 
-2. **`OpenMath/Symplectic.lean`** — define the canonical symplectic matrix
-   `J = [[0, I_d], [−I_d, 0]]`, the predicate `IsSymplectic φ` via
-   `(Dφ)ᵀ · J · (Dφ) = J`, and prove that composition of symplectic maps
-   is symplectic and that the Hamiltonian flow is symplectic.
+Sorry-first, batch ~5 Aristotle jobs, sleep 30 minutes, incorporate
+proofs that compile against live infrastructure, close remaining
+goals manually. Keep `maxHeartbeats ≤ 200000`.
 
-3. **`OpenMath/SymplecticEuler.lean`** — define the symplectic Euler scheme
-   for separable Hamiltonians and prove it is symplectic.
+**If §45 is unexpectedly blocked,** pivot to **Butcher §334 Fehlberg
+4(5) (RKF45)**: extend `OpenMath/EmbeddedRK.lean` with the Fehlberg
+tableau, mirror the Heun–Euler 2(1) and Bogacki–Shampine 3(2)
+templates already in that file. No new framework needed.
 
-Each file should be sorry-first, batch ~5 Aristotle jobs, sleep 30 minutes,
-incorporate proofs that compile against live infrastructure, and close
-remaining goals manually. Keep `maxHeartbeats ≤ 200000`.
-
-**If Chapter 5 is unexpectedly blocked,** pivot to **Chapter 6 (Error
-Control)**: Fehlberg 4(5) and DOPRI 5(4) extend the existing
-`EmbeddedRKPair` infrastructure in `OpenMath/EmbeddedRK.lean` and should
-not need new framework. Implement Fehlberg first (extend
-`OpenMath/EmbeddedRK.lean`), then DOPRI, then the Milne device for
-multistep predictor–corrector pairs.
-
-**If Ch 5 and Ch 6 are both blocked,** pivot to **Chapter 7 (Nonlinear
-Algebraic Systems)**: define functional iteration on `ℝᵈ` (thin wrapper
-over Mathlib `ContractingWith`) and Newton–Raphson with quadratic
-convergence near a simple root.
+After §45 closes, the medium-term path is:
+1. §38 Butcher group / algebraic RK properties (close Ch 3).
+2. **Chapter 5 General Linear Methods** — start with §500 (the
+   four-block `(A, U, B, V)` definition) and §502 / §503 (RK and LMM
+   embeddings) so that the existing RK and LMM infrastructure becomes
+   reusable inside the GLM framework. This will be a multi-cycle
+   programme.
 
 ### Do NOT
 
@@ -554,52 +577,63 @@ convergence near a simple root.
   equivalence (`OpenMath/DahlquistEquivalence.lean`) already gives
   qualitative convergence of every consistent zero-stable method;
   these per-step quantitative chains repeat the same template, are not
-  in Iserles, and were the reason cycles 466–489 stopped advancing the
+  in Butcher, and were the reason cycles 466–489 stopped advancing the
   textbook.
-- Do **not** reopen the BDF4 / BDF5 / BDF6 global-Lyapunov work without
-  first updating `.prover-state/issues/bdf4_lyapunov_gap.md`. Cycle 489
-  closed the forced-defect one-step recurrence (`bdf4LyapW_one_step_error_bound`);
-  the remaining global-Gronwall assembly is the only piece left and is
-  bounded — finish it in at most one cycle if you choose to attempt it,
-  otherwise leave it deferred.
+- Do **not** reopen the BDF5 / BDF6 global-Lyapunov work without
+  first updating `.prover-state/issues/bdf4_lyapunov_gap.md`. BDF4 closed
+  in cycle 490; the BDF5 / BDF6 spectral obstruction is structural and
+  needs a separate bespoke certificate per method, not a generic
+  template.
 - Do **not** attempt the Radau IA family-level collocation bridge
   (`IsCollocation ∧ HasRadauIANodes → IsAlgStable`). The
   counterexample in
   `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`
   is decisive under the live `IsCollocation` interface.
 - Do **not** create new tracked `OpenMath/*.lean` files containing live
-  `sorry` outside the active Chapter 5 target. Scratch belongs in
-  `.prover-state/`.
+  `sorry` outside the active §37 / §45 / Ch 5 target. Scratch belongs
+  in `.prover-state/scratch/`.
+- Do **not** re-resurrect the Iserles-flavoured Hamiltonian-flow
+  energy-conservation theorem at this time. The cycle 491 scaffold lives
+  in `.prover-state/scratch/Hamiltonian.lean`; it is not on the active
+  Butcher path (§370 is about the *RK method* preserving quadratic
+  invariants of the ODE, not about the exact Hamiltonian flow). If a
+  future cycle wants the scratch back, lift it as Butcher §123 / §370
+  motivation, not as the headline.
 
 ---
 
 ## Sorry Locations
 
-- No active `sorry`s.
+- No active `sorry`s in tracked code.
+- Scratch (`.prover-state/scratch/Hamiltonian.lean`, untracked) carries
+  9 sorries from the cycle 491 attempt; not in the Butcher active path.
 
 ---
 
 ## Blockers / Deferred
 
-- **BDF4 / BDF5 / BDF6 global Lyapunov / quantitative convergence** —
+- **BDF5 / BDF6 global Lyapunov / quantitative convergence** —
   `.prover-state/issues/bdf4_lyapunov_gap.md`. Spectral obstruction:
-  the absolute companion matrix of BDF4 has Perron eigenvalue ≈ 2.58, so
-  weighted-ℓ¹ Lyapunov sums in error coordinates cannot give the required
-  `1 + O(h)` contraction. Cycle 489 landed
-  `bdf4LyapW_one_step_error_bound` via a stable-block quadratic Lyapunov
-  certificate; the remaining global-Gronwall assembly is open. Same
-  obstruction blocks BDF5 and BDF6. BDF7 has no global theorem because it
-  is zero-unstable (proved).
-- **Theorem 359D (Iserles §3.5.10)** — pending the textbook source
-  statement. The cycle 376 §3.5.10 packaging corollaries
+  the absolute companion matrix of BDF4/5/6 has Perron eigenvalue ≈ 2.58,
+  so weighted-ℓ¹ Lyapunov sums in error coordinates cannot give the
+  required `1 + O(h)` contraction. Cycle 490 closed BDF4 via a
+  stable-block quadratic Lyapunov certificate
+  (`OpenMath/BDFQuadraticLyapunov.lean`). The same obstruction blocks
+  BDF5 and BDF6 — each will need its own bespoke quadratic Lyapunov
+  certificate on its own stable subspace; the BDF4 prototype is the
+  template. BDF7 has no global theorem because it is zero-unstable
+  (proved).
+- **§359D (Butcher §3.5.10)** — pending the textbook source statement.
+  The cycle 376 §3.5.10 packaging corollaries
   (`OpenMath/CollocationFamilies.lean`) provide a clean BN-stability
-  scaffold once the named theorem after 359C is identified.
-- **Theorem 359B (Radau IA family bridge)** —
+  scaffold once the named theorem after 359C is identified in
+  `.prover-state/textbook/butcher.txt`.
+- **§359B (Radau IA family bridge)** —
   `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`.
   `IsCollocation ∧ HasRadauIANodes → IsAlgStable` is false under the
   live `IsCollocation` interface (`C(s)`): the explicit 2-stage left-Radau
-  collocation tableau on nodes `{0, 2/3}` has `M₀₀ = −1/16`. Concrete node
-  certificates `rkRadauIA{2,3}_hasRadauIANodes` are landed; a future Radau IA
-  family theorem must use the simplifying-assumption shape
-  `B(2s−1) ∧ C(s−1) ∧ D(s)` or a different adjoint/transpose interface,
-  not the 358A bridge.
+  collocation tableau on nodes `{0, 2/3}` has `M₀₀ = −1/16`. Concrete
+  node certificates `rkRadauIA{2,3}_hasRadauIANodes` are landed; a
+  future Radau IA family theorem must use the simplifying-assumption
+  shape `B(2s−1) ∧ C(s−1) ∧ D(s)` or a different adjoint / transpose
+  interface, not the 358A bridge.
