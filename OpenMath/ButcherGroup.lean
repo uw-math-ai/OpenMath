@@ -432,4 +432,269 @@ theorem product_weightsSum {s t : ℕ}
 
 end QuotEquiv
 
+/-! ### §382 partial associativity (`A` and `b` only)
+
+Full `IsRKEquivalent` associativity for `ButcherProduct` does **not** hold:
+the `c` (node) field disagrees in the third block — `(t₁ * t₂) * t₃`
+gives `1 + t₃.c` while `t₁ * (t₂ * t₃)` gives `1 + (1 + t₃.c)`. See
+`.prover-state/issues/butcher_section382_composition.md`.
+
+The `A` matrix and `b` weight vector *do* line up under the canonical
+reassociation `Fin ((s+t)+u) ≃ Fin (s+(t+u))` (the value-preserving
+`finCongr (Nat.add_assoc s t u)`). This file lands that partial result,
+which is the part actually needed by §384's elementary-weight homomorphism. -/
+
+/-- The canonical reassociation `Fin ((s+t)+u) ≃ Fin (s+(t+u))`, identity
+on underlying values. -/
+def finReassoc (s t u : ℕ) : Fin ((s + t) + u) ≃ Fin (s + (t + u)) :=
+  finCongr (Nat.add_assoc s t u)
+
+@[simp] theorem finReassoc_val {s t u : ℕ} (i : Fin ((s + t) + u)) :
+    (finReassoc s t u i).val = i.val := by
+  simp [finReassoc]
+
+/-- Image of an `s`-block index under `finReassoc`: stays in the
+`s`-block of `s + (t + u)`. -/
+theorem finReassoc_castAdd_castAdd {s t u : ℕ} (i : Fin s) :
+    finReassoc s t u (Fin.castAdd u (Fin.castAdd t i)) =
+      Fin.castAdd (t + u) i := by
+  apply Fin.ext; simp [finReassoc, Fin.castAdd]
+
+/-- Image of a `t`-block index (middle, sitting inside the left `s+t`)
+under `finReassoc`: lands in the `t`-block of `s + (t + u)`. -/
+theorem finReassoc_castAdd_natAdd {s t u : ℕ} (j : Fin t) :
+    finReassoc s t u (Fin.castAdd u (Fin.natAdd s j)) =
+      Fin.natAdd s (Fin.castAdd u j) := by
+  apply Fin.ext
+  simp [finReassoc, Fin.castAdd, Fin.natAdd]
+
+/-- Image of a `u`-block index (rightmost) under `finReassoc`: lands in the
+`u`-block of `s + (t + u)`. -/
+theorem finReassoc_natAdd {s t u : ℕ} (k : Fin u) :
+    finReassoc s t u (Fin.natAdd (s + t) k) =
+      Fin.natAdd s (Fin.natAdd t k) := by
+  apply Fin.ext
+  simp [finReassoc, Fin.natAdd, Nat.add_assoc]
+
+/-- Partial associativity: the `A` (stage-coefficient) matrix of
+`(t₁ * t₂) * t₃` equals that of `t₁ * (t₂ * t₃)` after reindexing both
+arguments by `finReassoc`. -/
+theorem ButcherProduct.assoc_A {s t u : ℕ}
+    (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (t₃ : ButcherTableau u)
+    (i j : Fin ((s + t) + u)) :
+    (ButcherProduct (ButcherProduct t₁ t₂) t₃).A i j =
+      (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+        (finReassoc s t u i) (finReassoc s t u j) := by
+  refine Fin.addCases (motive := fun i =>
+      (ButcherProduct (ButcherProduct t₁ t₂) t₃).A i j =
+        (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+          (finReassoc s t u i) (finReassoc s t u j)) ?_ ?_ i
+  · intro i₁₂
+    refine Fin.addCases (motive := fun i₁₂ =>
+        (ButcherProduct (ButcherProduct t₁ t₂) t₃).A (Fin.castAdd u i₁₂) j =
+          (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+            (finReassoc s t u (Fin.castAdd u i₁₂))
+            (finReassoc s t u j)) ?_ ?_ i₁₂
+    · intro i₁
+      -- row in the s-block
+      refine Fin.addCases (motive := fun j =>
+          (ButcherProduct (ButcherProduct t₁ t₂) t₃).A
+              (Fin.castAdd u (Fin.castAdd t i₁)) j =
+            (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+              (finReassoc s t u (Fin.castAdd u (Fin.castAdd t i₁)))
+              (finReassoc s t u j)) ?_ ?_ j
+      · intro j₁₂
+        refine Fin.addCases (motive := fun j₁₂ =>
+            (ButcherProduct (ButcherProduct t₁ t₂) t₃).A
+                (Fin.castAdd u (Fin.castAdd t i₁)) (Fin.castAdd u j₁₂) =
+              (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+                (finReassoc s t u (Fin.castAdd u (Fin.castAdd t i₁)))
+                (finReassoc s t u (Fin.castAdd u j₁₂))) ?_ ?_ j₁₂
+        · intro j₁
+          -- (s, s): both reduce to t₁.A i₁ j₁
+          simp [ButcherProduct, finReassoc_castAdd_castAdd]
+        · intro j₂
+          -- (s, t): both reduce to 0
+          simp [ButcherProduct, finReassoc_castAdd_castAdd,
+                finReassoc_castAdd_natAdd]
+      · intro j₃
+        -- (s, u): both reduce to 0
+        simp [ButcherProduct, finReassoc_castAdd_castAdd, finReassoc_natAdd]
+    · intro i₂
+      -- row in the t-block (middle)
+      refine Fin.addCases (motive := fun j =>
+          (ButcherProduct (ButcherProduct t₁ t₂) t₃).A
+              (Fin.castAdd u (Fin.natAdd s i₂)) j =
+            (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+              (finReassoc s t u (Fin.castAdd u (Fin.natAdd s i₂)))
+              (finReassoc s t u j)) ?_ ?_ j
+      · intro j₁₂
+        refine Fin.addCases (motive := fun j₁₂ =>
+            (ButcherProduct (ButcherProduct t₁ t₂) t₃).A
+                (Fin.castAdd u (Fin.natAdd s i₂)) (Fin.castAdd u j₁₂) =
+              (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+                (finReassoc s t u (Fin.castAdd u (Fin.natAdd s i₂)))
+                (finReassoc s t u (Fin.castAdd u j₁₂))) ?_ ?_ j₁₂
+        · intro j₁
+          -- (t, s): both reduce to t₁.b j₁
+          simp [ButcherProduct, finReassoc_castAdd_natAdd,
+                finReassoc_castAdd_castAdd]
+        · intro j₂
+          -- (t, t): both reduce to t₂.A i₂ j₂
+          simp [ButcherProduct, finReassoc_castAdd_natAdd]
+      · intro j₃
+        -- (t, u): both reduce to 0
+        simp [ButcherProduct, finReassoc_castAdd_natAdd, finReassoc_natAdd]
+  · intro i₃
+    -- row in the u-block (rightmost)
+    refine Fin.addCases (motive := fun j =>
+        (ButcherProduct (ButcherProduct t₁ t₂) t₃).A (Fin.natAdd (s + t) i₃) j =
+          (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+            (finReassoc s t u (Fin.natAdd (s + t) i₃))
+            (finReassoc s t u j)) ?_ ?_ j
+    · intro j₁₂
+      refine Fin.addCases (motive := fun j₁₂ =>
+          (ButcherProduct (ButcherProduct t₁ t₂) t₃).A
+              (Fin.natAdd (s + t) i₃) (Fin.castAdd u j₁₂) =
+            (ButcherProduct t₁ (ButcherProduct t₂ t₃)).A
+              (finReassoc s t u (Fin.natAdd (s + t) i₃))
+              (finReassoc s t u (Fin.castAdd u j₁₂))) ?_ ?_ j₁₂
+      · intro j₁
+        -- (u, s): both reduce to t₁.b j₁
+        simp [ButcherProduct, finReassoc_natAdd, finReassoc_castAdd_castAdd]
+      · intro j₂
+        -- (u, t): both reduce to t₂.b j₂
+        simp [ButcherProduct, finReassoc_natAdd, finReassoc_castAdd_natAdd]
+    · intro j₃
+      -- (u, u): both reduce to t₃.A i₃ j₃
+      simp [ButcherProduct, finReassoc_natAdd]
+
+/-- Cross-size generalization of `IsRKEquivalent.elementaryWeight_eq`:
+two tableaux of possibly different stage counts whose `A` matrices
+are related by a stage-`Equiv` have equal elementary weights after
+relabeling. The `c` field plays no role in `elementaryWeight`, so this
+result needs only an `A`-compatibility hypothesis. -/
+theorem elementaryWeight_eq_of_A
+    {s s' : ℕ} {t : ButcherTableau s} {t' : ButcherTableau s'}
+    (σ : Fin s' ≃ Fin s)
+    (hA : ∀ i j, t'.A i j = t.A (σ i) (σ j))
+    (τ : BTree) (i : Fin s') :
+    t'.elementaryWeight τ i = t.elementaryWeight τ (σ i) := by
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin s',
+      t'.elementaryWeight τ i = t.elementaryWeight τ (σ i))
+    (motive_2 := fun children => ∀ i : Fin s',
+      children.foldr
+        (fun r acc => acc * (∑ k : Fin s', t'.A i k * t'.elementaryWeight r k)) 1 =
+      children.foldr
+        (fun r acc => acc * (∑ k : Fin s, t.A (σ i) k * t.elementaryWeight r k)) 1)
+    ?leaf ?node ?nil ?cons τ
+  · intro i; simp
+  · intro children hchildren i
+    simpa [ButcherTableau.elementaryWeight] using hchildren i
+  · intro i; simp
+  · intro head tail ih_head ih_tail i
+    simp only [List.foldr]
+    have hsum :
+        (∑ k : Fin s', t'.A i k * t'.elementaryWeight head k) =
+          ∑ k : Fin s, t.A (σ i) k * t.elementaryWeight head k := by
+      calc
+        (∑ k : Fin s', t'.A i k * t'.elementaryWeight head k)
+            = ∑ k : Fin s', t.A (σ i) (σ k) *
+                t.elementaryWeight head (σ k) := by
+                refine Finset.sum_congr rfl ?_
+                intro k _
+                rw [hA i k, ih_head k]
+      _ = ∑ k : Fin s, t.A (σ i) k * t.elementaryWeight head k := by
+                exact (Equiv.sum_comp σ
+                  (fun k : Fin s => t.A (σ i) k * t.elementaryWeight head k))
+    rw [ih_tail i, hsum]
+
+/-- Partial associativity: the `b` weight vector of `(t₁ * t₂) * t₃`
+equals that of `t₁ * (t₂ * t₃)` after reindexing by `finReassoc`. -/
+theorem ButcherProduct.assoc_b {s t u : ℕ}
+    (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (t₃ : ButcherTableau u)
+    (i : Fin ((s + t) + u)) :
+    (ButcherProduct (ButcherProduct t₁ t₂) t₃).b i =
+      (ButcherProduct t₁ (ButcherProduct t₂ t₃)).b
+        (finReassoc s t u i) := by
+  refine Fin.addCases (motive := fun i =>
+      (ButcherProduct (ButcherProduct t₁ t₂) t₃).b i =
+        (ButcherProduct t₁ (ButcherProduct t₂ t₃)).b
+          (finReassoc s t u i)) ?_ ?_ i
+  · intro i₁₂
+    refine Fin.addCases (motive := fun i₁₂ =>
+        (ButcherProduct (ButcherProduct t₁ t₂) t₃).b (Fin.castAdd u i₁₂) =
+          (ButcherProduct t₁ (ButcherProduct t₂ t₃)).b
+            (finReassoc s t u (Fin.castAdd u i₁₂))) ?_ ?_ i₁₂
+    · intro i₁
+      simp [ButcherProduct, finReassoc_castAdd_castAdd]
+    · intro i₂
+      simp [ButcherProduct, finReassoc_castAdd_natAdd]
+  · intro i₃
+    simp [ButcherProduct, finReassoc_natAdd]
+
+/-- Butcher-series associativity at the raw-tableau level: even though
+`ButcherProduct` is not associative on the nose (the `c`-field disagrees),
+the `b`-weighted elementary-weight sum *is* associative for every tree.
+This is what feeds Butcher §384's elementary-weight homomorphism. -/
+theorem ButcherProduct.bSeries_assoc {s t u : ℕ}
+    (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (t₃ : ButcherTableau u)
+    (τ : BTree) :
+    (∑ i, (ButcherProduct (ButcherProduct t₁ t₂) t₃).b i *
+        (ButcherProduct (ButcherProduct t₁ t₂) t₃).elementaryWeight τ i) =
+      (∑ i, (ButcherProduct t₁ (ButcherProduct t₂ t₃)).b i *
+        (ButcherProduct t₁ (ButcherProduct t₂ t₃)).elementaryWeight τ i) := by
+  set L := ButcherProduct (ButcherProduct t₁ t₂) t₃
+  set R := ButcherProduct t₁ (ButcherProduct t₂ t₃)
+  set σ : Fin ((s + t) + u) ≃ Fin (s + (t + u)) := finReassoc s t u
+  have hA : ∀ i j, L.A i j = R.A (σ i) (σ j) := by
+    intro i j; exact ButcherProduct.assoc_A t₁ t₂ t₃ i j
+  have hb : ∀ i, L.b i = R.b (σ i) := by
+    intro i; exact ButcherProduct.assoc_b t₁ t₂ t₃ i
+  calc
+    (∑ i, L.b i * L.elementaryWeight τ i)
+        = ∑ i, R.b (σ i) * R.elementaryWeight τ (σ i) := by
+            refine Finset.sum_congr rfl ?_
+            intro i _
+            rw [hb i, elementaryWeight_eq_of_A σ hA τ i]
+    _ = ∑ i, R.b i * R.elementaryWeight τ i :=
+            Equiv.sum_comp σ (fun i => R.b i * R.elementaryWeight τ i)
+
+namespace QuotEquiv
+
+/-- Butcher-series associativity on relabel-equivalence classes. The
+`bSeries` lifted to `QuotEquiv` is associative under `product`, even though
+the raw `ButcherProduct` is not on-the-nose associative. -/
+theorem product_bSeries_assoc {s t u : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) (q₃ : QuotEquiv u) (τ : BTree) :
+    bSeries (product (product q₁ q₂) q₃) τ =
+      bSeries (product q₁ (product q₂ q₃)) τ := by
+  refine Quotient.inductionOn₃ q₁ q₂ q₃ ?_
+  intro t₁ t₂ t₃
+  simpa [product, bSeries] using
+    ButcherProduct.bSeries_assoc t₁ t₂ t₃ τ
+
+/-- The lifted weights-sum `weightsSum` is associative under `product`. -/
+theorem product_weightsSum_assoc {s t u : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) (q₃ : QuotEquiv u) :
+    (product (product q₁ q₂) q₃).weightsSum =
+      (product q₁ (product q₂ q₃)).weightsSum := by
+  rw [product_weightsSum, product_weightsSum, product_weightsSum,
+      product_weightsSum, add_assoc]
+
+/-- Order-condition associativity: `(q₁ * q₂) * q₃` satisfies the tree
+condition for `τ` iff `q₁ * (q₂ * q₃)` does. This is the §384-facing
+consequence of `bSeries` associativity. -/
+theorem product_satisfiesTreeCondition_assoc {s t u : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) (q₃ : QuotEquiv u) (τ : BTree) :
+    satisfiesTreeCondition (product (product q₁ q₂) q₃) τ ↔
+      satisfiesTreeCondition (product q₁ (product q₂ q₃)) τ := by
+  rw [satisfiesTreeCondition_iff_bSeries,
+      satisfiesTreeCondition_iff_bSeries,
+      product_bSeries_assoc]
+
+end QuotEquiv
+
 end ButcherTableau

@@ -315,7 +315,19 @@ codebase.
     in `OpenMath/ButcherGroup.lean` (cycle 500); cycle 501 proved
     `ButcherProduct.equiv_congr` and lifted composition to
     `QuotEquiv.product`, with `QuotEquiv.product_weightsSum`.
-    Associativity-modulo-relabel on `QuotEquiv (s + t + u)` remains open.
+  - Cycle 502 landed **partial associativity** modulo relabel:
+    `ButcherProduct.assoc_A` and `ButcherProduct.assoc_b` (the `A`
+    matrix and `b` weights agree under the canonical reassociation
+    `finReassoc s t u : Fin ((s+t)+u) ≃ Fin (s+(t+u))`), the cross-size
+    helper `ButcherTableau.elementaryWeight_eq_of_A`, the raw
+    `ButcherProduct.bSeries_assoc`, and the QuotEquiv-level lifts
+    `QuotEquiv.product_bSeries_assoc`,
+    `QuotEquiv.product_weightsSum_assoc`, and
+    `QuotEquiv.product_satisfiesTreeCondition_assoc`. The `c` field
+    disagrees on the third block (`1+t₃.c` vs `2+t₃.c`); see
+    `.prover-state/issues/butcher_section382_composition.md`. Full
+    on-the-nose `IsRKEquivalent` associativity remains open and
+    requires reworking `ButcherProduct.c`.
 - [~] **§383 The Runge–Kutta group `G₁`** — elementary-weight
   homomorphism into the group of mappings on rooted trees. Prep layer
   landed in `OpenMath/ButcherGroup.lean` (cycle 497):
@@ -672,8 +684,17 @@ Concrete next steps:
   lifted `ButcherProduct` to
   `QuotEquiv s → QuotEquiv t → QuotEquiv (s + t)` via
   `ButcherProduct.equiv_congr`, and proved the lifted weights-sum law.
-  Next step: state/prove associativity on `QuotEquiv (s + t + u)`. The
-  homomorphism property remains blocked on §382 associativity.
+  Cycle 502 landed partial §382 associativity (`A` and `b` only) at the
+  raw level (`ButcherProduct.assoc_A`, `ButcherProduct.assoc_b`,
+  `ButcherProduct.bSeries_assoc`) and the QuotEquiv-level
+  `QuotEquiv.product_bSeries_assoc`,
+  `QuotEquiv.product_weightsSum_assoc`,
+  `QuotEquiv.product_satisfiesTreeCondition_assoc`; the `c`-field
+  mismatch on the third block is recorded in
+  `.prover-state/issues/butcher_section382_composition.md`.
+  Next step: §384 elementary-weight homomorphism (only needs
+  `bSeries`-level associativity, so this is now unblocked), or rework
+  `ButcherProduct.c` to land on-the-nose `IsRKEquivalent` associativity.
 - Cover §387 special elements: identity (zero-stage), inverse, integer
   power.
 - Defer §389 effective order to a separate `OpenMath/EffectiveOrder.lean`
