@@ -5,9 +5,9 @@
     "status": "unformalized"
   },
   "def:110A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section110.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section110.LipschitzInSecond",
+    "status": "formalized"
   },
   "lem:110B": {
     "lean_file": null,
