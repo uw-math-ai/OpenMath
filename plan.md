@@ -471,6 +471,14 @@ codebase.
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq`,
   showing that when all root children are `BTree.leaf`, each kept-side
   auxiliary factor collapses to the plain row sum `∑ j, t₂.A i j`.
+  Cycle 530 added the bSeries-form corollary
+  `ButcherProduct.bSeries_natAdd_node_trunk_kept_leaf_eq` (specializing
+  the cycle 529 lemma at `coef := t₁.bSeries` via
+  `bSeries_natAdd_eq_rightAuxAtCoef`) and the kept singleton-node
+  trunk simplification
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_eq`,
+  expanding the kept-side recursive auxiliary one structural level via
+  `rightAuxAtCoef_node_singleton` when each kept child is `BTree.node [gc p]`.
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
   general `(trunk, cuts)` closed form for
@@ -945,7 +953,14 @@ Concrete next steps:
   529 added the trunk-side kept-leaf simplification
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq`,
   showing that under an all-leaves root-child hypothesis the kept-side
-  factors reduce to `∑ j, t₂.A i j`.
+  factors reduce to `∑ j, t₂.A i j`. Cycle 530 added the bSeries-form
+  corollary `ButcherProduct.bSeries_natAdd_node_trunk_kept_leaf_eq`
+  (specializing cycle 529 at `coef := t₁.bSeries` via
+  `bSeries_natAdd_eq_rightAuxAtCoef`) and the kept singleton-node trunk
+  simplification
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_eq`,
+  expanding the kept-side recursive auxiliary one structural level via
+  `rightAuxAtCoef_node_singleton` when each kept child is `BTree.node [gc p]`.
   The next seam is the trunk-side recursive decomposition that turns
   the kept-side `(∏ p ∈ Sᶜ, ∑ j, t₂.A i j * rightAuxAtCoef ...)`
   product into `t₂.bSeries`-only values on subtrees — i.e. the

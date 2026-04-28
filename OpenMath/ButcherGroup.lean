@@ -1799,6 +1799,68 @@ theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq
     rw [hchild p]
     simp [ButcherProduct.rightAuxAtCoef_leaf]
 
+/-- Trunk-recursion kept singleton-node simplification: if every child of the
+root is a one-child node `BTree.node [gc p]`, the kept-side recursive auxiliary
+factor in the trunk recursion expands one structural level using the
+single-child unfolding `ButcherProduct.rightAuxAtCoef_node_singleton`,
+exposing only coefficient values on the grandchild trees `gc p`. This is the
+kept-node companion to `bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq`,
+demonstrating that the trunk recursion factors through `coef`-only values one
+level beyond the leaf base case from cycle 529. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) (gc : Fin children.length → BTree)
+    (hChild : ∀ p : Fin children.length, children.get p = BTree.node [gc p]) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, coef (BTree.node [gc p])) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+                (coef (gc p) +
+                  ∑ k : Fin t, t₂.A j k *
+                    ButcherProduct.rightAuxAtCoef t₂ coef (gc p) k)) := by
+  classical
+  rw [ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion,
+      Finset.powerset_univ]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  · refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hChild p]
+  · refine Finset.sum_congr rfl ?_
+    intro i _
+    congr 1
+    refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hChild p]
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [ButcherProduct.rightAuxAtCoef_node_singleton]
+
+/-- bSeries-form corollary of
+`ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq`: when every
+child of the root is `BTree.leaf`, the second-method `b`-weighted stage sum
+of `ButcherProduct t₁ t₂` evaluated at `BTree.node children` collapses to
+the trunk-recursion RHS with `coef := t₁.bSeries`, so each cut factor
+becomes `t₁.bSeries BTree.leaf` and the kept factor is the plain row sum
+`∑ j, t₂.A i j`. -/
+theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree)
+    (hAllLeaf : ∀ c ∈ children, c = BTree.leaf) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight
+          (BTree.node children) (Fin.natAdd s i))
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ _p ∈ S, t₁.bSeries BTree.leaf) *
+            (∑ i : Fin t, t₂.b i *
+                ∏ _p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j) := by
+  rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
+      ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq
+        t₁ t₂ (t₁.bSeries) children hAllLeaf]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The
