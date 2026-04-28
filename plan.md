@@ -374,8 +374,15 @@ codebase.
   `g1Setoid` over `Σ s, QuotEquiv s`, defined the quotient carrier
   `G1 p` and projection `G1.mk`, and lifted the order-restricted
   invariants `G1.bSeriesHomAt`, `G1.satisfiesTreeCondition`, and
-  `G1.hasTreeOrder` with their `_mk` computation lemmas. The monoid/group
-  structure on `G1 p` remains open.
+  `G1.hasTreeOrder` with their `_mk` computation lemmas. Cycle 516
+  added the §387 identity element `G1.one : ℕ → G1 p` (the class of
+  `trivialTableau`) with its computation lemma `G1.bSeriesHomAt_one`,
+  the extensionality principle `G1.ext` plus its iff form
+  `G1.eq_iff_forall_bSeriesHomAt`, the class-equality bridge
+  `G1.mk_eq_mk_iff_isG1Equiv`, and the tree-order characterization
+  `G1.hasTreeOrder_iff_forall`. The monoid/group structure on `G1 p`
+  is open and now recorded as blocked on the §384 convolution gap;
+  see `.prover-state/issues/butcher_g1_mul_section384_blocker.md`.
 - [~] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
   Cycle 503 landed identity prep for `bSeries` under `QuotEquiv.product`:
@@ -784,9 +791,29 @@ Concrete next steps:
   `G1.mk`, the restricted coefficient lift `G1.bSeriesHomAt`, the
   guarded tree-condition lift `G1.satisfiesTreeCondition`, the
   quotient-level order predicate `G1.hasTreeOrder`, and their `_mk`
-  computation lemmas. §38 remains the current target; the next planned
-  layer is congruence of `QuotEquiv.product` under `IsG1Equiv` before
-  lifting multiplication to `G1 p`.
+  computation lemmas. Cycle 516 added the §387 identity element
+  `G1.one`, its computation lemma `G1.bSeriesHomAt_one`, an
+  extensionality principle for `G1 p` (`G1.ext`,
+  `G1.eq_iff_forall_bSeriesHomAt`, `G1.mk_eq_mk_iff_isG1Equiv`),
+  and the tree-order characterization `G1.hasTreeOrder_iff_forall`.
+- Cycle 516 also confirmed that the §38 group multiplication on
+  `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
+  `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
+  convolution. The right-block contribution to
+  `(t₁.product t₂).bSeries τ` involves the full structure of
+  `t₂.A`, not just `t₂.bSeries`, and a closed reduction to bSeries
+  values requires the `(trunk, cuts)` decomposition which is
+  precisely the §384 convolution. See
+  `.prover-state/issues/butcher_g1_mul_section384_blocker.md` and
+  `.prover-state/issues/butcher_section384_convolution.md`.
+- §38 remains the current target. The next planned layer once the
+  §384 convolution is in place is `IsG1Equiv.product_congr`, then
+  `G1.mul`, `G1.mul_mk`, `G1.bSeriesHomAt_mul`, then
+  `G1.one_mul` / `G1.mul_one` (using `G1.bSeriesHomAt_one` and
+  `G1.ext` from cycle 516). Until the §384 convolution lands, the
+  §38 work that is still unblocked is: §387 powers
+  `G1.npow`-style stage-count arithmetic that does not need
+  `G1.mul`, and additional `G1`-side characterization lemmas.
 
 Expected sorry-first surface:
 - `def ButcherProduct : ButcherTableau s → ButcherTableau t → ButcherTableau (s + t)`

@@ -1544,6 +1544,72 @@ noncomputable def hasTreeOrder {p : ℕ} : G1 p → Prop :=
     hasTreeOrder (mk (p := p) q) = q.hasTreeOrder p := by
   rfl
 
+/-- The identity element of `G₁(p)`: the class of the zero-stage tableau.
+This is the §387 group identity for the (still-pending) `G1.mul` lift. -/
+noncomputable def one (p : ℕ) : G1 p :=
+  mk (p := p) (Quotient.mk _ trivialTableau)
+
+/-- The Butcher-series coefficient of the `G₁(p)` identity vanishes on every
+tree, in particular on every tree of order ≤ `p`. -/
+@[simp] theorem bSeriesHomAt_one {p : ℕ} (τ : BTree) (hτ : τ.order ≤ p) :
+    bSeriesHomAt p τ hτ (G1.one p) = 0 := by
+  unfold one
+  rw [bSeriesHomAt_mk]
+  exact QuotEquiv.bSeriesHom_one τ
+
+/-- Extensionality for `G₁(p)`: two classes coincide as soon as their lifted
+rooted-tree coefficients agree at every tree of order ≤ `p`. This is the
+quotient-level restatement of `IsG1Equiv` and is the main tool for proving
+quotient equalities without unfolding the underlying `Quotient.mk`. -/
+theorem ext {p : ℕ} {g₁ g₂ : G1 p}
+    (h : ∀ τ : BTree, ∀ hτ : τ.order ≤ p,
+        bSeriesHomAt p τ hτ g₁ = bSeriesHomAt p τ hτ g₂) :
+    g₁ = g₂ := by
+  induction g₁ using Quotient.inductionOn with
+  | _ x =>
+    induction g₂ using Quotient.inductionOn with
+    | _ y =>
+      apply Quotient.sound
+      intro τ hτ
+      simpa [bSeriesHomAt, mk] using h τ hτ
+
+/-- The order-restricted bSeries map on `G₁(p)` is faithful: classes are
+equal iff they agree on every tree of order at most `p`. -/
+theorem eq_iff_forall_bSeriesHomAt {p : ℕ} (g₁ g₂ : G1 p) :
+    g₁ = g₂ ↔
+      ∀ τ : BTree, ∀ hτ : τ.order ≤ p,
+        bSeriesHomAt p τ hτ g₁ = bSeriesHomAt p τ hτ g₂ := by
+  refine ⟨fun h _ _ => by rw [h], ?_⟩
+  intro h
+  exact ext h
+
+/-- Bridging characterization: two quotient classes have equal `G₁(p)` images
+iff they are `IsG1Equiv`. -/
+theorem mk_eq_mk_iff_isG1Equiv {p s s' : ℕ}
+    (q : QuotEquiv s) (q' : QuotEquiv s') :
+    (mk (p := p) q = mk (p := p) q') ↔ IsG1Equiv p q q' := by
+  constructor
+  · intro h
+    have := Quotient.exact h
+    exact this
+  · intro h
+    exact Quotient.sound h
+
+/-- The `hasTreeOrder` predicate on `G₁(p)` is equivalent to satisfying every
+tree condition up to order `p`, mirroring the same-stage characterization for
+`QuotEquiv`. -/
+theorem hasTreeOrder_iff_forall {p : ℕ} (g : G1 p) :
+    g.hasTreeOrder ↔ ∀ τ : BTree, τ.order ≤ p → g.satisfiesTreeCondition τ := by
+  induction g using Quotient.inductionOn with
+  | _ x =>
+    show x.2.hasTreeOrder p ↔
+      ∀ τ : BTree, τ.order ≤ p →
+        (τ.order ≤ p → x.2.satisfiesTreeCondition τ)
+    rw [IsRKEquivalentExt.hasTreeOrder_iff_forall x.2 p]
+    refine forall_congr' fun τ => ?_
+    refine imp_congr_right fun hτ => ?_
+    exact ⟨fun h _ => h, fun h => h hτ⟩
+
 end G1
 
 end ButcherTableau
