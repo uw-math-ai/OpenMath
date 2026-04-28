@@ -154,17 +154,19 @@ theorem elementaryWeight_eq
                 refine Finset.sum_congr rfl ?_
                 intro k _
                 rw [hA i k, ih_head k]
-        _ = ∑ k : Fin s, t₁.A (σ i) k * t₁.elementaryWeight head k := by
-                exact Equiv.sum_comp σ
-                  (fun k : Fin s => t₁.A (σ i) k * t₁.elementaryWeight head k)
+      _ = ∑ k : Fin s, t₁.A (σ i) k * t₁.elementaryWeight head k := by
+                exact (Equiv.sum_comp σ
+                  (fun k : Fin s => t₁.A (σ i) k * t₁.elementaryWeight head k))
     rw [ih_tail i, hsum]
 
-/-- The rooted-tree order condition is invariant under relabel-equivalence. -/
-theorem satisfiesTreeCondition_iff {t₁ t₂ : ButcherTableau s}
+/-- The b-weighted elementary-weight sum is invariant under
+relabel-equivalence. This is the Butcher-series coefficient attached to a
+tree `τ`. -/
+theorem bSeries_eq {t₁ t₂ : ButcherTableau s}
     (h : IsRKEquivalent t₁ t₂) (τ : BTree) :
-    t₁.satisfiesTreeCondition τ ↔ t₂.satisfiesTreeCondition τ := by
+    (∑ i : Fin s, t₁.b i * t₁.elementaryWeight τ i) =
+      (∑ i : Fin s, t₂.b i * t₂.elementaryWeight τ i) := by
   obtain ⟨σ, hA, hb, _⟩ := h
-  unfold ButcherTableau.satisfiesTreeCondition
   have hsum :
       (∑ i : Fin s, t₂.b i * t₂.elementaryWeight τ i) =
         ∑ i : Fin s, t₁.b i * t₁.elementaryWeight τ i := by
@@ -175,13 +177,23 @@ theorem satisfiesTreeCondition_iff {t₁ t₂ : ButcherTableau s}
               intro i _
               rw [hb i, elementaryWeight_eq hA τ i]
       _ = ∑ i : Fin s, t₁.b i * t₁.elementaryWeight τ i := by
-              exact Equiv.sum_comp σ
-                (fun i : Fin s => t₁.b i * t₁.elementaryWeight τ i)
+              exact (Equiv.sum_comp σ
+                (fun i : Fin s => t₁.b i * t₁.elementaryWeight τ i))
+  exact hsum.symm
+
+/-- The rooted-tree order condition is invariant under relabel-equivalence. -/
+theorem satisfiesTreeCondition_iff {t₁ t₂ : ButcherTableau s}
+    (h : IsRKEquivalent t₁ t₂) (τ : BTree) :
+    t₁.satisfiesTreeCondition τ ↔ t₂.satisfiesTreeCondition τ := by
+  unfold ButcherTableau.satisfiesTreeCondition
+  have hsum := bSeries_eq h τ
   constructor
   · intro h₁
-    rw [hsum, h₁]
+    rw [← hsum]
+    exact h₁
   · intro h₂
-    rw [← hsum, h₂]
+    rw [hsum]
+    exact h₂
 
 /-- Tree order up to any order `p` is invariant under relabel-equivalence. -/
 theorem hasTreeOrder_iff {t₁ t₂ : ButcherTableau s}
@@ -240,6 +252,27 @@ def cSum (q : QuotEquiv s) : ℝ :=
 /-- Computation lemma: the lifted node-sum unfolds on a representative. -/
 @[simp] theorem cSum_mk (t : ButcherTableau s) :
     cSum (Quotient.mk _ t) = ∑ i, t.c i := rfl
+
+/-- Butcher series coefficient `∑ b_i Φ_i(τ)` lifted to relabel classes.
+This is the left-hand side of the order condition for a tree `τ`. -/
+noncomputable def bSeries (q : QuotEquiv s) (τ : BTree) : ℝ :=
+  Quotient.lift (fun t : ButcherTableau s =>
+      ∑ i, t.b i * t.elementaryWeight τ i)
+    (fun _ _ h => IsRKEquivalent.bSeries_eq h τ) q
+
+/-- Computation lemma: the lifted Butcher-series coefficient unfolds on a
+representative. -/
+@[simp] theorem bSeries_mk (t : ButcherTableau s) (τ : BTree) :
+    bSeries (Quotient.mk _ t) τ =
+      ∑ i, t.b i * t.elementaryWeight τ i := rfl
+
+/-- The lifted tree order condition is exactly the lifted Butcher-series
+coefficient equation. -/
+theorem satisfiesTreeCondition_iff_bSeries (q : QuotEquiv s) (τ : BTree) :
+    satisfiesTreeCondition q τ ↔ bSeries q τ = 1 / (τ.density : ℝ) := by
+  refine Quotient.inductionOn q ?_
+  intro t
+  simp [ButcherTableau.satisfiesTreeCondition]
 
 end QuotEquiv
 

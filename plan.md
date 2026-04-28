@@ -319,8 +319,10 @@ codebase.
   `IsRKEquivalent.hasTreeOrder_iff`. Quotient-facing packaging landed
   in cycle 498: `QuotEquiv` alias, `QuotEquiv.satisfiesTreeCondition`,
   `QuotEquiv.hasTreeOrder`, sanity lifts `QuotEquiv.weightsSum` /
-  `QuotEquiv.cSum`, plus the `_mk` computation lemmas. The
-  homomorphism-into-tree-mapping side of `G₁` remains open.
+  `QuotEquiv.cSum`, plus the `_mk` computation lemmas. Cycle 499 added the
+  quotient-facing Butcher-series coefficient map `QuotEquiv.bSeries` and
+  `satisfiesTreeCondition_iff_bSeries`. The homomorphism-into-tree-mapping
+  side of `G₁` remains open.
 - [ ] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
@@ -656,8 +658,10 @@ Concrete next steps:
   ≥(p+1)-order trees (§383).
 - Cycle 497 landed the §383 class-invariance prep layer:
   `elementaryWeight_eq`, `satisfiesTreeCondition_iff`, and
-  `hasTreeOrder_iff` for `IsRKEquivalent`; next define the quotient-facing
-  elementary-weight map.
+  `hasTreeOrder_iff` for `IsRKEquivalent`; cycles 498-499 added the
+  quotient-facing `QuotEquiv` packaging, including the lifted Butcher-series
+  coefficient map `QuotEquiv.bSeries`. The homomorphism property remains
+  blocked on §382 composition.
 - Cover §387 special elements: identity (zero-stage), inverse, integer
   power.
 - Defer §389 effective order to a separate `OpenMath/EffectiveOrder.lean`
