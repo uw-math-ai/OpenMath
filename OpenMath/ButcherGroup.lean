@@ -2000,6 +2000,103 @@ theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_eq
       ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq
         t₁ t₂ (t₁.bSeries) children]
 
+/-- Trunk-recursion depth-2 kept-children simplification: after the cycle 532
+kept-child pass-through, each kept grandchild that remains attached under a
+kept node child is simplified one structural layer further by case-splitting
+on whether that grandchild is a leaf or a node. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (coef : BTree → ℝ) (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, coef (children.get p)) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ,
+                (match children.get p with
+                 | BTree.leaf => ∑ j : Fin t, t₂.A i j
+                 | BTree.node gc =>
+                     ∑ j : Fin t, t₂.A i j *
+                       (∑ T : Finset (Fin gc.length),
+                         (∏ q ∈ Tᶜ, coef (gc.get q)) *
+                         (∏ q ∈ T,
+                           (match gc.get q with
+                            | BTree.leaf => ∑ k : Fin t, t₂.A j k
+                            | BTree.node ggc =>
+                                ∑ k : Fin t, t₂.A j k *
+                                  (∑ U : Finset (Fin ggc.length),
+                                    (∏ r ∈ Uᶜ, coef (ggc.get r)) *
+                                    (∏ r ∈ U, ∑ l : Fin t, t₂.A k l *
+                                      ButcherProduct.rightAuxAtCoef t₂ coef
+                                        (ggc.get r) l))))))) := by
+  classical
+  have _ht₁ : t₁ = t₁ := rfl
+  rw [ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq
+    t₁ t₂ coef children]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  congr 1
+  refine Finset.prod_congr rfl ?_
+  intro p _
+  generalize children.get p = c
+  cases c with
+  | leaf =>
+    rfl
+  | node gc =>
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    congr 1
+    refine Finset.sum_congr rfl ?_
+    intro T _
+    congr 1
+    refine Finset.prod_congr rfl ?_
+    intro q _
+    generalize gc.get q = c
+    cases c with
+    | leaf =>
+      simp [ButcherProduct.rightAuxAtCoef_leaf]
+    | node ggc =>
+      refine Finset.sum_congr rfl ?_
+      intro k _
+      rw [ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum]
+
+/-- bSeries-form corollary of
+`ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq`:
+specialize the depth-2 trunk kept-children simplification at
+`coef := t₁.bSeries`. -/
+theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight
+          (BTree.node children) (Fin.natAdd s i))
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, t₁.bSeries (children.get p)) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ,
+                (match children.get p with
+                 | BTree.leaf => ∑ j : Fin t, t₂.A i j
+                 | BTree.node gc =>
+                     ∑ j : Fin t, t₂.A i j *
+                       (∑ T : Finset (Fin gc.length),
+                         (∏ q ∈ Tᶜ, t₁.bSeries (gc.get q)) *
+                         (∏ q ∈ T,
+                           (match gc.get q with
+                            | BTree.leaf => ∑ k : Fin t, t₂.A j k
+                            | BTree.node ggc =>
+                                ∑ k : Fin t, t₂.A j k *
+                                  (∑ U : Finset (Fin ggc.length),
+                                    (∏ r ∈ Uᶜ, t₁.bSeries (ggc.get r)) *
+                                    (∏ r ∈ U, ∑ l : Fin t, t₂.A k l *
+                                      ButcherProduct.rightAuxAtCoef t₂
+                                        (t₁.bSeries) (ggc.get r) l))))))) := by
+  rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
+      ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq
+        t₁ t₂ (t₁.bSeries) children]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

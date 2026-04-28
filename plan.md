@@ -490,7 +490,12 @@ codebase.
   case-splitting each kept root child via an inline `match` on
   `BTree`, and added the bSeries-form corollary
   `ButcherProduct.bSeries_natAdd_node_trunk_kept_eq` (specializing at
-  `coef := t₁.bSeries`).
+  `coef := t₁.bSeries`). Cycle 533 pushed this trunk pass-through one
+  layer deeper with
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq`,
+  expanding the kept-grandchild factors under each kept node child by a
+  further inline `match`, and added the bSeries-form corollary
+  `ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq`.
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
   general `(trunk, cuts)` closed form for
@@ -984,11 +989,16 @@ Concrete next steps:
   (case-split each kept root child via inline `match` on `BTree`),
   and added the bSeries-form corollary
   `ButcherProduct.bSeries_natAdd_node_trunk_kept_eq` (specializing at
-  `coef := t₁.bSeries`).
-  The next seam is the trunk-side recursive decomposition that turns
-  the kept-side `(∏ p ∈ Sᶜ, ∑ j, t₂.A i j * rightAuxAtCoef ...)`
-  product into `t₂.bSeries`-only values on subtrees — i.e. the
-  honest `(trunk, cuts)` closed form for
+  `coef := t₁.bSeries`). Cycle 533 pushed this trunk pass-through one
+  layer deeper with
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq`,
+  expanding the kept-grandchild factors under each kept node child by a
+  further inline `match`, and added the bSeries-form corollary
+  `ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq`.
+  The next seam is the depth-3 trunk-side recursive decomposition that
+  keeps turning attached `rightAuxAtCoef` factors into exposed
+  powerset/match structure on subtrees — ultimately the honest
+  `(trunk, cuts)` closed form for
   `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`, which provides the
   non-tautological coefficient product needed by
   `QuotEquiv.bSeriesHom_product`.
