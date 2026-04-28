@@ -100,13 +100,17 @@ matches Butcher exactly.
 
 * `thm:111A` (inhomogeneous IVP, §111) — will inherit the same
   strengthening unless concatenation is built first.
-* `thm:112B` (one-sided Lipschitz bound, §112) — uses Grönwall directly,
-  may not be affected.
 * `lem:319A` (Chapter 3) — depends on existence; would inherit.
+
+(`thm:112B`, the one-sided Lipschitz bound, was originally listed here.
+Cycle 010 confirmed that `thm:112B` is a uniqueness-style / Grönwall
+statement: existence of `y, z` is a *hypothesis*, not a conclusion.
+The theorem therefore does NOT inherit this issue and was formalized in
+cycle 010 as
+`OpenMath.Chapter1.Section112.one_sided_lipschitz_solution_diff_bound`.)
 
 ## Recommendation
 
-For cycles 009 and 010 (which target `thm:111A` and `thm:112B`), accept
-the strengthening as an inherited hypothesis. Schedule the concatenation
-infrastructure as a dedicated multi-cycle project after the §110–§112
-cluster lands.
+For cycle 009 (which targeted `thm:111A`), accept the strengthening as an
+inherited hypothesis. Schedule the concatenation infrastructure as a
+dedicated multi-cycle project after the §110–§112 cluster lands.

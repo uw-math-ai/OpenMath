@@ -30,9 +30,9 @@
     "status": "formalized"
   },
   "thm:112B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section112.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section112.one_sided_lipschitz_solution_diff_bound",
+    "status": "formalized"
   },
   "thm:123A": {
     "lean_file": "OpenMath/Chapter1/Section123.lean",
