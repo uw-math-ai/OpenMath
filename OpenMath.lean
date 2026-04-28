@@ -1,6 +1,8 @@
 import OpenMath.Basic
 import OpenMath.EulerConvergence
 import OpenMath.MultistepMethods
+import OpenMath.OneLegMethods
+import OpenMath.GStability
 import OpenMath.LMMTruncationOp
 import OpenMath.DahlquistEquivalence
 import OpenMath.Collocation

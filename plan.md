@@ -78,9 +78,11 @@ codebase.
 - §120–§124 are again example problems (many-body gravitation,
   delay equations, problems on the sphere, further Hamiltonians, DAEs).
   No formal items at this level. The Hamiltonian-flow scaffold in
-  `.prover-state/scratch/Hamiltonian.lean` (carried over from the
-  cycle 491 attempt) targets §123 background and §370 motivation; it is
-  not currently on the active path.
+  `OpenMath/Hamiltonian.lean` (cycle 491; `Hamiltonian.energy_conserved`
+  for the exact flow) covers §123 background and §370 motivation. It is
+  *not* a prerequisite for §370A (which is about the *RK update*
+  preserving quadratic invariants of the ODE, not about the exact
+  Hamiltonian flow), and it is not on the active formalization path.
 
 ### §13 Difference Equation Problems
 - §130–§135 are example difference-equation problems (Fibonacci,
@@ -417,15 +419,16 @@ error bound for one specific scheme:
 - [ ] **§443 Order arrows for linear multistep methods** — explicit
   LMM-side restatement open.
 
-### §45 One-Leg Methods and G-stability *(open, near-term target)*
-- [ ] **§450 One-leg counterpart** to a linear multistep method — define
-  the one-leg method and the bijection to its LMM (new file
-  `OpenMath/OneLegMethods.lean`).
-- [ ] **§451 G-stability** — define the `G`-norm associated to a positive
-  semi-definite `G`, the contractivity condition
-  `‖U_{n+1}‖_G² ≤ ‖U_n‖_G² + 2 h ⟨U_{n+1}, F⟩` and that A-stable
-  one-leg methods are G-stable for some `G` (new file
-  `OpenMath/GStability.lean`).
+### §45 One-Leg Methods and G-stability *(partly closed; follow-ups open)*
+- [x] **§450 One-leg counterpart** to a linear multistep method —
+  coefficient-level `OneLegMethod`, `OneLegMethod.toLMM`,
+  `LMM.toOneLeg`, round trips, and the trapezoidal one-leg method
+  `OneLegMethod.trapezoid` with
+  `OneLegMethod.trapezoid_toLMM_eq_lmm_trapezoid`
+  (`OpenMath/OneLegMethods.lean`).
+- [x] **§451 G-stability** — `gNormSq`, scalar `OneLegMethod.IsGStable`,
+  and `OneLegMethod.trapezoid_isGStable_with_G_one` for the `1×1`
+  identity matrix (`OpenMath/GStability.lean`).
 - [ ] **§452 Transformations** between one-leg and LMM.
 - [ ] **§453 Effective order interpretation** of the transformation.
 - [ ] **§454 Concluding remarks**.
@@ -525,8 +528,6 @@ error bound for one specific scheme:
 - **Chapters 1–4 are essentially closed** modulo the three Blockers
   below and small low-priority survey items.
 - **Highest-value gaps inside the existing chapters:**
-  - §37 Symplectic RK (small, builds on existing RK / `Collocation.lean`,
-    natural Aristotle target).
   - §38 Algebraic Properties / Butcher group (Butcher's namesake topic;
     medium-sized).
   - §45 One-Leg Methods and G-stability (medium-sized).
@@ -536,38 +537,114 @@ error bound for one specific scheme:
 
 ---
 
+## Backlog Queue
+
+> **Source of truth for the planner's next-target rotation.** When
+> the items in `## Current Target` are closed in tracked Lean code, the
+> planner's first instruction in `strategy.md` must be: mark the closed
+> items `[x]` in their chapter section, delete the closed body of
+> `## Current Target`, and copy the **top item below** into
+> `## Current Target` with concrete steps for the worker. Cross items
+> off this list as they are promoted into `## Current Target`. New
+> items always append at the bottom; **do not reorder closed work to
+> the top.**
+
+> **§45 (One-Leg Methods and G-stability) was completed for cycle 493;
+> §334 Fehlberg 4(5) was promoted to `## Current Target`.** Items below
+> renumber from #1.
+
+1. **Butcher §38 — Butcher group (algebraic RK properties).** New file
+   `OpenMath/ButcherGroup.lean`. §380 motivation, §381 equivalence
+   classes under stage relabelling, §382 composition group, §383 the
+   `G₁` group via elementary-weight homomorphism, §387 special elements
+   (identity, inverse, power). Defer §389 effective order to a sibling
+   `OpenMath/EffectiveOrder.lean`.
+2. **Butcher §500 — General linear method definition.** New file
+   `OpenMath/GeneralLinearMethod.lean`. The four-block
+   `(A, U, B, V)` data of sizes `s×s`, `s×r`, `r×s`, `r×r` and the
+   one-step update on `r`-vectors of input quantities.
+3. **Butcher §502 — RK as a general linear method.** Extend
+   `OpenMath/GeneralLinearMethod.lean` with the embedding
+   `r = 1`, `U = 𝟙`, `V = 1`. Use the existing `ButcherTableau`.
+4. **Butcher §503 — LMM as a general linear method.** Extend
+   `OpenMath/GeneralLinearMethod.lean` with the `s = 1` Nordsieck-vector
+   embedding. Use the existing `LMM` interface.
+5. **Butcher §510 — GLM consistency and stability definitions.**
+   `OpenMath/GeneralLinearMethod.lean`. Direct generalisation of §40.
+6. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
+   ⟹ convergence` for GLMs. The existing
+   `OpenMath/DahlquistEquivalence.lean` is a special case; the GLM
+   version reduces to the same companion-matrix spectral bound.
+7. **Butcher §111 — Linear systems of differential equations.** New
+   file `OpenMath/LinearODE.lean`. `y(x) = exp((x − x₀) A) y₀` as a
+   thin re-export of Mathlib `Matrix.exp` plus `Matrix.exp_add` for
+   commuting matrices.
+8. **Butcher §250 — Taylor series methods.** New file
+   `OpenMath/TaylorSeriesMethod.lean`. Fixed-order truncation of the
+   Taylor expansion of `y(x+h)`; consistency and order from existing
+   `OneStepConvergence.lean` machinery.
+9. **Butcher §341 — Solvability of implicit RK equations.** Thin
+    wrapper over Mathlib `ContractingWith` proving stage solvability
+    when `h · L · max_i Σ_j |A_{ij}| < 1`. Likely lives in
+    `OpenMath/RungeKutta.lean`.
+10. **Butcher §215 — Asymptotic error formula for the Euler method.**
+    Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
+    ODE. Extends `OpenMath/EulerConvergence.lean`.
+11. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
+    Same template as §334. Extends `OpenMath/EmbeddedRK.lean`.
+12. **Butcher §463 — Milne device for local error estimation.** New
+    file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
+    error from the difference, classical estimate.
+13. **Butcher §520–§522 — Stability matrix of a GLM and the
+    Butcher–Chipman conjecture (outline).** Extends the GLM file family.
+    Stability matrix `M(z) := V + z B (I − z A)⁻¹ U`, Padé-like
+    conditions on `M(z)`, outline of order of `M(z)` as approximation to
+    `exp(z) · I`.
+14. **Butcher §54 — DIMSIM types and ARK methods.** New file
+    `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
+    structural conditions.
+15. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+    `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
+    property F.
+16. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+    §365 (effective order definition / DESIRE) plus §389 algebraic
+    interpretation. Builds on item #1.
+17. **Butcher §372 — Symplectic order conditions.** Short corollary in
+    `OpenMath/SymplecticRK.lean`: an `IsSymplectic` method satisfying
+    order-`p` conditions automatically satisfies the symplectic
+    order-`p` conditions. Trivial follow-up to §370A.
+18. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+    restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
+    new sibling. Reuses the §354 / §355 machinery.
+
+When this list reaches under five items, any planner cycle that lands
+without completing real work must append at least one new concrete
+target before exiting (drawn from the chapter sections above). Do not
+let the queue empty.
+
+---
+
 ## Current Target
 
-**§37 (Symplectic RK) closed in cycle 492** — `OpenMath/SymplecticRK.lean`
-contains the `symplecticDefect` / `IsSymplectic` predicates, the §370A
-quadratic-invariant preservation theorem (`IsSymplectic.preserves_quadInv`),
-and §371 examples for Gauss–Legendre 1/2/3-stage. §372 (the trivial
-order-condition corollary) and §373 (informal experiments) remain open
-as low-priority follow-ups.
+**Butcher §334 — Fehlberg 4(5) (RKF45) embedded pair.** Extend
+`OpenMath/EmbeddedRK.lean` with the Fehlberg tableau, mirroring the
+Heun–Euler 2(1) and Bogacki–Shampine 3(2) embedded-pair templates
+already in that file.
 
-**Highest priority for the next planner cycle: close Butcher §45
-(One-Leg Methods and G-stability)** — define the one-leg counterpart
-of an LMM in `OpenMath/OneLegMethods.lean`, define the `G`-norm and
-G-stability predicate in `OpenMath/GStability.lean`, and prove that
-the trapezoidal rule (one-leg `θ = 1/2` method) is G-stable with
-`G = 1`.
+Concrete next steps:
 
-Sorry-first, batch ~5 Aristotle jobs, sleep 30 minutes, incorporate
-proofs that compile against live infrastructure, close remaining
-goals manually. Keep `maxHeartbeats ≤ 200000`.
-
-**If §45 is unexpectedly blocked,** pivot to **Butcher §334 Fehlberg
-4(5) (RKF45)**: extend `OpenMath/EmbeddedRK.lean` with the Fehlberg
-tableau, mirror the Heun–Euler 2(1) and Bogacki–Shampine 3(2)
-templates already in that file. No new framework needed.
-
-After §45 closes, the medium-term path is:
-1. §38 Butcher group / algebraic RK properties (close Ch 3).
-2. **Chapter 5 General Linear Methods** — start with §500 (the
-   four-block `(A, U, B, V)` definition) and §502 / §503 (RK and LMM
-   embeddings) so that the existing RK and LMM infrastructure becomes
-   reusable inside the GLM framework. This will be a multi-cycle
-   programme.
+- Read the existing `OpenMath/EmbeddedRK.lean` definitions for embedded
+  tableaux, consistency, low/high-order proofs, and error-weight closure.
+- Add the classical Fehlberg 4(5) coefficient data in the same local
+  style: stages, `A`, `b` for the order-5 weights, `bHat` for the
+  order-4 weights, and `c` row sums.
+- Prove the tableau consistency facts by the same `norm_num`/finite-sum
+  pattern used for Heun–Euler and Bogacki–Shampine.
+- Prove the embedded orders 4 and 5 by mirroring the existing order
+  condition lemmas, extracting any repeated rational arithmetic into
+  small private helpers if needed.
+- Close the RKF45 error-weight theorem showing the embedded difference
+  weights match the two Fehlberg weight vectors.
 
 ### Do NOT
 
@@ -590,23 +667,23 @@ After §45 closes, the medium-term path is:
   `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`
   is decisive under the live `IsCollocation` interface.
 - Do **not** create new tracked `OpenMath/*.lean` files containing live
-  `sorry` outside the active §37 / §45 / Ch 5 target. Scratch belongs
+  `sorry` outside the active §334 target or explicitly scheduled
+  follow-up targets. Scratch belongs
   in `.prover-state/scratch/`.
-- Do **not** re-resurrect the Iserles-flavoured Hamiltonian-flow
-  energy-conservation theorem at this time. The cycle 491 scaffold lives
-  in `.prover-state/scratch/Hamiltonian.lean`; it is not on the active
-  Butcher path (§370 is about the *RK method* preserving quadratic
-  invariants of the ODE, not about the exact Hamiltonian flow). If a
-  future cycle wants the scratch back, lift it as Butcher §123 / §370
-  motivation, not as the headline.
+- Do **not** extend `OpenMath/Hamiltonian.lean` as the cycle's headline
+  target. The cycle 491 file (`Hamiltonian.energy_conserved` for the
+  *exact* flow) is informally Butcher §123 / §370 motivation, not an
+  active formalization seam. §370 is about the *RK method* preserving
+  quadratic invariants of the ODE, not about the exact Hamiltonian flow,
+  and is now closed in `OpenMath/SymplecticRK.lean`. Touch
+  `OpenMath/Hamiltonian.lean` only for genuine maintenance, not as a way
+  to manufacture a cycle.
 
 ---
 
 ## Sorry Locations
 
 - No active `sorry`s in tracked code.
-- Scratch (`.prover-state/scratch/Hamiltonian.lean`, untracked) carries
-  9 sorries from the cycle 491 attempt; not in the Butcher active path.
 
 ---
 
