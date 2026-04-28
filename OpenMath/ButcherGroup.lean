@@ -1839,6 +1839,45 @@ theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_e
     intro j _
     rw [ButcherProduct.rightAuxAtCoef_node_singleton]
 
+/-- Trunk-recursion kept node simplification: if every child of the root is
+a node `BTree.node (gc p)`, the kept-side recursive auxiliary factor in the
+trunk recursion expands by the full powerset decomposition over the
+grandchildren of each kept child. This generalizes
+`bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_eq` from singleton
+grandchild lists to arbitrary grandchild lists. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_node_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) (gc : Fin children.length → List BTree)
+    (hChild : ∀ p : Fin children.length, children.get p = BTree.node (gc p)) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, coef (BTree.node (gc p))) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+                (∑ T : Finset (Fin (gc p).length),
+                  (∏ q ∈ Tᶜ, coef ((gc p).get q)) *
+                    (∏ q ∈ T, ∑ k : Fin t, t₂.A j k *
+                      ButcherProduct.rightAuxAtCoef t₂ coef ((gc p).get q) k))) := by
+  classical
+  rw [ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion,
+      Finset.powerset_univ]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  · refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hChild p]
+  · refine Finset.sum_congr rfl ?_
+    intro i _
+    congr 1
+    refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hChild p]
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum]
+
 /-- bSeries-form corollary of
 `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq`: when every
 child of the root is `BTree.leaf`, the second-method `b`-weighted stage sum
@@ -1860,6 +1899,30 @@ theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_leaf_eq
   rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
       ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq
         t₁ t₂ (t₁.bSeries) children hAllLeaf]
+
+/-- bSeries-form corollary of
+`ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_eq`:
+when every child of the root is a one-child node `BTree.node [gc p]`, the
+second-method `b`-weighted stage sum of `ButcherProduct t₁ t₂` is the
+coefficient-parametric trunk-recursion RHS specialized at
+`coef := t₁.bSeries`. -/
+theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_singleton_node_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) (gc : Fin children.length → BTree)
+    (hChild : ∀ p : Fin children.length, children.get p = BTree.node [gc p]) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight
+          (BTree.node children) (Fin.natAdd s i))
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, t₁.bSeries (BTree.node [gc p])) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+                (t₁.bSeries (gc p) +
+                  ∑ k : Fin t, t₂.A j k *
+                    ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) (gc p) k)) := by
+  rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
+      ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_singleton_node_eq
+        t₂ (t₁.bSeries) children gc hChild]
 
 namespace QuotEquiv
 
