@@ -1,412 +1,605 @@
 # Formalization Plan
 
 ## Textbook
-*A First Course in the Numerical Analysis of Differential Equations* — Arieh Iserles (Cambridge, 2nd edition)
+*A First Course in the Numerical Analysis of Differential Equations* — Arieh Iserles (Cambridge, 2nd edition).
+
+This plan follows Iserles' chapter numbering exactly. Theorem labels of the form
+`NMS_n` (e.g. `212A`, `351B`, `358A`) are Iserles' own §N.M.S enumeration and are
+preserved verbatim.
 
 ## Status Key
-- [x] Formalized (0 sorry)
-- [ ] Not started
-- [~] In progress
+- `[x]` Formalized (no live `sorry`)
+- `[ ]` Not started
+- `[~]` In progress
+- `[-]` Blocked or deferred — see **Blockers** at the end
 
-## Chapter 1: Multistep Methods
+## Status Summary
 
-### 1.1 The Picard–Lindelöf Theorem and Euler Method
+- **Part I, Chapters 1–4 (ODE theory and stability):** essentially closed.
+  Open items are blockers, not scheduled work.
+- **Part I, Chapter 5 (Geometric integration):** symmetry/adjoint/reflected
+  foundations exist; symplectic / Hamiltonian / Verlet content is **the
+  active frontier**.
+- **Part I, Chapter 6 (Error control):** embedded-RK infrastructure and two
+  embedded pairs exist; Milne device, Fehlberg, DOPRI, and step control are open.
+- **Part I, Chapter 7 (Nonlinear algebraic systems):** unstarted.
+- **Part II (Chs 8–11) and Part III (Chs 12–17):** unstarted, scoped here as
+  stubs so the planner has visible forward direction.
+
+---
+
+## Chapter 1: Euler's Method and Beyond
+
+### 1.1 ODEs and the Lipschitz condition
 - [x] **Definition 110A**: Lipschitz condition in second variable (`OpenMath/PicardLindelof.lean`)
 - [x] **Theorem 110C**: Picard–Lindelöf existence and uniqueness (`OpenMath/PicardLindelof.lean`)
   - [x] Uniqueness via Gronwall (`PicardLindelof.unique`)
   - [x] Continuous dependence on initial data (`PicardLindelof.continuous_dependence`)
   - [x] Perturbation bound (`PicardLindelof.perturbation_bound`)
-  - [x] Combined exists_unique
+  - [x] Combined `exists_unique`
   - [x] Existence via bisection induction (`PicardLindelof.exists_solution`)
-- [x] **Theorem 212A**: Global truncation error bound for Euler method (`OpenMath/Basic.lean`)
-- [x] **Theorem 213A**: Convergence of the Euler method (`OpenMath/EulerConvergence.lean`)
-  - Statement: If f is Lipschitz and sufficiently smooth, the Euler method converges with order 1
 
-### 1.2 Multistep Methods
-- [x] **Definition**: General linear multistep method infrastructure (`OpenMath/MultistepMethods.lean`); Adams–Bashforth and Adams–Moulton families (`OpenMath/AdamsMethods.lean`)
-- [x] **Example**: Adams–Moulton 2-step method — consistency, order 3, implicit, zero-stable (`OpenMath/AdamsMethods.lean`)
-- [x] **Adams–Bashforth 3-step**: consistency, order 3, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Moulton 3-step**: consistency, order 4, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Bashforth 4-step**: consistency, order 4, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Moulton 4-step**: consistency, order 5, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Bashforth 5-step**: consistency, order 5, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Moulton 5-step**: consistency, order 6, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Bashforth 6-step**: consistency, order 6, explicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Adams–Moulton 6-step**: consistency, order 7, implicit, zero-stability, convergence (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
-- [x] **Infrastructure**: Adams zero-stability proofs share the reusable characteristic-polynomial helper
-  `adams_zeroStable_of_rhoC_pow_mul` (`OpenMath/AdamsMethods.lean`, cycle 389)
-- [x] **Error constants**: `LMM.errorConstant`; forward Euler = 1/2, backward Euler = −1/2, trapezoidal = −1/12; AB2 = 5/12, AM2 = −1/24, AB3 = 3/8, AM3 = −19/720, AB4 = 251/720, AM4 = −3/160, AB5 = 95/288, AM5 = −863/60480, AB6 = 19087/60480, AM6 = −275/24192; BDF2 = −2/9, BDF3 = −3/22, BDF4 = −12/125, BDF5 = −10/137, BDF6 = −20/343, BDF7 = −35/726 (computed despite zero-instability) (`OpenMath/MultistepMethods.lean`, `OpenMath/AdamsMethods.lean`, cycles 390–393)
-- [x] **Adams error-constant signs**: AB2–AB6 are strictly positive and AM2–AM6 are strictly negative (`OpenMath/AdamsMethods.lean`, cycle 393)
-- [x] **Truncation operator**: definition `LMM.truncationOp`, monomial identity `truncationOp_monomial_zero`, linearity, vanishing on order-`p` monomials, converse/iff order-condition packaging, direct truncation-operator sufficient condition on monomials, leading coefficient at `t^(p+1)` equals `(p+1)! · errorConstant p · h^(p+1)` (`OpenMath/LMMTruncationOp.lean`, cycles 394–395; split from `OpenMath/MultistepMethods.lean` in cycle 397)
-  - [x] **Polynomial-form truncation operator**: finset-sum linearity `truncationOp_finset_sum`, polynomial-combination identity `truncationOp_polyCombination_zero`, degree-`≤ p` vanishing for order-`p` methods `truncationOp_polyCombination_eq_zero_of_HasOrder`, degree-`p+1` leading-coefficient formula `truncationOp_polyDegSucc_eq_leading_of_HasOrder` (`OpenMath/LMMTruncationOp.lean`, cycle 396; split in cycle 397)
-  - [x] **Translation-invariant truncation operator**: `truncationOp_translation` and shifted-polynomial vanishing `truncationOp_polyShift_eq_zero_of_HasOrder` move the order-`p` polynomial vanishing theorem from the origin to evaluation point `t` for polynomials in `(u - t)` (`OpenMath/LMMTruncationOp.lean`, cycle 397)
-  - [x] **Translated leading-coefficient identity**: `truncationOp_polyShiftDegSucc_eq_leading_of_HasOrder` — for an order-`p` LMM, the truncation operator at evaluation point `t` on a degree-`p+1` polynomial in `(u - t)` reduces to its leading coefficient times `(p+1)! · errorConstant p · h^(p+1)` (`OpenMath/LMMTruncationOp.lean`, cycle 398)
-  - [x] **Polynomial-eval truncation wrappers**: `truncationOp_polynomial_eval_eq_zero_of_HasOrder` and `truncationOp_polynomial_eval_eq_leading_of_HasOrder` bridge the finite-tuple polynomial identities to `Polynomial.eval`/`Polynomial.derivative.eval` at the origin (`OpenMath/LMMTruncationOp.lean`, cycle 399)
-  - [x] **Shifted polynomial-eval truncation wrappers**: `truncationOp_polynomial_evalShift_eq_zero_of_HasOrder` and `truncationOp_polynomial_evalShift_eq_leading_of_HasOrder` lift the `Polynomial.eval` wrappers from the origin to evaluation point `t` (`OpenMath/LMMTruncationOp.lean`, cycle 399)
-  - [x] **Taylor-polynomial truncation wrappers**: local definition `taylorPoly y t n := ∑ k ∈ range (n+1), C (y k t / k!) * X^k`; degree bound `taylorPoly_natDegree_le`; coefficient formula `taylorPoly_coeff`; `truncationOp_taylorPoly_eq_zero_of_HasOrder` (degree-`p` Taylor polynomial vanishes); headline `truncationOp_taylorPoly_eq_leading_of_HasOrder` — for an order-`p` LMM, the truncation operator at `t` on the degree-`p+1` Taylor polynomial of `y` about `t` equals `y^(p+1)(t) · errorConstant p · h^(p+1)` (the polynomial-side ingredient of Iserles' local truncation error formula) (`OpenMath/LMMTruncationOp.lean`, cycle 400)
-  - [x] **Smooth Taylor-remainder bridge**: `taylorPolyOf`, residual decomposition `truncationOp_smooth_eq_taylor_residual`, pointwise value/derivative residual bounds, and `truncationOp_smooth_eq_leading_add_remainder` bound the smooth truncation operator by the Taylor leading term plus a theorem-local `h^(p+2)` remainder constant. The current existential-constant surface is weak because `C` may depend on the fixed `h`; strengthening to a uniform small-`h` estimate remains the next local-error task. (`OpenMath/LMMTruncationOp.lean`, cycle 401)
-  - [x] **Uniform local truncation error bridge**: `truncationOp_smooth_local_truncation_error` — for an order-`p` LMM acting on `ContDiff ℝ (p+2) y`, exhibits a uniform `(C, δ)` pair with `δ ≤ δ₀` such that `‖τ(t,h) − y^(p+1)(t) · errorConstant p · h^(p+1)‖ ≤ C · h^(p+2)` for **all** `h ∈ (0, δ]`, with `C` independent of `h`. Auxiliary infrastructure: `taylorWithinEval_eq_taylorPolyOf_eval`, `taylor_remainder_value_bound_uniform`, `taylor_remainder_deriv_bound_uniform`, and the polynomial identity `taylorPolyOf_derivative_eval`. The bridge is packaged via `localTruncationError` (= `truncationOp` applied to `(y, y')`) and `localTruncationError_leading_bound` (Iserles' textbook-form local truncation error statement). (`OpenMath/LMMTruncationOp.lean`, cycle 402)
-  - [x] **Exponential horizon Grönwall bridge**: `discrete_gronwall_exp_horizon` specializes the closed-form discrete Grönwall inequality to the textbook finite-horizon shape `e n ≤ exp(L*T) * e 0 + T * exp(L*T) * C * h^p` under `e (n+1) ≤ (1 + h*L) * e n + C*h^(p+1)` and `(n : ℝ) * h ≤ T`; `lmm_error_bound_from_local_truncation` packages the same bound under the LMM/global-error-facing name. (`OpenMath/LMMTruncationOp.lean`, cycle 405)
-  - [x] **Forward-Euler scalar convergence chain**: `LMM.forwardEulerIter` (explicit Euler iteration), `LMM.forwardEuler_localTruncationError_eq` (textbook one-step residual = LMM truncation operator), `LMM.forwardEuler_one_step_error_bound` (Lipschitz one-step error recurrence `e(n+1) ≤ (1+hL)·e(n) + |τ_n|`), `LMM.forwardEuler_local_residual_bound` (uniform `|τ_n| ≤ M/2 · h^2` from a `C^3` solution and a uniform `|y''|` bound on the sample interval), and the headline `LMM.forwardEuler_global_error_bound` (`|y_N - y(t₀ + N h)| ≤ T · exp(L T) · M/2 · h` for `0 < h ≤ δ`, `N h ≤ T`) — the textbook scalar-Euler `O(h)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 1`. (`OpenMath/LMMTruncationOp.lean`, cycle 406)
-  - [x] **Forward-Euler vector convergence chain**: `LMM.forwardEulerIterVec`, `LMM.forwardEulerVec_one_step_error_bound`, private helpers `iteratedDeriv_two_bounded_on_Icc_vec` and `forwardEulerVec_pointwise_residual_bound`, `LMM.forwardEulerVec_local_residual_bound`, and the headline `LMM.forwardEulerVec_global_error_bound` lift the cycle-406 scalar consumer chain to finite-dimensional normed vector spaces, using an interval-integral Taylor residual inequality and the same `lmm_error_bound_from_local_truncation` Grönwall bridge at `p = 1`. (`OpenMath/LMMTruncationOp.lean`, cycle 407)
-  - [x] **Adams–Bashforth 2-step scalar convergence chain**: `LMM.ab2Iter` (two starting samples, recurrence `y_{n+2} = y_{n+1} + h(3/2 f_{n+1} − 1/2 f_n)`), `LMM.ab2_localTruncationError_eq` (textbook AB2 one-step residual `y(t+2h) − y(t+h) − h(3/2 y'(t+h) − 1/2 y'(t))` equals the LMM truncation operator), `LMM.ab2_one_step_lipschitz` and `LMM.ab2_one_step_error_bound` (Lipschitz max-norm one-step recurrence `max(eₙ₊₁,eₙ₊₂) ≤ (1+h·2L)·max(eₙ,eₙ₊₁) + |τ_n|`), private helpers `iteratedDeriv_three_bounded_on_Icc`, `y_third_order_taylor_remainder`, `derivY_second_order_taylor_remainder`, `ab2_pointwise_residual_bound` (combined Taylor remainders giving `9/4·M·h³`), `LMM.ab2_local_residual_bound` (uniform `|τ_n| ≤ C·h³`), and the headline `LMM.ab2_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(2L·T)·ε₀ + K·h²` for `(N+1)·h ≤ T`) — the textbook AB2 `O(h²)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 2` with effective Lipschitz constant `2L`. (`OpenMath/LMMAB2Convergence.lean`, cycle 408; extracted from `OpenMath/LMMTruncationOp.lean` in cycle 414)
-  - [x] **Adams–Bashforth 2-step vector convergence chain**: `LMM.ab2IterVec`, `LMM.ab2VecResidual` + `LMM.ab2Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab2Vec_one_step_lipschitz` and `LMM.ab2Vec_one_step_error_bound` (max-norm Lipschitz recurrence `max(‖eₙ₊₁‖,‖eₙ₊₂‖) ≤ (1+h·2L)·max(‖eₙ‖,‖eₙ₊₁‖) + ‖τ_n‖`), private helpers `iteratedDeriv_three_bounded_on_Icc_vec`, `derivY_second_order_taylor_remainder_vec`, `y_third_order_taylor_remainder_vec`, `ab2Vec_pointwise_residual_bound` (combined `intervalIntegral` Taylor remainders giving `9/4·M·h³`), `LMM.ab2Vec_local_residual_bound`, and the headline `LMM.ab2Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(2L·T)·ε₀ + K·h²` for `(N+1)·h ≤ T`) — vector mirror of cycle 408 in finite-dimensional normed spaces, assembled via `lmm_error_bound_from_local_truncation` at `p = 2` with effective Lipschitz constant `2L`. (`OpenMath/LMMAB2Convergence.lean`, cycle 410; extracted from `OpenMath/LMMTruncationOp.lean` in cycle 414)
-  - [x] **Adams–Moulton 2-step scalar convergence chain**: `LMM.IsAM2Trajectory` (supplied implicit trajectory satisfying `yₙ₊₂ = yₙ₊₁ + h(5/12 fₙ₊₂ + 8/12 fₙ₊₁ − 1/12 fₙ)`), `LMM.am2_localTruncationError_eq`, `LMM.am2_one_step_lipschitz` and `LMM.am2_one_step_error_pair_bound` (implicit max-norm recurrence under `(5/12)hL ≤ 1/2`, slackened to growth `3L` and residual coefficient `2` after division), `LMM.am2_pointwise_residual_bound` and `LMM.am2_local_residual_bound` (`|τ_n| ≤ C·h⁴` from the public AB3 fourth-order Taylor helpers), and the headline `LMM.am2_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(3L·T)·ε₀ + K·h³` for `(N+1)·h ≤ T`) — the textbook AM2 `O(h³)` scalar convergence theorem for supplied implicit trajectories. (`OpenMath/LMMAM2Convergence.lean`, cycle 434)
-  - [x] **Adams–Moulton 2-step vector convergence chain**: `LMM.IsAM2TrajectoryVec` (supplied implicit vector trajectory `yₙ₊₂ = yₙ₊₁ + h • ((5/12) • fₙ₊₂ + (8/12) • fₙ₊₁ − (1/12) • fₙ)`), `LMM.am2Vec_localTruncationError_eq`, `LMM.am2Vec_one_step_lipschitz` and `LMM.am2Vec_one_step_error_pair_bound` (implicit max-norm recurrence under `(5/12)hL ≤ 1/2`, slackened to growth `3L` and residual coefficient `2` after division), `LMM.am2Vec_pointwise_residual_bound` and `LMM.am2Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h⁴` from the now-public AB3 vector fourth-order Taylor helpers `y_fourth_order_taylor_remainder_vec` / `derivY_third_order_taylor_remainder_vec`), and the headline `LMM.am2Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(3L·T)·ε₀ + K·h³` for `(N+1)·h ≤ T`) — the vector AM2 `O(h³)` convergence theorem in a finite-dimensional normed space. (`OpenMath/LMMAM2VectorConvergence.lean`, cycle 438)
-  - [x] **Adams–Bashforth 3-step scalar convergence chain**: `LMM.ab3Iter` (three starting samples, recurrence `y_{n+3} = y_{n+2} + h·(23/12·f_{n+2} − 16/12·f_{n+1} + 5/12·f_n)`), `LMM.ab3_localTruncationError_eq` (textbook AB3 one-step residual = LMM truncation operator), `LMM.ab3_one_step_lipschitz` and `LMM.ab3_one_step_error_bound` (Lipschitz 3-window max-norm one-step recurrence `max(eₙ₊₁,eₙ₊₂,eₙ₊₃) ≤ (1+h·(11/3)L)·max(eₙ,eₙ₊₁,eₙ₊₂) + |τ_n|` with effective Lipschitz constant `(23+16+5)/12 · L = 11L/3`), private helpers `iteratedDeriv_four_bounded_on_Icc`, `y_fourth_order_taylor_remainder`, `derivY_third_order_taylor_remainder`, `ab3_pointwise_residual_bound` (algebraic identity `R_y(3) − R_y(2) − (23h/12)·R_y'(2) + (16h/12)·R_y'(1)` giving `7·M·h⁴` over-estimate), `LMM.ab3_local_residual_bound` (uniform `|τ_n| ≤ C·h⁴`), and the headline `LMM.ab3_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((11/3)·L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`) — the textbook AB3 `O(h³)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 3`. (`OpenMath/LMMAB3Convergence.lean`, cycles 416 + 418)
-  - [x] **Adams–Bashforth 3-step vector convergence chain**: `LMM.ab3IterVec`, `LMM.ab3VecResidual` + `LMM.ab3Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab3Vec_one_step_lipschitz` and `LMM.ab3Vec_one_step_error_bound` (3-window max-norm Lipschitz recurrence with effective constant `(11/3)·L`), private interval-integral Taylor helpers `iteratedDeriv_four_bounded_on_Icc_vec`, `y_fourth_order_taylor_remainder_vec`, `derivY_third_order_taylor_remainder_vec`, and `ab3Vec_pointwise_residual_bound` (same `7·M·h⁴` over-estimate as the scalar chain), `LMM.ab3Vec_local_residual_bound`, and the headline `LMM.ab3Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((11/3)·L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`) — vector mirror of the scalar AB3 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB3Convergence.lean`, cycle 419)
-  - [x] **Adams–Moulton 3-step scalar convergence chain**: `LMM.IsAM3Trajectory` (supplied implicit trajectory satisfying `yₙ₊₃ = yₙ₊₂ + h(9/24 fₙ₊₃ + 19/24 fₙ₊₂ − 5/24 fₙ₊₁ + 1/24 fₙ)`), `LMM.am3_localTruncationError_eq`, `LMM.am3_one_step_lipschitz` and `LMM.am3_one_step_error_pair_bound` (3-window implicit recurrence under `(9/24)hL ≤ 1/2`; explicit AM3 weights contribute `25L/24`, and the divided proof uses conservative growth `3L`), `LMM.am3_pointwise_residual_bound` (fifth-order Taylor identity with coefficient `131/32`, slackened to `5`), `LMM.am3_local_residual_bound` (`|τ_n| ≤ C·h⁵`), and the headline `LMM.am3_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(3L·T)·ε₀ + K·h⁴` for `(N+2)·h ≤ T`) — the textbook AM3 `O(h⁴)` scalar convergence theorem for supplied implicit trajectories. (`OpenMath/LMMAM3Convergence.lean`, cycle 435)
-  - [x] **Adams–Moulton 3-step vector convergence chain**: `LMM.IsAM3TrajectoryVec` (supplied implicit vector trajectory `yₙ₊₃ = yₙ₊₂ + h • ((9/24) • fₙ₊₃ + (19/24) • fₙ₊₂ − (5/24) • fₙ₊₁ + (1/24) • fₙ)`), `LMM.am3Vec_localTruncationError_eq`, `LMM.am3Vec_one_step_lipschitz` and `LMM.am3Vec_one_step_error_pair_bound` (3-window implicit recurrence under `(9/24)hL ≤ 1/2`, slackened to growth `3L` and residual coefficient `2` after division), `LMM.am3Vec_pointwise_residual_bound` and `LMM.am3Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h⁵` from the now-public AB4 vector fifth-order Taylor helpers `y_fifth_order_taylor_remainder_vec` / `derivY_fourth_order_taylor_remainder_vec`), and the headline `LMM.am3Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(3L·T)·ε₀ + K·h⁴` for `(N+2)·h ≤ T`) — the vector AM3 `O(h⁴)` convergence theorem in a finite-dimensional normed space. (`OpenMath/LMMAM3VectorConvergence.lean`, cycle 439)
-  - [x] **Adams–Moulton 4-step scalar convergence chain**: `LMM.IsAM4Trajectory` (supplied implicit trajectory satisfying `yₙ₊₄ = yₙ₊₃ + h(251/720 fₙ₊₄ + 646/720 fₙ₊₃ − 264/720 fₙ₊₂ + 106/720 fₙ₊₁ − 19/720 fₙ)`), `LMM.am4_localTruncationError_eq`, `LMM.am4_one_step_lipschitz` and `LMM.am4_one_step_error_pair_bound` (4-window implicit recurrence under `(251/720)hL ≤ 1/2`; explicit AM4 weights contribute `1035/720 = 23L/16`, and the divided proof slackens growth to `4L` since `3L` does not close `nlinarith`), `LMM.am4_pointwise_residual_bound` (sixth-order Taylor identity with coefficient `250389/21600 ≈ 11.59`, slackened to `12`, using the now-public `iteratedDeriv_six_bounded_on_Icc` / `y_sixth_order_taylor_remainder` / `derivY_fifth_order_taylor_remainder` from `LMMAB5Convergence`), `LMM.am4_local_residual_bound` (`|τ_n| ≤ C·h⁶`), and the headline `LMM.am4_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(4L·T)·ε₀ + K·h⁵` for `(N+3)·h ≤ T`) — the textbook AM4 `O(h⁵)` scalar convergence theorem for supplied implicit trajectories. (`OpenMath/LMMAM4Convergence.lean`, cycle 436)
-  - [x] **Adams–Moulton 4-step vector convergence chain**: `LMM.IsAM4TrajectoryVec` (supplied implicit vector trajectory `yₙ₊₄ = yₙ₊₃ + h • ((251/720) • fₙ₊₄ + (646/720) • fₙ₊₃ − (264/720) • fₙ₊₂ + (106/720) • fₙ₊₁ − (19/720) • fₙ)`), `LMM.am4Vec_localTruncationError_eq`, `LMM.am4Vec_one_step_lipschitz` and `LMM.am4Vec_one_step_error_pair_bound` (4-window implicit recurrence under `(251/720)hL ≤ 1/2`, slackened to growth `4L` and residual coefficient `2` after division), `LMM.am4Vec_pointwise_residual_bound` and `LMM.am4Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h⁶` from the now-public AB5 vector sixth-order Taylor helpers `iteratedDeriv_six_bounded_on_Icc_vec` / `y_sixth_order_taylor_remainder_vec` / `derivY_fifth_order_taylor_remainder_vec`), and the headline `LMM.am4Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(4L·T)·ε₀ + K·h⁵` for `(N+3)·h ≤ T`) — the vector AM4 `O(h⁵)` convergence theorem in a finite-dimensional normed space. (`OpenMath/LMMAM4VectorConvergence.lean`, cycle 440)
-  - [x] **Adams–Moulton 5-step scalar convergence chain**: `LMM.IsAM5Trajectory` (supplied implicit trajectory satisfying `yₙ₊₅ = yₙ₊₄ + h(475/1440 fₙ₊₅ + 1427/1440 fₙ₊₄ − 798/1440 fₙ₊₃ + 482/1440 fₙ₊₂ − 173/1440 fₙ₊₁ + 27/1440 fₙ)`), `LMM.am5_localTruncationError_eq`, `LMM.am5_one_step_lipschitz` and `LMM.am5_one_step_error_pair_bound` (5-window implicit recurrence under `(475/1440)hL ≤ 1/2`; explicit AM5 weights contribute `2907/1440`, and the divided proof slackens growth to `5L`), `LMM.am5_pointwise_residual_bound` (seventh-order Taylor identity with coefficient `23325037/725760 ≈ 32.14`, slackened to `33`, using the now-public `iteratedDeriv_seven_bounded_on_Icc` / `y_seventh_order_taylor_remainder` / `derivY_sixth_order_taylor_remainder` from `LMMAB6ScalarConvergence`), `LMM.am5_local_residual_bound` (`|τ_n| ≤ C·h⁷`), and the headline `LMM.am5_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(5L·T)·ε₀ + K·h⁶` for `(N+4)·h ≤ T`) — the textbook AM5 `O(h⁶)` scalar convergence theorem for supplied implicit trajectories. (`OpenMath/LMMAM5Convergence.lean`, cycle 437)
-  - [x] **Adams–Moulton 5-step vector convergence chain**: `LMM.IsAM5TrajectoryVec` (supplied implicit vector trajectory `yₙ₊₅ = yₙ₊₄ + h • ((475/1440) • fₙ₊₅ + (1427/1440) • fₙ₊₄ − (798/1440) • fₙ₊₃ + (482/1440) • fₙ₊₂ − (173/1440) • fₙ₊₁ + (27/1440) • fₙ)`), `LMM.am5Vec_localTruncationError_eq`, `LMM.am5Vec_one_step_lipschitz` and `LMM.am5Vec_one_step_error_pair_bound` (5-window implicit recurrence under `(475/1440)hL ≤ 1/2`, slackened to growth `5L` and residual coefficient `2` after division), `LMM.am5Vec_pointwise_residual_bound` and `LMM.am5Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h⁷` from the now-public AB6 vector seventh-order Taylor helpers `iteratedDeriv_seven_bounded_on_Icc_vec` / `y_seventh_order_taylor_remainder_vec` / `derivY_sixth_order_taylor_remainder_vec`), and the headline `LMM.am5Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(5L·T)·ε₀ + K·h⁶` for `(N+4)·h ≤ T`) — the vector AM5 `O(h⁶)` convergence theorem in a finite-dimensional normed space. (`OpenMath/LMMAM5VectorConvergence.lean`, cycle 441)
-  - [x] **Adams–Moulton 6-step scalar convergence chain**: `LMM.IsAM6Trajectory`, `LMM.am6_localTruncationError_eq`, `LMM.am6_one_step_lipschitz` and `LMM.am6_one_step_error_pair_bound` (6-window implicit recurrence under `(19087/60480)hL ≤ 1/2`, slackened to growth `7L` and residual coefficient `2` after division), private eighth-order Taylor helpers, `LMM.am6_pointwise_residual_bound`, `LMM.am6_local_residual_bound` (`|τ_n| ≤ C·h⁸`, exact coefficient `1121952791/12700800` slackened to `89`), and the headline `LMM.am6_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(7L·T)·ε₀ + K·h⁷` for `(N+5)·h ≤ T`). (`OpenMath/LMMAM6Convergence.lean`, cycle 442)
-  - [x] **Adams–Moulton 6-step vector convergence chain**: `LMM.IsAM6TrajectoryVec` (supplied implicit vector trajectory with AM6 weights), `LMM.am6Vec_localTruncationError_eq`, `LMM.am6Vec_one_step_lipschitz` and `LMM.am6Vec_one_step_error_pair_bound` (6-window implicit recurrence under `(19087/60480)hL ≤ 1/2`, slackened to growth `7L` and residual coefficient `2` after division), private eighth-order vector Taylor helpers, `LMM.am6Vec_pointwise_residual_bound`, `LMM.am6Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h⁸`, exact coefficient `1121952791/12700800` slackened to `89`), and the headline `LMM.am6Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(7L·T)·ε₀ + K·h⁷` for `(N+5)·h ≤ T`) — the vector AM6 `O(h⁷)` convergence theorem in a finite-dimensional normed space. (`OpenMath/LMMAM6VectorConvergence.lean`, cycle 443)
-  - [x] **Adams–Moulton 7-step scalar convergence chain**: `LMM.adamsMoulton7` (added to `OpenMath/AdamsMethods.lean`), `LMM.IsAM7Trajectory` (supplied implicit trajectory satisfying `yₙ₊₇ = yₙ₊₆ + h·(36799/120960 fₙ₊₇ + 139849/120960 fₙ₊₆ − 121797/120960 fₙ₊₅ + 123133/120960 fₙ₊₄ − 88547/120960 fₙ₊₃ + 41499/120960 fₙ₊₂ − 11351/120960 fₙ₊₁ + 1375/120960 fₙ)`), `LMM.am7_localTruncationError_eq`, `LMM.am7_one_step_lipschitz` and `LMM.am7_one_step_error_pair_bound` (7-window implicit recurrence under `(36799/120960)hL ≤ 1/2`, slackened to growth `10L` and residual coefficient `2` after division — minimum integer `G ≥ 2(β + S) ≈ 9.33` is 10), private ninth-order Taylor helpers `iteratedDeriv_nine_bounded_on_Icc`, `y_ninth_order_taylor_remainder`, `derivY_eighth_order_taylor_remainder`, the extracted `am7_residual_alg_identity` / `am7_residual_bound_alg_identity` / `am7_residual_nine_term_triangle` / `am7_residual_combine` helpers (kernel-friendly extraction, mirroring cycle 442's AM6 split), `LMM.am7_pointwise_residual_bound`, `LMM.am7_local_residual_bound` (`|τ_n| ≤ C·h⁹`, exact coefficient `84361887977/348364800 ≈ 242.17` slackened to `243`), and the headline `LMM.am7_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(10L·T)·ε₀ + K·h⁸` for `(N+6)·h ≤ T`). (`OpenMath/LMMAM7Convergence.lean`, cycle 444)
-  - [x] **Adams–Moulton 7-step vector convergence chain**: `LMM.IsAM7TrajectoryVec`, `LMM.am7Vec_localTruncationError_eq`, `LMM.am7Vec_one_step_lipschitz` and `LMM.am7Vec_one_step_error_pair_bound` (7-window supplied implicit vector recurrence under `(36799/120960)hL ≤ 1/2`, slackened to growth `10L` and residual coefficient `2` after division), private ninth-order vector Taylor helpers `iteratedDeriv_nine_bounded_on_Icc_vec`, `y_ninth_order_taylor_remainder_vec`, `derivY_eighth_order_taylor_remainder_vec`, the extracted `am7Vec_residual_alg_identity` / `am7Vec_residual_bound_alg_identity` / `am7Vec_residual_nine_term_triangle` / `am7Vec_residual_combine` helpers, `LMM.am7Vec_pointwise_residual_bound`, `LMM.am7Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h⁹`, exact scalar coefficient slackened to `243`), and the headline `LMM.am7Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(10L·T)·ε₀ + K·h⁸` for `(N+6)·h ≤ T`) — closing the AB2–AB6 + AM2–AM7 §1.2 quantitative convergence stack. (`OpenMath/LMMAM7VectorConvergence.lean`, cycle 445)
-  - [x] **Adams–Moulton 8-step scalar convergence chain**: `LMM.adamsMoulton8` (added to `OpenMath/AdamsMethods.lean`), `LMM.IsAM8Trajectory` (supplied implicit trajectory satisfying `yₙ₊₈ = yₙ₊₇ + h·(1070017/3628800 fₙ₊₈ + 4467094/3628800 fₙ₊₇ − 4604594/3628800 fₙ₊₆ + 5595358/3628800 fₙ₊₅ − 5033120/3628800 fₙ₊₄ + 3146338/3628800 fₙ₊₃ − 1291214/3628800 fₙ₊₂ + 312874/3628800 fₙ₊₁ − 33953/3628800 fₙ)`), `LMM.am8_localTruncationError_eq`, `LMM.am8_one_step_lipschitz` and `LMM.am8_one_step_error_pair_bound` (8-window implicit recurrence under `(1070017/3628800)hL ≤ 1/2`, slackened to growth `15L` and residual coefficient `2` after division — minimum integer `G ≥ 2(βₛ + S) ≈ 14.08` is 15; pivotal linarith identity `(hL/3628800)·(28877438 − 16050255·hL) ≥ 0` with slack 1661438), private tenth-order Taylor helpers `iteratedDeriv_ten_bounded_on_Icc`, `y_tenth_order_taylor_remainder`, `derivY_ninth_order_taylor_remainder`, the extracted `am8_residual_alg_identity` / `am8_residual_bound_alg_identity` / `am8_residual_ten_term_triangle` / `am8_residual_combine` helpers (kernel-friendly extraction, mirroring cycles 442/444), `LMM.am8_pointwise_residual_bound`, `LMM.am8_local_residual_bound` (`|τ_n| ≤ C·h¹⁰`, exact coefficient `4555920744497/6858432000 ≈ 664.28` slackened to `665`), and the headline `LMM.am8_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(15L·T)·ε₀ + K·h⁹` for `(N+7)·h ≤ T`). (`OpenMath/LMMAM8Convergence.lean`, cycle 452)
-  - [x] **Adams–Moulton 9-step scalar convergence chain**: `LMM.adamsMoulton9` (added to `OpenMath/AdamsMethods.lean`, with `adamsMoulton9_consistent`, `adamsMoulton9_implicit`, `adamsMoulton9_order_ten`, and `adamsMoulton9_zeroStable`), `LMM.IsAM9Trajectory` (supplied implicit trajectory satisfying `yₙ₊₉ = yₙ₊₈ + h·(2082753/7257600 fₙ₊₉ + 9449717/7257600 fₙ₊₈ − 11271304/7257600 fₙ₊₇ + 16002320/7257600 fₙ₊₆ − 17283646/7257600 fₙ₊₅ + 13510082/7257600 fₙ₊₄ − 7394032/7257600 fₙ₊₃ + 2687864/7257600 fₙ₊₂ − 583435/7257600 fₙ₊₁ + 57281/7257600 fₙ)`), `LMM.am9_localTruncationError_eq`, `LMM.am9_one_step_lipschitz` and `LMM.am9_one_step_error_pair_bound` (9-window implicit recurrence under `(2082753/7257600)hL ≤ 1/2`, slackened to growth `23L` and residual coefficient `2` after division — minimum integer `G ≥ 2Σ|β_k| ≈ 22.13` is 23), reused public eleventh-order scalar Taylor helpers from `OpenMath/LMMAB10Convergence.lean`, the extracted `am9_residual_alg_identity` / `am9_residual_bound_alg_identity` / `am9_residual_eleven_term_triangle` / `am9_residual_combine` helpers, `LMM.am9_pointwise_residual_bound`, `LMM.am9_local_residual_bound` (`|τ_n| ≤ C·h¹¹`, exact coefficient `88212037990481513/48283361280000 ≈ 1826.97` slackened to `1827`), and the headline `LMM.am9_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(23L·T)·ε₀ + K·h¹⁰` for `(N+8)·h ≤ T`). (`OpenMath/LMMAM9Convergence.lean`, cycle 473)
-  - [x] **Adams–Moulton 10-step scalar convergence chain**: `LMM.adamsMoulton10` (added to `OpenMath/AdamsMethods.lean`, with `adamsMoulton10_consistent`, `adamsMoulton10_implicit`, `adamsMoulton10_order_eleven`, and `adamsMoulton10_zeroStable`), `LMM.IsAM10Trajectory`, `LMM.am10_localTruncationError_eq`, finite-window `LMM.am10_one_step_lipschitz` / `LMM.am10_one_step_error_pair_bound` (implicit recurrence under `(134211265/479001600)hL ≤ 1/2`, slackened to growth `37L` and residual coefficient `2` after division — minimum integer `G ≥ 2Σ|β_k| ≈ 36.01` is 37), reused public twelfth-order scalar Taylor helpers from `OpenMath/LMMAB11Convergence.lean`, the extracted `am10_residual_alg_identity` / `am10_residual_bound_alg_identity` / `am10_residual_twelve_term_triangle` / `am10_residual_combine` helpers, `LMM.am10_pointwise_residual_bound`, `LMM.am10_local_residual_bound` (`|τ_n| ≤ C·h¹²`, exact coefficient `251196920117213671/49792216320000 ≈ 5044.91` slackened to `5045`), and the headline `LMM.am10_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(37L·T)·ε₀ + K·h¹⁰` for `(N+9)·h ≤ T`). (`OpenMath/LMMAM10Convergence.lean`, cycle 477)
-  - [x] **Adams–Bashforth 4-step scalar convergence chain**: `LMM.ab4Iter` (four starting samples, recurrence `y_{n+4} = y_{n+3} + h·((55/24)·f_{n+3} − (59/24)·f_{n+2} + (37/24)·f_{n+1} − (9/24)·f_n)`), `LMM.ab4_localTruncationError_eq` (textbook AB4 one-step residual = LMM truncation operator), `LMM.ab4_one_step_lipschitz` and `LMM.ab4_one_step_error_bound` (Lipschitz 4-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₄) ≤ (1+h·(20/3)L)·max(eₙ,…,eₙ₊₃) + |τ_n|` with effective Lipschitz constant `(55+59+37+9)/24 · L = 20L/3`), private helpers `iteratedDeriv_five_bounded_on_Icc`, `y_fifth_order_taylor_remainder`, `derivY_fourth_order_taylor_remainder`, `ab4_pointwise_residual_bound` (algebraic identity `R_y(4) − R_y(3) − (55h/24)·R_y'(3) + (59h/24)·R_y'(2) − (37h/24)·R_y'(1)` giving `20·M·h⁵` over-estimate from `57588/2880`), `LMM.ab4_local_residual_bound` (uniform `|τ_n| ≤ C·h⁵`), and the headline `LMM.ab4_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((20/3)·L·T)·ε₀ + K·h⁴` for `(N+3)·h ≤ T`) — the textbook AB4 `O(h⁴)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 4`. (`OpenMath/LMMAB4Convergence.lean`, cycle 420)
-  - [x] **Adams–Bashforth 4-step vector convergence chain**: `LMM.ab4IterVec`, `LMM.ab4VecResidual` + `LMM.ab4Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab4Vec_one_step_lipschitz` and `LMM.ab4Vec_one_step_error_bound` (4-window max-norm Lipschitz recurrence with effective constant `(20/3)·L`), private interval-integral Taylor helpers `iteratedDeriv_five_bounded_on_Icc_vec`, `y_fifth_order_taylor_remainder_vec`, `derivY_fourth_order_taylor_remainder_vec`, and `ab4Vec_pointwise_residual_bound` (same `20·M·h⁵` over-estimate as the scalar chain), `LMM.ab4Vec_local_residual_bound`, and the headline `LMM.ab4Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((20/3)·L·T)·ε₀ + K·h⁴` for `(N+3)·h ≤ T`) — vector mirror of the scalar AB4 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB4Convergence.lean`, cycle 421)
-  - [x] **Adams–Bashforth 5-step scalar convergence chain**: `LMM.ab5Iter` (five starting samples, recurrence `y_{n+5} = y_{n+4} + h·((1901/720)·f_{n+4} − (2774/720)·f_{n+3} + (2616/720)·f_{n+2} − (1274/720)·f_{n+1} + (251/720)·f_n)`), `LMM.ab5_localTruncationError_eq` (textbook AB5 one-step residual = LMM truncation operator), `LMM.ab5_one_step_lipschitz` and `LMM.ab5_one_step_error_bound` (Lipschitz 5-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₅) ≤ (1+h·(551/45)L)·max(eₙ,…,eₙ₊₄) + |τ_n|` with effective Lipschitz constant `(1901+2774+2616+1274+251)/720 · L = 551L/45`), private helpers `iteratedDeriv_six_bounded_on_Icc`, `y_sixth_order_taylor_remainder`, `derivY_fifth_order_taylor_remainder`, `ab5_pointwise_residual_bound` (algebraic identity `R_y(5) − R_y(4) − (1901h/720)·R_y'(4) + (2774h/720)·R_y'(3) − (2616h/720)·R_y'(2) + (1274h/720)·R_y'(1)` giving `59·M·h⁶` over-estimate from `5072212/86400`), `LMM.ab5_local_residual_bound` (uniform `|τ_n| ≤ C·h⁶`), and the headline `LMM.ab5_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((551/45)·L·T)·ε₀ + K·h⁵` for `(N+4)·h ≤ T`) — the textbook AB5 `O(h⁵)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 5`. (`OpenMath/LMMAB5Convergence.lean`, cycle 422)
-  - [x] **Adams–Bashforth 5-step vector convergence chain**: `LMM.ab5IterVec`, `LMM.ab5VecResidual` + `LMM.ab5Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab5Vec_one_step_lipschitz` and `LMM.ab5Vec_one_step_error_bound` (5-window max-norm Lipschitz recurrence with effective constant `(551/45)·L`), private interval-integral Taylor helpers `iteratedDeriv_six_bounded_on_Icc_vec`, `y_sixth_order_taylor_remainder_vec`, `derivY_fifth_order_taylor_remainder_vec`, and `ab5Vec_pointwise_residual_bound` (same `59·M·h⁶` over-estimate as the scalar chain from `5072212/86400`), `LMM.ab5Vec_local_residual_bound`, and the headline `LMM.ab5Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((551/45)·L·T)·ε₀ + K·h⁵` for `(N+4)·h ≤ T`) — vector mirror of the scalar AB5 convergence chain in finite-dimensional normed spaces; cycle 431 adds `LMM.ab5GenericCoeff`, the iteration/residual bridges to `LMM.abIterVec`/`LMM.abResidualVec`, and rewires the headline theorem through `LMM.ab_global_error_bound_generic_vec`. (`OpenMath/LMMAB5Convergence.lean`, cycles 423 + 431)
-  - [x] **Adams–Bashforth 6-step scalar convergence chain**: `LMM.ab6Iter` (six starting samples, recurrence `y_{n+6} = y_{n+5} + h·((4277/1440)·f_{n+5} − (7923/1440)·f_{n+4} + (9982/1440)·f_{n+3} − (7298/1440)·f_{n+2} + (2877/1440)·f_{n+1} − (475/1440)·f_n)`), `LMM.ab6_localTruncationError_eq` (textbook AB6 one-step residual = LMM truncation operator), `LMM.ab6_one_step_lipschitz` and `LMM.ab6_one_step_error_bound` (Lipschitz 6-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₆) ≤ (1+h·(114/5)L)·max(eₙ,…,eₙ₊₅) + |τ_n|` with effective Lipschitz constant `(4277+7923+9982+7298+2877+475)/1440 · L = 114L/5`), private helpers `iteratedDeriv_seven_bounded_on_Icc`, `y_seventh_order_taylor_remainder`, `derivY_sixth_order_taylor_remainder`, `ab6_pointwise_residual_bound` (algebraic identity `R_y(6) − R_y(5) − (4277h/1440)·R_y'(5) + (7923h/1440)·R_y'(4) − (9982h/1440)·R_y'(3) + (7298h/1440)·R_y'(2) − (2877h/1440)·R_y'(1)` giving `175·M·h⁷` over-estimate from `1264800760/7257600`), `LMM.ab6_local_residual_bound` (uniform `|τ_n| ≤ C·h⁷`), and the headline `LMM.ab6_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((114/5)·L·T)·ε₀ + K·h⁶` for `(N+5)·h ≤ T`) — the textbook AB6 `O(h⁶)` convergence theorem assembled via `lmm_error_bound_from_local_truncation` at `p = 6`. (`OpenMath/LMMAB6ScalarConvergence.lean`, cycle 424; split in cycle 425)
-  - [x] **Adams–Bashforth 6-step vector convergence chain**: `LMM.ab6IterVec`, `LMM.ab6VecResidual` + `LMM.ab6Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.ab6Vec_one_step_lipschitz` and `LMM.ab6Vec_one_step_error_bound` (6-window max-norm Lipschitz recurrence with effective constant `(114/5)·L`), private interval-integral Taylor helpers `iteratedDeriv_seven_bounded_on_Icc_vec`, `y_seventh_order_taylor_remainder_vec`, `derivY_sixth_order_taylor_remainder_vec`, and `ab6Vec_pointwise_residual_bound` (same `175·M·h⁷` over-estimate as the scalar chain from `1264800760/7257600`), `LMM.ab6Vec_local_residual_bound`, and the headline `LMM.ab6Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((114/5)·L·T)·ε₀ + K·h⁶` for `(N+5)·h ≤ T`) — vector mirror of the scalar AB6 convergence chain in finite-dimensional normed spaces. (`OpenMath/LMMAB6VectorConvergence.lean`, cycle 425)
-  - [x] **Adams–Bashforth 7-step vector convergence chain**: `LMM.ab7IterVec`, `LMM.ab7VecResidual` + `LMM.ab7Vec_localTruncationError_eq`, `LMM.ab7Vec_one_step_lipschitz` and `LMM.ab7Vec_one_step_error_bound` (7-window max-norm Lipschitz recurrence with effective constant `(40633/945)·L`), private eighth-order vector Taylor helpers, extracted residual algebra/triangle helpers, `LMM.ab7Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 525·M·h⁸`, slacked from `159970508328/304819200`), `LMM.ab7Vec_local_residual_bound`, and the headline `LMM.ab7Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((40633/945)·L·T)·ε₀ + K·h⁷` for `(N+6)·h ≤ T`) — finite-dimensional vector mirror of the scalar AB7 chain, routed through `LMM.ab_global_error_bound_generic_vec` at `p = 7`. (`OpenMath/LMMAB7VectorConvergence.lean`, cycle 451)
-  - [x] **BDF1 (backward Euler) scalar quantitative convergence chain**: `LMM.IsBDF1Trajectory` (supplied implicit one-step trajectory satisfying `y_{n+1} = y_n + h · f(t_{n+1}, y_{n+1})`), `LMM.bdf1_localTruncationError_eq` (textbook one-step residual `y(t+h) − y(t) − h · y'(t+h)` equals the LMM truncation operator for `backwardEuler`), `LMM.bdf1_one_step_lipschitz` and `LMM.bdf1_one_step_error_bound` (1-window implicit recurrence under `h·L ≤ 1/2`, slackened to growth `2L` and residual coefficient `2` after dividing out `(1 − h·L)`), `LMM.bdf1_pointwise_residual_bound` (forward-Euler Taylor remainder plus a segment derivative bound on `|y'(t+h) − y'(t)| ≤ M·h` giving `(3/2)·M·h²` slackened to `2·M·h²`), `LMM.bdf1_local_residual_bound` (`|τ_n| ≤ C·h²`), and the headline `LMM.bdf1_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(2L·T)·ε₀ + K·h` for `N·h ≤ T`) — the textbook BDF1 `O(h)` scalar convergence theorem for supplied implicit trajectories. (`OpenMath/LMMBDF1Convergence.lean`, cycle 446)
-  - [x] **BDF1 (backward Euler) vector quantitative convergence chain**: `LMM.IsBDF1TrajectoryVec` (supplied implicit one-step vector trajectory satisfying `y_{n+1} = y_n + h • f(t_{n+1}, y_{n+1})`), `LMM.bdf1VecResidual` + `LMM.bdf1Vec_localTruncationError_eq` (textbook vector residual unfolding), `LMM.bdf1Vec_one_step_lipschitz` and `LMM.bdf1Vec_one_step_error_bound` (1-window implicit norm recurrence under `h·L ≤ 1/2`, slackened to growth `2L` and residual coefficient `2` after dividing out `(1 − h·L)`), private vector Taylor helpers for `‖y'(t+h)-y'(t)‖ ≤ M·h` and `‖y(t+h)-y(t)-h•y'(t)‖ ≤ M/2·h²`, `LMM.bdf1Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h²`), and the headline `LMM.bdf1Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(2L·T)·ε₀ + K·h` for `N·h ≤ T`) — the finite-dimensional vector mirror of the scalar BDF1 quantitative convergence theorem. (`OpenMath/LMMBDF1VectorConvergence.lean`, cycle 447)
-  - [x] **BDF3 scalar quantitative convergence chain**: builds on the cycle-453 declarations (`LMM.IsBDF3Trajectory`, `LMM.bdf3_localTruncationError_eq`, `LMM.bdf3_one_step_lipschitz`, `LMM.bdf3_pointwise_residual_bound` with `|τ_n| ≤ 7·M·h⁴`, and `LMM.bdf3_local_residual_bound`). Closes the Lyapunov-window step recurrence: `LMM.bdf3LyapU`, `LMM.bdf3LyapSigma`, `LMM.bdf3LyapTau` (eigen-coordinates from the factorization `ρ(ζ) = (ζ−1)(ζ²−(7/11)ζ+2/11)`), `LMM.bdf3LyapW = |u| + (1/11)(|σ| + 5|τ|)` (Lyapunov sum with γ=5), `LMM.bdf3LyapU_succ_eq` / `Sigma_succ_eq` / `Tau_succ_eq` (clean coordinate recurrences), and `LMM.bdf3_one_step_error_bound` (`W_{n+1} ≤ (1+h·6L)·W_n + 4·|τ_LTE|` under `(6/11)·h·L ≤ 1/4`, routed through a 8-scalar pure-algebra core `bdf3_one_step_lyapunov_alg` to keep kernel budget under 200000 heartbeats per cycle 442/444/450 pattern). Adds `LMM.bdf3LyapW_initial_bound` (`W_0 ≤ 5·ε₀` from `|e_0|, |e_1|, |e_2| ≤ ε₀`) and `LMM.bdf3_eIdx2_le_W` (`|e_{n+2}| ≤ 2·W_n` from the inversion `e_{n+2} = (11/6)·u + (-2/11)·σ + (7/11)·τ`). Headline `LMM.bdf3_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ 10·exp(6L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`, Grönwall via `lmm_error_bound_from_local_truncation` at `p = 3`, with N=0,1,2 cases handled directly and N≥3 via Lyapunov reduction). (`OpenMath/LMMBDF3Convergence.lean`, cycles 453, 456)
-  - [x] **BDF3 vector quantitative convergence chain**: `LMM.IsBDF3TrajectoryVec`, `LMM.bdf3VecResidual`, `LMM.bdf3Vec_one_step_lipschitz`, `LMM.bdf3Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 7·M·h⁴` using the public AB3 vector fourth-order Taylor helpers), and `LMM.bdf3Vec_local_residual_bound` lift the BDF3 residual side to finite-dimensional normed vector spaces. The vector Lyapunov coordinates `LMM.bdf3VecLyapU`, `LMM.bdf3VecLyapSigma`, `LMM.bdf3VecLyapTau`, Lyapunov sum `LMM.bdf3VecLyapW`, coordinate recurrences, copied vector pure-algebra core, `LMM.bdf3Vec_one_step_error_bound`, `LMM.bdf3VecLyapW_initial_bound`, and `LMM.bdf3Vec_eIdx2_le_W` mirror the scalar BDF3 chain with norms. Headline `LMM.bdf3Vec_global_error_bound` gives `‖y_N − y(t₀+Nh)‖ ≤ 10·exp(6L·T)·ε₀ + K·h³` for `(N+2)·h ≤ T`. (`OpenMath/LMMBDF3VectorConvergence.lean`, cycle 457)
-  - [x] **BDF4 vector truncation chain**: `LMM.IsBDF4TrajectoryVec`, `LMM.bdf4VecResidual`, `LMM.bdf4Vec_one_step_lipschitz`, private `LMM.bdf4Vec_pointwise_residual_alg`, `LMM.bdf4Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 18·M·h⁵` using the public AB4 vector fifth-order Taylor helpers), and `LMM.bdf4Vec_local_residual_bound` mirror the cycle-458 scalar BDF4 truncation side in finite-dimensional normed vector spaces. This is truncation only; the BDF4 Lyapunov/global theorem remains deferred per `.prover-state/issues/bdf4_lyapunov_gap.md`. (`OpenMath/LMMBDF4VectorConvergence.lean`, cycle 459)
-  - [x] **BDF4 stable-block quadratic Lyapunov certificate and forced one-step recurrence**: `LMM.bdf4RecDefect`, `LMM.bdf4LyapU`, stable coordinates `LMM.bdf4StableX0/X1/X2`, exact forced stable-block update lemmas, the rational cubic-block quadratic form `LMM.bdf4CubicQuad`, exact identity `A^T P A - P = -I` via `LMM.bdf4CubicQuad_step_identity`, coercive bounds `1/4 * ‖x‖² ≤ Q(x) ≤ 9 * ‖x‖²`, homogeneous step decrease packaging `LMM.bdf4StableQuad_homogeneous_step_identity`, square-root stable energy `LMM.bdf4StableEnergy`, Lyapunov weight `LMM.bdf4LyapW`, forced stable-energy recurrence `LMM.bdf4StableEnergy_forced_step_bound`, defect recurrence `LMM.bdf4LyapW_succ_le_of_defect`, new-value control `LMM.bdf4_eIdx4_le_W_add_defect`, and trajectory-facing one-step bound `LMM.bdf4LyapW_one_step_error_bound` under `(12/25)hL ≤ 1/2`. The full BDF4 global convergence theorem remains pending. (`OpenMath/BDFQuadraticLyapunov.lean`, cycles 488–489)
-  - [x] **BDF5 scalar truncation chain**: `LMM.IsBDF5Trajectory` (supplied implicit trajectory satisfying the 5-step BDF recurrence), `LMM.bdf5_localTruncationError_eq`, `LMM.bdf5_one_step_lipschitz`, private `LMM.bdf5_pointwise_residual_alg`, `LMM.bdf5_pointwise_residual_bound` (`|τ_n| ≤ 48·M·h⁶` using the public AB5 sixth-order scalar Taylor helpers; exact coefficient `59075/1233 ≈ 47.91`), and `LMM.bdf5_local_residual_bound` close the BDF5 scalar truncation side. This is truncation only; the BDF5 Lyapunov/global theorem remains deferred by the same spectral obstruction documented for BDF4 in `.prover-state/issues/bdf4_lyapunov_gap.md`. (`OpenMath/LMMBDF5Convergence.lean`, cycle 461)
-  - [x] **BDF5 vector truncation chain**: `LMM.IsBDF5TrajectoryVec`, `LMM.bdf5VecResidual` + `LMM.bdf5Vec_localTruncationError_eq`, `LMM.bdf5Vec_one_step_lipschitz`, private `LMM.bdf5Vec_pointwise_residual_alg`, `LMM.bdf5Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 48·M·h⁶` using the public AB5 vector sixth-order Taylor helpers `iteratedDeriv_six_bounded_on_Icc_vec`, `y_sixth_order_taylor_remainder_vec`, `derivY_fifth_order_taylor_remainder_vec`; exact coefficient `59075/1233 ≈ 47.91`), and `LMM.bdf5Vec_local_residual_bound` mirror the cycle-461 scalar BDF5 truncation side in finite-dimensional normed vector spaces. This is truncation only; the BDF5 Lyapunov/global theorem remains deferred by the same spectral obstruction documented for BDF4 in `.prover-state/issues/bdf4_lyapunov_gap.md`. (`OpenMath/LMMBDF5VectorConvergence.lean`, cycle 472)
-  - [x] **BDF6 scalar truncation chain**: `LMM.IsBDF6Trajectory` (supplied implicit trajectory satisfying the 6-step BDF recurrence with weights `(360, 450, 400, 225, 72, 10)/147` and leading coefficient `60/147`), `LMM.bdf6_localTruncationError_eq`, `LMM.bdf6_one_step_lipschitz`, private `LMM.bdf6_pointwise_residual_alg`, `LMM.bdf6_pointwise_residual_bound` (`|τ_n| ≤ 132·M·h⁷` using the public AB6 seventh-order scalar Taylor helpers; exact coefficient `674636/5145 ≈ 131.125`), and `LMM.bdf6_local_residual_bound` close the BDF6 scalar truncation side. This is truncation only; the BDF6 Lyapunov/global theorem remains deferred by the same spectral obstruction documented for BDF4 in `.prover-state/issues/bdf4_lyapunov_gap.md`. (`OpenMath/LMMBDF6Convergence.lean`, cycle 462)
-  - [x] **BDF6 vector truncation chain**: `LMM.IsBDF6TrajectoryVec`, `LMM.bdf6VecResidual`, `LMM.bdf6Vec_one_step_lipschitz`, private `LMM.bdf6Vec_pointwise_residual_alg`, `LMM.bdf6Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 132·M·h⁷` using the public AB6 vector seventh-order Taylor helpers; exact coefficient `674636/5145 ≈ 131.125`), and `LMM.bdf6Vec_local_residual_bound` mirror the cycle-462 scalar BDF6 truncation side in finite-dimensional normed vector spaces. This is truncation only; the BDF6 Lyapunov/global theorem remains deferred by the same spectral obstruction documented for BDF4 in `.prover-state/issues/bdf4_lyapunov_gap.md`. (`OpenMath/LMMBDF6VectorConvergence.lean`, cycle 463)
-  - [x] **BDF7 scalar truncation chain**: `LMM.IsBDF7Trajectory` (supplied implicit trajectory satisfying the 7-step BDF recurrence with weights `(2940, 4410, 4900, 3675, 1764, 490, 60)/1089` and leading coefficient `420/1089`), `LMM.bdf7_localTruncationError_eq`, `LMM.bdf7_one_step_lipschitz`, private `LMM.bdf7_pointwise_residual_alg`, `LMM.bdf7_pointwise_residual_bound` (`|τ_n| ≤ 366·M·h⁸` using the public AM6 eighth-order scalar Taylor helpers; exact coefficient `17914498/49005 ≈ 365.565`), and `LMM.bdf7_local_residual_bound` close the BDF7 scalar truncation side. BDF7 is zero-unstable, so a global error theorem is moot — the local chain is the entire story. (`OpenMath/LMMBDF7Convergence.lean`, cycle 464)
-  - [x] **BDF7 vector truncation chain**: `LMM.IsBDF7TrajectoryVec`, `LMM.bdf7VecResidual`, `LMM.bdf7Vec_one_step_lipschitz`, private `LMM.bdf7Vec_pointwise_residual_alg`, `LMM.bdf7Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 366·M·h⁸` using the public AB7 vector eighth-order Taylor helpers; exact coefficient `17914498/49005 ≈ 365.565`), and `LMM.bdf7Vec_local_residual_bound` mirror the cycle-464 scalar BDF7 truncation side in finite-dimensional normed vector spaces. BDF7 is zero-unstable, so no global theorem applies. (`OpenMath/LMMBDF7VectorConvergence.lean`, cycle 465)
-  - [x] **Adams–Moulton 8-step vector convergence chain**: `LMM.IsAM8TrajectoryVec` (supplied implicit vector trajectory with AM8 weights), `LMM.am8VecResidual` + `LMM.am8Vec_localTruncationError_eq`, `LMM.am8Vec_one_step_lipschitz` and `LMM.am8Vec_one_step_error_pair_bound` (8-window implicit recurrence under `(1070017/3628800)hL ≤ 1/2`, slackened to growth `15L` and residual coefficient `2` after division), private tenth-order vector Taylor helpers (`iteratedDeriv_ten_bounded_on_Icc_vec`, `y_tenth_order_taylor_remainder_vec`, `derivY_ninth_order_taylor_remainder_vec`), the extracted `am8Vec_residual_alg_identity` / `am8Vec_residual_bound_alg_identity` / `am8Vec_residual_ten_term_triangle` / `am8Vec_residual_combine` helpers, `LMM.am8Vec_pointwise_residual_bound`, `LMM.am8Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h¹⁰`, exact coefficient `4555920744497/6858432000 ≈ 664.28` slackened to `665`), and the headline `LMM.am8Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(15L·T)·ε₀ + K·h⁹` for `(N+7)·h ≤ T`) — vector mirror of cycle 452 in finite-dimensional normed spaces. (`OpenMath/LMMAM8VectorConvergence.lean`, cycle 455)
-  - [x] **Adams–Moulton 9-step vector convergence chain**: `LMM.IsAM9TrajectoryVec` (supplied implicit vector trajectory with AM9 weights `(2082753, 9449717, -11271304, 16002320, -17283646, 13510082, -7394032, 2687864, -583435, 57281)/7257600`), `LMM.am9VecResidual` + `LMM.am9Vec_localTruncationError_eq`, `LMM.am9Vec_one_step_lipschitz` and `LMM.am9Vec_one_step_error_pair_bound` (9-window implicit recurrence under `(2082753/7257600)hL ≤ 1/2`, slackened to growth `23L` and residual coefficient `2` after division — minimum integer `G ≥ 2Σ|β_k| ≈ 22.13` is 23), reused public eleventh-order vector Taylor helpers from `OpenMath/LMMAB10VectorConvergence.lean` (`iteratedDeriv_eleven_bounded_on_Icc_vec`, `y_eleventh_order_taylor_remainder_vec`, `derivY_tenth_order_taylor_remainder_vec`), the extracted `am9Vec_residual_alg_identity` / `am9Vec_residual_bound_alg_identity` / `am9Vec_residual_eleven_term_triangle` / `am9Vec_residual_combine` helpers (kernel-friendly extraction with `clear_value` after eleven Taylor `set`s, mirroring cycle 473), `LMM.am9Vec_pointwise_residual_bound`, `LMM.am9Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h¹¹`, exact coefficient `88212037990481513/48283361280000 ≈ 1826.97` slackened to `1827`), and the headline `LMM.am9Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(23L·T)·ε₀ + K·h¹⁰` for `(N+8)·h ≤ T`) — vector mirror of the cycle-473 scalar AM9 chain in finite-dimensional normed spaces. (`OpenMath/LMMAM9VectorConvergence.lean`, cycle 474)
-  - [x] **Adams–Bashforth 8-step scalar convergence chain**: `LMM.adamsBashforth8` (added to `OpenMath/AdamsMethods.lean`, with `adamsBashforth8_consistent`, `adamsBashforth8_explicit`, `adamsBashforth8_order_eight`, and `adamsBashforth8_zeroStable`), `LMM.ab8Iter` (eight starting samples, recurrence `y_{n+8} = y_{n+7} + h·((434241/120960)·f_{n+7} − (1152169/120960)·f_{n+6} + (2183877/120960)·f_{n+5} − (2664477/120960)·f_{n+4} + (2102243/120960)·f_{n+3} − (1041723/120960)·f_{n+2} + (295767/120960)·f_{n+1} − (36799/120960)·f_n)`), `LMM.ab8_localTruncationError_eq` (textbook AB8 one-step residual = LMM truncation operator), `LMM.ab8_one_step_lipschitz` and `LMM.ab8_one_step_error_bound` (Lipschitz 8-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₈) ≤ (1+h·(77432/945)L)·max(eₙ,…,eₙ₊₇) + |τ_n|` with effective Lipschitz constant `Σ|β_k| · L = 77432L/945`), uses public ninth-order Taylor helpers from `LMMAM7Convergence` (`iteratedDeriv_nine_bounded_on_Icc`, `y_ninth_order_taylor_remainder`, `derivY_eighth_order_taylor_remainder` — promoted from `private` in cycle 466 so they can be shared), the extracted `ab8_residual_alg_identity` / `ab8_residual_bound_alg_identity` / `ab8_residual_nine_term_triangle` helpers (kernel-friendly extraction, mirroring cycles 442/444/450), private `LMM.ab8_pointwise_residual_bound` (`|τ_n| ≤ 1605·M·h⁹`, exact coefficient `388219697/241920 ≈ 1604.74`), `LMM.ab8_local_residual_bound`, and the headline `LMM.ab8_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((77432/945)·L·T)·ε₀ + K·h⁸` for `(N+7)·h ≤ T`) — the textbook AB8 `O(h⁸)` convergence theorem assembled via `lmm_error_bound_from_local_truncation`-style routing through `ab_global_error_bound_generic` at `s = p = 8`, with `LMM.ab8GenericCoeff`, `LMM.abLip_ab8GenericCoeff`, `LMM.ab8Iter_eq_abIter`, and `LMM.ab8Residual_eq_abResidual` providing the generic AB scaffold bridge. (`OpenMath/LMMAB8Convergence.lean`, cycle 466)
-  - [x] **Adams–Bashforth 8-step vector convergence chain**: `LMM.ab8IterVec`, `LMM.ab8VecResidual` + `LMM.ab8Vec_localTruncationError_eq`, `LMM.ab8Vec_one_step_lipschitz` and `LMM.ab8Vec_one_step_error_bound` (8-window max-norm Lipschitz recurrence with effective constant `(77432/945)·L`), public ninth-order vector Taylor helpers from `LMMAM7VectorConvergence`, extracted `ab8Vec_residual_alg_identity` / `ab8Vec_residual_bound_alg_identity` / `ab8Vec_residual_nine_term_triangle` helpers, private `LMM.ab8Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 1605·M·h⁹`), `LMM.ab8Vec_local_residual_bound`, the generic bridge `LMM.ab8IterVec_eq_abIterVec` / `LMM.ab8VecResidual_eq_abResidualVec`, and the headline `LMM.ab8Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((77432/945)·L·T)·ε₀ + K·h⁸` for `(N+7)·h ≤ T`) — finite-dimensional vector mirror of the scalar AB8 chain, routed through `LMM.ab_global_error_bound_generic_vec` at `p = 8`. (`OpenMath/LMMAB8VectorConvergence.lean`, cycle 467)
-  - [x] **Adams–Bashforth 9-step scalar convergence chain**: `LMM.adamsBashforth9` (added to `OpenMath/AdamsMethods.lean`, with `adamsBashforth9_consistent`, `adamsBashforth9_explicit`, `adamsBashforth9_order_nine`, and `adamsBashforth9_zeroStable`), `LMM.ab9Iter` (nine starting samples, recurrence `y_{n+9} = y_{n+8} + h·((14097247/3628800)·f_{n+8} − (43125206/3628800)·f_{n+7} + (95476786/3628800)·f_{n+6} − (139855262/3628800)·f_{n+5} + (137968480/3628800)·f_{n+4} − (91172642/3628800)·f_{n+3} + (38833486/3628800)·f_{n+2} − (9664106/3628800)·f_{n+1} + (1070017/3628800)·f_n)`), `LMM.ab9_localTruncationError_eq` (textbook AB9 one-step residual = LMM truncation operator), private `LMM.ab9_step_alg_decomp` (factored kernel-friendly algebraic decomposition that side-steps the kernel `whnf` heartbeat blowup observed when the AB9 set/clear_value chain is left inline), `LMM.ab9_one_step_lipschitz` and `LMM.ab9_one_step_error_bound` (Lipschitz 9-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₉) ≤ (1+h·(2231497/14175)L)·max(eₙ,…,eₙ₊₈) + |τ_n|` with effective Lipschitz constant `Σ|β_k| · L = 2231497L/14175`), uses public tenth-order Taylor helpers from `LMMAM8Convergence` (`iteratedDeriv_ten_bounded_on_Icc`, `y_tenth_order_taylor_remainder`, `derivY_ninth_order_taylor_remainder` — promoted from `private` in cycle 468 so they can be shared), the extracted `ab9_residual_alg_identity` / `ab9_residual_bound_alg_identity` / `ab9_residual_ten_term_triangle` / `ab9_residual_combine_aux` helpers (kernel-friendly extraction, mirroring cycles 442/444/450/466), private `LMM.ab9_pointwise_residual_bound` (`|τ_n| ≤ 4983·M·h¹⁰`, exact coefficient `102509448755347/20575296000 ≈ 4982.16`), `LMM.ab9_local_residual_bound`, and the headline `LMM.ab9_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((2231497/14175)·L·T)·ε₀ + K·h⁹` for `(N+8)·h ≤ T`) — the textbook AB9 `O(h⁹)` convergence theorem assembled via `lmm_error_bound_from_local_truncation`-style routing through `ab_global_error_bound_generic` at `s = p = 9`, with `LMM.ab9GenericCoeff`, `LMM.abLip_ab9GenericCoeff`, `LMM.ab9Iter_eq_abIter`, and `LMM.ab9Residual_eq_abResidual` providing the generic AB scaffold bridge. (`OpenMath/LMMAB9Convergence.lean`, cycle 468)
-  - [x] **Adams–Bashforth 9-step vector convergence chain**: `LMM.ab9IterVec`, `LMM.ab9VecResidual` + `LMM.ab9Vec_localTruncationError_eq`, `LMM.ab9Vec_one_step_lipschitz` and `LMM.ab9Vec_one_step_error_bound` (9-window max-norm Lipschitz recurrence with effective constant `(2231497/14175)·L`), public tenth-order vector Taylor helpers from `LMMAM8VectorConvergence`, extracted `ab9Vec_residual_alg_identity` / `ab9Vec_residual_bound_alg_identity` / `ab9Vec_residual_ten_term_triangle` / `ab9Vec_residual_combine_aux` helpers, private `LMM.ab9Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 4983·M·h¹⁰`), `LMM.ab9Vec_local_residual_bound`, the generic bridge `LMM.ab9IterVec_eq_abIterVec` / `LMM.ab9VecResidual_eq_abResidualVec`, and the headline `LMM.ab9Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((2231497/14175)·L·T)·ε₀ + K·h⁹` for `(N+8)·h ≤ T`) — finite-dimensional vector mirror of the scalar AB9 chain, routed through `LMM.ab_global_error_bound_generic_vec` at `p = 9`. (`OpenMath/LMMAB9VectorConvergence.lean`, cycle 469)
-  - [x] **Adams–Bashforth 10-step scalar convergence chain**: `LMM.adamsBashforth10` (added to `OpenMath/AdamsMethods.lean`, with `adamsBashforth10_consistent`, `adamsBashforth10_explicit`, `adamsBashforth10_order_ten`, and `adamsBashforth10_zeroStable`), `LMM.ab10Iter` (ten starting samples, recurrence `y_{n+10} = y_{n+9} + h·((30277247/7257600)·f_{n+9} − (104995189/7257600)·f_{n+8} + (265932680/7257600)·f_{n+7} − (454661776/7257600)·f_{n+6} + (538363838/7257600)·f_{n+5} − (444772162/7257600)·f_{n+4} + (252618224/7257600)·f_{n+3} − (94307320/7257600)·f_{n+2} + (20884811/7257600)·f_{n+1} − (2082753/7257600)·f_n)`), `LMM.ab10_localTruncationError_eq` (textbook AB10 one-step residual = LMM truncation operator), private `LMM.ab10_step_alg_decomp` and `LMM.ab10_step_lipschitz_triangle` (factored kernel-friendly algebraic decomposition + 11-term triangle aux that side-step the kernel `whnf` heartbeat blowup), `LMM.ab10_one_step_lipschitz` and `LMM.ab10_one_step_error_bound` (Lipschitz 10-window max-norm one-step recurrence `max(eₙ₊₁,…,eₙ₊₁₀) ≤ (1+h·(172570/567)L)·max(eₙ,…,eₙ₊₉) + |τ_n|` with effective Lipschitz constant `Σ|β_k| · L = 172570L/567`), uses public eleventh-order Taylor helpers `iteratedDeriv_eleven_bounded_on_Icc` / `y_eleventh_order_taylor_remainder` / `derivY_tenth_order_taylor_remainder` (in-file), the extracted `ab10_residual_alg_identity` / `ab10_residual_bound_alg_identity` / `ab10_residual_eleven_term_triangle` / `ab10_residual_combine_aux` helpers (kernel-friendly extraction, mirroring cycles 442/444/450/466/468), private `LMM.ab10_pointwise_residual_bound` (`|τ_n| ≤ 15695·M·h¹¹`, exact coefficient `11840488855359257/754427520000 ≈ 15694.67`), `LMM.ab10_local_residual_bound`, and the headline `LMM.ab10_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((172570/567)·L·T)·ε₀ + K·h¹⁰` for `(N+9)·h ≤ T`) — the textbook AB10 `O(h¹⁰)` convergence theorem assembled via `lmm_error_bound_from_local_truncation`-style routing through `ab_global_error_bound_generic` at `s = p = 10`, with `LMM.ab10GenericCoeff`, `LMM.abLip_ab10GenericCoeff`, `LMM.ab10Iter_eq_abIter`, and `LMM.ab10Residual_eq_abResidual` providing the generic AB scaffold bridge. (`OpenMath/LMMAB10Convergence.lean`, cycle 470)
-  - [x] **Adams–Bashforth 10-step vector convergence chain**: `LMM.ab10IterVec`, `LMM.ab10VecResidual` + `LMM.ab10Vec_localTruncationError_eq`, `LMM.ab10Vec_one_step_lipschitz` and `LMM.ab10Vec_one_step_error_bound` (generic 10-window vector recurrence with effective constant `(172570/567)·L`), eleventh-order vector Taylor helpers `iteratedDeriv_eleven_bounded_on_Icc_vec` / `y_eleventh_order_taylor_remainder_vec` / `derivY_tenth_order_taylor_remainder_vec`, extracted `ab10Vec_residual_alg_identity` / `ab10Vec_residual_bound_alg_identity` / `ab10Vec_residual_eleven_term_triangle` / `ab10Vec_residual_combine_aux` helpers, private `LMM.ab10Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 15695·M·h¹¹`), `LMM.ab10Vec_local_residual_bound`, the generic bridge `LMM.ab10IterVec_eq_abIterVec` / `LMM.ab10VecResidual_eq_abResidualVec`, and the headline `LMM.ab10Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((172570/567)·L·T)·ε₀ + K·h¹⁰` for `(N+9)·h ≤ T`) — finite-dimensional vector mirror of the scalar AB10 chain, routed through `LMM.ab_global_error_bound_generic_vec` at `p = 10`. (`OpenMath/LMMAB10VectorConvergence.lean`, cycle 471)
-  - [x] **Adams–Bashforth 11-step scalar convergence chain**: `LMM.adamsBashforth11` (added to `OpenMath/AdamsMethods.lean`, with `adamsBashforth11_consistent`, `adamsBashforth11_explicit`, `adamsBashforth11_order_eleven`, and `adamsBashforth11_zeroStable`), `LMM.ab11Iter` (eleven starting samples, generic AB recurrence with weights `(134211265, -1479574348, 7417904451, -22329634920, 44857168434, -63176201472, 63716378958, -46113029016, 23591063805, -8271795124, 2132509567)/479001600`), `LMM.ab11_localTruncationError_eq` (textbook AB11 one-step residual = LMM truncation operator), public twelfth-order scalar Taylor helpers `iteratedDeriv_twelve_bounded_on_Icc` / `y_twelfth_order_taylor_remainder` / `derivY_eleventh_order_taylor_remainder`, `LMM.ab11_one_step_lipschitz` and `LMM.ab11_one_step_error_bound` (generic 11-window max-norm recurrence with effective constant `(7902329/13365)·L`), extracted `ab11_residual_alg_identity` / `ab11_residual_bound_alg_identity` / `ab11_residual_twelve_term_triangle` / `ab11_residual_combine_aux` helpers, `LMM.ab11_pointwise_residual_bound` (`|τ_n| ≤ 52000·M·h¹²`, exact coefficient `152780723292716197/3048503040000 ≈ 50116.64`), `LMM.ab11_local_residual_bound`, the generic bridge `LMM.ab11GenericCoeff`, `LMM.abLip_ab11GenericCoeff`, `LMM.ab11Iter_eq_abIter`, `LMM.ab11Residual_eq_abResidual`, and the headline `LMM.ab11_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((7902329/13365)·L·T)·ε₀ + K·h¹¹` for `(N+10)·h ≤ T`) — the textbook AB11 `O(h¹¹)` scalar convergence theorem routed through `LMM.ab_global_error_bound_generic` at `s = p = 11`. (`OpenMath/LMMAB11Convergence.lean`, cycle 475)
-  - [x] **Adams–Moulton 10-step vector convergence chain**: `LMM.IsAM10TrajectoryVec` (supplied implicit vector trajectory with AM10 weights `(3250433, -36284876, 184776195, -567450984, 1170597042, -1710774528, 1823311566, -1446205080, 890175549, -656185652, 134211265)/479001600` summing to `479001600`), `LMM.am10VecResidual` + `LMM.am10Vec_localTruncationError_eq`, `LMM.am10Vec_one_step_lipschitz`, `LMM.am10Vec_one_step_error_bound` and `LMM.am10Vec_one_step_error_pair_bound` (10-window implicit recurrence under `(134211265/479001600)hL ≤ 1/2`, slackened to growth `37L` and residual coefficient `2` after division — minimum integer `G ≥ Σ|β_k|/(1-|β_10|) ≈ 36.01` is 37), reused public twelfth-order vector Taylor helpers from `OpenMath/LMMAB11VectorConvergence.lean` (`iteratedDeriv_twelve_bounded_on_Icc_vec`, `y_twelfth_order_taylor_remainder_vec`, `derivY_eleventh_order_taylor_remainder_vec`), the extracted `am10Vec_residual_alg_identity` / `am10Vec_residual_bound_alg_identity` / `am10Vec_residual_twelve_term_triangle` / `am10Vec_residual_combine_aux` helpers (kernel-friendly extraction with `clear_value` after twelve Taylor `set`s; `am10Vec_residual_alg_identity` further parameterized over the twelve abstract Taylor remainders to keep its `module`-elaboration inside the 200K heartbeat budget, mirroring cycle 476), `LMM.am10Vec_pointwise_residual_bound`, `LMM.am10Vec_local_residual_bound` (`‖τ_n‖ ≤ C·h¹²`, exact coefficient `251196920117213671/49792216320000 ≈ 5044.91` slackened to `5045`), and the headline `LMM.am10Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(37L·T)·ε₀ + K·h¹⁰` for `(N+9)·h ≤ T`) — vector mirror of the cycle-477 scalar AM10 chain in finite-dimensional normed spaces. (`OpenMath/LMMAM10VectorConvergence.lean`, cycle 478)
-  - [x] **Adams–Bashforth 11-step vector convergence chain**: `LMM.ab11IterVec`, `LMM.ab11VecResidual` + `LMM.ab11Vec_localTruncationError_eq`, `LMM.ab11Vec_one_step_lipschitz` and `LMM.ab11Vec_one_step_error_bound` (generic 11-window vector recurrence with effective constant `(7902329/13365)·L`), public twelfth-order vector Taylor helpers `iteratedDeriv_twelve_bounded_on_Icc_vec` / `y_twelfth_order_taylor_remainder_vec` / `derivY_eleventh_order_taylor_remainder_vec`, extracted `ab11Vec_residual_alg_identity` / `ab11Vec_residual_bound_alg_identity` / `ab11Vec_residual_twelve_term_triangle` / `ab11Vec_residual_combine_aux` helpers (kernel-friendly extraction with `clear_value` after twelve Taylor `set`s; `ab11Vec_residual_alg_identity` further parameterized over the twelve abstract Taylor remainders to keep its `module`-elaboration inside the 200K heartbeat budget), `LMM.ab11Vec_pointwise_residual_bound` (`‖τ_n‖ ≤ 52000·M·h¹²`), `LMM.ab11Vec_local_residual_bound`, the generic bridge `LMM.ab11IterVec_eq_abIterVec` / `LMM.ab11VecResidual_eq_abResidualVec`, and the headline `LMM.ab11Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((7902329/13365)·L·T)·ε₀ + K·h¹¹` for `(N+10)·h ≤ T`) — finite-dimensional vector mirror of the cycle-475 scalar AB11 chain, routed through `LMM.ab_global_error_bound_generic_vec` at `p = 11`. (`OpenMath/LMMAB11VectorConvergence.lean`, cycle 476)
-  - [x] **Adams–Bashforth 12-step scalar convergence chain**: `LMM.adamsBashforth12` (added to `OpenMath/AdamsMethods.lean`, with `adamsBashforth12_consistent`, `adamsBashforth12_explicit`, `adamsBashforth12_order_twelve`, and `adamsBashforth12_zeroStable`), `LMM.ab12Iter` (twelve starting samples, generic AB recurrence with weights `(-262747265, 3158642445, -17410248271, 58189107627, -131365867290, 211103573298, -247741639374, 214139355366, -135579356757, 61633227185, -19433810163, 4527766399)/958003200`), `LMM.ab12_localTruncationError_eq` (textbook AB12 one-step residual = LMM truncation operator), public thirteenth-order scalar Taylor helpers `iteratedDeriv_thirteen_bounded_on_Icc` / `y_thirteenth_order_taylor_remainder` / `derivY_twelfth_order_taylor_remainder`, `LMM.ab12_one_step_lipschitz` and `LMM.ab12_one_step_error_bound` (generic 12-window max-norm recurrence with effective constant `(443892/385)·L`), extracted `ab12_residual_alg_identity` / `ab12_residual_bound_alg_identity` / `ab12_residual_thirteen_term_triangle` / `ab12_residual_combine_aux` helpers, `LMM.ab12_pointwise_residual_bound` (`|τ_n| ≤ 162031·M·h¹³`, exact coefficient `171625746494360048711/1059216238080000 ≈ 162030.89`), `LMM.ab12_local_residual_bound`, the generic bridge `LMM.ab12GenericCoeff`, `LMM.abLip_ab12GenericCoeff`, `LMM.ab12Iter_eq_abIter`, `LMM.ab12Residual_eq_abResidual`, and the headline `LMM.ab12_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((443892/385)·L·T)·ε₀ + K·h¹²` for `(N+11)·h ≤ T`) — the textbook AB12 `O(h¹²)` scalar convergence theorem routed through `LMM.ab_global_error_bound_generic` at `s = p = 12`. (`OpenMath/LMMAB12Convergence.lean`, cycle 479)
-  - [x] **Adams–Bashforth 12-step vector convergence chain**: `LMM.ab12IterVec`, `LMM.ab12VecResidual` + `LMM.ab12Vec_localTruncationError_eq`, `LMM.ab12Vec_one_step_lipschitz` and `LMM.ab12Vec_one_step_error_bound` (generic 12-window vector recurrence with effective constant `(443892/385)·L`), thirteenth-order vector Taylor helpers from `LMMAM11VectorConvergence`, packed-polynomial residual helpers `ab12Vec_yPoly13` / `ab12Vec_dPoly12`, extracted `ab12Vec_residual_alg_identity` / `ab12Vec_residual_bound_alg_identity` / `ab12Vec_residual_thirteen_term_triangle` / `ab12Vec_residual_combine_aux`, `LMM.ab12Vec_pointwise_residual_bound` and `LMM.ab12Vec_local_residual_bound` (`‖τ_n‖ ≤ 162031·M·h¹³`), the generic bridge `LMM.ab12IterVec_eq_abIterVec` / `LMM.ab12VecResidual_eq_abResidualVec`, and the headline `LMM.ab12Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((443892/385)·L·T)·ε₀ + K·h¹²` for `(N+11)·h ≤ T`) — finite-dimensional vector mirror of the cycle-479 scalar AB12 chain, routed through `LMM.ab_global_error_bound_generic_vec` at `p = 12`. (`OpenMath/LMMAB12VectorConvergence.lean`, cycle 483)
-  - [x] **Adams–Moulton 11-step scalar convergence chain**: `LMM.adamsMoulton11` (added to `OpenMath/AdamsMethods.lean`, with `adamsMoulton11_consistent`, `adamsMoulton11_implicit`, `adamsMoulton11_order_twelve`, and `adamsMoulton11_zeroStable`), `LMM.IsAM11Trajectory` (supplied implicit trajectory with AM11 weights `(5675265, -68928781, 384709327, -1305971115, 3007739418, -4963166514, 6043521486, -5519460582, 3828828885, -2092490673, 1374799219, 262747265)/958003200`), `LMM.am11_localTruncationError_eq`, `LMM.am11_one_step_lipschitz`, `LMM.am11_one_step_error_bound`, and `LMM.am11_one_step_error_pair_bound` (11-window implicit recurrence under `(262747265/958003200)hL ≤ 1/2`, slackened to growth `61L` and residual coefficient `2`; `61 = ceil(2·Σ|β_k|)` is needed for the half-factor smallness assumption), reused public thirteenth-order scalar Taylor helpers from `OpenMath/LMMAB12Convergence.lean`, extracted `am11_residual_alg_identity` / `am11_residual_bound_alg_identity` / `am11_residual_thirteen_term_triangle` / `am11_residual_combine_aux`, `LMM.am11_pointwise_residual_bound` (`|τ_n| ≤ 14003·M·h¹³`, exact coefficient `345161607571042875013/24650850631680000 ≈ 14002.02`), `LMM.am11_local_residual_bound`, and the headline `LMM.am11_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(61L·T)·ε₀ + K·h¹¹` for `(N+10)·h ≤ T`). (`OpenMath/LMMAM11Convergence.lean`, cycle 481)
-  - [x] **Adams–Moulton 11-step vector convergence chain**: `LMM.IsAM11TrajectoryVec` (supplied implicit vector trajectory with AM11 weights `(5675265, -68928781, 384709327, -1305971115, 3007739418, -4963166514, 6043521486, -5519460582, 3828828885, -2092490673, 1374799219, 262747265)/958003200`), `LMM.am11VecResidual` + `LMM.am11Vec_localTruncationError_eq`, `LMM.am11Vec_one_step_lipschitz`, `LMM.am11Vec_one_step_error_bound` and `LMM.am11Vec_one_step_error_pair_bound` (11-window implicit vector recurrence under `(262747265/958003200)hL ≤ 1/2`, slackened to growth `61L` and residual coefficient `2`; `61 = ceil(2·Σ|β_k|)` is needed for the half-factor smallness assumption), thirteenth-order vector Taylor helpers `iteratedDeriv_thirteen_bounded_on_Icc_vec` / `y_thirteenth_order_taylor_remainder_vec` / `derivY_twelfth_order_taylor_remainder_vec`, the extracted `am11Vec_residual_alg_identity` / `am11Vec_residual_bound_alg_identity` / `am11Vec_residual_thirteen_term_triangle` / `am11Vec_residual_combine_aux` helpers (kernel-friendly extraction with `clear_value` after thirteen Taylor `set`s; `am11Vec_residual_alg_identity` further parameterized over the thirteen abstract Taylor remainders, with the y-form and deriv-form Taylor polynomials packed into private helpers `am11Vec_yPoly12` / `am11Vec_dPoly11` so that the 13-witness statement elaborates inside the 200K heartbeat budget — this packed-poly extraction is the cycle-482 lesson that unblocks the cycle-480 thirteen-witness vector wall), `LMM.am11Vec_pointwise_residual_bound`, `LMM.am11Vec_local_residual_bound` (`‖τ_n‖ ≤ 14003·M·h¹³`, exact coefficient `345161607571042875013/24650850631680000 ≈ 14002.02`), and the headline `LMM.am11Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(61L·T)·ε₀ + K·h¹¹` for `(N+10)·h ≤ T`) — vector mirror of the cycle-481 scalar AM11 chain in finite-dimensional normed spaces. (`OpenMath/LMMAM11VectorConvergence.lean`, cycle 482)
-  - [x] **Adams–Moulton 12-step scalar convergence chain**: `LMM.adamsMoulton12` (added to `OpenMath/AdamsMethods.lean`, with `adamsMoulton12_consistent`, `adamsMoulton12_implicit`, `adamsMoulton12_order_thirteen`, and `adamsMoulton12_zeroStable`), `LMM.IsAM12Trajectory` (supplied implicit trajectory with AM12 weights `(-13695779093, 179842822566, -1092096992268, 4063327863170, -10344711794985, 19058185652796, -26204344465152, 27345870698436, -21847538039895, 13465774256510, -6616420957428, 3917551216986, 703604254357)/2615348736000`), `LMM.am12_localTruncationError_eq`, `LMM.am12_one_step_lipschitz`, `LMM.am12_one_step_error_bound`, and `LMM.am12_one_step_error_pair_bound` (12-window implicit recurrence under `(703604254357/2615348736000)hL ≤ 1/2`, slackened to growth `104L` and residual coefficient `2`; `104 = ceil(2·Σ|β_k|)` is needed for the half-factor smallness assumption), public fourteenth-order scalar Taylor helpers `iteratedDeriv_fourteen_bounded_on_Icc` / `y_fourteenth_order_taylor_remainder` / `derivY_thirteenth_order_taylor_remainder`, extracted `am12_residual_alg_identity` / `am12_residual_bound_alg_identity` / `am12_residual_fourteen_term_triangle` / `am12_residual_combine_aux` (parameterized over fourteen abstract Taylor remainders, with packed Taylor polynomials `am12_yPoly13` / `am12_dPoly12` so that the 14-witness statement elaborates within the 200K heartbeat budget — same cycle-482 packed-poly pattern), `LMM.am12_pointwise_residual_bound` (`|τ_n| ≤ 39099·M·h¹⁴`, exact coefficient `414541158076267641095141/10602754543180800000 ≈ 39097.50`), `LMM.am12_local_residual_bound`, and the headline `LMM.am12_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp(104L·T)·ε₀ + K·h¹²` for `(N+11)·h ≤ T`) — routes through `lmm_error_bound_from_local_truncation` at `p = 12` after weakening the `h¹⁴` LTE to `h¹³` for the per-step recurrence under `h ≤ 1`. (`OpenMath/LMMAM12Convergence.lean`, cycle 484)
-  - [x] **Adams–Moulton 12-step vector convergence chain**: `LMM.IsAM12TrajectoryVec`, `LMM.am12VecResidual` + `LMM.am12Vec_localTruncationError_eq`, `LMM.am12Vec_one_step_lipschitz`, `LMM.am12Vec_one_step_error_bound`, and `LMM.am12Vec_one_step_error_pair_bound` mirror the scalar AM12 implicit recurrence with norms and scalar actions. Adds public fourteenth-order vector Taylor helpers `iteratedDeriv_fourteen_bounded_on_Icc_vec` / `y_fourteenth_order_taylor_remainder_vec` / `derivY_thirteenth_order_taylor_remainder_vec`, packed-polynomial residual helpers `am12Vec_yPoly13` / `am12Vec_dPoly12`, `am12Vec_residual_alg_identity` / `am12Vec_residual_bound_alg_identity` / `am12Vec_residual_fourteen_term_triangle` / `am12Vec_residual_combine_aux`, `LMM.am12Vec_pointwise_residual_bound`, `LMM.am12Vec_local_residual_bound` (`‖τ_n‖ ≤ 39099·M·h¹⁴`), and the headline `LMM.am12Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp(104L·T)·ε₀ + K·h¹²` for `(N+11)·h ≤ T`). (`OpenMath/LMMAM12VectorConvergence.lean`, cycle 485)
-  - [x] **Adams–Bashforth 13-step scalar convergence chain**: `LMM.adamsBashforth13` (added to `OpenMath/AdamsMethods.lean`, with `adamsBashforth13_consistent`, `adamsBashforth13_explicit`, `adamsBashforth13_order_thirteen`, and `adamsBashforth13_zeroStable`), `LMM.ab13Iter` (thirteen starting samples, generic AB recurrence with the verified textbook AB13 weights over denominator `2615348736000`), `LMM.ab13_localTruncationError_eq`, reused public fourteenth-order scalar Taylor helpers from `OpenMath/LMMAM12Convergence.lean`, `LMM.ab13_one_step_lipschitz` and `LMM.ab13_one_step_error_bound` (generic 13-window max-norm recurrence with effective constant `(1439788039057/638512875)·L`), generic Taylor-polynomial residual helpers `taylorPolyOf_eval_thirteen` / `taylorPolyOf_derivative_eval_thirteen` / `ab13_taylor_residual_sum_alg`, `LMM.ab13_pointwise_residual_bound` (`|τ_n| ≤ 529729·M·h¹⁴`, exact coefficient `5616577262114645115720677/10602754543180800000 ≈ 529728.12`), `LMM.ab13_local_residual_bound`, the generic bridge `LMM.ab13GenericCoeff`, `LMM.abLip_ab13GenericCoeff`, `LMM.ab13Iter_eq_abIter`, `LMM.ab13Residual_eq_abResidual`, and the headline `LMM.ab13_global_error_bound` (`|y_N − y(t₀+Nh)| ≤ exp((1439788039057/638512875)·L·T)·ε₀ + K·h¹³` for `(N+12)·h ≤ T`) — the textbook AB13 `O(h¹³)` scalar convergence theorem routed through `LMM.ab_global_error_bound_generic` at `s = p = 13`. (`OpenMath/LMMAB13Convergence.lean`, cycle 486)
-  - [x] **Adams–Bashforth 13-step vector convergence chain**: `LMM.ab13IterVec`, `LMM.ab13VecResidual` + `LMM.ab13Vec_localTruncationError_eq`, `LMM.ab13Vec_one_step_lipschitz` and `LMM.ab13Vec_one_step_error_bound` (generic 13-window vector recurrence with effective constant `(1439788039057/638512875)·L`), packed-polynomial residual helpers `ab13Vec_yPoly14` / `ab13Vec_dPoly13`, `ab13Vec_residual_alg_identity` / `ab13Vec_residual_bound_alg_identity` / `ab13Vec_residual_fourteen_term_triangle` / `ab13Vec_residual_combine_aux`, `LMM.ab13Vec_pointwise_residual_bound` and `LMM.ab13Vec_local_residual_bound` (`‖τ_n‖ ≤ 529729·M·h¹⁴`), the generic bridge `LMM.ab13GenericCoeffVec` / `LMM.abLip_ab13GenericCoeffVec` / `LMM.ab13IterVec_eq_abIterVec` / `LMM.ab13VecResidual_eq_abResidualVec`, and the headline `LMM.ab13Vec_global_error_bound` (`‖y_N − y(t₀+Nh)‖ ≤ exp((1439788039057/638512875)·L·T)·ε₀ + K·h¹³` for `(N+12)·h ≤ T`) — finite-dimensional vector mirror of the cycle-486 scalar AB13 chain. (`OpenMath/LMMAB13VectorConvergence.lean`, cycle 487)
-- [x] **Theorem**: Consistency conditions for multistep methods (`OpenMath/MultistepMethods.lean`)
-- [x] **Definition**: Order of a linear multistep method (`OpenMath/MultistepMethods.lean`)
-- [x] **Theorem**: Zero-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
-- [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
-- [x] **Theorem**: A-stability implies roots of ρ in unit disk (`OpenMath/MultistepMethods.lean`)
-- [x] **Theorem**: Dahlquist's second barrier — A-stable + zero-stable ⟹ order ≤ 2 (`OpenMath/MultistepMethods.lean`)
-  - [x] `E_nonneg_re`: Re(σ/ρ) ≥ 0 on unit circle for A-stable methods
-  - [x] `re_inv_exp_sub_one`: Re(1/(e^{iθ}-1)) = -1/2 on the unit circle
-  - [x] `sigmaC_one_eq_rhoCDeriv_one`: σ_ℂ(1) = ρ'_ℂ(1) for consistent methods
-  - [x] `sigmaC_one_ne_zero`: σ(1) ≠ 0 for zero-stable consistent methods
-  - [x] `dahlquistCounterexample`: counterexample (order 3, A-stable, not zero-stable)
-  - [x] Reversed polynomial identity: ρ̃(w) = w^s · ρ(1/w) via `Fin.revPerm`
-  - [x] Boundary non-negativity: Re(Gt(z)) ≥ 0 for |z| = 1
-  - [x] `DiffContOnCl ℂ Gt (Metric.ball 0 1)`: removable singularity + boundary regularity
-  - [x] `HasDerivAt Gt (1/12) 1`: polynomial algebra for derivative at removable singularity
-  - [x] `continuousOn_Gtilde_closedBall`: continuity on closed unit disk
-- [x] **Theorem**: Dahlquist equivalence theorem (consistency + stability ⟺ convergence) (`OpenMath/DahlquistEquivalence.lean`)
-  - [x] `SatisfiesRecurrence`, `HasStableRecurrence`, `IsConvergent` definitions
-  - [x] `geometric_satisfies_iff`, `linear_geometric_satisfies`
-  - [x] `not_stableRecurrence_of_root_outside_disk`, `not_stableRecurrence_of_double_root_on_circle`
-  - [x] `zeroStable_of_stableRecurrence`: stable recurrence → zero-stable
-  - [x] `stableRecurrence_of_zeroStable`: zero-stable → stable recurrence
-    - [x] `aeval_tupleSucc_charPoly_eq_zero`: Cayley-Hamilton for companion
-    - [x] `charPoly_eval_eq_rhoC`: charPoly evaluation = ρ_ℂ
-    - [x] `tupleSucc_eigenvalue_is_rhoC_root`: eigenvalue → ρ-root
-    - [x] `uniformly_bounded_tupleSucc_iterates`: spectral bound via generalized eigenspace decomposition (`OpenMath/SpectralBound.lean`)
-  - [x] `dahlquist_equivalence`: full equivalence theorem
-  - [x] Convergence for Euler, trapezoidal, AB2, AM2, BDF2, BDF3
-  - [x] `dahlquistCounterexample_not_convergent`
+### 1.2 Euler's method
+- [x] **Theorem 212A**: Global truncation error bound for Euler (`OpenMath/Basic.lean`)
+- [x] **Theorem 213A**: Convergence of Euler with order 1 (`OpenMath/EulerConvergence.lean`)
 
-### 1.3 Order and Convergence
-- [x] **Theorem**: Convergence theorem for one-step methods (`OpenMath/OneStepConvergence.lean`)
+### 1.3 The trapezoidal rule
+- [x] Trapezoidal rule formalized as the 1-step Adams–Moulton method; A-stable;
+  error constant `−1/12` (cross-ref Ch 2 and Ch 4)
 
-## Chapter 2: Runge–Kutta Methods
+### 1.4 The theta method
+- [ ] **Definition**: θ-method `y_{n+1} = y_n + h(θ f_n + (1−θ) f_{n+1})` as a
+  one-parameter family unifying forward Euler (θ=1), backward Euler (θ=0), and
+  trapezoidal (θ=1/2) (new file `OpenMath/ThetaMethod.lean`)
+- [ ] **Theorem**: θ-method is consistent (`OpenMath/ThetaMethod.lean`)
+- [ ] **Theorem**: θ-method has order 1 in general, order 2 iff θ = 1/2
+  (`OpenMath/ThetaMethod.lean`)
+- [ ] **Theorem**: θ-method A-stability domain — A-stable iff θ ≤ 1/2
+  (`OpenMath/ThetaMethod.lean`)
+- [ ] **Theorem**: θ-method recovers forward Euler / backward Euler / trapezoidal
+  at θ ∈ {1, 0, 1/2} (`OpenMath/ThetaMethod.lean`)
 
-### 2.1 Explicit Runge–Kutta Methods
-- [x] **Definition**: Butcher tableau (`OpenMath/RungeKutta.lean`)
-- [x] **Definition**: Consistency, explicit RK, order conditions up to order 4 (`OpenMath/RungeKutta.lean`)
-- [x] **Example**: Forward Euler, explicit midpoint, Heun's method as RK (`OpenMath/RungeKutta.lean`)
-- [x] **Example**: Classical RK4 method — consistency, explicit, order 4 (`OpenMath/RungeKutta.lean`)
-- [x] **Theorem**: Explicit RK order barriers (s-stage explicit ⟹ order ≤ s for s ≤ 4) (`OpenMath/OrderBarriers.lean`)
-- [x] **Theorem**: Explicit methods cannot satisfy C(2) with distinct nodes (`OpenMath/OrderBarriers.lean`)
+---
 
-### 2.2 Implicit Runge–Kutta Methods
-- [x] **Definition**: Implicit RK methods (implicit Euler, implicit midpoint) (`OpenMath/RungeKutta.lean`)
-- [x] **Definition**: Stability function R(z) for 1-stage RK methods (`OpenMath/RungeKutta.lean`)
-- [x] **Theorem**: A-stability of implicit Euler and implicit midpoint (`OpenMath/RungeKutta.lean`)
-- [x] **Theorem**: Forward Euler (RK) is NOT A-stable (`OpenMath/RungeKutta.lean`)
-- [x] **Example**: Gauss–Legendre 2-stage — Butcher tableau, consistency, A-stability, order 4 (`OpenMath/RungeKutta.lean`)
-- [x] **Example**: Gauss–Legendre 3-stage — order ≥ 5, B(6), D(3) (`OpenMath/GaussLegendre3.lean`)
-- [x] **Example**: Radau IA 2-stage — order 3, A/L-stability, algebraic stability (`OpenMath/RadauIA2.lean`)
-- [x] **Example**: Radau IA 3-stage (`OpenMath/RadauIA3.lean`)
-- [x] **Example**: Radau IIA 3-stage — order ≥ 5, algebraic stability (`OpenMath/RadauIIA3.lean`)
-- [x] **Definition**: B(p), C(q), D(r) simplifying assumptions (`OpenMath/Collocation.lean`)
-- [x] **Theorem**: B(p)∧C(q) ⟹ order ≥ p, various combinations (`OpenMath/Collocation.lean`)
-- [x] **Theorem**: Nørsett's even-order theorem: symmetric + order ≥ 3 ⟹ order ≥ 4 (`OpenMath/Symmetry.lean`)
-- [x] **Definition**: Self-adjoint / adjoint pair (`OpenMath/Adjoint.lean`)
+## Chapter 2: Multistep Methods
 
-### 2.3 Lobatto Methods
-- [x] **Example**: Lobatto IIIA 2-stage and 3-stage (`OpenMath/LobattoIIIA.lean`, `OpenMath/LobattoIIIA3.lean`)
-- [x] **Example**: Lobatto IIIB 2-stage and 3-stage (`OpenMath/LobattoIIIB.lean`, `OpenMath/LobattoIIIB3.lean`)
-- [x] **Example**: Lobatto IIIC 2-stage and 3-stage (`OpenMath/LobattoIIIC.lean`, `OpenMath/LobattoIIIC3.lean`)
+### 2.1 The Adams method
+- [x] **General LMM infrastructure** (`OpenMath/MultistepMethods.lean`)
+- [x] **Adams–Bashforth and Adams–Moulton families** (`OpenMath/AdamsMethods.lean`)
+- [x] **Adams convergence corollaries** for AB2–AB6 and AM2–AM6: consistency,
+  order, zero-stability, and convergence via Dahlquist
+  (`OpenMath/AdamsMethods.lean`, `OpenMath/DahlquistEquivalence.lean`)
+- [x] **Reusable Adams zero-stability helper** `adams_zeroStable_of_rhoC_pow_mul`
+  (`OpenMath/AdamsMethods.lean`, cycle 389)
 
-## Chapter 3: Stiff Equations
+### 2.2 Order and convergence of multistep methods
+- [x] **Consistency, order, zero-stability** definitions (`OpenMath/MultistepMethods.lean`)
+- [x] **Error constants** `LMM.errorConstant`: forward Euler `1/2`, backward Euler `−1/2`,
+  trapezoidal `−1/12`, AB2 `5/12`, AM2 `−1/24`, …; AB2–AB6 strictly positive,
+  AM2–AM6 strictly negative (`OpenMath/AdamsMethods.lean`, cycle 388)
+- [x] **BDF error constants** computed: BDF2 `−2/9`, BDF3 `−3/22`, BDF4 `−12/125`,
+  BDF5 `−10/137`, BDF6 `−20/343`, BDF7 `−35/726` (cycles 392–393)
+- [x] **Truncation operator infrastructure** (`OpenMath/LMMTruncationOp.lean`,
+  cycles 394–399): definition `LMM.truncationOp`, monomial / polynomial / shifted /
+  Taylor-remainder identities, and the uniform local-truncation-error bridge
+  `truncationOp_smooth_local_truncation_error`
+- [x] **Discrete Gronwall for finite horizons** `discrete_gronwall_exp_horizon`
+  (`OpenMath/LMMTruncationOp.lean`)
+- [x] **Theorem (Dahlquist equivalence)**: consistency + zero-stability ⟺
+  convergence (`OpenMath/DahlquistEquivalence.lean`); includes spectral bound
+  via generalized eigenspace decomposition (`OpenMath/SpectralBound.lean`)
+- [x] **One-step convergence theorem** (`OpenMath/OneStepConvergence.lean`)
 
-- [x] **Definition**: Stiffness (`OpenMath/Stiffness.lean`)
-- [x] **Theorem**: A-stability of backward Euler and trapezoidal rule (`OpenMath/MultistepMethods.lean`)
-- [x] **Theorem**: Forward Euler is not A-stable (`OpenMath/MultistepMethods.lean`)
-- [x] **Theorem**: Dahlquist's second barrier (A-stable + zero-stable ⟹ order ≤ 2) (`OpenMath/MultistepMethods.lean`)
-- [x] **Counterexample**: A-stable order-3 method without zero-stability (`dahlquistCounterexample`)
-- [x] **Definition**: L-stability (`OpenMath/StiffEquations.lean`)
-- [x] **Theorem**: L-stability of backward Euler, Radau IIA, SDIRK2, SDIRK3 (`OpenMath/StiffEquations.lean`, `OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
-- [x] **Definition**: Algebraic stability (`OpenMath/RungeKutta.lean`)
-- [x] **Theorem**: Algebraic stability of GL2, GL3, Radau IIA3, Lobatto IIIC3 (various files)
-- [x] **Theorem 358A**: algebraic-stability characterization of collocation methods (`OpenMath/CollocationAlgStability.lean`)
-  - [x] Forward direction: collocation + algebraically stable ⇒ nodes are zeros of `P_s^* − θ P_{s-1}^*` for some θ ≥ 0
-  - [x] Reverse direction: collocation + boundary nodes ⇒ algebraically stable (cycle 371, via `antiderivPoly` helper and Lagrange/quadrature route)
-- [x] **Theorem 359C**: classical collocation families are algebraically stable (`OpenMath/CollocationFamilies.lean`)
-  - [x] `gaussLegendreNodes_hasAlgStabilityBoundaryNodes`: GL nodes ⇒ θ=0 boundary nodes
-  - [x] `thm_359C_gaussLegendre`: any collocation method with GL nodes is algebraically stable (via 358A)
-  - [x] `thm_359C_radauI`: any collocation method on `P_s^* − P_{s-1}^*` zeros is algebraically stable (θ=1)
-  - [x] Concrete corollaries `rkGaussLegendre2_algStable_via_358A` and `rkGaussLegendre3_algStable_via_358A`
-- [x] **Theorem 359B**: Radau IIA family is algebraically stable (`OpenMath/CollocationFamilies.lean`, cycle 374)
-  - [x] `HasRadauIIANodes`: tableau abscissae are zeros of `P_s^* − P_{s-1}^*` (right-endpoint Radau, θ=1 under live sign convention)
-  - [x] `radauIIANodes_hasAlgStabilityBoundaryNodes`: Radau IIA nodes ⇒ algebraic-stability boundary nodes with θ = 1 ≥ 0
-  - [x] `thm_359B_radauIIA`: any collocation method with Radau IIA nodes is algebraically stable (via 358A)
-  - [x] Concrete corollary `rkRadauIIA3_algStable_via_358A`
-- [ ] **Theorem 359B (Radau IA side)**: left-endpoint Radau algebraic-stability family (`OpenMath/CollocationFamilies.lean`, cycle 375 partial)
-  - [x] `HasRadauIANodes`: tableau abscissae are zeros of `P_s^* + P_{s-1}^*` (`algStabilityBoundaryPoly s (-1)`)
-  - [x] Concrete node certificates `rkRadauIA2_hasRadauIANodes` and `rkRadauIA3_hasRadauIANodes`
-  - [ ] Family-level bridge blocked: the requested `IsCollocation` + θ = -1 statement is false for the genuine 2-stage left-Radau collocation tableau; see `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`
-- [x] **§3.5.10 packaging corollaries**: family-level BN-stability for collocation methods (`OpenMath/CollocationFamilies.lean`, cycle 376)
-  - [x] `thm_359C_gaussLegendre_bnStable`: `IsCollocation ∧ HasGaussLegendreNodes → IsBNStable`
-  - [x] `thm_359B_radauIIA_bnStable`: `IsCollocation ∧ HasRadauIIANodes → IsBNStable`
-  - [x] `thm_359C_radauI_bnStable`: `IsCollocation ∧ (zeros of P_s^* − P_{s-1}^*) → IsBNStable`
-  - [x] Concrete corollaries `rkGaussLegendre2_bnStable_via_358A`, `rkGaussLegendre3_bnStable_via_358A`, `rkRadauIIA3_bnStable_via_358A`
-  - [ ] Real Theorem 359D textbook statement still pending: requires Iserles §3.5.10 lookup to identify the named theorem after 359C
+#### Per-step quantitative convergence chains (covered)
+The following per-step `OpenMath/LMM*Convergence.lean` files each carry the
+trajectory predicate, residual unfolding, one-step Lipschitz/error bound,
+pointwise local-truncation-error bound, and finite-horizon global error
+bound for one specific scheme:
+
+- Forward Euler (`OpenMath/LMMTruncationOp.lean`)
+- AB2 through AB13 (scalar and vector) — `OpenMath/LMMAB{2,…,13}{,Vector}Convergence.lean`
+- AM2 through AM12 (scalar and vector) — `OpenMath/LMMAM{2,…,12}{,Vector}Convergence.lean`
+- BDF1 through BDF3 (scalar and vector, full global theorem) —
+  `OpenMath/LMMBDF{1,2,3}{,Vector}Convergence.lean`
+- BDF4 through BDF7 (scalar and vector truncation chains; global theorem deferred for
+  BDF4–BDF6, impossible for zero-unstable BDF7) —
+  `OpenMath/LMMBDF{4,5,6,7}{,Vector}Convergence.lean`
+
+> **Cap:** The per-step enumeration is closed. Do **not** add AB14, AM13,
+> or BDF8 quantitative convergence chains. Once the Dahlquist equivalence
+> (`OpenMath/DahlquistEquivalence.lean`) is in place, qualitative convergence
+> for any consistent zero-stable method follows; further quantitative
+> per-step files repeat the same template and are not in Iserles.
+
+### 2.3 Backward differentiation formulae
+- [x] **BDF1–BDF2** (`OpenMath/MultistepMethods.lean`)
+- [x] **BDF3–BDF6**: consistency, order = step count, zero-stability
+  (`OpenMath/MultistepMethods.lean`, `OpenMath/BDF.lean`)
+- [x] **BDF5 / BDF6 zero-stability** via `w = 1/ξ` substitution + `nlinarith`,
+  unit-root reductions for BDF6
+- [x] **BDF7 infrastructure**: definition, consistency, order 7, characteristic
+  factorization (`OpenMath/MultistepMethods.lean`, cycle 377)
+- [x] **BDF7 zero-instability** via exact algebraic root certificate for the
+  Cayley-transformed sextic (cycle 379)
+- [x] **BDF7 non-convergence** via Dahlquist equivalence (`OpenMath/DahlquistEquivalence.lean`)
+- [x] **BDF4–BDF6 convergence** via Dahlquist equivalence
+
+---
+
+## Chapter 3: Runge–Kutta Methods
+
+### 3.0 Foundations: rooted trees and order conditions
+- [x] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`):
+  `BTree`, `order`, `symmetry`, `density`, examples through order 5,
+  `thm_301A_order1` … `thm_301A_order5`
+- [x] **Order conditions** through order 5 (`OpenMath/OrderConditions.lean`,
+  `OpenMath/RootedTree.lean`)
+
+### 3.1 Gaussian quadrature
+- [x] **Legendre / shifted Legendre infrastructure** (`OpenMath/Legendre.lean`,
+  `OpenMath/LegendreHelpers.lean`, `OpenMath/ShiftedLegendreDivision.lean`)
+- [x] **Theorem 342C**: Gaussian quadrature order-condition equivalence
+  (`OpenMath/Collocation.lean`)
+  - 342j (`G(p) ⇒ B(p)`), 342k (`G(2n) ⇒ E(n,n)`), 342l (`B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)`)
+  - 342m / 342n / 342o / 342p (`B(2s) ∧ C(s)/D(s) ⇔ E(s,s)` bidirections)
+
+### 3.2 Explicit Runge–Kutta schemes
+- [x] **Butcher tableau** (`OpenMath/RungeKutta.lean`, `OpenMath/ExplicitRK.lean`)
+- [x] **Examples**: forward Euler / explicit midpoint / Heun / classical RK4 as RK,
+  consistency, order conditions through order 4
+- [x] **Theorem (order barrier)**: s-stage explicit ⟹ order ≤ s for s ≤ 4
+  (`OpenMath/OrderBarriers.lean`)
+- [x] **Theorem**: explicit methods cannot satisfy `C(2)` with distinct nodes
+  (`OpenMath/OrderBarriers.lean`)
+
+### 3.3 Implicit Runge–Kutta schemes
+- [x] **Implicit Euler / implicit midpoint** (`OpenMath/RungeKutta.lean`)
+- [x] **Stability function `R(z)`** for 1-stage RK (`OpenMath/RungeKutta.lean`)
+- [x] **A-stability**: implicit Euler / implicit midpoint A-stable; forward Euler not
+- [x] **Gauss–Legendre 2-stage** — order 4, A-stable (`OpenMath/RungeKutta.lean`)
+- [x] **Gauss–Legendre 3-stage** — order ≥ 5, `B(6)`, `D(3)` (`OpenMath/GaussLegendre3.lean`)
+- [x] **Radau IA 2-stage / 3-stage** (`OpenMath/RadauIA2.lean`, `OpenMath/RadauIA3.lean`)
+- [x] **Radau IIA 3-stage** — order ≥ 5, algebraic stability (`OpenMath/RadauIIA3.lean`)
+- [x] **SDIRK2 / SDIRK3** (`OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
+- [x] **Lobatto IIIA / IIIB / IIIC, 2-stage and 3-stage**
+  (`OpenMath/LobattoIIIA{,3}.lean`, `OpenMath/LobattoIIIB{,3}.lean`,
+  `OpenMath/LobattoIIIC{,3}.lean`)
+
+### 3.4 Collocation and IRK
+- [x] **`B(p)`, `C(q)`, `D(r)` simplifying assumptions** (`OpenMath/Collocation.lean`)
+- [x] **Theorem**: `B(p) ∧ C(q) ⟹ order ≥ p`, plus assorted combinations
+- [x] **Symmetric methods, Nørsett's even-order theorem**
+  (symmetric + order ≥ 3 ⟹ order ≥ 4) (`OpenMath/Symmetry.lean`)
+- [x] **Self-adjoint / adjoint pair** (`OpenMath/Adjoint.lean`)
+- [x] **Reflected RK tableau** `(1−c, b−A, b)` and transfer of `B`, `C`, `D`, `E`
+  (`OpenMath/ReflectedMethods.lean`)
+- [x] **`CollocationBN` infrastructure** (`OpenMath/CollocationBN.lean`)
+
+### 3.5 Stability theory of RK methods (Padé, order stars, AN/BN/algebraic)
 - [x] **Theorem 351B**: A-stability criterion via E-function (`OpenMath/AStabilityCriterion.lean`)
-- [x] **Theorems 355C/355D/355E**: global order-arrow trajectory bookkeeping (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
-  - [x] Formalized local order-star geometry, arrow directions, and the 355F imaginary-axis obstruction
-  - [x] Introduced explicit endpoint bookkeeping via `OrderArrowTerminationData`
-  - [x] Closed the concrete no-escape seam via `noArrowsEscapeToInfinity_of_concreteRationalApprox`
-  - [x] Landed the concrete wrappers `thm_355D_of_concreteRationalApprox` and `thm_355E'_of_concreteRationalApprox`
-- [x] **Theorem 355G**: repaired Ehle barrier / Padé wedge boundary (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
-  - [x] Kept the honest downstream boundary separate as `EhleBarrierInput`
-  - [x] Built the concrete Padé constructor `ehleBarrierInput_of_padeR_aStable`
-  - [x] Closed `padeREhleBarrierNatInput_of_padeR_aStable` and `ehle_barrier_nat_of_padeR`
-- [x] **Theorem 356C**: AN-stability implies algebraic stability (`OpenMath/ANStability.lean`)
-  - [x] Defined AN-stability (`IsANStable`) and diagonal stability function (`stabilityFnDiag`)
-  - [x] Proved `bⱼ ≥ 0` direction: det formula, stability function formula, norm bound
-  - [x] Proved M positive semidefinite direction via the imaginary-basis perturbation argument
-- [x] **Theorem 357C**: algebraic stability implies BN-stability (`OpenMath/BNStability.lean`)
-- [x] **Theorem 357D**: BN-stability implies AN-stability for irreducible non-confluent methods (`OpenMath/BNImpliesAN.lean`)
-- [x] **Definition**: Padé approximants and stability functions (`OpenMath/Pade.lean`)
-- [x] **Theorem 353A**: Padé approximation order (`OpenMath/PadeOrder.lean`)
-- [x] **Theorem 352C/352D**: Padé recurrence infrastructure (`OpenMath/Pade.lean`)
-  - [x] Added general `padeP`, `padeQ`, `padeR` families
-  - [x] Proved diagonal symmetry and specialization lemmas `padeQ_diagonal_eq_padeP_neg`, `padeP_one_one`, `padeQ_two_two`
-  - [x] Proved pair packaging theorem `padePQ_pair_recurrence`
-  - [x] Proved coefficient recurrences `padeQ_succ_left`, `padeP_succ_right`
-- [x] **Definition**: Embedded RK pairs (`OpenMath/EmbeddedRK.lean`)
-- [x] **Definition**: Stiff accuracy (`OpenMath/StiffAccuracy.lean`)
-- [x] **Theorem 342C**: Gaussian quadrature order-condition equivalence (`OpenMath/Collocation.lean`)
-  - [x] Defined `SatisfiesE (η, ζ)` from equation (321c)
-  - [x] Proved `B(2s) ∧ C(s) ⇒ E(s,s)` (342m) and `B(2s) ∧ D(s) ⇒ E(s,s)` (342o)
-  - [x] Proved `B(2s) ∧ E(s,s) ⇒ C(s)` (342n, requires distinct nodes + nonzero weights) via Vandermonde uniqueness
-  - [x] Proved `B(2s) ∧ E(s,s) ⇒ D(s)` (342p, requires distinct nodes) via Vandermonde uniqueness
-  - [x] Proved `G(p) ⇒ B(p)` (342j) via `bushyTree`
-  - [x] Proved `G(2n) ⇒ E(n,n)` (342k) via `branchedTree`
-  - [x] `B(2n) ∧ C(n) ∧ D(n) ⇒ G(2n)` (342l) fully proved via gen_tree_cond_big_child_aux
-- [x] **Theorem 301A**: rooted-tree infrastructure (`OpenMath/RootedTree.lean`)
-  - [x] Defined `BTree`
-  - [x] Defined `order`, `symmetry`, `density`
-  - [x] Added basic examples of orders `1` through `3`
-  - [x] Proved tree-based order infrastructure through order `5` (`thm_301A_order1` ... `thm_301A_order5`)
-  - [x] Theorem-facing bag-first recovery interface is in place; remaining `.hnode` equalities are private `RootedTree.lean` internals with no `OrderConditions.lean` consumers
+- [x] **Padé approximants and stability functions** (`OpenMath/Pade.lean`)
+- [x] **Theorems 352C / 352D**: Padé recurrence — `padeP`, `padeQ`, `padeR` families,
+  diagonal symmetry, specialization, pair packaging, coefficient recurrences
+- [x] **Theorem 353A**: Padé approximation order (`OpenMath/PadeOrder.lean` /
+  `OpenMath/PadeAsymptotics.lean`, `OpenMath/PadeUniqueness.lean`)
+- [x] **Theorems 355C / 355D / 355E**: order-arrow trajectory bookkeeping,
+  endpoint data, no-escape, concrete wrappers
+  (`OpenMath/OrderStars.lean`, `OpenMath/PadeOrderStars.lean`)
+- [x] **Theorem 355G**: Ehle barrier / Padé wedge boundary, with separate honest
+  downstream `EhleBarrierInput` and concrete Padé constructor
+- [x] **Theorem 356C**: AN-stability ⇒ algebraic stability (`OpenMath/ANStability.lean`)
+- [x] **Theorem 357C**: algebraic stability ⇒ BN-stability (`OpenMath/BNStability.lean`)
+- [x] **Theorem 357D**: BN-stability ⇒ AN-stability for irreducible non-confluent
+  methods (`OpenMath/BNImpliesAN.lean`)
+- [x] **Theorem 358A**: algebraic-stability characterization of collocation
+  methods (`OpenMath/CollocationAlgStability.lean`); both directions
+- [x] **Theorem 359B (Radau IIA family)**: collocation + Radau IIA nodes ⇒
+  algebraically stable (`OpenMath/CollocationFamilies.lean`, cycle 374)
+- [x] **Theorem 359C**: classical collocation families (Gauss–Legendre, Radau I/θ=1)
+  algebraically stable; concrete corollaries
+  `rkGaussLegendre{2,3}_algStable_via_358A` (`OpenMath/CollocationFamilies.lean`)
+- [-] **Theorem 359B (Radau IA side)**: blocked — see Blockers
+- [x] **§3.5.10 packaging corollaries**: family-level BN-stability for GL, Radau IIA
+  collocation (`OpenMath/CollocationFamilies.lean`, cycle 376)
+- [-] **Theorem 359D**: pending — needs Iserles §3.5.10 source statement (see Blockers)
 
-### BDF Methods (Section 4.5)
-- [x] **BDF1-2**: backward Euler and BDF2 (`OpenMath/MultistepMethods.lean`)
-- [x] **BDF3**: consistency, order 3, zero-stability, convergence (`OpenMath/MultistepMethods.lean`)
-- [x] **BDF4**: consistency, order 4, zero-stability (`OpenMath/MultistepMethods.lean`)
-- [x] **BDF5**: consistency, order 5, not A-stable (`OpenMath/MultistepMethods.lean`, `OpenMath/BDF.lean`)
-- [x] **BDF6**: consistency, order 6, not A-stable (`OpenMath/MultistepMethods.lean`, `OpenMath/BDF.lean`)
-- [x] **A(α)-stability**: sector definition, monotonicity, A-stable ↔ A(π/2)-stable (`OpenMath/BDF.lean`)
-- [x] **Theorem**: BDF3-6 are NOT A-stable (via Dahlquist barrier) (`OpenMath/BDF.lean`)
-- [x] **BDF5 zero-stability**: roots in disk via w=1/ξ substitution + nlinarith (`OpenMath/MultistepMethods.lean`)
-- [x] **BDF6 zero-stability**: roots in disk via w=1/ξ substitution + nlinarith, unit roots via real/imaginary decomposition (`OpenMath/MultistepMethods.lean`)
-- [x] **BDF4 convergence**: consistent + zero-stable → convergent (`OpenMath/DahlquistEquivalence.lean`)
-- [x] **BDF5 convergence**: consistent + zero-stable → convergent (`OpenMath/DahlquistEquivalence.lean`)
-- [x] **BDF6 convergence**: consistent + zero-stable → convergent; BDF6 is the highest-order convergent BDF method (`OpenMath/DahlquistEquivalence.lean`)
-- [x] **BDF7 infrastructure**: definition, consistency, order 7, implicitness, characteristic factorization, and bad-root reduction (`OpenMath/MultistepMethods.lean`, cycle 377)
-- [x] **BDF7 zero-instability**: exact algebraic root certificate for the Cayley-transformed sextic (`OpenMath/MultistepMethods.lean`, cycle 379)
-- [x] **BDF7 non-convergence**: not zero-stable → not convergent via Dahlquist equivalence (`OpenMath/DahlquistEquivalence.lean`, cycle 379)
-- [x] **BDF error constants**: BDF2 = −2/9, BDF3 = −3/22, BDF4 = −12/125, BDF5 = −10/137, BDF6 = −20/343, BDF7 = −35/726 (computed despite zero-instability) (`OpenMath/MultistepMethods.lean`, cycles 392–393)
+---
+
+## Chapter 4: Stiff Equations
+
+### 4.1 What are stiff ODEs?
+- [x] **Definition**: stiffness (`OpenMath/Stiffness.lean`)
+
+### 4.2 Linear stability domain and A-stability
+- [x] **Definition**: A-stability of multistep methods (`OpenMath/MultistepMethods.lean`)
+- [x] **A-stability ⇒ roots of `ρ` in unit disk** (`OpenMath/MultistepMethods.lean`)
+
+### 4.3 A-stability of Runge–Kutta methods
+- [x] Cross-ref Ch 3.5 (Padé, order stars, AN/BN/algebraic stability)
+- [x] **Definition**: stiff accuracy (`OpenMath/StiffAccuracy.lean`); concrete certs
+  for implicit Euler, SDIRK2/3, Radau IIA2/3, Lobatto IIIA2/3, Lobatto IIIC2/3
+- [x] **Definition**: L-stability (`OpenMath/StiffEquations.lean`); concrete certs
+  for backward Euler, Radau IIA, SDIRK2, SDIRK3
+  (`OpenMath/StiffEquations.lean`, `OpenMath/SDIRK.lean`, `OpenMath/SDIRK3.lean`)
+
+### 4.4 A-stability of multistep methods (Dahlquist barriers)
+- [x] **A-stability of backward Euler and trapezoidal rule** (`OpenMath/MultistepMethods.lean`)
+- [x] **Forward Euler is not A-stable** (`OpenMath/MultistepMethods.lean`)
+- [x] **Theorem (Dahlquist's second barrier)**: A-stable + zero-stable ⟹ order ≤ 2
+  (`OpenMath/MultistepMethods.lean`); 9 supporting lemmas including
+  `E_nonneg_re`, `re_inv_exp_sub_one`, removable-singularity Gtilde proof,
+  and `dahlquistCounterexample` (order-3 A-stable but not zero-stable)
+
+### 4.5 BDF methods (stability-side; defined in §2.3)
+- [x] **A(α)-stability sector**: definition, monotonicity, A-stable ↔ A(π/2)-stable
+  (`OpenMath/BDF.lean`)
+- [x] **BDF3–6 are NOT A-stable** via Dahlquist barrier (`OpenMath/BDF.lean`)
+- [x] **BDF4 stable-block quadratic Lyapunov certificate and forced one-step
+  recurrence** (`OpenMath/BDFQuadraticLyapunov.lean`): `bdf4RecDefect`,
+  `bdf4LyapU`, stable coordinates, `bdf4CubicQuad`, exact homogeneous decrease,
+  coercive bounds, `bdf4StableEnergy`, `bdf4LyapW`, forced energy/defect
+  recurrences, `bdf4_eIdx4_le_W_add_defect`,
+  `bdf4LyapW_one_step_error_bound` (cycles 458 / 488 / 489)
+- [-] **BDF4 / BDF5 / BDF6 global Lyapunov / quantitative convergence**: deferred
+  by spectral obstruction (see Blockers)
+
+---
+
+## Chapter 5: Geometric Numerical Integration
+
+> **This is the active frontier.** Symmetry / adjoint / reflected foundations
+> already exist in Ch 3.4; the symplectic / Hamiltonian / Verlet content below
+> is open and is what cycle 491+ should pursue.
+
+### 5.1 Between quality and quantity
+- Motivational. No formal items.
+
+### 5.2 Monotone equations and algebraic stability
+- [x] Cross-reference Ch 3.5: 356C / 357C / 357D / 358A / 359B / 359C and the
+  GL / Radau IIA / Lobatto IIIC concrete algebraic-stability certificates.
+
+### 5.3 From here to eternity (long-time behavior; Hamiltonian systems)
+- [ ] **Definition**: Hamiltonian function `H : Fin (2*d) → ℝ` (or `H : EuclideanSpace ℝ (Fin (2*d)) → ℝ`),
+  separable form `H(q,p) = T(p) + V(q)` (new file `OpenMath/Hamiltonian.lean`)
+- [ ] **Definition**: Hamiltonian flow ODE `q' = ∂H/∂p`, `p' = −∂H/∂q`
+  (`OpenMath/Hamiltonian.lean`)
+- [ ] **Theorem**: the Hamiltonian is a first integral — `H` is constant along
+  Hamiltonian-flow trajectories (`OpenMath/Hamiltonian.lean`)
+
+### 5.4 Symplectic methods
+- [ ] **Definition**: canonical symplectic 2-form / matrix
+  `J = [[0, I_d], [−I_d, 0]]` on `ℝ^{2d}` (new file `OpenMath/Symplectic.lean`)
+- [ ] **Definition**: `IsSymplectic φ` for a smooth `φ : ℝ^{2d} → ℝ^{2d}` via
+  `(Dφ(x))ᵀ · J · (Dφ(x)) = J` for all `x` (`OpenMath/Symplectic.lean`)
+- [ ] **Lemma**: composition of symplectic maps is symplectic
+  (`OpenMath/Symplectic.lean`)
+- [ ] **Theorem**: the Hamiltonian flow is symplectic (`OpenMath/Symplectic.lean`)
+- [ ] **Definition**: symplectic Euler scheme for separable Hamiltonians:
+  `q_{n+1} = q_n + h ∂H/∂p(q_n, p_{n+1})`, `p_{n+1} = p_n − h ∂H/∂q(q_n, p_{n+1})`
+  (new file `OpenMath/SymplecticEuler.lean`)
+- [ ] **Theorem**: symplectic Euler is symplectic (`OpenMath/SymplecticEuler.lean`)
+- [x] Cross-reference: symmetric / self-adjoint RK methods (`OpenMath/Symmetry.lean`,
+  `OpenMath/Adjoint.lean`); reflected tableau (`OpenMath/ReflectedMethods.lean`).
+
+### 5.5 The symplectic Verlet (Störmer–Verlet) method
+- [ ] **Definition**: Störmer–Verlet method for separable Hamiltonians (new file
+  `OpenMath/Verlet.lean`)
+- [ ] **Theorem**: Störmer–Verlet is symplectic and time-reversible
+  (`OpenMath/Verlet.lean`)
+- [ ] **Theorem**: Störmer–Verlet has order 2 (`OpenMath/Verlet.lean`)
+
+---
+
+## Chapter 6: Error Control
+
+### 6.1 Numerical software vs numerical mathematics
+- Motivational. No formal items.
+
+### 6.2 The Milne device
+- [ ] **Definition**: Milne device for matched predictor–corrector multistep pairs
+  (e.g. AB(p)/AM(p)) — local error estimate from `(y* − y) / (1 − error-constant ratio)`
+  (new file `OpenMath/MilneDevice.lean`)
+- [ ] **Theorem**: Milne estimate is asymptotically correct as `h → 0` for
+  matched-order pairs (`OpenMath/MilneDevice.lean`)
+
+### 6.3 Embedded Runge–Kutta methods
+- [x] **`EmbeddedRKPair` structure**, `IsConsistent`, `IsExplicit`, `errorWeights`,
+  `HasFSAL`, weight-sum identities (`OpenMath/EmbeddedRK.lean`)
+- [x] **Heun–Euler 2(1)**: explicit, consistent, main order 2, embed order 1,
+  error-weight closure (`OpenMath/EmbeddedRK.lean`)
+- [x] **Bogacki–Shampine 3(2)**: explicit, consistent, main order 3, embed order 2,
+  stiffly accurate, FSAL, non-negative weights, `B(3)`, `C(1)` (`OpenMath/EmbeddedRK.lean`)
+- [ ] **Fehlberg 4(5) (RKF45)** embedded pair: tableau, consistency, orders 4 and 5,
+  error-weight closure (extends `OpenMath/EmbeddedRK.lean` or `OpenMath/RKF45.lean`)
+- [ ] **Dormand–Prince 5(4) (DOPRI5)** embedded pair: tableau, consistency,
+  orders 5 and 4, FSAL, error-weight closure (extends `OpenMath/EmbeddedRK.lean`
+  or `OpenMath/DOPRI5.lean`)
+- [ ] **Theorem**: error-weight estimate `h · Σᵢ (bᵢ − b̂ᵢ) kᵢ` agrees with the
+  true LTE difference of the two embedded methods up to higher-order terms
+- [ ] **Algorithm**: step-size adaptation via local error estimate (PI controller
+  or proportional rule)
+
+---
+
+## Chapter 7: Nonlinear Algebraic Systems
+
+### 7.1 Functional iteration
+- [ ] **Definition**: functional iteration in `ℝᵈ`; contraction-mapping predicate
+  (likely thin wrapper over Mathlib's `ContractingWith`) — new file
+  `OpenMath/FunctionalIteration.lean`
+- [ ] **Theorem**: Banach fixed-point theorem for contractions on a complete
+  metric space (probably re-export of `ContractingWith.fixedPoint_unique` etc.)
+- [ ] **Theorem**: functional iteration on the implicit RK / implicit LMM
+  fixed-point equation converges for `h · L · |a-coefficient bound| < 1`
+  (`OpenMath/FunctionalIteration.lean`)
+
+### 7.2 The Newton–Raphson method
+- [ ] **Definition**: Newton–Raphson iteration in `ℝᵈ` (`OpenMath/Newton.lean`)
+- [ ] **Theorem**: quadratic convergence near a simple root with Lipschitz
+  Jacobian (`OpenMath/Newton.lean`)
+- [ ] **Definition**: modified Newton (frozen Jacobian) (`OpenMath/Newton.lean`)
+- [ ] **Theorem**: linear convergence of modified Newton when the Jacobian is
+  refreshed sufficiently often (`OpenMath/Newton.lean`)
+
+### 7.3 Starting and stopping the iteration
+- [ ] **Definitions**: residual-based and increment-based stopping criteria
+  (`OpenMath/Newton.lean`)
+
+---
+
+## Part II: Numerical Algebra (Chapters 8–11)
+
+> All chapters in Part II are unstarted. Items below are concrete `[ ]`
+> targets; the planner should reach for them only after Chs 5–7 close (or
+> if all of Chs 5–7 have hard blockers).
+
+### Chapter 8: Direct methods for linear algebraic systems
+- [ ] **Definition**: LU factorization of a square matrix `A = L · U`
+  (new file `OpenMath/LU.lean`)
+- [ ] **Theorem**: existence and uniqueness of LU when every leading principal
+  minor of `A` is non-singular (`OpenMath/LU.lean`)
+- [ ] **Definition**: forward and backward substitution (`OpenMath/LU.lean`)
+- [ ] **Theorem**: forward / backward substitution solves `L · x = b` /
+  `U · x = b` in `O(d²)` operations (`OpenMath/LU.lean`)
+- [ ] **Definition**: partial pivoting; permutation matrix `P` so that
+  `P · A = L · U` (`OpenMath/LU.lean`)
+- [ ] **Theorem**: every non-singular `A` admits an LU factorization with
+  partial pivoting (`OpenMath/LU.lean`)
+- [ ] **Definition**: Cholesky factorization `A = L · Lᵀ` for symmetric
+  positive-definite `A` (new file `OpenMath/Cholesky.lean`)
+- [ ] **Theorem**: existence and uniqueness of Cholesky for SPD `A`
+  (`OpenMath/Cholesky.lean`)
+- [ ] **Definition**: banded matrix; bandwidth (`OpenMath/LU.lean` or new
+  `OpenMath/Banded.lean`)
+- [ ] **Theorem**: LU of a banded matrix preserves bandwidth
+
+### Chapter 9: Iterative methods for sparse linear algebraic systems
+- [ ] **Definition**: linear one-step stationary iteration
+  `x_{n+1} = H · x_n + v` (new file `OpenMath/StationaryIteration.lean`)
+- [ ] **Theorem**: convergence iff spectral radius `ρ(H) < 1`
+  (`OpenMath/StationaryIteration.lean`)
+- [ ] **Theorem**: convergence rate is geometric with ratio `ρ(H)`
+- [ ] **Definitions**: Jacobi, Gauss–Seidel, SOR iterations from a matrix
+  splitting `A = L + D + U` (new file `OpenMath/JacobiSOR.lean`)
+- [ ] **Theorem**: Jacobi converges for strictly diagonally dominant `A`
+  (`OpenMath/JacobiSOR.lean`)
+- [ ] **Theorem**: Gauss–Seidel converges for SPD `A` (`OpenMath/JacobiSOR.lean`)
+- [ ] **Theorem (Ostrowski–Reich)**: SOR converges for SPD `A` iff
+  `0 < ω < 2` (`OpenMath/JacobiSOR.lean`)
+- [ ] **Theorem**: optimal SOR parameter `ω*` for the discrete Poisson
+  matrix (cross-ref Ch 15) (`OpenMath/JacobiSOR.lean`)
+
+### Chapter 10: The conjugate gradient method
+- [ ] **Definition**: Krylov subspace `K_n(A, r₀)` (new file
+  `OpenMath/Krylov.lean`)
+- [ ] **Definition**: conjugate gradient iteration on SPD systems
+  (new file `OpenMath/ConjugateGradient.lean`)
+- [ ] **Theorem**: CG residuals are mutually `A`-orthogonal
+  (`OpenMath/ConjugateGradient.lean`)
+- [ ] **Theorem**: CG terminates in at most `d` iterations in exact
+  arithmetic (`OpenMath/ConjugateGradient.lean`)
+- [ ] **Theorem**: CG error bound via condition number
+  `‖x_n − x*‖_A ≤ 2 · ((√κ − 1)/(√κ + 1))ⁿ · ‖x₀ − x*‖_A`
+  (`OpenMath/ConjugateGradient.lean`)
+- [ ] **Definition**: preconditioned CG (`OpenMath/ConjugateGradient.lean`)
+- [ ] **Definition**: Jacobi preconditioner; incomplete-Cholesky
+  preconditioner (`OpenMath/Preconditioners.lean`)
+
+### Chapter 11: Classical iterative methods for nonsymmetric systems
+- [ ] **Definition**: GMRES iteration (Arnoldi-based) on general non-singular
+  `A` (new file `OpenMath/GMRES.lean`)
+- [ ] **Theorem**: GMRES residual minimization in the Krylov subspace
+  (`OpenMath/GMRES.lean`)
+- [ ] **Theorem**: GMRES terminates in at most `d` iterations (exact
+  arithmetic) (`OpenMath/GMRES.lean`)
+- [ ] **Definition**: BiCGStab iteration (`OpenMath/BiCGStab.lean`)
+- [ ] **Theorem**: BiCGStab convergence on a model problem
+  (`OpenMath/BiCGStab.lean`)
+
+---
+
+## Part III: Partial Differential Equations (Chapters 12–17)
+
+> Items below are concrete `[ ]` targets. Some Mathlib infrastructure (Sobolev
+> spaces, weak derivatives) may need to be vendored or imported on demand.
+
+### Chapter 12: Finite difference schemes for PDEs
+- [ ] **Definition**: discrete grid; finite-difference operators (forward,
+  backward, central) (new file `OpenMath/FiniteDifference.lean`)
+- [ ] **Theorem**: order of the central second-difference operator approximating
+  `∂²/∂x²` is 2 (`OpenMath/FiniteDifference.lean`)
+- [ ] **Definition**: explicit / implicit / Crank–Nicolson schemes for the
+  1D heat equation (new file `OpenMath/HeatEquationFD.lean`)
+- [ ] **Theorem**: von Neumann stability analysis for the explicit heat scheme;
+  CFL condition `μ = h_t / h_x² ≤ 1/2` (`OpenMath/HeatEquationFD.lean`)
+- [ ] **Theorem**: Crank–Nicolson is unconditionally stable
+  (`OpenMath/HeatEquationFD.lean`)
+- [ ] **Theorem (Lax equivalence)**: for a consistent linear scheme,
+  stability ⟺ convergence (new file `OpenMath/LaxEquivalence.lean`)
+- [ ] **Definition**: explicit / implicit / leapfrog schemes for the 1D wave
+  equation (new file `OpenMath/WaveEquationFD.lean`)
+- [ ] **Theorem**: CFL condition for the explicit wave scheme — `c · h_t ≤ h_x`
+  (`OpenMath/WaveEquationFD.lean`)
+
+### Chapter 13: The finite element method
+- [ ] **Definition**: weak formulation of the 1D Poisson problem
+  `−u'' = f` on `(0,1)` with Dirichlet BCs (new file `OpenMath/FEM.lean`)
+- [ ] **Definition**: hat-function basis on a uniform mesh (`OpenMath/FEM.lean`)
+- [ ] **Definition**: Galerkin discretization (`OpenMath/FEM.lean`)
+- [ ] **Theorem (Lax–Milgram)**: existence and uniqueness of weak solution
+  for a coercive bounded bilinear form on a Hilbert space
+  (likely a wrapper over Mathlib) (`OpenMath/LaxMilgram.lean`)
+- [ ] **Theorem (Céa's lemma)**: Galerkin error bounded by best approximation
+  error (`OpenMath/FEM.lean`)
+- [ ] **Theorem**: piecewise-linear FEM has `O(h²)` energy-norm error
+  for `H²` solutions of the 1D Poisson problem (`OpenMath/FEM.lean`)
+- [ ] **Definition**: stiffness and mass matrices; their assembly
+  (`OpenMath/FEM.lean`)
+
+### Chapter 14: Spectral methods
+- [ ] **Definition**: Fourier collocation on a periodic grid (new file
+  `OpenMath/FourierSpectral.lean`)
+- [ ] **Theorem**: spectral convergence — Fourier truncation error decays faster
+  than any algebraic rate for `C^∞` periodic functions
+  (`OpenMath/FourierSpectral.lean`)
+- [ ] **Definition**: Chebyshev collocation on `[−1, 1]` (new file
+  `OpenMath/ChebyshevSpectral.lean`)
+- [ ] **Theorem**: Chebyshev spectral derivative matrix construction
+  (`OpenMath/ChebyshevSpectral.lean`)
+
+### Chapter 15: Gauss–Seidel and SOR for elliptic PDEs
+- [ ] **Definition**: discrete 2D Poisson matrix on a uniform `N × N` grid
+  (new file `OpenMath/PoissonDiscrete.lean`)
+- [ ] **Theorem**: discrete Poisson matrix is symmetric positive-definite
+  (`OpenMath/PoissonDiscrete.lean`)
+- [ ] **Theorem**: Jacobi spectral radius for discrete Poisson is
+  `cos(π/(N+1))` (`OpenMath/PoissonDiscrete.lean`)
+- [ ] **Theorem**: optimal SOR parameter for discrete Poisson is
+  `ω* = 2 / (1 + sin(π/(N+1)))` (`OpenMath/PoissonDiscrete.lean`)
+
+### Chapter 16: The multigrid technique
+- [ ] **Definition**: restriction and prolongation operators between fine and
+  coarse grids (new file `OpenMath/Multigrid.lean`)
+- [ ] **Definition**: V-cycle on a hierarchy of grids (`OpenMath/Multigrid.lean`)
+- [ ] **Theorem**: smoothing property — Jacobi / Gauss–Seidel reduces
+  high-frequency error components (`OpenMath/Multigrid.lean`)
+- [ ] **Theorem**: V-cycle convergence rate is bounded independently of
+  mesh size for the discrete Poisson problem (`OpenMath/Multigrid.lean`)
+
+### Chapter 17: Fast Poisson solvers
+- [ ] **Definition**: discrete Fourier transform (likely re-export from Mathlib)
+  (`OpenMath/FastPoisson.lean`)
+- [ ] **Theorem**: discrete Poisson on a periodic / Dirichlet rectangle is
+  diagonalized by the discrete sine / Fourier transform
+  (`OpenMath/FastPoisson.lean`)
+- [ ] **Algorithm**: FFT-based Poisson solver in `O(d² log d)`
+  (`OpenMath/FastPoisson.lean`)
+- [ ] **Definition**: cyclic-reduction Poisson solver for tri-diagonal block
+  systems (`OpenMath/CyclicReduction.lean`)
+
+---
+
+## Active Frontier
+
+- **Chapters 1–4 are essentially closed.** The only remaining items are the
+  three blockers below and (low priority) the θ-method definition in §1.4.
+- **Active work:** Chapter 5 (Geometric Numerical Integration). First three
+  files are listed in **Current Target** below.
+- **Next after Ch 5:** Chapter 6 missing items (Milne device, Fehlberg 4(5),
+  DOPRI 5(4), step-size adaptation), then Chapter 7 (functional iteration,
+  Newton–Raphson).
+
+---
 
 ## Current Target
 
-**Current target files**: `OpenMath/LMMTruncationOp.lean` hosts the local
-truncation-operator infrastructure and forward-Euler convergence chains,
-`OpenMath/LMMAB2Convergence.lean` hosts the Adams–Bashforth 2-step scalar
-and vector convergence chains, `OpenMath/LMMAB3Convergence.lean` hosts the
-Adams–Bashforth 3-step scalar and vector convergence chains,
-`OpenMath/LMMAB4Convergence.lean` hosts the Adams–Bashforth 4-step scalar
-and vector convergence chains, `OpenMath/LMMAB5Convergence.lean` hosts the
-Adams–Bashforth 5-step scalar and vector convergence chains,
-`OpenMath/LMMAB6ScalarConvergence.lean` hosts the Adams–Bashforth 6-step
-scalar convergence chain, `OpenMath/LMMAB6VectorConvergence.lean` hosts
-the Adams–Bashforth 6-step vector convergence chain,
-`OpenMath/LMMAB7Convergence.lean` hosts the Adams–Bashforth 7-step scalar
-quantitative convergence chain, `OpenMath/LMMAB7VectorConvergence.lean`
-hosts the Adams–Bashforth 7-step vector quantitative convergence chain,
-`OpenMath/LMMAM5VectorConvergence.lean` hosts the Adams–Moulton 5-step
-vector quantitative convergence chain, `OpenMath/LMMAM6Convergence.lean`
-hosts the Adams–Moulton 6-step scalar quantitative convergence chain,
-`OpenMath/LMMAM6VectorConvergence.lean` hosts the Adams–Moulton 6-step
-vector quantitative convergence chain,
-`OpenMath/LMMAM7Convergence.lean` hosts the Adams–Moulton 7-step scalar
-quantitative convergence chain, `OpenMath/LMMAM7VectorConvergence.lean`
-hosts the Adams–Moulton 7-step vector quantitative convergence chain,
-`OpenMath/LMMAM8Convergence.lean` hosts the Adams–Moulton 8-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAM8VectorConvergence.lean` hosts the Adams–Moulton 8-step
-vector quantitative convergence chain,
-`OpenMath/LMMAM9Convergence.lean` hosts the Adams–Moulton 9-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAM10Convergence.lean` hosts the Adams–Moulton 10-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAM11Convergence.lean` hosts the Adams–Moulton 11-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAM11VectorConvergence.lean` hosts the Adams–Moulton 11-step
-vector quantitative convergence chain,
-`OpenMath/LMMAM12Convergence.lean` hosts the Adams–Moulton 12-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAM12VectorConvergence.lean` hosts the Adams–Moulton 12-step
-vector quantitative convergence chain,
-`OpenMath/LMMAB8Convergence.lean` hosts the Adams–Bashforth 8-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAB8VectorConvergence.lean` hosts the Adams–Bashforth 8-step
-vector quantitative convergence chain,
-`OpenMath/LMMAB9Convergence.lean` hosts the Adams–Bashforth 9-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAB9VectorConvergence.lean` hosts the Adams–Bashforth 9-step
-vector quantitative convergence chain,
-`OpenMath/LMMAB10Convergence.lean` hosts the Adams–Bashforth 10-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAB10VectorConvergence.lean` hosts the Adams–Bashforth 10-step
-vector quantitative convergence chain,
-`OpenMath/LMMAB11Convergence.lean` hosts the Adams–Bashforth 11-step scalar
-quantitative convergence chain,
-`OpenMath/LMMAB13Convergence.lean` hosts the Adams–Bashforth 13-step scalar
-quantitative convergence chain (cycle 486 closed: method registration,
-generic coefficient bridge, one-step Lipschitz/error bounds, residual bound
-`|τ_n| ≤ 529729·M·h¹⁴`, local residual bound, and global error bound),
-`OpenMath/LMMAB13VectorConvergence.lean` hosts the Adams–Bashforth 13-step
-vector quantitative convergence chain (cycle 487 closed: vector iteration,
-residual unfolding, one-step Lipschitz/error bounds, packed residual algebra,
-`‖τ_n‖ ≤ 529729·M·h¹⁴`, generic bridge, and global error bound),
-`OpenMath/LMMBDF1Convergence.lean` hosts the BDF1 (backward Euler) scalar
-quantitative convergence chain, `OpenMath/LMMBDF1VectorConvergence.lean`
-hosts the BDF1 (backward Euler) vector quantitative convergence chain,
-`OpenMath/LMMBDF2Convergence.lean` hosts the BDF2 scalar quantitative
-convergence chain, `OpenMath/LMMBDF2VectorConvergence.lean` hosts the BDF2
-vector quantitative convergence chain, `OpenMath/LMMBDF3Convergence.lean`
-hosts the BDF3 scalar quantitative convergence chain,
-`OpenMath/LMMBDF3VectorConvergence.lean` hosts the BDF3 vector quantitative
-convergence chain, `OpenMath/LMMBDF4Convergence.lean` hosts the BDF4 scalar
-truncation chain (LTE reduction, Lipschitz defect, fifth-order pointwise
-residual `|τ_n| ≤ 18·M·h⁵` from exact `6724/375 ≈ 17.93`, and finite-horizon
-local residual bound; the Lyapunov global theorem is deferred — see
-`.prover-state/issues/bdf4_lyapunov_gap.md`),
-`OpenMath/LMMBDF4VectorConvergence.lean` hosts the BDF4 vector truncation
-chain (trajectory predicate, residual unfolding, Lipschitz defect,
-pointwise `‖τ_n‖ ≤ 18·M·h⁵`, and finite-horizon local residual bound; the
-same Lyapunov/global obstruction is deferred),
-`OpenMath/BDFQuadraticLyapunov.lean` hosts the BDF4 stable-cubic quadratic
-Lyapunov certificate and forced one-step recurrence (unit-root defect
-coordinate, stable coordinates, explicit rational quadratic form, exact
-homogeneous decrease, coercive upper/lower bounds, stable energy
-`bdf4StableEnergy`, Lyapunov weight `bdf4LyapW`, forced energy/defect
-recurrences, new-value control, and trajectory-facing one-step error bound;
-BDF4 global convergence remains pending),
-`OpenMath/LMMBDF5Convergence.lean` hosts the BDF5 scalar truncation chain
-(trajectory predicate, residual unfolding, Lipschitz defect, sixth-order
-pointwise residual `|τ_n| ≤ 48·M·h⁶`, and finite-horizon local residual
-bound; the Lyapunov global theorem is deferred by the same obstruction),
-`OpenMath/LMMBDF5VectorConvergence.lean` hosts the BDF5 vector truncation
-chain (trajectory predicate, residual unfolding, Lipschitz defect, pointwise
-`‖τ_n‖ ≤ 48·M·h⁶`, and finite-horizon local residual bound; same Lyapunov
-deferral),
-`OpenMath/LMMBDF6Convergence.lean` hosts the BDF6 scalar truncation chain
-(trajectory predicate, residual unfolding, Lipschitz defect, seventh-order
-pointwise residual `|τ_n| ≤ 132·M·h⁷`, and finite-horizon local residual
-bound; same Lyapunov deferral), `OpenMath/LMMBDF6VectorConvergence.lean`
-hosts the BDF6 vector truncation chain (trajectory predicate, residual
-unfolding, Lipschitz defect, pointwise `‖τ_n‖ ≤ 132·M·h⁷`, and finite-horizon
-local residual bound; same Lyapunov deferral),
-`OpenMath/LMMBDF7Convergence.lean` hosts the BDF7 scalar truncation chain
-(trajectory predicate, residual unfolding, Lipschitz defect, eighth-order
-pointwise residual `|τ_n| ≤ 366·M·h⁸`, and finite-horizon local residual
-bound; BDF7 is zero-unstable so no global theorem applies),
-`OpenMath/LMMBDF7VectorConvergence.lean` hosts the BDF7 vector truncation
-chain (trajectory predicate, residual unfolding, Lipschitz defect, pointwise
-`‖τ_n‖ ≤ 366·M·h⁸`, and finite-horizon local residual bound; BDF7 is
-zero-unstable so no global theorem applies), and
-`OpenMath/MultistepMethods.lean` still hosts the rest of the §1.2 LMM stack.
+**Highest priority for the next planner cycle: start Chapter 5 (Geometric
+Numerical Integration).** Concrete first goals, in order:
 
-**Active frontier**: AB2–AB13 and AM2–AM12 have closed scalar and vector
-quantitative convergence chains. BDF1–BDF3 have closed scalar and vector quantitative convergence
-chains. BDF4 has closed scalar/vector truncation chains plus a stable-block
-quadratic Lyapunov certificate and the forced Lyapunov one-step recurrence;
-its global theorem remains pending. BDF5, BDF6, and BDF7 each have closed
-scalar and vector truncation chains; the BDF5–BDF6 Lyapunov/global theorems
-remain deferred by the spectral obstruction documented in
-`.prover-state/issues/bdf4_lyapunov_gap.md`, and BDF7 has no global theorem
-(zero-unstable).
+1. **`OpenMath/Hamiltonian.lean`** — define a Hamiltonian
+   `H : EuclideanSpace ℝ (Fin (2*d)) → ℝ` together with the separable form
+   `H(q,p) = T(p) + V(q)`, the Hamiltonian flow ODE
+   `q' = ∂H/∂p, p' = −∂H/∂q`, and the energy-conservation theorem
+   "`H` is constant along trajectories of the Hamiltonian flow".
 
-**Blocked/deferred theorem**: Theorem 359D still needs the concrete Iserles
-§3.5.10 source statement. The cycle 376 §3.5.10 packaging corollaries provide a
-clean BN-stability scaffold once that source is available. BDF7
-zero-instability and the Dahlquist-equivalence `bdf7_not_convergent` wrapper
-are closed.
+2. **`OpenMath/Symplectic.lean`** — define the canonical symplectic matrix
+   `J = [[0, I_d], [−I_d, 0]]`, the predicate `IsSymplectic φ` via
+   `(Dφ)ᵀ · J · (Dφ) = J`, and prove that composition of symplectic maps
+   is symplectic and that the Hamiltonian flow is symplectic.
 
-Cycle 389 source lookup note:
-- The accessible Iserles second-edition source places "Order and convergence of
-  multistep methods" in §2.2, not §1.3. The named theorem found there is Theorem
-  2.2, the Dahlquist equivalence theorem: starting errors tend to zero, and
-  convergence is equivalent to order `p ≥ 1` plus the root condition. No separate
-  quantitative `O(h^p)` starting-error theorem was located in the available source.
-- Cycle 389 therefore used the strategy fallback and consolidated the Adams
-  zero-stability proofs by extracting `adams_zeroStable_of_rhoC_pow_mul`.
+3. **`OpenMath/SymplecticEuler.lean`** — define the symplectic Euler scheme
+   for separable Hamiltonians and prove it is symplectic.
 
-Blocked side note:
-- The Radau IA left-endpoint family cannot be added with the cycle-375 statement
-  `IsCollocation ∧ HasRadauIANodes → IsAlgStable`: the project's `IsCollocation`
-  interface means `C(s)`, and the explicit 2-stage left-Radau collocation tableau
-  on nodes `{0, 2/3}` has `M₀₀ = -1/16`. Any future Radau IA family theorem should
-  use the Radau IA simplifying-assumption shape (`B(2s-1)`, `C(s-1)`, `D(s)`) or a
-  different adjoint/transpose interface, not the collocation theorem 358A bridge.
+Each file should be sorry-first, batch ~5 Aristotle jobs, sleep 30 minutes,
+incorporate proofs that compile against live infrastructure, and close
+remaining goals manually. Keep `maxHeartbeats ≤ 200000`.
 
-Note: in cycle 374, what the strategy called the Radau IIA "right-endpoint" case turned out to coincide with the existing `thm_359C_radauI` (θ=1) under the live sign convention `shiftedLegendreP n 1 = 1`. The new `thm_359B_radauIIA` is the semantically named wrapper plus the concrete corollary for `rkRadauIIA3`. Cycle 375 added the Radau IA node predicate and concrete node certificates, but found that the proposed collocation-family bridge is false under the live `IsCollocation` interface.
+**If Chapter 5 is unexpectedly blocked,** pivot to **Chapter 6 (Error
+Control)**: Fehlberg 4(5) and DOPRI 5(4) extend the existing
+`EmbeddedRKPair` infrastructure in `OpenMath/EmbeddedRK.lean` and should
+not need new framework. Implement Fehlberg first (extend
+`OpenMath/EmbeddedRK.lean`), then DOPRI, then the Milne device for
+multistep predictor–corrector pairs.
 
-## Sorry locations
+**If Ch 5 and Ch 6 are both blocked,** pivot to **Chapter 7 (Nonlinear
+Algebraic Systems)**: define functional iteration on `ℝᵈ` (thin wrapper
+over Mathlib `ContractingWith`) and Newton–Raphson with quadratic
+convergence near a simple root.
+
+### Do NOT
+
+- Do **not** add `OpenMath/LMMAB14*Convergence.lean`,
+  `OpenMath/LMMAM13*Convergence.lean`, `OpenMath/LMMBDF8*Convergence.lean`,
+  or any further per-step LMM convergence chains. The Dahlquist
+  equivalence (`OpenMath/DahlquistEquivalence.lean`) already gives
+  qualitative convergence of every consistent zero-stable method;
+  these per-step quantitative chains repeat the same template, are not
+  in Iserles, and were the reason cycles 466–489 stopped advancing the
+  textbook.
+- Do **not** reopen the BDF4 / BDF5 / BDF6 global-Lyapunov work without
+  first updating `.prover-state/issues/bdf4_lyapunov_gap.md`. Cycle 489
+  closed the forced-defect one-step recurrence (`bdf4LyapW_one_step_error_bound`);
+  the remaining global-Gronwall assembly is the only piece left and is
+  bounded — finish it in at most one cycle if you choose to attempt it,
+  otherwise leave it deferred.
+- Do **not** attempt the Radau IA family-level collocation bridge
+  (`IsCollocation ∧ HasRadauIANodes → IsAlgStable`). The
+  counterexample in
+  `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`
+  is decisive under the live `IsCollocation` interface.
+- Do **not** create new tracked `OpenMath/*.lean` files containing live
+  `sorry` outside the active Chapter 5 target. Scratch belongs in
+  `.prover-state/`.
+
+---
+
+## Sorry Locations
 
 - No active `sorry`s.
+
+---
+
+## Blockers / Deferred
+
+- **BDF4 / BDF5 / BDF6 global Lyapunov / quantitative convergence** —
+  `.prover-state/issues/bdf4_lyapunov_gap.md`. Spectral obstruction:
+  the absolute companion matrix of BDF4 has Perron eigenvalue ≈ 2.58, so
+  weighted-ℓ¹ Lyapunov sums in error coordinates cannot give the required
+  `1 + O(h)` contraction. Cycle 489 landed
+  `bdf4LyapW_one_step_error_bound` via a stable-block quadratic Lyapunov
+  certificate; the remaining global-Gronwall assembly is open. Same
+  obstruction blocks BDF5 and BDF6. BDF7 has no global theorem because it
+  is zero-unstable (proved).
+- **Theorem 359D (Iserles §3.5.10)** — pending the textbook source
+  statement. The cycle 376 §3.5.10 packaging corollaries
+  (`OpenMath/CollocationFamilies.lean`) provide a clean BN-stability
+  scaffold once the named theorem after 359C is identified.
+- **Theorem 359B (Radau IA family bridge)** —
+  `.prover-state/issues/cycle_375_radauIA_collocation_counterexample.md`.
+  `IsCollocation ∧ HasRadauIANodes → IsAlgStable` is false under the
+  live `IsCollocation` interface (`C(s)`): the explicit 2-stage left-Radau
+  collocation tableau on nodes `{0, 2/3}` has `M₀₀ = −1/16`. Concrete node
+  certificates `rkRadauIA{2,3}_hasRadauIANodes` are landed; a future Radau IA
+  family theorem must use the simplifying-assumption shape
+  `B(2s−1) ∧ C(s−1) ∧ D(s)` or a different adjoint/transpose interface,
+  not the 358A bridge.

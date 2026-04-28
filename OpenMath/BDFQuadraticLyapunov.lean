@@ -1,4 +1,5 @@
 import OpenMath.LMMBDF4Convergence
+import OpenMath.LMMTruncationOp
 
 /-!
 # BDF quadratic Lyapunov infrastructure
@@ -469,5 +470,337 @@ theorem bdf4LyapW_one_step_error_bound
   change bdf4LyapW e (n + 1)
       ≤ (1 + h * (61 * L)) * bdf4LyapW e n + 122 * τ
   nlinarith
+
+/-- Bound the BDF4 stable-block energy by `6·M` when each stable coordinate
+is bounded in absolute value by `M`. Uses the upper coercive estimate
+`Q ≤ 9·(x₀² + x₁² + x₂²)` and `√(36·M²) = 6·M`. -/
+private lemma bdf4StableEnergy_le_of_max
+    (e : ℕ → ℝ) (n : ℕ) {M : ℝ} (hM : 0 ≤ M)
+    (h0 : |bdf4StableX0 e n| ≤ M)
+    (h1 : |bdf4StableX1 e n| ≤ M)
+    (h2 : |bdf4StableX2 e n| ≤ M) :
+    bdf4StableEnergy e n ≤ 6 * M := by
+  unfold bdf4StableEnergy
+  set x0 := bdf4StableX0 e n
+  set x1 := bdf4StableX1 e n
+  set x2 := bdf4StableX2 e n
+  have hsq0 : x0 ^ 2 ≤ M ^ 2 := by
+    rw [← sq_abs x0]; exact pow_le_pow_left₀ (abs_nonneg _) h0 2
+  have hsq1 : x1 ^ 2 ≤ M ^ 2 := by
+    rw [← sq_abs x1]; exact pow_le_pow_left₀ (abs_nonneg _) h1 2
+  have hsq2 : x2 ^ 2 ≤ M ^ 2 := by
+    rw [← sq_abs x2]; exact pow_le_pow_left₀ (abs_nonneg _) h2 2
+  have hupper := bdf4CubicQuad_upper x0 x1 x2
+  have hQ_le : bdf4CubicQuad x0 x1 x2 ≤ (6 * M) ^ 2 := by
+    nlinarith [hupper, hsq0, hsq1, hsq2]
+  have h6M_nn : 0 ≤ 6 * M := by linarith
+  calc Real.sqrt (bdf4CubicQuad x0 x1 x2)
+      ≤ Real.sqrt ((6 * M) ^ 2) := Real.sqrt_le_sqrt hQ_le
+    _ = 6 * M := Real.sqrt_sq h6M_nn
+
+/-- Initial Lyapunov bound: if the first four BDF4 errors are bounded by
+`ε₀`, then the BDF4 quadratic Lyapunov weight at index 0 is at most
+`292·ε₀`. -/
+lemma bdf4LyapW_initial_bound
+    {e : ℕ → ℝ} {ε₀ : ℝ}
+    (h0 : |e 0| ≤ ε₀) (h1 : |e 1| ≤ ε₀)
+    (h2 : |e 2| ≤ ε₀) (h3 : |e 3| ≤ ε₀) :
+    bdf4LyapW e 0 ≤ 292 * ε₀ := by
+  obtain ⟨h0a, h0b⟩ := abs_le.mp h0
+  obtain ⟨h1a, h1b⟩ := abs_le.mp h1
+  obtain ⟨h2a, h2b⟩ := abs_le.mp h2
+  obtain ⟨h3a, h3b⟩ := abs_le.mp h3
+  have hε_nn : 0 ≤ ε₀ := le_trans (abs_nonneg _) h0
+  -- |U| ≤ (3+13+23+25)·ε₀ = 64·ε₀
+  have hU_bd : |bdf4LyapU e 0| ≤ 64 * ε₀ := by
+    unfold bdf4LyapU
+    rw [abs_le]
+    refine ⟨?_, ?_⟩ <;> linarith
+  -- |Xi| ≤ ε₀ + |U|/12 ≤ (12 + 64)/12 · ε₀ = 76/12 · ε₀
+  set M : ℝ := (76 / 12 : ℝ) * ε₀ with hM_def
+  have hM_nn : 0 ≤ M := by rw [hM_def]; positivity
+  have hX0_bd : |bdf4StableX0 e 0| ≤ M := by
+    unfold bdf4StableX0 bdf4LyapU
+    rw [hM_def, abs_le]
+    refine ⟨?_, ?_⟩ <;> linarith
+  have hX1_bd : |bdf4StableX1 e 0| ≤ M := by
+    unfold bdf4StableX1 bdf4LyapU
+    rw [hM_def, abs_le]
+    refine ⟨?_, ?_⟩ <;> linarith
+  have hX2_bd : |bdf4StableX2 e 0| ≤ M := by
+    unfold bdf4StableX2 bdf4LyapU
+    rw [hM_def, abs_le]
+    refine ⟨?_, ?_⟩ <;> linarith
+  have hE_bd : bdf4StableEnergy e 0 ≤ 6 * M :=
+    bdf4StableEnergy_le_of_max e 0 hM_nn hX0_bd hX1_bd hX2_bd
+  -- |U| + 6 E ≤ 64 ε₀ + 36 · (76/12) · ε₀ = 64 ε₀ + 228 ε₀ = 292 ε₀
+  unfold bdf4LyapW
+  have h36M : 36 * M = 228 * ε₀ := by rw [hM_def]; ring
+  linarith
+
+/-- Coercive lower bound: `|Xᵢ| ≤ 2·E` for each stable coordinate. -/
+private lemma bdf4_abs_X0_le_2E (e : ℕ → ℝ) (n : ℕ) :
+    |bdf4StableX0 e n| ≤ 2 * bdf4StableEnergy e n := by
+  unfold bdf4StableEnergy
+  set x0 := bdf4StableX0 e n
+  set x1 := bdf4StableX1 e n
+  set x2 := bdf4StableX2 e n
+  have hlow := bdf4CubicQuad_lower x0 x1 x2
+  have hX0sq_le : x0 ^ 2 ≤ 4 * bdf4CubicQuad x0 x1 x2 := by
+    nlinarith [sq_nonneg x1, sq_nonneg x2, hlow]
+  have h2sqrtQ : 2 * Real.sqrt (bdf4CubicQuad x0 x1 x2)
+      = Real.sqrt (4 * bdf4CubicQuad x0 x1 x2) := by
+    rw [show (4 : ℝ) * bdf4CubicQuad x0 x1 x2
+          = 2 ^ 2 * bdf4CubicQuad x0 x1 x2 from by ring,
+        Real.sqrt_mul (by norm_num : (0 : ℝ) ≤ 2 ^ 2),
+        Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 2)]
+  rw [h2sqrtQ, ← Real.sqrt_sq_eq_abs]
+  exact Real.sqrt_le_sqrt hX0sq_le
+
+private lemma bdf4_abs_X1_le_2E (e : ℕ → ℝ) (n : ℕ) :
+    |bdf4StableX1 e n| ≤ 2 * bdf4StableEnergy e n := by
+  unfold bdf4StableEnergy
+  set x0 := bdf4StableX0 e n
+  set x1 := bdf4StableX1 e n
+  set x2 := bdf4StableX2 e n
+  have hlow := bdf4CubicQuad_lower x0 x1 x2
+  have hX1sq_le : x1 ^ 2 ≤ 4 * bdf4CubicQuad x0 x1 x2 := by
+    nlinarith [sq_nonneg x0, sq_nonneg x2, hlow]
+  have h2sqrtQ : 2 * Real.sqrt (bdf4CubicQuad x0 x1 x2)
+      = Real.sqrt (4 * bdf4CubicQuad x0 x1 x2) := by
+    rw [show (4 : ℝ) * bdf4CubicQuad x0 x1 x2
+          = 2 ^ 2 * bdf4CubicQuad x0 x1 x2 from by ring,
+        Real.sqrt_mul (by norm_num : (0 : ℝ) ≤ 2 ^ 2),
+        Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 2)]
+  rw [h2sqrtQ, ← Real.sqrt_sq_eq_abs]
+  exact Real.sqrt_le_sqrt hX1sq_le
+
+private lemma bdf4_abs_X2_le_2E (e : ℕ → ℝ) (n : ℕ) :
+    |bdf4StableX2 e n| ≤ 2 * bdf4StableEnergy e n := by
+  unfold bdf4StableEnergy
+  set x0 := bdf4StableX0 e n
+  set x1 := bdf4StableX1 e n
+  set x2 := bdf4StableX2 e n
+  have hlow := bdf4CubicQuad_lower x0 x1 x2
+  have hX2sq_le : x2 ^ 2 ≤ 4 * bdf4CubicQuad x0 x1 x2 := by
+    nlinarith [sq_nonneg x0, sq_nonneg x1, hlow]
+  have h2sqrtQ : 2 * Real.sqrt (bdf4CubicQuad x0 x1 x2)
+      = Real.sqrt (4 * bdf4CubicQuad x0 x1 x2) := by
+    rw [show (4 : ℝ) * bdf4CubicQuad x0 x1 x2
+          = 2 ^ 2 * bdf4CubicQuad x0 x1 x2 from by ring,
+        Real.sqrt_mul (by norm_num : (0 : ℝ) ≤ 2 ^ 2),
+        Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 2)]
+  rw [h2sqrtQ, ← Real.sqrt_sq_eq_abs]
+  exact Real.sqrt_le_sqrt hX2sq_le
+
+/-- Readout at index `n`: `|e_n| ≤ W_n`. -/
+lemma bdf4_eIdx0_le_W (e : ℕ → ℝ) (n : ℕ) :
+    |e n| ≤ bdf4LyapW e n := by
+  have hd : e n = bdf4StableX0 e n + bdf4LyapU e n / 12 := by
+    unfold bdf4StableX0; ring
+  rw [hd]
+  have htri : |bdf4StableX0 e n + bdf4LyapU e n / 12|
+      ≤ |bdf4StableX0 e n| + |bdf4LyapU e n / 12| := abs_add_le _ _
+  have hX0_le := bdf4_abs_X0_le_2E e n
+  have hU_div : |bdf4LyapU e n / 12| = |bdf4LyapU e n| / 12 := by
+    rw [abs_div, abs_of_pos (by norm_num : (0 : ℝ) < 12)]
+  unfold bdf4LyapW
+  have hE_nn := bdf4StableEnergy_nonneg e n
+  have hU_nn := abs_nonneg (bdf4LyapU e n)
+  linarith
+
+/-- Readout at index `n+1`: `|e_{n+1}| ≤ W_n`. -/
+lemma bdf4_eIdx1_le_W (e : ℕ → ℝ) (n : ℕ) :
+    |e (n + 1)| ≤ bdf4LyapW e n := by
+  have hd : e (n + 1) = bdf4StableX1 e n + bdf4LyapU e n / 12 := by
+    unfold bdf4StableX1; ring
+  rw [hd]
+  have htri : |bdf4StableX1 e n + bdf4LyapU e n / 12|
+      ≤ |bdf4StableX1 e n| + |bdf4LyapU e n / 12| := abs_add_le _ _
+  have hX1_le := bdf4_abs_X1_le_2E e n
+  have hU_div : |bdf4LyapU e n / 12| = |bdf4LyapU e n| / 12 := by
+    rw [abs_div, abs_of_pos (by norm_num : (0 : ℝ) < 12)]
+  unfold bdf4LyapW
+  have hE_nn := bdf4StableEnergy_nonneg e n
+  have hU_nn := abs_nonneg (bdf4LyapU e n)
+  linarith
+
+/-- Readout at index `n+2`: `|e_{n+2}| ≤ W_n`. -/
+lemma bdf4_eIdx2_le_W (e : ℕ → ℝ) (n : ℕ) :
+    |e (n + 2)| ≤ bdf4LyapW e n := by
+  have hd : e (n + 2) = bdf4StableX2 e n + bdf4LyapU e n / 12 := by
+    unfold bdf4StableX2; ring
+  rw [hd]
+  have htri : |bdf4StableX2 e n + bdf4LyapU e n / 12|
+      ≤ |bdf4StableX2 e n| + |bdf4LyapU e n / 12| := abs_add_le _ _
+  have hX2_le := bdf4_abs_X2_le_2E e n
+  have hU_div : |bdf4LyapU e n / 12| = |bdf4LyapU e n| / 12 := by
+    rw [abs_div, abs_of_pos (by norm_num : (0 : ℝ) < 12)]
+  unfold bdf4LyapW
+  have hE_nn := bdf4StableEnergy_nonneg e n
+  have hU_nn := abs_nonneg (bdf4LyapU e n)
+  linarith
+
+/-- Headline BDF4 global error bound. Mirrors `bdf3_global_error_bound`,
+extended by one starting index and with constants `K₁ = 292`, growth
+rate `61·L`, and residual coefficient `122·C` from
+`bdf4LyapW_one_step_error_bound` and `bdf4_local_residual_bound`. -/
+theorem bdf4_global_error_bound
+    {y : ℝ → ℝ} (hy_smooth : ContDiff ℝ 5 y)
+    {f : ℝ → ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
+    (hf : ∀ t a b : ℝ, |f t a - f t b| ≤ L * |a - b|)
+    (hyf : ∀ t, deriv y t = f t (y t))
+    (t₀ T : ℝ) (hT : 0 < T) :
+    ∃ K δ : ℝ, 0 ≤ K ∧ 0 < δ ∧
+      ∀ {h : ℝ}, 0 < h → h ≤ δ →
+      (12 / 25 : ℝ) * h * L ≤ 1 / 2 →
+      ∀ {yseq : ℕ → ℝ} {ε₀ : ℝ},
+      IsBDF4Trajectory h f t₀ yseq →
+      0 ≤ ε₀ →
+      |yseq 0 - y t₀| ≤ ε₀ →
+      |yseq 1 - y (t₀ + h)| ≤ ε₀ →
+      |yseq 2 - y (t₀ + 2 * h)| ≤ ε₀ →
+      |yseq 3 - y (t₀ + 3 * h)| ≤ ε₀ →
+      ∀ N : ℕ, ((N : ℝ) + 1) * h ≤ T →
+      |yseq N - y (t₀ + (N : ℝ) * h)|
+        ≤ 292 * Real.exp ((61 * L) * T) * ε₀ + K * h ^ 4 := by
+  obtain ⟨C, δ, hC_nn, hδ_pos, hresidual⟩ :=
+    bdf4_local_residual_bound hy_smooth t₀ T hT
+  refine ⟨122 * T * Real.exp ((61 * L) * T) * C, δ, ?_, hδ_pos, ?_⟩
+  · have hT_nn : (0 : ℝ) ≤ T := hT.le
+    have hexp_nn : (0 : ℝ) ≤ Real.exp ((61 * L) * T) := Real.exp_nonneg _
+    have h1 : (0 : ℝ) ≤ 122 * T := by positivity
+    have h2 : (0 : ℝ) ≤ 122 * T * Real.exp ((61 * L) * T) := mul_nonneg h1 hexp_nn
+    exact mul_nonneg h2 hC_nn
+  intro h hh hδ_le hsmall yseq ε₀ hy_traj hε₀ he0_bd he1_bd he2_bd he3_bd N hNh
+  set e : ℕ → ℝ := fun k => yseq k - y (t₀ + (k : ℝ) * h) with he_def
+  set W : ℕ → ℝ := fun k => bdf4LyapW e k with hW_def
+  have hW_nn : ∀ k, 0 ≤ W k := fun k => bdf4LyapW_nonneg e k
+  have h61L_nn : (0 : ℝ) ≤ 61 * L := by linarith
+  -- Initial bound: W 0 ≤ 292 ε₀.
+  have he0' : |e 0| ≤ ε₀ := by
+    show |yseq 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)| ≤ ε₀
+    have : t₀ + ((0 : ℕ) : ℝ) * h = t₀ := by push_cast; ring
+    rw [this]; exact he0_bd
+  have he1' : |e 1| ≤ ε₀ := by
+    show |yseq 1 - y (t₀ + ((1 : ℕ) : ℝ) * h)| ≤ ε₀
+    have : t₀ + ((1 : ℕ) : ℝ) * h = t₀ + h := by push_cast; ring
+    rw [this]; exact he1_bd
+  have he2' : |e 2| ≤ ε₀ := by
+    show |yseq 2 - y (t₀ + ((2 : ℕ) : ℝ) * h)| ≤ ε₀
+    have : t₀ + ((2 : ℕ) : ℝ) * h = t₀ + 2 * h := by push_cast; ring
+    rw [this]; exact he2_bd
+  have he3' : |e 3| ≤ ε₀ := by
+    show |yseq 3 - y (t₀ + ((3 : ℕ) : ℝ) * h)| ≤ ε₀
+    have : t₀ + ((3 : ℕ) : ℝ) * h = t₀ + 3 * h := by push_cast; ring
+    rw [this]; exact he3_bd
+  have hW0_le : W 0 ≤ 292 * ε₀ := bdf4LyapW_initial_bound he0' he1' he2' he3'
+  -- Step bound for the W iteration.
+  have hstep_general : ∀ n : ℕ, ((n : ℝ) + 4) * h ≤ T →
+      W (n + 1) ≤ (1 + h * (61 * L)) * W n + (122 * C) * h ^ (4 + 1) := by
+    intro n hnh_le
+    have honestep := bdf4LyapW_one_step_error_bound
+      (h := h) (L := L) hh.le hL hsmall hf t₀ hy_traj y hyf n
+    have hres := hresidual hh hδ_le n hnh_le
+    have h122_nn : (0 : ℝ) ≤ 122 := by norm_num
+    have h122τ : 122 * |bdf4.localTruncationError h
+        (t₀ + (n : ℝ) * h) y| ≤ (122 * C) * h ^ (4 + 1) := by
+      have := mul_le_mul_of_nonneg_left hres h122_nn
+      have hpow : (h : ℝ) ^ (4 + 1) = h ^ 5 := by norm_num
+      rw [hpow]; linarith
+    show bdf4LyapW e (n + 1)
+        ≤ (1 + h * (61 * L)) * bdf4LyapW e n + (122 * C) * h ^ (4 + 1)
+    linarith [honestep, h122τ]
+  have hexp_ge_one : (1 : ℝ) ≤ Real.exp ((61 * L) * T) :=
+    Real.one_le_exp_iff.mpr (mul_nonneg h61L_nn hT.le)
+  have hexp_nn : 0 ≤ Real.exp ((61 * L) * T) := Real.exp_nonneg _
+  have hKnn : 0 ≤ 122 * T * Real.exp ((61 * L) * T) * C := by
+    have h1 : (0 : ℝ) ≤ 122 * T := by positivity
+    have h2 : (0 : ℝ) ≤ 122 * T * Real.exp ((61 * L) * T) := mul_nonneg h1 hexp_nn
+    exact mul_nonneg h2 hC_nn
+  have hh4_nn : 0 ≤ h ^ 4 := by positivity
+  match N, hNh with
+  | 0, _ =>
+    show |yseq 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)|
+        ≤ 292 * Real.exp ((61 * L) * T) * ε₀
+            + 122 * T * Real.exp ((61 * L) * T) * C * h ^ 4
+    have hbd : |yseq 0 - y (t₀ + ((0 : ℕ) : ℝ) * h)| ≤ ε₀ := he0'
+    nlinarith [hbd, hexp_ge_one, hKnn, hh4_nn, hε₀]
+  | 1, _ =>
+    show |yseq 1 - y (t₀ + ((1 : ℕ) : ℝ) * h)|
+        ≤ 292 * Real.exp ((61 * L) * T) * ε₀
+            + 122 * T * Real.exp ((61 * L) * T) * C * h ^ 4
+    have hbd : |yseq 1 - y (t₀ + ((1 : ℕ) : ℝ) * h)| ≤ ε₀ := he1'
+    nlinarith [hbd, hexp_ge_one, hKnn, hh4_nn, hε₀]
+  | 2, _ =>
+    show |yseq 2 - y (t₀ + ((2 : ℕ) : ℝ) * h)|
+        ≤ 292 * Real.exp ((61 * L) * T) * ε₀
+            + 122 * T * Real.exp ((61 * L) * T) * C * h ^ 4
+    have hbd : |yseq 2 - y (t₀ + ((2 : ℕ) : ℝ) * h)| ≤ ε₀ := he2'
+    nlinarith [hbd, hexp_ge_one, hKnn, hh4_nn, hε₀]
+  | 3, _ =>
+    show |yseq 3 - y (t₀ + ((3 : ℕ) : ℝ) * h)|
+        ≤ 292 * Real.exp ((61 * L) * T) * ε₀
+            + 122 * T * Real.exp ((61 * L) * T) * C * h ^ 4
+    have hbd : |yseq 3 - y (t₀ + ((3 : ℕ) : ℝ) * h)| ≤ ε₀ := he3'
+    nlinarith [hbd, hexp_ge_one, hKnn, hh4_nn, hε₀]
+  | (N'' + 4), hNh' =>
+    -- Reduction: write N = N''+4 = (N''+2)+2; use |e_{(N''+2)+2}| ≤ W_{N''+2}.
+    -- Apply Gronwall up to index N''+2; need (N''+2)·h ≤ T and step bound
+    -- for n < N''+2, i.e., n ≤ N''+1, requiring (N''+5)·h ≤ T.
+    have hcastN : ((N'' + 4 : ℕ) : ℝ) = (N'' : ℝ) + 4 := by push_cast; ring
+    have hN_le : ((N'' : ℝ) + 5) * h ≤ T := by
+      have hcastNh : (((N'' + 4 : ℕ) : ℝ) + 1) * h ≤ T := hNh'
+      have heq : ((N'' + 4 : ℕ) : ℝ) + 1 = (N'' : ℝ) + 5 := by push_cast; ring
+      rw [heq] at hcastNh
+      exact hcastNh
+    -- Step bound for the Gronwall driver up to N''+2.
+    have hgronwall_step : ∀ n, n < N'' + 2 →
+        W (n + 1) ≤ (1 + h * (61 * L)) * W n + (122 * C) * h ^ (4 + 1) := by
+      intro n hn_lt
+      apply hstep_general
+      have hn1_le : (n : ℝ) ≤ ((N'' : ℝ) + 1) := by
+        exact_mod_cast Nat.lt_succ_iff.mp hn_lt
+      have hle : (n : ℝ) + 4 ≤ (N'' : ℝ) + 5 := by linarith
+      have hmul : ((n : ℝ) + 4) * h ≤ ((N'' : ℝ) + 5) * h :=
+        mul_le_mul_of_nonneg_right hle hh.le
+      linarith
+    have hN2h_le_T : ((N'' + 2 : ℕ) : ℝ) * h ≤ T := by
+      have hcast : ((N'' + 2 : ℕ) : ℝ) = (N'' : ℝ) + 2 := by push_cast; ring
+      rw [hcast]
+      have hle : (N'' : ℝ) + 2 ≤ (N'' : ℝ) + 5 := by linarith
+      have := mul_le_mul_of_nonneg_right hle hh.le
+      linarith
+    have hgronwall :=
+      lmm_error_bound_from_local_truncation
+        (h := h) (L := 61 * L) (C := 122 * C) (T := T) (p := 4) (e := W)
+        (N := N'' + 2)
+        hh.le h61L_nn (by positivity) (hW_nn 0) hgronwall_step
+        (N'' + 2) le_rfl hN2h_le_T
+    -- W_{N''+2} ≤ exp((61L)·T) W_0 + T·exp((61L)·T)·(122 C)·h^4.
+    -- |e_{(N''+2)+2}| ≤ W_{N''+2}.
+    have hek2 := bdf4_eIdx2_le_W e (N'' + 2)
+    have hidx : ((N'' + 2 + 2 : ℕ) : ℝ) = (N'' : ℝ) + 4 := by push_cast; ring
+    have h_chain :
+        Real.exp ((61 * L) * T) * W 0
+          ≤ Real.exp ((61 * L) * T) * (292 * ε₀) :=
+      mul_le_mul_of_nonneg_left hW0_le hexp_nn
+    show |yseq (N'' + 4) - y (t₀ + ((N'' + 4 : ℕ) : ℝ) * h)|
+        ≤ 292 * Real.exp ((61 * L) * T) * ε₀
+            + 122 * T * Real.exp ((61 * L) * T) * C * h ^ 4
+    have hcastN4 : ((N'' + 4 : ℕ) : ℝ) = (N'' : ℝ) + 4 := by push_cast; ring
+    rw [hcastN4]
+    have he_eq : e (N'' + 2 + 2)
+        = yseq (N'' + 4) - y (t₀ + ((N'' : ℝ) + 4) * h) := by
+      show yseq (N'' + 2 + 2) - y (t₀ + ((N'' + 2 + 2 : ℕ) : ℝ) * h)
+          = yseq (N'' + 4) - y (t₀ + ((N'' : ℝ) + 4) * h)
+      have h_idx_eq : (N'' + 2 + 2 : ℕ) = N'' + 4 := by ring
+      rw [h_idx_eq, hidx]
+    have hek2' : |yseq (N'' + 4) - y (t₀ + ((N'' : ℝ) + 4) * h)|
+        ≤ W (N'' + 2) := by
+      have := hek2
+      rw [he_eq] at this
+      exact this
+    linarith [hek2', hgronwall, h_chain]
 
 end LMM
