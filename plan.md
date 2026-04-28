@@ -352,8 +352,15 @@ codebase.
   convolution for `QuotEquiv.bSeriesHom_product` remains open; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
-- [ ] **§386 Recursive formula for the product** — explicit Butcher
-  product on tree-indexed coefficients.
+- [~] **§386 Recursive formula for the product** — explicit Butcher
+  product on tree-indexed coefficients. Cycle 504 landed the list-split
+  infrastructure (`ButcherGroup.foldr_mul_add_eq_prod`,
+  `ButcherGroup.foldr_mul_add_eq_sum_powerset`,
+  `ButcherGroup.prod_add_finset_indexed`,
+  `ButcherProduct.innerSum_natAdd_split`,
+  `ButcherProduct.elementaryWeight_node_natAdd`) plus the placeholder
+  definition `QuotEquiv.bSeriesConv` (still `sorry`). Filling in
+  `bSeriesConv` via tree recursion is the next seam (cycle 505+).
 - [~] **§387 Some special elements of `G`** — identity, inverse, power.
   Cycle 498 landed the identity element: `trivialTableau : ButcherTableau 0`
   and `trivialTableau_unique` in `OpenMath/ButcherGroup.lean`. Inverse and
@@ -706,8 +713,15 @@ Concrete next steps:
   `QuotEquiv.product_bSeries_one_left`,
   `QuotEquiv.product_bSeries_one_right`, `QuotEquiv.bSeriesHom`,
   `QuotEquiv.bSeriesHom_one`, and `QuotEquiv.bSeriesHom_assoc`.
-  Next step: define the non-tautological tree-indexed convolution/product
-  (Butcher §386-style recursive formula) and prove
+  Cycle 504 landed the §386 list-split infrastructure for the recursive
+  product: `ButcherGroup.foldr_mul_add_eq_prod`,
+  `ButcherGroup.foldr_mul_add_eq_sum_powerset`,
+  `ButcherGroup.prod_add_finset_indexed`,
+  `ButcherProduct.innerSum_natAdd_split`,
+  `ButcherProduct.elementaryWeight_node_natAdd`, plus a placeholder
+  `QuotEquiv.bSeriesConv` (sole tracked `sorry`).
+  Next step: fill in `bSeriesConv` via tree recursion using the
+  list-split lemma at the `node` case, then prove
   `QuotEquiv.bSeriesHom_product`; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - Cover §387 special elements: identity (zero-stage), inverse, integer

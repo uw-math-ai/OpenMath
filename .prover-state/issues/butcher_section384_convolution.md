@@ -61,24 +61,61 @@ Cycle 503 inspected the landed block lemmas
 `Fin (0+t)` / `Fin (s+0)` through `finCongr` and applying
 `elementaryWeight_eq_of_A`.
 
-No honest convolution definition was added. The candidate direct definition
-via `QuotEquiv.product` was rejected because it would hide, rather than
-formalize, the tree-indexed product.
+No honest convolution definition was added in cycle 503. The candidate
+direct definition via `QuotEquiv.product` was rejected because it would
+hide, rather than formalize, the tree-indexed product.
+
+Cycle 504 landed the §386 list-split infrastructure (option 2 above), and
+the placeholder symbol that the cycle-505+ body will fill in:
+
+- `ButcherGroup.foldr_mul_add_eq_prod` — converts the elementary-weight
+  `List.foldr (fun a acc => acc * (x a + y a)) 1` into
+  `(xs.map (fun a => x a + y a)).prod`.
+- `ButcherGroup.foldr_mul_add_eq_sum_powerset` — list-flavoured
+  `Finset.prod_add`: rewrites the same fold into a sum over subsets of
+  `Fin xs.length` selecting which positions take the `x`-summand vs
+  `y`-summand.
+- `ButcherGroup.prod_add_finset_indexed` — direct `Finset.prod_add` for
+  the `Fin n`-indexed (no `List`) case.
+- `butcherProduct_A_natAdd_castAdd` and `butcherProduct_A_natAdd_natAdd`
+  — simp lemmas for the second-block row of the lower-left and
+  lower-right blocks of `(ButcherProduct t₁ t₂).A`.
+- `ButcherProduct.innerSum_natAdd_split` — at a second-block stage
+  `Fin.natAdd s i`, the inner sum `∑ k : Fin (s+t), A · k * EW · k`
+  decomposes into a first-block `∑ k₁, t₁.b k₁ * EW (Fin.castAdd t k₁)`
+  plus a second-block `∑ k₂, t₂.A i k₂ * EW (Fin.natAdd s k₂)`.
+- `ButcherProduct.elementaryWeight_node_natAdd` — the §386 node-case
+  unfolding: at a second-block stage and a `BTree.node τs`, the
+  elementary weight is exactly `τs.foldr (fun child acc => acc *
+  (x child + y child)) 1` with `x` the first-block contribution and
+  `y` the second-block contribution.
+- `QuotEquiv.bSeriesConv` — the §386 recursive product placeholder
+  symbol (sole tracked `sorry`). Cycle 505+ will give it a body via
+  `BTree.rec` using
+  `ButcherGroup.foldr_mul_add_eq_sum_powerset` at the `node` case and
+  the additive split at `leaf`.
 
 ## Possible solutions
 
-1. Define the product recursively over `BTree`. For `leaf`, the coefficient
-   should be additive on the two non-empty-tree coefficient functions. For
-   `node children`, expand the `List.foldr` product into a finite sum over
-   choices of children assigned to the first-method coefficient versus the
-   recursive second-method contribution.
+1. Define the product recursively over `BTree` using cycle 504's
+   list-split lemma. For `leaf`, both `x` and `y` reduce to constants
+   (the singleton sums, since `elementaryWeight .leaf k = 1`); the
+   coefficient should be defined to handle that base case. For
+   `node children`, the body is exactly
+   `ButcherGroup.foldr_mul_add_eq_sum_powerset` applied to the two
+   per-child contributions, with the recursion landing inside the
+   `x` summand on each child.
 
-2. Add list-level infrastructure first: a lemma turning
-   `children.foldr (fun child acc => acc * (x child + y child)) 1` into a
-   finite sum over subsets/subsequences of `children`. This would match the
-   actual `elementaryWeight` definition and keep the proof local.
+2. (DONE — cycle 504) List-level infrastructure: the lemma turning
+   `children.foldr (fun child acc => acc * (x child + y child)) 1` into
+   a finite sum over subsets of children-positions
+   (`ButcherGroup.foldr_mul_add_eq_sum_powerset`) is now landed. The
+   §386 node-case unfolding `ButcherProduct.elementaryWeight_node_natAdd`
+   makes its application to the actual elementary-weight recursion
+   immediate.
 
-3. Alternatively, introduce a Connes-Kreimer-style coproduct on rooted trees
-   and prove it matches the current `List.foldr` elementary-weight recursion.
-   This is more canonical for Butcher's group, but is a larger build-out than
-   the local list-split expansion.
+3. Alternatively, introduce a Connes-Kreimer-style coproduct on rooted
+   trees and prove it matches the current `List.foldr` elementary-weight
+   recursion. This is more canonical for Butcher's group, but is a
+   larger build-out than the local list-split expansion that cycle 504
+   already landed.
