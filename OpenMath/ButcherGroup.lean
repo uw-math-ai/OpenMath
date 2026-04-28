@@ -761,6 +761,75 @@ independent of any specific tree decomposition.
 
 See `.prover-state/issues/butcher_section384_convolution.md`. -/
 
+/-- Raw Butcher-series coefficient of a tableau at a rooted tree:
+`∑ i, bᵢ Φᵢ(τ)`. The quotient-level version is `QuotEquiv.bSeries`;
+this representative-level wrapper is convenient for the §384 convolution
+identities before quotienting. -/
+noncomputable def bSeries (tab : ButcherTableau s) (τ : BTree) : ℝ :=
+  ∑ i, tab.b i * tab.elementaryWeight τ i
+
+/-- The elementary weight of `ButcherProduct t₁ t₂` at an upper-left block
+stage is exactly the elementary weight of `t₁`. This is the cut-side
+reduction needed for the §384 convolution: once a child has crossed through
+the lower-left `t₁.b` block, all further descendants remain inside the
+first tableau. -/
+theorem ButcherProduct.elementaryWeight_castAdd
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin s) :
+    (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.castAdd t i)
+      = t₁.elementaryWeight τ i := by
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin s,
+      (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.castAdd t i)
+        = t₁.elementaryWeight τ i)
+    (motive_2 := fun children => ∀ i : Fin s,
+      children.foldr
+        (fun r acc => acc * (∑ k : Fin (s + t),
+          (ButcherProduct t₁ t₂).A (Fin.castAdd t i) k *
+            (ButcherProduct t₁ t₂).elementaryWeight r k)) 1 =
+      children.foldr
+        (fun r acc => acc * (∑ k : Fin s,
+          t₁.A i k * t₁.elementaryWeight r k)) 1)
+    ?leaf ?node ?nil ?cons τ
+  · intro i
+    simp
+  · intro children hchildren i
+    simpa [ButcherTableau.elementaryWeight] using hchildren i
+  · intro i
+    simp
+  · intro head tail ih_head ih_tail i
+    simp only [List.foldr]
+    have hsum :
+        (∑ k : Fin (s + t),
+          (ButcherProduct t₁ t₂).A (Fin.castAdd t i) k *
+            (ButcherProduct t₁ t₂).elementaryWeight head k) =
+          ∑ k : Fin s, t₁.A i k * t₁.elementaryWeight head k := by
+      rw [Fin.sum_univ_add]
+      have hzero :
+          (∑ k : Fin t,
+            (ButcherProduct t₁ t₂).A (Fin.castAdd t i) (Fin.natAdd s k) *
+              (ButcherProduct t₁ t₂).elementaryWeight head (Fin.natAdd s k)) = 0 := by
+        apply Finset.sum_eq_zero
+        intro k _
+        simp [ButcherProduct]
+      rw [hzero, add_zero]
+      refine Finset.sum_congr rfl ?_
+      intro k _
+      rw [ih_head k]
+      simp [ButcherProduct]
+    rw [ih_tail i, hsum]
+
+/-- The cut-side weighted sum through the upper-left block is the raw
+Butcher-series coefficient of the first tableau. -/
+theorem ButcherProduct.bSeries_castAdd
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (τ : BTree) :
+    (∑ i : Fin s, t₁.b i *
+      (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.castAdd t i))
+      = t₁.bSeries τ := by
+  simp [bSeries, ButcherProduct.elementaryWeight_castAdd]
+
 /-- List-level combinator: a `foldr`-style product of binomial sums
 expands as a Finset.powerset-indexed sum over which factor is taken
 from each list position. This is the list-version mirror of
@@ -851,6 +920,60 @@ theorem ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum
       (ButcherProduct t₁ t₂).elementaryWeight c (Fin.castAdd t j₁))
     (fun c => ∑ j₂ : Fin t, t₂.A i j₂ *
       (ButcherProduct t₁ t₂).elementaryWeight c (Fin.natAdd s j₂))
+
+/-- The same node-level §384 powerset identity as
+`ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum`, with the
+cut-side factor reduced to the raw Butcher-series coefficient of `t₁`.
+The summation index `S` records the children kept attached to the second
+method; the complement `Sᶜ` records the children cut through `t₁.bSeries`. -/
+theorem ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum_bSeries
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) (i : Fin t) :
+    (ButcherProduct t₁ t₂).elementaryWeight (BTree.node children) (Fin.natAdd s i)
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, t₁.bSeries (children.get p)) *
+          (∏ p ∈ S, ∑ j₂ : Fin t, t₂.A i j₂ *
+            (ButcherProduct t₁ t₂).elementaryWeight (children.get p) (Fin.natAdd s j₂)) := by
+  classical
+  let cut : Fin children.length → ℝ := fun p => t₁.bSeries (children.get p)
+  let keep : Fin children.length → ℝ := fun p =>
+    ∑ j₂ : Fin t, t₂.A i j₂ *
+      (ButcherProduct t₁ t₂).elementaryWeight (children.get p) (Fin.natAdd s j₂)
+  have hraw :
+      (ButcherProduct t₁ t₂).elementaryWeight (BTree.node children) (Fin.natAdd s i)
+        = ∑ T ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+            (∏ p ∈ T, cut p) *
+            (∏ p ∈ Finset.univ \ T, keep p) := by
+    rw [ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum]
+    simp [cut, keep, ButcherProduct.bSeries_castAdd]
+  have hraw_univ :
+      (∑ T ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+          (∏ p ∈ T, cut p) *
+          (∏ p ∈ Finset.univ \ T, keep p))
+        = ∑ T : Finset (Fin children.length),
+            (∏ p ∈ T, cut p) * (∏ p ∈ Tᶜ, keep p) := by
+    simp [Finset.compl_eq_univ_sdiff]
+  have hcompl :
+      (∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, cut p) * (∏ p ∈ S, keep p))
+        = ∑ T : Finset (Fin children.length),
+            (∏ p ∈ T, cut p) * (∏ p ∈ Tᶜ, keep p) := by
+    let complPerm : Equiv.Perm (Finset (Fin children.length)) :=
+      { toFun := fun S => Sᶜ
+        invFun := fun S => Sᶜ
+        left_inv := by
+          intro S
+          ext p
+          simp
+        right_inv := by
+          intro S
+          ext p
+          simp }
+    simpa [complPerm] using
+      (Equiv.sum_comp complPerm (fun T : Finset (Fin children.length) =>
+        (∏ p ∈ T, cut p) * (∏ p ∈ Tᶜ, keep p)))
+  rw [hraw, hraw_univ]
+  exact hcompl.symm
 
 namespace QuotEquiv
 

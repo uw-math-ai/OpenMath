@@ -332,6 +332,8 @@ codebase.
   `IsRKEquivalentExt.hasTreeOrder_iff`, and recorded the natAdd-side
   nonempty-node vanishing lemma
   `ButcherTableau.padRight_elementaryWeight_natAdd_node_of_ne_nil`.
+  Cycle 519 reused the same nested `BTree.rec` motive split for the
+  §384 upper-left block lemma `ButcherProduct.elementaryWeight_castAdd`.
 - [~] **§382 The group of Runge–Kutta methods** — composition law on
   equivalence classes.
   - raw `ButcherProduct` and block-structure computation lemmas landed
@@ -400,12 +402,15 @@ codebase.
   expressing the second-method-block elementary weight at a node as a
   Finset.powerset-indexed sum over which children are "cut" via the
   lower-left `t₁.b j₁` block versus "kept" via the lower-right
-  `t₂.A i j₂` block. The non-tautological tree convolution for
-  `QuotEquiv.bSeriesHom_product` still requires reducing the cut
-  factor to `t₁.bSeries` (via the upper-left
-  `(ButcherProduct t₁ t₂).elementaryWeight · (Fin.castAdd t i)
-   = t₁.elementaryWeight · i` block lemma) and then recursing on the
-  kept children; see
+  `t₂.A i j₂` block. Cycle 519 landed the raw representative
+  coefficient wrapper `ButcherTableau.bSeries`, the upper-left block
+  reduction `ButcherProduct.elementaryWeight_castAdd`, the cut-side
+  corollary `ButcherProduct.bSeries_castAdd`, and the bSeries-form
+  powerset identity
+  `ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum_bSeries`.
+  The non-tautological tree convolution for
+  `QuotEquiv.bSeriesHom_product` still requires recursing on the
+  kept children to expose the closed-form `(trunk, cuts)` sum; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
