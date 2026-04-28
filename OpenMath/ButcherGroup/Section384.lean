@@ -2167,4 +2167,195 @@ theorem ButcherProduct.bSeries_node_replicate_leaf_eq
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_node_replicate_leaf_eq]
 
+/-! ### §384 dual all-empty-node parametric closed form (cycle 544)
+
+Mirror of the cycle 542 all-leaves family with `BTree.leaf` replaced
+throughout by `BTree.node []`. Both trees have the same `bSeries`-side
+data (`tab.bSeries leaf = tab.bSeries (node []) = tab.weightsSum`) and
+the same `convAt` value (= 1), so the cycle 542 closed form transports
+to the dual all-empty-node family `BTree.node (List.replicate n
+(BTree.node []))`. -/
+
+/-- The `convAt` value at an empty-children node is 1: the only powerset
+element of `Finset (Fin 0)` is `∅`, with empty product equal to 1. -/
+@[simp] theorem ButcherProduct.convAt_node_nil
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    ButcherProduct.convAt t₂ coef (BTree.node []) i = 1 := by
+  rw [ButcherProduct.convAt_node]
+  classical
+  rw [show (Finset.univ : Finset (Finset (Fin ([] : List BTree).length)))
+        = {∅} from rfl]
+  simp
+
+/-- The `rightAuxAtCoef` value at an empty-children node is 1, by
+`rightAuxAtCoef_eq_convAt` plus `convAt_node_nil`. -/
+private theorem rightAuxAtCoef_node_nil
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node []) i = 1 := by
+  rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+  exact ButcherProduct.convAt_node_nil t₂ coef i
+
+/-- Helper: the elementary weight of a node whose children are `n`
+empty-children nodes collapses to the `n`-th power of the row sum
+`∑ k, A i k`. Mirror of `elementaryWeight_node_replicate_leaf`. -/
+private theorem elementaryWeight_node_replicate_node_nil
+    {s : ℕ} (tab : ButcherTableau s) (n : ℕ) (i : Fin s) :
+    tab.elementaryWeight (BTree.node (List.replicate n (BTree.node []))) i
+      = (∑ k : Fin s, tab.A i k) ^ n := by
+  induction n with
+  | zero =>
+    show tab.elementaryWeight (BTree.node []) i = _
+    simp [ButcherTableau.elementaryWeight]
+  | succ m ih =>
+    rw [List.replicate_succ]
+    have hfold :
+        tab.elementaryWeight
+            (BTree.node (BTree.node [] :: List.replicate m (BTree.node []))) i
+          = tab.elementaryWeight
+              (BTree.node (List.replicate m (BTree.node []))) i *
+              (∑ k : Fin s, tab.A i k *
+                tab.elementaryWeight (BTree.node []) k) := by
+      simp [ButcherTableau.elementaryWeight, List.foldr]
+    rw [hfold, ih]
+    have hew : ∀ k : Fin s, tab.elementaryWeight (BTree.node []) k = 1 := by
+      intro k
+      simp [ButcherTableau.elementaryWeight]
+    simp_rw [hew, mul_one]
+    rw [pow_succ]
+
+/-- All-`node []` trunk/cut closed form: when every child of the root is
+`BTree.node []`, the b-weighted `convAt` at `BTree.node children`
+decomposes into a sum over cut subsets `S`, where each summand multiplies
+the cut term `(∏ p ∈ S, coef (BTree.node []))` by the `bSeries` of a
+node of `(BTree.node [])`-only remaining children. Mirror of
+`bWeighted_convAt_node_all_leaves_eq`. -/
+theorem ButcherProduct.bWeighted_convAt_node_all_node_nil_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree)
+    (hAll : ∀ c ∈ children, c = BTree.node []) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+          (∏ _p ∈ S, coef (BTree.node [])) *
+          t₂.bSeries
+            (BTree.node
+              (List.replicate (children.length - S.card)
+                (BTree.node []))) := by
+  classical
+  have hchild : ∀ p : Fin children.length,
+      children.get p = BTree.node [] := by
+    intro p
+    exact hAll (children.get p) (List.get_mem children p)
+  have hLHS :
+      (∑ i : Fin t, t₂.b i *
+          ButcherProduct.convAt t₂ coef (BTree.node children) i)
+        = ∑ i : Fin t, t₂.b i *
+            ButcherProduct.rightAuxAtCoef t₂ coef
+              (BTree.node children) i := by
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+  rw [hLHS,
+      ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  have hfac1 : (∏ p ∈ S, coef (children.get p))
+      = (∏ _p ∈ S, coef (BTree.node [])) := by
+    refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hchild p]
+  rw [hfac1]
+  congr 1
+  have hcard : (Sᶜ : Finset (Fin children.length)).card
+      = children.length - S.card := by
+    rw [Finset.card_compl]
+    simp [Fintype.card_fin]
+  have hbSeries :
+      t₂.bSeries
+          (BTree.node
+            (List.replicate (children.length - S.card)
+              (BTree.node [])))
+        = ∑ i : Fin t, t₂.b i *
+            (∑ j : Fin t, t₂.A i j) ^ (children.length - S.card) := by
+    unfold ButcherTableau.bSeries
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [elementaryWeight_node_replicate_node_nil]
+  rw [hbSeries]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  congr 1
+  have hfac2 : (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+                  ButcherProduct.rightAuxAtCoef t₂ coef
+                    (children.get p) j)
+      = (∏ _p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j) := by
+    refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hchild p]
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [rightAuxAtCoef_node_nil, mul_one]
+  rw [hfac2, Finset.prod_const, hcard]
+
+/-- §384 honest convolution closed form on the all-empty-node family
+`BTree.node (List.replicate n (BTree.node []))`: the bSeries-side
+convolution `bConv` decomposes into a powerset sum where each summand
+multiplies `t₁.bSeries (BTree.node [])` raised to the cut-set
+cardinality by the `t₂.bSeries` of a node of the remaining empty-node
+children. Dual of `bConv_node_replicate_leaf_eq`. -/
+theorem ButcherProduct.bConv_node_replicate_node_nil_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    ButcherProduct.bConv (t₁.bSeries) t₂
+        (BTree.node (List.replicate n (BTree.node [])))
+      = t₁.bSeries (BTree.node (List.replicate n (BTree.node [])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries (BTree.node [])) ^ S.card *
+            t₂.bSeries
+              (BTree.node
+                (List.replicate (n - S.card) (BTree.node []))) := by
+  unfold ButcherProduct.bConv
+  have hAll : ∀ c ∈ List.replicate n (BTree.node []),
+      c = BTree.node [] := by
+    intro c hc
+    exact List.eq_of_mem_replicate hc
+  rw [ButcherProduct.bWeighted_convAt_node_all_node_nil_eq t₂ t₁.bSeries
+        (List.replicate n (BTree.node [])) hAll]
+  have hlen : (List.replicate n (BTree.node [])).length = n :=
+    List.length_replicate
+  classical
+  let e : Fin (List.replicate n (BTree.node [])).length ≃ Fin n :=
+    { toFun := Fin.cast hlen
+      invFun := Fin.cast hlen.symm
+      left_inv := fun _ => by ext; rfl
+      right_inv := fun _ => by ext; rfl }
+  let φ : Finset (Fin (List.replicate n (BTree.node [])).length)
+            ≃ Finset (Fin n) :=
+    Equiv.finsetCongr e
+  congr 1
+  refine Finset.sum_equiv φ ?_ ?_
+  · intro S
+    simp [φ, e]
+  · intro S _
+    have hcard : (φ S).card = S.card := by
+      simp [φ]
+    rw [Finset.prod_const, hcard]
+    simp only [List.length_replicate]
+
+/-- Headline §384 corollary on the all-empty-node family: the product
+`bSeries` on `BTree.node (List.replicate n (BTree.node []))` decomposes
+into a sum that mentions both `t₁` and `t₂` only through `bSeries`. Dual
+of `bSeries_node_replicate_leaf_eq`. -/
+theorem ButcherProduct.bSeries_node_replicate_node_nil_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node (List.replicate n (BTree.node [])))
+      = t₁.bSeries (BTree.node (List.replicate n (BTree.node [])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries (BTree.node [])) ^ S.card *
+            t₂.bSeries
+              (BTree.node
+                (List.replicate (n - S.card) (BTree.node []))) := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_node_replicate_node_nil_eq]
+
 end ButcherTableau

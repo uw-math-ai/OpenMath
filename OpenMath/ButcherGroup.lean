@@ -158,6 +158,26 @@ theorem bSeriesHom_product_node_replicate_leaf
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_replicate_leaf_eq t₁ t₂ n
 
+/-- §384 lift of the cycle 544 dual all-empty-node closed form to the
+quotient layer. The product `bSeriesHom` on `BTree.node (List.replicate
+n (BTree.node []))` decomposes into a powerset sum of bSeries-only
+summands. Mirror of `bSeriesHom_product_node_replicate_leaf`. -/
+theorem bSeriesHom_product_node_replicate_node_nil
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) (n : ℕ) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [])))
+      = q.bSeriesHom (BTree.node (List.replicate n (BTree.node [])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (q.bSeriesHom (BTree.node [])) ^ S.card *
+            r.bSeriesHom
+              (BTree.node
+                (List.replicate (n - S.card) (BTree.node []))) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_replicate_node_nil_eq t₁ t₂ n
+
 end QuotEquiv
 
 /-! ### §387 raw and quotient powers
@@ -888,6 +908,68 @@ theorem product_congr_node_replicate_leaf
     rw [order_node_replicate_leaf]
     omega
   rw [hleaf, hsub]
+
+/-- Order of an all-empty-node node:
+`(BTree.node (List.replicate n (BTree.node []))).order = n + 1`.
+Each empty-children node has the same order as a leaf (= 1), so the
+foldr sum collapses identically to the all-leaves case. -/
+private theorem order_node_replicate_node_nil (n : ℕ) :
+    (BTree.node (List.replicate n (BTree.node []))).order = n + 1 := by
+  induction n with
+  | zero => simp
+  | succ m ih =>
+    rw [List.replicate_succ]
+    simp only [BTree.order_node, List.foldr]
+    have ihrw : (BTree.node (List.replicate m (BTree.node []))).order
+        = m + 1 := ih
+    simp only [BTree.order_node] at ihrw
+    have hnode_nil : (BTree.node []).order = 1 := by simp
+    omega
+
+/-- Cycle 544 third tracked `G1.mul`-direction well-definedness deliverable:
+parametric in `n`, product preserves `G₁` equivalence on every all-empty-node
+tree `BTree.node (List.replicate n (BTree.node []))` whose order is at most
+`p`. Dual of `product_congr_node_replicate_leaf`. -/
+theorem product_congr_node_replicate_node_nil
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (n : ℕ) (hn : n + 1 ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [])))
+      = (q'.product r').bSeriesHom
+        (BTree.node (List.replicate n (BTree.node []))) := by
+  rw [QuotEquiv.bSeriesHom_product_node_replicate_node_nil,
+      QuotEquiv.bSeriesHom_product_node_replicate_node_nil]
+  have hnode_nil : q.bSeriesHom (BTree.node [])
+      = q'.bSeriesHom (BTree.node []) := by
+    apply hq
+    have : (BTree.node []).order = 1 := by simp
+    rw [this]; omega
+  have hnode_n :
+      q.bSeriesHom (BTree.node (List.replicate n (BTree.node [])))
+        = q'.bSeriesHom (BTree.node (List.replicate n (BTree.node []))) := by
+    apply hq; rw [order_node_replicate_node_nil]; omega
+  rw [hnode_n]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  have hS : S.card ≤ n := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin n)) :=
+      Finset.mem_powerset.mp ‹S ∈ _›
+    have := Finset.card_le_card hmem
+    simp at this
+    exact this
+  have hsub :
+      r.bSeriesHom
+          (BTree.node (List.replicate (n - S.card) (BTree.node [])))
+        = r'.bSeriesHom
+          (BTree.node (List.replicate (n - S.card) (BTree.node []))) := by
+    apply hr
+    rw [order_node_replicate_node_nil]
+    omega
+  rw [hnode_nil, hsub]
 
 end IsG1Equiv
 
