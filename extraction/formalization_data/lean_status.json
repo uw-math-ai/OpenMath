@@ -71,7 +71,7 @@
   },
   "thm:142D": {
     "lean_file": "OpenMath/Chapter1/Section142.lean",
-    "lean_symbol": "OpenMath.Chapter1.Section142.convergent_imp_minpoly_roots_lt_one",
+    "lean_symbol": "OpenMath.Chapter1.Section142.convergent_iff_minpoly_roots_lt_one",
     "status": "in_progress"
   },
   "thm:142E": {

@@ -1,7 +1,9 @@
 import Mathlib.Analysis.Matrix.Normed
+import Mathlib.Analysis.Normed.Algebra.GelfandFormula
 import Mathlib.Analysis.Normed.Ring.Basic
 import Mathlib.Analysis.SpecificLimits.Normed
 import Mathlib.LinearAlgebra.Eigenspace.Minpoly
+import Mathlib.LinearAlgebra.Matrix.Charpoly.Eigs
 import Mathlib.LinearAlgebra.Matrix.Charpoly.Minpoly
 import Mathlib.LinearAlgebra.Matrix.ToLin
 import Mathlib.Topology.Order
@@ -13,11 +15,13 @@ This file collects the entities of subsection 142 of Butcher's
 *Numerical Methods for Ordinary Differential Equations* (3rd ed.).
 
 So far this file contains Definitions 142A (power-boundedness) and 142B
-(convergent matrix), plus the directional fragments of Theorem 142D
-that are reachable in current Mathlib. Mathlib (as of `v4.28.0`) does
-not provide Jordan canonical form or a Schur upper-triangular
-decomposition, so the (ii) ⇒ (iii), (iii) ⇒ (iv), and the standalone
-(i) ⇒ (iv) and (ii) ⇒ (iv) directions are deferred — see
+(convergent matrix), plus the (i) ⇔ (ii) fragment of Theorem 142D —
+the equivalence of convergence with all roots of the minimal polynomial
+lying in the open unit disc.  The reverse direction (ii) ⇒ (i) routes
+through Mathlib's spectral-radius and Gelfand-formula API.  Mathlib (as
+of `v4.28.0`) does not provide Jordan canonical form or a Schur
+upper-triangular decomposition, so the (ii) ⇒ (iii), (iii) ⇒ (iv), and
+the standalone (i) ⇒ (iv), (ii) ⇒ (iv) directions are deferred — see
 `.prover-state/issues/jordan_canonical_form_missing.md`.
 -/
 
@@ -93,12 +97,14 @@ four conditions for an `m × m` matrix `A`:
 Mathlib (as of `v4.28.0`) does not yet provide Jordan canonical form,
 nor a Schur upper-triangular decomposition.  Butcher's proof goes
 (i) ⇒ (ii) ⇒ (iii) ⇒ (iv) ⇒ (i); the first and last steps avoid
-Jordan/Schur structure but the middle steps do not.  In this file we
-formalise the two directions that are reachable without that
-infrastructure:
+Jordan/Schur structure but the middle steps do not.  We instead close
+the (ii) ⇒ (i) gap directly through Mathlib's spectral-radius / Gelfand-
+formula API, packaging the four reachable items:
 
-* `convergent_imp_minpoly_roots_lt_one`  — (i) ⇒ (ii)
-* `similar_norm_lt_one_imp_convergent`   — (iv) ⇒ (i)
+* `convergent_imp_minpoly_roots_lt_one`     — (i) ⇒ (ii)
+* `minpoly_roots_lt_one_imp_convergent`     — (ii) ⇒ (i)
+* `convergent_iff_minpoly_roots_lt_one`     — (i) ⇔ (ii) packaging
+* `similar_norm_lt_one_imp_convergent`      — (iv) ⇒ (i)
 
 The Jordan-form clause (iii) and the directions (ii) ⇒ (iv) and
 (i) ⇒ (iv) are tracked in
@@ -195,6 +201,140 @@ theorem similar_norm_lt_one_imp_convergent
   convert Tendsto.const_mul ( S : Matrix m m ℂ ) ( h_lim.mul_const ( S⁻¹ : Matrix m m ℂ ) ) using 2;
   · induction ‹_› <;> simp_all +decide [ pow_succ, mul_assoc ];
   · simp +decide
+
+/-! ### Direction (ii) ⇒ (i) via the Gelfand formula
+
+Butcher's direction (ii) ⇒ (i) goes through (iii) ⇒ (iv) which we cannot
+formalise yet (no Jordan form in Mathlib).  We instead route (ii) ⇒ (i)
+directly via Mathlib's spectral-radius API:
+
+* every spectrum element of `A` is a root of `minpoly ℂ A`
+  (`Matrix.minpoly_dvd_charpoly` + `Matrix.mem_spectrum_iff_isRoot_charpoly`),
+* hence `‖z‖ < 1` for every `z ∈ spectrum ℂ A`,
+* hence `spectralRadius ℂ A < 1` (`spectrum.spectralRadius_lt_of_forall_lt`),
+* hence `‖A^n‖ → 0` via Gelfand's formula
+  (`spectrum.pow_norm_pow_one_div_tendsto_nhds_spectralRadius`),
+* hence `A^n → 0`.
+
+The bridges all live in `Mathlib.Analysis.Normed.Algebra.GelfandFormula`
+and require `Matrix.Norms.Operator` to expose the `linftyOpNormedRing` /
+`linftyOpNormedAlgebra` instances on `Matrix m m ℂ`. -/
+
+/-- Spectrum elements of a square matrix `A` over a field are roots of
+`minpoly K A`.
+
+Proof: `μ ∈ spectrum K A ↔ A.charpoly.IsRoot μ` over a field
+(`Matrix.mem_spectrum_iff_isRoot_charpoly`); we then go through the
+End-side `hasEigenvalue_iff_isRoot` (using `minpoly_toLin'`) by way of
+the eigenvector bridge already established in
+`matrix_minpoly_root_is_eigenvalue`'s proof.  More directly, every
+spectrum element is an eigenvalue, hence a root of `minpoly`. -/
+private theorem matrix_mem_spectrum_imp_isRoot_minpoly
+    (A : Matrix m m ℂ) {μ : ℂ}
+    (h : μ ∈ spectrum ℂ A) : (minpoly ℂ A).IsRoot μ := by
+  have h1 : μ ∈ spectrum ℂ (Matrix.toLinAlgEquiv' (R := ℂ) A) := by
+    rwa [AlgEquiv.spectrum_eq]
+  rw [← Module.End.hasEigenvalue_iff_mem_spectrum] at h1
+  rw [Module.End.hasEigenvalue_iff_isRoot] at h1
+  convert h1 using 1
+  exact (Matrix.minpoly_toLin' A).symm
+
+/-- Spectral-radius bound from a uniform bound on minimal-polynomial roots.
+
+If every root of `minpoly ℂ A` lies in the open unit disc, then
+`spectralRadius ℂ A < 1`.  This combines
+`matrix_mem_spectrum_imp_isRoot_minpoly` with
+`spectrum.spectralRadius_lt_of_forall_lt` (which requires
+`Matrix m m ℂ` to be `Nontrivial`, equivalently `[Nonempty m]`). -/
+private theorem matrix_spectralRadius_lt_one_of_minpoly_roots
+    [Nonempty m]
+    (A : Matrix m m ℂ)
+    (h : ∀ μ : ℂ, μ ∈ (minpoly ℂ A).roots → ‖μ‖ < 1) :
+    spectralRadius ℂ A < 1 := by
+  convert spectrum.spectralRadius_lt_of_forall_lt A _;
+  exact fun z hz => by
+    simpa [← NNReal.coe_lt_coe] using
+      h z (Polynomial.mem_roots (minpoly.ne_zero (Matrix.isIntegral A)) |>.2 <|
+        matrix_mem_spectrum_imp_isRoot_minpoly A hz)
+
+/-- Gelfand corollary: `spectralRadius ℂ A < 1` implies `A` is convergent.
+
+Pick `r ∈ (spectralRadius A, 1)`; Gelfand's formula yields
+`‖A^n‖^(1/n) → spectralRadius A < r`, so `‖A^n‖ ≤ r^n` eventually,
+hence `‖A^n‖ → 0`, hence `A^n → 0`. -/
+private theorem matrix_convergent_of_spectralRadius_lt_one
+    [Nonempty m]
+    (A : Matrix m m ℂ) (h : spectralRadius ℂ A < 1) :
+    Convergent A := by
+  have := @spectrum.pow_nnnorm_pow_one_div_tendsto_nhds_spectralRadius;
+  convert this A using 1;
+  constructor <;> intro h <;>
+    rw [← ENNReal.tendsto_toReal_iff] at * <;> simp_all +decide [Convergent];
+  · convert ENNReal.tendsto_toReal (show (spectralRadius ℂ A) ≠ ⊤ from ?_) |>
+      Filter.Tendsto.comp <| this A using 1;
+    exact ne_of_lt (lt_of_lt_of_le ‹_› (by norm_num));
+  · exact ne_of_lt (lt_of_lt_of_le ‹_› (by norm_num));
+  · have h_lim_zero : ∃ r : ℝ, 0 < r ∧ r < 1 ∧ ∀ᶠ n in Filter.atTop, ‖A ^ n‖ ≤ r ^ n := by
+      obtain ⟨r, hr₀, hr₁⟩ : ∃ r : ℝ, 0 < r ∧ r < 1 ∧ (spectralRadius ℂ A).toReal < r := by
+        by_cases h₂ : (spectralRadius ℂ A).toReal < 1;
+        · exact ⟨(spectralRadius ℂ A |> ENNReal.toReal) / 2 + 1 / 2,
+            by linarith [show 0 ≤ (spectralRadius ℂ A |> ENNReal.toReal) by positivity],
+            by linarith, by linarith⟩;
+        · cases h : spectralRadius ℂ A <;> simp_all +decide [ENNReal.toReal];
+      have := h.eventually (gt_mem_nhds hr₁.2);
+      refine' ⟨r, hr₀, hr₁.1, this.mono fun n hn => _⟩;
+      rcases eq_or_ne n 0 with rfl | hn' <;> simp_all +decide;
+      convert pow_le_pow_left₀ (by positivity) hn.le n using 1;
+      rw [← ENNReal.toReal_pow, ← ENNReal.rpow_natCast, ← ENNReal.rpow_mul,
+        inv_mul_cancel₀ (by positivity), ENNReal.rpow_one];
+      norm_num;
+    exact squeeze_zero_norm'
+      (by filter_upwards [h_lim_zero.choose_spec.2.2] with n hn; simpa using hn)
+      (tendsto_pow_atTop_nhds_zero_of_lt_one h_lim_zero.choose_spec.1.le
+        h_lim_zero.choose_spec.2.1);
+  · exact ne_of_lt (lt_of_lt_of_le h le_top)
+
+/-- Butcher §142, Theorem 142D — direction (ii) ⇒ (i).
+
+If every root of the minimal polynomial of `A` lies in the open unit
+disc, then `A` is convergent.
+
+The proof routes through Mathlib's spectral-radius API: the spectrum of
+`A` is contained in the roots of `minpoly ℂ A`
+(`matrix_mem_spectrum_imp_isRoot_minpoly`), so a strict bound on the
+roots gives `spectralRadius ℂ A < 1`, and Gelfand's formula then forces
+`‖A^n‖ → 0`.
+
+The empty-`m` case is handled separately because Mathlib's
+`spectrum.spectralRadius_lt_of_forall_lt` requires `[Nontrivial A]`,
+which fails for the trivial matrix algebra over an empty index. -/
+theorem minpoly_roots_lt_one_imp_convergent
+    (A : Matrix m m ℂ)
+    (h : ∀ μ : ℂ, μ ∈ (minpoly ℂ A).roots → ‖μ‖ < 1) :
+    Convergent A := by
+  cases isEmpty_or_nonempty m;
+  · exact tendsto_const_nhds.congr fun n => by ext i; exact isEmptyElim i;
+  · exact matrix_convergent_of_spectralRadius_lt_one A
+      (matrix_spectralRadius_lt_one_of_minpoly_roots A h)
+
+/-- Butcher §142, Theorem 142D — clauses (i) ⇔ (ii).
+
+A square complex matrix `A` is convergent (`A^n → 0`) if and only if
+every root of its minimal polynomial lies in the open unit disc.
+
+This packages cycle 005's `convergent_imp_minpoly_roots_lt_one`
+((i) ⇒ (ii), via the eigenvector growth argument) with the
+spectral-radius / Gelfand route for the converse
+(`minpoly_roots_lt_one_imp_convergent`, (ii) ⇒ (i)).
+
+The full 4-way TFAE of Butcher's Theorem 142D is still blocked on
+Jordan canonical form and Schur triangularization; see
+`.prover-state/issues/jordan_canonical_form_missing.md`. -/
+theorem convergent_iff_minpoly_roots_lt_one
+    (A : Matrix m m ℂ) :
+    Convergent A ↔ ∀ μ : ℂ, μ ∈ (minpoly ℂ A).roots → ‖μ‖ < 1 :=
+  ⟨convergent_imp_minpoly_roots_lt_one A,
+   minpoly_roots_lt_one_imp_convergent A⟩
 
 end ConvergenceCharacterizations
 
