@@ -1302,6 +1302,61 @@ theorem ButcherProduct.bSeries_natAdd_node_two_level_eq_powerset_sum
                          ButcherProduct.rightAuxAt t₁ t₂ (gc.get q) k))))) := by
         simp [cut, kept]
 
+/-- Closed-form right-block auxiliary: at each node, sum over subsets
+`S` of children. Children outside `S` are cut via `coef` (later specialised
+to `t₁.bSeries`); children inside `S` are kept and feed back into the
+recursion through `t₂.A i j`. -/
+noncomputable def ButcherProduct.rightAuxAtCoef
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    BTree → Fin t → ℝ
+  | .leaf, _ => 1
+  | .node children, i =>
+      ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+        (∏ p ∈ Sᶜ, coef (children.get p)) *
+        (∏ p ∈ S,
+          ∑ j : Fin t,
+            t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j)
+termination_by τ => sizeOf τ
+decreasing_by
+  have hmem : sizeOf (children.get p) < sizeOf children :=
+    List.sizeOf_lt_of_mem (List.get_mem children p)
+  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp
+  exact Nat.lt_trans hmem hnode
+
+@[simp] theorem ButcherProduct.rightAuxAtCoef_leaf
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    ButcherProduct.rightAuxAtCoef t₂ coef BTree.leaf i = 1 := by
+  simp [ButcherProduct.rightAuxAtCoef]
+
+theorem ButcherProduct.rightAuxAtCoef_node
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i =
+      ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+        (∏ p ∈ Sᶜ, coef (children.get p)) *
+        (∏ p ∈ S,
+          ∑ j : Fin t,
+            t₂.A i j * ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j) := by
+  rw [ButcherProduct.rightAuxAtCoef]
+
+theorem ButcherProduct.rightAuxAt_leaf_eq_coef
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin t) :
+    ButcherProduct.rightAuxAt t₁ t₂ BTree.leaf i =
+      ButcherProduct.rightAuxAtCoef t₂ (t₁.bSeries) BTree.leaf i := by
+  simp [ButcherProduct.rightAuxAt_leaf, ButcherProduct.rightAuxAtCoef_leaf]
+
+theorem ButcherProduct.rightAuxAt_node_eq_coef_one_level
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAt t₁ t₂ (BTree.node children) i =
+      ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+        (∏ p ∈ Sᶜ, t₁.bSeries (children.get p)) *
+        (∏ p ∈ S,
+          ∑ j : Fin t,
+            t₂.A i j * ButcherProduct.rightAuxAt t₁ t₂ (children.get p) j) := by
+  simpa using
+    (ButcherProduct.rightAuxAt_node_eq_powerset_sum t₁ t₂ children i)
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

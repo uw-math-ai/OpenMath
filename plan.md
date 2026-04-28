@@ -425,7 +425,14 @@ codebase.
   case-splitting each kept child's contribution into a leaf branch
   (`∑ j, t₂.A i j`) or a node branch (inner powerset sum at the new
   parent index `j`), making the second-method-side recursion explicit
-  one full structural layer deeper. The non-tautological tree convolution
+  one full structural layer deeper. Cycle 523 began the closed-form
+  auxiliary layer with `ButcherProduct.rightAuxAtCoef`,
+  `ButcherProduct.rightAuxAtCoef_leaf`,
+  `ButcherProduct.rightAuxAtCoef_node`,
+  `ButcherProduct.rightAuxAt_leaf_eq_coef`, and
+  `ButcherProduct.rightAuxAt_node_eq_coef_one_level`, isolating the
+  right-block recursion behind an arbitrary cut coefficient function.
+  The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing
   `rightAuxAt` to the `(trunk, cuts)` closed form; see
   `.prover-state/issues/butcher_section384_convolution.md`.
@@ -854,7 +861,12 @@ Concrete next steps:
   `b`-weighted form
   `ButcherProduct.bSeries_natAdd_node_two_level_eq_powerset_sum`,
   case-splitting each kept child into a leaf (`∑ j, t₂.A i j`) or
-  node (inner powerset sum at the new parent index) branch.
+  node (inner powerset sum at the new parent index) branch. Cycle 523
+  added the closed-form right-block auxiliary
+  `ButcherProduct.rightAuxAtCoef` with `rightAuxAtCoef_leaf` /
+  `rightAuxAtCoef_node`, plus the specialisation bridge
+  `ButcherProduct.rightAuxAt_leaf_eq_coef` and one-level restatement
+  `ButcherProduct.rightAuxAt_node_eq_coef_one_level`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
