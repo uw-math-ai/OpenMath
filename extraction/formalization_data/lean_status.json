@@ -1,8 +1,8 @@
 {
   "thm:101A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section101.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section101.kepler_H_const, OpenMath.Chapter1.Section101.kepler_A_const",
+    "status": "formalized"
   },
   "def:110A": {
     "lean_file": "OpenMath/Chapter1/Section110.lean",
@@ -10,9 +10,9 @@
     "status": "formalized"
   },
   "lem:110B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section110.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section110.contraction_fixedPoint",
+    "status": "formalized"
   },
   "thm:110C": {
     "lean_file": null,
@@ -60,9 +60,9 @@
     "status": "formalized"
   },
   "def:142B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section142.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section142.Convergent",
+    "status": "formalized"
   },
   "thm:142C": {
     "lean_file": null,
