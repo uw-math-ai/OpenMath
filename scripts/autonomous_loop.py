@@ -1350,8 +1350,8 @@ def check_strategy_compliance(cycle: int) -> Optional[str]:
     if not strategy:
         return None
 
-    # Extract file paths mentioned in strategy (OpenMath/Foo.lean patterns)
-    target_files = set(re.findall(r'(OpenMath/\w+\.lean)', strategy))
+    # Extract file paths mentioned in strategy (OpenMath/Foo.lean and OpenMath/Foo/Bar.lean)
+    target_files = set(re.findall(r'OpenMath/[\w/]+\.lean', strategy))
     if not target_files:
         return None
 
