@@ -201,8 +201,11 @@ codebase.
 - [x] **Bogacki–Shampine 3(2)**: explicit, consistent, main order 3,
   embed order 2, stiffly accurate, FSAL, non-negative weights, `B(3)`,
   `C(1)` (`OpenMath/EmbeddedRK.lean`)
-- [ ] **§334 Fehlberg 4(5) (RKF45)** embedded pair: tableau, consistency,
-  orders 4 and 5, error-weight closure (extend `OpenMath/EmbeddedRK.lean`).
+- [x] **§334 Fehlberg 4(5) (RKF45)** embedded pair: tableau, consistency,
+  orders 4 and 5, embedding-not-order-5, error-weight closure
+  (`OpenMath/EmbeddedRK.lean`: `rkRKF45`, `rkRKF45_main_order5`,
+  `rkRKF45_embed_order4`, `rkRKF45_embed_not_order5`,
+  `rkRKF45_errorWeights_sum`).
 - [ ] **§335 Verner 6(5) / 7(8)** embedded pairs (low priority).
 - [ ] **§336 Dormand–Prince 5(4) (DOPRI5)** embedded pair: tableau,
   consistency, orders 5 and 4, FSAL, error-weight closure.
@@ -549,71 +552,64 @@ error bound for one specific scheme:
 > items always append at the bottom; **do not reorder closed work to
 > the top.**
 
-> **§45 (One-Leg Methods and G-stability) was completed for cycle 493;
-> §334 Fehlberg 4(5) was promoted to `## Current Target`.** Items below
-> renumber from #1.
+> **§334 Fehlberg 4(5) was completed for cycle 494; §38 Butcher group
+> was promoted to `## Current Target`.** Items below renumber from #1.
 
-1. **Butcher §38 — Butcher group (algebraic RK properties).** New file
-   `OpenMath/ButcherGroup.lean`. §380 motivation, §381 equivalence
-   classes under stage relabelling, §382 composition group, §383 the
-   `G₁` group via elementary-weight homomorphism, §387 special elements
-   (identity, inverse, power). Defer §389 effective order to a sibling
-   `OpenMath/EffectiveOrder.lean`.
-2. **Butcher §500 — General linear method definition.** New file
+1. **Butcher §500 — General linear method definition.** New file
    `OpenMath/GeneralLinearMethod.lean`. The four-block
    `(A, U, B, V)` data of sizes `s×s`, `s×r`, `r×s`, `r×r` and the
    one-step update on `r`-vectors of input quantities.
-3. **Butcher §502 — RK as a general linear method.** Extend
+2. **Butcher §502 — RK as a general linear method.** Extend
    `OpenMath/GeneralLinearMethod.lean` with the embedding
    `r = 1`, `U = 𝟙`, `V = 1`. Use the existing `ButcherTableau`.
-4. **Butcher §503 — LMM as a general linear method.** Extend
+3. **Butcher §503 — LMM as a general linear method.** Extend
    `OpenMath/GeneralLinearMethod.lean` with the `s = 1` Nordsieck-vector
    embedding. Use the existing `LMM` interface.
-5. **Butcher §510 — GLM consistency and stability definitions.**
+4. **Butcher §510 — GLM consistency and stability definitions.**
    `OpenMath/GeneralLinearMethod.lean`. Direct generalisation of §40.
-6. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
+5. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
    ⟹ convergence` for GLMs. The existing
    `OpenMath/DahlquistEquivalence.lean` is a special case; the GLM
    version reduces to the same companion-matrix spectral bound.
-7. **Butcher §111 — Linear systems of differential equations.** New
+6. **Butcher §111 — Linear systems of differential equations.** New
    file `OpenMath/LinearODE.lean`. `y(x) = exp((x − x₀) A) y₀` as a
    thin re-export of Mathlib `Matrix.exp` plus `Matrix.exp_add` for
    commuting matrices.
-8. **Butcher §250 — Taylor series methods.** New file
+7. **Butcher §250 — Taylor series methods.** New file
    `OpenMath/TaylorSeriesMethod.lean`. Fixed-order truncation of the
    Taylor expansion of `y(x+h)`; consistency and order from existing
    `OneStepConvergence.lean` machinery.
-9. **Butcher §341 — Solvability of implicit RK equations.** Thin
+8. **Butcher §341 — Solvability of implicit RK equations.** Thin
     wrapper over Mathlib `ContractingWith` proving stage solvability
     when `h · L · max_i Σ_j |A_{ij}| < 1`. Likely lives in
     `OpenMath/RungeKutta.lean`.
-10. **Butcher §215 — Asymptotic error formula for the Euler method.**
+9. **Butcher §215 — Asymptotic error formula for the Euler method.**
     Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
     ODE. Extends `OpenMath/EulerConvergence.lean`.
-11. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
+10. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
     Same template as §334. Extends `OpenMath/EmbeddedRK.lean`.
-12. **Butcher §463 — Milne device for local error estimation.** New
+11. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-13. **Butcher §520–§522 — Stability matrix of a GLM and the
+12. **Butcher §520–§522 — Stability matrix of a GLM and the
     Butcher–Chipman conjecture (outline).** Extends the GLM file family.
     Stability matrix `M(z) := V + z B (I − z A)⁻¹ U`, Padé-like
     conditions on `M(z)`, outline of order of `M(z)` as approximation to
     `exp(z) · I`.
-14. **Butcher §54 — DIMSIM types and ARK methods.** New file
+13. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
-15. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+14. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
     `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
     property F.
-16. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+15. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
     §365 (effective order definition / DESIRE) plus §389 algebraic
-    interpretation. Builds on item #1.
-17. **Butcher §372 — Symplectic order conditions.** Short corollary in
+    interpretation. Builds on Current Target.
+16. **Butcher §372 — Symplectic order conditions.** Short corollary in
     `OpenMath/SymplecticRK.lean`: an `IsSymplectic` method satisfying
     order-`p` conditions automatically satisfies the symplectic
     order-`p` conditions. Trivial follow-up to §370A.
-18. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+17. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
 
@@ -626,25 +622,34 @@ let the queue empty.
 
 ## Current Target
 
-**Butcher §334 — Fehlberg 4(5) (RKF45) embedded pair.** Extend
-`OpenMath/EmbeddedRK.lean` with the Fehlberg tableau, mirroring the
-Heun–Euler 2(1) and Bogacki–Shampine 3(2) embedded-pair templates
-already in that file.
+**Butcher §38 — Butcher group (algebraic RK properties).** New file
+`OpenMath/ButcherGroup.lean`. Butcher's namesake topic and the single
+biggest remaining gap inside Chapter 3.
 
 Concrete next steps:
 
-- Read the existing `OpenMath/EmbeddedRK.lean` definitions for embedded
-  tableaux, consistency, low/high-order proofs, and error-weight closure.
-- Add the classical Fehlberg 4(5) coefficient data in the same local
-  style: stages, `A`, `b` for the order-5 weights, `bHat` for the
-  order-4 weights, and `c` row sums.
-- Prove the tableau consistency facts by the same `norm_num`/finite-sum
-  pattern used for Heun–Euler and Bogacki–Shampine.
-- Prove the embedded orders 4 and 5 by mirroring the existing order
-  condition lemmas, extracting any repeated rational arithmetic into
-  small private helpers if needed.
-- Close the RKF45 error-weight theorem showing the embedded difference
-  weights match the two Fehlberg weight vectors.
+- Sketch the §380 motivation: why the equivalence-class group of RK
+  methods modulo stage relabelling is well-defined and why the
+  composition operation is associative.
+- Define `ButcherProduct` (composition of two `ButcherTableau` values
+  with possibly different stage counts), and the equivalence
+  `IsRKEquivalent` under stage relabelling permutations (§381).
+- Establish that `ButcherProduct` descends to the quotient — i.e.
+  `IsRKEquivalent`-classes form a monoid under composition (§382).
+- Define the elementary-weight homomorphism on rooted trees and use
+  it to identify the `G₁` group of order-`p` RK methods modulo
+  ≥(p+1)-order trees (§383).
+- Cover §387 special elements: identity (zero-stage), inverse, integer
+  power.
+- Defer §389 effective order to a separate `OpenMath/EffectiveOrder.lean`
+  follow-up (item #15 in the Backlog Queue).
+
+Expected sorry-first surface:
+- `def ButcherProduct : ButcherTableau s → ButcherTableau t → ButcherTableau (s + t)`
+- `def IsRKEquivalent : ButcherTableau s → ButcherTableau s → Prop`
+- `theorem rkEquiv_refl / symm / trans` (basic equivalence)
+- `def G₁` group via elementary-weight homomorphism through order p
+- `theorem butcherProduct_assoc_modEquiv`
 
 ### Do NOT
 

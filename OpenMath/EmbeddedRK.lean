@@ -304,19 +304,206 @@ theorem rkBS32_main_not_C2 : ¬rkBS32.mainMethod.SatisfiesC 2 := by
   simp [rkBS32, EmbeddedRKPair.mainMethod, Fin.sum_univ_four] at h
   norm_num at h
 
+/-! ## Fehlberg 4(5) (RKF45) Embedded Pair (Butcher §334) -/
+
+/-- The **Fehlberg 4(5) (RKF45)** embedded pair (Butcher §334).
+  6-stage explicit pair with order 5 main method and order 4 embedding.
+  ```
+    0     |
+    1/4   | 1/4
+    3/8   | 3/32        9/32
+    12/13 | 1932/2197  -7200/2197    7296/2197
+    1     | 439/216    -8            3680/513    -845/4104
+    1/2   | -8/27       2           -3544/2565   1859/4104   -11/40
+    ------|------------------------------------------------------------------
+          | 16/135      0            6656/12825  28561/56430 -9/50    2/55   (order 5, main)
+          | 25/216      0            1408/2565   2197/4104   -1/5     0      (order 4, embed)
+  ```
+  Reference: Fehlberg, "Low-order classical Runge-Kutta formulas with stepsize
+  control" (NASA TR R-315, 1969); Iserles §2.7. -/
+noncomputable def rkRKF45 : EmbeddedRKPair 6 where
+  A := ![
+    ![0,          0,          0,          0,           0,      0],
+    ![1/4,        0,          0,          0,           0,      0],
+    ![3/32,       9/32,       0,          0,           0,      0],
+    ![1932/2197, -7200/2197,  7296/2197,  0,           0,      0],
+    ![439/216,   -8,          3680/513,  -845/4104,    0,      0],
+    ![-8/27,      2,         -3544/2565,  1859/4104,  -11/40,  0]]
+  b := ![16/135, 0, 6656/12825, 28561/56430, -9/50, 2/55]
+  bHat := ![25/216, 0, 1408/2565, 2197/4104, -1/5, 0]
+  c := ![0, 1/4, 3/8, 12/13, 1, 1/2]
+
+namespace rkRKF45Aux
+
+/-- Explicit unfolding of a sum over `Fin 6` (mirrors `Fin.sum_univ_four`). -/
+private lemma sum_univ_six {α} [AddCommMonoid α] (f : Fin 6 → α) :
+    ∑ i : Fin 6, f i = f 0 + f 1 + f 2 + f 3 + f 4 + f 5 := by
+  simp [Fin.sum_univ_succ, add_assoc]
+
+end rkRKF45Aux
+
+open rkRKF45Aux
+
+/-- RKF45 is explicit. -/
+theorem rkRKF45_explicit : rkRKF45.IsExplicit := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;> simp_all [rkRKF45, EmbeddedRKPair.mainMethod]
+
+/-- RKF45 is consistent (both methods). -/
+theorem rkRKF45_consistent : rkRKF45.IsConsistent where
+  main_consistent := by
+    refine ⟨?_, ?_⟩
+    · simp [rkRKF45, EmbeddedRKPair.mainMethod, sum_univ_six]; norm_num
+    · intro i; fin_cases i <;>
+        simp [rkRKF45, EmbeddedRKPair.mainMethod, sum_univ_six] <;> norm_num
+  embed_consistent := by
+    refine ⟨?_, ?_⟩
+    · simp [rkRKF45, EmbeddedRKPair.embedMethod, sum_univ_six]; norm_num
+    · intro i; fin_cases i <;>
+        simp [rkRKF45, EmbeddedRKPair.embedMethod, sum_univ_six] <;> norm_num
+
+/-! ### Main method order conditions (order 5) -/
+
+private lemma rkRKF45_main_order1 : rkRKF45.mainMethod.order1 := by
+  simp [ButcherTableau.order1, rkRKF45, EmbeddedRKPair.mainMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_main_order2 : rkRKF45.mainMethod.order2 := by
+  simp [ButcherTableau.order2, rkRKF45, EmbeddedRKPair.mainMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_main_order3a : rkRKF45.mainMethod.order3a := by
+  simp [ButcherTableau.order3a, rkRKF45, EmbeddedRKPair.mainMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_main_order3b : rkRKF45.mainMethod.order3b := by
+  simp only [ButcherTableau.order3b, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order4a : rkRKF45.mainMethod.order4a := by
+  simp [ButcherTableau.order4a, rkRKF45, EmbeddedRKPair.mainMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_main_order4b : rkRKF45.mainMethod.order4b := by
+  simp only [ButcherTableau.order4b, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order4c : rkRKF45.mainMethod.order4c := by
+  simp only [ButcherTableau.order4c, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order4d : rkRKF45.mainMethod.order4d := by
+  simp only [ButcherTableau.order4d, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5a : rkRKF45.mainMethod.order5a := by
+  simp [ButcherTableau.order5a, rkRKF45, EmbeddedRKPair.mainMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_main_order5b : rkRKF45.mainMethod.order5b := by
+  simp only [ButcherTableau.order5b, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5c : rkRKF45.mainMethod.order5c := by
+  simp only [ButcherTableau.order5c, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5d : rkRKF45.mainMethod.order5d := by
+  simp only [ButcherTableau.order5d, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5e : rkRKF45.mainMethod.order5e := by
+  simp only [ButcherTableau.order5e, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5f : rkRKF45.mainMethod.order5f := by
+  simp only [ButcherTableau.order5f, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5g : rkRKF45.mainMethod.order5g := by
+  simp only [ButcherTableau.order5g, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5h : rkRKF45.mainMethod.order5h := by
+  simp only [ButcherTableau.order5h, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkRKF45_main_order5i : rkRKF45.mainMethod.order5i := by
+  simp only [ButcherTableau.order5i, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.mainMethod]; norm_num
+
+/-- The RKF45 main method has order at least 5. -/
+theorem rkRKF45_main_order5 : rkRKF45.mainMethod.HasOrderGe5 :=
+  ⟨⟨rkRKF45_main_order1, rkRKF45_main_order2,
+    rkRKF45_main_order3a, rkRKF45_main_order3b,
+    rkRKF45_main_order4a, rkRKF45_main_order4b,
+    rkRKF45_main_order4c, rkRKF45_main_order4d⟩,
+   rkRKF45_main_order5a, rkRKF45_main_order5b,
+   rkRKF45_main_order5c, rkRKF45_main_order5d,
+   rkRKF45_main_order5e, rkRKF45_main_order5f,
+   rkRKF45_main_order5g, rkRKF45_main_order5h,
+   rkRKF45_main_order5i⟩
+
+/-! ### Embedding order conditions (order 4 only) -/
+
+private lemma rkRKF45_embed_order1 : rkRKF45.embedMethod.order1 := by
+  simp [ButcherTableau.order1, rkRKF45, EmbeddedRKPair.embedMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_embed_order2 : rkRKF45.embedMethod.order2 := by
+  simp [ButcherTableau.order2, rkRKF45, EmbeddedRKPair.embedMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_embed_order3a : rkRKF45.embedMethod.order3a := by
+  simp [ButcherTableau.order3a, rkRKF45, EmbeddedRKPair.embedMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_embed_order3b : rkRKF45.embedMethod.order3b := by
+  simp only [ButcherTableau.order3b, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.embedMethod]; norm_num
+
+private lemma rkRKF45_embed_order4a : rkRKF45.embedMethod.order4a := by
+  simp [ButcherTableau.order4a, rkRKF45, EmbeddedRKPair.embedMethod, sum_univ_six]; norm_num
+
+private lemma rkRKF45_embed_order4b : rkRKF45.embedMethod.order4b := by
+  simp only [ButcherTableau.order4b, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.embedMethod]; norm_num
+
+private lemma rkRKF45_embed_order4c : rkRKF45.embedMethod.order4c := by
+  simp only [ButcherTableau.order4c, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.embedMethod]; norm_num
+
+private lemma rkRKF45_embed_order4d : rkRKF45.embedMethod.order4d := by
+  simp only [ButcherTableau.order4d, sum_univ_six]
+  simp [rkRKF45, EmbeddedRKPair.embedMethod]; norm_num
+
+/-- The RKF45 embedding method has order at least 4. -/
+theorem rkRKF45_embed_order4 : rkRKF45.embedMethod.HasOrderGe4 :=
+  ⟨rkRKF45_embed_order1, rkRKF45_embed_order2,
+   rkRKF45_embed_order3a, rkRKF45_embed_order3b,
+   rkRKF45_embed_order4a, rkRKF45_embed_order4b,
+   rkRKF45_embed_order4c, rkRKF45_embed_order4d⟩
+
+/-- The RKF45 embedding does NOT have order 5: the order5a condition
+  ∑ b̂ᵢ cᵢ⁴ = 83/416 ≠ 1/5. -/
+theorem rkRKF45_embed_not_order5 : ¬rkRKF45.embedMethod.HasOrderGe5 := by
+  intro ⟨_, h5a, _⟩
+  simp [ButcherTableau.order5a, rkRKF45, EmbeddedRKPair.embedMethod, sum_univ_six] at h5a
+  norm_num at h5a
+
+/-- Error weights of RKF45 sum to zero. -/
+theorem rkRKF45_errorWeights_sum :
+    ∑ i : Fin 6, rkRKF45.errorWeights i = 0 :=
+  rkRKF45.errorWeights_sum_zero rkRKF45_consistent
+
 /-! ## Summary Table
 
 | Pair        | Stages | Main Order | Embed Order | FSAL? | Explicit? |
 |-------------|--------|------------|-------------|-------|-----------|
 | Heun–Euler  | 2      | 2          | 1           | ✗     | ✓         |
 | BS3(2)      | 4      | 3          | 2           | ✓     | ✓         |
+| RKF45       | 6      | 5          | 4           | ✗     | ✓         |
 
 Key properties:
-- Both pairs are explicit and consistent
+- All pairs are explicit and consistent
 - Error estimate comes "for free" from the weight difference d = b − b̂
 - BS3(2) has FSAL: only 3 new function evaluations per step (not 4)
+- RKF45 (Fehlberg 1969) is the classical embedded 4(5) pair, widely used
+  in early adaptive Runge–Kutta solvers
 - The error weights always sum to zero for consistent pairs
 
 Reference: Iserles, *A First Course in the Numerical Analysis of Differential Equations*,
-Section 2.7 and Chapter 5.
+Section 2.7 and Chapter 5; Fehlberg (1969); Bogacki–Shampine (1989).
 -/
