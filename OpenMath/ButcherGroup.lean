@@ -2097,6 +2097,157 @@ theorem ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq
       ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq
         t₁ t₂ (t₁.bSeries) children]
 
+/-! ### §384 BTree-recursive closed form (`convAt`)
+
+This block collapses the depth ladder of cycles 528-533 into a single
+`BTree.rec` closure. `convAt` mirrors `rightAuxAtCoef` but with the
+kept/cut roles of `S`/`Sᶜ` swapped at every node so that the recursion
+unfolds along the kept side at every depth in one step. The headline
+`rightAuxAtCoef_eq_convAt` shows that the two recursive auxiliaries are
+equal, which makes any depth-N pass-through immediate. -/
+
+/-- Closed-form recursive auxiliary mirroring `rightAuxAtCoef` but with
+the kept-side powerset decomposition exposed at every level. -/
+noncomputable def ButcherProduct.convAt
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    BTree → Fin t → ℝ
+  | .leaf, _ => 1
+  | .node children, i =>
+      ∑ S : Finset (Fin children.length),
+        (∏ p ∈ S, coef (children.get p)) *
+          (∏ p ∈ Sᶜ,
+            ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef (children.get p) j)
+termination_by τ => sizeOf τ
+decreasing_by
+  have hmem : sizeOf (children.get p) < sizeOf children :=
+    List.sizeOf_lt_of_mem (List.get_mem children p)
+  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp
+  exact Nat.lt_trans hmem hnode
+
+@[simp] theorem ButcherProduct.convAt_leaf
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    ButcherProduct.convAt t₂ coef BTree.leaf i = 1 := by
+  simp [ButcherProduct.convAt]
+
+theorem ButcherProduct.convAt_node
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) (i : Fin t) :
+    ButcherProduct.convAt t₂ coef (BTree.node children) i
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ S, coef (children.get p)) *
+            (∏ p ∈ Sᶜ,
+              ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef (children.get p) j) := by
+  rw [ButcherProduct.convAt]
+
+/-- §384 single-step depth-ladder collapse: the §384 right-block
+auxiliary `rightAuxAtCoef` agrees with the closed-form recursive
+auxiliary `convAt` at every tree and stage. This makes every cycle
+528-533 depth-ladder result immediate. -/
+theorem ButcherProduct.rightAuxAtCoef_eq_convAt
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (τ : BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAtCoef t₂ coef τ i
+      = ButcherProduct.convAt t₂ coef τ i := by
+  classical
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin t,
+      ButcherProduct.rightAuxAtCoef t₂ coef τ i
+        = ButcherProduct.convAt t₂ coef τ i)
+    (motive_2 := fun children => ∀ c ∈ children, ∀ j : Fin t,
+      ButcherProduct.rightAuxAtCoef t₂ coef c j
+        = ButcherProduct.convAt t₂ coef c j)
+    ?leaf ?node ?nil ?cons τ
+  · intro i
+    simp
+  · intro children hchildren i
+    rw [ButcherProduct.rightAuxAtCoef_node_eq_powerset_sum,
+        ButcherProduct.convAt_node]
+    -- LHS: ∑ S, (∏ p ∈ Sᶜ, coef ...) * (∏ p ∈ S, ∑ j, A * rightAuxAtCoef)
+    -- RHS: ∑ S, (∏ p ∈ S, coef ...) * (∏ p ∈ Sᶜ, ∑ j, A * convAt)
+    -- Bridge: complement bijection on subsets + per-child IH.
+    have hIH :
+        ∀ S : Finset (Fin children.length), ∀ i : Fin t,
+          (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j) =
+          (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef (children.get p) j) := by
+      intro S i
+      refine Finset.prod_congr rfl ?_
+      intro p _
+      refine Finset.sum_congr rfl ?_
+      intro j _
+      rw [hchildren (children.get p) (List.get_mem children p) j]
+    let complPerm : Equiv.Perm (Finset (Fin children.length)) :=
+      { toFun := fun S => Sᶜ
+        invFun := fun S => Sᶜ
+        left_inv := by intro S; ext p; simp
+        right_inv := by intro S; ext p; simp }
+    have hperm :
+        (∑ S : Finset (Fin children.length),
+            (∏ p ∈ Sᶜ, coef (children.get p)) *
+            (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef (children.get p) j))
+        = ∑ S : Finset (Fin children.length),
+            (∏ p ∈ S, coef (children.get p)) *
+            (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef (children.get p) j) := by
+      simpa [complPerm] using
+        (Equiv.sum_comp complPerm
+          (fun S : Finset (Fin children.length) =>
+            (∏ p ∈ S, coef (children.get p)) *
+            (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef (children.get p) j)))
+    calc
+      (∑ S : Finset (Fin children.length),
+            (∏ p ∈ Sᶜ, coef (children.get p)) *
+            (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.rightAuxAtCoef t₂ coef (children.get p) j))
+          = ∑ S : Finset (Fin children.length),
+              (∏ p ∈ Sᶜ, coef (children.get p)) *
+              (∏ p ∈ S, ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef (children.get p) j) := by
+            refine Finset.sum_congr rfl ?_
+            intro S _
+            rw [hIH S i]
+      _ = ∑ S : Finset (Fin children.length),
+              (∏ p ∈ S, coef (children.get p)) *
+              (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef (children.get p) j) := hperm
+  · intro c hc
+    simp at hc
+  · intro head tail ih_head ih_tail c hc j
+    rcases List.mem_cons.mp hc with rfl | hc'
+    · exact ih_head j
+    · exact ih_tail c hc' j
+
+/-- Stage-`b` weighted closed form for the §384 right block: the
+`b`-weighted stage sum of `rightAuxAtCoef` collapses to the same
+weighted sum of `convAt`. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_eq_convAt_sum
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (τ : BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef τ i)
+      = ∑ i : Fin t, t₂.b i * ButcherProduct.convAt t₂ coef τ i := by
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+
+/-- §384 bSeries-form corollary: the second-method `b`-weighted stage
+sum of `ButcherProduct t₁ t₂` evaluated at any tree `τ` collapses to a
+`convAt` sum, mentioning `t₁` only through its `bSeries`. -/
+theorem ButcherProduct.bSeries_natAdd_eq_convAt
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (τ : BTree) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.natAdd s i))
+      = ∑ i : Fin t, t₂.b i *
+          ButcherProduct.convAt t₂ (t₁.bSeries) τ i := by
+  rw [ButcherProduct.bSeries_natAdd_eq_rightAuxAtCoef,
+      ButcherProduct.bWeighted_rightAuxAtCoef_eq_convAt_sum]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

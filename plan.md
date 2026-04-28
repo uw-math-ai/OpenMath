@@ -495,11 +495,21 @@ codebase.
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq`,
   expanding the kept-grandchild factors under each kept node child by a
   further inline `match`, and added the bSeries-form corollary
-  `ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq`.
+  `ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq`. Cycle
+  534 collapsed the depth ladder of cycles 528-533 into a single
+  `BTree.rec` closure: `ButcherProduct.convAt` (closed-form recursive
+  auxiliary mirroring `rightAuxAtCoef` with the kept/cut roles of
+  `S`/`Sᶜ` swapped at every node), with simp lemmas
+  `ButcherProduct.convAt_leaf` / `ButcherProduct.convAt_node`, the
+  headline equality `ButcherProduct.rightAuxAtCoef_eq_convAt`, the
+  `b`-weighted closure
+  `ButcherProduct.bWeighted_rightAuxAtCoef_eq_convAt_sum`, and the
+  bSeries-form corollary `ButcherProduct.bSeries_natAdd_eq_convAt`.
+  Any future depth-N pass-through is now immediate from `convAt`.
   The non-tautological tree convolution
-  for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
-  general `(trunk, cuts)` closed form for
-  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`; see
+  for `QuotEquiv.bSeriesHom_product` is now reduced to using `convAt`
+  to define the bSeries-only convolution and assess whether
+  `IsG1Equiv.product_congr` is provable; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
@@ -994,14 +1004,21 @@ Concrete next steps:
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_two_level_eq`,
   expanding the kept-grandchild factors under each kept node child by a
   further inline `match`, and added the bSeries-form corollary
-  `ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq`.
-  The next seam is the depth-3 trunk-side recursive decomposition that
-  keeps turning attached `rightAuxAtCoef` factors into exposed
-  powerset/match structure on subtrees — ultimately the honest
-  `(trunk, cuts)` closed form for
-  `∑ i, t₂.b i * rightAuxAtCoef t₂ coef τ i`, which provides the
-  non-tautological coefficient product needed by
-  `QuotEquiv.bSeriesHom_product`.
+  `ButcherProduct.bSeries_natAdd_node_trunk_kept_two_level_eq`. Cycle
+  534 stopped the depth ladder and collapsed it into a single
+  `BTree.rec` closure: `ButcherProduct.convAt` (closed-form recursive
+  auxiliary mirroring `rightAuxAtCoef`), the simp lemmas
+  `ButcherProduct.convAt_leaf` / `ButcherProduct.convAt_node`, the
+  headline equality `ButcherProduct.rightAuxAtCoef_eq_convAt`, the
+  `b`-weighted closure
+  `ButcherProduct.bWeighted_rightAuxAtCoef_eq_convAt_sum`, and the
+  bSeries-form corollary `ButcherProduct.bSeries_natAdd_eq_convAt`.
+  The next seam is to use `convAt` to define a bSeries-only
+  tree convolution (the §386-style honest recursive product on
+  bSeries values) and assess whether `IsG1Equiv.product_congr`
+  becomes provable from that recursive form; see
+  `.prover-state/issues/butcher_section384_convolution.md` and
+  `.prover-state/issues/butcher_g1_mul_section384_blocker.md`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
