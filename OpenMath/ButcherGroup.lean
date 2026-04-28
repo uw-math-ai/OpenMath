@@ -842,6 +842,12 @@ theorem ButcherProduct.npowStages_eq (s n : ℕ) :
   | succ n ih =>
       rw [ButcherProduct.npowStages_succ, ih, Nat.succ_mul, Nat.add_comm]
 
+/-- Stage counts of powers are additive in the exponent. -/
+theorem ButcherProduct.npowStages_add (s m n : ℕ) :
+    ButcherProduct.npowStages s (m + n) =
+      ButcherProduct.npowStages s m + ButcherProduct.npowStages s n := by
+  simp [ButcherProduct.npowStages_eq, Nat.add_mul]
+
 /-- Right-associated raw powers of a Butcher tableau under `ButcherProduct`. -/
 def ButcherProduct.npow {s : ℕ} (t : ButcherTableau s) :
     ∀ n : ℕ, ButcherTableau (ButcherProduct.npowStages s n)
@@ -996,6 +1002,38 @@ theorem weightsSum_npow_two {s : ℕ} (q : QuotEquiv s) :
 theorem cSum_npow_two {s : ℕ} (q : QuotEquiv s) :
     (q.npow 2).cSum = 2 * q.cSum + (s : ℝ) := by
   have h := cSum_npow q 2
+  push_cast at h
+  linarith
+
+/-- Weights-sums of powers are additive in the exponent. -/
+theorem weightsSum_npow_add {s : ℕ} (q : QuotEquiv s) (m n : ℕ) :
+    (q.npow (m + n)).weightsSum =
+      (q.npow m).weightsSum + (q.npow n).weightsSum := by
+  have hmn := weightsSum_npow q (m + n)
+  have hm := weightsSum_npow q m
+  have hn := weightsSum_npow q n
+  push_cast at hmn hm hn
+  linarith
+
+/-- Node-sums of powers are additive up to the cross block contribution. -/
+theorem cSum_npow_add {s : ℕ} (q : QuotEquiv s) (m n : ℕ) :
+    (q.npow (m + n)).cSum =
+      (q.npow m).cSum + (q.npow n).cSum + (s : ℝ) * m * n := by
+  have hmn := cSum_npow q (m + n)
+  have hm := cSum_npow q m
+  have hn := cSum_npow q n
+  push_cast at hmn hm hn
+  nlinarith [hmn, hm, hn]
+
+/-- `n = 3` instance of the closed-form `weightsSum_npow`. -/
+theorem weightsSum_npow_three {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 3).weightsSum = 3 * q.weightsSum := by
+  simpa using weightsSum_npow q 3
+
+/-- `n = 3` instance of the closed-form `cSum_npow`. -/
+theorem cSum_npow_three {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 3).cSum = 3 * q.cSum + 3 * (s : ℝ) := by
+  have h := cSum_npow q 3
   push_cast at h
   linarith
 

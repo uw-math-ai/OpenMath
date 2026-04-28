@@ -381,7 +381,11 @@ codebase.
   `QuotEquiv.cSum_npow`
   (`= n * cSum + s * (n*(n-1)/2)`), the alternate
   `QuotEquiv.weightsSum_npow_succ'`, and the `n = 2` corollaries
-  `QuotEquiv.weightsSum_npow_two` / `QuotEquiv.cSum_npow_two`. Inverse
+  `QuotEquiv.weightsSum_npow_two` / `QuotEquiv.cSum_npow_two`. Cycle 509
+  added the exponent-additivity and `n = 3` arithmetic surface:
+  `ButcherProduct.npowStages_add`, `QuotEquiv.weightsSum_npow_add`,
+  `QuotEquiv.cSum_npow_add`, `QuotEquiv.weightsSum_npow_three`, and
+  `QuotEquiv.cSum_npow_three`. Inverse
   and non-trivial power-homomorphism constructions remain open
   (the latter blocked by the §384 convolution gap).
 - [ ] **§388 Some subgroups and quotient groups**.
