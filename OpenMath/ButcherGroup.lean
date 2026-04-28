@@ -230,6 +230,30 @@ theorem bSeriesHom_product_node_leaf_leaf_node_nil
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_leaf_leaf_node_nil_eq t₁ t₂
 
+/-- §384 lift of the cycle 546 parametric trivial-children closed form
+to the quotient layer. The product `bSeriesHom` on
+`BTree.node children` (each child is `BTree.leaf` or `BTree.node []`)
+decomposes into a powerset sum of bSeries-only summands. Subsumes the
+cycle 540 / 542 / 544 / 545 single-shape and finite mixed-shape lifts
+in one parametric statement. -/
+theorem bSeriesHom_product_node_trivial_children
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t)
+    (children : List BTree)
+    (hTriv : ∀ p : Fin children.length,
+        children.get p = BTree.leaf ∨ children.get p = BTree.node []) :
+    (q.product r).bSeriesHom (BTree.node children)
+      = q.bSeriesHom (BTree.node children)
+        + ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+            (q.bSeriesHom BTree.leaf) ^ S.card *
+            r.bSeriesHom
+              (BTree.node
+                (List.replicate (children.length - S.card) BTree.leaf)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_trivial_children_eq t₁ t₂ children hTriv
+
 end QuotEquiv
 
 /-! ### §387 raw and quotient powers
@@ -1149,6 +1173,85 @@ theorem product_congr_node_leaf_leaf_node_nil
       r.bSeriesHom (BTree.node (List.replicate (3 - S.card) BTree.leaf))
         = r'.bSeriesHom
           (BTree.node (List.replicate (3 - S.card) BTree.leaf)) := by
+    apply hr
+    rw [order_node_replicate_leaf]
+    omega
+  rw [hleaf, hsub]
+
+/-- Order of a node whose every child is `BTree.leaf` or `BTree.node []`:
+each trivial child contributes order `1`, so the foldr sum equals
+`children.length`. -/
+private theorem order_node_trivial_children {children : List BTree}
+    (hTriv : ∀ p : Fin children.length,
+        children.get p = BTree.leaf ∨ children.get p = BTree.node []) :
+    (BTree.node children).order = children.length + 1 := by
+  induction children with
+  | nil => simp
+  | cons c cs ih =>
+    have hc : c = BTree.leaf ∨ c = BTree.node [] := by
+      have hh := hTriv ⟨0, by simp⟩
+      simpa using hh
+    have hcs : ∀ p : Fin cs.length,
+        cs.get p = BTree.leaf ∨ cs.get p = BTree.node [] := by
+      intro p
+      have hh := hTriv ⟨p.val + 1, by
+        simp only [List.length_cons]; omega⟩
+      simpa using hh
+    have ih' := ih hcs
+    have hco : c.order = 1 := by
+      rcases hc with rfl | rfl
+      · simp
+      · simp [BTree.order_node, List.foldr]
+    have hcs_fold : cs.foldr (fun t n => t.order + n) 0 = cs.length := by
+      have := ih'
+      simp only [BTree.order_node] at this
+      omega
+    simp only [BTree.order_node, List.foldr, List.length_cons]
+    omega
+
+/-- Cycle 546 fourth tracked `G1.mul`-direction well-definedness deliverable:
+parametric in `children`, product preserves `G₁` equivalence on every
+node `BTree.node children` whose children are each `BTree.leaf` or
+`BTree.node []`, when the tree has order at most `p`. Subsumes the cycle
+540 / 542 / 544 / 545 single-shape and finite mixed-shape G1 slices
+in one parametric statement. -/
+theorem product_congr_node_trivial_children
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (children : List BTree)
+    (hTriv : ∀ k : Fin children.length,
+        children.get k = BTree.leaf ∨ children.get k = BTree.node [])
+    (hOrd : (BTree.node children).order ≤ p) :
+    (q.product r).bSeriesHom (BTree.node children)
+      = (q'.product r').bSeriesHom (BTree.node children) := by
+  rw [QuotEquiv.bSeriesHom_product_node_trivial_children q r children hTriv,
+      QuotEquiv.bSeriesHom_product_node_trivial_children q' r' children hTriv]
+  have hLen : (BTree.node children).order = children.length + 1 :=
+    order_node_trivial_children hTriv
+  have hpge : children.length + 1 ≤ p := by rw [← hLen]; exact hOrd
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq; rw [BTree.order_leaf]; omega
+  have hnode :
+      q.bSeriesHom (BTree.node children)
+        = q'.bSeriesHom (BTree.node children) :=
+    hq (BTree.node children) hOrd
+  rw [hnode]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S hS_mem
+  have hS : S.card ≤ children.length := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin children.length)) :=
+      Finset.mem_powerset.mp hS_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have hsub :
+      r.bSeriesHom
+          (BTree.node (List.replicate (children.length - S.card) BTree.leaf))
+        = r'.bSeriesHom
+          (BTree.node
+            (List.replicate (children.length - S.card) BTree.leaf)) := by
     apply hr
     rw [order_node_replicate_leaf]
     omega

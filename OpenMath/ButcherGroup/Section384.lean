@@ -2446,4 +2446,122 @@ theorem ButcherProduct.bSeries_node_leaf_leaf_node_nil_eq
   rw [hp, ButcherProduct.bSeries_node_replicate_leaf_eq]
   simp [ButcherTableau.bSeries, ButcherTableau.elementaryWeight, List.foldr]
 
+/-! ### §384 parametric trivial-children all-shapes closed form (cycle 546)
+
+Generalizes cycles 540, 542, 544, 545: covers every node `BTree.node
+children` whose children are each `BTree.leaf` or `BTree.node []` in one
+parametric theorem. The two trivial child shapes share elementary weight
+`1`, so a node with arbitrary trivial children agrees with the all-leaves
+node of the same arity at every elementary-weight slot, and the closed
+form transports from cycle 542's `bSeries_node_replicate_leaf_eq`. -/
+
+/-- Helper: for any tableau, the elementary weight of a node whose every
+child is `BTree.leaf` or `BTree.node []` agrees with the elementary
+weight of an all-leaves node of the same arity. Both shapes have
+elementary weight `1`, so each foldr factor `∑ k, A i k *
+elementaryWeight c k` collapses to `∑ k, A i k`. -/
+private theorem elementaryWeight_node_trivial_children_eq_replicate_leaf
+    {s : ℕ} (tab : ButcherTableau s) (children : List BTree)
+    (hTriv : ∀ c ∈ children, c = BTree.leaf ∨ c = BTree.node [])
+    (i : Fin s) :
+    tab.elementaryWeight (BTree.node children) i
+      = tab.elementaryWeight
+          (BTree.node (List.replicate children.length BTree.leaf)) i := by
+  induction children with
+  | nil => simp
+  | cons c cs ih =>
+    have hc : c = BTree.leaf ∨ c = BTree.node [] :=
+      hTriv c (List.mem_cons_self)
+    have hcs : ∀ x ∈ cs, x = BTree.leaf ∨ x = BTree.node [] := by
+      intro x hx
+      exact hTriv x (List.mem_cons_of_mem c hx)
+    have ih' := ih hcs
+    have hLHS :
+        tab.elementaryWeight (BTree.node (c :: cs)) i
+          = tab.elementaryWeight (BTree.node cs) i *
+            (∑ k : Fin s, tab.A i k * tab.elementaryWeight c k) := by
+      simp [ButcherTableau.elementaryWeight, List.foldr]
+    have hRHS :
+        tab.elementaryWeight
+            (BTree.node (List.replicate (c :: cs).length BTree.leaf)) i
+          = tab.elementaryWeight
+              (BTree.node (List.replicate cs.length BTree.leaf)) i *
+            (∑ k : Fin s, tab.A i k) := by
+      rw [List.length_cons, List.replicate_succ]
+      simp [ButcherTableau.elementaryWeight, List.foldr]
+    rw [hLHS, hRHS, ih']
+    congr 1
+    refine Finset.sum_congr rfl ?_
+    intro k _
+    rcases hc with rfl | rfl
+    · simp
+    · simp [ButcherTableau.elementaryWeight]
+
+/-- Helper: bSeries on a node with trivial children agrees with bSeries
+on the all-leaves node of the same arity. -/
+private theorem bSeries_node_trivial_children_eq_replicate_leaf
+    {s : ℕ} (tab : ButcherTableau s) (children : List BTree)
+    (hTriv : ∀ c ∈ children, c = BTree.leaf ∨ c = BTree.node []) :
+    tab.bSeries (BTree.node children)
+      = tab.bSeries
+          (BTree.node (List.replicate children.length BTree.leaf)) := by
+  unfold ButcherTableau.bSeries
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [elementaryWeight_node_trivial_children_eq_replicate_leaf tab children
+        hTriv i]
+
+/-- §384 honest convolution closed form on the all-trivial-children
+family `BTree.node children` (each child is `BTree.leaf` or
+`BTree.node []`): `bConv` decomposes into a powerset sum where each
+summand multiplies `t₁.bSeries BTree.leaf` raised to the cut-set
+cardinality by the `t₂.bSeries` of an all-leaves node of the remaining
+arity. Generalizes `bConv_node_replicate_leaf_eq` (cycle 542) and
+`bConv_node_replicate_node_nil_eq` (cycle 544) to arbitrary mixes. -/
+theorem ButcherProduct.bConv_node_trivial_children_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree)
+    (hTriv : ∀ p : Fin children.length,
+        children.get p = BTree.leaf ∨ children.get p = BTree.node []) :
+    ButcherProduct.bConv (t₁.bSeries) t₂ (BTree.node children)
+      = t₁.bSeries (BTree.node children)
+        + ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+            (t₁.bSeries BTree.leaf) ^ S.card *
+            t₂.bSeries
+              (BTree.node
+                (List.replicate (children.length - S.card) BTree.leaf)) := by
+  have hMem : ∀ c ∈ children, c = BTree.leaf ∨ c = BTree.node [] := by
+    intro c hc
+    obtain ⟨k, hk⟩ := List.mem_iff_get.mp hc
+    rw [← hk]
+    exact hTriv k
+  rw [show ButcherProduct.bConv (t₁.bSeries) t₂ (BTree.node children)
+        = (ButcherProduct t₁ t₂).bSeries (BTree.node children) from
+        (ButcherProduct.bSeries_eq_bConv t₁ t₂ (BTree.node children)).symm,
+      bSeries_node_trivial_children_eq_replicate_leaf
+        (ButcherProduct t₁ t₂) children hMem,
+      ButcherProduct.bSeries_node_replicate_leaf_eq,
+      ← bSeries_node_trivial_children_eq_replicate_leaf t₁ children hMem]
+
+/-- Headline §384 corollary on the all-trivial-children family: the
+product `bSeries` on `BTree.node children` (each child is `BTree.leaf`
+or `BTree.node []`) decomposes into a sum that mentions both `t₁` and
+`t₂` only through `bSeries`. Parametric in `children`, this subsumes
+the cycle 540 / 542 / 544 / 545 single-shape and finite mixed-shape
+closed forms in one statement. -/
+theorem ButcherProduct.bSeries_node_trivial_children_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree)
+    (hTriv : ∀ p : Fin children.length,
+        children.get p = BTree.leaf ∨ children.get p = BTree.node []) :
+    (ButcherProduct t₁ t₂).bSeries (BTree.node children)
+      = t₁.bSeries (BTree.node children)
+        + ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+            (t₁.bSeries BTree.leaf) ^ S.card *
+            t₂.bSeries
+              (BTree.node
+                (List.replicate (children.length - S.card) BTree.leaf)) := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_node_trivial_children_eq t₁ t₂ children hTriv]
+
 end ButcherTableau
