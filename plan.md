@@ -418,7 +418,14 @@ codebase.
   `ButcherProduct.rightAuxAt_node_eq_powerset_sum` and
   `ButcherProduct.bSeries_natAdd_node_eq_powerset_sum`, exposing the
   `rightAuxAt` node recursion as the kept-child powerset sum and pulling
-  the `t₂.b` weighting through it. The non-tautological tree convolution
+  the `t₂.b` weighting through it. Cycle 522 landed the two-level
+  expansion `ButcherProduct.rightAuxAt_node_two_level_eq_powerset_sum`
+  and its `b`-weighted form
+  `ButcherProduct.bSeries_natAdd_node_two_level_eq_powerset_sum`,
+  case-splitting each kept child's contribution into a leaf branch
+  (`∑ j, t₂.A i j`) or a node branch (inner powerset sum at the new
+  parent index `j`), making the second-method-side recursion explicit
+  one full structural layer deeper. The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing
   `rightAuxAt` to the `(trunk, cuts)` closed form; see
   `.prover-state/issues/butcher_section384_convolution.md`.
@@ -838,7 +845,16 @@ Concrete next steps:
   `ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum` /
   `_eq_powerset_sum_bSeries`, and the right-block recursive auxiliary
   `ButcherProduct.rightAuxAt` together with the headline reduction
-  `ButcherProduct.elementaryWeight_natAdd`.
+  `ButcherProduct.elementaryWeight_natAdd`. Cycle 521 added
+  `ButcherProduct.rightAuxAt_node_eq_powerset_sum` and
+  `ButcherProduct.bSeries_natAdd_node_eq_powerset_sum`, the kept-child
+  powerset sum and its `b`-weighted form. Cycle 522 landed the
+  two-level expansion
+  `ButcherProduct.rightAuxAt_node_two_level_eq_powerset_sum` and its
+  `b`-weighted form
+  `ButcherProduct.bSeries_natAdd_node_two_level_eq_powerset_sum`,
+  case-splitting each kept child into a leaf (`∑ j, t₂.A i j`) or
+  node (inner powerset sum at the new parent index) branch.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

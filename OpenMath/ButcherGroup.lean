@@ -1188,6 +1188,120 @@ theorem ButcherProduct.bSeries_natAdd_node_eq_powerset_sum
               ButcherProduct.rightAuxAt t₁ t₂ (children.get p) j)) := by
         simp [cut, keep]
 
+/-- Two-level powerset expansion of the §384 right-block auxiliary: each
+kept child's contribution is itself decomposed by case analysis on the
+child's tree shape, exposing the second-method side one full structural
+layer deeper. Leaf children contribute a bare `t₂.A i j` row sum (since
+`rightAuxAt t₁ t₂ leaf j = 1`); node children unfold into the inner
+`(cut, kept)` powerset sum at the new parent index `j`. -/
+theorem ButcherProduct.rightAuxAt_node_two_level_eq_powerset_sum
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAt t₁ t₂ (BTree.node children) i
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, t₁.bSeries (children.get p)) *
+          (∏ p ∈ S,
+            (match children.get p with
+             | BTree.leaf => ∑ j : Fin t, t₂.A i j
+             | BTree.node gc =>
+                 ∑ j : Fin t, t₂.A i j *
+                   (∑ S' : Finset (Fin gc.length),
+                     (∏ q ∈ S'ᶜ, t₁.bSeries (gc.get q)) *
+                     (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                       ButcherProduct.rightAuxAt t₁ t₂ (gc.get q) k)))) := by
+  rw [ButcherProduct.rightAuxAt_node_eq_powerset_sum]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  refine Finset.prod_congr rfl ?_
+  intro p _
+  generalize children.get p = c
+  cases c with
+  | leaf =>
+    simp [ButcherProduct.rightAuxAt_leaf]
+  | node gc =>
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [ButcherProduct.rightAuxAt_node_eq_powerset_sum]
+
+/-- The stage-`b` weighted form of
+`ButcherProduct.rightAuxAt_node_two_level_eq_powerset_sum`: the cut-side
+`t₁.bSeries` product factors out of the second-method `b`-weighted stage
+sum, and each kept child's contribution is the explicit leaf-or-node
+case split that exposes `t₁` only through `bSeries` calls on
+grand-subtrees. -/
+theorem ButcherProduct.bSeries_natAdd_node_two_level_eq_powerset_sum
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAt t₁ t₂ (BTree.node children) i)
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, t₁.bSeries (children.get p)) *
+          (∑ i : Fin t, t₂.b i *
+            (∏ p ∈ S,
+              (match children.get p with
+               | BTree.leaf => ∑ j : Fin t, t₂.A i j
+               | BTree.node gc =>
+                   ∑ j : Fin t, t₂.A i j *
+                     (∑ S' : Finset (Fin gc.length),
+                       (∏ q ∈ S'ᶜ, t₁.bSeries (gc.get q)) *
+                       (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                         ButcherProduct.rightAuxAt t₁ t₂ (gc.get q) k))))) := by
+  classical
+  let cut : Finset (Fin children.length) → ℝ := fun S =>
+    ∏ p ∈ Sᶜ, t₁.bSeries (children.get p)
+  let kept : Fin t → Finset (Fin children.length) → ℝ := fun i S =>
+    ∏ p ∈ S,
+      (match children.get p with
+       | BTree.leaf => ∑ j : Fin t, t₂.A i j
+       | BTree.node gc =>
+           ∑ j : Fin t, t₂.A i j *
+             (∑ S' : Finset (Fin gc.length),
+               (∏ q ∈ S'ᶜ, t₁.bSeries (gc.get q)) *
+               (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                 ButcherProduct.rightAuxAt t₁ t₂ (gc.get q) k)))
+  have hstage : ∀ i : Fin t,
+      ButcherProduct.rightAuxAt t₁ t₂ (BTree.node children) i
+        = ∑ S : Finset (Fin children.length), cut S * kept i S := by
+    intro i
+    simpa [cut, kept] using
+      (ButcherProduct.rightAuxAt_node_two_level_eq_powerset_sum t₁ t₂ children i)
+  calc
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAt t₁ t₂ (BTree.node children) i)
+        = ∑ i : Fin t, t₂.b i *
+            (∑ S : Finset (Fin children.length), cut S * kept i S) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          rw [hstage i]
+    _ = ∑ i : Fin t, ∑ S : Finset (Fin children.length),
+          t₂.b i * (cut S * kept i S) := by
+        simp_rw [Finset.mul_sum]
+    _ = ∑ S : Finset (Fin children.length), ∑ i : Fin t,
+          t₂.b i * (cut S * kept i S) := by
+        rw [Finset.sum_comm]
+    _ = ∑ S : Finset (Fin children.length),
+          cut S * (∑ i : Fin t, t₂.b i * kept i S) := by
+        refine Finset.sum_congr rfl ?_
+        intro S _
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        ring
+    _ = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ Sᶜ, t₁.bSeries (children.get p)) *
+          (∑ i : Fin t, t₂.b i *
+            (∏ p ∈ S,
+              (match children.get p with
+               | BTree.leaf => ∑ j : Fin t, t₂.A i j
+               | BTree.node gc =>
+                   ∑ j : Fin t, t₂.A i j *
+                     (∑ S' : Finset (Fin gc.length),
+                       (∏ q ∈ S'ᶜ, t₁.bSeries (gc.get q)) *
+                       (∏ q ∈ S', ∑ k : Fin t, t₂.A j k *
+                         ButcherProduct.rightAuxAt t₁ t₂ (gc.get q) k))))) := by
+        simp [cut, kept]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The
