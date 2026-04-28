@@ -306,12 +306,18 @@ codebase.
 - [~] **§381 Equivalence classes of Runge–Kutta methods** — quotient by
   re-labelling of stages. Relabeling-equivalence relation `IsRKEquivalent`
   with `refl`/`symm`/`trans`, `Setoid` instance, and the sanity lemma
-  `weights_sum_eq` are landed in `OpenMath/ButcherGroup.lean` (cycle 496).
+  `weights_sum_eq` are landed in `OpenMath/ButcherGroup.lean` (cycle 496);
+  `c_sum_eq` landed in cycle 497.
   Cross-stage-count equivalence (embedding into `Fin (s ⊔ t)`) remains open.
 - [ ] **§382 The group of Runge–Kutta methods** — composition law on
   equivalence classes.
-- [ ] **§383 The Runge–Kutta group `G₁`** — elementary-weight
-  homomorphism into the group of mappings on rooted trees.
+- [~] **§383 The Runge–Kutta group `G₁`** — elementary-weight
+  homomorphism into the group of mappings on rooted trees. Prep layer
+  landed in `OpenMath/ButcherGroup.lean` (cycle 497):
+  `IsRKEquivalent.elementaryWeight_eq`,
+  `IsRKEquivalent.satisfiesTreeCondition_iff`, and
+  `IsRKEquivalent.hasTreeOrder_iff`. The quotient-facing `G₁` definition
+  remains open.
 - [ ] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
@@ -642,6 +648,10 @@ Concrete next steps:
 - Define the elementary-weight homomorphism on rooted trees and use
   it to identify the `G₁` group of order-`p` RK methods modulo
   ≥(p+1)-order trees (§383).
+- Cycle 497 landed the §383 class-invariance prep layer:
+  `elementaryWeight_eq`, `satisfiesTreeCondition_iff`, and
+  `hasTreeOrder_iff` for `IsRKEquivalent`; next define the quotient-facing
+  elementary-weight map.
 - Cover §387 special elements: identity (zero-stage), inverse, integer
   power.
 - Defer §389 effective order to a separate `OpenMath/EffectiveOrder.lean`

@@ -1,5 +1,6 @@
 import Mathlib
 import OpenMath.RungeKutta
+import OpenMath.OrderConditions
 
 /-!
 # Butcher §381: Equivalence classes of Runge–Kutta methods (relabeling layer)
@@ -104,6 +105,90 @@ theorem weights_sum_eq {t₁ t₂ : ButcherTableau s}
         refine Finset.sum_congr rfl ?_
         intro i _
         exact (hb i).symm
+
+/-- **Sanity lemma (§381):** relabel-equivalent tableaux have the same total
+abscissa sum `∑ i, c i`. -/
+theorem c_sum_eq {t₁ t₂ : ButcherTableau s}
+    (h : IsRKEquivalent t₁ t₂) :
+    ∑ i, t₁.c i = ∑ i, t₂.c i := by
+  obtain ⟨σ, _, _, hc⟩ := h
+  calc ∑ i, t₁.c i
+      = ∑ i, t₁.c (σ i) := (Equiv.sum_comp σ t₁.c).symm
+    _ = ∑ i, t₂.c i := by
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        exact (hc i).symm
+
+/-- Relabel-equivalent tableaux have identical elementary weights after
+reindexing stages by the witnessing permutation. -/
+theorem elementaryWeight_eq
+    {t₁ t₂ : ButcherTableau s} {σ : Equiv.Perm (Fin s)}
+    (hA : ∀ i j, t₂.A i j = t₁.A (σ i) (σ j))
+    (τ : BTree) (i : Fin s) :
+    t₂.elementaryWeight τ i = t₁.elementaryWeight τ (σ i) := by
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin s,
+      t₂.elementaryWeight τ i = t₁.elementaryWeight τ (σ i))
+    (motive_2 := fun children => ∀ i : Fin s,
+      children.foldr
+        (fun t acc => acc * (∑ k : Fin s, t₂.A i k * t₂.elementaryWeight t k)) 1 =
+      children.foldr
+        (fun t acc => acc * (∑ k : Fin s, t₁.A (σ i) k * t₁.elementaryWeight t k)) 1)
+    ?leaf ?node ?nil ?cons τ
+  · intro i
+    simp
+  · intro children hchildren i
+    simpa [ButcherTableau.elementaryWeight] using hchildren i
+  · intro i
+    simp
+  · intro head tail ih_head ih_tail i
+    simp only [List.foldr]
+    have hsum :
+        (∑ k : Fin s, t₂.A i k * t₂.elementaryWeight head k) =
+          ∑ k : Fin s, t₁.A (σ i) k * t₁.elementaryWeight head k := by
+      calc
+        (∑ k : Fin s, t₂.A i k * t₂.elementaryWeight head k)
+            = ∑ k : Fin s, t₁.A (σ i) (σ k) *
+                t₁.elementaryWeight head (σ k) := by
+                refine Finset.sum_congr rfl ?_
+                intro k _
+                rw [hA i k, ih_head k]
+        _ = ∑ k : Fin s, t₁.A (σ i) k * t₁.elementaryWeight head k := by
+                exact Equiv.sum_comp σ
+                  (fun k : Fin s => t₁.A (σ i) k * t₁.elementaryWeight head k)
+    rw [ih_tail i, hsum]
+
+/-- The rooted-tree order condition is invariant under relabel-equivalence. -/
+theorem satisfiesTreeCondition_iff {t₁ t₂ : ButcherTableau s}
+    (h : IsRKEquivalent t₁ t₂) (τ : BTree) :
+    t₁.satisfiesTreeCondition τ ↔ t₂.satisfiesTreeCondition τ := by
+  obtain ⟨σ, hA, hb, _⟩ := h
+  unfold ButcherTableau.satisfiesTreeCondition
+  have hsum :
+      (∑ i : Fin s, t₂.b i * t₂.elementaryWeight τ i) =
+        ∑ i : Fin s, t₁.b i * t₁.elementaryWeight τ i := by
+    calc
+      (∑ i : Fin s, t₂.b i * t₂.elementaryWeight τ i)
+          = ∑ i : Fin s, t₁.b (σ i) * t₁.elementaryWeight τ (σ i) := by
+              refine Finset.sum_congr rfl ?_
+              intro i _
+              rw [hb i, elementaryWeight_eq hA τ i]
+      _ = ∑ i : Fin s, t₁.b i * t₁.elementaryWeight τ i := by
+              exact Equiv.sum_comp σ
+                (fun i : Fin s => t₁.b i * t₁.elementaryWeight τ i)
+  constructor
+  · intro h₁
+    rw [hsum, h₁]
+  · intro h₂
+    rw [← hsum, h₂]
+
+/-- Tree order up to any order `p` is invariant under relabel-equivalence. -/
+theorem hasTreeOrder_iff {t₁ t₂ : ButcherTableau s}
+    (h : IsRKEquivalent t₁ t₂) (p : ℕ) :
+    t₁.hasTreeOrder p ↔ t₂.hasTreeOrder p := by
+  simp only [ButcherTableau.hasTreeOrder]
+  exact forall_congr' fun τ => imp_congr_right fun _ => satisfiesTreeCondition_iff h τ
 
 end IsRKEquivalent
 
