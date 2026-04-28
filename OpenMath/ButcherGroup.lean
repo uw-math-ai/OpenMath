@@ -1764,6 +1764,41 @@ theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion
   · intros S _; exact compl_compl S
   · intros S _; rw [compl_compl]
 
+/-- Trunk-recursion kept-leaf simplification: if every child of the root is
+`BTree.leaf`, the kept-side auxiliary factor in the trunk recursion collapses
+to the plain row sum `∑ j, t₂.A i j`. -/
+theorem ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (coef : BTree → ℝ)
+    (children : List BTree)
+    (hAllLeaf : ∀ c ∈ children, c = BTree.leaf) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ _p ∈ S, coef BTree.leaf) *
+            (∑ i : Fin t, t₂.b i *
+                ∏ _p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j) := by
+  classical
+  have _ht₁ : t₁ = t₁ := rfl
+  have hchild : ∀ p : Fin children.length, children.get p = BTree.leaf := by
+    intro p
+    exact hAllLeaf (children.get p) (List.get_mem children p)
+  rw [ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion,
+      Finset.powerset_univ]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  · refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hchild p]
+  · refine Finset.sum_congr rfl ?_
+    intro i _
+    congr 1
+    refine Finset.prod_congr rfl ?_
+    intro p _
+    rw [hchild p]
+    simp [ButcherProduct.rightAuxAtCoef_leaf]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

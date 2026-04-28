@@ -466,7 +466,11 @@ codebase.
   trunk-side reindexing
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion`
   (the `S` ↔ `Sᶜ` swap of `bWeighted_rightAuxAtCoef_node`, with `S` now
-  recording the cut children and `Sᶜ` the kept children).
+  recording the cut children and `Sᶜ` the kept children). Cycle 529 added
+  the trunk-side kept-leaf simplification
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq`,
+  showing that when all root children are `BTree.leaf`, each kept-side
+  auxiliary factor collapses to the plain row sum `∑ j, t₂.A i j`.
   The non-tautological tree convolution
   for `QuotEquiv.bSeriesHom_product` is now reduced to closing the
   general `(trunk, cuts)` closed form for
@@ -937,7 +941,11 @@ Concrete next steps:
   `t₂.weightsSum`), and the trunk-side reindexing
   `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion`
   (the `S` ↔ `Sᶜ` swap of `bWeighted_rightAuxAtCoef_node`, with
-  `S` recording cut children and `Sᶜ` recording kept children).
+  `S` recording cut children and `Sᶜ` recording kept children). Cycle
+  529 added the trunk-side kept-leaf simplification
+  `ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_leaf_eq`,
+  showing that under an all-leaves root-child hypothesis the kept-side
+  factors reduce to `∑ j, t₂.A i j`.
   The next seam is the trunk-side recursive decomposition that turns
   the kept-side `(∏ p ∈ Sᶜ, ∑ j, t₂.A i j * rightAuxAtCoef ...)`
   product into `t₂.bSeries`-only values on subtrees — i.e. the
