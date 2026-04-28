@@ -308,7 +308,19 @@ codebase.
   with `refl`/`symm`/`trans`, `Setoid` instance, and the sanity lemma
   `weights_sum_eq` are landed in `OpenMath/ButcherGroup.lean` (cycle 496);
   `c_sum_eq` landed in cycle 497.
-  Cross-stage-count equivalence (embedding into `Fin (s ⊔ t)`) remains open.
+  Cycle 510 landed the right-padding primitive `ButcherTableau.padRight`
+  with `@[simp]` projection lemmas (`padRight_b_castAdd`,
+  `padRight_b_natAdd`, `padRight_c_castAdd`, `padRight_c_natAdd`,
+  `padRight_A_castAdd_castAdd`, `padRight_A_castAdd_natAdd`,
+  `padRight_A_natAdd`), the sanity sums `padRight_weightsSum` and
+  `padRight_cSum`, the substantive
+  `padRight_elementaryWeight_castAdd` (via `BTree.rec` with the cycle 497
+  motive split), and the stretch lemma `padRight_bSeries`.
+  Cross-stage-count equivalence relation `IsRKEquivalentExt` (lifting
+  `padRight` to a `QuotEquiv` operation and declaring two tableaux of
+  different stage counts equivalent if their right-paddings to a common
+  stage count are relabel-equivalent) remains open and is the natural
+  next-cycle headline.
 - [~] **§382 The group of Runge–Kutta methods** — composition law on
   equivalence classes.
   - raw `ButcherProduct` and block-structure computation lemmas landed

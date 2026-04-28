@@ -1039,4 +1039,139 @@ theorem cSum_npow_three {s : ℕ} (q : QuotEquiv s) :
 
 end QuotEquiv
 
+/-! ### §381 stage padding
+
+Right-pad a tableau with `n` zero stages. This is the building block for
+cross-stage equivalence in §381: two tableaux of different stage counts
+will become comparable by padding both to a common stage count and then
+applying the existing `IsRKEquivalent` relation.
+
+The stage count grows additively (`s + n`); the new rows/columns are zero
+in `A`, `b`, and `c`. -/
+
+/-- Right-pad a `ButcherTableau s` with `n` zero stages to obtain a
+`ButcherTableau (s + n)`. The original `s × s` block is preserved; new
+rows/columns are zero. -/
+def padRight (t : ButcherTableau s) (n : ℕ) : ButcherTableau (s + n) where
+  A := fun i j =>
+    Fin.addCases
+      (fun i₁ =>
+        Fin.addCases
+          (fun j₁ => t.A i₁ j₁)
+          (fun _ => 0)
+          j)
+      (fun _ => 0)
+      i
+  b := fun i =>
+    Fin.addCases (fun i₁ => t.b i₁) (fun _ => 0) i
+  c := fun i =>
+    Fin.addCases (fun i₁ => t.c i₁) (fun _ => 0) i
+
+@[simp] theorem padRight_b_castAdd (t : ButcherTableau s) (n : ℕ) (i : Fin s) :
+    (t.padRight n).b (Fin.castAdd n i) = t.b i := by
+  simp [padRight]
+
+@[simp] theorem padRight_b_natAdd (t : ButcherTableau s) (n : ℕ) (i : Fin n) :
+    (t.padRight n).b (Fin.natAdd s i) = 0 := by
+  simp [padRight]
+
+@[simp] theorem padRight_c_castAdd (t : ButcherTableau s) (n : ℕ) (i : Fin s) :
+    (t.padRight n).c (Fin.castAdd n i) = t.c i := by
+  simp [padRight]
+
+@[simp] theorem padRight_c_natAdd (t : ButcherTableau s) (n : ℕ) (i : Fin n) :
+    (t.padRight n).c (Fin.natAdd s i) = 0 := by
+  simp [padRight]
+
+@[simp] theorem padRight_A_natAdd (t : ButcherTableau s) (n : ℕ)
+    (i : Fin n) (j : Fin (s + n)) :
+    (t.padRight n).A (Fin.natAdd s i) j = 0 := by
+  simp [padRight]
+
+@[simp] theorem padRight_A_castAdd_castAdd (t : ButcherTableau s) (n : ℕ)
+    (i : Fin s) (j : Fin s) :
+    (t.padRight n).A (Fin.castAdd n i) (Fin.castAdd n j) = t.A i j := by
+  simp [padRight]
+
+@[simp] theorem padRight_A_castAdd_natAdd (t : ButcherTableau s) (n : ℕ)
+    (i : Fin s) (j : Fin n) :
+    (t.padRight n).A (Fin.castAdd n i) (Fin.natAdd s j) = 0 := by
+  simp [padRight]
+
+theorem padRight_weightsSum (t : ButcherTableau s) (n : ℕ) :
+    (∑ i, (t.padRight n).b i) = ∑ i, t.b i := by
+  rw [Fin.sum_univ_add]
+  simp
+
+theorem padRight_cSum (t : ButcherTableau s) (n : ℕ) :
+    (∑ i, (t.padRight n).c i) = ∑ i, t.c i := by
+  rw [Fin.sum_univ_add]
+  simp
+
+/-- Padding preserves elementary weights at original stages. The pad rows
+have all-zero `A`-entries, so the recursive node sum reduces to the
+original `s`-block sum. -/
+theorem padRight_elementaryWeight_castAdd
+    (t : ButcherTableau s) (n : ℕ) (τ : BTree) (i : Fin s) :
+    (t.padRight n).elementaryWeight τ (Fin.castAdd n i)
+      = t.elementaryWeight τ i := by
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin s,
+      (t.padRight n).elementaryWeight τ (Fin.castAdd n i)
+        = t.elementaryWeight τ i)
+    (motive_2 := fun children => ∀ i : Fin s,
+      children.foldr
+        (fun r acc => acc * (∑ k : Fin (s + n),
+          (t.padRight n).A (Fin.castAdd n i) k *
+            (t.padRight n).elementaryWeight r k)) 1 =
+      children.foldr
+        (fun r acc => acc * (∑ k : Fin s,
+          t.A i k * t.elementaryWeight r k)) 1)
+    ?leaf ?node ?nil ?cons τ
+  · intro i; simp
+  · intro children hchildren i
+    simpa [ButcherTableau.elementaryWeight] using hchildren i
+  · intro i; simp
+  · intro head tail ih_head ih_tail i
+    simp only [List.foldr]
+    have hsum :
+        (∑ k : Fin (s + n),
+          (t.padRight n).A (Fin.castAdd n i) k *
+            (t.padRight n).elementaryWeight head k) =
+          ∑ k : Fin s, t.A i k * t.elementaryWeight head k := by
+      rw [Fin.sum_univ_add]
+      have hzero :
+          (∑ k : Fin n,
+            (t.padRight n).A (Fin.castAdd n i) (Fin.natAdd s k) *
+              (t.padRight n).elementaryWeight head (Fin.natAdd s k)) = 0 := by
+        apply Finset.sum_eq_zero
+        intro k _
+        simp
+      rw [hzero, add_zero]
+      refine Finset.sum_congr rfl ?_
+      intro k _
+      rw [padRight_A_castAdd_castAdd, ih_head k]
+    rw [ih_tail i, hsum]
+
+/-- Stretch lemma: padding preserves the b-weighted elementary-weight
+sum. The pad block contributes zero because both `b` and the `A` rows are
+zero there. -/
+theorem padRight_bSeries (t : ButcherTableau s) (n : ℕ) (τ : BTree) :
+    (∑ i : Fin (s + n),
+      (t.padRight n).b i * (t.padRight n).elementaryWeight τ i)
+      = ∑ i : Fin s, t.b i * t.elementaryWeight τ i := by
+  rw [Fin.sum_univ_add]
+  have hzero :
+      (∑ i : Fin n,
+        (t.padRight n).b (Fin.natAdd s i) *
+          (t.padRight n).elementaryWeight τ (Fin.natAdd s i)) = 0 := by
+    apply Finset.sum_eq_zero
+    intro i _
+    simp
+  rw [hzero, add_zero]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [padRight_b_castAdd, padRight_elementaryWeight_castAdd]
+
 end ButcherTableau
