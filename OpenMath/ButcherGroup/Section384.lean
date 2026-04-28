@@ -1657,4 +1657,120 @@ theorem ButcherProduct.convAt_congr_coef
     · exact ih_head hcoef j
     · exact ih_tail c hc' hcoef j
 
+/-- Internal stage-permutation transport for `convAt`. This follows the
+same orientation as `IsRKEquivalent`: the permutation maps stages of the
+second tableau back to stages of the first. -/
+private theorem convAt_perm_t2_aux
+    {t : ℕ} {t₂ t₂' : ButcherTableau t} {σ : Equiv.Perm (Fin t)}
+    (hA : ∀ i j, t₂'.A i j = t₂.A (σ i) (σ j))
+    (coef : BTree → ℝ) (τ : BTree) (i : Fin t) :
+    ButcherProduct.convAt t₂' coef τ i
+      = ButcherProduct.convAt t₂ coef τ (σ i) := by
+  classical
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin t,
+      ButcherProduct.convAt t₂' coef τ i
+        = ButcherProduct.convAt t₂ coef τ (σ i))
+    (motive_2 := fun children => ∀ c ∈ children, ∀ i : Fin t,
+      ButcherProduct.convAt t₂' coef c i
+        = ButcherProduct.convAt t₂ coef c (σ i))
+    ?leaf ?node ?nil ?cons τ
+  · intro i
+    simp
+  · intro children hchildren i
+    rw [ButcherProduct.convAt_node, ButcherProduct.convAt_node]
+    refine Finset.sum_congr rfl ?_
+    intro S _
+    have hcut :
+        (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂'.A i j *
+              ButcherProduct.convAt t₂' coef (children.get p) j)
+          = ∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A (σ i) j *
+              ButcherProduct.convAt t₂ coef (children.get p) j := by
+      refine Finset.prod_congr rfl ?_
+      intro p _
+      calc
+        (∑ j : Fin t, t₂'.A i j *
+              ButcherProduct.convAt t₂' coef (children.get p) j)
+            = ∑ j : Fin t, t₂.A (σ i) (σ j) *
+                ButcherProduct.convAt t₂ coef (children.get p) (σ j) := by
+                refine Finset.sum_congr rfl ?_
+                intro j _
+                rw [hA i j,
+                  hchildren (children.get p) (List.get_mem children p) j]
+        _ = ∑ j : Fin t, t₂.A (σ i) j *
+              ButcherProduct.convAt t₂ coef (children.get p) j := by
+                exact Equiv.sum_comp σ
+                  (fun j : Fin t => t₂.A (σ i) j *
+                    ButcherProduct.convAt t₂ coef (children.get p) j)
+    rw [hcut]
+  · intro c hc
+    simp at hc
+  · intro head tail ih_head ih_tail c hc i
+    rcases List.mem_cons.mp hc with rfl | hc'
+    · exact ih_head i
+    · exact ih_tail c hc' i
+
+/-- Permutation transport for `convAt` along an `IsRKEquivalent`
+witness on `t₂`. For a fixed coefficient slot `coef`, the recursive
+auxiliary `convAt t₂ coef τ` transports through a relabelling permutation
+between equivalent tableaux. -/
+theorem ButcherProduct.convAt_isRKEquivalent_t2
+    {t : ℕ} {t₂ t₂' : ButcherTableau t}
+    (h : IsRKEquivalent t₂ t₂')
+    (coef : BTree → ℝ) (τ : BTree) (i : Fin t) :
+    ∃ i', ButcherProduct.convAt t₂' coef τ i'
+      = ButcherProduct.convAt t₂ coef τ i := by
+  obtain ⟨σ, hA, _, _⟩ := h
+  refine ⟨σ.symm i, ?_⟩
+  simpa using
+    (convAt_perm_t2_aux (t₂ := t₂) (t₂' := t₂') (σ := σ) hA
+      coef τ (σ.symm i))
+
+/-- `b`-weighted form: the `b`-weighted sum
+`∑ i, t₂.b i * convAt t₂ coef τ i` is invariant under
+`IsRKEquivalent` on `t₂`. -/
+theorem ButcherProduct.bWeighted_convAt_isRKEquivalent_t2
+    {t : ℕ} {t₂ t₂' : ButcherTableau t}
+    (h : IsRKEquivalent t₂ t₂')
+    (coef : BTree → ℝ) (τ : BTree) :
+    (∑ i : Fin t, t₂.b i * ButcherProduct.convAt t₂ coef τ i)
+      = ∑ i : Fin t, t₂'.b i * ButcherProduct.convAt t₂' coef τ i := by
+  obtain ⟨σ, hA, hb, _⟩ := h
+  have hsum :
+      (∑ i : Fin t, t₂'.b i * ButcherProduct.convAt t₂' coef τ i)
+        = ∑ i : Fin t, t₂.b i * ButcherProduct.convAt t₂ coef τ i := by
+    calc
+      (∑ i : Fin t, t₂'.b i * ButcherProduct.convAt t₂' coef τ i)
+          = ∑ i : Fin t, t₂.b (σ i) *
+              ButcherProduct.convAt t₂ coef τ (σ i) := by
+              refine Finset.sum_congr rfl ?_
+              intro i _
+              rw [hb i,
+                convAt_perm_t2_aux (t₂ := t₂) (t₂' := t₂') (σ := σ)
+                  hA coef τ i]
+      _ = ∑ i : Fin t, t₂.b i * ButcherProduct.convAt t₂ coef τ i := by
+              exact Equiv.sum_comp σ
+                (fun i : Fin t => t₂.b i * ButcherProduct.convAt t₂ coef τ i)
+  exact hsum.symm
+
+/-- `bConv` is invariant in the `t₂` slot under `IsRKEquivalent`. -/
+theorem ButcherProduct.bConv_isRKEquivalent_t2
+    {t : ℕ} {t₂ t₂' : ButcherTableau t}
+    (h : IsRKEquivalent t₂ t₂')
+    (φ : BTree → ℝ) (τ : BTree) :
+    ButcherProduct.bConv φ t₂ τ = ButcherProduct.bConv φ t₂' τ := by
+  rw [ButcherProduct.bConv, ButcherProduct.bConv,
+      ButcherProduct.bWeighted_convAt_isRKEquivalent_t2 h φ τ]
+
+/-- Honest convolution-form invariance on the `bSeries` of the product
+under `IsRKEquivalent` on `t₂`. -/
+theorem ButcherProduct.bSeries_product_isRKEquivalent_t2
+    {s t : ℕ} (t₁ : ButcherTableau s)
+    {t₂ t₂' : ButcherTableau t}
+    (h : IsRKEquivalent t₂ t₂') (τ : BTree) :
+    (ButcherProduct t₁ t₂).bSeries τ = (ButcherProduct t₁ t₂').bSeries τ := by
+  rw [ButcherProduct.bSeries_eq_bConv, ButcherProduct.bSeries_eq_bConv]
+  exact ButcherProduct.bConv_isRKEquivalent_t2 h t₁.bSeries τ
+
 end ButcherTableau

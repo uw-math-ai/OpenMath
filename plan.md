@@ -523,9 +523,13 @@ codebase.
   congruence `ButcherProduct.convAt_congr_coef` (proved by `BTree.rec`
   with the cycle 524 / 534 nested motive split, using a strict-decrease
   helper `child_order_lt_of_mem_node` for the per-child IH at smaller
-  order). The next §38 seam is `IsG1Equiv.product_congr` on the `t₁`
-  slot (using `convAt_congr_coef`) plus the matching `t₂`-slot
-  `IsRKEquivalent`-side `convAt`-permutation invariance.
+  order). Cycle 537 landed the matching `t₂`-slot
+  `IsRKEquivalent`-side permutation invariance:
+  `ButcherProduct.convAt_isRKEquivalent_t2`,
+  `ButcherProduct.bWeighted_convAt_isRKEquivalent_t2`,
+  `ButcherProduct.bConv_isRKEquivalent_t2`, and
+  `ButcherProduct.bSeries_product_isRKEquivalent_t2`. The next §38 seam
+  is `IsG1Equiv.product_congr`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.
@@ -1045,9 +1049,14 @@ Concrete next steps:
   `ButcherProduct.bSeries_eq_split`, the bSeries-only convolution
   `ButcherProduct.bConv` (with `bSeries_eq_bConv`), and the
   per-tree-fixed `coef`-slot congruence
-  `ButcherProduct.convAt_congr_coef`. The next §38 seam is
-  `IsG1Equiv.product_congr` via `convAt_congr_coef` plus the matching
-  `t₂`-slot `IsRKEquivalent`-side `convAt` permutation invariance.
+  `ButcherProduct.convAt_congr_coef`. Cycle 537 added the matching
+  `t₂`-slot `IsRKEquivalent` permutation invariance of `convAt`, the
+  `b`-weighted convolution sum, `bConv`, and the product `bSeries`
+  wrapper (`ButcherProduct.convAt_isRKEquivalent_t2`,
+  `ButcherProduct.bWeighted_convAt_isRKEquivalent_t2`,
+  `ButcherProduct.bConv_isRKEquivalent_t2`, and
+  `ButcherProduct.bSeries_product_isRKEquivalent_t2`). The next §38 seam
+  is `IsG1Equiv.product_congr`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
