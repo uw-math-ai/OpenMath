@@ -1474,4 +1474,76 @@ theorem hasTreeOrder_iff {s u p : ℕ}
 
 end IsG1Equiv
 
+/-! ### §383 quotient `G₁(p)` layer -/
+
+/-- Setoid on staged quotient classes identifying methods with the same
+Butcher-series coefficients through order `p`. -/
+def g1Setoid (p : ℕ) : Setoid (Σ s : ℕ, QuotEquiv s) where
+  r x y := IsG1Equiv p x.2 y.2
+  iseqv := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro x
+      exact IsG1Equiv.refl x.2
+    · intro x y hxy
+      exact IsG1Equiv.symm hxy
+    · intro x y z hxy hyz
+      exact IsG1Equiv.trans hxy hyz
+
+/-- Butcher's `G₁(p)` quotient: RK methods modulo agreement of rooted-tree
+coefficients through order `p`. -/
+def G1 (p : ℕ) : Type :=
+  Quotient (g1Setoid p)
+
+namespace G1
+
+/-- Projection from a staged quotient class to `G₁(p)`. -/
+def mk {p s : ℕ} (q : QuotEquiv s) : G1 p :=
+  Quotient.mk (g1Setoid p) ⟨s, q⟩
+
+/-- The rooted-tree coefficient at a fixed tree of order at most `p`,
+descended to `G₁(p)`. -/
+noncomputable def bSeriesHomAt (p : ℕ) (τ : BTree) (hτ : τ.order ≤ p) :
+    G1 p → ℝ :=
+  Quotient.lift (fun x : Σ s : ℕ, QuotEquiv s => x.2.bSeriesHom τ) (by
+    intro x y hxy
+    exact hxy τ hτ)
+
+/-- The order-`p` tree condition descended to `G₁(p)`. Above order `p` this
+predicate is vacuous, since representatives are only identified through order
+`p`. -/
+noncomputable def satisfiesTreeCondition {p : ℕ} (g : G1 p) (τ : BTree) : Prop :=
+  Quotient.lift
+    (fun x : Σ s : ℕ, QuotEquiv s => τ.order ≤ p → x.2.satisfiesTreeCondition τ)
+    (by
+      intro x y hxy
+      apply propext
+      constructor
+      · intro hx hτ
+        exact (IsG1Equiv.satisfiesTreeCondition_apply hxy hτ).1 (hx hτ)
+      · intro hy hτ
+        exact (IsG1Equiv.satisfiesTreeCondition_apply hxy hτ).2 (hy hτ)) g
+
+/-- The order-`p` predicate descended to `G₁(p)`. -/
+noncomputable def hasTreeOrder {p : ℕ} : G1 p → Prop :=
+  Quotient.lift (fun x : Σ s : ℕ, QuotEquiv s => x.2.hasTreeOrder p) (by
+    intro x y hxy
+    exact propext (IsG1Equiv.hasTreeOrder_iff hxy))
+
+@[simp] theorem bSeriesHomAt_mk {p s : ℕ} (q : QuotEquiv s)
+    (τ : BTree) (hτ : τ.order ≤ p) :
+    bSeriesHomAt p τ hτ (mk (p := p) q) = q.bSeriesHom τ := by
+  rfl
+
+@[simp] theorem satisfiesTreeCondition_mk {p s : ℕ} (q : QuotEquiv s)
+    (τ : BTree) :
+    satisfiesTreeCondition (mk (p := p) q) τ =
+      (τ.order ≤ p → q.satisfiesTreeCondition τ) := by
+  rfl
+
+@[simp] theorem hasTreeOrder_mk {p s : ℕ} (q : QuotEquiv s) :
+    hasTreeOrder (mk (p := p) q) = q.hasTreeOrder p := by
+  rfl
+
+end G1
+
 end ButcherTableau

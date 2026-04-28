@@ -370,8 +370,12 @@ codebase.
   `trans`, `mono`, `zero`), the bridge from `IsRKEquivalentExt`
   (`IsRKEquivalentExt.toG1Equiv`), and the bridges to the lifted
   tree-condition layer (`IsG1Equiv.satisfiesTreeCondition_apply`,
-  `IsG1Equiv.hasTreeOrder_iff`). The full `G₁` quotient/group
-  construction (Setoid + carrier type) remains open.
+  `IsG1Equiv.hasTreeOrder_iff`). Cycle 515 packaged this relation as
+  `g1Setoid` over `Σ s, QuotEquiv s`, defined the quotient carrier
+  `G1 p` and projection `G1.mk`, and lifted the order-restricted
+  invariants `G1.bSeriesHomAt`, `G1.satisfiesTreeCondition`, and
+  `G1.hasTreeOrder` with their `_mk` computation lemmas. The monoid/group
+  structure on `G1 p` remains open.
 - [~] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
   Cycle 503 landed identity prep for `bSeries` under `QuotEquiv.product`:
@@ -776,6 +780,13 @@ Concrete next steps:
   power.
 - Defer §389 effective order to a separate `OpenMath/EffectiveOrder.lean`
   follow-up (item #15 in the Backlog Queue).
+- Cycle 515 landed the §383 quotient layer: `g1Setoid`, `G1 p`,
+  `G1.mk`, the restricted coefficient lift `G1.bSeriesHomAt`, the
+  guarded tree-condition lift `G1.satisfiesTreeCondition`, the
+  quotient-level order predicate `G1.hasTreeOrder`, and their `_mk`
+  computation lemmas. §38 remains the current target; the next planned
+  layer is congruence of `QuotEquiv.product` under `IsG1Equiv` before
+  lifting multiplication to `G1 p`.
 
 Expected sorry-first surface:
 - `def ButcherProduct : ButcherTableau s → ButcherTableau t → ButcherTableau (s + t)`
