@@ -1037,6 +1037,23 @@ theorem cSum_npow_three {s : ℕ} (q : QuotEquiv s) :
   push_cast at h
   linarith
 
+/-- `n = 4` instance of the closed-form `weightsSum_npow`. -/
+theorem weightsSum_npow_four {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 4).weightsSum = 4 * q.weightsSum := by
+  simpa using weightsSum_npow q 4
+
+/-- `n = 4` instance of the closed-form `cSum_npow`. -/
+theorem cSum_npow_four {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 4).cSum = 4 * q.cSum + 6 * (s : ℝ) := by
+  have h := cSum_npow q 4
+  push_cast at h
+  linarith
+
+/-- Closed form for the stage count of an `(n * m)`-th right-associated power. -/
+theorem npowStages_npow_eq_npowStages_mul (s n m : ℕ) :
+    ButcherProduct.npowStages s (n * m) = n * m * s := by
+  rw [ButcherProduct.npowStages_eq]
+
 end QuotEquiv
 
 /-! ### §381 stage padding
@@ -1153,6 +1170,18 @@ theorem padRight_elementaryWeight_castAdd
       intro k _
       rw [padRight_A_castAdd_castAdd, ih_head k]
     rw [ih_tail i, hsum]
+
+/-- A nonempty node has zero elementary weight on a right-padded stage. The
+degenerate `BTree.node []` has elementary weight `1`, so the nonemptiness
+hypothesis is essential. -/
+theorem padRight_elementaryWeight_natAdd_node_of_ne_nil
+    (t : ButcherTableau s) (n : ℕ) {children : List BTree}
+    (hchildren : children ≠ []) (i : Fin n) :
+    (t.padRight n).elementaryWeight (BTree.node children) (Fin.natAdd s i) = 0 := by
+  cases children with
+  | nil => contradiction
+  | cons head tail =>
+      simp [ButcherTableau.elementaryWeight]
 
 /-- Stretch lemma: padding preserves the b-weighted elementary-weight
 sum. The pad block contributes zero because both `b` and the `A` rows are
@@ -1344,6 +1373,30 @@ theorem bSeriesHom_eq {s u : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
     (h : IsRKEquivalentExt q₁ q₂) :
     q₁.bSeriesHom = q₂.bSeriesHom := by
   exact sigma_bSeriesHom_eq h
+
+/-- Cross-stage equivalence preserves every lifted tree condition. -/
+theorem satisfiesTreeCondition_iff {s u : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (h : IsRKEquivalentExt q₁ q₂) (τ : BTree) :
+    q₁.satisfiesTreeCondition τ ↔ q₂.satisfiesTreeCondition τ := by
+  have hτ : q₁.bSeries τ = q₂.bSeries τ := by
+    simpa [QuotEquiv.bSeriesHom] using congr_fun (bSeriesHom_eq h) τ
+  rw [QuotEquiv.satisfiesTreeCondition_iff_bSeries,
+      QuotEquiv.satisfiesTreeCondition_iff_bSeries, hτ]
+
+private theorem hasTreeOrder_iff_forall {s : ℕ} (q : QuotEquiv s) (p : ℕ) :
+    q.hasTreeOrder p ↔ ∀ τ : BTree, τ.order ≤ p → q.satisfiesTreeCondition τ := by
+  refine Quotient.inductionOn q ?_
+  intro t
+  simp [QuotEquiv.hasTreeOrder, ButcherTableau.hasTreeOrder,
+    QuotEquiv.satisfiesTreeCondition]
+
+/-- Cross-stage equivalence preserves tree order up to any order `p`. -/
+theorem hasTreeOrder_iff {s u : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (h : IsRKEquivalentExt q₁ q₂) (p : ℕ) :
+    q₁.hasTreeOrder p ↔ q₂.hasTreeOrder p := by
+  rw [hasTreeOrder_iff_forall q₁ p, hasTreeOrder_iff_forall q₂ p]
+  exact forall_congr' fun τ =>
+    imp_congr_right fun _ => satisfiesTreeCondition_iff h τ
 
 end IsRKEquivalentExt
 

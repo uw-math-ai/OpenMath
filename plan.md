@@ -327,7 +327,11 @@ codebase.
   `IsRKEquivalentExt.of_common_pad` for the common-padding witness shape,
   and invariance lemmas
   `IsRKEquivalentExt.weightsSum_eq`, `IsRKEquivalentExt.cSum_eq`, and
-  `IsRKEquivalentExt.bSeriesHom_eq`.
+  `IsRKEquivalentExt.bSeriesHom_eq`. Cycle 513 extended this cross-stage
+  invariant layer with `IsRKEquivalentExt.satisfiesTreeCondition_iff` and
+  `IsRKEquivalentExt.hasTreeOrder_iff`, and recorded the natAdd-side
+  nonempty-node vanishing lemma
+  `ButcherTableau.padRight_elementaryWeight_natAdd_node_of_ne_nil`.
 - [~] **§382 The group of Runge–Kutta methods** — composition law on
   equivalence classes.
   - raw `ButcherProduct` and block-structure computation lemmas landed
@@ -404,7 +408,10 @@ codebase.
   added the exponent-additivity and `n = 3` arithmetic surface:
   `ButcherProduct.npowStages_add`, `QuotEquiv.weightsSum_npow_add`,
   `QuotEquiv.cSum_npow_add`, `QuotEquiv.weightsSum_npow_three`, and
-  `QuotEquiv.cSum_npow_three`. Inverse
+  `QuotEquiv.cSum_npow_three`. Cycle 513 added the `n = 4` corollaries
+  `QuotEquiv.weightsSum_npow_four` / `QuotEquiv.cSum_npow_four` and the
+  redundant closed-form stage-count corollary
+  `QuotEquiv.npowStages_npow_eq_npowStages_mul`. Inverse
   and non-trivial power-homomorphism constructions remain open
   (the latter blocked by the §384 convolution gap).
 - [ ] **§388 Some subgroups and quotient groups**.
