@@ -919,10 +919,11 @@ def run_codex(prompt: str, timeout: int = 1800) -> str:
 def get_worker_engine(cycle: int) -> str:
     """Determine which engine to use for this cycle's worker.
 
-    Prefer claude. Fall back to codex only if the binary exists.
+    Always claude on this branch. Codex doesn't auto-load CLAUDE.md, so the
+    Butcher-specific rules in CLAUDE.md (extraction/, faithfulness checklist)
+    wouldn't reach the worker. The run_claude() helper still falls back to
+    codex on per-call failure (rate limit, timeout) — see run_claude.
     """
-    if os.path.exists(CODEX_BIN) and cycle % 2 == 1:
-        return "codex"
     return "claude"
 
 
