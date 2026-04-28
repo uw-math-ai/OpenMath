@@ -528,8 +528,19 @@ codebase.
   `ButcherProduct.convAt_isRKEquivalent_t2`,
   `ButcherProduct.bWeighted_convAt_isRKEquivalent_t2`,
   `ButcherProduct.bConv_isRKEquivalent_t2`, and
-  `ButcherProduct.bSeries_product_isRKEquivalent_t2`. The next §38 seam
-  is `IsG1Equiv.product_congr`.
+  `ButcherProduct.bSeries_product_isRKEquivalent_t2`. Cycle 538 added
+  the first concrete bSeries-only convolution closed forms:
+  `ButcherProduct.bWeighted_convAt_singleton_node_eq`,
+  `ButcherProduct.bWeighted_convAt_kept_leaf_eq`, and
+  `ButcherProduct.bWeighted_convAt_node_all_leaves_eq`, covering the
+  singleton, kept-leaf, and all-leaves trunk/cut cases. Cycle 539
+  extended this to the mixed-leaf/node kept-child layer with
+  `ButcherProduct.bWeighted_convAt_node_kept_eq` and the bSeries-form
+  specialization `ButcherProduct.bSeries_natAdd_node_kept_eq`, plus the
+  depth-2 all-leaves-grandchildren summand collapse
+  `ButcherProduct.bWeighted_kept_node_all_leaves_summand_eq`. The next
+  §38 seam remains the full `(trunk, cuts)` convolution closure needed
+  before retrying `IsG1Equiv.product_congr`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.
@@ -1073,6 +1084,21 @@ Concrete next steps:
   generalization toward the full `(trunk, cuts)` decomposition, where
   cut subsets `S` index the children of the root and the kept side is
   itself a `convAt` recursion through any node children.
+- Cycle 539 added that mixed-leaf/node kept-child `convAt` layer:
+  `ButcherProduct.bWeighted_convAt_node_kept_eq`, whose root cut subset
+  `S` contributes `coef (children.get p)` while each kept child in `Sᶜ`
+  is simplified by an inline `match` (`leaf` gives the row sum
+  `∑ j, t₂.A i j`; `node gc` gives
+  `∑ j, t₂.A i j * convAt t₂ coef (BTree.node gc) j`). It also added
+  the bSeries-form specialization
+  `ButcherProduct.bSeries_natAdd_node_kept_eq` and the depth-2
+  all-leaves-grandchildren summand collapse
+  `ButcherProduct.bWeighted_kept_node_all_leaves_summand_eq`, which
+  rewrites the remaining kept-node row-sum product as
+  `t₂.bSeries (BTree.node [BTree.node (List.replicate n BTree.leaf)])`.
+  Next concrete seam: package the remaining recursive `(trunk, cuts)`
+  closed form so arbitrary node children collapse by `BTree.rec`, then
+  retry `IsG1Equiv.product_congr`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

@@ -1909,4 +1909,118 @@ theorem ButcherProduct.bWeighted_convAt_node_all_leaves_eq
   congr 1
   rw [Finset.prod_const, hcard]
 
+/-- Mixed kept-children closed form at the `convAt` level: in the
+trunk-recursion expansion, cut children contribute `coef`, kept leaf
+children contribute the row sum of `A`, and kept node children stay in the
+recursive `convAt` form. This is the `convAt` analogue of
+`ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_kept_eq` with the
+node case left in the closed recursive auxiliary instead of re-expanding the
+inner powerset. -/
+theorem ButcherProduct.bWeighted_convAt_node_kept_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef (BTree.node children) i)
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, coef (children.get p)) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ,
+                (match children.get p with
+                 | BTree.leaf => ∑ j : Fin t, t₂.A i j
+                 | BTree.node gc =>
+                     ∑ j : Fin t, t₂.A i j *
+                       ButcherProduct.convAt t₂ coef (BTree.node gc) j)) := by
+  classical
+  have hLHS :
+      (∑ i : Fin t, t₂.b i *
+          ButcherProduct.convAt t₂ coef (BTree.node children) i)
+        = ∑ i : Fin t, t₂.b i *
+            ButcherProduct.rightAuxAtCoef t₂ coef (BTree.node children) i := by
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+  rw [hLHS, ButcherProduct.bWeighted_rightAuxAtCoef_node_trunk_recursion,
+      Finset.powerset_univ]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  congr 1
+  refine Finset.prod_congr rfl ?_
+  intro p _
+  generalize children.get p = c
+  cases c with
+  | leaf =>
+    simp [ButcherProduct.rightAuxAtCoef_leaf]
+  | node gc =>
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [ButcherProduct.rightAuxAtCoef_eq_convAt]
+
+/-- bSeries-form specialization of
+`ButcherProduct.bWeighted_convAt_node_kept_eq`: the second-method
+`b`-weighted stage sum of `ButcherProduct t₁ t₂` at a node is the mixed
+kept-children trunk recursion with `coef := t₁.bSeries`. -/
+theorem ButcherProduct.bSeries_natAdd_node_kept_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) :
+    (∑ i : Fin t, t₂.b i *
+        (ButcherProduct t₁ t₂).elementaryWeight
+          (BTree.node children) (Fin.natAdd s i))
+      = ∑ S ∈ (Finset.univ : Finset (Finset (Fin children.length))),
+          (∏ p ∈ S, t₁.bSeries (children.get p)) *
+            (∑ i : Fin t, t₂.b i *
+              ∏ p ∈ Sᶜ,
+                (match children.get p with
+                 | BTree.leaf => ∑ j : Fin t, t₂.A i j
+                 | BTree.node gc =>
+                     ∑ j : Fin t, t₂.A i j *
+                       ButcherProduct.convAt t₂ (t₁.bSeries)
+                         (BTree.node gc) j)) := by
+  rw [ButcherProduct.bSeries_natAdd_eq_convAt,
+      ButcherProduct.bWeighted_convAt_node_kept_eq]
+
+/-- All-leaves-grandchildren kept-node summand collapse: after choosing a
+cut subset among the grandchildren of a kept node, the remaining product of
+row sums is exactly the elementary-weight contribution to the `bSeries` of a
+singleton parent over a leaf-only node. This is the depth-2 analogue of the
+cycle 538 all-leaves collapse, restricted to one summand so it can be reused
+inside future mixed-child convolution formulas. -/
+theorem ButcherProduct.bWeighted_kept_node_all_leaves_summand_eq
+    {t n : ℕ} (t₂ : ButcherTableau t) (S : Finset (Fin n)) :
+    (∑ i : Fin t, t₂.b i *
+        (∑ j : Fin t, t₂.A i j *
+          ∏ _p ∈ Sᶜ, ∑ k : Fin t, t₂.A j k))
+      = t₂.bSeries
+          (BTree.node
+            [BTree.node (List.replicate (n - S.card) BTree.leaf)]) := by
+  classical
+  have hcard : (Sᶜ : Finset (Fin n)).card = n - S.card := by
+    rw [Finset.card_compl]
+    simp [Fintype.card_fin]
+  have hbSeries :
+      t₂.bSeries
+          (BTree.node
+            [BTree.node (List.replicate (n - S.card) BTree.leaf)])
+        = ∑ i : Fin t, t₂.b i *
+            (∑ j : Fin t, t₂.A i j *
+              (∑ k : Fin t, t₂.A j k) ^ (n - S.card)) := by
+    unfold ButcherTableau.bSeries
+    refine Finset.sum_congr rfl ?_
+    intro i _
+    rw [ButcherTableau.elementaryWeight_singleton]
+    congr 1
+    refine Finset.sum_congr rfl ?_
+    intro j _
+    rw [elementaryWeight_node_replicate_leaf]
+  rw [hbSeries]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro j _
+  congr 1
+  rw [Finset.prod_const, hcard]
+
 end ButcherTableau
