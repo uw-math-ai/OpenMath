@@ -370,4 +370,66 @@ theorem butcherProduct_b_sum
   rw [Fin.sum_univ_add]
   simp [ButcherProduct]
 
+/-- Butcher composition respects simultaneous relabeling of both factors. -/
+theorem ButcherProduct.equiv_congr {s t : ℕ}
+    {t₁ t₁' : ButcherTableau s} {t₂ t₂' : ButcherTableau t}
+    (h₁ : IsRKEquivalent t₁ t₁') (h₂ : IsRKEquivalent t₂ t₂') :
+    IsRKEquivalent (ButcherProduct t₁ t₂) (ButcherProduct t₁' t₂') := by
+  obtain ⟨σ₁, hA₁, hb₁, hc₁⟩ := h₁
+  obtain ⟨σ₂, hA₂, hb₂, hc₂⟩ := h₂
+  let σ : Equiv.Perm (Fin (s + t)) :=
+    finSumFinEquiv.symm.trans ((Equiv.sumCongr σ₁ σ₂).trans finSumFinEquiv)
+  refine ⟨σ, ?_, ?_, ?_⟩
+  · intro i j
+    refine Fin.addCases ?_ ?_ i
+    · intro i₁
+      refine Fin.addCases ?_ ?_ j
+      · intro j₁
+        simp [σ, ButcherProduct, hA₁]
+      · intro j₂
+        simp [σ, ButcherProduct]
+    · intro i₂
+      refine Fin.addCases ?_ ?_ j
+      · intro j₁
+        simp [σ, ButcherProduct, hb₁]
+      · intro j₂
+        simp [σ, ButcherProduct, hA₂]
+  · intro i
+    refine Fin.addCases ?_ ?_ i
+    · intro i₁
+      simp [σ, ButcherProduct, hb₁]
+    · intro i₂
+      simp [σ, ButcherProduct, hb₂]
+  · intro i
+    refine Fin.addCases ?_ ?_ i
+    · intro i₁
+      simp [σ, ButcherProduct, hc₁]
+    · intro i₂
+      simp [σ, ButcherProduct, hc₂]
+
+namespace QuotEquiv
+
+/-- Butcher composition lifted to relabel-equivalence classes. -/
+def product {s t : ℕ} : QuotEquiv s → QuotEquiv t → QuotEquiv (s + t) :=
+  Quotient.lift₂
+    (fun t₁ t₂ => Quotient.mk _ (ButcherProduct t₁ t₂))
+    (by
+      intro t₁ t₁' t₂ t₂' h₁ h₂
+      exact Quotient.sound (ButcherProduct.equiv_congr h₁ h₂))
+
+@[simp] theorem product_mk {s t : ℕ}
+    (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    product (Quotient.mk _ t₁) (Quotient.mk _ t₂)
+      = Quotient.mk _ (ButcherProduct t₁ t₂) := rfl
+
+/-- The lifted product adds total RK weights. -/
+theorem product_weightsSum {s t : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) :
+    (product q₁ q₂).weightsSum = q₁.weightsSum + q₂.weightsSum := by
+  refine Quotient.inductionOn₂ q₁ q₂ ?_
+  intro t₁ t₂
+  simp [product, butcherProduct_b_sum]
+
+end QuotEquiv
+
 end ButcherTableau
