@@ -25,9 +25,9 @@
     "status": "unformalized"
   },
   "def:112A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section112.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section112.OneSidedLipschitzInSecond",
+    "status": "formalized"
   },
   "thm:112B": {
     "lean_file": null,
@@ -55,9 +55,9 @@
     "status": "unformalized"
   },
   "def:142A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section142.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section142.PowerBounded",
+    "status": "formalized"
   },
   "def:142B": {
     "lean_file": null,
