@@ -662,6 +662,89 @@ theorem ButcherProduct.bSeries_assoc {s t u : ℕ}
     _ = ∑ i, R.b i * R.elementaryWeight τ i :=
             Equiv.sum_comp σ (fun i => R.b i * R.elementaryWeight τ i)
 
+/-! ### §384 identity prep for the Butcher-series map -/
+
+/-- The zero-stage tableau is a left identity for the b-weighted
+elementary-weight sum of a product tableau. -/
+theorem ButcherProduct.bSeries_one_left {t : ℕ}
+    (t₂ : ButcherTableau t) (τ : BTree) :
+    (∑ i, (ButcherProduct trivialTableau t₂).b i *
+        (ButcherProduct trivialTableau t₂).elementaryWeight τ i) =
+      ∑ i, t₂.b i * t₂.elementaryWeight τ i := by
+  let L := ButcherProduct trivialTableau t₂
+  let σ : Fin (0 + t) ≃ Fin t := finCongr (Nat.zero_add t)
+  have hA : ∀ i j, L.A i j = t₂.A (σ i) (σ j) := by
+    intro i j
+    refine Fin.addCases ?_ ?_ i
+    · intro i₀
+      exact Fin.elim0 i₀
+    · intro i₂
+      refine Fin.addCases ?_ ?_ j
+      · intro j₀
+        exact Fin.elim0 j₀
+      · intro j₂
+        simp [L, σ, ButcherProduct, Fin.addCases]
+  have hb : ∀ i, L.b i = t₂.b (σ i) := by
+    intro i
+    refine Fin.addCases ?_ ?_ i
+    · intro i₀
+      exact Fin.elim0 i₀
+    · intro i₂
+      simp [L, σ, ButcherProduct, Fin.addCases]
+  calc
+    (∑ i, (ButcherProduct trivialTableau t₂).b i *
+        (ButcherProduct trivialTableau t₂).elementaryWeight τ i)
+        = ∑ i, L.b i * L.elementaryWeight τ i := rfl
+    _ = ∑ i, t₂.b (σ i) * t₂.elementaryWeight τ (σ i) := by
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        rw [hb i, elementaryWeight_eq_of_A σ hA τ i]
+    _ = ∑ i, t₂.b i * t₂.elementaryWeight τ i :=
+        Equiv.sum_comp σ (fun i => t₂.b i * t₂.elementaryWeight τ i)
+
+/-- The zero-stage tableau is a right identity for the b-weighted
+elementary-weight sum of a product tableau. -/
+theorem ButcherProduct.bSeries_one_right {s : ℕ}
+    (t₁ : ButcherTableau s) (τ : BTree) :
+    (∑ i, (ButcherProduct t₁ trivialTableau).b i *
+        (ButcherProduct t₁ trivialTableau).elementaryWeight τ i) =
+      ∑ i, t₁.b i * t₁.elementaryWeight τ i := by
+  let L := ButcherProduct t₁ trivialTableau
+  let σ : Fin (s + 0) ≃ Fin s := finCongr (Nat.add_zero s)
+  have hcast (x : Fin s) (h : (x : ℕ) < s) : x.castLT h = x := by
+    ext
+    rfl
+  have hA : ∀ i j, L.A i j = t₁.A (σ i) (σ j) := by
+    intro i j
+    refine Fin.addCases ?_ ?_ i
+    · intro i₁
+      refine Fin.addCases ?_ ?_ j
+      · intro j₁
+        change L.A (Fin.castAdd 0 i₁) (Fin.castAdd 0 j₁) = t₁.A i₁ j₁
+        simp [L, ButcherProduct, Fin.addCases, hcast]
+      · intro j₀
+        exact Fin.elim0 j₀
+    · intro i₀
+      exact Fin.elim0 i₀
+  have hb : ∀ i, L.b i = t₁.b (σ i) := by
+    intro i
+    refine Fin.addCases ?_ ?_ i
+    · intro i₁
+      change L.b (Fin.castAdd 0 i₁) = t₁.b i₁
+      simp [L, ButcherProduct, Fin.addCases, hcast]
+    · intro i₀
+      exact Fin.elim0 i₀
+  calc
+    (∑ i, (ButcherProduct t₁ trivialTableau).b i *
+        (ButcherProduct t₁ trivialTableau).elementaryWeight τ i)
+        = ∑ i, L.b i * L.elementaryWeight τ i := rfl
+    _ = ∑ i, t₁.b (σ i) * t₁.elementaryWeight τ (σ i) := by
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        rw [hb i, elementaryWeight_eq_of_A σ hA τ i]
+    _ = ∑ i, t₁.b i * t₁.elementaryWeight τ i :=
+        Equiv.sum_comp σ (fun i => t₁.b i * t₁.elementaryWeight τ i)
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The
@@ -694,6 +777,40 @@ theorem product_satisfiesTreeCondition_assoc {s t u : ℕ}
   rw [satisfiesTreeCondition_iff_bSeries,
       satisfiesTreeCondition_iff_bSeries,
       product_bSeries_assoc]
+
+/-- The quotient product by the zero-stage tableau on the left preserves the
+Butcher-series coefficient. -/
+theorem product_bSeries_one_left {t : ℕ} (q : QuotEquiv t) (τ : BTree) :
+    bSeries (product (Quotient.mk _ trivialTableau) q) τ = bSeries q τ := by
+  refine Quotient.inductionOn q ?_
+  intro t₂
+  simpa [product, bSeries] using ButcherProduct.bSeries_one_left t₂ τ
+
+/-- The quotient product by the zero-stage tableau on the right preserves the
+Butcher-series coefficient. -/
+theorem product_bSeries_one_right {s : ℕ} (q : QuotEquiv s) (τ : BTree) :
+    bSeries (product q (Quotient.mk _ trivialTableau)) τ = bSeries q τ := by
+  refine Quotient.inductionOn q ?_
+  intro t₁
+  simpa [product, bSeries] using ButcherProduct.bSeries_one_right t₁ τ
+
+/-- The §384-facing elementary-weight map from a quotient class to its
+tree-indexed Butcher-series coefficients. -/
+noncomputable def bSeriesHom {s : ℕ} (q : QuotEquiv s) : BTree → ℝ :=
+  fun τ => bSeries q τ
+
+/-- The zero-stage tableau has vanishing positive-tree Butcher-series
+coefficients. The current `BTree` type has no separate empty tree. -/
+theorem bSeriesHom_one (τ : BTree) :
+    bSeriesHom (Quotient.mk _ trivialTableau) τ = 0 := by
+  simp [bSeriesHom, bSeries]
+
+/-- §384-shaped alias of the already-landed bSeries associativity law. -/
+theorem bSeriesHom_assoc {s t u : ℕ}
+    (q₁ : QuotEquiv s) (q₂ : QuotEquiv t) (q₃ : QuotEquiv u) (τ : BTree) :
+    bSeriesHom (product (product q₁ q₂) q₃) τ =
+      bSeriesHom (product q₁ (product q₂ q₃)) τ := by
+  simpa [bSeriesHom] using product_bSeries_assoc q₁ q₂ q₃ τ
 
 end QuotEquiv
 

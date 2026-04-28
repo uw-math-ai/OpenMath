@@ -338,10 +338,19 @@ codebase.
   `QuotEquiv.hasTreeOrder`, sanity lifts `QuotEquiv.weightsSum` /
   `QuotEquiv.cSum`, plus the `_mk` computation lemmas. Cycle 499 added the
   quotient-facing Butcher-series coefficient map `QuotEquiv.bSeries` and
-  `satisfiesTreeCondition_iff_bSeries`. The homomorphism-into-tree-mapping
-  side of `G₁` remains open.
-- [ ] **§384 A homomorphism between two groups** — bridge from RK
+  `satisfiesTreeCondition_iff_bSeries`. Cycle 503 added the §384-facing
+  wrapper `QuotEquiv.bSeriesHom`, the zero-stage vanishing coefficient
+  lemma `QuotEquiv.bSeriesHom_one`, and the associativity alias
+  `QuotEquiv.bSeriesHom_assoc`. The full `G₁` quotient/group construction
+  remains open.
+- [~] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
+  Cycle 503 landed identity prep for `bSeries` under `QuotEquiv.product`:
+  `ButcherProduct.bSeries_one_left`, `ButcherProduct.bSeries_one_right`,
+  `QuotEquiv.product_bSeries_one_left`, and
+  `QuotEquiv.product_bSeries_one_right`. The non-tautological tree
+  convolution for `QuotEquiv.bSeriesHom_product` remains open; see
+  `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
   product on tree-indexed coefficients.
@@ -691,10 +700,16 @@ Concrete next steps:
   `QuotEquiv.product_weightsSum_assoc`,
   `QuotEquiv.product_satisfiesTreeCondition_assoc`; the `c`-field
   mismatch on the third block is recorded in
-  `.prover-state/issues/butcher_section382_composition.md`.
-  Next step: §384 elementary-weight homomorphism (only needs
-  `bSeries`-level associativity, so this is now unblocked), or rework
-  `ButcherProduct.c` to land on-the-nose `IsRKEquivalent` associativity.
+  `.prover-state/issues/butcher_section382_composition.md`. Cycle 503
+  landed the §384 identity-prep layer:
+  `ButcherProduct.bSeries_one_left`, `ButcherProduct.bSeries_one_right`,
+  `QuotEquiv.product_bSeries_one_left`,
+  `QuotEquiv.product_bSeries_one_right`, `QuotEquiv.bSeriesHom`,
+  `QuotEquiv.bSeriesHom_one`, and `QuotEquiv.bSeriesHom_assoc`.
+  Next step: define the non-tautological tree-indexed convolution/product
+  (Butcher §386-style recursive formula) and prove
+  `QuotEquiv.bSeriesHom_product`; see
+  `.prover-state/issues/butcher_section384_convolution.md`.
 - Cover §387 special elements: identity (zero-stage), inverse, integer
   power.
 - Defer §389 effective order to a separate `OpenMath/EffectiveOrder.lean`
