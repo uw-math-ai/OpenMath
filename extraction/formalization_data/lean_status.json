@@ -35,9 +35,9 @@
     "status": "unformalized"
   },
   "thm:123A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section123.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section123.hamiltonian_invariant",
+    "status": "formalized"
   },
   "thm:123B": {
     "lean_file": "OpenMath/Chapter1/Section123.lean",

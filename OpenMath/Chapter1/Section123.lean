@@ -1,6 +1,7 @@
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Analysis.Calculus.Deriv.Mul
 import Mathlib.Analysis.Calculus.Deriv.Add
+import Mathlib.Analysis.Calculus.Deriv.Comp
 
 /-!
 # Butcher §123 — Further Hamiltonian problems
@@ -8,9 +9,12 @@ import Mathlib.Analysis.Calculus.Deriv.Add
 This file collects the entities of subsection 123 of Butcher's
 *Numerical Methods for Ordinary Differential Equations* (3rd ed.).
 
-So far this file contains Theorem 123B (area invariance of the symplectic
-form `uᵀ J v` on perturbations of a two-dimensional Hamiltonian
-trajectory), formalised as `area_const`.
+So far this file contains:
+* Theorem 123A (the Hamiltonian itself is invariant along solutions of
+  `y' = J ∇H`), formalised as `hamiltonian_invariant`.
+* Theorem 123B (area invariance of the symplectic form `uᵀ J v` on
+  perturbations of a two-dimensional Hamiltonian trajectory),
+  formalised as `area_const`.
 -/
 
 namespace OpenMath.Chapter1.Section123
@@ -57,6 +61,63 @@ theorem area_const
   have h_du := (h.d_u₁ x).mul (h.d_v₂ x)
   have h_dv := (h.d_u₂ x).mul (h.d_v₁ x)
   convert (h_du.sub h_dv) using 1
+  ring
+
+/-- The Fréchet derivative of a scalar function on `ℝ × ℝ`, expressed
+as a continuous linear map built from its two partial-derivative
+values `a = ∂₁ H` and `b = ∂₂ H`:
+
+  `gradientCLM a b (v₁, v₂) = a * v₁ + b * v₂`. -/
+noncomputable def gradientCLM (a b : ℝ) : (ℝ × ℝ) →L[ℝ] ℝ :=
+  a • ContinuousLinearMap.fst ℝ ℝ ℝ + b • ContinuousLinearMap.snd ℝ ℝ ℝ
+
+/-- Butcher §123, the Hamiltonian trajectory in two dimensions.
+
+`(y₁, y₂) : ℝ → ℝ` is a solution of `y' = J ∇H` with the standard
+symplectic matrix `J = [[0, -1], [1, 0]]`. The Hamiltonian
+`H : ℝ × ℝ → ℝ` is supplied directly, and its two partial derivatives
+evaluated along the trajectory are recorded as scalar functions
+`H₁, H₂ : ℝ → ℝ`; semantically,
+`H₁ x = ∂₁ H (y₁ x, y₂ x)` and `H₂ x = ∂₂ H (y₁ x, y₂ x)`.
+The field `hH` witnesses that `H` is differentiable along the
+trajectory with gradient `(H₁, H₂)`. The chain rule
+(`HasFDerivAt.comp_hasDerivAt`) is then applied *inside*
+`hamiltonian_invariant` to deduce that `H ∘ y` has derivative zero,
+removing the need for an explicit `d_H` chain-rule field.
+The textbook ODE `y' = J ∇H` expanded in components reads
+`y₁' = -∂₂ H` and `y₂' = ∂₁ H`, which is exactly `d_y₁` and `d_y₂`
+below. -/
+structure HamiltonianTraj2D
+    (y₁ y₂ H₁ H₂ : ℝ → ℝ) (H : ℝ × ℝ → ℝ) : Prop where
+  d_y₁ : ∀ x, HasDerivAt y₁ (-(H₂ x)) x
+  d_y₂ : ∀ x, HasDerivAt y₂ (H₁ x) x
+  hH   : ∀ x, HasFDerivAt H (gradientCLM (H₁ x) (H₂ x)) (y₁ x, y₂ x)
+
+/-- Butcher §123, Theorem 123A — *the Hamiltonian is invariant along
+solutions*.
+
+Statement (Butcher 3rd ed., §123, p. 56):
+> $H(y(x))$ is invariant.
+
+For a two-dimensional Hamiltonian system `y' = J ∇H`, the composition
+`H ∘ y` has zero derivative everywhere, so `H(y(x))` is constant.
+
+The proof uses the antisymmetry of `J`: along the trajectory,
+`d/dx H(y(x)) = ∂₁H · y₁' + ∂₂H · y₂'`
+            `= ∂₁H · (-∂₂H) + ∂₂H · ∂₁H`
+            `= 0`. -/
+theorem hamiltonian_invariant
+    {y₁ y₂ H₁ H₂ : ℝ → ℝ} {H : ℝ × ℝ → ℝ}
+    (h : HamiltonianTraj2D y₁ y₂ H₁ H₂ H) :
+    ∀ x, HasDerivAt (fun t => H (y₁ t, y₂ t)) 0 x := by
+  intro x
+  have hy : HasDerivAt (fun t => (y₁ t, y₂ t)) (-(H₂ x), H₁ x) x := by
+    have := HasFDerivAtFilter.prodMk (h.d_y₁ x).hasFDerivAt (h.d_y₂ x).hasFDerivAt
+    rw [hasDerivAt_iff_hasFDerivAt]
+    convert this using 1
+  have hcomp := (h.hH x).comp_hasDerivAt x hy
+  convert hcomp using 1
+  simp [gradientCLM, ContinuousLinearMap.fst, ContinuousLinearMap.snd]
   ring
 
 end OpenMath.Chapter1.Section123
