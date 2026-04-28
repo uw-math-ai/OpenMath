@@ -135,6 +135,15 @@ None this cycle. The proof closed on the first compile attempt.
 * **Continuity of `g(x) := ‖y x - z x‖²`** discharges as
   `(hy_cont.sub hz_cont).norm.pow 2`, three short dot-applications.
 
+## Commit verification
+
+- Local HEAD: `d2cd536a7b730239832cdbe5dc16daae91d9201d`
+- `origin/Main/Experiments`: `d2cd536a7b730239832cdbe5dc16daae91d9201d`
+- SHAs match; diff includes `OpenMath/Chapter1/Section112.lean`
+  (+131 lines), `extraction/formalization_data/lean_status.json` (+3/−3),
+  `.prover-state/issues/picard_lindelof_bound_strengthening.md`
+  (+9/−7), and this file.
+
 ## Suggested next approach
 
 * `thm:112B` is the last theorem in §112 outside of the qualitative
