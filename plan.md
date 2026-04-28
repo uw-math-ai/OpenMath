@@ -364,8 +364,14 @@ codebase.
   `satisfiesTreeCondition_iff_bSeries`. Cycle 503 added the §384-facing
   wrapper `QuotEquiv.bSeriesHom`, the zero-stage vanishing coefficient
   lemma `QuotEquiv.bSeriesHom_one`, and the associativity alias
-  `QuotEquiv.bSeriesHom_assoc`. The full `G₁` quotient/group construction
-  remains open.
+  `QuotEquiv.bSeriesHom_assoc`. Cycle 514 introduced the cross-stage
+  `IsG1Equiv p` relation (agreement of `bSeriesHom` on every tree of
+  order ≤ p) together with its basic equivalence laws (`refl`, `symm`,
+  `trans`, `mono`, `zero`), the bridge from `IsRKEquivalentExt`
+  (`IsRKEquivalentExt.toG1Equiv`), and the bridges to the lifted
+  tree-condition layer (`IsG1Equiv.satisfiesTreeCondition_apply`,
+  `IsG1Equiv.hasTreeOrder_iff`). The full `G₁` quotient/group
+  construction (Setoid + carrier type) remains open.
 - [~] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
   Cycle 503 landed identity prep for `bSeries` under `QuotEquiv.product`:

@@ -1400,4 +1400,78 @@ theorem hasTreeOrder_iff {s u : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
 
 end IsRKEquivalentExt
 
+/-! ### §383 G₁ order-p equivalence -/
+
+/-- `IsG1Equiv p q₁ q₂`: two quotient RK methods agree on the Butcher-series
+map for every rooted tree of order ≤ `p`. This is the relation whose quotient
+is Butcher's `G₁(p)` group of order-`p` methods. -/
+def IsG1Equiv (p : ℕ) {s u : ℕ} (q₁ : QuotEquiv s) (q₂ : QuotEquiv u) : Prop :=
+  ∀ τ : BTree, τ.order ≤ p → q₁.bSeriesHom τ = q₂.bSeriesHom τ
+
+namespace IsG1Equiv
+
+/-- `IsG1Equiv` is reflexive at every order. -/
+theorem refl {s p : ℕ} (q : QuotEquiv s) : IsG1Equiv p q q := by
+  intro _ _; rfl
+
+/-- `IsG1Equiv` is symmetric. -/
+theorem symm {s u p : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (h : IsG1Equiv p q₁ q₂) : IsG1Equiv p q₂ q₁ := by
+  intro τ hτ; exact (h τ hτ).symm
+
+/-- `IsG1Equiv` is transitive. -/
+theorem trans {s u v p : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u} {q₃ : QuotEquiv v}
+    (h₁ : IsG1Equiv p q₁ q₂) (h₂ : IsG1Equiv p q₂ q₃) :
+    IsG1Equiv p q₁ q₃ := by
+  intro τ hτ; exact (h₁ τ hτ).trans (h₂ τ hτ)
+
+/-- `IsG1Equiv` is monotone in the order parameter: agreement up to a larger
+order implies agreement up to a smaller one. -/
+theorem mono {s u p q : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (hpq : p ≤ q) (h : IsG1Equiv q q₁ q₂) : IsG1Equiv p q₁ q₂ := by
+  intro τ hτ; exact h τ (hτ.trans hpq)
+
+/-- Every two quotient methods are `G₁`-equivalent at order `0`, vacuously:
+no rooted tree has order ≤ 0 since trees always have at least one vertex. -/
+theorem zero {s u : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u} :
+    IsG1Equiv 0 q₁ q₂ := by
+  intro τ hτ
+  have hpos := BTree.order_pos τ
+  omega
+
+end IsG1Equiv
+
+/-- Cross-stage equivalence implies `G₁` equivalence at every order: equal
+Butcher-series maps agree pointwise on every tree, so in particular on every
+tree of order ≤ p. -/
+theorem IsRKEquivalentExt.toG1Equiv {s u : ℕ} {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (h : IsRKEquivalentExt q₁ q₂) (p : ℕ) : IsG1Equiv p q₁ q₂ := by
+  intro τ _
+  exact congr_fun (IsRKEquivalentExt.bSeriesHom_eq h) τ
+
+namespace IsG1Equiv
+
+/-- For a single tree `τ` with `τ.order ≤ p`, `G₁` equivalence preserves the
+lifted tree order condition. -/
+theorem satisfiesTreeCondition_apply {s u p : ℕ}
+    {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (h : IsG1Equiv p q₁ q₂) {τ : BTree} (hτ : τ.order ≤ p) :
+    q₁.satisfiesTreeCondition τ ↔ q₂.satisfiesTreeCondition τ := by
+  have hb : q₁.bSeries τ = q₂.bSeries τ := by
+    simpa [QuotEquiv.bSeriesHom] using h τ hτ
+  rw [QuotEquiv.satisfiesTreeCondition_iff_bSeries,
+      QuotEquiv.satisfiesTreeCondition_iff_bSeries, hb]
+
+/-- `G₁` equivalence preserves the lifted tree-order predicate at level `p`. -/
+theorem hasTreeOrder_iff {s u p : ℕ}
+    {q₁ : QuotEquiv s} {q₂ : QuotEquiv u}
+    (h : IsG1Equiv p q₁ q₂) :
+    q₁.hasTreeOrder p ↔ q₂.hasTreeOrder p := by
+  rw [IsRKEquivalentExt.hasTreeOrder_iff_forall q₁ p,
+      IsRKEquivalentExt.hasTreeOrder_iff_forall q₂ p]
+  exact forall_congr' fun τ =>
+    imp_congr_right fun hτ => satisfiesTreeCondition_apply h hτ
+
+end IsG1Equiv
+
 end ButcherTableau
