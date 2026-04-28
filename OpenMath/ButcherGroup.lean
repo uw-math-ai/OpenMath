@@ -975,6 +975,108 @@ theorem ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum_bSeries
   rw [hraw, hraw_univ]
   exact hcompl.symm
 
+/-- §384 right-block auxiliary `ψ`: the recursive contribution attached
+to a second-method stage `i : Fin t` after the upper-left block has been
+collapsed via `t₁.bSeries`. The `t₁` data only enters through `bSeries`
+values on subtrees, which is the structural witness that the next layer
+of the §384 convolution recursion can consume to expose a closed-form
+`(trunk, cuts)` decomposition. -/
+noncomputable def ButcherProduct.rightAuxAt
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    BTree → Fin t → ℝ
+  | .leaf, _ => 1
+  | .node children, i =>
+      children.foldr
+        (fun c acc => acc * (t₁.bSeries c +
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.rightAuxAt t₁ t₂ c j)) 1
+termination_by t => sizeOf t
+decreasing_by
+  have hmem : sizeOf c < sizeOf children :=
+    List.sizeOf_lt_of_mem (by assumption)
+  have hnode : sizeOf children < sizeOf (BTree.node children) := by simp
+  exact Nat.lt_trans hmem hnode
+
+@[simp] theorem ButcherProduct.rightAuxAt_leaf
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (i : Fin t) :
+    ButcherProduct.rightAuxAt t₁ t₂ BTree.leaf i = 1 := by
+  simp [ButcherProduct.rightAuxAt]
+
+theorem ButcherProduct.rightAuxAt_node
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (children : List BTree) (i : Fin t) :
+    ButcherProduct.rightAuxAt t₁ t₂ (BTree.node children) i
+      = children.foldr
+          (fun c acc => acc * (t₁.bSeries c +
+            ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.rightAuxAt t₁ t₂ c j)) 1 := by
+  rw [ButcherProduct.rightAuxAt]
+
+/-- §384 right-block recursive reduction: the elementary weight of
+`ButcherProduct t₁ t₂` at a second-method stage `Fin.natAdd s i` is the
+recursive auxiliary `rightAuxAt t₁ t₂ τ i`. The `t₁` data only enters
+through `bSeries`, which makes the closed-form `(trunk, cuts)`
+decomposition viable on the next layer. -/
+theorem ButcherProduct.elementaryWeight_natAdd
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin t) :
+    (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.natAdd s i)
+      = ButcherProduct.rightAuxAt t₁ t₂ τ i := by
+  revert i
+  refine BTree.rec
+    (motive_1 := fun τ => ∀ i : Fin t,
+      (ButcherProduct t₁ t₂).elementaryWeight τ (Fin.natAdd s i)
+        = ButcherProduct.rightAuxAt t₁ t₂ τ i)
+    (motive_2 := fun children => ∀ i : Fin t,
+      children.foldr
+        (fun r acc => acc * (∑ k : Fin (s + t),
+          (ButcherProduct t₁ t₂).A (Fin.natAdd s i) k *
+            (ButcherProduct t₁ t₂).elementaryWeight r k)) 1 =
+      children.foldr
+        (fun r acc => acc * (t₁.bSeries r +
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.rightAuxAt t₁ t₂ r j)) 1)
+    ?leaf ?node ?nil ?cons τ
+  · intro i
+    simp
+  · intro children hchildren i
+    simpa [ButcherTableau.elementaryWeight,
+           ButcherProduct.rightAuxAt_node] using hchildren i
+  · intro i
+    simp
+  · intro head tail ih_head ih_tail i
+    simp only [List.foldr]
+    have hsum :
+        (∑ k : Fin (s + t),
+          (ButcherProduct t₁ t₂).A (Fin.natAdd s i) k *
+            (ButcherProduct t₁ t₂).elementaryWeight head k) =
+          t₁.bSeries head +
+            ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.rightAuxAt t₁ t₂ head j := by
+      rw [Fin.sum_univ_add]
+      have hL :
+          (∑ k : Fin s,
+            (ButcherProduct t₁ t₂).A (Fin.natAdd s i) (Fin.castAdd t k) *
+              (ButcherProduct t₁ t₂).elementaryWeight head (Fin.castAdd t k)) =
+            t₁.bSeries head := by
+        rw [ButcherTableau.bSeries]
+        refine Finset.sum_congr rfl ?_
+        intro k _
+        rw [ButcherProduct.elementaryWeight_castAdd]
+        simp [ButcherProduct]
+      have hR :
+          (∑ k : Fin t,
+            (ButcherProduct t₁ t₂).A (Fin.natAdd s i) (Fin.natAdd s k) *
+              (ButcherProduct t₁ t₂).elementaryWeight head (Fin.natAdd s k)) =
+            ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.rightAuxAt t₁ t₂ head j := by
+        refine Finset.sum_congr rfl ?_
+        intro k _
+        rw [ih_head k]
+        simp [ButcherProduct]
+      rw [hL, hR]
+    rw [ih_tail i, hsum]
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The

@@ -408,9 +408,15 @@ codebase.
   corollary `ButcherProduct.bSeries_castAdd`, and the bSeries-form
   powerset identity
   `ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum_bSeries`.
-  The non-tautological tree convolution for
-  `QuotEquiv.bSeriesHom_product` still requires recursing on the
-  kept children to expose the closed-form `(trunk, cuts)` sum; see
+  Cycle 520 landed the right-block recursive auxiliary
+  `ButcherProduct.rightAuxAt` (with leaf simp lemma
+  `ButcherProduct.rightAuxAt_leaf` and node unfolding lemma
+  `ButcherProduct.rightAuxAt_node`) and the headline reduction
+  `ButcherProduct.elementaryWeight_natAdd`, expressing the second-method
+  block elementary weight as the recursive auxiliary in which `t₁`
+  enters only through `bSeries`. The non-tautological tree convolution
+  for `QuotEquiv.bSeriesHom_product` is now reduced to closing
+  `rightAuxAt` to the `(trunk, cuts)` closed form; see
   `.prover-state/issues/butcher_section384_convolution.md`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
@@ -820,7 +826,15 @@ Concrete next steps:
   Cycle 517 added the simp/identity-class wrappers
   `QuotEquiv.bSeriesHom_mk`, `IsG1Equiv.bSeriesHom_eq`,
   `G1.bSeriesHomAt_mk_apply`, `G1.hasTreeOrder_one_iff`,
-  `G1.hasTreeOrder_zero_one`, and `G1.eq_one_iff`.
+  `G1.hasTreeOrder_zero_one`, and `G1.eq_one_iff`. Cycles 518 / 519 / 520
+  landed the §384 identity-prep layer: the list combinator
+  `foldr_mul_add_eq_powerset_sum`, the upper-left block reduction
+  `ButcherProduct.elementaryWeight_castAdd` and its bSeries corollary
+  `ButcherProduct.bSeries_castAdd`, the powerset identities
+  `ButcherProduct.elementaryWeight_natAdd_node_eq_powerset_sum` /
+  `_eq_powerset_sum_bSeries`, and the right-block recursive auxiliary
+  `ButcherProduct.rightAuxAt` together with the headline reduction
+  `ButcherProduct.elementaryWeight_natAdd`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
