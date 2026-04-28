@@ -110,7 +110,7 @@ else
     [ "$target" = "$MATHLIB_CACHE" ] && ok "~/.cache/mathlib -> $target" \
         || warn "~/.cache/mathlib -> $target (not $MATHLIB_CACHE)"
 fi
-ltar_count=$(ls "$MATHLIB_CACHE"/*.ltar 2>/dev/null | wc -l)
+ltar_count=$(find "$MATHLIB_CACHE" -maxdepth 1 -name '*.ltar' -type f 2>/dev/null | wc -l)
 echo "  cached .ltar files: $ltar_count (will fetch missing on first build)"
 
 # ── 5. sanity checks ─────────────────────────────────────────────────────────
