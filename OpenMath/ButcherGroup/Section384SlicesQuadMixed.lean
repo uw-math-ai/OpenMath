@@ -735,4 +735,298 @@ theorem ButcherProduct.bSeries_node_quadMixedTwoTwo_eq
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_node_quadMixedTwoTwo_eq]
 
+/-! ### §384 standalone four-child mixed (1-leaf, 3-singleton-leaf) slice
+
+Cycle 561 successor of cycle 560. The root has one pure leaf and three
+singleton-leaf children. The root-level leaf choice is grouped by the
+`Fin 2` binomial expansion of `(X + R)`; each singleton-leaf child reuses
+the cycle 559 three-state choice. -/
+
+/-- The standalone cycle 561 mixed tree:
+one leaf and three singleton-leaf children. -/
+def tQuadMixedOneThree : BTree :=
+  BTree.node
+    [BTree.leaf, BTree.node [BTree.leaf], BTree.node [BTree.leaf],
+      BTree.node [BTree.leaf]]
+
+/-- Single-leaf keep count in `Fin 2`. The index records the root cut count,
+so the keep count is `1, 0`. -/
+def quadMixedOneThreeLeafChoiceCount (k : Fin 2) : ℕ :=
+  match k with
+  | ⟨0, _⟩ => 1
+  | ⟨1, _⟩ => 0
+
+/-- Binomial coefficient package for the two cases in `(X + R)`. -/
+noncomputable def quadMixedOneThreeLeafChoiceCoef
+    (k : Fin 2) (X R : ℝ) : ℝ :=
+  match k with
+  | ⟨0, _⟩ => R
+  | ⟨1, _⟩ => X
+
+/-- Cut count plus keep count is the one leaf child. -/
+theorem quadMixedOneThreeLeafChoiceCount_sum (k : Fin 2) :
+    k.1 + quadMixedOneThreeLeafChoiceCount k = 1 := by
+  fin_cases k <;> rfl
+
+/-- Grouped binomial expansion for the single leaf child. -/
+theorem quad_mixed_one_three_leaf_stage_polynomial_expand (X R : ℝ) :
+    X + R = ∑ k : Fin 2, quadMixedOneThreeLeafChoiceCoef k X R := by
+  simp [Fin.sum_univ_two, quadMixedOneThreeLeafChoiceCoef]
+  ring
+
+/-- The `t₂` tree produced by a leaf choice and three singleton-leaf state
+choices. -/
+def quadMixedOneThreeChoiceTree (k : Fin 2) (h₁ h₂ h₃ : Fin 3) : BTree :=
+  BTree.node
+    (List.replicate
+        (quadMixedOneThreeLeafChoiceCount k +
+          quadMixedSingletonLeafCount h₁ + quadMixedSingletonLeafCount h₂ +
+            quadMixedSingletonLeafCount h₃)
+        BTree.leaf ++
+      List.replicate
+        (quadMixedSingletonNodeCount h₁ + quadMixedSingletonNodeCount h₂ +
+          quadMixedSingletonNodeCount h₃)
+        (BTree.node [BTree.leaf]))
+
+/-- The three singleton-leaf children expand the singleton factor cubed
+into a triple sum. -/
+theorem quad_mixed_one_three_singleton_stage_expand (X Y R C : ℝ) :
+    (Y + (X * R + C)) ^ 3
+      = ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedSingletonStageChoiceCoef h₁ X Y R C *
+            (quadMixedSingletonStageChoiceCoef h₂ X Y R C *
+              quadMixedSingletonStageChoiceCoef h₃ X Y R C) := by
+  have h := quad_mixed_singleton_stage_expand X Y R C
+  rw [show (Y + (X * R + C)) ^ 3
+        = (Y + (X * R + C)) *
+          ((Y + (X * R + C)) * (Y + (X * R + C))) by ring]
+  rw [h]
+  rw [Finset.sum_mul]
+  refine Finset.sum_congr rfl ?_
+  intro h₁ _
+  rw [Finset.sum_mul_sum]
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h₂ _
+  rw [Finset.mul_sum]
+
+/-- Grouped per-stage polynomial expansion for the (1-leaf, 3-singleton)
+mixed tree. -/
+theorem quad_mixed_one_three_stage_polynomial_expand (X Y R C : ℝ) :
+    (X + R) * (Y + (X * R + C)) ^ 3
+      = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k X R *
+            (quadMixedSingletonStageChoiceCoef h₁ X Y R C *
+              (quadMixedSingletonStageChoiceCoef h₂ X Y R C *
+                quadMixedSingletonStageChoiceCoef h₃ X Y R C)) := by
+  rw [quad_mixed_one_three_leaf_stage_polynomial_expand,
+      quad_mixed_one_three_singleton_stage_expand]
+  rw [Finset.sum_mul]
+  refine Finset.sum_congr rfl ?_
+  intro k _
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h₁ _
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h₂ _
+  rw [Finset.mul_sum]
+
+/-- Per-stage `convAt` closed form on the standalone (1-leaf, 3-singleton)
+mixed tree. -/
+theorem ButcherProduct.convAt_node_quadMixedOneThree_at_i_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    ButcherProduct.convAt t₂ coef tQuadMixedOneThree i
+      = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k (coef BTree.leaf)
+            (∑ j : Fin t, t₂.A i j) *
+            (quadMixedSingletonStageChoiceCoef h₁ (coef BTree.leaf)
+                (coef (BTree.node [BTree.leaf]))
+                (∑ j : Fin t, t₂.A i j)
+                (∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)) *
+              (quadMixedSingletonStageChoiceCoef h₂ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf]))
+                  (∑ j : Fin t, t₂.A i j)
+                  (∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)) *
+                quadMixedSingletonStageChoiceCoef h₃ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf]))
+                  (∑ j : Fin t, t₂.A i j)
+                  (∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)))) := by
+  let X : ℝ := coef BTree.leaf
+  let Y : ℝ := coef (BTree.node [BTree.leaf])
+  let row : ℝ := ∑ j : Fin t, t₂.A i j
+  let chain : ℝ := ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)
+  calc
+    ButcherProduct.convAt t₂ coef tQuadMixedOneThree i
+        = (X + row) * (Y + (X * row + chain)) ^ 3 := by
+          have h :=
+            convAt_node_mixed_leaf_singleton_leaf_at_i_eq
+              t₂ coef 1 3 i
+          simpa [tQuadMixedOneThree, X, Y, row, chain] using h
+    _ = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k X row *
+            (quadMixedSingletonStageChoiceCoef h₁ X Y row chain *
+              (quadMixedSingletonStageChoiceCoef h₂ X Y row chain *
+                quadMixedSingletonStageChoiceCoef h₃ X Y row chain)) := by
+          rw [quad_mixed_one_three_stage_polynomial_expand]
+    _ = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k (coef BTree.leaf)
+            (∑ j : Fin t, t₂.A i j) *
+            (quadMixedSingletonStageChoiceCoef h₁ (coef BTree.leaf)
+                (coef (BTree.node [BTree.leaf]))
+                (∑ j : Fin t, t₂.A i j)
+                (∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)) *
+              (quadMixedSingletonStageChoiceCoef h₂ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf]))
+                  (∑ j : Fin t, t₂.A i j)
+                  (∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)) *
+                quadMixedSingletonStageChoiceCoef h₃ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf]))
+                  (∑ j : Fin t, t₂.A i j)
+                  (∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)))) := by
+          simp [X, Y, row, chain]
+
+/-- The `b`-weighted second-tableau contribution on the standalone
+(1-leaf, 3-singleton) mixed tree, grouped by the leaf choice and the three
+singleton-leaf state choices. -/
+theorem ButcherProduct.bWeighted_convAt_node_quadMixedOneThree_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef tQuadMixedOneThree i)
+      = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k (coef BTree.leaf) 1 *
+            (quadMixedSingletonChoiceCoef h₁ (coef BTree.leaf)
+                (coef (BTree.node [BTree.leaf])) *
+              (quadMixedSingletonChoiceCoef h₂ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf])) *
+                quadMixedSingletonChoiceCoef h₃ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf])))) *
+            t₂.bSeries (quadMixedOneThreeChoiceTree k h₁ h₂ h₃) := by
+  classical
+  let X : ℝ := coef BTree.leaf
+  let Y : ℝ := coef (BTree.node [BTree.leaf])
+  let row : Fin t → ℝ := fun i => ∑ j : Fin t, t₂.A i j
+  let chain : Fin t → ℝ := fun i =>
+    ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)
+  have hbSeries : ∀ k : Fin 2, ∀ h₁ h₂ h₃ : Fin 3,
+      t₂.bSeries (quadMixedOneThreeChoiceTree k h₁ h₂ h₃)
+        = ∑ i : Fin t, t₂.b i *
+            (row i ^ (quadMixedOneThreeLeafChoiceCount k +
+                quadMixedSingletonLeafCount h₁ +
+                quadMixedSingletonLeafCount h₂ +
+                quadMixedSingletonLeafCount h₃) *
+              chain i ^ (quadMixedSingletonNodeCount h₁ +
+                quadMixedSingletonNodeCount h₂ +
+                quadMixedSingletonNodeCount h₃)) := by
+    intro k h₁ h₂ h₃
+    rw [quadMixedOneThreeChoiceTree,
+      bSeries_node_replicate_leaf_append_replicate_singleton_leaf]
+  calc
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef tQuadMixedOneThree i)
+        = ∑ i : Fin t, t₂.b i *
+            (∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+              quadMixedOneThreeLeafChoiceCoef k X (row i) *
+                (quadMixedSingletonStageChoiceCoef h₁ X Y (row i) (chain i) *
+                  (quadMixedSingletonStageChoiceCoef h₂ X Y (row i) (chain i) *
+                    quadMixedSingletonStageChoiceCoef h₃ X Y (row i) (chain i)))) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          congr 1
+          rw [ButcherProduct.convAt_node_quadMixedOneThree_at_i_eq]
+    _ = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          ∑ i : Fin t, t₂.b i *
+            (quadMixedOneThreeLeafChoiceCoef k X (row i) *
+              (quadMixedSingletonStageChoiceCoef h₁ X Y (row i) (chain i) *
+                (quadMixedSingletonStageChoiceCoef h₂ X Y (row i) (chain i) *
+                  quadMixedSingletonStageChoiceCoef h₃ X Y (row i) (chain i)))) := by
+          simp_rw [Finset.mul_sum]
+          rw [Finset.sum_comm]
+          refine Finset.sum_congr rfl ?_
+          intro k _
+          rw [Finset.sum_comm]
+          refine Finset.sum_congr rfl ?_
+          intro h₁ _
+          rw [Finset.sum_comm]
+          refine Finset.sum_congr rfl ?_
+          intro h₂ _
+          rw [Finset.sum_comm]
+    _ = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k X 1 *
+            (quadMixedSingletonChoiceCoef h₁ X Y *
+              (quadMixedSingletonChoiceCoef h₂ X Y *
+                quadMixedSingletonChoiceCoef h₃ X Y)) *
+            t₂.bSeries (quadMixedOneThreeChoiceTree k h₁ h₂ h₃) := by
+          refine Finset.sum_congr rfl ?_
+          intro k _
+          refine Finset.sum_congr rfl ?_
+          intro h₁ _
+          refine Finset.sum_congr rfl ?_
+          intro h₂ _
+          refine Finset.sum_congr rfl ?_
+          intro h₃ _
+          rw [hbSeries k h₁ h₂ h₃]
+          fin_cases k <;> fin_cases h₁ <;> fin_cases h₂ <;>
+            fin_cases h₃ <;>
+            simp [quadMixedOneThreeLeafChoiceCoef,
+              quadMixedOneThreeLeafChoiceCount,
+              quadMixedSingletonChoiceCoef,
+              quadMixedSingletonStageChoiceCoef,
+              quadMixedSingletonLeafCount,
+              quadMixedSingletonNodeCount] <;>
+          first
+          | (rw [Finset.mul_sum]
+             refine Finset.sum_congr rfl ?_
+             intro i _
+             ring)
+          | (refine Finset.sum_congr rfl ?_
+             intro i _
+             ring)
+    _ = ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k (coef BTree.leaf) 1 *
+            (quadMixedSingletonChoiceCoef h₁ (coef BTree.leaf)
+                (coef (BTree.node [BTree.leaf])) *
+              (quadMixedSingletonChoiceCoef h₂ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf])) *
+                quadMixedSingletonChoiceCoef h₃ (coef BTree.leaf)
+                  (coef (BTree.node [BTree.leaf])))) *
+            t₂.bSeries (quadMixedOneThreeChoiceTree k h₁ h₂ h₃) := by
+          simp [X, Y]
+
+/-- §384 honest convolution closed form on the standalone (1-leaf,
+3-singleton) mixed tree, grouped as `Fin 2 × Fin 3 × Fin 3 × Fin 3`. -/
+theorem ButcherProduct.bConv_node_quadMixedOneThree_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    ButcherProduct.bConv (t₁.bSeries) t₂ tQuadMixedOneThree
+      = t₁.bSeries tQuadMixedOneThree
+        + ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k (t₁.bSeries BTree.leaf) 1 *
+            (quadMixedSingletonChoiceCoef h₁ (t₁.bSeries BTree.leaf)
+                (t₁.bSeries (BTree.node [BTree.leaf])) *
+              (quadMixedSingletonChoiceCoef h₂ (t₁.bSeries BTree.leaf)
+                  (t₁.bSeries (BTree.node [BTree.leaf])) *
+                quadMixedSingletonChoiceCoef h₃ (t₁.bSeries BTree.leaf)
+                  (t₁.bSeries (BTree.node [BTree.leaf])))) *
+            t₂.bSeries (quadMixedOneThreeChoiceTree k h₁ h₂ h₃) := by
+  unfold ButcherProduct.bConv
+  rw [ButcherProduct.bWeighted_convAt_node_quadMixedOneThree_eq]
+
+/-- Headline §384 product `bSeries` closed form on the standalone
+(1-leaf, 3-singleton) mixed tree. -/
+theorem ButcherProduct.bSeries_node_quadMixedOneThree_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) :
+    (ButcherProduct t₁ t₂).bSeries tQuadMixedOneThree
+      = t₁.bSeries tQuadMixedOneThree
+        + ∑ k : Fin 2, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3, ∑ h₃ : Fin 3,
+          quadMixedOneThreeLeafChoiceCoef k (t₁.bSeries BTree.leaf) 1 *
+            (quadMixedSingletonChoiceCoef h₁ (t₁.bSeries BTree.leaf)
+                (t₁.bSeries (BTree.node [BTree.leaf])) *
+              (quadMixedSingletonChoiceCoef h₂ (t₁.bSeries BTree.leaf)
+                  (t₁.bSeries (BTree.node [BTree.leaf])) *
+                quadMixedSingletonChoiceCoef h₃ (t₁.bSeries BTree.leaf)
+                  (t₁.bSeries (BTree.node [BTree.leaf])))) *
+            t₂.bSeries (quadMixedOneThreeChoiceTree k h₁ h₂ h₃) := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_node_quadMixedOneThree_eq]
+
 end ButcherTableau
