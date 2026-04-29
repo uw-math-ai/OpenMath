@@ -2947,4 +2947,462 @@ theorem ButcherProduct.bSeries_node_replicate_singleton_leaf_eq
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_node_replicate_singleton_leaf_eq]
 
+/-! ### §384 mixed leaf / singleton-leaf root-children parametric helper
+
+Cycle 549 re-lands the cycle 548 per-stage closed form for root children
+made of `BTree.leaf` and `BTree.node [BTree.leaf]`. -/
+
+/-- Per-stage `convAt` value at the mixed root family
+`replicate a leaf ++ replicate b (node [leaf])` is a product of two
+powers: a leaf factor `(coef leaf + row i)^a` and a singleton-leaf
+factor `(coef (node [leaf]) + coef leaf * row i + chain i)^b`. -/
+private theorem convAt_node_mixed_leaf_singleton_leaf_at_i_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (a b : ℕ)
+    (i : Fin t) :
+    ButcherProduct.convAt t₂ coef
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf]))) i
+      = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a *
+        (coef (BTree.node [BTree.leaf]) +
+          (coef BTree.leaf * (∑ j : Fin t, t₂.A i j) +
+            ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k))) ^ b := by
+  classical
+  rw [ButcherProduct.convAt_node]
+  have hprod_add :
+      (∑ S : Finset
+          (Fin (List.replicate a BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf])).length),
+          (∏ p ∈ S,
+            coef ((List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf])).get p)) *
+            (∏ p ∈ Sᶜ,
+              ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef
+                  ((List.replicate a BTree.leaf ++
+                      List.replicate b (BTree.node [BTree.leaf])).get p) j))
+        = ∏ p : Fin (List.replicate a BTree.leaf ++
+                        List.replicate b (BTree.node [BTree.leaf])).length,
+            (coef ((List.replicate a BTree.leaf ++
+                      List.replicate b (BTree.node [BTree.leaf])).get p) +
+              ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef
+                  ((List.replicate a BTree.leaf ++
+                      List.replicate b (BTree.node [BTree.leaf])).get p) j) := by
+    rw [Finset.prod_add (s := Finset.univ)
+        (f := fun p =>
+          coef ((List.replicate a BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf])).get p))
+        (g := fun p =>
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.convAt t₂ coef
+              ((List.replicate a BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf])).get p) j)]
+    rw [Finset.powerset_univ]
+    refine Finset.sum_congr rfl ?_
+    intro S _
+    rw [(Finset.compl_eq_univ_sdiff S).symm]
+  rw [hprod_add]
+  have hlen : (List.replicate a BTree.leaf ++
+                List.replicate b (BTree.node [BTree.leaf])).length = a + b := by
+    simp [List.length_append, List.length_replicate]
+  let e :
+      Fin (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf])).length ≃
+        Fin (a + b) :=
+    { toFun := Fin.cast hlen
+      invFun := Fin.cast hlen.symm
+      left_inv := fun _ => by ext; rfl
+      right_inv := fun _ => by ext; rfl }
+  let F : Fin (a + b) → ℝ := fun p =>
+    coef ((List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf])).get
+            (Fin.cast hlen.symm p)) +
+      ∑ j : Fin t, t₂.A i j *
+        ButcherProduct.convAt t₂ coef
+          ((List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf])).get
+            (Fin.cast hlen.symm p)) j
+  have hreindex :
+      (∏ p : Fin (List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf])).length,
+          (coef ((List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf])).get p) +
+            ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef
+                ((List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf])).get p) j))
+        = ∏ p : Fin (a + b), F p := by
+    apply Fintype.prod_equiv e
+    intro p
+    simp [e, F]
+  rw [hreindex]
+  rw [Fin.prod_univ_add]
+  have hleaf_factor : (∏ j : Fin a, F (Fin.castAdd b j))
+      = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a := by
+    have h : ∀ j : Fin a, F (Fin.castAdd b j)
+            = coef BTree.leaf + ∑ j : Fin t, t₂.A i j := by
+      intro j
+      have hpos : ((Fin.cast hlen.symm (Fin.castAdd b j)) : ℕ) < a := by
+        change ((Fin.castAdd b j) : ℕ) < a
+        have : ((Fin.castAdd b j) : ℕ) = (j : ℕ) := rfl
+        rw [this]
+        exact j.isLt
+      have hpos' :
+          ((Fin.cast hlen.symm (Fin.castAdd b j)) : ℕ) <
+            (List.replicate a BTree.leaf).length := by
+        simp [List.length_replicate]
+      have hget :
+          (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf])).get
+            (Fin.cast hlen.symm (Fin.castAdd b j)) = BTree.leaf := by
+        simp [List.get_eq_getElem, List.getElem_append_left]
+      show F (Fin.castAdd b j) = _
+      simp [F, ButcherProduct.convAt_leaf]
+    calc (∏ j : Fin a, F (Fin.castAdd b j))
+        = ∏ _ : Fin a, (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) :=
+            Finset.prod_congr rfl (fun j _ => h j)
+      _ = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a := by
+            rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+  have hsl_factor : (∏ j : Fin b, F (Fin.natAdd a j))
+      = (coef (BTree.node [BTree.leaf]) +
+          (coef BTree.leaf * (∑ j : Fin t, t₂.A i j) +
+            ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k))) ^ b := by
+    have h : ∀ j : Fin b, F (Fin.natAdd a j)
+            = coef (BTree.node [BTree.leaf]) +
+                (coef BTree.leaf * (∑ j : Fin t, t₂.A i j) +
+                  ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)) := by
+      intro j
+      have hge : a ≤ ((Fin.cast hlen.symm (Fin.natAdd a j)) : ℕ) := by
+        change a ≤ ((Fin.natAdd a j) : ℕ)
+        have : ((Fin.natAdd a j) : ℕ) = a + (j : ℕ) := rfl
+        rw [this]
+        exact Nat.le_add_right _ _
+      have hge' :
+          (List.replicate a BTree.leaf).length ≤
+            ((Fin.cast hlen.symm (Fin.natAdd a j)) : ℕ) := by
+        simp [List.length_replicate]
+      have hget :
+          (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf])).get
+            (Fin.cast hlen.symm (Fin.natAdd a j)) = BTree.node [BTree.leaf] := by
+        simp [List.get_eq_getElem, List.getElem_append_right]
+      show F (Fin.natAdd a j) = _
+      simp only [F, hget]
+      simp only [convAt_singleton_leaf_eq]
+      congr 1
+      calc (∑ k : Fin t, t₂.A i k * (coef BTree.leaf + ∑ ℓ : Fin t, t₂.A k ℓ))
+          = ∑ k : Fin t, (t₂.A i k * coef BTree.leaf +
+                          t₂.A i k * ∑ ℓ : Fin t, t₂.A k ℓ) := by
+              refine Finset.sum_congr rfl (fun k _ => by ring)
+        _ = (∑ k : Fin t, t₂.A i k * coef BTree.leaf) +
+              ∑ k : Fin t, t₂.A i k * ∑ ℓ : Fin t, t₂.A k ℓ := by
+              rw [Finset.sum_add_distrib]
+        _ = coef BTree.leaf * (∑ k : Fin t, t₂.A i k) +
+              ∑ k : Fin t, t₂.A i k * ∑ ℓ : Fin t, t₂.A k ℓ := by
+              congr 1
+              rw [← Finset.sum_mul]; ring
+    calc (∏ j : Fin b, F (Fin.natAdd a j))
+        = ∏ _ : Fin b, (coef (BTree.node [BTree.leaf]) +
+              (coef BTree.leaf * (∑ j : Fin t, t₂.A i j) +
+                ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k))) :=
+            Finset.prod_congr rfl (fun j _ => h j)
+      _ = (coef (BTree.node [BTree.leaf]) +
+              (coef BTree.leaf * (∑ j : Fin t, t₂.A i j) +
+                ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k))) ^ b := by
+            rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+  rw [hleaf_factor, hsl_factor]
+
+/-- Product-form binomial expansion over an arbitrary finite set. -/
+private theorem prod_const_add_eq_powerset {α : Type*} [DecidableEq α]
+    (s : Finset α) (x y : ℝ) :
+    (∏ _p ∈ s, (x + y))
+      = ∑ T ∈ s.powerset, x ^ T.card * y ^ (s.card - T.card) := by
+  classical
+  rw [Finset.prod_add]
+  refine Finset.sum_congr (M := ℝ) rfl ?_
+  intro T hT
+  have hsub : T ⊆ s := Finset.mem_powerset.mp hT
+  rw [Finset.prod_const, Finset.prod_const, Finset.card_sdiff_of_subset hsub]
+
+/-- Powerset-indexed binomial expansion of `(x + y)^n`. -/
+private theorem pow_add_eq_powerset (x y : ℝ) (n : ℕ) :
+    (x + y) ^ n
+      = ∑ T ∈ (Finset.univ : Finset (Fin n)).powerset,
+          x ^ T.card * y ^ (n - T.card) := by
+  classical
+  calc
+    (x + y) ^ n = ∏ _p : Fin n, (x + y) := by
+      rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+    _ = ∑ T ∈ (Finset.univ : Finset (Fin n)).powerset,
+          x ^ T.card * y ^ ((Finset.univ : Finset (Fin n)).card - T.card) := by
+      rw [prod_const_add_eq_powerset]
+    _ = ∑ T ∈ (Finset.univ : Finset (Fin n)).powerset,
+          x ^ T.card * y ^ (n - T.card) := by
+      simp [Fintype.card_fin]
+
+/-- Per-stage polynomial expansion for the mixed leaf/singleton-leaf
+closed form. The outer subsets cut root leaves and root singleton-leaf
+children; the inner subset cuts the leaf inside a kept singleton-leaf
+child. -/
+private theorem mixed_stage_polynomial_expand
+    (X Y R C : ℝ) (a b : ℕ) :
+    (X + R) ^ a * (Y + (X * R + C)) ^ b
+      = ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+          ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+            X ^ S_leaf.card * Y ^ S_sl.card *
+              (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                X ^ T.card *
+                  (R ^ (a - S_leaf.card + T.card) *
+                    C ^ ((S_slᶜ : Finset (Fin b)).card - T.card))) := by
+  classical
+  rw [pow_add_eq_powerset X R a]
+  rw [pow_add_eq_powerset Y (X * R + C) b]
+  rw [Finset.sum_mul]
+  refine Finset.sum_congr (M := ℝ) rfl ?_
+  intro S_leaf hS_leaf
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr (M := ℝ) rfl ?_
+  intro S_sl hS_sl
+  have hS_sl_card :
+      b - S_sl.card
+        = (S_slᶜ : Finset (Fin b)).card := by
+    rw [Finset.card_compl]
+    simp [Fintype.card_fin]
+  have hinner :
+      (X * R + C) ^ (b - S_sl.card)
+        = ∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+            (X * R) ^ T.card *
+              C ^ ((S_slᶜ : Finset (Fin b)).card - T.card) := by
+    calc
+      (X * R + C) ^ (b - S_sl.card)
+          = ∏ _p ∈ (S_slᶜ : Finset (Fin b)), (X * R + C) := by
+              rw [hS_sl_card, Finset.prod_const]
+      _ = ∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+            (X * R) ^ T.card *
+              C ^ ((S_slᶜ : Finset (Fin b)).card - T.card) := by
+              rw [prod_const_add_eq_powerset]
+  rw [hinner]
+  calc
+    X ^ S_leaf.card * R ^ (a - S_leaf.card) *
+        (Y ^ S_sl.card *
+          (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+            (X * R) ^ T.card *
+              C ^ ((S_slᶜ : Finset (Fin b)).card - T.card)))
+        = (X ^ S_leaf.card * R ^ (a - S_leaf.card) * Y ^ S_sl.card) *
+            (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+              (X * R) ^ T.card *
+                C ^ ((S_slᶜ : Finset (Fin b)).card - T.card)) := by
+          ring
+    _ = ∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+          (X ^ S_leaf.card * R ^ (a - S_leaf.card) * Y ^ S_sl.card) *
+            ((X * R) ^ T.card *
+              C ^ ((S_slᶜ : Finset (Fin b)).card - T.card)) := by
+          rw [Finset.mul_sum]
+    _ = ∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+          (X ^ S_leaf.card * Y ^ S_sl.card) *
+            (X ^ T.card *
+              (R ^ (a - S_leaf.card + T.card) *
+                C ^ ((S_slᶜ : Finset (Fin b)).card - T.card))) := by
+          refine Finset.sum_congr (M := ℝ) rfl ?_
+          intro T hT
+          rw [mul_pow]
+          calc
+            (X ^ S_leaf.card * R ^ (a - S_leaf.card) * Y ^ S_sl.card) *
+                (X ^ T.card * R ^ T.card *
+                  C ^ ((S_slᶜ : Finset (Fin b)).card - T.card))
+                = (X ^ S_leaf.card * Y ^ S_sl.card) *
+                    (X ^ T.card *
+                      ((R ^ (a - S_leaf.card) * R ^ T.card) *
+                        C ^ ((S_slᶜ : Finset (Fin b)).card - T.card))) := by
+                  ring
+            _ = (X ^ S_leaf.card * Y ^ S_sl.card) *
+                    (X ^ T.card *
+                      (R ^ (a - S_leaf.card + T.card) *
+                        C ^ ((S_slᶜ : Finset (Fin b)).card - T.card))) := by
+                  rw [← pow_add]
+    _ = X ^ S_leaf.card * Y ^ S_sl.card *
+          (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+            X ^ T.card *
+              (R ^ (a - S_leaf.card + T.card) *
+                C ^ ((S_slᶜ : Finset (Fin b)).card - T.card))) := by
+          rw [Finset.mul_sum]
+
+/-- Reorder the stage-weighted mixed polynomial expansion so the tableau
+stage sum is inside the three cut-set sums. -/
+private theorem weighted_mixed_stage_sum_expand
+    {t : ℕ} (w row chain : Fin t → ℝ) (X Y : ℝ) (a b : ℕ) :
+    (∑ i : Fin t, w i *
+      (∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+        ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+          X ^ S_leaf.card * Y ^ S_sl.card *
+            (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+              X ^ T.card *
+                (row i ^ (a - S_leaf.card + T.card) *
+                  chain i ^ ((S_slᶜ : Finset (Fin b)).card - T.card)))))
+      = ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+          ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+            X ^ S_leaf.card * Y ^ S_sl.card *
+              (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                X ^ T.card *
+                  (∑ i : Fin t, w i *
+                    (row i ^ (a - S_leaf.card + T.card) *
+                      chain i ^ ((S_slᶜ : Finset (Fin b)).card - T.card)))) := by
+  classical
+  simp_rw [Finset.mul_sum]
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr (M := ℝ) rfl ?_
+  intro S_leaf hS_leaf
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr (M := ℝ) rfl ?_
+  intro S_sl hS_sl
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr (M := ℝ) rfl ?_
+  intro T hT
+  refine Finset.sum_congr (M := ℝ) rfl ?_
+  intro i hi
+  ring
+
+/-- b-weighted `convAt` closed form for the mixed root family. -/
+private theorem bWeighted_convAt_node_mixed_leaf_singleton_leaf_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (a b : ℕ) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf]))) i)
+      = ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+          ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+            (coef BTree.leaf) ^ S_leaf.card *
+              (coef (BTree.node [BTree.leaf])) ^ S_sl.card *
+              (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                (coef BTree.leaf) ^ T.card *
+                  t₂.bSeries
+                    (BTree.node
+                      (List.replicate (a - S_leaf.card + T.card) BTree.leaf ++
+                        List.replicate ((S_slᶜ : Finset (Fin b)).card - T.card)
+                          (BTree.node [BTree.leaf])))) := by
+  classical
+  let X : ℝ := coef BTree.leaf
+  let Y : ℝ := coef (BTree.node [BTree.leaf])
+  let row : Fin t → ℝ := fun i => ∑ j : Fin t, t₂.A i j
+  let chain : Fin t → ℝ := fun i =>
+    ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)
+  have hbSeries : ∀ m n : ℕ,
+      t₂.bSeries
+          (BTree.node
+            (List.replicate m BTree.leaf ++
+              List.replicate n (BTree.node [BTree.leaf])))
+        = ∑ i : Fin t, t₂.b i * (row i ^ m * chain i ^ n) := by
+    intro m n
+    rw [bSeries_node_replicate_leaf_append_replicate_singleton_leaf]
+  calc
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf]))) i)
+        = ∑ i : Fin t, t₂.b i *
+            ((X + row i) ^ a * (Y + (X * row i + chain i)) ^ b) := by
+          refine Finset.sum_congr (M := ℝ) rfl ?_
+          intro i hi
+          rw [convAt_node_mixed_leaf_singleton_leaf_at_i_eq]
+    _ = ∑ i : Fin t, t₂.b i *
+          (∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+            ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+              X ^ S_leaf.card * Y ^ S_sl.card *
+                (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                  X ^ T.card *
+                    (row i ^ (a - S_leaf.card + T.card) *
+                      chain i ^ ((S_slᶜ : Finset (Fin b)).card - T.card)))) := by
+          refine Finset.sum_congr (M := ℝ) rfl ?_
+          intro i hi
+          rw [mixed_stage_polynomial_expand]
+    _ = ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+          ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+            X ^ S_leaf.card * Y ^ S_sl.card *
+              (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                X ^ T.card *
+                  (∑ i : Fin t, t₂.b i *
+                    (row i ^ (a - S_leaf.card + T.card) *
+                      chain i ^ ((S_slᶜ : Finset (Fin b)).card - T.card)))) := by
+          rw [weighted_mixed_stage_sum_expand]
+    _ = ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+          ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+            (coef BTree.leaf) ^ S_leaf.card *
+              (coef (BTree.node [BTree.leaf])) ^ S_sl.card *
+              (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                (coef BTree.leaf) ^ T.card *
+                  t₂.bSeries
+                    (BTree.node
+                      (List.replicate (a - S_leaf.card + T.card) BTree.leaf ++
+                        List.replicate ((S_slᶜ : Finset (Fin b)).card - T.card)
+                          (BTree.node [BTree.leaf])))) := by
+          refine Finset.sum_congr (M := ℝ) rfl ?_
+          intro S_leaf hS_leaf
+          refine Finset.sum_congr (M := ℝ) rfl ?_
+          intro S_sl hS_sl
+          simp only [X, Y]
+          congr 1
+          refine Finset.sum_congr (M := ℝ) rfl ?_
+          intro T hT
+          congr 1
+          rw [← hbSeries (a - S_leaf.card + T.card)
+            ((S_slᶜ : Finset (Fin b)).card - T.card)]
+
+/-- §384 honest convolution closed form on the mixed root family
+`BTree.node (List.replicate a BTree.leaf ++ List.replicate b (BTree.node [BTree.leaf]))`.
+
+Root leaves and root singleton-leaf children are cut independently; each
+kept singleton-leaf child has one further internal leaf cut/keep choice. -/
+theorem ButcherProduct.bConv_node_mixed_leaf_singleton_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (a b : ℕ) :
+    ButcherProduct.bConv (t₁.bSeries) t₂
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf])))
+        + ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+            ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+              (t₁.bSeries BTree.leaf) ^ S_leaf.card *
+                (t₁.bSeries (BTree.node [BTree.leaf])) ^ S_sl.card *
+                (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                  (t₁.bSeries BTree.leaf) ^ T.card *
+                  t₂.bSeries
+                    (BTree.node
+                      (List.replicate (a - S_leaf.card + T.card) BTree.leaf ++
+                        List.replicate ((S_slᶜ : Finset (Fin b)).card - T.card)
+                          (BTree.node [BTree.leaf])))) := by
+  unfold ButcherProduct.bConv
+  rw [bWeighted_convAt_node_mixed_leaf_singleton_leaf_eq]
+
+/-- Headline §384 corollary on the mixed leaf / singleton-leaf root family:
+the product `bSeries` decomposes into root-cut and internal-cut powersets. -/
+theorem ButcherProduct.bSeries_node_mixed_leaf_singleton_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (a b : ℕ) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf])))
+        + ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+            ∑ S_sl ∈ (Finset.univ : Finset (Fin b)).powerset,
+              (t₁.bSeries BTree.leaf) ^ S_leaf.card *
+                (t₁.bSeries (BTree.node [BTree.leaf])) ^ S_sl.card *
+                (∑ T ∈ (S_slᶜ : Finset (Fin b)).powerset,
+                  (t₁.bSeries BTree.leaf) ^ T.card *
+                  t₂.bSeries
+                    (BTree.node
+                      (List.replicate (a - S_leaf.card + T.card) BTree.leaf ++
+                        List.replicate ((S_slᶜ : Finset (Fin b)).card - T.card)
+                          (BTree.node [BTree.leaf])))) := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_node_mixed_leaf_singleton_leaf_eq]
+
 end ButcherTableau
