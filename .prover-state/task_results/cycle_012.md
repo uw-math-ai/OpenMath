@@ -285,8 +285,11 @@ For each new `def` / `theorem` introduced this cycle:
 
 ## Commit verification
 - Local HEAD before commit: `b10e1dbb9777aef35a0c2ccca575ac2fdf914e98`
-- Local HEAD after commit: TBD (filled in below)
-- `origin/Main/Experiments` after push: TBD (filled in below)
+- Local HEAD after commit: `156d337069ed302f646a2d2e85beb2e95a29e9a2`
+- `origin/Main/Experiments` after push: `156d337069ed302f646a2d2e85beb2e95a29e9a2`
+  (matches local HEAD — push landed cleanly).
+- `git diff --stat HEAD~1 HEAD`: 3 files changed, 733 insertions(+), 3 deletions(-)
+  — non-empty diff, cycle landed.
 
 ## Suggested next approach
 With `thm:141A` shipped, **Chapter 1 has 13 of 17 entities formalized**.
