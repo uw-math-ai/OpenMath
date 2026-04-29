@@ -3,6 +3,7 @@ import OpenMath.RungeKutta
 import OpenMath.OrderConditions
 import OpenMath.ButcherGroup.Core
 import OpenMath.ButcherGroup.Section384
+import OpenMath.ButcherGroup.Section384Slices
 
 /-!
 # Butcher §38 — algebraic Runge–Kutta properties (umbrella)
