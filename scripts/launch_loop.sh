@@ -34,6 +34,16 @@ done
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Load .env so TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID / ARISTOTLE_API_KEY
+# are exported into the environment of the python loop. Without this, the
+# loop's os.environ.get calls return "" and Telegram alerts silently no-op.
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+fi
+
 ELAN_SRC="/gscratch/amath/vilin/.elan/toolchains/leanprover--lean4---v4.28.0"
 CONDA_CURL="/gscratch/amath/vilin/conda/envs/curl-env/bin/curl"
 NVME_TOOLCHAIN="/tmp/lean4-toolchain"

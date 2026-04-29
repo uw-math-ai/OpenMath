@@ -28,6 +28,16 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Load .env so TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID / ARISTOTLE_API_KEY
+# are exported into the environment of the python loop. Without this, the
+# loop's os.environ.get calls return "" and Telegram alerts silently no-op.
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+fi
+
 # ─── User-configurable paths ────────────────────────────────────────────────
 # Change these if you're not vilin or your paths differ.
 
