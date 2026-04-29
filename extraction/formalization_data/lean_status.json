@@ -85,9 +85,9 @@
     "status": "unformalized"
   },
   "thm:212A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter2/Section212.lean",
+    "lean_symbol": "OpenMath.Chapter2.Section212.global_truncation_error_L_zero, OpenMath.Chapter2.Section212.global_truncation_error_L_pos",
+    "status": "formalized"
   },
   "thm:213A": {
     "lean_file": null,
