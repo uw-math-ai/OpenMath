@@ -178,6 +178,31 @@ theorem bSeriesHom_product_node_replicate_node_nil
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_replicate_node_nil_eq t₁ t₂ n
 
+/-- §384 lift of the all-singleton-leaf-children closed form to the
+quotient layer. The product `bSeriesHom` on
+`BTree.node (List.replicate n (BTree.node [BTree.leaf]))` decomposes into a
+root-cut powerset and an internal-cut powerset of bSeries-only summands. -/
+theorem bSeriesHom_product_node_replicate_singleton_leaf
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) (n : ℕ) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+      = q.bSeriesHom
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (q.bSeriesHom (BTree.node [BTree.leaf])) ^ S.card *
+            (∑ T ∈ Sᶜ.powerset,
+              (q.bSeriesHom BTree.leaf) ^ T.card *
+              r.bSeriesHom
+                (BTree.node
+                  (List.replicate T.card BTree.leaf ++
+                    List.replicate ((Sᶜ).card - T.card)
+                      (BTree.node [BTree.leaf])))) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_replicate_singleton_leaf_eq t₁ t₂ n
+
 /-- §384 lift of the finite mixed closure on
 `BTree.node [BTree.leaf, BTree.node []]`. -/
 theorem bSeriesHom_product_node_leaf_node_nil
@@ -1046,6 +1071,127 @@ theorem product_congr_node_replicate_node_nil
     rw [order_node_replicate_node_nil]
     omega
   rw [hnode_nil, hsub]
+
+/-- Order of an all-singleton-leaf node:
+`(BTree.node (List.replicate n (BTree.node [BTree.leaf]))).order =
+1 + 2 * n`. Each child contributes order 2. -/
+private theorem order_node_replicate_singleton_leaf (n : ℕ) :
+    (BTree.node (List.replicate n (BTree.node [BTree.leaf]))).order
+      = 1 + 2 * n := by
+  induction n with
+  | zero => simp
+  | succ m ih =>
+    rw [List.replicate_succ]
+    simp only [BTree.order_node, List.foldr]
+    have htail :
+        List.foldr (fun t n => t.order + n) 0
+          (List.replicate m (BTree.node [BTree.leaf])) = 2 * m := by
+      simp only [BTree.order_node] at ih
+      omega
+    rw [htail]
+    simp
+    omega
+
+/-- Order of a mixed node with `a` leaf children followed by `b`
+singleton-leaf children. This is the kept-side order accounting for the
+cycle 547 nested powerset closed form. -/
+private theorem order_node_replicate_leaf_append_replicate_singleton_leaf
+    (a b : ℕ) :
+    (BTree.node
+      (List.replicate a BTree.leaf ++
+        List.replicate b (BTree.node [BTree.leaf]))).order
+      = 1 + a + 2 * b := by
+  induction a with
+  | zero =>
+    have h := order_node_replicate_singleton_leaf b
+    simp only [BTree.order_node] at h
+    simp
+    omega
+  | succ m ih =>
+    rw [List.replicate_succ, List.cons_append]
+    simp only [BTree.order_node, List.foldr, BTree.order_leaf]
+    simp only [BTree.order_node] at ih
+    omega
+
+/-- Cycle 547 fifth tracked `G1.mul`-direction well-definedness
+deliverable: product preserves `G₁` equivalence on every node whose root
+children are all `BTree.node [BTree.leaf]`, with the order bound
+`1 + 2 * n ≤ p`. -/
+theorem product_congr_node_replicate_singleton_leaf
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (n : ℕ) (hn : 1 + 2 * n ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+      = (q'.product r').bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf]))) := by
+  rw [QuotEquiv.bSeriesHom_product_node_replicate_singleton_leaf,
+      QuotEquiv.bSeriesHom_product_node_replicate_singleton_leaf]
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode_n :
+      q.bSeriesHom
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+        = q'.bSeriesHom
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf]))) := by
+    apply hq
+    rw [order_node_replicate_singleton_leaf]
+    omega
+  rw [hnode_n]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S hS_mem
+  have hS : S.card ≤ n := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin n)) :=
+      Finset.mem_powerset.mp hS_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have hsingleton_pow :
+      (q.bSeriesHom (BTree.node [BTree.leaf])) ^ S.card
+        = (q'.bSeriesHom (BTree.node [BTree.leaf])) ^ S.card := by
+    by_cases hzero : S.card = 0
+    · simp [hzero]
+    · have hnpos : 0 < n := by
+        have hSpos : 0 < S.card := Nat.pos_of_ne_zero hzero
+        exact Nat.lt_of_lt_of_le hSpos hS
+      have hp2 : 2 ≤ p := by omega
+      have hsingleton :
+          q.bSeriesHom (BTree.node [BTree.leaf])
+            = q'.bSeriesHom (BTree.node [BTree.leaf]) := by
+        apply hq
+        have horder : (BTree.node [BTree.leaf]).order = 2 := by simp
+        rw [horder]
+        exact hp2
+      rw [hsingleton]
+  rw [hsingleton_pow]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro T hT_mem
+  have hT : T.card ≤ (Sᶜ : Finset (Fin n)).card := by
+    have hmem : T ⊆ Sᶜ := Finset.mem_powerset.mp hT_mem
+    exact Finset.card_le_card hmem
+  have hcomp : (Sᶜ : Finset (Fin n)).card = n - S.card := by
+    rw [Finset.card_compl]
+    simp [Fintype.card_fin]
+  have hmixed :
+      r.bSeriesHom
+          (BTree.node
+            (List.replicate T.card BTree.leaf ++
+              List.replicate ((Sᶜ : Finset (Fin n)).card - T.card)
+                (BTree.node [BTree.leaf])))
+        = r'.bSeriesHom
+          (BTree.node
+            (List.replicate T.card BTree.leaf ++
+              List.replicate ((Sᶜ : Finset (Fin n)).card - T.card)
+                (BTree.node [BTree.leaf]))) := by
+    apply hr
+    rw [order_node_replicate_leaf_append_replicate_singleton_leaf]
+    omega
+  rw [hleaf, hmixed]
 
 /-- Cycle 545 fallback slice: product preserves `G₁` equivalence on
 `BTree.node [BTree.leaf, BTree.node []]` when that tree has order at most

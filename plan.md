@@ -1159,6 +1159,21 @@ Concrete next steps:
   at most `p`. The unrestricted `IsG1Equiv.product_congr` remains
   blocked on the full §384 `(trunk, cuts)` convolution closure on
   arbitrary trees.
+- Cycle 547 landed the parametric all-singleton-leaf-children closed
+  form for `BTree.node (List.replicate n (BTree.node [BTree.leaf]))`.
+  In `OpenMath/ButcherGroup/Section384.lean`,
+  `ButcherProduct.bConv_node_replicate_singleton_leaf_eq` and
+  `ButcherProduct.bSeries_node_replicate_singleton_leaf_eq` decompose
+  the product bSeries into an outer powerset over root cuts and an
+  inner powerset over internal leaf cuts. The inner powerset is needed
+  because `convAt (node [leaf])` contributes both `t₁.bSeries leaf`
+  and the kept row-sum term. In `OpenMath/ButcherGroup.lean`,
+  `QuotEquiv.bSeriesHom_product_node_replicate_singleton_leaf` lifts
+  the formula to quotient classes, and
+  `IsG1Equiv.product_congr_node_replicate_singleton_leaf` is the fifth
+  tracked `G1.mul`-direction well-definedness deliverable, using the
+  order identity `1 + 2 * n` for the root family and `1 + a + 2 * b`
+  for mixed leaf/singleton-leaf kept subtrees.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest

@@ -2564,4 +2564,387 @@ theorem ButcherProduct.bSeries_node_trivial_children_eq
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_node_trivial_children_eq t₁ t₂ children hTriv]
 
+/-! ### §384 all-singleton-leaf-children parametric closed form (cycle 547)
+
+Each root child is the order-2 tree `BTree.node [BTree.leaf]`. Unlike the
+cycle 546 trivial-children family, the kept child is not elementary-weight
+unit: its `convAt` value exposes an additional internal cut at the leaf.
+The closed form therefore has an outer powerset over root children and, for
+each kept-root subset, an inner powerset over the singleton leaves inside the
+kept children. -/
+
+/-- The `convAt` value at the singleton-leaf child is the cut coefficient
+on the leaf plus the second tableau row sum. -/
+private theorem convAt_singleton_leaf_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    ButcherProduct.convAt t₂ coef (BTree.node [BTree.leaf]) i
+      = coef BTree.leaf + ∑ j : Fin t, t₂.A i j := by
+  rw [← ButcherProduct.rightAuxAtCoef_eq_convAt]
+  rw [ButcherProduct.rightAuxAtCoef_node_singleton]
+  simp [ButcherProduct.rightAuxAtCoef_leaf]
+
+/-- Helper: the elementary weight of a node whose children are `n`
+singleton-leaf nodes collapses to the `n`-th power of the depth-2 row
+factor `∑ j, A i j * (∑ k, A j k)`. -/
+private theorem elementaryWeight_node_replicate_singleton_leaf
+    {s : ℕ} (tab : ButcherTableau s) (n : ℕ) (i : Fin s) :
+    tab.elementaryWeight
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf]))) i
+      = (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) ^ n := by
+  induction n with
+  | zero =>
+    simp [ButcherTableau.elementaryWeight]
+  | succ m ih =>
+    rw [List.replicate_succ]
+    have hfold :
+        tab.elementaryWeight
+            (BTree.node
+              (BTree.node [BTree.leaf] ::
+                List.replicate m (BTree.node [BTree.leaf]))) i
+          = tab.elementaryWeight
+              (BTree.node (List.replicate m (BTree.node [BTree.leaf]))) i *
+              (∑ j : Fin s, tab.A i j *
+                tab.elementaryWeight (BTree.node [BTree.leaf]) j) := by
+      simp [ButcherTableau.elementaryWeight, List.foldr]
+    rw [hfold, ih]
+    have hchild :
+        (∑ j : Fin s, tab.A i j *
+          tab.elementaryWeight (BTree.node [BTree.leaf]) j)
+          = ∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k) := by
+      refine Finset.sum_congr rfl ?_
+      intro j _
+      rw [ButcherTableau.elementaryWeight_singleton]
+      simp
+    rw [hchild, pow_succ]
+
+/-- Helper for mixed kept-side summands: a node with `a` leaf children
+followed by `b` singleton-leaf children has elementary weight equal to the
+product of the corresponding leaf row factors and depth-2 row factors. -/
+private theorem elementaryWeight_node_replicate_leaf_append_replicate_singleton_leaf
+    {s : ℕ} (tab : ButcherTableau s) (a b : ℕ) (i : Fin s) :
+    tab.elementaryWeight
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf]))) i
+      = (∑ j : Fin s, tab.A i j) ^ a *
+        (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) ^ b := by
+  induction a with
+  | zero =>
+    simp [elementaryWeight_node_replicate_singleton_leaf]
+  | succ m ih =>
+    rw [List.replicate_succ, List.cons_append]
+    have hfold :
+        tab.elementaryWeight
+            (BTree.node
+              (BTree.leaf ::
+                (List.replicate m BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf])))) i
+          = tab.elementaryWeight
+              (BTree.node
+                (List.replicate m BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf]))) i *
+              (∑ j : Fin s, tab.A i j) := by
+      simp [ButcherTableau.elementaryWeight, List.foldr]
+    rw [hfold, ih, pow_succ]
+    ring
+
+/-- `bSeries` form of
+`elementaryWeight_node_replicate_leaf_append_replicate_singleton_leaf`. -/
+private theorem bSeries_node_replicate_leaf_append_replicate_singleton_leaf
+    {s : ℕ} (tab : ButcherTableau s) (a b : ℕ) :
+    tab.bSeries
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf])))
+      = ∑ i : Fin s, tab.b i *
+          ((∑ j : Fin s, tab.A i j) ^ a *
+            (∑ j : Fin s, tab.A i j * (∑ k : Fin s, tab.A j k)) ^ b) := by
+  unfold ButcherTableau.bSeries
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [elementaryWeight_node_replicate_leaf_append_replicate_singleton_leaf]
+
+/-- A kept singleton-leaf child contributes the sum of an internal cut
+factor and a depth-2 kept factor. -/
+private theorem singleton_leaf_kept_factor_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    (∑ j : Fin t, t₂.A i j *
+      ButcherProduct.convAt t₂ coef (BTree.node [BTree.leaf]) j)
+      = coef BTree.leaf * (∑ j : Fin t, t₂.A i j)
+        + ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k) := by
+  calc
+    (∑ j : Fin t, t₂.A i j *
+      ButcherProduct.convAt t₂ coef (BTree.node [BTree.leaf]) j)
+        = ∑ j : Fin t, t₂.A i j *
+            (coef BTree.leaf + ∑ k : Fin t, t₂.A j k) := by
+          refine Finset.sum_congr rfl ?_
+          intro j _
+          rw [convAt_singleton_leaf_eq]
+    _ = ∑ j : Fin t,
+          (t₂.A i j * coef BTree.leaf
+            + t₂.A i j * (∑ k : Fin t, t₂.A j k)) := by
+          refine Finset.sum_congr rfl ?_
+          intro j _
+          ring
+    _ = (∑ j : Fin t, t₂.A i j * coef BTree.leaf)
+        + ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k) := by
+          rw [Finset.sum_add_distrib]
+    _ = coef BTree.leaf * (∑ j : Fin t, t₂.A i j)
+        + ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k) := by
+          congr 1
+          rw [← Finset.sum_mul]
+          ring
+
+/-- Inner kept-side collapse for a fixed root cut set. Expanding the
+singleton-leaf `convAt` factor over the kept root children yields an inner
+powerset; each summand is the `bSeries` of a mixed node with leaf children
+for internal cuts and singleton-leaf children for internal keeps. -/
+private theorem bWeighted_kept_singleton_leaf_product_eq
+    {t n : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ)
+    (S : Finset (Fin n)) :
+    (∑ i : Fin t, t₂.b i *
+        ∏ _p ∈ Sᶜ,
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.convAt t₂ coef (BTree.node [BTree.leaf]) j)
+      = ∑ T ∈ Sᶜ.powerset,
+          (coef BTree.leaf) ^ T.card *
+          t₂.bSeries
+            (BTree.node
+              (List.replicate T.card BTree.leaf ++
+                List.replicate ((Sᶜ).card - T.card)
+                  (BTree.node [BTree.leaf]))) := by
+  classical
+  let row : Fin t → ℝ := fun i => ∑ j : Fin t, t₂.A i j
+  let chain : Fin t → ℝ := fun i =>
+    ∑ j : Fin t, t₂.A i j * (∑ k : Fin t, t₂.A j k)
+  calc
+    (∑ i : Fin t, t₂.b i *
+        ∏ _p ∈ Sᶜ,
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.convAt t₂ coef (BTree.node [BTree.leaf]) j)
+        = ∑ i : Fin t, t₂.b i *
+            ∏ _p ∈ Sᶜ,
+              (coef BTree.leaf * row i + chain i) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          congr 1
+          refine Finset.prod_congr rfl ?_
+          intro p _
+          simp [row, chain, singleton_leaf_kept_factor_eq]
+    _ = ∑ i : Fin t, t₂.b i *
+          (∑ T ∈ Sᶜ.powerset,
+            (∏ _p ∈ T, coef BTree.leaf * row i) *
+              ∏ _p ∈ Sᶜ \ T, chain i) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          congr 1
+          rw [Finset.prod_add]
+    _ = ∑ i : Fin t,
+          ∑ T ∈ Sᶜ.powerset,
+            t₂.b i *
+              ((coef BTree.leaf) ^ T.card *
+                (row i) ^ T.card *
+                (chain i) ^ ((Sᶜ).card - T.card)) := by
+          refine Finset.sum_congr rfl ?_
+          intro i _
+          rw [Finset.mul_sum]
+          refine Finset.sum_congr rfl ?_
+          intro T hT
+          rw [Finset.mul_sum]
+          have hTsub : T ⊆ Sᶜ := Finset.mem_powerset.mp hT
+          rw [Finset.prod_const, Finset.prod_const,
+            Finset.card_sdiff_of_subset hTsub]
+          rw [← Finset.mul_sum, mul_pow]
+    _ = ∑ T ∈ Sᶜ.powerset,
+          ∑ i : Fin t,
+            t₂.b i *
+              ((coef BTree.leaf) ^ T.card *
+                (row i) ^ T.card *
+                (chain i) ^ ((Sᶜ).card - T.card)) := by
+          rw [Finset.sum_comm]
+    _ = ∑ T ∈ Sᶜ.powerset,
+          (coef BTree.leaf) ^ T.card *
+          (∑ i : Fin t, t₂.b i *
+            ((row i) ^ T.card *
+              (chain i) ^ ((Sᶜ).card - T.card))) := by
+          refine Finset.sum_congr rfl ?_
+          intro T hT
+          calc
+            (∑ i : Fin t,
+                t₂.b i *
+                  ((coef BTree.leaf) ^ T.card *
+                    (row i) ^ T.card *
+                    (chain i) ^ ((Sᶜ).card - T.card)))
+                = ∑ i : Fin t,
+                    (coef BTree.leaf) ^ T.card *
+                      (t₂.b i *
+                        ((row i) ^ T.card *
+                          (chain i) ^ ((Sᶜ).card - T.card))) := by
+                  refine Finset.sum_congr rfl ?_
+                  intro i _
+                  ring
+            _ = (coef BTree.leaf) ^ T.card *
+                  (∑ i : Fin t, t₂.b i *
+                    ((row i) ^ T.card *
+                      (chain i) ^ ((Sᶜ).card - T.card))) := by
+                  rw [Finset.mul_sum]
+    _ = ∑ T ∈ Sᶜ.powerset,
+          (coef BTree.leaf) ^ T.card *
+          t₂.bSeries
+            (BTree.node
+              (List.replicate T.card BTree.leaf ++
+                List.replicate ((Sᶜ).card - T.card)
+                  (BTree.node [BTree.leaf]))) := by
+          refine Finset.sum_congr rfl ?_
+          intro T hT
+          congr 1
+          rw [bSeries_node_replicate_leaf_append_replicate_singleton_leaf]
+
+private theorem bWeighted_convAt_node_replicate_singleton_leaf_eq_length
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (n : ℕ) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf]))) i)
+      = ∑ S ∈
+          (Finset.univ :
+            Finset (Fin (List.replicate n (BTree.node [BTree.leaf])).length)).powerset,
+          (coef (BTree.node [BTree.leaf])) ^ S.card *
+          (∑ T ∈ Sᶜ.powerset,
+            (coef BTree.leaf) ^ T.card *
+            t₂.bSeries
+              (BTree.node
+                (List.replicate T.card BTree.leaf ++
+                  List.replicate ((Sᶜ).card - T.card)
+                    (BTree.node [BTree.leaf])))) := by
+  rw [ButcherProduct.bWeighted_convAt_node_kept_eq]
+  rw [Finset.powerset_univ]
+  refine Finset.sum_congr
+    (M := ℝ)
+    (s₁ := (Finset.univ :
+      Finset (Finset (Fin (List.replicate n (BTree.node [BTree.leaf])).length))))
+    (s₂ := (Finset.univ :
+      Finset (Finset (Fin (List.replicate n (BTree.node [BTree.leaf])).length))))
+    rfl ?_
+  intro S _
+  have hcut :
+      (∏ p ∈ S,
+          coef ((List.replicate n (BTree.node [BTree.leaf])).get p))
+        = (coef (BTree.node [BTree.leaf])) ^ S.card := by
+    calc
+      (∏ p ∈ S,
+          coef ((List.replicate n (BTree.node [BTree.leaf])).get p))
+          = ∏ _p ∈ S, coef (BTree.node [BTree.leaf]) := by
+            refine Finset.prod_congr (M := ℝ) rfl ?_
+            intro p _
+            simp
+      _ = (coef (BTree.node [BTree.leaf])) ^ S.card := by
+            rw [Finset.prod_const]
+  rw [hcut]
+  congr 1
+  convert bWeighted_kept_singleton_leaf_product_eq t₂ coef S using 2
+  congr 1
+  refine Finset.prod_congr (M := ℝ) rfl ?_
+  intro p _
+  simp
+
+private theorem bWeighted_convAt_node_replicate_singleton_leaf_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (n : ℕ) :
+    (∑ i : Fin t, t₂.b i *
+        ButcherProduct.convAt t₂ coef
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf]))) i)
+      = ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+          (coef (BTree.node [BTree.leaf])) ^ S.card *
+          (∑ T ∈ Sᶜ.powerset,
+            (coef BTree.leaf) ^ T.card *
+            t₂.bSeries
+              (BTree.node
+                (List.replicate T.card BTree.leaf ++
+                  List.replicate ((Sᶜ).card - T.card)
+                    (BTree.node [BTree.leaf])))) := by
+  classical
+  have hlen : (List.replicate n (BTree.node [BTree.leaf])).length = n :=
+    List.length_replicate
+  let e : Fin (List.replicate n (BTree.node [BTree.leaf])).length ≃ Fin n :=
+    { toFun := Fin.cast hlen
+      invFun := Fin.cast hlen.symm
+      left_inv := fun _ => by ext; rfl
+      right_inv := fun _ => by ext; rfl }
+  let φ :
+      Finset (Fin (List.replicate n (BTree.node [BTree.leaf])).length) ≃
+        Finset (Fin n) :=
+    Equiv.finsetCongr e
+  rw [bWeighted_convAt_node_replicate_singleton_leaf_eq_length]
+  refine Finset.sum_equiv φ ?_ ?_
+  · intro S
+    simp [φ, e]
+  · intro S hS
+    have hcard : (φ S).card = S.card := by
+      simp [φ]
+    have hcompl :
+        ((φ S)ᶜ : Finset (Fin n)).card = (Sᶜ).card := by
+      rw [Finset.card_compl, Finset.card_compl, hcard]
+      simp [Fintype.card_fin, hlen]
+    rw [hcard]
+    congr 1
+    refine Finset.sum_equiv φ ?_ ?_
+    · intro T
+      simpa [φ, Finset.mem_powerset, Finset.subset_iff] using
+        (show
+          (∀ ⦃x :
+              Fin (List.replicate n (BTree.node [BTree.leaf])).length⦄,
+              x ∈ T → x ∉ S) ↔
+            (∀ ⦃x : Fin n⦄, e.symm x ∈ T → e.symm x ∉ S) from
+          ⟨fun h {x} hx => h hx,
+           fun h {x} hx => by
+            have hnot : e.symm (e x) ∉ S := h (by simpa using hx)
+            simpa using hnot⟩)
+    · intro T hT
+      have hTcard : (φ T).card = T.card := by
+        simp [φ]
+      rw [hTcard, hcompl]
+
+/-- §384 honest convolution closed form on the all-singleton-leaf family
+`BTree.node (List.replicate n (BTree.node [BTree.leaf]))`. Root cuts
+contribute `t₁.bSeries (node [leaf])`; each kept root child contributes an
+inner cut/keep choice at its leaf, producing mixed leaf/singleton-leaf
+`t₂.bSeries` summands. -/
+theorem ButcherProduct.bConv_node_replicate_singleton_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    ButcherProduct.bConv (t₁.bSeries) t₂
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries (BTree.node [BTree.leaf])) ^ S.card *
+            (∑ T ∈ Sᶜ.powerset,
+              (t₁.bSeries BTree.leaf) ^ T.card *
+              t₂.bSeries
+                (BTree.node
+                  (List.replicate T.card BTree.leaf ++
+                    List.replicate ((Sᶜ).card - T.card)
+                      (BTree.node [BTree.leaf])))) := by
+  unfold ButcherProduct.bConv
+  rw [bWeighted_convAt_node_replicate_singleton_leaf_eq]
+
+/-- Headline §384 corollary on the all-singleton-leaf family: the product
+`bSeries` decomposes into a root-cut powerset and an internal-cut powerset
+of bSeries-only summands. -/
+theorem ButcherProduct.bSeries_node_replicate_singleton_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries (BTree.node [BTree.leaf])) ^ S.card *
+            (∑ T ∈ Sᶜ.powerset,
+              (t₁.bSeries BTree.leaf) ^ T.card *
+              t₂.bSeries
+                (BTree.node
+                  (List.replicate T.card BTree.leaf ++
+                    List.replicate ((Sᶜ).card - T.card)
+                      (BTree.node [BTree.leaf])))) := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_node_replicate_singleton_leaf_eq]
+
 end ButcherTableau
