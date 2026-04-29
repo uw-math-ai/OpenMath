@@ -74,30 +74,6 @@ with per-child induction hypotheses replacing the stagewise cut sums by
   This exposes the identity above but does not provide enough recursive
   structure for the child terms, because `bSeriesConv` has already
   summed over stages.
-- **Cycle 570:** Landed the headline `ButcherProduct.bSeriesConv_consistency`
-  modulo two helper sorries. Manually proved
-  `bSeriesConv_eq_sum_b_cutAt` (list induction on `τ.innerCut α`,
-  `Finset.mul_sum` + `Finset.sum_add_distrib` + `ring`). Proved
-  `innerCutForest_sum_eq` by `Finset.prod_add` reduction once
-  `innerCutForest_sum_eq_listProd` is available. Two outstanding sorries:
-  - `innerCutForest_sum_eq_listProd`: The list-level `flatMap` decomposition
-    of `BTree.innerCutForest (head :: tail) α` and factoring of `tailSum`
-    out of the outer head-cut sum compiled but the inner trunk-cons
-    `elementaryWeight` reduction (`unfold ButcherTableau.elementaryWeight; rfl`)
-    failed because `node :: trunk :: filterMap` does not reduce
-    definitionally — needs an explicit lemma for
-    `t₂.elementaryWeight (BTree.node (trunk :: cs)) i =
-      t₂.elementaryWeight (BTree.node cs) i *
-        ∑ k, t₂.A i k * t₂.elementaryWeight trunk k`.
-    Cycle 570 stripped the broken proof and replaced with `sorry` to
-    keep the file compiling.
-  - `cutAt_eq_convAt`: Stagewise bridge by `BTree.rec` with motive_2 carrying
-    per-child IH; leaf and `node []` close by simp on `cutAt_leaf` /
-    `convAt_leaf`; node case applies `innerCutForest_sum_eq` after
-    pushing the leading `(none, α (BTree.node children))` filter step out.
-- Submitted 5 Aristotle scaffolds for cycle 570 (`cutAt_simp`,
-  `innerCutForest_sum_eq`, `cutAt_eq_convAt`, `bSeriesConv_eq_sum_b_cutAt`,
-  `bSeriesConv_consistency`); all still QUEUED at cycle wrap-up.
 
 ## Possible solutions
 1. Add a local `cutAt` definition in `Section386Conv.lean`.
