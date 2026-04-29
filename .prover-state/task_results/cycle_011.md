@@ -156,6 +156,12 @@ imported by the modules used here; replaced with a direct
 - **`abel` works fine for the final `V`-valued combination** — it
   doesn't need ring structure, only `AddCommMonoid V`.
 
+## Commit verification (per cycle 010 lesson)
+- Local HEAD: `6d126274aa9bc559e7f47f3e16e8d0b2123ee548`
+- `origin/Main/Experiments`: `6d126274aa9bc559e7f47f3e16e8d0b2123ee548`
+- `git diff --stat HEAD~1 HEAD`: 4 files changed, 335 insertions(+), 3 deletions(-)
+  — non-empty, cycle landed.
+
 ## Suggested next approach
 Cycle 012 should target **`thm:141A`** (Constant coefficients, §141).
 With `thm:140A` shipped:
