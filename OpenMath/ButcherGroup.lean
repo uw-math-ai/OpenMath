@@ -164,6 +164,19 @@ theorem bSeriesConv_inverseCoeff_cancel_node
   simpa [add_assoc, add_comm, add_left_comm] using
     QuotEquiv.inverseCoeff_node_eq q children
 
+/-- Leaf checksum for the swapped-arguments §388 inverse direction: at the
+leaf, the bSeries convolution of `q.inverseCoeff` against `q.bSeries`
+collapses to `q.bSeries BTree.leaf`. The cycle 578 attempt at the matching
+node-level cancellation theorem revealed that the analogous *node* identity
+is in fact false for general unit-stage `q` — see
+`.prover-state/issues/butcher_section388_left_cancellation.md`. The leaf
+checksum still holds and is recorded here as the parallel of
+`bSeriesConv_inverseCoeff_cancel_leaf`. -/
+theorem bSeriesConv_inverseCoeff_cancel_leaf_left {s : ℕ}
+    (q : QuotEquiv s) :
+    bSeriesConv q.inverseCoeff q.bSeries BTree.leaf = q.bSeries BTree.leaf := by
+  rw [bSeriesConv_leaf]
+
 /-! ### §387 raw and quotient powers
 
 The raw power keeps the right-associated shape `(t^n) * t`, matching the
