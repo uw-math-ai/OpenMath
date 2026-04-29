@@ -132,7 +132,28 @@ decreasing_by
     q.inverseCoeff BTree.leaf = 1 := by
   rw [inverseCoeff]
 
+/-- Restatement of the `inverseCoeff` recursion at a `node` tree as the
+cancellation identity that the inverse coefficient closes the bSeries
+plus the proper-cut convolution to zero. -/
+theorem inverseCoeff_node_eq {s : ℕ} (q : QuotEquiv s)
+    (children : List BTree) :
+    q.bSeries (BTree.node children)
+      + bSeriesConvNonRoot q.bSeries (BTree.node children)
+          (fun σ _ => q.inverseCoeff σ)
+      + q.inverseCoeff (BTree.node children) = 0 := by
+  rw [inverseCoeff]
+  ring
+
 end QuotEquiv
+
+/-- Leaf checksum for the §388 inverse construction: the bSeries
+convolution of `q.bSeries` against `q.inverseCoeff` evaluates to `1` at
+the leaf, matching the leaf-level identity that motivates restricting
+to the unit-stage subgroup. -/
+theorem bSeriesConv_inverseCoeff_cancel_leaf {s : ℕ}
+    (q : QuotEquiv s) :
+    bSeriesConv q.bSeries (q.inverseCoeff) BTree.leaf = 1 := by
+  rw [bSeriesConv_leaf, QuotEquiv.inverseCoeff_leaf]
 
 /-! ### §387 raw and quotient powers
 

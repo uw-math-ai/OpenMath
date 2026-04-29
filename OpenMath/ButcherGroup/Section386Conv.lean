@@ -1033,4 +1033,126 @@ theorem bSeriesConv_congr_of_le
   have := innerCut_trunk_order_le α' τ c hc t ht
   exact this.trans hτ
 
+/-! ### Cycle 576: structural strengthening of `innerCut_trunk_order_le`.
+
+For the §388 inverse-coefficient cancellation, we need to know that the
+*only* entry in `τ.innerCut α` whose trunk option has full order
+`τ.order` is the canonical "no cut" entry `(some τ, 1)`. This refines
+`innerCut_trunk_order_le` (which only gives `≤`) and lets us peel the
+`(some τ, 1)` summand from `bSeriesConv α β τ`. -/
+
+/-- Helper: the canonical no-cut forest entry has trunk filterMap equal
+to the children list. -/
+private theorem canon_filterMap (children : List BTree) :
+    (children.map (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ))).filterMap
+      (fun c => c.1) = children := by
+  induction children with
+  | nil => simp
+  | cons h t ih => simp [ih]
+
+/-- Helper: the canonical no-cut forest entry has weight foldr equal to 1. -/
+private theorem canon_foldr (children : List BTree) :
+    (children.map (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ))).foldr
+      (fun c acc => c.2 * acc) (1 : ℝ) = 1 := by
+  induction children with
+  | nil => simp
+  | cons h t ih => simp [ih]
+
+/-- Helper: the canonical no-cut forest entry has trunk-order sum equal
+to the children-order sum. -/
+private theorem canon_order_sum (children : List BTree) :
+    ((children.map (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ))).filterMap
+      (fun c => c.1) |>.map BTree.order).sum
+      = (children.map BTree.order).sum := by
+  rw [canon_filterMap]
+
+/-- Structural strengthening of `innerCut_trunk_order_le`: every entry
+in `τ.innerCut α` is either a `none` cut, a `some t` cut with trunk
+order strictly less than `τ.order`, or the canonical no-cut
+`(some τ, 1)`. The forest-level dual identifies the canonical no-cut
+list explicitly as `children.map (fun c => (some c, 1))`. -/
+theorem innerCut_root_only_at_full_order
+    (α : BTree → ℝ) (τ : BTree) :
+    ∀ c ∈ τ.innerCut α,
+      c.1 = none
+        ∨ (∃ t, c.1 = some t ∧ t.order < τ.order)
+        ∨ c = (some τ, 1) := by
+  induction τ using BTree.rec
+    (motive_2 := fun children =>
+      ∀ cs ∈ BTree.innerCutForest children α,
+        ((cs.filterMap (fun c => c.1)).map BTree.order).sum
+            < (children.map BTree.order).sum
+          ∨ cs = children.map (fun c => (some c, (1 : ℝ)))) with
+  | leaf =>
+      intro c hc
+      rw [innerCut_leaf] at hc
+      simp at hc
+      rcases hc with hc | hc
+      · right; right; exact hc
+      · left; rw [hc]
+  | node children IH =>
+      intro c hc
+      rw [innerCut_node] at hc
+      simp only [List.mem_cons] at hc
+      rcases hc with hc | hc
+      · left; rw [hc]
+      · rw [List.mem_map] at hc
+        obtain ⟨cs, hcs, heq⟩ := hc
+        have hIH := IH cs hcs
+        rcases hIH with hlt | hcanon
+        · right; left
+          refine ⟨BTree.node (cs.filterMap (fun c => c.1)), ?_, ?_⟩
+          · rw [← heq]
+          · rw [BTree.order_node_sum, BTree.order_node_sum]; omega
+        · right; right
+          rw [← heq, hcanon, canon_filterMap, canon_foldr]
+  | nil =>
+      rename_i cs hcs
+      rw [BTree.innerCutForest] at hcs
+      simp at hcs
+      subst hcs
+      right
+      simp
+  | cons head tail ih_head ih_tail =>
+      rename_i cs hcs
+      rw [BTree.innerCutForest] at hcs
+      rw [List.mem_flatMap] at hcs
+      obtain ⟨c, hc, hin⟩ := hcs
+      rw [List.mem_map] at hin
+      obtain ⟨tail_cs, htail_cs, heq⟩ := hin
+      rw [← heq]
+      have h_head := ih_head c hc
+      have h_tail := ih_tail tail_cs htail_cs
+      have h_head_pos : 0 < head.order := BTree.order_pos head
+      cases hopt : c.1 with
+      | none =>
+          left
+          simp only [List.filterMap_cons, hopt, List.map_cons, List.sum_cons]
+          rcases h_tail with ht | hcanon
+          · omega
+          · rw [hcanon, canon_filterMap]; omega
+      | some t =>
+          rcases h_head with hnone | ⟨t', ht'_eq, ht'_lt⟩ | hcanon
+          · exfalso; rw [hopt] at hnone; cases hnone
+          · rw [hopt] at ht'_eq
+            obtain rfl : t' = t := by exact (Option.some.inj ht'_eq.symm)
+            left
+            simp only [List.filterMap_cons, hopt, List.map_cons, List.sum_cons]
+            rcases h_tail with ht | hcanon
+            · omega
+            · rw [hcanon, canon_filterMap]; omega
+          · have hc1 : c.1 = some head := by rw [hcanon]
+            have _hc2 : c.2 = 1 := by rw [hcanon]
+            rw [hc1] at hopt
+            obtain rfl : t = head := by
+              have := Option.some.inj hopt
+              exact this.symm
+            rcases h_tail with ht | hcanon_tail
+            · left
+              simp only [List.filterMap_cons, hc1, List.map_cons, List.sum_cons]
+              omega
+            · right
+              rw [hcanon, hcanon_tail]
+              simp [List.map_cons]
+
 end ButcherTableau
