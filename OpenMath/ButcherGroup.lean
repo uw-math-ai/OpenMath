@@ -348,6 +348,19 @@ theorem ButcherProduct.npowStages_add (s m n : ℕ) :
       ButcherProduct.npowStages s m + ButcherProduct.npowStages s n := by
   simp [ButcherProduct.npowStages_eq, Nat.add_mul]
 
+/-- Closed form for the stage count of an `(m * n)`-th right-associated
+power. -/
+theorem ButcherProduct.npowStages_mul (s m n : ℕ) :
+    ButcherProduct.npowStages s (m * n) = m * n * s := by
+  simpa using ButcherProduct.npowStages_eq s (m * n)
+
+/-- Multiplicative exponent form for stage counts of powers. -/
+theorem ButcherProduct.npowStages_mul_eq (s m n : ℕ) :
+    ButcherProduct.npowStages s (m * n) =
+      m * ButcherProduct.npowStages s n := by
+  rw [ButcherProduct.npowStages_eq, ButcherProduct.npowStages_eq]
+  exact Nat.mul_assoc m n s
+
 /-- Right-associated raw powers of a Butcher tableau under `ButcherProduct`. -/
 def ButcherProduct.npow {s : ℕ} (t : ButcherTableau s) :
     ∀ n : ℕ, ButcherTableau (ButcherProduct.npowStages s n)
@@ -427,6 +440,11 @@ theorem weightsSum_npow {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
       push_cast
       ring
 
+/-- Multiplicative-exponent closed form for quotient power weights-sums. -/
+theorem weightsSum_npow_mul {s : ℕ} (q : QuotEquiv s) (m n : ℕ) :
+    (q.npow (m * n)).weightsSum = (m * n : ℝ) * q.weightsSum := by
+  simpa using weightsSum_npow q (m * n)
+
 /-- Unit-power identity for the quotient Butcher-series homomorphism. -/
 theorem bSeriesHom_npow_one {s : ℕ} (q : QuotEquiv s) :
     (npow q 1).bSeriesHom = q.bSeriesHom := by
@@ -486,12 +504,29 @@ theorem cSum_npow {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
       push_cast
       ring
 
+/-- Multiplicative-exponent closed form for quotient power node-sums. -/
+theorem cSum_npow_mul {s : ℕ} (q : QuotEquiv s) (m n : ℕ) :
+    (q.npow (m * n)).cSum =
+      (m * n : ℝ) * q.cSum
+        + (s : ℝ) * ((m * n : ℝ) * ((m * n : ℝ) - 1) / 2) := by
+  simpa using cSum_npow q (m * n)
+
 /-- Alternate form of the weights-sum successor step in the right-associated
     orientation. -/
 theorem weightsSum_npow_succ' {s : ℕ} (q : QuotEquiv s) (n : ℕ) :
     (q.npow (n + 1)).weightsSum =
       q.weightsSum + (q.npow n).weightsSum := by
   rw [weightsSum_npow_succ, add_comm]
+
+/-- Nonnegative base weights-sum is bounded above by every positive power
+weights-sum. -/
+theorem weightsSum_npow_le {s : ℕ} (q : QuotEquiv s) (n : ℕ)
+    (h : 0 ≤ q.weightsSum) :
+    q.weightsSum ≤ (q.npow (n + 1)).weightsSum := by
+  rw [weightsSum_npow q (n + 1)]
+  push_cast
+  have hn : 0 ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le n
+  nlinarith
 
 /-- `n = 2` instance of the closed-form `weightsSum_npow`. -/
 theorem weightsSum_npow_two {s : ℕ} (q : QuotEquiv s) :
@@ -549,10 +584,29 @@ theorem cSum_npow_four {s : ℕ} (q : QuotEquiv s) :
   push_cast at h
   linarith
 
+/-- `n = 5` instance of the closed-form `weightsSum_npow`. -/
+theorem weightsSum_npow_five {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 5).weightsSum = 5 * q.weightsSum := by
+  simpa using weightsSum_npow q 5
+
+/-- `n = 5` instance of the closed-form `cSum_npow`. -/
+theorem cSum_npow_five {s : ℕ} (q : QuotEquiv s) :
+    (q.npow 5).cSum = 5 * q.cSum + 10 * (s : ℝ) := by
+  have h := cSum_npow q 5
+  push_cast at h
+  linarith
+
 /-- Closed form for the stage count of an `(n * m)`-th right-associated power. -/
 theorem npowStages_npow_eq_npowStages_mul (s n m : ℕ) :
     ButcherProduct.npowStages s (n * m) = n * m * s := by
   rw [ButcherProduct.npowStages_eq]
+
+/-- Stage count closed form after feeding an `n`th-power stage count back
+into `npowStages`. -/
+theorem npowStages_npow_eq_mul (s n : ℕ) :
+    ButcherProduct.npowStages s (ButcherProduct.npowStages s n) =
+      n * s * s := by
+  simp [ButcherProduct.npowStages_eq]
 
 end QuotEquiv
 
