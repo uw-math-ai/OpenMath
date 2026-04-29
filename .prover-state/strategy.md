@@ -1,290 +1,242 @@
-# Strategy — cycle 027
+# Cycle 028 Strategy
 
-## Status entering this cycle
+## Status snapshot
 
-* Tree: branch tip after cycle 026 lands `def:355A` in
-  `OpenMath/Chapter3/Section355.lean` (commit `1e624c9`).
-* Sorry count: **0** across `OpenMath/`.
-* Tautology scanner: **0 hits** across `OpenMath/`.
+* Cycle 027 landed `def:370A` (symplectic Runge–Kutta methods) cleanly:
+  `OpenMath/Chapter3/Section370.lean` with `symplecticityMatrix`,
+  `IsSymplectic`, `implicitMidpoint`, and
+  `implicitMidpoint_isSymplectic`. `lake build` clean, 0 sorries, 0
+  tautology hits.
 * No pending Aristotle results.
-* No active blocker that prevents progress on §35x or §37x.
-* `plan.md` progress: **27 / 175**.
+* No open sorries anywhere in `OpenMath/`.
+* No active worker-level blocker. `picard_lindelof_bound_strengthening`
+  and `jordan_canonical_form_missing` are §1/§142 backlog and remain
+  non-blocking for current §3 work; `reduced_method_deferred` and
+  `symmetry_group_equivalence` are also dormant. Do **not** touch them
+  this cycle.
 
-The cycle-026 task-result file suggested `thm:355B` or `thm:302C` as
-next targets. **Both have hidden infrastructure costs**:
+## Cycle-028 target — `def:357B` (algebraically stable)
 
-* `thm:355B` requires Taylor-expansion / `R(z) − exp(z) = -C·z^{p+1}
-  + O(z^{p+2})` machinery in ℂ, plus an analysis of arrows tangent to
-  `(p+1)`-th roots of unity. That is a 2–3 cycle build, not 1.
-* `thm:302C` (`Aₙ = Σ α(t) = (n−1)!`, `Bₙ = Σ β(t) = n^{n−1}`)
-  requires (a) defining `α(t)` and `β(t)` (only stated in `thm:302A`,
-  not yet formalised), and (b) building a finite enumeration of
-  `{t : RootedTree // r(t) = n}`. That is also multi-cycle.
+Formalize `def:357B` as a single new file
+`OpenMath/Chapter3/Section357.lean`.
 
-A cleaner one-cycle target sits a few rows further down: **`def:370A`
-— Symplectic Runge–Kutta methods**.
+Rationale (do not deviate without writing an issue):
 
----
+1. Directly extends cycle 027's `symplecticityMatrix` infrastructure
+   (the matrix `M = diag(b)A + A diag(b) − bbᵀ` is *literally* the
+   same matrix in both definitions — `def:370A` asks `M = 0`,
+   `def:357B` asks `b > 0` and `M` positive semidefinite).
+2. Self-contained — entity JSON gives a clean matrix-level statement
+   with no analytic dependencies. **Do NOT** be misled by the
+   `def:357B → def:357A` LLM-claimed dependency edge: `def:357A` is a
+   degenerately-extracted entity (its `statement_text` is just
+   commentary, "Definition 357A was first introduced..."), and the
+   actual mathematical relationship is *reverse*: algebraic stability
+   is a *sufficient condition* for B/BN-stability (Burrage–Butcher).
+   So `def:357B` does not logically depend on `def:357A` despite the
+   JSON edge.
+3. Concrete witness already exists: the implicit midpoint method has
+   `M = 0` (cycle 027), so `M.PosSemidef` holds trivially via the
+   zero-matrix PSD lemma. `b = (1)` is positive. So
+   `implicitMidpoint_isAlgebraicallyStable` falls out in two lines.
+4. Estimated cost: ≤ 1 cycle. Manageable in foreground without
+   Aristotle.
 
-## Primary target — `def:370A` (symplectic RK methods)
+### Textbook statement (quote verbatim in the file's docstring)
 
-### Why this target
+From `extraction/formalization_data/entities/def_357B.json`:
 
-The textbook statement (`extraction/formalization_data/entities/def_370A.json`)
-is a single matrix equality:
+> A Runge–Kutta method `(A, b, c)` is 'algebraically stable' if
+> `bᵢ > 0`, for `i = 1, 2, …, s`, and if the matrix `M`, given by
+> `M = diag(b)A + A diag(b) − bbᵀ` (357d), is positive
+> semi-definite.
 
-> A Runge–Kutta method `(A, b, c)` is **symplectic** if
->     `M = diag(b) A + A diag(b) − b bᵀ`
-> is the zero matrix.
+### Required Lean shape
 
-The dependency list in the JSON cites `def:381A`–`def:381F` and
-`thm:381G/H`, but those references are *paragraph-context* mentions
-(the surrounding §370 prose discusses reducibility), **not**
-mathematical prerequisites. The actual definition is self-contained
-on `RKTableau`. Confirm this when you read `def_370A.json` (the
-`statement_text` is just the formula above).
+Place in a new file `OpenMath/Chapter3/Section357.lean`. Open
+`OpenMath.Chapter3.Section370` so you can reuse `symplecticityMatrix`
+**without** re-defining it.
 
-The cycle is small and well-bounded: one new definition, one concrete
-witness, and a faithfulness check.
+```lean
+import OpenMath.Chapter3.Section370
+import Mathlib.LinearAlgebra.Matrix.PosDef
 
-### Concrete plan
+namespace OpenMath.Chapter3.Section357
 
-1. **Read** `extraction/formalization_data/entities/def_370A.json`
-   in full. Quote the statement verbatim in the file docstring.
+open OpenMath.Chapter3.Section312
+open OpenMath.Chapter3.Section370
 
-2. **Create `OpenMath/Chapter3/Section370.lean`** with these
-   declarations under `namespace OpenMath.Chapter3.Section370`:
+/-- Butcher §357 Definition 357B — a Runge–Kutta method `(A, b, c)` is
+*algebraically stable* iff every weight `bᵢ` is strictly positive and
+the symplecticity matrix `M = diag(b)A + A diag(b) − bbᵀ` is positive
+semidefinite. -/
+def IsAlgebraicallyStable {s : ℕ} (R : RKTableau s) : Prop :=
+  (∀ i, 0 < R.b i) ∧ (symplecticityMatrix R).PosSemidef
+```
 
+Note: `symplecticityMatrix` lives in `Section370`. **Reuse it** — do
+not re-introduce a parallel definition. If unfolding is awkward,
+factor out `symplecticityMatrix` into a fresh
+`OpenMath/Chapter3/SymplecticityMatrix.lean` shared file *only if
+necessary*. Default: keep it in `Section370` and import.
+
+### Concrete witness
+
+Add `implicitMidpoint_isAlgebraicallyStable` using cycle 027's
+`implicitMidpoint`:
+
+```lean
+theorem implicitMidpoint_isAlgebraicallyStable :
+    IsAlgebraicallyStable implicitMidpoint := by
+  refine ⟨?_, ?_⟩
+  · intro i; fin_cases i; norm_num [implicitMidpoint]
+  · -- symplecticityMatrix implicitMidpoint = 0, and 0 is PSD.
+    rw [show symplecticityMatrix implicitMidpoint = 0 from
+        implicitMidpoint_isSymplectic]
+    exact Matrix.PosSemidef.zero
+```
+
+If `Matrix.PosSemidef.zero` is not the right Mathlib name, use
+`lean_local_search "PosSemidef"` to find it. Likely candidates:
+`Matrix.PosSemidef.zero`, `Matrix.posSemidef_zero`, or you may need
+`(0 : Matrix _ _ ℝ).PosSemidef` constructed by hand from
+`Matrix.PosSemidef.mk` with `IsHermitian.zero` and the trivial
+quadratic-form bound. Use `lean_multi_attempt` to test the variants
+before settling on one.
+
+### Sub-goals to discharge
+
+1. `symplecticityMatrix implicitMidpoint = 0` — already
+   `implicitMidpoint_isSymplectic` (cycle 027). Just rewrite.
+2. `(0 : Matrix (Fin 1) (Fin 1) ℝ).PosSemidef` — should be a
+   one-liner; if Mathlib lacks the named lemma, prove inline:
    ```lean
-   import OpenMath.Chapter3.Section312
-
-   namespace OpenMath.Chapter3.Section370
-
-   open OpenMath.Chapter3.Section310  -- RKTableau lives there
-                                       -- per Section312.lean line 66
-
-   /-- The symplecticity matrix `M = diag(b) A + A diag(b) − b bᵀ`
-   of a Runge–Kutta method. -/
-   def symplecticityMatrix {s : ℕ} (R : RKTableau s) :
-       Matrix (Fin s) (Fin s) ℝ :=
-     Matrix.diagonal R.b * R.A + R.A * Matrix.diagonal R.b -
-       Matrix.vecMulVec R.b R.b
-
-   /-- Butcher §370 Definition 370A — a Runge–Kutta method is
-   *symplectic* iff its symplecticity matrix vanishes. -/
-   def IsSymplectic {s : ℕ} (R : RKTableau s) : Prop :=
-     symplecticityMatrix R = 0
+   refine ⟨Matrix.IsHermitian.zero, fun x => ?_⟩
+   simp
    ```
+3. `0 < (1 : ℝ)` for the `b i > 0` field — `norm_num` or `one_pos`.
 
-   Notes:
+## Execution plan (concrete, do these in order)
 
-   * `Matrix.vecMulVec u v` is the Mathlib spelling of the outer
-     product `u vᵀ` (`fun i j => u i * v j`). Verify with
-     `lean_local_search "vecMulVec"` if you're unsure; if the name is
-     different or the file is hard to import, just inline the lambda
-     `fun i j => R.b i * R.b j`.
-   * `Matrix.diagonal R.b` is `fun i j => if i = j then R.b i else 0`,
-     which is exactly `diag(b)`.
-   * Do **not** reuse the project's `Section381` reducibility
-     definitions here — `def:370A` is independent of them.
+1. **Verify Mathlib has `Matrix.PosSemidef`** at the expected path.
+   Run `lean_local_search "PosSemidef"` and
+   `lean_loogle "Matrix.PosSemidef"`. The expected import is
+   `Mathlib.LinearAlgebra.Matrix.PosDef`. If `PosSemidef` is in a
+   different file in this Mathlib pin, adjust the import.
+2. **Write the file with sorry-first scaffolding:**
+   * `IsAlgebraicallyStable` definition.
+   * `implicitMidpoint_isAlgebraicallyStable` with `sorry` for both
+     conjuncts.
+   * `lake env lean OpenMath/Chapter3/Section357.lean` to confirm it
+     compiles.
+3. **Close the positivity conjunct** with `fin_cases` + `norm_num`.
+4. **Close the PSD conjunct** by rewriting via
+   `implicitMidpoint_isSymplectic` to reduce to "0 is PSD". Try the
+   named lemma path first; if missing, construct the witness inline.
+5. **Add to `OpenMath/Chapter3.lean`** an `import
+   OpenMath.Chapter3.Section357` line (alphabetically after
+   `Section355` / `Section370` per existing convention).
+6. **Update `extraction/formalization_data/lean_status.json`** for
+   `def:357B`:
+   * `lean_file`: `OpenMath/Chapter3/Section357.lean`
+   * `lean_symbol`:
+     `OpenMath.Chapter3.Section357.IsAlgebraicallyStable`
+   * `formalization_status`: `formalized`
+7. **Update `plan.md`**:
+   * Flip the `def:357B` row from `[ ]` to `[x]` and append
+     `` — `OpenMath/Chapter3/Section357.lean` ``.
+   * Bump progress counter from `28 / 175` to `29 / 175`.
+8. **Pre-commit faithfulness check** — run the CLAUDE.md checklist
+   for `IsAlgebraicallyStable`. Expected conclusions:
+   * Lean type matches textbook: positivity conjunction with the
+     PSD condition on the explicit matrix `M`. ✓
+   * No definition smuggling — `IsAlgebraicallyStable` is a
+     `Prop` predicate, not a structure with derived fields. ✓
+   * No tautology check needed (definition, not theorem). ✓
+   * For `implicitMidpoint_isAlgebraicallyStable`: hypothesis-free,
+     not vacuous (real PSD verification through cycle 027's
+     `_isSymplectic` lemma), proof is not `exact h_…`. ✓
+   * Document the LLM-claimed `def:357B → def:357A` edge as **not
+     a real mathematical dependency** in the file's docstring (1–2
+     line note: "Butcher's text presents 357B as a sufficient
+     condition for the BN-stability concept introduced as 357A; the
+     LLM-extracted dependency edge is reversed in the project's
+     graph. Algebraic stability is a self-contained matrix
+     condition.").
+9. **Tautology scanner check**:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
+   should still return zero hits.
+10. **Sorry count** must remain 0 across `OpenMath/`.
+11. **Write `.prover-state/task_results/cycle_028.md`** per the
+    CLAUDE.md template.
+12. **Commit** with message:
+    `Formalize def:357B — algebraically stable Runge–Kutta methods`.
 
-3. **Concrete non-vacuous witness — implicit midpoint.** This is the
-   canonical 1-stage symplectic method:
+## Aristotle policy for this cycle
 
-   ```lean
-   /-- The implicit midpoint method, `s = 1`, with
-   `A = [[1/2]]`, `b = [1]`, `c = [1/2]`. -/
-   def implicitMidpoint : RKTableau 1 where
-     A := !![1/2]
-     b := fun _ => 1
-     c := fun _ => 1/2
+**Do not submit to Aristotle.** Estimated end-to-end work is well
+under 30 minutes; submitting a 30-minute Aristotle queue would
+dominate the cycle. Reserve Aristotle for cycles whose proofs
+genuinely look like multi-step open obligations.
 
-   /-- Implicit midpoint is symplectic. -/
-   theorem implicitMidpoint_isSymplectic :
-       IsSymplectic implicitMidpoint := by
-     unfold IsSymplectic symplecticityMatrix implicitMidpoint
-     ext i j
-     fin_cases i <;> fin_cases j
-     simp [Matrix.diagonal, Matrix.vecMulVec, Matrix.mul_apply]
-     ring
-   ```
+## What NOT to do (explicit list)
 
-   The literal `!![1/2]` is the standard Mathlib 1×1 matrix notation
-   (from `Mathlib.Data.Matrix.Notation`). If that exact spelling
-   fails, fall back to `Matrix.of (fun _ _ => (1/2 : ℝ))`. Verify
-   inside the proof with `lean_goal` — the final scalar identity is
-   `1·(1/2) + (1/2)·1 − 1·1 = 0`, which `ring` closes.
+* **Do NOT** formalize `def:357A` (B-stability) this cycle. Its
+  extracted statement is degenerate ("Definition 357A was first
+  introduced..."), and a faithful formalization requires reading the
+  surrounding §357 prose for the actual contractivity / one-sided
+  Lipschitz / dissipativity setup. That is a multi-cycle
+  infrastructure investment. If the worker concludes after writing
+  `def:357B` that `def:357A` blocks downstream §357 work, file an
+  issue at
+  `.prover-state/issues/b_stability_357A_extraction_gap.md`
+  describing the gap and the textbook prose location, **but do not
+  attempt to formalize 357A itself this cycle**.
+* **Do NOT** re-define `symplecticityMatrix`. Reuse `Section370`'s
+  `symplecticityMatrix` directly via
+  `open OpenMath.Chapter3.Section370`.
+* **Do NOT** introduce any `axiom` or `constant`.
+* **Do NOT** raise `maxHeartbeats`.
+* **Do NOT** edit `scripts/autonomous_loop.py` or any other infra
+  file. Tautology-scanner false-positive concerns are tracked in
+  `.prover-state/issues/tautology_scanner_false_positives.md` for the
+  loop maintainer; the worker should not touch them.
+* **Do NOT** edit `extraction/raw_text/` or
+  `extraction/formalization_data/entities/` (both are regenerated;
+  see `extraction/CLAUDE.md`). The only `extraction/` file the worker
+  may touch is `extraction/formalization_data/lean_status.json`.
+* **Do NOT** start `thm:372A` (order conditions for symplectic
+  methods) this cycle. It needs Φ-functional / order-condition
+  infrastructure that hasn't been built and would not finish in one
+  cycle.
+* **Do NOT** revisit `def:357A` / `def:356A` / `def:356B` etc.
+  They are non-blocking for `def:357B`.
+* **Do NOT** rename `h_<word>` style hypotheses unless the scanner
+  actually flags them. Cycle 027 already ships clean.
+* **Do NOT** start a worktree, refactor `RKTableau`, or build new
+  shared helper files unless `Matrix.PosSemidef` infrastructure
+  truly forces it. The default plan keeps everything in
+  `Section357.lean` + reuse of `Section370`.
 
-   **If `fin_cases` + `simp` + `ring` does not close the witness**,
-   do not chase it; substitute the trivial `s = 0` witness:
+## Tools to use
 
-   ```lean
-   def trivialZero : RKTableau 0 where
-     A := !![]      -- 0×0 matrix, empty
-     b := Fin.elim0
-     c := Fin.elim0
+* `lean_local_search "PosSemidef"` — find the right Mathlib lemma
+  names.
+* `lean_loogle "Matrix.PosSemidef"` — pattern search for PSD lemmas.
+* `lean_multi_attempt` at the `(0 : Matrix _ _ ℝ).PosSemidef` goal
+  to test candidate closers in one call:
+  `["exact Matrix.PosSemidef.zero", "exact Matrix.posSemidef_zero",
+    "refine ⟨Matrix.IsHermitian.zero, fun x => ?_⟩; simp"]`.
+* `lake env lean OpenMath/Chapter3/Section357.lean` for incremental
+  verification.
+* `lake build` only at the very end.
 
-   theorem trivialZero_isSymplectic : IsSymplectic trivialZero := by
-     ext i j
-     exact i.elim0
-   ```
+## Faithfulness reminder
 
-   The `s = 0` witness is technically non-vacuous (`RKTableau 0`
-   inhabits `Type`) and CLAUDE.md's "concrete witness/instance" rule
-   is satisfied. Prefer implicit midpoint if it goes through — it is
-   the textbook example.
-
-4. **Wire the new module into `OpenMath/Chapter3.lean`.** Add
-   `import OpenMath.Chapter3.Section370` next to the existing imports.
-
-5. **Update bookkeeping.**
-
-   * `plan.md`: flip `def:370A` to `[x]` with file path
-     `OpenMath/Chapter3/Section370.lean`. Bump
-     `Progress: 27 / 175` → `Progress: 28 / 175`.
-   * `extraction/formalization_data/lean_status.json`: set `def:370A`
-     entry to `formalized` with
-     `lean_symbol: OpenMath.Chapter3.Section370.IsSymplectic`.
-
-6. **Verify before commit.**
-
-   ```bash
-   lake env lean OpenMath/Chapter3/Section370.lean   # clean exit
-   lake build                                         # clean
-   rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/  # 0 hits
-   ```
-
-   Axiom check (in the file or via `lean_verify`):
-   ```
-   #print axioms OpenMath.Chapter3.Section370.IsSymplectic
-   #print axioms OpenMath.Chapter3.Section370.implicitMidpoint_isSymplectic
-   ```
-   Expected: `[propext, Classical.choice, Quot.sound]` only.
-
-7. **Faithfulness check (mandatory per CLAUDE.md).**
-
-   * Quote the textbook `statement_latex` from `def_370A.json` in the
-     `cycle_027.md` faithfulness section.
-   * Confirm the Lean type matches verbatim: `M = 0` ↔
-     `symplecticityMatrix R = 0`. No reformulation needed.
-   * Tautology check: `IsSymplectic` is a predicate, not a theorem.
-     The witness theorem `implicitMidpoint_isSymplectic` does real
-     work (computes the 1×1 entry of `M`). Not a vacuous re-export.
-   * Hypothesis-strength check: no extra hypotheses are imposed.
-     `def:370A` says nothing about `c`, `bᵢ > 0`, or non-degeneracy.
-
-### Estimated effort
-
-≤ 1 cycle. The longest line item is debugging the
-`fin_cases`/`Matrix.diagonal`/`Matrix.vecMulVec` simp set on the
-implicit-midpoint witness. If it spirals, fall back to `s = 0`.
-
-### Aristotle disposition
-
-**Do not** submit anything to Aristotle. The proof has zero `sorry`
-and the witness is a single-step `simp; ring`. Aristotle has 30-min
-turnaround; this whole cycle is faster than that.
-
----
-
-## Fallback target (only if `def:370A` blows up unexpectedly)
-
-**`def:357B` — algebraically stable RK methods.** Uses *exactly the
-same matrix* `M = diag(b) A + A diag(b) − b bᵀ`, but with a
-positive-semidefinite predicate instead of `M = 0`:
-
-> `(A, b, c)` is **algebraically stable** if `bᵢ > 0` for all `i`,
-> and `M` (above) is positive semi-definite.
-
-If you fall back to this, **do not** define a new
-`symplecticityMatrix` — extract it as a shared helper that both
-`Section370` and the new `Section357` import. Concrete witness for
-`def:357B`: implicit midpoint again (`M = 0` ⇒ PSD trivially).
-
-PSD predicate: use `Matrix.PosSemidef` from
-`Mathlib.LinearAlgebra.Matrix.PosDef`. Verify the field structure —
-it expects `Matrix.IsHermitian` and a non-negativity statement on the
-quadratic form. For the witness `M = 0`, both fields are immediate.
-
-**Skip** to this only if `def:370A` itself is blocked. Do not do
-both in one cycle — CLAUDE.md "Don't add features beyond what the
-task requires".
-
----
-
-## Explicit DO-NOT list (do not retry these in cycle 027)
-
-These have been recently tried, deferred, or flagged as multi-cycle
-infrastructure investments. Stay clear:
-
-1. **`thm:351B`, `lem:351A`, `thm:353A`** — need `(I − zA)⁻¹`
-   matrix-resolvent infrastructure. Multi-cycle prereq.
-2. **`def:356A`** — also needs `(I − AZ)⁻¹`. Skip until matrix
-   resolvent is built.
-3. **`thm:355B`, `thm:355C`, `thm:355D`, `thm:355E`** — Taylor /
-   asymptotic / pole-tracking analyses. Each is 2+ cycles.
-4. **`thm:302A`, `thm:302B`, `thm:302C`** — need `α(t)` and `β(t)`
-   defined as labelling counts AND a finite enumeration of trees of
-   given order. Multi-cycle prereq. The cycle-026 suggestion to
-   pursue `thm:302C` underestimated this cost.
-5. **`lem:383A`, `lem:383B`, `lem:383C`** — Runge–Kutta group
-   infrastructure not built. Wait until `def:381F` and reduced-method
-   construction land.
-6. **`def:381F`** — triggers the deferred reduced-method
-   construction (`reduced_method_deferred.md`). Skip.
-7. **`def:388D`, `def:388F`, `thm:388A`–`H`** — group `G₁` and its
-   subgroup lattice not built. Skip.
-8. **`def:323A`** — depends on `thm:315A`, `lem:313A`, `thm:311B`,
-   none yet formalised. Skip.
-9. **`def:357A` (BN-stability)** — the JSON `statement_text` is a
-   fragment ("was first introduced, it was referred to as
-   B-stability…") that does not capture the full predicate. Needs
-   careful textbook re-reading; risk of definition smuggling. Skip
-   in favour of `def:357B`/`def:370A` whose statements are crisp.
-10. **The `IsAStable ↔ IsAlphaStable (π/2)` bridge** — `Real.tan`
-    totalisation trap; do not chase it.
-11. **§142 Schur / Jordan infrastructure** — non-critical-path,
-    3–5 cycle effort, queue is full of higher-priority Chapter 3
-    work. See `jordan_canonical_form_missing.md`.
-
----
-
-## Mandatory worker reminders (CLAUDE.md)
-
-* **Sorry-first.** Write the file with `sorry` placeholders first,
-  verify it compiles, then close them. For this cycle the only
-  potential `sorry` site is the witness theorem; close with
-  `fin_cases`/`simp`/`ring` as in the plan above.
-* **Pre-commit faithfulness check.** Mandatory for every new `def`
-  and `theorem`. Quote textbook source in `cycle_027.md`.
-* **No `axiom`/`constant`. No `maxHeartbeats` increase. No edits to
-  `scripts/autonomous_loop.py`. No edits to `extraction/raw_text/`
-  or `extraction/formalization_data/entities/`.**
-* **Concrete witness rule.** `IsSymplectic` is a new `def` (not a
-  `class`/`structure`), but CLAUDE.md's witness rule still applies in
-  spirit — the predicate would be vacuous without an example.
-  Provide `implicitMidpoint_isSymplectic` (or the `s = 0` fallback).
-* **Run the scanner before commit.** Zero hits expected.
-* **Update `lean_status.json`** for `def:370A` and **bump `plan.md`
-  progress** in the same commit.
-
----
-
-## Cycle-027 success criteria
-
-1. New file `OpenMath/Chapter3/Section370.lean` with `IsSymplectic`
-   and a non-vacuous witness theorem.
-2. `OpenMath/Chapter3.lean` imports the new module.
-3. `lake build` clean; axiom check clean; tautology scanner returns 0
-   hits.
-4. `plan.md` row for `def:370A` flipped to `[x]`; progress bumped to
-   28 / 175.
-5. `lean_status.json` row for `def:370A` flipped to `formalized` with
-   the right `lean_symbol`.
-6. `cycle_027.md` written with faithfulness section quoting
-   `def_370A.json` `statement_latex`.
-7. Commit and push.
-
-If anything in steps 1–7 fails, write an issue file in
-`.prover-state/issues/` describing the specific blocker, then commit
-whatever partial progress was made.
+The defining matrix `M` is **the same** as in cycle 027's
+`symplecticityMatrix`. Reuse, do not parallel-define. The textbook
+calls equation (357d) the same `M` it called (370a). The Lean code
+should reflect that identity by sharing the term, not by recomputing
+it. This both avoids drift and lets
+`implicitMidpoint_isAlgebraicallyStable` discharge the PSD goal via
+cycle 027's `implicitMidpoint_isSymplectic` rewrite.

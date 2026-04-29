@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 28 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
+**Progress: 29 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -107,7 +107,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:310B` **Elementary Differential Weight Formula** (§310)
 - [ ] `thm:319B` **Global truncation error bound via local error accumulation** (§319)
 - [ ] `thm:352E` **V function recurrence relation** (§352)
-- [ ] `def:357B` **algebraically stable** (§357)
+- [x] `def:357B` **algebraically stable** (§357) — `OpenMath/Chapter3/Section357.lean`
 - [ ] `lem:311A` **The Taylor expansion of the exact solution** (§311)
 - [ ] `lem:312B` **Elementary Weight Summation Formula** (§312)
 - [ ] `lem:313A` **The Taylor expansion of the approximate solution** (§313)
