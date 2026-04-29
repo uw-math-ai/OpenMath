@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 20 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
+**Progress: 21 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -69,7 +69,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 
 - [ ] `def:350A` **A-stability, A(α)-stability and L-stability** (§350)
 - [x] `def:381B` **Φ-equivalent** (§380)
-- [ ] `def:381D` **P -reducible** (§380)
+- [x] `def:381D` **P -reducible** (§380)
 - [ ] `lem:322A` **Methods of order 4** (§322)
 - [ ] `lem:383C` **Existence of Left and Right Inverses** (§383)
 - [x] `thm:301A` **Functions on trees** (§301)

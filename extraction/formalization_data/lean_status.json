@@ -106,7 +106,7 @@
   },
   "thm:301A": {
     "lean_file": "OpenMath/Chapter3/Section301.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section310.RootedTree.r_recursion, OpenMath.Chapter3.Section310.RootedTree.σ_recursion, OpenMath.Chapter3.Section310.RootedTree.γ_recursion, OpenMath.Chapter3.Section310.RootedTree.tau_values",
+    "lean_symbol": "OpenMath.Chapter3.Section310.RootedTree.r_recursion, OpenMath.Chapter3.Section310.RootedTree.\u03c3_recursion, OpenMath.Chapter3.Section310.RootedTree.\u03b3_recursion, OpenMath.Chapter3.Section310.RootedTree.tau_values",
     "status": "formalized"
   },
   "thm:302A": {
@@ -450,9 +450,9 @@
     "status": "unformalized"
   },
   "def:381D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section381.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsPReducible",
+    "status": "formalized"
   },
   "def:381E": {
     "lean_file": null,
