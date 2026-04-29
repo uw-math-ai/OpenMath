@@ -210,9 +210,9 @@
     "status": "unformalized"
   },
   "lem:322A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section322.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section322.order_four_block_zero_decomposition",
+    "status": "formalized"
   },
   "def:323A": {
     "lean_file": null,
