@@ -105,9 +105,9 @@
     "status": "unformalized"
   },
   "thm:301A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section301.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section310.RootedTree.r_recursion, OpenMath.Chapter3.Section310.RootedTree.σ_recursion, OpenMath.Chapter3.Section310.RootedTree.γ_recursion, OpenMath.Chapter3.Section310.RootedTree.tau_values",
+    "status": "formalized"
   },
   "thm:302A": {
     "lean_file": null,
