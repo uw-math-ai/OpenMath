@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 33 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 34 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -128,7 +128,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:383D` **Runge Kutta group inverse formula** (§383)
 - [ ] `thm:311D` **Taylor expansion of exact solution equals numerical method** (§311)
 - [ ] `thm:352A` **Padé approximations to the exponential function** (§352)
-- [ ] `thm:357C` **Algebraic Stability Implies BN Stability** (§357)
+- [x] `thm:357C` **Algebraic Stability Implies BN Stability** (§357) — `OpenMath/Chapter3/Section357.lean`
 - [ ] `thm:363A` **Singly implicit methods** (§363)
 - [ ] `thm:384A` **A homomorphism between two groups** (§384)
 - [ ] `def:388F` **Algebraic condition for group commutators** (§388)

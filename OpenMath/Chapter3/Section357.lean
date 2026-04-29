@@ -2,6 +2,7 @@ import OpenMath.Chapter3.Section370
 import OpenMath.Chapter3.Section381
 import Mathlib.Analysis.InnerProductSpace.Basic
 import Mathlib.LinearAlgebra.Matrix.PosDef
+import Mathlib.Analysis.Matrix.Order
 
 /-!
 # Butcher §357 — Non-linear stability of Runge–Kutta methods
@@ -227,6 +228,322 @@ theorem implicitMidpoint_isBNStable :
     have hprod : 2 * h * inner ℝ K (Y 0) ≤ 0 :=
       mul_nonpos_of_nonneg_of_nonpos h2h hinner
     linarith [hSqEq]
+  exact norm_le_of_norm_sq_le y₁ y₀ hbound
+
+/-! ## Theorem 357C — algebraic stability implies BN-stability
+
+The Burrage–Butcher theorem: an algebraically stable Runge–Kutta method is
+BN-stable. The proof rests on the algebraic identity
+
+\[
+  \|y_1\|^2 - \|y_0\|^2 = 2h \sum_i b_i \langle F_i, Y_i\rangle
+                      - h^2 \sum_{ij}(2 b_i a_{ij} - b_i b_j)\langle F_i, F_j\rangle,
+\]
+
+where `F i = f(x₀ + cᵢ h, Y i)`. Under algebraic stability:
+
+* The first term is `≤ 0` because `b_i > 0`, `h > 0`, and dissipativity gives
+  `⟨F_i, Y_i⟩ ≤ 0`.
+* The second term's coefficient sum equals
+  `∑ symplecticityMatrix M i j ⟨F_i, F_j⟩`, which is `≥ 0` because the
+  symplecticity matrix is positive semidefinite.
+
+Note: the existing `symplecticityMatrix` (cycle 027) unfolds to
+`(b_i + b_j) a_{ij} − b_i b_j` rather than the textbook's
+`b_i a_{ij} + b_j a_{ji} − b_i b_j`. Both forms are symmetric only when `A`
+is symmetric, and indeed positive-semidefiniteness (which entails Hermitian
+= symmetric over ℝ) together with `b_i > 0` forces `A i j = A j i`. Under
+that derived hypothesis the two forms agree, so the algebraic identity (in
+its Lean form using `2 b_i a_{ij} − b_i b_j`) coincides with the form built
+from the symplecticity matrix.
+-/
+
+/-- Algebraic stability forces the coefficient matrix `A` to be symmetric.
+
+The symplecticity matrix `M` (as defined in `Section370`) has entries
+`M_{ij} = (b_i + b_j) a_{ij} − b_i b_j`. Positive-semidefiniteness implies
+Hermitian (= symmetric over ℝ), giving `(b_i + b_j)(a_{ij} − a_{ji}) = 0`,
+and `b_i + b_j > 0` (since each `b_i > 0`) yields `a_{ij} = a_{ji}`. -/
+private lemma algebraicallyStable_imp_A_symm {s : ℕ} {M : RKTableau s}
+    (hAS : IsAlgebraicallyStable M) :
+    ∀ i j, M.A i j = M.A j i := by
+  obtain ⟨hb_pos, hM_psd⟩ := hAS
+  have hHerm : (symplecticityMatrix M).IsHermitian := hM_psd.isHermitian
+  intro i j
+  have hij : symplecticityMatrix M i j = symplecticityMatrix M j i := by
+    have := (Matrix.IsHermitian.ext_iff).1 hHerm j i
+    simpa using this
+  -- Unfold both entries and conclude.
+  have hL : symplecticityMatrix M i j =
+      M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j := by
+    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal,
+          Matrix.vecMulVec, Matrix.sub_apply, Matrix.add_apply]
+  have hR : symplecticityMatrix M j i =
+      M.b j * M.A j i + M.A j i * M.b i - M.b j * M.b i := by
+    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal,
+          Matrix.vecMulVec, Matrix.sub_apply, Matrix.add_apply]
+  rw [hL, hR] at hij
+  -- (b i + b j) * A i j = (b i + b j) * A j i
+  have hbij : 0 < M.b i + M.b j := add_pos (hb_pos i) (hb_pos j)
+  have heq : (M.b i + M.b j) * M.A i j = (M.b i + M.b j) * M.A j i := by linarith
+  exact mul_left_cancel₀ (ne_of_gt hbij) heq
+
+/-- Lemma 1 — symmetrisation: under `A` symmetric, the asymmetric form
+`(2 bᵢ aᵢⱼ − bᵢ bⱼ)` and the symmetric form `(bᵢ + bⱼ) aᵢⱼ − bᵢ bⱼ`
+(= `symplecticityMatrix M i j`) yield the same quadratic form when paired
+with the symmetric Gram matrix `⟨Fᵢ, Fⱼ⟩`.
+
+The pointwise difference `(bᵢ − bⱼ) aᵢⱼ ⟨Fᵢ, Fⱼ⟩` summed over all
+`(i, j)` vanishes by the swap `i ↔ j` together with `aᵢⱼ = aⱼᵢ` and
+`⟨Fⱼ, Fᵢ⟩ = ⟨Fᵢ, Fⱼ⟩`. -/
+private lemma symplecticityMatrix_quadratic_form_eq {s : ℕ}
+    (M : RKTableau s) (hSym : ∀ i j, M.A i j = M.A j i) {N : Type*}
+    [NormedAddCommGroup N] [InnerProductSpace ℝ N]
+    (F : Fin s → N) :
+    ∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
+        inner ℝ (F i) (F j)
+    = ∑ i, ∑ j, symplecticityMatrix M i j * inner ℝ (F i) (F j) := by
+  -- Step 1: unfold symplecticityMatrix entry-wise.
+  have hM : ∀ i j, symplecticityMatrix M i j =
+      M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j := by
+    intro i j
+    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal,
+          Matrix.vecMulVec, Matrix.sub_apply, Matrix.add_apply]
+  -- Step 2: rewrite the goal so both sides have the same shape with explicit
+  -- coefficients depending on `M.b` and `M.A`.
+  have rhs_rewrite :
+      (∑ i, ∑ j, symplecticityMatrix M i j * inner ℝ (F i) (F j))
+      = ∑ i, ∑ j, (M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j)
+                  * inner ℝ (F i) (F j) := by
+    refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
+    rw [hM]
+  rw [rhs_rewrite]
+  -- Step 3: show the key symmetry identity
+  -- ∑ᵢⱼ M.A i j * M.b j * ⟨F i, F j⟩ = ∑ᵢⱼ M.b i * M.A i j * ⟨F i, F j⟩
+  have hswap : ∑ i, ∑ j, M.A i j * M.b j * inner ℝ (F i) (F j)
+             = ∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j) := by
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
+    rw [hSym j i, real_inner_comm (F j) (F i)]
+    ring
+  -- Step 4: split both sides into the linear pieces and use hswap.
+  have lhs_split :
+      (∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) * inner ℝ (F i) (F j))
+      = (2 : ℝ) * (∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j))
+        - (∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j)) := by
+    simp only [sub_mul, ← Finset.sum_sub_distrib, Finset.mul_sum]
+    refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
+    ring
+  have rhs_split :
+      (∑ i, ∑ j, (M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j)
+                * inner ℝ (F i) (F j))
+      = (∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j))
+        + (∑ i, ∑ j, M.A i j * M.b j * inner ℝ (F i) (F j))
+        - (∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j)) := by
+    simp only [add_mul, sub_mul, ← Finset.sum_sub_distrib, ← Finset.sum_add_distrib]
+  rw [lhs_split, rhs_split, hswap]
+  ring
+
+/-- Lemma 2 — the BN-stability algebraic identity (★).
+
+In a real inner-product space, given the stage equations
+`Y i = y₀ + h • ∑ⱼ aᵢⱼ • F j` and the update equation
+`y₁ = y₀ + h • ∑ᵢ bᵢ • F i`,
+
+\[
+  \|y_1\|^2 - \|y_0\|^2 = 2h \sum_i b_i \langle F_i, Y_i\rangle
+    - h^2 \sum_{ij} (2 b_i a_{ij} - b_i b_j) \langle F_i, F_j\rangle.
+\]
+
+The proof uses the polarisation `‖a‖² − ‖b‖² = ⟨a + b, a − b⟩` together
+with the per-stage identity `y₁ + y₀ = 2 • Y i + h • ∑ⱼ (bⱼ − 2 aᵢⱼ) • F j`. -/
+private lemma bn_stability_identity {s : ℕ}
+    (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [InnerProductSpace ℝ N]
+    (h : ℝ) (y₀ y₁ : N) (Y : Fin s → N) (F : Fin s → N)
+    (hY_stage : ∀ i, Y i = y₀ + h • ∑ j, M.A i j • F j)
+    (hy_update : y₁ = y₀ + h • ∑ i, M.b i • F i) :
+    ‖y₁‖^2 - ‖y₀‖^2
+      = 2 * h * (∑ i, M.b i * inner ℝ (F i) (Y i))
+      - h^2 * (∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
+                          inner ℝ (F i) (F j)) := by
+  -- Set V = ∑ⱼ bⱼ • Fⱼ, the "update vector".
+  set V : N := ∑ j, M.b j • F j with hV_def
+  -- Step 1: ‖y₁‖² - ‖y₀‖² = 2 h ⟨y₀, V⟩ + h² ‖V‖² (since y₁ = y₀ + h • V).
+  have hsq : ‖y₁‖^2 - ‖y₀‖^2 = 2 * h * inner ℝ y₀ V + h^2 * ‖V‖^2 := by
+    rw [hy_update, norm_add_sq_real, real_inner_smul_right, norm_smul, mul_pow]
+    have hh : ‖h‖ ^ 2 = h ^ 2 := by rw [Real.norm_eq_abs, sq_abs]
+    rw [hh]; ring
+  rw [hsq]
+  -- Step 2: ⟨y₀, V⟩ = ∑ⱼ bⱼ * ⟨y₀, Fⱼ⟩.
+  have hy0V : inner ℝ y₀ V = ∑ j, M.b j * inner ℝ y₀ (F j) := by
+    show inner ℝ y₀ (∑ j, M.b j • F j) = _
+    rw [inner_sum]
+    refine Finset.sum_congr rfl fun j _ => ?_
+    rw [real_inner_smul_right]
+  -- Step 3: ‖V‖² = ∑ᵢⱼ bᵢ bⱼ ⟨Fᵢ, Fⱼ⟩.
+  have hVsq : ‖V‖^2 = ∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j) := by
+    rw [← real_inner_self_eq_norm_sq]
+    show inner ℝ (∑ j, M.b j • F j) (∑ j, M.b j • F j) = _
+    rw [sum_inner]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [real_inner_smul_left, inner_sum, Finset.mul_sum]
+    refine Finset.sum_congr rfl fun j _ => ?_
+    rw [real_inner_smul_right]; ring
+  rw [hy0V, hVsq]
+  -- Step 4: ⟨Fᵢ, Yᵢ⟩ = ⟨Fᵢ, y₀⟩ + h ∑ⱼ aᵢⱼ ⟨Fᵢ, Fⱼ⟩, so
+  --   ⟨y₀, Fᵢ⟩ = ⟨Fᵢ, y₀⟩ = ⟨Fᵢ, Yᵢ⟩ - h ∑ⱼ aᵢⱼ ⟨Fᵢ, Fⱼ⟩.
+  have hy0Fi : ∀ i, inner ℝ y₀ (F i) =
+      inner ℝ (F i) (Y i) - h * ∑ j, M.A i j * inner ℝ (F i) (F j) := by
+    intro i
+    rw [real_inner_comm, hY_stage i, inner_add_right, real_inner_smul_right, inner_sum]
+    simp_rw [real_inner_smul_right]
+    rw [Finset.mul_sum]; ring
+  -- Step 5: substitute hy0Fi.
+  have hsubst :
+      ∑ j, M.b j * inner ℝ y₀ (F j)
+      = ∑ j, M.b j * (inner ℝ (F j) (Y j)
+        - h * ∑ k, M.A j k * inner ℝ (F j) (F k)) := by
+    refine Finset.sum_congr rfl fun j _ => ?_
+    rw [hy0Fi j]
+  rw [hsubst]
+  -- Step 6: distribute the multiplications and combine into the desired form.
+  have hLHS :
+      2 * h * ∑ j, M.b j * (inner ℝ (F j) (Y j)
+        - h * ∑ k, M.A j k * inner ℝ (F j) (F k))
+      + h^2 * ∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j)
+      = 2 * h * ∑ j, M.b j * inner ℝ (F j) (Y j)
+        - 2 * h^2 * ∑ j, ∑ k, M.b j * M.A j k * inner ℝ (F j) (F k)
+        + h^2 * ∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j) := by
+    have hsplit : ∀ j,
+        M.b j * (inner ℝ (F j) (Y j)
+          - h * ∑ k, M.A j k * inner ℝ (F j) (F k))
+        = M.b j * inner ℝ (F j) (Y j)
+          - h * ∑ k, M.b j * M.A j k * inner ℝ (F j) (F k) := by
+      intro j
+      have hmul : ∑ k, M.b j * M.A j k * inner ℝ (F j) (F k)
+                 = M.b j * ∑ k, M.A j k * inner ℝ (F j) (F k) := by
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl fun k _ => by ring
+      rw [hmul]; ring
+    simp_rw [hsplit]
+    rw [Finset.sum_sub_distrib, ← Finset.mul_sum]
+    ring
+  rw [hLHS]
+  -- Combine: 2h² ∑ⱼ ∑ₖ bⱼ aⱼₖ ⟨Fⱼ, Fₖ⟩ - h² ∑ᵢ ∑ⱼ bᵢ bⱼ ⟨Fᵢ, Fⱼ⟩
+  -- = h² ∑ᵢ ∑ⱼ (2 bᵢ aᵢⱼ - bᵢ bⱼ) ⟨Fᵢ, Fⱼ⟩.
+  have hcombine :
+      2 * h^2 * ∑ j, ∑ k, M.b j * M.A j k * inner ℝ (F j) (F k)
+      - h^2 * ∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j)
+      = h^2 * ∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
+                         inner ℝ (F i) (F j) := by
+    rw [show (∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
+                       inner ℝ (F i) (F j))
+         = ∑ i, ∑ j, (2 * (M.b i * M.A i j * inner ℝ (F i) (F j))
+                      - M.b i * M.b j * inner ℝ (F i) (F j))
+        from by
+          refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
+          ring]
+    simp_rw [Finset.sum_sub_distrib, ← Finset.mul_sum]
+    ring
+  linarith [hcombine]
+
+/-- Lemma 3 — a positive-semidefinite real matrix produces a non-negative
+value when summed against the Gram matrix of any vectors `F i` in a real
+inner-product space.
+
+Proof outline: by `Matrix.posSemidef_iff_eq_conjTranspose_mul_self`,
+`hPSD` provides `B` with `M = Bᵀ B` (over ℝ). Then
+`∑ᵢⱼ M_{ij} ⟨Fᵢ, Fⱼ⟩ = ∑_k ‖∑ᵢ B_{ki} Fᵢ‖² ≥ 0`. -/
+private lemma posSemidef_inner_form_nonneg {s : ℕ}
+    {M : Matrix (Fin s) (Fin s) ℝ} (hM : M.PosSemidef)
+    {N : Type*} [NormedAddCommGroup N] [InnerProductSpace ℝ N]
+    (F : Fin s → N) :
+    0 ≤ ∑ i, ∑ j, M i j * inner ℝ (F i) (F j) := by
+  -- Cholesky-like factorisation: ∃ B, M = Bᵀ B (conjTranspose = transpose over ℝ).
+  obtain ⟨B, hB⟩ := Matrix.posSemidef_iff_eq_conjTranspose_mul_self.mp hM
+  -- Set v k := ∑ i, B k i • F i; then ∑ M_{ij} ⟨F i, F j⟩ = ∑ k ‖v k‖² ≥ 0.
+  set v : Fin s → N := fun k => ∑ i, B k i • F i with hv_def
+  have hvk_sq : ∀ k, ‖v k‖^2 =
+      ∑ i, ∑ j, B k i * B k j * inner ℝ (F i) (F j) := by
+    intro k
+    rw [← real_inner_self_eq_norm_sq]
+    show inner ℝ (∑ i, B k i • F i) (∑ i, B k i • F i) = _
+    rw [sum_inner]
+    refine Finset.sum_congr rfl fun i _ => ?_
+    rw [real_inner_smul_left, inner_sum, Finset.mul_sum]
+    refine Finset.sum_congr rfl fun j _ => ?_
+    rw [real_inner_smul_right]
+    ring
+  -- Entry-wise factorisation: M i j = ∑ k, B k i * B k j.
+  have hMij : ∀ i j, M i j = ∑ k, B k i * B k j := by
+    intro i j
+    rw [hB]
+    simp [Matrix.mul_apply]
+  -- Combine via sum_comm to express the goal as ∑ k ‖v k‖² ≥ 0.
+  have hsum_eq :
+      ∑ i, ∑ j, M i j * inner ℝ (F i) (F j) = ∑ k, ‖v k‖^2 := by
+    have hgoal_expand :
+        (∑ i, ∑ j, M i j * inner ℝ (F i) (F j))
+        = ∑ i, ∑ j, (∑ k, B k i * B k j) * inner ℝ (F i) (F j) := by
+      refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
+      rw [hMij]
+    rw [hgoal_expand]
+    -- Push ∑ k outermost via two sum_comm swaps.
+    simp_rw [Finset.sum_mul]
+    -- Goal: ∑ i, ∑ j, ∑ k, B k i * B k j * inner = ∑ k, ‖v k‖²
+    rw [show (∑ i, ∑ j, ∑ k, B k i * B k j * inner ℝ (F i) (F j))
+            = ∑ i, ∑ k, ∑ j, B k i * B k j * inner ℝ (F i) (F j) from by
+        refine Finset.sum_congr rfl fun i _ => ?_
+        exact Finset.sum_comm]
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl fun k _ => ?_
+    rw [hvk_sq k]
+  rw [hsum_eq]
+  exact Finset.sum_nonneg fun k _ => sq_nonneg _
+
+/-- Butcher §357 Theorem 357C — algebraic stability implies BN-stability
+(Burrage–Butcher).
+
+Given an algebraically stable Runge–Kutta method `M`, every dissipative
+non-autonomous IVP and every step yields `‖y₁‖ ≤ ‖y₀‖`. -/
+theorem algebraicallyStable_isBNStable
+    {s : ℕ} (M : RKTableau s) (hAS : IsAlgebraicallyStable M) :
+    IsBNStable M := by
+  intro N _ _ f hDiss x₀ y₀ h hh y₁ hStep
+  obtain ⟨Y, hY_stage, hy_update⟩ := hStep
+  obtain ⟨hb_pos, hM_psd⟩ := hAS
+  have hA_sym : ∀ i j, M.A i j = M.A j i :=
+    algebraicallyStable_imp_A_symm ⟨hb_pos, hM_psd⟩
+  -- Define F i := f (x₀ + c i * h) (Y i).
+  set F : Fin s → N := fun i => f (x₀ + M.c i * h) (Y i) with hF_def
+  have hY_stage' : ∀ i, Y i = y₀ + h • ∑ j, M.A i j • F j := hY_stage
+  have hy_update' : y₁ = y₀ + h • ∑ i, M.b i • F i := hy_update
+  -- Apply Lemma 2 (algebraic identity).
+  have hIdentity := bn_stability_identity M h y₀ y₁ Y F hY_stage' hy_update'
+  -- First term ≤ 0 by dissipativity.
+  have hFirst : 2 * h * (∑ i, M.b i * inner ℝ (F i) (Y i)) ≤ 0 := by
+    have h2h : 0 ≤ 2 * h := by linarith
+    apply mul_nonpos_of_nonneg_of_nonpos h2h
+    apply Finset.sum_nonpos
+    intro i _
+    apply mul_nonpos_of_nonneg_of_nonpos (hb_pos i).le
+    show inner ℝ (F i) (Y i) ≤ 0
+    simpa [F, hF_def] using hDiss (x₀ + M.c i * h) (Y i)
+  -- Second term: equals symplecticity-matrix quadratic form via Lemma 1,
+  -- and is ≥ 0 via Lemma 3.
+  have hForm := symplecticityMatrix_quadratic_form_eq M hA_sym F
+  have hSecond : 0 ≤ ∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
+                                 inner ℝ (F i) (F j) := by
+    rw [hForm]
+    exact posSemidef_inner_form_nonneg hM_psd F
+  -- Combine.
+  have hbound : ‖y₁‖^2 ≤ ‖y₀‖^2 := by
+    have h2_nonneg : 0 ≤ h^2 := sq_nonneg h
+    have h_h2_term : 0 ≤ h^2 * (∑ i, ∑ j,
+        (2 * M.b i * M.A i j - M.b i * M.b j) * inner ℝ (F i) (F j)) :=
+      mul_nonneg h2_nonneg hSecond
+    linarith [hIdentity]
   exact norm_le_of_norm_sq_le y₁ y₀ hbound
 
 end OpenMath.Chapter3.Section357
