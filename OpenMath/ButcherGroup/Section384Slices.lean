@@ -1620,5 +1620,263 @@ theorem ButcherProduct.bSeries_node_mixed_leaf_singleton_leaf_eq
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_node_mixed_leaf_singleton_leaf_eq]
 
+/-! ### §384 mixed leaf / double-leaf root-children parametric helper
+
+Cycle 552 extends the cycle 549 parametric ladder to root children that
+are `BTree.leaf` or `BTree.node [BTree.leaf, BTree.leaf]` (the order-3
+two-leaf inner node). The strategy fallback path is taken: this slice
+delivers the per-stage `convAt` closed form, the corresponding `bConv`
+closed form, and the `bSeries` corollary at the per-stage level (no
+explicit cut-decomposition powerset). The squared keep-factor on the
+double-leaf side would require a five-level powerset expansion to mirror
+cycle 549's three-level form; the quotient lift and `IsG1Equiv` slice
+therefore defer to cycle 553. -/
+
+/-- The `convAt` value at the order-3 double-leaf child
+`BTree.node [BTree.leaf, BTree.leaf]` is the square of the cycle-549
+leaf factor. -/
+private theorem convAt_double_leaf_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (i : Fin t) :
+    ButcherProduct.convAt t₂ coef (BTree.node [BTree.leaf, BTree.leaf]) i
+      = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ 2 := by
+  classical
+  rw [ButcherProduct.convAt_node]
+  have hprod_add :
+      (∑ S : Finset (Fin [BTree.leaf, BTree.leaf].length),
+        (∏ p ∈ S, coef (([BTree.leaf, BTree.leaf] : List BTree).get p)) *
+          (∏ p ∈ Sᶜ, ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.convAt t₂ coef
+              (([BTree.leaf, BTree.leaf] : List BTree).get p) j))
+        = ∏ p : Fin [BTree.leaf, BTree.leaf].length,
+            (coef (([BTree.leaf, BTree.leaf] : List BTree).get p) +
+              ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef
+                  (([BTree.leaf, BTree.leaf] : List BTree).get p) j) := by
+    rw [Finset.prod_add (s := Finset.univ)
+        (f := fun p => coef (([BTree.leaf, BTree.leaf] : List BTree).get p))
+        (g := fun p => ∑ j : Fin t, t₂.A i j *
+          ButcherProduct.convAt t₂ coef
+            (([BTree.leaf, BTree.leaf] : List BTree).get p) j)]
+    rw [Finset.powerset_univ]
+    refine Finset.sum_congr rfl ?_
+    intro S _
+    rw [(Finset.compl_eq_univ_sdiff S).symm]
+  rw [hprod_add]
+  have hsame :
+      ∀ p : Fin [BTree.leaf, BTree.leaf].length,
+        (coef (([BTree.leaf, BTree.leaf] : List BTree).get p) +
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.convAt t₂ coef
+              (([BTree.leaf, BTree.leaf] : List BTree).get p) j)
+          = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) := by
+    intro p
+    fin_cases p <;> simp
+  rw [Finset.prod_congr rfl (fun p _ => hsame p)]
+  rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+  rfl
+
+/-- Per-stage `convAt` value at the mixed root family
+`replicate a leaf ++ replicate b (node [leaf, leaf])` is a product of two
+factors: a leaf factor `(coef leaf + row i)^a` and a double-leaf factor
+`(coef (node [leaf, leaf]) + ∑ j, A i j * (coef leaf + row j)^2)^b`. -/
+private theorem convAt_node_mixed_leaf_double_leaf_at_i_eq
+    {t : ℕ} (t₂ : ButcherTableau t) (coef : BTree → ℝ) (a b : ℕ)
+    (i : Fin t) :
+    ButcherProduct.convAt t₂ coef
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf, BTree.leaf]))) i
+      = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a *
+        (coef (BTree.node [BTree.leaf, BTree.leaf]) +
+          ∑ j : Fin t, t₂.A i j *
+            (coef BTree.leaf + ∑ k : Fin t, t₂.A j k) ^ 2) ^ b := by
+  classical
+  rw [ButcherProduct.convAt_node]
+  have hprod_add :
+      (∑ S : Finset
+          (Fin (List.replicate a BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).length),
+          (∏ p ∈ S,
+            coef ((List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p)) *
+            (∏ p ∈ Sᶜ,
+              ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef
+                  ((List.replicate a BTree.leaf ++
+                      List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p) j))
+        = ∏ p : Fin (List.replicate a BTree.leaf ++
+                        List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).length,
+            (coef ((List.replicate a BTree.leaf ++
+                      List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p) +
+              ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ coef
+                  ((List.replicate a BTree.leaf ++
+                      List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p) j) := by
+    rw [Finset.prod_add (s := Finset.univ)
+        (f := fun p =>
+          coef ((List.replicate a BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p))
+        (g := fun p =>
+          ∑ j : Fin t, t₂.A i j *
+            ButcherProduct.convAt t₂ coef
+              ((List.replicate a BTree.leaf ++
+                  List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p) j)]
+    rw [Finset.powerset_univ]
+    refine Finset.sum_congr rfl ?_
+    intro S _
+    rw [(Finset.compl_eq_univ_sdiff S).symm]
+  rw [hprod_add]
+  have hlen : (List.replicate a BTree.leaf ++
+                List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).length = a + b := by
+    simp [List.length_append, List.length_replicate]
+  let e :
+      Fin (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).length ≃
+        Fin (a + b) :=
+    { toFun := Fin.cast hlen
+      invFun := Fin.cast hlen.symm
+      left_inv := fun _ => by ext; rfl
+      right_inv := fun _ => by ext; rfl }
+  let F : Fin (a + b) → ℝ := fun p =>
+    coef ((List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get
+            (Fin.cast hlen.symm p)) +
+      ∑ j : Fin t, t₂.A i j *
+        ButcherProduct.convAt t₂ coef
+          ((List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get
+            (Fin.cast hlen.symm p)) j
+  have hreindex :
+      (∏ p : Fin (List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).length,
+          (coef ((List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p) +
+            ∑ j : Fin t, t₂.A i j *
+              ButcherProduct.convAt t₂ coef
+                ((List.replicate a BTree.leaf ++
+                    List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get p) j))
+        = ∏ p : Fin (a + b), F p := by
+    apply Fintype.prod_equiv e
+    intro p
+    simp [e, F]
+  rw [hreindex]
+  rw [Fin.prod_univ_add]
+  have hleaf_factor : (∏ j : Fin a, F (Fin.castAdd b j))
+      = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a := by
+    have h : ∀ j : Fin a, F (Fin.castAdd b j)
+            = coef BTree.leaf + ∑ j : Fin t, t₂.A i j := by
+      intro j
+      have hpos : ((Fin.cast hlen.symm (Fin.castAdd b j)) : ℕ) < a := by
+        change ((Fin.castAdd b j) : ℕ) < a
+        have : ((Fin.castAdd b j) : ℕ) = (j : ℕ) := rfl
+        rw [this]
+        exact j.isLt
+      have hpos' :
+          ((Fin.cast hlen.symm (Fin.castAdd b j)) : ℕ) <
+            (List.replicate a BTree.leaf).length := by
+        simp [List.length_replicate]
+      have hget :
+          (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get
+            (Fin.cast hlen.symm (Fin.castAdd b j)) = BTree.leaf := by
+        simp [List.get_eq_getElem, List.getElem_append_left]
+      show F (Fin.castAdd b j) = _
+      simp [F, ButcherProduct.convAt_leaf]
+    calc (∏ j : Fin a, F (Fin.castAdd b j))
+        = ∏ _ : Fin a, (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) :=
+            Finset.prod_congr rfl (fun j _ => h j)
+      _ = (coef BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a := by
+            rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+  have hdl_factor : (∏ j : Fin b, F (Fin.natAdd a j))
+      = (coef (BTree.node [BTree.leaf, BTree.leaf]) +
+          ∑ j : Fin t, t₂.A i j *
+            (coef BTree.leaf + ∑ k : Fin t, t₂.A j k) ^ 2) ^ b := by
+    have h : ∀ j : Fin b, F (Fin.natAdd a j)
+            = coef (BTree.node [BTree.leaf, BTree.leaf]) +
+                ∑ j : Fin t, t₂.A i j *
+                  (coef BTree.leaf + ∑ k : Fin t, t₂.A j k) ^ 2 := by
+      intro j
+      have hge : a ≤ ((Fin.cast hlen.symm (Fin.natAdd a j)) : ℕ) := by
+        change a ≤ ((Fin.natAdd a j) : ℕ)
+        have : ((Fin.natAdd a j) : ℕ) = a + (j : ℕ) := rfl
+        rw [this]
+        exact Nat.le_add_right _ _
+      have hge' :
+          (List.replicate a BTree.leaf).length ≤
+            ((Fin.cast hlen.symm (Fin.natAdd a j)) : ℕ) := by
+        simp [List.length_replicate]
+      have hget :
+          (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])).get
+            (Fin.cast hlen.symm (Fin.natAdd a j))
+              = BTree.node [BTree.leaf, BTree.leaf] := by
+        simp [List.get_eq_getElem, List.getElem_append_right]
+      show F (Fin.natAdd a j) = _
+      simp only [F, hget]
+      congr 1
+      refine Finset.sum_congr rfl ?_
+      intro k _
+      rw [convAt_double_leaf_eq]
+    calc (∏ j : Fin b, F (Fin.natAdd a j))
+        = ∏ _ : Fin b, (coef (BTree.node [BTree.leaf, BTree.leaf]) +
+              ∑ j : Fin t, t₂.A i j *
+                (coef BTree.leaf + ∑ k : Fin t, t₂.A j k) ^ 2) :=
+            Finset.prod_congr rfl (fun j _ => h j)
+      _ = (coef (BTree.node [BTree.leaf, BTree.leaf]) +
+              ∑ j : Fin t, t₂.A i j *
+                (coef BTree.leaf + ∑ k : Fin t, t₂.A j k) ^ 2) ^ b := by
+            rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+  rw [hleaf_factor, hdl_factor]
+
+/-- §384 honest convolution closed form on the mixed root family
+`BTree.node (List.replicate a BTree.leaf ++ List.replicate b
+(BTree.node [BTree.leaf, BTree.leaf]))` (cycle 552). The squared
+keep-factor on the double-leaf side keeps the result at the per-stage
+level: the `bConv` value is the first tableau's `bSeries` plus the
+`b`-weighted `Fin t`-sum of the per-stage closed form. -/
+theorem ButcherProduct.bConv_node_mixed_leaf_double_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (a b : ℕ) :
+    ButcherProduct.bConv (t₁.bSeries) t₂
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+        + ∑ i : Fin t, t₂.b i *
+            ((t₁.bSeries BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a *
+              (t₁.bSeries (BTree.node [BTree.leaf, BTree.leaf]) +
+                ∑ j : Fin t, t₂.A i j *
+                  (t₁.bSeries BTree.leaf + ∑ k : Fin t, t₂.A j k) ^ 2) ^ b) := by
+  unfold ButcherProduct.bConv
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [convAt_node_mixed_leaf_double_leaf_at_i_eq]
+
+/-- Headline §384 corollary on the mixed leaf / double-leaf root family
+(cycle 552, fallback path): the product `bSeries` decomposes into the
+first tableau's `bSeries` plus a `b`-weighted `Fin t`-sum of the
+per-stage closed form. Cycle 553 will deliver the explicit cut-form
+powerset expansion. -/
+theorem ButcherProduct.bSeries_node_mixed_leaf_double_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (a b : ℕ) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+        + ∑ i : Fin t, t₂.b i *
+            ((t₁.bSeries BTree.leaf + ∑ j : Fin t, t₂.A i j) ^ a *
+              (t₁.bSeries (BTree.node [BTree.leaf, BTree.leaf]) +
+                ∑ j : Fin t, t₂.A i j *
+                  (t₁.bSeries BTree.leaf + ∑ k : Fin t, t₂.A j k) ^ 2) ^ b) := by
+  rw [ButcherProduct.bSeries_eq_bConv,
+      ButcherProduct.bConv_node_mixed_leaf_double_leaf_eq]
+
 
 end ButcherTableau
