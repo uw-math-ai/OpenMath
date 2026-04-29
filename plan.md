@@ -1256,10 +1256,23 @@ Concrete next steps:
   `bSeriesConv α β τ = bSeriesConvAug ⟨1, α⟩ ⟨0, β⟩ τ`, and the depth-2
   unital associativity sanity check
   `mul_assoc_at_node_singleton_leaf` (plus depth-0/1 corollaries
-  `mul_assoc_at_leaf` / `mul_assoc_at_node_nil`). The next step is to
-  lift the unital depth-2 check to all trees by `BTree.rec` (requires a
-  list-level reindexing combinator on `innerCutForest`, same family as
-  cycles 569/570). Only after that do we have the algebraic hammer to
+  `mul_assoc_at_leaf` / `mul_assoc_at_node_nil`). Cycle 585 added the
+  symmetric root split `bSeriesConvAug_node` and the depth-2 sanity
+  `mul_assoc_at_node_node_nil`. Cycle 586 landed the parametric all-leaf
+  closed form `bSeriesConvAug_node_replicate_leaf` and headline
+  associativity `mul_assoc_at_node_replicate_leaf` (plus the `n=2`
+  safety-net `mul_assoc_at_node_two_leaves`). Cycle 588 mirrors the
+  cycle 586 leaf-shape proofs onto the `node []`-shape: the closed form
+  `bSeriesConvAug_node_replicate_node_nil`, headline
+  `mul_assoc_at_node_replicate_node_nil`, and `n=2` safety-net
+  `mul_assoc_at_node_two_node_nils`. Both order-1 subtree shapes
+  (`leaf`, `node []`) now have parametric unital associativity. The
+  next step is to lift the unital depth-2 check to all trees by
+  `BTree.rec` (requires a list-level reindexing combinator on
+  `innerCutForest` that handles partial-trunk cuts on order-≥2
+  subtrees, same family as cycles 569/570 — cycle 587 showed the
+  naive replicate-subtree closed form is **false** for `τ` of
+  order ≥ 2; see `cycle_587.md`). Only after that do we have the algebraic hammer to
   define `G1.inv` and finish `Group (G1 p)`. After the augmented
   convention is fully repaired, the `Group (G1 p)` instance and the
   §389 effective-order interpretation remain. `G1.npow`-style

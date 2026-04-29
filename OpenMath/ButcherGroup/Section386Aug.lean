@@ -338,4 +338,190 @@ theorem mul_assoc_at_node_replicate_leaf
     (β.toFun BTree.leaf) n
     (fun k => γ.toFun (BTree.node (List.replicate k BTree.leaf)))
 
+/-- Cons unfolding of `BTree.innerCutForest` on an empty-node prefix:
+prepending one `node []` splits as cut-head and kept-head over the tail
+forest.  Local copy of the private helper from `Section386Conv` since the
+original is file-private. -/
+private theorem innerCutForest_node_nil_cons_aux (α : BTree → ℝ)
+    (tail : List BTree) :
+    BTree.innerCutForest (BTree.node [] :: tail) α
+      = (BTree.innerCutForest tail α).map
+          (fun cs => (none, α (BTree.node [])) :: cs)
+        ++ (BTree.innerCutForest tail α).map
+          (fun cs => (some (BTree.node []), (1 : ℝ)) :: cs) := by
+  conv_lhs => rw [BTree.innerCutForest]
+  rw [innerCut_node_nil]
+  simp [List.flatMap]
+
+/-- The list enumeration of inner cuts of
+`BTree.node (List.replicate n (BTree.node []))` reindexes to the
+`Finset (Fin n)` powerset sum.  Local analogue of
+`innerCutForest_replicate_leaf_sum` for the `node []` shape; the original
+private lemma in `Section386Conv` is not visible here. -/
+private theorem innerCutForest_replicate_node_nil_sum_aux
+    (α β : BTree → ℝ) (n : ℕ) :
+    (List.filterMap
+        ((fun c => Option.map (fun t => c.2 * β t) c.1) ∘ fun cs =>
+          (some (BTree.node (List.filterMap (fun c => c.1) cs)),
+           List.foldr (fun c acc => c.2 * acc) 1 cs))
+        (BTree.innerCutForest (List.replicate n (BTree.node [])) α)).sum
+      =
+        ∑ S : Finset (Fin n),
+          α (BTree.node []) ^ S.card *
+            β (BTree.node (List.replicate (n - S.card) (BTree.node []))) := by
+  induction n generalizing β with
+  | zero =>
+      rw [cutSum_filterMap_eq_map]
+      simp [BTree.innerCutForest]
+      rw [show (default : Finset (Fin 0)) = ∅ from rfl]
+      simp
+  | succ n ih =>
+      rw [cutSum_filterMap_eq_map β,
+          List.replicate_succ, innerCutForest_node_nil_cons_aux,
+          List.map_append, List.sum_append,
+          List.map_map, List.map_map]
+      have hcut_fun :
+          ((fun cs : List (Option BTree × ℝ) =>
+              List.foldr (fun c acc => c.2 * acc) 1 cs *
+                β (BTree.node (List.filterMap (fun c => c.1) cs))) ∘
+            fun cs => (none, α (BTree.node [])) :: cs)
+            = (fun cs : List (Option BTree × ℝ) =>
+                α (BTree.node []) *
+                  (List.foldr (fun c acc => c.2 * acc) 1 cs *
+                    β (BTree.node (List.filterMap (fun c => c.1) cs)))) := by
+        funext cs
+        simp [Function.comp]
+        ring
+      let β_kept : BTree → ℝ := fun t =>
+        match t with
+        | BTree.leaf => 0
+        | BTree.node xs => β (BTree.node (BTree.node [] :: xs))
+      have hkept_fun :
+          ((fun cs : List (Option BTree × ℝ) =>
+              List.foldr (fun c acc => c.2 * acc) 1 cs *
+                β (BTree.node (List.filterMap (fun c => c.1) cs))) ∘
+            fun cs => (some (BTree.node []), (1 : ℝ)) :: cs)
+            = (fun cs : List (Option BTree × ℝ) =>
+                List.foldr (fun c acc => c.2 * acc) 1 cs *
+                  β_kept (BTree.node (List.filterMap (fun c => c.1) cs))) := by
+        funext cs
+        simp [Function.comp, β_kept, one_mul]
+      rw [hcut_fun, hkept_fun]
+      have hcut_factor :
+          (List.map (fun cs : List (Option BTree × ℝ) =>
+                α (BTree.node []) *
+                  (List.foldr (fun c acc => c.2 * acc) 1 cs *
+                    β (BTree.node (List.filterMap (fun c => c.1) cs))))
+              (BTree.innerCutForest (List.replicate n (BTree.node [])) α)).sum
+            = α (BTree.node []) *
+              (List.filterMap
+                  ((fun c : Option BTree × ℝ =>
+                      Option.map (fun t => c.2 * β t) c.1) ∘ fun cs =>
+                    (some (BTree.node (List.filterMap (fun c => c.1) cs)),
+                     List.foldr (fun c acc => c.2 * acc) 1 cs))
+                  (BTree.innerCutForest (List.replicate n (BTree.node [])) α)).sum := by
+        rw [cutSum_filterMap_eq_map β]
+        induction (BTree.innerCutForest (List.replicate n (BTree.node [])) α) with
+        | nil => simp
+        | cons head tail ih' =>
+            simp [List.map_cons, List.sum_cons, ih', mul_add]
+      rw [hcut_factor]
+      rw [show (List.map (fun cs : List (Option BTree × ℝ) =>
+            List.foldr (fun c acc => c.2 * acc) 1 cs *
+              β_kept (BTree.node (List.filterMap (fun c => c.1) cs)))
+            (BTree.innerCutForest (List.replicate n (BTree.node [])) α))
+          = List.filterMap
+              ((fun c : Option BTree × ℝ =>
+                  Option.map (fun t => c.2 * β_kept t) c.1) ∘ fun cs =>
+                (some (BTree.node (List.filterMap (fun c => c.1) cs)),
+                 List.foldr (fun c acc => c.2 * acc) 1 cs))
+              (BTree.innerCutForest (List.replicate n (BTree.node [])) α) from
+          (cutSum_filterMap_eq_map β_kept _).symm]
+      rw [ih β, ih β_kept]
+      rw [sum_finset_fin_succ_card_eq n
+            (fun k => α (BTree.node []) ^ k *
+              β (BTree.node (List.replicate ((n + 1) - k) (BTree.node []))))]
+      have hkept_match :
+          (∑ S : Finset (Fin n), α (BTree.node []) ^ S.card *
+              β_kept (BTree.node (List.replicate (n - S.card) (BTree.node []))))
+            = ∑ S : Finset (Fin n), α (BTree.node []) ^ S.card *
+                β (BTree.node
+                  (List.replicate ((n + 1) - S.card) (BTree.node []))) := by
+        refine Finset.sum_congr rfl ?_
+        intro S _
+        have hle : S.card ≤ n := by
+          have := S.card_le_univ
+          simpa [Finset.card_univ, Fintype.card_fin] using this
+        congr 2
+        show β_kept (BTree.node (List.replicate (n - S.card) (BTree.node [])))
+              = β (BTree.node
+                  (List.replicate ((n + 1) - S.card) (BTree.node [])))
+        simp [β_kept, ← List.replicate_succ, Nat.succ_sub hle]
+      have hcut_match :
+          α (BTree.node []) *
+              (∑ S : Finset (Fin n), α (BTree.node []) ^ S.card *
+                β (BTree.node (List.replicate (n - S.card) (BTree.node []))))
+            = ∑ S : Finset (Fin n), α (BTree.node []) ^ (S.card + 1) *
+                β (BTree.node
+                  (List.replicate ((n + 1) - (S.card + 1)) (BTree.node []))) := by
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro S _
+        have hsub : (n + 1) - (S.card + 1) = n - S.card := by omega
+        rw [hsub, pow_succ]
+        ring
+      rw [hcut_match, hkept_match]
+      ring
+
+/-- Closed form for `bSeriesConvAug` on a node whose children are `n`
+copies of `BTree.node []`: a `Finset (Fin n)`-powerset sum over which
+empty-node children to cut. -/
+theorem bSeriesConvAug_node_replicate_node_nil (α β : AugSeries) (n : ℕ) :
+    bSeriesConvAug α β (BTree.node (List.replicate n (BTree.node [])))
+      = α.toFun (BTree.node (List.replicate n (BTree.node []))) * β.emptyVal
+        + ∑ S : Finset (Fin n), α.toFun (BTree.node []) ^ S.card *
+            β.toFun (BTree.node
+              (List.replicate (n - S.card) (BTree.node []))) := by
+  rw [bSeriesConvAug_node]
+  congr 1
+  rw [← cutSum_filterMap_eq_map β.toFun]
+  exact innerCutForest_replicate_node_nil_sum_aux α.toFun β.toFun n
+
+/-- **Cycle 588 target**: depth-2 unital associativity of `bSeriesConvAug`
+on every node whose children are `n` copies of `BTree.node []`.
+
+Combines the closed form `bSeriesConvAug_node_replicate_node_nil` with
+the binomial identity `replicate_leaf_assoc_aux`. -/
+theorem mul_assoc_at_node_replicate_node_nil
+    (α β γ : AugSeries)
+    (_ : α.IsUnital) (hβ : β.IsUnital) (hγ : γ.IsUnital) (n : ℕ) :
+    bSeriesConvAug ⟨1, fun τ => bSeriesConvAug α β τ⟩ γ
+        (BTree.node (List.replicate n (BTree.node [])))
+      = bSeriesConvAug α ⟨1, fun τ => bSeriesConvAug β γ τ⟩
+          (BTree.node (List.replicate n (BTree.node []))) := by
+  have hβ' : β.emptyVal = 1 := hβ
+  have hγ' : γ.emptyVal = 1 := hγ
+  rw [bSeriesConvAug_node_replicate_node_nil,
+      bSeriesConvAug_node_replicate_node_nil]
+  dsimp only
+  simp only [bSeriesConvAug_node_nil, bSeriesConvAug_node_replicate_node_nil,
+    hβ', hγ', mul_one, mul_add, Finset.sum_add_distrib]
+  simp_rw [show α.toFun (BTree.node []) + β.toFun (BTree.node [])
+          = β.toFun (BTree.node []) + α.toFun (BTree.node []) from add_comm _ _]
+  linear_combination replicate_leaf_assoc_aux (α.toFun (BTree.node []))
+    (β.toFun (BTree.node [])) n
+    (fun k => γ.toFun (BTree.node (List.replicate k (BTree.node []))))
+
+/-- `n = 2` safety-net specialization of
+`mul_assoc_at_node_replicate_node_nil`. -/
+theorem mul_assoc_at_node_two_node_nils
+    (α β γ : AugSeries)
+    (hα : α.IsUnital) (hβ : β.IsUnital) (hγ : γ.IsUnital) :
+    bSeriesConvAug ⟨1, fun τ => bSeriesConvAug α β τ⟩ γ
+        (BTree.node [BTree.node [], BTree.node []])
+      = bSeriesConvAug α ⟨1, fun τ => bSeriesConvAug β γ τ⟩
+          (BTree.node [BTree.node [], BTree.node []]) := by
+  have h := mul_assoc_at_node_replicate_node_nil α β γ hα hβ hγ 2
+  simpa [List.replicate] using h
+
 end ButcherTableau
