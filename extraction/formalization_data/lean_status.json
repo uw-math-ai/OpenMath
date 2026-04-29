@@ -76,9 +76,9 @@
     "status": "formalized"
   },
   "def:357A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section357.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section357.IsBNStable",
+    "status": "formalized"
   },
   "def:357B": {
     "lean_file": "OpenMath/Chapter3/Section357.lean",

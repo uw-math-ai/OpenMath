@@ -372,6 +372,26 @@ def IsRKOneStep {s : ℕ} (M : RKTableau s) {N : Type*}
     (∀ i, Y i = y₀ + h • ∑ j, M.A i j • f (Y j)) ∧
     y₁ = y₀ + h • ∑ i, M.b i • f (Y i)
 
+/-- Non-autonomous predicate form of "method `M` produces output `y₁`
+after one step of size `h` from initial value `y₀` at time `x₀` on the
+non-autonomous ODE `y' = f(x, y)`".
+
+Captures the implicit stage system
+`Yᵢ = y₀ + h • Σⱼ aᵢⱼ • f(x₀ + cⱼ h, Yⱼ)` together with the update
+`y₁ = y₀ + h • Σᵢ bᵢ • f(x₀ + cᵢ h, Yᵢ)`. As with `IsRKOneStep`, this
+is a `Prop`: any `(Y, y₁)` tuple satisfying both equations witnesses
+the relation, honestly handling the zero/one/many implicit-stage
+solutions case.
+
+Used by `Section357.IsBNStable` (def:357A) and downstream non-linear
+stability results which require the non-autonomous form. -/
+def IsRKOneStepNonAut {s : ℕ} (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : ℝ → N → N) (x₀ : ℝ) (y₀ : N) (h : ℝ) (y₁ : N) : Prop :=
+  ∃ Y : Fin s → N,
+    (∀ i, Y i = y₀ + h • ∑ j, M.A i j • f (x₀ + M.c j * h) (Y j)) ∧
+    y₁ = y₀ + h • ∑ i, M.b i • f (x₀ + M.c i * h) (Y i)
+
 /-- Butcher §380 Definition 381A — two Runge–Kutta methods are
 *equivalent* if, for every autonomous Lipschitz right-hand side `f` and
 every initial value `y₀`, there exists a step-size threshold `h₀ > 0`
