@@ -45,9 +45,9 @@
     "status": "formalized"
   },
   "thm:140A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section140.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section140.linDiffEqSolution, OpenMath.Chapter1.Section140.linDiffEqSolution_closed_form",
+    "status": "formalized"
   },
   "thm:141A": {
     "lean_file": null,
