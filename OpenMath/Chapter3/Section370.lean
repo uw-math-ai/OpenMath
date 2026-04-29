@@ -11,7 +11,7 @@ Ordinary Differential Equations* (3rd ed., page 297).
 
 > A Runge–Kutta method `(A, b, c)` is *symplectic* if
 > \[
->   M = \operatorname{diag}(b) A + A \operatorname{diag}(b) - b b^{\top}
+>   M = \operatorname{diag}(b) A + A^{\top} \operatorname{diag}(b) - b b^{\top}
 > \]
 > is the zero matrix.
 
@@ -21,7 +21,7 @@ The defining identity in entry-wise form (equation (370a)) is
 ## Faithfulness notes
 
 * `symplecticityMatrix R` is the matrix `M` above, defined directly as
-  `Matrix.diagonal R.b * R.A + R.A * Matrix.diagonal R.b -
+  `Matrix.diagonal R.b * R.A + R.A.transpose * Matrix.diagonal R.b -
    Matrix.vecMulVec R.b R.b`.
   `Matrix.vecMulVec b b` is precisely the outer product `b bᵀ`
   (`(Matrix.vecMulVec b b) i j = b i * b j`).
@@ -48,13 +48,13 @@ open OpenMath.Chapter3.Section312
 /-- Butcher §370 — the *symplecticity matrix* of a Runge–Kutta method
 `(A, b, c)`:
 \[
-  M = \operatorname{diag}(b) A + A \operatorname{diag}(b) - b b^{\top}.
+  M = \operatorname{diag}(b) A + A^{\top} \operatorname{diag}(b) - b b^{\top}.
 \]
 Its entry-wise form is `m_{ij} = b_i a_{ij} + b_j a_{ji} − b_i b_j`
 (equation (370a) in the textbook). -/
 def symplecticityMatrix {s : ℕ} (R : RKTableau s) :
     Matrix (Fin s) (Fin s) ℝ :=
-  Matrix.diagonal R.b * R.A + R.A * Matrix.diagonal R.b -
+  Matrix.diagonal R.b * R.A + R.A.transpose * Matrix.diagonal R.b -
     Matrix.vecMulVec R.b R.b
 
 /-- Butcher §370 Definition 370A — a Runge–Kutta method `(A, b, c)` is
@@ -78,7 +78,8 @@ theorem implicitMidpoint_isSymplectic : IsSymplectic implicitMidpoint := by
   ext i j
   fin_cases i
   fin_cases j
-  simp [Matrix.diagonal, Matrix.vecMulVec, Matrix.mul_apply]
+  simp [Matrix.diagonal, Matrix.vecMulVec, Matrix.mul_apply,
+        Matrix.transpose_apply]
   ring
 
 end OpenMath.Chapter3.Section370

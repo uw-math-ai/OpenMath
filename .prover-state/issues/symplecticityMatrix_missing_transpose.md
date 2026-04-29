@@ -1,5 +1,34 @@
 # Issue: `symplecticityMatrix` is defined without a transpose, restricting algebraic stability to symmetric `A`
 
+## Resolution (cycle 034) — RESOLVED
+
+Solution 1 (the recommended fix) was applied:
+
+* `OpenMath/Chapter3/Section370.lean:55–58` — the second `R.A` is now
+  `R.A.transpose`, so `symplecticityMatrix R` unfolds entry-wise to the
+  textbook form `m_{ij} = b_i a_{ij} + b_j a_{ji} − b_i b_j`.
+* `OpenMath/Chapter3/Section370.lean:81` —
+  `implicitMidpoint_isSymplectic` still goes through (the `s = 1` 1×1
+  case is invariant under transpose); only `Matrix.transpose_apply` was
+  added to the simp set for clarity.
+* `OpenMath/Chapter3/Section357.lean` —
+  `algebraicallyStable_imp_A_symm` was deleted (no longer provable, no
+  longer needed), and the `hSym` hypothesis on
+  `symplecticityMatrix_quadratic_form_eq` was dropped. The proof of
+  the lemma now uses an `i ↔ j` index-swap argument that works for
+  every `RKTableau`. The call site in
+  `algebraicallyStable_isBNStable` was updated to pass one fewer
+  argument.
+
+After the fix, `IsAlgebraicallyStable` no longer silently entails
+symmetric `A`, so the predicate covers all RK methods (including
+explicit and Gauss–Legendre methods of order ≥ 4) as the textbook
+intends. The cycle-033 `algebraicallyStable_isBNStable` proof was
+preserved end-to-end with simpler intermediate lemmas; axioms are
+unchanged at `[propext, Classical.choice, Quot.sound]`.
+
+Predecessor commit: `903c17bb`. The cycle-034 fix commit follows.
+
 ## Blocker
 
 The current definition (cycle 027, `OpenMath/Chapter3/Section370.lean:55–58`)

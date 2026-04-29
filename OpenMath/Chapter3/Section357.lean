@@ -248,83 +248,52 @@ where `F i = f(x₀ + cᵢ h, Y i)`. Under algebraic stability:
   `∑ symplecticityMatrix M i j ⟨F_i, F_j⟩`, which is `≥ 0` because the
   symplecticity matrix is positive semidefinite.
 
-Note: the existing `symplecticityMatrix` (cycle 027) unfolds to
-`(b_i + b_j) a_{ij} − b_i b_j` rather than the textbook's
-`b_i a_{ij} + b_j a_{ji} − b_i b_j`. Both forms are symmetric only when `A`
-is symmetric, and indeed positive-semidefiniteness (which entails Hermitian
-= symmetric over ℝ) together with `b_i > 0` forces `A i j = A j i`. Under
-that derived hypothesis the two forms agree, so the algebraic identity (in
-its Lean form using `2 b_i a_{ij} − b_i b_j`) coincides with the form built
-from the symplecticity matrix.
+`symplecticityMatrix M` is the textbook form
+`m_{ij} = b_i a_{ij} + b_j a_{ji} − b_i b_j` (equation (357d) and
+equivalently (370a)); the proof below uses this form directly via
+the index-swap identity in Lemma 1, which holds for **all** `M`
+without an `A` symmetric hypothesis.
 -/
 
-/-- Algebraic stability forces the coefficient matrix `A` to be symmetric.
-
-The symplecticity matrix `M` (as defined in `Section370`) has entries
-`M_{ij} = (b_i + b_j) a_{ij} − b_i b_j`. Positive-semidefiniteness implies
-Hermitian (= symmetric over ℝ), giving `(b_i + b_j)(a_{ij} − a_{ji}) = 0`,
-and `b_i + b_j > 0` (since each `b_i > 0`) yields `a_{ij} = a_{ji}`. -/
-private lemma algebraicallyStable_imp_A_symm {s : ℕ} {M : RKTableau s}
-    (hAS : IsAlgebraicallyStable M) :
-    ∀ i j, M.A i j = M.A j i := by
-  obtain ⟨hb_pos, hM_psd⟩ := hAS
-  have hHerm : (symplecticityMatrix M).IsHermitian := hM_psd.isHermitian
-  intro i j
-  have hij : symplecticityMatrix M i j = symplecticityMatrix M j i := by
-    have := (Matrix.IsHermitian.ext_iff).1 hHerm j i
-    simpa using this
-  -- Unfold both entries and conclude.
-  have hL : symplecticityMatrix M i j =
-      M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j := by
-    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal,
-          Matrix.vecMulVec, Matrix.sub_apply, Matrix.add_apply]
-  have hR : symplecticityMatrix M j i =
-      M.b j * M.A j i + M.A j i * M.b i - M.b j * M.b i := by
-    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal,
-          Matrix.vecMulVec, Matrix.sub_apply, Matrix.add_apply]
-  rw [hL, hR] at hij
-  -- (b i + b j) * A i j = (b i + b j) * A j i
-  have hbij : 0 < M.b i + M.b j := add_pos (hb_pos i) (hb_pos j)
-  have heq : (M.b i + M.b j) * M.A i j = (M.b i + M.b j) * M.A j i := by linarith
-  exact mul_left_cancel₀ (ne_of_gt hbij) heq
-
-/-- Lemma 1 — symmetrisation: under `A` symmetric, the asymmetric form
-`(2 bᵢ aᵢⱼ − bᵢ bⱼ)` and the symmetric form `(bᵢ + bⱼ) aᵢⱼ − bᵢ bⱼ`
-(= `symplecticityMatrix M i j`) yield the same quadratic form when paired
-with the symmetric Gram matrix `⟨Fᵢ, Fⱼ⟩`.
-
-The pointwise difference `(bᵢ − bⱼ) aᵢⱼ ⟨Fᵢ, Fⱼ⟩` summed over all
-`(i, j)` vanishes by the swap `i ↔ j` together with `aᵢⱼ = aⱼᵢ` and
-`⟨Fⱼ, Fᵢ⟩ = ⟨Fᵢ, Fⱼ⟩`. -/
+/-- Lemma 1 — entry-wise unfolding plus an index-swap identity:
+the quadratic form built from the asymmetric coefficient
+`(2 bᵢ aᵢⱼ − bᵢ bⱼ)` agrees with the quadratic form built from
+`symplecticityMatrix M`. The equality holds for **every**
+`RKTableau` — no `A` symmetric hypothesis is needed once
+`symplecticityMatrix` is the textbook form
+`m_{ij} = bᵢ aᵢⱼ + aⱼᵢ bⱼ − bᵢ bⱼ`. The argument is `Finset.sum_comm`
+together with `⟨Fⱼ, Fᵢ⟩ = ⟨Fᵢ, Fⱼ⟩`. -/
 private lemma symplecticityMatrix_quadratic_form_eq {s : ℕ}
-    (M : RKTableau s) (hSym : ∀ i j, M.A i j = M.A j i) {N : Type*}
+    (M : RKTableau s) {N : Type*}
     [NormedAddCommGroup N] [InnerProductSpace ℝ N]
     (F : Fin s → N) :
     ∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
         inner ℝ (F i) (F j)
     = ∑ i, ∑ j, symplecticityMatrix M i j * inner ℝ (F i) (F j) := by
-  -- Step 1: unfold symplecticityMatrix entry-wise.
+  -- Step 1: unfold symplecticityMatrix entry-wise to the textbook form.
   have hM : ∀ i j, symplecticityMatrix M i j =
-      M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j := by
+      M.b i * M.A i j + M.A j i * M.b j - M.b i * M.b j := by
     intro i j
-    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal,
-          Matrix.vecMulVec, Matrix.sub_apply, Matrix.add_apply]
-  -- Step 2: rewrite the goal so both sides have the same shape with explicit
+    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal_apply,
+          Matrix.vecMulVec, Matrix.transpose_apply, Matrix.sub_apply,
+          Matrix.add_apply]
+  -- Step 2: rewrite the RHS so both sides have the same shape with explicit
   -- coefficients depending on `M.b` and `M.A`.
   have rhs_rewrite :
       (∑ i, ∑ j, symplecticityMatrix M i j * inner ℝ (F i) (F j))
-      = ∑ i, ∑ j, (M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j)
+      = ∑ i, ∑ j, (M.b i * M.A i j + M.A j i * M.b j - M.b i * M.b j)
                   * inner ℝ (F i) (F j) := by
     refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
     rw [hM]
   rw [rhs_rewrite]
-  -- Step 3: show the key symmetry identity
-  -- ∑ᵢⱼ M.A i j * M.b j * ⟨F i, F j⟩ = ∑ᵢⱼ M.b i * M.A i j * ⟨F i, F j⟩
-  have hswap : ∑ i, ∑ j, M.A i j * M.b j * inner ℝ (F i) (F j)
+  -- Step 3: the key index-swap identity:
+  --   ∑ᵢⱼ a_{ji} b_j ⟨F i, F j⟩ = ∑ᵢⱼ b_i a_{ij} ⟨F i, F j⟩
+  -- via i ↔ j swap and ⟨F j, F i⟩ = ⟨F i, F j⟩.
+  have hswap : ∑ i, ∑ j, M.A j i * M.b j * inner ℝ (F i) (F j)
              = ∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j) := by
     rw [Finset.sum_comm]
     refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
-    rw [hSym j i, real_inner_comm (F j) (F i)]
+    rw [real_inner_comm (F j) (F i)]
     ring
   -- Step 4: split both sides into the linear pieces and use hswap.
   have lhs_split :
@@ -335,10 +304,10 @@ private lemma symplecticityMatrix_quadratic_form_eq {s : ℕ}
     refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
     ring
   have rhs_split :
-      (∑ i, ∑ j, (M.b i * M.A i j + M.A i j * M.b j - M.b i * M.b j)
+      (∑ i, ∑ j, (M.b i * M.A i j + M.A j i * M.b j - M.b i * M.b j)
                 * inner ℝ (F i) (F j))
       = (∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j))
-        + (∑ i, ∑ j, M.A i j * M.b j * inner ℝ (F i) (F j))
+        + (∑ i, ∑ j, M.A j i * M.b j * inner ℝ (F i) (F j))
         - (∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j)) := by
     simp only [add_mul, sub_mul, ← Finset.sum_sub_distrib, ← Finset.sum_add_distrib]
   rw [lhs_split, rhs_split, hswap]
@@ -513,8 +482,6 @@ theorem algebraicallyStable_isBNStable
   intro N _ _ f hDiss x₀ y₀ h hh y₁ hStep
   obtain ⟨Y, hY_stage, hy_update⟩ := hStep
   obtain ⟨hb_pos, hM_psd⟩ := hAS
-  have hA_sym : ∀ i j, M.A i j = M.A j i :=
-    algebraicallyStable_imp_A_symm ⟨hb_pos, hM_psd⟩
   -- Define F i := f (x₀ + c i * h) (Y i).
   set F : Fin s → N := fun i => f (x₀ + M.c i * h) (Y i) with hF_def
   have hY_stage' : ∀ i, Y i = y₀ + h • ∑ j, M.A i j • F j := hY_stage
@@ -532,7 +499,7 @@ theorem algebraicallyStable_isBNStable
     simpa [F, hF_def] using hDiss (x₀ + M.c i * h) (Y i)
   -- Second term: equals symplecticity-matrix quadratic form via Lemma 1,
   -- and is ≥ 0 via Lemma 3.
-  have hForm := symplecticityMatrix_quadratic_form_eq M hA_sym F
+  have hForm := symplecticityMatrix_quadratic_form_eq M F
   have hSecond : 0 ≤ ∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
                                  inner ℝ (F i) (F j) := by
     rw [hForm]
