@@ -2524,6 +2524,42 @@ theorem product_congr_node_trivial_children
     omega
   rw [hleaf, hsub]
 
+/-- **Cycle 572 headline**: the unrestricted product congruence for
+`IsG1Equiv`. With `bSeriesConv_consistency` available, the product respects
+`G₁(p)` equivalence on every tree of order ≤ `p`, with no shape restriction
+on `τ`. This subsumes all of the cycle 540–565
+`product_congr_node_*` slice lemmas. -/
+theorem product_congr
+    {s u s' u' p : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv u} {r' : QuotEquiv u'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r') :
+    IsG1Equiv p (q.product r) (q'.product r') := by
+  intro τ hτ
+  induction q using Quotient.inductionOn with
+  | _ t₁ =>
+    induction q' using Quotient.inductionOn with
+    | _ t₁' =>
+      induction r using Quotient.inductionOn with
+      | _ t₂ =>
+        induction r' using Quotient.inductionOn with
+        | _ t₂' =>
+          -- α-locality hypothesis from `hq`.
+          have hα : ∀ τ' : BTree, τ'.order ≤ p →
+              t₁.bSeries τ' = t₁'.bSeries τ' := by
+            intro τ' hτ'
+            exact hq τ' hτ'
+          -- β-locality hypothesis from `hr`.
+          have hβ : ∀ τ' : BTree, τ'.order ≤ p →
+              t₂.bSeries τ' = t₂'.bSeries τ' := by
+            intro τ' hτ'
+            exact hr τ' hτ'
+          -- Goal: B-series of the products at τ agree on representatives.
+          show (ButcherProduct t₁ t₂).bSeries τ = (ButcherProduct t₁' t₂').bSeries τ
+          rw [ButcherProduct.bSeriesConv_consistency,
+              ButcherProduct.bSeriesConv_consistency]
+          rw [hα τ hτ, ButcherTableau.bSeriesConv_congr_of_le hα hβ hτ]
+
 end IsG1Equiv
 
 /-- Cross-stage equivalence implies `G₁` equivalence at every order: equal
@@ -2717,6 +2753,62 @@ theorem eq_one_iff {p : ℕ} (g : G1 p) :
       bSeriesHomAt p τ hτ g = 0 := by
   rw [eq_iff_forall_bSeriesHomAt]
   simp
+
+/-- The §387 group multiplication on `G₁(p)`. Lifts `QuotEquiv.product` along
+the `IsG1Equiv` quotient via `IsG1Equiv.product_congr`. -/
+noncomputable def mul {p : ℕ} : G1 p → G1 p → G1 p :=
+  Quotient.lift₂
+    (fun x y : Σ s : ℕ, QuotEquiv s => mk (p := p) (x.2.product y.2))
+    (by
+      intro x₁ y₁ x₂ y₂ hx hy
+      apply Quotient.sound
+      exact IsG1Equiv.product_congr hx hy)
+
+@[simp] theorem mul_mk {p s u : ℕ} (q : QuotEquiv s) (r : QuotEquiv u) :
+    mul (mk (p := p) q) (mk (p := p) r) = mk (p := p) (q.product r) := rfl
+
+/-- Representative-level `bSeriesHomAt` of a `G₁(p)` product: equals the
+admissible-cut convolution of its representatives' coefficients. This is the
+quotient-level shadow of `ButcherProduct.bSeriesConv_consistency`. -/
+theorem bSeriesHomAt_mul_mk {p s u : ℕ}
+    (q : QuotEquiv s) (r : QuotEquiv u) (τ : BTree) (hτ : τ.order ≤ p) :
+    bSeriesHomAt p τ hτ (mul (mk (p := p) q) (mk (p := p) r)) =
+      q.bSeries τ + bSeriesConv (q.bSeries) (r.bSeries) τ := by
+  induction q using Quotient.inductionOn with
+  | _ t₁ =>
+    induction r using Quotient.inductionOn with
+    | _ t₂ =>
+      show (ButcherProduct t₁ t₂).bSeries τ =
+          t₁.bSeries τ + bSeriesConv (t₁.bSeries) (t₂.bSeries) τ
+      rw [ButcherProduct.bSeriesConv_consistency]
+
+/-- Left identity for `G₁(p)` multiplication. -/
+theorem one_mul {p : ℕ} (g : G1 p) : mul (one p) g = g := by
+  induction g using Quotient.inductionOn with
+  | _ x =>
+    rcases x with ⟨s, q⟩
+    show mul (one p) (mk (p := p) q) = mk (p := p) q
+    unfold one
+    rw [mul_mk]
+    apply Quotient.sound
+    intro τ _
+    show (QuotEquiv.product (Quotient.mk _ trivialTableau) q).bSeries τ
+        = q.bSeries τ
+    exact QuotEquiv.product_bSeries_one_left q τ
+
+/-- Right identity for `G₁(p)` multiplication. -/
+theorem mul_one {p : ℕ} (g : G1 p) : mul g (one p) = g := by
+  induction g using Quotient.inductionOn with
+  | _ x =>
+    rcases x with ⟨s, q⟩
+    show mul (mk (p := p) q) (one p) = mk (p := p) q
+    unfold one
+    rw [mul_mk]
+    apply Quotient.sound
+    intro τ _
+    show (QuotEquiv.product q (Quotient.mk _ trivialTableau)).bSeries τ
+        = q.bSeries τ
+    exact QuotEquiv.product_bSeries_one_right q τ
 
 end G1
 

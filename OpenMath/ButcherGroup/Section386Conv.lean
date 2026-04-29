@@ -889,4 +889,148 @@ theorem ButcherProduct.bSeriesConv_consistency
       = t₁.bSeries τ + bSeriesConv (t₁.bSeries) (t₂.bSeries) τ := by
   rw [ButcherProduct.bSeries_eq_split, bSeriesConv_eq_b_weighted_convAt]
 
+/-! ### Cycle 572: locality of `bSeriesConv` in its coefficient maps.
+
+`bSeriesConv α β τ` evaluates `α` and `β` only on subtrees of `τ`. This
+locality is the structural prerequisite for the unrestricted
+`IsG1Equiv.product_congr` lift in `OpenMath/ButcherGroup.lean`. -/
+
+/-- Locality of `BTree.innerCut` in the cut coefficient `α`. If two
+coefficient maps agree on every tree of order at most `p`, the inner-cut
+list is the same on every tree of order ≤ `p`. -/
+private theorem innerCut_eq_of_agree {α α' : BTree → ℝ} {p : ℕ}
+    (hα : ∀ t : BTree, t.order ≤ p → α t = α' t) :
+    ∀ τ : BTree, τ.order ≤ p → τ.innerCut α = τ.innerCut α' := by
+  intro τ
+  induction τ using BTree.rec
+    (motive_2 := fun children =>
+      (∀ c ∈ children, c.order ≤ p) →
+        BTree.innerCutForest children α = BTree.innerCutForest children α')
+    with
+  | leaf =>
+      intro h
+      rw [innerCut_leaf, innerCut_leaf, hα BTree.leaf h]
+  | node children IH =>
+      intro h
+      have hchild_le : ∀ c ∈ children, c.order ≤ p := by
+        intro c hc
+        have hc_in : c.order ∈ children.map BTree.order :=
+          List.mem_map_of_mem hc
+        have hsum : c.order ≤ (children.map BTree.order).sum :=
+          List.single_le_sum (fun n _ => Nat.zero_le n) _ hc_in
+        rw [BTree.order_node_sum] at h
+        omega
+      rw [innerCut_node, innerCut_node, hα _ h, IH hchild_le]
+  | nil =>
+      rw [BTree.innerCutForest, BTree.innerCutForest]
+  | cons head tail ih_head ih_tail =>
+      rename_i h
+      have h_head : head.order ≤ p := h head List.mem_cons_self
+      have h_tail : ∀ c ∈ tail, c.order ≤ p := fun c hc =>
+        h c (List.mem_cons_of_mem _ hc)
+      have eq_head : head.innerCut α = head.innerCut α' := ih_head h_head
+      have eq_tail : BTree.innerCutForest tail α = BTree.innerCutForest tail α' :=
+        ih_tail h_tail
+      rw [BTree.innerCutForest, BTree.innerCutForest, eq_head, eq_tail]
+
+/-- Structural invariant: every trunk option produced by `BTree.innerCut τ α`
+has order at most `τ.order`. The cut coefficient `α` does not affect the
+list of trunk options. -/
+private theorem innerCut_trunk_order_le
+    (α : BTree → ℝ) (τ : BTree) :
+    ∀ c ∈ τ.innerCut α, ∀ t : BTree, c.1 = some t → t.order ≤ τ.order := by
+  induction τ using BTree.rec
+    (motive_2 := fun children =>
+      ∀ cs ∈ BTree.innerCutForest children α,
+        ((cs.filterMap (fun c => c.1)).map BTree.order).sum
+          ≤ (children.map BTree.order).sum) with
+  | leaf =>
+      intro c hc t ht
+      rw [innerCut_leaf] at hc
+      simp [List.mem_cons] at hc
+      rcases hc with hc | hc
+      · rw [hc] at ht
+        simp at ht
+        rw [← ht]
+      · rw [hc] at ht
+        simp at ht
+  | node children IH =>
+      intro c hc t ht
+      rw [innerCut_node] at hc
+      simp only [List.mem_cons] at hc
+      rcases hc with hc | hc
+      · rw [hc] at ht; simp at ht
+      · rw [List.mem_map] at hc
+        obtain ⟨cs, hcs, heq⟩ := hc
+        rw [← heq] at ht
+        simp at ht
+        rw [← ht, BTree.order_node_sum, BTree.order_node_sum]
+        have hbound := IH cs hcs
+        omega
+  | nil =>
+      rename_i cs hcs
+      rw [BTree.innerCutForest] at hcs
+      simp at hcs
+      subst hcs
+      simp
+  | cons head tail ih_head ih_tail =>
+      rename_i cs hcs
+      rw [BTree.innerCutForest] at hcs
+      rw [List.mem_flatMap] at hcs
+      obtain ⟨c, hc, hin⟩ := hcs
+      rw [List.mem_map] at hin
+      obtain ⟨tail_cs, htail_cs, heq⟩ := hin
+      rw [← heq]
+      have htail_bound :
+          ((tail_cs.filterMap (fun d => d.1)).map BTree.order).sum
+            ≤ (tail.map BTree.order).sum := ih_tail tail_cs htail_cs
+      simp only [List.map_cons, List.sum_cons]
+      cases hopt : c.1 with
+      | none =>
+          simp [hopt]
+          omega
+      | some t =>
+          have ht_bound : t.order ≤ head.order :=
+            ih_head c hc t hopt
+          simp [hopt, List.map_cons, List.sum_cons]
+          omega
+
+/-- List-level β-locality: replacing `β` by `β'` agreeing on entries with
+trunk-order at most `p` keeps the filterMap-sum invariant. -/
+private theorem sum_filterMap_β_eq_of_agree
+    {β β' : BTree → ℝ} {p : ℕ}
+    (hβ : ∀ t : BTree, t.order ≤ p → β t = β' t)
+    (L : List (Option BTree × ℝ))
+    (hL : ∀ c ∈ L, ∀ t : BTree, c.1 = some t → t.order ≤ p) :
+    (L.filterMap (fun c => c.1.map (fun t => c.2 * β t))).sum
+      = (L.filterMap (fun c => c.1.map (fun t => c.2 * β' t))).sum := by
+  induction L with
+  | nil => simp
+  | cons c tail ih =>
+      have hctail : ∀ c' ∈ tail, ∀ t, c'.1 = some t → t.order ≤ p :=
+        fun c' hc' => hL c' (List.mem_cons_of_mem _ hc')
+      cases hopt : c.1 with
+      | none =>
+          simp [hopt, ih hctail]
+      | some t =>
+          have ht : t.order ≤ p :=
+            hL c List.mem_cons_self t hopt
+          simp [hopt, ih hctail, hβ t ht]
+
+/-- **Headline locality** for `bSeriesConv`: replacing both coefficient
+maps `α, β` by `α', β'` agreeing on trees of order ≤ `p` keeps
+`bSeriesConv α β τ` invariant for every `τ` of order ≤ `p`. -/
+theorem bSeriesConv_congr_of_le
+    {α α' β β' : BTree → ℝ} {p : ℕ}
+    (hα : ∀ t : BTree, t.order ≤ p → α t = α' t)
+    (hβ : ∀ t : BTree, t.order ≤ p → β t = β' t)
+    {τ : BTree} (hτ : τ.order ≤ p) :
+    bSeriesConv α β τ = bSeriesConv α' β' τ := by
+  unfold bSeriesConv
+  rw [innerCut_eq_of_agree hα τ hτ]
+  apply sum_filterMap_β_eq_of_agree hβ
+  intro c hc t ht
+  have := innerCut_trunk_order_le α' τ c hc t ht
+  exact this.trans hτ
+
 end ButcherTableau
