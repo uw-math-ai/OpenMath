@@ -390,10 +390,12 @@ codebase.
   `G1.hasTreeOrder_zero_one`, and `G1.eq_one_iff`.
   Cycle 541 landed `IsG1Equiv.product_congr_le_two`, the first tracked
   order-restricted product-congruence slice toward `G1.mul`
-  well-definedness.
-  The monoid/group structure on `G1 p`
-  is open and now recorded as blocked on the §384 convolution gap;
-  see `.prover-state/issues/butcher_g1_mul_section384_blocker.md`.
+  well-definedness. Cycle 572 closed unrestricted
+  `IsG1Equiv.product_congr`, lifted `G1.mul`, `G1.mul_mk`,
+  `G1.bSeriesHomAt_mul_mk`, and proved `G1.one_mul` / `G1.mul_one`.
+  Cycle 573 added `G1.mul_assoc` and the noncomputable
+  `Monoid (G1 p)` instance, closing §38 at the monoid level; remaining
+  group-level work is the unit-stage inverse/subgroup layer.
 - [~] **§384 A homomorphism between two groups** — bridge from RK
   composition to the formal-power-series group on rooted trees.
   Cycle 503 landed identity prep for `bSeries` under `QuotEquiv.product`:
@@ -594,9 +596,10 @@ codebase.
   `QuotEquiv.cSum_npow_three`. Cycle 513 added the `n = 4` corollaries
   `QuotEquiv.weightsSum_npow_four` / `QuotEquiv.cSum_npow_four` and the
   redundant closed-form stage-count corollary
-  `QuotEquiv.npowStages_npow_eq_npowStages_mul`. Inverse
-  and non-trivial power-homomorphism constructions remain open
-  (the latter blocked by the §384 convolution gap).
+  `QuotEquiv.npowStages_npow_eq_npowStages_mul`. Cycles 572-573 lifted
+  the quotient product to `G1 p`, proved both identity laws and
+  associativity, and installed the noncomputable `Monoid (G1 p)` instance.
+  Inverses remain open on the unit-stage subgroup.
 - [ ] **§388 Some subgroups and quotient groups**.
 - [ ] **§389 An algebraic interpretation of effective order** — connects
   to §365 above.

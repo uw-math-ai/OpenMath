@@ -2810,6 +2810,32 @@ theorem mul_one {p : ℕ} (g : G1 p) : mul g (one p) = g := by
         = q.bSeries τ
     exact QuotEquiv.product_bSeries_one_right q τ
 
+/-- Associativity for `G₁(p)` multiplication. -/
+theorem mul_assoc {p : ℕ} (g₁ g₂ g₃ : G1 p) :
+    mul (mul g₁ g₂) g₃ = mul g₁ (mul g₂ g₃) := by
+  induction g₁ using Quotient.inductionOn with
+  | _ x₁ =>
+    induction g₂ using Quotient.inductionOn with
+    | _ x₂ =>
+      induction g₃ using Quotient.inductionOn with
+      | _ x₃ =>
+        rcases x₁ with ⟨s, q₁⟩
+        rcases x₂ with ⟨t, q₂⟩
+        rcases x₃ with ⟨u, q₃⟩
+        show mul (mul (mk (p := p) q₁) (mk (p := p) q₂)) (mk (p := p) q₃)
+            = mul (mk (p := p) q₁) (mul (mk (p := p) q₂) (mk (p := p) q₃))
+        simp only [mul_mk]
+        apply Quotient.sound
+        intro τ _
+        exact QuotEquiv.bSeriesHom_assoc q₁ q₂ q₃ τ
+
+noncomputable instance instMonoid (p : ℕ) : Monoid (G1 p) where
+  mul := mul
+  one := one p
+  mul_assoc := mul_assoc
+  one_mul := one_mul
+  mul_one := mul_one
+
 end G1
 
 end ButcherTableau
