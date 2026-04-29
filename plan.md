@@ -603,9 +603,15 @@ codebase.
   `QuotEquiv.npow` via `G1.mk_pow`, computed the headline
   `G1.bSeriesHomAt_pow`, and exported the short corollaries
   `G1.bSeriesHomAt_pow_zero`, `G1.bSeriesHomAt_pow_one`, and
-  `G1.one_pow_eq`. Inverses remain open on the unit-stage subgroup;
-  `G1.npow`-style stage-count arithmetic is closed.
-- [ ] **§388 Some subgroups and quotient groups**.
+  `G1.one_pow_eq`. Cycle 575 started the §388 inverse layer with
+  `QuotEquiv.IsUnit`, guarded `G1.IsUnit`, the proper-cut helper
+  `bSeriesConvNonRoot`, and the terminating recursive
+  `QuotEquiv.inverseCoeff` with its leaf sanity lemma. Inverse identities
+  remain open on the unit-stage subgroup; `G1.npow`-style stage-count
+  arithmetic is closed.
+- [~] **§388 Some subgroups and quotient groups** — inverse coefficient
+  recursion landed in cycle 575; product inverse identities and the group
+  instance remain open.
 - [ ] **§389 An algebraic interpretation of effective order** — connects
   to §365 above.
 
@@ -1219,14 +1225,15 @@ Concrete next steps:
   precisely the §384 convolution. See
   `.prover-state/issues/butcher_g1_mul_section384_blocker.md` and
   `.prover-state/issues/butcher_section384_convolution.md`.
-- §38 remains the current target. As of cycle 574 the §384 convolution
+- §38 remains the current target. As of cycle 575 the §384 convolution
   is closed, `G1.mul` / identity laws / `mul_assoc` / the `Monoid (G1 p)`
   instance are landed (cycles 572–573), and `Monoid.npow` `^` powers are
   bridged to `QuotEquiv.npow` via `G1.mk_pow` and the headline
-  `G1.bSeriesHomAt_pow` (cycle 574). The next §38 layer is the §388
-  inverse construction on the unit-stage subgroup of `G1 p` (recursion
-  on tree order to solve inverse coefficients); after that, the
-  `Group (G1 p)` instance and the §389 effective-order interpretation.
+  `G1.bSeriesHomAt_pow` (cycle 574). Cycle 575 landed the §388 unit
+  predicates plus the terminating `QuotEquiv.inverseCoeff` recursion on
+  tree order. The next §38 layer is the Möbius inversion identity for
+  these coefficients on the unit-stage subgroup of `G1 p`; after that,
+  the `Group (G1 p)` instance and the §389 effective-order interpretation.
   `G1.npow`-style stage-count arithmetic is closed.
 
 Expected sorry-first surface:

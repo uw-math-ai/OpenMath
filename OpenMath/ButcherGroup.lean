@@ -33,6 +33,15 @@ namespace ButcherTableau
 
 variable {s : ℕ}
 
+/-- Proper bSeries-side cut convolution for inverse recursion.  The no-cut
+trunk has the same order as `τ`, so this helper asks only for coefficients of
+strictly smaller trunks and contributes `0` to the no-cut branch. -/
+noncomputable def bSeriesConvNonRoot (α : BTree → ℝ) (τ : BTree)
+    (β : ∀ σ : BTree, σ.order < τ.order → ℝ) : ℝ :=
+  ((τ.innerCut α).filterMap fun c =>
+    c.1.map fun trunk =>
+      if h : trunk.order < τ.order then c.2 * β trunk h else 0).sum
+
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The
@@ -101,6 +110,27 @@ theorem bSeriesHom_leaf {s : ℕ} (q : QuotEquiv s) :
   refine Quotient.inductionOn q ?_
   intro t
   simp [bSeriesHom, bSeries, weightsSum]
+
+/-- Unit-stage augmentation predicate on the raw quotient layer. -/
+noncomputable def IsUnit {s : ℕ} (q : QuotEquiv s) : Prop :=
+  q.bSeries BTree.leaf = 1
+
+/-- Recursive coefficients for the §388 inverse construction.  At a
+non-leaf tree, the coefficient cancels the original coefficient and all
+proper admissible-cut contributions whose trunks have smaller order. -/
+noncomputable def inverseCoeff {s : ℕ} (q : QuotEquiv s) : BTree → ℝ
+  | BTree.leaf => 1
+  | BTree.node children =>
+      -(q.bSeries (BTree.node children) +
+        bSeriesConvNonRoot q.bSeries (BTree.node children)
+          (fun σ _hσ => inverseCoeff q σ))
+termination_by τ => τ.order
+decreasing_by
+  exact _hσ
+
+@[simp] theorem inverseCoeff_leaf {s : ℕ} (q : QuotEquiv s) :
+    q.inverseCoeff BTree.leaf = 1 := by
+  rw [inverseCoeff]
 
 end QuotEquiv
 
@@ -2669,6 +2699,15 @@ noncomputable def hasTreeOrder {p : ℕ} : G1 p → Prop :=
 @[simp] theorem hasTreeOrder_mk {p s : ℕ} (q : QuotEquiv s) :
     hasTreeOrder (mk (p := p) q) = q.hasTreeOrder p := by
   rfl
+
+/-- Unit-stage augmentation predicate on `G₁(p)`, guarded by the fact that
+the single-node tree has order at most `p`. -/
+noncomputable def IsUnit {p : ℕ} (hp : 1 ≤ p) (g : G1 p) : Prop :=
+  bSeriesHomAt p BTree.leaf (by simpa [BTree.order_leaf] using hp) g = 1
+
+@[simp] theorem isUnit_mk_iff {p s : ℕ} (hp : 1 ≤ p) (q : QuotEquiv s) :
+    IsUnit (p := p) hp (mk (p := p) q) ↔ q.IsUnit := by
+  simp [IsUnit, QuotEquiv.IsUnit, QuotEquiv.bSeriesHom]
 
 /-- The identity element of `G₁(p)`: the class of the zero-stage tableau.
 This is the §387 group identity for the (still-pending) `G1.mul` lift. -/
