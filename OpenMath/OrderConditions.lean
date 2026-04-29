@@ -58,9 +58,25 @@ theorem elementaryWeight_leaf (tab : ButcherTableau s) (i : Fin s) :
     tab.elementaryWeight .leaf i = 1 := by
   simp [elementaryWeight]
 
+/-- Elementary weight of the empty-child node is 1. -/
+@[simp]
+theorem elementaryWeight_node_nil (tab : ButcherTableau s) (i : Fin s) :
+    tab.elementaryWeight (.node []) i = 1 := by
+  simp [elementaryWeight]
+
 /-- Elementary weight of a single-child node [t] is ∑ₖ aᵢₖ Φₖ(t). -/
 theorem elementaryWeight_singleton (tab : ButcherTableau s) (t : BTree) (i : Fin s) :
     tab.elementaryWeight (.node [t]) i = ∑ k : Fin s, tab.A i k * tab.elementaryWeight t k := by
+  simp [elementaryWeight, List.foldr]
+
+/-- Elementary weight of a cons-child node factors into the tail node
+weight and the head row contribution. -/
+@[simp]
+theorem elementaryWeight_node_cons (tab : ButcherTableau s)
+    (head : BTree) (tail : List BTree) (i : Fin s) :
+    tab.elementaryWeight (.node (head :: tail)) i
+      = tab.elementaryWeight (.node tail) i
+        * (∑ k : Fin s, tab.A i k * tab.elementaryWeight head k) := by
   simp [elementaryWeight, List.foldr]
 
 /-- Elementary weights for a node depend only on the multiset of its children. -/

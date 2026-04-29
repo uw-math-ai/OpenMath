@@ -504,4 +504,389 @@ theorem bSeriesConv_node_replicate_node_nil_consistency
   rw [add_comm]
   rfl
 
+/-- Stagewise root-preserving inner-cut sum, indexed by a stage `i` of
+the second method. Bridges `bSeriesConv` (which evaluates trunks via
+`t₂.bSeries`) to the recursion needed by `convAt`. -/
+noncomputable def cutAt (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin t) : ℝ :=
+  ((τ.innerCut α).filterMap fun c =>
+    c.1.map (fun trunk => c.2 * t₂.elementaryWeight trunk i)).sum
+
+@[simp]
+theorem cutAt_leaf (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t)
+    (i : Fin t) :
+    cutAt α t₂ BTree.leaf i = 1 := by
+  simp [cutAt, BTree.innerCut]
+
+@[simp]
+theorem cutAt_node_nil (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t)
+    (i : Fin t) :
+    cutAt α t₂ (BTree.node []) i = 1 := by
+  simp [cutAt, BTree.innerCut, BTree.innerCutForest]
+
+private theorem list_sum_flatMap {α : Type*} (l : List α) (f : α → List ℝ) :
+    (l.flatMap f).sum = (l.map fun a => (f a).sum).sum := by
+  induction l with
+  | nil => simp
+  | cons a l ih =>
+      simp [List.flatMap, List.sum_append]
+      change (List.map (fun a => (f a).sum) l).sum =
+        (List.map (fun a => (f a).sum) l).sum
+      rfl
+
+private theorem list_sum_mul_finset_sum {ι γ : Type*} [Fintype ι]
+    (L : List γ) (a : ι → ℝ) (w : γ → ℝ) (g : γ → ι → ℝ) :
+    (L.map (fun x => w x * (∑ j : ι, a j * g x j))).sum
+      = ∑ j : ι, a j * (L.map fun x => w x * g x j).sum := by
+  induction L with
+  | nil => simp
+  | cons x xs ih =>
+      rw [List.map_cons, List.sum_cons, ih, Finset.mul_sum,
+        ← Finset.sum_add_distrib]
+      refine Finset.sum_congr rfl ?_
+      intro j _
+      simp
+      ring
+
+private theorem cutAt_node_eq_innerCutForest_sum
+    (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t) (i : Fin t)
+    (children : List BTree) :
+    cutAt α t₂ (BTree.node children) i =
+      (List.map
+        (fun cs =>
+          (cs.foldr (fun c acc => c.2 * acc) 1)
+            * t₂.elementaryWeight
+                (BTree.node (cs.filterMap fun c => c.1)) i)
+        (BTree.innerCutForest children α)).sum := by
+  unfold cutAt
+  rw [innerCut_node]
+  simp only [List.filterMap_cons, Option.map_none, List.filterMap_map]
+  rw [cutSum_filterMap_eq_map (fun τ => t₂.elementaryWeight τ i)]
+
+private theorem innerCut_stage_factor_sum_eq
+    (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t) (i : Fin t)
+    (τ : BTree) :
+    (List.map
+        (fun c : Option BTree × ℝ =>
+          match c.1 with
+          | none => c.2
+          | some trunk =>
+              c.2 * (∑ j : Fin t, t₂.A i j * t₂.elementaryWeight trunk j))
+        (τ.innerCut α)).sum
+      = α τ + ∑ j : Fin t, t₂.A i j * cutAt α t₂ τ j := by
+  cases τ with
+  | leaf =>
+      simp [BTree.innerCut, cutAt]
+      ring
+  | node children =>
+      rw [innerCut_node]
+      simp only [List.map_cons, List.sum_cons, List.map_map]
+      congr 1
+      change (List.map
+          (fun cs : List (Option BTree × ℝ) =>
+            cs.foldr (fun c acc => c.2 * acc) 1 *
+              (∑ j : Fin t, t₂.A i j *
+                t₂.elementaryWeight
+                  (BTree.node (cs.filterMap fun c => c.1)) j))
+          (BTree.innerCutForest children α)).sum
+        =
+        ∑ j : Fin t, t₂.A i j * cutAt α t₂ (BTree.node children) j
+      rw [show
+          (∑ j : Fin t, t₂.A i j * cutAt α t₂ (BTree.node children) j)
+            =
+          ∑ j : Fin t, t₂.A i j *
+            (List.map
+              (fun cs =>
+                cs.foldr (fun c acc => c.2 * acc) 1 *
+                  t₂.elementaryWeight
+                    (BTree.node (cs.filterMap fun c => c.1)) j)
+              (BTree.innerCutForest children α)).sum from by
+            refine Finset.sum_congr rfl ?_
+            intro j _
+            rw [cutAt_node_eq_innerCutForest_sum]]
+      rw [list_sum_mul_finset_sum
+        (BTree.innerCutForest children α)
+        (fun j : Fin t => t₂.A i j)
+        (fun cs : List (Option BTree × ℝ) => cs.foldr (fun c acc => c.2 * acc) 1)
+        (fun cs j => t₂.elementaryWeight
+          (BTree.node (cs.filterMap fun c => c.1)) j)]
+
+private theorem innerCutForest_cons_choice_sum
+    {t : ℕ} (t₂ : ButcherTableau t) (i : Fin t)
+    (forest : List (List (Option BTree × ℝ))) (c : Option BTree × ℝ) :
+    (List.map
+        (fun cs =>
+          ((c :: cs).foldr (fun c acc => c.2 * acc) 1)
+            * t₂.elementaryWeight
+                (BTree.node ((c :: cs).filterMap fun c => c.1)) i)
+        forest).sum
+      =
+        (match c.1 with
+        | none => c.2
+        | some trunk =>
+            c.2 * (∑ j : Fin t, t₂.A i j * t₂.elementaryWeight trunk j))
+        *
+        (List.map
+          (fun cs =>
+            (cs.foldr (fun c acc => c.2 * acc) 1)
+              * t₂.elementaryWeight
+                  (BTree.node (cs.filterMap fun c => c.1)) i)
+          forest).sum := by
+  cases c with
+  | mk opt w =>
+      cases opt with
+      | none =>
+          simpa [mul_assoc] using
+            (List.sum_map_mul_left forest
+              (fun cs : List (Option BTree × ℝ) =>
+                cs.foldr (fun c acc => c.2 * acc) 1 *
+                  t₂.elementaryWeight
+                    (BTree.node (cs.filterMap fun c => c.1)) i) w)
+      | some trunk =>
+          simp only [List.foldr_cons, List.filterMap_cons]
+          let row : ℝ := ∑ j : Fin t, t₂.A i j * t₂.elementaryWeight trunk j
+          have hfun :
+              (fun cs : List (Option BTree × ℝ) =>
+                w * cs.foldr (fun c acc => c.2 * acc) 1 *
+                  t₂.elementaryWeight
+                    (BTree.node (trunk :: List.filterMap (fun c => c.1) cs)) i)
+                =
+              fun cs : List (Option BTree × ℝ) =>
+                (w * row) *
+                  (cs.foldr (fun c acc => c.2 * acc) 1 *
+                    t₂.elementaryWeight
+                      (BTree.node (List.filterMap (fun c => c.1) cs)) i) := by
+            funext cs
+            simp [row, elementaryWeight_node_cons]
+            ring
+          rw [hfun]
+          simpa [row, mul_assoc] using
+            (List.sum_map_mul_left forest
+              (fun cs : List (Option BTree × ℝ) =>
+                cs.foldr (fun c acc => c.2 * acc) 1 *
+                  t₂.elementaryWeight
+                    (BTree.node (cs.filterMap fun c => c.1)) i) (w * row))
+
+private theorem innerCutForest_sum_foldr_eq
+    (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t) (i : Fin t)
+    (children : List BTree) :
+    (List.map
+        (fun cs =>
+          (cs.foldr (fun c acc => c.2 * acc) 1)
+            * t₂.elementaryWeight
+                (BTree.node (cs.filterMap fun c => c.1)) i)
+        (BTree.innerCutForest children α)).sum
+      = children.foldr
+          (fun child acc =>
+            acc * (α child + ∑ j : Fin t, t₂.A i j * cutAt α t₂ child j)) 1 := by
+  induction children with
+  | nil =>
+      simp [BTree.innerCutForest, ButcherTableau.elementaryWeight]
+  | cons head tail ih =>
+      conv_lhs => rw [BTree.innerCutForest]
+      rw [List.map_flatMap, list_sum_flatMap]
+      simp only [List.map_map]
+      rw [show
+          (List.map
+            (fun a : Option BTree × ℝ =>
+              (List.map
+                ((fun cs =>
+                  cs.foldr (fun c acc => c.2 * acc) 1 *
+                    t₂.elementaryWeight (BTree.node (cs.filterMap fun c => c.1)) i) ∘
+                    fun cs => a :: cs)
+                (BTree.innerCutForest tail α)).sum)
+            (head.innerCut α)).sum
+          =
+          (List.map
+            (fun a : Option BTree × ℝ =>
+              (match a.1 with
+              | none => a.2
+              | some trunk =>
+                  a.2 * (∑ j : Fin t, t₂.A i j *
+                    t₂.elementaryWeight trunk j)) *
+              (List.map
+                (fun cs =>
+                  cs.foldr (fun c acc => c.2 * acc) 1 *
+                    t₂.elementaryWeight (BTree.node (cs.filterMap fun c => c.1)) i)
+                (BTree.innerCutForest tail α)).sum)
+            (head.innerCut α)).sum from by
+              refine congrArg List.sum ?_
+              refine List.map_congr_left ?_
+              intro a ha
+              simpa [Function.comp] using
+                (innerCutForest_cons_choice_sum t₂ i
+                  (BTree.innerCutForest tail α) a)]
+      rw [List.sum_map_mul_right]
+      rw [innerCut_stage_factor_sum_eq, ih]
+      simp [List.foldr]
+      ring
+
+private theorem foldr_mul_add_eq_powerset_sum_stage {α : Type*}
+    (children : List α) (x y : α → ℝ) :
+    children.foldr (fun c acc => acc * (x c + y c)) 1
+      = ∑ T ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+          (∏ k ∈ T, x children[k]) * ∏ k ∈ Finset.univ \ T, y children[k] := by
+  have hprod : children.foldr (fun c acc => acc * (x c + y c)) 1
+      = ∏ k : Fin children.length, (x children[k] + y children[k]) := by
+    induction children with
+    | nil => simp
+    | cons c cs ih =>
+      show cs.foldr (fun c acc => acc * (x c + y c)) 1 * (x c + y c)
+           = ∏ k : Fin (cs.length + 1), (x (c :: cs)[k] + y (c :: cs)[k])
+      rw [ih, Fin.prod_univ_succ]
+      have h0 : (c :: cs)[(0 : Fin (cs.length + 1))] = c := rfl
+      have hsucc : ∀ k : Fin cs.length,
+          (c :: cs)[(k.succ : Fin (cs.length + 1))] = cs[k] := fun _ => rfl
+      rw [h0]
+      simp_rw [hsucc]
+      ring
+  rw [hprod, Finset.prod_add]
+
+private theorem innerCutForest_stage_sum_eq
+    (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t) (i : Fin t)
+    (children : List BTree)
+    (IH : ∀ c ∈ children, ∀ j : Fin t,
+      cutAt α t₂ c j = ButcherProduct.convAt t₂ α c j) :
+    (List.map
+        (fun cs =>
+          (cs.foldr (fun c acc => c.2 * acc) 1)
+            * t₂.elementaryWeight
+                (BTree.node (cs.filterMap fun c => c.1)) i)
+        (BTree.innerCutForest children α)).sum
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ S, α (children.get p))
+            * ∏ p ∈ Sᶜ,
+                (∑ j : Fin t, t₂.A i j *
+                  ButcherProduct.convAt t₂ α (children.get p) j) := by
+  rw [innerCutForest_sum_foldr_eq]
+  rw [foldr_mul_add_eq_powerset_sum_stage children
+    (fun c => α c)
+    (fun c => ∑ j : Fin t, t₂.A i j * cutAt α t₂ c j)]
+  rw [Finset.powerset_univ]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  congr 1
+  refine Finset.prod_congr rfl ?_
+  intro p hp
+  refine Finset.sum_congr rfl ?_
+  intro j _
+  rw [show children[p] = children.get p from rfl]
+  rw [IH (children.get p) (List.get_mem children p) j]
+
+theorem cutAt_eq_convAt (α : BTree → ℝ) {t : ℕ} (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin t) :
+    cutAt α t₂ τ i = ButcherProduct.convAt t₂ α τ i := by
+  revert i
+  induction τ using BTree.rec
+    (motive_2 := fun children =>
+      ∀ c ∈ children, ∀ j : Fin t,
+        cutAt α t₂ c j = ButcherProduct.convAt t₂ α c j) with
+  | leaf =>
+      intro i
+      simp [cutAt_leaf, ButcherProduct.convAt_leaf]
+  | node children IH =>
+      intro i
+      rw [cutAt_node_eq_innerCutForest_sum,
+        innerCutForest_stage_sum_eq α t₂ i children IH,
+        ButcherProduct.convAt_node]
+  | nil c hc j => simp at hc
+  | cons head tail ih_head ih_tail c hc j =>
+      rcases List.mem_cons.mp hc with rfl | hmem
+      · exact ih_head j
+      · exact ih_tail c hmem j
+
+private theorem option_filterMap_sum_eq_map (β : BTree → ℝ)
+    (L : List (Option BTree × ℝ)) :
+    (L.filterMap fun c => c.1.map (fun trunk => c.2 * β trunk)).sum
+      =
+    (L.map fun c =>
+      match c.1 with
+      | none => 0
+      | some trunk => c.2 * β trunk).sum := by
+  induction L with
+  | nil => simp
+  | cons c cs ih =>
+      cases c with
+      | mk opt w =>
+          cases opt <;> simp [ih]
+
+private theorem option_weighted_sum_comm
+    {t : ℕ} (t₂ : ButcherTableau t)
+    (L : List (Option BTree × ℝ)) :
+    (L.map
+        (fun c =>
+          match c.1 with
+          | none => 0
+          | some trunk => c.2 * t₂.bSeries trunk)).sum
+      =
+    ∑ i : Fin t, t₂.b i *
+      (L.map
+        (fun c =>
+          match c.1 with
+          | none => 0
+          | some trunk => c.2 * t₂.elementaryWeight trunk i)).sum := by
+  induction L with
+  | nil => simp
+  | cons c cs ih =>
+      cases c with
+      | mk opt w =>
+          cases opt with
+          | none =>
+              simp [ih]
+          | some trunk =>
+              rw [List.map_cons, List.sum_cons, ih]
+              unfold bSeries
+              change w * (∑ i : Fin t, t₂.b i * t₂.elementaryWeight trunk i) +
+                  ∑ i : Fin t, t₂.b i *
+                    (cs.map
+                      (fun c =>
+                        match c.1 with
+                        | none => 0
+                        | some trunk => c.2 * t₂.elementaryWeight trunk i)).sum
+                =
+                ∑ i : Fin t, t₂.b i *
+                  (w * t₂.elementaryWeight trunk i +
+                    (cs.map
+                      (fun c =>
+                        match c.1 with
+                        | none => 0
+                        | some trunk => c.2 * t₂.elementaryWeight trunk i)).sum)
+              rw [show
+                  w * (∑ i : Fin t, t₂.b i * t₂.elementaryWeight trunk i)
+                    = ∑ i : Fin t, t₂.b i * (w * t₂.elementaryWeight trunk i) from by
+                    rw [Finset.mul_sum]
+                    refine Finset.sum_congr rfl ?_
+                    intro i _
+                    ring]
+              rw [← Finset.sum_add_distrib]
+              refine Finset.sum_congr rfl ?_
+              intro i _
+              ring
+
+private theorem bSeriesConv_eq_b_weighted_cutAt
+    {t : ℕ} (t₂ : ButcherTableau t) (α : BTree → ℝ) (τ : BTree) :
+    bSeriesConv α (t₂.bSeries) τ
+      = ∑ i : Fin t, t₂.b i * cutAt α t₂ τ i := by
+  unfold bSeriesConv cutAt
+  rw [option_filterMap_sum_eq_map (fun τ => t₂.bSeries τ)]
+  rw [option_weighted_sum_comm]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [option_filterMap_sum_eq_map (fun trunk => t₂.elementaryWeight trunk i)]
+
+theorem bSeriesConv_eq_b_weighted_convAt
+    {t : ℕ} (t₂ : ButcherTableau t) (α : BTree → ℝ) (τ : BTree) :
+    bSeriesConv α (t₂.bSeries) τ
+      = ∑ i : Fin t, t₂.b i * ButcherProduct.convAt t₂ α τ i := by
+  rw [bSeriesConv_eq_b_weighted_cutAt]
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [cutAt_eq_convAt]
+
+theorem ButcherProduct.bSeriesConv_consistency
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (τ : BTree) :
+    (ButcherProduct t₁ t₂).bSeries τ
+      = t₁.bSeries τ + bSeriesConv (t₁.bSeries) (t₂.bSeries) τ := by
+  rw [ButcherProduct.bSeries_eq_split, bSeriesConv_eq_b_weighted_convAt]
+
 end ButcherTableau
