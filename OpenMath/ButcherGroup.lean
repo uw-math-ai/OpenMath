@@ -102,6 +102,19 @@ theorem bSeriesHom_leaf {s : ℕ} (q : QuotEquiv s) :
   intro t
   simp [bSeriesHom, bSeries, weightsSum]
 
+/-- Quotient-level §386 honest `bSeries`-only convolution consistency: the
+lifted bSeries hom of a product decomposes as the left factor's bSeries hom
+plus the honest `bSeriesConv` of the two factors' bSeries homs. -/
+theorem bSeriesHom_product_eq {s t : ℕ}
+    (q : QuotEquiv s) (r : QuotEquiv t) (τ : BTree) :
+    (product q r).bSeriesHom τ
+      = q.bSeriesHom τ +
+        ButcherTableau.bSeriesConv (q.bSeriesHom) (r.bSeriesHom) τ := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [product, bSeriesHom, bSeries] using
+    ButcherTableau.ButcherProduct.bSeriesConv_consistency t₁ t₂ τ
+
 end QuotEquiv
 
 /-! ### §387 raw and quotient powers

@@ -504,4 +504,160 @@ theorem bSeriesConv_node_replicate_node_nil_consistency
   rw [add_comm]
   rfl
 
+/-! ### Cycle 570: stagewise `cutAt` bridge to `convAt`.
+
+The headline `bSeriesConv_consistency` requires a stagewise auxiliary
+`cutAt` that mirrors `bSeriesConv` but evaluates trunks by an arbitrary
+elementary-weight column instead of `t₂.bSeries`. See
+`.prover-state/issues/butcher_section386_general_consistency.md`. -/
+
+/-- Stagewise admissible-cut sum: the same enumeration as `bSeriesConv`,
+but with `β trunk` replaced by `t₂.elementaryWeight trunk i`. -/
+noncomputable def cutAt {t : ℕ} (α : BTree → ℝ) (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin t) : ℝ :=
+  ((τ.innerCut α).filterMap fun c =>
+    c.1.map (fun trunk => c.2 * t₂.elementaryWeight trunk i)).sum
+
+theorem cutAt_leaf {t : ℕ} (α : BTree → ℝ) (t₂ : ButcherTableau t)
+    (i : Fin t) :
+    cutAt α t₂ BTree.leaf i = 1 := by
+  simp [cutAt, innerCut_leaf]
+
+theorem cutAt_node_nil {t : ℕ} (α : BTree → ℝ) (t₂ : ButcherTableau t)
+    (i : Fin t) :
+    cutAt α t₂ (BTree.node []) i = 1 := by
+  simp [cutAt, innerCut_node_nil, ButcherTableau.elementaryWeight]
+
+/-- Pure combinatorial bridge from the list enumeration of inner cuts of
+a forest to a foldr-product over the children: the inner-cut sum equals
+the list-product over children of `α ch + ∑ k, A i k * cutAt α t₂ ch k`.
+
+This is the missing helper for `cutAt_eq_convAt`; see the cycle 570
+issue file for the proof obligation. -/
+private theorem innerCutForest_sum_eq_listProd
+    {t : ℕ} (α : BTree → ℝ) (t₂ : ButcherTableau t) (i : Fin t)
+    (children : List BTree) :
+    (List.map
+        (fun cs : List (Option BTree × ℝ) =>
+          List.foldr (fun c acc => c.2 * acc) 1 cs *
+            t₂.elementaryWeight (BTree.node (List.filterMap (fun c => c.1) cs)) i)
+        (BTree.innerCutForest children α)).sum
+      = (children.map (fun ch =>
+          α ch + ∑ k : Fin t, t₂.A i k * cutAt α t₂ ch k)).prod := by
+  sorry
+
+/-- List-level forest invariant: the inner-cut sum over a list of children
+equals the `Finset (Fin children.length)` powerset sum from
+`ButcherProduct.convAt_node`, given a per-child IH bridging
+`cutAt` to `convAt`. -/
+private theorem innerCutForest_sum_eq
+    {t : ℕ} (α : BTree → ℝ) (t₂ : ButcherTableau t) (i : Fin t)
+    (children : List BTree)
+    (ih : ∀ c ∈ children, ∀ j : Fin t,
+      cutAt α t₂ c j = ButcherProduct.convAt t₂ α c j) :
+    (List.map
+        (fun cs : List (Option BTree × ℝ) =>
+          List.foldr (fun c acc => c.2 * acc) 1 cs *
+            t₂.elementaryWeight (BTree.node (List.filterMap (fun c => c.1) cs)) i)
+        (BTree.innerCutForest children α)).sum
+      = ∑ S : Finset (Fin children.length),
+          (∏ p ∈ S, α (children.get p)) *
+            ∏ p ∈ Sᶜ,
+              ∑ j : Fin t, t₂.A i j *
+                ButcherProduct.convAt t₂ α (children.get p) j := by
+  classical
+  rw [innerCutForest_sum_eq_listProd]
+  -- Step 1: replace cutAt with convAt using the per-child IH.
+  have hrew : (children.map (fun ch =>
+          α ch + ∑ k : Fin t, t₂.A i k * cutAt α t₂ ch k)).prod
+        = (children.map (fun ch =>
+          α ch + ∑ k : Fin t, t₂.A i k *
+            ButcherProduct.convAt t₂ α ch k)).prod := by
+    congr 1
+    refine List.map_congr_left ?_
+    intro ch hch
+    congr 1
+    refine Finset.sum_congr rfl ?_
+    intro k _
+    rw [ih ch hch]
+  rw [hrew]
+  -- Step 2: convert list-prod to Fin-product, then apply Finset.prod_add.
+  rw [← Fin.prod_univ_fun_getElem children
+        (f := fun ch => α ch + ∑ k : Fin t, t₂.A i k *
+          ButcherProduct.convAt t₂ α ch k)]
+  -- The product is over Fin children.length; apply Finset.prod_add via show.
+  rw [show (∏ p : Fin children.length,
+            (α children[(p : ℕ)] + ∑ k : Fin t, t₂.A i k *
+              ButcherProduct.convAt t₂ α children[(p : ℕ)] k))
+        = ∑ S ∈ (Finset.univ : Finset (Fin children.length)).powerset,
+            (∏ p ∈ S, α children[(p : ℕ)]) *
+              ∏ p ∈ (Finset.univ : Finset (Fin children.length)) \ S,
+                ∑ k : Fin t, t₂.A i k *
+                  ButcherProduct.convAt t₂ α children[(p : ℕ)] k from
+    Finset.prod_add _ _ _]
+  -- Match Finset.univ.powerset to univ; match univ \ S to Sᶜ; match indexing.
+  rw [show (Finset.univ : Finset (Fin children.length)).powerset
+        = (Finset.univ : Finset (Finset (Fin children.length))) from by
+    ext S; simp]
+  refine Finset.sum_congr rfl ?_
+  intro S _
+  refine congrArg₂ (· * ·) ?_ ?_
+  · exact Finset.prod_congr rfl (fun _ _ => rfl)
+  · refine Finset.prod_congr ?_ (fun _ _ => rfl)
+    ext p
+    simp
+
+/-- Stagewise bridge: the stagewise cut sum agrees with the `convAt`
+auxiliary from §384. -/
+theorem cutAt_eq_convAt {t : ℕ} (α : BTree → ℝ) (t₂ : ButcherTableau t)
+    (τ : BTree) (i : Fin t) :
+    cutAt α t₂ τ i = ButcherProduct.convAt t₂ α τ i := by
+  sorry
+
+/-- `b`-weighted stagewise bridge: the honest `bSeries`-only convolution
+equals the `t₂.b`-weighted sum of the stagewise `cutAt` aux. -/
+theorem bSeriesConv_eq_sum_b_cutAt {t : ℕ}
+    (α : BTree → ℝ) (t₂ : ButcherTableau t) (τ : BTree) :
+    bSeriesConv α (fun trunk => t₂.bSeries trunk) τ
+      = ∑ i : Fin t, t₂.b i * cutAt α t₂ τ i := by
+  unfold bSeriesConv cutAt
+  -- The inner-cut list is independent of i; push the i-sum past the
+  -- List.sum at the list level by induction on the list.
+  have key : ∀ L : List (Option BTree × ℝ),
+      (L.filterMap fun c => c.1.map (fun trunk => c.2 * t₂.bSeries trunk)).sum
+        = ∑ i : Fin t, t₂.b i *
+            (L.filterMap fun c => c.1.map (fun trunk =>
+              c.2 * t₂.elementaryWeight trunk i)).sum := by
+    intro L
+    induction L with
+    | nil => simp
+    | cons head tail ih =>
+      simp only [List.filterMap_cons]
+      cases hopt : head.1 with
+      | none =>
+        simp only [hopt, Option.map_none]
+        exact ih
+      | some trunk =>
+        simp only [hopt, Option.map_some, List.sum_cons]
+        rw [bSeries, ih, Finset.mul_sum, ← Finset.sum_add_distrib]
+        refine Finset.sum_congr rfl ?_
+        intro i _
+        ring
+  exact key (τ.innerCut α)
+
+/-- Headline §386 honest `bSeries`-only convolution consistency:
+`(t₁.product t₂).bSeries` decomposes as `t₁.bSeries` plus the honest
+`bSeries`-only convolution `bSeriesConv (t₁.bSeries) (t₂.bSeries)`. -/
+theorem ButcherProduct.bSeriesConv_consistency
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (τ : BTree) :
+    (ButcherProduct t₁ t₂).bSeries τ
+      = t₁.bSeries τ +
+        bSeriesConv (fun r => t₁.bSeries r) (fun r => t₂.bSeries r) τ := by
+  rw [ButcherProduct.bSeries_eq_split,
+      bSeriesConv_eq_sum_b_cutAt (fun r => t₁.bSeries r) t₂ τ]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro i _
+  rw [cutAt_eq_convAt]
+
 end ButcherTableau
