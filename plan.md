@@ -1174,6 +1174,19 @@ Concrete next steps:
   tracked `G1.mul`-direction well-definedness deliverable, using the
   order identity `1 + 2 * n` for the root family and `1 + a + 2 * b`
   for mixed leaf/singleton-leaf kept subtrees.
+- Cycle 548 partial: the mixed leaf / singleton-leaf root parametric
+  family `BTree.node (List.replicate a BTree.leaf ++ List.replicate b
+  (BTree.node [BTree.leaf]))` has the per-i convolution closed form
+  helper `convAt_node_mixed_leaf_singleton_leaf_at_i_eq` and the sixth
+  tracked `G1.mul`-direction deliverable
+  `IsG1Equiv.product_congr_node_mixed_leaf_singleton_leaf` (with bound
+  `1 + a + 2 * b ≤ p`) fully proved. The headline
+  `ButcherProduct.bConv_node_mixed_leaf_singleton_leaf_eq` carries one
+  live `sorry`, blocking the bSeries corollary, the QuotEquiv lift, and
+  consequently the G1 slice's mathematical content. See
+  `.prover-state/issues/cycle_548_headline_bConv_mixed.md` for the two
+  candidate proof routes (reindex from `Fin (a+b)` powerset, or expand
+  via the per-i helper + `Finset.prod_add` reverse).
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
