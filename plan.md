@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 31 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 32 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -138,7 +138,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:358A` **BN-stability of collocation methods** (§358)
 - [ ] `thm:382B` **Runge Kutta method composition inverse** (§380)
 - [ ] `thm:386A` **Recursive formula for the product** (§386)
-- [ ] `def:323A` **internal order q** (§323)
+- [x] `def:323A` **internal order q** (§323)
 - [ ] `thm:324C` **Explicit Runge Kutta Order Stage Lower Bound** (§324)
 - [ ] `thm:355C` **Arrow Termination at Poles Zeros or Infinity** (§355)
 - [ ] `thm:359C` **Algebraic Stability of Implicit Runge Kutta Methods** (§359)

@@ -1,304 +1,328 @@
-# Cycle 030 Strategy
+# Cycle 031 Strategy
 
-## Status snapshot
+## Status going in
 
-* Cycle 029 landed `def:356B` (DJ-reducibility) and the DJ-irreducibility
-  component of `def:356A`, with full `lake build` clean and 0 sorries.
-* AN-stability component of `def:356A` is **deferred** (issue:
-  `AN_stability_deferred.md`) — it needs complex matrix resolvent
-  infrastructure (`(I − A Z)⁻¹`, left-half-plane condition,
-  `R(Z)` magnitude bound). Cost estimate from the issue file: a
-  dedicated cycle (or two) just for the resolvent + `R(Z)` machinery
-  before the predicate itself can be stated faithfully.
-* Progress: 30 / 175 entities.
-* No pending Aristotle results, no open sorries.
+* No pending Aristotle results.
+* No sorry's anywhere in `OpenMath/`.
+* Cycle 030 closed `def:381A` (`OpenMath/Chapter3/Section381.lean`,
+  commit `79da1db`). Branch tip is clean.
+* Cycle 030's "Suggested next approach" was `def:381F`. **We are
+  overriding that suggestion** — see §"Why not def:381F" below.
 
-## Cycle 030 target: `def:381A` — *equivalent* Runge–Kutta methods
+## Target this cycle
 
-**Why this and not AN-stability or `def:323A`.**
+**`def:323A` — *internal order q* (Butcher §323, page 203).**
 
-* `def:381A` is the natural §380/§381 leaf. Cycles 020, 021, 022, 029
-  have built up the §381 reducibility cluster
-  (`def:381B/C/D/E`, `def:356A` DJ-component, `def:356B`). Continuing
-  the §381 momentum lets us reach `def:381F` (P-equivalent),
-  `thm:381G/H` (the equivalence-conditions theorem), and the entire
-  §382–§388 Runge–Kutta-group cluster.
-* `def:381A` has 7 downstream consumers (`lem:383A`, `lem:389A`,
-  `thm:382A`, `thm:382B`, `thm:384A`, `thm:388B`, plus `def:370A`
-  which only references it). All are blocked behind it.
-* AN-stability for `def:356A` remains the right *eventual* next major
-  infrastructure investment, but it is multi-cycle (resolvent +
-  `R(Z)` + predicate + witness, per the issue file). Tackle it after
-  the §381 leaves are cleared so that we land at most one
-  infrastructure-only cycle at a time.
-* `def:323A` (internal order `q`) is the named fallback if `def:381A`
-  blows scope (see §"Fallback" below).
+Entity file: `extraction/formalization_data/entities/def_323A.json`.
+Textbook statement (quoted verbatim from the JSON):
 
-## Textbook statement (verbatim from `extraction/formalization_data/entities/def_381A.json`)
+> Consider a Runge–Kutta method given by the tableau c A / b. For a
+> tree `t` and stage `i`, let `Φᵢ(t)` denote the elementary weight
+> associated with `t` for the tableau `[c A / eᵢ A]`. Stage `i` has
+> 'internal order `q`', if for all trees such that `r(t) ≤ q`,
+> `Φᵢ(t) = cᵢ^{r(t)} / γ(t)`.
 
-> Two Runge–Kutta methods are 'equivalent' if, for any initial value
-> problem defined by an autonomous function `f` satisfying a Lipschitz
-> condition, and an initial value `y0`, there exists `h0 > 0` such that
-> the result computed by the first method is identical with the result
-> computed by the second method, if `h ≤ h0`.
+This is a clean predicate over an existing tableau, reusing the
+§312 `internalWeight`, the §301 `density`, and the §310/§301
+`order`. No new infrastructure required; no analysis (no Lipschitz,
+no inner product). One cycle should comfortably deliver definition
++ witness + axiom check.
 
-This is a **semantic** equivalence: same numerical one-step output for
-every Lipschitz autonomous problem, for sufficiently small step. It is
-strictly weaker than Φ-equivalence (`def:381B`, already formalised),
-because it allows the methods to differ on non-Lipschitz or implicit
-ill-defined cases.
+### Where to put it
 
-## Concrete Lean plan
+New file: `OpenMath/Chapter3/Section323.lean`.
 
-**Place the new content in `OpenMath/Chapter3/Section381.lean`** (the
-existing §380/§381 file). Do NOT create a new file — `def:381A` is
-section 381, the same section as the existing P/0/Φ-reducibility
-definitions, and `def:381F` will land in the same file next cycle.
+Imports needed:
+* `OpenMath.Chapter3.Section301` (for `RootedTree.density`)
+* `OpenMath.Chapter3.Section312` (for `RKTableau`, `internalWeight`)
 
-### Step 1 — `IsRKOneStep` predicate
+Use the namespace pattern of `Section381.lean` — definitions in
+`namespace OpenMath.Chapter3.Section312.RKTableau` so
+`M.HasInternalOrder i q` works via dot notation. Look at
+`Section357.lean` and `Section381.lean` for the prevailing
+convention.
 
-A relational ("predicate-style") encoding lets us handle implicit
-methods without committing to a fixed-point existence theorem:
+### Notational clarification (do this BEFORE writing code)
 
-```lean
-/-- `M` produces output `y₁` after one step of size `h` from `y₀` on
-the autonomous ODE `y' = f(y)`. Captures the implicit stage system
-`Y_i = y₀ + h • Σⱼ aᵢⱼ • f(Y_j)` and the update
-`y₁ = y₀ + h • Σᵢ bᵢ • f(Yᵢ)`. -/
-def IsRKOneStep {s : ℕ} (M : RKTableau s) {N : Type*}
-    [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (f : N → N) (y₀ : N) (h : ℝ) (y₁ : N) : Prop :=
-  ∃ Y : Fin s → N,
-    (∀ i, Y i = y₀ + h • ∑ j, M.A i j • f (Y j)) ∧
-    y₁ = y₀ + h • ∑ i, M.b i • f (Y i)
-```
+Butcher uses two clashing notations for `Φᵢ(t)`. In §312 it is the
+*internal weight* (`Σⱼ aᵢⱼ (Φⱼ D)(t)`, our
+`RKTableau.internalWeight t i`). In §323 the textbook re-introduces
+`Φᵢ(t)` via "the elementary weight of the auxiliary tableau
+`[c A / eᵢ A]`", which expands to `Σⱼ (eᵢ)ⱼ (Φⱼ D)(t) = (Φᵢ D)(t)`
+of the *original* tableau (`derivativeWeight`).
 
-Note this is a `Prop`, not a function — it is *true* for any `(y₁, Y)`
-that satisfies the stage equations, and may admit zero, one, or
-multiple solutions depending on `M`, `f`, and `h`. This is honest:
-implicit methods may have no solution at large `h`, the unique
-small-`h` solution at moderate `h`, etc.
+These two would normally disagree, but Butcher's textbook line
+(`extraction/raw_text/ch03.txt:2465`)
 
-### Step 2 — `Equivalent` predicate
+> internal order 1 is equivalent to `cᵢ = Σⱼ aᵢⱼ`
+
+settles which one §323 means. `cᵢ = Σⱼ aᵢⱼ = M.internalWeight τ i`,
+so **Butcher's Φᵢ(t) in §323 is `M.internalWeight t i`**. This
+matches §312's primary use of the symbol, even if the
+auxiliary-tableau phrasing is confusing.
+
+Document this notational decision explicitly in the file's `/-! -/`
+docstring with a quote of `extraction/raw_text/ch03.txt:2465` as
+justification. This is the kind of subtle reading that the
+faithfulness checklist exists to catch.
+
+### Lean signature
 
 ```lean
-/-- Butcher def:381A — two Runge–Kutta methods are 'equivalent' if,
-for every Lipschitz autonomous problem and every initial value, there
-exists a step-size threshold `h₀` below which any output of the first
-method coincides with any output of the second method. -/
-def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
-  ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f) (y₀ : N),
-    ∃ h₀ > (0 : ℝ), ∀ h, 0 < h → h ≤ h₀ →
-      ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
-        y₁ = y₁'
+namespace OpenMath.Chapter3.Section312.RKTableau
+
+open OpenMath.Chapter3.Section310 OpenMath.Chapter3.Section312
+
+/-- Butcher §323 Definition 323A — stage `i` of the Runge–Kutta
+method `M` has *internal order* `q` if for every rooted tree `t`
+with `t.order ≤ q`, the internal weight `Φᵢ(t)` equals
+`(M.c i)^t.order / t.density`. -/
+def HasInternalOrder {s : ℕ} (M : RKTableau s) (i : Fin s) (q : ℕ) :
+    Prop :=
+  ∀ t : RootedTree, t.order ≤ q →
+    M.internalWeight t i = (M.c i) ^ t.order / (t.density : ℝ)
+
+end OpenMath.Chapter3.Section312.RKTableau
 ```
 
-Faithfulness check: this is exactly Butcher's "result computed by the
-first ... is identical with the result computed by the second". The
-`∀ y₁ y₁'` quantifier handles the (rare, implicit-method) case where
-the stage equations have multiple solutions — we require *all* outputs
-of `M` to agree with *all* outputs of `M'`. The `LipschitzWith L f`
-hypothesis matches Butcher's "Lipschitz condition" verbatim (Mathlib's
-`LipschitzWith` is the standard global-Lipschitz predicate over ℝ≥0).
+Notes:
+* Verify the type of `RootedTree.density` with `lean_hover_info`
+  *before* writing the cast. If it is `ℕ`, the `(t.density : ℝ)`
+  coercion is needed; if it is already `ℝ`, drop it.
+* `(M.c i) ^ t.order` is `ℝ`-valued; `t.order : ℕ`, so this is
+  natural-number power on `ℝ` (via `HPow.hPow` / `Monoid.npow`).
+* `M.c i : ℝ` already (from `Section312`'s `RKTableau` definition).
 
-Type-class plumbing note: Mathlib's `LipschitzWith` is in
-`Mathlib.Topology.MetricSpace.Lipschitz`; `NNReal` is `ℝ≥0`. Use the
-fully qualified name on first reference.
+### Witness — explicit Euler at stage 0 has internal order 1
 
-### Step 3 — Reflexivity witness on `explicitEuler`
-
-Target `Equivalent explicitEuler explicitEuler` specifically, where
-the stage system has a *unique* trivial solution `Y 0 = y₀` (since
-`A = 0`):
+Reasoning:
+* For `t.order = 1` (only tree of order ≤ 1, since `order ≥ 1` for
+  every rooted tree): `internalWeight t 0 = Σⱼ A 0 j * derivativeWeight j t`.
+  For explicit Euler, `A = 0`, so this is `0`.
+  `(c 0)^t.order / γ(t) = 0^1 / γ(t) = 0`. So both sides are `0`. ✓
 
 ```lean
-theorem equivalent_explicitEuler_self :
-    Equivalent explicitEuler explicitEuler := by
-  intros N _ _ f L _hL y₀
-  refine ⟨1, one_pos, ?_⟩
-  intros h _hh_pos _hh_le y₁ y₁' h₁ h₁'
-  obtain ⟨Y, hY_stage, hy₁⟩ := h₁
-  obtain ⟨Y', hY'_stage, hy₁'⟩ := h₁'
-  -- For explicit Euler (s = 1, A = 0), the stage equation is
-  --   Y 0 = y₀ + h • ∑ j, 0 • f (Y j) = y₀
-  -- So Y 0 = y₀ uniquely, and y₁ = y₀ + h • (1 • f y₀) = y₀ + h • f y₀.
-  have hY0 : Y 0 = y₀ := by
-    have hs := hY_stage 0
-    simp [explicitEuler] at hs
-    exact hs
-  have hY'0 : Y' 0 = y₀ := by
-    have hs := hY'_stage 0
-    simp [explicitEuler] at hs
-    exact hs
-  rw [hy₁, hy₁']
-  simp [explicitEuler, hY0, hY'0]
+/-- Witness — stage 0 of explicit Euler has internal order 1. -/
+theorem explicitEuler_hasInternalOrder_one :
+    RKTableau.explicitEuler.HasInternalOrder 0 1 := by
+  intro t ht
+  simp [RKTableau.explicitEuler, internalWeight]
+  -- both sides reduce to `0` because `A = 0` and `c 0 = 0`
+  ...
 ```
 
-The general `equivalent_self M : ∀ M, Equivalent M M` for arbitrary
-`M` is **out of scope this cycle** — it requires picking `h₀` small
-enough that the implicit map is a contraction (Banach fixed-point), so
-that any two stage solutions coincide. That is genuine Mathlib work
-(deferred — see Step 5). For cycle 030, deliver only the
-`explicitEuler` witness.
+For the proof, prefer the "no case-analysis" path: show the LHS is
+`0` (because explicit Euler has `A = 0`), show the RHS is `0`
+(because `c 0 = 0` and `0^k = 0` for `k ≥ 1`), close. Use
+`Section381.lean`'s `equivalent_explicitEuler_self` (lines 496–512)
+as the style template — unfold via
+`simp [RKTableau.explicitEuler, ...]`, then close arithmetic.
 
-### Step 4 — Mark `def:381A` as formalised
+If the `0^t.order = 0` step needs `t.order ≥ 1`, you can either:
 
-Update `extraction/formalization_data/lean_status.json`:
+(a) Use `Nat.pos_of_ne_zero` from `RootedTree.order_pos` if a lemma
+    of that name exists in `Section301.lean` or `Section310.lean`
+    (search with `lean_local_search "order_pos"` or
+    `lean_local_search "RootedTree.order"`).
+(b) Prove a small inline helper:
+    `have hpos : 0 < t.order := by ...` using whatever recursive
+    structure `order` has (it returns `1 + sum_of_children` so it
+    is always ≥ 1).
 
-```json
-"def:381A": {
-  "status": "formalized",
-  "lean_file": "OpenMath/Chapter3/Section381.lean",
-  "lean_symbol": "OpenMath.Chapter3.Section381.RKTableau.Equivalent",
-  "notes": "Predicate over arbitrary normed spaces; non-vacuity witness on explicitEuler. General reflexivity equivalent_self M deferred — needs implicit-stage uniqueness via Banach fixed-point at small h."
-}
+### Optional extension if time permits
+
+If the witness above is fast, also provide the *vacuous* `q = 0`
+witness for arbitrary `M`:
+
+```lean
+theorem hasInternalOrder_zero {s : ℕ} (M : RKTableau s) (i : Fin s) :
+    M.HasInternalOrder i 0 := by
+  intro t ht
+  -- `t.order ≥ 1` and `t.order ≤ 0` are contradictory
+  ...
 ```
 
-Update `plan.md`:
+This is a free lemma if you've already discovered the
+`t.order ≥ 1` lemma above. Skip if it slows you down.
 
-* `def:381A` row: `[ ]` → `[x]` and add file pointer.
-* Bump the progress counter `30 / 175` → `31 / 175` in the header.
+### Faithfulness checklist (run before commit)
 
-### Step 5 — Issue file for the deferred general `equivalent_self`
+* Open `extraction/formalization_data/entities/def_323A.json` —
+  quote the textbook in the docstring.
+* Confirm the Lean predicate matches: "for all trees with
+  `r(t) ≤ q`, `Φᵢ(t) = cᵢ^{r(t)} / γ(t)`". We are using
+  `internalWeight t i` for `Φᵢ(t)`, justified by the §323 line at
+  `extraction/raw_text/ch03.txt:2465`. Document this.
+* Tautology check: conclusion is the equation
+  `internalWeight = …`, which is **not** a hypothesis (the
+  hypothesis is just `t.order ≤ q`). Pass.
+* Hypothesis-strength check: textbook quantifies over "all trees
+  such that `r(t) ≤ q`" — we do the same. Pass.
+* Witness identity check: `explicitEuler_hasInternalOrder_one` is
+  not vacuous (it requires showing `0 = 0^1 / γ(τ) = 0`).
 
-Write `.prover-state/issues/equivalent_self_general_deferred.md`:
+### Commit checklist
 
-* Explain that `equivalent_self M` for arbitrary `M` is mathematically
-  trivial in the textbook (the same algorithm gives the same answer)
-  but in our predicate-style encoding requires implicit-stage
-  uniqueness, which needs Banach contraction at small `h`.
-* Cross-reference the AN-stability deferred issue: both share a
-  family of "implicit-method well-definedness" gaps that may best be
-  addressed in a single dedicated cycle building the Banach
-  contraction infrastructure.
-* Document that `equivalent_explicitEuler_self` is a sufficient
-  non-vacuity witness for the cycle's deliverable.
+1. `lake env lean OpenMath/Chapter3/Section323.lean` clean.
+2. `lake build` clean.
+3. Add `import OpenMath.Chapter3.Section323` to `OpenMath.lean` (the
+   project root) so the new file participates in `lake build`. Read
+   `OpenMath.lean` first to see the existing import list.
+4. Update `extraction/formalization_data/lean_status.json` —
+   `def:323A` → `formalized`, with `lean_file` and `lean_symbol`
+   pointing to the new file.
+5. Update `plan.md` — flip `def:323A` row from `[ ]` to `[x]`,
+   bump progress counter `31 → 32`.
+6. Axiom check on the witness:
+   ```
+   #print axioms OpenMath.Chapter3.Section312.RKTableau.explicitEuler_hasInternalOrder_one
+   ```
+   Expect `[propext, Classical.choice, Quot.sound]` only.
+7. Write `.prover-state/task_results/cycle_031.md` per CLAUDE.md
+   format.
+8. Commit with message "Formalize def:323A — internal order q for
+   Runge-Kutta stages" and push.
 
-## Pre-commit faithfulness checklist (mandatory)
+## Why not `def:381F` (despite cycle 030's suggestion)
 
-For `def:381A` → `Equivalent`:
+The cycle 030 worker proposed encoding "P-equivalent" as "their
+P-reduced methods are Φ-equivalent". This is **not** the textbook
+definition. Butcher def:381F (`def_381F.json`) reads:
 
-* [ ] Quote Butcher's statement in the file docstring (already
-  required by project rules).
-* [ ] Confirm the `IsRKOneStep` predicate captures Butcher's stage
-  equations exactly. The textbook writes
-  `Y_i = y_0 + h Σⱼ a_{ij} f(Y_j)` and
-  `y_1 = y_0 + h Σᵢ bᵢ f(Yᵢ)`; the Lean encoding must match.
-* [ ] **Definition smuggling check**: `Equivalent` must NOT be
-  defined as Φ-equivalence (`PhiEquivalent`, the algebraic condition
-  `∀ t, M.elementaryWeight t = M'.elementaryWeight t`). The textbook
-  introduces `def:381A` (semantic equivalence) and `def:381B`
-  (Φ-equivalence) as **distinct** notions; `thm:381H` later proves
-  them equivalent (modulo the reduced method). Defining one in terms
-  of the other smuggles the theorem.
-* [ ] **Tautology check**: the witness `equivalent_explicitEuler_self`
-  must do real work (unfold `IsRKOneStep`, derive `Y 0 = y₀` from
-  the stage equation, apply `simp [explicitEuler]` to close). It
-  should NOT be `exact rfl` or a one-liner.
-* [ ] **Hypothesis strength check**: `LipschitzWith L f` for `L : ℝ≥0`
-  is the cleanest match for Butcher's "satisfying a Lipschitz
-  condition". Do NOT strengthen to `Continuous f` or
-  `ContDiff ℝ ⊤ f` — Butcher specifies Lipschitz alone.
+> Two Runge–Kutta methods are 'P-equivalent' if each of them
+> reduces to the same reduced method.
 
-## Aristotle batch suggestion (optional)
+"Reduced method" is the def:381E construction (P-reduction
+followed by 0-reduction, possibly iterated), which is **deferred**
+per `.prover-state/issues/reduced_method_deferred.md`. That issue
+explicitly identifies def:381F as the first consumer that
+"genuinely requires" the deferred construction.
 
-`equivalent_explicitEuler_self` is small enough (≤ 20 lines) that
-manual proving will be faster than an Aristotle round-trip. Skip
-Aristotle for this cycle unless `equivalent_explicitEuler_self` blocks
-on a `simp` rewrite that resists `lean_multi_attempt` exploration.
+The cycle 030 paraphrase (P-reduced + Φ-equivalent) is a
+*non-trivial reformulation*, not a faithful definition. It would
+either need:
 
-## What NOT to try
+* A proved equivalence lemma between the two formulations
+  (substantial — requires reasoning about the iterated reduction
+  fixpoint), or
+* Treating it as "definition smuggling" — encoding the cycle 030
+  paraphrase as the definition and claiming it is faithful, which
+  it is not without a proof.
 
-* **Do NOT** define `Equivalent` as `PhiEquivalent` or as
-  "P-equivalent". These are theorems (`thm:381H`), not definitions —
-  smuggling them as defs is a faithfulness failure.
-* **Do NOT** define a function `oneStep : RKTableau s → ... → N` that
-  picks a single output. For implicit methods, multiple outputs may
-  exist; using a function silently drops the ambiguity. Use the
-  predicate `IsRKOneStep` instead.
-* **Do NOT** restrict `Equivalent` to explicit methods only. The
-  textbook quantifies over all RK methods; the predicate-style
-  encoding handles implicit methods correctly.
-* **Do NOT** claim a general `equivalent_self M` proof. Defer to an
-  issue file (see Step 5). The §381 cluster's proper closure of this
-  is `thm:381H`, not Step 3 reflexivity.
-* **Do NOT** introduce `axiom` or `constant` for the implicit-stage
-  uniqueness gap. CLAUDE.md is explicit; build the Banach contraction
-  helper later in a dedicated cycle, or live with the
-  `explicitEuler`-only witness.
-* **Do NOT** raise `maxHeartbeats` above 200000.
-* **Do NOT** start AN-stability infrastructure as a side task. It is
-  3+ cycles of complex-resolvent work and the cycle 029 issue file
-  is explicit that it deserves dedicated cycles. Park it for after
-  `def:381F` lands.
-* **Do NOT** edit `scripts/autonomous_loop.py` (worker rule, per
-  cycle 015 strategy and `tautology_scanner_false_positives.md`).
-* **Do NOT** rename or reorganise the existing `Section381.lean`
-  reducibility cluster. Append `IsRKOneStep`, `Equivalent`, and
-  `equivalent_explicitEuler_self` at the end of the file, before
-  `end RKTableau` / `end OpenMath.Chapter3.Section381`.
-* **Do NOT** repeat the cycles 005–014 phantom debugging patterns
-  ("commits not reaching repo", "scanner false positive"). Both are
-  resolved; ignore any stale `attempts.md` carry-overs.
-* **Do NOT** commit a half-finished `Equivalent` definition. Either
-  the predicate + witness lands fully or the work reverts cleanly
-  (see Fallback).
+CLAUDE.md is explicit:
 
-## Fallback (only if `def:381A` blows scope)
+> If you use an equivalent formulation, add an explicit equivalence
+> lemma.
 
-If by mid-cycle the `IsRKOneStep` / `Equivalent` predicate or the
-`explicitEuler` witness proves harder than expected (e.g.
-`LipschitzWith` typeclass plumbing won't unify, or `Fin 1` summation
-unfolding is unworkable), pivot to **`def:323A` (internal order `q`)**:
+The proper resolution of def:381F is the multi-cycle plan in
+`.prover-state/issues/reduced_method_deferred.md`:
 
-* `extraction/formalization_data/entities/def_323A.json` — pure scalar
-  definition over the existing `RKTableau` and `internalWeight`
-  infrastructure from `Section312.lean`. Likely a single-file
-  definition + a witness on `explicitEuler`.
-* Place in a new file `OpenMath/Chapter3/Section323.lean` (registered
-  in `OpenMath/Chapter3.lean` imports).
-* Treat the partial `def:381A` work as deferred: revert any partial
-  edits to `Section381.lean` and ship `def:323A` cleanly. No
-  half-finished definitions in the codebase.
+1. (Cycle X+0) Resolve Q1 (irreducible base case) and Q2 (single
+   step vs iterate) by re-reading `extraction/raw_text/ch03.txt`
+   §380.
+2. (Cycle X+1) Build `reducedMethod : RKTableau s → Σ s', RKTableau s'`
+   via well-founded recursion on stage count. Likely needs
+   `Classical.choose`-based partition extraction and a
+   strict-decrease lemma per reduction step.
+3. (Cycle X+2) Formalize `def:381F` as
+   `reducedMethod M = reducedMethod M'` (modulo dependent-pair
+   equality / Φ-equivalence on the result).
 
-Note the fallback target — do not freelance to a different leaf
-without writing why in `task_results/cycle_030.md`.
+This is not a one-cycle deliverable. **Defer def:381F until a
+dedicated multi-cycle plan is queued. Do not attempt the cycle 030
+paraphrase.**
 
-## Build commands
+## What NOT to try this cycle
 
-```bash
-# Compile the file in isolation (preferred — fast)
-lake env lean OpenMath/Chapter3/Section381.lean
+* **Do NOT formalize `def:381F`** via any single-step encoding. See
+  above; the textbook says "reduced method", not "P-reduced
+  method".
+* **Do NOT build the `reducedMethod` construction** as a side
+  effort to def:323A. It is multi-cycle infrastructure deserving
+  its own dedicated cycle(s).
+* **Do NOT attempt `def:357A` (BN-stability) this cycle.** It is a
+  reasonable alternative target but it requires (a) a non-autonomous
+  one-step predicate (new infrastructure parallel to `IsRKOneStep`
+  from §381), (b) an inner-product-space witness (implicit midpoint
+  via `‖y₁‖² - ‖y₀‖² = 2h ⟨f(m), m⟩`), and (c) deciding whether to
+  anchor on `Equivalent`-style predicate quantification or build a
+  multi-step iterate. Feasible in one cycle but riskier than
+  def:323A and has more design decisions. Park for cycle 032 if
+  def:323A finishes early — see "After def:323A" below.
+* **Do NOT** attempt `lem:383C` (existence of left/right inverses).
+  It depends on the Runge–Kutta group infrastructure (`thm:382A`,
+  `thm:382B`, `lem:383A`) which is not yet built.
+* **Do NOT** raise `maxHeartbeats` above 200000 (CLAUDE.md rule).
+* **Do NOT** introduce `axiom` or `constant` declarations.
+* **Do NOT** edit `extraction/raw_text/` or
+  `extraction/formalization_data/entities/`. Both are regenerated.
+* **Do NOT** edit `scripts/autonomous_loop.py`. The tautology
+  scanner false-positive issue
+  (`.prover-state/issues/tautology_scanner_false_positives.md`)
+  remains the loop maintainer's responsibility.
 
-# Full build (slow; only after the file compiles)
-lake build
+## After def:323A (stretch goal, only if main target lands ahead of schedule)
 
-# Axiom check on the new declarations (after build is clean)
-echo '#print axioms OpenMath.Chapter3.Section381.RKTableau.Equivalent
-#print axioms OpenMath.Chapter3.Section381.RKTableau.equivalent_explicitEuler_self' \
-  | lake env lean --stdin OpenMath/Chapter3/Section381.lean
-```
+If def:323A is committed and clean with time to spare:
 
-Expect `[propext, Classical.choice, Quot.sound]` only.
+1. Generalised `hasInternalOrder_zero {s} (M : RKTableau s) (i : Fin s) :
+   M.HasInternalOrder i 0` if not done inline.
+2. Internal order is downward-closed:
+   `M.HasInternalOrder i (q+1) → M.HasInternalOrder i q`.
+3. *(Exploratory only — do NOT commit half-finished)* — sketch
+   `def:357A` (BN-stability) in a new
+   `OpenMath/Chapter3/Section357A.lean` (separate from the existing
+   `Section357.lean` which holds def:357B). Define a non-autonomous
+   one-step predicate `IsRKOneStepNonauto M f x₀ y₀ h y₁` mirroring
+   `IsRKOneStep` from `Section381.lean`. If you write any sorry's,
+   do NOT commit them; either close them or revert the file.
 
-## Deliverables checklist
+Submit each as a separate Aristotle job from the project root with
+`mcp__aristotle__submit_prompt` (or `submit_file` if you've
+written a sorry stub). Sleep 30 min, check results, incorporate.
+**Do not poll repeatedly.**
 
-* [ ] `IsRKOneStep` predicate in `Section381.lean`
-* [ ] `Equivalent` predicate in `Section381.lean`
-* [ ] `equivalent_explicitEuler_self` non-vacuity witness, fully proved
-* [ ] File docstring updated to quote Butcher's `def:381A` statement
-* [ ] `lean_status.json` row for `def:381A` flipped to `formalized`
-* [ ] `plan.md` row for `def:381A` flipped to `[x]` with file pointer;
-      progress counter bumped 30 → 31
-* [ ] `.prover-state/issues/equivalent_self_general_deferred.md`
-      created
-* [ ] `lake env lean OpenMath/Chapter3/Section381.lean` clean
-* [ ] `lake build` clean
-* [ ] `#print axioms` returns the standard trio for both new declarations
-* [ ] No new sorries (`rg --pcre2 '(?<!--\s)sorry' OpenMath/` returns nothing)
-* [ ] Tautology scanner clean (rename any `h_<word>` closer to
-      `h<word>` if it triggers — see
-      `.prover-state/issues/tautology_scanner_false_positives.md`)
-* [ ] `task_results/cycle_030.md` written per CLAUDE.md template
-* [ ] Commit + push
+## Aristotle batch (this cycle)
+
+If def:323A's witness proof stalls beyond ~10 minutes of focused
+attempts, batch-submit to Aristotle:
+
+* The witness `explicitEuler_hasInternalOrder_one`, stated with
+  `sorry` (sub-lemmas if useful: "0^t.order = 0 when t.order ≥ 1",
+  "internalWeight t i = 0 when M.A = 0").
+* The `hasInternalOrder_zero` general lemma if you sketched it.
+
+Use `mcp__aristotle__submit_file` against the file with the
+`sorry`'s in place. Sleep 30 min. Check via
+`mcp__aristotle__list_projects` once. Do not poll.
+
+If the witness proof is closing cleanly by hand (likely — it's a
+short `simp` after unfolding explicit Euler), skip Aristotle for
+this cycle.
+
+## Open issue audit (do NOT pick these up this cycle)
+
+Reviewed the issue files in `.prover-state/issues/`:
+
+* `AN_stability_deferred.md` — needs complex matrix resolvent
+  infrastructure. Multi-cycle. Park.
+* `equivalent_self_general_deferred.md` — needs Banach contraction
+  for implicit-stage uniqueness. Multi-cycle. Park.
+* `reduced_method_deferred.md` — see "Why not def:381F" above.
+  Multi-cycle. Park.
+* `picard_lindelof_bound_strengthening.md` — Chapter 1 leftover;
+  not on the §3 critical path. Park.
+* `jordan_canonical_form_missing.md` — Chapter 1 §142 leftover;
+  not on the §3 critical path. Park.
+* `symmetry_group_equivalence.md` — faithfulness divergence on σ;
+  not blocking. Park.
+* `tautology_scanner_false_positives.md` — loop maintainer
+  responsibility, NOT worker. Do not edit `scripts/`.
+* `consultant_advice_cycle_009.md`, `consultant_advice_cycle_014.md`,
+  `consultant_advice_cycle_015.md` — historical consultant notes;
+  no actions needed.
+
+Each parked issue should remain parked until either (a) a
+downstream theorem we are about to formalize *genuinely* requires
+it, or (b) a dedicated multi-cycle plan is scheduled. None apply
+to this cycle.
