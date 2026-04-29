@@ -33,15 +33,6 @@ namespace ButcherTableau
 
 variable {s : ℕ}
 
-/-- Proper bSeries-side cut convolution for inverse recursion.  The no-cut
-trunk has the same order as `τ`, so this helper asks only for coefficients of
-strictly smaller trunks and contributes `0` to the no-cut branch. -/
-noncomputable def bSeriesConvNonRoot (α : BTree → ℝ) (τ : BTree)
-    (β : ∀ σ : BTree, σ.order < τ.order → ℝ) : ℝ :=
-  ((τ.innerCut α).filterMap fun c =>
-    c.1.map fun trunk =>
-      if h : trunk.order < τ.order then c.2 * β trunk h else 0).sum
-
 namespace QuotEquiv
 
 /-- Butcher-series associativity on relabel-equivalence classes. The
@@ -111,6 +102,13 @@ theorem bSeriesHom_leaf {s : ℕ} (q : QuotEquiv s) :
   intro t
   simp [bSeriesHom, bSeries, weightsSum]
 
+/-! ### §388 inverse coefficients
+
+Cycle 577 adds the canonical no-cut peeling identity in
+`Section386Conv` and the representative-level node cancellation below.
+The symmetric convolution direction and the eventual `G1.inv` lift are
+the remaining §388 frontier. -/
+
 /-- Unit-stage augmentation predicate on the raw quotient layer. -/
 noncomputable def IsUnit {s : ℕ} (q : QuotEquiv s) : Prop :=
   q.bSeries BTree.leaf = 1
@@ -154,6 +152,17 @@ theorem bSeriesConv_inverseCoeff_cancel_leaf {s : ℕ}
     (q : QuotEquiv s) :
     bSeriesConv q.bSeries (q.inverseCoeff) BTree.leaf = 1 := by
   rw [bSeriesConv_leaf, QuotEquiv.inverseCoeff_leaf]
+
+/-- Node cancellation for the §388 inverse construction: at every non-leaf
+tree, the bSeries convolution of `q.bSeries` against the recursively defined
+inverse coefficient cancels the original node coefficient. -/
+theorem bSeriesConv_inverseCoeff_cancel_node
+    {s : ℕ} (q : QuotEquiv s) (children : List BTree) :
+    q.bSeries (BTree.node children)
+      + bSeriesConv q.bSeries q.inverseCoeff (BTree.node children) = 0 := by
+  rw [bSeriesConv_eq_root_plus_nonRoot]
+  simpa [add_assoc, add_comm, add_left_comm] using
+    QuotEquiv.inverseCoeff_node_eq q children
 
 /-! ### §387 raw and quotient powers
 

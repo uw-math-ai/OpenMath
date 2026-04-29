@@ -76,6 +76,15 @@ map evaluated on that trunk. -/
 noncomputable def bSeriesConv (α β : BTree → ℝ) (τ : BTree) : ℝ :=
   ((τ.innerCut α).filterMap fun c => c.1.map (fun t => c.2 * β t)).sum
 
+/-- Proper bSeries-side cut convolution for inverse recursion.  The no-cut
+trunk has the same order as `τ`, so this helper asks only for coefficients of
+strictly smaller trunks and contributes `0` to the no-cut branch. -/
+noncomputable def bSeriesConvNonRoot (α : BTree → ℝ) (τ : BTree)
+    (β : ∀ σ : BTree, σ.order < τ.order → ℝ) : ℝ :=
+  ((τ.innerCut α).filterMap fun c =>
+    c.1.map fun trunk =>
+      if h : trunk.order < τ.order then c.2 * β trunk h else 0).sum
+
 theorem innerCut_leaf (α : BTree → ℝ) :
     BTree.leaf.innerCut α = [(some BTree.leaf, 1), (none, α BTree.leaf)] := by
   simp [BTree.innerCut]
@@ -1154,5 +1163,297 @@ theorem innerCut_root_only_at_full_order
             · right
               rw [hcanon, hcanon_tail]
               simp [List.map_cons]
+
+/-! ### Cycle 577: peeling the canonical no-cut summand. -/
+
+private theorem innerCutForest_root_only_at_full_order
+    (α : BTree → ℝ) (children : List BTree) :
+    ∀ cs ∈ BTree.innerCutForest children α,
+      ((cs.filterMap (fun c => c.1)).map BTree.order).sum
+          < (children.map BTree.order).sum
+        ∨ cs = children.map (fun c => (some c, (1 : ℝ))) := by
+  induction children with
+  | nil =>
+      intro cs hcs
+      rw [BTree.innerCutForest] at hcs
+      simp at hcs
+      subst hcs
+      right
+      simp
+  | cons head tail ih_tail =>
+      intro cs hcs
+      rw [BTree.innerCutForest] at hcs
+      rw [List.mem_flatMap] at hcs
+      obtain ⟨c, hc, hin⟩ := hcs
+      rw [List.mem_map] at hin
+      obtain ⟨tail_cs, htail_cs, heq⟩ := hin
+      rw [← heq]
+      have h_head := innerCut_root_only_at_full_order α head c hc
+      have h_tail := ih_tail tail_cs htail_cs
+      have h_head_pos : 0 < head.order := BTree.order_pos head
+      cases hopt : c.1 with
+      | none =>
+          left
+          simp only [List.filterMap_cons, hopt, List.map_cons, List.sum_cons]
+          rcases h_tail with ht | hcanon
+          · omega
+          · rw [hcanon, canon_filterMap]; omega
+      | some t =>
+          rcases h_head with hnone | ⟨t', ht'_eq, ht'_lt⟩ | hcanon
+          · exfalso; rw [hopt] at hnone; cases hnone
+          · rw [hopt] at ht'_eq
+            obtain rfl : t' = t := by exact (Option.some.inj ht'_eq.symm)
+            left
+            simp only [List.filterMap_cons, hopt, List.map_cons, List.sum_cons]
+            rcases h_tail with ht | hcanon
+            · omega
+            · rw [hcanon, canon_filterMap]; omega
+          · have hc1 : c.1 = some head := by rw [hcanon]
+            have _hc2 : c.2 = 1 := by rw [hcanon]
+            rw [hc1] at hopt
+            obtain rfl : t = head := by
+              have := Option.some.inj hopt
+              exact this.symm
+            rcases h_tail with ht | hcanon_tail
+            · left
+              simp only [List.filterMap_cons, hc1, List.map_cons, List.sum_cons]
+              omega
+            · right
+              rw [hcanon, hcanon_tail]
+              simp [List.map_cons]
+
+private theorem list_sum_indicator_eq_countP
+    {γ : Type*} [DecidableEq γ] (L : List γ) (a : γ) :
+    (L.map (fun x => if x = a then (1 : ℕ) else 0)).sum
+      = L.countP (· = a) := by
+  induction L with
+  | nil => simp
+  | cons x xs ih =>
+      by_cases hx : x = a
+      · simp [hx, ih, Nat.add_comm]
+      · simp [hx, ih]
+
+private theorem list_sum_real_indicator_eq_countP_mul
+    {γ : Type*} [DecidableEq γ] (L : List γ) (a : γ) (v : ℝ) :
+    (L.map (fun x => if x = a then v else 0)).sum
+      = (L.countP (· = a) : ℝ) * v := by
+  induction L with
+  | nil => simp
+  | cons x xs ih =>
+      by_cases hx : x = a
+      · simp [hx, ih]
+        ring
+      · simp [hx, ih]
+
+private def cutValue (β : BTree → ℝ) (c : Option BTree × ℝ) : ℝ :=
+  match c.1 with
+  | none => 0
+  | some t => c.2 * β t
+
+private def cutValueNonRoot (τ : BTree) (β : BTree → ℝ)
+    (c : Option BTree × ℝ) : ℝ :=
+  match c.1 with
+  | none => 0
+  | some t => if t.order < τ.order then c.2 * β t else 0
+
+private theorem filterMap_cutValue_sum
+    (β : BTree → ℝ) (L : List (Option BTree × ℝ)) :
+    (L.filterMap fun c => c.1.map (fun t => c.2 * β t)).sum
+      = (L.map (cutValue β)).sum := by
+  induction L with
+  | nil => simp
+  | cons c cs ih =>
+      rcases c with ⟨opt, w⟩
+      cases opt <;> simp [cutValue, ih]
+
+private theorem filterMap_cutValueNonRoot_sum
+    (τ : BTree) (β : BTree → ℝ) (L : List (Option BTree × ℝ)) :
+      (L.filterMap fun c =>
+        c.1.map fun trunk =>
+          if _h : trunk.order < τ.order then c.2 * β trunk else 0).sum
+      = (L.map (cutValueNonRoot τ β)).sum := by
+  induction L with
+  | nil => simp
+  | cons c cs ih =>
+      rcases c with ⟨opt, w⟩
+      cases opt with
+      | none =>
+          simpa [cutValueNonRoot] using ih
+      | some t =>
+          by_cases ht : t.order < τ.order
+          · simp [cutValueNonRoot, ht]
+            simpa using ih
+          · simp [cutValueNonRoot, ht]
+            simpa using ih
+
+private theorem cutValue_eq_nonRoot_add_indicator
+    (α β : BTree → ℝ) (τ : BTree) (c : Option BTree × ℝ)
+    (hc : c ∈ τ.innerCut α) :
+    cutValue β c
+      = cutValueNonRoot τ β c
+        + if c = ((some τ, (1 : ℝ)) : Option BTree × ℝ) then β τ else 0 := by
+  by_cases hcanon : c = ((some τ, (1 : ℝ)) : Option BTree × ℝ)
+  · subst c
+    simp [cutValue, cutValueNonRoot]
+  · rcases c with ⟨opt, w⟩
+    cases opt with
+    | none =>
+        simp [cutValue, cutValueNonRoot, hcanon]
+    | some t =>
+        have hstruct :=
+          innerCut_root_only_at_full_order α τ ((some t, w) : Option BTree × ℝ) hc
+        rcases hstruct with hnone | hsmall | hcanon'
+        · cases hnone
+        · rcases hsmall with ⟨t', ht'_eq, ht'_lt⟩
+          obtain rfl : t' = t := by exact (Option.some.inj ht'_eq.symm)
+          simp [cutValue, cutValueNonRoot, ht'_lt, hcanon]
+        · exact (hcanon hcanon').elim
+
+mutual
+  private theorem innerCut_canon_count
+      (α : BTree → ℝ) (τ : BTree) :
+      ((τ.innerCut α).countP
+        (· = ((some τ, (1 : ℝ)) : Option BTree × ℝ))) = 1 := by
+    cases τ with
+    | leaf =>
+        simp [BTree.innerCut]
+    | node children =>
+        rw [innerCut_node]
+        simp
+        have hpreimage :
+            (BTree.innerCutForest children α).countP
+                (((fun c : Option BTree × ℝ =>
+                    decide (c = ((some (BTree.node children), (1 : ℝ)) :
+                      Option BTree × ℝ))) ∘
+                  fun cs : List (Option BTree × ℝ) =>
+                    (some (BTree.node (cs.filterMap (fun c => c.1))),
+                      cs.foldr (fun c acc => c.2 * acc) (1 : ℝ))))
+              =
+            (BTree.innerCutForest children α).countP
+                (· = children.map
+                  (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ))) := by
+          apply List.countP_congr
+          intro cs hcs
+          constructor
+          · intro hpair_bool
+            have hpair :
+                (some (BTree.node (cs.filterMap (fun c => c.1))),
+                    cs.foldr (fun c acc => c.2 * acc) (1 : ℝ))
+                  =
+                ((some (BTree.node children), (1 : ℝ)) :
+                  Option BTree × ℝ) := by
+              simpa [Function.comp] using hpair_bool
+            rcases innerCutForest_root_only_at_full_order α children cs hcs with hlt | hcanon
+            · have hfst := congrArg Prod.fst hpair
+              have hnode :
+                  BTree.node (cs.filterMap (fun c => c.1)) =
+                    BTree.node children := by
+                exact Option.some.inj hfst
+              have hfilter : cs.filterMap (fun c => c.1) = children := by
+                simpa using BTree.node.inj hnode
+              rw [hfilter] at hlt
+              exact (Nat.lt_irrefl _ hlt).elim
+            · simp [hcanon]
+          · intro hcanon_bool
+            have hcanon :
+                cs = children.map
+                  (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ)) := by
+              simpa using hcanon_bool
+            subst cs
+            have hfilter := canon_filterMap children
+            have hfold := canon_foldr children
+            simp [hfilter, hfold]
+        rw [hpreimage]
+        exact innerCutForest_canon_count α children
+
+  private theorem innerCutForest_canon_count
+      (α : BTree → ℝ) (children : List BTree) :
+      ((BTree.innerCutForest children α).countP
+        (· = children.map (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ)))) = 1 := by
+    cases children with
+    | nil =>
+        simp [BTree.innerCutForest]
+    | cons head tail =>
+        rw [BTree.innerCutForest, List.countP_flatMap]
+        let headCanon : Option BTree × ℝ := (some head, (1 : ℝ))
+        let tailCanon : List (Option BTree × ℝ) :=
+          tail.map (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ))
+        have hbranch :
+            ∀ c ∈ head.innerCut α,
+              ((BTree.innerCutForest tail α).map (fun cs => c :: cs)).countP
+                  (· = headCanon :: tailCanon)
+                = if c = headCanon then 1 else 0 := by
+          intro c hc
+          by_cases hcanon : c = headCanon
+          · subst c
+            rw [List.countP_map]
+            have hcongr :
+                (BTree.innerCutForest tail α).countP
+                    (((fun x : List (Option BTree × ℝ) =>
+                        decide (x = headCanon :: tailCanon)) ∘
+                      fun cs => headCanon :: cs))
+                  =
+                (BTree.innerCutForest tail α).countP (· = tailCanon) := by
+              apply List.countP_congr
+              intro cs hcs
+              simp [Function.comp]
+            rw [hcongr]
+            simpa [tailCanon] using innerCutForest_canon_count α tail
+          · rw [List.countP_map]
+            simp [Function.comp, hcanon]
+        have hmap :
+            (List.map
+                (List.countP (fun x => decide (x = headCanon :: tailCanon)) ∘
+                  fun c => (BTree.innerCutForest tail α).map (fun cs => c :: cs))
+                (head.innerCut α))
+              =
+            (head.innerCut α).map (fun c => if c = headCanon then 1 else 0) := by
+          apply List.map_congr_left
+          intro c hc
+          exact hbranch c hc
+        change
+          (List.map
+              (List.countP (fun x => decide (x = headCanon :: tailCanon)) ∘
+                fun c => (BTree.innerCutForest tail α).map (fun cs => c :: cs))
+              (head.innerCut α)).sum = 1
+        rw [hmap, list_sum_indicator_eq_countP]
+        simpa [headCanon] using innerCut_canon_count α head
+end
+
+theorem bSeriesConv_eq_root_plus_nonRoot
+    (α β : BTree → ℝ) (τ : BTree) :
+    bSeriesConv α β τ
+      = β τ + bSeriesConvNonRoot α τ (fun σ _ => β σ) := by
+  unfold bSeriesConv bSeriesConvNonRoot
+  rw [filterMap_cutValue_sum β,
+    filterMap_cutValueNonRoot_sum τ β]
+  let canon : Option BTree × ℝ := (some τ, (1 : ℝ))
+  have hmap :
+      (τ.innerCut α).map (cutValue β)
+        =
+      (τ.innerCut α).map
+        (fun c => cutValueNonRoot τ β c
+          + if c = canon then β τ else 0) := by
+    apply List.map_congr_left
+    intro c hc
+    simpa [canon] using cutValue_eq_nonRoot_add_indicator α β τ c hc
+  calc
+    ((τ.innerCut α).map (cutValue β)).sum
+        = ((τ.innerCut α).map
+            (fun c => cutValueNonRoot τ β c
+              + if c = canon then β τ else 0)).sum := by
+          rw [hmap]
+    _ = ((τ.innerCut α).map (cutValueNonRoot τ β)).sum
+          + ((τ.innerCut α).map
+              (fun c => if c = canon then β τ else 0)).sum := by
+          rw [List.sum_map_add]
+    _ = ((τ.innerCut α).map (cutValueNonRoot τ β)).sum
+          + ((τ.innerCut α).countP (· = canon) : ℝ) * β τ := by
+          rw [list_sum_real_indicator_eq_countP_mul]
+    _ = ((τ.innerCut α).map (cutValueNonRoot τ β)).sum + β τ := by
+          rw [innerCut_canon_count α τ]
+          ring
+    _ = β τ + ((τ.innerCut α).map (cutValueNonRoot τ β)).sum := by
+          ring
 
 end ButcherTableau
