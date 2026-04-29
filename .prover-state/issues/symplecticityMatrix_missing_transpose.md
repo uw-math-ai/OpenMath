@@ -27,7 +27,7 @@ intends. The cycle-033 `algebraicallyStable_isBNStable` proof was
 preserved end-to-end with simpler intermediate lemmas; axioms are
 unchanged at `[propext, Classical.choice, Quot.sound]`.
 
-Predecessor commit: `903c17bb`. The cycle-034 fix commit follows.
+Predecessor commit: `903c17bb`. Cycle-034 fix commit: `34e769f`.
 
 ## Blocker
 
