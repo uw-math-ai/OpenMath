@@ -7,6 +7,7 @@ import OpenMath.ButcherGroup.Section384Slices
 import OpenMath.ButcherGroup.Section384SlicesMixed
 import OpenMath.ButcherGroup.Section384SlicesQuadMixed
 import OpenMath.ButcherGroup.Section386Conv
+import OpenMath.ButcherGroup.Section386Aug
 import OpenMath.ButcherGroup.QuotEquivSlices
 
 /-!

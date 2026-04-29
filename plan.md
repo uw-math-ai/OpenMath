@@ -1245,15 +1245,25 @@ Concrete next steps:
   `.prover-state/issues/butcher_section386_associativity_false.md`. The
   honest leaf and `node []` base cases — degenerate but true — are
   landed as `bSeriesConv_assoc_leaf` and `bSeriesConv_assoc_node_nil`.
-  The next §38 layer must redefine `bSeriesConv` symmetrically (e.g.
-  augment by an empty-forest scalar pair) before retrying associativity
-  or a tableau-level antipode; cycle 583 found that the first arbitrary
-  `AugSeries.emptyVal` scaffold is still non-associative at `node [leaf]`
-  unless the middle empty value is unital (see
-  `.prover-state/issues/butcher_section386_aug_middle_emptyval.md`). After
-  the augmented convention is repaired, the `Group (G1 p)` instance and the
-  §389 effective-order interpretation remain. `G1.npow`-style stage-count
-  arithmetic is closed.
+  Cycle 583 found that the first arbitrary `AugSeries.emptyVal`
+  scaffold is still non-associative at `node [leaf]` unless the middle
+  empty value is unital (see
+  `.prover-state/issues/butcher_section386_aug_middle_emptyval.md`).
+  Cycle 584 lands the unital fix in
+  `OpenMath/ButcherGroup/Section386Aug.lean`: `AugSeries`,
+  `AugSeries.IsUnital`, the augmented convolution `bSeriesConvAug` with
+  closed forms at `leaf`, `node []`, `node [leaf]`, the bridge
+  `bSeriesConv α β τ = bSeriesConvAug ⟨1, α⟩ ⟨0, β⟩ τ`, and the depth-2
+  unital associativity sanity check
+  `mul_assoc_at_node_singleton_leaf` (plus depth-0/1 corollaries
+  `mul_assoc_at_leaf` / `mul_assoc_at_node_nil`). The next step is to
+  lift the unital depth-2 check to all trees by `BTree.rec` (requires a
+  list-level reindexing combinator on `innerCutForest`, same family as
+  cycles 569/570). Only after that do we have the algebraic hammer to
+  define `G1.inv` and finish `Group (G1 p)`. After the augmented
+  convention is fully repaired, the `Group (G1 p)` instance and the
+  §389 effective-order interpretation remain. `G1.npow`-style
+  stage-count arithmetic is closed.
 
 Expected sorry-first surface:
 - `def ButcherProduct : ButcherTableau s → ButcherTableau t → ButcherTableau (s + t)`
