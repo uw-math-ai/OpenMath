@@ -391,6 +391,38 @@ theorem bSeriesHom_product_node_replicate_triple_leaf
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_replicate_triple_leaf_eq t₁ t₂ n
 
+/-- §384 lift of the mixed leaf / triple-leaf parametric family to the
+quotient layer. Each kept triple-leaf root child contributes a `Fin 4`
+cut-count choice; kept root leaves contribute to the residual leaf count. -/
+theorem bSeriesHom_product_node_replicate_mixed_leaf_triple_leaf
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) (a b : ℕ) :
+    (q.product r).bSeriesHom
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])))
+      = q.bSeriesHom
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b
+                (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])))
+        + ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+            ∑ S_tl ∈ (Finset.univ : Finset (Fin b)).powerset,
+              (q.bSeriesHom BTree.leaf) ^ S_leaf.card *
+                (q.bSeriesHom
+                  (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) ^ S_tl.card *
+                  (∑ χ : Fin (b - S_tl.card) → Fin 4,
+                    tripleLeafChoiceFunctionCoef (q.bSeriesHom BTree.leaf) χ *
+                      r.bSeriesHom
+                        (mixedLeafTripleLeafChoiceTree
+                          (a - S_leaf.card) χ)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_replicate_mixed_leaf_triple_leaf_eq
+      t₁ t₂ a b
+
 /-- §384 lift of the cycle 554 mixed singleton-leaf / double-leaf root
 family.  Each kept singleton-leaf gives a `Fin 2` cut/keep choice for its
 internal leaf; each kept double-leaf gives a `Fin 3` choice via
@@ -2327,6 +2359,146 @@ theorem product_congr_node_replicate_triple_leaf
     apply hr
     apply order_tripleLeafChoiceTree_le
     omega
+  rw [hchoice]
+
+private theorem order_node_replicate_leaf_append_replicate_triple_leaf
+    (a b : ℕ) :
+    (BTree.node
+      (List.replicate a BTree.leaf ++
+        List.replicate b
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))).order
+      = 1 + a + 4 * b := by
+  simpa using
+    (order_node_replicate_leaf_append_replicate_singleton_leaf_append_replicate_double_leaf_append_replicate_triple_leaf
+      a 0 0 b)
+
+private theorem order_mixedLeafTripleLeafChoiceTree
+    {n : ℕ} (aKeep : ℕ) (χ : Fin n → Fin 4) :
+    (mixedLeafTripleLeafChoiceTree aKeep χ).order
+      = 1 + (aKeep + tripleLeafRootChoiceCount χ ⟨3, by decide⟩)
+          + 2 * tripleLeafRootChoiceCount χ ⟨2, by decide⟩
+          + 3 * tripleLeafRootChoiceCount χ ⟨1, by decide⟩
+          + 4 * tripleLeafRootChoiceCount χ ⟨0, by decide⟩ := by
+  change
+    (BTree.node
+      (List.replicate
+          (aKeep + tripleLeafRootChoiceCount χ ⟨3, by decide⟩) BTree.leaf ++
+        List.replicate (tripleLeafRootChoiceCount χ ⟨2, by decide⟩)
+          (BTree.node [BTree.leaf]) ++
+        List.replicate (tripleLeafRootChoiceCount χ ⟨1, by decide⟩)
+          (BTree.node [BTree.leaf, BTree.leaf]) ++
+        List.replicate (tripleLeafRootChoiceCount χ ⟨0, by decide⟩)
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))).order = _
+  rw [order_node_replicate_leaf_append_replicate_singleton_leaf_append_replicate_double_leaf_append_replicate_triple_leaf]
+
+private theorem order_mixedLeafTripleLeafChoiceTree_le
+    {n a b p : ℕ} (aKeep : ℕ) (χ : Fin n → Fin 4)
+    (haKeep : aKeep ≤ a) (hn : n ≤ b) (hab : 1 + a + 4 * b ≤ p) :
+    (mixedLeafTripleLeafChoiceTree aKeep χ).order ≤ p := by
+  rw [order_mixedLeafTripleLeafChoiceTree]
+  have hsum := tripleLeafRootChoiceCount_sum χ
+  have hweighted :
+      tripleLeafRootChoiceCount χ ⟨3, by decide⟩
+        + 2 * tripleLeafRootChoiceCount χ ⟨2, by decide⟩
+        + 3 * tripleLeafRootChoiceCount χ ⟨1, by decide⟩
+        + 4 * tripleLeafRootChoiceCount χ ⟨0, by decide⟩ ≤ 4 * n := by
+    omega
+  omega
+
+/-- Cycle 565 mixed leaf / triple-leaf parametric `G₁.mul`-direction slice.
+The root tree has order `1 + a + 4 * b`. -/
+theorem product_congr_node_replicate_mixed_leaf_triple_leaf
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (a b : ℕ)
+    (hτ :
+      (BTree.node
+        (List.replicate a BTree.leaf ++
+          List.replicate b
+            (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))).order ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])))
+      = (q'.product r').bSeriesHom
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))) := by
+  rw [QuotEquiv.bSeriesHom_product_node_replicate_mixed_leaf_triple_leaf,
+      QuotEquiv.bSeriesHom_product_node_replicate_mixed_leaf_triple_leaf]
+  have hab : 1 + a + 4 * b ≤ p := by
+    rw [order_node_replicate_leaf_append_replicate_triple_leaf] at hτ
+    exact hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode :
+      q.bSeriesHom
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b
+                (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])))
+        = q'.bSeriesHom
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b
+                (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))) :=
+    hq _ hτ
+  rw [hnode, hleaf]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S_leaf hS_leaf_mem
+  have hS_leaf : S_leaf.card ≤ a := by
+    have hmem : S_leaf ⊆ (Finset.univ : Finset (Fin a)) :=
+      Finset.mem_powerset.mp hS_leaf_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  refine Finset.sum_congr rfl ?_
+  intro S_tl hS_tl_mem
+  have hS_tl : S_tl.card ≤ b := by
+    have hmem : S_tl ⊆ (Finset.univ : Finset (Fin b)) :=
+      Finset.mem_powerset.mp hS_tl_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have htriple_pow :
+      (q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) ^ S_tl.card
+        = (q'.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) ^
+          S_tl.card := by
+    by_cases hzero : S_tl.card = 0
+    · simp [hzero]
+    · have hbpos : 0 < b := by
+        have : 0 < S_tl.card := Nat.pos_of_ne_zero hzero
+        exact Nat.lt_of_lt_of_le this hS_tl
+      have hp4 : 4 ≤ p := by omega
+      have htriple :
+          q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+            = q'.bSeriesHom
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) := by
+        apply hq
+        have horder :
+            (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]).order = 4 := by
+          simp [BTree.order_node, List.foldr]
+        rw [horder]
+        exact hp4
+      rw [htriple]
+  rw [htriple_pow]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro χ _
+  have hchoice :
+      r.bSeriesHom (mixedLeafTripleLeafChoiceTree (a - S_leaf.card) χ)
+        = r'.bSeriesHom
+          (mixedLeafTripleLeafChoiceTree (a - S_leaf.card) χ) := by
+    apply hr
+    apply order_mixedLeafTripleLeafChoiceTree_le (a := a) (b := b)
+    · omega
+    · exact Nat.sub_le _ _
+    · exact hab
   rw [hchoice]
 
 /-- Cycle 554 mixed singleton-leaf / double-leaf `G₁.mul`-direction slice.
