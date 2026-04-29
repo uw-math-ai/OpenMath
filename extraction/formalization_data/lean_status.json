@@ -325,9 +325,9 @@
     "status": "unformalized"
   },
   "def:355A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section355.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section355.orderWeb",
+    "status": "formalized"
   },
   "thm:355B": {
     "lean_file": null,

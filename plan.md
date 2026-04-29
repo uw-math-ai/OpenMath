@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 26 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
+**Progress: 27 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -81,7 +81,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `cor:342D` **Gaussian Quadrature Runge Kutta Order Condition** (§342)
 - [ ] `cor:356D` **Positive weights for DJ irreducible methods** (§356)
 - [x] `def:310A` **elementary differential** (§310) — `OpenMath/Chapter3/Section310.lean`
-- [ ] `def:355A` **down arrows** (§355)
+- [x] `def:355A` **down arrows** (§355) — `OpenMath/Chapter3/Section355.lean`
 - [x] `def:381E` **reduced method (381E)** (§380) — `IsIrreducible` formalised; `reducedMethod` construction deferred (see `.prover-state/issues/reduced_method_deferred.md`)
 - [ ] `lem:342B` **Gaussian quadrature exactness degree** (§342)
 - [ ] `lem:351A` **Criteria for A-stability** (§351)
