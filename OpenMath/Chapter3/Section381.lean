@@ -1,18 +1,46 @@
 import OpenMath.Chapter3.Section310
 import OpenMath.Chapter3.Section312
+import Mathlib.Topology.MetricSpace.Lipschitz
 
 /-!
-# Butcher §380 — Φ-equivalence and reducibility of Runge–Kutta methods
+# Butcher §380 — equivalence and reducibility of Runge–Kutta methods
 
-This file formalises three definitions from Butcher's §380 ("Motivation"
+This file formalises four definitions from Butcher's §380 ("Motivation"
 of Section 38, *Numerical Methods for Ordinary Differential Equations*,
 3rd ed.):
 
+* **Definition 381A** (page 302) — *equivalent* Runge–Kutta methods
+  (semantic same-output equivalence on Lipschitz autonomous problems).
 * **Definition 381B** (page 302) — *Φ-equivalent* Runge–Kutta methods.
 * **Definition 381C** (page 303) — *0-reducible* Runge–Kutta methods
   and the *0-reduced method*.
 * **Definition 381D** (page 303) — *P-reducible* Runge–Kutta methods
   and the *P-reduced method*.
+
+## Definition 381A textbook statement (quoted verbatim from `def_381A.json`)
+
+> Two Runge–Kutta methods are 'equivalent' if, for any initial value
+> problem defined by an autonomous function `f` satisfying a Lipschitz
+> condition, and an initial value `y₀`, there exists `h₀ > 0` such that
+> the result computed by the first method is identical with the result
+> computed by the second method, if `h ≤ h₀`.
+
+The encoding splits this into two definitions:
+* `IsRKOneStep M f y₀ h y₁` — *predicate* form of "method `M` produces
+  output `y₁` after one step of size `h`". Encoded as a `Prop` so that
+  implicit methods (whose stage equations may have zero, one, or
+  multiple solutions depending on `h`) are handled honestly: any tuple
+  `(Y, y₁)` satisfying the implicit stage system is a valid output.
+* `Equivalent M M'` — Butcher's def:381A — for every Lipschitz
+  autonomous problem and initial value, there exists `h₀ > 0` below
+  which *every* output of `M` agrees with *every* output of `M'`.
+
+The semantic equivalence of def:381A is **strictly weaker** than
+Φ-equivalence (def:381B): it allows the methods to differ on
+non-Lipschitz or implicitly ill-defined problems. Butcher's
+`thm:381H` later proves the two notions agree modulo passing to the
+reduced method; that is a *theorem*, not a definition. We therefore
+must NOT define `Equivalent` as `PhiEquivalent`.
 
 ## Definition 381B textbook statement (quoted verbatim from `def_381B.json`)
 
@@ -158,6 +186,7 @@ end OpenMath.Chapter3.Section381
 namespace OpenMath.Chapter3.Section312.RKTableau
 
 open OpenMath.Chapter3.Section381
+open scoped NNReal
 
 /- ### Definition 381C — 0-reducible Runge–Kutta methods -/
 
@@ -324,6 +353,50 @@ of the "reduced method") is deferred — see
 def IsIrreducible {s : ℕ} (M : RKTableau s) : Prop :=
   ¬ M.IsZeroReducible ∧ ¬ M.IsPReducible
 
+/- ### Definition 381A — equivalent Runge–Kutta methods -/
+
+/-- Predicate form of "method `M` produces output `y₁` after one step
+of size `h` from initial value `y₀` on the autonomous ODE `y' = f(y)`".
+
+Captures the implicit stage system
+`Yᵢ = y₀ + h • Σⱼ aᵢⱼ • f(Yⱼ)` together with the update
+`y₁ = y₀ + h • Σᵢ bᵢ • f(Yᵢ)`. Encoded as a `Prop`, not a function:
+implicit methods may admit zero, one, or many solutions of the stage
+system depending on `M`, `f`, and `h`, so a function-style "the
+output" would silently drop the ambiguity. The predicate is *true*
+for any `(Y, y₁)` tuple satisfying both equations. -/
+def IsRKOneStep {s : ℕ} (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (y₀ : N) (h : ℝ) (y₁ : N) : Prop :=
+  ∃ Y : Fin s → N,
+    (∀ i, Y i = y₀ + h • ∑ j, M.A i j • f (Y j)) ∧
+    y₁ = y₀ + h • ∑ i, M.b i • f (Y i)
+
+/-- Butcher §380 Definition 381A — two Runge–Kutta methods are
+*equivalent* if, for every autonomous Lipschitz right-hand side `f` and
+every initial value `y₀`, there exists a step-size threshold `h₀ > 0`
+below which any one-step output of the first method coincides with any
+one-step output of the second method.
+
+This is **semantic** equivalence (same numerical output on every
+Lipschitz autonomous problem at sufficiently small step), strictly
+weaker than Φ-equivalence (`PhiEquivalent`, def:381B): the methods
+are allowed to diverge on non-Lipschitz problems or at large step
+sizes where the implicit stage system has no/multiple solutions.
+
+The `∀ y₁ y₁'` quantifier handles the (rare, implicit-method) case
+where the stage equations have multiple solutions: we require
+*every* output of `M` to agree with *every* output of `M'`. The
+hypothesis `LipschitzWith L f` (`L : ℝ≥0`) is the standard
+Mathlib global-Lipschitz predicate and matches Butcher's "satisfying
+a Lipschitz condition" verbatim. -/
+def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
+  ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f) (y₀ : N),
+    ∃ h₀ > (0 : ℝ), ∀ h, 0 < h → h ≤ h₀ →
+      ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
+        y₁ = y₁'
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381
@@ -404,5 +477,38 @@ theorem explicitEuler_isIrreducible :
   · rintro ⟨sBar, hLt, P, _⟩
     obtain rfl : sBar = 0 := Nat.lt_one_iff.mp hLt
     exact (P.block 0).elim0
+
+/- ### Non-vacuity witness for `def:381A` (Equivalent)
+
+`RKTableau.explicitEuler` (the 1-stage explicit Euler tableau, with
+`A = 0` and `b ≡ 1`) is `Equivalent` to itself: the stage system has
+the unique solution `Y 0 = y₀` and the update reads
+`y₁ = y₀ + h • f y₀`. The threshold `h₀ = 1` works (any positive `h₀`
+would do, since explicit Euler is well-defined for every `h`).
+
+The general `Equivalent M M` for arbitrary `M` requires implicit-stage
+uniqueness via Banach contraction at small `h`; that infrastructure is
+deferred — see `.prover-state/issues/equivalent_self_general_deferred.md`. -/
+
+open scoped NNReal in
+/-- Non-vacuity witness for `def:381A`: explicit Euler is equivalent to
+itself. -/
+theorem equivalent_explicitEuler_self :
+    RKTableau.explicitEuler.Equivalent RKTableau.explicitEuler := by
+  intro N _ _ f L _hL y₀
+  refine ⟨1, one_pos, ?_⟩
+  intro h _hh_pos _hh_le y₁ y₁' h₁ h₁'
+  obtain ⟨Y, hY_stage, hy₁⟩ := h₁
+  obtain ⟨Y', hY'_stage, hy₁'⟩ := h₁'
+  have hY0 : Y 0 = y₀ := by
+    have hs := hY_stage 0
+    simp [RKTableau.explicitEuler] at hs
+    exact hs
+  have hY'0 : Y' 0 = y₀ := by
+    have hs := hY'_stage 0
+    simp [RKTableau.explicitEuler] at hs
+    exact hs
+  rw [hy₁, hy₁']
+  simp [RKTableau.explicitEuler, hY0, hY'0]
 
 end OpenMath.Chapter3.Section381

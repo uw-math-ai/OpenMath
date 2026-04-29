@@ -1,416 +1,304 @@
-# Cycle 029 Strategy
+# Cycle 030 Strategy
 
-## Status
+## Status snapshot
 
-* No pending Aristotle results.
-* No sorry's anywhere in `OpenMath/`.
-* 29 / 175 entities formalized; cycle 028 closed `def:357B` (algebraic
-  stability) cleanly. The §357 stability stack has now hit a
-  prerequisite wall: every remaining §357 entity (`def:357A`,
-  `thm:357C`, `thm:357D`) consumes the §356 dissipativity setup
-  (DJ-irreducibility, AN-stability, reduced methods).
+* Cycle 029 landed `def:356B` (DJ-reducibility) and the DJ-irreducibility
+  component of `def:356A`, with full `lake build` clean and 0 sorries.
+* AN-stability component of `def:356A` is **deferred** (issue:
+  `AN_stability_deferred.md`) — it needs complex matrix resolvent
+  infrastructure (`(I − A Z)⁻¹`, left-half-plane condition,
+  `R(Z)` magnitude bound). Cost estimate from the issue file: a
+  dedicated cycle (or two) just for the resolvent + `R(Z)` machinery
+  before the predicate itself can be stated faithfully.
+* Progress: 30 / 175 entities.
+* No pending Aristotle results, no open sorries.
 
-The cycle 028 task results explicitly recommended **"option 3:
-§356 dissipativity infrastructure (`def:356A`, `def:356B`, `cor:356D`,
-`thm:356C`)"** as the natural unblocker. We follow that recommendation.
+## Cycle 030 target: `def:381A` — *equivalent* Runge–Kutta methods
 
-## Cycle 029 target — `def:356B` and the DJ-irreducibility component of `def:356A`
+**Why this and not AN-stability or `def:323A`.**
 
-`def:356B` is the foundational reducibility predicate of §356:
-**DJ-reducibility** (Dahlquist–Jeltsch). `def:356A` introduces two
-separate concepts in one entity record (the extractor combined a
-multi-paragraph passage):
+* `def:381A` is the natural §380/§381 leaf. Cycles 020, 021, 022, 029
+  have built up the §381 reducibility cluster
+  (`def:381B/C/D/E`, `def:356A` DJ-component, `def:356B`). Continuing
+  the §381 momentum lets us reach `def:381F` (P-equivalent),
+  `thm:381G/H` (the equivalence-conditions theorem), and the entire
+  §382–§388 Runge–Kutta-group cluster.
+* `def:381A` has 7 downstream consumers (`lem:383A`, `lem:389A`,
+  `thm:382A`, `thm:382B`, `thm:384A`, `thm:388B`, plus `def:370A`
+  which only references it). All are blocked behind it.
+* AN-stability for `def:356A` remains the right *eventual* next major
+  infrastructure investment, but it is multi-cycle (resolvent +
+  `R(Z)` + predicate + witness, per the issue file). Tackle it after
+  the §381 leaves are cleared so that we land at most one
+  infrastructure-only cycle at a time.
+* `def:323A` (internal order `q`) is the named fallback if `def:381A`
+  blows scope (see §"Fallback" below).
 
-1. **AN-stable Runge–Kutta method** — first sentence,
-   `R(Z) = 1 + b'Z(I − AZ)⁻¹𝟏` with `Z = diag(z₁,…,zₛ)` bounded ≤ 1
-   on the closed left half-plane (componentwise). Substantial: needs
-   complex matrix-valued resolvent infrastructure.
-2. **DJ-irreducibility** — the *named* concept of the entity record,
-   defined as the negation of `def:356B` (DJ-reducibility).
+## Textbook statement (verbatim from `extraction/formalization_data/entities/def_381A.json`)
 
-This cycle formalises **`def:356B` (DJ-reducibility) and the
-DJ-irreducibility part of `def:356A` only**. The AN-stability part of
-`def:356A` is deferred to a separate cycle (it is independent
-infrastructure: `R(Z)` is a complex-analytic boundedness condition,
-unrelated to the §381-style reducibility predicates that define
-DJ-irreducibility). Document the deferral in an issue file; do **not**
-silently weaken `def:356A` to "DJ-irreducibility only" without an
-explicit note.
+> Two Runge–Kutta methods are 'equivalent' if, for any initial value
+> problem defined by an autonomous function `f` satisfying a Lipschitz
+> condition, and an initial value `y0`, there exists `h0 > 0` such that
+> the result computed by the first method is identical with the result
+> computed by the second method, if `h ≤ h0`.
 
-## Quoted textbook content
+This is a **semantic** equivalence: same numerical one-step output for
+every Lipschitz autonomous problem, for sufficiently small step. It is
+strictly weaker than Φ-equivalence (`def:381B`, already formalised),
+because it allows the methods to differ on non-Lipschitz or implicit
+ill-defined cases.
 
-### `def:356B` (Butcher §356, p. 268, quoted from `entities/def_356B.json`)
+## Concrete Lean plan
 
-> A Runge–Kutta method is 'DJ-reducible' if there exists a partition
-> of the stages `{1, 2, …, s} = S ∪ S₀`, with `S₀` non-empty, such
-> that if `i ∈ S` and `j ∈ S₀`,
->
->     b_j = 0   and   a_{ij} = 0.
->
-> The 'reduced method' is the method formed by deleting all stages
-> numbered by members of the set `S₀`.
+**Place the new content in `OpenMath/Chapter3/Section381.lean`** (the
+existing §380/§381 file). Do NOT create a new file — `def:381A` is
+section 381, the same section as the existing P/0/Φ-reducibility
+definitions, and `def:381F` will land in the same file next cycle.
 
-### `def:356A` second-named-concept (Butcher §356, p. 268, quoted from `entities/def_356A.json`)
+### Step 1 — `IsRKOneStep` predicate
 
-> we identify 'irreducibility in the sense of Dahlquist and Jeltsch',
-> or 'DJ-irreducibility', (Dahlquist and Jeltsch, 1979) as the
-> property that a tableau cannot be reduced in the sense of
-> Definition 356B.
-
-## Interpretation note (settle before writing code)
-
-The textbook says "with `S₀` non-empty" but is silent on whether `S`
-must be non-empty. Two readings:
-
-* **Literal reading.** `S₀ ≠ ∅`, `S` may be empty. Then taking
-  `S = ∅, S₀ = {1,…,s}` makes the conjunction "`if i ∈ S and j ∈ S₀`"
-  vacuously true for every method. **Every tableau is DJ-reducible**,
-  so DJ-irreducibility has no models. This degenerates the entire §356
-  development.
-* **Spirit-of-the-theorem reading.** Both `S` and `S₀` non-empty —
-  i.e. the partition is genuinely "non-trivial on both sides". This
-  matches Butcher's §357 usage where DJ-irreducibility is treated as a
-  non-vacuous strengthening of irreducibility (e.g. `cor:356D`
-  asserts `b_i > 0` *under* DJ-irreducibility, which would be vacuous
-  on the literal reading).
-
-**Adopt the spirit-of-the-theorem reading.** The Lean predicate
-requires both `(∃ i, inS i = true)` and `(∃ i, inS i = false)` to
-witness DJ-reducibility. Document this in the file docstring next to
-the textbook quote, and explicitly justify the addition (the existing
-`def:381C`/`IsZeroReducible` already adopts the analogous `P₀ ≠ ∅`
-strengthening; we mirror that convention).
-
-## File and namespace layout
-
-Create a new file `OpenMath/Chapter3/Section356.lean`. Add its import to
-`OpenMath/Chapter3.lean` (insert between `Section355` and `Section357`
-to keep the alphabetical ordering already established in cycle 028).
-
-Imports needed:
+A relational ("predicate-style") encoding lets us handle implicit
+methods without committing to a fixed-point existence theorem:
 
 ```lean
-import OpenMath.Chapter3.Section312   -- RKTableau, RKTableau.explicitEuler
+/-- `M` produces output `y₁` after one step of size `h` from `y₀` on
+the autonomous ODE `y' = f(y)`. Captures the implicit stage system
+`Y_i = y₀ + h • Σⱼ aᵢⱼ • f(Y_j)` and the update
+`y₁ = y₀ + h • Σᵢ bᵢ • f(Yᵢ)`. -/
+def IsRKOneStep {s : ℕ} (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (y₀ : N) (h : ℝ) (y₁ : N) : Prop :=
+  ∃ Y : Fin s → N,
+    (∀ i, Y i = y₀ + h • ∑ j, M.A i j • f (Y j)) ∧
+    y₁ = y₀ + h • ∑ i, M.b i • f (Y i)
 ```
 
-Do **not** import `OpenMath.Chapter3.Section381` even though
-`Section381` already has `IsZeroReducibleVia`/`IsZeroReducible`. The
-DJ-reducibility predicate is mathematically a special case of
-0-reducibility (with both partition sides non-empty), but the
-textbook positions DJ-reducibility *before* the §381 unified
-treatment. Keeping `Section356` independent of `Section381` matches
-the textbook order and avoids a forward-importing tangle if a future
-cycle wants to refactor §381 into a function of §356.
+Note this is a `Prop`, not a function — it is *true* for any `(y₁, Y)`
+that satisfies the stage equations, and may admit zero, one, or
+multiple solutions depending on `M`, `f`, and `h`. This is honest:
+implicit methods may have no solution at large `h`, the unique
+small-`h` solution at moderate `h`, etc.
 
-If you choose to write a cross-reference equivalence lemma (see
-"Optional: relationship lemma" below), put it in `Section381.lean`
-(which already imports `Section312`) — not in `Section356.lean`.
-
-Namespace: `OpenMath.Chapter3.Section356`. Predicates on `RKTableau`
-go in the `OpenMath.Chapter3.Section312.RKTableau` namespace, mirroring
-the pattern in `Section381` (so users can write `M.IsDJReducible` for
-`M : RKTableau s`).
-
-## Concrete plan — what to write
-
-Follow the sorry-first rule. Step 1 below establishes a compiling
-skeleton; steps 2–5 fill in proofs.
-
-### Step 1. Define the predicates.
+### Step 2 — `Equivalent` predicate
 
 ```lean
-namespace OpenMath.Chapter3.Section312.RKTableau
-
-open OpenMath.Chapter3.Section356
-
-/-- Boolean encoding of a 2-block partition `{1,…,s} = S ∪ S₀`:
-`inS i = true` ↔ `i ∈ S`, `inS i = false` ↔ `i ∈ S₀`. -/
-def IsDJReducibleVia {s : ℕ}
-    (M : RKTableau s) (inS : Fin s → Bool) : Prop :=
-  ∀ j : Fin s, inS j = false →
-      M.b j = 0 ∧ ∀ i : Fin s, inS i = true → M.A i j = 0
-
-/-- Butcher §356 Definition 356B — a Runge–Kutta method is
-*DJ-reducible* if there is a 2-block partition with **both** `S` and
-`S₀` non-empty satisfying the zero conditions. The both-sides-non-empty
-strengthening is justified in the file docstring. -/
-def IsDJReducible {s : ℕ} (M : RKTableau s) : Prop :=
-  ∃ inS : Fin s → Bool,
-    (∃ i, inS i = true) ∧ (∃ i, inS i = false) ∧ M.IsDJReducibleVia inS
-
-/-- Butcher §356 Definition 356A (DJ-irreducibility component) — a
-Runge–Kutta method is *DJ-irreducible* if it is not DJ-reducible. -/
-def IsDJIrreducible {s : ℕ} (M : RKTableau s) : Prop :=
-  ¬ M.IsDJReducible
-
-end OpenMath.Chapter3.Section312.RKTableau
+/-- Butcher def:381A — two Runge–Kutta methods are 'equivalent' if,
+for every Lipschitz autonomous problem and every initial value, there
+exists a step-size threshold `h₀` below which any output of the first
+method coincides with any output of the second method. -/
+def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
+  ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f) (y₀ : N),
+    ∃ h₀ > (0 : ℝ), ∀ h, 0 < h → h ≤ h₀ →
+      ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
+        y₁ = y₁'
 ```
 
-(Adjust the `IsDJReducibleVia` shape if you find an alternative
-formulation
-`(∀ i j, inS i = true → inS j = false → M.b j = 0 ∧ M.A i j = 0)`
-shorter — both encode the same condition. The chosen shape should
-make the witness proof short. If you switch shapes, update the
-`paddedEuler` proof below accordingly.)
+Faithfulness check: this is exactly Butcher's "result computed by the
+first ... is identical with the result computed by the second". The
+`∀ y₁ y₁'` quantifier handles the (rare, implicit-method) case where
+the stage equations have multiple solutions — we require *all* outputs
+of `M` to agree with *all* outputs of `M'`. The `LipschitzWith L f`
+hypothesis matches Butcher's "Lipschitz condition" verbatim (Mathlib's
+`LipschitzWith` is the standard global-Lipschitz predicate over ℝ≥0).
 
-Note that `IsDJReducibleVia` factors out only the "if i ∈ S and
-j ∈ S₀ then b_j = 0 ∧ a_ij = 0" conjunction; the both-non-empty
-condition is in `IsDJReducible`. This mirrors the
-`IsZeroReducibleVia` / `IsZeroReducible` split in `Section381.lean:170`
-and lets you re-use `IsDJReducibleVia` for any future "reduced
-method" construction.
+Type-class plumbing note: Mathlib's `LipschitzWith` is in
+`Mathlib.Topology.MetricSpace.Lipschitz`; `NNReal` is `ℝ≥0`. Use the
+fully qualified name on first reference.
 
-### Step 2. Verify it compiles.
+### Step 3 — Reflexivity witness on `explicitEuler`
+
+Target `Equivalent explicitEuler explicitEuler` specifically, where
+the stage system has a *unique* trivial solution `Y 0 = y₀` (since
+`A = 0`):
+
+```lean
+theorem equivalent_explicitEuler_self :
+    Equivalent explicitEuler explicitEuler := by
+  intros N _ _ f L _hL y₀
+  refine ⟨1, one_pos, ?_⟩
+  intros h _hh_pos _hh_le y₁ y₁' h₁ h₁'
+  obtain ⟨Y, hY_stage, hy₁⟩ := h₁
+  obtain ⟨Y', hY'_stage, hy₁'⟩ := h₁'
+  -- For explicit Euler (s = 1, A = 0), the stage equation is
+  --   Y 0 = y₀ + h • ∑ j, 0 • f (Y j) = y₀
+  -- So Y 0 = y₀ uniquely, and y₁ = y₀ + h • (1 • f y₀) = y₀ + h • f y₀.
+  have hY0 : Y 0 = y₀ := by
+    have hs := hY_stage 0
+    simp [explicitEuler] at hs
+    exact hs
+  have hY'0 : Y' 0 = y₀ := by
+    have hs := hY'_stage 0
+    simp [explicitEuler] at hs
+    exact hs
+  rw [hy₁, hy₁']
+  simp [explicitEuler, hY0, hY'0]
+```
+
+The general `equivalent_self M : ∀ M, Equivalent M M` for arbitrary
+`M` is **out of scope this cycle** — it requires picking `h₀` small
+enough that the implicit map is a contraction (Banach fixed-point), so
+that any two stage solutions coincide. That is genuine Mathlib work
+(deferred — see Step 5). For cycle 030, deliver only the
+`explicitEuler` witness.
+
+### Step 4 — Mark `def:381A` as formalised
+
+Update `extraction/formalization_data/lean_status.json`:
+
+```json
+"def:381A": {
+  "status": "formalized",
+  "lean_file": "OpenMath/Chapter3/Section381.lean",
+  "lean_symbol": "OpenMath.Chapter3.Section381.RKTableau.Equivalent",
+  "notes": "Predicate over arbitrary normed spaces; non-vacuity witness on explicitEuler. General reflexivity equivalent_self M deferred — needs implicit-stage uniqueness via Banach fixed-point at small h."
+}
+```
+
+Update `plan.md`:
+
+* `def:381A` row: `[ ]` → `[x]` and add file pointer.
+* Bump the progress counter `30 / 175` → `31 / 175` in the header.
+
+### Step 5 — Issue file for the deferred general `equivalent_self`
+
+Write `.prover-state/issues/equivalent_self_general_deferred.md`:
+
+* Explain that `equivalent_self M` for arbitrary `M` is mathematically
+  trivial in the textbook (the same algorithm gives the same answer)
+  but in our predicate-style encoding requires implicit-stage
+  uniqueness, which needs Banach contraction at small `h`.
+* Cross-reference the AN-stability deferred issue: both share a
+  family of "implicit-method well-definedness" gaps that may best be
+  addressed in a single dedicated cycle building the Banach
+  contraction infrastructure.
+* Document that `equivalent_explicitEuler_self` is a sufficient
+  non-vacuity witness for the cycle's deliverable.
+
+## Pre-commit faithfulness checklist (mandatory)
+
+For `def:381A` → `Equivalent`:
+
+* [ ] Quote Butcher's statement in the file docstring (already
+  required by project rules).
+* [ ] Confirm the `IsRKOneStep` predicate captures Butcher's stage
+  equations exactly. The textbook writes
+  `Y_i = y_0 + h Σⱼ a_{ij} f(Y_j)` and
+  `y_1 = y_0 + h Σᵢ bᵢ f(Yᵢ)`; the Lean encoding must match.
+* [ ] **Definition smuggling check**: `Equivalent` must NOT be
+  defined as Φ-equivalence (`PhiEquivalent`, the algebraic condition
+  `∀ t, M.elementaryWeight t = M'.elementaryWeight t`). The textbook
+  introduces `def:381A` (semantic equivalence) and `def:381B`
+  (Φ-equivalence) as **distinct** notions; `thm:381H` later proves
+  them equivalent (modulo the reduced method). Defining one in terms
+  of the other smuggles the theorem.
+* [ ] **Tautology check**: the witness `equivalent_explicitEuler_self`
+  must do real work (unfold `IsRKOneStep`, derive `Y 0 = y₀` from
+  the stage equation, apply `simp [explicitEuler]` to close). It
+  should NOT be `exact rfl` or a one-liner.
+* [ ] **Hypothesis strength check**: `LipschitzWith L f` for `L : ℝ≥0`
+  is the cleanest match for Butcher's "satisfying a Lipschitz
+  condition". Do NOT strengthen to `Continuous f` or
+  `ContDiff ℝ ⊤ f` — Butcher specifies Lipschitz alone.
+
+## Aristotle batch suggestion (optional)
+
+`equivalent_explicitEuler_self` is small enough (≤ 20 lines) that
+manual proving will be faster than an Aristotle round-trip. Skip
+Aristotle for this cycle unless `equivalent_explicitEuler_self` blocks
+on a `simp` rewrite that resists `lean_multi_attempt` exploration.
+
+## What NOT to try
+
+* **Do NOT** define `Equivalent` as `PhiEquivalent` or as
+  "P-equivalent". These are theorems (`thm:381H`), not definitions —
+  smuggling them as defs is a faithfulness failure.
+* **Do NOT** define a function `oneStep : RKTableau s → ... → N` that
+  picks a single output. For implicit methods, multiple outputs may
+  exist; using a function silently drops the ambiguity. Use the
+  predicate `IsRKOneStep` instead.
+* **Do NOT** restrict `Equivalent` to explicit methods only. The
+  textbook quantifies over all RK methods; the predicate-style
+  encoding handles implicit methods correctly.
+* **Do NOT** claim a general `equivalent_self M` proof. Defer to an
+  issue file (see Step 5). The §381 cluster's proper closure of this
+  is `thm:381H`, not Step 3 reflexivity.
+* **Do NOT** introduce `axiom` or `constant` for the implicit-stage
+  uniqueness gap. CLAUDE.md is explicit; build the Banach contraction
+  helper later in a dedicated cycle, or live with the
+  `explicitEuler`-only witness.
+* **Do NOT** raise `maxHeartbeats` above 200000.
+* **Do NOT** start AN-stability infrastructure as a side task. It is
+  3+ cycles of complex-resolvent work and the cycle 029 issue file
+  is explicit that it deserves dedicated cycles. Park it for after
+  `def:381F` lands.
+* **Do NOT** edit `scripts/autonomous_loop.py` (worker rule, per
+  cycle 015 strategy and `tautology_scanner_false_positives.md`).
+* **Do NOT** rename or reorganise the existing `Section381.lean`
+  reducibility cluster. Append `IsRKOneStep`, `Equivalent`, and
+  `equivalent_explicitEuler_self` at the end of the file, before
+  `end RKTableau` / `end OpenMath.Chapter3.Section381`.
+* **Do NOT** repeat the cycles 005–014 phantom debugging patterns
+  ("commits not reaching repo", "scanner false positive"). Both are
+  resolved; ignore any stale `attempts.md` carry-overs.
+* **Do NOT** commit a half-finished `Equivalent` definition. Either
+  the predicate + witness lands fully or the work reverts cleanly
+  (see Fallback).
+
+## Fallback (only if `def:381A` blows scope)
+
+If by mid-cycle the `IsRKOneStep` / `Equivalent` predicate or the
+`explicitEuler` witness proves harder than expected (e.g.
+`LipschitzWith` typeclass plumbing won't unify, or `Fin 1` summation
+unfolding is unworkable), pivot to **`def:323A` (internal order `q`)**:
+
+* `extraction/formalization_data/entities/def_323A.json` — pure scalar
+  definition over the existing `RKTableau` and `internalWeight`
+  infrastructure from `Section312.lean`. Likely a single-file
+  definition + a witness on `explicitEuler`.
+* Place in a new file `OpenMath/Chapter3/Section323.lean` (registered
+  in `OpenMath/Chapter3.lean` imports).
+* Treat the partial `def:381A` work as deferred: revert any partial
+  edits to `Section381.lean` and ship `def:323A` cleanly. No
+  half-finished definitions in the codebase.
+
+Note the fallback target — do not freelance to a different leaf
+without writing why in `task_results/cycle_030.md`.
+
+## Build commands
 
 ```bash
-lake env lean OpenMath/Chapter3/Section356.lean
+# Compile the file in isolation (preferred — fast)
+lake env lean OpenMath/Chapter3/Section381.lean
+
+# Full build (slow; only after the file compiles)
+lake build
+
+# Axiom check on the new declarations (after build is clean)
+echo '#print axioms OpenMath.Chapter3.Section381.RKTableau.Equivalent
+#print axioms OpenMath.Chapter3.Section381.RKTableau.equivalent_explicitEuler_self' \
+  | lake env lean --stdin OpenMath/Chapter3/Section381.lean
 ```
 
-Expect zero errors at this point. If `Mathlib.Data.Matrix.Basic` /
-`Section312`'s exposure of `RKTableau` doesn't carry through cleanly,
-add the missing imports — but do not import `Section381`.
+Expect `[propext, Classical.choice, Quot.sound]` only.
 
-### Step 3. Prove `RKTableau.explicitEuler.IsDJIrreducible`.
+## Deliverables checklist
 
-Concrete witness, parallel to
-`Section381.lean:398-407`'s `explicitEuler_isIrreducible`. The proof
-is short:
-
-* `explicitEuler.IsDJReducible` would supply
-  `inS : Fin 1 → Bool` with both `(∃ i, inS i = true)` and
-  `(∃ i, inS i = false)`. Both witnesses are `0 : Fin 1`, so we have
-  `inS 0 = true ∧ inS 0 = false`, contradicting `Bool.true ≠ false`.
-
-```lean
-theorem explicitEuler_isDJIrreducible :
-    RKTableau.explicitEuler.IsDJIrreducible := by
-  rintro ⟨inS, ⟨i, hi⟩, ⟨j, hj⟩, _⟩
-  fin_cases i; fin_cases j
-  exact Bool.true_ne_false (hi.symm.trans hj)
-```
-
-If the exact incantation fails, try `lean_multi_attempt` with:
-
-```text
-exact absurd (hi.symm.trans hj) Bool.true_ne_false
-fin_cases i; fin_cases j; simp_all
-fin_cases i; fin_cases j; omega
-```
-
-### Step 4. Provide a non-vacuous DJ-reducible witness.
-
-Define a 2-stage `paddedEuler` analogue inline in `Section356.lean`
-(do **not** import `Section381`). The same `A=0, b=![1,0], c=0`
-shape works: choose `inS = ![true, false]`, so `S = {0}` (non-empty)
-and `S₀ = {1}` (non-empty). The zero conditions hold because
-`paddedEuler.b 1 = 0` and `paddedEuler.A 0 1 = 0`.
-
-Proof shape mirrors `Section381.lean:370-384`:
-
-```lean
-def paddedEuler : RKTableau 2 where
-  A := 0
-  b := ![1, 0]
-  c := 0
-
-example : paddedEuler.IsDJReducible := by
-  refine ⟨![true, false], ⟨0, by decide⟩, ⟨1, by decide⟩, ?_⟩
-  intro j hj
-  fin_cases j
-  · simp_all
-  · refine ⟨rfl, ?_⟩
-    intro i _
-    simp [paddedEuler]
-```
-
-(Tune the case analysis based on which `inS i = false` arm fires.
-The first arm — `j = 0` — is impossible because `inS 0 = true`, so
-`hj : true = false` is a contradiction; the second arm — `j = 1` —
-is the productive one where you discharge `b 1 = 0` and the
-inner-row-zero condition.)
-
-A standalone `paddedEuler` here is fine; it duplicates the
-`Section381.lean:126` definition but keeps `Section356` imports
-minimal. Add a comment cross-referencing the `Section381` version
-and noting that a future refactor could share the witness via a
-dedicated helpers file.
-
-### Step 5. (Optional) Relationship to `IsZeroReducible`.
-
-If time allows, add an explicit equivalence theorem in
-`Section381.lean` (NOT `Section356.lean`):
-
-```lean
-theorem IsDJReducible_iff {s : ℕ} (M : RKTableau s) :
-    M.IsDJReducible ↔ ∃ inP1 : Fin s → Bool,
-      (∃ i, inP1 i = true) ∧ (∃ i, inP1 i = false) ∧
-        M.IsZeroReducibleVia inP1 := ...
-```
-
-(With `inP1 := !inS` — the partitions are isomorphic via Boolean
-negation, with `S ↔ P₁`, `S₀ ↔ P₀`.) This is a faithfulness bonus,
-not required this cycle. **Skip it if step 4 takes longer than
-expected** — better to land a clean `def:356B` than to bundle and
-rush.
-
-## Faithfulness checklist for the commit
-
-For both new definitions and theorems, verify:
-
-* **Definition smuggling check.** `IsDJReducible` is a `Prop`, not a
-  `class`/`structure` with derived-conclusion fields. The
-  both-sides-non-empty strengthening of the textbook is documented
-  inline at the definition site, with the textbook quote and the
-  justification (vacuity argument).
-* **Hypothesis strength check.** `IsDJReducibleVia` does not assume
-  any consistency / row-sum / weight-positivity conditions on `M`.
-* **Tautology check.** `explicitEuler_isDJIrreducible` does real
-  work — it constructs a contradiction from the partition data; it
-  does not collapse to `exact h_…` or `:= id`.
-* **Identity check.** `IsDJIrreducible := ¬ IsDJReducible` is
-  intentionally trivial (negation), but its non-vacuity is witnessed
-  by `explicitEuler_isDJIrreducible` and the `paddedEuler`
-  reducibility example. This is the same pattern as `IsIrreducible`
-  in `Section381.lean:324`.
-* **Absent theorem check.** Verify there are no comments promising
-  proofs that aren't written. The AN-stability deferral note must
-  point to a real issue file (see "Issue file to write" below).
-
-## Issue file to write — AN-stability deferral
-
-After committing the DJ-irreducibility deliverable, write
-`.prover-state/issues/AN_stability_deferred.md`:
-
-* **Blocker.** `def:356A` introduces both DJ-irreducibility and
-  AN-stability. Cycle 029 formalised the DJ-irreducibility component;
-  AN-stability is deferred.
-* **Why deferred.** AN-stability requires the complex matrix
-  stability function `R(Z) = 1 + b'Z(I − AZ)⁻¹𝟏` for
-  `Z = diag(z₁,…,zₛ) ∈ ℂ^{s×s}`, with the boundedness condition
-  `|R(Z)| ≤ 1` whenever every `Re(zᵢ) ≤ 0`. None of `R(Z)`,
-  `(I − AZ)⁻¹`, or the `s`-dimensional left-half-plane condition is
-  currently in the codebase. This is independent infrastructure (it
-  shares no machinery with the §381-style reducibility predicates),
-  and a faithful formalisation deserves a dedicated cycle.
-* **Mathlib hooks for the future cycle.** `Matrix.IsUnit` and
-  `Matrix.inv` for `(I − AZ)⁻¹`; `Complex.re` and `Set.preimage` for
-  the half-plane; `Matrix.toLin'` and `‖·‖` for the magnitude bound.
-  The natural typeclass is `Matrix (Fin s) (Fin s) ℂ`.
-* **Downstream consumers.** `thm:356C` (AN-stability necessary
-  conditions) and `thm:357C/D` (algebraic stability ⇒ B/BN-stability)
-  cite AN-stability directly. Pursuing AN-stability is the natural
-  unblocker for the rest of §356–§357.
-* **Recommended resolution.** A dedicated cycle, after the
-  DJ-reducibility infrastructure of this cycle has settled.
-
-This issue file is the bookkeeping deliverable required by CLAUDE.md
-for any partial-formalization commit ("a cycle with zero changes is
-unacceptable; at minimum, decompose a sorry or write an issue").
-
-## Verification before commit
-
-1. `lake env lean OpenMath/Chapter3/Section356.lean` — clean.
-2. `lake env lean OpenMath/Chapter3.lean` — clean (re-verifies the
-   chapter aggregator).
-3. `lake build` — clean.
-4. `#print axioms` for both `IsDJReducible` and
-   `explicitEuler_isDJIrreducible` — must show only
-   `[propext, Classical.choice, Quot.sound]`.
-5. Tautology scanner: `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
-   should return zero hits. (If you reuse a name like `h_inP1` from
-   `Section381`, drop the underscore — see the cycle-014/015
-   consultant notes for the standing rename convention.)
-6. Sorry count: `rg --pcre2 '(?<!--\s)sorry' OpenMath/` returns zero.
-
-## Status-file updates required
-
-After the Lean commit lands:
-
-* `extraction/formalization_data/lean_status.json` — flip
-  `def:356B`'s `formalization_status` to `formalized`. Mark
-  `def:356A` as **`partial`** (or whatever the closest schema value
-  is — read `extraction/formalization_data/README.md` if unsure)
-  with a `notes` field pointing at `AN_stability_deferred.md`. Do
-  **not** mark `def:356A` as fully formalized; the AN-stability
-  component is a faithfulness gap.
-* `plan.md` — update `def:356B` to `[x]` and `def:356A` to `[~]`
-  (in-progress). Update the progress counter (29 → 30 if `def:356A`
-  partial counts toward the total; otherwise 29 → 31 once
-  AN-stability lands). Pick one accounting and be consistent.
-
-## What NOT to do
-
-* **Do NOT** attempt AN-stability this cycle. It is a multi-cycle
-  infrastructure investment (complex matrix resolvents); attempting
-  it as a side-quest will blow up the cycle. Defer with the issue
-  file.
-* **Do NOT** import `Section381` from `Section356`. Mathematically
-  DJ-reducibility is a refinement of 0-reducibility, but textbook
-  order says §356 comes first. If you want a relationship lemma,
-  put it in `Section381.lean` instead.
-* **Do NOT** define DJ-reducibility as
-  `IsDJReducible := M.IsZeroReducible ∧ ∃ i, inP1 i = true`
-  (forwarding to `Section381`'s machinery). The textbook gives an
-  independent definition; an independent Lean encoding is more
-  faithful and avoids surprising the reader who reaches §356 before
-  §381.
-* **Do NOT** drop the both-sides-non-empty strengthening. Without
-  it, every method is trivially DJ-reducible (take `S = ∅`) and
-  DJ-irreducibility is vacuous. The strengthening is the universally
-  understood reading; document it inline.
-* **Do NOT** raise `maxHeartbeats`. If `fin_cases`-based proofs
-  drag, decompose into named sub-lemmas instead.
-* **Do NOT** introduce `axiom` or `constant`. The DJ predicate is a
-  pure first-order condition on `RKTableau` — no axioms required.
-* **Do NOT** try to fix `scripts/autonomous_loop.py` from the
-  worker. Per cycle-014/015 strategy: scanner bugs go in
-  `tautology_scanner_false_positives.md` for the loop maintainer.
-* **Do NOT** start §142 Schur work or
-  `picard_lindelof_bound_strengthening` infrastructure. Both remain
-  off the critical path; cycle-009 / cycle-015 consultant notes
-  classify them as non-blocking until §142 / §319 enter the active
-  plan.
-* **Do NOT** hand-edit `extraction/raw_text/` or
-  `extraction/formalization_data/entities/` (per
-  `extraction/CLAUDE.md`). Only `lean_status.json` is editable
-  among the formalization-data files.
-
-## Aristotle (optional, low priority this cycle)
-
-The `def:356B` proof load is small enough that direct hand-proof is
-faster than batch-submitting to Aristotle. **Skip Aristotle this
-cycle** unless step 4 (the `paddedEuler` reducibility witness) hits
-an unexpected blocker that survives 3 `lean_multi_attempt` rounds. If
-that happens, batch the witness sub-goal and continue with step 3
-(the irreducibility theorem) while Aristotle works.
-
-## Suggested fall-back targets if `def:356B` is unexpectedly tractable
-
-If the cycle finishes with budget remaining (>60% of cycle budget
-remaining after step 5):
-
-1. **`def:381A` (equivalent)** — `Section381` infrastructure already
-   gives Φ-equivalent and the reducibility predicates; defining
-   "equivalent" is the next §381 leaf. Read `entities/def_381A.json`
-   first to confirm the textbook formulation.
-2. **`def:323A` (internal order q)** — pure scalar definition, no
-   stability infrastructure needed.
-
-Do **not** chain into `thm:356C` (AN-stability necessary conditions)
-or `cor:356D` — both depend on the AN-stability machinery that this
-cycle is explicitly deferring.
-
-## Summary
-
-* **Primary deliverable.** `IsDJReducible`, `IsDJReducibleVia`,
-  `IsDJIrreducible` in a new `OpenMath/Chapter3/Section356.lean`,
-  plus an `explicitEuler_isDJIrreducible` witness and a
-  `paddedEuler`-style DJ-reducibility witness.
-* **Issue deliverable.**
-  `.prover-state/issues/AN_stability_deferred.md` documenting the
-  AN-stability gap in `def:356A`.
-* **Status updates.** `lean_status.json` and `plan.md` reflecting
-  `def:356B` formalised and `def:356A` partial.
-* **Faithfulness disclosure.** Both-sides-non-empty strengthening of
-  `def:356B`, documented inline; AN-stability deferral, documented
-  in the issue file and in `lean_status.json`.
+* [ ] `IsRKOneStep` predicate in `Section381.lean`
+* [ ] `Equivalent` predicate in `Section381.lean`
+* [ ] `equivalent_explicitEuler_self` non-vacuity witness, fully proved
+* [ ] File docstring updated to quote Butcher's `def:381A` statement
+* [ ] `lean_status.json` row for `def:381A` flipped to `formalized`
+* [ ] `plan.md` row for `def:381A` flipped to `[x]` with file pointer;
+      progress counter bumped 30 → 31
+* [ ] `.prover-state/issues/equivalent_self_general_deferred.md`
+      created
+* [ ] `lake env lean OpenMath/Chapter3/Section381.lean` clean
+* [ ] `lake build` clean
+* [ ] `#print axioms` returns the standard trio for both new declarations
+* [ ] No new sorries (`rg --pcre2 '(?<!--\s)sorry' OpenMath/` returns nothing)
+* [ ] Tautology scanner clean (rename any `h_<word>` closer to
+      `h<word>` if it triggers — see
+      `.prover-state/issues/tautology_scanner_false_positives.md`)
+* [ ] `task_results/cycle_030.md` written per CLAUDE.md template
+* [ ] Commit + push

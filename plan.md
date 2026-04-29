@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 30 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 31 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -103,7 +103,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:381G` **Irreducible Runge Kutta Stage Distinguishability** (§380)
 - [ ] `thm:381H` **Runge Kutta Equivalence Conditions** (§380)
 - [ ] `def:357A` **B-stability** (§357)
-- [ ] `def:381A` **equivalent** (§380)
+- [x] `def:381A` **equivalent** (§380) — `OpenMath/Chapter3/Section381.lean`
 - [ ] `lem:310B` **Elementary Differential Weight Formula** (§310)
 - [ ] `thm:319B` **Global truncation error bound via local error accumulation** (§319)
 - [ ] `thm:352E` **V function recurrence relation** (§352)

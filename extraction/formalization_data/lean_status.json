@@ -1,17 +1,364 @@
 {
-  "thm:101A": {
-    "lean_file": "OpenMath/Chapter1/Section101.lean",
-    "lean_symbol": "OpenMath.Chapter1.Section101.kepler_H_const, OpenMath.Chapter1.Section101.kepler_A_const",
-    "status": "formalized"
+  "cor:342D": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "cor:356D": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "cor:359B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "cor:550C": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "def:110A": {
     "lean_file": "OpenMath/Chapter1/Section110.lean",
     "lean_symbol": "OpenMath.Chapter1.Section110.LipschitzInSecond",
     "status": "formalized"
   },
+  "def:112A": {
+    "lean_file": "OpenMath/Chapter1/Section112.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section112.OneSidedLipschitzInSecond",
+    "status": "formalized"
+  },
+  "def:142A": {
+    "lean_file": "OpenMath/Chapter1/Section142.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section142.PowerBounded",
+    "status": "formalized"
+  },
+  "def:142B": {
+    "lean_file": "OpenMath/Chapter1/Section142.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section142.Convergent",
+    "status": "formalized"
+  },
+  "def:310A": {
+    "lean_file": "OpenMath/Chapter3/Section310.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section310.elementaryDiff",
+    "status": "formalized"
+  },
+  "def:312A": {
+    "lean_file": "OpenMath/Chapter3/Section312.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.derivativeWeight",
+    "status": "formalized"
+  },
+  "def:323A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:350A": {
+    "lean_file": "OpenMath/Chapter3/Section350.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section350.IsAlphaStable",
+    "status": "formalized"
+  },
+  "def:355A": {
+    "lean_file": "OpenMath/Chapter3/Section355.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section355.orderWeb",
+    "status": "formalized"
+  },
+  "def:356A": {
+    "lean_file": "OpenMath/Chapter3/Section356.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJIrreducible",
+    "notes": "DJ-irreducibility component formalized; AN-stability component deferred \u2014 see .prover-state/issues/AN_stability_deferred.md",
+    "status": "in_progress"
+  },
+  "def:356B": {
+    "lean_file": "OpenMath/Chapter3/Section356.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJReducible",
+    "status": "formalized"
+  },
+  "def:357A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:357B": {
+    "lean_file": "OpenMath/Chapter3/Section357.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section357.IsAlgebraicallyStable",
+    "status": "formalized"
+  },
+  "def:370A": {
+    "lean_file": "OpenMath/Chapter3/Section370.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section370.IsSymplectic",
+    "status": "formalized"
+  },
+  "def:381A": {
+    "lean_file": "OpenMath/Chapter3/Section381.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.Equivalent",
+    "notes": "Predicate over arbitrary normed spaces; non-vacuity witness on explicitEuler. General reflexivity equivalent_self M deferred \u2014 needs implicit-stage uniqueness via Banach fixed-point at small h.",
+    "status": "formalized"
+  },
+  "def:381B": {
+    "lean_file": "OpenMath/Chapter3/Section381.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section381.PhiEquivalent",
+    "status": "formalized"
+  },
+  "def:381C": {
+    "lean_file": "OpenMath/Chapter3/Section381.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsZeroReducible",
+    "status": "formalized"
+  },
+  "def:381D": {
+    "lean_file": "OpenMath/Chapter3/Section381.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsPReducible",
+    "status": "formalized"
+  },
+  "def:381E": {
+    "lean_file": "OpenMath/Chapter3/Section381.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsIrreducible",
+    "status": "formalized"
+  },
+  "def:381F": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:388D": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:388F": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:402A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:403A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:404A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:404B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:406A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:422B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:442A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:451A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:510A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:510B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:510C": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:512A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:520A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:520C": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:520E": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:520F": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:521A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:525A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:530A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:530B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:530C": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:542A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "def:551A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
   "lem:110B": {
     "lean_file": "OpenMath/Chapter1/Section110.lean",
     "lean_symbol": "OpenMath.Chapter1.Section110.contraction_fixedPoint",
+    "status": "formalized"
+  },
+  "lem:310B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:311A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:312B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:313A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:319A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:322A": {
+    "lean_file": "OpenMath/Chapter3/Section322.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section322.order_four_block_zero_decomposition",
+    "status": "formalized"
+  },
+  "lem:342A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:342B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:351A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:359A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:383A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:383B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:383C": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:383D": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:389A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:406B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:441A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:441B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:515A": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:515B": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "lem:515C": {
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
+  },
+  "thm:101A": {
+    "lean_file": "OpenMath/Chapter1/Section101.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section101.kepler_H_const, OpenMath.Chapter1.Section101.kepler_A_const",
     "status": "formalized"
   },
   "thm:110C": {
@@ -22,11 +369,6 @@
   "thm:111A": {
     "lean_file": "OpenMath/Chapter1/Section111.lean",
     "lean_symbol": "OpenMath.Chapter1.Section111.solution_superposition",
-    "status": "formalized"
-  },
-  "def:112A": {
-    "lean_file": "OpenMath/Chapter1/Section112.lean",
-    "lean_symbol": "OpenMath.Chapter1.Section112.OneSidedLipschitzInSecond",
     "status": "formalized"
   },
   "thm:112B": {
@@ -52,16 +394,6 @@
   "thm:141A": {
     "lean_file": "OpenMath/Chapter1/Section141.lean",
     "lean_symbol": "OpenMath.Chapter1.Section141.linRec_closed_form",
-    "status": "formalized"
-  },
-  "def:142A": {
-    "lean_file": "OpenMath/Chapter1/Section142.lean",
-    "lean_symbol": "OpenMath.Chapter1.Section142.PowerBounded",
-    "status": "formalized"
-  },
-  "def:142B": {
-    "lean_file": "OpenMath/Chapter1/Section142.lean",
-    "lean_symbol": "OpenMath.Chapter1.Section142.Convergent",
     "status": "formalized"
   },
   "thm:142C": {
@@ -134,21 +466,6 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:310A": {
-    "lean_file": "OpenMath/Chapter3/Section310.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section310.elementaryDiff",
-    "status": "formalized"
-  },
-  "lem:310B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:311A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:311B": {
     "lean_file": null,
     "lean_symbol": null,
@@ -160,21 +477,6 @@
     "status": "unformalized"
   },
   "thm:311D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:312A": {
-    "lean_file": "OpenMath/Chapter3/Section312.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.derivativeWeight",
-    "status": "formalized"
-  },
-  "lem:312B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:313A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -199,22 +501,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "lem:319A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:319B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:322A": {
-    "lean_file": "OpenMath/Chapter3/Section322.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section322.order_four_block_zero_decomposition",
-    "status": "formalized"
-  },
-  "def:323A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -244,22 +531,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "lem:342A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:342B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:342C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "cor:342D": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -275,16 +547,6 @@
     "status": "unformalized"
   },
   "thm:344A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:350A": {
-    "lean_file": "OpenMath/Chapter3/Section350.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section350.IsAlphaStable",
-    "status": "formalized"
-  },
-  "lem:351A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -324,11 +586,6 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:355A": {
-    "lean_file": "OpenMath/Chapter3/Section355.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section355.orderWeb",
-    "status": "formalized"
-  },
   "thm:355B": {
     "lean_file": null,
     "lean_symbol": null,
@@ -359,36 +616,10 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:356A": {
-    "lean_file": "OpenMath/Chapter3/Section356.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJIrreducible",
-    "status": "in_progress",
-    "notes": "DJ-irreducibility component formalized; AN-stability component deferred — see .prover-state/issues/AN_stability_deferred.md"
-  },
-  "def:356B": {
-    "lean_file": "OpenMath/Chapter3/Section356.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJReducible",
-    "status": "formalized"
-  },
   "thm:356C": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
-  },
-  "cor:356D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:357A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:357B": {
-    "lean_file": "OpenMath/Chapter3/Section357.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section357.IsAlgebraicallyStable",
-    "status": "formalized"
   },
   "thm:357C": {
     "lean_file": null,
@@ -405,16 +636,6 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "lem:359A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "cor:359B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:359C": {
     "lean_file": null,
     "lean_symbol": null,
@@ -425,42 +646,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:370A": {
-    "lean_file": "OpenMath/Chapter3/Section370.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section370.IsSymplectic",
-    "status": "formalized"
-  },
   "thm:372A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:381A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:381B": {
-    "lean_file": "OpenMath/Chapter3/Section381.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section381.PhiEquivalent",
-    "status": "formalized"
-  },
-  "def:381C": {
-    "lean_file": "OpenMath/Chapter3/Section381.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsZeroReducible",
-    "status": "formalized"
-  },
-  "def:381D": {
-    "lean_file": "OpenMath/Chapter3/Section381.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsPReducible",
-    "status": "formalized"
-  },
-  "def:381E": {
-    "lean_file": "OpenMath/Chapter3/Section381.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsIrreducible",
-    "status": "formalized"
-  },
-  "def:381F": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -481,26 +667,6 @@
     "status": "unformalized"
   },
   "thm:382B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:383A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:383B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:383C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:383D": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -535,17 +701,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:388D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:388E": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:388F": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -556,31 +712,6 @@
     "status": "unformalized"
   },
   "thm:388H": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:389A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:402A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:403A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:404A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:404B": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -596,16 +727,6 @@
     "status": "unformalized"
   },
   "thm:405C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:406A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:406B": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -645,11 +766,6 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:422B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:422C": {
     "lean_file": null,
     "lean_symbol": null,
@@ -660,22 +776,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "lem:441A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:441B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:441C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:442A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -690,32 +791,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:451A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:454A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:510A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:510B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:510C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:512A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -730,27 +806,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "lem:515A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:515B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "lem:515C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:515D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:520A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -760,27 +816,7 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:520C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:520D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:520E": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:520F": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:521A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -796,26 +832,6 @@
     "status": "unformalized"
   },
   "thm:523B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:525A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:530A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:530B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:530C": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
@@ -840,27 +856,12 @@
     "lean_symbol": null,
     "status": "unformalized"
   },
-  "def:542A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
   "thm:550A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
   },
   "thm:550B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "cor:550C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
-  },
-  "def:551A": {
     "lean_file": null,
     "lean_symbol": null,
     "status": "unformalized"
