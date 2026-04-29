@@ -311,6 +311,19 @@ theorem pReduced_c_apply {s sBar : ℕ}
     (M.pReduced P).c I = M.c (Classical.choose (P.surj I)) :=
   rfl
 
+/- ### Definition 381E — irreducible Runge–Kutta methods -/
+
+/-- Butcher §380 Definition 381E (first sentence) — a Runge–Kutta method
+is *irreducible* if it is neither 0-reducible (`def:381C`) nor
+P-reducible (`def:381D`).
+
+This is the literal Boolean composite of the two negations, faithful to
+Butcher §380 page 303. The second sentence of def:381E (the construction
+of the "reduced method") is deferred — see
+`.prover-state/issues/reduced_method_deferred.md`. -/
+def IsIrreducible {s : ℕ} (M : RKTableau s) : Prop :=
+  ¬ M.IsZeroReducible ∧ ¬ M.IsPReducible
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381
@@ -369,5 +382,27 @@ example : paddedEuler.IsZeroReducible :=
       fin_cases i <;> simp_all [paddedEuler]
     · intro i j hi hj
       simp [paddedEuler]⟩
+
+/- ### Non-vacuous witness for irreducibility
+
+The 1-stage `RKTableau.explicitEuler` tableau is irreducible:
+
+* It is not 0-reducible: any 2-block partition `inP1 : Fin 1 → Bool`
+  with `(∃ i, inP1 i = false)` forces `inP1 0 = false`, giving
+  `b 0 = 0`. But `explicitEuler.b 0 = 1`.
+* It is not P-reducible: a non-trivial P-partition would require
+  `sBar < 1`, hence `sBar = 0`, but then `P.block 0 : Fin 0` is
+  uninhabited. -/
+
+/-- `RKTableau.explicitEuler` is irreducible (def:381E). -/
+theorem explicitEuler_isIrreducible :
+    RKTableau.explicitEuler.IsIrreducible := by
+  refine ⟨?_, ?_⟩
+  · rintro ⟨inP1, ⟨i, hi⟩, hbZero, _⟩
+    fin_cases i
+    exact one_ne_zero (hbZero 0 hi)
+  · rintro ⟨sBar, hLt, P, _⟩
+    obtain rfl : sBar = 0 := Nat.lt_one_iff.mp hLt
+    exact (P.block 0).elim0
 
 end OpenMath.Chapter3.Section381
