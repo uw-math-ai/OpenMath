@@ -1178,6 +1178,29 @@ Concrete next steps:
   `BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]`: a reusable `Fin 4`
   cut-count helper, grouped `bConv` / product `bSeries` closed forms,
   the quotient lift, and `IsG1Equiv.product_congr_node_triple_leaf`.
+- Cycle 564 split the oversized monolithic
+  `OpenMath/ButcherGroup/Section384SlicesMixed.lean` (3389 lines) into
+  family submodules under
+  `OpenMath/ButcherGroup/Section384SlicesMixed/`: `Common.lean`
+  (foundational `elementaryWeight` / `bSeries` / powerset helpers
+  shared across families), `LeafFamilies.lean` (mixed leaf +
+  singleton-leaf and mixed leaf + double-leaf slices, plus
+  `doubleLeafChoice*` machinery), `Mixed3Way.lean` (mixed
+  singleton-leaf + double-leaf and three-way leaf + singleton-leaf +
+  double-leaf slices), and `Replicate.lean` (standalone triple-leaf
+  single tree, parametric all-double-leaf and all-triple-leaf
+  families, plus `tripleLeafChoice*` machinery). The umbrella
+  `OpenMath/ButcherGroup/Section384SlicesMixed.lean` is now a thin
+  re-export shell; downstream consumers keep their existing import
+  and all public deliverables resolve unchanged. Mirrors the cycle
+  535 split of the original `OpenMath/ButcherGroup.lean`.
+  `OpenMath/ButcherGroup/Section384SlicesQuadMixed.lean` had carried
+  inline duplicate copies of `convAt_singleton_leaf_eq`,
+  `elementaryWeight_node_replicate_leaf`,
+  `bSeries_node_replicate_leaf_append_replicate_singleton_leaf`, and
+  `convAt_node_mixed_leaf_singleton_leaf_at_i_eq`; cycle 564 dropped
+  those duplicates and consumes the now-shared definitions from
+  `Common.lean` / `LeafFamilies.lean`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
