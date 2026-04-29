@@ -199,6 +199,25 @@ theorem bSeriesHom_product_node_quadMixed
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_quadMixed_eq t₁ t₂
 
+/-- §384 lift of the standalone (2-leaf, 2-singleton) four-children mixed
+closed form to the quotient layer, grouped as `Fin 3 × Fin 3 × Fin 3`. -/
+theorem bSeriesHom_product_node_quadMixedTwoTwo
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) :
+    (q.product r).bSeriesHom tQuadMixedTwoTwo
+      = q.bSeriesHom tQuadMixedTwoTwo
+        + ∑ k : Fin 3, ∑ h₁ : Fin 3, ∑ h₂ : Fin 3,
+          quadMixedTwoTwoLeafChoiceCoef k (q.bSeriesHom BTree.leaf) 1 *
+            (quadMixedTwoTwoSingletonChoiceCoef h₁ (q.bSeriesHom BTree.leaf)
+                (q.bSeriesHom (BTree.node [BTree.leaf])) *
+              quadMixedTwoTwoSingletonChoiceCoef h₂ (q.bSeriesHom BTree.leaf)
+                (q.bSeriesHom (BTree.node [BTree.leaf]))) *
+            r.bSeriesHom (quadMixedTwoTwoChoiceTree k h₁ h₂) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_quadMixedTwoTwo_eq t₁ t₂
+
 /-- §384 lift of the cycle 544 dual all-empty-node closed form to the
 quotient layer. The product `bSeriesHom` on `BTree.node (List.replicate
 n (BTree.node []))` decomposes into a powerset sum of bSeries-only
@@ -1437,6 +1456,54 @@ theorem product_congr_node_quadMixed
       order_node_replicate_leaf_append_replicate_singleton_leaf]
     have hcount := tripleLeafChoiceCount_sum k
     fin_cases h <;>
+      simp [quadMixedSingletonLeafCount, quadMixedSingletonNodeCount] <;>
+      omega
+  rw [hsub]
+
+/-- Cycle 560 standalone (2-leaf, 2-singleton-leaf) four-children mixed
+`G₁.mul` direction slice. Product preserves `G₁` equivalence on the concrete
+tree `tQuadMixedTwoTwo`, whose order is seven. -/
+theorem product_congr_node_quadMixedTwoTwo
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (hτ : tQuadMixedTwoTwo.order ≤ p) :
+    (q.product r).bSeriesHom tQuadMixedTwoTwo
+      = (q'.product r').bSeriesHom tQuadMixedTwoTwo := by
+  rw [QuotEquiv.bSeriesHom_product_node_quadMixedTwoTwo,
+      QuotEquiv.bSeriesHom_product_node_quadMixedTwoTwo]
+  have hp7 : 7 ≤ p := by
+    simpa [tQuadMixedTwoTwo, BTree.order_node, List.foldr] using hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hsingleton :
+      q.bSeriesHom (BTree.node [BTree.leaf])
+        = q'.bSeriesHom (BTree.node [BTree.leaf]) := by
+    apply hq
+    simp [BTree.order_node, List.foldr]
+    omega
+  have hnode :
+      q.bSeriesHom tQuadMixedTwoTwo = q'.bSeriesHom tQuadMixedTwoTwo :=
+    hq tQuadMixedTwoTwo hτ
+  rw [hnode, hleaf, hsingleton]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro k _
+  refine Finset.sum_congr rfl ?_
+  intro h₁ _
+  refine Finset.sum_congr rfl ?_
+  intro h₂ _
+  have hsub :
+      r.bSeriesHom (quadMixedTwoTwoChoiceTree k h₁ h₂)
+        = r'.bSeriesHom (quadMixedTwoTwoChoiceTree k h₁ h₂) := by
+    apply hr
+    rw [quadMixedTwoTwoChoiceTree,
+      order_node_replicate_leaf_append_replicate_singleton_leaf]
+    have hcount := quadMixedTwoTwoLeafChoiceCount_sum k
+    fin_cases h₁ <;> fin_cases h₂ <;>
       simp [quadMixedSingletonLeafCount, quadMixedSingletonNodeCount] <;>
       omega
   rw [hsub]
