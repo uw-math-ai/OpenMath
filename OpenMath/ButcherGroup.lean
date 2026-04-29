@@ -4,6 +4,7 @@ import OpenMath.OrderConditions
 import OpenMath.ButcherGroup.Core
 import OpenMath.ButcherGroup.Section384
 import OpenMath.ButcherGroup.Section384Slices
+import OpenMath.ButcherGroup.Section384SlicesMixed
 
 /-!
 # Butcher §38 — algebraic Runge–Kutta properties (umbrella)
@@ -11,12 +12,14 @@ import OpenMath.ButcherGroup.Section384Slices
 Cycle 535 split this file because it crossed the 3000-line cap. The
 §381 / §382 / §384-prep core is now in `OpenMath.ButcherGroup.Core`,
 and the §384 right-block convolution chain is in
-`OpenMath.ButcherGroup.Section384`. This umbrella imports both and
-contains the §387 power chain, `IsRKEquivalentExt`, `IsG1Equiv`, and
-`G1`.
+`OpenMath.ButcherGroup.Section384`. The §384 closed-form slice modules
+are in `OpenMath.ButcherGroup.Section384Slices` and
+`OpenMath.ButcherGroup.Section384SlicesMixed`. This umbrella imports
+those modules and contains the §387 power chain, `IsRKEquivalentExt`,
+`IsG1Equiv`, and `G1`.
 
 Downstream callers should continue to `import OpenMath.ButcherGroup`;
-this module re-exposes both sub-modules transitively.
+this module re-exposes the split sub-modules transitively.
 -/
 
 open Finset
