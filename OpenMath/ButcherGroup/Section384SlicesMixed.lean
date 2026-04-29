@@ -2694,4 +2694,53 @@ theorem ButcherProduct.bSeries_node_triple_leaf_eq
   rw [ButcherProduct.bSeries_eq_bConv,
       ButcherProduct.bConv_node_triple_leaf_eq]
 
+/-! ### §384 standalone all-double-leaf parametric family
+
+Cycle 562 specializes the cycle 552/553 mixed leaf+double-leaf machinery
+to the pure all-double-leaf family `BTree.node (List.replicate n
+(BTree.node [BTree.leaf, BTree.leaf]))` (i.e. `a = 0`). Each kept root
+child contributes a `Fin 3` cut/keep choice via `doubleLeafChoiceCoef`. -/
+
+/-- §384 honest convolution closed form on the all-double-leaf family
+`BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf]))`. -/
+theorem ButcherProduct.bSeries_node_replicate_double_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    (ButcherProduct t₁ t₂).bSeries
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries (BTree.node [BTree.leaf, BTree.leaf])) ^ S.card *
+            (∑ χ : Fin (n - S.card) → Fin 3,
+              doubleLeafChoiceCoef (t₁.bSeries BTree.leaf) χ *
+                t₂.bSeries (doubleLeafChoiceTree 0 χ)) := by
+  have h := ButcherProduct.bSeries_node_mixed_leaf_double_leaf_cut_eq t₁ t₂ 0 n
+  simp only [List.replicate_zero, List.nil_append] at h
+  rw [h]
+  congr 1
+  -- The outer sum over `(Finset.univ : Finset (Fin 0)).powerset` has only
+  -- one element `∅`, so it collapses to its single summand.
+  have hpow_empty :
+      ((Finset.univ : Finset (Fin 0)).powerset : Finset (Finset (Fin 0)))
+        = {∅} := by
+    rw [show (Finset.univ : Finset (Fin 0)) = ∅ from rfl]
+    simp
+  rw [hpow_empty, Finset.sum_singleton]
+  simp [Finset.card_empty]
+
+/-- §384 `bConv` closed form on the all-double-leaf family. -/
+theorem ButcherProduct.bConv_node_replicate_double_leaf_eq
+    {s t : ℕ} (t₁ : ButcherTableau s) (t₂ : ButcherTableau t) (n : ℕ) :
+    ButcherProduct.bConv (t₁.bSeries) t₂
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+      = t₁.bSeries
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (t₁.bSeries (BTree.node [BTree.leaf, BTree.leaf])) ^ S.card *
+            (∑ χ : Fin (n - S.card) → Fin 3,
+              doubleLeafChoiceCoef (t₁.bSeries BTree.leaf) χ *
+                t₂.bSeries (doubleLeafChoiceTree 0 χ)) := by
+  rw [← ButcherProduct.bSeries_eq_bConv]
+  exact ButcherProduct.bSeries_node_replicate_double_leaf_eq t₁ t₂ n
+
 end ButcherTableau

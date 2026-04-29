@@ -344,6 +344,27 @@ theorem bSeriesHom_product_node_mixed_leaf_double_leaf
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_mixed_leaf_double_leaf_cut_eq t₁ t₂ a b
 
+/-- §384 lift of the cycle 562 all-double-leaf parametric family
+`BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf]))` to
+the quotient layer. Each kept root child contributes a `Fin 3` cut/keep
+choice via `doubleLeafChoiceCoef`. -/
+theorem bSeriesHom_product_node_replicate_double_leaf
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) (n : ℕ) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+      = q.bSeriesHom
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+        + ∑ S ∈ (Finset.univ : Finset (Fin n)).powerset,
+            (q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])) ^ S.card *
+            (∑ χ : Fin (n - S.card) → Fin 3,
+              doubleLeafChoiceCoef (q.bSeriesHom BTree.leaf) χ *
+                r.bSeriesHom (doubleLeafChoiceTree 0 χ)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_replicate_double_leaf_eq t₁ t₂ n
+
 /-- §384 lift of the cycle 554 mixed singleton-leaf / double-leaf root
 family.  Each kept singleton-leaf gives a `Fin 2` cut/keep choice for its
 internal leaf; each kept double-leaf gives a `Fin 3` choice via
@@ -1973,6 +1994,75 @@ theorem product_congr_node_mixed_leaf_double_leaf
     · omega
     · omega
     · exact hab
+  rw [hchoice]
+
+/-- Cycle 562 all-double-leaf parametric `G₁.mul`-direction slice. The
+root tree `BTree.node (List.replicate n (BTree.node [BTree.leaf,
+BTree.leaf]))` has order `1 + 3 * n`. -/
+theorem product_congr_node_replicate_double_leaf
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (n : ℕ) (hn : 1 + 3 * n ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+      = (q'.product r').bSeriesHom
+        (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf]))) := by
+  rw [QuotEquiv.bSeriesHom_product_node_replicate_double_leaf,
+      QuotEquiv.bSeriesHom_product_node_replicate_double_leaf]
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode :
+      q.bSeriesHom
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf])))
+        = q'.bSeriesHom
+          (BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf]))) := by
+    apply hq
+    rw [order_node_replicate_double_leaf]
+    exact hn
+  rw [hnode, hleaf]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S hS_mem
+  have hS : S.card ≤ n := by
+    have hmem : S ⊆ (Finset.univ : Finset (Fin n)) :=
+      Finset.mem_powerset.mp hS_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have hdouble_pow :
+      (q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])) ^ S.card
+        = (q'.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])) ^ S.card := by
+    by_cases hzero : S.card = 0
+    · simp [hzero]
+    · have hnpos : 0 < n := by
+        have : 0 < S.card := Nat.pos_of_ne_zero hzero
+        exact Nat.lt_of_lt_of_le this hS
+      have hp3 : 3 ≤ p := by omega
+      have hdouble :
+          q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])
+            = q'.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf]) := by
+        apply hq
+        have horder : (BTree.node [BTree.leaf, BTree.leaf]).order = 3 := by
+          simp [BTree.order_node, List.foldr]
+        rw [horder]
+        exact hp3
+      rw [hdouble]
+  rw [hdouble_pow]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro χ _
+  have hchoice :
+      r.bSeriesHom (doubleLeafChoiceTree 0 χ)
+        = r'.bSeriesHom (doubleLeafChoiceTree 0 χ) := by
+    apply hr
+    apply order_doubleLeafChoiceTree_le (a := 0) (b := n)
+    · exact Nat.zero_le _
+    · -- (n - S.card) ≤ n
+      exact Nat.sub_le _ _
+    · omega
   rw [hchoice]
 
 /-- Cycle 554 mixed singleton-leaf / double-leaf `G₁.mul`-direction slice.
