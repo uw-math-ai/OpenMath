@@ -50,9 +50,9 @@
     "status": "formalized"
   },
   "thm:141A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter1/Section141.lean",
+    "lean_symbol": "OpenMath.Chapter1.Section141.linRec_closed_form",
+    "status": "formalized"
   },
   "def:142A": {
     "lean_file": "OpenMath/Chapter1/Section142.lean",
