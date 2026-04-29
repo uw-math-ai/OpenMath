@@ -599,7 +599,12 @@ codebase.
   `QuotEquiv.npowStages_npow_eq_npowStages_mul`. Cycles 572-573 lifted
   the quotient product to `G1 p`, proved both identity laws and
   associativity, and installed the noncomputable `Monoid (G1 p)` instance.
-  Inverses remain open on the unit-stage subgroup.
+  Cycle 574 bridged the resulting `Monoid.npow` `^` notation back to
+  `QuotEquiv.npow` via `G1.mk_pow`, computed the headline
+  `G1.bSeriesHomAt_pow`, and exported the short corollaries
+  `G1.bSeriesHomAt_pow_zero`, `G1.bSeriesHomAt_pow_one`, and
+  `G1.one_pow_eq`. Inverses remain open on the unit-stage subgroup;
+  `G1.npow`-style stage-count arithmetic is closed.
 - [ ] **§388 Some subgroups and quotient groups**.
 - [ ] **§389 An algebraic interpretation of effective order** — connects
   to §365 above.
@@ -1214,14 +1219,15 @@ Concrete next steps:
   precisely the §384 convolution. See
   `.prover-state/issues/butcher_g1_mul_section384_blocker.md` and
   `.prover-state/issues/butcher_section384_convolution.md`.
-- §38 remains the current target. The next planned layer once the
-  §384 convolution is in place is `IsG1Equiv.product_congr`, then
-  `G1.mul`, `G1.mul_mk`, `G1.bSeriesHomAt_mul`, then
-  `G1.one_mul` / `G1.mul_one` (using `G1.bSeriesHomAt_one` and
-  `G1.ext` from cycle 516). Until the §384 convolution lands, the
-  §38 work that is still unblocked is: §387 powers
-  `G1.npow`-style stage-count arithmetic that does not need
-  `G1.mul`, and additional `G1`-side characterization lemmas.
+- §38 remains the current target. As of cycle 574 the §384 convolution
+  is closed, `G1.mul` / identity laws / `mul_assoc` / the `Monoid (G1 p)`
+  instance are landed (cycles 572–573), and `Monoid.npow` `^` powers are
+  bridged to `QuotEquiv.npow` via `G1.mk_pow` and the headline
+  `G1.bSeriesHomAt_pow` (cycle 574). The next §38 layer is the §388
+  inverse construction on the unit-stage subgroup of `G1 p` (recursion
+  on tree order to solve inverse coefficients); after that, the
+  `Group (G1 p)` instance and the §389 effective-order interpretation.
+  `G1.npow`-style stage-count arithmetic is closed.
 
 Expected sorry-first surface:
 - `def ButcherProduct : ButcherTableau s → ButcherTableau t → ButcherTableau (s + t)`

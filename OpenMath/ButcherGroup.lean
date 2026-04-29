@@ -2836,6 +2836,49 @@ noncomputable instance instMonoid (p : ℕ) : Monoid (G1 p) where
   one_mul := one_mul
   mul_one := mul_one
 
+/-- Bridge lemma: the `Monoid.npow` `^` notation on `G₁(p)` agrees with the
+existing `QuotEquiv.npow` recursion lifted through `mk`. Cycle 574 §387. -/
+theorem mk_pow {p s : ℕ} (q : QuotEquiv s) (n : ℕ) :
+    (mk (p := p) q) ^ n = mk (p := p) (q.npow n) := by
+  induction n with
+  | zero =>
+    show (1 : G1 p) = mk (p := p) (q.npow 0)
+    rfl
+  | succ k ih =>
+    rw [pow_succ']
+    show mul (mk (p := p) q) ((mk (p := p) q) ^ k)
+        = mk (p := p) (q.npow (k + 1))
+    rw [ih, mul_mk, QuotEquiv.npow_succ]
+
+/-- Cycle 574 §387 headline: the order-`p` rooted-tree coefficient of a
+`Monoid.npow` power on `G₁(p)` equals the existing `QuotEquiv.npow`
+coefficient. -/
+theorem bSeriesHomAt_pow {p s : ℕ} (q : QuotEquiv s) (n : ℕ)
+    (τ : BTree) (hτ : τ.order ≤ p) :
+    bSeriesHomAt p τ hτ ((mk (p := p) q) ^ n) = (q.npow n).bSeries τ := by
+  rw [mk_pow]
+  rfl
+
+/-- Vanishing of the order-`p` coefficient on the zeroth power of any class.
+Bonus corollary of `bSeriesHomAt_pow` that is convenient downstream. -/
+@[simp] theorem bSeriesHomAt_pow_zero {p : ℕ} (g : G1 p)
+    (τ : BTree) (hτ : τ.order ≤ p) :
+    bSeriesHomAt p τ hτ (g ^ 0) = 0 := by
+  rw [pow_zero]
+  exact bSeriesHomAt_one (p := p) τ hτ
+
+/-- The first power on `G₁(p)` is the identity for `bSeriesHomAt`. -/
+@[simp] theorem bSeriesHomAt_pow_one {p : ℕ} (g : G1 p)
+    (τ : BTree) (hτ : τ.order ≤ p) :
+    bSeriesHomAt p τ hτ (g ^ 1) = bSeriesHomAt p τ hτ g := by
+  rw [pow_one]
+
+/-- Powers of the §387 identity remain the identity. Re-exported in the
+`G1` namespace for downstream ergonomics. -/
+@[simp] theorem one_pow_eq (p n : ℕ) : (G1.one p) ^ n = G1.one p := by
+  show ((1 : G1 p)) ^ n = (1 : G1 p)
+  exact one_pow n
+
 end G1
 
 end ButcherTableau
