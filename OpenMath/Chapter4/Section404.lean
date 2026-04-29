@@ -1,21 +1,26 @@
 import Mathlib
 
 /-!
-# Butcher §404 — Preconsistent linear multistep methods (Definition 404A)
+# Butcher §404 — Preconsistency and consistency of linear multistep methods
 
 This file opens Chapter 4 of the formalization. It introduces the
 `LinearMultistepMethod` structure (with the textbook normalisation
-`α₀ = -1`) and the `IsPreconsistent` predicate (Butcher equation
-(404a)).
+`α₀ = -1`), the `IsPreconsistent` predicate (Butcher equation (404a),
+Definition 404A), and the `IsConsistent` predicate (combining (404a)
+with the consistency equation (404b), Definition 404B).
 
-## Textbook statement (quoted from `entities/def_404A.json`)
+## Textbook statements (quoted from `entities/def_404A.json` and `entities/def_404B.json`)
 
 > A linear multistep method satisfying (404a) is said to be
 > 'preconsistent'.
+>
+> A linear multistep method satisfying (404a) and (404b) is said to be
+> 'consistent'.
 
-with (404a) defined in the section context as
+with the section-context equations
 
-> `1 = α₁ + α₂ + … + α_k`.
+> (404a)  `1 = α₁ + α₂ + … + α_k`
+> (404b)  `α₁ + 2α₂ + … + kα_k = β₀ + β₁ + … + β_k`.
 
 The recurrence (Butcher §404, p. 341, equation defining the method
 itself) is
@@ -97,5 +102,60 @@ def implicitEulerLMM : LinearMultistepMethod 1 where
 theorem implicitEulerLMM_isPreconsistent :
     implicitEulerLMM.IsPreconsistent := by
   simp [LinearMultistepMethod.IsPreconsistent, implicitEulerLMM]
+
+/-! ### Consistency (Definition 404B)
+
+Butcher §404, p. 342: a linear multistep method is *consistent* if it
+satisfies both (404a) (preconsistency) and (404b)
+
+  `α₁ + 2α₂ + … + kα_k = β₀ + β₁ + … + β_k`. -/
+
+/-- Butcher (404b): the equation
+`α₁ + 2α₂ + … + kα_k = β₀ + β₁ + … + β_k`.
+
+This is the second of the two consistency conditions. The α-sum runs
+over `i = 1 .. k` with coefficient `i`; we encode the textbook subscript
+via `((i : ℕ) + 1)` and select `M.α i.succ` to skip the `α 0` slot. The
+β-sum runs over all of `Fin (k+1)` since β indexing starts at 0. -/
+def LinearMultistepMethod.SatisfiesEq404b {k : ℕ}
+    (M : LinearMultistepMethod k) : Prop :=
+  (∑ i : Fin k, ((i : ℕ) + 1 : ℝ) * M.α i.succ) = ∑ i, M.β i
+
+/-- Butcher Definition 404B: a linear multistep method is *consistent*
+if it satisfies both the preconsistency condition (404a) and the
+consistency condition (404b).
+
+The textbook says "a linear multistep method satisfying (404a) and
+(404b) is said to be 'consistent'", so we encode this as the
+conjunction of the two conditions, faithful to the textbook one-to-one. -/
+def LinearMultistepMethod.IsConsistent {k : ℕ}
+    (M : LinearMultistepMethod k) : Prop :=
+  M.IsPreconsistent ∧ M.SatisfiesEq404b
+
+/-! ### Witnesses for consistency
+
+Both Euler methods (k=1, α=(-1,1)) satisfy (404b):
+- `explicitEulerLMM`: LHS = `1 · 1 = 1`, RHS = `0 + 1 = 1`. ✓
+- `implicitEulerLMM`: LHS = `1 · 1 = 1`, RHS = `1 + 0 = 1`. ✓ -/
+
+/-- Explicit Euler satisfies (404b). -/
+theorem explicitEulerLMM_satisfiesEq404b :
+    explicitEulerLMM.SatisfiesEq404b := by
+  simp [LinearMultistepMethod.SatisfiesEq404b, explicitEulerLMM]
+
+/-- Explicit Euler is consistent. -/
+theorem explicitEulerLMM_isConsistent :
+    explicitEulerLMM.IsConsistent :=
+  ⟨explicitEulerLMM_isPreconsistent, explicitEulerLMM_satisfiesEq404b⟩
+
+/-- Implicit Euler satisfies (404b). -/
+theorem implicitEulerLMM_satisfiesEq404b :
+    implicitEulerLMM.SatisfiesEq404b := by
+  simp [LinearMultistepMethod.SatisfiesEq404b, implicitEulerLMM]
+
+/-- Implicit Euler is consistent. -/
+theorem implicitEulerLMM_isConsistent :
+    implicitEulerLMM.IsConsistent :=
+  ⟨implicitEulerLMM_isPreconsistent, implicitEulerLMM_satisfiesEq404b⟩
 
 end OpenMath.Chapter4.Section404
