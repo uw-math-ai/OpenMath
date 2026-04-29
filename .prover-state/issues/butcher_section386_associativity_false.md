@@ -160,3 +160,34 @@ the cheapest source-of-truth pivot.
   `bSeriesConv α β τ = bSeriesConvAug 1 0 α β τ` (or whatever the
   correct boundary values turn out to be) so that prior work is
   reused, not invalidated.
+
+## Cycle 581 status update
+
+Cycle 581 landed the narrow one-sided augmented variant in
+`OpenMath/ButcherGroup/Section386Conv.lean`:
+
+    noncomputable def bSeriesConvAug
+        (β₀ : ℝ) (α β : BTree → ℝ) (τ : BTree) : ℝ :=
+      bSeriesConv α β τ + α τ * β₀
+
+The exact proved unfoldings are `bSeriesConvAug_leaf`,
+`bSeriesConvAug_node_nil`, and `bSeriesConvAug_node_singleton_leaf`.
+The singleton-leaf associativity sanity check is landed in the raw
+unit-empty form
+
+    theorem bSeriesConvAug_assoc_singleton_leaf
+        (α β γ : BTree → ℝ) :
+        bSeriesConvAug 1 (fun τ => bSeriesConvAug 1 α β τ) γ
+            (BTree.node [BTree.leaf])
+          = bSeriesConvAug 1 α (fun τ => bSeriesConvAug 1 β γ τ)
+            (BTree.node [BTree.leaf])
+
+and closes by direct expansion plus `ring`.  For the cycle-580
+counterexample coefficients `α ≡ 1`, `β ≡ 0`, `γ ≡ 1`, both sides now
+evaluate to `3` at `BTree.node [BTree.leaf]`.
+
+The more heavily scalar-parametric formula from the cycle prompt was
+not landed: with only the right empty-forest scalar represented in
+`bSeriesConvAug`, arbitrary non-unit intermediate empty values are not
+tracked symmetrically.  The full unit-empty associativity theorem is
+left as the planned proof surface `bSeriesConvAug_assoc`.
