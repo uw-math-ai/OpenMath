@@ -9,3 +9,6 @@ thm:141A (cycle 012): Sum-swap approach for constant-coefficient recurrence clos
 rename. Cycle 013 Section212.lean:138/144 entries resolved by cycle 014's
 inline refactor. Both removed 2026-04-28 to stop propagating into next
 cycle's prompt.)
+
+### Cycle 35
+Cycle 035 Section404.lean: Worker reports creating LinearMultistepMethod structure, IsPreconsistent predicate, and two concrete witnesses (explicit/implicit Euler) with clean compile and full lake build. However, git diff shows only heartbeat.json changed — no Lean files committed. Same commit-not-reaching-repo failure as cycle 008.

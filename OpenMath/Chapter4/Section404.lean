@@ -158,4 +158,79 @@ theorem implicitEulerLMM_isConsistent :
     implicitEulerLMM.IsConsistent :=
   ⟨implicitEulerLMM_isPreconsistent, implicitEulerLMM_satisfiesEq404b⟩
 
+/-! ## §403 — Stability (def:403A)
+
+Butcher §403, p. 341. The textbook defines stability as boundedness of
+all solutions to the homogeneous recurrence (403a), which arises when
+the linear multistep method is applied to the trivial IVP `f ≡ 0`. The
+section also notes that this concept is variously known as
+*zero-stability* or *stability in the sense of Dahlquist*.
+
+We capture only the definition and two non-vacuity witnesses (both
+Euler methods). Algebraic characterisations (root condition,
+power-bounded companion matrix) are theorems (e.g. `thm:441C`), not the
+definition; they will be added in later cycles. -/
+
+/-- Butcher (403a): a sequence `y : ℕ → ℝ` is a *solution of the
+homogeneous recurrence* of the linear multistep method `M` if for
+every `m : ℕ`,
+
+  `y (m + k) = α_1 · y_{m+k-1} + α_2 · y_{m+k-2} + ⋯ + α_k · y_m`.
+
+This is equation (403a) — the difference equation that arises when the
+method is applied to the trivial IVP `f ≡ 0`. The sum is indexed by
+`i : Fin k`, with `i.succ : Fin (k+1)` selecting `α_{i.val + 1}` and
+the offset `i.val + 1` running from 1 (giving `y_{m+k-1}`) to `k`
+(giving `y_m`). -/
+def LinearMultistepMethod.IsHomogeneousSolution {k : ℕ}
+    (M : LinearMultistepMethod k) (y : ℕ → ℝ) : Prop :=
+  ∀ m : ℕ, y (m + k) = ∑ i : Fin k, M.α i.succ * y (m + k - (i.val + 1))
+
+/-- Butcher Definition 403A (p. 341): a linear multistep method is
+*stable* (also called *zero-stable* or *stable in the sense of
+Dahlquist*) if every solution of the homogeneous recurrence (403a) is
+bounded.
+
+> "A linear multistep method [α, β] is 'stable' if the difference
+> equation (403a) has only bounded solutions."
+
+Boundedness is encoded as `∃ C, ∀ n, |y n| ≤ C`. -/
+def LinearMultistepMethod.IsStable {k : ℕ}
+    (M : LinearMultistepMethod k) : Prop :=
+  ∀ y : ℕ → ℝ, M.IsHomogeneousSolution y → ∃ C, ∀ n, |y n| ≤ C
+
+/-! ### Witnesses for stability
+
+Both Euler methods have `k = 1`, `α 1 = 1`, so the homogeneous
+recurrence collapses to `y (m + 1) = y m`, i.e. all solutions are
+constant sequences and trivially bounded by `|y 0|`. -/
+
+/-- Explicit Euler is Dahlquist-stable. -/
+theorem explicitEulerLMM_isStable : explicitEulerLMM.IsStable := by
+  intro y hy
+  have hconst : ∀ n, y n = y 0 := by
+    intro n
+    induction n with
+    | zero => rfl
+    | succ n ih =>
+        have hrec := hy n
+        simp [explicitEulerLMM] at hrec
+        linarith
+  refine ⟨|y 0|, fun n => ?_⟩
+  rw [hconst n]
+
+/-- Implicit Euler is Dahlquist-stable. -/
+theorem implicitEulerLMM_isStable : implicitEulerLMM.IsStable := by
+  intro y hy
+  have hconst : ∀ n, y n = y 0 := by
+    intro n
+    induction n with
+    | zero => rfl
+    | succ n ih =>
+        have hrec := hy n
+        simp [implicitEulerLMM] at hrec
+        linarith
+  refine ⟨|y 0|, fun n => ?_⟩
+  rw [hconst n]
+
 end OpenMath.Chapter4.Section404
