@@ -561,19 +561,7 @@ codebase.
   retrying unrestricted `IsG1Equiv.product_congr`.
 - [ ] **§385 A generalization of `G₁`** — including non-RK methods.
 - [ ] **§386 Recursive formula for the product** — explicit Butcher
-  product on tree-indexed coefficients. **Cycle 581 status update:**
-  added the augmented convolution
-  `bSeriesConvAug (β₀ : ℝ) (α β : BTree → ℝ) (τ : BTree)`,
-  defined as `bSeriesConv α β τ + α τ * β₀`, to make the missing full-cut
-  `τ ⊗ 1` term explicit without redefining the existing `bSeriesConv`.
-  The landed unfoldings are `bSeriesConvAug_leaf`,
-  `bSeriesConvAug_node_nil`, and
-  `bSeriesConvAug_node_singleton_leaf`; the unit-empty singleton-leaf
-  associativity sanity check `bSeriesConvAug_assoc_singleton_leaf` now
-  closes by direct expansion and `ring`. For the cycle-580 constants
-  `α ≡ 1`, `β ≡ 0`, `γ ≡ 1`, both augmented sides at
-  `BTree.node [BTree.leaf]` evaluate to `3`. The full inductive
-  associativity proof for `bSeriesConvAug` remains future work.
+  product on tree-indexed coefficients.
 - [~] **§387 Some special elements of `G`** — identity, inverse, power.
   Cycle 498 landed the identity element: `trivialTableau : ButcherTableau 0`
   and `trivialTableau_unique` in `OpenMath/ButcherGroup.lean`. Cycle 505
@@ -1257,14 +1245,10 @@ Concrete next steps:
   `.prover-state/issues/butcher_section386_associativity_false.md`. The
   honest leaf and `node []` base cases — degenerate but true — are
   landed as `bSeriesConv_assoc_leaf` and `bSeriesConv_assoc_node_nil`.
-  Cycle 581 introduced the separate augmented convolution
-  `bSeriesConvAug β₀ α β τ = bSeriesConv α β τ + α τ * β₀` and verified
-  the unit-empty singleton-leaf associativity sanity check
-  `bSeriesConvAug_assoc_singleton_leaf`; the concrete cycle-580 constants
-  now give `3 = 3` instead of `1 ≠ 2`. The next §38 layer is the full
-  inductive associativity proof for the augmented convolution before
-  retrying a tableau-level antipode; after that, the `Group (G1 p)`
-  instance and the §389 effective-order interpretation. `G1.npow`-style
+  The next §38 layer must redefine `bSeriesConv` symmetrically (e.g.
+  augment by an empty-forest scalar pair) before retrying associativity
+  or a tableau-level antipode; after that, the `Group (G1 p)` instance
+  and the §389 effective-order interpretation. `G1.npow`-style
   stage-count arithmetic is closed.
 
 Expected sorry-first surface:
@@ -1311,10 +1295,7 @@ Expected sorry-first surface:
 
 ## Sorry Locations
 
-- `OpenMath/ButcherGroup/Section386Conv.lean`:
-  `bSeriesConvAug_assoc` is the explicitly scheduled cycle-581 follow-up
-  stub for the full inductive associativity proof of the unit-empty
-  augmented convolution.
+- No active `sorry`s in tracked code.
 
 ---
 
