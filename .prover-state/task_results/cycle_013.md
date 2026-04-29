@@ -232,4 +232,6 @@ out-of-scope until Mathlib gains JCF infrastructure.
 
 ## Commit verification
 
-(filled in by the commit step below)
+- Commit SHA: `c9819aeee8448de1558c0a37fb941568f6e7dd48`
+- `git rev-parse HEAD == origin/Main/Experiments`: confirmed.
+- Push: `16420c9..c9819ae  Main/Experiments -> Main/Experiments`.

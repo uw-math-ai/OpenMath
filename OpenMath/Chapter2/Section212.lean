@@ -137,28 +137,6 @@ lemma step_error_bound (S : EulerSetup E) (k : Fin S.n) :
     rw [hŷ]; module
   -- Now bound by triangle.
   rw [key]
-  have h_tri₁ :
-      ‖(S.y (S.x k.castSucc) - S.ŷ (S.x k.castSucc))
-          + δ • (S.f (S.x k.castSucc) (S.y (S.x k.castSucc))
-                 - S.f (S.x k.castSucc) (S.ŷ (S.x k.castSucc)))
-          + (S.y (S.x k.succ)
-             - (S.y (S.x k.castSucc)
-                + δ • S.f (S.x k.castSucc) (S.y (S.x k.castSucc))))‖
-        ≤ ‖(S.y (S.x k.castSucc) - S.ŷ (S.x k.castSucc))
-              + δ • (S.f (S.x k.castSucc) (S.y (S.x k.castSucc))
-                     - S.f (S.x k.castSucc) (S.ŷ (S.x k.castSucc)))‖
-          + ‖S.y (S.x k.succ)
-             - (S.y (S.x k.castSucc)
-                + δ • S.f (S.x k.castSucc) (S.y (S.x k.castSucc)))‖ := by
-    exact norm_add_le _ _
-  have h_tri₂ :
-      ‖(S.y (S.x k.castSucc) - S.ŷ (S.x k.castSucc))
-          + δ • (S.f (S.x k.castSucc) (S.y (S.x k.castSucc))
-                 - S.f (S.x k.castSucc) (S.ŷ (S.x k.castSucc)))‖
-        ≤ ‖S.y (S.x k.castSucc) - S.ŷ (S.x k.castSucc)‖
-          + ‖δ • (S.f (S.x k.castSucc) (S.y (S.x k.castSucc))
-                  - S.f (S.x k.castSucc) (S.ŷ (S.x k.castSucc)))‖ := by
-    exact norm_add_le _ _
   -- Bound the scalar-multiplied f-difference by Lipschitz.
   have h_lip :
       ‖S.f (S.x k.castSucc) (S.y (S.x k.castSucc))
@@ -190,13 +168,14 @@ lemma step_error_bound (S : EulerSetup E) (k : Fin S.n) :
                    - S.f (S.x k.castSucc) (S.ŷ (S.x k.castSucc)))‖
         + ‖S.y (S.x k.succ)
            - (S.y (S.x k.castSucc)
-              + δ • S.f (S.x k.castSucc) (S.y (S.x k.castSucc)))‖ := h_tri₁
+              + δ • S.f (S.x k.castSucc) (S.y (S.x k.castSucc)))‖ :=
+        norm_add_le _ _
     _ ≤ (‖S.y (S.x k.castSucc) - S.ŷ (S.x k.castSucc)‖
           + δ * ‖S.f (S.x k.castSucc) (S.y (S.x k.castSucc))
                   - S.f (S.x k.castSucc) (S.ŷ (S.x k.castSucc))‖)
         + δ ^ 2 * S.m := by
           gcongr
-          · calc _ ≤ _ := h_tri₂
+          · calc _ ≤ _ := norm_add_le _ _
                  _ = _ := by rw [h_smul]
     _ ≤ (‖S.y (S.x k.castSucc) - S.ŷ (S.x k.castSucc)‖
           + δ * ((S.L : ℝ) * ‖S.y (S.x k.castSucc) - S.ŷ (S.x k.castSucc)‖))
