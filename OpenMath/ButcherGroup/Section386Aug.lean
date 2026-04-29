@@ -588,6 +588,64 @@ theorem bSeriesConvAug_two_singleton_leaves (α β : AugSeries) :
   simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest]
   ring
 
+/-- Closed form for `bSeriesConvAug` on a node whose three children are
+all `BTree.node [BTree.leaf]`.  The displayed terms are the concrete
+`n = 3` disjoint `(S₁, S₂)` enumeration: each child is either cut at
+its root, partially cut to `node []`, or fully kept. -/
+theorem bSeriesConvAug_three_singleton_leaves (α β : AugSeries) :
+    bSeriesConvAug α β
+        (BTree.node
+          [BTree.node [BTree.leaf], BTree.node [BTree.leaf],
+           BTree.node [BTree.leaf]])
+      = α.toFun (BTree.node
+          [BTree.node [BTree.leaf], BTree.node [BTree.leaf],
+           BTree.node [BTree.leaf]]) * β.emptyVal
+        + β.toFun (BTree.node
+          [BTree.node [BTree.leaf], BTree.node [BTree.leaf],
+           BTree.node [BTree.leaf]])
+        + α.toFun BTree.leaf
+            * β.toFun (BTree.node
+              [BTree.node [], BTree.node [BTree.leaf],
+               BTree.node [BTree.leaf]])
+        + α.toFun BTree.leaf
+            * β.toFun (BTree.node
+              [BTree.node [BTree.leaf], BTree.node [],
+               BTree.node [BTree.leaf]])
+        + α.toFun BTree.leaf
+            * β.toFun (BTree.node
+              [BTree.node [BTree.leaf], BTree.node [BTree.leaf],
+               BTree.node []])
+        + α.toFun BTree.leaf ^ 2
+            * β.toFun (BTree.node
+              [BTree.node [], BTree.node [], BTree.node [BTree.leaf]])
+        + α.toFun BTree.leaf ^ 2
+            * β.toFun (BTree.node
+              [BTree.node [], BTree.node [BTree.leaf],
+               BTree.node []])
+        + α.toFun BTree.leaf ^ 2
+            * β.toFun (BTree.node
+              [BTree.node [BTree.leaf], BTree.node [], BTree.node []])
+        + α.toFun BTree.leaf ^ 3
+            * β.toFun (BTree.node
+              [BTree.node [], BTree.node [], BTree.node []])
+        + 3 * α.toFun (BTree.node [BTree.leaf])
+            * β.toFun (BTree.node
+              [BTree.node [BTree.leaf], BTree.node [BTree.leaf]])
+        + 3 * α.toFun (BTree.node [BTree.leaf]) * α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node [], BTree.node [BTree.leaf]])
+        + 3 * α.toFun (BTree.node [BTree.leaf]) * α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node [BTree.leaf], BTree.node []])
+        + 3 * α.toFun (BTree.node [BTree.leaf]) * α.toFun BTree.leaf ^ 2
+            * β.toFun (BTree.node [BTree.node [], BTree.node []])
+        + 3 * α.toFun (BTree.node [BTree.leaf]) ^ 2
+            * β.toFun (BTree.node [BTree.node [BTree.leaf]])
+        + 3 * α.toFun (BTree.node [BTree.leaf]) ^ 2 * α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node []])
+        + α.toFun (BTree.node [BTree.leaf]) ^ 3
+            * β.toFun (BTree.node []) := by
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest]
+  ring
+
 /-- Closed form for `bSeriesConvAug` on the asymmetric two-child shape
 `[BTree.node [BTree.leaf], BTree.node []]`.  Used by Theorem B's
 expansion of `(βγ)` on the inner trunks. -/
@@ -666,6 +724,23 @@ theorem mul_assoc_at_two_singleton_leaves
     bSeriesConvAug_node_nil_node_singleton_leaf,
     bSeriesConvAug_two_node_nils,
     hβ', hγ', mul_one]
+  ring
+
+/-- Depth-3 unital associativity sanity check at the three-child
+order-2 shape `BTree.node [node [leaf], node [leaf], node [leaf]]`. -/
+theorem mul_assoc_at_three_singleton_leaves
+    (α β γ : AugSeries) (hβ : β.IsUnital) (hγ : γ.IsUnital) :
+    bSeriesConvAug ⟨1, fun τ => bSeriesConvAug α β τ⟩ γ
+        (BTree.node
+          [BTree.node [BTree.leaf], BTree.node [BTree.leaf],
+           BTree.node [BTree.leaf]])
+      = bSeriesConvAug α ⟨1, fun τ => bSeriesConvAug β γ τ⟩
+        (BTree.node
+          [BTree.node [BTree.leaf], BTree.node [BTree.leaf],
+           BTree.node [BTree.leaf]]) := by
+  have hβ' : β.emptyVal = 1 := hβ
+  have hγ' : γ.emptyVal = 1 := hγ
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest, hβ', hγ']
   ring
 
 end ButcherTableau
