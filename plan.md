@@ -1236,9 +1236,18 @@ Concrete next steps:
   `.prover-state/issues/butcher_section388_left_cancellation.md`). Cycle
   579 added `bSeriesConv_add_right`, `bSeriesConv_smul_right`, and
   `bSeriesConv_zero_left`, giving right-slot bilinearity and the zero-left
-  sanity check for the §386 convolution. The next §38 layer is a
-  tableau-level antipode or other genuine inverse construction for the
-  unit-stage subgroup of `G1 p`; after that, the `Group (G1 p)` instance
+  sanity check for the §386 convolution. Cycle 580 then discovered that
+  `bSeriesConv` is **not associative** as currently defined (counterexample
+  at `α ≡ 1`, `β ≡ 0`, `γ ≡ 1`, `τ = node [leaf]`, landed as
+  `bSeriesConv_assoc_singleton_leaf_counterexample`); this is the same root
+  cause as the false §388 left-cancellation, namely the asymmetric
+  treatment of the empty pruned forest. See
+  `.prover-state/issues/butcher_section386_associativity_false.md`. The
+  honest leaf and `node []` base cases — degenerate but true — are
+  landed as `bSeriesConv_assoc_leaf` and `bSeriesConv_assoc_node_nil`.
+  The next §38 layer must redefine `bSeriesConv` symmetrically (e.g.
+  augment by an empty-forest scalar pair) before retrying associativity
+  or a tableau-level antipode; after that, the `Group (G1 p)` instance
   and the §389 effective-order interpretation. `G1.npow`-style
   stage-count arithmetic is closed.
 

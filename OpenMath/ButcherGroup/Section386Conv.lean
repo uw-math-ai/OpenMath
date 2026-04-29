@@ -1570,6 +1570,66 @@ private theorem innerCut_zero_canon_or_weight_zero
       · right
         simp [h_head_zero]
 
+/-! ### Cycle 580: associativity of `bSeriesConv` is **false** as stated.
+
+The cycle 580 planner asked for Connes–Kreimer-style convolution
+associativity
+
+    `bSeriesConv (bSeriesConv α β) γ τ = bSeriesConv α (bSeriesConv β γ) τ`,
+
+modelled on the rooted-tree Hopf algebra coassociativity.  This
+identity is **false** for `bSeriesConv` as currently defined: the
+asymmetric treatment of the empty pruned forest (the trivial cut
+`(some τ, 1)` contributes `β τ` with no `α`-prefactor, while the
+"everything pruned" cut `(none, α τ)` is filtered out completely)
+breaks associativity at any tree with a non-trivial admissible cut.
+
+The smallest counterexample is `τ = node [leaf]` with constant
+coefficients `α ≡ 1`, `β ≡ 0`, `γ ≡ 1`:
+
+* LHS = `γ(node [leaf]) + (bSeriesConv α β)(leaf) · γ(node [])
+      = 1 + β(leaf) · 1 = 1`.
+* RHS = `(bSeriesConv β γ)(node [leaf]) + α(leaf) · (bSeriesConv β γ)(node [])
+      = (γ(node [leaf]) + β(leaf) γ(node [])) + α(leaf) γ(node [])
+      = 1 + 0 + 1 = 2`.
+
+The discrepancy is the missing `α(leaf) γ(node [])` term: in the
+RHS the "1 ⊗ τ" cut contributes a `β`-correction that is not visible
+in the LHS, where the outer `(bSeriesConv α β)` is only ever
+evaluated at *proper* pruned subtrees.
+
+What survives are the degenerate base cases at trees with no proper
+admissible cut (the only admissible cut is the trivial one keeping
+the entire tree), at which both sides collapse to `γ τ`. These are
+landed below. The full counterexample is recorded as
+`bSeriesConv_assoc_singleton_leaf_counterexample` and discussed
+further in
+`.prover-state/issues/butcher_section386_associativity_false.md`. -/
+
+theorem bSeriesConv_assoc_leaf (α β γ : BTree → ℝ) :
+    bSeriesConv (bSeriesConv α β) γ BTree.leaf
+      = bSeriesConv α (bSeriesConv β γ) BTree.leaf := by
+  rw [bSeriesConv_leaf, bSeriesConv_leaf, bSeriesConv_leaf]
+
+theorem bSeriesConv_assoc_node_nil (α β γ : BTree → ℝ) :
+    bSeriesConv (bSeriesConv α β) γ (BTree.node [])
+      = bSeriesConv α (bSeriesConv β γ) (BTree.node []) := by
+  rw [bSeriesConv_node_nil, bSeriesConv_node_nil, bSeriesConv_node_nil]
+
+/-- Counterexample at `τ = node [leaf]` with `α ≡ 1`, `β ≡ 0`, `γ ≡ 1`.
+The two convolutions disagree by `α(leaf) · γ(node [])`. This rules
+out a literal Connes–Kreimer associativity for the current
+`bSeriesConv`, see
+`.prover-state/issues/butcher_section386_associativity_false.md`. -/
+theorem bSeriesConv_assoc_singleton_leaf_counterexample :
+    ∃ (α β γ : BTree → ℝ),
+      bSeriesConv (bSeriesConv α β) γ (BTree.node [BTree.leaf])
+        ≠ bSeriesConv α (bSeriesConv β γ) (BTree.node [BTree.leaf]) := by
+  refine ⟨fun _ => (1 : ℝ), fun _ => (0 : ℝ), fun _ => (1 : ℝ), ?_⟩
+  simp only [bSeriesConv_node_singleton_leaf, bSeriesConv_leaf,
+    bSeriesConv_node_nil]
+  norm_num
+
 theorem bSeriesConv_zero_left
     (β : BTree → ℝ) (τ : BTree) :
     bSeriesConv (fun _ : BTree => (0 : ℝ)) β τ = β τ := by

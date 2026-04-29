@@ -202,3 +202,25 @@ the left coefficient is identically zero. They do **not** imply a
 left-inverse law for `QuotEquiv.inverseCoeff`, because the obstruction
 recorded above is in the first coefficient slot, where cut weights are
 products and cross terms/non-invertible leaf behavior remain.
+
+## Cycle 580 status update — root cause identified
+
+Cycle 580 attempted the cycle 578 issue's "option 2" pivot:
+convolution associativity for `bSeriesConv` as the structural
+prerequisite for a clean two-sided inverse / tableau-level antipode.
+
+That associativity is **also false** under the current `bSeriesConv`
+definition — see
+`.prover-state/issues/butcher_section386_associativity_false.md` for
+the counterexample (`α ≡ 1`, `β ≡ 0`, `γ ≡ 1` at `τ = node [leaf]`,
+yielding `1 ≠ 2`) and Lean theorem
+`bSeriesConv_assoc_singleton_leaf_counterexample`.
+
+This is the root cause of *both* this §388 issue and the §386
+associativity gap: the asymmetric treatment of the empty pruned
+forest (the trivial cut `(some τ, 1)` contributes `β τ` without an
+`α`-prefactor while the "everything pruned" cut `(none, α τ)` is
+filtered out completely).  Any future §388 antipode work must first
+redefine `bSeriesConv` to be symmetric in its empty-forest
+convention; only then will both this left-cancellation identity and
+the §386 associativity become provable.
