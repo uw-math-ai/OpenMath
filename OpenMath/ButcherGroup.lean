@@ -5,6 +5,7 @@ import OpenMath.ButcherGroup.Core
 import OpenMath.ButcherGroup.Section384
 import OpenMath.ButcherGroup.Section384Slices
 import OpenMath.ButcherGroup.Section384SlicesMixed
+import OpenMath.ButcherGroup.Section384SlicesQuadMixed
 
 /-!
 # Butcher §38 — algebraic Runge–Kutta properties (umbrella)
@@ -13,8 +14,9 @@ Cycle 535 split this file because it crossed the 3000-line cap. The
 §381 / §382 / §384-prep core is now in `OpenMath.ButcherGroup.Core`,
 and the §384 right-block convolution chain is in
 `OpenMath.ButcherGroup.Section384`. The §384 closed-form slice modules
-are in `OpenMath.ButcherGroup.Section384Slices` and
-`OpenMath.ButcherGroup.Section384SlicesMixed`. This umbrella imports
+are in `OpenMath.ButcherGroup.Section384Slices`,
+`OpenMath.ButcherGroup.Section384SlicesMixed`, and
+`OpenMath.ButcherGroup.Section384SlicesQuadMixed`. This umbrella imports
 those modules and contains the §387 power chain, `IsRKEquivalentExt`,
 `IsG1Equiv`, and `G1`.
 
@@ -179,6 +181,23 @@ theorem bSeriesHom_product_node_triple_leaf
   simpa [bSeriesHom, bSeries, product,
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_triple_leaf_eq t₁ t₂
+
+/-- §384 lift of the standalone four-child mixed leaf/singleton-leaf closed
+form to the quotient layer, grouped as `Fin 4 × Fin 3`. -/
+theorem bSeriesHom_product_node_quadMixed
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) :
+    (q.product r).bSeriesHom tQuadMixed
+      = q.bSeriesHom tQuadMixed
+        + ∑ k : Fin 4, ∑ h : Fin 3,
+          tripleLeafChoiceCoef k (q.bSeriesHom BTree.leaf) 1 *
+            quadMixedSingletonChoiceCoef h (q.bSeriesHom BTree.leaf)
+              (q.bSeriesHom (BTree.node [BTree.leaf])) *
+            r.bSeriesHom (quadMixedChoiceTree k h) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_quadMixed_eq t₁ t₂
 
 /-- §384 lift of the cycle 544 dual all-empty-node closed form to the
 quotient layer. The product `bSeriesHom` on `BTree.node (List.replicate
@@ -1375,6 +1394,52 @@ private theorem order_node_replicate_leaf_append_replicate_singleton_leaf
     simp only [BTree.order_node, List.foldr, BTree.order_leaf]
     simp only [BTree.order_node] at ih
     omega
+
+/-- Cycle 559 standalone four-child mixed leaf/singleton-leaf `G₁.mul`
+direction slice. Product preserves `G₁` equivalence on the concrete tree
+`tQuadMixed`, whose order is six. -/
+theorem product_congr_node_quadMixed
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (hτ : tQuadMixed.order ≤ p) :
+    (q.product r).bSeriesHom tQuadMixed
+      = (q'.product r').bSeriesHom tQuadMixed := by
+  rw [QuotEquiv.bSeriesHom_product_node_quadMixed,
+      QuotEquiv.bSeriesHom_product_node_quadMixed]
+  have hp6 : 6 ≤ p := by
+    simpa [tQuadMixed, BTree.order_node, List.foldr] using hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hsingleton :
+      q.bSeriesHom (BTree.node [BTree.leaf])
+        = q'.bSeriesHom (BTree.node [BTree.leaf]) := by
+    apply hq
+    simp [BTree.order_node, List.foldr]
+    omega
+  have hnode :
+      q.bSeriesHom tQuadMixed = q'.bSeriesHom tQuadMixed :=
+    hq tQuadMixed hτ
+  rw [hnode, hleaf, hsingleton]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro k _
+  refine Finset.sum_congr rfl ?_
+  intro h _
+  have hsub :
+      r.bSeriesHom (quadMixedChoiceTree k h)
+        = r'.bSeriesHom (quadMixedChoiceTree k h) := by
+    apply hr
+    rw [quadMixedChoiceTree,
+      order_node_replicate_leaf_append_replicate_singleton_leaf]
+    have hcount := tripleLeafChoiceCount_sum k
+    fin_cases h <;>
+      simp [quadMixedSingletonLeafCount, quadMixedSingletonNodeCount] <;>
+      omega
+  rw [hsub]
 
 /-- Cycle 547 fifth tracked `G1.mul`-direction well-definedness
 deliverable: product preserves `G₁` equivalence on every node whose root
