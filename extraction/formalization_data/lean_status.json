@@ -360,14 +360,15 @@
     "status": "unformalized"
   },
   "def:356A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section356.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJIrreducible",
+    "status": "in_progress",
+    "notes": "DJ-irreducibility component formalized; AN-stability component deferred — see .prover-state/issues/AN_stability_deferred.md"
   },
   "def:356B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section356.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.IsDJReducible",
+    "status": "formalized"
   },
   "thm:356C": {
     "lean_file": null,
