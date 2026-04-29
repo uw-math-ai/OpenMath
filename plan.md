@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 23 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
+**Progress: 24 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -75,7 +75,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `thm:301A` **Functions on trees** (§301)
 - [ ] `thm:302C` **Rooted Tree Enumeration Formulas** (§302)
 - [ ] `thm:342C` **Gaussian Quadrature Order Conditions Equivalence** (§342)
-- [ ] `thm:343A` **Reflected methods** (§343)
+- [x] `thm:343A` **Reflected methods** (§343) — `OpenMath/Chapter3/Section343.lean`
 - [ ] `thm:351B` **A Stability Criterion for Runge Kutta Methods** (§351)
 - [ ] `thm:356C` **AN stability necessary conditions** (§356)
 - [ ] `cor:342D` **Gaussian Quadrature Runge Kutta Order Condition** (§342)

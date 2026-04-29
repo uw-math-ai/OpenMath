@@ -265,9 +265,9 @@
     "status": "unformalized"
   },
   "thm:343A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section343.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.reflection_reflection",
+    "status": "formalized"
   },
   "thm:343B": {
     "lean_file": null,
