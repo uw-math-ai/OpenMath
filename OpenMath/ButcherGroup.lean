@@ -236,6 +236,33 @@ theorem bSeriesHom_product_node_mixed_leaf_singleton_leaf
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_mixed_leaf_singleton_leaf_eq t₁ t₂ a b
 
+/-- §384 lift of the mixed leaf / double-leaf root closed form to the
+quotient layer. The kept double-leaf branch is indexed by a `Fin 3` choice:
+both internal leaves cut, one internal leaf cut, or both kept. -/
+theorem bSeriesHom_product_node_mixed_leaf_double_leaf
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) (a b : ℕ) :
+    (q.product r).bSeriesHom
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+      = q.bSeriesHom
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+        + ∑ S_leaf ∈ (Finset.univ : Finset (Fin a)).powerset,
+            ∑ S_dl ∈ (Finset.univ : Finset (Fin b)).powerset,
+              (q.bSeriesHom BTree.leaf) ^ S_leaf.card *
+                (q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])) ^ S_dl.card *
+                (∑ χ : Fin (b - S_dl.card) → Fin 3,
+                  doubleLeafChoiceCoef (q.bSeriesHom BTree.leaf) χ *
+                    r.bSeriesHom
+                      (doubleLeafChoiceTree (a - S_leaf.card) χ)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_mixed_leaf_double_leaf_cut_eq t₁ t₂ a b
+
 /-- §384 lift of the finite mixed closure on
 `BTree.node [BTree.leaf, BTree.node []]`. -/
 theorem bSeriesHom_product_node_leaf_node_nil
@@ -1375,6 +1402,224 @@ theorem product_congr_node_mixed_leaf_singleton_leaf
     rw [hcomp] at hT
     omega
   rw [hmixed]
+
+/-- Order of an all-double-leaf node:
+`(BTree.node (List.replicate n (BTree.node [BTree.leaf, BTree.leaf]))).order =
+1 + 3 * n`. -/
+private theorem order_node_replicate_double_leaf (n : ℕ) :
+    (BTree.node
+      (List.replicate n (BTree.node [BTree.leaf, BTree.leaf]))).order
+      = 1 + 3 * n := by
+  induction n with
+  | zero => simp
+  | succ m ih =>
+    rw [List.replicate_succ]
+    simp only [BTree.order_node, List.foldr]
+    have htail :
+        List.foldr (fun t n => t.order + n) 0
+          (List.replicate m (BTree.node [BTree.leaf, BTree.leaf])) = 3 * m := by
+      simp only [BTree.order_node] at ih
+      omega
+    rw [htail]
+    simp
+    omega
+
+/-- Order of a mixed node with `a` leaf children followed by `b`
+double-leaf children. -/
+private theorem order_node_replicate_leaf_append_replicate_double_leaf
+    (a b : ℕ) :
+    (BTree.node
+      (List.replicate a BTree.leaf ++
+        List.replicate b (BTree.node [BTree.leaf, BTree.leaf]))).order
+      = 1 + a + 3 * b := by
+  induction a with
+  | zero =>
+    have h := order_node_replicate_double_leaf b
+    simp only [BTree.order_node] at h
+    simp
+    omega
+  | succ m ih =>
+    rw [List.replicate_succ, List.cons_append]
+    simp only [BTree.order_node, List.foldr, BTree.order_leaf]
+    simp only [BTree.order_node] at ih
+    omega
+
+private theorem order_node_replicate_singleton_leaf_append_replicate_double_leaf
+    (b c : ℕ) :
+    (BTree.node
+      (List.replicate b (BTree.node [BTree.leaf]) ++
+        List.replicate c (BTree.node [BTree.leaf, BTree.leaf]))).order
+      = 1 + 2 * b + 3 * c := by
+  induction b with
+  | zero =>
+    simpa using (order_node_replicate_double_leaf c)
+  | succ m ih =>
+    rw [List.replicate_succ, List.cons_append]
+    simp only [BTree.order_node, List.foldr]
+    have htail :
+        List.foldr (fun t n => t.order + n)
+          0
+          (List.replicate m (BTree.node [BTree.leaf]) ++
+            List.replicate c (BTree.node [BTree.leaf, BTree.leaf]))
+          = 2 * m + 3 * c := by
+      simp only [BTree.order_node] at ih
+      omega
+    rw [htail]
+    simp
+    omega
+
+private theorem
+    order_node_replicate_leaf_append_replicate_singleton_leaf_append_replicate_double_leaf
+    (a b c : ℕ) :
+    (BTree.node
+      (List.replicate a BTree.leaf ++
+        List.replicate b (BTree.node [BTree.leaf]) ++
+          List.replicate c (BTree.node [BTree.leaf, BTree.leaf]))).order
+      = 1 + a + 2 * b + 3 * c := by
+  induction a with
+  | zero =>
+    simpa using
+      (order_node_replicate_singleton_leaf_append_replicate_double_leaf b c)
+  | succ m ih =>
+    rw [List.replicate_succ, List.cons_append, List.cons_append]
+    simp only [BTree.order_node, List.foldr, BTree.order_leaf]
+    have htail :
+        List.foldr (fun t n => t.order + n)
+          0
+          (List.replicate m BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf]) ++
+              List.replicate c (BTree.node [BTree.leaf, BTree.leaf]))
+          = m + 2 * b + 3 * c := by
+      simp only [BTree.order_node] at ih
+      omega
+    rw [htail]
+    omega
+
+private theorem doubleLeafChoiceCount_sum {n : ℕ} (χ : Fin n → Fin 3) :
+    doubleLeafChoiceCount χ ⟨0, by decide⟩
+      + doubleLeafChoiceCount χ ⟨1, by decide⟩
+      + doubleLeafChoiceCount χ ⟨2, by decide⟩ = n := by
+  classical
+  have h :=
+    Finset.card_eq_sum_card_fiberwise
+      (s := (Finset.univ : Finset (Fin n)))
+      (t := (Finset.univ : Finset (Fin 3)))
+      (f := χ) (by intro x hx; simp)
+  simpa [Fin.sum_univ_three, doubleLeafChoiceCount, Fintype.card_fin] using h.symm
+
+private theorem order_doubleLeafChoiceTree
+    {n : ℕ} (aKeep : ℕ) (χ : Fin n → Fin 3) :
+    (doubleLeafChoiceTree aKeep χ).order
+      = 1 + (aKeep + doubleLeafChoiceCount χ ⟨0, by decide⟩)
+          + 2 * doubleLeafChoiceCount χ ⟨1, by decide⟩
+          + 3 * doubleLeafChoiceCount χ ⟨2, by decide⟩ := by
+  change
+    (BTree.node
+      (List.replicate (aKeep + doubleLeafChoiceCount χ ⟨0, by decide⟩) BTree.leaf ++
+        List.replicate (doubleLeafChoiceCount χ ⟨1, by decide⟩)
+          (BTree.node [BTree.leaf]) ++
+        List.replicate (doubleLeafChoiceCount χ ⟨2, by decide⟩)
+          (BTree.node [BTree.leaf, BTree.leaf]))).order = _
+  rw [order_node_replicate_leaf_append_replicate_singleton_leaf_append_replicate_double_leaf]
+
+private theorem order_doubleLeafChoiceTree_le
+    {n a b p : ℕ} (aKeep : ℕ) (χ : Fin n → Fin 3)
+    (haKeep : aKeep ≤ a) (hn : n ≤ b) (hab : 1 + a + 3 * b ≤ p) :
+    (doubleLeafChoiceTree aKeep χ).order ≤ p := by
+  rw [order_doubleLeafChoiceTree]
+  have hsum := doubleLeafChoiceCount_sum χ
+  have hweighted :
+      doubleLeafChoiceCount χ ⟨0, by decide⟩
+        + 2 * doubleLeafChoiceCount χ ⟨1, by decide⟩
+        + 3 * doubleLeafChoiceCount χ ⟨2, by decide⟩ ≤ 3 * n := by
+    omega
+  omega
+
+/-- Cycle 553 mixed leaf / double-leaf `G₁.mul`-direction slice. -/
+theorem product_congr_node_mixed_leaf_double_leaf
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (a b : ℕ)
+    (hτ :
+      (BTree.node
+        (List.replicate a BTree.leaf ++
+          List.replicate b (BTree.node [BTree.leaf, BTree.leaf]))).order ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+      = (q'.product r').bSeriesHom
+        (BTree.node
+          (List.replicate a BTree.leaf ++
+            List.replicate b (BTree.node [BTree.leaf, BTree.leaf]))) := by
+  rw [QuotEquiv.bSeriesHom_product_node_mixed_leaf_double_leaf,
+      QuotEquiv.bSeriesHom_product_node_mixed_leaf_double_leaf]
+  have hab : 1 + a + 3 * b ≤ p := by
+    rw [order_node_replicate_leaf_append_replicate_double_leaf] at hτ
+    exact hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode :
+      q.bSeriesHom
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf])))
+        = q'.bSeriesHom
+          (BTree.node
+            (List.replicate a BTree.leaf ++
+              List.replicate b (BTree.node [BTree.leaf, BTree.leaf]))) :=
+    hq _ hτ
+  rw [hnode, hleaf]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro S_leaf hS_leaf_mem
+  have hS_leaf : S_leaf.card ≤ a := by
+    have hmem : S_leaf ⊆ (Finset.univ : Finset (Fin a)) :=
+      Finset.mem_powerset.mp hS_leaf_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  refine Finset.sum_congr rfl ?_
+  intro S_dl hS_dl_mem
+  have hS_dl : S_dl.card ≤ b := by
+    have hmem : S_dl ⊆ (Finset.univ : Finset (Fin b)) :=
+      Finset.mem_powerset.mp hS_dl_mem
+    have := Finset.card_le_card hmem
+    simpa using this
+  have hdouble_pow :
+      (q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])) ^ S_dl.card
+        = (q'.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])) ^ S_dl.card := by
+    by_cases hzero : S_dl.card = 0
+    · simp [hzero]
+    · have hbpos : 0 < b := by
+        have : 0 < S_dl.card := Nat.pos_of_ne_zero hzero
+        exact Nat.lt_of_lt_of_le this hS_dl
+      have hp3 : 3 ≤ p := by omega
+      have hdouble :
+          q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf])
+            = q'.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf]) := by
+        apply hq
+        have horder : (BTree.node [BTree.leaf, BTree.leaf]).order = 3 := by
+          simp [BTree.order_node, List.foldr]
+        rw [horder]
+        exact hp3
+      rw [hdouble]
+  rw [hdouble_pow]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro χ _
+  have hchoice :
+      r.bSeriesHom (doubleLeafChoiceTree (a - S_leaf.card) χ)
+        = r'.bSeriesHom (doubleLeafChoiceTree (a - S_leaf.card) χ) := by
+    apply hr
+    apply order_doubleLeafChoiceTree_le (a := a) (b := b)
+    · omega
+    · omega
+    · exact hab
+  rw [hchoice]
 
 /-- Cycle 545 fallback slice: product preserves `G₁` equivalence on
 `BTree.node [BTree.leaf, BTree.node []]` when that tree has order at most
