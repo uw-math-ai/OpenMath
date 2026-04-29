@@ -1,337 +1,362 @@
-# Cycle 034 Strategy — Fix the `symplecticityMatrix` transpose bug
+# Cycle 035 strategy — open Chapter 4 with `def:404A` (preconsistent LMM)
 
-## TL;DR
+## State entering this cycle
 
-This is a **focused infrastructure cycle**. The single deliverable is fixing
-the `symplecticityMatrix` bug discovered in cycle 033 and documented in
-`.prover-state/issues/symplecticityMatrix_missing_transpose.md`. After the
-fix, three things change in the codebase:
+- Cycle 034 RESOLVED `symplecticityMatrix_missing_transpose`. Build clean,
+  no sorrys, axioms standard. Branch tip: `34e769f`.
+- No Aristotle results pending.
+- No sorrys in the codebase. Cycle must produce a new entity.
+- Plan progress: 34/175 entities. Chapter 1: 13/17. Chapter 2: 3/4 +
+  1 deferred. Chapter 3: 17/92. **Chapter 4: 0/27. Chapter 5: 0/35.**
 
-1. `IsAlgebraicallyStable` covers the textbook's intended class (no longer
-   silently restricted to symmetric `A`).
-2. `algebraicallyStable_imp_A_symm` becomes unprovable (and unnecessary)
-   and must be **deleted**.
-3. The `hSym` hypothesis on `symplecticityMatrix_quadratic_form_eq`
-   (Lemma 1) becomes unnecessary; the lemma's proof must be reworked to
-   use an index-swap argument instead.
+## Target this cycle
 
-No new theorems, no new sorrys, no Aristotle submissions this cycle. The
-bug fix is the entire job. After the fix lands, downstream cycles (357D,
-356C, …) can rest on a faithful predicate.
+**`def:404A` — preconsistent linear multistep method** (Butcher §404, p. 341).
+Entity record: `extraction/formalization_data/entities/def_404A.json`.
 
-## Why this is the priority (not 357D, not §3 leaf entries)
+### Why this target (and why NOT the cycle-034 list)
 
-`thm:357D` (BN ⇒ AN) — the natural successor to `thm:357C` — depends on
-`def:356A`'s **AN-stability** component, which is deferred (see
-`AN_stability_deferred.md`). That cycle is several cycles of complex
-matrix resolvent infrastructure away. So §357 is **blocked above**.
+Cycle 034's "after this cycle" suggested
+`def:381B / def:381D / def:381F / lem:310B`. All four are **stale or
+blocked**:
 
-§357 is also blocked **below** by today's bug: the entire §357C theorem
-proved last cycle relies on a predicate (`IsAlgebraicallyStable`) that
-silently excludes most useful RK methods. Leaving the bug unfixed
-means every later §357/§356C consumer of `IsAlgebraicallyStable`
-inherits the silent restriction. This must be cleaned up before more
-weight is built on top.
+- `def:381B` and `def:381D` are already `[x]` in `plan.md` (cycles 030
+  and 022). Verified by re-reading the plan.
+- `def:381F` (P-equivalent) is blocked by the deferred "reduced method"
+  construction (`reduced_method_deferred.md`). Its definition reads
+  "each of them reduces to the same reduced method" — no reduced
+  method, no def:381F.
+- `lem:310B` requires `thm:306A` (Taylor's theorem), which is
+  unformalized (`[ ]` in plan.md). Wrong order.
 
-This cycle is small (the cycle-033 task results estimate "one-line
-change + simplification"), high-leverage, and has zero novel
-mathematics. It is exactly the kind of work that should not be
-postponed.
+`def:404A` is the cleanest unblocked target on the entire board:
 
-## Step-by-step task list
+- **Self-contained**: `dependencies = []`,
+  `transitive_dependencies = []` per the entity JSON.
+- **Opens Chapter 4** (currently 0/27, no scaffolding yet).
+- **High leverage**: 6 immediate dependents
+  (`def:404B`, `def:406A`, `def:510A`, `thm:405B`, `thm:422A`,
+  `thm:422C`). Builds the reusable `LinearMultistepMethod` structure
+  every Chapter 4 entity will need.
+- **Single cycle**: definition + structure + non-vacuity witness fits
+  comfortably.
 
-### Step 1: Edit `OpenMath/Chapter3/Section370.lean:55–58`
+Continuing Chapter 3 leaf work would now require either (a) the
+multi-cycle AN-stability infrastructure (`AN_stability_deferred.md`),
+(b) the multi-cycle reduced-method construction
+(`reduced_method_deferred.md`), or (c) the §31x Taylor's-theorem
+chain (`thm:306A` → `lem:310B` → …). Better to break new ground in
+Chapter 4 and return to those when one is explicitly scoped.
 
-Change the second `R.A` to `R.A.transpose`:
+## Textbook content to formalize
+
+From `def_404A.json` `context_latex` and `statement_latex`:
+
+A **k-step linear multistep method** for `y' = f(x, y)` is given by
+real coefficients `α_0, α_1, …, α_k` and `β_0, β_1, …, β_k` with
+`α_0 = -1` (the leading-coefficient normalisation), defining the
+recurrence
+
+```
+Σ_{i=0}^{k} α_i y_{n-i} = h Σ_{i=0}^{k} β_i f(x_{n-i}, y_{n-i}).
+```
+
+Equivalently (using `α_0 = -1`):
+`y_n = Σ_{i=1}^{k} α_i y_{n-i} + h Σ_{i=0}^{k} β_i f(x_{n-i}, y_{n-i})`.
+
+The method is **preconsistent** if equation (404a) holds:
+
+```
+1 = α_1 + α_2 + ⋯ + α_k.        (404a)
+```
+
+The textbook prose then derives (404b)
+`α_1 + 2 α_2 + ⋯ + k α_k = β_0 + β_1 + ⋯ + β_k`
+as motivation for `def:404B` (consistency, NOT this cycle).
+
+## Implementation plan
+
+### Step 1 — Chapter 4 scaffolding
+
+Worker MUST create, in order:
+
+1. `OpenMath/Chapter4/Section404.lean` — main file (contents in Step 2).
+2. `OpenMath/Chapter4.lean` — chapter aggregator, single line:
+   ```lean
+   import OpenMath.Chapter4.Section404
+   ```
+3. Append to `OpenMath.lean`:
+   ```lean
+   import OpenMath.Chapter4
+   ```
+
+### Step 2 — `LinearMultistepMethod` structure
+
+Define the LMM record. Recommended shape (refine only if a
+`lean_local_search "LinearMultistep"` reveals a Mathlib idiom — but
+do NOT introduce a new typeclass abstraction):
 
 ```lean
-def symplecticityMatrix {s : ℕ} (R : RKTableau s) :
-    Matrix (Fin s) (Fin s) ℝ :=
-  Matrix.diagonal R.b * R.A + R.A.transpose * Matrix.diagonal R.b -
-    Matrix.vecMulVec R.b R.b
+import Mathlib
+
+namespace OpenMath.Chapter4.Section404
+
+/-- A `k`-step linear multistep method (Butcher §40, p. 341).
+
+    Coefficients `α : Fin (k+1) → ℝ` and `β : Fin (k+1) → ℝ` define the
+    recurrence
+    `Σᵢ αᵢ · y_{n-i} = h · Σᵢ βᵢ · f(x_{n-i}, y_{n-i})`,
+    with the leading-coefficient normalisation `α 0 = -1`.
+
+    `α_zero` is a *hypothesis* (textbook normalisation convention),
+    not a derived fact: every concrete LMM must supply it. -/
+structure LinearMultistepMethod (k : ℕ) where
+  α : Fin (k + 1) → ℝ
+  β : Fin (k + 1) → ℝ
+  α_zero : α 0 = -1
 ```
 
-Also update the docstring at lines 48–54 to match Butcher's actual
-formula:
+Notes for the worker:
 
-```
-\[
-  M = \operatorname{diag}(b) A + A^{\top} \operatorname{diag}(b) - b b^{\top}.
-\]
-```
+- Use `Fin (k+1)` so that `α k` is the coefficient of `y_{n-k}` and
+  `α 0` is the coefficient of `y_n`. This matches Butcher's `α_i for
+  i = 0..k`.
+- `α_zero` is a structure field; every instance must prove it. Keep it.
+- Do NOT add a `step_count_pos : 0 < k` field. Butcher does not
+  require it; some downstream entities (e.g. `def:404B`, `thm:410A`)
+  treat the `k = 0` case implicitly.
 
-(Keep the entry-wise sentence "`m_{ij} = b_i a_{ij} + b_j a_{ji} − b_i b_j`"
-— that was already the textbook form and it is now correct as written.)
-
-**Verify the entry-wise unfolding** with `lean_multi_attempt` if
-needed. The new entries are:
-
-- `(diag(b) * A) i j = b i * A i j`
-- `(Aᵀ * diag(b)) i j = A j i * b j`
-- `(bbᵀ) i j = b i * b j`
-- Sum: `b_i * A i j + A j i * b j - b_i * b_j` ✓
-
-### Step 2: Verify / fix `implicitMidpoint_isSymplectic`
-
-The `s = 1` 1×1 case is invariant under transpose (`A 0 0 = A 0 0`),
-so the proof at `Section370.lean:76–82` should still work. But the
-`simp` lemma set may need `Matrix.transpose_apply` added:
+### Step 3 — `IsPreconsistent` predicate
 
 ```lean
-simp [Matrix.diagonal, Matrix.vecMulVec, Matrix.mul_apply,
-      Matrix.transpose_apply]
+/-- Butcher (404a): a linear multistep method is *preconsistent* if
+    `1 = α₁ + α₂ + ⋯ + α_k`. -/
+def LinearMultistepMethod.IsPreconsistent {k : ℕ}
+    (M : LinearMultistepMethod k) : Prop :=
+  1 = ∑ i : Fin k, M.α i.succ
 ```
 
-Run `lake env lean OpenMath/Chapter3/Section370.lean`. If it fails,
-inspect the goal with `lean_goal` and add the missing simp lemma.
-This is a 1-line fix at most.
+The sum runs from `i = 1` to `i = k`, encoded by iterating over
+`Fin k` and using `i.succ : Fin (k+1)` to skip `α 0`. If this
+formulation is awkward downstream, an equivalent form is
+`1 = ∑ i ∈ Finset.Ioi (0 : Fin (k+1)), M.α i`, but prefer the
+`Fin k` version for evaluation simplicity.
 
-### Step 3: Rework `OpenMath/Chapter3/Section357.lean`
+### Step 4 — Non-vacuity witness: explicit Euler as a 1-step LMM
 
-#### Step 3a: Delete `algebraicallyStable_imp_A_symm` (lines 261–289)
+CLAUDE.md mandates a concrete witness in the same cycle. The simplest
+LMM is **explicit Euler** as a 1-step method:
 
-It is no longer provable (the new symplecticity matrix is automatically
-symmetric in `(i, j)` regardless of `A`) and no longer needed. Delete
-the docstring + lemma body entirely.
+`y_n - y_{n-1} = h · f(x_{n-1}, y_{n-1})`
 
-#### Step 3b: Simplify `symplecticityMatrix_quadratic_form_eq` (lines 291–345)
-
-Drop the `(hSym : ∀ i j, M.A i j = M.A j i)` hypothesis. Update the
-docstring to drop the "under `A` symmetric" wording and mention that
-the equality now holds for **all** `M`, by an index-swap argument.
-
-The new proof outline (replace the existing 50-line proof):
+so `k = 1`, `α 0 = -1, α 1 = 1, β 0 = 0, β 1 = 1`. Preconsistency
+condition: `1 = α 1 = 1`. ✓
 
 ```lean
-private lemma symplecticityMatrix_quadratic_form_eq {s : ℕ}
-    (M : RKTableau s) {N : Type*}
-    [NormedAddCommGroup N] [InnerProductSpace ℝ N]
-    (F : Fin s → N) :
-    ∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) *
-        inner ℝ (F i) (F j)
-    = ∑ i, ∑ j, symplecticityMatrix M i j * inner ℝ (F i) (F j) := by
-  -- Step 1: unfold symplecticityMatrix entry-wise to the textbook form.
-  have hM : ∀ i j, symplecticityMatrix M i j =
-      M.b i * M.A i j + M.A j i * M.b j - M.b i * M.b j := by
-    intro i j
-    simp [symplecticityMatrix, Matrix.mul_apply, Matrix.diagonal,
-          Matrix.vecMulVec, Matrix.sub_apply, Matrix.add_apply,
-          Matrix.transpose_apply]
-  -- Step 2: rewrite RHS to its expanded form.
-  conv_rhs =>
-    rw [show (∑ i, ∑ j, symplecticityMatrix M i j * inner ℝ (F i) (F j))
-       = ∑ i, ∑ j, (M.b i * M.A i j + M.A j i * M.b j - M.b i * M.b j)
-                    * inner ℝ (F i) (F j)
-        from Finset.sum_congr rfl fun i _ =>
-              Finset.sum_congr rfl fun j _ => by rw [hM]]
-  -- Step 3: the key index-swap identity:
-  --   ∑ᵢⱼ a_{ji} b_j ⟨F i, F j⟩ = ∑ᵢⱼ b_i a_{ij} ⟨F i, F j⟩
-  -- via i ↔ j swap and ⟨F j, F i⟩ = ⟨F i, F j⟩.
-  have hswap :
-      ∑ i, ∑ j, M.A j i * M.b j * inner ℝ (F i) (F j)
-      = ∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j) := by
-    rw [Finset.sum_comm]
-    refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
-    rw [real_inner_comm (F j) (F i)]
-    ring
-  -- Step 4: split LHS and RHS into the linear pieces and use hswap.
-  have lhs_split :
-      (∑ i, ∑ j, (2 * M.b i * M.A i j - M.b i * M.b j) * inner ℝ (F i) (F j))
-      = (2 : ℝ) * (∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j))
-        - (∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j)) := by
-    simp only [sub_mul, ← Finset.sum_sub_distrib, Finset.mul_sum]
-    refine Finset.sum_congr rfl fun i _ => Finset.sum_congr rfl fun j _ => ?_
-    ring
-  have rhs_split :
-      (∑ i, ∑ j, (M.b i * M.A i j + M.A j i * M.b j - M.b i * M.b j)
-                * inner ℝ (F i) (F j))
-      = (∑ i, ∑ j, M.b i * M.A i j * inner ℝ (F i) (F j))
-        + (∑ i, ∑ j, M.A j i * M.b j * inner ℝ (F i) (F j))
-        - (∑ i, ∑ j, M.b i * M.b j * inner ℝ (F i) (F j)) := by
-    simp only [add_mul, sub_mul, ← Finset.sum_sub_distrib,
-               ← Finset.sum_add_distrib]
-  rw [lhs_split, rhs_split, hswap]
-  ring
+/-- Explicit Euler as a 1-step linear multistep method:
+    `y_n - y_{n-1} = h · f(x_{n-1}, y_{n-1})`. -/
+def explicitEulerLMM : LinearMultistepMethod 1 where
+  α := fun i => if i = 0 then -1 else 1
+  β := fun i => if i = 0 then 0 else 1
+  α_zero := by simp
+
+/-- Explicit Euler is preconsistent. -/
+theorem explicitEulerLMM_isPreconsistent :
+    explicitEulerLMM.IsPreconsistent := by
+  simp [LinearMultistepMethod.IsPreconsistent, explicitEulerLMM,
+        Fin.sum_univ_one]
 ```
 
-The key observation: `hswap` proves
-`∑ᵢⱼ a_{ji} b_j ⟨F_i, F_j⟩ = ∑ᵢⱼ b_i a_{ij} ⟨F_i, F_j⟩` by
-`Finset.sum_comm` plus inner-product symmetry, with no need for
-`A` symmetric. The `ring` at the end of step 4 sees `2 X - Y =
-X + X - Y` (since `hswap` rewrites the second RHS sum to match
-the first).
+If `simp` does not close it directly, try `lean_multi_attempt` with
+fallbacks (in order): `["decide", "rfl", "norm_num",
+"simp [LinearMultistepMethod.IsPreconsistent, explicitEulerLMM,
+ Fin.sum_univ_succ, Fin.sum_univ_zero]; rfl",
+"simp [LinearMultistepMethod.IsPreconsistent, explicitEulerLMM,
+ Fin.sum_univ_one]; norm_num"]`.
 
-If the proof above does not type-check verbatim, the cycle's
-fallback is to keep the structure but use `lean_multi_attempt` /
-`lean_goal` at the points where rewrites stall. Do **not** add
-`hSym` back — that would mean the bug isn't actually fixed.
+The arithmetic should close in <30 seconds. **No Aristotle batch
+needed for this cycle** — see "Aristotle usage" below.
 
-#### Step 3c: Update the call site in `algebraicallyStable_isBNStable`
+### Step 5 — Optional second witness (recommended but not required)
 
-At lines 516–517 (after `obtain ⟨hb_pos, hM_psd⟩ := hAS`):
+If time permits and the main witness landed quickly, add the
+**implicit Euler** 1-step LMM as well: `α 0 = -1, α 1 = 1, β 0 = 1,
+β 1 = 0`. Same preconsistency proof shape. Provides evidence that
+the predicate is meaningful for both explicit and implicit methods.
 
-```lean
-have hA_sym : ∀ i j, M.A i j = M.A j i :=
-  algebraicallyStable_imp_A_symm ⟨hb_pos, hM_psd⟩
-```
+Skip this if the main witness took >40 minutes; prioritise commit
+over gold-plating.
 
-**Delete this `have`**. It is no longer derivable and no longer
-needed.
+### Step 6 — Pre-commit faithfulness check (mandatory)
 
-At line 535:
+Per CLAUDE.md's checklist:
 
-```lean
-have hForm := symplecticityMatrix_quadratic_form_eq M hA_sym F
-```
+- [ ] `LinearMultistepMethod`: a `structure`, not a `class`. The
+      single `Prop` field `α_zero` is a *hypothesis* (textbook
+      normalisation convention), labelled as such in the docstring.
+- [ ] `IsPreconsistent`: matches Butcher (404a) verbatim
+      `1 = α_1 + … + α_k`. Quote (404a) in the docstring.
+- [ ] Tautology check on `explicitEulerLMM_isPreconsistent`: the
+      proof must genuinely evaluate the sum (`simp` unfolding +
+      arithmetic), not be `exact rfl` on a hypothesis.
+- [ ] Definition-smuggling check: `IsPreconsistent` is the algebraic
+      condition (404a) directly — this matches Butcher's *definition*
+      of preconsistency, not a characterisation. Document this
+      explicitly: Butcher's prose says "a linear multistep method
+      satisfying (404a) is said to be preconsistent", so (404a) IS
+      the definition.
 
-Change to:
+### Step 7 — Status updates
 
-```lean
-have hForm := symplecticityMatrix_quadratic_form_eq M F
-```
+Update `extraction/formalization_data/lean_status.json` row for
+`def:404A`:
+- `formalization_status` → `"formalized"`.
+- `lean_file` → `"OpenMath/Chapter4/Section404.lean"`.
+- `lean_symbol` →
+  `"OpenMath.Chapter4.Section404.LinearMultistepMethod.IsPreconsistent"`.
 
-(Drop the `hA_sym` argument — the lemma no longer takes it.)
+Update `plan.md`:
+- Change the Chapter 4 row from
+  `- [ ] def:404A preconsistent (§404)`
+  to
+  `- [x] def:404A preconsistent (§404) — OpenMath/Chapter4/Section404.lean`.
+- Bump the progress counter at the top from `34 / 175` to `35 / 175`.
 
-#### Step 3d: Update the docstring at lines 233–259
-
-The "Note: the existing `symplecticityMatrix` (cycle 027) unfolds to
-`(b_i + b_j) a_{ij} − b_i b_j` rather than the textbook's …"
-paragraph (lines 251–258) is now obsolete and must be **deleted**.
-Replace it with a short positive sentence: "`symplecticityMatrix M`
-is now the textbook form `m_{ij} = b_i a_{ij} + b_j a_{ji} − b_i b_j`
-(equation (357d) and equivalently (370a)); the proof below uses this
-form directly."
-
-### Step 4: Verify the build
-
-Run, in order, expecting clean exits:
+### Step 8 — Build verification
 
 ```bash
-lake env lean OpenMath/Chapter3/Section370.lean
-lake env lean OpenMath/Chapter3/Section357.lean
-lake build
+lake env lean OpenMath/Chapter4/Section404.lean    # individual file
+lake build                                          # full build (cached)
 ```
 
-Verify the axiom set on the affected entrypoints:
+Then check axioms on the witness:
+
+```bash
+echo '#print axioms OpenMath.Chapter4.Section404.explicitEulerLMM_isPreconsistent' \
+  | lake env lean --stdin OpenMath/Chapter4/Section404.lean
+```
+
+Expected: `[propext, Classical.choice, Quot.sound]` only.
+
+### Step 9 — Task results
+
+Write `.prover-state/task_results/cycle_035.md` per CLAUDE.md format,
+specifically including:
+
+- The `def:404A` faithfulness quote from the entity JSON.
+- Confirmation that `α_zero` is a hypothesis (textbook convention),
+  not a hidden conclusion.
+- Confirmation that `IsPreconsistent` is exactly Butcher (404a):
+  equality of `1` and the sum of `α_1..α_k`.
+- The two `lake build` outputs and the axiom-check output.
+
+### Step 10 — Commit and push
+
+Suggested commit message:
 
 ```
-#print axioms OpenMath.Chapter3.Section370.implicitMidpoint_isSymplectic
-#print axioms OpenMath.Chapter3.Section357.implicitMidpoint_isAlgebraicallyStable
-#print axioms OpenMath.Chapter3.Section357.algebraicallyStable_isBNStable
+Open Chapter 4 — formalize def:404A (preconsistent linear multistep methods)
+
+Introduces `LinearMultistepMethod k` structure (with the textbook
+α_0 = -1 normalisation) and the `IsPreconsistent` predicate
+(Butcher §404, equation (404a)). Witnesses preconsistency of
+explicit Euler as a 1-step LMM. Opens Chapter 4 of plan.md (now 35/175).
 ```
 
-All three should report `[propext, Classical.choice, Quot.sound]`.
+Verify with `git rev-parse HEAD == git rev-parse origin/Main/Experiments`
+after pushing, per the cycle-009 consultant note's anti-phantom
+verification routine.
 
-### Step 5: Update the resolved issue file
+## What NOT to do
 
-Edit `.prover-state/issues/symplecticityMatrix_missing_transpose.md`:
-add a "## Resolution (cycle 034)" section at the top documenting:
-
-- The fix that landed (`R.A` → `R.A.transpose` in Section370 line 57).
-- That `algebraicallyStable_imp_A_symm` was deleted.
-- That `symplecticityMatrix_quadratic_form_eq` no longer needs the
-  `hSym` hypothesis.
-- A pointer to the new commit hash.
-
-Do NOT delete the issue file — leave it as a historical record. Just
-mark it resolved at the top.
-
-### Step 6: Verify `extraction/formalization_data/lean_status.json`
-
-Confirm that the `def:357B`, `thm:357C`, `def:357A`, and `def:370A`
-rows still point at the correct files; the bug fix preserves all of
-them. No edits expected.
-
-## Faithfulness check (mandatory before commit)
-
-For the modified `symplecticityMatrix`:
-
-- [ ] Quote the textbook formula from `def_357B.json` /
-      `entities/def_370A.json` and confirm it matches the new Lean
-      definition (`diag(b) A + Aᵀ diag(b) − bbᵀ`, entries
-      `b_i a_{ij} + b_j a_{ji} − b_i b_j`).
-- [ ] Confirm `IsAlgebraicallyStable` no longer silently entails
-      symmetric `A` (the new symplecticity matrix is symmetric in
-      `(i, j)` automatically, so `IsHermitian` is non-restrictive on
-      `A`).
-- [ ] The cycle-033 `algebraicallyStable_isBNStable` proof must
-      still work after the simplification (Lemma 1 simpler, no
-      `algebraicallyStable_imp_A_symm`).
-
-## What NOT to try
-
-- **Do not** preserve `algebraicallyStable_imp_A_symm` "for backwards
-  compatibility". It is not exported, it is `private`, and after the
-  fix it would be unprovable. Delete it cleanly.
-- **Do not** add a parallel `symplecticityMatrixSym` definition.
-  Solution 2 in the issue file (parallel definitions) was explicitly
-  not recommended; pick solution 1 (fix the definition).
-- **Do not** weaken `IsAlgebraicallyStable` to add `A` symmetric as
-  an explicit hypothesis. The textbook does NOT require `A` symmetric.
-- **Do not** modify `IsBNStable`, `bn_stability_identity`, or
-  `posSemidef_inner_form_nonneg`. None of them depend on the bug.
-- **Do not** start `thm:357D` this cycle. It depends on AN-stability
-  (deferred), and bundling it with the bug fix would make the cycle
-  unreviewable.
-- **Do not** raise `maxHeartbeats`. The Section357 proof was
-  comfortably within budget last cycle and the simplification should
-  reduce heartbeat usage, not increase it.
-- **Do not** introduce `axiom` / `constant` if any rewrite stalls.
-  Decompose with `lean_multi_attempt` / `lean_goal` instead.
-- **Do not** modify `scripts/autonomous_loop.py` or any
-  `.prover-state/` infrastructure. Per CLAUDE.md and the cycle-014
-  consultant guidance, scanner / loop changes are the loop
-  maintainer's responsibility.
-- **Do not** chase the "stuck" entries from older `attempts.md`
-  rows — both Section112 and Section212 false positives have been
-  resolved (cycles 014 and 015). The current `OpenMath/` tree has
-  zero scanner hits, verified via
+- **Do NOT pursue the cycle-034 list verbatim.** `def:381B` and
+  `def:381D` are already done; `def:381F` is blocked by reduced-method
+  deferral; `lem:310B` needs `thm:306A`. The list was stale relative
+  to the current `plan.md`.
+- **Do NOT start the AN-stability infrastructure** this cycle. It is
+  a multi-cycle complex-matrix-resolvent project per
+  `AN_stability_deferred.md` — pursue it only when a planner explicitly
+  scopes it as the cycle goal.
+- **Do NOT start the §142 Schur infrastructure** (per
+  `jordan_canonical_form_missing.md`). Non-critical path.
+- **Do NOT start the reduced-method construction** (per
+  `reduced_method_deferred.md`). Defer until `def:381F` is the
+  targeted cycle.
+- **Do NOT modify `scripts/autonomous_loop.py`** to fix the tautology
+  scanner false positives. Loop-maintainer work; the issue file
+  `tautology_scanner_false_positives.md` already captures the patches.
+- **Do NOT raise `maxHeartbeats`** above 200000.
+- **Do NOT introduce `axiom` or `constant`** declarations.
+- **Do NOT introduce a class hierarchy or typeclass abstraction over
+  LMMs** ("LMM-like" structures, etc.). One concrete `structure` is
+  enough; abstractions can come later when a downstream theorem needs
+  one.
+- **Do NOT add a `step_count_pos : 0 < k` field** to
+  `LinearMultistepMethod`. Butcher does not require it.
+- **Do NOT define preconsistency in terms of (404b)** (the consistency
+  condition `Σᵢ i αᵢ = Σᵢ βᵢ`). That is a different definition
+  (`def:404B`, NOT this cycle) and conflating them would be a
+  faithfulness failure.
+- **Do NOT skip the non-vacuity witness.** CLAUDE.md mandates one
+  concrete instance per new `structure` in the same cycle.
+- **Do NOT re-formalize `def:381B`, `def:381D`, or any already-done
+  entity.** Check `plan.md` first if uncertain.
+- **Do NOT chase the "stuck on" rows from older `attempts.md`**
+  (Section112:74, Section212:138/144). All resolved cycles ago; the
+  current scanner shows zero hits, verified by
   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`.
 
 ## Aristotle usage this cycle
 
-**None.** This cycle has zero new sorrys and zero new theorems. The
-bug fix is a refactor + a one-paragraph proof simplification, both
-of which are quicker manually than via Aristotle.
+**Skip the Aristotle batch.** Justification (document this in
+`task_results/cycle_035.md` under "Approach" so the evaluator does
+not flag the skip):
 
-If for any reason `symplecticityMatrix_quadratic_form_eq` fails to
-type-check after the rewrite and resists `lean_multi_attempt`, file
-the goal as a sorry'd helper lemma and submit to Aristotle as a
-single-job fallback. Do NOT submit speculative jobs in advance.
+- The single new theorem (`explicitEulerLMM_isPreconsistent`) is
+  trivial arithmetic that closes in `<30s` manually.
+- The 30-minute Aristotle round-trip would push the cycle to >40
+  minutes for a goal `decide` can solve.
+- CLAUDE.md's "Aristotle-first" rule is explicitly conditioned on
+  having ~5 sub-lemmas worth submitting; here there are zero such
+  goals.
 
-## Task results expectations
+If `explicitEulerLMM_isPreconsistent` unexpectedly resists manual
+proof for >15 minutes, file the goal as a `sorry`'d helper and
+submit a single Aristotle job as a fallback. Do NOT submit
+speculative jobs in advance.
 
-Write `.prover-state/task_results/cycle_034.md` documenting:
+## Search hints if you get stuck
 
-- The exact diff applied to `Section370.lean` (definition + docstring).
-- The exact diff applied to `Section357.lean` (Lemma 1 simplification,
-  helper deletion, theorem-call update, docstring update).
-- The `lake env lean` and `lake build` results.
-- The `#print axioms` outputs for the three entrypoints in Step 4.
-- A faithfulness section confirming the new `symplecticityMatrix`
-  matches the textbook (357d)/(370a) formula verbatim.
-- The cross-link to the resolved
-  `symplecticityMatrix_missing_transpose.md` issue.
+- `Fin.sum_univ_one`, `Fin.sum_univ_succ`, `Fin.sum_univ_zero` — for
+  evaluating `∑ i : Fin k, …` in the small-k cases.
+- `Mathlib.Algebra.BigOperators.Fin` — for `Fin`-indexed sum lemmas.
+- `lean_local_search "LinearMultistep"` — confirm Mathlib has no
+  pre-existing LMM structure to reuse. (Pre-cycle check: as of pinned
+  Mathlib, it does not — only ODE-side material in
+  `Mathlib/Analysis/ODE/`.)
+- Skip `lean_leansearch` / `lean_loogle` — this cycle is plumbing,
+  not a Mathlib-find puzzle.
 
-## After this cycle (for the next planner)
+## Definition of done
 
-Once the bug is fixed, the natural cycle-035 candidates are:
+1. New file `OpenMath/Chapter4/Section404.lean` exists, defines
+   `LinearMultistepMethod`, `LinearMultistepMethod.IsPreconsistent`,
+   `explicitEulerLMM`, and `explicitEulerLMM_isPreconsistent`.
+2. `OpenMath/Chapter4.lean` and the new `import OpenMath.Chapter4`
+   line in `OpenMath.lean` are in place.
+3. `lake build` completes cleanly.
+4. Axiom check on `explicitEulerLMM_isPreconsistent` shows
+   `[propext, Classical.choice, Quot.sound]`.
+5. `lean_status.json` and `plan.md` are updated (entity row +
+   progress counter).
+6. `.prover-state/task_results/cycle_035.md` exists with the
+   faithfulness check section filled in.
+7. Commit landed and pushed; `git rev-parse HEAD ==
+   git rev-parse origin/Main/Experiments` after the push.
 
-- **Option A (recommended): a §3 leaf entry that doesn't depend on
-  AN-stability or §142 Schur.** Strong candidates from the plan:
-  `def:381B` (Φ-equivalent), `def:381D` (P-reducible), `def:381F`
-  (P-equivalent), `lem:310B` (elementary differential weight formula).
-  These are unblocked by current infrastructure and chip away at the
-  §380 and §31x clusters.
-
-- **Option B: open the AN-stability infrastructure.** Per
-  `AN_stability_deferred.md`, this is the path that unlocks `thm:357D`,
-  `thm:356C`, `cor:356D`, and the non-trivial parts of §358/§359. The
-  required pieces are: `Matrix.diagonal` of complex eigenvalues, the
-  resolvent `(I − AZ)⁻¹` via `Matrix.nonsing_inv`, the scalar `R(Z)`,
-  the closed-left-half-plane condition, and the magnitude bound
-  `|R(Z)| ≤ 1`. Estimated 1–2 cycles. Higher leverage but heavier
-  lift.
-
-The next planner should pick based on whether the project is
-prioritising breadth (Option A) or depth in §356/§357 (Option B).
+If any step blocks unexpectedly, write a structured issue file to
+`.prover-state/issues/` rather than committing partial work, and
+pivot to a different unblocked leaf entity (next-best candidates,
+in order: `def:510A` preconsistency vector for GLM in §510 — same
+structural pattern as def:404A — or `def:520A` Introduction in
+§520).
