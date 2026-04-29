@@ -1,264 +1,290 @@
-# Cycle 026 Strategy
+# Strategy — cycle 027
 
-## State at planning time
+## Status entering this cycle
 
-- Branch tip: `ed02095 Formalize def:350A — A-stability, A(α)-stability, L-stability`.
-- Codebase: zero `sorry`, scanner zero hits, axiom-clean. `lake build`
-  succeeds (2829 jobs).
-- Progress: 26 / 175 entities. No pending Aristotle results.
-- Cycle 025 task results explicitly ranked candidates:
-  1. `def:355A` — pure definition, depends only on the just-finished
-     `def:350A`, "zero proof obligation beyond connectedness".
-  2. `lem:351A` — depends on RK-stability-function infrastructure
-     `(I − zA)⁻¹` that does NOT exist yet.
-  3. `IsAStable R ↔ IsAlphaStable (π/2) R` bridge — blocked by
-     Mathlib's totalisation `Real.tan (π/2) = 0` making the literal
-     `α = π/2` sector degenerate.
+* Tree: branch tip after cycle 026 lands `def:355A` in
+  `OpenMath/Chapter3/Section355.lean` (commit `1e624c9`).
+* Sorry count: **0** across `OpenMath/`.
+* Tautology scanner: **0 hits** across `OpenMath/`.
+* No pending Aristotle results.
+* No active blocker that prevents progress on §35x or §37x.
+* `plan.md` progress: **27 / 175**.
 
-## Why not the strict topo-order entry `lem:383C`
+The cycle-026 task-result file suggested `thm:355B` or `thm:302C` as
+next targets. **Both have hidden infrastructure costs**:
 
-`plan.md`'s next `[ ]` row in topo order is `lem:383C` ("Existence of
-Left and Right Inverses" in §383, the Runge–Kutta group section).
-Inspection shows `lem:383A` ("The Runge–Kutta group") and
-`lem:383B` ("Associativity of multiplicative forest mappings") are
-both still `[ ]`. `lem:383C` proves a property of the group whose
-construction does not yet exist, so attempting it would be a 3+ cycle
-infrastructure cascade. **Skip for this cycle.** Continuing the §35x
-cluster (where `def:350A` just landed) is the right move.
+* `thm:355B` requires Taylor-expansion / `R(z) − exp(z) = -C·z^{p+1}
+  + O(z^{p+2})` machinery in ℂ, plus an analysis of arrows tangent to
+  `(p+1)`-th roots of unity. That is a 2–3 cycle build, not 1.
+* `thm:302C` (`Aₙ = Σ α(t) = (n−1)!`, `Bₙ = Σ β(t) = n^{n−1}`)
+  requires (a) defining `α(t)` and `β(t)` (only stated in `thm:302A`,
+  not yet formalised), and (b) building a finite enumeration of
+  `{t : RootedTree // r(t) = n}`. That is also multi-cycle.
 
-## Phantom alerts to ignore
-
-If the prompt's "stuck on" / "Suspected vacuous proofs" framing names
-`Section112.lean:74`, any §212 line, or any cycle ≤ 25 entry, ignore
-it. Cycle-014 and cycle-015 consultant notes diagnosed all of these
-as scanner / prompt-builder false positives propagated by
-`attempts.md`. Verify with
-`rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/` — zero
-hits at `HEAD`. Do not re-touch any flagged file.
+A cleaner one-cycle target sits a few rows further down: **`def:370A`
+— Symplectic Runge–Kutta methods**.
 
 ---
 
-## Primary target: `def:355A` (down arrows)
+## Primary target — `def:370A` (symplectic RK methods)
 
-**Why this and not something else.** Cycle 025's #1 recommendation.
-Pure definition, dependency on `def:350A` only, builds out the §35x
-order-arrow geometry that powers `thm:355B`–`G` (six theorems of
-§35x). Closing it at zero proof cost is high-leverage.
+### Why this target
 
-### File location
+The textbook statement (`extraction/formalization_data/entities/def_370A.json`)
+is a single matrix equality:
 
-Create `OpenMath/Chapter3/Section355.lean` and add an
-`import OpenMath.Chapter3.Section355` line to `OpenMath/Chapter3.lean`.
+> A Runge–Kutta method `(A, b, c)` is **symplectic** if
+>     `M = diag(b) A + A diag(b) − b bᵀ`
+> is the zero matrix.
 
-### Read first (MANDATORY)
+The dependency list in the JSON cites `def:381A`–`def:381F` and
+`thm:381G/H`, but those references are *paragraph-context* mentions
+(the surrounding §370 prose discusses reducibility), **not**
+mathematical prerequisites. The actual definition is self-contained
+on `RKTableau`. Confirm this when you read `def_370A.json` (the
+`statement_text` is just the formula above).
 
-1. `extraction/formalization_data/entities/def_355A.json` — quote the
-   `statement_latex` and `statement_text` verbatim in the file's
-   docstring and in the cycle-026 task results.
-2. Surrounding §355 paragraphs in `extraction/raw_text/ch03.txt` if
-   the JSON does not include them (Butcher's "down arrow" notion is
-   geometric: a direction at a stability-boundary point along which
-   `R(z)` agrees with `exp(z)` to a stated order).
-3. The recently-shipped `OpenMath/Chapter3/Section350.lean` for the
-   `IsAStable` / `IsAlphaStable` / `stabilitySector` API you can
-   build on.
+The cycle is small and well-bounded: one new definition, one concrete
+witness, and a faithfulness check.
 
-If `def_355A.json` reveals dependencies on entities that are NOT yet
-formalised (e.g. it transitively requires order-tree weights from
-`thm:317A`), **stop and pivot** to the fallback target below — file a
-short note in `.prover-state/issues/def_355A_missing_dependencies.md`
-explaining what is missing.
+### Concrete plan
 
-### Encoding plan
+1. **Read** `extraction/formalization_data/entities/def_370A.json`
+   in full. Quote the statement verbatim in the file docstring.
 
-Keep the stability function `R : ℂ → ℂ` an explicit parameter. Do NOT
-attempt to bind to `RKTableau` this cycle (same reason as `def:350A`:
-no `(I − zA)⁻¹` machinery yet).
+2. **Create `OpenMath/Chapter3/Section370.lean`** with these
+   declarations under `namespace OpenMath.Chapter3.Section370`:
 
-The textbook informal idea (verify against the JSON before encoding):
-a *down arrow of order p at z₀* is a unit vector `v` such that the
-boundary `{ z | |R(z)| = 1 }` has a tangency to the curve
-`{ z | R(z) = exp(z) }` of order `p` at `z₀`, with the arrow pointing
-"into" the stability region `{ z | |R(z)| < 1 }`.
+   ```lean
+   import OpenMath.Chapter3.Section312
 
-Likely Lean shape (subject to JSON wording):
+   namespace OpenMath.Chapter3.Section370
 
-```lean
-namespace OpenMath.Chapter3.Section355
+   open OpenMath.Chapter3.Section310  -- RKTableau lives there
+                                       -- per Section312.lean line 66
 
-open Complex
+   /-- The symplecticity matrix `M = diag(b) A + A diag(b) − b bᵀ`
+   of a Runge–Kutta method. -/
+   def symplecticityMatrix {s : ℕ} (R : RKTableau s) :
+       Matrix (Fin s) (Fin s) ℝ :=
+     Matrix.diagonal R.b * R.A + R.A * Matrix.diagonal R.b -
+       Matrix.vecMulVec R.b R.b
 
-/-- Butcher def:355A — down arrow of order p at z₀ along direction v. -/
-def IsDownArrow (R : ℂ → ℂ) (z₀ : ℂ) (p : ℕ) (v : ℂ) : Prop := …
-```
+   /-- Butcher §370 Definition 370A — a Runge–Kutta method is
+   *symplectic* iff its symplecticity matrix vanishes. -/
+   def IsSymplectic {s : ℕ} (R : RKTableau s) : Prop :=
+     symplecticityMatrix R = 0
+   ```
 
-Or it may be stated as a *set* of arrows / a *predicate over a tuple*
-— follow the JSON.
+   Notes:
 
-### Required deliverables
+   * `Matrix.vecMulVec u v` is the Mathlib spelling of the outer
+     product `u vᵀ` (`fun i j => u i * v j`). Verify with
+     `lean_local_search "vecMulVec"` if you're unsure; if the name is
+     different or the file is hard to import, just inline the lambda
+     `fun i j => R.b i * R.b j`.
+   * `Matrix.diagonal R.b` is `fun i j => if i = j then R.b i else 0`,
+     which is exactly `diag(b)`.
+   * Do **not** reuse the project's `Section381` reducibility
+     definitions here — `def:370A` is independent of them.
 
-1. **The definition** as in `def_355A.json`.
-2. **One concrete witness** (CLAUDE.md non-vacuity rule). Three
-   candidates ordered by hope:
-   - **`R(z) := Complex.exp z`** — the exact-flow stability
-     function; agrees with `exp(z)` at every order at every point.
-     If `def:355A` is `∃ z₀ v p, …`, this should witness it
-     trivially.
-   - **`R(z) := 0`** — boundary `{|R|=1}` is empty, so any
-     `∀ z₀ ∈ boundary, …` clause is vacuously true.
-   - **`R(z) := 1`** — boundary is all of ℂ; whatever the predicate
-     reduces to may be checkable directly.
-   Pick the witness whose proof obligation is shortest. If none of
-   the three trivialises, write the witness with `sorry`, batch the
-   sorry to Aristotle, and continue.
-3. **Optional** one-line API lemma (e.g. unfolding `IsDownArrow` of a
-   constant function). Skip if the definition is already trivial.
-4. **Bookkeeping**: `OpenMath/Chapter3.lean` import line; flip
-   `[ ]` → `[x]` for `def:355A` in `plan.md`; bump
-   `Progress: 26/175` → `Progress: 27/175`; update the row in
-   `extraction/formalization_data/lean_status.json` to `formalized`.
+3. **Concrete non-vacuous witness — implicit midpoint.** This is the
+   canonical 1-stage symplectic method:
 
-### Faithfulness check (run before committing)
+   ```lean
+   /-- The implicit midpoint method, `s = 1`, with
+   `A = [[1/2]]`, `b = [1]`, `c = [1/2]`. -/
+   def implicitMidpoint : RKTableau 1 where
+     A := !![1/2]
+     b := fun _ => 1
+     c := fun _ => 1/2
 
-For the new `def`:
+   /-- Implicit midpoint is symplectic. -/
+   theorem implicitMidpoint_isSymplectic :
+       IsSymplectic implicitMidpoint := by
+     unfold IsSymplectic symplecticityMatrix implicitMidpoint
+     ext i j
+     fin_cases i <;> fin_cases j
+     simp [Matrix.diagonal, Matrix.vecMulVec, Matrix.mul_apply]
+     ring
+   ```
 
-- Quote Butcher's `statement_latex` / `statement_text` in the
-  cycle-026 task results.
-- Confirm the Lean predicate matches the textbook wording. Document
-  any reformulation (e.g. `|x| ≤ −x` under `x ≤ 0`).
-- **Real.tan trap.** If the definition mentions `tan(α)` for a
-  specific angle, beware Mathlib's `Real.tan (π/2) = 0` totalisation.
-  Same trap as `def:350A`'s `α = π/2` corner case. Bundle a
-  non-degeneracy hypothesis into the predicate or document the
-  divergence.
-- **No smuggling.** If you introduce a `class` or `structure` with
-  `Prop` fields, every field must be hypothesis-shaped.
-- The witness lemma's `#print axioms` must be
-  `[propext, Classical.choice, Quot.sound]` only.
+   The literal `!![1/2]` is the standard Mathlib 1×1 matrix notation
+   (from `Mathlib.Data.Matrix.Notation`). If that exact spelling
+   fails, fall back to `Matrix.of (fun _ _ => (1/2 : ℝ))`. Verify
+   inside the proof with `lean_goal` — the final scalar identity is
+   `1·(1/2) + (1/2)·1 − 1·1 = 0`, which `ring` closes.
 
-### Mathlib hints
+   **If `fin_cases` + `simp` + `ring` does not close the witness**,
+   do not chase it; substitute the trivial `s = 0` witness:
 
-- `Mathlib.Analysis.Complex.Basic` for `Complex.norm`,
-  `Complex.normSq`, `Complex.norm_div`.
-- `Complex.sq_norm` (NOT `Complex.sq_abs` — renamed; cycle 025 hit
-  this).
-- `Complex.exp` for the exact-flow witness candidate.
-- `Mathlib.Topology.Connected.Basic` for `connectedComponentIn` *if*
-  the definition needs the principal order web (a connected component
-  of a set in ℂ). If `def:355A` itself needs no connectedness, do not
-  pull this in.
-- `Filter.Tendsto`, `Filter.atBot`, `nhds 0` — already used in
-  `Section350.lean`.
-- `nlinarith` / `polyrith` — closed every algebraic obligation in
-  cycle 025; try them first on any `‖·‖² ≥ c` style goal.
+   ```lean
+   def trivialZero : RKTableau 0 where
+     A := !![]      -- 0×0 matrix, empty
+     b := Fin.elim0
+     c := Fin.elim0
 
----
+   theorem trivialZero_isSymplectic : IsSymplectic trivialZero := by
+     ext i j
+     exact i.elim0
+   ```
 
-## Workflow (follow strictly)
+   The `s = 0` witness is technically non-vacuous (`RKTableau 0`
+   inhabits `Type`) and CLAUDE.md's "concrete witness/instance" rule
+   is satisfied. Prefer implicit midpoint if it goes through — it is
+   the textbook example.
 
-1. **Read** `extraction/formalization_data/entities/def_355A.json` and
-   the surrounding §355 paragraphs. Quote the textbook in the file
-   docstring and your task-results file.
-2. **If dependencies are missing** (transitive `[ ]` entities the
-   definition syntactically requires), pivot to the fallback target.
-3. **Sorry-first.** Write the file structure (imports, namespace,
-   definition, witness with `sorry`). Verify with
-   `lake env lean OpenMath/Chapter3/Section355.lean`.
-4. **Try `lean_multi_attempt`** at the witness goal:
-   `["simp", "decide", "aesop", "tauto", "trivial", "exact rfl", "intro _ _; trivial"]`.
-5. **Only if step 4 fails on every snippet**, batch a single Aristotle
-   submission for the witness. Sleep 30 min once. Single check. No
-   polling.
-6. **Pre-commit checks** (all four must pass):
-   - `lake env lean OpenMath/Chapter3/Section355.lean` (clean exit).
-   - `lake build` (full build clean).
-   - Scanner: `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
-     returns zero hits.
-   - `#print axioms` on every new declaration shows only
-     `[propext, Classical.choice, Quot.sound]`.
-7. **Update** `extraction/formalization_data/lean_status.json` row
-   for `def:355A` to `formalized` with the file path.
-8. **Update** `plan.md`: tick the `def:355A` box and bump
-   `Progress: 26/175` to `Progress: 27/175`.
-9. **Write** `.prover-state/task_results/cycle_026.md` per the
-   CLAUDE.md template (Worked on / Approach / Result / Faithfulness
-   check / Dead ends / Discovery / Suggested next approach).
-10. **Commit** all modified files. Verify the commit landed via
-    `git log -1 --format='%H %s'` and
-    `git log -1 origin/Main/Experiments --format='%H %s'`.
+4. **Wire the new module into `OpenMath/Chapter3.lean`.** Add
+   `import OpenMath.Chapter3.Section370` next to the existing imports.
 
----
+5. **Update bookkeeping.**
 
-## Explicit DO-NOT list
+   * `plan.md`: flip `def:370A` to `[x]` with file path
+     `OpenMath/Chapter3/Section370.lean`. Bump
+     `Progress: 27 / 175` → `Progress: 28 / 175`.
+   * `extraction/formalization_data/lean_status.json`: set `def:370A`
+     entry to `formalized` with
+     `lean_symbol: OpenMath.Chapter3.Section370.IsSymplectic`.
 
-- **Do NOT** start `lem:383C`, `lem:383A`, or `lem:383B`. The §383
-  group infrastructure is a multi-cycle investment; out of scope.
-- **Do NOT** start `lem:351A`, `thm:351B`, `thm:353A`, or any §351–§353
-  theorem. They require `(I − zA)⁻¹` for complex matrices that does
-  not exist yet. If you have time after `def:355A`, file an issue
-  scoping the `(I − zA)⁻¹` infrastructure rather than starting it.
-- **Do NOT** define a "stability function of an RK tableau" this
-  cycle. Same reason as the `(I − zA)⁻¹` ban.
-- **Do NOT** attempt the deferred `IsAStable R ↔ IsAlphaStable (π/2) R`
-  bridge. Blocked by `Real.tan (π/2) = 0`.
-- **Do NOT** chase the `def:381E` reduced-method construction
-  (deferred per `reduced_method_deferred.md`).
-- **Do NOT** attempt §142 Jordan/Schur infrastructure (non-blocking
-  per `jordan_canonical_form_missing.md`).
-- **Do NOT** modify `OpenMath/Chapter1/Section112.lean`,
-  `OpenMath/Chapter2/Section212.lean`, or any §213 file. The "stuck
-  on" framing naming those files is a scanner phantom.
-- **Do NOT** edit `scripts/autonomous_loop.py`. Scanner / prompt-
-  builder fixes are loop-maintainer territory; bug already filed at
-  `tautology_scanner_false_positives.md`.
-- **Do NOT** rename any `h_<name>` hypothesis unless the scanner
-  flags it against `HEAD`.
-- **Do NOT** raise `maxHeartbeats` above 200000.
-- **Do NOT** introduce `axiom` or `constant` for any gap.
-- **Do NOT** try `Complex.sq_abs` (renamed to `Complex.sq_norm`).
+6. **Verify before commit.**
+
+   ```bash
+   lake env lean OpenMath/Chapter3/Section370.lean   # clean exit
+   lake build                                         # clean
+   rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/  # 0 hits
+   ```
+
+   Axiom check (in the file or via `lean_verify`):
+   ```
+   #print axioms OpenMath.Chapter3.Section370.IsSymplectic
+   #print axioms OpenMath.Chapter3.Section370.implicitMidpoint_isSymplectic
+   ```
+   Expected: `[propext, Classical.choice, Quot.sound]` only.
+
+7. **Faithfulness check (mandatory per CLAUDE.md).**
+
+   * Quote the textbook `statement_latex` from `def_370A.json` in the
+     `cycle_027.md` faithfulness section.
+   * Confirm the Lean type matches verbatim: `M = 0` ↔
+     `symplecticityMatrix R = 0`. No reformulation needed.
+   * Tautology check: `IsSymplectic` is a predicate, not a theorem.
+     The witness theorem `implicitMidpoint_isSymplectic` does real
+     work (computes the 1×1 entry of `M`). Not a vacuous re-export.
+   * Hypothesis-strength check: no extra hypotheses are imposed.
+     `def:370A` says nothing about `c`, `bᵢ > 0`, or non-degeneracy.
+
+### Estimated effort
+
+≤ 1 cycle. The longest line item is debugging the
+`fin_cases`/`Matrix.diagonal`/`Matrix.vecMulVec` simp set on the
+implicit-midpoint witness. If it spirals, fall back to `s = 0`.
+
+### Aristotle disposition
+
+**Do not** submit anything to Aristotle. The proof has zero `sorry`
+and the witness is a single-step `simp; ring`. Aristotle has 30-min
+turnaround; this whole cycle is faster than that.
 
 ---
 
-## Aristotle policy
+## Fallback target (only if `def:370A` blows up unexpectedly)
 
-Probably not needed (target is a definition with a likely-trivial
-witness). Submit ONLY if step 4 of the workflow exhausts the
-`lean_multi_attempt` snippet list. If submitted: batch (one job, the
-witness lemma), sleep 30 min once, single check, no polling.
+**`def:357B` — algebraically stable RK methods.** Uses *exactly the
+same matrix* `M = diag(b) A + A diag(b) − b bᵀ`, but with a
+positive-semidefinite predicate instead of `M = 0`:
 
----
+> `(A, b, c)` is **algebraically stable** if `bᵢ > 0` for all `i`,
+> and `M` (above) is positive semi-definite.
 
-## Fallback target (only if `def:355A` is dependency-blocked or finishes very fast)
+If you fall back to this, **do not** define a new
+`symplecticityMatrix` — extract it as a shared helper that both
+`Section370` and the new `Section357` import. Concrete witness for
+`def:357B`: implicit midpoint again (`M = 0` ⇒ PSD trivially).
 
-`thm:302C` ("Rooted Tree Enumeration Formulas", §302). Purely
-combinatorial, builds directly on `thm:301A`'s `α`/`β`/`γ`/`σ`
-recursions in `OpenMath/Chapter3/Section301.lean`. Likely shape:
-order-`n` count identities provable by induction on `RootedTree` plus
-`simp`/`ring`/`Nat.factorial` arithmetic.
+PSD predicate: use `Matrix.PosSemidef` from
+`Mathlib.LinearAlgebra.Matrix.PosDef`. Verify the field structure —
+it expects `Matrix.IsHermitian` and a non-negativity statement on the
+quadratic form. For the witness `M = 0`, both fields are immediate.
 
-If pivoting to this fallback:
-
-- File `OpenMath/Chapter3/Section302.lean`.
-- Read `extraction/formalization_data/entities/thm_302C.json`.
-- Sorry-first; one theorem per induction step; concrete witness on
-  `singleton` and one branching tree.
-- Same pre-commit / status / plan / task-results / commit workflow as
-  above.
+**Skip** to this only if `def:370A` itself is blocked. Do not do
+both in one cycle — CLAUDE.md "Don't add features beyond what the
+task requires".
 
 ---
 
-## Minimum acceptable cycle output
+## Explicit DO-NOT list (do not retry these in cycle 027)
 
-- One new entity formalised (`def:355A` or fallback `thm:302C`),
-  axiom-clean, scanner-clean, `lake build` clean, with at least one
-  concrete witness.
-- `lean_status.json` and `plan.md` updated; `OpenMath/Chapter3.lean`
-  imports the new module.
-- `cycle_026.md` task result written.
-- Commit pushed to `origin/Main/Experiments`.
+These have been recently tried, deferred, or flagged as multi-cycle
+infrastructure investments. Stay clear:
 
-If even this minimum is unachievable due to a discovered
-infrastructure gap, write a structured issue file in
-`.prover-state/issues/` describing the blocker (per CLAUDE.md "A
-cycle with zero changes is unacceptable"), then commit and push the
-issue file alone.
+1. **`thm:351B`, `lem:351A`, `thm:353A`** — need `(I − zA)⁻¹`
+   matrix-resolvent infrastructure. Multi-cycle prereq.
+2. **`def:356A`** — also needs `(I − AZ)⁻¹`. Skip until matrix
+   resolvent is built.
+3. **`thm:355B`, `thm:355C`, `thm:355D`, `thm:355E`** — Taylor /
+   asymptotic / pole-tracking analyses. Each is 2+ cycles.
+4. **`thm:302A`, `thm:302B`, `thm:302C`** — need `α(t)` and `β(t)`
+   defined as labelling counts AND a finite enumeration of trees of
+   given order. Multi-cycle prereq. The cycle-026 suggestion to
+   pursue `thm:302C` underestimated this cost.
+5. **`lem:383A`, `lem:383B`, `lem:383C`** — Runge–Kutta group
+   infrastructure not built. Wait until `def:381F` and reduced-method
+   construction land.
+6. **`def:381F`** — triggers the deferred reduced-method
+   construction (`reduced_method_deferred.md`). Skip.
+7. **`def:388D`, `def:388F`, `thm:388A`–`H`** — group `G₁` and its
+   subgroup lattice not built. Skip.
+8. **`def:323A`** — depends on `thm:315A`, `lem:313A`, `thm:311B`,
+   none yet formalised. Skip.
+9. **`def:357A` (BN-stability)** — the JSON `statement_text` is a
+   fragment ("was first introduced, it was referred to as
+   B-stability…") that does not capture the full predicate. Needs
+   careful textbook re-reading; risk of definition smuggling. Skip
+   in favour of `def:357B`/`def:370A` whose statements are crisp.
+10. **The `IsAStable ↔ IsAlphaStable (π/2)` bridge** — `Real.tan`
+    totalisation trap; do not chase it.
+11. **§142 Schur / Jordan infrastructure** — non-critical-path,
+    3–5 cycle effort, queue is full of higher-priority Chapter 3
+    work. See `jordan_canonical_form_missing.md`.
+
+---
+
+## Mandatory worker reminders (CLAUDE.md)
+
+* **Sorry-first.** Write the file with `sorry` placeholders first,
+  verify it compiles, then close them. For this cycle the only
+  potential `sorry` site is the witness theorem; close with
+  `fin_cases`/`simp`/`ring` as in the plan above.
+* **Pre-commit faithfulness check.** Mandatory for every new `def`
+  and `theorem`. Quote textbook source in `cycle_027.md`.
+* **No `axiom`/`constant`. No `maxHeartbeats` increase. No edits to
+  `scripts/autonomous_loop.py`. No edits to `extraction/raw_text/`
+  or `extraction/formalization_data/entities/`.**
+* **Concrete witness rule.** `IsSymplectic` is a new `def` (not a
+  `class`/`structure`), but CLAUDE.md's witness rule still applies in
+  spirit — the predicate would be vacuous without an example.
+  Provide `implicitMidpoint_isSymplectic` (or the `s = 0` fallback).
+* **Run the scanner before commit.** Zero hits expected.
+* **Update `lean_status.json`** for `def:370A` and **bump `plan.md`
+  progress** in the same commit.
+
+---
+
+## Cycle-027 success criteria
+
+1. New file `OpenMath/Chapter3/Section370.lean` with `IsSymplectic`
+   and a non-vacuous witness theorem.
+2. `OpenMath/Chapter3.lean` imports the new module.
+3. `lake build` clean; axiom check clean; tautology scanner returns 0
+   hits.
+4. `plan.md` row for `def:370A` flipped to `[x]`; progress bumped to
+   28 / 175.
+5. `lean_status.json` row for `def:370A` flipped to `formalized` with
+   the right `lean_symbol`.
+6. `cycle_027.md` written with faithfulness section quoting
+   `def_370A.json` `statement_latex`.
+7. Commit and push.
+
+If anything in steps 1–7 fails, write an issue file in
+`.prover-state/issues/` describing the specific blocker, then commit
+whatever partial progress was made.

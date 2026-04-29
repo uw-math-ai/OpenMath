@@ -425,9 +425,9 @@
     "status": "unformalized"
   },
   "def:370A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section370.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section370.IsSymplectic",
+    "status": "formalized"
   },
   "thm:372A": {
     "lean_file": null,

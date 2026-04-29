@@ -5,4 +5,5 @@ import OpenMath.Chapter3.Section322
 import OpenMath.Chapter3.Section343
 import OpenMath.Chapter3.Section350
 import OpenMath.Chapter3.Section355
+import OpenMath.Chapter3.Section370
 import OpenMath.Chapter3.Section381

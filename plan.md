@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 27 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
+**Progress: 28 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -157,7 +157,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:389A` **An algebraic interpretation of effective order** (§389)
 - [ ] `thm:352B` **Uniqueness of Pade exponential approximation** (§352)
 - [ ] `thm:355G` **A-stability Pade approximation order restriction** (§355)
-- [ ] `def:370A` **Maintaining quadratic invariants** (§370)
+- [x] `def:370A` **Maintaining quadratic invariants** (§370) — `OpenMath/Chapter3/Section370.lean`
 - [ ] `thm:372A` **Order conditions** (§372)
 
 ---
