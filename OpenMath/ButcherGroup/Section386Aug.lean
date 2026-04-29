@@ -561,4 +561,111 @@ theorem mul_assoc_at_node_two_node_nils
   have h := mul_assoc_at_node_replicate_node_nil α β γ hα hβ hγ 2
   simpa [List.replicate] using h
 
+/-- Closed form for `bSeriesConvAug` on a node whose two children are both
+`BTree.node [BTree.leaf]`.  Each child contributes three cut options
+(fully cut at its own root, partial-trunk cut keeping the root and pruning
+the leaf, fully kept), so the forest enumeration has nine entries plus
+the top-level prune. -/
+theorem bSeriesConvAug_two_singleton_leaves (α β : AugSeries) :
+    bSeriesConvAug α β
+        (BTree.node [BTree.node [BTree.leaf], BTree.node [BTree.leaf]])
+      = α.toFun (BTree.node [BTree.node [BTree.leaf],
+            BTree.node [BTree.leaf]]) * β.emptyVal
+        + β.toFun (BTree.node [BTree.node [BTree.leaf],
+            BTree.node [BTree.leaf]])
+        + α.toFun (BTree.node [BTree.leaf]) ^ 2
+            * β.toFun (BTree.node [])
+        + 2 * α.toFun (BTree.node [BTree.leaf])
+            * β.toFun (BTree.node [BTree.node [BTree.leaf]])
+        + 2 * α.toFun (BTree.node [BTree.leaf]) * α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node []])
+        + α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node [BTree.leaf], BTree.node []])
+        + α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node [], BTree.node [BTree.leaf]])
+        + α.toFun BTree.leaf ^ 2
+            * β.toFun (BTree.node [BTree.node [], BTree.node []]) := by
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest]
+  ring
+
+/-- Closed form for `bSeriesConvAug` on the asymmetric two-child shape
+`[BTree.node [BTree.leaf], BTree.node []]`.  Used by Theorem B's
+expansion of `(βγ)` on the inner trunks. -/
+private theorem bSeriesConvAug_node_singleton_leaf_node_nil (α β : AugSeries) :
+    bSeriesConvAug α β
+        (BTree.node [BTree.node [BTree.leaf], BTree.node []])
+      = α.toFun (BTree.node [BTree.node [BTree.leaf], BTree.node []])
+            * β.emptyVal
+        + β.toFun (BTree.node [BTree.node [BTree.leaf], BTree.node []])
+        + α.toFun (BTree.node [BTree.leaf]) * α.toFun (BTree.node [])
+            * β.toFun (BTree.node [])
+        + α.toFun (BTree.node [BTree.leaf])
+            * β.toFun (BTree.node [BTree.node []])
+        + α.toFun (BTree.node [])
+            * β.toFun (BTree.node [BTree.node [BTree.leaf]])
+        + α.toFun BTree.leaf * α.toFun (BTree.node [])
+            * β.toFun (BTree.node [BTree.node []])
+        + α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node [], BTree.node []]) := by
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest]
+  ring
+
+/-- Closed form for `bSeriesConvAug` on the asymmetric two-child shape
+`[BTree.node [], BTree.node [BTree.leaf]]`. -/
+private theorem bSeriesConvAug_node_nil_node_singleton_leaf
+    (α β : AugSeries) :
+    bSeriesConvAug α β
+        (BTree.node [BTree.node [], BTree.node [BTree.leaf]])
+      = α.toFun (BTree.node [BTree.node [], BTree.node [BTree.leaf]])
+            * β.emptyVal
+        + β.toFun (BTree.node [BTree.node [], BTree.node [BTree.leaf]])
+        + α.toFun (BTree.node []) * α.toFun (BTree.node [BTree.leaf])
+            * β.toFun (BTree.node [])
+        + α.toFun (BTree.node [])
+            * β.toFun (BTree.node [BTree.node [BTree.leaf]])
+        + α.toFun (BTree.node []) * α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node []])
+        + α.toFun (BTree.node [BTree.leaf])
+            * β.toFun (BTree.node [BTree.node []])
+        + α.toFun BTree.leaf
+            * β.toFun (BTree.node [BTree.node [], BTree.node []]) := by
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest]
+  ring
+
+/-- Closed form for `bSeriesConvAug` on `BTree.node [BTree.node [],
+BTree.node []]`.  Direct two-empty-children evaluation. -/
+private theorem bSeriesConvAug_two_node_nils (α β : AugSeries) :
+    bSeriesConvAug α β (BTree.node [BTree.node [], BTree.node []])
+      = α.toFun (BTree.node [BTree.node [], BTree.node []]) * β.emptyVal
+        + β.toFun (BTree.node [BTree.node [], BTree.node []])
+        + α.toFun (BTree.node []) ^ 2 * β.toFun (BTree.node [])
+        + 2 * α.toFun (BTree.node [])
+            * β.toFun (BTree.node [BTree.node []]) := by
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest]
+  ring
+
+/-- Depth-3 unital associativity sanity check at the two-child order-2
+shape `BTree.node [BTree.node [BTree.leaf], BTree.node [BTree.leaf]]`. -/
+theorem mul_assoc_at_two_singleton_leaves
+    (α β γ : AugSeries)
+    (_ : α.IsUnital) (hβ : β.IsUnital) (hγ : γ.IsUnital) :
+    bSeriesConvAug ⟨1, fun τ => bSeriesConvAug α β τ⟩ γ
+        (BTree.node [BTree.node [BTree.leaf], BTree.node [BTree.leaf]])
+      = bSeriesConvAug α ⟨1, fun τ => bSeriesConvAug β γ τ⟩
+          (BTree.node [BTree.node [BTree.leaf],
+            BTree.node [BTree.leaf]]) := by
+  have hβ' : β.emptyVal = 1 := hβ
+  have hγ' : γ.emptyVal = 1 := hγ
+  rw [bSeriesConvAug_two_singleton_leaves,
+      bSeriesConvAug_two_singleton_leaves]
+  simp only [bSeriesConvAug_leaf, bSeriesConvAug_node_nil,
+    bSeriesConvAug_node_singleton_leaf, bSeriesConvAug_node_node_nil,
+    bSeriesConvAug_singleton_singleton_leaf,
+    bSeriesConvAug_two_singleton_leaves,
+    bSeriesConvAug_node_singleton_leaf_node_nil,
+    bSeriesConvAug_node_nil_node_singleton_leaf,
+    bSeriesConvAug_two_node_nils,
+    hβ', hγ', mul_one]
+  ring
+
 end ButcherTableau

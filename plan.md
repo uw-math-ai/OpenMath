@@ -1271,7 +1271,16 @@ Concrete next steps:
   records the first order-2 partial-trunk cut at
   `BTree.node [BTree.node [BTree.leaf]]`; its companion
   `mul_assoc_at_singleton_singleton_leaf` verifies unital
-  associativity on that depth-3 sanity case. The
+  associativity on that depth-3 sanity case. Cycle 590 extends the
+  cut enumeration to two parallel order-2 children: the closed form
+  `bSeriesConvAug_two_singleton_leaves` records the 9-entry forest
+  enumeration on
+  `BTree.node [BTree.node [BTree.leaf], BTree.node [BTree.leaf]]`,
+  and the companion `mul_assoc_at_two_singleton_leaves` verifies
+  unital associativity at that shape (with private helpers
+  `bSeriesConvAug_node_singleton_leaf_node_nil`,
+  `bSeriesConvAug_node_nil_node_singleton_leaf`,
+  `bSeriesConvAug_two_node_nils` for the asymmetric inner trunks). The
   next step is to lift the unital depth-2 check to all trees by
   `BTree.rec` (requires a list-level reindexing combinator on
   `innerCutForest` that handles partial-trunk cuts on order-≥2
