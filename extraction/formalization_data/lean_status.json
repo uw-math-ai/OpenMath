@@ -132,9 +132,9 @@
     "status": "unformalized"
   },
   "def:402A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section404.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.IsConvergent",
+    "status": "formalized"
   },
   "def:403A": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",

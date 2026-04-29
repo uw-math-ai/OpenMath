@@ -1,4 +1,5 @@
 import Mathlib
+import OpenMath.Chapter1.Section110
 
 /-!
 # Butcher §404 — Preconsistency and consistency of linear multistep methods
@@ -32,6 +33,8 @@ preconsistency predicate here; the integration-by-recurrence operator
 will be added when downstream entities (e.g. `def:402A`, `def:406A`)
 need it.
 -/
+
+open scoped NNReal Topology
 
 namespace OpenMath.Chapter4.Section404
 
@@ -232,5 +235,121 @@ theorem implicitEulerLMM_isStable : implicitEulerLMM.IsStable := by
         linarith
   refine ⟨|y 0|, fun n => ?_⟩
   rw [hconst n]
+
+/-! ## §402 — Convergence (def:402A)
+
+Butcher §402, p. 340. We add the recurrence predicate `IsLMMSolution`
+(the equation in the file's existing docstring), and the textbook
+definition `IsConvergent` (Definition 402A). Two sanity helpers
+(`isLMMSolution_zero_iff`, `const_sequence_isHomogeneousSolution`)
+provide the non-vacuity content. The full convergence witness for any
+concrete LMM is deferred (Butcher's theorem `thm:422C`); see the
+issue file `lmm_convergence_witness_deferred.md`. -/
+
+/-- Butcher §404, p. 341 (recurrence): a sequence `Y : ℕ → ℝ` is an
+*LMM solution* of the linear multistep method `M` with step size `h`,
+RHS `f`, and grid origin `x₀` if for every `n ≥ 0`,
+
+  `Σ_{i=0}^{k} α_i · Y_{n+k-i} = h · Σ_{i=0}^{k} β_i · f(x₀ + (n+k-i)·h, Y_{n+k-i})`.
+
+We use `n + k` as the index for the LHS (so `n + k - i` is replaced
+with the natural-number subtraction that is always non-negative for
+`i ≤ k`). The sum runs over `Fin (k + 1)` so it includes the leading
+term `α 0` (= `-1` by `M.α_zero`). For `f ≡ 0` this reduces to
+`IsHomogeneousSolution`; see `isLMMSolution_zero_iff`. -/
+def LinearMultistepMethod.IsLMMSolution {k : ℕ}
+    (M : LinearMultistepMethod k) (h x₀ : ℝ) (f : ℝ → ℝ → ℝ)
+    (Y : ℕ → ℝ) : Prop :=
+  ∀ n : ℕ,
+    (∑ i : Fin (k + 1), M.α i * Y (n + k - i.val)) =
+      h * ∑ i : Fin (k + 1), M.β i *
+        f (x₀ + ((n + k - i.val : ℕ) : ℝ) * h) (Y (n + k - i.val))
+
+/-- Butcher Definition 402A (p. 340): a linear multistep method is
+*convergent* if for every initial value problem
+
+  `y'(x) = f(x, y(x)),    y(x₀) = y₀`
+
+with `f` jointly continuous and Lipschitz in its second variable
+(Butcher §110A `LipschitzInSecond`), every exact solution `yex` of
+the IVP, every starting method whose iterates converge to `y₀` as the
+step size shrinks, and every `x > x₀`, the sequence of LMM iterates
+`Y_m` (with step size `h = (x - x₀)/m`) approximating `y(x)` satisfies
+
+  `Y_m − yex(x) → 0,    as m → ∞`.
+
+> "The linear multistep method is said to be 'convergent' if, for any
+> such initial value problem, `Y_m − y(x) → 0, as m → ∞`."
+> (Butcher 2008, p. 340.)
+
+Encoded faithfully: `f` continuous, `f` Lipschitz-in-second, `yex`
+solves the IVP, `start` produces the `k` initial values and converges
+to `y₀` with `h`, and `Y m` is any sequence of iterates of `M` (with
+step size `(x-x₀)/m`) whose first `k` entries match `start`. The
+conclusion is the textbook limit. -/
+def LinearMultistepMethod.IsConvergent {k : ℕ}
+    (M : LinearMultistepMethod k) : Prop :=
+  ∀ (f : ℝ → ℝ → ℝ),
+    Continuous (Function.uncurry f) →
+  ∀ (L : ℝ≥0),
+    OpenMath.Chapter1.Section110.LipschitzInSecond Set.univ L f →
+  ∀ (x₀ y₀ : ℝ) (yex : ℝ → ℝ),
+    yex x₀ = y₀ →
+    (∀ x ≥ x₀, HasDerivAt yex (f x (yex x)) x) →
+  ∀ (start : ℝ → Fin k → ℝ),
+    (∀ i : Fin k,
+      Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) →
+  ∀ (x : ℝ), x₀ < x →
+  ∀ (Y : ℕ → ℕ → ℝ),
+    (∀ m : ℕ, 0 < m →
+      (∀ i : Fin k, Y m i.val = start ((x - x₀) / (m : ℝ)) i) ∧
+      M.IsLMMSolution ((x - x₀) / (m : ℝ)) x₀ f (Y m)) →
+    Filter.Tendsto (fun m : ℕ => Y m m - yex x) Filter.atTop (nhds 0)
+
+/-! ### Sanity helpers — non-vacuity of the predicates
+
+These are infrastructure for future convergence work (Butcher
+`thm:422C` and `thm:406D` will both consume them). They also
+demonstrate the predicates are non-vacuous: `IsLMMSolution` for the
+trivial RHS `f ≡ 0` matches `IsHomogeneousSolution` exactly, and
+constant sequences solve the homogeneous recurrence whenever the
+method is preconsistent. -/
+
+/-- Sanity bridge: when `f ≡ 0`, an LMM solution is exactly a
+solution of the homogeneous recurrence (403a). The two predicates use
+different index conventions (`IsLMMSolution` sums over `Fin (k+1)`
+including `α 0`; `IsHomogeneousSolution` only over `Fin k`), but they
+agree on this trivial RHS thanks to `M.α_zero = -1`. -/
+theorem isLMMSolution_zero_iff {k : ℕ} (M : LinearMultistepMethod k)
+    (h x₀ : ℝ) (Y : ℕ → ℝ) :
+    M.IsLMMSolution h x₀ (fun _ _ => 0) Y ↔
+      M.IsHomogeneousSolution Y := by
+  unfold LinearMultistepMethod.IsLMMSolution
+  unfold LinearMultistepMethod.IsHomogeneousSolution
+  constructor
+  · intro hLMM n
+    have hn := hLMM n
+    simp only [mul_zero, Finset.sum_const_zero] at hn
+    rw [Fin.sum_univ_succ] at hn
+    simp only [Fin.val_zero, Nat.sub_zero, M.α_zero, Fin.val_succ] at hn
+    linarith
+  · intro hHom n
+    have hn := hHom n
+    simp only [mul_zero, Finset.sum_const_zero]
+    rw [Fin.sum_univ_succ]
+    simp only [Fin.val_zero, Nat.sub_zero, M.α_zero, Fin.val_succ]
+    linarith
+
+/-- A constant sequence solves the homogeneous recurrence (403a)
+provided the method is preconsistent. This is folklore: a method
+preserves constants iff the α-coefficients sum to one, which is
+exactly equation (404a). -/
+theorem const_sequence_isHomogeneousSolution {k : ℕ}
+    (M : LinearMultistepMethod k) (hM : M.IsPreconsistent) (c : ℝ) :
+    M.IsHomogeneousSolution (fun _ : ℕ => c) := by
+  intro m
+  have hsum : ∑ i : Fin k, M.α i.succ * c = (∑ i : Fin k, M.α i.succ) * c := by
+    rw [Finset.sum_mul]
+  rw [hsum, ← hM, one_mul]
 
 end OpenMath.Chapter4.Section404

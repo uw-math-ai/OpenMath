@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 37 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 38 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -167,7 +167,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:404A` **preconsistent** (§404) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `def:451A` **G-stable** (§451)
 - [ ] `thm:431A` **Stability regions** (§431)
-- [ ] `def:402A` **convergent (LMM)** (§402)
+- [x] `def:402A` **convergent (LMM)** (§402) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `def:422B` **underlying one-step method** (§422)
 - [ ] `def:442A` **principal sheet** (§441)
 - [ ] `thm:454A` **Concluding remarks on G-stability** (§454)
