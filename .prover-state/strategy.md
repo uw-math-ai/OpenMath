@@ -1,334 +1,315 @@
-# Cycle 037 strategy — formalize `def:403A` (Dahlquist stability / zero-stability)
+# Cycle 039 strategy
 
-## 0. Cycle 036 status: real success, do not redo
+## TL;DR
 
-Cycle 036 successfully formalized `def:404B` (consistent LMM) with
-four witness theorems. Commit hash `16b74c7`. Verify with:
+**Primary target: `def:406A`** (local truncation error of an LMM,
+Butcher §406, p. 345). Single-cycle deliverable: extend
+`OpenMath/Chapter4/Section404.lean` with a `## §406 — Local
+truncation error` section, define `LinearMultistepMethod.localTruncationError`
+faithful to the textbook formula, and ship one or two non-vacuity
+witnesses showing the LTE vanishes on solutions where it should.
 
-```
-git log -1 --format='%H %s'
-```
+**Do NOT pick `thm:243A`** this cycle. Reasons in §1 below.
 
-Expected output: `16b74c7 Formalize def:404B — consistent linear multistep methods`.
-The branch tip is current; nothing about §404 needs revisiting.
-
-## 1. Top-line directive
-
-**Pick exactly one entity this cycle: `def:403A`.** Extend the
-existing `OpenMath/Chapter4/Section404.lean` file — do **not** create
-a new `Section403.lean`. The §403 content sits naturally alongside
-§404 in the same Chapter-4 introductory cluster, and reusing the file
-avoids adding another import-graph entry for a single definition. Add
-a new section comment `## §403 — Stability (def:403A)` inside the
-existing namespace; everything else stays in
-`OpenMath.Chapter4.Section404`.
-
-> The **file** is named `Section404.lean` for cycle-035/036 reasons,
-> but the contents already span §404. We will treat it as the §40
-> introductory file. Do **not** rename the file; do **not** rename the
-> namespace. Just append §403 content at the bottom.
-
-If at the end of the cycle you have spare time, do **only**
-housekeeping (update `lean_status.json`, update `plan.md` to bump the
-progress counter and tick the `def:403A` row). Do **not** start
-`def:402A` — it needs the LMM step operator and is a separate cycle.
+**No Aristotle results** to incorporate this cycle.
 
 ---
 
-## 2. What `def:403A` says (textbook, quoted verbatim)
+## 1. Why `def:406A` and not `thm:243A`
 
-From `extraction/formalization_data/entities/def_403A.json`:
+Cycle 038's task-result note offered both as candidates and (correctly)
+flagged that `thm:243A` likely needs more infrastructure. Here is the
+explicit ruling:
 
-> A linear multistep method [α, β] is 'stable' if the difference
-> equation (403a) has only bounded solutions.
+- `thm:243A` is the equivalence
+  `M.IsConvergent ↔ (M.IsStable ∧ M.IsConsistent)`.
+  Stating it is trivial (we have all three predicates). **Proving it**
+  decomposes into the textbook chain
+  - (⇒) `thm:405A` (convergent ⇒ stable) + `thm:405B` (convergent ⇒
+        preconsistent) + `thm:405C` (convergent ⇒ consistent), and
+  - (⇐) `thm:406D` / `thm:422C` (stable + consistent ⇒ convergent — the
+        hard direction, requiring discrete Grönwall on LMM iterates and
+        the Picard–Lindelöf strengthening flagged in
+        `picard_lindelof_bound_strengthening.md`).
+  None of those four supporting theorems exists yet. Closing
+  `thm:243A` properly is a 4–6 cycle project. CLAUDE.md and `plan.md`
+  both forbid committing a `sorry`-stubbed theorem outside an active
+  multi-cycle restructuring window — and we have not opened one. So
+  the correct disposition for `thm:243A` is **leave deferred** until
+  `thm:405A/B/C` and `thm:406D` are formalized, then close it as a
+  one-line corollary.
 
-with the section-context equation
+- `def:406A` is a clean **definition** with concrete textbook formula.
+  Its only dependencies (`def:404A`, `def:404B`) are formalized as of
+  cycle 038. It is the natural unblocker for `lem:406B` (Convergence
+  condition sufficiency bound) and ultimately for `thm:406D` — i.e.
+  it is on the critical path back to `thm:243A` anyway.
 
-> (403a)  `y_n = α_1 y_{n-1} + α_2 y_{n-2} + ⋯ + α_k y_{n-k}`
+So: **`def:406A` first**, then in subsequent cycles work through
+`lem:406B → thm:406C → thm:405A → thm:405B → thm:405C → thm:406D`.
+After `thm:406D` lands, `thm:243A` is a corollary.
 
-and the textbook's note that "stability" here is also called
-**zero-stability** or **stability in the sense of Dahlquist**.
+## 2. Concrete tasks for `def:406A`
 
-The dependency hooks are `def:142A` (power-boundedness, formalized in
-`OpenMath/Chapter1/Section142.lean`) and `thm:140A` (linear
-difference equations, also formalized). You do **not** need to invoke
-either — they are conceptual hooks for downstream characterisation
-theorems (`thm:405A/B/C`, `thm:441A/C`), not for this definition.
+### 2a. Extend `OpenMath/Chapter4/Section404.lean`
 
----
+Append a new section after the `§402 — Convergence` block (currently
+ends at line 354 with `end OpenMath.Chapter4.Section404`). Insert the
+new content **before** the `end` line — keep all new declarations
+inside the existing namespace. The file already opens
+`OpenMath.Chapter4.Section404` and has `LinearMultistepMethod`,
+`IsConsistent`, etc. in scope.
 
-## 3. Required Lean deliverables
+### 2b. Read `extraction/formalization_data/entities/def_406A.json` first
 
-Add to `OpenMath/Chapter4/Section404.lean`, inside the existing
-`namespace OpenMath.Chapter4.Section404`, **after** the §404 content:
-
-### (a) The homogeneous-recurrence predicate
-
-```lean
-/-- Butcher (403a): a sequence `y : ℕ → ℝ` is a *solution of the
-homogeneous recurrence* of the linear multistep method `M` if for
-every `m : ℕ`,
-
-  `y (m + k) = α_1 · y_{m+k-1} + α_2 · y_{m+k-2} + ⋯ + α_k · y_m`.
-
-This is equation (403a) — the difference equation that arises when
-the method is applied to the trivial IVP `f ≡ 0`. The sum is indexed
-by `i : Fin k`, with `i.succ : Fin (k+1)` selecting `α_{i.val + 1}`
-and offset `i.val + 1` running from 1 to k. -/
-def LinearMultistepMethod.IsHomogeneousSolution {k : ℕ}
-    (M : LinearMultistepMethod k) (y : ℕ → ℝ) : Prop :=
-  ∀ m : ℕ, y (m + k) = ∑ i : Fin k, M.α i.succ * y (m + k - (i.val + 1))
-```
-
-### (b) The stability predicate (Definition 403A)
-
-```lean
-/-- Butcher Definition 403A: a linear multistep method is *stable*
-(also called *zero-stable* or *Dahlquist-stable*) if every solution
-of the homogeneous recurrence (403a) is bounded.
-
-Boundedness is encoded as `∃ C, ∀ n, |y n| ≤ C`. -/
-def LinearMultistepMethod.IsStable {k : ℕ}
-    (M : LinearMultistepMethod k) : Prop :=
-  ∀ y : ℕ → ℝ, M.IsHomogeneousSolution y → ∃ C, ∀ n, |y n| ≤ C
-```
-
-### (c) Two witness theorems
-
-`explicitEulerLMM` and `implicitEulerLMM` (already defined in this
-file) both have `k = 1`, `α 1 = 1`, so the homogeneous recurrence
-collapses to `y (m + 1) = y m`, i.e. solutions are constant
-sequences, trivially bounded by `|y 0|`.
-
-```lean
-theorem explicitEulerLMM_isStable : explicitEulerLMM.IsStable := by
-  sorry
-theorem implicitEulerLMM_isStable : implicitEulerLMM.IsStable := by
-  sorry
-```
-
-Both proofs follow the same shape (see §4 below).
-
----
-
-## 4. Proof recipe (apply identically to both witnesses)
-
-For each Euler witness:
-
-```lean
-  intro y hy
-  have hconst : ∀ n, y n = y 0 := by
-    intro n
-    induction n with
-    | zero => rfl
-    | succ n ih =>
-        have hrec := hy n
-        -- hrec : y (n + 1) = ∑ i : Fin 1, α i.succ * y (n + 1 - (i.val + 1))
-        simp [LinearMultistepMethod.IsHomogeneousSolution,
-              explicitEulerLMM,    -- or implicitEulerLMM
-              Fin.sum_univ_one] at hrec
-        -- After simp, hrec should read `y (n + 1) = y n` (or
-        -- `y (n + 1) = 1 * y n`). Combine with ih.
-        linarith
-  refine ⟨|y 0|, fun n => ?_⟩
-  rw [hconst n]
-```
-
-### Robustness fallbacks
-
-* If `Fin.sum_univ_one` doesn't immediately collapse the sum, try
-  `Fin.sum_univ_succ` or `Finset.sum_singleton`. Use
-  `lean_multi_attempt` at that step — do **not** burn cycle time on
-  manual sum-rewriting.
-* If `m + 1 - (0 + 1) = m` doesn't normalize, add
-  `Nat.add_sub_cancel` or unfold the subtraction by hand:
-  `show y (n + 1) = M.α (Fin.succ 0) * y (n + 1 - 1)` and reduce.
-* If `linarith` doesn't close the final step, replace with
-  `rw [hrec, ih]` (after simplifying the `* 1` and the
-  index-arithmetic).
-
-The proof is short (≤ 15 lines) — if it stretches longer than 30
-lines, stop and re-read the `IsHomogeneousSolution` definition: you
-may have a mismatch in the `i.val + 1` offset.
-
----
-
-## 5. Sorry-first checkpoint (CLAUDE.md absolute rule)
-
-Before any closing tactic, write the full file (definition + two
-witnesses, all closed with `sorry`) and run
+Mandatory per CLAUDE.md. The textbook formula (Butcher §406, p. 345) is
 
 ```
-lake env lean OpenMath/Chapter4/Section404.lean
+L(y, x, h) = y(x) − Σ_{i=1}^{k} α_i · y(x − ih)
+                  − h · Σ_{i=0}^{k} β_i · y'(x − ih).
 ```
 
-It must compile cleanly. **Only then** start closing the two
-sorries.
+**Sign-convention warning.** Butcher's textbook formula in this
+passage uses the implicit coefficient `+1` on `y(x)` (he sums α from
+i = 1, not i = 0). Our `LinearMultistepMethod` structure normalises
+**`α 0 = -1`** (cycle 036 convention; preserved through cycles
+037–038). Therefore the literal textbook expression
+`y(x) − Σ_{i=1}^{k} α_i y(x − ih)` becomes, in our convention,
+```
+y(x) − Σ_{i=1}^{k} M.α i.succ · y(x − i·h)
+   = −Σ_{i=0}^{k} M.α i · y(x − i·h)        -- because M.α 0 = -1
+```
+i.e. `L(y, x, h) = -[Σ_{i=0}^{k} M.α i · y(x − i·h) + h · Σ_{i=0}^{k} M.β i · y'(x − i·h)]`.
 
----
+You have **two encoding choices**. Pick **option A** unless you find a
+genuine obstacle:
 
-## 6. Aristotle batch — submit immediately after sorry-first compiles
+- **Option A (recommended, textbook-faithful):** define `L` directly by
+  the textbook formula, using `M.α i.succ` for the i = 1..k sum:
+  ```lean
+  def LinearMultistepMethod.localTruncationError {k : ℕ}
+      (M : LinearMultistepMethod k) (y : ℝ → ℝ) (x h : ℝ) : ℝ :=
+    y x
+      - ∑ i : Fin k, M.α i.succ * y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+      - h * ∑ i : Fin (k + 1), M.β i * deriv y (x - (i.val : ℕ) * h)
+  ```
+  This matches Butcher one-to-one and avoids any sign-flip in the
+  predicate name. The `α 0 = -1` normalisation is *not used* in this
+  encoding; that is fine — the textbook formula simply does not refer
+  to `α 0`.
 
-Submit **all three** items below to Aristotle as separate jobs the
-moment the sorry-first file compiles:
+- **Option B (uniform-index):** define `L` as
+  `-[Σ_{i=0}^{k} M.α i · y(x − i·h) + h · Σ_{i=0}^{k} M.β i · y'(x − i·h)]`
+  using `Fin (k+1)` sums and `M.α_zero` to recover Butcher's formula.
+  Equivalent up to algebra but **less faithful** at the syntactic
+  level. If you take this route, **prove the equivalence** as a
+  separate lemma — this is the CLAUDE.md "equivalent formulation
+  requires explicit equivalence lemma" rule.
 
-1. `explicitEulerLMM_isStable` — full theorem statement and sorry'd
-   proof skeleton.
-2. `implicitEulerLMM_isStable` — same shape; Aristotle may even
-   solve it in one shot.
-3. A bonus sub-lemma:
-   ```lean
-   theorem const_sequence_isHomogeneousSolution
-       (c : ℝ) {k : ℕ} (M : LinearMultistepMethod k)
-       (hM : M.IsPreconsistent) :
-       M.IsHomogeneousSolution (fun _ => c) := by sorry
+### 2c. Use `deriv y` for `y'`
+
+Mathlib's `deriv : (ℝ → ℝ) → ℝ → ℝ` returns `0` if `y` is not
+differentiable at the point. That is the standard Mathlib spelling
+and matches what every consumer in §406 onward will expect. Do
+**not** introduce an `IsDifferentiableAt`-bundled variant — the
+textbook signature `L(y, x, h)` is a value, not a theorem;
+differentiability is the caller's concern, exactly like
+`IsLMMSolution` does not require `f` continuous.
+
+### 2d. Witnesses (non-vacuity, per CLAUDE.md)
+
+Provide **at least two** sanity facts. Suggested:
+
+1. **Constant solution kills the LTE under preconsistency.** Show
+   `localTruncationError M (fun _ => c) x h = 0` provided
+   `M.IsPreconsistent` and `c : ℝ`. The α-sum becomes
+   `c · Σ M.α i.succ = c · 1 = c` (preconsistency); the β-sum is
+   `0` because `deriv (fun _ => c) = 0` everywhere. So
+   `L = c − c − 0 = 0`. **Tactic sketch:** `unfold`, then `simp` with
+   `deriv_const`, `Finset.sum_const_zero`, `Finset.mul_sum` and
+   `← M.IsPreconsistent`-flavoured rewrites. If `simp` doesn't close,
+   finish with `ring` or `linarith`.
+
+2. **Linear-in-x solution kills the LTE under consistency.** Show
+   `localTruncationError M (fun t => a*t + b) x h = 0` provided
+   `M.IsConsistent` and arbitrary `a, b, x, h`. Computation:
+   `y(x − ih) = a·(x − ih) + b`, so
+   - α-sum = `Σᵢ M.α i.succ · (a(x − (i+1)h) + b)
+              = a·x · Σᵢ M.α i.succ
+                − a·h · Σᵢ (i+1) · M.α i.succ
+                + b · Σᵢ M.α i.succ`
+              = `a·x · 1 − a·h · (Σᵢ (i+1) M.α i.succ) + b · 1`
+                (preconsistency).
+   - β-sum = `Σᵢ M.β i · a = a · Σᵢ M.β i`.
+   - Plugging in:
+     `L = (a*x + b) − [a·x − a·h·(Σ (i+1) α_{i+1}) + b] − h · a · (Σ β_i)`
+     `= a·h · [(Σ (i+1) α_{i+1}) − Σ β_i]`
+     `= 0` by `M.SatisfiesEq404b` (the (404b) consistency identity).
+
+   This witness is the textbook content of "consistency means LTE is
+   `O(h²)` for smooth solutions" (the linear case is the borderline
+   `O(h²) = 0` instance) and is the cleanest non-vacuity demonstration.
+
+   *If witness 2 turns out to require >40 lines of arithmetic*, retreat
+   to just witness 1 and write a brief comment that the linear-in-x
+   case is left for cycle 040 (along with a stub theorem name so the
+   gap is visible). Witness 1 alone is sufficient for the CLAUDE.md
+   non-vacuity rule.
+
+3. **Optional bonus — explicit Euler unfolding sanity check.**
+   `localTruncationError explicitEulerLMM y x h
+      = y x − y (x − h) − h · deriv y x`. Sanity check by
+   `simp [explicitEulerLMM, localTruncationError, ...]` then `ring`
+   to verify the unfolding closes cleanly. (Not required — just a
+   smoke test that confirms the encoding is right.)
+
+### 2e. Aristotle batch
+
+After writing the sorry-first skeleton (definition + `sorry`'d
+witnesses), **submit the two witness theorems to Aristotle** as a
+single batch, then continue with manual proofs in parallel. CLAUDE.md
+is explicit: Aristotle is free compute, use it. Sleep 30 min, check
+results once, take whichever (manual or Aristotle) finishes first.
+
+If you don't reach the Aristotle step before manual proofs close,
+that is also fine per the CLAUDE.md rule "if your manual proof
+finishes first, keep it" — but **try** to submit (Aristotle warm-up
+takes <1 minute and runs in the background while you work).
+
+## 3. After `def:406A` ships
+
+Update `extraction/formalization_data/lean_status.json`:
+```
+"def:406A": "formalized"  (was "unformalized")
+```
+And update `plan.md`:
+- Change `[ ] def:406A` → `[x] def:406A` in the Chapter 4 table.
+- Bump the progress counter at the top:
+  `38 / 175` → `39 / 175`.
+
+## 4. What NOT to try
+
+- **Do NOT** state `thm:243A` with a `sorry`'d proof body. Leave it
+  deferred. (Reasons in §1.) If you find the temptation strong, the
+  meta-rule is: a `sorry` is acceptable only mid-restructuring; we are
+  not in a restructuring cycle for §405–§406; opening one without a
+  decomposition plan in `strategy.md` would itself be off-strategy.
+
+- **Do NOT** raise `maxHeartbeats` above 200000 (CLAUDE.md hard rule).
+  If a `simp` or `ring` step times out, decompose: extract the α-sum
+  identity and the β-sum identity as separate lemmas first, then
+  combine.
+
+- **Do NOT** modify `OpenMath/Chapter4/Section404.lean` at any line
+  earlier than the new `## §406` section header. Cycles 036–038
+  committed those definitions and witnesses; touching them risks
+  breaking the existing IsConsistent / IsStable / IsConvergent
+  theorems and gains nothing.
+
+- **Do NOT** modify `scripts/autonomous_loop.py` (worker / planner
+  rule from cycle 015). Scanner false positives go in
+  `.prover-state/issues/tautology_scanner_false_positives.md` for the
+  loop maintainer.
+
+- **Do NOT** introduce `axiom` or `constant` for the `deriv y`
+  computation. Mathlib's `deriv_const`, `deriv_add`, `deriv_const_mul`,
+  `deriv_id'`, `deriv_sub`, `deriv_neg` cover the smooth cases needed
+  for witnesses 1 and 2. Use `lean_local_search "deriv_const"` to
+  confirm the names before relying on them.
+
+- **Do NOT** start work on `lem:406B`, `thm:405A/B/C`, `thm:406C/D`,
+  or `thm:422C` this cycle. Each is its own cycle; take them in plan
+  order in subsequent cycles.
+
+- **Do NOT** use `h_<name>` for any new hypothesis names in the
+  cycle's commits — it trips the tautology scanner. Use
+  `hcons`, `hpre`, `heq`, etc. (no underscore after `h`). See
+  `tautology_scanner_false_positives.md` for context.
+
+- **Do NOT** chase the "previous cycle didn't commit" phantom. Cycle
+  038 committed at `bc72bd0` (verified `git log -1 origin/Main/Experiments`).
+  If the prompt's `attempts.md` rolls forward a stale "empty diff"
+  warning, check `git log -1 origin/Main/Experiments --format='%H %s'`
+  first — same diagnostic the cycle-009 / cycle-014 / cycle-015
+  consultants prescribed.
+
+## 5. Workflow checklist (concrete)
+
+1. `Read extraction/formalization_data/entities/def_406A.json` — quote
+   the statement in your commit message body and in the Lean docstring.
+2. Sketch the four-line `LinearMultistepMethod.localTruncationError`
+   definition (Option A from §2b).
+3. Write the two witness theorems with `sorry` bodies. Run
+   `lake env lean OpenMath/Chapter4/Section404.lean` to verify the
+   skeleton compiles.
+4. Submit witness theorems to Aristotle as a batch (~5 sub-jobs is
+   fine; even 2 is fine — single batch).
+5. Close witness 1 (constant solution) by hand. Aim for ≤15 lines:
    ```
-   This says "constant sequences solve the homogeneous recurrence
-   iff the method is preconsistent" (use `hM` to discharge
-   `1 = ∑ α_{i+1}` after pulling `c` out of the sum). It is bonus
-   infrastructure — not required for the cycle to succeed.
+   unfold ... ; simp [deriv_const, Finset.sum_const_zero,
+                       ← Finset.mul_sum, M.IsPreconsistent ...];
+   ring
+   ```
+   or similar. If `simp` does not close, manually rewrite using
+   `Finset.mul_sum`, then close with `linarith` or `ring`.
+6. Close witness 2 (linear solution) by hand. Aim for ≤40 lines.
+   Decompose into `α_sum_linear` and `β_sum_linear` helper lemmas if
+   the inline proof bloats. The key identity at the end is
+   `M.SatisfiesEq404b` rewriting `Σᵢ (i+1) M.α i.succ = Σᵢ M.β i`.
+7. After Aristotle returns (or after your 30-min check, whichever
+   first): if Aristotle has a cleaner proof, swap in. If not, keep
+   yours.
+8. Run `lake env lean OpenMath/Chapter4/Section404.lean` again to
+   verify the cycle's deliverable is sorry-free.
+9. Run `#print axioms OpenMath.Chapter4.Section404.localTruncationError` —
+   should show `[propext, Classical.choice, Quot.sound]` only (or
+   `[]` for the definition itself; the witness theorems should show
+   the standard three).
+10. Update `lean_status.json` and `plan.md` per §3.
+11. Pre-commit faithfulness check (CLAUDE.md). For the new `def`:
+    - Quote `def_406A.json`'s `statement_text` / `statement_latex`.
+    - Confirm Lean type matches (Option A is direct match; Option B
+      requires the equivalence lemma).
+    - Definition-smuggling check: ✓ defined as the textbook formula,
+      not as "L = O(h²)" (the order property is a *consequence* under
+      consistency, not the definition).
+12. `git status` to verify only `OpenMath/Chapter4/Section404.lean`,
+    `extraction/formalization_data/lean_status.json`, `plan.md`,
+    `.prover-state/task_results/cycle_039.md`, and any new issue file
+    (if you wrote one) are modified outside `.prover-state/`'s
+    machine-managed files.
+13. Commit and push. Verify the commit reaches `origin/Main/Experiments`
+    by running `git log -1 origin/Main/Experiments --format='%H %s'` —
+    this is the cycle-009 consultant's diagnostic against the recurrent
+    "empty diff" phantom.
+14. Write `.prover-state/task_results/cycle_039.md` per the CLAUDE.md
+    template. Include the faithfulness-check section.
 
-After submitting, **sleep 30 minutes** (CLAUDE.md rule). While
-Aristotle works, do the manual proof of `explicitEulerLMM_isStable`
-using §4 above. If your manual proof finishes first, keep it; if
-Aristotle returns a cleaner proof, use Aristotle's. Do **not** poll
-Aristotle repeatedly — one check after 30 min is enough.
+## 6. Stretch goal (only if §5 finishes early)
 
----
+If `def:406A` ships fast and you have spare cycle time, the
+**lowest-risk follow-on** is to also formalize `def:451A` (G-stable,
+§451) — another single-definition deliverable in Chapter 4, listed in
+`plan.md`. It depends on Chapter 1's Section 110 / inner-product
+infrastructure already used by `thm:112B`. One witness (e.g. the
+trivial `G = 1` scalar or `G = I` identity matrix on a 1-step method)
+demonstrates non-vacuity.
 
-## 7. Pre-commit faithfulness checklist
+But: **only attempt the stretch goal if the primary target is
+complete and committed**. Do not ship a half-finished `def:451A`
+alongside a finished `def:406A`. Two separate commits if both land.
 
-For `IsHomogeneousSolution`:
-- [ ] Quote (403a) verbatim in a docstring (already in §3a above).
-- [ ] **Hand-trace `k = 2`**: the sum must produce
-  `α_1 · y_{m+1} + α_2 · y_m`. If it produces
-  `α_1 · y_m + α_2 · y_{m+1}` instead, the offset is reversed —
-  flip to `y (m + k - 1 - i.val)` and re-trace.
+## 7. Open issues (for awareness; not actionable this cycle)
 
-For `IsStable`:
-- [ ] **Definition smuggling check**: `IsStable` must be defined as
-  "every homogeneous solution is bounded", **not** as any algebraic
-  characterisation (root condition, power-bounded companion matrix,
-  Schur condition). The textbook *defines* stability as "(403a) has
-  only bounded solutions"; the equivalent characterisations are
-  *theorems* (e.g. `thm:441C`), not the definition.
-- [ ] **Tautology check**: `IsStable M` does not have hypothesis
-  `IsHomogeneousSolution`; the universal quantifier is in the body.
-- [ ] No characteristic polynomial in this cycle.
+- `lmm_convergence_witness_deferred.md` — gates a concrete
+  `IsConvergent` witness on `thm:422C` infrastructure.
+- `picard_lindelof_bound_strengthening.md` — gates `thm:406D` (and
+  hence `thm:243A`'s ⇐ direction).
+- `tautology_scanner_false_positives.md` — loop-maintainer issue;
+  do not edit `scripts/autonomous_loop.py` from the worker.
+- `AN_stability_deferred.md`, `equivalent_self_general_deferred.md`,
+  `jordan_canonical_form_missing.md`, `reduced_method_deferred.md`,
+  `symmetry_group_equivalence.md` — Chapter 1 / 3 deferrals; not
+  in scope for cycle 039.
 
-For the two witness theorems:
-- [ ] Both are zero-hypothesis non-vacuity witnesses against
-  concrete Euler records.
-- [ ] **Identity check**: neither closes with `:= h_<name>`,
-  `:= id`, or `exact h_<name>` — the proofs use
-  `intro / induction / simp / refine`. This avoids the scanner
-  false-positive issue documented in
-  `tautology_scanner_false_positives.md`.
-- [ ] `lake env lean OpenMath/Chapter4/Section404.lean` exits
-  clean.
-- [ ] `#print axioms OpenMath.Chapter4.Section404.explicitEulerLMM_isStable`
-  shows only `[propext, Classical.choice, Quot.sound]`.
-
----
-
-## 8. What NOT to do this cycle
-
-These are **explicit prohibitions** with reasons. Do not deviate.
-
-1. **Do NOT introduce a characteristic polynomial `ρ(z)`.** The
-   cycle-036 task results suggested this, but `def:403A`'s
-   `statement_text` does not mention `ρ` — only the homogeneous
-   recurrence. Building `ρ` here would be infrastructure for §410's
-   order-condition theorems, not for §403. Defer.
-
-2. **Do NOT introduce a companion-matrix encoding.** The companion
-   matrix bridges §403 stability to `def:142A` power-boundedness.
-   That bridge is a *theorem* (essentially `thm:140A` plus a
-   wrapper), not the definition. Defer.
-
-3. **Do NOT formalize `def:402A` (convergent LMM) in this cycle.**
-   `def:402A` requires the LMM step operator
-   (`LinearMultistepMethod.step` or similar), which depends on `f`,
-   `h`, and a chosen starting method. That is at least one full
-   cycle of new infrastructure. Stay scoped.
-
-4. **Do NOT rename `Section404.lean` to `Section403.lean` or split
-   it.** Reusing the file is the cycle-035/036 convention; splitting
-   adds an import-graph entry for one definition.
-
-5. **Do NOT raise `maxHeartbeats`** above 200000 (CLAUDE.md absolute
-   rule). The proofs here are short; you will not need to.
-
-6. **Do NOT introduce any `axiom` or `constant` declaration**
-   (CLAUDE.md absolute rule).
-
-7. **Do NOT modify `scripts/autonomous_loop.py`** (worker rule per
-   `tautology_scanner_false_positives.md`).
-
-8. **Do NOT chase phantom verdicts.** Any "Section112.lean:74" or
-   "Section212.lean:138/144" line in `attempts.md` is stale; both
-   are diagnosed in `consultant_advice_cycle_009/014/015.md`. Cycle
-   036 is committed at `16b74c7` — verify with
-   `git log -1 --format='%H %s'` and move on.
-
-9. **Do NOT use `:= h_<name>`, `:= id`, or `exact h_<name>` as the
-   final closer of any new theorem or sub-proof.** Use plain
-   `intro/refine/exact <full term>` shapes. The scanner has bugs
-   and the workaround is to avoid the underscore-prefixed-
-   hypothesis idiom. If you must build up a hypothesis with
-   `rw … at hX; exact hX`, name it `hx` (no underscore).
-
-10. **Do NOT redo any previously-formalized entity.** Do NOT touch
-    `Section404.lean`'s existing `LinearMultistepMethod`,
-    `IsPreconsistent`, `SatisfiesEq404b`, `IsConsistent`,
-    `explicitEulerLMM`, `implicitEulerLMM`, or any of their witness
-    theorems. **Append only.**
-
-11. **Do NOT spend time on §142, AN-stability, Schur, or
-    `picard_lindelof_bound_strengthening`.** All are documented
-    blockers; none is on the critical path for §403. The current
-    `def:403A` deliverable does not depend on any of them.
-
----
-
-## 9. Bookkeeping (do all of these before committing)
-
-1. Set `formalization_status` to `"formalized"` and populate
-   `lean_file` / `lean_symbol` for `def:403A` in
-   `extraction/formalization_data/lean_status.json`. Use:
-   - `lean_file`: `OpenMath/Chapter4/Section404.lean`
-   - `lean_symbol`: `OpenMath.Chapter4.Section404.LinearMultistepMethod.IsStable`
-2. In `plan.md`, change the `[ ] def:403A` row to
-   `[x] def:403A ... — OpenMath/Chapter4/Section404.lean` and bump
-   the header counter from `36 / 175` to `37 / 175`.
-3. Write `.prover-state/task_results/cycle_037.md` per the
-   CLAUDE.md format. Faithfulness section must list:
-   - `IsHomogeneousSolution` (helper predicate, not a textbook
-     concept on its own — it captures equation (403a)).
-   - `IsStable` (Definition 403A) with the textbook quote.
-   - The two `_isStable` witnesses.
-   Each with the textbook quote (or "not a named concept" note for
-   `IsHomogeneousSolution`) and the "captures: same content" line.
-4. Commit with a message of the form
-   `Formalize def:403A — Dahlquist (zero-)stability of LMMs`.
-   Verify the commit lands by running `git log -1 --format='%H %s'`
-   *after* `git push`. Both must show the new commit hash.
-
----
-
-## 10. Suggested cycle-038 preview (informational only)
-
-After `def:403A` lands, the next §40 target is `def:402A`
-(convergent LMM). It needs:
-
-* The **LMM step operator**: a function or predicate capturing the
-  implicit recurrence
-  `Σ_i α_i y_{n-i} = h Σ_i β_i f(x_{n-i}, y_{n-i})`.
-* A "starting method" abstraction (Butcher §402 mentions this is
-  externally supplied) — likely a function `ℕ → ℝ → ℝ → ℕ → ℝ`
-  returning the starting values `y_0, …, y_{k-1}` from the IVP and
-  step size.
-* A `Tendsto` statement `Y_m - y(x) → 0` as `m → ∞`.
-
-That is a full cycle of infrastructure work. Do **not** start it
-this cycle.
+These all stay open after cycle 039.

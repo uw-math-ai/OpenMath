@@ -152,9 +152,9 @@
     "status": "formalized"
   },
   "def:406A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section404.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.localTruncationError",
+    "status": "formalized"
   },
   "def:422B": {
     "lean_file": null,

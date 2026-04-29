@@ -352,4 +352,131 @@ theorem const_sequence_isHomogeneousSolution {k : ℕ}
     rw [Finset.sum_mul]
   rw [hsum, ← hM, one_mul]
 
+/-! ## §406 — Local truncation error (def:406A)
+
+Butcher §406, p. 345. Quoting `entities/def_406A.json`:
+
+> Let `[α, β]` be a consistent linear multistep method. The 'local
+> truncation error' associated with a differentiable function `y` at a
+> point `x` with stepsize `h` is the value of
+> `L(y, x, h) = y(x) − Σ_{i=1}^{k} α_i · y(x − ih) − h · Σ_{i=0}^{k} β_i · y'(x − ih)`.
+
+We follow Option A from the cycle 039 strategy: encode the formula
+directly. The textbook sums α from `i = 1` to `i = k`, which we encode
+via `M.α i.succ` over `i : Fin k`; the β-sum runs from `i = 0` to
+`i = k` over `Fin (k + 1)`. We use Mathlib's `deriv y` for `y'(·)`
+(the value `0` is returned at non-differentiable points; the textbook
+already restricts to differentiable `y`, so this convention agrees on
+the textbook's domain).
+
+Note: the `M.α 0 = -1` normalisation does **not** appear in the
+textbook formula — Butcher's sum starts at `i = 1`, so `α 0` is
+unused. The definition therefore makes sense for *any* coefficient
+data (preconsistency / consistency are properties of `M`, not of the
+LTE expression itself). -/
+
+/-- Butcher Definition 406A (p. 345): the *local truncation error*
+of a linear multistep method `M` associated with a function `y` at
+point `x` with stepsize `h`.
+
+Encoded directly from the textbook formula (Option A, cycle 039
+strategy):
+
+  `L(y, x, h) = y x
+                  − Σ_{i ∈ Fin k} α_{i+1} · y(x − (i+1)·h)
+                  − h · Σ_{i ∈ Fin (k+1)} β_i · y'(x − i·h)`,
+
+with `y'` interpreted as Mathlib's `deriv y`. -/
+noncomputable def LinearMultistepMethod.localTruncationError {k : ℕ}
+    (M : LinearMultistepMethod k) (y : ℝ → ℝ) (x h : ℝ) : ℝ :=
+  y x
+    - ∑ i : Fin k, M.α i.succ * y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+    - h * ∑ i : Fin (k + 1), M.β i * deriv y (x - ((i.val : ℕ) : ℝ) * h)
+
+/-! ### Witnesses for `localTruncationError`
+
+Two non-vacuity facts (per CLAUDE.md) demonstrating the LTE behaves
+as the textbook expects:
+
+1. Constant solutions kill the LTE under preconsistency.
+2. Linear-in-`x` solutions kill the LTE under consistency. -/
+
+/-- A constant function has vanishing local truncation error for any
+preconsistent linear multistep method.
+
+Computation: the α-sum equals `c · Σ M.α i.succ = c · 1 = c`
+(preconsistency); the β-sum vanishes because `deriv (fun _ => c) = 0`.
+So `L = c − c − 0 = 0`. -/
+theorem localTruncationError_const {k : ℕ}
+    (M : LinearMultistepMethod k) (hpre : M.IsPreconsistent) (c x h : ℝ) :
+    M.localTruncationError (fun _ => c) x h = 0 := by
+  unfold LinearMultistepMethod.localTruncationError
+  have hα : ∑ i : Fin k, M.α i.succ * c = c := by
+    rw [← Finset.sum_mul, ← hpre, one_mul]
+  have hd : deriv (fun _ : ℝ => c) = fun _ => 0 := by
+    funext t; exact deriv_const t c
+  simp only [hd]
+  rw [hα]
+  simp
+
+/-- A linear function has vanishing local truncation error for any
+consistent linear multistep method.
+
+Computation: writing `y(t) = a·t + b`, the α-sum unfolds to
+`a·x · Σ M.α i.succ − a·h · Σ (i+1)·M.α i.succ + b · Σ M.α i.succ`
+= `a·x − a·h · Σ (i+1)·M.α i.succ + b` (preconsistency); the β-sum
+is `a · Σ M.β i`. The (404b) consistency identity
+`Σ (i+1)·M.α i.succ = Σ M.β i` makes the residual `−a·h·(Σ β) + h·a·(Σ β)`
+cancel. -/
+theorem localTruncationError_linear {k : ℕ}
+    (M : LinearMultistepMethod k) (hcons : M.IsConsistent) (a b x h : ℝ) :
+    M.localTruncationError (fun t => a * t + b) x h = 0 := by
+  obtain ⟨hpre, h404b⟩ := hcons
+  unfold LinearMultistepMethod.localTruncationError
+  -- compute deriv of t ↦ a*t + b
+  have hd : deriv (fun t : ℝ => a * t + b) = fun _ => a := by
+    funext t
+    have h1 : HasDerivAt (fun t : ℝ => a * t + b) a t := by
+      simpa using ((hasDerivAt_id t).const_mul a).add_const b
+    exact h1.deriv
+  simp only [hd]
+  -- α-sum: expand a*(x - (i+1)*h) + b
+  have hα_expand : ∀ i : Fin k,
+      M.α i.succ * (a * (x - ((i.val + 1 : ℕ) : ℝ) * h) + b)
+        = a * x * M.α i.succ
+          - a * h * (((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+          + b * M.α i.succ := by
+    intro i; ring
+  rw [Finset.sum_congr rfl (fun i _ => hα_expand i)]
+  -- split sum into three pieces
+  rw [show (∑ i : Fin k,
+        (a * x * M.α i.succ
+          - a * h * (((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+          + b * M.α i.succ))
+      = (∑ i : Fin k, a * x * M.α i.succ)
+        - (∑ i : Fin k, a * h * (((i.val + 1 : ℕ) : ℝ) * M.α i.succ))
+        + ∑ i : Fin k, b * M.α i.succ from by
+        rw [← Finset.sum_sub_distrib, ← Finset.sum_add_distrib]]
+  -- pull out constants
+  rw [← Finset.mul_sum, ← Finset.mul_sum, ← Finset.mul_sum]
+  -- preconsistency: Σ M.α i.succ = 1
+  rw [← hpre]
+  -- (404b): Σ ((i+1) : ℝ) * M.α i.succ = Σ M.β i
+  -- M.SatisfiesEq404b states `(∑ i : Fin k, ((i : ℕ) + 1 : ℝ) * M.α i.succ) = ∑ i, M.β i`
+  have h404b' : (∑ i : Fin k, (((i.val + 1 : ℕ) : ℝ)) * M.α i.succ)
+      = ∑ i : Fin (k + 1), M.β i := by
+    have := h404b
+    unfold LinearMultistepMethod.SatisfiesEq404b at this
+    convert this using 1
+    apply Finset.sum_congr rfl
+    intro i _; push_cast; ring
+  rw [h404b']
+  -- final β-sum identity
+  have hβ' : h * ∑ i : Fin (k + 1), M.β i * a = a * h * ∑ i : Fin (k + 1), M.β i := by
+    rw [Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro i _; ring
+  rw [hβ']
+  ring
+
 end OpenMath.Chapter4.Section404
