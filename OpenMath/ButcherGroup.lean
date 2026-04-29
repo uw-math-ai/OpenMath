@@ -6,6 +6,7 @@ import OpenMath.ButcherGroup.Section384
 import OpenMath.ButcherGroup.Section384Slices
 import OpenMath.ButcherGroup.Section384SlicesMixed
 import OpenMath.ButcherGroup.Section384SlicesQuadMixed
+import OpenMath.ButcherGroup.Section386Conv
 import OpenMath.ButcherGroup.QuotEquivSlices
 
 /-!
@@ -17,9 +18,10 @@ and the §384 right-block convolution chain is in
 `OpenMath.ButcherGroup.Section384`. The §384 closed-form slice modules
 are in `OpenMath.ButcherGroup.Section384Slices`,
 `OpenMath.ButcherGroup.Section384SlicesMixed`, and
-`OpenMath.ButcherGroup.Section384SlicesQuadMixed`. This umbrella imports
-those modules and contains the §387 power chain, `IsRKEquivalentExt`,
-`IsG1Equiv`, and `G1`.
+`OpenMath.ButcherGroup.Section384SlicesQuadMixed`. The §386 bSeries-only
+admissible-cut convolution is in `OpenMath.ButcherGroup.Section386Conv`.
+This umbrella imports those modules and contains the §387 power chain,
+`IsRKEquivalentExt`, `IsG1Equiv`, and `G1`.
 
 Downstream callers should continue to `import OpenMath.ButcherGroup`;
 this module re-exposes the split sub-modules transitively.
