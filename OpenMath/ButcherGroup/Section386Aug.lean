@@ -145,4 +145,41 @@ theorem mul_assoc_at_node_nil
   rw [hβ', hγ']
   ring
 
+/-- Closed form for the next order-2 tree `BTree.node [BTree.node []]`. -/
+theorem bSeriesConvAug_node_node_nil (α β : AugSeries) :
+    bSeriesConvAug α β (BTree.node [BTree.node []])
+      = α.toFun (BTree.node [BTree.node []]) * β.emptyVal
+        + β.toFun (BTree.node [BTree.node []])
+        + α.toFun (BTree.node []) * β.toFun (BTree.node []) := by
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest,
+    add_comm, add_left_comm]
+
+/-- Depth-2 unital associativity sanity check at
+`BTree.node [BTree.node []]`. -/
+theorem mul_assoc_at_node_node_nil
+    (α β γ : AugSeries)
+    (_ : α.IsUnital) (hβ : β.IsUnital) (hγ : γ.IsUnital) :
+    bSeriesConvAug ⟨1, fun τ => bSeriesConvAug α β τ⟩ γ
+        (BTree.node [BTree.node []])
+      = bSeriesConvAug α ⟨1, fun τ => bSeriesConvAug β γ τ⟩
+          (BTree.node [BTree.node []]) := by
+  have hβ' : β.emptyVal = 1 := hβ
+  have hγ' : γ.emptyVal = 1 := hγ
+  rw [bSeriesConvAug_node_node_nil, bSeriesConvAug_node_node_nil]
+  simp only [bSeriesConvAug_node_nil, bSeriesConvAug_node_node_nil]
+  rw [hβ', hγ']
+  ring
+
+/-- Symmetric root split for `bSeriesConvAug` at a node: the root-prune
+branch is separated from the forest cuts that keep the trunk root. -/
+theorem bSeriesConvAug_node (α β : AugSeries) (children : List BTree) :
+    bSeriesConvAug α β (BTree.node children)
+      = α.toFun (BTree.node children) * β.emptyVal
+        + ((BTree.innerCutForest children α.toFun).map (fun cs =>
+            cs.foldr (fun c acc => c.2 * acc) (1 : ℝ)
+              * β.toFun (BTree.node (cs.filterMap (fun c => c.1))))).sum := by
+  unfold bSeriesConvAug
+  rw [BTree.innerCut]
+  simp [List.map_cons, List.map_map, Function.comp_def]
+
 end ButcherTableau
