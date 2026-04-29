@@ -170,6 +170,43 @@ theorem mul_assoc_at_node_node_nil
   rw [hβ', hγ']
   ring
 
+/-- Closed form for the smallest tree exhibiting a partial-trunk cut.
+
+For `BTree.node [BTree.node [BTree.leaf]]`, the inner-cut list has four
+entries:
+* `(none, α(node [node [leaf]]))`, contributing the full-prune branch;
+* `(some (node []), α(node [leaf]))`, pruning the whole child;
+* `(some (node [node [leaf]]), 1)`, the no-prune branch;
+* `(some (node [node []]), α(leaf))`, the new partial-trunk branch that
+  cuts the inner leaf while keeping the child root. -/
+theorem bSeriesConvAug_singleton_singleton_leaf (α β : AugSeries) :
+    bSeriesConvAug α β (BTree.node [BTree.node [BTree.leaf]])
+      = α.toFun (BTree.node [BTree.node [BTree.leaf]]) * β.emptyVal
+        + β.toFun (BTree.node [BTree.node [BTree.leaf]])
+        + α.toFun (BTree.node [BTree.leaf]) * β.toFun (BTree.node [])
+        + α.toFun BTree.leaf * β.toFun (BTree.node [BTree.node []]) := by
+  simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest]
+  ring
+
+/-- Depth-3 unital associativity sanity check at the first tree with a
+partial-trunk cut, `BTree.node [BTree.node [BTree.leaf]]`. -/
+theorem mul_assoc_at_singleton_singleton_leaf
+    (α β γ : AugSeries)
+    (_ : α.IsUnital) (hβ : β.IsUnital) (hγ : γ.IsUnital) :
+    bSeriesConvAug ⟨1, fun τ => bSeriesConvAug α β τ⟩ γ
+        (BTree.node [BTree.node [BTree.leaf]])
+      = bSeriesConvAug α ⟨1, fun τ => bSeriesConvAug β γ τ⟩
+          (BTree.node [BTree.node [BTree.leaf]]) := by
+  have hβ' : β.emptyVal = 1 := hβ
+  have hγ' : γ.emptyVal = 1 := hγ
+  rw [bSeriesConvAug_singleton_singleton_leaf,
+      bSeriesConvAug_singleton_singleton_leaf]
+  simp only [bSeriesConvAug_leaf, bSeriesConvAug_node_nil,
+    bSeriesConvAug_node_singleton_leaf, bSeriesConvAug_node_node_nil,
+    bSeriesConvAug_singleton_singleton_leaf]
+  rw [hβ', hγ']
+  ring
+
 /-- Symmetric root split for `bSeriesConvAug` at a node: the root-prune
 branch is separated from the forest cuts that keep the trunk root. -/
 theorem bSeriesConvAug_node (α β : AugSeries) (children : List BTree) :

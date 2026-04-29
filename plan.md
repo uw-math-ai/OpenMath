@@ -1267,6 +1267,11 @@ Concrete next steps:
   `mul_assoc_at_node_replicate_node_nil`, and `n=2` safety-net
   `mul_assoc_at_node_two_node_nils`. Both order-1 subtree shapes
   (`leaf`, `node []`) now have parametric unital associativity. The
+  cycle 589 closed form `bSeriesConvAug_singleton_singleton_leaf`
+  records the first order-2 partial-trunk cut at
+  `BTree.node [BTree.node [BTree.leaf]]`; its companion
+  `mul_assoc_at_singleton_singleton_leaf` verifies unital
+  associativity on that depth-3 sanity case. The
   next step is to lift the unital depth-2 check to all trees by
   `BTree.rec` (requires a list-level reindexing combinator on
   `innerCutForest` that handles partial-trunk cuts on order-≥2
