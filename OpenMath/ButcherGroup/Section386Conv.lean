@@ -176,7 +176,7 @@ private theorem innerCutForest_node_nil_cons (α : BTree → ℝ) (tail : List B
 
 /-- Cardinality decomposition: a sum over `Finset (Fin (n+1))` indexed by
 cardinality is the kept-head/cut-head split over `Finset (Fin n)`. -/
-private lemma sum_finset_fin_succ_card_eq {M : Type*} [AddCommMonoid M] (n : ℕ)
+lemma sum_finset_fin_succ_card_eq {M : Type*} [AddCommMonoid M] (n : ℕ)
     (φ : ℕ → M) :
     ∑ S' : Finset (Fin (n + 1)), φ S'.card
       = (∑ S : Finset (Fin n), φ S.card)
@@ -226,7 +226,7 @@ private lemma sum_finset_fin_succ_card_eq {M : Type*} [AddCommMonoid M] (n : ℕ
 /-- A `BTree`-coefficient version of the cut sum on a leaf-only forest:
 the filterMap-style admissible cut sum equals the simpler list-map form
 because the kept option is always `some`. -/
-private theorem cutSum_filterMap_eq_map (β : BTree → ℝ)
+theorem cutSum_filterMap_eq_map (β : BTree → ℝ)
     (F : List (List (Option BTree × ℝ))) :
     List.filterMap
       ((fun c : Option BTree × ℝ => Option.map (fun t => c.2 * β t) c.1) ∘ fun cs =>
@@ -241,7 +241,7 @@ private theorem cutSum_filterMap_eq_map (β : BTree → ℝ)
 
 /-- The list enumeration of inner cuts of `BTree.node (List.replicate n BTree.leaf)`
 reindexes to the `Finset (Fin n)` powerset sum from cycle 542. -/
-private theorem innerCutForest_replicate_leaf_sum (α β : BTree → ℝ) (n : ℕ) :
+theorem innerCutForest_replicate_leaf_sum (α β : BTree → ℝ) (n : ℕ) :
     (List.filterMap
         ((fun c => Option.map (fun t => c.2 * β t) c.1) ∘ fun cs =>
           (some (BTree.node (List.filterMap (fun c => c.1) cs)),
