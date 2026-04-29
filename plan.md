@@ -1247,9 +1247,13 @@ Concrete next steps:
   landed as `bSeriesConv_assoc_leaf` and `bSeriesConv_assoc_node_nil`.
   The next §38 layer must redefine `bSeriesConv` symmetrically (e.g.
   augment by an empty-forest scalar pair) before retrying associativity
-  or a tableau-level antipode; after that, the `Group (G1 p)` instance
-  and the §389 effective-order interpretation. `G1.npow`-style
-  stage-count arithmetic is closed.
+  or a tableau-level antipode; cycle 583 found that the first arbitrary
+  `AugSeries.emptyVal` scaffold is still non-associative at `node [leaf]`
+  unless the middle empty value is unital (see
+  `.prover-state/issues/butcher_section386_aug_middle_emptyval.md`). After
+  the augmented convention is repaired, the `Group (G1 p)` instance and the
+  §389 effective-order interpretation remain. `G1.npow`-style stage-count
+  arithmetic is closed.
 
 Expected sorry-first surface:
 - `def ButcherProduct : ButcherTableau s → ButcherTableau t → ButcherTableau (s + t)`
