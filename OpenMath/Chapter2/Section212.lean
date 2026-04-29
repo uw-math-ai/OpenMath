@@ -335,6 +335,345 @@ theorem global_truncation_error_L_pos
   have : αk ≤ E0 * α0 + (E0 - 1) * c := by linarith
   exact this
 
+/-! ## Off-step extensions
+
+The on-step Theorem 212A bounds the error at every grid point `S.x k`. For
+the uniform-convergence Theorem 213B we need a bound at every
+`t ∈ [x₀, xN]`, not just at grid values. The standard textbook argument
+adds a `2·Mf·H` slack term arising from one partial Euler step from the
+nearest grid point to `t`.
+
+These lemmas take two extra hypotheses, both of which follow from
+Butcher's setup but are not in the bare `EulerSetup` structure:
+
+* `h_y_lip` — the exact solution `S.y` is `Mf`-Lipschitz on `[x₀, xN]`
+  (consequence of `y'(t) = f(t, y(t))` together with `‖f‖ ≤ Mf`).
+* `h_f_grid_bound` — `‖f(S.x k, S.ŷ (S.x k))‖ ≤ Mf` at every grid value
+  (consequence of a uniform `‖f‖`-bound on the relevant region).
+
+Both are passed as hypotheses rather than added as fields to keep the
+existing on-step proofs untouched. -/
+
+namespace EulerSetup
+
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+
+/-- For any `t ∈ [x₀, xN]`, there exists a grid index `k₀ : Fin (S.n + 1)`
+with `S.x k₀ ≤ t`, `t - S.x k₀ ≤ S.H`, and `S.ŷ` admits the off-step
+Euler representation `ŷ t = ŷ(xₖ₀) + (t - xₖ₀) • f(xₖ₀, ŷ(xₖ₀))`. The
+witness is the largest grid index ≤ t; when t = xN it is `Fin.last S.n`
+(both conjuncts then collapse to triviality). -/
+lemma yhat_offstep_repr (S : EulerSetup E) {t : ℝ}
+    (ht : t ∈ Set.Icc (S.x ⟨0, by omega⟩)
+                       (S.x ⟨S.n, Nat.lt_succ_self _⟩)) :
+    ∃ k₀ : Fin (S.n + 1),
+      S.x k₀ ≤ t ∧ t - S.x k₀ ≤ S.H ∧
+      S.ŷ t = S.ŷ (S.x k₀)
+              + (t - S.x k₀) • S.f (S.x k₀) (S.ŷ (S.x k₀)) := by
+  -- Filter the universe to grid indices ≤ t; nonempty because index 0 qualifies.
+  set s : Finset (Fin (S.n + 1)) :=
+    Finset.univ.filter (fun k => S.x k ≤ t) with hs_def
+  have h0_mem : (⟨0, by omega⟩ : Fin (S.n + 1)) ∈ s := by
+    simp only [hs_def, Finset.mem_filter, Finset.mem_univ, true_and]
+    exact ht.1
+  have h_nonempty : s.Nonempty := ⟨_, h0_mem⟩
+  set k₀ := s.max' h_nonempty with hk₀_def
+  have hk₀_mem : k₀ ∈ s := s.max'_mem h_nonempty
+  have hk₀_le : S.x k₀ ≤ t := (Finset.mem_filter.mp hk₀_mem).2
+  have hk₀_max : ∀ j : Fin (S.n + 1), S.x j ≤ t → j ≤ k₀ := by
+    intro j hj
+    apply s.le_max' j
+    exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hj⟩
+  refine ⟨k₀, hk₀_le, ?_, ?_⟩
+  · -- Bound `t - S.x k₀ ≤ S.H`. Case on whether k₀ is the last index.
+    by_cases hk_last : k₀.val = S.n
+    · -- k₀ = Fin.last. Then S.x k₀ = xN ≥ t and S.x k₀ ≤ t, so t = S.x k₀.
+      have hk_eq : k₀ = ⟨S.n, Nat.lt_succ_self _⟩ := Fin.ext hk_last
+      have h_le : S.x k₀ ≥ t := by rw [hk_eq]; exact ht.2
+      have h_eq : S.x k₀ = t := le_antisymm hk₀_le h_le
+      linarith [S.H_nonneg]
+    · -- k₀.val < S.n, so we can step to k₀.val + 1.
+      have hk₀_lt : k₀.val < S.n :=
+        lt_of_le_of_ne (Nat.lt_succ_iff.mp k₀.isLt) hk_last
+      let k_step : Fin S.n := k₀.castLT hk₀_lt
+      have h_castSucc_eq : k_step.castSucc = k₀ := Fin.castSucc_castLT k₀ hk₀_lt
+      let k₀_succ : Fin (S.n + 1) := ⟨k₀.val + 1, by omega⟩
+      have h_succ_eq : k_step.succ = k₀_succ := rfl
+      -- By maximality, S.x k₀_succ > t.
+      have h_succ_gt : t < S.x k₀_succ := by
+        by_contra h
+        push_neg at h
+        have hle : k₀_succ ≤ k₀ := hk₀_max k₀_succ h
+        have : k₀.val + 1 ≤ k₀.val := hle
+        omega
+      -- Step length: S.x k_step.succ - S.x k_step.castSucc ≤ S.H.
+      have h_step_le_H := S.hH_max k_step
+      rw [h_castSucc_eq, h_succ_eq] at h_step_le_H
+      linarith
+  · -- Off-step formula for ŷ. Case on whether k₀ is the last index.
+    by_cases hk_last : k₀.val = S.n
+    · -- t = S.x k₀, so RHS reduces to S.ŷ (S.x k₀) = S.ŷ t.
+      have hk_eq : k₀ = ⟨S.n, Nat.lt_succ_self _⟩ := Fin.ext hk_last
+      have h_le : S.x k₀ ≥ t := by rw [hk_eq]; exact ht.2
+      have h_eq : t = S.x k₀ := le_antisymm h_le hk₀_le
+      rw [h_eq]
+      simp
+    · -- t ∈ Icc (S.x k₀) (S.x k₀.succ) for k_step : Fin S.n. Apply hŷ_interp.
+      have hk₀_lt : k₀.val < S.n :=
+        lt_of_le_of_ne (Nat.lt_succ_iff.mp k₀.isLt) hk_last
+      let k_step : Fin S.n := k₀.castLT hk₀_lt
+      have h_castSucc_eq : k_step.castSucc = k₀ := Fin.castSucc_castLT k₀ hk₀_lt
+      let k₀_succ : Fin (S.n + 1) := ⟨k₀.val + 1, by omega⟩
+      have h_succ_eq : k_step.succ = k₀_succ := rfl
+      have h_succ_ge : t ≤ S.x k₀_succ := by
+        by_contra h
+        push_neg at h
+        have hle : k₀_succ ≤ k₀ := hk₀_max k₀_succ h.le
+        have : k₀.val + 1 ≤ k₀.val := hle
+        omega
+      have h_t_mem : t ∈ Set.Icc (S.x k_step.castSucc) (S.x k_step.succ) := by
+        rw [h_castSucc_eq, h_succ_eq]
+        exact ⟨hk₀_le, h_succ_ge⟩
+      have hyhat_at := S.hŷ_interp k_step t h_t_mem
+      rw [h_castSucc_eq] at hyhat_at
+      exact hyhat_at
+
+end EulerSetup
+
+/-- Butcher §212 Theorem 212A — off-step extension, `L = 0` case.
+
+For any `t ∈ [x₀, xN]`, the Euler error `‖y t - ŷ t‖` is bounded by the
+on-step bound at `xN` plus a `2·Mf·H` off-step slack. The slack
+collapses at grid points (since `t - S.x k₀ = 0` there). -/
+theorem global_truncation_error_L_zero_offstep
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (S : EulerSetup E) (hL0 : S.L = 0)
+    {Mf : ℝ} (h_Mf_nn : 0 ≤ Mf)
+    (h_y_lip : ∀ s t,
+        s ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩) →
+        t ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩) →
+        ‖S.y t - S.y s‖ ≤ Mf * |t - s|)
+    (h_f_grid_bound : ∀ k : Fin (S.n + 1),
+        ‖S.f (S.x k) (S.ŷ (S.x k))‖ ≤ Mf)
+    {t : ℝ}
+    (ht : t ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩)) :
+    ‖S.y t - S.ŷ t‖
+      ≤ ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+        + S.H * S.m * (S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩)
+        + 2 * Mf * S.H := by
+  -- Get the off-step representation of ŷ at t.
+  obtain ⟨k₀, hk₀_le, h_dt_le_H, h_yhat_eq⟩ := S.yhat_offstep_repr ht
+  -- Membership of S.x k₀ in [x₀, xN].
+  have hk_mem : S.x k₀ ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩) := by
+    constructor
+    · exact S.hx_mono.monotone (Fin.mk_le_mk.mpr (Nat.zero_le _))
+    · exact S.hx_mono.monotone (Fin.mk_le_mk.mpr (Nat.le_of_lt_succ k₀.isLt))
+  -- Triangle inequality.
+  have h_dt_nn : 0 ≤ t - S.x k₀ := by linarith
+  have h_dt_abs : |t - S.x k₀| = t - S.x k₀ := abs_of_nonneg h_dt_nn
+  -- Bound 1: ‖y t - y(xₖ₀)‖ ≤ Mf · (t - xₖ₀) ≤ Mf · H.
+  have hy_diff : ‖S.y t - S.y (S.x k₀)‖ ≤ Mf * (t - S.x k₀) := by
+    have := h_y_lip (S.x k₀) t hk_mem ht
+    rw [h_dt_abs] at this
+    exact this
+  have hy_diff_H : ‖S.y t - S.y (S.x k₀)‖ ≤ Mf * S.H := by
+    calc ‖S.y t - S.y (S.x k₀)‖
+        ≤ Mf * (t - S.x k₀) := hy_diff
+      _ ≤ Mf * S.H := mul_le_mul_of_nonneg_left h_dt_le_H h_Mf_nn
+  -- Bound 3: ‖ŷ(xₖ₀) - ŷ t‖ ≤ Mf · (t - xₖ₀) ≤ Mf · H.
+  have h_yhat_diff : ‖S.ŷ t - S.ŷ (S.x k₀)‖ ≤ Mf * S.H := by
+    have h_diff_eq : S.ŷ t - S.ŷ (S.x k₀)
+                      = (t - S.x k₀) • S.f (S.x k₀) (S.ŷ (S.x k₀)) := by
+      rw [h_yhat_eq]; abel
+    rw [h_diff_eq, norm_smul, Real.norm_of_nonneg h_dt_nn]
+    have h_f_bd := h_f_grid_bound k₀
+    calc (t - S.x k₀) * ‖S.f (S.x k₀) (S.ŷ (S.x k₀))‖
+        ≤ (t - S.x k₀) * Mf := mul_le_mul_of_nonneg_left h_f_bd h_dt_nn
+      _ ≤ S.H * Mf := mul_le_mul_of_nonneg_right h_dt_le_H h_Mf_nn
+      _ = Mf * S.H := by ring
+  -- Bound 2: on-step bound at k₀.
+  have hon_step :=
+    global_truncation_error_L_zero S hL0 k₀
+  -- Bound 2 by monotonicity in (S.x k₀ - x₀) ≤ (xN - x₀).
+  have hx_sub_nn : 0 ≤ S.x k₀ - S.x ⟨0, by omega⟩ := by
+    have := S.hx_mono.monotone (Fin.mk_le_mk.mpr (Nat.zero_le k₀.val) :
+      (⟨0, by omega⟩ : Fin (S.n + 1)) ≤ k₀)
+    linarith
+  have hx_sub_le : S.x k₀ - S.x ⟨0, by omega⟩
+                    ≤ S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩ := by
+    have h_le : k₀ ≤ (⟨S.n, Nat.lt_succ_self _⟩ : Fin (S.n + 1)) :=
+      Fin.mk_le_mk.mpr (Nat.le_of_lt_succ k₀.isLt)
+    linarith [S.hx_mono.monotone h_le]
+  have hHm_nn : 0 ≤ S.H * S.m := mul_nonneg S.H_nonneg S.hm_nn
+  have hon_step_xN :
+      ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+        ≤ ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+          + S.H * S.m * (S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩) := by
+    calc ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+        ≤ ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+            + S.H * S.m * (S.x k₀ - S.x ⟨0, by omega⟩) := hon_step
+      _ ≤ ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+            + S.H * S.m * (S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩) := by
+            have := mul_le_mul_of_nonneg_left hx_sub_le hHm_nn
+            linarith
+  -- Assemble.
+  calc ‖S.y t - S.ŷ t‖
+      = ‖(S.y t - S.y (S.x k₀)) + (S.y (S.x k₀) - S.ŷ (S.x k₀))
+          + (S.ŷ (S.x k₀) - S.ŷ t)‖ := by congr 1; abel
+    _ ≤ ‖S.y t - S.y (S.x k₀)‖ + ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+        + ‖S.ŷ (S.x k₀) - S.ŷ t‖ := by
+          calc _ ≤ ‖(S.y t - S.y (S.x k₀)) + (S.y (S.x k₀) - S.ŷ (S.x k₀))‖
+                  + ‖S.ŷ (S.x k₀) - S.ŷ t‖ := norm_add_le _ _
+            _ ≤ ‖S.y t - S.y (S.x k₀)‖ + ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+                + ‖S.ŷ (S.x k₀) - S.ŷ t‖ := by
+                  have := norm_add_le (S.y t - S.y (S.x k₀))
+                                       (S.y (S.x k₀) - S.ŷ (S.x k₀))
+                  linarith
+    _ ≤ Mf * S.H +
+          (‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+            + S.H * S.m * (S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩))
+          + Mf * S.H := by
+            have h_sym : ‖S.ŷ (S.x k₀) - S.ŷ t‖ = ‖S.ŷ t - S.ŷ (S.x k₀)‖ :=
+              norm_sub_rev _ _
+            rw [h_sym]
+            linarith [hy_diff_H, h_yhat_diff, hon_step_xN]
+    _ = ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+          + S.H * S.m * (S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩)
+          + 2 * Mf * S.H := by ring
+
+/-- Butcher §212 Theorem 212A — off-step extension, `L > 0` case.
+
+For any `t ∈ [x₀, xN]`, the Euler error is bounded by the on-step bound
+at `xN` (the exponential form) plus a `2·Mf·H` off-step slack. -/
+theorem global_truncation_error_L_pos_offstep
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (S : EulerSetup E) (hL : 0 < (S.L : ℝ))
+    {Mf : ℝ} (h_Mf_nn : 0 ≤ Mf)
+    (h_y_lip : ∀ s t,
+        s ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩) →
+        t ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩) →
+        ‖S.y t - S.y s‖ ≤ Mf * |t - s|)
+    (h_f_grid_bound : ∀ k : Fin (S.n + 1),
+        ‖S.f (S.x k) (S.ŷ (S.x k))‖ ≤ Mf)
+    {t : ℝ}
+    (ht : t ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩)) :
+    ‖S.y t - S.ŷ t‖
+      ≤ Real.exp ((S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩) * (S.L : ℝ))
+          * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+        + (Real.exp ((S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩) * (S.L : ℝ)) - 1) / (S.L : ℝ)
+            * S.H * S.m
+        + 2 * Mf * S.H := by
+  obtain ⟨k₀, hk₀_le, h_dt_le_H, h_yhat_eq⟩ := S.yhat_offstep_repr ht
+  have hk_mem : S.x k₀ ∈ Set.Icc (S.x ⟨0, by omega⟩) (S.x ⟨S.n, Nat.lt_succ_self _⟩) := by
+    constructor
+    · exact S.hx_mono.monotone (Fin.mk_le_mk.mpr (Nat.zero_le _))
+    · exact S.hx_mono.monotone (Fin.mk_le_mk.mpr (Nat.le_of_lt_succ k₀.isLt))
+  have h_dt_nn : 0 ≤ t - S.x k₀ := by linarith
+  have h_dt_abs : |t - S.x k₀| = t - S.x k₀ := abs_of_nonneg h_dt_nn
+  have hy_diff : ‖S.y t - S.y (S.x k₀)‖ ≤ Mf * (t - S.x k₀) := by
+    have := h_y_lip (S.x k₀) t hk_mem ht
+    rw [h_dt_abs] at this
+    exact this
+  have hy_diff_H : ‖S.y t - S.y (S.x k₀)‖ ≤ Mf * S.H := by
+    calc ‖S.y t - S.y (S.x k₀)‖
+        ≤ Mf * (t - S.x k₀) := hy_diff
+      _ ≤ Mf * S.H := mul_le_mul_of_nonneg_left h_dt_le_H h_Mf_nn
+  have h_yhat_diff : ‖S.ŷ t - S.ŷ (S.x k₀)‖ ≤ Mf * S.H := by
+    have h_diff_eq : S.ŷ t - S.ŷ (S.x k₀)
+                      = (t - S.x k₀) • S.f (S.x k₀) (S.ŷ (S.x k₀)) := by
+      rw [h_yhat_eq]; abel
+    rw [h_diff_eq, norm_smul, Real.norm_of_nonneg h_dt_nn]
+    have h_f_bd := h_f_grid_bound k₀
+    calc (t - S.x k₀) * ‖S.f (S.x k₀) (S.ŷ (S.x k₀))‖
+        ≤ (t - S.x k₀) * Mf := mul_le_mul_of_nonneg_left h_f_bd h_dt_nn
+      _ ≤ S.H * Mf := mul_le_mul_of_nonneg_right h_dt_le_H h_Mf_nn
+      _ = Mf * S.H := by ring
+  -- Bound 2: on-step bound at k₀, with monotonicity.
+  have hon_step := global_truncation_error_L_pos S hL k₀
+  -- Monotonicity bounds.
+  have hx_sub_nn : 0 ≤ S.x k₀ - S.x ⟨0, by omega⟩ := by
+    have := S.hx_mono.monotone (Fin.mk_le_mk.mpr (Nat.zero_le k₀.val) :
+      (⟨0, by omega⟩ : Fin (S.n + 1)) ≤ k₀)
+    linarith
+  have hx_sub_le : S.x k₀ - S.x ⟨0, by omega⟩
+                    ≤ S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩ := by
+    have h_le : k₀ ≤ (⟨S.n, Nat.lt_succ_self _⟩ : Fin (S.n + 1)) :=
+      Fin.mk_le_mk.mpr (Nat.le_of_lt_succ k₀.isLt)
+    linarith [S.hx_mono.monotone h_le]
+  set δk : ℝ := S.x k₀ - S.x ⟨0, by omega⟩ with hδk_def
+  set δN : ℝ := S.x ⟨S.n, Nat.lt_succ_self _⟩ - S.x ⟨0, by omega⟩ with hδN_def
+  have h_δk_le_δN : δk ≤ δN := hx_sub_le
+  have h_δk_nn : 0 ≤ δk := hx_sub_nn
+  have h_δN_nn : 0 ≤ δN := le_trans h_δk_nn h_δk_le_δN
+  -- exp is monotone, so exp(δk · L) ≤ exp(δN · L).
+  have h_exp_mono : Real.exp (δk * (S.L : ℝ)) ≤ Real.exp (δN * (S.L : ℝ)) :=
+    Real.exp_le_exp.mpr (mul_le_mul_of_nonneg_right h_δk_le_δN hL.le)
+  have h_exp_pos : 0 < Real.exp (δN * (S.L : ℝ)) := Real.exp_pos _
+  have h_exp_pos_k : 0 < Real.exp (δk * (S.L : ℝ)) := Real.exp_pos _
+  have h_α0_nn : 0 ≤ ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖ :=
+    norm_nonneg _
+  -- Convert on-step bound at k₀ to a bound by xN-form.
+  have hon_step_xN :
+      ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+        ≤ Real.exp (δN * (S.L : ℝ))
+            * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+          + (Real.exp (δN * (S.L : ℝ)) - 1) / (S.L : ℝ) * S.H * S.m := by
+    have h_first :
+        Real.exp (δk * (S.L : ℝ))
+          * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+          ≤ Real.exp (δN * (S.L : ℝ))
+              * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖ :=
+      mul_le_mul_of_nonneg_right h_exp_mono h_α0_nn
+    have hHm_nn : 0 ≤ S.H * S.m := mul_nonneg S.H_nonneg S.hm_nn
+    have h_facHm_nn : 0 ≤ S.H * S.m / (S.L : ℝ) :=
+      div_nonneg hHm_nn hL.le
+    have h_fac_le :
+        (Real.exp (δk * (S.L : ℝ)) - 1) / (S.L : ℝ) * S.H * S.m
+          ≤ (Real.exp (δN * (S.L : ℝ)) - 1) / (S.L : ℝ) * S.H * S.m := by
+      have h_num_le : Real.exp (δk * (S.L : ℝ)) - 1
+                       ≤ Real.exp (δN * (S.L : ℝ)) - 1 := by linarith
+      have h_div_le : (Real.exp (δk * (S.L : ℝ)) - 1) / (S.L : ℝ)
+                       ≤ (Real.exp (δN * (S.L : ℝ)) - 1) / (S.L : ℝ) :=
+        div_le_div_of_nonneg_right h_num_le hL.le
+      have h_HSn : 0 ≤ S.H := S.H_nonneg
+      have h_mn : 0 ≤ S.m := S.hm_nn
+      nlinarith [h_div_le, h_HSn, h_mn,
+                 mul_nonneg h_HSn h_mn]
+    calc ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+        ≤ Real.exp (δk * (S.L : ℝ))
+            * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+          + (Real.exp (δk * (S.L : ℝ)) - 1) / (S.L : ℝ) * S.H * S.m := hon_step
+      _ ≤ Real.exp (δN * (S.L : ℝ))
+            * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+          + (Real.exp (δN * (S.L : ℝ)) - 1) / (S.L : ℝ) * S.H * S.m := by
+            linarith
+  -- Assemble.
+  calc ‖S.y t - S.ŷ t‖
+      = ‖(S.y t - S.y (S.x k₀)) + (S.y (S.x k₀) - S.ŷ (S.x k₀))
+          + (S.ŷ (S.x k₀) - S.ŷ t)‖ := by congr 1; abel
+    _ ≤ ‖S.y t - S.y (S.x k₀)‖ + ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+        + ‖S.ŷ (S.x k₀) - S.ŷ t‖ := by
+          calc _ ≤ ‖(S.y t - S.y (S.x k₀)) + (S.y (S.x k₀) - S.ŷ (S.x k₀))‖
+                  + ‖S.ŷ (S.x k₀) - S.ŷ t‖ := norm_add_le _ _
+            _ ≤ ‖S.y t - S.y (S.x k₀)‖ + ‖S.y (S.x k₀) - S.ŷ (S.x k₀)‖
+                + ‖S.ŷ (S.x k₀) - S.ŷ t‖ := by
+                  have := norm_add_le (S.y t - S.y (S.x k₀))
+                                       (S.y (S.x k₀) - S.ŷ (S.x k₀))
+                  linarith
+    _ ≤ Mf * S.H +
+          (Real.exp (δN * (S.L : ℝ))
+            * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+            + (Real.exp (δN * (S.L : ℝ)) - 1) / (S.L : ℝ) * S.H * S.m)
+          + Mf * S.H := by
+            have h_sym : ‖S.ŷ (S.x k₀) - S.ŷ t‖ = ‖S.ŷ t - S.ŷ (S.x k₀)‖ :=
+              norm_sub_rev _ _
+            rw [h_sym]
+            linarith [hy_diff_H, h_yhat_diff, hon_step_xN]
+    _ = Real.exp (δN * (S.L : ℝ))
+            * ‖S.y (S.x ⟨0, by omega⟩) - S.ŷ (S.x ⟨0, by omega⟩)‖
+          + (Real.exp (δN * (S.L : ℝ)) - 1) / (S.L : ℝ) * S.H * S.m
+          + 2 * Mf * S.H := by ring
+
 /-! ## Concrete witness
 
 Constructing a non-trivial `EulerSetup` requires solving an ODE — well outside

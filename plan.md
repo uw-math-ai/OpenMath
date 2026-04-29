@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 0 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
+**Progress: 16 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -34,31 +34,31 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 
 ## Chapter 1 — Differential and Difference Equations  (17 entities)
 
-- [ ] `def:110A` **Lipschitz condition in its second variable** (§110)
-- [ ] `def:142A` **power-boundedness** (§142)
-- [ ] `thm:101A` **The Kepler problem** (§101)
-- [ ] `thm:123B` **Area invariance for Hamiltonian parallelograms** (§123)
+- [x] `def:110A` **Lipschitz condition in its second variable** (§110)
+- [x] `def:142A` **power-boundedness** (§142)
+- [x] `thm:101A` **The Kepler problem** (§101)
+- [x] `thm:123B` **Area invariance for Hamiltonian parallelograms** (§123)
 - [ ] `thm:142D` **Convergence Equivalence for Matrix Powers** (§142)
-- [ ] `def:112A` **one-sided Lipschitz condition** (§112)
-- [ ] `def:142B` **convergent (matrix)** (§142)
-- [ ] `lem:110B` **Contraction Mapping Fixed Point Existence** (§110)
-- [ ] `thm:123A` **Further Hamiltonian problems** (§123)
+- [x] `def:112A` **one-sided Lipschitz condition** (§112)
+- [x] `def:142B` **convergent (matrix)** (§142)
+- [x] `lem:110B` **Contraction Mapping Fixed Point Existence** (§110)
+- [x] `thm:123A` **Further Hamiltonian problems** (§123)
 - [ ] `thm:142E` **Stable Matrix Perturbation Power Bound** (§142)
-- [ ] `thm:110C` **Existence and uniqueness of solutions** (§110)
-- [ ] `thm:112B` **One Sided Lipschitz Solution Difference Bound** (§112)
+- [x] `thm:110C` **Existence and uniqueness of solutions** (§110)
+- [x] `thm:112B` **One Sided Lipschitz Solution Difference Bound** (§112)
 - [ ] `thm:142C` **Stability and Minimal Polynomial Zeros Condition** (§142)
-- [ ] `thm:111A` **inhomogeneous term** (§111)
+- [x] `thm:111A` **inhomogeneous term** (§111)
 - [ ] `thm:142F` **Stable Matrix Perturbation Bound** (§142)
-- [ ] `thm:140A` **Linear difference equations** (§140)
-- [ ] `thm:141A` **Constant coefficients** (§141)
+- [x] `thm:140A` **Linear difference equations** (§140)
+- [x] `thm:141A` **Constant coefficients** (§141)
 
 ---
 
 ## Chapter 2 — Numerical Differential Equation Methods  (4 entities; 1 deferred)
 
-- [ ] `thm:212A` **Global truncation error (Euler)** (§212)
-- [ ] `thm:213A` **Convergence of the Euler method** (§213)
-- [ ] `thm:213B` **Euler method uniform convergence theorem** (§213)
+- [x] `thm:212A` **Global truncation error (Euler)** (§212)
+- [x] `thm:213A` **Convergence of the Euler method** (§213)
+- [x] `thm:213B` **Euler method uniform convergence theorem** (§213)
 
 ### Deferred to after Chapter 4
 - [!] `thm:243A` **Consistency, stability and convergence** (§243) — depends on `def:402A`, `def:403A`, `def:404B` (Ch.4 §§402–404). Resume after those are formalized.

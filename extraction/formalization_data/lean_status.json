@@ -95,9 +95,9 @@
     "status": "formalized"
   },
   "thm:213B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter2/Section213.lean",
+    "lean_symbol": "OpenMath.Chapter2.Section213.euler_convergence_uniform",
+    "status": "formalized"
   },
   "thm:243A": {
     "lean_file": null,

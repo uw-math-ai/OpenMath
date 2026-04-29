@@ -107,7 +107,7 @@ theorem one_sided_lipschitz_solution_diff_bound
     have hyz : HasDerivWithinAt (fun t => y t - z t)
         (f x (y x) - f x (z x)) (Ici x) x := (hy x hx_mem).sub (hz x hx_mem)
     -- Apply HasDerivWithinAt.inner ℝ to get the derivative of ⟪u t, u t⟫.
-    have h_inner :=
+    have hinner :=
       (HasDerivWithinAt.inner (𝕜 := ℝ) hyz hyz :
         HasDerivWithinAt (fun t => inner ℝ (y t - z t) (y t - z t))
           (inner ℝ (y x - z x) (f x (y x) - f x (z x))
@@ -115,15 +115,15 @@ theorem one_sided_lipschitz_solution_diff_bound
     -- Convert to g via congruence.
     have h_eq : (fun t => inner ℝ (y t - z t) (y t - z t)) = g := by
       funext t; exact (hg_inner t).symm
-    rw [h_eq] at h_inner
+    rw [h_eq] at hinner
     -- Combine the two summands using real_inner_comm.
     have h_combine : inner ℝ (y x - z x) (f x (y x) - f x (z x))
         + inner ℝ (f x (y x) - f x (z x)) (y x - z x)
         = 2 * inner ℝ (f x (y x) - f x (z x)) (y x - z x) := by
       rw [real_inner_comm (y x - z x) (f x (y x) - f x (z x))]
       ring
-    rw [h_combine] at h_inner
-    exact h_inner
+    rw [h_combine] at hinner
+    exact hinner
   -- Step 3 — Bound the derivative by `2ℓ * g x` using `def:112A`.
   have hg_bound : ∀ x ∈ Ico x₀ b,
       2 * inner ℝ (f x (y x) - f x (z x)) (y x - z x) ≤ 2 * ℓ * g x := by
