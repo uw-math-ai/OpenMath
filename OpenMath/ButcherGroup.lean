@@ -162,6 +162,24 @@ theorem bSeriesHom_product_node_replicate_leaf
          ButcherTableau.bSeries] using
     ButcherProduct.bSeries_node_replicate_leaf_eq t₁ t₂ n
 
+/-- §384 lift of the standalone triple-leaf closed form to the quotient
+layer, grouped by the four possible cut counts. -/
+theorem bSeriesHom_product_node_triple_leaf
+    {s t : ℕ} (q : QuotEquiv s) (r : QuotEquiv t) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+      = q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+        + ∑ k : Fin 4,
+          tripleLeafChoiceCoef k (q.bSeriesHom BTree.leaf) 1 *
+            r.bSeriesHom
+              (BTree.node
+                (List.replicate (tripleLeafChoiceCount k) BTree.leaf)) := by
+  refine Quotient.inductionOn₂ q r ?_
+  intro t₁ t₂
+  simpa [bSeriesHom, bSeries, product,
+         ButcherTableau.bSeries] using
+    ButcherProduct.bSeries_node_triple_leaf_eq t₁ t₂
+
 /-- §384 lift of the cycle 544 dual all-empty-node closed form to the
 quotient layer. The product `bSeriesHom` on `BTree.node (List.replicate
 n (BTree.node []))` decomposes into a powerset sum of bSeries-only
@@ -1212,6 +1230,48 @@ theorem product_congr_node_replicate_leaf
     rw [order_node_replicate_leaf]
     omega
   rw [hleaf, hsub]
+
+/-- Cycle 557 standalone triple-leaf `G₁.mul`-direction slice. Product
+preserves `G₁` equivalence on `BTree.node [leaf, leaf, leaf]`, whose order
+is four. -/
+theorem product_congr_node_triple_leaf
+    {p s s' t t' : ℕ}
+    {q : QuotEquiv s} {q' : QuotEquiv s'}
+    {r : QuotEquiv t} {r' : QuotEquiv t'}
+    (hq : IsG1Equiv p q q') (hr : IsG1Equiv p r r')
+    (hτ : (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]).order ≤ p) :
+    (q.product r).bSeriesHom
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+      = (q'.product r').bSeriesHom
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) := by
+  rw [QuotEquiv.bSeriesHom_product_node_triple_leaf,
+      QuotEquiv.bSeriesHom_product_node_triple_leaf]
+  have hp4 : 4 ≤ p := by
+    simpa [BTree.order_node, List.foldr] using hτ
+  have hleaf : q.bSeriesHom BTree.leaf = q'.bSeriesHom BTree.leaf := by
+    apply hq
+    rw [BTree.order_leaf]
+    omega
+  have hnode :
+      q.bSeriesHom (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+        = q'.bSeriesHom
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) :=
+    hq (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) hτ
+  rw [hnode, hleaf]
+  congr 1
+  refine Finset.sum_congr rfl ?_
+  intro k _
+  have hsub :
+      r.bSeriesHom
+          (BTree.node (List.replicate (tripleLeafChoiceCount k) BTree.leaf))
+        = r'.bSeriesHom
+          (BTree.node
+            (List.replicate (tripleLeafChoiceCount k) BTree.leaf)) := by
+    apply hr
+    rw [order_node_replicate_leaf]
+    have hcount := tripleLeafChoiceCount_sum k
+    omega
+  rw [hsub]
 
 /-- Order of an all-empty-node node:
 `(BTree.node (List.replicate n (BTree.node []))).order = n + 1`.

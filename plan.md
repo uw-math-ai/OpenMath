@@ -1174,6 +1174,10 @@ Concrete next steps:
   tracked `G1.mul`-direction well-definedness deliverable, using the
   order identity `1 + 2 * n` for the root family and `1 + a + 2 * b`
   for mixed leaf/singleton-leaf kept subtrees.
+- Cycle 557 landed the standalone triple-leaf single-tree slice
+  `BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]`: a reusable `Fin 4`
+  cut-count helper, grouped `bConv` / product `bSeries` closed forms,
+  the quotient lift, and `IsG1Equiv.product_congr_node_triple_leaf`.
 - Cycle 516 also confirmed that the §38 group multiplication on
   `G1 p` (i.e. `IsG1Equiv.product_congr`, `G1.mul`, `G1.mul_mk`,
   `G1.bSeriesHomAt_mul`) is genuinely blocked on the §384 honest
