@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 21 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
+**Progress: 22 / 175** entities done (5 chapters; 1 entity deferred cross-chapter)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -87,7 +87,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:351A` **Criteria for A-stability** (§351)
 - [ ] `thm:302A` **Some combinatorial questions** (§302)
 - [ ] `def:356B` **reduced method (356B)** (§356)
-- [ ] `def:381C` **0-reduced method** (§380)
+- [x] `def:381C` **0-reduced method** (§380)
 - [ ] `def:381F` **P -equivalent** (§380)
 - [ ] `lem:342A` **Methods based on Gaussian quadrature** (§342)
 - [ ] `thm:302B` **Rooted Tree Generating Function Identity** (§302)

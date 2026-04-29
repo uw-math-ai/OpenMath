@@ -2,13 +2,15 @@ import OpenMath.Chapter3.Section310
 import OpenMath.Chapter3.Section312
 
 /-!
-# Butcher §380 — Φ-equivalence and P-reducibility of Runge–Kutta methods
+# Butcher §380 — Φ-equivalence and reducibility of Runge–Kutta methods
 
-This file formalises two definitions from Butcher's §380 ("Motivation"
+This file formalises three definitions from Butcher's §380 ("Motivation"
 of Section 38, *Numerical Methods for Ordinary Differential Equations*,
 3rd ed.):
 
 * **Definition 381B** (page 302) — *Φ-equivalent* Runge–Kutta methods.
+* **Definition 381C** (page 303) — *0-reducible* Runge–Kutta methods
+  and the *0-reduced method*.
 * **Definition 381D** (page 303) — *P-reducible* Runge–Kutta methods
   and the *P-reduced method*.
 
@@ -23,6 +25,14 @@ concept of *reducibility*, where one Runge–Kutta method is replaced by
 another with **fewer stages**. The Lean signature must therefore allow
 the two methods to have *different* stage counts; we parametrise
 separately by `s` and `s'`.
+
+## Definition 381C textbook statement (quoted verbatim from `def_381C.json`)
+
+> A Runge–Kutta method `(A, b, c)` is `0-reducible' if the stage index
+> set can be partitioned into two subsets `{1, 2, …, s} = P₀ ∪ P₁`
+> such that `bᵢ = 0` for all `i ∈ P₀` and such that `aᵢⱼ = 0` if
+> `i ∈ P₁` and `j ∈ P₀`. The method formed by deleting all stages
+> indexed by members of `P₀` is known as the `0-reduced method'.
 
 ## Definition 381D textbook statement (quoted verbatim from `def_381D.json`)
 
@@ -48,6 +58,18 @@ separately by `s` and `s'`.
   without elaboration, but a partition into `s` singleton blocks is
   trivially row-sum-constant for any tableau) is captured by the
   side condition `ŝ < s` in `IsPReducible`.
+* Definition 381C's two-block partition `{1, …, s} = P₀ ∪ P₁` is
+  encoded as a Boolean predicate `inP1 : Fin s → Bool`. We set
+  `P₀ = {i | inP1 i = false}` and `P₁ = {i | inP1 i = true}`. A
+  Boolean predicate is equivalent to a partition of `Fin s` into two
+  sets, with `decide` available as a bonus for the witness. The
+  non-emptiness side condition `(∃ i, inP1 i = false)` in
+  `IsZeroReducible` rules out the trivially-no-reduction case
+  `P₀ = ∅`; without it, every tableau is vacuously 0-reducible via
+  the all-`P₁` partition. This mirrors the `ŝ < s` strengthening on
+  `IsPReducible`. Requiring also `P₁ ≠ ∅` would over-strengthen and
+  exclude the legitimate "delete all stages" reduction (which yields
+  the unique 0-stage tableau).
 * Butcher's "ĉ_I = c_i for i ∈ P_I" requires that `c` be constant on
   each block. This is **not** implied by the row-sum-constancy
   condition `Σ_{j ∈ P_J} a_{ij}` alone; under the consistency
@@ -136,6 +158,84 @@ end OpenMath.Chapter3.Section381
 namespace OpenMath.Chapter3.Section312.RKTableau
 
 open OpenMath.Chapter3.Section381
+
+/- ### Definition 381C — 0-reducible Runge–Kutta methods -/
+
+/-- Predicate form of Butcher §380 Definition 381C: the 2-block
+partition `P₀ := {i | ¬ inP1 i}`, `P₁ := {i | inP1 i}` witnesses
+0-reducibility of `M` when
+
+* `b i = 0` for every `i ∈ P₀`, and
+* `A i j = 0` whenever `i ∈ P₁` and `j ∈ P₀`. -/
+def IsZeroReducibleVia {s : ℕ}
+    (M : RKTableau s) (inP1 : Fin s → Bool) : Prop :=
+  (∀ i : Fin s, inP1 i = false → M.b i = 0) ∧
+  (∀ i j : Fin s, inP1 i = true → inP1 j = false → M.A i j = 0)
+
+/-- Butcher §380 Definition 381C — a Runge–Kutta method is
+*0-reducible* if there is a 2-block partition (encoded as a Boolean
+predicate `inP1`) with **non-empty** `P₀` satisfying the two zero
+conditions. The non-emptiness of `P₀` rules out the trivial
+"all-stages-in-`P₁`" partition under which every tableau would
+vacuously satisfy the zero conditions; this strengthening parallels
+the `ŝ < s` side condition on `IsPReducible`. See the file docstring
+for further discussion. -/
+def IsZeroReducible {s : ℕ} (M : RKTableau s) : Prop :=
+  ∃ inP1 : Fin s → Bool,
+    (∃ i, inP1 i = false) ∧ M.IsZeroReducibleVia inP1
+
+/-- Order embedding from `Fin (#P₁)` into `Fin s` whose image is
+exactly `P₁ = {i | inP1 i = true}`. Used to re-index the surviving
+stages after deleting `P₀`. -/
+noncomputable def zeroReducedEmb {s : ℕ} (inP1 : Fin s → Bool) :
+    Fin (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card ↪o
+      Fin s :=
+  (Finset.univ.filter (fun i : Fin s => inP1 i = true)).orderEmbOfFin
+    rfl
+
+/-- The *0-reduced method* obtained by deleting all `P₀`-indexed
+stages (Butcher §380 Definition 381C, second sentence).
+
+The new stage index set is `Fin (#P₁)`, and the canonical order
+embedding `zeroReducedEmb inP1` identifies each new stage with a
+specific old stage in `P₁`. The new `A`, `b`, `c` are the obvious
+restrictions; no `Classical.choose` is needed because the embedding
+makes each new index correspond to a unique old index (contrast with
+`pReduced`'s representative-based `A` and `c`). -/
+noncomputable def zeroReduced {s : ℕ}
+    (M : RKTableau s) (inP1 : Fin s → Bool) :
+    RKTableau (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card
+    where
+  A I J := M.A (zeroReducedEmb inP1 I) (zeroReducedEmb inP1 J)
+  b I := M.b (zeroReducedEmb inP1 I)
+  c I := M.c (zeroReducedEmb inP1 I)
+
+/-- Unfolding lemma for the `A` field of the 0-reduced method. -/
+theorem zeroReduced_A_apply {s : ℕ} (M : RKTableau s)
+    (inP1 : Fin s → Bool)
+    (I J : Fin (Finset.univ.filter
+        (fun i : Fin s => inP1 i = true)).card) :
+    (M.zeroReduced inP1).A I J =
+      M.A (zeroReducedEmb inP1 I) (zeroReducedEmb inP1 J) :=
+  rfl
+
+/-- Unfolding lemma for the `b` field of the 0-reduced method. -/
+theorem zeroReduced_b_apply {s : ℕ} (M : RKTableau s)
+    (inP1 : Fin s → Bool)
+    (I : Fin (Finset.univ.filter
+        (fun i : Fin s => inP1 i = true)).card) :
+    (M.zeroReduced inP1).b I = M.b (zeroReducedEmb inP1 I) :=
+  rfl
+
+/-- Unfolding lemma for the `c` field of the 0-reduced method. -/
+theorem zeroReduced_c_apply {s : ℕ} (M : RKTableau s)
+    (inP1 : Fin s → Bool)
+    (I : Fin (Finset.univ.filter
+        (fun i : Fin s => inP1 i = true)).card) :
+    (M.zeroReduced inP1).c I = M.c (zeroReducedEmb inP1 I) :=
+  rfl
+
+/- ### Definition 381D — P-reducible Runge–Kutta methods -/
 
 /-- The row-sum-constancy condition (Definition 381D, first sentence):
 for all blocks `I, J : Fin ŝ`, the sum `Σ_{j ∈ P_J} a_{ij}` is constant
@@ -241,5 +341,33 @@ example : paddedEuler.IsPReducible :=
   ⟨1, by decide, pairPartition, by
     intro _ _ _ _ _ _
     simp [paddedEuler]⟩
+
+/- ### Non-vacuous witness for 0-reducibility
+
+The 2-stage `paddedEuler` tableau has `b = ![1, 0]` and `A = 0`. The
+partition `inP1 := ![true, false]` (so `P₁ = {0}` and `P₀ = {1}`)
+witnesses 0-reducibility:
+
+* `b 1 = 0` ✔ (the only `P₀`-indexed stage is `1`).
+* `A i j = 0` for `i ∈ P₁, j ∈ P₀` ✔ (vacuously, since `A = 0`).
+* `P₀ ≠ ∅` ✔ (stage `1` lies in `P₀`). -/
+
+/-- `paddedEuler` is 0-reducible-via the partition `![true, false]`
+(i.e. `P₁ = {0}`, `P₀ = {1}`). -/
+example : paddedEuler.IsZeroReducibleVia ![true, false] := by
+  refine ⟨?_, ?_⟩
+  · intro i hi
+    fin_cases i <;> simp_all [paddedEuler]
+  · intro i j hi hj
+    simp [paddedEuler]
+
+/-- Hence `paddedEuler` is 0-reducible. -/
+example : paddedEuler.IsZeroReducible :=
+  ⟨![true, false], ⟨1, by decide⟩, by
+    refine ⟨?_, ?_⟩
+    · intro i hi
+      fin_cases i <;> simp_all [paddedEuler]
+    · intro i j hi hj
+      simp [paddedEuler]⟩
 
 end OpenMath.Chapter3.Section381
