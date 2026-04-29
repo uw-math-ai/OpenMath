@@ -204,3 +204,9 @@ No `sorry` introduced. No `axiom`/`constant` declarations. No
    §212A proof uses it only at step values. If §213B / §214 want to
    weaken this to `∀ t ∈ Icc x₀ xN`, that is a one-line tightening
    of the field; not blocking but worth noting.
+
+## Commit verification
+
+- Commit SHA: `2ce1552dafc2102f151b552a3cf0d89bbc7e51d9`
+- `git rev-parse HEAD == origin/Main/Experiments`: confirmed.
+- Push: `c9819ae..2ce1552  Main/Experiments -> Main/Experiments`.
