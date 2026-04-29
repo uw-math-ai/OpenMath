@@ -186,3 +186,19 @@ file plus the sorry-free leaf companion
 `bSeriesConv_inverseCoeff_cancel_leaf_left` (which only restates
 `bSeriesConv_leaf` at the inverse-arguments) is the agreed minimum.
 Both have been landed.
+
+## Cycle 579 status update
+
+Cycle 579 did not reopen the false left-cancellation target. It added
+right-slot structural identities for the honest §386 convolution:
+
+- `bSeriesConv_add_right`
+- `bSeriesConv_smul_right`
+- `bSeriesConv_zero_left`
+
+These lemmas are compatible with this issue: they describe linearity in
+the second coefficient map and the canonical no-cut contribution when
+the left coefficient is identically zero. They do **not** imply a
+left-inverse law for `QuotEquiv.inverseCoeff`, because the obstruction
+recorded above is in the first coefficient slot, where cut weights are
+products and cross terms/non-invertible leaf behavior remain.

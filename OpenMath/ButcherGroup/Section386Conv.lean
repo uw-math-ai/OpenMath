@@ -1456,4 +1456,161 @@ theorem bSeriesConv_eq_root_plus_nonRoot
     _ = β τ + ((τ.innerCut α).map (cutValueNonRoot τ β)).sum := by
           ring
 
+/-! ### Cycle 579: right-slot linearity and the zero-left sanity check. -/
+
+private theorem sum_filterMap_add_right
+    (β γ : BTree → ℝ) (L : List (Option BTree × ℝ)) :
+    (L.filterMap fun c => c.1.map (fun t => c.2 * (β + γ) t)).sum
+      =
+    (L.filterMap fun c => c.1.map (fun t => c.2 * β t)).sum
+      + (L.filterMap fun c => c.1.map (fun t => c.2 * γ t)).sum := by
+  induction L with
+  | nil =>
+      simp
+  | cons c cs ih =>
+      rcases c with ⟨opt, w⟩
+      cases opt with
+      | none =>
+          simpa using ih
+      | some t =>
+          have ih' :
+              (cs.filterMap fun c =>
+                c.1.map (fun t => c.2 * β t + c.2 * γ t)).sum
+                =
+              (cs.filterMap fun c => c.1.map (fun t => c.2 * β t)).sum
+                + (cs.filterMap fun c => c.1.map (fun t => c.2 * γ t)).sum := by
+            simpa [Pi.add_apply, mul_add] using ih
+          simp [Pi.add_apply, mul_add, ih']
+          ring
+
+private theorem sum_filterMap_smul_right
+    (β : BTree → ℝ) (c : ℝ) (L : List (Option BTree × ℝ)) :
+    (L.filterMap fun d => d.1.map (fun t => d.2 * (c * β t))).sum
+      =
+    c * (L.filterMap fun d => d.1.map (fun t => d.2 * β t)).sum := by
+  induction L with
+  | nil =>
+      simp
+  | cons d ds ih =>
+      rcases d with ⟨opt, w⟩
+      cases opt with
+      | none =>
+          simpa using ih
+      | some t =>
+          simp [ih]
+          ring
+
+theorem bSeriesConv_add_right
+    (α β γ : BTree → ℝ) (τ : BTree) :
+    bSeriesConv α (β + γ) τ
+      = bSeriesConv α β τ + bSeriesConv α γ τ := by
+  simpa [bSeriesConv] using sum_filterMap_add_right β γ (τ.innerCut α)
+
+theorem bSeriesConv_smul_right
+    (α β : BTree → ℝ) (c : ℝ) (τ : BTree) :
+    bSeriesConv α (fun σ => c * β σ) τ
+      = c * bSeriesConv α β τ := by
+  simpa [bSeriesConv] using sum_filterMap_smul_right β c (τ.innerCut α)
+
+private theorem innerCut_zero_canon_or_weight_zero
+    (τ : BTree) :
+    ∀ c ∈ τ.innerCut (fun _ : BTree => (0 : ℝ)),
+      c = ((some τ, (1 : ℝ)) : Option BTree × ℝ) ∨ c.2 = 0 := by
+  induction τ using BTree.rec
+    (motive_2 := fun children =>
+      ∀ cs ∈ BTree.innerCutForest children (fun _ : BTree => (0 : ℝ)),
+        cs = children.map (fun c => ((some c, (1 : ℝ)) : Option BTree × ℝ))
+          ∨ cs.foldr (fun c acc => c.2 * acc) (1 : ℝ) = 0) with
+  | leaf =>
+      intro c hc
+      rw [innerCut_leaf] at hc
+      simp at hc
+      rcases hc with hc | hc
+      · left; exact hc
+      · right
+        rw [hc]
+  | node children IH =>
+      intro c hc
+      rw [innerCut_node] at hc
+      simp only [List.mem_cons] at hc
+      rcases hc with hc | hc
+      · right
+        rw [hc]
+      · rw [List.mem_map] at hc
+        obtain ⟨cs, hcs, heq⟩ := hc
+        rcases IH cs hcs with hcanon | hzero
+        · left
+          rw [← heq, hcanon, canon_filterMap, canon_foldr]
+        · right
+          rw [← heq]
+          simp [hzero]
+  | nil =>
+      rename_i cs hcs
+      rw [BTree.innerCutForest] at hcs
+      simp at hcs
+      subst cs
+      left
+      simp
+  | cons head tail ih_head ih_tail =>
+      rename_i cs hcs
+      rw [BTree.innerCutForest] at hcs
+      rw [List.mem_flatMap] at hcs
+      obtain ⟨c, hc, hin⟩ := hcs
+      rw [List.mem_map] at hin
+      obtain ⟨tail_cs, htail_cs, heq⟩ := hin
+      rw [← heq]
+      rcases ih_head c hc with h_head_canon | h_head_zero
+      · rcases ih_tail tail_cs htail_cs with h_tail_canon | h_tail_zero
+        · left
+          rw [h_head_canon, h_tail_canon]
+          simp [List.map_cons]
+        · right
+          rw [h_head_canon]
+          simp [h_tail_zero]
+      · right
+        simp [h_head_zero]
+
+theorem bSeriesConv_zero_left
+    (β : BTree → ℝ) (τ : BTree) :
+    bSeriesConv (fun _ : BTree => (0 : ℝ)) β τ = β τ := by
+  unfold bSeriesConv
+  rw [filterMap_cutValue_sum β]
+  let zero : BTree → ℝ := fun _ => 0
+  let canon : Option BTree × ℝ := (some τ, (1 : ℝ))
+  change
+    ((τ.innerCut zero).map (cutValue β)).sum = β τ
+  have hmap :
+      (τ.innerCut zero).map (cutValue β)
+        =
+      (τ.innerCut zero).map
+        (fun c => if c = canon then β τ else 0) := by
+    apply List.map_congr_left
+    intro c hc
+    have hstruct : c = canon ∨ c.2 = 0 := by
+      simpa [zero, canon] using innerCut_zero_canon_or_weight_zero τ c hc
+    by_cases hcanon : c = canon
+    · subst c
+      simp [cutValue, canon]
+    · rcases hstruct with hcanon' | hzero
+      · exact (hcanon hcanon').elim
+      · rcases c with ⟨opt, w⟩
+        cases opt with
+        | none =>
+            simp [cutValue, canon, hcanon]
+        | some t =>
+            have hw : w = 0 := hzero
+            simp [cutValue, canon, hw]
+  calc
+    ((τ.innerCut zero).map (cutValue β)).sum
+        = ((τ.innerCut zero).map
+            (fun c => if c = canon then β τ else 0)).sum := by
+          rw [hmap]
+    _ = ((τ.innerCut zero).countP (· = canon) : ℝ) * β τ := by
+          rw [list_sum_real_indicator_eq_countP_mul]
+    _ = β τ := by
+          have hcount : (τ.innerCut zero).countP (· = canon) = 1 := by
+            simpa [zero, canon] using innerCut_canon_count zero τ
+          rw [hcount]
+          ring
+
 end ButcherTableau

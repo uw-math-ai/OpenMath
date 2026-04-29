@@ -1231,10 +1231,16 @@ Concrete next steps:
   bridged to `QuotEquiv.npow` via `G1.mk_pow` and the headline
   `G1.bSeriesHomAt_pow` (cycle 574). Cycle 575 landed the §388 unit
   predicates plus the terminating `QuotEquiv.inverseCoeff` recursion on
-  tree order. The next §38 layer is the Möbius inversion identity for
-  these coefficients on the unit-stage subgroup of `G1 p`; after that,
-  the `Group (G1 p)` instance and the §389 effective-order interpretation.
-  `G1.npow`-style stage-count arithmetic is closed.
+  tree order. Cycle 578 closed out the attempted left-cancellation via
+  `inverseCoeff` as false (see
+  `.prover-state/issues/butcher_section388_left_cancellation.md`). Cycle
+  579 added `bSeriesConv_add_right`, `bSeriesConv_smul_right`, and
+  `bSeriesConv_zero_left`, giving right-slot bilinearity and the zero-left
+  sanity check for the §386 convolution. The next §38 layer is a
+  tableau-level antipode or other genuine inverse construction for the
+  unit-stage subgroup of `G1 p`; after that, the `Group (G1 p)` instance
+  and the §389 effective-order interpretation. `G1.npow`-style
+  stage-count arithmetic is closed.
 
 Expected sorry-first surface:
 - `def ButcherProduct : ButcherTableau s → ButcherTableau t → ButcherTableau (s + t)`
