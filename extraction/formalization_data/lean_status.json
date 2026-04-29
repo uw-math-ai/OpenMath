@@ -135,9 +135,9 @@
     "status": "unformalized"
   },
   "def:310A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section310.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section310.elementaryDiff",
+    "status": "formalized"
   },
   "lem:310B": {
     "lean_file": null,
