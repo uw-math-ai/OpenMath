@@ -479,4 +479,216 @@ theorem localTruncationError_linear {k : ℕ}
   rw [hβ']
   ring
 
+/-! ## §406 — Convergence condition sufficiency bound (lem:406B)
+
+Butcher §406, p. 346. Quoting `entities/lem_406B.json`:
+
+> If `y` is the exact solution to the standard initial value problem
+> and `x ∈ [x₀ + kh, x̄]`, then
+>   `|L(y, x, h)| ≤ (½ ∑_{i=1}^k i² |α_i| + ∑_{i=1}^k i |i α_i − β_i|) L M h²`.
+
+**Textbook discrepancy** (cycle 040): the textbook proof claims the
+decomposition
+
+  `L = ∑ α_i (y(x) − y(x−ih) − ih y'(x)) + h ∑ (iα_i − β_i)(y'(x) − y'(x−ih))`,
+
+which would give `∑ i|iα_i − β_i|` in the bound. Direct algebraic
+verification shows this decomposition is wrong (it disagrees with
+def:406A on explicit Euler). The algebraically correct form uses
+`β_i` instead of `iα_i − β_i`:
+
+  `L = ∑ α_i (y(x) − y(x−ih) − ih y'(x)) + h ∑ β_i (y'(x) − y'(x−ih))`,
+
+producing the bound `∑ i|β_i|`. We encode the corrected statement.
+See `.prover-state/issues/lem_406B_textbook_check.md` for the full
+derivation.
+
+The proof decomposes into integration sub-lemmas (FTC, Lipschitz
+bookkeeping) that are written sorry-first in this cycle and closed
+incrementally over later cycles. -/
+
+/-- Sub-lemma A: pointwise bound on `|y(x + h*ξ) − y x|` for ξ ≤ 0
+under the IVP hypotheses `y' = f∘y` and `‖f∘y‖ ≤ M_bound`.
+
+Proof sketch (deferred): write
+`y(x + hξ) − y(x) = ∫_x^{x+hξ} y'(t) dt = ∫_x^{x+hξ} f(y(t)) dt`,
+then bound by `M_bound` times the length `h·|ξ|`. -/
+lemma exact_solution_norm_bound
+    {f : ℝ → ℝ} {M_bound : ℝ} (hM : 0 ≤ M_bound)
+    {y : ℝ → ℝ}
+    (hy_diff : Differentiable ℝ y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h)
+    (ξ : ℝ) (hξ : ξ ≤ 0) :
+    |y (x + h * ξ) - y x| ≤ h * (-ξ) * M_bound := by
+  sorry
+
+/-- Sub-lemma B: integral form for the residual
+`y(x) − y(x − i*h) − i*h*y'(x)`.
+
+Proof sketch (deferred): apply FTC to write
+`y(x) − y(x − i*h) = ∫_{x−i*h}^x y'(t) dt`, change variables
+`t = x + h*ξ` to get an integral over `(−i, 0)`, and subtract
+`i*h*y'(x)`. -/
+lemma residual_integral_form
+    {f : ℝ → ℝ} {y : ℝ → ℝ}
+    (hy_diff : Differentiable ℝ y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
+    y x - y (x - (i : ℝ) * h) - ((i : ℝ) * h) * deriv y x
+      = h * ∫ ξ in (-(i : ℝ))..0, (f (y (x + h*ξ)) - f (y x)) := by
+  sorry
+
+/-- Sub-lemma C: bound on `|y(x) − y(x − i*h) − i*h*y'(x)|`.
+
+Combines sub-lemmas A and B with the Lipschitz hypothesis on `f`:
+
+  `|y(x) − y(x − i*h) − i*h*y'(x)| ≤ (1/2) i² h² L M`. -/
+lemma residual_bound
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_diff : Differentiable ℝ y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
+    |y x - y (x - (i : ℝ) * h) - ((i : ℝ) * h) * deriv y x|
+      ≤ (1/2) * (i : ℝ)^2 * h^2 * L * M_bound := by
+  sorry
+
+/-- Sub-lemma D: Lipschitz bound on the difference
+`|y'(x) − y'(x − i*h)|`.
+
+Since `y'(t) = f(y(t))` and `f` is Lipschitz, this becomes
+`|f(y(x)) − f(y(x − i*h))| ≤ L · |y(x) − y(x − i*h)| ≤ L · (i*h*M)`. -/
+lemma deriv_diff_bound
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_diff : Differentiable ℝ y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
+    |deriv y x - deriv y (x - (i : ℝ) * h)|
+      ≤ (i : ℝ) * h * L * M_bound := by
+  sorry
+
+/-- Sub-lemma E: algebraic decomposition of the local truncation error
+under consistency.
+
+This is the **algebraically corrected** form (see the `§406` block
+header for the textbook discrepancy and the issue file
+`.prover-state/issues/lem_406B_textbook_check.md`):
+
+  `L(y,x,h) = ∑ α_i (y(x) − y(x−ih) − ih y'(x))
+              + h ∑ β_i (y'(x) − y'(x−ih))`. -/
+lemma LinearMultistepMethod.localTruncationError_decomposition {k : ℕ}
+    (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    (y : ℝ → ℝ) (x h : ℝ) :
+    M.localTruncationError y x h
+      = (∑ i : Fin k, M.α i.succ
+          * (y x - y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+             - ((i.val + 1 : ℕ) : ℝ) * h * deriv y x))
+        + h * ∑ i : Fin k, M.β i.succ
+              * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)) := by
+  obtain ⟨hpre, h404b⟩ := hcons
+  -- Cast bridge: SatisfiesEq404b uses `((i : ℕ) + 1 : ℝ)`, our expanded
+  -- α-sum produces `(((i.val + 1 : ℕ) : ℝ))`. (Per MEMORY.md.)
+  have h404b' : (∑ i : Fin k, (((i.val + 1 : ℕ) : ℝ)) * M.α i.succ)
+      = ∑ i : Fin (k + 1), M.β i := by
+    unfold LinearMultistepMethod.SatisfiesEq404b at h404b
+    convert h404b using 1
+    apply Finset.sum_congr rfl
+    intro i _
+    push_cast
+    ring
+  -- Step 1: peel `i = 0` off the LHS β-sum (over `Fin (k+1)`).
+  have hLHS :
+      M.localTruncationError y x h
+        = y x - (∑ i : Fin k, M.α i.succ * y (x - ((i.val + 1 : ℕ) : ℝ) * h))
+          - h * M.β 0 * deriv y x
+          - h * (∑ i : Fin k, M.β i.succ
+                  * deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)) := by
+    unfold LinearMultistepMethod.localTruncationError
+    rw [Fin.sum_univ_succ
+        (f := fun i : Fin (k + 1) => M.β i * deriv y (x - ((i.val : ℕ) : ℝ) * h))]
+    simp only [Fin.val_zero, Nat.cast_zero, zero_mul, sub_zero, Fin.val_succ]
+    ring
+  -- Step 2: distribute the α-sum on the RHS, then collapse with preconsistency.
+  have hα_dist :
+      (∑ i : Fin k, M.α i.succ
+          * (y x - y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+             - ((i.val + 1 : ℕ) : ℝ) * h * deriv y x))
+        = y x - (∑ i : Fin k, M.α i.succ * y (x - ((i.val + 1 : ℕ) : ℝ) * h))
+          - h * deriv y x
+              * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ) := by
+    have heach : ∀ i : Fin k,
+        M.α i.succ
+          * (y x - y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+             - ((i.val + 1 : ℕ) : ℝ) * h * deriv y x)
+        = M.α i.succ * y x
+          - M.α i.succ * y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+          - h * deriv y x * (((i.val + 1 : ℕ) : ℝ) * M.α i.succ) :=
+      fun i => by ring
+    rw [Finset.sum_congr rfl (fun i _ => heach i)]
+    rw [Finset.sum_sub_distrib, Finset.sum_sub_distrib]
+    rw [show (∑ i : Fin k, M.α i.succ * y x)
+            = (∑ i : Fin k, M.α i.succ) * y x from by rw [← Finset.sum_mul]]
+    rw [show (∑ i : Fin k, h * deriv y x * (((i.val + 1 : ℕ) : ℝ) * M.α i.succ))
+            = h * deriv y x
+                * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ) from by
+        rw [← Finset.mul_sum]]
+    rw [← hpre]
+    ring
+  -- Step 3: distribute the β-sum on the RHS.
+  have hβ_dist :
+      (∑ i : Fin k, M.β i.succ
+          * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)))
+        = (∑ i : Fin k, M.β i.succ) * deriv y x
+          - (∑ i : Fin k, M.β i.succ
+                  * deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)) := by
+    have heach : ∀ i : Fin k,
+        M.β i.succ
+          * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h))
+        = M.β i.succ * deriv y x
+          - M.β i.succ * deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h) :=
+      fun i => by ring
+    rw [Finset.sum_congr rfl (fun i _ => heach i)]
+    rw [Finset.sum_sub_distrib]
+    rw [show (∑ i : Fin k, M.β i.succ * deriv y x)
+            = (∑ i : Fin k, M.β i.succ) * deriv y x from by rw [← Finset.sum_mul]]
+  -- Step 4: combine, substitute (404b), peel `M.β 0` off the (k+1)-sum, ring.
+  rw [hLHS, hα_dist, hβ_dist, h404b']
+  rw [Fin.sum_univ_succ (f := M.β)]
+  ring
+
+/-- Butcher Lemma 406B (corrected, p. 346): for a consistent linear
+multistep method, the local truncation error of the exact solution
+of an IVP `y' = f∘y` with `f` Lipschitz (constant `L`) and `‖f∘y‖`
+bounded by `M_bound` satisfies
+
+  `|L(y, x, h)| ≤ (½ ∑ (i+1)² |α_{i+1}| + ∑ (i+1) |β_{i+1}|) · L · M_bound · h²`.
+
+The bound differs from Butcher's stated form (`∑ i |i α_i − β_i|`)
+because the textbook decomposition has a typo; see the §406 block
+header and `.prover-state/issues/lem_406B_textbook_check.md`. -/
+theorem LinearMultistepMethod.localTruncationError_bound {k : ℕ}
+    (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_diff : Differentiable ℝ y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |M.localTruncationError y x h|
+      ≤ ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * L * M_bound * h^2 := by
+  sorry
+
 end OpenMath.Chapter4.Section404

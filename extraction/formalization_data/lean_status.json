@@ -327,9 +327,9 @@
     "status": "unformalized"
   },
   "lem:406B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section404.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.localTruncationError_bound",
+    "status": "in_progress"
   },
   "lem:441A": {
     "lean_file": null,
