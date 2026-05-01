@@ -86,15 +86,28 @@ list position of children) into one term, off by a position-dependent
 factor. The cycle 590 manual expansion shows position order is
 load-bearing.
 
-**What is true**: the correct closed form needs a **disjoint pair**
+**What was tried and failed**: the **disjoint pair**
 `(S₁, S₂) : Finset (Fin n) × Finset (Fin n)` parametrization plus a
-positional `trunkChildren` combinator that walks `Fin n` in order. The
-cycle 590 issue file
-`.prover-state/issues/butcher_section386_aug_replicate_singleton_leaf.md`
-describes the correct shape.
+positional `trunkChildren` combinator that walks `Fin n` in order. Cycle
+592 attempted this shape and was reverted (sorry count went 0 → 1 with
+no proof landing). Cycle 595 re-introduced the disjoint-pair combinator
+(`threeChoice`) as scaffolding and was flagged off-strategy.
 
-**Do not** restate the parametric replicate-subtree closed form using a
-single `Finset (Fin n)` powerset.
+**What is actually the path forward**: the **cons-decomposition** for
+`bSeriesConvAug` at a `c :: cs` node head — `bSeriesConvAug_node_cons`
+(landed cycle 594, recovered as commit 4507aadbc1). Once the cons-split
+is solid, the unital associativity headline drops out of one mutual
+`BTree.rec`. See strategy.md "Why this seam" for the architecture.
+
+**Do not**:
+- Restate the parametric replicate-subtree closed form using a single
+  `Finset (Fin n)` powerset (the original cycle 587 form).
+- Re-introduce the disjoint-pair `Finset (Fin n) × Finset (Fin n)`
+  parametrization or any supporting combinator (`threeChoice`,
+  `trunkChildren`, etc.) for the `replicate n (node [leaf])` shape.
+  Cycle 592 already failed at this and cycle 595 re-attempted the
+  scaffolding off-strategy. The disjoint-pair path stays closed until
+  the cons-decomposition gives a generic seam.
 
 ---
 
