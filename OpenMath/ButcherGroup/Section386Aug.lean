@@ -1274,9 +1274,7 @@ private theorem forestSum_cons_node_singleton_depth_one
   rcases (order_le_one_iff d).mp hd with rfl | rfl
   · rw [innerCut_node_singleton_leaf]
     simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
-      Option.isSome, Bool.true_eq_false, ↓reduceIte, List.map_append,
-      List.sum_append, List.map_map, Function.comp_def, List.filterMap_cons,
-      Option.map_some, List.foldr_cons, one_mul, AugSeries.shiftBy_node]
+      List.sum_append, one_mul, AugSeries.shiftBy_node]
     have hscale :
         (List.map
             (fun forest =>
@@ -1306,8 +1304,7 @@ private theorem forestSum_cons_node_singleton_depth_one
       List.map_nil, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
       List.append_nil,
       List.filterMap_cons, List.filterMap_nil, List.foldr_cons,
-      List.foldr_nil, mul_one, one_mul, Option.map_none, Option.map_some,
-      List.map_append, List.sum_append, List.map_map, Function.comp_def,
+      List.foldr_nil, mul_one, one_mul, List.map_append, List.sum_append,
       AugSeries.shiftBy_node]
     have hscale :
         (List.map
