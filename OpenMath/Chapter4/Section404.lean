@@ -586,7 +586,61 @@ lemma residual_integral_form
     (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
     y x - y (x - (i : ℝ) * h) - ((i : ℝ) * h) * deriv y x
       = h * ∫ ξ in (-(i : ℝ))..0, (f (y (x + h*ξ)) - f (y x)) := by
-  sorry
+  -- Setup: f∘y is continuous (it equals deriv y).
+  have hfy_cont : Continuous (fun t => f (y t)) := by
+    have heq : (fun t => f (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact hy_C1.continuous_deriv le_rfl
+  -- HasDerivAt y (f (y t)) t pointwise.
+  have hderiv : ∀ t, HasDerivAt y (f (y t)) t := by
+    intro t
+    have hdiff := (hy_C1.differentiable (by norm_num : (1 : WithTop ℕ∞) ≠ 0)) t
+    have ht := hdiff.hasDerivAt
+    rw [hy_ode t] at ht
+    exact ht
+  -- Integrability of f∘y on any interval.
+  have hfy_int : ∀ a b : ℝ,
+      IntervalIntegrable (fun t => f (y t)) MeasureTheory.volume a b :=
+    fun a b => hfy_cont.intervalIntegrable a b
+  -- Continuity of ξ ↦ f(y(x + h*ξ)) and integrability on (-i, 0).
+  have hfyhx_cont : Continuous (fun ξ : ℝ => f (y (x + h * ξ))) := by
+    have hlin : Continuous (fun ξ : ℝ => x + h * ξ) := by fun_prop
+    exact hfy_cont.comp hlin
+  have hfyhx_int : IntervalIntegrable (fun ξ : ℝ => f (y (x + h * ξ)))
+                     MeasureTheory.volume (-(i : ℝ)) 0 :=
+    hfyhx_cont.intervalIntegrable _ _
+  have hfyx_int : IntervalIntegrable (fun _ : ℝ => f (y x))
+                     MeasureTheory.volume (-(i : ℝ)) 0 :=
+    continuous_const.intervalIntegrable _ _
+  -- Step A: FTC on [(x - i*h), x].
+  have hFTC : ∫ t in (x - (i : ℝ) * h)..x, f (y t)
+                = y x - y (x - (i : ℝ) * h) :=
+    intervalIntegral.integral_eq_sub_of_hasDerivAt
+      (fun t _ => hderiv t) (hfy_int _ _)
+  -- Step B: change of variables t = h*ξ + x via smul_integral_comp_mul_add.
+  have hCV : h * ∫ ξ in (-(i : ℝ))..0, f (y (x + h * ξ))
+              = ∫ t in (x - (i : ℝ) * h)..x, f (y t) := by
+    have hCV0 := intervalIntegral.smul_integral_comp_mul_add
+                    (fun t => f (y t)) (a := -(i : ℝ)) (b := 0)
+                    h x
+    -- hCV0 : h • ∫ ξ in (-(i:ℝ))..0, f(y(h*ξ + x))
+    --        = ∫ t in (h*(-(i:ℝ)) + x)..(h*0 + x), f(y t)
+    have heq_l : h * (-(i : ℝ)) + x = x - (i : ℝ) * h := by ring
+    have heq_r : h * (0 : ℝ) + x = x := by ring
+    have hbody : (fun ξ : ℝ => f (y (h * ξ + x)))
+                  = (fun ξ : ℝ => f (y (x + h * ξ))) := by
+      funext ξ; rw [add_comm (h * ξ) x]
+    rw [smul_eq_mul, hbody, heq_l, heq_r] at hCV0
+    exact hCV0
+  -- Step C: constant integral ∫ _ in (-i)..0, f(y x) = i * f(y x).
+  have hConst : ∫ _ in (-(i : ℝ))..(0 : ℝ), f (y x) = (i : ℝ) * f (y x) := by
+    rw [intervalIntegral.integral_const, smul_eq_mul]
+    ring
+  -- Step D: assemble.
+  rw [intervalIntegral.integral_sub hfyhx_int hfyx_int]
+  rw [hConst, mul_sub, hCV, hFTC, hy_ode x]
+  ring
 
 /-- Sub-lemma C: bound on `|y(x) − y(x − i*h) − i*h*y'(x)|`.
 
@@ -604,7 +658,87 @@ lemma residual_bound
     (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
     |y x - y (x - (i : ℝ) * h) - ((i : ℝ) * h) * deriv y x|
       ≤ (1/2) * (i : ℝ)^2 * h^2 * L * M_bound := by
-  sorry
+  -- Step 1: rewrite LHS via sub-lemma B (residual_integral_form).
+  rw [residual_integral_form hy_C1 hy_ode i x h hh]
+  -- Goal: |h * ∫ ξ in (-i)..0, (f(y(x+hξ)) - f(y x))|
+  --        ≤ (1/2) * i^2 * h^2 * L * M_bound
+  -- Step 2: |h * X| = h * |X| since h ≥ 0.
+  rw [abs_mul, abs_of_nonneg hh]
+  -- Continuity helpers (mirroring sub-lemma B / A setup).
+  have hfy_cont : Continuous (fun t => f (y t)) := by
+    have heq : (fun t => f (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact hy_C1.continuous_deriv le_rfl
+  have hyhx_cont : Continuous (fun ξ : ℝ => y (x + h * ξ)) := by
+    have hlin : Continuous (fun ξ : ℝ => x + h * ξ) := by fun_prop
+    exact hy_C1.continuous.comp hlin
+  have hfyhx_cont : Continuous (fun ξ : ℝ => f (y (x + h * ξ))) := by
+    have hlin : Continuous (fun ξ : ℝ => x + h * ξ) := by fun_prop
+    exact hfy_cont.comp hlin
+  have hi_le : -(i : ℝ) ≤ 0 := neg_nonpos_of_nonneg (Nat.cast_nonneg i)
+  -- Integrability obligations.
+  have hint_abs_diff :
+      IntervalIntegrable (fun ξ => |f (y (x + h * ξ)) - f (y x)|)
+        MeasureTheory.volume (-(i : ℝ)) 0 :=
+    ((hfyhx_cont.sub continuous_const).abs).intervalIntegrable _ _
+  have hint_L_diff :
+      IntervalIntegrable (fun ξ => L * |y (x + h * ξ) - y x|)
+        MeasureTheory.volume (-(i : ℝ)) 0 :=
+    (continuous_const.mul ((hyhx_cont.sub continuous_const).abs)).intervalIntegrable _ _
+  have hint_A :
+      IntervalIntegrable (fun ξ : ℝ => L * (h * (-ξ) * M_bound))
+        MeasureTheory.volume (-(i : ℝ)) 0 := by
+    have hcont : Continuous (fun ξ : ℝ => L * (h * (-ξ) * M_bound)) := by fun_prop
+    exact hcont.intervalIntegrable _ _
+  -- Step 3: |∫| ≤ ∫|·|.
+  have h_abs_int :
+      |∫ ξ in (-(i : ℝ))..0, (f (y (x + h * ξ)) - f (y x))|
+        ≤ ∫ ξ in (-(i : ℝ))..0, |f (y (x + h * ξ)) - f (y x)| :=
+    intervalIntegral.abs_integral_le_integral_abs hi_le
+  -- Step 4: pointwise Lipschitz bound.
+  have hLip_pw : ∀ ξ : ℝ,
+      |f (y (x + h * ξ)) - f (y x)| ≤ L * |y (x + h * ξ) - y x| := by
+    intro ξ
+    have hd := hf_lip.dist_le_mul (y (x + h * ξ)) (y x)
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    have hco : ((Real.toNNReal L : ℝ≥0) : ℝ) = L := Real.coe_toNNReal L hL
+    rw [hco] at hd
+    exact hd
+  have h_int_lip :
+      ∫ ξ in (-(i : ℝ))..0, |f (y (x + h * ξ)) - f (y x)|
+        ≤ ∫ ξ in (-(i : ℝ))..0, L * |y (x + h * ξ) - y x| :=
+    intervalIntegral.integral_mono_on hi_le hint_abs_diff hint_L_diff
+      (fun ξ _ => hLip_pw ξ)
+  -- Step 5: pointwise sub-lemma A bound for ξ ∈ [-i, 0].
+  have h_int_A :
+      ∫ ξ in (-(i : ℝ))..0, L * |y (x + h * ξ) - y x|
+        ≤ ∫ ξ in (-(i : ℝ))..0, L * (h * (-ξ) * M_bound) := by
+    apply intervalIntegral.integral_mono_on hi_le hint_L_diff hint_A
+    intro ξ hξ
+    have hξ_le : ξ ≤ 0 := hξ.2
+    exact mul_le_mul_of_nonneg_left
+      (exact_solution_norm_bound hM hy_C1 hy_ode hf_y_bound x h hh ξ hξ_le) hL
+  -- Step 6: compute ∫ ξ in (-i)..0, L * (h * (-ξ) * M_bound) = L * h * M_bound * (i^2 / 2).
+  have h_int_eq :
+      ∫ ξ in (-(i : ℝ))..0, L * (h * (-ξ) * M_bound)
+        = L * h * M_bound * ((i : ℝ)^2 / 2) := by
+    have heq : (fun ξ : ℝ => L * (h * (-ξ) * M_bound))
+                 = (fun ξ : ℝ => (L * h * M_bound) * (-ξ)) := by
+      funext ξ; ring
+    rw [heq, intervalIntegral.integral_const_mul,
+        intervalIntegral.integral_neg, integral_id]
+    ring
+  -- Step 7: assemble.
+  calc h * |∫ ξ in (-(i : ℝ))..0, (f (y (x + h * ξ)) - f (y x))|
+      ≤ h * ∫ ξ in (-(i : ℝ))..0, |f (y (x + h * ξ)) - f (y x)| :=
+        mul_le_mul_of_nonneg_left h_abs_int hh
+    _ ≤ h * ∫ ξ in (-(i : ℝ))..0, L * |y (x + h * ξ) - y x| :=
+        mul_le_mul_of_nonneg_left h_int_lip hh
+    _ ≤ h * ∫ ξ in (-(i : ℝ))..0, L * (h * (-ξ) * M_bound) :=
+        mul_le_mul_of_nonneg_left h_int_A hh
+    _ = h * (L * h * M_bound * ((i : ℝ)^2 / 2)) := by rw [h_int_eq]
+    _ = (1/2) * (i : ℝ)^2 * h^2 * L * M_bound := by ring
 
 /-- Sub-lemma D: Lipschitz bound on the difference
 `|y'(x) − y'(x − i*h)|`.
