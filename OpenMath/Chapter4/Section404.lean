@@ -2182,6 +2182,49 @@ private lemma c_h_h_squared_tendsto_zero
   have hmul := hc.mul hh2
   simpa using hmul
 
+/-- **Generic `f · h^2 → 0` (cycle 057, Aristotle batch).**
+If `f h → c` (any finite `c`) as `h → 0`, then `(fun h => f h * h^2) → 0`. -/
+private lemma tendsto_id_squared_zero
+    (f : ℝ → ℝ) (c : ℝ)
+    (hf : Filter.Tendsto f (nhds 0) (nhds c)) :
+    Filter.Tendsto (fun h : ℝ => f h * h ^ 2) (nhds 0) (nhds 0) := by
+  simpa using hf.mul (Filter.tendsto_id.pow 2)
+
+/-- **Generic `f · h → 0` (cycle 057, Aristotle batch).**
+If `f h → c` as `h → 0`, then `(fun h => f h * h) → 0`. -/
+private lemma tendsto_const_mul_h_zero
+    (f : ℝ → ℝ) (c : ℝ)
+    (hf : Filter.Tendsto f (nhds 0) (nhds c)) :
+    Filter.Tendsto (fun h : ℝ => f h * h) (nhds 0) (nhds 0) := by
+  simpa using hf.mul Filter.tendsto_id
+
+/-- **`Real.exp` Tendsto lift (cycle 057, Aristotle batch).**
+If `Tendsto g (nhds 0) (nhds c)`, then
+`Tendsto (Real.exp ∘ g) (nhds 0) (nhds (Real.exp c))`. -/
+private lemma tendsto_real_exp_lift
+    {g : ℝ → ℝ} {c : ℝ}
+    (hg : Filter.Tendsto g (nhds 0) (nhds c)) :
+    Filter.Tendsto (fun h : ℝ => Real.exp (g h)) (nhds 0)
+      (nhds (Real.exp c)) :=
+  (Real.continuous_exp.tendsto c).comp hg
+
+/-- **`exp(p h) − 1 → 0` when `p → 0` (cycle 057, Aristotle batch).** -/
+private lemma tendsto_exp_sub_one_at_zero_aux
+    {p : ℝ → ℝ} (hp : Filter.Tendsto p (nhds 0) (nhds 0)) :
+    Filter.Tendsto (fun h : ℝ => Real.exp (p h) - 1) (nhds 0) (nhds 0) := by
+  simpa using
+    Filter.Tendsto.sub_const
+      (Filter.Tendsto.comp (Real.continuous_exp.tendsto _) hp) 1
+
+/-- **`f / g → 0` when `f → 0`, `g → c > 0` (cycle 057, Aristotle batch).** -/
+private lemma tendsto_div_at_pos
+    {f g : ℝ → ℝ} {c : ℝ}
+    (hf : Filter.Tendsto f (nhds 0) (nhds 0))
+    (hg : Filter.Tendsto g (nhds 0) (nhds c))
+    (hc : 0 < c) :
+    Filter.Tendsto (fun h : ℝ => f h / g h) (nhds 0) (nhds 0) := by
+  simpa using hf.div hg hc.ne'
+
 open OpenMath.Chapter1.Section141 in
 /-- **`a_m → 0` as `h → 0` (cycle 057, toward `thm:406D`).**
 
@@ -2227,6 +2270,210 @@ private lemma a_m_tendsto_zero
   -- Combine: bracket · tail → (Θ + 1) · 0 = 0
   have hfinal := h5.mul htail
   simpa using hfinal
+
+/-- **`(x − x₀)/m → 0` as `m → ∞` (cycle 058).**
+
+The squeeze in `stable_consistent_isConvergent` substitutes
+`h_m := (x − x₀)/m`. As `m → ∞` (over `ℕ`, cast to `ℝ`), this
+tends to `0`. Pure Mathlib one-liner via
+`tendsto_const_div_atTop_nhds_zero_nat`. -/
+private lemma tendsto_step_size_atTop (x₀ x : ℝ) :
+    Filter.Tendsto (fun m : ℕ => (x - x₀) / (m : ℝ))
+      Filter.atTop (nhds 0) :=
+  tendsto_const_div_atTop_nhds_zero_nat (x - x₀)
+
+/-- **Composition bridge: `nhds 0` Tendsto → `atTop` Tendsto via
+`h_m := (x − x₀)/m` (cycle 058).**
+
+If `F` has limit `c` as `h → 0`, and `h_m := (x − x₀)/m`, then
+`F ∘ h_m` has limit `c` as `m → ∞`. Just `Tendsto.comp` of `F` with
+`tendsto_step_size_atTop`. The squeeze in §406D outer assembly will
+use this to lift the cycle 056/057 `nhds 0`-Tendsto helpers to the
+`atTop`-Tendsto shape `IsConvergent` requires. -/
+private lemma tendsto_step_size_comp
+    {F : ℝ → ℝ} {c : ℝ}
+    (hF : Filter.Tendsto F (nhds 0) (nhds c))
+    (x₀ x : ℝ) :
+    Filter.Tendsto (fun m : ℕ => F ((x - x₀) / (m : ℝ)))
+      Filter.atTop (nhds c) :=
+  hF.comp (tendsto_step_size_atTop x₀ x)
+
+/-- **`a`-term outer squeeze (cycle 059, toward `thm:406D`).**
+
+The first half of the closed-form bound's RHS is
+`exp(b(h_m) · k · m · h_m) · a(h_m)` where `h_m := (x − x₀)/m`.
+Since `m · h_m = x − x₀` (constant in `m`, by `m_h_constancy`), the
+exponent stabilises to `b(h_m) · k · (x − x₀)`, which tends to a
+finite limit `bInf · k · (x − x₀)`. Combined with `a(h_m) → 0` this
+gives `exp(…) · 0 = 0`.
+
+Generic in `a, b` — does **not** consume any LMM-specific data. -/
+private lemma globalError_outer_squeeze_a_term
+    {a b : ℝ → ℝ} {bInf : ℝ}
+    (ha : Filter.Tendsto a (nhds 0) (nhds 0))
+    (hb : Filter.Tendsto b (nhds 0) (nhds bInf))
+    (k : ℕ) (x₀ x : ℝ) :
+    Filter.Tendsto
+      (fun m : ℕ =>
+        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
+                    * ((x - x₀) / (m : ℝ)))
+          * a ((x - x₀) / (m : ℝ)))
+      Filter.atTop (nhds 0) := by
+  -- Step A: for m ≥ 1, m · h_m = x − x₀ (m_h_constancy).
+  have heventually_eq :
+      (fun m : ℕ =>
+        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
+                    * ((x - x₀) / (m : ℝ)))
+          * a ((x - x₀) / (m : ℝ)))
+      =ᶠ[Filter.atTop]
+      (fun m : ℕ =>
+        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
+          * a ((x - x₀) / (m : ℝ))) := by
+    refine Filter.eventually_atTop.mpr ⟨1, ?_⟩
+    intro m hm
+    dsimp only
+    have hm_pos : 0 < m := hm
+    have hm_h : (m : ℝ) * ((x - x₀) / (m : ℝ)) = x - x₀ :=
+      m_h_constancy hm_pos x x₀
+    have h_assoc :
+        b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
+          * ((x - x₀) / (m : ℝ))
+        = b ((x - x₀) / (m : ℝ)) * (k : ℝ)
+          * ((m : ℝ) * ((x - x₀) / (m : ℝ))) := by ring
+    rw [h_assoc, hm_h]
+  -- Step B: the simplified function is the product of two atTop Tendstos.
+  have ha_atTop :
+      Filter.Tendsto (fun m : ℕ => a ((x - x₀) / (m : ℝ)))
+        Filter.atTop (nhds 0) := tendsto_step_size_comp ha x₀ x
+  have hb_atTop :
+      Filter.Tendsto (fun m : ℕ => b ((x - x₀) / (m : ℝ)))
+        Filter.atTop (nhds bInf) := tendsto_step_size_comp hb x₀ x
+  have hbk_atTop :
+      Filter.Tendsto
+        (fun m : ℕ => b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
+        Filter.atTop (nhds (bInf * (k : ℝ) * (x - x₀))) :=
+    (hb_atTop.mul_const ((k : ℝ))).mul_const (x - x₀)
+  have hexp_atTop :
+      Filter.Tendsto
+        (fun m : ℕ =>
+          Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)))
+        Filter.atTop
+        (nhds (Real.exp (bInf * (k : ℝ) * (x - x₀)))) :=
+    (Real.continuous_exp.tendsto _).comp hbk_atTop
+  have hprod : Filter.Tendsto
+      (fun m : ℕ =>
+        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
+          * a ((x - x₀) / (m : ℝ)))
+      Filter.atTop (nhds 0) := by
+    have hmul := hexp_atTop.mul ha_atTop
+    simpa using hmul
+  exact Filter.Tendsto.congr' heventually_eq.symm hprod
+
+/-- **`c`-term outer squeeze (cycle 059, toward `thm:406D`).**
+
+The second half of the closed-form bound's RHS is
+`(exp(b(h_m) · k · m · h_m) − 1) · c(h_m) · h_m / (b(h_m) · k)`
+where `h_m := (x − x₀)/m`. Since `m · h_m = x − x₀`, the
+`(exp(…) − 1)` factor stabilises to a finite constant, and the
+remaining `c(h_m) · h_m / (b(h_m) · k)` tends to `cInf · 0 / (bInf · k)
+= 0` (with `0 < bInf · k` ensuring the divisor is non-zero in the
+limit).
+
+Generic in `b, c` — does **not** consume any LMM-specific data. -/
+private lemma globalError_outer_squeeze_c_term
+    {b c : ℝ → ℝ} {bInf cInf : ℝ}
+    (hb : Filter.Tendsto b (nhds 0) (nhds bInf))
+    (hc : Filter.Tendsto c (nhds 0) (nhds cInf))
+    (hb_pos : 0 < bInf)
+    {k : ℕ} (hk : 0 < k) (x₀ x : ℝ) :
+    Filter.Tendsto
+      (fun m : ℕ =>
+        (Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
+                    * ((x - x₀) / (m : ℝ))) - 1)
+          * (c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
+              / (b ((x - x₀) / (m : ℝ)) * (k : ℝ))))
+      Filter.atTop (nhds 0) := by
+  -- Step A: eventually rewrite m · h_m → x − x₀ inside the exponent.
+  have heventually_eq :
+      (fun m : ℕ =>
+        (Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
+                    * ((x - x₀) / (m : ℝ))) - 1)
+          * (c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
+              / (b ((x - x₀) / (m : ℝ)) * (k : ℝ))))
+      =ᶠ[Filter.atTop]
+      (fun m : ℕ =>
+        (Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)) - 1)
+          * (c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
+              / (b ((x - x₀) / (m : ℝ)) * (k : ℝ)))) := by
+    refine Filter.eventually_atTop.mpr ⟨1, ?_⟩
+    intro m hm
+    dsimp only
+    have hm_pos : 0 < m := hm
+    have hm_h : (m : ℝ) * ((x - x₀) / (m : ℝ)) = x - x₀ :=
+      m_h_constancy hm_pos x x₀
+    have h_assoc :
+        b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
+          * ((x - x₀) / (m : ℝ))
+        = b ((x - x₀) / (m : ℝ)) * (k : ℝ)
+          * ((m : ℝ) * ((x - x₀) / (m : ℝ))) := by ring
+    rw [h_assoc, hm_h]
+  -- Step B: factor lifts via tendsto_step_size_comp.
+  have hb_atTop :
+      Filter.Tendsto (fun m : ℕ => b ((x - x₀) / (m : ℝ)))
+        Filter.atTop (nhds bInf) := tendsto_step_size_comp hb x₀ x
+  have hc_atTop :
+      Filter.Tendsto (fun m : ℕ => c ((x - x₀) / (m : ℝ)))
+        Filter.atTop (nhds cInf) := tendsto_step_size_comp hc x₀ x
+  have hh_atTop :
+      Filter.Tendsto (fun m : ℕ => (x - x₀) / (m : ℝ))
+        Filter.atTop (nhds 0) := tendsto_step_size_atTop x₀ x
+  -- (exp − 1) factor tends to a finite constant.
+  have hbk_atTop :
+      Filter.Tendsto
+        (fun m : ℕ => b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
+        Filter.atTop (nhds (bInf * (k : ℝ) * (x - x₀))) :=
+    (hb_atTop.mul_const ((k : ℝ))).mul_const (x - x₀)
+  have hexpsub :
+      Filter.Tendsto
+        (fun m : ℕ =>
+          Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)) - 1)
+        Filter.atTop
+        (nhds (Real.exp (bInf * (k : ℝ) * (x - x₀)) - 1)) := by
+    have hexp_at := (Real.continuous_exp.tendsto _).comp hbk_atTop
+    exact hexp_at.sub_const 1
+  -- c(h_m) · h_m → 0.
+  have hch :
+      Filter.Tendsto
+        (fun m : ℕ => c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ)))
+        Filter.atTop (nhds 0) := by
+    have hmul := hc_atTop.mul hh_atTop
+    simpa using hmul
+  -- b(h_m) · k → b∞ · k, with b∞ · k > 0.
+  have hbk_lim :
+      Filter.Tendsto (fun m : ℕ => b ((x - x₀) / (m : ℝ)) * (k : ℝ))
+        Filter.atTop (nhds (bInf * (k : ℝ))) := hb_atTop.mul_const _
+  have hk_pos_real : (0 : ℝ) < (k : ℝ) := by exact_mod_cast hk
+  have hbk_pos : 0 < bInf * (k : ℝ) := mul_pos hb_pos hk_pos_real
+  -- (c · h) / (b · k) → 0.
+  have hquot :
+      Filter.Tendsto
+        (fun m : ℕ =>
+          c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
+            / (b ((x - x₀) / (m : ℝ)) * (k : ℝ)))
+        Filter.atTop (nhds 0) := by
+    have hdiv := hch.div hbk_lim hbk_pos.ne'
+    simpa using hdiv
+  -- Combine: (exp − 1) · (c · h / (b · k)) → finite · 0 = 0.
+  have hprod :
+      Filter.Tendsto
+        (fun m : ℕ =>
+          (Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)) - 1)
+            * (c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
+                / (b ((x - x₀) / (m : ℝ)) * (k : ℝ))))
+        Filter.atTop (nhds 0) := by
+    have hmul := hexpsub.mul hquot
+    simpa using hmul
+  exact Filter.Tendsto.congr' heventually_eq.symm hprod
 
 /-- **Index-arithmetic adapter for `thm:406D` (cycle 050).**
 The "recent-window sum" `Σ_{j:Fin k} g(i − (j+1))` summed over
