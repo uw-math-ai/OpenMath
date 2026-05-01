@@ -2150,6 +2150,84 @@ private lemma c_tendsto_at_zero
                 * L * M_bound))) := by
   exact (Dbase_tendsto_at_zero M L M_bound).const_mul (Θ + 1)
 
+/-- **Constancy of `m · ((x − x₀) / m)` for `m > 0` (cycle 057).**
+
+Pure algebra. When the squeeze substitutes `h := (x − x₀)/m` and
+`n := m` into the closed-form bound, `n · h = m · h_m` collapses
+to the constant `x − x₀`. This is what makes the exponent
+`b · k · n · h` bounded as `m → ∞`. -/
+private lemma m_h_constancy
+    {m : ℕ} (hm : 0 < m) (x x₀ : ℝ) :
+    ((m : ℝ)) * ((x - x₀) / (m : ℝ)) = x - x₀ := by
+  have hm_ne : (m : ℝ) ≠ 0 := by exact_mod_cast hm.ne'
+  field_simp
+
+/-- **`c(h) · h^2 → 0` as `h → 0` (cycle 057).**
+
+Lifts `c_tendsto_at_zero` through `· * h^2`. Since `c(h)` tends to a
+finite limit and `h^2 → 0`, the product tends to 0. Used by §406D
+outer assembly to flatten the `c · h^2` term in the closed-form
+bound. -/
+private lemma c_h_h_squared_tendsto_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L M_bound : ℝ) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        ((Θ + 1) *
+          (((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+              + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+            * L * M_bound / (1 - h * L * |M.β 0|))) * h ^ 2)
+      (nhds 0) (nhds 0) := by
+  have hc := c_tendsto_at_zero M Θ L M_bound
+  have hh2 := tendsto_h_squared_zero
+  have hmul := hc.mul hh2
+  simpa using hmul
+
+open OpenMath.Chapter1.Section141 in
+/-- **`a_m → 0` as `h → 0` (cycle 057, toward `thm:406D`).**
+
+The linear-recurrence form `globalError_recurrence_form` produces
+`a = (Θ + (Θ + 1) · Cbase · h · k + 1) · y'sum`. As `h → 0`:
+* `Cbase` tends to `Cbase∞` (finite),
+* `Cbase · h · k` tends to `0`,
+* `y'sum` tends to `0` by `yPrime_sum_abs_tendsto_zero` (the parametric
+  premise is that the starting method converges, so each
+  `yex(x₀ + j·h) - start h j → 0`).
+
+Therefore `a → (Θ + 0 + 1) · 0 = 0`.
+
+This is a parametric Tendsto fact about the *shape* of `a`; the
+squeeze in a later cycle threads through the existential of
+`globalError_recurrence_form`. No `M.IsStable` / `M.IsConsistent`
+hypotheses creep in. -/
+private lemma a_m_tendsto_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ)
+    {u : ℝ → Fin k → ℝ}
+    (hu : ∀ j : Fin k,
+      Filter.Tendsto (fun h : ℝ => u h j) (nhds 0) (nhds 0)) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        (Θ + (Θ + 1) *
+              (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                    + ∑ i : Fin k, |M.β i.succ|)
+                / (1 - h * L * |M.β 0|))
+            * h * (k : ℝ) + 1)
+        * (∑ i ∈ Finset.range k,
+            |yPrime k (fun j : Fin k => M.α j.succ) (u h) i|))
+      (nhds 0) (nhds 0) := by
+  -- bracket(h) = Θ + (Θ + 1) · Cbase(h) · h · k + 1
+  have hCbase := Cbase_tendsto_at_zero M L
+  have h1 := hCbase.const_mul (Θ + 1)
+  have h2 := h1.mul Filter.tendsto_id
+  have h3 := h2.mul_const ((k : ℝ))
+  have h4 := h3.const_add Θ
+  have h5 := h4.add_const (1 : ℝ)
+  -- tail(h) = Σ |yPrime k α (u h) i| → 0
+  have htail :=
+    yPrime_sum_abs_tendsto_zero (fun j : Fin k => M.α j.succ) hu
+  -- Combine: bracket · tail → (Θ + 1) · 0 = 0
+  have hfinal := h5.mul htail
+  simpa using hfinal
+
 /-- **Index-arithmetic adapter for `thm:406D` (cycle 050).**
 The "recent-window sum" `Σ_{j:Fin k} g(i − (j+1))` summed over
 `i ∈ Ico k n` is bounded by `k` copies of the total sum

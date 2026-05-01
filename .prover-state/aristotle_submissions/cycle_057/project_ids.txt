@@ -1,0 +1,5 @@
+tendsto_id_squared_zero        aa899fc5-97b5-4f46-8efa-65a83154b896
+tendsto_const_mul_h_zero       bc1d3a46-120f-4453-a916-2c4fb9304f50
+tendsto_real_exp_lift          ed2246ea-a3e6-492d-899c-6709a595f6be
+tendsto_exp_sub_one_at_zero_aux e5ad3830-5b38-4878-9f20-e955cc1f4937
+tendsto_div_at_pos             6b913333-f290-442d-80a4-401504681127
