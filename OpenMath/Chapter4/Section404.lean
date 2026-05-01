@@ -1922,6 +1922,69 @@ private lemma recentSum_swap_bound
     omega
   · intro i _ _; exact hg _
 
+/-- **Per-step bound in sum form (helper for thm:406D).**
+Specialise `globalError_recurrence_bound_textbook` (cycle 045) to
+`Mmax := ∑_{j : Fin k} |ε(n-(j+1))|`, the sum of recent errors. The
+bound becomes
+  `|ε_n - Σ α_i.succ ε_{n-(i+1)}|
+      ≤ Cₕ · (∑_{j:Fin k} |ε(n-(j+1))|) + Dₕ · h²`
+where Cₕ and Dₕ are the cycle 045 coefficients. This is the shape
+`sum_theta_psi_contraction` (cycle 048) consumes via
+`Sε(i) := ∑_{j:Fin k} |ε(i-(j+1))|`.
+
+Used by: cycle 052+ outer assembly of `thm:406D`. -/
+private lemma globalError_per_step_sum_form
+    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)
+    (n : ℕ) (hn : k ≤ n) :
+    |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))|
+      ≤ (h * L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                  + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L * |M.β 0|))
+          * (∑ j : Fin k,
+              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (j.val + 1))|)
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L * M_bound * h^2
+            / (1 - h * L * |M.β 0|) := by
+  -- Specialise `Mmax` to the sum of recent errors.
+  set Mmax : ℝ :=
+    ∑ j : Fin k,
+      |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+        - Y (n - (j.val + 1))| with hMmax_def
+  -- Mmax ≥ 0 (sum of absolute values).
+  have hMmax_nn : 0 ≤ Mmax :=
+    Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  -- Each summand is ≤ the full sum.
+  have hMmax_bound :
+      ∀ i : Fin k,
+        |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+          - Y (n - (i.val + 1))| ≤ Mmax := by
+    intro i
+    exact Finset.single_le_sum
+            (f := fun j : Fin k =>
+              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (j.val + 1))|)
+            (fun j _ => abs_nonneg _) (Finset.mem_univ i)
+  -- Forward to cycle 045.
+  exact M.globalError_recurrence_bound_textbook hcons hL hM hf_lip
+          hyex_C1 hyex_ode hf_yex_bound hh hsmall hY n hn
+          Mmax hMmax_nn hMmax_bound
+
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.**
 

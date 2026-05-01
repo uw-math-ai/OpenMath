@@ -1,292 +1,342 @@
-# Cycle 050 Strategy — `thm:406D` shape-matching adapter (`recentSum_swap_bound`)
+# Cycle 051 Strategy — `globalError_per_step_sum_form` (sum-form per-step bound for thm:406D)
 
 ## Status going in
 
-* **One sorry remaining**: `OpenMath/Chapter4/Section404.lean:1898` —
-  the body of `LinearMultistepMethod.stable_consistent_isConvergent`
-  (the `thm:406D` outer assembly scaffold from cycle 047).
-* **Four building blocks already in place** (cycles 045–049):
-  - cycle 045 — `globalError_recurrence_bound_textbook` (line 1331):
-    `|ψ_n| ≤ Cₕ · Mmax + Dₕ · h²` where `Mmax` uniformly bounds
-    `|ε(n-(i+1))|` for `i : Fin k`.
-  - cycle 046 — `discrete_gronwall_exp_bound` (line 1631): closed form
-    `u n ≤ exp(b·k·n·h)·a + (exp(b·k·n·h) − 1)·c·h/(b·k)` from the
-    recurrence `u n ≤ a + b·h·k·(Σ_{i ∈ Ico 1 n} u i) + c·h²·n`.
-  - cycle 048 — `sum_theta_psi_contraction` (line 1762): bounds
-    `|Σ_{i ∈ Ico k n} θ(idx i) · ψ i|` by
-    `Θ·C·h·(Σ Sε i) + Θ·D·h²·(n-k)` whenever `|ψ i| ≤ C·h·Sε i + D·h²`
-    and `|θ| ≤ Θ`.
-  - cycle 049 — `starting_error_each/sum_tendsto_zero` (lines 1810/1851):
-    `Σ_{i:Fin k} |yex(x₀ + i·h) − start h i| → 0` as `h → 0`.
+- **Sorry count: 1** at `OpenMath/Chapter4/Section404.lean:1947`
+  (the `stable_consistent_isConvergent` outer-assembly scaffold from
+  cycle 047). **DO NOT attempt to close this sorry this cycle.**
+  It is a multi-cycle outer-assembly target (planned for cycles
+  052–053).
+- **Pending Aristotle: none.**
+- **Last cycle delivered**: `recentSum_swap_bound` (cycle 050) —
+  the index-arithmetic adapter
+  `Σ_{i ∈ Ico k n} Σ_{j:Fin k} g(i-(j+1)) ≤ k · Σ_{p ∈ Ico 0 n} g p`.
 
-## What cycle 050 should NOT attempt
+The convergence theorem `thm:406D` is being assembled from a stack
+of cleanly-separated helpers; cycle 051 is the next-to-last
+infrastructure brick before the outer assembly begins in cycle 052.
 
-Do NOT attempt to close the full `stable_consistent_isConvergent` body
-this cycle. The outer assembly is at minimum:
+## This cycle's target: `globalError_per_step_sum_form`
 
-1. Unfold `IsConvergent`, intro all 7+ hypotheses, set `h := (x−x₀)/m`.
-2. Set up `ε : ℕ → ℝ := fun n => yex(x₀ + n·h) − Y m n`.
-3. Apply `linRec_closed_form` to get
-   `ε_n = Σ_{i<k} θ_{n-i}·ζ_i + Σ_{i ∈ Icc k n} θ_{n-i}·ψ_i`.
-4. Combine cycle 048 with cycle 045 to bound the RHS.
-5. Apply cycle 046 to extract the closed form.
-6. Take `m → ∞`: `h → 0`, `m·h = x−x₀` constant, so
-   `Real.exp(b·k·m·h) = exp(b·k·(x−x₀))` is a constant; multiplying
-   constants by `c·h/(b·k) → 0` and `φ(h) → 0` (cycle 049) gives the
-   limit.
+A single private helper lemma that bridges:
 
-That is 4–6 cycles of work. **Cycle 050 builds the missing
-index-arithmetic adapter that bridges cycle 045's `Mmax` with cycle
-048's `Sε`.**
+* **Cycle 045's `globalError_recurrence_bound_textbook`** (per-step
+  bound parameterised over a *single* `Mmax` upper-bounding all of
+  `|ε(n-(j+1))|` for `j : Fin k`).
+* **Cycle 048's `sum_theta_psi_contraction`** (consumes a per-`i`
+  `Sε(i)` value, not a max).
 
-## Primary deliverable — `recentSum_swap_bound` adapter
+Specialise cycle 045's lemma to `Mmax := ∑_{j : Fin k} |ε(n-(j+1))|`
+so that the per-step bound depends on the **sum** of recent errors
+instead of an abstract upper bound `Mmax`. This is exactly the
+shape `sum_theta_psi_contraction` wants when called with
+`Sε(i) := ∑_{j : Fin k} |ε(i-(j+1))|`.
 
-Cycle 045's bound uses a single `Mmax` that uniformly bounds
-`|ε(n-(i+1))|` over `i : Fin k`. Cycle 048's `Sε` is per-i. Cycle 046
-needs the recurrence in `Σ_{i ∈ Ico 1 n} |ε i|` form.
+### Concrete signature (target)
 
-The cleanest bridge: take `Sε(i) := Σ_{j:Fin k} |ε(i − (j+1))|`. This
-trivially satisfies `Mmax(i) ≤ Sε(i)` (each `|ε(i-(j+1))|` is a single
-term in a sum of nonnegatives, so `max ≤ sum`). Then we need:
-
-```
-Σ_{i ∈ Ico k n} Σ_{j : Fin k} g (i - (j+1))  ≤  k · Σ_{p ∈ Ico 0 n} g p
-```
-
-for any `g : ℕ → ℝ` with `0 ≤ g i`. Each `g p` (for `p ∈ [0, n−1]`)
-appears in the double sum exactly when `i = p + (j+1)` for some
-`j : Fin k`, i.e. for at most `k` values of `i`.
-
-### Lean signature
-
-Add this **immediately before** `theorem
-LinearMultistepMethod.stable_consistent_isConvergent` (around line
-1872, in the §406D infrastructure block):
+Insert immediately AFTER `recentSum_swap_bound` (line 1924) and
+BEFORE `LinearMultistepMethod.stable_consistent_isConvergent`
+(line 1947). Keep `private` to mirror neighbouring helpers.
 
 ```lean
-/-- **Index-arithmetic adapter for `thm:406D` (cycle 050).**
-The "recent-window sum" `Σ_{j:Fin k} g(i − (j+1))` summed over
-`i ∈ Ico k n` is bounded by `k` copies of the total sum
-`Σ_{p ∈ Ico 0 n} g p`, because each `g p` appears in the recent
-window for at most `k` later indices.
+/-- **Per-step bound in sum form (helper for thm:406D).**
+Specialise `globalError_recurrence_bound_textbook` (cycle 045) to
+`Mmax := ∑_{j : Fin k} |ε(n-(j+1))|`, the sum of recent errors. The
+bound becomes
+  `|ε_n - Σ α_i.succ ε_{n-(i+1)}|
+      ≤ Cₕ · (∑_{j:Fin k} |ε(n-(j+1))|) + Dₕ · h²`
+where Cₕ and Dₕ are the cycle 045 coefficients. This is the shape
+`sum_theta_psi_contraction` (cycle 048) consumes via
+`Sε(i) := ∑_{j:Fin k} |ε(i-(j+1))|`.
 
-This bridges:
-* cycle 045's `globalError_recurrence_bound_textbook` (per-step bound
-  via `Mmax = max_{j:Fin k} |ε(n-(j+1))|`),
-* cycle 048's `sum_theta_psi_contraction` (takes a per-i `Sε`),
-* cycle 046's `discrete_gronwall_exp_bound` (wants the recurrence in
-  `Σ_{i ∈ Ico 1 n} u i` form).
-
-Used by: cycle 051+ outer assembly of `thm:406D`. -/
-private lemma recentSum_swap_bound
-    (g : ℕ → ℝ) (hg : ∀ i, 0 ≤ g i)
-    (k n : ℕ) :
-    (∑ i ∈ Finset.Ico k n, ∑ j : Fin k, g (i - (j.val + 1)))
-      ≤ (k : ℝ) * ∑ p ∈ Finset.Ico 0 n, g p := by
+Used by: cycle 052+ outer assembly of `thm:406D`. -/
+private lemma globalError_per_step_sum_form
+    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)
+    (n : ℕ) (hn : k ≤ n) :
+    |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))|
+      ≤ (h * L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                  + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L * |M.β 0|))
+          * (∑ j : Fin k,
+              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (j.val + 1))|)
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L * M_bound * h^2
+            / (1 - h * L * |M.β 0|) := by
   sorry
 ```
 
-### Proof plan (manual)
+(Cross-check the exact polynomial form of the RHS by reading
+`globalError_recurrence_bound_textbook`'s conclusion at lines
+1349–1359 — the only change should be the `Mmax` slot.)
 
-The cleanest route is **swap the order of summation** then bound each
-inner sum.
+## Approach (specific tactic plan)
 
+The proof is a single forward call to cycle 045's lemma with a
+specific `Mmax` instantiation. Four steps:
+
+### Step 1 — Define `Mmax` as the sum.
 ```lean
-  -- Step 0: handle k = 0 trivially.
-  obtain rfl | hkpos := Nat.eq_zero_or_pos k
-  · simp  -- Inner Σ_{j : Fin 0} is empty; outer LHS = 0; RHS = 0.
-  -- Step 1: swap the two sums.
-  rw [Finset.sum_comm]
-  -- Goal: Σ_{j:Fin k} Σ_{i ∈ Ico k n} g(i-(j+1)) ≤ k · Σ_{p ∈ Ico 0 n} g p
-  -- Step 2: rewrite k · Σ as Σ_{j:Fin k} Σ_{p ∈ Ico 0 n} g p.
-  rw [show ((k : ℝ) * ∑ p ∈ Finset.Ico 0 n, g p)
-        = ∑ _j : Fin k, ∑ p ∈ Finset.Ico 0 n, g p from by
-    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]]
-  -- Step 3: pointwise (per j : Fin k):
-  --   Σ_{i ∈ Ico k n} g(i-(j+1)) ≤ Σ_{p ∈ Ico 0 n} g p.
-  refine Finset.sum_le_sum (fun j _hj => ?_)
-  -- Reindex: i ↦ i - (j+1) is injective on Ico k n (since k ≥ 1+j.val
-  -- because j : Fin k ⟹ j.val < k). The image lies in Ico 0 n.
-  -- Use Finset.sum_le_sum_nbij' for one-shot reindexing.
-  apply Finset.sum_le_sum_nbij'
-            (i := fun i _hi => i - (j.val + 1))
-            (j := fun p _hp => p + (j.val + 1))
-  all_goals (intro x hx; simp_all [Finset.mem_Ico]; first | omega | exact hg _)
+set Mmax : ℝ :=
+  ∑ j : Fin k,
+    |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+      - Y (n - (j.val + 1))| with hMmax_def
+```
+The `with hMmax_def` clause records the unfolding equation, useful
+if step 4's `exact` needs help.
+
+### Step 2 — Discharge `0 ≤ Mmax`.
+```lean
+have hMmax_nn : 0 ≤ Mmax := by
+  rw [hMmax_def]
+  exact Finset.sum_nonneg (fun j _ => abs_nonneg _)
+```
+Each summand is `|·|`, hence non-negative; sum of non-negatives is
+non-negative.
+
+### Step 3 — Discharge `∀ i : Fin k, |ε(n-(i+1))| ≤ Mmax`.
+
+Use `Finset.single_le_sum`. The Mathlib signature is roughly:
+```
+Finset.single_le_sum
+    {s : Finset ι} {f : ι → α} (h : ∀ i ∈ s, 0 ≤ f i) {i : ι} (hi : i ∈ s) :
+    f i ≤ ∑ j ∈ s, f j
 ```
 
-### Recommended `lean_multi_attempt` snippets
-
-If `Finset.sum_le_sum_nbij'` doesn't unify cleanly with the desired
-direction, fall back via `Finset.sum_image`:
-
+Verify the exact name with `lean_local_search "single_le_sum"`
+BEFORE relying on it. If the name has changed, fall through to a
+manual decomposition:
 ```lean
--- Approach B: Finset.sum_image with explicit injectivity.
-have hinj : ∀ a ∈ Finset.Ico k n, ∀ b ∈ Finset.Ico k n,
-    a - (j.val + 1) = b - (j.val + 1) → a = b := by
-  intro a ha b hb hab
-  simp [Finset.mem_Ico] at ha hb
-  have hjv : j.val + 1 ≤ k := by have := j.isLt; omega
-  omega
-rw [← Finset.sum_image hinj]
-apply Finset.sum_le_sum_of_subset_of_nonneg
-· intro p hp
-  rw [Finset.mem_image] at hp
-  obtain ⟨i, hi, rfl⟩ := hp
-  rw [Finset.mem_Ico] at hi ⊢
-  exact ⟨Nat.zero_le _, by omega⟩
-· intros; exact hg _
+have hMmax_bound :
+    ∀ i : Fin k,
+      |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+        - Y (n - (i.val + 1))| ≤ Mmax := by
+  intro i
+  rw [hMmax_def]
+  exact Finset.single_le_sum
+          (f := fun j : Fin k =>
+            |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+              - Y (n - (j.val + 1))|)
+          (fun j _ => abs_nonneg _)
+          (Finset.mem_univ i)
 ```
 
-Try Approach A (the `nbij'` one) first. If it doesn't unify, B works.
-
-### Why `j.val + 1 ≤ k` matters
-
-For `j : Fin k`, `j.val < k`, hence `j.val + 1 ≤ k`. This is the
-**well-foundedness condition** for the change-of-variables: when
-`i ≥ k ≥ j.val + 1`, `Nat`-subtraction `i - (j.val + 1)` agrees with
-integer subtraction (no truncation). Worker should `have hjv : j.val + 1 ≤ k`
-explicitly via `Nat.succ_le_of_lt j.isLt`.
-
-### Faithfulness check (for the new lemma)
-
-* **Tautology check**: PASS — the conclusion is a non-trivial sum
-  inequality, not a hypothesis.
-* **Identity check**: PASS — the proof is real combinatorial work
-  (reindexing + subset bound).
-* **Class/structure check**: N/A — no new class/structure.
-* **Definition smuggling check**: N/A — no new `def`.
-
-Not a Butcher entity; pure index-juggling infrastructure (comparable
-to `sum_theta_psi_contraction` from cycle 048). Document in the
-docstring exactly as cycle 048 did, citing the cycles 045/046/048
-that constitute its consumers.
-
-## Aristotle batch (optional, recommended — single job)
-
-The lemma is a single ~30-line proof; submit ONE Aristotle job at the
-start of the cycle. Don't submit variants — there's only one lemma.
-
-* **Job**: `recentSum_swap_bound` with the full statement and
-  hypothesis above. Aristotle handles `Finset.sum_le_sum_nbij'`-style
-  proofs decently.
-* **Sleep 30 min** per CLAUDE.md, **check once**, incorporate if a
-  clean proof returns. Otherwise finish manually with Approach A or B.
-
-Do NOT submit the outer `stable_consistent_isConvergent` body to
-Aristotle — it's far too large (the assembly involves
-`linRec_closed_form` unfolding, Tendsto algebra, and `IsLMMSolution`
-destructuring) and Aristotle would burn compute without progress.
-
-## Stretch (only if primary lands cleanly with substantial time left)
-
-Do **not** start the outer assembly. Instead, add a second, more
-focused adapter that wraps cycles 045 + 050 into a sum-form per-step
-bound directly suited to cycle 048:
-
+If `Finset.single_le_sum` has a different argument order or name
+(e.g. `Finset.le_sum_of_mem` or `Finset.sum_le_sum_of_ne_zero`), the
+manual fallback is:
 ```lean
-/-- **Cycle 050 stretch — combined per-step error recurrence.**
-For an LMM solution `Y`, the residual
-`ψ_n := |yex(x₀ + n·h) - Y n - Σ α_{i+1}·(yex(x₀+(n-(i+1))h) - Y(n-(i+1)))|`
-satisfies (under the cycle 045 hypotheses):
-
-  `ψ_n ≤ Cₕ · Σ_{j:Fin k} |yex(x₀+(n-(j+1))h) - Y(n-(j+1))| + Dₕ · h²`,
-
-where `Cₕ`, `Dₕ` are the cycle 045 textbook constants. The
-substitution `Mmax := Σ_{j:Fin k} |ε(n-(j+1))|` lets cycle 048 consume
-this directly with `Sε(i) := Σ_{j:Fin k} |ε(i-(j+1))|`. -/
-private lemma globalError_per_step_sum_form
-    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
-    -- (full hypothesis list mirroring cycle 045's textbook form)
-    ... :
-    |...|  ≤  Cₕ * (∑ j : Fin k, |ε(n-(j+1))|) + Dₕ * h^2 := by
-  -- Apply cycle 045 with Mmax := Σ |ε(n-(j+1))|.
-  -- The key step: max ≤ sum for nonnegatives.
-  apply (M.globalError_recurrence_bound_textbook ... 
-            (Mmax := ∑ j : Fin k, |...|) ...).trans
-  apply le_of_eq; ring
+have hMmax_bound :
+    ∀ i : Fin k, … ≤ Mmax := by
+  intro i
+  rw [hMmax_def]
+  have hsplit :
+      (∑ j : Fin k, |…(j.val + 1)…|)
+        = |…(i.val + 1)…| + ∑ j ∈ Finset.univ.erase i, |…(j.val + 1)…| := by
+    rw [← Finset.sum_erase_add _ _ (Finset.mem_univ i)]
+    ring
+  rw [hsplit]
+  have : (0 : ℝ) ≤ ∑ j ∈ Finset.univ.erase i, |…(j.val + 1)…| :=
+    Finset.sum_nonneg (fun j _ => abs_nonneg _)
+  linarith
 ```
 
-Skip this stretch if the primary takes >75% of the cycle. Cycle 051
-can do this substitution inline at minor cost.
+### Step 4 — Forward to cycle 045.
+```lean
+exact M.globalError_recurrence_bound_textbook hcons hL hM hf_lip
+        hyex_C1 hyex_ode hf_yex_bound hh hsmall hY n hn
+        Mmax hMmax_nn hMmax_bound
+```
 
-## What cycle 050 must NOT do
+The `set Mmax := …` from step 1 ensures the goal's RHS contains the
+identifier `Mmax` rather than the spelled-out sum, so `exact`
+should succeed without `convert`. If `exact` fails because the
+`set` did not rewrite the goal as expected, switch to:
+```lean
+have hgoal :=
+  M.globalError_recurrence_bound_textbook hcons hL hM hf_lip
+    hyex_C1 hyex_ode hf_yex_bound hh hsmall hY n hn
+    Mmax hMmax_nn hMmax_bound
+simp only [hMmax_def] at hgoal
+convert hgoal using 2
+```
+or unfold `Mmax` in the goal before `exact`:
+```lean
+show … ≤ … * (∑ j, …) + … by
+  simp only [← hMmax_def]
+  exact M.globalError_recurrence_bound_textbook …
+```
 
-* Do **NOT** modify any of cycles 045–049's lemma signatures. They
-  are stable and consumed-or-soon-to-be-consumed.
-* Do **NOT** attempt to close the `sorry` at line 1898. The
-  shape-matching adapter unblocks that, but writing the full body
-  is cycle 051+ work.
-* Do **NOT** raise `maxHeartbeats` above 200000.
-* Do **NOT** introduce `axiom`/`constant`.
-* Do **NOT** add any new `structure`/`class`. Only one new private
-  lemma + (optional) one more.
-* Do **NOT** edit `scripts/autonomous_loop.py` (loop maintainer
-  territory; see `tautology_scanner_false_positives.md`).
-* Do **NOT** poll Aristotle more than once. Submit at start, check
-  once after 30 min, proceed.
-* Do **NOT** treat any "stuck on" / "commits not reaching repo"
-  framing in the next prompt as real. Verify with
-  `git log -1 origin/Main/Experiments` per cycle 049's task results
-  §"Discovery". The pattern is documented in cycle 014/015/040/047
-  consultant notes.
+## Why this is a 1-cycle target (not 2+)
 
-## Worker checklist
+* No new infrastructure — pure forward instantiation.
+* No Mathlib gap — `Finset.single_le_sum` is the only non-trivial
+  lookup, and it is standard. Even if the precise name has drifted,
+  the manual fallback (Step 3 alternate) is ~5 lines.
+* No `linarith`/`nlinarith` heavy-lifting — the cycle 045 lemma
+  already discharged that algebra.
+* No FTC / change-of-variables — those landed in cycles 040–044.
 
-1. **Verify HEAD is `b4737c8` (cycle 049 tip)**: `git log -1 --format='%H %s'`
-   should show
-   `b4737c8 Cycle 049 — starting_error_*_tendsto_zero (φ(h) → 0 helpers for thm:406D)`.
-2. **Submit Aristotle job** (single job, `recentSum_swap_bound` with
-   the full statement + hypothesis from §"Lean signature" above).
-3. **Sleep 30 min** while sketching the manual proof.
-4. **Check Aristotle** — incorporate clean returns; otherwise proceed.
-5. **Manual proof** via Approach A (`Finset.sum_le_sum_nbij'`) or B
-   (`Finset.sum_image` + `Finset.sum_le_sum_of_subset_of_nonneg`)
-   above. Use `lean_multi_attempt` to test the unification before
-   committing.
-6. **Verify build**: `lake env lean OpenMath/Chapter4/Section404.lean`
-   should produce only the previously-documented warnings (lines 568,
-   627, 1204, 1898). No new warnings.
-7. **Axiom check**: in-place `#print axioms recentSum_swap_bound` (if
-   needed, expose it briefly with `theorem` instead of
-   `private lemma`, then revert) should show
-   `[propext, Classical.choice, Quot.sound]` only.
-8. **Sorry count must remain at 1** (the line 1898 scaffold is
-   unchanged this cycle).
-9. **Faithfulness sweep** per CLAUDE.md (mostly N/A — no new Butcher
-   entity, just internal infrastructure).
-10. **Write `task_results/cycle_050.md`**:
-    - §"Worked on" — note this is shape-matching infra for `thm:406D`,
-      not the entity itself.
-    - §"Approach" — list which Aristotle/manual route worked.
-    - §"Result" — confirm sorry count = 1, axiom-clean.
-    - §"Discovery" — any Mathlib lemma surprises (especially around
-      `Finset.sum_le_sum_nbij'` vs `Finset.sum_image`).
-    - §"Suggested next approach" — describe cycle 051's outer-assembly
-      path: instantiate `Mmax := Σ_{j:Fin k} |ε(n-(j+1))|` in cycle
-      045, feed cycle 048 with `Sε(i) := Σ_{j:Fin k} |ε(i-(j+1))|`,
-      apply this adapter to collapse `Σ Sε` to
-      `k · Σ_{p < n} |ε p|`, finish with cycle 046's discrete Grönwall
-      and cycle 049's φ(h) → 0.
-11. **Commit + push** with message
-    `Cycle 050 — recentSum_swap_bound adapter (shape-matching for thm:406D)`.
+Estimated proof body: ~15 lines.
 
-## Cycle 051+ outline (NOT this cycle — for the next planner's reference)
+## Aristotle plan
 
-For continuity, the cycle 051 planner should build cycle 050's
-stretch goal (the combined per-step lemma `globalError_per_step_sum_form`),
-then in cycle 052 attempt the `stable_consistent_isConvergent` body
-using:
+Submit ONE Aristotle job containing only `globalError_per_step_sum_form`
+at the start of the cycle, with the dependency
+`globalError_recurrence_bound_textbook` (and its environment) in
+scope. The lemma is small and forward-style; Aristotle should solve
+it within the 30-minute window.
 
-* `IsConvergent` unfolding,
-* `linRec_closed_form` for ε,
-* `theta_bounded_of_isStable` for Θ,
-* The cycle 050 adapter + cycle 048,
-* `discrete_gronwall_exp_bound`,
-* `starting_error_sum_tendsto_zero` for the φ(h) → 0 limit,
-* `Filter.Tendsto.const_mul` and `Filter.Tendsto.add` for the
-  `m → ∞` step.
+While Aristotle runs, attempt the manual proof per the four-step
+plan above. The cycle 045 lemma's calling convention is well
+understood (cycle 045's task results spell it out), so the manual
+proof should land first.
 
-Estimated total: 3–4 more cycles after cycle 050 to close `thm:406D`.
+CLAUDE.md cap: ONE Aristotle status check after 30 min. Do not
+poll repeatedly.
 
-Then `thm:406D` unblocks `thm:243A` (the cross-chapter Ch.2 → Ch.4
-deferral) — that's the next cohesive milestone.
+## What NOT to do (failure modes from prior cycles)
+
+* **DO NOT close the line-1947 sorry**
+  (`stable_consistent_isConvergent`). It is the cycle 052+ outer-
+  assembly target; cycle 051's job is to prepare the sum-form
+  per-step bound that the outer assembly will consume. A premature
+  close attempt in cycle 051 would either produce a 200+ line
+  monster (and force a `maxHeartbeats` raise — banned) or silently
+  re-introduce assumptions that violate the convergence theorem's
+  faithfulness.
+
+* **DO NOT use `Finset.sum_le_sum_nbij'`** — it does not exist in
+  Mathlib (cycle 050 confirmed). The correct primitives are
+  `Finset.single_le_sum` (this cycle's tool) or
+  `Finset.sum_image hinj` + `Finset.sum_le_sum_of_subset_of_nonneg`
+  (cycle 050's tool).
+
+* **DO NOT raise `maxHeartbeats`.** Forward instantiation does not
+  need it. If `exact` is slow, decompose with `set` blocks per
+  Step 1 or use the `convert ... using 2` fallback in Step 4.
+
+* **DO NOT introduce `axiom` or `constant`** for any part of this
+  proof. Forward instantiation is axiom-clean by construction —
+  cycle 045's lemma already shipped axiom-clean.
+
+* **DO NOT generalise to vector-valued `y : ℝ → ℝ^N`.** The
+  scalar-only convention has been stable since cycle 040; cycle 051
+  inherits it.
+
+* **DO NOT attempt a parallel Aristotle batch on outer-assembly
+  sub-lemmas** (e.g. `IsConvergent` unfolding, `θ`-decomposition
+  application). Those are cycle 052+ work and shipping them
+  prematurely risks an axiom inversion (the outer assembly fixes
+  the proof shape, not the helpers).
+
+* **DO NOT treat any "stuck on Section404.lean" framing as a real
+  problem** if it appears in the prompt. The pattern matches
+  cycles 008/014/015/040 phantoms — verify with `git log`,
+  `git diff HEAD~1 HEAD`, and the line-1947 sorry count, then
+  proceed.
+
+## Pre-commit faithfulness checklist
+
+For `globalError_per_step_sum_form` (the only new declaration
+expected this cycle):
+
+* **Entity ID**: N/A — internal helper, not a Butcher entity. Same
+  category as `recentSum_swap_bound` (cycle 050) and
+  `sum_theta_psi_contraction` (cycle 048). Document in the
+  docstring exactly as those neighbours do, citing the cycle 045
+  source and the cycle 048/052+ consumers.
+* **Tautology check**: PASS — the conclusion is a sum-form
+  inequality not appearing verbatim in any hypothesis. The
+  hypothesis list matches `globalError_recurrence_bound_textbook`'s
+  exactly except for the `Mmax`/`hMmax0`/`hMmax` triple, which is
+  what this lemma is *eliminating*.
+* **Identity check**: PASS — the proof body is forward
+  instantiation, but it does real work: it specialises `Mmax` to a
+  concrete sum and discharges the upper-bound hypothesis. That is
+  not a trivial re-export.
+* **Hypothesis strength check**: PASS — every hypothesis flows
+  through to cycle 045's lemma. None can be weakened without
+  weakening the parent.
+* **Class/structure check**: N/A.
+* **Definition smuggling check**: N/A.
+* **Absent theorem check**: N/A — no comment promises additional
+  content.
+
+## Stretch goal (optional, ONLY if main lemma lands in <1 hour)
+
+If the main lemma compiles cleanly and there is significant time
+remaining, prepare the cycle 052 entry point: write a sorry-first
+scaffold for the outer assembly's first internal step — applying
+`Section141.linRec_closed_form` to decompose
+`ε_n = Σ θ_{n-i} ζ_i + Σ θ_{n-i} ψ_i`. Locate the `linRec_closed_form`
+signature in `OpenMath/Chapter1/Section141.lean` first via
+`lean_file_outline`; then drop a `private lemma` with the
+decomposition shape and `sorry` body. **This is scaffold-only**;
+do not attempt to close it. Estimated ~30 lines (including a
+docstring).
+
+If neither the main lemma nor the stretch goal completes, write an
+issue file at `.prover-state/issues/per_step_sum_form_blocked.md`
+explaining specifically *which* of step 1/2/3/4 above failed and
+what was tried (with `lean_diagnostic_messages` excerpts). Do not
+just write "stuck" — file structured WHY-content per CLAUDE.md.
+
+## Pre-commit verification
+
+Before committing:
+
+1. `lake env lean OpenMath/Chapter4/Section404.lean` — must compile
+   cleanly with no new errors.
+2. `lean_diagnostic_messages` on Section404.lean — must show ONLY
+   the four pre-existing warnings (unused-variable at lines 568,
+   627, 1204; sorry at line 1947). NO new warnings.
+3. `lean_verify` on
+   `OpenMath.Chapter4.Section404.globalError_per_step_sum_form` —
+   must report axioms `[propext, Classical.choice, Quot.sound]`
+   only (no new axioms).
+4. Sorry count must remain at **1** (line 1947 unchanged; no new
+   sorries from the stretch-goal scaffold either, unless the
+   stretch goal explicitly uses `sorry`).
+
+## Cycle 052+ preview (do not implement this cycle)
+
+After `globalError_per_step_sum_form` lands, cycle 052 begins the
+outer assembly of `stable_consistent_isConvergent`:
+
+1. Unfold `IsConvergent` to expose the `Tendsto … atTop (𝓝 0)`
+   conclusion + the per-`Fin k` starting-method hypotheses.
+2. Apply `Section141.linRec_closed_form` (cycle 012) to decompose
+   `ε_n = Σ θ_{n-i} ζ_i + Σ θ_{n-i} ψ_i` (Theorem 141A).
+3. Apply `theta_bounded_of_isStable` (cycle 047) to extract the `Θ`
+   bound on `θ`.
+4. Apply this cycle's `globalError_per_step_sum_form` to get the
+   per-`ψ_n` sum-form bound.
+5. Apply `sum_theta_psi_contraction` (cycle 048) to bound the
+   `Σ θ_{n-i} ψ_i` contribution.
+6. Apply `recentSum_swap_bound` (cycle 050) to collapse the nested
+   recent-window sum.
+7. Apply `discrete_gronwall_exp_bound` (cycle 046) for the final
+   exponential closed form.
+8. Apply `starting_error_sum_tendsto_zero` (cycle 049) for the
+   φ(h) → 0 limit on the starting-error contribution.
+9. Combine via `Tendsto` algebra (`Filter.Tendsto.add`,
+   `squeeze_zero`, `Real.exp_continuous` at the cycle 046 closed
+   form).
+
+Cycle 053 polishes the `Tendsto` algebra. Estimated total: 3 cycles
+(051 → 052 → 053) to close `thm:406D` and unblock `thm:243A`.

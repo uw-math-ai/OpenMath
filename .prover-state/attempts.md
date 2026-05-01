@@ -12,3 +12,6 @@ cycle's prompt.)
 
 ### Cycle 35
 Cycle 035 Section404.lean: Worker reports creating LinearMultistepMethod structure, IsPreconsistent predicate, and two concrete witnesses (explicit/implicit Euler) with clean compile and full lake build. However, git diff shows only heartbeat.json changed — no Lean files committed. Same commit-not-reaching-repo failure as cycle 008.
+
+### Cycle 50
+Cycle 050: `Finset.sum_le_sum_nbij'` does not exist in Mathlib; use `← Finset.sum_image hinj` + `Finset.sum_le_sum_of_subset_of_nonneg` instead (Approach B). Also: after `intro a ha b hb hab` in a `Set.InjOn` proof, a bare `simp only` is needed to beta-reduce `(fun i => i - c) a = (fun i => i - c) b` before `omega` can close it.
