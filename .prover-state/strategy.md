@@ -1,270 +1,335 @@
-# Cycle 040 Strategy
+# Strategy — Cycle 041
 
-## Status going in
+## Status
 
-- Cycle 039 landed `def:406A` (`localTruncationError`) cleanly at the
-  current branch tip, with two non-vacuity witnesses
-  (`localTruncationError_const`, `localTruncationError_linear`). All
-  Chapter 4 §404/§406 *definitions* are now in place. No `sorry` on
-  the branch.
-- No pending Aristotle results to incorporate.
-- The natural next link in the Chapter 4 chain is **`lem:406B`** —
-  "Convergence condition sufficiency bound". Its single dependent is
-  `thm:406C` (global error bound), which is in turn a key prerequisite
-  for `thm:405A/B/C` and `thm:406D` (and thus for `thm:243A` once Ch.4
-  is done). So `lem:406B` is the right target.
+**Cycle 040 IS committed.** The branch tip `4154007` ("Cycle 040 —
+lem:406B sorry-first scaffold + sub-lemma E proved") landed
+`OpenMath/Chapter4/Section404.lean` (212 net new lines), the typo
+issue file, and the sorry-first scaffold. The cycle-040 evaluator
+score of `-2 (REVERTED)` is the same `attempts.md`-propagation
+phantom diagnosed in cycles 008/014/015 and re-confirmed in
+`.prover-state/issues/consultant_advice_cycle_040.md` §A.
+**Do NOT redo cycle 040 work.** Verify the state with:
 
-## Primary target — `lem:406B`
-
-**Entity file**: `extraction/formalization_data/entities/lem_406B.json`
-(read this verbatim before writing any Lean).
-
-**Textbook statement** (from the JSON):
-> If `y` is the exact solution to the standard initial value problem
-> and `x ∈ [x₀ + kh, x̄]`, then
->   `|L(y, x, h)| ≤ (½ Σ_{i=1}^k i² |αᵢ| + Σ_{i=1}^k i |iαᵢ − βᵢ|) · L · M · h²`.
-
-`L` here is the Lipschitz constant of `f`, `M` is the bound on
-`‖f(y(·))‖` over the interval, and `L(y, x, h)` is the local
-truncation error from `def:406A`.
-
-**Note on the textbook bound** ⚠️: the textbook proof claims the
-algebraic decomposition
-
-  `L(y,x,h) = Σ αᵢ (y(x) − y(x−ih) − ih y'(x)) + h Σ (iαᵢ − βᵢ)(y'(x) − y'(x−ih))`.
-
-Re-deriving this from preconsistency (`Σαᵢ = 1`) and (404b)
-(`Σ iαᵢ = Σ_{i=0}^k βᵢ`) by direct algebra appears to give the **simpler**
-
-  `L(y,x,h) = Σ αᵢ (y(x) − y(x−ih) − ih y'(x)) + h Σ βᵢ (y'(x) − y'(x−ih))`,
-
-which would change the bound's second sum from `Σ i|iαᵢ − βᵢ|` to
-`Σ i|βᵢ|`. **DO NOT trust this planner derivation**: re-derive the
-decomposition yourself by direct expansion early in the cycle,
-*before* writing the bound's RHS. If your derivation matches Butcher,
-use Butcher's form. If it disagrees with Butcher, file a dated issue
-at `.prover-state/issues/lem_406B_textbook_check.md` documenting the
-two candidate forms with full algebraic justification (both forms
-are valid upper bounds; the question is which is the one Butcher
-intended). Then ship whichever is mathematically sound — do not
-silently encode one.
-
-### Required hypotheses (signature design, do not skip)
-
-The textbook's "exact solution" / `M`-bound / Lipschitz-`L` triple is
-not a single Mathlib predicate. You will need to introduce them
-explicitly. Recommended Lean signature shape (scalar `ℝ → ℝ`, matching
-`def:406A`):
-
-```lean
-theorem localTruncationError_bound
-    {k : ℕ} (M_method : LinearMultistepMethod k)
-    (hcons : M_method.IsConsistent)
-    {f : ℝ → ℝ} {L M_bound : ℝ}
-    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
-    (hf_lip : LipschitzWith L.toNNReal f)
-    {y : ℝ → ℝ}
-    (hy_diff : Differentiable ℝ y)
-    (hy_ode : ∀ t, deriv y t = f (y t))
-    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
-    (x h : ℝ) (hh : 0 ≤ h) :
-    |M_method.localTruncationError y x h|
-      ≤ ((1/2) * ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M_method.α i.succ|
-          + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)
-              * |M_method.β i.succ| /- or |i.val+1 * α i.succ - β i.succ| -/)
-        * L * M_bound * h^2 := by
-  sorry
+```bash
+git log -1 --format='%H %s'                # → 4154007 Cycle 040 …
+git rev-parse HEAD                          # → 4154007…
+git rev-parse origin/Main/Experiments       # → 4154007…  (same SHA)
+git diff --stat HEAD~1 HEAD                 # → 8 files, +1304 / -285
 ```
 
-The "scalar `ℝ → ℝ`" choice is forced by `def:406A` (which uses
-`y : ℝ → ℝ` and `deriv y`). Generalising to `ℝ^N` would be a separate
-infrastructure cycle and is out of scope here. Do *not* drop
-`hf_lip`, `hf_y_bound`, or `hy_ode`: the proof crucially needs all
-three.
+If all four pass, the phantom is confirmed; proceed with the proof
+work below.
 
-### Sorry-first decomposition (MANDATORY per CLAUDE.md)
+## Open sorries (post-cycle-040)
 
-State the theorem above with the full RHS, then decompose into the
-sub-lemmas below. **Compile after each sub-lemma is stated, before
-attempting any proofs.** Then prove what's tractable; submit the rest
-to Aristotle.
+`OpenMath/Chapter4/Section404.lean` has five sorries, all inside
+`lem:406B`'s sorry-first scaffold:
 
-1. **Sub-lemma A — norm bound on `y(x+hξ) − y(x)`** (textbook eq.
-   (406b)):
-   ```lean
-   lemma exact_solution_norm_bound
-       (hy_diff …) (hy_ode …) (hf_y_bound …) (x h : ℝ) (hh : 0 ≤ h)
-       (ξ : ℝ) (hξ : ξ ≤ 0) :
-       |y (x + h * ξ) - y x| ≤ h * (-ξ) * M_bound := sorry
-   ```
-   Proof sketch: `y(x+hξ) − y(x) = ∫_{x}^{x+hξ} y'(t) dt =
-   ∫_{x}^{x+hξ} f(y(t)) dt`, then `|·| ≤ |hξ| · M_bound`. Mathlib:
-   `intervalIntegral.integral_eq_sub_of_hasDerivAt`,
-   `intervalIntegral.norm_integral_le_of_norm_le_const`.
+| Line | Lemma                              | Status |
+|------|------------------------------------|--------|
+| 525  | `exact_solution_norm_bound`  (A)   | sorry  |
+| 541  | `residual_integral_form`     (B)   | sorry  |
+| 559  | `residual_bound`             (C)   | sorry  |
+| 577  | `deriv_diff_bound`           (D)   | sorry  |
+| 692  | `localTruncationError_bound` (main)| sorry  |
 
-2. **Sub-lemma B — FTC identity for the residual `T_i`**:
-   ```lean
-   lemma residual_integral_form
-       … (i : ℕ) (hi : 1 ≤ i) :
-       y x - y (x - i*h) - (i*h) * deriv y x
-         = h * ∫ ξ in (-(i : ℝ))..0, (f (y (x + h*ξ)) - f (y x)) := sorry
-   ```
-   Proof sketch: by FTC + change of variables `t = x + hξ`.
+(Sub-lemma E `localTruncationError_decomposition` is fully proved at
+lines 588–666. Do not touch it.)
 
-3. **Sub-lemma C — bound on the residual `‖T_i‖ ≤ ½ i² h² LM`**:
-   Combine A + B + Lipschitz: `|T_i| ≤ h · L · ∫_{-i}^0 |y(x+hξ) −
-   y(x)| dξ ≤ hL · ∫_{-i}^0 h(−ξ) M dξ = hL · h M · i²/2`.
+## Cycle 041 target
 
-4. **Sub-lemma D — Lipschitz bound on `f(y(x)) − f(y(x−ih))`**:
-   ```lean
-   lemma deriv_diff_bound
-       … (i : ℕ) :
-       |deriv y x - deriv y (x - i*h)| ≤ (i : ℝ) * h * L * M_bound := sorry
-   ```
-   This is `|f(y(x)) − f(y(x−ih))| ≤ L · |y(x) − y(x−ih)|`, then
-   sub-lemma A with `ξ = −i`.
+**Goal: close sub-lemma D, then sub-lemma A.** This satisfies the
+cycle-040 multi-cycle plan's "structure + 2 sub-lemmas closed"
+ceiling with margin and matches the consultant's
+`consultant_advice_cycle_040.md` §E primary plan.
 
-5. **Sub-lemma E — algebraic decomposition** (the load-bearing
-   identity; **verify direction first per the warning above**):
-   ```lean
-   lemma localTruncationError_decomposition
-       (hcons : M.IsConsistent) (y …) (x h : ℝ) :
-       M.localTruncationError y x h
-         = ∑ i : Fin k, M.α i.succ
-              * (y x - y (x - ((i.val+1):ℝ)*h)
-                 - ((i.val+1):ℝ)*h * deriv y x)
-           + h * ∑ i : Fin k, /- coefficient: M.β i.succ OR
-                                ((i.val+1):ℝ)*M.α i.succ - M.β i.succ -/
-                  * (deriv y x - deriv y (x - ((i.val+1):ℝ)*h))
-       := sorry
-   ```
-   Proof: pure algebra. Unfold `localTruncationError`, peel the `i=0`
-   term off the β-sum (it contributes `−h β₀ y'(x)`), apply
-   preconsistency to convert `y(x)` to `Σ αᵢ y(x)`, apply (404b) to
-   collapse the `y'(x)` coefficient. The `SatisfiesEq404b` cast bridge
-   from the auto-memory file (`MEMORY.md`) is required:
-   `convert ... using 1; exact Finset.sum_congr rfl …; push_cast; ring`.
+### Step 0 — Poll Aristotle ONCE
 
-6. **Sub-lemma F (the main theorem)**: triangle inequality on the
-   decomposition + sub-lemmas C + D, with
-   `Finset.abs_sum_le_sum_abs` and `mul_le_mul`-style monotonicity.
+Run `mcp__aristotle__get_status` for project
+`53d674e4-20e3-43e8-9600-0b189c62c8f5` exactly once at the start of
+the cycle.
 
-### Aristotle batch
+* If the project has returned proofs for any of A/B/C/D, copy them
+  in via `mcp__aristotle__extract_result` and verify each
+  individually with `lake env lean OpenMath/Chapter4/Section404.lean`
+  + axiom check. Keep the manual sub-lemma E proof; do not replace
+  it with an Aristotle proof.
+* If the project is still `IN_PROGRESS` (it was at 4 % at end of
+  cycle 040, ≈ 1 h after submission), do NOT poll again. Proceed
+  directly to manual proofs of D and A. Log the status in
+  cycle_041.md and move on.
+* If the project is `FAILED` or `COMPLETED` with no usable proofs,
+  proceed with manual proofs.
 
-After sorry-first compiles cleanly, submit sub-lemmas A–E (skip F —
-the main theorem is the integration point, prove it manually after
-its dependencies close). Aristotle is good at FTC plumbing
-(sub-lemma A, B) and at Lipschitz/triangle bookkeeping (sub-lemma D).
-Sub-lemma E is the algebraic decomposition; Aristotle may struggle
-with the SatisfiesEq404b cast bridge — try it anyway, but keep your
-manual proof ready.
+CLAUDE.md is explicit: one poll per cycle. No retry loops.
 
-Use the auto-memory note in `MEMORY.md` for the cast pattern when
-working with `SatisfiesEq404b`.
+### Step 1 — Manually prove sub-lemma D `deriv_diff_bound` (line 577)
 
-Submit as a self-contained Lean file at
-`.prover-state/aristotle_submissions/cycle_040/sub_lemmas.lean`,
-exactly as cycle 039 did. Sleep 30 minutes after submission, then
-poll once with `mcp__aristotle__get_status`.
+Easiest of the four; only depends on sub-lemma A's *statement* (not
+its proof), so even with A still `sorry` this compiles.
 
-### Faithfulness checklist (cycle 040 specifics)
+**Mathematical argument** (consultant note §D.4):
 
-- [ ] **Tautology check**: the theorem's conclusion is a numerical
-      bound — verify it does not collapse to a hypothesis.
-- [ ] **Hypothesis strength check**: `hf_lip` (Lipschitz) and
-      `hf_y_bound` are textbook-required. Do *not* add a closed-ball
-      strengthening (Butcher's hypothesis is global Lipschitz on the
-      relevant interval).
-- [ ] **Definition smuggling**: do not redefine `localTruncationError`.
-      Use the existing one from `def:406A`.
-- [ ] **Textbook-discrepancy escalation**: if you find the
-      decomposition `iαᵢ − βᵢ` vs `βᵢ` discrepancy is real, file the
-      issue file before committing.
+```
+|y'(x) − y'(x − ih)| = |f(y(x)) − f(y(x − ih))|     [hy_ode]
+                    ≤ L · |y(x) − y(x − ih)|         [Lipschitz f]
+                    ≤ L · h · i · M_bound            [sub-lemma A with ξ = -i]
+                    = i · h · L · M_bound.
+```
 
-## Fallback target — only if sorry-first signature does not compile
+**Concrete Lean tactic plan** (consultant note §D.4):
 
-If the sorry-first scaffold does not compile within ~45 minutes (most
-likely cause: `LipschitzWith L.toNNReal f` or `deriv y` mismatch with
-Mathlib's `intervalIntegral` API), **switch immediately** to:
+```lean
+lemma deriv_diff_bound … := by
+  rw [hy_ode x, hy_ode (x - (i : ℝ) * h)]
+  -- Goal: |f (y x) - f (y (x - i*h))| ≤ i * h * L * M_bound
+  have hLip : |f (y x) - f (y (x - (i : ℝ) * h))|
+                ≤ L * |y x - y (x - (i : ℝ) * h)| := by
+    have := hf_lip.dist_le_mul (y x) (y (x - (i : ℝ) * h))
+    simpa [Real.dist_eq, ← NNReal.coe_le_coe, NNReal.coe_mul,
+           Real.coe_toNNReal _ hL] using this
+  -- Apply sub-lemma A at ξ = -i (note: x + h * -i = x - i*h, abs_sub_comm).
+  have hA : |y x - y (x - (i : ℝ) * h)| ≤ h * (i : ℝ) * M_bound := by
+    have hA_raw := exact_solution_norm_bound hM hy_diff hy_ode hf_y_bound
+                     x h hh (-(i : ℝ)) (neg_nonpos_of_nonneg (Nat.cast_nonneg i))
+    have heq1 : x + h * (-(i : ℝ)) = x - (i : ℝ) * h := by ring
+    have heq2 : -(-(i : ℝ)) = (i : ℝ) := by ring
+    rw [heq1, heq2] at hA_raw
+    rw [abs_sub_comm]
+    exact hA_raw
+  calc |f (y x) - f (y (x - (i : ℝ) * h))|
+      ≤ L * |y x - y (x - (i : ℝ) * h)| := hLip
+    _ ≤ L * (h * (i : ℝ) * M_bound) := by
+        apply mul_le_mul_of_nonneg_left hA hL
+    _ = (i : ℝ) * h * L * M_bound := by ring
+```
 
-**Fallback: `def:451A`** — G-stable (Butcher §451). Read
-`extraction/formalization_data/entities/def_451A.json`. This is a
-standalone Chapter 4 definition with no Ch.4 prerequisites in our
-codebase yet (its dependencies `def:404B` and any G-stability prereq
-are already in or self-contained). It is a pure `def`+`structure` +
-witness deliverable, mirroring `def:357B` (algebraic stability) in
-shape — likely 1-cycle tractable. After fallback, submit a sanity
-witness (e.g. trivial linear test problem) per CLAUDE.md
-non-vacuity rule.
+If `simpa` on the Lipschitz bridge stalls, the alternative pattern
+is to extract `dist_le_mul` and rewrite `Real.dist_eq` and
+`NNReal.coe_mul` separately, then close with `linarith`.
 
-Do **not** chain to a different fallback. If even def:451A is
-intractable, write an issue describing why and stop — a cycle with
-"sorry-first lem:406B + open issue" is acceptable progress per
-CLAUDE.md's "minimum: decompose a sorry or write an issue" rule.
+### Step 2 — Manually prove sub-lemma A `exact_solution_norm_bound` (line 525)
 
-## What NOT to try (failed approaches and stale traps)
+**Hypothesis-strengthening required.** As detailed in
+`consultant_advice_cycle_040.md` §D.1, the textbook proof needs
+`f∘y = deriv y` to be **continuous**, not merely defined pointwise.
+`Differentiable ℝ y` alone does not give a continuous derivative —
+`y` could be differentiable with a discontinuous `deriv y`.
 
-- **Do NOT** generalise `localTruncationError` to vector-valued
-  `y : ℝ → ℝ^N`. Cycle 039's definition is scalar; generalising is a
-  separate infrastructure cycle and not on the critical path. Stay
-  scalar.
-- **Do NOT** attempt to *construct* the exact solution `y` inside
-  `lem:406B`. Take it as a hypothesis (just like `def:402A`'s
-  `IsConvergent` does). The
-  `picard_lindelof_bound_strengthening` issue does not block
-  `lem:406B`.
-- **Do NOT** raise `maxHeartbeats` above 200000. If sub-lemma F or E
-  times out, decompose further (e.g. peel out a separate `α`-sum
-  bound and `β`-sum bound).
-- **Do NOT** introduce `axiom`/`constant`. If sub-lemma B's
-  change-of-variables FTC is unwieldy, write it as a helper lemma in
-  the same file rather than axiomatising it.
-- **Do NOT** edit `scripts/autonomous_loop.py`. Scanner false
-  positives go in `.prover-state/issues/` for the loop maintainer (see
-  `tautology_scanner_false_positives.md` from cycle 015).
-- **Do NOT** touch any `extraction/raw_text/`,
-  `extraction/formalization_data/entities/*.json`, or
-  `extraction/formalization_data/index.json` /
-  `topo_order.json` / `by_chapter.json`. These are regenerated. Edit
-  only `extraction/formalization_data/lean_status.json` to record
-  formalization status.
-- **Do NOT** silently follow Butcher's algebraic decomposition without
-  re-deriving it. The planner suspects a textbook typo; the worker
-  must verify.
+**Action**: strengthen the hypothesis on `y` from
+`(hy_diff : Differentiable ℝ y)` to `(hy_C1 : ContDiff ℝ 1 y)`.
+Update the signature at line 519 (sub-lemma A), and propagate the
+same change to sub-lemmas B (line 536), C (line 552), D (line 571),
+and the main theorem at line 684. Replace
+`Differentiable ℝ y` with `ContDiff ℝ 1 y` throughout, and adjust
+internal uses (e.g. `hy_diff.differentiableAt` becomes
+`hy_C1.differentiable le_rfl |>.differentiableAt` if needed; but
+sub-lemma D as written above only uses `hy_ode`, so it needs no
+change beyond the parameter spelling).
 
-## Bookkeeping
+**Faithfulness justification** (mandatory; record in cycle_041.md):
+Butcher §406's "exact solution to the standard initial value
+problem `y' = f∘y` with `f` Lipschitz" implicitly assumes `y ∈ C¹`,
+because the Picard–Lindelöf theorem (Butcher §110, our `thm:110C`)
+produces a `C¹` solution from Lipschitz `f`. Surfacing this as an
+explicit hypothesis is **not a strengthening relative to the
+textbook** — it is making explicit what was implicit. Document this
+in the docstring of sub-lemma A and in the cycle 041 task results
+faithfulness check.
 
-When work lands:
-1. Update `extraction/formalization_data/lean_status.json` row for
-   `lem:406B` (or `def:451A` if you fall back) — set status,
-   `lean_file`, `lean_symbol`.
-2. Update `plan.md` Chapter 4 row from `[ ]` to `[x]` (or `[~]` if you
-   landed structure + sub-lemmas but not the main theorem).
-3. Update progress count: 39 → 40 (or 39 if structure-only).
-4. Write `.prover-state/task_results/cycle_040.md` per the CLAUDE.md
-   format, with the **Faithfulness check** section filled in
-   exhaustively for `lem:406B` (or fallback).
-5. If you ship structure + some sub-lemmas with the main theorem
-   still `sorry`, that's fine — the cycle still moves the chain
-   forward, and `[~]` (in progress) is the right plan.md status.
-6. If you discover the textbook decomposition discrepancy is real,
-   the issue file from §"Note on the textbook bound" is the
-   load-bearing artefact for cycle 041 to pick up.
+**Mathematical argument** (consultant note §D.1):
 
-## Why this cycle, this target
+```
+y(x + hξ) − y(x) = ∫_x^{x+hξ} y'(t) dt = ∫_x^{x+hξ} f(y(t)) dt    [FTC]
+|integral|       ≤ M_bound · |hξ - 0| = M_bound · h · (-ξ)         [norm bound]
+```
 
-`thm:406C` (the only dependent of `lem:406B`) sits on the critical
-path to `thm:243A` (the cross-chapter Ch.2→Ch.4 deferral). Every
-other Chapter 4 leaf — `thm:431A`, `thm:441C`, `thm:454A`, the
-`def:442A` principal-sheet machinery, the §410 order-criteria
-theorems — is parallel to this chain, not on it. Picking
-`lem:406B` is the strategic move; picking another Ch.4 leaf would
-be cherry-picking per CLAUDE.md's "follow the strategy" rule.
+**Concrete Lean tactic plan** (consultant note §D.1):
 
-The scale of the cycle (one theorem + 5 sub-lemmas + analysis
-infrastructure) genuinely is multi-cycle. **Sorry-first** is the
-correct deliverable shape: it locks in the signature, exposes the
-sub-lemmas as the unit of future Aristotle work, and lets cycles 041
-and 042 close them one at a time without redesigning the overall
-proof. Aim for "structure + 2 sub-lemmas closed" as the realistic
-cycle 040 ceiling; anything more is bonus.
+```lean
+lemma exact_solution_norm_bound
+    {f : ℝ → ℝ} {M_bound : ℝ} (hM : 0 ≤ M_bound)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h)
+    (ξ : ℝ) (hξ : ξ ≤ 0) :
+    |y (x + h * ξ) - y x| ≤ h * (-ξ) * M_bound := by
+  -- Step 1: f∘y is continuous (= deriv y, which is continuous from C¹ y).
+  have hfy_cont : Continuous (fun t => f (y t)) := by
+    have heq : (fun t => f (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact (hy_C1.continuous_deriv le_rfl)
+  -- Step 2: HasDerivAt at every point.
+  have hderiv : ∀ t, HasDerivAt y (f (y t)) t := by
+    intro t
+    have ht := (hy_C1.differentiable le_rfl).differentiableAt.hasDerivAt
+    rw [hy_ode] at ht
+    exact ht
+  -- Step 3: integrability.
+  have hint : IntervalIntegrable (fun t => f (y t)) MeasureTheory.volume
+                x (x + h * ξ) := hfy_cont.intervalIntegrable _ _
+  -- Step 4: FTC.
+  have hFTC : ∫ t in x..(x + h * ξ), f (y t) = y (x + h * ξ) - y x := by
+    have := intervalIntegral.integral_eq_sub_of_hasDerivAt
+              (fun t _ => hderiv t) hint
+    simpa using this
+  -- Step 5: bound the integral by M_bound.
+  have hC : ∀ t ∈ Set.uIoc x (x + h * ξ), ‖f (y t)‖ ≤ M_bound := by
+    intro t _
+    simpa [Real.norm_eq_abs] using hf_y_bound t
+  have hbound :
+      ‖∫ t in x..(x + h * ξ), f (y t)‖ ≤ M_bound * |h * ξ| := by
+    -- Use intervalIntegral.norm_integral_le_of_norm_le_const.
+    have := intervalIntegral.norm_integral_le_of_norm_le_const hC
+    -- Length is |b - a| = |(x + h*ξ) - x| = |h * ξ|.
+    simpa [add_sub_cancel_left] using this
+  -- Step 6: simplify |h * ξ| = h * (-ξ).
+  have habs : |h * ξ| = h * (-ξ) := by
+    rw [abs_mul, abs_of_nonneg hh, abs_of_nonpos hξ]
+  rw [← hFTC, Real.norm_eq_abs] at hbound
+  calc |y (x + h * ξ) - y x|
+      ≤ M_bound * |h * ξ| := by linarith [hbound]
+    _ = M_bound * (h * (-ξ)) := by rw [habs]
+    _ = h * (-ξ) * M_bound := by ring
+```
+
+The exact spelling of `intervalIntegral.norm_integral_le_of_norm_le_const`
+arguments and `ContDiff.continuous_deriv` may differ slightly —
+verify each with `lean_hover_info` first. Common variants:
+`intervalIntegral.norm_integral_le_of_norm_le_const_ae` (a.e.
+version), `ContDiff.continuous_iteratedDeriv` (general-order
+version, specialise to k=1).
+
+### Step 3 — verify and commit
+
+Run, in this order:
+
+```bash
+# 1. Compile cleanly.
+lake env lean OpenMath/Chapter4/Section404.lean
+# Expected: warnings on remaining sorrys at lines 541, 559, 692 only.
+# (Lines 525 and 577 should disappear from the warning list.)
+
+# 2. Axiom check on the two newly-proved lemmas.
+echo '#print axioms OpenMath.Chapter4.Section404.deriv_diff_bound' | …
+echo '#print axioms OpenMath.Chapter4.Section404.exact_solution_norm_bound' | …
+# Expected: [propext, Classical.choice, Quot.sound] only.
+
+# 3. Verify the rest of the project still builds.
+lake build
+```
+
+Update `.prover-state/task_results/cycle_041.md` with the
+faithfulness check (especially the `Differentiable → ContDiff`
+hypothesis upgrade — flag it explicitly), the proof outcomes, the
+Aristotle status, and any dead ends.
+
+Update `extraction/formalization_data/lean_status.json` only if a
+*whole entity* moves from `partial` to `formalized` — in this cycle
+that does not happen; `lem:406B` itself stays `partial` until the
+main theorem proof closes. Leave the status row unchanged.
+
+### Step 4 — commit and push
+
+```
+git add OpenMath/Chapter4/Section404.lean \
+        .prover-state/task_results/cycle_041.md \
+        .prover-state/heartbeat.json \
+        .prover-state/history.jsonl
+git commit -m "Cycle 041 — close sub-lemmas A and D of lem:406B"
+git push origin Main/Experiments
+```
+
+If only D closed (A turns out sticky on the `ContDiff` upgrade),
+commit D alone and adjust the message accordingly. **Always commit
+non-empty progress** — a single sub-lemma closed is a valid cycle
+deliverable per CLAUDE.md.
+
+## Fallback plan
+
+If sub-lemma A's `intervalIntegral` plumbing burns more than 90 min
+of cycle time:
+
+1. Keep the `ContDiff ℝ 1 y` upgrade in ALL sub-lemma signatures
+   (A, B, C, D, main). The cost of consistent signatures is zero
+   even if A is still `sorry`.
+2. Leave sub-lemma A as `sorry`.
+3. File a follow-up issue
+   `.prover-state/issues/exact_solution_norm_bound_FTC_plumbing.md`
+   documenting the specific Mathlib-lemma signature problem
+   encountered.
+4. Commit D + the signature upgrade only. Cycle deliverable is
+   "structure + 2 sub-lemmas closed (D, E) + ContDiff signature
+   upgrade". Aristotle continues to work on A/B/C in the background.
+
+## What NOT to do
+
+* Do **NOT** treat the `cycle 40 score=-2 REVERTED` verdict as real.
+  See §A above; the commit IS on `origin/Main/Experiments`. If you
+  start "fixing" cycle-040 work, you will overwrite valid
+  deliverables.
+* Do **NOT** re-prove sub-lemma E. It is fully closed at lines
+  588–666 with `[propext, Classical.choice, Quot.sound]` axioms.
+* Do **NOT** revert the corrected `β_i` decomposition in favour of
+  Butcher's stated `(iα_i − β_i)` form. The textbook has a typo;
+  see `.prover-state/issues/lem_406B_textbook_check.md` and
+  `consultant_advice_cycle_040.md` §B for two independent
+  derivations confirming the typo.
+* Do **NOT** poll Aristotle more than once. If the project is still
+  `IN_PROGRESS` at the start of the cycle, treat it as "no
+  contribution this cycle" and move on. CLAUDE.md is explicit; the
+  consultant note §C reaffirms it.
+* Do **NOT** raise `maxHeartbeats` above 200000. If a `ring_nf` or
+  `simp` blows up, decompose into named `have`s.
+* Do **NOT** introduce `axiom` or `constant` to bypass the
+  `Continuous (deriv y)` gap. The right move is the
+  `ContDiff ℝ 1 y` upgrade described in Step 2; that is faithful to
+  the textbook.
+* Do **NOT** generalise `localTruncationError` from `ℝ → ℝ` to
+  vector-valued `ℝ → ℝ^N`. The current scalar formulation matches
+  Butcher's §406 narrative and the proof plans above all require it.
+* Do **NOT** edit `scripts/autonomous_loop.py`. The phantom-verdict
+  bug is loop-maintainer territory; see
+  `.prover-state/issues/tautology_scanner_false_positives.md`.
+* Do **NOT** attempt sub-lemmas B (FTC + change-of-variables) or C
+  (chain of A+B+Lipschitz) this cycle. B is the most plumbing-heavy
+  of the four and is the natural cycle-042 target *after* A's FTC
+  pattern is established and the Aristotle results land.
+* Do **NOT** cherry-pick easier work elsewhere. `lem:406B` is the
+  current `[~]` entity and is the gate for `thm:406C`,
+  `thm:406D`, `thm:422C`, and the cross-chapter `thm:243A`. Stay on
+  this target.
+
+## Pre-commit faithfulness checklist (mandatory before commit)
+
+For each newly-closed lemma in this cycle:
+
+* `deriv_diff_bound`: not a textbook entity (helper for `lem:406B`).
+  Statement matches Butcher's implicit step
+  `|y'(x) − y'(x − ih)| ≤ ihLM`. ✓ tautology-free, ✓ no extra
+  hypotheses beyond what Butcher's §406 proof uses.
+* `exact_solution_norm_bound`: not a textbook entity (helper for
+  `lem:406B`). The `ContDiff ℝ 1 y` strengthening relative to
+  `Differentiable ℝ y`: **document explicitly** in the docstring
+  AND in the task_results faithfulness section, with the
+  Picard–Lindelöf-implies-C¹ justification. This is the single
+  most important faithfulness flag for this cycle.
+
+## Cross-references
+
+* `.prover-state/issues/consultant_advice_cycle_040.md` §C, §D.1,
+  §D.4, §E — Aristotle polling rule, sub-lemma A and D proof plans,
+  cycle-041 strategy recommendation.
+* `.prover-state/issues/lem_406B_textbook_check.md` — textbook typo
+  documentation.
+* `.prover-state/task_results/cycle_040.md` — cycle 040 deliverables
+  and current sorry list.
+* `OpenMath/Chapter4/Section404.lean:516–692` — the sorry-first
+  scaffold under development.
+* MEMORY.md `feedback_satisfieseq404b_cast.md` — the cast-bridging
+  pattern used in sub-lemma E (already applied; documented for
+  posterity).

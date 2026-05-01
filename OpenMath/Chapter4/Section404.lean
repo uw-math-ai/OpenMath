@@ -510,19 +510,67 @@ incrementally over later cycles. -/
 /-- Sub-lemma A: pointwise bound on `|y(x + h*ξ) − y x|` for ξ ≤ 0
 under the IVP hypotheses `y' = f∘y` and `‖f∘y‖ ≤ M_bound`.
 
-Proof sketch (deferred): write
-`y(x + hξ) − y(x) = ∫_x^{x+hξ} y'(t) dt = ∫_x^{x+hξ} f(y(t)) dt`,
-then bound by `M_bound` times the length `h·|ξ|`. -/
+Proof: write
+`y(x + hξ) − y(x) = ∫_x^{x+hξ} y'(t) dt = ∫_x^{x+hξ} f(y(t)) dt`
+via FTC, then bound by `M_bound` times the length `h·|ξ|`.
+
+**Hypothesis-strength note (faithfulness check, cycle 041)**.
+The textbook (Butcher §406) implicitly assumes `y ∈ C¹`: it
+applies FTC to `y'`, which requires `y'` to be continuous. The
+Picard–Lindelöf theorem (Butcher §110, our `thm:110C`) produces
+exactly such a `C¹` solution from a Lipschitz `f`. We surface
+this requirement explicitly via `ContDiff ℝ 1 y`, which is
+strictly equivalent to "`y` differentiable with continuous
+derivative" — i.e. **not** a strengthening relative to the
+textbook, only making explicit what was implicit. -/
 lemma exact_solution_norm_bound
     {f : ℝ → ℝ} {M_bound : ℝ} (hM : 0 ≤ M_bound)
     {y : ℝ → ℝ}
-    (hy_diff : Differentiable ℝ y)
+    (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
     (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
     (x h : ℝ) (hh : 0 ≤ h)
     (ξ : ℝ) (hξ : ξ ≤ 0) :
     |y (x + h * ξ) - y x| ≤ h * (-ξ) * M_bound := by
-  sorry
+  -- Step 1: f∘y is continuous (it equals deriv y, which is continuous from C¹ y).
+  have hfy_cont : Continuous (fun t => f (y t)) := by
+    have heq : (fun t => f (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact hy_C1.continuous_deriv le_rfl
+  -- Step 2: HasDerivAt y (f (y t)) t at every t.
+  have hderiv : ∀ t, HasDerivAt y (f (y t)) t := by
+    intro t
+    have hdiff := (hy_C1.differentiable (by norm_num : (1 : WithTop ℕ∞) ≠ 0)) t
+    have ht := hdiff.hasDerivAt
+    rw [hy_ode t] at ht
+    exact ht
+  -- Step 3: integrability.
+  have hint : IntervalIntegrable (fun t => f (y t)) MeasureTheory.volume
+                x (x + h * ξ) := hfy_cont.intervalIntegrable _ _
+  -- Step 4: FTC.
+  have hFTC : ∫ t in x..(x + h * ξ), f (y t) = y (x + h * ξ) - y x :=
+    intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hderiv t) hint
+  -- Step 5: bound the integral by M_bound.
+  have hC : ∀ t ∈ Set.uIoc x (x + h * ξ), ‖f (y t)‖ ≤ M_bound := by
+    intro t _
+    rw [Real.norm_eq_abs]
+    exact hf_y_bound t
+  have hbound :
+      |∫ t in x..(x + h * ξ), f (y t)| ≤ M_bound * |h * ξ| := by
+    have hb := intervalIntegral.norm_integral_le_of_norm_le_const hC
+    rw [Real.norm_eq_abs] at hb
+    have hsub : (x + h * ξ) - x = h * ξ := by ring
+    rw [hsub] at hb
+    exact hb
+  rw [hFTC] at hbound
+  -- Step 6: |h*ξ| = h*(-ξ).
+  have habs : |h * ξ| = h * (-ξ) := by
+    rw [abs_mul, abs_of_nonneg hh, abs_of_nonpos hξ]
+  rw [habs] at hbound
+  calc |y (x + h * ξ) - y x|
+      ≤ M_bound * (h * (-ξ)) := hbound
+    _ = h * (-ξ) * M_bound := by ring
 
 /-- Sub-lemma B: integral form for the residual
 `y(x) − y(x − i*h) − i*h*y'(x)`.
@@ -533,7 +581,7 @@ Proof sketch (deferred): apply FTC to write
 `i*h*y'(x)`. -/
 lemma residual_integral_form
     {f : ℝ → ℝ} {y : ℝ → ℝ}
-    (hy_diff : Differentiable ℝ y)
+    (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
     (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
     y x - y (x - (i : ℝ) * h) - ((i : ℝ) * h) * deriv y x
@@ -550,7 +598,7 @@ lemma residual_bound
     (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
     (hf_lip : LipschitzWith L.toNNReal f)
     {y : ℝ → ℝ}
-    (hy_diff : Differentiable ℝ y)
+    (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
     (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
     (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
@@ -568,13 +616,35 @@ lemma deriv_diff_bound
     (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
     (hf_lip : LipschitzWith L.toNNReal f)
     {y : ℝ → ℝ}
-    (hy_diff : Differentiable ℝ y)
+    (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
     (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
     (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
     |deriv y x - deriv y (x - (i : ℝ) * h)|
       ≤ (i : ℝ) * h * L * M_bound := by
-  sorry
+  rw [hy_ode x, hy_ode (x - (i : ℝ) * h)]
+  -- Step 1: Lipschitz on f.
+  have hLip : |f (y x) - f (y (x - (i : ℝ) * h))|
+                ≤ L * |y x - y (x - (i : ℝ) * h)| := by
+    have hd := hf_lip.dist_le_mul (y x) (y (x - (i : ℝ) * h))
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    have hco : ((Real.toNNReal L : ℝ≥0) : ℝ) = L := Real.coe_toNNReal L hL
+    rw [hco] at hd
+    exact hd
+  -- Step 2: apply sub-lemma A at ξ = -(i : ℝ).
+  have hA_raw := exact_solution_norm_bound hM hy_C1 hy_ode hf_y_bound
+                   x h hh (-(i : ℝ)) (neg_nonpos_of_nonneg (Nat.cast_nonneg i))
+  have hA : |y x - y (x - (i : ℝ) * h)| ≤ h * (i : ℝ) * M_bound := by
+    have heq1 : x + h * (-(i : ℝ)) = x - (i : ℝ) * h := by ring
+    have heq2 : -(-(i : ℝ)) = (i : ℝ) := by ring
+    rw [heq1, heq2] at hA_raw
+    rw [abs_sub_comm]
+    exact hA_raw
+  -- Step 3: combine.
+  calc |f (y x) - f (y (x - (i : ℝ) * h))|
+      ≤ L * |y x - y (x - (i : ℝ) * h)| := hLip
+    _ ≤ L * (h * (i : ℝ) * M_bound) := mul_le_mul_of_nonneg_left hA hL
+    _ = (i : ℝ) * h * L * M_bound := by ring
 
 /-- Sub-lemma E: algebraic decomposition of the local truncation error
 under consistency.
@@ -681,7 +751,7 @@ theorem LinearMultistepMethod.localTruncationError_bound {k : ℕ}
     (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
     (hf_lip : LipschitzWith L.toNNReal f)
     {y : ℝ → ℝ}
-    (hy_diff : Differentiable ℝ y)
+    (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
     (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
     (x h : ℝ) (hh : 0 ≤ h) :
