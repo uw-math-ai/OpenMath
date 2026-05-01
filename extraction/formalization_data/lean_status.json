@@ -733,8 +733,8 @@
   },
   "thm:406C": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
-    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.globalError_recurrence_bound",
-    "status": "partial"
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.globalError_recurrence_bound_textbook",
+    "status": "formalized"
   },
   "thm:406D": {
     "lean_file": null,

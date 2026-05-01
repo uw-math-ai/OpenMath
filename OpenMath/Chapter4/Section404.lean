@@ -354,6 +354,32 @@ theorem isLMMSolution_zero_iff {k : ℕ} (M : LinearMultistepMethod k)
     simp only [Fin.val_zero, Nat.sub_zero, M.α_zero, Fin.val_succ]
     linarith
 
+/-- Sanity-check witness: an `explicitEulerLMM.IsLMMSolution` reduces
+to the textbook explicit Euler step `Y(m+1) = Y(m) + h · f(x_m, Y(m))`.
+
+This lemma exists to lock in the sign convention of `IsLMMSolution`
+against future drift. (Cycle 044 fixed a sign bug in
+`IsLMMSolution`; cycle 045 adds this regression witness so the bug
+cannot silently re-appear.) -/
+theorem explicitEulerLMM_step_eq
+    {f : ℝ → ℝ → ℝ} {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hY : explicitEulerLMM.IsLMMSolution h x₀ f Y) (m : ℕ) :
+    Y (m + 1) = Y m + h * f (x₀ + (m : ℝ) * h) (Y m) := by
+  have h_step := hY m
+  -- The IsLMMSolution recurrence at index m for k = 1 reads
+  --   Σ_{i ∈ Fin 2} α i · Y(m + 1 - i) = -h · Σ_{i ∈ Fin 2} β i · f(x₀+(m+1-i)h, Y(m+1-i)).
+  -- Unfolding `Fin 2` via `Fin.sum_univ_two` and using
+  -- explicitEulerLMM's coefficients (α 0 = -1, α 1 = 1, β 0 = 0, β 1 = 1)
+  -- yields the textbook step.
+  have ha0 : explicitEulerLMM.α 0 = -1 := explicitEulerLMM.α_zero
+  have ha1 : explicitEulerLMM.α 1 = 1 := by simp [explicitEulerLMM]
+  have hb0 : explicitEulerLMM.β 0 = 0 := by simp [explicitEulerLMM]
+  have hb1 : explicitEulerLMM.β 1 = 1 := by simp [explicitEulerLMM]
+  rw [Fin.sum_univ_two, Fin.sum_univ_two] at h_step
+  simp only [Fin.val_zero, Fin.val_one, Nat.sub_zero, Nat.add_sub_cancel,
+             ha0, ha1, hb0, hb1] at h_step
+  linarith
+
 /-- A constant sequence solves the homogeneous recurrence (403a)
 provided the method is preconsistent. This is folklore: a method
 preserves constants iff the α-coefficients sum to one, which is
@@ -1282,5 +1308,149 @@ theorem LinearMultistepMethod.globalError_recurrence_bound
               (x₀ + (n : ℝ) * h) h hh
   -- Combine: |T_1| + |T_2| + |T_3| ≤ goal RHS.
   exact le_trans (add_le_add (add_le_add hB hC) hD) (le_of_eq (by ring))
+
+/-- Butcher Theorem 406C (p. 347, textbook form): under the smallness
+hypothesis `h L |β_0| < 1` (Butcher's "for `h_0` sufficiently small so
+that `h_0 |β_0| L < 1` and `h < h_0`"), the per-term bound from
+`globalError_recurrence_bound` can be absorbed via the
+`(1 − h L |β_0|)`-inversion to yield the textbook form (406c)
+
+  `|n_n − Σ α_i n_{n-i}|  ≤  C_h · h · max |n_{n-i}|  +  D_h · h²`
+
+with explicit `h`-dependent constants. The proof proceeds by Butcher's
+"use (406d) twice" recipe: bound `|n_n|` by `|Σ α_i n_{n-i}| + |LHS|`
+(reverse triangle), substitute into the per-term bound, solve the
+resulting algebraic inequality `(1 − h L |β_0|) · A ≤ c · B + K`
+(where `c = h L |β_0|`, `B ≤ Σ|α_i| · Mmax`), and divide through.
+
+The textbook abstracts `C` and `D` as unspecified constants depending
+on `h_0`. Our Lean form is strictly tighter (explicit `h`-dependent
+constants), and trivially implies the textbook constants form when
+`h ≤ h_0` and we take constants at `h_0`. -/
+theorem LinearMultistepMethod.globalError_recurrence_bound_textbook
+    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)
+    (n : ℕ) (hn : k ≤ n)
+    (Mmax : ℝ) (hMmax0 : 0 ≤ Mmax)
+    (hMmax : ∀ i : Fin k,
+              |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1))| ≤ Mmax) :
+    |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))|
+      ≤ (h * L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                  + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L * |M.β 0|)) * Mmax
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L * M_bound * h^2
+            / (1 - h * L * |M.β 0|) := by
+  -- Apply the cycle-044 per-term bound.
+  have hA := M.globalError_recurrence_bound hcons hL hM hf_lip
+                hyex_C1 hyex_ode hf_yex_bound hh hY n hn Mmax hMmax0 hMmax
+  -- Reverse triangle: |n_n| ≤ |Σ α (yex − Y)| + A.
+  have h_abs_nn :
+      |yex (x₀ + (n : ℝ) * h) - Y n|
+        ≤ |∑ i : Fin k, M.α i.succ
+              * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                  - Y (n - (i.val + 1)))|
+          + |yex (x₀ + (n : ℝ) * h) - Y n
+              - ∑ i : Fin k, M.α i.succ
+                  * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                      - Y (n - (i.val + 1)))| := by
+    have hrw : yex (x₀ + (n : ℝ) * h) - Y n
+              = (∑ i : Fin k, M.α i.succ
+                  * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                      - Y (n - (i.val + 1))))
+                + (yex (x₀ + (n : ℝ) * h) - Y n
+                    - ∑ i : Fin k, M.α i.succ
+                        * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                            - Y (n - (i.val + 1)))) := by ring
+    calc |yex (x₀ + (n : ℝ) * h) - Y n|
+        = |(∑ i : Fin k, M.α i.succ
+                * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                    - Y (n - (i.val + 1))))
+            + (yex (x₀ + (n : ℝ) * h) - Y n
+                - ∑ i : Fin k, M.α i.succ
+                    * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                        - Y (n - (i.val + 1))))| := by rw [← hrw]
+      _ ≤ _ := abs_add_le _ _
+  -- Bound |Σ α (yex − Y)| by (Σ|α|) · Mmax.
+  have h_abs_sum :
+      |∑ i : Fin k, M.α i.succ
+          * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+              - Y (n - (i.val + 1)))|
+        ≤ (∑ i : Fin k, |M.α i.succ|) * Mmax := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    rw [Finset.sum_mul]
+    apply Finset.sum_le_sum
+    intro i _
+    rw [abs_mul]
+    exact mul_le_mul_of_nonneg_left (hMmax i) (abs_nonneg _)
+  -- Smallness: 1 − c > 0.
+  have h_one_sub_c_pos : 0 < 1 - h * L * |M.β 0| := by linarith
+  -- c ≥ 0 (needed to multiply the reverse-triangle through).
+  have hc_nn : 0 ≤ h * L * |M.β 0| :=
+    mul_nonneg (mul_nonneg hh hL) (abs_nonneg _)
+  -- Σ|α| ≥ 0.
+  have hsum_alpha_nn : 0 ≤ ∑ i : Fin k, |M.α i.succ| :=
+    Finset.sum_nonneg (fun i _ => abs_nonneg _)
+  -- Set up shorthands as `let`s so linarith can chain them.
+  set A : ℝ :=
+      |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))| with hA_def
+  set B : ℝ :=
+      |∑ i : Fin k, M.α i.succ
+          * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+              - Y (n - (i.val + 1)))| with hB_def
+  set N : ℝ := |yex (x₀ + (n : ℝ) * h) - Y n| with hN_def
+  set c : ℝ := h * L * |M.β 0| with hc_def
+  set Sα : ℝ := ∑ i : Fin k, |M.α i.succ| with hSα_def
+  set T2coef : ℝ := h * L * (∑ i : Fin k, |M.β i.succ|) with hT2c_def
+  set Dh2 : ℝ :=
+      ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+        + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * L * M_bound * h^2 with hD_def
+  -- Step 1: per-term bound (rephrased with shorthands).
+  have h_step1 : A ≤ c * N + T2coef * Mmax + Dh2 := hA
+  -- Step 2: c · N ≤ c · B + c · A.
+  have h_step2 : c * N ≤ c * B + c * A := by
+    have := mul_le_mul_of_nonneg_left h_abs_nn hc_nn
+    linarith
+  -- Step 3: (1 - c) · A ≤ c · B + T2coef · Mmax + Dh2.
+  have h_step3 :
+      (1 - c) * A ≤ c * B + T2coef * Mmax + Dh2 := by
+    nlinarith [h_step1, h_step2]
+  -- Step 4: bound c · B by c · Sα · Mmax (since c ≥ 0).
+  have h_step4 :
+      (1 - c) * A ≤ c * Sα * Mmax + T2coef * Mmax + Dh2 := by
+    have hcB : c * B ≤ c * (Sα * Mmax) :=
+      mul_le_mul_of_nonneg_left h_abs_sum hc_nn
+    nlinarith [h_step3, hcB]
+  -- Step 5: divide by (1 − c) (positive) to get the goal.
+  rw [show (h * L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L * |M.β 0|)) * Mmax
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L * M_bound * h^2
+            / (1 - h * L * |M.β 0|)
+        = (c * Sα * Mmax + T2coef * Mmax + Dh2) / (1 - c) from by
+    simp only [hc_def, hSα_def, hT2c_def, hD_def]; ring]
+  rw [le_div_iff₀ h_one_sub_c_pos]
+  linarith [h_step4]
 
 end OpenMath.Chapter4.Section404

@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 40 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 41 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -182,7 +182,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:441C` **Maximum order bound for stable linear multistep methods** (§441)
 - [ ] `lem:441B` **Maximum order coefficients negativity** (§441)
 - [ ] `thm:405A` **Necessity of conditions for convergence** (§405)
-- [ ] `thm:406C` **Global error bound for linear multistep methods** (§406)
+- [x] `thm:406C` **Global error bound for linear multistep methods** (§406)
 - [ ] `thm:410A` **Criteria for order** (§410)
 - [ ] `thm:422C` **Convergence of Linear Multistep Methods** (§422)
 - [ ] `lem:441A` **Maximum order for a convergent k-step method** (§441)
