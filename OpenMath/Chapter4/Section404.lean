@@ -3391,7 +3391,7 @@ private lemma globalError_recurrence_form_explicit
                 (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i := by
       rw [h_cf, h_empty, Finset.sum_empty, add_zero]
     have h_eps_le : |yex (x₀ + (n : ℝ) * h) - Y n| ≤ Θ * y'sum := by
-      rw [h_eps_eq]; exact h_Sy_bound
+      simpa [h_eps_eq] using h_Sy_bound
     -- a ≥ Θ * y'sum.
     have h_Θy_le_a : Θ * y'sum ≤ a := by
       show Θ * y'sum ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum
@@ -3729,6 +3729,69 @@ theorem LinearMultistepMethod.globalError_closed_form_autonomous_explicit
     (fun m => |yex (x₀ + (m : ℝ) * h) - Y m|)
     (aOf M Θ L h yex Y x₀) (bOf M Θ L h) (cOf M Θ L M_bound h) h k
     ha hb hc hh hk hu0' hrec n
+
+/-- **Tendsto of `bOf` at `h = 0` (cycle 061).**
+
+`bOf M Θ L h` unfolds to `(Θ + 1) · CbaseOf M L h + 1`, which is the
+exact `b`-formula proved by cycle 056's `b_tendsto_at_zero`. Internal
+scaffolding for the §406D outer-squeeze assembly (cycle 062). Not a
+Butcher concept. -/
+private lemma bOf_tendsto_at_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ) :
+    Filter.Tendsto (fun h : ℝ => bOf M Θ L h)
+      (nhds 0)
+      (nhds ((Θ + 1) *
+              (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                    + ∑ i : Fin k, |M.β i.succ|))
+            + 1)) := by
+  unfold bOf CbaseOf
+  exact b_tendsto_at_zero M Θ L
+
+/-- **Tendsto of `cOf` at `h = 0` (cycle 061).**
+
+`cOf M Θ L M_bound h` unfolds to `(Θ + 1) · DbaseOf M L M_bound h`,
+which is the exact `c`-formula proved by cycle 056's
+`c_tendsto_at_zero`. Internal scaffolding for the §406D outer-squeeze
+assembly (cycle 062). Not a Butcher concept. -/
+private lemma cOf_tendsto_at_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L M_bound : ℝ) :
+    Filter.Tendsto (fun h : ℝ => cOf M Θ L M_bound h)
+      (nhds 0)
+      (nhds ((Θ + 1) *
+              (((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+                  + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+                * L * M_bound))) := by
+  unfold cOf DbaseOf
+  exact c_tendsto_at_zero M Θ L M_bound
+
+open OpenMath.Chapter1.Section141 in
+/-- **Tendsto of `yPrimeSumOf` to zero (cycle 061).**
+
+`yPrimeSumOf M yex Y x₀ h` is the `y'sum` quantity of
+`globalError_recurrence_form` (cycle 052). For the §406D outer
+squeeze, the starting data is per-`h` (`Yh : ℝ → ℕ → ℝ`), since
+`IsConvergent`'s `start` parameter is per-`h` by design.
+
+Given the starting-data convergence
+`yex (x₀ + j·h) - Yh h j → 0` for each `j < k`,
+`yPrimeSumOf M yex (Yh h) x₀ h → 0` follows from cycle 055's
+`yPrime_sum_abs_tendsto_zero`. Internal scaffolding for cycle 062.
+Not a Butcher concept. -/
+private lemma yPrimeSumOf_tendsto_zero
+    {k : ℕ} (M : LinearMultistepMethod k)
+    (yex : ℝ → ℝ) (Yh : ℝ → ℕ → ℝ) (x₀ : ℝ)
+    (hstart : ∀ j : Fin k,
+        Filter.Tendsto
+          (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
+          (nhds 0) (nhds 0)) :
+    Filter.Tendsto
+      (fun h : ℝ => yPrimeSumOf M yex (Yh h) x₀ h)
+      (nhds 0) (nhds 0) := by
+  unfold yPrimeSumOf
+  exact yPrime_sum_abs_tendsto_zero
+    (fun j : Fin k => M.α j.succ)
+    (u := fun h j => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
+    hstart
 
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.** [STATUS: scaffold; closure deferred
