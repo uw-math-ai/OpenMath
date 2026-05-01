@@ -1453,4 +1453,217 @@ theorem LinearMultistepMethod.globalError_recurrence_bound_textbook
   rw [le_div_iff₀ h_one_sub_c_pos]
   linarith [h_step4]
 
+/-! ### Discrete Grönwall (helper for thm:406D)
+
+Butcher §406D proves convergence of stable consistent linear multistep
+methods by combining the textbook recurrence bound (406c, closed in
+cycle 045 as `globalError_recurrence_bound_textbook`) with the
+closed-form solution of a linear recurrence and a discrete Grönwall
+inequality. Equation (406h) on p. 347 of Butcher (3rd ed.) is the
+recurrence
+
+  `u_n ≤ a + b·h·k · Σ_{i=1}^{n−1} u_i + c · h² · n`
+
+whose closed-form bound is
+
+  `u_n ≤ exp(b·k·n·h) · a + (exp(b·k·n·h) − 1) · c·h/(b·k)`.
+
+We package this as a standalone helper. It is **not** a Butcher entity
+in the extraction registry (it is the auxiliary inequality between the
+hypotheses of (406h) and the exponential bound used in the proof of
+the convergence theorem), so no `entities/<id>.json` applies. -/
+
+/-- Closed-form bound `u n ≤ a · (1+b·h·k)^n + (c·h/(b·k)) · ((1+b·h·k)^n - 1)`,
+    proved by strong induction on `n` from the recurrence hypothesis.
+
+    The inductive step uses the geometric sum identity
+    `(Σ i ∈ range n, r^i)·(r-1) = r^n - 1` (`geom_sum_mul`) with `r = 1+x`
+    where `x := b·h·k`. The key cancellation is `(c·h/(b·k))·x = c·h²`,
+    which makes the `c·h²·n` term and the geometric correction collapse. -/
+private lemma _v_geom
+    {u : ℕ → ℝ} {a b c h : ℝ} {k : ℕ}
+    (ha : 0 ≤ a) (hb : 0 < b) (hc : 0 ≤ c) (hh : 0 ≤ h) (hk : 0 < k)
+    (hu0 : u 0 ≤ a)
+    (hu_rec : ∀ n, 1 ≤ n →
+      u n ≤ a + b * h * (k : ℝ) * (∑ i ∈ Finset.Ico 1 n, u i)
+              + c * h^2 * (n : ℝ)) :
+    ∀ n, u n ≤ a * (1 + b * h * (k : ℝ))^n
+              + (c * h / (b * (k : ℝ)))
+                  * ((1 + b * h * (k : ℝ))^n - 1) := by
+  -- Notation.
+  set x : ℝ := b * h * (k : ℝ) with hx_def
+  set B : ℝ := c * h / (b * (k : ℝ)) with hB_def
+  -- Setup non-negativity / equalities.
+  have hk_pos : (0 : ℝ) < (k : ℝ) := Nat.cast_pos.mpr hk
+  have hbk_pos : (0 : ℝ) < b * (k : ℝ) := mul_pos hb hk_pos
+  have hbk_ne : b * (k : ℝ) ≠ 0 := ne_of_gt hbk_pos
+  have hx_nn : 0 ≤ x := show 0 ≤ b * h * (k : ℝ) by positivity
+  have hB_nn : 0 ≤ B :=
+    show 0 ≤ c * h / (b * (k : ℝ)) by positivity
+  have hr_nn : 0 ≤ 1 + x := by linarith
+  have hBx_eq : B * x = c * h^2 := by
+    show c * h / (b * (k : ℝ)) * (b * h * (k : ℝ)) = c * h^2
+    field_simp
+  have hax_nn : 0 ≤ a * x := mul_nonneg ha hx_nn
+  -- Strong induction on n.
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    match n, ih with
+    | 0, _ =>
+      simp only [pow_zero, mul_one, sub_self, mul_zero, add_zero]
+      linarith
+    | n+1, ih =>
+      -- Apply rec at n+1.
+      have hn1 : 1 ≤ n + 1 := Nat.succ_le_succ (Nat.zero_le _)
+      have hrec : u (n+1) ≤ a + x * (∑ i ∈ Finset.Ico 1 (n+1), u i)
+                          + c * h^2 * ((n+1 : ℕ) : ℝ) := hu_rec (n+1) hn1
+      -- IH gives, for each i ∈ Ico 1 (n+1), the closed-form bound on u i.
+      have hSum_le_C :
+          ∑ i ∈ Finset.Ico 1 (n+1), u i
+            ≤ ∑ i ∈ Finset.Ico 1 (n+1),
+                (a * (1+x)^i + B * ((1+x)^i - 1)) := by
+        apply Finset.sum_le_sum
+        intro i hi
+        rw [Finset.mem_Ico] at hi
+        exact ih i hi.2
+      -- Σ C(i) = (a+B) · Σ(1+x)^i - B · n  (since |Ico 1 (n+1)| = n).
+      have hSum_C_eq :
+          ∑ i ∈ Finset.Ico 1 (n+1), (a * (1+x)^i + B * ((1+x)^i - 1))
+          = (a + B) * (∑ i ∈ Finset.Ico 1 (n+1), (1+x)^i) - B * (n : ℝ) := by
+        have hrw : ∀ i, a * (1+x)^i + B * ((1+x)^i - 1)
+                        = (a + B) * (1+x)^i - B := by
+          intro i; ring
+        simp_rw [hrw]
+        rw [Finset.sum_sub_distrib, ← Finset.mul_sum, Finset.sum_const]
+        rw [Nat.card_Ico, Nat.add_sub_cancel, nsmul_eq_mul]
+        ring
+      -- Geometric sum: x · Σ_{Ico 1 (n+1)} (1+x)^i = (1+x)^(n+1) - (1+x).
+      have hgeom_sum :
+          x * (∑ i ∈ Finset.Ico 1 (n+1), (1+x)^i)
+            = (1+x)^(n+1) - (1+x) := by
+        rw [Finset.sum_Ico_eq_sum_range, Nat.add_sub_cancel]
+        -- ∑_{j ∈ range n} (1+x)^(1+j) = (1+x) · ∑_{j ∈ range n} (1+x)^j
+        have hshift :
+            ∀ j, ((1 : ℝ) + x)^(1 + j) = (1+x) * (1+x)^j := by
+          intro j; rw [pow_add, pow_one]
+        simp_rw [hshift]
+        rw [← Finset.mul_sum]
+        -- x · ((1+x) · Σ) = (1+x) · (Σ · x) = (1+x) · ((1+x)^n - 1) = (1+x)^(n+1) - (1+x)
+        have hgsm : (∑ i ∈ Finset.range n, ((1:ℝ)+x)^i) * x
+                      = (1+x)^n - 1 := by
+          have := geom_sum_mul ((1:ℝ)+x) n
+          have heq : ((1:ℝ) + x) - 1 = x := by ring
+          rw [heq] at this; exact this
+        have : x * ((1+x) * (∑ i ∈ Finset.range n, ((1:ℝ)+x)^i))
+             = (1+x) * ((∑ i ∈ Finset.range n, ((1:ℝ)+x)^i) * x) := by ring
+        rw [this, hgsm, pow_succ]; ring
+      -- Set short names for the sums.
+      set S : ℝ := ∑ i ∈ Finset.Ico 1 (n+1), u i with hS_def
+      set Sg : ℝ := ∑ i ∈ Finset.Ico 1 (n+1), (1+x)^i with hSg_def
+      have hS_bnd : S ≤ (a + B) * Sg - B * (n : ℝ) :=
+        hSum_le_C.trans hSum_C_eq.le
+      have hSg_geom : x * Sg = (1+x)^(n+1) - (1+x) := hgeom_sum
+      -- Multiply the sum bound by x ≥ 0.
+      have h_xS : x * S ≤ x * ((a + B) * Sg - B * (n : ℝ)) :=
+        mul_le_mul_of_nonneg_left hS_bnd hx_nn
+      -- ch²·(n+1) = B·x·(n+1) = B·x·n + B·x.
+      have hcheq_n :
+          c * h^2 * ((n+1 : ℕ) : ℝ) = B * x * (n : ℝ) + B * x := by
+        have := hBx_eq
+        push_cast
+        nlinarith [this]
+      -- Combine: u(n+1) ≤ a + x·((a+B)Sg - Bn) + Bxn + Bx
+      --                = a + (a+B)·(xSg) + Bx
+      --                = a + (a+B)·((1+x)^(n+1) - (1+x)) + Bx
+      --                = a(1+x)^(n+1) + B((1+x)^(n+1) - 1) - ax.
+      -- Algebraic identity to chain through.
+      have h_alg :
+          a + (a + B) * ((1+x)^(n+1) - (1+x)) + B * x
+            = a * (1+x)^(n+1) + B * ((1+x)^(n+1) - 1) - a * x := by ring
+      -- u(n+1) ≤ a + (a+B)·((1+x)^(n+1) - (1+x)) + Bx
+      have h_intermediate :
+          u (n+1) ≤ a + (a + B) * ((1+x)^(n+1) - (1+x)) + B * x := by
+        -- u(n+1) ≤ a + xS + ch²(n+1)
+        --       ≤ a + x·((a+B)·Sg - Bn) + Bx·n + Bx
+        --       = a + (a+B)·(xSg) - Bxn + Bxn + Bx
+        --       = a + (a+B)·((1+x)^(n+1) - (1+x)) + Bx
+        nlinarith [hrec, h_xS, hcheq_n, hSg_geom]
+      linarith [h_intermediate, h_alg, hax_nn]
+
+/-- `(1 + b·h·k)^n ≤ exp(b·k·n·h)`, as needed for the closed-form
+    Grönwall bound. Combines `Real.add_one_le_exp`, `pow_le_pow_left₀`,
+    and `Real.exp_nat_mul`. -/
+private lemma _one_add_pow_le_exp
+    (b h : ℝ) (k n : ℕ) (hb : 0 ≤ b) (hh : 0 ≤ h) :
+    (1 + b * h * (k : ℝ))^n ≤ Real.exp (b * (k : ℝ) * (n : ℝ) * h) := by
+  have hk_nn : (0 : ℝ) ≤ (k : ℝ) := Nat.cast_nonneg _
+  have hbhk_nn : 0 ≤ b * h * (k : ℝ) := by positivity
+  have hone_add_nn : 0 ≤ 1 + b * h * (k : ℝ) := by linarith
+  -- 1 + bhk ≤ exp(bhk)
+  have h1 : 1 + b * h * (k : ℝ) ≤ Real.exp (b * h * (k : ℝ)) := by
+    have := Real.add_one_le_exp (b * h * (k : ℝ)); linarith
+  -- (1 + bhk)^n ≤ (exp bhk)^n
+  have h2 : (1 + b * h * (k : ℝ))^n ≤ (Real.exp (b * h * (k : ℝ)))^n :=
+    pow_le_pow_left₀ hone_add_nn h1 n
+  -- (exp bhk)^n = exp(n · bhk) = exp(b·k·n·h)
+  have h3 : (Real.exp (b * h * (k : ℝ)))^n
+              = Real.exp (b * (k : ℝ) * (n : ℝ) * h) := by
+    rw [← Real.exp_nat_mul]
+    congr 1; ring
+  linarith [h2, h3.le, h3.ge]
+
+/-- **Discrete Grönwall (Butcher equation (406h) closed form, §406D, p. 347).**
+Suppose a non-negative sequence `u : ℕ → ℝ` satisfies, for some
+non-negative constants `a, c, h ≥ 0`, `b > 0`, `k > 0`, and every
+`n ≥ 1`,
+
+  `u n ≤ a + b·h·k · (Σ i ∈ Ico 1 n, u i) + c·h² · n`,
+
+with `u 0 ≤ a`. Then for every `n`,
+
+  `u n ≤ exp(b·k·n·h) · a + (exp(b·k·n·h) − 1) · c·h/(b·k)`.
+
+Butcher's auxiliary sequence (406h) is exactly this with `a = φ(h)`,
+`b = ΘC`, `c = ΘD`. Hypothesis `b > 0` is faithful to the textbook
+since `Θ ≥ |θ_0| = 1 > 0` (`Section141.theta_zero`). -/
+lemma discrete_gronwall_exp_bound
+    (u : ℕ → ℝ) (a b c h : ℝ) (k : ℕ)
+    (ha : 0 ≤ a) (hb : 0 < b) (hc : 0 ≤ c) (hh : 0 ≤ h) (hk : 0 < k)
+    (hu0 : u 0 ≤ a)
+    (hu_rec : ∀ n, 1 ≤ n →
+      u n ≤ a + b * h * (k : ℝ) * (∑ i ∈ Finset.Ico 1 n, u i)
+              + c * h^2 * (n : ℝ))
+    (n : ℕ) :
+    u n ≤ Real.exp (b * (k : ℝ) * (n : ℝ) * h) * a
+            + (Real.exp (b * (k : ℝ) * (n : ℝ) * h) - 1)
+                * (c * h / (b * (k : ℝ))) := by
+  -- Step 1: closed-form bound u n ≤ a·(1+x)^n + B·((1+x)^n - 1).
+  have hgeom := _v_geom (u := u) (a := a) (b := b) (c := c) (h := h) (k := k)
+                        ha hb hc hh hk hu0 hu_rec n
+  -- Step 2: (1+x)^n ≤ exp(b·k·n·h).
+  have hexp := _one_add_pow_le_exp b h k n hb.le hh
+  -- Step 3: combine. Set up non-negativity bounds.
+  have hk_pos : (0 : ℝ) < (k : ℝ) := Nat.cast_pos.mpr hk
+  have hbk_pos : (0 : ℝ) < b * (k : ℝ) := mul_pos hb hk_pos
+  have hB_nn : 0 ≤ c * h / (b * (k : ℝ)) :=
+    div_nonneg (mul_nonneg hc hh) hbk_pos.le
+  have hx_nn : 0 ≤ b * h * (k : ℝ) := by positivity
+  have hr_nn : 0 ≤ 1 + b * h * (k : ℝ) := by linarith
+  have hpow_nn : 0 ≤ (1 + b * h * (k : ℝ))^n := pow_nonneg hr_nn _
+  -- a · (1+x)^n ≤ a · exp(...).
+  have h1 : a * (1 + b * h * (k : ℝ))^n
+              ≤ a * Real.exp (b * (k : ℝ) * (n : ℝ) * h) :=
+    mul_le_mul_of_nonneg_left hexp ha
+  -- B · ((1+x)^n - 1) ≤ B · (exp(...) - 1).
+  have h2 : (c * h / (b * (k : ℝ))) * ((1 + b * h * (k : ℝ))^n - 1)
+              ≤ (c * h / (b * (k : ℝ)))
+                  * (Real.exp (b * (k : ℝ) * (n : ℝ) * h) - 1) :=
+    mul_le_mul_of_nonneg_left (by linarith) hB_nn
+  -- Combine.
+  linarith [hgeom, h1, h2,
+            mul_comm a (Real.exp (b * (k : ℝ) * (n : ℝ) * h)),
+            mul_comm (c * h / (b * (k : ℝ)))
+              (Real.exp (b * (k : ℝ) * (n : ℝ) * h) - 1)]
+
 end OpenMath.Chapter4.Section404
