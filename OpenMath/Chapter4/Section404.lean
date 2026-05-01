@@ -2007,6 +2007,149 @@ private lemma Cbase_tendsto_at_zero
     h_num.div h_denom (by norm_num)
   simpa using h_div
 
+-- §406D outer-assembly Tendsto helpers (cycle 055 Aristotle batch,
+-- integrated cycle 056). These supply the next layer of analytic
+-- combinators needed for the outer squeeze in
+-- `stable_consistent_isConvergent`.
+
+/-- **`Dbase`-style ratio is continuous at `h = 0` (cycle 055/056).**
+
+The `Dbase` constant in `globalError_recurrence_form` (line 2266) has
+the form
+```
+((1/2) · Σᵢ (i+1)² · |α(i+1)| + Σᵢ (i+1) · |β(i+1)|) · L · M_bound
+  / (1 - h · L · |β 0|)
+```
+The numerator is constant in `h`; the denominator tends to 1.
+Mirrors `Cbase_tendsto_at_zero` for the `Dbase` shape. -/
+private lemma Dbase_tendsto_at_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (L M_bound : ℝ) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * L * M_bound / (1 - h * L * |M.β 0|))
+      (nhds 0)
+      (nhds (((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+              + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+            * L * M_bound)) := by
+  set N : ℝ := ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+                + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L * M_bound with hN_def
+  have h_denom : Filter.Tendsto
+      (fun h : ℝ => 1 - h * L * |M.β 0|) (nhds 0) (nhds 1) := by
+    have h0 : Filter.Tendsto
+        (fun h : ℝ => 1 - h * L * |M.β 0|)
+        (nhds 0) (nhds (1 - 0 * L * |M.β 0|)) := by
+      refine tendsto_const_nhds.sub ?_
+      exact (Filter.tendsto_id.mul tendsto_const_nhds).mul tendsto_const_nhds
+    simpa using h0
+  have h_num : Filter.Tendsto
+      (fun _ : ℝ => N) (nhds 0) (nhds N) := tendsto_const_nhds
+  have h_div : Filter.Tendsto
+      (fun h : ℝ => N / (1 - h * L * |M.β 0|))
+      (nhds 0) (nhds (N / 1)) :=
+    h_num.div h_denom (by norm_num)
+  simpa using h_div
+
+/-- **Tendsto of constant-over-affine helper (cycle 055/056).**
+
+If `c` is a constant and `1 - h · a → 1` as `h → 0`, then
+`c / (1 - h · a) → c`. Used by §406D outer assembly to handle the
+`Cbase` and `Dbase` shapes' denominator generically. -/
+private lemma tendsto_const_div_one_sub_mul (c a : ℝ) :
+    Filter.Tendsto
+      (fun h : ℝ => c / (1 - h * a))
+      (nhds 0)
+      (nhds c) := by
+  have h_denom : Filter.Tendsto
+      (fun h : ℝ => 1 - h * a) (nhds 0) (nhds 1) := by
+    have h0 : Filter.Tendsto
+        (fun h : ℝ => 1 - h * a) (nhds 0) (nhds (1 - 0 * a)) :=
+      tendsto_const_nhds.sub (Filter.tendsto_id.mul tendsto_const_nhds)
+    simpa using h0
+  have hdiv : Filter.Tendsto
+      (fun h : ℝ => c / (1 - h * a)) (nhds 0) (nhds (c / 1)) :=
+    tendsto_const_nhds.div h_denom (by norm_num)
+  simpa using hdiv
+
+/-- **`h^2 → 0` as `h → 0` (cycle 055/056 helper).**
+
+Trivial Mathlib fact, but explicitly named for §406D outer assembly
+where we encounter `c · h^2 · n` in the closed-form bound and need
+to conclude this product tends to 0. -/
+private lemma tendsto_h_squared_zero :
+    Filter.Tendsto (fun h : ℝ => h ^ 2) (nhds 0) (nhds 0) := by
+  exact Continuous.tendsto' (continuous_pow 2) _ _ (by norm_num)
+
+/-- **Sum of absolute values tends to 0 (cycle 055/056 helper).**
+
+If each component of a finite-sum family tends to 0, then so does
+the sum of absolute values. Pure Tendsto/finite-sum combinator;
+used by §406D outer assembly. -/
+private lemma tendsto_finset_sum_abs_zero
+    {ι : Type*} (s : Finset ι) {f : ℝ → ι → ℝ}
+    (hf : ∀ i ∈ s, Filter.Tendsto (fun h : ℝ => f h i) (nhds 0) (nhds 0)) :
+    Filter.Tendsto
+      (fun h : ℝ => ∑ i ∈ s, |f h i|)
+      (nhds 0) (nhds 0) := by
+  simpa using tendsto_finset_sum _ fun i hi => Filter.Tendsto.abs (hf i hi)
+
+/-- **Real exp is continuous at every point (cycle 055/056 helper).**
+
+Used by §406D outer assembly: the closed-form bound contains
+`exp(b · k · n · h)` where `n · h = x − x₀` is constant and `b → b∞`
+as `h → 0`. We need `Tendsto Real.exp` at points other than 0. -/
+private lemma tendsto_real_exp_at (c : ℝ) :
+    Filter.Tendsto Real.exp (nhds c) (nhds (Real.exp c)) := by
+  exact Real.continuous_exp.tendsto c
+
+/-- **Tendsto of `b = (Θ + 1) · Cbase + 1` at `h = 0` (cycle 056).**
+
+Lifts `Cbase_tendsto_at_zero` through `· * (Θ + 1) + 1` to give a
+`Tendsto` for the linear-recurrence multiplier `b` from
+`globalError_recurrence_form`. As `h → 0` the value `b` tends to
+`(Θ + 1) · Cbase∞ + 1` where
+`Cbase∞ = L · (|β 0| · Σ|α(i+1)| + Σ|β(i+1)|)`. -/
+private lemma b_tendsto_at_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        (Θ + 1) *
+          (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L * |M.β 0|))
+        + 1)
+      (nhds 0)
+      (nhds ((Θ + 1) *
+              (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                    + ∑ i : Fin k, |M.β i.succ|))
+            + 1)) := by
+  have hCbase := Cbase_tendsto_at_zero M L
+  have hmul := hCbase.const_mul (Θ + 1)
+  have hadd := hmul.add_const (1 : ℝ)
+  simpa using hadd
+
+/-- **Tendsto of `c = (Θ + 1) · Dbase` at `h = 0` (cycle 056).**
+
+Lifts `Dbase_tendsto_at_zero` through `· * (Θ + 1)` to give a
+`Tendsto` for the quadratic-coefficient `c` from
+`globalError_recurrence_form`. -/
+private lemma c_tendsto_at_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L M_bound : ℝ) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        (Θ + 1) *
+          (((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+              + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+            * L * M_bound / (1 - h * L * |M.β 0|)))
+      (nhds 0)
+      (nhds ((Θ + 1) *
+              (((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+                  + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+                * L * M_bound))) := by
+  exact (Dbase_tendsto_at_zero M L M_bound).const_mul (Θ + 1)
+
 /-- **Index-arithmetic adapter for `thm:406D` (cycle 050).**
 The "recent-window sum" `Σ_{j:Fin k} g(i − (j+1))` summed over
 `i ∈ Ico k n` is bounded by `k` copies of the total sum
