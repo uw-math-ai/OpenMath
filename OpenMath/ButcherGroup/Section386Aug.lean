@@ -743,4 +743,29 @@ theorem mul_assoc_at_three_singleton_leaves
   simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest, hβ', hγ']
   ring
 
+section ThreeChoice
+
+/-- Disjoint-pair combinator. Encodes the per-position three-way choice
+on `BTree.node (List.replicate n (BTree.node [BTree.leaf]))`:
+- `i ∈ S₁`: cut at the child root.
+- `i ∈ S₂`: partial-trunk cut, prune the inner leaf.
+- `i ∉ S₁ ∪ S₂`: keep the child fully.
+The carrier filter enforces `S₁ ∩ S₂ = ∅`. -/
+def threeChoice (n : ℕ) :
+    Finset (Finset (Fin n) × Finset (Fin n)) :=
+  Finset.univ.filter (fun p => p.1 ∩ p.2 = ∅)
+
+theorem threeChoice_zero : threeChoice 0 = {(∅, ∅)} := by
+  decide
+
+theorem mem_threeChoice_iff (n : ℕ) (S₁ S₂ : Finset (Fin n)) :
+    (S₁, S₂) ∈ threeChoice n ↔ Disjoint S₁ S₂ := by
+  simp [threeChoice, Finset.disjoint_iff_inter_eq_empty]
+
+theorem threeChoice_one :
+    threeChoice 1 = {(∅, ∅), (∅, {0}), ({0}, ∅)} := by
+  decide
+
+end ThreeChoice
+
 end ButcherTableau
