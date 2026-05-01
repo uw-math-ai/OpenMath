@@ -1,0 +1,5 @@
+Dbase_tendsto_at_zero: 85144f3e-c182-40df-810f-4447dc3d9a13
+tendsto_quotient_pos_const: 1e6e1560-d695-4813-9511-489f1ffc5b68
+tendsto_h_squared_zero: 37d9e153-27ac-4265-a6b3-cb96ea6b6141
+tendsto_exp_continuous_at_zero: 8b82d93a-fafe-4f19-b0ab-5103f754b8ef
+tendsto_finset_sum_abs_zero: 7e508e7b-2c30-4c77-8e4d-63ef7e79fa2f

@@ -1869,6 +1869,144 @@ private lemma starting_error_sum_tendsto_zero
     tendsto_finset_sum _ (fun i _ => h_each i)
   simpa using h_sum
 
+open OpenMath.Chapter1.Section141 in
+/-- **`yPrime`-sum tends to 0 helper (cycle 055, toward `thm:406D`).**
+
+`yPrime k α u` is a finite triangular recurrence (Section141, eq.
+141b): `yPrime _ _ u 0 = u 0` and for `0 < m < k`,
+`yPrime _ _ u m = u m - Σ_{i<m} θ_{m-i} · yPrime _ _ u i`. Hence each
+`yPrime k α u m` for `m < k` is a finite linear combination of
+`u 0, …, u m` with coefficients independent of the parameter.
+
+If a parametric family `u_h : Fin k → ℝ` satisfies `u_h j → 0` as
+`h → 0` for each `j : Fin k`, then `Σ_{i ∈ range k} |yPrime k α u_h i| → 0`.
+
+Used by: cycle 056+ outer assembly of `thm:406D` to capture the
+"a_m = (Θ + …) · y'sum_m → 0" sub-goal of the squeeze proof. -/
+private lemma yPrime_sum_abs_tendsto_zero
+    {k : ℕ} (α : Fin k → ℝ)
+    {u : ℝ → Fin k → ℝ}
+    (hu : ∀ j : Fin k,
+      Filter.Tendsto (fun h : ℝ => u h j) (nhds 0) (nhds 0)) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        ∑ i ∈ Finset.range k, |yPrime k α (u h) i|)
+      (nhds 0) (nhds 0) := by
+  -- Step 1: per-index Tendsto via strong induction on m < k.
+  have h_each : ∀ m, m < k →
+      Filter.Tendsto (fun h : ℝ => yPrime k α (u h) m) (nhds 0) (nhds 0) := by
+    intro m
+    induction m using Nat.strong_induction_on with
+    | _ m ih =>
+      intro hmk
+      have h_eq : ∀ h : ℝ,
+          yPrime k α (u h) m
+            = u h ⟨m, hmk⟩ -
+                ∑ i : Fin m, theta k α (m - i.val) *
+                  yPrime k α (u h) i.val := by
+        intro h
+        exact yPrime_of_lt k α (u h) m hmk
+      have h_sub_tendsto : ∀ i : Fin m,
+          Filter.Tendsto
+            (fun h : ℝ => theta k α (m - i.val) * yPrime k α (u h) i.val)
+            (nhds 0) (nhds 0) := by
+        intro i
+        have hilt : i.val < m := i.isLt
+        have h_iv_lt : i.val < k := lt_trans hilt hmk
+        have h_yPrime_i := ih i.val hilt h_iv_lt
+        have := h_yPrime_i.const_mul (theta k α (m - i.val))
+        simpa using this
+      have h_sum_tendsto :
+          Filter.Tendsto
+            (fun h : ℝ =>
+              ∑ i : Fin m, theta k α (m - i.val) *
+                yPrime k α (u h) i.val)
+            (nhds 0) (nhds 0) := by
+        have h_step : Filter.Tendsto
+            (fun h : ℝ =>
+              ∑ i : Fin m, theta k α (m - i.val) *
+                yPrime k α (u h) i.val)
+            (nhds 0)
+            (nhds (∑ _i : Fin m, (0 : ℝ))) :=
+          tendsto_finset_sum _ (fun i _ => h_sub_tendsto i)
+        simpa using h_step
+      have h_uh_tendsto :
+          Filter.Tendsto (fun h : ℝ => u h ⟨m, hmk⟩) (nhds 0) (nhds 0) :=
+        hu ⟨m, hmk⟩
+      have h_diff :
+          Filter.Tendsto
+            (fun h : ℝ => u h ⟨m, hmk⟩ -
+                ∑ i : Fin m, theta k α (m - i.val) *
+                  yPrime k α (u h) i.val)
+            (nhds 0) (nhds 0) := by
+        have h_sub := h_uh_tendsto.sub h_sum_tendsto
+        simpa using h_sub
+      have h_funext : (fun h : ℝ => yPrime k α (u h) m)
+          = (fun h : ℝ => u h ⟨m, hmk⟩ -
+              ∑ i : Fin m, theta k α (m - i.val) *
+                yPrime k α (u h) i.val) := by
+        funext h; exact h_eq h
+      rw [h_funext]
+      exact h_diff
+  -- Step 2: lift per-index Tendsto to |·| via .abs.
+  have h_each_abs : ∀ i ∈ Finset.range k,
+      Filter.Tendsto (fun h : ℝ => |yPrime k α (u h) i|) (nhds 0) (nhds 0) := by
+    intro i hi
+    have hik : i < k := Finset.mem_range.mp hi
+    have h_t := h_each i hik
+    have h_at := h_t.abs
+    simpa using h_at
+  -- Step 3: lift to the finite sum.
+  have h_sum :
+      Filter.Tendsto
+        (fun h : ℝ => ∑ i ∈ Finset.range k, |yPrime k α (u h) i|)
+        (nhds 0)
+        (nhds (∑ _i ∈ Finset.range k, (0 : ℝ))) :=
+    tendsto_finset_sum _ h_each_abs
+  simpa using h_sum
+
+/-- **`Cbase`-style ratio is continuous at `h = 0` (cycle 055).**
+
+The `Cbase` constant in `globalError_recurrence_form` (line 2125) has
+the form
+```
+L * (|β 0| · Σᵢ |α(i+1)| + Σᵢ |β(i+1)|) / (1 - h · L · |β 0|)
+```
+The numerator is constant in `h`; the denominator `1 - h · L · |β 0|`
+tends to 1 as `h → 0`. Hence the whole expression is continuous at 0
+and tends to the `h = 0` value
+`L * (|β 0| · Σᵢ |α(i+1)| + Σᵢ |β(i+1)|)`.
+
+We state it as a Tendsto fact; cycle 056+ uses this to control the
+slack in `b · k = ((Θ + 1) · Cbase + 1) · k` as `h → 0`. -/
+private lemma Cbase_tendsto_at_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (L : ℝ) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+              + ∑ i : Fin k, |M.β i.succ|)
+          / (1 - h * L * |M.β 0|))
+      (nhds 0)
+      (nhds (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                  + ∑ i : Fin k, |M.β i.succ|))) := by
+  set N : ℝ := L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                    + ∑ i : Fin k, |M.β i.succ|) with hN_def
+  have h_denom : Filter.Tendsto
+      (fun h : ℝ => 1 - h * L * |M.β 0|) (nhds 0) (nhds 1) := by
+    have h0 : Filter.Tendsto
+        (fun h : ℝ => 1 - h * L * |M.β 0|)
+        (nhds 0) (nhds (1 - 0 * L * |M.β 0|)) := by
+      refine tendsto_const_nhds.sub ?_
+      exact (Filter.tendsto_id.mul tendsto_const_nhds).mul tendsto_const_nhds
+    simpa using h0
+  have h_num : Filter.Tendsto
+      (fun _ : ℝ => N) (nhds 0) (nhds N) := tendsto_const_nhds
+  have h_div : Filter.Tendsto
+      (fun h : ℝ => N / (1 - h * L * |M.β 0|))
+      (nhds 0) (nhds (N / 1)) :=
+    h_num.div h_denom (by norm_num)
+  simpa using h_div
+
 /-- **Index-arithmetic adapter for `thm:406D` (cycle 050).**
 The "recent-window sum" `Σ_{j:Fin k} g(i − (j+1))` summed over
 `i ∈ Ico k n` is bounded by `k` copies of the total sum
@@ -2575,69 +2713,6 @@ theorem LinearMultistepMethod.globalError_closed_form_autonomous
   exact discrete_gronwall_exp_bound
     (fun m => |yex (x₀ + (m : ℝ) * h) - Y m|)
     a b c h k ha hb hc hh hk hu0' hrec n
-
-/-- **Butcher Theorem 406D, autonomous-IVP Tendsto form (cycle 054
-step toward `stable_consistent_isConvergent`).** [STATUS: stated;
-closure deferred to cycle 055+.]
-
-For an autonomous IVP `y' = f(y)` with `f` Lipschitz and `f∘yex`
-bounded, a stable consistent linear multistep method whose starting
-values converge to `y₀` produces iterates that converge to the exact
-solution as `m → ∞` (equivalently, as `h_m := (x − x₀)/m → 0`). This
-is the analytical core of the textbook 406D; the non-autonomous
-generalisation (matching the full `IsConvergent` predicate) is the
-cycle 055+ target.
-
-The proof skeleton (cycle 055):
-1. Set `h_m := (x − x₀) / m`. For `m > 0`, `m · h_m = x − x₀` is
-   constant.
-2. Apply `Filter.eventually_atTop` to discard small `m` and ensure
-   `h_m · L · |M.β 0| < 1`.
-3. Apply `globalError_closed_form_autonomous` at each `m`,
-   destructure `⟨a_m, b_m, c_m, …⟩`. The bound at `n = m` is
-   `|Y m m − yex x| ≤ exp(b_m·k·m·h_m)·a_m
-                      + (exp(b_m·k·m·h_m) − 1)·c_m·h_m/(b_m·k)`.
-   Since `m · h_m = x − x₀` is constant, the exponential factor is
-   bounded uniformly in `m`.
-4. Show each piece tends to 0:
-   * `a_m = (Θ + (Θ+1)·Cbase_m·h_m·k + 1) · y'sum_m` — the factor
-     stays bounded as `m → ∞` (`Cbase_m → Cbase_∞`, `h_m → 0`),
-     and `y'sum_m → 0` by `starting_error_sum_tendsto_zero`
-     (cycle 049). Hence `a_m → 0`. (This step relies on the
-     cycle 054 slack removal that makes `a_m` scale linearly with
-     `y'sum_m`.)
-   * `c_m · h_m / (b_m · k) → 0` since `c_m` is bounded, `b_m · k`
-     is bounded below by 1·k > 0, and `h_m → 0`.
-5. Conclude `Tendsto (fun m => Y m m − yex x) atTop (𝓝 0)` by
-   `squeeze_zero`.
-
-Textbook statement (`entities/thm_406D.json`):
-> "A stable consistent linear multistep method is convergent."
-
-This theorem captures the textbook conclusion *only* for autonomous
-`f : ℝ → ℝ`; cycle 055+ closes the gap to the full non-autonomous
-`f : ℝ → ℝ → ℝ` of `IsConvergent`. -/
-theorem LinearMultistepMethod.stable_consistent_isConvergent_autonomous
-    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
-    (hcons : M.IsConsistent) (hstab : M.IsStable)
-    {f : ℝ → ℝ} {L M_bound : ℝ}
-    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
-    (hf_lip : LipschitzWith L.toNNReal f)
-    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
-    (hy0 : yex x₀ = y₀)
-    (hyex_C1 : ContDiff ℝ 1 yex)
-    (hyex_ode : ∀ t, deriv yex t = f (yex t))
-    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
-    {start : ℝ → Fin k → ℝ}
-    (hstart : ∀ i : Fin k,
-      Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀))
-    (x : ℝ) (hxx₀ : x₀ < x)
-    (Y : ℕ → ℕ → ℝ)
-    (hY : ∀ m : ℕ, 0 < m →
-      (∀ i : Fin k, Y m i.val = start ((x - x₀) / (m : ℝ)) i) ∧
-      M.IsLMMSolution ((x - x₀) / (m : ℝ)) x₀ (fun _ y => f y) (Y m)) :
-    Filter.Tendsto (fun m : ℕ => Y m m - yex x) Filter.atTop (nhds 0) := by
-  sorry
 
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.** [STATUS: scaffold; closure deferred
