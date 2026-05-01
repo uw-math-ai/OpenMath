@@ -2150,7 +2150,7 @@ private lemma globalError_recurrence_form
         yex (x₀ + (j.val : ℝ) * h) - Y j.val) i| with hy'sum_def
   have hy'sum_nn : 0 ≤ y'sum := Finset.sum_nonneg (fun _ _ => abs_nonneg _)
   -- Step 4: a, b, c.
-  set a : ℝ := (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum + 1 with ha_def
+  set a : ℝ := (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum with ha_def
   set b : ℝ := (Θ + 1) * Cbase + 1 with hb_def
   set c : ℝ := (Θ + 1) * Dbase with hc_def
   -- Positivity.
@@ -2159,9 +2159,7 @@ private lemma globalError_recurrence_form
   have hCbase_h_k_nn : 0 ≤ (Θ + 1) * Cbase * h * (k : ℝ) := by positivity
   have ha_nn : 0 ≤ a := by
     have h_factor_nn : 0 ≤ Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1 := by linarith
-    have : 0 ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum :=
-      mul_nonneg h_factor_nn hy'sum_nn
-    linarith
+    exact mul_nonneg h_factor_nn hy'sum_nn
   have hb_pos : 0 < b := by
     have : 0 ≤ (Θ + 1) * Cbase := mul_nonneg hΘp1_nn hCbase_nn
     linarith
@@ -2183,12 +2181,12 @@ private lemma globalError_recurrence_form
       have h1 : 0 ≤ Θ + (Θ + 1) * Cbase * h * (k : ℝ) := by
         linarith [hΘ_nn, hCbase_h_k_nn]
       linarith
-    have h_step : y'sum ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum := by
-      calc y'sum = 1 * y'sum := by ring
-        _ ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum :=
-            mul_le_mul_of_nonneg_right h_factor_ge_1 hy'sum_nn
     show |yex x₀ - Y 0| ≤ a
-    linarith [hy0_le_sum, h_step]
+    calc |yex x₀ - Y 0|
+        ≤ y'sum := hy0_le_sum
+      _ = 1 * y'sum := by ring
+      _ ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum :=
+          mul_le_mul_of_nonneg_right h_factor_ge_1 hy'sum_nn
   -- The main recurrence.
   refine ⟨a, b, c, ha_nn, hb_pos, hc_nn, ?_, hu0⟩
   intro n hn
@@ -2238,7 +2236,7 @@ private lemma globalError_recurrence_form
       rw [h_eps_eq]; exact h_Sy_bound
     -- a ≥ Θ * y'sum.
     have h_Θy_le_a : Θ * y'sum ≤ a := by
-      show Θ * y'sum ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum + 1
+      show Θ * y'sum ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum
       nlinarith [hy'sum_nn, hΘ_nn, hCbase_h_k_nn]
     have h_rest_nn : 0 ≤ b * h * (k : ℝ) * Srec + c * h^2 * (n : ℝ) := by
       have h1 : 0 ≤ b * h * (k : ℝ) := by positivity
@@ -2513,8 +2511,8 @@ private lemma globalError_recurrence_form
     -- We have h_eps_le_split : |ε n| ≤ Θ * y'sum + ((Θ+1)*Cbase*h*k*Stot + Θ*Dbase*h²*(n-k) + Dbase*h²)
     -- Use h_Cbase_term, h_Dbase_term to convert to a + b*h*k*Srec + c*h²*n form.
     have h_a_expand :
-        a = Θ * y'sum + (Θ + 1) * Cbase * h * (k : ℝ) * y'sum + y'sum + 1 := by
-      show (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum + 1 = _
+        a = Θ * y'sum + (Θ + 1) * Cbase * h * (k : ℝ) * y'sum + y'sum := by
+      show (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum = _
       ring
     have h_a_target :
         Θ * y'sum + (Θ + 1) * Cbase * h * (k : ℝ) * y'sum ≤ a := by
@@ -2578,24 +2576,87 @@ theorem LinearMultistepMethod.globalError_closed_form_autonomous
     (fun m => |yex (x₀ + (m : ℝ) * h) - Y m|)
     a b c h k ha hb hc hh hk hu0' hrec n
 
+/-- **Butcher Theorem 406D, autonomous-IVP Tendsto form (cycle 054
+step toward `stable_consistent_isConvergent`).** [STATUS: stated;
+closure deferred to cycle 055+.]
+
+For an autonomous IVP `y' = f(y)` with `f` Lipschitz and `f∘yex`
+bounded, a stable consistent linear multistep method whose starting
+values converge to `y₀` produces iterates that converge to the exact
+solution as `m → ∞` (equivalently, as `h_m := (x − x₀)/m → 0`). This
+is the analytical core of the textbook 406D; the non-autonomous
+generalisation (matching the full `IsConvergent` predicate) is the
+cycle 055+ target.
+
+The proof skeleton (cycle 055):
+1. Set `h_m := (x − x₀) / m`. For `m > 0`, `m · h_m = x − x₀` is
+   constant.
+2. Apply `Filter.eventually_atTop` to discard small `m` and ensure
+   `h_m · L · |M.β 0| < 1`.
+3. Apply `globalError_closed_form_autonomous` at each `m`,
+   destructure `⟨a_m, b_m, c_m, …⟩`. The bound at `n = m` is
+   `|Y m m − yex x| ≤ exp(b_m·k·m·h_m)·a_m
+                      + (exp(b_m·k·m·h_m) − 1)·c_m·h_m/(b_m·k)`.
+   Since `m · h_m = x − x₀` is constant, the exponential factor is
+   bounded uniformly in `m`.
+4. Show each piece tends to 0:
+   * `a_m = (Θ + (Θ+1)·Cbase_m·h_m·k + 1) · y'sum_m` — the factor
+     stays bounded as `m → ∞` (`Cbase_m → Cbase_∞`, `h_m → 0`),
+     and `y'sum_m → 0` by `starting_error_sum_tendsto_zero`
+     (cycle 049). Hence `a_m → 0`. (This step relies on the
+     cycle 054 slack removal that makes `a_m` scale linearly with
+     `y'sum_m`.)
+   * `c_m · h_m / (b_m · k) → 0` since `c_m` is bounded, `b_m · k`
+     is bounded below by 1·k > 0, and `h_m → 0`.
+5. Conclude `Tendsto (fun m => Y m m − yex x) atTop (𝓝 0)` by
+   `squeeze_zero`.
+
+Textbook statement (`entities/thm_406D.json`):
+> "A stable consistent linear multistep method is convergent."
+
+This theorem captures the textbook conclusion *only* for autonomous
+`f : ℝ → ℝ`; cycle 055+ closes the gap to the full non-autonomous
+`f : ℝ → ℝ → ℝ` of `IsConvergent`. -/
+theorem LinearMultistepMethod.stable_consistent_isConvergent_autonomous
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
+    (hcons : M.IsConsistent) (hstab : M.IsStable)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (hy0 : yex x₀ = y₀)
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {start : ℝ → Fin k → ℝ}
+    (hstart : ∀ i : Fin k,
+      Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀))
+    (x : ℝ) (hxx₀ : x₀ < x)
+    (Y : ℕ → ℕ → ℝ)
+    (hY : ∀ m : ℕ, 0 < m →
+      (∀ i : Fin k, Y m i.val = start ((x - x₀) / (m : ℝ)) i) ∧
+      M.IsLMMSolution ((x - x₀) / (m : ℝ)) x₀ (fun _ y => f y) (Y m)) :
+    Filter.Tendsto (fun m : ℕ => Y m m - yex x) Filter.atTop (nhds 0) := by
+  sorry
+
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.** [STATUS: scaffold; closure deferred
-to cycle 055+.]
+to cycle 056+.]
 
 The full `IsConvergent` predicate is non-autonomous (`f : ℝ → ℝ → ℝ`),
 but the cycle 045–052 helper chain is built for autonomous
 `f : ℝ → ℝ`. The analytical core (the exponential closed-form bound
 on `|ε(n)|`) lands in cycle 053 as
-`globalError_closed_form_autonomous`. Cycle 054 will turn that bound
-into the autonomous-IVP Tendsto theorem
-(`stable_consistent_isConvergent_autonomous`). Cycle 055+ then
+`globalError_closed_form_autonomous`; the autonomous-IVP Tendsto
+form is stated as `stable_consistent_isConvergent_autonomous`
+(cycle 054, closure deferred to cycle 055). Cycle 056+ then
 generalises the chain to non-autonomous `f`, OR files an issue
 explaining the residual gap.
 
 Textbook statement (`entities/thm_406D.json`):
 > "A stable consistent linear multistep method is convergent."
 
-The body is `sorry` pending cycle 055+ closure. -/
+The body is `sorry` pending cycle 056+ closure. -/
 theorem LinearMultistepMethod.stable_consistent_isConvergent
     {k : ℕ} (M : LinearMultistepMethod k)
     (hstab : M.IsStable) (hcons : M.IsConsistent) :
