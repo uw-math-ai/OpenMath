@@ -869,6 +869,88 @@ lemma LinearMultistepMethod.localTruncationError_decomposition {k : ℕ}
   rw [Fin.sum_univ_succ (f := M.β)]
   ring
 
+/-- Helper for `localTruncationError_bound`: the α-sum from the
+sub-lemma E decomposition is bounded by the α-coefficient of the
+final RHS times `(1/2) * h^2 * L * M`.
+
+Each summand has the form `|α_{i+1}| · |residual at step (i+1)|`,
+and `residual_bound` (sub-lemma C) bounds `|residual|` by
+`(1/2) (i+1)² h² L M`. The result follows from triangle inequality
++ summand-wise monotonicity. -/
+lemma localTruncationError_α_sum_bound {k : ℕ}
+    (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |∑ i : Fin k, M.α i.succ
+        * (y x - y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+           - ((i.val + 1 : ℕ) : ℝ) * h * deriv y x)|
+      ≤ (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+        * ((1/2) * h^2 * L * M_bound) := by
+  refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+  rw [show (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          * ((1/2) * h^2 * L * M_bound)
+        = ∑ i : Fin k,
+            (((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+              * ((1/2) * h^2 * L * M_bound) from
+        by rw [Finset.sum_mul]]
+  apply Finset.sum_le_sum
+  intro i _
+  rw [abs_mul]
+  have hC := residual_bound hL hM hf_lip hy_C1 hy_ode hf_y_bound
+               (i.val + 1) x h hh
+  calc |M.α i.succ|
+        * |y x - y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+            - ((i.val + 1 : ℕ) : ℝ) * h * deriv y x|
+      ≤ |M.α i.succ|
+          * ((1/2) * ((i.val + 1 : ℕ) : ℝ)^2 * h^2 * L * M_bound) :=
+        mul_le_mul_of_nonneg_left hC (abs_nonneg _)
+    _ = (((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          * ((1/2) * h^2 * L * M_bound) := by ring
+
+/-- Helper for `localTruncationError_bound`: the β-sum from the
+sub-lemma E decomposition is bounded by the β-coefficient of the
+final RHS times `(h * L * M)`.
+
+Each summand has the form `|β_{i+1}| · |y'(x) − y'(x − (i+1)h)|`,
+and `deriv_diff_bound` (sub-lemma D) bounds the y'-difference by
+`(i+1) h L M`. -/
+lemma localTruncationError_β_sum_bound {k : ℕ}
+    (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |∑ i : Fin k, M.β i.succ
+        * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h))|
+      ≤ (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * (h * L * M_bound) := by
+  refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+  rw [show (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+          * (h * L * M_bound)
+        = ∑ i : Fin k,
+            (((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|) * (h * L * M_bound) from
+        by rw [Finset.sum_mul]]
+  apply Finset.sum_le_sum
+  intro i _
+  rw [abs_mul]
+  have hD := deriv_diff_bound hL hM hf_lip hy_C1 hy_ode hf_y_bound
+               (i.val + 1) x h hh
+  calc |M.β i.succ|
+        * |deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)|
+      ≤ |M.β i.succ| * (((i.val + 1 : ℕ) : ℝ) * h * L * M_bound) :=
+        mul_le_mul_of_nonneg_left hD (abs_nonneg _)
+    _ = (((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|) * (h * L * M_bound) := by ring
+
 /-- Butcher Lemma 406B (corrected, p. 346): for a consistent linear
 multistep method, the local truncation error of the exact solution
 of an IVP `y' = f∘y` with `f` Lipschitz (constant `L`) and `‖f∘y‖`
@@ -893,6 +975,20 @@ theorem LinearMultistepMethod.localTruncationError_bound {k : ℕ}
       ≤ ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
           + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
         * L * M_bound * h^2 := by
-  sorry
+  rw [M.localTruncationError_decomposition hcons y x h]
+  refine (abs_add_le _ _).trans ?_
+  have hα := localTruncationError_α_sum_bound M hL hM hf_lip
+               hy_C1 hy_ode hf_y_bound x h hh
+  have hβ := localTruncationError_β_sum_bound M hL hM hf_lip
+               hy_C1 hy_ode hf_y_bound x h hh
+  have habs_h : |h * (∑ i : Fin k, M.β i.succ
+                  * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)))|
+                = h * |∑ i : Fin k, M.β i.succ
+                  * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h))| := by
+    rw [abs_mul, abs_of_nonneg hh]
+  rw [habs_h]
+  refine le_trans (add_le_add hα (mul_le_mul_of_nonneg_left hβ hh)) ?_
+  apply le_of_eq
+  ring
 
 end OpenMath.Chapter4.Section404

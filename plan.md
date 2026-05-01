@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 39 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 40 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -175,7 +175,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:403A` **stability in the sense of Dahlquist** (§403) — OpenMath/Chapter4/Section404.lean
 - [x] `def:406A` **local truncation error** (§406) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `thm:410B` **Order Condition for Linear Multistep Methods (410B)** (§410)
-- [~] `lem:406B` **Convergence condition sufficiency bound** (§406) — `OpenMath/Chapter4/Section404.lean` (sorry-first scaffold; sub-lemma E proved; A–D + main theorem still `sorry`)
+- [x] `lem:406B` **Convergence condition sufficiency bound** (§406) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `thm:405C` **Convergent Linear Multistep Implies Consistency** (§405)
 - [ ] `thm:410C` **Order condition via generating functions** (§410)
 - [ ] `thm:422A` **The underlying one-step method (LMM)** (§422)
