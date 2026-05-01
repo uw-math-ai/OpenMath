@@ -10,11 +10,9 @@ labels of the form `§NMS_letter` (e.g. `212A`, `351B`, `358A`) are
 Butcher's own §N.M.S enumeration and are preserved verbatim throughout the
 codebase.
 
-> **Scope.** Butcher's book covers only ODEs (5 chapters). The earlier
-> Iserles-flavoured stubs for linear algebra (LU/Cholesky/CG/GMRES) and PDEs
+> **Scope.** Butcher's book covers only ODEs (5 chapters). Earlier
+> stubs for linear algebra (LU/Cholesky/CG/GMRES) and PDEs
 > (FEM/spectral/multigrid) are out of scope here and have been removed.
-> A separate Iserles PDF is kept at `.prover-state/textbook/iserles.pdf`
-> for cross-reference only.
 
 ## Status Key
 - `[x]` Formalized (no live `sorry`)

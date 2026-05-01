@@ -40,9 +40,9 @@ ATTEMPTS_FILE = STATE / "attempts.md"
 LOCK_FILE = STATE / "run.lock"
 HEARTBEAT_FILE = STATE / "heartbeat.json"
 WATCHDOG_LOG = STATE / "watchdog.log"
-ARISTOTLE_INPUTS_DIR = STATE / "aristotle_inputs"
 SWEEP_STAMP_FILE = STATE / "last_cleanup_sweep.txt"
 SWEEP_REPORTS_DIR = STATE / "cleanup_sweeps"
+DISPROVEN_FILE = STATE / "disproven.md"
 PLAN_FILE = ROOT / "plan.md"
 CLAUDE_FILE = ROOT / "CLAUDE.md"
 ENV_FILE = ROOT / ".env"
@@ -65,13 +65,12 @@ FILE_SIZE_CAP = 6000    # split before adding more; evaluator penalty on growth
 
 # Cleanup sweep: runs inline at the end of run_cycle() when the last sweep was
 # >= SWEEP_INTERVAL_HOURS ago. Purely mechanical: prunes issue files whose
-# referenced theorem/file is already sorry-free, deletes old scaffolding
-# directories under .prover-state/aristotle_inputs/, and writes a markdown
-# report with oversized files and persistent sorry's. Never touches live
-# proof code (OpenMath/*.lean).
+# referenced theorem/file is already sorry-free, archives stale consultant
+# advice files, and writes a markdown report with oversized files and
+# persistent sorry's. Never touches live proof code (OpenMath/*.lean).
 SWEEP_INTERVAL_HOURS = 48
-ARISTOTLE_INPUTS_RETAIN = 30   # keep last N cycles of scaffolding
-PERSISTENT_SORRY_DAYS = 14     # flag sorry's whose blame is >= N days old
+CLEANUP_KEEP_RECENT_CYCLES = 30  # cutoff: only sweep entries older than N cycles
+PERSISTENT_SORRY_DAYS = 14       # flag sorry's whose blame is >= N days old
 
 # NVMe toolchain paths — GPFS lean toolchain is extremely slow on this cluster
 NVME_LEAN_TOOLCHAIN = "/tmp/lean4-toolchain/bin"
@@ -582,18 +581,19 @@ def _files_with_live_sorries() -> set:
 
 def sweep_stale_issues(current_cycle: int, live_sorry_files: set) -> List[Tuple[str, str]]:
     """Delete `cycle_<N>_*.md` issue files where:
-      1. N is at least 30 cycles old (N <= current_cycle - ARISTOTLE_INPUTS_RETAIN), and
+      1. N is at least CLEANUP_KEEP_RECENT_CYCLES cycles old, and
       2. The issue mentions at least one `OpenMath/*.lean` path, and
       3. None of the mentioned paths still has a live sorry.
 
-    Consultant advice files (`consultant_advice_cycle_*.md`) are skipped — they
-    are advice logs, not blockers.
+    Consultant advice files (`consultant_advice_cycle_*.md`) are handled by
+    `sweep_stale_consultant_advice` (cycle-age cutoff only — consultant
+    advice is per-stall ephemeral, not file-scoped).
 
     Returns list of (relative_path, reason) for removed files."""
     if not ISSUES.exists():
         return []
     removed: List[Tuple[str, str]] = []
-    cutoff = current_cycle - ARISTOTLE_INPUTS_RETAIN
+    cutoff = current_cycle - CLEANUP_KEEP_RECENT_CYCLES
     for path in sorted(ISSUES.iterdir()):
         if not path.is_file() or path.suffix != ".md":
             continue
@@ -630,32 +630,74 @@ def sweep_stale_issues(current_cycle: int, live_sorry_files: set) -> List[Tuple[
     return removed
 
 
-def sweep_old_aristotle_inputs(current_cycle: int) -> List[str]:
-    """Delete `.prover-state/aristotle_inputs/cycle_<N>/` directories where
-    N <= current_cycle - ARISTOTLE_INPUTS_RETAIN. Returns list of removed
-    relative paths."""
-    if not ARISTOTLE_INPUTS_DIR.exists():
+_CONSULTANT_RE = re.compile(r"^consultant_advice_cycle_(\d+)\.md$")
+_TASK_RESULT_RE = re.compile(r"^cycle_(\d+)\.md$")
+
+
+def sweep_stale_consultant_advice(current_cycle: int) -> List[Tuple[str, str]]:
+    """Delete consultant_advice_cycle_<N>.md files older than
+    CLEANUP_KEEP_RECENT_CYCLES cycles. The consultant writes a fresh advice
+    file per stall; the planner only ever reads non-consultant issue files
+    (see get_recent_issue_text), so old consultant logs accumulate without
+    being read.
+
+    Returns list of (relative_path, reason) for removed files."""
+    if not ISSUES.exists():
         return []
-    removed: List[str] = []
-    cutoff = current_cycle - ARISTOTLE_INPUTS_RETAIN
-    for path in sorted(ARISTOTLE_INPUTS_DIR.iterdir()):
-        if not path.is_dir():
+    removed: List[Tuple[str, str]] = []
+    cutoff = current_cycle - CLEANUP_KEEP_RECENT_CYCLES
+    for path in sorted(ISSUES.iterdir()):
+        if not path.is_file() or path.suffix != ".md":
             continue
-        name = path.name
-        if not name.startswith("cycle_"):
+        m = _CONSULTANT_RE.match(path.name)
+        if not m:
             continue
         try:
-            n = int(name[len("cycle_"):])
+            n = int(m.group(1))
         except ValueError:
             continue
         if n > cutoff:
             continue
         try:
-            shutil.rmtree(path)
+            path.unlink()
         except Exception as e:
-            log(f"sweep: failed to remove {name}: {e}")
+            log(f"sweep: failed to remove {path.name}: {e}")
             continue
-        removed.append(str(path.relative_to(ROOT)))
+        removed.append((str(path.relative_to(ROOT)),
+                        f"consultant advice from cycle {n} <= {cutoff}"))
+    return removed
+
+
+def sweep_old_task_results(current_cycle: int) -> List[Tuple[str, str]]:
+    """Delete task_results/cycle_<N>.md files older than
+    CLEANUP_KEEP_RECENT_CYCLES cycles. The planner only ever reads the
+    immediately-prior cycle's task result; older ones accrete without being
+    consumed (the project has 500+ such files).
+
+    Returns list of (relative_path, reason) for removed files."""
+    if not TASK_RESULTS.exists():
+        return []
+    removed: List[Tuple[str, str]] = []
+    cutoff = current_cycle - CLEANUP_KEEP_RECENT_CYCLES
+    for path in sorted(TASK_RESULTS.iterdir()):
+        if not path.is_file() or path.suffix != ".md":
+            continue
+        m = _TASK_RESULT_RE.match(path.name)
+        if not m:
+            continue
+        try:
+            n = int(m.group(1))
+        except ValueError:
+            continue
+        if n > cutoff:
+            continue
+        try:
+            path.unlink()
+        except Exception as e:
+            log(f"sweep: failed to remove {path.name}: {e}")
+            continue
+        removed.append((str(path.relative_to(ROOT)),
+                        f"task result from cycle {n} <= {cutoff}"))
     return removed
 
 
@@ -728,7 +770,8 @@ def format_cleanup_report(
     date_str: str,
     current_cycle: int,
     removed_issues: List[Tuple[str, str]],
-    removed_aristotle: List[str],
+    removed_consultant: List[Tuple[str, str]],
+    removed_task_results: List[Tuple[str, str]],
     oversized: List[Tuple[str, int]],
     persistent: List[Tuple[str, int, int]],
 ) -> str:
@@ -743,10 +786,19 @@ def format_cleanup_report(
         lines.append("- (none)")
     lines.append("")
 
-    lines.append(f"## Removed aristotle_inputs (> {ARISTOTLE_INPUTS_RETAIN} cycles old)")
-    if removed_aristotle:
-        for path in removed_aristotle:
-            lines.append(f"- `{path}`")
+    lines.append("## Removed stale consultant advice")
+    if removed_consultant:
+        for path, reason in removed_consultant:
+            lines.append(f"- `{path}` — {reason}")
+    else:
+        lines.append("- (none)")
+    lines.append("")
+
+    lines.append("## Removed old task results")
+    if removed_task_results:
+        # Compact: just count + range, individual paths bloat the report.
+        lines.append(f"- Removed {len(removed_task_results)} files "
+                     f"({removed_task_results[0][0]} … {removed_task_results[-1][0]})")
     else:
         lines.append("- (none)")
     lines.append("")
@@ -792,13 +844,13 @@ def _sweep_should_run() -> bool:
 
 
 def _sweep_commit_and_push(report_rel: str):
-    """Stage any touched .prover-state/{issues,aristotle_inputs,cleanup_sweeps}
+    """Stage any touched .prover-state/{issues,task_results,cleanup_sweeps}
     paths, commit if there's a diff, and push. Never touches OpenMath/."""
     try:
         subprocess.run(
             ["git", "add", "-A", "--",
              ".prover-state/issues",
-             ".prover-state/aristotle_inputs",
+             ".prover-state/task_results",
              ".prover-state/cleanup_sweeps",
              ".prover-state/last_cleanup_sweep.txt"],
             cwd=ROOT, check=False, timeout=60,
@@ -832,21 +884,24 @@ def maybe_run_cleanup_sweep(current_cycle: int) -> bool:
     try:
         live = _files_with_live_sorries()
         removed_issues = sweep_stale_issues(current_cycle, live)
-        removed_aristotle = sweep_old_aristotle_inputs(current_cycle)
+        removed_consultant = sweep_stale_consultant_advice(current_cycle)
+        removed_task_results = sweep_old_task_results(current_cycle)
         oversized = oversized_files_report()
         persistent = persistent_sorry_report()
         now = datetime.now(tz=timezone.utc)
         date_tag = now.strftime("%Y-%m-%dT%H-%M-%SZ")
         report = format_cleanup_report(
             now.strftime("%Y-%m-%d %H:%M UTC"),
-            current_cycle, removed_issues, removed_aristotle,
+            current_cycle, removed_issues,
+            removed_consultant, removed_task_results,
             oversized, persistent,
         )
         report_path = SWEEP_REPORTS_DIR / f"{date_tag}.md"
         report_path.write_text(report)
         log(f"sweep: wrote {report_path.relative_to(ROOT)}; "
             f"removed {len(removed_issues)} issue(s), "
-            f"{len(removed_aristotle)} aristotle dir(s); "
+            f"{len(removed_consultant)} consultant advice, "
+            f"{len(removed_task_results)} task results; "
             f"{len(oversized)} oversized, {len(persistent)} persistent sorry(s)")
         SWEEP_STAMP_FILE.write_text(f"{now.timestamp():.6f}")
         _sweep_commit_and_push(str(report_path.relative_to(ROOT)))
@@ -1178,134 +1233,8 @@ def check_build(files: list = None) -> bool:
 
 # ─── Agent sessions ──────────────────────────────────────────────────────────
 
-# Path to Aristotle CLI (installed via uv)
-ARISTOTLE_BIN = str(ROOT / ".uv-tools" / "aristotle-mcp" / "bin" / "aristotle")
-ARISTOTLE_RESULTS_DIR = STATE / "aristotle_results"
-
 # Path to codex binary (installed in conda env)
 CODEX_BIN = "/gscratch/amath/vilin/conda/envs/codex/bin/codex"
-
-# ─── Aristotle ────────────────────────────────────────────────────────────────
-
-def aristotle_check_completed() -> List[Dict]:
-    """Check for completed Aristotle jobs. Returns list of completed projects."""
-    api_key = os.environ.get("ARISTOTLE_API_KEY", "")
-    if not api_key:
-        log("Aristotle: no API key configured, skipping check")
-        return []
-
-    completed = []
-    for status in ["COMPLETE", "COMPLETE_WITH_ERRORS"]:
-        try:
-            r = subprocess.run(
-                [ARISTOTLE_BIN, "list", "--api-key", api_key,
-                 "--status", status, "--limit", "20"],
-                cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                universal_newlines=True, timeout=30)
-            if r.returncode != 0:
-                log(f"Aristotle list ({status}) failed: {r.stderr[:200]}")
-                continue
-            # Parse output — aristotle list prints project info
-            output = r.stdout.strip()
-            if output:
-                # Extract project IDs (UUIDs) from output
-                ids = re.findall(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', output)
-                for pid in ids:
-                    completed.append({"project_id": pid, "status": status})
-        except subprocess.TimeoutExpired:
-            log(f"Aristotle list ({status}) timed out")
-        except Exception as e:
-            log(f"Aristotle list ({status}) error: {e}")
-
-    return completed
-
-
-def aristotle_download_result(project_id: str) -> Optional[str]:
-    """Download result for a completed Aristotle project. Returns destination path or None."""
-    api_key = os.environ.get("ARISTOTLE_API_KEY", "")
-    if not api_key:
-        return None
-
-    dest_dir = ARISTOTLE_RESULTS_DIR / project_id
-    # If a previous run left a flat file (not a dir) at this path, remove it
-    if dest_dir.exists() and not dest_dir.is_dir():
-        dest_dir.unlink()
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    # CLI --destination expects a file path (writes tar.gz), not a directory
-    dest_file = dest_dir / "result.tar.gz"
-
-    try:
-        r = subprocess.run(
-            [ARISTOTLE_BIN, "result", project_id,
-             "--api-key", api_key, "--destination", str(dest_file)],
-            cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            universal_newlines=True, timeout=60)
-        if r.returncode != 0:
-            log(f"Aristotle result {project_id[:8]} failed: {r.stderr[:200]}")
-            return None
-        # Extract the tar.gz
-        import tarfile
-        if dest_file.exists() and tarfile.is_tarfile(str(dest_file)):
-            with tarfile.open(str(dest_file), "r:gz") as tf:
-                tf.extractall(path=str(dest_dir))
-            log(f"Aristotle result {project_id[:8]} extracted to {dest_dir}")
-        else:
-            log(f"Aristotle result {project_id[:8]} downloaded to {dest_dir}")
-        return str(dest_dir)
-    except Exception as e:
-        log(f"Aristotle result {project_id[:8]} error: {e}")
-        return None
-
-
-def aristotle_harvest() -> str:
-    """Check for and download all completed Aristotle results.
-
-    Returns a summary string for the worker to use.
-    """
-    completed = aristotle_check_completed()
-    if not completed:
-        log("Aristotle: no completed jobs found")
-        return ""
-
-    log(f"Aristotle: found {len(completed)} completed job(s)")
-    summaries = []
-
-    # Track which projects we've already harvested
-    harvested_file = STATE / "aristotle_harvested.txt"
-    already_harvested = set()
-    if harvested_file.exists():
-        already_harvested = set(harvested_file.read_text().strip().splitlines())
-
-    new_results = []
-    for job in completed:
-        pid = job["project_id"]
-        if pid in already_harvested:
-            continue
-
-        dest = aristotle_download_result(pid)
-        if dest:
-            # List files in the result directory
-            result_files = list(Path(dest).rglob("*.lean"))
-            file_list = ", ".join(f.name for f in result_files[:10])
-            summaries.append(
-                f"- Project {pid[:8]}… ({job['status']}): "
-                f"{len(result_files)} Lean file(s) [{file_list}] → {dest}"
-            )
-            new_results.append(pid)
-        else:
-            summaries.append(f"- Project {pid[:8]}… ({job['status']}): download failed")
-
-    # Mark as harvested
-    if new_results:
-        with open(harvested_file, "a") as f:
-            for pid in new_results:
-                f.write(pid + "\n")
-
-    if summaries:
-        summary = "## Aristotle results ready for incorporation\n" + "\n".join(summaries)
-        log(f"Aristotle harvest: {len(new_results)} new result(s)")
-        return summary
-    return ""
 
 
 def run_claude(prompt: str, model: str = None, timeout: int = 1800,
@@ -1515,7 +1444,7 @@ def get_recent_issue_text(limit: int = 12, preferred_files: Optional[List[str]] 
 
 # ─── Components ───────────────────────────────────────────────────────────────
 
-def run_planner(cycle: int, aristotle_summary: str = "") -> str:
+def run_planner(cycle: int) -> str:
     """Run the planner to generate strategy.md."""
     sorry_locations = get_sorry_locations()
     plan = read_file(PLAN_FILE, "No plan.md found.")
@@ -1561,14 +1490,15 @@ def run_planner(cycle: int, aristotle_summary: str = "") -> str:
         if budget_stuck else
         "No active budget-cap blocker."
     )
+    disproven = read_file(DISPROVEN_FILE,
+        "(no disproven.md — assume nothing has been disproven yet)")
 
     prompt = f"""You are the planner for an autonomous Lean 4 formalization project.
 Your job: write strategy.md with concrete instructions for the worker.
 
-This repository's textbook on `main` is Arieh Iserles, *A First Course in the Numerical Analysis
-of Differential Equations*. The old `extraction/` pipeline was for a different book and has been
-removed from `main`; do not assume `extraction/` exists, and do not plan work around Butcher-only
-metadata.
+This repository's textbook on `main` is J. C. Butcher, *Numerical Methods for Ordinary
+Differential Equations* (Wiley, 2nd ed., 2008). The old `extraction/` pipeline has been
+removed from `main`; do not assume `extraction/` exists.
 
 ## Current plan
 {plan}
@@ -1606,26 +1536,25 @@ metadata.
 ## Latest-cycle alignment check
 {latest_alignment}
 
-## Completed Aristotle results (ready for incorporation)
-{aristotle_summary or "No pending Aristotle results."}
+## Disproven identities — DO NOT re-attempt these
+{disproven}
 
 ## Your job
 Write `.prover-state/strategy.md` with:
-1. If Aristotle results are available, prioritize incorporating them first
-2. Which sorry/theorem to work on (highest priority, not cherry-picking easy ones)
-3. What approach to use (specific, not "try harder")
-4. What NOT to try (explicitly list failed approaches from attempts)
-5. If an issue reports a blocker, assign infrastructure work before proof work
-6. If there are no sorry's and no theorems in progress, pick the next theorem from plan.md
-7. If recent history shows repeated low-value cycles on the same blocker, pivot to a smaller
+1. Which sorry/theorem to work on (highest priority, not cherry-picking easy ones)
+2. What approach to use (specific, not "try harder")
+3. What NOT to try (explicitly list failed approaches from attempts)
+4. If an issue reports a blocker, assign infrastructure work before proof work
+5. If there are no sorry's and no theorems in progress, pick the next theorem from plan.md
+6. If recent history shows repeated low-value cycles on the same blocker, pivot to a smaller
    prerequisite seam or to the next unfinished target instead of reissuing the same plan
-8. Base the strategy on the live Lean files, `plan.md`, recent task results, and recent issues only
-9. Treat `plan.md`'s Current Target as the highest-priority source of truth; do not pivot to a
+7. Base the strategy on the live Lean files, `plan.md`, recent task results, and recent issues only
+8. Treat `plan.md`'s Current Target as the highest-priority source of truth; do not pivot to a
    different theorem family unless an issue or task result shows it is an explicit prerequisite
-10. Do not promote a failed or off-target side investigation into the next main target by default
-11. Do not assign tracked scratch work in a new `OpenMath/*.lean` file unless it is clearly part
+9. Do not promote a failed or off-target side investigation into the next main target by default
+10. Do not assign tracked scratch work in a new `OpenMath/*.lean` file unless it is clearly part
     of the planned theorem path and intended to remain in the repo
-12. If any file is over the hard size cap (see "File size status"), the highest-priority work is
+11. If any file is over the hard size cap (see "File size status"), the highest-priority work is
     a split of that file. Extract a cohesive sub-theory into a new module (e.g. split
     `OpenMath/Foo.lean` into `OpenMath/Foo/Core.lean` + `OpenMath/Foo/Extras.lean`). Only skip
     the split if the current Target theorem is one-to-two cycles away AND would be strictly
@@ -1639,62 +1568,47 @@ Write the file now using the Write tool.
     return output
 
 
-def run_worker(cycle: int, aristotle_summary: str = "") -> str:
+def run_worker(cycle: int) -> str:
     """Run the worker to make progress on the formalization."""
     engine = get_worker_engine(cycle)
     strategy = read_file(STRATEGY_FILE, "No strategy file. Work on the next theorem in plan.md.")
     sorry_locations = get_sorry_locations()
-
-    aristotle_section = ""
-    if aristotle_summary:
-        aristotle_section = f"""
-## Aristotle results from previous cycles (INCORPORATE THESE FIRST)
-{aristotle_summary}
-
-**IMPORTANT**: Before starting new work, check these Aristotle results. Read the Lean files
-in the result directories, and incorporate any successful proofs into the codebase. Fix partial
-proofs if they need minor edits. This is free work — do not ignore it.
-"""
+    disproven = read_file(DISPROVEN_FILE,
+        "(no disproven.md — assume nothing has been disproven yet)")
 
     prompt = f"""You are the worker for cycle {cycle} of an autonomous Lean 4 formalization project.
 
 ## Project ground truth
-- The live textbook on `main` is Arieh Iserles, *A First Course in the Numerical Analysis of Differential Equations*.
-- The old `extraction/` pipeline is gone from `main`; do not rely on `extraction/...` paths or Butcher-only metadata.
+- The live textbook on `main` is J. C. Butcher, *Numerical Methods for Ordinary Differential Equations* (Wiley, 2nd ed., 2008).
+- The old `extraction/` pipeline is gone from `main`; do not rely on `extraction/...` paths.
 - Treat `plan.md`, the live Lean files, recent task results, and recent issue files as the source of truth.
 
 ## Your strategy (from the planner — FOLLOW THIS)
 {strategy}
-{aristotle_section}
+
 ## Current sorry locations
 {sorry_locations}
 
 ## File size status
 {get_file_size_report()}
 
+## Disproven identities — DO NOT re-attempt these
+{disproven}
+
 ## Instructions
 1. Follow the strategy above. Do not freelance or cherry-pick easy goals.
-2. Use sorry-first workflow: write proof structure with sorry, verify it compiles, then close sorry's.
-3. **Aristotle-first workflow (MANDATORY)**: Aristotle is FREE compute — use it aggressively.
-   a. After setting up the sorry-first structure, identify ~5 sorry's or sub-lemmas suitable for Aristotle.
-   b. Submit ALL of them to Aristotle in batch (use submit_file tool for each).
-   c. Sleep for 30 minutes (`sleep 1800`) to let Aristotle work.
-   d. Check all Aristotle results.
-   e. Incorporate whatever Aristotle proved.
-   f. Fix partial proofs from Aristotle if they need minor edits.
-   g. Only manually prove what Aristotle completely failed on.
-4. Use lean LSP tools (lean_goal, lean_multi_attempt, lean_leansearch, lean_loogle) to find lemmas and prove goals that Aristotle didn't solve.
-5. Verify your changes compile: run `lake env lean <file>` before committing.
-6. Write `.prover-state/task_results/cycle_{cycle:03d}.md` documenting what you did (include Aristotle job results).
-7. If blocked, write an issue file in `.prover-state/issues/`.
-8. Commit and push your changes with a descriptive message.
-9. A cycle with zero changes is unacceptable. At minimum, decompose a sorry or write an issue.
-10. Do not commit a new tracked `OpenMath/*.lean` file with live `sorry`s unless the strategy
-    explicitly requires that file and the proof path is part of the current plan target.
-11. If you need scratch Lean code or Aristotle scaffolding, keep it under `.prover-state/`,
-    not under `OpenMath/`.
-12. Do not leave tracked orphan helper modules on `main`.
-13. Respect the file size cap. If any existing file is already over the hard cap ({FILE_SIZE_CAP}
+2. Use sorry-first workflow: write proof structure with sorry, verify it compiles, then close sorry's one by one.
+3. Use lean LSP tools (lean_goal, lean_multi_attempt, lean_leansearch, lean_loogle, lean_state_search, lean_hammer_premise) aggressively. Search Mathlib before reinventing a lemma.
+4. Verify your changes compile: run `lake env lean <file>` before committing.
+5. Write `.prover-state/task_results/cycle_{cycle:03d}.md` documenting what you did (what you tried, what worked, what failed, suggested next approach).
+6. If blocked, write an issue file in `.prover-state/issues/` explaining WHY (not just "it's hard").
+7. Commit and push your changes with a descriptive message.
+8. A cycle with zero changes is unacceptable. At minimum, decompose a sorry or write an issue.
+9. Do not commit a new tracked `OpenMath/*.lean` file with live `sorry`s unless the strategy
+   explicitly requires that file and the proof path is part of the current plan target.
+10. If you need scratch Lean code, keep it under `.prover-state/scratch/`, not under `OpenMath/`.
+11. Do not leave tracked orphan helper modules on `main`.
+12. Respect the file size cap. If any existing file is already over the hard cap ({FILE_SIZE_CAP}
     lines, see "File size status"), do NOT add lines to it — instead, extract cohesive helpers
     into a new sub-module and update imports. If the strategy does not already schedule a split,
     treat the split as this cycle's work. If you are mid-refactor and legitimately need a
@@ -1705,9 +1619,9 @@ Work autonomously. Do not ask questions. Make progress.
 """
     log(f"Worker engine: {engine}")
     if engine == "codex":
-        output = run_codex(prompt, timeout=7200)
+        output = run_codex(prompt, timeout=4800)
     else:
-        output = run_claude(prompt, timeout=7200)
+        output = run_claude(prompt, timeout=4800)
     log(f"Worker done ({engine}). Output length: {len(output)}")
     return output
 
@@ -1939,10 +1853,6 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     if ci_failing:
         log(f"CI FAILING: {ci['details'][:500]}")
 
-    # ── Aristotle Harvest ──
-    log("── Checking Aristotle results ──")
-    aristotle_summary = aristotle_harvest()
-
     # Pre-cycle state
     pre_sorry_count = count_sorries()
     log(f"Pre-cycle sorry count: {pre_sorry_count}")
@@ -1968,7 +1878,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     elif not worker_only and not skip_planner:
         log("── Running Planner ──")
         write_heartbeat(cycle, "planner")
-        run_planner(cycle, aristotle_summary=aristotle_summary)
+        run_planner(cycle)
     elif not STRATEGY_FILE.exists():
         # Write a default strategy if none exists
         STRATEGY_FILE.write_text(
@@ -1981,7 +1891,7 @@ def run_cycle(cycle: int, worker_only: bool = False, skip_planner: bool = False)
     # ── Worker ──
     log("── Running Worker ──")
     write_heartbeat(cycle, "worker")
-    worker_output = run_worker(cycle, aristotle_summary=aristotle_summary)
+    worker_output = run_worker(cycle)
 
     # Post-cycle state
     post_sorry_count = count_sorries()
@@ -2150,7 +2060,6 @@ def main():
     # Ensure state directories exist
     TASK_RESULTS.mkdir(parents=True, exist_ok=True)
     ISSUES.mkdir(parents=True, exist_ok=True)
-    ARISTOTLE_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # File lock
     lock_fd = open(LOCK_FILE, "w")
