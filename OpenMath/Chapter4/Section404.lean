@@ -1794,6 +1794,81 @@ private lemma sum_theta_psi_contraction
       Nat.card_Ico, nsmul_eq_mul]
   apply le_of_eq; ring
 
+/-- **Butcher §406D's φ(h) → 0 helper, per index.**
+For each `i : Fin k`, the per-index "starting error"
+`|yex(x₀ + i·h) - start h i|` tends to 0 as `h → 0`.
+
+Proof: continuity of `yex` at `x₀` (from differentiability) plus
+the starting-method limit hypothesis (`start h i → y₀`). Compose
+with `Filter.Tendsto.sub` and `Filter.Tendsto.abs`.
+
+Used by: cycle 050's outer-assembly proof of `thm:406D`. The
+hypothesis shape (`hyex_diff` over all `x ≥ x₀`, plus `hstart`
+per `Fin k`) deliberately mirrors `IsConvergent` line-for-line so
+that cycle 050 can destructure `IsConvergent` and feed its
+hypotheses here unchanged. -/
+private lemma starting_error_each_tendsto_zero
+    {k : ℕ} {f : ℝ → ℝ → ℝ} {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (hy0 : yex x₀ = y₀)
+    (hyex_diff : ∀ x ≥ x₀, HasDerivAt yex (f x (yex x)) x)
+    {start : ℝ → Fin k → ℝ}
+    (hstart : ∀ i : Fin k,
+      Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) :
+    ∀ i : Fin k,
+      Filter.Tendsto
+        (fun h : ℝ => |yex (x₀ + (i.val : ℝ) * h) - start h i|)
+        (nhds 0) (nhds 0) := by
+  intro i
+  have hyex_cont_x₀ : ContinuousAt yex x₀ :=
+    (hyex_diff x₀ le_rfl).continuousAt
+  have h_curve : Filter.Tendsto (fun h : ℝ => x₀ + (i.val : ℝ) * h)
+                                 (nhds 0) (nhds x₀) := by
+    have h0 : Filter.Tendsto (fun h : ℝ => x₀ + (i.val : ℝ) * h)
+                             (nhds 0)
+                             (nhds (x₀ + (i.val : ℝ) * 0)) :=
+      tendsto_const_nhds.add (tendsto_const_nhds.mul Filter.tendsto_id)
+    simpa using h0
+  have h_yex_curve :
+      Filter.Tendsto (fun h : ℝ => yex (x₀ + (i.val : ℝ) * h))
+                     (nhds 0) (nhds y₀) := by
+    have := hyex_cont_x₀.tendsto.comp h_curve
+    simpa [hy0] using this
+  have h_diff :
+      Filter.Tendsto (fun h : ℝ => yex (x₀ + (i.val : ℝ) * h) - start h i)
+                     (nhds 0) (nhds 0) := by
+    have := h_yex_curve.sub (hstart i)
+    simpa using this
+  have := h_diff.abs
+  simpa using this
+
+/-- **Butcher §406D's φ(h) → 0 helper, sum form.**
+The sum over `Fin k` of starting errors tends to 0 as `h → 0`.
+
+Used by: cycle 050's outer assembly to bound the "starting block"
+contribution to the global error (the `φ(h)` term in (406g)). The
+sum form matches the shape `discrete_gronwall_exp_bound` consumes
+(a sum of recent errors, not a max). -/
+private lemma starting_error_sum_tendsto_zero
+    {k : ℕ} {f : ℝ → ℝ → ℝ} {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (hy0 : yex x₀ = y₀)
+    (hyex_diff : ∀ x ≥ x₀, HasDerivAt yex (f x (yex x)) x)
+    {start : ℝ → Fin k → ℝ}
+    (hstart : ∀ i : Fin k,
+      Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) :
+    Filter.Tendsto
+      (fun h : ℝ =>
+        ∑ i : Fin k, |yex (x₀ + (i.val : ℝ) * h) - start h i|)
+      (nhds 0) (nhds 0) := by
+  have h_each := starting_error_each_tendsto_zero hy0 hyex_diff hstart
+  have h_sum :
+      Filter.Tendsto
+        (fun h : ℝ =>
+          ∑ i : Fin k, |yex (x₀ + (i.val : ℝ) * h) - start h i|)
+        (nhds 0)
+        (nhds (∑ _i ∈ (Finset.univ : Finset (Fin k)), (0 : ℝ))) :=
+    tendsto_finset_sum _ (fun i _ => h_each i)
+  simpa using h_sum
+
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.**
 
