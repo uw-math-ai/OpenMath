@@ -1869,6 +1869,59 @@ private lemma starting_error_sum_tendsto_zero
     tendsto_finset_sum _ (fun i _ => h_each i)
   simpa using h_sum
 
+/-- **Index-arithmetic adapter for `thm:406D` (cycle 050).**
+The "recent-window sum" `Σ_{j:Fin k} g(i − (j+1))` summed over
+`i ∈ Ico k n` is bounded by `k` copies of the total sum
+`Σ_{p ∈ Ico 0 n} g p`, because each `g p` appears in the recent
+window for at most `k` later indices.
+
+This bridges:
+* cycle 045's `globalError_recurrence_bound_textbook` (per-step bound
+  via `Mmax = max_{j:Fin k} |ε(n-(j+1))|`),
+* cycle 048's `sum_theta_psi_contraction` (takes a per-i `Sε`),
+* cycle 046's `discrete_gronwall_exp_bound` (wants the recurrence in
+  `Σ_{i ∈ Ico 1 n} u i` form).
+
+Used by: cycle 051+ outer assembly of `thm:406D`. -/
+private lemma recentSum_swap_bound
+    (g : ℕ → ℝ) (hg : ∀ i, 0 ≤ g i)
+    (k n : ℕ) :
+    (∑ i ∈ Finset.Ico k n, ∑ j : Fin k, g (i - (j.val + 1)))
+      ≤ (k : ℝ) * ∑ p ∈ Finset.Ico 0 n, g p := by
+  -- Step 0: handle k = 0 trivially.
+  obtain rfl | hkpos := Nat.eq_zero_or_pos k
+  · simp
+  -- Step 1: swap the two sums.
+  rw [Finset.sum_comm]
+  -- Step 2: rewrite the RHS as Σ_{j:Fin k} Σ_{p ∈ Ico 0 n} g p.
+  rw [show ((k : ℝ) * ∑ p ∈ Finset.Ico 0 n, g p)
+        = ∑ _j : Fin k, ∑ p ∈ Finset.Ico 0 n, g p from by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]]
+  -- Step 3: pointwise (per j : Fin k):
+  --   Σ_{i ∈ Ico k n} g(i-(j+1)) ≤ Σ_{p ∈ Ico 0 n} g p.
+  refine Finset.sum_le_sum (fun j _hj => ?_)
+  -- For j : Fin k we have j.val + 1 ≤ k; this gives well-foundedness
+  -- of the change-of-variables i ↦ i - (j+1) on Ico k n (no Nat
+  -- truncation, hence injective).
+  have hjv : j.val + 1 ≤ k := j.isLt
+  have hinj :
+      Set.InjOn (fun i => i - (j.val + 1)) (Finset.Ico k n : Finset ℕ) := by
+    intro a ha b hb hab
+    simp only [Finset.coe_Ico, Set.mem_Ico] at ha hb
+    simp only at hab
+    omega
+  -- Reindex: the LHS sum equals Σ_{p ∈ image} g p.
+  rw [← Finset.sum_image (f := g) hinj]
+  -- Then bound by enlarging the index set to Ico 0 n.
+  apply Finset.sum_le_sum_of_subset_of_nonneg
+  · intro p hp
+    rw [Finset.mem_image] at hp
+    obtain ⟨i, hi, rfl⟩ := hp
+    rw [Finset.mem_Ico] at hi ⊢
+    refine ⟨Nat.zero_le _, ?_⟩
+    omega
+  · intro i _ _; exact hg _
+
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.**
 
