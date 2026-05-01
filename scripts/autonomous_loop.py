@@ -39,7 +39,10 @@ STRATEGY_FILE = STATE / "strategy.md"
 ATTEMPTS_FILE = STATE / "attempts.md"
 LOCK_FILE = STATE / "run.lock"
 HEARTBEAT_FILE = STATE / "heartbeat.json"
-WATCHDOG_LOG = STATE / "watchdog.log"
+LOGS_DIR = ROOT / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
+WATCHDOG_LOG = LOGS_DIR / "watchdog.log"
+LOOP_LOG = LOGS_DIR / "autonomous_loop.log"
 SWEEP_STAMP_FILE = STATE / "last_cleanup_sweep.txt"
 SWEEP_REPORTS_DIR = STATE / "cleanup_sweeps"
 DISPROVEN_FILE = STATE / "disproven.md"
@@ -306,7 +309,7 @@ def run_watchdog(interval: int = 300, max_restarts: int = 10):
             loop_proc = subprocess.Popen(
                 [sys.executable, str(ROOT / "scripts" / "autonomous_loop.py"), "--loop"],
                 cwd=ROOT,
-                stdout=open("/tmp/autonomous_loop.log", "a"),
+                stdout=open(LOOP_LOG, "a"),
                 stderr=subprocess.STDOUT,
             )
             watchdog_log(f"Watchdog: started new loop (PID {loop_proc.pid})")

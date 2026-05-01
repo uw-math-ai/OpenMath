@@ -22,6 +22,9 @@
 .prover-state/attempts.md
 .prover-state/heartbeat.json
 .prover-state/watchdog.log
+
+# Autonomous loop logs (lives in OpenMath/logs/, not /tmp or ~/)
+logs/
 .prover-state/aristotle_harvested.txt
 .prover-state/aristotle/
 .prover-state/aristotle_results/
