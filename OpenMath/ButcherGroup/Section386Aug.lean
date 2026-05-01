@@ -768,4 +768,37 @@ theorem threeChoice_one :
 
 end ThreeChoice
 
+/-- Cons-layer specialization of `bSeriesConvAug_node`: same root-prune
+plus inner-forest split, expressed for an explicit head child `c` and
+tail `cs`.  This is the list-cons form that the unital associativity
+inductive step decomposes through. -/
+theorem bSeriesConvAug_node_cons (α β : AugSeries) (c : BTree)
+    (cs : List BTree) :
+    bSeriesConvAug α β (BTree.node (c :: cs))
+      = α.toFun (BTree.node (c :: cs)) * β.emptyVal
+        + ((BTree.innerCutForest (c :: cs) α.toFun).map (fun forest =>
+            forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+              * β.toFun
+                  (BTree.node (forest.filterMap (fun e => e.1))))).sum :=
+  bSeriesConvAug_node α β (c :: cs)
+
+/-- Sanity bridge for `bSeriesConvAug_node_cons`: instantiated at
+`c = leaf, cs = [leaf]`, the cons-form RHS evaluates to the explicit
+two-leaf closed form `bSeriesConvAug_node_two_leaves` (line 329). -/
+theorem bSeriesConvAug_node_cons_two_leaves_consistency
+    (α β : AugSeries) :
+    α.toFun (BTree.node [BTree.leaf, BTree.leaf]) * β.emptyVal
+      + ((BTree.innerCutForest (BTree.leaf :: [BTree.leaf]) α.toFun).map
+          (fun forest =>
+            forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+              * β.toFun
+                  (BTree.node (forest.filterMap (fun e => e.1))))).sum
+      = α.toFun (BTree.node [BTree.leaf, BTree.leaf]) * β.emptyVal
+        + β.toFun (BTree.node [BTree.leaf, BTree.leaf])
+        + 2 * α.toFun BTree.leaf * β.toFun (BTree.node [BTree.leaf])
+        + α.toFun BTree.leaf * α.toFun BTree.leaf
+            * β.toFun (BTree.node []) := by
+  simp [BTree.innerCutForest, BTree.innerCut]
+  ring
+
 end ButcherTableau
