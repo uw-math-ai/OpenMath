@@ -250,7 +250,21 @@ issue file `lmm_convergence_witness_deferred.md`. -/
 *LMM solution* of the linear multistep method `M` with step size `h`,
 RHS `f`, and grid origin `x₀` if for every `n ≥ 0`,
 
-  `Σ_{i=0}^{k} α_i · Y_{n+k-i} = h · Σ_{i=0}^{k} β_i · f(x₀ + (n+k-i)·h, Y_{n+k-i})`.
+  `Σ_{i=0}^{k} α_i · Y_{n+k-i} = -h · Σ_{i=0}^{k} β_i · f(x₀ + (n+k-i)·h, Y_{n+k-i})`.
+
+The negative sign on the RHS is what reconciles the textbook
+recurrence (Butcher §400, equation (400b))
+`y_n = α_1 y_{n-1} + ⋯ + α_k y_{n-k} + h Σ_{i=0}^{k} β_i f(x_{n-i}, y_{n-i})`
+— i.e. `y_n − Σ_{i=1}^k α_i y_{n-i} = h Σ_{i=0}^k β_i f` —
+with the textbook normalisation `α_0 = -1`. Peeling the `i = 0`
+term off the LHS sum yields
+`-Y_n + Σ_{i=1}^k α_i Y_{n-i} = -h Σ β_i f`,
+which rearranges to Butcher's recurrence
+`Y_n − Σ_{i=1}^k α_i Y_{n-i} = h Σ β_i f`.
+
+Sanity check: for explicit Euler (`α = (-1, 1)`, `β = (0, 1)`),
+the recurrence at index `m` reads `-Y(m+1) + Y(m) = -h · f(Y(m))`,
+i.e. `Y(m+1) = Y(m) + h f(Y(m))` — the textbook forward Euler step.
 
 We use `n + k` as the index for the LHS (so `n + k - i` is replaced
 with the natural-number subtraction that is always non-negative for
@@ -262,7 +276,7 @@ def LinearMultistepMethod.IsLMMSolution {k : ℕ}
     (Y : ℕ → ℝ) : Prop :=
   ∀ n : ℕ,
     (∑ i : Fin (k + 1), M.α i * Y (n + k - i.val)) =
-      h * ∑ i : Fin (k + 1), M.β i *
+      -h * ∑ i : Fin (k + 1), M.β i *
         f (x₀ + ((n + k - i.val : ℕ) : ℝ) * h) (Y (n + k - i.val))
 
 /-- Butcher Definition 402A (p. 340): a linear multistep method is
@@ -990,5 +1004,283 @@ theorem LinearMultistepMethod.localTruncationError_bound {k : ℕ}
   refine le_trans (add_le_add hα (mul_le_mul_of_nonneg_left hβ hh)) ?_
   apply le_of_eq
   ring
+
+/-! ## §406 — Global error bound for linear multistep methods (thm:406C)
+
+Butcher §406, p. 347. Quoting `entities/thm_406C.json`:
+
+> Let `n` denote the vector `n = y(x_n) − y_n`. Then for `h_0`
+> sufficiently small so that `h_0 |β_0| L < 1` and `h < h_0`, there
+> exist constants `C` and `D` such that
+>   `‖n − Σ_{i=1}^k α_i n_{−i}‖ ≤ C h max_{i=1}^k ‖n_{−i}‖ + D h^2`. (406c)
+
+Butcher's proof outline (§406, p. 347): the value of
+`n − Σ α_i n_{−i} − h Σ β_i (f(y(x_{n-i})) − f(y_{n-i}))` is the
+difference of two terms — the first is bounded by `D · h^2` (by
+`lem:406B`) and the second is zero (by the LMM recurrence). Hence
+`n − Σ α_i n_{−i} = T_1 + T_2 + T_3`, with
+- `T_1 = h β_0 (f(y(x_n)) − f(y_n))`, bounded by `h L |β_0| · ‖n_n‖`
+- `T_2 = h Σ_{i=1}^k β_i (f(y(x_{n-i})) − f(y_{n-i}))`,
+  bounded by `h L Σ |β_i| · max ‖n_{-i}‖`
+- `T_3 = L(y, x_n, h)`, bounded by `D h^2` via `lem:406B`.
+
+Cycle 044 formalises the per-term bound `|T_1 + T_2 + T_3|` directly,
+**before** Butcher's `(1 − h L |β_0|)` inversion that absorbs `T_1`
+into the LHS. The full (406c) form requires the additional `h L |β_0| < 1`
+hypothesis and is deferred to a corollary in a later cycle.
+
+**Faithfulness flag.** Sub-lemma A's algebraic identity (the discrete
+analogue of (406d)) matches Butcher's textbook decomposition
+coefficient-by-coefficient. The cycle-044 main theorem keeps `T_1`
+explicit on the RHS (i.e. the bound
+`h L |β_0| · |n_n| + h L Σ |β_i| · max + D h^2`) — the textbook
+form `C h · max + D h^2` follows from this by a `(1 − h L |β_0|)`
+inversion (Butcher's "use (406d) twice"), to be added as a corollary
+in cycle 045+.
+
+**Sign-convention prerequisite (cycle 044 fix).** Cycle 044 audited
+the existing `IsLMMSolution` predicate and discovered that the
+right-hand side carried the wrong sign relative to Butcher's
+recurrence (400b)
+`y_n = α_1 y_{n-1} + ⋯ + α_k y_{n-k} + h Σ β_i f(x_{n-i}, y_{n-i})`.
+The fix: negate the RHS to `-h · Σ β_i f`, so that with `α_0 = -1`
+the leading-term cancellation gives Butcher's recurrence in textbook
+form. Sanity check: explicit Euler now produces
+`Y(m+1) = Y(m) + h f(Y(m))` (the textbook forward Euler step).
+See the `IsLMMSolution` docstring for details. -/
+
+/-- The global error of an LMM iterate `Y` against the exact solution
+`yex` of the IVP at grid point `n` (i.e. real point `x₀ + n*h`).
+
+Kept as a plain `def` (not a structure-instance method) so it can be
+unfolded freely in algebraic manipulations. -/
+def globalError (yex : ℝ → ℝ) (Y : ℕ → ℝ) (x₀ h : ℝ) (n : ℕ) : ℝ :=
+  yex (x₀ + (n : ℝ) * h) - Y n
+
+/-- Sub-lemma A (Butcher's algebraic identity (406d)): the global
+error vector `n_n - Σ α_i n_{n-i}` equals the LTE at `x_n` plus the
+two `f`-difference terms `T_1` and `T_2`.
+
+This is purely algebraic — it follows from unfolding
+`localTruncationError`, applying `IsLMMSolution` (re-indexed via
+`hn : k ≤ n`), and combining with `α_zero = -1`. -/
+lemma globalError_decomposition {k : ℕ} (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ} {yex : ℝ → ℝ} {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)
+    (n : ℕ) (hn : k ≤ n) :
+    globalError yex Y x₀ h n
+      - ∑ i : Fin k, M.α i.succ * globalError yex Y x₀ h (n - (i.val + 1))
+      = h * M.β 0 * (f (yex (x₀ + (n : ℝ) * h)) - f (Y n))
+        + h * (∑ i : Fin k, M.β i.succ
+                * (f (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h))
+                   - f (Y (n - (i.val + 1)))))
+        + M.localTruncationError yex (x₀ + (n : ℝ) * h) h := by
+  -- Re-index: n = m + k for some m : ℕ.
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + k := ⟨n - k, (Nat.sub_add_cancel hn).symm⟩
+  -- Cast bridge: (m + k - (j+1) : ℕ) : ℝ) equals (m+k:ℝ) - (j+1:ℝ).
+  have hjk : ∀ i : Fin k, i.val + 1 ≤ m + k := fun i => by
+    have : i.val < k := i.isLt; omega
+  have hcast_real : ∀ i : Fin k,
+      x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h
+        = x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h := fun i => by
+    rw [Nat.cast_sub (hjk i)]; push_cast; ring
+  -- Convert all deriv yex terms in LTE to f∘yex.
+  have hderiv_xn : deriv yex (x₀ + ((m + k : ℕ) : ℝ) * h)
+                    = f (yex (x₀ + ((m + k : ℕ) : ℝ) * h)) := hyex_ode _
+  have hderiv_shifted : ∀ i : Fin k,
+      deriv yex (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h)
+        = f (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)) := fun i => by
+    rw [hcast_real i]; exact hyex_ode _
+  -- Bridge yex application for the y-sum in LTE.
+  have hyex_shifted : ∀ i : Fin k,
+      yex (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h)
+        = yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h) := fun i => by
+    rw [hcast_real i]
+  -- LMM equation at m, then peel `i = 0` from both sums.
+  have hYm := hY m
+  rw [Fin.sum_univ_succ (f := fun i : Fin (k + 1) =>
+        M.α i * Y (m + k - i.val))] at hYm
+  rw [Fin.sum_univ_succ (f := fun i : Fin (k + 1) =>
+        M.β i * (fun _ y => f y) (x₀ + ((m + k - i.val : ℕ) : ℝ) * h)
+                                  (Y (m + k - i.val)))] at hYm
+  simp only [Fin.val_zero, Nat.sub_zero, M.α_zero, Fin.val_succ] at hYm
+  -- Unfold globalError and localTruncationError; then unfold the LTE β-sum.
+  unfold globalError LinearMultistepMethod.localTruncationError
+  rw [Fin.sum_univ_succ (f := fun i : Fin (k + 1) =>
+        M.β i * deriv yex
+          (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val : ℕ) : ℝ) * h))]
+  simp only [Fin.val_zero, Nat.cast_zero, zero_mul, sub_zero, Fin.val_succ]
+  -- Substitute deriv yex (xn) → f(yex(xn)) for the leading term.
+  rw [hderiv_xn]
+  -- Convert the yex y-sum and the deriv yex β-sum (i ≥ 1) via the cast bridges.
+  rw [show (∑ i : Fin k, M.α i.succ
+              * yex (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h))
+        = (∑ i : Fin k, M.α i.succ
+              * yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)) from
+      Finset.sum_congr rfl (fun i _ => by rw [hyex_shifted i])]
+  rw [show (∑ i : Fin k, M.β i.succ
+              * deriv yex
+                  (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h))
+        = (∑ i : Fin k, M.β i.succ
+              * f (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h))) from
+      Finset.sum_congr rfl (fun i _ => by rw [hderiv_shifted i])]
+  -- Distribute the difference-of-sums on both LHS and RHS so linarith can match.
+  rw [show (∑ i : Fin k, M.α i.succ
+              * (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+                 - Y (m + k - (i.val + 1))))
+        = (∑ i : Fin k, M.α i.succ
+              * yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h))
+          - (∑ i : Fin k, M.α i.succ * Y (m + k - (i.val + 1))) from by
+      rw [← Finset.sum_sub_distrib]
+      apply Finset.sum_congr rfl
+      intro i _; ring]
+  rw [show (∑ i : Fin k, M.β i.succ
+              * (f (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h))
+                 - f (Y (m + k - (i.val + 1)))))
+        = (∑ i : Fin k, M.β i.succ
+              * f (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)))
+          - (∑ i : Fin k, M.β i.succ * f (Y (m + k - (i.val + 1)))) from by
+      rw [← Finset.sum_sub_distrib]
+      apply Finset.sum_congr rfl
+      intro i _; ring]
+  -- Normalise casts of `(m + k : ℕ)` so linarith sees matching atoms.
+  push_cast at hYm ⊢
+  linarith [hYm]
+
+/-- Sub-lemma B: bound on `T_1 = h β_0 (f a − f b)` via Lipschitz of
+`f`. -/
+lemma T1_bound {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {β₀ : ℝ} (h : ℝ) (hh : 0 ≤ h) (a b : ℝ) :
+    |h * β₀ * (f a - f b)| ≤ h * L * |β₀| * |a - b| := by
+  have hLip : |f a - f b| ≤ L * |a - b| := by
+    have hd := hf_lip.dist_le_mul a b
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    have hco : ((Real.toNNReal L : ℝ≥0) : ℝ) = L := Real.coe_toNNReal L hL
+    rw [hco] at hd
+    exact hd
+  calc |h * β₀ * (f a - f b)|
+      = h * |β₀| * |f a - f b| := by
+        rw [abs_mul, abs_mul, abs_of_nonneg hh]
+    _ ≤ h * |β₀| * (L * |a - b|) :=
+        mul_le_mul_of_nonneg_left hLip (mul_nonneg hh (abs_nonneg _))
+    _ = h * L * |β₀| * |a - b| := by ring
+
+/-- Sub-lemma C: bound on `T_2 = h Σ β_i (f a_i − f b_i)` via Lipschitz
+of `f` and a uniform bound `Mmax` on `|a_i − b_i|`. -/
+lemma T2_bound {k : ℕ} (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    (h : ℝ) (hh : 0 ≤ h)
+    (a : Fin k → ℝ) (b : Fin k → ℝ) (Mmax : ℝ)
+    (hMmax : ∀ i : Fin k, |a i - b i| ≤ Mmax) (hMmax0 : 0 ≤ Mmax) :
+    |h * ∑ i : Fin k, M.β i.succ * (f (a i) - f (b i))|
+      ≤ h * L * (∑ i : Fin k, |M.β i.succ|) * Mmax := by
+  -- Step 1: pull h out using h ≥ 0.
+  rw [abs_mul, abs_of_nonneg hh]
+  -- Step 2: triangle inequality on sum, then per-summand Lipschitz bound.
+  have hsum_bound :
+      |∑ i : Fin k, M.β i.succ * (f (a i) - f (b i))|
+        ≤ (∑ i : Fin k, |M.β i.succ|) * (L * Mmax) := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    rw [show (∑ i : Fin k, |M.β i.succ|) * (L * Mmax)
+            = ∑ i : Fin k, |M.β i.succ| * (L * Mmax) from
+          by rw [Finset.sum_mul]]
+    apply Finset.sum_le_sum
+    intro i _
+    rw [abs_mul]
+    have hLip : |f (a i) - f (b i)| ≤ L * |a i - b i| := by
+      have hd := hf_lip.dist_le_mul (a i) (b i)
+      rw [Real.dist_eq, Real.dist_eq] at hd
+      have hco : ((Real.toNNReal L : ℝ≥0) : ℝ) = L := Real.coe_toNNReal L hL
+      rw [hco] at hd
+      exact hd
+    have hLM : |f (a i) - f (b i)| ≤ L * Mmax := by
+      calc |f (a i) - f (b i)|
+          ≤ L * |a i - b i| := hLip
+        _ ≤ L * Mmax := mul_le_mul_of_nonneg_left (hMmax i) hL
+    exact mul_le_mul_of_nonneg_left hLM (abs_nonneg _)
+  -- Step 3: pull through h.
+  calc h * |∑ i : Fin k, M.β i.succ * (f (a i) - f (b i))|
+      ≤ h * ((∑ i : Fin k, |M.β i.succ|) * (L * Mmax)) :=
+        mul_le_mul_of_nonneg_left hsum_bound hh
+    _ = h * L * (∑ i : Fin k, |M.β i.succ|) * Mmax := by ring
+
+/-- Sub-lemma D: bound on `T_3 = L(yex, x, h)` — direct application
+of `lem:406B`. -/
+lemma T3_bound {k : ℕ} (M : LinearMultistepMethod k)
+    (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |M.localTruncationError y x h|
+      ≤ ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * L * M_bound * h^2 :=
+  M.localTruncationError_bound hcons hL hM hf_lip
+    hy_C1 hy_ode hf_y_bound x h hh
+
+/-- Butcher Theorem 406C (p. 347, partial form): for an LMM solution
+`Y` of the IVP `y' = f(y)` with `f` Lipschitz, the global error
+recurrence satisfies the per-term bound
+
+  `|n_n - Σ α_i n_{n-i}|
+    ≤ h L |β_0| · |n_n| + h L Σ |β_{i+1}| · Mmax + D · h^2`
+
+where `D` is the LTE coefficient from `lem:406B` and `Mmax` bounds
+the per-step error history `max_{i=1..k} |n_{n-i}|`. The textbook
+(406c) form `‖n - Σ α n_{-i}‖ ≤ C h · max + D h^2` follows from this
+by a `(1 − h L |β_0|)`-inversion under the additional smallness
+hypothesis `h L |β_0| < 1`; deferred to a corollary in a later cycle. -/
+theorem LinearMultistepMethod.globalError_recurrence_bound
+    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)
+    (n : ℕ) (hn : k ≤ n)
+    (Mmax : ℝ) (hMmax0 : 0 ≤ Mmax)
+    (hMmax : ∀ i : Fin k,
+              |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1))| ≤ Mmax) :
+    |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))|
+      ≤ h * L * |M.β 0| * |yex (x₀ + (n : ℝ) * h) - Y n|
+        + h * L * (∑ i : Fin k, |M.β i.succ|) * Mmax
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+          * L * M_bound * h^2 := by
+  -- Apply sub-lemma A to rewrite LHS as |T_1 + T_2 + T_3|.
+  have hA := globalError_decomposition M hyex_ode hY n hn
+  unfold globalError at hA
+  rw [hA]
+  -- Triangle inequality: |T_1 + T_2 + T_3| ≤ |T_1| + |T_2| + |T_3|.
+  refine (abs_add_le _ _).trans ?_
+  refine le_trans (add_le_add (abs_add_le _ _) le_rfl) ?_
+  -- Per-term bounds via sub-lemmas B, C, T3 (= lem:406B).
+  have hB := T1_bound (β₀ := M.β 0) hL hf_lip h hh
+              (yex (x₀ + (n : ℝ) * h)) (Y n)
+  have hC := T2_bound M hL hf_lip h hh
+              (fun i : Fin k => yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h))
+              (fun i : Fin k => Y (n - (i.val + 1)))
+              Mmax hMmax hMmax0
+  have hD := T3_bound M hcons hL hM hf_lip hyex_C1 hyex_ode hf_yex_bound
+              (x₀ + (n : ℝ) * h) h hh
+  -- Combine: |T_1| + |T_2| + |T_3| ≤ goal RHS.
+  exact le_trans (add_le_add (add_le_add hB hC) hD) (le_of_eq (by ring))
 
 end OpenMath.Chapter4.Section404
