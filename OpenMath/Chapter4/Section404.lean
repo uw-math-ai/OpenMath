@@ -1,5 +1,6 @@
 import Mathlib
 import OpenMath.Chapter1.Section110
+import OpenMath.Chapter1.Section141
 
 /-!
 # Butcher §404 — Preconsistency and consistency of linear multistep methods
@@ -1665,5 +1666,108 @@ lemma discrete_gronwall_exp_bound
             mul_comm a (Real.exp (b * (k : ℝ) * (n : ℝ) * h)),
             mul_comm (c * h / (b * (k : ℝ)))
               (Real.exp (b * (k : ℝ) * (n : ℝ) * h) - 1)]
+
+/-! ### §406D infrastructure: θ-sequence boundedness
+
+Butcher's proof of `thm:406D` (p. 347) extracts `Θ = sup_{i ≥ 1} |θ_i|`
+from the bounded-θ remark. We use the slightly stronger `IsStable`
+predicate (every homogeneous solution bounded), giving boundedness of
+`θ` directly without relying on `IsConvergent` (which is currently a
+predicate, not a conclusion, in our encoding).
+
+The two helpers here are *connector* lemmas — they bridge `Section141.theta`
+(the canonical scalar `θ`-sequence) with `Section404`'s LMM-level
+`IsHomogeneousSolution` predicate. They are not Butcher entities in the
+extraction registry.
+-/
+
+open OpenMath.Chapter1.Section141 in
+/-- The fundamental θ-sequence of an LMM (`Section141.theta` applied to
+the LMM's tail-coefficient vector `M.α ∘ Fin.succ`) satisfies the
+homogeneous recurrence (403a) of `M`.
+
+The two recurrences match because:
+
+* `Section141.theta_succ` gives, for `n + 1 ≥ 1`,
+    `θ(n+1) = Σ_{j : Fin k} if j.val ≤ n then α_{j+1} · θ(n - j.val) else 0`,
+* `IsHomogeneousSolution` requires
+    `y(m + k) = Σ_{i : Fin k} M.α i.succ · y(m + k - (i.val + 1))`.
+
+Substituting `m + k = n + 1` (so `n = m + k - 1`) and noting that for
+`m ≥ 0`, `j : Fin k` gives `j.val < k ≤ k + m = n + 1`, so the
+conditional always fires; `n - j.val = m + k - (j.val + 1)`.
+
+The hypothesis `0 < k` is required because `IsHomogeneousSolution` for
+`k = 0` reduces to `∀ m, y m = 0` (empty `Fin 0` sum), but
+`theta 0 _ 0 = 1 ≠ 0`, so the claim is false in that degenerate case.
+Butcher implicitly assumes `k ≥ 1` throughout §141 and §403. -/
+theorem theta_isHomogeneousSolution {k : ℕ} (hk : 0 < k)
+    (M : LinearMultistepMethod k) :
+    M.IsHomogeneousSolution
+      (theta k (fun i : Fin k => M.α i.succ)) := by
+  intro m
+  set α : Fin k → ℝ := fun i => M.α i.succ with hα_def
+  -- n + 1 := m + k. Since k ≥ 1, m + k = (m + k - 1) + 1 syntactically.
+  obtain ⟨k', rfl⟩ : ∃ k', k = k' + 1 := ⟨k - 1, by omega⟩
+  -- Now m + (k' + 1) = (m + k') + 1; apply theta_succ at index m + k'.
+  have hsucc :
+      theta (k' + 1) α (m + (k' + 1))
+        = ∑ j : Fin (k' + 1), if j.val ≤ m + k' then
+            α j * theta (k' + 1) α (m + k' - j.val) else 0 := by
+    show theta (k' + 1) α ((m + k') + 1) = _
+    rw [theta_succ]
+  rw [hsucc]
+  refine Finset.sum_congr rfl (fun j _ => ?_)
+  have hj : j.val ≤ m + k' := by
+    have := j.isLt
+    omega
+  rw [if_pos hj]
+  -- Goal: α j * theta _ _ (m + k' - j.val)
+  --       = M.α j.succ * theta _ _ (m + (k'+1) - (j.val + 1))
+  have hidx : m + k' - j.val = m + (k' + 1) - (j.val + 1) := by omega
+  rw [hidx]
+
+open OpenMath.Chapter1.Section141 in
+/-- **Butcher §406D's "Θ exists".** From `M.IsStable`, the θ-sequence
+of `M` (in the sense of `Section141`) is uniformly bounded by some
+non-negative `Θ`. The non-negativity is obtained via the `max ⬝ 0`
+trick, since `IsStable` exposes `∃ C : ℝ` (no sign constraint).
+
+Requires `0 < k` (inherited from `theta_isHomogeneousSolution`). -/
+theorem theta_bounded_of_isStable {k : ℕ} (hk : 0 < k)
+    (M : LinearMultistepMethod k) (hstab : M.IsStable) :
+    ∃ Θ : ℝ, 0 ≤ Θ ∧
+      ∀ n, |theta k (fun i : Fin k => M.α i.succ) n| ≤ Θ := by
+  obtain ⟨C, hC⟩ := hstab _ (theta_isHomogeneousSolution hk M)
+  refine ⟨max C 0, le_max_right _ _, fun n => ?_⟩
+  exact (hC n).trans (le_max_left _ _)
+
+/-- **Butcher Theorem 406D (p. 347): a stable consistent linear
+multistep method is convergent.**
+
+Combines:
+
+* `globalError_recurrence_bound_textbook` (cycle 045) — the (406c)
+  per-step bound `|ψ_n| ≤ C h max + D h²`,
+* `Section141.linRec_closed_form` (cycle 012) — the `θ`-decomposition
+  `ε_n = Σ θ_{n-i} ζ_i + Σ θ_{n-i} ψ_i` (Theorem 141A),
+* `theta_bounded_of_isStable` (this cycle) — extracts `Θ` from
+  `IsStable`,
+* `discrete_gronwall_exp_bound` (cycle 046) — Butcher's (406h)
+  exponential closed form,
+
+to conclude `Tendsto (Y_m m - yex x) atTop (𝓝 0)`.
+
+Textbook statement (`entities/thm_406D.json`):
+> "A stable consistent linear multistep method is convergent."
+
+The body is `sorry` for cycle 047 — this is the documented scaffold,
+locking in the signature and proof outline for cycles 048+. See the
+proof-outline section of `task_results/cycle_047.md`. -/
+theorem LinearMultistepMethod.stable_consistent_isConvergent
+    {k : ℕ} (M : LinearMultistepMethod k)
+    (hstab : M.IsStable) (hcons : M.IsConsistent) :
+    M.IsConvergent := by
+  sorry
 
 end OpenMath.Chapter4.Section404
