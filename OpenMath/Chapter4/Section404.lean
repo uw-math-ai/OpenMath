@@ -1742,6 +1742,58 @@ theorem theta_bounded_of_isStable {k : ℕ} (hk : 0 < k)
   refine ⟨max C 0, le_max_right _ _, fun n => ?_⟩
   exact (hC n).trans (le_max_left _ _)
 
+/-- **Butcher §406D contraction lemma (helper for `thm:406D`).**
+Bounds `|Σ θ_{·} ψ_·|` by `Θ · (C·h·Σ Sε + D·h²·#range)` whenever
+each `|ψ i|` is dominated pointwise by `C·h·Sε i + D·h²` and
+`|θ i| ≤ Θ`.
+
+The user supplies the per-index "max-of-recent-errors" upper bound
+`Sε i` themselves (typically `max_{j<k} |ε(i - j - 1)|`, but we keep
+this abstract to avoid bringing `Finset.sup'` into the lemma).
+
+This is the Σ → Σ contraction Butcher invokes in the (406h) recurrence
+derivation: the sum over `i ∈ Ico k n` of bounded `|ψ i|` collapses to
+a "weighted total error" plus a "linear-in-n h² term".
+
+The `idx` parameter abstracts the index passed to `θ` (typical caller
+will use `idx := fun i => n - 1 - i`, matching Butcher's `θ_{n-1-i}`).
+This avoids fighting `Nat`-subtraction inside the inequality and makes
+the lemma reusable. -/
+private lemma sum_theta_psi_contraction
+    {Θ C D h : ℝ} (hΘ : 0 ≤ Θ) (_hh : 0 ≤ h)
+    (θ : ℕ → ℝ) (hθ : ∀ i, |θ i| ≤ Θ)
+    (ψ : ℕ → ℝ) (Sε : ℕ → ℝ)
+    (k n : ℕ) (_hkn : k ≤ n)
+    (idx : ℕ → ℕ)
+    (hψ : ∀ i, k ≤ i → i < n → |ψ i| ≤ C * h * Sε i + D * h^2) :
+    |∑ i ∈ Finset.Ico k n, θ (idx i) * ψ i|
+      ≤ Θ * C * h * (∑ i ∈ Finset.Ico k n, Sε i)
+        + Θ * D * h^2 * ((n - k : ℕ) : ℝ) := by
+  -- Step 1: |Σ| ≤ Σ |·|.
+  refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+  -- Step 2: pointwise: |θ * ψ| = |θ| * |ψ| ≤ Θ * (C h Sε + D h²).
+  have hbound : ∀ i ∈ Finset.Ico k n,
+      |θ (idx i) * ψ i| ≤ Θ * (C * h * Sε i + D * h^2) := by
+    intro i hi
+    rw [Finset.mem_Ico] at hi
+    rw [abs_mul]
+    have h_psi := hψ i hi.1 hi.2
+    have h_psi_nn : 0 ≤ |ψ i| := abs_nonneg _
+    calc |θ (idx i)| * |ψ i|
+        ≤ Θ * |ψ i| :=
+          mul_le_mul_of_nonneg_right (hθ (idx i)) h_psi_nn
+      _ ≤ Θ * (C * h * Sε i + D * h^2) :=
+          mul_le_mul_of_nonneg_left h_psi hΘ
+  -- Step 3: sum the bound.
+  refine (Finset.sum_le_sum hbound).trans ?_
+  -- Step 4: distribute Θ over the (Chx + Dh²) split, then collect.
+  have hpoint : ∀ i, Θ * (C * h * Sε i + D * h^2) =
+                       Θ * C * h * Sε i + Θ * D * h^2 := by intro; ring
+  simp_rw [hpoint]
+  rw [Finset.sum_add_distrib, ← Finset.mul_sum, Finset.sum_const,
+      Nat.card_Ico, nsmul_eq_mul]
+  apply le_of_eq; ring
+
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.**
 
