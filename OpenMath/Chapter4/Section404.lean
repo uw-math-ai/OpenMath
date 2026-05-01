@@ -1985,6 +1985,98 @@ private lemma globalError_per_step_sum_form
           hyex_C1 hyex_ode hf_yex_bound hh hsmall hY n hn
           Mmax hMmax_nn hMmax_bound
 
+open OpenMath.Chapter1.Section141 in
+/-- **The LMM global error sequence equals `Section141.linRec`.**
+Given an LMM `M`, an exact solution `yex`, and any iterate sequence
+`Y`, the global error
+    `ε(n) := yex(x₀ + n·h) − Y(n)`
+is exactly `Section141.linRec` applied with:
+
+* coefficients `α(j) := M.α j.succ` (the tail-α coefficients),
+* initial values `y₀init(j) := ε(j.val)` (the first `k` errors),
+* forcing `ψ(n) := ε(n) − Σ_{j:Fin k} M.α j.succ · ε(n − 1 − j.val)`
+  (the per-step residual at index `n`).
+
+This is a pure algebraic identity — no hypotheses on `f`, `yex`, or
+`Y`. The proof is by strong induction on `n`: for `n < k`,
+`linRec_of_lt` returns the initial value `y₀init ⟨n, _⟩ = ε n`; for
+`n ≥ k`, `linRec_of_ge` plus the IH plus the definition of `ψ`
+collapse to `ε n` by `ring`.
+
+Used by: cycle 053+ outer assembly of `thm:406D` — composes with
+`Section141.linRec_closed_form` (cycle 012, Theorem 141A) to give
+the explicit `θ`-decomposition. -/
+private lemma globalError_eq_linRec
+    {k : ℕ} (M : LinearMultistepMethod k)
+    {yex : ℝ → ℝ} {Y : ℕ → ℝ} {x₀ h : ℝ} (n : ℕ) :
+    yex (x₀ + (n : ℝ) * h) - Y n
+      = linRec k
+          (fun j : Fin k => M.α j.succ)
+          (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val)
+          (fun m =>
+            (yex (x₀ + (m : ℝ) * h) - Y m)
+              - ∑ j : Fin k, M.α j.succ
+                  * (yex (x₀ + ((m - 1 - j.val : ℕ) : ℝ) * h)
+                      - Y (m - 1 - j.val)))
+          n := by
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    by_cases hn : n < k
+    · rw [linRec_of_lt _ _ _ _ _ hn]
+    · push_neg at hn
+      rw [linRec_of_ge _ _ _ _ _ hn]
+      have hsub : ∀ j : Fin k, n - 1 - j.val < n := by
+        intro j
+        have hj : j.val < k := j.isLt
+        omega
+      have h_eq : ∀ j : Fin k,
+          linRec k
+            (fun j : Fin k => M.α j.succ)
+            (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val)
+            (fun m =>
+              (yex (x₀ + (m : ℝ) * h) - Y m)
+                - ∑ j : Fin k, M.α j.succ
+                    * (yex (x₀ + ((m - 1 - j.val : ℕ) : ℝ) * h)
+                        - Y (m - 1 - j.val)))
+            (n - 1 - j.val) =
+            yex (x₀ + ((n - 1 - j.val : ℕ) : ℝ) * h) - Y (n - 1 - j.val) :=
+        fun j => (ih (n - 1 - j.val) (hsub j)).symm
+      simp_rw [h_eq]
+      ring
+
+open OpenMath.Chapter1.Section141 in
+/-- **Closed-form decomposition of the LMM global error.**
+Compose `globalError_eq_linRec` with `Section141.linRec_closed_form`
+(Theorem 141A, cycle 012) to get the explicit `θ`-decomposition
+
+  `ε(n) = Σ_{i ∈ [0, min k (n+1))} θ_{n-i} · y'_i
+          + Σ_{i ∈ [k, n]} θ_{n-i} · ψ_i`
+
+where `θ` and `y'` are the impulse response and transformed initial
+data of the homogeneous part, and `ψ` is the per-step residual of
+the LMM error sequence.
+
+Used by: cycle 053+ outer assembly of `thm:406D` — feeds the
+`Σ θ_{n-i} ε'_i + Σ θ_{n-i} ψ_i` shape into the `Θ`-bound (cycle
+047) and per-step bound (cycle 051). -/
+private lemma globalError_closed_form
+    {k : ℕ} (M : LinearMultistepMethod k)
+    {yex : ℝ → ℝ} {Y : ℕ → ℝ} {x₀ h : ℝ} (n : ℕ) :
+    yex (x₀ + (n : ℝ) * h) - Y n
+      = (∑ i ∈ Finset.range (min k (n + 1)),
+            theta k (fun j : Fin k => M.α j.succ) (n - i)
+              * yPrime k (fun j : Fin k => M.α j.succ)
+                  (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val)
+                  i)
+        + ∑ i ∈ Finset.Icc k n,
+            theta k (fun j : Fin k => M.α j.succ) (n - i)
+              * ((yex (x₀ + (i : ℝ) * h) - Y i)
+                  - ∑ j : Fin k, M.α j.succ
+                      * (yex (x₀ + ((i - 1 - j.val : ℕ) : ℝ) * h)
+                          - Y (i - 1 - j.val))) := by
+  rw [globalError_eq_linRec M n]
+  exact linRec_closed_form k _ _ _ n
+
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.**
 

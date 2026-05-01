@@ -1,300 +1,348 @@
-# Cycle 051 Strategy — `globalError_per_step_sum_form` (sum-form per-step bound for thm:406D)
+# Cycle 052 Strategy — `globalError_eq_linRec` (bridge LMM error sequence to §141 `linRec`)
 
 ## Status going in
 
-- **Sorry count: 1** at `OpenMath/Chapter4/Section404.lean:1947`
-  (the `stable_consistent_isConvergent` outer-assembly scaffold from
-  cycle 047). **DO NOT attempt to close this sorry this cycle.**
-  It is a multi-cycle outer-assembly target (planned for cycles
-  052–053).
+- **Sorry count: 1** at `OpenMath/Chapter4/Section404.lean:2014`
+  (`stable_consistent_isConvergent`, the cycle-047 outer-assembly
+  scaffold). **DO NOT touch this sorry this cycle.** It is the
+  cycle 053+ outer-assembly target.
 - **Pending Aristotle: none.**
-- **Last cycle delivered**: `recentSum_swap_bound` (cycle 050) —
-  the index-arithmetic adapter
-  `Σ_{i ∈ Ico k n} Σ_{j:Fin k} g(i-(j+1)) ≤ k · Σ_{p ∈ Ico 0 n} g p`.
+- **Last cycle delivered**: `globalError_per_step_sum_form` (cycle
+  051) — the per-step bound parameterised by the *sum* of recent
+  errors instead of an abstract `Mmax`.
 
-The convergence theorem `thm:406D` is being assembled from a stack
-of cleanly-separated helpers; cycle 051 is the next-to-last
-infrastructure brick before the outer assembly begins in cycle 052.
+The convergence theorem `thm:406D` is being assembled brick-by-brick:
+each cycle adds one helper lemma keeping `sorry` count at 1. Cycles
+045–051 closed seven helpers; cycle 052 adds the eighth — and the
+first piece of the outer assembly itself, in the form of an
+*algebraic identity* (no analytic hypotheses required).
 
-## This cycle's target: `globalError_per_step_sum_form`
+## This cycle's target: `globalError_eq_linRec`
 
-A single private helper lemma that bridges:
+A single private helper lemma that **expresses the LMM global error
+sequence as a `Section141.linRec`** with explicit parameters. This is
+step 1+2 of the cycle 051 outer-assembly outline, factored out as a
+standalone identity so cycle 053 can compose it with
+`Section141.linRec_closed_form` (cycle 012) to get the explicit
+`Σ θ_{n-i} ε'_i + Σ θ_{n-i} ψ_i` decomposition.
 
-* **Cycle 045's `globalError_recurrence_bound_textbook`** (per-step
-  bound parameterised over a *single* `Mmax` upper-bounding all of
-  `|ε(n-(j+1))|` for `j : Fin k`).
-* **Cycle 048's `sum_theta_psi_contraction`** (consumes a per-`i`
-  `Sε(i)` value, not a max).
+### Why this lemma
 
-Specialise cycle 045's lemma to `Mmax := ∑_{j : Fin k} |ε(n-(j+1))|`
-so that the per-step bound depends on the **sum** of recent errors
-instead of an abstract upper bound `Mmax`. This is exactly the
-shape `sum_theta_psi_contraction` wants when called with
-`Sε(i) := ∑_{j : Fin k} |ε(i-(j+1))|`.
+The cycle 045 lemma's per-step bound has the shape
+
+  `|ε_n − Σ_{j:Fin k} α_{j+1} · ε_{n−1−j}|  ≤  C_h · Mmax + D_h · h²`
+
+i.e. it bounds the *residual* of the linear recurrence. Define
+
+  `ψ(n) := ε(n) − Σ_{j:Fin k} α_{j+1} · ε(n−1−j.val)`
+
+so that **by definition** `ε` satisfies the inhomogeneous linear
+recurrence `ε(n) = Σ α(j) · ε(n−1−j) + ψ(n)` for every `n`. Together
+with the trivial initial values `ε(j) = ε(j)` for `j : Fin k`, this
+characterises `ε` as the unique solution `linRec k α y₀init ψ`.
+Cycle 053 can then apply `linRec_closed_form` to get the
+`θ`-decomposition.
+
+This is **pure algebra** — no hypotheses on `f`, `yex`, Lipschitz,
+consistency, smallness, etc. The lemma is a uniqueness-by-induction
+identity. That makes it (a) tractable in one cycle, and (b)
+maximally reusable downstream.
 
 ### Concrete signature (target)
 
-Insert immediately AFTER `recentSum_swap_bound` (line 1924) and
-BEFORE `LinearMultistepMethod.stable_consistent_isConvergent`
-(line 1947). Keep `private` to mirror neighbouring helpers.
+Insert immediately AFTER `globalError_per_step_sum_form`
+(line 1986) and BEFORE the `LinearMultistepMethod.stable_consistent_isConvergent`
+docstring block (currently line 1988). Keep `private` (matches
+neighbouring helpers).
 
 ```lean
-/-- **Per-step bound in sum form (helper for thm:406D).**
-Specialise `globalError_recurrence_bound_textbook` (cycle 045) to
-`Mmax := ∑_{j : Fin k} |ε(n-(j+1))|`, the sum of recent errors. The
-bound becomes
-  `|ε_n - Σ α_i.succ ε_{n-(i+1)}|
-      ≤ Cₕ · (∑_{j:Fin k} |ε(n-(j+1))|) + Dₕ · h²`
-where Cₕ and Dₕ are the cycle 045 coefficients. This is the shape
-`sum_theta_psi_contraction` (cycle 048) consumes via
-`Sε(i) := ∑_{j:Fin k} |ε(i-(j+1))|`.
+open OpenMath.Chapter1.Section141 in
+/-- **The LMM global error sequence equals `Section141.linRec`.**
+Given an LMM `M`, an exact solution `yex`, and any iterate sequence
+`Y`, the global error
+    ε(n) := yex(x₀ + n·h) − Y(n)
+is exactly `Section141.linRec` applied with:
 
-Used by: cycle 052+ outer assembly of `thm:406D`. -/
-private lemma globalError_per_step_sum_form
-    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
-    {f : ℝ → ℝ} {L M_bound : ℝ}
-    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
-    (hf_lip : LipschitzWith L.toNNReal f)
-    {yex : ℝ → ℝ}
-    (hyex_C1 : ContDiff ℝ 1 yex)
-    (hyex_ode : ∀ t, deriv yex t = f (yex t))
-    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
-    {Y : ℕ → ℝ} {x₀ h : ℝ}
-    (hh : 0 ≤ h)
-    (hsmall : h * L * |M.β 0| < 1)
-    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)
-    (n : ℕ) (hn : k ≤ n) :
-    |yex (x₀ + (n : ℝ) * h) - Y n
-        - ∑ i : Fin k, M.α i.succ
-            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
-                - Y (n - (i.val + 1)))|
-      ≤ (h * L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
-                  + ∑ i : Fin k, |M.β i.succ|)
-            / (1 - h * L * |M.β 0|))
-          * (∑ j : Fin k,
-              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
-                - Y (n - (j.val + 1))|)
-        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
-            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
-              * L * M_bound * h^2
-            / (1 - h * L * |M.β 0|) := by
+* coefficients `α(j) := M.α j.succ` (the tail-α coefficients),
+* initial values `y₀init(j) := ε(j.val)` (the first `k` errors),
+* forcing `ψ(n) := ε(n) − Σ_{j:Fin k} M.α j.succ · ε(n − 1 − j.val)`
+  (the per-step residual at index `n`).
+
+This is a pure algebraic identity — no hypotheses on `f`, `yex`, or
+`Y`. The proof is by strong induction on `n`: for `n < k`,
+`linRec_of_lt` returns the initial value `y₀init ⟨n, _⟩ = ε n`; for
+`n ≥ k`, `linRec_of_ge` plus the IH plus the definition of `ψ`
+collapse to `ε n` by `ring`.
+
+Used by: cycle 053+ outer assembly of `thm:406D` — composes with
+`Section141.linRec_closed_form` (cycle 012, Theorem 141A) to give
+the explicit `θ`-decomposition. -/
+private lemma globalError_eq_linRec
+    {k : ℕ} (M : LinearMultistepMethod k)
+    {yex : ℝ → ℝ} {Y : ℕ → ℝ} {x₀ h : ℝ} (n : ℕ) :
+    yex (x₀ + (n : ℝ) * h) - Y n
+      = linRec k
+          (fun j : Fin k => M.α j.succ)
+          (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val)
+          (fun m =>
+            (yex (x₀ + (m : ℝ) * h) - Y m)
+              - ∑ j : Fin k, M.α j.succ
+                  * (yex (x₀ + ((m - 1 - j.val : ℕ) : ℝ) * h)
+                      - Y (m - 1 - j.val)))
+          n := by
   sorry
 ```
 
-(Cross-check the exact polynomial form of the RHS by reading
-`globalError_recurrence_bound_textbook`'s conclusion at lines
-1349–1359 — the only change should be the `Mmax` slot.)
+Note: the `open OpenMath.Chapter1.Section141 in` line lets the
+declaration use `linRec` unqualified. There is already an
+`open OpenMath.Chapter1.Section141 in` at line 1684 for the
+`theta_isHomogeneousSolution`/`theta_bounded_of_isStable` helpers;
+follow the same pattern (a per-declaration `open ... in` rather than
+a file-level `open`).
 
 ## Approach (specific tactic plan)
 
-The proof is a single forward call to cycle 045's lemma with a
-specific `Mmax` instantiation. Four steps:
+The proof is strong induction on `n` with two cases (`n < k` and
+`n ≥ k`):
 
-### Step 1 — Define `Mmax` as the sum.
+### Step 0 — Set up the induction.
 ```lean
-set Mmax : ℝ :=
-  ∑ j : Fin k,
-    |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
-      - Y (n - (j.val + 1))| with hMmax_def
+induction n using Nat.strong_induction_on with
+| _ n ih =>
+  by_cases hn : n < k
+  · -- Case n < k: linRec returns the initial value.
+    rw [linRec_of_lt _ _ _ _ _ hn]
+    -- Goal: yex(x₀ + n·h) - Y n
+    --     = (fun j : Fin k => yex(x₀ + j.val·h) - Y j.val) ⟨n, hn⟩
+    rfl                       -- β-reduces the lambda; `j.val = n`.
+  · -- Case n ≥ k: linRec recurses.
+    push_neg at hn
+    rw [linRec_of_ge _ _ _ _ _ hn]
+    -- Goal: ε n = Σ α(j) · linRec(n-1-j.val) + ψ n
+    -- where ψ unfolds to (ε n) - Σ α(j) · ε(n-1-j.val).
+    sorry
 ```
-The `with hMmax_def` clause records the unfolding equation, useful
-if step 4's `exact` needs help.
 
-### Step 2 — Discharge `0 ≤ Mmax`.
+### Step 1 — Apply IH to each `linRec(n-1-j.val)` term.
+
+For each `j : Fin k`, `n - 1 - j.val < n` (since `n ≥ k ≥ 1` for the
+recursive case to fire — but: for `k = 0`, the `Fin 0` sum is empty,
+so this branch is vacuous).
+
+Case split on `k = 0` vs `k ≥ 1` first if Lean complains about the
+`n ≥ 1` derivation:
+
 ```lean
-have hMmax_nn : 0 ≤ Mmax := by
-  rw [hMmax_def]
-  exact Finset.sum_nonneg (fun j _ => abs_nonneg _)
+rcases Nat.eq_zero_or_pos k with hk0 | hkpos
+· -- k = 0: the `Fin 0` sum vanishes; ψ n = ε n; linRec n = ε n. 
+  subst hk0
+  simp [linRec, Finset.sum_empty] -- or unfold linRec_of_ge directly
+· -- k ≥ 1, n ≥ k ≥ 1, so n - 1 is well-defined and n - 1 - j.val < n.
+  have hsub : ∀ j : Fin k, n - 1 - j.val < n := fun j => by
+    have hj : j.val < k := j.isLt
+    have h1 : 1 ≤ n := le_trans hkpos hn
+    omega
+  have h_eq : ∀ j : Fin k,
+      linRec k _ _ _ (n - 1 - j.val) =
+        yex (x₀ + ((n - 1 - j.val : ℕ) : ℝ) * h) - Y (n - 1 - j.val) :=
+    fun j => (ih (n - 1 - j.val) (hsub j)).symm
+  simp_rw [h_eq]
+  ring
 ```
-Each summand is `|·|`, hence non-negative; sum of non-negatives is
-non-negative.
 
-### Step 3 — Discharge `∀ i : Fin k, |ε(n-(i+1))| ≤ Mmax`.
+The `_`s in `linRec k _ _ _` are: the α-coefficients, the y₀init
+function, the ψ function — all the same triple as in the goal, so
+Lean should unify them. If unification fails (because the lambdas in
+the IH are not syntactically identical to the lambdas in `h_eq`),
+make the IH application explicit:
 
-Use `Finset.single_le_sum`. The Mathlib signature is roughly:
-```
-Finset.single_le_sum
-    {s : Finset ι} {f : ι → α} (h : ∀ i ∈ s, 0 ≤ f i) {i : ι} (hi : i ∈ s) :
-    f i ≤ ∑ j ∈ s, f j
-```
-
-Verify the exact name with `lean_local_search "single_le_sum"`
-BEFORE relying on it. If the name has changed, fall through to a
-manual decomposition:
 ```lean
-have hMmax_bound :
-    ∀ i : Fin k,
-      |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
-        - Y (n - (i.val + 1))| ≤ Mmax := by
-  intro i
-  rw [hMmax_def]
-  exact Finset.single_le_sum
-          (f := fun j : Fin k =>
-            |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
-              - Y (n - (j.val + 1))|)
-          (fun j _ => abs_nonneg _)
-          (Finset.mem_univ i)
+have h_eq : ∀ j : Fin k,
+    linRec k
+      (fun j' : Fin k => M.α j'.succ)
+      (fun j' : Fin k => yex (x₀ + (j'.val : ℝ) * h) - Y j'.val)
+      (fun m => (yex (x₀ + (m : ℝ) * h) - Y m)
+                - ∑ j' : Fin k, M.α j'.succ
+                    * (yex (x₀ + ((m - 1 - j'.val : ℕ) : ℝ) * h)
+                        - Y (m - 1 - j'.val)))
+      (n - 1 - j.val) =
+        yex (x₀ + ((n - 1 - j.val : ℕ) : ℝ) * h) - Y (n - 1 - j.val) :=
+  fun j => (ih (n - 1 - j.val) (hsub j)).symm
 ```
 
-If `Finset.single_le_sum` has a different argument order or name
-(e.g. `Finset.le_sum_of_mem` or `Finset.sum_le_sum_of_ne_zero`), the
-manual fallback is:
+### Step 2 — `simp_rw` + `ring`.
+
+After substituting all the IH applications, both sides become
+syntactically `Σ α(j) · ε(n-1-j) + (ε n − Σ α(j) · ε(n-1-j))`, which
+collapses to `ε n` by `ring`. The `simp_rw` needs the rewriting form
+of the IH (i.e., `simp_rw [h_eq]` rewrites occurrences of
+`linRec k _ _ _ (n - 1 - j.val)` to `yex(...) − Y(...)`).
+
+### Step 0 fallback (if `rfl` fails for `n < k` case)
+
+If `rfl` doesn't close the `n < k` case, the issue is likely that
+the lambda's β-reduction is not happening automatically. Try in
+order:
+
 ```lean
-have hMmax_bound :
-    ∀ i : Fin k, … ≤ Mmax := by
-  intro i
-  rw [hMmax_def]
-  have hsplit :
-      (∑ j : Fin k, |…(j.val + 1)…|)
-        = |…(i.val + 1)…| + ∑ j ∈ Finset.univ.erase i, |…(j.val + 1)…| := by
-    rw [← Finset.sum_erase_add _ _ (Finset.mem_univ i)]
-    ring
-  rw [hsplit]
-  have : (0 : ℝ) ≤ ∑ j ∈ Finset.univ.erase i, |…(j.val + 1)…| :=
-    Finset.sum_nonneg (fun j _ => abs_nonneg _)
-  linarith
+· rw [linRec_of_lt _ _ _ _ _ hn]
+  -- One of these should close it:
+  rfl                   -- β-reduce the y₀init lambda
+  -- OR
+  simp only             -- force β-reduction
+  -- OR
+  show yex (x₀ + ((⟨n, hn⟩ : Fin k).val : ℝ) * h) - Y (⟨n, hn⟩ : Fin k).val
+       = yex (x₀ + (n : ℝ) * h) - Y n
+  rfl
 ```
 
-### Step 4 — Forward to cycle 045.
-```lean
-exact M.globalError_recurrence_bound_textbook hcons hL hM hf_lip
-        hyex_C1 hyex_ode hf_yex_bound hh hsmall hY n hn
-        Mmax hMmax_nn hMmax_bound
-```
-
-The `set Mmax := …` from step 1 ensures the goal's RHS contains the
-identifier `Mmax` rather than the spelled-out sum, so `exact`
-should succeed without `convert`. If `exact` fails because the
-`set` did not rewrite the goal as expected, switch to:
-```lean
-have hgoal :=
-  M.globalError_recurrence_bound_textbook hcons hL hM hf_lip
-    hyex_C1 hyex_ode hf_yex_bound hh hsmall hY n hn
-    Mmax hMmax_nn hMmax_bound
-simp only [hMmax_def] at hgoal
-convert hgoal using 2
-```
-or unfold `Mmax` in the goal before `exact`:
-```lean
-show … ≤ … * (∑ j, …) + … by
-  simp only [← hMmax_def]
-  exact M.globalError_recurrence_bound_textbook …
-```
+The `Fin.val ⟨n, hn⟩ = n` step is definitional, so `rfl` should
+work. If not, `simp` is the bigger hammer.
 
 ## Why this is a 1-cycle target (not 2+)
 
-* No new infrastructure — pure forward instantiation.
-* No Mathlib gap — `Finset.single_le_sum` is the only non-trivial
-  lookup, and it is standard. Even if the precise name has drifted,
-  the manual fallback (Step 3 alternate) is ~5 lines.
-* No `linarith`/`nlinarith` heavy-lifting — the cycle 045 lemma
-  already discharged that algebra.
-* No FTC / change-of-variables — those landed in cycles 040–044.
+* No new infrastructure — uses only `Section141.linRec_of_lt`,
+  `linRec_of_ge`, and `Nat.strong_induction_on`. All three are
+  standard.
+* No analytic hypotheses — pure algebraic identity.
+* Decomposition into two cases (`n < k`, `n ≥ k`) plus a `k = 0` /
+  `k ≥ 1` sub-case is mechanical.
+* The `ring`-closer at the end is well-tested at this point in the
+  codebase; the algebra is "x = a + (x − a)".
 
-Estimated proof body: ~15 lines.
+Estimated proof body: ~25–35 lines.
 
 ## Aristotle plan
 
-Submit ONE Aristotle job containing only `globalError_per_step_sum_form`
-at the start of the cycle, with the dependency
-`globalError_recurrence_bound_textbook` (and its environment) in
-scope. The lemma is small and forward-style; Aristotle should solve
-it within the 30-minute window.
+Submit ONE Aristotle job containing only `globalError_eq_linRec` at
+the start of the cycle, with `linRec`, `linRec_of_lt`,
+`linRec_of_ge`, and `Nat.strong_induction_on` in the prompt's
+"available lemmas" hint. The lemma is small and uses only
+elementary recursion machinery; Aristotle should solve it within
+the 30-minute window.
 
-While Aristotle runs, attempt the manual proof per the four-step
-plan above. The cycle 045 lemma's calling convention is well
-understood (cycle 045's task results spell it out), so the manual
-proof should land first.
+While Aristotle runs, attempt the manual proof per Step 0 → 1 → 2
+above. The induction skeleton is rote enough that the manual proof
+should land first; if Aristotle returns a cleaner version, prefer
+the cleaner one for readability.
 
-CLAUDE.md cap: ONE Aristotle status check after 30 min. Do not
+CLAUDE.md cap: ONE Aristotle status check after 30 minutes. Do not
 poll repeatedly.
 
 ## What NOT to do (failure modes from prior cycles)
 
-* **DO NOT close the line-1947 sorry**
-  (`stable_consistent_isConvergent`). It is the cycle 052+ outer-
-  assembly target; cycle 051's job is to prepare the sum-form
-  per-step bound that the outer assembly will consume. A premature
-  close attempt in cycle 051 would either produce a 200+ line
-  monster (and force a `maxHeartbeats` raise — banned) or silently
-  re-introduce assumptions that violate the convergence theorem's
-  faithfulness.
+* **DO NOT close the line-2014 sorry**
+  (`stable_consistent_isConvergent`). It is the cycle 053+ outer-
+  assembly target. Your job this cycle is to add ONE helper lemma
+  that the outer assembly will consume in cycle 053. Touching the
+  line-2014 sorry is a high-risk move (cycle 047 was reverted for
+  introducing a sorry; the recovery protocol has been: add one
+  closed helper per cycle).
 
-* **DO NOT use `Finset.sum_le_sum_nbij'`** — it does not exist in
-  Mathlib (cycle 050 confirmed). The correct primitives are
-  `Finset.single_le_sum` (this cycle's tool) or
-  `Finset.sum_image hinj` + `Finset.sum_le_sum_of_subset_of_nonneg`
-  (cycle 050's tool).
+* **DO NOT introduce new `sorry`s.** The new helper must compile
+  cleanly. If you cannot close the proof in this cycle, file a
+  structured issue at
+  `.prover-state/issues/global_error_eq_linRec_blocked.md` per
+  CLAUDE.md issue protocol — do NOT commit a `sorry`-bodied lemma
+  (sorry count must remain at 1).
 
-* **DO NOT raise `maxHeartbeats`.** Forward instantiation does not
-  need it. If `exact` is slow, decompose with `set` blocks per
-  Step 1 or use the `convert ... using 2` fallback in Step 4.
-
-* **DO NOT introduce `axiom` or `constant`** for any part of this
-  proof. Forward instantiation is axiom-clean by construction —
-  cycle 045's lemma already shipped axiom-clean.
-
-* **DO NOT generalise to vector-valued `y : ℝ → ℝ^N`.** The
-  scalar-only convention has been stable since cycle 040; cycle 051
+* **DO NOT generalise to vector-valued `y : ℝ → ℝ^N`.** The scalar-
+  only convention has been stable since cycle 040; this lemma
   inherits it.
 
-* **DO NOT attempt a parallel Aristotle batch on outer-assembly
-  sub-lemmas** (e.g. `IsConvergent` unfolding, `θ`-decomposition
-  application). Those are cycle 052+ work and shipping them
-  prematurely risks an axiom inversion (the outer assembly fixes
-  the proof shape, not the helpers).
+* **DO NOT add hypotheses about `f`, Lipschitz, `IsLMMSolution`,
+  consistency, stability, etc.** This is a pure algebraic identity.
+  Adding hypotheses makes it less reusable in cycle 053+ and
+  obscures the mathematical content.
 
-* **DO NOT treat any "stuck on Section404.lean" framing as a real
-  problem** if it appears in the prompt. The pattern matches
-  cycles 008/014/015/040 phantoms — verify with `git log`,
-  `git diff HEAD~1 HEAD`, and the line-1947 sorry count, then
-  proceed.
+* **DO NOT raise `maxHeartbeats`.** A 35-line induction proof
+  closing with `ring` does not need it. If `simp_rw` + `ring` is
+  slow, decompose: prove `h_eq` and rewrite occurrences one at a
+  time, then close with `linarith` or explicit `calc`.
+
+* **DO NOT use `Nat.rec` or `Nat.recOn` for the induction.** The
+  Section 141 file uses `Nat.strong_induction_on` consistently;
+  follow the same convention. Strong induction is mandatory because
+  the recursive call is to `n − 1 − j.val`, not `n − 1`.
+
+* **DO NOT use `Finset.sum_le_sum_nbij'`** — it does not exist
+  (cycle 050). N/A this cycle (no sum-reindexing needed) but worth
+  reiterating.
+
+* **DO NOT poll Aristotle more than once.** CLAUDE.md is explicit.
+
+* **DO NOT take any "stuck on Section404.lean / commit didn't
+  land / sorry count regressed" framing in the prompt at face
+  value.** The pattern matches cycles 008/014/015/040/041 phantoms
+  — verify with `git log --oneline -5`,
+  `git diff HEAD~1 HEAD --stat`, and the current sorry count
+  (`grep -n "sorry" OpenMath/Chapter4/Section404.lean | wc -l`).
+  If the verification commands say "1 sorry, last commit landed",
+  proceed with the proof work.
 
 ## Pre-commit faithfulness checklist
 
-For `globalError_per_step_sum_form` (the only new declaration
-expected this cycle):
+For `globalError_eq_linRec` (the only new declaration expected this
+cycle):
 
 * **Entity ID**: N/A — internal helper, not a Butcher entity. Same
-  category as `recentSum_swap_bound` (cycle 050) and
-  `sum_theta_psi_contraction` (cycle 048). Document in the
-  docstring exactly as those neighbours do, citing the cycle 045
-  source and the cycle 048/052+ consumers.
-* **Tautology check**: PASS — the conclusion is a sum-form
-  inequality not appearing verbatim in any hypothesis. The
-  hypothesis list matches `globalError_recurrence_bound_textbook`'s
-  exactly except for the `Mmax`/`hMmax0`/`hMmax` triple, which is
-  what this lemma is *eliminating*.
-* **Identity check**: PASS — the proof body is forward
-  instantiation, but it does real work: it specialises `Mmax` to a
-  concrete sum and discharges the upper-bound hypothesis. That is
-  not a trivial re-export.
-* **Hypothesis strength check**: PASS — every hypothesis flows
-  through to cycle 045's lemma. None can be weakened without
-  weakening the parent.
+  category as `recentSum_swap_bound`, `globalError_per_step_sum_form`,
+  `sum_theta_psi_contraction`. Document in the docstring with the
+  cycle 012 (`linRec_closed_form`) and cycle 053+ (outer assembly)
+  cross-references explicit.
+* **Tautology check**: PASS — the conclusion is a uniqueness
+  identity. The `linRec` term on the RHS is computed by
+  `Section141.linRec`'s recursion; the `ε` term on the LHS is the
+  global error. They are not syntactically identical.
+* **Identity check**: PASS — the proof body is strong induction +
+  `linRec_of_lt`/`linRec_of_ge` + `ring`. The `ring` step does real
+  algebraic work (cancelling `Σ α · ε` against itself); this is not
+  a vacuous re-export.
+* **Hypothesis strength check**: PASS — the lemma takes only the
+  most general data (`M`, `yex`, `Y`, `x₀`, `h`, `n`). No
+  Lipschitz, ODE, consistency, or stability hypotheses; the
+  identity is pure algebra and would not be improved by weakening
+  hypotheses (none to weaken).
 * **Class/structure check**: N/A.
 * **Definition smuggling check**: N/A.
-* **Absent theorem check**: N/A — no comment promises additional
-  content.
+* **Absent theorem check**: N/A — the docstring forward-references
+  `cycle 053+`'s consumer, not a non-existent theorem.
 
 ## Stretch goal (optional, ONLY if main lemma lands in <1 hour)
 
-If the main lemma compiles cleanly and there is significant time
-remaining, prepare the cycle 052 entry point: write a sorry-first
-scaffold for the outer assembly's first internal step — applying
-`Section141.linRec_closed_form` to decompose
-`ε_n = Σ θ_{n-i} ζ_i + Σ θ_{n-i} ψ_i`. Locate the `linRec_closed_form`
-signature in `OpenMath/Chapter1/Section141.lean` first via
-`lean_file_outline`; then drop a `private lemma` with the
-decomposition shape and `sorry` body. **This is scaffold-only**;
-do not attempt to close it. Estimated ~30 lines (including a
-docstring).
+If `globalError_eq_linRec` compiles cleanly with significant time
+remaining, prepare a *second* helper lemma:
 
-If neither the main lemma nor the stretch goal completes, write an
-issue file at `.prover-state/issues/per_step_sum_form_blocked.md`
-explaining specifically *which* of step 1/2/3/4 above failed and
-what was tried (with `lean_diagnostic_messages` excerpts). Do not
-just write "stuck" — file structured WHY-content per CLAUDE.md.
+```lean
+open OpenMath.Chapter1.Section141 in
+/-- **Closed-form decomposition of the LMM global error.**
+Compose `globalError_eq_linRec` with `linRec_closed_form` to get
+the explicit `θ`-decomposition. -/
+private lemma globalError_closed_form
+    {k : ℕ} (M : LinearMultistepMethod k)
+    {yex : ℝ → ℝ} {Y : ℕ → ℝ} {x₀ h : ℝ} (n : ℕ) :
+    yex (x₀ + (n : ℝ) * h) - Y n
+      = (∑ i ∈ Finset.range (min k (n + 1)),
+            theta k (fun j : Fin k => M.α j.succ) (n - i)
+              * yPrime k (fun j : Fin k => M.α j.succ)
+                  (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val)
+                  i)
+        + ∑ i ∈ Finset.Icc k n,
+            theta k (fun j : Fin k => M.α j.succ) (n - i)
+              * ((yex (x₀ + (i : ℝ) * h) - Y i)
+                  - ∑ j : Fin k, M.α j.succ
+                      * (yex (x₀ + ((i - 1 - j.val : ℕ) : ℝ) * h)
+                          - Y (i - 1 - j.val))) := by
+  rw [globalError_eq_linRec M n]
+  exact linRec_closed_form k _ _ _ n
+```
+
+This is a one-liner once `globalError_eq_linRec` is in place. If
+both compile, cycle 053 starts from a fully-decomposed shape.
+
+This is OPTIONAL. If the main lemma is non-trivial (Step 0
+fallback fires, or the `simp_rw` is finicky), skip the stretch
+goal — `globalError_eq_linRec` alone is the cycle 052 deliverable.
 
 ## Pre-commit verification
 
@@ -304,39 +352,75 @@ Before committing:
    cleanly with no new errors.
 2. `lean_diagnostic_messages` on Section404.lean — must show ONLY
    the four pre-existing warnings (unused-variable at lines 568,
-   627, 1204; sorry at line 1947). NO new warnings.
+   627, 1204; sorry at line 2014). NO new warnings.
 3. `lean_verify` on
-   `OpenMath.Chapter4.Section404.globalError_per_step_sum_form` —
-   must report axioms `[propext, Classical.choice, Quot.sound]`
-   only (no new axioms).
-4. Sorry count must remain at **1** (line 1947 unchanged; no new
-   sorries from the stretch-goal scaffold either, unless the
-   stretch goal explicitly uses `sorry`).
+   `OpenMath.Chapter4.Section404.globalError_eq_linRec` — must
+   report axioms `[propext, Classical.choice, Quot.sound]` only
+   (no new axioms).
+4. Sorry count must remain at **1** (line 2014 unchanged; no new
+   sorries from the stretch goal either).
+5. If the stretch goal lands too: also `lean_verify` on
+   `globalError_closed_form` — same axiom report expected.
 
-## Cycle 052+ preview (do not implement this cycle)
+## Cycle 053+ preview (do not implement this cycle)
 
-After `globalError_per_step_sum_form` lands, cycle 052 begins the
-outer assembly of `stable_consistent_isConvergent`:
+After `globalError_eq_linRec` lands, cycle 053 continues the outer
+assembly:
 
-1. Unfold `IsConvergent` to expose the `Tendsto … atTop (𝓝 0)`
-   conclusion + the per-`Fin k` starting-method hypotheses.
-2. Apply `Section141.linRec_closed_form` (cycle 012) to decompose
-   `ε_n = Σ θ_{n-i} ζ_i + Σ θ_{n-i} ψ_i` (Theorem 141A).
-3. Apply `theta_bounded_of_isStable` (cycle 047) to extract the `Θ`
-   bound on `θ`.
-4. Apply this cycle's `globalError_per_step_sum_form` to get the
-   per-`ψ_n` sum-form bound.
-5. Apply `sum_theta_psi_contraction` (cycle 048) to bound the
-   `Σ θ_{n-i} ψ_i` contribution.
-6. Apply `recentSum_swap_bound` (cycle 050) to collapse the nested
-   recent-window sum.
-7. Apply `discrete_gronwall_exp_bound` (cycle 046) for the final
+1. **(this cycle's stretch goal, if not yet landed)** Compose with
+   `linRec_closed_form` to expose the `Σ θ_{n-i} ε'_i + Σ θ_{n-i} ψ_i`
+   shape.
+2. Apply `theta_bounded_of_isStable` (cycle 047) to extract the `Θ`
+   bound on `θ`. Need `0 < k` here — file an issue if `k = 0` becomes
+   awkward (it should not, since `IsConvergent` is vacuous for `k = 0`
+   in any practical sense; the `IsLMMSolution` recurrence becomes
+   `Y(n) = -h · β_0 · f(...)`, a one-step explicit-ish iteration).
+3. Apply this cycle's `globalError_per_step_sum_form` (and inheritor
+   `globalError_eq_linRec` to translate the `ψ` shape) to get
+   `|ψ_i| ≤ C_h · Sε(i) + D_h · h²`.
+4. Apply `sum_theta_psi_contraction` (cycle 048) to bound
+   `|Σ θ_{n-i} ψ_i|`.
+5. Apply `recentSum_swap_bound` (cycle 050) to collapse the nested
+   recent-window sum (gives `k · Σ |ε|`).
+6. Apply `discrete_gronwall_exp_bound` (cycle 046) for the final
    exponential closed form.
-8. Apply `starting_error_sum_tendsto_zero` (cycle 049) for the
-   φ(h) → 0 limit on the starting-error contribution.
-9. Combine via `Tendsto` algebra (`Filter.Tendsto.add`,
-   `squeeze_zero`, `Real.exp_continuous` at the cycle 046 closed
-   form).
+7. Apply `starting_error_sum_tendsto_zero` (cycle 049) for the
+   `φ(h) → 0` limit.
+8. Combine via `Filter.Tendsto.add`, `squeeze_zero`,
+   `Real.exp_continuous`.
 
-Cycle 053 polishes the `Tendsto` algebra. Estimated total: 3 cycles
-(051 → 052 → 053) to close `thm:406D` and unblock `thm:243A`.
+Cycle 054 polishes the `Filter.Tendsto` algebra. Estimated total
+remaining: 2–3 cycles (052 → 053 → 054) to close `thm:406D` and
+unblock `thm:243A`.
+
+## Reference: surrounding helper signatures (for orientation)
+
+```
+-- Section141 (cycle 012):
+def linRec (k : ℕ) (α : Fin k → R) (y₀init : Fin k → R)
+    (ψ : ℕ → R) : ℕ → R          -- Section141.lean:53
+lemma linRec_of_lt … (h : i < k) :
+    linRec k α y₀init ψ i = y₀init ⟨i, h⟩    -- Section141.lean:100
+lemma linRec_of_ge … (h : k ≤ n) :
+    linRec k α y₀init ψ n
+      = (∑ j : Fin k, α j * linRec k α y₀init ψ (n - 1 - j.val)) + ψ n
+                                              -- Section141.lean:107
+theorem linRec_closed_form … :
+    linRec k α y₀init ψ n
+      = (∑ i ∈ Finset.range (min k (n + 1)),
+             theta k α (n - i) * yPrime k α y₀init i)
+        + ∑ i ∈ Finset.Icc k n,
+            theta k α (n - i) * ψ i           -- Section141.lean:373
+
+-- Section404 (cycles 045–051):
+theorem globalError_recurrence_bound_textbook …  -- Section404.lean:1331
+lemma discrete_gronwall_exp_bound …               -- Section404.lean:1631
+theorem theta_bounded_of_isStable …               -- Section404.lean:1737
+private lemma sum_theta_psi_contraction …         -- Section404.lean:1762
+private lemma starting_error_each_tendsto_zero …  -- Section404.lean:1810
+private lemma starting_error_sum_tendsto_zero …   -- Section404.lean:1851
+private lemma recentSum_swap_bound …              -- Section404.lean:1886
+private lemma globalError_per_step_sum_form …     -- Section404.lean:1936
+theorem stable_consistent_isConvergent …          -- Section404.lean:2010
+  -- ↑ this is the ONE remaining sorry (line 2014). DO NOT TOUCH.
+```
