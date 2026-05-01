@@ -3136,6 +3136,64 @@ private lemma globalError_recurrence_form
       _ ≤ a + b * h * (k : ℝ) * Srec + c * h^2 * (n : ℝ) := by
           linarith [h_a_target]
 
+-- Cycle 060: explicit-function infrastructure for the §406D outer-squeeze
+-- assembly. The six `*Of` defs below are abbreviations for the local
+-- `set`-bound formulas inside `globalError_recurrence_form` (cycle 052).
+-- They name no Butcher concept; they simply expose the (a, b, c) of the
+-- closed-form bound as functions of `h` so that cycle 061 can prove
+-- `aOf → 0`, `bOf → bInf`, `cOf → cInf` as `h → 0`.
+
+/-- Abbreviation for the constant `Cbase` from
+`globalError_recurrence_form` (cycle 052), exposed as a function of
+`h` for the §406D outer-squeeze assembly. Not a Butcher concept. -/
+private noncomputable def CbaseOf {k : ℕ} (M : LinearMultistepMethod k)
+    (L h : ℝ) : ℝ :=
+  L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+        + ∑ i : Fin k, |M.β i.succ|)
+    / (1 - h * L * |M.β 0|)
+
+/-- Abbreviation for the constant `Dbase` from
+`globalError_recurrence_form` (cycle 052), exposed as a function of
+`h` for the §406D outer-squeeze assembly. Not a Butcher concept. -/
+private noncomputable def DbaseOf {k : ℕ} (M : LinearMultistepMethod k)
+    (L M_bound h : ℝ) : ℝ :=
+  ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+    + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+  * L * M_bound / (1 - h * L * |M.β 0|)
+
+open OpenMath.Chapter1.Section141 in
+/-- Abbreviation for `y'sum` from `globalError_recurrence_form`
+(cycle 052), exposed as a function of `h` for the §406D outer-squeeze
+assembly. Not a Butcher concept. -/
+private noncomputable def yPrimeSumOf {k : ℕ}
+    (M : LinearMultistepMethod k)
+    (yex : ℝ → ℝ) (Y : ℕ → ℝ) (x₀ h : ℝ) : ℝ :=
+  ∑ i ∈ Finset.range k,
+    |yPrime k (fun j : Fin k => M.α j.succ)
+       (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i|
+
+/-- Abbreviation for `a` from `globalError_recurrence_form`
+(cycle 052), exposed as a function of `h` for the §406D outer-squeeze
+assembly. Not a Butcher concept. -/
+private noncomputable def aOf {k : ℕ} (M : LinearMultistepMethod k)
+    (Θ L h : ℝ) (yex : ℝ → ℝ) (Y : ℕ → ℝ) (x₀ : ℝ) : ℝ :=
+  (Θ + (Θ + 1) * CbaseOf M L h * h * (k : ℝ) + 1)
+    * yPrimeSumOf M yex Y x₀ h
+
+/-- Abbreviation for `b` from `globalError_recurrence_form`
+(cycle 052), exposed as a function of `h` for the §406D outer-squeeze
+assembly. Not a Butcher concept. -/
+private noncomputable def bOf {k : ℕ} (M : LinearMultistepMethod k)
+    (Θ L h : ℝ) : ℝ :=
+  (Θ + 1) * CbaseOf M L h + 1
+
+/-- Abbreviation for `c` from `globalError_recurrence_form`
+(cycle 052), exposed as a function of `h` for the §406D outer-squeeze
+assembly. Not a Butcher concept. -/
+private noncomputable def cOf {k : ℕ} (M : LinearMultistepMethod k)
+    (Θ L M_bound h : ℝ) : ℝ :=
+  (Θ + 1) * DbaseOf M L M_bound h
+
 /-- **Butcher Theorem 406D, autonomous-IVP form (closed-form bound).**
 For a stable consistent LMM solving the autonomous IVP `y' = f(y)`
 with `f` Lipschitz and `f∘yex` bounded, the global error satisfies
@@ -3181,6 +3239,496 @@ theorem LinearMultistepMethod.globalError_closed_form_autonomous
   exact discrete_gronwall_exp_bound
     (fun m => |yex (x₀ + (m : ℝ) * h) - Y m|)
     a b c h k ha hb hc hh hk hu0' hrec n
+
+open OpenMath.Chapter1.Section141 in
+/-- **Recurrence form (explicit `(a, b, c)`) — cycle 060 helper.**
+Same as `globalError_recurrence_form` but takes `Θ` and the θ-bound
+hypothesis as explicit parameters and exposes the linear-recurrence
+constants as `aOf, bOf, cOf` (cycle 060 abbreviations). Used to build
+`globalError_closed_form_autonomous_explicit`. -/
+private lemma globalError_recurrence_form_explicit
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
+    (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)
+    (Θ : ℝ) (hΘ_nn : 0 ≤ Θ)
+    (hΘ : ∀ n, |theta k (fun i : Fin k => M.α i.succ) n| ≤ Θ) :
+    0 ≤ aOf M Θ L h yex Y x₀ ∧
+    0 < bOf M Θ L h ∧
+    0 ≤ cOf M Θ L M_bound h ∧
+    (∀ n : ℕ, 1 ≤ n →
+      |yex (x₀ + (n : ℝ) * h) - Y n|
+        ≤ aOf M Θ L h yex Y x₀ + bOf M Θ L h * h * (k : ℝ) *
+            (∑ p ∈ Finset.Ico 1 n,
+              |yex (x₀ + (p : ℝ) * h) - Y p|)
+          + cOf M Θ L M_bound h * h^2 * (n : ℝ)) ∧
+    |yex x₀ - Y 0| ≤ aOf M Θ L h yex Y x₀ := by
+  -- Unfold the *Of abbreviations so the goal matches
+  -- `globalError_recurrence_form`'s body verbatim modulo the dropped
+  -- existential and the externally-supplied Θ.
+  unfold aOf bOf cOf yPrimeSumOf CbaseOf DbaseOf
+  -- Step 0–1: notation. Θ comes from the parameter list.
+  set α : Fin k → ℝ := fun j : Fin k => M.α j.succ with hα_def
+  -- Step 2: Cbase, Dbase (so bcoef_h = h*Cbase, ccoef_h2 = Dbase*h²).
+  have h_denom_pos : 0 < 1 - h * L * |M.β 0| := by linarith [hsmall]
+  set Cbase : ℝ := L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                        + ∑ i : Fin k, |M.β i.succ|)
+                      / (1 - h * L * |M.β 0|) with hCbase_def
+  set Dbase : ℝ := ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+                    + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+                    * L * M_bound / (1 - h * L * |M.β 0|) with hDbase_def
+  have hCbase_nn : 0 ≤ Cbase := by
+    apply div_nonneg _ h_denom_pos.le
+    apply mul_nonneg hL
+    exact add_nonneg
+      (mul_nonneg (abs_nonneg _)
+        (Finset.sum_nonneg (fun _ _ => abs_nonneg _)))
+      (Finset.sum_nonneg (fun _ _ => abs_nonneg _))
+  have hDbase_nn : 0 ≤ Dbase := by
+    apply div_nonneg _ h_denom_pos.le
+    refine mul_nonneg (mul_nonneg ?_ hL) hM
+    exact add_nonneg
+      (mul_nonneg (by norm_num : (0:ℝ) ≤ 1/2)
+        (Finset.sum_nonneg
+          (fun _ _ => mul_nonneg (sq_nonneg _) (abs_nonneg _))))
+      (Finset.sum_nonneg
+        (fun _ _ => mul_nonneg (Nat.cast_nonneg _) (abs_nonneg _)))
+  -- Step 3: y'sum.
+  set y'sum : ℝ := ∑ i ∈ Finset.range k,
+      |yPrime k α (fun j : Fin k =>
+        yex (x₀ + (j.val : ℝ) * h) - Y j.val) i| with hy'sum_def
+  have hy'sum_nn : 0 ≤ y'sum := Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  -- Step 4: a, b, c.
+  set a : ℝ := (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum with ha_def
+  set b : ℝ := (Θ + 1) * Cbase + 1 with hb_def
+  set c : ℝ := (Θ + 1) * Dbase with hc_def
+  -- Positivity.
+  have hk_nn : 0 ≤ (k : ℝ) := Nat.cast_nonneg _
+  have hΘp1_nn : 0 ≤ Θ + 1 := by linarith
+  have hCbase_h_k_nn : 0 ≤ (Θ + 1) * Cbase * h * (k : ℝ) := by positivity
+  have ha_nn : 0 ≤ a := by
+    have h_factor_nn : 0 ≤ Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1 := by linarith
+    exact mul_nonneg h_factor_nn hy'sum_nn
+  have hb_pos : 0 < b := by
+    have : 0 ≤ (Θ + 1) * Cbase := mul_nonneg hΘp1_nn hCbase_nn
+    linarith
+  have hc_nn : 0 ≤ c := mul_nonneg hΘp1_nn hDbase_nn
+  -- |y'(0)| = |yex x₀ - Y 0| ≤ y'sum.
+  have hy0_eq : yPrime k α
+      (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) 0
+      = yex x₀ - Y 0 := by
+    rw [yPrime_of_lt k α _ 0 hk]
+    simp
+  have hy0_le_sum : |yex x₀ - Y 0| ≤ y'sum := by
+    rw [← hy0_eq]
+    exact Finset.single_le_sum (f := fun i =>
+      |yPrime k α (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i|)
+      (fun i _ => abs_nonneg _) (Finset.mem_range.mpr hk)
+  -- |yex x₀ - Y 0| ≤ a.
+  have hu0 : |yex x₀ - Y 0| ≤ a := by
+    have h_factor_ge_1 : (1 : ℝ) ≤ Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1 := by
+      have h1 : 0 ≤ Θ + (Θ + 1) * Cbase * h * (k : ℝ) := by
+        linarith [hΘ_nn, hCbase_h_k_nn]
+      linarith
+    show |yex x₀ - Y 0| ≤ a
+    calc |yex x₀ - Y 0|
+        ≤ y'sum := hy0_le_sum
+      _ = 1 * y'sum := by ring
+      _ ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum :=
+          mul_le_mul_of_nonneg_right h_factor_ge_1 hy'sum_nn
+  -- The main recurrence.
+  refine ⟨ha_nn, hb_pos, hc_nn, ?_, hu0⟩
+  intro n hn
+  -- (A) Closed-form decomposition of ε(n).
+  have h_cf := globalError_closed_form M (yex := yex) (Y := Y) (x₀ := x₀) (h := h) n
+  -- Index equality bridging closed-form's `i - 1 - j.val` to per-step's `i - (j.val + 1)`.
+  have h_idx_eq : ∀ (i : ℕ) (j : Fin k), (i - 1 - j.val : ℕ) = (i - (j.val + 1) : ℕ) :=
+    fun i j => by omega
+  -- (B) Bound the y'-sum by Θ * y'sum.
+  have h_Sy_bound : |∑ i ∈ Finset.range (min k (n + 1)),
+                      theta k α (n - i) *
+                        yPrime k α
+                          (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i|
+                    ≤ Θ * y'sum := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    have h_per : ∀ i ∈ Finset.range (min k (n + 1)),
+        |theta k α (n - i) *
+          yPrime k α (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i|
+          ≤ Θ * |yPrime k α
+                  (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i| := by
+      intro i _
+      rw [abs_mul]
+      exact mul_le_mul_of_nonneg_right (hΘ _) (abs_nonneg _)
+    refine (Finset.sum_le_sum h_per).trans ?_
+    rw [← Finset.mul_sum]
+    refine mul_le_mul_of_nonneg_left ?_ hΘ_nn
+    exact Finset.sum_le_sum_of_subset_of_nonneg
+      (Finset.range_subset_range.mpr (Nat.min_le_left _ _))
+      (fun _ _ _ => abs_nonneg _)
+  -- Stot abbreviation: Σ_{p ∈ Ico 0 n} |ε p|.
+  set Stot : ℝ := ∑ p ∈ Finset.Ico 0 n, |yex (x₀ + (p : ℝ) * h) - Y p| with hStot_def
+  set Srec : ℝ := ∑ p ∈ Finset.Ico 1 n, |yex (x₀ + (p : ℝ) * h) - Y p| with hSrec_def
+  have hStot_nn : 0 ≤ Stot := Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  have hSrec_nn : 0 ≤ Srec := Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  -- Case split on n vs k.
+  rcases Nat.lt_or_ge n k with hkn | hkn
+  -- (C1) n < k: ψ-sum is empty.
+  · have h_empty : Finset.Icc k n = ∅ := Finset.Icc_eq_empty (by omega)
+    have h_eps_eq :
+        yex (x₀ + (n : ℝ) * h) - Y n
+        = ∑ i ∈ Finset.range (min k (n + 1)),
+            theta k α (n - i) *
+              yPrime k α
+                (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i := by
+      rw [h_cf, h_empty, Finset.sum_empty, add_zero]
+    have h_eps_le : |yex (x₀ + (n : ℝ) * h) - Y n| ≤ Θ * y'sum := by
+      rw [h_eps_eq]; exact h_Sy_bound
+    -- a ≥ Θ * y'sum.
+    have h_Θy_le_a : Θ * y'sum ≤ a := by
+      show Θ * y'sum ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum
+      nlinarith [hy'sum_nn, hΘ_nn, hCbase_h_k_nn]
+    have h_rest_nn : 0 ≤ b * h * (k : ℝ) * Srec + c * h^2 * (n : ℝ) := by
+      have h1 : 0 ≤ b * h * (k : ℝ) := by positivity
+      have h3 : 0 ≤ c * h^2 * (n : ℝ) := by positivity
+      have := mul_nonneg h1 hSrec_nn
+      linarith
+    show |yex (x₀ + (n : ℝ) * h) - Y n| ≤ a + b * h * (k : ℝ) * Srec + c * h^2 * (n : ℝ)
+    linarith
+  -- (C2) n ≥ k: full assembly.
+  · -- ψfn (per-step shape) abbreviation.
+    set ψfn : ℕ → ℝ := fun i =>
+      (yex (x₀ + (i : ℝ) * h) - Y i)
+        - ∑ j : Fin k, M.α j.succ
+            * (yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+                - Y (i - (j.val + 1))) with hψfn_def
+    -- Closed-form ψ-term equals ψfn (after index swap).
+    have h_term_eq : ∀ i,
+        theta k α (n - i) *
+          ((yex (x₀ + (i : ℝ) * h) - Y i)
+            - ∑ j : Fin k, M.α j.succ *
+                (yex (x₀ + ((i - 1 - j.val : ℕ) : ℝ) * h)
+                  - Y (i - 1 - j.val)))
+        = theta k α (n - i) * ψfn i := by
+      intro i
+      congr 1
+      show _ - _ = _ - _
+      congr 1
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [h_idx_eq i j]
+    -- Rewrite closed form using ψfn.
+    have h_cf' :
+        yex (x₀ + (n : ℝ) * h) - Y n
+        = (∑ i ∈ Finset.range (min k (n + 1)),
+              theta k α (n - i) *
+                yPrime k α
+                  (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i)
+          + ∑ i ∈ Finset.Icc k n, theta k α (n - i) * ψfn i := by
+      rw [h_cf]
+      congr 1
+      exact Finset.sum_congr rfl (fun i _ => h_term_eq i)
+    -- Per-step bound for ψfn at any index i ≥ k.
+    have h_psi_bound : ∀ i, k ≤ i →
+        |ψfn i| ≤ Cbase * h *
+                    (∑ j : Fin k,
+                      |yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+                        - Y (i - (j.val + 1))|)
+                  + Dbase * h^2 := by
+      intro i hki
+      have h_per := globalError_per_step_sum_form M hcons hL hM hf_lip
+                      hyex_C1 hyex_ode hf_yex_bound hh hsmall hY i hki
+      -- Convert h_per's RHS to Cbase, Dbase form.
+      have h_RHS_eq :
+          (h * L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                    + ∑ i : Fin k, |M.β i.succ|)
+              / (1 - h * L * |M.β 0|))
+            * (∑ j : Fin k,
+                |yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+                  - Y (i - (j.val + 1))|)
+          + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+              + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+                * L * M_bound * h^2
+              / (1 - h * L * |M.β 0|)
+          = Cbase * h *
+              (∑ j : Fin k,
+                |yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+                  - Y (i - (j.val + 1))|)
+            + Dbase * h^2 := by
+        rw [hCbase_def, hDbase_def]; ring
+      show |ψfn i| ≤ _
+      linarith [h_per, h_RHS_eq.le, h_RHS_eq.ge]
+    -- Split Σ_{Icc k n} = Σ_{Ico k n} + ψfn(n) (peel i = n via theta_zero = 1).
+    have hicc_eq : Finset.Icc k n = Finset.Ico k (n + 1) :=
+      (Finset.Ico_add_one_right_eq_Icc _ _).symm
+    have h_Sψ_split :
+        (∑ i ∈ Finset.Icc k n, theta k α (n - i) * ψfn i)
+        = (∑ i ∈ Finset.Ico k n, theta k α (n - i) * ψfn i)
+          + ψfn n := by
+      rw [hicc_eq, Finset.sum_Ico_succ_top hkn]
+      have h_n_n : n - n = 0 := Nat.sub_self n
+      rw [h_n_n, theta_zero, one_mul]
+    -- Apply contraction lemma to Σ_{Ico k n} part.
+    have h_contract :
+        |∑ i ∈ Finset.Ico k n, theta k α (n - i) * ψfn i|
+          ≤ Θ * Cbase * h *
+              (∑ i ∈ Finset.Ico k n,
+                ∑ j : Fin k,
+                  |yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+                    - Y (i - (j.val + 1))|)
+            + Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ) :=
+      sum_theta_psi_contraction (Θ := Θ) (C := Cbase) (D := Dbase) (h := h)
+        hΘ_nn hh
+        (theta k α) hΘ ψfn
+        (fun i => ∑ j : Fin k,
+                    |yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+                      - Y (i - (j.val + 1))|)
+        k n hkn (fun i => n - i)
+        (fun i hki _ => h_psi_bound i hki)
+    -- recentSum_swap_bound: Σ_{Ico k n} Σ_{j:Fin k} |ε(i-(j+1))| ≤ k · Stot.
+    have h_swap :
+        (∑ i ∈ Finset.Ico k n,
+          ∑ j : Fin k,
+            |yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+              - Y (i - (j.val + 1))|)
+          ≤ (k : ℝ) * Stot :=
+      recentSum_swap_bound
+        (fun p => |yex (x₀ + (p : ℝ) * h) - Y p|)
+        (fun _ => abs_nonneg _) k n
+    -- Bound for ψfn(n): each |ε(n-(j+1))| is one summand of Stot.
+    have hn_pos : 1 ≤ n := le_trans hk hkn
+    have h_Sε_n_le : (∑ j : Fin k,
+                        |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                          - Y (n - (j.val + 1))|)
+                      ≤ (k : ℝ) * Stot := by
+      have h_each : ∀ j : Fin k,
+          |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+            - Y (n - (j.val + 1))| ≤ Stot := by
+        intro j
+        have hj1 : j.val + 1 ≤ n := by
+          have : j.val < k := j.isLt
+          omega
+        have h_in_Ico : (n - (j.val + 1) : ℕ) ∈ Finset.Ico 0 n := by
+          rw [Finset.mem_Ico]
+          refine ⟨Nat.zero_le _, ?_⟩
+          omega
+        exact Finset.single_le_sum
+                (f := fun p : ℕ => |yex (x₀ + (p : ℝ) * h) - Y p|)
+                (fun p _ => abs_nonneg _) h_in_Ico
+      calc ∑ j : Fin k,
+              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (j.val + 1))|
+          ≤ ∑ _j : Fin k, Stot := Finset.sum_le_sum (fun j _ => h_each j)
+        _ = (k : ℝ) * Stot := by
+            rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+    have h_psi_n_bound : |ψfn n| ≤ Cbase * h * (k : ℝ) * Stot + Dbase * h^2 := by
+      have h1 := h_psi_bound n hkn
+      have h2 : Cbase * h * (∑ j : Fin k,
+                              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                                - Y (n - (j.val + 1))|)
+                ≤ Cbase * h * ((k : ℝ) * Stot) := by
+        have h_Cbase_h_nn : 0 ≤ Cbase * h := mul_nonneg hCbase_nn hh
+        exact mul_le_mul_of_nonneg_left h_Sε_n_le h_Cbase_h_nn
+      have h3 : Cbase * h * ((k : ℝ) * Stot) = Cbase * h * (k : ℝ) * Stot := by ring
+      linarith
+    -- Combine the Ico k n part and the {n} part for the ψ-sum.
+    have h_Sψ_bound :
+        |∑ i ∈ Finset.Icc k n, theta k α (n - i) * ψfn i|
+          ≤ (Θ + 1) * Cbase * h * (k : ℝ) * Stot
+            + Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ)
+            + Dbase * h^2 := by
+      have h_tri : |∑ i ∈ Finset.Icc k n, theta k α (n - i) * ψfn i|
+                    ≤ |∑ i ∈ Finset.Ico k n, theta k α (n - i) * ψfn i|
+                      + |ψfn n| := by
+        rw [h_Sψ_split]; exact abs_add_le _ _
+      have h_Cbase_h_nn : 0 ≤ Cbase * h := mul_nonneg hCbase_nn hh
+      have hΘCbase_h_nn : 0 ≤ Θ * Cbase * h :=
+        mul_nonneg (mul_nonneg hΘ_nn hCbase_nn) hh
+      have h_swap_scaled :
+          Θ * Cbase * h *
+              (∑ i ∈ Finset.Ico k n,
+                ∑ j : Fin k,
+                  |yex (x₀ + ((i - (j.val + 1) : ℕ) : ℝ) * h)
+                    - Y (i - (j.val + 1))|)
+            ≤ Θ * Cbase * h * ((k : ℝ) * Stot) :=
+        mul_le_mul_of_nonneg_left h_swap hΘCbase_h_nn
+      have h_combined :
+          |∑ i ∈ Finset.Icc k n, theta k α (n - i) * ψfn i|
+            ≤ Θ * Cbase * h * ((k : ℝ) * Stot)
+              + Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ)
+              + (Cbase * h * (k : ℝ) * Stot + Dbase * h^2) := by
+        linarith [h_tri, h_contract, h_swap_scaled, h_psi_n_bound]
+      have h_RHS_simp :
+          Θ * Cbase * h * ((k : ℝ) * Stot)
+            + Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ)
+            + (Cbase * h * (k : ℝ) * Stot + Dbase * h^2)
+          = (Θ + 1) * Cbase * h * (k : ℝ) * Stot
+            + Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ) + Dbase * h^2 := by
+        ring
+      linarith [h_combined, h_RHS_simp.le, h_RHS_simp.ge]
+    -- Now bound |ε n| using h_cf'.
+    have h_eps_le_split :
+        |yex (x₀ + (n : ℝ) * h) - Y n|
+        ≤ Θ * y'sum
+          + ((Θ + 1) * Cbase * h * (k : ℝ) * Stot
+              + Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ) + Dbase * h^2) := by
+      have h_tri : |yex (x₀ + (n : ℝ) * h) - Y n|
+                    ≤ |∑ i ∈ Finset.range (min k (n + 1)),
+                          theta k α (n - i) *
+                            yPrime k α
+                              (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i|
+                      + |∑ i ∈ Finset.Icc k n, theta k α (n - i) * ψfn i| := by
+        rw [h_cf']; exact abs_add_le _ _
+      linarith [h_tri, h_Sy_bound, h_Sψ_bound]
+    -- Stot = |ε 0| + Srec (since 0 < n), and |ε 0| ≤ y'sum.
+    have hStot_eq : Stot = |yex x₀ - Y 0| + Srec := by
+      show (∑ p ∈ Finset.Ico 0 n, |yex (x₀ + (p : ℝ) * h) - Y p|)
+            = |yex x₀ - Y 0| + Srec
+      have h_split : Finset.Ico 0 n = insert 0 (Finset.Ico 1 n) := by
+        ext m
+        simp only [Finset.mem_Ico, Finset.mem_insert]
+        omega
+      have h_zero_not : (0 : ℕ) ∉ Finset.Ico 1 n := by
+        simp [Finset.mem_Ico]
+      rw [h_split, Finset.sum_insert h_zero_not]
+      have h_eps0 : |yex (x₀ + ((0 : ℕ) : ℝ) * h) - Y 0| = |yex x₀ - Y 0| := by
+        norm_num
+      rw [h_eps0]
+    -- (Θ+1) * Cbase * h * k * Stot ≤ (Θ+1)*Cbase*h*k*y'sum + b*h*k*Srec.
+    have h_Cbase_term :
+        (Θ + 1) * Cbase * h * (k : ℝ) * Stot
+          ≤ (Θ + 1) * Cbase * h * (k : ℝ) * y'sum
+            + b * h * (k : ℝ) * Srec := by
+      have h_factor_nn : 0 ≤ (Θ + 1) * Cbase * h * (k : ℝ) := by
+        have : 0 ≤ (Θ + 1) * Cbase := mul_nonneg hΘp1_nn hCbase_nn
+        positivity
+      have h_split_eq :
+          (Θ + 1) * Cbase * h * (k : ℝ) * Stot
+            = (Θ + 1) * Cbase * h * (k : ℝ) * |yex x₀ - Y 0|
+              + (Θ + 1) * Cbase * h * (k : ℝ) * Srec := by
+        rw [hStot_eq]; ring
+      have h_eps0_term :
+          (Θ + 1) * Cbase * h * (k : ℝ) * |yex x₀ - Y 0|
+            ≤ (Θ + 1) * Cbase * h * (k : ℝ) * y'sum :=
+        mul_le_mul_of_nonneg_left hy0_le_sum h_factor_nn
+      have h_b_eq : b = (Θ + 1) * Cbase + 1 := hb_def
+      have h_Srec_term :
+          (Θ + 1) * Cbase * h * (k : ℝ) * Srec
+            ≤ b * h * (k : ℝ) * Srec := by
+        have h_b_ge : (Θ + 1) * Cbase ≤ b := by linarith [h_b_eq]
+        have h_hk_nn : 0 ≤ h * (k : ℝ) := mul_nonneg hh hk_nn
+        have h1 :
+            (Θ + 1) * Cbase * (h * (k : ℝ)) * Srec
+              ≤ b * (h * (k : ℝ)) * Srec := by
+          have h2 : (Θ + 1) * Cbase * (h * (k : ℝ))
+                      ≤ b * (h * (k : ℝ)) :=
+            mul_le_mul_of_nonneg_right h_b_ge h_hk_nn
+          exact mul_le_mul_of_nonneg_right h2 hSrec_nn
+        have h_assoc1 :
+            (Θ + 1) * Cbase * (h * (k : ℝ)) * Srec
+              = (Θ + 1) * Cbase * h * (k : ℝ) * Srec := by ring
+        have h_assoc2 :
+            b * (h * (k : ℝ)) * Srec = b * h * (k : ℝ) * Srec := by ring
+        linarith [h1, h_assoc1.le, h_assoc1.ge, h_assoc2.le, h_assoc2.ge]
+      linarith
+    -- The h² term: Θ * Dbase * h² * (n-k) + Dbase * h² ≤ c * h² * n.
+    have h_Dbase_term :
+        Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ) + Dbase * h^2
+          ≤ c * h^2 * (n : ℝ) := by
+      have hnk_le_n : ((n - k : ℕ) : ℝ) ≤ (n : ℝ) := by
+        have : (n - k : ℕ) ≤ n := Nat.sub_le _ _
+        exact_mod_cast this
+      have hn_real_ge_1 : (1 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn_pos
+      have hDh2_nn : 0 ≤ Dbase * h^2 := mul_nonneg hDbase_nn (sq_nonneg _)
+      have hΘDh2_nn : 0 ≤ Θ * Dbase * h^2 :=
+        mul_nonneg (mul_nonneg hΘ_nn hDbase_nn) (sq_nonneg _)
+      have h1 : Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ) ≤ Θ * Dbase * h^2 * (n : ℝ) :=
+        mul_le_mul_of_nonneg_left hnk_le_n hΘDh2_nn
+      have h2 : Dbase * h^2 ≤ Dbase * h^2 * (n : ℝ) := by
+        calc Dbase * h^2 = Dbase * h^2 * 1 := by ring
+          _ ≤ Dbase * h^2 * (n : ℝ) :=
+              mul_le_mul_of_nonneg_left hn_real_ge_1 hDh2_nn
+      have h_c : c = (Θ + 1) * Dbase := hc_def
+      have h_target :
+          Θ * Dbase * h^2 * (n : ℝ) + Dbase * h^2 * (n : ℝ)
+            = c * h^2 * (n : ℝ) := by
+        rw [h_c]; ring
+      linarith
+    -- Final assembly.
+    show |yex (x₀ + (n : ℝ) * h) - Y n| ≤ a + b * h * (k : ℝ) * Srec + c * h^2 * (n : ℝ)
+    have h_a_expand :
+        a = Θ * y'sum + (Θ + 1) * Cbase * h * (k : ℝ) * y'sum + y'sum := by
+      show (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum = _
+      ring
+    have h_a_target :
+        Θ * y'sum + (Θ + 1) * Cbase * h * (k : ℝ) * y'sum ≤ a := by
+      rw [h_a_expand]; linarith
+    calc |yex (x₀ + (n : ℝ) * h) - Y n|
+        ≤ Θ * y'sum
+            + ((Θ + 1) * Cbase * h * (k : ℝ) * Stot
+                + Θ * Dbase * h^2 * ((n - k : ℕ) : ℝ) + Dbase * h^2) :=
+          h_eps_le_split
+      _ ≤ Θ * y'sum
+            + ((Θ + 1) * Cbase * h * (k : ℝ) * y'sum
+                + b * h * (k : ℝ) * Srec + c * h^2 * (n : ℝ)) := by
+          linarith [h_Cbase_term, h_Dbase_term]
+      _ ≤ a + b * h * (k : ℝ) * Srec + c * h^2 * (n : ℝ) := by
+          linarith [h_a_target]
+
+/-- **Butcher Theorem 406D, autonomous-IVP form (closed-form bound,
+explicit `(a, b, c)`).** Cycle 060 sister of
+`globalError_closed_form_autonomous`: same conclusion but with the
+existential `∃ a b c` peeled off via the `aOf, bOf, cOf` functions of
+`(M, Θ, L, M_bound, h, yex, Y, x₀)`. The remaining existential is
+the stability-derived `Θ` (still implicit because its value depends
+on `M, hstab`).
+
+Cycle 061 uses this to prove `aOf → 0`, `bOf → bInf`, `cOf → cInf`
+as `h → 0`; cycle 062 then assembles the outer squeeze. -/
+theorem LinearMultistepMethod.globalError_closed_form_autonomous_explicit
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
+    (hcons : M.IsConsistent) (hstab : M.IsStable)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y) :
+    ∃ Θ : ℝ, 0 ≤ Θ ∧
+      0 ≤ aOf M Θ L h yex Y x₀ ∧
+      0 < bOf M Θ L h ∧
+      0 ≤ cOf M Θ L M_bound h ∧
+      ∀ n : ℕ,
+        |yex (x₀ + (n : ℝ) * h) - Y n|
+          ≤ Real.exp (bOf M Θ L h * (k : ℝ) * (n : ℝ) * h)
+              * aOf M Θ L h yex Y x₀
+            + (Real.exp (bOf M Θ L h * (k : ℝ) * (n : ℝ) * h) - 1)
+                * (cOf M Θ L M_bound h * h
+                    / (bOf M Θ L h * (k : ℝ))) := by
+  obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab
+  obtain ⟨ha, hb, hc, hrec, hu0⟩ :=
+    globalError_recurrence_form_explicit hk M hcons hL hM hf_lip
+      hyex_C1 hyex_ode hf_yex_bound hh hsmall hY Θ hΘ_nn hΘ
+  refine ⟨Θ, hΘ_nn, ha, hb, hc, ?_⟩
+  intro n
+  have hu0' : |yex (x₀ + ((0 : ℕ) : ℝ) * h) - Y 0| ≤ aOf M Θ L h yex Y x₀ := by
+    simpa using hu0
+  exact discrete_gronwall_exp_bound
+    (fun m => |yex (x₀ + (m : ℝ) * h) - Y m|)
+    (aOf M Θ L h yex Y x₀) (bOf M Θ L h) (cOf M Θ L M_bound h) h k
+    ha hb hc hh hk hu0' hrec n
 
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.** [STATUS: scaffold; closure deferred

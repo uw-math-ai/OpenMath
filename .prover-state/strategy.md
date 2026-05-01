@@ -1,488 +1,389 @@
-# Cycle 059 Strategy — `thm:406D` outer assembly: prove the two sub-squeezes
+# Cycle 060 Strategy — Expose explicit (a, b, c) functions for the §406D outer squeeze
 
-## TL;DR
+## Status snapshot
 
-Cycle 058 landed every Tendsto helper the squeeze needs (5 Aristotle
-generic combinators + 2 `atTop` bridge lemmas). The single remaining
-sorry is at `OpenMath/Chapter4/Section404.lean:3030`
-(`stable_consistent_isConvergent`).
+* **Sole sorry**: `OpenMath/Chapter4/Section404.lean:3207` —
+  `LinearMultistepMethod.stable_consistent_isConvergent` (the
+  non-autonomous shape; closure deferred to cycle 064+ for the
+  autonomous→non-autonomous lift).
+* **Just landed (cycle 059)**: two generic outer-squeeze sub-lemmas
+  `globalError_outer_squeeze_a_term` (line 2311) and
+  `globalError_outer_squeeze_c_term` (line 2383). Both take generic
+  `a, b, c : ℝ → ℝ` and produce `Tendsto … atTop (nhds 0)` for the
+  two halves of the closed-form bound's RHS, *given* the
+  corresponding `nhds 0`-Tendsto hypotheses.
+* **The bridge that's missing**: the closed-form analytical core
+  `globalError_closed_form_autonomous` (line 3154) returns an
+  *existential* `∃ a b c : ℝ, …` (per fixed `h`). The cycle 059
+  sub-squeezes need *functions* `a, b, c : ℝ → ℝ` whose limits as
+  `h → 0` are visible. Without exposing the explicit formulas,
+  cycle 062's outer-squeeze assembly cannot apply the cycle 059
+  helpers.
+* **Aristotle**: no pending results.
+* **No phantom blockers**: if the prompt's "stuck on" framing
+  surfaces stale `attempts.md` rows, ignore them. The single sorry
+  at line 3207 is the sole real outstanding item; everything else
+  in the cycle 058–059 chain is committed and compiles. Verify with
+  `git rev-parse HEAD` / `git rev-parse origin/Main/Experiments`
+  (should match `b0332b9` or descendant), and
+  `lake env lean OpenMath/Chapter4/Section404.lean` (clean modulo
+  the expected `sorry` warning at line 3207). The standing
+  `tautology_scanner_false_positives.md` issue covers any
+  scanner-false-positive hits at lines 1762/1950/2842.
 
-The cycle 058 strategy preview suggested cycle 059 attempt the *full*
-`globalError_outer_squeeze_autonomous` (~80–120 lines). That is too
-much for one cycle's CLAUDE.md "structure + 2 sub-lemmas closed"
-envelope. **Decompose instead**: prove the two **sub-squeezes** that
-the eventual outer squeeze will combine via `add` plus `squeeze_zero`.
-Each sub-squeeze is a self-contained Tendsto fact about one half of
-the closed-form bound RHS — they are decoupled from any LMM-specific
-data, so they can be unit-tested in isolation.
+## Cycle 060 deliverable: explicit-function refactor (preparing the outer squeeze)
 
-This cycle's deliverables are **two new private lemmas** plus the
-existing scaffolding to keep the file compiling. The single sorry at
-line 3030 is **not touched**.
+**Goal**: Land an explicit-function closed-form lemma
+`globalError_closed_form_autonomous_explicit` whose signature
+exposes `a`, `b`, `c` as `noncomputable def`s with explicit formulas
+in `(M, Θ, h, yex, Y, x₀)`. After cycle 060 lands, cycle 061 can
+prove the three limit lemmas (`a → 0`, `b → bInf > 0`, `c → cInf`),
+and cycle 062 can do the outer-squeeze assembly proper using
+cycle 059's helpers.
 
----
+This is a refactor cycle. The bound itself is already proven
+(cycle 053's `globalError_closed_form_autonomous`); we are just
+peeling out the existential into named functions.
 
-## Recap of what landed in cycle 058
+### Concrete steps
 
-* Lines ≈2185–2226: the five Aristotle-closed Tendsto combinators
-  (`tendsto_id_squared_zero`, `tendsto_const_mul_h_zero`,
-  `tendsto_real_exp_lift`, `tendsto_exp_sub_one_at_zero_aux`,
-  `tendsto_div_at_pos`).
-* Lines ≈2274–2299: the two `atTop` bridge lemmas
-  (`tendsto_step_size_atTop`, `tendsto_step_size_comp`).
-* Single sorry at line 3030 (the body of `stable_consistent_isConvergent`).
-
-The cycle 056/057 helpers (`b_tendsto_at_zero`, `c_tendsto_at_zero`,
-`Cbase_tendsto_at_zero`, `Dbase_tendsto_at_zero`,
-`m_h_constancy`, `c_h_h_squared_tendsto_zero`, `a_m_tendsto_zero`,
-`yPrime_sum_abs_tendsto_zero`, `tendsto_h_squared_zero`,
-`tendsto_real_exp_at`) are all in place (lines 2050–2272) and
-already tested via the cycle 057/058 builds.
-
----
-
-## Priority 1 (PRIMARY DELIVERABLE): the `a`-term sub-squeeze
-
-### What it says, mathematically
-
-The closed-form bound is
-
-```
-|ε(n)| ≤ exp(b(h) · k · n · h) · a(h) + (exp(b(h) · k · n · h) − 1) · c(h) · h / (b(h) · k).
-```
-
-When the squeeze substitutes `h = h_m := (x − x₀)/m` and `n = m`:
-
-* `m · h_m = x − x₀` (constant in `m` — `m_h_constancy`).
-* So `b(h_m) · k · m · h_m = b(h_m) · k · (x − x₀)`.
-
-The `a`-half of the RHS is `exp(b(h_m) · k · (x − x₀)) · a(h_m)`. We
-want this to tend to 0 as `m → ∞`.
-
-Inputs needed:
-* `a(h) → 0` as `h → 0` (provided by `a_m_tendsto_zero` for the
-  LMM-specific `a`, but the sub-squeeze takes a generic `a`).
-* `b(h) → b∞` as `h → 0` (any finite limit; positivity not needed
-  here).
-
-Output: `exp(...) → exp(b∞ · k · (x−x₀))` is a finite constant, and
-multiplying by something that tends to 0 gives 0.
-
-### Lemma to prove
-
-Insert after `tendsto_step_size_comp` (current line ≈2299) — at the
-end of the "§141 Tendsto helpers" block, *before* the
-`recentSum_swap_bound` adapter (line ≈2301).
+**Step 1 — Audit the existing formulas.** In
+`globalError_recurrence_form` (line 2704), the proof body uses `set`
+for these expressions (lines 2731–2761):
 
 ```lean
-/-- **`a`-term outer squeeze (cycle 059, toward `thm:406D`).**
+Cbase := L * (|β 0| * (Σᵢ |α i.succ|) + Σᵢ |β i.succ|)
+           / (1 - h * L * |β 0|)
+Dbase := ((1/2) * Σᵢ ((i+1):ℝ)^2 * |α i.succ|
+           + Σᵢ ((i+1):ℝ) * |β i.succ|)
+           * L * M_bound / (1 - h * L * |β 0|)
+y'sum := Σᵢ ∈ range k, |yPrime k α (fun j ↦ yex(x₀ + j·h) - Y j) i|
+a     := (Θ + (Θ + 1) * Cbase * h * k + 1) * y'sum
+b     := (Θ + 1) * Cbase + 1
+c     := (Θ + 1) * Dbase
+```
 
-The first half of the closed-form bound RHS:
-`exp(b(h_m) · k · m · h_m) · a(h_m)` where `h_m := (x − x₀)/m`.
+These are the formulas to expose. Quote them verbatim before
+introducing the `*Of` definitions to avoid drift.
 
-Since `m · h_m = x − x₀` (constant), the exponent stabilises to
-`b(h_m) · k · (x − x₀)`, which tends to `b∞ · k · (x − x₀)` (a
-finite limit). Combined with `a(h_m) → 0`, the product tends to
-`exp(…) · 0 = 0`.
+**Step 2 — Promote to top-level `noncomputable def`s.** Add six
+new private definitions just above
+`LinearMultistepMethod.globalError_closed_form_autonomous`
+(around line 3140). Use the suffix `Of` so callers read as
+`aOf M Θ L h yex Y x₀`, matching cycle 056/057's
+`_tendsto_at_zero` style:
 
-Generic in `a, b` — does **not** consume any LMM data. -/
-private lemma globalError_outer_squeeze_a_term
-    {a b : ℝ → ℝ} {b∞ : ℝ}
-    (ha : Filter.Tendsto a (nhds 0) (nhds 0))
-    (hb : Filter.Tendsto b (nhds 0) (nhds b∞))
-    (k : ℕ) (x₀ x : ℝ) :
-    Filter.Tendsto
-      (fun m : ℕ =>
-        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
-                    * ((x - x₀) / (m : ℝ)))
-          * a ((x - x₀) / (m : ℝ)))
-      Filter.atTop (nhds 0) := by
+```lean
+private noncomputable def CbaseOf {k : ℕ} (M : LinearMultistepMethod k)
+    (L h : ℝ) : ℝ :=
+  L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+        + ∑ i : Fin k, |M.β i.succ|)
+    / (1 - h * L * |M.β 0|)
+
+private noncomputable def DbaseOf {k : ℕ} (M : LinearMultistepMethod k)
+    (L M_bound h : ℝ) : ℝ :=
+  ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+    + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+  * L * M_bound / (1 - h * L * |M.β 0|)
+
+private noncomputable def yPrimeSumOf {k : ℕ}
+    (M : LinearMultistepMethod k)
+    (yex : ℝ → ℝ) (Y : ℕ → ℝ) (x₀ h : ℝ) : ℝ :=
+  ∑ i ∈ Finset.range k,
+    |yPrime k (fun j : Fin k => M.α j.succ)
+       (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i|
+
+private noncomputable def aOf {k : ℕ} (M : LinearMultistepMethod k)
+    (Θ L h : ℝ) (yex : ℝ → ℝ) (Y : ℕ → ℝ) (x₀ : ℝ) : ℝ :=
+  (Θ + (Θ + 1) * CbaseOf M L h * h * (k : ℝ) + 1)
+    * yPrimeSumOf M yex Y x₀ h
+
+private noncomputable def bOf {k : ℕ} (M : LinearMultistepMethod k)
+    (Θ L h : ℝ) : ℝ :=
+  (Θ + 1) * CbaseOf M L h + 1
+
+private noncomputable def cOf {k : ℕ} (M : LinearMultistepMethod k)
+    (Θ L M_bound h : ℝ) : ℝ :=
+  (Θ + 1) * DbaseOf M L M_bound h
+```
+
+Order matters: `CbaseOf` and `DbaseOf` must come before `bOf` /
+`cOf`, and `yPrimeSumOf` before `aOf`.
+
+**Step 3 — State the explicit closed-form lemma.** Add a new
+top-level theorem immediately after
+`LinearMultistepMethod.globalError_closed_form_autonomous`
+(line 3183 area), before the line-3203 `stable_consistent_isConvergent`
+stub:
+
+```lean
+theorem LinearMultistepMethod.globalError_closed_form_autonomous_explicit
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
+    (hcons : M.IsConsistent) (hstab : M.IsStable)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y) :
+    ∃ Θ : ℝ, 0 ≤ Θ ∧
+      0 ≤ aOf M Θ L h yex Y x₀ ∧
+      0 < bOf M Θ L h ∧
+      0 ≤ cOf M Θ L M_bound h ∧
+      ∀ n : ℕ,
+        |yex (x₀ + (n : ℝ) * h) - Y n|
+          ≤ Real.exp (bOf M Θ L h * (k : ℝ) * (n : ℝ) * h)
+              * aOf M Θ L h yex Y x₀
+            + (Real.exp (bOf M Θ L h * (k : ℝ) * (n : ℝ) * h) - 1)
+                * (cOf M Θ L M_bound h * h
+                    / (bOf M Θ L h * (k : ℝ))) := by
   sorry
 ```
 
-### Proof recipe (do follow this — it's been worked out)
+`Θ` is existential (depends on `M, k, hstab` via
+`theta_bounded_of_isStable`); the four positivity / bound conjuncts
+are quantified over the existential `Θ`.
 
-Step A — establish the `m · h_m = x − x₀` rewrite eventually
-(only valid for `m ≥ 1`).
+**Step 4 — Prove it.** The minimum-work path: replay the proof
+body of `globalError_recurrence_form` with the `set` lines
+replaced by `change` / `show` so the `*Of` defs become the local
+identifiers, then re-run the existential-form
+`globalError_closed_form_autonomous` proof (the `discrete_gronwall_exp_bound`
+application). Concrete plan:
 
-```lean
-  -- For m ≥ 1, m · h_m = x − x₀ (m_h_constancy).
-  have h_eventually_eq :
-      (fun m : ℕ =>
-        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
-                    * ((x - x₀) / (m : ℝ)))
-          * a ((x - x₀) / (m : ℝ)))
-      =ᶠ[Filter.atTop]
-      (fun m : ℕ =>
-        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
-          * a ((x - x₀) / (m : ℝ))) := by
-    refine Filter.eventually_atTop.mpr ⟨1, ?_⟩
-    intro m hm
-    have hm_pos : 0 < m := hm
-    have hm_h : (m : ℝ) * ((x - x₀) / (m : ℝ)) = x - x₀ :=
-      m_h_constancy hm_pos x x₀
-    have h_assoc :
-        b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
-          * ((x - x₀) / (m : ℝ))
-        = b ((x - x₀) / (m : ℝ)) * (k : ℝ)
-          * ((m : ℝ) * ((x - x₀) / (m : ℝ))) := by ring
-    rw [h_assoc, hm_h]
-```
+1. `obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab`.
+2. `refine ⟨Θ, hΘ_nn, ?_, ?_, ?_, ?_⟩`.
+3. **Goal `0 ≤ aOf M Θ L h yex Y x₀`** — `unfold aOf yPrimeSumOf
+   CbaseOf`, then replay the
+   `globalError_recurrence_form` body's positivity proof for `a`
+   (lines 2766–2768). Helper facts you'll need:
+   * `h_denom_pos : 0 < 1 - h * L * |M.β 0|` from `hsmall`.
+   * `hCbase_nn`, `hΘp1_nn`, `hCbase_h_k_nn` (lines 2737, 2764–2765).
+4. **Goal `0 < bOf M Θ L h`** — `unfold bOf CbaseOf`, replay
+   lines 2769–2771.
+5. **Goal `0 ≤ cOf M Θ L M_bound h`** — `unfold cOf DbaseOf`,
+   replay lines 2744–2752 + 2772.
+6. **Goal `∀ n, |yex … - Y n| ≤ exp(bOf …) * aOf … + …`** — this
+   is the bound. `unfold aOf bOf cOf`, then *cite*
+   `globalError_closed_form_autonomous` with the same hypotheses;
+   destructure its existential and discharge with `linarith` /
+   `congr` after observing that the algebraic shapes match.
 
-Step B — the simplified function `g_m := exp(b(h_m) · k · (x − x₀)) · a(h_m)`
-is the product of two Tendsto-quantities at `atTop`.
+If step 6's `congr`-after-cite path is finicky (the cited lemma's
+existential `a, b, c` are local `set` names and may not
+syntactically match `aOf M Θ L h yex Y x₀` etc.), the alternative
+is a **full replay**: copy the body of `globalError_recurrence_form`
++ the `discrete_gronwall_exp_bound` postlude from
+`globalError_closed_form_autonomous`, with each `set name := …` line
+replaced by a `have name_eq : aOf … = … := by unfold aOf …; rfl`
+followed by `rw [← name_eq]` on the goal at the end. Either path
+works; try the cite first (it's ~15 lines), fall back to full
+replay (~120 lines) only if the cite fails.
 
-```lean
-  -- Lift `a → 0` to atTop via h_m.
-  have ha_atTop :
-      Filter.Tendsto (fun m : ℕ => a ((x - x₀) / (m : ℝ)))
-        Filter.atTop (nhds 0) := tendsto_step_size_comp ha x₀ x
-  -- Lift `b · k · (x - x₀)` from h-Tendsto to m-Tendsto.
-  have hbk_atTop :
-      Filter.Tendsto (fun m : ℕ => b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
-        Filter.atTop (nhds (b∞ * (k : ℝ) * (x - x₀))) := by
-    have hb_atTop := tendsto_step_size_comp hb x₀ x
-    have h1 := hb_atTop.mul_const ((k : ℝ))
-    exact h1.mul_const (x - x₀)
-  -- exp lift.
-  have hexp_atTop :
-      Filter.Tendsto
-        (fun m : ℕ =>
-          Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)))
-        Filter.atTop (nhds (Real.exp (b∞ * (k : ℝ) * (x - x₀)))) :=
-    (Real.continuous_exp.tendsto _).comp hbk_atTop
-  -- Product: exp(…) · a(h_m) → exp(…) · 0 = 0.
-  have h_prod : Filter.Tendsto
-      (fun m : ℕ =>
-        Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
-          * a ((x - x₀) / (m : ℝ)))
-      Filter.atTop (nhds 0) := by
-    have := hexp_atTop.mul ha_atTop
-    simpa using this
-  -- Lift via the eventually-equal congruence.
-  exact h_prod.congr' h_eventually_eq.symm
-```
-
-The whole proof is ~25–35 lines once tightened.
-
-### Acceptable variations
-
-* `Filter.Tendsto.congr'` may be spelled `EventuallyEq.tendsto_iff` —
-  use whichever your `lean_local_search` finds. The shape is the same.
-* `mul_const` chains can be replaced by a single `Tendsto.mul`
-  composition; either is fine as long as the result type matches.
-* If the `simpa using hexp_atTop.mul ha_atTop` fails (because
-  `0` isn't simplified automatically), fall back to:
-  ```lean
-  have hzero : Real.exp (b∞ * (k : ℝ) * (x - x₀)) * 0 = 0 := mul_zero _
-  rw [← hzero]; exact hexp_atTop.mul ha_atTop
-  ```
-
----
-
-## Priority 2 (PRIMARY DELIVERABLE): the `c`-term sub-squeeze
-
-### What it says, mathematically
-
-The `c`-half of the RHS is
-`(exp(b(h_m) · k · m · h_m) − 1) · c(h_m) · h_m / (b(h_m) · k)`.
-
-After the same `m · h_m = x − x₀` simplification, the exponential
-factor `(exp(b(h_m) · k · (x − x₀)) − 1)` tends to a finite constant
-`exp(b∞ · k · (x − x₀)) − 1`. The remaining factor
-`c(h_m) · h_m / (b(h_m) · k)` tends to `c∞ · 0 / (b∞ · k) = 0` (with
-`b∞ · k > 0` ensuring the division is fine).
-
-Inputs needed:
-* `c(h) → c∞` as `h → 0` (any finite limit).
-* `b(h) → b∞` as `h → 0`, **with `0 < b∞` and `0 < k`** (so the
-  divisor is non-zero in the limit).
-
-### Lemma to prove
-
-Insert immediately after `globalError_outer_squeeze_a_term`.
+**Pragmatic shortcut**: if step 6's cite is unstable, expose the
+existential's witnesses directly. Replace the body with:
 
 ```lean
-/-- **`c`-term outer squeeze (cycle 059, toward `thm:406D`).**
-
-The second half of the closed-form bound RHS:
-`(exp(b(h_m) · k · m · h_m) − 1) · c(h_m) · h_m / (b(h_m) · k)`
-where `h_m := (x − x₀)/m`. Since `m · h_m = x − x₀`, the
-`(exp(…) − 1)` factor stabilises to a finite constant, and the
-remaining `c(h_m) · h_m / (b(h_m) · k)` tends to `c∞ · 0 / (b∞ · k)
-= 0`.
-
-Generic in `b, c` — does **not** consume any LMM data. -/
-private lemma globalError_outer_squeeze_c_term
-    {b c : ℝ → ℝ} {b∞ c∞ : ℝ}
-    (hb : Filter.Tendsto b (nhds 0) (nhds b∞))
-    (hc : Filter.Tendsto c (nhds 0) (nhds c∞))
-    (hb_pos : 0 < b∞)
-    {k : ℕ} (hk : 0 < k) (x₀ x : ℝ) :
-    Filter.Tendsto
-      (fun m : ℕ =>
-        (Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
-                    * ((x - x₀) / (m : ℝ))) - 1)
-          * (c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
-              / (b ((x - x₀) / (m : ℝ)) * (k : ℝ))))
-      Filter.atTop (nhds 0) := by
-  sorry
+  obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab
+  obtain ⟨a, b, c, ha, hb, hc, hbound, hu0⟩ :=
+    globalError_recurrence_form hk M hcons hstab hL hM hf_lip
+      hyex_C1 hyex_ode hf_yex_bound hh hsmall hY
+  -- Show aOf … = a, bOf … = b, cOf … = c by unfolding both sides.
+  -- This requires the existential's a, b, c to literally match the *Of
+  -- formulas — which they do, by construction.
 ```
 
-### Proof recipe
+But this only works if `globalError_recurrence_form`'s `obtain`
+exposes the *exact* `set` witnesses, which it does NOT (the `set`s
+are local, not part of the conclusion). So the cleanest path is
+the full replay.
 
-Step A — eventually rewrite `m · h_m → x − x₀` inside the exponent.
-Identical structure to Priority 1's Step A.
+**Recommended order**: try cite (step 4, option 1) first with a 30-min
+budget. If that hits algebraic-shape mismatch, switch to replay.
 
-Step B — split the product into `(exp(…) − 1)` × `(c · h / (b · k))`.
+**Step 5 — Compile and axiom-check.** Run
+`lake env lean OpenMath/Chapter4/Section404.lean`. Expected: clean
+build modulo the same warnings as cycle 059 (three pre-existing
+unused-variable warnings + the line-3207 `sorry` warning, now
+shifted by ~+200 lines). Verify axioms via
+`mcp__lean-lsp__lean_verify` with
+`OpenMath.Chapter4.Section404.LinearMultistepMethod.globalError_closed_form_autonomous_explicit`;
+expect `[propext, Classical.choice, Quot.sound]`.
 
-Step C — show each factor's behaviour:
-* `(exp(b · k · (x − x₀)) − 1)` tends to `exp(b∞ · k · (x − x₀)) − 1`
-  (a finite constant). Lift via `tendsto_step_size_comp` plus
-  `tendsto_real_exp_lift` plus `Tendsto.sub_const`.
-* `c(h_m) → c∞` (lifted via `tendsto_step_size_comp`).
-* `h_m → 0` (lifted via `tendsto_step_size_atTop`).
-* `b(h_m) · k → b∞ · k > 0` (lifted via `tendsto_step_size_comp` plus
-  `mul_const`).
-* So `c(h_m) · h_m → c∞ · 0 = 0` by `Tendsto.mul`.
-* So `c(h_m) · h_m / (b(h_m) · k) → 0` by `Tendsto.div` (using
-  `b∞ · k > 0`).
+### Things to NOT do this cycle
 
-Step D — multiply: `(exp(…) − 1) · 0 = 0`. Use `Tendsto.mul` and
-`simpa`.
+* **Do NOT delete `globalError_closed_form_autonomous`.** Keep both
+  the existential and the explicit form. The existential is
+  potentially used by other downstream consumers; cycle 062 will
+  decide whether to retire it.
+* **Do NOT touch `globalError_recurrence_form`.** It is internal
+  infrastructure; the explicit-function exposure is *only* needed
+  at the closed-form level (since the outer squeeze is built off
+  the closed-form, not the recurrence). Adding parallel definitions
+  inside `globalError_recurrence_form` would be wasted work.
+* **Do NOT prove the limit lemmas `aOf → 0`, `bOf → bInf`,
+  `cOf → cInf` this cycle.** Those are cycle 061. Specifically,
+  `aOf → 0` requires the starting-method convergence hypothesis
+  (`Tendsto (start · i) (nhds 0) (nhds y₀)`) which is currently
+  threaded only through `IsConvergent`'s `start` function and is
+  *not* part of the closed-form's hypothesis list. The cycle 061
+  job will be to lift those hypotheses appropriately. Cycle 056's
+  existing `b_tendsto_at_zero`, `c_tendsto_at_zero`,
+  `Cbase_tendsto_at_zero`, `Dbase_tendsto_at_zero` (lines 1982,
+  2025, 2114, 2138) already prove the right limits for the
+  deterministic factors of `bOf` and `cOf` — only `aOf → 0` (via
+  `yPrimeSumOf → 0`) is the new piece in cycle 061.
+* **Do NOT attempt the outer-squeeze assembly proper this cycle.**
+  That is cycle 062. Cycle 060's deliverable is *only* the
+  explicit-function variant of the closed-form.
+* **Do NOT touch the `sorry` at line 3207.** It is gated on the
+  autonomous→non-autonomous lift (cycle 064+), which is far
+  downstream of cycle 060. Closing it in cycle 060 is **not**
+  expected; cycle 059's task results document this multi-cycle
+  decomposition and cycle 060 sits one step into it.
+* **Do NOT generalise the closed-form to vector-valued `y`.** Stay
+  scalar; cycle 053's autonomous restriction stands.
+* **Do NOT raise `maxHeartbeats`.** If the proof is slow, decompose
+  into helper lemmas (one each for `aOf_pos_of_*`, `bOf_pos_of_*`,
+  `cOf_pos_of_*`) — but try the direct `refine` first.
+* **Do NOT mistake the cycle 059 outer-squeeze sub-lemmas
+  (`globalError_outer_squeeze_a_term`,
+  `globalError_outer_squeeze_c_term`) for the missing pieces.**
+  They are correct and final; cycle 062 will instantiate them.
+  Cycle 060's job is to produce the explicit `a, b, c` *that
+  cycle 062 will plug in*.
+* **Do NOT introduce `axiom`/`constant`** to bypass any positivity
+  obligation. Per CLAUDE.md.
+* **Do NOT modify `scripts/autonomous_loop.py`.** Per CLAUDE.md and
+  cycle 015's strategy. The `tautology_scanner_false_positives.md`
+  issue stands.
 
-### Sketch (template — refine to taste)
+### Aristotle plan
+
+* **Skip Aristotle this cycle.** This is a mechanical refactor,
+  not a search problem. Aristotle is most useful for finding
+  Mathlib lemmas to close goals; here every required step is
+  already in the existing proof body of
+  `globalError_closed_form_autonomous` /
+  `globalError_recurrence_form`. The four positivity goals are
+  identical to lines 2766–2772; the bound goal is the
+  `discrete_gronwall_exp_bound` postlude.
+* If the cite-then-congr path (step 4 option 1) fails for the
+  bound goal *after* a 30-minute manual attempt, the worker may
+  submit *that single sub-goal* to Aristotle as a one-shot. Do
+  not submit the whole theorem statement, and do not poll more
+  than once per CLAUDE.md.
+
+### Faithfulness checklist (per CLAUDE.md)
+
+* **No new `def` of a named mathematical concept.** `aOf`, `bOf`,
+  `cOf`, `CbaseOf`, `DbaseOf`, `yPrimeSumOf` are *infrastructure*
+  abbreviations for expressions that already appear inside
+  cycle 052's proof. They do not name any Butcher-textbook concept.
+  Document this in a one-line comment above each definition.
+* **No new `class` or `structure`.**
+* **For the new theorem
+  `globalError_closed_form_autonomous_explicit`**:
+  * Tautology check — conclusion is a five-fold `∧` of positivity
+    + a `∀ n, |ε(n)| ≤ …` bound. None of the conjuncts equals any
+    hypothesis.
+  * Identity check — proof is replay or wrap, not `exact h`.
+  * Hypothesis strength check — same hypothesis list as the
+    existential `globalError_closed_form_autonomous`. No
+    strengthening.
+  * Absent theorem check — N/A (no comments promising other
+    theorems in cycle 060).
+
+### Stretch (only if Step 5 lands cleanly with > 30 min budget left)
+
+Sketch (do not commit; just put as a comment block in the file)
+the cycle 061 lemma signatures so the next planner has a head
+start:
 
 ```lean
-  -- Step A: eventually-equal rewrite for the exponent.
-  have h_eventually_eq : ... =ᶠ[Filter.atTop]
-      (fun m : ℕ =>
-        (Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)) - 1)
-          * (c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
-              / (b ((x - x₀) / (m : ℝ)) * (k : ℝ)))) := by
-    refine Filter.eventually_atTop.mpr ⟨1, ?_⟩
-    intro m hm
-    have hm_pos : 0 < m := hm
-    have hm_h : (m : ℝ) * ((x - x₀) / (m : ℝ)) = x - x₀ :=
-      m_h_constancy hm_pos x x₀
-    have h_assoc :
-        b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (m : ℝ)
-          * ((x - x₀) / (m : ℝ))
-        = b ((x - x₀) / (m : ℝ)) * (k : ℝ)
-          * ((m : ℝ) * ((x - x₀) / (m : ℝ))) := by ring
-    rw [h_assoc, hm_h]
-  -- Step B: factor lift via tendsto_step_size_comp.
-  have hb_atTop :
-      Filter.Tendsto (fun m : ℕ => b ((x - x₀) / (m : ℝ)))
-        Filter.atTop (nhds b∞) := tendsto_step_size_comp hb x₀ x
-  have hc_atTop :
-      Filter.Tendsto (fun m : ℕ => c ((x - x₀) / (m : ℝ)))
-        Filter.atTop (nhds c∞) := tendsto_step_size_comp hc x₀ x
-  have hh_atTop :
-      Filter.Tendsto (fun m : ℕ => (x - x₀) / (m : ℝ))
-        Filter.atTop (nhds 0) := tendsto_step_size_atTop x₀ x
-  -- exp − 1 factor.
-  have hbk_atTop :
-      Filter.Tendsto (fun m : ℕ => b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀))
-        Filter.atTop (nhds (b∞ * (k : ℝ) * (x - x₀))) :=
-    (hb_atTop.mul_const ((k : ℝ))).mul_const (x - x₀)
-  have hexpsub :
-      Filter.Tendsto
-        (fun m : ℕ =>
-          Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)) - 1)
-        Filter.atTop
-        (nhds (Real.exp (b∞ * (k : ℝ) * (x - x₀)) - 1)) := by
-    have hexp_at := (Real.continuous_exp.tendsto _).comp hbk_atTop
-    exact hexp_at.sub_const 1
-  -- c · h → 0 (since c bounded, h → 0).
-  have hch :
-      Filter.Tendsto (fun m : ℕ => c ((x - x₀) / (m : ℝ))
-                                    * ((x - x₀) / (m : ℝ)))
-        Filter.atTop (nhds 0) := by
-    have := hc_atTop.mul hh_atTop
-    simpa using this
-  -- b · k → b∞ · k (and b∞ · k > 0).
-  have hbk_lim :
-      Filter.Tendsto (fun m : ℕ => b ((x - x₀) / (m : ℝ)) * (k : ℝ))
-        Filter.atTop (nhds (b∞ * (k : ℝ))) := hb_atTop.mul_const _
-  have hbk_pos : 0 < b∞ * (k : ℝ) := by
-    have hk_pos_real : 0 < (k : ℝ) := by exact_mod_cast hk
-    exact mul_pos hb_pos hk_pos_real
-  -- (c · h) / (b · k) → 0.
-  have hquot :
-      Filter.Tendsto (fun m : ℕ => c ((x - x₀) / (m : ℝ))
-                                    * ((x - x₀) / (m : ℝ))
-                                    / (b ((x - x₀) / (m : ℝ)) * (k : ℝ)))
-        Filter.atTop (nhds 0) := by
-    have := hch.div hbk_lim hbk_pos.ne'
-    simpa using this
-  -- Combined: (exp − 1) · (c · h / (b · k)) → finite · 0 = 0.
-  have h_prod :
-      Filter.Tendsto
-        (fun m : ℕ =>
-          (Real.exp (b ((x - x₀) / (m : ℝ)) * (k : ℝ) * (x - x₀)) - 1)
-            * (c ((x - x₀) / (m : ℝ)) * ((x - x₀) / (m : ℝ))
-                / (b ((x - x₀) / (m : ℝ)) * (k : ℝ))))
-        Filter.atTop (nhds 0) := by
-    have := hexpsub.mul hquot
-    simpa using this
-  exact h_prod.congr' h_eventually_eq.symm
+-- Cycle 061 targets (sketch):
+-- private lemma CbaseOf_tendsto_at_zero
+--     (M : LinearMultistepMethod k) (L : ℝ) :
+--     Tendsto (CbaseOf M L) (nhds 0)
+--       (nhds (L * (|M.β 0| * (Σᵢ |M.α i.succ|) + Σᵢ |M.β i.succ|))) :=
+--   Cbase_tendsto_at_zero M L  -- already exists at line 1982
+--
+-- private lemma yPrimeSumOf_tendsto_at_zero
+--     (M : LinearMultistepMethod k)
+--     {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+--     (hyex_x₀ : yex x₀ = y₀)
+--     {start : ℝ → Fin k → ℝ}
+--     (hstart : ∀ i : Fin k,
+--       Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀))
+--     (Y : ℝ → ℕ → ℝ)
+--     (hYstart : ∀ h, ∀ i : Fin k, Y h i.val = start h i) :
+--     Tendsto (fun h => yPrimeSumOf M yex (Y h) x₀ h) (nhds 0) (nhds 0)
+--   := sorry  -- cycle 061 will close
 ```
 
-### Faithfulness flag
+The threading of "starting Y from start h" is the cycle 061 design
+problem. Don't solve it now — just confirm the signature shape so
+cycle 060's `aOf` has the right argument list.
 
-Both sub-squeezes are **purely analytical Tendsto facts** — no LMM
-data, no Butcher entity references. They are private infrastructure
-lemmas. The CLAUDE.md per-`def` faithfulness checklist does not
-apply (no new `def`/`structure`/`class`).
+### File-edit checklist for the worker
 
----
+* [ ] Read `OpenMath/Chapter4/Section404.lean:2700–2900` to
+      verify the formulas before introducing the `*Of` definitions
+      (Cbase, Dbase, y'sum, a, b, c).
+* [ ] Add the six `noncomputable def`s in a single block
+      immediately above
+      `LinearMultistepMethod.globalError_closed_form_autonomous`
+      (line ~3140). Place them *inside* the `OpenMath.Chapter4.Section404`
+      namespace. Mark them `private`. Add a one-line comment above
+      each indicating it's an abbreviation for the
+      cycle-052 / cycle-053 `set`-name from
+      `globalError_recurrence_form`.
+* [ ] Add `LinearMultistepMethod.globalError_closed_form_autonomous_explicit`
+      immediately after
+      `LinearMultistepMethod.globalError_closed_form_autonomous`
+      (line ~3183) but *before* the `stable_consistent_isConvergent`
+      stub at line 3203. Both should remain in the same namespace.
+* [ ] Compile via `lake env lean OpenMath/Chapter4/Section404.lean`.
+      Expected warnings: 3 pre-existing unused-variable +
+      1 declaration-uses-`sorry` (line 3207, shifted to ~3400 by
+      the new content).
+* [ ] Verify axioms via `mcp__lean-lsp__lean_verify` with the
+      fully-qualified theorem name
+      `OpenMath.Chapter4.Section404.LinearMultistepMethod.globalError_closed_form_autonomous_explicit`.
+      Expected: `[propext, Classical.choice, Quot.sound]`.
+* [ ] Check the tautology scanner: only the standing
+      `tautology_scanner_false_positives.md` hits should remain
+      (lines around 1762, 1950, 2842 — drift expected). If a
+      *new* hit appears in any of the new `*Of` definitions or
+      the new theorem body, refactor before committing.
+* [ ] Update `.prover-state/task_results/cycle_060.md` per
+      CLAUDE.md task-results format. Include a faithfulness-check
+      section.
+* [ ] Commit with message
+      `Cycle 060 — explicit (a, b, c) functions for thm:406D outer squeeze`.
+* [ ] Push to `origin/Main/Experiments`. Verify
+      `git rev-parse HEAD = git rev-parse origin/Main/Experiments`
+      after the push.
 
-## Priority 3 (NOT THIS CYCLE): the outer-squeeze assembly
+### Suggested next-cycle pointer (for the cycle 061 planner)
 
-**Do NOT attempt assembling `globalError_outer_squeeze_autonomous`
-this cycle.** The two sub-squeezes above are sufficient for one
-cycle's CLAUDE.md envelope. Cycle 060 will combine them via
-`Tendsto.add` plus `squeeze_zero`. The expected cycle 060 shape:
+Cycle 061: prove the three limit lemmas `aOf_tendsto_zero`,
+`bOf_tendsto`, `cOf_tendsto` using cycles 055–057's helpers
+(`b_tendsto_at_zero`, `c_tendsto_at_zero`, `Cbase_tendsto_at_zero`,
+`Dbase_tendsto_at_zero`). The new piece is `yPrimeSumOf → 0`,
+which requires lifting the starting-method convergence assumption.
+Cycle 062 then assembles the outer squeeze using cycle 059's two
+sub-squeeze helpers and cycle 060's explicit closed-form. Cycle 063
+proves `stable_consistent_isConvergent_autonomous`. Cycle 064+
+lifts to non-autonomous (closing line 3207's sorry).
 
-```lean
-private theorem globalError_outer_squeeze_autonomous
-    ... :
-    Filter.Tendsto (fun m : ℕ => Y m m - yex x) Filter.atTop (nhds 0) := by
-  -- Apply globalError_closed_form_autonomous with h = h_m to get the
-  -- pointwise bound for each m large enough that h_m * L * |β 0| < 1.
-  -- The bound's RHS is exp(b·k·m·h)·a + (exp(b·k·m·h)−1)·c·h/(b·k).
-  -- That RHS = (a-term) + (c-term), both → 0 by the cycle 059 sub-squeezes.
-  -- So the bound → 0 by Tendsto.add. Then squeeze_zero.
-  sorry
-```
-
-The assembly will need to thread the existential `(a, b, c)` from
-`globalError_closed_form_autonomous` through. This is mechanical
-once the two sub-squeezes are in place, but it is the right size
-for its own cycle.
-
----
-
-## Verification checklist (before commit)
-
-1. `lake env lean OpenMath/Chapter4/Section404.lean` succeeds with
-   exactly **one** sorry (at line ≈3050–3080, the body of
-   `stable_consistent_isConvergent` — the line shifts by however many
-   lines the two new sub-squeezes add, expected ~70–100 lines total).
-2. `#print axioms OpenMath.Chapter4.Section404.globalError_outer_squeeze_a_term`
-   reports `[propext, Classical.choice, Quot.sound]` only.
-3. `#print axioms OpenMath.Chapter4.Section404.globalError_outer_squeeze_c_term`
-   reports `[propext, Classical.choice, Quot.sound]` only.
-4. **Tautology scanner** returns no **new** hits beyond the two
-   pre-existing ones at lines ≈1950, 2595. The sub-squeeze proofs
-   end in `exact h_prod.congr' h_eventually_eq.symm` — `h_prod` is
-   underscore-named, so the regex `:=\s*h_\w+\s*$` / `\bexact\s+h_\w+\s*$`
-   *will* match. **Rename** `h_prod → hprod` (drop underscore) before
-   commit, per the standing
-   `tautology_scanner_false_positives.md` convention. Same for any
-   other `h_<name>` final-line closer in the proof. Cosmetic
-   workaround; do **not** modify the scanner from worker side.
-   Run `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
-   before commit; expected ≤ 2 hits, both at pre-existing lines.
-5. `git diff --stat` shows changes confined to
-   `OpenMath/Chapter4/Section404.lean` (and `.prover-state/` updates).
-
----
-
-## What NOT to do this cycle
-
-* **Do NOT touch `stable_consistent_isConvergent` (line 3030).** Its
-  body stays `sorry`. The closure path is multi-cycle.
-* **Do NOT attempt `globalError_outer_squeeze_autonomous` assembly
-  this cycle.** That is cycle 060's deliverable. The two
-  sub-squeezes here are decoupled prerequisites.
-* **Do NOT attempt the autonomous → non-autonomous lift this cycle.**
-  Defer to a later cycle (likely 061+). It is a separate
-  medium-size refactor.
-* **Do NOT introduce new structures, defs, or classes.** The two
-  deliverables are private lemmas only.
-* **Do NOT rename or refactor any of the cycle 053–058 lemmas.**
-* **Do NOT raise `maxHeartbeats`** above 200000.
-* **Do NOT introduce `axiom`/`constant`** for any squeeze step.
-  Each sub-squeeze proof is ≤40 lines once tightened.
-* **Do NOT submit Aristotle jobs this cycle.** The proof recipes
-  above are concrete enough that manual proof is faster than the
-  30-minute Aristotle round-trip. The five Aristotle generic
-  combinators landed in cycle 057 already cover the Tendsto plumbing
-  this cycle needs.
-* **Do NOT modify `scripts/autonomous_loop.py`** (loop maintainer
-  territory; see standing
-  `tautology_scanner_false_positives.md`).
-* **Do NOT take any "stuck on" / "commits not reaching repo"
-  verdict in this prompt at face value** if it appears. Cycles
-  008/014/015/040 all had identical phantom verdicts; the
-  `consultant_advice_cycle_040.md` note §A documents the
-  verification commands. Cycle 058's HEAD plus this cycle's
-  changes is the source of truth. Run `git log -1` and
-  `git rev-parse HEAD origin/Main/Experiments` to verify.
-
----
-
-## Faithfulness flags
-
-* Both new lemmas are infrastructure `private lemma`s. **No new
-  `def`/`structure`/`class`** is being introduced; no new top-level
-  `theorem` corresponding to a Butcher entity is being added.
-* The cycle's deliverable is purely outer-assembly scaffolding for
-  `thm:406D` (which itself stays `sorry`).
-* **Tautology scanner**: rename any final-line `exact h_*` / `:= h_*`
-  closer to drop the underscore (e.g. `h_prod → hprod`,
-  `h_eventually_eq → heventually_eq`) per the standing convention.
-* The sub-squeezes are decoupled from any LMM-specific data — they
-  take generic `a, b, c : ℝ → ℝ` as parameters. So they cannot
-  introduce hidden faithfulness divergences.
-
----
-
-## Cycle 060 preview (for the planner's bookkeeping)
-
-Cycle 060 should attempt `globalError_outer_squeeze_autonomous`
-proper, combining the two cycle-059 sub-squeezes via:
-1. Apply `globalError_closed_form_autonomous` with `h = h_m` to get
-   the existential `(a, b, c)` plus the per-`n` bound for each `m`
-   large enough that `h_m * L * |M.β 0| < 1`.
-2. The RHS = (a-term) + (c-term) where each tends to 0 by the
-   cycle 059 sub-squeezes.
-3. Combine via `Tendsto.add` to get RHS → 0.
-4. Apply `squeeze_zero` between `0 ≤ |ε_m| ≤ RHS` to close.
-
-Expected cycle 060 size: ~60–100 lines, dominated by threading the
-existential and matching the closed-form's RHS shape against the
-sub-squeezes' RHS shape (some `simp` / `congr` work may be
-needed because the sub-squeezes use generic `a, b, c` but the
-LMM-specific (a, b, c) have explicit definitions).
-
-After cycle 060, **cycle 061+** addresses the autonomous →
-non-autonomous lift to close `stable_consistent_isConvergent` proper.
-That is a separate planner decision — likely 3–5 cycles, possibly
-preceded by an issue file documenting the gap and the lift recipe.
-
----
-
-## Cross-references
-
-* `OpenMath/Chapter4/Section404.lean:2107–2299` — cycles 056/057/058
-  Tendsto helpers (the seven `Tendsto` lemmas this cycle composes).
-* `OpenMath/Chapter4/Section404.lean:2280` —
-  `tendsto_step_size_atTop` (the `1/m → 0` bridge).
-* `OpenMath/Chapter4/Section404.lean:2293` —
-  `tendsto_step_size_comp` (the generic `nhds 0` → `atTop` lift).
-* `OpenMath/Chapter4/Section404.lean:2977` —
-  `globalError_closed_form_autonomous` (the analytical core; cycle
-  053). The two sub-squeezes match its RHS shape precisely.
-* `OpenMath/Chapter4/Section404.lean:2159` — `m_h_constancy`
-  (the `m · h_m = x − x₀` rewrite).
-* `OpenMath/Chapter4/Section404.lean:305` — `IsConvergent` definition
-  (the eventual squeeze target shape).
-* `.prover-state/issues/tautology_scanner_false_positives.md` —
-  scanner-rename convention.
-* `.prover-state/issues/consultant_advice_cycle_040.md` §A —
-  phantom verdict diagnosis (verification commands).
-* `.prover-state/task_results/cycle_058.md` (if present) —
-  cycle 058 deliverable record.
+This four-cycle decomposition (060 explicit-functions → 061 limit
+lemmas → 062 outer-squeeze assembly → 063 autonomous Tendsto →
+064+ non-autonomous lift) replaces cycle 059's "60–100 lines in
+cycle 060" estimate, which underestimated the existential threading
+work. Cycle 060 is the prerequisite that makes the rest tractable.
