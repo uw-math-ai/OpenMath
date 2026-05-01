@@ -801,4 +801,161 @@ theorem bSeriesConvAug_node_cons_two_leaves_consistency
   simp [BTree.innerCutForest, BTree.innerCut]
   ring
 
+/-- Forest-level base case for `bSeriesConvAug`'s inner-forest sum: at the
+empty children list there is exactly one forest (the empty list), whose
+weight contribution is `β.toFun (BTree.node [])`. -/
+theorem bSeriesConvAug_innerForest_nil (α β : AugSeries) :
+    ((BTree.innerCutForest [] α.toFun).map (fun forest =>
+        forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+          * β.toFun
+              (BTree.node (forest.filterMap (fun e => e.1))))).sum
+      = β.toFun (BTree.node []) := by
+  simp [BTree.innerCutForest]
+
+/-- Auxiliary identity: sum of a flatMap applied through a `head :: forest`
+list-cons unfolds as a sum over heads, with each head's contribution
+splitting on whether `head.1` is `none` (weight `head.2 * tailSum`) or
+`some trunk` (weight `head.2 * forest.foldr * β.toFun (node (trunk :: filt))`). -/
+private lemma innerForest_split_aux
+    (β : AugSeries) (cs : List BTree) (αFun : BTree → ℝ)
+    (L : List (Option BTree × ℝ)) :
+    ((L.flatMap (fun head =>
+        (BTree.innerCutForest cs αFun).map (fun cs' => head :: cs'))).map
+        (fun forest =>
+          forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+            * β.toFun (BTree.node (forest.filterMap (fun e => e.1))))).sum
+      = (L.filterMap (fun head =>
+            match head.1 with
+            | none => some head.2
+            | some _ => none)).sum
+              * ((BTree.innerCutForest cs αFun).map (fun forest =>
+                  forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                    * β.toFun
+                        (BTree.node (forest.filterMap (fun e => e.1))))).sum
+        + (L.flatMap (fun head =>
+            match head.1 with
+            | none => ([] : List ℝ)
+            | some trunk =>
+              (BTree.innerCutForest cs αFun).map (fun forest =>
+                head.2
+                  * forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * β.toFun
+                      (BTree.node
+                        (trunk :: forest.filterMap (fun e => e.1)))))).sum := by
+  -- Abbreviate the tail forest sum.
+  set tailSum : ℝ :=
+      ((BTree.innerCutForest cs αFun).map (fun forest =>
+        forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+          * β.toFun (BTree.node (forest.filterMap (fun e => e.1))))).sum
+    with htail
+  induction L with
+  | nil => simp [htail]
+  | cons head tail ih =>
+    rcases hh : head.1 with _ | trunk
+    · -- head.1 = none.  The outer filterMap's match emits `some head.2`,
+      -- the outer flatMap's match emits `[]`.
+      simp only [List.flatMap_cons, List.map_append, List.sum_append,
+        List.filterMap_cons, hh, List.map_map, Function.comp_def,
+        List.sum_cons, List.nil_append]
+      rw [ih]
+      -- After simp, the per-head sum has been simplified using `hh` for
+      -- the filterMap.  The remaining task is to show the head's
+      -- contribution is `head.2 * tailSum`.
+      have hphead : ((BTree.innerCutForest cs αFun).map (fun x =>
+          (head :: x).foldr (fun e acc => e.2 * acc) (1 : ℝ)
+            * β.toFun (BTree.node (x.filterMap (fun e => e.1))))).sum
+          = head.2 * tailSum := by
+        rw [show (fun x : List (Option BTree × ℝ) =>
+                (head :: x).foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * β.toFun (BTree.node (x.filterMap (fun e => e.1))))
+              = (fun x => head.2 *
+                  (x.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                    * β.toFun (BTree.node (x.filterMap (fun e => e.1)))))
+              from by
+          funext x
+          show head.2 * x.foldr (fun e acc => e.2 * acc) (1 : ℝ) * _ = _
+          ring]
+        rw [List.sum_map_mul_left, htail]
+      rw [hphead]
+      ring
+    · -- head.1 = some trunk.
+      simp only [List.flatMap_cons, List.map_append, List.sum_append,
+        List.filterMap_cons, hh, List.map_map, Function.comp_def]
+      rw [ih]
+      -- Show pointwise equality on the per-head sum.
+      have hphead : ((BTree.innerCutForest cs αFun).map (fun x =>
+          (head :: x).foldr (fun e acc => e.2 * acc) (1 : ℝ)
+            * β.toFun
+                (BTree.node (trunk :: x.filterMap (fun e => e.1))))).sum
+          = ((BTree.innerCutForest cs αFun).map (fun x =>
+              head.2 * x.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * β.toFun
+                    (BTree.node (trunk :: x.filterMap (fun e => e.1))))).sum := by
+        apply congrArg List.sum
+        apply List.map_congr_left
+        intro x _
+        show head.2 * x.foldr (fun e acc => e.2 * acc) (1 : ℝ) * _ = _
+        ring
+      rw [hphead]
+      ring
+
+/-- Forest-level cons split for `bSeriesConvAug`.  The inner forest sum on
+`c :: cs` decomposes as a per-head two-branch split (prune the head root
+vs. keep it) times the inner forest sum on `cs`.  The first summand is
+the prune-root branch (weight `α.toFun c`); the second summand collects
+the keep-root contributions, indexed by entries of `BTree.innerCut c`
+whose first component is `some trunk`. -/
+theorem bSeriesConvAug_innerForest_cons (α β : AugSeries)
+    (c : BTree) (cs : List BTree) :
+    ((BTree.innerCutForest (c :: cs) α.toFun).map (fun forest =>
+        forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+          * β.toFun
+              (BTree.node (forest.filterMap (fun e => e.1))))).sum
+      = α.toFun c
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * β.toFun
+                    (BTree.node (forest.filterMap (fun e => e.1))))).sum
+        + ((BTree.innerCut c α.toFun).flatMap (fun head =>
+            match head.1 with
+            | none      => ([] : List ℝ)
+            | some trunk =>
+              (BTree.innerCutForest cs α.toFun).map (fun forest =>
+                head.2
+                  * forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * β.toFun
+                      (BTree.node
+                        (trunk :: forest.filterMap (fun e => e.1)))))).sum := by
+  -- Unfold the cons of innerCutForest.
+  have hfc : BTree.innerCutForest (c :: cs) α.toFun
+      = (c.innerCut α.toFun).flatMap (fun head =>
+          (BTree.innerCutForest cs α.toFun).map (fun cs' => head :: cs')) := by
+    rw [BTree.innerCutForest]
+  rw [hfc, innerForest_split_aux β cs α.toFun (c.innerCut α.toFun)]
+  -- Reduce the filterMap-sum on `c.innerCut α.toFun` to `α.toFun c`.
+  have hfilt : ((c.innerCut α.toFun).filterMap (fun head =>
+        match head.1 with
+        | none => some head.2
+        | some _ => none)).sum = α.toFun c := by
+    cases c with
+    | leaf => simp [BTree.innerCut]
+    | node children =>
+      rw [innerCut_node]
+      simp only [List.filterMap_cons, List.sum_cons]
+      have htail :
+          (((BTree.innerCutForest children α.toFun).map (fun cs =>
+              (some (BTree.node (cs.filterMap (fun c => c.1))),
+                cs.foldr (fun c acc => c.2 * acc) (1 : ℝ)))).filterMap
+            (fun head =>
+              match head.1 with
+              | none => some head.2
+              | some _ => none)) = [] := by
+        rw [List.filterMap_eq_nil_iff]
+        intro x hx
+        rcases List.mem_map.mp hx with ⟨_, _, rfl⟩
+        rfl
+      rw [htail]
+      simp
+  rw [hfilt]
+
 end ButcherTableau
