@@ -803,25 +803,24 @@ error bound for one specific scheme:
   of §501. Cycle 617 proved stage-map covariance, step covariance,
   and transport of `IsPreconsistent` / `IsConsistent` in
   `OpenMath/GeneralLinearMethod.lean`.
-- [~] **§512 Definition of convergence**. Cycle 618 added
+- [x] **§512 Definition of convergence**. Cycle 618 added
   `GeneralLinearMethod.IsConvergent` (consistency ∧ stability) in
   `OpenMath/GeneralLinearMethod.lean` and the RK sanity check
-  `ButcherTableau.toGLM_isConvergent` in `OpenMath/RKAsGLM.lean`. The
-  LMM-side `LMM.toGLM_isStable` / `toGLM_isConvergent` lift is open;
-  see `.prover-state/issues/butcher_section512_lmm_stability_lift.md`.
-  Cycle 619 landed structural `LMM.toGLM.V` row simp lemmas ready for
-  the Phase 2–4 LMM stability lift. Cycle 620 closed Phase B with
-  `LMM.toGLM_V_iter_natAdd_eq_zero`: after `n + (k:ℕ) ≥ s` iterations
-  the past-`h*f` slot at position `s + k` of the `V`-iterate is `0`.
-  Cycle 621 added the `n ≥ s` Phase B corollary and closed Phase C's
-  coarse row bound: `toGLM_V_row_l1_le`, `toGLM_V_step_le`, and
-  `toGLM_V_iter_le` in `OpenMath/LMMAsGLM.lean`.
-  Cycle 622 added the §512 Phase D step 1 y-half / past-h·f-half
-  projections plus the one-step companion bridge
-  `toGLM_V_step_y_of_hf_zero_shift` / `…_last`.
-  Cycle 623 closed Phase D step 2 with the multi-step y-iterate
-  companion bridge `toGLM_V_iter_step_y_shift` / `…_last`, composing
-  the step-1 bridges with the Phase B vanished past-`h*f` half.
+  `ButcherTableau.toGLM_isConvergent` in `OpenMath/RKAsGLM.lean`.
+  Cycle 619 landed structural `LMM.toGLM.V` row simp lemmas. Cycle 620
+  closed Phase B with `LMM.toGLM_V_iter_natAdd_eq_zero`. Cycle 621
+  added the `n ≥ s` corollary and Phase C's coarse row bound:
+  `toGLM_V_row_l1_le`, `toGLM_V_step_le`, and `toGLM_V_iter_le`.
+  Cycles 622/623 added the §512 Phase D step 1/2 y-half / past-h·f-half
+  bridges (`toGLM_V_step_y_of_hf_zero_shift` / `…_last`,
+  `toGLM_V_iter_step_y_shift` / `…_last`). Cycles 624/625 closed
+  Phase D step 3/4 with the real companion-step `toGLM_y_step`,
+  the multi-step y-iterate matching `toGLM_y_half_iter_eq`, and the
+  complex norm bound `toGLM_y_half_iter_complex_norm_bound`.
+  **Cycle 626 closes the LMM-side §512 story** by assembling Phases B,
+  C and D into `LMM.toGLM_isStable` and the one-line
+  `LMM.toGLM_isConvergent`, retiring
+  `.prover-state/issues/butcher_section512_lmm_stability_lift.md`.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
 - [ ] **§515 Stability and consistency imply convergence** — the GLM
@@ -915,6 +914,14 @@ error bound for one specific scheme:
   `stabilityMatrix z = Vℂ + z • (Bℂ * (I - z • Aℂ)⁻¹ * Uℂ)` landed with
   entrywise and zero-step sanity lemmas, plus the RK scalar specialization
   and the LMM one-stage entry formula.
+- **Cycle 626 closed the §512 LMM stability lift (Phase E)** — assembled
+  Phases B / C / D into `LMM.toGLM_isStable` and the one-line
+  `LMM.toGLM_isConvergent` in `OpenMath/LMMAsGLM.lean`. The
+  zero-stable LMM characteristic recurrence transports through the
+  GLM embedding: y-half via the Phase D step 4 complex norm bound,
+  past-`h*f` half via Phase B vanishing for `n ≥ s`, and the finite
+  prefix `n < s` via the Phase C `M_max^n` bound. Retires
+  `.prover-state/issues/butcher_section512_lmm_stability_lift.md`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -938,9 +945,11 @@ error bound for one specific scheme:
 
 1. **Butcher §510 — GLM consistency and stability definitions.**
    `OpenMath/GeneralLinearMethod.lean`. Direct generalisation of §40.
-   *Partial — cycle 613 closed the consistency predicate
-   (`IsConsistent`, `toGLM_isConsistent`); convergence chain
-   (§512–§515) still pending.*
+   *Partial — cycles 613 / 618 / 626 closed the consistency
+   predicate (`IsConsistent`, `toGLM_isConsistent`), the convergence
+   predicate (`IsConvergent = IsConsistent ∧ IsStable`), and the
+   §512 LMM stability lift (`LMM.toGLM_isStable`,
+   `LMM.toGLM_isConvergent`); §513–§515 still pending.*
 2. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
    ⟹ convergence` for GLMs. The existing
    `OpenMath/DahlquistEquivalence.lean` is a special case; the GLM

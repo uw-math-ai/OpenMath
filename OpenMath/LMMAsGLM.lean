@@ -1222,4 +1222,108 @@ theorem toGLM_isConsistent (m : LMM s) (hm : m.IsConsistent) :
           rw [if_neg this]
         · intro h; exact absurd (Finset.mem_univ _) h
 
+/-- §512 Phase E helper. Monotonicity of `(M_max m) ^ n` in `n`. -/
+private theorem M_max_pow_le_M_max_pow_of_le
+    (m : LMM s) {a b : ℕ} (h : a ≤ b) :
+    (M_max m) ^ a ≤ (M_max m) ^ b :=
+  pow_le_pow_right₀ (one_le_M_max m) h
+
+/-- §512 Phase E. Every zero-stable LMM embeds as a §510-stable GLM.
+This combines Phase B (`toGLM_V_iter_natAdd_eq_zero_of_le`), Phase C
+(`toGLM_V_iter_le`) and Phase D step 4
+(`toGLM_y_half_iter_complex_norm_bound`). -/
+theorem toGLM_isStable (m : LMM s) (hzs : m.IsZeroStable) :
+    m.toGLM.IsStable := by
+  obtain ⟨My, hMy_nonneg, hMy⟩ := toGLM_y_half_iter_complex_norm_bound m hzs
+  set Mbase : ℝ := (M_max m) ^ s with hMbase_def
+  have hMbase_nonneg : 0 ≤ Mbase := by
+    rw [hMbase_def]; exact pow_nonneg (M_max_nonneg m) s
+  set M' : ℝ := My * Mbase + Mbase with hM'_def
+  have hMyMb_nonneg : 0 ≤ My * Mbase := mul_nonneg hMy_nonneg hMbase_nonneg
+  have hM'_nonneg : 0 ≤ M' := by rw [hM'_def]; linarith
+  have hMyMb_le_M' : My * Mbase ≤ M' := by rw [hM'_def]; linarith
+  have hMbase_le_M' : Mbase ≤ M' := by rw [hM'_def]; linarith
+  refine ⟨M', hM'_nonneg, ?_⟩
+  intro n q hq k
+  -- Reindex k via Fin.cast (Nat.two_mul s) into Fin (s + s).
+  set kc : Fin (s + s) := Fin.cast (Nat.two_mul s) k with hkc_def
+  have hk : k = Fin.cast (Nat.two_mul s).symm kc := by
+    rw [hkc_def]; ext; simp
+  rw [hk]
+  refine kc.addCases (motive := fun kc' =>
+      |((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)
+        (Fin.cast (Nat.two_mul s).symm kc')| ≤ M') ?_ ?_
+  · -- y-half slot.
+    intro k'
+    rcases Nat.lt_or_ge n s with hns | hns
+    · -- n < s: Phase C bound.
+      have hbound := toGLM_V_iter_le m q 1 hq n
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k'))
+      rw [mul_one] at hbound
+      have hpow : (M_max m) ^ n ≤ Mbase :=
+        M_max_pow_le_M_max_pow_of_le m (le_of_lt hns)
+      linarith
+    · -- s ≤ n: companion-step bound.
+      set j : ℕ := n - s with hj_def
+      have hns_eq : s + j = n := by rw [hj_def]; omega
+      -- Inner-norm bound: complex y-half of V^[s] q has Pi-norm ≤ Mbase.
+      have hVs_yhalf_norm :
+          ‖fun k0 : Fin s =>
+            ((toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+                fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[s] q) k0
+              : ℝ) : ℂ)‖
+          ≤ Mbase := by
+        rw [pi_norm_le_iff_of_nonneg hMbase_nonneg]
+        intro i
+        rw [Complex.norm_real, Real.norm_eq_abs]
+        unfold toGLM_y_half
+        have := toGLM_V_iter_le m q 1 hq s
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s i))
+        rw [mul_one] at this
+        rw [hMbase_def]
+        exact this
+      -- Apply Phase D step 4 with n := s, j := j.
+      have hMy_app := hMy q s (le_refl s) j
+      have hMy_total :
+          ‖fun k0 : Fin s =>
+            ((toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+                fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[s + j] q)
+              k0 : ℝ) : ℂ)‖
+          ≤ My * Mbase :=
+        hMy_app.trans (mul_le_mul_of_nonneg_left hVs_yhalf_norm hMy_nonneg)
+      -- Single-coordinate extraction via norm_le_pi_norm.
+      have hsingle :
+          ‖((toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+              fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[s + j] q) k'
+            : ℝ) : ℂ)‖
+          ≤ My * Mbase :=
+        (norm_le_pi_norm _ k').trans hMy_total
+      rw [Complex.norm_real, Real.norm_eq_abs] at hsingle
+      -- Identify: toGLM_y_half (V^[s+j] q) k' = (V^[n] q) (cast.symm (castAdd s k')).
+      unfold toGLM_y_half at hsingle
+      rw [hns_eq] at hsingle
+      exact hsingle.trans hMyMb_le_M'
+  · -- h·f-half slot.
+    intro k'
+    rcases Nat.lt_or_ge n s with hns | hns
+    · -- n < s: Phase C bound.
+      have hbound := toGLM_V_iter_le m q 1 hq n
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k'))
+      rw [mul_one] at hbound
+      have hpow : (M_max m) ^ n ≤ Mbase :=
+        M_max_pow_le_M_max_pow_of_le m (le_of_lt hns)
+      linarith
+    · -- s ≤ n: Phase B says the slot is zero.
+      have hzero := toGLM_V_iter_natAdd_eq_zero_of_le m q n hns k'
+      rw [hzero, abs_zero]
+      exact hM'_nonneg
+
+/-- §512 Phase E. Every consistent and zero-stable LMM embeds as a §512
+convergent GLM. -/
+theorem toGLM_isConvergent (m : LMM s)
+    (hcon : m.IsConsistent) (hzs : m.IsZeroStable) :
+    m.toGLM.IsConvergent :=
+  ⟨m.toGLM_isConsistent hcon, m.toGLM_isStable hzs⟩
+
 end LMM
