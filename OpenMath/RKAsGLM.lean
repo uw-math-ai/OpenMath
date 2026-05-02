@@ -5,6 +5,7 @@ import OpenMath.SDIRK3
 import OpenMath.RadauIIA3
 import OpenMath.GaussLegendre3
 import OpenMath.LobattoIIIA
+import OpenMath.LobattoIIIB
 import OpenMath.LobattoIIIC
 
 /-!
@@ -685,3 +686,55 @@ theorem rkLobattoIIIC2_toGLM_isAStable :
   intro z hz
   rw [rkLobattoIIIC2_stabilityFunction_eq z hz]
   exact lobIIIC_aStable z hz
+
+/-- Bridge from the canonical GLM-side `stabilityFunction` to the
+classical scalar `lobIIIAStabilityFn` on the Lobatto IIIB 2-stage tableau.
+Lobatto IIIB shares the IIIA stability function `(2 + z) / (2 - z)`. -/
+theorem rkLobattoIIIB2_stabilityFunction_eq (z : ℂ) (hz : z.re ≤ 0) :
+    rkLobattoIIIB2.stabilityFunction z = lobIIIAStabilityFn z := by
+  have hne1 : (1 : ℂ) - z * (1/2 : ℂ) ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re, Complex.mul_re] at hre
+    nlinarith [hz]
+  have hD : (2 : ℂ) - z ≠ 0 := by
+    intro h
+    apply hne1
+    calc
+      (1 : ℂ) - z * (1/2 : ℂ) = ((2 : ℂ) - z) / 2 := by ring
+      _ = 0 := by simp [h]
+  rw [ButcherTableau.stabilityFunction]
+  have hM :
+      ((1 : Matrix (Fin 2) (Fin 2) ℂ) - z •
+          (Matrix.of (fun i j => ((rkLobattoIIIB2.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 2) (Fin 2) ℂ)) =
+      !![1 - z * (1/2 : ℂ), 0; -(z * (1/2 : ℂ)), 1] := by
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rkLobattoIIIB2, Matrix.cons_val_zero, Matrix.cons_val_one]
+  change 1 + z * ∑ i, ∑ j,
+      (rkLobattoIIIB2.b i : ℂ) *
+        ((1 - z • (Matrix.of (fun i j => ((rkLobattoIIIB2.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 2) (Fin 2) ℂ))⁻¹) i j = lobIIIAStabilityFn z
+  rw [hM]
+  have hdet : (!![1 - z * (1/2 : ℂ), 0; -(z * (1/2 : ℂ)), 1] :
+                  Matrix (Fin 2) (Fin 2) ℂ).det = 1 - z * (1/2 : ℂ) := by
+    simp [Matrix.det_fin_two_of]
+  rw [Matrix.inv_def]
+  simp only [Matrix.adjugate_fin_two_of, hdet, Ring.inverse_eq_inv']
+  simp only [Fin.sum_univ_two, rkLobattoIIIB2,
+             Matrix.cons_val_zero, Matrix.cons_val_one,
+             Matrix.smul_of, Matrix.smul_cons, smul_eq_mul,
+             Matrix.cons_val_fin_one, Matrix.of_apply,
+             lobIIIAStabilityFn, lobIIIANum, lobIIIADenom]
+  push_cast
+  field_simp [hne1, hD]
+  ring
+
+/-- Lobatto IIIB 2-stage is A-stable after the §502 embedding into GLMs. -/
+theorem rkLobattoIIIB2_toGLM_isAStable :
+    (rkLobattoIIIB2).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  rw [rkLobattoIIIB2_stabilityFunction_eq z hz]
+  exact lobIIIB_aStable z hz

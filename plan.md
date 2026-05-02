@@ -1005,6 +1005,13 @@ error bound for one specific scheme:
   skipped — the `Real.sqrt 6` / `Real.sqrt 15` cross-term cancellation
   in `det(1 - z•A)` is opaque to `ring`; tracked in
   `.prover-state/issues/radau_gl3_glm_aStable_sqrt_bridge.md`.
+- **Cycle 656 added §521 Lobatto IIIB 2-stage GLM A-stability
+  transport** — `rkLobattoIIIB2_stabilityFunction_eq` and
+  `rkLobattoIIIB2_toGLM_isAStable` in `OpenMath/RKAsGLM.lean`. Uses the
+  same lower-triangular `Matrix.adjugate_fin_two_of` pattern as the
+  IIIA bridge from cycle 655, with the second-row diagonal `1` instead
+  of `1 - z/2`; closes via `lobIIIB_aStable` (which itself is just
+  `lobIIIA_aStable` since IIIB shares the IIIA stability function).
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1093,32 +1100,37 @@ let the queue empty.
 
 ## Current Target
 
-**Butcher §521 — GLM A-stability transports for collocation methods.**
-Active file: `OpenMath/RKAsGLM.lean`. Continue the GLM-side
-A-stability transport bridges from individual scalar RK stability
-proofs (`SDIRK2`, `SDIRK3`, `RadauIIA3`, `GaussLegendre3`).
+**Butcher §521 — GLM A-stability transports for 3-stage Lobatto
+collocation methods.**
+Active file: `OpenMath/RKAsGLM.lean`. The 2-stage Lobatto transports
+(IIIA cycle 655, IIIC cycle 655, IIIB cycle 656) are closed; the
+3-stage Lobatto methods (IIIA / IIIC) are the next §521 RK-side
+candidates, following the same pattern but using the cycle 653 / 654
+three-certificate split for the 3×3 adjugate determinant.
 
 Concrete next targets:
-- `rkLobattoIIIA2_stabilityFunction_eq` — bridge the GLM-side
-  `stabilityFunction` of Lobatto IIIA 2-stage to the classical
-  `lobIIIAStabilityFn = (2 + z) / (2 - z)`.
-- `rkLobattoIIIA2_toGLM_isAStable` — A-stability transport via
-  `toGLM_isAStable_iff` and `lobIIIA_aStable`.
-- If the IIIA bridge lands cleanly, continue with
-  `rkLobattoIIIC2_stabilityFunction_eq`, bridging to
-  `lobIIICStabilityFn = 2 / (z^2 - 2*z + 2)`.
-- `rkLobattoIIIC2_toGLM_isAStable` — A-stability transport via
-  `toGLM_isAStable_iff` and `lobIIIC_aStable`.
+- `rkLobattoIIIA3_stabilityFunction_eq` — bridge the GLM-side
+  `stabilityFunction` of Lobatto IIIA 3-stage to the classical scalar
+  stability function (see `OpenMath/LobattoIIIA3.lean`).
+- `rkLobattoIIIA3_toGLM_isAStable` — A-stability transport via
+  `toGLM_isAStable_iff` and the classical Lobatto IIIA 3-stage
+  A-stability proof.
+- If IIIA 3-stage lands, continue with the IIIC 3-stage analogue
+  (`OpenMath/LobattoIIIC3.lean`).
+
+Pattern reference: cycle 653 (Radau IIA 3-stage) and cycle 654 (GL3)
+both used a bespoke three-certificate split for the 3×3 adjugate
+determinant. Follow that template: identify the three independent
+hypotheses needed to keep `field_simp`/`ring` from drowning in the
+`Real.sqrt` cross-terms (if any), and stage the certificate factor by
+factor.
 
 The classical scalar A-stability data lives in
-`OpenMath/LobattoIIIA.lean` (`lobIIIAStabilityFn`,
-`lobIIIA_aStable`) and `OpenMath/LobattoIIIC.lean`
-(`lobIIICStabilityFn`, `lobIIIC_denom_ne_zero`, `lobIIIC_aStable`).
+`OpenMath/LobattoIIIA3.lean` and `OpenMath/LobattoIIIC3.lean`. Confirm
+the stability-function shape and A-stability lemma names before
+scaffolding.
 
-After the 2-stage Lobatto transports land, follow-on §521 candidates:
-schedule Lobatto IIIB 2-stage as a duplicated-stability bridge if the
-planner wants explicit coverage, then tackle Lobatto 3-stage methods
-with the 3×3 adjugate split. Alternatively, pursue the
+Alternative (if the 3-stage cross-term obstruction recurs): pursue the
 `LMM.toGLM_isAStable_iff` general charpoly factorisation tracked in
 `.prover-state/issues/lmm_toGLM_general_charpoly_rank_one.md`.
 
