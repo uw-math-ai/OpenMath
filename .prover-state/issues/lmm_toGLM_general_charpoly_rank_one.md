@@ -2,20 +2,28 @@
 
 ## Blocker
 
-The cycle 641 `Matrix.fromBlocks` decomposition and rank-one update are still
-the right structural entry point, but cycle 642 showed that the earlier
-"nilpotent past-`h*f` block gives an automatic `X^s` factor" plan is false
-for general LMMs.
-
-The past-`h*f` block is only nilpotent in the BDF-shaped case
+Cycle 641 exposed the full `Matrix.fromBlocks` decomposition and the
+rank-one update
 
 ```lean
-∀ l : Fin s, m.β l.castSucc = 0
+m.toGLM.stabilityMatrix z =
+  V_active_lift +
+    (1 / (1 - z * (m.β (Fin.last s) : ℂ))) • rankOneCorrection
 ```
 
-For a concrete counterexample, the trapezoidal rule has `s = 1` and
-`PHF[0,0] = z / (2 - z)`, so the single past-`h*f` block is not nilpotent
-unless `z = 0`.
+but the remaining charpoly bridge still needs a determinant identity for the
+specific companion-shift matrix plus that rank-one update. Mathlib has useful
+pieces (`Matrix.charpoly_reindex`, `Matrix.charpoly_fromBlocks_zero₁₂`,
+`Matrix.charpoly_fromBlocks_zero₂₁`, `Matrix.det_one_add_smul`,
+`Matrix.det_one_add_replicateCol_mul_replicateRow`), but not a direct theorem
+for
+
+```lean
+(shiftCompanion + c • Matrix.vecMulVec u v).charpoly
+```
+
+with the nilpotent past-`h*f` shift rows contributing the spurious `X^s`
+factor and the active factor matching `LMM.stabilityPoly`.
 
 ## Context
 
@@ -26,46 +34,38 @@ LMM.toGLM_stabilityMatrix_eq_fromBlocks
 LMM.toGLM_stabilityMatrix_eq_V_active_plus_rank_one
 ```
 
-Cycle 643 landed the BDF-only block helper:
+The LMM-side target is currently a scalar function:
 
 ```lean
-LMM.toGLM_stabilityMatrixPHF_charpoly_of_bdf
+LMM.stabilityPoly (m : LMM s) (ξ z : ℂ) : ℂ
 ```
 
-It proves that under `∀ l : Fin s, m.β l.castSucc = 0`, the
-`toGLM_stabilityMatrixPHF` block is upper-triangular with zero diagonal and
-has charpoly `Polynomial.X ^ s`.
+There is not yet a polynomial-valued `scaledStabilityPoly m z : ℂ[X]` with
+evaluation theorem connecting its roots to `m.stabilityPoly · z`.
 
 ## What was tried
 
-- Cycle 641 proved the four block entries for the `s × s` block split and
-  reindexed them through `toGLM_stabilityBlockEquiv`.
-- Cycle 641 also proved the full stability matrix is a rank-one update of the
-  complex `V` block via `Matrix.vecMulVec`.
-- Cycle 642 tried to define a polynomial-valued LMM stability polynomial and
-  prove a general charpoly factorisation. That attempt was reverted because
-  it introduced a live sorry and rested on false general nilpotency.
-- Cycle 642 also showed that neither off-diagonal block in the cycle 641
-  `fromBlocks` decomposition is zero. Both off-diagonal blocks are rank at
-  most one but have a nonzero row at `j = s - 1`, so
-  `Matrix.charpoly_fromBlocks_zero₁₂` and
-  `Matrix.charpoly_fromBlocks_zero₂₁` do not apply.
+- Proved the block entries as four `s × s` matrices and reindexed them through
+  `toGLM_stabilityBlockEquiv`.
+- Proved the stability matrix is a rank-one update of the complex `V` block via
+  `Matrix.vecMulVec`.
+- Searched Mathlib for block charpoly and rank-one determinant tools. Existing
+  tools cover triangular block matrices and `det(1 + r • M)`, but the current
+  matrix needs a companion-shift determinant calculation before those tools can
+  identify the LMM stability polynomial factor.
 
 ## Possible solutions
 
-1. First prove the scaffolded BDF headline
-   `LMM.toGLM_stabilityMatrix_charpoly_of_bdf`. The intended reduction is:
-   use `LMM.toGLM_stabilityMatrixPHF_charpoly_of_bdf`, then expand the
-   `fromBlocks` charmatrix along the rank-one right block row/column.
-2. Keep the BDF factorisation existential at first:
-   `∃ q, (m.toGLM.stabilityMatrix z).charpoly = Polynomial.X ^ s * q`.
-   Do not identify `q` with the LMM stability polynomial until the determinant
-   route is stable.
-3. For the later general non-BDF theorem, expect a scalar prefactor on the
-   left, with a `(1 - z * β_s)`-style denominator-clearing term. The naive
-   unscaled shape
-   `(m.toGLM.stabilityMatrix z).charpoly = X^s * stabilityPolyPoly z`
-   is structurally wrong.
-4. Do not use the zero-block charpoly lemmas on the cycle 641 block matrix.
-   A direct determinant calculation for the companion-shift-plus-rank-one
-   charmatrix is still needed.
+1. Define a polynomial-valued LMM stability polynomial
+   `stabilityPolyPoly (m : LMM s) (z : ℂ) : ℂ[X]` and prove its evaluation
+   agrees with `m.stabilityPoly ξ z`.
+2. Reindex `charmatrix (m.toGLM.stabilityMatrix z)` using
+   `toGLM_stabilityMatrix_eq_fromBlocks` and eliminate the nilpotent
+   past-`h*f` shift block by repeated sparse-column/row expansion or a helper
+   determinant lemma for the shift block.
+3. Prove a local determinant lemma for the companion-shift-plus-rank-one shape,
+   probably by induction on `s`, yielding
+   `charpoly(M(z)) = X^s * scaledStabilityPoly m z` after denominator clearing.
+4. Once the polynomial factorisation lands, `LMM.toGLM_isAStable_iff` should
+   follow by `Matrix.charpoly_reindex` and the evaluation bridge for
+   `stabilityPolyPoly`.
