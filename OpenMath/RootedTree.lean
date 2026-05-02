@@ -679,6 +679,93 @@ theorem order_le_two_iff (τ : BTree) :
   · intro hτ
     rcases hτ with rfl | rfl | rfl | rfl <;> native_decide
 
+private theorem eq_nil_or_singleton_or_pair_of_order_sum_le_two
+    (children : List BTree) (h : (children.map BTree.order).sum ≤ 2) :
+    children = []
+      ∨ (∃ c : BTree, children = [c] ∧ c.order ≤ 2)
+      ∨ (∃ c₁ c₂ : BTree, children = [c₁, c₂] ∧ c₁.order = 1 ∧ c₂.order = 1) := by
+  cases children with
+  | nil => exact Or.inl rfl
+  | cons c cs =>
+    have hcpos : 0 < c.order := order_pos c
+    have hsum : c.order + (cs.map BTree.order).sum ≤ 2 := by
+      simpa only [List.map, List.sum_cons] using h
+    cases cs with
+    | nil =>
+      right; left
+      refine ⟨c, rfl, ?_⟩
+      simp only [List.map, List.sum_nil, add_zero] at hsum
+      exact hsum
+    | cons c₂ rest =>
+      have hc₂pos : 0 < c₂.order := order_pos c₂
+      have hsum₂ : c.order + (c₂.order + (rest.map BTree.order).sum) ≤ 2 := by
+        simpa only [List.map, List.sum_cons] using hsum
+      have hc1 : c.order = 1 := by omega
+      have hc2 : c₂.order = 1 := by omega
+      have hrest_sum : (rest.map BTree.order).sum = 0 := by omega
+      have hrest : rest = [] := (map_order_sum_eq_zero_iff rest).1 hrest_sum
+      right; right
+      refine ⟨c, c₂, ?_, hc1, hc2⟩
+      simp [hrest]
+
+/-- The rooted trees whose `BTree.order` is at most `3` in the current
+ordered-child representation. -/
+theorem order_le_three_iff (τ : BTree) :
+    τ.order ≤ 3 ↔
+      τ = BTree.leaf
+      ∨ τ = BTree.node []
+      ∨ τ = BTree.node [BTree.leaf]
+      ∨ τ = BTree.node [BTree.node []]
+      ∨ τ = BTree.node [BTree.node [BTree.leaf]]
+      ∨ τ = BTree.node [BTree.node [BTree.node []]]
+      ∨ τ = BTree.node [BTree.leaf, BTree.leaf]
+      ∨ τ = BTree.node [BTree.leaf, BTree.node []]
+      ∨ τ = BTree.node [BTree.node [], BTree.leaf]
+      ∨ τ = BTree.node [BTree.node [], BTree.node []] := by
+  have order_one_cases : ∀ c : BTree, c.order = 1 →
+      c = BTree.leaf ∨ c = BTree.node [] := by
+    intro c hc
+    cases c with
+    | leaf => exact Or.inl rfl
+    | node ch =>
+      right
+      rw [order_node_sum] at hc
+      have hsum : (ch.map BTree.order).sum = 0 := by omega
+      rw [(map_order_sum_eq_zero_iff ch).mp hsum]
+  constructor
+  · intro hτ
+    cases τ with
+    | leaf => exact Or.inl rfl
+    | node children =>
+        have hsum : (children.map BTree.order).sum ≤ 2 := by
+          rw [order_node_sum] at hτ
+          omega
+        rcases eq_nil_or_singleton_or_pair_of_order_sum_le_two children hsum
+          with hnil | ⟨c, hchildren, hcle⟩ | ⟨c₁, c₂, hchildren, hc₁, hc₂⟩
+        · subst hnil
+          exact Or.inr (Or.inl rfl)
+        · subst hchildren
+          rcases (order_le_two_iff c).mp hcle with rfl | rfl | rfl | rfl
+          · exact Or.inr (Or.inr (Or.inl rfl))
+          · exact Or.inr (Or.inr (Or.inr (Or.inl rfl)))
+          · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))
+          · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))
+        · subst hchildren
+          rcases order_one_cases c₁ hc₁ with rfl | rfl
+          · rcases order_one_cases c₂ hc₂ with rfl | rfl
+            · exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+                Or.inl rfl
+            · exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+                Or.inr <| Or.inl rfl
+          · rcases order_one_cases c₂ hc₂ with rfl | rfl
+            · exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+                Or.inr <| Or.inr <| Or.inl rfl
+            · exact Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <| Or.inr <|
+                Or.inr <| Or.inr <| Or.inr rfl
+  · intro hτ
+    rcases hτ with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      native_decide
+
 /-- The order of a node depends only on the multiset of its children. -/
 theorem order_node_perm {children₁ children₂ : List BTree}
     (hperm : children₁.Perm children₂) :

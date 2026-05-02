@@ -1803,4 +1803,240 @@ theorem mul_assoc_at_node_depth_two_children
                    (BTree.node (forest.filterMap (fun e => e.1))))).sum
   linarith
 
+/-! ## Cycle 600: depth-3 mixed-children associativity scaffold
+
+Extends the depth-1 (cycle 598) and depth-2 (cycle 599) cons recurrences
+to head children of order at most 3.  The two new shape families are the
+two-children-of-order-one node `BTree.node [a, b]` (each `a, b` either
+`BTree.leaf` or `BTree.node []`) and the singleton-with-singleton head
+`BTree.node [BTree.node [e]]` (with `e` of order ≤ 1).  See the
+`section386aug_strong_induction_obstruction.md` issue for why the
+parametric form is blocked. -/
+
+/-- Cons recurrence for the inner-forest sum when the head child is the
+depth-3 shape `BTree.node [a, b]` with `a, b` of order ≤ 1.  The keep-root
+branch enumerates four trunks: `node [a, b]`, `node [a]`, `node [b]`, and
+`node []`. -/
+private theorem forestSum_cons_node_pair_depth_one
+    (α β : AugSeries) (a b : BTree) (ha : a.order ≤ 1) (hb : b.order ≤ 1)
+    (cs : List BTree) :
+    ((BTree.innerCutForest (BTree.node [a, b] :: cs) α.toFun).map (fun forest =>
+        forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+          * β.toFun (BTree.node (forest.filterMap (fun e => e.1))))).sum
+      = α.toFun (BTree.node [a, b])
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * β.toFun (BTree.node (forest.filterMap (fun e => e.1))))).sum
+        + α.toFun a * α.toFun b
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * (β.shiftBy (BTree.node [])).toFun
+                    (BTree.node (forest.filterMap (fun e => e.1))))).sum
+        + α.toFun b
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * (β.shiftBy (BTree.node [a])).toFun
+                    (BTree.node (forest.filterMap (fun e => e.1))))).sum
+        + α.toFun a
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * (β.shiftBy (BTree.node [b])).toFun
+                    (BTree.node (forest.filterMap (fun e => e.1))))).sum
+        + ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+            forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+              * (β.shiftBy (BTree.node [a, b])).toFun
+                  (BTree.node (forest.filterMap (fun e => e.1))))).sum := by
+  -- Helper: factor a scalar `k` out of a forest-sum-style map over the
+  -- residual cuts.
+  have hscale : ∀ (k : ℝ) (T : BTree),
+      (List.map
+          (fun forest =>
+            k * forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+              * β.toFun
+                  (BTree.node (T :: forest.filterMap (fun e => e.1))))
+          (BTree.innerCutForest cs α.toFun)).sum
+        = k * (List.map
+            (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * β.toFun
+                    (BTree.node (T :: forest.filterMap (fun e => e.1))))
+            (BTree.innerCutForest cs α.toFun)).sum := by
+    intro k T
+    induction BTree.innerCutForest cs α.toFun with
+    | nil => simp
+    | cons forest tail ih =>
+      simp only [List.map_cons, List.sum_cons, ih]; ring
+  rw [bSeriesConvAug_innerForest_cons]
+  rcases (order_le_one_iff a).mp ha with rfl | rfl <;>
+    rcases (order_le_one_iff b).mp hb with rfl | rfl
+  all_goals
+    rw [innerCut_node]
+    simp only [BTree.innerCutForest, innerCut_leaf, innerCut_node_nil,
+      List.flatMap_cons, List.flatMap_nil, List.append_nil,
+      List.flatMap_append,
+      List.map_cons, List.map_nil, List.map_append,
+      List.foldr_cons, List.foldr_nil,
+      List.filterMap_cons, List.filterMap_nil, mul_one, one_mul,
+      List.sum_cons, List.sum_nil, List.sum_append,
+      add_zero, zero_add, AugSeries.shiftBy_node]
+  -- Case 1: a = leaf, b = leaf
+  · rw [hscale (α.toFun BTree.leaf * α.toFun BTree.leaf) (BTree.node []),
+        hscale (α.toFun BTree.leaf) (BTree.node [BTree.leaf])]
+    linarith
+  -- Case 2: a = leaf, b = node []
+  · rw [hscale (α.toFun BTree.leaf * α.toFun (BTree.node [])) (BTree.node []),
+        hscale (α.toFun BTree.leaf) (BTree.node [BTree.node []]),
+        hscale (α.toFun (BTree.node [])) (BTree.node [BTree.leaf])]
+    linarith
+  -- Case 3: a = node [], b = leaf
+  · rw [hscale (α.toFun (BTree.node []) * α.toFun BTree.leaf) (BTree.node []),
+        hscale (α.toFun (BTree.node [])) (BTree.node [BTree.leaf]),
+        hscale (α.toFun BTree.leaf) (BTree.node [BTree.node []])]
+    linarith
+  -- Case 4: a = node [], b = node []
+  · rw [hscale (α.toFun (BTree.node []) * α.toFun (BTree.node []))
+          (BTree.node []),
+        hscale (α.toFun (BTree.node [])) (BTree.node [BTree.node []])]
+    linarith
+
+/-- Cons recurrence for the inner-forest sum when the head child is the
+depth-3 singleton shape `BTree.node [BTree.node [e]]` with `e.order ≤ 1`.
+The keep-root branch enumerates three trunks: `node [node [e]]`,
+`node [node []]`, and `node []`. -/
+private theorem forestSum_cons_node_singleton_node_singleton_depth_one
+    (α β : AugSeries) (e : BTree) (he : e.order ≤ 1) (cs : List BTree) :
+    ((BTree.innerCutForest (BTree.node [BTree.node [e]] :: cs) α.toFun).map
+        (fun forest =>
+          forest.foldr (fun ec acc => ec.2 * acc) (1 : ℝ)
+            * β.toFun (BTree.node (forest.filterMap (fun ec => ec.1))))).sum
+      = α.toFun (BTree.node [BTree.node [e]])
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun ec acc => ec.2 * acc) (1 : ℝ)
+                * β.toFun (BTree.node (forest.filterMap (fun ec => ec.1))))).sum
+        + α.toFun (BTree.node [e])
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun ec acc => ec.2 * acc) (1 : ℝ)
+                * (β.shiftBy (BTree.node [])).toFun
+                    (BTree.node (forest.filterMap (fun ec => ec.1))))).sum
+        + α.toFun e
+          * ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+              forest.foldr (fun ec acc => ec.2 * acc) (1 : ℝ)
+                * (β.shiftBy (BTree.node [BTree.node []])).toFun
+                    (BTree.node (forest.filterMap (fun ec => ec.1))))).sum
+        + ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+            forest.foldr (fun ec acc => ec.2 * acc) (1 : ℝ)
+              * (β.shiftBy (BTree.node [BTree.node [e]])).toFun
+                  (BTree.node (forest.filterMap (fun ec => ec.1))))).sum := by
+  have hscale : ∀ (k : ℝ) (T : BTree),
+      (List.map
+          (fun forest =>
+            k * forest.foldr (fun ec acc => ec.2 * acc) (1 : ℝ)
+              * β.toFun
+                  (BTree.node (T :: forest.filterMap (fun ec => ec.1))))
+          (BTree.innerCutForest cs α.toFun)).sum
+        = k * (List.map
+            (fun forest =>
+              forest.foldr (fun ec acc => ec.2 * acc) (1 : ℝ)
+                * β.toFun
+                    (BTree.node (T :: forest.filterMap (fun ec => ec.1))))
+            (BTree.innerCutForest cs α.toFun)).sum := by
+    intro k T
+    induction BTree.innerCutForest cs α.toFun with
+    | nil => simp
+    | cons forest tail ih =>
+      simp only [List.map_cons, List.sum_cons, ih]; ring
+  rw [bSeriesConvAug_innerForest_cons]
+  rcases (order_le_one_iff e).mp he with rfl | rfl
+  · -- e = leaf
+    have hcut : (BTree.node [BTree.node [BTree.leaf]]).innerCut α.toFun =
+        [(none, α.toFun (BTree.node [BTree.node [BTree.leaf]])),
+         (some (BTree.node []), α.toFun (BTree.node [BTree.leaf])),
+         (some (BTree.node [BTree.node [BTree.leaf]]), 1),
+         (some (BTree.node [BTree.node []]), α.toFun BTree.leaf)] := by
+      simp [BTree.innerCut, BTree.innerCutForest]
+    rw [hcut]
+    simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
+      List.nil_append, List.sum_append, one_mul, AugSeries.shiftBy_node]
+    rw [hscale (α.toFun (BTree.node [BTree.leaf])) (BTree.node []),
+        hscale (α.toFun BTree.leaf) (BTree.node [BTree.node []])]
+    linarith
+  · -- e = node []
+    have hcut : (BTree.node [BTree.node [BTree.node []]]).innerCut α.toFun =
+        [(none, α.toFun (BTree.node [BTree.node [BTree.node []]])),
+         (some (BTree.node []), α.toFun (BTree.node [BTree.node []])),
+         (some (BTree.node [BTree.node []]), α.toFun (BTree.node [])),
+         (some (BTree.node [BTree.node [BTree.node []]]), 1)] := by
+      simp [BTree.innerCut, BTree.innerCutForest]
+    rw [hcut]
+    simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
+      List.nil_append, List.sum_append, one_mul, AugSeries.shiftBy_node]
+    rw [hscale (α.toFun (BTree.node [BTree.node []])) (BTree.node []),
+        hscale (α.toFun (BTree.node [])) (BTree.node [BTree.node []])]
+    linarith
+
+private theorem forestSum_cons_node_pair_depth_one_compact
+    (α β : AugSeries) (a b : BTree) (ha : a.order ≤ 1) (hb : b.order ≤ 1)
+    (cs : List BTree) :
+    forestSum α.toFun β (BTree.node [a, b] :: cs)
+      = α.toFun (BTree.node [a, b]) * forestSum α.toFun β cs
+        + α.toFun a * α.toFun b
+            * forestSum α.toFun (β.shiftBy (BTree.node [])) cs
+        + α.toFun b * forestSum α.toFun (β.shiftBy (BTree.node [a])) cs
+        + α.toFun a * forestSum α.toFun (β.shiftBy (BTree.node [b])) cs
+        + forestSum α.toFun (β.shiftBy (BTree.node [a, b])) cs := by
+  simpa [forestSum] using
+    forestSum_cons_node_pair_depth_one α β a b ha hb cs
+
+private theorem
+    forestSum_cons_node_singleton_node_singleton_depth_one_compact
+    (α β : AugSeries) (e : BTree) (he : e.order ≤ 1) (cs : List BTree) :
+    forestSum α.toFun β (BTree.node [BTree.node [e]] :: cs)
+      = α.toFun (BTree.node [BTree.node [e]]) * forestSum α.toFun β cs
+        + α.toFun (BTree.node [e])
+            * forestSum α.toFun (β.shiftBy (BTree.node [])) cs
+        + α.toFun e
+            * forestSum α.toFun (β.shiftBy (BTree.node [BTree.node []])) cs
+        + forestSum α.toFun (β.shiftBy (BTree.node [BTree.node [e]])) cs := by
+  simpa [forestSum] using
+    forestSum_cons_node_singleton_node_singleton_depth_one α β e he cs
+
+/-- Pointwise expansion of `bSeriesConvAug β γ` at a cons whose head is the
+depth-3 pair shape `BTree.node [a, b]` with `a, b` of order ≤ 1. -/
+private lemma bSeriesConvAug_node_cons_node_pair_depth_one_expand_compact
+    (β γ : AugSeries) (a b : BTree) (ha : a.order ≤ 1) (hb : b.order ≤ 1)
+    (xs : List BTree) :
+    bSeriesConvAug β γ (BTree.node (BTree.node [a, b] :: xs))
+      = β.toFun (BTree.node (BTree.node [a, b] :: xs)) * γ.emptyVal
+        + β.toFun (BTree.node [a, b]) * forestSum β.toFun γ xs
+        + β.toFun a * β.toFun b
+            * forestSum β.toFun (γ.shiftBy (BTree.node [])) xs
+        + β.toFun b * forestSum β.toFun (γ.shiftBy (BTree.node [a])) xs
+        + β.toFun a * forestSum β.toFun (γ.shiftBy (BTree.node [b])) xs
+        + forestSum β.toFun (γ.shiftBy (BTree.node [a, b])) xs := by
+  rw [bSeriesConvAug_node β γ (BTree.node [a, b] :: xs),
+      forestSum_cons_node_pair_depth_one β γ a b ha hb xs]
+  simp only [forestSum, AugSeries.shiftBy_node]
+  ring
+
+/-- Pointwise expansion of `bSeriesConvAug β γ` at a cons whose head is the
+depth-3 singleton-of-singleton shape `BTree.node [BTree.node [e]]` with
+`e.order ≤ 1`. -/
+private lemma
+    bSeriesConvAug_node_cons_node_singleton_node_singleton_depth_one_expand_compact
+    (β γ : AugSeries) (e : BTree) (he : e.order ≤ 1) (xs : List BTree) :
+    bSeriesConvAug β γ (BTree.node (BTree.node [BTree.node [e]] :: xs))
+      = β.toFun (BTree.node (BTree.node [BTree.node [e]] :: xs))
+            * γ.emptyVal
+        + β.toFun (BTree.node [BTree.node [e]]) * forestSum β.toFun γ xs
+        + β.toFun (BTree.node [e])
+            * forestSum β.toFun (γ.shiftBy (BTree.node [])) xs
+        + β.toFun e
+            * forestSum β.toFun (γ.shiftBy (BTree.node [BTree.node []])) xs
+        + forestSum β.toFun
+            (γ.shiftBy (BTree.node [BTree.node [e]])) xs := by
+  rw [bSeriesConvAug_node β γ (BTree.node [BTree.node [e]] :: xs),
+      forestSum_cons_node_singleton_node_singleton_depth_one β γ e he xs]
+  simp only [forestSum, AugSeries.shiftBy_node]
+  ring
+
 end ButcherTableau
