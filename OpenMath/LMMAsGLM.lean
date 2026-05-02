@@ -505,6 +505,72 @@ theorem toGLM_V_iter_step_y_last
     exact toGLM_V_iter_natAdd_eq_zero_of_le m q n hn k
   exact toGLM_V_step_y_of_hf_zero_last m _ hhf k hk1
 
+/-- §512 Phase D step 3 — companion-step operator on the y-half. Given a
+real-valued y-state `v : Fin s → ℝ`, produce the next y-state by shifting
+forward, except on the last row where we apply the LMM `−ρ`-coefficient
+combination. This is the real-valued companion-step extracted from the
+cycle 622/623 one-step / iterate bridges. -/
+noncomputable def toGLM_y_step (m : LMM s) (v : Fin s → ℝ) : Fin s → ℝ :=
+  fun k =>
+    if h : (k : ℕ) + 1 = s then
+      ∑ l, (-m.α (Fin.castSucc l)) * v l
+    else
+      v ⟨(k : ℕ) + 1, by have := k.isLt; omega⟩
+
+/-- §512 Phase D step 3 — one-step matching theorem. For `n ≥ s`, the
+y-half of `V^{n+1} q` equals the companion-step operator applied to the
+y-half of `V^n q`. -/
+theorem toGLM_y_half_step_eq (m : LMM s) (q : Fin (2 * s) → ℝ)
+    (n : ℕ) (hn : s ≤ n) :
+    toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+        fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n + 1] q)
+      = toGLM_y_step m
+          (toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+              fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)) := by
+  funext k
+  by_cases hk1 : (k : ℕ) + 1 = s
+  · -- last-row case
+    rw [Function.iterate_succ_apply']
+    show (∑ l, m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) l *
+        ((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) l)
+        = toGLM_y_step m
+            (toGLM_y_half
+              ((fun v : Fin (2 * s) → ℝ =>
+                  fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)) k
+    unfold toGLM_y_step
+    rw [dif_pos hk1]
+    exact toGLM_V_iter_step_y_last m q n hn k hk1
+  · -- shift case
+    rw [Function.iterate_succ_apply']
+    show (∑ l, m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) l *
+        ((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) l)
+        = toGLM_y_step m
+            (toGLM_y_half
+              ((fun v : Fin (2 * s) → ℝ =>
+                  fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)) k
+    unfold toGLM_y_step
+    rw [dif_neg hk1]
+    exact toGLM_V_iter_step_y_shift m q n hn k hk1
+
+/-- §512 Phase D step 3 — multi-step matching theorem. For `n ≥ s` and
+`j : ℕ`, the y-half of `V^{n+j} q` equals the `j`-th iterate of the
+companion-step operator applied to the y-half of `V^n q`. -/
+theorem toGLM_y_half_iter_eq (m : LMM s) (q : Fin (2 * s) → ℝ)
+    (n : ℕ) (hn : s ≤ n) (j : ℕ) :
+    toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+        fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n + j] q)
+      = (toGLM_y_step m)^[j]
+          (toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+              fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)) := by
+  induction j with
+  | zero => simp
+  | succ j ih =>
+    rw [Nat.add_succ, Function.iterate_succ_apply' (toGLM_y_step m)]
+    rw [← ih]
+    exact toGLM_y_half_step_eq m q (n + j) (by omega)
+
 /-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
 the stability-matrix entry collapses to the single stage resolvent factor.
 The surrounding `toGLM` blocks retain the literal §503 row/column shape. -/
