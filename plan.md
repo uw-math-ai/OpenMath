@@ -844,6 +844,9 @@ error bound for one specific scheme:
   `stabilityDefect`, `stabilityDefect_zero`, and `HasStabilityOrder`.
   Cycle 635 added the RK-side stability-defect bridge connecting that
   surface to the scalar RK stability function.
+  Cycle 636 added the LMM-side stability-defect bridge
+  (`LMM.nordsieckQ`, `LMM.toGLM_V_nordsieckQ_eq`,
+  `LMM.toGLM_stabilityDefect_zero` in `OpenMath/LMMAsGLM.lean`).
   Remaining §521 milestone is the LMM-side iff bridge
   `LMM.toGLM_isAStable_iff` (needs general-`s` charpoly factorisation).
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
@@ -966,6 +969,16 @@ error bound for one specific scheme:
   `ButcherTableau.toGLM_stabilityDefect_eq_zero_iff` in
   `OpenMath/RKAsGLM.lean`, connecting cycle 633's defect surface to the
   existing scalar stability function.
+- **Cycle 636 added the §521 LMM-side stability-defect bridge** —
+  `LMM.nordsieckQ` (the past-`y` indicator preconsistency vector),
+  the simp lemmas `nordsieckQ_castAdd`/`nordsieckQ_natAdd` and their
+  `qℂ` lifts `toGLM_qℂ_nordsieckQ_castAdd`/`toGLM_qℂ_nordsieckQ_natAdd`,
+  the standalone `V·q = q` lemma `toGLM_V_nordsieckQ_eq`, and the
+  headline `LMM.toGLM_stabilityDefect_zero` in
+  `OpenMath/LMMAsGLM.lean`. The cycle 614 first-subgoal proof of
+  `toGLM_isConsistent` was kept as-is — the new theorem lives in a
+  later section so a single-line refactor would create a forward
+  reference.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1020,6 +1033,10 @@ error bound for one specific scheme:
     Cycle 635 connected that surface to RK methods through
     `ButcherTableau.toGLM_stabilityDefect_apply` and the zero-defect
     specialization in `OpenMath/RKAsGLM.lean`.
+    Cycle 636 mirrored cycle 635 on the LMM side
+    (`LMM.nordsieckQ`, `LMM.toGLM_V_nordsieckQ_eq`,
+    `LMM.toGLM_stabilityDefect_zero` in `OpenMath/LMMAsGLM.lean`); the
+    next §521 milestone (the iff bridge) remains.
     Next milestones, in priority order:
     (1) prove the LMM-side iff bridge `LMM.toGLM_isAStable_iff` using
     the general-`s` charpoly factorisation

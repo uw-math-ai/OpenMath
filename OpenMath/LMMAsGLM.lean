@@ -1327,6 +1327,223 @@ theorem toGLM_isConvergent (m : LMM s)
     m.toGLM.IsConvergent :=
   ⟨m.toGLM_isConsistent hcon, m.toGLM_isStable hzs⟩
 
+/-! ## §521 — Stability defect for LMM as GLM -/
+
+/-- §510/§521 Nordsieck preconsistency vector for an LMM-as-GLM:
+`1` on past-`y` slots, `0` on past-`h·f` slots. Identical to the
+witness used in `toGLM_isConsistent`. -/
+noncomputable def nordsieckQ (s : ℕ) : Fin (2 * s) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin s => (1 : ℝ)) (fun _ : Fin s => (0 : ℝ))
+    (Fin.cast (Nat.two_mul s) k)
+
+@[simp] theorem nordsieckQ_castAdd (k : Fin s) :
+    nordsieckQ s (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) = 1 := by
+  unfold nordsieckQ
+  have hcast :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) =
+        Fin.castAdd s k := by
+    ext; simp
+  rw [hcast, Fin.addCases_left]
+
+@[simp] theorem nordsieckQ_natAdd (k : Fin s) :
+    nordsieckQ s (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) = 0 := by
+  unfold nordsieckQ
+  have hcast :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) =
+        Fin.natAdd s k := by
+    ext; simp
+  rw [hcast, Fin.addCases_right]
+
+@[simp] theorem toGLM_qℂ_nordsieckQ_castAdd (k : Fin s) :
+    GeneralLinearMethod.qℂ (nordsieckQ s)
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) = (1 : ℂ) := by
+  unfold GeneralLinearMethod.qℂ
+  rw [nordsieckQ_castAdd]
+  norm_num
+
+@[simp] theorem toGLM_qℂ_nordsieckQ_natAdd (k : Fin s) :
+    GeneralLinearMethod.qℂ (nordsieckQ s)
+      (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) = (0 : ℂ) := by
+  unfold GeneralLinearMethod.qℂ
+  rw [nordsieckQ_natAdd]
+  norm_num
+
+/-- §521 — `V · q = q` for the Nordsieck preconsistency vector.
+Extracted from cycle 614's `toGLM_isConsistent` first subgoal. -/
+theorem toGLM_V_nordsieckQ_eq (m : LMM s) (hm : m.IsConsistent)
+    (k : Fin (2 * s)) :
+    ∑ l, m.toGLM.V k l * nordsieckQ s l = nordsieckQ s k := by
+  -- Reindex Fin (2*s) → Fin (s+s) and split into past-y / past-f halves.
+  have hreindex :
+      (∑ l : Fin (2 * s), m.toGLM.V k l * nordsieckQ s l)
+        = (∑ l : Fin s, m.toGLM.V k (Fin.cast (Nat.two_mul s).symm
+              (Fin.castAdd s l))) := by
+    have stepA : (∑ l : Fin (2 * s), m.toGLM.V k l * nordsieckQ s l)
+          = ∑ l : Fin (2 * s),
+              m.toGLM.V k (Fin.cast (Nat.two_mul s).symm
+                (Fin.cast (Nat.two_mul s) l)) *
+                Fin.addCases (motive := fun _ => ℝ)
+                  (fun _ : Fin s => (1 : ℝ))
+                  (fun _ : Fin s => (0 : ℝ))
+                  (Fin.cast (Nat.two_mul s) l) := by
+      apply Finset.sum_congr rfl
+      intro l _
+      have hcast : Fin.cast (Nat.two_mul s).symm
+              (Fin.cast (Nat.two_mul s) l) = l := by ext; simp
+      rw [hcast]
+      rfl
+    rw [stepA]
+    rw [Fin.sum_congr' (M := ℝ)
+      (fun l : Fin (s + s) =>
+        m.toGLM.V k (Fin.cast (Nat.two_mul s).symm l) *
+          Fin.addCases (motive := fun _ => ℝ)
+            (fun _ : Fin s => (1 : ℝ)) (fun _ : Fin s => (0 : ℝ)) l)
+      (Nat.two_mul s)]
+    rw [Fin.sum_univ_add]
+    simp only [Fin.addCases_left, Fin.addCases_right, mul_one, mul_zero,
+      Finset.sum_const_zero, add_zero]
+  rw [hreindex]
+  -- Case-split on (Fin.cast _ k) via addCases.
+  set kc : Fin (s + s) := Fin.cast (Nat.two_mul s) k with hkc_def
+  refine kc.addCases (motive := fun kc' =>
+      Fin.cast (Nat.two_mul s) k = kc' →
+      (∑ l : Fin s, m.toGLM.V k
+            (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l))) =
+        nordsieckQ s k)
+    ?_ ?_ rfl
+  · -- past-y row
+    intro j hkc_eq
+    have hqk : nordsieckQ s k = 1 := by
+      unfold nordsieckQ
+      rw [hkc_eq, Fin.addCases_left]
+    rw [hqk]
+    by_cases hj : (j : ℕ) + 1 = s
+    · -- last-y row: V[k, l] = -m.α (Fin.castSucc l)
+      have hVrow : ∀ l : Fin s,
+          m.toGLM.V k (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+            -m.α (Fin.castSucc l) := by
+        intro l
+        show Fin.addCases (motive := fun _ => ℝ)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then
+              Fin.addCases (motive := fun _ => ℝ)
+                  (fun q : Fin s => -m.α (Fin.castSucc q))
+                  (fun q : Fin s => m.β (Fin.castSucc q))
+                  (Fin.cast (Nat.two_mul s)
+                    (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)))
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = (j' : ℕ) + 1 then 1 else 0)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then 0
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = s + (j' : ℕ) + 1 then 1 else 0)
+            (Fin.cast (Nat.two_mul s) k) = -m.α (Fin.castSucc l)
+        rw [hkc_eq]
+        rw [Fin.addCases_left]
+        rw [if_pos hj]
+        have hcast :
+            Fin.cast (Nat.two_mul s)
+                (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+              Fin.castAdd s l := by ext; simp
+        rw [hcast, Fin.addCases_left]
+      simp_rw [hVrow]
+      rw [Finset.sum_neg_distrib]
+      have h1 := hm.sum_α_eq_zero
+      rw [m.rho_one, Fin.sum_univ_castSucc, m.normalized] at h1
+      linarith
+    · -- shift-y row
+      have hVrow : ∀ l : Fin s,
+          m.toGLM.V k (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+            if (l : ℕ) = (j : ℕ) + 1 then (1 : ℝ) else 0 := by
+        intro l
+        show Fin.addCases (motive := fun _ => ℝ)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then _
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = (j' : ℕ) + 1 then 1 else 0)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then 0
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = s + (j' : ℕ) + 1 then 1 else 0)
+            (Fin.cast (Nat.two_mul s) k) = _
+        rw [hkc_eq]
+        rw [Fin.addCases_left]
+        rw [if_neg hj]
+        have hval : (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+            = (l : ℕ) := by simp [Fin.castAdd]
+        rw [hval]
+      simp_rw [hVrow]
+      have hjlt : (j : ℕ) + 1 < s := by
+        rcases lt_or_eq_of_le (Nat.succ_le_of_lt j.isLt) with h | h
+        · exact h
+        · exact absurd h hj
+      have hexists : (⟨(j : ℕ) + 1, hjlt⟩ : Fin s) ∈ (Finset.univ : Finset (Fin s)) :=
+        Finset.mem_univ _
+      rw [Finset.sum_eq_single (⟨(j : ℕ) + 1, hjlt⟩ : Fin s)]
+      · simp
+      · intro b _ hb
+        have : (b : ℕ) ≠ (j : ℕ) + 1 := by
+          intro heq
+          apply hb
+          ext; exact heq
+        rw [if_neg this]
+      · intro h; exact absurd hexists h
+  · -- past-f row
+    intro j hkc_eq
+    have hqk : nordsieckQ s k = 0 := by
+      unfold nordsieckQ
+      rw [hkc_eq, Fin.addCases_right]
+    rw [hqk]
+    by_cases hj : (j : ℕ) + 1 = s
+    · -- last-f row
+      have hVrow : ∀ l : Fin s,
+          m.toGLM.V k (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+            (0 : ℝ) := by
+        intro l
+        show Fin.addCases (motive := fun _ => ℝ)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then _
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = (j' : ℕ) + 1 then 1 else 0)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then 0
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = s + (j' : ℕ) + 1 then 1 else 0)
+            (Fin.cast (Nat.two_mul s) k) = _
+        rw [hkc_eq]
+        rw [Fin.addCases_right]
+        rw [if_pos hj]
+      simp_rw [hVrow]
+      simp
+    · -- shift-f row
+      have hVrow : ∀ l : Fin s,
+          m.toGLM.V k (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+            (0 : ℝ) := by
+        intro l
+        show Fin.addCases (motive := fun _ => ℝ)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then _
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = (j' : ℕ) + 1 then 1 else 0)
+            (fun j' : Fin s => if (j' : ℕ) + 1 = s then 0
+              else if (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+                  = s + (j' : ℕ) + 1 then 1 else 0)
+            (Fin.cast (Nat.two_mul s) k) = _
+        rw [hkc_eq]
+        rw [Fin.addCases_right]
+        rw [if_neg hj]
+        have hval : (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l) : Fin (2*s)).val
+            = (l : ℕ) := by simp [Fin.castAdd]
+        rw [hval, if_neg]
+        omega
+      simp_rw [hVrow]
+      simp
+
+/-- §521 — Headline mirror of `ButcherTableau.toGLM_stabilityDefect_zero`:
+the stability defect at `z = 0` vanishes on the Nordsieck preconsistency
+vector. -/
+theorem toGLM_stabilityDefect_zero (m : LMM s) (hm : m.IsConsistent) :
+    m.toGLM.stabilityDefect (nordsieckQ s) 0 = 0 := by
+  apply GeneralLinearMethod.stabilityDefect_zero
+  intro k
+  exact m.toGLM_V_nordsieckQ_eq hm k
+
 end LMM
 
 /-- §521 — Backward Euler is A-stable in the GLM sense after the §503
