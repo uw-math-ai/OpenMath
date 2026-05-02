@@ -160,6 +160,47 @@ theorem stabilityMatrix_zero (m : GeneralLinearMethod s r) :
     m.stabilityMatrix 0 = m.Vℂ := by
   simp [stabilityMatrix]
 
+/-! ## §521 — Stability Order
+
+A method has stability order `p` if `M(z)` agrees with `exp(z) • V` to
+order `p + 1` near `z = 0`: there exist `C ≥ 0` and `δ > 0` such that
+`‖M(z) - Complex.exp z • V‖ ≤ C * ‖z‖ ^ (p + 1)` for all `‖z‖ < δ`.
+
+For RK methods (where `V = 1`) this collapses to the standard scalar
+stability-order condition `R(z) - exp z = O(z^{p+1})`. -/
+
+attribute [local instance] Matrix.normedAddCommGroup
+
+/-- Butcher §521 — matrix-level stability order. -/
+def IsStabilityOrder (m : GeneralLinearMethod s r) (p : ℕ) : Prop :=
+  ∃ C δ : ℝ, 0 < δ ∧ 0 ≤ C ∧
+    ∀ z : ℂ, ‖z‖ < δ →
+      ‖m.stabilityMatrix z - Complex.exp z • m.Vℂ‖ ≤ C * ‖z‖ ^ (p + 1)
+
+/-- Stability order is monotone in `p`: a higher-order method
+satisfies every weaker order condition. The proof shrinks `δ` to
+`min δ 1` so `‖z‖ ^ (p+1) ≤ ‖z‖ ^ (q+1)` for `q ≤ p`. -/
+theorem IsStabilityOrder.mono (m : GeneralLinearMethod s r)
+    {p q : ℕ} (hpq : q ≤ p) (hp : m.IsStabilityOrder p) :
+    m.IsStabilityOrder q := by
+  obtain ⟨C, δ, hδ, hC, hbound⟩ := hp
+  refine ⟨C, min δ 1, lt_min hδ one_pos, hC, ?_⟩
+  intro z hz
+  have hz_lt_δ : ‖z‖ < δ := lt_of_lt_of_le hz (min_le_left _ _)
+  have hz_le_one : ‖z‖ ≤ 1 := le_of_lt (lt_of_lt_of_le hz (min_le_right _ _))
+  have hz_nn : 0 ≤ ‖z‖ := norm_nonneg _
+  have hpow : ‖z‖ ^ (p + 1) ≤ ‖z‖ ^ (q + 1) :=
+    pow_le_pow_of_le_one hz_nn hz_le_one (Nat.add_le_add_right hpq 1)
+  exact (hbound z hz_lt_δ).trans
+    (mul_le_mul_of_nonneg_left hpow hC)
+
+/-- Sanity: every GLM has stability order `0`. The matrix
+`g z := m.stabilityMatrix z - exp z • m.Vℂ` is complex-analytic in
+`z` near `0` and vanishes at `z = 0`, hence is `O(z)`. -/
+theorem isStabilityOrder_zero (m : GeneralLinearMethod s r) :
+    m.IsStabilityOrder 0 := by
+  sorry
+
 /-! ## Stage Solvability by Contraction -/
 
 /-- The scalar GLM stage self-map. Fixed points are stage vectors satisfying
