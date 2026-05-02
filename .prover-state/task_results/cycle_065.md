@@ -192,10 +192,28 @@ For cycle 066 (§406D recurrence helpers):
    established. The `localTruncationError_bound_nonauto` cycle 065
    delivered should be a drop-in replacement for the autonomous
    `localTruncationError_bound` in the recurrence chain.
-3. Aristotle batch: cycle 065 deferred Aristotle submission to
-   keep the manual lift small; cycle 066 should batch-submit the
-   §406D recurrence helpers as alternative proofs (CLAUDE.md
+3. **Aristotle: check the cycle 065 submission first.** Cycle 065
+   submitted a single-file project `lift_helpers_C_D.lean`
+   containing alternative-proof targets for `residual_bound_nonauto`
+   and `deriv_diff_bound_nonauto` (project ID
+   `55543850-b9f1-4dab-9d34-e65f732f030c`, see
+   `.prover-state/aristotle_submissions/cycle_065/project_ids.txt`).
+   Per CLAUDE.md cadence, check ONCE at start of cycle 066. If the
+   Aristotle proofs are obviously cleaner than the manual ones,
+   examine and consider replacing — but per the cycle 065 strategy,
+   keep the manual proofs unless the diff is clear.
+4. After processing the cycle 065 Aristotle results, batch-submit
+   the §406D recurrence helpers as alternative proofs (CLAUDE.md
    cadence: submit, sleep 30 min, check at start of cycle 067).
+5. Cycle 065 deferred submission of the third main helper
+   (`LinearMultistepMethod.localTruncationError_bound_nonauto`):
+   bundling LinearMultistepMethod / IsConsistent /
+   localTruncationError_decomposition / α-β-sum wrappers into a
+   single self-contained file is ~500 LOC of duplication for low
+   expected payoff, given the manual proof is mechanical
+   composition of `α/β-sum-bound` helpers + `abs_add_le` + `ring`.
+   Cycle 066 should re-evaluate whether to submit this if the
+   cycle 065 Aristotle results suggest leverage.
 
 For cycle 067: cluster 3 (cycle 057–061 squeeze helpers, ~100
 lines).
