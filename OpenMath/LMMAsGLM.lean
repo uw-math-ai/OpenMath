@@ -806,6 +806,124 @@ theorem toGLM_stabilityMatrix_natAdd_last_apply (m : LMM s) (z : ℂ)
   rw [hV, hB]
   ring
 
+/-- §521 prep — the `1×1` `A`-block of the LMM-as-GLM embedding is
+the implicit-stage coefficient `m.β (Fin.last s)`, lifted to ℂ. -/
+@[simp] theorem toGLM_Aℂ_apply (m : LMM s) :
+    m.toGLM.Aℂ 0 0 = ((m.β (Fin.last s) : ℝ) : ℂ) := by
+  show ((m.toGLM.A 0 0 : ℝ) : ℂ) = _
+  rw [toGLM_A_apply]
+
+/-- §521 prep — the `1×1` GLM resolvent collapses to a scalar
+inverse in `z` and `m.β (Fin.last s)`. -/
+theorem toGLM_resolvent_apply (m : LMM s) (z : ℂ) :
+    (((1 : Matrix (Fin 1) (Fin 1) ℂ) - z • m.toGLM.Aℂ)⁻¹ 0 0)
+      = 1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) := by
+  have hsub : (1 : Matrix (Fin 1) (Fin 1) ℂ) - z • m.toGLM.Aℂ =
+      !![1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)] := by
+    ext i j
+    fin_cases i; fin_cases j
+    show (1 : ℂ) - z * m.toGLM.Aℂ 0 0 = _
+    rw [toGLM_Aℂ_apply]
+    simp
+  rw [hsub, Matrix.inv_def]
+  simp [Matrix.adjugate_fin_one]
+
+/-- §521 prep — past-`y` half of the `Uℂ` block: the complex-lifted
+LMM-as-GLM `U` row reads off `-m.α (Fin.castSucc k)` on past-`y` slots. -/
+@[simp] theorem toGLM_Uℂ_castAdd (m : LMM s) (k : Fin s) :
+    m.toGLM.Uℂ 0 (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k))
+      = ((-m.α (Fin.castSucc k) : ℝ) : ℂ) := by
+  show ((m.toGLM.U 0
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) : ℝ) : ℂ) = _
+  simp only [toGLM]
+  have hcol :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) =
+        Fin.castAdd s k := by
+    ext; simp
+  rw [hcol, Fin.addCases_left]
+
+/-- §521 prep — past-`h*f` half of the `Uℂ` block: the complex-lifted
+LMM-as-GLM `U` row reads off `m.β (Fin.castSucc k)` on past-`h*f` slots. -/
+@[simp] theorem toGLM_Uℂ_natAdd (m : LMM s) (k : Fin s) :
+    m.toGLM.Uℂ 0 (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k))
+      = ((m.β (Fin.castSucc k) : ℝ) : ℂ) := by
+  show ((m.toGLM.U 0
+      (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) : ℝ) : ℂ) = _
+  simp only [toGLM]
+  have hcol :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) =
+        Fin.natAdd s k := by
+    ext; simp
+  rw [hcol, Fin.addCases_right]
+
+/-- §521 — closed scalar entry on (last past-`y` row, past-`y` column). -/
+theorem toGLM_stabilityMatrix_castAdd_last_castAdd_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+      ((-m.α (Fin.castSucc l) : ℝ) : ℂ) +
+        z * ((m.β (Fin.last s) : ℝ) : ℂ) *
+          (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+          ((-m.α (Fin.castSucc l) : ℝ) : ℂ) := by
+  rw [toGLM_stabilityMatrix_castAdd_last_apply m z j hj]
+  rw [toGLM_resolvent_apply, toGLM_Uℂ_castAdd]
+  have hV : m.toGLM.Vℂ
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+        ((-m.α (Fin.castSucc l) : ℝ) : ℂ) := by
+    show ((m.toGLM.V
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) : ℝ) : ℂ) = _
+    rw [toGLM_V_castAdd_last_castAdd_apply m j hj]
+  rw [hV]
+
+/-- §521 — closed scalar entry on (last past-`y` row, past-`h*f` column). -/
+theorem toGLM_stabilityMatrix_castAdd_last_natAdd_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+      ((m.β (Fin.castSucc l) : ℝ) : ℂ) +
+        z * ((m.β (Fin.last s) : ℝ) : ℂ) *
+          (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+          ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+  rw [toGLM_stabilityMatrix_castAdd_last_apply m z j hj]
+  rw [toGLM_resolvent_apply, toGLM_Uℂ_natAdd]
+  have hV : m.toGLM.Vℂ
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+      (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+        ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+    show ((m.toGLM.V
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) : ℝ) : ℂ) = _
+    rw [toGLM_V_castAdd_last_natAdd_apply m j hj]
+  rw [hV]
+
+/-- §521 — closed scalar entry on (last past-`h*f` row, past-`y` column). -/
+theorem toGLM_stabilityMatrix_natAdd_last_castAdd_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+      z * (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+        ((-m.α (Fin.castSucc l) : ℝ) : ℂ) := by
+  rw [toGLM_stabilityMatrix_natAdd_last_apply m z j hj]
+  rw [toGLM_resolvent_apply, toGLM_Uℂ_castAdd]
+
+/-- §521 — closed scalar entry on (last past-`h*f` row, past-`h*f` column). -/
+theorem toGLM_stabilityMatrix_natAdd_last_natAdd_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+      z * (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+        ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+  rw [toGLM_stabilityMatrix_natAdd_last_apply m z j hj]
+  rw [toGLM_resolvent_apply, toGLM_Uℂ_natAdd]
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
