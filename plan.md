@@ -792,8 +792,11 @@ error bound for one specific scheme:
   honest `IsConsistent` predicate with first-derivative compatibility in
   `OpenMath/GeneralLinearMethod.lean`, plus RK sanity checks
   `toGLM_isPreconsistent` / `toGLM_isStable` / `toGLM_isConsistent` in
-  `OpenMath/RKAsGLM.lean`. The consistency / convergence chain
-  (§512–§515) remains open.
+  `OpenMath/RKAsGLM.lean`. Cycle 614 added the matching LMM sanity
+  check `LMM.toGLM_isConsistent` in `OpenMath/LMMAsGLM.lean` with the
+  Nordsieck `q / q'` witnesses (`q` = past-y indicator,
+  `q' j = j` on past-y / `1` on past-f). The consistency / convergence
+  chain (§512–§515) remains open.
 - [ ] **§511 Covariance of methods** under the equivalence transformation
   of §501.
 - [ ] **§512 Definition of convergence**.
@@ -876,6 +879,12 @@ error bound for one specific scheme:
   from `True` placeholder to the honest preconsistency +
   first-derivative compatibility predicate, with
   `ButcherTableau.toGLM_isConsistent` as the RK sanity check.
+- **Cycle 614 closed the §510 LMM sanity check** — `LMM.toGLM_isConsistent`
+  in `OpenMath/LMMAsGLM.lean` proves every consistent LMM embeds as a
+  §510-consistent GLM. Witnesses encode the Nordsieck `y / h·y'` content:
+  `q` is the past-y indicator (1 on past-y slots, 0 on past-h·f), and
+  `q' j = (j : ℝ)` on past-y, `1` on past-h·f. Closes the symmetric
+  §510 story before the §512–§515 convergence chain.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
