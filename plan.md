@@ -133,13 +133,13 @@ codebase.
   Adams / BDF infrastructure.
 
 ### §25 Taylor Series Methods
-- [~] **§250 Introduction to Taylor series methods** — fixed-order
+- [x] **§250 Introduction to Taylor series methods** — fixed-order
   truncation of the Taylor expansion of `y(x+h)` (new file
   `OpenMath/TaylorSeriesMethod.lean`). Cycle 606 landed the abstract
   `TaylorSeriesMethod.increment p D`, the `OneStepMethod` packaging,
   the `increment_one` / `increment_two` computations, and
   `isConsistent_of_first_derivative` (consistency for all `p ≥ 1` once
-  `D 1 = f`).
+  `D 1 = f`), closing the introductory Taylor-series method target.
 - [ ] **§251 Manipulation of power series** — Cauchy product / power-series
   ring lemmas (likely Mathlib re-export).
 - [ ] **§253 Other methods using higher derivatives** — Obreshkov-style
@@ -301,8 +301,9 @@ codebase.
   (implicit midpoint), 2-stage and 3-stage all proved symplectic
   (`rkGaussLegendre1_isSymplectic`, `rkGaussLegendre2_isSymplectic`,
   `rkGaussLegendre3_isSymplectic`).
-- [ ] **§372 Order conditions** — symplectic order conditions
-  (consequence of `M = 0` plus the standard order conditions; minor).
+- [x] **§372 Order conditions** — symplectic simplifying column identity
+  `∑ᵢ bᵢ Aᵢⱼ = bⱼ(1 - cⱼ)` proved as
+  `IsSymplectic.bA_col_eq` in `OpenMath/SymplecticRK.lean` (cycle 607).
 - [ ] **§373 Experiments with symplectic methods** — informal.
 
 ### §38 Algebraic Properties of Runge–Kutta Methods *(largest gap inside Ch 3 — Butcher's namesake)*
@@ -881,47 +882,33 @@ error bound for one specific scheme:
    file `OpenMath/LinearODE.lean`. `y(x) = exp((x − x₀) A) y₀` as a
    thin re-export of Mathlib `Matrix.exp` plus `Matrix.exp_add` for
    commuting matrices.
-7. **Butcher §250 — Taylor series methods.** New file
-   `OpenMath/TaylorSeriesMethod.lean`. Fixed-order truncation of the
-   Taylor expansion of `y(x+h)`; consistency and order from existing
-   `OneStepConvergence.lean` machinery. **In progress (cycle 606)**:
-   abstract `increment p D`, `OneStepMethod` packaging,
-   `increment_one`, `increment_two`, and
-   `isConsistent_of_first_derivative` all landed and proved (no live
-   sorrys). Remaining follow-up: concrete higher-derivative chains
-   `D k` for specific `f`, which belong to §254 (item is
-   independently in this queue under the chapter listing).
-8. **Butcher §341 — Solvability of implicit RK equations.** Thin
+7. **Butcher §341 — Solvability of implicit RK equations.** Thin
     wrapper over Mathlib `ContractingWith` proving stage solvability
     when `h · L · max_i Σ_j |A_{ij}| < 1`. Likely lives in
     `OpenMath/RungeKutta.lean`.
-9. **Butcher §215 — Asymptotic error formula for the Euler method.**
+8. **Butcher §215 — Asymptotic error formula for the Euler method.**
     Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
     ODE. Extends `OpenMath/EulerConvergence.lean`.
-10. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
+9. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
     Same template as §334. Extends `OpenMath/EmbeddedRK.lean`.
-11. **Butcher §463 — Milne device for local error estimation.** New
+10. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-12. **Butcher §520–§522 — Stability matrix of a GLM and the
+11. **Butcher §520–§522 — Stability matrix of a GLM and the
     Butcher–Chipman conjecture (outline).** Extends the GLM file family.
     Stability matrix `M(z) := V + z B (I − z A)⁻¹ U`, Padé-like
     conditions on `M(z)`, outline of order of `M(z)` as approximation to
     `exp(z) · I`.
-13. **Butcher §54 — DIMSIM types and ARK methods.** New file
+12. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
-14. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+13. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
     `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
     property F.
-15. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+14. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
     §365 (effective order definition / DESIRE) plus §389 algebraic
     interpretation. Builds on Current Target.
-16. **Butcher §372 — Symplectic order conditions.** Short corollary in
-    `OpenMath/SymplecticRK.lean`: an `IsSymplectic` method satisfying
-    order-`p` conditions automatically satisfies the symplectic
-    order-`p` conditions. Trivial follow-up to §370A.
-17. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+15. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
 

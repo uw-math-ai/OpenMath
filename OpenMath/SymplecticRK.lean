@@ -280,4 +280,47 @@ theorem rkGaussLegendre3_isSymplectic : rkGaussLegendre3.IsSymplectic := by
   fin_cases i <;> fin_cases j <;>
     simp [symplecticDefect, rkGaussLegendre3] <;> nlinarith [sqrt15_sq']
 
+/-! ## §372 — Symplectic simplifying assumption -/
+
+/-- **§372 — Symplectic simplifying assumption.**
+A symplectic, consistent Runge–Kutta method automatically satisfies the column
+identity `∑ᵢ bᵢ Aᵢⱼ = bⱼ (1 − cⱼ)`. This is the reason symplectic order conditions
+collapse: many of the standard order conditions become consequences of the others
+under `M = 0`. -/
+theorem IsSymplectic.bA_col_eq {s : ℕ} {t : ButcherTableau s}
+    (hSymp : t.IsSymplectic) (hCons : t.IsConsistent) :
+    ∀ j : Fin s, (∑ i, t.b i * t.A i j) = t.b j * (1 - t.c j) := by
+  intro j
+  have hdefect :
+      ∀ i, t.b i * t.A i j + t.b j * t.A j i - t.b i * t.b j = 0 := by
+    intro i
+    simpa [symplecticDefect] using hSymp i j
+  have hsum :
+      (∑ i, (t.b i * t.A i j + t.b j * t.A j i - t.b i * t.b j)) = 0 :=
+    Finset.sum_eq_zero (fun i _ => hdefect i)
+  have hsplit :
+      (∑ i, (t.b i * t.A i j + t.b j * t.A j i - t.b i * t.b j))
+        = (∑ i, t.b i * t.A i j)
+          + t.b j * (∑ i, t.A j i)
+          - t.b j * (∑ i, t.b i) := by
+    rw [Finset.sum_sub_distrib, Finset.sum_add_distrib]
+    rw [show (∑ i, t.b j * t.A j i) = t.b j * (∑ i, t.A j i) from
+      (Finset.mul_sum (s := Finset.univ) (f := fun i => t.A j i) (a := t.b j)).symm]
+    rw [show (∑ i, t.b i * t.b j) = t.b j * (∑ i, t.b i) from by
+      rw [show (fun i => t.b i * t.b j) = (fun i => t.b j * t.b i) from
+        funext (fun i => by ring)]
+      exact (Finset.mul_sum (s := Finset.univ) (f := fun i => t.b i) (a := t.b j)).symm]
+  have hrowsum : (∑ i, t.A j i) = t.c j := (hCons.row_sum j).symm
+  have hwsum : (∑ i, t.b i) = 1 := hCons.weights_sum
+  rw [hrowsum, hwsum] at hsplit
+  calc
+    (∑ i, t.b i * t.A i j) = t.b j - t.b j * t.c j := by
+      linarith [hsum, hsplit]
+    _ = t.b j * (1 - t.c j) := by ring
+
+theorem rkGaussLegendre1_bA_col :
+    ∀ j, (∑ i, rkGaussLegendre1.b i * rkGaussLegendre1.A i j)
+      = rkGaussLegendre1.b j * (1 - rkGaussLegendre1.c j) :=
+  rkGaussLegendre1_isSymplectic.bA_col_eq rkGaussLegendre1_consistent
+
 end ButcherTableau
