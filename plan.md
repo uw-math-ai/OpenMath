@@ -133,9 +133,13 @@ codebase.
   Adams / BDF infrastructure.
 
 ### §25 Taylor Series Methods
-- [ ] **§250 Introduction to Taylor series methods** — fixed-order
+- [~] **§250 Introduction to Taylor series methods** — fixed-order
   truncation of the Taylor expansion of `y(x+h)` (new file
-  `OpenMath/TaylorSeriesMethod.lean`).
+  `OpenMath/TaylorSeriesMethod.lean`). Cycle 606 landed the abstract
+  `TaylorSeriesMethod.increment p D`, the `OneStepMethod` packaging,
+  the `increment_one` / `increment_two` computations, and
+  `isConsistent_of_first_derivative` (consistency for all `p ≥ 1` once
+  `D 1 = f`).
 - [ ] **§251 Manipulation of power series** — Cauchy product / power-series
   ring lemmas (likely Mathlib re-export).
 - [ ] **§253 Other methods using higher derivatives** — Obreshkov-style
@@ -826,8 +830,16 @@ error bound for one specific scheme:
   below and small low-priority survey items.
 - **Highest-value gaps inside the existing chapters:**
   - §38 Algebraic Properties / Butcher group (Butcher's namesake topic;
-    medium-sized).
+    medium-sized). **Paused as of cycle 606**: six consecutive cycles
+    on `bSeriesConvAug` unital associativity stalled on the
+    `cut_assoc` Hopf-algebra identity (see
+    `.prover-state/issues/section386aug_strong_induction_obstruction.md`).
+    Resume only when there is a structured plan for that identity, not
+    by adding more depth-ladder shapes.
   - §45 One-Leg Methods and G-stability (medium-sized).
+- **Cycle 606 pivot to §250 Taylor series methods** — abstract Taylor
+  increment, `OneStepMethod` packaging, order-1 / order-2 reductions,
+  and consistency theorem all landed in `OpenMath/TaylorSeriesMethod.lean`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   completely open and the part of Butcher that is not duplicated
   elsewhere.
@@ -872,7 +884,13 @@ error bound for one specific scheme:
 7. **Butcher §250 — Taylor series methods.** New file
    `OpenMath/TaylorSeriesMethod.lean`. Fixed-order truncation of the
    Taylor expansion of `y(x+h)`; consistency and order from existing
-   `OneStepConvergence.lean` machinery.
+   `OneStepConvergence.lean` machinery. **In progress (cycle 606)**:
+   abstract `increment p D`, `OneStepMethod` packaging,
+   `increment_one`, `increment_two`, and
+   `isConsistent_of_first_derivative` all landed and proved (no live
+   sorrys). Remaining follow-up: concrete higher-derivative chains
+   `D k` for specific `f`, which belong to §254 (item is
+   independently in this queue under the chapter listing).
 8. **Butcher §341 — Solvability of implicit RK equations.** Thin
     wrapper over Mathlib `ContractingWith` proving stage solvability
     when `h · L · max_i Σ_j |A_{ij}| < 1`. Likely lives in
