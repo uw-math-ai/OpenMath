@@ -842,15 +842,8 @@ error bound for one specific scheme:
   `trapezoidalRule_toGLM_isAStable`, and `bdf2_toGLM_isAStable`.
   Cycle 633 added the GLM stability-order surface with `qℂ`,
   `stabilityDefect`, `stabilityDefect_zero`, and `HasStabilityOrder`.
-  Cycle 634 isolated the structural pieces of the LMM-side iff bridge:
-  `LMM.toGLM_stabilityMatrix_cross_block_zero` and
-  `LMM.toGLM_stabilityMatrix_natAdd_natAdd_shift` (both sorry-free)
-  show the §503 GLM stability matrix is block-lower-triangular with a
-  strict shift register on the non-stage past-h·f rows. The headline
-  `LMM.toGLM_isAStable_iff` is in place with both directions reduced
-  to `LMM.toGLM_stabilityMatrix_charpoly_factor`, which remains the
-  one open `sorry` (parametric-`s` lift of the cycle 632 `s = 2`
-  block-determinant computation).
+  Remaining §521 milestone is the LMM-side iff bridge
+  `LMM.toGLM_isAStable_iff` (needs general-`s` charpoly factorisation).
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
   of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
   out of scope for this cycle.)
