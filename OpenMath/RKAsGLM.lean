@@ -74,6 +74,44 @@ theorem toGLM_stabilityMatrix (t : ButcherTableau s) (z : ℂ) :
   rw [hA]
   simp [stabilityFunction]
 
+private lemma charpoly_fin_one_const (a : ℂ) :
+    Matrix.charpoly
+        (((fun (_ : Fin 1) (_ : Fin 1) => a) :
+          Matrix (Fin 1) (Fin 1) ℂ)) =
+      Polynomial.X - Polynomial.C a := by
+  rw [Matrix.charpoly]
+  simp [Matrix.charmatrix]
+
+private lemma charpoly_fin_one_const_isRoot_iff (a μ : ℂ) :
+    (Matrix.charpoly
+        (((fun (_ : Fin 1) (_ : Fin 1) => a) :
+          Matrix (Fin 1) (Fin 1) ℂ))).IsRoot μ ↔ μ = a := by
+  rw [charpoly_fin_one_const]
+  simp [Polynomial.IsRoot, sub_eq_zero]
+
+/-- An RK method is A-stable in the GLM sense iff its stability
+function satisfies `‖R(z)‖ ≤ 1` on the closed left half-plane. -/
+theorem toGLM_isAStable_iff (t : ButcherTableau s) :
+    t.toGLM.IsAStable ↔
+      ∀ z : ℂ, z.re ≤ 0 → ‖t.stabilityFunction z‖ ≤ 1 := by
+  constructor
+  · intro h z hz
+    exact h z hz (t.stabilityFunction z) (by
+      rw [toGLM_stabilityMatrix]
+      change (Matrix.charpoly
+          (((fun (_ : Fin 1) (_ : Fin 1) => t.stabilityFunction z) :
+            Matrix (Fin 1) (Fin 1) ℂ))).IsRoot (t.stabilityFunction z)
+      rw [charpoly_fin_one_const_isRoot_iff])
+  · intro h z hz μ hμ
+    have hroot :
+        (Matrix.charpoly
+          (((fun (_ : Fin 1) (_ : Fin 1) => t.stabilityFunction z) :
+            Matrix (Fin 1) (Fin 1) ℂ))).IsRoot μ := by
+      simpa [toGLM_stabilityMatrix] using hμ
+    have hμeq : μ = t.stabilityFunction z :=
+      (charpoly_fin_one_const_isRoot_iff (t.stabilityFunction z) μ).mp hroot
+    simpa [hμeq] using h z hz
+
 /-- The GLM stage map of `t.toGLM` at the constant input `yIn ≡ y₀`
 matches the standard RK stage equation `Y_i = y₀ + h · ∑ A_ij f(Y_j)`. -/
 theorem toGLM_stageMap_eq (t : ButcherTableau s) (f : ℝ → ℝ) (h y₀ : ℝ)
@@ -156,3 +194,22 @@ theorem toGLM_isConvergent (t : ButcherTableau s) (ht : t.IsConsistent) :
   ⟨t.toGLM_isConsistent ht, t.toGLM_isStable⟩
 
 end ButcherTableau
+
+/-- Implicit Euler is A-stable after the §502 embedding into GLMs. -/
+theorem rkImplicitEuler_toGLM_isAStable :
+    (rkImplicitEuler).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  have hne' : (1 : ℂ) - z ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp at hre
+    linarith
+  have hne : 1 - z * (rkImplicitEuler.A 0 0 : ℂ) ≠ 0 := by
+    simpa [rkImplicitEuler] using hne'
+  have h := rkImplicitEuler_aStable z hz hne
+  have hfun : rkImplicitEuler.stabilityFunction z = rkImplicitEuler.stabilityFn1 z := by
+    simp [ButcherTableau.stabilityFunction, ButcherTableau.stabilityFn1, rkImplicitEuler]
+    field_simp [hne']
+    ring
+  simpa [hfun] using h

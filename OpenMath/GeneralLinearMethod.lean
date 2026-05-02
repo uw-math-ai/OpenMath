@@ -199,6 +199,16 @@ theorem stabilityMatrix_zero (m : GeneralLinearMethod s r) :
     m.stabilityMatrix 0 = m.Vℂ := by
   simp [stabilityMatrix]
 
+/-! ## §521 — A-stability -/
+
+/-- Butcher §521 — A-stability of a general linear method.
+A GLM is A-stable if for every `z` in the closed left half-plane,
+every eigenvalue `μ` of `M(z)` satisfies `|μ| ≤ 1`. Eigenvalues are encoded
+as roots of the characteristic polynomial of the stability matrix. -/
+def IsAStable (m : GeneralLinearMethod s r) : Prop :=
+  ∀ z : ℂ, z.re ≤ 0 →
+    ∀ μ : ℂ, (m.stabilityMatrix z).charpoly.IsRoot μ → ‖μ‖ ≤ 1
+
 /-! ## Stage Solvability by Contraction -/
 
 /-- The scalar GLM stage self-map. Fixed points are stage vectors satisfying

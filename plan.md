@@ -833,8 +833,13 @@ error bound for one specific scheme:
   the entrywise row formula and `M(0) = V`. Cycle 615 also added the RK
   scalar stability-function specialization in `OpenMath/RKAsGLM.lean`
   and the one-stage LMM entry formula in `OpenMath/LMMAsGLM.lean`.
-- [ ] **§521 Methods with maximal stability order** — Padé-like
-  conditions on `M(z)`.
+- [~] **§521 Methods with maximal stability order** — A-stability and
+  Padé-like conditions on `M(z)`. Cycle 627 opened the GLM-level
+  A-stability surface with `GeneralLinearMethod.IsAStable`, the RK bridge
+  `ButcherTableau.toGLM_isAStable_iff`, and the concrete sanity check
+  `rkImplicitEuler_toGLM_isAStable`. Remaining §521 milestones are the
+  LMM-side iff bridge, concrete LMM A-stability transport, and the
+  stability-order definition via `Matrix.exp`.
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
   of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
   out of scope for this cycle.)
@@ -922,6 +927,10 @@ error bound for one specific scheme:
   past-`h*f` half via Phase B vanishing for `n ≥ s`, and the finite
   prefix `n < s` via the Phase C `M_max^n` bound. Retires
   `.prover-state/issues/butcher_section512_lmm_stability_lift.md`.
+- **Cycle 627 opened §521** — `GeneralLinearMethod.IsAStable`,
+  `ButcherTableau.toGLM_isAStable_iff`, and
+  `rkImplicitEuler_toGLM_isAStable` landed as the GLM A-stability
+  predicate, RK iff bridge, and concrete sanity check.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -966,9 +975,12 @@ error bound for one specific scheme:
 6. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-7. **Butcher §521 — Stability order / Padé-like conditions on `M(z)`.**
-    Extends the §520 stability-matrix surface with conditions for maximal
-    stability order. Later §522 can record the Butcher–Chipman conjecture
+7. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
+    Cycle 627 opened the GLM A-stability predicate and RK bridge. Next
+    milestones are: (1) prove the LMM-side iff bridge
+    `LMM.toGLM_isAStable_iff`; (2) transport concrete LMM A-stability
+    results through the §503 embedding; (3) define stability order via
+    `Matrix.exp`. Later §522 can record the Butcher–Chipman conjecture
     outline: order of `M(z)` as approximation to `exp(z) · I`.
 8. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
