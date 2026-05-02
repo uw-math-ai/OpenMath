@@ -3793,24 +3793,218 @@ private lemma yPrimeSumOf_tendsto_zero
     (u := fun h j => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
     hstart
 
+open OpenMath.Chapter1.Section141 in
+/-- **Tendsto of `aOf` to zero (cycle 062).**
+
+`aOf M Θ L h yex (Yh h) x₀` is the linear-recurrence initial constant
+`a` of `globalError_recurrence_form_explicit`. As `h → 0`:
+* the bracket `Θ + (Θ + 1) · CbaseOf · h · k + 1` tends to a finite
+  limit (the `· h` factor kills `CbaseOf`'s contribution);
+* `yPrimeSumOf M yex (Yh h) x₀ h` tends to `0` whenever the
+  starting-data error converges (`yex (x₀ + j·h) - Yh h j → 0` for
+  each `j < k`).
+
+So `aOf · → 0`. Wrapper over cycle 057's `a_m_tendsto_zero`, threaded
+through cycle 060's `aOf` and `yPrimeSumOf` defs with the per-`h`
+`Yh : ℝ → ℕ → ℝ` shape. Internal scaffolding for the §406D
+outer-squeeze assembly (cycle 062). Not a Butcher concept. -/
+private lemma aOf_tendsto_zero
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ)
+    (yex : ℝ → ℝ) (Yh : ℝ → ℕ → ℝ) (x₀ : ℝ)
+    (hstart : ∀ j : Fin k,
+        Filter.Tendsto
+          (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
+          (nhds 0) (nhds 0)) :
+    Filter.Tendsto
+      (fun h : ℝ => aOf M Θ L h yex (Yh h) x₀)
+      (nhds 0) (nhds 0) := by
+  unfold aOf CbaseOf yPrimeSumOf
+  exact a_m_tendsto_zero M Θ L
+    (u := fun h j => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
+    hstart
+
+/-- **Positivity of the `bOf` limit (cycle 062, helper for §406D).**
+
+`bOf M Θ L h` tends as `h → 0` to
+`(Θ + 1) · L · (|β 0| · Σ|α(i+1)| + Σ|β(i+1)|) + 1`
+(cycle 061's `bOf_tendsto_at_zero`). The trailing `+ 1` makes
+positivity unconditional given `Θ, L ≥ 0` — used by
+`globalError_outer_squeeze_c_term` which divides by `bInf · k`.
+Aristotle batch (cycle 062). -/
+private lemma bOf_limit_pos
+    {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ)
+    (hΘ_nn : 0 ≤ Θ) (hL : 0 ≤ L) :
+    0 < (Θ + 1) *
+            (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                  + ∑ i : Fin k, |M.β i.succ|))
+          + 1 := by
+  positivity
+
+open OpenMath.Chapter1.Section141 in
+/-- **Butcher Theorem 406D, autonomous-IVP form (Tendsto).** [Cycle 062]
+
+For a stable consistent linear multistep method `M` solving the
+*autonomous* IVP `y' = f(y)` with `f` Lipschitz and `f∘yex` bounded
+on the trajectory, the global LMM error tends to zero as the step
+size shrinks:
+
+  `|yex(x) − Yh h_m m| → 0    as m → ∞,    where  h_m := (x−x₀)/m`.
+
+This is the autonomous specialisation of `IsConvergent` (Butcher
+def:402A): `f` does not depend on `x`, the iterate `Yh : ℝ → ℕ → ℝ`
+is parametrised per-`h`, and the `k` initial values converge to
+`y₀ = yex x₀` as `h → 0` (per-`h` `hstart`). The non-autonomous form
+`stable_consistent_isConvergent` follows by lifting in cycle 063+.
+
+This is **not** a Butcher-named entity; it is the autonomous
+specialisation of `thm:406D`. The textbook statement is non-
+autonomous; this proves the analytical core, deferring the
+non-autonomous lift. -/
+theorem LinearMultistepMethod.stable_consistent_isConvergent_autonomous
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
+    (hstab : M.IsStable) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f (yex t))
+    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
+    {x₀ x : ℝ} (hxx : x₀ < x)
+    (Yh : ℝ → ℕ → ℝ)
+    (hsmall : ∀ m : ℕ, 0 < m →
+      ((x - x₀) / (m : ℝ)) * L * |M.β 0| < 1)
+    (hYh : ∀ m : ℕ, 0 < m →
+      M.IsLMMSolution ((x - x₀) / (m : ℝ)) x₀ (fun _ y => f y)
+        (Yh ((x - x₀) / (m : ℝ))))
+    (hstart : ∀ j : Fin k,
+        Filter.Tendsto
+          (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
+          (nhds 0) (nhds 0)) :
+    Filter.Tendsto
+      (fun m : ℕ => Yh ((x - x₀) / (m : ℝ)) m - yex x)
+      Filter.atTop (nhds 0) := by
+  -- Step 1: extract canonical Θ from stability.
+  obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab
+  -- Convenient names for the limits we'll squeeze against.
+  set bInf : ℝ := (Θ + 1) *
+        (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+              + ∑ i : Fin k, |M.β i.succ|)) + 1 with hbInf_def
+  set cInf : ℝ := (Θ + 1) *
+        (((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+          * L * M_bound) with hcInf_def
+  -- Step 2: per-`m` closed-form bound (threading Θ explicitly).
+  have hbound : ∀ m : ℕ, 0 < m →
+      |yex (x₀ + (m : ℝ) * ((x - x₀) / (m : ℝ)))
+          - Yh ((x - x₀) / (m : ℝ)) m|
+        ≤ Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
+                      * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ)))
+            * aOf M Θ L ((x - x₀) / (m : ℝ)) yex
+                (Yh ((x - x₀) / (m : ℝ))) x₀
+          + (Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
+                        * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ))) - 1)
+              * (cOf M Θ L M_bound ((x - x₀) / (m : ℝ))
+                  * ((x - x₀) / (m : ℝ))
+                  / (bOf M Θ L ((x - x₀) / (m : ℝ)) * (k : ℝ))) := by
+    intro m hm
+    have hh_nn : 0 ≤ (x - x₀) / (m : ℝ) :=
+      div_nonneg (le_of_lt (sub_pos.mpr hxx)) (Nat.cast_nonneg m)
+    obtain ⟨ha, hb, hc, hrec, hu0⟩ :=
+      globalError_recurrence_form_explicit hk M hcons hL hM hf_lip
+        hyex_C1 hyex_ode hf_yex_bound hh_nn (hsmall m hm) (hYh m hm)
+        Θ hΘ_nn hΘ
+    have hu0' :
+        |yex (x₀ + ((0 : ℕ) : ℝ) * ((x - x₀) / (m : ℝ)))
+            - Yh ((x - x₀) / (m : ℝ)) 0|
+          ≤ aOf M Θ L ((x - x₀) / (m : ℝ)) yex
+              (Yh ((x - x₀) / (m : ℝ))) x₀ := by
+      simpa using hu0
+    exact discrete_gronwall_exp_bound
+      (fun n => |yex (x₀ + (n : ℝ) * ((x - x₀) / (m : ℝ)))
+                  - Yh ((x - x₀) / (m : ℝ)) n|)
+      _ _ _ _ k ha hb hc hh_nn hk hu0' hrec m
+  -- Step 3: per-`h` Tendsto facts (cycle 061 wrappers + cycle 062 wrapper).
+  have hb_lim : Filter.Tendsto (fun h : ℝ => bOf M Θ L h)
+      (nhds 0) (nhds bInf) := bOf_tendsto_at_zero M Θ L
+  have hc_lim : Filter.Tendsto (fun h : ℝ => cOf M Θ L M_bound h)
+      (nhds 0) (nhds cInf) := cOf_tendsto_at_zero M Θ L M_bound
+  have ha_lim : Filter.Tendsto
+      (fun h : ℝ => aOf M Θ L h yex (Yh h) x₀)
+      (nhds 0) (nhds 0) := aOf_tendsto_zero M Θ L yex Yh x₀ hstart
+  have hb_pos : 0 < bInf := bOf_limit_pos M Θ L hΘ_nn hL
+  -- Step 4: outer-squeeze helpers compose to the RHS Tendsto.
+  have ha_term :=
+    globalError_outer_squeeze_a_term ha_lim hb_lim k x₀ x
+  have hc_term :=
+    globalError_outer_squeeze_c_term hb_lim hc_lim hb_pos hk x₀ x
+  have hsum_zero :
+      Filter.Tendsto
+        (fun m : ℕ =>
+          Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
+                      * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ)))
+              * aOf M Θ L ((x - x₀) / (m : ℝ)) yex
+                  (Yh ((x - x₀) / (m : ℝ))) x₀
+            + (Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
+                          * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ))) - 1)
+                * (cOf M Θ L M_bound ((x - x₀) / (m : ℝ))
+                    * ((x - x₀) / (m : ℝ))
+                    / (bOf M Θ L ((x - x₀) / (m : ℝ)) * (k : ℝ))))
+        Filter.atTop (nhds 0) := by
+    have hsum := ha_term.add hc_term
+    simpa using hsum
+  -- Step 5: squeeze. For m ≥ 1, m·h_m = x - x₀ (m_h_constancy), so
+  -- the LHS of `hbound` collapses to `|yex x - Yh h_m m|`.
+  have habs_le : ∀ᶠ m : ℕ in Filter.atTop,
+      |Yh ((x - x₀) / (m : ℝ)) m - yex x|
+        ≤ Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
+                      * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ)))
+            * aOf M Θ L ((x - x₀) / (m : ℝ)) yex
+                (Yh ((x - x₀) / (m : ℝ))) x₀
+          + (Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
+                        * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ))) - 1)
+              * (cOf M Θ L M_bound ((x - x₀) / (m : ℝ))
+                  * ((x - x₀) / (m : ℝ))
+                  / (bOf M Θ L ((x - x₀) / (m : ℝ)) * (k : ℝ))) := by
+    refine Filter.eventually_atTop.mpr ⟨1, ?_⟩
+    intro m hm
+    have hm_pos : 0 < m := hm
+    have hm_h : (m : ℝ) * ((x - x₀) / (m : ℝ)) = x - x₀ :=
+      m_h_constancy hm_pos x x₀
+    have hxsubst : x₀ + (m : ℝ) * ((x - x₀) / (m : ℝ)) = x := by
+      rw [hm_h]; ring
+    have hb := hbound m hm_pos
+    rw [hxsubst] at hb
+    rwa [abs_sub_comm]
+  -- Tendsto of |Yh h_m m - yex x| → 0, then drop the abs.
+  have habs_tendsto :
+      Filter.Tendsto
+        (fun m : ℕ => |Yh ((x - x₀) / (m : ℝ)) m - yex x|)
+        Filter.atTop (nhds 0) := by
+    refine tendsto_of_tendsto_of_tendsto_of_le_of_le'
+      (g := fun _ : ℕ => (0 : ℝ)) (h := _)
+      tendsto_const_nhds hsum_zero ?_ habs_le
+    refine Filter.eventually_atTop.mpr ⟨0, ?_⟩
+    intro _ _
+    exact abs_nonneg _
+  -- Drop the abs.
+  exact (tendsto_zero_iff_abs_tendsto_zero _).mpr habs_tendsto
+
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
 multistep method is convergent.** [STATUS: scaffold; closure deferred
-to cycle 056+.]
+to cycle 063+.]
 
 The full `IsConvergent` predicate is non-autonomous (`f : ℝ → ℝ → ℝ`),
-but the cycle 045–052 helper chain is built for autonomous
-`f : ℝ → ℝ`. The analytical core (the exponential closed-form bound
-on `|ε(n)|`) lands in cycle 053 as
-`globalError_closed_form_autonomous`; the autonomous-IVP Tendsto
-form is stated as `stable_consistent_isConvergent_autonomous`
-(cycle 054, closure deferred to cycle 055). Cycle 056+ then
-generalises the chain to non-autonomous `f`, OR files an issue
-explaining the residual gap.
+but the cycle 045–062 helper chain is built for autonomous
+`f : ℝ → ℝ`. The autonomous-IVP form is closed in cycle 062 as
+`stable_consistent_isConvergent_autonomous`; the cycle 063+ task is
+to lift `LipschitzInSecond Set.univ L f` ⇒ per-`x` `LipschitzWith L`
+on the autonomous restriction `fun y => f x y`, then specialise.
 
 Textbook statement (`entities/thm_406D.json`):
 > "A stable consistent linear multistep method is convergent."
 
-The body is `sorry` pending cycle 056+ closure. -/
+The body is `sorry` pending cycle 063+ closure. -/
 theorem LinearMultistepMethod.stable_consistent_isConvergent
     {k : ℕ} (M : LinearMultistepMethod k)
     (hstab : M.IsStable) (hcons : M.IsConsistent) :

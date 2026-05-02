@@ -739,7 +739,8 @@
   "thm:406D": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.stable_consistent_isConvergent",
-    "status": "partial"
+    "status": "partial",
+    "notes": "Autonomous-IVP form done as `stable_consistent_isConvergent_autonomous` (cycle 062, fully proved, no sorry). The non-autonomous lift to the textbook `IsConvergent` predicate is the cycle 063+ deliverable; the body of `stable_consistent_isConvergent` is still `sorry`."
   },
   "thm:410A": {
     "lean_file": null,
