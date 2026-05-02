@@ -819,6 +819,9 @@ error bound for one specific scheme:
   Cycle 622 added the §512 Phase D step 1 y-half / past-h·f-half
   projections plus the one-step companion bridge
   `toGLM_V_step_y_of_hf_zero_shift` / `…_last`.
+  Cycle 623 closed Phase D step 2 with the multi-step y-iterate
+  companion bridge `toGLM_V_iter_step_y_shift` / `…_last`, composing
+  the step-1 bridges with the Phase B vanished past-`h*f` half.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
 - [ ] **§515 Stability and consistency imply convergence** — the GLM

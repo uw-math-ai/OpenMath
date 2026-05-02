@@ -466,6 +466,45 @@ theorem toGLM_V_step_y_of_hf_zero_last
   -- Past-`y` half is exactly `∑ l, -α(castSucc l) * toGLM_y_half q l`.
   rfl
 
+/-- §512 Phase D step 2 (shift case). Once `n ≥ s` so that the past-`h·f`
+half of `V^n q` has vanished (Phase B), one further application of `V`
+on a non-last past-`y` row of `V^n q` is the y-half shift. -/
+theorem toGLM_V_iter_step_y_shift
+    (m : LMM s) (q : Fin (2 * s) → ℝ) (n : ℕ) (_hn : s ≤ n)
+    (k : Fin s) (hk1 : (k : ℕ) + 1 ≠ s) :
+    (∑ l, m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) l *
+        ((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) l)
+      =
+    toGLM_y_half
+      ((fun v : Fin (2 * s) → ℝ =>
+          fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)
+      ⟨(k : ℕ) + 1, by have := k.isLt; omega⟩ := by
+  exact toGLM_V_step_y_of_hf_zero_shift m _ k hk1
+
+/-- §512 Phase D step 2 (last-row case). Once `n ≥ s`, applying `V` to
+the last past-`y` row of `V^n q` gives the LMM companion update on the
+y-half. -/
+theorem toGLM_V_iter_step_y_last
+    (m : LMM s) (q : Fin (2 * s) → ℝ) (n : ℕ) (hn : s ≤ n)
+    (k : Fin s) (hk1 : (k : ℕ) + 1 = s) :
+    (∑ l, m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) l *
+        ((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) l)
+      =
+    ∑ l, (-m.α (Fin.castSucc l)) *
+      toGLM_y_half
+        ((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)
+        l := by
+  have hhf : ∀ k : Fin s,
+      toGLM_hf_half
+        ((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) k = 0 := by
+    intro k
+    exact toGLM_V_iter_natAdd_eq_zero_of_le m q n hn k
+  exact toGLM_V_step_y_of_hf_zero_last m _ hhf k hk1
+
 /-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
 the stability-matrix entry collapses to the single stage resolvent factor.
 The surrounding `toGLM` blocks retain the literal §503 row/column shape. -/
