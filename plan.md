@@ -810,7 +810,9 @@ error bound for one specific scheme:
   LMM-side `LMM.toGLM_isStable` / `toGLM_isConvergent` lift is open;
   see `.prover-state/issues/butcher_section512_lmm_stability_lift.md`.
   Cycle 619 landed structural `LMM.toGLM.V` row simp lemmas ready for
-  the Phase 2–4 LMM stability lift.
+  the Phase 2–4 LMM stability lift. Cycle 620 closed Phase B with
+  `LMM.toGLM_V_iter_natAdd_eq_zero`: after `n + (k:ℕ) ≥ s` iterations
+  the past-`h*f` slot at position `s + k` of the `V`-iterate is `0`.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
 - [ ] **§515 Stability and consistency imply convergence** — the GLM

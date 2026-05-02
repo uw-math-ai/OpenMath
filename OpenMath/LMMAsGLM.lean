@@ -183,6 +183,52 @@ noncomputable def toGLM (m : LMM s) : GeneralLinearMethod 1 (2 * s) where
     simp
   rw [hrow, Fin.addCases_right, if_pos hj]
 
+/-- §510 / §512 stability prep — Phase B. Iterating the LMM-as-GLM
+`V`-block always zeros the past-`h*f` half of the input within `s`
+steps. Specifically, the `h*f`-slot at position `s + k` of the
+`n`-fold `V`-iterate is zero whenever `n + k ≥ s`. The proof is purely
+structural (no zero-stability or companion-matrix input). -/
+theorem toGLM_V_iter_natAdd_eq_zero
+    (m : LMM s) (q : Fin (2 * s) → ℝ) :
+    ∀ (n : ℕ) (k : Fin s), s ≤ n + (k : ℕ) →
+      ((fun v : Fin (2 * s) → ℝ =>
+          fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) = 0 := by
+  intro n
+  induction n with
+  | zero =>
+    intro k hk
+    exact absurd hk (by have := k.isLt; omega)
+  | succ n ih =>
+    intro k hk
+    rw [Function.iterate_succ_apply']
+    -- Beta-reduce the outer lambda application.
+    show (∑ l, m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) l *
+        ((fun v : Fin (2 * s) → ℝ =>
+            fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) l) = 0
+    by_cases hk1 : (k : ℕ) + 1 = s
+    · -- Last past-h*f row: every V entry is 0 (cycle 619 simp lemma).
+      simp_rw [toGLM_V_natAdd_last_apply m k hk1, zero_mul, Finset.sum_const_zero]
+    · -- Shift past-h*f row: V row picks out a single column at s + (k:ℕ) + 1.
+      simp_rw [toGLM_V_natAdd_shift_apply m k hk1]
+      have hkSucc : (k : ℕ) + 1 < s := by
+        have := k.isLt; omega
+      set l₀ : Fin (2 * s) :=
+        Fin.cast (Nat.two_mul s).symm (Fin.natAdd s ⟨(k : ℕ) + 1, hkSucc⟩)
+        with hl₀_def
+      have hl₀_val : (l₀ : ℕ) = s + (k : ℕ) + 1 := by
+        rw [hl₀_def]; simp [Fin.natAdd]; omega
+      rw [Finset.sum_eq_single l₀]
+      · rw [if_pos hl₀_val, one_mul, hl₀_def]
+        exact ih ⟨(k : ℕ) + 1, hkSucc⟩ (by show s ≤ n + ((k : ℕ) + 1); omega)
+      · intro b _ hb
+        rw [if_neg, zero_mul]
+        intro hbeq
+        apply hb
+        apply Fin.ext
+        rw [hbeq, hl₀_val]
+      · intro h; exact absurd (Finset.mem_univ _) h
+
 /-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
 the stability-matrix entry collapses to the single stage resolvent factor.
 The surrounding `toGLM` blocks retain the literal §503 row/column shape. -/
