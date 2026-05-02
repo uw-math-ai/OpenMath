@@ -1137,6 +1137,29 @@ theorem toGLM_stabilityMatrix_eq_fromBlocks (m : LMM s) (z : ℂ) :
       simpa [blocks, Matrix.reindex, Matrix.fromBlocks]
         using toGLM_stabilityMatrix_natAdd_natAdd_apply m z j l
 
+/-- §521 — In a non-final past-`y` row of the PY block, the entry is the
+pure shift indicator: `1` at the next column, `0` otherwise. -/
+theorem toGLM_stabilityMatrixPY_apply_shift
+    (m : LMM s) (z : ℂ) (j : Fin s) (hj : (j : ℕ) + 1 ≠ s) (l : Fin s) :
+    toGLM_stabilityMatrixPY m z j l =
+      (if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0) := by
+  unfold toGLM_stabilityMatrixPY
+  rw [if_neg hj]
+
+/-- §521 — In the final past-`y` row of the PY block, the entry simplifies to
+`-α l / (1 - z · β_s)` once the resolvent denominator is non-zero. -/
+theorem toGLM_stabilityMatrixPY_apply_last_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    toGLM_stabilityMatrixPY m z j l =
+      ((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
+        (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) := by
+  unfold toGLM_stabilityMatrixPY
+  rw [if_pos hj]
+  field_simp
+  ring
+
 /-- §521 rank-one base matrix: the complex lift of the underlying `V` shift
 block. -/
 private noncomputable def toGLM_V_active_lift (m : LMM s) :
