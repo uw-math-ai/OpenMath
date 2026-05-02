@@ -1390,3 +1390,88 @@ theorem backwardEuler_toGLM_isAStable :
     rw [inv_le_one_iff₀]
     right
     exact h1z_ge
+
+/-- §521 — The trapezoidal rule is A-stable in the GLM sense after the
+§503 embedding. At `s = 1`, the `2 × 2` stability matrix is rank one with
+trace `(2 + z)/(2 - z)`, so its characteristic polynomial factors as
+`X * (X - C ((2 + z)/(2 - z)))`. -/
+theorem trapezoidalRule_toGLM_isAStable :
+    trapezoidalRule.toGLM.IsAStable := by
+  intro z hz μ hμ
+  have hne : (2 : ℂ) - z ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re] at hre
+    linarith
+  have hM : trapezoidalRule.toGLM.stabilityMatrix z =
+      !![2 / (2 - z), 1 / (2 - z);
+        2 * z / (2 - z), z / (2 - z)] := by
+    ext k l
+    rw [LMM.toGLM_stabilityMatrix_apply]
+    have hAℂ : trapezoidalRule.toGLM.Aℂ = !![(1 / 2 : ℂ)] := by
+      ext i j
+      fin_cases i; fin_cases j
+      show (trapezoidalRule.β (Fin.last 1) : ℂ) = (!![(1 / 2 : ℂ)]) 0 0
+      simp [trapezoidalRule]
+    rw [hAℂ]
+    have hsub : (1 : Matrix (Fin 1) (Fin 1) ℂ) - z • !![(1 / 2 : ℂ)] =
+        !![1 - z / 2] := by
+      ext i j
+      fin_cases i; fin_cases j
+      simp
+      ring
+    rw [hsub]
+    have hinv : (!![1 - z / 2] : Matrix (Fin 1) (Fin 1) ℂ)⁻¹ 0 0 =
+        1 / (1 - z / 2) := by
+      rw [Matrix.inv_def]
+      simp [Matrix.adjugate_fin_one]
+    rw [hinv]
+    fin_cases k <;> fin_cases l <;>
+      simp [LMM.toGLM, trapezoidalRule, Fin.addCases, Fin.cast,
+        GeneralLinearMethod.Vℂ, GeneralLinearMethod.Bℂ, GeneralLinearMethod.Uℂ,
+        Fin.last]
+    all_goals
+      field_simp [hne]
+      try ring
+  rw [hM] at hμ
+  have hchar :
+      (!![2 / (2 - z), 1 / (2 - z);
+        2 * z / (2 - z), z / (2 - z)] : Matrix (Fin 2) (Fin 2) ℂ).charpoly =
+        Polynomial.X * (Polynomial.X - Polynomial.C ((2 + z) / (2 - z))) := by
+    have htrace :
+        (!![2 / (2 - z), 1 / (2 - z);
+          2 * z / (2 - z), z / (2 - z)] : Matrix (Fin 2) (Fin 2) ℂ).trace =
+          (2 + z) / (2 - z) := by
+      simp [Matrix.trace]
+      field_simp [hne]
+    have hdet :
+        (!![2 / (2 - z), 1 / (2 - z);
+          2 * z / (2 - z), z / (2 - z)] : Matrix (Fin 2) (Fin 2) ℂ).det = 0 := by
+      rw [Matrix.det_fin_two]
+      simp
+      field_simp [hne]
+      ring
+    rw [Matrix.charpoly_fin_two, htrace, hdet]
+    simp
+    rw [mul_sub]
+    rw [mul_comm Polynomial.X (Polynomial.C ((2 + z) / (2 - z)))]
+    ring
+  rw [hchar] at hμ
+  rw [Polynomial.IsRoot] at hμ
+  simp at hμ
+  rcases hμ with hμ0 | hμ1
+  · rw [hμ0]; simp
+  · have hμeq : μ = (2 + z) / (2 - z) := sub_eq_zero.mp hμ1
+    rw [hμeq]
+    have h_denom_pos : (0 : ℝ) < ‖(2 : ℂ) - z‖ := norm_pos_iff.mpr hne
+    have h_nsq_le : ‖(2 : ℂ) + z‖ ^ 2 ≤ ‖(2 : ℂ) - z‖ ^ 2 := by
+      rw [Complex.sq_norm, Complex.sq_norm]
+      simp only [Complex.normSq_apply, Complex.add_re, Complex.sub_re,
+        Complex.add_im, Complex.sub_im]
+      norm_num
+      nlinarith
+    have h_num_le : ‖(2 : ℂ) + z‖ ≤ ‖(2 : ℂ) - z‖ := by
+      nlinarith [norm_nonneg ((2 : ℂ) + z), norm_nonneg ((2 : ℂ) - z),
+        sq_nonneg (‖(2 : ℂ) - z‖ - ‖(2 : ℂ) + z‖)]
+    rw [norm_div]
+    exact (div_le_one h_denom_pos).mpr h_num_le

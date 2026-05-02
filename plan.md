@@ -837,8 +837,10 @@ error bound for one specific scheme:
   Padé-like conditions on `M(z)`. Cycle 627 opened the GLM-level
   A-stability surface with `GeneralLinearMethod.IsAStable`, the RK bridge
   `ButcherTableau.toGLM_isAStable_iff`, and the concrete sanity check
-  `rkImplicitEuler_toGLM_isAStable`. Remaining §521 milestones are the
-  LMM-side iff bridge, concrete LMM A-stability transport, and the
+  `rkImplicitEuler_toGLM_isAStable`. Cycles 630–631 added the concrete
+  LMM-side transports `backwardEuler_toGLM_isAStable` and
+  `trapezoidalRule_toGLM_isAStable`. Remaining §521 milestones are the
+  LMM-side iff bridge, more concrete LMM A-stability transports, and the
   stability-order definition via `Matrix.exp`.
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
   of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
@@ -937,6 +939,10 @@ error bound for one specific scheme:
   `backwardEuler_toGLM_isAStable` in `OpenMath/LMMAsGLM.lean` (direct
   `s = 1` charpoly factorisation `X * (X − 1/(1−z))`, independent of
   any LMM↔GLM iff bridge).
+- **Cycle 631 added §521 trapezoidal LMM-side A-stability transport** —
+  `trapezoidalRule_toGLM_isAStable` in `OpenMath/LMMAsGLM.lean` (direct
+  `s = 1` rank-one stability matrix with charpoly
+  `X * (X − (2+z)/(2−z))`).
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -983,13 +989,16 @@ error bound for one specific scheme:
     error from the difference, classical estimate.
 7. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
     Cycle 627 opened the GLM A-stability predicate and RK bridge.
-    Cycle 630 added the first LMM-side concrete transport
-    (`backwardEuler_toGLM_isAStable`). Next milestones are:
+    Cycles 630–631 added the first LMM-side concrete transports
+    (`backwardEuler_toGLM_isAStable`, `trapezoidalRule_toGLM_isAStable`).
+    Next milestones are:
     (1) prove the LMM-side iff bridge `LMM.toGLM_isAStable_iff`
     (still open — needs general-`s` charpoly factorisation
     `charpoly(M(z)) = X^s · π(·, z)` up to scaling);
     (2) extend the concrete LMM A-stability transports
-    (`trapezoidalRule_toGLM_isAStable` is the obvious next target);
+    (`bdf2_toGLM_isAStable` is the plausible next concrete target, with
+    an `implicitMidpointLMM_toGLM_isAStable` variant only if a one-step
+    LMM representative is introduced);
     (3) define stability order via `Matrix.exp`. Later §522 can record
     the Butcher–Chipman conjecture outline: order of `M(z)` as
     approximation to `exp(z) · I`.
