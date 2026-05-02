@@ -1172,6 +1172,49 @@ theorem toGLM_stabilityMatrix_eq_V_active_plus_rank_one
     toGLM_rankOneRow, Matrix.vecMulVec_apply]
   ring
 
+/-- BDF case: the past-`h*f` block collapses to the pure shift block. -/
+private lemma toGLM_stabilityMatrixPHF_apply_of_bdf
+    (m : LMM s) (z : ℂ) (hβ : ∀ l : Fin s, m.β l.castSucc = 0) (j l : Fin s) :
+    m.toGLM_stabilityMatrixPHF z j l =
+      if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0 := by
+  unfold toGLM_stabilityMatrixPHF
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj]
+    have hlj : ¬ (l : ℕ) = (j : ℕ) + 1 := by
+      intro h
+      omega
+    rw [if_neg hlj]
+    simp [hβ l]
+  · rw [if_neg hj]
+
+/-- BDF case: when `∀ l, m.β l.castSucc = 0`, the past-`h*f` block of the
+    LMM-as-GLM stability matrix is upper-triangular with zero diagonal,
+    hence its charpoly is `X^s`. -/
+lemma toGLM_stabilityMatrixPHF_charpoly_of_bdf
+    (m : LMM s) (z : ℂ) (hβ : ∀ l : Fin s, m.β l.castSucc = 0) :
+    (m.toGLM_stabilityMatrixPHF z).charpoly = Polynomial.X ^ (s : ℕ) := by
+  have htri : (m.toGLM_stabilityMatrixPHF z).BlockTriangular id := by
+    intro i j hji
+    rw [toGLM_stabilityMatrixPHF_apply_of_bdf m z hβ i j]
+    rw [if_neg]
+    intro hsucc
+    have hjlt : (j : ℕ) < (i : ℕ) := by exact hji
+    omega
+  have hdiag : ∀ i : Fin s, m.toGLM_stabilityMatrixPHF z i i = 0 := by
+    intro i
+    rw [toGLM_stabilityMatrixPHF_apply_of_bdf m z hβ i i]
+    simp
+  rw [Matrix.charpoly_of_upperTriangular _ htri]
+  simp [hdiag, Finset.prod_const]
+
+/-- BDF case headline: under the BDF hypothesis, the LMM-as-GLM
+    stability matrix charpoly factors as `X^s * (active factor)`. -/
+theorem toGLM_stabilityMatrix_charpoly_of_bdf
+    (m : LMM s) (z : ℂ) (hβ : ∀ l : Fin s, m.β l.castSucc = 0) :
+    ∃ q : Polynomial ℂ,
+      (m.toGLM.stabilityMatrix z).charpoly = Polynomial.X ^ (s : ℕ) * q := by
+  sorry
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
