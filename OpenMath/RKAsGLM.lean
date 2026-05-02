@@ -479,3 +479,84 @@ theorem rkRadauIIA3_toGLM_isAStable :
   intro z hz
   rw [rkRadauIIA3_stabilityFunction_eq z hz]
   exact radauIIA3_aStable z hz
+
+/-- Bridge from the canonical GLM-side `stabilityFunction` to the
+classical scalar `gl3StabilityFn` on the Gauss--Legendre 3-stage tableau. -/
+theorem rkGaussLegendre3_stabilityFunction_eq (z : ℂ) (hz : z.re ≤ 0) :
+    rkGaussLegendre3.stabilityFunction z = gl3StabilityFn z := by
+  let s : ℂ := ((Real.sqrt 15 : ℝ) : ℂ)
+  have hs15_R : Real.sqrt 15 ^ 2 = 15 :=
+    Real.sq_sqrt (by norm_num : (15 : ℝ) ≥ 0)
+  have hs15_C : s ^ 2 = 15 := by
+    dsimp [s]
+    exact_mod_cast hs15_R
+  have hD : gl3Q z ≠ 0 := gl3_Q_ne_zero z hz
+  let M : Matrix (Fin 3) (Fin 3) ℂ :=
+      !![1 - z * (5 / 36),
+         -(z * (2 / 9 - s / 15)),
+         -(z * (5 / 36 - s / 30));
+         -(z * (5 / 36 + s / 24)),
+         1 - z * (2 / 9),
+         -(z * (5 / 36 - s / 24));
+         -(z * (5 / 36 + s / 30)),
+         -(z * (2 / 9 + s / 15)),
+         1 - z * (5 / 36)]
+  rw [ButcherTableau.stabilityFunction]
+  have hM :
+      ((1 : Matrix (Fin 3) (Fin 3) ℂ) - z •
+          (Matrix.of (fun i j => ((rkGaussLegendre3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ)) = M := by
+    subst M
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rkGaussLegendre3, s, Matrix.cons_val_zero, Matrix.cons_val_one]
+  change 1 + z * ∑ i, ∑ j,
+      (rkGaussLegendre3.b i : ℂ) *
+        ((1 - z • (Matrix.of (fun i j => ((rkGaussLegendre3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ))⁻¹) i j = gl3StabilityFn z
+  rw [hM]
+  have hdet : M.det = gl3Q z / 120 := by
+    subst M
+    rw [Matrix.det_fin_three]
+    simp [Matrix.cons_val_zero, Matrix.cons_val_one, gl3Q]
+    linear_combination (norm := ring_nf) (z ^ 2 * (12 - z) / 1800) * hs15_C
+  have hsum :
+      ∑ i, ∑ j, (rkGaussLegendre3.b i : ℂ) * M.adjugate i j =
+        (60 + z ^ 2) / 60 := by
+    subst M
+    simp [Fin.sum_univ_three, rkGaussLegendre3, Matrix.adjugate_fin_three_of,
+          Matrix.cons_val_zero, Matrix.cons_val_one]
+    linear_combination (norm := ring_nf) (z ^ 2 / 900) * hs15_C
+  have hsumInv :
+      ∑ i, ∑ j, (rkGaussLegendre3.b i : ℂ) *
+          ((gl3Q z / 120)⁻¹ * M.adjugate i j) =
+        (gl3Q z / 120)⁻¹ * ((60 + z ^ 2) / 60) := by
+    rw [← hsum]
+    simp only [Fin.sum_univ_three]
+    ring
+  rw [Matrix.inv_def]
+  simp only [hdet, Ring.inverse_eq_inv', Matrix.smul_apply, smul_eq_mul]
+  rw [hsumInv]
+  have hPsub : gl3P z - gl3Q z = 2 * z * (60 + z ^ 2) := gl3_P_sub_Q z
+  have hnum : gl3Q z + z * 2 * (60 + z ^ 2) = gl3P z := by linear_combination -hPsub
+  have h_inv_div : ((gl3Q z) / 120)⁻¹ = 120 * (gl3Q z)⁻¹ := by
+    rw [inv_div]
+    ring
+  calc
+    1 + z * ((gl3Q z / 120)⁻¹ * ((60 + z ^ 2) / 60)) =
+        (gl3Q z)⁻¹ * (gl3Q z + z * 2 * (60 + z ^ 2)) := by
+      rw [h_inv_div, mul_add, inv_mul_cancel₀ hD]
+      ring
+    _ = (gl3Q z)⁻¹ * gl3P z := by rw [hnum]
+    _ = gl3StabilityFn z := by
+      unfold gl3StabilityFn
+      rw [div_eq_mul_inv]
+      ring
+
+/-- 3-stage Gauss--Legendre is A-stable after the §502 embedding into GLMs. -/
+theorem rkGaussLegendre3_toGLM_isAStable :
+    (rkGaussLegendre3).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  rw [rkGaussLegendre3_stabilityFunction_eq z hz]
+  exact gl3_aStable z hz

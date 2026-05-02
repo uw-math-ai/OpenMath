@@ -1093,9 +1093,38 @@ let the queue empty.
 
 ## Current Target
 
-**Paused note:** §38 remains paused until there is a structured plan for
-the `cut_assoc` obstruction. Cycle 615's active target was Chapter 5 §520,
-which is now closed in the §52 chapter list above.
+**Butcher §521 — GLM A-stability transports for collocation methods.**
+Active file: `OpenMath/RKAsGLM.lean`. Continue the GLM-side
+A-stability transport bridges from individual scalar RK stability
+proofs (`SDIRK2`, `SDIRK3`, `RadauIIA3`, soon `GaussLegendre3`).
+
+Concrete next targets:
+- `rkGaussLegendre3_stabilityFunction_eq` — bridge the GLM-side
+  `stabilityFunction` of GL3 to the classical `gl3StabilityFn` (Padé
+  (3,3) approximant) using the cycle 653 split-certificate recipe.
+- `rkGaussLegendre3_toGLM_isAStable` — A-stability transport via
+  `toGLM_isAStable_iff` and `gl3_aStable`. After this lands, close
+  `.prover-state/issues/radau_gl3_glm_aStable_sqrt_bridge.md`.
+
+The classical scalar A-stability data lives in
+`OpenMath/GaussLegendre3.lean` (`gl3StabilityFn`, `gl3P`, `gl3Q`,
+`gl3_Q_ne_zero`, `gl3_aStable`).
+
+After GL3 lands, follow-on §521 candidates: extend the same recipe to
+remaining collocation methods, or pursue the
+`LMM.toGLM_isAStable_iff` general charpoly factorisation tracked in
+`.prover-state/issues/lmm_toGLM_general_charpoly_rank_one.md`.
+
+---
+
+## Paused — §38 (Butcher group)
+
+**§38 remains paused** until there is a structured plan for the
+`cut_assoc` obstruction (see
+`.prover-state/issues/section386aug_strong_induction_obstruction.md`).
+Cycle 615's active target was Chapter 5 §520, which is now closed in
+the §52 chapter list above. The full §38 progress history is preserved
+below for context; do **not** treat it as the active frontier.
 
 **Butcher §38 — Butcher group (algebraic RK properties).** Module family
 rooted at `OpenMath/ButcherGroup.lean`. Butcher's namesake topic and the
