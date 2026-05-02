@@ -245,6 +245,118 @@ private lemma
   simp only [forestSum, AugSeries.shiftBy_node]
   ring
 
+/-- Cons recurrence for the next order-4 head shape
+`BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]`.  The keep-root cuts
+collapse to four trunk shapes with binomial multiplicities. -/
+private theorem forestSum_cons_node_triple_leaf_compact
+    (α β : AugSeries) (cs : List BTree) :
+    forestSum α.toFun β
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: cs)
+      = α.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+          * forestSum α.toFun β cs
+        + α.toFun BTree.leaf ^ 3
+          * forestSum α.toFun (β.shiftBy (BTree.node [])) cs
+        + 3 * α.toFun BTree.leaf ^ 2
+          * forestSum α.toFun (β.shiftBy (BTree.node [BTree.leaf])) cs
+        + 3 * α.toFun BTree.leaf
+          * forestSum α.toFun
+              (β.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) cs
+        + forestSum α.toFun
+            (β.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs := by
+  simp only [forestSum]
+  have hscale : ∀ (k : ℝ) (T : BTree),
+      (List.map
+          (fun forest =>
+            k * forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+              * β.toFun
+                  (BTree.node (T :: forest.filterMap (fun e => e.1))))
+          (BTree.innerCutForest cs α.toFun)).sum
+        = k * (List.map
+            (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * β.toFun
+                    (BTree.node (T :: forest.filterMap (fun e => e.1))))
+            (BTree.innerCutForest cs α.toFun)).sum := by
+    intro k T
+    induction BTree.innerCutForest cs α.toFun with
+    | nil => simp
+    | cons forest tail ih =>
+      simp only [List.map_cons, List.sum_cons, ih]
+      ring
+  rw [bSeriesConvAug_innerForest_cons]
+  have hcut :
+      (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]).innerCut α.toFun =
+        [(none, α.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])),
+         (some (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]), 1),
+         (some (BTree.node [BTree.leaf, BTree.leaf]), α.toFun BTree.leaf),
+         (some (BTree.node [BTree.leaf, BTree.leaf]), α.toFun BTree.leaf),
+         (some (BTree.node [BTree.leaf]), α.toFun BTree.leaf * α.toFun BTree.leaf),
+         (some (BTree.node [BTree.leaf, BTree.leaf]), α.toFun BTree.leaf),
+         (some (BTree.node [BTree.leaf]), α.toFun BTree.leaf * α.toFun BTree.leaf),
+         (some (BTree.node [BTree.leaf]), α.toFun BTree.leaf * α.toFun BTree.leaf),
+         (some (BTree.node []),
+            α.toFun BTree.leaf
+              * (α.toFun BTree.leaf * α.toFun BTree.leaf))] := by
+    simp [BTree.innerCut, BTree.innerCutForest]
+  rw [hcut]
+  simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil,
+    List.nil_append, List.sum_append, one_mul, AugSeries.shiftBy_node]
+  rw [hscale
+        (α.toFun BTree.leaf
+          * (α.toFun BTree.leaf * α.toFun BTree.leaf)) (BTree.node []),
+      hscale (α.toFun BTree.leaf * α.toFun BTree.leaf)
+        (BTree.node [BTree.leaf]),
+      hscale (α.toFun BTree.leaf)
+        (BTree.node [BTree.leaf, BTree.leaf])]
+  ring
+
+/-- Pointwise expansion of `bSeriesConvAug β γ` at a cons whose head is the
+order-4 triple-leaf shape `BTree.node [leaf, leaf, leaf]`. -/
+private lemma bSeriesConvAug_node_cons_node_triple_leaf_expand_compact
+    (β γ : AugSeries) (xs : List BTree) :
+    bSeriesConvAug β γ
+        (BTree.node (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs))
+      = β.toFun
+            (BTree.node
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs))
+          * γ.emptyVal
+        + β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+          * forestSum β.toFun γ xs
+        + β.toFun BTree.leaf ^ 3
+          * forestSum β.toFun (γ.shiftBy (BTree.node [])) xs
+        + 3 * β.toFun BTree.leaf ^ 2
+          * forestSum β.toFun (γ.shiftBy (BTree.node [BTree.leaf])) xs
+        + 3 * β.toFun BTree.leaf
+          * forestSum β.toFun
+              (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) xs
+        + forestSum β.toFun
+            (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) xs := by
+  rw [bSeriesConvAug_node β γ
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs)]
+  change β.toFun
+          (BTree.node
+            (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs))
+        * γ.emptyVal
+      + forestSum β.toFun γ
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs)
+      = β.toFun
+            (BTree.node
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs))
+          * γ.emptyVal
+        + β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+          * forestSum β.toFun γ xs
+        + β.toFun BTree.leaf ^ 3
+          * forestSum β.toFun (γ.shiftBy (BTree.node [])) xs
+        + 3 * β.toFun BTree.leaf ^ 2
+          * forestSum β.toFun (γ.shiftBy (BTree.node [BTree.leaf])) xs
+        + 3 * β.toFun BTree.leaf
+          * forestSum β.toFun
+              (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) xs
+        + forestSum β.toFun
+            (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) xs
+  rw [forestSum_cons_node_triple_leaf_compact β γ xs]
+  ring
+
 /-- Aggregate shift identity for the depth-3 pair head `node [a, b]`.
 This packages the pointwise pair expansion so the future depth-3 forest
 induction can treat it as a single head case. -/
@@ -864,6 +976,264 @@ private theorem shift_node_singleton_agg
   linear_combination -β.toFun (BTree.node [d]) * hih_γ
     - β.toFun d * hih_γn - hih_γd
 
+/-! ## Cycle 605: add the triple-leaf order-4 head shape -/
+
+/-- Aggregate shift identity for the order-4 triple-leaf head
+`node [leaf, leaf, leaf]`. -/
+private theorem shift_triple_leaf_agg
+    (α β γ : AugSeries) (cs : List BTree)
+    (hih : ∀ δ : AugSeries,
+      forestSum (fun σ => bSeriesConvAug α β σ) δ cs
+        + forestSum α.toFun β cs * δ.emptyVal
+        = forestSum α.toFun ⟨1, fun σ => bSeriesConvAug β δ σ⟩ cs) :
+    forestSum α.toFun
+        ((⟨1, fun σ => bSeriesConvAug β γ σ⟩ : AugSeries).shiftBy
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs
+      = forestSum α.toFun
+          (β.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs
+          * γ.emptyVal
+        + β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+          * forestSum (fun σ => bSeriesConvAug α β σ) γ cs
+        + β.toFun BTree.leaf ^ 3
+          * forestSum (fun σ => bSeriesConvAug α β σ)
+            (γ.shiftBy (BTree.node [])) cs
+        + 3 * β.toFun BTree.leaf ^ 2
+          * forestSum (fun σ => bSeriesConvAug α β σ)
+            (γ.shiftBy (BTree.node [BTree.leaf])) cs
+        + 3 * β.toFun BTree.leaf
+          * forestSum (fun σ => bSeriesConvAug α β σ)
+            (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) cs
+        + forestSum (fun σ => bSeriesConvAug α β σ)
+          (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs := by
+  have hih_γ := hih γ
+  have hih_γn := hih (γ.shiftBy (BTree.node []))
+  have hih_γl := hih (γ.shiftBy (BTree.node [BTree.leaf]))
+  have hih_γll := hih (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf]))
+  have hih_γlll :=
+    hih (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))
+  have keyPt : ∀ xs : List BTree,
+      bSeriesConvAug β γ
+          (BTree.node
+            (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs))
+        = β.toFun
+            (BTree.node
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: xs))
+            * γ.emptyVal
+          + β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+            * (bSeriesConvAug β γ (BTree.node xs)
+                - β.toFun (BTree.node xs) * γ.emptyVal)
+          + β.toFun BTree.leaf ^ 3
+            * (bSeriesConvAug β (γ.shiftBy (BTree.node [])) (BTree.node xs)
+                - β.toFun (BTree.node xs)
+                  * (γ.shiftBy (BTree.node [])).emptyVal)
+          + 3 * β.toFun BTree.leaf ^ 2
+            * (bSeriesConvAug β (γ.shiftBy (BTree.node [BTree.leaf]))
+                (BTree.node xs)
+                - β.toFun (BTree.node xs)
+                  * (γ.shiftBy (BTree.node [BTree.leaf])).emptyVal)
+          + 3 * β.toFun BTree.leaf
+            * (bSeriesConvAug β
+                (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf]))
+                (BTree.node xs)
+                - β.toFun (BTree.node xs)
+                  * (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])).emptyVal)
+          + (bSeriesConvAug β
+              (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))
+              (BTree.node xs)
+              - β.toFun (BTree.node xs)
+                * (γ.shiftBy
+                    (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])).emptyVal) := by
+    intro xs
+    have hS1 : forestSum β.toFun γ xs
+        = bSeriesConvAug β γ (BTree.node xs)
+            - β.toFun (BTree.node xs) * γ.emptyVal := by
+      rw [bSeriesConvAug_node β γ xs]
+      change forestSum β.toFun γ xs
+          = β.toFun (BTree.node xs) * γ.emptyVal
+            + forestSum β.toFun γ xs
+            - β.toFun (BTree.node xs) * γ.emptyVal
+      ring
+    have hS2 : forestSum β.toFun (γ.shiftBy (BTree.node [])) xs
+        = bSeriesConvAug β (γ.shiftBy (BTree.node [])) (BTree.node xs)
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy (BTree.node [])).emptyVal := by
+      rw [bSeriesConvAug_node β (γ.shiftBy (BTree.node [])) xs]
+      change forestSum β.toFun (γ.shiftBy (BTree.node [])) xs
+          = β.toFun (BTree.node xs) * (γ.shiftBy (BTree.node [])).emptyVal
+            + forestSum β.toFun (γ.shiftBy (BTree.node [])) xs
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy (BTree.node [])).emptyVal
+      ring
+    have hS3 :
+        forestSum β.toFun (γ.shiftBy (BTree.node [BTree.leaf])) xs
+          = bSeriesConvAug β (γ.shiftBy (BTree.node [BTree.leaf]))
+              (BTree.node xs)
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy (BTree.node [BTree.leaf])).emptyVal := by
+      rw [bSeriesConvAug_node β (γ.shiftBy (BTree.node [BTree.leaf])) xs]
+      change forestSum β.toFun (γ.shiftBy (BTree.node [BTree.leaf])) xs
+          = β.toFun (BTree.node xs)
+              * (γ.shiftBy (BTree.node [BTree.leaf])).emptyVal
+            + forestSum β.toFun (γ.shiftBy (BTree.node [BTree.leaf])) xs
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy (BTree.node [BTree.leaf])).emptyVal
+      ring
+    have hS4 :
+        forestSum β.toFun
+            (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) xs
+          = bSeriesConvAug β
+              (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf]))
+              (BTree.node xs)
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf])).emptyVal := by
+      rw [bSeriesConvAug_node β
+        (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) xs]
+      change forestSum β.toFun
+            (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) xs
+          = β.toFun (BTree.node xs)
+              * (γ.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf])).emptyVal
+            + forestSum β.toFun
+                (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) xs
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf])).emptyVal
+      ring
+    have hS5 :
+        forestSum β.toFun
+            (γ.shiftBy
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) xs
+          = bSeriesConvAug β
+              (γ.shiftBy
+                (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))
+              (BTree.node xs)
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])).emptyVal := by
+      rw [bSeriesConvAug_node β
+        (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) xs]
+      change forestSum β.toFun
+            (γ.shiftBy
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) xs
+          = β.toFun (BTree.node xs)
+              * (γ.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])).emptyVal
+            + forestSum β.toFun
+                (γ.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) xs
+            - β.toFun (BTree.node xs)
+              * (γ.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])).emptyVal
+      ring
+    rw [bSeriesConvAug_node_cons_node_triple_leaf_expand_compact β γ xs,
+      hS1, hS2, hS3, hS4, hS5]
+  have aux : ∀ (L : List (List (Option BTree × ℝ))),
+      (L.map (fun forest =>
+          forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+            * bSeriesConvAug β γ
+                (BTree.node
+                  (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]
+                    :: forest.filterMap (fun e => e.1))))).sum
+        = (L.map (fun forest =>
+            forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+              * β.toFun
+                  (BTree.node
+                    (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]
+                      :: forest.filterMap (fun e => e.1))))).sum
+            * γ.emptyVal
+          + β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+            * ((L.map (fun forest =>
+                forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * bSeriesConvAug β γ
+                      (BTree.node (forest.filterMap (fun e => e.1))))).sum
+              - (L.map (fun forest =>
+                  forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                    * β.toFun
+                        (BTree.node (forest.filterMap (fun e => e.1))))).sum
+                  * γ.emptyVal)
+          + β.toFun BTree.leaf ^ 3
+            * ((L.map (fun forest =>
+                forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * bSeriesConvAug β (γ.shiftBy (BTree.node []))
+                      (BTree.node (forest.filterMap (fun e => e.1))))).sum
+              - (L.map (fun forest =>
+                  forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                    * β.toFun
+                        (BTree.node (forest.filterMap (fun e => e.1))))).sum
+                  * (γ.shiftBy (BTree.node [])).emptyVal)
+          + 3 * β.toFun BTree.leaf ^ 2
+            * ((L.map (fun forest =>
+                forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * bSeriesConvAug β (γ.shiftBy (BTree.node [BTree.leaf]))
+                      (BTree.node (forest.filterMap (fun e => e.1))))).sum
+              - (L.map (fun forest =>
+                  forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                    * β.toFun
+                        (BTree.node (forest.filterMap (fun e => e.1))))).sum
+                  * (γ.shiftBy (BTree.node [BTree.leaf])).emptyVal)
+          + 3 * β.toFun BTree.leaf
+            * ((L.map (fun forest =>
+                forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * bSeriesConvAug β
+                      (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf]))
+                      (BTree.node (forest.filterMap (fun e => e.1))))).sum
+              - (L.map (fun forest =>
+                  forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                    * β.toFun
+                        (BTree.node (forest.filterMap (fun e => e.1))))).sum
+                  * (γ.shiftBy
+                      (BTree.node [BTree.leaf, BTree.leaf])).emptyVal)
+          + ((L.map (fun forest =>
+              forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                * bSeriesConvAug β
+                    (γ.shiftBy
+                      (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]))
+                    (BTree.node (forest.filterMap (fun e => e.1))))).sum
+            - (L.map (fun forest =>
+                forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+                  * β.toFun
+                      (BTree.node (forest.filterMap (fun e => e.1))))).sum
+                * (γ.shiftBy
+                    (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])).emptyVal) := by
+    intro L
+    induction L with
+    | nil => simp
+    | cons fhd ftl ihL =>
+      simp only [List.map_cons, List.sum_cons, ihL]
+      rw [keyPt (fhd.filterMap (fun e => e.1))]
+      ring
+  change ((BTree.innerCutForest cs α.toFun).map (fun forest =>
+      forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+        * bSeriesConvAug β γ
+            (BTree.node
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]
+                :: forest.filterMap (fun e => e.1))))).sum
+    = forestSum α.toFun
+        (β.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs
+        * γ.emptyVal
+      + β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+        * forestSum (fun σ => bSeriesConvAug α β σ) γ cs
+      + β.toFun BTree.leaf ^ 3
+        * forestSum (fun σ => bSeriesConvAug α β σ)
+          (γ.shiftBy (BTree.node [])) cs
+      + 3 * β.toFun BTree.leaf ^ 2
+        * forestSum (fun σ => bSeriesConvAug α β σ)
+          (γ.shiftBy (BTree.node [BTree.leaf])) cs
+      + 3 * β.toFun BTree.leaf
+        * forestSum (fun σ => bSeriesConvAug α β σ)
+          (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) cs
+      + forestSum (fun σ => bSeriesConvAug α β σ)
+        (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs
+  rw [aux (BTree.innerCutForest cs α.toFun)]
+  simp only [forestSum, AugSeries.shiftBy_node] at hih_γ hih_γn hih_γl hih_γll hih_γlll ⊢
+  linear_combination
+    -β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) * hih_γ
+    - β.toFun BTree.leaf ^ 3 * hih_γn
+    - (3 * β.toFun BTree.leaf ^ 2) * hih_γl
+    - (3 * β.toFun BTree.leaf) * hih_γll
+    - hih_γlll
+
 /-- Head case for `forestSum_assoc_depth_three` when the head child has
 order ≤ 1 (i.e. is `BTree.leaf` or `BTree.node []`). -/
 private theorem forestSum_assoc_three_one_head
@@ -1127,6 +1497,99 @@ private theorem forestSum_assoc_three_singleton_node_singleton_head
       shift_singleton_node_singleton_agg α β γ e he cs hih]
   linear_combination α.toFun (BTree.node [BTree.node [e]]) * hih_γ
 
+/-- Head case for the new order-4 triple-leaf child
+`BTree.node [leaf, leaf, leaf]`. -/
+private theorem forestSum_assoc_three_triple_leaf_head
+    (α β γ : AugSeries) (hβ : β.IsUnital) (cs : List BTree)
+    (hih : ∀ δ : AugSeries,
+      forestSum (fun σ => bSeriesConvAug α β σ) δ cs
+        + forestSum α.toFun β cs * δ.emptyVal
+        = forestSum α.toFun ⟨1, fun σ => bSeriesConvAug β δ σ⟩ cs) :
+    forestSum (fun σ => bSeriesConvAug α β σ) γ
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: cs)
+      + forestSum α.toFun β
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: cs)
+          * γ.emptyVal
+    = forestSum α.toFun ⟨1, fun σ => bSeriesConvAug β γ σ⟩
+        (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :: cs) := by
+  have hβ' : β.emptyVal = 1 := hβ
+  have hih_γ := hih γ
+  have hgβ_leaf :
+      bSeriesConvAug α β BTree.leaf
+        = α.toFun BTree.leaf + β.toFun BTree.leaf := by
+    rw [bSeriesConvAug_leaf, hβ']
+    ring
+  have hgβ_triple :
+      bSeriesConvAug α β
+          (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+        = α.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+          + α.toFun BTree.leaf ^ 3 * β.toFun (BTree.node [])
+          + 3 * α.toFun BTree.leaf ^ 2
+              * β.toFun (BTree.node [BTree.leaf])
+          + 3 * α.toFun BTree.leaf
+              * β.toFun (BTree.node [BTree.leaf, BTree.leaf])
+          + β.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) := by
+    simp [bSeriesConvAug, BTree.innerCut, BTree.innerCutForest, hβ']
+    ring
+  rw [forestSum_cons_node_triple_leaf_compact
+        ⟨1, fun σ => bSeriesConvAug α β σ⟩ γ cs,
+      forestSum_cons_node_triple_leaf_compact α β cs,
+      forestSum_cons_node_triple_leaf_compact
+        α ⟨1, fun σ => bSeriesConvAug β γ σ⟩ cs]
+  change bSeriesConvAug α β
+            (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+          * forestSum (fun σ => bSeriesConvAug α β σ) γ cs
+        + bSeriesConvAug α β BTree.leaf ^ 3
+          * forestSum (fun σ => bSeriesConvAug α β σ)
+              (γ.shiftBy (BTree.node [])) cs
+        + 3 * bSeriesConvAug α β BTree.leaf ^ 2
+          * forestSum (fun σ => bSeriesConvAug α β σ)
+              (γ.shiftBy (BTree.node [BTree.leaf])) cs
+        + 3 * bSeriesConvAug α β BTree.leaf
+          * forestSum (fun σ => bSeriesConvAug α β σ)
+              (γ.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) cs
+        + forestSum (fun σ => bSeriesConvAug α β σ)
+            (γ.shiftBy
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs
+        + (α.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+              * forestSum α.toFun β cs
+            + α.toFun BTree.leaf ^ 3
+              * forestSum α.toFun (β.shiftBy (BTree.node [])) cs
+            + 3 * α.toFun BTree.leaf ^ 2
+              * forestSum α.toFun
+                  (β.shiftBy (BTree.node [BTree.leaf])) cs
+            + 3 * α.toFun BTree.leaf
+              * forestSum α.toFun
+                  (β.shiftBy (BTree.node [BTree.leaf, BTree.leaf])) cs
+            + forestSum α.toFun
+                (β.shiftBy
+                  (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs)
+            * γ.emptyVal
+      = α.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])
+          * forestSum α.toFun ⟨1, fun σ => bSeriesConvAug β γ σ⟩ cs
+        + α.toFun BTree.leaf ^ 3
+          * forestSum α.toFun
+              ((⟨1, fun σ => bSeriesConvAug β γ σ⟩ : AugSeries).shiftBy
+                (BTree.node [])) cs
+        + 3 * α.toFun BTree.leaf ^ 2
+          * forestSum α.toFun
+              ((⟨1, fun σ => bSeriesConvAug β γ σ⟩ : AugSeries).shiftBy
+                (BTree.node [BTree.leaf])) cs
+        + 3 * α.toFun BTree.leaf
+          * forestSum α.toFun
+              ((⟨1, fun σ => bSeriesConvAug β γ σ⟩ : AugSeries).shiftBy
+                (BTree.node [BTree.leaf, BTree.leaf])) cs
+        + forestSum α.toFun
+            ((⟨1, fun σ => bSeriesConvAug β γ σ⟩ : AugSeries).shiftBy
+              (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf])) cs
+  rw [hgβ_triple, hgβ_leaf,
+      shift_one_agg α β γ (BTree.node []) (by simp) cs hih,
+      shift_node_singleton_agg α β γ BTree.leaf (by simp) cs hih,
+      shift_pair_agg α β γ BTree.leaf BTree.leaf (by simp) (by simp) cs hih,
+      shift_triple_leaf_agg α β γ cs hih]
+  linear_combination
+    α.toFun (BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) * hih_γ
+
 /-- Forest-level associativity for unital `β`, valid for any `γ`, on
 lists whose children have order at most three.  Extends the cycle 598 /
 cycle 599 ladder one rung further. -/
@@ -1180,6 +1643,67 @@ private theorem forestSum_assoc_depth_three
     · exact forestSum_assoc_three_pair_head α β γ hβ (BTree.node [])
         (BTree.node []) (by simp) (by simp) cs hih
 
+/-- Forest-level associativity for unital `β`, valid for any `γ`, on
+lists whose children have order at most three, except that the new
+order-4 triple-leaf shape is also allowed as a head/tail child. -/
+private theorem forestSum_assoc_three_with_triple_leaf
+    (α β : AugSeries) (hβ : β.IsUnital) :
+    ∀ (children : List BTree), (∀ c ∈ children,
+        c.order ≤ 3 ∨ c = BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) →
+      ∀ (γ : AugSeries),
+        forestSum (fun σ => bSeriesConvAug α β σ) γ children
+          + forestSum α.toFun β children * γ.emptyVal
+          = forestSum α.toFun ⟨1, fun σ => bSeriesConvAug β γ σ⟩
+              children := by
+  intro children
+  induction children with
+  | nil =>
+    intro _ γ
+    simp only [forestSum, BTree.innerCutForest, List.map_cons, List.map_nil,
+               List.sum_cons, List.sum_nil, List.foldr_nil,
+               List.filterMap_nil, one_mul, add_zero]
+    rw [bSeriesConvAug_node_nil β γ]
+    ring
+  | cons c cs ih =>
+    intro hch γ
+    have hc : c.order ≤ 3
+        ∨ c = BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :=
+      hch c List.mem_cons_self
+    have hcs : ∀ c' ∈ cs,
+        c'.order ≤ 3
+          ∨ c' = BTree.node [BTree.leaf, BTree.leaf, BTree.leaf] :=
+      fun c' hc' => hch c' (List.mem_cons_of_mem c hc')
+    have hih : ∀ δ : AugSeries,
+        forestSum (fun σ => bSeriesConvAug α β σ) δ cs
+          + forestSum α.toFun β cs * δ.emptyVal
+          = forestSum α.toFun ⟨1, fun σ => bSeriesConvAug β δ σ⟩ cs :=
+      fun δ => ih hcs δ
+    rcases hc with hc3 | htriple
+    · rcases (BTree.order_le_three_iff c).mp hc3 with
+          rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+      · exact forestSum_assoc_three_one_head α β γ hβ BTree.leaf
+          (by simp) cs hih
+      · exact forestSum_assoc_three_one_head α β γ hβ (BTree.node [])
+          (by simp) cs hih
+      · exact forestSum_assoc_three_singleton_head α β γ hβ BTree.leaf
+          (by simp) cs hih
+      · exact forestSum_assoc_three_singleton_head α β γ hβ (BTree.node [])
+          (by simp) cs hih
+      · exact forestSum_assoc_three_singleton_node_singleton_head α β γ hβ
+          BTree.leaf (by simp) cs hih
+      · exact forestSum_assoc_three_singleton_node_singleton_head α β γ hβ
+          (BTree.node []) (by simp) cs hih
+      · exact forestSum_assoc_three_pair_head α β γ hβ BTree.leaf BTree.leaf
+          (by simp) (by simp) cs hih
+      · exact forestSum_assoc_three_pair_head α β γ hβ BTree.leaf
+          (BTree.node []) (by simp) (by simp) cs hih
+      · exact forestSum_assoc_three_pair_head α β γ hβ (BTree.node [])
+          BTree.leaf (by simp) (by simp) cs hih
+      · exact forestSum_assoc_three_pair_head α β γ hβ (BTree.node [])
+          (BTree.node []) (by simp) (by simp) cs hih
+    · subst c
+      exact forestSum_assoc_three_triple_leaf_head α β γ hβ cs hih
+
 /-- **Cycle 602 headline (depth-3 mixed children)**: unital
 associativity of `bSeriesConvAug` at any node whose root children all
 have order ≤ 3. -/
@@ -1198,6 +1722,42 @@ theorem mul_assoc_at_node_depth_three_children
        = α.toFun (BTree.node children) * 1 + _
   rw [bSeriesConvAug_node α β children, hβ', hγ', mul_one, mul_one]
   have key := forestSum_assoc_depth_three α β hβ children hchildren γ
+  rw [hγ', mul_one] at key
+  simp only [forestSum] at key
+  show α.toFun (BTree.node children)
+       + ((BTree.innerCutForest children α.toFun).map (fun forest =>
+           forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+             * β.toFun (BTree.node (forest.filterMap (fun e => e.1))))).sum
+       + ((BTree.innerCutForest children
+             (fun σ => bSeriesConvAug α β σ)).map (fun forest =>
+           forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+             * γ.toFun (BTree.node (forest.filterMap (fun e => e.1))))).sum
+       = α.toFun (BTree.node children)
+         + ((BTree.innerCutForest children α.toFun).map (fun forest =>
+             forest.foldr (fun e acc => e.2 * acc) (1 : ℝ)
+               * bSeriesConvAug β γ
+                   (BTree.node (forest.filterMap (fun e => e.1))))).sum
+  linarith
+
+/-- **Cycle 605 headline extension**: unital associativity of
+`bSeriesConvAug` at any node whose root children either have order at most
+three or are the order-4 triple-leaf shape. -/
+theorem mul_assoc_at_node_with_triple_leaf_children
+    (α β γ : AugSeries) (_ : α.IsUnital) (hβ : β.IsUnital) (hγ : γ.IsUnital)
+    (children : List BTree) (hchildren : ∀ c ∈ children,
+      c.order ≤ 3 ∨ c = BTree.node [BTree.leaf, BTree.leaf, BTree.leaf]) :
+    bSeriesConvAug ⟨1, fun σ => bSeriesConvAug α β σ⟩ γ
+        (BTree.node children)
+      = bSeriesConvAug α ⟨1, fun σ => bSeriesConvAug β γ σ⟩
+        (BTree.node children) := by
+  have hβ' : β.emptyVal = 1 := hβ
+  have hγ' : γ.emptyVal = 1 := hγ
+  rw [bSeriesConvAug_node ⟨1, fun σ => bSeriesConvAug α β σ⟩ γ children,
+      bSeriesConvAug_node α ⟨1, fun σ => bSeriesConvAug β γ σ⟩ children]
+  show bSeriesConvAug α β (BTree.node children) * γ.emptyVal + _
+       = α.toFun (BTree.node children) * 1 + _
+  rw [bSeriesConvAug_node α β children, hβ', hγ', mul_one, mul_one]
+  have key := forestSum_assoc_three_with_triple_leaf α β hβ children hchildren γ
   rw [hγ', mul_one] at key
   simp only [forestSum] at key
   show α.toFun (BTree.node children)
