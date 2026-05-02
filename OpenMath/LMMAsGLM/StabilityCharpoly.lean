@@ -148,4 +148,101 @@ theorem toGLM_stabilityMatrix_charpoly_rankOne_contraction
     · rw [if_pos hq, if_pos hq]
     · rw [if_neg hq, if_neg hq]; simp
 
+/-- §521 — Past-`y` adjugate row entry at the unique selected index
+`q + 1 = s` (i.e. `q = ⟨s - 1, _⟩`). -/
+noncomputable def toGLM_stabilityCharpolyRowY (m : LMM s) : Polynomial ℂ :=
+  if h : s = 0 then 0 else
+    Matrix.vecMul (fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+        ((toGLM_V_active_lift m).charmatrix).adjugate
+      (Fin.cast (Nat.two_mul s).symm
+        (Fin.castAdd s ⟨s - 1, by omega⟩))
+
+/-- §521 — Past-`h*f` adjugate row entry at the unique selected index. -/
+noncomputable def toGLM_stabilityCharpolyRowF (m : LMM s) : Polynomial ℂ :=
+  if h : s = 0 then 0 else
+    Matrix.vecMul (fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+        ((toGLM_V_active_lift m).charmatrix).adjugate
+      (Fin.cast (Nat.two_mul s).symm
+        (Fin.natAdd s ⟨s - 1, by omega⟩))
+
+private theorem fin_q_succ_eq_s_iff (hs : 0 < s) (q : Fin s) :
+    (q : ℕ) + 1 = s ↔ q = ⟨s - 1, by omega⟩ := by
+  constructor
+  · intro h
+    apply Fin.ext
+    change (q : ℕ) = s - 1
+    omega
+  · intro h
+    rw [h]
+    simpa using Nat.sub_add_cancel hs
+
+/-- §521 Step C.2 — Collapse the past-`y` selector sum to the unique
+selected adjugate-row entry. -/
+theorem sum_castAdd_selector_collapse (m : LMM s) (z : ℂ) (hs : 0 < s) :
+    (∑ q : Fin s,
+      Matrix.vecMul (fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+          ((toGLM_V_active_lift m).charmatrix).adjugate
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s q)) *
+      (if (q : ℕ) + 1 = s then
+         Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ)) else 0))
+      = toGLM_stabilityCharpolyRowY m *
+          Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ)) := by
+  classical
+  let qlast : Fin s := ⟨s - 1, by omega⟩
+  have hlast : (qlast : ℕ) + 1 = s := by
+    dsimp [qlast]
+    omega
+  rw [Finset.sum_eq_single qlast]
+  · rw [if_pos hlast]
+    unfold toGLM_stabilityCharpolyRowY
+    rw [dif_neg (by omega : ¬ s = 0)]
+  · intro q _ hne
+    have hnot : (q : ℕ) + 1 ≠ s := by
+      intro hq
+      exact hne ((fin_q_succ_eq_s_iff hs q).mp hq)
+    rw [if_neg hnot, mul_zero]
+  · simp
+
+/-- §521 Step C.2 — Collapse the past-`h*f` selector sum to the unique
+selected adjugate-row entry. -/
+theorem sum_natAdd_selector_collapse (m : LMM s) (z : ℂ) (hs : 0 < s) :
+    (∑ q : Fin s,
+      Matrix.vecMul (fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+          ((toGLM_V_active_lift m).charmatrix).adjugate
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s q)) *
+      (if (q : ℕ) + 1 = s then Polynomial.C z else 0))
+      = toGLM_stabilityCharpolyRowF m * Polynomial.C z := by
+  classical
+  let qlast : Fin s := ⟨s - 1, by omega⟩
+  have hlast : (qlast : ℕ) + 1 = s := by
+    dsimp [qlast]
+    omega
+  rw [Finset.sum_eq_single qlast]
+  · rw [if_pos hlast]
+    unfold toGLM_stabilityCharpolyRowF
+    rw [dif_neg (by omega : ¬ s = 0)]
+  · intro q _ hne
+    have hnot : (q : ℕ) + 1 ≠ s := by
+      intro hq
+      exact hne ((fin_q_succ_eq_s_iff hs q).mp hq)
+    rw [if_neg hnot, mul_zero]
+  · simp
+
+/-- §521 Step C.2 — Rewrite the rank-one contraction using the two named
+surviving scalar adjugate-row entries. -/
+theorem toGLM_stabilityMatrix_charpoly_rankOne_contraction_explicit
+    (m : LMM s) (z : ℂ) (hs : 0 < s) :
+    dotProduct (fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+        (((toGLM_V_active_lift m).charmatrix).adjugate.mulVec
+          (fun i => Polynomial.C
+            (((1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) •
+              toGLM_rankOneColumn m z) i)))
+      = Polynomial.C (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+          ( toGLM_stabilityCharpolyRowY m *
+              Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + toGLM_stabilityCharpolyRowF m * Polynomial.C z ) := by
+  rw [toGLM_stabilityMatrix_charpoly_rankOne_contraction,
+    sum_castAdd_selector_collapse m z hs,
+    sum_natAdd_selector_collapse m z hs]
+
 end LMM
