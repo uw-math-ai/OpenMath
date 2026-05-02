@@ -4086,6 +4086,300 @@ private lemma residual_integral_form_nonauto
   rw [hConst, mul_sub, hCV, hFTC, hy_ode x]
   ring
 
+/-- **Joint-Lipschitz product-distance bound (cycle 065 helper).**
+
+For a jointly Lipschitz `f : ℝ → ℝ → ℝ`, bound `|f t₁ y₁ − f t₂ y₂|` by
+`L_joint · (|t₁ − t₂| + |y₁ − y₂|)`. The product distance on `ℝ × ℝ`
+is the sup norm; we bound it by the sum.
+
+This is the key algebraic ingredient that lets the §406B helpers
+(`residual_bound`, `deriv_diff_bound`) lift from autonomous
+`f : ℝ → ℝ` to non-autonomous `f : ℝ → ℝ → ℝ`. The autonomous proofs
+applied `LipschitzWith.dist_le_mul` to a single argument; the
+non-autonomous lift needs the joint form to handle time-shifted
+arguments. -/
+private lemma joint_lipschitz_pair_bound
+    {f : ℝ → ℝ → ℝ} {L_joint : ℝ}
+    (hL_joint : 0 ≤ L_joint)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    (t₁ y₁ t₂ y₂ : ℝ) :
+    |f t₁ y₁ - f t₂ y₂| ≤ L_joint * (|t₁ - t₂| + |y₁ - y₂|) := by
+  have hd := hf_lip_joint.dist_le_mul (t₁, y₁) (t₂, y₂)
+  simp only [Function.uncurry_apply_pair] at hd
+  rw [Real.dist_eq] at hd
+  rw [show ((Real.toNNReal L_joint : ℝ≥0) : ℝ) = L_joint from
+        Real.coe_toNNReal L_joint hL_joint] at hd
+  have hprod : dist ((t₁, y₁) : ℝ × ℝ) (t₂, y₂)
+                ≤ |t₁ - t₂| + |y₁ - y₂| := by
+    rw [Prod.dist_eq, Real.dist_eq, Real.dist_eq]
+    exact max_le (le_add_of_nonneg_right (abs_nonneg _))
+                 (le_add_of_nonneg_left (abs_nonneg _))
+  exact hd.trans (mul_le_mul_of_nonneg_left hprod hL_joint)
+
+/-- **Sub-lemma C, non-autonomous lift (cycle 065)**: bound on
+`|y(x) − y(x − i*h) − i*h*y'(x)|` under non-autonomous IVP hypotheses.
+
+Replaces the autonomous bound `(1/2) i² h² L M` with
+`(1/2) i² h² L_joint (1 + M_bound)` — the extra `(1 + M_bound)`
+factor accounts for the joint-Lipschitz time-shift contribution
+(see the `joint_lipschitz_pair_bound` derivation). The textbook
+(Butcher §406) implicitly assumes joint Lipschitz on a compact
+trajectory; the constant shift `L M ↦ L_joint (1 + M)` is a faithful
+re-parameterisation. -/
+private lemma residual_bound_nonauto
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
+    |y x - y (x - (i : ℝ) * h) - ((i : ℝ) * h) * deriv y x|
+      ≤ (1/2) * (i : ℝ)^2 * h^2 * L_joint * (1 + M_bound) := by
+  -- Step 1: rewrite LHS via sub-lemma B (residual_integral_form_nonauto).
+  rw [residual_integral_form_nonauto hy_C1 hy_ode i x h hh]
+  -- Step 2: |h * X| = h * |X| since h ≥ 0.
+  rw [abs_mul, abs_of_nonneg hh]
+  -- Continuity helpers (mirroring sub-lemma B / A setup).
+  have hfy_cont : Continuous (fun t => f t (y t)) := by
+    have heq : (fun t => f t (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact hy_C1.continuous_deriv le_rfl
+  have hfyhx_cont : Continuous (fun ξ : ℝ => f (x + h * ξ) (y (x + h * ξ))) := by
+    have hlin : Continuous (fun ξ : ℝ => x + h * ξ) := by fun_prop
+    exact hfy_cont.comp hlin
+  have hi_le : -(i : ℝ) ≤ 0 := neg_nonpos_of_nonneg (Nat.cast_nonneg i)
+  -- Integrability obligations.
+  have hint_abs_diff :
+      IntervalIntegrable
+        (fun ξ => |f (x + h * ξ) (y (x + h * ξ)) - f x (y x)|)
+        MeasureTheory.volume (-(i : ℝ)) 0 :=
+    ((hfyhx_cont.sub continuous_const).abs).intervalIntegrable _ _
+  have hint_lip :
+      IntervalIntegrable
+        (fun ξ : ℝ => L_joint * (h * (-ξ) + h * (-ξ) * M_bound))
+        MeasureTheory.volume (-(i : ℝ)) 0 := by
+    have hcont : Continuous
+        (fun ξ : ℝ => L_joint * (h * (-ξ) + h * (-ξ) * M_bound)) := by fun_prop
+    exact hcont.intervalIntegrable _ _
+  -- Step 3: |∫| ≤ ∫|·|.
+  have h_abs_int :
+      |∫ ξ in (-(i : ℝ))..0, (f (x + h * ξ) (y (x + h * ξ)) - f x (y x))|
+        ≤ ∫ ξ in (-(i : ℝ))..0, |f (x + h * ξ) (y (x + h * ξ)) - f x (y x)| :=
+    intervalIntegral.abs_integral_le_integral_abs hi_le
+  -- Step 4: pointwise joint-Lipschitz + sub-lemma A bound on ξ ∈ [-i, 0].
+  have hLip_pw : ∀ ξ : ℝ, ξ ≤ 0 →
+      |f (x + h * ξ) (y (x + h * ξ)) - f x (y x)|
+        ≤ L_joint * (h * (-ξ) + h * (-ξ) * M_bound) := by
+    intro ξ hξ
+    have hpair := joint_lipschitz_pair_bound hL_joint hf_lip_joint
+                    (x + h * ξ) (y (x + h * ξ)) x (y x)
+    have habs_t : |(x + h * ξ) - x| = h * (-ξ) := by
+      rw [show (x + h * ξ) - x = h * ξ from by ring,
+          abs_mul, abs_of_nonneg hh, abs_of_nonpos hξ]
+    have hA := exact_solution_norm_bound_nonauto hM hy_C1 hy_ode hf_y_bound
+                 x h hh ξ hξ
+    calc |f (x + h * ξ) (y (x + h * ξ)) - f x (y x)|
+        ≤ L_joint * (|(x + h * ξ) - x| + |y (x + h * ξ) - y x|) := hpair
+      _ = L_joint * (h * (-ξ) + |y (x + h * ξ) - y x|) := by rw [habs_t]
+      _ ≤ L_joint * (h * (-ξ) + h * (-ξ) * M_bound) := by
+          apply mul_le_mul_of_nonneg_left _ hL_joint
+          linarith [hA]
+  have h_int_lip :
+      ∫ ξ in (-(i : ℝ))..0, |f (x + h * ξ) (y (x + h * ξ)) - f x (y x)|
+        ≤ ∫ ξ in (-(i : ℝ))..0, L_joint * (h * (-ξ) + h * (-ξ) * M_bound) :=
+    intervalIntegral.integral_mono_on hi_le hint_abs_diff hint_lip
+      (fun ξ hξ => hLip_pw ξ hξ.2)
+  -- Step 5: compute the closed-form integral.
+  have h_int_eq :
+      ∫ ξ in (-(i : ℝ))..0, L_joint * (h * (-ξ) + h * (-ξ) * M_bound)
+        = L_joint * h * (1 + M_bound) * ((i : ℝ)^2 / 2) := by
+    have heq : (fun ξ : ℝ => L_joint * (h * (-ξ) + h * (-ξ) * M_bound))
+                 = (fun ξ : ℝ => (L_joint * h * (1 + M_bound)) * (-ξ)) := by
+      funext ξ; ring
+    rw [heq, intervalIntegral.integral_const_mul,
+        intervalIntegral.integral_neg, integral_id]
+    ring
+  -- Step 6: assemble.
+  calc h * |∫ ξ in (-(i : ℝ))..0, (f (x + h * ξ) (y (x + h * ξ)) - f x (y x))|
+      ≤ h * ∫ ξ in (-(i : ℝ))..0, |f (x + h * ξ) (y (x + h * ξ)) - f x (y x)| :=
+        mul_le_mul_of_nonneg_left h_abs_int hh
+    _ ≤ h * ∫ ξ in (-(i : ℝ))..0, L_joint * (h * (-ξ) + h * (-ξ) * M_bound) :=
+        mul_le_mul_of_nonneg_left h_int_lip hh
+    _ = h * (L_joint * h * (1 + M_bound) * ((i : ℝ)^2 / 2)) := by rw [h_int_eq]
+    _ = (1/2) * (i : ℝ)^2 * h^2 * L_joint * (1 + M_bound) := by ring
+
+/-- **Sub-lemma D, non-autonomous lift (cycle 065)**: Lipschitz bound
+on `|y'(x) − y'(x − i*h)|` under non-autonomous IVP hypotheses.
+
+Replaces the autonomous bound `i h L M` with `i h L_joint (1 + M_bound)`
+— the extra `(1 + M_bound)` factor accounts for the joint-Lipschitz
+time-shift contribution. -/
+private lemma deriv_diff_bound_nonauto
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
+    |deriv y x - deriv y (x - (i : ℝ) * h)|
+      ≤ (i : ℝ) * h * L_joint * (1 + M_bound) := by
+  rw [hy_ode x, hy_ode (x - (i : ℝ) * h)]
+  -- Step 1: joint-Lipschitz pair bound.
+  have hpair := joint_lipschitz_pair_bound hL_joint hf_lip_joint
+                  x (y x) (x - (i : ℝ) * h) (y (x - (i : ℝ) * h))
+  have habs_t : |x - (x - (i : ℝ) * h)| = (i : ℝ) * h := by
+    have hsub : x - (x - (i : ℝ) * h) = (i : ℝ) * h := by ring
+    rw [hsub, abs_of_nonneg (mul_nonneg (Nat.cast_nonneg i) hh)]
+  -- Step 2: apply sub-lemma A at ξ = -(i : ℝ).
+  have hA_raw := exact_solution_norm_bound_nonauto hM hy_C1 hy_ode hf_y_bound
+                   x h hh (-(i : ℝ)) (neg_nonpos_of_nonneg (Nat.cast_nonneg i))
+  have hA : |y x - y (x - (i : ℝ) * h)| ≤ h * (i : ℝ) * M_bound := by
+    have heq1 : x + h * (-(i : ℝ)) = x - (i : ℝ) * h := by ring
+    have heq2 : -(-(i : ℝ)) = (i : ℝ) := by ring
+    rw [heq1, heq2] at hA_raw
+    rw [abs_sub_comm]
+    exact hA_raw
+  -- Step 3: combine.
+  calc |f x (y x) - f (x - (i : ℝ) * h) (y (x - (i : ℝ) * h))|
+      ≤ L_joint * (|x - (x - (i : ℝ) * h)| + |y x - y (x - (i : ℝ) * h)|) := hpair
+    _ = L_joint * ((i : ℝ) * h + |y x - y (x - (i : ℝ) * h)|) := by rw [habs_t]
+    _ ≤ L_joint * ((i : ℝ) * h + h * (i : ℝ) * M_bound) := by
+        apply mul_le_mul_of_nonneg_left _ hL_joint
+        linarith [hA]
+    _ = (i : ℝ) * h * L_joint * (1 + M_bound) := by ring
+
+/-- **α-sum bound, non-autonomous lift (cycle 065)**: the α-sum from
+the sub-lemma E decomposition is bounded under non-autonomous IVP
+hypotheses. Mirror of `localTruncationError_α_sum_bound` with
+`L * M_bound` replaced by `L_joint * (1 + M_bound)` and the
+underlying `residual_bound` replaced by `residual_bound_nonauto`. -/
+private lemma localTruncationError_α_sum_bound_nonauto {k : ℕ}
+    (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |∑ i : Fin k, M.α i.succ
+        * (y x - y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+           - ((i.val + 1 : ℕ) : ℝ) * h * deriv y x)|
+      ≤ (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+        * ((1/2) * h^2 * L_joint * (1 + M_bound)) := by
+  refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+  rw [show (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          * ((1/2) * h^2 * L_joint * (1 + M_bound))
+        = ∑ i : Fin k,
+            (((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+              * ((1/2) * h^2 * L_joint * (1 + M_bound)) from
+        by rw [Finset.sum_mul]]
+  apply Finset.sum_le_sum
+  intro i _
+  rw [abs_mul]
+  have hC := residual_bound_nonauto hL_joint hM hf_lip_joint
+               hy_C1 hy_ode hf_y_bound (i.val + 1) x h hh
+  calc |M.α i.succ|
+        * |y x - y (x - ((i.val + 1 : ℕ) : ℝ) * h)
+            - ((i.val + 1 : ℕ) : ℝ) * h * deriv y x|
+      ≤ |M.α i.succ|
+          * ((1/2) * ((i.val + 1 : ℕ) : ℝ)^2 * h^2 * L_joint * (1 + M_bound)) :=
+        mul_le_mul_of_nonneg_left hC (abs_nonneg _)
+    _ = (((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          * ((1/2) * h^2 * L_joint * (1 + M_bound)) := by ring
+
+/-- **β-sum bound, non-autonomous lift (cycle 065)**: the β-sum from
+the sub-lemma E decomposition is bounded under non-autonomous IVP
+hypotheses. Mirror of `localTruncationError_β_sum_bound` with
+`L * M_bound` replaced by `L_joint * (1 + M_bound)` and the
+underlying `deriv_diff_bound` replaced by `deriv_diff_bound_nonauto`. -/
+private lemma localTruncationError_β_sum_bound_nonauto {k : ℕ}
+    (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |∑ i : Fin k, M.β i.succ
+        * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h))|
+      ≤ (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * (h * L_joint * (1 + M_bound)) := by
+  refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+  rw [show (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+          * (h * L_joint * (1 + M_bound))
+        = ∑ i : Fin k,
+            (((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * (h * L_joint * (1 + M_bound)) from
+        by rw [Finset.sum_mul]]
+  apply Finset.sum_le_sum
+  intro i _
+  rw [abs_mul]
+  have hD := deriv_diff_bound_nonauto hL_joint hM hf_lip_joint
+               hy_C1 hy_ode hf_y_bound (i.val + 1) x h hh
+  calc |M.β i.succ|
+        * |deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)|
+      ≤ |M.β i.succ|
+          * (((i.val + 1 : ℕ) : ℝ) * h * L_joint * (1 + M_bound)) :=
+        mul_le_mul_of_nonneg_left hD (abs_nonneg _)
+    _ = (((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+          * (h * L_joint * (1 + M_bound)) := by ring
+
+/-- **Butcher Lemma 406B, non-autonomous form (cycle 065).**
+
+For a consistent linear multistep method, the local truncation error
+of the exact solution of a non-autonomous IVP `y'(t) = f(t, y(t))`
+with `f` jointly Lipschitz (constant `L_joint`) on `Function.uncurry f`
+and `‖f(t, y(t))‖ ≤ M_bound` satisfies
+
+  `|L(y, x, h)|
+    ≤ (½ ∑ (i+1)² |α_{i+1}| + ∑ (i+1) |β_{i+1}|)
+        · L_joint · (1 + M_bound) · h²`.
+
+Mirror of `localTruncationError_bound` with `L · M_bound` replaced by
+`L_joint · (1 + M_bound)`. The constant shift is the natural
+absorption of the joint-Lipschitz time-shift contribution; the
+textbook (Butcher §406) implicitly assumes joint Lipschitz on a
+compact trajectory, so this is a faithful re-parameterisation of
+`lem:406B`. -/
+theorem LinearMultistepMethod.localTruncationError_bound_nonauto {k : ℕ}
+    (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |M.localTruncationError y x h|
+      ≤ ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * L_joint * (1 + M_bound) * h^2 := by
+  rw [M.localTruncationError_decomposition hcons y x h]
+  refine (abs_add_le _ _).trans ?_
+  have hα := localTruncationError_α_sum_bound_nonauto M hL_joint hM hf_lip_joint
+               hy_C1 hy_ode hf_y_bound x h hh
+  have hβ := localTruncationError_β_sum_bound_nonauto M hL_joint hM hf_lip_joint
+               hy_C1 hy_ode hf_y_bound x h hh
+  have habs_h : |h * (∑ i : Fin k, M.β i.succ
+                  * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h)))|
+                = h * |∑ i : Fin k, M.β i.succ
+                  * (deriv y x - deriv y (x - ((i.val + 1 : ℕ) : ℝ) * h))| := by
+    rw [abs_mul, abs_of_nonneg hh]
+  rw [habs_h]
+  refine le_trans (add_le_add hα (mul_le_mul_of_nonneg_left hβ hh)) ?_
+  apply le_of_eq
+  ring
+
 open OpenMath.Chapter1.Section141 in
 /-- **Butcher Theorem 406D, autonomous-IVP form (Tendsto).** [Cycle 062]
 

@@ -36,9 +36,24 @@ hypothesis. List in dependency order:
   `exact_solution_norm_bound_nonauto` (1:1 port, no Lipschitz).
 * `residual_integral_form` (line 624) — **LANDED cycle 064** as
   `residual_integral_form_nonauto` (1:1 port, no Lipschitz).
-* `residual_bound` (line 692) — **DEFERRED to cycle 065** (joint-Lipschitz).
-* `deriv_diff_bound` (line 790) — **DEFERRED to cycle 065** (joint-Lipschitz).
-* `localTruncationError_bound` = `lem:406B` (line 923) — **DEFERRED to cycle 065**.
+* `residual_bound` (line 692) — **LANDED cycle 065** as
+  `residual_bound_nonauto` (joint-Lipschitz, bound shape
+  `(1/2) i² h² L_joint (1+M_bound)`).
+* `deriv_diff_bound` (line 790) — **LANDED cycle 065** as
+  `deriv_diff_bound_nonauto` (joint-Lipschitz, bound shape
+  `i h L_joint (1+M_bound)`).
+* `localTruncationError_bound` = `lem:406B` (line 923) — **LANDED
+  cycle 065** as `LinearMultistepMethod.localTruncationError_bound_nonauto`
+  (joint-Lipschitz, faithful re-parameterisation of `lem:406B`).
+* Plus α/β-sum wrappers
+  `localTruncationError_α_sum_bound_nonauto`,
+  `localTruncationError_β_sum_bound_nonauto` and helper
+  `joint_lipschitz_pair_bound`.
+
+**RESOLVED in cycle 065**: cluster 1 of the 064–067 refactor is
+complete. The cycle 065 fallback (deferring α/β + main theorem to
+cycle 066) was NOT triggered — all 6 lemmas landed within the
+~200-line budget.
 
 ### Cycle 064 deferral note: joint-Lipschitz hypothesis
 
@@ -64,7 +79,7 @@ and `localTruncationError_bound_nonauto`. Do not introduce piecemeal
 across one helper at a time — the three helpers form a tight
 algebraic chain and must share the hypothesis form.
 
-### Cycle 065 — lift §406D recurrence helpers (~200 lines)
+### Cycle 066 — lift §406D recurrence helpers (~200 lines)
 
 * `T1_bound` (line 1180)
 * `T2_term_bound` (line 1200)
@@ -72,19 +87,22 @@ algebraic chain and must share the hypothesis form.
 * `globalError_recurrence_form` (line 2544)
 * `globalError_recurrence_form_explicit` (line 3249)
 
-### Cycle 066 — lift cycle 057–061 squeeze helpers (~100 lines)
+### Cycle 067 — lift cycle 057–061 squeeze helpers (~100 lines)
 
 * `globalError_outer_squeeze_a_term`
 * `globalError_outer_squeeze_c_term`
 * `bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`,
   `aOf_tendsto_zero`, `bOf_limit_pos`
 
-### Cycle 067 — close `stable_consistent_isConvergent` (~80 lines)
+### Cycle 068 — close `stable_consistent_isConvergent` (~80 lines)
 
 Lift `globalError_closed_form_autonomous_explicit` to non-autonomous
 and prove `stable_consistent_isConvergent` directly, using:
 * the cycle 063 adapters (Lipschitz, bound, hstart bridge);
-* the cycle 064–066 lifted helpers.
+* the cycle 064–067 lifted helpers.
+
+(Schedule slipped one cycle relative to the original cycle 063 plan
+because cycle 064 deferred §406B helpers 3/4/5 to cycle 065.)
 
 ## Why a refactor cycle by cycle (not one big cycle)
 
