@@ -1621,6 +1621,56 @@ theorem toGLM_isAStable_of_bdf
       simp
     · exact ha z hz_re μ hstab
 
+/-- §521 — BDF specialisation: the §503 LMM-as-GLM embedding preserves
+A-stability in both directions. The denominator hypothesis is the same
+as for `toGLM_isAStable_of_bdf`. -/
+theorem toGLM_isAStable_iff_of_bdf
+    (m : LMM s)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hβ_last : ∀ z : ℂ, z.re ≤ 0 →
+      1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    m.toGLM.IsAStable ↔ m.IsAStable := by
+  refine ⟨fun hG => ?_, fun ha => toGLM_isAStable_of_bdf m ha hbdf hβ_last⟩
+  intro z hz_re ξ hξ
+  by_cases hs : s = 0
+  · subst hs
+    -- For `s = 0` the stability polynomial collapses to `1 - z · β_last`,
+    -- which `hβ_last` rules out on the closed left half-plane. Hence the
+    -- root hypothesis `hξ` is contradictory.
+    exfalso
+    apply hβ_last z hz_re
+    have hα0 : m.α 0 = 1 := by
+      have := m.normalized
+      simpa [Fin.last] using this
+    have hξ' : (1 : ℂ) - z * ((m.β 0 : ℝ) : ℂ) = 0 := by
+      have := hξ
+      simp [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, hα0] at this
+      exact this
+    simpa [Fin.last] using hξ'
+  · haveI : NeZero s := ⟨hs⟩
+    apply hG z hz_re ξ
+    rw [toGLM_stabilityMatrix_eigenvalue_iff_of_bdf m z hbdf (hβ_last z hz_re)]
+    exact Or.inr hξ
+
+/-- §521 — BDF3 is **not** A-stable in the GLM sense. Direct consequence
+of the BDF iff bridge `toGLM_isAStable_iff_of_bdf` and the classical
+result `bdf3_not_aStable` (Dahlquist's second barrier). -/
+theorem bdf3_toGLM_not_isAStable : ¬ bdf3.toGLM.IsAStable := by
+  intro hG
+  apply bdf3_not_aStable
+  refine (toGLM_isAStable_iff_of_bdf bdf3 ?hbdf ?hβ).mp hG
+  case hbdf =>
+    intro l hl
+    fin_cases l <;> simp [bdf3, Fin.last] at hl ⊢
+  case hβ =>
+    intro z hz_re h
+    have hβ_val : (bdf3.β (Fin.last 3) : ℝ) = 6 / 11 := by
+      simp [bdf3, Fin.last]
+    rw [hβ_val] at h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re, Complex.mul_re] at hre
+    linarith
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
@@ -2528,67 +2578,23 @@ theorem toGLM_stabilityDefect_zero (m : LMM s) (hm : m.IsConsistent) :
 end LMM
 
 /-- §521 — Backward Euler is A-stable in the GLM sense after the §503
-embedding. Direct concrete check at `s = 1`: the `2 × 2` stability
-matrix is `!![1/(1-z), 0; z/(1-z), 0]`, whose characteristic polynomial
-factors as `X * (X - 1/(1-z))`. The two eigenvalues are `0` and
-`1/(1-z)`, both of norm at most `1` for `z.re ≤ 0`. The LMM-side
-analogue of cycle 627's `rkImplicitEuler_toGLM_isAStable`. -/
+embedding. One-shot consequence of the BDF iff bridge
+`toGLM_isAStable_iff_of_bdf` and `backwardEuler_aStable`. -/
 theorem backwardEuler_toGLM_isAStable :
     backwardEuler.toGLM.IsAStable := by
-  intro z hz μ hμ
-  have hne : (1 : ℂ) - z ≠ 0 := by
-    intro h
+  refine (LMM.toGLM_isAStable_iff_of_bdf backwardEuler ?hbdf ?hβ).mpr
+    backwardEuler_aStable
+  case hbdf =>
+    intro l hl
+    fin_cases l <;> simp [backwardEuler, Fin.last] at hl ⊢
+  case hβ =>
+    intro z hz_re h
+    have hβ_val : (backwardEuler.β (Fin.last 1) : ℝ) = 1 := by
+      simp [backwardEuler, Fin.last]
+    rw [hβ_val] at h
     have hre := congrArg Complex.re h
     simp [Complex.sub_re] at hre
     linarith
-  have hM : backwardEuler.toGLM.stabilityMatrix z =
-      !![1 / (1 - z), 0; z / (1 - z), 0] := by
-    ext k l
-    rw [LMM.toGLM_stabilityMatrix_apply]
-    have hAℂ : backwardEuler.toGLM.Aℂ = !![1] := by
-      ext i j
-      fin_cases i; fin_cases j
-      show (backwardEuler.β (Fin.last 1) : ℂ) = (!![(1 : ℂ)]) 0 0
-      simp [backwardEuler]
-    rw [hAℂ]
-    have hsub : (1 : Matrix (Fin 1) (Fin 1) ℂ) - z • !![(1 : ℂ)] = !![1 - z] := by
-      ext i j
-      fin_cases i; fin_cases j; simp
-    rw [hsub]
-    have hinv : (!![1 - z] : Matrix (Fin 1) (Fin 1) ℂ)⁻¹ 0 0 = 1 / (1 - z) := by
-      rw [Matrix.inv_def]
-      simp [Matrix.adjugate_fin_one]
-    rw [hinv]
-    fin_cases k <;> fin_cases l <;>
-      simp [LMM.toGLM, backwardEuler, Fin.addCases, Fin.cast,
-        GeneralLinearMethod.Vℂ, GeneralLinearMethod.Bℂ, GeneralLinearMethod.Uℂ,
-        Fin.last]
-    all_goals first | rfl | (field_simp; ring)
-  rw [hM] at hμ
-  have hchar :
-      (!![(1 : ℂ) / (1 - z), 0; z / (1 - z), 0]).charpoly =
-        Polynomial.X * (Polynomial.X - Polynomial.C (1 / (1 - z))) := by
-    rw [Matrix.charpoly]
-    rw [Matrix.charmatrix]
-    rw [Matrix.det_fin_two]
-    simp
-    ring
-  rw [hchar] at hμ
-  rw [Polynomial.IsRoot] at hμ
-  simp at hμ
-  rcases hμ with hμ0 | hμ1
-  · rw [hμ0]; simp
-  · have hμeq : μ = (1 - z)⁻¹ := sub_eq_zero.mp hμ1
-    rw [hμeq]
-    rw [norm_inv]
-    have h1z_ge : 1 ≤ ‖(1 : ℂ) - z‖ := by
-      have h1 := Complex.abs_re_le_norm ((1 : ℂ) - z)
-      simp [Complex.sub_re] at h1
-      rw [abs_of_nonneg (by linarith : (0 : ℝ) ≤ 1 - z.re)] at h1
-      linarith
-    rw [inv_le_one_iff₀]
-    right
-    exact h1z_ge
 
 /-- §521 — The trapezoidal rule is A-stable in the GLM sense after the
 §503 embedding. At `s = 1`, the `2 × 2` stability matrix is rank one with
@@ -2676,126 +2682,19 @@ theorem trapezoidalRule_toGLM_isAStable :
     exact (div_le_one h_denom_pos).mpr h_num_le
 
 /-- §521 — BDF2 is A-stable in the GLM sense after the §503 embedding.
-At `s = 2`, the GLM stability matrix is `4 × 4` and block lower-triangular:
-the rows / columns indexed by the `h·f` slot give two zero eigenvalues,
-and the remaining `2 × 2` active block has charpoly
-`X² − (4 / (3 − 2z)) X + 1 / (3 − 2z)`, whose roots are precisely the
-roots of `bdf2.stabilityPoly · z` rescaled by `1/(3 − 2z)`. -/
+One-shot consequence of the BDF iff bridge `toGLM_isAStable_iff_of_bdf`
+and `bdf2_aStable`. -/
 theorem bdf2_toGLM_isAStable :
     bdf2.toGLM.IsAStable := by
-  intro z hz μ hμ
-  have hne : (3 : ℂ) - 2 * z ≠ 0 := by
-    intro h
+  refine (LMM.toGLM_isAStable_iff_of_bdf bdf2 ?hbdf ?hβ).mpr bdf2_aStable
+  case hbdf =>
+    intro l hl
+    fin_cases l <;> simp [bdf2, Fin.last] at hl ⊢
+  case hβ =>
+    intro z hz_re h
+    have hβ_val : (bdf2.β (Fin.last 2) : ℝ) = 2 / 3 := by
+      simp [bdf2, Fin.last]
+    rw [hβ_val] at h
     have hre := congrArg Complex.re h
     simp [Complex.sub_re, Complex.mul_re] at hre
     linarith
-  have hne' : (3 : ℂ) - z * 2 ≠ 0 := by
-    rwa [show (3 : ℂ) - z * 2 = 3 - 2 * z from by ring]
-  have hAℂ : bdf2.toGLM.Aℂ = !![(2 / 3 : ℂ)] := by
-    ext i j; fin_cases i; fin_cases j
-    show (bdf2.β (Fin.last 2) : ℂ) = (!![(2 / 3 : ℂ)]) 0 0
-    simp [bdf2]
-  have hsub : (1 : Matrix (Fin 1) (Fin 1) ℂ) - z • !![(2 / 3 : ℂ)] =
-      !![1 - z * (2 / 3)] := by
-    ext i j; fin_cases i; fin_cases j; simp
-  have hinv : (!![1 - z * (2 / 3)] : Matrix (Fin 1) (Fin 1) ℂ)⁻¹ 0 0 =
-      1 / (1 - z * (2 / 3)) := by
-    rw [Matrix.inv_def]
-    simp [Matrix.adjugate_fin_one]
-  have hM : bdf2.toGLM.stabilityMatrix z =
-      !![0, 1, 0, 0;
-         -(1 / (3 - 2 * z)), 4 / (3 - 2 * z), 0, 0;
-         0, 0, 0, 1;
-         -(z / (3 - 2 * z)), 4 * z / (3 - 2 * z), 0, 0] := by
-    ext k l
-    rw [LMM.toGLM_stabilityMatrix_apply]
-    rw [hAℂ, hsub, hinv]
-    fin_cases k <;> fin_cases l <;>
-      simp [LMM.toGLM, bdf2, Fin.addCases, Fin.cast,
-        GeneralLinearMethod.Vℂ, GeneralLinearMethod.Bℂ, GeneralLinearMethod.Uℂ,
-        Fin.last]
-    all_goals first | rfl | (field_simp [hne, hne']; try ring)
-  -- Convert IsRoot to determinant condition via eval_charpoly.
-  rw [Polynomial.IsRoot, Matrix.eval_charpoly, hM] at hμ
-  -- Compute the determinant by expanding twice along sparse columns.
-  -- The matrix `(scalar μ - M)` is block lower-triangular with zero
-  -- top-right `2 × 2` block; the bottom-right block is upper-triangular
-  -- with diagonal `(μ, μ)`, contributing `μ²`. The top-left active block
-  -- is `!![μ, -1; 1/(3-2z), μ-4/(3-2z)]`, with det `μ² - 4μ/(3-2z) + 1/(3-2z)`.
-  have hdet :
-      (Matrix.scalar (Fin 4) μ -
-        !![(0 : ℂ), 1, 0, 0;
-           -(1 / (3 - 2 * z)), 4 / (3 - 2 * z), 0, 0;
-           0, 0, 0, 1;
-           -(z / (3 - 2 * z)), 4 * z / (3 - 2 * z), 0, 0]).det =
-        μ ^ 2 * (μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z)) := by
-    -- Rewrite scalar μ as the explicit diagonal 4×4 matrix and form the
-    -- explicit difference matrix.
-    have hscalar : Matrix.scalar (Fin 4) μ =
-        !![μ, 0, 0, 0; 0, μ, 0, 0; 0, 0, μ, 0; 0, 0, 0, μ] := by
-      ext i j
-      fin_cases i <;> fin_cases j <;>
-        simp [Matrix.scalar_apply, Matrix.diagonal]
-    rw [hscalar]
-    have hdiff :
-        (!![(μ : ℂ), 0, 0, 0; 0, μ, 0, 0; 0, 0, μ, 0; 0, 0, 0, μ] -
-          !![(0 : ℂ), 1, 0, 0;
-             -(1 / (3 - 2 * z)), 4 / (3 - 2 * z), 0, 0;
-             0, 0, 0, 1;
-             -(z / (3 - 2 * z)), 4 * z / (3 - 2 * z), 0, 0]) =
-        !![(μ : ℂ), -1, 0, 0;
-           1 / (3 - 2 * z), μ - 4 / (3 - 2 * z), 0, 0;
-           0, 0, μ, -1;
-           z / (3 - 2 * z), -(4 * z / (3 - 2 * z)), 0, μ] := by
-      ext i j
-      fin_cases i <;> fin_cases j <;> simp
-    rw [hdiff]
-    -- The 4×4 matrix is block lower-triangular: rows {0,1} cols {2,3} block is
-    -- zero. Express it as a `Matrix.fromBlocks` permuted via `finSumFinEquiv`,
-    -- then use `det_fromBlocks_zero₁₂`.
-    set Ablk : Matrix (Fin 2) (Fin 2) ℂ :=
-      !![μ, -1; 1 / (3 - 2 * z), μ - 4 / (3 - 2 * z)] with hAblk
-    set Cblk : Matrix (Fin 2) (Fin 2) ℂ :=
-      !![0, 0; z / (3 - 2 * z), -(4 * z / (3 - 2 * z))] with hCblk
-    set Dblk : Matrix (Fin 2) (Fin 2) ℂ := !![μ, -1; 0, μ] with hDblk
-    have hblock :
-        !![(μ : ℂ), -1, 0, 0;
-           1 / (3 - 2 * z), μ - 4 / (3 - 2 * z), 0, 0;
-           0, 0, μ, -1;
-           z / (3 - 2 * z), -(4 * z / (3 - 2 * z)), 0, μ] =
-        (Matrix.fromBlocks Ablk 0 Cblk Dblk).submatrix
-            finSumFinEquiv.symm finSumFinEquiv.symm := by
-      ext i j
-      fin_cases i <;> fin_cases j <;>
-        simp [Matrix.submatrix_apply, Matrix.fromBlocks,
-          finSumFinEquiv, Fin.addCases, Ablk, Cblk, Dblk]
-    rw [hblock, Matrix.det_submatrix_equiv_self,
-        Matrix.det_fromBlocks_zero₁₂]
-    simp [Ablk, Dblk, Matrix.det_fin_two]
-    ring
-  rw [hdet] at hμ
-  -- μ = 0 or quadratic factor vanishes.
-  have hquad_or_zero : μ = 0 ∨
-      μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z) = 0 := by
-    rcases mul_eq_zero.mp hμ with h2 | h2
-    · left
-      exact pow_eq_zero_iff (n := 2) (by norm_num) |>.mp h2
-    · right; exact h2
-  rcases hquad_or_zero with hμ0 | hquad
-  · rw [hμ0]; simp
-  · -- The quadratic root condition becomes `bdf2.stabilityPoly μ z = 0`.
-    have hpoly : bdf2.stabilityPoly μ z = 0 := by
-      have h_zero : (3 - 2 * z) * μ ^ 2 - 4 * μ + 1 = 0 := by
-        have h1 : (3 - 2 * z) * (μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z)) = 0 := by
-          rw [hquad, mul_zero]
-        have h_eq :
-            (3 - 2 * z) * (μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z))
-              = (3 - 2 * z) * μ ^ 2 - 4 * μ + 1 := by
-          field_simp
-        linear_combination h1 - h_eq
-      -- bdf2.stabilityPoly μ z = (1 - 2z/3)μ² - (4/3)μ + 1/3 = (1/3)((3-2z)μ² - 4μ + 1)
-      simp only [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, bdf2]
-      simp [Fin.sum_univ_three]
-      linear_combination h_zero / 3
-    -- Apply bdf2_aStable.
-    exact bdf2_aStable z hz μ hpoly
