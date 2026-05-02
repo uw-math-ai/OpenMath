@@ -1535,6 +1535,33 @@ theorem toGLM_V_nordsieckQ_eq (m : LMM s) (hm : m.IsConsistent)
       simp_rw [hVrow]
       simp
 
+/-- §521 — Row formula for the LMM-as-GLM stability defect on the
+Nordsieck preconsistency vector. Tautological unfolding mirroring
+`ButcherTableau.toGLM_stabilityDefect_apply` on the RK side; supplies
+a `simp`-shaped restatement so downstream `HasStabilityOrder`-style
+work does not have to re-unfold `stabilityDefect` and `mulVec`. -/
+theorem toGLM_stabilityDefect_apply (m : LMM s) (hm : m.IsConsistent)
+    (z : ℂ) (k : Fin (2 * s)) :
+    m.toGLM.stabilityDefect (nordsieckQ s) z k =
+      (∑ l, m.toGLM.stabilityMatrix z k l *
+              GeneralLinearMethod.qℂ (nordsieckQ s) l)
+        - Complex.exp z * GeneralLinearMethod.qℂ (nordsieckQ s) k := by
+  have _ : m.IsConsistent := hm
+  simp [GeneralLinearMethod.stabilityDefect, Matrix.mulVec,
+    dotProduct, Pi.sub_apply, Pi.smul_apply, smul_eq_mul]
+
+/-- §521 — At a past-`h·f` slot the defect drops the `exp z` term
+because `qℂ_natAdd = 0`. -/
+theorem toGLM_stabilityDefect_natAdd (m : LMM s)
+    (hm : m.IsConsistent) (z : ℂ) (k : Fin s) :
+    m.toGLM.stabilityDefect (nordsieckQ s) z
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) =
+      ∑ l, m.toGLM.stabilityMatrix z
+              (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) l *
+        GeneralLinearMethod.qℂ (nordsieckQ s) l := by
+  rw [toGLM_stabilityDefect_apply m hm, toGLM_qℂ_nordsieckQ_natAdd]
+  ring
+
 /-- §521 — Headline mirror of `ButcherTableau.toGLM_stabilityDefect_zero`:
 the stability defect at `z = 0` vanishes on the Nordsieck preconsistency
 vector. -/

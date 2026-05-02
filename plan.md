@@ -979,6 +979,9 @@ error bound for one specific scheme:
   `toGLM_isConsistent` was kept as-is — the new theorem lives in a
   later section so a single-line refactor would create a forward
   reference.
+- **Cycle 637 added the §521 LMM-side stability-defect row formula** —
+  `LMM.toGLM_stabilityDefect_apply` and the past-`h·f` specialization
+  `LMM.toGLM_stabilityDefect_natAdd` in `OpenMath/LMMAsGLM.lean`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
