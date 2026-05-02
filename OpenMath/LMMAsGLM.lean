@@ -1162,21 +1162,21 @@ theorem toGLM_stabilityMatrixPY_apply_last_of_bdf
 
 /-- §521 rank-one base matrix: the complex lift of the underlying `V` shift
 block. -/
-private noncomputable def toGLM_V_active_lift (m : LMM s) :
+noncomputable def toGLM_V_active_lift (m : LMM s) :
     Matrix (Fin (2 * s)) (Fin (2 * s)) ℂ :=
   m.toGLM.Vℂ
 
 /-- §521 rank-one correction column: only the implicit output rows can
 consume the one-stage resolvent. -/
-private noncomputable def toGLM_rankOneColumn (m : LMM s) (z : ℂ) :
+noncomputable def toGLM_rankOneColumn (m : LMM s) (z : ℂ) :
     Fin (2 * s) → ℂ := fun k => z * m.toGLM.Bℂ k 0
 
 /-- §521 rank-one correction row: the one-stage `U` row over past data. -/
-private noncomputable def toGLM_rankOneRow (m : LMM s) :
+noncomputable def toGLM_rankOneRow (m : LMM s) :
     Fin (2 * s) → ℂ := fun l => m.toGLM.Uℂ 0 l
 
 /-- §521 rank-one correction for the one-stage LMM-as-GLM stability matrix. -/
-private noncomputable def toGLM_rankOneCorrection (m : LMM s) (z : ℂ) :
+noncomputable def toGLM_rankOneCorrection (m : LMM s) (z : ℂ) :
     Matrix (Fin (2 * s)) (Fin (2 * s)) ℂ :=
   Matrix.vecMulVec (toGLM_rankOneColumn m z) (toGLM_rankOneRow m)
 
