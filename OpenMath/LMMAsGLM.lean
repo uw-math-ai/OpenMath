@@ -1,6 +1,7 @@
 import OpenMath.MultistepMethods
 import OpenMath.GeneralLinearMethod
 import OpenMath.DahlquistEquivalence
+import OpenMath.BDF
 
 /-!
 # Butcher §503 — Linear multistep methods as general linear methods
@@ -1475,3 +1476,128 @@ theorem trapezoidalRule_toGLM_isAStable :
         sq_nonneg (‖(2 : ℂ) - z‖ - ‖(2 : ℂ) + z‖)]
     rw [norm_div]
     exact (div_le_one h_denom_pos).mpr h_num_le
+
+/-- §521 — BDF2 is A-stable in the GLM sense after the §503 embedding.
+At `s = 2`, the GLM stability matrix is `4 × 4` and block lower-triangular:
+the rows / columns indexed by the `h·f` slot give two zero eigenvalues,
+and the remaining `2 × 2` active block has charpoly
+`X² − (4 / (3 − 2z)) X + 1 / (3 − 2z)`, whose roots are precisely the
+roots of `bdf2.stabilityPoly · z` rescaled by `1/(3 − 2z)`. -/
+theorem bdf2_toGLM_isAStable :
+    bdf2.toGLM.IsAStable := by
+  intro z hz μ hμ
+  have hne : (3 : ℂ) - 2 * z ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re, Complex.mul_re] at hre
+    linarith
+  have hne' : (3 : ℂ) - z * 2 ≠ 0 := by
+    rwa [show (3 : ℂ) - z * 2 = 3 - 2 * z from by ring]
+  have hAℂ : bdf2.toGLM.Aℂ = !![(2 / 3 : ℂ)] := by
+    ext i j; fin_cases i; fin_cases j
+    show (bdf2.β (Fin.last 2) : ℂ) = (!![(2 / 3 : ℂ)]) 0 0
+    simp [bdf2]
+  have hsub : (1 : Matrix (Fin 1) (Fin 1) ℂ) - z • !![(2 / 3 : ℂ)] =
+      !![1 - z * (2 / 3)] := by
+    ext i j; fin_cases i; fin_cases j; simp
+  have hinv : (!![1 - z * (2 / 3)] : Matrix (Fin 1) (Fin 1) ℂ)⁻¹ 0 0 =
+      1 / (1 - z * (2 / 3)) := by
+    rw [Matrix.inv_def]
+    simp [Matrix.adjugate_fin_one]
+  have hM : bdf2.toGLM.stabilityMatrix z =
+      !![0, 1, 0, 0;
+         -(1 / (3 - 2 * z)), 4 / (3 - 2 * z), 0, 0;
+         0, 0, 0, 1;
+         -(z / (3 - 2 * z)), 4 * z / (3 - 2 * z), 0, 0] := by
+    ext k l
+    rw [LMM.toGLM_stabilityMatrix_apply]
+    rw [hAℂ, hsub, hinv]
+    fin_cases k <;> fin_cases l <;>
+      simp [LMM.toGLM, bdf2, Fin.addCases, Fin.cast,
+        GeneralLinearMethod.Vℂ, GeneralLinearMethod.Bℂ, GeneralLinearMethod.Uℂ,
+        Fin.last]
+    all_goals first | rfl | (field_simp [hne, hne']; try ring)
+  -- Convert IsRoot to determinant condition via eval_charpoly.
+  rw [Polynomial.IsRoot, Matrix.eval_charpoly, hM] at hμ
+  -- Compute the determinant by expanding twice along sparse columns.
+  -- The matrix `(scalar μ - M)` is block lower-triangular with zero
+  -- top-right `2 × 2` block; the bottom-right block is upper-triangular
+  -- with diagonal `(μ, μ)`, contributing `μ²`. The top-left active block
+  -- is `!![μ, -1; 1/(3-2z), μ-4/(3-2z)]`, with det `μ² - 4μ/(3-2z) + 1/(3-2z)`.
+  have hdet :
+      (Matrix.scalar (Fin 4) μ -
+        !![(0 : ℂ), 1, 0, 0;
+           -(1 / (3 - 2 * z)), 4 / (3 - 2 * z), 0, 0;
+           0, 0, 0, 1;
+           -(z / (3 - 2 * z)), 4 * z / (3 - 2 * z), 0, 0]).det =
+        μ ^ 2 * (μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z)) := by
+    -- Rewrite scalar μ as the explicit diagonal 4×4 matrix and form the
+    -- explicit difference matrix.
+    have hscalar : Matrix.scalar (Fin 4) μ =
+        !![μ, 0, 0, 0; 0, μ, 0, 0; 0, 0, μ, 0; 0, 0, 0, μ] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        simp [Matrix.scalar_apply, Matrix.diagonal]
+    rw [hscalar]
+    have hdiff :
+        (!![(μ : ℂ), 0, 0, 0; 0, μ, 0, 0; 0, 0, μ, 0; 0, 0, 0, μ] -
+          !![(0 : ℂ), 1, 0, 0;
+             -(1 / (3 - 2 * z)), 4 / (3 - 2 * z), 0, 0;
+             0, 0, 0, 1;
+             -(z / (3 - 2 * z)), 4 * z / (3 - 2 * z), 0, 0]) =
+        !![(μ : ℂ), -1, 0, 0;
+           1 / (3 - 2 * z), μ - 4 / (3 - 2 * z), 0, 0;
+           0, 0, μ, -1;
+           z / (3 - 2 * z), -(4 * z / (3 - 2 * z)), 0, μ] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;> simp
+    rw [hdiff]
+    -- The 4×4 matrix is block lower-triangular: rows {0,1} cols {2,3} block is
+    -- zero. Express it as a `Matrix.fromBlocks` permuted via `finSumFinEquiv`,
+    -- then use `det_fromBlocks_zero₁₂`.
+    set Ablk : Matrix (Fin 2) (Fin 2) ℂ :=
+      !![μ, -1; 1 / (3 - 2 * z), μ - 4 / (3 - 2 * z)] with hAblk
+    set Cblk : Matrix (Fin 2) (Fin 2) ℂ :=
+      !![0, 0; z / (3 - 2 * z), -(4 * z / (3 - 2 * z))] with hCblk
+    set Dblk : Matrix (Fin 2) (Fin 2) ℂ := !![μ, -1; 0, μ] with hDblk
+    have hblock :
+        !![(μ : ℂ), -1, 0, 0;
+           1 / (3 - 2 * z), μ - 4 / (3 - 2 * z), 0, 0;
+           0, 0, μ, -1;
+           z / (3 - 2 * z), -(4 * z / (3 - 2 * z)), 0, μ] =
+        (Matrix.fromBlocks Ablk 0 Cblk Dblk).submatrix
+            finSumFinEquiv.symm finSumFinEquiv.symm := by
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        simp [Matrix.submatrix_apply, Matrix.fromBlocks,
+          finSumFinEquiv, Fin.addCases, Ablk, Cblk, Dblk]
+    rw [hblock, Matrix.det_submatrix_equiv_self,
+        Matrix.det_fromBlocks_zero₁₂]
+    simp [Ablk, Dblk, Matrix.det_fin_two]
+    ring
+  rw [hdet] at hμ
+  -- μ = 0 or quadratic factor vanishes.
+  have hquad_or_zero : μ = 0 ∨
+      μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z) = 0 := by
+    rcases mul_eq_zero.mp hμ with h2 | h2
+    · left
+      exact pow_eq_zero_iff (n := 2) (by norm_num) |>.mp h2
+    · right; exact h2
+  rcases hquad_or_zero with hμ0 | hquad
+  · rw [hμ0]; simp
+  · -- The quadratic root condition becomes `bdf2.stabilityPoly μ z = 0`.
+    have hpoly : bdf2.stabilityPoly μ z = 0 := by
+      have h_zero : (3 - 2 * z) * μ ^ 2 - 4 * μ + 1 = 0 := by
+        have h1 : (3 - 2 * z) * (μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z)) = 0 := by
+          rw [hquad, mul_zero]
+        have h_eq :
+            (3 - 2 * z) * (μ ^ 2 - (4 / (3 - 2 * z)) * μ + 1 / (3 - 2 * z))
+              = (3 - 2 * z) * μ ^ 2 - 4 * μ + 1 := by
+          field_simp
+        linear_combination h1 - h_eq
+      -- bdf2.stabilityPoly μ z = (1 - 2z/3)μ² - (4/3)μ + 1/3 = (1/3)((3-2z)μ² - 4μ + 1)
+      simp only [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, bdf2]
+      simp [Fin.sum_univ_three]
+      linear_combination h_zero / 3
+    -- Apply bdf2_aStable.
+    exact bdf2_aStable z hz μ hpoly
