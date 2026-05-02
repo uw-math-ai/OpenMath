@@ -1,5 +1,6 @@
 import OpenMath.MultistepMethods
 import OpenMath.GeneralLinearMethod
+import OpenMath.DahlquistEquivalence
 
 /-!
 # Butcher §503 — Linear multistep methods as general linear methods
@@ -570,6 +571,87 @@ theorem toGLM_y_half_iter_eq (m : LMM s) (q : Fin (2 * s) → ℝ)
     rw [Nat.add_succ, Function.iterate_succ_apply' (toGLM_y_step m)]
     rw [← ih]
     exact toGLM_y_half_step_eq m q (n + j) (by omega)
+
+/-- §512 Phase D step 4 — the real y-half companion step is the
+`Complex.ofReal` lift of Mathlib's `LinearRecurrence.tupleSucc` companion
+for the LMM characteristic recurrence. -/
+theorem toGLM_y_step_complex_eq (m : LMM s) (v : Fin s → ℝ) :
+    (fun k : Fin s => ((toGLM_y_step m v k : ℝ) : ℂ))
+      = m.toLinearRecurrence.tupleSucc (fun k : Fin s => ((v k : ℝ) : ℂ)) := by
+  funext k
+  unfold toGLM_y_step
+  simp only [toLinearRecurrence, LinearRecurrence.tupleSucc, LinearMap.coe_mk,
+    AddHom.coe_mk]
+  by_cases hlt : (k : ℕ) + 1 < s
+  · have hne : ¬ (k : ℕ) + 1 = s := by omega
+    rw [dif_neg hne, dif_pos hlt]
+  · have heq : (k : ℕ) + 1 = s := by
+      have := k.isLt
+      omega
+    rw [dif_pos heq, dif_neg hlt]
+    simp [Complex.ofReal_sum, Complex.ofReal_mul, Complex.ofReal_neg]
+
+/-- §512 Phase D step 4 — iterate the real/complex companion-step bridge. -/
+theorem toGLM_y_step_iter_complex_eq (m : LMM s)
+    (v : Fin s → ℝ) (j : ℕ) :
+    (fun k : Fin s => (((toGLM_y_step m)^[j] v) k : ℂ))
+      = (m.toLinearRecurrence.tupleSucc^[j])
+          (fun k : Fin s => ((v k : ℝ) : ℂ)) := by
+  induction j with
+  | zero =>
+    simp
+  | succ j ih =>
+    calc
+      (fun k : Fin s => (((toGLM_y_step m)^[j + 1] v) k : ℂ))
+          = (fun k : Fin s =>
+              (toGLM_y_step m ((toGLM_y_step m)^[j] v) k : ℂ)) := by
+            rw [Function.iterate_succ_apply']
+      _ = m.toLinearRecurrence.tupleSucc
+            (fun k : Fin s => (((toGLM_y_step m)^[j] v) k : ℂ)) :=
+          toGLM_y_step_complex_eq m ((toGLM_y_step m)^[j] v)
+      _ = m.toLinearRecurrence.tupleSucc
+            ((m.toLinearRecurrence.tupleSucc^[j])
+              (fun k : Fin s => ((v k : ℝ) : ℂ))) := by
+          rw [ih]
+      _ = (m.toLinearRecurrence.tupleSucc^[j + 1])
+            (fun k : Fin s => ((v k : ℝ) : ℂ)) := by
+          rw [Function.iterate_succ_apply']
+
+/-- §512 Phase D step 4 — zero-stability gives a uniform complex norm bound
+on the y-half of all post-`s` GLM iterates. -/
+theorem toGLM_y_half_iter_complex_norm_bound
+    (m : LMM s) (hzs : m.IsZeroStable) :
+    ∃ M : ℝ, 0 ≤ M ∧
+      ∀ (q : Fin (2 * s) → ℝ) (n : ℕ) (_hn : s ≤ n) (j : ℕ),
+        ‖fun k : Fin s =>
+            ((toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+                fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n + j] q) k
+              : ℝ) : ℂ)‖
+          ≤ M * ‖fun k : Fin s =>
+              ((toGLM_y_half ((fun v : Fin (2 * s) → ℝ =>
+                  fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) k
+                : ℝ) : ℂ)‖ := by
+  obtain ⟨M, hM_nonneg, hM⟩ := uniformly_bounded_tupleSucc_iterates m hzs
+  refine ⟨M, hM_nonneg, ?_⟩
+  intro q n hn j
+  let Vop : (Fin (2 * s) → ℝ) → Fin (2 * s) → ℝ :=
+    fun v k' => ∑ l, m.toGLM.V k' l * v l
+  let initR : Fin s → ℝ := toGLM_y_half ((Vop^[n]) q)
+  let initC : Fin s → ℂ := fun k => ((initR k : ℝ) : ℂ)
+  have hreal :
+      toGLM_y_half ((Vop^[n + j]) q) = (toGLM_y_step m)^[j] initR := by
+    exact toGLM_y_half_iter_eq m q n hn j
+  have hcomplex :
+      (fun k : Fin s => ((toGLM_y_half ((Vop^[n + j]) q) k : ℝ) : ℂ))
+        = (m.toLinearRecurrence.tupleSucc^[j]) initC := by
+    calc
+      (fun k : Fin s => ((toGLM_y_half ((Vop^[n + j]) q) k : ℝ) : ℂ))
+          = (fun k : Fin s => (((toGLM_y_step m)^[j] initR) k : ℂ)) := by
+            rw [hreal]
+      _ = (m.toLinearRecurrence.tupleSucc^[j]) initC := by
+          exact toGLM_y_step_iter_complex_eq m initR j
+  rw [hcomplex]
+  exact hM j initC
 
 /-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
 the stability-matrix entry collapses to the single stage resolvent factor.
