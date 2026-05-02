@@ -840,9 +840,10 @@ error bound for one specific scheme:
   `rkImplicitEuler_toGLM_isAStable`. Cycles 630–632 added the concrete
   LMM-side transports `backwardEuler_toGLM_isAStable`,
   `trapezoidalRule_toGLM_isAStable`, and `bdf2_toGLM_isAStable`.
-  Remaining §521 milestones are the stability-order definition via
-  `Matrix.exp` and the LMM-side iff bridge `LMM.toGLM_isAStable_iff`
-  (needs general-`s` charpoly factorisation).
+  Cycle 633 added the GLM stability-order surface with `qℂ`,
+  `stabilityDefect`, `stabilityDefect_zero`, and `HasStabilityOrder`.
+  Remaining §521 milestone is the LMM-side iff bridge
+  `LMM.toGLM_isAStable_iff` (needs general-`s` charpoly factorisation).
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
   of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
   out of scope for this cycle.)
@@ -950,6 +951,12 @@ error bound for one specific scheme:
   `X² · (X² − 4X/(3−2z) + 1/(3−2z))` via `Matrix.fromBlocks` +
   `det_fromBlocks_zero₁₂`, then transports the nonzero quadratic factor
   to `bdf2.stabilityPoly` and finishes with `bdf2_aStable`).
+- **Cycle 633 added §521 stability-order infrastructure** —
+  `GeneralLinearMethod.qℂ`, `stabilityDefect`, `stabilityDefect_zero`,
+  and `HasStabilityOrder` landed in `OpenMath/GeneralLinearMethod.lean`,
+  defining the entrywise defect `M(z) q - exp(z) q` at a real
+  preconsistency vector. The next §521 milestone is the general
+  `LMM.toGLM_isAStable_iff` bridge.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -999,16 +1006,15 @@ error bound for one specific scheme:
     Cycles 630–632 landed three concrete LMM-side transports
     (`backwardEuler_toGLM_isAStable`,
     `trapezoidalRule_toGLM_isAStable`, `bdf2_toGLM_isAStable`).
+    Cycle 633 landed the GLM stability-order surface (`qℂ`,
+    `stabilityDefect`, `stabilityDefect_zero`, `HasStabilityOrder`).
     Next milestones, in priority order:
-    (1) define **stability order** via `Matrix.exp` on the GLM side
-    (small, self-contained — pursue this before any further concrete
-    transports);
-    (2) prove the LMM-side iff bridge `LMM.toGLM_isAStable_iff` using
+    (1) prove the LMM-side iff bridge `LMM.toGLM_isAStable_iff` using
     the general-`s` charpoly factorisation
     `charpoly(M(z)) = X^s · π(·, z)` up to scaling, leveraging the
-    block-decomposition pattern from cycle 632; (3) only after the
-    stability-order definition lands consider further concrete LMM
-    A-stability transports — **not** `am2` / `ab2` next. Later §522 can
+    block-decomposition pattern from cycle 632; (2) only after the
+    iff bridge lands consider further concrete LMM A-stability transports
+    — **not** `am2` / `ab2` next. Later §522 can
     record the Butcher–Chipman conjecture outline: order of `M(z)` as
     approximation to `exp(z) · I`.
 8. **Butcher §54 — DIMSIM types and ARK methods.** New file

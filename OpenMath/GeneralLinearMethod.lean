@@ -209,6 +209,37 @@ def IsAStable (m : GeneralLinearMethod s r) : Prop :=
   ∀ z : ℂ, z.re ≤ 0 →
     ∀ μ : ℂ, (m.stabilityMatrix z).charpoly.IsRoot μ → ‖μ‖ ≤ 1
 
+/-- Complex lift of a real preconsistency vector. -/
+def qℂ (q : Fin r → ℝ) : Fin r → ℂ := fun k => (q k : ℂ)
+
+/-- Butcher §521 — stability defect at preconsistency vector `q`:
+`M(z) · q − exp(z) · q`, as a `ℂ`-valued vector function of `z`.
+A GLM has stability order `p` iff this defect vanishes to order `p+1`. -/
+noncomputable def stabilityDefect
+    (m : GeneralLinearMethod s r) (q : Fin r → ℝ) (z : ℂ) : Fin r → ℂ :=
+  (m.stabilityMatrix z).mulVec (qℂ q) - Complex.exp z • (qℂ q)
+
+/-- Butcher §521 — stability defect at `z = 0` collapses, on the
+preconsistency vector, to zero: `M(0) q = V q = q = exp(0) q`. -/
+theorem stabilityDefect_zero (m : GeneralLinearMethod s r)
+    (q : Fin r → ℝ) (hVq : ∀ k, ∑ l, m.V k l * q l = q k) :
+    m.stabilityDefect q 0 = 0 := by
+  ext k
+  simp only [stabilityDefect, stabilityMatrix_zero, Pi.sub_apply,
+    Pi.zero_apply, Complex.exp_zero, one_smul, qℂ]
+  rw [sub_eq_zero]
+  simp only [Matrix.mulVec, dotProduct, Vℂ, qℂ]
+  exact_mod_cast hVq k
+
+/-- Butcher §521 — a GLM has **stability order at least `p`** at the
+preconsistency vector `q` if its stability defect vanishes to order
+`p+1` near `z = 0`. -/
+def HasStabilityOrder (m : GeneralLinearMethod s r) (q : Fin r → ℝ)
+    (p : ℕ) : Prop :=
+  ∃ (C δ : ℝ), 0 < δ ∧ 0 ≤ C ∧
+    ∀ z : ℂ, ‖z‖ < δ →
+      ∀ k, ‖m.stabilityDefect q z k‖ ≤ C * ‖z‖ ^ (p + 1)
+
 /-! ## Stage Solvability by Contraction -/
 
 /-- The scalar GLM stage self-map. Fixed points are stage vectors satisfying
