@@ -837,15 +837,9 @@ error bound for one specific scheme:
   Padé-like conditions on `M(z)`. Cycle 627 opened the GLM-level
   A-stability surface with `GeneralLinearMethod.IsAStable`, the RK bridge
   `ButcherTableau.toGLM_isAStable_iff`, and the concrete sanity check
-  `rkImplicitEuler_toGLM_isAStable`. Cycle 628 landed the sorry-first
-  headline `LMM.toGLM_isAStable_iff` plus the concrete LMM-side sanity
-  check `backwardEuler_toGLM_isAStable` (proved directly via the s=1
-  charpoly factorisation rather than through the bridge). Remaining
-  §521 milestones are closing the general-`s` LMM-side iff bridge
-  (charpoly identity worked out for `s=1` in
-  `.prover-state/issues/lmm_toGLM_isAStable_iff_charpoly.md`),
-  transporting trapezoidal/BDF2 A-stability through the bridge, and
-  the stability-order definition via `Matrix.exp`.
+  `rkImplicitEuler_toGLM_isAStable`. Remaining §521 milestones are the
+  LMM-side iff bridge, concrete LMM A-stability transport, and the
+  stability-order definition via `Matrix.exp`.
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
   of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
   out of scope for this cycle.)
