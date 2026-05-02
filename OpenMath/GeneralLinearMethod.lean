@@ -78,6 +78,38 @@ theorem IsExplicit.A_diag_zero (m : GeneralLinearMethod s r)
   intro i
   exact hm i i le_rfl
 
+/-! ## §501 / §511 — Input Transformations -/
+
+/-- Butcher §501/§511 — transform the input/output basis of a general
+linear method by matrices `T` and `Tinv`.
+
+For an inverse pair this is the equivalence
+`(A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`.  The inverse matrices are
+kept as explicit arguments so downstream algebra can choose the exact
+side of the inverse law it needs. -/
+def transform (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) : GeneralLinearMethod s r where
+  A := m.A
+  U := m.U * Tinv
+  B := T * m.B
+  V := T * m.V * Tinv
+
+@[simp] theorem transform_A (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) :
+    (m.transform T Tinv).A = m.A := rfl
+
+@[simp] theorem transform_U (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) :
+    (m.transform T Tinv).U = m.U * Tinv := rfl
+
+@[simp] theorem transform_B (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) :
+    (m.transform T Tinv).B = T * m.B := rfl
+
+@[simp] theorem transform_V (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) :
+    (m.transform T Tinv).V = T * m.V * Tinv := rfl
+
 /-! ## §510 — Preconsistency, Consistency, and Stability -/
 
 /-- Butcher §510 — consistency. A general linear method is **consistent**
@@ -173,6 +205,134 @@ def stageMap (m : GeneralLinearMethod s r)
     (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) (i : Fin s) :
     m.stageMap f h yIn Y i =
       h * ∑ j, m.A i j * f (Y j) + ∑ k, m.U i k * yIn k := rfl
+
+private lemma mulVec_transform_input {ι : Type*} (M : Matrix ι (Fin r) ℝ)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) (hTinvT : Tinv * T = 1)
+    (v : Fin r → ℝ) :
+    (M * Tinv).mulVec (T.mulVec v) = M.mulVec v := by
+  rw [Matrix.mulVec_mulVec, Matrix.mul_assoc, hTinvT, Matrix.mul_one]
+
+private lemma mulVec_transform_output (T Tinv : Matrix (Fin r) (Fin r) ℝ)
+    (M : Matrix (Fin r) (Fin r) ℝ) (hTinvT : Tinv * T = 1)
+    (v : Fin r → ℝ) :
+    (T * M * Tinv).mulVec (T.mulVec v) = T.mulVec (M.mulVec v) := by
+  rw [Matrix.mulVec_mulVec, Matrix.mul_assoc, hTinvT, Matrix.mul_one,
+    ← Matrix.mulVec_mulVec]
+
+private lemma left_mul_mulVec {ι : Type*} [Fintype ι]
+    (T : Matrix (Fin r) (Fin r) ℝ) (M : Matrix (Fin r) ι ℝ)
+    (v : ι → ℝ) :
+    (T * M).mulVec v = T.mulVec (M.mulVec v) := by
+  rw [← Matrix.mulVec_mulVec]
+
+/-- §511 — the transformed stage map at transformed input agrees with
+the original stage map. -/
+theorem transform_stageMap_eq (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) (hTinvT : Tinv * T = 1)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) :
+    (m.transform T Tinv).stageMap f h (T.mulVec yIn) Y =
+      m.stageMap f h yIn Y := by
+  ext i
+  have hU :
+      ∑ k, (m.U * Tinv) i k * T.mulVec yIn k =
+        ∑ k, m.U i k * yIn k := by
+    simpa [Matrix.mulVec] using
+      congr_fun (mulVec_transform_input (m.U) T Tinv hTinvT yIn) i
+  simp [stageMap_apply, hU]
+
+/-- §511 — a transformed step is the `T`-image of the original step. -/
+theorem transform_step_eq (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) (hTinvT : Tinv * T = 1)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) :
+    (m.transform T Tinv).step f h (T.mulVec yIn) Y =
+      T.mulVec (m.step f h yIn Y) := by
+  let F : Fin s → ℝ := fun j => f (Y j)
+  have hTransStep :
+      (m.transform T Tinv).step f h (T.mulVec yIn) Y =
+        h • ((T * m.B).mulVec F) +
+          (T * m.V * Tinv).mulVec (T.mulVec yIn) := by
+    ext k
+    simp only [step_apply, Matrix.mulVec, dotProduct, Pi.add_apply,
+      Pi.smul_apply, transform_B, transform_V, smul_eq_mul, F]
+  have hStep :
+      m.step f h yIn Y =
+        h • (m.B.mulVec F) + m.V.mulVec yIn := by
+    ext k
+    simp only [step_apply, Matrix.mulVec, dotProduct, Pi.add_apply,
+      Pi.smul_apply, smul_eq_mul, F]
+  rw [hTransStep, left_mul_mulVec T m.B F,
+    mulVec_transform_output T Tinv m.V hTinvT yIn, hStep,
+    Matrix.mulVec_add, Matrix.mulVec_smul]
+
+/-- §511 — preconsistency is transported by an input transformation. -/
+theorem transform_isPreconsistent (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) (hTTinv : T * Tinv = 1)
+    (hm : m.IsPreconsistent) :
+    (m.transform T Tinv).IsPreconsistent := by
+  have hTinvT : Tinv * T = 1 := mul_eq_one_comm.mp hTTinv
+  rcases hm with ⟨q, hVq, hUq⟩
+  refine ⟨T.mulVec q, ?_, ?_⟩
+  · have hVq_vec : m.V.mulVec q = q := by
+      ext k
+      simpa [Matrix.mulVec] using hVq k
+    have hV :
+        (T * m.V * Tinv).mulVec (T.mulVec q) = T.mulVec q := by
+      rw [mulVec_transform_output T Tinv m.V hTinvT q, hVq_vec]
+    intro k
+    simpa [Matrix.mulVec] using congr_fun hV k
+  · have hU := mulVec_transform_input (m.U) T Tinv hTinvT q
+    intro i
+    calc
+      ∑ k, (m.U * Tinv) i k * T.mulVec q k = (m.U.mulVec q) i := by
+        simpa [Matrix.mulVec] using congr_fun hU i
+      _ = 1 := hUq i
+
+/-- §511 — consistency is transported by an input transformation. -/
+theorem transform_isConsistent (m : GeneralLinearMethod s r)
+    (T Tinv : Matrix (Fin r) (Fin r) ℝ) (hTTinv : T * Tinv = 1)
+    (hm : m.IsConsistent) :
+    (m.transform T Tinv).IsConsistent := by
+  have hTinvT : Tinv * T = 1 := mul_eq_one_comm.mp hTTinv
+  rcases hm with ⟨q, q', hVq, hUq, hCompat⟩
+  let oneS : Fin s → ℝ := fun _ => 1
+  refine ⟨T.mulVec q, T.mulVec q', ?_, ?_, ?_⟩
+  · have hVq_vec : m.V.mulVec q = q := by
+      ext k
+      simpa [Matrix.mulVec] using hVq k
+    have hV :
+        (T * m.V * Tinv).mulVec (T.mulVec q) = T.mulVec q := by
+      rw [mulVec_transform_output T Tinv m.V hTinvT q, hVq_vec]
+    intro k
+    simpa [Matrix.mulVec] using congr_fun hV k
+  · have hU := mulVec_transform_input (m.U) T Tinv hTinvT q
+    intro i
+    calc
+      ∑ k, (m.U * Tinv) i k * T.mulVec q k = (m.U.mulVec q) i := by
+        simpa [Matrix.mulVec] using congr_fun hU i
+      _ = 1 := hUq i
+  · have hCompat_vec :
+        m.B.mulVec oneS + m.V.mulVec q' = q + q' := by
+      ext k
+      simpa [Matrix.mulVec, dotProduct, oneS] using hCompat k
+    have hThird :
+        (T * m.B).mulVec oneS +
+            (T * m.V * Tinv).mulVec (T.mulVec q') =
+          T.mulVec q + T.mulVec q' := by
+      calc
+        (T * m.B).mulVec oneS +
+            (T * m.V * Tinv).mulVec (T.mulVec q')
+            = T.mulVec (m.B.mulVec oneS) + T.mulVec (m.V.mulVec q') := by
+              rw [left_mul_mulVec T m.B oneS,
+                mulVec_transform_output T Tinv m.V hTinvT q']
+        _ = T.mulVec (m.B.mulVec oneS + m.V.mulVec q') := by
+              rw [Matrix.mulVec_add]
+        _ = T.mulVec (q + q') := by
+              rw [hCompat_vec]
+        _ = T.mulVec q + T.mulVec q' := by
+              rw [Matrix.mulVec_add]
+    intro k
+    simpa only [Matrix.mulVec, dotProduct, Pi.add_apply, oneS, mul_one] using
+      congr_fun hThird k
 
 /-- The maximum row-`ℓ¹` norm of `A`, `max_i ∑_j |A i j|`. Equals `0` in
 the vacuous case `s = 0`. -/

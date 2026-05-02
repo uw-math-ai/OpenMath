@@ -771,8 +771,10 @@ error bound for one specific scheme:
   one-step `step`, explicitness predicate, contraction-based unique stage
   solvability theorem, and the initial §510 hook later upgraded in
   cycle 613.
-- [ ] **§501 Transformations of methods** — equivalence under
-  `T : (A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`.
+- [x] **§501 Transformations of methods** — equivalence under
+  `T : (A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`
+  (`OpenMath/GeneralLinearMethod.lean`). Cycle 617 added
+  `GeneralLinearMethod.transform` and projection lemmas.
 - [x] **§502 Runge–Kutta methods as general linear methods** — embedding
   `r = 1`, `U = 𝟙`, `V = 1` (`OpenMath/RKAsGLM.lean`).
 - [x] **§503 Linear multistep methods as general linear methods** —
@@ -797,8 +799,10 @@ error bound for one specific scheme:
   Nordsieck `q / q'` witnesses (`q` = past-y indicator,
   `q' j = j` on past-y / `1` on past-f). The consistency / convergence
   chain (§512–§515) remains open.
-- [ ] **§511 Covariance of methods** under the equivalence transformation
-  of §501.
+- [x] **§511 Covariance of methods** under the equivalence transformation
+  of §501. Cycle 617 proved stage-map covariance, step covariance,
+  and transport of `IsPreconsistent` / `IsConsistent` in
+  `OpenMath/GeneralLinearMethod.lean`.
 - [ ] **§512 Definition of convergence**.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
@@ -951,11 +955,6 @@ error bound for one specific scheme:
 11. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
-12. **Butcher §511 — Covariance of GLMs under the equivalence
-    transformation `T : (A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`.**
-    Extends `OpenMath/GeneralLinearMethod.lean` with a pure
-    linear-algebra restatement; follows naturally after §502/§503/§510.
-
 When this list reaches under five items, any planner cycle that lands
 without completing real work must append at least one new concrete
 target before exiting (drawn from the chapter sections above). Do not
