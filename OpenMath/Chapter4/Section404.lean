@@ -4380,6 +4380,382 @@ theorem LinearMultistepMethod.localTruncationError_bound_nonauto {k : ℕ}
   apply le_of_eq
   ring
 
+/-! ### Cycle 066 — §406D recurrence cluster lift to non-autonomous `f : ℝ → ℝ → ℝ`
+
+The cycle 044 §406D recurrence helpers (T1/T2/T3, `globalError_recurrence_bound`,
+`globalError_recurrence_bound_textbook`) take an autonomous `f : ℝ → ℝ`. Cycle 066
+lifts them to non-autonomous form under the joint-Lipschitz hypothesis on
+`Function.uncurry f` cycle 065 established. The autonomous variants (lines
+~1180–1455) are preserved and still consumed by
+`stable_consistent_isConvergent_autonomous`. -/
+
+/-- **Sub-lemma D, non-autonomous lift (cycle 066)**: bound on
+`T_3 = L(yex, x, h)` — direct application of `lem:406B`'s non-autonomous
+form `localTruncationError_bound_nonauto` (cycle 065). Trivial wrapper.
+
+The autonomous `T3_bound` is preserved (line 1239). The bound's
+`L · M_bound` term becomes `L_joint · (1 + M_bound)` automatically,
+inherited from cycle 065. -/
+lemma T3_bound_nonauto {k : ℕ} (M : LinearMultistepMethod k)
+    (hcons : M.IsConsistent)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) :
+    |M.localTruncationError y x h|
+      ≤ ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+          + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * L_joint * (1 + M_bound) * h^2 :=
+  M.localTruncationError_bound_nonauto hcons hL_joint hM hf_lip_joint
+    hy_C1 hy_ode hf_y_bound x h hh
+
+/-- **Sub-lemma B, non-autonomous lift (cycle 066)**: bound on
+`T_1 = h β_0 (f t a − f t b)` via per-time Lipschitz at a single time
+argument `t`, extracted from joint Lipschitz on `Function.uncurry f`.
+
+Autonomous version `T1_bound` (line 1180) is preserved. Bound shape is
+identical with `L ↦ L_joint`: the time arguments coincide in the call
+site (both `f`-applications evaluate at the current step time
+`x₀ + n·h`), so the joint-Lipschitz pair bound collapses to the
+spatial-only bound. -/
+lemma T1_bound_nonauto {f : ℝ → ℝ → ℝ} {L_joint : ℝ} (hL_joint : 0 ≤ L_joint)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {β₀ : ℝ} (h : ℝ) (hh : 0 ≤ h) (t a b : ℝ) :
+    |h * β₀ * (f t a - f t b)| ≤ h * L_joint * |β₀| * |a - b| := by
+  -- Joint-Lipschitz pair bound at coinciding time arguments collapses to
+  -- the spatial Lipschitz bound.
+  have hLip : |f t a - f t b| ≤ L_joint * |a - b| := by
+    have hpair := joint_lipschitz_pair_bound hL_joint hf_lip_joint t a t b
+    have hsub : |t - t| = 0 := by rw [sub_self, abs_zero]
+    rw [hsub, zero_add] at hpair
+    exact hpair
+  calc |h * β₀ * (f t a - f t b)|
+      = h * |β₀| * |f t a - f t b| := by
+        rw [abs_mul, abs_mul, abs_of_nonneg hh]
+    _ ≤ h * |β₀| * (L_joint * |a - b|) :=
+        mul_le_mul_of_nonneg_left hLip (mul_nonneg hh (abs_nonneg _))
+    _ = h * L_joint * |β₀| * |a - b| := by ring
+
+/-- **Sub-lemma C, non-autonomous lift (cycle 066)**: bound on
+`T_2 = h Σ β_i (f t_i a_i − f t_i b_i)` via per-`i` per-time Lipschitz
+(time arguments coincide per summand) extracted from joint Lipschitz.
+
+Autonomous version `T2_bound` (line 1199) is preserved. Bound shape is
+identical with `L ↦ L_joint`: per-summand time arguments coincide
+(both `f`-applications evaluate at the same `t_i`), so the joint
+Lipschitz pair bound collapses to the spatial-only bound. -/
+lemma T2_bound_nonauto {k : ℕ} (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ → ℝ} {L_joint : ℝ} (hL_joint : 0 ≤ L_joint)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    (h : ℝ) (hh : 0 ≤ h)
+    (t : Fin k → ℝ) (a : Fin k → ℝ) (b : Fin k → ℝ) (Mmax : ℝ)
+    (hMmax : ∀ i : Fin k, |a i - b i| ≤ Mmax) (hMmax0 : 0 ≤ Mmax) :
+    |h * ∑ i : Fin k, M.β i.succ * (f (t i) (a i) - f (t i) (b i))|
+      ≤ h * L_joint * (∑ i : Fin k, |M.β i.succ|) * Mmax := by
+  rw [abs_mul, abs_of_nonneg hh]
+  have hsum_bound :
+      |∑ i : Fin k, M.β i.succ * (f (t i) (a i) - f (t i) (b i))|
+        ≤ (∑ i : Fin k, |M.β i.succ|) * (L_joint * Mmax) := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    rw [show (∑ i : Fin k, |M.β i.succ|) * (L_joint * Mmax)
+            = ∑ i : Fin k, |M.β i.succ| * (L_joint * Mmax) from
+          by rw [Finset.sum_mul]]
+    apply Finset.sum_le_sum
+    intro i _
+    rw [abs_mul]
+    have hLip : |f (t i) (a i) - f (t i) (b i)| ≤ L_joint * |a i - b i| := by
+      have hpair := joint_lipschitz_pair_bound hL_joint hf_lip_joint
+                      (t i) (a i) (t i) (b i)
+      have hsub : |t i - t i| = 0 := by rw [sub_self, abs_zero]
+      rw [hsub, zero_add] at hpair
+      exact hpair
+    have hLM : |f (t i) (a i) - f (t i) (b i)| ≤ L_joint * Mmax := by
+      calc |f (t i) (a i) - f (t i) (b i)|
+          ≤ L_joint * |a i - b i| := hLip
+        _ ≤ L_joint * Mmax := mul_le_mul_of_nonneg_left (hMmax i) hL_joint
+    exact mul_le_mul_of_nonneg_left hLM (abs_nonneg _)
+  calc h * |∑ i : Fin k, M.β i.succ * (f (t i) (a i) - f (t i) (b i))|
+      ≤ h * ((∑ i : Fin k, |M.β i.succ|) * (L_joint * Mmax)) :=
+        mul_le_mul_of_nonneg_left hsum_bound hh
+    _ = h * L_joint * (∑ i : Fin k, |M.β i.succ|) * Mmax := by ring
+
+/-- **Sub-lemma A, non-autonomous lift (cycle 066)**: the algebraic
+identity (406d) for the global error vector under non-autonomous IVP
+hypotheses. Mirror of `globalError_decomposition` (line 1094) with
+`f (yex t)` replaced by `f t (yex t)`.
+
+The proof structure is identical: unfold `localTruncationError`, apply
+`IsLMMSolution` (re-indexed via `hn`), and combine with `α_zero = -1`.
+The only change is the substitution `deriv yex t = f t (yex t)`
+in the time-dependent form. -/
+lemma globalError_decomposition_nonauto {k : ℕ} (M : LinearMultistepMethod k)
+    {f : ℝ → ℝ → ℝ} {yex : ℝ → ℝ} {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hyex_ode : ∀ t, deriv yex t = f t (yex t))
+    (hY : M.IsLMMSolution h x₀ f Y)
+    (n : ℕ) (hn : k ≤ n) :
+    globalError yex Y x₀ h n
+      - ∑ i : Fin k, M.α i.succ * globalError yex Y x₀ h (n - (i.val + 1))
+      = h * M.β 0 * (f (x₀ + (n : ℝ) * h) (yex (x₀ + (n : ℝ) * h))
+                     - f (x₀ + (n : ℝ) * h) (Y n))
+        + h * (∑ i : Fin k, M.β i.succ
+                * (f (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                       (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h))
+                   - f (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                       (Y (n - (i.val + 1)))))
+        + M.localTruncationError yex (x₀ + (n : ℝ) * h) h := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + k := ⟨n - k, (Nat.sub_add_cancel hn).symm⟩
+  have hjk : ∀ i : Fin k, i.val + 1 ≤ m + k := fun i => by
+    have : i.val < k := i.isLt; omega
+  have hcast_real : ∀ i : Fin k,
+      x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h
+        = x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h := fun i => by
+    rw [Nat.cast_sub (hjk i)]; push_cast; ring
+  have hderiv_xn : deriv yex (x₀ + ((m + k : ℕ) : ℝ) * h)
+                    = f (x₀ + ((m + k : ℕ) : ℝ) * h)
+                        (yex (x₀ + ((m + k : ℕ) : ℝ) * h)) := hyex_ode _
+  have hderiv_shifted : ∀ i : Fin k,
+      deriv yex (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h)
+        = f (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+            (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)) := fun i => by
+    rw [hcast_real i]; exact hyex_ode _
+  have hyex_shifted : ∀ i : Fin k,
+      yex (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h)
+        = yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h) := fun i => by
+    rw [hcast_real i]
+  have hYm := hY m
+  rw [Fin.sum_univ_succ (f := fun i : Fin (k + 1) =>
+        M.α i * Y (m + k - i.val))] at hYm
+  rw [Fin.sum_univ_succ (f := fun i : Fin (k + 1) =>
+        M.β i * f (x₀ + ((m + k - i.val : ℕ) : ℝ) * h)
+                  (Y (m + k - i.val)))] at hYm
+  simp only [Fin.val_zero, Nat.sub_zero, M.α_zero, Fin.val_succ] at hYm
+  unfold globalError LinearMultistepMethod.localTruncationError
+  rw [Fin.sum_univ_succ (f := fun i : Fin (k + 1) =>
+        M.β i * deriv yex
+          (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val : ℕ) : ℝ) * h))]
+  simp only [Fin.val_zero, Nat.cast_zero, zero_mul, sub_zero, Fin.val_succ]
+  rw [hderiv_xn]
+  rw [show (∑ i : Fin k, M.α i.succ
+              * yex (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h))
+        = (∑ i : Fin k, M.α i.succ
+              * yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)) from
+      Finset.sum_congr rfl (fun i _ => by rw [hyex_shifted i])]
+  rw [show (∑ i : Fin k, M.β i.succ
+              * deriv yex
+                  (x₀ + ((m + k : ℕ) : ℝ) * h - ((i.val + 1 : ℕ) : ℝ) * h))
+        = (∑ i : Fin k, M.β i.succ
+              * f (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+                  (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h))) from
+      Finset.sum_congr rfl (fun i _ => by rw [hderiv_shifted i])]
+  rw [show (∑ i : Fin k, M.α i.succ
+              * (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+                 - Y (m + k - (i.val + 1))))
+        = (∑ i : Fin k, M.α i.succ
+              * yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h))
+          - (∑ i : Fin k, M.α i.succ * Y (m + k - (i.val + 1))) from by
+      rw [← Finset.sum_sub_distrib]
+      apply Finset.sum_congr rfl
+      intro i _; ring]
+  rw [show (∑ i : Fin k, M.β i.succ
+              * (f (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+                    (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h))
+                 - f (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+                    (Y (m + k - (i.val + 1)))))
+        = (∑ i : Fin k, M.β i.succ
+              * f (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+                  (yex (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)))
+          - (∑ i : Fin k, M.β i.succ
+              * f (x₀ + ((m + k - (i.val + 1) : ℕ) : ℝ) * h)
+                  (Y (m + k - (i.val + 1)))) from by
+      rw [← Finset.sum_sub_distrib]
+      apply Finset.sum_congr rfl
+      intro i _; ring]
+  push_cast at hYm ⊢
+  linarith [hYm]
+
+/-- **Butcher Theorem 406C, non-autonomous form (cycle 066, partial form):**
+For an LMM solution `Y` of the non-autonomous IVP `y' = f(t, y)` with `f`
+jointly Lipschitz on `Function.uncurry f`, the global error recurrence
+satisfies the per-term bound
+
+  `|n_n - Σ α_i n_{n-i}|
+    ≤ h L_joint |β_0| · |n_n| + h L_joint Σ |β_{i+1}| · Mmax
+       + D · L_joint · (1 + M_bound) · h^2`
+
+where `D` is the LTE coefficient from `lem:406B`-non-auto and `Mmax`
+bounds the per-step error history. The autonomous form (line 1268)
+is preserved; this is the textbook 406C primary form. -/
+theorem LinearMultistepMethod.globalError_recurrence_bound_nonauto
+    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f t (yex t))
+    (hf_yex_bound : ∀ t, |f t (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hY : M.IsLMMSolution h x₀ f Y)
+    (n : ℕ) (hn : k ≤ n)
+    (Mmax : ℝ) (hMmax0 : 0 ≤ Mmax)
+    (hMmax : ∀ i : Fin k,
+              |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1))| ≤ Mmax) :
+    |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))|
+      ≤ h * L_joint * |M.β 0| * |yex (x₀ + (n : ℝ) * h) - Y n|
+        + h * L_joint * (∑ i : Fin k, |M.β i.succ|) * Mmax
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+          * L_joint * (1 + M_bound) * h^2 := by
+  have hA := globalError_decomposition_nonauto M hyex_ode hY n hn
+  unfold globalError at hA
+  rw [hA]
+  refine (abs_add_le _ _).trans ?_
+  refine le_trans (add_le_add (abs_add_le _ _) le_rfl) ?_
+  have hB := T1_bound_nonauto (β₀ := M.β 0) hL_joint hf_lip_joint h hh
+              (x₀ + (n : ℝ) * h)
+              (yex (x₀ + (n : ℝ) * h)) (Y n)
+  have hC := T2_bound_nonauto M hL_joint hf_lip_joint h hh
+              (fun i : Fin k => x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+              (fun i : Fin k => yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h))
+              (fun i : Fin k => Y (n - (i.val + 1)))
+              Mmax hMmax hMmax0
+  have hD := T3_bound_nonauto M hcons hL_joint hM hf_lip_joint
+              hyex_C1 hyex_ode hf_yex_bound (x₀ + (n : ℝ) * h) h hh
+  exact le_trans (add_le_add (add_le_add hB hC) hD) (le_of_eq (by ring))
+
+/-- **Butcher Theorem 406C, non-autonomous textbook form (cycle 066):**
+under the smallness hypothesis `h L_joint |β_0| < 1`, the per-term bound
+from `globalError_recurrence_bound_nonauto` can be absorbed via
+`(1 − h L_joint |β_0|)`-inversion to yield the textbook form (406c)
+
+  `|n_n − Σ α_i n_{n-i}|  ≤  C_h · h · max |n_{n-i}|  +  D_h · h²`
+
+with explicit `h`-dependent constants. The autonomous form
+(line 1331) is preserved; this is the textbook 406C primary form. -/
+theorem LinearMultistepMethod.globalError_recurrence_bound_textbook_nonauto
+    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f t (yex t))
+    (hf_yex_bound : ∀ t, |f t (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L_joint * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ f Y)
+    (n : ℕ) (hn : k ≤ n)
+    (Mmax : ℝ) (hMmax0 : 0 ≤ Mmax)
+    (hMmax : ∀ i : Fin k,
+              |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1))| ≤ Mmax) :
+    |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))|
+      ≤ (h * L_joint * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                  + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L_joint * |M.β 0|)) * Mmax
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L_joint * (1 + M_bound) * h^2
+            / (1 - h * L_joint * |M.β 0|) := by
+  have hA := M.globalError_recurrence_bound_nonauto hcons hL_joint hM
+                hf_lip_joint hyex_C1 hyex_ode hf_yex_bound hh hY n hn
+                Mmax hMmax0 hMmax
+  have h_abs_nn :
+      |yex (x₀ + (n : ℝ) * h) - Y n|
+        ≤ |∑ i : Fin k, M.α i.succ
+              * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                  - Y (n - (i.val + 1)))|
+          + |yex (x₀ + (n : ℝ) * h) - Y n
+              - ∑ i : Fin k, M.α i.succ
+                  * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                      - Y (n - (i.val + 1)))| := by
+    have hrw : yex (x₀ + (n : ℝ) * h) - Y n
+              = (∑ i : Fin k, M.α i.succ
+                  * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                      - Y (n - (i.val + 1))))
+                + (yex (x₀ + (n : ℝ) * h) - Y n
+                    - ∑ i : Fin k, M.α i.succ
+                        * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                            - Y (n - (i.val + 1)))) := by ring
+    calc |yex (x₀ + (n : ℝ) * h) - Y n|
+        = |(∑ i : Fin k, M.α i.succ
+                * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                    - Y (n - (i.val + 1))))
+            + (yex (x₀ + (n : ℝ) * h) - Y n
+                - ∑ i : Fin k, M.α i.succ
+                    * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                        - Y (n - (i.val + 1))))| := by rw [← hrw]
+      _ ≤ _ := abs_add_le _ _
+  have h_abs_sum :
+      |∑ i : Fin k, M.α i.succ
+          * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+              - Y (n - (i.val + 1)))|
+        ≤ (∑ i : Fin k, |M.α i.succ|) * Mmax := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    rw [Finset.sum_mul]
+    apply Finset.sum_le_sum
+    intro i _
+    rw [abs_mul]
+    exact mul_le_mul_of_nonneg_left (hMmax i) (abs_nonneg _)
+  have h_one_sub_c_pos : 0 < 1 - h * L_joint * |M.β 0| := by linarith
+  have hc_nn : 0 ≤ h * L_joint * |M.β 0| :=
+    mul_nonneg (mul_nonneg hh hL_joint) (abs_nonneg _)
+  have hsum_alpha_nn : 0 ≤ ∑ i : Fin k, |M.α i.succ| :=
+    Finset.sum_nonneg (fun i _ => abs_nonneg _)
+  set A : ℝ :=
+      |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))| with hA_def
+  set B : ℝ :=
+      |∑ i : Fin k, M.α i.succ
+          * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+              - Y (n - (i.val + 1)))| with hB_def
+  set N : ℝ := |yex (x₀ + (n : ℝ) * h) - Y n| with hN_def
+  set c : ℝ := h * L_joint * |M.β 0| with hc_def
+  set Sα : ℝ := ∑ i : Fin k, |M.α i.succ| with hSα_def
+  set T2coef : ℝ := h * L_joint * (∑ i : Fin k, |M.β i.succ|) with hT2c_def
+  set Dh2 : ℝ :=
+      ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+        + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+        * L_joint * (1 + M_bound) * h^2 with hD_def
+  have h_step1 : A ≤ c * N + T2coef * Mmax + Dh2 := hA
+  have h_step2 : c * N ≤ c * B + c * A := by
+    have := mul_le_mul_of_nonneg_left h_abs_nn hc_nn
+    linarith
+  have h_step3 :
+      (1 - c) * A ≤ c * B + T2coef * Mmax + Dh2 := by
+    nlinarith [h_step1, h_step2]
+  have h_step4 :
+      (1 - c) * A ≤ c * Sα * Mmax + T2coef * Mmax + Dh2 := by
+    have hcB : c * B ≤ c * (Sα * Mmax) :=
+      mul_le_mul_of_nonneg_left h_abs_sum hc_nn
+    nlinarith [h_step3, hcB]
+  rw [show (h * L_joint * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L_joint * |M.β 0|)) * Mmax
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L_joint * (1 + M_bound) * h^2
+            / (1 - h * L_joint * |M.β 0|)
+        = (c * Sα * Mmax + T2coef * Mmax + Dh2) / (1 - c) from by
+    simp only [hc_def, hSα_def, hT2c_def, hD_def]; ring]
+  rw [le_div_iff₀ h_one_sub_c_pos]
+  linarith [h_step4]
+
 open OpenMath.Chapter1.Section141 in
 /-- **Butcher Theorem 406D, autonomous-IVP form (Tendsto).** [Cycle 062]
 

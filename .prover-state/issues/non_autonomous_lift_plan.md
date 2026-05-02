@@ -81,11 +81,29 @@ algebraic chain and must share the hypothesis form.
 
 ### Cycle 066 — lift §406D recurrence helpers (~200 lines)
 
-* `T1_bound` (line 1180)
-* `T2_term_bound` (line 1200)
-* `globalError_step_bound` (line 1241)
-* `globalError_recurrence_form` (line 2544)
-* `globalError_recurrence_form_explicit` (line 3249)
+* `T1_bound` (line 1180) — **LANDED cycle 066** as `T1_bound_nonauto`
+  (joint-Lipschitz collapsed at coinciding time arg; bound shape
+  `h L_joint |β₀| · |a−b|`).
+* `T2_bound` (line 1199) — **LANDED cycle 066** as `T2_bound_nonauto`
+  (per-summand joint-Lipschitz collapsed at coinciding time arg;
+  bound shape `h L_joint Σ|β| · Mmax`).
+* `T3_bound` (line 1239) — **LANDED cycle 066** as `T3_bound_nonauto`
+  (trivial wrapper of cycle 065's `localTruncationError_bound_nonauto`).
+* `globalError_decomposition` (line 1094) — **LANDED cycle 066** as
+  `globalError_decomposition_nonauto` (private helper, mirror of the
+  autonomous algebraic identity (406d) with `f t (yex t)` substitution).
+* `globalError_recurrence_bound` (line 1268) — **LANDED cycle 066**
+  as `LinearMultistepMethod.globalError_recurrence_bound_nonauto`
+  (per-term form, composes T1/T2/T3 + decomposition lift).
+* `globalError_recurrence_bound_textbook` (line 1331) — **LANDED
+  cycle 066** as
+  `LinearMultistepMethod.globalError_recurrence_bound_textbook_nonauto`
+  (textbook form; `(1−hL_joint|β₀|)`-inversion mirroring autonomous).
+
+**RESOLVED in cycle 066**: cluster 2 of the 064–067 refactor is
+complete. All 6 new lemmas (5 strategy targets + 1 private decomposition
+helper) landed within the cycle's budget. The cycle 066 fallback
+(deferring (4) and (5) to cycle 067) was NOT triggered.
 
 ### Cycle 067 — lift cycle 057–061 squeeze helpers (~100 lines)
 
