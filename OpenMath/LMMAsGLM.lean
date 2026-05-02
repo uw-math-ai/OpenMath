@@ -1172,6 +1172,29 @@ theorem toGLM_stabilityMatrix_eq_V_active_plus_rank_one
     toGLM_rankOneRow, Matrix.vecMulVec_apply]
   ring
 
+/-- §521 — Under the BDF hypothesis, the past-`y` rows have no dependence on
+past `h*f` columns. -/
+theorem toGLM_stabilityMatrixPYHF_eq_zero_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    toGLM_stabilityMatrixPYHF m z = 0 := by
+  ext j l
+  change toGLM_stabilityMatrixPYHF m z j l = (0 : ℂ)
+  unfold toGLM_stabilityMatrixPYHF
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj]
+    have hlne : (Fin.castSucc l) ≠ Fin.last s := by
+      intro hl
+      have : (l : ℕ) = s := by
+        have := congrArg (Fin.val) hl
+        simpa [Fin.castSucc, Fin.last] using this
+      exact absurd this (by have := l.isLt; omega)
+    have hβ : m.β (Fin.castSucc l) = 0 := hbdf (Fin.castSucc l) hlne
+    rw [hβ]
+    push_cast
+    ring_nf
+  · rw [if_neg hj]
+
 /-- §521 — Under the BDF hypothesis (only the last `β` coefficient is
 non-zero), the past-`h*f` block of the LMM-as-GLM stability matrix
 collapses to the pure shift companion: no `z`-dependence, no resolvent
@@ -1235,6 +1258,21 @@ theorem toGLM_stabilityMatrixPHF_charpoly_of_bdf
     rw [if_neg (by omega)]
     simp
   simp [hdiag, Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+
+/-- §521 — For BDF-type LMMs, the full LMM-as-GLM stability matrix has the
+same characteristic polynomial as the active past-`y` block, multiplied by
+the nilpotent past-`h*f` shift factor. -/
+theorem toGLM_stabilityMatrix_charpoly_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    (m.toGLM.stabilityMatrix z).charpoly =
+      (toGLM_stabilityMatrixPY m z).charpoly *
+        (Polynomial.X : Polynomial ℂ) ^ s := by
+  rw [toGLM_stabilityMatrix_eq_fromBlocks m z]
+  rw [Matrix.charpoly_reindex]
+  rw [toGLM_stabilityMatrixPYHF_eq_zero_of_bdf m z hbdf]
+  rw [Matrix.charpoly_fromBlocks_zero₁₂]
+  rw [toGLM_stabilityMatrixPHF_charpoly_of_bdf m z hbdf]
 
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
