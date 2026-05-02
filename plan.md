@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 41 / 175** entities done (5 chapters; 1 entity deferred cross-chapter; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 43 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -61,7 +61,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `thm:213B` **Euler method uniform convergence theorem** (§213)
 
 ### Deferred to after Chapter 4
-- [~] `thm:243A` **Consistency, stability and convergence** (§243) — iff packager landed cycle 069 in `OpenMath/Chapter4/Section405.lean`. Forward direction (`stable ∧ consistent ⇒ convergent`) closed via cycle 068 `stable_consistent_isConvergent`. Reverse direction `thm:405C` closed cycle 070; only `thm:405A` (`convergent_isStable`) remains partial.
+- [x] `thm:243A` **Consistency, stability and convergence** (§243) — iff packager landed cycle 069 in `OpenMath/Chapter4/Section405.lean`. Forward direction (`stable ∧ consistent ⇒ convergent`) closed via cycle 068 `stable_consistent_isConvergent`. Reverse direction (`convergent_isStable` cycle 072, `convergent_isPreconsistent` cycle 069, `convergent_isConsistent` cycle 070) all closed.
 
 ---
 
@@ -181,7 +181,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:422A` **The underlying one-step method (LMM)** (§422)
 - [ ] `thm:441C` **Maximum order bound for stable linear multistep methods** (§441)
 - [ ] `lem:441B` **Maximum order coefficients negativity** (§441)
-- [~] `thm:405A` **Necessity of conditions for convergence** (§405) — scaffold in `OpenMath/Chapter4/Section405.lean`
+- [x] `thm:405A` **Necessity of conditions for convergence** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 072)
 - [x] `thm:406C` **Global error bound for linear multistep methods** (§406)
 - [ ] `thm:410A` **Criteria for order** (§410)
 - [ ] `thm:422C` **Convergence of Linear Multistep Methods** (§422)

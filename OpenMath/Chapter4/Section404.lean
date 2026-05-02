@@ -5639,4 +5639,177 @@ theorem LinearMultistepMethod.stable_consistent_isConvergent
     have hpre := hcons.1
     simp [LinearMultistepMethod.IsPreconsistent] at hpre
 
+/-! ### Helpers for `thm:405A` (Butcher §405A; convergent ⇒ stable)
+
+The textbook argument (cycle 071+) constructs an unbounded homogeneous
+sequence `η`, then rescales it by a running maximum `ζ_n = max_{i≤n}|η_i|`
+to feed convergence and derive a contradiction.  The four declarations
+below are pure infrastructure (no LMM-specific dependence beyond
+`IsHomogeneousSolution.const_smul`) and live here so `Section405.lean`
+can assemble them. -/
+
+/-- Running maximum of `|y i|` over `i ≤ n`.  Used by `thm:405A`. -/
+def LinearMultistepMethod.runningMaxAbs (y : ℕ → ℝ) : ℕ → ℝ
+  | 0     => |y 0|
+  | n + 1 => max (LinearMultistepMethod.runningMaxAbs y n) |y (n + 1)|
+
+/-- The running maximum is monotone in `n`. -/
+theorem LinearMultistepMethod.runningMaxAbs_monotone (y : ℕ → ℝ) :
+    Monotone (LinearMultistepMethod.runningMaxAbs y) := by
+  apply monotone_nat_of_le_succ
+  intro n
+  show LinearMultistepMethod.runningMaxAbs y n
+        ≤ max (LinearMultistepMethod.runningMaxAbs y n) |y (n + 1)|
+  exact le_max_left _ _
+
+/-- `|y n|` is bounded above by the running maximum at index `n`. -/
+theorem LinearMultistepMethod.runningMaxAbs_ge_abs (y : ℕ → ℝ) (n : ℕ) :
+    |y n| ≤ LinearMultistepMethod.runningMaxAbs y n := by
+  cases n with
+  | zero => exact le_refl _
+  | succ n =>
+      show |y (n + 1)|
+            ≤ max (LinearMultistepMethod.runningMaxAbs y n) |y (n + 1)|
+      exact le_max_right _ _
+
+/-- If `|y n|` is unbounded above, the running maximum tends to ∞. -/
+theorem LinearMultistepMethod.runningMaxAbs_atTop_of_unbounded
+    {y : ℕ → ℝ} (hy : ∀ C : ℝ, ∃ n, C < |y n|) :
+    Filter.Tendsto (LinearMultistepMethod.runningMaxAbs y)
+      Filter.atTop Filter.atTop := by
+  refine Filter.tendsto_atTop_atTop.mpr ?_
+  intro C
+  obtain ⟨n₀, hn₀⟩ := hy C
+  refine ⟨n₀, fun n hn => ?_⟩
+  have hC_le : C ≤ |y n₀| := le_of_lt hn₀
+  have h_ge_at_n₀ : |y n₀| ≤ LinearMultistepMethod.runningMaxAbs y n₀ :=
+    LinearMultistepMethod.runningMaxAbs_ge_abs y n₀
+  have h_mono :
+      LinearMultistepMethod.runningMaxAbs y n₀
+        ≤ LinearMultistepMethod.runningMaxAbs y n :=
+    LinearMultistepMethod.runningMaxAbs_monotone y hn
+  linarith
+
+/-- Linearity of the homogeneous-solution predicate under scalar
+multiplication.  Used by `thm:405A` to rescale the unbounded
+homogeneous solution `η` by `1/ζ m`. -/
+theorem LinearMultistepMethod.IsHomogeneousSolution.const_smul
+    {k : ℕ} {M : LinearMultistepMethod k} {y : ℕ → ℝ}
+    (hy : M.IsHomogeneousSolution y) (c : ℝ) :
+    M.IsHomogeneousSolution (fun n => c * y n) := by
+  intro m
+  show c * y (m + k) = ∑ i : Fin k, M.α i.succ * (c * y (m + k - (i.val + 1)))
+  rw [hy m, Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  ring
+
+/-- Existence of arbitrarily-large *record* indices for an unbounded
+sequence: `n` is a record if `|y n| = ζ n` (the new value sets a
+fresh maximum).  Cycle 071: closed via Aristotle.
+
+Strategy: pick `m` with `|y m|` exceeding both `ζ N` and the sum of
+`|y i|` for `i ≤ N`.  Some index `i ≤ m` achieves the running max at
+`m`; if `i ≤ N` it would be bounded by the sum, contradicting the
+choice of `m`, so `i > N` and `|y i| = ζ i` is a record. -/
+theorem LinearMultistepMethod.runningMaxAbs_record_above
+    {y : ℕ → ℝ} (hy : ∀ C : ℝ, ∃ n, C < |y n|) (N : ℕ) :
+    ∃ n, N ≤ n ∧ |y n| = LinearMultistepMethod.runningMaxAbs y n := by
+  obtain ⟨m, hm⟩ := hy (Max.max (LinearMultistepMethod.runningMaxAbs y N)
+      (∑ i ∈ Finset.range (N + 1), |y i|))
+  -- By definition of `runningMaxAbs`, the running max at `m` is
+  -- achieved by some `|y i|` for `i ≤ m`.
+  obtain ⟨i, hi₁, hi₂⟩ : ∃ i ∈ Finset.range (m + 1),
+      LinearMultistepMethod.runningMaxAbs y m = |y i| := by
+    have h_max : ∀ n, ∃ i ∈ Finset.range (n + 1),
+        LinearMultistepMethod.runningMaxAbs y n = |y i| := by
+      intro n
+      induction n with
+      | zero => exact ⟨0, by norm_num, rfl⟩
+      | succ n ih =>
+          obtain ⟨j, hj_mem, hj_eq⟩ := ih
+          rcases le_or_gt |y (n + 1)|
+            (LinearMultistepMethod.runningMaxAbs y n) with hcase | hcase
+          · refine ⟨j, ?_, ?_⟩
+            · simp [Finset.mem_range] at hj_mem ⊢
+              omega
+            · show LinearMultistepMethod.runningMaxAbs y (n + 1) = |y j|
+              show max (LinearMultistepMethod.runningMaxAbs y n)
+                       |y (n + 1)| = |y j|
+              rw [max_eq_left hcase]
+              exact hj_eq
+          · refine ⟨n + 1, ?_, ?_⟩
+            · simp [Finset.mem_range]
+            · show LinearMultistepMethod.runningMaxAbs y (n + 1) = |y (n + 1)|
+              show max (LinearMultistepMethod.runningMaxAbs y n)
+                       |y (n + 1)| = |y (n + 1)|
+              exact max_eq_right (le_of_lt hcase)
+    exact h_max m
+  by_cases hi₃ : i ≤ N
+  · -- If `i ≤ N`, |y i| ≤ ∑_{j ≤ N} |y j|, but `runningMaxAbs y m > ∑`,
+    -- contradicting `runningMaxAbs y m = |y i|`.
+    exfalso
+    have hsum :
+        |y i| ≤ ∑ j ∈ Finset.range (N + 1), |y j| := by
+      refine Finset.single_le_sum (f := fun j => |y j|)
+        (fun j _ => abs_nonneg (y j))
+        (Finset.mem_range.mpr (Nat.lt_succ_of_le hi₃))
+    have h_le : LinearMultistepMethod.runningMaxAbs y m ≤
+        ∑ j ∈ Finset.range (N + 1), |y j| := by
+      rw [hi₂]; exact hsum
+    have h_lt : LinearMultistepMethod.runningMaxAbs y m < |y m| := by
+      have := lt_of_le_of_lt h_le (lt_of_le_of_lt (le_max_right _ _) hm)
+      exact this
+    have hge :
+        |y m| ≤ LinearMultistepMethod.runningMaxAbs y m :=
+      LinearMultistepMethod.runningMaxAbs_ge_abs y m
+    linarith
+  · refine ⟨i, le_of_not_ge hi₃, ?_⟩
+    refine le_antisymm
+      (LinearMultistepMethod.runningMaxAbs_ge_abs y i) ?_
+    -- `runningMaxAbs y i ≤ runningMaxAbs y m = |y i|` by monotonicity.
+    have him : i ≤ m := by
+      have := Finset.mem_range.mp hi₁
+      omega
+    have h_mono :
+        LinearMultistepMethod.runningMaxAbs y i ≤
+          LinearMultistepMethod.runningMaxAbs y m :=
+      LinearMultistepMethod.runningMaxAbs_monotone y him
+    rw [hi₂] at h_mono
+    exact h_mono
+
+/-- Textbook-style contradiction packager.  If `ζ` is the running
+maximum (monotone, dominates `|η|`) of an unbounded sequence and
+`η m / ζ m → 0`, the record-index subsequence forces `1 = 0`.
+
+Cycle 071: closed via Aristotle.  Strategy: from `Tendsto`, pick `N`
+beyond which `|η n / ζ n| < 1/2`; use `hrecord` and
+`hζ_atTop.eventually_gt_atTop 0` to find a record index `n` past `N`
+where `ζ n > 0`, then `|η n / ζ n| = 1` contradicts `< 1/2`. -/
+theorem LinearMultistepMethod.unbounded_homogeneous_contra
+    {η ζ : ℕ → ℝ}
+    (_hζ_monotone : Monotone ζ)
+    (hζ_ge : ∀ n, |η n| ≤ ζ n)
+    (hζ_atTop : Filter.Tendsto ζ Filter.atTop Filter.atTop)
+    (hrecord : ∀ N, ∃ n, N ≤ n ∧ |η n| = ζ n)
+    (htendsto : Filter.Tendsto (fun m => η m / ζ m)
+                  Filter.atTop (nhds 0)) :
+    False := by
+  -- Threshold beyond which `|η n / ζ n| < 1/2`.
+  obtain ⟨N, hN⟩ : ∃ N, ∀ n ≥ N, |η n / ζ n| < 1 / 2 := by
+    simpa [abs_div] using
+      Metric.tendsto_atTop.mp htendsto (1 / 2) (by norm_num)
+  -- Threshold beyond which `ζ n > 0`.
+  obtain ⟨M, hM⟩ := Filter.eventually_atTop.mp
+    (hζ_atTop.eventually_gt_atTop 0)
+  -- Find a record index ≥ max N M.
+  obtain ⟨n, hn_ge, hn_record⟩ := hrecord (Max.max N M)
+  have hN' := hN n (le_trans (le_max_left _ _) hn_ge)
+  have hM' := hM n (le_trans (le_max_right _ _) hn_ge)
+  have hge_n := hζ_ge n
+  rw [abs_lt] at hN'
+  cases abs_cases (η n) with
+  | inl h => nlinarith [mul_div_cancel₀ (η n) hM'.ne']
+  | inr h => nlinarith [mul_div_cancel₀ (η n) hM'.ne']
+
 end OpenMath.Chapter4.Section404

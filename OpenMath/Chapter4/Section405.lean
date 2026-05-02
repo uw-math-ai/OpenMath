@@ -86,18 +86,145 @@ theorem LinearMultistepMethod.homogeneousFromOnes_isHomogeneousSolution
 /-- **Butcher Theorem 405A** (p. 343).  A convergent linear multistep
 method is stable.
 
-Textbook proof sketch: if the method were not stable, there would
-exist an unbounded sequence `η` solving the homogeneous recurrence.
-Setting `ζ_n = max_{i ≤ n} |η_i|` and applying convergence to the
-trivial IVP `y' = 0, y(0) = 0` with starting values `η_i / ζ_n`
-forces `|η_n / ζ_n| → 0`, contradicting `|η_n / ζ_n| = 1` for
-infinitely many `n`.
+Textbook proof: if the method were not stable, there would exist an
+unbounded sequence `η` solving the homogeneous recurrence.  Setting
+`ζ_n = max_{i ≤ n} |η_i|` and applying convergence to the trivial IVP
+`y' = 0, y(0) = 0` with starting values `η_i / ζ_n` forces
+`|η_n / ζ_n| → 0`, contradicting `|η_n / ζ_n| = 1` along the record
+subsequence (where `|η_n| = ζ_n`).
 
-Cycle 070+ followup. -/
+Cycle 071: scaffold landed using
+`runningMaxAbs`/`runningMaxAbs_*`/`unbounded_homogeneous_contra` from
+`Section404.lean`.  Three sub-sorries remain (`hstart_tendsto`,
+`hY_props`, plus the two helpers' bodies in Section404) for cycle
+072+. -/
 theorem LinearMultistepMethod.convergent_isStable
     {k : ℕ} (M : LinearMultistepMethod k)
     (hConv : M.IsConvergent) : M.IsStable := by
-  sorry
+  intro y hy
+  by_contra h_bnd
+  push_neg at h_bnd
+  -- After push_neg: h_bnd : ∀ C : ℝ, ∃ n, C < |y n|
+  -- Running max of |y|: monotone, dominates |y n|, → ∞ by unboundedness.
+  set ζ := LinearMultistepMethod.runningMaxAbs y with hζ_def
+  have hζ_monotone : Monotone ζ :=
+    LinearMultistepMethod.runningMaxAbs_monotone y
+  have hζ_ge : ∀ n, |y n| ≤ ζ n :=
+    LinearMultistepMethod.runningMaxAbs_ge_abs y
+  have hζ_atTop : Filter.Tendsto ζ Filter.atTop Filter.atTop :=
+    LinearMultistepMethod.runningMaxAbs_atTop_of_unbounded h_bnd
+  have hrecord : ∀ N, ∃ n, N ≤ n ∧ |y n| = ζ n :=
+    LinearMultistepMethod.runningMaxAbs_record_above h_bnd
+  -- Trivial IVP setup: y' = 0, y(0) = 0, x = 1.  The rescaled sequence
+  -- `Y m n := y n / ζ m` is a homogeneous solution (via `const_smul`)
+  -- whose initial values match the start function `h ↦ y i / ζ (⌈1/h⌉)`.
+  set f : ℝ → ℝ → ℝ := fun _ _ => 0 with hf_def
+  set yex : ℝ → ℝ := fun _ => 0 with hyex_def
+  set start : ℝ → Fin k → ℝ := fun h i =>
+    if 0 < h then y i.val / ζ (Nat.ceil (1 / h)) else 0 with hstart_def
+  set Y : ℕ → ℕ → ℝ := fun m n => y n / ζ m with hY_def
+  -- Standard boilerplate (mirrors `convergent_isPreconsistent`).
+  have hf_uncurry_const : Function.uncurry f = fun _ => (0 : ℝ) := by
+    funext p; rfl
+  have hf_cont : Continuous (Function.uncurry f) := by
+    rw [hf_uncurry_const]; exact continuous_const
+  have hf_lip : LipschitzWith 0 (Function.uncurry f) := by
+    rw [hf_uncurry_const]; exact LipschitzWith.const _
+  have hyex_x₀ : yex 0 = 0 := rfl
+  have hyex_C1 : ContDiff ℝ 1 yex := contDiff_const
+  have hyex_ode : ∀ x, HasDerivAt yex (f x (yex x)) x := by
+    intro x; exact hasDerivAt_const x 0
+  have hM_bound_nn : (0 : ℝ) ≤ 0 := le_refl 0
+  have hf_yex_bound : ∀ t, |f t (yex t)| ≤ 0 := by intro t; simp [f]
+  have hxx : (0 : ℝ) < 1 := by norm_num
+  -- Sub-claim 1: `start h i → 0` as `h → 0`.  The argument is
+  -- `1/h → ∞` as `h → 0⁺`, so `Nat.ceil (1/h) → ∞`, so
+  -- `ζ (⌈1/h⌉) → ∞`, so `y i.val / ζ (⌈1/h⌉) → 0`.  For `h ≤ 0`
+  -- the if-branch is `else`, so `start h i = 0`.  Combine via
+  -- `nhdsLE_sup_nhdsGT`.
+  have hstart_tendsto : ∀ i : Fin k,
+      Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds 0) := by
+    intro i
+    -- Right tail: 0 < h ⇒ start h i = y i.val / ζ (⌈1/h⌉).
+    have h_right : Filter.Tendsto (fun h : ℝ => start h i)
+        (𝓝[>] (0 : ℝ)) (nhds 0) := by
+      have h_inv : Filter.Tendsto (fun h : ℝ => (1 : ℝ) / h)
+          (𝓝[>] (0 : ℝ)) Filter.atTop := by
+        have h_eq : (fun h : ℝ => (1 : ℝ) / h) = fun h : ℝ => h⁻¹ := by
+          funext h; rw [one_div]
+        rw [h_eq]; exact tendsto_inv_nhdsGT_zero
+      have h_ceil : Filter.Tendsto
+          (fun h : ℝ => (⌈(1 : ℝ) / h⌉₊ : ℕ))
+          (𝓝[>] (0 : ℝ)) Filter.atTop :=
+        tendsto_nat_ceil_atTop.comp h_inv
+      have h_zeta : Filter.Tendsto
+          (fun h : ℝ => ζ (⌈(1 : ℝ) / h⌉₊))
+          (𝓝[>] (0 : ℝ)) Filter.atTop :=
+        hζ_atTop.comp h_ceil
+      have h_quot : Filter.Tendsto
+          (fun h : ℝ => y i.val / ζ (⌈(1 : ℝ) / h⌉₊))
+          (𝓝[>] (0 : ℝ)) (nhds 0) :=
+        h_zeta.const_div_atTop _
+      refine (Filter.tendsto_congr' ?_).mpr h_quot
+      filter_upwards [self_mem_nhdsWithin] with h hh
+      have hh' : (0 : ℝ) < h := hh
+      show (if 0 < h then y i.val / ζ (Nat.ceil (1 / h)) else 0) =
+            y i.val / ζ (⌈(1 : ℝ) / h⌉₊)
+      rw [if_pos hh']
+    -- Left tail: h ≤ 0 ⇒ start h i = 0.
+    have h_left : Filter.Tendsto (fun h : ℝ => start h i)
+        (𝓝[≤] (0 : ℝ)) (nhds 0) := by
+      refine (Filter.tendsto_congr' ?_).mpr tendsto_const_nhds
+      filter_upwards [self_mem_nhdsWithin] with h hh
+      have hh' : ¬ (0 : ℝ) < h := not_lt.mpr hh
+      show (if 0 < h then y i.val / ζ (Nat.ceil (1 / h)) else 0) = 0
+      rw [if_neg hh']
+    have h_combined : Filter.Tendsto (fun h : ℝ => start h i)
+        (𝓝[≤] (0 : ℝ) ⊔ 𝓝[>] (0 : ℝ)) (nhds 0) :=
+      h_left.sup h_right
+    rwa [nhdsLE_sup_nhdsGT] at h_combined
+  -- Sub-claim 2: `Y m` matches `start (1/m)` initially and solves
+  -- `IsLMMSolution` (which collapses to `IsHomogeneousSolution` since
+  -- `f ≡ 0`) via `IsHomogeneousSolution.const_smul`.
+  have hY_props : ∀ m : ℕ, 0 < m →
+      (∀ i : Fin k, Y m i.val = start ((1 - 0) / (m : ℝ)) i) ∧
+      M.IsLMMSolution ((1 - 0) / (m : ℝ)) 0 f (Y m) := by
+    intro m hm
+    have hm_real_pos : (0 : ℝ) < (m : ℝ) := by exact_mod_cast hm
+    have hm_real_ne : (m : ℝ) ≠ 0 := ne_of_gt hm_real_pos
+    refine ⟨?_, ?_⟩
+    · intro i
+      have hh_pos : (0 : ℝ) < 1 / (m : ℝ) := by positivity
+      have hh_eq : (1 - 0 : ℝ) / m = 1 / m := by ring
+      have h11 : (1 : ℝ) / (1 / m) = m := one_div_one_div _
+      have hceil : Nat.ceil ((m : ℝ)) = m := Nat.ceil_natCast m
+      show y i.val / ζ m = start ((1 - 0) / (m : ℝ)) i
+      rw [hh_eq]
+      show y i.val / ζ m =
+            (if 0 < 1 / (m : ℝ) then y i.val / ζ (Nat.ceil (1 / (1 / (m : ℝ)))) else 0)
+      rw [if_pos hh_pos, h11, hceil]
+    · rw [show f = (fun _ _ : ℝ => 0) from rfl, isLMMSolution_zero_iff]
+      have h := hy.const_smul (1 / ζ m)
+      have heq : (fun n => (1 / ζ m) * y n) = Y m := by
+        funext n
+        show (1 / ζ m) * y n = y n / ζ m
+        ring
+      rw [heq] at h
+      exact h
+  -- Apply convergence: `Y m m - yex 1 → 0`.
+  have hconv : Filter.Tendsto (fun m : ℕ => Y m m - yex 1)
+                 Filter.atTop (nhds 0) := by
+    refine hConv f hf_cont 0 hf_lip 0 0 yex hyex_x₀ hyex_C1 hyex_ode
+      0 hM_bound_nn hf_yex_bound start hstart_tendsto 1 hxx Y hY_props
+  -- `Y m m - yex 1 = y m / ζ m`, so the ratio tends to 0.
+  have htendsto : Filter.Tendsto (fun m : ℕ => y m / ζ m)
+                    Filter.atTop (nhds 0) := by
+    have heq : ∀ m : ℕ, Y m m - yex 1 = y m / ζ m := by
+      intro m; simp [Y, yex]
+    exact (Filter.tendsto_congr heq).mp hconv
+  -- Contradiction via the record-index argument (Section404).
+  exact LinearMultistepMethod.unbounded_homogeneous_contra hζ_monotone
+    hζ_ge hζ_atTop hrecord htendsto
 
 /-- **Butcher Theorem 405B** (p. 343).  A convergent linear multistep
 method is preconsistent.

@@ -15,3 +15,9 @@ Cycle 035 Section404.lean: Worker reports creating LinearMultistepMethod structu
 
 ### Cycle 50
 Cycle 050: `Finset.sum_le_sum_nbij'` does not exist in Mathlib; use `← Finset.sum_image hinj` + `Finset.sum_le_sum_of_subset_of_nonneg` instead (Approach B). Also: after `intro a ha b hb hab` in a `Set.InjOn` proof, a bare `simp only` is needed to beta-reduce `(fun i => i - c) a = (fun i => i - c) b` before `omega` can close it.
+
+### Cycle 71
+Cycle 071: Worker staged infrastructure for convergent_isStable (runningMaxAbs def + 6 helpers, Section405 scaffold) but did not commit — git diff shows heartbeat.json only, same failure as cycles 008/035. A tautological proof was introduced at Section404.lean:4695 (proof is `exact <hypothesis>`), bumping semantic sorry count 0→1.
+
+### Cycle 72
+Cycle 072 confirmed cycle-071 staged work was sound and committed it together with the cycle-072 closure of `hstart_tendsto`/`thm:405A` in a single commit. The line-4695 "tautology" was a scanner false positive (sum-head inside a theorem statement, not a proof body) per `tautology_scanner_false_positives.md`. Faithfulness/axiom check clean. Note: `lake env lean <file>` does NOT update the .olean cache — use `lake build OpenMath.Chapter4.Section405` before `#print axioms` to avoid stale-cache `sorryAx` false positives.
