@@ -995,6 +995,16 @@ error bound for one specific scheme:
   `LMM.toGLM_isAStable_iff_of_bdf`. The denominator side condition uses
   the concrete coefficient `bdf4.β (Fin.last 4) = 12 / 25` and the same
   real-part contradiction as the BDF3 transport.
+- **Cycle 652 added §521 RK-side SDIRK GLM A-stability transports** —
+  `rkSDIRK2_toGLM_isAStable` and `rkSDIRK3_toGLM_isAStable` in
+  `OpenMath/RKAsGLM.lean`, each routed through a
+  `t.stabilityFunction z = customStabilityFn z` bridge using
+  `Matrix.adjugate_fin_two_of` / `Matrix.adjugate_fin_three_of` on the
+  lower-triangular `1 - z•A` (constant-diagonal det `(1 - zλ)^s`) and
+  closed via `sdirk2_aStable` / `sdirk3_aStable`. Radau IIA and GL3
+  skipped — the `Real.sqrt 6` / `Real.sqrt 15` cross-term cancellation
+  in `det(1 - z•A)` is opaque to `ring`; tracked in
+  `.prover-state/issues/radau_gl3_glm_aStable_sqrt_bridge.md`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.

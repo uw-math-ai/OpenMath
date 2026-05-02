@@ -1,5 +1,9 @@
 import OpenMath.RungeKutta
 import OpenMath.GeneralLinearMethod
+import OpenMath.SDIRK
+import OpenMath.SDIRK3
+import OpenMath.RadauIIA3
+import OpenMath.GaussLegendre3
 
 /-!
 # Butcher §502 — Runge–Kutta methods as general linear methods
@@ -272,3 +276,114 @@ theorem rkImplicitMidpoint_toGLM_isAStable :
     field_simp [hne', hne2]
     ring
   simpa [hfun] using h
+
+/-- Bridge from the canonical GLM-side `stabilityFunction` to the
+classical scalar `sdirk2StabilityFn` on the SDIRK2 tableau. -/
+theorem rkSDIRK2_stabilityFunction_eq (z : ℂ) (hz : z.re ≤ 0) :
+    rkSDIRK2.stabilityFunction z = sdirk2StabilityFn z := by
+  have hl_pos : (0 : ℝ) < sdirk2Lambda := sdirk2Lambda_pos
+  have hne1 : (1 : ℂ) - z * (sdirk2Lambda : ℝ) ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re, Complex.mul_re] at hre
+    nlinarith [hl_pos, hz]
+  have hne1' : (1 : ℂ) - z * (sdirk2Lambda : ℂ) ≠ 0 := by exact_mod_cast hne1
+  rw [ButcherTableau.stabilityFunction]
+  have hM :
+      ((1 : Matrix (Fin 2) (Fin 2) ℂ) - z •
+          (Matrix.of (fun i j => ((rkSDIRK2.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 2) (Fin 2) ℂ)) =
+      !![1 - z * (sdirk2Lambda : ℂ), 0;
+         -(z * (1 - (sdirk2Lambda : ℂ))), 1 - z * (sdirk2Lambda : ℂ)] := by
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rkSDIRK2, Matrix.one_apply,
+            Matrix.cons_val_zero, Matrix.cons_val_one]
+  change 1 + z * ∑ i, ∑ j,
+      (rkSDIRK2.b i : ℂ) *
+        ((1 - z • (Matrix.of (fun i j => ((rkSDIRK2.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 2) (Fin 2) ℂ))⁻¹) i j = sdirk2StabilityFn z
+  rw [hM]
+  have hdet : (!![1 - z * (sdirk2Lambda : ℂ), 0;
+                  -(z * (1 - (sdirk2Lambda : ℂ))), 1 - z * (sdirk2Lambda : ℂ)] :
+                  Matrix (Fin 2) (Fin 2) ℂ).det = (1 - z * (sdirk2Lambda : ℂ)) ^ 2 := by
+    simp [Matrix.det_fin_two_of]; ring
+  rw [Matrix.inv_def]
+  simp only [Matrix.adjugate_fin_two_of, hdet, Ring.inverse_eq_inv']
+  simp only [Fin.sum_univ_two, rkSDIRK2, Matrix.cons_val_zero, Matrix.cons_val_one,
+             Matrix.smul_of, Matrix.smul_cons, smul_eq_mul,
+             Matrix.cons_val_fin_one, Matrix.of_apply,
+             sdirk2StabilityFn, sdirk2Num, sdirk2Denom]
+  push_cast
+  field_simp
+  ring
+
+/-- 2-stage SDIRK is A-stable after the §502 embedding into GLMs. -/
+theorem rkSDIRK2_toGLM_isAStable :
+    (rkSDIRK2).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  rw [rkSDIRK2_stabilityFunction_eq z hz]
+  exact sdirk2_aStable z hz
+
+/-- Bridge from the canonical GLM-side `stabilityFunction` to the
+classical scalar `sdirk3StabilityFn` on the SDIRK3 tableau. -/
+theorem rkSDIRK3_stabilityFunction_eq (z : ℂ) (hz : z.re ≤ 0) :
+    rkSDIRK3.stabilityFunction z = sdirk3StabilityFn z := by
+  have hl_pos : (0 : ℝ) < sdirk3Lambda := sdirk3Lambda_pos
+  have h1ml_ne : (1 - sdirk3Lambda : ℝ) ≠ 0 := one_sub_sdirk3Lambda_ne_zero
+  have h1ml_ne_C : (1 - (sdirk3Lambda : ℂ)) ≠ 0 := by exact_mod_cast h1ml_ne
+  have hne1 : (1 : ℂ) - z * (sdirk3Lambda : ℝ) ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re, Complex.mul_re] at hre
+    nlinarith [hl_pos, hz]
+  have hne1' : (1 : ℂ) - z * (sdirk3Lambda : ℂ) ≠ 0 := by exact_mod_cast hne1
+  rw [ButcherTableau.stabilityFunction]
+  have hM :
+      ((1 : Matrix (Fin 3) (Fin 3) ℂ) - z •
+          (Matrix.of (fun i j => ((rkSDIRK3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ)) =
+      !![1 - z * (sdirk3Lambda : ℂ), 0, 0;
+         -(z * ((1 - (sdirk3Lambda : ℂ)) / 2)), 1 - z * (sdirk3Lambda : ℂ), 0;
+         -(z * ((sdirk3Lambda : ℂ) * (2 - (sdirk3Lambda : ℂ)) / (1 - (sdirk3Lambda : ℂ)))),
+         -(z * ((2 * (sdirk3Lambda : ℂ) ^ 2 - 4 * (sdirk3Lambda : ℂ) + 1) /
+                  (1 - (sdirk3Lambda : ℂ)))),
+         1 - z * (sdirk3Lambda : ℂ)] := by
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rkSDIRK3, Matrix.one_apply,
+            Matrix.cons_val_zero, Matrix.cons_val_one]
+  change 1 + z * ∑ i, ∑ j,
+      (rkSDIRK3.b i : ℂ) *
+        ((1 - z • (Matrix.of (fun i j => ((rkSDIRK3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ))⁻¹) i j = sdirk3StabilityFn z
+  rw [hM]
+  have hdet :
+      (!![1 - z * (sdirk3Lambda : ℂ), 0, 0;
+          -(z * ((1 - (sdirk3Lambda : ℂ)) / 2)), 1 - z * (sdirk3Lambda : ℂ), 0;
+          -(z * ((sdirk3Lambda : ℂ) * (2 - (sdirk3Lambda : ℂ)) / (1 - (sdirk3Lambda : ℂ)))),
+          -(z * ((2 * (sdirk3Lambda : ℂ) ^ 2 - 4 * (sdirk3Lambda : ℂ) + 1) /
+                   (1 - (sdirk3Lambda : ℂ)))),
+          1 - z * (sdirk3Lambda : ℂ)] :
+            Matrix (Fin 3) (Fin 3) ℂ).det = (1 - z * (sdirk3Lambda : ℂ)) ^ 3 := by
+    rw [Matrix.det_fin_three]
+    simp; ring
+  rw [Matrix.inv_def]
+  simp only [Matrix.adjugate_fin_three_of, hdet, Ring.inverse_eq_inv']
+  simp only [Fin.sum_univ_three, rkSDIRK3, Matrix.cons_val_zero, Matrix.cons_val_one,
+             Matrix.smul_of, Matrix.smul_cons, smul_eq_mul,
+             Matrix.cons_val_fin_one, Matrix.of_apply,
+             sdirk3StabilityFn, sdirk3Num, sdirk3Denom]
+  push_cast
+  field_simp
+  ring
+
+/-- 3-stage SDIRK (Alexander) is A-stable after the §502 embedding into GLMs. -/
+theorem rkSDIRK3_toGLM_isAStable :
+    (rkSDIRK3).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  rw [rkSDIRK3_stabilityFunction_eq z hz]
+  exact sdirk3_aStable z hz
+
