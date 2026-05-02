@@ -1,348 +1,507 @@
-# Cycle 066 Strategy — §406D recurrence cluster non-autonomous lift
+# Cycle 067 Strategy — `globalError_per_step_sum_form` and `globalError_recurrence_form_explicit` non-autonomous lift
 
 ## TL;DR
 
-Cycle 065 closed the §406B sub-lemma cluster non-autonomous lift
-(joint-Lipschitz form, `L · M ↦ L_joint · (1 + M_bound)`
-re-parameterisation). All six deliverables landed cleanly; build is
-green; the only remaining sorry is the cycle 068 target
-(`stable_consistent_isConvergent`, line 4552).
+Cluster 3 of the cycle 064–069 four-cluster non-autonomous lift plan.
+Cycle 066 closed cluster 2 (six §406D recurrence helpers) at score
++1. The remaining sorry is `stable_consistent_isConvergent` at
+`OpenMath/Chapter4/Section404.lean:4928`.
 
-**Cycle 066 task: lift the §406D recurrence cluster.** Specifically
-the five helpers that are consumed by
-`stable_consistent_isConvergent_autonomous` (lines 4403–4531) just
-above the cycle 065 §406B helpers:
+The cycle 064 plan in
+`.prover-state/issues/non_autonomous_lift_plan.md` lists cluster 3
+as "lift the cycle 057–061 squeeze helpers". Re-reading the source
+(see analysis below) shows that those named squeeze helpers
+(`globalError_outer_squeeze_a_term`, `globalError_outer_squeeze_c_term`,
+`bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`, `aOf_tendsto_zero`,
+`bOf_limit_pos`) are **already shape-agnostic** — they take
+`{a b c : ℝ → ℝ}` or scalar `Θ L M_bound` and consume no `f`-shape
+data. They will be reused directly by the cycle 068 closure.
 
-* `T1_bound` (line 1180)
-* `T2_bound` (line 1199)
-* `T3_bound` (line 1239)
-* `LinearMultistepMethod.globalError_recurrence_bound` (line 1268)
-* `LinearMultistepMethod.globalError_recurrence_bound_textbook` (line 1331)
+The actual cluster-3 lift work is to lift the two intermediate
+helpers that *do* take an autonomous `f : ℝ → ℝ`:
 
-This is cluster 2 of the four-cluster lift roadmap in
-`.prover-state/issues/non_autonomous_lift_plan.md`. Cluster 3
-(squeeze helpers, ~100 lines) is cycle 067; cluster 4 (close
-`stable_consistent_isConvergent` from the autonomous theorem +
-adapters) is cycle 068.
+1. `globalError_per_step_sum_form` (line 2542, ~50-line body) — a
+   thin wrapper around cycle 045's `globalError_recurrence_bound_textbook`.
+2. `globalError_recurrence_form_explicit` (line 3249, ~430-line body)
+   — the heavy assembly that bundles the per-step sum bound, the
+   `theta`-decomposition, and the `recentSum_swap_bound` index
+   arithmetic into the `aOf, bOf, cOf` recurrence shape.
 
----
+Both lifts are **mechanical 1:1 ports** under the cycle 065
+joint-Lipschitz hypothesis form. No new mathematics is involved.
+The §406B/§406D sub-lemmas they consume are already lifted (cycle
+064–066).
 
-## Step 1 (mandatory, ~5 min): Aristotle status check on cycle 065 submission
-
-Cycle 065 left a single Aristotle project pending — alternative-proof
-attempts for `residual_bound_nonauto` and `deriv_diff_bound_nonauto`.
-
-**Project ID**: `55543850-b9f1-4dab-9d34-e65f732f030c`
-**File**: `.prover-state/aristotle_submissions/cycle_065/project_ids.txt`
-**Submitted**: cycle 065, ~30+ minutes ago by now.
-
-Run **once**:
-
-```
-mcp__aristotle__get_status with project_id "55543850-b9f1-4dab-9d34-e65f732f030c"
-```
-
-* If `IN_PROGRESS` and < 50 %: skip — proceed straight to Step 2. Do
-  NOT re-poll mid-cycle.
-* If `IN_PROGRESS` and ≥ 50 %: still skip — Aristotle's contribution
-  here is *alternative* proofs (we already have manual ones), not
-  load-bearing.
-* If `COMPLETED` and proofs returned: extract via
-  `mcp__aristotle__download_result`. Compare against the manual
-  cycle 065 proofs at `Section404.lean:4129` and `:4220`. Replace
-  ONLY if the Aristotle proof is materially shorter (≥ 30 % fewer
-  lines) AND the axiom check is clean AND it does not introduce new
-  hypotheses. Otherwise keep the manual proofs (they are mechanical
-  joint-Lipschitz + integral algebra; reproducibility wins).
-* If `FAILED`: ignore. Move on.
-
-**Do not** submit new Aristotle jobs at this step. Cycle 066's
-Aristotle submission (Step 4) is a separate batch.
+This cycle's ceiling is **~500 LOC**. If you hit ~300 LOC and the
+`_explicit_nonauto` body is not done, snapshot and defer the rest to
+cycle 068; do **not** push past 500 LOC.
 
 ---
 
-## Step 2 (main deliverable, ~150–200 lines): lift §406D recurrence cluster
+## Step 0 (≤ 5 minutes) — Aristotle status check
 
-The five autonomous helpers and their non-autonomous targets:
+Run `mcp__aristotle__get_status` once on project
+`55543850-b9f1-4dab-9d34-e65f732f030c` (cycle 065's submission for
+alternative proofs of `residual_bound_nonauto` and
+`deriv_diff_bound_nonauto`).
 
-| # | Autonomous (line) | Non-autonomous target | Notes |
-|---|---|---|---|
-| 1 | `T1_bound` (1180) | `T1_bound_nonauto` | Lipschitz at one time arg only — pure rewrite |
-| 2 | `T2_bound` (1199) | `T2_bound_nonauto` | Same as T1: Lipschitz at one time arg per summand |
-| 3 | `T3_bound` (1239) | `T3_bound_nonauto` | Trivial: wrapper of cycle 065's `localTruncationError_bound_nonauto` |
-| 4 | `globalError_recurrence_bound` (1268) | `globalError_recurrence_bound_nonauto` | Composes T1/T2/T3; `globalError_decomposition` already non-autonomous-friendly via `IsLMMSolution h x₀ f Y` |
-| 5 | `globalError_recurrence_bound_textbook` (1331) | `globalError_recurrence_bound_textbook_nonauto` | Composes (4) + `(1 − h L |β₀|)`-inversion algebra; mechanical |
+* If the status is `IN_PROGRESS` and progress is below ~50%,
+  treat the submission as not contributing. The cycle 065 manual
+  proofs are clean (`L_joint · (1 + M_bound)` shape) and already
+  consumed by cycle 066's recurrence cluster, so any returning
+  Aristotle proof would be redundant. Move on.
+* If the submission has *completed*, you may extract proofs for
+  reference, but do **not** swap them in. The cycle 065 manual
+  proofs have been validated by the cycle 066 build; replacing them
+  is unnecessary churn.
+* CLAUDE.md cadence rule: poll **once**, not repeatedly.
 
-### Hypothesis form (mirror cycle 065)
+---
 
-For each `_nonauto` lift, take the same joint-Lipschitz pair the
-cycle 065 helpers already consume:
+## Step 1 — Lift `globalError_per_step_sum_form` to non-autonomous
+
+**Target**: insert immediately after
+`LinearMultistepMethod.globalError_recurrence_bound_textbook_nonauto`
+(line 4644, end of cycle 066 cluster), as a new `private lemma`.
+
+### Statement
 
 ```lean
-{f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
-(hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
-(hf_lip : LipschitzWith L_joint.toNNReal (Function.uncurry f))
-{yex : ℝ → ℝ}
-(hyex_C1 : ContDiff ℝ 1 yex)
-(hyex_ode : ∀ t, deriv yex t = f t (yex t))
-(hf_yex_bound : ∀ t, |f t (yex t)| ≤ M_bound)
+private lemma globalError_per_step_sum_form_nonauto
+    {k : ℕ} (M : LinearMultistepMethod k) (hcons : M.IsConsistent)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f t (yex t))
+    (hf_yex_bound : ∀ t, |f t (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L_joint * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ f Y)
+    (n : ℕ) (hn : k ≤ n) :
+    |yex (x₀ + (n : ℝ) * h) - Y n
+        - ∑ i : Fin k, M.α i.succ
+            * (yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (i.val + 1)))|
+      ≤ (h * L_joint * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                  + ∑ i : Fin k, |M.β i.succ|)
+            / (1 - h * L_joint * |M.β 0|))
+          * (∑ j : Fin k,
+              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (j.val + 1))|)
+        + ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+            + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+              * L_joint * (1 + M_bound) * h^2
+            / (1 - h * L_joint * |M.β 0|) := by
+  -- Specialise `Mmax` to the sum of recent errors.
+  set Mmax : ℝ :=
+    ∑ j : Fin k,
+      |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+        - Y (n - (j.val + 1))|
+  have hMmax_nn : 0 ≤ Mmax :=
+    Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  have hMmax_bound :
+      ∀ i : Fin k,
+        |yex (x₀ + ((n - (i.val + 1) : ℕ) : ℝ) * h)
+          - Y (n - (i.val + 1))| ≤ Mmax := by
+    intro i
+    exact Finset.single_le_sum
+            (f := fun j : Fin k =>
+              |yex (x₀ + ((n - (j.val + 1) : ℕ) : ℝ) * h)
+                - Y (n - (j.val + 1))|)
+            (fun j _ => abs_nonneg _) (Finset.mem_univ i)
+  exact M.globalError_recurrence_bound_textbook_nonauto hcons hL_joint hM
+          hf_lip_joint hyex_C1 hyex_ode hf_yex_bound hh hsmall hY n hn
+          Mmax hMmax_nn hMmax_bound
 ```
 
-The `IsLMMSolution` hypothesis becomes
-`hY : M.IsLMMSolution h x₀ f Y` (no `fun _ y => f y` wrapping —
-non-autonomous from the outset).
+### Key differences from autonomous source (line 2542)
 
-### Bound shape (mirror cycle 065's `L · M ↦ L_joint · (1 + M_bound)`)
+| Autonomous | Non-autonomous |
+| --- | --- |
+| `{f : ℝ → ℝ}` | `{f : ℝ → ℝ → ℝ}` |
+| `hL : 0 ≤ L` | `hL_joint : 0 ≤ L_joint` |
+| `hf_lip : LipschitzWith L.toNNReal f` | `hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f)` |
+| `hyex_ode : ∀ t, deriv yex t = f (yex t)` | `hyex_ode : ∀ t, deriv yex t = f t (yex t)` |
+| `hf_yex_bound : ∀ t, \|f (yex t)\| ≤ M_bound` | `hf_yex_bound : ∀ t, \|f t (yex t)\| ≤ M_bound` |
+| `hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y` | `hY : M.IsLMMSolution h x₀ f Y` |
+| Bound coeff `L * M_bound * h^2` | Bound coeff `L_joint * (1 + M_bound) * h^2` |
+| Calls `globalError_recurrence_bound_textbook` | Calls `globalError_recurrence_bound_textbook_nonauto` |
 
-For T1/T2: the bound `h * L * |β| * |a − b|` becomes
-`h * L_joint * |β| * |a − b|` (no `M_bound` shift; T1/T2 only use
-Lipschitz, no `M_bound`). The Lipschitz application is
-
-* T1 case: `|f a₁ a − f a₂ b|` where `a₁` and `a₂` differ by `i·h`.
-  Bound: `L_joint · (|a₁ − a₂| + |a − b|)` via cycle 065's
-  `joint_lipschitz_pair_bound` (line 4101). The `|a₁ − a₂|` term
-  introduces a new `i·h` factor, so the bound shape becomes
-  `h · L_joint · |β₀| · (i·h + |a − b|)`.
-* T2 case: same pattern per summand.
-
-**Decision point on bound shape — verify before writing the lift.**
-Inspect the call sites of T1 and T2 inside
-`globalError_recurrence_bound` (line 1268) and the upstream
-`globalError_decomposition` (line 1094). Specifically:
-
-* T1 is invoked at line 1302 with arguments
-  `yex (x₀ + (n : ℝ) * h)` and `Y n`. **Both** `f`-applications
-  inside T1 evaluate at the same time argument
-  `t = x₀ + (n : ℝ) * h` in the non-autonomous case (T1's body
-  computes `|h * β₀ * (f a − f b)|` where `a, b` are spatial values
-  at the *same* time `t`, the current step). So T1's lift uses
-  `lipschitzInSecond_univ_toLipschitzWith` (line 3862) at a single
-  time argument — no joint-Lipschitz expansion needed, no extra
-  time factor in the bound. Bound shape is identical to autonomous
-  with `L ↦ L_joint`.
-* T2 is invoked at line 1304 with per-`i` arguments
-  `yex (x₀ + ((n − (i.val + 1)) : ℕ) : ℝ) * h)` and
-  `Y (n − (i.val + 1))`. **Both** `f`-applications in T2's
-  per-summand bound evaluate at the same time
-  `t_i = x₀ + ((n − (i+1)) : ℕ : ℝ) * h` (the `(n − (i+1))`-th
-  step time). So per-summand T2 also uses
-  `lipschitzInSecond_univ_toLipschitzWith` at a single time arg.
-  Bound shape: identical to autonomous with `L ↦ L_joint`.
-
-**Re-confirm the above by reading lines 1199–1235 (T2_bound body) and
-the call site at 1304** before writing the lift. If the inspection
-contradicts the analysis above, fall back to the joint-Lipschitz
-triangle expansion via `joint_lipschitz_pair_bound` and absorb the
-extra `|t₁ − t₂|` term into the existing bound shape (it cleanly
-factors out as a multiple of `h`, raising the bound order by a
-controllable amount).
-
-For T3: the bound is exactly cycle 065's
-`localTruncationError_bound_nonauto`, so T3's lift is a one-line
-`exact M.localTruncationError_bound_nonauto …` mirroring the
-autonomous T3 (line 1252). The `L · M_bound` term becomes
-`L_joint · (1 + M_bound)` automatically (inherited from cycle 065).
-
-For (4) and (5): mechanically combine T1/T2/T3 via the same
-`abs_add_le` + `add_le_add` chain the autonomous proofs use. Do
-NOT re-derive — copy the autonomous structure and substitute the
-`_nonauto` helpers.
-
-### Faithfulness flags
-
-Each new `_nonauto` lemma must carry a docstring noting:
-
-* The autonomous version is preserved (cycle 040–044 helpers stay).
-* The bound shape is `L_joint` in place of `L` (and `(1 + M_bound)`
-  in place of `M_bound` for `T3_bound`'s LTE term, inherited from
-  cycle 065).
-* The non-autonomous form is the textbook 406D primary form;
-  the autonomous version is the cycle 062 IVP-form variant.
-
-### Implementation order (bottom-up)
-
-Land in this order to keep the build green at every step:
-
-1. `T3_bound_nonauto` (~5 lines, trivial wrapper).
-2. `T1_bound_nonauto` (~25 lines, single
-   `lipschitzInSecond_univ_toLipschitzWith` application — the time
-   args coincide, see analysis above).
-3. `T2_bound_nonauto` (~40 lines, sum-form of T1).
-4. `globalError_recurrence_bound_nonauto` (~50 lines, mechanical
-   composition mirroring autonomous version).
-5. `globalError_recurrence_bound_textbook_nonauto` (~60 lines,
-   mechanical inversion mirroring autonomous version).
-
-**After each step, run `lake env lean OpenMath/Chapter4/Section404.lean`
-and verify exit 0 before proceeding.**
-
-### Ceiling
-
-Per the cycle 060 red-flag threshold (~430 lines triggered a
-regression), keep cycle 066's added LOC under 250. If T1/T2 require
-the joint-Lipschitz triangle expansion (i.e. the time-args-coincide
-analysis is wrong at the call site), defer (4) and (5) to cycle
-067 and use the saved budget on Aristotle submissions instead.
-
-**Hard line**: if (1)+(2)+(3) take > 150 lines, STOP, commit just
-those three, and defer (4)+(5) to cycle 067. The cycle 060
-regression was driven by cramming too much into one cycle; do not
-repeat.
-
----
-
-## Step 3 (mandatory, ~5 min): pre-commit faithfulness check
-
-Run the CLAUDE.md checklist for every new `_nonauto` lemma:
-
-* **Tautology check**: each conclusion is a real bound, not a
-  hypothesis.
-* **Identity check**: each proof composes the cycle 065 helpers + the
-  autonomous proof structure; not `exact h_<name>`.
-* **Hypothesis strength check**: joint Lipschitz on `Function.uncurry f`
-  is the natural non-autonomous analogue; document in docstring.
-* **Absent theorem check**: no comments promising lemmas not present.
-
-Then build the full file:
+### Verify
 
 ```bash
 lake env lean OpenMath/Chapter4/Section404.lean
 ```
 
-Expect exit 0 with the single sorry at line 4552 (`stable_consistent_isConvergent`)
-unchanged.
+Should exit 0. The single sorry at line 4928 remains.
+
+### Estimated effort
+
+~50 LOC including docstring. The proof body is the autonomous body
+verbatim modulo the closing lemma name. **This is the easy half of
+the cycle. Aim to land it in the first 30 minutes.**
 
 ---
 
-## Step 4 (optional, parallel to Step 2): Aristotle batch submission for cycle 067
+## Step 2 — Lift `globalError_recurrence_form_explicit` to non-autonomous
 
-If Step 2 finishes with budget remaining, prepare a self-contained
-single-file Aristotle submission for the **cycle 067** squeeze cluster:
+**Target**: insert immediately after `globalError_per_step_sum_form_nonauto`,
+as a new `private lemma`. **DO NOT** modify the autonomous version
+(the cycle 062 closure
+`stable_consistent_isConvergent_autonomous` still consumes it).
 
-* The cluster is `globalError_outer_squeeze_a_term` (line 2311) and
-  `globalError_outer_squeeze_c_term` (line 2383), plus the
-  Tendsto-wrapper helpers (`bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`,
-  `aOf_tendsto_zero`, `bOf_limit_pos`).
-* These are *pure ℝ-analysis squeeze arguments* — exactly the type
-  Aristotle has historically handled well.
-* Bundle them into
-  `.prover-state/aristotle_submissions/cycle_066/squeeze_lifts.lean`
-  with the cycle 065 helpers (`exact_solution_norm_bound_nonauto`
-  signature, `joint_lipschitz_pair_bound`, etc.) reproduced as
-  hypotheses.
+### Statement
 
-If you submit, save the project ID to
-`.prover-state/aristotle_submissions/cycle_066/project_ids.txt` and
-include it in the cycle 066 task results. Cycle 067 will check the
-result at its start.
+```lean
+open OpenMath.Chapter1.Section141 in
+private lemma globalError_recurrence_form_explicit_nonauto
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
+    (hcons : M.IsConsistent)
+    {f : ℝ → ℝ → ℝ} {L_joint M_bound : ℝ}
+    (hL_joint : 0 ≤ L_joint) (hM : 0 ≤ M_bound)
+    (hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f))
+    {yex : ℝ → ℝ}
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_ode : ∀ t, deriv yex t = f t (yex t))
+    (hf_yex_bound : ∀ t, |f t (yex t)| ≤ M_bound)
+    {Y : ℕ → ℝ} {x₀ h : ℝ}
+    (hh : 0 ≤ h)
+    (hsmall : h * L_joint * |M.β 0| < 1)
+    (hY : M.IsLMMSolution h x₀ f Y)
+    (Θ : ℝ) (hΘ_nn : 0 ≤ Θ)
+    (hΘ : ∀ n, |theta k (fun i : Fin k => M.α i.succ) n| ≤ Θ) :
+    0 ≤ aOf M Θ L_joint h yex Y x₀ ∧
+    0 < bOf M Θ L_joint h ∧
+    0 ≤ cOf M Θ L_joint (1 + M_bound) h ∧
+    (∀ n : ℕ, 1 ≤ n →
+      |yex (x₀ + (n : ℝ) * h) - Y n|
+        ≤ aOf M Θ L_joint h yex Y x₀
+          + bOf M Θ L_joint h * h * (k : ℝ) *
+              (∑ p ∈ Finset.Ico 1 n,
+                |yex (x₀ + (p : ℝ) * h) - Y p|)
+          + cOf M Θ L_joint (1 + M_bound) h * h^2 * (n : ℝ)) ∧
+    |yex x₀ - Y 0| ≤ aOf M Θ L_joint h yex Y x₀
+```
 
-**Do not block cycle 066 on this step.** It is purely opportunistic.
+### Method: mechanical port of lines 3249–3683
+
+**Copy the autonomous body verbatim** (lines 3274–3683, ~410 lines)
+and apply the following **eight global substitutions**:
+
+1. `hL` → `hL_joint`
+2. `hf_lip` → `hf_lip_joint`
+3. `(fun _ y => f y)` → `f` (in the `IsLMMSolution` shape inside `hY`)
+4. **At the call to `globalError_per_step_sum_form` (autonomous line
+   3446)**: replace
+   ```lean
+   have h_per := globalError_per_step_sum_form M hcons hL hM hf_lip
+                   hyex_C1 hyex_ode hf_yex_bound hh hsmall hY i hki
+   ```
+   with
+   ```lean
+   have h_per := globalError_per_step_sum_form_nonauto M hcons hL_joint hM
+                   hf_lip_joint hyex_C1 hyex_ode hf_yex_bound hh hsmall hY i hki
+   ```
+5. **`Cbase` definition (autonomous line 3283)**: substitute `L`
+   with `L_joint`. Result:
+   ```lean
+   set Cbase : ℝ := L_joint * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
+                         + ∑ i : Fin k, |M.β i.succ|)
+                       / (1 - h * L_joint * |M.β 0|) with hCbase_def
+   ```
+6. **`Dbase` definition (autonomous line 3286)**: substitute
+   `L * M_bound` with `L_joint * (1 + M_bound)`:
+   ```lean
+   set Dbase : ℝ := ((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
+                     + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
+                     * L_joint * (1 + M_bound)
+                     / (1 - h * L_joint * |M.β 0|) with hDbase_def
+   ```
+7. **`hDbase_nn` proof (autonomous line 3296–3304)**: replace `hM`
+   with `(by linarith : (0:ℝ) ≤ 1 + M_bound)` in the
+   `mul_nonneg` argument.
+8. **`h_RHS_eq` rewrite inside `h_psi_bound` (autonomous lines
+   3449–3464)**: substitute `L * M_bound` with `L_joint * (1 + M_bound)`
+   on both sides. The `ring` close at line 3465 will still go through.
+
+Everything else — `theta_bounded_of_isStable` is not called in this
+lemma (it's called by the *caller* `globalError_closed_form_autonomous_explicit`
+at line 3720; this lemma already takes `Θ` as a parameter), so no Θ
+infrastructure changes; `globalError_closed_form M` (line 3352 call)
+is shape-agnostic; `sum_theta_psi_contraction` (line 3487) is
+shape-agnostic; `recentSum_swap_bound` (line 3502) is shape-agnostic.
+
+### What stays the same
+
+* All `theta`, `yPrime`, `linRec` infrastructure from
+  `OpenMath/Chapter1/Section141.lean`.
+* `globalError_eq_linRec` and `globalError_closed_form`
+  (autonomous lines 2615, 2668) are pure algebraic identities
+  with no `f`-dependence; reuse them directly.
+* `sum_theta_psi_contraction`, `recentSum_swap_bound` — no `f`-shape.
+* `aOf`, `bOf`, `cOf` definitions — these are functions of
+  `Θ, L, h` (and `M_bound, yex, Y, x₀` for some), not of `f` itself.
+  Pass `L_joint` where you'd pass `L`, and pass `(1 + M_bound)`
+  where you'd pass `M_bound`.
+* The case split `n < k` vs `n ≥ k`, and all `linarith`/`nlinarith`
+  closes — go through verbatim.
+
+### Verify
+
+```bash
+lake env lean OpenMath/Chapter4/Section404.lean
+```
+
+Should exit 0. The single sorry at line 4928 remains.
+
+### Estimated effort
+
+~430 LOC (mechanical copy with 8 substitutions). This is the
+**heavy half** of the cycle.
+
+### Budget watch — ABORT TO CYCLE 068 IF YOU HIT 500 LOC
+
+Cycle 060 (score −1) demonstrated that single-cycle 430-LOC pushes
+are fragile. If at any point the cycle's total LOC delta exceeds
+**500**, OR if Step 2 has not produced a clean
+`lake env lean` build by the time you reach 500 LOC, **stop**:
+
+1. Snapshot whatever lines 3274–3683 you've already ported into
+   `globalError_recurrence_form_explicit_nonauto`. Leave the
+   incomplete proof body as `sorry` at the end (so the file still
+   compiles).
+2. Update the issue plan
+   (`.prover-state/issues/non_autonomous_lift_plan.md`) with a
+   "cluster 3 partial completion — Step 1 done, Step 2 deferred to
+   cycle 068" note.
+3. Commit the partial progress + Step 1.
+4. Write `cycle_067.md` documenting the partial completion.
 
 ---
 
-## Step 5 (mandatory): write task results + commit
+## Step 3 — Pre-commit faithfulness check (MANDATORY)
 
-Write `.prover-state/task_results/cycle_066.md` per the CLAUDE.md
-template. Include:
+For each new lemma:
 
-* Aristotle status from Step 1 (with project ID).
-* Which §406D helpers landed.
-* Faithfulness check entries for each new `_nonauto` lemma.
-* Whether (4)+(5) were deferred to cycle 067 (per the hard line in
-  Step 2).
-* Aristotle submission ID for cycle 067 if Step 4 ran.
+### `globalError_per_step_sum_form_nonauto`
 
-Update `.prover-state/issues/non_autonomous_lift_plan.md` to mark
-"Cycle 066 — lift §406D recurrence helpers" as RESOLVED (or
-PARTIAL with the deferred items listed if Step 2's hard line
-triggered).
+* **Entity ID**: not a Butcher entity; intermediate helper for §406D.
+  No textbook quote required, but the `M_bound ↦ (1 + M_bound)`
+  semantic shift carried over from cycle 065 should be flagged in
+  the docstring.
+* **Tautology check**: bound, not a hypothesis. ✓
+* **Identity check**: trivial wrapper of cycle 066's
+  `globalError_recurrence_bound_textbook_nonauto`. The
+  "specialise `Mmax`" reduction is real work (not just an `exact`).
+  ✓
+* **Hypothesis strength**: matches cycle 066. Joint-Lipschitz is
+  the natural non-autonomous analogue of cycle 045's per-`x`
+  `LipschitzWith`.
 
-Commit message follows the cycle 062–065 pattern:
-`Cycle 066 — §406D recurrence cluster non-autonomous lift`.
+### `globalError_recurrence_form_explicit_nonauto`
+
+* **Entity ID**: not a Butcher entity; analytical assembly for
+  `thm:406D` (Butcher §406D, p. 347).
+* **Tautology check**: bound, not a hypothesis. ✓
+* **Identity check**: substantive — bundles
+  `globalError_closed_form` (closed-form decomposition),
+  `sum_theta_psi_contraction` (Θ-bound), and
+  `recentSum_swap_bound` (index swap) into the
+  `aOf, bOf, cOf` recurrence shape needed by
+  `discrete_gronwall_exp_bound`.
+* **Hypothesis strength**: same as autonomous version, with
+  `L ↦ L_joint` and `M_bound ↦ (1 + M_bound)`. Joint-Lipschitz is
+  the natural non-autonomous analogue.
+* **Absent theorem check**: the cycle 068 `stable_consistent_isConvergent`
+  closure is not promised inline; only as a strategy commitment. ✓
+
+---
+
+## Step 4 — Commit and update plan
+
+### Update `non_autonomous_lift_plan.md`
+
+Mark cluster 3 as RESOLVED (or PARTIAL if Step 2 was deferred):
+
+```markdown
+### Cycle 067 — lift cycle 057–061 squeeze helpers (~100 lines)
+
+* **Re-scoped on cycle 067**: the named squeeze helpers
+  (`globalError_outer_squeeze_a_term`, etc.) are already
+  shape-agnostic (take `{a b c : ℝ → ℝ}` directly). The actual
+  cluster-3 lift work is to lift `globalError_per_step_sum_form`
+  and `globalError_recurrence_form_explicit`, which take
+  autonomous `f : ℝ → ℝ`.
+* `globalError_per_step_sum_form` — **LANDED cycle 067** as
+  `globalError_per_step_sum_form_nonauto` (~50 LOC).
+* `globalError_recurrence_form_explicit` — **LANDED cycle 067** as
+  `globalError_recurrence_form_explicit_nonauto` (~430 LOC,
+  mechanical port).
+
+**RESOLVED in cycle 067**: cluster 3 is complete.
+```
+
+### Update `task_results/cycle_067.md`
+
+Use the standard cycle template (worked on, approach, result,
+faithfulness check, dead ends, discovery, suggested next approach).
+Highlight:
+
+* The re-scoping (named squeeze helpers were already shape-agnostic).
+* The two new lemmas and their statements.
+* Final LOC count.
+* Aristotle status from Step 0.
+
+### Commit message template
+
+```
+Cycle 067 — §406D recurrence-form non-autonomous lift
+
+`globalError_per_step_sum_form_nonauto` (joint-Lipschitz wrapper of
+cycle 066's `_recurrence_bound_textbook_nonauto`) and
+`globalError_recurrence_form_explicit_nonauto` (mechanical 1:1 port
+of the autonomous assembly under `L ↦ L_joint`,
+`M_bound ↦ (1 + M_bound)` substitution). Build clean; sorry count
+unchanged (single sorry at line 4928, cycle 068 target).
+
+Cluster 3 of the cycle 064–069 four-cluster non-autonomous lift
+plan; see .prover-state/issues/non_autonomous_lift_plan.md.
+```
+
+Then `git push` to land the cycle.
 
 ---
 
 ## What NOT to do
 
-* **Do NOT touch the cycle 040–044 autonomous helpers.** They are
-  consumed by `stable_consistent_isConvergent_autonomous` (line
-  4403). The cycle 066 task is to ADD `_nonauto` variants
-  alongside, not to replace them.
-* **Do NOT poll Aristotle more than once in cycle 066.** CLAUDE.md
-  is explicit on this. One check at Step 1, then proceed.
-* **Do NOT attempt to close `stable_consistent_isConvergent`
-  (line 4552) this cycle.** It is the cycle 068 target. The cycle
-  066+067 lifts must land first.
-* **Do NOT raise `maxHeartbeats` above 200000.** Decompose if a proof
-  becomes slow.
-* **Do NOT introduce `axiom`/`constant`** for any joint-Lipschitz
-  reformulation that proves awkward. The cycle 065 joint-Lipschitz
-  pattern works; if a §406D helper resists it, file an issue and
-  defer that specific helper, not the whole cluster.
-* **Do NOT rewrite cycle 065's `residual_bound_nonauto` /
-  `deriv_diff_bound_nonauto` proofs.** They are the agreed
-  reference shape. If Aristotle returns alternative proofs, only
-  swap if the diff is dramatic (≥ 30 % LOC reduction) — see Step 1.
-* **Do NOT use `add_le_add_left` for monotone-addition with a left
-  constant.** The cycle 065 worker discovered Lean dispatches this
-  to a right-add covariant instance, producing type mismatches.
-  Use `linarith [hA]` or `gcongr` instead. (Saved in feedback
-  memory; see also `.prover-state/task_results/cycle_065.md` §"Dead
-  ends".)
-* **Do NOT bundle T3_bound's lift with T1/T2.** T3 is a trivial
-  wrapper of cycle 065's `localTruncationError_bound_nonauto`; bundling
-  hides the trivial nature and clutters the proof structure. Land
-  it as its own one-liner.
-* **Do NOT try to replace `globalError_decomposition` (line 1094)
-  with a new non-autonomous variant.** Inspect first — it likely
-  already takes `IsLMMSolution h x₀ f Y` (non-autonomous shape) and
-  works as-is for the lift. If it doesn't, the fix is upstream
-  in cluster 1, not cluster 2; file an issue.
-* **Do NOT modify `scripts/autonomous_loop.py`.** The standing
-  prompt-builder bug from `tautology_scanner_false_positives.md`
-  is loop-maintainer territory.
-* **Do NOT spend time on the "phantom" framing if the cycle 066
-  prompt later carries a stale "stuck on" verdict.** Prior phantoms
-  (cycles 008/014/015/040) were always `attempts.md` propagation
-  bugs. The cycle 066 verification is: `git log -1` shows the cycle
-  065 commit `9e5d2ee`; `lake env lean OpenMath/Chapter4/Section404.lean`
-  exits 0 with one sorry at line 4552. If both pass, the cycle 065
-  work landed; the prompt is wrong.
+(Carried forward from prior consultant notes and cycle history;
+read these before starting.)
+
+### Specifically forbidden this cycle
+
+1. **Do NOT modify the autonomous helpers** at lines 2542–3683.
+   The cycle 062 closure `stable_consistent_isConvergent_autonomous`
+   still consumes them. Add `_nonauto` parallel versions only.
+2. **Do NOT define new `aOf_nonauto`, `bOf_nonauto`, `cOf_nonauto`
+   functions.** The existing `aOf, bOf, cOf` are already
+   parametrised by scalar `Θ L M_bound`; pass `L_joint` and
+   `(1 + M_bound)` to them in the `_nonauto` lemma. A new
+   parallel definition would inflate the cycle past budget for no
+   semantic gain.
+3. **Do NOT raise `maxHeartbeats`** above 200000. The autonomous
+   `_explicit` body compiles within budget; the `_nonauto` mirror
+   should too. If you hit a heartbeat limit, decompose into smaller
+   private lemmas (the autonomous chain already does this) — do
+   not raise the limit.
+4. **Do NOT introduce `axiom`/`constant`** to bypass any step.
+5. **Do NOT poll Aristotle more than once.** CLAUDE.md cadence
+   rule (cycle 040 consultant note §C). One status check at the
+   start of the cycle is sufficient.
+6. **Do NOT attempt to close `stable_consistent_isConvergent`
+   itself this cycle.** That is the cycle 068 (or cycle 069 if
+   Step 2 deferred) deliverable. Do **not** reach for the cycle
+   068 close, even if budget allows; the squeeze-assembly side of
+   the close needs its own dedicated cycle to verify
+   joint-Lipschitz threading through the per-`m` Tendsto facts.
+7. **Do NOT attempt path (b)** ("inline closed-form Grönwall
+   closure") from the cycle 066 task results. Path (a) — the
+   `_explicit_nonauto` lift — is the plan, since (i) the squeeze
+   helpers are already in place, (ii) cycle 068 needs an
+   `aOf, bOf, cOf` recurrence shape to consume them, and
+   (iii) inlining duplicates work that path (a) does cleanly.
+8. **Do NOT lift the named squeeze helpers**
+   (`globalError_outer_squeeze_a_term`,
+   `globalError_outer_squeeze_c_term`, `bOf_tendsto_at_zero`,
+   `cOf_tendsto_at_zero`, `aOf_tendsto_zero`, `bOf_limit_pos`).
+   They are already shape-agnostic; cycle 068 reuses them
+   verbatim. The cycle 064 plan that listed them as cluster 3 was
+   over-conservative; the cycle 066 task results already noted
+   this.
+
+### Carried-forward false-positive verdicts (ignore if mentioned in prompt)
+
+The supervisor's prompt-builder occasionally surfaces stale
+"commits not reaching repo" / "stuck on previous sorry" verdicts
+from `attempts.md`. Per the cycle 008/014/015/040 consultant
+analyses (`.prover-state/issues/consultant_advice_cycle_*.md`),
+these are typically false positives. Verify the actual git state
+with:
+
+```bash
+git log -1 --format='%H %s'
+git rev-parse HEAD
+git rev-parse origin/Main/Experiments
+```
+
+If `HEAD == origin/Main/Experiments` and `git diff HEAD~1 HEAD`
+is non-empty, the prior cycle landed; ignore the phantom and
+proceed with the actual work.
+
+### Deferred to cycle 068
+
+* Closing `stable_consistent_isConvergent` at line 4928. The cycle
+  068 strategy will use cycle 067's `globalError_recurrence_form_explicit_nonauto`
+  + the existing shape-agnostic squeeze helpers + a joint-Lipschitz
+  adapter (TBD: derive joint-Lipschitz on `Function.uncurry f` from
+  `LipschitzInSecond Set.univ L f` + continuity, since
+  `LipschitzInSecond` is spatial-only). The cycle 063 adapter set
+  may need one more entry; cycle 068's strategy will determine
+  whether to add it.
+
+### Deferred to cycle 069 (only if Step 2 deferred this cycle)
+
+If cycle 067 Step 2 is deferred, cycle 068 finishes the
+`_explicit_nonauto` port and cycle 069 closes
+`stable_consistent_isConvergent`.
 
 ---
 
-## Cross-references
+## Reference: prior cycle history (don't repeat)
 
-* `.prover-state/issues/non_autonomous_lift_plan.md` — four-cluster
-  roadmap; Cluster 1 (§406B) RESOLVED in cycle 065; cluster 2
-  (§406D) is this cycle's target.
-* `.prover-state/task_results/cycle_065.md` — cycle 065 deliverable
-  record + the `add_le_add_left` discovery.
-* `.prover-state/issues/lem_406B_textbook_check.md` — corrected LTE
-  bound coefficient; cycle 065's lift inherits this.
-* `OpenMath/Chapter4/Section404.lean:1180–1480` — autonomous §406D
-  recurrence helpers (T1/T2/T3 + recurrence_bound +
-  recurrence_bound_textbook).
-* `OpenMath/Chapter4/Section404.lean:4101` — cycle 065's
-  `joint_lipschitz_pair_bound` (the joint-Lipschitz triangle
-  inequality used in `residual_bound_nonauto` / `deriv_diff_bound_nonauto`).
-* `OpenMath/Chapter4/Section404.lean:4129–4413` — cycle 065's §406B
-  non-autonomous helpers (the cluster cycle 066 builds on).
-* `OpenMath/Chapter4/Section404.lean:4548–4552` — the sorry to close
-  in cycle 068 (NOT this cycle).
+* **Cycle 060**: −1 score; pushed ~430 LOC in a single cycle and
+  regressed. The lesson: 430 LOC ports are fragile; budget-watch
+  aggressively.
+* **Cycle 062**: +2 score; closed the autonomous-IVP form of
+  `thm:406D` in ~150 LOC. Demonstrated that small, well-decomposed
+  pushes succeed.
+* **Cycle 063**: +1 score; landed three boundary adapters at the
+  autonomous/non-autonomous interface. The current cycle 067 work
+  builds on these (specifically `lipschitzInSecond_univ_toLipschitzWith`
+  for cycle 068's adapter — not used in this cycle but worth
+  knowing about).
+* **Cycle 064**: +1 score; landed cluster 1 sub-lemmas A and B
+  (no Lipschitz invocation, 1:1 lift).
+* **Cycle 065**: 0 score; off-strategy but delivered cluster 1
+  sub-lemmas C/D + main + α/β-sum wrappers. The
+  `M_bound ↦ (1 + M_bound)` shape emerged from the joint-Lipschitz
+  hypothesis here; cycle 067's ports inherit it.
+* **Cycle 066**: +1 score; landed cluster 2 (six recurrence
+  helpers) within budget. The cycle 067 lift consumes
+  `globalError_recurrence_bound_textbook_nonauto` directly.
 
 ---
 
-## Quick-reference: cycle 065 helpers cycle 066 builds on
+## Reference: relevant Mathlib lemmas
 
-| Helper | Line | Use in cycle 066 |
-|---|---|---|
-| `joint_lipschitz_pair_bound` | 4101 | T1/T2 Lipschitz step IF time args differ (analysis suggests they don't) |
-| `lipschitzInSecond_univ_toLipschitzWith` | 3862 | T1/T2 Lipschitz step when time args coincide (expected default) |
-| `LinearMultistepMethod.localTruncationError_bound_nonauto` | 4353 | T3_bound_nonauto body |
-| `f_yex_bound_on_Icc` | 3885 | (not needed cluster 2; cluster 4 only) |
-| `hstart_shape_bridge` | 3916 | (not needed cluster 2; cluster 4 only) |
+None new — Step 1 is a `Finset.single_le_sum` + delegation to
+cycle 066's lemma, and Step 2 is a copy of an existing autonomous
+proof. All Mathlib infrastructure (`abs_add_le`,
+`Finset.abs_sum_le_sum_abs`, `mul_le_mul_of_nonneg_left`, `linarith`,
+`nlinarith`, `ring`, `Finset.sum_Ico_succ_top`, `theta_zero`, `Nat.sub_self`)
+is already in place from prior cycles.
 
-Aim for cycle 066 to mirror cycle 065's structure: a tight
-~200-LOC commit that lifts one cluster cleanly, with the autonomous
-helpers preserved.
+---
+
+## Estimated total effort
+
+* Step 0: ≤ 5 minutes (Aristotle check).
+* Step 1: ≤ 30 minutes (~50 LOC, mechanical).
+* Step 2: 60–90 minutes (~430 LOC, mechanical with 8 substitutions).
+* Step 3 + Step 4: 15 minutes (faithfulness + plan + commit).
+
+Total: 2–3 hours of focused worker time. Land the commit before
+the cycle's session deadline; if Step 2 starts blowing up, snapshot
+at 500 LOC and defer.

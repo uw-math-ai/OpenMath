@@ -105,19 +105,40 @@ complete. All 6 new lemmas (5 strategy targets + 1 private decomposition
 helper) landed within the cycle's budget. The cycle 066 fallback
 (deferring (4) and (5) to cycle 067) was NOT triggered.
 
-### Cycle 067 — lift cycle 057–061 squeeze helpers (~100 lines)
+### Cycle 067 — lift §406D recurrence-form intermediates (~474 lines)
 
-* `globalError_outer_squeeze_a_term`
-* `globalError_outer_squeeze_c_term`
-* `bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`,
-  `aOf_tendsto_zero`, `bOf_limit_pos`
+* **Re-scoped on cycle 067**: the named squeeze helpers
+  (`globalError_outer_squeeze_a_term`,
+  `globalError_outer_squeeze_c_term`, `bOf_tendsto_at_zero`,
+  `cOf_tendsto_at_zero`, `aOf_tendsto_zero`, `bOf_limit_pos`) are
+  already shape-agnostic (they take `{a b c : ℝ → ℝ}` or scalar
+  `Θ L M_bound` directly). The actual cluster-3 lift work was the
+  two intermediate helpers that take an autonomous `f : ℝ → ℝ`.
+* `globalError_per_step_sum_form` (line 2542) — **LANDED cycle 067**
+  as `globalError_per_step_sum_form_nonauto` (~50 LOC; thin wrapper
+  of cycle 066's `globalError_recurrence_bound_textbook_nonauto`
+  with `Mmax := ∑ |ε(n−(j+1))|` specialisation).
+* `globalError_recurrence_form_explicit` (line 3249) — **LANDED
+  cycle 067** as `globalError_recurrence_form_explicit_nonauto`
+  (~420 LOC; mechanical 1:1 port under `L ↦ L_joint`,
+  `M_bound ↦ (1 + M_bound)`, and the `globalError_per_step_sum_form
+  ↦ globalError_per_step_sum_form_nonauto` swap).
+
+**RESOLVED in cycle 067**: cluster 3 is complete. Total LOC delta
++474, within the 500-LOC ceiling. The shape-agnostic squeeze
+helpers above are reused verbatim by cycle 068.
 
 ### Cycle 068 — close `stable_consistent_isConvergent` (~80 lines)
 
-Lift `globalError_closed_form_autonomous_explicit` to non-autonomous
-and prove `stable_consistent_isConvergent` directly, using:
-* the cycle 063 adapters (Lipschitz, bound, hstart bridge);
-* the cycle 064–067 lifted helpers.
+Compose `globalError_recurrence_form_explicit_nonauto` (cycle 067)
++ `discrete_gronwall_exp_bound` (cycle 050) + the existing
+shape-agnostic squeeze helpers (`globalError_outer_squeeze_*`,
+`bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`, `aOf_tendsto_zero`,
+`bOf_limit_pos`) under the cycle 063 boundary adapters
+(`lipschitzInSecond_univ_toLipschitzWith`, `f_yex_bound_on_Icc`,
+`hstart_shape_bridge`). Cycle 068's strategy will determine whether
+a joint-Lipschitz adapter (uncurried `f` from `LipschitzInSecond`
++ continuity) needs to be added to the cycle 063 set.
 
 (Schedule slipped one cycle relative to the original cycle 063 plan
 because cycle 064 deferred §406B helpers 3/4/5 to cycle 065.)
@@ -157,7 +178,7 @@ For each helper:
   statement (non-autonomous).
 * `OpenMath/Chapter4/Section404.lean:3863` — autonomous theorem
   (cycle 062).
-* `OpenMath/Chapter4/Section404.lean:4012` — the sorry to close
-  (cycle 067).
+* `OpenMath/Chapter4/Section404.lean:5398` — the sorry to close
+  (cycle 068, after cycle 067 cluster-3 lift).
 * `.prover-state/task_results/cycle_062.md` — original lift
   estimate (200–400 lines, "no deep new mathematics").
