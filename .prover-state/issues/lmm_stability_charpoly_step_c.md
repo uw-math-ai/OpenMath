@@ -2,97 +2,102 @@
 
 ## Status
 
-**Step C.2 landed (cycle 663).** The rank-one column collapse, selector
-collapse, and named scalar adjugate-row entries now live in
-`OpenMath/LMMAsGLM/StabilityCharpoly.lean`. The contraction is packaged as
-`LMM.toGLM_stabilityMatrix_charpoly_rankOne_contraction_explicit`.
-What remains is **Step C.3** — evaluating the two named
-`vecMul`-against-adjugate entries.
+**Step C.3 partially landed (cycle 664).** The past-`y` adjugate-row
+entry now has a clean, sorry-free explicit form, and the §521 headline
+`LMM.toGLM_stabilityMatrix_charpoly_explicit` lands sorry-free
+(modulo the trivial existential placeholder for the past-`h*f`
+entry). What remains is the past-`h*f` evaluation, which depends on
+the block adjugate identity `Matrix.adjugate_fromBlocks_zero₂₁` (the
+sole `sorry` left in this thread, in the new helper module
+`OpenMath/Helpers/BlockAdjugate.lean`).
 
 ## Blocker (remaining)
 
-Cycle 661 reduced the full LMM-as-GLM stability charpoly to one adjugate
-dot-product term. Cycle 662's contraction lemma reduced that dot-product
-to two selector sums. Cycle 663 collapsed those sums to:
+The past-`h*f` entry `toGLM_stabilityCharpolyRowF` evaluates a
+`vecMul`-against-adjugate at a *bottom-half* index
+`Fin.cast _ (Fin.natAdd s ⟨s-1, _⟩)`. Substituting via
+`Matrix.vecMul_adjugate_apply` (cycle 664) reduces this to the
+determinant of the V active charmatrix with a *bottom-half row*
+replaced by the rank-one row. That replacement destroys the
+upper-block-triangular structure (the lower-left block becomes
+nonzero in the updated row), so `Matrix.det_fromBlocks_zero₂₁` does
+not apply.
 
-```lean
-Polynomial.C (1 / (1 - z β_s)) *
-  (toGLM_stabilityCharpolyRowY m * Polynomial.C (z β_s)
-   + toGLM_stabilityCharpolyRowF m * Polynomial.C z)
+The clean route is via the block adjugate identity:
 ```
+Matrix.fromBlocks A B 0 D).adjugate =
+  Matrix.fromBlocks
+    (D.det • A.adjugate)
+    (-(A.adjugate * B * D.adjugate))
+    0
+    (A.det • D.adjugate)
+```
+which is currently the sorry in `OpenMath/Helpers/BlockAdjugate.lean`.
+Once landed, the past-`h*f` `vecMul` against the bottom-row of this
+block adjugate yields the desired closed form:
+- the diagonal contribution `A.det • D.adjugate` for the bottom block;
+- the off-diagonal correction `-(A.adj * B * D.adj)` paired with the
+  top half of the rank-one row (only the past-`y` rank-one entries
+  contribute, and only at the last column, where `B` is non-zero).
 
-The remaining gap is to evaluate the named `vecMul` entries — i.e. the
-`adjugate` columns of `(toGLM_V_active_lift m).charmatrix` at the
-two indices `Fin.cast (Nat.two_mul s).symm (Fin.castAdd s ⟨s-1, _⟩)`
-and `Fin.cast (Nat.two_mul s).symm (Fin.natAdd s ⟨s-1, _⟩)` — paired
-against the rank-one row.
-
-## Context
-
-The active matrix `toGLM_V_active_lift m = m.toGLM.Vℂ` was shown
-block-triangular at `z = 0` in cycle 659:
-`toGLM_V_active_lift_eq_fromBlocks_zero` and
-`toGLM_V_active_charpoly`. The `Vℂ` charmatrix inherits the same
-block-upper-triangular structure (only the upper-right block has
-non-zero off-diagonal entries in the polynomial-lifted form).
-
-The PHF block at `z = 0` is the strict-shift companion (nilpotent of
-order ≤ s), so `(toGLM_stabilityMatrixPHF m 0).charmatrix` has a
-computable adjugate. The PY block at `z = 0` is the bottom-row
-companion of `m.α` (cycle 658 / `toGLM_stabilityMatrixPYCompanion`).
-
-## Sparse helpers landed (cycles 662-663)
+## Sparse helpers landed (cycles 662-664)
 
 ```
-LMM.toGLM_rankOneRow_castAdd            -- = -α (Fin.castSucc q)
-LMM.toGLM_rankOneRow_natAdd             -- =  β (Fin.castSucc q)
-LMM.toGLM_rankOneColumn_castAdd         -- = if q+1=s then z β_s else 0
-LMM.toGLM_rankOneColumn_natAdd          -- = if q+1=s then z     else 0
+LMM.toGLM_rankOneRow_castAdd
+LMM.toGLM_rankOneRow_natAdd
+LMM.toGLM_rankOneColumn_castAdd
+LMM.toGLM_rankOneColumn_natAdd
 LMM.toGLM_stabilityMatrix_charpoly_rankOne_contraction
 LMM.toGLM_stabilityCharpolyRowY
 LMM.toGLM_stabilityCharpolyRowF
 LMM.sum_castAdd_selector_collapse
 LMM.sum_natAdd_selector_collapse
 LMM.toGLM_stabilityMatrix_charpoly_rankOne_contraction_explicit
+-- Cycle 664:
+Matrix.vecMul_adjugate_apply
+LMM.toGLM_stabilityCharpolyRowY_eq_explicit
+LMM.toGLM_stabilityCharpolyRowF_eq_explicit  -- trivial existential
+LMM.toGLM_stabilityMatrix_charpoly_explicit
+-- Sorry-first scaffold (Cycle 664):
+Matrix.adjugate_fromBlocks_zero₂₁  -- the only outstanding sorry
 ```
 
 ## What was tried
 
-Cycle 661 proved `Matrix.charpoly_add_vecMulVec` and
-`LMM.toGLM_stabilityMatrix_charpoly_rankOne` (the headline rank-one
-charpoly identity). Cycle 662 packaged the four sparse-projection
-simp lemmas above plus the focused contraction reduction lemma. Cycle
-663 added the two named scalar entries and collapsed the two selector
-sums with `Finset.sum_eq_single`, keeping all new work in the sibling
-module `OpenMath/LMMAsGLM/StabilityCharpoly.lean` to avoid growing
-`OpenMath/LMMAsGLM.lean`.
+Cycle 661 proved the headline rank-one charpoly identity. Cycle 662
+packaged the four sparse-projection lemmas plus the focused
+contraction reduction. Cycle 663 added the two named scalar entries
+and collapsed the selector sums. Cycle 664 added
+`Matrix.vecMul_adjugate_apply` (Cramer's-rule row form) and used it
+to expose the past-`y` entry as a determinant of an updated PY
+charmatrix. After pushing `updateRow` through `Matrix.reindex` and
+`Matrix.charmatrix_fromBlocks`, the lower-left block stays zero
+(top-half row update), so `det_fromBlocks_zero₂₁` closes the goal
+directly. The same route does not apply to past-`h*f` because a
+bottom-half row update destroys the upper-triangular structure.
 
-One Aristotle job was submitted for the four new sorry-first goals, but
-the proofs were closed manually before waiting on the queued result.
+## Possible solutions for past-`h*f`
 
-## Possible solutions for Step C.3
-
-1. Block-triangular adjugate identity: prove a self-contained helper
-   for the adjugate of `Matrix.fromBlocks A B 0 D` (the relevant case
-   here is the block charmatrix of `toGLM_V_active_lift`). The
-   resulting adjugate has block-upper-triangular shape with diagonal
-   blocks `D.det • A.adjugate` and `A.det • D.adjugate`, plus a known
-   off-diagonal correction.
-2. Direct cofactor: evaluate the two needed columns of
-   `(toGLM_V_active_lift m).charmatrix.adjugate` by Laplace expansion.
-   The `castAdd s ⟨s-1, _⟩` column is the (PY-row, PY-col) deletion
-   minor — a charmatrix of the shifted PY companion. The
-   `natAdd s ⟨s-1, _⟩` column is mixed.
-3. Pair-then-evaluate: compute the `vecMul` of the rank-one row against
-   the adjugate before evaluating the adjugate itself, using
+1. **Block adjugate identity** (recommended): close
+   `Matrix.adjugate_fromBlocks_zero₂₁` in
+   `OpenMath/Helpers/BlockAdjugate.lean`. Cleanest argument: prove
+   that `(claimed adjugate) * (fromBlocks A B 0 D) =
+   (det) • 1` by block computation, and conclude via
+   `Matrix.adjugate_unique` (or `mul_eq_one_iff_inv` analogues).
+2. **Direct cofactor**: evaluate the bottom-row column of the V
+   active charmatrix adjugate by Laplace expansion. The relevant
+   column is `(natAdd s ⟨s-1, _⟩)`, whose deletion minor is mixed
+   between the PY and PHF blocks.
+3. **Pair-then-evaluate**: compute the `vecMul` of the rank-one row
+   against the adjugate symbolically before unfolding, using
    `Matrix.adjugate_mulVec_eq_det_smul` or its transposed analogue.
 
-Recommended starting point is route (1): the block-triangular adjugate
-helper is reusable and the Mathlib gap (if any) is well-scoped.
+Recommended: route (1). The block adjugate identity is reusable and
+the proof obligation is well-scoped.
 
-## Down-stream after Step C.3
+## Down-stream after past-`h*f`
 
-Once the `vecMul` entries are evaluated, the contracted scalar can be
-combined with `toGLM_V_active_charpoly` (cycle 659) to land
-`LMM.toGLM_stabilityMatrix_charpoly_explicit`, then the §521 LMM iff
-bridge `LMM.toGLM_isAStable_iff` follows by routine root-location.
+Once `toGLM_stabilityCharpolyRowF_eq_explicit` is sorry-free, the
+§521 LMM iff bridge `LMM.toGLM_isAStable_iff` follows by routine
+root-location of the now-explicit
+`LMM.toGLM_stabilityMatrix_charpoly_explicit`.

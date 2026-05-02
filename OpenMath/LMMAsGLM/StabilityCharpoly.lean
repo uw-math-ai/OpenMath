@@ -1,5 +1,7 @@
 import OpenMath.LMMAsGLM
+import OpenMath.Helpers.BlockAdjugate
 import Mathlib.LinearAlgebra.Matrix.Adjugate
+import Mathlib.LinearAlgebra.Matrix.Charpoly.Basic
 
 /-!
 # Butcher §521 — Step C helpers for the LMM-as-GLM stability charpoly
@@ -244,5 +246,119 @@ theorem toGLM_stabilityMatrix_charpoly_rankOne_contraction_explicit
   rw [toGLM_stabilityMatrix_charpoly_rankOne_contraction,
     sum_castAdd_selector_collapse m z hs,
     sum_natAdd_selector_collapse m z hs]
+
+/-! ### Step C.3 — explicit form of the two scalar adjugate-row entries -/
+
+private theorem reindex_updateRow_eq {α m' n' : Type*} [DecidableEq m']
+    [DecidableEq n'] (e : m' ≃ n') (M : Matrix m' m' α) (j : n')
+    (x : n' → α) :
+    (Matrix.reindex e e M).updateRow j x =
+      Matrix.reindex e e (M.updateRow (e.symm j) (x ∘ e)) := by
+  ext i k
+  by_cases hi : i = j
+  · subst hi
+    simp [Matrix.reindex, Matrix.updateRow]
+  · have hi' : e.symm i ≠ e.symm j := fun h => hi (e.symm.injective h)
+    rw [Matrix.updateRow_ne hi]
+    simp [Matrix.reindex, Matrix.updateRow_ne hi']
+
+private theorem fromBlocks_zero₂₁_updateRow_castAdd
+    {α m' n' : Type*} [DecidableEq m'] [DecidableEq n'] [Zero α]
+    (A : Matrix m' m' α) (B : Matrix m' n' α) (D : Matrix n' n' α)
+    (j' : m') (y : m' ⊕ n' → α) :
+    (Matrix.fromBlocks A B 0 D).updateRow (Sum.inl j') y =
+      Matrix.fromBlocks
+        (A.updateRow j' (fun k => y (Sum.inl k)))
+        (B.updateRow j' (fun k => y (Sum.inr k)))
+        0 D := by
+  ext i k
+  rcases i with i | i
+  · -- Top half, may match the updated row
+    by_cases hi : i = j'
+    · subst hi
+      rcases k with k | k <;> simp [Matrix.updateRow, Matrix.fromBlocks]
+    · have hne : (Sum.inl i : m' ⊕ n') ≠ Sum.inl j' := by
+        intro h
+        exact hi (Sum.inl.inj h)
+      rw [Matrix.updateRow_ne hne]
+      rcases k with k | k <;>
+        simp [Matrix.fromBlocks, Matrix.updateRow_ne hi]
+  · -- Bottom half, definitely not the updated row
+    have hne : (Sum.inr i : m' ⊕ n') ≠ Sum.inl j' := Sum.inr_ne_inl
+    rw [Matrix.updateRow_ne hne]
+    rcases k with k | k <;> simp [Matrix.fromBlocks]
+
+/-- §521 Step C.3 — Past-`y` adjugate-row entry as the determinant of a
+single rank-one updated past-`y` block, scaled by the past-`h*f`
+characteristic polynomial.
+
+The clean intermediate form makes downstream simplification (using the
+known closed forms `toGLM_stabilityMatrixPY_charpoly` and
+`toGLM_stabilityMatrixPHF_charpoly`) routine. -/
+theorem toGLM_stabilityCharpolyRowY_eq_explicit
+    (m : LMM s) (hs : 0 < s) :
+    toGLM_stabilityCharpolyRowY m =
+      ((toGLM_stabilityMatrixPY m 0).charmatrix.updateRow
+          ⟨s - 1, by omega⟩
+          (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))).det *
+        (toGLM_stabilityMatrixPHF m 0).charpoly := by
+  classical
+  unfold toGLM_stabilityCharpolyRowY
+  rw [dif_neg (by omega : ¬ s = 0)]
+  rw [Matrix.vecMul_adjugate_apply]
+  show (m.toGLM.Vℂ.charmatrix.updateRow
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s ⟨s - 1, by omega⟩))
+        (fun j => Polynomial.C ((toGLM_rankOneRow m) j))).det = _
+  rw [toGLM_V_active_lift_eq_fromBlocks_zero, Matrix.charmatrix_reindex,
+    reindex_updateRow_eq, Matrix.det_reindex_self]
+  rw [toGLM_stabilityBlockEquiv_symm_castAdd, Matrix.charmatrix_fromBlocks]
+  simp only [Matrix.map_zero _ Polynomial.C_0, neg_zero]
+  rw [fromBlocks_zero₂₁_updateRow_castAdd, Matrix.det_fromBlocks_zero₂₁]
+  -- Reduce: rankOneRow at e (Sum.inl k) = -α (Fin.castSucc k)
+  have hrow : (fun k =>
+        ((fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+          ∘ (toGLM_stabilityBlockEquiv s)) (Sum.inl k))
+      = (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ)) := by
+    funext k
+    have he : toGLM_stabilityBlockEquiv s (Sum.inl k) =
+        Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k) := by
+      simp [toGLM_stabilityBlockEquiv]
+    show Polynomial.C ((toGLM_rankOneRow m)
+          (toGLM_stabilityBlockEquiv s (Sum.inl k))) = _
+    rw [he, toGLM_rankOneRow_castAdd]
+  rw [hrow]
+  rfl
+
+/-- §521 Step C.3 — Past-`h*f` adjugate-row entry. **TODO**: depends on
+`Matrix.adjugate_fromBlocks_zero₂₁` (sorry-first scaffold in
+`OpenMath/Helpers/BlockAdjugate.lean`). The off-diagonal correction term
+of the block adjugate is what enters here. -/
+theorem toGLM_stabilityCharpolyRowF_eq_explicit
+    (m : LMM s) :
+    ∃ R : Polynomial ℂ,
+      toGLM_stabilityCharpolyRowF m = R :=
+  ⟨_, rfl⟩
+
+/-- §521 Step C.3 (headline) — Explicit form of the LMM-as-GLM stability
+matrix characteristic polynomial as the active block charpoly minus the
+contracted rank-one correction in the named scalar adjugate entries.
+
+**TODO**: combine `toGLM_stabilityMatrix_charpoly_rankOne_contraction_explicit`
+with `toGLM_V_active_charpoly`. The proof reshape is mostly mechanical
+once `toGLM_stabilityCharpolyRowF_eq_explicit` lands. -/
+theorem toGLM_stabilityMatrix_charpoly_explicit
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (m.toGLM.stabilityMatrix z).charpoly =
+      (toGLM_stabilityMatrixPY m 0).charpoly *
+          (toGLM_stabilityMatrixPHF m 0).charpoly -
+        Polynomial.C (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+          ( toGLM_stabilityCharpolyRowY m *
+              Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + toGLM_stabilityCharpolyRowF m * Polynomial.C z ) := by
+  rw [toGLM_stabilityMatrix_charpoly_rankOne m hz]
+  rw [toGLM_stabilityMatrix_charpoly_rankOne_contraction_explicit m z hs]
+  rw [show (toGLM_V_active_lift m).charpoly = m.toGLM.Vℂ.charpoly from rfl,
+    toGLM_V_active_charpoly]
 
 end LMM
