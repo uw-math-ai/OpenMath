@@ -100,4 +100,19 @@ theorem toGLM_isStable (t : ButcherTableau s) :
     simp only [toGLM_V, one_mul, Fin.sum_univ_one] at ih ⊢
     exact ih 0
 
+/-- §502 sanity check — every consistent RK tableau embeds as a
+consistent GLM (Butcher §510). Witnesses: `q ≡ 1`, `q' ≡ 0`. The third
+conjunct collapses to `∑ j, t.b j = 1`, which is exactly RK weight-sum
+consistency. -/
+theorem toGLM_isConsistent (t : ButcherTableau s)
+    (ht : t.IsConsistent) : t.toGLM.IsConsistent := by
+  refine ⟨fun _ => 1, fun _ => 0, ?_, ?_, ?_⟩
+  · intro k
+    simp [toGLM_V]
+  · intro i
+    simp [toGLM_U]
+  · intro k
+    simp only [toGLM_V, toGLM_B, mul_zero, Finset.sum_const_zero, add_zero]
+    exact ht.weights_sum
+
 end ButcherTableau

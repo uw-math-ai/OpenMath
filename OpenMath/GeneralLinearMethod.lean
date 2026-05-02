@@ -78,13 +78,27 @@ theorem IsExplicit.A_diag_zero (m : GeneralLinearMethod s r)
   intro i
   exact hm i i le_rfl
 
-/-! ## §510 — Preconsistency, Consistency Hook, and Stability -/
+/-! ## §510 — Preconsistency, Consistency, and Stability -/
 
-/-- Placeholder predicate for the §510 consistency theory of general linear
-methods. Future cycles will replace this with the coefficient conditions
-needed for GLM consistency and stability. -/
-def IsConsistent (_m : GeneralLinearMethod s r) : Prop :=
-  True
+/-- Butcher §510 — consistency. A general linear method is **consistent**
+if there exist input vectors `q, q' : Fin r → ℝ` with
+* `q` a preconsistency witness (`V q = q`, `U q = 𝟙`), and
+* `q'` satisfying the first-derivative compatibility
+  `(B 𝟙_s) + V q' = q + q'`,
+where `(B 𝟙_s) k := ∑ j, m.B k j` is the input action of the `B` block
+on the all-ones stage vector. The interpretation is that `q` carries
+the `y_n` content of each input quantity and `q'` carries the
+`h · y'_n` content; the third clause is exactly Butcher's §510
+condition for the GLM applied to a linear test trajectory.
+
+For the §502 RK embedding (`r = 1`, `U = 𝟙`, `V = 1`, `B = b row`),
+this collapses to the standard RK consistency condition `∑ j, b j = 1`
+(witnesses `q ≡ 1`, `q' ≡ 0`). -/
+def IsConsistent (m : GeneralLinearMethod s r) : Prop :=
+  ∃ q q' : Fin r → ℝ,
+    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧
+    (∀ i : Fin s, ∑ k, m.U i k * q k = 1) ∧
+    (∀ k : Fin r, (∑ j, m.B k j) + ∑ l, m.V k l * q' l = q k + q' k)
 
 /-- Butcher §510 — preconsistency. A general linear method is
 preconsistent if there is an input-vector decomposition `q : Fin r → ℝ`

@@ -42,7 +42,10 @@ codebase.
   Methods and G-stability) and §46 (implementation: Nordsieck etc.) are
   open.
 - **Chapter 5 (General Linear Methods):** **opened by §500. This remains
-  the active frontier and the largest real gap in the codebase.** Butcher's
+  the active frontier and the largest real gap in the codebase.** Cycle
+  612 / 613 landed `IsPreconsistent`, `IsStable`, and the honest
+  `IsConsistent` predicate plus the RK sanity check
+  `toGLM_isConsistent`. Butcher's
   Ch 5 unifies RK and LMM under a single multivalue-multistage framework
   and is the part of Butcher's book that does not appear in any other
   ODE textbook.
@@ -766,7 +769,8 @@ error bound for one specific scheme:
   (`OpenMath/GeneralLinearMethod.lean`). Cycle 609 landed the
   `GeneralLinearMethod` structure, scalar `stageMap`, `stageResidual`,
   one-step `step`, explicitness predicate, contraction-based unique stage
-  solvability theorem, and a minimal `IsConsistent` hook for §510.
+  solvability theorem, and the initial §510 hook later upgraded in
+  cycle 613.
 - [ ] **§501 Transformations of methods** — equivalence under
   `T : (A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`.
 - [x] **§502 Runge–Kutta methods as general linear methods** — embedding
@@ -782,13 +786,14 @@ error bound for one specific scheme:
 
 ### §51 Consistency, Stability and Convergence
 - [~] **§510 Definitions of consistency and stability** — analogue of
-  §40 for GLMs. Cycle 612 landed `IsPreconsistent` (existence of an
-  input decomposition `q` fixed by `V` with `U q = 𝟙_s`) and
-  `IsStable` (uniform bound on iterated `V`-propagation of bounded
-  inputs) in `OpenMath/GeneralLinearMethod.lean`, plus RK sanity
-  checks `toGLM_isPreconsistent` / `toGLM_isStable` in
-  `OpenMath/RKAsGLM.lean`. Full consistency / convergence chain still
-  pending.
+  §40 for GLMs. Cycle 612 / 613 landed `IsPreconsistent` (existence of
+  an input decomposition `q` fixed by `V` with `U q = 𝟙_s`), `IsStable`
+  (uniform bound on iterated `V`-propagation of bounded inputs), and the
+  honest `IsConsistent` predicate with first-derivative compatibility in
+  `OpenMath/GeneralLinearMethod.lean`, plus RK sanity checks
+  `toGLM_isPreconsistent` / `toGLM_isStable` / `toGLM_isConsistent` in
+  `OpenMath/RKAsGLM.lean`. The consistency / convergence chain
+  (§512–§515) remains open.
 - [ ] **§511 Covariance of methods** under the equivalence transformation
   of §501.
 - [ ] **§512 Definition of convergence**.
@@ -867,6 +872,10 @@ error bound for one specific scheme:
   embedding sanity checks (`toGLM_isPreconsistent`, `toGLM_isStable`)
   in `OpenMath/RKAsGLM.lean`. Full §510 (consistency + convergence
   chain) still pending — see backlog item #1.
+- **Cycle 613 tightened §510 consistency** — `IsConsistent` upgraded
+  from `True` placeholder to the honest preconsistency +
+  first-derivative compatibility predicate, with
+  `ButcherTableau.toGLM_isConsistent` as the RK sanity check.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -890,8 +899,9 @@ error bound for one specific scheme:
 
 1. **Butcher §510 — GLM consistency and stability definitions.**
    `OpenMath/GeneralLinearMethod.lean`. Direct generalisation of §40.
-   *Partial — cycle 612 landed `IsPreconsistent` + `IsStable` and RK
-   sanity checks; full consistency + convergence chain still pending.*
+   *Partial — cycle 613 closed the consistency predicate
+   (`IsConsistent`, `toGLM_isConsistent`); convergence chain
+   (§512–§515) still pending.*
 2. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
    ⟹ convergence` for GLMs. The existing
    `OpenMath/DahlquistEquivalence.lean` is a special case; the GLM
