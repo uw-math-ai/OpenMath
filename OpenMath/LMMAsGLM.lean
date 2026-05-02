@@ -2721,6 +2721,167 @@ theorem toGLM_stabilityDefect_zero (m : LMM s) (hm : m.IsConsistent) :
 
 end LMM
 
+namespace Matrix
+
+/-- §521 helper — auxiliary cardinality split for `Finset n`-indexed sums:
+when a function `F` vanishes on subsets of size `≥ 2`, the total sum
+collapses to the empty-set term plus the sum of singleton terms. Used to
+isolate the rank-one contribution in `det_add_vecMulVec`. -/
+private lemma sum_finset_le_one_eq
+    {n : Type*} [Fintype n] [DecidableEq n] {R : Type*} [AddCommMonoid R]
+    {F : Finset n → R} (hF : ∀ S, 2 ≤ S.card → F S = 0) :
+    ∑ S : Finset n, F S = F ∅ + ∑ k, F {k} := by
+  classical
+  rw [show ∑ S : Finset n, F S =
+        ∑ S ∈ (Finset.univ : Finset (Finset n)).filter (·.card ≤ 1), F S from ?_]
+  · rw [show (Finset.univ : Finset (Finset n)).filter (·.card ≤ 1) =
+          insert ∅ (Finset.univ.image (fun k : n => ({k} : Finset n))) from ?_]
+    · rw [Finset.sum_insert ?_, Finset.sum_image ?_]
+      · intros a _ b _ hab
+        exact (Finset.singleton_inj.mp hab : a = b)
+      · intro hh
+        rcases Finset.mem_image.mp hh with ⟨k, _, hk⟩
+        exact (Finset.singleton_ne_empty k) hk
+    · ext S
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_insert,
+        Finset.mem_image]
+      constructor
+      · intro hS
+        rcases Nat.lt_or_ge S.card 1 with h | h
+        · left
+          exact Finset.card_eq_zero.mp (Nat.lt_one_iff.mp h)
+        · right
+          have hcard : S.card = 1 := le_antisymm hS h
+          obtain ⟨k, hk⟩ := Finset.card_eq_one.mp hcard
+          exact ⟨k, hk.symm⟩
+      · rintro (rfl | ⟨k, rfl⟩) <;> simp
+  · apply (Finset.sum_subset (Finset.filter_subset _ _) ?_).symm
+    intro S _ hS
+    have h2 : 2 ≤ S.card := by
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, not_le] at hS
+      exact hS
+    exact hF S h2
+
+/-- §521 — Matrix determinant lemma in `vecMulVec` form, valid for any
+commutative ring. No invertibility hypothesis on `M.det` is required.
+
+This is the rank-one update form of the matrix determinant lemma:
+`det(M + u vᵀ) = det M + vᵀ · adj(M) · u`. Lifting to the polynomial
+ring `R[X]` produces the rank-one charpoly update; that step is left for
+a downstream cycle.
+
+Reference: Butcher §521 / classical matrix determinant lemma; the
+Mathlib lemma `Matrix.det_add_replicateCol_mul_replicateRow` covers the
+`IsUnit M.det` special case, and the file-level TODO there records the
+general version proved here. -/
+theorem det_add_vecMulVec
+    {n : Type*} [Fintype n] [DecidableEq n] {R : Type*} [CommRing R]
+    (M : Matrix n n R) (u v : n → R) :
+    (M + Matrix.vecMulVec u v).det
+      = M.det + dotProduct v (M.adjugate.mulVec u) := by
+  classical
+  -- Step 1: rewrite `(M + vecMulVec u v).det` as a sum-over-subsets via
+  -- multilinearity of `detRowAlternating` along the rows.
+  rw [show (M + Matrix.vecMulVec u v).det
+        = ∑ S : Finset n,
+            (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+              (S.piecewise (fun i => u i • v) (fun i => M i)) from ?_]
+  swap
+  · rw [show (M + Matrix.vecMulVec u v).det
+          = (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+              (fun i => u i • v + M i) from ?_]
+    · exact (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R).toMultilinearMap.map_add_univ
+        (fun i => u i • v) (fun i => M i)
+    · congr 1
+      funext i
+      ext j
+      simp [Matrix.add_apply, Matrix.vecMulVec_apply, Pi.smul_apply,
+        Pi.add_apply, smul_eq_mul, add_comm]
+  -- Step 2: factor `∏ i ∈ S, u i` out of each term using `map_piecewise_smul`.
+  have hpiece : ∀ S : Finset n,
+      (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+          (S.piecewise (fun i => u i • v) (fun i => M i))
+        = (∏ i ∈ S, u i) • (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+            (S.piecewise (fun _ => v) (fun i => M i)) := by
+    intro S
+    let m' : n → (n → R) := S.piecewise (fun _ => v) (fun i => M i)
+    have heq : S.piecewise (fun i => u i • v) (fun i => M i)
+        = S.piecewise (fun i => u i • m' i) m' := by
+      funext i
+      by_cases hi : i ∈ S
+      · simp [Finset.piecewise_eq_of_mem _ _ _ hi, m']
+      · simp [Finset.piecewise_eq_of_notMem _ _ _ hi, m']
+    rw [heq]
+    exact (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R).toMultilinearMap.map_piecewise_smul
+      u m' S
+  rw [Finset.sum_congr rfl (fun S _ => hpiece S)]
+  -- Step 3: terms with `|S| ≥ 2` vanish (two rows equal `v`).
+  have hzero : ∀ S : Finset n, 2 ≤ S.card →
+      (∏ i ∈ S, u i) • (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+        (S.piecewise (fun _ => v) (fun i => M i)) = 0 := by
+    intro S hS
+    obtain ⟨i, hi, j, hj, hij⟩ : ∃ i ∈ S, ∃ j ∈ S, i ≠ j := by
+      rcases Finset.one_lt_card_iff.mp hS with ⟨i, j, hi, hj, hij⟩
+      exact ⟨i, hi, j, hj, hij⟩
+    have hd0 : (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+        (S.piecewise (fun _ => v) (fun i => M i)) = 0 := by
+      refine (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R).map_eq_zero_of_eq _ ?_ hij
+      simp [Finset.piecewise_eq_of_mem _ _ _ hi, Finset.piecewise_eq_of_mem _ _ _ hj]
+    rw [hd0, smul_zero]
+  -- Step 4: collapse the sum to the `|S| ≤ 1` terms.
+  rw [sum_finset_le_one_eq hzero]
+  -- Step 5: the `S = ∅` term is `M.det`; each `S = {k}` term is
+  -- `u k * (M.updateRow k v).det`.
+  have hempty : (∏ i ∈ (∅ : Finset n), u i) •
+      (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+        ((∅ : Finset n).piecewise (fun _ => v) (fun i => M i)) = M.det := by
+    simp
+    rfl
+  rw [hempty]
+  have hsingleton : ∀ k : n,
+      (∏ i ∈ ({k} : Finset n), u i) •
+        (Matrix.detRowAlternating : (n → R) [⋀^n]→ₗ[R] R)
+          (({k} : Finset n).piecewise (fun _ => v) (fun i => M i))
+        = u k * (M.updateRow k v).det := by
+    intro k
+    rw [Finset.prod_singleton]
+    have hpw : ({k} : Finset n).piecewise (fun _ : n => v) (fun i => M i)
+        = fun i => (M.updateRow k v) i := by
+      funext i
+      by_cases hik : i = k
+      · subst hik
+        simp [Matrix.updateRow_self]
+      · rw [Matrix.updateRow_ne hik]
+        have : i ∉ ({k} : Finset n) := by simpa using fun h => hik h
+        rw [Finset.piecewise_eq_of_notMem _ _ _ this]
+    rw [hpw]
+    show u k • (M.updateRow k v).det = u k * (M.updateRow k v).det
+    rw [smul_eq_mul]
+  rw [Finset.sum_congr rfl (fun k _ => hsingleton k)]
+  -- Step 6: replace `(M.updateRow k v).det` by the cofactor expansion
+  -- `∑ j, v j * adj(M) j k`, using Cramer's rule.
+  have hupdate : ∀ k : n, (M.updateRow k v).det = ∑ j, v j * M.adjugate j k := by
+    intro k
+    rw [← Matrix.cramer_transpose_apply M v k, Matrix.cramer_eq_adjugate_mulVec,
+        ← Matrix.adjugate_transpose]
+    simp [Matrix.mulVec, dotProduct, Matrix.transpose_apply, mul_comm]
+  rw [Finset.sum_congr rfl (fun k _ => by rw [hupdate])]
+  -- Step 7: reorganise the double sum as `dotProduct v (adjugate M *ᵥ u)`.
+  congr 1
+  rw [dotProduct]
+  conv_rhs =>
+    enter [2, i]
+    rw [Matrix.mulVec, dotProduct, Finset.mul_sum]
+  rw [Finset.sum_comm]
+  apply Finset.sum_congr rfl
+  intros k _
+  rw [Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intros j _
+  ring
+
+end Matrix
+
 /-- §521 — Backward Euler is A-stable in the GLM sense after the §503
 embedding. One-shot consequence of the BDF iff bridge
 `toGLM_isAStable_iff_of_bdf` and `backwardEuler_aStable`. -/
