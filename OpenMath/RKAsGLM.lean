@@ -387,3 +387,95 @@ theorem rkSDIRK3_toGLM_isAStable :
   rw [rkSDIRK3_stabilityFunction_eq z hz]
   exact sdirk3_aStable z hz
 
+/-- Bridge from the canonical GLM-side `stabilityFunction` to the
+classical scalar `radauIIA3StabilityFn` on the Radau IIA tableau. -/
+theorem rkRadauIIA3_stabilityFunction_eq (z : ℂ) (hz : z.re ≤ 0) :
+    rkRadauIIA3.stabilityFunction z = radauIIA3StabilityFn z := by
+  let s : ℂ := ((Real.sqrt 6 : ℝ) : ℂ)
+  have hs6_R : Real.sqrt 6 ^ 2 = 6 := Real.sq_sqrt (by norm_num : (6 : ℝ) ≥ 0)
+  have hs6_C : s ^ 2 = 6 := by
+    dsimp [s]
+    exact_mod_cast hs6_R
+  have hD : radauIIA3Denom z ≠ 0 := radauIIA3_denom_ne_zero z hz
+  let M : Matrix (Fin 3) (Fin 3) ℂ :=
+      !![1 - z * ((88 - 7 * s) / 360),
+         -(z * ((296 - 169 * s) / 1800)),
+         -(z * ((-2 + 3 * s) / 225));
+         -(z * ((296 + 169 * s) / 1800)),
+         1 - z * ((88 + 7 * s) / 360),
+         -(z * ((-2 - 3 * s) / 225));
+         -(z * ((16 - s) / 36)),
+         -(z * ((16 + s) / 36)),
+         1 - z * ((1 : ℂ) / 9)]
+  rw [ButcherTableau.stabilityFunction]
+  have hM :
+      ((1 : Matrix (Fin 3) (Fin 3) ℂ) - z •
+          (Matrix.of (fun i j => ((rkRadauIIA3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ)) = M := by
+    subst M
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rkRadauIIA3, s, Matrix.cons_val_zero, Matrix.cons_val_one]
+  change 1 + z * ∑ i, ∑ j,
+      (rkRadauIIA3.b i : ℂ) *
+        ((1 - z • (Matrix.of (fun i j => ((rkRadauIIA3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ))⁻¹) i j = radauIIA3StabilityFn z
+  rw [hM]
+  have hdet : M.det = radauIIA3Denom z := by
+    subst M
+    rw [Matrix.det_fin_three]
+    unfold radauIIA3Denom
+    simp [Matrix.cons_val_zero, Matrix.cons_val_one]
+    linear_combination (norm := ring_nf) (-z ^ 2 * (93 * z - 413) / 45000) * hs6_C
+  have hsum :
+      ∑ i, ∑ j, (rkRadauIIA3.b i : ℂ) * M.adjugate i j =
+        (93 * s ^ 2 * z ^ 2 + 250 * s ^ 2 * z + 192 * z ^ 2 - 6000 * z + 45000) /
+          45000 := by
+    subst M
+    simp [Fin.sum_univ_three, rkRadauIIA3, Matrix.adjugate_fin_three_of,
+          Matrix.cons_val_zero, Matrix.cons_val_one]
+    rw [show ((Real.sqrt 6 : ℝ) : ℂ) = s from rfl]
+    ring_nf
+  have hsumInv :
+      ∑ i, ∑ j, (rkRadauIIA3.b i : ℂ) *
+          ((radauIIA3Denom z)⁻¹ * M.adjugate i j) =
+        (radauIIA3Denom z)⁻¹ *
+          ((93 * s ^ 2 * z ^ 2 + 250 * s ^ 2 * z + 192 * z ^ 2 - 6000 * z + 45000) /
+            45000) := by
+    rw [← hsum]
+    simp only [Fin.sum_univ_three]
+    ring
+  rw [Matrix.inv_def]
+  simp only [hdet, Ring.inverse_eq_inv', Matrix.smul_apply, smul_eq_mul]
+  rw [hsumInv]
+  have hnum :
+      radauIIA3Denom z +
+          z * ((93 * s ^ 2 * z ^ 2 + 250 * s ^ 2 * z + 192 * z ^ 2 - 6000 * z + 45000) /
+            45000) =
+        radauIIA3Num z := by
+    unfold radauIIA3Denom radauIIA3Num
+    linear_combination (norm := ring_nf) (z ^ 2 * (93 * z + 250) / 45000) * hs6_C
+  calc
+    1 + z * ((radauIIA3Denom z)⁻¹ *
+        ((93 * s ^ 2 * z ^ 2 + 250 * s ^ 2 * z + 192 * z ^ 2 - 6000 * z + 45000) /
+          45000)) =
+        (radauIIA3Denom z)⁻¹ *
+          (radauIIA3Denom z + z *
+            ((93 * s ^ 2 * z ^ 2 + 250 * s ^ 2 * z + 192 * z ^ 2 - 6000 * z + 45000) /
+              45000)) := by
+      rw [mul_add]
+      rw [inv_mul_cancel₀ hD]
+      ring
+    _ = (radauIIA3Denom z)⁻¹ * radauIIA3Num z := by rw [hnum]
+    _ = radauIIA3StabilityFn z := by
+      unfold radauIIA3StabilityFn
+      rw [div_eq_mul_inv]
+      ring
+
+/-- 3-stage Radau IIA is A-stable after the §502 embedding into GLMs. -/
+theorem rkRadauIIA3_toGLM_isAStable :
+    (rkRadauIIA3).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  rw [rkRadauIIA3_stabilityFunction_eq z hz]
+  exact radauIIA3_aStable z hz
