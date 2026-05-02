@@ -750,9 +750,10 @@
     "notes": "Closed in cycle 074. Section410 infrastructure (αPoly, βPoly, C, expNegPS, 5 Aristotle helpers, 7 manual sub-lemmas) was authored in cycle 073 but reverted because thm:410A's general-j case carried a sorry. Cycle 074 closes the sorry via map_sub/map_one/map_sum push-throughs of `Polynomial.aeval expNegPS` and `PowerSeries.coeff (j+1)`, applies coeff_aeval_C_X_pow per monomial, and matches the closed-form C M (j+1) definitionally (rfl). The β side first peels off the leading X via PowerSeries.coeff_succ_X_mul. Axioms: [propext, Classical.choice, Quot.sound]."
   },
   "thm:410B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section410.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section410.thm_410B",
+    "status": "formalized",
+    "notes": "Closed in cycle 075 as a packaging of thm:410A (cycle 074) plus the new HasOrderAtLeast predicate (∀ j ≤ p, C M j = 0). Per-coefficient form `∀ j ≤ p, coeff j (genFn M) = 0` — the textbook's `O(z^{p+1})` operationalised for formal power series. Sign convention is backward (matches def:406A and §410A); textbook writes forward but the two are equivalent under z ↦ -z, documented in docstring. Cycle 075 also lands the §410↔§404 consistency bridge `C_one_eq_zero_iff_isConsistent`, the `genFn` abbreviation, and three witnesses (explicitEulerLMM has order ≥ 0 and ≥ 1, but C 2 ≠ 0). Bridge proof was Aristotle-suggested (`simp [C, ...]; constructor <;> norm_num <;> linarith`). Axioms: [propext, Classical.choice, Quot.sound]."
   },
   "thm:410C": {
     "lean_file": null,

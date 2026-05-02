@@ -270,6 +270,24 @@ theorem coeff_aeval_C_X_pow (c : ℝ) (m j : ℕ) :
 
 /-! ### Theorem 410A — generating-function identity -/
 
+/-- **Generating function of an LMM (per Butcher §410, eq. 410c).**
+
+In our backward-sign convention,
+`genFn M = α(exp(-z)) - z·β(exp(-z))`. By `thm_410A`, the j-th
+formal power-series coefficient of `genFn M` equals `C M j`, so
+`genFn M` is exactly the Taylor-series generating function of the
+order constants.
+
+Sign convention: Butcher's textbook (§410, p. 331) writes the
+generating function as `α(exp(z)) + z β(exp(z))` (forward sign).
+Our backward-sign encoding matches def:406A, §404, §405, §406, and
+all of cycle 074's §410 work; the two formulations are equivalent
+under `z ↦ -z`. -/
+noncomputable def genFn {k : ℕ} (M : LinearMultistepMethod k) :
+    PowerSeries ℝ :=
+  (Polynomial.aeval expNegPS) (αPoly M)
+    - PowerSeries.X * (Polynomial.aeval expNegPS) (βPoly M)
+
 /-- **Theorem 410A at `j = 0`** — the constant term of
 `α(exp(-z)) - z β(exp(-z))` is `1 - Σ M.α i.succ = C M 0`.
 
@@ -277,10 +295,8 @@ The `X * (...)` term contributes 0 at coefficient 0 (X has order 1),
 so this reduces to evaluating `α` at the constant term of
 `expNegPS`, which is 1. (Aristotle, cycle 073.) -/
 theorem thm_410A_zero {k : ℕ} (M : LinearMultistepMethod k) :
-    (PowerSeries.coeff (R := ℝ) 0)
-        ((Polynomial.aeval expNegPS) (αPoly M)
-          - PowerSeries.X * (Polynomial.aeval expNegPS) (βPoly M))
-      = C M 0 := by
+    (PowerSeries.coeff (R := ℝ) 0) (genFn M) = C M 0 := by
+  unfold genFn
   simp +decide [C, αPoly]
   unfold expNegPS
   aesop
@@ -291,8 +307,8 @@ of the Taylor coefficients `C_j`.
 Equation (410c): `α(exp(-z)) - z β(exp(-z)) = C_0 + C_1 z + ⋯`.
 
 The Lean statement asserts: for every `j`, the j-th formal
-power-series coefficient of `α(exp(-z)) - z β(exp(-z))` (with
-α, β substituted at the power series `expNegPS` via
+power-series coefficient of `genFn M = α(exp(-z)) - z β(exp(-z))`
+(with α, β substituted at the power series `expNegPS` via
 `Polynomial.aeval`) equals `C M j`.
 
 Proof: case split on `j`. The j=0 case is `thm_410A_zero`. For
@@ -302,13 +318,11 @@ via `coeff_aeval_C_X_pow`. The β side first peels off the leading
 `X` via `PowerSeries.coeff_succ_X_mul`. The resulting closed-form
 sums match the `j' + 1` branch of `C M` definitionally. -/
 theorem thm_410A {k : ℕ} (M : LinearMultistepMethod k) (j : ℕ) :
-    (PowerSeries.coeff (R := ℝ) j)
-        ((Polynomial.aeval expNegPS) (αPoly M)
-          - PowerSeries.X * (Polynomial.aeval expNegPS) (βPoly M))
-      = C M j := by
+    (PowerSeries.coeff (R := ℝ) j) (genFn M) = C M j := by
   cases j with
   | zero => exact thm_410A_zero M
   | succ j' =>
+    unfold genFn
     rw [map_sub]
     have hα : (PowerSeries.coeff (R := ℝ) (j' + 1))
                 ((Polynomial.aeval expNegPS) (αPoly M))
@@ -336,5 +350,121 @@ theorem thm_410A {k : ℕ} (M : LinearMultistepMethod k) (j : ℕ) :
       rw [coeff_aeval_C_X_pow (M.β i) i.val j']
     rw [hα, hβ]
     rfl
+
+/-! ### Theorem 410B — order condition -/
+
+/-- **§410↔§404 bridge.** The first Taylor coefficient `C M 1`
+vanishes if and only if the method satisfies the consistency
+equation (404b).
+
+Computation: at `j = 0` (so the `j+1` branch with `j = 0`),
+`(-x)^(0+1)/(0+1)! = -x` and `(-x)^0/0! = 1`. So
+`C M 1 = -Σᵢ M.α(i.succ) · (-(i+1)) - Σᵢ M.β i
+       = Σᵢ (i+1) · M.α(i.succ) - Σᵢ M.β i`,
+which equals 0 iff `M.SatisfiesEq404b`. -/
+theorem C_one_eq_zero_iff_isConsistent_aux {k : ℕ}
+    (M : LinearMultistepMethod k) :
+    C M 1 = 0 ↔ M.SatisfiesEq404b := by
+  simp [C, LinearMultistepMethod.SatisfiesEq404b]
+  constructor <;> intro h <;>
+    norm_num [Finset.sum_add_distrib, add_mul, mul_add, mul_assoc,
+      mul_comm, mul_left_comm] at * <;>
+    linarith
+
+/-- **§410↔§404 consistency bridge.** The first Taylor coefficient
+`C M 1` vanishes if and only if the method is consistent
+(def:404B), assuming preconsistency (def:404A).
+
+`C 0 = 0` ↔ preconsistency was already proved as
+`C_zero_eq_zero_iff_isPreconsistent`; this lemma packages the
+`C 1 = 0` ↔ (404b) algebra and combines with preconsistency to
+give the full equivalence with `IsConsistent`. -/
+theorem C_one_eq_zero_iff_isConsistent {k : ℕ}
+    (M : LinearMultistepMethod k) (hpre : M.IsPreconsistent) :
+    C M 1 = 0 ↔ M.IsConsistent := by
+  rw [LinearMultistepMethod.IsConsistent, and_iff_right hpre]
+  exact C_one_eq_zero_iff_isConsistent_aux M
+
+end OpenMath.Chapter4.Section410
+
+namespace OpenMath.Chapter4.Section404
+
+/-- **Butcher §410B order predicate.**
+
+A linear multistep method has order at least `p` if its first
+`p+1` Taylor coefficients vanish: `C M j = 0` for all `j ≤ p`.
+
+This matches Butcher's definitional statement (§410, p. 330):
+"order p will mean that `C₀ = C₁ = ⋯ = Cp = 0`".
+
+The asymptotic interpretation `L(y, x, h) = O(h^{p+1})` is captured
+implicitly via Butcher's Taylor expansion (410b); for `p = 1` it is
+captured quantitatively by `lem:406B` (`localTruncationError_bound`,
+Section404.lean). Equivalence to the generating-function form
+`α(exp(-z)) - z β(exp(-z)) = O(z^{p+1})` is the content of
+`thm_410B` below. -/
+def LinearMultistepMethod.HasOrderAtLeast {k : ℕ}
+    (M : LinearMultistepMethod k) (p : ℕ) : Prop :=
+  ∀ j ≤ p, OpenMath.Chapter4.Section410.C M j = 0
+
+end OpenMath.Chapter4.Section404
+
+namespace OpenMath.Chapter4.Section410
+
+open OpenMath.Chapter4.Section404
+
+/-- **Butcher §410 Theorem 410B (order condition).**
+
+A linear multistep method has order at least `p` if and only if
+the first `p+1` formal power-series coefficients of its generating
+function `α(exp(-z)) - z β(exp(-z))` vanish.
+
+Sign convention: Butcher's textbook statement uses
+`α(exp(z)) + z β(exp(z))` with the forward sign convention. Our
+encoding uses backward sign matching def:406A and `thm_410A`; the
+two formulations are equivalent under `z ↦ -z`.
+
+Proof: by `thm_410A`, `coeff j (genFn M) = C M j` for every `j`,
+so the predicate `∀ j ≤ p, coeff j (genFn M) = 0` is equivalent to
+`∀ j ≤ p, C M j = 0`, which is `M.HasOrderAtLeast p`. -/
+theorem thm_410B {k : ℕ} (M : LinearMultistepMethod k) (p : ℕ) :
+    M.HasOrderAtLeast p
+      ↔ ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (genFn M) = 0 := by
+  unfold LinearMultistepMethod.HasOrderAtLeast
+  refine ⟨fun h j hj => ?_, fun h j hj => ?_⟩
+  · rw [thm_410A]; exact h j hj
+  · rw [← thm_410A]; exact h j hj
+
+/-! ### §410B witnesses -/
+
+/-- **Non-vacuity witness — explicit Euler has order ≥ 0.**
+Order ≥ 0 is exactly preconsistency (`C 0 = 0`). -/
+theorem explicitEulerLMM_hasOrderAtLeast_zero :
+    explicitEulerLMM.HasOrderAtLeast 0 := by
+  intro j hj
+  interval_cases j
+  exact C_zero_explicitEuler
+
+/-- **Non-vacuity witness — explicit Euler has order ≥ 1.**
+By `C_one_eq_zero_iff_isConsistent` and
+`explicitEulerLMM_isConsistent`. -/
+theorem explicitEulerLMM_hasOrderAtLeast_one :
+    explicitEulerLMM.HasOrderAtLeast 1 := by
+  intro j hj
+  interval_cases j
+  · exact C_zero_explicitEuler
+  · exact (C_one_eq_zero_iff_isConsistent explicitEulerLMM
+            explicitEulerLMM_isPreconsistent).mpr
+            explicitEulerLMM_isConsistent
+
+/-- **Restrictiveness check — explicit Euler does NOT have order 2.**
+This proves `HasOrderAtLeast` is genuinely restrictive (not
+vacuous) and matches the textbook's classification of explicit
+Euler as a first-order method. -/
+theorem explicitEulerLMM_C_two_ne_zero :
+    C explicitEulerLMM 2 ≠ 0 := by
+  unfold C explicitEulerLMM
+  simp [Fin.sum_univ_succ]
+  norm_num
 
 end OpenMath.Chapter4.Section410
