@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 43 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 44 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -183,7 +183,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:441B` **Maximum order coefficients negativity** (§441)
 - [x] `thm:405A` **Necessity of conditions for convergence** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 072)
 - [x] `thm:406C` **Global error bound for linear multistep methods** (§406)
-- [ ] `thm:410A` **Criteria for order** (§410)
+- [x] `thm:410A` **Criteria for order** (§410) — `OpenMath/Chapter4/Section410.lean` (cycle 074)
 - [ ] `thm:422C` **Convergence of Linear Multistep Methods** (§422)
 - [ ] `lem:441A` **Maximum order for a convergent k-step method** (§441)
 - [x] `thm:405B` **Convergent linear multistep method is preconsistent** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 069)

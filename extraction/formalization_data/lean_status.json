@@ -744,9 +744,10 @@
     "notes": "Closed in cycle 068 via the cycle 064-067 non-autonomous lift of the §406B + §406D helper chain. The `IsConvergent` predicate (def:402A) was strengthened in cycle 068 (joint-Lipschitz on `Function.uncurry f`, global `ContDiff ℝ 1 yex`, global trajectory bound `M_bound`); see `.prover-state/issues/is_convergent_strengthened.md` for the faithfulness deviation."
   },
   "thm:410A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section410.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section410.thm_410A",
+    "status": "formalized",
+    "notes": "Closed in cycle 074. Section410 infrastructure (αPoly, βPoly, C, expNegPS, 5 Aristotle helpers, 7 manual sub-lemmas) was authored in cycle 073 but reverted because thm:410A's general-j case carried a sorry. Cycle 074 closes the sorry via map_sub/map_one/map_sum push-throughs of `Polynomial.aeval expNegPS` and `PowerSeries.coeff (j+1)`, applies coeff_aeval_C_X_pow per monomial, and matches the closed-form C M (j+1) definitionally (rfl). The β side first peels off the leading X via PowerSeries.coeff_succ_X_mul. Axioms: [propext, Classical.choice, Quot.sound]."
   },
   "thm:410B": {
     "lean_file": null,

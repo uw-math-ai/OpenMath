@@ -21,3 +21,6 @@ Cycle 071: Worker staged infrastructure for convergent_isStable (runningMaxAbs d
 
 ### Cycle 72
 Cycle 072 confirmed cycle-071 staged work was sound and committed it together with the cycle-072 closure of `hstart_tendsto`/`thm:405A` in a single commit. The line-4695 "tautology" was a scanner false positive (sum-head inside a theorem statement, not a proof body) per `tautology_scanner_false_positives.md`. Faithfulness/axiom check clean. Note: `lake env lean <file>` does NOT update the .olean cache — use `lake build OpenMath.Chapter4.Section405` before `#print axioms` to avoid stale-cache `sorryAx` false positives.
+
+### Cycle 73
+Cycle 073: Authored the §410 generating-function infrastructure (`αPoly`, `βPoly`, `C`, `expNegPS`, 5 Aristotle helpers including the load-bearing `coeff_aeval_C_X_pow`, 7 manually-closed sub-lemmas) in `OpenMath/Chapter4/Section410.lean`, but left `thm_410A`'s general-`j` case as `sorry` and committed nothing — supervisor REVERTED with score −2 (commit-not-reaching-repo). Cycle 074 closes the sorry (via `map_sub`/`map_one`/`map_sum` push-throughs + `coeff_aeval_C_X_pow` + `rfl` against the `C M (j+1)` pattern-match) and lands the cycle-073 infrastructure together in one zero-sorry commit.
