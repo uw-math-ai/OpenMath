@@ -2350,3 +2350,115 @@ theorem bdf2_toGLM_isAStable :
       linear_combination h_zero / 3
     -- Apply bdf2_aStable.
     exact bdf2_aStable z hz μ hpoly
+
+/-! ## §521 Cycle 642 — Polynomial-valued LMM stability polynomial
+
+Bridge towards `LMM.toGLM_isAStable_iff`. We need a polynomial in `ℂ[X]`
+whose roots are the LMM stability matrix eigenvalues so the
+`Matrix.charpoly` of `m.toGLM.stabilityMatrix z` can be matched against
+the LMM-side scalar `LMM.stabilityPoly`.
+
+Concretely:
+  `stabilityPolyPoly m z = ∑_{j=0}^{s} (α_j - z β_j) X^j ∈ ℂ[X]`
+and `(stabilityPolyPoly m z).eval ξ = stabilityPoly m ξ z`.
+
+The headline factorisation reads
+  `(1 - z β_s) • (m.toGLM.stabilityMatrix z).charpoly
+      = X^s * stabilityPolyPoly m z`
+i.e. the GLM-side characteristic polynomial of the `(2s) × (2s)` stability
+matrix factors as `X^s` (from the past-`h·f` shift block) times the
+denominator-cleared LMM stability polynomial. The `(1 - z β_s)` scalar on
+the left is the natural denominator that clears when normalising the
+leading coefficient of the active block charpoly, so this version avoids
+the singularity at `z β_s = 1` and is well-defined as a polynomial
+identity in `ℂ[X]`. Verified by hand at BDF2 (s = 2) and trapezoidal
+(s = 1).
+-/
+
+namespace LMM
+
+variable {s : ℕ}
+
+/-- §521 — Polynomial-valued LMM stability polynomial. The coefficient at
+degree `j` is `(α_j - z β_j) ∈ ℂ`. Evaluating at `ξ` recovers the scalar
+`stabilityPoly m ξ z`. -/
+noncomputable def stabilityPolyPoly (m : LMM s) (z : ℂ) : Polynomial ℂ :=
+  ∑ j : Fin (s + 1),
+    Polynomial.C ((m.α j : ℂ) - z * (m.β j : ℂ)) * Polynomial.X ^ (j : ℕ)
+
+/-- §521 — Evaluating `stabilityPolyPoly` at `ξ` recovers the scalar
+`stabilityPoly m ξ z = ρ(ξ) - z σ(ξ)`. -/
+theorem stabilityPolyPoly_eval (m : LMM s) (z ξ : ℂ) :
+    (m.stabilityPolyPoly z).eval ξ = m.stabilityPoly ξ z := by
+  simp only [stabilityPolyPoly, Polynomial.eval_finset_sum,
+    Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+    Polynomial.eval_X, stabilityPoly, rhoC, sigmaC, Finset.mul_sum]
+  rw [← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro j _
+  ring
+
+/-- §521 — The past-`h*f` shift block charpoly is `X^s` whenever the
+implicit β-coefficients on past slots all vanish (the BDF / one-leg
+shape), since then the block is the strictly upper-triangular shift
+matrix on `Fin s` (its `s`-th power is zero). The general case admits
+a non-trivial bottom row (e.g. trapezoidal, Adams-Moulton) and the
+charpoly picks up a companion-matrix contribution; that case is handled
+in the headline factorisation directly without going through this
+helper.
+
+This is a sorry-first scaffold for cycle 643. The lemma as stated is
+**only true when `m.β (Fin.castSucc l) = 0` for every `l : Fin s`** —
+i.e. for BDF-shaped methods. -/
+theorem toGLM_stabilityMatrixPHF_charpoly_of_explicit_past
+    (m : LMM s) (z : ℂ)
+    (hβ : ∀ l : Fin s, m.β (Fin.castSucc l) = 0) :
+    (toGLM_stabilityMatrixPHF m z).charpoly = Polynomial.X ^ (s : ℕ) := by
+  -- Diagonal entries vanish: PHF[i, i] = 0 for every i in BDF case.
+  have hdiag : ∀ i : Fin s,
+      toGLM_stabilityMatrixPHF m z i i = 0 := by
+    intro i
+    simp only [toGLM_stabilityMatrixPHF]
+    by_cases hi : (i : ℕ) + 1 = s
+    · rw [if_pos hi, hβ i]; simp
+    · rw [if_neg hi]
+      have h_ne : ((i : Fin s) : ℕ) ≠ (i : ℕ) + 1 := by omega
+      rw [if_neg h_ne]
+  -- Below-diagonal entries vanish: PHF[i, j] = 0 for j < i in BDF case.
+  have hUT : (toGLM_stabilityMatrixPHF m z).charmatrix.BlockTriangular id := by
+    intro i j hji
+    have hij : i ≠ j := ne_of_gt hji
+    rw [Matrix.charmatrix_apply, Matrix.diagonal_apply_ne _ hij]
+    simp only [zero_sub, neg_eq_zero]
+    rw [Polynomial.C_eq_zero]
+    simp only [toGLM_stabilityMatrixPHF]
+    by_cases hi : (i : ℕ) + 1 = s
+    · rw [if_pos hi, hβ j]; simp
+    · rw [if_neg hi]
+      have h_ne : (j : ℕ) ≠ (i : ℕ) + 1 := by
+        have hji' : (j : ℕ) < (i : ℕ) := hji
+        omega
+      simp [h_ne]
+  -- charpoly = det charmatrix; det of upper-triangular = product of diagonal.
+  rw [Matrix.charpoly, Matrix.det_of_upperTriangular hUT]
+  -- Each diagonal entry of charmatrix is X - C(0) = X.
+  have hprod : ∀ i : Fin s,
+      (toGLM_stabilityMatrixPHF m z).charmatrix i i = Polynomial.X := by
+    intro i
+    rw [Matrix.charmatrix_apply_eq, hdiag i, Polynomial.C_0, sub_zero]
+  rw [Finset.prod_congr rfl (fun i _ => hprod i)]
+  simp [Finset.prod_const]
+
+/-- §521 — Headline charpoly factorisation of the LMM-as-GLM stability
+matrix. The `(2 s) × (2 s)` matrix `m.toGLM.stabilityMatrix z` has
+characteristic polynomial proportional to `X^s · stabilityPolyPoly m z`,
+with the `(1 - z β_s)` scalar absorbing the natural denominator on the
+active block. Sorry-first scaffold for cycle 643 (the planner's step 3).
+-/
+theorem toGLM_stabilityMatrix_charpoly (m : LMM s) (z : ℂ) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) •
+        (m.toGLM.stabilityMatrix z).charpoly
+      = Polynomial.X ^ (s : ℕ) * m.stabilityPolyPoly z := by
+  sorry
+
+end LMM
