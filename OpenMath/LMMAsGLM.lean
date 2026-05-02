@@ -1556,6 +1556,71 @@ theorem toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf
   rw [hLHS_sum, Finset.sum_neg_distrib]
   ring
 
+/-- §521 — Under the BDF denominator hypothesis, roots of the active
+past-`y` block characteristic polynomial are exactly the roots of the
+LMM scalar stability polynomial. -/
+theorem toGLM_stabilityMatrixPY_charpoly_isRoot_iff_stabilityPoly_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (ξ : ℂ) :
+    (toGLM_stabilityMatrixPY m z).charpoly.IsRoot ξ ↔
+      m.stabilityPoly ξ z = 0 := by
+  rw [Polynomial.IsRoot.def]
+  have h_eval := congrArg (fun p : Polynomial ℂ => p.eval ξ)
+    (toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf m z hbdf hz)
+  simp [Polynomial.eval_smul, smul_eq_mul, stabilityPolyPoly_eval] at h_eval
+  constructor
+  · intro hroot
+    rw [← h_eval, hroot, mul_zero]
+  · intro hstab
+    have hmul :
+        (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+            ((toGLM_stabilityMatrixPY m z).charpoly.eval ξ) = 0 := by
+      rw [h_eval, hstab]
+    exact (mul_eq_zero.mp hmul).resolve_left hz
+
+/-- §521 — For nonzero-step BDF-type LMMs, roots of the full GLM
+stability-matrix characteristic polynomial are either the nilpotent
+past-`h*f` root `0` or roots of the LMM scalar stability polynomial. -/
+theorem toGLM_stabilityMatrix_eigenvalue_iff_of_bdf [NeZero s]
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (ξ : ℂ) :
+    (m.toGLM.stabilityMatrix z).charpoly.IsRoot ξ ↔
+      ξ = 0 ∨ m.stabilityPoly ξ z = 0 := by
+  rw [toGLM_stabilityMatrix_charpoly_of_bdf m z hbdf]
+  rw [Polynomial.root_mul]
+  rw [toGLM_stabilityMatrixPY_charpoly_isRoot_iff_stabilityPoly_of_bdf m z hbdf hz ξ]
+  have hxroot : ((Polynomial.X : Polynomial ℂ) ^ s).IsRoot ξ ↔ ξ = 0 := by
+    rw [Polynomial.IsRoot.def]
+    simpa [Polynomial.eval_pow, Polynomial.eval_X] using
+      (pow_eq_zero_iff (NeZero.ne s) : ξ ^ s = 0 ↔ ξ = 0)
+  rw [hxroot]
+  exact or_comm
+
+/-- §521 — BDF specialisation: classical LMM A-stability transports through
+the §503 LMM-as-GLM embedding. The denominator hypothesis is kept explicit;
+for concrete BDF methods it follows from positivity of the last `β`
+coefficient on the closed left half-plane. -/
+theorem toGLM_isAStable_of_bdf
+    (m : LMM s) (ha : m.IsAStable)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hβ_last : ∀ z : ℂ, z.re ≤ 0 →
+      1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    m.toGLM.IsAStable := by
+  intro z hz_re μ hμ
+  by_cases hs : s = 0
+  · subst s
+    have hchar := toGLM_stabilityMatrix_charpoly_of_bdf m z hbdf
+    rw [hchar] at hμ
+    simp at hμ
+  · haveI : NeZero s := ⟨hs⟩
+    rcases (toGLM_stabilityMatrix_eigenvalue_iff_of_bdf
+        m z hbdf (hβ_last z hz_re) μ).1 hμ with hzero | hstab
+    · rw [hzero]
+      simp
+    · exact ha z hz_re μ hstab
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
