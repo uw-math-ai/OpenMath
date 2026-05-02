@@ -1172,6 +1172,70 @@ theorem toGLM_stabilityMatrix_eq_V_active_plus_rank_one
     toGLM_rankOneRow, Matrix.vecMulVec_apply]
   ring
 
+/-- §521 — Under the BDF hypothesis (only the last `β` coefficient is
+non-zero), the past-`h*f` block of the LMM-as-GLM stability matrix
+collapses to the pure shift companion: no `z`-dependence, no resolvent
+prefactor. -/
+theorem toGLM_stabilityMatrixPHF_apply_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (j l : Fin s) :
+    toGLM_stabilityMatrixPHF m z j l =
+      (if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0) := by
+  unfold toGLM_stabilityMatrixPHF
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj]
+    have hlne : (Fin.castSucc l) ≠ Fin.last s := by
+      intro hl
+      have : (l : ℕ) = s := by
+        have := congrArg (Fin.val) hl
+        simpa [Fin.castSucc, Fin.last] using this
+      exact absurd this (by have := l.isLt; omega)
+    have hβ : m.β (Fin.castSucc l) = 0 := hbdf (Fin.castSucc l) hlne
+    rw [hβ]
+    push_cast
+    rw [if_neg]
+    · ring
+    · intro hlj
+      have hl_lt : (l : ℕ) < s := l.isLt
+      omega
+  · rw [if_neg hj]
+
+/-- §521 — Under the BDF hypothesis, the past-`h*f` block is upper
+triangular in the `Fin s` order. Off-diagonal nonzero entries live
+strictly above the diagonal at `(l : ℕ) = (j : ℕ) + 1`. -/
+theorem toGLM_stabilityMatrixPHF_blockTriangular_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    (toGLM_stabilityMatrixPHF m z).BlockTriangular id := by
+  intro j l hlt
+  rw [toGLM_stabilityMatrixPHF_apply_of_bdf m z hbdf j l]
+  rw [if_neg]
+  intro h
+  -- `hlt : id l < id j`, i.e. `(l : ℕ) < (j : ℕ)`; `h : (l : ℕ) = (j : ℕ) + 1`
+  simp [id] at hlt
+  omega
+
+/-- §521 — Under the BDF hypothesis, the past-`h*f` block has
+characteristic polynomial `X^s`. The diagonal of the upper-triangular
+matrix is identically zero (since `(j : ℕ) ≠ (j : ℕ) + 1`), so each
+linear factor in the diagonal product collapses to `X`. -/
+theorem toGLM_stabilityMatrixPHF_charpoly_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    (toGLM_stabilityMatrixPHF m z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s := by
+  rw [Matrix.charpoly_of_upperTriangular _
+        (toGLM_stabilityMatrixPHF_blockTriangular_of_bdf m z hbdf)]
+  have hdiag : ∀ j : Fin s,
+      (Polynomial.X - Polynomial.C (toGLM_stabilityMatrixPHF m z j j)) =
+      (Polynomial.X : Polynomial ℂ) := by
+    intro j
+    rw [toGLM_stabilityMatrixPHF_apply_of_bdf m z hbdf j j]
+    rw [if_neg (by omega)]
+    simp
+  simp [hdiag, Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
