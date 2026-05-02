@@ -149,4 +149,10 @@ theorem toGLM_isConsistent (t : ButcherTableau s)
     simp only [toGLM_V, toGLM_B, mul_zero, Finset.sum_const_zero, add_zero]
     exact ht.weights_sum
 
+/-- §502 sanity check — every consistent RK tableau embeds as a convergent
+GLM (Butcher §512). Combines `toGLM_isConsistent` and `toGLM_isStable`. -/
+theorem toGLM_isConvergent (t : ButcherTableau s) (ht : t.IsConsistent) :
+    t.toGLM.IsConvergent :=
+  ⟨t.toGLM_isConsistent ht, t.toGLM_isStable⟩
+
 end ButcherTableau

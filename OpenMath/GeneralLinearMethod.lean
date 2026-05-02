@@ -151,6 +151,13 @@ def IsStable (m : GeneralLinearMethod s r) : Prop :=
     (∀ k, |q k| ≤ 1) →
     ∀ k, |((fun v => fun k' => ∑ l, m.V k' l * v l)^[n] q) k| ≤ M
 
+/-- Butcher §512 — convergence of a general linear method. We define this
+through the two algebraic conditions that characterize it on the GLM side:
+consistency (§510) and stability (§510). The full Dahlquist-style
+equivalence with sequence-level convergence is §515. -/
+def IsConvergent (m : GeneralLinearMethod s r) : Prop :=
+  m.IsConsistent ∧ m.IsStable
+
 /-! ## §520 — Stability Matrix -/
 
 /-- Complex lift of the `A` block. -/

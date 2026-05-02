@@ -803,7 +803,12 @@ error bound for one specific scheme:
   of §501. Cycle 617 proved stage-map covariance, step covariance,
   and transport of `IsPreconsistent` / `IsConsistent` in
   `OpenMath/GeneralLinearMethod.lean`.
-- [ ] **§512 Definition of convergence**.
+- [~] **§512 Definition of convergence**. Cycle 618 added
+  `GeneralLinearMethod.IsConvergent` (consistency ∧ stability) in
+  `OpenMath/GeneralLinearMethod.lean` and the RK sanity check
+  `ButcherTableau.toGLM_isConvergent` in `OpenMath/RKAsGLM.lean`. The
+  LMM-side `LMM.toGLM_isStable` / `toGLM_isConvergent` lift is open;
+  see `.prover-state/issues/butcher_section512_lmm_stability_lift.md`.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
 - [ ] **§515 Stability and consistency imply convergence** — the GLM
