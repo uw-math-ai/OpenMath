@@ -807,7 +807,11 @@ error bound for one specific scheme:
   (`OpenMath/DahlquistEquivalence.lean` is a special case).
 
 ### §52 The Stability of General Linear Methods
-- [ ] **§520 Introduction** — stability matrix `M(z) := V + z B (I − z A)⁻¹ U`.
+- [x] **§520 Introduction** — stability matrix `M(z) := V + z B (I − z A)⁻¹ U`
+  over complex coefficients (`OpenMath/GeneralLinearMethod.lean`), with
+  the entrywise row formula and `M(0) = V`. Cycle 615 also added the RK
+  scalar stability-function specialization in `OpenMath/RKAsGLM.lean`
+  and the one-stage LMM entry formula in `OpenMath/LMMAsGLM.lean`.
 - [ ] **§521 Methods with maximal stability order** — Padé-like
   conditions on `M(z)`.
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
@@ -885,6 +889,10 @@ error bound for one specific scheme:
   `q` is the past-y indicator (1 on past-y slots, 0 on past-h·f), and
   `q' j = (j : ℝ)` on past-y, `1` on past-h·f. Closes the symmetric
   §510 story before the §512–§515 convergence chain.
+- **Cycle 615 closed §520** — complex lifts of the GLM blocks and
+  `stabilityMatrix z = Vℂ + z • (Bℂ * (I - z • Aℂ)⁻¹ * Uℂ)` landed with
+  entrywise and zero-step sanity lemmas, plus the RK scalar specialization
+  and the LMM one-stage entry formula.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -927,11 +935,10 @@ error bound for one specific scheme:
 6. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-7. **Butcher §520–§522 — Stability matrix of a GLM and the
-    Butcher–Chipman conjecture (outline).** Extends the GLM file family.
-    Stability matrix `M(z) := V + z B (I − z A)⁻¹ U`, Padé-like
-    conditions on `M(z)`, outline of order of `M(z)` as approximation to
-    `exp(z) · I`.
+7. **Butcher §521 — Stability order / Padé-like conditions on `M(z)`.**
+    Extends the §520 stability-matrix surface with conditions for maximal
+    stability order. Later §522 can record the Butcher–Chipman conjecture
+    outline: order of `M(z)` as approximation to `exp(z) · I`.
 8. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
@@ -957,6 +964,10 @@ let the queue empty.
 ---
 
 ## Current Target
+
+**Paused note:** §38 remains paused until there is a structured plan for
+the `cut_assoc` obstruction. Cycle 615's active target was Chapter 5 §520,
+which is now closed in the §52 chapter list above.
 
 **Butcher §38 — Butcher group (algebraic RK properties).** Module family
 rooted at `OpenMath/ButcherGroup.lean`. Butcher's namesake topic and the

@@ -40,6 +40,40 @@ def toGLM (t : ButcherTableau s) : GeneralLinearMethod s 1 where
 @[simp] theorem toGLM_V (t : ButcherTableau s) (k l : Fin 1) :
     t.toGLM.V k l = 1 := rfl
 
+@[simp] theorem toGLM_Aℂ (t : ButcherTableau s) (i j : Fin s) :
+    t.toGLM.Aℂ i j = (t.A i j : ℂ) := rfl
+
+@[simp] theorem toGLM_Uℂ (t : ButcherTableau s) (i : Fin s) (k : Fin 1) :
+    t.toGLM.Uℂ i k = 1 := rfl
+
+@[simp] theorem toGLM_Bℂ (t : ButcherTableau s) (k : Fin 1) (j : Fin s) :
+    t.toGLM.Bℂ k j = (t.b j : ℂ) := rfl
+
+@[simp] theorem toGLM_Vℂ (t : ButcherTableau s) (k l : Fin 1) :
+    t.toGLM.Vℂ k l = 1 := rfl
+
+/-- §520 / §502 — scalar Runge--Kutta stability function in the same
+total-inverse convention as `GeneralLinearMethod.stabilityMatrix`. -/
+noncomputable def stabilityFunction (t : ButcherTableau s) (z : ℂ) : ℂ :=
+  let Aℂ : Matrix (Fin s) (Fin s) ℂ := fun i j => (t.A i j : ℂ)
+  1 + z * ∑ i, ∑ j,
+    (t.b i : ℂ) * ((1 : Matrix (Fin s) (Fin s) ℂ) - z • Aℂ)⁻¹ i j
+
+/-- §502 sanity check for §520: the GLM stability matrix of an RK method
+is the `1 × 1` matrix whose sole entry is the scalar RK stability
+function. -/
+theorem toGLM_stabilityMatrix (t : ButcherTableau s) (z : ℂ) :
+    t.toGLM.stabilityMatrix z =
+      fun _ _ => t.stabilityFunction z := by
+  ext k l
+  rw [GeneralLinearMethod.stabilityMatrix_apply]
+  have hA : t.toGLM.Aℂ =
+      ((fun i j => (t.A i j : ℂ)) : Matrix (Fin s) (Fin s) ℂ) := by
+    ext i j
+    rfl
+  rw [hA]
+  simp [stabilityFunction]
+
 /-- The GLM stage map of `t.toGLM` at the constant input `yIn ≡ y₀`
 matches the standard RK stage equation `Y_i = y₀ + h · ∑ A_ij f(Y_j)`. -/
 theorem toGLM_stageMap_eq (t : ButcherTableau s) (f : ℝ → ℝ) (h y₀ : ℝ)

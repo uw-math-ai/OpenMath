@@ -98,6 +98,19 @@ noncomputable def toGLM (m : LMM s) : GeneralLinearMethod 1 (2 * s) where
       m.β (Fin.castSucc k)
   exact Fin.addCases_right k
 
+/-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
+the stability-matrix entry collapses to the single stage resolvent factor.
+The surrounding `toGLM` blocks retain the literal §503 row/column shape. -/
+theorem toGLM_stabilityMatrix_apply (m : LMM s) (z : ℂ) (k l : Fin (2 * s)) :
+    m.toGLM.stabilityMatrix z k l =
+      m.toGLM.Vℂ k l +
+        z *
+          (m.toGLM.Bℂ k 0 *
+            (((1 : Matrix (Fin 1) (Fin 1) ℂ) - z • m.toGLM.Aℂ)⁻¹ 0 0) *
+            m.toGLM.Uℂ 0 l) := by
+  rw [GeneralLinearMethod.stabilityMatrix_apply]
+  simp
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the

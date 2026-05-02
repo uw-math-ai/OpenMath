@@ -119,6 +119,47 @@ def IsStable (m : GeneralLinearMethod s r) : Prop :=
     (∀ k, |q k| ≤ 1) →
     ∀ k, |((fun v => fun k' => ∑ l, m.V k' l * v l)^[n] q) k| ≤ M
 
+/-! ## §520 — Stability Matrix -/
+
+/-- Complex lift of the `A` block. -/
+def Aℂ (m : GeneralLinearMethod s r) : Matrix (Fin s) (Fin s) ℂ :=
+  fun i j => (m.A i j : ℂ)
+
+/-- Complex lift of the `U` block. -/
+def Uℂ (m : GeneralLinearMethod s r) : Matrix (Fin s) (Fin r) ℂ :=
+  fun i k => (m.U i k : ℂ)
+
+/-- Complex lift of the `B` block. -/
+def Bℂ (m : GeneralLinearMethod s r) : Matrix (Fin r) (Fin s) ℂ :=
+  fun k j => (m.B k j : ℂ)
+
+/-- Complex lift of the `V` block. -/
+def Vℂ (m : GeneralLinearMethod s r) : Matrix (Fin r) (Fin r) ℂ :=
+  fun k l => (m.V k l : ℂ)
+
+/-- Butcher §520 — stability matrix `M(z) = V + z B (I - z A)⁻¹ U`.
+Uses the total `Matrix.inv`, so the function is defined for every `z`.
+Invertibility hypotheses belong on downstream theorems, not this
+definition. -/
+noncomputable def stabilityMatrix
+    (m : GeneralLinearMethod s r) (z : ℂ) : Matrix (Fin r) (Fin r) ℂ :=
+  m.Vℂ + z • (m.Bℂ * ((1 : Matrix (Fin s) (Fin s) ℂ) - z • m.Aℂ)⁻¹ * m.Uℂ)
+
+@[simp] theorem stabilityMatrix_apply (m : GeneralLinearMethod s r)
+    (z : ℂ) (k l : Fin r) :
+    m.stabilityMatrix z k l =
+      m.Vℂ k l +
+        z * ∑ i, ∑ j,
+          m.Bℂ k i *
+            ((1 : Matrix (Fin s) (Fin s) ℂ) - z • m.Aℂ)⁻¹ i j *
+            m.Uℂ j l := by
+  simp [stabilityMatrix, Matrix.mul_apply, Finset.mul_sum, Finset.sum_mul, mul_assoc]
+  rw [Finset.sum_comm]
+
+theorem stabilityMatrix_zero (m : GeneralLinearMethod s r) :
+    m.stabilityMatrix 0 = m.Vℂ := by
+  simp [stabilityMatrix]
+
 /-! ## Stage Solvability by Contraction -/
 
 /-- The scalar GLM stage self-map. Fixed points are stage vectors satisfying
