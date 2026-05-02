@@ -1,0 +1,256 @@
+import Mathlib
+
+/-!
+# General Linear Methods
+
+Butcher §500 introduces general linear methods as multivalue,
+multistage methods determined by four coefficient blocks `(A, U, B, V)`.
+This file records the scalar autonomous step equations and the basic
+contraction criterion for solving the stage equations.
+
+Reference: J. C. Butcher, *Numerical Methods for Ordinary Differential
+Equations*, 2nd ed., §500.
+-/
+
+open Finset Real
+open scoped NNReal
+
+/-- A **general linear method** with `s` stages and `r` input/output
+quantities carried between steps.
+
+The four coefficient blocks are those of Butcher §500:
+`A` couples stages to stages, `U` couples input quantities to stages,
+`B` couples stages to output quantities, and `V` propagates input
+quantities to output quantities. -/
+structure GeneralLinearMethod (s r : ℕ) where
+  /-- The `s × s` stage-to-stage block. Here `s` is the number of stages. -/
+  A : Matrix (Fin s) (Fin s) ℝ
+  /-- The `s × r` input-to-stage block. Here `r` is the number of input
+  quantities carried between steps. -/
+  U : Matrix (Fin s) (Fin r) ℝ
+  /-- The `r × s` stage-to-output block. Here `s` is the number of stages. -/
+  B : Matrix (Fin r) (Fin s) ℝ
+  /-- The `r × r` input-to-output block. Here `r` is the number of input
+  quantities carried between steps. -/
+  V : Matrix (Fin r) (Fin r) ℝ
+
+namespace GeneralLinearMethod
+
+variable {s r : ℕ}
+
+/-! ## §500 — Scalar Stage and Step Equations -/
+
+/-- One-step output for a scalar autonomous ODE `y' = f y`, using a given
+stage vector `Y`. Stage existence is handled separately by the fixed-point
+criterion below. -/
+def step (m : GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) :
+    Fin r → ℝ :=
+  fun k => h * ∑ j, m.B k j * f (Y j) + ∑ l, m.V k l * yIn l
+
+@[simp] theorem step_apply (m : GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) (k : Fin r) :
+    m.step f h yIn Y k =
+      h * ∑ j, m.B k j * f (Y j) + ∑ l, m.V k l * yIn l := rfl
+
+/-- Stage residual for the scalar autonomous GLM stage equations. Zeros of
+this residual are exactly solutions of
+`Y_i = h * ∑_j A_ij * f (Y_j) + ∑_k U_ik * yIn_k`. -/
+def stageResidual (m : GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) :
+    Fin s → ℝ :=
+  fun i => Y i - h * ∑ j, m.A i j * f (Y j) - ∑ k, m.U i k * yIn k
+
+@[simp] theorem stageResidual_apply (m : GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) (i : Fin s) :
+    m.stageResidual f h yIn Y i =
+      Y i - h * ∑ j, m.A i j * f (Y j) - ∑ k, m.U i k * yIn k := rfl
+
+/-! ## Explicit Methods -/
+
+/-- A GLM is explicit when the stage matrix `A` is strictly lower
+triangular: `A i j = 0` for `j ≥ i`. -/
+def IsExplicit (m : GeneralLinearMethod s r) : Prop :=
+  ∀ i j : Fin s, j.val ≥ i.val → m.A i j = 0
+
+theorem IsExplicit.A_diag_zero (m : GeneralLinearMethod s r)
+    (hm : m.IsExplicit) : ∀ i : Fin s, m.A i i = 0 := by
+  intro i
+  exact hm i i le_rfl
+
+/-! ## Consistency Hook -/
+
+/-- Placeholder predicate for the §510 consistency theory of general linear
+methods. Future cycles will replace this with the coefficient conditions
+needed for GLM consistency and stability. -/
+def IsConsistent (_m : GeneralLinearMethod s r) : Prop :=
+  True
+
+/-! ## Stage Solvability by Contraction -/
+
+/-- The scalar GLM stage self-map. Fixed points are stage vectors satisfying
+Butcher's §500 stage equations. -/
+def stageMap (m : GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) :
+    Fin s → ℝ :=
+  fun i => h * ∑ j, m.A i j * f (Y j) + ∑ k, m.U i k * yIn k
+
+@[simp] theorem stageMap_apply (m : GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (h : ℝ) (yIn : Fin r → ℝ) (Y : Fin s → ℝ) (i : Fin s) :
+    m.stageMap f h yIn Y i =
+      h * ∑ j, m.A i j * f (Y j) + ∑ k, m.U i k * yIn k := rfl
+
+/-- The maximum row-`ℓ¹` norm of `A`, `max_i ∑_j |A i j|`. Equals `0` in
+the vacuous case `s = 0`. -/
+noncomputable def rowAbsSumMax (m : GeneralLinearMethod s r) : ℝ :=
+  if h : 0 < s then
+    Finset.univ.sup' (Finset.univ_nonempty_iff.mpr ⟨⟨0, h⟩⟩)
+      (fun i : Fin s => ∑ j, |m.A i j|)
+  else 0
+
+theorem rowAbsSumMax_nonneg (m : GeneralLinearMethod s r) :
+    0 ≤ m.rowAbsSumMax := by
+  unfold rowAbsSumMax
+  split_ifs with hs
+  · refine Finset.le_sup'_of_le _ (Finset.mem_univ (⟨0, hs⟩ : Fin s)) ?_
+    exact Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  · rfl
+
+/-- Each row sum `∑_j |A i j|` is bounded by `rowAbsSumMax`. -/
+theorem row_absSum_le_rowAbsSumMax (m : GeneralLinearMethod s r) (i : Fin s) :
+    (∑ j, |m.A i j|) ≤ m.rowAbsSumMax := by
+  have hpos : 0 < s := lt_of_le_of_lt (Nat.zero_le _) i.is_lt
+  unfold rowAbsSumMax
+  rw [dif_pos hpos]
+  exact Finset.le_sup' (fun i : Fin s => ∑ j, |m.A i j|) (Finset.mem_univ i)
+
+/-- Pointwise distance bound for the GLM stage self-map. -/
+theorem stageMap_dist_le (m : GeneralLinearMethod s r) {f : ℝ → ℝ} {L : ℝ≥0}
+    (hf : LipschitzWith L f) {h : ℝ} (hh : 0 ≤ h) (yIn : Fin r → ℝ)
+    (Y Y' : Fin s → ℝ) :
+    dist (m.stageMap f h yIn Y) (m.stageMap f h yIn Y') ≤
+      (h * L * m.rowAbsSumMax) * dist Y Y' := by
+  have hL : (0 : ℝ) ≤ (L : ℝ) := L.coe_nonneg
+  have hRow : 0 ≤ m.rowAbsSumMax := m.rowAbsSumMax_nonneg
+  have hdY : 0 ≤ dist Y Y' := dist_nonneg
+  have hRHS : 0 ≤ (h * L * m.rowAbsSumMax) * dist Y Y' := by positivity
+  refine (dist_pi_le_iff hRHS).mpr ?_
+  intro i
+  have hdist_inner :
+      dist (m.stageMap f h yIn Y i) (m.stageMap f h yIn Y' i)
+        = h * |∑ j, m.A i j * (f (Y j) - f (Y' j))| := by
+    simp only [stageMap_apply]
+    have hsum :
+        (∑ j, m.A i j * f (Y j)) - (∑ j, m.A i j * f (Y' j))
+          = ∑ j, m.A i j * (f (Y j) - f (Y' j)) := by
+      rw [← Finset.sum_sub_distrib]
+      exact Finset.sum_congr rfl (fun j _ => by ring)
+    have heq :
+        (h * ∑ j, m.A i j * f (Y j) + ∑ k, m.U i k * yIn k) -
+            (h * ∑ j, m.A i j * f (Y' j) + ∑ k, m.U i k * yIn k)
+          = h * ∑ j, m.A i j * (f (Y j) - f (Y' j)) := by
+      linear_combination h * hsum
+    rw [Real.dist_eq, heq, abs_mul, abs_of_nonneg hh]
+  have habs_le :
+      |∑ j, m.A i j * (f (Y j) - f (Y' j))|
+        ≤ (∑ j, |m.A i j|) * ((L : ℝ) * dist Y Y') := by
+    have h1 :
+        |∑ j, m.A i j * (f (Y j) - f (Y' j))|
+          ≤ ∑ j, |m.A i j * (f (Y j) - f (Y' j))| :=
+      Finset.abs_sum_le_sum_abs _ _
+    have h2 :
+        ∑ j, |m.A i j * (f (Y j) - f (Y' j))|
+          ≤ ∑ j, |m.A i j| * ((L : ℝ) * dist Y Y') := by
+      apply Finset.sum_le_sum
+      intro j _
+      rw [abs_mul]
+      have hcoord : |f (Y j) - f (Y' j)| ≤ (L : ℝ) * dist Y Y' := by
+        calc |f (Y j) - f (Y' j)|
+            = dist (f (Y j)) (f (Y' j)) := by rw [Real.dist_eq]
+          _ ≤ (L : ℝ) * dist (Y j) (Y' j) := hf.dist_le_mul _ _
+          _ ≤ (L : ℝ) * dist Y Y' :=
+            mul_le_mul_of_nonneg_left (dist_le_pi_dist Y Y' j) hL
+      exact mul_le_mul_of_nonneg_left hcoord (abs_nonneg _)
+    have h3 :
+        (∑ j, |m.A i j| * ((L : ℝ) * dist Y Y'))
+          = (∑ j, |m.A i j|) * ((L : ℝ) * dist Y Y') := by
+      rw [← Finset.sum_mul]
+    linarith
+  have hrow := m.row_absSum_le_rowAbsSumMax i
+  have hLDist : 0 ≤ (L : ℝ) * dist Y Y' := mul_nonneg hL hdY
+  have hbnd :
+      (∑ j, |m.A i j|) * ((L : ℝ) * dist Y Y') ≤
+        m.rowAbsSumMax * ((L : ℝ) * dist Y Y') :=
+    mul_le_mul_of_nonneg_right hrow hLDist
+  have hstep_a :
+      h * |∑ j, m.A i j * (f (Y j) - f (Y' j))|
+        ≤ h * ((∑ j, |m.A i j|) * ((L : ℝ) * dist Y Y')) :=
+    mul_le_mul_of_nonneg_left habs_le hh
+  have hstep_b :
+      h * ((∑ j, |m.A i j|) * ((L : ℝ) * dist Y Y'))
+        ≤ h * (m.rowAbsSumMax * ((L : ℝ) * dist Y Y')) :=
+    mul_le_mul_of_nonneg_left hbnd hh
+  have hfinal :
+      dist (m.stageMap f h yIn Y i) (m.stageMap f h yIn Y' i)
+        ≤ h * (m.rowAbsSumMax * ((L : ℝ) * dist Y Y')) := by
+    calc dist (m.stageMap f h yIn Y i) (m.stageMap f h yIn Y' i)
+        = h * |∑ j, m.A i j * (f (Y j) - f (Y' j))| := hdist_inner
+      _ ≤ h * (m.rowAbsSumMax * ((L : ℝ) * dist Y Y')) :=
+        le_trans hstep_a hstep_b
+  have hreorg :
+      h * (m.rowAbsSumMax * ((L : ℝ) * dist Y Y'))
+        = h * (L : ℝ) * m.rowAbsSumMax * dist Y Y' := by ring
+  rw [hreorg] at hfinal
+  exact hfinal
+
+/-- The GLM stage self-map is `(h · L · rowAbsSumMax)`-Lipschitz in the
+supremum metric on `Fin s → ℝ`, given `h ≥ 0` and `f` `L`-Lipschitz. -/
+theorem stageMap_lipschitzWith
+    (m : GeneralLinearMethod s r) {f : ℝ → ℝ} {L : ℝ≥0}
+    (hf : LipschitzWith L f) {h : ℝ} (hh : 0 ≤ h) (yIn : Fin r → ℝ) :
+    LipschitzWith
+      (Real.toNNReal h * L * Real.toNNReal m.rowAbsSumMax)
+      (m.stageMap f h yIn) := by
+  apply LipschitzWith.of_dist_le_mul
+  intro Y Y'
+  have hbound := stageMap_dist_le m hf hh yIn Y Y'
+  have hcoe :
+      ((Real.toNNReal h * L * Real.toNNReal m.rowAbsSumMax : ℝ≥0) : ℝ)
+        = h * (L : ℝ) * m.rowAbsSumMax := by
+    rw [NNReal.coe_mul, NNReal.coe_mul,
+        Real.coe_toNNReal h hh,
+        Real.coe_toNNReal _ m.rowAbsSumMax_nonneg]
+  rw [hcoe]
+  exact hbound
+
+/-- **Butcher §500 / §341 template.** If `f` is `L`-Lipschitz and the
+step size is small enough that `h · L · rowAbsSumMax < 1`, the scalar
+GLM stage equations have a unique solution. -/
+theorem stageEquations_unique_solution
+    (m : GeneralLinearMethod s r) {f : ℝ → ℝ} {L : ℝ≥0}
+    (hf : LipschitzWith L f) {h : ℝ} (hh : 0 ≤ h) (yIn : Fin r → ℝ)
+    (hsmall : h * (L : ℝ) * m.rowAbsSumMax < 1) :
+    ∃! Y : Fin s → ℝ, Y = m.stageMap f h yIn Y := by
+  set Ylip : ℝ≥0 :=
+    Real.toNNReal h * L * Real.toNNReal m.rowAbsSumMax with hYlip
+  have hlip : LipschitzWith Ylip (m.stageMap f h yIn) :=
+    m.stageMap_lipschitzWith hf hh yIn
+  have hYlt : Ylip < 1 := by
+    have hcoe : (Ylip : ℝ) = h * (L : ℝ) * m.rowAbsSumMax := by
+      simp [hYlip, NNReal.coe_mul, Real.coe_toNNReal _ hh,
+            Real.coe_toNNReal _ m.rowAbsSumMax_nonneg]
+    have h_lt : (Ylip : ℝ) < 1 := by rw [hcoe]; exact_mod_cast hsmall
+    exact_mod_cast h_lt
+  have hcontr : ContractingWith Ylip (m.stageMap f h yIn) := ⟨hYlt, hlip⟩
+  haveI : Nonempty (Fin s → ℝ) := ⟨fun _ => 0⟩
+  obtain ⟨Y, hY_fix, _⟩ :=
+    hcontr.exists_fixedPoint (0 : Fin s → ℝ) (edist_ne_top _ _)
+  refine ⟨Y, hY_fix.symm, ?_⟩
+  intro Y' hY'_fix
+  have h1 : Y' = ContractingWith.fixedPoint (m.stageMap f h yIn) hcontr :=
+    hcontr.fixedPoint_unique hY'_fix.symm
+  have h2 : Y = ContractingWith.fixedPoint (m.stageMap f h yIn) hcontr :=
+    hcontr.fixedPoint_unique hY_fix
+  rw [h1, ← h2]
+
+end GeneralLinearMethod
