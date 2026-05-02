@@ -758,6 +758,54 @@ theorem toGLM_stabilityMatrix_natAdd_shift_apply (m : LMM s) (z : ℂ)
   rw [hB]
   ring
 
+/-- §521 prep — on the last past-`y` row (the `y_{n+s}` output row),
+the stability matrix sums the `Vℂ` part (the `α` / `β` LMM coefficients
+on past-`y` and past-`h*f` slots) with the implicit-stage resolvent
+contribution `z * β(last) * resolvent * Uℂ 0 l`. -/
+theorem toGLM_stabilityMatrix_castAdd_last_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin (2 * s)) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) l =
+      m.toGLM.Vℂ (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) l +
+        z * ((m.β (Fin.last s) : ℝ) : ℂ) *
+          (((1 : Matrix (Fin 1) (Fin 1) ℂ) - z • m.toGLM.Aℂ)⁻¹ 0 0) *
+          m.toGLM.Uℂ 0 l := by
+  rw [toGLM_stabilityMatrix_apply]
+  have hB : m.toGLM.Bℂ
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) 0 =
+        ((m.β (Fin.last s) : ℝ) : ℂ) := by
+    show ((m.toGLM.B
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) 0 : ℝ) : ℂ) = _
+    rw [toGLM_B_castAdd_last_apply m j hj]
+  rw [hB]
+  ring
+
+/-- §521 prep — on the last past-`h*f` row (the `h·f_{n+s}` output row),
+the stability matrix has *no* `Vℂ` contribution (cycle 620 lemma) and
+reduces to a pure resolvent-times-`Uℂ` term. -/
+theorem toGLM_stabilityMatrix_natAdd_last_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin (2 * s)) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) l =
+      z *
+          (((1 : Matrix (Fin 1) (Fin 1) ℂ) - z • m.toGLM.Aℂ)⁻¹ 0 0) *
+          m.toGLM.Uℂ 0 l := by
+  rw [toGLM_stabilityMatrix_apply]
+  have hV : m.toGLM.Vℂ
+      (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) l = 0 := by
+    show ((m.toGLM.V
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) l : ℝ) : ℂ) = 0
+    rw [toGLM_V_natAdd_last_apply m j hj]
+    simp
+  have hB : m.toGLM.Bℂ
+      (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) 0 = 1 := by
+    show ((m.toGLM.B
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) 0 : ℝ) : ℂ) = 1
+    rw [toGLM_B_natAdd_last_apply m j hj]
+    simp
+  rw [hV, hB]
+  ring
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the

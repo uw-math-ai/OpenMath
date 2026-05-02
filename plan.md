@@ -982,6 +982,12 @@ error bound for one specific scheme:
 - **Cycle 637 added the §521 LMM-side stability-defect row formula** —
   `LMM.toGLM_stabilityDefect_apply` and the past-`h·f` specialization
   `LMM.toGLM_stabilityDefect_natAdd` in `OpenMath/LMMAsGLM.lean`.
+- **Cycle 639 added §521 implicit-row stability-matrix projections** —
+  `LMM.toGLM_stabilityMatrix_castAdd_last_apply` and
+  `LMM.toGLM_stabilityMatrix_natAdd_last_apply` in
+  `OpenMath/LMMAsGLM.lean`, completing the shift-row / implicit-row
+  projection surface needed before a future `Matrix.fromBlocks`
+  factorisation.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
