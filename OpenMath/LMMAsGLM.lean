@@ -1297,6 +1297,177 @@ theorem toGLM_stabilityMatrix_charpoly_of_bdf
   rw [Matrix.charpoly_fromBlocks_zero₁₂]
   rw [toGLM_stabilityMatrixPHF_charpoly_of_bdf m z hbdf]
 
+/-- §521 helper: the bottom-row companion matrix with shift rows above it. -/
+private noncomputable def toGLM_stabilityMatrixPYCompanion (a : Fin s → ℂ) :
+    Matrix (Fin s) (Fin s) ℂ := fun j l =>
+  if (j : ℕ) + 1 = s then a l
+  else if (l : ℕ) = (j : ℕ) + 1 then 1 else 0
+
+/-- §521 helper: characteristic polynomial of the bottom-row companion shape
+used by the BDF past-`y` block. -/
+private theorem toGLM_stabilityMatrixPYCompanion_charpoly (a : Fin s → ℂ) :
+    (toGLM_stabilityMatrixPYCompanion a).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s -
+        ∑ l : Fin s, Polynomial.C (a l) * Polynomial.X ^ (l : ℕ) := by
+  induction s with
+  | zero =>
+      simp [Matrix.charpoly]
+  | succ n ih =>
+      cases n with
+      | zero =>
+          simp [Matrix.charpoly, toGLM_stabilityMatrixPYCompanion]
+      | succ n =>
+          rw [Matrix.charpoly, Matrix.det_succ_column_zero]
+          have htail :
+              (toGLM_stabilityMatrixPYCompanion a).charmatrix.submatrix Fin.succ Fin.succ =
+                (toGLM_stabilityMatrixPYCompanion
+                  (fun i : Fin (n + 1) => a i.succ)).charmatrix := by
+            ext i j k
+            by_cases hij : i = j
+            · subst j
+              simp [Matrix.charmatrix, toGLM_stabilityMatrixPYCompanion]
+            · have hsij : i.succ ≠ j.succ := by
+                intro h
+                exact hij (Fin.succ_injective _ h)
+              simp [Matrix.charmatrix, toGLM_stabilityMatrixPYCompanion, hij, hsij]
+          have htail_det :
+              ((toGLM_stabilityMatrixPYCompanion a).charmatrix.submatrix
+                  Fin.succ Fin.succ).det =
+                (toGLM_stabilityMatrixPYCompanion
+                  (fun i : Fin (n + 1) => a i.succ)).charpoly := by
+            rw [htail, Matrix.charpoly]
+          have hlast :
+              ((toGLM_stabilityMatrixPYCompanion a).charmatrix.submatrix
+                  Fin.castSucc Fin.succ).det =
+                (-1 : Polynomial ℂ) ^ (n + 1) := by
+            let B :=
+              (toGLM_stabilityMatrixPYCompanion a).charmatrix.submatrix
+                Fin.castSucc Fin.succ
+            have htri : B.BlockTriangular OrderDual.toDual := by
+              intro i j hij
+              have hij' : (i : ℕ) < (j : ℕ) := by simpa using hij
+              have hi_not : (i : ℕ) ≠ n + 1 := by omega
+              have hji_ne : (j : ℕ) ≠ (i : ℕ) := by omega
+              have hdiagOff :
+                  (Fin.castSucc i : Fin (n + 1 + 1)) ≠
+                    (Fin.succ j : Fin (n + 1 + 1)) := by
+                intro h
+                have hv := congrArg Fin.val h
+                simp at hv
+                omega
+              simp [B, Matrix.charmatrix, toGLM_stabilityMatrixPYCompanion,
+                hi_not, hji_ne, hdiagOff]
+            rw [Matrix.det_of_lowerTriangular B htri]
+            have hdiag : ∀ i : Fin (n + 1), B i i = (-1 : Polynomial ℂ) := by
+              intro i
+              have hne :
+                  (Fin.castSucc i : Fin (n + 1 + 1)) ≠
+                    (Fin.succ i : Fin (n + 1 + 1)) := by
+                intro h
+                have hv := congrArg Fin.val h
+                simp at hv
+              have hi_not : (i : ℕ) ≠ n + 1 := by omega
+              simp [B, Matrix.charmatrix, toGLM_stabilityMatrixPYCompanion,
+                hne, hi_not]
+            simp [hdiag, Finset.prod_const, Fintype.card_fin]
+          have hnotLast : ∀ x : Fin n, (x : ℕ) ≠ n := by
+            intro x
+            omega
+          rw [Fin.sum_univ_succ]
+          rw [Fin.sum_univ_castSucc]
+          simp [toGLM_stabilityMatrixPYCompanion, htail_det, hlast, hnotLast]
+          rw [ih (fun i : Fin (n + 1) => a i.succ)]
+          conv_lhs =>
+            rw [Fin.sum_univ_succ]
+          conv_rhs =>
+            rw [Fin.sum_univ_succ]
+            rw [Fin.sum_univ_succ]
+          simp
+          have hsign :
+              (-1 : Polynomial ℂ) ^ (n + 1) * Polynomial.C (a 0) *
+                  (-1) ^ (n + 1) =
+                Polynomial.C (a 0) := by
+            calc
+              (-1 : Polynomial ℂ) ^ (n + 1) * Polynomial.C (a 0) *
+                    (-1) ^ (n + 1)
+                  = Polynomial.C (a 0) *
+                      (((-1 : Polynomial ℂ) ^ (n + 1)) *
+                        ((-1) ^ (n + 1))) := by
+                    ring
+              _ = Polynomial.C (a 0) * ((-1 : Polynomial ℂ) ^ (2 * (n + 1))) := by
+                    rw [← pow_add]
+                    have hpow : (n + 1) + (n + 1) = 2 * (n + 1) := by omega
+                    rw [hpow]
+              _ = Polynomial.C (a 0) := by
+                    rw [pow_mul]
+                    simp
+          rw [hsign]
+          simp_rw [mul_sub, mul_add, Finset.mul_sum]
+          have hpow_main :
+              Polynomial.X * Polynomial.X ^ (n + 1) =
+                (Polynomial.X : Polynomial ℂ) ^ (n + 1 + 1) := by
+            rw [← pow_succ']
+          have hsum_pow :
+              (∑ i : Fin n,
+                  Polynomial.X *
+                    (Polynomial.C (a i.succ.succ) *
+                      Polynomial.X ^ ((i : ℕ) + 1))) =
+                ∑ i : Fin n,
+                  Polynomial.C (a i.succ.succ) *
+                    Polynomial.X ^ ((i : ℕ) + 1 + 1) := by
+            apply Finset.sum_congr rfl
+            intro i _
+            calc
+              Polynomial.X *
+                    (Polynomial.C (a i.succ.succ) *
+                      Polynomial.X ^ ((i : ℕ) + 1))
+                  = Polynomial.C (a i.succ.succ) *
+                      (Polynomial.X * Polynomial.X ^ ((i : ℕ) + 1)) := by
+                    ring
+              _ = Polynomial.C (a i.succ.succ) *
+                    Polynomial.X ^ ((i : ℕ) + 1 + 1) := by
+                    rw [← pow_succ']
+          rw [hpow_main, hsum_pow]
+          ring_nf
+
+/-- §521 — Under the BDF denominator hypothesis, the active past-`y` block is
+the bottom-row companion matrix with coefficients `-α_l / (1 - z β_s)`. -/
+private theorem toGLM_stabilityMatrixPY_eq_companion_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    toGLM_stabilityMatrixPY m z =
+      toGLM_stabilityMatrixPYCompanion
+        (fun l : Fin s =>
+          (((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
+            (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)))) := by
+  have _ := hbdf
+  ext j l
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [toGLM_stabilityMatrixPY_apply_last_of_bdf m z hz j hj l]
+    simp [toGLM_stabilityMatrixPYCompanion, hj]
+  · rw [toGLM_stabilityMatrixPY_apply_shift m z j hj l]
+    simp [toGLM_stabilityMatrixPYCompanion, hj]
+
+/-- §521 — For BDF-type LMMs, the active past-`y` block has the expected
+monic companion characteristic polynomial. -/
+theorem toGLM_stabilityMatrixPY_charpoly_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    (toGLM_stabilityMatrixPY m z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s -
+        ∑ l : Fin s,
+          Polynomial.C
+            (((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
+              (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+            Polynomial.X ^ (l : ℕ) := by
+  rw [toGLM_stabilityMatrixPY_eq_companion_of_bdf m z hbdf hz]
+  exact toGLM_stabilityMatrixPYCompanion_charpoly
+    (fun l : Fin s =>
+      (((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
+        (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))))
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
