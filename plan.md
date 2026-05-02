@@ -781,8 +781,14 @@ error bound for one specific scheme:
   ARK, IRKS examples (low priority; reuses §54 / §55 below).
 
 ### §51 Consistency, Stability and Convergence
-- [ ] **§510 Definitions of consistency and stability** — analogue of
-  §40 for GLMs.
+- [~] **§510 Definitions of consistency and stability** — analogue of
+  §40 for GLMs. Cycle 612 landed `IsPreconsistent` (existence of an
+  input decomposition `q` fixed by `V` with `U q = 𝟙_s`) and
+  `IsStable` (uniform bound on iterated `V`-propagation of bounded
+  inputs) in `OpenMath/GeneralLinearMethod.lean`, plus RK sanity
+  checks `toGLM_isPreconsistent` / `toGLM_isStable` in
+  `OpenMath/RKAsGLM.lean`. Full consistency / convergence chain still
+  pending.
 - [ ] **§511 Covariance of methods** under the equivalence transformation
   of §501.
 - [ ] **§512 Definition of convergence**.
@@ -856,6 +862,11 @@ error bound for one specific scheme:
 - **Cycle 611 closed §503** — LMM-as-GLM embedding as a one-stage method
   with `r = 2 * s`, including stage-map and explicitness agreement,
   landed in `OpenMath/LMMAsGLM.lean`.
+- **Cycle 612 partially opened §510** — `IsPreconsistent` and `IsStable`
+  predicates added to `OpenMath/GeneralLinearMethod.lean`, with RK
+  embedding sanity checks (`toGLM_isPreconsistent`, `toGLM_isStable`)
+  in `OpenMath/RKAsGLM.lean`. Full §510 (consistency + convergence
+  chain) still pending — see backlog item #1.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -879,6 +890,8 @@ error bound for one specific scheme:
 
 1. **Butcher §510 — GLM consistency and stability definitions.**
    `OpenMath/GeneralLinearMethod.lean`. Direct generalisation of §40.
+   *Partial — cycle 612 landed `IsPreconsistent` + `IsStable` and RK
+   sanity checks; full consistency + convergence chain still pending.*
 2. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
    ⟹ convergence` for GLMs. The existing
    `OpenMath/DahlquistEquivalence.lean` is a special case; the GLM

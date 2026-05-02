@@ -78,13 +78,32 @@ theorem IsExplicit.A_diag_zero (m : GeneralLinearMethod s r)
   intro i
   exact hm i i le_rfl
 
-/-! ## Consistency Hook -/
+/-! ## §510 — Preconsistency, Consistency Hook, and Stability -/
 
 /-- Placeholder predicate for the §510 consistency theory of general linear
 methods. Future cycles will replace this with the coefficient conditions
 needed for GLM consistency and stability. -/
 def IsConsistent (_m : GeneralLinearMethod s r) : Prop :=
   True
+
+/-- Butcher §510 — preconsistency. A general linear method is
+preconsistent if there is an input-vector decomposition `q : Fin r → ℝ`
+that is a fixed point of `V` and is sent by `U` to the all-ones stage
+vector. The vector `q` interprets each input quantity as carrying a
+copy of `y(x_n)`. -/
+def IsPreconsistent (m : GeneralLinearMethod s r) : Prop :=
+  ∃ q : Fin r → ℝ,
+    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧
+    (∀ i : Fin s, ∑ k, m.U i k * q k = 1)
+
+/-- Butcher §510 — stability. The iterated propagation of any bounded
+input by `V` stays uniformly bounded. We phrase this in elementary
+terms (no `Matrix.pow` unfolding) by iterating the explicit-sum
+`mulVec`. -/
+def IsStable (m : GeneralLinearMethod s r) : Prop :=
+  ∃ M : ℝ, 0 ≤ M ∧ ∀ (n : ℕ) (q : Fin r → ℝ),
+    (∀ k, |q k| ≤ 1) →
+    ∀ k, |((fun v => fun k' => ∑ l, m.V k' l * v l)^[n] q) k| ≤ M
 
 /-! ## Stage Solvability by Contraction -/
 

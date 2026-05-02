@@ -72,4 +72,32 @@ theorem toGLM_stageEquations_unique_solution (t : ButcherTableau s)
       Y = t.toGLM.stageMap f h (fun _ => y₀) Y := by
   exact t.toGLM.stageEquations_unique_solution hf hh (fun _ => y₀) hsmall
 
+/-- §502 sanity check — every RK embedding is preconsistent (Butcher §510).
+The witness is the constant input vector `q ≡ 1`, fixed by the scalar
+`V = 1` and sent to the all-ones stage vector by `U = 𝟙`. -/
+theorem toGLM_isPreconsistent (t : ButcherTableau s) :
+    t.toGLM.IsPreconsistent := by
+  refine ⟨fun _ => 1, ?_, ?_⟩
+  · intro k
+    simp [toGLM_V]
+  · intro i
+    simp [toGLM_U]
+
+/-- §502 sanity check — every RK embedding is stable (Butcher §510).
+The single input quantity is propagated by the scalar `V = 1`, so every
+iterate of the propagation map is the identity on `Fin 1 → ℝ`. -/
+theorem toGLM_isStable (t : ButcherTableau s) :
+    t.toGLM.IsStable := by
+  refine ⟨1, zero_le_one, ?_⟩
+  intro n q hq
+  induction n with
+  | zero =>
+    intro k
+    simpa using hq k
+  | succ n ih =>
+    intro k
+    rw [Function.iterate_succ_apply']
+    simp only [toGLM_V, one_mul, Fin.sum_univ_one] at ih ⊢
+    exact ih 0
+
 end ButcherTableau
