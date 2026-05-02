@@ -809,6 +809,8 @@ error bound for one specific scheme:
   `ButcherTableau.toGLM_isConvergent` in `OpenMath/RKAsGLM.lean`. The
   LMM-side `LMM.toGLM_isStable` / `toGLM_isConvergent` lift is open;
   see `.prover-state/issues/butcher_section512_lmm_stability_lift.md`.
+  Cycle 619 landed structural `LMM.toGLM.V` row simp lemmas ready for
+  the Phase 2–4 LMM stability lift.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
 - [ ] **§515 Stability and consistency imply convergence** — the GLM

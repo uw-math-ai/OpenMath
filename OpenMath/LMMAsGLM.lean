@@ -98,6 +98,91 @@ noncomputable def toGLM (m : LMM s) : GeneralLinearMethod 1 (2 * s) where
       m.β (Fin.castSucc k)
   exact Fin.addCases_right k
 
+/-- Shape projection lemma for non-last past-`y` shift rows of the `V` block. -/
+@[simp] theorem toGLM_V_castAdd_shift_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 ≠ s) (l : Fin (2 * s)) :
+    m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) l =
+      if (l : ℕ) = (j : ℕ) + 1 then (1 : ℝ) else 0 := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) =
+        Fin.castAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_left, if_neg hj]
+
+/-- Shape projection lemma for the last past-`y` row against past-`y` entries. -/
+@[simp] theorem toGLM_V_castAdd_last_castAdd_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+              (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+      -m.α (Fin.castSucc l) := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) =
+        Fin.castAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_left, if_pos hj]
+  have hcol :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+        Fin.castAdd s l := by
+    ext
+    simp
+  rw [hcol, Fin.addCases_left]
+
+/-- Shape projection lemma for the last past-`y` row against past-`h*f` entries. -/
+@[simp] theorem toGLM_V_castAdd_last_natAdd_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+              (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+      m.β (Fin.castSucc l) := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) =
+        Fin.castAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_left, if_pos hj]
+  have hcol :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+        Fin.natAdd s l := by
+    ext
+    simp
+  rw [hcol, Fin.addCases_right]
+
+/-- Shape projection lemma for non-last past-`h*f` shift rows of the `V` block. -/
+@[simp] theorem toGLM_V_natAdd_shift_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 ≠ s) (l : Fin (2 * s)) :
+    m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) l =
+      if (l : ℕ) = s + (j : ℕ) + 1 then (1 : ℝ) else 0 := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) =
+        Fin.natAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_right, if_neg hj]
+
+/-- Shape projection lemma for the zero last past-`h*f` row of the `V` block. -/
+@[simp] theorem toGLM_V_natAdd_last_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 = s) (l : Fin (2 * s)) :
+    m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) l = 0 := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) =
+        Fin.natAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_right, if_pos hj]
+
 /-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
 the stability-matrix entry collapses to the single stage resolvent factor.
 The surrounding `toGLM` blocks retain the literal §503 row/column shape. -/
