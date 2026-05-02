@@ -185,6 +185,63 @@ noncomputable def toGLM (m : LMM s) : GeneralLinearMethod 1 (2 * s) where
     simp
   rw [hrow, Fin.addCases_right, if_pos hj]
 
+/-- Shape projection lemma for non-last past-`y` shift rows of the `B` block:
+the `B` row vanishes because the `B`-block input is unused on shift rows. -/
+@[simp] theorem toGLM_B_castAdd_shift_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 ≠ s) :
+    m.toGLM.B (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) 0 = 0 := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) =
+        Fin.castAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_left, if_neg hj]
+
+/-- Shape projection lemma for the last past-`y` row of the `B` block:
+carries the implicit-stage coefficient `m.β (Fin.last s)` from `f(Y)`. -/
+@[simp] theorem toGLM_B_castAdd_last_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 = s) :
+    m.toGLM.B (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) 0 =
+      m.β (Fin.last s) := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) =
+        Fin.castAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_left, if_pos hj]
+
+/-- Shape projection lemma for non-last past-`h*f` shift rows of the `B` block:
+the `B` row vanishes because shift rows do not consume `f(Y)`. -/
+@[simp] theorem toGLM_B_natAdd_shift_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 ≠ s) :
+    m.toGLM.B (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) 0 = 0 := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) =
+        Fin.natAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_right, if_neg hj]
+
+/-- Shape projection lemma for the last past-`h*f` row of the `B` block:
+emits the canonical `1` carrying `f(Y)` to the new `h · f` slot. -/
+@[simp] theorem toGLM_B_natAdd_last_apply (m : LMM s) (j : Fin s)
+    (hj : (j : ℕ) + 1 = s) :
+    m.toGLM.B (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) 0 = 1 := by
+  simp only [toGLM]
+  have hrow :
+      Fin.cast (Nat.two_mul s)
+          (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) =
+        Fin.natAdd s j := by
+    ext
+    simp
+  rw [hrow, Fin.addCases_right, if_pos hj]
+
 /-- §510 / §512 stability prep — Phase B. Iterating the LMM-as-GLM
 `V`-block always zeros the past-`h*f` half of the input within `s`
 steps. Specifically, the `h*f`-slot at position `s + k` of the
@@ -666,6 +723,40 @@ theorem toGLM_stabilityMatrix_apply (m : LMM s) (z : ℂ) (k l : Fin (2 * s)) :
             m.toGLM.Uℂ 0 l) := by
   rw [GeneralLinearMethod.stabilityMatrix_apply]
   simp
+
+/-- §521 prep — on a non-last past-`y` shift row, the stability matrix
+agrees with `m.toGLM.Vℂ` because the `B`-block contribution vanishes. -/
+theorem toGLM_stabilityMatrix_castAdd_shift_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 ≠ s) (l : Fin (2 * s)) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) l =
+      m.toGLM.Vℂ (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) l := by
+  rw [toGLM_stabilityMatrix_apply]
+  have hB : m.toGLM.Bℂ
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) 0 = 0 := by
+    show ((m.toGLM.B
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) 0 : ℝ) : ℂ) = 0
+    rw [toGLM_B_castAdd_shift_apply m j hj]
+    simp
+  rw [hB]
+  ring
+
+/-- §521 prep — on a non-last past-`h*f` shift row, the stability matrix
+agrees with `m.toGLM.Vℂ` because the `B`-block contribution vanishes. -/
+theorem toGLM_stabilityMatrix_natAdd_shift_apply (m : LMM s) (z : ℂ)
+    (j : Fin s) (hj : (j : ℕ) + 1 ≠ s) (l : Fin (2 * s)) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) l =
+      m.toGLM.Vℂ (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) l := by
+  rw [toGLM_stabilityMatrix_apply]
+  have hB : m.toGLM.Bℂ
+      (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) 0 = 0 := by
+    show ((m.toGLM.B
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) 0 : ℝ) : ℂ) = 0
+    rw [toGLM_B_natAdd_shift_apply m j hj]
+    simp
+  rw [hB]
+  ring
 
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
