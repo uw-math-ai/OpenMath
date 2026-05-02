@@ -1,480 +1,283 @@
-# Cycle 063 Strategy — Adapter lemmas at the autonomous/non-autonomous boundary
+# Cycle 064 Strategy — Lift §406B sub-lemmas to non-autonomous `f : ℝ → ℝ → ℝ`
 
-## TL;DR
+## Summary
 
-Cycle 062 (commit `1eaf808`) closed the **autonomous-IVP form** of
-Theorem 406D as `LinearMultistepMethod.stable_consistent_isConvergent_autonomous`
-at `OpenMath/Chapter4/Section404.lean:3863` — the analytical core.
-The remaining single sorry at line 4012 is the **non-autonomous lift**
-to the textbook `IsConvergent` predicate (which takes
-`f : ℝ → ℝ → ℝ` with `LipschitzInSecond Set.univ L f`, not autonomous
-`f : ℝ → ℝ` with `LipschitzWith L.toNNReal f`).
+Cycle 062 closed the autonomous form `stable_consistent_isConvergent_autonomous`
+(scalar `f : ℝ → ℝ`). Cycle 063 added three private adapter lemmas at the
+autonomous/non-autonomous boundary. Cycle 064 begins the bottom-up
+refactor laid out in `.prover-state/issues/non_autonomous_lift_plan.md`.
 
-The cycle 062 task results estimate the lift at **200–400 lines of
-Lipschitz bookkeeping, no new mathematics**. Realistically that is
-**a 4–5 cycle effort**: 19 helpers along the cycle 040–062 chain
-take `{f : ℝ → ℝ}` and need non-autonomous variants taking
-`{f : ℝ → ℝ → ℝ}`. The cycle 060 regression (score −1) showed that
-single-cycle ~430-line targets risk vacuous-proof bugs; cycle 061
-and 062 (3 wrappers + 1 wrapper, scores +1 and +2) showed that
-small decomposed wins land cleanly.
+**The single sorry remaining in the file** is at
+`OpenMath/Chapter4/Section404.lean:4110`, the textbook `IsConvergent` form
+of `stable_consistent_isConvergent` (`thm:406D`). Closing it requires
+lifting 19 helpers from `f : ℝ → ℝ` to `f : ℝ → ℝ → ℝ`. The plan splits
+that work across cycles 064–067; **cycle 064 is the §406B cluster**
+(5 helpers, ~150 lines).
 
-**Cycle 063 scope:** build the **3 small adapter lemmas** at the
-autonomous/non-autonomous boundary, file the multi-cycle refactor
-plan, and batch-submit the adapters to Aristotle. **Do NOT** attempt
-to refactor the cycle 040–062 helper chain in this cycle. **Do NOT**
-attempt to close the line-4012 sorry directly.
+**Do NOT attempt to close the line-4110 sorry this cycle.** That is the
+cycle 067 deliverable. Cycle 064's job is purely the §406B lift.
 
 ---
 
-## Priority 0 — sanity checks before starting
+## Cycle 064 deliverables (in order)
 
-Run these once at the start of the cycle:
+Lift the following 5 helpers from `{f : ℝ → ℝ}` to `{f : ℝ → ℝ → ℝ}`,
+preserving statements and proofs as faithfully as possible. The new
+versions go in the same file (`OpenMath/Chapter4/Section404.lean`),
+inserted **immediately before** the cycle 062 autonomous theorem at
+line 3863 and **immediately after** the cycle 063 adapter block.
 
-```bash
-# 1. Branch tip is the cycle 062 commit.
-git log -1 --format='%H %s'
-# Expected: 1eaf808 Cycle 062 — autonomous-IVP form of thm:406D + aOf_tendsto_zero wrapper
+Use the suffix convention `_nonauto` to distinguish from the existing
+autonomous helpers. Keep the autonomous helpers in place — they are
+still consumed by `stable_consistent_isConvergent_autonomous` and must
+not be removed or renamed.
 
-# 2. Section404.lean has exactly one sorry at line 4012.
-rg '\bsorry\b' OpenMath/Chapter4/Section404.lean -n
-# Expected: a single hit at line 4012.
+### 1. `exact_solution_norm_bound_nonauto` (mirror of line 568)
 
-# 3. The file compiles cleanly (modulo the documented sorry).
-lake env lean OpenMath/Chapter4/Section404.lean
-# Expected: clean exit, no errors beyond the documented sorry.
-```
-
-If a second sorry has crept in, or the branch tip is not `1eaf808`,
-stop and triage before proceeding. The "stuck on" framing in the
-prompt about line 4012 is **expected** (cycle 062 explicitly left
-that sorry as the cycle 063+ target).
-
----
-
-## Priority 1 — the three adapter lemmas
-
-All three live in `OpenMath/Chapter4/Section404.lean`, placed
-**immediately above** the autonomous theorem at line 3863 (so they
-sit at the boundary). They are deliberately small and
-Aristotle-friendly.
-
-### Adapter 1 — `LipschitzInSecond` to per-`x` `LipschitzWith`
-
-**Why:** the cycle 062 autonomous theorem expects
-`LipschitzWith L.toNNReal f` for autonomous `f : ℝ → ℝ`. The
-non-autonomous `IsConvergent` predicate gives
-`LipschitzInSecond Set.univ L f` for `f : ℝ → ℝ → ℝ`. The bridge is
-direct because
-`LipschitzInSecond s L f := ∀ x ∈ s, LipschitzWith L (f x)`
-(see `OpenMath/Chapter1/Section110.lean:45`), so on `Set.univ` the
-universal hypothesis is automatic.
-
-**Statement (place above the autonomous theorem):**
-
+Current autonomous statement (line 568):
 ```lean
-/-- **Adapter (cycle 063): `LipschitzInSecond Set.univ` ⇒ per-`x`
-`LipschitzWith` on the autonomous restriction.**
-
-The non-autonomous `IsConvergent` predicate hypothesises
-`LipschitzInSecond Set.univ L f`; the autonomous helper chain
-(cycles 040–062) requires `LipschitzWith L (f x)` for each `x`.
-This is the trivial unfolding bridge. -/
-private lemma lipschitzInSecond_univ_toLipschitzWith
-    {L : ℝ≥0} {f : ℝ → ℝ → ℝ}
-    (hf_lip : OpenMath.Chapter1.Section110.LipschitzInSecond Set.univ L f)
-    (x : ℝ) :
-    LipschitzWith L (f x) :=
-  hf_lip x (Set.mem_univ _)
+private lemma exact_solution_norm_bound
+    {f : ℝ → ℝ} {M_bound : ℝ} (hM : 0 ≤ M_bound)
+    {y : ℝ → ℝ}
+    (hy_diff : Differentiable ℝ y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h)
+    (ξ : ℝ) (hξ : ξ ≤ 0) :
+    |y (x + h * ξ) - y x| ≤ h * (-ξ) * M_bound
 ```
 
-**Expected proof:** the term `hf_lip x (Set.mem_univ _)` should close
-it directly (`LipschitzInSecond` unfolds to `∀ x ∈ s, …`). If Lean
-rejects, try `by exact hf_lip x (Set.mem_univ _)` or check the
-unfolded shape with `lean_hover_info` on `LipschitzInSecond`.
-
-**Aristotle:** trivial; expect a 1-line solution.
-
----
-
-### Adapter 2 — `f t (yex t)` is bounded on `[x₀, x]`
-
-**Why:** the autonomous theorem hypothesises
-`hf_yex_bound : ∀ t : ℝ, |f (yex t)| ≤ M_bound` (a uniform bound
-over all of ℝ). The non-autonomous `IsConvergent` does not directly
-hypothesise such a bound. We extract one from compactness: on the
-compact interval `[x₀, x]`, the continuous function
-`t ↦ |f t (yex t)|` attains a maximum.
-
-**Statement (place above the autonomous theorem):**
-
+Non-autonomous variant:
 ```lean
-/-- **Adapter (cycle 063): bound for `f t (yex t)` on a compact
-interval.**
-
-Given `f : ℝ → ℝ → ℝ` jointly continuous and `yex : ℝ → ℝ`
-continuous, the function `t ↦ |f t (yex t)|` is bounded on every
-closed interval. The bound is the `M_bound` the autonomous theorem
-chain consumes; the cycle 064+ refactor will re-derive the
-autonomous helpers to take a compact-restricted bound rather than
-the global `∀ t : ℝ` form.
-
-Note: this gives a bound on `Set.Icc (min x₀ x) (max x₀ x)`, NOT on
-all of ℝ. The autonomous theorem's `∀ t : ℝ` is stricter than what
-continuity alone delivers. The cycle 064+ refactor will adapt the
-helper chain to the compact-restricted form. -/
-private lemma f_yex_bound_on_Icc
-    {f : ℝ → ℝ → ℝ}
-    (hf_cont : Continuous (Function.uncurry f))
-    {yex : ℝ → ℝ} (hyex_cont : Continuous yex)
-    (x₀ x : ℝ) :
-    ∃ M_bound : ℝ, 0 ≤ M_bound ∧
-      ∀ t ∈ Set.Icc (min x₀ x) (max x₀ x), |f t (yex t)| ≤ M_bound := by
-  sorry
+private lemma exact_solution_norm_bound_nonauto
+    {f : ℝ → ℝ → ℝ} {M_bound : ℝ} (hM : 0 ≤ M_bound)
+    {y : ℝ → ℝ}
+    (hy_diff : Differentiable ℝ y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h)
+    (ξ : ℝ) (hξ : ξ ≤ 0) :
+    |y (x + h * ξ) - y x| ≤ h * (-ξ) * M_bound
 ```
 
-**Proof sketch:**
-- `(fun t => |f t (yex t)|)` is continuous: rewrite as
-  `|Function.uncurry f (t, yex t)|`, then compose
-  `continuous_id.prod_mk hyex_cont` with `hf_cont` and `continuous_abs`.
-- `Set.Icc (min x₀ x) (max x₀ x)` is compact via `isCompact_Icc`,
-  and is non-empty since `min x₀ x ≤ max x₀ x`.
-- Continuous function on compact non-empty set attains its max:
-  `IsCompact.exists_isMaxOn` (verify name with
-  `lean_local_search "exists_isMaxOn"`).
-- Take `M_bound = |f t₀ (yex t₀)|` for the maximizer `t₀`.
+The proof body should be the same as the autonomous version with
+`f (y t)` replaced by `f t (y t)`. The FTC + `norm_integral_le_…`
+argument does not care whether the integrand is autonomous or
+non-autonomous; the only change is the integrand identity.
 
-**Manual proof attempt (if Aristotle fails):**
+### 2. `residual_integral_form_nonauto` (mirror of line 624)
 
-```lean
-  have hcont : Continuous (fun t : ℝ => |f t (yex t)|) := by
-    have hpair : Continuous (fun t : ℝ => (t, yex t)) :=
-      continuous_id.prod_mk hyex_cont
-    exact (hf_cont.comp hpair).abs
-  have hcpt : IsCompact (Set.Icc (min x₀ x) (max x₀ x)) := isCompact_Icc
-  have hnonempty : (Set.Icc (min x₀ x) (max x₀ x)).Nonempty :=
-    Set.nonempty_Icc.mpr (min_le_max)
-  obtain ⟨t₀, ht₀_mem, ht₀_max⟩ :=
-    hcpt.exists_isMaxOn hnonempty hcont.continuousOn
-  refine ⟨|f t₀ (yex t₀)|, abs_nonneg _, fun t ht => ?_⟩
-  exact ht₀_max ht
-```
+Current autonomous form takes `(hy_ode : ∀ t, deriv y t = f (y t))`;
+replace with `(hy_ode : ∀ t, deriv y t = f t (y t))`. The integrand
+in the conclusion changes from
+`f (y (x + h*ξ)) - f (y x)` to `f (x + h*ξ) (y (x + h*ξ)) - f x (y x)`.
+Proof body: the FTC + `smul_integral_comp_mul_add` argument works
+identically; just thread the time argument through.
 
-**Aristotle:** submit; ~25 lines if Aristotle finds the right
-compactness lemma. The fallback above is the manual route.
+### 3. `residual_bound_nonauto` (mirror of line 692) — DECISION POINT
 
----
+Hypothesis to update: `(hf_lip : LipschitzWith L.toNNReal f)` →
+`(hf_lip : LipschitzInSecond Set.univ L f)` (consumed via cycle 063's
+`lipschitzInSecond_univ_toLipschitzWith` adapter inside the body).
 
-### Adapter 3 — starting-data shape bridge
+**Critical caveat:** the autonomous body applies Lipschitz to
+`f(y(x+hξ))` vs `f(y(x))`. In the non-autonomous case the two `f`
+calls become `f (x+hξ) (y(x+hξ))` vs `f x (y x)` — the *time
+arguments are different*. `LipschitzInSecond` (Lipschitz in the
+spatial argument only, uniformly in `t`) does NOT bound
+`|f t₁ y₁ - f t₂ y₂|` when `t₁ ≠ t₂`.
 
-**Why:** the autonomous theorem hypothesises per-`h`
-`hstart : ∀ j : Fin k, Tendsto (fun h => yex (x₀ + j·h) − Yh h j)
-(nhds 0) (nhds 0)`. The non-autonomous `IsConvergent` uses the
-textbook shape `hstart : ∀ i : Fin k, Tendsto (start · i) (nhds 0)
-(nhds y₀)`. The two are equivalent under continuity of `yex` at
-`x₀` and `yex x₀ = y₀` (which the `IsConvergent` predicate
-provides via `HasDerivAt`).
+**Decision protocol for cycle 064:**
 
-**Statement (place above the autonomous theorem):**
+1. **Trace step.** Read `OpenMath/Chapter4/Section404.lean` lines
+   692–790 (the autonomous `residual_bound` proof body). Identify
+   every place `hf_lip` is invoked. For each invocation, note the
+   `f`-arguments on both sides.
+2. **If the time argument is the same** at every Lipschitz invocation
+   (e.g. only spatial differences are bounded; time-shift residuals
+   are absorbed elsewhere): port `residual_bound_nonauto` directly
+   with `LipschitzInSecond` and the cycle 063 adapter. Helpers 4
+   and 5 follow the same pattern.
+3. **If the time argument differs** at any Lipschitz invocation
+   (the more likely case based on Butcher's §406B written argument):
+   **defer helpers 3, 4, 5 to cycle 065.** Write a brief addendum
+   to `non_autonomous_lift_plan.md` describing the joint-Lipschitz
+   issue, and commit cycle 064 with helpers 1 and 2 only. Cycle 065
+   will introduce the joint-Lipschitz hypothesis (e.g.
+   `hf_lip_joint : LipschitzWith L_joint.toNNReal (Function.uncurry f)`)
+   uniformly across helpers 3/4/5 — not piecemeal.
 
-```lean
-/-- **Adapter (cycle 063): starting-data shape bridge.**
+### 4. `deriv_diff_bound_nonauto` (mirror of line 790)
 
-The non-autonomous `IsConvergent` predicate uses the textbook
-starting-data shape `start h i → y₀`; the autonomous theorem (and
-the cycle 040–062 helper chain) uses the per-`h` shape
-`yex (x₀ + j·h) − Yh h j → 0`. The two are equivalent under
-continuity of `yex` at `x₀` and `yex x₀ = y₀` (which the
-`IsConvergent` predicate provides via `HasDerivAt`).
+Same time-argument issue as helper 3:
+`|deriv y x - deriv y (x - i*h)| = |f x (y x) - f (x - i*h) (y (x-i*h))|`.
+Both arguments shift. **Same decision protocol.** If helper 3 is
+deferred, defer helper 4 too.
 
-This adapter is the boundary lemma that lets cycle 064+ thread
-the textbook starting-data hypothesis through the autonomous
-helper chain. -/
-private lemma hstart_shape_bridge
-    {k : ℕ} {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
-    (hyex_x₀ : yex x₀ = y₀)
-    (hyex_cont_x₀ : ContinuousAt yex x₀)
-    {start : ℝ → Fin k → ℝ}
-    (hstart : ∀ i : Fin k,
-        Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) :
-    ∀ j : Fin k,
-      Filter.Tendsto
-        (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - start h j)
-        (nhds 0) (nhds 0) := by
-  sorry
-```
+### 5. `localTruncationError_bound_nonauto` (mirror of line 923 — `lem:406B`)
 
-**Proof sketch:**
-- Fix `j : Fin k`. The map `h ↦ x₀ + j·h` is continuous and equals
-  `x₀` at `h = 0`, so `h ↦ yex (x₀ + j·h)` tends to `yex x₀ = y₀`
-  as `h → 0` (composition + `ContinuousAt`).
-- Combined with `start h j → y₀`, the difference tends to
-  `y₀ − y₀ = 0` via `Filter.Tendsto.sub`.
-
-**Manual proof attempt:**
-
-```lean
-  intro j
-  have hlin : Filter.Tendsto (fun h : ℝ => x₀ + (j.val : ℝ) * h)
-      (nhds 0) (nhds x₀) := by
-    have : Filter.Tendsto (fun h : ℝ => x₀ + (j.val : ℝ) * h)
-        (nhds 0) (nhds (x₀ + (j.val : ℝ) * 0)) := by fun_prop
-    simpa using this
-  have hyex_lim : Filter.Tendsto (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h))
-      (nhds 0) (nhds y₀) := by
-    have := hyex_cont_x₀.tendsto.comp hlin
-    rwa [hyex_x₀] at this
-  have hsub := hyex_lim.sub (hstart j)
-  simpa using hsub
-```
-
-**Aristotle:** submit; ~15 lines.
+Final integration. Defer to cycle 065 if helpers 3 and 4 are
+deferred.
 
 ---
 
-## Priority 2 — issue file documenting the cycle 064+ refactor plan
+## Concrete cycle 064 plan
 
-Create `.prover-state/issues/non_autonomous_lift_plan.md` with the
-following exact content (this is the authoritative roadmap for
-cycles 064–067):
+1. **(15 min) Read lines 540–960** of `OpenMath/Chapter4/Section404.lean`
+   to understand the §406B helper chain in detail. Pay special
+   attention to where `hf_lip` is invoked and whether the time
+   argument changes between the two `f` applications.
+2. **(10 min) Confirm whether helpers 3/4/5 actually need joint
+   Lipschitz** by tracing the time arguments through the autonomous
+   proofs. Decision per §3 above.
+3. **(45 min) Land helpers 1 and 2** (`exact_solution_norm_bound_nonauto`
+   and `residual_integral_form_nonauto`). These are pure 1:1
+   ports — `f (y t)` → `f t (y t)` — and should compile with at most
+   a few `simp`/`ring` adjustments. Use `lake env lean
+   OpenMath/Chapter4/Section404.lean` to verify after each.
+4. **(60 min) Decision point on helpers 3/4/5.**
+   * If trace shows time argument is invariant: port them too.
+   * If trace shows time argument differs: write a brief addendum
+     to `non_autonomous_lift_plan.md` explaining the joint-Lipschitz
+     issue, defer helpers 3/4/5 to cycle 065, and commit.
+5. **(20 min) Aristotle batch (only if helpers 3/4/5 are deferred).**
+   Submit deferred helpers as a backup. CLAUDE.md cadence: submit
+   once, sleep 30 min, check once at the start of cycle 065.
+6. **(30 min) Verification + commit.**
+   * `lake env lean OpenMath/Chapter4/Section404.lean` — exit code 0,
+     line-4110 sorry still the only sorry.
+   * `#print axioms` on each new helper — should be `[propext,
+     Classical.choice, Quot.sound]`.
+   * Update `.prover-state/task_results/cycle_064.md`.
+   * Update the issue file `non_autonomous_lift_plan.md` with what
+     landed and what was deferred.
+   * Commit + push: `Cycle 064 — §406B sub-lemmas non-autonomous
+     lift (helpers 1/2 [+3/4/5 if landed])`.
 
-```markdown
-# Issue: Non-autonomous lift of `stable_consistent_isConvergent`
+**Target deliverable (minimum):** helpers 1 and 2 land. Helpers 3/4/5
+either land or are deferred with a written justification.
 
-## Status
-
-Cycle 062 closed `LinearMultistepMethod.stable_consistent_isConvergent_autonomous`
-(autonomous-IVP form, scalar `f : ℝ → ℝ`) at
-`OpenMath/Chapter4/Section404.lean:3863`. The textbook `IsConvergent`
-predicate (def:402A, line 305) is non-autonomous (`f : ℝ → ℝ → ℝ`).
-The lift to `LinearMultistepMethod.stable_consistent_isConvergent`
-(line 4012) requires re-deriving 19 helpers from the cycle 040–062
-chain to accept `f : ℝ → ℝ → ℝ` with `LipschitzInSecond Set.univ L f`.
-
-## Cycle 063 deliverables (the boundary adapters)
-
-* `lipschitzInSecond_univ_toLipschitzWith` — converts the
-  non-autonomous Lipschitz predicate to the per-`x` autonomous form
-  the helper chain consumes.
-* `f_yex_bound_on_Icc` — extracts a uniform bound on `[x₀, x]` from
-  joint continuity of `f` and continuity of `yex`.
-* `hstart_shape_bridge` — bridges the textbook `start h i → y₀`
-  shape to the per-`h` `yex (x₀+j·h) − Yh h j → 0` shape.
-
-These three adapters form the autonomous/non-autonomous boundary;
-the cycle 064+ refactor builds on them.
-
-## Cycle 064–067 refactor plan (bottom-up)
-
-Each helper currently takes `{f : ℝ → ℝ}` and uses autonomous `f y`
-calls. The non-autonomous variant takes `{f : ℝ → ℝ → ℝ}` and uses
-`f t y`, with a `LipschitzInSecond` (or per-`x` `LipschitzWith`)
-hypothesis. List in dependency order:
-
-### Cycle 064 — lift §406B sub-lemmas (~150 lines)
-
-* `exact_solution_norm_bound` (line 568)
-* `residual_integral_form` (line 624)
-* `residual_bound` (line 692)
-* `deriv_diff_bound` (line 790)
-* `localTruncationError_bound` = `lem:406B` (line 923)
-
-### Cycle 065 — lift §406D recurrence helpers (~200 lines)
-
-* `T1_bound` (line 1180)
-* `T2_term_bound` (line 1200)
-* `globalError_step_bound` (line 1241)
-* `globalError_recurrence_form` (line 2544)
-* `globalError_recurrence_form_explicit` (line 3249)
-
-### Cycle 066 — lift cycle 057–061 squeeze helpers (~100 lines)
-
-* `globalError_outer_squeeze_a_term`
-* `globalError_outer_squeeze_c_term`
-* `bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`,
-  `aOf_tendsto_zero`, `bOf_limit_pos`
-
-### Cycle 067 — close `stable_consistent_isConvergent` (~80 lines)
-
-Lift `globalError_closed_form_autonomous_explicit` to non-autonomous
-and prove `stable_consistent_isConvergent` directly, using:
-* the cycle 063 adapters (Lipschitz, bound, hstart bridge);
-* the cycle 064–066 lifted helpers.
-
-## Why a refactor cycle by cycle (not one big cycle)
-
-* Cycle 060 (~430 lines, single-cycle target) regressed (score −1)
-  because complexity outpaced verification. Cycle 061 (3 wrappers,
-  +1) and cycle 062 (autonomous theorem + wrapper, +2) showed that
-  small decomposed wins land cleanly.
-* The 19 helpers form 4 natural clusters along the dependency
-  chain. Each cluster is ~80–200 lines.
-* Aristotle batch-submits at each cluster boundary keep the manual
-  effort O(50–100 lines per cycle).
-
-## Hypothesis adaptation rules
-
-For each helper:
-
-* `{f : ℝ → ℝ}` → `{f : ℝ → ℝ → ℝ}`.
-* `(hf_lip : LipschitzWith L.toNNReal f)` → either
-  `(hf_lip : LipschitzInSecond Set.univ L f)` (and use cycle 063's
-  `lipschitzInSecond_univ_toLipschitzWith` adapter inside the body)
-  or per-`x` `(hf_lip : ∀ x, LipschitzWith L.toNNReal (f x))`.
-* `(hyex_ode : ∀ t, deriv yex t = f (yex t))` →
-  `(hyex_ode : ∀ t, deriv yex t = f t (yex t))`.
-* `(hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)` →
-  `(hf_yex_bound : ∀ t ∈ Set.Icc x₀ x, |f t (yex t)| ≤ M_bound)`
-  (compact-restricted) plus, where the helper indexes off the
-  trajectory, the appropriate restriction.
-* `(hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)` →
-  `(hY : M.IsLMMSolution h x₀ f Y)`.
-
-## Cross-references
-
-* `extraction/formalization_data/entities/thm_406D.json` — textbook
-  statement (non-autonomous).
-* `OpenMath/Chapter4/Section404.lean:3863` — autonomous theorem
-  (cycle 062).
-* `OpenMath/Chapter4/Section404.lean:4012` — the sorry to close
-  (cycle 067).
-* `.prover-state/task_results/cycle_062.md` — original lift
-  estimate (200–400 lines, "no deep new mathematics").
-```
+**Stretch deliverable:** all 5 helpers land if the time argument
+trace shows the autonomous versions are already structured cleanly.
 
 ---
 
-## Priority 3 — Aristotle batch
+## Faithfulness checklist (apply per CLAUDE.md before commit)
 
-Submit the **3 adapter lemmas** to Aristotle as a single submission
-(via `mcp__aristotle__submit_file` if creating a single .lean file
-with all three, or `mcp__aristotle__submit_prompt` per lemma). Each
-is small enough to close in one Aristotle round.
+For each new helper:
 
-After submission:
-1. Sleep **30 minutes** (CLAUDE.md rule, not 5 min, not 60 min).
-2. Check **once** with `mcp__aristotle__get_status`.
-3. Incorporate any returned proofs (with attribution in docstring).
-4. For any adapter Aristotle did not close, fall back to the
-   manual proof sketches above.
-
-**Do NOT poll Aristotle more than once after the 30-minute sleep.**
-
----
-
-## What NOT to do
-
-* **Do NOT** attempt to close the line-4012 sorry in cycle 063. The
-  cycle 062 task results estimated 200–400 lines for the full lift,
-  which is multi-cycle work. Trying to do it all in one cycle risks
-  the cycle 060 regression pattern (score −1).
-* **Do NOT** refactor any of the cycle 040–062 autonomous helpers
-  to non-autonomous form in cycle 063. That is the cycle 064–067
-  scope per the issue file.
-* **Do NOT** modify `LinearMultistepMethod.stable_consistent_isConvergent_autonomous`
-  (the cycle 062 deliverable at line 3863). It is the analytical
-  core; the lift builds on top of it.
-* **Do NOT** introduce `axiom` or `constant` declarations.
-* **Do NOT** raise `maxHeartbeats` above 200000.
-* **Do NOT** treat the line-4012 sorry as a "regression" to fix; it
-  was deliberately left in cycle 062 per the strategy and is the
-  cycle 067 target.
-* **Do NOT** modify `scripts/autonomous_loop.py` (loop-maintainer
-  territory; see `tautology_scanner_false_positives.md`).
-* **Do NOT** delete or weaken any of the cycle 040–062 helpers as
-  a "shortcut". The autonomous chain is load-bearing for cycle 067.
-* **Do NOT** write the adapter lemmas as `theorem` or
-  non-`private`. They are internal scaffolding for the cycle 064+
-  refactor.
-* **Do NOT** cherry-pick a different Chapter 4 entity (e.g.
-  `thm:410A`, `thm:443A`) instead of cycle 063's adapters. Per
-  CLAUDE.md, "Follow the strategy. Do not cherry-pick easy goals."
-  The non-autonomous lift of `thm:406D` is the canonical thread to
-  pull because it unblocks the textbook form of the marquee
-  cycle 040–062 result.
+- [ ] **Tautology check:** the conclusion is NOT one of the
+  hypotheses. The five helpers are all genuine bounds.
+- [ ] **Identity check:** the proof is NOT a single `exact h`.
+  All five involve real calculus (FTC, change of variables,
+  Lipschitz, monotone integration).
+- [ ] **Hypothesis strength check:** the non-autonomous hypotheses
+  must not over-strengthen relative to the textbook. `hy_ode` with
+  `f t (y t)` matches def:402A's IVP shape. `LipschitzInSecond
+  Set.univ L f` matches the def:402A `IsConvergent` predicate's
+  Lipschitz hypothesis at line 308. `hf_y_bound` is a uniform bound
+  on the trajectory's image — implicit in the textbook (the exact
+  solution's compactness gives a finite bound on `f(t, y(t))` over
+  any compact `t`-interval); making it explicit is faithful.
+- [ ] **Absent theorem check:** if a docstring promises a future
+  helper, it must actually exist or be marked deferred in the
+  issue file.
+- [ ] **No `axiom` or `constant`** introduced.
+- [ ] **No `maxHeartbeats` raised** above 200000.
 
 ---
 
-## Acceptance criteria for cycle 063
+## What NOT to do this cycle
 
-A successful cycle 063 commit produces:
-
-1. **Three new private lemmas** in
-   `OpenMath/Chapter4/Section404.lean`, placed immediately above
-   line 3863:
-   - `lipschitzInSecond_univ_toLipschitzWith`
-   - `f_yex_bound_on_Icc`
-   - `hstart_shape_bridge`
-
-   All three compile cleanly (no `sorry`, no `axiom`).
-
-2. **One new issue file**:
-   `.prover-state/issues/non_autonomous_lift_plan.md` documenting
-   the cycle 064–067 refactor plan (use the template in §"Priority 2"
-   above verbatim).
-
-3. **Verification**:
-   - `lake env lean OpenMath/Chapter4/Section404.lean` exits clean.
-   - `rg '\bsorry\b' OpenMath/Chapter4/Section404.lean -n` shows
-     exactly 1 hit (the line-4012 main theorem, unchanged).
-   - `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
-     returns no new tautology hits.
-   - Axiom check on the three new adapters: only
-     `[propext, Classical.choice, Quot.sound]`.
-
-4. **`task_results/cycle_063.md`** documenting:
-   - Each adapter's statement, proof approach, and Aristotle status.
-   - The issue file reference.
-   - Cycle 064 next-step (lift the §406B sub-lemmas: see issue file).
-
-5. **Faithfulness check** in the task results:
-   - Each adapter is internal scaffolding; not a Butcher-named
-     entity. Document accordingly.
-   - Adapter 2 introduces a *compact-restricted* bound (weaker than
-     the autonomous theorem's `∀ t : ℝ`). The cycle 064+ refactor
-     will adapt the helpers to consume the compact-restricted form.
-     Document this as a deliberate scope decision in adapter 2's
-     docstring.
-   - Tautology check: each adapter does real work (not vacuous
-     hypothesis re-export).
+* Do **NOT** attempt to close the line-4110 sorry
+  (`stable_consistent_isConvergent`). That is the cycle 067 target.
+  Cycle 064 is purely the §406B lift.
+* Do **NOT** delete or rename the autonomous helpers
+  (`exact_solution_norm_bound`, `residual_integral_form`,
+  `residual_bound`, `deriv_diff_bound`, `localTruncationError_bound`).
+  They are still consumed by
+  `stable_consistent_isConvergent_autonomous` (cycle 062) and that
+  theorem must not regress.
+* Do **NOT** generalize from scalar (`ℝ → ℝ → ℝ`) to vector-valued
+  RHS in this cycle. The textbook §406D-equivalent staged approach
+  in cycles 064–067 stays scalar.
+* Do **NOT** introduce a new Lipschitz hypothesis form mid-helper.
+  If helpers 3/4/5 need joint Lipschitz on `Function.uncurry f`,
+  that is fine, but introduce it consistently across helpers 3, 4,
+  and 5 — not piecemeal.
+* Do **NOT** submit a giant Aristotle batch (>5 jobs) for this
+  cluster. Per CLAUDE.md, ~5 jobs per cycle is the cadence. If
+  helpers 1 and 2 land manually and 3/4/5 are deferred, only
+  helpers 3/4/5 (3 jobs) go to Aristotle.
+* Do **NOT** poll Aristotle more than once. Submit, sleep 30 min,
+  check at the start of cycle 065.
+* Do **NOT** edit `scripts/autonomous_loop.py`. Loop infrastructure
+  is the maintainer's responsibility.
+* Do **NOT** modify `extraction/raw_text/` or
+  `extraction/formalization_data/entities/`. Those are regenerated.
+* Do **NOT** spend cycle time on the
+  `picard_lindelof_bound_strengthening` or `jordan_canonical_form_missing`
+  issues. Both are non-blocking for §406D's lift.
+* Do **NOT** bundle ~400+ lines into one cycle (cycle 060 lesson:
+  score −1). Keep cycle 064 to ≤ 200 lines of new code; defer
+  spillover to cycle 065.
 
 ---
 
-## Faithfulness flags for the worker
+## Failed approaches from attempts (DO NOT repeat)
 
-* **Adapter 1** is a definitional unfolding bridge — no
-  faithfulness divergence. Document in docstring as "trivial
-  unfolding bridge".
-* **Adapter 2** introduces a *compact-restricted* bound. The
-  autonomous theorem's `∀ t : ℝ` is stricter than what continuity
-  delivers; the cycle 064+ refactor will re-derive the autonomous
-  helpers to consume the compact-restricted form. Document this as
-  a deliberate scope decision; not a divergence from the textbook
-  (the textbook's `M = max …` is implicitly compact-restricted).
-* **Adapter 3** uses `ContinuousAt yex x₀` (extractable from
-  `HasDerivAt yex … x₀` in the `IsConvergent` predicate via
-  `HasDerivAt.continuousAt`) plus `yex x₀ = y₀`. Both are
-  immediate from `IsConvergent`'s hypotheses. No new mathematical
-  content.
+* **Cycle 060** (score −1): attempted to bundle ~430 lines of
+  outer-squeeze proof replay with explicit (a, b, c) coefficient
+  exposure in a single cycle. Regression: vacuous `exact <hypothesis>`
+  proof introduced (semantic sorry +1). Lesson: keep cycle 064 to
+  ~150 lines max; if helpers 3/4/5 grow the diff above that,
+  defer them.
+* **Cycle 008/035 phantom "commits not reaching repo"**: ignore any
+  framing in the prompt that suggests prior work didn't land.
+  Verify with `git log -1 origin/Main/Experiments` and proceed.
+  Cycle 063 landed at `7741825`.
+* **Cycle 050 `Finset.sum_le_sum_nbij'`**: this lemma does not exist
+  in current Mathlib. If you need sum-le-sum with reindexing, use
+  `← Finset.sum_image hinj` then `Finset.sum_le_sum_of_subset_of_nonneg`
+  (per the memory file).
+* **`Continuous.prod_mk` (snake_case)**: Mathlib uses `prodMk`
+  (camelCase) in current pin. If `prod_mk` fails, switch to
+  `prodMk`.
+* **`fun_prop` for `Filter.Tendsto`**: not `@[fun_prop]`-tagged.
+  Build `Continuous` first, then apply `Continuous.tendsto`.
 
 ---
 
-## Strategic context (for the worker's awareness, not action)
+## Open issues (read before starting; non-blocking for cycle 064)
 
-The cycle 062 commit `1eaf808` proves the autonomous form, which is
-the analytical core. The non-autonomous lift is mechanical
-bookkeeping. After cycle 067 closes
-`stable_consistent_isConvergent`, the natural follow-ups are
-(per `plan.md` Chapter 4):
+* `non_autonomous_lift_plan.md` — the cycle 064–067 schedule.
+  **Required reading.** Cycle 064 is cluster 1 (§406B).
+* `lem_406B_textbook_check.md` — Butcher's `(iα_i − β_i)` form is a
+  textbook typo; we use the corrected `β_i` form. The non-autonomous
+  lift preserves this correction (the algebra is identical).
+* `tautology_scanner_false_positives.md` — if the scanner flags any
+  `:= h_<name>` / `exact h_<name>` lines you wrote, rename
+  `h_<name>` → `h<name>` (drop the underscore) as a cosmetic
+  workaround. Do not touch `scripts/autonomous_loop.py`.
 
-* `thm:406C` (already done — global error bound for LMMs).
-* `thm:243A` (cross-chapter Ch.2→Ch.4 deferral; consumes
-  `IsConvergent`).
-* `thm:405A`, `thm:405B`, `thm:405C` (necessity-of-conditions
-  theorems for convergence; all consume `IsConvergent`
-  symbolically).
+---
 
-None of these are blocked by cycle 063's scope; cycle 063 is purely
-the entry point for the cycle 067 closure of `thm:406D`'s textbook
-form. The worker should focus on cycle 063's three adapters and the
-issue file, not on these downstream targets.
+## Aristotle batch suggestion (only if helpers 3/4/5 deferred)
+
+Submit a single Aristotle project containing:
+
+* `residual_bound_nonauto` (helper 3)
+* `deriv_diff_bound_nonauto` (helper 4)
+* `localTruncationError_bound_nonauto` (helper 5)
+
+Submission file goes in
+`.prover-state/aristotle_submissions/cycle_064/sub_lemmas.lean`,
+with imports matching `OpenMath/Chapter4/Section404.lean`'s import
+block (Mathlib + the autonomous helpers as proved facts). Pass the
+project ID via `mcp__aristotle__submit_file`. Sleep 30 min; check
+once at the start of cycle 065.
+
+If Aristotle returns with the joint-Lipschitz / time-argument
+issue resolved automatically (premise selection finds the right
+Mathlib helper), incorporate that solution. Otherwise stick with
+the cycle 064 manual ports + cycle 065 follow-up.

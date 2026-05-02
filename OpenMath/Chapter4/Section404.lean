@@ -3938,6 +3938,154 @@ private lemma hstart_shape_bridge
   have hsub := hyex_lim.sub (hstart j)
   simpa using hsub
 
+/-! ### Cycle 064 — §406B sub-lemma lift to non-autonomous `f : ℝ → ℝ → ℝ`
+
+The cycle 040–062 §406B sub-lemmas (FTC + Lipschitz + monotone integration)
+take an autonomous `f : ℝ → ℝ`. The textbook `IsConvergent` predicate
+(def:402A) is non-autonomous (`f : ℝ → ℝ → ℝ`); the cycle 064–067 refactor
+lifts these helpers cluster by cluster (see
+`.prover-state/issues/non_autonomous_lift_plan.md`).
+
+Cycle 064 lands the first two helpers (`exact_solution_norm_bound_nonauto`
+and `residual_integral_form_nonauto`), which carry no Lipschitz invocation
+and lift 1:1 by replacing `f (y t)` with `f t (y t)`. The remaining three
+helpers (`residual_bound`, `deriv_diff_bound`, `localTruncationError_bound`)
+apply Lipschitz with *different* time arguments on each side
+(`(x + h*ξ)` vs `x`, and `x` vs `(x − i*h)`), which `LipschitzInSecond`
+(spatial-only Lipschitz) does not bound. They are deferred to cycle 065
+under a joint-Lipschitz hypothesis on `Function.uncurry f`. -/
+
+/-- **Sub-lemma A, non-autonomous lift (cycle 064)**: pointwise bound on
+`|y(x + h*ξ) − y x|` for ξ ≤ 0 under the non-autonomous IVP hypotheses
+`y'(t) = f t (y t)` and `‖f t (y t)‖ ≤ M_bound`.
+
+Mirror of `exact_solution_norm_bound` (line 568) with `f (y t)` replaced by
+`f t (y t)`. The FTC + `norm_integral_le_…` argument is identical; only the
+integrand identity changes. No Lipschitz invocation, so the lift is 1:1.
+
+The autonomous version is preserved (still consumed by
+`stable_consistent_isConvergent_autonomous`). -/
+private lemma exact_solution_norm_bound_nonauto
+    {f : ℝ → ℝ → ℝ} {M_bound : ℝ} (hM : 0 ≤ M_bound)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (hf_y_bound : ∀ t, |f t (y t)| ≤ M_bound)
+    (x h : ℝ) (hh : 0 ≤ h)
+    (ξ : ℝ) (hξ : ξ ≤ 0) :
+    |y (x + h * ξ) - y x| ≤ h * (-ξ) * M_bound := by
+  -- Step 1: t ↦ f t (y t) is continuous (it equals deriv y, which is
+  -- continuous from C¹ y).
+  have hfy_cont : Continuous (fun t => f t (y t)) := by
+    have heq : (fun t => f t (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact hy_C1.continuous_deriv le_rfl
+  -- Step 2: HasDerivAt y (f t (y t)) t at every t.
+  have hderiv : ∀ t, HasDerivAt y (f t (y t)) t := by
+    intro t
+    have hdiff := (hy_C1.differentiable (by norm_num : (1 : WithTop ℕ∞) ≠ 0)) t
+    have ht := hdiff.hasDerivAt
+    rw [hy_ode t] at ht
+    exact ht
+  -- Step 3: integrability.
+  have hint : IntervalIntegrable (fun t => f t (y t)) MeasureTheory.volume
+                x (x + h * ξ) := hfy_cont.intervalIntegrable _ _
+  -- Step 4: FTC.
+  have hFTC : ∫ t in x..(x + h * ξ), f t (y t) = y (x + h * ξ) - y x :=
+    intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hderiv t) hint
+  -- Step 5: bound the integral by M_bound.
+  have hC : ∀ t ∈ Set.uIoc x (x + h * ξ), ‖f t (y t)‖ ≤ M_bound := by
+    intro t _
+    rw [Real.norm_eq_abs]
+    exact hf_y_bound t
+  have hbound :
+      |∫ t in x..(x + h * ξ), f t (y t)| ≤ M_bound * |h * ξ| := by
+    have hb := intervalIntegral.norm_integral_le_of_norm_le_const hC
+    rw [Real.norm_eq_abs] at hb
+    have hsub : (x + h * ξ) - x = h * ξ := by ring
+    rw [hsub] at hb
+    exact hb
+  rw [hFTC] at hbound
+  -- Step 6: |h*ξ| = h*(-ξ).
+  have habs : |h * ξ| = h * (-ξ) := by
+    rw [abs_mul, abs_of_nonneg hh, abs_of_nonpos hξ]
+  rw [habs] at hbound
+  calc |y (x + h * ξ) - y x|
+      ≤ M_bound * (h * (-ξ)) := hbound
+    _ = h * (-ξ) * M_bound := by ring
+
+/-- **Sub-lemma B, non-autonomous lift (cycle 064)**: integral form for the
+residual `y(x) − y(x − i*h) − i*h*y'(x)` under the non-autonomous IVP
+hypothesis `y'(t) = f t (y t)`.
+
+Mirror of `residual_integral_form` (line 624) with `f (y t)` replaced by
+`f t (y t)`. The FTC + change-of-variables (`smul_integral_comp_mul_add`)
+argument is identical; only the integrand identity changes. No Lipschitz
+invocation, so the lift is 1:1. -/
+private lemma residual_integral_form_nonauto
+    {f : ℝ → ℝ → ℝ} {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f t (y t))
+    (i : ℕ) (x h : ℝ) (hh : 0 ≤ h) :
+    y x - y (x - (i : ℝ) * h) - ((i : ℝ) * h) * deriv y x
+      = h * ∫ ξ in (-(i : ℝ))..0,
+                (f (x + h*ξ) (y (x + h*ξ)) - f x (y x)) := by
+  -- Setup: t ↦ f t (y t) is continuous (it equals deriv y).
+  have hfy_cont : Continuous (fun t => f t (y t)) := by
+    have heq : (fun t => f t (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact hy_C1.continuous_deriv le_rfl
+  -- HasDerivAt y (f t (y t)) t pointwise.
+  have hderiv : ∀ t, HasDerivAt y (f t (y t)) t := by
+    intro t
+    have hdiff := (hy_C1.differentiable (by norm_num : (1 : WithTop ℕ∞) ≠ 0)) t
+    have ht := hdiff.hasDerivAt
+    rw [hy_ode t] at ht
+    exact ht
+  -- Integrability of t ↦ f t (y t) on any interval.
+  have hfy_int : ∀ a b : ℝ,
+      IntervalIntegrable (fun t => f t (y t)) MeasureTheory.volume a b :=
+    fun a b => hfy_cont.intervalIntegrable a b
+  -- Continuity of ξ ↦ f (x + h*ξ) (y (x + h*ξ)) and integrability on (-i, 0).
+  have hfyhx_cont : Continuous (fun ξ : ℝ => f (x + h * ξ) (y (x + h * ξ))) := by
+    have hlin : Continuous (fun ξ : ℝ => x + h * ξ) := by fun_prop
+    exact hfy_cont.comp hlin
+  have hfyhx_int : IntervalIntegrable
+                     (fun ξ : ℝ => f (x + h * ξ) (y (x + h * ξ)))
+                     MeasureTheory.volume (-(i : ℝ)) 0 :=
+    hfyhx_cont.intervalIntegrable _ _
+  have hfyx_int : IntervalIntegrable (fun _ : ℝ => f x (y x))
+                     MeasureTheory.volume (-(i : ℝ)) 0 :=
+    continuous_const.intervalIntegrable _ _
+  -- Step A: FTC on [(x - i*h), x].
+  have hFTC : ∫ t in (x - (i : ℝ) * h)..x, f t (y t)
+                = y x - y (x - (i : ℝ) * h) :=
+    intervalIntegral.integral_eq_sub_of_hasDerivAt
+      (fun t _ => hderiv t) (hfy_int _ _)
+  -- Step B: change of variables t = h*ξ + x via smul_integral_comp_mul_add.
+  have hCV : h * ∫ ξ in (-(i : ℝ))..0, f (x + h * ξ) (y (x + h * ξ))
+              = ∫ t in (x - (i : ℝ) * h)..x, f t (y t) := by
+    have hCV0 := intervalIntegral.smul_integral_comp_mul_add
+                    (fun t => f t (y t)) (a := -(i : ℝ)) (b := 0)
+                    h x
+    have heq_l : h * (-(i : ℝ)) + x = x - (i : ℝ) * h := by ring
+    have heq_r : h * (0 : ℝ) + x = x := by ring
+    have hbody : (fun ξ : ℝ => f (h * ξ + x) (y (h * ξ + x)))
+                  = (fun ξ : ℝ => f (x + h * ξ) (y (x + h * ξ))) := by
+      funext ξ; rw [add_comm (h * ξ) x]
+    rw [smul_eq_mul, hbody, heq_l, heq_r] at hCV0
+    exact hCV0
+  -- Step C: constant integral ∫ _ in (-i)..0, f x (y x) = i * f x (y x).
+  have hConst : ∫ _ in (-(i : ℝ))..(0 : ℝ), f x (y x) = (i : ℝ) * f x (y x) := by
+    rw [intervalIntegral.integral_const, smul_eq_mul]
+    ring
+  -- Step D: assemble.
+  rw [intervalIntegral.integral_sub hfyhx_int hfyx_int]
+  rw [hConst, mul_sub, hCV, hFTC, hy_ode x]
+  ring
+
 open OpenMath.Chapter1.Section141 in
 /-- **Butcher Theorem 406D, autonomous-IVP form (Tendsto).** [Cycle 062]
 

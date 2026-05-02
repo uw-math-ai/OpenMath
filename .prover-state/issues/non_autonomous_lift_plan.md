@@ -32,11 +32,37 @@ hypothesis. List in dependency order:
 
 ### Cycle 064 — lift §406B sub-lemmas (~150 lines)
 
-* `exact_solution_norm_bound` (line 568)
-* `residual_integral_form` (line 624)
-* `residual_bound` (line 692)
-* `deriv_diff_bound` (line 790)
-* `localTruncationError_bound` = `lem:406B` (line 923)
+* `exact_solution_norm_bound` (line 568) — **LANDED cycle 064** as
+  `exact_solution_norm_bound_nonauto` (1:1 port, no Lipschitz).
+* `residual_integral_form` (line 624) — **LANDED cycle 064** as
+  `residual_integral_form_nonauto` (1:1 port, no Lipschitz).
+* `residual_bound` (line 692) — **DEFERRED to cycle 065** (joint-Lipschitz).
+* `deriv_diff_bound` (line 790) — **DEFERRED to cycle 065** (joint-Lipschitz).
+* `localTruncationError_bound` = `lem:406B` (line 923) — **DEFERRED to cycle 065**.
+
+### Cycle 064 deferral note: joint-Lipschitz hypothesis
+
+Cycle 064 traced the autonomous `residual_bound` (line 692–782) and
+`deriv_diff_bound` (line 789–822) Lipschitz invocations. In each case
+the two `f`-applications differ in their *time* argument, not just
+their spatial argument:
+
+* `residual_bound`: `|f (y(x+hξ)) − f (y x)|` becomes
+  `|f (x+hξ) (y(x+hξ)) − f x (y x)|`. Time args: `x+hξ` vs `x`.
+* `deriv_diff_bound`: `|f (y x) − f (y(x−ih))|` becomes
+  `|f x (y x) − f (x−ih) (y(x−ih))|`. Time args: `x` vs `x−ih`.
+
+`LipschitzInSecond Set.univ L f` (cycle 063 adapter) is Lipschitz in
+the *spatial* argument only, uniformly in `t`, so it does NOT bound
+`|f t₁ y₁ − f t₂ y₂|` when `t₁ ≠ t₂`.
+
+**Cycle 065 plan**: introduce a joint-Lipschitz hypothesis on the
+uncurried `f` (e.g. `LipschitzWith L_joint.toNNReal (Function.uncurry f)`,
+or jointly `(L_t, L_y)`-Lipschitz with separate constants) and apply
+it uniformly to `residual_bound_nonauto`, `deriv_diff_bound_nonauto`,
+and `localTruncationError_bound_nonauto`. Do not introduce piecemeal
+across one helper at a time — the three helpers form a tight
+algebraic chain and must share the hypothesis form.
 
 ### Cycle 065 — lift §406D recurrence helpers (~200 lines)
 
