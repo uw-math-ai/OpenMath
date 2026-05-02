@@ -933,6 +933,10 @@ error bound for one specific scheme:
   predicate, RK iff bridge, and concrete sanity check.
 - **Cycle 629 added §521 concrete bridge for implicit midpoint** —
   `rkImplicitMidpoint_toGLM_isAStable` in `OpenMath/RKAsGLM.lean`.
+- **Cycle 630 added §521 first LMM-side concrete A-stability transport** —
+  `backwardEuler_toGLM_isAStable` in `OpenMath/LMMAsGLM.lean` (direct
+  `s = 1` charpoly factorisation `X * (X − 1/(1−z))`, independent of
+  any LMM↔GLM iff bridge).
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -978,12 +982,17 @@ error bound for one specific scheme:
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
 7. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
-    Cycle 627 opened the GLM A-stability predicate and RK bridge. Next
-    milestones are: (1) prove the LMM-side iff bridge
-    `LMM.toGLM_isAStable_iff`; (2) transport concrete LMM A-stability
-    results through the §503 embedding; (3) define stability order via
-    `Matrix.exp`. Later §522 can record the Butcher–Chipman conjecture
-    outline: order of `M(z)` as approximation to `exp(z) · I`.
+    Cycle 627 opened the GLM A-stability predicate and RK bridge.
+    Cycle 630 added the first LMM-side concrete transport
+    (`backwardEuler_toGLM_isAStable`). Next milestones are:
+    (1) prove the LMM-side iff bridge `LMM.toGLM_isAStable_iff`
+    (still open — needs general-`s` charpoly factorisation
+    `charpoly(M(z)) = X^s · π(·, z)` up to scaling);
+    (2) extend the concrete LMM A-stability transports
+    (`trapezoidalRule_toGLM_isAStable` is the obvious next target);
+    (3) define stability order via `Matrix.exp`. Later §522 can record
+    the Butcher–Chipman conjecture outline: order of `M(z)` as
+    approximation to `exp(z) · I`.
 8. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
