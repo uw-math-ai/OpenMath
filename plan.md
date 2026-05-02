@@ -988,6 +988,13 @@ error bound for one specific scheme:
   `OpenMath/LMMAsGLM.lean`, completing the shift-row / implicit-row
   projection surface needed before a future `Matrix.fromBlocks`
   factorisation.
+- **Cycle 651 added the second §521 negative BDF GLM A-stability
+  transport** — `LMM.bdf4_toGLM_not_isAStable` in
+  `OpenMath/LMMAsGLM.lean` transports the classical
+  `bdf4_not_aStable` result through the BDF iff bridge
+  `LMM.toGLM_isAStable_iff_of_bdf`. The denominator side condition uses
+  the concrete coefficient `bdf4.β (Fin.last 4) = 12 / 25` and the same
+  real-part contradiction as the BDF3 transport.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.

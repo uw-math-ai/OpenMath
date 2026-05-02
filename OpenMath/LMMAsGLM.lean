@@ -1671,6 +1671,25 @@ theorem bdf3_toGLM_not_isAStable : ¬ bdf3.toGLM.IsAStable := by
     simp [Complex.sub_re, Complex.mul_re] at hre
     linarith
 
+/-- §521 — BDF4 is **not** A-stable in the GLM sense. Direct consequence
+of the BDF iff bridge `toGLM_isAStable_iff_of_bdf` and the classical
+result `bdf4_not_aStable` (Dahlquist's second barrier). -/
+theorem bdf4_toGLM_not_isAStable : ¬ bdf4.toGLM.IsAStable := by
+  intro hG
+  apply bdf4_not_aStable
+  refine (toGLM_isAStable_iff_of_bdf bdf4 ?hbdf ?hβ).mp hG
+  case hbdf =>
+    intro l hl
+    fin_cases l <;> simp [bdf4, Fin.last] at hl ⊢
+  case hβ =>
+    intro z hz_re h
+    have hβ_val : (bdf4.β (Fin.last 4) : ℝ) = 12 / 25 := by
+      simp [bdf4, Fin.last]
+    rw [hβ_val] at h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re, Complex.mul_re] at hre
+    linarith
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
