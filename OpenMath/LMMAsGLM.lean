@@ -229,6 +229,161 @@ theorem toGLM_V_iter_natAdd_eq_zero
         rw [hbeq, hl₀_val]
       · intro h; exact absurd (Finset.mem_univ _) h
 
+/-- Phase B corollary specialised to `n ≥ s`. After at least `s`
+iterations the entire past-`h*f` half of the `V`-iterate is identically
+zero. -/
+theorem toGLM_V_iter_natAdd_eq_zero_of_le
+    (m : LMM s) (q : Fin (2 * s) → ℝ) (n : ℕ) (hn : s ≤ n) (k : Fin s) :
+    ((fun v : Fin (2 * s) → ℝ =>
+        fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q)
+      (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k)) = 0 := by
+  exact toGLM_V_iter_natAdd_eq_zero m q n k (by have := k.isLt; omega)
+
+/-- Local row-sum bound for the LMM-as-GLM `V` block. This is deliberately
+private: it is only a coarse proof artefact for the §512 stability lift. -/
+private noncomputable def M_max (m : LMM s) : ℝ :=
+  1 + ∑ k : Fin s, (|m.α (Fin.castSucc k)| + |m.β (Fin.castSucc k)|)
+
+private theorem M_max_nonneg (m : LMM s) : 0 ≤ M_max m := by
+  unfold M_max
+  have hsum : 0 ≤ ∑ k : Fin s, (|m.α (Fin.castSucc k)| + |m.β (Fin.castSucc k)|) := by
+    exact Finset.sum_nonneg (fun k _ => add_nonneg (abs_nonneg _) (abs_nonneg _))
+  linarith
+
+private theorem one_le_M_max (m : LMM s) : 1 ≤ M_max m := by
+  unfold M_max
+  have hsum : 0 ≤ ∑ k : Fin s, (|m.α (Fin.castSucc k)| + |m.β (Fin.castSucc k)|) := by
+    exact Finset.sum_nonneg (fun k _ => add_nonneg (abs_nonneg _) (abs_nonneg _))
+  linarith
+
+private theorem toGLM_V_row_l1_split (m : LMM s) (k : Fin (2 * s)) :
+    (∑ l : Fin (2 * s), |m.toGLM.V k l|)
+      =
+    (∑ l : Fin s, |m.toGLM.V k
+      (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l))|)
+      + (∑ l : Fin s, |m.toGLM.V k
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l))|) := by
+  have hstep :
+      (∑ l : Fin (2 * s), |m.toGLM.V k l|)
+        =
+      ∑ l : Fin (2 * s),
+        |m.toGLM.V k (Fin.cast (Nat.two_mul s).symm
+          (Fin.cast (Nat.two_mul s) l))| := rfl
+  rw [hstep]
+  rw [Fin.sum_congr' (M := ℝ)
+    (fun l : Fin (s + s) =>
+      |m.toGLM.V k (Fin.cast (Nat.two_mul s).symm l)|)
+    (Nat.two_mul s)]
+  rw [Fin.sum_univ_add]
+
+/-- Phase C row bound: each row of the structural `V` block has ℓ¹ norm
+bounded by the local coarse constant `M_max`. -/
+theorem toGLM_V_row_l1_le (m : LMM s) (k : Fin (2 * s)) :
+    (∑ l, |m.toGLM.V k l|) ≤ M_max m := by
+  set kc : Fin (s + s) := Fin.cast (Nat.two_mul s) k with hkc_def
+  have hk : k = Fin.cast (Nat.two_mul s).symm kc := by
+    rw [hkc_def]
+    ext
+    simp
+  rw [hk]
+  refine kc.addCases (motive := fun kc' =>
+      (∑ l : Fin (2 * s),
+        |m.toGLM.V (Fin.cast (Nat.two_mul s).symm kc') l|) ≤ M_max m)
+    ?_ ?_
+  · intro j
+    by_cases hj : (j : ℕ) + 1 = s
+    · rw [toGLM_V_row_l1_split]
+      simp_rw [toGLM_V_castAdd_last_castAdd_apply m j hj,
+        toGLM_V_castAdd_last_natAdd_apply m j hj]
+      unfold M_max
+      simp_rw [abs_neg]
+      rw [Finset.sum_add_distrib]
+      linarith
+    · simp_rw [toGLM_V_castAdd_shift_apply m j hj]
+      have hc : (j : ℕ) + 1 < 2 * s := by
+        have := j.isLt
+        omega
+      rw [Finset.sum_eq_single (⟨(j : ℕ) + 1, hc⟩ : Fin (2 * s))]
+      · simp [one_le_M_max m]
+      · intro b _ hb
+        have hbne : (b : ℕ) ≠ (j : ℕ) + 1 := by
+          intro h
+          apply hb
+          ext
+          exact h
+        rw [if_neg hbne, abs_zero]
+      · intro h
+        exact absurd (Finset.mem_univ _) h
+  · intro j
+    by_cases hj : (j : ℕ) + 1 = s
+    · simp_rw [toGLM_V_natAdd_last_apply m j hj, abs_zero]
+      simp [M_max_nonneg m]
+    · simp_rw [toGLM_V_natAdd_shift_apply m j hj]
+      have hc : s + (j : ℕ) + 1 < 2 * s := by
+        have := j.isLt
+        omega
+      rw [Finset.sum_eq_single (⟨s + (j : ℕ) + 1, hc⟩ : Fin (2 * s))]
+      · simp [one_le_M_max m]
+      · intro b _ hb
+        have hbne : (b : ℕ) ≠ s + (j : ℕ) + 1 := by
+          intro h
+          apply hb
+          ext
+          exact h
+        rw [if_neg hbne, abs_zero]
+      · intro h
+        exact absurd (Finset.mem_univ _) h
+
+/-- Phase C one-step pointwise bound for the structural `V` block. -/
+theorem toGLM_V_step_le
+    (m : LMM s) (q : Fin (2 * s) → ℝ) (M : ℝ)
+    (hq : ∀ l, |q l| ≤ M) (k : Fin (2 * s)) :
+    |∑ l, m.toGLM.V k l * q l| ≤ (M_max m) * M := by
+  have hM : 0 ≤ M := by
+    have hqk := hq k
+    have hnonneg : 0 ≤ |q k| := abs_nonneg _
+    linarith
+  calc
+    |∑ l, m.toGLM.V k l * q l|
+        ≤ ∑ l, |m.toGLM.V k l * q l| := Finset.abs_sum_le_sum_abs _ _
+    _ ≤ ∑ l, |m.toGLM.V k l| * M := by
+      apply Finset.sum_le_sum
+      intro l _
+      rw [abs_mul]
+      exact mul_le_mul_of_nonneg_left (hq l) (abs_nonneg _)
+    _ = (∑ l, |m.toGLM.V k l|) * M := by
+      rw [← Finset.sum_mul]
+    _ ≤ (M_max m) * M :=
+      mul_le_mul_of_nonneg_right (toGLM_V_row_l1_le m k) hM
+
+/-- Phase C. Bound on the `V`-iterate for any number of iterations in terms
+of the input ℓ∞-norm. Used later with the y-side spectral bound. -/
+theorem toGLM_V_iter_le
+    (m : LMM s) (q : Fin (2 * s) → ℝ) (M : ℝ)
+    (hq : ∀ l, |q l| ≤ M) (n : ℕ) (k : Fin (2 * s)) :
+    |((fun v : Fin (2 * s) → ℝ =>
+        fun k' : Fin (2 * s) => ∑ l, m.toGLM.V k' l * v l)^[n] q) k|
+      ≤ (M_max m) ^ n * M := by
+  let Vop : (Fin (2 * s) → ℝ) → Fin (2 * s) → ℝ :=
+    fun v k' => ∑ l, m.toGLM.V k' l * v l
+  change |(Vop^[n] q) k| ≤ (M_max m) ^ n * M
+  induction n generalizing k with
+  | zero =>
+    simpa using hq k
+  | succ n ih =>
+    rw [Function.iterate_succ_apply']
+    change |∑ l, m.toGLM.V k l * (Vop^[n] q) l| ≤ (M_max m) ^ (n + 1) * M
+    have hiter : ∀ l : Fin (2 * s), |(Vop^[n] q) l| ≤ (M_max m) ^ n * M := by
+      intro l
+      exact ih l
+    calc
+      |∑ l, m.toGLM.V k l * (Vop^[n] q) l|
+          ≤ (M_max m) * ((M_max m) ^ n * M) :=
+            toGLM_V_step_le m (Vop^[n] q) ((M_max m) ^ n * M) hiter k
+      _ = (M_max m) ^ (n + 1) * M := by
+        rw [pow_succ']
+        ring
+
 /-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
 the stability-matrix entry collapses to the single stage resolvent factor.
 The surrounding `toGLM` blocks retain the literal §503 row/column shape. -/

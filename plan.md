@@ -813,6 +813,9 @@ error bound for one specific scheme:
   the Phase 2–4 LMM stability lift. Cycle 620 closed Phase B with
   `LMM.toGLM_V_iter_natAdd_eq_zero`: after `n + (k:ℕ) ≥ s` iterations
   the past-`h*f` slot at position `s + k` of the `V`-iterate is `0`.
+  Cycle 621 added the `n ≥ s` Phase B corollary and closed Phase C's
+  coarse row bound: `toGLM_V_row_l1_le`, `toGLM_V_step_le`, and
+  `toGLM_V_iter_le` in `OpenMath/LMMAsGLM.lean`.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
 - [ ] **§515 Stability and consistency imply convergence** — the GLM
