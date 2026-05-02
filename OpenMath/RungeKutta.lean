@@ -23,6 +23,7 @@ Chapter 2.
 -/
 
 open Finset Real
+open scoped NNReal
 
 /-! ## Butcher Tableau -/
 
@@ -737,3 +738,215 @@ theorem rkGaussLegendre2_order4 : rkGaussLegendre2.HasOrderGe4 := by
   · -- order4d: ∑ b_i a_{ij} a_{jk} c_k = 1/24
     simp [ButcherTableau.order4d, rkGaussLegendre2, Fin.sum_univ_two]
     nlinarith [sqrt3_sq]
+
+/-! ## §341 — Solvability of Implicit Runge–Kutta Stage Equations
+
+Reference: Butcher, *Numerical Methods for ODEs*, §341.
+
+For an autonomous ODE `y' = f(y)` and Butcher tableau `(A, b, c)`, the
+implicit stage equations are
+
+    `K_i = f (y₀ + h · ∑_j A i j · K_j),    i = 1, …, s.`
+
+We package these as a self-map `stageMap` on `Fin s → ℝ` whose fixed
+points are exactly the stage values. When `f` is `L`-Lipschitz and the
+step size is small enough that `h · L · rowAbsSumMax(A) < 1`, the map is
+a contraction (in the supremum metric on `Fin s → ℝ`) and Banach's fixed
+point theorem yields a unique solution.
+
+This cycle is scalar (`ℝ`-valued) only; vector right-hand sides are a
+follow-up.
+-/
+
+namespace ButcherTableau
+
+variable {s : ℕ}
+
+/-- **Implicit stage self-map.** For tableau `t`, autonomous right-hand
+side `f`, step size `h`, and base value `y₀`, the map whose fixed points
+are the stage values of the implicit Runge–Kutta system,
+    `K_i = f (y₀ + h · ∑_j A i j · K_j)`. -/
+noncomputable def stageMap (t : ButcherTableau s) (f : ℝ → ℝ)
+    (h y₀ : ℝ) : (Fin s → ℝ) → (Fin s → ℝ) :=
+  fun K i => f (y₀ + h * ∑ j, t.A i j * K j)
+
+@[simp] theorem stageMap_apply (t : ButcherTableau s) (f : ℝ → ℝ)
+    (h y₀ : ℝ) (K : Fin s → ℝ) (i : Fin s) :
+    t.stageMap f h y₀ K i = f (y₀ + h * ∑ j, t.A i j * K j) := rfl
+
+/-- The maximum row-ℓ¹ norm of `A`, `max_i ∑_j |A i j|`. Equals `0` in
+the vacuous case `s = 0`. -/
+noncomputable def rowAbsSumMax (t : ButcherTableau s) : ℝ :=
+  if h : 0 < s then
+    Finset.univ.sup' (Finset.univ_nonempty_iff.mpr ⟨⟨0, h⟩⟩)
+      (fun i : Fin s => ∑ j, |t.A i j|)
+  else 0
+
+theorem rowAbsSumMax_nonneg (t : ButcherTableau s) : 0 ≤ t.rowAbsSumMax := by
+  unfold rowAbsSumMax
+  split_ifs with hs
+  · refine Finset.le_sup'_of_le _ (Finset.mem_univ (⟨0, hs⟩ : Fin s)) ?_
+    exact Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  · rfl
+
+/-- Each row sum `∑_j |A i j|` is bounded by the row-max `rowAbsSumMax`. -/
+theorem row_absSum_le_rowAbsSumMax (t : ButcherTableau s) (i : Fin s) :
+    (∑ j, |t.A i j|) ≤ t.rowAbsSumMax := by
+  have hpos : 0 < s := lt_of_le_of_lt (Nat.zero_le _) i.is_lt
+  unfold rowAbsSumMax
+  rw [dif_pos hpos]
+  exact Finset.le_sup' (fun i : Fin s => ∑ j, |t.A i j|) (Finset.mem_univ i)
+
+/-- Pointwise distance bound for the implicit-stage self-map. -/
+theorem stageMap_dist_le (t : ButcherTableau s) {f : ℝ → ℝ} {L : ℝ≥0}
+    (hf : LipschitzWith L f) {h : ℝ} (hh : 0 ≤ h) (y₀ : ℝ)
+    (K K' : Fin s → ℝ) :
+    dist (t.stageMap f h y₀ K) (t.stageMap f h y₀ K') ≤
+      (h * L * t.rowAbsSumMax) * dist K K' := by
+  have hL : (0 : ℝ) ≤ (L : ℝ) := L.coe_nonneg
+  have hRow : 0 ≤ t.rowAbsSumMax := t.rowAbsSumMax_nonneg
+  have hdK : 0 ≤ dist K K' := dist_nonneg
+  have hRHS : 0 ≤ (h * L * t.rowAbsSumMax) * dist K K' := by positivity
+  refine (dist_pi_le_iff hRHS).mpr ?_
+  intro i
+  -- start with Lipschitz on the inner argument
+  have hLip_inner :
+      dist (t.stageMap f h y₀ K i) (t.stageMap f h y₀ K' i)
+        ≤ (L : ℝ) * dist (y₀ + h * ∑ j, t.A i j * K j)
+                          (y₀ + h * ∑ j, t.A i j * K' j) := by
+    simp only [stageMap_apply]
+    exact hf.dist_le_mul _ _
+  -- collapse the y₀ + ... and the linear combinator
+  have heq :
+      (y₀ + h * ∑ j, t.A i j * K j) - (y₀ + h * ∑ j, t.A i j * K' j)
+        = h * ∑ j, t.A i j * (K j - K' j) := by
+    have hsum :
+        (∑ j, t.A i j * K j) - (∑ j, t.A i j * K' j)
+          = ∑ j, t.A i j * (K j - K' j) := by
+      rw [← Finset.sum_sub_distrib]
+      exact Finset.sum_congr rfl (fun j _ => by ring)
+    linear_combination h * hsum
+  have hdist_inner :
+      dist (y₀ + h * ∑ j, t.A i j * K j)
+            (y₀ + h * ∑ j, t.A i j * K' j)
+        = h * |∑ j, t.A i j * (K j - K' j)| := by
+    rw [Real.dist_eq, heq, abs_mul, abs_of_nonneg hh]
+  -- bound the absolute sum
+  have habs_le :
+      |∑ j, t.A i j * (K j - K' j)|
+        ≤ (∑ j, |t.A i j|) * dist K K' := by
+    have h1 :
+        |∑ j, t.A i j * (K j - K' j)|
+          ≤ ∑ j, |t.A i j * (K j - K' j)| := Finset.abs_sum_le_sum_abs _ _
+    have h2 :
+        ∑ j, |t.A i j * (K j - K' j)|
+          ≤ ∑ j, |t.A i j| * dist K K' := by
+      apply Finset.sum_le_sum
+      intro j _
+      rw [abs_mul]
+      have hcoord : |K j - K' j| ≤ dist K K' := by
+        rw [← Real.dist_eq]; exact dist_le_pi_dist K K' j
+      exact mul_le_mul_of_nonneg_left hcoord (abs_nonneg _)
+    have h3 :
+        (∑ j, |t.A i j| * dist K K')
+          = (∑ j, |t.A i j|) * dist K K' := by
+      rw [← Finset.sum_mul]
+    linarith
+  -- combine all bounds
+  have hrow := t.row_absSum_le_rowAbsSumMax i
+  have habs_nn : 0 ≤ |∑ j, t.A i j * (K j - K' j)| := abs_nonneg _
+  have hsum_nn : 0 ≤ ∑ j, |t.A i j| := Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  -- A i j absolute sum times dist ≤ rowAbsSumMax times dist
+  have hbnd :
+      (∑ j, |t.A i j|) * dist K K' ≤ t.rowAbsSumMax * dist K K' :=
+    mul_le_mul_of_nonneg_right hrow hdK
+  -- L * (h * |∑|) ≤ L * (h * rowAbsSumMax * dist K K')
+  have hstep_a : h * |∑ j, t.A i j * (K j - K' j)|
+                  ≤ h * ((∑ j, |t.A i j|) * dist K K') :=
+    mul_le_mul_of_nonneg_left habs_le hh
+  have hstep_b : h * ((∑ j, |t.A i j|) * dist K K')
+                  ≤ h * (t.rowAbsSumMax * dist K K') :=
+    mul_le_mul_of_nonneg_left hbnd hh
+  have hstep_c :
+      (L : ℝ) * (h * |∑ j, t.A i j * (K j - K' j)|)
+        ≤ (L : ℝ) * (h * (t.rowAbsSumMax * dist K K')) :=
+    mul_le_mul_of_nonneg_left (le_trans hstep_a hstep_b) hL
+  have hfinal :
+      dist (t.stageMap f h y₀ K i) (t.stageMap f h y₀ K' i)
+        ≤ (L : ℝ) * (h * (t.rowAbsSumMax * dist K K')) := by
+    calc dist (t.stageMap f h y₀ K i) (t.stageMap f h y₀ K' i)
+        ≤ (L : ℝ) * dist (y₀ + h * ∑ j, t.A i j * K j)
+                          (y₀ + h * ∑ j, t.A i j * K' j) := hLip_inner
+      _ = (L : ℝ) * (h * |∑ j, t.A i j * (K j - K' j)|) := by rw [hdist_inner]
+      _ ≤ (L : ℝ) * (h * (t.rowAbsSumMax * dist K K')) := hstep_c
+  -- rearrange to match the desired RHS
+  have hreorg : (L : ℝ) * (h * (t.rowAbsSumMax * dist K K'))
+                  = h * (L : ℝ) * t.rowAbsSumMax * dist K K' := by ring
+  rw [hreorg] at hfinal
+  exact hfinal
+
+/-- The implicit-stage self-map is `(h · L · rowAbsSumMax)`-Lipschitz in
+the supremum metric on `Fin s → ℝ`, given `h ≥ 0` and `f` `L`-Lipschitz. -/
+theorem stageMap_lipschitzWith
+    (t : ButcherTableau s) {f : ℝ → ℝ} {L : ℝ≥0}
+    (hf : LipschitzWith L f) {h : ℝ} (hh : 0 ≤ h) (y₀ : ℝ) :
+    LipschitzWith
+      (Real.toNNReal h * L * Real.toNNReal t.rowAbsSumMax)
+      (t.stageMap f h y₀) := by
+  apply LipschitzWith.of_dist_le_mul
+  intro K K'
+  have hbound := stageMap_dist_le t hf hh y₀ K K'
+  have hcoe :
+      ((Real.toNNReal h * L * Real.toNNReal t.rowAbsSumMax : ℝ≥0) : ℝ)
+        = h * (L : ℝ) * t.rowAbsSumMax := by
+    rw [NNReal.coe_mul, NNReal.coe_mul,
+        Real.coe_toNNReal h hh,
+        Real.coe_toNNReal _ t.rowAbsSumMax_nonneg]
+  rw [hcoe]
+  exact hbound
+
+/-- **Butcher §341.** If `f` is `L`-Lipschitz and the step size is small
+enough that `h · L · rowAbsSumMax < 1`, the implicit stage system has a
+unique solution. -/
+theorem stageEquations_unique_solution
+    (t : ButcherTableau s) {f : ℝ → ℝ} {L : ℝ≥0}
+    (hf : LipschitzWith L f) {h : ℝ} (hh : 0 ≤ h) (y₀ : ℝ)
+    (hsmall : h * L * t.rowAbsSumMax < 1) :
+    ∃! K : Fin s → ℝ, t.stageMap f h y₀ K = K := by
+  set Klip : ℝ≥0 :=
+    Real.toNNReal h * L * Real.toNNReal t.rowAbsSumMax with hKlip
+  have hlip : LipschitzWith Klip (t.stageMap f h y₀) :=
+    t.stageMap_lipschitzWith hf hh y₀
+  have hKlt : Klip < 1 := by
+    have hcoe : (Klip : ℝ) = h * (L : ℝ) * t.rowAbsSumMax := by
+      simp [hKlip, NNReal.coe_mul, Real.coe_toNNReal _ hh,
+            Real.coe_toNNReal _ t.rowAbsSumMax_nonneg]
+    have h_lt : (Klip : ℝ) < 1 := by rw [hcoe]; exact_mod_cast hsmall
+    exact_mod_cast h_lt
+  have hcontr : ContractingWith Klip (t.stageMap f h y₀) := ⟨hKlt, hlip⟩
+  -- the underlying space `Fin s → ℝ` is a complete metric space and is nonempty
+  haveI : Nonempty (Fin s → ℝ) := ⟨fun _ => 0⟩
+  obtain ⟨K, hK_fix, _⟩ :=
+    hcontr.exists_fixedPoint (0 : Fin s → ℝ) (edist_ne_top _ _)
+  refine ⟨K, hK_fix, ?_⟩
+  intro K' hK'_fix
+  have h1 : K' = ContractingWith.fixedPoint (t.stageMap f h y₀) hcontr :=
+    hcontr.fixedPoint_unique hK'_fix
+  have h2 : K = ContractingWith.fixedPoint (t.stageMap f h y₀) hcontr :=
+    hcontr.fixedPoint_unique hK_fix
+  rw [h1, ← h2]
+
+end ButcherTableau
+
+/-- **Backward Euler stage equation has a unique solution** when `h · L < 1`. -/
+theorem rkImplicitEuler_stageEquations_unique_solution
+    {f : ℝ → ℝ} {L : ℝ≥0} (hf : LipschitzWith L f)
+    {h : ℝ} (hh : 0 ≤ h) (y₀ : ℝ) (hsmall : h * L < 1) :
+    ∃! K : Fin 1 → ℝ, rkImplicitEuler.stageMap f h y₀ K = K := by
+  have hrow : rkImplicitEuler.rowAbsSumMax = 1 := by
+    unfold ButcherTableau.rowAbsSumMax
+    rw [dif_pos (by norm_num : (0 : ℕ) < 1)]
+    simp [rkImplicitEuler]
+  have hsmall' : h * L * rkImplicitEuler.rowAbsSumMax < 1 := by
+    rw [hrow]; simpa using hsmall
+  exact rkImplicitEuler.stageEquations_unique_solution hf hh y₀ hsmall'

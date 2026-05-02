@@ -217,9 +217,11 @@ codebase.
 ### §34 Implicit Runge–Kutta Methods
 - [x] **§340 Introduction**: implicit Euler / implicit midpoint
   (`OpenMath/RungeKutta.lean`)
-- [ ] **§341 Solvability of implicit equations** — contraction-mapping
-  argument for `h · L · |a-coefficient bound| < 1`. Open (planned thin
-  wrapper over Mathlib `ContractingWith`).
+- [x] **§341 Solvability of implicit equations** — contraction-mapping
+  argument for `h · L · rowAbsSumMax(A) < 1`
+  (`OpenMath/RungeKutta.lean`: `stageMap`, `rowAbsSumMax`,
+  `stageMap_lipschitzWith`, `stageEquations_unique_solution`,
+  `rkImplicitEuler_stageEquations_unique_solution`).
 - [x] **§342 Methods based on Gaussian quadrature** —
   Legendre / shifted-Legendre infrastructure (`OpenMath/Legendre.lean`,
   `OpenMath/LegendreHelpers.lean`,
@@ -882,33 +884,29 @@ error bound for one specific scheme:
    file `OpenMath/LinearODE.lean`. `y(x) = exp((x − x₀) A) y₀` as a
    thin re-export of Mathlib `Matrix.exp` plus `Matrix.exp_add` for
    commuting matrices.
-7. **Butcher §341 — Solvability of implicit RK equations.** Thin
-    wrapper over Mathlib `ContractingWith` proving stage solvability
-    when `h · L · max_i Σ_j |A_{ij}| < 1`. Likely lives in
-    `OpenMath/RungeKutta.lean`.
-8. **Butcher §215 — Asymptotic error formula for the Euler method.**
+7. **Butcher §215 — Asymptotic error formula for the Euler method.**
     Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
     ODE. Extends `OpenMath/EulerConvergence.lean`.
-9. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
+8. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
     Same template as §334. Extends `OpenMath/EmbeddedRK.lean`.
-10. **Butcher §463 — Milne device for local error estimation.** New
+9. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-11. **Butcher §520–§522 — Stability matrix of a GLM and the
+10. **Butcher §520–§522 — Stability matrix of a GLM and the
     Butcher–Chipman conjecture (outline).** Extends the GLM file family.
     Stability matrix `M(z) := V + z B (I − z A)⁻¹ U`, Padé-like
     conditions on `M(z)`, outline of order of `M(z)` as approximation to
     `exp(z) · I`.
-12. **Butcher §54 — DIMSIM types and ARK methods.** New file
+11. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
-13. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+12. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
     `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
     property F.
-14. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+13. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
     §365 (effective order definition / DESIRE) plus §389 algebraic
     interpretation. Builds on Current Target.
-15. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+14. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
 
