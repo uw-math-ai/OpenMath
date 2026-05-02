@@ -1563,6 +1563,36 @@ theorem toGLM_stabilityMatrixPY_charpoly
   rw [toGLM_stabilityMatrixPY_eq_companion m z hz]
   exact toGLM_stabilityMatrixPYCompanion_charpoly _
 
+/-- §521 — At `z = 0`, the past-`h*f` rows against past-`y` columns vanish
+in the LMM-as-GLM block decomposition. The opposite off-diagonal block does
+not vanish in general; it contains the structural `β` entries from `Vℂ`. -/
+theorem toGLM_stabilityMatrixPHFY_zero (m : LMM s) :
+    toGLM_stabilityMatrixPHFY m 0 = 0 := by
+  ext j l
+  simp [toGLM_stabilityMatrixPHFY]
+
+/-- §521 — Block form of the active `Vℂ` matrix at `z = 0`. The lower-left
+off-diagonal block is zero, while the upper-right block is the nonzero
+structural past-`y`/past-`h*f` block `toGLM_stabilityMatrixPYHF m 0`. -/
+theorem toGLM_V_active_lift_eq_fromBlocks_zero (m : LMM s) :
+    m.toGLM.Vℂ =
+      Matrix.reindex (toGLM_stabilityBlockEquiv s) (toGLM_stabilityBlockEquiv s)
+        (Matrix.fromBlocks
+          (toGLM_stabilityMatrixPY m 0) (toGLM_stabilityMatrixPYHF m 0)
+          0 (toGLM_stabilityMatrixPHF m 0)) := by
+  rw [← GeneralLinearMethod.stabilityMatrix_zero m.toGLM,
+    toGLM_stabilityMatrix_eq_fromBlocks m 0, toGLM_stabilityMatrixPHFY_zero m]
+
+/-- §521 — The active `Vℂ` characteristic polynomial factors into the two
+diagonal block characteristic polynomials at `z = 0`. This uses the
+lower-left zero block; no BDF hypothesis is required. -/
+theorem toGLM_V_active_charpoly (m : LMM s) :
+    m.toGLM.Vℂ.charpoly =
+      (toGLM_stabilityMatrixPY m 0).charpoly *
+        (toGLM_stabilityMatrixPHF m 0).charpoly := by
+  rw [toGLM_V_active_lift_eq_fromBlocks_zero m, Matrix.charpoly_reindex,
+    Matrix.charpoly_fromBlocks_zero₂₁]
+
 /-- §521 — Polynomial-valued LMM stability polynomial at fixed `z`:
 package `ρ(X) - z · σ(X)` as a polynomial in `X` (a polynomial of
 degree at most `s`) rather than a scalar function of `ξ`. -/
