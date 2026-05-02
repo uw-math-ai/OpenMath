@@ -112,6 +112,40 @@ theorem toGLM_isAStable_iff (t : ButcherTableau s) :
       (charpoly_fin_one_const_isRoot_iff (t.stabilityFunction z) μ).mp hroot
     simpa [hμeq] using h z hz
 
+/-! ## §521 — Stability defect for RK as GLM -/
+
+theorem toGLM_qℂ_one (k : Fin 1) :
+    GeneralLinearMethod.qℂ (fun _ : Fin 1 => (1 : ℝ)) k = (1 : ℂ) := by
+  simp [GeneralLinearMethod.qℂ]
+
+theorem toGLM_stabilityDefect_apply (t : ButcherTableau s)
+    (z : ℂ) (k : Fin 1) :
+    t.toGLM.stabilityDefect (fun _ => (1 : ℝ)) z k =
+      t.stabilityFunction z - Complex.exp z := by
+  unfold GeneralLinearMethod.stabilityDefect
+  rw [toGLM_stabilityMatrix]
+  simp [Matrix.mulVec, dotProduct, GeneralLinearMethod.qℂ,
+    Pi.smul_apply, smul_eq_mul, Pi.sub_apply]
+
+theorem toGLM_stabilityDefect_zero (t : ButcherTableau s) :
+    t.toGLM.stabilityDefect (fun _ => (1 : ℝ)) 0 = 0 := by
+  apply GeneralLinearMethod.stabilityDefect_zero
+  intro k
+  simp [toGLM_V]
+
+theorem toGLM_stabilityDefect_eq_zero_iff (t : ButcherTableau s)
+    (z : ℂ) :
+    t.toGLM.stabilityDefect (fun _ => (1 : ℝ)) z = 0 ↔
+      t.stabilityFunction z = Complex.exp z := by
+  constructor
+  · intro h
+    have h0 : t.stabilityFunction z - Complex.exp z = 0 := by
+      simpa [toGLM_stabilityDefect_apply] using congrFun h 0
+    exact sub_eq_zero.mp h0
+  · intro h
+    funext k
+    simp [toGLM_stabilityDefect_apply, h]
+
 /-- The GLM stage map of `t.toGLM` at the constant input `yIn ≡ y₀`
 matches the standard RK stage equation `Y_i = y₀ + h · ∑ A_ij f(Y_j)`. -/
 theorem toGLM_stageMap_eq (t : ButcherTableau s) (f : ℝ → ℝ) (h y₀ : ℝ)

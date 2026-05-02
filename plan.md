@@ -842,6 +842,8 @@ error bound for one specific scheme:
   `trapezoidalRule_toGLM_isAStable`, and `bdf2_toGLM_isAStable`.
   Cycle 633 added the GLM stability-order surface with `qℂ`,
   `stabilityDefect`, `stabilityDefect_zero`, and `HasStabilityOrder`.
+  Cycle 635 added the RK-side stability-defect bridge connecting that
+  surface to the scalar RK stability function.
   Remaining §521 milestone is the LMM-side iff bridge
   `LMM.toGLM_isAStable_iff` (needs general-`s` charpoly factorisation).
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
@@ -957,6 +959,13 @@ error bound for one specific scheme:
   defining the entrywise defect `M(z) q - exp(z) q` at a real
   preconsistency vector. The next §521 milestone is the general
   `LMM.toGLM_isAStable_iff` bridge.
+- **Cycle 635 added the §521 RK-side stability-defect bridge** —
+  `ButcherTableau.toGLM_qℂ_one`,
+  `ButcherTableau.toGLM_stabilityDefect_apply`,
+  `ButcherTableau.toGLM_stabilityDefect_zero`, and
+  `ButcherTableau.toGLM_stabilityDefect_eq_zero_iff` in
+  `OpenMath/RKAsGLM.lean`, connecting cycle 633's defect surface to the
+  existing scalar stability function.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1008,6 +1017,9 @@ error bound for one specific scheme:
     `trapezoidalRule_toGLM_isAStable`, `bdf2_toGLM_isAStable`).
     Cycle 633 landed the GLM stability-order surface (`qℂ`,
     `stabilityDefect`, `stabilityDefect_zero`, `HasStabilityOrder`).
+    Cycle 635 connected that surface to RK methods through
+    `ButcherTableau.toGLM_stabilityDefect_apply` and the zero-defect
+    specialization in `OpenMath/RKAsGLM.lean`.
     Next milestones, in priority order:
     (1) prove the LMM-side iff bridge `LMM.toGLM_isAStable_iff` using
     the general-`s` charpoly factorisation
