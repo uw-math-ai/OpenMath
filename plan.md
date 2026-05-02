@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 45 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 46 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -177,7 +177,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `thm:410B` **Order Condition for Linear Multistep Methods (410B)** (§410) — `OpenMath/Chapter4/Section410.lean` (cycle 075)
 - [x] `lem:406B` **Convergence condition sufficiency bound** (§406) — `OpenMath/Chapter4/Section404.lean`
 - [x] `thm:405C` **Convergent Linear Multistep Implies Consistency** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 070)
-- [ ] `thm:410C` **Order condition via generating functions** (§410)
+- [x] `thm:410C` **Order condition via generating functions** (§410) — `OpenMath/Chapter4/Section410.lean` (cycle 076)
 - [ ] `thm:422A` **The underlying one-step method (LMM)** (§422)
 - [ ] `thm:441C` **Maximum order bound for stable linear multistep methods** (§441)
 - [ ] `lem:441B` **Maximum order coefficients negativity** (§441)

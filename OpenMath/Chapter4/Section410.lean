@@ -467,4 +467,333 @@ theorem explicitEulerLMM_C_two_ne_zero :
   simp [Fin.sum_univ_succ]
   norm_num
 
+/-! ### §410C — (ρ, σ)-form generating-function order condition
+
+Butcher §410C states the order condition in the traditional
+`(ρ, σ)` notation: `ρ(exp(z)) − z σ(exp(z)) = O(z^{p+1})`, where
+`ρ(z) = z^k · α(1/z)` and `σ(z) = z^k · β(1/z)` are the reverse
+polynomials of α, β. The load-bearing identity is
+
+  ρ(exp(z)) - z σ(exp(z)) = exp(kz) · genFn M.
+
+Multiplication by the unit `exp(kz)` (constant term 1) preserves
+the property "first p+1 coefficients vanish", so §410C reduces
+to §410B. -/
+
+/-- **The forward exponential power series `exp(z) = Σ_n z^n / n!`.**
+
+Defined directly via `PowerSeries.mk` to avoid the `Algebra ℚ ℝ`
+requirements of `PowerSeries.exp`. -/
+noncomputable def expPS : PowerSeries ℝ :=
+  PowerSeries.mk fun n => 1 / (Nat.factorial n : ℝ)
+
+/-- **The unit power series `exp(k z) = Σ_n k^n z^n / n!`.**
+
+Defined directly via `PowerSeries.mk`. Constant term is `1` (a unit
+in `PowerSeries ℝ`), so multiplying by `expKzPS k` preserves the
+"first p+1 coefficients vanish" property used in §410C. -/
+noncomputable def expKzPS (k : ℕ) : PowerSeries ℝ :=
+  PowerSeries.mk fun n => (k : ℝ) ^ n / (Nat.factorial n : ℝ)
+
+/-- **Coefficients of `expPS`.** The j-th coefficient of
+`exp(z) = Σ_n z^n / n!` is `1 / j!`. -/
+theorem expPS_coeff (n : ℕ) :
+    (PowerSeries.coeff (R := ℝ) n) expPS
+      = 1 / (Nat.factorial n : ℝ) := by
+  simp [expPS]
+
+/-- **Coefficients of `expKzPS`.** The j-th coefficient of
+`exp(k z) = Σ_n k^n z^n / n!` is `k^j / j!`. -/
+theorem expKzPS_coeff (k n : ℕ) :
+    (PowerSeries.coeff (R := ℝ) n) (expKzPS k)
+      = (k : ℝ) ^ n / (Nat.factorial n : ℝ) := by
+  simp [expKzPS]
+
+/-- **`expKzPS k` has constant term 1.** Used to show `expKzPS k`
+is a unit in `PowerSeries ℝ`. -/
+theorem expKzPS_constantCoeff (k : ℕ) :
+    (PowerSeries.constantCoeff (R := ℝ)) (expKzPS k) = 1 := by
+  simp [expKzPS]
+
+/-- **Bridge: `expPS = PowerSeries.exp ℝ`.**
+
+Both sides have constant-coefficient `1/n!` at degree `n` (with the
+Mathlib `algebraMap ℚ ℝ` collapsing to the cast). Lets us reuse
+Mathlib's `PowerSeries.exp_mul_exp_neg_eq_one` and
+`PowerSeries.exp_pow_eq_rescale_exp`. -/
+theorem expPS_eq_exp : expPS = PowerSeries.exp ℝ := by
+  ext n
+  rw [expPS_coeff, PowerSeries.coeff_exp]
+  rw [show algebraMap ℚ ℝ (1 / (n.factorial : ℚ)) = 1 / (n.factorial : ℝ) from by
+    rw [map_div₀, map_one, map_natCast]]
+
+/-- **Bridge: `expNegPS = evalNegHom (PowerSeries.exp ℝ)`.**
+
+`expNegPS = mk fun n => (-1)^n / n!`, and `evalNegHom = rescale (-1)`,
+which gives `coeff n (rescale (-1) (exp ℝ)) = (-1)^n * coeff n (exp ℝ)
+= (-1)^n / n!`. -/
+theorem expNegPS_eq_evalNegHom_exp :
+    expNegPS = PowerSeries.evalNegHom (PowerSeries.exp ℝ) := by
+  rw [PowerSeries.evalNegHom, ← expPS_eq_exp]
+  ext n
+  rw [PowerSeries.coeff_rescale, expPS_coeff, expNegPS_coeff]
+  ring
+
+/-- **Bridge: `expKzPS k = rescale (k : ℝ) (PowerSeries.exp ℝ)`.** -/
+theorem expKzPS_eq_rescale_exp (k : ℕ) :
+    expKzPS k = PowerSeries.rescale (k : ℝ) (PowerSeries.exp ℝ) := by
+  rw [← expPS_eq_exp]
+  ext n
+  rw [PowerSeries.coeff_rescale, expPS_coeff, expKzPS_coeff]
+  ring
+
+/-- **`expPS · expNegPS = 1`.**
+
+Direct corollary of Mathlib's `exp_mul_exp_neg_eq_one`. -/
+theorem expPS_mul_expNegPS_eq_one : expPS * expNegPS = 1 := by
+  rw [expPS_eq_exp, expNegPS_eq_evalNegHom_exp]
+  exact PowerSeries.exp_mul_exp_neg_eq_one
+
+/-- **`expPS^a = expKzPS a`.**
+
+Direct corollary of Mathlib's `exp_pow_eq_rescale_exp`. -/
+theorem expPS_pow_eq_expKzPS (a : ℕ) : expPS ^ a = expKzPS a := by
+  rw [expPS_eq_exp, expKzPS_eq_rescale_exp]
+  exact PowerSeries.exp_pow_eq_rescale_exp a
+
+/-- **Bridge lemma.** For `m ≤ k`, `expPS^(k - m) = expKzPS k * expNegPS^m`.
+
+Proof: multiply both sides by `expPS^m` and use `expPS · expNegPS = 1`
+plus `expPS^k = expKzPS k`. -/
+theorem expPS_pow_sub_eq_expKzPS_mul_expNegPS_pow {k m : ℕ} (hm : m ≤ k) :
+    expPS ^ (k - m) = expKzPS k * expNegPS ^ m := by
+  have h1 : expPS ^ k = expKzPS k := expPS_pow_eq_expKzPS k
+  have h2 : (expPS * expNegPS) ^ m = 1 := by
+    rw [expPS_mul_expNegPS_eq_one, one_pow]
+  calc expPS ^ (k - m)
+      = expPS ^ (k - m) * 1 := (mul_one _).symm
+    _ = expPS ^ (k - m) * (expPS * expNegPS) ^ m := by rw [h2]
+    _ = expPS ^ (k - m) * (expPS ^ m * expNegPS ^ m) := by rw [mul_pow]
+    _ = (expPS ^ (k - m) * expPS ^ m) * expNegPS ^ m := by ring
+    _ = expPS ^ k * expNegPS ^ m := by rw [← pow_add, Nat.sub_add_cancel hm]
+    _ = expKzPS k * expNegPS ^ m := by rw [h1]
+
+/-- **Butcher §410 ρ-polynomial of an LMM.**
+
+In the `(ρ, σ)` notation, `ρ(z) = z^k · α(1/z)` is the reverse
+polynomial of α(z). With our `α(z) = 1 - Σ_{i=1}^k M.α i.succ · z^i`,
+this gives
+
+```
+ρ(z) = z^k - Σ_{i=1}^k M.α i.succ · z^{k-i}.
+```
+
+Butcher writes this as `ρ(z) = z^k - α₁ z^{k-1} - ⋯ - α_k`. -/
+noncomputable def ρPoly {k : ℕ} (M : LinearMultistepMethod k) :
+    Polynomial ℝ :=
+  Polynomial.X ^ k -
+    ∑ i : Fin k,
+      Polynomial.C (M.α i.succ) * Polynomial.X ^ (k - (i.val + 1))
+
+/-- **Butcher §410 σ-polynomial of an LMM.**
+
+In the `(ρ, σ)` notation, `σ(z) = z^k · β(1/z) = Σ_{i=0}^k β_i z^{k-i}`. -/
+noncomputable def σPoly {k : ℕ} (M : LinearMultistepMethod k) :
+    Polynomial ℝ :=
+  ∑ i : Fin (k + 1), Polynomial.C (M.β i) * Polynomial.X ^ (k - i.val)
+
+/-- **Non-vacuity witness — explicit Euler's ρ-polynomial is `X - 1`.**
+
+For explicit Euler `(α₁ = 1, k = 1)`, we have
+`ρPoly explicitEulerLMM = X - 1`. -/
+theorem ρPoly_explicitEuler : ρPoly explicitEulerLMM = X - 1 := by
+  unfold ρPoly
+  simp [explicitEulerLMM]
+
+/-- **Non-vacuity witness — explicit Euler's σ-polynomial is `1`.**
+
+For explicit Euler `(β₀ = 0, β₁ = 1, k = 1)`, we have
+`σPoly explicitEulerLMM = 1`. -/
+theorem σPoly_explicitEuler : σPoly explicitEulerLMM = 1 := by
+  unfold σPoly
+  simp [explicitEulerLMM]
+
+/-- **(ρ, σ)-form generating function (forward sign).**
+
+`genFnForward M = ρ(exp(z)) - z σ(exp(z))`. By §410C, the
+condition `M.HasOrderAtLeast p` is equivalent to the first p+1
+coefficients of `genFnForward M` vanishing. -/
+noncomputable def genFnForward {k : ℕ} (M : LinearMultistepMethod k) :
+    PowerSeries ℝ :=
+  (Polynomial.aeval expPS) (ρPoly M)
+    - PowerSeries.X * (Polynomial.aeval expPS) (σPoly M)
+
+/-- **ρ-side substitution identity.**
+
+`aeval expPS (ρPoly M) = expKzPS k · aeval expNegPS (αPoly M)`.
+
+Per-monomial: `expPS^(k-(i+1)) = expKzPS k · expNegPS^(i+1)` by
+the bridge `expPS_pow_sub_eq_expKzPS_mul_expNegPS_pow`. -/
+theorem aeval_expPS_ρPoly_eq {k : ℕ} (M : LinearMultistepMethod k) :
+    (Polynomial.aeval expPS) (ρPoly M) =
+      expKzPS k * (Polynomial.aeval expNegPS) (αPoly M) := by
+  unfold ρPoly αPoly
+  rw [map_sub, map_sub, map_pow, Polynomial.aeval_X,
+      expPS_pow_eq_expKzPS k, map_one, map_sum, map_sum,
+      mul_sub, mul_one]
+  congr 1
+  rw [Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  have hi_succ_le : i.val + 1 ≤ k := i.isLt
+  rw [map_mul, map_mul, Polynomial.aeval_C, Polynomial.aeval_C,
+      map_pow, map_pow, Polynomial.aeval_X, Polynomial.aeval_X,
+      expPS_pow_sub_eq_expKzPS_mul_expNegPS_pow hi_succ_le]
+  ring
+
+/-- **σ-side substitution identity.**
+
+`aeval expPS (σPoly M) = expKzPS k · aeval expNegPS (βPoly M)`.
+
+Per-monomial: `expPS^(k-i) = expKzPS k · expNegPS^i` by the
+bridge `expPS_pow_sub_eq_expKzPS_mul_expNegPS_pow`. -/
+theorem aeval_expPS_σPoly_eq {k : ℕ} (M : LinearMultistepMethod k) :
+    (Polynomial.aeval expPS) (σPoly M) =
+      expKzPS k * (Polynomial.aeval expNegPS) (βPoly M) := by
+  unfold σPoly βPoly
+  rw [map_sum, map_sum, Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  have hi_le : i.val ≤ k := Nat.lt_succ_iff.mp i.isLt
+  rw [map_mul, map_mul, Polynomial.aeval_C, Polynomial.aeval_C,
+      map_pow, map_pow, Polynomial.aeval_X, Polynomial.aeval_X,
+      expPS_pow_sub_eq_expKzPS_mul_expNegPS_pow hi_le]
+  ring
+
+/-- **§410C unit equivalence.**
+
+`ρ(exp(z)) - z σ(exp(z)) = exp(kz) · (α(exp(-z)) - z β(exp(-z)))`,
+i.e. `genFnForward M = expKzPS k * genFn M`. The `expKzPS k`
+factor is a unit (constant term 1), so it preserves "first p+1
+coefficients vanish". -/
+theorem genFnForward_eq_expKzPS_mul_genFn {k : ℕ}
+    (M : LinearMultistepMethod k) :
+    genFnForward M = expKzPS k * genFn M := by
+  unfold genFnForward genFn
+  rw [aeval_expPS_ρPoly_eq, aeval_expPS_σPoly_eq]
+  ring
+
+/-- **Multiplication by the unit `expKzPS k` preserves vanishing of
+low coefficients.**
+
+Since `expKzPS k` has constant term 1, the iff holds: the first
+p+1 coefficients of `expKzPS k * g` vanish if and only if the first
+p+1 coefficients of `g` vanish. The forward direction uses
+induction on `p`, isolating the `(0, j)` term in the Cauchy
+product (where `expKzPS k`'s coefficient is 1). The reverse
+direction is direct from the Cauchy product, since each
+`coeff b g` term has `b ≤ j ≤ p` so vanishes. -/
+theorem coeff_expKzPS_mul_eq_zero_iff {k : ℕ} (g : PowerSeries ℝ)
+    (p : ℕ) :
+    (∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (expKzPS k * g) = 0)
+      ↔ (∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) g = 0) := by
+  constructor
+  · intro h
+    induction p with
+    | zero =>
+      intro l hl
+      interval_cases l
+      have h0 := h 0 (le_refl 0)
+      rw [PowerSeries.coeff_zero_eq_constantCoeff] at h0 ⊢
+      rw [map_mul, expKzPS_constantCoeff, one_mul] at h0
+      exact h0
+    | succ p ih =>
+      have h_restr : ∀ j ≤ p,
+          (PowerSeries.coeff (R := ℝ) j) (expKzPS k * g) = 0 :=
+        fun j hj => h j (le_trans hj (Nat.le_succ p))
+      have ih_g : ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) g = 0 := ih h_restr
+      intro l hl
+      by_cases hl_le : l ≤ p
+      · exact ih_g l hl_le
+      · have hl_eq : l = p + 1 := by omega
+        subst hl_eq
+        have hmul := h (p + 1) (le_refl _)
+        rw [PowerSeries.coeff_mul] at hmul
+        rw [Finset.sum_eq_single (0, p + 1) ?_ ?_] at hmul
+        · have h0 : (PowerSeries.coeff (R := ℝ) 0) (expKzPS k) = 1 := by
+            rw [PowerSeries.coeff_zero_eq_constantCoeff]
+            exact expKzPS_constantCoeff k
+          rw [h0, one_mul] at hmul
+          exact hmul
+        · rintro ⟨a, b⟩ hab hne
+          have hsum : a + b = p + 1 := Finset.mem_antidiagonal.mp hab
+          have hb_le : b ≤ p := by
+            by_contra hbp
+            push_neg at hbp
+            have ha : a = 0 := by omega
+            have hb_eq : b = p + 1 := by omega
+            exact hne (by simp [ha, hb_eq])
+          rw [ih_g b hb_le, mul_zero]
+        · intro hnotmem
+          exfalso
+          exact hnotmem (Finset.mem_antidiagonal.mpr (by omega))
+  · intro h j hj
+    rw [PowerSeries.coeff_mul]
+    apply Finset.sum_eq_zero
+    rintro ⟨a, b⟩ hab
+    have hsum : a + b = j := Finset.mem_antidiagonal.mp hab
+    have hb_le : b ≤ p := by omega
+    rw [h b hb_le, mul_zero]
+
+/-- **Butcher §410 Theorem 410C — (ρ, σ)-form order condition.**
+
+A linear multistep method `(ρ, σ)` has order at least `p` if and
+only if the first `p+1` formal power-series coefficients of
+`ρ(exp(z)) - z σ(exp(z))` vanish.
+
+Proof: by `thm_410B`, `M.HasOrderAtLeast p` is equivalent to the
+first p+1 coefficients of `genFn M = α(exp(-z)) - z β(exp(-z))`
+vanishing. By `genFnForward_eq_expKzPS_mul_genFn`,
+`genFnForward M = expKzPS k * genFn M`. Multiplication by the unit
+`expKzPS k` (constant term 1) preserves vanishing of the first p+1
+coefficients (`coeff_expKzPS_mul_eq_zero_iff`). -/
+theorem thm_410C {k : ℕ} (M : LinearMultistepMethod k) (p : ℕ) :
+    M.HasOrderAtLeast p
+      ↔ ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (genFnForward M) = 0 := by
+  rw [thm_410B]
+  constructor
+  · intro h
+    have h2 : ∀ j ≤ p,
+        (PowerSeries.coeff (R := ℝ) j) (expKzPS k * genFn M) = 0 :=
+      (coeff_expKzPS_mul_eq_zero_iff (genFn M) p).mpr h
+    intro j hj
+    rw [genFnForward_eq_expKzPS_mul_genFn]
+    exact h2 j hj
+  · intro h
+    have h2 : ∀ j ≤ p,
+        (PowerSeries.coeff (R := ℝ) j) (expKzPS k * genFn M) = 0 := by
+      intro j hj
+      have := h j hj
+      rwa [genFnForward_eq_expKzPS_mul_genFn] at this
+    exact (coeff_expKzPS_mul_eq_zero_iff (genFn M) p).mp h2
+
+/-! ### §410C witnesses -/
+
+/-- **Witness — explicit Euler satisfies `genFnForward = O(z²)`.**
+
+Repackaging cycle 075's `explicitEulerLMM_hasOrderAtLeast_one`
+through `thm_410C`. -/
+theorem explicitEulerLMM_genFnForward_O_z2 :
+    ∀ j ≤ 1, (PowerSeries.coeff (R := ℝ) j)
+                (genFnForward explicitEulerLMM) = 0 :=
+  (thm_410C explicitEulerLMM 1).mp explicitEulerLMM_hasOrderAtLeast_one
+
+/-- **Witness — explicit Euler has order ≥ 1 via §410C.**
+
+Re-derives `explicitEulerLMM_hasOrderAtLeast_one` through the
+`(ρ, σ)`-form order condition `thm_410C`. -/
+theorem explicitEulerLMM_hasOrderAtLeast_one_via_410C :
+    explicitEulerLMM.HasOrderAtLeast 1 :=
+  (thm_410C explicitEulerLMM 1).mpr explicitEulerLMM_genFnForward_O_z2
+
 end OpenMath.Chapter4.Section410

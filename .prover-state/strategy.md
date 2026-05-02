@@ -1,494 +1,339 @@
-# Cycle 075 Strategy — open §410B order-condition cluster (thm:410B + bridges)
+# Cycle 076 strategy
 
-## Situation snapshot
+## Status snapshot
 
-* Cycle 074 closed **`thm:410A`** (commit `fa8abdb`, score +2) and
-  landed all of cycle 073's §410 generating-function infrastructure.
-  `OpenMath/Chapter4/Section410.lean` is now ~340 LOC, 0 sorries,
-  axioms `[propext, Classical.choice, Quot.sound]`. Progress
-  counter at **44/175**.
-* Cycle 074's task results explicitly suggest: **`thm:410B`**
-  ("Order Condition for LMM"), then `C_one_eq_zero_iff_isConsistent`
-  bridge, then `thm:410C` / `thm:410D`.
-* No sorries anywhere in the codebase. No pending Aristotle results.
-* Open issues: all are deferral notes from older cycles; none block
-  this cycle.
+* Cycle 075 closed `thm:410B` (`Section410.lean:430`) and landed
+  the §410B order-condition cluster. Section410.lean has 0 sorries.
+* Progress: 45/175. The §410 cluster has 2 of 4 entities done
+  (`thm:410A`, `thm:410B`); `thm:410C` and `thm:410D` are open.
+* No pending Aristotle results.
+* No sorry's anywhere in `OpenMath/`.
+* No Aristotle results to incorporate.
 
-## Cycle goal
+## Priority 0 — Target: `thm:410C` (Order condition via generating functions, (ρ, σ) form)
 
-**Open the §410B order-condition cluster** by:
+**Why this and not `thm:410D`?** Cycle 075's worker recommended
+`thm:410D` next, framing it as ~1 packaging cycle. On inspection
+that's too optimistic: `thm:410D` requires PowerSeries composition
+with `log(1+z)` (substitute `z ↦ -log(1+z)` into our `genFn`), and
+Mathlib's `PowerSeries.subst` is non-trivial to use even when it
+applies. `thm:410C` is the *true* packaging cycle: it's the
+forward-sign (ρ, σ) restatement of `thm:410B`, achievable by
+multiplying our existing `genFn M` by the unit power series
+`exp(kz)`. Single cycle. Closes another §410 entity.
 
-1. Defining `LinearMultistepMethod.HasOrderAtLeast M p` (the
-   per-coefficient predicate `∀ j ≤ p, C M j = 0`).
-2. Proving the **§410↔§404 consistency bridge**
-   `C_one_eq_zero_iff_isConsistent`.
-3. Proving **`thm:410B`** as the generating-function reformulation:
-   `M.HasOrderAtLeast p ↔ ∀ j ≤ p, (PowerSeries.coeff ℝ j) (genFn M) = 0`
-   where `genFn M := aeval expNegPS αPoly - X * aeval expNegPS βPoly`.
-4. Landing concrete witnesses (explicit Euler order ≥ 0, ≥ 1,
-   and a `C_2 ≠ 0` non-vacuity check showing the predicate is
-   genuinely restrictive).
+`thm:410D` then becomes natural for cycle 077, after the §410
+infrastructure is fully bidirectional.
 
-Net deliverable: **+1 entity (thm:410B) → 45/175**, plus the
-infrastructure (`HasOrderAtLeast`, `C_one_eq_zero_iff_isConsistent`,
-`genFn` abbreviation) for the rest of the §410 cluster.
+### Textbook statement (`entities/thm_410C.json`)
 
-## Why thm:410B and not thm:410D / thm:431A / thm:422A
+> A linear multistep method (ρ, σ) has order p if and only if
+> `ρ(exp(z)) − z σ(exp(z)) = O(z^{p+1})`.
 
-* **thm:410B** is the natural follow-up to thm:410A — it closes the
-  loop from "C_j is the j-th coefficient" (thm:410A) to "method has
-  order p iff first p+1 coefficients vanish" (thm:410B).
-  Mathematically nearly trivial in our encoding (it's a packaging
-  of thm:410A + a definition), so a clean 1-cycle target.
-* **thm:410D** depends on thm:410B; sequencing demands 410B first.
-* **thm:431A** (Schur stability for LMMs) is self-contained but
-  needs Schur infrastructure (root location for polynomials with
-  modulus < 1) — much heavier than the §410B packaging.
-* **thm:422A** (LMM as a one-step method on ℝ^k) is heavier still
-  (vector-valued one-step infrastructure + similarity to LMM
-  recurrence).
+where ρ(z), σ(z) are the (ρ, σ)-form generating polynomials —
+i.e. the reverse-degree-`k` polynomials of α(z), β(z):
 
-`C_one_eq_zero_iff_isConsistent` is folded into this cycle as
-preparatory infrastructure: §410B's witnesses (explicit Euler has
-order ≥ 1) need it.
-
-## Faithfulness framing — DO READ BEFORE CODING
-
-Butcher (§410, p. 330, paragraph immediately preceding thm:410A):
-> "this will enable us to expand (410a) in a Taylor series
->   `C₀ y(xn) + C₁ h y'(xn) + C₂ h² y''(xn) + ⋯ + Cp h^p y^(p)(xn) + ⋯`
->   (410b) and order p will mean that C₀ = C₁ = ⋯ = Cp = 0."
-
-Then (§410, p. 331, statement of thm:410B):
-> "A linear multistep method [α, β] has order p (or higher) if and
-> only if `α(exp(z)) + zβ(exp(z)) = O(z^{p+1})`."
-
-Two faithfulness observations:
-
-1. **The textbook uses `C₀ = ⋯ = Cp = 0` as the definition of
-   "order p"** (the sentence "order p will mean that C₀ = ⋯ = Cp =
-   0" is definitional). The asymptotic interpretation
-   `L(y, x, h) = O(h^{p+1})` is implicit via (410b)'s Taylor
-   expansion but is *not* the textbook's stated definition. So
-   defining `HasOrderAtLeast M p := ∀ j ≤ p, C M j = 0` matches
-   Butcher's text directly. **Add a docstring quoting the textbook
-   sentence + a brief note that the asymptotic interpretation is
-   captured implicitly via (410b) and quantitatively via lem:406B
-   for p = 1.**
-
-2. **Sign convention.** Butcher's thm:410B uses `α(exp(z)) +
-   zβ(exp(z))` (forward sign). Our §410 encoding (cycle 073/074)
-   uses backward sign per def:406A:
-   `α(exp(-z)) - zβ(exp(-z))`. Both encode the same mathematical
-   content; the equivalence is a sign conjugation `z ↦ -z`. We
-   stick with the backward convention (matches all of §404, §405,
-   §406, §410A). **Add a docstring footnote explaining the sign
-   discrepancy and pointing to thm:410A for the convention.**
-   Do NOT introduce a forward variant in this cycle — that's a
-   `thm:410C`-bridge concern.
-
-## Concrete deliverable plan
-
-### Deliverable D1 — `HasOrderAtLeast` definition (~25 LOC)
-
-In `OpenMath/Chapter4/Section410.lean`, after the existing `C` and
-its helpers:
-
-```lean
-/-- **Butcher §410B order predicate.**
-
-A linear multistep method has order at least `p` if its first `p+1`
-Taylor coefficients vanish: `C M j = 0` for all `j ≤ p`.
-
-This matches Butcher's definitional statement (§410, p. 330):
-"order p will mean that C₀ = C₁ = ⋯ = Cp = 0".
-
-The asymptotic interpretation `L(y, x, h) = O(h^{p+1})` is captured
-implicitly via Butcher's Taylor expansion (410b); for `p = 1` it is
-captured quantitatively by `lem:406B`
-(`localTruncationError_bound`, Section404.lean). Equivalence to the
-generating-function form `α(exp(-z)) - zβ(exp(-z)) = O(z^{p+1})` is
-the content of `thm_410B` below. -/
-def LinearMultistepMethod.HasOrderAtLeast {k : ℕ}
-    (M : LinearMultistepMethod k) (p : ℕ) : Prop :=
-  ∀ j ≤ p, C M j = 0
+```
+ρ(z) = z^k - α_1 z^{k-1} - ⋯ - α_k = z^k · α(1/z)    [Butcher's α with α_0 = 1]
+σ(z) = β_0 z^k + β_1 z^{k-1} + ⋯ + β_k = z^k · β(1/z)
 ```
 
-### Deliverable D2 — `genFn` abbreviation (~10 LOC)
+(Butcher's α_0 = 1 corresponds to `M.α 0 = -1` after the sign flip
+in the §404 normalisation; under our normalisation, the αPoly we
+defined in cycle 074 already IS Butcher's α(z), see Section410.lean
+header.)
+
+### The load-bearing identity
+
+```
+ρ(exp(z)) - z σ(exp(z)) = exp(kz) · genFn M
+                        = exp(kz) · (αPoly M (exp(-z)) - z βPoly M (exp(-z)))
+```
+
+**Verification on explicit Euler (k=1, so exp(kz) = exp(z)):**
+
+* `ρ(z) = z - 1`, `σ(z) = 1` (standard for explicit Euler).
+* `ρ(exp(z)) - z σ(exp(z)) = exp(z) - 1 - z = z²/2 + z³/6 + ⋯`.
+* `genFn = (1 - exp(-z)) - z exp(-z) = z - z²/2 + z³/6 - ⋯ - z + z² - z³/2 + ⋯
+         = z²/2 - z³/3 + ⋯`.
+* `exp(z) · genFn = (1 + z + z²/2 + ⋯)(z²/2 - z³/3 + ⋯)
+                  = z²/2 + z³(1/2 - 1/3) + ⋯ = z²/2 + z³/6 + ⋯`. ✓
+
+So the identity holds, and `exp(kz)` is a unit (constant term 1)
+in `PowerSeries ℝ`, so multiplying by it preserves "vanishes for all
+`j ≤ p`". This reduces `thm:410C` to `thm:410B` plus the algebra.
+
+## Approach (concrete plan)
+
+Edit only `OpenMath/Chapter4/Section410.lean`. Do NOT touch
+`Section404.lean` (the cycle 075 cross-namespace pattern stays
+in place — see lines 388–414 of Section410.lean).
+
+### D1: define `expPS` (forward exponential power series)
 
 ```lean
-/-- **Generating function of an LMM.** Per Butcher (410c)
-(in our backward-sign convention),
-`genFn M = α(exp(-z)) - z·β(exp(-z))`. By thm_410A, the j-th formal
-power-series coefficient of `genFn M` equals `C M j`. -/
-noncomputable def genFn {k : ℕ} (M : LinearMultistepMethod k) :
+/-- The formal power series `exp(z) = Σ_n z^n / n!`. Defined
+directly via `PowerSeries.mk` to avoid `Algebra ℚ ℝ` requirements
+of `PowerSeries.exp`. -/
+noncomputable def expPS : PowerSeries ℝ :=
+  PowerSeries.mk fun n => 1 / (Nat.factorial n : ℝ)
+```
+
+### D2: define `expKzPS` (the unit `exp(kz)`)
+
+```lean
+/-- The formal power series `exp(k z) = Σ_n k^n z^n / n!`. -/
+noncomputable def expKzPS (k : ℕ) : PowerSeries ℝ :=
+  PowerSeries.mk fun n => (k : ℝ) ^ n / (Nat.factorial n : ℝ)
+```
+
+Sanity helper: `expKzPS 0 = 1` (one-line `simp` proof) — useful for
+edge cases in the unit lemma.
+
+### D3: define `ρPoly`, `σPoly`
+
+```lean
+/-- **Butcher §410 ρ-polynomial.** `ρ(z) = z^k · α(1/z)` is the
+reverse polynomial of α. With our `α(z) = 1 - Σ_{i=1}^k α_i z^i`,
+this gives `ρ(z) = z^k - Σ_{i=1}^k α_i z^{k-i}`. -/
+noncomputable def ρPoly {k : ℕ} (M : LinearMultistepMethod k) :
+    Polynomial ℝ :=
+  Polynomial.X ^ k -
+    ∑ i : Fin k,
+      Polynomial.C (M.α i.succ) * Polynomial.X ^ (k - (i.val + 1))
+
+/-- **Butcher §410 σ-polynomial.** `σ(z) = z^k · β(1/z) = Σ_{i=0}^k β_i z^{k-i}`. -/
+noncomputable def σPoly {k : ℕ} (M : LinearMultistepMethod k) :
+    Polynomial ℝ :=
+  ∑ i : Fin (k + 1), Polynomial.C (M.β i) * Polynomial.X ^ (k - i.val)
+```
+
+Witness lemmas (mirror cycle 074's `αPoly_explicitEuler`,
+`βPoly_explicitEuler`):
+
+```lean
+theorem ρPoly_explicitEuler : ρPoly explicitEulerLMM = X - 1 := by
+  unfold ρPoly; simp [explicitEulerLMM]
+theorem σPoly_explicitEuler : σPoly explicitEulerLMM = 1 := by
+  unfold σPoly; simp [explicitEulerLMM, Fin.sum_univ_succ]
+```
+
+### D4: define `genFnForward`
+
+```lean
+/-- **(ρ, σ)-form generating function (forward sign).**
+`genFnForward M = ρ(exp(z)) - z σ(exp(z))`. -/
+noncomputable def genFnForward {k : ℕ} (M : LinearMultistepMethod k) :
     PowerSeries ℝ :=
-  (Polynomial.aeval expNegPS) (αPoly M)
-    - PowerSeries.X * (Polynomial.aeval expNegPS) (βPoly M)
+  (Polynomial.aeval expPS) (ρPoly M)
+    - PowerSeries.X * (Polynomial.aeval expPS) (σPoly M)
 ```
 
-Then refactor `thm_410A` and `thm_410A_zero` to use `genFn`:
+### D5: prove the unit-equivalence (`genFnForward_eq_expKzPS_mul_genFn`)
+
+This is the load-bearing lemma. The two natural routes:
+
+* **Route A (preferred — match cycle 075's `thm_410A` style)**: prove
+  the coefficient identity `coeff j (genFnForward M) = (k^? · ⋯)` by
+  unfolding `ρPoly`, `σPoly`, applying `map_sub`/`map_sum`, and using
+  the cycle 074 `coeff_aeval_C_X_pow` lemma per monomial. Then show
+  `coeff j (expKzPS k · genFn M)` equals the same thing via
+  `PowerSeries.coeff_mul` and the closed-form `coeff j (expKzPS k)
+  = k^j / j!`.
+* **Route B**: prove the polynomial reverse identity
+  `ρPoly M = X^k * (αPoly M).reflect k` (or similar), then show
+  `aeval expPS (P.reflect k) = expKzPS k * aeval expNegPS P` for
+  any P with degree ≤ k. This is cleaner conceptually but the Mathlib
+  lemma `Polynomial.aeval_reflect` may not exist as stated — would
+  need to derive it.
+
+**Recommend Route A.** Direct coefficient unfolding worked for
+`thm_410A` in cycle 074 and is the well-trodden path. Aristotle is
+likely to handle the algebraic-equality core if we batch it right.
+
+State the identity in a way that lets the proof be modular:
+
 ```lean
-theorem thm_410A {k : ℕ} (M : LinearMultistepMethod k) (j : ℕ) :
-    (PowerSeries.coeff (R := ℝ) j) (genFn M) = C M j := …
+/-- **§410C unit equivalence.** `ρ(exp(z)) - z σ(exp(z)) = exp(kz) · genFn M`. -/
+theorem genFnForward_eq_expKzPS_mul_genFn {k : ℕ}
+    (M : LinearMultistepMethod k) :
+    genFnForward M = expKzPS k * genFn M := by
+  ext j
+  -- LHS = coeff j (αPoly M(expPS) - X · βPoly_reverse(expPS))
+  -- RHS = Σ_{i+l=j} k^i/i! · (genFn M).coeff l
+  -- Reduce both to the same closed-form polynomial in k, j.
+  sorry
 ```
 
-(Refactor is α-equivalent — should be a one-line `unfold genFn` in
-the existing proof.)
+If Route A's `ext j` proof is heavy, decompose into:
+* `coeff_genFnForward` — closed form for `coeff j (genFnForward M)`,
+  analogous to `thm_410A`.
+* `coeff_expKzPS_mul_genFn` — closed form for the RHS via Cauchy
+  product.
+* The main lemma equates them.
 
-### Deliverable D3 — `C_one_eq_zero_iff_isConsistent` bridge (~50 LOC)
+### D6: the bridge to `HasOrderAtLeast`
 
 ```lean
-/-- **§410↔§404 bridge.** Under preconsistency (def:404A), the
-first Taylor coefficient `C M 1` vanishes if and only if the method
-satisfies (404b), i.e. is consistent (def:404B).
-
-Computation (using `Nat.factorial_one`, `pow_one`, `pow_zero`):
-  `C M 1 = -Σᵢ M.α (i.succ) · (-(i+1))¹/1!
-            - Σᵢ M.β i · (-i)⁰/0!`
-        = `Σᵢ (i+1) · M.α (i.succ) - Σᵢ M.β i`
-        = `(404b LHS) - (404b RHS)`.
-So `C M 1 = 0 ↔ M.SatisfiesEq404b`. -/
-theorem C_one_eq_zero_iff_isConsistent {k : ℕ}
-    (M : LinearMultistepMethod k) (hpre : M.IsPreconsistent) :
-    C M 1 = 0 ↔ M.IsConsistent := by
-  rw [LinearMultistepMethod.IsConsistent]
-  refine Iff.trans ?_ (and_iff_right hpre)
-  -- Goal: C M 1 = 0 ↔ M.SatisfiesEq404b
-  unfold C LinearMultistepMethod.SatisfiesEq404b
-  -- After unfold, both sides are linear identities; use ring after
-  -- collapsing factorial and power-of-0 terms.
-  …
+/-- **Multiplication by `expKzPS k` preserves vanishing of low coefficients.**
+Since `expKzPS k` has constant term 1 (a unit), `coeff j (expKzPS k · g) = 0
+for all j ≤ p` iff `coeff j g = 0 for all j ≤ p`. -/
+theorem coeff_expKzPS_mul_eq_zero_iff {k : ℕ} (g : PowerSeries ℝ) (p : ℕ) :
+    (∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (expKzPS k * g) = 0)
+      ↔ (∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) g = 0) := by
+  -- Forward: induct on j ≤ p. coeff 0 (expKzPS k · g) = 1 · g.coeff 0,
+  -- coeff (j+1) is g.coeff (j+1) + sum of terms involving smaller g.coeff's,
+  -- which all vanish by IH.
+  -- Reverse: if all g coeffs ≤ p vanish, the Cauchy product sum is 0.
+  sorry
 ```
 
-**Tactic plan for the algebra step:**
-
-1. `simp only [pow_one, pow_zero, Nat.factorial_one, Nat.factorial_zero,
-   Nat.cast_one, mul_one, div_one]` — collapse `1! = 1`, `0! = 1`,
-   `(-x)^1 = -x`, `(-x)^0 = 1`.
-2. The α-sum becomes `-Σᵢ M.α i.succ * (-(i.val+1 : ℝ))`, which
-   simplifies via `neg_neg` and `mul_comm` to
-   `Σᵢ (i.val+1 : ℝ) * M.α i.succ`.
-3. The β-sum becomes `-Σᵢ M.β i * 1` = `-Σ M.β i`.
-4. Goal: `Σᵢ (i.val+1 : ℝ) · M.α i.succ - Σ M.β i = 0 ↔
-   Σᵢ (i.val+1 : ℝ) · M.α i.succ = Σ M.β i`. Close via `linarith`
-   (or `omega` after `sub_eq_zero`).
-
-**Cast bridging note (per memory `feedback_satisfieseq404b_cast.md`):**
-`SatisfiesEq404b` uses `((i : ℕ) + 1 : ℝ)` (cast from `Fin k`).
-After `unfold C`, we have `(-((i.val + 1 : ℕ) : ℝ))^1 = -(↑(i.val + 1))`
-where the cast is on the *expanded* `Nat`. These are
-extensionally equal — use `convert ... using 1; Finset.sum_congr; push_cast; ring`
-if direct rewriting stalls.
-
-### Deliverable D4 — `thm_410B` (~40 LOC)
+Then the main theorem:
 
 ```lean
-/-- **Butcher §410 Theorem 410B (order condition).**
-
-A linear multistep method has order at least `p` if and only if
-the first `p+1` formal power-series coefficients of its generating
-function `α(exp(-z)) - zβ(exp(-z))` vanish.
-
-(Sign convention: Butcher's textbook statement uses
-`α(exp(z)) + zβ(exp(z))` with forward sign convention. Our encoding
-uses backward sign matching def:406A and thm:410A; the two
-formulations are equivalent under `z ↦ -z`.)
-
-Proof: by thm_410A, `coeff j (genFn M) = C M j` for every `j`, so
-the predicate `∀ j ≤ p, coeff j (genFn M) = 0` is *literally*
-`∀ j ≤ p, C M j = 0`, which is `M.HasOrderAtLeast p`. -/
-theorem thm_410B {k : ℕ} (M : LinearMultistepMethod k) (p : ℕ) :
+/-- **Butcher §410 Theorem 410C ((ρ, σ)-form order condition).** -/
+theorem thm_410C {k : ℕ} (M : LinearMultistepMethod k) (p : ℕ) :
     M.HasOrderAtLeast p
-      ↔ ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (genFn M) = 0 := by
-  unfold LinearMultistepMethod.HasOrderAtLeast
-  refine ⟨fun h j hj => ?_, fun h j hj => ?_⟩
-  · rw [thm_410A]; exact h j hj
-  · rw [← thm_410A]; exact h j hj
+      ↔ ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (genFnForward M) = 0 := by
+  rw [thm_410B]
+  rw [genFnForward_eq_expKzPS_mul_genFn]
+  exact (coeff_expKzPS_mul_eq_zero_iff (genFn M) p).symm
 ```
 
-### Deliverable D5 — Witnesses (~50 LOC)
+(The `rw` plumbing may want a small reshuffle; the conceptual core is
+`thm:410B` + unit equivalence + unit preservation.)
 
-```lean
-/-- **Non-vacuity witness — explicit Euler has order ≥ 0.**
-Order ≥ 0 is exactly preconsistency (C₀ = 0). -/
-theorem explicitEulerLMM_hasOrderAtLeast_zero :
-    explicitEulerLMM.HasOrderAtLeast 0 := by
-  intro j hj
-  interval_cases j
-  exact C_zero_explicitEuler
+### D7: witnesses
 
-/-- **Non-vacuity witness — explicit Euler has order ≥ 1.**
-By `C_one_eq_zero_iff_isConsistent` and
-`explicitEulerLMM_isConsistent`. -/
-theorem explicitEulerLMM_hasOrderAtLeast_one :
-    explicitEulerLMM.HasOrderAtLeast 1 := by
-  intro j hj
-  interval_cases j
-  · exact C_zero_explicitEuler
-  · exact (C_one_eq_zero_iff_isConsistent explicitEulerLMM
-            explicitEulerLMM_isPreconsistent).mpr
-            explicitEulerLMM_isConsistent
+* `explicitEulerLMM_genFnForward_O_z2` — at `j = 0, 1`, the forward
+  generating function vanishes (consistency restated forward).
+* `explicitEulerLMM_hasOrderAtLeast_one_via_410C` — repackage cycle 075's
+  `explicitEulerLMM_hasOrderAtLeast_one` through `thm_410C`. (1-line
+  via `(thm_410C _ _).mpr`.)
 
-/-- **Restrictiveness check — explicit Euler does NOT have order 2.**
-Computes `C explicitEulerLMM 2` directly and shows it is non-zero
-(it equals `1/2`, since explicit Euler is the standard order-1
-method). This proves `HasOrderAtLeast` is genuinely restrictive
-(not vacuous) and matches the textbook's classification of
-explicit Euler as a first-order method. -/
-theorem explicitEulerLMM_C_two_ne_zero :
-    C explicitEulerLMM 2 ≠ 0 := by
-  unfold C explicitEulerLMM
-  simp [Fin.sum_univ_succ]
-  -- After simp, goal reduces to a concrete numerical inequality
-  -- (e.g. `1/2 ≠ 0` after factorials collapse). Close with `norm_num`.
-  norm_num
-```
+## Aristotle batch (submit at start of cycle, ~30 min sleep)
 
-The expected `C explicitEulerLMM 2` value (per Butcher's Adams
-classification) is `-1/2` (with our sign convention; can be
-positive depending on detail). The proof should compute it exactly
-via `simp [Fin.sum_univ_succ, Fin.sum_univ_zero]` then `norm_num`.
+Submit a self-contained `cycle_076_410C.lean` to Aristotle covering:
 
-If the explicit numerical value is awkward, the simpler tactic
-plan is:
-```lean
-unfold C explicitEulerLMM
-simp [Fin.sum_univ_succ, Fin.sum_univ_zero, Nat.factorial_succ,
-      Nat.factorial_zero]
-norm_num
-```
+1. `expPS_coeff` — `(PowerSeries.coeff j) expPS = 1 / j!` (1-liner;
+   parallel to `expNegPS_coeff` in cycle 073).
+2. `expKzPS_coeff` — `(PowerSeries.coeff j) (expKzPS k) = k^j / j!`.
+3. `coeff_aeval_C_X_pow_expPS` — analog of cycle 074's
+   `coeff_aeval_C_X_pow` but at `expPS` instead of `expNegPS`:
+   `coeff j (aeval expPS (C c · X^m)) = c · m^j / j!`.
+4. `expPS_pow` — closed form `expPS^m = PowerSeries.mk fun n => m^n / n!`
+   (induction on m; mirror of cycle 074's `expNegPS^m` proof).
+5. `coeff_expKzPS_mul_eq_zero_iff` (D6 bridge).
 
-## Aristotle batch (mandatory per CLAUDE.md)
+Routes 1–4 are almost mechanical re-derivations of cycle 073/074 results
+with sign change `(-1)^? → 1`. Route 5 is the bridge lemma; if Aristotle
+struggles, fall back to manual proof via induction on `j ≤ p`.
 
-Submit a batch of 5 sub-lemmas to Aristotle **at the start of the
-cycle** (before manual proof attempts). Sleep 30 min, then
-incorporate or proceed manually.
+The substantive identity `genFnForward_eq_expKzPS_mul_genFn` (D5) is
+NOT a great Aristotle target because it's a structural/inductive proof
+across the polynomial sums, not a pure premise-selection win. Prove it
+manually using cycle 075's `thm_410A` pattern (case j = 0; case j = j' + 1
+with `map_sub`/`map_sum` push-throughs).
 
-**Batch contents** (write to
-`.prover-state/aristotle_submissions/cycle_075/sub_lemmas.lean`):
+## What NOT to try
 
-1. **`C_one_eq_zero_iff_isConsistent`** (the bridge — D3 above).
-   Provide context: `IsPreconsistent`, `IsConsistent`,
-   `SatisfiesEq404b` definitions from Section404.lean. The
-   algebraic step is the only mildly tricky part and Aristotle
-   excels at this style of `simp + ring` finisher.
-2. **`thm_410B`** (D4 above). Provide context: `HasOrderAtLeast`
-   definition, `genFn` definition, `thm_410A` statement. The proof
-   is mechanical (forward/reverse via `rw [thm_410A]`) so Aristotle
-   should close it cleanly; gives a sanity check on the lemma
-   shape.
-3. **`explicitEulerLMM_hasOrderAtLeast_one`** (D5). Tests that the
-   bridge wires up correctly.
-4. **`explicitEulerLMM_C_two_ne_zero`** (D5). Numerical
-   computation; well-suited for Aristotle.
-5. **`αPoly_implicitEuler`** + **`βPoly_implicitEuler`** (combined
-   as one Aristotle file): for implicit Euler `(α₁=1, β₀=1, β₁=0)`,
-   show `αPoly = 1 - X` and `βPoly = 1`. Direct unfold + `simp`.
-   Useful non-vacuity coverage of the implicit branch (mirrors the
-   existing `αPoly_explicitEuler`/`βPoly_explicitEuler`).
+* **Don't** tackle `thm:410D` this cycle. It needs PowerSeries composition
+  (substitute `log(1+z)`) plus invertibility of substitution; Mathlib's
+  `PowerSeries.subst` works but is heavy. After thm:410C lands, cycle 077
+  can take it on with the full §410 forward/backward equivalence in hand.
+* **Don't** use `Mathlib.PowerSeries.exp` — it requires `Algebra ℚ R`
+  which complicates the substitution lemmas. Reuse cycle 073's pattern of
+  defining `expPS`/`expKzPS` directly via `PowerSeries.mk`. (Cycle 074's
+  `expNegPS` is right there at `Section410.lean:139`.)
+* **Don't** use `Polynomial.reverse` — for our αPoly, `natDegree` may
+  be < k if `M.α k = 0`, which makes `reverse` inconsistent. Define
+  `ρPoly`, `σPoly` explicitly via summation as in D3 above.
+  (`Polynomial.reflect` is the degree-aware version, but a direct
+  definition is clearer for this size.)
+* **Don't** try to refactor `genFn` to use the forward sign. Cycle 074
+  and 075 are committed to the backward-sign convention; changing it
+  would break `thm:410A`/`thm:410B`/the bridge lemmas. Define
+  `genFnForward` as a separate object and derive its relationship to
+  `genFn`.
+* **Don't** put `genFnForward` or `ρPoly`/`σPoly` under `Section404`'s
+  namespace. Keep them in §410 (the type `LinearMultistepMethod` lives
+  in §404 but our generating-function objects are §410-specific).
+  `M.HasOrderAtLeast` lives in §404 (cycle 075's design); follow that
+  pattern (already done — don't break it).
+* **Don't** raise `maxHeartbeats`. If `genFnForward_eq_expKzPS_mul_genFn`
+  is heavy, decompose into per-coefficient closed forms (analog of
+  `thm_410A` + a Cauchy-product sum lemma) instead of one big `ext j; simp`.
+* **Don't** introduce `axiom`/`constant`. If `coeff_expKzPS_mul_eq_zero_iff`
+  resists, fall back to a strong-induction proof on `j ≤ p`; the unit
+  property of `expKzPS k` (constant term 1, hence multiplicatively
+  invertible in `PowerSeries`) is the essential fact.
 
-**Polling**: ONE check after 30 min. Do NOT re-poll.
+## Faithfulness check (worker MUST run before commit)
 
-## Step-by-step worker checklist
+For `genFnForward`:
+* Textbook statement: `ρ(exp(z)) − z σ(exp(z))` (statement_text of
+  `thm:410C`).
+* Lean statement: `aeval expPS (ρPoly M) - X · aeval expPS (σPoly M)`.
+* Captures: same content (substitution at `expPS` is the formal
+  power-series version of `_(exp(z))`).
 
-1. **(5 min)** Verify cycle 074 state: `git log -1 --oneline`
-   should show `fa8abdb`. Run
-   `lake env lean OpenMath/Chapter4/Section410.lean` and confirm
-   clean compile + 0 sorries.
+For `ρPoly`, `σPoly`:
+* Textbook: ρ(z) = z^k - α_1 z^{k-1} - ⋯ - α_k, σ(z) = β_0 z^k + ⋯ + β_k
+  (Butcher §410, p. 351, in (ρ, σ) notation, with Butcher's α_0 = 1).
+* Lean: matches D3 above.
+* Note: Butcher's α_0 = 1 corresponds to our `M.α 0 = -1`; the sign
+  is absorbed in the `αPoly = 1 - Σ ...` definition (cycle 074
+  Section410 header). Our `αPoly` IS Butcher's α(z), so our `ρPoly`
+  IS Butcher's ρ(z) = z^k · α(1/z).
 
-2. **(15 min)** Submit Aristotle batch (above). Use
-   `mcp__aristotle__submit_directory` on
-   `.prover-state/aristotle_submissions/cycle_075/`. Record
-   project ID. Set wakeup for 30 min.
+For `thm_410C`:
+* Textbook: "[α, β] LMM has order p iff ρ(exp(z)) - z σ(exp(z)) = O(z^{p+1})".
+* Lean: `M.HasOrderAtLeast p ↔ ∀ j ≤ p, coeff j (genFnForward M) = 0`.
+* Captures: same content. The `O(z^{p+1})` is the standard formal
+  power-series ⇔ "first p+1 coefficients vanish" (same encoding choice
+  as `thm_410B`).
 
-3. **(20 min)** Add `genFn` abbreviation (D2). Refactor existing
-   `thm_410A` and `thm_410A_zero` to use it. Compile-check
-   (`lake env lean OpenMath/Chapter4/Section410.lean`).
+For `genFnForward_eq_expKzPS_mul_genFn`:
+* This is a derived algebraic identity, not a textbook entity. Tautology
+  check: PASS — neither side syntactically equals a hypothesis.
+* Identity check: the proof unfolds both sides and identifies them
+  via Cauchy product algebra. Substantive.
 
-4. **(15 min)** Add `HasOrderAtLeast` definition (D1) with
-   docstring quoting Butcher. Compile-check.
+## Pre-commit final checks
 
-5. **(40 min)** Prove `C_one_eq_zero_iff_isConsistent` (D3)
-   manually. Use `lean_multi_attempt` to test the simp/ring
-   tactic at the algebra step before committing.
+* `lake env lean OpenMath/Chapter4/Section410.lean` — clean compile.
+* `#print axioms thm_410C` — must be `[propext, Classical.choice, Quot.sound]`.
+  If `sorryAx` shows up, run `lake build OpenMath.Chapter4.Section410`
+  to refresh `.olean` (per cycle 072 lesson).
+* `lean_status.json::thm:410C` → `formalized`, with `lean_file` and
+  `lean_symbol` fields populated.
+* `plan.md::thm:410C` from `[ ]` to `[x]`. Bump progress 45 → 46.
 
-6. **(20 min)** Prove `thm_410B` (D4) manually. Should be ~10 LOC
-   by direct rw + `thm_410A`.
+## Suggested follow-on for cycle 077
 
-7. **(30 min)** Add witnesses (D5). Use `lean_multi_attempt` for
-   the `C explicitEulerLMM 2 ≠ 0` numerical step.
+`thm:410D` — log-form `α((1+z)⁻¹) − log(1+z)·β((1+z)⁻¹) = O(z^{p+1})`.
+With cycle 076's `expPS`/`expKzPS` infrastructure landing, the natural
+approach is to define:
 
-8. **(15 min)** Check Aristotle once. If `C_one_eq_zero_iff_isConsistent`
-   or any other returned lemma has a cleaner proof than yours,
-   substitute it (with attribution comment); otherwise keep
-   manual. Verify file still compiles + axioms still
-   `[propext, Classical.choice, Quot.sound]`.
+* `logOnePlusPS` — `Σ_{n≥1} (-1)^{n-1} z^n / n`.
+* `oneOverOnePlusPS` — `Σ_n (-1)^n z^n` (geometric).
 
-9. **(20 min)** Pre-commit faithfulness checklist (CLAUDE.md):
-   - For each new `def`/`theorem`, quote textbook statement and
-     verify Lean version captures the same content.
-   - **Tautology check**: `HasOrderAtLeast` ↔ "all C_j = 0" is the
-     definition; `thm_410B` is "all C_j = 0" ↔ "all coefficients
-     of genFn vanish". The latter is non-trivial because
-     `coeff j (genFn) = C M j` is `thm_410A` (a substantive
-     identity, not an unfold). PASS.
-   - **Identity check**: `thm_410B`'s proof is a 2-step
-     `rw [thm_410A]` in each direction. NOT vacuous because
-     `thm_410A` is doing the work.
-   - **Hypothesis strength check**: Butcher's 410B takes only an
-     LMM. Our version is parameterised only by
-     `M : LinearMultistepMethod k`. PASS.
+and prove the substitution identity that under the formal identity
+`exp(-log(1+z)) = (1+z)^{-1}`, the cycle 075/076 results transfer.
 
-10. **(10 min)** Update `extraction/formalization_data/lean_status.json`:
-    flip `thm:410B` to `formalized` with notes pointing at
-    `OpenMath/Chapter4/Section410.lean::thm_410B`. Update
-    `plan.md::thm:410B` from `[ ]` to `[x]` and bump progress
-    counter `44 → 45 of 175`.
+This is a 1–2 cycle deliverable and closes the §410 cluster.
 
-11. **(15 min)** Write `.prover-state/task_results/cycle_075.md`
-    documenting deliverables, approach, faithfulness check, and
-    suggested next step (likely `thm:410D` or
-    `thm:410C`-bridging).
+## Cycle deliverable bar
 
-12. **(10 min)** Final `lake build OpenMath.Chapter4.Section410`
-    + `#print axioms OpenMath.Chapter4.Section410.thm_410B`
-    sanity check. Commit and push.
+Minimum acceptable: D1–D4 land (definitions + witnesses) and the
+unit-equivalence sub-lemma `genFnForward_eq_expKzPS_mul_genFn` is
+stated as `sorry`-first, with at least 2 of the Aristotle-batched
+sub-lemmas (D6 bridge, expPS coefficient lemma) closed. Issue file
+documents what blocks the main `thm_410C`.
 
-Total budget: ~3.5 hours of worker time. Net diff: +5 to +8
-theorems and 1 new definition; probably ~150–200 LOC added.
+Target: full closure of `thm:410C` with 0 sorries and standard axioms.
 
-## What NOT to do this cycle
-
-* **Do NOT define `HasOrderAtLeast` asymptotically.** A predicate
-  like `∃ C, ∀ y h, |L(y,x,h)| ≤ C · h^{p+1}` would be the
-  *characterization* via lem:406B-style bounds. It is heavier
-  (requires `Filter.IsBigO` or a quantitative bound) and is NOT
-  Butcher's stated definition. The C_j-vanishing form matches
-  Butcher's text verbatim and is faithful.
-
-* **Do NOT introduce a forward-sign `αPolyForward`/`βPolyForward`
-  pair to literally match Butcher's 410B `+z β(exp(z))` form.**
-  That is `thm:410C` territory (the textbook notes 410C is "this
-  result restated in (ρ, σ) notation"). The sign-conjugation
-  bridge can be a future deliverable. Document the sign mismatch
-  in `thm_410B`'s docstring instead.
-
-* **Do NOT formalize Butcher's `O(z^{p+1})` directly via
-  `Filter.IsBigO`.** That requires a topology on `PowerSeries ℝ`
-  which Mathlib does not have at the level of generality we need
-  here. Use the per-coefficient form
-  `∀ j ≤ p, coeff j (genFn M) = 0`, which is the textbook's
-  operational meaning of `O(z^{p+1})` for formal power series.
-
-* **Do NOT touch `Section404.lean` or `Section405.lean`.** All work
-  for cycle 075 lives in `Section410.lean`. Keep the diff
-  localized.
-
-* **Do NOT raise `maxHeartbeats`.** If the explicit-Euler
-  numerical step `C explicitEulerLMM 2 ≠ 0` is slow, decompose:
-  use `decide` on the rational-arithmetic step, or compute the
-  literal value first with `have hC2 : C explicitEulerLMM 2 = 1/2 := ...`
-  then `rw [hC2]; norm_num`.
-
-* **Do NOT skip the Aristotle batch.** Per CLAUDE.md:
-  "Maximize Aristotle usage. It is free compute." The 5-sub-lemma
-  batch above is the cycle's mandated batch.
-
-* **Do NOT poll Aristotle more than once.** The CLAUDE.md
-  "submit, sleep 30 min, check once" rule is explicit; cycle 074's
-  worker followed it correctly and so should you.
-
-* **Do NOT introduce `axiom` or `constant` for any step.** The
-  cycle 075 plan has no infrastructure gaps — all needed Mathlib
-  pieces (`Polynomial.aeval`, `PowerSeries.coeff`, factorials,
-  `Fin.sum_univ_succ`) exist and were exercised by cycle 074.
-
-* **Do NOT widen `IsConvergent` further.** The cycle 068
-  strengthening (joint Lipschitz + global C¹ + global trajectory
-  bound) is sufficient and documented. §410B does not consume
-  `IsConvergent`.
-
-* **Do NOT commit Section410.lean with any new sorry.** Net sorry
-  count must stay at 0. If a sub-lemma proof goes sideways,
-  decompose it into smaller pieces and prove the pieces; do NOT
-  leave a `sorry` placeholder. (Cycle 073's revert is the
-  cautionary tale.)
-
-* **Do NOT use the `unfold C; ring` shortcut for the
-  `C M 1 = 0 ↔ M.SatisfiesEq404b` step.** As cycle 074 discovered,
-  `match`-based definitions like `C` do not auto-reduce under
-  `ring`. Use the explicit
-  `simp only [pow_one, pow_zero, Nat.factorial_one, Nat.factorial_zero,
-   Nat.cast_one, mul_one, div_one]` collapse first, then `linarith`
-  or `omega` to close.
-
-* **Do NOT chase the "forward-vs-backward sign convention" issue
-  this cycle.** Document it in the `thm_410B` docstring; defer
-  the literal forward-form variant to a later cycle (likely the
-  `thm:410C` bridge cycle).
-
-* **Do NOT modify `scripts/autonomous_loop.py`.** Per the standing
-  `tautology_scanner_false_positives.md` issue, scanner / prompt-builder
-  bugs are loop-maintainer territory, not worker territory.
-
-## Backup plan if Aristotle returns surprising results
-
-If Aristotle returns a proof for `thm_410B` that uses a
-*different* abbreviation than `genFn` (e.g. inlines the
-`aeval expNegPS αPoly - X * aeval expNegPS βPoly` expression),
-either accept the inline form and skip D2's `genFn` abbreviation,
-or do the trivial `unfold genFn` rewrite in the returned proof.
-Prefer keeping the abbreviation — it makes the §410C / §410D
-work cleaner.
-
-If Aristotle's `C_one_eq_zero_iff_isConsistent` proof works but
-uses the `convert` cast bridge from
-`feedback_satisfieseq404b_cast.md`, prefer it (the cast bridge is
-the proven-correct pattern; the simp/linarith plan in D3 is the
-fallback).
-
-If Aristotle's `explicitEulerLMM_C_two_ne_zero` proof returns a
-specific numerical value for `C explicitEulerLMM 2`, record it in
-the witness's docstring (it should be `1/2` or `-1/2` depending
-on sign collection — the actual sign is an interesting datum
-worth documenting).
-
-If Aristotle fails on **all 5** sub-lemmas (unusual for goals this
-algebraically standard), fall back to the manual proofs in D3/D4/D5;
-they are individually small enough to close in cycle time.
-
-## Backup plan if the cycle stalls
-
-If by hour 3 not all 5 deliverables (D1–D5) are landed:
-
-* **Minimum viable cycle**: ship D1 (`HasOrderAtLeast` definition)
-  + D2 (`genFn` abbreviation + thm_410A refactor) + D3
-  (`C_one_eq_zero_iff_isConsistent`) + D4 (`thm_410B`). Defer D5
-  witnesses to cycle 076. This still bumps the progress counter
-  to 45/175 and lands the §410B order condition.
-* **Smaller fallback**: ship D1 + D2 + D4 only. The
-  `C_one_eq_zero_iff_isConsistent` bridge can be deferred — it
-  is needed only by D5's `explicitEulerLMM_hasOrderAtLeast_one`,
-  not by `thm_410B` itself.
-
-In any case, **commit ONLY zero-sorry work**. Cycle 073's revert
-shows that any sorry-bearing commit triggers an automatic revert
-even if the work is sound. Better to ship a smaller diff than to
-re-trigger the revert.
-
-## Cross-references
-
-* `OpenMath/Chapter4/Section410.lean:125-132` — `C` definition.
-* `OpenMath/Chapter4/Section410.lean:304-338` — existing
-  `thm_410A` (refactor target for D2).
-* `OpenMath/Chapter4/Section404.lean:124-137` — `SatisfiesEq404b`,
-  `IsConsistent`, `IsPreconsistent` (consumed by D3).
-* `OpenMath/Chapter4/Section404.lean:88-152` — explicit Euler
-  preconsistency / consistency witnesses (consumed by D5).
-* `extraction/formalization_data/entities/thm_410B.json` —
-  textbook statement (faithfulness target for D4).
-* `.prover-state/task_results/cycle_074.md` §"Suggested next
-  approach" — origin of this cycle's plan.
-* Memory `feedback_satisfieseq404b_cast.md` — cast bridging
-  pattern relevant to D3's algebra step.
+If the unit-equivalence proof balloons (>200 lines or `maxHeartbeats`
+trouble), decompose along the cycle 074 `thm_410A` pattern: per-coeff
+closed form + α-side identity + β-side identity + ring/algebra
+finisher.

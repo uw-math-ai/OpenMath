@@ -756,9 +756,10 @@
     "notes": "Closed in cycle 075 as a packaging of thm:410A (cycle 074) plus the new HasOrderAtLeast predicate (∀ j ≤ p, C M j = 0). Per-coefficient form `∀ j ≤ p, coeff j (genFn M) = 0` — the textbook's `O(z^{p+1})` operationalised for formal power series. Sign convention is backward (matches def:406A and §410A); textbook writes forward but the two are equivalent under z ↦ -z, documented in docstring. Cycle 075 also lands the §410↔§404 consistency bridge `C_one_eq_zero_iff_isConsistent`, the `genFn` abbreviation, and three witnesses (explicitEulerLMM has order ≥ 0 and ≥ 1, but C 2 ≠ 0). Bridge proof was Aristotle-suggested (`simp [C, ...]; constructor <;> norm_num <;> linarith`). Axioms: [propext, Classical.choice, Quot.sound]."
   },
   "thm:410C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section410.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section410.thm_410C",
+    "status": "formalized",
+    "notes": "Closed in cycle 076 as a packaging of thm:410B (cycle 075) plus the §410C unit equivalence `genFnForward M = expKzPS k * genFn M`. New §410C infrastructure: `expPS`, `expKzPS k` (forward and rescaled exp power series), `ρPoly`/`σPoly` (Butcher's reverse polynomials of α/β), `genFnForward M = aeval expPS (ρPoly M) - X · aeval expPS (σPoly M)`. The unit equivalence reduces per-monomial to `expPS^(k - m) = expKzPS k · expNegPS^m` for `m ≤ k`, which follows from `expPS^k = expKzPS k` (via Mathlib's `exp_pow_eq_rescale_exp`) and `expPS · expNegPS = 1` (via Mathlib's `exp_mul_exp_neg_eq_one`). Bridge to PowerSeries.exp via `expPS = PowerSeries.exp ℝ` (algebraMap ℚ ℝ collapses to cast). The unit-preservation iff `coeff_expKzPS_mul_eq_zero_iff` is proved manually by induction on p (forward: isolate the (0, p+1) Cauchy term; reverse: every Cauchy term has b ≤ j ≤ p so vanishes). Cycle 076 also lands two witnesses: `explicitEulerLMM_genFnForward_O_z2` and `explicitEulerLMM_hasOrderAtLeast_one_via_410C`. Aristotle (project 7fa8918d) independently solved all 5 helpers but my Mathlib-bridged versions were already in place. Axioms: [propext, Classical.choice, Quot.sound]."
   },
   "thm:410D": {
     "lean_file": null,
