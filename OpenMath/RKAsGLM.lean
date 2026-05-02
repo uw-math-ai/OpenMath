@@ -213,3 +213,28 @@ theorem rkImplicitEuler_toGLM_isAStable :
     field_simp [hne']
     ring
   simpa [hfun] using h
+
+/-- Implicit midpoint is A-stable after the §502 embedding into GLMs. -/
+theorem rkImplicitMidpoint_toGLM_isAStable :
+    (rkImplicitMidpoint).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  have hne' : (1 : ℂ) - z * (1/2 : ℂ) ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re, Complex.mul_re] at hre
+    linarith
+  have hne : 1 - z * (rkImplicitMidpoint.A 0 0 : ℂ) ≠ 0 := by
+    simpa [rkImplicitMidpoint] using hne'
+  have hne2 : (2 : ℂ) - z ≠ 0 := by
+    intro h2
+    apply hne'
+    calc
+      (1 : ℂ) - z * (1/2 : ℂ) = ((2 : ℂ) - z) / 2 := by ring
+      _ = 0 := by simp [h2]
+  have h := rkImplicitMidpoint_aStable z hz hne
+  have hfun : rkImplicitMidpoint.stabilityFunction z = rkImplicitMidpoint.stabilityFn1 z := by
+    simp [ButcherTableau.stabilityFunction, ButcherTableau.stabilityFn1, rkImplicitMidpoint]
+    field_simp [hne', hne2]
+    ring
+  simpa [hfun] using h

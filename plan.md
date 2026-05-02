@@ -931,6 +931,8 @@ error bound for one specific scheme:
   `ButcherTableau.toGLM_isAStable_iff`, and
   `rkImplicitEuler_toGLM_isAStable` landed as the GLM A-stability
   predicate, RK iff bridge, and concrete sanity check.
+- **Cycle 629 added §521 concrete bridge for implicit midpoint** —
+  `rkImplicitMidpoint_toGLM_isAStable` in `OpenMath/RKAsGLM.lean`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
