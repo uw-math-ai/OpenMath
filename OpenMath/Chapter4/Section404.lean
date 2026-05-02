@@ -297,8 +297,36 @@ step size shrinks, and every `x > x₀`, the sequence of LMM iterates
 > such initial value problem, `Y_m − y(x) → 0, as m → ∞`."
 > (Butcher 2008, p. 340.)
 
-Encoded faithfully: `f` continuous, `f` Lipschitz-in-second, `yex`
-solves the IVP, `start` produces the `k` initial values and converges
+**Faithfulness deviation (cycle 068)**. The textbook quote requires only
+`f` continuous and `f` Lipschitz in its second variable. The formal
+predicate strengthens these to:
+
+1. `LipschitzWith L (Function.uncurry f)` — joint Lipschitz on the
+   uncurried `f` (rather than spatial-only `LipschitzInSecond`). This
+   is required because the §406D recurrence-form bound proof
+   (cycles 064–067) compares `f t₁ y₁` with `f t₂ y₂` for *different*
+   times `t₁, t₂`, which spatial-only Lipschitz does not bound.
+2. `ContDiff ℝ 1 yex` — global C¹ on the exact solution (rather than
+   merely `HasDerivAt yex (f x (yex x)) x` for `x ≥ x₀`). This is
+   required because the §406B residual bound proof applies FTC to
+   `yex'`, which needs continuity of `yex'` on all of ℝ.
+3. A global trajectory bound `∀ t, |f t (yex t)| ≤ M_bound` with
+   `M_bound ≥ 0`. This is required because the local truncation-error
+   bound (`lem:406B`) needs a uniform `M_bound` on `f ∘ trajectory`,
+   which continuity alone does not provide.
+
+For any IVP that arises in practice (`f` smooth, `yex` on a bounded
+trajectory), all three additional conditions are automatic. The
+strengthening rules out pathological `f`s that Butcher's argument
+would not actually handle either.
+
+See `.prover-state/issues/is_convergent_strengthened.md` for the full
+discussion, including the table of helper-chain hypotheses that drive
+each strengthening.
+
+Encoded: `f` continuous, `f` jointly Lipschitz on `Function.uncurry f`,
+`yex` is C¹ and solves the IVP on all of ℝ with `|f ∘ trajectory|`
+globally bounded, `start` produces the `k` initial values and converges
 to `y₀` with `h`, and `Y m` is any sequence of iterates of `M` (with
 step size `(x-x₀)/m`) whose first `k` entries match `start`. The
 conclusion is the textbook limit. -/
@@ -307,10 +335,14 @@ def LinearMultistepMethod.IsConvergent {k : ℕ}
   ∀ (f : ℝ → ℝ → ℝ),
     Continuous (Function.uncurry f) →
   ∀ (L : ℝ≥0),
-    OpenMath.Chapter1.Section110.LipschitzInSecond Set.univ L f →
+    LipschitzWith L (Function.uncurry f) →
   ∀ (x₀ y₀ : ℝ) (yex : ℝ → ℝ),
     yex x₀ = y₀ →
-    (∀ x ≥ x₀, HasDerivAt yex (f x (yex x)) x) →
+    ContDiff ℝ 1 yex →
+    (∀ x, HasDerivAt yex (f x (yex x)) x) →
+  ∀ (M_bound : ℝ),
+    0 ≤ M_bound →
+    (∀ t, |f t (yex t)| ≤ M_bound) →
   ∀ (start : ℝ → Fin k → ℝ),
     (∀ i : Fin k,
       Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) →
@@ -5381,24 +5413,230 @@ theorem LinearMultistepMethod.stable_consistent_isConvergent_autonomous
   exact (tendsto_zero_iff_abs_tendsto_zero _).mpr habs_tendsto
 
 /-- **Butcher Theorem 406D (p. 347): a stable consistent linear
-multistep method is convergent.** [STATUS: scaffold; closure deferred
-to cycle 063+.]
-
-The full `IsConvergent` predicate is non-autonomous (`f : ℝ → ℝ → ℝ`),
-but the cycle 045–062 helper chain is built for autonomous
-`f : ℝ → ℝ`. The autonomous-IVP form is closed in cycle 062 as
-`stable_consistent_isConvergent_autonomous`; the cycle 063+ task is
-to lift `LipschitzInSecond Set.univ L f` ⇒ per-`x` `LipschitzWith L`
-on the autonomous restriction `fun y => f x y`, then specialise.
+multistep method is convergent.**
 
 Textbook statement (`entities/thm_406D.json`):
 > "A stable consistent linear multistep method is convergent."
 
-The body is `sorry` pending cycle 063+ closure. -/
+The proof closes via the cycle 064–067 non-autonomous lift of the
+§406B + §406D helper chain (cluster 4 of the cycle 064–068 plan).
+Structure:
+
+* **Step 0** — handle the `k = 0` edge case: `IsConsistent` requires
+  `1 = ∑ i : Fin 0, M.α i.succ = 0`, which is contradictory.
+* **Step 1** — extract canonical `Θ` via `theta_bounded_of_isStable`.
+* **Step 2** — bridge: convert the predicate's `LipschitzWith L
+  (Function.uncurry f)` (with `L : ℝ≥0`) to the helper's
+  `LipschitzWith ((L : ℝ)).toNNReal (Function.uncurry f)` shape.
+* **Step 3** — derive `hyex_ode` (autonomous-shape) from `HasDerivAt`.
+* **Step 4** — bridge `hstart` shape via the cycle 063 adapter.
+* **Step 5** — extend `start : ℝ → Fin k → ℝ` to `Yh : ℝ → ℕ → ℝ`
+  via the dependent-if extension (`if n < k then start h ⟨n, _⟩
+  else 0`). The squeeze argument only ever evaluates `Yh h j.val`
+  for `j : Fin k`, where the extension agrees with `start h j` —
+  and where `start h_m j = Y m j.val` by the predicate's per-`m`
+  initial-data clause.
+* **Step 6** — derive `M₀` (an Archimedean threshold) such that
+  `((x − x₀) / m) · L · |M.β 0| < 1` holds for all `m ≥ M₀`.
+* **Step 7** — per-`m` closed-form bound via cycle 067's
+  `globalError_recurrence_form_explicit_nonauto` + cycle 050's
+  `discrete_gronwall_exp_bound`.
+* **Step 8** — replace `aOf … (Y m) x₀` with `aOf … (Yh h_m) x₀`
+  inside the per-`m` bound (they agree because `aOf` only depends on
+  the first `k` indices).
+* **Step 9** — apply the cycle 062 outer-squeeze helpers to conclude
+  `Tendsto (fun m ↦ |Y m m − yex x|) atTop (nhds 0)`, then drop the
+  absolute value.
+
+See `.prover-state/issues/is_convergent_strengthened.md` for the
+faithfulness deviation note: the predicate is strengthened beyond
+the textbook quote (`f` continuous + Lipschitz-in-second) to
+joint-Lipschitz + global C¹ + global trajectory bound. -/
 theorem LinearMultistepMethod.stable_consistent_isConvergent
     {k : ℕ} (M : LinearMultistepMethod k)
     (hstab : M.IsStable) (hcons : M.IsConsistent) :
     M.IsConvergent := by
-  sorry
+  intro f hf_cont L hf_lip_joint x₀ y₀ yex hyex_x₀ hyex_C1 hyex_ode_at
+        M_bound hM hf_yex_bound start hstart x hxx Y hY_props
+  by_cases hk : 0 < k
+  · -- Main case k ≥ 1.
+    -- Step 1: extract canonical Θ from stability.
+    obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab
+    -- Step 2: bridge L : ℝ≥0 to the helper chain's L_joint : ℝ shape.
+    have hL_joint : (0 : ℝ) ≤ (L : ℝ) := L.coe_nonneg
+    have hL_toNNReal : ((L : ℝ)).toNNReal = L := Real.toNNReal_coe
+    have hf_lip_joint' : LipschitzWith ((L : ℝ)).toNNReal
+                            (Function.uncurry f) := by
+      rw [hL_toNNReal]; exact hf_lip_joint
+    -- Step 3: derive autonomous-shape hyex_ode from HasDerivAt.
+    have hyex_ode : ∀ t, deriv yex t = f t (yex t) :=
+      fun t => (hyex_ode_at t).deriv
+    -- Step 4: bridge hstart shape to per-`h` form via cycle 063 adapter.
+    have hyex_cont_x₀ : ContinuousAt yex x₀ :=
+      hyex_C1.continuous.continuousAt
+    have hstart' := hstart_shape_bridge hyex_x₀ hyex_cont_x₀ hstart
+    -- Step 5: extend `start : ℝ → Fin k → ℝ` to `Yh : ℝ → ℕ → ℝ` so
+    -- the cycle 062 squeeze helpers (which take `Yh : ℝ → ℕ → ℝ`)
+    -- can be applied. The extension is by zero past `Fin k`; only
+    -- the first `k` indices matter for `aOf`.
+    let Yh : ℝ → ℕ → ℝ := fun h n =>
+      if h_lt : n < k then start h ⟨n, h_lt⟩ else 0
+    have hYh_eq : ∀ (h : ℝ) (j : Fin k), Yh h j.val = start h j := by
+      intro h j
+      simp only [Yh, j.isLt, dif_pos]
+    have hstart'_Yh : ∀ j : Fin k,
+        Filter.Tendsto
+          (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
+          (nhds 0) (nhds 0) := by
+      intro j
+      have h_orig := hstart' j
+      have heq : (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
+                  = (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h)
+                                    - start h j) := by
+        funext h
+        rw [hYh_eq]
+      rw [heq]
+      exact h_orig
+    -- Step 6: Archimedean M₀ such that hsmall holds for m ≥ M₀.
+    obtain ⟨M₀_temp, hM₀_temp⟩ : ∃ M₀ : ℕ, ∀ m ≥ M₀,
+        ((x - x₀) / (m : ℝ)) * (L : ℝ) * |M.β 0| < 1 := by
+      have hh_zero : Filter.Tendsto (fun m : ℕ => (x - x₀) / (m : ℝ))
+        Filter.atTop (nhds 0) := tendsto_step_size_atTop x₀ x
+      have hprod_zero : Filter.Tendsto
+          (fun m : ℕ => ((x - x₀) / (m : ℝ)) * (L : ℝ) * |M.β 0|)
+          Filter.atTop (nhds 0) := by
+        have h1 := hh_zero.mul_const ((L : ℝ))
+        have h2 := h1.mul_const (|M.β 0|)
+        simpa using h2
+      have hIio : Set.Iio (1 : ℝ) ∈ nhds (0 : ℝ) :=
+        Iio_mem_nhds (by norm_num)
+      exact Filter.eventually_atTop.mp (hprod_zero hIio)
+    set M₀ : ℕ := max 1 M₀_temp with hM₀_def
+    have hM₀_pos : 0 < M₀ :=
+      lt_of_lt_of_le Nat.one_pos (le_max_left _ _)
+    have hM₀_small : ∀ m ≥ M₀,
+        ((x - x₀) / (m : ℝ)) * (L : ℝ) * |M.β 0| < 1 := by
+      intro m hm
+      exact hM₀_temp m (le_trans (le_max_right _ _) hm)
+    -- Step 7: per-`m` closed-form bound (Y m, joint-Lipschitz form).
+    have hbound : ∀ m : ℕ, M₀ ≤ m →
+        |yex (x₀ + (m : ℝ) * ((x - x₀) / (m : ℝ)))
+            - Y m m|
+          ≤ Real.exp (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                        * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ)))
+              * aOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ)) yex
+                  (Y m) x₀
+            + (Real.exp (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                          * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ))) - 1)
+                * (cOf M Θ ((L : ℝ)) (1 + M_bound) ((x - x₀) / (m : ℝ))
+                    * ((x - x₀) / (m : ℝ))
+                    / (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                        * (k : ℝ))) := by
+      intro m hm
+      have hm_pos : 0 < m := lt_of_lt_of_le hM₀_pos hm
+      obtain ⟨_hY_init, hY_lmm⟩ := hY_props m hm_pos
+      have hh_nn : 0 ≤ (x - x₀) / (m : ℝ) :=
+        div_nonneg (le_of_lt (sub_pos.mpr hxx)) (Nat.cast_nonneg m)
+      obtain ⟨ha, hb, hc, hrec, hu0⟩ :=
+        globalError_recurrence_form_explicit_nonauto hk M hcons hL_joint hM
+          hf_lip_joint' hyex_C1 hyex_ode hf_yex_bound hh_nn
+          (hM₀_small m hm) hY_lmm Θ hΘ_nn hΘ
+      have hu0' :
+          |yex (x₀ + ((0 : ℕ) : ℝ) * ((x - x₀) / (m : ℝ)))
+              - Y m 0|
+            ≤ aOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ)) yex
+                (Y m) x₀ := by
+        simpa using hu0
+      exact discrete_gronwall_exp_bound
+        (fun n => |yex (x₀ + (n : ℝ) * ((x - x₀) / (m : ℝ)))
+                    - Y m n|)
+        _ _ _ _ k ha hb hc hh_nn hk hu0' hrec m
+    -- Step 8: aOf agrees on Y m and Yh h_m via the per-m initial-data clause.
+    have h_aOf_eq : ∀ m : ℕ, M₀ ≤ m →
+        aOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ)) yex (Y m) x₀
+          = aOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ)) yex
+              (Yh ((x - x₀) / (m : ℝ))) x₀ := by
+      intro m hm
+      have hm_pos : 0 < m := lt_of_lt_of_le hM₀_pos hm
+      obtain ⟨hY_init, _⟩ := hY_props m hm_pos
+      unfold aOf yPrimeSumOf
+      congr 1
+      apply Finset.sum_congr rfl
+      intro i _
+      congr 2
+      funext j
+      rw [hY_init j, ← hYh_eq]
+    -- Step 9: per-`h` Tendsto facts (cycle 061+62 wrappers).
+    have hb_lim := bOf_tendsto_at_zero M Θ ((L : ℝ))
+    have hc_lim := cOf_tendsto_at_zero M Θ ((L : ℝ)) (1 + M_bound)
+    have hb_pos := bOf_limit_pos M Θ ((L : ℝ)) hΘ_nn hL_joint
+    have ha_lim : Filter.Tendsto
+        (fun h : ℝ => aOf M Θ ((L : ℝ)) h yex (Yh h) x₀)
+        (nhds 0) (nhds 0) :=
+      aOf_tendsto_zero M Θ ((L : ℝ)) yex Yh x₀ hstart'_Yh
+    -- Outer-squeeze helpers (already shape-agnostic).
+    have ha_term :=
+      globalError_outer_squeeze_a_term ha_lim hb_lim k x₀ x
+    have hc_term :=
+      globalError_outer_squeeze_c_term hb_lim hc_lim hb_pos hk x₀ x
+    have hsum_zero :
+        Filter.Tendsto
+          (fun m : ℕ =>
+            Real.exp (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                        * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ)))
+                * aOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ)) yex
+                    (Yh ((x - x₀) / (m : ℝ))) x₀
+              + (Real.exp (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                            * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ))) - 1)
+                  * (cOf M Θ ((L : ℝ)) (1 + M_bound) ((x - x₀) / (m : ℝ))
+                      * ((x - x₀) / (m : ℝ))
+                      / (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                          * (k : ℝ))))
+          Filter.atTop (nhds 0) := by
+      have hsum := ha_term.add hc_term
+      simpa using hsum
+    -- Squeeze: for m ≥ M₀, m·h_m = x − x₀, so the LHS collapses to
+    -- |yex x − Y m m|, and the RHS uses the Yh-form of `aOf`.
+    have habs_le : ∀ᶠ m : ℕ in Filter.atTop,
+        |Y m m - yex x|
+          ≤ Real.exp (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                        * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ)))
+              * aOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ)) yex
+                  (Yh ((x - x₀) / (m : ℝ))) x₀
+            + (Real.exp (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                          * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ))) - 1)
+                * (cOf M Θ ((L : ℝ)) (1 + M_bound) ((x - x₀) / (m : ℝ))
+                    * ((x - x₀) / (m : ℝ))
+                    / (bOf M Θ ((L : ℝ)) ((x - x₀) / (m : ℝ))
+                        * (k : ℝ))) := by
+      refine Filter.eventually_atTop.mpr ⟨M₀, ?_⟩
+      intro m hm
+      have hm_pos : 0 < m := lt_of_lt_of_le hM₀_pos hm
+      have hm_h : (m : ℝ) * ((x - x₀) / (m : ℝ)) = x - x₀ :=
+        m_h_constancy hm_pos x x₀
+      have hxsubst : x₀ + (m : ℝ) * ((x - x₀) / (m : ℝ)) = x := by
+        rw [hm_h]; ring
+      have hb := hbound m hm
+      rw [hxsubst, h_aOf_eq m hm] at hb
+      rwa [abs_sub_comm]
+    have habs_tendsto :
+        Filter.Tendsto
+          (fun m : ℕ => |Y m m - yex x|)
+          Filter.atTop (nhds 0) := by
+      refine tendsto_of_tendsto_of_tendsto_of_le_of_le'
+        (g := fun _ : ℕ => (0 : ℝ)) (h := _)
+        tendsto_const_nhds hsum_zero ?_ habs_le
+      refine Filter.eventually_atTop.mpr ⟨0, ?_⟩
+      intro _ _
+      exact abs_nonneg _
+    exact (tendsto_zero_iff_abs_tendsto_zero _).mpr habs_tendsto
+  · -- k = 0 edge case: `IsConsistent` is contradictory because
+    -- preconsistency requires `1 = ∑ i : Fin 0, M.α i.succ = 0`.
+    push_neg at hk
+    have hk0 : k = 0 := Nat.le_zero.mp hk
+    subst hk0
+    exfalso
+    have hpre := hcons.1
+    simp [LinearMultistepMethod.IsPreconsistent] at hpre
 
 end OpenMath.Chapter4.Section404

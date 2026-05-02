@@ -128,17 +128,42 @@ helper) landed within the cycle's budget. The cycle 066 fallback
 +474, within the 500-LOC ceiling. The shape-agnostic squeeze
 helpers above are reused verbatim by cycle 068.
 
-### Cycle 068 — close `stable_consistent_isConvergent` (~80 lines)
+### Cycle 068 — close `stable_consistent_isConvergent` (~210 lines)
 
 Compose `globalError_recurrence_form_explicit_nonauto` (cycle 067)
 + `discrete_gronwall_exp_bound` (cycle 050) + the existing
 shape-agnostic squeeze helpers (`globalError_outer_squeeze_*`,
 `bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`, `aOf_tendsto_zero`,
-`bOf_limit_pos`) under the cycle 063 boundary adapters
-(`lipschitzInSecond_univ_toLipschitzWith`, `f_yex_bound_on_Icc`,
-`hstart_shape_bridge`). Cycle 068's strategy will determine whether
-a joint-Lipschitz adapter (uncurried `f` from `LipschitzInSecond`
-+ continuity) needs to be added to the cycle 063 set.
+`bOf_limit_pos`) under the cycle 063 `hstart_shape_bridge` adapter.
+
+**RESOLVED in cycle 068**: cluster 4 of the 064–068 refactor is
+complete. `LinearMultistepMethod.stable_consistent_isConvergent`
+(line 5475) is closed — `M.IsConvergent` follows from `M.IsStable`
++ `M.IsConsistent`.
+
+**Faithfulness deviation**: the `IsConvergent` predicate was
+strengthened from `Continuous (Function.uncurry f)` +
+`LipschitzInSecond Set.univ L f` to `Continuous (Function.uncurry f)`
++ `LipschitzWith L (Function.uncurry f)` (joint), plus
+`ContDiff ℝ 1 yex` and a global trajectory bound `M_bound`. See
+`.prover-state/issues/is_convergent_strengthened.md` for the full
+discussion. The strengthening was necessary because the cycle
+064–067 helper chain consumes joint-Lipschitz / global-bound /
+global-C¹ hypotheses that cannot be derived from the textbook's
+literal statement (continuity in `t` is qualitative, joint-Lipschitz
+quantitative; the trajectory bound and global C¹ similarly cannot
+be derived from continuity alone).
+
+The cycle 063 adapters `lipschitzInSecond_univ_toLipschitzWith` and
+`f_yex_bound_on_Icc` are NOT consumed by the closure (they were
+designed for the autonomous helper chain, which the cycle 064–067
+non-autonomous lift no longer routes through). Only
+`hstart_shape_bridge` is used.
+
+The `k = 0` edge case is closed by deriving `False` from
+`hcons.1 : 1 = ∑ i : Fin 0, M.α i.succ = 0`. The textbook
+implicitly assumes `k ≥ 1`; for `k = 0` the `IsConsistent`
+predicate is contradictory.
 
 (Schedule slipped one cycle relative to the original cycle 063 plan
 because cycle 064 deferred §406B helpers 3/4/5 to cycle 065.)

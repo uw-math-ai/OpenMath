@@ -134,7 +134,8 @@
   "def:402A": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.IsConvergent",
-    "status": "formalized"
+    "status": "formalized",
+    "notes": "Strengthened in cycle 068 beyond the textbook quote: joint-Lipschitz `LipschitzWith L (Function.uncurry f)` (vs textbook `LipschitzInSecond`), global `ContDiff ℝ 1 yex`, and a global trajectory bound `∀ t, |f t (yex t)| ≤ M_bound`. See `.prover-state/issues/is_convergent_strengthened.md` for the faithfulness deviation."
   },
   "def:403A": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
@@ -739,8 +740,8 @@
   "thm:406D": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.stable_consistent_isConvergent",
-    "status": "partial",
-    "notes": "Autonomous-IVP form done as `stable_consistent_isConvergent_autonomous` (cycle 062, fully proved, no sorry). The non-autonomous lift to the textbook `IsConvergent` predicate is the cycle 063+ deliverable; the body of `stable_consistent_isConvergent` is still `sorry`."
+    "status": "formalized",
+    "notes": "Closed in cycle 068 via the cycle 064-067 non-autonomous lift of the §406B + §406D helper chain. The `IsConvergent` predicate (def:402A) was strengthened in cycle 068 (joint-Lipschitz on `Function.uncurry f`, global `ContDiff ℝ 1 yex`, global trajectory bound `M_bound`); see `.prover-state/issues/is_convergent_strengthened.md` for the faithfulness deviation."
   },
   "thm:410A": {
     "lean_file": null,
