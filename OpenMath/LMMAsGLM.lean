@@ -1468,6 +1468,94 @@ theorem toGLM_stabilityMatrixPY_charpoly_of_bdf
       (((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
         (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))))
 
+/-- §521 — Polynomial-valued LMM stability polynomial at fixed `z`:
+package `ρ(X) - z · σ(X)` as a polynomial in `X` (a polynomial of
+degree at most `s`) rather than a scalar function of `ξ`. -/
+noncomputable def stabilityPolyPoly (m : LMM s) (z : ℂ) : Polynomial ℂ :=
+  ∑ j : Fin (s + 1),
+    Polynomial.C (((m.α j : ℝ) : ℂ) - z * ((m.β j : ℝ) : ℂ)) *
+      Polynomial.X ^ (j : ℕ)
+
+/-- §521 — Evaluating `stabilityPolyPoly` at `ξ` recovers the scalar
+`stabilityPoly` defined in `OpenMath/MultistepMethods.lean`. -/
+theorem stabilityPolyPoly_eval (m : LMM s) (ξ z : ℂ) :
+    (m.stabilityPolyPoly z).eval ξ = m.stabilityPoly ξ z := by
+  unfold stabilityPolyPoly stabilityPoly rhoC sigmaC
+  rw [Polynomial.eval_finset_sum]
+  simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+    Polynomial.eval_X]
+  rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
+  apply Finset.sum_congr rfl
+  intro j _
+  ring
+
+/-- §521 — Degree bookkeeping for `stabilityPolyPoly`: it is a polynomial
+of degree at most `s` (the number of steps). -/
+theorem stabilityPolyPoly_natDegree_le (m : LMM s) (z : ℂ) :
+    (m.stabilityPolyPoly z).natDegree ≤ s := by
+  unfold stabilityPolyPoly
+  refine (Polynomial.natDegree_sum_le _ _).trans ?_
+  rw [Finset.fold_max_le]
+  refine ⟨Nat.zero_le _, ?_⟩
+  intro j _
+  refine (Polynomial.natDegree_C_mul_X_pow_le _ _).trans ?_
+  exact Nat.le_of_lt_succ j.isLt
+
+/-- §521 — BDF specialisation bridge: under the BDF hypothesis, the
+characteristic polynomial of the active past-`y` block of the GLM
+stability matrix is proportional to `stabilityPolyPoly`. The non-zero
+proportionality constant is `1 - z · β_last`. -/
+theorem toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) •
+        (toGLM_stabilityMatrixPY m z).charpoly =
+      m.stabilityPolyPoly z := by
+  set c : ℂ := 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) with hc_def
+  rw [toGLM_stabilityMatrixPY_charpoly_of_bdf m z hbdf hz]
+  unfold stabilityPolyPoly
+  rw [Fin.sum_univ_castSucc]
+  simp only [Fin.val_castSucc, Fin.val_last]
+  have hbeta_cast : ∀ l : Fin s, m.β (Fin.castSucc l) = 0 := fun l =>
+    hbdf (Fin.castSucc l) (Fin.castSucc_lt_last l).ne
+  have halpha_last : m.α (Fin.last s) = 1 := m.normalized
+  have hRHS_sum :
+      (∑ l : Fin s,
+          Polynomial.C (((m.α (Fin.castSucc l) : ℝ) : ℂ) -
+              z * ((m.β (Fin.castSucc l) : ℝ) : ℂ)) *
+            Polynomial.X ^ (l : ℕ)) =
+        ∑ l : Fin s,
+          Polynomial.C ((m.α (Fin.castSucc l) : ℝ) : ℂ) *
+            Polynomial.X ^ (l : ℕ) := by
+    apply Finset.sum_congr rfl
+    intro l _
+    have hb0 : ((m.β (Fin.castSucc l) : ℝ) : ℂ) = 0 := by
+      rw [hbeta_cast l]; norm_cast
+    rw [hb0, mul_zero, sub_zero]
+  rw [hRHS_sum, halpha_last]
+  have hC_last : (((1 : ℝ) : ℂ) - z * ((m.β (Fin.last s) : ℝ) : ℂ)) = c := by
+    rw [hc_def]; push_cast; ring
+  rw [hC_last]
+  rw [smul_sub, Polynomial.smul_eq_C_mul, Finset.smul_sum]
+  have hLHS_sum :
+      (∑ l : Fin s,
+          c • (Polynomial.C (((-m.α (Fin.castSucc l) : ℝ) : ℂ) / c) *
+              Polynomial.X ^ (l : ℕ))) =
+        ∑ l : Fin s,
+          -(Polynomial.C ((m.α (Fin.castSucc l) : ℝ) : ℂ) *
+              Polynomial.X ^ (l : ℕ)) := by
+    apply Finset.sum_congr rfl
+    intro l _
+    rw [Polynomial.smul_eq_C_mul, ← mul_assoc, ← Polynomial.C_mul]
+    rw [show c * (((-m.α (Fin.castSucc l) : ℝ) : ℂ) / c) =
+        -((m.α (Fin.castSucc l) : ℝ) : ℂ) by
+      field_simp; push_cast; ring]
+    rw [Polynomial.C_neg]
+    ring
+  rw [hLHS_sum, Finset.sum_neg_distrib]
+  ring
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
