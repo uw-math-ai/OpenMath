@@ -924,6 +924,254 @@ theorem toGLM_stabilityMatrix_natAdd_last_natAdd_apply (m : LMM s) (z : ℂ)
   rw [toGLM_stabilityMatrix_natAdd_last_apply m z j hj]
   rw [toGLM_resolvent_apply, toGLM_Uℂ_natAdd]
 
+/-- §521 block reindexing: split the `2*s` GLM state into past-`y`
+and past-`h*f` halves. -/
+noncomputable def toGLM_stabilityBlockEquiv (s : ℕ) :
+    Fin s ⊕ Fin s ≃ Fin (2 * s) :=
+  finSumFinEquiv.trans (finCongr (Nat.two_mul s).symm)
+
+@[simp] theorem toGLM_stabilityBlockEquiv_symm_castAdd (j : Fin s) :
+    (toGLM_stabilityBlockEquiv s).symm
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j)) =
+      Sum.inl j := by
+  simp [toGLM_stabilityBlockEquiv]
+
+@[simp] theorem toGLM_stabilityBlockEquiv_symm_natAdd (j : Fin s) :
+    (toGLM_stabilityBlockEquiv s).symm
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j)) =
+      Sum.inr j := by
+  simp [toGLM_stabilityBlockEquiv]
+  apply finSumFinEquiv.injective
+  ext
+  simp [Fin.addNat, Fin.natAdd, Nat.add_comm]
+
+@[simp] theorem toGLM_stabilityBlockEquiv_symm_addNat (j : Fin s) :
+    (toGLM_stabilityBlockEquiv s).symm
+        (Fin.cast (Nat.two_mul s).symm (j.addNat s)) =
+      Sum.inr j := by
+  simp [toGLM_stabilityBlockEquiv]
+  apply finSumFinEquiv.injective
+  ext
+  simp [Fin.addNat, Fin.natAdd, Nat.add_comm]
+
+/-- §521 block form: past-`y` rows against past-`y` columns. -/
+noncomputable def toGLM_stabilityMatrixPY (m : LMM s) (z : ℂ) :
+    Matrix (Fin s) (Fin s) ℂ := fun j l =>
+  if (j : ℕ) + 1 = s then
+    ((-m.α (Fin.castSucc l) : ℝ) : ℂ) +
+      z * ((m.β (Fin.last s) : ℝ) : ℂ) *
+        (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+        ((-m.α (Fin.castSucc l) : ℝ) : ℂ)
+  else if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0
+
+/-- §521 block form: past-`y` rows against past-`h*f` columns. -/
+noncomputable def toGLM_stabilityMatrixPYHF (m : LMM s) (z : ℂ) :
+    Matrix (Fin s) (Fin s) ℂ := fun j l =>
+  if (j : ℕ) + 1 = s then
+    ((m.β (Fin.castSucc l) : ℝ) : ℂ) +
+      z * ((m.β (Fin.last s) : ℝ) : ℂ) *
+        (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+        ((m.β (Fin.castSucc l) : ℝ) : ℂ)
+  else 0
+
+/-- §521 block form: past-`h*f` rows against past-`y` columns. -/
+noncomputable def toGLM_stabilityMatrixPHFY (m : LMM s) (z : ℂ) :
+    Matrix (Fin s) (Fin s) ℂ := fun j l =>
+  if (j : ℕ) + 1 = s then
+    z * (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+      ((-m.α (Fin.castSucc l) : ℝ) : ℂ)
+  else 0
+
+/-- §521 block form: past-`h*f` rows against past-`h*f` columns. -/
+noncomputable def toGLM_stabilityMatrixPHF (m : LMM s) (z : ℂ) :
+    Matrix (Fin s) (Fin s) ℂ := fun j l =>
+  if (j : ℕ) + 1 = s then
+    z * (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+      ((m.β (Fin.castSucc l) : ℝ) : ℂ)
+  else if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0
+
+theorem toGLM_stabilityMatrix_castAdd_castAdd_apply (m : LMM s) (z : ℂ)
+    (j l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+      toGLM_stabilityMatrixPY m z j l := by
+  unfold toGLM_stabilityMatrixPY
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj]
+    exact toGLM_stabilityMatrix_castAdd_last_castAdd_apply m z j hj l
+  · rw [if_neg hj]
+    rw [toGLM_stabilityMatrix_castAdd_shift_apply m z j hj]
+    show ((m.toGLM.V
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) : ℝ) : ℂ) =
+      if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0
+    rw [toGLM_V_castAdd_shift_apply m j hj]
+    by_cases hlj : (l : ℕ) = (j : ℕ) + 1 <;> simp [Fin.castAdd, hlj]
+
+theorem toGLM_stabilityMatrix_castAdd_natAdd_apply (m : LMM s) (z : ℂ)
+    (j l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+      toGLM_stabilityMatrixPYHF m z j l := by
+  unfold toGLM_stabilityMatrixPYHF
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj]
+    exact toGLM_stabilityMatrix_castAdd_last_natAdd_apply m z j hj l
+  · rw [if_neg hj]
+    rw [toGLM_stabilityMatrix_castAdd_shift_apply m z j hj]
+    show ((m.toGLM.V
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) : ℝ) : ℂ) = 0
+    rw [toGLM_V_castAdd_shift_apply m j hj]
+    rw [if_neg]
+    · norm_num
+    · simp [Fin.natAdd]
+      omega
+
+theorem toGLM_stabilityMatrix_natAdd_castAdd_apply (m : LMM s) (z : ℂ)
+    (j l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) =
+      toGLM_stabilityMatrixPHFY m z j l := by
+  unfold toGLM_stabilityMatrixPHFY
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj]
+    exact toGLM_stabilityMatrix_natAdd_last_castAdd_apply m z j hj l
+  · rw [if_neg hj]
+    rw [toGLM_stabilityMatrix_natAdd_shift_apply m z j hj]
+    show ((m.toGLM.V
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s l)) : ℝ) : ℂ) = 0
+    rw [toGLM_V_natAdd_shift_apply m j hj]
+    rw [if_neg]
+    · norm_num
+    · simp [Fin.castAdd]
+      omega
+
+theorem toGLM_stabilityMatrix_natAdd_natAdd_apply (m : LMM s) (z : ℂ)
+    (j l : Fin s) :
+    m.toGLM.stabilityMatrix z
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+      toGLM_stabilityMatrixPHF m z j l := by
+  unfold toGLM_stabilityMatrixPHF
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj]
+    exact toGLM_stabilityMatrix_natAdd_last_natAdd_apply m z j hj l
+  · rw [if_neg hj]
+    rw [toGLM_stabilityMatrix_natAdd_shift_apply m z j hj]
+    show ((m.toGLM.V
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+        (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) : ℝ) : ℂ) =
+      if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0
+    rw [toGLM_V_natAdd_shift_apply m j hj]
+    by_cases hlj : (l : ℕ) = (j : ℕ) + 1
+    · rw [if_pos (by simp [Fin.natAdd]; omega), if_pos hlj]
+      norm_num
+    · rw [if_neg (by simp [Fin.natAdd]; omega), if_neg hlj]
+      norm_num
+
+/-- §521 — Reindexing the LMM-as-GLM stability matrix by the past-`y` /
+past-`h*f` split exposes the four closed-form `s × s` blocks. -/
+theorem toGLM_stabilityMatrix_eq_fromBlocks (m : LMM s) (z : ℂ) :
+    m.toGLM.stabilityMatrix z =
+      Matrix.reindex (toGLM_stabilityBlockEquiv s) (toGLM_stabilityBlockEquiv s)
+        (Matrix.fromBlocks
+          (toGLM_stabilityMatrixPY m z) (toGLM_stabilityMatrixPYHF m z)
+          (toGLM_stabilityMatrixPHFY m z) (toGLM_stabilityMatrixPHF m z)) := by
+  let blocks : Matrix (Fin s ⊕ Fin s) (Fin s ⊕ Fin s) ℂ :=
+    Matrix.fromBlocks
+      (toGLM_stabilityMatrixPY m z) (toGLM_stabilityMatrixPYHF m z)
+      (toGLM_stabilityMatrixPHFY m z) (toGLM_stabilityMatrixPHF m z)
+  suffices h :
+      ∀ kc lc : Fin (s + s),
+        m.toGLM.stabilityMatrix z
+            (Fin.cast (Nat.two_mul s).symm kc)
+            (Fin.cast (Nat.two_mul s).symm lc) =
+          (Matrix.reindex (toGLM_stabilityBlockEquiv s) (toGLM_stabilityBlockEquiv s)
+            blocks)
+            (Fin.cast (Nat.two_mul s).symm kc)
+            (Fin.cast (Nat.two_mul s).symm lc) by
+    ext k l
+    simpa [blocks] using h (Fin.cast (Nat.two_mul s) k) (Fin.cast (Nat.two_mul s) l)
+  intro kc lc
+  refine kc.addCases (motive := fun kc' =>
+      m.toGLM.stabilityMatrix z
+          (Fin.cast (Nat.two_mul s).symm kc')
+          (Fin.cast (Nat.two_mul s).symm lc) =
+        (Matrix.reindex (toGLM_stabilityBlockEquiv s) (toGLM_stabilityBlockEquiv s)
+          blocks)
+          (Fin.cast (Nat.two_mul s).symm kc')
+          (Fin.cast (Nat.two_mul s).symm lc)) ?_ ?_
+  · intro j
+    refine lc.addCases (motive := fun lc' =>
+        m.toGLM.stabilityMatrix z
+            (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+            (Fin.cast (Nat.two_mul s).symm lc') =
+          (Matrix.reindex (toGLM_stabilityBlockEquiv s) (toGLM_stabilityBlockEquiv s)
+            blocks)
+            (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s j))
+            (Fin.cast (Nat.two_mul s).symm lc')) ?_ ?_
+    · intro l
+      simpa [blocks, Matrix.reindex, Matrix.fromBlocks]
+        using toGLM_stabilityMatrix_castAdd_castAdd_apply m z j l
+    · intro l
+      simpa [blocks, Matrix.reindex, Matrix.fromBlocks]
+        using toGLM_stabilityMatrix_castAdd_natAdd_apply m z j l
+  · intro j
+    refine lc.addCases (motive := fun lc' =>
+        m.toGLM.stabilityMatrix z
+            (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+            (Fin.cast (Nat.two_mul s).symm lc') =
+          (Matrix.reindex (toGLM_stabilityBlockEquiv s) (toGLM_stabilityBlockEquiv s)
+            blocks)
+            (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s j))
+            (Fin.cast (Nat.two_mul s).symm lc')) ?_ ?_
+    · intro l
+      simpa [blocks, Matrix.reindex, Matrix.fromBlocks]
+        using toGLM_stabilityMatrix_natAdd_castAdd_apply m z j l
+    · intro l
+      simpa [blocks, Matrix.reindex, Matrix.fromBlocks]
+        using toGLM_stabilityMatrix_natAdd_natAdd_apply m z j l
+
+/-- §521 rank-one base matrix: the complex lift of the underlying `V` shift
+block. -/
+private noncomputable def toGLM_V_active_lift (m : LMM s) :
+    Matrix (Fin (2 * s)) (Fin (2 * s)) ℂ :=
+  m.toGLM.Vℂ
+
+/-- §521 rank-one correction column: only the implicit output rows can
+consume the one-stage resolvent. -/
+private noncomputable def toGLM_rankOneColumn (m : LMM s) (z : ℂ) :
+    Fin (2 * s) → ℂ := fun k => z * m.toGLM.Bℂ k 0
+
+/-- §521 rank-one correction row: the one-stage `U` row over past data. -/
+private noncomputable def toGLM_rankOneRow (m : LMM s) :
+    Fin (2 * s) → ℂ := fun l => m.toGLM.Uℂ 0 l
+
+/-- §521 rank-one correction for the one-stage LMM-as-GLM stability matrix. -/
+private noncomputable def toGLM_rankOneCorrection (m : LMM s) (z : ℂ) :
+    Matrix (Fin (2 * s)) (Fin (2 * s)) ℂ :=
+  Matrix.vecMulVec (toGLM_rankOneColumn m z) (toGLM_rankOneRow m)
+
+/-- §521 — The one-stage resolvent contribution to the LMM-as-GLM stability
+matrix is a rank-one update of the complex `V` block. -/
+theorem toGLM_stabilityMatrix_eq_V_active_plus_rank_one
+    (m : LMM s) (z : ℂ) (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    m.toGLM.stabilityMatrix z =
+      toGLM_V_active_lift m +
+        (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) •
+          toGLM_rankOneCorrection m z := by
+  have _ := hz
+  ext k l
+  rw [toGLM_stabilityMatrix_apply, toGLM_resolvent_apply]
+  simp [toGLM_V_active_lift, toGLM_rankOneCorrection, toGLM_rankOneColumn,
+    toGLM_rankOneRow, Matrix.vecMulVec_apply]
+  ring
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
