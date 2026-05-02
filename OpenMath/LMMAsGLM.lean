@@ -666,6 +666,19 @@ theorem toGLM_stabilityMatrix_apply (m : LMM s) (z : ℂ) (k l : Fin (2 * s)) :
   rw [GeneralLinearMethod.stabilityMatrix_apply]
   simp
 
+/-- §521 — An LMM is A-stable in the GLM sense (every eigenvalue of
+`m.toGLM.stabilityMatrix z` has norm `≤ 1` on the closed left
+half-plane) iff it is A-stable in the LMM sense (`InStabilityRegion`
+on the closed left half-plane).
+
+The forward direction transports a stability-polynomial root `ξ` to a
+charpoly root by the structural factorisation
+`charpoly(M(z)) = X^s * π(·, z)` (up to scaling), which is currently
+deferred to a follow-up cycle along with the reverse direction. -/
+theorem toGLM_isAStable_iff (m : LMM s) :
+    m.toGLM.IsAStable ↔ m.IsAStable := by
+  sorry
+
 /-- Stage map specialisation: the GLM stage equation reduces to the
 expected linear combination of past values plus the implicit `f(Y)`
 term. State this in scalar form, taking `yIn : Fin (2 * s) → ℝ` as the
@@ -1327,3 +1340,67 @@ theorem toGLM_isConvergent (m : LMM s)
   ⟨m.toGLM_isConsistent hcon, m.toGLM_isStable hzs⟩
 
 end LMM
+
+/-- §521 — Backward Euler is A-stable in the GLM sense after the §503
+embedding. This is a direct concrete check at `s = 1`: the 2×2
+stability matrix is `!![1/(1-z), 0; z/(1-z), 0]`, whose characteristic
+polynomial factors as `X * (X - 1/(1-z))`. The two eigenvalues are
+`0` and `1/(1-z)`, both of norm at most `1` for `z.re ≤ 0`. Pending
+the §521 charpoly factorisation `LMM.toGLM_isAStable_iff`, this serves
+as the LMM-side analogue of cycle 627's `rkImplicitEuler_toGLM_isAStable`. -/
+theorem backwardEuler_toGLM_isAStable :
+    backwardEuler.toGLM.IsAStable := by
+  intro z hz μ hμ
+  have hne : (1 : ℂ) - z ≠ 0 := by
+    intro h
+    have hre := congrArg Complex.re h
+    simp [Complex.sub_re] at hre
+    linarith
+  have hM : backwardEuler.toGLM.stabilityMatrix z =
+      !![1 / (1 - z), 0; z / (1 - z), 0] := by
+    ext k l
+    rw [LMM.toGLM_stabilityMatrix_apply]
+    have hAℂ : backwardEuler.toGLM.Aℂ = !![1] := by
+      ext i j
+      fin_cases i; fin_cases j
+      show (backwardEuler.β (Fin.last 1) : ℂ) = (!![(1 : ℂ)]) 0 0
+      simp [backwardEuler]
+    rw [hAℂ]
+    have hsub : (1 : Matrix (Fin 1) (Fin 1) ℂ) - z • !![(1 : ℂ)] = !![1 - z] := by
+      ext i j
+      fin_cases i; fin_cases j; simp
+    rw [hsub]
+    have hinv : (!![1 - z] : Matrix (Fin 1) (Fin 1) ℂ)⁻¹ 0 0 = 1 / (1 - z) := by
+      rw [Matrix.inv_def]
+      simp [Matrix.adjugate_fin_one]
+    rw [hinv]
+    fin_cases k <;> fin_cases l <;>
+      simp [LMM.toGLM, backwardEuler, Fin.addCases, Fin.cast,
+        GeneralLinearMethod.Vℂ, GeneralLinearMethod.Bℂ, GeneralLinearMethod.Uℂ,
+        Fin.last]
+    all_goals first | rfl | (field_simp; ring)
+  rw [hM] at hμ
+  have hchar :
+      (!![(1 : ℂ) / (1 - z), 0; z / (1 - z), 0]).charpoly =
+        Polynomial.X * (Polynomial.X - Polynomial.C (1 / (1 - z))) := by
+    rw [Matrix.charpoly]
+    rw [Matrix.charmatrix]
+    rw [Matrix.det_fin_two]
+    simp
+    ring
+  rw [hchar] at hμ
+  rw [Polynomial.IsRoot] at hμ
+  simp at hμ
+  rcases hμ with hμ0 | hμ1
+  · rw [hμ0]; simp
+  · have hμeq : μ = (1 - z)⁻¹ := sub_eq_zero.mp hμ1
+    rw [hμeq]
+    rw [norm_inv]
+    have h1z_ge : 1 ≤ ‖(1 : ℂ) - z‖ := by
+      have h1 := Complex.abs_re_le_norm ((1 : ℂ) - z)
+      simp [Complex.sub_re] at h1
+      rw [abs_of_nonneg (by linarith : (0 : ℝ) ≤ 1 - z.re)] at h1
+      linarith
+    rw [inv_le_one_iff₀]
+    right
+    exact h1z_ge
