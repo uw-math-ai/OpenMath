@@ -1,675 +1,480 @@
-# Cycle 062 Strategy — Assemble the autonomous-IVP outer squeeze (`thm:406D` core)
+# Cycle 063 Strategy — Adapter lemmas at the autonomous/non-autonomous boundary
 
 ## TL;DR
 
-All cycle 053–061 prerequisites are in place. Cycle 062 closes the
-**autonomous-IVP variant** of `thm:406D` as a fresh top-level theorem
-`stable_consistent_isConvergent_autonomous`. The single open
-`sorry` at `Section404.lean:3818`
-(`stable_consistent_isConvergent`, the full non-autonomous form)
-**stays in place** — the non-autonomous lift is the cycle 063+
-deliverable.
+Cycle 062 (commit `1eaf808`) closed the **autonomous-IVP form** of
+Theorem 406D as `LinearMultistepMethod.stable_consistent_isConvergent_autonomous`
+at `OpenMath/Chapter4/Section404.lean:3863` — the analytical core.
+The remaining single sorry at line 4012 is the **non-autonomous lift**
+to the textbook `IsConvergent` predicate (which takes
+`f : ℝ → ℝ → ℝ` with `LipschitzInSecond Set.univ L f`, not autonomous
+`f : ℝ → ℝ` with `LipschitzWith L.toNNReal f`).
 
-Two priorities, in order:
+The cycle 062 task results estimate the lift at **200–400 lines of
+Lipschitz bookkeeping, no new mathematics**. Realistically that is
+**a 4–5 cycle effort**: 19 helpers along the cycle 040–062 chain
+take `{f : ℝ → ℝ}` and need non-autonomous variants taking
+`{f : ℝ → ℝ → ℝ}`. The cycle 060 regression (score −1) showed that
+single-cycle ~430-line targets risk vacuous-proof bugs; cycle 061
+and 062 (3 wrappers + 1 wrapper, scores +1 and +2) showed that
+small decomposed wins land cleanly.
 
-1. **Add `aOf_tendsto_zero`** — the cycle-061 wrappers covered
-   `bOf`, `cOf`, `yPrimeSumOf` but `aOf` was deferred since it
-   requires both `bOf` (via `CbaseOf`) and `yPrimeSumOf`. This is
-   the last missing Tendsto helper.
-2. **State and prove `stable_consistent_isConvergent_autonomous`** —
-   the autonomous-IVP analog of the line-3818 deliverable, proved by
-   `globalError_closed_form_autonomous_explicit` plus the cycle 059
-   outer-squeeze helpers plus the cycle 057
-   `c_h_h_squared_tendsto_zero` / `tendsto_step_size_*` infrastructure.
-
-There are **no pending Aristotle results**. Per CLAUDE.md
-"maximize Aristotle usage", batch-submit ~5 sub-lemmas at the start
-of the cycle (see §C). Sleep 30 min, then proceed with manual proofs
-of whatever Aristotle has not closed.
+**Cycle 063 scope:** build the **3 small adapter lemmas** at the
+autonomous/non-autonomous boundary, file the multi-cycle refactor
+plan, and batch-submit the adapters to Aristotle. **Do NOT** attempt
+to refactor the cycle 040–062 helper chain in this cycle. **Do NOT**
+attempt to close the line-4012 sorry directly.
 
 ---
 
-## A. No-rebuild checks
+## Priority 0 — sanity checks before starting
 
-Run before any Lean edit, to confirm the cycle 061 baseline:
+Run these once at the start of the cycle:
 
 ```bash
-rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter4/Section404.lean
-# Expected: exactly 2 hits — line 1950 (`exact h_diff`) and line 2842
-# (`rw [h_eps_eq]; exact h_Sy_bound`). Both grandfathered cycle-052/055
-# closers, both do real work.
-
+# 1. Branch tip is the cycle 062 commit.
 git log -1 --format='%H %s'
-# Expected: aac1b40 Cycle 061 — three Tendsto wrappers for cycle 060's *Of defs ...
+# Expected: 1eaf808 Cycle 062 — autonomous-IVP form of thm:406D + aOf_tendsto_zero wrapper
 
-git rev-parse HEAD; git rev-parse origin/Main/Experiments
-# Expected: same SHA on both. (If different, see consultant notes 009/014/015 §A.)
+# 2. Section404.lean has exactly one sorry at line 4012.
+rg '\bsorry\b' OpenMath/Chapter4/Section404.lean -n
+# Expected: a single hit at line 4012.
 
+# 3. The file compiles cleanly (modulo the documented sorry).
 lake env lean OpenMath/Chapter4/Section404.lean
-# Expected: exit 0; warnings = 4 (hM, hh, hMmax0 unused-variables + line-3818 sorry).
+# Expected: clean exit, no errors beyond the documented sorry.
 ```
 
-If any of these returns something different, escalate before
-proceeding (it would mean the cycle 061 commit has been rolled back
-or a stale `attempts.md` is being read).
+If a second sorry has crept in, or the branch tip is not `1eaf808`,
+stop and triage before proceeding. The "stuck on" framing in the
+prompt about line 4012 is **expected** (cycle 062 explicitly left
+that sorry as the cycle 063+ target).
 
 ---
 
-## B. Priority 1 — `aOf_tendsto_zero`
+## Priority 1 — the three adapter lemmas
 
-### Background
+All three live in `OpenMath/Chapter4/Section404.lean`, placed
+**immediately above** the autonomous theorem at line 3863 (so they
+sit at the boundary). They are deliberately small and
+Aristotle-friendly.
 
-`aOf M Θ L h yex Y x₀` (cycle 060,
-`Section404.lean:3178–3181`) unfolds to
+### Adapter 1 — `LipschitzInSecond` to per-`x` `LipschitzWith`
 
-```lean
-aOf M Θ L h yex Y x₀
-  = (Θ + (Θ + 1) * CbaseOf M L h * h * (k : ℝ) + 1)
-    * yPrimeSumOf M yex Y x₀ h
-```
+**Why:** the cycle 062 autonomous theorem expects
+`LipschitzWith L.toNNReal f` for autonomous `f : ℝ → ℝ`. The
+non-autonomous `IsConvergent` predicate gives
+`LipschitzInSecond Set.univ L f` for `f : ℝ → ℝ → ℝ`. The bridge is
+direct because
+`LipschitzInSecond s L f := ∀ x ∈ s, LipschitzWith L (f x)`
+(see `OpenMath/Chapter1/Section110.lean:45`), so on `Set.univ` the
+universal hypothesis is automatic.
 
-Cycle 057 proved exactly this Tendsto fact in unfolded form as
-`a_m_tendsto_zero` (`Section404.lean:2245–2272`). What's needed
-this cycle is the wrapper over the cycle 060 `aOf` def, with the
-**per-`h`** starting-data hypothesis (so the result composes cleanly
-with `IsConvergent`'s `start : ℝ → Fin k → ℝ`).
-
-### Signature to add
-
-Insert immediately after `yPrimeSumOf_tendsto_zero`
-(`Section404.lean:3780–3794`), before
-`stable_consistent_isConvergent`:
+**Statement (place above the autonomous theorem):**
 
 ```lean
-open OpenMath.Chapter1.Section141 in
-/-- **Tendsto of `aOf` to zero (cycle 062).**
+/-- **Adapter (cycle 063): `LipschitzInSecond Set.univ` ⇒ per-`x`
+`LipschitzWith` on the autonomous restriction.**
 
-`aOf M Θ L h yex (Yh h) x₀` is the linear-recurrence initial
-constant `a` of `globalError_recurrence_form_explicit`. As `h → 0`:
-* the bracket `Θ + (Θ + 1) · CbaseOf · h · k + 1` tends to a finite
-  limit (the `· h` factor kills `CbaseOf`'s contribution);
-* `yPrimeSumOf M yex (Yh h) x₀ h` tends to `0` whenever the
-  starting-data error converges (`yex (x₀ + j·h) - Yh h j → 0` for
-  each `j < k`).
-
-So `aOf · → 0`. Wrapper over cycle 057's `a_m_tendsto_zero`,
-threaded through cycle 060's `aOf` and `yPrimeSumOf` defs with the
-per-`h` `Yh : ℝ → ℕ → ℝ` shape. Internal scaffolding for the §406D
-outer-squeeze assembly (cycle 062). Not a Butcher concept. -/
-private lemma aOf_tendsto_zero
-    {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ)
-    (yex : ℝ → ℝ) (Yh : ℝ → ℕ → ℝ) (x₀ : ℝ)
-    (hstart : ∀ j : Fin k,
-        Filter.Tendsto
-          (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
-          (nhds 0) (nhds 0)) :
-    Filter.Tendsto
-      (fun h : ℝ => aOf M Θ L h yex (Yh h) x₀)
-      (nhds 0) (nhds 0) := by
-  unfold aOf
-  exact a_m_tendsto_zero M Θ L
-    (u := fun h j => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
-    hstart
+The non-autonomous `IsConvergent` predicate hypothesises
+`LipschitzInSecond Set.univ L f`; the autonomous helper chain
+(cycles 040–062) requires `LipschitzWith L (f x)` for each `x`.
+This is the trivial unfolding bridge. -/
+private lemma lipschitzInSecond_univ_toLipschitzWith
+    {L : ℝ≥0} {f : ℝ → ℝ → ℝ}
+    (hf_lip : OpenMath.Chapter1.Section110.LipschitzInSecond Set.univ L f)
+    (x : ℝ) :
+    LipschitzWith L (f x) :=
+  hf_lip x (Set.mem_univ _)
 ```
 
-### Why this works
+**Expected proof:** the term `hf_lip x (Set.mem_univ _)` should close
+it directly (`LipschitzInSecond` unfolds to `∀ x ∈ s, …`). If Lean
+rejects, try `by exact hf_lip x (Set.mem_univ _)` or check the
+unfolded shape with `lean_hover_info` on `LipschitzInSecond`.
 
-- `unfold aOf` exposes the goal as the body of `a_m_tendsto_zero`
-  with `u h j := yex (x₀ + j·h) - Yh h j`.
-- `a_m_tendsto_zero` already takes a generic
-  `u : ℝ → Fin k → ℝ` with per-index Tendsto. The named-argument
-  syntax `(u := …)` forces the unifier to commit to the right
-  family.
-- `yPrimeSumOf` *also* unfolds (cycle 060 def) to exactly the
-  `Σ |yPrime …|` form `a_m_tendsto_zero` wants. If the unfold
-  chain doesn't fire on its first pass, add `yPrimeSumOf` to the
-  unfold: `unfold aOf yPrimeSumOf`.
-
-### Fallback if the proof is sticky
-
-If `a_m_tendsto_zero` won't unify directly (e.g. `CbaseOf` is not
-unfolded in `a_m_tendsto_zero`'s statement so the bracket shapes
-differ), the alternative is a slightly longer `convert`:
-
-```lean
-  unfold aOf CbaseOf yPrimeSumOf
-  convert a_m_tendsto_zero M Θ L
-    (u := fun h j => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
-    hstart using 1
-  -- (one or two `ring`/`congr 1` steps if shapes drift)
-```
-
-Do **not** redo the proof of `a_m_tendsto_zero` from scratch — it is
-60 lines of cycle 057 work and reproducing it costs 30 min for
-zero gain.
+**Aristotle:** trivial; expect a 1-line solution.
 
 ---
 
-## C. Aristotle batch (~5 sub-lemmas, submit at cycle start)
+### Adapter 2 — `f t (yex t)` is bounded on `[x₀, x]`
 
-Per CLAUDE.md: maximize Aristotle, submit ~5 jobs in batch, sleep
-30 min, check once. Submit these five sub-lemmas at cycle start so
-they have run while you do priorities 1 and (if Aristotle returns)
-priority 2:
+**Why:** the autonomous theorem hypothesises
+`hf_yex_bound : ∀ t : ℝ, |f (yex t)| ≤ M_bound` (a uniform bound
+over all of ℝ). The non-autonomous `IsConvergent` does not directly
+hypothesise such a bound. We extract one from compactness: on the
+compact interval `[x₀, x]`, the continuous function
+`t ↦ |f t (yex t)|` attains a maximum.
 
-### Job 1 — `aOf_tendsto_zero`
-
-The lemma in §B. If the `unfold + exact` chain works, manual proof
-is one line; submission is a hedge. If unfold drifts, Aristotle's
-`convert ... using 1; ring` may close it faster than manual
-debugging.
-
-### Job 2 — `cOf_h_tendsto_zero`
-
-Standalone, 3-line manual proof — but submit anyway:
+**Statement (place above the autonomous theorem):**
 
 ```lean
-private lemma cOf_h_tendsto_zero
-    {k : ℕ} (M : LinearMultistepMethod k) (Θ L M_bound : ℝ) :
-    Filter.Tendsto (fun h : ℝ => cOf M Θ L M_bound h * h)
-      (nhds 0) (nhds 0) := by
-  exact tendsto_const_mul_h_zero (fun h => cOf M Θ L M_bound h) _
-    (cOf_tendsto_at_zero M Θ L M_bound)
-```
+/-- **Adapter (cycle 063): bound for `f t (yex t)` on a compact
+interval.**
 
-(`tendsto_const_mul_h_zero` is at `Section404.lean:2195`.)
+Given `f : ℝ → ℝ → ℝ` jointly continuous and `yex : ℝ → ℝ`
+continuous, the function `t ↦ |f t (yex t)|` is bounded on every
+closed interval. The bound is the `M_bound` the autonomous theorem
+chain consumes; the cycle 064+ refactor will re-derive the
+autonomous helpers to take a compact-restricted bound rather than
+the global `∀ t : ℝ` form.
 
-### Job 3 — `bOf_pos_at_zero`
-
-For `globalError_outer_squeeze_c_term`'s `0 < bInf` hypothesis. The
-limit is `(Θ + 1) · L · (|β 0| · Σ|α(i+1)| + Σ|β(i+1)|) + 1`. The
-`+ 1` makes positivity unconditional:
-
-```lean
-private lemma bOf_limit_pos
-    {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ)
-    (hΘ_nn : 0 ≤ Θ) (hL : 0 ≤ L) :
-    0 < (Θ + 1) *
-            (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
-                  + ∑ i : Fin k, |M.β i.succ|))
-          + 1 := by
-  have h1 : 0 ≤ (Θ + 1) := by linarith
-  have h2 : 0 ≤ L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
-                + ∑ i : Fin k, |M.β i.succ|) := by
-    apply mul_nonneg hL
-    apply add_nonneg
-    · exact mul_nonneg (abs_nonneg _) (Finset.sum_nonneg (fun _ _ => abs_nonneg _))
-    · exact Finset.sum_nonneg (fun _ _ => abs_nonneg _)
-  linarith [mul_nonneg h1 h2]
-```
-
-Submit with the alternative phrasings `positivity`-style and
-`nlinarith`; Aristotle picks the one that unifies.
-
-### Job 4 — A small helper bridging `globalError_closed_form_autonomous_explicit` to a per-`m` `Y m m` bound
-
-```lean
-private lemma globalError_per_m_bound
-    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
-    (hcons : M.IsConsistent) (hstab : M.IsStable)
-    {f : ℝ → ℝ} {L M_bound : ℝ}
-    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
-    (hf_lip : LipschitzWith L.toNNReal f)
-    {yex : ℝ → ℝ}
-    (hyex_C1 : ContDiff ℝ 1 yex)
-    (hyex_ode : ∀ t, deriv yex t = f (yex t))
-    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
-    {x₀ x : ℝ} (hxx : x₀ ≤ x)
-    (Y : ℕ → ℕ → ℝ)
-    (hY : ∀ m : ℕ, 0 < m →
-      let h_m := (x - x₀) / (m : ℝ)
-      h_m * L * |M.β 0| < 1 ∧
-      M.IsLMMSolution h_m x₀ (fun _ y => f y) (Y m)) :
-    ∃ Θ : ℝ, 0 ≤ Θ ∧
-      ∀ m : ℕ, 0 < m →
-        let h_m := (x - x₀) / (m : ℝ)
-        |yex (x₀ + (m : ℝ) * h_m) - Y m m|
-          ≤ Real.exp (bOf M Θ L h_m * (k : ℝ) * (m : ℝ) * h_m)
-              * aOf M Θ L h_m yex (Y m) x₀
-            + (Real.exp (bOf M Θ L h_m * (k : ℝ) * (m : ℝ) * h_m) - 1)
-                * (cOf M Θ L M_bound h_m * h_m
-                    / (bOf M Θ L h_m * (k : ℝ))) := by
-  -- Pick Θ from theta_bounded_of_isStable; reuse it for all m.
-  obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab
-  refine ⟨Θ, hΘ_nn, ?_⟩
-  intro m hm
-  obtain ⟨hsmall, hYm⟩ := hY m hm
-  have hh_nn : 0 ≤ (x - x₀) / (m : ℝ) :=
-    div_nonneg (sub_nonneg.mpr hxx) (Nat.cast_nonneg m)
-  -- Apply globalError_closed_form_autonomous_explicit at n := m.
-  have hbound :=
-    LinearMultistepMethod.globalError_closed_form_autonomous_explicit
-      hk M hcons hstab hL hM hf_lip hyex_C1 hyex_ode hf_yex_bound
-      hh_nn hsmall hYm
-  -- destruct the ∃ Θ' but force Θ' = Θ via uniqueness of theta_bounded? No — re-derive.
-  sorry  -- Aristotle / manual: extract `Θ` consistently across `m`.
-```
-
-⚠️ **Subtle point**: `globalError_closed_form_autonomous_explicit`
-re-derives `Θ` internally via `theta_bounded_of_isStable`, so the
-`Θ` it picks is the *same* canonical θ-bound for every call (the
-underlying `theta_bounded_of_isStable` is deterministic — it returns
-`sSup (range |theta|)` or similar). Verify this by reading
-`theta_bounded_of_isStable`'s body (`Section404.lean:1737`); if it
-uses `Classical.choose`, the per-`m` `Θ`s may differ and you need
-to extract `Θ` *once* and pass it through.
-
-If `theta_bounded_of_isStable` is non-deterministic, the right move
-is to refactor the cycle 060 `globalError_closed_form_autonomous_explicit`
-to take `Θ` as an *input* parameter (it already does, via
-`globalError_recurrence_form_explicit`). Bypass the cycle 060 wrapper
-and call `globalError_recurrence_form_explicit` directly here, with
-the same `Θ` extracted once.
-
-This is the riskiest sub-lemma of the five — submit to Aristotle
-first.
-
-### Job 5 — The main theorem itself
-
-Submit `stable_consistent_isConvergent_autonomous` as a complete
-draft (see §D below for the full sketch). If Aristotle closes it,
-land directly. If not, treat the returned partial as a starting
-point.
-
----
-
-## D. Priority 2 — `stable_consistent_isConvergent_autonomous`
-
-### Statement to add
-
-Insert immediately before `stable_consistent_isConvergent`
-(`Section404.lean:3814`). **Do not delete the existing sorry'd
-theorem** — leave it as the cycle 063+ deliverable for the
-non-autonomous lift.
-
-```lean
-open OpenMath.Chapter1.Section141 in
-/-- **Butcher Theorem 406D, autonomous-IVP form (Tendsto).**
-For a stable consistent linear multistep method `M` solving the
-*autonomous* IVP `y' = f(y)` with `f` Lipschitz and `f∘yex` bounded
-on the interval, the global LMM error tends to zero as the step
-size shrinks:
-
-  `|yex(x) − Y_m m| → 0    as m → ∞,    where  h_m := (x−x₀)/m`.
-
-This is the autonomous specialisation of `IsConvergent` (Butcher
-def:402A): `f` does not depend on `x`, `start` is per-`h`, and the
-`k` initial values converge to `y₀ = yex x₀` as `h → 0`.
-
-The non-autonomous form `stable_consistent_isConvergent` follows by
-lifting in cycle 063+. -/
-theorem LinearMultistepMethod.stable_consistent_isConvergent_autonomous
-    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
-    (hstab : M.IsStable) (hcons : M.IsConsistent)
-    {f : ℝ → ℝ} {L M_bound : ℝ}
-    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
-    (hf_lip : LipschitzWith L.toNNReal f)
-    {yex : ℝ → ℝ}
-    (hyex_C1 : ContDiff ℝ 1 yex)
-    (hyex_ode : ∀ t, deriv yex t = f (yex t))
-    (hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)
-    {x₀ x : ℝ} (hxx : x₀ < x)
-    (Y : ℕ → ℕ → ℝ)
-    (hsmall : ∀ m : ℕ, 0 < m →
-      ((x - x₀) / (m : ℝ)) * L * |M.β 0| < 1)
-    (hYm : ∀ m : ℕ, 0 < m →
-      M.IsLMMSolution ((x - x₀) / (m : ℝ)) x₀ (fun _ y => f y) (Y m))
-    (hstart : ∀ j : Fin k,
-        Filter.Tendsto
-          (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h)
-                          - Y (Nat.ceil ((x - x₀) / h)) j.val)
-          (nhds 0) (nhds 0)) :
-    Filter.Tendsto (fun m : ℕ => Y m m - yex x)
-      Filter.atTop (nhds 0) := by
+Note: this gives a bound on `Set.Icc (min x₀ x) (max x₀ x)`, NOT on
+all of ℝ. The autonomous theorem's `∀ t : ℝ` is stricter than what
+continuity alone delivers. The cycle 064+ refactor will adapt the
+helper chain to the compact-restricted form. -/
+private lemma f_yex_bound_on_Icc
+    {f : ℝ → ℝ → ℝ}
+    (hf_cont : Continuous (Function.uncurry f))
+    {yex : ℝ → ℝ} (hyex_cont : Continuous yex)
+    (x₀ x : ℝ) :
+    ∃ M_bound : ℝ, 0 ≤ M_bound ∧
+      ∀ t ∈ Set.Icc (min x₀ x) (max x₀ x), |f t (yex t)| ≤ M_bound := by
   sorry
 ```
 
-⚠️ **Two design decisions to nail down before writing the proof**:
+**Proof sketch:**
+- `(fun t => |f t (yex t)|)` is continuous: rewrite as
+  `|Function.uncurry f (t, yex t)|`, then compose
+  `continuous_id.prod_mk hyex_cont` with `hf_cont` and `continuous_abs`.
+- `Set.Icc (min x₀ x) (max x₀ x)` is compact via `isCompact_Icc`,
+  and is non-empty since `min x₀ x ≤ max x₀ x`.
+- Continuous function on compact non-empty set attains its max:
+  `IsCompact.exists_isMaxOn` (verify name with
+  `lean_local_search "exists_isMaxOn"`).
+- Take `M_bound = |f t₀ (yex t₀)|` for the maximizer `t₀`.
 
-1. **`hstart` shape.** The full `IsConvergent` shape is "for each
-   `j`, `start h j → y₀` as `h → 0`". Combined with `hyex_C1`
-   (which gives `yex` continuous, so
-   `yex (x₀ + j·h) → yex x₀ = y₀`), the per-`j` Tendsto
-   `yex (x₀ + j·h) - Yh h j → 0` is equivalent to `Yh h j → y₀`.
-   For the per-`m` `Y : ℕ → ℕ → ℝ` shape, the natural reformulation
-   is to parametrize `Yh h := Y (Nat.ceil ((x - x₀) / h))`, but
-   that's clumsy and obscures the squeeze. **Cleaner alternative**:
-   take `hstart` directly as a per-`m` Tendsto:
-   ```
-   (hstart : ∀ j : Fin k,
-       Filter.Tendsto
-         (fun m : ℕ => Y m j.val - yex (x₀ + (j.val : ℝ) * ((x - x₀) / (m : ℝ))))
-         Filter.atTop (nhds 0))
-   ```
-   This matches `globalError_outer_squeeze_a_term`'s `atTop` shape
-   directly. **Recommend this version**; the `nhds 0` form is
-   cycle 063 territory (lift via `tendsto_step_size_comp`).
-
-2. **Strict vs non-strict inequality on `x₀ < x`.** Cycle 057's
-   `m_h_constancy` requires `0 < m` for the field-simp; cycle 058's
-   `tendsto_step_size_atTop` works for any `x, x₀`. Use `x₀ < x`
-   (strict) so `(x - x₀) > 0` and downstream consumers can lift to
-   non-autonomous without an extra positivity dance.
-
-### Proof skeleton
+**Manual proof attempt (if Aristotle fails):**
 
 ```lean
-  -- Step 1: extract the canonical Θ once.
-  obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab
-  -- Step 2: per-m closed-form bound.
-  have hbound : ∀ m : ℕ, 0 < m →
-      |yex (x₀ + (m : ℝ) * ((x - x₀) / (m : ℝ))) - Y m m|
-        ≤ Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
-                      * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ)))
-            * aOf M Θ L ((x - x₀) / (m : ℝ)) yex (Y m) x₀
-          + (Real.exp (bOf M Θ L ((x - x₀) / (m : ℝ))
-                        * (k : ℝ) * (m : ℝ) * ((x - x₀) / (m : ℝ))) - 1)
-              * (cOf M Θ L M_bound ((x - x₀) / (m : ℝ))
-                  * ((x - x₀) / (m : ℝ))
-                  / (bOf M Θ L ((x - x₀) / (m : ℝ)) * (k : ℝ))) := by
-    intro m hm
-    have hh_nn : 0 ≤ (x - x₀) / (m : ℝ) :=
-      div_nonneg (le_of_lt (sub_pos.mpr hxx)) (Nat.cast_nonneg m)
-    -- Bypass the cycle-060 wrapper to thread Θ explicitly.
-    obtain ⟨ha, hb, hc, hrec, hu0⟩ :=
-      globalError_recurrence_form_explicit hk M hcons hL hM hf_lip
-        hyex_C1 hyex_ode hf_yex_bound hh_nn (hsmall m hm) (hYm m hm)
-        Θ hΘ_nn hΘ
-    have hu0' :
-        |yex (x₀ + ((0 : ℕ) : ℝ) * ((x - x₀) / (m : ℝ))) - Y m 0|
-          ≤ aOf M Θ L ((x - x₀) / (m : ℝ)) yex (Y m) x₀ := by
-      simpa using hu0
-    exact discrete_gronwall_exp_bound
-      (fun n => |yex (x₀ + (n : ℝ) * ((x - x₀) / (m : ℝ))) - Y m n|)
-      _ _ _ _ k ha hb hc hh_nn hk hu0' hrec m
-  -- Step 3: rewrite `m · h_m = x - x₀` inside the bound's LHS argument
-  --         (the `yex (x₀ + m·h_m)` term collapses to `yex x`).
-  -- Step 4: squeeze.
-  --   • `aOf-term → 0` via `globalError_outer_squeeze_a_term` +
-  --     `aOf_tendsto_zero` + `bOf_tendsto_at_zero`.
-  --   • `cOf-term → 0` via `globalError_outer_squeeze_c_term` +
-  --     `bOf_tendsto_at_zero` + `cOf_tendsto_at_zero` (and
-  --     `bOf_limit_pos`).
-  --   • `|sum of two →0|` ≥ |yex x - Y m m|, so squeeze.
-  -- Step 5: discharge by `Filter.Tendsto.squeeze` /
-  --         `tendsto_of_tendsto_of_tendsto_of_le_of_le`.
-  sorry  -- ~80–120 lines of glue; decompose if it overflows.
+  have hcont : Continuous (fun t : ℝ => |f t (yex t)|) := by
+    have hpair : Continuous (fun t : ℝ => (t, yex t)) :=
+      continuous_id.prod_mk hyex_cont
+    exact (hf_cont.comp hpair).abs
+  have hcpt : IsCompact (Set.Icc (min x₀ x) (max x₀ x)) := isCompact_Icc
+  have hnonempty : (Set.Icc (min x₀ x) (max x₀ x)).Nonempty :=
+    Set.nonempty_Icc.mpr (min_le_max)
+  obtain ⟨t₀, ht₀_mem, ht₀_max⟩ :=
+    hcpt.exists_isMaxOn hnonempty hcont.continuousOn
+  refine ⟨|f t₀ (yex t₀)|, abs_nonneg _, fun t ht => ?_⟩
+  exact ht₀_max ht
 ```
 
-### Concrete glue plan for steps 3–5
-
-#### Step 3 — collapse `yex (x₀ + m · h_m)` to `yex x`
-
-`m · h_m = x - x₀` for `m ≥ 1` (cycle 057's `m_h_constancy`). So
-`x₀ + m · h_m = x`, hence `yex (x₀ + m · h_m) = yex x`. Use
-`Filter.eventually_atTop.mpr ⟨1, ?_⟩` and `m_h_constancy hm x x₀`
-inside an `eventually_eq` rewrite of the LHS.
-
-#### Step 4 — Tendsto chain
-
-After Step 3, the LHS of the bound is `|yex x - Y m m|`. The bound's
-RHS is exactly the sum
-```
-exp(bOf · k · m · h_m) · aOf + (exp(bOf · k · m · h_m) - 1) · (cOf · h_m / (bOf · k))
-```
-which is the sum of `globalError_outer_squeeze_a_term`'s subject and
-`globalError_outer_squeeze_c_term`'s subject (instantiated at the
-right `b, c, a`).
-
-Setup:
-```lean
-  -- aOf as a function of h, with Yh = Y (ceil((x-x₀)/h)) (or per-m if you took the per-m hstart).
-  let bFun := fun h : ℝ => bOf M Θ L h
-  let cFun := fun h : ℝ => cOf M Θ L M_bound h
-  let aFun := fun h : ℝ => aOf M Θ L h yex (Y (Nat.ceil ((x - x₀) / h))) x₀
-  -- (Or with the per-m hstart, build aFun via the m-indexed form directly.)
-  have hb_lim : Filter.Tendsto bFun (nhds 0) (nhds bInf) :=
-    bOf_tendsto_at_zero M Θ L
-  have hc_lim : Filter.Tendsto cFun (nhds 0) (nhds cInf) :=
-    cOf_tendsto_at_zero M Θ L M_bound
-  have ha_lim : Filter.Tendsto aFun (nhds 0) (nhds 0) :=
-    aOf_tendsto_zero M Θ L yex (Y (Nat.ceil …)) x₀ hstart
-  -- (Or with per-m hstart, prove `aFun → 0` via `m`-indexed combinator
-  -- since `aOf_tendsto_zero` is `nhds 0`-shaped.)
-  have ha_term :=
-    globalError_outer_squeeze_a_term ha_lim hb_lim k x₀ x
-  have hc_term :=
-    globalError_outer_squeeze_c_term hb_lim hc_lim hb_pos hk x₀ x
-  have hsum : Filter.Tendsto
-      (fun m : ℕ => exp(…) · aFun(h_m) + (exp(…) - 1) · …)
-      Filter.atTop (nhds (0 + 0)) := ha_term.add hc_term
-  simpa using hsum
-```
-
-The `simpa` handles `0 + 0 = 0`.
-
-#### Step 5 — squeeze
-
-```lean
-  refine tendsto_of_tendsto_of_tendsto_of_le_of_le' ?_ hsum ?_ ?_
-  · -- |·| ≥ 0
-    exact tendsto_const_nhds
-    -- (or use `tendsto_of_tendsto_of_tendsto_of_le_of_le` + abs_nonneg)
-  · refine Filter.eventually_atTop.mpr ⟨1, fun m hm => ?_⟩
-    exact abs_nonneg _
-  · refine Filter.eventually_atTop.mpr ⟨1, fun m hm => ?_⟩
-    -- Apply hbound at m, post-rewrite by m_h_constancy in the LHS.
-    have := hbound m hm
-    -- Bridge `|yex (x₀ + m·h_m) - Y m m| = |yex x - Y m m|`.
-    rwa [show x₀ + (m : ℝ) * ((x - x₀) / (m : ℝ)) = x from by
-          rw [m_h_constancy hm x x₀]; ring] at this
-```
-
-Then convert `Y m m - yex x` to `|yex x - Y m m|` via `abs_sub_comm`
-+ `tendsto_zero_iff_abs_tendsto_zero` (or just take absolute values
-on the conclusion via `Filter.Tendsto.abs` on the input direction).
-
-If the abs-stripping is awkward, an alternative is to prove
-`Tendsto (fun m => |yex x - Y m m|) atTop (nhds 0)` first, then
-convert to `Tendsto (fun m => Y m m - yex x) atTop (nhds 0)` via
-`tendsto_zero_iff_abs_tendsto_zero` + `abs_sub_comm`.
-
-### Estimated cost
-
-- Step 1 (Θ extraction): 3 lines.
-- Step 2 (per-`m` bound): 15 lines, mostly boilerplate.
-- Step 3 (`m_h_constancy` rewrite): 5 lines.
-- Step 4 (Tendsto chain): 30 lines.
-- Step 5 (squeeze + abs juggling): 20 lines.
-- Total: ~75 lines. Below CLAUDE.md's "decompose if > 200000
-  heartbeats" threshold; no maxHeartbeats bump needed.
-
-If any single step blows up (most likely Step 4 if `aFun`'s
-parametrization gets tangled), decompose into a private helper
-`stable_consistent_isConvergent_autonomous_RHS_tendsto` that proves
-just the Tendsto of the RHS sum, and let the main theorem squeeze
-against it.
+**Aristotle:** submit; ~25 lines if Aristotle finds the right
+compactness lemma. The fallback above is the manual route.
 
 ---
 
-## E. What NOT to do
+### Adapter 3 — starting-data shape bridge
 
-1. **Do NOT close the line-3818 `sorry` on
-   `stable_consistent_isConvergent` itself.** That theorem is the
-   *non-autonomous* form (`f : ℝ → ℝ → ℝ`) and bridging from the
-   autonomous closed-form bound (`f : ℝ → ℝ`) to the non-autonomous
-   `IsConvergent` predicate requires a separate cycle of work
-   (lifting `LipschitzInSecond Set.univ L f` ⇒ `LipschitzWith` for
-   the *autonomous restriction* `fun y => f x y`, then handling the
-   `x`-dependence). That is the cycle 063+ deliverable. Cycle 062's
-   contribution is the **autonomous** specialization, which is a
-   separate top-level theorem. Leave the line-3818 sorry intact.
+**Why:** the autonomous theorem hypothesises per-`h`
+`hstart : ∀ j : Fin k, Tendsto (fun h => yex (x₀ + j·h) − Yh h j)
+(nhds 0) (nhds 0)`. The non-autonomous `IsConvergent` uses the
+textbook shape `hstart : ∀ i : Fin k, Tendsto (start · i) (nhds 0)
+(nhds y₀)`. The two are equivalent under continuity of `yex` at
+`x₀` and `yex x₀ = y₀` (which the `IsConvergent` predicate
+provides via `HasDerivAt`).
 
-2. **Do NOT redo the cycle 057 `a_m_tendsto_zero` from scratch.**
-   Wrap it via `unfold + exact` per §B. Reproducing 60 lines for a
-   one-line wrapper is wasted effort.
-
-3. **Do NOT modify `scripts/autonomous_loop.py`** to "fix" the
-   tautology scanner. Per CLAUDE.md and the standing
-   `tautology_scanner_false_positives.md` issue, that is loop-
-   maintainer territory. The cycle 061 baseline is 2 hits, both
-   grandfathered cycle-052/055 closers. Don't introduce a new
-   `:= h_*` or `exact h_*` closer; if the squeeze proof naturally
-   wants one, use `simpa [h_eq] using h_name` or `convert h_name
-   using 0`.
-
-4. **Do NOT raise `maxHeartbeats` above 200000.** If Step 4's
-   Tendsto chain is slow, decompose into 2 sub-lemmas (one for the
-   `aOf`-term, one for the `cOf`-term).
-
-5. **Do NOT introduce `axiom` or `constant`.** All §406D
-   prerequisites are in the file; no genuine Mathlib gap remains
-   for this cycle.
-
-6. **Do NOT change `globalError_recurrence_form_explicit`,
-   `globalError_closed_form_autonomous_explicit`, or any cycle 060
-   def.** They are load-bearing and were validated last cycle.
-   Cycle 060's score=−1 was a duplicated false positive (see cycle
-   061 strategy diagnosis), not a correctness regression.
-
-7. **Do NOT poll Aristotle more than once after the 30-min sleep.**
-   CLAUDE.md is explicit. Submit at cycle start, sleep 30 min,
-   check once, then proceed manually with whatever did not return.
-
-8. **Do NOT try to "lift to `Tendsto … atTop`" using a generic
-   sequence-from-net argument.** The right pattern for our shape is
-   `tendsto_step_size_comp` (cycle 058,
-   `Section404.lean:2293`) — it converts `Tendsto F (nhds 0)`
-   helpers to `Tendsto (F ((x-x₀)/m)) atTop` directly, using
-   `tendsto_const_div_atTop_nhds_zero_nat`. This is what the
-   cycle 059 `globalError_outer_squeeze_*_term` helpers internally
-   use.
-
----
-
-## F. Aristotle batch script (for your convenience)
-
-Submit the ~5 jobs in §C as one Aristotle batch at the start of
-the cycle. Suggested submission file
-`.prover-state/aristotle_submissions/cycle_062/sub_lemmas.lean`:
+**Statement (place above the autonomous theorem):**
 
 ```lean
-import OpenMath.Chapter4.Section404
-namespace OpenMath.Chapter4.Section404
+/-- **Adapter (cycle 063): starting-data shape bridge.**
 
--- Job 1: aOf_tendsto_zero
-example {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ)
-    (yex : ℝ → ℝ) (Yh : ℝ → ℕ → ℝ) (x₀ : ℝ)
-    (hstart : ∀ j : Fin k,
-        Filter.Tendsto
-          (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
-          (nhds 0) (nhds 0)) :
-    Filter.Tendsto
-      (fun h : ℝ => aOf M Θ L h yex (Yh h) x₀) (nhds 0) (nhds 0) := by
+The non-autonomous `IsConvergent` predicate uses the textbook
+starting-data shape `start h i → y₀`; the autonomous theorem (and
+the cycle 040–062 helper chain) uses the per-`h` shape
+`yex (x₀ + j·h) − Yh h j → 0`. The two are equivalent under
+continuity of `yex` at `x₀` and `yex x₀ = y₀` (which the
+`IsConvergent` predicate provides via `HasDerivAt`).
+
+This adapter is the boundary lemma that lets cycle 064+ thread
+the textbook starting-data hypothesis through the autonomous
+helper chain. -/
+private lemma hstart_shape_bridge
+    {k : ℕ} {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_cont_x₀ : ContinuousAt yex x₀)
+    {start : ℝ → Fin k → ℝ}
+    (hstart : ∀ i : Fin k,
+        Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) :
+    ∀ j : Fin k,
+      Filter.Tendsto
+        (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - start h j)
+        (nhds 0) (nhds 0) := by
   sorry
-
--- Job 2: cOf · h → 0
-example {k : ℕ} (M : LinearMultistepMethod k) (Θ L M_bound : ℝ) :
-    Filter.Tendsto (fun h : ℝ => cOf M Θ L M_bound h * h)
-      (nhds 0) (nhds 0) := by
-  sorry
-
--- Job 3: bOf limit positivity
-example {k : ℕ} (M : LinearMultistepMethod k) (Θ L : ℝ)
-    (hΘ_nn : 0 ≤ Θ) (hL : 0 ≤ L) :
-    0 < (Θ + 1) *
-            (L * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
-                  + ∑ i : Fin k, |M.β i.succ|))
-          + 1 := by
-  sorry
-
--- Job 4: per-m closed-form bound (see §C job 4 for full statement)
--- Job 5: stable_consistent_isConvergent_autonomous (see §D for full statement)
-
-end OpenMath.Chapter4.Section404
 ```
 
-(Use `mcp__aristotle__submit_file` with this file. Sleep 30 min via
-the standard `sleep 1800 &` pattern, then `mcp__aristotle__get_status`
-once.)
+**Proof sketch:**
+- Fix `j : Fin k`. The map `h ↦ x₀ + j·h` is continuous and equals
+  `x₀` at `h = 0`, so `h ↦ yex (x₀ + j·h)` tends to `yex x₀ = y₀`
+  as `h → 0` (composition + `ContinuousAt`).
+- Combined with `start h j → y₀`, the difference tends to
+  `y₀ − y₀ = 0` via `Filter.Tendsto.sub`.
+
+**Manual proof attempt:**
+
+```lean
+  intro j
+  have hlin : Filter.Tendsto (fun h : ℝ => x₀ + (j.val : ℝ) * h)
+      (nhds 0) (nhds x₀) := by
+    have : Filter.Tendsto (fun h : ℝ => x₀ + (j.val : ℝ) * h)
+        (nhds 0) (nhds (x₀ + (j.val : ℝ) * 0)) := by fun_prop
+    simpa using this
+  have hyex_lim : Filter.Tendsto (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h))
+      (nhds 0) (nhds y₀) := by
+    have := hyex_cont_x₀.tendsto.comp hlin
+    rwa [hyex_x₀] at this
+  have hsub := hyex_lim.sub (hstart j)
+  simpa using hsub
+```
+
+**Aristotle:** submit; ~15 lines.
 
 ---
 
-## G. Faithfulness checklist (for cycle 062 commit)
+## Priority 2 — issue file documenting the cycle 064+ refactor plan
 
-For `stable_consistent_isConvergent_autonomous`:
+Create `.prover-state/issues/non_autonomous_lift_plan.md` with the
+following exact content (this is the authoritative roadmap for
+cycles 064–067):
 
-- [ ] Entity ID: this is **not** a Butcher-named entity; it is a
-  helper specialization of `thm:406D` (`def:402A`-style conclusion
-  with autonomous `f`). Document this clearly in the docstring:
-  > "Autonomous-IVP specialization of Butcher Theorem 406D
-  > (entity `thm:406D`). The full non-autonomous theorem is the
-  > sorry'd `stable_consistent_isConvergent` below; the autonomous
-  > form will be lifted to non-autonomous in cycle 063+."
-- [ ] Lean statement captures: a *strictly weaker* form of the
-  textbook (autonomous specialization). Justify in the docstring +
-  task results.
-- [ ] Tautology check: hypotheses include `hstab`, `hcons`,
-  Lipschitz, smoothness, IVP-solution. Conclusion is a `Tendsto` —
-  none of the hypotheses asserts this Tendsto. ✓
-- [ ] Identity check: proof is not `exact h` — it is a non-trivial
-  squeeze. ✓
-- [ ] Hypothesis strength: `ContDiff ℝ 1 yex` is implicit in
-  Butcher's "exact solution of IVP with Lipschitz `f`" (yex is
-  automatically C¹). `hf_yex_bound` is a faithful add (Butcher's
-  `M = max |f|` over the trajectory; needed since we don't have
-  Picard-Lindelöf existence to derive it). Document both adds in
-  the cycle 062 task results' faithfulness section.
-- [ ] Absent theorem check: the `aOf_tendsto_zero` lemma must
-  actually exist in the file (don't promise-and-skip). ✓ (priority
-  1 above ensures this).
+```markdown
+# Issue: Non-autonomous lift of `stable_consistent_isConvergent`
 
-For `aOf_tendsto_zero`: standard internal-scaffolding faithfulness
-(no entity ID, documented "not a Butcher concept", proves a real
-limit fact, hypotheses are minimal).
+## Status
+
+Cycle 062 closed `LinearMultistepMethod.stable_consistent_isConvergent_autonomous`
+(autonomous-IVP form, scalar `f : ℝ → ℝ`) at
+`OpenMath/Chapter4/Section404.lean:3863`. The textbook `IsConvergent`
+predicate (def:402A, line 305) is non-autonomous (`f : ℝ → ℝ → ℝ`).
+The lift to `LinearMultistepMethod.stable_consistent_isConvergent`
+(line 4012) requires re-deriving 19 helpers from the cycle 040–062
+chain to accept `f : ℝ → ℝ → ℝ` with `LipschitzInSecond Set.univ L f`.
+
+## Cycle 063 deliverables (the boundary adapters)
+
+* `lipschitzInSecond_univ_toLipschitzWith` — converts the
+  non-autonomous Lipschitz predicate to the per-`x` autonomous form
+  the helper chain consumes.
+* `f_yex_bound_on_Icc` — extracts a uniform bound on `[x₀, x]` from
+  joint continuity of `f` and continuity of `yex`.
+* `hstart_shape_bridge` — bridges the textbook `start h i → y₀`
+  shape to the per-`h` `yex (x₀+j·h) − Yh h j → 0` shape.
+
+These three adapters form the autonomous/non-autonomous boundary;
+the cycle 064+ refactor builds on them.
+
+## Cycle 064–067 refactor plan (bottom-up)
+
+Each helper currently takes `{f : ℝ → ℝ}` and uses autonomous `f y`
+calls. The non-autonomous variant takes `{f : ℝ → ℝ → ℝ}` and uses
+`f t y`, with a `LipschitzInSecond` (or per-`x` `LipschitzWith`)
+hypothesis. List in dependency order:
+
+### Cycle 064 — lift §406B sub-lemmas (~150 lines)
+
+* `exact_solution_norm_bound` (line 568)
+* `residual_integral_form` (line 624)
+* `residual_bound` (line 692)
+* `deriv_diff_bound` (line 790)
+* `localTruncationError_bound` = `lem:406B` (line 923)
+
+### Cycle 065 — lift §406D recurrence helpers (~200 lines)
+
+* `T1_bound` (line 1180)
+* `T2_term_bound` (line 1200)
+* `globalError_step_bound` (line 1241)
+* `globalError_recurrence_form` (line 2544)
+* `globalError_recurrence_form_explicit` (line 3249)
+
+### Cycle 066 — lift cycle 057–061 squeeze helpers (~100 lines)
+
+* `globalError_outer_squeeze_a_term`
+* `globalError_outer_squeeze_c_term`
+* `bOf_tendsto_at_zero`, `cOf_tendsto_at_zero`,
+  `aOf_tendsto_zero`, `bOf_limit_pos`
+
+### Cycle 067 — close `stable_consistent_isConvergent` (~80 lines)
+
+Lift `globalError_closed_form_autonomous_explicit` to non-autonomous
+and prove `stable_consistent_isConvergent` directly, using:
+* the cycle 063 adapters (Lipschitz, bound, hstart bridge);
+* the cycle 064–066 lifted helpers.
+
+## Why a refactor cycle by cycle (not one big cycle)
+
+* Cycle 060 (~430 lines, single-cycle target) regressed (score −1)
+  because complexity outpaced verification. Cycle 061 (3 wrappers,
+  +1) and cycle 062 (autonomous theorem + wrapper, +2) showed that
+  small decomposed wins land cleanly.
+* The 19 helpers form 4 natural clusters along the dependency
+  chain. Each cluster is ~80–200 lines.
+* Aristotle batch-submits at each cluster boundary keep the manual
+  effort O(50–100 lines per cycle).
+
+## Hypothesis adaptation rules
+
+For each helper:
+
+* `{f : ℝ → ℝ}` → `{f : ℝ → ℝ → ℝ}`.
+* `(hf_lip : LipschitzWith L.toNNReal f)` → either
+  `(hf_lip : LipschitzInSecond Set.univ L f)` (and use cycle 063's
+  `lipschitzInSecond_univ_toLipschitzWith` adapter inside the body)
+  or per-`x` `(hf_lip : ∀ x, LipschitzWith L.toNNReal (f x))`.
+* `(hyex_ode : ∀ t, deriv yex t = f (yex t))` →
+  `(hyex_ode : ∀ t, deriv yex t = f t (yex t))`.
+* `(hf_yex_bound : ∀ t, |f (yex t)| ≤ M_bound)` →
+  `(hf_yex_bound : ∀ t ∈ Set.Icc x₀ x, |f t (yex t)| ≤ M_bound)`
+  (compact-restricted) plus, where the helper indexes off the
+  trajectory, the appropriate restriction.
+* `(hY : M.IsLMMSolution h x₀ (fun _ y => f y) Y)` →
+  `(hY : M.IsLMMSolution h x₀ f Y)`.
+
+## Cross-references
+
+* `extraction/formalization_data/entities/thm_406D.json` — textbook
+  statement (non-autonomous).
+* `OpenMath/Chapter4/Section404.lean:3863` — autonomous theorem
+  (cycle 062).
+* `OpenMath/Chapter4/Section404.lean:4012` — the sorry to close
+  (cycle 067).
+* `.prover-state/task_results/cycle_062.md` — original lift
+  estimate (200–400 lines, "no deep new mathematics").
+```
 
 ---
 
-## H. End-of-cycle checklist
+## Priority 3 — Aristotle batch
 
-Before commit:
+Submit the **3 adapter lemmas** to Aristotle as a single submission
+(via `mcp__aristotle__submit_file` if creating a single .lean file
+with all three, or `mcp__aristotle__submit_prompt` per lemma). Each
+is small enough to close in one Aristotle round.
 
-- [ ] `lake env lean OpenMath/Chapter4/Section404.lean` exits 0
-  with the same warnings as cycle 061 (4 warnings: `hM`, `hh`,
-  `hMmax0`, line-3818 sorry).
-- [ ] `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
-  reports exactly 2 hits (no new closer-style flags).
-- [ ] `#print axioms LinearMultistepMethod.stable_consistent_isConvergent_autonomous`
-  returns `[propext, Classical.choice, Quot.sound]` only.
-- [ ] `git diff --stat` shows real changes in
-  `OpenMath/Chapter4/Section404.lean` (the new `aOf_tendsto_zero`
-  + new `stable_consistent_isConvergent_autonomous`). Expected
-  change: ~+150 lines net, no deletions.
-- [ ] `extraction/formalization_data/lean_status.json` updated:
-  `thm:406D` → `partial` (with note: "autonomous-IVP form done as
-  `stable_consistent_isConvergent_autonomous`; non-autonomous lift
-  is cycle 063+"). Do **not** mark as `formalized` — the textbook
-  statement is non-autonomous.
-- [ ] Task results at `.prover-state/task_results/cycle_062.md`
-  include the §G faithfulness check explicitly, and the §H
-  "Suggested next approach" should describe the cycle 063
-  non-autonomous lift (build `LipschitzInSecond` ⇒ per-`x`
-  `LipschitzWith` adapter, then specialise to autonomous case +
-  use `stable_consistent_isConvergent_autonomous`).
+After submission:
+1. Sleep **30 minutes** (CLAUDE.md rule, not 5 min, not 60 min).
+2. Check **once** with `mcp__aristotle__get_status`.
+3. Incorporate any returned proofs (with attribution in docstring).
+4. For any adapter Aristotle did not close, fall back to the
+   manual proof sketches above.
+
+**Do NOT poll Aristotle more than once after the 30-minute sleep.**
 
 ---
 
-## I. Cross-references
+## What NOT to do
 
-- Cycle 061 task results: this strategy's §B / §D leverage
-  cycle 061's three Tendsto wrappers exactly as cycle 061
-  recommended.
-- Cycle 057's `a_m_tendsto_zero` (`Section404.lean:2245`): the
-  underlying lemma wrapped by `aOf_tendsto_zero`.
-- Cycle 058's `tendsto_step_size_comp` (`Section404.lean:2293`):
-  the bridge from `nhds 0` to `atTop`.
-- Cycle 059's `globalError_outer_squeeze_a_term`,
-  `_c_term` (`Section404.lean:2311`, `2383`): the load-bearing
-  squeeze helpers.
-- Cycle 060's `globalError_closed_form_autonomous_explicit`
-  (`Section404.lean:3695`): the per-`h` bound used in §D's Step 2.
-- `lmm_convergence_witness_deferred.md`: the cycle 062 deliverable
-  partially resolves this issue (provides an autonomous-IVP
-  *theorem*, but not a concrete *witness* for explicit Euler — that
-  requires lifting to non-autonomous in cycle 063+ and then
-  specialising).
+* **Do NOT** attempt to close the line-4012 sorry in cycle 063. The
+  cycle 062 task results estimated 200–400 lines for the full lift,
+  which is multi-cycle work. Trying to do it all in one cycle risks
+  the cycle 060 regression pattern (score −1).
+* **Do NOT** refactor any of the cycle 040–062 autonomous helpers
+  to non-autonomous form in cycle 063. That is the cycle 064–067
+  scope per the issue file.
+* **Do NOT** modify `LinearMultistepMethod.stable_consistent_isConvergent_autonomous`
+  (the cycle 062 deliverable at line 3863). It is the analytical
+  core; the lift builds on top of it.
+* **Do NOT** introduce `axiom` or `constant` declarations.
+* **Do NOT** raise `maxHeartbeats` above 200000.
+* **Do NOT** treat the line-4012 sorry as a "regression" to fix; it
+  was deliberately left in cycle 062 per the strategy and is the
+  cycle 067 target.
+* **Do NOT** modify `scripts/autonomous_loop.py` (loop-maintainer
+  territory; see `tautology_scanner_false_positives.md`).
+* **Do NOT** delete or weaken any of the cycle 040–062 helpers as
+  a "shortcut". The autonomous chain is load-bearing for cycle 067.
+* **Do NOT** write the adapter lemmas as `theorem` or
+  non-`private`. They are internal scaffolding for the cycle 064+
+  refactor.
+* **Do NOT** cherry-pick a different Chapter 4 entity (e.g.
+  `thm:410A`, `thm:443A`) instead of cycle 063's adapters. Per
+  CLAUDE.md, "Follow the strategy. Do not cherry-pick easy goals."
+  The non-autonomous lift of `thm:406D` is the canonical thread to
+  pull because it unblocks the textbook form of the marquee
+  cycle 040–062 result.
+
+---
+
+## Acceptance criteria for cycle 063
+
+A successful cycle 063 commit produces:
+
+1. **Three new private lemmas** in
+   `OpenMath/Chapter4/Section404.lean`, placed immediately above
+   line 3863:
+   - `lipschitzInSecond_univ_toLipschitzWith`
+   - `f_yex_bound_on_Icc`
+   - `hstart_shape_bridge`
+
+   All three compile cleanly (no `sorry`, no `axiom`).
+
+2. **One new issue file**:
+   `.prover-state/issues/non_autonomous_lift_plan.md` documenting
+   the cycle 064–067 refactor plan (use the template in §"Priority 2"
+   above verbatim).
+
+3. **Verification**:
+   - `lake env lean OpenMath/Chapter4/Section404.lean` exits clean.
+   - `rg '\bsorry\b' OpenMath/Chapter4/Section404.lean -n` shows
+     exactly 1 hit (the line-4012 main theorem, unchanged).
+   - `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
+     returns no new tautology hits.
+   - Axiom check on the three new adapters: only
+     `[propext, Classical.choice, Quot.sound]`.
+
+4. **`task_results/cycle_063.md`** documenting:
+   - Each adapter's statement, proof approach, and Aristotle status.
+   - The issue file reference.
+   - Cycle 064 next-step (lift the §406B sub-lemmas: see issue file).
+
+5. **Faithfulness check** in the task results:
+   - Each adapter is internal scaffolding; not a Butcher-named
+     entity. Document accordingly.
+   - Adapter 2 introduces a *compact-restricted* bound (weaker than
+     the autonomous theorem's `∀ t : ℝ`). The cycle 064+ refactor
+     will adapt the helpers to consume the compact-restricted form.
+     Document this as a deliberate scope decision in adapter 2's
+     docstring.
+   - Tautology check: each adapter does real work (not vacuous
+     hypothesis re-export).
+
+---
+
+## Faithfulness flags for the worker
+
+* **Adapter 1** is a definitional unfolding bridge — no
+  faithfulness divergence. Document in docstring as "trivial
+  unfolding bridge".
+* **Adapter 2** introduces a *compact-restricted* bound. The
+  autonomous theorem's `∀ t : ℝ` is stricter than what continuity
+  delivers; the cycle 064+ refactor will re-derive the autonomous
+  helpers to consume the compact-restricted form. Document this as
+  a deliberate scope decision; not a divergence from the textbook
+  (the textbook's `M = max …` is implicitly compact-restricted).
+* **Adapter 3** uses `ContinuousAt yex x₀` (extractable from
+  `HasDerivAt yex … x₀` in the `IsConvergent` predicate via
+  `HasDerivAt.continuousAt`) plus `yex x₀ = y₀`. Both are
+  immediate from `IsConvergent`'s hypotheses. No new mathematical
+  content.
+
+---
+
+## Strategic context (for the worker's awareness, not action)
+
+The cycle 062 commit `1eaf808` proves the autonomous form, which is
+the analytical core. The non-autonomous lift is mechanical
+bookkeeping. After cycle 067 closes
+`stable_consistent_isConvergent`, the natural follow-ups are
+(per `plan.md` Chapter 4):
+
+* `thm:406C` (already done — global error bound for LMMs).
+* `thm:243A` (cross-chapter Ch.2→Ch.4 deferral; consumes
+  `IsConvergent`).
+* `thm:405A`, `thm:405B`, `thm:405C` (necessity-of-conditions
+  theorems for convergence; all consume `IsConvergent`
+  symbolically).
+
+None of these are blocked by cycle 063's scope; cycle 063 is purely
+the entry point for the cycle 067 closure of `thm:406D`'s textbook
+form. The worker should focus on cycle 063's three adapters and the
+issue file, not on these downstream targets.

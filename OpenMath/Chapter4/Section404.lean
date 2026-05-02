@@ -3840,6 +3840,104 @@ private lemma bOf_limit_pos
           + 1 := by
   positivity
 
+/-! ### Cycle 063 — adapters at the autonomous/non-autonomous boundary
+
+These three private lemmas form the boundary between the autonomous
+helper chain (cycles 040–062, taking `f : ℝ → ℝ`) and the textbook
+non-autonomous `IsConvergent` predicate (taking `f : ℝ → ℝ → ℝ`).
+The cycle 064–067 refactor will lift the autonomous helpers to
+non-autonomous form on top of these adapters; see
+`.prover-state/issues/non_autonomous_lift_plan.md`. -/
+
+/-- **Adapter (cycle 063): `LipschitzInSecond Set.univ` ⇒ per-`x`
+`LipschitzWith` on the autonomous restriction.**
+
+The non-autonomous `IsConvergent` predicate hypothesises
+`LipschitzInSecond Set.univ L f`; the autonomous helper chain
+(cycles 040–062) requires `LipschitzWith L (f x)` for each `x`.
+This is the trivial unfolding bridge:
+`LipschitzInSecond s L f := ∀ x ∈ s, LipschitzWith L (f x)`
+(see `OpenMath/Chapter1/Section110.lean:45`), so on `Set.univ` the
+universal hypothesis is automatic. -/
+private lemma lipschitzInSecond_univ_toLipschitzWith
+    {L : ℝ≥0} {f : ℝ → ℝ → ℝ}
+    (hf_lip : OpenMath.Chapter1.Section110.LipschitzInSecond Set.univ L f)
+    (x : ℝ) :
+    LipschitzWith L (f x) :=
+  hf_lip x (Set.mem_univ _)
+
+/-- **Adapter (cycle 063): bound for `f t (yex t)` on a compact
+interval.**
+
+Given `f : ℝ → ℝ → ℝ` jointly continuous and `yex : ℝ → ℝ`
+continuous, the function `t ↦ |f t (yex t)|` is bounded on every
+closed interval. The bound is the `M_bound` the autonomous theorem
+chain consumes; the cycle 064+ refactor will re-derive the
+autonomous helpers to take a compact-restricted bound rather than
+the global `∀ t : ℝ` form.
+
+Note: this gives a bound on `Set.Icc (min x₀ x) (max x₀ x)`, NOT on
+all of ℝ. The autonomous theorem's `∀ t : ℝ` is stricter than what
+continuity alone delivers. The cycle 064+ refactor will adapt the
+helper chain to the compact-restricted form (which matches the
+textbook's implicit `M = max …` over the trajectory's compact
+interval). -/
+private lemma f_yex_bound_on_Icc
+    {f : ℝ → ℝ → ℝ}
+    (hf_cont : Continuous (Function.uncurry f))
+    {yex : ℝ → ℝ} (hyex_cont : Continuous yex)
+    (x₀ x : ℝ) :
+    ∃ M_bound : ℝ, 0 ≤ M_bound ∧
+      ∀ t ∈ Set.Icc (min x₀ x) (max x₀ x), |f t (yex t)| ≤ M_bound := by
+  have hcont : Continuous (fun t : ℝ => |f t (yex t)|) := by
+    have hpair : Continuous (fun t : ℝ => (t, yex t)) :=
+      continuous_id.prodMk hyex_cont
+    exact (hf_cont.comp hpair).abs
+  have hcpt : IsCompact (Set.Icc (min x₀ x) (max x₀ x)) := isCompact_Icc
+  have hnonempty : (Set.Icc (min x₀ x) (max x₀ x)).Nonempty :=
+    Set.nonempty_Icc.mpr min_le_max
+  obtain ⟨t₀, ht₀_mem, ht₀_max⟩ :=
+    hcpt.exists_isMaxOn hnonempty hcont.continuousOn
+  refine ⟨|f t₀ (yex t₀)|, abs_nonneg _, fun t ht => ?_⟩
+  exact ht₀_max ht
+
+/-- **Adapter (cycle 063): starting-data shape bridge.**
+
+The non-autonomous `IsConvergent` predicate uses the textbook
+starting-data shape `start h i → y₀`; the autonomous theorem (and
+the cycle 040–062 helper chain) uses the per-`h` shape
+`yex (x₀ + j·h) − Yh h j → 0`. The two are equivalent under
+continuity of `yex` at `x₀` and `yex x₀ = y₀` (which the
+`IsConvergent` predicate provides via `HasDerivAt`).
+
+This adapter is the boundary lemma that lets cycle 064+ thread
+the textbook starting-data hypothesis through the autonomous
+helper chain. -/
+private lemma hstart_shape_bridge
+    {k : ℕ} {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_cont_x₀ : ContinuousAt yex x₀)
+    {start : ℝ → Fin k → ℝ}
+    (hstart : ∀ i : Fin k,
+        Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) :
+    ∀ j : Fin k,
+      Filter.Tendsto
+        (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - start h j)
+        (nhds 0) (nhds 0) := by
+  intro j
+  have hlin_cont : Continuous (fun h : ℝ => x₀ + (j.val : ℝ) * h) :=
+    continuous_const.add (continuous_const.mul continuous_id)
+  have hlin : Filter.Tendsto (fun h : ℝ => x₀ + (j.val : ℝ) * h)
+      (nhds 0) (nhds x₀) := by
+    have h0 := hlin_cont.tendsto (0 : ℝ)
+    simpa using h0
+  have hyex_lim : Filter.Tendsto (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h))
+      (nhds 0) (nhds y₀) := by
+    have hcomp := hyex_cont_x₀.tendsto.comp hlin
+    rwa [hyex_x₀] at hcomp
+  have hsub := hyex_lim.sub (hstart j)
+  simpa using hsub
+
 open OpenMath.Chapter1.Section141 in
 /-- **Butcher Theorem 406D, autonomous-IVP form (Tendsto).** [Cycle 062]
 
