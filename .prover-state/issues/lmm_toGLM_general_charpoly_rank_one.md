@@ -69,3 +69,14 @@ evaluation theorem connecting its roots to `m.stabilityPoly · z`.
 4. Once the polynomial factorisation lands, `LMM.toGLM_isAStable_iff` should
    follow by `Matrix.charpoly_reindex` and the evaluation bridge for
    `stabilityPolyPoly`.
+
+## Status as of cycle 658
+
+Solution (1) landed: `stabilityPolyPoly` is defined and bridged to
+`stabilityPoly`. The block-level charpolys (general PHF, general PY) for
+each diagonal block have been computed without `hbdf`. The remaining gap
+is the *full* assembly when both off-diagonal blocks PYHF and PHFY are
+non-zero rank-one (true for general LMMs, false only under `hbdf`). See
+`lmm_general_stability_charpoly_step3.md` for the next two recommended
+lemmas (`toGLM_V_active_charpoly` and `Matrix.charpoly_add_smul_vecMulVec`)
+and a route comparison.

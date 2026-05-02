@@ -1430,6 +1430,52 @@ private theorem toGLM_stabilityMatrixPYCompanion_charpoly (a : Fin s → ℂ) :
           rw [hpow_main, hsum_pow]
           ring_nf
 
+/-- §521 — General LMM PHF block as the bottom-row companion matrix with
+coefficients `z · β_castSucc l / D` (no BDF hypothesis). The PHF block has
+the exact shape of `toGLM_stabilityMatrixPYCompanion` by definition. -/
+private theorem toGLM_stabilityMatrixPHF_eq_companion
+    (m : LMM s) (z : ℂ) :
+    toGLM_stabilityMatrixPHF m z =
+      toGLM_stabilityMatrixPYCompanion
+        (fun l : Fin s =>
+          z * (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+            ((m.β (Fin.castSucc l) : ℝ) : ℂ)) := by
+  rfl
+
+/-- §521 — General LMM PHF block characteristic polynomial (drops the BDF
+hypothesis from cycle 643's `_of_bdf`). The bottom row carries
+`z · β_castSucc l / D` entries where `D = 1 - z · β_last`. -/
+theorem toGLM_stabilityMatrixPHF_charpoly (m : LMM s) (z : ℂ) :
+    (toGLM_stabilityMatrixPHF m z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s -
+        ∑ l : Fin s,
+          Polynomial.C
+            (z * (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+              ((m.β (Fin.castSucc l) : ℝ) : ℂ)) *
+            Polynomial.X ^ (l : ℕ) := by
+  rw [toGLM_stabilityMatrixPHF_eq_companion]
+  exact toGLM_stabilityMatrixPYCompanion_charpoly _
+
+/-- §521 — BDF specialisation of the general PHF charpoly. Recovers
+`toGLM_stabilityMatrixPHF_charpoly_of_bdf` as a one-liner consequence of the
+general theorem. Kept as a `'`-suffixed sanity check; the original
+`_of_bdf` (proved via upper-triangularity) is preserved unchanged. -/
+theorem toGLM_stabilityMatrixPHF_charpoly_of_bdf'
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    (toGLM_stabilityMatrixPHF m z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s := by
+  rw [toGLM_stabilityMatrixPHF_charpoly]
+  have hβ : ∀ l : Fin s, m.β (Fin.castSucc l) = 0 := by
+    intro l
+    refine hbdf (Fin.castSucc l) ?_
+    intro h
+    have hv := congrArg Fin.val h
+    have hl_lt : (l : ℕ) < s := l.isLt
+    simp [Fin.castSucc, Fin.last] at hv
+    omega
+  simp [hβ]
+
 /-- §521 — Under the BDF denominator hypothesis, the active past-`y` block is
 the bottom-row companion matrix with coefficients `-α_l / (1 - z β_s)`. -/
 private theorem toGLM_stabilityMatrixPY_eq_companion_of_bdf
@@ -1467,6 +1513,55 @@ theorem toGLM_stabilityMatrixPY_charpoly_of_bdf
     (fun l : Fin s =>
       (((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
         (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))))
+
+/-- §521 — In the final past-`y` row of the PY block, the entry simplifies to
+`-α l / (1 - z · β_s)` once the resolvent denominator is non-zero. This
+generalises `toGLM_stabilityMatrixPY_apply_last_of_bdf` by dropping the
+unused `hbdf` argument. -/
+theorem toGLM_stabilityMatrixPY_apply_last
+    (m : LMM s) (z : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0)
+    (j : Fin s) (hj : (j : ℕ) + 1 = s) (l : Fin s) :
+    toGLM_stabilityMatrixPY m z j l =
+      ((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
+        (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) := by
+  unfold toGLM_stabilityMatrixPY
+  rw [if_pos hj]
+  field_simp
+  ring
+
+/-- §521 — General LMM PY block as the bottom-row companion matrix with
+coefficients `-α_l / (1 - z β_s)` (drops the BDF hypothesis from
+`toGLM_stabilityMatrixPY_eq_companion_of_bdf`). -/
+private theorem toGLM_stabilityMatrixPY_eq_companion
+    (m : LMM s) (z : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    toGLM_stabilityMatrixPY m z =
+      toGLM_stabilityMatrixPYCompanion
+        (fun l : Fin s =>
+          (((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
+            (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)))) := by
+  ext j l
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [toGLM_stabilityMatrixPY_apply_last m z hz j hj l]
+    simp [toGLM_stabilityMatrixPYCompanion, hj]
+  · rw [toGLM_stabilityMatrixPY_apply_shift m z j hj l]
+    simp [toGLM_stabilityMatrixPYCompanion, hj]
+
+/-- §521 — General LMM PY block charpoly (drops the BDF hypothesis from
+`toGLM_stabilityMatrixPY_charpoly_of_bdf`). -/
+theorem toGLM_stabilityMatrixPY_charpoly
+    (m : LMM s) (z : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    (toGLM_stabilityMatrixPY m z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s -
+        ∑ l : Fin s,
+          Polynomial.C
+            (((-m.α (Fin.castSucc l) : ℝ) : ℂ) /
+              (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+            Polynomial.X ^ (l : ℕ) := by
+  rw [toGLM_stabilityMatrixPY_eq_companion m z hz]
+  exact toGLM_stabilityMatrixPYCompanion_charpoly _
 
 /-- §521 — Polynomial-valued LMM stability polynomial at fixed `z`:
 package `ρ(X) - z · σ(X)` as a polynomial in `X` (a polynomial of
