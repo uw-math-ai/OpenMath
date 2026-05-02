@@ -2880,7 +2880,64 @@ theorem det_add_vecMulVec
   intros j _
   ring
 
+/-- §521 — Characteristic polynomial form of the unrestricted rank-one
+determinant lemma. No invertibility hypothesis on `M.det` is required. -/
+theorem charpoly_add_vecMulVec
+    {R : Type*} [CommRing R] {n : Type*} [DecidableEq n] [Fintype n]
+    (M : Matrix n n R) (u v : n → R) :
+    (M + Matrix.vecMulVec u v).charpoly
+      = M.charpoly
+        - dotProduct (fun j => Polynomial.C (v j))
+            ((M.charmatrix).adjugate.mulVec
+               (fun i => Polynomial.C (u i))) := by
+  classical
+  have hcharmatrix :
+      (M + Matrix.vecMulVec u v).charmatrix =
+        M.charmatrix + Matrix.vecMulVec (fun i => -Polynomial.C (u i))
+          (fun j => Polynomial.C (v j)) := by
+    ext i j
+    simp [Matrix.charmatrix, Matrix.vecMulVec_apply]
+    ring
+  rw [Matrix.charpoly, hcharmatrix]
+  have h := Matrix.det_add_vecMulVec (M.charmatrix)
+    (fun i => -Polynomial.C (u i)) (fun j => Polynomial.C (v j))
+  simpa [Matrix.charpoly, dotProduct, Matrix.mulVec, sub_eq_add_neg] using h
+
 end Matrix
+
+namespace LMM
+
+variable {s : ℕ}
+
+/-- §521 — Rank-one characteristic polynomial formula for the LMM-as-GLM
+stability matrix, before simplifying the sparse dot-product term. -/
+theorem toGLM_stabilityMatrix_charpoly_rankOne
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    (m.toGLM.stabilityMatrix z).charpoly
+      = (toGLM_V_active_lift m).charpoly
+        - dotProduct (fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+            (((toGLM_V_active_lift m).charmatrix).adjugate.mulVec
+               (fun i => Polynomial.C
+                 (((1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) •
+                    toGLM_rankOneColumn m z) i))) := by
+  rw [toGLM_stabilityMatrix_eq_V_active_plus_rank_one m z hz]
+  have hcorr :
+      (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) •
+          toGLM_rankOneCorrection m z =
+        Matrix.vecMulVec
+          ((1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) •
+            toGLM_rankOneColumn m z)
+          (toGLM_rankOneRow m) := by
+    ext i j
+    simp [toGLM_rankOneCorrection, Matrix.vecMulVec_apply, Pi.smul_apply,
+      smul_eq_mul, mul_assoc]
+  rw [hcorr]
+  exact Matrix.charpoly_add_vecMulVec (toGLM_V_active_lift m)
+    ((1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) • toGLM_rankOneColumn m z)
+    (toGLM_rankOneRow m)
+
+end LMM
 
 /-- §521 — Backward Euler is A-stable in the GLM sense after the §503
 embedding. One-shot consequence of the BDF iff bridge
