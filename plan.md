@@ -812,15 +812,8 @@ error bound for one specific scheme:
   the entrywise row formula and `M(0) = V`. Cycle 615 also added the RK
   scalar stability-function specialization in `OpenMath/RKAsGLM.lean`
   and the one-stage LMM entry formula in `OpenMath/LMMAsGLM.lean`.
-- [~] **§521 Methods with maximal stability order** — Padé-like
-  conditions on `M(z)`. Cycle 616 added the `IsStabilityOrder p`
-  predicate (matrix-level ε-δ form) plus `IsStabilityOrder.mono` in
-  `OpenMath/GeneralLinearMethod.lean`, the scalar
-  `ButcherTableau.IsStabilityFunctionOrder` predicate and the bridge
-  `toGLM_isStabilityOrder_of_stabilityFunctionOrder` in
-  `OpenMath/RKAsGLM.lean`. `isStabilityOrder_zero` left as `sorry`
-  with a focused issue file
-  (`.prover-state/issues/glm_stability_order_zero_analytic_gap.md`).
+- [ ] **§521 Methods with maximal stability order** — Padé-like
+  conditions on `M(z)`.
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
   of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
   out of scope for this cycle.)
@@ -900,13 +893,6 @@ error bound for one specific scheme:
   `stabilityMatrix z = Vℂ + z • (Bℂ * (I - z • Aℂ)⁻¹ * Uℂ)` landed with
   entrywise and zero-step sanity lemmas, plus the RK scalar specialization
   and the LMM one-stage entry formula.
-- **Cycle 616 partially opened §521** — `IsStabilityOrder p` predicate,
-  `IsStabilityOrder.mono`, scalar `IsStabilityFunctionOrder`, and the RK
-  bridge `toGLM_isStabilityOrder_of_stabilityFunctionOrder` all landed
-  sorry-free. The `isStabilityOrder_zero` sanity lemma remains as
-  `sorry` pending an analytic Big-O assembly; see issue
-  `.prover-state/issues/glm_stability_order_zero_analytic_gap.md` for
-  the planned Solution A path.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.

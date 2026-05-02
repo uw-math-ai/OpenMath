@@ -74,36 +74,6 @@ theorem toGLM_stabilityMatrix (t : ButcherTableau s) (z : ℂ) :
   rw [hA]
   simp [stabilityFunction]
 
-/-- §521 / §502 — scalar RK stability-order predicate, in the same
-total-inverse convention as `stabilityFunction`. -/
-def IsStabilityFunctionOrder (t : ButcherTableau s) (p : ℕ) : Prop :=
-  ∃ C δ : ℝ, 0 < δ ∧ 0 ≤ C ∧
-    ∀ z : ℂ, ‖z‖ < δ →
-      ‖t.stabilityFunction z - Complex.exp z‖ ≤ C * ‖z‖ ^ (p + 1)
-
-/-- Bridge — the scalar order of the RK stability function transfers
-to the GLM stability-matrix order. The GLM matrix is `1 × 1` and its
-sole entry is the scalar stability function; `Vℂ k l = 1` so
-`exp z • Vℂ` has sole entry `exp z`. -/
-theorem toGLM_isStabilityOrder_of_stabilityFunctionOrder
-    (t : ButcherTableau s) {p : ℕ}
-    (h : t.IsStabilityFunctionOrder p) :
-    t.toGLM.IsStabilityOrder p := by
-  obtain ⟨C, δ, hδ, hC, hbound⟩ := h
-  refine ⟨C, δ, hδ, hC, ?_⟩
-  intro z hz
-  have hRHS : 0 ≤ C * ‖z‖ ^ (p + 1) :=
-    mul_nonneg hC (pow_nonneg (norm_nonneg _) _)
-  rw [Matrix.norm_le_iff hRHS]
-  intro k l
-  have hentry :
-      (t.toGLM.stabilityMatrix z - Complex.exp z • t.toGLM.Vℂ) k l
-        = t.stabilityFunction z - Complex.exp z := by
-    simp [toGLM_stabilityMatrix, toGLM_Vℂ, Matrix.sub_apply,
-          Matrix.smul_apply, smul_eq_mul]
-  rw [hentry]
-  exact hbound z hz
-
 /-- The GLM stage map of `t.toGLM` at the constant input `yIn ≡ y₀`
 matches the standard RK stage equation `Y_i = y₀ + h · ∑ A_ij f(Y_j)`. -/
 theorem toGLM_stageMap_eq (t : ButcherTableau s) (f : ℝ → ℝ) (h y₀ : ℝ)
