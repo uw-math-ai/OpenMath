@@ -816,6 +816,9 @@ error bound for one specific scheme:
   Cycle 621 added the `n ≥ s` Phase B corollary and closed Phase C's
   coarse row bound: `toGLM_V_row_l1_le`, `toGLM_V_step_le`, and
   `toGLM_V_iter_le` in `OpenMath/LMMAsGLM.lean`.
+  Cycle 622 added the §512 Phase D step 1 y-half / past-h·f-half
+  projections plus the one-step companion bridge
+  `toGLM_V_step_y_of_hf_zero_shift` / `…_last`.
 - [ ] **§513 Necessity of stability** for convergence.
 - [ ] **§514 Necessity of consistency** for convergence.
 - [ ] **§515 Stability and consistency imply convergence** — the GLM

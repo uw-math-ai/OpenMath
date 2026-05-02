@@ -384,6 +384,88 @@ theorem toGLM_V_iter_le
         rw [pow_succ']
         ring
 
+/-- §512 Phase D prep: extract the past-`y` half of a `Fin (2*s)`-indexed
+input vector. -/
+def toGLM_y_half (q : Fin (2 * s) → ℝ) (k : Fin s) : ℝ :=
+  q (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k))
+
+/-- §512 Phase D prep: extract the past-`h·f` half of a `Fin (2*s)`-indexed
+input vector. -/
+def toGLM_hf_half (q : Fin (2 * s) → ℝ) (k : Fin s) : ℝ :=
+  q (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k))
+
+/-- §512 Phase D bridge (step 1, shift case). When the past-`h·f` half of
+the input vector is zero (unused here, kept for symmetry with the last-row
+sibling), one application of the LMM-as-GLM `V`-block on a non-last
+past-`y` row simply shifts the `y` slot. -/
+theorem toGLM_V_step_y_of_hf_zero_shift
+    (m : LMM s) (q : Fin (2 * s) → ℝ)
+    (k : Fin s) (hk1 : (k : ℕ) + 1 ≠ s) :
+    (∑ l, m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) l * q l)
+      = toGLM_y_half q ⟨(k : ℕ) + 1, by have := k.isLt; omega⟩ := by
+  simp_rw [toGLM_V_castAdd_shift_apply m k hk1]
+  have hkSucc : (k : ℕ) + 1 < s := by have := k.isLt; omega
+  set l₀ : Fin (2 * s) :=
+    Fin.cast (Nat.two_mul s).symm (Fin.castAdd s ⟨(k : ℕ) + 1, hkSucc⟩)
+    with hl₀_def
+  have hl₀_val : (l₀ : ℕ) = (k : ℕ) + 1 := by
+    rw [hl₀_def]; simp [Fin.castAdd]
+  rw [Finset.sum_eq_single l₀]
+  · rw [if_pos hl₀_val, one_mul, hl₀_def]
+    rfl
+  · intro b _ hb
+    rw [if_neg, zero_mul]
+    intro hbeq
+    apply hb
+    apply Fin.ext
+    rw [hbeq, hl₀_val]
+  · intro h; exact absurd (Finset.mem_univ _) h
+
+/-- §512 Phase D bridge (step 1, last-row case). When the past-`h·f` half
+of the input vector is zero, one application of the LMM-as-GLM `V`-block
+on the last past-`y` row produces the LMM update's `−ρ`-side coefficient
+sum against the past-`y` half. -/
+theorem toGLM_V_step_y_of_hf_zero_last
+    (m : LMM s) (q : Fin (2 * s) → ℝ)
+    (hhf : ∀ k : Fin s, toGLM_hf_half q k = 0)
+    (k : Fin s) (hk1 : (k : ℕ) + 1 = s) :
+    (∑ l, m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) l * q l)
+      = ∑ l, (-m.α (Fin.castSucc l)) * toGLM_y_half q l := by
+  -- Reindex `Fin (2*s)` to `Fin (s+s)` and split into past-y / past-h·f halves.
+  have hstep :
+      (∑ l : Fin (2 * s),
+          m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k)) l *
+            q l)
+        =
+      ∑ l : Fin (2 * s),
+          m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k))
+              (Fin.cast (Nat.two_mul s).symm
+                (Fin.cast (Nat.two_mul s) l)) *
+            q (Fin.cast (Nat.two_mul s).symm
+              (Fin.cast (Nat.two_mul s) l)) := rfl
+  rw [hstep]
+  rw [Fin.sum_congr' (M := ℝ)
+    (fun l : Fin (s + s) =>
+      m.toGLM.V (Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k))
+          (Fin.cast (Nat.two_mul s).symm l) *
+        q (Fin.cast (Nat.two_mul s).symm l))
+    (Nat.two_mul s)]
+  rw [Fin.sum_univ_add]
+  simp_rw [toGLM_V_castAdd_last_castAdd_apply m k hk1,
+    toGLM_V_castAdd_last_natAdd_apply m k hk1]
+  -- Past-`h·f` half is zero termwise by `hhf`.
+  have hhfsum :
+      (∑ l : Fin s, m.β (Fin.castSucc l) *
+          q (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l))) = 0 := by
+    apply Finset.sum_eq_zero
+    intro l _
+    have hl : q (Fin.cast (Nat.two_mul s).symm (Fin.natAdd s l)) =
+        toGLM_hf_half q l := rfl
+    rw [hl, hhf l, mul_zero]
+  rw [hhfsum, add_zero]
+  -- Past-`y` half is exactly `∑ l, -α(castSucc l) * toGLM_y_half q l`.
+  rfl
+
 /-- §503 sanity check for §520: because an LMM embeds as a one-stage GLM,
 the stability-matrix entry collapses to the single stage resolvent factor.
 The surrounding `toGLM` blocks retain the literal §503 row/column shape. -/
