@@ -5,8 +5,10 @@ import OpenMath.SDIRK3
 import OpenMath.RadauIIA3
 import OpenMath.GaussLegendre3
 import OpenMath.LobattoIIIA
+import OpenMath.LobattoIIIA3
 import OpenMath.LobattoIIIB
 import OpenMath.LobattoIIIC
+import OpenMath.LobattoIIIC3
 
 /-!
 # Butcher §502 — Runge–Kutta methods as general linear methods
@@ -738,3 +740,145 @@ theorem rkLobattoIIIB2_toGLM_isAStable :
   intro z hz
   rw [rkLobattoIIIB2_stabilityFunction_eq z hz]
   exact lobIIIB_aStable z hz
+
+/-- Bridge from the canonical GLM-side `stabilityFunction` to the
+classical scalar `gl2StabilityFn` on the Lobatto IIIA 3-stage tableau. -/
+theorem rkLobattoIIIA3_stabilityFunction_eq (z : ℂ) (hz : z.re ≤ 0) :
+    rkLobattoIIIA3.stabilityFunction z = gl2StabilityFn z := by
+  have hD : gl2Denom z ≠ 0 := gl2_denom_ne_zero z hz
+  let M : Matrix (Fin 3) (Fin 3) ℂ :=
+      !![1, 0, 0;
+         -(z * (5/24)), 1 - z * (1/3), -(z * (-1/24));
+         -(z * (1/6)), -(z * (2/3)), 1 - z * (1/6)]
+  rw [ButcherTableau.stabilityFunction]
+  have hM :
+      ((1 : Matrix (Fin 3) (Fin 3) ℂ) - z •
+          (Matrix.of (fun i j => ((rkLobattoIIIA3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ)) = M := by
+    subst M
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rkLobattoIIIA3, Matrix.cons_val_zero, Matrix.cons_val_one]
+  change 1 + z * ∑ i, ∑ j,
+      (rkLobattoIIIA3.b i : ℂ) *
+        ((1 - z • (Matrix.of (fun i j => ((rkLobattoIIIA3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ))⁻¹) i j = gl2StabilityFn z
+  rw [hM]
+  have hdet : M.det = gl2Denom z := by
+    subst M
+    rw [Matrix.det_fin_three]
+    simp [Matrix.cons_val_zero, Matrix.cons_val_one, gl2Denom]
+    ring
+  have hsum :
+      ∑ i, ∑ j, (rkLobattoIIIA3.b i : ℂ) * M.adjugate i j = 1 := by
+    subst M
+    simp [Fin.sum_univ_three, rkLobattoIIIA3, Matrix.adjugate_fin_three_of,
+          Matrix.cons_val_zero, Matrix.cons_val_one]
+    ring
+  have hsumInv :
+      ∑ i, ∑ j, (rkLobattoIIIA3.b i : ℂ) *
+          ((gl2Denom z)⁻¹ * M.adjugate i j) =
+        (gl2Denom z)⁻¹ := by
+    calc
+      ∑ i, ∑ j, (rkLobattoIIIA3.b i : ℂ) *
+          ((gl2Denom z)⁻¹ * M.adjugate i j) =
+        (gl2Denom z)⁻¹ *
+          (∑ i, ∑ j, (rkLobattoIIIA3.b i : ℂ) * M.adjugate i j) := by
+        simp only [Fin.sum_univ_three]
+        ring
+      _ = (gl2Denom z)⁻¹ := by rw [hsum]; ring
+  rw [Matrix.inv_def]
+  simp only [hdet, Ring.inverse_eq_inv', Matrix.smul_apply, smul_eq_mul]
+  rw [hsumInv]
+  have hnum : gl2Denom z + z = gl2Num z := by
+    unfold gl2Denom gl2Num
+    ring
+  calc
+    1 + z * (gl2Denom z)⁻¹ =
+        (gl2Denom z)⁻¹ * (gl2Denom z + z) := by
+      rw [mul_add, inv_mul_cancel₀ hD]
+      ring
+    _ = (gl2Denom z)⁻¹ * gl2Num z := by rw [hnum]
+    _ = gl2StabilityFn z := by
+      unfold gl2StabilityFn
+      rw [div_eq_mul_inv]
+      ring
+
+/-- Lobatto IIIA 3-stage is A-stable after the §502 embedding into GLMs. -/
+theorem rkLobattoIIIA3_toGLM_isAStable :
+    (rkLobattoIIIA3).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  rw [rkLobattoIIIA3_stabilityFunction_eq z hz]
+  exact lobIIIA3_aStable z hz
+
+/-- Bridge from the canonical GLM-side `stabilityFunction` to the
+classical scalar `lobIIIC3StabilityFn` on the Lobatto IIIC 3-stage tableau. -/
+theorem rkLobattoIIIC3_stabilityFunction_eq (z : ℂ) (hz : z.re ≤ 0) :
+    rkLobattoIIIC3.stabilityFunction z = lobIIIC3StabilityFn z := by
+  have hD : lobIIIC3Denom z ≠ 0 := lobIIIC3_denom_ne_zero z hz
+  let M : Matrix (Fin 3) (Fin 3) ℂ :=
+      !![1 - z * (1/6), -(z * (-1/3)), -(z * (1/6));
+         -(z * (1/6)), 1 - z * (5/12), -(z * (-1/12));
+         -(z * (1/6)), -(z * (2/3)), 1 - z * (1/6)]
+  rw [ButcherTableau.stabilityFunction]
+  have hM :
+      ((1 : Matrix (Fin 3) (Fin 3) ℂ) - z •
+          (Matrix.of (fun i j => ((rkLobattoIIIC3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ)) = M := by
+    subst M
+    ext i j
+    fin_cases i <;> fin_cases j <;>
+      simp [rkLobattoIIIC3, Matrix.cons_val_zero, Matrix.cons_val_one]
+  change 1 + z * ∑ i, ∑ j,
+      (rkLobattoIIIC3.b i : ℂ) *
+        ((1 - z • (Matrix.of (fun i j => ((rkLobattoIIIC3.A i j : ℝ) : ℂ)) :
+            Matrix (Fin 3) (Fin 3) ℂ))⁻¹) i j = lobIIIC3StabilityFn z
+  rw [hM]
+  have hdet : M.det = lobIIIC3Denom z / 24 := by
+    subst M
+    rw [Matrix.det_fin_three]
+    simp [Matrix.cons_val_zero, Matrix.cons_val_one, lobIIIC3Denom]
+    ring
+  have hsum :
+      ∑ i, ∑ j, (rkLobattoIIIC3.b i : ℂ) * M.adjugate i j =
+        (z ^ 2 - 6 * z + 24) / 24 := by
+    subst M
+    simp [Fin.sum_univ_three, rkLobattoIIIC3, Matrix.adjugate_fin_three_of,
+          Matrix.cons_val_zero, Matrix.cons_val_one]
+    ring
+  have hsumInv :
+      ∑ i, ∑ j, (rkLobattoIIIC3.b i : ℂ) *
+          ((lobIIIC3Denom z / 24)⁻¹ * M.adjugate i j) =
+        (lobIIIC3Denom z / 24)⁻¹ * ((z ^ 2 - 6 * z + 24) / 24) := by
+    rw [← hsum]
+    simp only [Fin.sum_univ_three]
+    ring
+  rw [Matrix.inv_def]
+  simp only [hdet, Ring.inverse_eq_inv', Matrix.smul_apply, smul_eq_mul]
+  rw [hsumInv]
+  have hnum : lobIIIC3Denom z + z * (z ^ 2 - 6 * z + 24) = lobIIIC3Num z := by
+    unfold lobIIIC3Denom lobIIIC3Num
+    ring
+  have h_inv_div : ((lobIIIC3Denom z) / 24)⁻¹ = 24 * (lobIIIC3Denom z)⁻¹ := by
+    rw [inv_div]
+    ring
+  calc
+    1 + z * ((lobIIIC3Denom z / 24)⁻¹ * ((z ^ 2 - 6 * z + 24) / 24)) =
+        (lobIIIC3Denom z)⁻¹ *
+          (lobIIIC3Denom z + z * (z ^ 2 - 6 * z + 24)) := by
+      rw [h_inv_div, mul_add, inv_mul_cancel₀ hD]
+      ring
+    _ = (lobIIIC3Denom z)⁻¹ * lobIIIC3Num z := by rw [hnum]
+    _ = lobIIIC3StabilityFn z := by
+      unfold lobIIIC3StabilityFn
+      rw [div_eq_mul_inv]
+      ring
+
+/-- Lobatto IIIC 3-stage is A-stable after the §502 embedding into GLMs. -/
+theorem rkLobattoIIIC3_toGLM_isAStable :
+    (rkLobattoIIIC3).toGLM.IsAStable := by
+  rw [ButcherTableau.toGLM_isAStable_iff]
+  intro z hz
+  rw [rkLobattoIIIC3_stabilityFunction_eq z hz]
+  exact lobIIIC3_aStable z hz

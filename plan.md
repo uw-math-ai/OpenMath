@@ -847,6 +847,8 @@ error bound for one specific scheme:
   Cycle 636 added the LMM-side stability-defect bridge
   (`LMM.nordsieckQ`, `LMM.toGLM_V_nordsieckQ_eq`,
   `LMM.toGLM_stabilityDefect_zero` in `OpenMath/LMMAsGLM.lean`).
+  Cycle 657 added the 3-stage Lobatto IIIA / IIIC RK-side GLM
+  A-stability transports in `OpenMath/RKAsGLM.lean`.
   Remaining §521 milestone is the LMM-side iff bridge
   `LMM.toGLM_isAStable_iff` (needs general-`s` charpoly factorisation).
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
@@ -1012,6 +1014,17 @@ error bound for one specific scheme:
   IIIA bridge from cycle 655, with the second-row diagonal `1` instead
   of `1 - z/2`; closes via `lobIIIB_aStable` (which itself is just
   `lobIIIA_aStable` since IIIB shares the IIIA stability function).
+- **Cycle 657 added §521 Lobatto IIIA/IIIC 3-stage GLM A-stability
+  transports** — `rkLobattoIIIA3_stabilityFunction_eq`,
+  `rkLobattoIIIA3_toGLM_isAStable`,
+  `rkLobattoIIIC3_stabilityFunction_eq`, and
+  `rkLobattoIIIC3_toGLM_isAStable` in `OpenMath/RKAsGLM.lean`. Both
+  bridges use the cycle 653 / 654 `Matrix.inv_def` +
+  `Matrix.adjugate_fin_three_of` assembly pattern, but with pure
+  rational certificates: IIIA3 has determinant `gl2Denom z` and
+  weighted adjugate sum `1`, while IIIC3 has determinant
+  `lobIIIC3Denom z / 24` and weighted adjugate sum
+  `(z ^ 2 - 6*z + 24) / 24`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1100,39 +1113,26 @@ let the queue empty.
 
 ## Current Target
 
-**Butcher §521 — GLM A-stability transports for 3-stage Lobatto
-collocation methods.**
-Active file: `OpenMath/RKAsGLM.lean`. The 2-stage Lobatto transports
-(IIIA cycle 655, IIIC cycle 655, IIIB cycle 656) are closed; the
-3-stage Lobatto methods (IIIA / IIIC) are the next §521 RK-side
-candidates, following the same pattern but using the cycle 653 / 654
-three-certificate split for the 3×3 adjugate determinant.
+**Butcher §521 — LMM-to-GLM A-stability iff bridge.**
+Active file: `OpenMath/LMMAsGLM.lean`. The concrete RK-side GLM
+A-stability transports through the planned Lobatto 3-stage candidates
+are closed as of cycle 657. The remaining §521 milestone is the
+LMM-side iff bridge:
 
 Concrete next targets:
-- `rkLobattoIIIA3_stabilityFunction_eq` — bridge the GLM-side
-  `stabilityFunction` of Lobatto IIIA 3-stage to the classical scalar
-  stability function (see `OpenMath/LobattoIIIA3.lean`).
-- `rkLobattoIIIA3_toGLM_isAStable` — A-stability transport via
-  `toGLM_isAStable_iff` and the classical Lobatto IIIA 3-stage
-  A-stability proof.
-- If IIIA 3-stage lands, continue with the IIIC 3-stage analogue
-  (`OpenMath/LobattoIIIC3.lean`).
-
-Pattern reference: cycle 653 (Radau IIA 3-stage) and cycle 654 (GL3)
-both used a bespoke three-certificate split for the 3×3 adjugate
-determinant. Follow that template: identify the three independent
-hypotheses needed to keep `field_simp`/`ring` from drowning in the
-`Real.sqrt` cross-terms (if any), and stage the certificate factor by
-factor.
-
-The classical scalar A-stability data lives in
-`OpenMath/LobattoIIIA3.lean` and `OpenMath/LobattoIIIC3.lean`. Confirm
-the stability-function shape and A-stability lemma names before
-scaffolding.
-
-Alternative (if the 3-stage cross-term obstruction recurs): pursue the
-`LMM.toGLM_isAStable_iff` general charpoly factorisation tracked in
-`.prover-state/issues/lmm_toGLM_general_charpoly_rank_one.md`.
+- Prove, or sharply decompose, `LMM.toGLM_isAStable_iff` for a general
+  `s`-step LMM embedded as a GLM.
+- Start from the BDF-specialized bridge
+  `LMM.toGLM_isAStable_iff_of_bdf` and the direct BDF2 block
+  factorisation already in `OpenMath/LMMAsGLM.lean`.
+- Isolate the general-`s` charpoly factorisation
+  `charpoly(M(z)) = X^s · π(·, z)` up to the scalar denominator
+  factor, using the rank-one / companion-style block decomposition
+  tracked in
+  `.prover-state/issues/lmm_toGLM_general_charpoly_rank_one.md`.
+- If the full iff is still too large for one cycle, land a named helper
+  for one side of the block determinant or write a structured issue
+  explaining the exact algebraic obstruction.
 
 ---
 
