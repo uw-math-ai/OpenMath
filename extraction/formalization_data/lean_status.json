@@ -433,9 +433,9 @@
     "status": "formalized"
   },
   "thm:243A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section405.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.isConvergent_iff_isStable_and_isConsistent",
+    "status": "partial"
   },
   "thm:301A": {
     "lean_file": "OpenMath/Chapter3/Section301.lean",
@@ -718,19 +718,19 @@
     "status": "unformalized"
   },
   "thm:405A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section405.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.convergent_isStable",
+    "status": "partial"
   },
   "thm:405B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section405.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.convergent_isPreconsistent",
+    "status": "formalized"
   },
   "thm:405C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section405.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.convergent_isConsistent",
+    "status": "partial"
   },
   "thm:406C": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",

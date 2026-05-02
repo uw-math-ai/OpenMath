@@ -1965,7 +1965,7 @@ private lemma yPrime_sum_abs_tendsto_zero
       have h_uh_tendsto :
           Filter.Tendsto (fun h : ℝ => u h ⟨m, hmk⟩) (nhds 0) (nhds 0) :=
         hu ⟨m, hmk⟩
-      have h_diff :
+      have hdiff :
           Filter.Tendsto
             (fun h : ℝ => u h ⟨m, hmk⟩ -
                 ∑ i : Fin m, theta k α (m - i.val) *
@@ -1979,7 +1979,7 @@ private lemma yPrime_sum_abs_tendsto_zero
                 yPrime k α (u h) i.val) := by
         funext h; exact h_eq h
       rw [h_funext]
-      exact h_diff
+      exact hdiff
   -- Step 2: lift per-index Tendsto to |·| via .abs.
   have h_each_abs : ∀ i ∈ Finset.range k,
       Filter.Tendsto (fun h : ℝ => |yPrime k α (u h) i|) (nhds 0) (nhds 0) := by
@@ -2871,7 +2871,7 @@ private lemma globalError_recurrence_form
                 (fun j : Fin k => yex (x₀ + (j.val : ℝ) * h) - Y j.val) i := by
       rw [h_cf, h_empty, Finset.sum_empty, add_zero]
     have h_eps_le : |yex (x₀ + (n : ℝ) * h) - Y n| ≤ Θ * y'sum := by
-      rw [h_eps_eq]; exact h_Sy_bound
+      simpa only [h_eps_eq] using h_Sy_bound
     -- a ≥ Θ * y'sum.
     have h_Θy_le_a : Θ * y'sum ≤ a := by
       show Θ * y'sum ≤ (Θ + (Θ + 1) * Cbase * h * (k : ℝ) + 1) * y'sum
@@ -5489,14 +5489,14 @@ theorem LinearMultistepMethod.stable_consistent_isConvergent
           (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
           (nhds 0) (nhds 0) := by
       intro j
-      have h_orig := hstart' j
+      have horig := hstart' j
       have heq : (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - Yh h j.val)
                   = (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h)
                                     - start h j) := by
         funext h
         rw [hYh_eq]
       rw [heq]
-      exact h_orig
+      exact horig
     -- Step 6: Archimedean M₀ such that hsmall holds for m ≥ M₀.
     obtain ⟨M₀_temp, hM₀_temp⟩ : ∃ M₀ : ℕ, ∀ m ≥ M₀,
         ((x - x₀) / (m : ℝ)) * (L : ℝ) * |M.β 0| < 1 := by

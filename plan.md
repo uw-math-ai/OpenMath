@@ -61,7 +61,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `thm:213B` **Euler method uniform convergence theorem** (§213)
 
 ### Deferred to after Chapter 4
-- [!] `thm:243A` **Consistency, stability and convergence** (§243) — depends on `def:402A`, `def:403A`, `def:404B` (Ch.4 §§402–404). Resume after those are formalized.
+- [~] `thm:243A` **Consistency, stability and convergence** (§243) — iff packager landed cycle 069 in `OpenMath/Chapter4/Section405.lean`. Forward direction (`stable ∧ consistent ⇒ convergent`) closed via cycle 068 `stable_consistent_isConvergent`. Reverse splits into `thm:405A` and `thm:405C`, both still partial.
 
 ---
 
@@ -176,17 +176,17 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:406A` **local truncation error** (§406) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `thm:410B` **Order Condition for Linear Multistep Methods (410B)** (§410)
 - [x] `lem:406B` **Convergence condition sufficiency bound** (§406) — `OpenMath/Chapter4/Section404.lean`
-- [ ] `thm:405C` **Convergent Linear Multistep Implies Consistency** (§405)
+- [~] `thm:405C` **Convergent Linear Multistep Implies Consistency** (§405) — scaffold in `OpenMath/Chapter4/Section405.lean`
 - [ ] `thm:410C` **Order condition via generating functions** (§410)
 - [ ] `thm:422A` **The underlying one-step method (LMM)** (§422)
 - [ ] `thm:441C` **Maximum order bound for stable linear multistep methods** (§441)
 - [ ] `lem:441B` **Maximum order coefficients negativity** (§441)
-- [ ] `thm:405A` **Necessity of conditions for convergence** (§405)
+- [~] `thm:405A` **Necessity of conditions for convergence** (§405) — scaffold in `OpenMath/Chapter4/Section405.lean`
 - [x] `thm:406C` **Global error bound for linear multistep methods** (§406)
 - [ ] `thm:410A` **Criteria for order** (§410)
 - [ ] `thm:422C` **Convergence of Linear Multistep Methods** (§422)
 - [ ] `lem:441A` **Maximum order for a convergent k-step method** (§441)
-- [ ] `thm:405B` **Convergent linear multistep method is preconsistent** (§405)
+- [x] `thm:405B` **Convergent linear multistep method is preconsistent** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 069)
 - [ ] `thm:406D` **Convergence from Stability and Consistency** (§406)
 - [ ] `thm:410D` **Order Condition for Linear Multistep Methods (410D)** (§410)
 - [ ] `thm:443A` **Order arrows for linear multistep methods** (§441)
