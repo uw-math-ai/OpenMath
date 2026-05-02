@@ -769,8 +769,8 @@ error bound for one specific scheme:
   solvability theorem, and a minimal `IsConsistent` hook for §510.
 - [ ] **§501 Transformations of methods** — equivalence under
   `T : (A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`.
-- [ ] **§502 Runge–Kutta methods as general linear methods** — embedding
-  `r = 1`, `U = 𝟙`, `V = 1`.
+- [x] **§502 Runge–Kutta methods as general linear methods** — embedding
+  `r = 1`, `U = 𝟙`, `V = 1` (`OpenMath/RKAsGLM.lean`).
 - [ ] **§503 Linear multistep methods as general linear methods** —
   `s = 1` embedding (Nordsieck-vector form).
 - [ ] **§504 Some known unconventional methods** — e.g. cyclic LMM and
@@ -849,6 +849,9 @@ error bound for one specific scheme:
 - **Cycle 609 opened Chapter 5** — §500 GLM data, scalar stage/step
   equations, explicitness, and contraction-based unique stage solvability
   landed in `OpenMath/GeneralLinearMethod.lean`.
+- **Cycle 610 closed §502** — RK-as-GLM embedding (`r=1`, `U=𝟙`, `V=1`)
+  with stage/step/explicitness agreement and unique solvability re-export
+  landed in `OpenMath/RKAsGLM.lean`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -870,47 +873,48 @@ error bound for one specific scheme:
 > **§334 Fehlberg 4(5) was completed for cycle 494; §38 Butcher group
 > was promoted to `## Current Target`.** Items below renumber from #1.
 
-1. **Butcher §502 — RK as a general linear method.** Extend
-   `OpenMath/GeneralLinearMethod.lean` with the embedding
-   `r = 1`, `U = 𝟙`, `V = 1`. Use the existing `ButcherTableau`.
-2. **Butcher §503 — LMM as a general linear method.** Extend
+1. **Butcher §503 — LMM as a general linear method.** Extend
    `OpenMath/GeneralLinearMethod.lean` with the `s = 1` Nordsieck-vector
    embedding. Use the existing `LMM` interface.
-3. **Butcher §510 — GLM consistency and stability definitions.**
+2. **Butcher §510 — GLM consistency and stability definitions.**
    `OpenMath/GeneralLinearMethod.lean`. Direct generalisation of §40.
-4. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
+3. **Butcher §515 — GLM Dahlquist equivalence.** `stability + consistency
    ⟹ convergence` for GLMs. The existing
    `OpenMath/DahlquistEquivalence.lean` is a special case; the GLM
    version reduces to the same companion-matrix spectral bound.
-5. **Butcher §111 — Linear systems of differential equations.** New
+4. **Butcher §111 — Linear systems of differential equations.** New
    file `OpenMath/LinearODE.lean`. `y(x) = exp((x − x₀) A) y₀` as a
    thin re-export of Mathlib `Matrix.exp` plus `Matrix.exp_add` for
    commuting matrices.
-6. **Butcher §215 — Asymptotic error formula for the Euler method.**
+5. **Butcher §215 — Asymptotic error formula for the Euler method.**
     Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
     ODE. Extends `OpenMath/EulerConvergence.lean`.
-7. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
+6. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
     Same template as §334. Extends `OpenMath/EmbeddedRK.lean`.
-8. **Butcher §463 — Milne device for local error estimation.** New
+7. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-9. **Butcher §520–§522 — Stability matrix of a GLM and the
+8. **Butcher §520–§522 — Stability matrix of a GLM and the
     Butcher–Chipman conjecture (outline).** Extends the GLM file family.
     Stability matrix `M(z) := V + z B (I − z A)⁻¹ U`, Padé-like
     conditions on `M(z)`, outline of order of `M(z)` as approximation to
     `exp(z) · I`.
-10. **Butcher §54 — DIMSIM types and ARK methods.** New file
+9. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
-11. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+10. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
     `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
     property F.
-12. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+11. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
     §365 (effective order definition / DESIRE) plus §389 algebraic
     interpretation. Builds on Current Target.
-13. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+12. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
+13. **Butcher §511 — Covariance of GLMs under the equivalence
+    transformation `T : (A, U, B, V) ↦ (A, U T⁻¹, T B, T V T⁻¹)`.**
+    Extends `OpenMath/GeneralLinearMethod.lean` with a pure
+    linear-algebra restatement; follows naturally after §502/§503/§510.
 
 When this list reaches under five items, any planner cycle that lands
 without completing real work must append at least one new concrete
