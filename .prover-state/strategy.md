@@ -1,409 +1,525 @@
-# Cycle 068 Strategy — close `stable_consistent_isConvergent`
+# Cycle 070 strategy
 
-## Target
+## TL;DR
 
-`OpenMath/Chapter4/Section404.lean:5398–5402`
+**Score=−2 was a phantom.** Cycle 069 closed `thm:405B`
+(`convergent_isPreconsistent`) cleanly, wired the `thm:243A` iff
+packager, and added two scaffold sorries (`thm:405A`,
+`thm:405C`) so the iff packager could compile against the
+unfinished reverse direction. The supervisor's "0 → 2 sorrys"
+verdict treats the deliberate scaffolds as regressions; they are
+not. (Same pattern as cycles 008/014/015/040 — see
+`consultant_advice_cycle_040.md` §A. Do not reorganise the work
+to game the scanner.)
+
+**This cycle's job: close `thm:405C` (`convergent_isConsistent`)
+at `OpenMath/Chapter4/Section405.lean:241`.** That brings the
+Section405 sorry count from 2 → 1 and turns the iff packager
+into a complete two-direction equivalence modulo only the
+remaining `thm:405A` (queued for cycle 071).
+
+`thm:405A` is the *harder* of the two open theorems
+(contrapositive on an unbounded sequence + maximum-sequence
+construction). `thm:405C` reuses the trivial-IVP machinery from
+cycle 069's `thm:405B` proof almost verbatim, so the worker has
+the muscle memory.
+
+---
+
+## Priority 0 — incorporate cycle 069's Aristotle results (one shot)
+
+Cycle 069 submitted `Section405.lean` to Aristotle as project
+**`4ddc0ab0-9542-49ab-abf1-fa7f5601df37`** at 07:38 UTC and
+reported it sitting at 8 % after 47 min. Per CLAUDE.md "check
+once at 30 min, then proceed", check the status **once** at the
+top of cycle 070 via:
+
+```
+mcp__aristotle__get_status project_id=4ddc0ab0-9542-49ab-abf1-fa7f5601df37
+```
+
+* If a proof for `convergent_isConsistent` (or
+  `convergent_isStable`, or any helper) has been returned: extract
+  via `mcp__aristotle__extract_result`, paste into Section405.lean,
+  verify with `lake env lean OpenMath/Chapter4/Section405.lean` +
+  `#print axioms` (must be `propext, Classical.choice, Quot.sound`
+  only). Skip the corresponding manual proof below if Aristotle
+  has closed it.
+* If still `IN_PROGRESS` and < 50 %: the project is unlikely to
+  contribute this cycle. Do **not** poll again. Do **not**
+  resubmit.
+* If `FAILED` or `COMPLETED` with no usable proofs: log in the
+  cycle task results and proceed.
+
+Whatever the outcome, do **not** wait beyond a single status
+check. The total wall-clock budget for Aristotle interaction this
+cycle is < 5 minutes.
+
+---
+
+## Priority 1 — close `thm:405C` (`convergent_isConsistent`)
+
+### Target
+
+`OpenMath/Chapter4/Section405.lean:241` — replace the current
+`sorry` body of
+`LinearMultistepMethod.convergent_isConsistent` with a complete
+proof.
+
+### Mathematical strategy
+
+`M.IsConsistent` unfolds to `M.IsPreconsistent ∧ M.SatisfiesEq404b`
+(Section404.lean:135). The first conjunct is `thm:405B`, already
+closed in cycle 069 as `M.convergent_isPreconsistent hConv`. So
+the entire content of cycle 070 is the second conjunct,
+
+> `M.SatisfiesEq404b`,
+> i.e.  `Σ_{i:Fin k} ((i.val:ℝ) + 1) * M.α i.succ
+>      = Σ_{i:Fin (k+1)} M.β i`.
+
+(Verify the exact stated form by re-reading `SatisfiesEq404b`
+in Section404.lean before starting; the `(i.val + 1) : ℝ` cast
+form is what the cycle 040–062 helper chain uses.)
+
+Use the textbook construction (Butcher §405, p. 344) adapted to
+sidestep the "Σ iα ≠ 0" non-degeneracy requirement.  The trivial
+IVP is `y'(x) = 1, y(0) = 0`, with `yex t := t`, evaluated at
+`x = 1`.  Step size `h = 1/m`.  Use the scaled sequence
+
+```
+Y m n := S * (n : ℝ) / (m : ℝ),     where S := Σ_{i:Fin (k+1)} M.β i.
+```
+
+#### Algebraic computation of the LMM recurrence at this Y
+
+LHS at index `n`:
+```
+Σ_{i:Fin (k+1)} M.α i * (S * ((n+k - i.val : ℕ) : ℝ) / (m : ℝ))
+  = (S/m) * ((n+k) * Σ M.α i  −  Σ_{i:Fin (k+1)} (i.val : ℝ) * M.α i)
+  = (S/m) * (0  −  T)                         [preconsistency: Σ M.α i = 0]
+  = -(S/m) * T,
+where T := Σ_{i:Fin (k+1)} (i.val : ℝ) * M.α i
+        = Σ_{i:Fin k} ((i.val + 1 : ℝ)) * M.α i.succ      [the i=0 term is 0].
+```
+
+RHS at index `n`:
+```
+-(1/m) * Σ_{i:Fin (k+1)} M.β i * 1 = -(S/m).
+```
+
+So the LMM recurrence holds **iff** `S * T = S`, i.e.
+`S · (T − 1) = 0`.
+
+#### Case analysis on `S`
+
+* **Case `S = 0` (exfalso branch).** The zero sequence
+  `Y_zero m n := 0` is an LMM solution of `y' = 1` because the
+  recurrence collapses to `0 = -(1/m) * S = 0`. Apply `hConv` to
+  this `Y_zero` with the given starts. Convergence yields
+  `0 = Y_zero m m → yex(1) = 1`, contradiction. Hence `S ≠ 0`.
+
+* **Case `S ≠ 0` (main branch).** The `Y` above is an LMM
+  solution **iff** `T = 1` (since `S · (T − 1) = 0` and `S ≠ 0`).
+  But we don't know `T = 1` yet — it's what we're trying to
+  prove. So we cannot directly hand `hConv` the sequence `Y`
+  without first knowing `T = 1`.
+
+  **Resolution: a sub-case split on `T`.**
+  - Sub-case `T = 1`. Then `Y` *is* an LMM solution of `y' = 1`.
+    Apply `hConv`: `Y m m = S → yex(1) = 1`, hence `S = 1`.
+    Combined with `T = 1`, we get `T = S`, which is the goal.
+  - Sub-case `T ≠ 1`. Then the recurrence `S · (T − 1) = 0`
+    forces `S = 0`, contradicting the outer case `S ≠ 0`. So
+    this sub-case is vacuous; close with `exfalso` + the
+    arithmetic contradiction.
+
+So the proof has *three* terminal branches:
+- `S = 0` → exfalso via zero-sequence + convergence.
+- `S ≠ 0 ∧ T = 1` → main argument via `Y`-sequence + convergence.
+- `S ≠ 0 ∧ T ≠ 1` → exfalso via `S · (T − 1) = 0` + arithmetic.
+
+### Numerical sanity check (do this before committing)
+
+Test against `explicitEulerLMM` (`k = 1`, `α 0 = -1`, `α 1 = 1`,
+`β 0 = 0`, `β 1 = 1`):
+
+* `T = (0+1) · M.α 1 = 1`.
+* `S = M.β 0 + M.β 1 = 0 + 1 = 1`.
+* `S ≠ 0`, `T = 1`, `T = S`.  ✓
+
+Test against `implicitEulerLMM` (`α 0 = -1, α 1 = 1, β 0 = 1, β 1 = 0`):
+
+* `T = (0+1) · 1 = 1`, `S = 1 + 0 = 1`.  ✓
+
+Test against a hypothetical inconsistent method (`k = 1`,
+`α = (-1, 1)`, `β = (0, 0)`):
+
+* `S = 0` → exfalso branch fires.  ✓
+
+### Concrete Lean skeleton
 
 ```lean
-theorem LinearMultistepMethod.stable_consistent_isConvergent
+theorem LinearMultistepMethod.convergent_isConsistent
     {k : ℕ} (M : LinearMultistepMethod k)
-    (hstab : M.IsStable) (hcons : M.IsConsistent) :
-    M.IsConvergent := by
-  sorry
+    (hConv : M.IsConvergent) : M.IsConsistent := by
+  refine ⟨M.convergent_isPreconsistent hConv, ?_⟩
+  -- Goal: M.SatisfiesEq404b
+  -- Setup: f ≡ 1, yex t = t, x = 1, S := Σβ, T := Σ_{Fin k} (i+1)·α_succ.
+  set S : ℝ := ∑ i : Fin (k + 1), M.β i with hS_def
+  set T : ℝ := ∑ i : Fin k, ((i.val : ℝ) + 1) * M.α i.succ with hT_def
+  -- 0. Algebraic prep: peel the i=0 term off Σ (i:ℝ)·M.α i.
+  have hT_alt : (∑ i : Fin (k + 1), (i.val : ℝ) * M.α i) = T := by
+    -- Use Fin.sum_univ_succ; the i=0 term vanishes.
+    sorry
+  -- 1. Preconsistency:  Σ_{Fin (k+1)} M.α i = 0.
+  have hPre : (∑ i : Fin (k + 1), M.α i) = 0 := by
+    -- α_zero = -1 plus M.convergent_isPreconsistent hConv (= Σ_{Fin k} α.succ = 1).
+    sorry
+  -- 2. Trivial IVP setup.
+  set f : ℝ → ℝ → ℝ := fun _ _ => 1 with hf_def
+  set yex : ℝ → ℝ := fun t => t with hyex_def
+  -- starts: any sequence with start h i → 0 as h → 0; pick start h _ := 0.
+  set start : ℝ → Fin k → ℝ := fun _ _ => 0 with hstart_def
+  -- Discharge the 8 hConv hypotheses (Continuous, LipschitzWith, ContDiff,
+  -- HasDerivAt, M_bound = 1, hf_yex_bound, hstart_tendsto, hxx).
+  -- See the cycle 069 convergent_isPreconsistent proof (Section405.lean:128–155)
+  -- for the boilerplate template; adapt:
+  --   • hf_uncurry_const : Function.uncurry f = fun _ => 1
+  --   • hf_cont via continuous_const
+  --   • hf_lip via LipschitzWith.const
+  --   • hyex_x₀ : yex 0 = 0   (rfl)
+  --   • hyex_C1 : ContDiff ℝ 1 yex   (use contDiff_id or
+  --       (contDiff_id.of_le le_top).restrict_scalars; check name)
+  --   • hyex_ode : ∀ x, HasDerivAt yex (f x (yex x)) x
+  --       — yex' = 1 = f x (yex x); via hasDerivAt_id'
+  --   • M_bound = 1, with `0 ≤ 1` and `∀ t, |1| ≤ 1`.
+  --   • hstart_tendsto : Tendsto (fun _ => 0) (𝓝 0) (𝓝 0) is tendsto_const_nhds.
+  --   • hxx : (0:ℝ) < 1 by norm_num.
+  -- The Y sequence depends on case-split on S; defer setup until after split.
+  by_cases hS_zero : S = 0
+  · -- Case S = 0: zero sequence + convergence ⇒ 0 = 1.
+    exfalso
+    set Yzero : ℕ → ℕ → ℝ := fun _ _ => 0 with hYzero_def
+    have hYzero_props : ∀ m, 0 < m →
+        (∀ i : Fin k, Yzero m i.val = start ((1 - 0)/(m : ℝ)) i) ∧
+        M.IsLMMSolution ((1 - 0)/(m : ℝ)) 0 f (Yzero m) := by
+      intro m hm
+      refine ⟨fun _ => rfl, ?_⟩
+      -- Goal: M.IsLMMSolution (1/m) 0 (fun _ _ => 1) (fun _ => 0).
+      -- LHS Σα·0 = 0. RHS = -(1/m) · Σβ = -(1/m) · S = 0 (since S = 0).
+      intro n
+      simp only [Yzero, mul_zero, Finset.sum_const_zero, mul_one, neg_zero]
+      -- After simp: 0 = -(1/m) * Σβ.  Need to use hS_zero.
+      sorry  -- ~5 lines: rewrite S to 0 via hS_zero
+    -- Apply hConv with f, yex, start, Yzero.
+    have hconv : Filter.Tendsto (fun m : ℕ => Yzero m m - yex 1)
+                   Filter.atTop (nhds 0) := by
+      sorry  -- apply hConv … ; ~2 lines
+    -- Yzero m m - yex 1 = 0 - 1 = -1, constantly. Cannot tend to 0.
+    sorry  -- ~10 lines: tendsto_nhds_unique against tendsto_const_nhds
+  · -- Case S ≠ 0.
+    -- Sub-case split on T = 1.
+    by_cases hT_one : T = 1
+    · -- Main branch: Y satisfies recurrence, hConv ⇒ S = 1, hence T = S.
+      set Y : ℕ → ℕ → ℝ := fun m n => S * (n : ℝ) / (m : ℝ) with hY_def
+      have hY_props : ∀ m, 0 < m →
+          (∀ i : Fin k, Y m i.val = start ((1 - 0)/(m : ℝ)) i) ∧
+          M.IsLMMSolution ((1 - 0)/(m : ℝ)) 0 f (Y m) := by
+        sorry
+        -- LMM recurrence reduces (via hPre, hT_alt, hT_one) to S * T = S, i.e. S = S. ✓
+        -- Starts: Y m i.val = S · i / m and start (1/m) i = 0; these match only if i = 0!
+        -- ⚠️ This is a problem: with start ≡ 0, Y m 0 = 0 = start, but Y m 1 = S / m ≠ 0.
+        -- FIX: change `start h i := S * (i.val : ℝ) * h` so that
+        --   start (1/m) i = S * i / m = Y m i.val.  Then start h i → 0 as h → 0.
+      -- ... (re-do with start h i := S * i.val * h; hstart_tendsto adapts via
+      --  `(continuous_const.mul continuous_id).tendsto 0`).
+      sorry
+    · -- Sub-case T ≠ 1, S ≠ 0: derive contradiction from S · (T − 1) = 0.
+      -- The "S · (T − 1) = 0" identity is *not* a free fact; it would follow if Y
+      -- were an LMM solution.  We don't have that here.  So this sub-case
+      -- requires a different witness: try Y_alt m n := (n : ℝ) / (m : ℝ).
+      -- Recompute:  LHS = (1/m) · (Σα·(n+k) − Σ i·α) = (1/m)·(0 − T) = -T/m.
+      --             RHS = -S/m.  So Y_alt is LMM solution iff T = S.
+      -- Apply hConv: Y_alt m m = 1 → yex(1) = 1.  This is consistent regardless,
+      -- so no constraint extracted directly.
+      -- HMMMM — try Y_alt2 m n := (S/T) · n / m for T ≠ 0 (need separate sub-case).
+      -- This sub-case is genuinely the hardest; see "Fallback" below.
+      sorry
 ```
 
-This is cluster 4 (the final step) of the cycle 064–068 non-autonomous
-lift plan. Cycles 064–067 lifted the §406B + §406D helper chain to
-non-autonomous form. Cycle 068 closes the main theorem by mirroring
-the autonomous template `stable_consistent_isConvergent_autonomous`
-(line 5253).
+**The skeleton above exposes a real complication in the
+`S ≠ 0 ∧ T ≠ 1` sub-case.** The "S · (T − 1) = 0 ⇒ contradiction"
+shortcut from the earlier algebra requires `Y` to *be* an LMM
+solution, which we're trying to establish.  The fix is to use a
+**second witness sequence** `Y2 m n := (n : ℝ) / (m : ℝ)`
+(unscaled), whose LMM-recurrence reads:
 
-## Aristotle status
+* LHS = `(1/m) · (0 − T) = -T/m`.
+* RHS = `-S/m`.
 
-No pending Aristotle results. The cycle 067 task results note that
-the cycle 065 alternative-proof submission completed but was not
-swapped in (cycle 065's manual proofs are validated and consumed by
-cycle 066). **Do not poll Aristotle this cycle** — there is no
-in-flight job and nothing useful to submit (the closure is
-integration work, not premise selection).
+So `Y2` is an LMM solution **iff** `T = S`. Apply `hConv`: `Y2 m m
+= 1 → yex(1) = 1` — a tautology, no constraint extracted.
 
-## CRITICAL — hypothesis-strength gap (resolve first)
+So `Y2` doesn't separate the sub-cases. Try a third witness:
 
-The cycle 064–067 helper chain consumes hypotheses that the textbook
-`IsConvergent` predicate (line 305) does NOT provide:
+`Y3 m n := S * (n : ℝ) / (T * (m : ℝ))` when `T ≠ 0`. The recurrence
+becomes `(S/T) · ((1/m)·(0 − T)) = -(S/m)`, i.e. `-S/m = -S/m`. ✓
+unconditionally. Then `Y3 m m = S/T → 1` forces `S = T`.
 
-| Helper expects | `IsConvergent` provides |
-|---|---|
-| `LipschitzWith L_joint (Function.uncurry f)` (joint) | `LipschitzInSecond Set.univ L f` (spatial only — `∀ x, LipschitzWith L (f x)`) |
-| `∀ t : ℝ, \|f t (yex t)\| ≤ M_bound` (global) | nothing — only `Continuous (Function.uncurry f)` |
-| `ContDiff ℝ 1 yex` (global C¹) | only `∀ x ≥ x₀, HasDerivAt yex (f x (yex x)) x` (one-sided, partial) |
+But this only works when `T ≠ 0`. If `T = 0` we need yet another
+sub-split.
 
-**These are genuine mathematical gaps**: spatial-only Lipschitz cannot
-bound `|f t₁ y₁ − f t₂ y₂|` when `t₁ ≠ t₂`; continuity alone gives
-no global bound; one-sided `HasDerivAt` does not imply C¹ on all of
-ℝ. Butcher's textbook proof tacitly assumes more regularity than the
-predicate's literal text states.
+#### Fallback recommended sub-strategy
 
-### Resolution: strengthen `IsConvergent` (faithfulness deviation)
+Given the case-split tangle, the **cleanest formal route** is to
+do the textbook's exact construction and explicitly handle the
+degeneracy:
 
-`IsConvergent` has **zero downstream Lean consumers** (verified:
-`grep -n "M.IsConvergent\|IsConvergent " OpenMath/` returns only the
-definition site at line 305 and the theorem we are closing at line
-5401). Strengthening the predicate is therefore safe — no other
-proof breaks.
+1. **Sub-case `T ≠ 0`**. Define `A := S / T` and `Y m n := A · n / m`.
+   The recurrence becomes `A · (-T/m) = -S/m`, i.e.
+   `A · T = S`, which holds by `A := S/T`. Apply `hConv`:
+   `A → 1`, hence `A = S/T = 1`, so `S = T`. Done.
+2. **Sub-case `T = 0`**. From the recurrence with `Y m n := S · n / m`:
+   `-(S/m) · 0 = -(S/m)`, i.e. `0 = -(S/m)` for all `m > 0`.
+   Hence `S = 0`. Then `T = S = 0`, done.
 
-**Replace lines 305–322 with**:
+This avoids the three-way split and reduces to `T = 0` vs `T ≠ 0`.
+(The `S = 0` case folds into sub-case 2 transparently.)
+
+**Recommended encoding (final):**
 
 ```lean
-def LinearMultistepMethod.IsConvergent {k : ℕ}
-    (M : LinearMultistepMethod k) : Prop :=
-  ∀ (f : ℝ → ℝ → ℝ),
-    Continuous (Function.uncurry f) →
-  ∀ (L : ℝ≥0),
-    LipschitzWith L (Function.uncurry f) →           -- joint, was LipschitzInSecond
-  ∀ (x₀ y₀ : ℝ) (yex : ℝ → ℝ),
-    yex x₀ = y₀ →
-    ContDiff ℝ 1 yex →                                -- new: global C¹
-    (∀ x, HasDerivAt yex (f x (yex x)) x) →           -- changed: ∀ x (was x ≥ x₀)
-  ∀ (M_bound : ℝ),                                    -- new: global trajectory bound
-    0 ≤ M_bound →
-    (∀ t, |f t (yex t)| ≤ M_bound) →
-  ∀ (start : ℝ → Fin k → ℝ),
-    (∀ i : Fin k,
-      Filter.Tendsto (fun h : ℝ => start h i) (nhds 0) (nhds y₀)) →
-  ∀ (x : ℝ), x₀ < x →
-  ∀ (Y : ℕ → ℕ → ℝ),
-    (∀ m : ℕ, 0 < m →
-      (∀ i : Fin k, Y m i.val = start ((x - x₀) / (m : ℝ)) i) ∧
-      M.IsLMMSolution ((x - x₀) / (m : ℝ)) x₀ f (Y m)) →
-    Filter.Tendsto (fun m : ℕ => Y m m - yex x) Filter.atTop (nhds 0)
+  by_cases hT_zero : T = 0
+  · -- T = 0: with Y m n := S · n / m, the recurrence forces S = 0.
+    -- Then S = T = 0, done.
+    sorry
+  · -- T ≠ 0: with Y m n := (S/T) · n / m, recurrence holds unconditionally.
+    -- hConv ⇒ S/T = 1, hence S = T.
+    sorry
 ```
 
-**Update the docstring** (lines 283–304) to call out the
-strengthening explicitly. Keep the textbook quote; add a paragraph
-noting that the formal predicate adds (1) joint-Lipschitz on
-`Function.uncurry f`, (2) global `C¹` on `yex`, (3) a global
-`M_bound` on `|f t (yex t)|`, all required for the §406D
-recurrence-form bound proof.
+**This is the canonical Lean encoding.** Two sub-cases, each
+~80 lines including the `hConv` hypothesis discharge.
 
-### File a faithfulness issue
+### Sub-lemma scaffolding (recommended)
 
-Write `.prover-state/issues/is_convergent_strengthened.md`
-documenting:
-- Quote Butcher §402, p. 340: only "continuous" + "Lipschitz in y".
-- Explain why each strengthening is needed (with the table above).
-- Note that for any IVP that arises in practice (`f` smooth, `yex`
-  on a bounded trajectory), all three additional conditions are
-  automatic. The strengthening rules out pathological `f`s that
-  Butcher's argument would not actually handle either.
-- Cross-reference `non_autonomous_lift_plan.md`.
+To keep individual proof obligations small, factor out:
 
-### Do NOT do these alternatives
+* `sum_alpha_zero : (∑ i : Fin (k+1), M.α i) = 0`
+  — derive from `M.α_zero = -1` + `M.convergent_isPreconsistent hConv`.
+  Likely exists somewhere in Section404; search with
+  `Grep "α.*= 0|sum.*α.*zero" OpenMath/Chapter4/Section404.lean`.
+* `sum_i_alpha_eq_T : (∑ i : Fin (k+1), (i.val : ℝ) * M.α i)
+                    = ∑ i : Fin k, ((i.val : ℝ) + 1) * M.α i.succ`
+  — peel the `i = 0` term off via `Fin.sum_univ_succ`.
+* `Y_isLMMSolution :  hRecurrence : A * T = S → ∀ m,
+   M.IsLMMSolution (1/m) 0 (fun _ _ => 1) (fun n => A * n / m)`
+  — encapsulates the algebra; reusable across both sub-cases.
 
-* **Do NOT** try to derive joint-Lipschitz from `LipschitzInSecond +
-  Continuous`. It is mathematically impossible — continuity in `t` is
-  qualitative; joint-Lipschitz is quantitative.
-* **Do NOT** try to derive a global `M_bound` from continuity alone.
-  Same reason. The autonomous version's `∀ t : ℝ, |f (yex t)| ≤
-  M_bound` was a hypothesis precisely because it cannot be derived.
-* **Do NOT** refactor cycles 064–067 to take Icc-restricted bounds.
-  That is at least 3 more cycles of churn for a strictly weaker
-  result. The strengthening above is the correct call.
-* **Do NOT** add a new boundary adapter under
-  `lipschitzInSecond_univ_toLipschitzWith` (line 3862). It serves
-  the autonomous helper chain (per-`x` `LipschitzWith`), which we
-  are no longer using — cycles 065–067 use joint-Lipschitz directly.
+Each of these is ≤ 20 lines.  The main proof then becomes mostly
+hypothesis bookkeeping.
 
-## Closure: mirror `stable_consistent_isConvergent_autonomous`
+### Boilerplate to copy from cycle 069
 
-The autonomous theorem at line 5253 is the line-by-line template.
-**The body of `stable_consistent_isConvergent` should be a
-mechanical port of lines 5277–5381 with the substitutions below.**
+Lines 124–171 of `Section405.lean` (cycle 069's
+`convergent_isPreconsistent`) are the hypothesis-discharge
+template for `hConv`. Adapt:
 
-### Step 0: unfold `IsConvergent` and destructure
+* `f := fun _ _ => 1` (was `fun _ _ => 0`).
+* `yex := fun t => t` (was `fun _ => 1`).
+* `M_bound := 1` (was `0`); `hf_yex_bound : ∀ t, |1| ≤ 1` via
+  `simp [abs_one]`.
+* `start := fun h i => (S/T) * (i.val : ℝ) * h` (or `S * i.val * h`
+  in the `T = 0` branch); `hstart_tendsto` via
+  `(tendsto_const_nhds.mul tendsto_id).comp`.
+* `hyex_C1`: `ContDiff ℝ 1 (fun t : ℝ => t)`; first try
+  `contDiff_id`. If that produces the wrong instance form, try
+  `(contDiff_id : ContDiff ℝ ⊤ _).of_le le_top` or
+  `(contDiff_id : ContDiff ℝ _ _)`. Verify the exact lemma name
+  with `lean_local_search "contDiff_id"`.
+* `hyex_ode`: `∀ x, HasDerivAt (fun t : ℝ => t) (1 : ℝ) x` via
+  `hasDerivAt_id'` (or `(hasDerivAt_id x)` plus a coercion/eta).
+  Verify with `lean_hover_info` if both names exist.
 
-```lean
-theorem LinearMultistepMethod.stable_consistent_isConvergent
-    {k : ℕ} (M : LinearMultistepMethod k)
-    (hstab : M.IsStable) (hcons : M.IsConsistent) :
-    M.IsConvergent := by
-  by_cases hk : 0 < k
-  case neg =>
-    sorry  -- See "k = 0 edge case" subsection below
-  -- Unfold the strengthened predicate.
-  intro f hf_cont L hf_lip_joint x₀ y₀ yex hyex_x₀ hyex_C1 hyex_ode_at
-        M_bound hM hf_yex_bound start hstart x hxx Y hY_props
-  ...
-```
+### Aristotle suitability
 
-### Step 1: bridge `Y : ℕ → ℕ → ℝ` to autonomous `Yh : ℝ → ℕ → ℝ`
+`convergent_isConsistent` is one moderately complex theorem with
+a case split + algebraic recurrence calculation. Aristotle's
+premise selection often misses the `Fin.sum_univ_succ` re-indexing
+that drives the `T`-identity. **Recommendation: do not re-submit
+`thm:405C` to Aristotle this cycle.** The cycle 069 submission
+already includes it; if no proof comes back from that, manual
+proof is the cheaper route. If you want to use free compute,
+batch-submit the **three sub-lemmas** (`sum_alpha_zero`,
+`sum_i_alpha_eq_T`, `Y_isLMMSolution`) to a fresh project — these
+are exactly the kind of mechanical algebra Aristotle handles
+well.
 
-The autonomous template uses `Yh : ℝ → ℕ → ℝ` (per-`h`); the
-non-autonomous predicate provides `Y : ℕ → ℕ → ℝ` (per-`m`). The
-squeeze argument only touches `Yh` at `h = (x - x₀)/m`. Two
-implementation choices:
+### Estimated effort
 
-1. **Inline (recommended)**: Skip the per-`h` bridge. Replicate the
-   squeeze argument directly using `Y m n` and the family `fun n =>
-   Y m n` per `m`. Simpler than building a `Yh` artefact.
-2. **Bridge** (alternative): define `Yh h n := if h = (x - x₀)/m then
-   Y m n else 0` for some `m`. Awkward decidability; not recommended.
+* Sub-lemmas (3): ~60 lines combined.
+* `T = 0` branch: ~50 lines (zero-sequence + recurrence + `S = 0`
+  extraction + done).
+* `T ≠ 0` branch: ~120 lines (`hConv` discharge + limit argument
+  + `S/T = 1` extraction + done).
+* Total: ~230 LOC, single cycle.
 
-Use option 1.
+If after 2 hours of focused effort the `T ≠ 0` branch doesn't
+land cleanly: file a sub-lemma decomposition issue, sorry-first
+the helpers, and target cycle 071 for closure. Do **not** spend
+more than one cycle on `thm:405C`.
 
-### Step 2: substitution map (autonomous → non-autonomous)
+---
 
-When porting lines 5277–5381 of
-`stable_consistent_isConvergent_autonomous`, apply these
-substitutions:
+## Priority 2 — only if Priority 1 lands cleanly
 
-| Autonomous symbol | Non-autonomous replacement |
-|---|---|
-| `f : ℝ → ℝ` | `f : ℝ → ℝ → ℝ` (received) |
-| `L : ℝ` | `(L : ℝ)` (cast `ℝ≥0 → ℝ`); use `(L : ℝ).toNNReal = L` from `Real.toNNReal_coe_nnreal` |
-| `hL : 0 ≤ L` | `hL_joint : 0 ≤ (L : ℝ)` (`NNReal.coe_nonneg L`) |
-| `hf_lip : LipschitzWith L.toNNReal f` | `hf_lip_joint : LipschitzWith L (Function.uncurry f)` (received) |
-| `hyex_C1 : ContDiff ℝ 1 yex` | received from `IsConvergent` |
-| `hyex_ode : ∀ t, deriv yex t = f (yex t)` | derive: `∀ t, deriv yex t = f t (yex t)` from `(hyex_ode_at t).deriv` |
-| `hf_yex_bound : ∀ t, \|f (yex t)\| ≤ M_bound` | received as `hf_yex_bound : ∀ t, \|f t (yex t)\| ≤ M_bound` |
-| `hYh : M.IsLMMSolution h x₀ (fun _ y => f y) ...` | `M.IsLMMSolution h x₀ f ...` (extracted from `hY_props m _).2`) |
-| `hstart` (per-`h` shape, expects `yex (x₀ + j*h) - Yh h j → 0`) | adapt via `hstart_shape_bridge` (line 3916) plus the `Y m i.val = start ((x-x₀)/m) i` clause from `hY_props` |
-| `globalError_recurrence_form_explicit` | `globalError_recurrence_form_explicit_nonauto` (line 4829) |
+Begin scaffolding `thm:405A` (`convergent_isStable`,
+Section405.lean:100) for cycle 071. Concretely, write helper
+signatures (with `sorry` bodies, not full proofs) for:
 
-### Step 3: derive `hyex_ode` (autonomous-shape) from `HasDerivAt`
+* `unboundedSeq_max : (η : ℕ → ℝ) → ℕ → ℝ` — running max of
+  `|η_·|`.
+* `unboundedSeq_max_records : Unbounded (Set.range (fun n => |η n|)) →
+  ∀ N, ∃ n ≥ N, |η n| = unboundedSeq_max η n` — record indices
+  form an unbounded subsequence.
+* `IsHomogeneousSolution.const_smul :
+   M.IsHomogeneousSolution η → ∀ c : ℝ,
+   M.IsHomogeneousSolution (fun n => c * η n)` — linearity (the
+  recurrence is linear in `η`).
 
-```lean
-have hyex_ode : ∀ t, deriv yex t = f t (yex t) :=
-  fun t => (hyex_ode_at t).deriv
-```
+Each of these is independently provable (no convergence required)
+and decoupled from `hConv`. They form the toolkit for the
+cycle 071 contrapositive proof.
 
-### Step 4: build `hsmall` for sufficiently large `m`
+Submit them as a fresh Aristotle batch at cycle's end — but
+**only if cycle 070's Priority 1 has landed**. If Priority 1
+hasn't landed, defer Priority 2 to keep the cycle's diff focused
+and reviewable.
 
-The autonomous theorem takes
-`hsmall : ∀ m : ℕ, 0 < m → ((x - x₀) / m) * L * |M.β 0| < 1`
-as a hypothesis. The non-autonomous `IsConvergent` does not. Derive
-`hsmall` for `m` ≥ some `M₀` by Archimedean:
+---
 
-```lean
-obtain ⟨M₀, hM₀_pos, hM₀_small⟩ : ∃ M₀ : ℕ, 0 < M₀ ∧
-    ∀ m ≥ M₀, ((x - x₀) / (m : ℝ)) * (L : ℝ) * |M.β 0| < 1 := by
-  -- (x - x₀) / m → 0 as m → ∞ since x - x₀ > 0
-  -- multiplied by constant → 0 → eventually < 1
-  sorry
-```
+## What NOT to do this cycle
 
-Useful Mathlib lemmas: `tendsto_const_div_atTop_nhds_zero_nat`,
-`Filter.Tendsto.const_mul`, `Filter.Tendsto.eventually_lt_const`.
+* Do **NOT** treat the cycle 069 `score=−2` verdict as a real
+  failure. The two scaffold sorries are the deliberate mechanism
+  by which `thm:243A`'s iff packager type-checks against the
+  staged reverse direction. See `consultant_advice_cycle_040.md`
+  §A for the standing prompt-builder phantom diagnosis. Do not
+  back-out the scaffolds.
+* Do **NOT** revert the cycle 068 strengthening of
+  `IsConvergent` (joint Lipschitz, `ContDiff ℝ 1`, `M_bound`).
+  See `is_convergent_strengthened.md`. The cycle 069
+  `convergent_isPreconsistent` proof relies on the strengthening
+  in exactly the same way the cycle 070 `convergent_isConsistent`
+  proof will.
+* Do **NOT** attempt `thm:405A` (`convergent_isStable`) before
+  `thm:405C`. `thm:405A` is harder (contrapositive on an
+  unbounded sequence + maximum-sequence + record-indices
+  pigeonhole). Closing `thm:405C` first uses the cycle-069-tested
+  trivial-IVP machinery.
+* Do **NOT** chase the textbook's "Σ iα ≠ 0" hypothesis (Butcher
+  derives it from `thm:405A`). The Lean approach above
+  side-steps via the case split on `T := Σ_{Fin k} (i+1)·α_succ`,
+  mirroring how cycle 069's `thm:405B` proof side-stepped
+  Butcher's appeal to `thm:405A`.
+* Do **NOT** use the three-way split (`S = 0`, `S ≠ 0 ∧ T = 1`,
+  `S ≠ 0 ∧ T ≠ 1`) sketched in the first-pass skeleton. That
+  split has a gap in the `S ≠ 0 ∧ T ≠ 1` branch (the `S(T−1)=0`
+  identity is not a free fact). Use the **two-way split on `T`
+  via `A := S/T`** described in "Fallback recommended sub-strategy"
+  above.
+* Do **NOT** raise `maxHeartbeats` above 200000. If the
+  preconsistency-driven sum manipulation
+  `(n+k) · Σ M.α i = 0` triggers a heartbeat blow-up, decompose
+  into `sum_alpha_zero` and apply via `rw` rather than letting
+  `ring` chew on the entire goal.
+* Do **NOT** introduce `axiom`/`constant` to bypass the
+  `ContDiff ℝ 1 (fun t => t)` /
+  `HasDerivAt (fun t => t) 1 _` obligations. Both are standard
+  Mathlib facts (verify exact names with `lean_local_search` /
+  `lean_hover_info` before committing to one).
+* Do **NOT** modify `scripts/autonomous_loop.py`. The cycle
+  scoring vs scaffold-sorry mismatch is a loop-maintainer issue
+  tracked in `tautology_scanner_false_positives.md`.
+* Do **NOT** poll Aristotle more than once. Single status check
+  at top of cycle, then proceed. Do **NOT** resubmit cycle 069's
+  project — it is still in flight.
+* Do **NOT** cherry-pick easier targets from Chapter 3 (e.g.
+  `def:381B`, `def:381D`, `def:381F`) to "rescue" the score.
+  The §405 chain is the strategic critical path; Chapter 3 work
+  is fine in parallel cycles but should not pre-empt closing the
+  `thm:243A` cross-chapter deferral.
 
-The squeeze step (autonomous line 5359 `Filter.eventually_atTop.mpr
-⟨1, ...⟩`) shifts to `⟨M₀, ...⟩` so the `m ≥ M₀` precondition is
-discharged.
+---
 
-### Step 5: bridge `hstart` shape
+## Pre-commit faithfulness check (CLAUDE.md mandatory)
 
-The textbook
-`hstart : ∀ i : Fin k, Tendsto (fun h => start h i) (nhds 0) (nhds y₀)`
-becomes the autonomous form
-`hstart' : ∀ j : Fin k, Tendsto (fun h => yex (x₀ + j*h) - start h j) (nhds 0) (nhds 0)`
-via the existing adapter at line 3916:
+For `convergent_isConsistent`:
 
-```lean
-have hyex_cont_x₀ : ContinuousAt yex x₀ :=
-  hyex_C1.continuous.continuousAt
-have hstart' : ∀ j : Fin k,
-    Filter.Tendsto
-      (fun h : ℝ => yex (x₀ + (j.val : ℝ) * h) - start h j)
-      (nhds 0) (nhds 0) :=
-  hstart_shape_bridge hyex_x₀ hyex_cont_x₀ hstart
-```
+* **Entity**: `thm:405C`, textbook statement
+  > "A convergent linear multistep [method] is consistent."
+* **Lean statement**:
+  `(hConv : M.IsConvergent) → M.IsConsistent`.
+  Captures: **same content**.
+* **Proof-side deviation from textbook**: the Lean proof
+  side-steps Butcher's appeal to `thm:405A` (used in the
+  textbook to derive `Σ iα ≠ 0`). We use a case split on
+  `T := Σ (i+1)·α_succ` instead. Document this in the
+  docstring + cycle 070 task results §"Faithfulness check".
+  The *conclusion* matches Butcher's exactly; the divergence is
+  only in the proof.
+* **Tautology check**: `IsConsistent` is the conjunction of two
+  non-trivial equations on `α, β`; conclusion ≠ any hypothesis.
+  ✓
+* **Identity check**: proof is non-trivial (case split + LMM
+  recurrence + limit argument); not `exact h`. ✓
+* **Hypothesis strength check**: the only hypothesis is
+  `M.IsConvergent`, matching the textbook exactly. ✓
+* **Absent theorem check**: no promised-but-missing helpers.
+  All sub-lemmas (if extracted) must be defined and proved
+  before commit. ✓
 
-The autonomous template expects `Yh h j.val`; here we have `start h
-j` (which equals `Y m j.val` by `(hY_props m _).1`). The squeeze on
-`aOf M Θ L h yex Y_m x₀` (where `Y_m n := Y m n`) collapses to use
-`start h j` once the per-`m` initial-data clause is invoked.
+---
 
-### Step 6: handle the `k = 0` edge case
+## Workflow summary
 
-When `k = 0`, `Fin k` is empty, the LMM has no look-back, and
-`IsLMMSolution` reduces to a degenerate single-step recurrence. The
-autonomous theorem requires `hk : 0 < k`; the non-autonomous
-predicate does not.
+1. **(5 min)** Check Aristotle status of project
+   `4ddc0ab0-9542-49ab-abf1-fa7f5601df37` once.
+2. **(10 min)** Read cycle 069's `convergent_isPreconsistent`
+   proof (Section405.lean:120–225) to refresh the hypothesis-
+   discharge boilerplate.
+3. **(15 min)** Verify the sub-sum identity
+   `(∑ i : Fin (k+1), (i.val : ℝ) * M.α i)
+    = ∑ i : Fin k, ((i.val : ℝ) + 1) * M.α i.succ`
+   compiles standalone (use `Fin.sum_univ_succ` and `Fin.val_succ`).
+   This is the algebraic heart of the LMM-solution discharge.
+   Lock it in as a local `have` or a sub-lemma.
+4. **(10 min)** Verify `(∑ i : Fin (k+1), M.α i) = 0` from
+   `M.α_zero` + `M.convergent_isPreconsistent hConv`. Lock in
+   as `hPre`.
+5. **(40 min)** Write the `T = 0` branch. Use the unscaled
+   `Y m n := S · n / m`; recurrence forces `S · 0 = S`, hence
+   `S = 0`; then `T = S = 0`, done.
+6. **(60 min)** Write the `T ≠ 0` branch. Use
+   `Y m n := (S/T) · n / m`; recurrence holds unconditionally;
+   discharge the 8 `hConv` hypotheses; `Y m m = S/T → 1` gives
+   `S/T = 1`, hence `S = T`. Done.
+7. **(15 min)** Verify with `lake env lean
+   OpenMath/Chapter4/Section405.lean`, `#print axioms`, and
+   `lake build`.
+8. **(15 min)** Update `lean_status.json` for `thm:405C`
+   (status `formalized`, `lean_file`, `lean_symbol`). Update
+   `plan.md` row for `thm:405C`. Re-check the cycle 069
+   `plan.md` state before bumping the totals.
+9. **(15 min)** Write `task_results/cycle_070.md` documenting
+   approach, faithfulness deviation (case split on `T`), and
+   whether Priority 2 was started.
+10. **Commit + push.**
 
-For `k = 0`: `IsLMMSolution h x₀ f Y` becomes `∀ n, M.α 0 * Y n =
--h * M.β 0 * f (x₀ + n*h) (Y n)`, i.e. `Y n = h * M.β 0 * f (x₀ +
-n*h) (Y n)` (using `M.α 0 = -1` from `M.α_zero`). This is forward
-Euler for `M.β 0 = 0` (which gives `Y n = 0` for all n) or implicit
-otherwise.
-
-**Recommendation**: try a direct closure for `k = 0` (likely
-`M.α_zero` + algebraic manipulation gets `Y m m → yex x` from
-nothing — but only if `M.β 0 = 0` and the iterates are all 0,
-which won't equal `yex x` in general). If a clean argument doesn't
-emerge in ~30 minutes, file
-`.prover-state/issues/lmm_k_zero_degenerate.md` documenting the
-case as deferred and `sorry` it. The textbook implicitly assumes
-`k ≥ 1` (a 0-step method isn't really a multistep method).
-
-### Step 7: assemble
-
-The body should look roughly like:
-
-```lean
-intro f hf_cont L hf_lip_joint x₀ y₀ yex hyex_x₀ hyex_C1 hyex_ode_at
-      M_bound hM hf_yex_bound start hstart x hxx Y hY_props
--- (k = 0 edge case branched out earlier via by_cases hk : 0 < k)
-obtain ⟨Θ, hΘ_nn, hΘ⟩ := theta_bounded_of_isStable hk M hstab
-have hL_joint : (0 : ℝ) ≤ (L : ℝ) := L.coe_nonneg
-have hyex_ode : ∀ t, deriv yex t = f t (yex t) :=
-  fun t => (hyex_ode_at t).deriv
-have hyex_cont_x₀ : ContinuousAt yex x₀ :=
-  hyex_C1.continuous.continuousAt
-have hstart' := hstart_shape_bridge hyex_x₀ hyex_cont_x₀ hstart
-obtain ⟨M₀, hM₀_pos, hM₀_small⟩ : ∃ M₀ : ℕ, 0 < M₀ ∧
-    ∀ m ≥ M₀, ((x - x₀) / (m : ℝ)) * (L : ℝ) * |M.β 0| < 1 := ...
--- Define bInf, cInf as in the autonomous template (with L_joint,
--- (1 + M_bound) — the cycle 065+ lift uses (1+M_bound) per the
--- joint-Lipschitz substitution).
-set bInf : ℝ := (Θ + 1) *
-      ((L : ℝ) * (|M.β 0| * (∑ i : Fin k, |M.α i.succ|)
-            + ∑ i : Fin k, |M.β i.succ|)) + 1 with hbInf_def
-set cInf : ℝ := (Θ + 1) *
-      (((1/2) * (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ)^2 * |M.α i.succ|)
-          + ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * |M.β i.succ|)
-        * (L : ℝ) * (1 + M_bound)) with hcInf_def
--- Per-m closed-form bound (uses globalError_recurrence_form_explicit_nonauto).
-have hbound : ∀ m : ℕ, m ≥ M₀ →
-    |yex (x₀ + (m : ℝ) * ((x - x₀) / (m : ℝ))) - Y m m| ≤ ... := by
-  intro m hm
-  have hm_pos : 0 < m := lt_of_lt_of_le hM₀_pos hm
-  obtain ⟨hY_init, hY_lmm⟩ := hY_props m hm_pos
-  have hh_nn : 0 ≤ (x - x₀) / (m : ℝ) :=
-    div_nonneg (sub_pos.mpr hxx).le (Nat.cast_nonneg m)
-  obtain ⟨ha, hb, hc, hrec, hu0⟩ :=
-    globalError_recurrence_form_explicit_nonauto hk M hcons hL_joint hM
-      hf_lip_joint hyex_C1 hyex_ode hf_yex_bound hh_nn (hM₀_small m hm)
-      hY_lmm Θ hΘ_nn hΘ
-  -- Apply discrete_gronwall_exp_bound (cycle 050).
-  ...
--- Per-h Tendsto facts (cycle 061+62 wrappers — shape-agnostic).
-have hb_lim := bOf_tendsto_at_zero M Θ (L : ℝ)
-have hc_lim := cOf_tendsto_at_zero M Θ (L : ℝ) (1 + M_bound)
-have hb_pos := bOf_limit_pos M Θ (L : ℝ) hΘ_nn hL_joint
--- For ha_lim, the autonomous version uses `Yh h`; we use `fun n => start h n`
--- on the trajectory's first k indices. Use hY_init to bridge.
-have ha_lim : Filter.Tendsto
-    (fun h : ℝ => aOf M Θ (L : ℝ) h yex (fun n => start h n) x₀)
-    (nhds 0) (nhds 0) := aOf_tendsto_zero M Θ (L : ℝ) yex
-                            (fun h n => start h n) x₀ hstart'
--- Outer-squeeze helpers (already shape-agnostic).
-have ha_term := globalError_outer_squeeze_a_term ha_lim hb_lim k x₀ x
-have hc_term := globalError_outer_squeeze_c_term hb_lim hc_lim hb_pos hk x₀ x
--- ... assemble per-m squeeze, then conclude Tendsto via
--- tendsto_of_tendsto_of_tendsto_of_le_of_le' as in autonomous lines
--- 5374–5381.
-```
-
-The exact squeeze-assembly needs adjustment because `hbound` is per
-`m ≥ M₀` (not per `m > 0`): the `Filter.eventually_atTop` wrapper
-uses `M₀` instead of `1`. Otherwise structurally identical to lines
-5348–5381.
-
-## Order of operations
-
-1. **First**: Apply the `IsConvergent` predicate strengthening
-   (Phase 1 above). Verify the file compiles after the predicate
-   change. This touches only the predicate's hypothesis list — the
-   conclusion (`Tendsto ... atTop (nhds 0)`) is unchanged.
-2. **Second**: Write
-   `.prover-state/issues/is_convergent_strengthened.md` documenting
-   the deviation. Cross-reference `non_autonomous_lift_plan.md`.
-3. **Third**: Implement the closure (Steps 0–7 above). Build
-   incrementally with `lake env lean OpenMath/Chapter4/Section404.lean`
-   between major destructuring steps so failures localise quickly.
-4. **Fourth**: Run the pre-commit faithfulness check from CLAUDE.md.
-   Update `.prover-state/task_results/cycle_068.md` with the
-   strengthening rationale documented under "Faithfulness check".
-5. **Fifth**: If the closure compiles cleanly, append a "RESOLVED in
-   cycle 068" note to `non_autonomous_lift_plan.md` (do NOT delete
-   the file — keep the historical record like cycles 065/066).
-6. **Sixth**: Update `lean_status.json` for `thm:406D` and `def:402A`
-   if status changes from `partial` to `formalized`.
-
-## Estimated scope
-
-* Predicate strengthening + issue file: ~30 LOC + ~80 LOC issue.
-* Theorem closure: ~120–180 LOC (autonomous template body is ~130
-  LOC; non-auto adds destructuring, the `M₀` derivation, and the
-  `hyex_ode` bridge).
-* Total: ~150–220 LOC. Well under the 500-LOC ceiling.
-
-## Fallback if closure stalls
-
-If Step 7's squeeze assembly turns out to require more than ~250
-LOC of debugging, **stop and decompose**:
-
-1. Split off two private helpers `stable_consistent_per_m_bound`
-   (per-`m` closed-form, ~80 LOC) and `stable_consistent_squeeze`
-   (the `tendsto_of_tendsto_of_tendsto_of_le_of_le'` final assembly,
-   ~50 LOC). Land both this cycle.
-2. Land the predicate strengthening + issue file regardless.
-3. Defer the `stable_consistent_isConvergent` final integration to
-   cycle 069. Document in `non_autonomous_lift_plan.md` as a 5th
-   cluster.
-
-Goal: cycle 068 must not regress. A two-helper landing with the
-predicate strengthening is a valid score-1 cycle even if the
-top-level theorem stays sorry'd.
-
-## What NOT to do
-
-* **Do NOT** modify `scripts/autonomous_loop.py` (loop-maintainer
-  territory).
-* **Do NOT** raise `maxHeartbeats` above 200000.
-* **Do NOT** introduce `axiom` or `constant`.
-* **Do NOT** attempt to derive joint-Lipschitz, global `M_bound`, or
-  global `ContDiff ℝ 1 yex` from the existing `IsConvergent`
-  hypotheses. They cannot be derived (see "CRITICAL" section).
-* **Do NOT** refactor cycles 065–067 helpers to take spatial-only
-  Lipschitz or Icc-restricted bounds. That would require redoing
-  three cycles of work and produce a strictly weaker result.
-* **Do NOT** strengthen the predicate by adding `LipschitzInSecond`
-  AND `LipschitzWith (Function.uncurry f)` redundantly. The latter
-  implies the former; pick the joint version.
-* **Do NOT** poll Aristotle. There is no in-flight job, and the
-  closure is integration work, not premise selection.
-* **Do NOT** delete `stable_consistent_isConvergent_autonomous`
-  (line 5253). It is the template we are mirroring; keeping it is
-  useful for documentation and for any future user who wants the
-  autonomous form directly.
-* **Do NOT** rename or move existing helpers. The file structure is
-  load-bearing — `globalError_recurrence_form_explicit_nonauto`
-  (cycle 067) is consumed verbatim by the closure.
-* **Do NOT** treat the prompt's "stuck on" framing (if any
-  `attempts.md` entry points at line 5402) as a real problem. The
-  sorry there IS the cycle 068 target; it has been there since
-  cycle 062 by design.
-* **Do NOT** attempt to prove convergence for any concrete LMM
-  (e.g. `explicitEulerLMM.IsConvergent`). The cycle 068 goal is
-  the abstract predicate-level theorem; concrete witnesses are
-  separately tracked in `lmm_convergence_witness_deferred.md` and
-  remain deferred.
-
-## Cross-references
-
-* `OpenMath/Chapter4/Section404.lean:5253` — autonomous template.
-* `OpenMath/Chapter4/Section404.lean:4829` — cycle 067
-  `globalError_recurrence_form_explicit_nonauto`.
-* `OpenMath/Chapter4/Section404.lean:3852` — cycle 063 boundary
-  adapters (`lipschitzInSecond_univ_toLipschitzWith`,
-  `f_yex_bound_on_Icc`, `hstart_shape_bridge`). Only
-  `hstart_shape_bridge` is consumed by cycle 068.
-* `.prover-state/issues/non_autonomous_lift_plan.md` — overall
-  cycle 064–068 plan; update the cluster-4 status when closing.
-* `.prover-state/task_results/cycle_067.md` — cycle 067 deliverable
-  log; the cluster-3 lift this builds on.
-* `extraction/formalization_data/entities/thm_406D.json` —
-  textbook statement.
-* `extraction/formalization_data/entities/def_402A.json` —
-  textbook predicate (compare with the strengthened Lean version
-  for the faithfulness issue).
+If at hour 4 the `T ≠ 0` branch hasn't landed: file a sorry-first
+decomposition issue, leave the case-split branches as `sorry`
+placeholders (one per branch), prove at least the three
+sub-lemmas (`sum_alpha_zero`, `sum_i_alpha_eq_T`,
+`Y_isLMMSolution`), and target cycle 071 for closure. A clean
+sorry-first scaffold + 3 sub-lemmas proven counts as cycle
+progress under CLAUDE.md.

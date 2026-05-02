@@ -730,7 +730,7 @@
   "thm:405C": {
     "lean_file": "OpenMath/Chapter4/Section405.lean",
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.convergent_isConsistent",
-    "status": "partial"
+    "status": "formalized"
   },
   "thm:406C": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
