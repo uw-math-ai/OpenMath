@@ -606,4 +606,270 @@ theorem toGLM_stabilityMatrix_charpoly_explicit_of_bdf
   rw [toGLM_stabilityCharpolyRowF_of_bdf m hs hbdf]
   ring
 
+/-! ### Step C.6 — General PHF(0) adjugate column closed form -/
+
+/-- §521 Step C.6 — Closed form of `toGLM_stabilityMatrixPHF m 0` at
+arbitrary entry: it is the strict upper-shift companion (no BDF
+hypothesis needed; the `z = 0` substitution makes the bottom-row
+coefficient vanish unconditionally). -/
+theorem toGLM_stabilityMatrixPHF_zero_apply (m : LMM s) (j l : Fin s) :
+    toGLM_stabilityMatrixPHF m 0 j l =
+      (if (l : ℕ) = (j : ℕ) + 1 then (1 : ℂ) else 0) := by
+  unfold toGLM_stabilityMatrixPHF
+  by_cases hj : (j : ℕ) + 1 = s
+  · rw [if_pos hj, zero_mul, zero_mul]
+    rw [if_neg]
+    intro hlj
+    have hl_lt : (l : ℕ) < s := l.isLt
+    omega
+  · rw [if_neg hj]
+
+/-- §521 Step C.6 — Explicit closed form of the entries of
+`toGLM_stabilityMatrixPHF m 0`'s charmatrix: it is the
+upper-bidiagonal polynomial matrix with `X` on the diagonal and `-1`
+on the super-diagonal. -/
+theorem toGLM_stabilityMatrixPHF_zero_charmatrix_apply
+    (m : LMM s) (j l : Fin s) :
+    (toGLM_stabilityMatrixPHF m 0).charmatrix j l =
+      if (j : ℕ) = (l : ℕ) then (Polynomial.X : Polynomial ℂ)
+      else if (l : ℕ) = (j : ℕ) + 1 then (-1 : Polynomial ℂ)
+      else 0 := by
+  rw [Matrix.charmatrix_apply, toGLM_stabilityMatrixPHF_zero_apply]
+  by_cases hjl : j = l
+  · subst hjl
+    simp
+  · have hjl' : (j : ℕ) ≠ (l : ℕ) := fun h => hjl (Fin.ext h)
+    rw [if_neg hjl']
+    by_cases hlj1 : (l : ℕ) = (j : ℕ) + 1
+    · simp [hjl, hlj1]
+    · simp [hjl, hlj1]
+
+/-- §521 Step C.6 — The candidate explicit adjugate matrix for
+`(toGLM_stabilityMatrixPHF m 0).charmatrix`: entries are powers of
+`X` on and above the diagonal, zero below. -/
+noncomputable def phfZeroCharmatrixAdjExplicit (s : ℕ) :
+    Matrix (Fin s) (Fin s) (Polynomial ℂ) :=
+  fun i j =>
+    if (i : ℕ) ≤ (j : ℕ) then
+      (Polynomial.X : Polynomial ℂ) ^ (s - 1 - ((j : ℕ) - (i : ℕ)))
+    else 0
+
+/-- §521 Step C.6 — Last column of the explicit adjugate is the
+geometric power vector `(1, X, X², …, X^{s-1})`. -/
+theorem phfZeroCharmatrixAdjExplicit_last_col (s : ℕ) (hs : 0 < s)
+    (i : Fin s) :
+    phfZeroCharmatrixAdjExplicit s i ⟨s - 1, by omega⟩ =
+      (Polynomial.X : Polynomial ℂ) ^ (i : ℕ) := by
+  unfold phfZeroCharmatrixAdjExplicit
+  have hi_lt : (i : ℕ) < s := i.isLt
+  have hi : (i : ℕ) ≤ s - 1 := by omega
+  show (if (i : ℕ) ≤ s - 1 then
+      (Polynomial.X : Polynomial ℂ) ^ (s - 1 - ((s - 1) - (i : ℕ)))
+    else 0) = (Polynomial.X : Polynomial ℂ) ^ (i : ℕ)
+  rw [if_pos hi]
+  congr 1
+  omega
+
+/-- §521 Step C.6 — Cancellation: in an integral domain, if
+`A * B = (det A) • 1` and `det A ≠ 0`, then `A.adjugate = B`.
+The standard `A * adjugate A = (det A) • 1` and `adjugate A * A = (det A) • 1`
+identities give `(det A) • B = (det A) • A.adjugate` after multiplication
+by `adjugate A`; entry-wise cancellation by `det A` (non-zero in an
+integral domain) finishes. -/
+private theorem adjugate_eq_of_mul_eq_det_smul
+    {ι R : Type*} [DecidableEq ι] [Fintype ι] [CommRing R]
+    [NoZeroDivisors R]
+    {A B : Matrix ι ι R} (hmul : A * B = A.det • (1 : Matrix ι ι R))
+    (hdet : A.det ≠ 0) :
+    A.adjugate = B := by
+  have hsmul : A.det • B = A.det • A.adjugate := by
+    calc A.det • B
+        = (A.det • (1 : Matrix ι ι R)) * B := by
+            rw [Matrix.smul_mul, Matrix.one_mul]
+      _ = (A.adjugate * A) * B := by rw [Matrix.adjugate_mul]
+      _ = A.adjugate * (A * B) := by rw [Matrix.mul_assoc]
+      _ = A.adjugate * (A.det • (1 : Matrix ι ι R)) := by rw [hmul]
+      _ = A.det • (A.adjugate * 1) := Matrix.mul_smul _ _ _
+      _ = A.det • A.adjugate := by rw [Matrix.mul_one]
+  ext i j
+  have hij := congrFun (congrFun hsmul i) j
+  simp only [Matrix.smul_apply, smul_eq_mul] at hij
+  exact (mul_left_cancel₀ hdet hij.symm)
+
+/-- §521 Step C.6 — Multiplication identity: the past-`h*f` charmatrix
+times the explicit adjugate-candidate equals `X^s • 1`. Bridge for
+identifying `phfZeroCharmatrixAdjExplicit s` with the actual
+adjugate via `adjugate_eq_of_mul_eq_det_smul`.
+
+Proof strategy: each row `i` of `charmatrix` has at most two non-zero
+entries — `X` at column `i`, and (when `(i:ℕ)+1 < s`) `-1` at column
+`⟨(i:ℕ)+1, _⟩`. The matrix product in column `j` is therefore a sum
+of at most two terms, which telescope to `X^s` on the diagonal and `0`
+off the diagonal.
+-/
+theorem phfZeroCharmatrix_mul_adjExplicit (m : LMM s) :
+    (toGLM_stabilityMatrixPHF m 0).charmatrix *
+        phfZeroCharmatrixAdjExplicit s =
+      ((Polynomial.X : Polynomial ℂ) ^ s) •
+        (1 : Matrix (Fin s) (Fin s) (Polynomial ℂ)) := by
+  classical
+  refine Matrix.ext (fun i j => ?_)
+  simp only [Matrix.mul_apply, Matrix.smul_apply, Matrix.one_apply,
+    smul_eq_mul]
+  -- Reduce charmatrix entries to the explicit closed form.
+  have hcm : ∀ k : Fin s,
+      (toGLM_stabilityMatrixPHF m 0).charmatrix i k =
+        (if (i : ℕ) = (k : ℕ) then (Polynomial.X : Polynomial ℂ)
+         else if (k : ℕ) = (i : ℕ) + 1 then (-1 : Polynomial ℂ)
+         else 0) := fun k =>
+    toGLM_stabilityMatrixPHF_zero_charmatrix_apply m i k
+  conv_lhs =>
+    enter [2, k]
+    rw [hcm k]
+  have hi_lt : (i : ℕ) < s := i.isLt
+  have hj_lt : (j : ℕ) < s := j.isLt
+  by_cases h_i_last : (i : ℕ) + 1 = s
+  · -- Last row: only the diagonal contributes, so the sum collapses to
+    -- `X * adjExplicit i j`.
+    rw [Finset.sum_eq_single i]
+    · -- evaluate at k = i
+      have hii : ((i : ℕ) = (i : ℕ)) := rfl
+      rw [if_pos hii]
+      -- Need: X * adjExplicit i j = X^s * (if i = j then 1 else 0)
+      unfold phfZeroCharmatrixAdjExplicit
+      by_cases hij : i = j
+      · subst hij
+        have hi_le : (i : ℕ) ≤ (i : ℕ) := le_refl _
+        rw [if_pos hi_le, if_pos rfl]
+        rw [Nat.sub_self, Nat.sub_zero, mul_one]
+        conv_rhs => rw [show s = (s - 1) + 1 from by omega]
+        rw [pow_succ']
+      · have hij' : (i : ℕ) ≠ (j : ℕ) := fun h => hij (Fin.ext h)
+        rw [if_neg hij]
+        rw [mul_zero]
+        -- Need: X * (...) = 0; show that adjExplicit i j = 0
+        by_cases hij_le : (i : ℕ) ≤ (j : ℕ)
+        · -- (i : ℕ) ≤ (j : ℕ), but i ≠ j ⇒ (i : ℕ) < (j : ℕ)
+          -- but (i : ℕ) + 1 = s and (j : ℕ) < s ⇒ (j : ℕ) ≤ i, contradiction
+          exfalso
+          omega
+        · rw [if_neg hij_le, mul_zero]
+    · -- k ≠ i case: charmatrix i k = 0 because either (k : ℕ) ≠ (i : ℕ) and
+      -- (k : ℕ) = (i : ℕ) + 1 = s would put k out of range.
+      intro k _ hki
+      have hki' : (i : ℕ) ≠ (k : ℕ) := fun h => hki (Fin.ext h.symm)
+      rw [if_neg hki']
+      have hk_lt : (k : ℕ) < s := k.isLt
+      have hk_ne : (k : ℕ) ≠ (i : ℕ) + 1 := by omega
+      rw [if_neg hk_ne, zero_mul]
+    · intro h
+      exact absurd (Finset.mem_univ i) h
+  · -- General row: i+1 < s. Two non-zero terms: k = i and k = ⟨i+1, _⟩.
+    have h_i_lt : (i : ℕ) + 1 < s := by omega
+    let i' : Fin s := ⟨(i : ℕ) + 1, h_i_lt⟩
+    have hi'_val : (i' : ℕ) = (i : ℕ) + 1 := rfl
+    have h_i_ne_i' : i ≠ i' := by
+      intro h
+      have hv := congrArg (Fin.val) h
+      rw [hi'_val] at hv
+      omega
+    rw [Finset.sum_eq_add i i' h_i_ne_i']
+    · -- Evaluate at k = i and k = i'.
+      have hii : ((i : ℕ) = (i : ℕ)) := rfl
+      rw [if_pos hii]
+      have hii' : (i : ℕ) ≠ (i' : ℕ) := by rw [hi'_val]; omega
+      rw [if_neg hii']
+      rw [if_pos hi'_val]
+      -- Now: X * adjExplicit i j + (-1) * adjExplicit i' j = X^s * 1_{i=j}
+      unfold phfZeroCharmatrixAdjExplicit
+      by_cases hij : i = j
+      · subst hij
+        have hii_le : (i : ℕ) ≤ (i : ℕ) := le_refl _
+        rw [if_pos hii_le, if_pos rfl]
+        have hi'i_not_le : ¬ ((i' : ℕ) ≤ (i : ℕ)) := by
+          rw [hi'_val]; omega
+        rw [if_neg hi'i_not_le]
+        rw [Nat.sub_self, Nat.sub_zero]
+        -- Goal: X * X^(s-1) + -1 * 0 = X^s * 1
+        have hpow : (Polynomial.X : Polynomial ℂ) ^ s =
+            Polynomial.X * Polynomial.X ^ (s - 1) := by
+          conv_lhs => rw [show s = (s - 1) + 1 from by omega]
+          rw [pow_succ']
+        rw [hpow]
+        ring
+      · -- i ≠ j
+        have hij' : (i : ℕ) ≠ (j : ℕ) := fun h => hij (Fin.ext h)
+        rw [if_neg hij]
+        by_cases hij_le : (i : ℕ) ≤ (j : ℕ)
+        · -- (i:ℕ) < (j:ℕ); (i'+1:ℕ) ≤ (j:ℕ) iff (i:ℕ)+1 ≤ (j:ℕ)
+          have hij_lt : (i : ℕ) < (j : ℕ) := lt_of_le_of_ne hij_le hij'
+          rw [if_pos hij_le]
+          have hi'j_le : (i' : ℕ) ≤ (j : ℕ) := by rw [hi'_val]; omega
+          rw [if_pos hi'j_le]
+          -- Telescope: X * X^{s-1-(j-i)} - X^{s-1-(j-(i+1))} = 0.
+          -- Note `s-1-(j-i') = (s-1-(j-i)) + 1` since `i' = i+1` and `i+1 ≤ j`.
+          have hex : s - 1 - ((j : ℕ) - (i' : ℕ)) =
+              (s - 1 - ((j : ℕ) - (i : ℕ))) + 1 := by
+            have h1 : (i' : ℕ) = (i : ℕ) + 1 := hi'_val
+            omega
+          rw [hex, pow_succ']
+          ring
+        · -- (i:ℕ) > (j:ℕ); both adjExplicit terms are 0
+          rw [if_neg hij_le]
+          have hi'j_not_le : ¬ ((i' : ℕ) ≤ (j : ℕ)) := by
+            rw [hi'_val]; omega
+          rw [if_neg hi'j_not_le]
+          ring
+    · -- All k ≠ i, k ≠ i' have charmatrix entry 0.
+      intro k _ ⟨hk_ne_i, hk_ne_i'⟩
+      have hki' : (i : ℕ) ≠ (k : ℕ) := fun h => hk_ne_i (Fin.ext h.symm)
+      rw [if_neg hki']
+      have hk_ne_i'_val : (k : ℕ) ≠ (i : ℕ) + 1 := by
+        intro h
+        apply hk_ne_i'
+        apply Fin.ext
+        rw [hi'_val]
+        exact h
+      rw [if_neg hk_ne_i'_val, zero_mul]
+    · intro h
+      exact absurd (Finset.mem_univ i) h
+    · intro h
+      exact absurd (Finset.mem_univ i') h
+
+/-- §521 Step C.6 — Identification of the adjugate of the past-`h*f`
+charmatrix at `z = 0` as the explicit closed form
+`phfZeroCharmatrixAdjExplicit`. -/
+theorem toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_eq
+    (m : LMM s) :
+    (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate =
+      phfZeroCharmatrixAdjExplicit s := by
+  classical
+  have hdet : (toGLM_stabilityMatrixPHF m 0).charmatrix.det =
+      (Polynomial.X : Polynomial ℂ) ^ s := by
+    have := toGLM_stabilityMatrixPHF_zero_charpoly m
+    rwa [Matrix.charpoly] at this
+  have hne : (toGLM_stabilityMatrixPHF m 0).charmatrix.det ≠ 0 := by
+    rw [hdet]
+    exact pow_ne_zero _ Polynomial.X_ne_zero
+  apply adjugate_eq_of_mul_eq_det_smul
+  · rw [hdet]
+    exact phfZeroCharmatrix_mul_adjExplicit m
+  · exact hne
+
+/-- §521 Step C.6 — Column ⟨s-1, _⟩ of the past-`h*f` charmatrix
+adjugate at `z = 0` is the geometric power vector
+`(1, X, X², …, X^{s-1})`.
+
+Mirrors cycle 672's `rowYQuot_mul_X_pow_eq_RowY` step but on the
+adjugate-side: this is the structural foundation for extracting an
+`X^s` factor from the general (non-BDF) RowF in the upcoming
+`rowFQuot_mul_X_pow_eq_RowF` lemma. -/
+theorem toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_last_col
+    (m : LMM s) (i : Fin s) :
+    (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate i
+        ⟨s - 1, by have := i.isLt; omega⟩ =
+      (Polynomial.X : Polynomial ℂ) ^ (i : ℕ) := by
+  rw [toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_eq m]
+  exact phfZeroCharmatrixAdjExplicit_last_col s (by have := i.isLt; omega) i
+
 end LMM
