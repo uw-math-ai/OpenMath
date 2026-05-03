@@ -578,4 +578,32 @@ theorem toGLM_stabilityCharpolyRowF_of_bdf
     rfl
   rw [hαsumm, hβsumm, add_zero]
 
+/-- §521 Step C.5 — BDF-branch X^s extraction from
+`toGLM_stabilityMatrix_charpoly_explicit`: under BDF, the GLM stability
+charpoly factors cleanly as `X^s · (PY.charpoly - resolvent · rowYQuot · zβ)`.
+
+This is a real headline result for the BDF branch — a clean intermediate
+target on the path to the eventual general iff bridge. The proof
+combines:
+
+* `toGLM_stabilityMatrixPHF_zero_charpoly` — `PHF(0).charpoly = X^s`,
+* `rowYQuot_mul_X_pow_eq_RowY` — `RowY = rowYQuot · X^s`,
+* `toGLM_stabilityCharpolyRowF_of_bdf` — `RowF = 0` under BDF.
+-/
+theorem toGLM_stabilityMatrix_charpoly_explicit_of_bdf
+    (m : LMM s) (z : ℂ) (hs : 0 < s)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    (m.toGLM.stabilityMatrix z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s *
+        ((toGLM_stabilityMatrixPY m 0).charpoly -
+          Polynomial.C (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+            rowYQuot m *
+            Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))) := by
+  rw [toGLM_stabilityMatrix_charpoly_explicit m hz hs]
+  rw [toGLM_stabilityMatrixPHF_zero_charpoly]
+  rw [← rowYQuot_mul_X_pow_eq_RowY m hs]
+  rw [toGLM_stabilityCharpolyRowF_of_bdf m hs hbdf]
+  ring
+
 end LMM
