@@ -2206,7 +2206,7 @@ private theorem rowFAlphaResidual_eval_one_eq_double_sum
 /-- §521 Step D.16d — Under BDF, `rowFAlphaResidual m l` evaluates to
 zero at `ξ = 1`, because the entire `PYHF` block vanishes (cycle 643's
 `toGLM_stabilityMatrixPYHF_eq_zero_of_bdf`). -/
-private theorem rowFAlphaResidual_eval_one_of_bdf_eq_zero
+theorem rowFAlphaResidual_eval_one_of_bdf_eq_zero
     (m : LMM s)
     (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
     (l : Fin s) :
@@ -2582,5 +2582,29 @@ theorem D_mul_toGLM_charpoly_eval_one_general
     rw [Finset.sum_sub_distrib, ← Finset.mul_sum]
   rw [hsum_split]
   ring
+
+/-- §521 Step G.2 — BDF specialisation of G.1, recovering F.4 via
+the alternative D.11b route. Both correction terms in G.1 vanish
+under BDF: the `rowFAlphaResidual` sum by D.16d, and the
+`∑β castSucc` factor by direct BDF castSucc-vanishing. -/
+theorem D_mul_toGLM_charpoly_eval_one_general_of_bdf
+    (m : LMM s)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1 := by
+  rw [D_mul_toGLM_charpoly_eval_one_general m hz hs]
+  have h1 : ∑ l : Fin s, (rowFAlphaResidual m l).eval 1 = 0 := by
+    apply Finset.sum_eq_zero
+    intro l _
+    exact rowFAlphaResidual_eval_one_of_bdf_eq_zero m hbdf l
+  have h2 : ∑ l : Fin s, ((m.β l.castSucc : ℝ) : ℂ) = 0 := by
+    apply Finset.sum_eq_zero
+    intro l _
+    have hβ := hbdf _ (Fin.castSucc_lt_last l).ne
+    rw [hβ]; simp
+  rw [h1, h2]; ring
 
 end LMM
