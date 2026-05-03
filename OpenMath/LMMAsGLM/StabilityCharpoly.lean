@@ -473,4 +473,26 @@ theorem D_mul_toGLM_charpoly_eq_X_pow_mul_active_of_bdf
   rw [Polynomial.smul_eq_C_mul]
   ring
 
+/-- §521 Step C.5 — At `z = 0`, the past-`h*f` block charpoly is the
+pure `X^s` factor (no BDF hypothesis). Direct `z = 0` specialisation of
+the general `toGLM_stabilityMatrixPHF_charpoly`: every summand in the
+bottom-row companion correction has an explicit `z` factor and so
+vanishes. -/
+theorem toGLM_stabilityMatrixPHF_zero_charpoly (m : LMM s) :
+    (toGLM_stabilityMatrixPHF m 0).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s := by
+  rw [toGLM_stabilityMatrixPHF_charpoly m 0]
+  simp
+
+/-- §521 Step C.5 — The `PY(0).charpoly · PHF(0).charpoly` summand of
+`toGLM_stabilityMatrix_charpoly_explicit` factors as
+`X^s · PY(0).charpoly`, isolating the `X^s` extraction on the
+"non-rank-one-correction" half of the explicit form. -/
+theorem toGLM_V_active_charpoly_eq_X_pow_s_mul_PY (m : LMM s) :
+    m.toGLM.Vℂ.charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s *
+        (toGLM_stabilityMatrixPY m 0).charpoly := by
+  rw [toGLM_V_active_charpoly, toGLM_stabilityMatrixPHF_zero_charpoly]
+  ring
+
 end LMM
