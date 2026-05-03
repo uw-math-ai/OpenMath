@@ -1,0 +1,4 @@
+double_powerset_swap: 606857e0-f5a1-44e0-a194-af8ca3527036
+convProduct_assoc_lhs_eq: e899d5dc-f3f8-4798-8240-37788ae5fc3b
+convProduct_assoc_rhs_eq: 2cb97874-3c5b-44cf-86c2-2cc5e058d631
+convProduct_assoc: 061fadc5-616a-420e-b214-69d1871f792d

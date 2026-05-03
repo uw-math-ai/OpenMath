@@ -309,9 +309,10 @@
     "status": "formalized"
   },
   "lem:383B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section383.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section383.convProduct_assoc",
+    "notes": "Cycle 080. Convolution product associativity (αβ)γ = α(βγ). Stated WITHOUT IsMultiplicative hypotheses — a faithful generalisation, since the textbook proof uses only the algebraic structure of the convolution sum (not multiplicativity). Three private helper lemmas: convProduct_assoc_lhs_eq, convProduct_assoc_rhs_eq (LHS/RHS as double sums via Multiset.bind), and double_powerset_swap (the key combinatorial bijection (Q,T) ↔ (Q+T,Q), proved by induction on S applying the IH thrice with reparameterised f). Closes via `S - Q - (R - Q) = S - R` for Q ≤ R. Axioms = [propext, Classical.choice, Quot.sound].",
+    "status": "formalized"
   },
   "lem:383C": {
     "lean_file": null,

@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 51 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 52 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -117,7 +117,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:388B` **Equivalence of Additive and Multiplicative Perturbations** (§388)
 - [ ] `cor:359B` **W transformation preserves orthogonality conditions** (§359)
 - [x] `def:312A` **derivative weights** (§312)
-- [ ] `lem:383B` **Associativity of multiplicative forest mappings** (§383)
+- [x] `lem:383B` **Associativity of multiplicative forest mappings** (§383)
 - [ ] `thm:311C` **Taylor expansion via Picard iteration** (§311)
 - [ ] `thm:313B` **Runge Kutta method Taylor expansion formulas** (§313)
 - [ ] `thm:352C` **Pade approximant recurrence relation** (§352)

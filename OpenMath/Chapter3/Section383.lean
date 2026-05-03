@@ -228,7 +228,8 @@ theorem isMultiplicative_const_one :
 
 This is the multiset analogue of the textbook reindexing
 `Σ_{Q ⊑ R ⊑ S} f(R-Q, Q) = Σ_{Q ⊑ S, T ⊑ S-Q} f(T, Q)` via the
-bijection `(Q, T) ↔ (Q + T, Q)`. -/
+bijection `(Q, T) ↔ (Q + T, Q)`. The proof is by induction on `S`,
+applying the IH three times to three reparameterised versions of `f`. -/
 private theorem double_powerset_swap
     (S : Multiset RootedTree)
     (f : Multiset RootedTree → Multiset RootedTree → ℝ) :
@@ -236,7 +237,71 @@ private theorem double_powerset_swap
         (fun Q => (S - Q).powerset.map (fun T => f Q T))).sum
       = ((S.powerset).bind
           (fun R => R.powerset.map (fun Q => f Q (R - Q)))).sum := by
-  sorry
+  induction S using Multiset.induction generalizing f with
+  | empty => simp
+  | cons a s IH =>
+    -- Setup: cons-cons cancellation in multiset subtraction.
+    have hcons_sub : ∀ (m n : Multiset RootedTree), a ::ₘ m - a ::ₘ n = m - n := by
+      intros; ext y; simp only [Multiset.count_sub, Multiset.count_cons]; omega
+    rw [Multiset.powerset_cons]
+    simp only [Multiset.add_bind, Multiset.bind_map, Multiset.sum_add]
+    -- We have to prove A + B = C + D, where:
+    --   A = Σ Q ≤ s. Σ T ≤ a::s - Q. f Q T
+    --   B = Σ Q ≤ s. Σ T ≤ a::s - a::Q. f (a::Q) T
+    --   C = Σ R ≤ s. Σ Q ≤ R. f Q (R - Q)        -- = IH RHS for f
+    --   D = Σ R ≤ s. Σ Q ≤ a::R. f Q (a::R - Q)
+    -- Plan: split A and D into two pieces each:
+    --   A = A1 + Z, where A1 = Σ Q ≤ s. Σ T ≤ s - Q. f Q T   (= IH-LHS for f)
+    --                  Z  = Σ Q ≤ s. Σ T ≤ s - Q. f Q (a::T)
+    --   B = B', where B' = Σ Q ≤ s. Σ T ≤ s - Q. f (a::Q) T  (= IH-LHS for `fun Q T => f (a::Q) T`)
+    --   D = W + V, where W = Σ R ≤ s. Σ Q ≤ R. f Q (a::(R - Q))  (= IH-RHS for `fun Q T => f Q (a::T)`)
+    --                  V = Σ R ≤ s. Σ Q ≤ R. f (a::Q) (R - Q)    (= IH-RHS for `fun Q T => f (a::Q) T`)
+    -- So by IH thrice: A = C + W (matching C in RHS); B = V; D = W + V; total: A + B = C + W + V = C + D.
+    -- The first split uses `Multiset.cons_sub_of_le` (Q ≤ s ⇒ a::s - Q = a::(s-Q)) and `Multiset.powerset_cons`.
+    -- The second uses `hcons_sub` (a::s - a::Q = s - Q) and `Multiset.powerset_cons` (for D).
+    -- Step 1: rewrite A as A1 + Z.
+    have hA :
+        (s.powerset.bind fun Q => Multiset.map (fun T => f Q T) (a ::ₘ s - Q).powerset).sum
+          = (s.powerset.bind fun Q => Multiset.map (fun T => f Q T) (s - Q).powerset).sum
+          + (s.powerset.bind fun Q => Multiset.map (fun T => f Q (a ::ₘ T)) (s - Q).powerset).sum := by
+      rw [← Multiset.sum_add, ← Multiset.bind_add]
+      refine congrArg Multiset.sum (Multiset.bind_congr (fun Q hQ => ?_))
+      have hQs : Q ≤ s := Multiset.mem_powerset.mp hQ
+      rw [Multiset.cons_sub_of_le _ hQs, Multiset.powerset_cons,
+          Multiset.map_add, Multiset.map_map]
+      rfl
+    -- Step 2: rewrite B in LHS form using hcons_sub.
+    have hB :
+        (s.powerset.bind fun Q =>
+          Multiset.map (fun T => f (a ::ₘ Q) T) (a ::ₘ s - a ::ₘ Q).powerset).sum
+          = (s.powerset.bind fun Q =>
+              Multiset.map (fun T => f (a ::ₘ Q) T) (s - Q).powerset).sum := by
+      refine congrArg Multiset.sum (Multiset.bind_congr (fun Q _ => ?_))
+      rw [hcons_sub]
+    -- Step 3: rewrite D as W + V (in RHS form).
+    have hD :
+        (s.powerset.bind fun R =>
+          Multiset.map (fun Q => f Q (a ::ₘ R - Q)) (a ::ₘ R).powerset).sum
+          = (s.powerset.bind fun R =>
+              Multiset.map (fun Q => f Q (a ::ₘ (R - Q))) R.powerset).sum
+          + (s.powerset.bind fun R =>
+              Multiset.map (fun Q => f (a ::ₘ Q) (R - Q)) R.powerset).sum := by
+      rw [← Multiset.sum_add, ← Multiset.bind_add]
+      refine congrArg Multiset.sum (Multiset.bind_congr (fun R _ => ?_))
+      rw [Multiset.powerset_cons, Multiset.map_add]
+      congr 1
+      · -- Q ≤ R branch: a ::ₘ R - Q = a ::ₘ (R - Q).
+        refine Multiset.map_congr rfl (fun Q hQR => ?_)
+        rw [Multiset.cons_sub_of_le _ (Multiset.mem_powerset.mp hQR)]
+      · -- Q = a ::ₘ Q' branch: a ::ₘ R - a ::ₘ Q' = R - Q'.
+        rw [Multiset.map_map]
+        refine Multiset.map_congr rfl (fun Q' _ => ?_)
+        simp only [Function.comp_apply]
+        rw [hcons_sub]
+    -- Step 4: apply IH three times.
+    rw [hA, hB, hD]
+    rw [IH f, IH (fun Q T => f Q (a ::ₘ T)), IH (fun Q T => f (a ::ₘ Q) T)]
+    ring
 
 /-- Expansion of the LHS of associativity as a double sum. -/
 private theorem convProduct_assoc_lhs_eq (α β γ : Forest → ℝ) (S : Forest) :
@@ -244,7 +309,10 @@ private theorem convProduct_assoc_lhs_eq (α β γ : Forest → ℝ) (S : Forest
       = ((S.powerset).bind
           (fun Q => (S - Q).powerset.map
             (fun T => α (S - Q - T) * β T * γ Q))).sum := by
-  sorry
+  unfold convProduct
+  rw [Multiset.sum_bind]
+  refine congrArg Multiset.sum (Multiset.map_congr rfl (fun Q _ => ?_))
+  exact (Multiset.sum_map_mul_right).symm
 
 /-- Expansion of the RHS of associativity as a double sum. -/
 private theorem convProduct_assoc_rhs_eq (α β γ : Forest → ℝ) (S : Forest) :
@@ -252,7 +320,12 @@ private theorem convProduct_assoc_rhs_eq (α β γ : Forest → ℝ) (S : Forest
       = ((S.powerset).bind
           (fun R => R.powerset.map
             (fun Q => α (S - R) * β (R - Q) * γ Q))).sum := by
-  sorry
+  unfold convProduct
+  rw [Multiset.sum_bind]
+  refine congrArg Multiset.sum (Multiset.map_congr rfl (fun R _ => ?_))
+  rw [← Multiset.sum_map_mul_left]
+  refine congrArg Multiset.sum (Multiset.map_congr rfl (fun Q _ => ?_))
+  ring
 
 /-- **Butcher §383 Lemma 383B** — the convolution product on
 forest mappings is associative.
@@ -266,6 +339,14 @@ convolution sum (not multiplicativity). The Lean statement therefore
 drops the hypothesis — a faithful generalisation. -/
 theorem convProduct_assoc (α β γ : Forest → ℝ) :
     convProduct (convProduct α β) γ = convProduct α (convProduct β γ) := by
-  sorry
+  funext S
+  rw [convProduct_assoc_lhs_eq, convProduct_assoc_rhs_eq]
+  rw [double_powerset_swap S (fun Q T => α (S - Q - T) * β T * γ Q)]
+  refine congrArg Multiset.sum (Multiset.bind_congr (fun R hR => ?_))
+  refine Multiset.map_congr rfl (fun Q hQR => ?_)
+  have hQR' : Q ≤ R := Multiset.mem_powerset.mp hQR
+  have h1 : S - Q - (R - Q) = S - R := by
+    rw [← Multiset.sub_add_eq_sub_sub, add_comm, Multiset.sub_add_cancel hQR']
+  rw [h1]
 
 end OpenMath.Chapter3.Section383
