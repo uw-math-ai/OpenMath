@@ -1,313 +1,253 @@
-# Cycle 088 Strategy — formalize `def:520E` (A-stable GLM)
+# Cycle 089 — Formalize `def:520F` (L-stable general linear method)
 
-## Status snapshot
+## Status going in
 
-Cycle 087 successfully formalised `def:520C` (`stabilityFunction`,
-`stabilityRegion`, `instabilityRegion`) plus two non-vacuity witnesses
-in `OpenMath/Chapter5/Section520.lean`. Build clean, axioms reduced to
-`[propext, Classical.choice, Quot.sound]`, score +2. Progress is
-58 / 175.
+- Cycle 088 closed `def:520E` (A-stable GLM) plus the `trivialZeroGLM`
+  non-vacuity witness. `OpenMath/Chapter5/Section520.lean` builds clean.
+- No pending Aristotle results, no sorry's, no infrastructure
+  blockers reported by previous workers in scope.
+- The cycle 088 worker explicitly recommended `def:520F` as next.
+  Its only direct dependency is `def:520E`, which is now in place.
 
-There are **zero open sorry's** in the codebase and **no pending
-Aristotle results** to incorporate. The cycle 087 task results
-§"Suggested next approach" recommends two parallel paths:
+## Priority 0 — incorporate Aristotle
 
-* `thm:520B` — requires designing a non-trivial GLM-iteration encoding
-  (no infrastructure for `(500c)` exists yet; multi-cycle commitment).
-* `def:520E` (A-stable) — *near-trivial* follow-up to cycle 087's
-  `stabilityRegion`.
+**None pending.** Skip.
 
-**Cycle 088 picks `def:520E`.** Rationale: cycles 083–087 all scored
-+2 with the "definition + ≤ 2 non-vacuity witnesses" pattern; this
-target preserves that momentum and unblocks `def:520F` (L-stable),
-the only direct downstream consumer of `def:520E`. `thm:520B` is
-deferred to a future cycle that can dedicate the planning effort
-needed for the GLM iteration encoding.
+## Priority 1 — formalize `def:520F` (L-stable GLM)
 
-## Target
+### Textbook statement (verbatim from `entities/def_520F.json`)
 
-**Entity**: `def:520E` (A-stable general linear method).
+> A general linear method is L-stable if it is A-stable and
+> ρ(M(∞)) = 0.
 
-**Textbook statement** (quoted verbatim from
-`extraction/formalization_data/entities/def_520E.json`):
+Here ρ denotes spectral radius and `M(∞)` is the formal value of the
+rational function `M(z) = V + zB(I − zA)⁻¹U` "at infinity". In the
+standard interpretation (Hairer–Wanner, Butcher), the condition
+`ρ(M(∞)) = 0` is equivalent to "the spectral radius of `M(z)` tends
+to 0 as `z → ∞` in `ℂ`". This is the formulation we encode, because
+it sidesteps the `A`-invertibility issue that arises when trying to
+define `M(∞)` as a single matrix.
 
-> A general linear method is 'A-stable' if `M(z)` is power-bounded
-> for every `z` in the left half complex plane.
+### Encoding choice — use `Filter.Tendsto`, not an elementary form
 
-**Page reference**: Butcher 2008, p. 419.
+Use Mathlib's `spectralRadius` (lives in
+`Mathlib/Analysis/Normed/Algebra/Spectrum.lean:53`) returning
+`ℝ≥0∞`, and Mathlib's `Filter.cocompact ℂ` (the standard "going to
+infinity" filter on a finite-dim normed space). This is more
+idiomatic than a `∀ ε > 0, ∃ R, …` form and Mathlib has the lemmas
+we need (`spectralRadius_zero`, `tendsto_const_nhds`).
 
-## Encoding plan
+### Exact Lean signature
 
-### File: `OpenMath/Chapter5/Section520.lean`
+Add the new definition and witness inside the existing
+`namespace OpenMath.Chapter5.Section510` block of
+`OpenMath/Chapter5/Section520.lean` (the same block that holds
+`IsAStable` and `trivialZeroGLM_isAStable` — see lines 59–279 of
+the current file). Place the new declarations **after**
+`trivialZeroGLM_isAStable` (line 277) and **before** the closing
+`end OpenMath.Chapter5.Section510` (line 279).
 
-Append at the end of the `namespace OpenMath.Chapter5.Section510`
-block (the second namespace block in the file, lines 59–210), **before**
-the existing `end OpenMath.Chapter5.Section510` on line 210.
-
-### Four new declarations
-
-#### 1. `def GeneralLinearMethod.IsAStable`
+Imports to add at the top of the file (only if not already present):
 
 ```lean
-/-- **Definition 520E** — A general linear method is *A-stable* if its
-stability matrix `M(z)` is power-bounded for every `z` in the (closed)
-left half complex plane.
+import Mathlib.Analysis.Normed.Algebra.Spectrum
+```
 
-Butcher (Definition 520E, p. 419): "A general linear method is
-'A-stable' if `M(z)` is power-bounded for every `z` in the left half
-complex plane."
+The `spectralRadius` and `Filter.cocompact` symbols should both
+become accessible from this import plus the existing
+`Mathlib.Data.Complex.Basic` import. Add other imports only if Lean
+errors demand it; keep the diff minimal.
 
-Encoding choices:
+Definition:
 
-* "Power-bounded" is the existential `PowerBounded` predicate from
-  `OpenMath.Chapter1.Section142` reused via membership in the
-  `stabilityRegion` set defined in `def:520C`. By unfolding,
-  `z ∈ M.stabilityRegion ↔ ∃ C, PowerBounded C (M.stabilityMatrix z)`,
-  so this re-spelling is a literal restatement of the textbook.
-* "Left half complex plane" is encoded as the closed left half-plane
-  `{z : ℂ | z.re ≤ 0}`. The textbook is silent on open vs closed; the
-  closed interpretation is the standard convention in stability
-  theory and matches `def:350A` (Runge–Kutta A-stability) elsewhere
-  in this codebase. -/
-def GeneralLinearMethod.IsAStable {s r : ℕ}
+```lean
+/-- **Definition 520F** — A general linear method is *L-stable* if it
+is A-stable and the spectral radius of its stability matrix `M(z)`
+tends to `0` as `z → ∞` in `ℂ`.
+
+Butcher (Definition 520F, p. 419): "A general linear method is
+L-stable if it is A-stable and ρ(M(∞)) = 0."
+
+Encoding choice: the condition `ρ(M(∞)) = 0` is interpreted as
+`Filter.Tendsto (fun z => spectralRadius ℂ (M(z))) (Filter.cocompact ℂ)
+(𝓝 0)`. This sidesteps the issue that `M(∞)` as a literal matrix
+value is only well-defined when the `A`-block is invertible (in
+which case `M(∞) = V − B·A⁻¹·U`); the spectral-radius limit
+formulation captures the same mathematical content without needing
+a case split on invertibility, and is the formulation universally
+used in the modern stiff-ODE literature (cf. Hairer–Wanner). -/
+def GeneralLinearMethod.IsLStable {s r : ℕ}
     (M : GeneralLinearMethod s r) : Prop :=
-  ∀ z : ℂ, z.re ≤ 0 → z ∈ M.stabilityRegion
+  M.IsAStable ∧
+  Filter.Tendsto
+    (fun z : ℂ => spectralRadius ℂ (M.stabilityMatrix z))
+    (Filter.cocompact ℂ)
+    (𝓝 0)
 ```
 
-#### 2. Non-vacuity helper: a trivial all-zero GLM
-
-`explicitEulerGLM` is **not** A-stable (`z = -3` gives
-`M(z) = !![1 + (-3)] = !![-2]`, whose powers blow up). We need a
-distinct witness. The simplest is the all-zero `(s, r) = (1, 1)` GLM:
+Non-vacuity witness:
 
 ```lean
-/-- The trivial `(s, r) = (1, 1)` GLM with all four blocks set to the
-zero `1×1` matrix. This is not a Runge–Kutta or LMM in the textbook
-sense — it is the simplest non-vacuity witness for A-stability:
-its stability matrix `M(z) = !![0]` for every `z`, so the trivial
-power bound holds uniformly. -/
-def trivialZeroGLM : GeneralLinearMethod 1 1 where
-  A := !![0]
-  U := !![0]
-  B := !![0]
-  V := !![0]
+/-- Non-vacuity witness for `IsLStable`: the `trivialZeroGLM` is
+L-stable. Since `M(z) = !![0]` for every `z` (cycle 088
+`trivialZeroGLM_stabilityMatrix`), the spectral radius is
+identically `0`, and `Tendsto` of a constant sequence to its
+constant value is automatic. -/
+theorem trivialZeroGLM_isLStable : trivialZeroGLM.IsLStable := by
+  refine ⟨trivialZeroGLM_isAStable, ?_⟩
+  -- Reduce the spectral-radius function to the constant 0.
+  have hfun :
+      (fun z : ℂ => spectralRadius ℂ (trivialZeroGLM.stabilityMatrix z))
+        = fun _ => (0 : ℝ≥0∞) := by
+    funext z
+    rw [trivialZeroGLM_stabilityMatrix]
+    -- Show `!![(0 : ℂ)] = 0` then use `spectralRadius_zero`.
+    have h0 : (!![(0 : ℂ)] : Matrix (Fin 1) (Fin 1) ℂ) = 0 := by
+      ext i j; fin_cases i; fin_cases j; simp
+    rw [h0]
+    exact spectralRadius_zero
+  rw [hfun]
+  exact tendsto_const_nhds
 ```
-
-#### 3. The stability matrix of `trivialZeroGLM` is identically `!![0]`
-
-```lean
-/-- For the all-zero `(1,1)` GLM, the stability matrix collapses to
-the `1×1` zero matrix at every `z ∈ ℂ`. Mirrors the cycle 086
-`explicitEulerGLM_stabilityMatrix` proof shape (which also unfolds
-the resolvent factor against the `A = !![0]` block first). -/
-theorem trivialZeroGLM_stabilityMatrix (z : ℂ) :
-    trivialZeroGLM.stabilityMatrix z = !![0] := by
-  -- (1 - z • complexify A) = 1 since A = !![0].
-  have hA :
-      (1 - z • complexify trivialZeroGLM.A)
-        = (1 : Matrix (Fin 1) (Fin 1) ℂ) := by
-    ext i j
-    fin_cases i; fin_cases j
-    simp [trivialZeroGLM, complexify]
-  unfold GeneralLinearMethod.stabilityMatrix
-  rw [hA, inv_one]
-  ext i j
-  fin_cases i; fin_cases j
-  simp [trivialZeroGLM, complexify, Matrix.mul_apply]
-```
-
-#### 4. Non-vacuity: `trivialZeroGLM` is A-stable
-
-```lean
-/-- Non-vacuity witness for `IsAStable`: the `trivialZeroGLM` is
-A-stable. Since `M(z) = !![0]` for every `z`, the powers
-`M(z)^0 = 1`, `M(z)^k = 0` (`k ≥ 1`) are uniformly bounded by
-`‖(1 : Matrix (Fin 1) (Fin 1) ℂ)‖`. -/
-theorem trivialZeroGLM_isAStable : trivialZeroGLM.IsAStable := by
-  intro z _hz
-  refine ⟨‖(1 : Matrix (Fin 1) (Fin 1) ℂ)‖, ?_⟩
-  intro k
-  rw [trivialZeroGLM_stabilityMatrix]
-  -- Goal: ‖(!![(0 : ℂ)] : Matrix (Fin 1) (Fin 1) ℂ) ^ k‖
-  --        ≤ ‖(1 : Matrix (Fin 1) (Fin 1) ℂ)‖
-  -- Identify the !![0] entry-matrix with the actual zero matrix:
-  have h0 : (!![(0 : ℂ)] : Matrix (Fin 1) (Fin 1) ℂ) = 0 := by
-    ext i j; fin_cases i; fin_cases j; simp
-  rw [h0]
-  -- Goal: ‖(0 : Matrix (Fin 1) (Fin 1) ℂ) ^ k‖ ≤ ‖(1 : …)‖
-  cases k with
-  | zero => simp
-  | succ n =>
-      rw [zero_pow (Nat.succ_ne_zero n), norm_zero]
-      exact norm_nonneg _
-```
-
-(The exact spelling of `cases k with | zero | succ n` may need
-minor tweaking — see "Implementation notes" below.)
-
-## Implementation notes
-
-### Existing infrastructure to reuse (already in the file from cycle 087)
-
-* `OpenMath.Chapter5.Section520.complexify` (line 50) — the lift
-  `Matrix m n ℝ → Matrix m n ℂ`. Note: still in the **`Section520`**
-  namespace; the `Section510` namespace block in `Section520.lean`
-  re-opens it via `open OpenMath.Chapter5.Section520 (complexify)`
-  on line 63. **Do not redeclare.**
-* `GeneralLinearMethod.stabilityMatrix` (line 92, in `Section510`).
-* `GeneralLinearMethod.stabilityRegion` (line 170, in `Section510`).
-* The scoped `Matrix.Norms.Operator` open (line 62 of the
-  `Section510` namespace block) — already provides the
-  `linftyOpSemiNormedRing` instance needed for `PowerBounded` on
-  `Matrix (Fin r) (Fin r) ℂ`. **Do not re-open.**
-* `OpenMath.Chapter1.Section142.PowerBounded` (already imported
-  transitively via `Section510`).
-
-### Namespace placement
-
-All four new declarations (`IsAStable`, `trivialZeroGLM`,
-`trivialZeroGLM_stabilityMatrix`, `trivialZeroGLM_isAStable`) go
-**inside the existing `namespace OpenMath.Chapter5.Section510` block**
-in `Section520.lean`. This matches cycle 086/087 placement and
-ensures dot notation `M.IsAStable` works on values of
-`GeneralLinearMethod s r`. Add them after
-`explicitEulerGLM_zero_mem_stabilityRegion` (line 208) and before
-`end OpenMath.Chapter5.Section510` (line 210).
 
 ### Likely build issues and quick fixes
 
-1. **`cases k` arm syntax.** If
-   `cases k with | zero => … | succ n => …` fails on motive issues,
-   fall back to `induction k with | zero => … | succ n _ih => …` or
-   to `rcases k with _ | n`. Test with `lean_multi_attempt` inside
-   the goal.
-2. **`zero_pow` argument shape.** The needed lemma is
-   `zero_pow : ∀ {n : ℕ}, n ≠ 0 → (0 : α)^n = 0`. If
-   `zero_pow (Nat.succ_ne_zero n)` produces a unification mismatch,
-   try `zero_pow n.succ_ne_zero` or `simp [pow_succ]` (since
-   `0 * x = 0`).
-3. **`(!![(0 : ℂ)] : Matrix (Fin 1) (Fin 1) ℂ) = 0`.** May already
-   be `simp`-closable directly via `Matrix.zero_apply` /
-   `Matrix.of_isEmpty`. If `ext + fin_cases + simp` is unwieldy,
-   try `Matrix.ext` (functional ext) or
-   `show !![(0 : ℂ)] = (0 : Matrix _ _ ℂ); decide` is sometimes
-   sufficient.
+The strategy above should compile as written, but here are the
+most likely snags and their canonical fixes:
 
-### Faithfulness checklist (must run before commit)
+1. **`spectralRadius_zero` name mismatch.** If Lean reports the name
+   does not exist, search via
+   `lean_local_search "spectralRadius_zero"` — the lemma exists in
+   `Mathlib/Analysis/Normed/Algebra/Spectrum.lean:81`. The signature
+   is `theorem spectralRadius_zero : spectralRadius 𝕜 (0 : A) = 0`
+   with `A` instance-inferred from context. May need to spell out
+   `(spectralRadius_zero (𝕜 := ℂ) (A := Matrix (Fin 1) (Fin 1) ℂ))`
+   if instance inference stalls.
 
-For `def GeneralLinearMethod.IsAStable`:
+2. **`spectralRadius` instance resolution.** `spectralRadius`
+   requires `[NormedField 𝕜] [Ring A] [Algebra 𝕜 A]`. For
+   `A = Matrix (Fin r) (Fin r) ℂ` and `𝕜 = ℂ`, all three are
+   inferred from Mathlib's standard matrix-algebra instances
+   (which `Mathlib.Analysis.Matrix.Normed`, transitively imported,
+   provides). If instance synthesis stalls, the worker should
+   `lean_hover_info` on `spectralRadius` to confirm what's missing
+   and add the targeted import — but try the minimal import first.
 
-* **Quoted textbook**: "A general linear method is 'A-stable' if
-  `M(z)` is power-bounded for every `z` in the left half complex
-  plane." (Butcher 2008, p. 419, `entities/def_520E.json`.)
-* **Lean type matches**: `∀ z : ℂ, z.re ≤ 0 → z ∈ M.stabilityRegion`
-  literally re-spells the textbook quantifier. The
-  `z ∈ M.stabilityRegion` membership unfolds to
-  `∃ C, PowerBounded C (M.stabilityMatrix z)`, the literal
-  power-boundedness condition from cycle 087's `def:520C`.
-* **No definition smuggling**: A-stability is encoded as
-  exactly the textbook's quantifier, not as a derived
-  characterization (e.g. via `Re(eigenvalues) ≤ 0`).
-* **Convention note (closed vs open half-plane)**: documented
-  in the docstring; closed is the textbook convention used by
-  `def:350A` (Runge–Kutta A-stability) elsewhere in the codebase.
+3. **`Filter.cocompact` namespace.** The full name is
+   `Filter.cocompact`. Use it explicitly. The `(𝓝 0)` notation
+   requires `open scoped Topology` (commonly already in scope). If
+   not, add `open scoped Topology` near the top of the namespace
+   block.
 
-For each new theorem:
+4. **`(𝓝 (0 : ℝ≥0∞))` vs `(𝓝 0)`.** The `0` in `(𝓝 0)` may
+   require explicit type annotation `(𝓝 (0 : ℝ≥0∞))` if Lean
+   cannot infer it. Apply only if the first form fails.
 
-* `trivialZeroGLM_stabilityMatrix`: tautology-free (conclusion is
-  a concrete matrix equation).
-* `trivialZeroGLM_isAStable`: tautology-free (conclusion is
-  `M.IsAStable`, providing real witnesses `C` and `k`-uniform bound).
-* No hypothesis strengthening: both theorems are hypothesis-free.
+5. **`!![(0 : ℂ)] = 0` rewrite.** Already done in cycle 088 at
+   `trivialZeroGLM_isAStable` (lines 270–271). Same `ext + fin_cases
+   + simp` works.
 
-## Aristotle plan
+6. **`tendsto_const_nhds`.** Universally available; no extra
+   import needed.
 
-Probably not needed. This cycle's deliverable is small and matches
-the cycle 087 shape, which closed without Aristotle. **Only if** the
-`cases k` proof of `trivialZeroGLM_isAStable` proves stubborn after
-~20 minutes of manual tries, batch-submit just the one lemma and
-sleep ≤ 30 minutes, then incorporate or fall back to `induction k`.
-Do NOT submit `IsAStable` (definition-only) or
-`trivialZeroGLM_stabilityMatrix` (cycle 086 has the matching
-`explicitEulerGLM_stabilityMatrix` proof template; copy-adapt
-directly).
+If any one of these fails, do **not** rewrite the encoding; instead
+search Mathlib for the working name. The encoding is faithful and
+should not be changed.
 
-## Tracking updates
+### Faithfulness check (mandatory pre-commit)
 
-After the file compiles cleanly:
+Per CLAUDE.md, before committing:
 
-1. **`extraction/formalization_data/lean_status.json`** — set
-   `def:520E` row to:
-   ```json
-   {
-     "lean_file": "OpenMath/Chapter5/Section520.lean",
-     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsAStable",
-     "formalization_status": "formalized"
-   }
-   ```
-   (Match the cycle 087 row format for `def:520C`.)
-2. **`plan.md`** — flip the `[ ]` next to `def:520E` to `[x]` and
-   append `— OpenMath/Chapter5/Section520.lean`. Bump the progress
-   counter from 58 / 175 to 59 / 175.
+* **Definition smuggling check (`IsLStable`):** the Lean predicate
+  encodes "A-stable AND spectral radius of `M(z)` tends to 0 as
+  `z → ∞`". The textbook statement is "A-stable AND ρ(M(∞)) = 0".
+  These are mathematically equivalent under the standard
+  interpretation of `M(∞)` as the limit at infinity (cf. the
+  encoding-choice paragraph in the docstring). Document this
+  divergence explicitly in the docstring and in the cycle 089
+  task results. NOT smuggling — `M(∞)` is not part of Lean
+  syntax, so the limit formulation is the literal Lean expression
+  of the textbook condition.
 
-## Build verification (run before commit)
+* **Non-vacuity check:** `trivialZeroGLM_isLStable` is a real
+  witness; `trivialZeroGLM` exists, A-stability is proved
+  (cycle 088), and the limit half is closed by reducing to a
+  constant function and `tendsto_const_nhds`.
 
-```bash
-lake env lean OpenMath/Chapter5/Section520.lean   # single file check
-lake build OpenMath.Chapter5.Section520           # populate .olean cache
-```
+* **No new hypotheses, no extra typeclass requirements** beyond
+  what `def:520E` (`IsAStable`) already requires plus the
+  `spectralRadius` instances inferred from `Matrix … ℂ`.
 
-Then verify axioms:
+* **No `class`/`structure` introductions, no `axiom`/`constant`,
+  no heartbeat bumps.**
 
-```bash
-echo '#print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.IsAStable
-#print axioms OpenMath.Chapter5.Section510.trivialZeroGLM_stabilityMatrix
-#print axioms OpenMath.Chapter5.Section510.trivialZeroGLM_isAStable' \
-  | lake env lean --stdin OpenMath/Chapter5/Section520.lean
-```
+## Priority 2 — housekeeping
 
-Expected for all three: `[propext, Classical.choice, Quot.sound]`.
-**Note** (per cycle 072): run `lake build` *before* `#print axioms`
-so the `.olean` cache is fresh; otherwise stale caches can produce
-spurious `sorryAx` reports.
+After the build is clean and axioms check out:
 
-## What NOT to do this cycle
+1. **`extraction/formalization_data/lean_status.json`**:
+   bump `def:520F` from `unformalized` to `formalized`. The pattern
+   is the same as cycle 088 used for `def:520E`. The existing entry
+   for `def:520F` (search for `"def:520F"` in the file) will have
+   `lean_file: null`, `lean_symbol: null`, `formalization_status:
+   "unformalized"` — set them to
+   `"OpenMath/Chapter5/Section520.lean"`,
+   `"OpenMath.Chapter5.Section510.GeneralLinearMethod.IsLStable"`,
+   `"formalized"` respectively.
 
-* Do **NOT** target `thm:520B` ("for `y' = qy`, the GLM iteration
-  yields `y^[n] = M(z) y^[n-1]` with `z = hq`"). It requires a
-  fresh design pass for the GLM iteration encoding (no Lean
-  infrastructure for Butcher's equation `(500c)` exists yet); this
-  is a multi-cycle commitment that should be opened by a planner
-  cycle dedicated to the encoding decision.
-* Do **NOT** also try `def:520F` (L-stable) in the same cycle.
-  L-stability adds a `lim_{|z| → ∞} ‖M(z)‖ = 0` requirement on top
-  of A-stability, involving a complex limit and materially more
-  work. Save it for a clean follow-up cycle.
-* Do **NOT** try to prove `explicitEulerGLM` is *not* A-stable.
-  Negation witnesses are harder than positive witnesses and are
-  not required for non-vacuity.
-* Do **NOT** redeclare `complexify` or re-open
-  `Matrix.Norms.Operator`. Both are already in scope inside the
-  `Section510` namespace block of `Section520.lean` (lines 62–63).
-* Do **NOT** raise `maxHeartbeats`. CLAUDE.md is explicit.
-* Do **NOT** introduce `axiom` / `constant`.
-* Do **NOT** edit `scripts/autonomous_loop.py` from the worker.
-  (Standing rule from cycle 015's
-  `tautology_scanner_false_positives.md`.)
-* Do **NOT** treat any "stuck" / "commit not landed" / "semantic
-  sorry" verdict in the prompt at face value without first running
-  the verification commands above. The pattern of
-  `attempts.md`-propagated phantom verdicts (cycles 008, 014, 015,
-  035, 040, 071) is well-documented; verify HEAD before reacting.
+2. **`plan.md`**: change the `def:520F` row in Chapter 5 from `[ ]`
+   to `[x]` and add the trailing pointer
+   `OpenMath/Chapter5/Section520.lean`. Update the
+   "**Progress: 59 / 175**" header to **60 / 175**.
 
-## Definition of done
+## Priority 3 — task results
 
-* `OpenMath/Chapter5/Section520.lean` compiles cleanly
-  (`lake env lean` + `lake build`).
-* All three new declarations have axiom set
+Write `.prover-state/task_results/cycle_089.md` per CLAUDE.md
+template. The faithfulness section must explicitly call out the
+`M(∞)` ↔ `Filter.Tendsto … (𝓝 0)` interpretation (this is the
+only non-trivial encoding choice this cycle).
+
+## What NOT to try
+
+1. **Do NOT define `M(∞)` as a separate matrix value.** That would
+   require a case split on `A`-invertibility (the formula
+   `M(∞) = V − B·A⁻¹·U` only applies when `A` is invertible) and
+   would force a different — and arguably less faithful — encoding
+   for the `A`-singular case. The `Tendsto`-spectralRadius form is
+   the literature-standard encoding and is what we use.
+
+2. **Do NOT introduce a `Matrix.spectralRadius` wrapper.** Use
+   Mathlib's `spectralRadius ℂ (M : Matrix _ _ ℂ)` directly. The
+   instance synthesis should just work.
+
+3. **Do NOT use `Filter.atTop.comap norm` or similar bespoke
+   filter constructions.** `Filter.cocompact ℂ` is the canonical
+   "going to infinity" filter on a finite-dim normed space.
+
+4. **Do NOT use `explicitEulerGLM` as the L-stability witness.**
+   Explicit Euler is **not** A-stable (e.g. at `z = -3`, `M(z) =
+   !![-2]` whose powers diverge), hence not L-stable. The
+   `trivialZeroGLM` is the only non-vacuity witness in scope.
+
+5. **Do NOT introduce an elementary `∀ ε > 0, ∃ R, ...` form**
+   alongside the Tendsto form. Keep the encoding minimal — one
+   formulation, the Tendsto one, with a docstring explaining the
+   choice.
+
+6. **Do NOT bump `maxHeartbeats`.** None of the proofs above need
+   it; if `simp` or `ext + fin_cases + simp` runs slow, decompose
+   manually rather than raising the limit (CLAUDE.md rule).
+
+7. **Do NOT submit anything to Aristotle this cycle.** All proof
+   obligations are short and have known shapes; manual
+   verification is faster than a 30-minute Aristotle round-trip.
+
+## Acceptance criteria
+
+* `lake env lean OpenMath/Chapter5/Section520.lean` exits clean.
+* `lake build OpenMath.Chapter5.Section520` succeeds.
+* `#print axioms trivialZeroGLM_isLStable` returns
   `[propext, Classical.choice, Quot.sound]`.
-* `lean_status.json` and `plan.md` updated.
-* Faithfulness checklist filled in `task_results/cycle_088.md`,
-  with quoted textbook statement and matching Lean type discussion.
-* Commit pushed to `origin/Main/Experiments`.
-* Progress: 58 / 175 → **59 / 175**.
+* `lean_status.json` and `plan.md` updated as in Priority 2.
+* `cycle_089.md` task results present.
+* Single commit, single push, branch `Main/Experiments`.

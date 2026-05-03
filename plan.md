@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 59 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 60 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -221,7 +221,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:515B` **Stability and Consistency Imply Convergence (515B)** (§515)
 - [ ] `thm:521B` **Maximum stability order for given steps** (§521)
 - [ ] `thm:523B` **Nonlinear Stability via Positive Semidefiniteness** (§523)
-- [ ] `def:520F` **L Stability Condition for Linear Methods** (§520)
+- [x] `def:520F` **L Stability Condition for Linear Methods** (§520) — OpenMath/Chapter5/Section520.lean
 - [ ] `def:551A` **Inherent Runge–Kutta stability** (§551)
 - [ ] `lem:515C` **Accumulated error estimate for multistep methods** (§515)
 - [ ] `thm:535A` **The underlying one-step method (GLM)** (§535)

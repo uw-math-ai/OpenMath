@@ -1,3 +1,4 @@
+import Mathlib.Analysis.Normed.Algebra.Spectrum
 import Mathlib.Data.Complex.Basic
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 import Mathlib.LinearAlgebra.Matrix.Notation
@@ -275,5 +276,47 @@ theorem trivialZeroGLM_isAStable : trivialZeroGLM.IsAStable := by
   | succ n =>
       rw [zero_pow (Nat.succ_ne_zero n), norm_zero]
       exact norm_nonneg _
+
+/-- **Definition 520F** — A general linear method is *L-stable* if it
+is A-stable and the spectral radius of its stability matrix `M(z)`
+tends to `0` as `z → ∞` in `ℂ`.
+
+Butcher (Definition 520F, p. 419): "A general linear method is
+L-stable if it is A-stable and ρ(M(∞)) = 0."
+
+Encoding choice: the condition `ρ(M(∞)) = 0` is interpreted as
+`Filter.Tendsto (fun z => spectralRadius ℂ (M(z))) (Filter.cocompact ℂ)
+(𝓝 0)`. This sidesteps the issue that `M(∞)` as a literal matrix
+value is only well-defined when the `A`-block is invertible (in
+which case `M(∞) = V − B·A⁻¹·U`); the spectral-radius limit
+formulation captures the same mathematical content without needing
+a case split on invertibility, and is the formulation universally
+used in the modern stiff-ODE literature (cf. Hairer–Wanner). -/
+def GeneralLinearMethod.IsLStable {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  M.IsAStable ∧
+  Filter.Tendsto
+    (fun z : ℂ => spectralRadius ℂ (M.stabilityMatrix z))
+    (Filter.cocompact ℂ)
+    (nhds 0)
+
+/-- Non-vacuity witness for `IsLStable`: the `trivialZeroGLM` is
+L-stable. Since `M(z) = !![0]` for every `z` (cycle 088
+`trivialZeroGLM_stabilityMatrix`), the spectral radius is
+identically `0`, and `Tendsto` of a constant sequence to its
+constant value is automatic. -/
+theorem trivialZeroGLM_isLStable : trivialZeroGLM.IsLStable := by
+  refine ⟨trivialZeroGLM_isAStable, ?_⟩
+  have hfun :
+      (fun z : ℂ => spectralRadius ℂ (trivialZeroGLM.stabilityMatrix z))
+        = fun _ => (0 : ENNReal) := by
+    funext z
+    rw [trivialZeroGLM_stabilityMatrix]
+    have h0 : (!![(0 : ℂ)] : Matrix (Fin 1) (Fin 1) ℂ) = 0 := by
+      ext i j; fin_cases i; fin_cases j; simp
+    rw [h0]
+    exact spectrum.spectralRadius_zero
+  rw [hfun]
+  exact tendsto_const_nhds
 
 end OpenMath.Chapter5.Section510
