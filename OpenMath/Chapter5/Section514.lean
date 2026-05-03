@@ -98,7 +98,29 @@ theorem GeneralLinearMethod.glmConstOneIterate_closed_form {s r : ℕ}
     M.glmConstOneIterate h n =
       h • (∑ k ∈ Finset.range n,
               (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))) := by
-  sorry
+  induction n with
+  | zero =>
+    funext i
+    simp [GeneralLinearMethod.glmConstOneIterate]
+  | succ n ih =>
+    -- Reshape the RHS: peel off the k = 0 term, factor V out of the
+    -- inner sum, distribute h • over +, and substitute the IH.
+    rw [Finset.sum_range_succ']
+    simp_rw [pow_succ', ← Matrix.mulVec_mulVec]
+    rw [← Matrix.mulVec_sum, pow_zero, Matrix.one_mulVec, smul_add,
+        ← Matrix.mulVec_smul, ← ih]
+    -- Goal is now: glmConstOneIterate h (n+1) =
+    --              V *ᵥ glmConstOneIterate h n + h • (B *ᵥ 𝟙)
+    funext i
+    show (∑ j, M.B i j * h) + (∑ j, M.V i j * M.glmConstOneIterate h n j) =
+         (M.V *ᵥ M.glmConstOneIterate h n +
+            h • (M.B *ᵥ (fun _ => (1 : ℝ)))) i
+    simp only [Pi.add_apply, Pi.smul_apply, smul_eq_mul,
+      Matrix.mulVec, dotProduct, mul_one, Finset.mul_sum]
+    rw [add_comm]
+    congr 1
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    ring
 
 /-! ### Sub-lemma C — Cesàro residual tends to zero
 
