@@ -1,5 +1,19 @@
 # Issue: `thm:515D` `s = 0` degenerate case
 
+## Resolution (cycle 109) — RESOLVED via Option D
+
+Cycle 109 strengthened the theorem signature with an `(hs : 0 < s)`
+precondition, eliminating the degenerate `s = 0` branch. The
+faithfulness divergence is documented in
+`OpenMath/Chapter5/Section515.lean` at the docstring of
+`GeneralLinearMethod.stable_consistent_isConvergent` and in the
+`thm:515D` row of
+`extraction/formalization_data/lean_status.json`.
+
+The original Blocker / Context / What was tried / Possible solutions
+sections are kept below as a record of the analysis that led to the
+divergence decision.
+
 ## Blocker
 
 The main theorem `GeneralLinearMethod.stable_consistent_isConvergent`

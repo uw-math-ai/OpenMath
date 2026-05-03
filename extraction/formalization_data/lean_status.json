@@ -824,8 +824,8 @@
     "lean_file": "OpenMath/Chapter5/Section515.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent",
     "status": "partial",
-    "cycle": 108,
-    "notes": "Cycle 108 scaffold: main theorem `stable_consistent_isConvergent` factored through two private sub-lemma sorries (`aux_515D_output_tendsto`, `aux_515D_stage_tendsto`) plus one inline sorry at the `s = 0` degenerate branch. The `0 < s` branch closes inline (u ≠ 0 from U·u = 𝟙). The two sub-lemmas were submitted to Aristotle (project 40554853-18b3-424c-81e4-2a2fae9e57c4) for batch processing. Issue `thm_515D_s_zero_degenerate.md` documents the s = 0 corner case (preconsistency vacuous in Fin 0 → ℝ); recommendation is Option D (add `0 < s` to the theorem signature). Faithfulness: textbook signature 'stable + consistent ⇒ convergent' captured verbatim modulo the degenerate s = 0 sorry. No new top-level definitions introduced."
+    "cycle": 109,
+    "notes": "Scaffold + 2 sorries (cycle 109; `0 < s` precondition added). Main theorem `stable_consistent_isConvergent` factors through two private sub-lemma sorries (`aux_515D_output_tendsto` line ~1481, `aux_515D_stage_tendsto` line ~1522). The `u ≠ 0` clause closes inline from `U·u = 𝟙` evaluated at `⟨0, hs⟩`. Cycle 109 added an `(hs : 0 < s)` precondition (faithfulness divergence; textbook implicitly assumes ≥ 1 internal stage; for `(s, r) = (0, 0)` IsConvergent is vacuously False). The two sub-lemmas were submitted to Aristotle (project 40554853-18b3-424c-81e4-2a2fae9e57c4) for batch processing in cycle 108. Issue `thm_515D_s_zero_degenerate.md` resolved via Option D (precondition added). Status remains `partial` until both sub-lemmas close."
   },
   "thm:520B": {
     "lean_file": null,

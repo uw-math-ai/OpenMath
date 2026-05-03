@@ -1555,42 +1555,40 @@ The proof below factors through two internal helpers:
 * `aux_515D_output_tendsto` — output convergence `Y n n → u · yex(x)`.
 * `aux_515D_stage_tendsto` — stage convergence `Y_int n → yex(x)`.
 
-The `u ≠ 0` clause is handled inline: for `s ≥ 1` it follows directly
-from `U·u = 𝟙` (since `(fun _ : Fin s => 1) 0 = 1 ≠ 0`); for `s = 0`
-the GLM has no internal stages and the case is degenerate (the
-iteration reduces to a pure linear recurrence `y_{n+1} = V·y_n` with
-no `f`-dependence). The `s = 0` branch is currently deferred as a
-single inline `sorry`; see issue `thm_515D_s_zero_degenerate.md`.
+The `u ≠ 0` clause follows directly from `U·u = 𝟙`: evaluating at
+index `⟨0, hs⟩ : Fin s` gives `(U·u) ⟨0, hs⟩ = 1`, contradicting
+`u = 0`.
+
+**Faithfulness divergence**: the hypothesis `hs : 0 < s` is a
+strengthening of Butcher's flat statement. The textbook implicitly
+assumes the GLM has at least one internal stage — the `s = 0` case
+is genuinely degenerate (for `(s, r) = (0, 0)` the IsConvergent
+statement is vacuously False since `Fin 0 → ℝ` has only the zero
+inhabitant, so `u ≠ 0` is impossible; the textbook's flat statement
+is therefore also incorrect at that corner case). See
+`.prover-state/issues/thm_515D_s_zero_degenerate.md` for the full
+analysis.
 
 This is `thm:515D` of `entities/thm_515D.json`. -/
 theorem GeneralLinearMethod.stable_consistent_isConvergent
-    {s r : ℕ} (M : GeneralLinearMethod s r)
+    {s r : ℕ} (hs : 0 < s) (M : GeneralLinearMethod s r)
     (hStab : M.IsStable) (hCons : M.IsConsistent) :
     M.IsConvergent := by
   intro f L hf_lip x₀ y₀ yex hyex_x₀ hyex_ode
   obtain ⟨u, v, ⟨hVu, hUu⟩, hCons_eq⟩ := hCons
-  by_cases hs : 0 < s
-  · -- Standard case `0 < s`: derive `u ≠ 0` from `U·u = 𝟙`, then
-    -- dispatch to the two sub-lemmas.
-    refine ⟨u, ?_, ?_⟩
-    · -- u ≠ 0: evaluate `U·u = 𝟙` at index `⟨0, hs⟩` to get
-      -- `(U·u) ⟨0, hs⟩ = 1`. If `u = 0` then `U·u = 0`, giving `1 = 0`.
-      intro hu0
-      have h1 : (M.U *ᵥ u) ⟨0, hs⟩ = (fun _ : Fin s => (1 : ℝ)) ⟨0, hs⟩ :=
-        congrFun hUu ⟨0, hs⟩
-      rw [hu0] at h1
-      simp [Matrix.mulVec, dotProduct] at h1
-    · intro φ hφ x hxx Y Y_int hY_props
-      refine ⟨?_, ?_⟩
-      · exact aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
-                hVu hUu hCons_eq hφ hxx Y Y_int hY_props
-      · exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
-                hVu hUu hCons_eq hφ hxx Y Y_int hY_props
-  · -- s = 0 degenerate case: the GLM has no internal stages, the
-    -- equation `U·u = 𝟙` is vacuous (both sides are the empty
-    -- function in `Fin 0 → ℝ`), and IsConvergent's existential
-    -- `u ≠ 0` is unconstrained. Deferred — see issue
-    -- `thm_515D_s_zero_degenerate.md`.
-    sorry
+  refine ⟨u, ?_, ?_⟩
+  · -- u ≠ 0: evaluate `U·u = 𝟙` at index `⟨0, hs⟩` to get
+    -- `(U·u) ⟨0, hs⟩ = 1`. If `u = 0` then `U·u = 0`, giving `1 = 0`.
+    intro hu0
+    have h1 : (M.U *ᵥ u) ⟨0, hs⟩ = (fun _ : Fin s => (1 : ℝ)) ⟨0, hs⟩ :=
+      congrFun hUu ⟨0, hs⟩
+    rw [hu0] at h1
+    simp [Matrix.mulVec, dotProduct] at h1
+  · intro φ hφ x hxx Y Y_int hY_props
+    refine ⟨?_, ?_⟩
+    · exact aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
+              hVu hUu hCons_eq hφ hxx Y Y_int hY_props
+    · exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
+              hVu hUu hCons_eq hφ hxx Y Y_int hY_props
 
 end OpenMath.Chapter5.Section510
