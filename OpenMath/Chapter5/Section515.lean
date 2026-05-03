@@ -2,6 +2,7 @@ import Mathlib.Analysis.MeanInequalities
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 import Mathlib.Analysis.Calculus.Deriv.Basic
+import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Topology.MetricSpace.Lipschitz
 import OpenMath.Chapter5.Section512
 
@@ -171,6 +172,274 @@ lemma aux_y_diff_norm_bound
       ≤ (L * M_bound) * (h * |ξ|) := hbound
     _ = h * |ξ| * (L * M_bound) := by ring
 
+/-! ## Sub-lemmas for the (515a) decomposition
+
+The textbook proof of (515a) decomposes the residual as `T1 + T2 + T3 + T4`,
+proving `T1 = T2 = 0` (FTC + algebraic identity using `c = A·𝟙 + U·v`)
+and `T3, T4` bounded via Lipschitz of `f` plus `aux_y_diff_norm_bound`. -/
+
+/-- **(T1 ≡ 0)** FTC telescoping: if `y` is `C¹` with `y'(t) = f(y(t))`,
+then `y(x + h·c_i) − y(x) − h·∫₀^{c_i} f(y(x + h·ξ)) dξ = 0`. -/
+private theorem aux_T1_eq_zero
+    {f : ℝ → ℝ}
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (x h c_i : ℝ) :
+    y (x + h * c_i) - y x
+      - h * ∫ ξ in (0 : ℝ)..c_i, f (y (x + h * ξ)) = 0 := by
+  -- Continuity of f∘y (= deriv y).
+  have hfy_cont : Continuous (fun t => f (y t)) := by
+    have heq : (fun t => f (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]
+    exact hy_C1.continuous_deriv le_rfl
+  -- HasDerivAt y (f (y t)) t.
+  have hderiv_y : ∀ t, HasDerivAt y (f (y t)) t := by
+    intro t
+    have hdiff := (hy_C1.differentiable (by norm_num : (1 : WithTop ℕ∞) ≠ 0)) t
+    have ht := hdiff.hasDerivAt
+    rw [hy_ode t] at ht
+    exact ht
+  -- Chain rule: G(c) = y(x + h*c) has derivative h * f(y(x + h*c)).
+  have hG : ∀ c, HasDerivAt (fun c => y (x + h * c)) (h * f (y (x + h * c))) c := by
+    intro c
+    have h_inner : HasDerivAt (fun c : ℝ => x + h * c) h c := by
+      have h1 : HasDerivAt (fun c : ℝ => h * c) h c := by
+        simpa using (hasDerivAt_id c).const_mul h
+      exact h1.const_add x
+    have h_chain := (hderiv_y (x + h * c)).comp c h_inner
+    convert h_chain using 1
+    ring
+  -- Continuity & integrability of the integrand.
+  have hG'_cont : Continuous (fun c => h * f (y (x + h * c))) := by
+    have hc1 : Continuous (fun c : ℝ => x + h * c) :=
+      continuous_const.add (continuous_const.mul continuous_id)
+    exact continuous_const.mul (hfy_cont.comp hc1)
+  have hG'_int : IntervalIntegrable (fun c => h * f (y (x + h * c)))
+                  MeasureTheory.volume 0 c_i :=
+    hG'_cont.intervalIntegrable _ _
+  -- FTC.
+  have hFTC : ∫ c in (0:ℝ)..c_i, h * f (y (x + h * c))
+              = y (x + h * c_i) - y (x + h * 0) :=
+    intervalIntegral.integral_eq_sub_of_hasDerivAt (fun c _ => hG c) hG'_int
+  have hzero : x + h * 0 = x := by ring
+  rw [hzero] at hFTC
+  -- Pull h out of the integral.
+  have hpull : ∫ c in (0:ℝ)..c_i, h * f (y (x + h * c))
+              = h * ∫ c in (0:ℝ)..c_i, f (y (x + h * c)) :=
+    intervalIntegral.integral_const_mul h _
+  rw [hpull] at hFTC
+  linarith
+
+/-- **(T2 ≡ 0)** Algebraic identity using `c = A·𝟙 + U·v` and `U·u = 𝟙`:
+`y(x) + c_i·h·y'(x) − Σ U_{ij}(u_j·y(x) + v_j·h·y'(x)) − Σ A_{ij}·h·y'(x) = 0`. -/
+private theorem aux_T2_eq_zero {s r : ℕ}
+    (A : Matrix (Fin s) (Fin s) ℝ) (U : Matrix (Fin s) (Fin r) ℝ)
+    (u v : Fin r → ℝ)
+    (hUu : U *ᵥ u = (fun _ => 1))
+    (c : Fin s → ℝ)
+    (hc : c = A *ᵥ (fun _ => 1) + U *ᵥ v)
+    {y : ℝ → ℝ} (x h : ℝ) (i : Fin s) :
+    y x + c i * h * deriv y x
+      - (∑ j, U i j * (u j * y x + v j * h * deriv y x))
+      - (∑ j, A i j * h * deriv y x) = 0 := by
+  -- Σ U_{ij} u_j = (U *ᵥ u) i = 1 (rfl-unfold of mulVec/dotProduct).
+  have hUu_apply : (U *ᵥ u) i = ∑ j, U i j * u j := rfl
+  have hUv_apply : (U *ᵥ v) i = ∑ j, U i j * v j := rfl
+  have hA1_apply : (A *ᵥ (fun _ => (1:ℝ))) i = ∑ j, A i j := by
+    show ∑ j, A i j * 1 = _
+    simp
+  have hUu_i : (∑ j, U i j * u j) = 1 := by
+    rw [← hUu_apply, hUu]
+  -- Distribute the U-sum into a y(x)-part and an h·y'(x)-part.
+  have hU_split :
+      (∑ j, U i j * (u j * y x + v j * h * deriv y x))
+        = (∑ j, U i j * u j) * y x + (∑ j, U i j * v j) * h * deriv y x := by
+    simp only [mul_add]
+    rw [Finset.sum_add_distrib]
+    congr 1
+    · rw [Finset.sum_mul]
+      refine Finset.sum_congr rfl (fun j _ => ?_); ring
+    · rw [Finset.sum_mul, Finset.sum_mul]
+      refine Finset.sum_congr rfl (fun j _ => ?_); ring
+  -- Σ A_{ij} h y'(x) = (Σ A_{ij}) * h * y'(x).
+  have hA_split : (∑ j, A i j * h * deriv y x)
+                = (∑ j, A i j) * h * deriv y x := by
+    rw [Finset.sum_mul, Finset.sum_mul]
+  -- c i = (A *ᵥ 1) i + (U *ᵥ v) i = Σ A_{ij} + Σ U_{ij} v_j.
+  have hc_i : c i = (∑ j, A i j) + (∑ j, U i j * v j) := by
+    rw [hc]
+    show (A *ᵥ (fun _ => 1)) i + (U *ᵥ v) i = _
+    rw [hA1_apply, hUv_apply]
+  rw [hU_split, hA_split, hUu_i, hc_i]
+  ring
+
+/-- **(T3 bound)** With `0 ≤ c_i`, by Lipschitz of `f` and `aux_y_diff_norm_bound`:
+`|h · ∫₀^{c_i} (f(y(x+hξ)) − f(y x)) dξ| ≤ ½ h² L² M c_i²`.
+
+**Faithfulness divergence**: textbook treats `c_i ∈ ℝ`; we restrict to
+`c_i ≥ 0`. The bound is sign-symmetric (proof for `c_i < 0` requires
+sign-flipping the integration interval), but all standard GLMs (explicit
+Euler `c = 0`, classical RK `c ∈ [0,1]`, Gauss `c ∈ (0,1)`) satisfy
+`c_i ≥ 0`. The `c_i < 0` case can be added as a follow-up. -/
+private theorem aux_T3_bound
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) (c_i : ℝ) (hc_i : 0 ≤ c_i) :
+    |h * ∫ ξ in (0 : ℝ)..c_i, (f (y (x + h * ξ)) - f (y x))|
+      ≤ (1/2) * h^2 * L^2 * M_bound * c_i^2 := by
+  -- Continuity of f∘y.
+  have hfy_cont : Continuous (fun t => f (y t)) := by
+    have heq : (fun t => f (y t)) = deriv y := by
+      funext t; exact (hy_ode t).symm
+    rw [heq]; exact hy_C1.continuous_deriv le_rfl
+  -- Per-point Lipschitz bridge: |f(a) - f(b)| ≤ L * |a - b|.
+  have hLip_abs : ∀ a b : ℝ, |f a - f b| ≤ L * |a - b| := by
+    intro a b
+    have hd := hf_lip.dist_le_mul a b
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    have hcoe : (Real.toNNReal L : ℝ) = L := Real.coe_toNNReal L hL
+    rw [hcoe] at hd
+    exact hd
+  -- The pointwise bound on |f(y(x+hξ)) - f(y x)| for ξ ∈ [0, c_i].
+  have hpt_bound : ∀ ξ ∈ Set.Icc (0:ℝ) c_i,
+      |f (y (x + h * ξ)) - f (y x)| ≤ h * ξ * (L * (L * M_bound)) := by
+    intro ξ hξ
+    have h1 : |f (y (x + h * ξ)) - f (y x)|
+              ≤ L * |y (x + h * ξ) - y x| := hLip_abs _ _
+    have h2 : |y (x + h * ξ) - y x| ≤ h * |ξ| * (L * M_bound) :=
+      aux_y_diff_norm_bound hL hM hy_C1 hy_ode hf_y_bound x h hh ξ
+    have hξ_nn : 0 ≤ ξ := hξ.1
+    have habs_ξ : |ξ| = ξ := abs_of_nonneg hξ_nn
+    rw [habs_ξ] at h2
+    have h3 : L * |y (x + h * ξ) - y x| ≤ L * (h * ξ * (L * M_bound)) := by
+      exact mul_le_mul_of_nonneg_left h2 hL
+    calc |f (y (x + h * ξ)) - f (y x)|
+        ≤ L * |y (x + h * ξ) - y x| := h1
+      _ ≤ L * (h * ξ * (L * M_bound)) := h3
+      _ = h * ξ * (L * (L * M_bound)) := by ring
+  -- Step 1: |h * ∫…| = h * |∫…| since 0 ≤ h.
+  have habs_h : |h * ∫ ξ in (0:ℝ)..c_i, (f (y (x + h * ξ)) - f (y x))|
+              = h * |∫ ξ in (0:ℝ)..c_i, (f (y (x + h * ξ)) - f (y x))| := by
+    rw [abs_mul, abs_of_nonneg hh]
+  rw [habs_h]
+  -- Step 2: |∫ g| ≤ ∫ |g|.
+  have hint_g : IntervalIntegrable (fun ξ => f (y (x + h * ξ)) - f (y x))
+                  MeasureTheory.volume 0 c_i := by
+    have hc1 : Continuous (fun ξ : ℝ => x + h * ξ) :=
+      continuous_const.add (continuous_const.mul continuous_id)
+    have hf_yshift : Continuous (fun ξ => f (y (x + h * ξ))) := hfy_cont.comp hc1
+    exact (hf_yshift.sub continuous_const).intervalIntegrable _ _
+  have habs_int : |∫ ξ in (0:ℝ)..c_i, (f (y (x + h * ξ)) - f (y x))|
+                ≤ ∫ ξ in (0:ℝ)..c_i, |f (y (x + h * ξ)) - f (y x)| :=
+    intervalIntegral.abs_integral_le_integral_abs hc_i
+  -- Step 3: ∫ |g| ≤ ∫ (h * ξ * L² M).
+  have hint_abs : IntervalIntegrable (fun ξ => |f (y (x + h * ξ)) - f (y x)|)
+                  MeasureTheory.volume 0 c_i := hint_g.abs
+  have hint_lin : IntervalIntegrable (fun ξ => h * ξ * (L * (L * M_bound)))
+                  MeasureTheory.volume 0 c_i := by
+    refine (((continuous_const.mul continuous_id).mul continuous_const)).intervalIntegrable _ _
+  have hmono : ∫ ξ in (0:ℝ)..c_i, |f (y (x + h * ξ)) - f (y x)|
+              ≤ ∫ ξ in (0:ℝ)..c_i, h * ξ * (L * (L * M_bound)) :=
+    intervalIntegral.integral_mono_on hc_i hint_abs hint_lin hpt_bound
+  -- Step 4: ∫ (h * ξ * (L * (L * M))) = h * (L * (L * M)) * c_i² / 2.
+  have hint_eval : ∫ ξ in (0:ℝ)..c_i, h * ξ * (L * (L * M_bound))
+                = h * (L * (L * M_bound)) * (c_i^2 / 2) := by
+    have hrw : (fun ξ : ℝ => h * ξ * (L * (L * M_bound)))
+              = (fun ξ : ℝ => (h * (L * (L * M_bound))) * ξ) := by
+      funext ξ; ring
+    rw [hrw, intervalIntegral.integral_const_mul, integral_id]
+    ring
+  -- Combine.
+  calc h * |∫ ξ in (0:ℝ)..c_i, (f (y (x + h * ξ)) - f (y x))|
+      ≤ h * ∫ ξ in (0:ℝ)..c_i, |f (y (x + h * ξ)) - f (y x)| := by
+          exact mul_le_mul_of_nonneg_left habs_int hh
+    _ ≤ h * ∫ ξ in (0:ℝ)..c_i, h * ξ * (L * (L * M_bound)) := by
+          exact mul_le_mul_of_nonneg_left hmono hh
+    _ = h * (h * (L * (L * M_bound)) * (c_i^2 / 2)) := by rw [hint_eval]
+    _ = (1/2) * h^2 * L^2 * M_bound * c_i^2 := by ring
+
+/-- **(T4 bound)** Lipschitz of `f` at the discrete abscissae, using
+`aux_y_diff_norm_bound`:
+`|h · Σ_j A_{ij}·(f(y(x+h·c_j)) − f(y x))| ≤ h² L² M Σ_j |A_{ij}·c_j|`. -/
+private theorem aux_T4_bound {s : ℕ}
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
+    (A : Matrix (Fin s) (Fin s) ℝ)
+    (c : Fin s → ℝ)
+    (x h : ℝ) (hh : 0 ≤ h) (i : Fin s) :
+    |h * ∑ j, A i j * (f (y (x + h * c j)) - f (y x))|
+      ≤ h^2 * L^2 * M_bound * ∑ j, |A i j * c j| := by
+  -- Lipschitz bridge.
+  have hLip_abs : ∀ a b : ℝ, |f a - f b| ≤ L * |a - b| := by
+    intro a b
+    have hd := hf_lip.dist_le_mul a b
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    have hcoe : (Real.toNNReal L : ℝ) = L := Real.coe_toNNReal L hL
+    rw [hcoe] at hd
+    exact hd
+  -- |h * Σ| = h * |Σ|.
+  have habs_h : |h * ∑ j, A i j * (f (y (x + h * c j)) - f (y x))|
+              = h * |∑ j, A i j * (f (y (x + h * c j)) - f (y x))| := by
+    rw [abs_mul, abs_of_nonneg hh]
+  rw [habs_h]
+  -- |Σ| ≤ Σ |·|.
+  have habs_sum : |∑ j, A i j * (f (y (x + h * c j)) - f (y x))|
+                ≤ ∑ j, |A i j * (f (y (x + h * c j)) - f (y x))| :=
+    Finset.abs_sum_le_sum_abs _ _
+  -- Per summand: |A_{ij} * (f(y(x+hc_j)) - f(y x))| ≤ |A_{ij}*c_j| * h * (L * (L*M)).
+  have hpt : ∀ j, |A i j * (f (y (x + h * c j)) - f (y x))|
+                ≤ |A i j * c j| * (h * (L * (L * M_bound))) := by
+    intro j
+    have h1 : |f (y (x + h * c j)) - f (y x)|
+              ≤ L * |y (x + h * c j) - y x| := hLip_abs _ _
+    have h2 : |y (x + h * c j) - y x| ≤ h * |c j| * (L * M_bound) :=
+      aux_y_diff_norm_bound hL hM hy_C1 hy_ode hf_y_bound x h hh (c j)
+    have hLM_nn : 0 ≤ L * M_bound := mul_nonneg hL hM
+    have h3 : L * |y (x + h * c j) - y x| ≤ L * (h * |c j| * (L * M_bound)) :=
+      mul_le_mul_of_nonneg_left h2 hL
+    have hf_diff_bound : |f (y (x + h * c j)) - f (y x)|
+                ≤ h * |c j| * (L * (L * M_bound)) := by
+      calc |f (y (x + h * c j)) - f (y x)|
+          ≤ L * |y (x + h * c j) - y x| := h1
+        _ ≤ L * (h * |c j| * (L * M_bound)) := h3
+        _ = h * |c j| * (L * (L * M_bound)) := by ring
+    have hAij_nn : 0 ≤ |A i j| := abs_nonneg _
+    -- |A_{ij} * (f - f)| = |A_{ij}| * |f - f| ≤ |A_{ij}| * (h * |c_j| * (L * (L * M)))
+    --                    = |A_{ij} * c_j| * (h * (L * (L * M)))
+    calc |A i j * (f (y (x + h * c j)) - f (y x))|
+        = |A i j| * |f (y (x + h * c j)) - f (y x)| := abs_mul _ _
+      _ ≤ |A i j| * (h * |c j| * (L * (L * M_bound))) :=
+          mul_le_mul_of_nonneg_left hf_diff_bound hAij_nn
+      _ = (|A i j| * |c j|) * (h * (L * (L * M_bound))) := by ring
+      _ = |A i j * c j| * (h * (L * (L * M_bound))) := by rw [abs_mul]
+  -- Sum the per-summand bound.
+  have hsum_bound : ∑ j, |A i j * (f (y (x + h * c j)) - f (y x))|
+                  ≤ ∑ j, |A i j * c j| * (h * (L * (L * M_bound))) :=
+    Finset.sum_le_sum (fun j _ => hpt j)
+  -- Pull the constant h * (L * (L * M)) out of the right sum.
+  have hsum_pull : ∑ j, |A i j * c j| * (h * (L * (L * M_bound)))
+                = (∑ j, |A i j * c j|) * (h * (L * (L * M_bound))) := by
+    rw [← Finset.sum_mul]
+  rw [hsum_pull] at hsum_bound
+  calc h * |∑ j, A i j * (f (y (x + h * c j)) - f (y x))|
+      ≤ h * ∑ j, |A i j * (f (y (x + h * c j)) - f (y x))| :=
+          mul_le_mul_of_nonneg_left habs_sum hh
+    _ ≤ h * ((∑ j, |A i j * c j|) * (h * (L * (L * M_bound)))) :=
+          mul_le_mul_of_nonneg_left hsum_bound hh
+    _ = h^2 * L^2 * M_bound * ∑ j, |A i j * c j| := by ring
+
 /-! ## Lemma 515A — local truncation error bounds
 
 The two main inequalities (515a) and (515b) of Butcher's lem:515A.
@@ -195,7 +464,13 @@ The `u`/`v` parameters are the consistency vectors of `M`: the
 hypotheses `M.V *ᵥ u = u`, `M.U *ᵥ u = 1`, and the implicit
 `B·𝟙 + V·v = u + v` (consistency 510c) are encoded inline so the
 lemma can be reused without an `IsConsistent` extraction. The side
-condition `c = A·𝟙 + U·v` matches the textbook setup. -/
+condition `c = A·𝟙 + U·v` matches the textbook setup.
+
+**Faithfulness divergence**: extra hypothesis `∀ i, 0 ≤ c i` (cycle 101).
+The textbook (515a) is sign-symmetric in `c_i`, but the cycle-101
+proof of `aux_T3_bound` covers only the `c_i ≥ 0` case (see its
+docstring). All standard GLMs (explicit Euler, classical RK, Gauss)
+satisfy `c ∈ [0, 1]`. -/
 theorem GeneralLinearMethod.localStageError_bound_a {s r : ℕ}
     (M : GeneralLinearMethod s r)
     {h L M_bound : ℝ}
@@ -211,6 +486,7 @@ theorem GeneralLinearMethod.localStageError_bound_a {s r : ℕ}
     (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
     (_hCons : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
     (c : Fin s → ℝ)
+    (_hc_nonneg : ∀ i, 0 ≤ c i)
     (_hc_def : c = M.glmAbscissae v) :
     ∀ i : Fin s,
       |yex (xn1 + h * c i)
@@ -218,11 +494,101 @@ theorem GeneralLinearMethod.localStageError_bound_a {s r : ℕ}
         - (∑ j, M.U i j * (u j * yex xn1 + v j * h * deriv yex xn1))|
       ≤ h^2 * L^2 * M_bound *
         ((1/2) * (c i)^2 + ∑ j, |M.A i j * c j|) := by
-  -- Sorry-first: the proof is the T1+T2+T3+T4 decomposition described
-  -- in the file docstring. Cycle 100 leaves this sorry; the four
-  -- sub-bounds are submitted to Aristotle in
-  -- `.prover-state/aristotle_submissions/cycle_100/`.
-  sorry
+  intro i
+  -- Bridge: |f(yex t)| ≤ L * M_bound from |deriv yex t| ≤ L * M_bound via hy_ode.
+  have hf_yex_bound : ∀ t, |f (yex t)| ≤ L * M_bound := by
+    intro t; rw [← _hy_ode t]; exact _hy'_LM t
+  -- T1 = 0 (FTC telescoping).
+  have hT1 : yex (xn1 + h * c i) - yex xn1
+              - h * ∫ ξ in (0 : ℝ)..(c i), f (yex (xn1 + h * ξ)) = 0 :=
+    aux_T1_eq_zero _hy_C1 _hy_ode xn1 h (c i)
+  -- T2 = 0 (algebraic identity using c = A·𝟙 + U·v and U·u = 𝟙).
+  have hc_def_eq : c = M.A *ᵥ (fun _ => 1) + M.U *ᵥ v := by
+    rw [_hc_def]; rfl
+  have hT2 : yex xn1 + c i * h * deriv yex xn1
+              - (∑ j, M.U i j * (u j * yex xn1 + v j * h * deriv yex xn1))
+              - (∑ j, M.A i j * h * deriv yex xn1) = 0 :=
+    aux_T2_eq_zero M.A M.U u v _hUu c hc_def_eq xn1 h i
+  -- T3 bound (Lipschitz + integral of |ξ|).
+  have hT3 : |h * ∫ ξ in (0:ℝ)..(c i), (f (yex (xn1 + h * ξ)) - f (yex xn1))|
+              ≤ (1/2) * h^2 * L^2 * M_bound * (c i)^2 :=
+    aux_T3_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
+      xn1 h _hh (c i) (_hc_nonneg i)
+  -- T4 bound (Lipschitz + |Σ| ≤ Σ |·|).
+  have hT4 : |h * ∑ j, M.A i j * (f (yex (xn1 + h * c j)) - f (yex xn1))|
+              ≤ h^2 * L^2 * M_bound * ∑ j, |M.A i j * c j| :=
+    aux_T4_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
+      M.A c xn1 h _hh i
+  -- Continuity of integrand for splitting T3.
+  have hfy_cont : Continuous (fun t => f (yex t)) := by
+    have heq : (fun t => f (yex t)) = deriv yex := by
+      funext t; exact (_hy_ode t).symm
+    rw [heq]; exact _hy_C1.continuous_deriv le_rfl
+  have hf_yex_shift_cont : Continuous (fun ξ : ℝ => f (yex (xn1 + h * ξ))) := by
+    have hc1 : Continuous (fun ξ : ℝ => xn1 + h * ξ) :=
+      continuous_const.add (continuous_const.mul continuous_id)
+    exact hfy_cont.comp hc1
+  have hint_g_shift : IntervalIntegrable (fun ξ => f (yex (xn1 + h * ξ)))
+                      MeasureTheory.volume 0 (c i) :=
+    hf_yex_shift_cont.intervalIntegrable _ _
+  -- T3 expansion: h * ∫ (f(...) - f(yex xn1)) = h * ∫ f(...) - h * c_i * f(yex xn1).
+  have hT3_expand :
+      h * ∫ ξ in (0:ℝ)..(c i), (f (yex (xn1 + h * ξ)) - f (yex xn1))
+        = h * (∫ ξ in (0:ℝ)..(c i), f (yex (xn1 + h * ξ)))
+          - h * (c i) * f (yex xn1) := by
+    rw [intervalIntegral.integral_sub hint_g_shift intervalIntegrable_const,
+        intervalIntegral.integral_const]
+    simp only [smul_eq_mul, sub_zero]
+    ring
+  -- T4 expansion: h * Σ A_{ij}(f - f(yex xn1)) = h * Σ A_{ij} f - Σ_j A_{ij} h f(yex xn1).
+  have hT4_expand :
+      h * ∑ j, M.A i j * (f (yex (xn1 + h * c j)) - f (yex xn1))
+        = h * (∑ j, M.A i j * f (yex (xn1 + h * c j)))
+          - (∑ j, M.A i j * h * f (yex xn1)) := by
+    have hsum_distrib :
+        (∑ j, M.A i j * (f (yex (xn1 + h * c j)) - f (yex xn1)))
+          = (∑ j, M.A i j * f (yex (xn1 + h * c j)))
+            - (∑ j, M.A i j * f (yex xn1)) := by
+      rw [← Finset.sum_sub_distrib]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      ring
+    rw [hsum_distrib, mul_sub, Finset.mul_sum]
+    rw [show (∑ j, M.A i j * h * f (yex xn1)) = h * (∑ j, M.A i j * f (yex xn1)) from ?_]
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    ring
+  -- Bridge from `deriv yex xn1` to `f (yex xn1)` in the T2 sum.
+  have hy'0 : deriv yex xn1 = f (yex xn1) := _hy_ode xn1
+  have hsumA_swap :
+      (∑ j, M.A i j * h * deriv yex xn1) = (∑ j, M.A i j * h * f (yex xn1)) := by
+    rw [hy'0]
+  -- Algebraic identity: LHS = T3v - T4v.
+  set T3v := h * ∫ ξ in (0:ℝ)..(c i), (f (yex (xn1 + h * ξ)) - f (yex xn1)) with hT3v_def
+  set T4v := h * ∑ j, M.A i j * (f (yex (xn1 + h * c j)) - f (yex xn1)) with hT4v_def
+  set Iv := ∫ ξ in (0:ℝ)..(c i), f (yex (xn1 + h * ξ)) with hIv_def
+  set SAfb := ∑ j, M.A i j * f (yex (xn1 + h * c j)) with hSAfb_def
+  set Uinp := ∑ j, M.U i j * (u j * yex xn1 + v j * h * deriv yex xn1) with hUinp_def
+  set SAhy := ∑ j, M.A i j * h * deriv yex xn1 with hSAhy_def
+  set SAhf := ∑ j, M.A i j * h * f (yex xn1) with hSAhf_def
+  -- Now hT1: yex(xn1 + h c_i) - yex xn1 - h * Iv = 0
+  -- hT2: yex xn1 + c_i * h * y'0 - Uinp - SAhy = 0
+  -- hT3_expand: T3v = h * Iv - h * c_i * f(yex xn1)
+  -- hT4_expand: T4v = h * SAfb - SAhf
+  -- hsumA_swap: SAhy = SAhf
+  -- hy'0: deriv yex xn1 = f (yex xn1)
+  -- Goal: |yex(xn1 + h c_i) - h * SAfb - Uinp| ≤ ...
+  -- We claim: yex(xn1 + h c_i) - h * SAfb - Uinp = T3v - T4v.
+  have hdecomp :
+      yex (xn1 + h * c i) - h * SAfb - Uinp = T3v - T4v := by
+    linear_combination hT1 + hT2 - hT3_expand + hT4_expand + hsumA_swap
+                       - (c i * h) * hy'0
+  rw [hdecomp]
+  -- |T3v - T4v| ≤ |T3v| + |T4v| ≤ T3_bound + T4_bound = goal
+  calc |T3v - T4v|
+      ≤ |T3v| + |T4v| := abs_sub _ _
+    _ ≤ (1/2) * h^2 * L^2 * M_bound * (c i)^2
+          + h^2 * L^2 * M_bound * ∑ j, |M.A i j * c j| := add_le_add hT3 hT4
+    _ = h^2 * L^2 * M_bound * ((1/2) * (c i)^2 + ∑ j, |M.A i j * c j|) := by ring
 
 /-- **Lemma 515A (b)** — Output-wise local truncation error bound for
 a GLM `(A, U, B, V)`. With the same setup as
@@ -249,6 +615,7 @@ theorem GeneralLinearMethod.localStageError_bound_b {s r : ℕ}
     (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
     (_hCons : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
     (c : Fin s → ℝ)
+    (_hc_nonneg : ∀ i, 0 ≤ c i)
     (_hc_def : c = M.glmAbscissae v) :
     ∀ i : Fin r,
       |(u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
