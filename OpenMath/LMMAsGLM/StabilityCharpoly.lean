@@ -2536,4 +2536,20 @@ theorem rowYQuot_eval_zero (m : LMM s) (hs : 0 < s) :
   · intro h
     exact absurd (Finset.mem_univ _) h
 
+/-- §521 Step F.4 — BDF unit-circle scalar identity (headline). Combines
+E.2 (`D_mul_toGLM_charpoly_eval_one_reduced_of_bdf`) with F.3
+(`rowYQuot_eval_one`): the abstract `(rowYQuot m).eval 1` term cancels the
+`z β_last · ∑ α(castSucc l)` correction, leaving only the pure
+`(stabilityPolyPoly z).eval 1`. -/
+theorem D_mul_toGLM_charpoly_eval_one_eq_stabilityPolyPoly_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1
+      = (m.stabilityPolyPoly z).eval 1 := by
+  rw [D_mul_toGLM_charpoly_eval_one_reduced_of_bdf m hbdf hz hs]
+  rw [rowYQuot_eval_one m hs]
+  ring
+
 end LMM
