@@ -428,14 +428,21 @@ theorem GeneralLinearMethod.convergent_isStable
       h_left.sup h_right
     rwa [nhdsLE_sup_nhdsGT] at h_combined
   -- Step 6: Y m matches start (1/m) initially and is a GLM solution.
+  -- Cycle 098: under the strengthened `IsConvergent`, also feed
+  -- `Y_int m i := (M.U *ᵥ Y m m) i` (the stage at the m-th micro-step;
+  -- for f ≡ 0 the stage equation collapses to this trivially).
   have hxx : (0 : ℝ) < 1 := by norm_num
+  set Y_int : ℕ → Fin s → ℝ := fun m i => ∑ j, M.U i j * Y m m j with hY_int_def
   have hY_props : ∀ m : ℕ, 0 < m →
       Y m 0 = start ((1 - 0) / (m : ℝ)) ∧
-      M.IsGLMSolution ((1 - 0) / (m : ℝ)) f (Y m) := by
+      M.IsGLMSolution ((1 - 0) / (m : ℝ)) f (Y m) ∧
+      (∀ i, Y_int m i =
+        (∑ j, M.A i j * (((1 - 0) / (m : ℝ)) * f (Y_int m j)))
+        + (∑ j, M.U i j * Y m m j)) := by
     intro m hm
     have hm_real_pos : (0 : ℝ) < (m : ℝ) := by exact_mod_cast hm
     have hm_real_ne : (m : ℝ) ≠ 0 := ne_of_gt hm_real_pos
-    refine ⟨?_, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
     · funext i
       have hh_pos : (0 : ℝ) < 1 / (m : ℝ) := by positivity
       have hh_eq : (1 - 0 : ℝ) / m = 1 / m := by ring
@@ -462,10 +469,21 @@ theorem GeneralLinearMethod.convergent_isStable
         rfl
       rw [← hY_alt]
       exact M.glmZeroIterate_const_smul (1 / (m : ℝ)) (w m) (1 / ζ m)
+    · -- Stage equation (cycle 098): collapses for f ≡ 0.
+      intro i
+      show (∑ j, M.U i j * Y m m j) =
+        (∑ j, M.A i j * (((1 - 0) / (m : ℝ)) * f (Y_int m j)))
+        + (∑ j, M.U i j * Y m m j)
+      have h_A_zero :
+          (∑ j, M.A i j * (((1 - 0) / (m : ℝ)) * f (Y_int m j))) = 0 := by
+        refine Finset.sum_eq_zero (fun j _ => ?_)
+        show M.A i j * ((1 - 0) / (m : ℝ) * f (Y_int m j)) = 0
+        rw [hf_def]; ring
+      rw [h_A_zero, zero_add]
   -- Step 7: apply hConv' to obtain `Y n n → fun i => u i * yex 1 = 0`.
+  have hconv_pair := hConv' start hstart_tendsto 1 hxx Y Y_int hY_props
   have hconv : Filter.Tendsto (fun n : ℕ => Y n n)
-                 Filter.atTop (nhds (fun i => u i * yex 1)) :=
-    hConv' start hstart_tendsto 1 hxx Y hY_props
+                 Filter.atTop (nhds (fun i => u i * yex 1)) := hconv_pair.1
   -- yex 1 = 0, so the limit is the zero vector.
   have h_zero_fn : (fun i : Fin r => u i * yex 1) = (fun _ : Fin r => (0 : ℝ)) := by
     funext i; rw [hyex_def]; ring

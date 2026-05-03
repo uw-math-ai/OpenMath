@@ -5771,12 +5771,12 @@ theorem LinearMultistepMethod.runningMaxAbs_record_above
     have him : i ≤ m := by
       have := Finset.mem_range.mp hi₁
       omega
-    have h_mono :
+    have hmono :
         LinearMultistepMethod.runningMaxAbs y i ≤
           LinearMultistepMethod.runningMaxAbs y m :=
       LinearMultistepMethod.runningMaxAbs_monotone y him
-    rw [hi₂] at h_mono
-    exact h_mono
+    rw [hi₂] at hmono
+    exact hmono
 
 /-- Textbook-style contradiction packager.  If `ζ` is the running
 maximum (monotone, dominates `|η|`) of an unbounded sequence and

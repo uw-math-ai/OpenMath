@@ -134,7 +134,19 @@ LMM precedent at `OpenMath/Chapter4/Section404.lean:333–354`),
 `u ≠ 0` per textbook, and **no preemptive strengthening** (joint
 Lipschitz / C¹ / uniform M-bound) as in
 `is_convergent_strengthened.md` for LMMs. If a future §515 proof
-requires those, file a parallel issue at that point. -/
+requires those, file a parallel issue at that point.
+
+**Strengthening (cycle 098, faithfulness divergent)**: in addition
+to the textbook output-side conclusion `Y n n → u · yex(x)`, this
+formalisation requires the consumer to also exhibit an internal-stage
+sequence `Y_int : ℕ → Fin s → ℝ` (the stage at the n-th micro-step
+of the n-step run, satisfying the GLM stage equation
+`Y_int n i = h • A f(Y_int n) + U *ᵥ Y n n`) and concludes that
+`Y_int n → (fun _ => yex(x))` (all stage components tend to the
+exact solution at the target time). This is needed to extract
+`U · u' = 𝟙` for the `u' = u` bridge in `thm:514A`; see
+`.prover-state/issues/glm_isconvergent_strengthened.md` and
+`.prover-state/issues/u_prime_equals_u_bridge.md`. -/
 def GeneralLinearMethod.IsConvergent {s r : ℕ}
     (M : GeneralLinearMethod s r) : Prop :=
   ∀ (f : ℝ → ℝ) (L : NNReal), LipschitzWith L f →
@@ -147,11 +159,16 @@ def GeneralLinearMethod.IsConvergent {s r : ℕ}
                        (nhds 0) (nhds (u i * y₀))) →
     ∀ x : ℝ, x₀ < x →
     ∀ Y : ℕ → ℕ → Fin r → ℝ,
+    ∀ Y_int : ℕ → Fin s → ℝ,
       (∀ n : ℕ, 0 < n →
         Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
-        M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n)) →
+        M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+        (∀ i, Y_int n i = (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+                          + (∑ j, M.U i j * Y n n j))) →
       Filter.Tendsto (fun n : ℕ => Y n n)
                      Filter.atTop (nhds (fun i => u i * yex x))
+      ∧ Filter.Tendsto Y_int
+                       Filter.atTop (nhds (fun _ => yex x))
 
 /-! ### Sanity helpers — non-vacuity of `IsGLMSolution` -/
 

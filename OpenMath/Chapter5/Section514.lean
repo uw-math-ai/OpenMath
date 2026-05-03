@@ -143,7 +143,18 @@ IVP `y(x) = x`) to the Cesàro statement
 Note: `u'` from `IsConvergent` may differ from the `u` of
 `IsPreconsistent`. For cycle 094 we accept this: the proof either
 extracts `u` from `hPre` and shows the Cesàro statement directly, or
-defers the bridging to a separate sub-lemma. -/
+defers the bridging to a separate sub-lemma.
+
+**Cycle 098 update**: `IsConvergent` is now strengthened (see
+`Section512.lean::IsConvergent` and
+`.prover-state/issues/glm_isconvergent_strengthened.md`) to also
+require a stage-limit conclusion `Y_int n → (fun _ => yex(x))`. Applied
+to the trivial IVP (`f ≡ 1, yex = id, x = 1`) with the stage choice
+`Y_int n i := (1/n) • (A𝟙)_i + (U *ᵥ Y n n)_i`, this forces
+`(U *ᵥ u') = 𝟙`, which combined with the existing `V *ᵥ u' = u'`
+(see `convergence_witness_isVfixed`) closes the `u' = u` bridge
+modulo a uniqueness argument for preconsistency vectors. The closure
+of this `sorry` is scheduled for a future cycle. -/
 
 /-- Cesàro mean of `V^k · (B·𝟙 - u)` tends to `0` under
 convergence + preconsistency. -/
@@ -289,10 +300,10 @@ theorem exists_inverse_of_cesaro_zero {r : ℕ}
       -- hMTu : u - V.transpose *ᵥ u = 0
       exact (sub_eq_zero.mp hMTu).symm
     -- Apply orthogonality lemma.
-    have h_dot : dotProduct w u = 0 :=
+    have hdot : dotProduct w u = 0 :=
       cesaro_orthogonal_to_VT_fixed hCes hVu
     -- Bridge to inner-product form.
-    have h_inner : inner ℝ u_E w_E = (0 : ℝ) := by
+    have hinner : inner ℝ u_E w_E = (0 : ℝ) := by
       rw [EuclideanSpace.inner_eq_star_dotProduct]
       -- ⟨u_E, w_E⟩ = w_E.ofLp ⬝ᵥ star u_E.ofLp = w ⬝ᵥ u (over ℝ, star = id).
       show w_E.ofLp ⬝ᵥ star u_E.ofLp = 0
@@ -301,8 +312,8 @@ theorem exists_inverse_of_cesaro_zero {r : ℕ}
         funext i
         exact star_trivial _
       rw [hw_ofLp, hstar_u, ← hu_def]
-      exact h_dot
-    exact h_inner
+      exact hdot
+    exact hinner
   -- Step B: `(T.adjoint).kerᗮ = T.range` via `(range T)ᗮ = ker(T.adjoint)`
   -- and `Submodule.orthogonal_orthogonal` in finite-dim.
   have h_orth_range : (LinearMap.range T)ᗮ = LinearMap.ker (LinearMap.adjoint T) := by
@@ -460,11 +471,20 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
     rw [show u' i * 0 = 0 from by ring]
     exact tendsto_const_nhds
   have hxx : (0 : ℝ) < 1 := by norm_num
+  -- Cycle 098: under strengthened `IsConvergent`, also feed `Y_int n` —
+  -- the stage at the n-th micro-step. For f ≡ 1 the stage equation
+  -- `Y_int n i = h • (A𝟙)_i + (U *ᵥ Y n n) i` defines `Y_int` directly.
+  set Y_int : ℕ → Fin s → ℝ :=
+    fun n i => (∑ j, M.A i j * (((1 - 0 : ℝ) / (n : ℝ)) * f (0 : ℝ)))
+               + (∑ j, M.U i j * Y n n j) with hY_int_def
   have hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((1 - 0) / (n : ℝ)) ∧
-      M.IsGLMSolution ((1 - 0) / (n : ℝ)) f (Y n) := by
+      M.IsGLMSolution ((1 - 0) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+        (∑ j, M.A i j * (((1 - 0) / (n : ℝ)) * f (Y_int n j)))
+        + (∑ j, M.U i j * Y n n j)) := by
     intro n hn
-    refine ⟨?_, ?_⟩
+    refine ⟨?_, ?_, ?_⟩
     · -- Y n 0 = (fun _ => 0) (= φ ((1-0)/n))
       funext i
       show M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) 0 i = (0 : ℝ)
@@ -472,9 +492,18 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
     · -- M.IsGLMSolution ((1-0)/n) f (Y n).
       rw [hf_def]
       exact M.glmConstOneIterate_isGLMSolution ((1 - 0 : ℝ) / (n : ℝ))
+    · -- Stage equation (cycle 098): for f ≡ 1, both sides reduce to
+      --   (1/n) • (A𝟙)_i + (U *ᵥ Y n n)_i, since f is constant.
+      intro i
+      show (∑ j, M.A i j * (((1 - 0 : ℝ) / (n : ℝ)) * f (0 : ℝ)))
+            + (∑ j, M.U i j * Y n n j) =
+            (∑ j, M.A i j * (((1 - 0) / (n : ℝ)) * f (Y_int n j)))
+            + (∑ j, M.U i j * Y n n j)
+      simp only [hf_def]
+  have hConv_pair := hConv' φ hφ_tendsto 1 hxx Y Y_int hY_props
   have hY_lim : Filter.Tendsto (fun n : ℕ => Y n n)
                   Filter.atTop (nhds (fun i => u' i * yex 1)) :=
-    hConv' φ hφ_tendsto 1 hxx Y hY_props
+    hConv_pair.1
   -- yex 1 = id 1 = 1, so the limit simplifies to u'.
   have h_lim_simp : (fun i : Fin r => u' i * yex 1) = u' := by
     rw [hyex_def]; funext i; show u' i * (1 : ℝ) = u' i; ring

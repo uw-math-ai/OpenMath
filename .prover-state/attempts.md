@@ -27,3 +27,6 @@ Cycle 073: Authored the §410 generating-function infrastructure (`αPoly`, `βP
 
 ### Cycle 78
 Cycle 078 lem:383A: planner's Path B sketch proposed a trivial pointwise multiplicativity statement — rejected as definition smuggling (Butcher's lemma is about the convolution product, not pointwise). Faithful implementation required building Multiset.powerset_add (missing from Mathlib) and sum_mul_sum_eq_sum_product as private helpers. DecidableEq for RootedTree required Classical.decEq workaround (nested-inductive deriving failure). Multiset.mul_sum does not exist — correct name is Multiset.sum_map_mul_left.
+
+### Cycle 97
+Cycle 097: `LinearMap.orthogonal_ker` does not exist in Mathlib — Loogle returned a hallucinated name; only `ContinuousLinearMap.orthogonal_ker` exists at Adjoint.lean:182. Worked around with ~10 LOC inline proof of `(range T)ᗮ = ker(adjoint T)` via `LinearMap.adjoint_inner_right + ext_inner_left`. `dotProduct` and `smul_dotProduct`/`sum_dotProduct` live in root namespace, not `Matrix.*` — bare names work under `open Matrix`. Aristotle jobs A/B/C completed during cycle but manual proofs were already axiom-clean before results returned; Aristotle output not incorporated.
