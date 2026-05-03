@@ -495,4 +495,17 @@ theorem toGLM_V_active_charpoly_eq_X_pow_s_mul_PY (m : LMM s) :
   rw [toGLM_V_active_charpoly, toGLM_stabilityMatrixPHF_zero_charpoly]
   ring
 
+/-- §521 Step C.5 — RowY as `updatedDet · X^s`. Immediate from
+`toGLM_stabilityCharpolyRowY_eq_explicit` and
+`toGLM_stabilityMatrixPHF_zero_charpoly`. -/
+theorem toGLM_stabilityCharpolyRowY_eq_X_pow_s_mul
+    (m : LMM s) (hs : 0 < s) :
+    toGLM_stabilityCharpolyRowY m =
+      ((toGLM_stabilityMatrixPY m 0).charmatrix.updateRow
+          ⟨s - 1, by omega⟩
+          (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))).det *
+        (Polynomial.X : Polynomial ℂ) ^ s := by
+  rw [toGLM_stabilityCharpolyRowY_eq_explicit m hs,
+      toGLM_stabilityMatrixPHF_zero_charpoly]
+
 end LMM
