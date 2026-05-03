@@ -1,4 +1,5 @@
 import Mathlib.Analysis.Normed.Algebra.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Data.Complex.Basic
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 import Mathlib.LinearAlgebra.Matrix.Notation
@@ -318,5 +319,89 @@ theorem trivialZeroGLM_isLStable : trivialZeroGLM.IsLStable := by
     exact spectrum.spectralRadius_zero
   rw [hfun]
   exact tendsto_const_nhds
+
+/-- **Definition 521A** — A general linear method *has stability order* `p`
+if its stability function `Φ(w, z)` satisfies
+`Φ(exp(z), z) = O(z^(p+1))` as `z → 0` in `ℂ`.
+
+Butcher (Definition 521A, p. 420): "A method with stability function
+`Φ(w, z)` has 'stability order' `p*` if `Φ(exp(z), z) = O(z^{p*+1})`."
+
+Encoding choices:
+
+* Big-O is `Asymptotics.IsBigO` at `nhds (0 : ℂ)`. The textbook's
+  `O(z^{p*+1})` is at `z → 0` in `ℂ` (since `Φ` is bivariate
+  complex). Plain `nhds 0` is the right filter: for any consistent
+  method `Φ(exp 0, 0) = Φ(1, 0)` is well-defined (and indeed equals
+  `0` for the witness below), so there is no need for a punctured
+  neighborhood `nhdsWithin 0 ({0}ᶜ)`.
+
+* No maximality clause. The textbook says "*has stability order p* if* …"
+  without demanding that `p` is the largest such integer. Adding a
+  maximality clause `¬ Φ(exp z, z) = O(z^(p+2))` would be
+  over-specification and would require a non-vanishing argument (e.g.
+  `¬ IsBigO _ _ (· ^ 3)`) for the explicit-Euler witness, which
+  Mathlib does not provide directly. Downstream uses (e.g. `thm:521B`)
+  can introduce a maximality predicate when needed.
+
+The textbook §521A also introduces an auxiliary *complexity sequence*
+`ν = [ν_0, ν_1, …, ν_k]` arising from the bivariate polynomial
+representation
+`Φ(w, z) = Σ_{j=0..k} w^(k-j) Σ_{l=0..ν_j} α_{jl} z^j`. That apparatus
+is purely a representation device used to set up `thm:521B` ("for a
+given ν, what is the highest possible stability order?") and is
+**deferred** to whenever `thm:521B` is tackled. It plays no role in
+the primary stability-order predicate above. Encoding it here would
+require re-encoding `stabilityFunction` as a `Polynomial (Polynomial ℂ)`
+or a parallel polynomial representation (currently
+`stabilityFunction : ℂ → ℂ → ℂ` is a function, not a polynomial), a
+multi-cycle infrastructure investment justified only when `thm:521B`
+is the active target.
+
+The declaration lives in the `OpenMath.Chapter5.Section510` namespace
+(rather than the file's `Section520` namespace) so that dot notation
+`M.HasStabilityOrder p` works on `GeneralLinearMethod` values. -/
+def GeneralLinearMethod.HasStabilityOrder {s r : ℕ}
+    (M : GeneralLinearMethod s r) (p : ℕ) : Prop :=
+  Asymptotics.IsBigO (nhds (0 : ℂ))
+    (fun z : ℂ => M.stabilityFunction (Complex.exp z) z)
+    (fun z : ℂ => z ^ (p + 1))
+
+/-- Closed-form stability function of explicit Euler:
+`Φ_explicitEuler(w, z) = w − 1 − z`.
+
+This is the `(s, r) = (1, 1)` case of `Φ(w, z) = det(wI − M(z))` with
+`M(z) = !![1 + z]` from `explicitEulerGLM_stabilityMatrix`: the `1×1`
+determinant evaluates to `w − (1 + z) = w − 1 − z`. -/
+theorem explicitEulerGLM_stabilityFunction (w z : ℂ) :
+    explicitEulerGLM.stabilityFunction w z = w - 1 - z := by
+  unfold GeneralLinearMethod.stabilityFunction
+  rw [explicitEulerGLM_stabilityMatrix]
+  rw [Matrix.det_fin_one]
+  simp [Matrix.smul_apply]
+  ring
+
+/-- Non-vacuity witness for `HasStabilityOrder`: explicit Euler has
+stability order `1`.
+
+Computation: from `explicitEulerGLM_stabilityFunction`,
+`Φ(exp z, z) = exp z − 1 − z = exp z − ∑_{i<2} z^i / i!`. Mathlib's
+`Complex.exp_sub_sum_range_isBigO_pow 2` then gives the desired
+`O(z^2) = O(z^(1+1))` bound at `nhds 0`. -/
+theorem explicitEulerGLM_hasStabilityOrder_one :
+    explicitEulerGLM.HasStabilityOrder 1 := by
+  unfold GeneralLinearMethod.HasStabilityOrder
+  have hΦ :
+      (fun z : ℂ => explicitEulerGLM.stabilityFunction
+                      (Complex.exp z) z)
+        = (fun z : ℂ => Complex.exp z
+            - ∑ i ∈ Finset.range 2, z ^ i / (i.factorial : ℂ)) := by
+    funext z
+    rw [explicitEulerGLM_stabilityFunction]
+    rw [Finset.sum_range_succ, Finset.sum_range_succ, Finset.sum_range_zero]
+    simp [Nat.factorial]
+    ring
+  rw [hΦ]
+  exact Complex.exp_sub_sum_range_isBigO_pow 2
 
 end OpenMath.Chapter5.Section510

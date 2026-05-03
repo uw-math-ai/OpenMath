@@ -213,9 +213,9 @@
     "status": "formalized"
   },
   "def:521A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section520.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.HasStabilityOrder",
+    "status": "formalized"
   },
   "def:525A": {
     "lean_file": null,

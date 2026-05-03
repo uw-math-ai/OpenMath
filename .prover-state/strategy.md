@@ -1,253 +1,295 @@
-# Cycle 089 — Formalize `def:520F` (L-stable general linear method)
+# Cycle 090 Strategy — formalize `def:521A` (stability order)
 
-## Status going in
+## What landed last cycle
 
-- Cycle 088 closed `def:520E` (A-stable GLM) plus the `trivialZeroGLM`
-  non-vacuity witness. `OpenMath/Chapter5/Section520.lean` builds clean.
-- No pending Aristotle results, no sorry's, no infrastructure
-  blockers reported by previous workers in scope.
-- The cycle 088 worker explicitly recommended `def:520F` as next.
-  Its only direct dependency is `def:520E`, which is now in place.
+Cycle 089 closed `def:520F` (L-stable GLM) with witness
+`trivialZeroGLM_isLStable`. `OpenMath/Chapter5/Section520.lean` now
+holds the full §520 stack: `M(z)` (520A), `Φ(w,z)` and the
+`stabilityRegion` / `instabilityRegion` (520C), `IsAStable` (520E),
+`IsLStable` (520F). Progress: 60/175.
 
-## Priority 0 — incorporate Aristotle
+There are zero pending Aristotle results and no open sorry's anywhere
+in `OpenMath/`. The repo state is clean.
 
-**None pending.** Skip.
+## Target this cycle: `def:521A` — stability order
 
-## Priority 1 — formalize `def:520F` (L-stable GLM)
+Entity file: `extraction/formalization_data/entities/def_521A.json`.
 
-### Textbook statement (verbatim from `entities/def_520F.json`)
+### Textbook statement (quote from JSON)
 
-> A general linear method is L-stable if it is A-stable and
-> ρ(M(∞)) = 0.
+> A method with stability function `Φ(w, z)` has 'stability order'
+> `p*` if `Φ(exp(z), z) = O(z^{p*+1})`.
+>
+> [Then introduces a complexity sequence `ν = [ν_0, …, ν_k]` for the
+> bivariate polynomial representation of `Φ`, used as setup for
+> `thm:521B`.]
 
-Here ρ denotes spectral radius and `M(∞)` is the formal value of the
-rational function `M(z) = V + zB(I − zA)⁻¹U` "at infinity". In the
-standard interpretation (Hairer–Wanner, Butcher), the condition
-`ρ(M(∞)) = 0` is equivalent to "the spectral radius of `M(z)` tends
-to 0 as `z → ∞` in `ℂ`". This is the formulation we encode, because
-it sidesteps the `A`-invertibility issue that arises when trying to
-define `M(∞)` as a single matrix.
+### Lean encoding
 
-### Encoding choice — use `Filter.Tendsto`, not an elementary form
-
-Use Mathlib's `spectralRadius` (lives in
-`Mathlib/Analysis/Normed/Algebra/Spectrum.lean:53`) returning
-`ℝ≥0∞`, and Mathlib's `Filter.cocompact ℂ` (the standard "going to
-infinity" filter on a finite-dim normed space). This is more
-idiomatic than a `∀ ε > 0, ∃ R, …` form and Mathlib has the lemmas
-we need (`spectralRadius_zero`, `tendsto_const_nhds`).
-
-### Exact Lean signature
-
-Add the new definition and witness inside the existing
-`namespace OpenMath.Chapter5.Section510` block of
-`OpenMath/Chapter5/Section520.lean` (the same block that holds
-`IsAStable` and `trivialZeroGLM_isAStable` — see lines 59–279 of
-the current file). Place the new declarations **after**
-`trivialZeroGLM_isAStable` (line 277) and **before** the closing
-`end OpenMath.Chapter5.Section510` (line 279).
-
-Imports to add at the top of the file (only if not already present):
+The primary content is a single condition on `Φ(exp z, z)` as
+`z → 0`. Encode as `Asymptotics.IsBigO` at `nhds 0`:
 
 ```lean
-import Mathlib.Analysis.Normed.Algebra.Spectrum
+def GeneralLinearMethod.HasStabilityOrder {s r : ℕ}
+    (M : GeneralLinearMethod s r) (p : ℕ) : Prop :=
+  Asymptotics.IsBigO (nhds (0 : ℂ))
+    (fun z : ℂ => M.stabilityFunction (Complex.exp z) z)
+    (fun z : ℂ => z ^ (p + 1))
 ```
 
-The `spectralRadius` and `Filter.cocompact` symbols should both
-become accessible from this import plus the existing
-`Mathlib.Data.Complex.Basic` import. Add other imports only if Lean
-errors demand it; keep the diff minimal.
+This uses the existing `M.stabilityFunction` from cycle 087
+(`OpenMath/Chapter5/Section520.lean:147`), so no new infrastructure
+on top of §520 is needed.
 
-Definition:
+### Faithfulness: definition smuggling check
+
+The textbook bundles **two** ideas in §521A:
+
+1. *The stability-order predicate* `Φ(exp z, z) = O(z^{p*+1})` — this
+   is the load-bearing definition.
+2. *The complexity sequence* `ν = [ν_0, …, ν_k]` representing
+   `Φ(w, z)` in the bivariate polynomial form
+   `Σ_j w^{k-j} Σ_l α_{jl} z^j`. Constraints `ν_j ≥ −1` with strict
+   inequality at `j = 0, k`.
+
+Idea (2) is auxiliary representation/setup for `thm:521B` ("for a
+given ν, what is the highest possible stability order?"). It plays
+no role in the primary `def:521A` predicate; the textbook only uses
+it to *frame* the stability-order question.
+
+**Decision**: formalize idea (1) only this cycle. The complexity
+sequence ν is a derived representation that cannot even be defined
+in our current encoding (`stabilityFunction : ℂ → ℂ → ℂ` is a
+function, not a `Polynomial` — extracting bivariate coefficients
+requires a separate polynomial encoding). Defer ν to whenever
+`thm:521B` is tackled, with a docstring note recording the
+deferral.
+
+This is **not** definition smuggling: idea (1) IS the definition of
+"stability order p*" — the textbook literally says
+"has stability order p* **if** Φ(exp(z), z) = O(z^{p*+1})". Idea (2)
+is auxiliary apparatus, separately introduced under "Suppose the
+stability function is given by …".
+
+### Non-vacuity witness
+
+Use `explicitEulerGLM` (already in `Section510`, `Section520`).
+
+* From cycle 086 `explicitEulerGLM_stabilityMatrix`:
+  `M(z) = !![1 + z]`.
+* So `Φ(w, z) = det(w·I − M(z)) = w − 1 − z` (1×1 determinant).
+* Therefore `Φ(exp z, z) = exp z − 1 − z`.
+* Mathlib lemma **`Complex.exp_sub_sum_range_isBigO_pow`**
+  (`.lake/packages/mathlib/Mathlib/Analysis/SpecialFunctions/Exp.lean:77`):
+  ```
+  (fun x ↦ exp x − ∑ i ∈ Finset.range n, x^i / i!) =O[𝓝 0] (· ^ n)
+  ```
+* With `n := 2`: `Σ_{i<2} x^i/i! = 1 + x`, so
+  `exp z − (1 + z) =O[𝓝 0] (· ^ 2)`. Exactly what we need for
+  `p + 1 = 2`, i.e. `p = 1`.
+
+Hence: `explicitEulerGLM.HasStabilityOrder 1`.
+
+### File placement
+
+Add to `OpenMath/Chapter5/Section520.lean` (NOT a new file). The
+definition depends only on `stabilityFunction` (520C) and a separate
+`Section521.lean` for one definition would be wasteful. If/when
+`thm:521B` is tackled, that cycle can pull this into a new
+`Section521.lean` as part of a real §521 build-out.
+
+Place inside `namespace OpenMath.Chapter5.Section510` (so dot
+notation `M.HasStabilityOrder p` works on `GeneralLinearMethod`
+values), immediately after the `IsLStable` block (line ~322).
+
+The needed import is `Mathlib.Analysis.SpecialFunctions.Exp` —
+verify it's already transitively pulled in via the existing
+`Mathlib.Analysis.Normed.Algebra.Spectrum` import. If `lean_build`
+errors with `unknown constant Complex.exp_sub_sum_range_isBigO_pow`,
+add the explicit import line at the top of `Section520.lean`.
+
+### Proof skeleton
 
 ```lean
-/-- **Definition 520F** — A general linear method is *L-stable* if it
-is A-stable and the spectral radius of its stability matrix `M(z)`
-tends to `0` as `z → ∞` in `ℂ`.
+def GeneralLinearMethod.HasStabilityOrder {s r : ℕ}
+    (M : GeneralLinearMethod s r) (p : ℕ) : Prop :=
+  Asymptotics.IsBigO (nhds (0 : ℂ))
+    (fun z : ℂ => M.stabilityFunction (Complex.exp z) z)
+    (fun z : ℂ => z ^ (p + 1))
 
-Butcher (Definition 520F, p. 419): "A general linear method is
-L-stable if it is A-stable and ρ(M(∞)) = 0."
+/-- Closed-form: explicit Euler has `Φ(w, z) = w − 1 − z`. -/
+theorem explicitEulerGLM_stabilityFunction (w z : ℂ) :
+    explicitEulerGLM.stabilityFunction w z = w - 1 - z := by
+  unfold GeneralLinearMethod.stabilityFunction
+  rw [explicitEulerGLM_stabilityMatrix]
+  rw [Matrix.det_fin_one]
+  simp; ring
 
-Encoding choice: the condition `ρ(M(∞)) = 0` is interpreted as
-`Filter.Tendsto (fun z => spectralRadius ℂ (M(z))) (Filter.cocompact ℂ)
-(𝓝 0)`. This sidesteps the issue that `M(∞)` as a literal matrix
-value is only well-defined when the `A`-block is invertible (in
-which case `M(∞) = V − B·A⁻¹·U`); the spectral-radius limit
-formulation captures the same mathematical content without needing
-a case split on invertibility, and is the formulation universally
-used in the modern stiff-ODE literature (cf. Hairer–Wanner). -/
-def GeneralLinearMethod.IsLStable {s r : ℕ}
-    (M : GeneralLinearMethod s r) : Prop :=
-  M.IsAStable ∧
-  Filter.Tendsto
-    (fun z : ℂ => spectralRadius ℂ (M.stabilityMatrix z))
-    (Filter.cocompact ℂ)
-    (𝓝 0)
-```
-
-Non-vacuity witness:
-
-```lean
-/-- Non-vacuity witness for `IsLStable`: the `trivialZeroGLM` is
-L-stable. Since `M(z) = !![0]` for every `z` (cycle 088
-`trivialZeroGLM_stabilityMatrix`), the spectral radius is
-identically `0`, and `Tendsto` of a constant sequence to its
-constant value is automatic. -/
-theorem trivialZeroGLM_isLStable : trivialZeroGLM.IsLStable := by
-  refine ⟨trivialZeroGLM_isAStable, ?_⟩
-  -- Reduce the spectral-radius function to the constant 0.
-  have hfun :
-      (fun z : ℂ => spectralRadius ℂ (trivialZeroGLM.stabilityMatrix z))
-        = fun _ => (0 : ℝ≥0∞) := by
+theorem explicitEulerGLM_hasStabilityOrder_one :
+    explicitEulerGLM.HasStabilityOrder 1 := by
+  unfold GeneralLinearMethod.HasStabilityOrder
+  -- Rewrite Φ(exp z, z) into exp z − ∑_{i<2} z^i/i! = exp z − (1 + z).
+  have hΦ : (fun z : ℂ => explicitEulerGLM.stabilityFunction
+                            (Complex.exp z) z)
+            = (fun z : ℂ => Complex.exp z
+                - ∑ i ∈ Finset.range 2, z ^ i / (i.factorial : ℂ)) := by
     funext z
-    rw [trivialZeroGLM_stabilityMatrix]
-    -- Show `!![(0 : ℂ)] = 0` then use `spectralRadius_zero`.
-    have h0 : (!![(0 : ℂ)] : Matrix (Fin 1) (Fin 1) ℂ) = 0 := by
-      ext i j; fin_cases i; fin_cases j; simp
-    rw [h0]
-    exact spectralRadius_zero
-  rw [hfun]
-  exact tendsto_const_nhds
+    rw [explicitEulerGLM_stabilityFunction]
+    simp [Finset.sum_range_succ, Finset.sum_range_zero, Nat.factorial]
+    ring
+  rw [hΦ]
+  exact Complex.exp_sub_sum_range_isBigO_pow 2
 ```
 
-### Likely build issues and quick fixes
+If `simp; ring` in `explicitEulerGLM_stabilityFunction` doesn't close
+(the determinant expression may need help to unfold `w • 1` and the
+1×1 matrix subtraction), use `lean_multi_attempt` with these candidates
+in order:
 
-The strategy above should compile as written, but here are the
-most likely snags and their canonical fixes:
+```text
+[ "simp [explicitEulerGLM_stabilityMatrix, Matrix.det_fin_one,
+       Matrix.sub_apply, Matrix.smul_apply, Matrix.one_apply]; ring",
+  "rw [explicitEulerGLM_stabilityMatrix]; simp [Matrix.det_fin_one]; ring",
+  "rw [explicitEulerGLM_stabilityMatrix];
+   rw [show (w • (1 : Matrix (Fin 1) (Fin 1) ℂ) - !![1 + z])
+         = !![w - (1 + z)] from by ext i j; fin_cases i; fin_cases j; simp];
+   rw [Matrix.det_fin_one]; simp; ring" ]
+```
 
-1. **`spectralRadius_zero` name mismatch.** If Lean reports the name
-   does not exist, search via
-   `lean_local_search "spectralRadius_zero"` — the lemma exists in
-   `Mathlib/Analysis/Normed/Algebra/Spectrum.lean:81`. The signature
-   is `theorem spectralRadius_zero : spectralRadius 𝕜 (0 : A) = 0`
-   with `A` instance-inferred from context. May need to spell out
-   `(spectralRadius_zero (𝕜 := ℂ) (A := Matrix (Fin 1) (Fin 1) ℂ))`
-   if instance inference stalls.
+For the `hΦ` step: if the chained `simp` doesn't close, do the sum
+expansion manually:
+```lean
+have h0 : (∑ i ∈ Finset.range 2, z ^ i / (i.factorial : ℂ)) = 1 + z := by
+  rw [show (2 : ℕ) = 1 + 1 from rfl,
+      Finset.sum_range_succ, Finset.sum_range_one]
+  simp [Nat.factorial]
+  ring
+rw [h0]
+ring
+```
 
-2. **`spectralRadius` instance resolution.** `spectralRadius`
-   requires `[NormedField 𝕜] [Ring A] [Algebra 𝕜 A]`. For
-   `A = Matrix (Fin r) (Fin r) ℂ` and `𝕜 = ℂ`, all three are
-   inferred from Mathlib's standard matrix-algebra instances
-   (which `Mathlib.Analysis.Matrix.Normed`, transitively imported,
-   provides). If instance synthesis stalls, the worker should
-   `lean_hover_info` on `spectralRadius` to confirm what's missing
-   and add the targeted import — but try the minimal import first.
+For the final `exact`: `(p + 1)` with `p := 1` reduces to `1 + 1 = 2`
+which is definitionally `Nat.succ 1 = 2`. The exact line should
+typecheck without massaging; if it doesn't, insert
+`change (fun z : ℂ => Complex.exp z - _) =O[nhds 0] (fun z : ℂ => z ^ 2)`
+or `show _ =O[nhds (0:ℂ)] (· ^ 2)` to nudge unification.
 
-3. **`Filter.cocompact` namespace.** The full name is
-   `Filter.cocompact`. Use it explicitly. The `(𝓝 0)` notation
-   requires `open scoped Topology` (commonly already in scope). If
-   not, add `open scoped Topology` near the top of the namespace
-   block.
+### Build / verification
 
-4. **`(𝓝 (0 : ℝ≥0∞))` vs `(𝓝 0)`.** The `0` in `(𝓝 0)` may
-   require explicit type annotation `(𝓝 (0 : ℝ≥0∞))` if Lean
-   cannot infer it. Apply only if the first form fails.
+After editing, run:
 
-5. **`!![(0 : ℂ)] = 0` rewrite.** Already done in cycle 088 at
-   `trivialZeroGLM_isAStable` (lines 270–271). Same `ext + fin_cases
-   + simp` works.
+```bash
+lake env lean OpenMath/Chapter5/Section520.lean
+lake build OpenMath.Chapter5.Section520
+```
 
-6. **`tendsto_const_nhds`.** Universally available; no extra
-   import needed.
+Then verify axioms via the standard pattern (the `lake build` step
+above is mandatory before `#print axioms`, otherwise the .olean cache
+is stale per cycle 089's discovery):
 
-If any one of these fails, do **not** rewrite the encoding; instead
-search Mathlib for the working name. The encoding is faithful and
-should not be changed.
+```bash
+echo '
+import OpenMath.Chapter5.Section520
+open OpenMath.Chapter5.Section510
+#print axioms explicitEulerGLM_hasStabilityOrder_one
+' > /tmp/check_521A.lean
+lake env lean /tmp/check_521A.lean
+```
 
-### Faithfulness check (mandatory pre-commit)
+Expected: clean build; axioms = `[propext, Classical.choice, Quot.sound]`.
 
-Per CLAUDE.md, before committing:
+### Faithfulness checklist
 
-* **Definition smuggling check (`IsLStable`):** the Lean predicate
-  encodes "A-stable AND spectral radius of `M(z)` tends to 0 as
-  `z → ∞`". The textbook statement is "A-stable AND ρ(M(∞)) = 0".
-  These are mathematically equivalent under the standard
-  interpretation of `M(∞)` as the limit at infinity (cf. the
-  encoding-choice paragraph in the docstring). Document this
-  divergence explicitly in the docstring and in the cycle 089
-  task results. NOT smuggling — `M(∞)` is not part of Lean
-  syntax, so the limit formulation is the literal Lean expression
-  of the textbook condition.
+- [ ] Open `extraction/formalization_data/entities/def_521A.json` and
+      quote the textbook statement in the docstring of
+      `HasStabilityOrder`.
+- [ ] Confirm `HasStabilityOrder M p` matches the textbook's
+      `Φ(exp(z), z) = O(z^{p*+1})` literally (with `p* = p` and
+      Big-O at `nhds 0`).
+- [ ] Document in the docstring why the **complexity sequence ν is
+      deferred** (it's a separate representation device used only by
+      `thm:521B`; not part of the primary "stability order"
+      definition).
+- [ ] No tautology / identity / hypothesis-strength concerns
+      (definition has no hypotheses; non-vacuity proof is genuine
+      Mathlib citation).
+- [ ] Confirm `explicitEulerGLM_hasStabilityOrder_one` is *not*
+      vacuous: it uses a concrete witness method, and the
+      `Complex.exp_sub_sum_range_isBigO_pow` citation does real
+      work (asymptotic bound on `exp z − 1 − z`).
 
-* **Non-vacuity check:** `trivialZeroGLM_isLStable` is a real
-  witness; `trivialZeroGLM` exists, A-stability is proved
-  (cycle 088), and the limit half is closed by reducing to a
-  constant function and `tendsto_const_nhds`.
+### Bookkeeping
 
-* **No new hypotheses, no extra typeclass requirements** beyond
-  what `def:520E` (`IsAStable`) already requires plus the
-  `spectralRadius` instances inferred from `Matrix … ℂ`.
+- Update `extraction/formalization_data/lean_status.json` for
+  `def:521A`: status `formalized`, `lean_file` set to
+  `OpenMath/Chapter5/Section520.lean`, `lean_symbol` set to
+  `OpenMath.Chapter5.Section510.GeneralLinearMethod.HasStabilityOrder`.
+- Update `plan.md`: tick `def:521A`, bump `60 → 61`.
+- Write `.prover-state/task_results/cycle_090.md` per the CLAUDE.md
+  template.
 
-* **No `class`/`structure` introductions, no `axiom`/`constant`,
-  no heartbeat bumps.**
+## Aristotle policy
 
-## Priority 2 — housekeeping
+**Do NOT submit** to Aristotle this cycle. The proof is small (~40
+LOC), depends on a single named Mathlib lemma
+(`Complex.exp_sub_sum_range_isBigO_pow`), and direct manual proof is
+faster than a 30-minute round-trip. This matches the cycle 086–089
+pattern (definition + small witness; no Aristotle).
 
-After the build is clean and axioms check out:
+## What NOT to do
 
-1. **`extraction/formalization_data/lean_status.json`**:
-   bump `def:520F` from `unformalized` to `formalized`. The pattern
-   is the same as cycle 088 used for `def:520E`. The existing entry
-   for `def:520F` (search for `"def:520F"` in the file) will have
-   `lean_file: null`, `lean_symbol: null`, `formalization_status:
-   "unformalized"` — set them to
-   `"OpenMath/Chapter5/Section520.lean"`,
-   `"OpenMath.Chapter5.Section510.GeneralLinearMethod.IsLStable"`,
-   `"formalized"` respectively.
+- **Do NOT** formalize the complexity sequence ν or the bivariate
+  polynomial decomposition `Φ(w,z) = Σ_j w^{k-j} Σ_l α_{jl} z^j`
+  this cycle. Our `stabilityFunction : ℂ → ℂ → ℂ` is a function, not
+  a `Polynomial ℂ`, so extracting `α_{jl}` requires either re-encoding
+  `stabilityFunction` as a `Polynomial (Polynomial ℂ)` or introducing
+  a parallel polynomial representation. That's a multi-cycle
+  infrastructure investment, justified only when `thm:521B` is
+  tackled. See the §"Faithfulness: definition smuggling check"
+  decision above.
 
-2. **`plan.md`**: change the `def:520F` row in Chapter 5 from `[ ]`
-   to `[x]` and add the trailing pointer
-   `OpenMath/Chapter5/Section520.lean`. Update the
-   "**Progress: 59 / 175**" header to **60 / 175**.
+- **Do NOT** strengthen `HasStabilityOrder` with a "maximal p*"
+  clause (i.e. demanding that `Φ(exp z, z)` is *not* `O(z^{p+2})`).
+  The textbook says "*has stability order p* if* …" without the
+  maximality clause; the upper bound is implicit in downstream
+  results. Adding maximality would be over-specification and would
+  require a *non-vanishing* argument (i.e. `¬ IsBigO _ _ (· ^ 3)`)
+  for the explicit-Euler witness, which Mathlib does not provide
+  out of the box.
 
-## Priority 3 — task results
+- **Do NOT** try to define `HasStabilityOrder` over `ℝ` or with a
+  filter other than `nhds 0`. The textbook's `O(z^{p*+1})` is at
+  `z → 0` in `ℂ` (since `Φ` is bivariate complex). `nhdsWithin 0
+  ({0}ᶜ)` would be over-cautious — `Φ(exp 0, 0) = 1 − 1 − 0 = 0`
+  for explicit Euler (and indeed for any consistent method, since
+  `det(I − V) = 0` follows from `V·u = u`), so both functions are
+  defined and continuous at 0; plain `nhds 0` is correct.
 
-Write `.prover-state/task_results/cycle_089.md` per CLAUDE.md
-template. The faithfulness section must explicitly call out the
-`M(∞)` ↔ `Filter.Tendsto … (𝓝 0)` interpretation (this is the
-only non-trivial encoding choice this cycle).
+- **Do NOT** spawn a new file `OpenMath/Chapter5/Section521.lean`
+  for a single definition. Add to `Section520.lean` per §"File
+  placement" above.
 
-## What NOT to try
+- **Do NOT** introduce `axiom`/`constant`. Manual proof using
+  `Complex.exp_sub_sum_range_isBigO_pow` closes the witness cleanly.
 
-1. **Do NOT define `M(∞)` as a separate matrix value.** That would
-   require a case split on `A`-invertibility (the formula
-   `M(∞) = V − B·A⁻¹·U` only applies when `A` is invertible) and
-   would force a different — and arguably less faithful — encoding
-   for the `A`-singular case. The `Tendsto`-spectralRadius form is
-   the literature-standard encoding and is what we use.
+- **Do NOT** raise `maxHeartbeats`. The proof is small.
 
-2. **Do NOT introduce a `Matrix.spectralRadius` wrapper.** Use
-   Mathlib's `spectralRadius ℂ (M : Matrix _ _ ℂ)` directly. The
-   instance synthesis should just work.
+- **Do NOT** modify `scripts/autonomous_loop.py`. Standing rule
+  per `tautology_scanner_false_positives.md`.
 
-3. **Do NOT use `Filter.atTop.comap norm` or similar bespoke
-   filter constructions.** `Filter.cocompact ℂ` is the canonical
-   "going to infinity" filter on a finite-dim normed space.
+- **Do NOT** chase any "stuck on" / "commits not reaching repo"
+  framing if the supervisor's prompt-builder propagates one. Per
+  `consultant_advice_cycle_009.md` / `_014.md` / `_015.md`, those
+  are stale `attempts.md` artifacts; verify with
+  `git log -1 origin/Main/Experiments` and proceed.
 
-4. **Do NOT use `explicitEulerGLM` as the L-stability witness.**
-   Explicit Euler is **not** A-stable (e.g. at `z = -3`, `M(z) =
-   !![-2]` whose powers diverge), hence not L-stable. The
-   `trivialZeroGLM` is the only non-vacuity witness in scope.
+## Quick-reference: relevant Mathlib lemmas
 
-5. **Do NOT introduce an elementary `∀ ε > 0, ∃ R, ...` form**
-   alongside the Tendsto form. Keep the encoding minimal — one
-   formulation, the Tendsto one, with a docstring explaining the
-   choice.
-
-6. **Do NOT bump `maxHeartbeats`.** None of the proofs above need
-   it; if `simp` or `ext + fin_cases + simp` runs slow, decompose
-   manually rather than raising the limit (CLAUDE.md rule).
-
-7. **Do NOT submit anything to Aristotle this cycle.** All proof
-   obligations are short and have known shapes; manual
-   verification is faster than a 30-minute Aristotle round-trip.
-
-## Acceptance criteria
-
-* `lake env lean OpenMath/Chapter5/Section520.lean` exits clean.
-* `lake build OpenMath.Chapter5.Section520` succeeds.
-* `#print axioms trivialZeroGLM_isLStable` returns
-  `[propext, Classical.choice, Quot.sound]`.
-* `lean_status.json` and `plan.md` updated as in Priority 2.
-* `cycle_089.md` task results present.
-* Single commit, single push, branch `Main/Experiments`.
+| Goal | Lemma | File |
+|---|---|---|
+| `exp z − Σ_{i<n} z^i/i! = O(z^n)` near 0 | `Complex.exp_sub_sum_range_isBigO_pow` | `Mathlib/Analysis/SpecialFunctions/Exp.lean:77` |
+| Big-O notation / typeclass | `Asymptotics.IsBigO` | `Mathlib/Analysis/Asymptotics/...` |
+| 1×1 determinant | `Matrix.det_fin_one` | std |
+| `(Finset.range (n+1)).sum f = (range n).sum f + f n` | `Finset.sum_range_succ` | std |
+| `(Finset.range 0).sum f = 0` | `Finset.sum_range_zero` | std |
+| `(Finset.range 1).sum f = f 0` | `Finset.sum_range_one` | std |
