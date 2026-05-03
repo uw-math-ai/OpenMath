@@ -1,339 +1,378 @@
-# Cycle 076 strategy
+# Cycle 078 strategy — recover from cycle 077 revert
 
-## Status snapshot
+## Context
 
-* Cycle 075 closed `thm:410B` (`Section410.lean:430`) and landed
-  the §410B order-condition cluster. Section410.lean has 0 sorries.
-* Progress: 45/175. The §410 cluster has 2 of 4 entities done
-  (`thm:410A`, `thm:410B`); `thm:410C` and `thm:410D` are open.
-* No pending Aristotle results.
-* No sorry's anywhere in `OpenMath/`.
-* No Aristotle results to incorporate.
+Cycle 077 was **REVERTED with score −2**. It attempted `thm:410D`
+(Butcher §410 log-form order condition) and left **two unresolved
+sorries**, triggering the supervisor's "sorry count increased 0→2"
+revert. The two sorries are documented in
+`.prover-state/issues/thm_410D_substitution.md`:
 
-## Priority 0 — Target: `thm:410C` (Order condition via generating functions, (ρ, σ) form)
+1. `coeff_eq_zero_of_coeff_subst_eq_zero` — reverse direction of
+   "substitution by a unit-leading series preserves vanishing of low
+   coefficients".
+2. `subst_logOnePlusPS_expNegPS` — load-bearing identity
+   `subst logOnePlusPS expNegPS = oneOverOnePlusPS`, equivalent to
+   `exp(-log(1+w)) = (1+w)^{-1}`. Mathlib has no `PowerSeries.log`,
+   so route (a) (direct coefficient computation) is required.
 
-**Why this and not `thm:410D`?** Cycle 075's worker recommended
-`thm:410D` next, framing it as ~1 packaging cycle. On inspection
-that's too optimistic: `thm:410D` requires PowerSeries composition
-with `log(1+z)` (substitute `z ↦ -log(1+z)` into our `genFn`), and
-Mathlib's `PowerSeries.subst` is non-trivial to use even when it
-applies. `thm:410C` is the *true* packaging cycle: it's the
-forward-sign (ρ, σ) restatement of `thm:410B`, achievable by
-multiplying our existing `genFn M` by the unit power series
-`exp(kz)`. Single cycle. Closes another §410 entity.
+Cycle 077 also submitted an Aristotle batch on these two sub-lemmas
+(project ID `18504be5-2481-4d60-9d7b-12b8a5cd2b47`, file
+`.prover-state/aristotle_submissions/cycle_077/section410d_helpers.lean`).
+At cycle 077's last check it was at 13% with ≈80 minutes elapsed.
+By now (cycle 078), it may have completed.
 
-`thm:410D` then becomes natural for cycle 077, after the §410
-infrastructure is fully bidirectional.
+**The cycle 077 worker's Lean infrastructure (`oneOverOnePlusPS`,
+`logOnePlusPS`, `genFnLog`, the *forward* substitution lemma, and
+the substitution decomposition `genFnLog M = subst logOnePlusPS
+(genFn M)`) was committed in the reverted cycle and is therefore
+NOT in the current `OpenMath/Chapter4/Section410.lean`.** Verify
+this with `git log --oneline -5` — current HEAD must be `9dab007`
+(cycle 076). If a §410D rebuild is undertaken, **all** of that
+infrastructure must be reproduced; the only artifact preserved is
+the Aristotle submission file `section410d_helpers.lean`.
 
-### Textbook statement (`entities/thm_410C.json`)
+## Top priority — DO NOT REPEAT cycle 077's failure mode
 
-> A linear multistep method (ρ, σ) has order p if and only if
-> `ρ(exp(z)) − z σ(exp(z)) = O(z^{p+1})`.
+**Absolute rule: do NOT commit any new sorry to the repository this
+cycle.** If you cannot fully close a theorem, either decompose it
+into closable parts, or revert to a smaller target. The supervisor
+reverts any cycle that increases sorry count.
 
-where ρ(z), σ(z) are the (ρ, σ)-form generating polynomials —
-i.e. the reverse-degree-`k` polynomials of α(z), β(z):
+If you write a sorry-first scaffold to plan a proof, that is fine
+— but it MUST be either fully closed by end of cycle, or rolled
+back via `git restore` before commit. Do not commit partial scaffolds.
+
+## Priority 0 — Check Aristotle status (5 minutes, MANDATORY)
+
+Run:
 
 ```
-ρ(z) = z^k - α_1 z^{k-1} - ⋯ - α_k = z^k · α(1/z)    [Butcher's α with α_0 = 1]
-σ(z) = β_0 z^k + β_1 z^{k-1} + ⋯ + β_k = z^k · β(1/z)
+mcp__aristotle__get_status with project_id = "18504be5-2481-4d60-9d7b-12b8a5cd2b47"
 ```
 
-(Butcher's α_0 = 1 corresponds to `M.α 0 = -1` after the sign flip
-in the §404 normalisation; under our normalisation, the αPoly we
-defined in cycle 074 already IS Butcher's α(z), see Section410.lean
-header.)
+Then `mcp__aristotle__download_result` if status is `COMPLETED`.
 
-### The load-bearing identity
+The submission file is preserved at
+`.prover-state/aristotle_submissions/cycle_077/section410d_helpers.lean`
+(3.3KB) — read it to see exactly which 5 sub-lemmas were submitted.
+Inspect each returned proof: which of these did Aristotle close?
 
-```
-ρ(exp(z)) - z σ(exp(z)) = exp(kz) · genFn M
-                        = exp(kz) · (αPoly M (exp(-z)) - z βPoly M (exp(-z)))
-```
+* `coeff_eq_zero_of_coeff_subst_eq_zero` — the reverse direction.
+* `subst_logOnePlusPS_expPS` (= `1 + X` if present) — the
+  load-bearing identity.
+* (Plus three smaller helpers.)
 
-**Verification on explicit Euler (k=1, so exp(kz) = exp(z)):**
+**Decision rule based on Aristotle results:**
 
-* `ρ(z) = z - 1`, `σ(z) = 1` (standard for explicit Euler).
-* `ρ(exp(z)) - z σ(exp(z)) = exp(z) - 1 - z = z²/2 + z³/6 + ⋯`.
-* `genFn = (1 - exp(-z)) - z exp(-z) = z - z²/2 + z³/6 - ⋯ - z + z² - z³/2 + ⋯
-         = z²/2 - z³/3 + ⋯`.
-* `exp(z) · genFn = (1 + z + z²/2 + ⋯)(z²/2 - z³/3 + ⋯)
-                  = z²/2 + z³(1/2 - 1/3) + ⋯ = z²/2 + z³/6 + ⋯`. ✓
+* **Both sorries closed by Aristotle** → take Path A (rebuild §410D
+  fully).
+* **One sorry closed, one open** → take Path B (pivot away from
+  §410D — partial closure of a single direction is not worth the
+  rebuild risk).
+* **Neither closed** → take Path B.
+* **Aristotle still IN_PROGRESS or FAILED** → take Path B.
 
-So the identity holds, and `exp(kz)` is a unit (constant term 1)
-in `PowerSeries ℝ`, so multiplying by it preserves "vanishes for all
-`j ≤ p`". This reduces `thm:410C` to `thm:410B` plus the algebra.
+Document the Aristotle result in `.prover-state/task_results/cycle_078.md`
+regardless of which path you take.
 
-## Approach (concrete plan)
+---
 
-Edit only `OpenMath/Chapter4/Section410.lean`. Do NOT touch
-`Section404.lean` (the cycle 075 cross-namespace pattern stays
-in place — see lines 388–414 of Section410.lean).
+## Path A — Aristotle delivered both proofs: rebuild and close §410D
 
-### D1: define `expPS` (forward exponential power series)
+This path applies **only** if Aristotle returned proofs for **both**
+of the two cycle-077 sorries. Otherwise skip to Path B.
+
+### Step 1 — Reproduce the cycle-077 infrastructure
+
+Re-derive in `OpenMath/Chapter4/Section410.lean` (after the existing
+§410C cluster from commit `9dab007`):
+
+1. `oneOverOnePlusPS : PowerSeries ℝ` — the formal `1/(1+X)` series
+   with coefficients `(-1)^n`. Define via
+   `PowerSeries.mk (fun n => (-1)^n)` or analogous.
+2. `logOnePlusPS : PowerSeries ℝ` — formal `log(1+X)` with
+   coefficients `(-1)^(n+1) / n` for `n ≥ 1`, `0` at `n=0`.
+   Use `PowerSeries.mk` and prove constant term = 0,
+   `coeff 1 logOnePlusPS = 1` (the unit-leading conditions needed
+   for `PowerSeries.subst`).
+3. `genFnLog (M : LinearMultistepMethod k) : PowerSeries ℝ` — the
+   log-form generating function. By the textbook, this equals
+   `subst logOnePlusPS (genFn M)` (substitution decomposition);
+   prove the decomposition lemma `genFnLog_eq_subst_genFn`.
+4. `(1 + X) * oneOverOnePlusPS = 1` — algebraic identity.
+5. **Forward direction** of substitution-preserves-vanishing
+   (cycle 077 closed this manually; reproduce):
+   `∀ p, ∀ f g, constantCoeff g = 0 → coeff 1 g = 1 →
+   (∀ j ≤ p, coeff j f = 0) → ∀ j ≤ p,
+   coeff j (PowerSeries.subst g f) = 0`.
+
+Stay within the cycle 077 manual proof shapes — those compiled.
+
+### Step 2 — Incorporate Aristotle's two proofs verbatim
+
+Copy Aristotle's returned proofs for the two reverse-direction
+sub-lemmas into the file. Verify each compiles
+(`lake env lean OpenMath/Chapter4/Section410.lean`) and has clean
+axioms.
+
+### Step 3 — State and close `thm:410D`
+
+The textbook statement (Butcher §410):
+
+> A linear multistep formula `[α, β]` has order `p` if and only if
+> `coeff j (genFnLog M) = 0` for all `0 ≤ j ≤ p`.
+
+Bridging via the substitution decomposition + forward direction +
+Aristotle's reverse direction gives the iff.
+
+### Step 4 — Pre-commit gates
+
+* `lake build` clean.
+* `#print axioms thm_410D` shows only `[propext, Classical.choice,
+  Quot.sound]`.
+* Faithfulness check: `genFnLog` matches Butcher's
+  `log(α(1+z)/...)` formula (or document the formal-power-series
+  reformulation as an equivalence lemma).
+* Update `lean_status.json::thm:410D` to `formalized`.
+* Update `plan.md` to mark `thm:410D` `[x]`.
+* Move `.prover-state/issues/thm_410D_substitution.md` to a
+  resolution note in `task_results/cycle_078.md` (or delete it).
+
+### Path A budget warning
+
+If by ~70% of the cycle-time budget you have NOT completed Steps
+1–3 cleanly, **STOP, restore to HEAD (`git restore .`), switch to
+Path B**. Do not commit a partial Path A. The cycle 077 worker
+spent the whole cycle on §410D and ended with sorries — that is
+precisely the failure mode to avoid.
+
+---
+
+## Path B (default for most outcomes) — pivot to `lem:383A`
+
+Take this path if Aristotle did not return both proofs, OR if
+Path A's budget warning fires.
+
+### Target: `lem:383A` — multiplicativity of forest mappings
+
+Textbook statement (Butcher §383):
+
+> Let α and β be multiplicative mappings from the forests to the
+> real numbers. Then αβ is multiplicative.
+
+Entity:
+`extraction/formalization_data/entities/lem_383A.json`. Dependencies:
+`def:381A` (already formalized as
+`OpenMath.Chapter3.Section381.Equivalent`).
+
+### Why this target is right for cycle 078
+
+* Status: unformalized, all dependencies done, no infrastructure
+  blocker.
+* Risk: low. The proof is essentially "ring algebra after unfolding
+  the multiplicativity equation", a few lines.
+* Faithfulness: clean — Butcher's "forest" is a multiset of rooted
+  trees; we already have `RootedTree`
+  (`OpenMath/Chapter3/Section310.lean`, inductive
+  `RootedTree | mk : List RootedTree → RootedTree`).
+* Non-vacuity: trivially provided by the constant function
+  `α : Forest → ℝ` with `α _ := 1`.
+
+### Step 1 — Add `Forest` infrastructure in a new file
+
+Create `OpenMath/Chapter3/Section383.lean`. **Do NOT** modify
+`Section381.lean` or `Section310.lean` beyond the import line of
+the new file.
 
 ```lean
-/-- The formal power series `exp(z) = Σ_n z^n / n!`. Defined
-directly via `PowerSeries.mk` to avoid `Algebra ℚ ℝ` requirements
-of `PowerSeries.exp`. -/
-noncomputable def expPS : PowerSeries ℝ :=
-  PowerSeries.mk fun n => 1 / (Nat.factorial n : ℝ)
+import OpenMath.Chapter3.Section310
+import Mathlib.Data.Multiset.Basic
+
+namespace OpenMath.Chapter3.Section383
+
+open OpenMath.Chapter3.Section310
+
+/-- A *forest* of rooted trees — Butcher §383's underlying object
+for multiplicative mappings. Encoded as a `Multiset RootedTree`
+(unordered, with multiplicities). The empty forest is the unit
+of the multiplicative monoid. -/
+abbrev Forest : Type := Multiset RootedTree
+
+/-- Multiplicative mapping (Butcher §383): a function from the
+forest monoid to ℝ that sends the empty forest to 1 and preserves
+multiset addition (i.e. forest concatenation). -/
+def IsMultiplicative (α : Forest → ℝ) : Prop :=
+  α 0 = 1 ∧ ∀ s t : Forest, α (s + t) = α s * α t
 ```
 
-### D2: define `expKzPS` (the unit `exp(kz)`)
+**Faithfulness note**: Butcher's "forest" is a multiset of rooted
+trees, so `Multiset RootedTree` is the literal encoding. The
+`α 0 = 1` clause is the standard normalization (the empty product
+is 1) implicit in Butcher's exposition. If on inspection of the
+surrounding §383 prose you find Butcher does NOT include the
+empty-forest normalization, drop `α 0 = 1` and adjust the lemma
+proof accordingly — but document the divergence in the cycle 078
+faithfulness check.
+
+### Step 2 — Prove `lem:383A`
 
 ```lean
-/-- The formal power series `exp(k z) = Σ_n k^n z^n / n!`. -/
-noncomputable def expKzPS (k : ℕ) : PowerSeries ℝ :=
-  PowerSeries.mk fun n => (k : ℝ) ^ n / (Nat.factorial n : ℝ)
+/-- Butcher §383 Lemma 383A — pointwise product of multiplicative
+mappings is multiplicative. -/
+theorem multiplicative_mul {α β : Forest → ℝ}
+    (hα : IsMultiplicative α) (hβ : IsMultiplicative β) :
+    IsMultiplicative (fun f => α f * β f) := by
+  refine ⟨?_, ?_⟩
+  · simp [hα.1, hβ.1]
+  · intro s t
+    rw [hα.2 s t, hβ.2 s t]
+    ring
 ```
 
-Sanity helper: `expKzPS 0 = 1` (one-line `simp` proof) — useful for
-edge cases in the unit lemma.
+This should compile in one shot. If it doesn't, the issue is likely
+a definitional unfolding — try `show α (s + t) * β (s + t) = ...`
+to expose the goal, or replace `simp` with `dsimp only` on the
+first sub-goal.
 
-### D3: define `ρPoly`, `σPoly`
+### Step 3 — Non-vacuity witness
+
+CLAUDE.md mandates non-vacuity for new structures/predicates. Add:
 
 ```lean
-/-- **Butcher §410 ρ-polynomial.** `ρ(z) = z^k · α(1/z)` is the
-reverse polynomial of α. With our `α(z) = 1 - Σ_{i=1}^k α_i z^i`,
-this gives `ρ(z) = z^k - Σ_{i=1}^k α_i z^{k-i}`. -/
-noncomputable def ρPoly {k : ℕ} (M : LinearMultistepMethod k) :
-    Polynomial ℝ :=
-  Polynomial.X ^ k -
-    ∑ i : Fin k,
-      Polynomial.C (M.α i.succ) * Polynomial.X ^ (k - (i.val + 1))
-
-/-- **Butcher §410 σ-polynomial.** `σ(z) = z^k · β(1/z) = Σ_{i=0}^k β_i z^{k-i}`. -/
-noncomputable def σPoly {k : ℕ} (M : LinearMultistepMethod k) :
-    Polynomial ℝ :=
-  ∑ i : Fin (k + 1), Polynomial.C (M.β i) * Polynomial.X ^ (k - i.val)
+/-- The constant-1 mapping is multiplicative — non-vacuity witness. -/
+theorem isMultiplicative_const_one :
+    IsMultiplicative (fun _ : Forest => (1 : ℝ)) :=
+  ⟨rfl, fun _ _ => by ring⟩
 ```
 
-Witness lemmas (mirror cycle 074's `αPoly_explicitEuler`,
-`βPoly_explicitEuler`):
+### Step 4 — Bookkeeping
 
-```lean
-theorem ρPoly_explicitEuler : ρPoly explicitEulerLMM = X - 1 := by
-  unfold ρPoly; simp [explicitEulerLMM]
-theorem σPoly_explicitEuler : σPoly explicitEulerLMM = 1 := by
-  unfold σPoly; simp [explicitEulerLMM, Fin.sum_univ_succ]
-```
+* `lake env lean OpenMath/Chapter3/Section383.lean` clean.
+* `lake build OpenMath.Chapter3.Section383` clean.
+* `#print axioms OpenMath.Chapter3.Section383.multiplicative_mul`
+  shows only `[propext, Classical.choice, Quot.sound]` (likely a
+  subset for this purely algebraic proof).
+* Update `extraction/formalization_data/lean_status.json::lem:383A`
+  to `formalized` with
+  `lean_symbol = "OpenMath.Chapter3.Section383.multiplicative_mul"`.
+* Update `plan.md`: change `lem:383A` from `[ ]` to `[x]`.
+* Faithfulness check: write entry in cycle 078 task results
+  quoting Butcher's statement and confirming the Lean type matches.
 
-### D4: define `genFnForward`
+### Path B budget — use leftover time for plan.md cleanup
 
-```lean
-/-- **(ρ, σ)-form generating function (forward sign).**
-`genFnForward M = ρ(exp(z)) - z σ(exp(z))`. -/
-noncomputable def genFnForward {k : ℕ} (M : LinearMultistepMethod k) :
-    PowerSeries ℝ :=
-  (Polynomial.aeval expPS) (ρPoly M)
-    - PowerSeries.X * (Polynomial.aeval expPS) (σPoly M)
-```
+This is intentionally a small cycle. If Steps 1–4 take less than
+half the cycle-time budget, use the remaining time for **plan.md
+bookkeeping cleanup**:
 
-### D5: prove the unit-equivalence (`genFnForward_eq_expKzPS_mul_genFn`)
+* `def:381B` ("Φ-equivalent") is already formalized at
+  `OpenMath/Chapter3/Section381.lean:122` as `PhiEquivalent`, with
+  `lean_status.json` already correct (status `formalized`), but
+  `plan.md` still shows `[ ]`. Update plan.md to `[x]`.
+* `def:381D` ("P-reducible") similarly: already at
+  `OpenMath/Chapter3/Section381.lean:284` as `IsPReducible`,
+  `lean_status.json` correct, `plan.md` shows `[ ]`. Update to `[x]`.
+* Update the progress counter in `plan.md` (currently 46/175). If
+  cycle 078 lands `lem:383A` plus the two stale `[x]` updates, new
+  count is 49/175.
 
-This is the load-bearing lemma. The two natural routes:
+This bookkeeping is real progress (the entities are genuinely
+done; the plan was stale). Do it inside this cycle's commit, not
+as a separate cycle.
 
-* **Route A (preferred — match cycle 075's `thm_410A` style)**: prove
-  the coefficient identity `coeff j (genFnForward M) = (k^? · ⋯)` by
-  unfolding `ρPoly`, `σPoly`, applying `map_sub`/`map_sum`, and using
-  the cycle 074 `coeff_aeval_C_X_pow` lemma per monomial. Then show
-  `coeff j (expKzPS k · genFn M)` equals the same thing via
-  `PowerSeries.coeff_mul` and the closed-form `coeff j (expKzPS k)
-  = k^j / j!`.
-* **Route B**: prove the polynomial reverse identity
-  `ρPoly M = X^k * (αPoly M).reflect k` (or similar), then show
-  `aeval expPS (P.reflect k) = expKzPS k * aeval expNegPS P` for
-  any P with degree ≤ k. This is cleaner conceptually but the Mathlib
-  lemma `Polynomial.aeval_reflect` may not exist as stated — would
-  need to derive it.
+### What NOT to do in Path B
 
-**Recommend Route A.** Direct coefficient unfolding worked for
-`thm_410A` in cycle 074 and is the well-trodden path. Aristotle is
-likely to handle the algebraic-equality core if we batch it right.
+* Do NOT formalize `Multiplicative` as a typeclass on `Forest → ℝ`.
+  Predicate-style is sufficient and matches Butcher.
+* Do NOT introduce a separate `Forest` inductive type when
+  `Multiset RootedTree` is the natural Mathlib encoding.
+* Do NOT touch `OpenMath/Chapter3/Section381.lean` or
+  `OpenMath/Chapter3/Section310.lean`. The new file imports them
+  and stands on its own.
+* Do NOT attempt `lem:383B` ("Associativity of multiplicative
+  forest mappings") or `lem:383C` ("left/right inverses in G_1") in
+  the same cycle. They are the natural next targets but belong in
+  future cycles. One lemma per cycle for safety.
 
-State the identity in a way that lets the proof be modular:
+---
 
-```lean
-/-- **§410C unit equivalence.** `ρ(exp(z)) - z σ(exp(z)) = exp(kz) · genFn M`. -/
-theorem genFnForward_eq_expKzPS_mul_genFn {k : ℕ}
-    (M : LinearMultistepMethod k) :
-    genFnForward M = expKzPS k * genFn M := by
-  ext j
-  -- LHS = coeff j (αPoly M(expPS) - X · βPoly_reverse(expPS))
-  -- RHS = Σ_{i+l=j} k^i/i! · (genFn M).coeff l
-  -- Reduce both to the same closed-form polynomial in k, j.
-  sorry
-```
+## Critically: what NOT to do this cycle (regardless of path)
 
-If Route A's `ext j` proof is heavy, decompose into:
-* `coeff_genFnForward` — closed form for `coeff j (genFnForward M)`,
-  analogous to `thm_410A`.
-* `coeff_expKzPS_mul_genFn` — closed form for the RHS via Cauchy
-  product.
-* The main lemma equates them.
+These are explicit failure modes from cycle 077 and earlier:
 
-### D6: the bridge to `HasOrderAtLeast`
+* **Do NOT commit any unclosed sorry.** Every `theorem`/`lemma` in
+  the commit must compile with no `sorry` in its body. If a
+  sorry-first scaffold doesn't get closed, `git restore` it before
+  commit.
+* **Do NOT retry the §410D substitution sorries with manual proofs**
+  if Aristotle didn't deliver them. The PowerSeries.log gap is real
+  and not closable without dedicated infrastructure (issue file
+  documents this).
+* **Do NOT introduce `axiom` or `constant` declarations.** CLAUDE.md
+  is explicit. The PowerSeries.log gap is NOT a license to
+  axiomatize.
+* **Do NOT raise `maxHeartbeats` above 200000.** Decompose instead.
+* **Do NOT touch `scripts/autonomous_loop.py`.** Loop-maintainer
+  territory; standing issue file
+  `tautology_scanner_false_positives.md` is the canonical
+  recommendation.
+* **Do NOT modify `extraction/raw_text/` or
+  `extraction/formalization_data/entities/`** — both are
+  regenerated. `lean_status.json` and `plan.md` are the editable
+  bookkeeping files.
+* **Do NOT poll Aristotle more than once this cycle.** CLAUDE.md
+  rule. One status check at start; if not delivered, pivot to Path
+  B.
+* **Do NOT rewrite or remove cycle-077-style issue files.** The
+  `thm_410D_substitution.md` issue documents an outstanding
+  blocker; if Path A succeeds, mark it resolved with a pointer in
+  the cycle 078 task results. If Path B is taken, leave the issue
+  file as-is — it remains an open blocker for a future cycle.
 
-```lean
-/-- **Multiplication by `expKzPS k` preserves vanishing of low coefficients.**
-Since `expKzPS k` has constant term 1 (a unit), `coeff j (expKzPS k · g) = 0
-for all j ≤ p` iff `coeff j g = 0 for all j ≤ p`. -/
-theorem coeff_expKzPS_mul_eq_zero_iff {k : ℕ} (g : PowerSeries ℝ) (p : ℕ) :
-    (∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (expKzPS k * g) = 0)
-      ↔ (∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) g = 0) := by
-  -- Forward: induct on j ≤ p. coeff 0 (expKzPS k · g) = 1 · g.coeff 0,
-  -- coeff (j+1) is g.coeff (j+1) + sum of terms involving smaller g.coeff's,
-  -- which all vanish by IH.
-  -- Reverse: if all g coeffs ≤ p vanish, the Cauchy product sum is 0.
-  sorry
-```
+## Faithfulness check reminder (CLAUDE.md mandate)
 
-Then the main theorem:
+Whichever path you take, your `.prover-state/task_results/cycle_078.md`
+must contain a faithfulness check section with:
 
-```lean
-/-- **Butcher §410 Theorem 410C ((ρ, σ)-form order condition).** -/
-theorem thm_410C {k : ℕ} (M : LinearMultistepMethod k) (p : ℕ) :
-    M.HasOrderAtLeast p
-      ↔ ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (genFnForward M) = 0 := by
-  rw [thm_410B]
-  rw [genFnForward_eq_expKzPS_mul_genFn]
-  exact (coeff_expKzPS_mul_eq_zero_iff (genFn M) p).symm
-```
+* The textbook statement (quoted from
+  `extraction/formalization_data/entities/<id>.json`).
+* The Lean statement (quoted from your code).
+* An assertion that the Lean statement captures the textbook
+  meaning (or, if it diverges, a justification — but for both
+  Path A and Path B targets, no divergence should be needed beyond
+  the `α 0 = 1` clause discussed above).
 
-(The `rw` plumbing may want a small reshuffle; the conceptual core is
-`thm:410B` + unit equivalence + unit preservation.)
+## Aristotle policy this cycle
 
-### D7: witnesses
+Path A consumes one Aristotle status check. Path B should NOT
+submit any new Aristotle jobs — the target is small enough to
+prove manually in one cycle. If Path B finishes early and you
+have spare cycle time, you may submit Aristotle jobs for
+`lem:383B` (associativity) or `lem:383C` (left/right inverses in
+G_1) so they're cooking for cycle 079, but DO NOT incorporate the
+results in this cycle's commit. Save the project IDs in
+`.prover-state/aristotle_submissions/cycle_078/project_ids.txt`
+for cycle 079 to pick up.
 
-* `explicitEulerLMM_genFnForward_O_z2` — at `j = 0, 1`, the forward
-  generating function vanishes (consistency restated forward).
-* `explicitEulerLMM_hasOrderAtLeast_one_via_410C` — repackage cycle 075's
-  `explicitEulerLMM_hasOrderAtLeast_one` through `thm_410C`. (1-line
-  via `(thm_410C _ _).mpr`.)
+## Task results format
 
-## Aristotle batch (submit at start of cycle, ~30 min sleep)
+Write to `.prover-state/task_results/cycle_078.md` per the CLAUDE.md
+template, with these specific sections:
 
-Submit a self-contained `cycle_076_410C.lean` to Aristotle covering:
-
-1. `expPS_coeff` — `(PowerSeries.coeff j) expPS = 1 / j!` (1-liner;
-   parallel to `expNegPS_coeff` in cycle 073).
-2. `expKzPS_coeff` — `(PowerSeries.coeff j) (expKzPS k) = k^j / j!`.
-3. `coeff_aeval_C_X_pow_expPS` — analog of cycle 074's
-   `coeff_aeval_C_X_pow` but at `expPS` instead of `expNegPS`:
-   `coeff j (aeval expPS (C c · X^m)) = c · m^j / j!`.
-4. `expPS_pow` — closed form `expPS^m = PowerSeries.mk fun n => m^n / n!`
-   (induction on m; mirror of cycle 074's `expNegPS^m` proof).
-5. `coeff_expKzPS_mul_eq_zero_iff` (D6 bridge).
-
-Routes 1–4 are almost mechanical re-derivations of cycle 073/074 results
-with sign change `(-1)^? → 1`. Route 5 is the bridge lemma; if Aristotle
-struggles, fall back to manual proof via induction on `j ≤ p`.
-
-The substantive identity `genFnForward_eq_expKzPS_mul_genFn` (D5) is
-NOT a great Aristotle target because it's a structural/inductive proof
-across the polynomial sums, not a pure premise-selection win. Prove it
-manually using cycle 075's `thm_410A` pattern (case j = 0; case j = j' + 1
-with `map_sub`/`map_sum` push-throughs).
-
-## What NOT to try
-
-* **Don't** tackle `thm:410D` this cycle. It needs PowerSeries composition
-  (substitute `log(1+z)`) plus invertibility of substitution; Mathlib's
-  `PowerSeries.subst` works but is heavy. After thm:410C lands, cycle 077
-  can take it on with the full §410 forward/backward equivalence in hand.
-* **Don't** use `Mathlib.PowerSeries.exp` — it requires `Algebra ℚ R`
-  which complicates the substitution lemmas. Reuse cycle 073's pattern of
-  defining `expPS`/`expKzPS` directly via `PowerSeries.mk`. (Cycle 074's
-  `expNegPS` is right there at `Section410.lean:139`.)
-* **Don't** use `Polynomial.reverse` — for our αPoly, `natDegree` may
-  be < k if `M.α k = 0`, which makes `reverse` inconsistent. Define
-  `ρPoly`, `σPoly` explicitly via summation as in D3 above.
-  (`Polynomial.reflect` is the degree-aware version, but a direct
-  definition is clearer for this size.)
-* **Don't** try to refactor `genFn` to use the forward sign. Cycle 074
-  and 075 are committed to the backward-sign convention; changing it
-  would break `thm:410A`/`thm:410B`/the bridge lemmas. Define
-  `genFnForward` as a separate object and derive its relationship to
-  `genFn`.
-* **Don't** put `genFnForward` or `ρPoly`/`σPoly` under `Section404`'s
-  namespace. Keep them in §410 (the type `LinearMultistepMethod` lives
-  in §404 but our generating-function objects are §410-specific).
-  `M.HasOrderAtLeast` lives in §404 (cycle 075's design); follow that
-  pattern (already done — don't break it).
-* **Don't** raise `maxHeartbeats`. If `genFnForward_eq_expKzPS_mul_genFn`
-  is heavy, decompose into per-coefficient closed forms (analog of
-  `thm_410A` + a Cauchy-product sum lemma) instead of one big `ext j; simp`.
-* **Don't** introduce `axiom`/`constant`. If `coeff_expKzPS_mul_eq_zero_iff`
-  resists, fall back to a strong-induction proof on `j ≤ p`; the unit
-  property of `expKzPS k` (constant term 1, hence multiplicatively
-  invertible in `PowerSeries`) is the essential fact.
-
-## Faithfulness check (worker MUST run before commit)
-
-For `genFnForward`:
-* Textbook statement: `ρ(exp(z)) − z σ(exp(z))` (statement_text of
-  `thm:410C`).
-* Lean statement: `aeval expPS (ρPoly M) - X · aeval expPS (σPoly M)`.
-* Captures: same content (substitution at `expPS` is the formal
-  power-series version of `_(exp(z))`).
-
-For `ρPoly`, `σPoly`:
-* Textbook: ρ(z) = z^k - α_1 z^{k-1} - ⋯ - α_k, σ(z) = β_0 z^k + ⋯ + β_k
-  (Butcher §410, p. 351, in (ρ, σ) notation, with Butcher's α_0 = 1).
-* Lean: matches D3 above.
-* Note: Butcher's α_0 = 1 corresponds to our `M.α 0 = -1`; the sign
-  is absorbed in the `αPoly = 1 - Σ ...` definition (cycle 074
-  Section410 header). Our `αPoly` IS Butcher's α(z), so our `ρPoly`
-  IS Butcher's ρ(z) = z^k · α(1/z).
-
-For `thm_410C`:
-* Textbook: "[α, β] LMM has order p iff ρ(exp(z)) - z σ(exp(z)) = O(z^{p+1})".
-* Lean: `M.HasOrderAtLeast p ↔ ∀ j ≤ p, coeff j (genFnForward M) = 0`.
-* Captures: same content. The `O(z^{p+1})` is the standard formal
-  power-series ⇔ "first p+1 coefficients vanish" (same encoding choice
-  as `thm_410B`).
-
-For `genFnForward_eq_expKzPS_mul_genFn`:
-* This is a derived algebraic identity, not a textbook entity. Tautology
-  check: PASS — neither side syntactically equals a hypothesis.
-* Identity check: the proof unfolds both sides and identifies them
-  via Cauchy product algebra. Substantive.
-
-## Pre-commit final checks
-
-* `lake env lean OpenMath/Chapter4/Section410.lean` — clean compile.
-* `#print axioms thm_410C` — must be `[propext, Classical.choice, Quot.sound]`.
-  If `sorryAx` shows up, run `lake build OpenMath.Chapter4.Section410`
-  to refresh `.olean` (per cycle 072 lesson).
-* `lean_status.json::thm:410C` → `formalized`, with `lean_file` and
-  `lean_symbol` fields populated.
-* `plan.md::thm:410C` from `[ ]` to `[x]`. Bump progress 45 → 46.
-
-## Suggested follow-on for cycle 077
-
-`thm:410D` — log-form `α((1+z)⁻¹) − log(1+z)·β((1+z)⁻¹) = O(z^{p+1})`.
-With cycle 076's `expPS`/`expKzPS` infrastructure landing, the natural
-approach is to define:
-
-* `logOnePlusPS` — `Σ_{n≥1} (-1)^{n-1} z^n / n`.
-* `oneOverOnePlusPS` — `Σ_n (-1)^n z^n` (geometric).
-
-and prove the substitution identity that under the formal identity
-`exp(-log(1+z)) = (1+z)^{-1}`, the cycle 075/076 results transfer.
-
-This is a 1–2 cycle deliverable and closes the §410 cluster.
-
-## Cycle deliverable bar
-
-Minimum acceptable: D1–D4 land (definitions + witnesses) and the
-unit-equivalence sub-lemma `genFnForward_eq_expKzPS_mul_genFn` is
-stated as `sorry`-first, with at least 2 of the Aristotle-batched
-sub-lemmas (D6 bridge, expPS coefficient lemma) closed. Issue file
-documents what blocks the main `thm_410C`.
-
-Target: full closure of `thm:410C` with 0 sorries and standard axioms.
-
-If the unit-equivalence proof balloons (>200 lines or `maxHeartbeats`
-trouble), decompose along the cycle 074 `thm_410A` pattern: per-coeff
-closed form + α-side identity + β-side identity + ring/algebra
-finisher.
+* **Path taken**: A or B (with one-line justification).
+* **Aristotle status report**: the result of the project 18504be5
+  status check (regardless of path).
+* **Worked on**: the entity ID closed (or stale plan entries
+  cleaned).
+* **Approach**: what you tried, what compiled, what didn't.
+* **Result**: SUCCESS / FAILED + per-target axiom-check
+  confirmation.
+* **Faithfulness check**: per the section above.
+* **Dead ends**: anything that didn't compile and how you worked
+  around it.
+* **Discovery**: anything useful learned for future cycles.
+* **Suggested next approach**: what cycle 079 should target. If
+  Path A succeeded, suggest `lem:441A` or another §441 entry (now
+  unblocked by §410D). If Path B succeeded, suggest `lem:383B`
+  (the natural next §383 lemma) or `lem:383C`.

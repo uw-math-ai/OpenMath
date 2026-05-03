@@ -134,8 +134,8 @@
   "def:402A": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.IsConvergent",
-    "status": "formalized",
-    "notes": "Strengthened in cycle 068 beyond the textbook quote: joint-Lipschitz `LipschitzWith L (Function.uncurry f)` (vs textbook `LipschitzInSecond`), global `ContDiff ℝ 1 yex`, and a global trajectory bound `∀ t, |f t (yex t)| ≤ M_bound`. See `.prover-state/issues/is_convergent_strengthened.md` for the faithfulness deviation."
+    "notes": "Strengthened in cycle 068 beyond the textbook quote: joint-Lipschitz `LipschitzWith L (Function.uncurry f)` (vs textbook `LipschitzInSecond`), global `ContDiff \u211d 1 yex`, and a global trajectory bound `\u2200 t, |f t (yex t)| \u2264 M_bound`. See `.prover-state/issues/is_convergent_strengthened.md` for the faithfulness deviation.",
+    "status": "formalized"
   },
   "def:403A": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
@@ -303,9 +303,10 @@
     "status": "unformalized"
   },
   "lem:383A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section383.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section383.multiplicative_conv",
+    "notes": "Cycle 078. Formalised via convolution product (eq 383a) on Multiset RootedTree. Required proving auxiliary Mathlib lemma _PowersetAdd.powerset_add (not in Mathlib). Forest := Multiset RootedTree; convolution defined via S.powerset; the (S+T).powerset = (S.powerset \u00d7\u02e2 T.powerset).map (\u00b7 + \u00b7) identity is the load-bearing combinatorial step. Axioms = [propext, Classical.choice, Quot.sound]. Non-vacuity witness: isMultiplicative_const_one.",
+    "status": "formalized"
   },
   "lem:383B": {
     "lean_file": null,
@@ -740,26 +741,26 @@
   "thm:406D": {
     "lean_file": "OpenMath/Chapter4/Section404.lean",
     "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.stable_consistent_isConvergent",
-    "status": "formalized",
-    "notes": "Closed in cycle 068 via the cycle 064-067 non-autonomous lift of the §406B + §406D helper chain. The `IsConvergent` predicate (def:402A) was strengthened in cycle 068 (joint-Lipschitz on `Function.uncurry f`, global `ContDiff ℝ 1 yex`, global trajectory bound `M_bound`); see `.prover-state/issues/is_convergent_strengthened.md` for the faithfulness deviation."
+    "notes": "Closed in cycle 068 via the cycle 064-067 non-autonomous lift of the \u00a7406B + \u00a7406D helper chain. The `IsConvergent` predicate (def:402A) was strengthened in cycle 068 (joint-Lipschitz on `Function.uncurry f`, global `ContDiff \u211d 1 yex`, global trajectory bound `M_bound`); see `.prover-state/issues/is_convergent_strengthened.md` for the faithfulness deviation.",
+    "status": "formalized"
   },
   "thm:410A": {
     "lean_file": "OpenMath/Chapter4/Section410.lean",
     "lean_symbol": "OpenMath.Chapter4.Section410.thm_410A",
-    "status": "formalized",
-    "notes": "Closed in cycle 074. Section410 infrastructure (αPoly, βPoly, C, expNegPS, 5 Aristotle helpers, 7 manual sub-lemmas) was authored in cycle 073 but reverted because thm:410A's general-j case carried a sorry. Cycle 074 closes the sorry via map_sub/map_one/map_sum push-throughs of `Polynomial.aeval expNegPS` and `PowerSeries.coeff (j+1)`, applies coeff_aeval_C_X_pow per monomial, and matches the closed-form C M (j+1) definitionally (rfl). The β side first peels off the leading X via PowerSeries.coeff_succ_X_mul. Axioms: [propext, Classical.choice, Quot.sound]."
+    "notes": "Closed in cycle 074. Section410 infrastructure (\u03b1Poly, \u03b2Poly, C, expNegPS, 5 Aristotle helpers, 7 manual sub-lemmas) was authored in cycle 073 but reverted because thm:410A's general-j case carried a sorry. Cycle 074 closes the sorry via map_sub/map_one/map_sum push-throughs of `Polynomial.aeval expNegPS` and `PowerSeries.coeff (j+1)`, applies coeff_aeval_C_X_pow per monomial, and matches the closed-form C M (j+1) definitionally (rfl). The \u03b2 side first peels off the leading X via PowerSeries.coeff_succ_X_mul. Axioms: [propext, Classical.choice, Quot.sound].",
+    "status": "formalized"
   },
   "thm:410B": {
     "lean_file": "OpenMath/Chapter4/Section410.lean",
     "lean_symbol": "OpenMath.Chapter4.Section410.thm_410B",
-    "status": "formalized",
-    "notes": "Closed in cycle 075 as a packaging of thm:410A (cycle 074) plus the new HasOrderAtLeast predicate (∀ j ≤ p, C M j = 0). Per-coefficient form `∀ j ≤ p, coeff j (genFn M) = 0` — the textbook's `O(z^{p+1})` operationalised for formal power series. Sign convention is backward (matches def:406A and §410A); textbook writes forward but the two are equivalent under z ↦ -z, documented in docstring. Cycle 075 also lands the §410↔§404 consistency bridge `C_one_eq_zero_iff_isConsistent`, the `genFn` abbreviation, and three witnesses (explicitEulerLMM has order ≥ 0 and ≥ 1, but C 2 ≠ 0). Bridge proof was Aristotle-suggested (`simp [C, ...]; constructor <;> norm_num <;> linarith`). Axioms: [propext, Classical.choice, Quot.sound]."
+    "notes": "Closed in cycle 075 as a packaging of thm:410A (cycle 074) plus the new HasOrderAtLeast predicate (\u2200 j \u2264 p, C M j = 0). Per-coefficient form `\u2200 j \u2264 p, coeff j (genFn M) = 0` \u2014 the textbook's `O(z^{p+1})` operationalised for formal power series. Sign convention is backward (matches def:406A and \u00a7410A); textbook writes forward but the two are equivalent under z \u21a6 -z, documented in docstring. Cycle 075 also lands the \u00a7410\u2194\u00a7404 consistency bridge `C_one_eq_zero_iff_isConsistent`, the `genFn` abbreviation, and three witnesses (explicitEulerLMM has order \u2265 0 and \u2265 1, but C 2 \u2260 0). Bridge proof was Aristotle-suggested (`simp [C, ...]; constructor <;> norm_num <;> linarith`). Axioms: [propext, Classical.choice, Quot.sound].",
+    "status": "formalized"
   },
   "thm:410C": {
     "lean_file": "OpenMath/Chapter4/Section410.lean",
     "lean_symbol": "OpenMath.Chapter4.Section410.thm_410C",
-    "status": "formalized",
-    "notes": "Closed in cycle 076 as a packaging of thm:410B (cycle 075) plus the §410C unit equivalence `genFnForward M = expKzPS k * genFn M`. New §410C infrastructure: `expPS`, `expKzPS k` (forward and rescaled exp power series), `ρPoly`/`σPoly` (Butcher's reverse polynomials of α/β), `genFnForward M = aeval expPS (ρPoly M) - X · aeval expPS (σPoly M)`. The unit equivalence reduces per-monomial to `expPS^(k - m) = expKzPS k · expNegPS^m` for `m ≤ k`, which follows from `expPS^k = expKzPS k` (via Mathlib's `exp_pow_eq_rescale_exp`) and `expPS · expNegPS = 1` (via Mathlib's `exp_mul_exp_neg_eq_one`). Bridge to PowerSeries.exp via `expPS = PowerSeries.exp ℝ` (algebraMap ℚ ℝ collapses to cast). The unit-preservation iff `coeff_expKzPS_mul_eq_zero_iff` is proved manually by induction on p (forward: isolate the (0, p+1) Cauchy term; reverse: every Cauchy term has b ≤ j ≤ p so vanishes). Cycle 076 also lands two witnesses: `explicitEulerLMM_genFnForward_O_z2` and `explicitEulerLMM_hasOrderAtLeast_one_via_410C`. Aristotle (project 7fa8918d) independently solved all 5 helpers but my Mathlib-bridged versions were already in place. Axioms: [propext, Classical.choice, Quot.sound]."
+    "notes": "Closed in cycle 076 as a packaging of thm:410B (cycle 075) plus the \u00a7410C unit equivalence `genFnForward M = expKzPS k * genFn M`. New \u00a7410C infrastructure: `expPS`, `expKzPS k` (forward and rescaled exp power series), `\u03c1Poly`/`\u03c3Poly` (Butcher's reverse polynomials of \u03b1/\u03b2), `genFnForward M = aeval expPS (\u03c1Poly M) - X \u00b7 aeval expPS (\u03c3Poly M)`. The unit equivalence reduces per-monomial to `expPS^(k - m) = expKzPS k \u00b7 expNegPS^m` for `m \u2264 k`, which follows from `expPS^k = expKzPS k` (via Mathlib's `exp_pow_eq_rescale_exp`) and `expPS \u00b7 expNegPS = 1` (via Mathlib's `exp_mul_exp_neg_eq_one`). Bridge to PowerSeries.exp via `expPS = PowerSeries.exp \u211d` (algebraMap \u211a \u211d collapses to cast). The unit-preservation iff `coeff_expKzPS_mul_eq_zero_iff` is proved manually by induction on p (forward: isolate the (0, p+1) Cauchy term; reverse: every Cauchy term has b \u2264 j \u2264 p so vanishes). Cycle 076 also lands two witnesses: `explicitEulerLMM_genFnForward_O_z2` and `explicitEulerLMM_hasOrderAtLeast_one_via_410C`. Aristotle (project 7fa8918d) independently solved all 5 helpers but my Mathlib-bridged versions were already in place. Axioms: [propext, Classical.choice, Quot.sound].",
+    "status": "formalized"
   },
   "thm:410D": {
     "lean_file": null,

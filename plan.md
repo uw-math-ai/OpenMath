@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 46 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 50 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -111,7 +111,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:311A` **The Taylor expansion of the exact solution** (§311)
 - [ ] `lem:312B` **Elementary Weight Summation Formula** (§312)
 - [ ] `lem:313A` **The Taylor expansion of the approximate solution** (§313)
-- [ ] `lem:383A` **The Runge–Kutta group** (§383)
+- [x] `lem:383A` **The Runge–Kutta group** (§383)
 - [ ] `thm:317A` **Independence of elementary weights** (§317)
 - [ ] `thm:352D` **Pade approximation recurrence relation** (§352)
 - [ ] `thm:388B` **Equivalence of Additive and Multiplicative Perturbations** (§388)
@@ -187,7 +187,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:422C` **Convergence of Linear Multistep Methods** (§422)
 - [ ] `lem:441A` **Maximum order for a convergent k-step method** (§441)
 - [x] `thm:405B` **Convergent linear multistep method is preconsistent** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 069)
-- [ ] `thm:406D` **Convergence from Stability and Consistency** (§406)
+- [x] `thm:406D` **Convergence from Stability and Consistency** (§406)
 - [ ] `thm:410D` **Order Condition for Linear Multistep Methods (410D)** (§410)
 - [ ] `thm:443A` **Order arrows for linear multistep methods** (§441)
 - [ ] `thm:443B` **A stability error constant upper bound** (§441)
