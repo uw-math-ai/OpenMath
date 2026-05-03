@@ -188,9 +188,9 @@
     "status": "formalized"
   },
   "def:512A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section512.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsConvergent",
+    "status": "formalized"
   },
   "def:520A": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
