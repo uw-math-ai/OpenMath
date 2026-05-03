@@ -1961,4 +1961,40 @@ theorem D_mul_toGLM_charpoly_eval_one_concrete_of_bdf
   rw [hBetaSum]
   ring
 
+/-- §521 Step D.10a — Constant-term evaluation of `rowFAlphaPoly`
+collapses to the single `l = 0` summand of the residual decomposition.
+The cycle 687 `rowFAlphaPoly_eq_residual_sum` expresses
+`rowFAlphaPoly m = ∑ l : Fin s, rowFAlphaResidual m l * X^l`; at
+`X = 0`, `0^l = 0` for `l ≥ 1`, leaving only the `l = 0` term whose
+`X^0` factor is `1`. The `rowFAlphaResidual` evaluation itself
+(`Matrix.vecMul` against `charmatrix.adjugate * map C`) is left
+abstract — that hard computation is for a future cycle. -/
+theorem rowFAlphaPoly_eval_zero_eq_residual_zero
+    (m : LMM s) (hs : 0 < s) :
+    (rowFAlphaPoly m).eval 0 =
+      (rowFAlphaResidual m ⟨0, hs⟩).eval 0 := by
+  rw [rowFAlphaPoly_eq_residual_sum]
+  rw [Polynomial.eval_finset_sum]
+  rw [Finset.sum_eq_single (⟨0, hs⟩ : Fin s)]
+  · simp
+  · intro k _ hk
+    have hk' : (k : ℕ) ≠ 0 := fun h => hk (Fin.ext h)
+    simp [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X,
+      zero_pow hk']
+  · intro h
+    exact absurd (Finset.mem_univ _) h
+
+/-- §521 Step D.10b — Unit-circle evaluation of `rowFAlphaPoly`. All
+`1^l = 1` factors collapse, leaving `∑ l : Fin s, (rowFAlphaResidual m l).eval 1`.
+Companion to `rowFAlphaPoly_eval_zero_eq_residual_zero` for the
+unit-disk boundary argument. No `s ≥ 1` hypothesis needed. -/
+theorem rowFAlphaPoly_eval_one_eq_residual_sum (m : LMM s) :
+    (rowFAlphaPoly m).eval 1 =
+      ∑ l : Fin s, (rowFAlphaResidual m l).eval 1 := by
+  rw [rowFAlphaPoly_eq_residual_sum]
+  rw [Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl ?_
+  intro l _
+  simp [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X]
+
 end LMM
