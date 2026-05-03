@@ -2246,4 +2246,34 @@ theorem D_mul_toGLM_charpoly_eval_one_collapsed_of_bdf
     exact rowFAlphaResidual_eval_one_of_bdf_eq_zero m hbdf l
   rw [hSum]; ring
 
+/-- §521 Step E.2 — Under BDF, β(castSucc l) = 0 for all l : Fin s,
+so the bracketed sum in E.1 collapses to a single term. -/
+theorem D_mul_toGLM_charpoly_eval_one_reduced_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        - z * ((m.β (Fin.last s) : ℝ) : ℂ) *
+            ∑ l : Fin s, ((m.α l.castSucc : ℝ) : ℂ)
+        - (rowYQuot m).eval 1 *
+            (z * ((m.β (Fin.last s) : ℝ) : ℂ)) := by
+  rw [D_mul_toGLM_charpoly_eval_one_collapsed_of_bdf m hbdf hz hs]
+  have hβSum :
+      ∑ l : Fin s,
+          ( ((m.β l.castSucc : ℝ) : ℂ)
+            - ((m.β (Fin.last s) : ℝ) : ℂ) *
+              ((m.α l.castSucc : ℝ) : ℂ) )
+        = -((m.β (Fin.last s) : ℝ) : ℂ) *
+            ∑ l : Fin s, ((m.α l.castSucc : ℝ) : ℂ) := by
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun l _ => ?_)
+    have hβ : m.β (Fin.castSucc l) = 0 :=
+      hbdf _ (Fin.castSucc_lt_last l).ne
+    rw [hβ]
+    push_cast
+    ring
+  rw [hβSum]; ring
+
 end LMM
