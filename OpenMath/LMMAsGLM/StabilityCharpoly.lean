@@ -1258,4 +1258,161 @@ theorem rowFNamedSum_degree_lt (m : LMM s) :
     rw [h2s]
     exact WithBot.add_lt_add_left WithBot.coe_ne_bot hβ
 
+/-- §521 Step C.12a — `D · charpoly = X^s · (D · PY(0).charpoly) − residual`.
+
+This lifts the BDF-only `D_mul_toGLM_charpoly_eq_X_pow_mul_active_of_bdf`
+(cycle 668) to a general `s`-step LMM by absorbing the cycle 688 named
+consolidated charpoly identity. Multiplying the named form by
+`Polynomial.C D` collapses the rank-one `Polynomial.C (1/D)` denominator
+to leave the residual as a clean subtraction with no division.
+
+NOTE: The active stability polynomial `activeStabilityPolyPoly m z`
+unfolds to `D • (toGLM_stabilityMatrixPY m z).charpoly` (using `PY(z)`),
+but the explicit form's structural decomposition lands on
+`(toGLM_stabilityMatrixPY m 0).charpoly` (using `PY(0)`); these differ
+in general because `PY(z)` rescales the bottom row by `1/D`. So the
+general headline below is naturally stated with `PY(0).charpoly`. The
+bridge to `activeStabilityPolyPoly` will need a separate lemma relating
+`C D * PY(z).charpoly` to `C D * PY(0).charpoly` modulo a residual
+contribution. -/
+theorem D_mul_toGLM_charpoly_eq_X_pow_mul_PY0_plus_residual
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        (m.toGLM.stabilityMatrix z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s *
+          (Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+            (toGLM_stabilityMatrixPY m 0).charpoly) -
+        ( rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s *
+            Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+        + ( rowFAlphaPoly m +
+              (toGLM_stabilityMatrixPY m 0).charpoly *
+                rowFBetaPoly m ) *
+            Polynomial.C z ) := by
+  rw [toGLM_stabilityMatrix_charpoly_named m hz hs]
+  have hCD :
+      Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        Polynomial.C (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) = 1 := by
+    rw [← Polynomial.C_mul, mul_one_div, div_self hz, Polynomial.C_1]
+  linear_combination
+    -hCD * ( rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s *
+              Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+            + ( rowFAlphaPoly m +
+                  (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m ) *
+                Polynomial.C z )
+
+/-- §521 Step C.12 helper — Degree bound for `rowYQuot`. The defining
+determinant has one row replaced by a `Polynomial.C`-valued row (degree
+≤ 0); the remaining `s - 1` rows are charmatrix rows (entry-wise
+natDegree ≤ 1). The expansion `Matrix.det_apply` then yields total
+natDegree `≤ s - 1`, hence degree `< s`. The `s = 0` case is captured
+by `(0 : Polynomial ℂ).degree = ⊥ < 0`. -/
+private theorem rowYQuot_natDegree_le (m : LMM s) :
+    (rowYQuot m).natDegree ≤ s - 1 := by
+  classical
+  unfold rowYQuot
+  by_cases hs0 : s = 0
+  · subst hs0
+    rw [dif_pos rfl]
+    simp
+  · rw [dif_neg hs0]
+    have hspos : 0 < s := Nat.pos_of_ne_zero hs0
+    rw [Matrix.det_apply]
+    refine (Polynomial.natDegree_sum_le _ _).trans ?_
+    rw [Finset.fold_max_le]
+    refine ⟨Nat.zero_le _, fun σ _ => ?_⟩
+    refine (Polynomial.natDegree_smul_le _ _).trans ?_
+    refine (Polynomial.natDegree_prod_le _ _).trans ?_
+    calc ∑ k : Fin s,
+            (((toGLM_stabilityMatrixPY m 0).charmatrix.updateRow
+                ⟨s - 1, by omega⟩
+                (fun k' => Polynomial.C ((-m.α (Fin.castSucc k') : ℝ) : ℂ)))
+              (σ k) k).natDegree
+        ≤ ∑ k : Fin s, if σ k = ⟨s - 1, by omega⟩ then 0 else 1 := by
+            refine Finset.sum_le_sum (fun k _ => ?_)
+            by_cases h : σ k = ⟨s - 1, by omega⟩
+            · rw [if_pos h, Matrix.updateRow_apply, if_pos h]
+              simp [Polynomial.natDegree_C]
+            · rw [if_neg h, Matrix.updateRow_apply, if_neg h]
+              refine (Matrix.charmatrix_apply_natDegree_le _ _).trans ?_
+              split_ifs <;> simp
+      _ = s - 1 := by
+            rw [Finset.sum_ite, Finset.sum_const_zero, zero_add, Finset.sum_const,
+                smul_eq_mul, mul_one]
+            have h : (Finset.univ.filter
+                        (fun k : Fin s => σ k ≠ ⟨s - 1, by omega⟩))
+                  = Finset.univ.erase (σ.symm ⟨s - 1, by omega⟩) := by
+              ext k
+              simp [Finset.mem_filter, Finset.mem_erase,
+                    Equiv.eq_symm_apply (e := σ)]
+            rw [h, Finset.card_erase_of_mem (Finset.mem_univ _),
+                Finset.card_univ, Fintype.card_fin]
+
+/-- §521 Step C.12 helper — Degree wrapper around `rowYQuot_natDegree_le`. -/
+theorem rowYQuot_degree_lt (m : LMM s) :
+    (rowYQuot m).degree < (s : WithBot ℕ) := by
+  classical
+  by_cases hs0 : s = 0
+  · subst hs0
+    unfold rowYQuot
+    rw [dif_pos rfl, Polynomial.degree_zero]
+    exact WithBot.bot_lt_coe _
+  · have hspos : 0 < s := Nat.pos_of_ne_zero hs0
+    refine Polynomial.degree_le_natDegree.trans_lt ?_
+    have hnd : (rowYQuot m).natDegree ≤ s - 1 := rowYQuot_natDegree_le m
+    exact_mod_cast Nat.lt_of_le_of_lt hnd (by omega : s - 1 < s)
+
+/-- §521 Step C.12b — Combined degree bound for the full residual on the
+RHS of `D_mul_toGLM_charpoly_eq_X_pow_mul_PY0_plus_residual`. The residual
+splits into two summands:
+
+* `rowYQuot · X^s · C(z β_last)`, with `rowYQuot` of degree `< s`,
+  `X^s` of degree `s`, and `C` factor of degree `≤ 0`, total `< 2 s`.
+* `(rowFAlphaPoly + PY(0).charpoly · rowFBetaPoly) · C z`, with the
+  inner sum bounded by `rowFNamedSum_degree_lt` (`< 2 s`) and `C z` of
+  degree `≤ 0`, total `< 2 s`. -/
+theorem charpoly_residual_degree_lt
+    (m : LMM s) (z : ℂ) :
+    ( rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s *
+        Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+    + ( rowFAlphaPoly m +
+          (toGLM_stabilityMatrixPY m 0).charpoly *
+            rowFBetaPoly m ) *
+        Polynomial.C z ).degree < ((2 * s : ℕ) : WithBot ℕ) := by
+  refine (Polynomial.degree_add_le _ _).trans_lt ?_
+  refine max_lt ?_ ?_
+  · -- rowYQuot * X^s * C(zβ): degree < s + s = 2s.
+    refine (Polynomial.degree_mul_le _ _).trans_lt ?_
+    have hC : (Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))).degree
+        ≤ (0 : WithBot ℕ) := Polynomial.degree_C_le
+    have hY : (rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s).degree
+        < ((2 * s : ℕ) : WithBot ℕ) := by
+      refine (Polynomial.degree_mul_le _ _).trans_lt ?_
+      rw [Polynomial.degree_X_pow]
+      have hYQ : (rowYQuot m).degree < (s : WithBot ℕ) := rowYQuot_degree_lt m
+      have h2s : ((2 * s : ℕ) : WithBot ℕ) = (s : WithBot ℕ) + (s : WithBot ℕ) := by
+        push_cast; ring
+      rw [h2s]
+      exact WithBot.add_lt_add_right (WithBot.coe_ne_bot) hYQ
+    calc (rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s).degree
+            + (Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))).degree
+        ≤ (rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s).degree + 0 :=
+            add_le_add (le_refl _) hC
+      _ = (rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s).degree := by simp
+      _ < ((2 * s : ℕ) : WithBot ℕ) := hY
+  · -- (rowFAlphaPoly + PY * rowFBetaPoly) * C z: degree < 2s.
+    refine (Polynomial.degree_mul_le _ _).trans_lt ?_
+    have hC : (Polynomial.C z).degree ≤ (0 : WithBot ℕ) := Polynomial.degree_C_le
+    have hsum := rowFNamedSum_degree_lt m
+    calc ( rowFAlphaPoly m +
+            (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m ).degree
+            + (Polynomial.C z).degree
+        ≤ ( rowFAlphaPoly m +
+              (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m ).degree
+                + 0 :=
+            add_le_add (le_refl _) hC
+      _ = ( rowFAlphaPoly m +
+              (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m ).degree := by simp
+      _ < ((2 * s : ℕ) : WithBot ℕ) := hsum
+
 end LMM
