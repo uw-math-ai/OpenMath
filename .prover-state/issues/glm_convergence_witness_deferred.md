@@ -1,5 +1,16 @@
 # Issue: Concrete GLM convergence witness deferred
 
+## Cycle 092 update
+
+Cycle 092 repaired the φ quantifier in `def:512A` from existential
+to universal (`∃ φ` → `∀ φ`), aligning with the LMM analog at
+`OpenMath/Chapter4/Section404.lean:333–354` and enabling the
+cycle-093 §B work to construct φ explicitly per Butcher's §513
+proof. The deferral itself remains in force: a concrete
+`_ : explicitEulerGLM.IsConvergent` still requires `thm:515D` (or
+the path-B trivial-IVP slice). The repair only changed the shape
+of the universal quantification, not the deferred witness.
+
 ## Blocker
 
 `def:512A` (Definition 512A — convergence of a general linear method)

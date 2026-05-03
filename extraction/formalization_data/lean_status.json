@@ -190,7 +190,8 @@
   "def:512A": {
     "lean_file": "OpenMath/Chapter5/Section512.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsConvergent",
-    "status": "formalized"
+    "status": "formalized",
+    "notes": "Cycle 092 repaired the φ quantifier from existential to universal (faithfulness fix; the textbook proof of thm:513A constructs its own bad starting procedure)."
   },
   "def:520A": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
@@ -806,9 +807,10 @@
     "status": "unformalized"
   },
   "thm:513A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section513.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.convergent_isStable",
+    "status": "partial",
+    "notes": "Cycle 092 sorry-first scaffold; main theorem and 2 helpers (unit_vector_witness_of_not_stable, unbounded_zero_iterate_contra) deferred to cycle 093. Helpers runningMaxNorm family + glmZeroIterate proved."
   },
   "thm:514A": {
     "lean_file": null,

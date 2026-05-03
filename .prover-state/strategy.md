@@ -1,421 +1,467 @@
-# Cycle 091 Strategy — formalize `def:512A` (convergent GLM)
+# Cycle 092 Strategy — repair `def:512A` φ-encoding, then sorry-first scaffold `thm:513A`
+
+## Decision (one sentence)
+
+**Two deliverables this cycle, in this order.** First, repair a
+faithfulness oversight in cycle 091's `def:512A` (the φ
+quantification is `∃` but should be `∀`); then sorry-first scaffold
+`thm:513A` (`M.IsConvergent → M.IsStable`) and close the
+infrastructure helpers.
 
 ## Target
 
-`def:512A` — **convergent (general linear method)**, Butcher §512, p. 409.
+* **Priority 0 (faithfulness fix)** — `def:512A`'s `∃ φ` must
+  become `∀ φ`. See §A below.
+* **Priority 1 (next-up entity)** — `thm:513A` (Butcher §513,
+  p. 409) — *"A general linear method (A, U, B, V) is convergent
+  only if it is stable."* New file
+  `OpenMath/Chapter5/Section513.lean`. See §B below.
+* **Priority 2 (Aristotle batch)** — five infrastructure helpers
+  needed by §B. Submit at cycle start, sleep 30 min per CLAUDE.md.
+  See §C below.
 
-This is the GLM analogue of `def:402A` (convergent LMM), formalized in
-cycle 038 as
-`OpenMath.Chapter4.Section404.LinearMultistepMethod.IsConvergent`.
+## A. Priority 0 — repair `def:512A` (Section512.lean:132)
 
-**Why this entity now.** Cycle 090's worker recommended the §514/§515
-convergence thread (necessity of stability/consistency, sufficiency).
-Inspecting the topo order in `plan.md` and
-`extraction/formalization_data/entities/def_512A.json` confirms that
-**`def:512A` is the immediate prerequisite** of every entity in that
-thread:
+### Diagnosis
 
-```
-dependents of def:512A:
-  thm:513A   — necessity of stability
-  thm:514A   — necessity of consistency
-  lem:515B   — stability+consistency ⇒ convergence helper
-  thm:515D   — stability+consistency ⇒ convergence
-  def:542A
-```
-
-Without `def:512A` formalized, none of these can be stated. So
-cycle 091's job is to land the definition + a `IsGLMSolution`
-recurrence predicate + sanity helpers, mirroring the cycle 038 LMM
-deliverable.
-
-## Aristotle preflight
-
-**No pending Aristotle results** as of the start of this cycle. Before
-manual proof, batch-submit the helper lemmas listed in §"Aristotle
-batch" below. Then proceed to manual proof while waiting (per
-CLAUDE.md: one 30-min sleep, then check once).
-
-## File placement
-
-Create a new file `OpenMath/Chapter5/Section512.lean`. Do **not** add
-to `Section510.lean` (which holds §510A/B/C only) or to
-`Section520.lean` (which holds the stability theory of §52x).
-
-This mirrors the chapter's textbook structure (§512 is a distinct
-subsection — "Definition of convergence"), and parallels the way
-Chapter 4 separated §402 / §404 / §405 / §406 / §410 into one file
-per subsection. We choose the cleaner per-subsection split here
-because §512 has a substantial recurrence predicate (`IsGLMSolution`)
-that does not belong in §510.
-
-## Imports (in this order)
+Cycle 091's `IsConvergent` (`Section512.lean:132–148`) reads:
 
 ```lean
-import Mathlib.Topology.Algebra.Order.Filter
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
-import Mathlib.Topology.MetricSpace.Lipschitz
-import OpenMath.Chapter5.Section510
-```
-
-`Section510` brings the `GeneralLinearMethod` structure and the four
-existing predicates (`IsPreconsistent`, `IsStable`, `IsConsistent`).
-The other imports cover `Filter.Tendsto`, `LipschitzWith`, and
-`HasDerivAt`. Verify with `lean_build` after the file lands; do not
-trial-and-error the import list.
-
-## Encoding plan
-
-### Step 1 — `IsGLMSolution` (the GLM iteration recurrence)
-
-The textbook defines (Butcher §511) the GLM step as: given input
-vector `y^{[n-1]} ∈ ℝ^r`, the internal stages `Y_i^{[n]}` and outputs
-`y_i^{[n]}` satisfy
-
-```
-Y_i^{[n]} = Σ_j a_{ij} · h · f(Y_j^{[n]}) + Σ_j u_{ij} · y_j^{[n-1]}
-y_i^{[n]} = Σ_j b_{ij} · h · f(Y_j^{[n]}) + Σ_j v_{ij} · y_j^{[n-1]}
-```
-
-For autonomous `f : ℝ → ℝ` (matching `def:512A`'s autonomous IVP
-`y'(x) = f(y(x))`), encode this as a **per-step existential** over
-the stage tuple `Y : Fin s → ℝ`:
-
-```lean
-/-- The sequence `y_seq : ℕ → Fin r → ℝ` is a GLM iteration of `M`
-with stepsize `h` and autonomous RHS `f`, starting from `y_seq 0`,
-if at every step `n` there exist internal stages `Y : Fin s → ℝ`
-satisfying the implicit stage equations and producing
-`y_seq (n+1)` via the output equations. -/
-def GeneralLinearMethod.IsGLMSolution {s r : ℕ}
-    (M : GeneralLinearMethod s r) (h : ℝ) (f : ℝ → ℝ)
-    (y_seq : ℕ → Fin r → ℝ) : Prop :=
-  ∀ n : ℕ, ∃ Y : Fin s → ℝ,
-    (∀ i, Y i = (∑ j, M.A i j * (h * f (Y j)))
-                + (∑ j, M.U i j * y_seq n j))
-    ∧ (∀ i, y_seq (n + 1) i = (∑ j, M.B i j * (h * f (Y j)))
-                              + (∑ j, M.V i j * y_seq n j))
-```
-
-Existential per step (not a single existential over the whole stage
-history) is the right encoding because the stage tuple `Y` at step
-`n+1` depends only on `y_seq n`, not on the prior stages. This is the
-parallel encoding to `LinearMultistepMethod.IsLMMSolution` at
-`OpenMath/Chapter4/Section404.lean:275`.
-
-**Faithfulness flag.** Butcher's `f` is generally vector-valued
-(`f : ℝ^N → ℝ^N`) but the textbook §512 writes the IVP as the scalar
-`y'(x) = f(y(x))`. We use scalar `f : ℝ → ℝ` to match the textbook
-literally; this is also what `def:402A` did in `Section404.lean`.
-Vectorization is a future generalization, not a faithfulness issue.
-
-### Step 2 — `IsConvergent` (the textbook predicate)
-
-```lean
-/-- **Definition 512A** — A general linear method `(A, U, B, V)` is
-*convergent* if for any IVP `y'(x) = f(y(x))`, `y(x₀) = y₀` with `f`
-Lipschitz, there exists a non-zero vector `u ∈ ℝ^r` and a starting
-procedure `φ : ℝ → Fin r → ℝ` with `φ_i(h) → u_i · y(x₀)` as `h → 0`,
-such that for any `x > x₀`, the GLM iterations `y^{[n]}` (computed
-with stepsize `h_n = (x - x₀)/n` and starting value `y^{[0]} = φ(h_n)`)
-satisfy `y^{[n]} → u · y(x)` as `n → ∞`. -/
-def GeneralLinearMethod.IsConvergent {s r : ℕ}
-    (M : GeneralLinearMethod s r) : Prop :=
-  ∀ (f : ℝ → ℝ) (L : ℝ≥0) (_ : LipschitzWith L f)
-    (x₀ y₀ : ℝ) (yex : ℝ → ℝ)
-    (_ : yex x₀ = y₀)
-    (_ : ∀ x, HasDerivAt yex (f (yex x)) x),
+def GeneralLinearMethod.IsConvergent ... :=
+  ∀ f L (hL : LipschitzWith L f) ∀ x₀ y₀ yex (hy0 : yex x₀ = y₀)
+    (hode : ∀ x, HasDerivAt yex (f (yex x)) x),
   ∃ u : Fin r → ℝ, u ≠ 0 ∧
     ∃ φ : ℝ → Fin r → ℝ,
-    (∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
-                     (nhds 0) (nhds (u i * y₀))) ∧
-    ∀ x : ℝ, x₀ < x →
-    ∀ Y : ℕ → ℕ → Fin r → ℝ,
-      (∀ n : ℕ, 0 < n →
-        Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
-        M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n)) →
-      Filter.Tendsto (fun n : ℕ => Y n n)
-                     Filter.atTop (nhds (fun i => u i * yex x))
+    (∀ i, Filter.Tendsto (fun h => φ h i) (nhds 0) (nhds (u i * y₀))) ∧
+    ∀ x, x₀ < x → ∀ Y, (...iteration with Y n 0 = φ ((x-x₀)/n)...) →
+      Filter.Tendsto (fun n => Y n n) atTop (nhds (fun i => u i * yex x))
 ```
 
-Note the **double-indexed `Y : ℕ → ℕ → Fin r → ℝ`**: outer index is
-the discretization parameter `n` (number of steps; defines `h_n`),
-inner index is the iteration step `0..n`. This matches the LMM
-template's `Y : ℕ → ℕ → ℝ` shape from `Section404.lean:350`.
+The LMM analog at `OpenMath/Chapter4/Section404.lean:333–354` uses
+**`∀ start`**, not `∃ start`. The cycle-072 LMM `convergent_isStable`
+proof (`OpenMath/Chapter4/Section405.lean:101–227`) **constructs** its
+own `start` (line 124) and plugs it into the universal slot. Under
+cycle 091's existential encoding, the worker cannot do this — they
+only get the φ that `IsConvergent`'s existential hands them, which
+they cannot direct.
 
-**Critical structural choices** (do not deviate without escalation):
+The textbook proof of `thm:513A` (Butcher §513, p. 409) **picks**
+its own bad starting procedure
+`φ(1/n) = (1/max_{i≤n} ‖V^i w_i‖) w_n` to derive a contradiction.
+This is incompatible with the existential encoding.
 
-1. **Autonomous `f : ℝ → ℝ`** (textbook is explicit: `y'(x) = f(y(x))`).
-   Do NOT introduce a time argument; that would diverge from the
-   textbook.
-2. **Existential `u`, `φ` outside the `∀ Y`**, with `u ≠ 0` —
-   matches "there exist a non-zero vector u and a starting procedure
-   φ" in the textbook.
-3. **Pointwise `Y n n → (fun i => u i * yex x)`** — pi-type pointwise
-   convergence is the right Mathlib idiom; matches
-   `Filter.tendsto_pi_nhds`.
-4. **Do NOT add the cycle 068 strengthening** (joint Lipschitz, global
-   C¹, M_bound) yet. The downstream §513/§514/§515 helpers may need
-   strengthening eventually — when they do, file an issue parallel to
-   `is_convergent_strengthened.md`. For def-only cycle 091, stay close
-   to the textbook.
+The `∃ u` is correct (`u` is a *property of the method*, like a
+preconsistency vector, not a free choice of the user). Only the φ
+encoding is wrong.
 
-### Step 3 — Non-vacuity sanity helpers
+### Fix
 
-CLAUDE.md requires a witness or an issue for every new structure with
-`Prop` fields. `IsGLMSolution` and `IsConvergent` are predicates (not
-structures), but the same spirit applies — provide enough evidence
-that the predicate is non-vacuously inhabitable.
+Edit `OpenMath/Chapter5/Section512.lean:132–148` from
 
-**Helper 1 (sanity, must close cleanly):**
 ```lean
-/-- For autonomous RHS `f ≡ 0`, the GLM iteration recurrence reduces
-to the homogeneous V-recurrence `y_seq (n+1) i = (B·U·y_seq n) i +
-(V·y_seq n) i` (i.e., the stage `h·f(Y_j)` term vanishes; the
-remaining stage equation `Y_i = Σ_j U_{ij} y_seq n j` makes
-`B·h·f(Y) = 0` and the output reduces to `B·0 + V·y_seq n = V·y_seq n`,
-plus a `B·U·y_seq n`-shaped contribution from the explicit-stage
-b-row terms when `B` actually picks up the stage values via U).
-
-NOTE: After unfolding `f ≡ 0`, the b-row's `B_{ij} · h · f(Y_j)` term
-is zero — so the `B·U` contribution above vanishes too, and the
-recurrence collapses fully to `y_seq (n+1) = V · y_seq n`. -/
-theorem isGLMSolution_zero_iff {s r : ℕ}
-    (M : GeneralLinearMethod s r) (h : ℝ) (y_seq : ℕ → Fin r → ℝ) :
-    M.IsGLMSolution h (fun _ => 0) y_seq ↔
-    ∀ n : ℕ, ∀ i : Fin r,
-      y_seq (n + 1) i = ∑ j : Fin r, M.V i j * y_seq n j
+∃ u : Fin r → ℝ, u ≠ 0 ∧
+  ∃ φ : ℝ → Fin r → ℝ,
+  (∀ i, Filter.Tendsto (fun h => φ h i) (nhds 0) (nhds (u i * y₀))) ∧
+  ∀ x, x₀ < x → ∀ Y, (...) → ...
 ```
 
-Proof shape: forward direction extracts `Y` from the existential and
-substitutes `f = 0` into the stage equation to get
-`Y i = Σ_j U_{ij} y_seq n j`, then notes the output equation's
-`B·h·f(Y) = 0` term vanishes, leaving `Σ_j V_{ij} y_seq n j`.
-Reverse direction constructs `Y i := Σ_j U_{ij} y_seq n j` and verifies
-both equations under `f = 0`. The arithmetic is `simp [mul_zero]`-style;
-should be ~30 lines after both directions.
+to
 
-**Helper 2 (sanity, must close cleanly):**
 ```lean
-/-- The constantly-zero `y_seq` is a valid GLM iteration of any GLM at
-any stepsize for the trivial autonomous RHS `f ≡ 0`. -/
-theorem zero_isGLMSolution_zero {s r : ℕ}
-    (M : GeneralLinearMethod s r) (h : ℝ) :
-    M.IsGLMSolution h (fun _ => 0) (fun _ _ => 0) := by
-  intro n
-  refine ⟨fun _ => 0, ?_, ?_⟩
-  · intro i; simp
-  · intro i; simp
+∃ u : Fin r → ℝ, u ≠ 0 ∧
+  ∀ φ : ℝ → Fin r → ℝ,
+    (∀ i, Filter.Tendsto (fun h => φ h i) (nhds 0) (nhds (u i * y₀))) →
+  ∀ x, x₀ < x → ∀ Y, (...) → ...
 ```
 
-(`simp` closes both goals because every term is `* 0` or sum-of-zeros.)
+(The conjunction `∧` becomes implication `→` after the `∀ φ`.)
 
-These two helpers establish that `IsGLMSolution` is well-defined and
-inhabitable. They will be reused by §513/§514/§515 work.
+### Verify
 
-### Step 4 — Issue file for the deferred concrete `IsConvergent` witness
+* `lake env lean OpenMath/Chapter5/Section512.lean` clean.
+* `#print axioms` for `IsConvergent` shows
+  `[propext, Classical.choice, Quot.sound]`.
+* The two cycle-091 helpers (`isGLMSolution_zero_iff`,
+  `zero_isGLMSolution_zero`, `zero_seq_homogeneous_V`) are
+  unaffected — they don't reference `IsConvergent`.
+* Update the docstring on `IsConvergent` to remove "existential" and
+  add a note "see also `is_convergent_strengthened.md`'s LMM
+  precedent — we deliberately do not preemptively apply joint-Lipschitz
+  / C¹ / M_bound strengthenings; if a future §515 proof requires
+  them, file a parallel issue at that point."
+* Update `.prover-state/issues/glm_convergence_witness_deferred.md`
+  with a one-line note: "Cycle 092 repaired the φ existential to
+  universal; the deferral remains in force."
 
-Following the cycle 038 LMM template, **do not** attempt to produce a
-concrete `M.IsConvergent` witness for any specific GLM in this cycle.
-The argument requires `thm:515D` ("stability + consistency ⇒
-convergence"), which is itself one of the cycle 091 dependents (i.e.,
-needs `def:512A` to even be stated).
+This is a 5-minute edit + 1-minute axiom check. Do this **before**
+beginning §B.
 
-Instead, write an issue file at
-`.prover-state/issues/glm_convergence_witness_deferred.md` modeled on
-`.prover-state/issues/lmm_convergence_witness_deferred.md`. Cover:
+## B. Priority 1 — sorry-first scaffold `thm:513A`
 
-* Why no concrete witness in this cycle (any non-trivial proof needs
-  `thm:515D`, which is downstream).
-* Trivial-IVP path: `f ≡ 0`, `y₀ = 0`, `yex ≡ 0`, `u = (1, …, 1)`,
-  `φ ≡ 0`. **Caveat**: this is *not* a witness for `M.IsConvergent`
-  for any `M` (the predicate quantifies over *all* IVPs, not just the
-  trivial one), but it is a reasonable target for a "trivial-IVP
-  slice" lemma in a future cycle.
-* Recommendation: the canonical witness producer is `thm:515D`. After
-  it lands, `explicitEulerGLM.IsConvergent` and any preconsistent +
-  stable + consistent GLM follow as corollaries.
+### Statement
 
-This is the documented escape hatch of CLAUDE.md ("write an issue
-explaining why this is currently impossible").
+```lean
+theorem GeneralLinearMethod.convergent_isStable
+    {s r : ℕ} (M : GeneralLinearMethod s r)
+    (hConv : M.IsConvergent) : M.IsStable
+```
+
+In a new file `OpenMath/Chapter5/Section513.lean`, namespace
+`OpenMath.Chapter5.Section510` (matching Section512.lean's choice).
+
+### Textbook proof transcribed
+
+> Suppose, on the contrary, that `{V^n : n = 1, 2, 3, …}` is
+> unbounded. Then there exists a sequence of vectors `w_1, w_2, …`
+> with `‖w_n‖ = 1` and such that `{V^n w_n}` is unbounded. Consider
+> the trivial IVP `y'(x) = 0, y(0) = 0` with `n` steps of stepsize
+> `h = 1/n`, approximating at `x = 1`. Convergence forces the
+> approximations to converge to `u·0 = 0` (irrespective of `u`).
+> Use the starting approximation
+> `φ(1/n) = (1/max_{i ≤ n} ‖V^i w_i‖) w_n`. Then `‖φ(1/n)‖ → 0`
+> (denominator → ∞). The result after n steps is
+> `V^n φ(1/n) = (1/max...) V^n w_n`, with norm
+> `‖V^n φ(1/n)‖ = ‖V^n w_n‖ / max_{i ≤ n} ‖V^i w_i‖`.
+> Infinitely many `n` make this ratio = 1 (whenever
+> `‖V^n w_n‖ = max_{i ≤ n} ‖V^i w_i‖`), contradicting convergence
+> to 0.
+
+### Lean strategy
+
+Mirror `OpenMath/Chapter4/Section405.lean:101–227` (cycle 072's LMM
+`convergent_isStable`) line-for-line, with the substitutions:
+
+| LMM (cycle 072) | GLM (cycle 092/093) |
+|---|---|
+| `y : ℕ → ℝ` (unbounded homogeneous) | `w : ℕ → Fin r → ℝ` (unit-norm, with `‖V^n w n‖` unbounded) |
+| `runningMaxAbs y n` | `runningMaxNorm (fun i => V^i *ᵥ w i) n` |
+| `start h i := y i.val / ζ ⌈1/h⌉` | `start h i := w ⌈1/h⌉ i / ζ ⌈1/h⌉` |
+| `Y m n := y n / ζ m` | `Y m n i := (V^n *ᵥ w m) i / ζ m` |
+| `IsHomogeneousSolution.const_smul` | `glmZeroIterate_isGLMSolution` (sub-lemma) |
+| Final contradiction via `unbounded_homogeneous_contra` | Vector analog (sub-lemma) |
+
+### Sorry-first scaffold (write this verbatim, then attempt closure)
+
+```lean
+import OpenMath.Chapter5.Section512
+
+namespace OpenMath.Chapter5.Section510
+
+open Matrix
+open scoped BigOperators Topology
+
+/-- **Butcher Theorem 513A** (p. 409) — A convergent general linear
+method is stable. -/
+theorem GeneralLinearMethod.convergent_isStable
+    {s r : ℕ} (M : GeneralLinearMethod s r)
+    (hConv : M.IsConvergent) : M.IsStable := by
+  by_contra h_ns
+  -- Step 1: extract unit-vector witness sequence with unbounded V^n action.
+  obtain ⟨w, hw_unit, hw_unbd⟩ :=
+    GeneralLinearMethod.unit_vector_witness_of_not_stable h_ns
+  -- Step 2: trivial IVP setup (f ≡ 0, x₀ = 0, y₀ = 0, yex ≡ 0).
+  set f : ℝ → ℝ := fun _ => 0 with hf_def
+  set yex : ℝ → ℝ := fun _ => 0 with hyex_def
+  -- Step 3: extract u from hConv (applied to trivial IVP).
+  -- u is some non-zero vector that the method's convergence is "scaled by".
+  -- Discharge the existential to get u, hu_ne, and the universal-φ
+  -- statement.
+  obtain ⟨u, hu_ne, hConv'⟩ :=
+    hConv f 0 (by rw [hf_def]; exact LipschitzWith.const _) 0 0 yex rfl
+      (fun x => by rw [hyex_def, hf_def]; exact hasDerivAt_const x 0)
+  sorry -- ← cycle 093 closes this from here using the LMM template
+        --   (build runningMaxNorm, start, Y, derive contradiction)
+
+end OpenMath.Chapter5.Section510
+```
+
+The `sorry` is the cycle-093 deliverable. The cycle-092 deliverable
+is everything *above* it — the imports, namespace, scaffold, and
+the *signature* of `unit_vector_witness_of_not_stable`. It must
+compile.
+
+If Aristotle returns clean proofs of all five §C helpers within the
+30-minute window, the worker MAY attempt to close the main `sorry`
+this cycle as a stretch goal; otherwise it stays as scaffold and
+cycle 093 picks it up. **Do not force.**
+
+## C. Priority 2 — Aristotle batch (submit at cycle start)
+
+Submit a single Aristotle project containing the five helpers below,
+with sorry bodies. Sleep 30 minutes; check once.
+
+### Helper 1 — `runningMaxNorm` family
+
+Direct port of `OpenMath/Chapter4/Section404.lean:5651–5691` with
+`|·|` → `‖·‖` and `ℕ → ℝ` → `ℕ → Fin r → ℝ` (or `ℕ → ℝ` if you
+specialise to `‖V^n *ᵥ w n‖` directly — preferred, simpler).
+
+```lean
+def runningMaxNorm (z : ℕ → ℝ) : ℕ → ℝ
+  | 0     => z 0
+  | n + 1 => max (runningMaxNorm z n) (z (n + 1))
+
+theorem runningMaxNorm_monotone (z : ℕ → ℝ) :
+    Monotone (runningMaxNorm z) := by sorry
+
+theorem runningMaxNorm_ge (z : ℕ → ℝ) (n : ℕ) :
+    z n ≤ runningMaxNorm z n := by sorry
+
+theorem runningMaxNorm_atTop_of_unbounded
+    {z : ℕ → ℝ} (hz : ∀ C : ℝ, ∃ n, C < z n) :
+    Filter.Tendsto (runningMaxNorm z) Filter.atTop Filter.atTop := by sorry
+
+theorem runningMaxNorm_record_above
+    {z : ℕ → ℝ} (hz : ∀ C : ℝ, ∃ n, C < z n) (N : ℕ) :
+    ∃ n, N ≤ n ∧ z n = runningMaxNorm z n := by sorry
+```
+
+These four mirror `runningMaxAbs_*` line-for-line. Aristotle should
+close all four within minutes; if the manual port from
+Section404.lean takes < 30 min, **prefer the manual port** (faster
+than waiting on Aristotle).
+
+### Helper 2 — `unit_vector_witness_of_not_stable`
+
+This is the mathematically loaded one — extracts the witness
+sequence from `¬ M.IsStable` (cycle 084).
+
+```lean
+theorem GeneralLinearMethod.unit_vector_witness_of_not_stable
+    {s r : ℕ} {M : GeneralLinearMethod s r} (h_ns : ¬ M.IsStable) :
+    ∃ w : ℕ → Fin r → ℝ,
+      (∀ n, ‖w n‖ ≤ 1) ∧
+      (∀ C : ℝ, ∃ n, C < ‖(M.V ^ n) *ᵥ w n‖) := by sorry
+```
+
+Construction (when Aristotle fails, do this manually in cycle 093):
+
+1. `¬ M.IsStable` unfolds to `∀ C, ¬ PowerBounded C M.V`, i.e.
+   `∀ C, ∃ n, C < ‖M.V ^ n‖`.
+2. For each `n`, the linfty operator norm `‖M.V ^ n‖` (which is
+   `Matrix.linftyOpNorm`) equals `Finset.univ.sup' ⟨0, …⟩
+   (fun i => ∑ j, |((M.V ^ n) i j)|)`.
+3. Pick `i_n : Fin r` realising the row sup; set
+   `w n j := SignType.sign ((M.V ^ n) i_n j)` (cast to ℝ as
+   `±1`).
+4. Then `((M.V ^ n) *ᵥ w n) i_n = ∑_j (M.V ^ n) i_n j · sign(...)
+   = ∑_j |(M.V ^ n) i_n j| = ‖M.V ^ n‖`.
+5. So `‖(M.V ^ n) *ᵥ w n‖ ≥ |((M.V ^ n) *ᵥ w n) i_n| = ‖M.V ^ n‖`,
+   which is unbounded.
+
+The `‖w n‖ ≤ 1` part: `w n` has entries in `{-1, 0, +1}`, so
+`‖w n‖_∞ = max_j |w n j| ≤ 1`.
+
+If this proves too heavy for cycle 092 (it likely is — Aristotle is
+unlikely to find the row-realiser construction), **defer to cycle
+093** and leave the helper as a `sorry` with a TODO comment
+referring to this strategy section.
+
+### Helper 3 — `glmZeroIterate` and `glmZeroIterate_isGLMSolution`
+
+```lean
+def GeneralLinearMethod.glmZeroIterate {s r : ℕ}
+    (M : GeneralLinearMethod s r) (y₀ : Fin r → ℝ) (n : ℕ) : Fin r → ℝ :=
+  (M.V ^ n) *ᵥ y₀
+
+theorem GeneralLinearMethod.glmZeroIterate_isGLMSolution {s r : ℕ}
+    (M : GeneralLinearMethod s r) (h : ℝ) (y₀ : Fin r → ℝ) :
+    M.IsGLMSolution h (fun _ => 0) (M.glmZeroIterate y₀) := by sorry
+```
+
+Proof sketch: use `isGLMSolution_zero_iff` (cycle 091) to reduce to
+the homogeneous V-recurrence
+`y_seq (n+1) i = ∑_j V_{ij} · y_seq n j`, which under
+`y_seq n := V^n *ᵥ y₀` becomes
+`(V^(n+1) *ᵥ y₀) i = ∑_j V_{ij} · (V^n *ᵥ y₀) j`. RHS is
+`(V *ᵥ (V^n *ᵥ y₀)) i = (V * V^n *ᵥ y₀) i = (V^(n+1) *ᵥ y₀) i`,
+the LHS. Closes via `Matrix.mulVec_mulVec` and `pow_succ`.
+
+This is Aristotle-friendly (clean algebra, all named Mathlib
+lemmas).
+
+### Helper 4 — `glmZeroIterate.const_smul`
+
+```lean
+theorem GeneralLinearMethod.glmZeroIterate_const_smul {s r : ℕ}
+    (M : GeneralLinearMethod s r) (h : ℝ) (y₀ : Fin r → ℝ) (c : ℝ) :
+    M.IsGLMSolution h (fun _ => 0) (fun n i => c * (M.glmZeroIterate y₀ n) i) := by
+  sorry
+```
+
+Proof: `M.V^n *ᵥ (c • y₀) = c • (M.V^n *ᵥ y₀)` via
+`Matrix.mulVec_smul` (or `smul_mulVec`); then apply
+`glmZeroIterate_isGLMSolution` with `y₀ ↦ c • y₀` and unfold
+`glmZeroIterate`. Should be a 5-line proof. Aristotle-friendly.
+
+### Helper 5 — vector contradiction extractor
+
+Vector analog of `unbounded_homogeneous_contra`
+(`Section404.lean`). Submit:
+
+```lean
+theorem GeneralLinearMethod.unbounded_zero_iterate_contra
+    {s r : ℕ} {M : GeneralLinearMethod s r}
+    {w : ℕ → Fin r → ℝ}
+    (hw_unit : ∀ n, ‖w n‖ ≤ 1)
+    (hw_unbd : ∀ C : ℝ, ∃ n, C < ‖(M.V ^ n) *ᵥ w n‖)
+    (hY : Filter.Tendsto
+            (fun n : ℕ => ‖(M.V ^ n) *ᵥ w n‖ /
+                            runningMaxNorm (fun i => ‖(M.V ^ i) *ᵥ w i‖) n)
+            Filter.atTop (nhds 0)) :
+    False := by sorry
+```
+
+Proof sketch: by `runningMaxNorm_record_above` applied to
+`(fun n => ‖V^n *ᵥ w n‖)`, there are infinitely many record indices
+`n` where the running max equals the current value, giving
+`‖V^n *ᵥ w n‖ / runningMaxNorm ... n = 1`. The ratio sequence is
+not eventually < 1, contradicting `hY`. Aristotle should handle
+this — it's a `Tendsto.atTop_basis` argument.
 
 ## What NOT to try
 
-* **Do NOT pursue `thm:521B`** (Maximum stability order for given
-  steps). The cycle 090 worker correctly flagged this as a multi-cycle
-  polynomial-encoding tax — it requires re-encoding `stabilityFunction`
-  as `Polynomial (Polynomial ℂ)` and proving the new representation
-  agrees with the existing function form. Out of scope for cycle 091.
-* **Do NOT add the cycle 068 `is_convergent_strengthened` clauses**
-  (joint Lipschitz, ContDiff ℝ 1, M_bound) to `IsConvergent` yet.
-  These are downstream-driven strengthenings that should appear only
-  when a §513/§514/§515 proof actually fails without them. Faithfulness
-  takes priority for the definition-cycle.
-* **Do NOT attempt a concrete `M.IsConvergent` witness** for any GLM.
-  See the issue file plan in Step 4 above.
-* **Do NOT generalize to vector-valued `f : ℝ^N → ℝ^N`**. Textbook
-  §512 writes scalar `y'(x) = f(y(x))` and this matches the `def:402A`
-  encoding. Future-cycle generalization is acceptable; cycle 091 stays
-  scalar.
-* **Do NOT use `def:512A` to introduce a `class` or `structure`.**
-  It is a `Prop` predicate on a value of type
-  `Section510.GeneralLinearMethod s r`; the existing
-  `GeneralLinearMethod` structure is the only structure that should
-  appear in the cycle's diff.
-* **Do NOT modify `Section510.lean`** beyond cosmetic comment fixes.
-  The new content goes in `Section512.lean`.
-* **Do NOT raise `maxHeartbeats`**. If `simp` is slow on Step 3
-  helpers, decompose into named arithmetic lemmas. Per CLAUDE.md.
-* **Do NOT introduce `axiom`** for the deferred concrete witness
-  (write an issue, don't axiomatize).
-* **Do NOT trust the prompt's "stuck on" text without verification.**
-  The cycle-090 history shows zero stuck items — `git log -1 --oneline`
-  is `1bd6ba0 Cycle 090 — formalize def:521A`, on
-  `origin/Main/Experiments`, no sorry's reported. Treat any "commits
-  not reaching repo" framing as the standing phantom from
-  `consultant_advice_cycle_009.md` §A.
-* **Do NOT poll Aristotle more than once.** Per CLAUDE.md: submit at
-  the start, sleep 30 min, check once, then proceed. Do not block on
-  Aristotle for the manually-tractable Step 3 helpers.
+* **Do NOT attempt `thm:513A` without first repairing `def:512A`.**
+  The repair is a 5-minute edit and is mandatory for the proof
+  template to apply. Skipping it means cycle 092 is wasted.
+* **Do NOT introduce `axiom` / `constant`** for any helper. The
+  `unit_vector_witness_of_not_stable` construction is genuinely
+  concrete (sign-of-row-of-V^n).
+* **Do NOT raise `maxHeartbeats` above 200000.** If
+  `glmZeroIterate_isGLMSolution`'s `Matrix.mulVec_mulVec` rewriting
+  is slow, decompose; do not raise the ceiling.
+* **Do NOT poll Aristotle more than once** (CLAUDE.md;
+  `consultant_advice_cycle_040.md` §C).
+* **Do NOT cherry-pick `def:530A` or `def:530B` or any of the
+  unstarted Ch.5 definitions over `thm:513A`.** A pure-definition
+  cycle would be lower value than exercising the cycle-091
+  predicate against its first dependent.
+* **Do NOT generalise `f : ℝ → ℝ` to vector-valued
+  `f : ℝ → Fin N → ℝ`.** Cycle 091 committed to scalar `f`; preserve
+  that.
+* **Do NOT preemptively apply the LMM `is_convergent_strengthened`
+  conditions** (joint-Lipschitz, ContDiff ℝ 1, M_bound) to GLM
+  `IsConvergent`. The trivial-IVP proofs for §513/§514 don't
+  trigger any of those; defer the question to whenever a §515
+  helper actually fails. (When that happens, file a parallel issue
+  to `is_convergent_strengthened.md`.)
+* **Do NOT close `lem:515B` or `thm:515D` "while you're there".**
+  Those are 3+ cycle efforts and out of scope.
+* **Do NOT modify `scripts/autonomous_loop.py`** (per CLAUDE.md and
+  the standing `tautology_scanner_false_positives.md`).
+* **Do NOT skip the cycle-091 docstring update on `IsConvergent`**
+  after the φ-fix. The docstring currently says "encoding choices:
+  existential `u, φ`"; this becomes false after Priority 0.
+* **Do NOT attempt to replace `Matrix.linftyOpNorm` with
+  Frobenius / l2.** All matrix norms on a finite-dimensional space
+  are equivalent up to constants, but the witness construction in
+  Helper 2 is *much* cleaner with linfty. Cycle 084 already chose
+  linfty for `IsStable`; stick with it.
 
-## Aristotle batch (submit at cycle start)
+## Pre-commit faithfulness checklist
 
-Submit the following ~3 helper lemmas / sub-goals to Aristotle in a
-single `decomposition_attempt.lean`-style file. Use the existing
-`.prover-state/aristotle_submissions/cycle_091/` directory pattern.
+For the `def:512A` repair (Priority 0):
 
-1. **`isGLMSolution_zero_iff`** (Helper 1 from Step 3). Likely
-   tractable — the algebra is `mul_zero` + sum-distributivity.
-2. **`zero_isGLMSolution_zero`** (Helper 2 from Step 3). Trivial; will
-   probably close in seconds.
-3. **A bonus statement**: prove that the all-zeros `y_seq` solves the
-   homogeneous V-recurrence (RHS of `isGLMSolution_zero_iff`) for any
-   `M`. Useful for future §513/§514/§515 work; ~5 lines.
+- [ ] Quote textbook (entities/def_512A.json) in the docstring.
+- [ ] Confirm: `∃ u, u ≠ 0 ∧ ∀ φ, ...` matches Butcher's "there
+      exist a non-zero vector u, and a starting procedure φ such
+      that..." under the standard reading where φ is a *parameter*
+      of the convergence claim, not a method-level data.
+- [ ] **Definition smuggling check**: the new `IsConvergent` does
+      not embed `IsStable` or `IsConsistent` as conclusions; it
+      remains the convergence predicate proper.
 
-Submit, sleep 30 min, then proceed to Steps 1/2 manually while
-waiting. After the sleep, check once and incorporate any landed
-proofs (or keep the manual proofs if they finished first).
+For `thm:513A` scaffold (Priority 1):
 
-## Faithfulness checklist (run BEFORE committing)
+- [ ] Entity ID `thm:513A`. Quote: *"A general linear method (A, U,
+      B, V) is convergent only if it is stable."*
+- [ ] Lean statement `M.IsConvergent → M.IsStable` matches **same
+      content**.
+- [ ] **Tautology check**: `M.IsStable` is not a hypothesis. Pass.
+- [ ] **Identity check**: scaffold's only sorry is the contradiction
+      assembly; not `exact hConv`. Pass.
+- [ ] **Hypothesis-strength check**: only `M.IsConvergent`. No
+      strengthening.
+- [ ] **Absent theorem check**: any sub-sorry has a TODO comment
+      pointing to the strategy section that closes it (cycle 093 +
+      this strategy's §C).
 
-For `def:512A` / `IsConvergent`:
+For each new helper (Priority 2):
 
-- [ ] Quote the textbook statement from `entities/def_512A.json` in
-      the docstring. Match line-for-line where possible.
-- [ ] **Tautology check** — `IsConvergent` is not a re-export. The
-      conclusion `Tendsto (Y n n) atTop (nhds (u • yex x))` is
-      genuinely derived from the iteration; no hypothesis says this
-      directly.
-- [ ] **Hypothesis-strength check** — current encoding has only
-      `LipschitzWith L f`, `yex x₀ = y₀`, `HasDerivAt yex (f (yex x)) x`.
-      No extra strengthening. ✓
-- [ ] **Definition-smuggling check** — `IsConvergent` does NOT embed
-      the conclusion of `thm:515D` (stable+consistent ⇒ convergent).
-      It is the convergence predicate alone.
-- [ ] **Identity check** on Helper 1 — the proof is not `exact h`. It
-      is forward/reverse implication of an unfolding.
-- [ ] Confirm `M.IsConvergent` does not contain
-      `M.IsStable` or `M.IsConsistent` as sub-clauses (those are
-      separate `Section510` predicates; only the *converse* direction
-      is `thm:515D`).
+- [ ] Comment explaining role and which textbook step.
+- [ ] No tautology / identity / smuggling.
+- [ ] Hypotheses minimal (`runningMaxNorm` is a pure
+      sequence-of-reals helper; no `M : GeneralLinearMethod`
+      dependency).
 
-For `IsGLMSolution`:
+## Build steps (post-edit)
 
-- [ ] Confirm the recurrence matches Butcher's general scheme (Butcher
-      §511 equations or §501 introduction) for the autonomous case.
-      Documented in `entities/def_512A.json`'s `preamble` field.
-- [ ] Existential `Y` per step is the right encoding; bullet why
-      (analogous to `IsLMMSolution`).
+1. `lake env lean OpenMath/Chapter5/Section512.lean` (after Priority 0).
+2. `lake env lean OpenMath/Chapter5/Section513.lean` (after Priority 1).
+3. `lake build OpenMath.Chapter5.Section512 OpenMath.Chapter5.Section513`.
+4. Axiom check on `convergent_isStable` and helpers: only
+   `propext, Classical.choice, Quot.sound`.
+5. Update `extraction/formalization_data/lean_status.json`:
+   * `def:512A` — keep as `formalized`, add note
+     "cycle 092 repaired φ to universal".
+   * `thm:513A` — set to `partial` with file pointer
+     `OpenMath/Chapter5/Section513.lean`.
+6. Update `plan.md` Chapter 5 — `thm:513A` row gets `[~]` (in
+   progress) and a note pointing to `Section513.lean`. The
+   `Progress: N / 175` counter does NOT advance (only `[x]` rows
+   count).
+7. Commit message:
+   `Cycle 092 — repair def:512A φ encoding + scaffold thm:513A
+   (convergent ⇒ stable)`.
 
-## Build verification
+## If Aristotle returns nothing useful
 
-After landing the file:
+Fallback: the manual ports of the `runningMaxNorm` family
+(Helper 1) and the `glmZeroIterate` definition + lemma (Helper 3,
+Helper 4) are short enough to land in 30–60 minutes of manual work.
+Helper 2 (`unit_vector_witness_of_not_stable`) and Helper 5 (the
+contradiction extractor) are the genuinely-loaded helpers; if
+Aristotle fails on those, **leave them as `sorry`** with the
+strategy-section TODO and proceed to commit. Cycle 093 picks them
+up.
 
-```bash
-lake env lean OpenMath/Chapter5/Section512.lean    # standalone check
-lake build OpenMath.Chapter5.Section512            # cache update
-echo '#print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.IsConvergent' \
-  | lake env lean --stdin OpenMath/Chapter5/Section512.lean
-echo '#print axioms OpenMath.Chapter5.Section512.zero_isGLMSolution_zero' \
-  | lake env lean --stdin OpenMath/Chapter5/Section512.lean
-```
+A cycle 092 with **just** the Priority 0 fix + Priority 1 scaffold
++ Helpers 1, 3, 4 closed manually + Helpers 2, 5 as `sorry`s is a
+**successful** cycle. Do not over-extend.
 
-(Note: `IsConvergent` and `IsGLMSolution` live in the
-`Section510.GeneralLinearMethod` namespace via dot-notation declarations
-in `Section512.lean`, mirroring the `Section520` pattern of declaring
-`stabilityMatrix` in `OpenMath.Chapter5.Section510` namespace from
-inside `Section520.lean`. The `#print axioms` prints under whichever
-namespace was opened.)
+## If reconciliation goes sideways
 
-Expected axiom output: `[propext, Classical.choice, Quot.sound]`.
-
-If `#print axioms` returns `sorryAx`, run `lake build` first to
-refresh the .olean cache (cycle 089 staleness pattern). Re-run.
-
-## Bookkeeping
-
-After the build is clean:
-
-1. **`extraction/formalization_data/lean_status.json`** — mark
-   `def:512A` row with status `formalized`,
-   `lean_file = OpenMath/Chapter5/Section512.lean`,
-   `lean_symbol = OpenMath.Chapter5.Section510.GeneralLinearMethod.IsConvergent`
-   (or whichever namespace the dot-notation `def` lands in — verify
-   after compile).
-2. **`plan.md`** — update the `[ ] def:512A convergent (GLM)` row to
-   `[x]`, bump progress counter `61 → 62 / 175`.
-3. **`.prover-state/issues/glm_convergence_witness_deferred.md`** —
-   write per Step 4 plan above.
-4. **`.prover-state/task_results/cycle_091.md`** — write per CLAUDE.md
-   format. Include all faithfulness-check answers in the
-   "Faithfulness check" section.
-
-## Commit
-
-```
-git add OpenMath/Chapter5/Section512.lean \
-        extraction/formalization_data/lean_status.json \
-        plan.md \
-        .prover-state/issues/glm_convergence_witness_deferred.md \
-        .prover-state/task_results/cycle_091.md \
-        .prover-state/aristotle_submissions/cycle_091/
-
-git commit -m "Cycle 091 — formalize def:512A (convergent GLM) + IsGLMSolution recurrence"
-
-git push origin Main/Experiments
-```
-
-Verify HEAD == origin/Main/Experiments after push (cycle 008/035/071
-phantom guard).
-
-## Estimated effort
-
-* New file `Section512.lean`: ~140 lines.
-  * Imports + namespace boilerplate: ~10 lines.
-  * `IsGLMSolution` def + docstring: ~30 lines.
-  * `IsConvergent` def + docstring: ~50 lines.
-  * `isGLMSolution_zero_iff`: ~30 lines (Helper 1).
-  * `zero_isGLMSolution_zero`: ~5 lines (Helper 2).
-  * Optional bonus helper: ~10 lines.
-* Issue file: ~50 lines.
-* Bookkeeping: ~10 lines (json, plan, task results).
-
-Total cycle target: **~200 lines + bookkeeping**, in line with the
-cycle 086–090 cadence (~150–250 lines per cycle for a definition +
-witness deliverable).
+If the worker discovers during Priority 0 that the repair is
+larger than 5 minutes (e.g. the cycle-091 helpers DO reference the
+`∃ φ` encoding indirectly), file an issue
+`.prover-state/issues/glm_is_convergent_phi_repair.md` documenting
+the dependency, then **revert to scaffold-only mode**: leave
+`def:512A` as-is, write `Section513.lean` with a single `sorry` for
+the entire main theorem, document the φ-encoding blocker. Cycle 093
+becomes a dedicated repair cycle.
 
 ## Cross-references
 
-* `OpenMath/Chapter4/Section404.lean:242–354` — the LMM template for
-  `IsLMMSolution` and `IsConvergent`.
-* `OpenMath/Chapter5/Section510.lean` — the `GeneralLinearMethod`
-  structure and `IsPreconsistent`/`IsStable`/`IsConsistent`.
-* `extraction/formalization_data/entities/def_512A.json` — textbook
-  statement.
-* `extraction/formalization_data/entities/def_402A.json` — LMM
-  parallel.
-* `.prover-state/issues/lmm_convergence_witness_deferred.md` — the
-  template for the new `glm_convergence_witness_deferred.md` issue.
-* `.prover-state/issues/is_convergent_strengthened.md` — record of
-  the LMM strengthening; do **not** preemptively apply to GLM (Step 2
-  policy).
+* `OpenMath/Chapter5/Section512.lean:132–148` — `IsConvergent`
+  predicate to repair (Priority 0).
+* `OpenMath/Chapter4/Section404.lean:333–354` — LMM `IsConvergent`,
+  the canonical `∀ start` template.
+* `OpenMath/Chapter4/Section405.lean:101–227` — LMM
+  `convergent_isStable` (cycle 072), the line-by-line model for §B.
+* `OpenMath/Chapter4/Section404.lean:5642–5719` — LMM
+  `runningMaxAbs` family, the port target for Helper 1.
+* `OpenMath/Chapter5/Section510.lean:105–107` — GLM `IsStable`
+  (cycle 084) using `PowerBounded C M.V`.
+* `extraction/formalization_data/entities/thm_513A.json` —
+  textbook statement and proof for `thm:513A`.
+* `extraction/formalization_data/entities/def_512A.json` —
+  textbook for `def:512A` (used to confirm φ-encoding).
+* `.prover-state/issues/glm_convergence_witness_deferred.md` —
+  cycle-091 deferral note (update with φ-repair note).
+* `.prover-state/issues/is_convergent_strengthened.md` — LMM
+  precedent for hypothesis strengthening (do NOT preemptively
+  apply here).
+* `.prover-state/issues/consultant_advice_cycle_040.md` §A — the
+  "scanner / prompt-builder phantom" pattern; if next cycle's
+  prompt claims commit/work failure but `git log` shows cycle 092's
+  commit landed, ignore the phantom.

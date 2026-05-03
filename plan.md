@@ -207,7 +207,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:520A` **Introduction** (§520) — `OpenMath/Chapter5/Section520.lean`
 - [ ] `thm:523A` **Non-linear stability** (§523)
 - [x] `def:520C` **stability function** (§520) — `OpenMath/Chapter5/Section520.lean`
-- [ ] `thm:513A` **The necessity of stability** (§513)
+- [~] `thm:513A` **The necessity of stability** (§513) — `OpenMath/Chapter5/Section513.lean` (cycle 092 scaffold; helpers 1, 3, 4 closed; main + helpers 2, 5 deferred to cycle 093)
 - [ ] `thm:515D` **Stability and Consistency Imply Convergence (515D)** (§515)
 - [ ] `thm:550B` **Doubly companion matrix similarity transformation** (§550)
 - [x] `def:521A` **Methods with maximal stability order** (§521)

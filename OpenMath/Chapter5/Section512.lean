@@ -126,9 +126,15 @@ at step `m` within that sequence. The conclusion takes the diagonal
 and asks for pointwise convergence to `u · y(x)`.
 
 **Critical structural choices** (see file docstring): autonomous `f`,
-existential `u, φ` outside the `∀ Y`, `u ≠ 0` per textbook, and **no
-preemptive strengthening** (joint Lipschitz / C¹ / uniform M-bound) as
-in `is_convergent_strengthened.md` for LMMs. -/
+existential `u` (a property of the method, like a preconsistency
+vector), **universal `φ`** (the proof of `thm:513A` constructs its
+own bad starting procedure to derive a contradiction, so the
+worker must be able to direct φ — see cycle 092 strategy §A and the
+LMM precedent at `OpenMath/Chapter4/Section404.lean:333–354`),
+`u ≠ 0` per textbook, and **no preemptive strengthening** (joint
+Lipschitz / C¹ / uniform M-bound) as in
+`is_convergent_strengthened.md` for LMMs. If a future §515 proof
+requires those, file a parallel issue at that point. -/
 def GeneralLinearMethod.IsConvergent {s r : ℕ}
     (M : GeneralLinearMethod s r) : Prop :=
   ∀ (f : ℝ → ℝ) (L : NNReal), LipschitzWith L f →
@@ -136,9 +142,9 @@ def GeneralLinearMethod.IsConvergent {s r : ℕ}
     yex x₀ = y₀ →
     (∀ x, HasDerivAt yex (f (yex x)) x) →
   ∃ u : Fin r → ℝ, u ≠ 0 ∧
-    ∃ φ : ℝ → Fin r → ℝ,
-    (∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
-                     (nhds 0) (nhds (u i * y₀))) ∧
+    ∀ φ : ℝ → Fin r → ℝ,
+      (∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
+                       (nhds 0) (nhds (u i * y₀))) →
     ∀ x : ℝ, x₀ < x →
     ∀ Y : ℕ → ℕ → Fin r → ℝ,
       (∀ n : ℕ, 0 < n →
