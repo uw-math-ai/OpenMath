@@ -1774,4 +1774,66 @@ theorem D_mul_toGLM_charpoly_eval_zero_eq_zero_of_bdf
   rw [hAlpha, hBeta]
   simp
 
+/-- §521 Step D.4 — Constant-term evaluation of `rowFBetaPoly`. The
+geometric `∑ k : Fin s, C(β (castSucc k)) * X^k` evaluated at `0`
+collapses to the single `k = 0` summand because `0^k = 0` for `k ≥ 1`,
+isolating the bare `β 0` coefficient. Companion to `rowFBetaPoly_eval_one`
+for the unit-disk boundary argument behind `LMM.toGLM_isAStable_iff`. -/
+theorem rowFBetaPoly_eval_zero (m : LMM s) (hs : 0 < s) :
+    (rowFBetaPoly m).eval 0 =
+      ((m.β (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ) := by
+  unfold rowFBetaPoly
+  rw [Polynomial.eval_finset_sum]
+  rw [Finset.sum_eq_single (⟨0, hs⟩ : Fin s)]
+  · simp
+  · intro k _ hk
+    have hk' : (k : ℕ) ≠ 0 := fun h => hk (Fin.ext h)
+    simp [zero_pow hk']
+  · intro h
+    exact absurd (Finset.mem_univ _) h
+
+/-- §521 Step D.5 — Unit-circle evaluation of `rowFBetaPoly`. All
+`1^k = 1` factors collapse, leaving the bare coefficient sum
+`∑ k : Fin s, β(castSucc k)`. Companion to `rowFBetaPoly_eval_zero`
+for the unit-disk boundary argument behind
+`LMM.toGLM_isAStable_iff`. No `s ≥ 1` hypothesis is needed: at `s = 0`
+both sides are the empty sum. -/
+theorem rowFBetaPoly_eval_one (m : LMM s) :
+    (rowFBetaPoly m).eval 1 =
+      ∑ k : Fin s, ((m.β (Fin.castSucc k) : ℝ) : ℂ) := by
+  unfold rowFBetaPoly
+  rw [Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl ?_
+  intro k _
+  simp
+
+/-- §521 Step D.3 — General (non-BDF) `ξ = 1` evaluation of the cycle 698
+textbook headline. The unit-circle boundary point `ξ = 1` is the natural
+input to the boundary-locus argument behind `LMM.toGLM_isAStable_iff`:
+all `1^k = 1` powers collapse, isolating the `ξ = 1` value of the GLM
+charpoly purely in terms of `m.stabilityPolyPoly z` evaluated at `1`
+and linear corrections in `rowYQuot`, `rowFAlphaPoly`, and
+`rowFBetaPoly`. -/
+theorem D_mul_toGLM_charpoly_eval_one_eq
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        + z *
+            ∑ l : Fin s,
+              ( ((m.β l.castSucc : ℝ) : ℂ)
+                  - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ) )
+        - ( (rowYQuot m).eval 1 *
+              (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + ( (rowFAlphaPoly m).eval 1 +
+                ((toGLM_stabilityMatrixPY m 0).charpoly).eval 1 *
+                  (rowFBetaPoly m).eval 1 ) * z ) := by
+  have h := D_mul_toGLM_charpoly_eval_eq m (z := z) (ξ := 1) hz hs
+  have h1 : (1 : ℂ) ^ s = 1 := one_pow s
+  rw [h1] at h
+  simp only [one_pow, mul_one, one_mul] at h
+  linear_combination h
+
 end LMM
