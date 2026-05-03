@@ -796,4 +796,277 @@ theorem explicitEulerLMM_hasOrderAtLeast_one_via_410C :
     explicitEulerLMM.HasOrderAtLeast 1 :=
   (thm_410C explicitEulerLMM 1).mpr explicitEulerLMM_genFnForward_O_z2
 
+/-! ### §410D — log-form order condition
+
+Butcher §410D states the order condition in the *log* form by
+substituting `exp(-z) ↦ (1+z)^{-1}` (equivalently `z ↦ log(1+z)`)
+in the backward-sign generating function `genFn M`:
+
+```
+α((1+z)^{-1}) - log(1+z) · β((1+z)^{-1}) = O(z^{p+1}).      (410d)
+```
+
+The substitution is `z ↦ logOnePlusPS = z - z²/2 + z³/3 - ⋯`. We
+encode the §410D residual as `genFnLog M = subst logOnePlusPS (genFn M)`,
+and prove `M.HasOrderAtLeast p ↔ ∀ j ≤ p, coeff j (genFnLog M) = 0`
+via `thm_410B` plus a "substitution by unit-leading series preserves
+and reflects vanishing of the first p+1 coefficients" pair of lemmas.
+
+The five Aristotle-supplied helper lemmas (cycle 077 batch
+`18504be5-2481-4d60-9d7b-12b8a5cd2b47`, completed cycle 078):
+
+1. `onePlusX_mul_oneOverOnePlusPS_eq_one` — `(1 + X) · (1+X)⁻¹ = 1`
+2. `coeff_subst_eq_zero_of_coeff_eq_zero` — forward direction
+3. `coeff_eq_zero_of_coeff_subst_eq_zero` — reverse direction
+4. `subst_logOnePlusPS_expPS_eq_one_add_X` — `exp(log(1+X)) = 1+X`
+5. `subst_logOnePlusPS_expNegPS` — `exp(-log(1+X)) = (1+X)⁻¹`
+-/
+
+/-- **The geometric series `(1+z)^{-1} = Σ_n (-1)^n z^n`.** -/
+noncomputable def oneOverOnePlusPS : PowerSeries ℝ :=
+  PowerSeries.mk fun n => (-1 : ℝ) ^ n
+
+/-- **The formal logarithm `log(1+z) = z - z²/2 + z³/3 - ⋯`.** -/
+noncomputable def logOnePlusPS : PowerSeries ℝ :=
+  PowerSeries.mk fun n => if n = 0 then 0 else (-1 : ℝ) ^ (n - 1) / (n : ℝ)
+
+@[simp] theorem oneOverOnePlusPS_coeff (n : ℕ) :
+    (PowerSeries.coeff (R := ℝ) n) oneOverOnePlusPS = (-1 : ℝ) ^ n := by
+  simp [oneOverOnePlusPS]
+
+@[simp] theorem logOnePlusPS_constantCoeff :
+    (PowerSeries.constantCoeff (R := ℝ)) logOnePlusPS = 0 := by
+  rw [← PowerSeries.coeff_zero_eq_constantCoeff_apply]
+  simp [logOnePlusPS]
+
+@[simp] theorem logOnePlusPS_coeff_one :
+    (PowerSeries.coeff (R := ℝ) 1) logOnePlusPS = 1 := by
+  simp [logOnePlusPS]
+
+/-- **`(1 + X) · (1+X)⁻¹ = 1`.** Cauchy product telescopes via
+`(-1)^n + (-1)^{n-1} = 0` for `n ≥ 1`. (Aristotle, cycle 077.) -/
+theorem onePlusX_mul_oneOverOnePlusPS_eq_one :
+    ((1 : PowerSeries ℝ) + PowerSeries.X) * oneOverOnePlusPS = 1 := by
+  ext (_ | n) <;>
+    simp_all +decide [PowerSeries.coeff_one, PowerSeries.coeff_X, mul_assoc, add_mul]
+  · exact Eq.symm (Real.ext_cauchy rfl)
+  · ring
+
+/-- **Forward direction.** Substitution by `g` with `constantCoeff g = 0`
+preserves `∀ j ≤ p, coeff j f = 0`. (Aristotle, cycle 077.) -/
+theorem coeff_subst_eq_zero_of_coeff_eq_zero
+    {g : PowerSeries ℝ} (hg : (PowerSeries.constantCoeff (R := ℝ)) g = 0)
+    {f : PowerSeries ℝ} {p : ℕ}
+    (h : ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) f = 0) :
+    ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (PowerSeries.subst g f) = 0 := by
+  have h_order_le :
+      (PowerSeries.order f : WithTop ℕ) ≤
+        (PowerSeries.order (PowerSeries.subst g f) : WithTop ℕ) :=
+    PowerSeries.le_order_subst_left' hg
+  contrapose! h_order_le
+  simp_all +decide [PowerSeries.order]
+  split_ifs <;> simp_all +decide [Nat.find_eq_iff]
+  grind
+
+/-- **Reverse direction.** Substitution by unit-leading `g` (constant
+term 0, linear coeff 1) reflects `∀ j ≤ p, coeff j (subst g f) = 0`.
+(Aristotle, cycle 077.) -/
+theorem coeff_eq_zero_of_coeff_subst_eq_zero
+    {g : PowerSeries ℝ} (hg0 : (PowerSeries.constantCoeff (R := ℝ)) g = 0)
+    (hg1 : (PowerSeries.coeff (R := ℝ) 1) g = 1)
+    {f : PowerSeries ℝ} {p : ℕ}
+    (h : ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (PowerSeries.subst g f) = 0) :
+    ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) f = 0 := by
+  have h_coeff_g_pow : ∀ d j, d ≥ 1 →
+      (PowerSeries.coeff j (g ^ d)) = 0 ∨ j ≥ d := by
+    intro d j hd
+    by_contra h_contra
+    induction' hd with d hd ih generalizing j <;>
+      simp_all +decide [pow_succ, PowerSeries.coeff_mul]
+    · aesop
+    · obtain ⟨k, hk⟩ := Finset.exists_ne_zero_of_sum_ne_zero h_contra.1
+      simp_all +decide [Finset.mem_antidiagonal]
+      linarith [ih _ hk.2.1, show k.2 > 0 from Nat.pos_of_ne_zero fun h => by aesop]
+  have h_subst : ∀ j, (PowerSeries.coeff j (PowerSeries.subst g f)) =
+      ∑ d ∈ Finset.range (j + 1),
+        (PowerSeries.coeff d f) * (PowerSeries.coeff j (g ^ d)) := by
+    simp +decide [Finset.sum_range_succ, PowerSeries.coeff_subst]
+    intro j
+    convert PowerSeries.coeff_subst
+      (PowerSeries.HasSubst.of_constantCoeff_zero' hg0) f (Finsupp.single () j) using 1
+    rw [finsum_eq_sum_of_support_subset]
+    case s => exact Finset.range (j + 1)
+    · simp +decide [Finset.sum_range_succ, PowerSeries.coeff]
+    · intro d hd; contrapose! hd; simp_all +decide [MvPowerSeries.coeff]
+      cases h_coeff_g_pow d j (by linarith) <;> simp_all +decide [LinearMap.proj]
+      · exact?
+      · linarith
+  intro j hj
+  induction' j using Nat.strong_induction_on with j ih
+  rcases j with (_ | j) <;> simp_all +decide [Finset.sum_range_succ]
+  · specialize h 0; aesop
+  · specialize h (j + 1) (by linarith); simp_all +decide [Finset.sum_range_succ]
+    have h_coeff_g_pow_succ : (PowerSeries.coeff (j + 1)) (g ^ (j + 1)) = 1 := by
+      induction' j + 1 with j ih <;> simp_all +decide [pow_succ, mul_assoc]
+      rw [PowerSeries.coeff_mul]
+      rw [Finset.sum_eq_single (j, 1)] <;>
+        simp_all +decide [Finset.Nat.sum_antidiagonal_succ]
+      grind
+    simp_all +decide [Finset.sum_eq_zero]
+    rw [Finset.sum_eq_zero] at h <;> simp_all +decide [Finset.sum_range_succ]
+    · grind +splitIndPred
+    · exact fun x hx => Or.inl <| ih x hx.le <| by linarith
+
+theorem derivative_expPS :
+    (PowerSeries.derivative ℝ) expPS = expPS := by
+  unfold expPS
+  ext (_ | n) <;> norm_num [Nat.factorial_ne_zero]
+  · norm_num [PowerSeries.derivative]
+    norm_num [PowerSeries.derivativeFun]
+  · simp +decide [PowerSeries.coeff_derivative, Nat.factorial_succ]
+    rw [mul_assoc, inv_mul_cancel₀ (by positivity), mul_one]
+
+theorem derivative_logOnePlusPS :
+    (PowerSeries.derivative ℝ) logOnePlusPS = oneOverOnePlusPS := by
+  ext n
+  simp +decide [logOnePlusPS, PowerSeries.coeff_derivative]
+  rw [div_mul_cancel₀ _ (Nat.cast_add_one_ne_zero _)]
+
+/-- If `D(G) = G · (1+X)⁻¹` and `G(0) = 0`, then `G = 0`. -/
+theorem eq_zero_of_derivative_eq_mul_oneOverOnePlusPS
+    {G : PowerSeries ℝ} (hG0 : (PowerSeries.constantCoeff (R := ℝ)) G = 0)
+    (hDE : (PowerSeries.derivative ℝ) G = G * oneOverOnePlusPS) :
+    G = 0 := by
+  refine PowerSeries.ext ?_
+  intro n
+  induction' n using Nat.strong_induction_on with n ih
+  rcases n <;> simp_all +decide [PowerSeries.coeff_derivative]
+  rw [eq_comm, PowerSeries.ext_iff] at hDE
+  specialize hDE ‹_›; simp_all +decide [PowerSeries.coeff_mul]
+  rw [Finset.sum_eq_zero] at hDE <;> simp_all +decide [PowerSeries.coeff_derivative]
+  · exact hDE.resolve_right <| Nat.cast_add_one_ne_zero _
+  · exact fun a b hab => ih a <| by linarith
+
+theorem constantCoeff_subst_logOnePlusPS_expPS :
+    (PowerSeries.constantCoeff (R := ℝ)) (PowerSeries.subst logOnePlusPS expPS) = 1 := by
+  rw [PowerSeries.constantCoeff, PowerSeries.constantCoeff_subst]
+  · rw [finsum_eq_single] <;> norm_num
+    case a => exact 0
+    · unfold expPS; norm_num
+    · aesop
+  · exact PowerSeries.HasSubst.of_constantCoeff_zero' rfl
+
+/-- **`exp(log(1+X)) = 1 + X`**: substitution of `logOnePlusPS` into
+`expPS` yields `1 + X`. Proved via ODE uniqueness — `G := subst log expPS - (1 + X)`
+satisfies `D(G) = G · oneOverOnePlusPS` and `G(0) = 0`, hence `G = 0`.
+(Aristotle, cycle 077.) -/
+theorem subst_logOnePlusPS_expPS_eq_one_add_X :
+    PowerSeries.subst logOnePlusPS expPS = (1 : PowerSeries ℝ) + PowerSeries.X := by
+  have hF_deriv :
+      (PowerSeries.derivative ℝ) (PowerSeries.subst logOnePlusPS expPS) =
+        (PowerSeries.subst logOnePlusPS expPS) * oneOverOnePlusPS := by
+    have h_chain :
+        (PowerSeries.derivative ℝ) (PowerSeries.subst logOnePlusPS expPS) =
+          PowerSeries.subst logOnePlusPS ((PowerSeries.derivative ℝ) expPS) *
+            (PowerSeries.derivative ℝ) logOnePlusPS := by
+      rw [PowerSeries.derivative_subst]
+      exact PowerSeries.HasSubst.of_constantCoeff_zero' rfl
+    rw [h_chain, derivative_expPS, derivative_logOnePlusPS]
+  set G : PowerSeries ℝ := PowerSeries.subst logOnePlusPS expPS - (1 + PowerSeries.X)
+  have hG_deriv : (PowerSeries.derivative ℝ) G = G * oneOverOnePlusPS := by
+    simp +zetaDelta at *
+    rw [hF_deriv, sub_mul]
+    rw [onePlusX_mul_oneOverOnePlusPS_eq_one]
+  have hG_zero : (PowerSeries.constantCoeff (R := ℝ)) G = 0 := by
+    simp +zetaDelta at *
+    rw [sub_eq_zero, constantCoeff_subst_logOnePlusPS_expPS]
+  exact sub_eq_zero.mp (eq_zero_of_derivative_eq_mul_oneOverOnePlusPS hG_zero hG_deriv)
+
+/-- **`exp(-log(1+X)) = (1+X)⁻¹`**: substitution of `logOnePlusPS` into
+`expNegPS` yields the geometric series `oneOverOnePlusPS`. Combines
+`subst_logOnePlusPS_expPS_eq_one_add_X`, `expPS_mul_expNegPS_eq_one`,
+and `onePlusX_mul_oneOverOnePlusPS_eq_one` via uniqueness of the
+multiplicative inverse. (Aristotle, cycle 077.) -/
+theorem subst_logOnePlusPS_expNegPS :
+    PowerSeries.subst logOnePlusPS expNegPS = oneOverOnePlusPS := by
+  have h_inv :
+      (1 + PowerSeries.X : PowerSeries ℝ) *
+        PowerSeries.subst logOnePlusPS expNegPS = 1 := by
+    have h_mul : PowerSeries.subst logOnePlusPS (expPS * expNegPS) =
+        (PowerSeries.subst logOnePlusPS expPS) *
+          (PowerSeries.subst logOnePlusPS expNegPS) := by
+      apply PowerSeries.subst_mul
+      exact PowerSeries.HasSubst.of_constantCoeff_zero' rfl
+    rw [expPS_mul_expNegPS_eq_one] at h_mul
+    convert h_mul.symm using 1
+    · rw [show PowerSeries.subst logOnePlusPS expPS = 1 + PowerSeries.X from
+        subst_logOnePlusPS_expPS_eq_one_add_X]
+    · norm_num [PowerSeries.subst]
+      norm_num [MvPowerSeries.subst]
+      norm_num [MvPowerSeries.eval₂]
+  have h_unique : ∀ f g : PowerSeries ℝ,
+      (1 + PowerSeries.X) * f = 1 → (1 + PowerSeries.X) * g = 1 → f = g := by
+    grind +ring
+  exact h_unique _ _ h_inv onePlusX_mul_oneOverOnePlusPS_eq_one
+
+/-! ### Theorem 410D — log-form order condition -/
+
+/-- **Log-form generating function (Butcher §410D, eq. 410d).**
+
+```
+genFnLog M := subst logOnePlusPS (genFn M).
+```
+
+Equivalently, substituting `z ↦ log(1+z)` in
+`genFn M = α(exp(-z)) - z β(exp(-z))` and using
+`subst_logOnePlusPS_expNegPS` (`exp(-log(1+z)) = (1+z)⁻¹`) gives
+`α((1+z)^{-1}) - log(1+z) β((1+z)^{-1})`, which is Butcher's
+(410d). -/
+noncomputable def genFnLog {k : ℕ} (M : LinearMultistepMethod k) :
+    PowerSeries ℝ :=
+  PowerSeries.subst logOnePlusPS (genFn M)
+
+/-- **Butcher §410 Theorem 410D — log-form order condition.**
+
+A linear multistep method has order at least `p` if and only if
+the first `p+1` formal power-series coefficients of
+`α((1+z)^{-1}) - log(1+z) · β((1+z)^{-1})` vanish.
+
+Sign convention: Butcher's textbook (§410, p. 351) writes the
+condition as `z/log(1+z) · α(1+z) + β(1+z) = O(z^p)` (forward sign).
+The context_latex of thm:410D gives the equivalent backward-sign
+form `α((1+z)^{-1}) - log(1+z) · β((1+z)^{-1}) = O(z^{p+1})` (eq.
+410d), which matches our encoding `genFnLog M = subst logOnePlusPS (genFn M)`.
+
+Proof: by `thm_410B`, order ≥ p ↔ first p+1 coefficients of `genFn M`
+vanish. Substitution by `logOnePlusPS` (constant term 0, linear coeff 1)
+preserves and reflects this vanishing
+(`coeff_subst_eq_zero_of_coeff_eq_zero` and
+`coeff_eq_zero_of_coeff_subst_eq_zero`). -/
+theorem thm_410D {k : ℕ} (M : LinearMultistepMethod k) (p : ℕ) :
+    M.HasOrderAtLeast p
+      ↔ ∀ j ≤ p, (PowerSeries.coeff (R := ℝ) j) (genFnLog M) = 0 := by
+  rw [thm_410B]
+  unfold genFnLog
+  refine ⟨coeff_subst_eq_zero_of_coeff_eq_zero logOnePlusPS_constantCoeff,
+          coeff_eq_zero_of_coeff_subst_eq_zero logOnePlusPS_constantCoeff
+            logOnePlusPS_coeff_one⟩
+
+/-! ### §410D witnesses -/
+
+/-- **Witness — explicit Euler satisfies `genFnLog = O(z²)`.**
+Repackaging cycle 075's `explicitEulerLMM_hasOrderAtLeast_one`
+through `thm_410D`. -/
+theorem explicitEulerLMM_genFnLog_O_z2 :
+    ∀ j ≤ 1, (PowerSeries.coeff (R := ℝ) j)
+                (genFnLog explicitEulerLMM) = 0 :=
+  (thm_410D explicitEulerLMM 1).mp explicitEulerLMM_hasOrderAtLeast_one
+
+/-- **Witness — explicit Euler has order ≥ 1 via §410D.**
+Re-derives `explicitEulerLMM_hasOrderAtLeast_one` through the
+log-form order condition `thm_410D`. -/
+theorem explicitEulerLMM_hasOrderAtLeast_one_via_410D :
+    explicitEulerLMM.HasOrderAtLeast 1 :=
+  (thm_410D explicitEulerLMM 1).mpr explicitEulerLMM_genFnLog_O_z2
+
 end OpenMath.Chapter4.Section410

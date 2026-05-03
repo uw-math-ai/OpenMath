@@ -24,3 +24,6 @@ Cycle 072 confirmed cycle-071 staged work was sound and committed it together wi
 
 ### Cycle 73
 Cycle 073: Authored the §410 generating-function infrastructure (`αPoly`, `βPoly`, `C`, `expNegPS`, 5 Aristotle helpers including the load-bearing `coeff_aeval_C_X_pow`, 7 manually-closed sub-lemmas) in `OpenMath/Chapter4/Section410.lean`, but left `thm_410A`'s general-`j` case as `sorry` and committed nothing — supervisor REVERTED with score −2 (commit-not-reaching-repo). Cycle 074 closes the sorry (via `map_sub`/`map_one`/`map_sum` push-throughs + `coeff_aeval_C_X_pow` + `rfl` against the `C M (j+1)` pattern-match) and lands the cycle-073 infrastructure together in one zero-sorry commit.
+
+### Cycle 78
+Cycle 078 lem:383A: planner's Path B sketch proposed a trivial pointwise multiplicativity statement — rejected as definition smuggling (Butcher's lemma is about the convolution product, not pointwise). Faithful implementation required building Multiset.powerset_add (missing from Mathlib) and sum_mul_sum_eq_sum_product as private helpers. DecidableEq for RootedTree required Classical.decEq workaround (nested-inductive deriving failure). Multiset.mul_sum does not exist — correct name is Multiset.sum_map_mul_left.

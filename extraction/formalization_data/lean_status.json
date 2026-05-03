@@ -763,9 +763,10 @@
     "status": "formalized"
   },
   "thm:410D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section410.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section410.thm_410D",
+    "notes": "Closed in cycle 079 by integrating the cycle 077 Aristotle batch (project 18504be5-2481-4d60-9d7b-12b8a5cd2b47, COMPLETE at start of cycle 079, 100% solved). Five Aristotle-supplied helper lemmas: (1) onePlusX_mul_oneOverOnePlusPS_eq_one (Cauchy product telescopes), (2) coeff_subst_eq_zero_of_coeff_eq_zero (forward direction of substitution-preserves-vanishing, via PowerSeries.le_order_subst_left'), (3) coeff_eq_zero_of_coeff_subst_eq_zero (reverse direction, by strong induction on j with coeff(j+1)(g^(j+1))=1 leading-term argument), (4) subst_logOnePlusPS_expPS_eq_one_add_X (`exp(log(1+X)) = 1+X` via ODE uniqueness: G := subst log expPS - (1+X) satisfies G' = G/(1+X) and G(0)=0, hence G=0), (5) subst_logOnePlusPS_expNegPS (`exp(-log(1+X)) = (1+X)⁻¹` via subst_mul + uniqueness of multiplicative inverse). New definitions added: oneOverOnePlusPS = Σ (-1)^n z^n, logOnePlusPS = Σ (-1)^(n-1)/n · z^n, genFnLog M = subst logOnePlusPS (genFn M). Main theorem chained off thm_410B (cycle 075): order ≥ p iff first p+1 coefficients of genFn M vanish. Substitution by logOnePlusPS (constantCoeff = 0, coeff 1 = 1) preserves and reflects this vanishing via helpers (2) and (3). Witnesses landed: explicitEulerLMM_genFnLog_O_z2 and explicitEulerLMM_hasOrderAtLeast_one_via_410D. Faithfulness: textbook §410D backward-sign equation (410d) `α((1+z)⁻¹) - log(1+z)·β((1+z)⁻¹) = O(z^(p+1))` matches genFnLog M = subst logOnePlusPS (genFn M) exactly via subst_logOnePlusPS_expNegPS. Axioms: [propext, Classical.choice, Quot.sound].",
+    "status": "formalized"
   },
   "thm:422A": {
     "lean_file": null,
