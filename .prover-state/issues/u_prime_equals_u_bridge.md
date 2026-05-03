@@ -58,6 +58,20 @@ i.e. **target ⇔ `u' = u`**.
   combined with the closed-form computation gives `V *ᵥ u' = u'`.
   This is a partial bridge (the `V·u' = u'` half) but does NOT pin
   down `u' = u` since `ker(I - V)` may be multi-dimensional.
+* (Cycle 096) **PARTIAL BRIDGE CLOSED**: the `V·u' = u'` half is now
+  proven as a sorry-free lemma
+  `GeneralLinearMethod.convergence_witness_isVfixed` in
+  `OpenMath/Chapter5/Section514.lean`. The proof instantiates the
+  trivial IVP (`f ≡ 1`, `yex := id`, `x₀ := 0`, `y₀ := 0`) with
+  `φ ≡ 0` and `Y n m := M.glmConstOneIterate (1/n) m`, applies the
+  closed-form lemma + the algebraic identity
+  `V *ᵥ glm h n = glm h n + h • (V^n *ᵥ B𝟙 - B𝟙)`, uses
+  power-boundedness (via §513 stability) to vanish the residual
+  `(1/n) • (V^n *ᵥ B𝟙 - B𝟙) → 0`, and concludes by
+  `tendsto_nhds_unique` against the continuous-mulVec lift of
+  `Y n n → u'`. Axioms: `[propext, Classical.choice, Quot.sound]`
+  only. **Remaining work**: `U·u' = 𝟙` (other half) plus a
+  uniqueness step to identify `u'` with `u`.
 
 ## Why this is hard
 

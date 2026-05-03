@@ -223,6 +223,163 @@ theorem GeneralLinearMethod.IsStable.powerBound {s r : ℕ}
   obtain ⟨K, hK⟩ := hStable
   exact ⟨K, hK⟩
 
+/-! ### Partial bridge `V·u' = u'` for `thm:514A`
+
+The convergence-witness vector `u'` extracted from `M.IsConvergent`
+(applied to the trivial IVP `y'(x) = 1, y(0) = 0, yex = id`) is a
+fixed point of `M.V`. This is one half of the `u' = u` bridge —
+the other half (`U·u' = 𝟙`) and the uniqueness step needed to
+identify `u'` with the preconsistency vector `u` remain open; see
+`.prover-state/issues/u_prime_equals_u_bridge.md`. -/
+
+/-- Algebraic identity: `V *ᵥ y[n] = y[n] + h • (V^n *ᵥ B𝟙 - B𝟙)`
+where `y[n] = M.glmConstOneIterate h n`. Proof: substitute the
+closed form, distribute `V` through the `h • Σ` shell, reindex
+`Σ_{k<n} V^(k+1) = Σ_{k<n+1} V^k - V^0`. -/
+private lemma GeneralLinearMethod.V_mulVec_glmConstOneIterate_eq
+    {s r : ℕ} (M : GeneralLinearMethod s r) (h : ℝ) (n : ℕ) :
+    M.V *ᵥ M.glmConstOneIterate h n =
+      M.glmConstOneIterate h n
+      + h • (M.V ^ n *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))
+              - M.B *ᵥ (fun _ => (1 : ℝ))) := by
+  rw [M.glmConstOneIterate_closed_form h n,
+      Matrix.mulVec_smul, Matrix.mulVec_sum]
+  have hterm : ∀ k : ℕ, M.V *ᵥ (M.V ^ k *ᵥ (M.B *ᵥ (fun _ => (1:ℝ)))) =
+                M.V ^ (k+1) *ᵥ (M.B *ᵥ (fun _ => (1:ℝ))) := by
+    intro k
+    rw [Matrix.mulVec_mulVec, ← pow_succ']
+  simp_rw [hterm]
+  -- LHS: h • Σ_{k<n} V^(k+1) *ᵥ (B *ᵥ 𝟙)
+  -- RHS: h • Σ V^k *ᵥ (B *ᵥ 𝟙) + h • (V^n *ᵥ (B *ᵥ 𝟙) - B *ᵥ 𝟙)
+  set v : Fin r → ℝ := M.B *ᵥ (fun _ => (1:ℝ)) with hv_def
+  -- Reindex `Σ V^(k+1) *ᵥ v = (Σ V^k *ᵥ v) + V^n *ᵥ v - v` via
+  -- the two `sum_range_succ` peels.
+  have h1 : (∑ k ∈ Finset.range n, M.V ^ (k+1) *ᵥ v) + (M.V ^ (0 : ℕ)) *ᵥ v
+              = ∑ k ∈ Finset.range (n+1), M.V ^ k *ᵥ v := by
+    exact (Finset.sum_range_succ' (fun k => M.V ^ k *ᵥ v) n).symm
+  have h2 : ∑ k ∈ Finset.range (n+1), M.V ^ k *ᵥ v =
+              (∑ k ∈ Finset.range n, M.V ^ k *ᵥ v) + M.V ^ n *ᵥ v := by
+    exact Finset.sum_range_succ (fun k => M.V ^ k *ᵥ v) n
+  have hV0 : (M.V ^ (0 : ℕ)) *ᵥ v = v := by
+    rw [pow_zero, Matrix.one_mulVec]
+  rw [hV0] at h1
+  have h12 : (∑ k ∈ Finset.range n, M.V ^ (k+1) *ᵥ v) + v
+              = (∑ k ∈ Finset.range n, M.V ^ k *ᵥ v) + M.V ^ n *ᵥ v :=
+    h1.trans h2
+  -- Goal: h • Σ V^(k+1) *ᵥ v = h • Σ V^k *ᵥ v + h • (V^n *ᵥ v - v)
+  rw [smul_sub]
+  -- Reduce to vector equation: rewrite as a single funext.
+  funext i
+  have hi := congrFun h12 i
+  simp only [Pi.add_apply, Pi.sub_apply, Pi.smul_apply, smul_eq_mul,
+    Finset.sum_apply] at hi ⊢
+  linear_combination h * hi
+
+/-- **Half of the `u' = u` bridge**: the convergence-witness vector
+`u'` extracted from `M.IsConvergent` (applied to the trivial IVP
+`y'(x) = 1, y(0) = 0, yex = id`) is a fixed point of `M.V`.
+
+This is a partial step toward `thm:514A`; the full bridge `u' = u`
+to the preconsistency vector remains open — see
+`.prover-state/issues/u_prime_equals_u_bridge.md`. -/
+private theorem GeneralLinearMethod.convergence_witness_isVfixed
+    {s r : ℕ} (M : GeneralLinearMethod s r)
+    (hConv : M.IsConvergent) :
+    ∃ u' : Fin r → ℝ, u' ≠ 0 ∧ M.V *ᵥ u' = u' := by
+  -- Step 1: trivial IVP setup (f ≡ 1, x₀ = 0, y₀ = 0, yex = id).
+  set f : ℝ → ℝ := fun _ => (1 : ℝ) with hf_def
+  set yex : ℝ → ℝ := id with hyex_def
+  have hf_lip : LipschitzWith 0 f := by rw [hf_def]; exact LipschitzWith.const _
+  have hyex_x₀ : yex 0 = 0 := rfl
+  have hyex_ode : ∀ x : ℝ, HasDerivAt yex (f (yex x)) x := by
+    intro x
+    rw [hyex_def, hf_def]
+    exact hasDerivAt_id x
+  -- Step 2: extract u' from hConv.
+  obtain ⟨u', hu'_ne, hConv'⟩ :=
+    hConv f 0 hf_lip 0 0 yex hyex_x₀ hyex_ode
+  refine ⟨u', hu'_ne, ?_⟩
+  -- Step 3: instantiate hConv' at φ ≡ 0, x = 1, Y := glmConstOneIterate (1/n).
+  set φ : ℝ → Fin r → ℝ := fun _ _ => (0 : ℝ) with hφ_def
+  set Y : ℕ → ℕ → Fin r → ℝ :=
+    fun n m => M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) m with hY_def
+  have hφ_tendsto : ∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
+                       (nhds 0) (nhds (u' i * 0)) := by
+    intro i
+    rw [show u' i * 0 = 0 from by ring]
+    exact tendsto_const_nhds
+  have hxx : (0 : ℝ) < 1 := by norm_num
+  have hY_props : ∀ n : ℕ, 0 < n →
+      Y n 0 = φ ((1 - 0) / (n : ℝ)) ∧
+      M.IsGLMSolution ((1 - 0) / (n : ℝ)) f (Y n) := by
+    intro n hn
+    refine ⟨?_, ?_⟩
+    · -- Y n 0 = (fun _ => 0) (= φ ((1-0)/n))
+      funext i
+      show M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) 0 i = (0 : ℝ)
+      rfl
+    · -- M.IsGLMSolution ((1-0)/n) f (Y n).
+      rw [hf_def]
+      exact M.glmConstOneIterate_isGLMSolution ((1 - 0 : ℝ) / (n : ℝ))
+  have hY_lim : Filter.Tendsto (fun n : ℕ => Y n n)
+                  Filter.atTop (nhds (fun i => u' i * yex 1)) :=
+    hConv' φ hφ_tendsto 1 hxx Y hY_props
+  -- yex 1 = id 1 = 1, so the limit simplifies to u'.
+  have h_lim_simp : (fun i : Fin r => u' i * yex 1) = u' := by
+    rw [hyex_def]; funext i; show u' i * (1 : ℝ) = u' i; ring
+  rw [h_lim_simp] at hY_lim
+  -- Step 4: continuity of `M.V *ᵥ ·` lifts the limit.
+  have hVY_lim : Filter.Tendsto (fun n : ℕ => M.V *ᵥ Y n n)
+                   Filter.atTop (nhds (M.V *ᵥ u')) := by
+    have hcont : Continuous fun w : Fin r → ℝ => M.V *ᵥ w :=
+      Continuous.matrix_mulVec continuous_const continuous_id
+    exact hcont.tendsto _ |>.comp hY_lim
+  -- Step 5: V *ᵥ Y n n = Y n n + (1/n) • residual (from Step 4 helper).
+  have h_step4 : ∀ n : ℕ, M.V *ᵥ Y n n = Y n n
+        + ((1 - 0 : ℝ) / (n : ℝ)) • (M.V ^ n *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))
+                                      - M.B *ᵥ (fun _ => (1 : ℝ))) := by
+    intro n
+    show M.V *ᵥ M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) n = _
+    exact M.V_mulVec_glmConstOneIterate_eq ((1 - 0 : ℝ) / (n : ℝ)) n
+  -- Step 6: residual vanishes — `(1/n) • (V^n *ᵥ B𝟙 - B𝟙) → 0`.
+  have hStable := M.convergent_isStable hConv
+  obtain ⟨K, hK⟩ := hStable.powerBound
+  set w : Fin r → ℝ := M.B *ᵥ (fun _ => (1 : ℝ)) with hw_def
+  set residual : ℕ → Fin r → ℝ := fun n => M.V ^ n *ᵥ w - w with hresidual_def
+  have h_residual_bd : ∀ n : ℕ, ‖residual n‖ ≤ K * ‖w‖ + ‖w‖ := by
+    intro n
+    have h1 : ‖M.V ^ n *ᵥ w‖ ≤ ‖M.V ^ n‖ * ‖w‖ :=
+      Matrix.linfty_opNorm_mulVec _ _
+    have h2 : ‖M.V ^ n‖ * ‖w‖ ≤ K * ‖w‖ :=
+      mul_le_mul_of_nonneg_right (hK n) (norm_nonneg _)
+    have h3 : ‖M.V ^ n *ᵥ w - w‖ ≤ ‖M.V ^ n *ᵥ w‖ + ‖w‖ := norm_sub_le _ _
+    linarith
+  have h_inv_tendsto : Filter.Tendsto (fun n : ℕ => (1 - 0 : ℝ) / (n : ℝ))
+                          Filter.atTop (nhds 0) := by
+    have heq : (fun n : ℕ => (1 - 0 : ℝ) / (n : ℝ)) = fun n : ℕ => (1 : ℝ) / (n : ℝ) := by
+      funext n; ring
+    rw [heq]
+    exact tendsto_one_div_atTop_nhds_zero_nat
+  have h_residual_vanish : Filter.Tendsto
+      (fun n : ℕ => ((1 - 0 : ℝ) / (n : ℝ)) • residual n)
+      Filter.atTop (nhds 0) := by
+    refine NormedField.tendsto_zero_smul_of_tendsto_zero_of_bounded h_inv_tendsto ?_
+    exact ⟨K * ‖w‖ + ‖w‖, by
+      rw [Filter.eventually_map]
+      exact Filter.Eventually.of_forall h_residual_bd⟩
+  -- Step 7: combine via Filter.Tendsto.add and tendsto_nhds_unique.
+  have hYn_plus_res : Filter.Tendsto
+      (fun n : ℕ => Y n n + ((1 - 0 : ℝ) / (n : ℝ)) • residual n)
+      Filter.atTop (nhds (u' + 0)) :=
+    hY_lim.add h_residual_vanish
+  rw [add_zero] at hYn_plus_res
+  have hVY_eq : (fun n : ℕ => M.V *ᵥ Y n n) =
+                (fun n : ℕ => Y n n + ((1 - 0 : ℝ) / (n : ℝ)) • residual n) := by
+    funext n
+    exact h_step4 n
+  rw [hVY_eq] at hVY_lim
+  exact tendsto_nhds_unique hVY_lim hYn_plus_res
+
 /-! ### Main theorem: `thm:514A`
 
 Butcher's textbook proof: under `IsConvergent` + `IsPreconsistent`
