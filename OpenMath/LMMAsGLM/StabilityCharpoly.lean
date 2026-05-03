@@ -2607,4 +2607,17 @@ theorem D_mul_toGLM_charpoly_eval_one_general_of_bdf
     rw [hβ]; simp
   rw [h1, h2]; ring
 
+/-- §521 Step G.3 — General (non-BDF) ξ = 0 mirror of G.1.
+This is the public surface of D.11a renamed to match the
+G-ladder naming. -/
+theorem D_mul_toGLM_charpoly_eval_zero_general
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 0 =
+      - ((rowFAlphaResidual m ⟨0, hs⟩).eval 0
+            + ((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ)
+                * ((m.β (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ)) * z :=
+  D_mul_toGLM_charpoly_eval_zero_substituted m hz hs
+
 end LMM
