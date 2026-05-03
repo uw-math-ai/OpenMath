@@ -2954,4 +2954,196 @@ theorem D_mul_toGLM_charpoly_eval_zero_eq_zero
       rowFAlphaResidual_eval_zero_closed_form m hs ⟨0, hs⟩]
   ring
 
+/-- §521 Step J.1 — Generic-ξ closed form for `rowFAlphaResidual.eval ξ`.
+Generalises H.2 (`rowFAlphaResidual_eval_one_closed_form`) and I.2
+(`rowFAlphaResidual_eval_zero_closed_form`) to arbitrary `ξ : ℂ`. The
+last-column adjugate factor `(X^k).eval ξ` expands to `ξ^(k:ℕ)`,
+leaving the outer k-sum as a polynomial in ξ. -/
+theorem rowFAlphaResidual_eval_closed_form
+    (m : LMM s) (hs : 0 < s) (l : Fin s) (ξ : ℂ) :
+    (rowFAlphaResidual m l).eval ξ
+      = -((m.β (Fin.castSucc l) : ℝ) : ℂ)
+          * ∑ k : Fin s,
+              ((m.α (Fin.castSucc k) : ℝ) : ℂ) * ξ ^ (k : ℕ) := by
+  rw [rowFAlphaResidual_eval_eq_double_sum m l ξ]
+  -- Collapse inner j-sum to the single surviving j = ⟨s-1, _⟩ term.
+  have hInner : ∀ k : Fin s,
+      ∑ j : Fin s,
+        ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+          * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval ξ
+        = -((m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((m.β (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (k : ℕ) := by
+    intro k
+    rw [Finset.sum_eq_single (⟨s - 1, by omega⟩ : Fin s)]
+    · -- Surviving j = ⟨s-1, _⟩ term.
+      have hPYHF :
+          (toGLM_stabilityMatrixPYHF m 0) ⟨s - 1, by omega⟩ l
+            = ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+        unfold toGLM_stabilityMatrixPYHF
+        rw [if_pos (show ((⟨s - 1, by omega⟩ : Fin s) : ℕ) + 1 = s by
+                      show s - 1 + 1 = s; omega)]
+        ring
+      have hAdj :
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩).eval ξ = ξ ^ (k : ℕ) := by
+        rw [toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last_col m hs k,
+            Polynomial.eval_pow, Polynomial.eval_X]
+      rw [hPYHF, hAdj]
+      push_cast
+      ring
+    · -- j ≠ ⟨s-1, _⟩: PYHF j l = 0.
+      intro j _ hj
+      have hPYHF : (toGLM_stabilityMatrixPYHF m 0) j l = 0 := by
+        unfold toGLM_stabilityMatrixPYHF
+        rw [if_neg]
+        intro heq
+        apply hj
+        apply Fin.ext
+        show (j : ℕ) = s - 1
+        omega
+      rw [hPYHF]
+      ring
+    · intro hmem
+      exact absurd (Finset.mem_univ _) hmem
+  rw [show
+        (∑ k : Fin s, ∑ j : Fin s,
+            ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+                * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+              * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval ξ)
+        = ∑ k : Fin s,
+            (-((m.α (Fin.castSucc k) : ℝ) : ℂ)
+              * ((m.β (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (k : ℕ)) from
+        Finset.sum_congr rfl (fun k _ => hInner k)]
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl (fun k _ => ?_)
+  ring
+
+/-- §521 Step J.2 — Generic-ξ unfolding of `rowFAlphaPoly.eval ξ` as
+the position-graded sum of `rowFAlphaResidual` evaluations. Generalises
+`rowFAlphaPoly_eval_one_eq_residual_sum` (D.10b) to arbitrary `ξ : ℂ`
+by retaining the `ξ^(l:ℕ)` factor that `one_pow` collapses at ξ = 1. -/
+theorem rowFAlphaPoly_eval_general (m : LMM s) (ξ : ℂ) :
+    (rowFAlphaPoly m).eval ξ
+      = ∑ l : Fin s, (rowFAlphaResidual m l).eval ξ * ξ ^ (l : ℕ) := by
+  rw [rowFAlphaPoly_eq_residual_sum]
+  rw [Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl ?_
+  intro l _
+  simp [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X]
+
+/-- §521 Step J.3 — Generic-ξ evaluation of `rowYQuot`. Generalises
+F.3 at ξ = 1 (`rowYQuot_eval_one`) and ξ = 0 (`rowYQuot_eval_zero`)
+by retaining the position-graded `ξ^(l:ℕ)` factor that `one_pow` /
+`zero_pow` collapse at the endpoints. -/
+theorem rowYQuot_eval_general (m : LMM s) (hs : 0 < s) (ξ : ℂ) :
+    (rowYQuot m).eval ξ
+      = - ∑ l : Fin s,
+            ((m.α (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ) := by
+  rw [rowYQuot_eq_neg_alpha_sum m hs]
+  rw [Polynomial.eval_neg, Polynomial.eval_finset_sum]
+  congr 1
+  refine Finset.sum_congr rfl (fun l _ => ?_)
+  rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+      Polynomial.eval_X]
+
+/-- §521 Step J.4 helper — Generic-ξ unfolding of `rowFBetaPoly.eval ξ`.
+Generalises `rowFBetaPoly_eval_one` (D.5) to arbitrary `ξ : ℂ`. -/
+private theorem rowFBetaPoly_eval_general (m : LMM s) (ξ : ℂ) :
+    (rowFBetaPoly m).eval ξ
+      = ∑ k : Fin s, ((m.β (Fin.castSucc k) : ℝ) : ℂ) * ξ ^ (k : ℕ) := by
+  unfold rowFBetaPoly
+  rw [Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl ?_
+  intro k _
+  simp [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X,
+        Polynomial.eval_C]
+
+/-- §521 Step J.4 helper — Generic-ξ unfolding of
+`(toGLM_stabilityMatrixPY m 0).charpoly.eval ξ`. Routine eval of the
+C.13a closed form `X^s - ∑ C(-α l.castSucc) * X^l`. -/
+private theorem toGLM_stabilityMatrixPY_zero_charpoly_eval_general
+    (m : LMM s) (ξ : ℂ) :
+    ((toGLM_stabilityMatrixPY m 0).charpoly).eval ξ
+      = ξ^s + ∑ l : Fin s,
+                ((m.α (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ) := by
+  rw [toGLM_stabilityMatrixPY_zero_charpoly_eq]
+  rw [Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_X,
+      Polynomial.eval_finset_sum]
+  have hSum : ∑ l : Fin s,
+        (Polynomial.C ((-m.α (Fin.castSucc l) : ℝ) : ℂ) *
+          Polynomial.X ^ (l : ℕ)).eval ξ
+      = -∑ l : Fin s, ((m.α (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ) := by
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun l _ => ?_)
+    simp [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X,
+          Polynomial.eval_C]
+  rw [hSum]; ring
+
+/-- §521 Step J.4 — Generic-ξ headline (general, non-BDF) lifting H.3
+and I.3 to arbitrary `ξ : ℂ`. The §521 LMM-side iff bridge
+`LMM.toGLM_isAStable_iff` reduces to a unit-disk root-counting argument
+over this identity. Substituting J.1, J.2, J.3 plus the
+`rowFBetaPoly` and `(PY 0).charpoly` evaluations into C.16
+collapses the residual algebra to a single `ring` close after
+extracting the two scalar sums `A := ∑ α_k ξ^k` and `B := ∑ β_l ξ^l`. -/
+theorem D_mul_toGLM_charpoly_eval_general
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval ξ
+      = ξ^s * (m.stabilityPolyPoly z).eval ξ := by
+  rw [D_mul_toGLM_charpoly_eval_eq m ξ hz hs]
+  rw [rowYQuot_eval_general m hs ξ]
+  rw [rowFAlphaPoly_eval_general m ξ]
+  rw [rowFBetaPoly_eval_general m ξ]
+  rw [toGLM_stabilityMatrixPY_zero_charpoly_eval_general m ξ]
+  -- Rewrite each rowFAlphaResidual.eval ξ via J.1.
+  rw [show (∑ l : Fin s, (rowFAlphaResidual m l).eval ξ * ξ ^ (l : ℕ))
+        = ∑ l : Fin s,
+            (-((m.β (Fin.castSucc l) : ℝ) : ℂ)
+              * ∑ k : Fin s,
+                  ((m.α (Fin.castSucc k) : ℝ) : ℂ) * ξ ^ (k : ℕ))
+              * ξ ^ (l : ℕ) from
+        Finset.sum_congr rfl (fun l _ => by
+          rw [rowFAlphaResidual_eval_closed_form m hs l ξ])]
+  -- Pull α-sum out of the rowFAlphaResidual sum: ∑_l (-β_l ξ^l) * A = -B*A.
+  set A : ℂ := ∑ k : Fin s,
+                  ((m.α (Fin.castSucc k) : ℝ) : ℂ) * ξ ^ (k : ℕ) with hA
+  set B : ℂ := ∑ l : Fin s,
+                  ((m.β (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ) with hB
+  have hRes : (∑ l : Fin s,
+        (-((m.β (Fin.castSucc l) : ℝ) : ℂ) * A) * ξ ^ (l : ℕ))
+      = - B * A := by
+    rw [show (∑ l : Fin s,
+          (-((m.β (Fin.castSucc l) : ℝ) : ℂ) * A) * ξ ^ (l : ℕ))
+        = ∑ l : Fin s,
+            -(((m.β (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ)) * A from
+          Finset.sum_congr rfl (fun l _ => by ring)]
+    rw [show (∑ l : Fin s,
+          -(((m.β (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ)) * A)
+        = (∑ l : Fin s,
+            -(((m.β (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ))) * A from
+          (Finset.sum_mul ..).symm]
+    rw [Finset.sum_neg_distrib]
+  rw [hRes]
+  -- Pull β_l - β_last α_l sum apart: ∑(β_l - β_last α_l) ξ^l = B - β_last A.
+  have hDiff : (∑ l : Fin s,
+        ( ((m.β (Fin.castSucc l) : ℝ) : ℂ)
+            - ((m.β (Fin.last s) : ℝ) : ℂ) *
+              ((m.α (Fin.castSucc l) : ℝ) : ℂ) ) * ξ ^ (l : ℕ))
+      = B - ((m.β (Fin.last s) : ℝ) : ℂ) * A := by
+    rw [show (∑ l : Fin s,
+          ( ((m.β (Fin.castSucc l) : ℝ) : ℂ)
+              - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                ((m.α (Fin.castSucc l) : ℝ) : ℂ) ) * ξ ^ (l : ℕ))
+        = ∑ l : Fin s,
+            (((m.β (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ)
+              - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                (((m.α (Fin.castSucc l) : ℝ) : ℂ) * ξ ^ (l : ℕ))) from
+          Finset.sum_congr rfl (fun l _ => by ring)]
+    rw [Finset.sum_sub_distrib, ← Finset.mul_sum]
+  rw [hDiff]
+  ring
+
 end LMM
