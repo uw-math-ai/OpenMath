@@ -348,8 +348,8 @@
   },
   "lem:515A": {
     "lean_file": "OpenMath/Chapter5/Section515.lean",
-    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.localStageError_bound_a",
-    "status": "partial"
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.localStageError_bound_a, OpenMath.Chapter5.Section510.GeneralLinearMethod.localStageError_bound_b",
+    "status": "formalized"
   },
   "lem:515B": {
     "lean_file": null,

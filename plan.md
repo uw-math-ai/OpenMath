@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 63 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 64 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -211,7 +211,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:515D` **Stability and Consistency Imply Convergence (515D)** (§515)
 - [ ] `thm:550B` **Doubly companion matrix similarity transformation** (§550)
 - [x] `def:521A` **Methods with maximal stability order** (§521)
-- [~] `lem:515A` **Stability and consistency imply convergence (515A)** (§515) — `OpenMath/Chapter5/Section515.lean` (cycle 101 partial: 515a closed via T1+T2+T3+T4; 515b mirror pending cycle 102)
+- [x] `lem:515A` **Stability and consistency imply convergence (515A)** (§515) — `OpenMath/Chapter5/Section515.lean` (cycle 102 closure: 515a + 515b axiom-clean)
 - [x] `thm:514A` **The necessity of consistency** (§514) — `OpenMath/Chapter5/Section514.lean` (cycle 099 closure; option (ii) sidestep, axiom-clean)
 - [ ] `thm:520B` **Stability Matrix for Linear Differential Equation** (§520)
 - [ ] `thm:520D` **Instability Region Boundary Characterization** (§520)

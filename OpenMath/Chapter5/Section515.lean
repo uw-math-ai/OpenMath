@@ -367,8 +367,12 @@ private theorem aux_T3_bound
 
 /-- **(T4 bound)** Lipschitz of `f` at the discrete abscissae, using
 `aux_y_diff_norm_bound`:
-`|h · Σ_j A_{ij}·(f(y(x+h·c_j)) − f(y x))| ≤ h² L² M Σ_j |A_{ij}·c_j|`. -/
-private theorem aux_T4_bound {s : ℕ}
+`|h · Σ_j A_{ij}·(f(y(x+h·c_j)) − f(y x))| ≤ h² L² M Σ_j |A_{ij}·c_j|`.
+
+Generalized in cycle 102 to allow distinct row/column dimensions
+(`Fin r`/`Fin s`) so it can be re-used at row index in (515b)
+where `M.B : Matrix (Fin r) (Fin s) ℝ`. -/
+private theorem aux_T4_bound {s r : ℕ}
     {f : ℝ → ℝ} {L M_bound : ℝ}
     (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
     (hf_lip : LipschitzWith L.toNNReal f)
@@ -376,9 +380,9 @@ private theorem aux_T4_bound {s : ℕ}
     (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
     (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
-    (A : Matrix (Fin s) (Fin s) ℝ)
+    (A : Matrix (Fin r) (Fin s) ℝ)
     (c : Fin s → ℝ)
-    (x h : ℝ) (hh : 0 ≤ h) (i : Fin s) :
+    (x h : ℝ) (hh : 0 ≤ h) (i : Fin r) :
     |h * ∑ j, A i j * (f (y (x + h * c j)) - f (y x))|
       ≤ h^2 * L^2 * M_bound * ∑ j, |A i j * c j| := by
   -- Lipschitz bridge.
@@ -439,6 +443,99 @@ private theorem aux_T4_bound {s : ℕ}
     _ ≤ h * ((∑ j, |A i j * c j|) * (h * (L * (L * M_bound)))) :=
           mul_le_mul_of_nonneg_left hsum_bound hh
     _ = h^2 * L^2 * M_bound * ∑ j, |A i j * c j| := by ring
+
+/-- **(T3' bound)** Pointwise Lipschitz bridge for the (515b) output-side
+expansion of `v_i · h · y'(xn)`: with `xn = xn1 + h`, by Lipschitz of `f`
+and `aux_y_diff_norm_bound` at `ξ = 1`,
+`|v_i · h · (f(y(xn1+h)) − f(y xn1))| ≤ |v_i| · h² L² M`.
+
+Cycle 102 helper for `localStageError_bound_b`. The shape is genuinely
+new — `aux_T3_bound` integrates over `[0, c_i]` whereas this is a
+single point evaluation. -/
+private theorem aux_T3'_bound
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
+    (x h : ℝ) (hh : 0 ≤ h) (vi : ℝ) :
+    |vi * h * (f (y (x + h)) - f (y x))|
+      ≤ |vi| * (h^2 * L^2 * M_bound) := by
+  -- Lipschitz bridge.
+  have hLip_abs : ∀ a b : ℝ, |f a - f b| ≤ L * |a - b| := by
+    intro a b
+    have hd := hf_lip.dist_le_mul a b
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    have hcoe : (Real.toNNReal L : ℝ) = L := Real.coe_toNNReal L hL
+    rw [hcoe] at hd
+    exact hd
+  -- |y(x+h) - y x| ≤ h * (L * M_bound) via aux_y_diff_norm_bound at ξ = 1.
+  have hy_diff_bound : |y (x + h) - y x| ≤ h * (L * M_bound) := by
+    have h1 := aux_y_diff_norm_bound hL hM hy_C1 hy_ode hf_y_bound x h hh 1
+    have hxh : x + h * 1 = x + h := by ring
+    rw [hxh, abs_one, mul_one] at h1
+    exact h1
+  -- |f(y(x+h)) - f(y x)| ≤ h * L * (L * M_bound).
+  have hf_diff_bound : |f (y (x + h)) - f (y x)| ≤ h * L * (L * M_bound) := by
+    calc |f (y (x + h)) - f (y x)|
+        ≤ L * |y (x + h) - y x| := hLip_abs _ _
+      _ ≤ L * (h * (L * M_bound)) := mul_le_mul_of_nonneg_left hy_diff_bound hL
+      _ = h * L * (L * M_bound) := by ring
+  -- |vi * h * (f - f)| = |vi| * h * |f - f| (using h ≥ 0).
+  have habs1 : |vi * h * (f (y (x + h)) - f (y x))|
+              = |vi| * h * |f (y (x + h)) - f (y x)| := by
+    rw [abs_mul, abs_mul, abs_of_nonneg hh]
+  rw [habs1]
+  have hvih_nn : 0 ≤ |vi| * h := mul_nonneg (abs_nonneg _) hh
+  calc |vi| * h * |f (y (x + h)) - f (y x)|
+      ≤ |vi| * h * (h * L * (L * M_bound)) :=
+        mul_le_mul_of_nonneg_left hf_diff_bound hvih_nn
+    _ = |vi| * (h^2 * L^2 * M_bound) := by ring
+
+/-- **(T2 ≡ 0, output-side)** Algebraic identity using `V·u = u`
+and consistency `B·𝟙 + V·v = u + v`:
+`u_i · y(xn1) + (u_i + v_i) · h · y'(xn1) − Σ V_{ij}(u_j·y(xn1) + v_j·h·y'(xn1)) − Σ B_{ij}·h·y'(xn1) = 0`. -/
+private theorem aux_T2_b_eq_zero {s r : ℕ}
+    (B : Matrix (Fin r) (Fin s) ℝ) (V : Matrix (Fin r) (Fin r) ℝ)
+    (u v : Fin r → ℝ)
+    (hVu : V *ᵥ u = u)
+    (hCons : B *ᵥ (fun _ => 1) + V *ᵥ v = u + v)
+    {y : ℝ → ℝ} (xn1 h : ℝ) (i : Fin r) :
+    u i * y xn1 + (u i + v i) * h * deriv y xn1
+      - (∑ j, V i j * (u j * y xn1 + v j * h * deriv y xn1))
+      - (∑ j, B i j * h * deriv y xn1) = 0 := by
+  -- Σ V_{ij} u_j = (V *ᵥ u) i = u_i.
+  have hVu_apply : (V *ᵥ u) i = ∑ j, V i j * u j := rfl
+  have hVv_apply : (V *ᵥ v) i = ∑ j, V i j * v j := rfl
+  have hB1_apply : (B *ᵥ (fun _ => (1:ℝ))) i = ∑ j, B i j := by
+    show ∑ j, B i j * 1 = _
+    simp
+  have hVu_i : (∑ j, V i j * u j) = u i := by
+    rw [← hVu_apply, hVu]
+  -- (B·𝟙 + V·v)_i = (u + v)_i  ⇒  Σ B_{ij} + Σ V_{ij} v_j = u_i + v_i.
+  have hCons_i : (∑ j, B i j) + (∑ j, V i j * v j) = u i + v i := by
+    have h := congrFun hCons i
+    rw [Pi.add_apply, Pi.add_apply] at h
+    rw [hB1_apply, hVv_apply] at h
+    exact h
+  -- Distribute the V-sum into a y(xn1)-part and an h·y'(xn1)-part.
+  have hV_split :
+      (∑ j, V i j * (u j * y xn1 + v j * h * deriv y xn1))
+        = (∑ j, V i j * u j) * y xn1 + (∑ j, V i j * v j) * h * deriv y xn1 := by
+    simp only [mul_add]
+    rw [Finset.sum_add_distrib]
+    congr 1
+    · rw [Finset.sum_mul]
+      refine Finset.sum_congr rfl (fun j _ => ?_); ring
+    · rw [Finset.sum_mul, Finset.sum_mul]
+      refine Finset.sum_congr rfl (fun j _ => ?_); ring
+  have hB_split : (∑ j, B i j * h * deriv y xn1)
+                = (∑ j, B i j) * h * deriv y xn1 := by
+    rw [Finset.sum_mul, Finset.sum_mul]
+  rw [hV_split, hB_split, hVu_i]
+  linear_combination -(h * deriv y xn1) * hCons_i
 
 /-! ## Lemma 515A — local truncation error bounds
 
@@ -623,9 +720,112 @@ theorem GeneralLinearMethod.localStageError_bound_b {s r : ℕ}
         - (∑ j, M.V i j * (u j * yex xn1 + v j * h * deriv yex xn1))|
       ≤ h^2 * L^2 * M_bound *
         ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|) := by
-  -- Sorry-first: same T1+T2+T3+T4 decomposition as (515a) but with
-  -- output-side coefficients (B/V instead of A/U). Cycle 100 leaves
-  -- this sorry; closure tracks (515a).
-  sorry
+  intro i
+  -- Bridge: |f(yex t)| ≤ L * M_bound from |deriv yex t| ≤ L * M_bound via hy_ode.
+  have hf_yex_bound : ∀ t, |f (yex t)| ≤ L * M_bound := by
+    intro t; rw [← _hy_ode t]; exact _hy'_LM t
+  -- T1 = 0 (FTC telescoping at c_i := 1, then bridge xn1 + h * 1 = xn1 + h).
+  have hT1 : yex (xn1 + h) - yex xn1
+              - h * ∫ ξ in (0 : ℝ)..1, f (yex (xn1 + h * ξ)) = 0 := by
+    have h0 := aux_T1_eq_zero _hy_C1 _hy_ode xn1 h 1
+    have hxh : xn1 + h * 1 = xn1 + h := by ring
+    rw [hxh] at h0
+    exact h0
+  -- T2 = 0 (output-side algebraic identity using V·u = u and B·𝟙 + V·v = u + v).
+  have hT2 : u i * yex xn1 + (u i + v i) * h * deriv yex xn1
+              - (∑ j, M.V i j * (u j * yex xn1 + v j * h * deriv yex xn1))
+              - (∑ j, M.B i j * h * deriv yex xn1) = 0 :=
+    aux_T2_b_eq_zero M.B M.V u v _hVu _hCons xn1 h i
+  -- T3 bound at c_i := 1 (then 1^2 = 1 gives ½ h² L² M_bound).
+  have hT3 : |h * ∫ ξ in (0:ℝ)..1, (f (yex (xn1 + h * ξ)) - f (yex xn1))|
+              ≤ (1/2) * h^2 * L^2 * M_bound := by
+    have h0 := aux_T3_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
+                xn1 h _hh 1 (by norm_num : (0:ℝ) ≤ 1)
+    simpa using h0
+  -- T3' bound (point-evaluation Lipschitz, new helper this cycle).
+  have hT3' : |v i * h * (f (yex (xn1 + h)) - f (yex xn1))|
+              ≤ |v i| * (h^2 * L^2 * M_bound) :=
+    aux_T3'_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
+      xn1 h _hh (v i)
+  -- T4 bound for B (after row-dim refactor of aux_T4_bound).
+  have hT4 : |h * ∑ j, M.B i j * (f (yex (xn1 + h * c j)) - f (yex xn1))|
+              ≤ h^2 * L^2 * M_bound * ∑ j, |M.B i j * c j| :=
+    aux_T4_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
+      M.B c xn1 h _hh i
+  -- Continuity of integrand for splitting T3 over [0, 1].
+  have hfy_cont : Continuous (fun t => f (yex t)) := by
+    have heq : (fun t => f (yex t)) = deriv yex := by
+      funext t; exact (_hy_ode t).symm
+    rw [heq]; exact _hy_C1.continuous_deriv le_rfl
+  have hf_yex_shift_cont : Continuous (fun ξ : ℝ => f (yex (xn1 + h * ξ))) := by
+    have hc1 : Continuous (fun ξ : ℝ => xn1 + h * ξ) :=
+      continuous_const.add (continuous_const.mul continuous_id)
+    exact hfy_cont.comp hc1
+  have hint_g_shift : IntervalIntegrable (fun ξ => f (yex (xn1 + h * ξ)))
+                      MeasureTheory.volume 0 1 :=
+    hf_yex_shift_cont.intervalIntegrable _ _
+  -- T3 expansion: h * ∫_0^1 (f - f(yex xn1)) = h * ∫_0^1 f - h * 1 * f(yex xn1).
+  have hT3_expand :
+      h * ∫ ξ in (0:ℝ)..1, (f (yex (xn1 + h * ξ)) - f (yex xn1))
+        = h * (∫ ξ in (0:ℝ)..1, f (yex (xn1 + h * ξ)))
+          - h * 1 * f (yex xn1) := by
+    rw [intervalIntegral.integral_sub hint_g_shift intervalIntegrable_const,
+        intervalIntegral.integral_const]
+    simp only [smul_eq_mul, sub_zero]
+    ring
+  -- T4 expansion: h * Σ B_{ij}(f - f(yex xn1)) = h * Σ B_{ij} f - Σ_j B_{ij} h f(yex xn1).
+  have hT4_expand :
+      h * ∑ j, M.B i j * (f (yex (xn1 + h * c j)) - f (yex xn1))
+        = h * (∑ j, M.B i j * f (yex (xn1 + h * c j)))
+          - (∑ j, M.B i j * h * f (yex xn1)) := by
+    have hsum_distrib :
+        (∑ j, M.B i j * (f (yex (xn1 + h * c j)) - f (yex xn1)))
+          = (∑ j, M.B i j * f (yex (xn1 + h * c j)))
+            - (∑ j, M.B i j * f (yex xn1)) := by
+      rw [← Finset.sum_sub_distrib]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      ring
+    rw [hsum_distrib, mul_sub, Finset.mul_sum]
+    rw [show (∑ j, M.B i j * h * f (yex xn1)) = h * (∑ j, M.B i j * f (yex xn1)) from ?_]
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    ring
+  -- Bridge from `deriv yex xn1` and `deriv yex (xn1+h)` to `f(yex …)`.
+  have hy'0 : deriv yex xn1 = f (yex xn1) := _hy_ode xn1
+  have hy'h : deriv yex (xn1 + h) = f (yex (xn1 + h)) := _hy_ode (xn1 + h)
+  have hsumB_swap :
+      (∑ j, M.B i j * h * deriv yex xn1) = (∑ j, M.B i j * h * f (yex xn1)) := by
+    rw [hy'0]
+  -- Set up abbreviations matching the (515a) pattern.
+  set T3v := h * ∫ ξ in (0:ℝ)..1, (f (yex (xn1 + h * ξ)) - f (yex xn1)) with hT3v_def
+  set T3'v := v i * h * (f (yex (xn1 + h)) - f (yex xn1)) with hT3'v_def
+  set T4v := h * ∑ j, M.B i j * (f (yex (xn1 + h * c j)) - f (yex xn1)) with hT4v_def
+  set Iv := ∫ ξ in (0:ℝ)..1, f (yex (xn1 + h * ξ)) with hIv_def
+  set SBfb := ∑ j, M.B i j * f (yex (xn1 + h * c j)) with hSBfb_def
+  set Vinp := ∑ j, M.V i j * (u j * yex xn1 + v j * h * deriv yex xn1) with hVinp_def
+  set SBhy := ∑ j, M.B i j * h * deriv yex xn1 with hSBhy_def
+  set SBhf := ∑ j, M.B i j * h * f (yex xn1) with hSBhf_def
+  -- Algebraic claim: LHS = u i * T3v + T3'v − T4v.
+  have hdecomp :
+      (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h)) - h * SBfb - Vinp
+        = u i * T3v + T3'v - T4v := by
+    linear_combination
+        u i * hT1 + hT2 - u i * hT3_expand + hT4_expand + hsumB_swap
+        - (u i + v i) * h * hy'0 + v i * h * hy'h
+  rw [hdecomp]
+  -- |u i * T3v + T3'v - T4v| ≤ |u i| * |T3v| + |T3'v| + |T4v|
+  --                          ≤ ½ |u i| h² L² M + |v i| h² L² M + h² L² M Σ |B_{ij} c_j|.
+  have hT3_scaled : |u i * T3v| ≤ |u i| * ((1/2) * h^2 * L^2 * M_bound) := by
+    rw [abs_mul]
+    exact mul_le_mul_of_nonneg_left hT3 (abs_nonneg _)
+  calc |u i * T3v + T3'v - T4v|
+      ≤ |u i * T3v + T3'v| + |T4v| := abs_sub _ _
+    _ ≤ (|u i * T3v| + |T3'v|) + |T4v| := by
+          gcongr
+          exact abs_add_le _ _
+    _ ≤ (|u i| * ((1/2) * h^2 * L^2 * M_bound) + |v i| * (h^2 * L^2 * M_bound))
+          + h^2 * L^2 * M_bound * ∑ j, |M.B i j * c j| :=
+          add_le_add (add_le_add hT3_scaled hT3') hT4
+    _ = h^2 * L^2 * M_bound * ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|) := by ring
 
 end OpenMath.Chapter5.Section510
