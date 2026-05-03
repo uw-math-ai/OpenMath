@@ -2222,4 +2222,28 @@ private theorem rowFAlphaResidual_eval_one_of_bdf_eq_zero
   rw [hPYHF]
   ring
 
+/-- §521 Step E.1 — Substitute D.16d into D.11c: under BDF, the
+`∑ l, (rowFAlphaResidual m l).eval 1` summand collapses to zero,
+yielding the cleaner BDF unit-circle identity. -/
+theorem D_mul_toGLM_charpoly_eval_one_collapsed_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        + z *
+            ∑ l : Fin s,
+              ( ((m.β l.castSucc : ℝ) : ℂ)
+                  - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ) )
+        - (rowYQuot m).eval 1 *
+            (z * ((m.β (Fin.last s) : ℝ) : ℂ)) := by
+  rw [D_mul_toGLM_charpoly_eval_one_substituted_of_bdf m hbdf hz hs]
+  have hSum : ∑ l : Fin s, (rowFAlphaResidual m l).eval 1 = 0 := by
+    apply Finset.sum_eq_zero
+    intro l _
+    exact rowFAlphaResidual_eval_one_of_bdf_eq_zero m hbdf l
+  rw [hSum]; ring
+
 end LMM
