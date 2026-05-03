@@ -1,5 +1,35 @@
 # Issue: `aux_515B_eta_contraction` deferred — needs M-matrix `(I − h₀L|A|)^{−1}` positivity
 
+## Status (cycle 106) — PARTIAL: M-matrix infrastructure landed
+
+Cycle 106 closed the **inverse-positivity** lemma (Priority 1 of cycle
+106 plan):
+
+```
+Matrix.EntrywiseNonneg.inv_one_sub_of_norm_lt_one
+    {M : Matrix n n ℝ} (hM : M.EntrywiseNonneg) (h_norm : ‖M‖ < 1) :
+    (Ring.inverse ((1 : Matrix n n ℝ) - M)).EntrywiseNonneg
+```
+
+and the **comparison principle** lemma (Priority 2):
+
+```
+Matrix.EntrywiseNonneg.nonneg_of_one_sub_mulVec_nonneg
+    {M : Matrix n n ℝ} (hM : M.EntrywiseNonneg) (h_norm : ‖M‖ < 1)
+    {v : n → ℝ} (h : ∀ i, 0 ≤ ((1 - M) *ᵥ v) i) :
+    ∀ i, 0 ≤ v i
+```
+
+Both proved via Mathlib's `hasSum_geom_series_inverse` (Neumann series)
+plus `Pi.hasSum` to extract entrywise convergence; clean axioms
+(`[propext, Classical.choice, Quot.sound]`). Live in
+`OpenMath/Chapter5/MMatrix.lean`, scoped under `Matrix.Norms.Frobenius`.
+
+Cycle 107 should close `aux_515B_eta_contraction` directly: add the
+hypothesis `‖h₀ • L • A.map(|·|)‖ < 1`, reduce to the comparison lemma
+above, and update the unique `localStepError_bound` caller to carry
+the new hypothesis. Estimated 90 min / ~120 LOC per cycle 106 plan.
+
 ## Blocker
 
 The auxiliary lemma `aux_515B_eta_contraction` in

@@ -7,6 +7,9 @@ import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Positivity
+import Mathlib.Analysis.Matrix.Normed
+import Mathlib.Analysis.SpecificLimits.Normed
+import Mathlib.Topology.Instances.Matrix
 
 /-!
 # M-matrix infrastructure (helper file)
@@ -162,27 +165,75 @@ example : EntrywiseNonneg (!![(1/2 : ℝ), 1/2; 1/3, 2/3]) := by
 
 end Witnesses
 
-/-! ### Deferred to cycle 106
+section InversePositivity
 
-The load-bearing lemma for `aux_515B_eta_contraction` is:
+/-!
+### Inverse positivity (Neumann series)
 
-```
-lemma EntrywiseNonneg.inv_one_sub_of_norm_lt_one
-    [Fintype n] [DecidableEq n] {M : Matrix n n ℝ}
-    (hM : M.EntrywiseNonneg) (h_norm : ‖M‖ < 1) :
-    ((1 : Matrix n n ℝ) - M)⁻¹.EntrywiseNonneg
-```
+For an entrywise-nonneg matrix `M` over `ℝ` with operator norm `‖M‖ < 1`
+(Frobenius norm here, scoped via `Matrix.Norms.Frobenius`), the inverse
+`Ring.inverse (1 - M)` is entrywise non-negative. The proof goes via the
+Neumann series `(1 - M)⁻¹ = ∑' k, M^k` (Mathlib's
+`hasSum_geom_series_inverse`), then extracts entrywise convergence via
+`Pi.hasSum` (twice, since `Matrix n n ℝ = n → n → ℝ` definitionally).
 
-The proof goes via the Neumann series `(1 - M)⁻¹ = ∑_{k=0}^∞ M^k`,
-which converges entrywise because `‖M‖ < 1`. Each summand `M^k` is
-entrywise non-negative by `EntrywiseNonneg.pow`, and entrywise
-non-negativity is preserved under entrywise convergence (closed in
-the product topology).
-
-This is **not** stubbed with `sorry` here, per the cycle 105 strategy
-constraint of no new sorries in `OpenMath/`. Cycle 106 should land it
-using `Mathlib.Analysis.Normed.Ring.Units.tsum_geometric_of_norm_lt_one`
-or the `Ring.inverse` API in `Mathlib.Analysis.Normed.Algebra.Spectrum`.
+The Frobenius norm scope is opened locally so this section does not
+pollute global instance resolution. Downstream consumers must open the
+same scope.
 -/
+
+open scoped Matrix.Norms.Frobenius
+
+variable {n : Type*} [Fintype n] [DecidableEq n]
+
+/-- **Inverse positivity (Neumann series)**: for an entrywise-nonneg
+matrix `M` over `ℝ` with `‖M‖ < 1` (Frobenius norm), the inverse
+`Ring.inverse (1 - M)` is entrywise non-negative.
+
+This is the load-bearing M-matrix-flavored lemma used by Butcher §515's
+`aux_515B_eta_contraction` (η-contraction step in the local-step error
+bound). The proof realizes `(1 - M)⁻¹` as the Neumann series
+`∑' k, M^k`, which converges in the normed-ring topology, and each
+partial sum `M^k` is entrywise non-negative by
+`EntrywiseNonneg.pow`. -/
+lemma EntrywiseNonneg.inv_one_sub_of_norm_lt_one
+    {M : Matrix n n ℝ} (hM : M.EntrywiseNonneg) (h_norm : ‖M‖ < 1) :
+    (Ring.inverse ((1 : Matrix n n ℝ) - M)).EntrywiseNonneg := by
+  intro i j
+  have h_sum : HasSum (fun k => M ^ k) (Ring.inverse (1 - M)) :=
+    hasSum_geom_series_inverse M h_norm
+  have h_row : HasSum (fun k => (M ^ k) i) ((Ring.inverse (1 - M)) i) :=
+    Pi.hasSum.mp h_sum i
+  have h_entry : HasSum (fun k => (M ^ k) i j)
+      ((Ring.inverse (1 - M)) i j) := Pi.hasSum.mp h_row j
+  exact h_entry.nonneg (fun k => hM.pow k i j)
+
+/-- **M-matrix comparison principle**: if `M ≥ 0` entrywise with
+`‖M‖ < 1` and `(1 - M) *ᵥ v ≥ 0` componentwise, then `v ≥ 0`
+componentwise.
+
+The proof writes `v = (1 - M)⁻¹ *ᵥ ((1 - M) *ᵥ v)` (using
+`Ring.inverse_mul_cancel` from `IsUnit (1 - M)`, available because
+`‖M‖ < 1`), then applies the inverse-positivity lemma above together
+with `EntrywiseNonneg.mulVec_nonneg`. -/
+lemma EntrywiseNonneg.nonneg_of_one_sub_mulVec_nonneg
+    {M : Matrix n n ℝ} (hM : M.EntrywiseNonneg) (h_norm : ‖M‖ < 1)
+    {v : n → ℝ} (h : ∀ i, 0 ≤ ((1 - M) *ᵥ v) i) :
+    ∀ i, 0 ≤ v i := by
+  have h_unit : IsUnit ((1 : Matrix n n ℝ) - M) :=
+    isUnit_one_sub_of_norm_lt_one h_norm
+  have h_inv_mul : Ring.inverse ((1 : Matrix n n ℝ) - M) * (1 - M) = 1 :=
+    Ring.inverse_mul_cancel _ h_unit
+  have h_inv_pos : (Ring.inverse ((1 : Matrix n n ℝ) - M)).EntrywiseNonneg :=
+    hM.inv_one_sub_of_norm_lt_one h_norm
+  have h_apply : ∀ i, v i =
+      ((Ring.inverse ((1 : Matrix n n ℝ) - M)) *ᵥ ((1 - M) *ᵥ v)) i := by
+    intro i
+    rw [Matrix.mulVec_mulVec, h_inv_mul, Matrix.one_mulVec]
+  intro i
+  rw [h_apply i]
+  exact h_inv_pos.mulVec_nonneg h i
+
+end InversePositivity
 
 end Matrix
