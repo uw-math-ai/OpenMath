@@ -1530,4 +1530,38 @@ theorem activeStabilityPolyPoly_eq_stabilityPolyPoly_add_correction
       fun _ _ => Finset.sum_add_distrib]
   ring
 
+/-- §521 Step C.14 — General `s`-step LMM headline in textbook form.
+`D · charpoly = X^s · stabilityPolyPoly + X^s · C(z) · correction
+                  − residual`, obtained by feeding the cycle 696
+bridge `activeStabilityPolyPoly_eq_stabilityPolyPoly_add_correction`
+into the cycle 690 active-form headline
+`D_mul_toGLM_charpoly_eq_X_pow_mul_active_plus_residual`. The
+correction sum vanishes coefficient-by-coefficient when
+`β(castSucc l) = β_last · α(castSucc l)` (in particular under BDF),
+recovering the cycle 643 BDF headline
+`D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_of_bdf`. -/
+theorem D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_plus_residual
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        (m.toGLM.stabilityMatrix z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s * m.stabilityPolyPoly z
+        + (Polynomial.X : Polynomial ℂ) ^ s *
+            ( Polynomial.C z *
+                ∑ l : Fin s,
+                  Polynomial.C
+                      (((m.β l.castSucc : ℝ) : ℂ) -
+                        ((m.β (Fin.last s) : ℝ) : ℂ) *
+                          ((m.α l.castSucc : ℝ) : ℂ)) *
+                    Polynomial.X ^ (l : ℕ) )
+        - ( rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s *
+              Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + ( rowFAlphaPoly m +
+                (toGLM_stabilityMatrixPY m 0).charpoly *
+                  rowFBetaPoly m ) *
+              Polynomial.C z ) := by
+  rw [D_mul_toGLM_charpoly_eq_X_pow_mul_active_plus_residual m hz hs,
+      activeStabilityPolyPoly_eq_stabilityPolyPoly_add_correction m z]
+  ring
+
 end LMM
