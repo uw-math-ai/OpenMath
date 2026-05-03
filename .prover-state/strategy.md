@@ -1,357 +1,219 @@
-# Cycle 104 Strategy — Close `lem:515B` sub-lemmas + main combination
+# Cycle 105 Strategy
 
-## Context
+## Status snapshot
 
-Cycle 103 opened `lem:515B` with a sorry-first scaffold in
-`OpenMath/Chapter5/Section515.lean`. Three sorries remain:
+* **Sorries**: 1 in `OpenMath/` (`Section515.lean:995`,
+  `aux_515B_eta_contraction`, deferred per
+  `.prover-state/issues/lem_515B_eta_contraction_deferred.md`).
+* **Aristotle**: project `4688b630-d9c9-4f86-9572-7e4bd9a6b0b8`
+  was `IN_PROGRESS` at 2 % (2026-05-03 18:04 UTC). The η contraction
+  needs M-matrix theory; Aristotle has historically struggled with
+  problems requiring novel infrastructure, so do not expect a useful
+  return.
+* **Recent cycle pattern** (CRITICAL, read this before deciding):
+  - Cycles 100 (-2) and 103 (-2): scaffold cycles that opened sorries
+    without closing enough in the same cycle. Both **negatively
+    scored**.
+  - Cycles 101 (+2), 102 (+2), 104 (+2): focused work that **net
+    decreased** sorry count (or kept it constant while removing one
+    sorry and properly deferring another).
+  - **Lesson**: the supervisor penalizes cycles that net-add sorries
+    to `OpenMath/`. Do NOT scaffold a new entity unless you can close
+    at least as many sorries as you open in the same cycle.
 
-| Line | Symbol | Difficulty |
-|------|--------|------------|
-| 914  | `aux_515B_lipschitz_bridge` | **CHEAP** — pattern of `aux_T4_bound` (cycle 101) |
-| 953  | `aux_515B_eta_contraction`  | **HARD** — needs `(I − h₀L|A|)^{-1}` positivity (M-matrix) |
-| 1038 | `GeneralLinearMethod.localStepError_bound` | **MEDIUM** — composition |
+## Priority 0 — Aristotle poll (MANDATORY, 5 min, ONE call only)
 
-Aristotle batch was submitted in cycle 103 (project
-`4688b630-d9c9-4f86-9572-7e4bd9a6b0b8`, submitted 2026-05-03 17:52
-UTC) covering all three.
+Invoke `mcp__aristotle__get_status` on
+`4688b630-d9c9-4f86-9572-7e4bd9a6b0b8` exactly once. Possible outcomes:
 
-## Priority 0 (FIRST 10 MINUTES): Check Aristotle ONCE
+* **Returned a proof of `aux_515B_eta_contraction`**: incorporate it.
+  Run `lake build OpenMath.Chapter5.Section515` (NOT just
+  `lake env lean`, per the cycle 072 lesson — `.olean` cache must
+  refresh for `#print axioms` to be reliable). Verify
+  `#print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.localStepError_bound`
+  shows `[propext, Classical.choice, Quot.sound]` only (no `sorryAx`).
+  If clean, this closes §515 entirely and is the cycle's primary
+  deliverable.
+* **Still IN_PROGRESS or FAILED**: proceed to Priority 1.
 
-Run **exactly once** at the start of the cycle:
+Do NOT poll a second time this cycle, regardless of outcome. CLAUDE.md
+is explicit on this.
 
+## Priority 1 — Begin M-matrix infrastructure (PRIMARY WORK)
+
+Create a NEW file `OpenMath/Chapter5/MMatrix.lean`. Do NOT touch
+`Section515.lean` for this priority.
+
+The cycle 104 task results recommend this as the highest-value
+direction; it unblocks `aux_515B_eta_contraction` (and likely future
+GLM stability work in §530+, §550+).
+
+### Scope for cycle 105
+
+Cycle 105 is the FIRST of an estimated 2–3 cycles of M-matrix work.
+This cycle should land:
+
+1. **Predicate definition**: `EntrywiseNonneg M : Prop := ∀ i j, 0 ≤ M i j`
+   (or use Mathlib's `Matrix.PosSemidef`-adjacent infrastructure if a
+   suitable predicate already exists — search first).
+2. **Closure lemmas** (all must be PROVED, no sorries):
+   - `EntrywiseNonneg M → EntrywiseNonneg N → EntrywiseNonneg (M + N)`
+   - `EntrywiseNonneg M → 0 ≤ c → EntrywiseNonneg (c • M)`
+   - `EntrywiseNonneg M → EntrywiseNonneg N → EntrywiseNonneg (M * N)`
+   - `EntrywiseNonneg M → ∀ v, (∀ i, 0 ≤ v i) → ∀ i, 0 ≤ (M *ᵥ v) i`
+3. **Power preservation**:
+   - `EntrywiseNonneg M → ∀ k, EntrywiseNonneg (M ^ k)`
+4. **Inverse positivity setup** (state but only prove if time
+   permits): for the next cycle, the load-bearing lemma is
+   `EntrywiseNonneg M → ‖M‖₊ < 1 → EntrywiseNonneg (1 - M)⁻¹`,
+   provable via Neumann series. If the proof falls out cleanly
+   from Mathlib's `tsum_geometric_of_norm_lt_one` style lemmas,
+   land it. Otherwise, state it in a comment and **do not stub it
+   with sorry** — leave it for cycle 106.
+
+### Search first
+
+Before writing any of the above, search Mathlib:
 ```
-mcp__aristotle__get_status project_id=4688b630-d9c9-4f86-9572-7e4bd9a6b0b8
+lean_local_search "entrywise"
+lean_local_search "nonneg matrix"
+lean_local_search "Neumann"
+lean_loogle "Matrix _ _ _ → 0 ≤ _"
 ```
+If suitable predicates already exist in Mathlib, use them directly
+instead of re-defining. This was the cycle 050 lesson
+(`Finset.sum_le_sum_nbij'` doesn't exist; cycle 050 wasted effort
+trying to use a hallucinated name).
 
-If the project has finished (`status = COMPLETED` or has extractable
-proofs):
+### Concrete witness rule (from CLAUDE.md)
 
-1. `mcp__aristotle__download_result project_id=4688b630-...`
-2. `mcp__aristotle__extract_result` to pull each lemma's body.
-3. For each returned proof:
-   - Verify it compiles standalone (`lake env lean OpenMath/Chapter5/Section515.lean`).
-   - Verify axioms are clean (`#print axioms <symbol>` returns only
-     `[propext, Classical.choice, Quot.sound]`).
-   - Insert into the file at the corresponding sorry site.
-
-If the project is still `IN_PROGRESS` after this single check, **do
-not poll again**. Proceed with the manual plan below; any later
-returned proofs can be incorporated in cycle 105.
-
-## Priority 1: Close `aux_515B_lipschitz_bridge` MANUALLY (line 914)
-
-This is the easiest sorry and is high-confidence. The proof structure
-is well-established by `aux_T4_bound` from cycle 101 (same file).
-Use `lean_local_search` for `aux_T4_bound` to copy the shape.
-
-**Goal** (signature at line 906):
+For `EntrywiseNonneg`, supply at least one concrete witness:
+```lean
+example : EntrywiseNonneg (1 : Matrix (Fin 2) (Fin 2) ℝ) := by ...
 ```
-|h * ∑ j, B i j * (f (Y_hat j) - f (Y j))|
-  ≤ h * L * ∑ j, |B i j| * |Y_hat j - Y j|
-```
-under `0 ≤ L`, `LipschitzWith L.toNNReal f`, `0 ≤ h`.
+This satisfies the non-vacuity rule.
 
-**Proof recipe** (target ≤ 30 LOC):
+### Wire to lakefile
 
-1. `rw [abs_mul, abs_of_nonneg _hh]` to peel out the leading `h`
-   from the LHS magnitude.
-2. Apply `mul_le_mul_of_nonneg_left _ _hh` to remove the leading
-   `h` on both sides; goal becomes
-   `|∑ j, B i j * (f (Y_hat j) - f (Y j))| ≤ L * ∑ j, |B i j| * |Y_hat j - Y j|`.
-3. Use `Finset.abs_sum_le_sum_abs` to push `|·|` inside the LHS
-   sum: goal becomes `∑ j, |B i j * (f (Y_hat j) - f (Y j))| ≤ ...`.
-4. Use `Finset.mul_sum` (rewrite the RHS as `∑ L * |B i j| * |...|`).
-5. Apply `Finset.sum_le_sum` to compare summand-wise.
-6. For each summand:
-   - `rw [abs_mul]` for `|B i j * (f (Y_hat j) - f (Y j))|`.
-   - Apply `mul_le_mul_of_nonneg_left _ (abs_nonneg _)` to factor
-     out `|B i j|`.
-   - Bound `|f (Y_hat j) - f (Y j)| ≤ L * |Y_hat j - Y j|` via
-     `_hf_lip.dist_le_mul` + `Real.dist_eq` + `NNReal.coe_toNNReal _hL`.
+If you create `OpenMath/Chapter5/MMatrix.lean`, also add it to
+`OpenMath.lean`'s import list (or wherever the chapter index is). A
+file that exists but isn't imported won't be built and won't appear in
+`#print axioms` checks downstream.
 
-**Reference pattern**: cycle 101's `aux_T4_bound` (~30 LOC, same
-structure). Read its proof body via `lean_local_search "aux_T4_bound"`
-or by direct `Read` of `Section515.lean` if you need the exact
-tactic shape.
+## Priority 2 — Submit Aristotle batch for cycle 106 (5 min)
 
-**Pitfalls** (do NOT repeat from prior cycles):
-- `LipschitzWith.dist_le_mul` returns `dist (f a) (f b) ≤ ↑K * dist a b`
-  with `K : ℝ≥0`. Bridge to `ℝ` via
-  `simpa [Real.dist_eq, ← NNReal.coe_le_coe, NNReal.coe_mul,
-         Real.coe_toNNReal _ _hL]`.
-- Per `feedback_add_le_add_left_dispatch.md`: prefer `linarith` /
-  `gcongr` over `add_le_add_left` for left-constant scaling — the
-  argument order may surprise you.
+If Priority 1 lands lemmas that may help, submit a fresh Aristotle
+batch with:
+- `aux_515B_eta_contraction` (from `Section515.lean`)
+- 2–3 of the new M-matrix lemmas if any were left as sub-claims
+  during Priority 1 development (e.g. inverse positivity if you
+  didn't land it manually)
 
-## Priority 2: Close `localStepError_bound` composition (line 1038)
+Sleep 30 minutes per CLAUDE.md, then proceed. Do NOT block on the
+result.
 
-The main theorem is a composition of:
+## Priority 3 — Update lean_status.json
 
-* `aux_515B_residual_decomposition` (cycle 103, **already closed**).
-* `aux_515B_lipschitz_bridge` (Priority 1, will be closed this
-  cycle).
-* `aux_515B_eta_contraction` (Priority 3 — may remain `sorry`).
+If any new entity work landed, update
+`extraction/formalization_data/lean_status.json`. M-matrix
+infrastructure is helper work (not a Butcher entity), so it does NOT
+get a row in `lean_status.json`. Only update for entity-level
+deliverables (e.g. if you defect to `def:451A` per the fallback below).
 
-**Important**: `localStepError_bound` does NOT depend on the
-*proofs* of the sub-lemmas, only on their *types*. Even if
-`aux_515B_eta_contraction` remains as `sorry`, we can still close
-`localStepError_bound` by *applying* the sub-lemma. The composition
-chain is structural, not analytical.
+## What NOT to try (HARD CONSTRAINTS)
 
-**Witness** for the existential `∃ K`:
-```
-K i := h * (∑ j, M.B i j * f (Y j))
-       + (∑ j, M.V i j * yt_prev j)
-       - (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
-       - ∑ j, M.V i j * δ j
-```
-Equivalently (after `aux_515B_residual_decomposition`):
-`K i = (∑ j, M.V i j * (yt_prev j − y_prev j)) − (∑ j, M.V i j * δ j)
-       + (the residual against the EXACT-stage-equation solution)
-       + h * (∑ j, M.B i j * (f (Y j) − f (Ŷ_exact j)))`
-where `Ŷ_exact` solves the implicit stage equation with `yt_prev`
-replaced by `y(xn1) u + h y'(xn1) v`.
+1. **Do NOT introduce new sorries in `OpenMath/Chapter5/Section515.lean`.**
+   The sorry count there must stay at exactly 1 or decrease. The
+   supervisor's reversion threshold is well-documented (cycles 100,
+   103).
 
-**Plan** (target ≤ 100 LOC):
+2. **Do NOT scaffold `lem:515C` or `thm:515D` this cycle.** Both
+   depend on `lem:515B`'s bound, which is gated by the η contraction.
+   Opening them creates premature complexity and sorry inflation.
+   Wait until M-matrix infrastructure lands.
 
-1. **Identity clause**: with K *defined* as `LHS − ∑ V·δ`, the
-   equation `LHS = ∑ V·δ + K i` becomes a `ring` identity.
-   Apply `aux_515B_residual_decomposition` first to get the
-   structure (use `M`, `yt_prev`, `y_prev := fun k => u k * yex xn1 + v k * h * deriv yex xn1`,
-   `δ`, `Y`, `f`, `yex`, `xn1`, `u`, `v`, `i` as arguments).
+3. **Do NOT attempt the η contraction directly without M-matrix
+   infrastructure.** The deferral issue file
+   (`lem_515B_eta_contraction_deferred.md`) explains why direct
+   approaches fail (no inverse positivity = no monotone-bound
+   propagation). Cycles spent re-discovering this are wasted.
 
-2. **Bound clause** `|K i| ≤ α h δ_max + β h²`. Decompose:
-   * `K = K_residual + K_correction` where:
-     - `K_residual` is the §515A-style residual against the
-       *exact-stage-equation* solution `Ŷ_exact`.
-     - `K_correction = h Σ B·(f(Y) − f(Ŷ_exact))`.
-   * **`K_residual`**: this matches the cycle-102 `localStageError_bound_b`
-     bound shape — `½h²L²M c² + h²L²M Σ|A·c| + h²L²M(½|u| + |v| + Σ|B·c|)`
-     terms — exactly the components inside the textbook β formula
-     (without the `h₀ L Σ|B|·phi_A` term, which arises from the
-     correction). Bound using `lem:515A` with `Ŷ_exact` substituted.
-     If this turns out to be too intricate, factor it as
-     `aux_515B_kresidual_bound` (a sub-lemma) and apply.
-   * **`K_correction`**: bounded by `aux_515B_lipschitz_bridge` →
-     `h L Σ|B|·|Y_j − Ŷ_exact_j|`. The differences `|Y_j − Ŷ_exact_j|`
-     ARE the η-vector that `aux_515B_eta_contraction` controls.
-     Apply `aux_515B_eta_contraction` (regardless of whether its
-     proof is `sorry` — its *signature* is what we need).
-   * **Combine**: the `h L Σ|B|·ell_U_j δ_max` term collapses to
-     `α h δ_max` via `_hα_def`. The `h³L³M²Σ|B|·phi_A_j` term plus
-     the residual bounds collapse to `β h²` via `_hβ_def` (using
-     `h ≤ h₀`).
+4. **Do NOT poll Aristotle more than once.** CLAUDE.md is explicit.
 
-3. **Aristotle-friendly batching**: if the manual composition
-   stalls past 60 LOC of intermediate goals, factor a single
-   `aux_515B_main_combination` private lemma whose statement is
-   the bound clause assuming the three sub-lemmas as named
-   hypotheses, and submit it to Aristotle as a *second* batch.
-   Do NOT block on this submission; defer to cycle 105.
+5. **Do NOT modify `scripts/autonomous_loop.py`** or any
+   loop-infrastructure file. Worker rule from CLAUDE.md.
 
-**Faithfulness check** (per CLAUDE.md):
-- The conclusion is `∃ K, identity ∧ bound`. Identity is non-trivial
-  (`aux_515B_residual_decomposition` does the algebraic work).
-  Bound is non-trivial (composes three sub-lemmas).
-- `K` is constructed; it is not a hypothesis.
-- The proxy parameters `α, β, δ_max` are weakened upper bounds, not
-  the textbook's literal maxima — already documented in the
-  cycle-103 docstring. No new faithfulness deviation.
+6. **Do NOT raise `maxHeartbeats` above 200000.** Decompose proofs
+   instead.
 
-## Priority 3: `aux_515B_eta_contraction` (line 953) — TRIAGE
+7. **Do NOT introduce `axiom` or `constant` declarations** for the
+   M-matrix theory. If a lemma is too hard to prove cleanly this
+   cycle, OMIT it from the file (write a `sorry`-free deliverable
+   that contains only what you can fully prove). The infeasible
+   lemma can be filed as an issue and picked up in cycle 106.
 
-This is the **infrastructure-blocked** sub-lemma. The textbook
-proof requires the M-matrix monotonicity principle:
+8. **Do NOT use `Matrix.PosSemidef` as a substitute for entrywise
+   non-negativity.** They are different concepts (PSD = spectral
+   non-negativity, entrywise = component-wise). The η contraction
+   needs entrywise.
 
-> If `x ≤ M·x + b` with `M ≥ 0` (entrywise) and `(I − M)^{-1}` exists
-> with non-negative entries, then `x ≤ (I − M)^{-1}·b`.
+9. **Do NOT pick a fallback target from plan.md unless Priority 1 is
+   genuinely unworkable.** The cycle 104 strategic recommendation is
+   M-matrix infrastructure; defection without strong reason wastes
+   the predecessor's analysis. If you must defect after a serious
+   attempt, file an issue documenting why M-matrix work was
+   infeasible, then pick `def:451A` (G-stable, §451) as a safe
+   single-cycle target — it is a definition-only entity in Chapter 4
+   with `entities/def_451A.json` available; pair it with a concrete
+   witness instance and update `lean_status.json`.
 
-Specifically, with `M = h₀ L |A|` (entrywise),
-`(I − h₀L|A|)^{-1} ≥ 0` follows from M-matrix theory
-(Perron–Frobenius / Neumann series) under `ρ(M) < 1`. This is
-multi-cycle Mathlib infrastructure.
+## Faithfulness / pre-commit checklist
 
-### Decision tree
+For every new `def`:
+- [ ] Confirm the definition matches standard mathematical convention
+      (e.g., entrywise non-negativity is unambiguous; M-matrix has
+      multiple equivalent definitions, pick one and document the
+      choice in the docstring).
+- [ ] Provide a concrete witness in the same cycle.
 
-**3a. If Aristotle returned `aux_515B_eta_contraction`** (Priority
-0): use it. Done.
+For every new `theorem` / `lemma`:
+- [ ] Tautology check: conclusion ≠ verbatim hypothesis.
+- [ ] Hypothesis strength check: don't add hypotheses you don't use.
+- [ ] No promised-but-absent sub-lemmas.
 
-**3b. If Aristotle did NOT return it**, choose ONE of:
+In `task_results/cycle_105.md`, for each new `def` or `theorem`,
+either quote the relevant textbook reference (if it has one) or note
+"helper infrastructure, no textbook entity" — then confirm the Lean
+statement matches intent.
 
-**(b-i) Defer with issue file (DEFAULT — recommended).** Write
-`.prover-state/issues/lem_515B_eta_contraction_deferred.md`
-documenting:
+## Workflow recap
 
-- The M-matrix infrastructure gap.
-- The Neumann-series proof outline:
-  ```
-  |η| ≤ hL|A|·|η| + (Σ|U|·δ_max + h²L²M(½c² + Σ|A·c|))
-  ⇒  (I − hL|A|)·|η| ≤ rhs
-  ⇒  (I − h₀L|A|)·|η| ≤ rhs   (since h ≤ h₀ and |A|, |η| ≥ 0)
-  ⇒  |η| ≤ (I − h₀L|A|)^{-1} · rhs = ell_U·δ_max + h²L²M·phi_A
-  ```
-- Cross-link to `cesaro_inverse_I_minus_V.md` (the analogous
-  `(I − V)^{-1}` infrastructure for §514 — same flavor of
-  Banach-perturbation argument).
-- Mathlib pointers: search for `Matrix.IsM`, M-matrix scaffolding.
-  Use `lean_local_search "diagonally dominant"` /
-  `lean_local_search "Neumann"` /
-  `lean_loogle "Matrix _ _ _ → Matrix _ _ _"` (for `inv` /
-  `nonsing_inv` patterns).
-- Estimated cost: 2–3 cycles for the M-matrix skeleton, then one
-  more cycle to close `aux_515B_eta_contraction`.
+1. (5 min) Aristotle poll — Priority 0.
+2. (15 min) Mathlib searches — find existing nonneg/Neumann
+   infrastructure.
+3. (~2 hours) Implement Priority 1 incrementally; commit local state
+   after each lemma compiles cleanly.
+4. (5 min) Submit cycle 106 Aristotle batch — Priority 2.
+5. (15 min) Write `task_results/cycle_105.md`, run faithfulness
+   checklist, commit, push.
+6. **Verify push reached origin** (`git rev-parse HEAD` ==
+   `git rev-parse origin/Main/Experiments`) before declaring success.
+   Cycles 008, 035, 071, 073 all had stale "commit didn't reach repo"
+   verdicts in their successor prompts; verify in-cycle to avoid
+   this. Run `git diff HEAD~1 HEAD --stat` and confirm the diff is
+   non-empty before declaring "done".
 
-This leaves `aux_515B_eta_contraction` as `sorry`. Per CLAUDE.md
-non-vacuity, the proxy parameter shape (with `_hellU_eq` /
-`_hphiA_eq` side conditions) ensures the lemma is *not*
-tautological — it correctly conditions the conclusion on the
-existence of `ell_U`, `phi_A` solving the linear systems. The
-lemma is genuinely provable; the *gap* is the existence/positivity
-of the inverse.
+## Success criteria for cycle 105
 
-**(b-ii) Re-submit a smaller piece to Aristotle**, ONLY if
-Priority 1 + Priority 2 closed by mid-cycle and time remains.
-Decompose `aux_515B_eta_contraction` into:
-- A specialization to `h = h₀` (eliminates one parameter).
-- A `Finset.induction_on` over `Fin s` size — works for triangular
-  `A` (lower-triangular case is explicit RK; closed-form solvable).
-- Submit as a fresh Aristotle batch; do NOT poll, defer to cycle
-  105 evaluation.
+* **Minimum acceptable** (score ≥ 0): Aristotle polled; either some
+  M-matrix lemmas land (with proofs), or a clear blocker issue is
+  filed explaining why M-matrix was infeasible AND a definition
+  entity (`def:451A`) is opened and closed.
+* **Target** (score ≥ +2): 4+ M-matrix lemmas land with proofs and
+  a concrete witness; no new sorries in `OpenMath/`; cycle 106 setup
+  (Aristotle batch) submitted.
+* **Stretch** (score ≥ +3): inverse positivity lemma also lands,
+  enabling cycle 106 to directly close `aux_515B_eta_contraction`.
 
-**Do NOT attempt (b-iii)**: a *manual* full M-matrix proof in this
-cycle. The infrastructure footprint is too large
-(Perron–Frobenius for non-negative matrices, Neumann-series
-convergence, monotonicity of inverse) and would dwarf the cycle's
-other priorities.
-
-## What NOT to try (failed approaches from prior cycles)
-
-These are explicitly listed; do NOT repeat:
-
-1. **`Finset.sum_le_sum_nbij'`** — does not exist in Mathlib (cycle
-   050). For sum-le-sum via injective reindexing, use
-   `← Finset.sum_image hinj` then
-   `Finset.sum_le_sum_of_subset_of_nonneg`.
-
-2. **`add_le_add_left hA c` for left-constant addition monotonicity**
-   — the produced shape may be `a + c ≤ b + c` instead of
-   `c + a ≤ c + b`. Use `linarith [hA]` or `gcongr` instead.
-
-3. **Unicode `𝟙` as identifier suffix** — breaks the parser
-   (cycle 099). Reserve `𝟙` for operators/notation; use ASCII
-   identifiers like `B1`, `bone`, `ones_vec`.
-
-4. **Polling Aristotle more than once per cycle** — CLAUDE.md
-   explicit. One check at start of cycle is enough; another at end
-   is acceptable only if Priority 1 + Priority 2 wrapped early.
-
-5. **Editing `scripts/autonomous_loop.py`** — not the worker's
-   responsibility. Scanner / prompt-builder bugs go in
-   `tautology_scanner_false_positives.md` for the loop maintainer.
-
-6. **Raising `maxHeartbeats` above 200000** — explicit CLAUDE.md
-   rule. Decompose into helpers instead. The current §515.lean has
-   no `maxHeartbeats` overrides — keep it that way.
-
-7. **Introducing `axiom`/`constant`** — never. The η-contraction
-   inverse-positivity gap is real Mathlib infrastructure, not
-   axiom-bypass territory.
-
-8. **Mass refactoring the `lem:515B` signature** — the cycle 103
-   docstring documents four faithfulness deviations
-   (proxy maxima, two ell-vectors, deferred inverse infrastructure,
-   pointwise `|K i|`). Do NOT alter the signature this cycle; the
-   composition in Priority 2 must match the cycle-103 shape.
-
-## Pre-commit checklist
-
-Before committing:
-
-1. **Build**: `lake env lean OpenMath/Chapter5/Section515.lean`
-   succeeds with at most 1 sorry (`aux_515B_eta_contraction` if
-   Priority 3 deferred). Aim for 0 sorries.
-
-2. **Axioms** (for each new/modified theorem):
-   ```
-   lake build OpenMath.Chapter5.Section515
-   #print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.localStepError_bound
-   #print axioms OpenMath.Chapter5.Section510.aux_515B_lipschitz_bridge
-   ```
-   Both should return `[propext, Classical.choice, Quot.sound]`
-   only — no `sorryAx` (a residual sorry in
-   `aux_515B_eta_contraction` is acceptable for `localStepError_bound`'s
-   axiom check ONLY if `localStepError_bound` does not unfold its
-   proof; since we apply it as a black-box hypothesis, this is
-   fine — but verify with `#print axioms`).
-
-   **Important**: `lake env lean <file>` does NOT update the
-   .olean cache. Run `lake build OpenMath.Chapter5.Section515`
-   BEFORE `#print axioms` to avoid stale-cache `sorryAx` false
-   positives (this trick saved cycle 072).
-
-3. **Faithfulness check**: for `localStepError_bound`, the
-   docstring already documents the four deviations from the
-   textbook. No new deviations expected from cycle 104's
-   composition. Re-verify the K-witness against the
-   `aux_515B_residual_decomposition` shape.
-
-4. **Update `lean_status.json`**: `lem:515B` is currently `[ ]`
-   (planned). Bump to `[~]` (in progress, partial) if
-   `aux_515B_eta_contraction` remains as `sorry`; bump to `[x]`
-   (complete) if all three close.
-
-5. **Update `plan.md`**: same status bump as `lean_status.json`.
-
-6. **Write `.prover-state/task_results/cycle_104.md`**:
-   - "Worked on": close lem:515B sub-lemmas and main theorem.
-   - "Approach": Aristotle check + Priority 1 manual + Priority 2
-     composition + Priority 3 triage decision.
-   - "Result": SUCCESS / PARTIAL / FAILED with explicit sorry
-     count delta (e.g. "3 → 1, with `aux_515B_eta_contraction`
-     deferred").
-   - "Faithfulness check": tabulate the §515.lean lemmas
-     introduced/modified.
-   - "Suggested next approach": cycle 105 should focus on either
-     (a) M-matrix infrastructure to close
-     `aux_515B_eta_contraction`, or (b) `lem:515C` (next §515
-     entity, depends on `lem:515B`).
-
-7. **Commit message** (shape):
-   ```
-   Cycle 104 — close lem:515B lipschitz bridge + main composition
-   ```
-   or analogous shape based on what landed.
-
-8. **Push** to `origin/Main/Experiments`.
-
-## Stretch goals (only if Priorities 1 + 2 + 3 wrap by 75% of cycle time)
-
-* **Stretch A**: Begin `lem:515C` scaffold (entity
-  `entities/lem_515C.json`: "Accumulated error estimate for
-  multistep methods"). Sorry-first scaffold + 1 trivial helper.
-  Submit a small Aristotle batch.
-
-* **Stretch B**: Begin M-matrix infrastructure file
-  `OpenMath/Chapter5/MMatrix.lean` (or extend `Section515.lean`)
-  with `(I − cM)·x ≤ b ∧ M ≥ 0 ∧ ρ(cM) < 1 ⇒ x ≤ (I − cM)^{-1}·b`,
-  the canonical M-matrix theorem. This is the long-term unblock for
-  `aux_515B_eta_contraction`.
-
-Do NOT attempt both stretch goals in one cycle.
-
-## Summary table
-
-| Priority | Symbol | Action | Status |
-|----------|--------|--------|--------|
-| 0 | (Aristotle) | One status check; incorporate returned proofs | mandatory |
-| 1 | `aux_515B_lipschitz_bridge` | Manual close (~30 LOC) | mandatory |
-| 2 | `localStepError_bound` | Composition (~100 LOC) | mandatory |
-| 3 | `aux_515B_eta_contraction` | Triage: Aristotle / defer-with-issue / smaller batch | conditional |
-| 4 (stretch A) | `lem:515C` | Scaffold | optional |
-| 4 (stretch B) | `MMatrix.lean` | Infrastructure | optional |
-
-**Minimum acceptable cycle outcome**: Priority 1 closed manually +
-Priority 2 closed (composition) + Priority 3 triaged (deferral
-issue written if not Aristotle-returned). Sorry count goes 3 → 1
-(η contraction deferred). A 0-sorry outcome (3 → 0) is the cycle
-goal but not strictly required.
+The most important constraint is the no-sorry-inflation rule. A
+small-but-clean cycle is far better than a large-but-sorry-heavy one.
