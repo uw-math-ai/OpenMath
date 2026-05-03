@@ -1436,4 +1436,23 @@ theorem charpoly_residual_degree_lt
               (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m ).degree := by simp
       _ < ((2 * s : ℕ) : WithBot ℕ) := hsum
 
+/-- §521 Step C.13a — Closed form for the PY-block charpoly at `z = 0`.
+Specialisation of `toGLM_stabilityMatrixPY_charpoly` (Stability.lean:864)
+at `z = 0`, where the denominator `1 - 0 * β_last = 1` collapses the
+`Polynomial.C` divisor to `1`. -/
+theorem toGLM_stabilityMatrixPY_zero_charpoly_eq (m : LMM s) :
+    (toGLM_stabilityMatrixPY m 0).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s -
+        ∑ l : Fin s,
+          Polynomial.C (((-m.α (Fin.castSucc l) : ℝ) : ℂ)) *
+            Polynomial.X ^ (l : ℕ) := by
+  have hz : (1 : ℂ) - 0 * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0 := by
+    simp
+  rw [toGLM_stabilityMatrixPY_charpoly m 0 hz]
+  congr 1
+  refine Finset.sum_congr rfl (fun l _ => ?_)
+  congr 2
+  field_simp
+  ring
+
 end LMM
