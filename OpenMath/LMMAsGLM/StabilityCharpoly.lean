@@ -1706,4 +1706,72 @@ theorem toGLM_charpoly_eval_eq_zero_iff_of_bdf [NeZero s]
       toGLM_stabilityMatrix_eigenvalue_iff_of_bdf m z hbdf hz,
       ← stabilityPolyPoly_eval]
 
+/-- §521 Step C.20 — Eval-form contrapositive of the unified BDF iff
+(cycle 706 / Step C.19). The GLM stability-matrix charpoly is non-zero
+at `ξ` iff `ξ ≠ 0` AND the textbook scalar stability polynomial is
+non-zero at `ξ`. This is the De Morgan dual of Step C.19 and the
+natural input to the unit-disk root-counting argument that drives
+`LMM.toGLM_isAStable_iff` for general BDFs. -/
+theorem toGLM_charpoly_eval_ne_zero_iff_of_bdf [NeZero s]
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    ((m.toGLM.stabilityMatrix z).charpoly).eval ξ ≠ 0 ↔
+      ξ ≠ 0 ∧ (m.stabilityPolyPoly z).eval ξ ≠ 0 := by
+  rw [Ne, toGLM_charpoly_eval_eq_zero_iff_of_bdf m ξ hbdf hz, not_or]
+
+/-- §521 Step D.1 — General (non-BDF) ξ = 0 evaluation of the cycle 698
+textbook headline. With `s ≥ 1`, the three `X^s · …` summands collapse,
+leaving a closed form for the constant term `D · charpoly(0)` purely
+in terms of the `rowFAlphaPoly`, `rowFBetaPoly`, and `PY(0).charpoly`
+evaluators at zero. Under BDF this constant collapses further to zero
+(cycle 704 / Step C.18) because both `rowFAlphaPoly` and `rowFBetaPoly`
+vanish; the general identity isolates exactly which terms could
+contribute a non-spurious ξ = 0 root for non-BDF methods. -/
+theorem D_mul_toGLM_charpoly_eval_zero_eq
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 0 =
+      - ( (rowFAlphaPoly m).eval 0
+            + ((toGLM_stabilityMatrixPY m 0).charpoly).eval 0
+                * (rowFBetaPoly m).eval 0 ) * z := by
+  have h := D_mul_toGLM_charpoly_eval_eq m (z := z) (ξ := 0) hz hs
+  have h0 : (0 : ℂ) ^ s = 0 := zero_pow hs.ne'
+  rw [h0] at h
+  linear_combination h
+
+/-- §521 Step D.2 — Alternative proof of Step C.18 (cycle 704)
+`toGLM_charpoly_eval_zero_eq_zero_of_bdf` via the new general-form
+identity `D_mul_toGLM_charpoly_eval_zero_eq` (Step D.1). Under BDF,
+both `rowFAlphaPoly m` and `rowFBetaPoly m` vanish identically (cycle
+672 BDF row collapse + the BDF β-coefficients vanishing on
+`Fin.castSucc`), so the constant term of `D · charpoly` produced by
+Step D.1 collapses to zero. This routes through the general headline
+rather than directly through the BDF charpoly headline used by
+Step C.18. -/
+theorem D_mul_toGLM_charpoly_eval_zero_eq_zero_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 0 = 0 := by
+  rw [D_mul_toGLM_charpoly_eval_zero_eq m hz hs]
+  have hBeta : rowFBetaPoly m = 0 := by
+    unfold rowFBetaPoly
+    apply Finset.sum_eq_zero
+    intro k _
+    have hβ : m.β (Fin.castSucc k) = 0 :=
+      hbdf _ (Fin.castSucc_lt_last k).ne
+    rw [hβ]
+    simp
+  have hRowF : toGLM_stabilityCharpolyRowF m = 0 :=
+    toGLM_stabilityCharpolyRowF_of_bdf m hs hbdf
+  have hSplit :=
+    toGLM_stabilityCharpolyRowF_eq_alphaPoly_plus_PY_betaPoly m hs
+  rw [hRowF, hBeta, mul_zero, add_zero] at hSplit
+  have hAlpha : rowFAlphaPoly m = 0 := hSplit.symm
+  rw [hAlpha, hBeta]
+  simp
+
 end LMM
