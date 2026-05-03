@@ -1688,4 +1688,22 @@ theorem toGLM_charpoly_eval_zero_eq_zero_of_bdf
   rw [zero_pow hs.ne', zero_mul] at heval
   exact (mul_eq_zero.mp heval).resolve_left hz
 
+/-- §521 Step C.19 — Under BDF, with `s ≥ 1` (from `[NeZero s]`) and
+non-zero denominator `D = 1 - z β_last`, the GLM stability-matrix
+characteristic polynomial vanishes at `ξ` iff `ξ = 0` or
+`m.stabilityPolyPoly z` vanishes at `ξ`. Combines Step C.17 (cycle 702)
+non-zero-roots scalar bridge and Step C.18 (cycle 704) `ξ = 0` boundary
+case into a unified eval-form iff with no side condition on `ξ`.
+Mirrors the IsRoot-form `toGLM_stabilityMatrix_eigenvalue_iff_of_bdf`
+in scalar evaluation form. -/
+theorem toGLM_charpoly_eval_eq_zero_iff_of_bdf [NeZero s]
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    ((m.toGLM.stabilityMatrix z).charpoly).eval ξ = 0 ↔
+      ξ = 0 ∨ (m.stabilityPolyPoly z).eval ξ = 0 := by
+  rw [← Polynomial.IsRoot.def,
+      toGLM_stabilityMatrix_eigenvalue_iff_of_bdf m z hbdf hz,
+      ← stabilityPolyPoly_eval]
+
 end LMM
