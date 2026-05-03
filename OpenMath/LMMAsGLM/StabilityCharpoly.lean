@@ -2084,4 +2084,62 @@ theorem rowYQuot_eval_one_eq (m : LMM s) (hs : 0 < s) :
   unfold rowYQuot
   rw [dif_neg hs.ne']
 
+/-- §521 Step D.13 — Cofactor expansion of `rowYQuot` along the `-α`
+updated row, recasting the determinant as a sum of `Polynomial.C`-times-
+adjugate-entry contributions. -/
+theorem rowYQuot_eq_adjugate_sum (m : LMM s) (hs : 0 < s) :
+    rowYQuot m =
+      ∑ k : Fin s,
+        Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+          (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+            ⟨s - 1, by omega⟩ := by
+  unfold rowYQuot
+  rw [dif_neg hs.ne', ← Matrix.cramer_transpose_apply,
+      Matrix.cramer_eq_adjugate_mulVec, Matrix.mulVec_eq_sum]
+  simp [Matrix.adjugate_transpose, mul_comm]
+
+/-- §521 Step D.14a — Push `Polynomial.eval ξ` through `rowYQuot_eq_adjugate_sum`
+to obtain the cofactor sum at any complex point `ξ`. -/
+theorem rowYQuot_eval_eq_sum (m : LMM s) (hs : 0 < s) (ξ : ℂ) :
+    (rowYQuot m).eval ξ =
+      ∑ k : Fin s,
+        ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩).eval ξ := by
+  rw [rowYQuot_eq_adjugate_sum m hs]
+  rw [Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl (fun k _ => ?_)
+  rw [Polynomial.eval_mul, Polynomial.eval_C]
+
+/-- §521 Step D.14b — Specialisation of `rowYQuot_eval_eq_sum` at `ξ = 0`. -/
+theorem rowYQuot_eval_zero_eq_sum (m : LMM s) (hs : 0 < s) :
+    (rowYQuot m).eval 0 =
+      ∑ k : Fin s,
+        ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩).eval 0 :=
+  rowYQuot_eval_eq_sum m hs 0
+
+/-- §521 Step D.14c — Specialisation of `rowYQuot_eval_eq_sum` at `ξ = 1`. -/
+theorem rowYQuot_eval_one_eq_sum (m : LMM s) (hs : 0 < s) :
+    (rowYQuot m).eval 1 =
+      ∑ k : Fin s,
+        ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩).eval 1 :=
+  rowYQuot_eval_eq_sum m hs 1
+
+/-- §521 Step D.14d — BDF wrapper for `rowYQuot_eval_one_eq_sum`. The
+`hbdf` hypothesis is unused at this seam; downstream callers see a
+BDF-flavoured name. -/
+theorem rowYQuot_eval_one_eq_sum_of_bdf
+    (m : LMM s) (hs : 0 < s)
+    (_hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    (rowYQuot m).eval 1 =
+      ∑ k : Fin s,
+        ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩).eval 1 :=
+  rowYQuot_eval_one_eq_sum m hs
+
 end LMM
