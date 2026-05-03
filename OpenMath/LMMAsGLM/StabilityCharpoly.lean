@@ -2498,4 +2498,42 @@ theorem rowYQuot_eq_neg_alpha_sum (m : LMM s) (hs : 0 < s) :
     ring
   linear_combination -hEntry + h_sum_eq
 
+/-- §521 Step F.3 — Evaluation of `rowYQuot` at `ξ = 1`.
+Direct consequence of F.2 by `Polynomial.eval` distribution. -/
+theorem rowYQuot_eval_one (m : LMM s) (hs : 0 < s) :
+    (rowYQuot m).eval 1
+      = - ∑ l : Fin s, ((m.α (Fin.castSucc l) : ℝ) : ℂ) := by
+  rw [rowYQuot_eq_neg_alpha_sum m hs]
+  rw [Polynomial.eval_neg, Polynomial.eval_finset_sum]
+  congr 1
+  refine Finset.sum_congr rfl (fun l _ => ?_)
+  rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+      Polynomial.eval_X, one_pow, mul_one]
+
+/-- §521 Step F.3 — Evaluation of `rowYQuot` at `ξ = 0`.
+Only the `l = 0` summand survives `(0 : ℂ) ^ l`. -/
+theorem rowYQuot_eval_zero (m : LMM s) (hs : 0 < s) :
+    (rowYQuot m).eval 0
+      = - ((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ) := by
+  rw [rowYQuot_eq_neg_alpha_sum m hs]
+  rw [Polynomial.eval_neg, Polynomial.eval_finset_sum]
+  congr 1
+  rw [Finset.sum_eq_single (⟨0, hs⟩ : Fin s)]
+  · rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+        Polynomial.eval_X]
+    show ((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ) *
+         (0 : ℂ) ^ ((⟨0, hs⟩ : Fin s) : ℕ) = _
+    rw [show ((⟨0, hs⟩ : Fin s) : ℕ) = 0 from rfl, pow_zero, mul_one]
+  · intro l _ hl
+    rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+        Polynomial.eval_X]
+    have hlne : (l : ℕ) ≠ 0 := by
+      intro h
+      apply hl
+      apply Fin.ext
+      exact h
+    rw [zero_pow hlne, mul_zero]
+  · intro h
+    exact absurd (Finset.mem_univ _) h
+
 end LMM
