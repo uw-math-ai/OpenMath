@@ -1,4 +1,5 @@
 import OpenMath.LMMAsGLM
+import OpenMath.LMMAsGLM.Stability
 import OpenMath.Helpers.BlockAdjugate
 import Mathlib.LinearAlgebra.Matrix.Adjugate
 import Mathlib.LinearAlgebra.Matrix.Charpoly.Basic
