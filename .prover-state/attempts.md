@@ -30,3 +30,6 @@ Cycle 078 lem:383A: planner's Path B sketch proposed a trivial pointwise multipl
 
 ### Cycle 97
 Cycle 097: `LinearMap.orthogonal_ker` does not exist in Mathlib — Loogle returned a hallucinated name; only `ContinuousLinearMap.orthogonal_ker` exists at Adjoint.lean:182. Worked around with ~10 LOC inline proof of `(range T)ᗮ = ker(adjoint T)` via `LinearMap.adjoint_inner_right + ext_inner_left`. `dotProduct` and `smul_dotProduct`/`sum_dotProduct` live in root namespace, not `Matrix.*` — bare names work under `open Matrix`. Aristotle jobs A/B/C completed during cycle but manual proofs were already axiom-clean before results returned; Aristotle output not incorporated.
+
+### Cycle 99
+Cycle 099: unicode `𝟙` as an identifier suffix (e.g. `B𝟙`) breaks the Lean parser — use ASCII identifiers (`B1`, etc.) and reserve `𝟙` for operators/notation only. For `V^(k+1) *ᵥ u' = u'` induction after `rw [pow_succ, ← Matrix.mulVec_mulVec]`, the goal becomes `V^k *ᵥ (V *ᵥ u') = u'`; `ih` does not match the inner `V *ᵥ u'` subterm, so rewrite `hVu'` first (reducing `V *ᵥ u'` to `u'`) then apply `ih`: correct order is `rw [pow_succ, ← Matrix.mulVec_mulVec, hVu', ih]`.

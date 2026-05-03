@@ -816,9 +816,9 @@
   "thm:514A": {
     "lean_file": "OpenMath/Chapter5/Section514.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.convergent_preconsistent_isConsistent",
-    "status": "partial",
-    "cycle": 94,
-    "notes": "Cycle 094 sorry-first scaffold: main theorem + 5 sub-lemmas declared (A: glmConstOneIterate_isGLMSolution, B: glmConstOneIterate_closed_form, C: cesaro_residual_tendsto_zero, D: exists_inverse_of_cesaro_zero (INFRASTRUCTURE GAP — see cesaro_inverse_I_minus_V.md), E: witness_v_of_cesaro_inverse). Main theorem body completed modulo sub-lemma sorries. Aristotle batch submitted for A/B/C/E (project 11f63aa0-7a38-45eb-a6c9-a86fff9b8149)."
+    "status": "formalized",
+    "cycle": 99,
+    "notes": "Cycle 099 closure (sorry-free, axiom-clean [propext, Classical.choice, Quot.sound]). Closure path: cycle 098's strengthened IsConvergent (def:512A, with stage-limit clause) enables convergence_witness_satisfies_U to extract `M.U *ᵥ u' = 𝟙` alongside cycle 096's `M.V *ᵥ u' = u'`, so the convergence-witness vector u' is itself a preconsistency vector. Sub-lemma C (cesaro_residual_tendsto_zero) is reformulated as a pure-algebraic identity parameterised by u' (no GLM dependence). Sub-lemma D (exists_inverse_of_cesaro_zero) closed cycle 097 via Path B mean-ergodic. The hPre hypothesis is unused internally — option (ii) of u_prime_equals_u_bridge.md. A separate corollary `convergent_isPreconsistent` exposes the GLM analog of LMM thm:405B."
   },
   "thm:515D": {
     "lean_file": null,

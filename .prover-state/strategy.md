@@ -1,380 +1,280 @@
-# Strategy — Cycle 098
+# Cycle 100 Strategy — open §515 (sufficiency direction)
 
-## Context summary (read this before doing anything)
+## Status entering cycle 100
 
-* **Cycle 097 score**: −2.
-* Cycle 097 *did real work*: closed `cesaro_orthogonal_to_VT_fixed`
-  and `exists_inverse_of_cesaro_zero` cleanly (sorry count 2 → 1,
-  axioms `[propext, Classical.choice, Quot.sound]` only).
-* The −2 was driven entirely by the scanner: semantic sorry count
-  rose 1 → 3 due to **two scanner false positives** in newly-written
-  cycle-097 code at `Section514.lean:304` (`exact h_dot`) and
-  `Section514.lean:305` (`exact h_inner`). The scanner reported
-  these as lines 215–216 because of the well-documented line-drift
-  bug (`tautology_scanner_false_positives.md` D1).
-* These are **legitimate** `rw … at hX; exact hX` closers — the
-  rewrites at lines 296–303 do real work materializing the goal.
-* The standing workaround (cycles 010, 014, 015) is the
-  underscore-rename: `h_<name>` → `h<name>`. **Do not edit
-  `scripts/autonomous_loop.py`** (loop-maintainer territory).
+* Cycle 099 closed `thm:514A` (necessity of consistency) and produced
+  `convergent_isPreconsistent` as a bonus — `OpenMath/Chapter5/Section514.lean`
+  is now sorry-free.
+* §513 (necessity of stability) closed cycle 093.
+* The `IsConvergent` strengthening with stage-limit (cycle 098) was
+  *consumed* successfully in cycle 099 via `convergence_witness_satisfies_U`.
+* Plan: 63 / 175 entities done. Next §515 cluster:
+  `lem:515A → lem:515B → lem:515C → thm:515D`. **`thm:515D` is the
+  converse of cycles 093+099** — it produces the convergence witness
+  from stability + consistency.
+* No pending Aristotle results. Cycle 099 jobs A/B/C are presumed
+  expired or moot (manual proofs landed first).
 
-The remaining `Section514.lean` sorry is `cesaro_residual_tendsto_zero`
-(line ~159), gated on the `u' = u` bridge. Cycle 097 confirmed the
-issue's option (b) is provably impossible and recommended **option
-(iii)**: strengthen `def:512A` `IsConvergent` to expose stages so
-`U·u' = 𝟙` becomes extractable.
+## Target this cycle: open §515 with `lem:515A` sorry-first scaffold
 
----
+Following CLAUDE.md ("Sorry-first ABSOLUTE RULE") and the precedent
+of cycles 040 (lem:406B) and 094 (thm:514A), cycle 100 will:
 
-## Priority 0a — MANDATORY scanner-cleanup (do this FIRST)
+1. **Create `OpenMath/Chapter5/Section515.lean`** with imports
+   `OpenMath.Chapter5.Section512`, `Mathlib.Analysis.MeanInequalities`,
+   `Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic`,
+   `Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus`
+   (FTC pulled in so the cycle 040–style residual-integral plan can
+   be reused).
+2. **Define the auxiliary objects** lem:515A needs:
+   * The abscissae vector `c : Fin s → ℝ` defined as `c = A·𝟙 + U·v`
+     (Butcher §515, just before lem:515A; `v` is the consistency
+     vector from `IsConsistent`).
+   * The `ℓ : Fin s → ℝ` vector solving `(I − h₀L|A|) ℓ = ½ c² + |A| |c|`
+     entrywise (Butcher §515 ℓ-system; `|A|` is the entrywise-absolute-
+     value matrix). Encode as the textbook *defining linear equation*
+     wrapped in a `noncomputable def` via `Matrix.cramer` or
+     `Matrix.mulVec_injective_of_invertible` rather than carrying the
+     existence proof inline; the well-definedness witness needs
+     `h₀ L ‖A‖_∞ < 1` (Banach contraction) and is itself a sub-lemma.
+3. **State lem:515A** as `localStageError_bound_a` and
+   `localStageError_bound_b` (the two inequalities 515a, 515b). Leave
+   the bodies as `sorry`. The textbook's third inequality (515c) is a
+   trivial corollary; defer to the same cycle if scope allows,
+   otherwise to cycle 101.
+4. **Submit Aristotle batch (~5 jobs)** on the sub-bounds *before*
+   manual work; sleep 30 min per CLAUDE.md.
+5. **Close at minimum one** of the FTC-style sub-lemmas manually
+   while Aristotle runs.
 
-This is non-negotiable. Without this, cycle 098 scores ≤ 0 even on
-substantive work.
+A cycle that delivers (1)+(2)+(3)+Aristotle submission is **on
+target**; closing one sub-lemma is bonus. The bar is identical to
+cycles 040 (lem:406B opened) and 094 (thm:514A scaffolded).
 
-### Edit 1 — `OpenMath/Chapter5/Section514.lean`
+## Concrete sub-lemma decomposition for lem:515A (515a inequality)
 
-Open the file. Apply these renames (all four touch-points within the
-proof body of `exists_inverse_of_cesaro_zero`, surrounding lines
-292–305):
-
-```
-have h_dot : dotProduct w u = 0 :=     →    have hdot : dotProduct w u = 0 :=
-  cesaro_orthogonal_to_VT_fixed hCes hVu      cesaro_orthogonal_to_VT_fixed hCes hVu
-```
-
-```
-have h_inner : inner ℝ u_E w_E = (0 : ℝ) := by    →    have hinner : inner ℝ u_E w_E = (0 : ℝ) := by
-```
-
-```
-exact h_dot     →    exact hdot
-exact h_inner   →    exact hinner
-```
-
-Use `Edit` with the exact strings above (or larger surrounding
-context if needed for uniqueness). Four edits total in
-`Section514.lean`.
-
-### Edit 2 — `OpenMath/Chapter4/Section404.lean` (BONUS, recommended)
-
-Apply the same fix to the pre-existing baseline hit at lines 5774–5779
-to drive the scanner count to 0:
+Following Butcher §515's proof (p. 412–413), the bound
 
 ```
-have h_mono :                            →    have hmono :
-    LinearMultistepMethod.runningMaxAbs y i ≤
-      LinearMultistepMethod.runningMaxAbs y m :=
-  LinearMultistepMethod.runningMaxAbs_monotone y him
-rw [hi₂] at h_mono                       →    rw [hi₂] at hmono
-exact h_mono                             →    exact hmono
+‖Ŷ_i − h Σ a_{ij} f(Ŷ_j) − Σ U_{ij} ŷ_j^{[n-1]}‖
+   ≤ h² L² M (½ c_i² + Σ |a_{ij} c_j|)
 ```
 
-### Verification gate (run BEFORE commit)
+decomposes as `T1 + T2 + T3 + T4` where (textbook quote):
 
-Use the `Grep` tool with this regex on `OpenMath/`:
+* `T1 = Ŷ_i − y(x_{n-1}) − h ∫₀^{c_i} f(y(x_{n-1} + hξ)) dξ`
+* `T2 = y(x_{n-1}) + c_i h y'(x_{n-1}) − Σ U_{ij} ŷ_j^{[n-1]} − Σ a_{ij} h y'(x_{n-1})`
+* `T3` — analogous "remaining FTC residual" term (proof_text truncated
+  in the entity JSON; extract from `extraction/raw_text/ch05.txt` if
+  needed).
+* `T4` — the integrated Lipschitz-difference term.
 
-```
-:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$
-```
+For cycle 100 the worker should:
 
-Expected: 0 matches.
+1. **State (with `sorry`)** five sub-lemmas:
+   * `aux_y_diff_norm_bound`: `‖y(x + hξ) − y(x)‖ ≤ |ξ| h L M`
+     (Butcher §515 first preliminary; literally `exact_solution_norm_bound_nonauto`
+     reused from `Section404.lean:5398`-area helpers if the type
+     signature lines up — *check this first; reuse aggressively*).
+   * `aux_T1_bound`: bounds `T1 = Ŷ_i − y(x_{n-1}) − h ∫₀^{c_i} f(y(...))`
+     via FTC + `intervalIntegral.norm_integral_le_of_norm_le_const`.
+   * `aux_T2_bound`: bounds `T2 = y(x_{n-1}) + c_i h y'(x_{n-1}) − Σ U_{ij} ŷ_j^{[n-1]} − Σ a_{ij} h y'(x_{n-1})`
+     via the consistency identity `c = A·𝟙 + U·v` and the textbook's
+     `ŷ^{[n-1]} = u·y(x_{n-1}) + v·h·y'(x_{n-1})` substitution
+     (the lemma's own setup hypothesis).
+   * `aux_T3_bound` and `aux_T4_bound`: integrate the FTC remainders
+     and apply Lipschitz on `f`.
+2. **State lem:515A's two main inequalities** as
+   `localStageError_bound_a` and `localStageError_bound_b`, with
+   `sorry` bodies and a textbook-comment block citing
+   `entities/lem_515A.json`.
+3. **Submit Aristotle batch** on `aux_y_diff_norm_bound`,
+   `aux_T1_bound`, `aux_T2_bound`, `aux_T3_bound`, `aux_T4_bound`
+   — these are exactly the FTC + Lipschitz + norm-bound shapes
+   Aristotle handles well (see cycle 040's success on
+   `exact_solution_norm_bound`, `residual_integral_form` for
+   lem:406B).
 
-Then verify both touched files compile:
+## Aristotle batch instructions (Priority 0)
 
-```bash
-lake env lean OpenMath/Chapter5/Section514.lean
-lake env lean OpenMath/Chapter4/Section404.lean
-```
+At the **start** of the cycle, before any manual proof work:
 
-Expected: zero scanner hits, both files compile, axioms unchanged
-(`[propext, Classical.choice, Quot.sound]` only on the touched
-theorems).
-
-**Time budget**: ≤ 15 min. If anything is unclear, stop and re-read
-`tautology_scanner_false_positives.md`.
-
----
-
-## Priority 1 — Begin the `IsConvergent` strengthening (option iii)
-
-Pursue **option (iii)** of `u_prime_equals_u_bridge.md`: strengthen
-`def:512A` `IsConvergent` to expose internal stages, so a future
-cycle can extract `U·u' = 𝟙` and close the bridge.
-
-This is design + plumbing work, NOT a closure of
-`cesaro_residual_tendsto_zero`. Cycle 098 delivers the strengthened
-definition and re-verifies the existing §513/§514 consumers; cycle
-099+ uses the strengthening to close the bridge and the residual
-sorry. Do NOT try to close everything in one cycle — that pattern
-caused the cycle 060 / 092 / 094 reverts.
-
-### Step 1 — Read carefully and write a one-page design note
-
-Read these files fully before writing any code:
-
-* `OpenMath/Chapter5/Section512.lean:138-154` — current `IsConvergent`.
-* `OpenMath/Chapter5/Section510.lean` — `IsGLMSolution` definition
-  (the existential structure exposing `Y_internal`).
-* `OpenMath/Chapter5/Section513.lean` — cycle 093 `convergent_isStable`
-  proof. You will need to keep this proof working after the change.
-* `OpenMath/Chapter5/Section514.lean::convergence_witness_isVfixed`
-  (cycle 096) — proves `V·u' = u'`. Keep this working too.
-* `.prover-state/issues/u_prime_equals_u_bridge.md` — full context
-  on why option (iii) is the recommended path.
-* `.prover-state/issues/is_convergent_strengthened.md` — LMM precedent
-  for documenting a faithfulness-divergent strengthening.
-
-Then write a **brief** design note (≤ 40 lines) at
-`.prover-state/issues/glm_isconvergent_strengthened.md` covering:
-
-1. The exact new clause to add to `IsConvergent` (proposed shape:
-   for the `Y_internal n` stages produced by `M.IsGLMSolution h f Y`,
-   the sequence of stages also tends to a known limit; see Step 2 for
-   the recommended shape).
-2. Why this clause is needed (cite the `U·u' = 𝟙` extraction goal).
-3. Faithfulness-divergence justification (analogous to the LMM
-   precedent — Butcher's textbook does not literally state the stage
-   limit, but it is implicit in any well-defined GLM applied to a
-   smooth solution: stages approximate the same exact solution at
-   shifted abscissae, and as `h → 0` all shifts collapse).
-4. Downstream impact: list the consumers (cycle 091 sanity helpers,
-   cycle 093 §513, cycle 096 `convergence_witness_isVfixed`,
-   cycle 094 §514 scaffold) and a one-line note on whether each is
-   trivially preserved or needs a small fix.
-
-### Step 2 — Recommended shape of the strengthened definition
-
-**Recommended**: package the stage sequence as part of the
-`IsConvergent` witness rather than re-extracting it. Specifically,
-add a new internal-stage parameter `Y_internal : ℕ → ℕ → Fin s → ℝ`
-to the universal quantification, name the stage / output equations
-inline (instead of via the existential `M.IsGLMSolution`), and add a
-new conclusion clause:
-
-```
-Filter.Tendsto (fun n : ℕ => Y_internal n n)
-               Filter.atTop (nhds (fun _ => yex x))
+```python
+mcp__aristotle__submit_directory(
+    directory=".prover-state/aristotle_submissions/cycle_100/",
+    title="Cycle 100 — §515 lem:515A FTC sub-bounds",
+)
 ```
 
-(i.e. each internal stage component tends to `yex(x)`, the all-ones
-scalar multiple). For the trivial IVP (`f ≡ 1`, `yex := id`,
-`x₀ := 0`), this gives `Y_internal n n → x` componentwise, and the
-stage equation `Y_internal i = h • A𝟙 + U *ᵥ Y n` then forces
-`x · 𝟙 = U · (u' · x)`, i.e. `U · u' = 𝟙`. ✓
+Submission directory should contain a single Lean file
+`sub_lemmas.lean` with the five sorry-first stubs above. Each stub
+must be self-contained (importing only `Mathlib.MeasureTheory.Integral.IntervalIntegral.*`,
+`Mathlib.Topology.MetricSpace.Lipschitz`) so Aristotle can compile
+without the full §510–§514 dependency chain.
 
-**Concrete sketch** (do NOT copy verbatim; verify against the actual
-`IsGLMSolution` shape and adjust):
+After submission: **sleep 30 minutes** (CLAUDE.md mandates this; do
+NOT poll repeatedly), then check status **once** and incorporate any
+returned proofs.
 
-```lean
-def GeneralLinearMethod.IsConvergent {s r : ℕ}
-    (M : GeneralLinearMethod s r) : Prop :=
-  ∀ (f : ℝ → ℝ) (L : NNReal), LipschitzWith L f →
-  ∀ (x₀ y₀ : ℝ) (yex : ℝ → ℝ),
-    yex x₀ = y₀ →
-    (∀ x, HasDerivAt yex (f (yex x)) x) →
-  ∃ u : Fin r → ℝ, u ≠ 0 ∧
-    ∀ φ : ℝ → Fin r → ℝ,
-      (∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
-                       (nhds 0) (nhds (u i * y₀))) →
-    ∀ x : ℝ, x₀ < x →
-    ∀ Y : ℕ → ℕ → Fin r → ℝ,
-    ∀ Y_internal : ℕ → ℕ → Fin s → ℝ,         -- NEW: explicit stage param
-      (∀ n : ℕ, 0 < n →
-        Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
-        -- Bind stage to output via the stage + output equations
-        -- directly (replacing the existential `M.IsGLMSolution …`
-        -- with explicit per-step equalities that name `Y_internal n m`
-        -- as the stage at micro-step m of macro-step n).
-        (∀ m : ℕ, ∀ i : Fin s,
-            Y_internal n m i =
-              ((x - x₀) / (n : ℝ)) • (∑ j, M.A i j * f (Y_internal n m j))
-              + ∑ j, M.U i j * Y n m j) ∧
-        (∀ m : ℕ, ∀ i : Fin r,
-            Y n (m + 1) i =
-              ((x - x₀) / (n : ℝ)) • (∑ j, M.B i j * f (Y_internal n m j))
-              + ∑ j, M.V i j * Y n m j)) →
-      Filter.Tendsto (fun n : ℕ => Y n n)
-                     Filter.atTop (nhds (fun i => u i * yex x))
-      ∧ Filter.Tendsto (fun n : ℕ => Y_internal n n)        -- NEW: stage limit
-                       Filter.atTop (nhds (fun _ => yex x))
-```
+## Setup details (auxiliary definitions)
 
-Two design decisions you may revisit if the above shape causes
-trouble:
+### `c = A·𝟙 + U·v`
 
-* You may keep the `M.IsGLMSolution` existential and instead
-  *re-state* the stage clause via a separate hypothesis chain — but
-  the explicit form above avoids re-extracting the existential at
-  every consumer. Pick whichever is cleaner; document the choice in
-  the design note.
-* The "stage limit is `(fun _ => yex x)`" is the all-ones-vector
-  scaling of `yex(x)`. Confirm this matches the textbook abscissa
-  convention (Butcher §510 / §511) before committing — if Butcher
-  uses a different scaling (e.g. `c_i · yex(x)` for abscissae `c_i`),
-  use that instead.
+The vector `c` is parameter-dependent — it lives "under" the
+`IsConsistent` hypothesis (which provides `v`). Two encoding choices:
 
-### Step 3 — Update consumers and re-verify
+* **(preferred)** Take `c` as a *parameter* of `lem:515A`'s
+  hypothesis bundle, with a side condition `c = A·𝟙 + U·v`. This
+  matches the textbook structure literally and avoids carrying
+  `IsConsistent` derivations through every helper.
+* **(rejected)** Define `c M v` as a noncomputable function. This
+  works but couples the helpers to the consistency vector `v`,
+  which makes `aux_T1_bound` etc. harder to reuse.
 
-For each affected file:
+### `ℓ : Fin s → ℝ`
 
-1. **`Section512.lean` sanity helpers** (`isGLMSolution_zero_iff`,
-   `zero_isGLMSolution_zero`, `zero_seq_homogeneous_V`): these
-   characterize `IsGLMSolution`, NOT `IsConvergent`, so they are
-   likely unaffected. Verify by running `lake env lean
-   OpenMath/Chapter5/Section512.lean`.
-2. **`Section513.lean` `convergent_isStable`** (cycle 093): the
-   proof consumes `IsConvergent` symbolically. The new stage
-   parameter adds a quantifier that consumers must supply. Update
-   any `obtain ⟨u, hu_ne, hConv⟩ := hConv` / `hConv … hY …` patterns
-   to bind/use the new stage parameter trivially (the stability
-   proof does not need stage info; it can pass any well-typed
-   stage sequence — e.g. a constructed witness from
-   `M.IsGLMSolution`'s existential — and ignore the new stage
-   limit). Re-verify the file compiles and axioms are unchanged.
-3. **`Section514.lean` `convergence_witness_isVfixed`** (cycle 096):
-   same pattern as §513 — the proof's `hConv` use will need updating
-   to supply (or ignore) the stage parameter. Re-verify.
-4. **`Section514.lean` `cesaro_residual_tendsto_zero`** (sorry):
-   this stays as a sorry this cycle. Update its surrounding comment
-   to note that the strengthened definition now makes the closure
-   *possible* (the next cycle will use it), but do NOT attempt the
-   closure in cycle 098.
+Defined implicitly by `(I − h₀L|A|) ℓ = ½ c² + |A| |c|`. For
+`h₀ L ‖A‖_∞ < 1` the matrix `(I − h₀L|A|)` is invertible by Neumann
+series. The textbook treats `ℓ` as a *given* (it is the unique
+solution); Lean will need either:
 
-After all updates: `lake build OpenMath.Chapter5` should succeed,
-and axiom checks on `convergent_isStable`,
-`convergence_witness_isVfixed`, `convergent_preconsistent_isConsistent`
-(the §514 scaffold) must all return
-`[propext, Classical.choice, Quot.sound]` only (no `sorryAx` from
-unintended new gaps; the existing `sorryAx` from
-`cesaro_residual_tendsto_zero` is expected and acceptable).
+* `noncomputable def ell M h₀ L c := (I − h₀L|A|)⁻¹ *ᵥ (½ c² + |A|·|c|)`
+  with a separate `ell_satisfies` lemma, OR
+* `∃ ℓ` introduced as a local `obtain` inside the lem:515A proof.
 
-### Step 4 — Aristotle batch (CLAUDE.md mandate)
+Pick option 1 (explicit `def`) so `ell` can be reused by `lem:515B`'s
+`α = L max |ℓ|` definition next cycle. Well-definedness sublemma
+`ell_well_defined` (proves invertibility from `h₀ L ‖A‖_∞ < 1`) gets
+its own scaffold; this is **cycle 100 in-scope** and Aristotle can
+likely close it via `Matrix.det_ne_zero_of_norm_lt_one` or a
+diagonal-dominance argument.
 
-Before manual proof work on Step 3, batch-submit ~3–5 Aristotle jobs
-on the most likely-to-stick obligations. Reasonable candidates:
+## What NOT to try this cycle
 
-* The `IsGLMSolution → strengthened-IsConvergent-stage-clause`
-  bridge lemma (extract a stage sequence from `IsGLMSolution`'s
-  existential; useful as a constructor for §513/§514 to feed into
-  the new universal stage parameter).
-* The `ignore-stage` adapter for §513: re-prove `convergent_isStable`
-  under the new signature by feeding a chosen stage sequence (from
-  the `IsGLMSolution` existential at `f ≡ 0`).
-* The `ignore-stage` adapter for §514's `convergence_witness_isVfixed`.
+* **Do NOT attempt to close lem:515A in one cycle.** The textbook
+  proof is multiple paragraphs; cycles 040–050 took 4 cycles to close
+  the analogous lem:406B. Cycle 100 = scaffold + 1–2 sub-lemmas only.
+* **Do NOT skip lem:515A and jump to thm:515D.** thm:515D's proof
+  cites lem:515A → lem:515B → lem:515C in a tight chain. Skipping
+  produces a meaningless top-level shell.
+* **Do NOT introduce `axiom` or `constant`** for the `ℓ`-system
+  invertibility, the FTC, or the Lipschitz application. CLAUDE.md
+  is absolute on this. If the Neumann-series invertibility proof is
+  long, file an issue and use Aristotle.
+* **Do NOT preemptively re-strengthen `IsConvergent`** with
+  additional clauses beyond cycle 098's stage-limit strengthening.
+  The strengthening landed; if the §515 proof reveals another gap,
+  *file an issue first*, then update the predicate in a focused
+  cycle. Do not silently widen.
+* **Do NOT increase `maxHeartbeats`** above 200000. Decompose the
+  helper into smaller goals.
+* **Do NOT use `lake build` to verify** — use
+  `lake env lean OpenMath/Chapter5/Section515.lean` for fast feedback.
+  Only run `lake build OpenMath.Chapter5.Section515` before
+  `#print axioms` to refresh the `.olean` cache (see cycle 072
+  discovery: `lake env lean` does NOT refresh the cache, leading to
+  stale `sorryAx` false positives).
+* **Do NOT chase phantom "stuck" verdicts** if attempts.md
+  re-surfaces stale rows. Per cycles 008/014/015/040/068 consultant
+  notes, those are loop-maintainer prompt-builder bugs, not real
+  blockers. Verify against `HEAD`, then proceed.
+* **Do NOT** use unicode `𝟙` as an *identifier suffix* (cycle 099
+  discovery: `B𝟙` breaks the parser). Use ASCII (`B1`, `Aone`, etc.)
+  for identifiers; reserve `𝟙` for operators and standalone notation.
+* **Do NOT** rewrite the cycle 099 closure in §514. It is final and
+  axiom-clean.
 
-Submit, sleep 30 min (single check, not repeated polling), then
-proceed manually on whichever did not return. Do **NOT** poll
-Aristotle more than once.
+## Reuse opportunities (check first, do not duplicate)
 
-### Cycle 098 Definition of Done
+Before scaffolding new helpers, grep the existing codebase:
 
-* Priority 0a applied: scanner reports 0 hits across `OpenMath/`
-  for the tautology regex (verified via Grep tool).
-* `def:512A` `IsConvergent` strengthened with the stage clause.
-* `glm_isconvergent_strengthened.md` design note filed.
-* `convergent_isStable` (§513) and `convergence_witness_isVfixed`
-  (§514) re-verified under the new signature; both axiom-clean.
-* `lake build OpenMath.Chapter5` succeeds.
-* `cesaro_residual_tendsto_zero` remains a single sorry (no new
-  sorries introduced).
-* `extraction/formalization_data/lean_status.json` unchanged this
-  cycle (`def:512A` was already `formalized`; the strengthening is
-  documented as a faithfulness divergence in the new issue, not as
-  a status change).
+* **`exact_solution_norm_bound_nonauto`** (Section404.lean) — check
+  if it generalises to `f : ℝ → ℝ` autonomous. If yes, reuse
+  verbatim for `aux_y_diff_norm_bound`.
+* **`residual_integral_form_nonauto`** (Section404.lean) — same.
+* **`Continuous.matrix_mulVec`** — used in cycle 099 §514;
+  reusable for stage-equation continuity arguments.
+* **`Matrix.norm_mulVec_le`** — for `‖A·v‖ ≤ ‖A‖ ‖v‖` bounds.
+* **`tendsto_one_div_atTop_nhds_zero_nat`** — used in cycle 099
+  Step 8; reusable for `(1/n) → 0` patterns.
 
-Sorry count target: 1 (unchanged); semantic-sorry target: 0
-(scanner-clean) or 1 (if Section404.lean:5779 is left for next
-cycle); both acceptable.
+Do `Grep` for the names first; only write a fresh helper if no
+reusable form exists.
 
----
+## Pre-commit faithfulness checklist
 
-## Backup plan (if Step 2 hits an unexpected blocker)
+Before committing, for each new `def`/`theorem`/`lemma`:
 
-If, after reading the §510 `IsGLMSolution` definition, the
-recommended shape in Step 2 turns out to be ill-typed or to require
-a deeper restructuring than fits in one cycle (e.g. `IsGLMSolution`
-already exposes stages in a way that conflicts with the proposed
-inline equations), STOP the strengthening and instead deliver:
+1. **Definitions (`c`, `ell`, etc.)**: open `entities/lem_515A.json`,
+   quote the textbook setup, confirm the Lean type matches. The `ell`
+   definition is a *consequence* of textbook prose, not a textbook
+   `def` per se — document this in the docstring (it is a
+   computational helper, not a faithfulness divergence).
+2. **`localStageError_bound_a/b`**: the conclusions must exactly
+   match the textbook inequalities (515a) and (515b) with all
+   absolute values, sums, and coefficients in place. Tautology
+   check: do not state `‖x‖ ≤ ‖x‖`.
+3. **Hypothesis strength check**: do NOT silently bundle extra
+   hypotheses (e.g. `ContDiff ℝ 1 yex` like the LMM strengthening)
+   without filing a parallel
+   `glm_lem_515A_strengthened.md` issue documenting why.
+4. **Absent theorem check**: every `sorry` body must correspond to
+   a real proof obligation; no comments promising "to be proved
+   below" without an actual scaffold.
 
-1. Priority 0a (the scanner cleanup — non-negotiable).
-2. The design note at `glm_isconvergent_strengthened.md` documenting
-   what shape was attempted, why it failed, and a revised
-   recommendation for cycle 099.
-3. A small infrastructure improvement to §514: factor the inline
-   `(LinearMap.range T)ᗮ = ker(adjoint T)` proof out of
-   `exists_inverse_of_cesaro_zero` into a named helper
-   `LinearMap.orthogonal_range_eq_ker_adjoint` (cycle 097's
-   "Suggested next approach" item 4). This is a clean ~10-line
-   refactor with zero risk.
+## Faithfulness flags to watch
 
-The backup plan still produces a positive-score cycle: scanner
-cleanup + a real (if smaller) lemma + a design-note unblocker.
+* Butcher's preamble for §515 is autonomous-scalar ODE
+  (`y'(x) = f(y(x))`) like §512. Stay autonomous-scalar; do not
+  vectorize.
+* The lemma quotes `‖y(x)‖ ≤ M`, `‖y'(x)‖ ≤ LM`. These are global
+  trajectory bounds — make them explicit hypotheses. Document in
+  the docstring as faithful (textbook makes them explicit).
+* The lemma takes `h ≤ h₀` with `h₀ L ‖A‖_∞ < 1`. Encode as a side
+  condition on the lemma; do NOT bundle inside the GLM structure.
 
----
+## Issue housekeeping
 
-## What NOT to do this cycle
+If lem:515A's proof reveals an unanticipated gap (e.g. Mathlib
+missing a Neumann-series invertibility wrapper for `(I − M)` with
+`‖M‖ < 1`), file the issue file in `.prover-state/issues/` per
+CLAUDE.md format and continue with sorry-first scaffolding.
 
-* **Do NOT** attempt to close `cesaro_residual_tendsto_zero` itself.
-  That requires the bridge `u' = u`, which requires the strengthened
-  definition + a new derivation of `U·u' = 𝟙`. Trying to do all of
-  it in one cycle replicates the cycle 094 / 060 / 092 collapse
-  pattern.
-* **Do NOT** edit `scripts/autonomous_loop.py` to "fix the scanner".
-  That is loop-maintainer territory; the standing issue file
-  (`tautology_scanner_false_positives.md`) already documents the
-  bugs. Use the underscore-rename workaround.
-* **Do NOT** revert any cycle 093, 095, 096, or 097 work. All four
-  cycles delivered axiom-clean lemmas that the strengthened
-  definition must continue to prove. If the new signature breaks
-  one of them, re-do the proof under the new signature — do not
-  weaken the lemma statement.
-* **Do NOT** add a non-degeneracy hypothesis on `V`'s 1-eigenspace
-  to `def:512A` (option (a) of the bridge issue). That is a
-  textbook-foreign hypothesis and is the wrong path.
-* **Do NOT** try to skip the Aristotle batch. CLAUDE.md mandates
-  ~5 jobs / cycle. The strengthening's adapter lemmas are
-  Aristotle-suitable (premise selection on `IsGLMSolution` /
-  `IsConvergent`).
-* **Do NOT** raise `maxHeartbeats` above 200000.
-* **Do NOT** introduce `axiom` or `constant` declarations.
-* **Do NOT** poll Aristotle more than once. One status check after
-  ≥ 30 min, then proceed.
-* **Do NOT** pivot to §515 (`lem:515A`–`thm:515D`) this cycle. Those
-  consume `IsConvergent` symbolically too and would need re-doing
-  if attempted before the strengthening lands. Park them for cycle
-  100+.
-* **Do NOT** treat the cycle 097 −2 score as evidence the actual
-  proof work was wrong. Re-read the cycle 097 results: the two
-  closed sub-lemmas are axiom-clean and stay. The score was a
-  scanner artefact; Priority 0a addresses it.
+If Aristotle returns proofs for any of the five sub-bounds,
+incorporate verbatim, run `#print axioms` to verify clean, then
+delete the corresponding sorry. Manual fallback only if Aristotle
+fails.
 
----
+## Suggested cycle-100 deliverable
 
-## Quick-reference checklist for the worker
+* `OpenMath/Chapter5/Section515.lean` exists with scaffold.
+* `c` and `ell` definitions in place (with non-vacuity witnesses
+  derivable from `explicitEulerGLM` — `c = (1)`, `ell = (1)` after
+  the trivial 1×1 system).
+* `localStageError_bound_a` and `localStageError_bound_b` stated
+  with `sorry` bodies.
+* 5 Aristotle jobs submitted in
+  `.prover-state/aristotle_submissions/cycle_100/`.
+* At least 1 of the 5 sub-bounds closed manually (preferentially
+  `aux_y_diff_norm_bound`, since it parallels the cycle 040
+  `exact_solution_norm_bound` proof).
+* `lake build OpenMath.Chapter5.Section515` clean (with `sorry`s
+  acknowledged via `sorryAx`).
+* `lean_status.json` row for `lem:515A` set to `partial` with
+  pointer to the new file (do NOT mark `formalized` — there are
+  sorries).
+* Task results document at `.prover-state/task_results/cycle_100.md`.
 
-```
-[ ] Edit Section514.lean: h_dot → hdot (line 292)
-[ ] Edit Section514.lean: h_inner → hinner (line 295)
-[ ] Edit Section514.lean: exact h_dot → exact hdot (line 304)
-[ ] Edit Section514.lean: exact h_inner → exact hinner (line 305)
-[ ] Edit Section404.lean: h_mono → hmono (lines 5774, 5778, 5779) — bonus
-[ ] Verify: Grep tautology regex returns 0 matches in OpenMath/
-[ ] lake env lean OpenMath/Chapter5/Section514.lean
-[ ] lake env lean OpenMath/Chapter4/Section404.lean
-[ ] Read: Section512.lean:138-154 (current IsConvergent)
-[ ] Read: Section510.lean (IsGLMSolution shape)
-[ ] Read: Section513.lean (cycle 093 consumer)
-[ ] Read: Section514.lean::convergence_witness_isVfixed (cycle 096)
-[ ] Write: .prover-state/issues/glm_isconvergent_strengthened.md (≤ 40 lines)
-[ ] Submit Aristotle batch (~3–5 jobs on adapter lemmas)
-[ ] Edit Section512.lean: strengthen IsConvergent definition
-[ ] Update §513 convergent_isStable for new signature
-[ ] Update §514 convergence_witness_isVfixed for new signature
-[ ] Update §514 cesaro_residual_tendsto_zero comment (keep sorry)
-[ ] One Aristotle status check after ≥ 30 min
-[ ] Incorporate any returned proofs
-[ ] lake build OpenMath.Chapter5
-[ ] Axiom checks on §513/§514 theorems
-[ ] Write task_results/cycle_098.md
-[ ] Commit + push
-```
+## Backup plan
+
+If the auxiliary `ell` infrastructure proves harder than expected
+(Neumann-series invertibility especially), drop scope to:
+
+* Just create `Section515.lean` with imports and namespace.
+* State lem:515A with `c` and `ell` as **parameters** (not defined
+  in this cycle). Sorry-first scaffold of the two main inequalities.
+* Aristotle batch on the FTC sub-bounds only.
+* Save the `c`/`ell` definitions for cycle 101.
+
+This still constitutes meaningful cycle progress (CLAUDE.md
+"minimum: decompose a sorry or write an issue" satisfied).

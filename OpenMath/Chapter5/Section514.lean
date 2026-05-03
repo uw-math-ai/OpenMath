@@ -12,17 +12,22 @@ linear method that is preconsistent (with preconsistency vector `u`)
 is consistent — i.e. there exists a vector `v` such that
 `B·𝟙 + V·v = u + v` (equation 510c).
 
-## Cycle 094 deliverable (sorry-first scaffold)
+## Status (cycle 099): closed
 
-* The main theorem `convergent_preconsistent_isConsistent` is stated
-  with a `sorry` body and a textbook-faithful proof outline.
-* Five sub-lemmas formalising Butcher's textbook proof are stated:
-  `glmConstOneIterate` + `glmConstOneIterate_isGLMSolution` (sub-lemma
-  A), `glmConstOneIterate_closed_form` (sub-lemma B),
-  `cesaro_residual_tendsto_zero` (sub-lemma C),
-  `exists_inverse_of_cesaro_zero` (sub-lemma D —
-  **the infrastructure gap**, see `.prover-state/issues/cesaro_inverse_I_minus_V.md`),
-  `witness_v_of_cesaro_inverse` (sub-lemma E).
+The main theorem `convergent_preconsistent_isConsistent` is now
+sorry-free. Sub-lemmas:
+
+* `glmConstOneIterate` + `glmConstOneIterate_isGLMSolution` (sub-lemma A)
+* `glmConstOneIterate_closed_form` (sub-lemma B)
+* `cesaro_residual_tendsto_zero` (sub-lemma C — closed cycle 099 as
+  a pure-algebraic identity)
+* `cesaro_orthogonal_to_VT_fixed` + `exists_inverse_of_cesaro_zero`
+  (sub-lemma D — closed cycle 097 via Path B mean ergodic)
+* `witness_v_of_cesaro_inverse` (sub-lemma E)
+* `convergence_witness_satisfies_U` (cycle 099) — convergence-
+  witness vector `u'` is itself a preconsistency vector
+* `convergent_isPreconsistent` (cycle 099) — GLM analog of LMM
+  `thm:405B`: convergent ⇒ preconsistent
 
 ## Textbook statement (quoted from `entities/thm_514A.json`)
 
@@ -124,50 +129,90 @@ theorem GeneralLinearMethod.glmConstOneIterate_closed_form {s r : ℕ}
     refine Finset.sum_congr rfl (fun j _ => ?_)
     ring
 
-/-! ### Sub-lemma C — Cesàro residual tends to zero
+/-! ### Sub-lemma C — Cesàro residual tends to zero (cycle 099)
 
-Plumbing from `IsConvergent` (instantiated at the trivial `f ≡ 1`
-IVP `y(x) = x`) to the Cesàro statement
-`(1/n) Σ V^k · (B·𝟙 - u) → 0`. The argument:
+Pure-algebraic statement (no GLM dependence): given
+`hY_lim : (1/n) • Σ_{k<n} V^k *ᵥ B1 → u'` and a fixed-point witness
+`hVu' : V *ᵥ u' = u'`, the residual Cesàro sum
+`(1/n) • Σ_{k<n} V^k *ᵥ (B1 - u')` tends to `0`.
 
-1. Apply `hConv` to `f ≡ 1`, `x₀ = 0`, `y₀ = 0`, `yex = id`,
-   yielding a convergence-witness vector `u'` with `u' ≠ 0`.
-2. Use `φ ≡ 0` (constant zero starting procedure); verify
-   `Tendsto (fun h => 0) (nhds 0) (nhds (u' i * 0)) = nhds 0`.
-3. Apply `hConv'` to the iterate `Y n m := M.glmConstOneIterate (1/n) m`.
-4. Conclude `Y n n → fun i => u' i * yex 1 = u' i`.
-5. Use `glmConstOneIterate_closed_form` to rewrite `Y n n`.
-6. Subtract `u`-dependent term using `V·u = u` ⇒ `V^k · u = u`,
-   factor, and conclude.
+Proof: by induction `V^k *ᵥ u' = u'` for all k; distributing
+`V^k *ᵥ (B1 - u') = V^k *ᵥ B1 - u'`; the sum becomes
+`(Σ V^k *ᵥ B1) - n • u'`, and `(1/n) • (n • u') = u'` for `n ≥ 1`,
+so the difference Cesàro sum tends to `u' - u' = 0`.
 
-Note: `u'` from `IsConvergent` may differ from the `u` of
-`IsPreconsistent`. For cycle 094 we accept this: the proof either
-extracts `u` from `hPre` and shows the Cesàro statement directly, or
-defers the bridging to a separate sub-lemma.
+Cycle 099 reformulation: previously the lemma was parameterised by
+`hConv` and a preconsistency witness `u`. Now it's parameterised by
+the convergence-witness `u'` and its V-fixed property — the GLM
+context is no longer needed. The consumer
+(`convergent_preconsistent_isConsistent`) supplies these via
+`convergence_witness_satisfies_U`. -/
 
-**Cycle 098 update**: `IsConvergent` is now strengthened (see
-`Section512.lean::IsConvergent` and
-`.prover-state/issues/glm_isconvergent_strengthened.md`) to also
-require a stage-limit conclusion `Y_int n → (fun _ => yex(x))`. Applied
-to the trivial IVP (`f ≡ 1, yex = id, x = 1`) with the stage choice
-`Y_int n i := (1/n) • (A𝟙)_i + (U *ᵥ Y n n)_i`, this forces
-`(U *ᵥ u') = 𝟙`, which combined with the existing `V *ᵥ u' = u'`
-(see `convergence_witness_isVfixed`) closes the `u' = u` bridge
-modulo a uniqueness argument for preconsistency vectors. The closure
-of this `sorry` is scheduled for a future cycle. -/
-
-/-- Cesàro mean of `V^k · (B·𝟙 - u)` tends to `0` under
-convergence + preconsistency. -/
-theorem GeneralLinearMethod.cesaro_residual_tendsto_zero {s r : ℕ}
-    (M : GeneralLinearMethod s r)
-    (_hConv : M.IsConvergent) {u : Fin r → ℝ}
-    (_hPre_u : M.V *ᵥ u = u ∧ M.U *ᵥ u = (fun _ => 1)) :
+/-- Cesàro mean of `V^k *ᵥ (B1 - u')` tends to `0`, given that the
+Cesàro mean of `V^k *ᵥ B1` tends to `u'` and `V *ᵥ u' = u'`. -/
+private theorem cesaro_residual_tendsto_zero
+    {r : ℕ} (V : Matrix (Fin r) (Fin r) ℝ) (B1 : Fin r → ℝ)
+    {u' : Fin r → ℝ}
+    (hVu' : V *ᵥ u' = u')
+    (hY_lim : Filter.Tendsto
+      (fun n : ℕ => (1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ B1))
+      Filter.atTop (nhds u')) :
     Filter.Tendsto
       (fun n : ℕ => (1 / (n : ℝ)) •
-        (∑ k ∈ Finset.range n,
-            (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)) - u)))
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ (B1 - u')))
       Filter.atTop (nhds 0) := by
-  sorry
+  -- Step 1: V^k *ᵥ u' = u' for all k.
+  have hV_pow_u : ∀ k : ℕ, V ^ k *ᵥ u' = u' := by
+    intro k
+    induction k with
+    | zero => rw [pow_zero]; exact Matrix.one_mulVec u'
+    | succ k ih => rw [pow_succ, ← Matrix.mulVec_mulVec, hVu', ih]
+  -- Step 2: distribute V^k over the subtraction.
+  have hsplit : ∀ k : ℕ, V ^ k *ᵥ (B1 - u') = V ^ k *ᵥ B1 - u' := by
+    intro k; rw [Matrix.mulVec_sub, hV_pow_u k]
+  -- Step 3: pointwise (componentwise) reduction to scalar Tendsto.
+  rw [tendsto_pi_nhds]; intro i
+  show Filter.Tendsto
+      (fun n : ℕ => ((1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ (B1 - u'))) i)
+      Filter.atTop (nhds 0)
+  -- Step 4: pointwise equality (for n ≥ 1):
+  --   ((1/n) • Σ V^k *ᵥ (B1 - u')) i = ((1/n) • Σ V^k *ᵥ B1) i - u' i.
+  have h_pointwise : ∀ n : ℕ, 0 < n →
+      ((1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ (B1 - u'))) i
+      = ((1 / (n : ℝ)) •
+          (∑ k ∈ Finset.range n, (V ^ k) *ᵥ B1)) i - u' i := by
+    intro n hn
+    have h_inner : ∀ k ∈ Finset.range n,
+        ((V ^ k) *ᵥ (B1 - u')) i = ((V ^ k) *ᵥ B1) i - u' i := by
+      intro k _
+      rw [hsplit]; rfl
+    simp only [Pi.smul_apply, smul_eq_mul, Finset.sum_apply]
+    rw [Finset.sum_congr rfl h_inner, Finset.sum_sub_distrib,
+        Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+    have hn_ne : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn)
+    field_simp
+  -- Step 5: hY_lim componentwise gives convergence to u' i.
+  have hY_lim_i : Filter.Tendsto
+      (fun n : ℕ => ((1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ B1)) i)
+      Filter.atTop (nhds (u' i)) := (tendsto_pi_nhds.mp hY_lim) i
+  -- Step 6: subtract u' i to get → 0.
+  have h_sub_lim : Filter.Tendsto
+      (fun n : ℕ => ((1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ B1)) i - u' i)
+      Filter.atTop (nhds (u' i - u' i)) := hY_lim_i.sub tendsto_const_nhds
+  rw [sub_self] at h_sub_lim
+  -- Step 7: bridge eventually-equal.
+  have h_eventually : (fun n : ℕ => ((1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ (B1 - u'))) i)
+      =ᶠ[Filter.atTop]
+      (fun n : ℕ => ((1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ B1)) i - u' i) :=
+    Filter.eventually_atTop.mpr ⟨1, fun n hn => h_pointwise n hn⟩
+  exact (Filter.tendsto_congr' h_eventually).mpr h_sub_lim
 
 /-! ### Sub-lemma D — INFRASTRUCTURE GAP
 
@@ -347,29 +392,29 @@ Given the Cesàro inverse `v` with `(I − V) v = B·𝟙 − u`, rearrange
 to `B·𝟙 + V·v = u + v`. -/
 
 /-- Witness construction: from the Cesàro inverse, build `v` such
-that `B·𝟙 + V·v = u + v`. -/
+that `B·𝟙 + V·v = u' + v`. -/
 private theorem GeneralLinearMethod.witness_v_of_cesaro_inverse {s r : ℕ}
-    (M : GeneralLinearMethod s r) {u : Fin r → ℝ}
-    (_hPre_u : M.V *ᵥ u = u ∧ M.U *ᵥ u = (fun _ => 1))
+    (M : GeneralLinearMethod s r) {u' : Fin r → ℝ}
+    (_hPre_u' : M.V *ᵥ u' = u' ∧ M.U *ᵥ u' = (fun _ => 1))
     (hCes : Filter.Tendsto
       (fun n : ℕ => (1 / (n : ℝ)) •
         (∑ k ∈ Finset.range n,
-            (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)) - u)))
+            (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)) - u')))
       Filter.atTop (nhds 0))
     (hPB : ∃ K : ℝ, ∀ n, ‖M.V ^ n‖ ≤ K) :
     ∃ v : Fin r → ℝ,
-      M.B *ᵥ (fun _ => (1 : ℝ)) + M.V *ᵥ v = u + v := by
+      M.B *ᵥ (fun _ => (1 : ℝ)) + M.V *ᵥ v = u' + v := by
   obtain ⟨v, hv⟩ := exists_inverse_of_cesaro_zero (V := M.V) hPB hCes
   refine ⟨v, ?_⟩
-  -- hv : (1 - M.V) *ᵥ v = M.B *ᵥ 1 - u.
+  -- hv : (1 - M.V) *ᵥ v = M.B *ᵥ 1 - u'.
   rw [Matrix.sub_mulVec, Matrix.one_mulVec] at hv
-  -- hv : v - M.V *ᵥ v = M.B *ᵥ 1 - u.
+  -- hv : v - M.V *ᵥ v = M.B *ᵥ 1 - u'.
   funext i
   have hi := congrFun hv i
-  show (M.B *ᵥ (fun _ => (1 : ℝ))) i + (M.V *ᵥ v) i = u i + v i
+  show (M.B *ᵥ (fun _ => (1 : ℝ))) i + (M.V *ᵥ v) i = u' i + v i
   have hpi : (v - M.V *ᵥ v) i = v i - (M.V *ᵥ v) i := Pi.sub_apply v _ i
-  have hpi' : (M.B *ᵥ (fun _ => (1 : ℝ)) - u) i =
-              (M.B *ᵥ (fun _ => (1 : ℝ))) i - u i := Pi.sub_apply _ u i
+  have hpi' : (M.B *ᵥ (fun _ => (1 : ℝ)) - u') i =
+              (M.B *ᵥ (fun _ => (1 : ℝ))) i - u' i := Pi.sub_apply _ u' i
   rw [hpi, hpi'] at hi
   linarith
 
@@ -385,16 +430,17 @@ theorem GeneralLinearMethod.IsStable.powerBound {s r : ℕ}
   obtain ⟨K, hK⟩ := hStable
   exact ⟨K, hK⟩
 
-/-! ### Partial bridge `V·u' = u'` for `thm:514A`
+/-! ### Convergence-witness vector is a preconsistency vector
 
 The convergence-witness vector `u'` extracted from `M.IsConvergent`
-(applied to the trivial IVP `y'(x) = 1, y(0) = 0, yex = id`) is a
-fixed point of `M.V`. This is one half of the `u' = u` bridge —
-the other half (`U·u' = 𝟙`) and the uniqueness step needed to
-identify `u'` with the preconsistency vector `u` remain open; see
-`.prover-state/issues/u_prime_equals_u_bridge.md`. -/
+(applied to the trivial IVP `y'(x) = 1, y(0) = 0, yex = id`) is
+itself a preconsistency vector: it satisfies both `V·u' = u'` and
+`U·u' = 𝟙` (with `u' ≠ 0`). This sidesteps the textbook's implicit
+`u' = u` identification — `IsConsistent` is existential, so we can
+just use `u'` as the witness. The fourth conclusion is the Cesàro
+sum form, used by `cesaro_residual_tendsto_zero`. -/
 
-/-- Algebraic identity: `V *ᵥ y[n] = y[n] + h • (V^n *ᵥ B𝟙 - B𝟙)`
+/-- Algebraic identity: `V *ᵥ y[n] = y[n] + h • (V^n *ᵥ B1 - B1)`
 where `y[n] = M.glmConstOneIterate h n`. Proof: substitute the
 closed form, distribute `V` through the `h • Σ` shell, reindex
 `Σ_{k<n} V^(k+1) = Σ_{k<n+1} V^k - V^0`. -/
@@ -437,17 +483,28 @@ private lemma GeneralLinearMethod.V_mulVec_glmConstOneIterate_eq
     Finset.sum_apply] at hi ⊢
   linear_combination h * hi
 
-/-- **Half of the `u' = u` bridge**: the convergence-witness vector
-`u'` extracted from `M.IsConvergent` (applied to the trivial IVP
-`y'(x) = 1, y(0) = 0, yex = id`) is a fixed point of `M.V`.
+/-- **Convergence-witness preconsistency**: the convergence-witness
+vector `u'` extracted from `M.IsConvergent` (applied to the trivial
+IVP `y'(x) = 1, y(0) = 0, yex = id`) is itself a preconsistency
+vector — it satisfies both `M.V *ᵥ u' = u'` AND `M.U *ᵥ u' = 𝟙`.
+The fourth conclusion exposes the Cesàro-sum form of the limit
+(consumed by `cesaro_residual_tendsto_zero`).
 
-This is a partial step toward `thm:514A`; the full bridge `u' = u`
-to the preconsistency vector remains open — see
-`.prover-state/issues/u_prime_equals_u_bridge.md`. -/
-private theorem GeneralLinearMethod.convergence_witness_isVfixed
+This is the load-bearing helper for `thm:514A`. The cycle 098
+strengthening of `IsConvergent` (with the stage-limit clause) is
+exactly what enables the `U *ᵥ u' = 𝟙` extraction in Step 8. -/
+private theorem GeneralLinearMethod.convergence_witness_satisfies_U
     {s r : ℕ} (M : GeneralLinearMethod s r)
     (hConv : M.IsConvergent) :
-    ∃ u' : Fin r → ℝ, u' ≠ 0 ∧ M.V *ᵥ u' = u' := by
+    ∃ u' : Fin r → ℝ,
+      u' ≠ 0 ∧
+      M.V *ᵥ u' = u' ∧
+      M.U *ᵥ u' = (fun _ => 1) ∧
+      Filter.Tendsto
+        (fun n : ℕ => (1 / (n : ℝ)) •
+          (∑ k ∈ Finset.range n,
+              (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))))
+        Filter.atTop (nhds u') := by
   -- Step 1: trivial IVP setup (f ≡ 1, x₀ = 0, y₀ = 0, yex = id).
   set f : ℝ → ℝ := fun _ => (1 : ℝ) with hf_def
   set yex : ℝ → ℝ := id with hyex_def
@@ -460,7 +517,6 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
   -- Step 2: extract u' from hConv.
   obtain ⟨u', hu'_ne, hConv'⟩ :=
     hConv f 0 hf_lip 0 0 yex hyex_x₀ hyex_ode
-  refine ⟨u', hu'_ne, ?_⟩
   -- Step 3: instantiate hConv' at φ ≡ 0, x = 1, Y := glmConstOneIterate (1/n).
   set φ : ℝ → Fin r → ℝ := fun _ _ => (0 : ℝ) with hφ_def
   set Y : ℕ → ℕ → Fin r → ℝ :=
@@ -471,9 +527,8 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
     rw [show u' i * 0 = 0 from by ring]
     exact tendsto_const_nhds
   have hxx : (0 : ℝ) < 1 := by norm_num
-  -- Cycle 098: under strengthened `IsConvergent`, also feed `Y_int n` —
-  -- the stage at the n-th micro-step. For f ≡ 1 the stage equation
-  -- `Y_int n i = h • (A𝟙)_i + (U *ᵥ Y n n) i` defines `Y_int` directly.
+  -- Cycle 098 stage choice: for f ≡ 1 the stage equation reduces to
+  --   `Y_int n i = (1/n) • (A𝟙)_i + (U *ᵥ Y n n)_i`.
   set Y_int : ℕ → Fin s → ℝ :=
     fun n i => (∑ j, M.A i j * (((1 - 0 : ℝ) / (n : ℝ)) * f (0 : ℝ)))
                + (∑ j, M.U i j * Y n n j) with hY_int_def
@@ -485,16 +540,12 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
         + (∑ j, M.U i j * Y n n j)) := by
     intro n hn
     refine ⟨?_, ?_, ?_⟩
-    · -- Y n 0 = (fun _ => 0) (= φ ((1-0)/n))
-      funext i
+    · funext i
       show M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) 0 i = (0 : ℝ)
       rfl
-    · -- M.IsGLMSolution ((1-0)/n) f (Y n).
-      rw [hf_def]
+    · rw [hf_def]
       exact M.glmConstOneIterate_isGLMSolution ((1 - 0 : ℝ) / (n : ℝ))
-    · -- Stage equation (cycle 098): for f ≡ 1, both sides reduce to
-      --   (1/n) • (A𝟙)_i + (U *ᵥ Y n n)_i, since f is constant.
-      intro i
+    · intro i
       show (∑ j, M.A i j * (((1 - 0 : ℝ) / (n : ℝ)) * f (0 : ℝ)))
             + (∑ j, M.U i j * Y n n j) =
             (∑ j, M.A i j * (((1 - 0) / (n : ℝ)) * f (Y_int n j)))
@@ -504,24 +555,17 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
   have hY_lim : Filter.Tendsto (fun n : ℕ => Y n n)
                   Filter.atTop (nhds (fun i => u' i * yex 1)) :=
     hConv_pair.1
-  -- yex 1 = id 1 = 1, so the limit simplifies to u'.
+  have hYint_lim : Filter.Tendsto Y_int
+                     Filter.atTop (nhds (fun _ => yex 1)) :=
+    hConv_pair.2
+  -- Simplify yex 1 = id 1 = 1.
   have h_lim_simp : (fun i : Fin r => u' i * yex 1) = u' := by
     rw [hyex_def]; funext i; show u' i * (1 : ℝ) = u' i; ring
   rw [h_lim_simp] at hY_lim
-  -- Step 4: continuity of `M.V *ᵥ ·` lifts the limit.
-  have hVY_lim : Filter.Tendsto (fun n : ℕ => M.V *ᵥ Y n n)
-                   Filter.atTop (nhds (M.V *ᵥ u')) := by
-    have hcont : Continuous fun w : Fin r → ℝ => M.V *ᵥ w :=
-      Continuous.matrix_mulVec continuous_const continuous_id
-    exact hcont.tendsto _ |>.comp hY_lim
-  -- Step 5: V *ᵥ Y n n = Y n n + (1/n) • residual (from Step 4 helper).
-  have h_step4 : ∀ n : ℕ, M.V *ᵥ Y n n = Y n n
-        + ((1 - 0 : ℝ) / (n : ℝ)) • (M.V ^ n *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))
-                                      - M.B *ᵥ (fun _ => (1 : ℝ))) := by
-    intro n
-    show M.V *ᵥ M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) n = _
-    exact M.V_mulVec_glmConstOneIterate_eq ((1 - 0 : ℝ) / (n : ℝ)) n
-  -- Step 6: residual vanishes — `(1/n) • (V^n *ᵥ B𝟙 - B𝟙) → 0`.
+  have h_lim_simp_int : (fun _ : Fin s => yex 1) = (fun _ => (1 : ℝ)) := by
+    rw [hyex_def]; rfl
+  rw [h_lim_simp_int] at hYint_lim
+  -- Step 4: V-fixed conclusion (cycle 096).
   have hStable := M.convergent_isStable hConv
   obtain ⟨K, hK⟩ := hStable.powerBound
   set w : Fin r → ℝ := M.B *ᵥ (fun _ => (1 : ℝ)) with hw_def
@@ -536,7 +580,8 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
     linarith
   have h_inv_tendsto : Filter.Tendsto (fun n : ℕ => (1 - 0 : ℝ) / (n : ℝ))
                           Filter.atTop (nhds 0) := by
-    have heq : (fun n : ℕ => (1 - 0 : ℝ) / (n : ℝ)) = fun n : ℕ => (1 : ℝ) / (n : ℝ) := by
+    have heq : (fun n : ℕ => (1 - 0 : ℝ) / (n : ℝ))
+                 = fun n : ℕ => (1 : ℝ) / (n : ℝ) := by
       funext n; ring
     rw [heq]
     exact tendsto_one_div_atTop_nhds_zero_nat
@@ -547,18 +592,111 @@ private theorem GeneralLinearMethod.convergence_witness_isVfixed
     exact ⟨K * ‖w‖ + ‖w‖, by
       rw [Filter.eventually_map]
       exact Filter.Eventually.of_forall h_residual_bd⟩
-  -- Step 7: combine via Filter.Tendsto.add and tendsto_nhds_unique.
-  have hYn_plus_res : Filter.Tendsto
-      (fun n : ℕ => Y n n + ((1 - 0 : ℝ) / (n : ℝ)) • residual n)
-      Filter.atTop (nhds (u' + 0)) :=
-    hY_lim.add h_residual_vanish
-  rw [add_zero] at hYn_plus_res
-  have hVY_eq : (fun n : ℕ => M.V *ᵥ Y n n) =
-                (fun n : ℕ => Y n n + ((1 - 0 : ℝ) / (n : ℝ)) • residual n) := by
-    funext n
-    exact h_step4 n
-  rw [hVY_eq] at hVY_lim
-  exact tendsto_nhds_unique hVY_lim hYn_plus_res
+  have hVu' : M.V *ᵥ u' = u' := by
+    have hVY_lim : Filter.Tendsto (fun n : ℕ => M.V *ᵥ Y n n)
+                     Filter.atTop (nhds (M.V *ᵥ u')) := by
+      have hcont : Continuous fun w : Fin r → ℝ => M.V *ᵥ w :=
+        Continuous.matrix_mulVec continuous_const continuous_id
+      exact hcont.tendsto _ |>.comp hY_lim
+    have h_step4 : ∀ n : ℕ, M.V *ᵥ Y n n = Y n n
+          + ((1 - 0 : ℝ) / (n : ℝ)) • (M.V ^ n *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))
+                                        - M.B *ᵥ (fun _ => (1 : ℝ))) := by
+      intro n
+      show M.V *ᵥ M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) n = _
+      exact M.V_mulVec_glmConstOneIterate_eq ((1 - 0 : ℝ) / (n : ℝ)) n
+    have hYn_plus_res : Filter.Tendsto
+        (fun n : ℕ => Y n n + ((1 - 0 : ℝ) / (n : ℝ)) • residual n)
+        Filter.atTop (nhds (u' + 0)) :=
+      hY_lim.add h_residual_vanish
+    rw [add_zero] at hYn_plus_res
+    have hVY_eq : (fun n : ℕ => M.V *ᵥ Y n n) =
+                  (fun n : ℕ => Y n n + ((1 - 0 : ℝ) / (n : ℝ)) • residual n) := by
+      funext n
+      exact h_step4 n
+    rw [hVY_eq] at hVY_lim
+    exact tendsto_nhds_unique hVY_lim hYn_plus_res
+  -- Step 8 (NEW, cycle 099): U-side conclusion via the stage-limit
+  -- clause. From `hYint_lim : Y_int n → (fun _ => 1)` and the
+  -- stage equation reduction `Y_int n i = (1/n) • (Σ j, A i j) + (U·Y n n) i`,
+  -- the first term → 0 and the second → (U·u') i, so (U·u') i = 1.
+  have hUu' : M.U *ᵥ u' = (fun _ => 1) := by
+    have hUY_lim : Filter.Tendsto (fun n : ℕ => M.U *ᵥ Y n n)
+                     Filter.atTop (nhds (M.U *ᵥ u')) := by
+      have hcont : Continuous fun w : Fin r → ℝ => M.U *ᵥ w :=
+        Continuous.matrix_mulVec continuous_const continuous_id
+      exact hcont.tendsto _ |>.comp hY_lim
+    have hY_int_simp : ∀ n : ℕ, ∀ i : Fin s,
+        Y_int n i = ((1 : ℝ) / (n : ℝ)) * (∑ j, M.A i j) + (M.U *ᵥ Y n n) i := by
+      intro n i
+      show (∑ j, M.A i j * (((1 - 0 : ℝ) / (n : ℝ)) * f (0 : ℝ)))
+            + (∑ j, M.U i j * Y n n j) =
+            ((1 : ℝ) / (n : ℝ)) * (∑ j, M.A i j) + (M.U *ᵥ Y n n) i
+      rw [hf_def]
+      show (∑ j, M.A i j * (((1 - 0 : ℝ) / (n : ℝ)) * 1))
+            + (∑ j, M.U i j * Y n n j) =
+            ((1 : ℝ) / (n : ℝ)) * (∑ j, M.A i j) + (M.U *ᵥ Y n n) i
+      have h_left : (∑ j, M.A i j * (((1 - 0 : ℝ) / (n : ℝ)) * 1))
+                      = ((1 : ℝ) / (n : ℝ)) * (∑ j, M.A i j) := by
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        ring
+      have h_right : (∑ j, M.U i j * Y n n j) = (M.U *ᵥ Y n n) i := rfl
+      rw [h_left, h_right]
+    funext i
+    show (M.U *ᵥ u') i = (1 : ℝ)
+    have hYint_lim_i : Filter.Tendsto (fun n => Y_int n i)
+                          Filter.atTop (nhds 1) := by
+      have h := (tendsto_pi_nhds.mp hYint_lim) i
+      simpa using h
+    have hUY_lim_i : Filter.Tendsto (fun n => (M.U *ᵥ Y n n) i)
+                       Filter.atTop (nhds ((M.U *ᵥ u') i)) :=
+      (tendsto_pi_nhds.mp hUY_lim) i
+    have h_first_tendsto : Filter.Tendsto
+        (fun n : ℕ => ((1 : ℝ) / (n : ℝ)) * (∑ j, M.A i j))
+        Filter.atTop (nhds 0) := by
+      have hone : Filter.Tendsto (fun n : ℕ => (1 : ℝ) / (n : ℝ))
+                     Filter.atTop (nhds 0) := tendsto_one_div_atTop_nhds_zero_nat
+      have := hone.mul_const (∑ j, M.A i j)
+      simpa using this
+    have h_sum_tendsto : Filter.Tendsto
+        (fun n : ℕ => ((1 : ℝ) / (n : ℝ)) * (∑ j, M.A i j) + (M.U *ᵥ Y n n) i)
+        Filter.atTop (nhds (0 + (M.U *ᵥ u') i)) :=
+      h_first_tendsto.add hUY_lim_i
+    rw [zero_add] at h_sum_tendsto
+    have h_eq : (fun n : ℕ => Y_int n i) =
+                (fun n : ℕ => ((1 : ℝ) / (n : ℝ)) * (∑ j, M.A i j) + (M.U *ᵥ Y n n) i) := by
+      funext n; exact hY_int_simp n i
+    rw [h_eq] at hYint_lim_i
+    exact (tendsto_nhds_unique hYint_lim_i h_sum_tendsto).symm
+  -- Step 9 (NEW, cycle 099): Cesàro-sum form of hY_lim, exposed as the
+  -- fourth conclusion. Y n n equals the Cesàro sum by the closed form.
+  have hCes_lim : Filter.Tendsto
+      (fun n : ℕ => (1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n,
+            (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))))
+      Filter.atTop (nhds u') := by
+    have h_eq : (fun n : ℕ => Y n n) =
+                (fun n : ℕ => (1 / (n : ℝ)) •
+                  (∑ k ∈ Finset.range n,
+                      (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ))))) := by
+      funext n
+      show M.glmConstOneIterate ((1 - 0 : ℝ) / (n : ℝ)) n = _
+      rw [M.glmConstOneIterate_closed_form ((1 - 0 : ℝ) / (n : ℝ)) n]
+      congr 1
+      ring
+    rw [h_eq] at hY_lim
+    exact hY_lim
+  exact ⟨u', hu'_ne, hVu', hUu', hCes_lim⟩
+
+/-- **GLM analog of LMM `thm:405B`** (cycle 069): A convergent GLM
+is preconsistent. The convergence-witness vector `u'` extracted from
+`IsConvergent` satisfies both `V *ᵥ u' = u'` and `U *ᵥ u' = 𝟙`, and
+is non-zero — i.e. `u'` is itself a preconsistency vector. -/
+theorem GeneralLinearMethod.convergent_isPreconsistent
+    {s r : ℕ} (M : GeneralLinearMethod s r)
+    (hConv : M.IsConvergent) : M.IsPreconsistent := by
+  obtain ⟨u', _, hVu, hUu, _⟩ := M.convergence_witness_satisfies_U hConv
+  exact ⟨u', hVu, hUu⟩
 
 /-! ### Main theorem: `thm:514A`
 
@@ -569,20 +707,34 @@ derive the Cesàro residual statement (sub-lemma C), invert
 witness `v` via sub-lemma E. -/
 
 /-- **Butcher Theorem 514A** (p. 410) — A convergent preconsistent
-GLM is consistent. -/
+GLM is consistent.
+
+**Faithfulness note** (cycle 099): the `_hPre` hypothesis matches
+the textbook signature but is unused internally. The proof uses the
+convergence-witness vector `u'` (extracted via
+`convergence_witness_satisfies_U`) as its own preconsistency vector,
+sidestepping the textbook's implicit `u' = u` identification — the
+cycle 097 analysis showed that uniqueness of preconsistency vectors
+is non-trivial in general, but `IsConsistent` is existential, so
+*any* preconsistency vector witnesses it. The stronger fact
+`IsConvergent → IsPreconsistent` (without `hPre`) is exposed
+separately as `convergent_isPreconsistent`. -/
 theorem GeneralLinearMethod.convergent_preconsistent_isConsistent
     {s r : ℕ} (M : GeneralLinearMethod s r)
-    (hConv : M.IsConvergent) (hPre : M.IsPreconsistent) :
+    (hConv : M.IsConvergent) (_hPre : M.IsPreconsistent) :
     M.IsConsistent := by
-  obtain ⟨u, hVu, hUu⟩ := hPre
+  -- Extract the convergence-witness vector u' (cycle 099 closure).
+  obtain ⟨u', _hu'_ne, hVu', hUu', hY_lim⟩ :=
+    M.convergence_witness_satisfies_U hConv
   -- Get power-boundedness of V via the §513 stability theorem.
   have hStable := M.convergent_isStable hConv
   have hPB : ∃ K : ℝ, ∀ n, ‖M.V ^ n‖ ≤ K := hStable.powerBound
-  -- Sub-lemma C: Cesàro residual tends to zero.
-  have hCes := M.cesaro_residual_tendsto_zero hConv ⟨hVu, hUu⟩
+  -- Sub-lemma C (pure-algebraic): Cesàro residual tends to zero.
+  have hCes := cesaro_residual_tendsto_zero M.V (M.B *ᵥ (fun _ => 1))
+                  hVu' hY_lim
   -- Sub-lemma E: assemble the witness v.
-  obtain ⟨v, hv⟩ := M.witness_v_of_cesaro_inverse ⟨hVu, hUu⟩ hCes hPB
-  -- Pack into IsConsistent.
-  exact ⟨u, v, ⟨hVu, hUu⟩, hv⟩
+  obtain ⟨v, hv⟩ := M.witness_v_of_cesaro_inverse ⟨hVu', hUu'⟩ hCes hPB
+  -- Pack into IsConsistent (using u' as the preconsistency witness).
+  exact ⟨u', v, ⟨hVu', hUu'⟩, hv⟩
 
 end OpenMath.Chapter5.Section510

@@ -60,6 +60,17 @@ identifying `u' = u`.
 | `cesaro_residual_tendsto_zero` (§514) | 094 | Stays as `sorry`; the strengthening enables future closure (cycle 099+) |
 | §512 sanity helpers | 091 | Unaffected (characterise `IsGLMSolution`, not `IsConvergent`) |
 
+## Status (cycle 099): consumed successfully
+
+The strengthening was successfully consumed in cycle 099. The
+new `convergence_witness_satisfies_U` lemma (replacing
+`convergence_witness_isVfixed`) extracts `M.U *ᵥ u' = (fun _ => 1)`
+from the stage-limit clause `Tendsto Y_int atTop (nhds (fun _ => 1))`
+applied to the trivial IVP, exactly as predicted. This unblocked
+`cesaro_residual_tendsto_zero` (now reformulated as a pure-algebraic
+identity) and closed `thm:514A`. See `u_prime_equals_u_bridge.md`
+for the full closure narrative.
+
 ## Cross-references
 
 * `u_prime_equals_u_bridge.md` — option (iii) chosen here.

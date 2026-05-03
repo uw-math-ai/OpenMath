@@ -161,9 +161,54 @@ because `U·u' = 𝟙` is a *natural* additional output of the
 formalised `IsConvergent` definition, and because options (i) and
 (c) require open-ended invention.
 
+## RESOLUTION (cycle 099) — option (ii) via existential sidestep
+
+**Status: RESOLVED.** Cycle 099 closed `thm:514A` by adopting
+option (ii), enabled by cycle 098's option (iii) strengthening
+of `IsConvergent`.
+
+The closure observation: `IsConsistent` is *existential* in the
+preconsistency vector — `∃ u v, (V·u = u ∧ U·u = 𝟙) ∧ B𝟙 + V·v = u + v`.
+With cycle 098's strengthened `IsConvergent`, the convergence-witness
+vector `u'` is now a full preconsistency vector (`V·u' = u'` AND
+`U·u' = 𝟙` AND `u' ≠ 0`), so `u'` *itself* witnesses preconsistency.
+There is no need to identify `u'` with the externally-supplied `u`
+from `hPre`.
+
+**What's now in `OpenMath/Chapter5/Section514.lean`** (cycle 099):
+
+* `convergence_witness_satisfies_U` — `∃ u', u' ≠ 0 ∧ V·u' = u'
+  ∧ U·u' = 𝟙 ∧ Tendsto Cesàro-sum atTop (nhds u')`. The U-side
+  half is derived from cycle 098's stage-limit clause via the
+  trivial-IVP stage equation `Y_int n i = (1/n)•(A𝟙)_i +
+  (U·Y n n) i` and continuity of `M.U *ᵥ ·`.
+* `convergent_isPreconsistent` — GLM analog of LMM `thm:405B`,
+  one-line corollary: `IsConvergent → IsPreconsistent` without
+  needing `hPre`.
+* `cesaro_residual_tendsto_zero` (reformulated) — pure-algebraic
+  identity, no GLM dependence; takes `u'`, `V·u' = u'`, and
+  the Cesàro-sum hY_lim and produces the residual Cesàro Tendsto.
+* `convergent_preconsistent_isConsistent` — uses `u'` as the
+  preconsistency witness. The `_hPre` hypothesis is unused
+  (underscore-prefixed binder); the theorem could be tightened to
+  drop `IsPreconsistent`, but the textbook signature is preserved
+  as documented faithfulness.
+
+**Faithfulness divergence** (documented in the theorem docstring):
+the `_hPre` hypothesis is unused. The textbook implicitly identifies
+`u' = u`; we sidestep this by using `u'` as both the convergence
+witness AND the preconsistency witness. This is faithful to the
+textbook's *theorem statement* (a vector `v` exists making 510c
+hold for *some* preconsistency vector), but slightly stronger
+internally than the textbook's *proof sketch* (which used `u`
+from the assumption).
+
+**Axioms**: `[propext, Classical.choice, Quot.sound]` for
+`convergent_preconsistent_isConsistent` and `convergent_isPreconsistent`.
+
 ## Cross-reference
 
-This bridge plus sub-lemma D (`cesaro_inverse_I_minus_V.md`) are
-the two remaining blockers for `thm:514A`. Sub-lemma D is mean-ergodic
-infrastructure (multi-cycle); this issue is comparatively local
-(single-lemma) but conceptually subtle.
+Companion: `glm_isconvergent_strengthened.md` (cycle 098) — the
+strengthening of `def:512A` that made this closure possible.
+`cesaro_inverse_I_minus_V.md` (cycle 097) — the parallel
+infrastructure dependency, also resolved.
