@@ -431,47 +431,52 @@ theorem toGLM_stabilityMatrix_charpoly_explicit
 /-- §521 Step C.5 — The **active stability polynomial** of an LMM-as-GLM,
 defined as the resolvent denominator `D = 1 - z β_last` times the
 characteristic polynomial of the active past-`y` block of the GLM
-stability matrix.
+stability matrix **at `z = 0`** (only the prefactor `D` carries `z`
+dependence; the underlying matrix is `PY(0)`).
 
-This is the natural general-`z` companion of the classical scalar
-stability polynomial `LMM.stabilityPolyPoly`, to which it reduces under
-the BDF hypothesis (see
-`activeStabilityPolyPoly_eq_stabilityPolyPoly_of_bdf`). -/
+Cycle 692 redefinition: previously the body used `PY(z)`, but the
+explicit form's structural decomposition (cycles 666 / 680 / 688 / 690)
+naturally produces `(toGLM_stabilityMatrixPY m 0).charpoly`. The
+`PY(z)` and `PY(0)` charpolys differ in general because `PY(z)` rescales
+the bottom row by `1/D`, so the redefinition makes the general headline
+identity `D · charpoly = X^s · activeStabilityPolyPoly − residual`
+(`D_mul_toGLM_charpoly_eq_X_pow_mul_active_plus_residual`) clean.
+
+NOTE: With this `PY(0)`-flavoured definition, `activeStabilityPolyPoly`
+no longer collapses to `stabilityPolyPoly` under BDF. The BDF headline
+in classical scalar form is provided directly as
+`D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_of_bdf`. -/
 noncomputable def activeStabilityPolyPoly (m : LMM s) (z : ℂ) : Polynomial ℂ :=
   (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) •
-    (toGLM_stabilityMatrixPY m z).charpoly
+    (toGLM_stabilityMatrixPY m 0).charpoly
 
-/-- §521 Step C.5 — BDF sanity lemma: under the BDF hypothesis on `β`
-(all entries except `β_last` vanish), the active stability polynomial
-collapses to the classical scalar stability polynomial. Direct restatement
-of `LMM.toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf` via
-the new definition. -/
-theorem activeStabilityPolyPoly_eq_stabilityPolyPoly_of_bdf
+/-- §521 Step C.5 — BDF specialisation of the GLM stability charpoly in
+the classical scalar form: `C D · charpoly = X^s · stabilityPolyPoly`
+under BDF. Direct combination of `toGLM_stabilityMatrix_charpoly_of_bdf`
+(cycle 643) and `toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf`
+(`OpenMath/LMMAsGLM/Stability.lean` line 944).
+
+This replaces the cycle-668 BDF lemma
+`D_mul_toGLM_charpoly_eq_X_pow_mul_active_of_bdf`, which after the
+cycle-692 redefinition of `activeStabilityPolyPoly` would no longer
+hold (the `PY(z)`-vs-`PY(0)` rescaling of the bottom row produces a
+non-vanishing residual under BDF). -/
+theorem D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_of_bdf
     (m : LMM s) (z : ℂ)
     (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
     (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
-    activeStabilityPolyPoly m z = m.stabilityPolyPoly z :=
-  toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf m z hbdf hz
-
-/-- §521 Step C.5 — BDF specialisation of the headline identity
-`D · charpoly = X^s · activeStabilityPolyPoly`. Under the BDF hypothesis
-the cycle 643 lemma `toGLM_stabilityMatrix_charpoly_of_bdf` factors the
-full GLM stability charpoly as `PY.charpoly · X^s`, so multiplying both
-sides by `Polynomial.C D` reorders them into the active-stability form.
-
-The general (non-BDF) version remains the next sub-step toward the §521
-iff bridge: it requires extracting the `Polynomial.X^s` factor from the
-rank-one adjugate contraction in
-`toGLM_stabilityMatrix_charpoly_explicit`. -/
-theorem D_mul_toGLM_charpoly_eq_X_pow_mul_active_of_bdf
-    (m : LMM s) (z : ℂ)
-    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
     Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
         (m.toGLM.stabilityMatrix z).charpoly =
-      (Polynomial.X : Polynomial ℂ) ^ s * activeStabilityPolyPoly m z := by
+      (Polynomial.X : Polynomial ℂ) ^ s * m.stabilityPolyPoly z := by
   rw [toGLM_stabilityMatrix_charpoly_of_bdf m z hbdf]
-  unfold activeStabilityPolyPoly
-  rw [Polynomial.smul_eq_C_mul]
+  rw [show Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+            ((toGLM_stabilityMatrixPY m z).charpoly *
+              (Polynomial.X : Polynomial ℂ) ^ s) =
+        ((1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) •
+            (toGLM_stabilityMatrixPY m z).charpoly) *
+          (Polynomial.X : Polynomial ℂ) ^ s by
+    rw [Polynomial.smul_eq_C_mul]; ring]
+  rw [toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf m z hbdf hz]
   ring
 
 /-- §521 Step C.5 — At `z = 0`, the past-`h*f` block charpoly is the
@@ -1260,21 +1265,15 @@ theorem rowFNamedSum_degree_lt (m : LMM s) :
 
 /-- §521 Step C.12a — `D · charpoly = X^s · (D · PY(0).charpoly) − residual`.
 
-This lifts the BDF-only `D_mul_toGLM_charpoly_eq_X_pow_mul_active_of_bdf`
-(cycle 668) to a general `s`-step LMM by absorbing the cycle 688 named
-consolidated charpoly identity. Multiplying the named form by
-`Polynomial.C D` collapses the rank-one `Polynomial.C (1/D)` denominator
-to leave the residual as a clean subtraction with no division.
+This lifts the BDF-only headline of cycle 668 to a general `s`-step
+LMM by absorbing the cycle 688 named consolidated charpoly identity.
+Multiplying the named form by `Polynomial.C D` collapses the rank-one
+`Polynomial.C (1/D)` denominator to leave the residual as a clean
+subtraction with no division.
 
-NOTE: The active stability polynomial `activeStabilityPolyPoly m z`
-unfolds to `D • (toGLM_stabilityMatrixPY m z).charpoly` (using `PY(z)`),
-but the explicit form's structural decomposition lands on
-`(toGLM_stabilityMatrixPY m 0).charpoly` (using `PY(0)`); these differ
-in general because `PY(z)` rescales the bottom row by `1/D`. So the
-general headline below is naturally stated with `PY(0).charpoly`. The
-bridge to `activeStabilityPolyPoly` will need a separate lemma relating
-`C D * PY(z).charpoly` to `C D * PY(0).charpoly` modulo a residual
-contribution. -/
+After the cycle 692 redefinition of `activeStabilityPolyPoly` (which
+now uses `PY(0)`), this identity is repackaged as
+`D_mul_toGLM_charpoly_eq_X_pow_mul_active_plus_residual`. -/
 theorem D_mul_toGLM_charpoly_eq_X_pow_mul_PY0_plus_residual
     (m : LMM s) {z : ℂ}
     (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
@@ -1300,6 +1299,28 @@ theorem D_mul_toGLM_charpoly_eq_X_pow_mul_PY0_plus_residual
             + ( rowFAlphaPoly m +
                   (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m ) *
                 Polynomial.C z )
+
+/-- §521 Step C.12 — General `s`-step LMM headline:
+`D · charpoly = X^s · activeStabilityPolyPoly − residual` with the
+matching residual degree bound supplied by `charpoly_residual_degree_lt`.
+Direct restatement of `D_mul_toGLM_charpoly_eq_X_pow_mul_PY0_plus_residual`
+under the cycle 692 redefinition of `activeStabilityPolyPoly` (which now
+unfolds to `D • PY(0).charpoly`). -/
+theorem D_mul_toGLM_charpoly_eq_X_pow_mul_active_plus_residual
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        (m.toGLM.stabilityMatrix z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s * activeStabilityPolyPoly m z -
+        ( rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s *
+            Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+        + ( rowFAlphaPoly m +
+              (toGLM_stabilityMatrixPY m 0).charpoly *
+                rowFBetaPoly m ) *
+            Polynomial.C z ) := by
+  rw [D_mul_toGLM_charpoly_eq_X_pow_mul_PY0_plus_residual m hz hs]
+  unfold activeStabilityPolyPoly
+  rw [Polynomial.smul_eq_C_mul]
 
 /-- §521 Step C.12 helper — Degree bound for `rowYQuot`. The defining
 determinant has one row replaced by a `Polynomial.C`-valued row (degree
