@@ -1,6 +1,38 @@
 # Issue: `aux_515D_stage_eventually_bounded` deferred — needs M-matrix-based eventual bound on `f ∘ Y_int n`
 
-## Status (cycle 110) — OPEN, deferred to cycle 111
+## Status (cycle 111) — RESOLVED
+
+Closed cycle 111 in `OpenMath/Chapter5/Section515.lean` (the
+`aux_515D_stage_eventually_bounded` private theorem).
+
+**Approach used**: sum-norm self-bound, *not* M-matrix. The
+M-matrix approach outlined below is mathematically valid but
+heavy in Lean carpentry. Instead, summing the absolute-valued
+stage equation over `i` gives a scalar self-bound
+`Sₙ ≤ hₙ K Lr Sₙ + hₙ K s |f 0| + B_Uₙ` where `K := ∑_{i,j}|A_{ij}|`
+(Frobenius L¹-norm of `A`) and `Sₙ := ∑ᵢ |Y_int n i|`. For `n` with
+`hₙ K Lr < 1/2` (automatic from `hₙ → 0`), this gives
+`Sₙ ≤ 2(hₙ K s |f 0| + B_Uₙ)`. Output convergence makes `B_Uₙ`
+bounded, so `Sₙ` is eventually bounded; Lipschitz lifts to `f`.
+
+**Key advantage**: no signature change needed. The helper still
+takes the original cycle-110 hypotheses without an added Frobenius
+norm hypothesis. Axioms verify clean (`[propext, Classical.choice,
+Quot.sound]`).
+
+**Sorry count delta**: 2 → 1 (only `aux_515D_output_tendsto` at
+`Section515.lean:1504` remains).
+
+**Faithfulness note**: this is a *strict simplification* over the
+strategy's M-matrix recipe — no new hypothesis, no new helper, no
+new external lemma. The textbook claim ("Y_int eventually bounded")
+is captured by the conclusion. The bound constant
+`Bf := Lr · 2(Δx K s |f 0| + B_Ulim + 1) + |f 0|` is explicit but
+not tight; tightness is irrelevant since the conclusion is mere
+existence. The M-matrix machinery in `OpenMath/Chapter5/MMatrix.lean`
+remains in place for future use.
+
+## Status (cycle 110) — OPEN (resolved cycle 111)
 
 Cycle 110 closed `aux_515D_stage_tendsto` modulo this single helper
 sorry. The stage-side limit argument now reduces to a clean

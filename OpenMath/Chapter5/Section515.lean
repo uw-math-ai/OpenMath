@@ -1503,40 +1503,298 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
         (nhds (fun i => u i * yex x)) := by
   sorry
 
-/-- **Helper for `aux_515D_stage_tendsto` (deferred to cycle 111)**:
+/-- **Helper for `aux_515D_stage_tendsto` (closed cycle 111)**:
 under stability + consistency + Lipschitz `f`, plus output convergence
 `Y n n → u · yex(x)`, the values `f(Y_int n j)` are eventually bounded
 uniformly in `j` along the cofinite tail.
 
-This is the M-matrix-based eventual boundedness step. The proof
-strategy uses the cycle 105–107 M-matrix infrastructure
-(`Matrix.EntrywiseNonneg.nonneg_of_one_sub_mulVec_nonneg`) applied to
-the stage equation rearranged as
-`(I - h_n L |A|) · |Y_int n| ≤ h_n · |A| · 𝟙 · |f 0| + |U · Y n n|`,
-combined with output convergence to bound the RHS. For sufficiently
-small `h_n` (i.e. large enough `n`), the M-matrix hypothesis
-`‖h_n · L · |A|‖ < 1` holds, analogous to cycle 107's
-`‖h₀ · L · |A|‖ < 1` Frobenius-norm hypothesis on `lem:515B`.
+**Cycle 111 proof strategy (sum-norm in lieu of M-matrix)**: rather
+than invoke the cycle 105–107 M-matrix machinery
+(`Matrix.EntrywiseNonneg.nonneg_of_one_sub_mulVec_nonneg`), we sum the
+absolute-valued stage equation over `i` and use the bound
+`(∑ᵢ |A_{ij}|) ≤ K := ∑_{i,j} |A_{ij}|` (the Frobenius L¹-norm of `A`)
+to obtain a scalar self-bound `Sₙ ≤ hₙ K L Sₙ + hₙ K s |f 0| + B_Uₙ`,
+where `Sₙ := ∑ᵢ |Y_int n i|` and `B_Uₙ := ∑ᵢ |(U · Y n n) i|`. For
+`n` with `hₙ K L < 1/2` (automatic from `hₙ → 0`), this gives
+`Sₙ ≤ 2(hₙ K s |f 0| + B_Uₙ)`. Output convergence makes `B_Uₙ`
+bounded, hence `Sₙ` is eventually bounded; Lipschitz lifts to `f`.
 
-See `.prover-state/issues/aux_515D_stage_eventually_bounded_deferred.md`. -/
+This avoids needing a Frobenius-norm hypothesis `‖(x - x₀) L |A|‖ < 1`
+on the helper signature, since the sum-norm self-bound only needs the
+scalar `hₙ K L < 1/2` which is automatic from `hₙ → 0`. The M-matrix
+machinery in `OpenMath/Chapter5/MMatrix.lean` would give a tighter
+componentwise bound, but is overkill for this *eventual existence*
+claim. See `.prover-state/issues/aux_515D_stage_eventually_bounded_deferred.md`
+for the M-matrix outline. -/
 private theorem aux_515D_stage_eventually_bounded {s r : ℕ}
     (M : GeneralLinearMethod s r)
     (_hStab : M.IsStable)
-    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
     {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
     (_hyex_x₀ : yex x₀ = y₀)
     {u : Fin r → ℝ}
-    {x : ℝ} (_hxx : x₀ < x)
+    {x : ℝ} (hxx : x₀ < x)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
-    (_hY_int_eq : ∀ n : ℕ, 0 < n → ∀ i,
+    (hY_int_eq : ∀ n : ℕ, 0 < n → ∀ i,
       Y_int n i =
         (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
         + (∑ j, M.U i j * Y n n j))
-    (_h_output : Filter.Tendsto (fun n : ℕ => Y n n) Filter.atTop
+    (h_output : Filter.Tendsto (fun n : ℕ => Y n n) Filter.atTop
                    (nhds (fun i => u i * yex x))) :
     ∃ Bf : ℝ, 0 ≤ Bf ∧
       ∀ᶠ n in Filter.atTop, ∀ j : Fin s, |f (Y_int n j)| ≤ Bf := by
-  sorry
+  -- Constants.
+  set Lr : ℝ := (L : ℝ) with hLr_def
+  have hLr_nn : 0 ≤ Lr := L.coe_nonneg
+  set Δx : ℝ := x - x₀ with hΔx_def
+  have hΔx_pos : 0 < Δx := sub_pos.mpr hxx
+  have hΔx_nn : 0 ≤ Δx := hΔx_pos.le
+  set K : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j| with hK_def
+  have hK_nn : 0 ≤ K :=
+    Finset.sum_nonneg (fun _ _ => Finset.sum_nonneg (fun _ _ => abs_nonneg _))
+  -- Lipschitz: |f a - f b| ≤ Lr * |a - b|, hence |f y| ≤ Lr * |y| + |f 0|.
+  have hLip_abs : ∀ a b : ℝ, |f a - f b| ≤ Lr * |a - b| := by
+    intro a b
+    have hd := hf_lip.dist_le_mul a b
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    exact hd
+  have hf_bound : ∀ y : ℝ, |f y| ≤ Lr * |y| + |f 0| := by
+    intro y
+    have h1 : |f y - f 0| ≤ Lr * |y - 0| := hLip_abs y 0
+    rw [sub_zero] at h1
+    have h3 : |f y| ≤ |f y - f 0| + |f 0| := by
+      have h := abs_add_le (f y - f 0) (f 0)
+      have hcancel : (f y - f 0) + f 0 = f y := by ring
+      rw [hcancel] at h
+      exact h
+    linarith
+  -- Continuity ⇒ ∑_i |(M.U *ᵥ Y n n) i| eventually ≤ B_Ulim + 1.
+  set yexp : Fin r → ℝ := fun i => u i * yex x with hyexp_def
+  set B_Ulim : ℝ := ∑ i : Fin s, |(M.U *ᵥ yexp) i| with hB_Ulim_def
+  have hB_Ulim_nn : 0 ≤ B_Ulim :=
+    Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  have hUY_tendsto : Filter.Tendsto (fun n : ℕ => M.U *ᵥ Y n n)
+                      Filter.atTop (nhds (M.U *ᵥ yexp)) := by
+    have hcont : Continuous fun w : Fin r → ℝ => M.U *ᵥ w :=
+      Continuous.matrix_mulVec continuous_const continuous_id
+    exact (hcont.tendsto _).comp h_output
+  have hUY_i_tendsto : ∀ i : Fin s, Filter.Tendsto (fun n : ℕ => (M.U *ᵥ Y n n) i)
+                       Filter.atTop (nhds ((M.U *ᵥ yexp) i)) :=
+    fun i => (tendsto_pi_nhds.mp hUY_tendsto) i
+  have habs_UY_i_tendsto : ∀ i : Fin s, Filter.Tendsto (fun n : ℕ => |(M.U *ᵥ Y n n) i|)
+                           Filter.atTop (nhds (|(M.U *ᵥ yexp) i|)) :=
+    fun i => (continuous_abs.tendsto _).comp (hUY_i_tendsto i)
+  have hsum_abs_UY_tendsto : Filter.Tendsto
+                              (fun n : ℕ => ∑ i : Fin s, |(M.U *ᵥ Y n n) i|)
+                              Filter.atTop (nhds B_Ulim) := by
+    have h := tendsto_finset_sum (Finset.univ : Finset (Fin s))
+              (fun i _ => habs_UY_i_tendsto i)
+    exact h
+  have hB_U_eventually : ∀ᶠ n : ℕ in Filter.atTop,
+                          ∑ i : Fin s, |(M.U *ᵥ Y n n) i| ≤ B_Ulim + 1 := by
+    have hopen : IsOpen (Set.Iio (B_Ulim + 1)) := isOpen_Iio
+    have hmem : B_Ulim ∈ Set.Iio (B_Ulim + 1) := by
+      show B_Ulim < B_Ulim + 1; linarith
+    have h := hsum_abs_UY_tendsto.eventually (hopen.mem_nhds hmem)
+    filter_upwards [h] with n hn
+    exact le_of_lt hn
+  -- h_n K Lr < 1/2 eventually.
+  have hh_n_to_0 : Filter.Tendsto (fun n : ℕ => Δx / (n : ℝ))
+                    Filter.atTop (nhds 0) := by
+    have h1 : Filter.Tendsto (fun n : ℕ => (1 : ℝ) / (n : ℝ))
+                Filter.atTop (nhds 0) := tendsto_one_div_atTop_nhds_zero_nat
+    have h2 := h1.const_mul Δx
+    simpa [mul_div_assoc'] using h2
+  have hh_n_K_Lr_to_0 : Filter.Tendsto (fun n : ℕ => (Δx / (n : ℝ)) * (K * Lr))
+                         Filter.atTop (nhds 0) := by
+    have := hh_n_to_0.mul_const (K * Lr)
+    simpa using this
+  have hh_n_K_Lr_lt_half : ∀ᶠ n : ℕ in Filter.atTop,
+                            (Δx / (n : ℝ)) * (K * Lr) < 1 / 2 := by
+    have hopen : IsOpen (Set.Iio (1/2 : ℝ)) := isOpen_Iio
+    have hmem : (0 : ℝ) ∈ Set.Iio (1/2 : ℝ) := by
+      show (0 : ℝ) < 1/2; norm_num
+    exact hh_n_K_Lr_to_0.eventually (hopen.mem_nhds hmem)
+  -- Define final bound.
+  set s_card : ℝ := ((Finset.univ : Finset (Fin s)).card : ℝ) with hs_card_def
+  have hs_card_nn : 0 ≤ s_card := by
+    show (0 : ℝ) ≤ ((Finset.univ : Finset (Fin s)).card : ℝ)
+    exact_mod_cast Nat.zero_le _
+  set B_S : ℝ := 2 * (Δx * K * s_card * |f 0| + (B_Ulim + 1)) with hB_S_def
+  have hB_S_nn : 0 ≤ B_S := by
+    have h1 : 0 ≤ Δx * K * s_card * |f 0| :=
+      mul_nonneg (mul_nonneg (mul_nonneg hΔx_nn hK_nn) hs_card_nn) (abs_nonneg _)
+    have h2 : 0 ≤ B_Ulim + 1 := by linarith
+    have : 0 ≤ Δx * K * s_card * |f 0| + (B_Ulim + 1) := by linarith
+    show (0 : ℝ) ≤ 2 * _; linarith
+  refine ⟨Lr * B_S + |f 0|, ?_, ?_⟩
+  · -- nonnegativity
+    have h1 : 0 ≤ Lr * B_S := mul_nonneg hLr_nn hB_S_nn
+    linarith [abs_nonneg (f 0)]
+  -- Now the eventual claim.
+  filter_upwards [hB_U_eventually, hh_n_K_Lr_lt_half,
+                  Filter.eventually_ge_atTop 1]
+    with n hB_U_n hh_K_Lr_n hn_ge_1
+  intro j
+  have hn_pos : 0 < n := hn_ge_1
+  set h_n : ℝ := Δx / (n : ℝ) with hh_n_def
+  have hn_nn_real : (0 : ℝ) ≤ (n : ℝ) := by exact_mod_cast Nat.zero_le _
+  have hh_n_nn : 0 ≤ h_n := div_nonneg hΔx_nn hn_nn_real
+  have hn_pos_real : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn_pos
+  have hh_n_le_Δx : h_n ≤ Δx := by
+    show Δx / (n : ℝ) ≤ Δx
+    have h1 : (1 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn_ge_1
+    rw [div_le_iff₀ hn_pos_real]
+    nlinarith [hΔx_nn]
+  -- Per-i bound.
+  have hYi : ∀ i : Fin s, |Y_int n i| ≤
+              h_n * (∑ j, |M.A i j| * |f (Y_int n j)|) + |(M.U *ᵥ Y n n) i| := by
+    intro i
+    have heq := hY_int_eq n hn_pos i
+    -- Pull h_n out of the inner sum.
+    have hpullh : (∑ j, M.A i j * (h_n * f (Y_int n j)))
+                  = h_n * ∑ j, M.A i j * f (Y_int n j) := by
+      rw [Finset.mul_sum]
+      refine Finset.sum_congr rfl (fun j _ => ?_); ring
+    -- |Σ_j M.A i j * f(Y_int n j)| ≤ Σ_j |M.A i j| * |f(Y_int n j)|.
+    have habs_sum : |∑ j, M.A i j * f (Y_int n j)|
+                    ≤ ∑ j, |M.A i j| * |f (Y_int n j)| := by
+      calc |∑ j, M.A i j * f (Y_int n j)|
+          ≤ ∑ j, |M.A i j * f (Y_int n j)| := Finset.abs_sum_le_sum_abs _ _
+        _ = ∑ j, |M.A i j| * |f (Y_int n j)| := by
+              refine Finset.sum_congr rfl (fun j _ => ?_); rw [abs_mul]
+    have hU_eq : (∑ j, M.U i j * Y n n j) = (M.U *ᵥ Y n n) i := rfl
+    -- Now combine.
+    show |Y_int n i| ≤ _
+    rw [heq, hpullh, hU_eq]
+    have htri : |h_n * (∑ j, M.A i j * f (Y_int n j)) + (M.U *ᵥ Y n n) i|
+                ≤ |h_n * (∑ j, M.A i j * f (Y_int n j))| + |(M.U *ᵥ Y n n) i| :=
+      abs_add_le _ _
+    have habs_h : |h_n * (∑ j, M.A i j * f (Y_int n j))|
+                  = h_n * |∑ j, M.A i j * f (Y_int n j)| := by
+      rw [abs_mul, abs_of_nonneg hh_n_nn]
+    rw [habs_h] at htri
+    have hmono : h_n * |∑ j, M.A i j * f (Y_int n j)|
+                  ≤ h_n * (∑ j, |M.A i j| * |f (Y_int n j)|) :=
+      mul_le_mul_of_nonneg_left habs_sum hh_n_nn
+    linarith
+  -- Sum over i.
+  set S_n : ℝ := ∑ i : Fin s, |Y_int n i| with hS_n_def
+  have hS_n_nn : 0 ≤ S_n :=
+    Finset.sum_nonneg (fun _ _ => abs_nonneg _)
+  set B_U_n : ℝ := ∑ i : Fin s, |(M.U *ᵥ Y n n) i| with hB_U_n_def
+  -- Sum the per-i bound.
+  have hSn_bound1 : S_n ≤ h_n * (∑ i : Fin s, ∑ j : Fin s, |M.A i j| * |f (Y_int n j)|)
+                          + B_U_n := by
+    have hsum_le : (∑ i : Fin s, |Y_int n i|)
+                    ≤ ∑ i : Fin s, (h_n * (∑ j, |M.A i j| * |f (Y_int n j)|)
+                                    + |(M.U *ᵥ Y n n) i|) :=
+      Finset.sum_le_sum (fun i _ => hYi i)
+    have hsplit : (∑ i : Fin s, (h_n * (∑ j, |M.A i j| * |f (Y_int n j)|)
+                                  + |(M.U *ᵥ Y n n) i|))
+                  = h_n * (∑ i : Fin s, ∑ j : Fin s, |M.A i j| * |f (Y_int n j)|)
+                    + B_U_n := by
+      rw [Finset.sum_add_distrib, ← Finset.mul_sum]
+    show S_n ≤ _
+    linarith [hsum_le, hsplit ▸ hsum_le]
+  -- Bound the inner sum: ∑_i ∑_j |M.A i j| * |f(Y_int n j)|
+  --   = ∑_j (∑_i |M.A i j|) * |f(Y_int n j)|
+  --   ≤ ∑_j K * |f(Y_int n j)| = K * ∑_j |f(Y_int n j)|.
+  have hIn_swap : (∑ i : Fin s, ∑ j : Fin s, |M.A i j| * |f (Y_int n j)|)
+                  = ∑ j : Fin s, (∑ i : Fin s, |M.A i j|) * |f (Y_int n j)| := by
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [Finset.sum_mul]
+  have hIn_K : ∀ j : Fin s, (∑ i : Fin s, |M.A i j|) ≤ K := by
+    intro j
+    -- ∑_i |M.A i j| ≤ ∑_i ∑_{j'} |M.A i j'| = K (since j-th term ≤ full sum, all terms nonneg).
+    show (∑ i : Fin s, |M.A i j|) ≤ ∑ i : Fin s, ∑ j' : Fin s, |M.A i j'|
+    refine Finset.sum_le_sum (fun i _ => ?_)
+    exact Finset.single_le_sum (f := fun j' => |M.A i j'|)
+      (fun j' _ => abs_nonneg _) (Finset.mem_univ j)
+  have hIn_bound : (∑ i : Fin s, ∑ j : Fin s, |M.A i j| * |f (Y_int n j)|)
+                  ≤ K * (∑ j : Fin s, |f (Y_int n j)|) := by
+    rw [hIn_swap]
+    rw [Finset.mul_sum]
+    refine Finset.sum_le_sum (fun j _ => ?_)
+    have : (∑ i : Fin s, |M.A i j|) * |f (Y_int n j)| ≤ K * |f (Y_int n j)| :=
+      mul_le_mul_of_nonneg_right (hIn_K j) (abs_nonneg _)
+    linarith
+  -- Bound ∑_j |f(Y_int n j)| ≤ Lr * S_n + s_card * |f 0|.
+  have hSf_bound : (∑ j : Fin s, |f (Y_int n j)|)
+                    ≤ Lr * S_n + s_card * |f 0| := by
+    have hpt : ∀ j, |f (Y_int n j)| ≤ Lr * |Y_int n j| + |f 0| :=
+      fun j => hf_bound _
+    have hsum_le : (∑ j : Fin s, |f (Y_int n j)|)
+                    ≤ ∑ j : Fin s, (Lr * |Y_int n j| + |f 0|) :=
+      Finset.sum_le_sum (fun j _ => hpt j)
+    have hsplit : (∑ j : Fin s, (Lr * |Y_int n j| + |f 0|))
+                  = Lr * S_n + s_card * |f 0| := by
+      rw [Finset.sum_add_distrib, ← Finset.mul_sum, Finset.sum_const]
+      show Lr * S_n + (Finset.univ : Finset (Fin s)).card • |f 0| = _
+      rw [nsmul_eq_mul]
+    linarith
+  -- Combine: S_n ≤ h_n K (Lr S_n + s_card |f 0|) + B_U_n.
+  have hSn_bound2 : S_n ≤ h_n * K * (Lr * S_n + s_card * |f 0|) + B_U_n := by
+    have h1 : h_n * (∑ i : Fin s, ∑ j : Fin s, |M.A i j| * |f (Y_int n j)|)
+              ≤ h_n * (K * (∑ j : Fin s, |f (Y_int n j)|)) :=
+      mul_le_mul_of_nonneg_left hIn_bound hh_n_nn
+    have h2 : h_n * (K * (∑ j : Fin s, |f (Y_int n j)|))
+              ≤ h_n * (K * (Lr * S_n + s_card * |f 0|)) := by
+      have hKpos : 0 ≤ K := hK_nn
+      apply mul_le_mul_of_nonneg_left _ hh_n_nn
+      exact mul_le_mul_of_nonneg_left hSf_bound hKpos
+    have h3 : h_n * (K * (Lr * S_n + s_card * |f 0|))
+              = h_n * K * (Lr * S_n + s_card * |f 0|) := by ring
+    linarith
+  -- (1 - h_n K Lr) S_n ≤ h_n K s_card |f 0| + B_U_n. Since h_n K Lr < 1/2:
+  -- (1/2) S_n ≤ h_n K s_card |f 0| + B_U_n, i.e., S_n ≤ 2 (h_n K s_card |f 0| + B_U_n).
+  have hh_n_K_Lr_eq : (Δx / (n : ℝ)) * (K * Lr) = h_n * K * Lr := by
+    show Δx / (n : ℝ) * (K * Lr) = Δx / (n : ℝ) * K * Lr
+    ring
+  rw [hh_n_K_Lr_eq] at hh_K_Lr_n
+  have hSn_bound3 : (1 / 2) * S_n ≤ h_n * K * (s_card * |f 0|) + B_U_n := by
+    have h1 : S_n - h_n * K * Lr * S_n ≤ h_n * K * (s_card * |f 0|) + B_U_n := by
+      have : h_n * K * (Lr * S_n + s_card * |f 0|)
+              = h_n * K * Lr * S_n + h_n * K * (s_card * |f 0|) := by ring
+      linarith [hSn_bound2]
+    have h2 : (1 - h_n * K * Lr) * S_n ≥ (1/2) * S_n := by
+      have hge : (1 / 2 : ℝ) ≤ 1 - h_n * K * Lr := by linarith
+      exact mul_le_mul_of_nonneg_right hge hS_n_nn
+    have h3 : (1 - h_n * K * Lr) * S_n = S_n - h_n * K * Lr * S_n := by ring
+    linarith
+  have hSn_bound4 : S_n ≤ B_S := by
+    -- B_S = 2 * (Δx K s_card |f 0| + (B_Ulim + 1))
+    -- We have: (1/2) S_n ≤ h_n K s_card |f 0| + B_U_n ≤ Δx K s_card |f 0| + (B_Ulim + 1).
+    have h1 : h_n * K * (s_card * |f 0|) ≤ Δx * K * (s_card * |f 0|) := by
+      have hKsf_nn : 0 ≤ K * (s_card * |f 0|) :=
+        mul_nonneg hK_nn (mul_nonneg hs_card_nn (abs_nonneg _))
+      have : h_n * (K * (s_card * |f 0|)) ≤ Δx * (K * (s_card * |f 0|)) :=
+        mul_le_mul_of_nonneg_right hh_n_le_Δx hKsf_nn
+      linarith [this]
+    have h1' : h_n * K * (s_card * |f 0|) + B_U_n ≤
+                Δx * K * (s_card * |f 0|) + (B_Ulim + 1) := by linarith
+    have h2 : (1 / 2) * S_n ≤ Δx * K * (s_card * |f 0|) + (B_Ulim + 1) := by
+      linarith [hSn_bound3]
+    -- B_S = 2 * (Δx * K * s_card * |f 0| + (B_Ulim + 1))
+    --     = Δx * K * (2 * (s_card * |f 0|)) + 2 * (B_Ulim + 1)
+    -- We have S_n ≤ 2 * RHS, but need to match B_S form.
+    have hreshape : Δx * K * s_card * |f 0| = Δx * K * (s_card * |f 0|) := by ring
+    show S_n ≤ 2 * (Δx * K * s_card * |f 0| + (B_Ulim + 1))
+    rw [hreshape]
+    linarith
+  -- Per-j bound on |Y_int n j|: |Y_int n j| ≤ S_n.
+  have hYj_le_Sn : ∀ k : Fin s, |Y_int n k| ≤ S_n := by
+    intro k
+    show |Y_int n k| ≤ ∑ i : Fin s, |Y_int n i|
+    exact Finset.single_le_sum (f := fun i => |Y_int n i|)
+      (fun i _ => abs_nonneg _) (Finset.mem_univ k)
+  -- Final: |f(Y_int n j)| ≤ Lr * S_n + |f 0| ≤ Lr * B_S + |f 0|.
+  have hfj : |f (Y_int n j)| ≤ Lr * |Y_int n j| + |f 0| := hf_bound _
+  have hYj_bd : |Y_int n j| ≤ B_S := le_trans (hYj_le_Sn j) hSn_bound4
+  have hLr_Yj : Lr * |Y_int n j| ≤ Lr * B_S :=
+    mul_le_mul_of_nonneg_left hYj_bd hLr_nn
+  linarith
 
 /-- **Sub-lemma for `thm:515D`**: under stability + consistency,
 the GLM iteration's *internal-stage* sequence `Y_int n` converges to
