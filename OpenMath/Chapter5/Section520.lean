@@ -59,6 +59,7 @@ end OpenMath.Chapter5.Section520
 namespace OpenMath.Chapter5.Section510
 
 open Matrix
+open scoped Matrix.Norms.Operator
 open OpenMath.Chapter5.Section520 (complexify)
 
 /-- **Definition 520A** — The *stability matrix* `M(z)` of a general
@@ -129,5 +130,81 @@ theorem explicitEulerGLM_stabilityMatrix (z : ℂ) :
   ext i j
   fin_cases i; fin_cases j
   simp [explicitEulerGLM, complexify, Matrix.mul_apply]
+
+/-- **Definition 520C** — The *stability function* of a general linear
+method, `Φ(w, z) = det(wI − M(z))`.
+
+Butcher (Definition 520C, p. 419): "The 'stability function' for the
+method is the polynomial `Φ(w, z)` given by `Φ(w, z) = det(wI − M(z))`."
+
+Encoding note: in general `M(z)` involves `(I − zA)⁻¹`, so `Φ` is
+naturally a rational function in `z`. The textbook remark "we equally
+refer to the numerator of this rational function as the stability
+function" is a notational convenience, not a separate Lean definition;
+we encode the literal `det(wI − M(z))` form, which is the canonical
+representative on the invertibility domain. -/
+noncomputable def GeneralLinearMethod.stabilityFunction
+    {s r : ℕ} (M : GeneralLinearMethod s r) (w z : ℂ) : ℂ :=
+  (w • (1 : Matrix (Fin r) (Fin r) ℂ) - M.stabilityMatrix z).det
+
+/-- **Definition 520C** (continued) — The *stability region* of a
+general linear method is the set of `z ∈ ℂ` for which the powers of
+`M(z)` are uniformly bounded.
+
+Butcher (Definition 520C, p. 419): "the 'stability region' is the
+subset of the complex plane such that if `z` is in this subset, then
+`sup_{n=1..∞} ‖M(z)^n‖ < ∞`."
+
+We use the existential `PowerBounded` predicate from
+`OpenMath.Chapter1.Section142` (a uniform `∀ k, ‖a^k‖ ≤ C` bound,
+equivalent on a `SeminormedRing` to the supremum-finiteness condition
+`sup_n ‖a^n‖ < ∞`). The matrix norm is the default Mathlib
+`Matrix.linftyOpNormedRing` made available by
+`Mathlib.Analysis.Matrix.Normed`; per the §142 docstring, the
+predicate is norm-equivalence-invariant on finite-dimensional spaces
+so the choice of matrix norm does not affect membership.
+
+This is a literal re-spelling of the textbook condition, not
+definition smuggling: existence of a uniform bound is equivalent to
+finiteness of the supremum on a `SeminormedRing`. -/
+noncomputable def GeneralLinearMethod.stabilityRegion
+    {s r : ℕ} (M : GeneralLinearMethod s r) : Set ℂ :=
+  { z : ℂ | ∃ C : ℝ,
+      OpenMath.Chapter1.Section142.PowerBounded C (M.stabilityMatrix z) }
+
+/-- **Definition 520C** (continued) — The *instability region* of a
+general linear method is the complement of its stability region in
+`ℂ`.
+
+Butcher (Definition 520C, p. 419): "We refer to the 'instability
+region' as the complement of the stability region." -/
+noncomputable def GeneralLinearMethod.instabilityRegion
+    {s r : ℕ} (M : GeneralLinearMethod s r) : Set ℂ :=
+  (M.stabilityRegion)ᶜ
+
+/-- Non-vacuity: at `z = 0`, the explicit-Euler stability function
+collapses to `Φ(w, 0) = w − 1`.
+
+Since `M(0) = !![1 + 0] = !![1]` for explicit Euler, the determinant
+`det(wI − M(0))` reduces (1×1) to the scalar `w − 1`. -/
+theorem explicitEulerGLM_stabilityFunction_at_zero (w : ℂ) :
+    explicitEulerGLM.stabilityFunction w 0 = w - 1 := by
+  unfold GeneralLinearMethod.stabilityFunction
+  rw [explicitEulerGLM_stabilityMatrix]
+  rw [Matrix.det_fin_one]
+  simp
+
+/-- Non-vacuity: `0` lies in the stability region of explicit Euler.
+At `z = 0`, `M(0) = !![1] = 1`, so every power equals `1` and the
+sequence of norms is uniformly bounded by `‖(1 : Matrix (Fin 1) (Fin 1) ℂ)‖`. -/
+theorem explicitEulerGLM_zero_mem_stabilityRegion :
+    (0 : ℂ) ∈ explicitEulerGLM.stabilityRegion := by
+  refine ⟨‖(1 : Matrix (Fin 1) (Fin 1) ℂ)‖, ?_⟩
+  intro k
+  rw [explicitEulerGLM_stabilityMatrix]
+  have hM : !![(1 : ℂ) + 0] = (1 : Matrix (Fin 1) (Fin 1) ℂ) := by
+    ext i j; fin_cases i; fin_cases j
+    simp
+  rw [hM, one_pow]
 
 end OpenMath.Chapter5.Section510

@@ -198,9 +198,9 @@
     "status": "formalized"
   },
   "def:520C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section520.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stabilityFunction",
+    "status": "formalized"
   },
   "def:520E": {
     "lean_file": null,

@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 57 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 58 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -206,7 +206,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `def:512A` **convergent (GLM)** (§512)
 - [x] `def:520A` **Introduction** (§520) — `OpenMath/Chapter5/Section520.lean`
 - [ ] `thm:523A` **Non-linear stability** (§523)
-- [ ] `def:520C` **stability function** (§520)
+- [x] `def:520C` **stability function** (§520) — `OpenMath/Chapter5/Section520.lean`
 - [ ] `thm:513A` **The necessity of stability** (§513)
 - [ ] `thm:515D` **Stability and Consistency Imply Convergence (515D)** (§515)
 - [ ] `thm:550B` **Doubly companion matrix similarity transformation** (§550)
