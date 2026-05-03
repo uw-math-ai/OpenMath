@@ -1,5 +1,15 @@
 # Issue: `aux_515B_eta_contraction` deferred — needs M-matrix `(I − h₀L|A|)^{−1}` positivity
 
+## Status (cycle 107) — RESOLVED
+
+Closed in cycle 107 via the M-matrix comparison principle from cycle
+106 (`Matrix.EntrywiseNonneg.nonneg_of_one_sub_mulVec_nonneg`) plus an
+explicit `‖(h₀ * L) • |A|‖ < 1` Frobenius-norm hypothesis (faithfulness
+divergence: textbook tacitly assumes "h₀ small enough"; we surface the
+precise condition). The new hypothesis is propagated up to
+`localStepError_bound`'s signature so callers must supply it. Clean
+axioms (`[propext, Classical.choice, Quot.sound]`).
+
 ## Status (cycle 106) — PARTIAL: M-matrix infrastructure landed
 
 Cycle 106 closed the **inverse-positivity** lemma (Priority 1 of cycle

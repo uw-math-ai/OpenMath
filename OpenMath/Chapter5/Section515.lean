@@ -5,6 +5,7 @@ import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Topology.MetricSpace.Lipschitz
 import OpenMath.Chapter5.Section512
+import OpenMath.Chapter5.MMatrix
 
 /-!
 # Butcher §515 — Stability and consistency imply convergence (Lemma 515A)
@@ -78,6 +79,7 @@ namespace OpenMath.Chapter5.Section510
 
 open Matrix
 open scoped BigOperators Topology
+open scoped Matrix.Norms.Frobenius
 
 /-! ## §515 setup — abscissae vector `c = A·𝟙 + U·v` -/
 
@@ -968,8 +970,11 @@ yields
 where `ell_U`, `phi_A` solve the two linear systems with right-hand
 sides `Σ_k|U_{jk}|` and `½c_j² + Σ|A_{jk} c_k|` respectively.
 
-Sorry-first this cycle; the proof requires positivity of
-`(I − h₀ L|A|)^{−1}`, which is multi-cycle infrastructure. -/
+Faithfulness divergence: the textbook tacitly assumes "h₀ small
+enough"; the explicit hypothesis `‖(h₀ L) • |A|‖ < 1` (Frobenius
+norm) surfaces this assumption — it is what the M-matrix
+comparison principle from `OpenMath/Chapter5/MMatrix.lean` requires.
+See `.prover-state/issues/lem_515B_eta_contraction_deferred.md`. -/
 private theorem aux_515B_eta_contraction {s r : ℕ}
     (A : Matrix (Fin s) (Fin s) ℝ)
     (U : Matrix (Fin s) (Fin r) ℝ)
@@ -990,9 +995,145 @@ private theorem aux_515B_eta_contraction {s r : ℕ}
     (_hcontraction : ∀ j, |η j - ∑ k, U j k * δ k|
                           ≤ h * L * (∑ k, |A j k| * |η k|)
                             + h^2 * L^2 * M_bound *
-                              ((1/2) * (c j)^2 + ∑ k, |A j k * c k|)) :
+                              ((1/2) * (c j)^2 + ∑ k, |A j k * c k|))
+    (_h_norm : ‖((h₀ * L) • A.map (fun x => |x|) : Matrix (Fin s) (Fin s) ℝ)‖ < 1) :
     ∀ j, |η j| ≤ ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j := by
-  sorry
+  -- Set up the M-matrix M_pos = (h₀ * L) • |A| and the target vector.
+  set M_pos : Matrix (Fin s) (Fin s) ℝ := (h₀ * L) • A.map (fun x => |x|)
+    with hMpos_def
+  let target : Fin s → ℝ :=
+    fun j => ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j
+  let absη : Fin s → ℝ := fun j => |η j|
+  -- M_pos is entrywise non-negative.
+  have hh₀L_nn : 0 ≤ h₀ * L := mul_nonneg _h₀_pos.le _hL
+  have hMpos_nn : M_pos.EntrywiseNonneg := by
+    intro i j
+    show 0 ≤ ((h₀ * L) • A.map (fun x => |x|)) i j
+    simp only [Matrix.smul_apply, Matrix.map_apply, smul_eq_mul]
+    exact mul_nonneg hh₀L_nn (abs_nonneg _)
+  -- Useful arithmetic facts.
+  have hh2L2M_nn : 0 ≤ h^2 * L^2 * M_bound :=
+    mul_nonneg (mul_nonneg (sq_nonneg _) (sq_nonneg _)) _hM
+  -- Entrywise formula for M_pos.
+  have hMpos_apply : ∀ i k, M_pos i k = h₀ * L * |A i k| := by
+    intro i k
+    rw [hMpos_def]
+    show ((h₀ * L) • A.map (fun x => |x|)) i k = h₀ * L * |A i k|
+    rw [Matrix.smul_apply, Matrix.map_apply, smul_eq_mul]
+  -- Compute (M_pos *ᵥ v) i = h₀*L * Σ_k |A i k| * v k.
+  have hMpos_mulVec : ∀ (v : Fin s → ℝ) (i : Fin s),
+      (M_pos *ᵥ v) i = h₀ * L * ∑ k, |A i k| * v k := by
+    intro v i
+    have h1 : (M_pos *ᵥ v) i = ∑ k, M_pos i k * v k := rfl
+    rw [h1, Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun k _ => ?_)
+    rw [hMpos_apply]; ring
+  -- Per-row key inequality: absη j - h₀L Σ|A_jk| absη_k ≤ target j - h₀L Σ|A_jk| target_k.
+  have hkey_arith : ∀ j,
+      absη j - h₀ * L * (∑ k, |A j k| * absη k)
+        ≤ target j - h₀ * L * (∑ k, |A j k| * target k) := by
+    intro j
+    have hcontr := _hcontraction j
+    have hellU_j := _hellU_eq j
+    have hphiA_j := _hphiA_eq j
+    -- Triangle inequality: |η j| ≤ |η j - Σ U_jk δ_k| + |Σ U_jk δ_k|.
+    have htriangle : |η j| ≤ |η j - ∑ k, U j k * δ k| + |∑ k, U j k * δ k| := by
+      have hsplit : η j = (η j - ∑ k, U j k * δ k) + (∑ k, U j k * δ k) := by ring
+      conv_lhs => rw [hsplit]
+      exact abs_add_le _ _
+    -- Bound |Σ U_jk δ_k| ≤ Σ |U_jk| * δ_max.
+    have hUδ_bound : |∑ k, U j k * δ k| ≤ ∑ k, |U j k| * δ_max := by
+      calc |∑ k, U j k * δ k|
+          ≤ ∑ k, |U j k * δ k| := Finset.abs_sum_le_sum_abs _ _
+        _ = ∑ k, |U j k| * |δ k| := by
+              refine Finset.sum_congr rfl (fun k _ => ?_); rw [abs_mul]
+        _ ≤ ∑ k, |U j k| * δ_max :=
+              Finset.sum_le_sum (fun k _ =>
+                mul_le_mul_of_nonneg_left (_hδ_max k) (abs_nonneg _))
+    -- Combine triangle + contraction + δ-bound.
+    have hAη_nn : 0 ≤ ∑ k, |A j k| * |η k| :=
+      Finset.sum_nonneg (fun k _ => mul_nonneg (abs_nonneg _) (abs_nonneg _))
+    have hsum_mul : (∑ k, |U j k| * δ_max) = (∑ k, |U j k|) * δ_max := by
+      rw [Finset.sum_mul]
+    have hcombined : |η j|
+        ≤ (∑ k, |U j k|) * δ_max
+          + h * L * (∑ k, |A j k| * |η k|)
+          + h^2 * L^2 * M_bound *
+            ((1/2) * (c j)^2 + ∑ k, |A j k * c k|) := by
+      have hUδ' : |∑ k, U j k * δ k| ≤ (∑ k, |U j k|) * δ_max := by
+        rw [← hsum_mul]; exact hUδ_bound
+      linarith [htriangle, hcontr, hUδ']
+    -- Substitute the side equations.
+    have h_sumU : ∑ k, |U j k| = ell_U j - h₀ * L * ∑ k, |A j k| * ell_U k :=
+      hellU_j.symm
+    have h_phi : (1/2) * (c j)^2 + ∑ k, |A j k * c k|
+                  = phi_A j - h₀ * L * ∑ k, |A j k| * phi_A k :=
+      hphiA_j.symm
+    rw [h_sumU, h_phi] at hcombined
+    -- Use h ≤ h₀ to upgrade `h*L*...` term to `h₀*L*...`.
+    have h_h_le : h * L * ∑ k, |A j k| * |η k|
+                  ≤ h₀ * L * ∑ k, |A j k| * |η k| := by
+      have hLA_nn : 0 ≤ L * ∑ k, |A j k| * |η k| := mul_nonneg _hL hAη_nn
+      have : h * (L * ∑ k, |A j k| * |η k|)
+              ≤ h₀ * (L * ∑ k, |A j k| * |η k|) :=
+        mul_le_mul_of_nonneg_right _hh_le hLA_nn
+      linarith
+    -- Algebraic identity: Σ |A_jk| * target k = (Σ|A_jk| ell_U_k)·δ_max
+    --                                          + h²L²M·(Σ|A_jk| phi_A_k).
+    have hsum_target_split :
+        ∑ k, |A j k| * target k
+          = (∑ k, |A j k| * ell_U k) * δ_max
+            + h^2 * L^2 * M_bound * (∑ k, |A j k| * phi_A k) := by
+      have hpoint : ∀ k, |A j k| * target k
+                          = |A j k| * (ell_U k * δ_max)
+                            + |A j k| * (h^2 * L^2 * M_bound * phi_A k) := by
+        intro k
+        show |A j k| * (ell_U k * δ_max + h^2 * L^2 * M_bound * phi_A k) = _
+        ring
+      calc ∑ k, |A j k| * target k
+          = ∑ k, (|A j k| * (ell_U k * δ_max)
+                  + |A j k| * (h^2 * L^2 * M_bound * phi_A k)) :=
+            Finset.sum_congr rfl (fun k _ => hpoint k)
+        _ = (∑ k, |A j k| * (ell_U k * δ_max))
+            + (∑ k, |A j k| * (h^2 * L^2 * M_bound * phi_A k)) :=
+            Finset.sum_add_distrib
+        _ = (∑ k, |A j k| * ell_U k) * δ_max
+            + h^2 * L^2 * M_bound * (∑ k, |A j k| * phi_A k) := by
+            congr 1
+            · rw [Finset.sum_mul]; refine Finset.sum_congr rfl (fun k _ => ?_); ring
+            · rw [Finset.mul_sum]; refine Finset.sum_congr rfl (fun k _ => ?_); ring
+    -- Conclude the per-row inequality.
+    show |η j| - h₀ * L * (∑ k, |A j k| * |η k|)
+          ≤ (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j)
+            - h₀ * L * (∑ k, |A j k| * target k)
+    rw [hsum_target_split]
+    linarith [hcombined, h_h_le]
+  -- Translate to (1 - M_pos) *ᵥ (target - absη) ≥ 0 entrywise.
+  have hkey_matrix : ∀ j, 0 ≤ ((1 - M_pos) *ᵥ (target - absη)) j := by
+    intro j
+    rw [Matrix.sub_mulVec, Pi.sub_apply, Matrix.one_mulVec, hMpos_mulVec]
+    -- Goal: 0 ≤ (target - absη) j - h₀ * L * ∑ k, |A j k| * (target - absη) k.
+    have hsum_distrib : ∑ k, |A j k| * (target - absη) k
+                        = (∑ k, |A j k| * target k)
+                          - (∑ k, |A j k| * absη k) := by
+      rw [← Finset.sum_sub_distrib]
+      refine Finset.sum_congr rfl (fun k _ => ?_)
+      show |A j k| * (target k - absη k) = _; ring
+    rw [hsum_distrib]
+    have hkey_j := hkey_arith j
+    show 0 ≤ (target j - absη j)
+              - h₀ * L * ((∑ k, |A j k| * target k) - (∑ k, |A j k| * absη k))
+    linarith [hkey_j]
+  -- Apply the M-matrix comparison principle.
+  have h_target_minus_absη_nn : ∀ j, 0 ≤ (target - absη) j :=
+    Matrix.EntrywiseNonneg.nonneg_of_one_sub_mulVec_nonneg
+      hMpos_nn _h_norm hkey_matrix
+  intro j
+  have hj := h_target_minus_absη_nn j
+  show |η j| ≤ ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j
+  have heq : (target - absη) j
+              = (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j) - |η j| := rfl
+  linarith [heq ▸ hj]
 
 /-- **Butcher Lemma 515B** — Local-step error propagation across one
 GLM step.
@@ -1034,10 +1175,10 @@ The textbook proof structure is formalized via the three sub-lemmas
 above. Cycle 104 closes the main combination via:
 * `aux_515B_residual_decomposition` (algebraic identity).
 * `aux_515B_lipschitz_bridge` (closed cycle 104).
-* `aux_515B_eta_contraction` (applied as a black-box hypothesis;
-  its proof is `sorry` pending M-matrix `(I − h₀ L|A|)^{−1}`
-  positivity infrastructure — see
-  `.prover-state/issues/lem_515B_eta_contraction_deferred.md`).
+* `aux_515B_eta_contraction` (closed cycle 107 via M-matrix
+  comparison principle from `OpenMath/Chapter5/MMatrix.lean`; the
+  Frobenius-norm hypothesis `‖(h₀ L) • |A|‖ < 1` is propagated up
+  to this signature).
 * `localStageError_bound_a` and `localStageError_bound_b` (515A). -/
 theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
     (M : GeneralLinearMethod s r)
@@ -1076,7 +1217,8 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
     (_hδ_max_nonneg : 0 ≤ δ_max)
     (Y : Fin s → ℝ)
     (_hY_stage : ∀ i, Y i = h * (∑ j, M.A i j * f (Y j))
-                          + ∑ j, M.U i j * yt_prev j) :
+                          + ∑ j, M.U i j * yt_prev j)
+    (_h_norm : ‖((h₀ * L) • M.A.map (fun x => |x|) : Matrix (Fin s) (Fin s) ℝ)‖ < 1) :
     ∃ K : Fin r → ℝ,
       (∀ i,
         h * (∑ j, M.B i j * f (Y j))
@@ -1149,7 +1291,7 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
   have hη_bound : ∀ j, |η j| ≤ ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j :=
     aux_515B_eta_contraction (s := s) (r := r) M.A M.U _hh _hh_le _h₀_pos _hL _hM
       _hδ_max_nonneg c _hc_nonneg ell_U phi_A η _hell_U_nonneg _hphi_A_nonneg
-      _hellU_eq _hphiA_eq δ _hδ_max hη_contr
+      _hellU_eq _hphiA_eq δ _hδ_max hη_contr _h_norm
   -- Construct K and prove the two clauses.
   refine ⟨fun i => h * (∑ j, M.B i j * f (Y j))
           + (∑ j, M.V i j * yt_prev j)
