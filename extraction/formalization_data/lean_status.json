@@ -347,9 +347,9 @@
     "status": "unformalized"
   },
   "lem:515A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section515.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.localStageError_bound_a",
+    "status": "partial"
   },
   "lem:515B": {
     "lean_file": null,
