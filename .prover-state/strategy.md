@@ -1,327 +1,473 @@
-# Cycle 082 Strategy
+# Strategy for cycle 083
 
-## Context — what just happened
+## TL;DR
 
-Cycle 081 closed `lem:383C` cleanly (existence of convolution inverse in
-G₁). Five new theorems landed in `OpenMath/Chapter3/Section383.lean`,
-all on baseline axioms only. Progress 52 → 53/175.
+The cycle 082 worker recommended `lem:322A` (Methods of order 4) for
+cycle 083 because it appeared "unformalized" in `plan.md`. It is in
+fact **already formalized** — see
+`OpenMath/Chapter3/Section322.lean` (`order_four_block_zero_decomposition`)
+and `extraction/formalization_data/lean_status.json` (line 280)
+which records `"status": "formalized"`. `plan.md` has a stale `[ ]`
+marker that was missed during a prior cycle's housekeeping.
 
-The cycle 081 worker also **escalated** a faithfulness concern in
-[`.prover-state/issues/convolution_vertex_vs_multiset.md`](issues/convolution_vertex_vs_multiset.md):
-our `convProduct` (cycle 077–078) uses *multiset sub-selection*, while
-Butcher §383 (page 287) uses *vertex-subset partition*. The two
-diverge on single-tree forests of order > 1. The worker's
-`convInverse` is a closed-form witness in our (multiset-graded)
-algebra; Butcher's α⁻¹ would involve a sum over vertex-subset
-partitions (lem:383D). The worker explicitly asked the planner to
-decide whether to refactor `convProduct` before further §383 work.
+The cycle's deliverable splits into two priorities:
 
-## Priority 0 — Planner decision on the convolution divergence (5 min)
+1. **Priority 0 (housekeeping, ~5 min)** — fix the stale `plan.md`
+   row for `lem:322A`.
+2. **Priority 1 (substantive, ~1 cycle)** — open **Chapter 5** with
+   `def:510A` (preconsistency vector for GLMs): introduce the
+   `GeneralLinearMethod` structure, the `IsPreconsistent` predicate,
+   and a concrete non-vacuity witness.
 
-**Decision: Option (b) from the issue file — defer the refactor and
-document the divergence.**
+Chapter 5 is currently 0/35. `def:510A` is the canonical
+chapter-opener and depends only on `def:404A` (already done in
+`OpenMath/Chapter4/Section404.lean`). Standard "definition + witness"
+cycle pattern, identical in shape to cycles 020/027/029/030.
 
-Rationale:
-* Option (a) (refactor `convProduct` to use vertex-subset partition)
-  is multi-cycle and invalidates cycles 077–081's work. It would
-  unblock `lem:383D` and `thm:386A` but cost the entire group-axiom
-  chain we just built.
-* Our current convolution defines a valid graded-multiplicative
-  algebra. The cycle 077–081 lemmas (multiplicativity preservation,
-  associativity, identity, inverse existence) are all sound *in this
-  algebra* — they are not a faithful encoding of Butcher's exact
-  Hopf-algebra structure, but they are mathematically correct
-  statements about a related algebra.
-* `lem:383D` and `thm:386A` are explicitly **out of scope** for the
-  next several cycles per this decision. Do not attempt them.
-* `thm:382A` (the Runge–Kutta group theorem) is about RK tableaux
-  and equivalence classes, *not* about forest mappings. It is
-  **not** blocked by the convolution divergence — but it is blocked
-  by missing infrastructure (RK composition, equivalence-class
-  quotient, Lipschitz arguments). Out of scope this cycle.
+There are no Aristotle results pending. There are no current sorries
+to incorporate (cycle 082 closed all four bonus theorems clean and
+left zero sorries in `Section383.lean`).
 
-**Worker actions for Priority 0**:
+---
 
-1. Add a file-level docstring at the very top of
-   `OpenMath/Chapter3/Section383.lean` (in the existing `/-! ... -/`
-   block — extend it; do not start a new block) summarising:
-   * Our convolution `convProduct` uses *multiset sub-selection*
-     `R ≤ S` on `Multiset RootedTree`, not Butcher's *vertex-subset*
-     `R ⊑ S`.
-   * The two agree only when every tree in `S` has order 1
-     (no edges).
-   * Lemmas 383A, 383B, 383C are proved here in the multiset-graded
-     algebra; they hold also in Butcher's true convolution but the
-     cycle 077–081 proofs do not constitute a faithful encoding of
-     Butcher's argument for the latter.
-   * `lem:383D`, `thm:386A`, and any partition-sum / Hopf-algebra
-     content require the vertex-subset refactor and are deferred.
-   * Cross-link to `.prover-state/issues/convolution_vertex_vs_multiset.md`.
+## Priority 0 — Housekeeping (do first, ~5 min)
 
-2. Append a **"Status (cycle 082)"** subsection to
-   `.prover-state/issues/convolution_vertex_vs_multiset.md` recording
-   the planner decision: "Option (b) adopted; refactor deferred until
-   `lem:383D`/`thm:386A` becomes blocking."
+### 0a. Fix stale `plan.md` marker for `lem:322A`
 
-## Priority 1 — Identity laws + `inverse_unique` (~60 min total)
+In `plan.md`, the Chapter 3 listing has
 
-These three lemmas finish the §383 group-axiom infrastructure. Each
-is short (<20 lines) and the chain unblocks any future Group
-packaging.
-
-### 1a. `convProduct_one_left` and `convProduct_one_right` (~30 min)
-
-**Statement** (append to `Section383.lean` after
-`convProduct_convInverse_symm`, before `exists_inverse_of_isMultiplicative`):
-
-```lean
-/-- The convolution-product identity is a left identity: `1 · α = α`. -/
-theorem convProduct_one_left (α : Forest → ℝ) :
-    convProduct convOne α = α := by
-  funext S
-  -- convProduct convOne α S = ∑ R ≤ S, convOne (S - R) * α R
-  -- convOne (S - R) is 1 when S - R = 0 (i.e. R = S), else 0.
-  -- So the sum reduces to convOne 0 * α S = 1 * α S = α S.
-  sorry
-
-/-- The convolution-product identity is a right identity: `α · 1 = α`. -/
-theorem convProduct_one_right (α : Forest → ℝ) :
-    convProduct α convOne = α := by
-  funext S
-  -- convProduct α convOne S = ∑ R ≤ S, α (S - R) * convOne R
-  -- convOne R is 1 when R = 0, else 0.
-  -- So the sum reduces to α S * convOne 0 = α S * 1 = α S.
-  sorry
+```
+- [ ] `lem:322A` **Methods of order 4** (§322)
 ```
 
-**Proof strategy** (mechanical):
+but `lean_status.json:280` records:
 
-* `convOne` is defined as the indicator of the empty multiset
-  (`if F = 0 then 1 else 0` or equivalent — read the source at
-  `Section383.lean:357` and consult the existing `simp` unfolds in
-  `isMultiplicative_convOne` proof at line 378).
-* For the **right** identity: the sum
-  `∑ R ∈ S.powerset, α (S - R) * convOne R` has only the `R = 0`
-  summand non-zero (since `convOne R = 0` for `R ≠ 0`). At `R = 0`:
-  `α (S - 0) * convOne 0 = α S * 1 = α S`. Use
-  `Multiset.sum_eq_zero_iff` or pick out the unique non-zero summand
-  with `Finset.sum_eq_single` / `Multiset.sum_map_eq_single`
-  (whichever fits the underlying iteration).
-* For the **left** identity: same shape, but the unique non-zero
-  summand is `R = S` (so that `S - R = 0`).
-* If you find Mathlib doesn't have the right "sum-eq-single" lemma
-  for `Multiset.powerset`, the cleanest path is to manually split
-  `S.powerset` as `{S} + (S.powerset.erase S)` (or `{0} + ...` for
-  the right identity) and use `Multiset.sum_cons` /
-  `Multiset.sum_erase`. Look at how cycle 080's
-  `convProduct_assoc_lhs_eq` (Section383.lean:307) and cycle 081's
-  `convProduct_singleton_eq_zero` (Section383.lean:414) crack open
-  the powerset — those are the precedents for the same shape of
-  unfold.
-
-**Hypothesis note**: the `(hα : IsMultiplicative α)` hypothesis is
-NOT needed — these are pure unfolding lemmas (the convolution-product
-formula reduces by `convOne`'s indicator behaviour without needing
-multiplicativity of `α`). Statements above already drop the
-hypothesis.
-
-### 1b. `inverse_unique` (~15 min, mechanical)
-
-**Statement** (append after the identity laws):
-
-```lean
-/-- Uniqueness of two-sided inverses in the convolution algebra.
-
-If `β` and `γ` are both two-sided inverses of `α` (with respect to
-`convOne`), then `β = γ`. The standard group-theoretic argument
-`γ = γ · 1 = γ · (α · β) = (γ · α) · β = 1 · β = β`. -/
-theorem inverse_unique {α β γ : Forest → ℝ}
-    (hαβ : convProduct α β = convOne)
-    (hγα : convProduct γ α = convOne) :
-    β = γ := by
-  calc β = convProduct convOne β := (convProduct_one_left β).symm
-    _ = convProduct (convProduct γ α) β := by rw [hγα]
-    _ = convProduct γ (convProduct α β) := convProduct_assoc γ α β
-    _ = convProduct γ convOne := by rw [hαβ]
-    _ = γ := convProduct_one_right γ
+```json
+"lem:322A": {
+  "lean_file": "OpenMath/Chapter3/Section322.lean",
+  "lean_symbol": "OpenMath.Chapter3.Section322.order_four_block_zero_decomposition",
+  "status": "formalized"
+}
 ```
 
-No multiplicative hypotheses needed (matches §1a).
+and the file is a complete proof with no sorries (verify with
+`lake env lean OpenMath/Chapter3/Section322.lean`).
 
-### 1c. `convInverse_convInverse` corollary (stretch; ~10 min)
+**Edit `plan.md`** to change the row to:
 
-```lean
-/-- Inverse is involutive: `(α⁻¹)⁻¹ = α` for multiplicative α. -/
-theorem convInverse_convInverse {α : Forest → ℝ}
-    (hα : IsMultiplicative α) :
-    convInverse (convInverse α) = α := by
-  -- α and convInverse (convInverse α) are both two-sided inverses
-  -- of convInverse α; uniqueness forces them equal.
-  refine inverse_unique ?_ ?_
-  · -- convProduct (convInverse α) (convInverse (convInverse α)) = convOne
-    exact convProduct_convInverse (convInverse_isMultiplicative α)
-  · -- convProduct α (convInverse α) = convOne
-    exact convProduct_convInverse hα
+```
+- [x] `lem:322A` **Methods of order 4** (§322) — `OpenMath/Chapter3/Section322.lean`
 ```
 
-**Orientation check** (do verify this on paper before encoding):
-`inverse_unique hαβ hγα : β = γ`. We want to conclude
-`convInverse (convInverse α) = α`. Set
-* `α := convInverse α` (the "α" in `inverse_unique`),
-* `β := convInverse (convInverse α)`,
-* `γ := α`.
-Then `hαβ` is
-`convProduct (convInverse α) (convInverse (convInverse α)) = convOne`
-(right-inverse property applied to `convInverse α`), and `hγα` is
-`convProduct α (convInverse α) = convOne` (right-inverse property of
-`α`). Both hold; the conclusion `β = γ` is
-`convInverse (convInverse α) = α`. ✓
+Also bump the **Progress** counter from `53 / 175` to `54 / 175`
+(remove the inconsistency — `lean_status.json` already records
+`lem:322A` formalized, and the per-chapter total of 92 in Ch.3 means
+the global counter has been one short for some time).
 
-If the orientation comes out reversed, the fix is `(... ).symm` on
-the conclusion.
+### 0b. Sanity-check the formalized `Section322.lean` axiom set
 
-Faithfulness check for all three: pure algebraic consequences of
-existing theorems; tautology check passes (conclusions don't appear
-verbatim in hypotheses); identity check passes (proofs do real
-algebraic work via `calc` / `inverse_unique`).
+```
+#print axioms OpenMath.Chapter3.Section322.order_four_block_zero_decomposition
+```
 
-## Priority 2 — Verify and commit (~15 min)
+Expected: `[propext, Classical.choice, Quot.sound]`. If anything
+else appears, escalate as a separate issue — but cycle 082's worker
+ran a similar check and got the standard set, so this should be a
+no-op.
 
-* Run `lake env lean OpenMath/Chapter3/Section383.lean` — must be
-  clean.
-* Run `lake build OpenMath.Chapter3.Section383` — must succeed.
-  (Reminder from cycle 072: `lake env lean <file>` does NOT update
-  the .olean cache, so use `lake build` before `#print axioms` to
-  avoid stale-cache `sorryAx` false positives.)
-* `#print axioms convProduct_one_left convProduct_one_right
-  inverse_unique` (and `convInverse_convInverse` if landed) — must
-  show only `[propext, Classical.choice, Quot.sound]`.
-* No `sorry`s anywhere in the file.
-* `extraction/formalization_data/lean_status.json`: no entity status
-  changes (these are helper lemmas, not textbook entities). No edit
-  needed.
-* Commit with message:
-  `Cycle 082 — convolution algebra identity + inverse uniqueness; document multiset/partition divergence`
+### 0c. Sweep `plan.md` for other stale `[ ]` rows
 
-## Priority 3 — DO NOT submit Aristotle this cycle
+While editing `plan.md`, grep for any other rows whose entity ID
+appears in `lean_status.json` with `"status": "formalized"` but is
+still marked `[ ]` (or vice versa). The worker should fix every
+such row in this cycle's commit. If more than 2-3 rows turn up,
+note them in `task_results/cycle_083.md` so the loop maintainer can
+audit the planner/evaluator's status-reporting.
 
-Per cycle 080 + 081 discoveries (recorded in their task results),
-manual proofs of small algebraic identity lemmas (~20 lines each)
-finish faster than an Aristotle round-trip. The Priority 1 lemmas
-are all in this category.
+Quick command (for the worker's reference, not literally):
+```bash
+python3 -c "
+import json, re
+status = json.load(open('extraction/formalization_data/lean_status.json'))
+formalized_ids = {k for k, v in status.items() if v.get('status') == 'formalized'}
+plan = open('plan.md').read()
+for line in plan.splitlines():
+    m = re.search(r'^- \[([x ~!])\] \`([^\`]+)\`', line)
+    if not m: continue
+    mark, eid = m.group(1), m.group(2)
+    if eid in formalized_ids and mark == ' ':
+        print('STALE [ ] should be [x]:', eid)
+    if eid not in formalized_ids and mark == 'x':
+        print('STALE [x] should be [ ]:', eid)
+"
+```
 
-If Priority 1 stalls badly (e.g., the multiset-powerset
-sum-eq-single argument can't be cleanly assembled in 30 min), only
-*then* batch-submit `convProduct_one_right` to Aristotle and pivot
-to manual work on `convProduct_one_left` + `inverse_unique` while
-waiting. Default plan: skip Aristotle entirely.
+---
 
-## Priority 4 — Cycle 083 scoping (~5 min if everything else closes)
+## Priority 1 — `def:510A` preconsistency vector for GLMs
 
-Once Priority 1 + 2 land, the §383 algebraic infrastructure is
-**done** for this convolution. The next §380-area target needs
-fresh infrastructure:
+### Why this target
 
-* `thm:382A` (RK group well-defined-ness): needs RK composition
-  (`composedMethod : RKTableau s₁ → RKTableau s₂ → RKTableau (s₁+s₂)`)
-  and a Lipschitz-based equality-of-output argument. **Heavy** —
-  multiple cycles. Not blocked by the convolution divergence.
-* `thm:381G` (Irreducible RK Stage Distinguishability): blocked by
-  `thm:314A` (Independence of elementary differentials), itself
-  blocked by `lem:311A`/`thm:311B/C/D`. Heavy.
-* `thm:343B` (Reflected order conditions preservation): requires
-  formalising B(η), C(η), D(η), E(η,ζ) simplifying assumptions.
-  Heavy.
+* `def:510A` is a leaf in Chapter 5: depends only on `def:404A`
+  (done in `OpenMath/Chapter4/Section404.lean`).
+* It is the **canonical Chapter-5 chapter-opener** — it introduces
+  the foundational `GeneralLinearMethod` structure that every other
+  Chapter-5 entity builds on (`def:510B`, `def:510C`, `def:512A`,
+  `def:520A`, etc.).
+* Standard "definition + non-vacuity witness" cycle pattern,
+  matching the shape of:
+  * Cycle 020 (`def:381C`, `def:381D`)
+  * Cycle 027 (`def:370A`)
+  * Cycle 029 (`def:356B` + DJ-irreducibility component of `def:356A`)
+  * Cycle 030 (`def:381A` + explicit-Euler witness)
+  * Cycle 038 (`def:402A` + helper lemmas)
+* Avoids every blocker that ruled out other Chapter-3 / Chapter-5
+  candidates:
+  * **Not `lem:322A`** — already formalized.
+  * **Not `def:381F`** — needs the deferred `reducedMethod`
+    construction (`reduced_method_deferred.md`).
+  * **Not `def:422B` / `thm:422A` / `thm:422C`** — these embed the
+    convolution group `G₁` in their *definitions*, so they bake the
+    multiset/vertex-subset convolution divergence
+    (`convolution_vertex_vs_multiset.md`) into a downstream-visible
+    spot. Defer until that decision is revisited.
+  * **Not `lem:351A` / `thm:351B`** — need the matrix-resolvent
+    `(I − zA)⁻¹` infrastructure that `AN_stability_deferred.md`
+    estimates at 3-5 cycles.
+  * **Not `lem:441A` / `lem:441B` / `thm:441C`** — Dahlquist's
+    first barrier requires polynomial root-counting (Rouché /
+    Schur-Cohn), heavy.
+  * **Not `lem:310B` / `lem:312B` / `thm:302A` / etc.** — need
+    Taylor's theorem (`thm:306A`) and the elementary-differential
+    machinery, multi-cycle infrastructure.
 
-**Action**: do NOT pre-commit cycle 083 to any of these. Use the
-slack to read the following entity files and write a one-line scope
-estimate for each in `.prover-state/task_results/cycle_082.md`
-§"Suggested next approach":
+### Textbook statement (quoted verbatim from
+`extraction/formalization_data/entities/def_510A.json`)
 
-* `extraction/formalization_data/entities/lem_311A.json`
-  (foundational §311 entry — Taylor expansion of exact solution).
-* `extraction/formalization_data/entities/thm_441A.json` (Chapter 4
-  §441, possibly cleaner than §380 — max order for convergent
-  k-step methods).
-* `extraction/formalization_data/entities/def_422B.json`
-  (Chapter 4 §422 entry — a definition, may be tractable in one
-  cycle).
-* `extraction/formalization_data/entities/lem_322A.json` (§322
-  methods of order 4 — Chapter 3 algebraic, may avoid the
-  elementary-differential infrastructure).
+> A general linear method `(A, U, B, V)` is 'preconsistent' if there
+> exists a vector `u` such that
+>
+>     V u = u,                              (510a)
+>     U u = 1.                              (510b)
+>
+> The vector `u` is the 'preconsistency vector'.
 
-Let the next planner cycle pick from your scoping notes.
+### Lean encoding plan
 
-## What NOT to do this cycle
+Create new file: **`OpenMath/Chapter5/Section510.lean`** (the
+`OpenMath/Chapter5/` directory does not yet exist; create it).
+Update `OpenMath.lean` (the project root index, if there is one;
+otherwise `lakefile.toml`/`lean-toolchain` are unaffected) only if
+required by the existing import structure — the worker should check
+how `OpenMath/Chapter4/Section404.lean` is registered and follow the
+same pattern.
 
-* **Do NOT refactor `convProduct`** to use vertex-subset partition.
-  Per the Priority 0 decision, this is option (a) and is deferred.
-  The refactor would invalidate the entire cycle 077–081 chain and
-  is multi-cycle.
-* **Do NOT attempt `lem:383D`** (partition-sum inverse formula).
-  Per the convolution caveat, our closed-form inverse from cycle 081
-  is the right object in our algebra; lem:383D's textbook formula
-  presupposes the vertex-subset convolution.
-* **Do NOT attempt `thm:386A`** (recursive product formula). Same
-  blocker as `lem:383D`.
-* **Do NOT attempt `thm:382A`, `thm:381G`, or `thm:343B`** this
-  cycle. All three need fresh multi-cycle infrastructure
-  (RK composition, elementary-differential independence, simplifying
-  assumptions B/C/D/E respectively).
-* **Do NOT submit Aristotle for the Priority 1 lemmas** unless they
-  stall hard. These are short, manual, and well-targeted; a 30-min
-  Aristotle wait dominates their actual proof time.
-* **Do NOT introduce `axiom` or `constant`** for any "the multiset
-  sum-eq-single lemma is missing from Mathlib" gap. If Mathlib's
-  `Multiset.powerset` summation API is genuinely thin, build the
-  one-line helper you need as a private lemma in `Section383.lean`
-  (e.g., a small lemma extracting the unique non-zero summand).
-* **Do NOT raise `maxHeartbeats`**.
-* **Do NOT touch `scripts/autonomous_loop.py`** or any other
-  loop-infrastructure file (per the standing scanner false-positive
-  issue and CLAUDE.md).
-* **Do NOT skip the file-level docstring update** in Priority 0.
-  The convolution divergence is now a documented project-level
-  decision; the file must reflect it so future readers (planner +
-  worker) don't accidentally try `lem:383D`.
+#### Step 1 — `GeneralLinearMethod` structure
 
-## Faithfulness checks for new lemmas
+The textbook GLM has two natural-number indices:
 
-For `convProduct_one_left`, `convProduct_one_right`,
-`inverse_unique`, `convInverse_convInverse`:
+* `s : ℕ` — the number of internal stages.
+* `r : ℕ` — the number of input/output values (multistep
+  history depth).
 
-* No textbook entity IDs (helpers).
-* All four are standard group-theoretic identities; their
-  truth in our convolution algebra follows from cycles 077–081.
-* Tautology check: each conclusion does not appear verbatim as a
-  hypothesis. ✓
-* Identity check: each proof does genuine algebraic work via `calc`
-  / `Multiset.sum_eq_single` / `convProduct_assoc`. None is a bare
-  `exact h` re-export. ✓
-* Hypothesis strength: identity laws drop `IsMultiplicative` (pure
-  unfolding); `inverse_unique` drops it too; `convInverse_convInverse`
-  legitimately needs `IsMultiplicative` because `convProduct_convInverse`
-  requires it.
+The four matrices live in:
 
-For the file-level docstring update: not a theorem; a documentation
-change. Faithfulness to the convolution-divergence decision is the
-content.
+| Matrix | Type |
+|---|---|
+| `A` | `Matrix (Fin s) (Fin s) ℝ` |
+| `U` | `Matrix (Fin s) (Fin r) ℝ` |
+| `B` | `Matrix (Fin r) (Fin s) ℝ` |
+| `V` | `Matrix (Fin r) (Fin r) ℝ` |
 
-## Estimated effort budget
+Encode as:
 
-| Priority | Task | Time |
-|---|---|---|
-| 0 | Convolution doc + issue update | 5 min |
-| 1a | `convProduct_one_left` + `convProduct_one_right` | 30 min |
-| 1b | `inverse_unique` | 15 min |
-| 1c | `convInverse_convInverse` (stretch) | 10 min |
-| 2 | Verify + commit | 15 min |
-| 4 | Cycle 083 scoping (stretch) | 5 min |
-| **Total** | | **~80 min** |
+```lean
+namespace OpenMath.Chapter5.Section510
 
-This is a **deliberately small cycle** following two large cycles
-(080: associativity; 081: inverse existence). Use the slack to
-confirm the convolution-decision documentation is solid and to
-scope cycle 083 candidates honestly. Do not overreach into thm:382A
-or §381G/H — they are real multi-cycle infrastructure and rushing
-them now will produce another half-finished scaffold.
+/-- A general linear method (Butcher §510) with `s` internal stages
+and `r` input/output values. The four constituent matrices together
+specify how a single step transforms the `r`-vector of input values
+and computes the `s` internal stages. -/
+structure GeneralLinearMethod (s r : ℕ) where
+  A : Matrix (Fin s) (Fin s) ℝ
+  U : Matrix (Fin s) (Fin r) ℝ
+  B : Matrix (Fin r) (Fin s) ℝ
+  V : Matrix (Fin r) (Fin r) ℝ
+```
+
+Use `structure`, not `class` — there is no instance-resolution role
+here.
+
+#### Step 2 — `IsPreconsistent` predicate
+
+```lean
+/-- **Definition 510A** — A GLM is *preconsistent* if there exists a
+vector `u : Fin r → ℝ` (the *preconsistency vector*) such that
+`V u = u` and `U u = 1` (the all-ones vector in `Fin s → ℝ`). -/
+def GeneralLinearMethod.IsPreconsistent {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  ∃ u : Fin r → ℝ, M.V *ᵥ u = u ∧ M.U *ᵥ u = (fun _ => 1)
+```
+
+Notes:
+
+* `*ᵥ` is `Matrix.mulVec`. The notation should be in scope under
+  `open Matrix`. Verify with `lean_local_search "mulVec"` if not.
+  The relevant import in `Section322.lean` already brings it in
+  (`Mathlib.LinearAlgebra.Matrix.Determinant.Basic` etc.); the
+  cleanest single import that picks up everything needed is
+  `Mathlib.LinearAlgebra.Matrix.NonsingularInverse` — copy
+  `Section322.lean`'s import block as a starting point.
+* `(fun _ => 1)` is the all-ones vector in `Fin s → ℝ`. Mathlib also
+  has `1 : Fin s → ℝ` via `Pi.instOne`, but the explicit
+  `fun _ => (1 : ℝ)` is clearer (avoids reader confusion with the
+  matrix identity `(1 : Matrix _ _ ℝ)`).
+
+#### Step 3 — Non-vacuity witness: explicit Euler as a `(1, 1)`-GLM
+
+Explicit Euler `y_{n+1} = y_n + h f(y_n)` is the canonical GLM with
+`s = r = 1` and matrices:
+
+| | |
+|---|---|
+| `A = !![0]` | `U = !![1]` |
+| `B = !![1]` | `V = !![1]` |
+
+(One stage `Y_1 = y_n + h · 0 · f(Y_1) = y_n` (no implicit recursion
+because `A = 0`), and one output `y_{n+1} = h · 1 · f(Y_1) + 1 · y_n
+= y_n + h f(y_n)`.)
+
+The preconsistency vector is `u = (fun _ => 1)`:
+
+```lean
+def explicitEulerGLM : GeneralLinearMethod 1 1 where
+  A := !![0]
+  U := !![1]
+  B := !![1]
+  V := !![1]
+
+theorem explicitEulerGLM_isPreconsistent :
+    explicitEulerGLM.IsPreconsistent := by
+  refine ⟨fun _ => 1, ?_, ?_⟩
+  · -- V u = u: !![1] applied to fun _ => 1 gives fun _ => 1.
+    funext i; fin_cases i
+    simp [Matrix.mulVec, Matrix.dotProduct, Fin.sum_univ_one,
+          explicitEulerGLM]
+  · -- U u = 1: !![1] applied to fun _ => 1 gives fun _ => 1.
+    funext i; fin_cases i
+    simp [Matrix.mulVec, Matrix.dotProduct, Fin.sum_univ_one,
+          explicitEulerGLM]
+```
+
+If `fin_cases i` on `Fin 1` is awkward, replace with the `Fin 1`
+elimination idiom `Subsingleton.elim i 0 ▸ ...` or `match i with
+| 0 => ...`. The `simp` set above should close both goals; if not,
+expand manually with `Matrix.mulVec_cons` /
+`Matrix.cons_val_zero` / `Matrix.cons_val_one` (these are the
+`!![ ... ]` matrix-literal lemmas — discoverable via
+`lean_local_search "Matrix.cons_val"`).
+
+If the proof balloons past ~10 lines, the simplest fallback is a
+`decide`-style direct verification: `Matrix.mulVec` on a 1×1 matrix
+is a single multiplication; the worker can write the equations out
+elementwise and discharge with `ring` / `norm_num`.
+
+#### Step 4 — Update `lean_status.json`
+
+Change the entry for `def:510A`:
+
+```json
+"def:510A": {
+  "lean_file": "OpenMath/Chapter5/Section510.lean",
+  "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsPreconsistent",
+  "status": "formalized"
+}
+```
+
+#### Step 5 — Update `plan.md`
+
+Change the Chapter 5 row for `def:510A` from `[ ]` to `[x]` and
+append `— OpenMath/Chapter5/Section510.lean`. Bump the global
+**Progress** counter accordingly (after Priority 0's bump to 54/175,
+this brings it to 55/175).
+
+### File-level docstring (do include this)
+
+Add a top-of-file block comment quoting Butcher's def:510A statement
+verbatim and noting the `(s, r)` index convention. Pattern after
+`OpenMath/Chapter3/Section322.lean`'s docstring (which is exemplary
+for a single-entity file).
+
+---
+
+## Faithfulness checklist for cycle 083 (run before commit)
+
+For `GeneralLinearMethod` (new structure):
+
+- [ ] Quote textbook source: `def_510A.json` "A general linear
+  method (A, U, B, V)" — four matrices match.
+- [ ] Type signatures match: `A : s×s`, `U : s×r`, `B : r×s`,
+  `V : r×r`. Confirm with `def_520A.json` and `def_510B.json` quoted
+  text (the same `(A, U, B, V)` tuple appears throughout Chapter 5,
+  so this convention is stable).
+- [ ] No Prop fields — pure data structure.
+
+For `IsPreconsistent` (new def):
+
+- [ ] Quote: `∃ u, V u = u ∧ U u = 1`. Match.
+- [ ] Definition smuggling check: this is a *predicate on existence
+  of u*, not a stipulation that any specific `u` works. Matches
+  Butcher's "there exists a vector u".
+- [ ] Hypothesis-strength check: no extra hypotheses on `M`.
+
+For `explicitEulerGLM_isPreconsistent` (new theorem):
+
+- [ ] Tautology check: conclusion `IsPreconsistent` does not appear
+  verbatim as a hypothesis — the witness `u = fun _ => 1` is the
+  real content.
+- [ ] Identity check: proof is not `exact h`; it constructs the
+  witness and discharges the matrix-vector equations.
+- [ ] Hypothesis-strength check: hypothesis-free; this is a
+  non-vacuity witness.
+
+Per CLAUDE.md "every new `class` or `structure`, provide at least
+one concrete witness/instance in the same cycle":
+**`explicitEulerGLM` + `explicitEulerGLM_isPreconsistent` is the
+witness.** Without it, the cycle violates the rule.
+
+---
+
+## What NOT to try this cycle
+
+* **Do NOT pick `lem:322A`** — already formalized. The cycle 082
+  worker's recommendation was based on a stale `plan.md` row.
+* **Do NOT re-open the convolution-divergence question
+  (`convolution_vertex_vs_multiset.md`).** The cycle 082 planner
+  decision (option (b) — defer the refactor) stands until `lem:383D`
+  or `thm:386A` becomes a blocker, and neither is queued for at
+  least the next several cycles.
+* **Do NOT attempt `def:381F`.** It needs the deferred `reducedMethod`
+  construction (`reduced_method_deferred.md`).
+* **Do NOT attempt `def:422B` / `thm:422A` / `thm:422C`.** They
+  embed the convolution group `G₁` in their definitions and would
+  bake the convolution divergence into Chapter-4 visible code.
+* **Do NOT attempt `lem:351A` or `thm:351B`.** They need the matrix
+  resolvent `(I − zA)⁻¹` infrastructure (3-5 cycles to build, per
+  `AN_stability_deferred.md`).
+* **Do NOT attempt `lem:441A` / `lem:441B` / `thm:441C`.** Dahlquist's
+  first barrier — needs polynomial Schur-Cohn / Rouché root-counting
+  infrastructure.
+* **Do NOT attempt `lem:310B` / `lem:312B` / `thm:302A` / `thm:302B` /
+  `thm:302C` / `thm:304A` / etc.** These need Taylor's theorem
+  (`thm:306A`) and the elementary-differential machinery, plus a
+  vertex-set / labelling framework on `RootedTree` that is not in
+  the codebase. Multi-cycle infrastructure project.
+* **Do NOT attempt `def:451A` (G-stable for one-leg method) or any
+  Chapter-4 §44x / §45x targets.** They need infrastructure (one-leg
+  method framework, `g`-quadratic-form machinery) not yet in the
+  codebase.
+* **Do NOT change the index convention to `(r, s)` from `(s, r)`.**
+  Butcher's tableau presentation `[A | U; B | V]` has `A` in the
+  top-left (s×s, the stage-stage block), so `s` is the natural first
+  index. This will keep the convention consistent with `def:520A`
+  ("`M(z) = V + zB(I - zA)⁻¹U`" — the `(I - zA)⁻¹` block-shape
+  reading requires `A : s×s`).
+* **Do NOT submit definitions to Aristotle.** Aristotle is for
+  closing proofs of theorems/lemmas; definitions have no proof
+  obligation. The non-vacuity witness `explicitEulerGLM_isPreconsistent`
+  is a ~5-line `simp` proof and should not be batched out.
+* **Do NOT raise `maxHeartbeats`** — the file is small.
+* **Do NOT introduce `axiom` / `constant`** — none of this work
+  needs it.
+
+---
+
+## Aristotle workflow this cycle
+
+**Skip Aristotle entirely.** This cycle's substantive work is one
+new structure, one new predicate, and one ≤10-line non-vacuity
+witness — none of which are "Aristotle bait" (Aristotle excels at
+premise selection for theorem proofs, not at structure design or
+trivial `simp`-closes). Save Aristotle compute for cycle 084 when
+the next cluster of GLM consistency lemmas (`def:510B`, `def:510C`)
+or stability theorems will benefit from it.
+
+If during the cycle the worker discovers an unexpected lemma that
+*would* benefit from Aristotle (e.g. a `Matrix.mulVec` identity that
+fails to `simp`-close), batch-submit and proceed manually rather
+than blocking on a 30-minute wait — the file is too small to justify
+a wait window.
+
+---
+
+## Build verification (mandatory before commit)
+
+```bash
+# Verify the new Section510 compiles standalone.
+lake env lean OpenMath/Chapter5/Section510.lean
+
+# Sanity-check the existing Section322 still compiles (no regression).
+lake env lean OpenMath/Chapter3/Section322.lean
+
+# Axiom check on the new entities. Run AFTER lake build OpenMath.Chapter5.Section510
+# (per attempts.md cycle 072: lake env lean does NOT update .olean cache).
+lake build OpenMath.Chapter5.Section510
+echo '#print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.IsPreconsistent
+#print axioms OpenMath.Chapter5.Section510.explicitEulerGLM_isPreconsistent' \
+  | lake env lean --stdin OpenMath/Chapter5/Section510.lean
+```
+
+Expected: clean compile; axioms `[propext, Classical.choice, Quot.sound]`
+only.
+
+---
+
+## Suggested follow-ups (NOT cycle 083 work — for the planner of later cycles)
+
+After cycle 083 lands:
+
+* **Cycle 084**: `def:510C` (stable GLM — `‖V^n‖ ≤ C`). Depends only
+  on `def:142A` (power-boundedness, done) and the cycle-083
+  `GeneralLinearMethod` structure. Trivial wrapping.
+
+* **Cycle 085**: `def:510B` (consistent GLM). Depends on 510A + 510C.
+  Adds the extra hypothesis `B 1 + V v = u + v`. Modest.
+
+* **Cycle 086+**: `def:512A` (convergent GLM) — analogous to the
+  cycle-068 `LinearMultistepMethod.IsConvergent`. May need a
+  trajectory-bound strengthening (cf.
+  `is_convergent_strengthened.md` for the LMM analogue), but the
+  pattern is now well-trodden.
+
+* **Cycle 087+**: `thm:513A` (necessity of stability), `thm:514A`
+  (necessity of consistency) — Chapter 5 analogues of `thm:405A` /
+  `thm:405C`, which the project already has machinery for (cycles
+  068-072).
+
+This roadmap suggests Chapter 5 §51x can be cleared in 5-6 cycles
+of similar shape to the §404/§405 cycles, after which §52x
+(stability matrix `M(z)`) becomes the natural next investment —
+which *will* benefit from matrix-resolvent infrastructure shared
+with the deferred `lem:351A` / AN-stability work, so it would be
+worth opening that infrastructure project then.
+
+---
+
+## Task results expectations
+
+Write `.prover-state/task_results/cycle_083.md` documenting:
+
+* What landed (Priority 0 housekeeping + Priority 1 def + witness).
+* Whether the proof of `explicitEulerGLM_isPreconsistent` closed
+  with `simp` alone or needed manual `Matrix.mulVec_def` / `cons_val`
+  expansion.
+* Whether `lake env lean` showed any unexpected axioms.
+* Confirmation that `plan.md` and `lean_status.json` are
+  consistent with each other (i.e. no other stale rows beyond the
+  `lem:322A` one this cycle fixes — list any further mismatches the
+  Priority 0c sweep turned up).
+
+If the worker discovers further stale `[ ]` markers in `plan.md`
+that should be `[x]` per `lean_status.json`, fix them under
+Priority 0 — but do NOT try to add new entities to `plan.md` or
+edit anything else in `lean_status.json` beyond the `def:510A` row.

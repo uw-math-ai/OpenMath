@@ -173,9 +173,9 @@
     "status": "unformalized"
   },
   "def:510A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section510.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsPreconsistent",
+    "status": "formalized"
   },
   "def:510B": {
     "lean_file": null,
