@@ -193,9 +193,9 @@
     "status": "unformalized"
   },
   "def:520A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section520.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stabilityMatrix",
+    "status": "formalized"
   },
   "def:520C": {
     "lean_file": null,
@@ -311,13 +311,13 @@
   "lem:383B": {
     "lean_file": "OpenMath/Chapter3/Section383.lean",
     "lean_symbol": "OpenMath.Chapter3.Section383.convProduct_assoc",
-    "notes": "Cycle 080. Convolution product associativity (αβ)γ = α(βγ). Stated WITHOUT IsMultiplicative hypotheses — a faithful generalisation, since the textbook proof uses only the algebraic structure of the convolution sum (not multiplicativity). Three private helper lemmas: convProduct_assoc_lhs_eq, convProduct_assoc_rhs_eq (LHS/RHS as double sums via Multiset.bind), and double_powerset_swap (the key combinatorial bijection (Q,T) ↔ (Q+T,Q), proved by induction on S applying the IH thrice with reparameterised f). Closes via `S - Q - (R - Q) = S - R` for Q ≤ R. Axioms = [propext, Classical.choice, Quot.sound].",
+    "notes": "Cycle 080. Convolution product associativity (\u03b1\u03b2)\u03b3 = \u03b1(\u03b2\u03b3). Stated WITHOUT IsMultiplicative hypotheses \u2014 a faithful generalisation, since the textbook proof uses only the algebraic structure of the convolution sum (not multiplicativity). Three private helper lemmas: convProduct_assoc_lhs_eq, convProduct_assoc_rhs_eq (LHS/RHS as double sums via Multiset.bind), and double_powerset_swap (the key combinatorial bijection (Q,T) \u2194 (Q+T,Q), proved by induction on S applying the IH thrice with reparameterised f). Closes via `S - Q - (R - Q) = S - R` for Q \u2264 R. Axioms = [propext, Classical.choice, Quot.sound].",
     "status": "formalized"
   },
   "lem:383C": {
     "lean_file": "OpenMath/Chapter3/Section383.lean",
     "lean_symbol": "OpenMath.Chapter3.Section383.exists_inverse_of_isMultiplicative",
-    "notes": "Cycle 081. Existence of left/right inverses in G₁ (multiplicative forest mappings). Constructive: exhibits convInverse α (closed form (-1)^|F| · ∏_{t ∈ F} α({t})) as the explicit witness. Supporting infrastructure: convOne (identity element), isMultiplicative_convOne (identity is in G₁), convInverse_isMultiplicative (the closed form is multiplicative — no hypothesis on α needed), convProduct_singleton_eq_zero / convProduct_singleton_symm_eq_zero (per-singleton zero), convProduct_convInverse / convProduct_convInverse_symm (right/left inverse property by Multiset.induction with multiplicativity). FAITHFULNESS CAVEAT: this proves inverse-existence for our convProduct (multiset sub-selection), not Butcher's convolution (vertex-subset partition). Inverse exists in both algebras; closed form differs (Butcher's involves partition sum, ours is product). See .prover-state/issues/convolution_vertex_vs_multiset.md. Axioms = [propext, Classical.choice, Quot.sound].",
+    "notes": "Cycle 081. Existence of left/right inverses in G\u2081 (multiplicative forest mappings). Constructive: exhibits convInverse \u03b1 (closed form (-1)^|F| \u00b7 \u220f_{t \u2208 F} \u03b1({t})) as the explicit witness. Supporting infrastructure: convOne (identity element), isMultiplicative_convOne (identity is in G\u2081), convInverse_isMultiplicative (the closed form is multiplicative \u2014 no hypothesis on \u03b1 needed), convProduct_singleton_eq_zero / convProduct_singleton_symm_eq_zero (per-singleton zero), convProduct_convInverse / convProduct_convInverse_symm (right/left inverse property by Multiset.induction with multiplicativity). FAITHFULNESS CAVEAT: this proves inverse-existence for our convProduct (multiset sub-selection), not Butcher's convolution (vertex-subset partition). Inverse exists in both algebras; closed form differs (Butcher's involves partition sum, ours is product). See .prover-state/issues/convolution_vertex_vs_multiset.md. Axioms = [propext, Classical.choice, Quot.sound].",
     "status": "formalized"
   },
   "lem:383D": {
@@ -767,7 +767,7 @@
   "thm:410D": {
     "lean_file": "OpenMath/Chapter4/Section410.lean",
     "lean_symbol": "OpenMath.Chapter4.Section410.thm_410D",
-    "notes": "Closed in cycle 079 by integrating the cycle 077 Aristotle batch (project 18504be5-2481-4d60-9d7b-12b8a5cd2b47, COMPLETE at start of cycle 079, 100% solved). Five Aristotle-supplied helper lemmas: (1) onePlusX_mul_oneOverOnePlusPS_eq_one (Cauchy product telescopes), (2) coeff_subst_eq_zero_of_coeff_eq_zero (forward direction of substitution-preserves-vanishing, via PowerSeries.le_order_subst_left'), (3) coeff_eq_zero_of_coeff_subst_eq_zero (reverse direction, by strong induction on j with coeff(j+1)(g^(j+1))=1 leading-term argument), (4) subst_logOnePlusPS_expPS_eq_one_add_X (`exp(log(1+X)) = 1+X` via ODE uniqueness: G := subst log expPS - (1+X) satisfies G' = G/(1+X) and G(0)=0, hence G=0), (5) subst_logOnePlusPS_expNegPS (`exp(-log(1+X)) = (1+X)⁻¹` via subst_mul + uniqueness of multiplicative inverse). New definitions added: oneOverOnePlusPS = Σ (-1)^n z^n, logOnePlusPS = Σ (-1)^(n-1)/n · z^n, genFnLog M = subst logOnePlusPS (genFn M). Main theorem chained off thm_410B (cycle 075): order ≥ p iff first p+1 coefficients of genFn M vanish. Substitution by logOnePlusPS (constantCoeff = 0, coeff 1 = 1) preserves and reflects this vanishing via helpers (2) and (3). Witnesses landed: explicitEulerLMM_genFnLog_O_z2 and explicitEulerLMM_hasOrderAtLeast_one_via_410D. Faithfulness: textbook §410D backward-sign equation (410d) `α((1+z)⁻¹) - log(1+z)·β((1+z)⁻¹) = O(z^(p+1))` matches genFnLog M = subst logOnePlusPS (genFn M) exactly via subst_logOnePlusPS_expNegPS. Axioms: [propext, Classical.choice, Quot.sound].",
+    "notes": "Closed in cycle 079 by integrating the cycle 077 Aristotle batch (project 18504be5-2481-4d60-9d7b-12b8a5cd2b47, COMPLETE at start of cycle 079, 100% solved). Five Aristotle-supplied helper lemmas: (1) onePlusX_mul_oneOverOnePlusPS_eq_one (Cauchy product telescopes), (2) coeff_subst_eq_zero_of_coeff_eq_zero (forward direction of substitution-preserves-vanishing, via PowerSeries.le_order_subst_left'), (3) coeff_eq_zero_of_coeff_subst_eq_zero (reverse direction, by strong induction on j with coeff(j+1)(g^(j+1))=1 leading-term argument), (4) subst_logOnePlusPS_expPS_eq_one_add_X (`exp(log(1+X)) = 1+X` via ODE uniqueness: G := subst log expPS - (1+X) satisfies G' = G/(1+X) and G(0)=0, hence G=0), (5) subst_logOnePlusPS_expNegPS (`exp(-log(1+X)) = (1+X)\u207b\u00b9` via subst_mul + uniqueness of multiplicative inverse). New definitions added: oneOverOnePlusPS = \u03a3 (-1)^n z^n, logOnePlusPS = \u03a3 (-1)^(n-1)/n \u00b7 z^n, genFnLog M = subst logOnePlusPS (genFn M). Main theorem chained off thm_410B (cycle 075): order \u2265 p iff first p+1 coefficients of genFn M vanish. Substitution by logOnePlusPS (constantCoeff = 0, coeff 1 = 1) preserves and reflects this vanishing via helpers (2) and (3). Witnesses landed: explicitEulerLMM_genFnLog_O_z2 and explicitEulerLMM_hasOrderAtLeast_one_via_410D. Faithfulness: textbook \u00a7410D backward-sign equation (410d) `\u03b1((1+z)\u207b\u00b9) - log(1+z)\u00b7\u03b2((1+z)\u207b\u00b9) = O(z^(p+1))` matches genFnLog M = subst logOnePlusPS (genFn M) exactly via subst_logOnePlusPS_expNegPS. Axioms: [propext, Classical.choice, Quot.sound].",
     "status": "formalized"
   },
   "thm:422A": {
