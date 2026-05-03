@@ -1503,45 +1503,166 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
         (nhds (fun i => u i * yex x)) := by
   sorry
 
-/-- **Sub-lemma for `thm:515D`**: under stability + consistency,
-the GLM iteration's *internal-stage* sequence `Y_int n` converges to
-the constant function `fun _ => yex(x)` as `n → ∞`.
+/-- **Helper for `aux_515D_stage_tendsto` (deferred to cycle 111)**:
+under stability + consistency + Lipschitz `f`, plus output convergence
+`Y n n → u · yex(x)`, the values `f(Y_int n j)` are eventually bounded
+uniformly in `j` along the cofinite tail.
 
-Proof outline (deferred to cycle 109): from the stage equation
-`Y_int n i = h_n · ∑_j A_{ij} f(Y_int n j) + ∑_j U_{ij} Y n n j`,
-take `n → ∞`:
-* The first summand vanishes because `h_n → 0` and `f` is bounded
-  along the trajectory (Lipschitz of `f` plus convergence of `Y n n`
-  imply boundedness of `f(Y_int n j)` along a subsequence).
-* The second summand tends to `(U *ᵥ (fun i => u i · yex x)) i =
-  yex(x) · (U *ᵥ u) i = yex(x) · 1 = yex(x)` by continuity of
-  `Matrix.mulVec` and the output convergence assumption.
+This is the M-matrix-based eventual boundedness step. The proof
+strategy uses the cycle 105–107 M-matrix infrastructure
+(`Matrix.EntrywiseNonneg.nonneg_of_one_sub_mulVec_nonneg`) applied to
+the stage equation rearranged as
+`(I - h_n L |A|) · |Y_int n| ≤ h_n · |A| · 𝟙 · |f 0| + |U · Y n n|`,
+combined with output convergence to bound the RHS. For sufficiently
+small `h_n` (i.e. large enough `n`), the M-matrix hypothesis
+`‖h_n · L · |A|‖ < 1` holds, analogous to cycle 107's
+`‖h₀ · L · |A|‖ < 1` Frobenius-norm hypothesis on `lem:515B`.
 
-This is the easier of the two sub-lemmas — pure linear-algebra
-limit. It is an *internal helper* for the §515 capstone. -/
-private theorem aux_515D_stage_tendsto {s r : ℕ}
+See `.prover-state/issues/aux_515D_stage_eventually_bounded_deferred.md`. -/
+private theorem aux_515D_stage_eventually_bounded {s r : ℕ}
     (M : GeneralLinearMethod s r)
     (_hStab : M.IsStable)
     {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
     {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
     (_hyex_x₀ : yex x₀ = y₀)
+    {u : Fin r → ℝ}
+    {x : ℝ} (_hxx : x₀ < x)
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (_hY_int_eq : ∀ n : ℕ, 0 < n → ∀ i,
+      Y_int n i =
+        (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+        + (∑ j, M.U i j * Y n n j))
+    (_h_output : Filter.Tendsto (fun n : ℕ => Y n n) Filter.atTop
+                   (nhds (fun i => u i * yex x))) :
+    ∃ Bf : ℝ, 0 ≤ Bf ∧
+      ∀ᶠ n in Filter.atTop, ∀ j : Fin s, |f (Y_int n j)| ≤ Bf := by
+  sorry
+
+/-- **Sub-lemma for `thm:515D`**: under stability + consistency,
+the GLM iteration's *internal-stage* sequence `Y_int n` converges to
+the constant function `fun _ => yex(x)` as `n → ∞`, given that the
+output sequence `Y n n` already converges to `(fun i => u i · yex x)`.
+
+The signature explicitly takes the output convergence `h_output` as a
+hypothesis, supplied at the call site by `aux_515D_output_tendsto`.
+This is a zero-cost decomposition: the surrounding capstone theorem
+`stable_consistent_isConvergent` already produces both convergence
+witnesses, so threading the output limit into this lemma costs nothing
+and yields a clean stage-side proof.
+
+Proof outline (cycle 110): from the stage equation
+`Y_int n i = h_n · ∑_j A_{ij} f(Y_int n j) + ∑_j U_{ij} Y n n j`,
+take `n → ∞`:
+* The first summand vanishes because `h_n → 0` and `f(Y_int n j)` is
+  *eventually bounded* by `aux_515D_stage_eventually_bounded`.
+* The second summand tends to `(U *ᵥ (fun i => u i · yex x)) i =
+  yex(x) · (U *ᵥ u) i = yex(x) · 1 = yex(x)` by continuity of
+  `Matrix.mulVec` and the output-convergence hypothesis.
+
+This is the easier of the two sub-lemmas — pure linear-algebra
+limit. It is an *internal helper* for the §515 capstone. -/
+private theorem aux_515D_stage_tendsto {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
     (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
     {u v : Fin r → ℝ}
-    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hVu : M.V *ᵥ u = u) (hUu : M.U *ᵥ u = (fun _ => 1))
     (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
     {φ : ℝ → Fin r → ℝ}
     (_hφ : ∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
                           (nhds 0) (nhds (u i * y₀)))
-    {x : ℝ} (_hxx : x₀ < x)
+    {x : ℝ} (hxx : x₀ < x)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
-    (_hY_props : ∀ n : ℕ, 0 < n →
+    (hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
       M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
       (∀ i, Y_int n i =
               (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
-              + (∑ j, M.U i j * Y n n j))) :
+              + (∑ j, M.U i j * Y n n j)))
+    (h_output : Filter.Tendsto (fun n : ℕ => Y n n) Filter.atTop
+                  (nhds (fun i => u i * yex x))) :
     Filter.Tendsto Y_int Filter.atTop (nhds (fun _ => yex x)) := by
-  sorry
+  -- Eventual boundedness of `f ∘ Y_int n`, deferred to the helper.
+  obtain ⟨Bf, _hBf_nn, hBf_ev⟩ :=
+    aux_515D_stage_eventually_bounded M hStab hf_lip hyex_x₀ hxx Y Y_int
+      (fun n hn => (hY_props n hn).2.2) h_output
+  -- Componentwise reduction.
+  rw [tendsto_pi_nhds]
+  intro i
+  -- Continuity of `Matrix.mulVec M.U` lifts output convergence.
+  have hUY_tendsto : Filter.Tendsto (fun n : ℕ => M.U *ᵥ Y n n)
+                      Filter.atTop (nhds (M.U *ᵥ (fun i => u i * yex x))) := by
+    have hcont : Continuous fun w : Fin r → ℝ => M.U *ᵥ w :=
+      Continuous.matrix_mulVec continuous_const continuous_id
+    exact hcont.tendsto _ |>.comp h_output
+  have hUY_i : Filter.Tendsto (fun n : ℕ => (M.U *ᵥ Y n n) i)
+                Filter.atTop (nhds ((M.U *ᵥ (fun i => u i * yex x)) i)) :=
+    (tendsto_pi_nhds.mp hUY_tendsto) i
+  -- Simplify (M.U *ᵥ (fun i => u i * yex x)) i = yex x using `M.U *ᵥ u = 𝟙`.
+  have hU_simp : (M.U *ᵥ (fun i => u i * yex x)) i = yex x := by
+    have hsum : (∑ j, M.U i j * (u j * yex x))
+                  = yex x * (∑ j, M.U i j * u j) := by
+      rw [Finset.mul_sum]
+      refine Finset.sum_congr rfl (fun j _ => ?_); ring
+    have hUu_i : (∑ j, M.U i j * u j) = 1 := by
+      have := congrFun hUu i
+      simpa [Matrix.mulVec, dotProduct] using this
+    show (∑ j, M.U i j * (u j * yex x)) = yex x
+    rw [hsum, hUu_i]; ring
+  rw [hU_simp] at hUY_i
+  -- `(x - x₀) / n → 0`.
+  have hh_n_to_0 : Filter.Tendsto (fun n : ℕ => (x - x₀) / (n : ℝ))
+                    Filter.atTop (nhds 0) := by
+    have h1 : Filter.Tendsto (fun n : ℕ => (1 : ℝ) / (n : ℝ))
+                Filter.atTop (nhds 0) := tendsto_one_div_atTop_nhds_zero_nat
+    have h2 := h1.const_mul (x - x₀)
+    simpa [mul_div_assoc'] using h2
+  -- For each j, the per-summand `M.A i j * ((x-x₀)/n * f(Y_int n j)) → 0`.
+  have hT1j_tendsto : ∀ j : Fin s, Filter.Tendsto
+      (fun n : ℕ => M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+      Filter.atTop (nhds 0) := by
+    intro j
+    have hbd : Filter.IsBoundedUnder (· ≤ ·) Filter.atTop
+                (fun n : ℕ => ‖f (Y_int n j)‖) := by
+      refine ⟨Bf, ?_⟩
+      rw [Filter.eventually_map]
+      filter_upwards [hBf_ev] with n hn
+      exact (Real.norm_eq_abs _).symm ▸ hn j
+    have h_inner : Filter.Tendsto
+        (fun n : ℕ => ((x - x₀) / (n : ℝ)) * f (Y_int n j))
+        Filter.atTop (nhds 0) := by
+      have hsmul := NormedField.tendsto_zero_smul_of_tendsto_zero_of_bounded
+                      (𝕜 := ℝ) (E := ℝ) hh_n_to_0 hbd
+      simpa [Pi.smul_apply', smul_eq_mul] using hsmul
+    have := h_inner.const_mul (M.A i j)
+    simpa using this
+  -- Sum over j.
+  have hT1_tendsto : Filter.Tendsto
+      (fun n : ℕ => ∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+      Filter.atTop (nhds 0) := by
+    have h := tendsto_finset_sum (Finset.univ : Finset (Fin s))
+              (fun j _ => hT1j_tendsto j)
+    simpa using h
+  -- Combine: T1 → 0 and T2 → yex x.
+  have h_total : Filter.Tendsto
+      (fun n : ℕ => (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+                    + (M.U *ᵥ Y n n) i)
+      Filter.atTop (nhds (0 + yex x)) :=
+    hT1_tendsto.add hUY_i
+  rw [zero_add] at h_total
+  -- Rewrite via the stage equation on the cofinite tail `n ≥ 1`.
+  refine h_total.congr' ?_
+  filter_upwards [Filter.eventually_ge_atTop 1] with n hn
+  have hn_pos : 0 < n := hn
+  have hstage := (hY_props n hn_pos).2.2 i
+  show (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+        + (M.U *ᵥ Y n n) i = Y_int n i
+  have hU_eq : (M.U *ᵥ Y n n) i = ∑ j, M.U i j * Y n n j := rfl
+  rw [hU_eq]
+  exact hstage.symm
 
 /-- **Theorem 515D** (Butcher 2008, p. 417) — *A stable and consistent
 general linear method is convergent.*
@@ -1585,10 +1706,10 @@ theorem GeneralLinearMethod.stable_consistent_isConvergent
     rw [hu0] at h1
     simp [Matrix.mulVec, dotProduct] at h1
   · intro φ hφ x hxx Y Y_int hY_props
-    refine ⟨?_, ?_⟩
-    · exact aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
-              hVu hUu hCons_eq hφ hxx Y Y_int hY_props
-    · exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
-              hVu hUu hCons_eq hφ hxx Y Y_int hY_props
+    have h_output := aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
+                       hVu hUu hCons_eq hφ hxx Y Y_int hY_props
+    refine ⟨h_output, ?_⟩
+    exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
+            hVu hUu hCons_eq hφ hxx Y Y_int hY_props h_output
 
 end OpenMath.Chapter5.Section510
