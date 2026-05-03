@@ -1901,4 +1901,64 @@ theorem D_mul_toGLM_charpoly_eval_zero_concrete
       toGLM_stabilityMatrixPY_zero_charpoly_eval_zero m hs,
       rowFBetaPoly_eval_zero m hs]
 
+/-- §521 Step D.9 — Fully concrete coefficient-form of the cycle 710
+`ξ = 1` evaluation. Substitutes the closed forms
+`(PY(0)).charpoly.eval 1 = 1 + ∑ α(castSucc l)` (Step D.7) and
+`rowFBetaPoly.eval 1 = ∑ β(castSucc k)` (Step D.5) into the cycle 710
+identity `D_mul_toGLM_charpoly_eval_one_eq`. The unit-circle value of
+the GLM stability matrix charpoly (rescaled by `D`) is now expressed
+purely in terms of `m.stabilityPolyPoly z` evaluated at `1`, the bare
+α/β coefficient sums, and the abstract residuals
+`(rowYQuot m).eval 1` and `(rowFAlphaPoly m).eval 1`. -/
+theorem D_mul_toGLM_charpoly_eval_one_concrete
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        + z *
+            ∑ l : Fin s,
+              ( ((m.β l.castSucc : ℝ) : ℂ)
+                  - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ) )
+        - ( (rowYQuot m).eval 1 *
+              (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + ( (rowFAlphaPoly m).eval 1 +
+                (1 + ∑ l : Fin s, ((m.α (Fin.castSucc l) : ℝ) : ℂ)) *
+                  (∑ k : Fin s, ((m.β (Fin.castSucc k) : ℝ) : ℂ)) ) * z ) := by
+  rw [D_mul_toGLM_charpoly_eval_one_eq m hz hs,
+      toGLM_stabilityMatrixPY_zero_charpoly_eval_one m,
+      rowFBetaPoly_eval_one m]
+
+/-- §521 Step D.9b — BDF specialisation of `D_mul_toGLM_charpoly_eval_one_concrete`.
+Under BDF, every `β (Fin.castSucc k) = 0`, so
+`∑ k : Fin s, β(castSucc k) = 0` and the corrective factor
+`(1 + ∑ α(castSucc l)) * (∑ β(castSucc k))` vanishes. Provides a
+sanity check that the cycle 700 BDF `ξ = 1` identity is consistent
+with the new general-form D.9 substitution. -/
+theorem D_mul_toGLM_charpoly_eval_one_concrete_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        + z *
+            ∑ l : Fin s,
+              ( ((m.β l.castSucc : ℝ) : ℂ)
+                  - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ) )
+        - ( (rowYQuot m).eval 1 *
+              (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + (rowFAlphaPoly m).eval 1 * z ) := by
+  rw [D_mul_toGLM_charpoly_eval_one_concrete m hz hs]
+  have hBetaSum : ∑ k : Fin s, ((m.β (Fin.castSucc k) : ℝ) : ℂ) = 0 := by
+    apply Finset.sum_eq_zero
+    intro k _
+    have hβ : m.β (Fin.castSucc k) = 0 :=
+      hbdf _ (Fin.castSucc_lt_last k).ne
+    rw [hβ]; simp
+  rw [hBetaSum]
+  ring
+
 end LMM
