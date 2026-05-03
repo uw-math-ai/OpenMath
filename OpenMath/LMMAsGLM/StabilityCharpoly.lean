@@ -2820,6 +2820,35 @@ theorem D_mul_toGLM_charpoly_eval_one_general_of_bdf
     rw [hβ]; simp
   rw [h1, h2]; ring
 
+/-- §521 Step H.3 — Headline general (non-BDF) unit-circle identity.
+Substitutes H.2 (`rowFAlphaResidual_eval_one_closed_form`) into G.1
+(`D_mul_toGLM_charpoly_eval_one_general`). The `rowFAlphaResidual` sum
+reduces to `-(∑ β castSucc) · (∑ α castSucc)`, which exactly cancels
+the `∑β · ∑α` cross-product correction in G.1. The BDF hypothesis
+drops out entirely: this is the same closed identity that
+`D_mul_toGLM_charpoly_eval_one_eq_stabilityPolyPoly_of_bdf` (F.4)
+proved under BDF, but here at full generality. -/
+theorem D_mul_toGLM_charpoly_eval_one_eq_stabilityPolyPoly
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1
+      = (m.stabilityPolyPoly z).eval 1 := by
+  rw [D_mul_toGLM_charpoly_eval_one_general m hz hs]
+  have hRes :
+      ∑ l : Fin s, (rowFAlphaResidual m l).eval 1
+        = -(∑ l : Fin s, ((m.β (Fin.castSucc l) : ℝ) : ℂ))
+            * (∑ k : Fin s, ((m.α (Fin.castSucc k) : ℝ) : ℂ)) := by
+    rw [show (∑ l : Fin s, (rowFAlphaResidual m l).eval 1)
+            = ∑ l : Fin s,
+                (-((m.β (Fin.castSucc l) : ℝ) : ℂ)
+                  * ∑ k : Fin s, ((m.α (Fin.castSucc k) : ℝ) : ℂ)) from
+          Finset.sum_congr rfl
+            (fun l _ => rowFAlphaResidual_eval_one_closed_form m hs l)]
+    rw [← Finset.sum_mul, Finset.sum_neg_distrib]
+  rw [hRes]
+  ring
+
 /-- §521 Step G.3 — General (non-BDF) ξ = 0 mirror of G.1.
 This is the public surface of D.11a renamed to match the
 G-ladder naming. -/
