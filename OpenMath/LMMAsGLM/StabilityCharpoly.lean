@@ -2294,4 +2294,21 @@ private theorem rowFAlphaResidual_eval_zero_of_bdf_eq_zero
     exact congrFun (congrFun this j) l
   rw [hPYHF]; ring
 
+/-- §521 Step E.4 — Under BDF, the rescaled charpoly vanishes at
+ξ = 0. Combine D.11a with E.3 (rowFAlphaResidual vanishes at 0)
+and the BDF condition `β(castSucc ⟨0,hs⟩) = 0`. -/
+theorem D_mul_toGLM_charpoly_eval_zero_collapsed_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 0 = 0 := by
+  rw [D_mul_toGLM_charpoly_eval_zero_substituted m hz hs]
+  have h1 : (rowFAlphaResidual m ⟨0, hs⟩).eval 0 = 0 :=
+    rowFAlphaResidual_eval_zero_of_bdf_eq_zero m hbdf ⟨0, hs⟩
+  have hβ : m.β (Fin.castSucc ⟨0, hs⟩) = 0 :=
+    hbdf _ (Fin.castSucc_lt_last _).ne
+  rw [h1, hβ]
+  push_cast; ring
+
 end LMM
