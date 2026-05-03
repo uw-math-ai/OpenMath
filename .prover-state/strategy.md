@@ -1,383 +1,419 @@
-# Cycle 096 Strategy — close `V·u' = u'` partial bridge for `thm:514A`
+# Cycle 097 Strategy — Build Path B mean-ergodic infrastructure for `exists_inverse_of_cesaro_zero`
 
-## Context: where we are
+## Status snapshot
 
-* **Branch tip**: `dcdadee Cycle 095 — close sub-lemma B`.
-* **Sorry count**: **2**, both in `OpenMath/Chapter5/Section514.lean`:
-  * line 157 — `cesaro_residual_tendsto_zero` (sub-lemma C).
-  * line 180 — `exists_inverse_of_cesaro_zero` (sub-lemma D, mean-ergodic infrastructure gap).
-* **Cycle 095** closed sub-lemma B (`glmConstOneIterate_closed_form`)
-  cleanly via induction. Score: +1.
-* **Open blockers** for sub-lemma C (per `.prover-state/issues/`):
-  * `u_prime_equals_u_bridge.md` — `u'` (from `IsConvergent`) and `u`
-    (from `IsPreconsistent`) are not automatically equal.
-  * `cesaro_inverse_I_minus_V.md` — sub-lemma D needs multi-cycle
-    mean-ergodic theorem in finite-dim; defer.
+* `OpenMath/Chapter5/Section514.lean` has **2 sorries**:
+  - Line 157 — `cesaro_residual_tendsto_zero` (gated on the
+    `u' = u` bridge: see `u_prime_equals_u_bridge.md`).
+  - Line 180 — `exists_inverse_of_cesaro_zero` (gated on
+    finite-dim mean-ergodic infrastructure: see
+    `cesaro_inverse_I_minus_V.md`).
+* Cycle 096 closed half of the `u' = u` bridge
+  (`convergence_witness_isVfixed`, `V·u' = u'`). The other half
+  (`U·u' = 𝟙`) is **not extractable from `def:512A` directly**
+  because `IsConvergent`'s conclusion only constrains `Y n n` (the
+  output sequence), not the per-step internal stages `Y_i` where
+  `U` actually appears in the recurrence (verified by re-reading
+  `Section512.lean:89-96`).
+* No pending Aristotle results.
+* Sorry count must not regress (cycles 092/094/095 reverted on
+  sorry-count regression; cycles 091/096 hit +2 with focused, small,
+  clean wins).
 
-## Recent score pattern — read this carefully
+## Decision: target the `exists_inverse_of_cesaro_zero` sorry, not the bridge
 
-| Cycle | Score | Pattern |
-|-------|-------|---------|
-| 091   | +2    | Closed deliverable |
-| 092   | **−2**| **REVERTED — sorry count 0→3 on incomplete scaffold** |
-| 093   | +2    | Closed deliverable |
-| 094   | **−2**| **REVERTED — sorry count 0→3 on thm:514A scaffold** |
-| 095   | +1    | Closed one sorry (3→2) |
+The supervisor explicitly directs us toward infrastructure work
+when an issue reports a blocker. `cesaro_inverse_I_minus_V.md`
+lays out **Path B (finite-dim mean ergodic)** as a feasible
+2–3 cycle program. We start that program in cycle 097.
 
-**The lesson is brutal and explicit**: cycles that *add* sorries to
-new scaffolds get scored **−2 (revert)**. Cycles that *close* sorries
-or add sorry-free new deliverables score positive. Cycle 096 must
-end either at sorry count ≤ 2 *or* with a sorry-free new theorem
-added. **Do NOT introduce new sorries under any circumstance.**
+We do **NOT** attempt `U·u' = 𝟙` this cycle. The cycle 096 task
+results' analysis (option (b) in `u_prime_equals_u_bridge.md`)
+suggested a "smarter φ" approach, but `U` does not appear in the
+*output* recurrence `y_seq (n+1) = h·B𝟙 + V·y_seq n` for any
+choice of `f`, `y₀`, `yex`, or φ — it appears only in the
+existential *stage* equation. The convergence conclusion is on
+`y_seq` alone, so no choice of `(f, y₀, yex, φ)` constrains `U·u'`
+through `IsConvergent`'s output. Document this in
+`u_prime_equals_u_bridge.md` (Priority 0a below) and pivot.
 
-## Primary deliverable: `convergence_witness_isVfixed`
+## Mathematical plan for `exists_inverse_of_cesaro_zero`
 
-Add a new private theorem to `OpenMath/Chapter5/Section514.lean`:
+### Goal (verbatim from `Section514.lean:170-180`)
 
-```lean
-/-- Half of the `u' = u` bridge: the convergence-witness vector
-extracted from `M.IsConvergent` (applied to the trivial IVP
-`y'(x) = 1, y(0) = 0, yex = id`) is a fixed point of `M.V`.
-
-This is a partial step toward `thm:514A`; the full bridge `u' = u`
-to the preconsistency vector remains open — see
-`.prover-state/issues/u_prime_equals_u_bridge.md`. -/
-private theorem GeneralLinearMethod.convergence_witness_isVfixed
-    {s r : ℕ} (M : GeneralLinearMethod s r)
-    (hConv : M.IsConvergent) :
-    ∃ u' : Fin r → ℝ, u' ≠ 0 ∧ M.V *ᵥ u' = u' := by
-  ...
+```
+exists_inverse_of_cesaro_zero {r : ℕ}
+  {V : Matrix (Fin r) (Fin r) ℝ}
+  (_hPB : ∃ K : ℝ, ∀ n, ‖V ^ n‖ ≤ K)
+  {w : Fin r → ℝ}
+  (_hCes : Filter.Tendsto
+    (fun n : ℕ => (1 / (n : ℝ)) •
+      (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w))
+    Filter.atTop (nhds 0)) :
+  ∃ v : Fin r → ℝ,
+    ((1 : Matrix (Fin r) (Fin r) ℝ) - V) *ᵥ v = w
 ```
 
-This is **a fresh closed lemma** — it does not change the existing
-sorry count of 2, and it makes documented progress toward closing
-sub-lemma C in cycle 097. It is the cycle-095 worker's recommended
-next step (option 1 in `task_results/cycle_095.md` §"Suggested next
-approach").
+### Argument (Path B from the issue, expanded)
 
-Note: derive `hStable` inline via `M.convergent_isStable hConv`
-(cycle 093) inside the proof so the public signature is minimal.
+**Claim**: `w ∈ range((I - V).mulVecLin)`. Equivalently
+(in finite-dim Euclidean space) `w ⊥ ker((I - V)ᵀ.mulVecLin)`.
 
-### Proof skeleton (follow this literally)
+**Step 1 — orthogonality**: For every `u` with `Vᵀ *ᵥ u = u`,
+show `⟪w, u⟫ = 0` (equivalently `Matrix.dotProduct w u = 0`).
 
-#### Step 1 — extract `u'` from `IsConvergent` at the trivial IVP
+Computation: For any such `u` and any `k ≥ 0`,
+```
+dotProduct (V^k *ᵥ w) u = dotProduct w ((V^k)ᵀ *ᵥ u)
+                        = dotProduct w ((Vᵀ)^k *ᵥ u)
+                        = dotProduct w u
+```
+(using `Matrix.dotProduct_mulVec`, `Matrix.transpose_pow`, and
+the fact that `(Vᵀ)^k · u = u` follows from `Vᵀ·u = u` by
+induction on `k`).
 
-Apply `hConv` with:
-* `f := fun _ : ℝ => (1 : ℝ)` (constant 1).
-* `L := (0 : NNReal)`. A constant function is `LipschitzWith 0`.
-  - Lookup: `LipschitzWith.const`, or write
-    `intro a b; simp [edist_dist, dist_self]`.
-* `x₀ := (0 : ℝ)`, `y₀ := (0 : ℝ)`, `yex := id`.
-* `yex x₀ = y₀`: `rfl` (since `id 0 = 0`).
-* `∀ x, HasDerivAt yex (f (yex x)) x` = `∀ x, HasDerivAt id 1 x`:
-  use `hasDerivAt_id'` or `hasDerivAt_id`.
+So
+```
+dotProduct ((1/n) • Σ_{k<n} V^k *ᵥ w) u
+  = (1/n) · Σ_{k<n} dotProduct (V^k *ᵥ w) u
+  = (1/n) · (n · dotProduct w u)
+  = dotProduct w u.
+```
+The LHS sequence tends to `dotProduct 0 u = 0` (by `hCes` and
+continuity of `dotProduct · u`). Hence `dotProduct w u = 0`.
 
-Destructure: `obtain ⟨u', hu'_ne, hConv'⟩ := hConv ...`.
+**Step 2 — bridge orthogonality to range**: In finite-dim
+Euclidean space, for `T = (I - V).toEuclideanLin` (continuous
+linear map),
+```
+range T = (ker Tᵀ_adjoint)ᗮ
+```
+(applying `ContinuousLinearMap.orthogonal_ker` to `T†` and using
+that finite-dim subspaces are closed). Step 1 shows
+`w ∈ (ker T†)ᗮ`, hence `w ∈ range T`. Extract `v`.
 
-#### Step 2 — instantiate `hConv'` at `φ ≡ 0`, `x = 1`, `Y := glmConstOneIterate (1/n)`
+### Mathlib infrastructure (verified available; verify exact names with `lean_local_search` before relying)
 
-Apply `hConv'` with:
-* `φ := fun (_ : ℝ) (_ : Fin r) => (0 : ℝ)`.
-* The φ-tendsto hypothesis: `∀ i, Tendsto (fun h => 0) (nhds 0)
-  (nhds (u' i * 0))`. Simplify: `u' i * 0 = 0`, RHS is `nhds 0`,
-  LHS is constant 0. Use `tendsto_const_nhds`.
-* `x := (1 : ℝ)`, `hx : (0 : ℝ) < 1` is `zero_lt_one`.
-* `Y := fun n m => M.glmConstOneIterate ((1 - 0 : ℝ) / n) m`
-  = `fun n m => M.glmConstOneIterate (1 / (n : ℝ)) m`.
-* The Y-spec hypothesis: for each `n > 0`,
-  - `Y n 0 = φ ((1 - 0) / n) = 0`. By definition of
-    `glmConstOneIterate` at 0: `M.glmConstOneIterate h 0 = fun _ => 0`.
-    `funext i; rfl` should close it (or `simp [GeneralLinearMethod.glmConstOneIterate]`).
-  - `M.IsGLMSolution (1/n) (fun _ => 1) (Y n)`: cite
-    `M.glmConstOneIterate_isGLMSolution (1 / (n : ℝ))`.
+| Goal | Lemma | File |
+|---|---|---|
+| Matrix adjoint = `conjTranspose` (= `transpose` over ℝ) | `Matrix.toEuclideanLin_conjTranspose_eq_adjoint` | `Mathlib/Analysis/InnerProductSpace/Adjoint.lean:894` |
+| `range = (ker adjoint)ᗮ` (over ℝ via closure) | `ContinuousLinearMap.orthogonal_ker` | `Adjoint.lean:182` |
+| `(M^k)ᵀ = (Mᵀ)^k` | `Matrix.transpose_pow` | `Mathlib/Data/Matrix/Basic.lean:911` |
+| `EuclideanSpace ℝ (Fin r)` ↔ `Fin r → ℝ` | `EuclideanSpace.equiv` (linear isometry) | `Mathlib/Analysis/InnerProductSpace/PiL2.lean:249` |
+| Inner product as dot product | `EuclideanSpace.inner_eq_star_dotProduct` (or via `PiLp.inner_apply`) | `PiL2.lean` |
+| `dotProduct (A *ᵥ x) y = dotProduct x (Aᵀ *ᵥ y)` | `Matrix.dotProduct_mulVec` | `LinearAlgebra/Matrix/DotProduct.lean` |
+| Finite-dim subspaces are closed | `Submodule.closed_of_finiteDimensional` | std |
 
-Conclusion: `Tendsto (fun n => M.glmConstOneIterate (1/n) n) atTop
-              (nhds (fun i => u' i * id 1))` = `nhds u'`.
+## Cycle 097 deliverables (in priority order)
 
-Name this `hY_lim`. **Note**: the conclusion is in terms of the
-*function* `fun i => u' i * 1`. Simplify to `u'` via `funext i;
-ring` inside a congruence rewrite, or use `Filter.Tendsto.congr_dist`
-or just `convert hY_lim using 2; funext i; ring` style.
+### Priority 0 — Quick win (~10 min)
 
-#### Step 3 — apply continuity of `M.V *ᵥ ·` to lift the limit
+**0a.** Update `.prover-state/issues/u_prime_equals_u_bridge.md`
+to record cycle 096's analysis: `U·u' = 𝟙` is provably **NOT
+extractable from `def:512A`** because `U` appears only in the
+existential stage equation. State the only viable paths now: (i)
+prove a GLM analog of LMM's `thm:405B` (`convergent_isPreconsistent`)
+by an ergodic-style argument that bypasses the stage equation —
+needs invention; (ii) reformulate `thm:514A`'s conclusion to use
+`u'` itself (drop the textbook `IsPreconsistent` connection in the
+witness) — requires changing the textbook signature; (iii)
+strengthen `IsConvergent` to also expose stages — also a textbook
+deviation. Mark as a major open problem to be addressed after
+Path B mean-ergodic lands.
 
-`M.V *ᵥ ·` is continuous on `Fin r → ℝ`. Search Mathlib first:
-* `lean_local_search "Continuous Matrix.mulVec"` — check if
-  `Continuous.matrix_mulVec` or `Matrix.continuous_mulVec_left`
-  exists.
-* If not findable in 10 minutes, build the inline helper:
+### Priority 1 — orthogonality lemma (the core sub-lemma)
+
+Add to `OpenMath/Chapter5/Section514.lean`, **above**
+`exists_inverse_of_cesaro_zero` (around line 165):
 
 ```lean
-private lemma _root_.Matrix.tendsto_mulVec {r : ℕ}
-    (V : Matrix (Fin r) (Fin r) ℝ) {ι : Type*} {l : Filter ι}
-    {f : ι → Fin r → ℝ} {a : Fin r → ℝ}
-    (hf : Tendsto f l (nhds a)) :
-    Tendsto (fun n => V *ᵥ f n) l (nhds (V *ᵥ a)) := by
-  refine tendsto_pi_nhds.mpr (fun i => ?_)
-  simp only [Matrix.mulVec, dotProduct]
-  exact tendsto_finset_sum _
-    (fun j _ => ((tendsto_pi_nhds.mp hf) j).const_mul (V i j))
+/-- Inner-product orthogonality: under the Cesàro-zero hypothesis
+on `V` and `w`, every fixed point `u` of `Vᵀ` is orthogonal
+(in the dotProduct sense) to `w`. -/
+private lemma cesaro_orthogonal_to_VT_fixed {r : ℕ}
+    {V : Matrix (Fin r) (Fin r) ℝ}
+    {w : Fin r → ℝ}
+    (hCes : Filter.Tendsto
+      (fun n : ℕ => (1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w))
+      Filter.atTop (nhds 0))
+    {u : Fin r → ℝ} (hu : V.transpose *ᵥ u = u) :
+    Matrix.dotProduct w u = 0 := by
+  sorry
 ```
 
-Conclude: `hVY_lim : Tendsto (fun n => M.V *ᵥ M.glmConstOneIterate (1/n) n) atTop (nhds (M.V *ᵥ u'))`.
+Proof outline (worker should manualize, ~80 LOC):
 
-#### Step 4 — algebraic identity using closed form
+1. Inductive helper `∀ k : ℕ, (V.transpose ^ k) *ᵥ u = u`.
+   Use `pow_zero`/`Matrix.one_mulVec` for base case, and
+   `pow_succ` + `Matrix.mulVec_mulVec` for the step. Should
+   close in ~10 LOC.
+2. Per-`k` identity:
+   `Matrix.dotProduct ((V ^ k) *ᵥ w) u = Matrix.dotProduct w u`.
+   Chain: `dotProduct (V^k *ᵥ w) u = dotProduct w ((V^k)ᵀ *ᵥ u)`
+   via `Matrix.dotProduct_mulVec` (verify exact statement —
+   may be `Matrix.dotProduct_mulVec` or
+   `Matrix.mulVec_dotProduct`; use `lean_local_search "dotProduct
+   mulVec"`). Then `(V^k)ᵀ = (Vᵀ)^k` via
+   `Matrix.transpose_pow`. Then apply step 1.
+3. Sum identity:
+   `∑ k ∈ Finset.range n, dotProduct ((V^k) *ᵥ w) u
+     = (n : ℝ) * dotProduct w u`.
+   Use `Finset.sum_const` + `Finset.card_range` after rewriting
+   each summand by step 2.
+4. Bridge sum-into-dotProduct:
+   `dotProduct (∑ k, (V^k) *ᵥ w) u = ∑ k, dotProduct ((V^k) *ᵥ w) u`
+   via `Matrix.sum_dotProduct` (verify name).
+5. Bridge smul-into-dotProduct:
+   `dotProduct ((1/n) • s) u = (1/n) * dotProduct s u`
+   via `Matrix.smul_dotProduct` (verify name).
+6. Combine 3+4+5: for every `n`,
+   `dotProduct ((1/n) • ∑ k, (V^k) *ᵥ w) u = dotProduct w u`
+   (when `n > 0`; the `(1/n) * n = 1` cancellation is `field_simp`
+   or explicit).
+7. Apply `Filter.Tendsto.const_dotProduct` (or build the
+   `Continuous` variant manually via
+   `(continuous_id.dotProduct continuous_const).tendsto`) to lift
+   `hCes` to
+   `dotProduct ((1/n) • ∑ k, (V^k) *ᵥ w) u → dotProduct 0 u = 0`.
+8. By `tendsto_nhds_unique` (or `tendsto_const_nhds.unique`)
+   applied to step 6's eventually-constant sequence and step 7's
+   convergence to 0: `dotProduct w u = 0`.
 
-Build a separate helper lemma:
+If step 7's `Continuous` lift is unfamiliar API, an explicit
+proof: `dotProduct ·ᵥ u : (Fin r → ℝ) → ℝ` is a finite linear
+combination of components, hence continuous. For each `n > 0`
+the LHS sequence equals the constant `dotProduct w u`, and the
+RHS converges to `0`. Two limits of the same eventually-constant
+sequence must agree.
+
+**Verification**: `lake env lean OpenMath/Chapter5/Section514.lean`
+must succeed, and `lean_verify
+OpenMath.Chapter5.Section510.cesaro_orthogonal_to_VT_fixed` must
+show only `[propext, Classical.choice, Quot.sound]`.
+
+### Priority 2 — close `exists_inverse_of_cesaro_zero`
+
+Replace the body of `exists_inverse_of_cesaro_zero`
+(`Section514.lean:170-180`):
 
 ```lean
-private lemma GeneralLinearMethod.V_mulVec_glmConstOneIterate_eq
-    {s r : ℕ} (M : GeneralLinearMethod s r) (h : ℝ) (n : ℕ) :
-    M.V *ᵥ M.glmConstOneIterate h n =
-      M.glmConstOneIterate h n
-      + h • (M.V ^ n *ᵥ (M.B *ᵥ (fun _ => 1)) - M.B *ᵥ (fun _ => 1)) := by
-  ...
+theorem exists_inverse_of_cesaro_zero {r : ℕ}
+    {V : Matrix (Fin r) (Fin r) ℝ}
+    (_hPB : ∃ K : ℝ, ∀ n, ‖V ^ n‖ ≤ K)
+    {w : Fin r → ℝ}
+    (hCes : Filter.Tendsto ...)
+    : ∃ v : Fin r → ℝ,
+        ((1 : Matrix (Fin r) (Fin r) ℝ) - V) *ᵥ v = w := by
+  -- See proof outline below.
+  sorry
 ```
 
-The cleanest path is a direct induction on `n` mirroring cycle 095's
-`glmConstOneIterate_closed_form` proof structure:
+Proof outline (~120 LOC):
 
-* **Base** (`n = 0`): both sides reduce to `0` (LHS: `V *ᵥ 0`; RHS:
-  `0 + h • (I *ᵥ B𝟙 - B𝟙) = 0` since `pow_zero`, `Matrix.one_mulVec`,
-  `sub_self`, `smul_zero`).
-* **Inductive step**: rewrite both sides via
-  `glmConstOneIterate_closed_form` (cycle 095 lemma at line 96), then
-  use `Finset.sum_range_succ` to peel off the new term, plus
-  `pow_succ`, `Matrix.mulVec_mulVec` to merge `V * V^k`.
+1. Set `M := (1 : Matrix _ _ ℝ) - V`. The goal becomes
+   `∃ v, M *ᵥ v = w`.
+2. Equivalent in `LinearMap.range` form: `w ∈ Set.range M.mulVec`.
+   Bridge via `Matrix.mulVec_eq` if needed; the cleanest formal
+   statement is `w ∈ LinearMap.range (Matrix.mulVecLin M)`, then
+   `LinearMap.mem_range` extracts `v`.
+3. To show `w ∈ LinearMap.range (Matrix.mulVecLin M)` over `ℝ`
+   in finite dim, work in `EuclideanSpace ℝ (Fin r)` via
+   `Matrix.toEuclideanLin M`:
+   - This gives a `ContinuousLinearMap`.
+   - Goal becomes `(EuclideanSpace.equiv).symm w ∈
+     (Matrix.toEuclideanLin M).range`.
+4. By `ContinuousLinearMap.orthogonal_ker (Matrix.toEuclideanLin M)†`,
+   ```
+   ((Matrix.toEuclideanLin M)†).range.topologicalClosure
+     = (LinearMap.ker (Matrix.toEuclideanLin M))ᗮ
+   ```
+   We want `range T = (ker T†)ᗮ`. This is **the dual statement**:
+   apply `orthogonal_ker` to `T†` instead of `T`, using
+   `T†.adjoint = T` (the adjoint is involutive: see
+   `ContinuousLinearMap.adjoint_adjoint`):
+   ```
+   (LinearMap.ker T†)ᗮ = T.range.topologicalClosure = T.range
+   ```
+   (last step: `Submodule.closed_of_finiteDimensional` makes
+   `topologicalClosure = id`).
+5. Suffices: `w ⊥ ker (Matrix.toEuclideanLin M)†`. Take `u` in
+   that kernel, i.e. `(Matrix.toEuclideanLin M)† u = 0`. Bridge
+   to matrix form via `Matrix.toEuclideanLin_conjTranspose_eq_adjoint`:
+   the adjoint of `M.toEuclideanLin` is `M.conjTranspose.toEuclideanLin`,
+   and over ℝ `conjTranspose = transpose`. So `u` satisfies
+   `M.transpose *ᵥ u = 0`, i.e.
+   `((1 - V).transpose) *ᵥ u = 0`. Unfold:
+   `(1.transpose - V.transpose) *ᵥ u = 0`, hence
+   `u - V.transpose *ᵥ u = 0`, i.e. `V.transpose *ᵥ u = u`.
+6. Apply `cesaro_orthogonal_to_VT_fixed hCes hu` →
+   `Matrix.dotProduct w u = 0`.
+7. Bridge `dotProduct w u = 0` to
+   `⟪w, u⟫_(EuclideanSpace ℝ (Fin r)) = 0` via
+   `EuclideanSpace.inner_eq_star_dotProduct` (or
+   `PiLp.inner_apply` and `IsROrC.star_def` over ℝ where
+   `star = id`).
+8. Conclude `w ∈ T.range` from step 4. Apply `LinearMap.mem_range`
+   (or the `ContinuousLinearMap.mem_range` analog) to extract a
+   `v_E : EuclideanSpace ℝ (Fin r)` with
+   `(Matrix.toEuclideanLin M) v_E = w_E`.
+9. Set `v := EuclideanSpace.equiv v_E` (transport back to
+   `Fin r → ℝ`). Show `M *ᵥ v = w` by unfolding `toEuclideanLin`'s
+   `mulVec`-action. This is `rfl` modulo the equiv.
 
-Alternative (if induction route is messy): start from
-`glmConstOneIterate_closed_form` on the LHS, use
-`Matrix.mulVec_smul`, `Matrix.mulVec_sum`, then re-index
-`Σ_{k<n} V^(k+1) *ᵥ B𝟙 = Σ_{0<k≤n} V^k *ᵥ B𝟙
-                       = Σ_{k<n} V^k *ᵥ B𝟙 - V^0 *ᵥ B𝟙 + V^n *ᵥ B𝟙`
-via `Finset.sum_range_succ` (forward) and the cycle-95 closed form
-(backward) to fold the residual term.
+**If step 4's adjoint-involution + `topologicalClosure = id`
+combo is fiddly**, an alternative: use
+`Submodule.eq_orthogonal_orthogonal_of_isClosed` directly,
+combined with `(LinearMap.range L)ᗮ = LinearMap.ker L†` (the dual
+direction of `orthogonal_ker`). The two-`ᗮ`-trick is standard.
 
-Estimated 30–80 LOC.
+### Priority 3 — verification + cleanup (~15 min)
 
-#### Step 5 — vanishing of the residual
+* `lake env lean OpenMath/Chapter5/Section514.lean` — clean.
+* `lake build OpenMath.Chapter5.Section514` — refresh `.olean`
+  (per the cycle 072 stale-cache lesson).
+* `lean_verify` on both new sub-lemmas:
+  `OpenMath.Chapter5.Section510.cesaro_orthogonal_to_VT_fixed` and
+  `OpenMath.Chapter5.Section510.exists_inverse_of_cesaro_zero` —
+  axioms must be `[propext, Classical.choice, Quot.sound]` only.
+* Verify the **whole §514 file** has only ONE remaining sorry
+  (line ~157, `cesaro_residual_tendsto_zero`).
+* If Priority 2 closes, also `lean_verify
+  OpenMath.Chapter5.Section510.GeneralLinearMethod.convergent_preconsistent_isConsistent`
+  to confirm the main theorem still has just the 1 cesaro_residual
+  gating sorry.
 
-`hStable.powerBound : ∃ K, ∀ n, ‖V^n‖ ≤ K` is already a lemma in
-the file (line 220). Get `hPB : ∃ K : ℝ, ∀ n, ‖M.V ^ n‖ ≤ K` from
-`hStable := M.convergent_isStable hConv`, then
-`hPB := hStable.powerBound`.
+## Aristotle batch (start at cycle entry, before Priority 1)
 
-Then:
-* `‖V^n *ᵥ B𝟙 - B𝟙‖ ≤ ‖V^n *ᵥ B𝟙‖ + ‖B𝟙‖ ≤ K · ‖B𝟙‖ + ‖B𝟙‖ = (K+1) ‖B𝟙‖`.
-  (Use `Matrix.linfty_opNorm_mulVec` or `norm_mulVec_le` — verify name
-  with `lean_local_search "norm_mulVec"`. Or: pi-norm + Cauchy.)
-* `(1/n) → 0` as `n → ∞` (via `tendsto_one_div_atTop_nhds_zero_nat`).
-* `(1/n) • (bounded vector seq) → 0`. Combine via:
-  - `Tendsto (1/n) → 0` and constant-bounded sequence ⇒ scalar
-    multiplication tends to 0. Use `tendsto_zero_smul_of_tendsto_zero_of_bounded`
-    or pi-direction squeeze.
+CLAUDE.md mandates Aristotle-first. Submit **three** small,
+self-contained sub-lemmas to Aristotle (free compute, max ~5
+jobs, 30-minute sleep, ONE check per CLAUDE.md):
 
-If a direct lemma is hard to find, the cleanest approach is
-componentwise: `tendsto_pi_nhds`, then for each `i`,
-`|((1/n) • residual n) i| ≤ (1/n) · ‖residual n‖ ≤ (1/n) · (K+1)·‖B𝟙‖ → 0`.
-Use `squeeze_zero` with bounds 0 and `(1/n) · (K+1) · ‖B𝟙‖`.
+* **Job A — VT power preserves fixed point**:
+  ```
+  ∀ {r : ℕ} {V : Matrix (Fin r) (Fin r) ℝ} {u : Fin r → ℝ},
+    V.transpose *ᵥ u = u → ∀ k : ℕ, V.transpose ^ k *ᵥ u = u
+  ```
+  (~10 LOC; pure induction. Aristotle should one-shot this.)
 
-Name this `h_residual_vanish : Tendsto (fun n => (1/n) • (V^n *ᵥ B𝟙 - B𝟙)) atTop (nhds 0)`.
+* **Job B — per-`k` orthogonality (the heart of step 2)**:
+  ```
+  ∀ {r : ℕ} {V : Matrix (Fin r) (Fin r) ℝ} {w u : Fin r → ℝ},
+    V.transpose *ᵥ u = u → ∀ k : ℕ,
+      Matrix.dotProduct (V^k *ᵥ w) u = Matrix.dotProduct w u
+  ```
+  (~15 LOC. Tests Aristotle's premise selection on
+  `Matrix.transpose_pow` + `Matrix.dotProduct_mulVec`.)
 
-#### Step 6 — close `M.V *ᵥ u' = u'`
+* **Job C — sum of constant**:
+  ```
+  ∀ {n : ℕ} (c : ℝ),
+    (∑ _k ∈ Finset.range n, c) = (n : ℝ) * c
+  ```
+  (Trivial via `Finset.sum_const` + `Finset.card_range` +
+  `nsmul_eq_mul`. Submit only if jobs A, B leave room — this
+  one closes manually in 1 line.)
 
-Combine:
-* From Step 4: `M.V *ᵥ Y n n = Y n n + (1/n) • (V^n *ᵥ B𝟙 - B𝟙)`
-  pointwise in `n` (where `Y n m := M.glmConstOneIterate (1/n) m`).
-* `Tendsto (fun n => Y n n) atTop (nhds u')` (Step 2).
-* `Tendsto (fun n => (1/n) • residual) atTop (nhds 0)` (Step 5).
-* By `Filter.Tendsto.add`: `Tendsto (fun n => Y n n + (1/n) • residual) atTop (nhds (u' + 0)) = nhds u'`.
-* By Step 4 rewriting: this equals
-  `Tendsto (fun n => M.V *ᵥ Y n n) atTop (nhds u')`.
-* But also from Step 3: `Tendsto (fun n => M.V *ᵥ Y n n) atTop (nhds (M.V *ᵥ u'))`.
-* By `tendsto_nhds_unique`: `M.V *ᵥ u' = u'`.
+Submit batch via `mcp__aristotle__submit_prompt` with each job's
+statement and request `[propext, Classical.choice, Quot.sound]`-only
+proofs. Sleep 30 min via `Bash sleep 1800` (run in background while
+working on Priority 0a). After 30 min, ONE check via
+`mcp__aristotle__get_status`. Incorporate any returned proofs;
+manualize the rest.
 
-Pack: `exact ⟨u', hu'_ne, hVu'_eq_u'⟩`.
+## Hypothesis adaptation rules
 
-### Estimated complexity
+* `_hPB` (power-boundedness) is currently underscored (unused).
+  **For Path B's argument as written, `_hPB` is genuinely
+  unused** — the inner-product orthogonality argument doesn't
+  need power-boundedness. Keep the underscore. (Power-boundedness
+  IS needed by the OTHER sorry, `cesaro_residual_tendsto_zero`,
+  which we are not touching this cycle.)
+* `dotProduct` over ℝ is symmetric (`Matrix.dotProduct_comm`);
+  use this if direction-of-arguments mismatches Mathlib lemma
+  signatures.
+* The `dotProduct ↔ inner` bridge over `EuclideanSpace ℝ (Fin r)`:
+  `EuclideanSpace.inner_eq_star_dotProduct` gives
+  `⟪x, y⟫ = star (dotProduct (star x) y)` or similar. Over ℝ,
+  `star = id`, so `⟪x, y⟫ = dotProduct x y`. Verify exact form
+  via `lean_hover_info` on the lemma.
+* `Matrix.toEuclideanLin` vs `Matrix.toLin'` vs `Matrix.mulVecLin`:
+  use `Matrix.toEuclideanLin` for the InnerProductSpace structure
+  (it's `Matrix.toLin'` post-composed with `EuclideanSpace.equiv`).
 
-* Step 4 helper (`V_mulVec_glmConstOneIterate_eq`): 30–80 LOC.
-* Step 3 inline continuity helper: 5–15 LOC (or a one-line
-  Mathlib citation if the name is found).
-* Steps 1–2 (IsConvergent unwinding): 30–60 LOC.
-* Steps 5–6 (residual vanish + tendsto unique): 30–50 LOC.
-* **Total**: 100–200 LOC. Within budget.
+## What NOT to try
 
-## NON-NEGOTIABLE rules for this cycle
+* **Do NOT attempt `U·u' = 𝟙`**. Cycle 096's analysis confirms `U`
+  is unreachable from `IsConvergent`'s output-only conclusion.
+  Documented in Priority 0a.
+* **Do NOT touch `cesaro_residual_tendsto_zero`** (Section514:148).
+  It is gated on the `u' = u` bridge which we are NOT closing
+  this cycle. Leave the sorry in place.
+* **Do NOT raise `maxHeartbeats`**. The orthogonality argument is
+  finite-dim and should not be slow.
+* **Do NOT introduce `axiom` or `constant`**. If you hit a
+  Mathlib API gap (e.g., `Submodule.closed_of_finiteDimensional`
+  with the wrong typeclass), prove it as a private helper or use
+  a known-equivalent lemma.
+* **Do NOT modify `def:512A` (`IsConvergent`)**. The strengthening
+  question is open (per `is_convergent_strengthened.md`'s parallel
+  for LMMs); we are NOT addressing that this cycle.
+* **Do NOT use `Mathlib.MeasureTheory.Ergodic`** — that's the
+  unitary mean-ergodic theorem, which doesn't apply to general
+  power-bounded `V`. Path B is finite-dim Euclidean, derived from
+  scratch via the inner-product argument above.
+* **Do NOT attempt a Schur or Jordan decomposition** (per the
+  `jordan_canonical_form_missing.md` issue, neither is in
+  Mathlib). Path B is exactly the "avoid Jordan/Schur" workaround.
+* **Do NOT cherry-pick a different theorem** from `plan.md`.
+  §514 is the active target; deviating will be flagged as
+  strategy_deviation.
+* **Do NOT poll Aristotle more than once**. CLAUDE.md is
+  explicit. Submit batch → sleep 30 min → ONE check → proceed.
 
-### Rule 1 — No new sorries
+## Acceptance criteria
 
-If `convergence_witness_isVfixed` does not close cleanly:
-* Do **NOT** commit it with `sorry` in the body.
-* Do **NOT** add sub-helpers with `sorry` in their bodies.
-* Use `lean_multi_attempt` and the search tools liberally — but if
-  after substantial effort (~3 hours of cycle time) a sub-step
-  refuses to close, **abort** the lemma.
+* **Sorry count must not regress**: currently **2**, must end at
+  **2** or fewer. Closing only Priority 1 keeps it at 2 — that's
+  a successful cycle. Closing Priorities 1 + 2 brings it to 1.
+* New lemmas must have axiom check `[propext, Classical.choice,
+  Quot.sound]` only.
+* `lake build OpenMath.Chapter5.Section514` must succeed.
+* Faithfulness check: both new lemmas are pure linear-algebra
+  sub-lemmas of the abstract `exists_inverse_of_cesaro_zero`
+  (which is itself a Lean-side helper, not a textbook entity), so
+  no textbook entity is at risk of definition smuggling. Document
+  in `task_results/cycle_097.md` per CLAUDE.md.
 
-The cycle-094 score (−2) was triggered by exactly this pattern. The
-cycle-095 worker explicitly warned: *"better to land [the safe
-deliverable] clean than to ship a broken edit"*.
+## Backup plan (if Priority 1 stalls > 90 min)
 
-### Rule 2 — Do NOT touch the existing two sorries
+If the inner-product orthogonality argument hits a Mathlib API
+gap (e.g., the `Continuous.dotProduct` lift is unexpectedly
+non-trivial, or the smul/sum/dotProduct bridge lemmas are
+named differently than expected):
 
-The sorries at `Section514.lean:157` and `:180` are **gated on
-multi-cycle infrastructure** (per `cesaro_inverse_I_minus_V.md`,
-`u_prime_equals_u_bridge.md`). Do not attempt them this cycle.
-Closing the partial bridge `V·u' = u'` is sufficient cycle progress.
+1. Decompose Priority 1 into smaller `private lemma`s (one per
+   step 1–8 in the outline above) and close as many as possible.
+   Each closed lemma is a deliverable; even closing steps 1+2 is
+   meaningful progress.
+2. Skip Priority 2 for cycle 097 (defer to cycle 098).
+3. Write `task_results/cycle_097.md` documenting the specific
+   API gap encountered, with reproducer snippets via
+   `lean_multi_attempt`, and recommend the next-cycle plan.
 
-### Rule 3 — Verify lemma names before relying on them
+A cycle that lands the orthogonality lemma cleanly + scaffolds
+`exists_inverse_of_cesaro_zero` (with its body still `sorry` but
+the orthogonality plumbing wired up) is still a **positive**
+cycle by CLAUDE.md's "minimum: decompose a sorry or write an
+issue" rule.
 
-Cycle-068 consultancy notes flag this rule explicitly. Every Mathlib
-lemma cited in this strategy (`Matrix.linfty_opNorm_mulVec`,
-`tendsto_zero_smul_of_tendsto_zero_of_bounded`,
-`Continuous.matrix_mulVec`, `tendsto_one_div_atTop_nhds_zero_nat`,
-`hasDerivAt_id'`, `LipschitzWith.const`) is a best-effort guess.
-**Verify each with `lean_local_search` or `lean_loogle` before
-using.** If a name doesn't exist, use the search tools to find the
-correct one.
+## Suggested cycle-098 follow-up (planner preview, do NOT execute)
 
-### Rule 4 — Aristotle policy this cycle
-
-`Section514.lean` Step 4's algebraic identity
-(`V_mulVec_glmConstOneIterate_eq`) is a textbook-mechanical sum
-manipulation — exactly the kind of proof Aristotle handles well. If
-Step 4 stalls after 30 minutes of manual work:
-* Submit a single Aristotle job for `V_mulVec_glmConstOneIterate_eq`
-  with the closed-form rewrite + reindex hints (`Finset.sum_range_succ`,
-  `pow_succ`, `Matrix.mulVec_sum`).
-* Sleep 30 min. One check after wake-up. Don't poll.
-* If Aristotle returns a proof, incorporate. If not, fall back to
-  manual induction on `n`.
-
-Do **NOT** submit Step 1–3 to Aristotle — they require IsConvergent
-unwinding which Aristotle's premise selection isn't tuned for.
-
-## Backup plan (only if Step 1 IsConvergent unwinding fails)
-
-If after ~2 hours the IsConvergent application in Step 1 cannot
-close (e.g. type mismatches that resist all `lean_multi_attempt`
-attempts), abort `convergence_witness_isVfixed` and fall back to:
-
-**Backup deliverable**: write a *standalone* sorry-free helper lemma
-in `Section514.lean` that future cycles will need. Specifically:
-
-```lean
-/-- Cesàro-of-power-bounded vector tends to zero in the residual
-direction: `(1/n) • (V^n *ᵥ w - w) → 0` for any power-bounded `V`. -/
-private lemma _root_.Matrix.cesaro_residual_vanish_of_power_bounded
-    {r : ℕ} {V : Matrix (Fin r) (Fin r) ℝ}
-    (hPB : ∃ K : ℝ, ∀ n, ‖V ^ n‖ ≤ K) (w : Fin r → ℝ) :
-    Tendsto (fun n : ℕ => (1 / (n : ℝ)) • (V ^ n *ᵥ w - w))
-      atTop (nhds 0) := by
-  ...
-```
-
-This is **Step 5** of the primary deliverable, hoisted to a
-standalone lemma. It is genuinely useful (will be used in any future
-ergodic-style argument for §514/§515) and is closable with pure
-Mathlib techniques (no IsConvergent unwinding). Estimated 30–60 LOC.
-
-## What NOT to do
-
-* Do **NOT** introduce any new sorries (rule 1).
-* Do **NOT** attempt sub-lemma C (`cesaro_residual_tendsto_zero`) or
-  sub-lemma D (`exists_inverse_of_cesaro_zero`) — both are
-  multi-cycle infrastructure dependencies.
-* Do **NOT** add the AN-stability infrastructure or any §530/§550/
-  §551 entities. Stay focused on `thm:514A`'s partial bridge.
-* Do **NOT** modify `IsConvergent`'s signature (cycle 092 already did
-  the φ quantifier repair; further tweaks risk breaking thm:513A).
-* Do **NOT** strengthen `IsConvergent` with joint Lipschitz / global
-  C¹ / uniform M-bound preemptively. The §513/§514/§515 textbook
-  proofs use only the textbook hypotheses; if a Lean proof needs
-  more, file a parallel issue (per `glm_convergence_witness_deferred.md`
-  precedent).
-* Do **NOT** raise `maxHeartbeats` above 200000.
-* Do **NOT** introduce `axiom` or `constant` declarations.
-* Do **NOT** modify `scripts/autonomous_loop.py` or other loop
-  infrastructure.
-* Do **NOT** trust the strategy's Mathlib lemma names blindly.
-  Verify each with `lean_local_search` before relying on them.
-* Do **NOT** chase `MulOpposite`, `LinearMap`, or category-theory
-  abstractions for the matrix-power algebra — stay in `Matrix.mulVec`
-  / `Matrix.HPow` land per cycle 095's clean idioms.
-
-## Faithfulness check (pre-commit)
-
-For `convergence_witness_isVfixed`:
-
-* **Entity ID**: not a textbook entity — this is a Lean-side helper
-  toward closing `thm:514A`. No JSON to consult.
-* **Statement coverage**: the lemma asserts that the convergence
-  witness `u'` (existential clause of `IsConvergent` instantiated at
-  the trivial IVP) satisfies `V *ᵥ u' = u'`. This is a partial
-  consequence of Butcher's §514 textbook argument (one half of the
-  `u' = u` bridge). Document the partial nature in the docstring
-  with reference to `.prover-state/issues/u_prime_equals_u_bridge.md`.
-* **Tautology check**: the conclusion `V *ᵥ u' = u'` does not appear
-  as a hypothesis. ✓
-* **Hypothesis strength check**: requires only `hConv`. Power-
-  boundedness is derived inline via `hConv → IsStable → powerBound`.
-  No extra hypothesis beyond the textbook setup.
-* **Identity check**: the proof is a multi-step argument involving
-  IsConvergent unwinding + algebraic manipulation + limit uniqueness.
-  Definitely not `exact h`.
-* **Absent theorem check**: no comments promise content not in the
-  file. ✓
-
-For `V_mulVec_glmConstOneIterate_eq` (Step 4 helper):
-
-* Pure algebraic identity (textbook-mechanical). Faithfulness check
-  trivial.
-
-For (potential) backup `Matrix.cesaro_residual_vanish_of_power_bounded`:
-
-* Pure Mathlib-style limit lemma. Faithfulness check trivial.
-
-## Cycle 097 plan preview
-
-After cycle 096 lands `convergence_witness_isVfixed`:
-* Cycle 097 will attempt the `U·u' = 𝟙` half of the bridge via a
-  smarter IsConvergent application (see
-  `u_prime_equals_u_bridge.md` option (b)).
-* Cycle 098 will combine both halves with a preconsistency-vector
-  uniqueness argument (option (c)) to close the full `u' = u`
-  bridge, then close sub-lemma C.
-* Sub-lemma D (mean-ergodic) remains a separate multi-cycle effort.
-
-This puts `thm:514A` at full closure in ~3–5 more cycles, in line
-with the issue files' estimates.
-
-## Definition of done
-
-Cycle 096 success bar:
-1. **Sorry count ≤ 2** (no new sorries).
-2. **`lake env lean OpenMath/Chapter5/Section514.lean`** clean.
-3. **`#print axioms` on the new theorem(s)** shows
-   `[propext, Classical.choice, Quot.sound]` only.
-4. **`task_results/cycle_096.md`** documents the deliverable, the
-   IsConvergent unwinding pattern (so cycle 097 can reuse it), and
-   the residual proof approach.
-5. **`u_prime_equals_u_bridge.md`** updated to mark the partial
-   bridge `V·u' = u'` as DONE, leaving `U·u' = 𝟙` and uniqueness as
-   the remaining work.
-
-Stretch (only if primary lands well before time): begin sketching the
-`U·u' = 𝟙` extraction strategy in `u_prime_equals_u_bridge.md` —
-**without** committing any Lean code for it. Reserve the actual
-proof attempt for cycle 097.
-
-## Final note on score expectation
-
-A clean cycle 096 with `convergence_witness_isVfixed` closed adds a
-useful new lemma without sorry-count regression. Expected score:
-**+1 to +2**. If the backup deliverable
-(`Matrix.cesaro_residual_vanish_of_power_bounded`) is what lands
-instead, expected score: **+1** (still useful infrastructure, but
-less direct §514 progress).
-
-If neither lands, expected score: **0 or below**. To avoid a
-zero-changes cycle (forbidden by CLAUDE.md), at minimum update
-`u_prime_equals_u_bridge.md` with a detailed account of what was
-attempted and why each step blocked — this counts as the required
-"write an issue" deliverable.
+* Close Priority 2 of cycle 097 if it slipped.
+* Once `exists_inverse_of_cesaro_zero` is fully closed, the
+  remaining gating sorry is `cesaro_residual_tendsto_zero` →
+  pivot to the `u' = u` bridge problem with a fresh attack.
+* If the bridge stays blocked, pivot to §515 (`lem:515A`,
+  `lem:515B`, `lem:515C`, `thm:515D`) — these are the
+  "stability + consistency ⇒ convergence" theorems and may
+  surface infrastructure that simplifies the §514 closure.

@@ -77,39 +77,89 @@ i.e. **target ⇔ `u' = u`**.
 
 Two problems:
 
-1. **`U·u' = 𝟙` is not extractable from `IsConvergent`.** The `U`-block
-   appears in `IsGLMSolution`'s stage equation, but the
-   `IsConvergent` conclusion `Y n n → u' · yex(x)` doesn't expose it.
-   To force `U·u' = 𝟙` we would need a more informative φ that probes
-   the U-coupling — but the textbook φ ≡ 0 choice loses this signal.
+1. **`U·u' = 𝟙` is provably NOT extractable from `def:512A`** (cycle
+   097 confirmation). Re-reading `Section512.lean:89-96`:
+   `IsGLMSolution h f Y` for the autonomous RHS `f ≡ 1` reduces, on
+   the *output* side, to `y[n+1] = h • B𝟙 + V *ᵥ y[n]`. The `U`
+   matrix appears only in the existential *stage* equation
+   `Y_i = h • A𝟙 + U *ᵥ y[n]` (where `Y_i` are internal stages), but
+   the `IsConvergent` conclusion is `Y n n → u' · yex(x)` — which
+   constrains only the output sequence, never the per-step internal
+   stages. Therefore **no choice of `(f, y₀, yex, φ)` constrains
+   `U·u'` through `IsConvergent`'s output**, no matter how clever
+   the φ. The "smarter φ" approach floated in cycle 095 (option (b)
+   below) does not work for this reason.
 
 2. **Even if `V·u' = u'` and `V·u = u` both hold, `u' = u` is not
    automatic** unless `ker(I - V)` is one-dimensional. With matrix
    `V` allowed to have arbitrary `1`-eigenspace, this is a real gap.
 
-## Possible solutions
+## Possible solutions (revised cycle 097)
 
-* **(a) Add a non-degeneracy hypothesis** on `V`'s `1`-eigenspace
-  (e.g. assume `dim ker(I - V) = 1` or a related uniqueness clause).
-  Risk: this adds a textbook-foreign hypothesis to `thm:514A`. Would
+The cycle-097 analysis above closes off option (b) below entirely.
+Only the following remain viable, and **all of them deviate from
+the textbook signature** in some way:
+
+* **(i) Prove a GLM analog of LMM `thm:405B`
+  (`convergent_isPreconsistent`) by an ergodic-style argument that
+  bypasses the stage equation.** Idea: derive *some* rank/range
+  condition on `(I - V, B𝟙, U)` from the Cesàro mean alone (without
+  ever touching `U`). This requires invention; no textbook proof
+  exists in Butcher §514 because the textbook implicitly identifies
+  `u'` with `u`. **Cost**: open-ended; potentially several cycles
+  of mathematical exploration.
+
+* **(ii) Reformulate `thm:514A`'s conclusion to use `u'` itself**
+  (drop the textbook `IsPreconsistent` connection in the witness).
+  This requires changing the textbook signature: the resulting
+  `IsConsistent`-style conclusion would witness consistency
+  *relative to* the convergence-witness `u'`, not the preconsistency
+  vector `u`. **Cost**: 1–2 cycles. **Risk**: faithfulness
+  divergence needs careful documentation; the textbook does not
+  separate these vectors.
+
+* **(iii) Strengthen `IsConvergent` (def:512A) to also expose
+  stages.** Add an extra clause that the stage sequence
+  `Y_i (n) → some-vector · yex(x)`, then derive `U·u' = 𝟙` from
+  it. **Cost**: 1 cycle for the definition change + downstream
+  rewiring (e.g. `thm:513A` and `thm:514A`'s convergence-witness
+  proofs need updating). **Risk**: textbook deviation similar to
+  the LMM `is_convergent_strengthened.md` parallel.
+
+* **(a) (Original)** Add a non-degeneracy hypothesis on `V`'s
+  `1`-eigenspace (e.g. assume `dim ker(I - V) = 1` or similar).
+  **Risk**: textbook-foreign hypothesis added to `thm:514A`. Would
   need to be documented as a faithfulness divergence and ideally
   proven equivalent to (or implied by) preconsistency + stability.
 
-* **(b) Prove `U·u' = 𝟙` by examining the starting-procedure
-  quantification more carefully.** The `IsConvergent` statement
-  quantifies over all valid φ; perhaps a more informative φ (e.g.
-  φ(h) i = u_i for all h, satisfying the φ tendsto with `y₀ = 0`
-  trivially since `u_i * 0 = 0`) makes `U·u'` extractable. Needs
-  careful exploration of the GLM stage equation under different φ.
+* **~~(b) Prove `U·u' = 𝟙` by examining the starting-procedure
+  quantification more carefully.~~** **CLOSED OFF (cycle 097)**: see
+  point 1 of "Why this is hard" above. The `U` matrix is provably
+  invisible to `IsConvergent`'s output-only conclusion.
 
 * **(c) Defer until a uniqueness theorem for preconsistency
   vectors.** If we prove "the preconsistency vector is unique up to
-  a scalar" as a separate theorem (Butcher §510 has this implicitly),
-  then combined with `u'` being a fixed point of `V` and the
-  IsConvergent normalisation `u' ≠ 0`, we may get `u' = c · u` for
-  some `c ≠ 0`. Then the Cesàro statement becomes `c·u = u` after
-  taking limits, which forces `c = 1`. Needs a cycle of its own to
-  formalise the uniqueness step.
+  a scalar", then combined with `u'` being a fixed point of `V`
+  and `u' ≠ 0`, we may get `u' = c · u` and force `c = 1` via the
+  Cesàro statement. **Cost**: a cycle of its own. **Risk**: still
+  needs `U·u' = something-extractable` to bridge — and per (1)
+  above this can't come from `def:512A` directly.
+
+## Status as of cycle 097
+
+This is now a **major open problem** for `thm:514A`. We are
+deferring it and pivoting to the orthogonal infrastructure work
+on `exists_inverse_of_cesaro_zero` (Path B mean-ergodic, see
+`cesaro_inverse_I_minus_V.md`). Once Path B lands and its sorry
+is closed, the only remaining sorry in §514 will be
+`cesaro_residual_tendsto_zero`, gated on this very issue. At that
+point a planning cycle should choose between options (i)–(iii)
++ (a)/(c) and commit to a path; the most likely candidate is
+**(iii) strengthen `IsConvergent`** because it parallels the LMM
+strengthening already on the table (`is_convergent_strengthened.md`),
+because `U·u' = 𝟙` is a *natural* additional output of the
+formalised `IsConvergent` definition, and because options (i) and
+(c) require open-ended invention.
 
 ## Cross-reference
 

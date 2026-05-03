@@ -1,4 +1,6 @@
 import Mathlib.Topology.Algebra.InfiniteSum.Basic
+import Mathlib.Topology.Instances.Matrix
+import Mathlib.Analysis.InnerProductSpace.Adjoint
 import OpenMath.Chapter5.Section512
 import OpenMath.Chapter5.Section513
 
@@ -164,20 +166,169 @@ statement. **This is the gating infrastructure dependency for
 `thm:514A`.** Multi-cycle work; see
 `.prover-state/issues/cesaro_inverse_I_minus_V.md`. -/
 
-/-- **INFRASTRUCTURE GAP** (cesaro_inverse_I_minus_V.md): if `V` is
-power-bounded and the Cesàro mean of `V^k · w` tends to `0`, then
-`w ∈ range (I − V)`. -/
+/-- Inner-product orthogonality (Path B step 1): under the
+Cesàro-zero hypothesis on `V` and `w`, every fixed point `u` of
+`Vᵀ` satisfies `dotProduct w u = 0`. -/
+private lemma cesaro_orthogonal_to_VT_fixed {r : ℕ}
+    {V : Matrix (Fin r) (Fin r) ℝ}
+    {w : Fin r → ℝ}
+    (hCes : Filter.Tendsto
+      (fun n : ℕ => (1 / (n : ℝ)) •
+        (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w))
+      Filter.atTop (nhds 0))
+    {u : Fin r → ℝ} (hu : V.transpose *ᵥ u = u) :
+    dotProduct w u = 0 := by
+  -- Step 1: V.transpose ^ k *ᵥ u = u for all k.
+  have hVT_pow : ∀ k : ℕ, V.transpose ^ k *ᵥ u = u := by
+    intro k
+    induction k with
+    | zero => rw [pow_zero]; exact Matrix.one_mulVec u
+    | succ k ih =>
+      rw [pow_succ, ← Matrix.mulVec_mulVec, hu, ih]
+  -- Step 2: per-k identity dotProduct (V^k *ᵥ w) u = dotProduct w u.
+  have h_per_k : ∀ k : ℕ,
+      dotProduct ((V ^ k) *ᵥ w) u = dotProduct w u := by
+    intro k
+    rw [dotProduct_comm, dotProduct_mulVec]
+    have h_uV : u ᵥ* V ^ k = u := by
+      rw [← Matrix.mulVec_transpose, Matrix.transpose_pow]
+      exact hVT_pow k
+    rw [h_uV, dotProduct_comm]
+  -- Step 3: sum identity.
+  have h_sum : ∀ n : ℕ,
+      (∑ k ∈ Finset.range n, dotProduct ((V ^ k) *ᵥ w) u)
+        = (n : ℝ) * dotProduct w u := by
+    intro n
+    simp_rw [h_per_k]
+    rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+  -- Step 4: bridge sum into dotProduct.
+  have h_bridge_sum : ∀ n : ℕ,
+      dotProduct (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w) u
+        = (n : ℝ) * dotProduct w u := by
+    intro n
+    rw [sum_dotProduct, h_sum n]
+  -- Step 5: combine smul into dotProduct + cancellation (n > 0).
+  have h_eventually : ∀ n : ℕ, 0 < n →
+      dotProduct
+        ((1 / (n : ℝ)) • (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w)) u
+        = dotProduct w u := by
+    intro n hn
+    rw [smul_dotProduct, h_bridge_sum, smul_eq_mul]
+    have hn_ne : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hn)
+    field_simp
+  -- Step 6: continuity → lift hCes to dotProduct convergence.
+  have h_cont : Continuous fun s : Fin r → ℝ => dotProduct s u :=
+    Continuous.dotProduct continuous_id continuous_const
+  have h_lim : Filter.Tendsto
+      (fun n : ℕ => dotProduct
+        ((1 / (n : ℝ)) • (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w)) u)
+      Filter.atTop (nhds (dotProduct (0 : Fin r → ℝ) u)) :=
+    (h_cont.tendsto _).comp hCes
+  rw [zero_dotProduct] at h_lim
+  -- Step 7: the same sequence is eventually-constant `dotProduct w u`.
+  have h_eq : (fun _ : ℕ => dotProduct w u) =ᶠ[Filter.atTop]
+      (fun n : ℕ => dotProduct
+        ((1 / (n : ℝ)) • (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w)) u) :=
+    Filter.eventually_atTop.mpr ⟨1, fun n hn => (h_eventually n hn).symm⟩
+  have h_const : Filter.Tendsto
+      (fun n : ℕ => dotProduct
+        ((1 / (n : ℝ)) • (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w)) u)
+      Filter.atTop (nhds (dotProduct w u)) :=
+    (Filter.tendsto_congr' h_eq).mp tendsto_const_nhds
+  -- Step 8: tendsto_nhds_unique.
+  exact tendsto_nhds_unique h_const h_lim
+
+/-- Path B mean-ergodic step: if `V` is power-bounded (`_hPB` is
+unused here — power-boundedness is needed for
+`cesaro_residual_tendsto_zero`, not for the orthogonal-range
+argument) and the Cesàro mean of `V^k · w` tends to `0`, then
+`w ∈ range (I − V)`. The proof goes through the inner-product
+orthogonality lemma `cesaro_orthogonal_to_VT_fixed` plus the
+finite-dim Fredholm alternative `LinearMap.orthogonal_ker`. -/
 theorem exists_inverse_of_cesaro_zero {r : ℕ}
     {V : Matrix (Fin r) (Fin r) ℝ}
     (_hPB : ∃ K : ℝ, ∀ n, ‖V ^ n‖ ≤ K)
     {w : Fin r → ℝ}
-    (_hCes : Filter.Tendsto
+    (hCes : Filter.Tendsto
       (fun n : ℕ => (1 / (n : ℝ)) •
         (∑ k ∈ Finset.range n, (V ^ k) *ᵥ w))
       Filter.atTop (nhds 0)) :
     ∃ v : Fin r → ℝ,
       ((1 : Matrix (Fin r) (Fin r) ℝ) - V) *ᵥ v = w := by
-  sorry
+  set M : Matrix (Fin r) (Fin r) ℝ := 1 - V with hM_def
+  -- Work in EuclideanSpace ℝ (Fin r) via toEuclideanLin.
+  set T : EuclideanSpace ℝ (Fin r) →ₗ[ℝ] EuclideanSpace ℝ (Fin r) :=
+    Matrix.toEuclideanLin M with hT_def
+  set w_E : EuclideanSpace ℝ (Fin r) := WithLp.toLp 2 w with hw_E_def
+  -- adjoint(T) = (Mᵀ).toEuclideanLin (over ℝ, conjTranspose = transpose).
+  have hT_adj : LinearMap.adjoint T = Matrix.toEuclideanLin M.transpose := by
+    rw [hT_def, ← Matrix.toEuclideanLin_conjTranspose_eq_adjoint,
+        Matrix.conjTranspose_eq_transpose_of_trivial]
+  -- Step A: `w_E ∈ (T.adjoint).kerᗮ`.
+  have h_orth : w_E ∈ (LinearMap.adjoint T).kerᗮ := by
+    rw [Submodule.mem_orthogonal]
+    intro u_E hu_E_ker
+    set u : Fin r → ℝ := u_E.ofLp with hu_def
+    -- u_E ∈ ker(T.adjoint) ⟹ V.transpose *ᵥ u = u.
+    have hadj_apply : Matrix.toEuclideanLin M.transpose u_E = 0 := by
+      rw [← hT_adj]; exact hu_E_ker
+    have hMTu : M.transpose *ᵥ u = 0 := by
+      have h_apply : Matrix.toEuclideanLin M.transpose u_E
+                      = WithLp.toLp 2 (M.transpose *ᵥ u_E.ofLp) :=
+        Matrix.toEuclideanLin_apply M.transpose u_E
+      rw [h_apply] at hadj_apply
+      have hzero : WithLp.toLp 2 (M.transpose *ᵥ u_E.ofLp)
+                    = WithLp.toLp 2 (0 : Fin r → ℝ) := by
+        rw [hadj_apply]; rfl
+      have := (WithLp.toLp_injective 2 (V := Fin r → ℝ)) hzero
+      simpa [hu_def] using this
+    have hVu : V.transpose *ᵥ u = u := by
+      have h_eq : M.transpose = (1 : Matrix (Fin r) (Fin r) ℝ) - V.transpose := by
+        rw [hM_def, Matrix.transpose_sub, Matrix.transpose_one]
+      rw [h_eq, Matrix.sub_mulVec, Matrix.one_mulVec] at hMTu
+      -- hMTu : u - V.transpose *ᵥ u = 0
+      exact (sub_eq_zero.mp hMTu).symm
+    -- Apply orthogonality lemma.
+    have h_dot : dotProduct w u = 0 :=
+      cesaro_orthogonal_to_VT_fixed hCes hVu
+    -- Bridge to inner-product form.
+    have h_inner : inner ℝ u_E w_E = (0 : ℝ) := by
+      rw [EuclideanSpace.inner_eq_star_dotProduct]
+      -- ⟨u_E, w_E⟩ = w_E.ofLp ⬝ᵥ star u_E.ofLp = w ⬝ᵥ u (over ℝ, star = id).
+      show w_E.ofLp ⬝ᵥ star u_E.ofLp = 0
+      have hw_ofLp : w_E.ofLp = w := WithLp.ofLp_toLp 2 w
+      have hstar_u : star u_E.ofLp = u_E.ofLp := by
+        funext i
+        exact star_trivial _
+      rw [hw_ofLp, hstar_u, ← hu_def]
+      exact h_dot
+    exact h_inner
+  -- Step B: `(T.adjoint).kerᗮ = T.range` via `(range T)ᗮ = ker(T.adjoint)`
+  -- and `Submodule.orthogonal_orthogonal` in finite-dim.
+  have h_orth_range : (LinearMap.range T)ᗮ = LinearMap.ker (LinearMap.adjoint T) := by
+    ext x
+    simp only [Submodule.mem_orthogonal, LinearMap.mem_range, LinearMap.mem_ker]
+    constructor
+    · intro hx
+      refine ext_inner_left ℝ fun v => ?_
+      rw [inner_zero_right, LinearMap.adjoint_inner_right]
+      exact hx (T v) ⟨v, rfl⟩
+    · rintro hx _ ⟨v, rfl⟩
+      rw [← LinearMap.adjoint_inner_right, hx]
+      exact inner_zero_right v
+  have h_range_eq : (LinearMap.adjoint T).kerᗮ = LinearMap.range T := by
+    rw [← h_orth_range]
+    exact Submodule.orthogonal_orthogonal _
+  rw [h_range_eq] at h_orth
+  -- Step C: extract `v_E` and convert to `v : Fin r → ℝ`.
+  obtain ⟨v_E, hv_E⟩ := LinearMap.mem_range.mp h_orth
+  refine ⟨v_E.ofLp, ?_⟩
+  -- T v_E = w_E, so M *ᵥ v_E.ofLp = w.
+  have h_apply : T v_E = WithLp.toLp 2 (M *ᵥ v_E.ofLp) :=
+    Matrix.toEuclideanLin_apply M v_E
+  rw [h_apply] at hv_E
+  have hv_E' : WithLp.toLp 2 (M *ᵥ v_E.ofLp) = WithLp.toLp 2 w := hv_E
+  exact (WithLp.toLp_injective 2 (V := Fin r → ℝ)) hv_E'
 
 /-! ### Sub-lemma E — assemble the witness `v`
 
