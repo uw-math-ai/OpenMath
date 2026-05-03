@@ -508,4 +508,21 @@ theorem toGLM_stabilityCharpolyRowY_eq_X_pow_s_mul
   rw [toGLM_stabilityCharpolyRowY_eq_explicit m hs,
       toGLM_stabilityMatrixPHF_zero_charpoly]
 
+/-- §521 Step C.5 — The RowY-quotient polynomial: the determinant of the
+`PY(0)` charmatrix with its last past-`y` row replaced by the `-α`
+coefficients. By `toGLM_stabilityCharpolyRowY_eq_X_pow_s_mul`, the
+product `rowYQuot m * X ^ s = toGLM_stabilityCharpolyRowY m`. -/
+noncomputable def rowYQuot (m : LMM s) : Polynomial ℂ :=
+  if h : s = 0 then 0 else
+    ((toGLM_stabilityMatrixPY m 0).charmatrix.updateRow
+        ⟨s - 1, by omega⟩
+        (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))).det
+
+theorem rowYQuot_mul_X_pow_eq_RowY (m : LMM s) (hs : 0 < s) :
+    rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s =
+      toGLM_stabilityCharpolyRowY m := by
+  rw [toGLM_stabilityCharpolyRowY_eq_X_pow_s_mul m hs]
+  unfold rowYQuot
+  rw [dif_neg (by omega : ¬ s = 0)]
+
 end LMM
