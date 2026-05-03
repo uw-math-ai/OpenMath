@@ -1666,4 +1666,26 @@ theorem toGLM_charpoly_eval_ne_zero_iff_stabilityPoly_of_bdf
   (toGLM_charpoly_eval_eq_zero_iff_stabilityPoly_of_bdf
      m ξ hbdf hz hξ).not
 
+/-- §521 Step C.18 — Under BDF, with `s ≥ 1` and non-zero denominator
+`D = 1 - z β_last`, the GLM stability-matrix characteristic polynomial
+vanishes at `ξ = 0`. This is the boundary case excluded from Step C.17
+(cycle 702) and pins down the spurious-root structure of the BDF
+charpoly: every zero of `(m.toGLM.stabilityMatrix z).charpoly` other
+than `ξ = 0` is a zero of `m.stabilityPolyPoly z`. Direct evaluation of
+the cycle 643 BDF headline `D · charpoly = X^s · stabilityPolyPoly` at
+`ξ = 0`, where `X^s` collapses to `0^s = 0` for `s ≥ 1`. -/
+theorem toGLM_charpoly_eval_zero_eq_zero_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0)
+    (hs : 0 < s) :
+    ((m.toGLM.stabilityMatrix z).charpoly).eval 0 = 0 := by
+  have h := D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_of_bdf
+              m z hbdf hz
+  have heval := congrArg (Polynomial.eval (0 : ℂ)) h
+  simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+    Polynomial.eval_X] at heval
+  rw [zero_pow hs.ne', zero_mul] at heval
+  exact (mul_eq_zero.mp heval).resolve_left hz
+
 end LMM
