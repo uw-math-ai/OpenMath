@@ -1025,4 +1025,47 @@ theorem rowFBetaPoly_degree_lt (m : LMM s) :
   refine lt_of_le_of_lt (Polynomial.degree_C_mul_X_pow_le _ _) ?_
   exact_mod_cast k.isLt
 
+/-- §521 Step C.9 — α-summand polynomial of
+`toGLM_stabilityCharpolyRowF`. Mirrors cycle 682's `rowFBetaPoly`. By
+`toGLM_stabilityCharpolyRowF_eq_alphaPoly_plus_PY_betaPoly`, the rank-one
+row entry `toGLM_stabilityCharpolyRowF m` equals
+`rowFAlphaPoly m + (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m`. -/
+noncomputable def rowFAlphaPoly (m : LMM s) : Polynomial ℂ :=
+  ∑ l : Fin s,
+    ( Matrix.vecMul
+        (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+        (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+          (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) ) l *
+      (Polynomial.X : Polynomial ℂ) ^ (l : ℕ)
+
+/-- §521 Step C.9 — Restated `toGLM_stabilityCharpolyRowF_eq_summand_split`
+with both summand polynomials named. Direct cycle 682 / cycle 680 chain. -/
+theorem toGLM_stabilityCharpolyRowF_eq_alphaPoly_plus_PY_betaPoly
+    (m : LMM s) (hs : 0 < s) :
+    toGLM_stabilityCharpolyRowF m =
+      rowFAlphaPoly m +
+        (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m := by
+  rw [toGLM_stabilityCharpolyRowF_eq_alpha_plus_PY_beta m hs]
+  rfl
+
+/-- §521 Step C.9 — Per-`l` residual polynomial in the α-summand
+column-decomposition. Used so the degree analysis of `rowFAlphaPoly` in a
+later cycle can quote a single named entry rather than re-expand the
+nested `Matrix.vecMul`. -/
+private noncomputable def rowFAlphaResidual (m : LMM s) : Fin s → Polynomial ℂ :=
+  fun l =>
+    Matrix.vecMul
+        (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+        (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+          (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) l
+
+/-- §521 Step C.9 — `rowFAlphaPoly` factored through `rowFAlphaResidual`.
+Trivial: closes by `unfold rowFAlphaPoly rowFAlphaResidual; rfl`. -/
+private theorem rowFAlphaPoly_eq_residual_sum (m : LMM s) :
+    rowFAlphaPoly m =
+      ∑ l : Fin s,
+        rowFAlphaResidual m l * (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) := by
+  unfold rowFAlphaPoly rowFAlphaResidual
+  rfl
+
 end LMM
