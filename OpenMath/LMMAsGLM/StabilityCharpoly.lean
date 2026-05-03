@@ -2184,7 +2184,7 @@ private theorem rowFAlphaResidual_eval_eq_double_sum
   rw [Polynomial.eval_mul, Polynomial.eval_C]
 
 /-- §521 Step D.16b — `ξ = 0` specialisation of D.16a. -/
-private theorem rowFAlphaResidual_eval_zero_eq_double_sum
+theorem rowFAlphaResidual_eval_zero_eq_double_sum
     (m : LMM s) (l : Fin s) :
     (rowFAlphaResidual m l).eval 0 =
       ∑ k : Fin s, ∑ j : Fin s,
@@ -2861,5 +2861,97 @@ theorem D_mul_toGLM_charpoly_eval_zero_general
             + ((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ)
                 * ((m.β (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ)) * z :=
   D_mul_toGLM_charpoly_eval_zero_substituted m hz hs
+
+/-- §521 Step I.2 — Closed form for `rowFAlphaResidual.eval 0` for
+**general** (non-BDF) LMMs. Inner `j`-sum collapses identically to H.2
+(PYHF gates on `j = ⟨s-1, _⟩`). Outer `k`-sum further collapses
+because `(X^k).eval 0` vanishes unless `k.val = 0`. -/
+theorem rowFAlphaResidual_eval_zero_closed_form
+    (m : LMM s) (hs : 0 < s) (l : Fin s) :
+    (rowFAlphaResidual m l).eval 0
+      = -((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ)
+          * ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+  rw [rowFAlphaResidual_eval_zero_eq_double_sum m l]
+  -- Inner j-sum collapses to j = ⟨s-1, _⟩, identical to H.2.
+  have hInner : ∀ k : Fin s,
+      ∑ j : Fin s,
+        ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+          * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval 0
+        = -((m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((m.β (Fin.castSucc l) : ℝ) : ℂ)
+            * ((Polynomial.X : Polynomial ℂ) ^ (k : ℕ)).eval 0 := by
+    intro k
+    rw [Finset.sum_eq_single (⟨s - 1, by omega⟩ : Fin s)]
+    · -- Surviving j = ⟨s-1, _⟩ term.
+      have hPYHF :
+          (toGLM_stabilityMatrixPYHF m 0) ⟨s - 1, by omega⟩ l
+            = ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+        unfold toGLM_stabilityMatrixPYHF
+        rw [if_pos (show ((⟨s - 1, by omega⟩ : Fin s) : ℕ) + 1 = s by
+                      show s - 1 + 1 = s; omega)]
+        ring
+      have hAdj :
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩)
+            = (Polynomial.X : Polynomial ℂ) ^ (k : ℕ) :=
+        toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last_col m hs k
+      rw [hPYHF, hAdj]
+      push_cast
+      ring
+    · intro j _ hj
+      have hPYHF : (toGLM_stabilityMatrixPYHF m 0) j l = 0 := by
+        unfold toGLM_stabilityMatrixPYHF
+        rw [if_neg]
+        intro heq
+        apply hj
+        apply Fin.ext
+        show (j : ℕ) = s - 1
+        omega
+      rw [hPYHF]
+      ring
+    · intro hmem
+      exact absurd (Finset.mem_univ _) hmem
+  rw [show
+        (∑ k : Fin s, ∑ j : Fin s,
+            ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+                * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+              * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval 0)
+        = ∑ k : Fin s,
+            -((m.α (Fin.castSucc k) : ℝ) : ℂ)
+              * ((m.β (Fin.castSucc l) : ℝ) : ℂ)
+              * ((Polynomial.X : Polynomial ℂ) ^ (k : ℕ)).eval 0 from
+        Finset.sum_congr rfl (fun k _ => hInner k)]
+  -- Outer k-sum: (X^k).eval 0 = if k.val = 0 then 1 else 0.
+  rw [Finset.sum_eq_single (⟨0, hs⟩ : Fin s)]
+  · -- Surviving k = ⟨0, hs⟩ term: (X^0).eval 0 = 1.
+    simp
+  · -- k ≠ ⟨0, hs⟩: (k : ℕ) ≠ 0, so 0^k = 0.
+    intro k _ hk
+    have hpos : (k : ℕ) ≠ 0 := by
+      intro h0
+      apply hk
+      apply Fin.ext
+      exact h0
+    rw [Polynomial.eval_pow, Polynomial.eval_X, zero_pow hpos]
+    ring
+  · intro hmem
+    exact absurd (Finset.mem_univ _) hmem
+
+/-- §521 Step I.3 — Headline general (non-BDF) ξ = 0 identity. Substitutes
+I.2 (`rowFAlphaResidual_eval_zero_closed_form`) at `l = ⟨0, hs⟩` into G.3
+(`D_mul_toGLM_charpoly_eval_zero_general`). The closed form
+`(rowFAlphaResidual m ⟨0,_⟩).eval 0 = -α₀ · β₀` exactly cancels the
+`α₀ · β₀` correction, leaving zero. The BDF hypothesis drops out
+entirely: this is the general analogue of E.4
+(`D_mul_toGLM_charpoly_eval_zero_collapsed_of_bdf`). -/
+theorem D_mul_toGLM_charpoly_eval_zero_eq_zero
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 0 = 0 := by
+  rw [D_mul_toGLM_charpoly_eval_zero_general m hz hs,
+      rowFAlphaResidual_eval_zero_closed_form m hs ⟨0, hs⟩]
+  ring
 
 end LMM
