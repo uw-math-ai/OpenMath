@@ -1,366 +1,327 @@
-# Strategy — Cycle 081
+# Cycle 082 Strategy
 
-## Status snapshot
+## Context — what just happened
 
-- **Last cycle**: 080 closed `lem:383B` (associativity of convolution
-  product) at `OpenMath/Chapter3/Section383.lean:340`. Score +2,
-  build clean, axioms baseline only. Progress 51 → **52 / 175**.
-- **Sorry count**: 0 across all of `OpenMath/`.
-- **Aristotle**: no pending jobs.
-- **Open issues**: nothing blocking — all open issues are documented
-  deferrals (AN-stability, reduced-method construction, Picard
-  strengthening, etc.) that do NOT block §383 work.
+Cycle 081 closed `lem:383C` cleanly (existence of convolution inverse in
+G₁). Five new theorems landed in `OpenMath/Chapter3/Section383.lean`,
+all on baseline axioms only. Progress 52 → 53/175.
 
-## Priority 0 — none
+The cycle 081 worker also **escalated** a faithfulness concern in
+[`.prover-state/issues/convolution_vertex_vs_multiset.md`](issues/convolution_vertex_vs_multiset.md):
+our `convProduct` (cycle 077–078) uses *multiset sub-selection*, while
+Butcher §383 (page 287) uses *vertex-subset partition*. The two
+diverge on single-tree forests of order > 1. The worker's
+`convInverse` is a closed-form witness in our (multiset-graded)
+algebra; Butcher's α⁻¹ would involve a sum over vertex-subset
+partitions (lem:383D). The worker explicitly asked the planner to
+decide whether to refactor `convProduct` before further §383 work.
 
-No Aristotle results to incorporate, no infrastructure blockers, no
-sorries to clean up. Cycle 080's deliverable was the cleanest in
-recent history. Proceed directly to the next entity.
+## Priority 0 — Planner decision on the convolution divergence (5 min)
 
-## Priority 1 — `lem:383C` (existence of left and right inverses)
+**Decision: Option (b) from the issue file — defer the refactor and
+document the divergence.**
 
-### Target
+Rationale:
+* Option (a) (refactor `convProduct` to use vertex-subset partition)
+  is multi-cycle and invalidates cycles 077–081's work. It would
+  unblock `lem:383D` and `thm:386A` but cost the entire group-axiom
+  chain we just built.
+* Our current convolution defines a valid graded-multiplicative
+  algebra. The cycle 077–081 lemmas (multiplicativity preservation,
+  associativity, identity, inverse existence) are all sound *in this
+  algebra* — they are not a faithful encoding of Butcher's exact
+  Hopf-algebra structure, but they are mathematically correct
+  statements about a related algebra.
+* `lem:383D` and `thm:386A` are explicitly **out of scope** for the
+  next several cycles per this decision. Do not attempt them.
+* `thm:382A` (the Runge–Kutta group theorem) is about RK tableaux
+  and equivalence classes, *not* about forest mappings. It is
+  **not** blocked by the convolution divergence — but it is blocked
+  by missing infrastructure (RK composition, equivalence-class
+  quotient, Lipschitz arguments). Out of scope this cycle.
 
-`OpenMath/Chapter3/Section383.lean` — append a new theorem
-`exists_inverse_in_G1` (or paired left/right), plus the supporting
-closed-form construction `convInverse`.
+**Worker actions for Priority 0**:
 
-**Textbook statement** (`extraction/formalization_data/entities/lem_383C.json`):
+1. Add a file-level docstring at the very top of
+   `OpenMath/Chapter3/Section383.lean` (in the existing `/-! ... -/`
+   block — extend it; do not start a new block) summarising:
+   * Our convolution `convProduct` uses *multiset sub-selection*
+     `R ≤ S` on `Multiset RootedTree`, not Butcher's *vertex-subset*
+     `R ⊑ S`.
+   * The two agree only when every tree in `S` has order 1
+     (no edges).
+   * Lemmas 383A, 383B, 383C are proved here in the multiset-graded
+     algebra; they hold also in Butcher's true convolution but the
+     cycle 077–081 proofs do not constitute a faithful encoding of
+     Butcher's argument for the latter.
+   * `lem:383D`, `thm:386A`, and any partition-sum / Hopf-algebra
+     content require the vertex-subset refactor and are deferred.
+   * Cross-link to `.prover-state/issues/convolution_vertex_vs_multiset.md`.
 
-> Given α ∈ G₁, there exist a left inverse and a right inverse.
+2. Append a **"Status (cycle 082)"** subsection to
+   `.prover-state/issues/convolution_vertex_vs_multiset.md` recording
+   the planner decision: "Option (b) adopted; refactor deferred until
+   `lem:383D`/`thm:386A` becomes blocking."
 
-Where G₁ = multiplicative forest mappings with `α(∅) = 1` (= our
-`IsMultiplicative` predicate, which already requires `α 0 = 1`).
+## Priority 1 — Identity laws + `inverse_unique` (~60 min total)
 
-**Textbook proof** (Butcher §383, p. 310):
+These three lemmas finish the §383 group-axiom infrastructure. Each
+is short (<20 lines) and the chain unblocks any future Group
+packaging.
 
-> By induction on the order of `t`. For singleton τ:
-> `(αβ)(τ) = (βα)(τ) = α(τ) + β(τ)`, set `β(τ) := −α(τ)`.
->
-> For higher-order `t`: `(αβ)(t) = α(t) + β(t) + φ(t, α, β)`, where
-> `φ(t, α, β)` involves only values of α and β at trees of order
-> < ord(t). So `β(t) := −α(t) − φ(t, α, β)` makes `(αβ)(t) = 0`.
+### 1a. `convProduct_one_left` and `convProduct_one_right` (~30 min)
 
-### Critical observation: our forest encoding makes this much simpler
-
-In our `convProduct` (defined on **forests** = `Multiset RootedTree`,
-with multiset subtraction), the convolution on a *single-tree forest*
-`{t} = (t ::ₘ 0)` collapses:
-
-```
-(αβ)({t}) = Σ_{R ≤ {t}} α({t} - R) β(R)
-          = α({t}) β(∅) + α(∅) β({t})         -- powerset of {t} = {∅, {t}}
-          = α({t}) + β({t})                    -- using α(∅)=β(∅)=1
-```
-
-There is **no φ term** at the forest level for single-tree forests —
-the textbook's φ comes from tree-level partitions (decomposing a tree
-along its edges into a forest), but our convolution operates over
-forest sub-multisets, which for a singleton-tree forest are just ∅
-and {t} itself.
-
-So `β({t}) := -α({t})` directly works, and we extend β
-multiplicatively to multi-tree forests via the closed form
-
-```
-β(F) := (-1)^|F| · ∏_{t ∈ F} α({t})
-```
-
-By multiplicativity (Lemma 383A) of `αβ`, once `(αβ)({t}) = 0` for
-every single-tree forest, `(αβ)(F) = 0` for every non-empty forest
-(it factors as a product containing at least one zero).
-
-### Step-by-step plan
-
-#### Step A — Sorry-first scaffold + checkpoint commit
-
-Write the full structure with `sorry` at every closure point. Verify
-it compiles with `lake env lean OpenMath/Chapter3/Section383.lean`.
-Then commit as
-"Cycle 081 [scaffold] — sorry-first scaffold for lem:383C".
-
-The scaffold should include:
+**Statement** (append to `Section383.lean` after
+`convProduct_convInverse_symm`, before `exists_inverse_of_isMultiplicative`):
 
 ```lean
-/-- The convolution-product identity element on G₁: 1 on the empty
-forest, 0 elsewhere. (Used to state the inverse property succinctly.) -/
-noncomputable def convOne : Forest → ℝ :=
-  fun F => if F = 0 then 1 else 0
+/-- The convolution-product identity is a left identity: `1 · α = α`. -/
+theorem convProduct_one_left (α : Forest → ℝ) :
+    convProduct convOne α = α := by
+  funext S
+  -- convProduct convOne α S = ∑ R ≤ S, convOne (S - R) * α R
+  -- convOne (S - R) is 1 when S - R = 0 (i.e. R = S), else 0.
+  -- So the sum reduces to convOne 0 * α S = 1 * α S = α S.
+  sorry
 
-/-- Closed-form inverse: β(F) = (-1)^|F| · ∏_{t ∈ F} α({t}). -/
-noncomputable def convInverse (α : Forest → ℝ) : Forest → ℝ :=
-  fun F => (-1)^(Multiset.card F) *
-    (F.map (fun t => α ({t} : Multiset RootedTree))).prod
-
-/-- `convInverse α` is multiplicative whenever the formula structure
-permits (which is always — multiplicativity of α is not required to
-make convInverse itself multiplicative). -/
-theorem convInverse_isMultiplicative (α : Forest → ℝ) :
-    IsMultiplicative (convInverse α) := by sorry
-
-/-- Per-tree zero: `(αβ)({t}) = 0` where β = convInverse α. -/
-theorem convProduct_singleton_eq_zero
-    {α : Forest → ℝ} (hα : IsMultiplicative α) (t : RootedTree) :
-    convProduct α (convInverse α) ({t} : Multiset RootedTree) = 0 := by sorry
-
-/-- Inverse property: `convProduct α (convInverse α) = convOne`. -/
-theorem convProduct_convInverse
-    {α : Forest → ℝ} (hα : IsMultiplicative α) :
-    convProduct α (convInverse α) = convOne := by sorry
-
-/-- Symmetric: `convProduct (convInverse α) α = convOne`. -/
-theorem convProduct_convInverse_symm
-    {α : Forest → ℝ} (hα : IsMultiplicative α) :
-    convProduct (convInverse α) α = convOne := by sorry
-
-/-- **Butcher §383 Lemma 383C** — existence of left and right
-inverses for any α ∈ G₁. -/
-theorem exists_inverse_of_isMultiplicative
-    {α : Forest → ℝ} (hα : IsMultiplicative α) :
-    ∃ β : Forest → ℝ, IsMultiplicative β ∧
-      convProduct α β = convOne ∧ convProduct β α = convOne :=
-  ⟨convInverse α, convInverse_isMultiplicative α,
-   convProduct_convInverse hα, convProduct_convInverse_symm hα⟩
+/-- The convolution-product identity is a right identity: `α · 1 = α`. -/
+theorem convProduct_one_right (α : Forest → ℝ) :
+    convProduct α convOne = α := by
+  funext S
+  -- convProduct α convOne S = ∑ R ≤ S, α (S - R) * convOne R
+  -- convOne R is 1 when R = 0, else 0.
+  -- So the sum reduces to α S * convOne 0 = α S * 1 = α S.
+  sorry
 ```
 
-#### Step B — Aristotle batch (parallel mode, do NOT sleep)
+**Proof strategy** (mechanical):
 
-**Cycle 080 discovery (memorialise this)**: Aristotle was at 2-5%
-after 14 minutes on the lem:383B batch. The "sleep 30 min then
-check" rule wasted compute when manual proofs landed faster. **For
-cycle 081**: submit the batch, then *immediately* work on the manual
-proof in parallel. Check Aristotle at the **end** of the cycle, not
-mid-cycle.
+* `convOne` is defined as the indicator of the empty multiset
+  (`if F = 0 then 1 else 0` or equivalent — read the source at
+  `Section383.lean:357` and consult the existing `simp` unfolds in
+  `isMultiplicative_convOne` proof at line 378).
+* For the **right** identity: the sum
+  `∑ R ∈ S.powerset, α (S - R) * convOne R` has only the `R = 0`
+  summand non-zero (since `convOne R = 0` for `R ≠ 0`). At `R = 0`:
+  `α (S - 0) * convOne 0 = α S * 1 = α S`. Use
+  `Multiset.sum_eq_zero_iff` or pick out the unique non-zero summand
+  with `Finset.sum_eq_single` / `Multiset.sum_map_eq_single`
+  (whichever fits the underlying iteration).
+* For the **left** identity: same shape, but the unique non-zero
+  summand is `R = S` (so that `S - R = 0`).
+* If you find Mathlib doesn't have the right "sum-eq-single" lemma
+  for `Multiset.powerset`, the cleanest path is to manually split
+  `S.powerset` as `{S} + (S.powerset.erase S)` (or `{0} + ...` for
+  the right identity) and use `Multiset.sum_cons` /
+  `Multiset.sum_erase`. Look at how cycle 080's
+  `convProduct_assoc_lhs_eq` (Section383.lean:307) and cycle 081's
+  `convProduct_singleton_eq_zero` (Section383.lean:414) crack open
+  the powerset — those are the precedents for the same shape of
+  unfold.
 
-Submit the following targets to Aristotle (self-contained `Mathlib`
-files, axiom-mock the dependencies on `convProduct`,
-`IsMultiplicative`, `Forest`):
+**Hypothesis note**: the `(hα : IsMultiplicative α)` hypothesis is
+NOT needed — these are pure unfolding lemmas (the convolution-product
+formula reduces by `convOne`'s indicator behaviour without needing
+multiplicativity of `α`). Statements above already drop the
+hypothesis.
 
-1. `convInverse_isMultiplicative` — pure algebra over Multiset.
-2. `convProduct_singleton_eq_zero` — direct unfolding.
-3. (Optional) `convProduct_convInverse` — full inverse property.
+### 1b. `inverse_unique` (~15 min, mechanical)
 
-Do NOT submit the top-level `exists_inverse_of_isMultiplicative` to
-Aristotle — it composes the sub-lemmas trivially.
-
-#### Step C — Manual proofs
-
-##### `convInverse_isMultiplicative` (~15 lines)
+**Statement** (append after the identity laws):
 
 ```lean
-refine ⟨?_, ?_⟩
-· -- convInverse α 0 = 1
-  unfold convInverse
-  simp [Multiset.card_zero, pow_zero, Multiset.map_zero, Multiset.prod_zero]
-· -- convInverse α (s + t) = convInverse α s * convInverse α t
-  intro s t
-  unfold convInverse
-  rw [Multiset.card_add, Multiset.map_add, Multiset.prod_add, pow_add]
-  ring
+/-- Uniqueness of two-sided inverses in the convolution algebra.
+
+If `β` and `γ` are both two-sided inverses of `α` (with respect to
+`convOne`), then `β = γ`. The standard group-theoretic argument
+`γ = γ · 1 = γ · (α · β) = (γ · α) · β = 1 · β = β`. -/
+theorem inverse_unique {α β γ : Forest → ℝ}
+    (hαβ : convProduct α β = convOne)
+    (hγα : convProduct γ α = convOne) :
+    β = γ := by
+  calc β = convProduct convOne β := (convProduct_one_left β).symm
+    _ = convProduct (convProduct γ α) β := by rw [hγα]
+    _ = convProduct γ (convProduct α β) := convProduct_assoc γ α β
+    _ = convProduct γ convOne := by rw [hαβ]
+    _ = γ := convProduct_one_right γ
 ```
 
-##### `convProduct_singleton_eq_zero` (~10 lines)
+No multiplicative hypotheses needed (matches §1a).
+
+### 1c. `convInverse_convInverse` corollary (stretch; ~10 min)
 
 ```lean
-unfold convProduct
-have hpow : (Multiset.card ({t} : Multiset RootedTree) : ℕ) = 1 := by
-  simp [Multiset.card_singleton]
--- {t}.powerset = {∅, {t}}; expand the sum directly.
-simp only [show ({t} : Multiset RootedTree) = t ::ₘ 0 from rfl,
-           Multiset.powerset_cons, Multiset.powerset_zero,
-           Multiset.map_singleton, Multiset.map_cons, Multiset.sum_cons,
-           Multiset.sum_singleton, Multiset.map_zero, Multiset.sum_zero]
--- Goal reduces to: α({t}) * β(0) + α(0) * β({t}) = 0
--- where β = convInverse α.
-unfold convInverse
-simp [hα.1, Multiset.card_zero, Multiset.card_singleton, pow_zero, pow_one,
-      Multiset.map_zero, Multiset.prod_zero, Multiset.map_singleton,
-      Multiset.prod_singleton]
-ring
+/-- Inverse is involutive: `(α⁻¹)⁻¹ = α` for multiplicative α. -/
+theorem convInverse_convInverse {α : Forest → ℝ}
+    (hα : IsMultiplicative α) :
+    convInverse (convInverse α) = α := by
+  -- α and convInverse (convInverse α) are both two-sided inverses
+  -- of convInverse α; uniqueness forces them equal.
+  refine inverse_unique ?_ ?_
+  · -- convProduct (convInverse α) (convInverse (convInverse α)) = convOne
+    exact convProduct_convInverse (convInverse_isMultiplicative α)
+  · -- convProduct α (convInverse α) = convOne
+    exact convProduct_convInverse hα
 ```
 
-(Worker: the exact set of `simp` lemmas to thread through may need
-adjustment; use `lean_multi_attempt` to probe the unfolding shape.)
+**Orientation check** (do verify this on paper before encoding):
+`inverse_unique hαβ hγα : β = γ`. We want to conclude
+`convInverse (convInverse α) = α`. Set
+* `α := convInverse α` (the "α" in `inverse_unique`),
+* `β := convInverse (convInverse α)`,
+* `γ := α`.
+Then `hαβ` is
+`convProduct (convInverse α) (convInverse (convInverse α)) = convOne`
+(right-inverse property applied to `convInverse α`), and `hγα` is
+`convProduct α (convInverse α) = convOne` (right-inverse property of
+`α`). Both hold; the conclusion `β = γ` is
+`convInverse (convInverse α) = α`. ✓
 
-##### `convProduct_convInverse` (~25 lines)
+If the orientation comes out reversed, the fix is `(... ).symm` on
+the conclusion.
 
-Use `Multiset.induction` on F:
+Faithfulness check for all three: pure algebraic consequences of
+existing theorems; tautology check passes (conclusions don't appear
+verbatim in hypotheses); identity check passes (proofs do real
+algebraic work via `calc` / `inverse_unique`).
 
-```lean
-funext F
-unfold convOne
-induction F using Multiset.induction with
-| empty =>
-  -- (αβ)(0) = α(0) * β(0) = 1.
-  simp only [if_pos rfl]
-  show ((Multiset.powerset 0).map _).sum = 1
-  simp [Multiset.powerset_zero, hα.1, convInverse_isMultiplicative α |>.1]
-| cons t rest IH =>
-  -- (αβ)(t ::ₘ rest) = (αβ)({t} + rest) = (αβ)({t}) * (αβ)(rest)  [by 383A]
-  --                  = 0 * (...) = 0.
-  rw [show t ::ₘ rest = ({t} : Multiset RootedTree) + rest from rfl]
-  -- Apply Lemma 383A multiplicativity.
-  have hαβ : IsMultiplicative (convProduct α (convInverse α)) :=
-    multiplicative_conv hα (convInverse_isMultiplicative α)
-  rw [hαβ.2 ({t}) rest]
-  rw [convProduct_singleton_eq_zero hα t]
-  simp
-```
+## Priority 2 — Verify and commit (~15 min)
 
-The `if F = 0 then 1 else 0` branch when `F = t ::ₘ rest`: since
-`t ::ₘ rest ≠ 0` (a non-empty multiset), `if_neg` collapses to 0 on
-the RHS; the LHS is `0 * (αβ)(rest) = 0`. Match cleanly.
+* Run `lake env lean OpenMath/Chapter3/Section383.lean` — must be
+  clean.
+* Run `lake build OpenMath.Chapter3.Section383` — must succeed.
+  (Reminder from cycle 072: `lake env lean <file>` does NOT update
+  the .olean cache, so use `lake build` before `#print axioms` to
+  avoid stale-cache `sorryAx` false positives.)
+* `#print axioms convProduct_one_left convProduct_one_right
+  inverse_unique` (and `convInverse_convInverse` if landed) — must
+  show only `[propext, Classical.choice, Quot.sound]`.
+* No `sorry`s anywhere in the file.
+* `extraction/formalization_data/lean_status.json`: no entity status
+  changes (these are helper lemmas, not textbook entities). No edit
+  needed.
+* Commit with message:
+  `Cycle 082 — convolution algebra identity + inverse uniqueness; document multiset/partition divergence`
 
-##### `convProduct_convInverse_symm` (~25 lines)
+## Priority 3 — DO NOT submit Aristotle this cycle
 
-Same shape — by Lemma 383A multiplicativity of `(convInverse α) * α`,
-plus the symmetric per-singleton zero
-`convProduct (convInverse α) α {t} = β({t}) + α({t}) = -α({t}) + α({t}) = 0`.
+Per cycle 080 + 081 discoveries (recorded in their task results),
+manual proofs of small algebraic identity lemmas (~20 lines each)
+finish faster than an Aristotle round-trip. The Priority 1 lemmas
+are all in this category.
 
-The structure is identical; just swap the order of arguments. May
-factor a shared helper `convProduct_singleton_alpha_beta` if it
-saves lines, but a copy-paste is fine.
+If Priority 1 stalls badly (e.g., the multiset-powerset
+sum-eq-single argument can't be cleanly assembled in 30 min), only
+*then* batch-submit `convProduct_one_right` to Aristotle and pivot
+to manual work on `convProduct_one_left` + `inverse_unique` while
+waiting. Default plan: skip Aristotle entirely.
 
-### Mathlib lemmas (verify with `lean_local_search` before use)
+## Priority 4 — Cycle 083 scoping (~5 min if everything else closes)
 
-| Goal | Lemma |
-|---|---|
-| `Multiset.card (s + t) = Multiset.card s + Multiset.card t` | `Multiset.card_add` |
-| `(s + t).map f = s.map f + t.map f` | `Multiset.map_add` |
-| `(s + t).prod = s.prod * t.prod` | `Multiset.prod_add` |
-| `(-1 : ℝ)^(a + b) = (-1)^a * (-1)^b` | `pow_add` |
-| `Multiset.card 0 = 0` | `Multiset.card_zero` |
-| `Multiset.card {x} = 1` | `Multiset.card_singleton` |
-| `(0 : Multiset α).map f = 0` | `Multiset.map_zero` |
-| `(0 : Multiset ℝ).prod = 1` | `Multiset.prod_zero` |
-| `(t ::ₘ 0).powerset = ...` | `Multiset.powerset_cons` + `Multiset.powerset_zero` |
-| Singleton-multiset map | `Multiset.map_singleton` |
-| Singleton-multiset prod | `Multiset.prod_singleton` |
+Once Priority 1 + 2 land, the §383 algebraic infrastructure is
+**done** for this convolution. The next §380-area target needs
+fresh infrastructure:
 
-### Faithfulness check
+* `thm:382A` (RK group well-defined-ness): needs RK composition
+  (`composedMethod : RKTableau s₁ → RKTableau s₂ → RKTableau (s₁+s₂)`)
+  and a Lipschitz-based equality-of-output argument. **Heavy** —
+  multiple cycles. Not blocked by the convolution divergence.
+* `thm:381G` (Irreducible RK Stage Distinguishability): blocked by
+  `thm:314A` (Independence of elementary differentials), itself
+  blocked by `lem:311A`/`thm:311B/C/D`. Heavy.
+* `thm:343B` (Reflected order conditions preservation): requires
+  formalising B(η), C(η), D(η), E(η,ζ) simplifying assumptions.
+  Heavy.
 
-For `convInverse` and the inverse-existence theorem:
+**Action**: do NOT pre-commit cycle 083 to any of these. Use the
+slack to read the following entity files and write a one-line scope
+estimate for each in `.prover-state/task_results/cycle_082.md`
+§"Suggested next approach":
 
-- Entity: `lem:383C`. Textbook: "Given α ∈ G₁, there exist a left
-  inverse and a right inverse."
-- Lean: `convInverse α` is exhibited as both a left and right
-  inverse (the per-singleton zero identity is symmetric in α and β).
-- The Lean statement is **strictly stronger** than the textbook in
-  one sense: we provide an explicit closed-form formula, not just
-  an existential. This is a faithful constructive refinement, not a
-  restriction.
-- Hypothesis check: only `IsMultiplicative α` (= G₁ membership). ✓
-- Tautology check: conclusion `convProduct α β = convOne` does not
-  appear as a hypothesis. ✓
-- Identity check: the proof of `exists_inverse_of_isMultiplicative`
-  is `⟨convInverse α, ..., ..., ...⟩` — *constructive*, not a
-  vacuous re-export of a hypothesis. ✓
-- Definition smuggling check: `convInverse` is a genuine new
-  definition with a closed-form formula. It IS the textbook's β,
-  computed in closed form. ✓
-- Notable divergence from textbook PROOF (not statement): the
-  textbook does induction on tree order to construct β; we use a
-  closed form because our forest-level convolution makes the φ term
-  vanish on single-tree forests. **Document this in the docstring**
-  of `convInverse` so future readers understand why the textbook's
-  inductive structure is unnecessary in our encoding.
+* `extraction/formalization_data/entities/lem_311A.json`
+  (foundational §311 entry — Taylor expansion of exact solution).
+* `extraction/formalization_data/entities/thm_441A.json` (Chapter 4
+  §441, possibly cleaner than §380 — max order for convergent
+  k-step methods).
+* `extraction/formalization_data/entities/def_422B.json`
+  (Chapter 4 §422 entry — a definition, may be tractable in one
+  cycle).
+* `extraction/formalization_data/entities/lem_322A.json` (§322
+  methods of order 4 — Chapter 3 algebraic, may avoid the
+  elementary-differential infrastructure).
 
-### What NOT to try
+Let the next planner cycle pick from your scoping notes.
 
-1. **Do NOT do induction on `RootedTree.order`** to define β. The
-   textbook does this because its convolution operates on tree
-   partitions; in our forest encoding, single-tree forests have only
-   the trivial sub-multisets {∅, {t}}, so the recursion collapses to
-   a closed form. Doing induction would massively over-complicate
-   the proof.
+## What NOT to do this cycle
 
-2. **Do NOT define β via well-founded recursion on `Multiset.card`**
-   of forests. The closed form `(-1)^|F| · ∏ α({t})` works directly.
+* **Do NOT refactor `convProduct`** to use vertex-subset partition.
+  Per the Priority 0 decision, this is option (a) and is deferred.
+  The refactor would invalidate the entire cycle 077–081 chain and
+  is multi-cycle.
+* **Do NOT attempt `lem:383D`** (partition-sum inverse formula).
+  Per the convolution caveat, our closed-form inverse from cycle 081
+  is the right object in our algebra; lem:383D's textbook formula
+  presupposes the vertex-subset convolution.
+* **Do NOT attempt `thm:386A`** (recursive product formula). Same
+  blocker as `lem:383D`.
+* **Do NOT attempt `thm:382A`, `thm:381G`, or `thm:343B`** this
+  cycle. All three need fresh multi-cycle infrastructure
+  (RK composition, elementary-differential independence, simplifying
+  assumptions B/C/D/E respectively).
+* **Do NOT submit Aristotle for the Priority 1 lemmas** unless they
+  stall hard. These are short, manual, and well-targeted; a 30-min
+  Aristotle wait dominates their actual proof time.
+* **Do NOT introduce `axiom` or `constant`** for any "the multiset
+  sum-eq-single lemma is missing from Mathlib" gap. If Mathlib's
+  `Multiset.powerset` summation API is genuinely thin, build the
+  one-line helper you need as a private lemma in `Section383.lean`
+  (e.g., a small lemma extracting the unique non-zero summand).
+* **Do NOT raise `maxHeartbeats`**.
+* **Do NOT touch `scripts/autonomous_loop.py`** or any other
+  loop-infrastructure file (per the standing scanner false-positive
+  issue and CLAUDE.md).
+* **Do NOT skip the file-level docstring update** in Priority 0.
+  The convolution divergence is now a documented project-level
+  decision; the file must reflect it so future readers (planner +
+  worker) don't accidentally try `lem:383D`.
 
-3. **Do NOT submit the top-level existence theorem to Aristotle** as
-   a single job. It depends on `multiplicative_conv` (Lemma 383A)
-   and the closed-form `convInverse`, which Aristotle would have to
-   discover. Submit only the *sub-lemmas*; compose manually.
+## Faithfulness checks for new lemmas
 
-4. **Do NOT introduce a class or structure for the Runge–Kutta
-   group**. That would be `thm:386A` territory (and possibly
-   premature even there). Keep `convOne`, `convInverse`, etc. as
-   plain `def`s. The Runge–Kutta-group abstraction is a future-cycle
-   concern.
+For `convProduct_one_left`, `convProduct_one_right`,
+`inverse_unique`, `convInverse_convInverse`:
 
-5. **Do NOT mix LHS-form and RHS-form intermediate lemmas** (per
-   cycle 080 dead-end §1). Always rewrite LHS-to-LHS or RHS-to-RHS
-   before invoking IH or comparison lemmas.
+* No textbook entity IDs (helpers).
+* All four are standard group-theoretic identities; their
+  truth in our convolution algebra follows from cycles 077–081.
+* Tautology check: each conclusion does not appear verbatim as a
+  hypothesis. ✓
+* Identity check: each proof does genuine algebraic work via `calc`
+  / `Multiset.sum_eq_single` / `convProduct_assoc`. None is a bare
+  `exact h` re-export. ✓
+* Hypothesis strength: identity laws drop `IsMultiplicative` (pure
+  unfolding); `inverse_unique` drops it too; `convInverse_convInverse`
+  legitimately needs `IsMultiplicative` because `convProduct_convInverse`
+  requires it.
 
-6. **Do NOT wait 30 minutes for Aristotle**. Per cycle 080's
-   discovery: submit, then immediately work in parallel. Check
-   Aristotle at end of cycle. If a useful proof is returned, swap
-   it in opportunistically. Otherwise cancel the jobs.
+For the file-level docstring update: not a theorem; a documentation
+change. Faithfulness to the convolution-divergence decision is the
+content.
 
-7. **Do NOT increase `maxHeartbeats`**. Decompose if a single proof
-   is slow (likely the multi-forest induction step in the inverse
-   property — split off helper lemmas for the base case and
-   inductive step if needed).
+## Estimated effort budget
 
-8. **Do NOT define `convOne` if a Mathlib equivalent exists**. Run
-   `lean_local_search "Pi.single"` and `lean_local_search "single
-   indicator"` first — there may be a Mathlib indicator function
-   that fits. If nothing matches, the local `def` is fine.
+| Priority | Task | Time |
+|---|---|---|
+| 0 | Convolution doc + issue update | 5 min |
+| 1a | `convProduct_one_left` + `convProduct_one_right` | 30 min |
+| 1b | `inverse_unique` | 15 min |
+| 1c | `convInverse_convInverse` (stretch) | 10 min |
+| 2 | Verify + commit | 15 min |
+| 4 | Cycle 083 scoping (stretch) | 5 min |
+| **Total** | | **~80 min** |
 
-### Stretch goal — only if main target lands cleanly by mid-cycle
-
-If `lem:383C` is closed by ~half-cycle, attempt **either**:
-
-(a) **`lem:383D`** (a more explicit formula for the inverse). The
-    textbook gives a partition-sum formula
-    `α⁻¹(t) = Σ_{P ∈ P(t)} (-1)^{#P} ∏ α(tᵢ)`. Our `convInverse`
-    already encodes a closed-form on FORESTS, so `lem:383D` may
-    require relating our forest-level inverse to a tree-partition
-    formula via the multiplicative extension — likely a multi-cycle
-    job once partition machinery is needed. **Probably skip.**
-
-(b) **A small follow-up cleanup**: prove
-    `IsMultiplicative convOne` (it is: `convOne (s + t) = convOne s
-    · convOne t` since both sides are 1 iff both s = 0 and t = 0).
-    Useful for the future Runge–Kutta-group material.
-
-**Do NOT pursue the stretch goal unless the main target is
-unambiguously closed by mid-cycle.**
-
-### Workflow checklist (worker)
-
-1. [ ] Read `extraction/formalization_data/entities/lem_383C.json`
-   (just to confirm the textbook statement firsthand).
-2. [ ] Sketch the Lean signatures in this strategy as a draft block
-   in `Section383.lean`.
-3. [ ] Sorry-first scaffold; build with
-   `lake env lean OpenMath/Chapter3/Section383.lean`; commit as
-   "Cycle 081 [scaffold] — sorry-first scaffold for lem:383C".
-4. [ ] Submit Aristotle batch (sub-lemmas 1–2, optionally 3); do
-   NOT sleep.
-5. [ ] Manually prove `convInverse_isMultiplicative`.
-6. [ ] Manually prove `convProduct_singleton_eq_zero`.
-7. [ ] Manually prove `convProduct_convInverse` (and the symmetric
-   variant).
-8. [ ] Package the existence theorem.
-9. [ ] Build clean. Verify axioms via `#print axioms` (expect
-   `[propext, Classical.choice, Quot.sound]`).
-10. [ ] Update `extraction/formalization_data/lean_status.json` —
-    mark `lem:383C` as `formalized` with file/symbol pointers.
-11. [ ] Update `plan.md` — `lem:383C` row `[ ]` → `[x]`, increment
-    progress 52 → **53 / 175**.
-12. [ ] Check Aristotle status; if useful proofs returned, decide
-    whether to swap in (only if cleaner than manual). Cancel
-    remaining jobs.
-13. [ ] Write `.prover-state/task_results/cycle_081.md` (use the
-    template in `CLAUDE.md`).
-14. [ ] Final commit:
-    "Cycle 081 — close lem:383C; existence of convolution inverse in G₁".
-
-### Time budget
-
-Estimated 1.5–2 hours wall-clock for a clean close. The closed-form
-encoding makes this much simpler than the textbook's induction.
-Expect Aristotle to be irrelevant (manual proofs are short and
-well-targeted); use it only as a backup. **Do not spend more than
-30 min on any single sub-lemma without decomposing further.**
+This is a **deliberately small cycle** following two large cycles
+(080: associativity; 081: inverse existence). Use the slack to
+confirm the convolution-decision documentation is solid and to
+scope cycle 083 candidates honestly. Do not overreach into thm:382A
+or §381G/H — they are real multi-cycle infrastructure and rushing
+them now will produce another half-finished scaffold.

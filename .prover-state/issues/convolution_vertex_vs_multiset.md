@@ -118,3 +118,28 @@ Specifically:
 * Strengthen the file-level docstring on `Section383.lean` to
   document the divergence at the top, not just buried in
   individual theorem comments.
+
+## Status (cycle 082)
+
+**Planner decision adopted: Option (b).** The refactor of
+`convProduct` to use vertex-subset partition is deferred until
+`lem:383D` or `thm:386A` becomes a blocker.
+
+Rationale (per cycle 082 strategy):
+
+* Option (a) would invalidate cycles 077–081's group-axiom chain
+  (Lemma 383A multiplicativity, Lemma 383B associativity, Lemma
+  383C inverse existence) and is a multi-cycle effort.
+* The current convolution defines a valid graded-multiplicative
+  algebra in which the cycle 077–081 lemmas are sound.
+* `lem:383D` and `thm:386A` are explicitly *out of scope* for the
+  next several cycles per this decision.
+
+Cycle 082 actions taken in support of this decision:
+
+1. File-level docstring on `OpenMath/Chapter3/Section383.lean`
+   extended with a CAVEAT block documenting the multiset/vertex-
+   subset divergence and pointing to this issue.
+2. `lem:383D`, `thm:386A` to remain unscheduled until either (a)
+   the refactor is undertaken or (b) downstream work strictly
+   requires them.

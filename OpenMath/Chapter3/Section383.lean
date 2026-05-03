@@ -36,6 +36,34 @@ with the product defined by equation (383a):
   encoding, to `R ≤ S` as multisets. The induced "set difference"
   `S \ R` becomes multiset subtraction `S - R`.
 
+  **CAVEAT (cycle 081–082 escalation, planner decision adopted)**:
+  Butcher's actual `R ⊑ S` (page 287) is *vertex-subset* inclusion
+  on `V(S)`, not multiset sub-selection. The two relations agree
+  only when every tree in `S` has order 1 (i.e., no edges) — for
+  forests with edges, vertex subsets can split a connected tree
+  into multiple components, producing a strictly richer family of
+  sub-forests than multiset sub-selection. As a consequence, our
+  `convProduct` is a *graded multiplicative algebra* on `Forest → ℝ`,
+  not Butcher's full Hopf-algebra convolution.
+
+  Lemmas 383A (multiplicativity preservation), 383B (associativity),
+  383C (inverse existence) are *true and proved here in the
+  multiset-graded algebra*. They are also true in Butcher's true
+  convolution, but the cycle 077–081 proofs do not constitute a
+  faithful encoding of Butcher's argument for the latter — the
+  vertex-subset version requires distinct combinatorial machinery
+  (induction on tree order, partition sums) and a different
+  closed-form inverse.
+
+  `lem:383D` (partition-sum formula for `α⁻¹`), `thm:386A`
+  (recursive product formula), and any further partition-sum /
+  full Hopf-algebra content are **deferred** pending a vertex-subset
+  refactor. See
+  `.prover-state/issues/convolution_vertex_vs_multiset.md` for the
+  full discussion and planner decision (option (b): document the
+  divergence; defer the refactor until `lem:383D`/`thm:386A`
+  becomes blocking).
+
 * The sum `Σ_{R ⊑ S}` is interpreted as a sum over `S.powerset`. When
   `S` has duplicated trees, `S.powerset` enumerates each sub-multiset
   with the appropriate multiplicity (e.g. `({a,a} : Multiset _).powerset`
@@ -493,6 +521,155 @@ theorem convProduct_convInverse_symm
       rw [h] at hmem
       exact (Multiset.notMem_zero t) hmem
     simp
+
+/-! ### Identity laws and uniqueness of inverses (cycle 082) -/
+
+/-- Auxiliary indicator-sum: in `S.powerset`, the empty multiset is the
+unique sub-multiset for which the indicator `R = 0` fires. The sum of
+`R ↦ (if R = 0 then c else 0)` over `S.powerset` therefore equals `c`. -/
+private lemma sum_powerset_indicator_zero
+    {S : Multiset RootedTree} (c : ℝ) :
+    (S.powerset.map
+        (fun R : Multiset RootedTree => if R = 0 then c else 0)).sum = c := by
+  induction S using Multiset.induction with
+  | empty => simp [Multiset.powerset_zero]
+  | cons a s IH =>
+    rw [Multiset.powerset_cons, Multiset.map_add, Multiset.sum_add,
+        Multiset.map_map]
+    -- The "added a" branch contributes 0: for any R, `a ::ₘ R ≠ 0`.
+    have hB : (s.powerset.map
+                  ((fun R : Multiset RootedTree => if R = 0 then c else 0)
+                    ∘ (a ::ₘ ·))).sum = 0 := by
+      apply Multiset.sum_eq_zero
+      intro x hx
+      simp only [Multiset.mem_map, Function.comp_apply] at hx
+      obtain ⟨R, _, hRx⟩ := hx
+      rw [if_neg Multiset.cons_ne_zero] at hRx
+      exact hRx.symm
+    rw [hB, add_zero, IH]
+
+/-- Auxiliary indicator-sum: in `S.powerset`, `S` itself is the unique
+sub-multiset of full cardinality. The sum of `R ↦ (if R = S then c else 0)`
+over `S.powerset` therefore equals `c`. -/
+private lemma sum_powerset_indicator_top
+    {S : Multiset RootedTree} (c : ℝ) :
+    (S.powerset.map
+        (fun R : Multiset RootedTree => if R = S then c else 0)).sum = c := by
+  induction S using Multiset.induction with
+  | empty => simp [Multiset.powerset_zero]
+  | cons a s IH =>
+    rw [Multiset.powerset_cons, Multiset.map_add, Multiset.sum_add,
+        Multiset.map_map]
+    -- The "no-a" branch contributes 0: every R ≤ s has card < card (a ::ₘ s).
+    have hA : (s.powerset.map
+                  (fun R : Multiset RootedTree =>
+                    if R = a ::ₘ s then c else 0)).sum = 0 := by
+      apply Multiset.sum_eq_zero
+      intro x hx
+      simp only [Multiset.mem_map] at hx
+      obtain ⟨R, hRpow, hRx⟩ := hx
+      have hRle : R ≤ s := Multiset.mem_powerset.mp hRpow
+      have hne : R ≠ a ::ₘ s := by
+        intro heq
+        have hcard : Multiset.card R ≤ Multiset.card s :=
+          Multiset.card_le_card hRle
+        rw [heq, Multiset.card_cons] at hcard
+        omega
+      rw [if_neg hne] at hRx
+      exact hRx.symm
+    rw [hA, zero_add]
+    -- The "added a" branch reduces to the IH after cons-injectivity.
+    have hcong : (s.powerset.map
+                    ((fun R : Multiset RootedTree =>
+                        if R = a ::ₘ s then c else 0) ∘ (a ::ₘ ·)))
+                = s.powerset.map
+                    (fun R : Multiset RootedTree => if R = s then c else 0) := by
+      refine Multiset.map_congr rfl (fun R _ => ?_)
+      simp only [Function.comp_apply]
+      by_cases h : R = s
+      · simp [h]
+      · have h' : a ::ₘ R ≠ a ::ₘ s := fun heq =>
+          h ((Multiset.cons_inj_right a).mp heq)
+        rw [if_neg h', if_neg h]
+    rw [hcong, IH]
+
+/-- The convolution-product identity is a right identity: `α · 1 = α`.
+
+The convolution sum on the right by `convOne` collapses: only the
+`R = 0` summand contributes (since `convOne R = 0` for `R ≠ 0`). -/
+theorem convProduct_one_right (α : Forest → ℝ) :
+    convProduct α convOne = α := by
+  funext S
+  show (S.powerset.map
+          (fun R : Multiset RootedTree => α (S - R) * convOne R)).sum = α S
+  -- Rewrite the summand to indicator form: only R = 0 is nonzero.
+  have hcong : (S.powerset.map
+                  (fun R : Multiset RootedTree => α (S - R) * convOne R))
+              = S.powerset.map
+                  (fun R : Multiset RootedTree =>
+                    if R = 0 then α S else 0) := by
+    refine Multiset.map_congr rfl (fun R _ => ?_)
+    by_cases h : R = 0
+    · simp [h, convOne]
+    · simp [h, convOne]
+  rw [hcong]
+  exact sum_powerset_indicator_zero (α S)
+
+/-- The convolution-product identity is a left identity: `1 · α = α`.
+
+The convolution sum on the left by `convOne` collapses: only the `R = S`
+summand contributes (since for `R ≤ S`, the factor `convOne (S - R)` is
+nonzero only when `S - R = 0`, i.e., `S ≤ R`, forcing `R = S`). -/
+theorem convProduct_one_left (α : Forest → ℝ) :
+    convProduct convOne α = α := by
+  funext S
+  show (S.powerset.map
+          (fun R : Multiset RootedTree => convOne (S - R) * α R)).sum = α S
+  have hcong : (S.powerset.map
+                  (fun R : Multiset RootedTree => convOne (S - R) * α R))
+              = S.powerset.map
+                  (fun R : Multiset RootedTree =>
+                    if R = S then α S else 0) := by
+    refine Multiset.map_congr rfl (fun R hR => ?_)
+    have hRle : R ≤ S := Multiset.mem_powerset.mp hR
+    by_cases h : R = S
+    · simp [h, convOne]
+    · -- Show S - R ≠ 0: otherwise S ≤ R combined with R ≤ S gives R = S.
+      have hsubne : S - R ≠ 0 := by
+        intro hsub
+        have hSle : S ≤ R := tsub_eq_zero_iff_le.mp hsub
+        exact h (le_antisymm hRle hSle)
+      simp [convOne, hsubne, h]
+  rw [hcong]
+  exact sum_powerset_indicator_top (α S)
+
+/-- Uniqueness of two-sided inverses in the convolution algebra.
+
+If `β` and `γ` are both two-sided inverses of `α` (with respect to
+`convOne`), then `β = γ`. The standard group-theoretic argument
+`γ = γ · 1 = γ · (α · β) = (γ · α) · β = 1 · β = β`. -/
+theorem inverse_unique {α β γ : Forest → ℝ}
+    (hαβ : convProduct α β = convOne)
+    (hγα : convProduct γ α = convOne) :
+    β = γ := by
+  calc β = convProduct convOne β := (convProduct_one_left β).symm
+    _ = convProduct (convProduct γ α) β := by rw [hγα]
+    _ = convProduct γ (convProduct α β) := convProduct_assoc γ α β
+    _ = convProduct γ convOne := by rw [hαβ]
+    _ = γ := convProduct_one_right γ
+
+/-- The closed-form inverse is involutive: `(α⁻¹)⁻¹ = α` for
+multiplicative `α`. Both `α` and `convInverse (convInverse α)` are
+two-sided inverses of `convInverse α`, so `inverse_unique` forces
+them equal. -/
+theorem convInverse_convInverse {α : Forest → ℝ}
+    (hα : IsMultiplicative α) :
+    convInverse (convInverse α) = α := by
+  refine inverse_unique (α := convInverse α) ?_ ?_
+  · -- convProduct (convInverse α) (convInverse (convInverse α)) = convOne
+    exact convProduct_convInverse (convInverse_isMultiplicative α)
+  · -- convProduct α (convInverse α) = convOne
+    exact convProduct_convInverse hα
 
 /-- **Butcher §383 Lemma 383C** — existence of left and right
 inverses for any α ∈ G₁.
