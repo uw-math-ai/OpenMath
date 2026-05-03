@@ -329,10 +329,12 @@ theorem toGLM_stabilityCharpolyRowY_eq_explicit
   rw [hrow]
   rfl
 
-/-- §521 Step C.3 — Past-`h*f` adjugate-row entry. **TODO**: depends on
-`Matrix.adjugate_fromBlocks_zero₂₁` (sorry-first scaffold in
-`OpenMath/Helpers/BlockAdjugate.lean`). The off-diagonal correction term
-of the block adjugate is what enters here. -/
+/-- §521 Step C.3 — Past-`h*f` adjugate-row entry placeholder.
+
+The reusable block-adjugate identity needed for the real scalar expansion is
+available as `Matrix.adjugate_fromBlocks_zero₂₁`; the remaining work is to
+push it through the `toGLM_stabilityBlockEquiv` reindexing and simplify the
+off-diagonal correction term against the rank-one row. -/
 theorem toGLM_stabilityCharpolyRowF_eq_explicit
     (m : LMM s) :
     ∃ R : Polynomial ℂ,
@@ -342,10 +344,7 @@ theorem toGLM_stabilityCharpolyRowF_eq_explicit
 /-- §521 Step C.3 (headline) — Explicit form of the LMM-as-GLM stability
 matrix characteristic polynomial as the active block charpoly minus the
 contracted rank-one correction in the named scalar adjugate entries.
-
-**TODO**: combine `toGLM_stabilityMatrix_charpoly_rankOne_contraction_explicit`
-with `toGLM_V_active_charpoly`. The proof reshape is mostly mechanical
-once `toGLM_stabilityCharpolyRowF_eq_explicit` lands. -/
+-/
 theorem toGLM_stabilityMatrix_charpoly_explicit
     (m : LMM s) {z : ℂ}
     (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
