@@ -2142,4 +2142,84 @@ theorem rowYQuot_eval_one_eq_sum_of_bdf
               ⟨s - 1, by omega⟩).eval 1 :=
   rowYQuot_eval_one_eq_sum m hs
 
+/-- §521 Step D.15 — `rowFAlphaResidual m l` expanded as a double sum
+over `(k, j) : Fin s × Fin s` of `Polynomial.C`-coefficients times a
+single charmatrix adjugate entry.  Mirrors cycle 720's
+`rowYQuot_eq_adjugate_sum` for the rowF side.  The leading
+`-α(castSucc k)` is inherited from the `rowFAlphaResidual` definition
+(the inner two negations on `adjugate` and `PYHF.map C` cancel via
+`neg_mul_neg`; the outer `-α` factor remains). -/
+private theorem rowFAlphaResidual_eq_double_sum
+    (m : LMM s) (l : Fin s) :
+    rowFAlphaResidual m l =
+      ∑ k : Fin s, ∑ j : Fin s,
+        Polynomial.C
+            ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+                * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+          * (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j := by
+  unfold rowFAlphaResidual
+  rw [Matrix.vecMul_eq_sum]
+  simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul]
+  refine Finset.sum_congr rfl (fun k _ => ?_)
+  rw [Matrix.mul_apply]
+  simp only [Matrix.neg_apply, Matrix.map_apply, neg_mul_neg, Finset.mul_sum]
+  refine Finset.sum_congr rfl (fun j _ => ?_)
+  rw [Polynomial.C_mul]
+  ring
+
+/-- §521 Step D.16a — Push `Polynomial.eval ξ` through D.15's cofactor
+expansion of `rowFAlphaResidual`. -/
+private theorem rowFAlphaResidual_eval_eq_double_sum
+    (m : LMM s) (l : Fin s) (ξ : ℂ) :
+    (rowFAlphaResidual m l).eval ξ =
+      ∑ k : Fin s, ∑ j : Fin s,
+        ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+          * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval ξ := by
+  rw [rowFAlphaResidual_eq_double_sum m l]
+  rw [Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl (fun k _ => ?_)
+  rw [Polynomial.eval_finset_sum]
+  refine Finset.sum_congr rfl (fun j _ => ?_)
+  rw [Polynomial.eval_mul, Polynomial.eval_C]
+
+/-- §521 Step D.16b — `ξ = 0` specialisation of D.16a. -/
+private theorem rowFAlphaResidual_eval_zero_eq_double_sum
+    (m : LMM s) (l : Fin s) :
+    (rowFAlphaResidual m l).eval 0 =
+      ∑ k : Fin s, ∑ j : Fin s,
+        ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+          * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval 0 :=
+  rowFAlphaResidual_eval_eq_double_sum m l 0
+
+/-- §521 Step D.16c — `ξ = 1` specialisation of D.16a. -/
+private theorem rowFAlphaResidual_eval_one_eq_double_sum
+    (m : LMM s) (l : Fin s) :
+    (rowFAlphaResidual m l).eval 1 =
+      ∑ k : Fin s, ∑ j : Fin s,
+        ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+          * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval 1 :=
+  rowFAlphaResidual_eval_eq_double_sum m l 1
+
+/-- §521 Step D.16d — Under BDF, `rowFAlphaResidual m l` evaluates to
+zero at `ξ = 1`, because the entire `PYHF` block vanishes (cycle 643's
+`toGLM_stabilityMatrixPYHF_eq_zero_of_bdf`). -/
+private theorem rowFAlphaResidual_eval_one_of_bdf_eq_zero
+    (m : LMM s)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (l : Fin s) :
+    (rowFAlphaResidual m l).eval 1 = 0 := by
+  rw [rowFAlphaResidual_eval_one_eq_double_sum m l]
+  apply Finset.sum_eq_zero
+  intro k _
+  apply Finset.sum_eq_zero
+  intro j _
+  have hPYHF : (toGLM_stabilityMatrixPYHF m 0) j l = 0 := by
+    have := toGLM_stabilityMatrixPYHF_eq_zero_of_bdf m 0 hbdf
+    exact congrFun (congrFun this j) l
+  rw [hPYHF]
+  ring
+
 end LMM
