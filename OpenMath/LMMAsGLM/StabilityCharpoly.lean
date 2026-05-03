@@ -2552,4 +2552,35 @@ theorem D_mul_toGLM_charpoly_eval_one_eq_stabilityPolyPoly_of_bdf
   rw [rowYQuot_eval_one m hs]
   ring
 
+/-- §521 Step G.1 — General (non-BDF) unit-circle identity.
+Substitutes F.3 (`rowYQuot_eval_one`) into D.11b
+(`D_mul_toGLM_charpoly_eval_one_substituted`) and collects the
+explicit `(rowYQuot m).eval 1 = -∑ α(castSucc l)` cancellation.
+After cancellation the residual is a `rowFAlphaResidual` sum plus a
+single cross product `∑β(castSucc) · ∑α(castSucc)`. This is the
+non-BDF analogue of F.4; the BDF specialisation
+`D_mul_toGLM_charpoly_eval_one_eq_stabilityPolyPoly_of_bdf` recovers
+F.4 by zeroing both correction summands. -/
+theorem D_mul_toGLM_charpoly_eval_one_general
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        - z * (∑ l : Fin s, (rowFAlphaResidual m l).eval 1)
+        - z * (∑ l : Fin s, ((m.β l.castSucc : ℝ) : ℂ))
+            * (∑ l : Fin s, ((m.α l.castSucc : ℝ) : ℂ)) := by
+  rw [D_mul_toGLM_charpoly_eval_one_substituted m hz hs]
+  rw [rowYQuot_eval_one m hs]
+  have hsum_split : ∑ l : Fin s,
+        ( ((m.β l.castSucc : ℝ) : ℂ)
+            - ((m.β (Fin.last s) : ℝ) : ℂ) *
+              ((m.α l.castSucc : ℝ) : ℂ) ) =
+      (∑ l : Fin s, ((m.β l.castSucc : ℝ) : ℂ))
+        - ((m.β (Fin.last s) : ℝ) : ℂ) *
+            (∑ l : Fin s, ((m.α l.castSucc : ℝ) : ℂ)) := by
+    rw [Finset.sum_sub_distrib, ← Finset.mul_sum]
+  rw [hsum_split]
+  ring
+
 end LMM
