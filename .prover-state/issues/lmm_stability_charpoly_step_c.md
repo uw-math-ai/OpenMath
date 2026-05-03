@@ -2,23 +2,16 @@
 
 ## Status
 
-**Block-adjugate infrastructure landed (cycle 664).** The reusable theorem
+**Step C closed (cycle 666).** Both scalar adjugate-row entries
+`toGLM_stabilityCharpolyRowY` and `toGLM_stabilityCharpolyRowF` now have
+real closed forms in `OpenMath/LMMAsGLM/StabilityCharpoly.lean`, and
+`toGLM_stabilityMatrix_charpoly_explicit` is a sorry-free identity.
 
-```
-Matrix.adjugate_fromBlocks_zero₂₁
-```
+The next §521 milestone is the iff bridge `LMM.toGLM_isAStable_iff` as a
+root-location argument over the spurious-`X^s` factorisation of
+`toGLM_stabilityMatrix_charpoly_explicit`.
 
-is now proved in `OpenMath/Helpers/BlockAdjugate.lean`. The past-`y`
-entry and the rank-one contraction headline remain compiled in
-`OpenMath/LMMAsGLM/StabilityCharpoly.lean`.
-
-The remaining mathematical work is not a live proof placeholder: it is to
-replace the current existential placeholder
-`LMM.toGLM_stabilityCharpolyRowF_eq_explicit` with the actual scalar formula
-obtained by applying the block-adjugate identity to the V-active
-charmatrix.
-
-## Remaining blocker
+## Cycle 666 — past-`h*f` past-tense (closed)
 
 The past-`h*f` entry
 
@@ -117,6 +110,20 @@ from `Matrix.adjugate_apply`.
 
 ## Downstream after past-`h*f`
 
-Once `toGLM_stabilityCharpolyRowF_eq_explicit` is a real closed form, the
-§521 LMM iff bridge `LMM.toGLM_isAStable_iff` should be a root-location
-argument over `LMM.toGLM_stabilityMatrix_charpoly_explicit`.
+`toGLM_stabilityCharpolyRowF_eq_explicit` is now a real closed form (cycle
+666). The §521 LMM iff bridge `LMM.toGLM_isAStable_iff` becomes a
+root-location argument over `LMM.toGLM_stabilityMatrix_charpoly_explicit`,
+factoring out the spurious `X^s` and reading roots of the active polynomial.
+
+Cycle 666 added the generic helper
+
+```
+Matrix.vecMul_fromBlocks_apply_inr
+Matrix.vecMul_fromBlocks_apply_inl
+```
+
+in `OpenMath/Helpers/BlockAdjugate.lean`. The proof routes through
+`Matrix.adjugate_fromBlocks_zero₂₁` (the row-update at `Sum.inr` does not
+preserve the bottom-left zero block, so the `det_fromBlocks_zero₂₁`
+shortcut used for `RowY` does not apply — the strategy guidance was
+correct on this point).

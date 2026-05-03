@@ -196,6 +196,32 @@ private theorem adjugate_fromBlocks_zero₂₁_one
     Matrix.fromBlocks_multiply]
   simp [Matrix.mul_neg]
 
+/-- Row-vector of a `fromBlocks` matrix, evaluated at a `Sum.inr` index:
+the result splits as the row-vector against the top-right and bottom-right
+blocks. -/
+theorem vecMul_fromBlocks_apply_inr
+    [Fintype m] [Fintype n] [NonUnitalNonAssocSemiring α]
+    (A : Matrix m m α) (B : Matrix m n α) (C : Matrix n m α)
+    (D : Matrix n n α) (x : m ⊕ n → α) (j : n) :
+    Matrix.vecMul x (Matrix.fromBlocks A B C D) (Sum.inr j) =
+      Matrix.vecMul (x ∘ Sum.inl) B j +
+        Matrix.vecMul (x ∘ Sum.inr) D j := by
+  simp only [Matrix.vecMul, dotProduct, Matrix.fromBlocks_apply₁₂,
+    Matrix.fromBlocks_apply₂₂, Fintype.sum_sum_type, Function.comp_apply]
+
+/-- Row-vector of a `fromBlocks` matrix, evaluated at a `Sum.inl` index:
+the result splits as the row-vector against the top-left and bottom-left
+blocks. -/
+theorem vecMul_fromBlocks_apply_inl
+    [Fintype m] [Fintype n] [NonUnitalNonAssocSemiring α]
+    (A : Matrix m m α) (B : Matrix m n α) (C : Matrix n m α)
+    (D : Matrix n n α) (x : m ⊕ n → α) (j : m) :
+    Matrix.vecMul x (Matrix.fromBlocks A B C D) (Sum.inl j) =
+      Matrix.vecMul (x ∘ Sum.inl) A j +
+        Matrix.vecMul (x ∘ Sum.inr) C j := by
+  simp only [Matrix.vecMul, dotProduct, Matrix.fromBlocks_apply₁₁,
+    Matrix.fromBlocks_apply₂₁, Fintype.sum_sum_type, Function.comp_apply]
+
 /-- Adjugate of an upper-block-triangular matrix (zero in the bottom-left
 block): the adjugate is itself upper-block-triangular, with diagonal
 blocks scaled by the determinant of the opposite block and an explicit

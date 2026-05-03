@@ -329,17 +329,82 @@ theorem toGLM_stabilityCharpolyRowY_eq_explicit
   rw [hrow]
   rfl
 
-/-- §521 Step C.3 — Past-`h*f` adjugate-row entry placeholder.
+/-- §521 Step C.3 — Past-`h*f` adjugate-row entry as a sum of two block
+contributions: a top-half rank-one updated past-`y` correction (the
+off-diagonal block of the upper-triangular adjugate) and a bottom-half
+`PY.charmatrix.det`-scaled past-`h*f` adjugate row.
 
-The reusable block-adjugate identity needed for the real scalar expansion is
-available as `Matrix.adjugate_fromBlocks_zero₂₁`; the remaining work is to
-push it through the `toGLM_stabilityBlockEquiv` reindexing and simplify the
-off-diagonal correction term against the rank-one row. -/
+This is the `RowF` analogue of `toGLM_stabilityCharpolyRowY_eq_explicit`,
+obtained by routing through `Matrix.adjugate_fromBlocks_zero₂₁` rather
+than `Matrix.det_fromBlocks_zero₂₁` (the row-update at `Sum.inr` does not
+preserve the bottom-left zero block, so the determinant shortcut does
+not apply here). -/
 theorem toGLM_stabilityCharpolyRowF_eq_explicit
-    (m : LMM s) :
-    ∃ R : Polynomial ℂ,
-      toGLM_stabilityCharpolyRowF m = R :=
-  ⟨_, rfl⟩
+    (m : LMM s) (hs : 0 < s) :
+    toGLM_stabilityCharpolyRowF m =
+      Matrix.vecMul
+          (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+          (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+            (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C) *
+            (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate)
+          ⟨s - 1, by omega⟩
+      +
+      Matrix.vecMul
+          (fun k => Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ))
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.det •
+            (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate)
+          ⟨s - 1, by omega⟩ := by
+  classical
+  unfold toGLM_stabilityCharpolyRowF
+  rw [dif_neg (by omega : ¬ s = 0)]
+  show Matrix.vecMul (fun j => Polynomial.C ((toGLM_rankOneRow m) j))
+        (m.toGLM.Vℂ.charmatrix).adjugate
+      (Fin.cast (Nat.two_mul s).symm
+        (Fin.natAdd s ⟨s - 1, by omega⟩)) = _
+  rw [toGLM_V_active_lift_eq_fromBlocks_zero, Matrix.charmatrix_reindex,
+    Matrix.adjugate_reindex, Matrix.reindex_apply,
+    Matrix.submatrix_vecMul_equiv]
+  simp only [Equiv.symm_symm, Function.comp_apply,
+    toGLM_stabilityBlockEquiv_symm_natAdd]
+  rw [Matrix.charmatrix_fromBlocks]
+  simp only [Matrix.map_zero _ Polynomial.C_0, neg_zero]
+  rw [Matrix.adjugate_fromBlocks_zero₂₁]
+  rw [Matrix.vecMul_fromBlocks_apply_inr]
+  -- Rewrite the row-vector restrictions using the rank-one row simp lemmas.
+  have hrow_inl :
+      ((fun j => Polynomial.C ((toGLM_rankOneRow m) j)) ∘
+          (toGLM_stabilityBlockEquiv s)) ∘ Sum.inl
+        = fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ) := by
+    funext k
+    have he : toGLM_stabilityBlockEquiv s (Sum.inl k) =
+        Fin.cast (Nat.two_mul s).symm (Fin.castAdd s k) := by
+      simp [toGLM_stabilityBlockEquiv]
+    show Polynomial.C ((toGLM_rankOneRow m)
+          (toGLM_stabilityBlockEquiv s (Sum.inl k))) = _
+    rw [he, toGLM_rankOneRow_castAdd]
+  have hrow_inr :
+      ((fun j => Polynomial.C ((toGLM_rankOneRow m) j)) ∘
+          (toGLM_stabilityBlockEquiv s)) ∘ Sum.inr
+        = fun k => Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ) := by
+    funext k
+    have he : toGLM_stabilityBlockEquiv s (Sum.inr k) =
+        Fin.cast (Nat.two_mul s).symm (Fin.natAdd s k) := by
+      simp [toGLM_stabilityBlockEquiv]
+    show Polynomial.C ((toGLM_rankOneRow m)
+          (toGLM_stabilityBlockEquiv s (Sum.inr k))) = _
+    rw [he, toGLM_rankOneRow_natAdd]
+  rw [hrow_inl, hrow_inr]
+  -- Top half: rewrite -(A * B * D) = (-A) * B * D so the resulting matrix
+  -- matches the strategy form `(-A.adjugate) * (-(B.map C)) * D.adjugate`.
+  rw [show
+        (-((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+            (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C) *
+          (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate))
+          =
+        (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate) *
+            (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C) *
+          (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate from by
+        rw [Matrix.neg_mul, Matrix.neg_mul]]
 
 /-- §521 Step C.3 (headline) — Explicit form of the LMM-as-GLM stability
 matrix characteristic polynomial as the active block charpoly minus the
