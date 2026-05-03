@@ -1997,4 +1997,91 @@ theorem rowFAlphaPoly_eval_one_eq_residual_sum (m : LMM s) :
   intro l _
   simp [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X]
 
+/-- §521 Step D.11a — Substitute the cycle 716 D.10a evaluation
+`(rowFAlphaPoly m).eval 0 = (rowFAlphaResidual m ⟨0, hs⟩).eval 0`
+into the cycle 712 D.8 closed form
+`D_mul_toGLM_charpoly_eval_zero_concrete`. The `(rowFAlphaPoly m).eval 0`
+term collapses to a single residual evaluation; the rest of D.8 stays
+unchanged. -/
+theorem D_mul_toGLM_charpoly_eval_zero_substituted
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 0 =
+      - ( (rowFAlphaResidual m ⟨0, hs⟩).eval 0
+            + ((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ)
+                * ((m.β (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ) ) * z := by
+  rw [D_mul_toGLM_charpoly_eval_zero_concrete m hz hs,
+      rowFAlphaPoly_eval_zero_eq_residual_zero m hs]
+
+/-- §521 Step D.11b — Substitute the cycle 716 D.10b evaluation
+`(rowFAlphaPoly m).eval 1 = ∑ l : Fin s, (rowFAlphaResidual m l).eval 1`
+into the cycle 714 D.9 closed form
+`D_mul_toGLM_charpoly_eval_one_concrete`. -/
+theorem D_mul_toGLM_charpoly_eval_one_substituted
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        + z *
+            ∑ l : Fin s,
+              ( ((m.β l.castSucc : ℝ) : ℂ)
+                  - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ) )
+        - ( (rowYQuot m).eval 1 *
+              (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + ( (∑ l : Fin s, (rowFAlphaResidual m l).eval 1) +
+                (1 + ∑ l : Fin s, ((m.α (Fin.castSucc l) : ℝ) : ℂ)) *
+                  (∑ k : Fin s, ((m.β (Fin.castSucc k) : ℝ) : ℂ)) ) * z ) := by
+  rw [D_mul_toGLM_charpoly_eval_one_concrete m hz hs,
+      rowFAlphaPoly_eval_one_eq_residual_sum m]
+
+/-- §521 Step D.11c — BDF specialisation of D.11b. Under BDF,
+`∑ k : Fin s, β(castSucc k) = 0`, so the corrective product term in
+D.11b vanishes (same simplification used in D.9b). -/
+theorem D_mul_toGLM_charpoly_eval_one_substituted_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 1 =
+      (m.stabilityPolyPoly z).eval 1
+        + z *
+            ∑ l : Fin s,
+              ( ((m.β l.castSucc : ℝ) : ℂ)
+                  - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ) )
+        - ( (rowYQuot m).eval 1 *
+              (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + (∑ l : Fin s, (rowFAlphaResidual m l).eval 1) * z ) := by
+  rw [D_mul_toGLM_charpoly_eval_one_substituted m hz hs]
+  have hBetaSum : ∑ k : Fin s, ((m.β (Fin.castSucc k) : ℝ) : ℂ) = 0 := by
+    apply Finset.sum_eq_zero
+    intro k _
+    have hβ : m.β (Fin.castSucc k) = 0 :=
+      hbdf _ (Fin.castSucc_lt_last k).ne
+    rw [hβ]; simp
+  rw [hBetaSum]; ring
+
+/-- §521 Step D.12a — Discharge `dif_neg` branch of `rowYQuot.eval 0`. -/
+theorem rowYQuot_eval_zero_eq (m : LMM s) (hs : 0 < s) :
+    (rowYQuot m).eval 0 =
+      (((toGLM_stabilityMatrixPY m 0).charmatrix.updateRow
+          ⟨s - 1, by omega⟩
+          (fun k =>
+            Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))).det).eval 0 := by
+  unfold rowYQuot
+  rw [dif_neg hs.ne']
+
+/-- §521 Step D.12b — Discharge `dif_neg` branch of `rowYQuot.eval 1`. -/
+theorem rowYQuot_eval_one_eq (m : LMM s) (hs : 0 < s) :
+    (rowYQuot m).eval 1 =
+      (((toGLM_stabilityMatrixPY m 0).charmatrix.updateRow
+          ⟨s - 1, by omega⟩
+          (fun k =>
+            Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))).det).eval 1 := by
+  unfold rowYQuot
+  rw [dif_neg hs.ne']
+
 end LMM
