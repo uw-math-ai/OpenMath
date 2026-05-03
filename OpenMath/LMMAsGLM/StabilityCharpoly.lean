@@ -425,4 +425,52 @@ theorem toGLM_stabilityMatrix_charpoly_explicit
   rw [show (toGLM_V_active_lift m).charpoly = m.toGLM.Vℂ.charpoly from rfl,
     toGLM_V_active_charpoly]
 
+/-! ### Step C.5 — The active stability polynomial -/
+
+/-- §521 Step C.5 — The **active stability polynomial** of an LMM-as-GLM,
+defined as the resolvent denominator `D = 1 - z β_last` times the
+characteristic polynomial of the active past-`y` block of the GLM
+stability matrix.
+
+This is the natural general-`z` companion of the classical scalar
+stability polynomial `LMM.stabilityPolyPoly`, to which it reduces under
+the BDF hypothesis (see
+`activeStabilityPolyPoly_eq_stabilityPolyPoly_of_bdf`). -/
+noncomputable def activeStabilityPolyPoly (m : LMM s) (z : ℂ) : Polynomial ℂ :=
+  (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) •
+    (toGLM_stabilityMatrixPY m z).charpoly
+
+/-- §521 Step C.5 — BDF sanity lemma: under the BDF hypothesis on `β`
+(all entries except `β_last` vanish), the active stability polynomial
+collapses to the classical scalar stability polynomial. Direct restatement
+of `LMM.toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf` via
+the new definition. -/
+theorem activeStabilityPolyPoly_eq_stabilityPolyPoly_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    activeStabilityPolyPoly m z = m.stabilityPolyPoly z :=
+  toGLM_stabilityMatrixPY_charpoly_eq_stabilityPolyPoly_of_bdf m z hbdf hz
+
+/-- §521 Step C.5 — BDF specialisation of the headline identity
+`D · charpoly = X^s · activeStabilityPolyPoly`. Under the BDF hypothesis
+the cycle 643 lemma `toGLM_stabilityMatrix_charpoly_of_bdf` factors the
+full GLM stability charpoly as `PY.charpoly · X^s`, so multiplying both
+sides by `Polynomial.C D` reorders them into the active-stability form.
+
+The general (non-BDF) version remains the next sub-step toward the §521
+iff bridge: it requires extracting the `Polynomial.X^s` factor from the
+rank-one adjugate contraction in
+`toGLM_stabilityMatrix_charpoly_explicit`. -/
+theorem D_mul_toGLM_charpoly_eq_X_pow_mul_active_of_bdf
+    (m : LMM s) (z : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        (m.toGLM.stabilityMatrix z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s * activeStabilityPolyPoly m z := by
+  rw [toGLM_stabilityMatrix_charpoly_of_bdf m z hbdf]
+  unfold activeStabilityPolyPoly
+  rw [Polynomial.smul_eq_C_mul]
+  ring
+
 end LMM
