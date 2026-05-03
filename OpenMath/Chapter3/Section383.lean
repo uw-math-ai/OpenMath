@@ -220,4 +220,52 @@ theorem isMultiplicative_const_one :
     IsMultiplicative (fun _ : Forest => (1 : ℝ)) :=
   ⟨rfl, fun _ _ => by ring⟩
 
+/-! ### Lemma 383B — convolution is associative -/
+
+/-- Key combinatorial bijection: for fixed `S`, summing first over
+`Q ≤ S` and then over `T ≤ S - Q` is the same as summing first over
+`R ≤ S` and then over `Q ≤ R` with `T = R - Q`.
+
+This is the multiset analogue of the textbook reindexing
+`Σ_{Q ⊑ R ⊑ S} f(R-Q, Q) = Σ_{Q ⊑ S, T ⊑ S-Q} f(T, Q)` via the
+bijection `(Q, T) ↔ (Q + T, Q)`. -/
+private theorem double_powerset_swap
+    (S : Multiset RootedTree)
+    (f : Multiset RootedTree → Multiset RootedTree → ℝ) :
+    ((S.powerset).bind
+        (fun Q => (S - Q).powerset.map (fun T => f Q T))).sum
+      = ((S.powerset).bind
+          (fun R => R.powerset.map (fun Q => f Q (R - Q)))).sum := by
+  sorry
+
+/-- Expansion of the LHS of associativity as a double sum. -/
+private theorem convProduct_assoc_lhs_eq (α β γ : Forest → ℝ) (S : Forest) :
+    convProduct (convProduct α β) γ S
+      = ((S.powerset).bind
+          (fun Q => (S - Q).powerset.map
+            (fun T => α (S - Q - T) * β T * γ Q))).sum := by
+  sorry
+
+/-- Expansion of the RHS of associativity as a double sum. -/
+private theorem convProduct_assoc_rhs_eq (α β γ : Forest → ℝ) (S : Forest) :
+    convProduct α (convProduct β γ) S
+      = ((S.powerset).bind
+          (fun R => R.powerset.map
+            (fun Q => α (S - R) * β (R - Q) * γ Q))).sum := by
+  sorry
+
+/-- **Butcher §383 Lemma 383B** — the convolution product on
+forest mappings is associative.
+
+> Let α, β and γ be multiplicative mappings from forests to the real
+> numbers. Then (αβ)γ = α(βγ).
+
+Faithfulness note: the textbook hypothesises multiplicativity of
+α, β, γ, but its proof uses only the algebraic structure of the
+convolution sum (not multiplicativity). The Lean statement therefore
+drops the hypothesis — a faithful generalisation. -/
+theorem convProduct_assoc (α β γ : Forest → ℝ) :
+    convProduct (convProduct α β) γ = convProduct α (convProduct β γ) := by
+  sorry
+
 end OpenMath.Chapter3.Section383
