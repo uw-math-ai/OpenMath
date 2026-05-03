@@ -2276,4 +2276,22 @@ theorem D_mul_toGLM_charpoly_eval_one_reduced_of_bdf
     ring
   rw [hβSum]; ring
 
+/-- §521 Step E.3 — Mirror of D.16d at ξ = 0: under BDF, the entire
+PYHF block vanishes (cycle 645), so each `rowFAlphaResidual l`
+evaluates to zero at any point including ξ = 0. -/
+private theorem rowFAlphaResidual_eval_zero_of_bdf_eq_zero
+    (m : LMM s)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (l : Fin s) :
+    (rowFAlphaResidual m l).eval 0 = 0 := by
+  rw [rowFAlphaResidual_eval_zero_eq_double_sum m l]
+  apply Finset.sum_eq_zero
+  intro k _
+  apply Finset.sum_eq_zero
+  intro j _
+  have hPYHF : (toGLM_stabilityMatrixPYHF m 0) j l = 0 := by
+    have := toGLM_stabilityMatrixPYHF_eq_zero_of_bdf m 0 hbdf
+    exact congrFun (congrFun this j) l
+  rw [hPYHF]; ring
+
 end LMM
