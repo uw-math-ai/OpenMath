@@ -2311,4 +2311,74 @@ theorem D_mul_toGLM_charpoly_eval_zero_collapsed_of_bdf
   rw [h1, hβ]
   push_cast; ring
 
+/-- §521 Step F.1 — The `(s-1, s-1)` adjugate entry of `(PY 0).charmatrix`
+is `X^(s-1)`. The matrix `(PY 0).charmatrix.updateRow (s-1) (Pi.single (s-1) 1)`
+is upper triangular with diagonal `[X, X, ..., X, 1]`. Each non-last row of
+`PY 0` is the pure shift indicator (cycle 643's
+`toGLM_stabilityMatrixPY_apply_shift`), so deleting the last column leaves
+an upper-triangular minor with `X` on the diagonal.  The updated last row
+is `Pi.single ⟨s-1,_⟩ 1`, contributing `1` on the diagonal. -/
+private theorem toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last
+    (m : LMM s) (hs : 0 < s) :
+    (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate
+        ⟨s - 1, by omega⟩ ⟨s - 1, by omega⟩
+      = (Polynomial.X : Polynomial ℂ) ^ (s - 1) := by
+  rw [Matrix.adjugate_apply]
+  set N := (toGLM_stabilityMatrixPY m 0).charmatrix.updateRow
+              ⟨s - 1, by omega⟩
+              (Pi.single (⟨s - 1, by omega⟩ : Fin s) (1 : Polynomial ℂ))
+      with hN_def
+  -- Step 1: N is upper triangular.
+  have htri : N.BlockTriangular id := by
+    intro j l hlt
+    have hlt' : (l : ℕ) < (j : ℕ) := hlt
+    by_cases hj : j = ⟨s - 1, by omega⟩
+    · rw [hj, hN_def, Matrix.updateRow_self]
+      apply Pi.single_eq_of_ne
+      intro heq
+      have hv : (l : ℕ) = s - 1 := congrArg Fin.val heq
+      omega
+    · have hj_lt : (j : ℕ) + 1 ≠ s := by
+        intro heq
+        apply hj
+        apply Fin.ext
+        show (j : ℕ) = s - 1
+        omega
+      have hN_jl : N j l = (toGLM_stabilityMatrixPY m 0).charmatrix j l := by
+        simp [hN_def, Matrix.updateRow_ne hj]
+      rw [hN_jl, Matrix.charmatrix_apply]
+      rw [Matrix.diagonal_apply_ne _ (fun hjl => by
+          have hv : (j : ℕ) = (l : ℕ) := congrArg Fin.val hjl
+          omega)]
+      rw [toGLM_stabilityMatrixPY_apply_shift m 0 j hj_lt l]
+      rw [if_neg (by omega : ¬ (l : ℕ) = (j : ℕ) + 1)]
+      simp
+  -- Step 2: det N = ∏ i, N i i.
+  rw [Matrix.det_of_upperTriangular htri]
+  -- Step 3: Diagonal product = X^(s-1).
+  have h_last : N ⟨s - 1, by omega⟩ ⟨s - 1, by omega⟩ = (1 : Polynomial ℂ) := by
+    rw [hN_def, Matrix.updateRow_self]
+    exact Pi.single_eq_same _ _
+  have h_other : ∀ i : Fin s, i ≠ ⟨s - 1, by omega⟩ →
+      N i i = (Polynomial.X : Polynomial ℂ) := by
+    intro i hi
+    have hN_ii : N i i = (toGLM_stabilityMatrixPY m 0).charmatrix i i := by
+      simp [hN_def, Matrix.updateRow_ne hi]
+    rw [hN_ii, Matrix.charmatrix_apply, Matrix.diagonal_apply_eq]
+    have hi_lt : (i : ℕ) + 1 ≠ s := by
+      intro heq
+      apply hi
+      apply Fin.ext
+      show (i : ℕ) = s - 1
+      omega
+    rw [toGLM_stabilityMatrixPY_apply_shift m 0 i hi_lt i]
+    rw [if_neg (by omega : ¬ (i : ℕ) = (i : ℕ) + 1)]
+    simp
+  rw [← Finset.mul_prod_erase Finset.univ (fun i => N i i)
+        (Finset.mem_univ ⟨s - 1, by omega⟩)]
+  rw [h_last, one_mul]
+  rw [Finset.prod_congr rfl (fun i hi => h_other i (Finset.ne_of_mem_erase hi))]
+  rw [Finset.prod_const, Finset.card_erase_of_mem (Finset.mem_univ _),
+      Finset.card_univ, Fintype.card_fin]
+
 end LMM
