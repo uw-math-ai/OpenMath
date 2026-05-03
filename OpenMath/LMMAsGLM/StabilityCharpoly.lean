@@ -1623,4 +1623,47 @@ theorem D_mul_toGLM_charpoly_eval_eq
     Polynomial.eval_pow, Polynomial.eval_X, Polynomial.eval_C,
     Polynomial.eval_finset_sum] using this
 
+/-- §521 Step C.17 — Under BDF, for every `ξ ≠ 0` and every `z` with
+non-zero denominator `D = 1 - z·β_last`, the GLM stability-matrix
+characteristic polynomial vanishes at `ξ` iff the textbook scalar
+stability polynomial `stabilityPolyPoly z` vanishes at `ξ`. The
+non-zero hypothesis on `ξ` discards the `X^s` factor on the RHS of
+`D · charpoly = X^s · stabilityPolyPoly`. Direct evaluation of the
+cycle 643 BDF headline at `ξ`. -/
+theorem toGLM_charpoly_eval_eq_zero_iff_stabilityPoly_of_bdf
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0)
+    (hξ : ξ ≠ 0) :
+    ((m.toGLM.stabilityMatrix z).charpoly).eval ξ = 0 ↔
+      (m.stabilityPolyPoly z).eval ξ = 0 := by
+  have h := D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_of_bdf
+              m z hbdf hz
+  have heval := congrArg (Polynomial.eval ξ) h
+  simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+    Polynomial.eval_X] at heval
+  have hξs : ξ ^ s ≠ 0 := pow_ne_zero _ hξ
+  constructor
+  · intro hcp
+    rw [hcp, mul_zero] at heval
+    exact (mul_eq_zero.mp heval.symm).resolve_left hξs
+  · intro hsp
+    rw [hsp, mul_zero] at heval
+    exact (mul_eq_zero.mp heval).resolve_left hz
+
+/-- §521 Step C.17 contrapositive — Under BDF, the GLM matrix charpoly
+is non-vanishing at every non-zero `ξ` iff the textbook scalar
+stability polynomial is non-vanishing at every non-zero `ξ`. Useful
+form for the unit-disk root-counting argument that drives
+`LMM.toGLM_isAStable_iff`. -/
+theorem toGLM_charpoly_eval_ne_zero_iff_stabilityPoly_of_bdf
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0)
+    (hξ : ξ ≠ 0) :
+    ((m.toGLM.stabilityMatrix z).charpoly).eval ξ ≠ 0 ↔
+      (m.stabilityPolyPoly z).eval ξ ≠ 0 :=
+  (toGLM_charpoly_eval_eq_zero_iff_stabilityPoly_of_bdf
+     m ξ hbdf hz hξ).not
+
 end LMM
