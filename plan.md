@@ -218,7 +218,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:550A` **Doubly companion matrices** (§550)
 - [x] `def:520E` **A-stable** (§520) — OpenMath/Chapter5/Section520.lean
 - [ ] `def:542A` **annihilation conditions** (§542)
-- [ ] `lem:515B` **Stability and Consistency Imply Convergence (515B)** (§515)
+- [~] `lem:515B` **Stability and Consistency Imply Convergence (515B)** (§515) — OpenMath/Chapter5/Section515.lean: main composition closed; `aux_515B_eta_contraction` deferred (M-matrix `(I − h₀L|A|)^{−1}` infrastructure)
 - [ ] `thm:521B` **Maximum stability order for given steps** (§521)
 - [ ] `thm:523B` **Nonlinear Stability via Positive Semidefiniteness** (§523)
 - [x] `def:520F` **L Stability Condition for Linear Methods** (§520) — OpenMath/Chapter5/Section520.lean

@@ -911,7 +911,49 @@ private theorem aux_515B_lipschitz_bridge {s r : ℕ}
     (h : ℝ) (_hh : 0 ≤ h) (i : Fin r) :
     |h * ∑ j, B i j * (f (Y_hat j) - f (Y j))|
       ≤ h * L * ∑ j, |B i j| * |Y_hat j - Y j| := by
-  sorry
+  -- Lipschitz bridge: |f a - f b| ≤ L * |a - b|.
+  have hLip_abs : ∀ a b : ℝ, |f a - f b| ≤ L * |a - b| := by
+    intro a b
+    have hd := _hf_lip.dist_le_mul a b
+    rw [Real.dist_eq, Real.dist_eq] at hd
+    have hcoe : (Real.toNNReal L : ℝ) = L := Real.coe_toNNReal L _hL
+    rw [hcoe] at hd
+    exact hd
+  -- |h * Σ| = h * |Σ|.
+  have habs_h : |h * ∑ j, B i j * (f (Y_hat j) - f (Y j))|
+              = h * |∑ j, B i j * (f (Y_hat j) - f (Y j))| := by
+    rw [abs_mul, abs_of_nonneg _hh]
+  rw [habs_h]
+  -- |Σ| ≤ Σ |·|.
+  have habs_sum : |∑ j, B i j * (f (Y_hat j) - f (Y j))|
+                ≤ ∑ j, |B i j * (f (Y_hat j) - f (Y j))| :=
+    Finset.abs_sum_le_sum_abs _ _
+  -- Per-summand bound: |B_{ij} * (f(Ŷ_j) - f(Y_j))| ≤ |B_{ij}| * |Ŷ_j - Y_j| * L.
+  have hpt : ∀ j, |B i j * (f (Y_hat j) - f (Y j))|
+                ≤ |B i j| * |Y_hat j - Y j| * L := by
+    intro j
+    have h1 : |f (Y_hat j) - f (Y j)| ≤ L * |Y_hat j - Y j| := hLip_abs _ _
+    have hBij_nn : 0 ≤ |B i j| := abs_nonneg _
+    calc |B i j * (f (Y_hat j) - f (Y j))|
+        = |B i j| * |f (Y_hat j) - f (Y j)| := abs_mul _ _
+      _ ≤ |B i j| * (L * |Y_hat j - Y j|) :=
+          mul_le_mul_of_nonneg_left h1 hBij_nn
+      _ = |B i j| * |Y_hat j - Y j| * L := by ring
+  -- Sum the per-summand bound.
+  have hsum_bound : ∑ j, |B i j * (f (Y_hat j) - f (Y j))|
+                  ≤ ∑ j, |B i j| * |Y_hat j - Y j| * L :=
+    Finset.sum_le_sum (fun j _ => hpt j)
+  -- Pull L out of the right sum.
+  have hsum_pull : ∑ j, |B i j| * |Y_hat j - Y j| * L
+                = (∑ j, |B i j| * |Y_hat j - Y j|) * L := by
+    rw [← Finset.sum_mul]
+  rw [hsum_pull] at hsum_bound
+  calc h * |∑ j, B i j * (f (Y_hat j) - f (Y j))|
+      ≤ h * ∑ j, |B i j * (f (Y_hat j) - f (Y j))| :=
+          mul_le_mul_of_nonneg_left habs_sum _hh
+    _ ≤ h * ((∑ j, |B i j| * |Y_hat j - Y j|) * L) :=
+          mul_le_mul_of_nonneg_left hsum_bound _hh
+    _ = h * L * ∑ j, |B i j| * |Y_hat j - Y j| := by ring
 
 /-- **(515B η contraction)** Given the per-stage contraction estimate
 
@@ -989,7 +1031,14 @@ This is `lem:515B` of `entities/lem_515B.json`.
    the analysis tightly.
 
 The textbook proof structure is formalized via the three sub-lemmas
-above; the main combination is left as `sorry` for Aristotle. -/
+above. Cycle 104 closes the main combination via:
+* `aux_515B_residual_decomposition` (algebraic identity).
+* `aux_515B_lipschitz_bridge` (closed cycle 104).
+* `aux_515B_eta_contraction` (applied as a black-box hypothesis;
+  its proof is `sorry` pending M-matrix `(I − h₀ L|A|)^{−1}`
+  positivity infrastructure — see
+  `.prover-state/issues/lem_515B_eta_contraction_deferred.md`).
+* `localStageError_bound_a` and `localStageError_bound_b` (515A). -/
 theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
     (M : GeneralLinearMethod s r)
     {h h₀ L M_bound α β δ_max : ℝ}
@@ -1035,6 +1084,238 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
           - (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
           = (∑ j, M.V i j * δ j) + K i)
       ∧ (∀ i, |K i| ≤ α * h * δ_max + β * h^2) := by
-  sorry
+  -- Phantom variables: exact ODE values at abscissae and exact previous values.
+  let Yhat : Fin s → ℝ := fun j => yex (xn1 + h * c j)
+  let y_prev : Fin r → ℝ := fun k => u k * yex xn1 + v k * h * deriv yex xn1
+  let η : Fin s → ℝ := fun j => Y j - Yhat j
+  -- 515A (b) bound: exact-side residual R_i.
+  have hRi : ∀ i : Fin r, |(u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+                - h * (∑ j, M.B i j * f (Yhat j))
+                - (∑ j, M.V i j * y_prev j)|
+                ≤ h^2 * L^2 * M_bound *
+                  ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|) :=
+    M.localStageError_bound_b _hh _hL _hM f _hf_lip yex _hy_C1 _hy_ode
+        _hy_M _hy'_LM xn1 u v _hVu _hUu _hCons c _hc_nonneg _hc_def
+  -- 515A (a) bound: per-stage exact residual.
+  have hres_j : ∀ j : Fin s, |Yhat j - h * (∑ k, M.A j k * f (Yhat k))
+                               - (∑ k, M.U j k * y_prev k)|
+                            ≤ h^2 * L^2 * M_bound *
+                              ((1/2) * (c j)^2 + ∑ k, |M.A j k * c k|) :=
+    M.localStageError_bound_a _hh _hL _hM f _hf_lip yex _hy_C1 _hy_ode
+        _hy_M _hy'_LM xn1 u v _hVu _hUu _hCons c _hc_nonneg _hc_def
+  -- η contraction estimate: the per-stage Lipschitz + residual bound.
+  have hη_contr : ∀ j, |η j - ∑ k, M.U j k * δ k|
+                        ≤ h * L * (∑ k, |M.A j k| * |η k|)
+                          + h^2 * L^2 * M_bound *
+                            ((1/2) * (c j)^2 + ∑ k, |M.A j k * c k|) := by
+    intro j
+    -- Algebraic key identity: η_j - Σ U·δ
+    --   = h Σ A·(f(Y) - f(Ŷ)) - residual_j.
+    have hkey : η j - (∑ k, M.U j k * δ k)
+                = h * (∑ k, M.A j k * (f (Y k) - f (Yhat k)))
+                  - (Yhat j - h * (∑ k, M.A j k * f (Yhat k))
+                            - (∑ k, M.U j k * y_prev k)) := by
+      have hY := _hY_stage j
+      have hUδ : (∑ k, M.U j k * δ k)
+                  = (∑ k, M.U j k * yt_prev k) - (∑ k, M.U j k * y_prev k) := by
+        rw [← Finset.sum_sub_distrib]
+        refine Finset.sum_congr rfl (fun k _ => ?_)
+        rw [_hδ_def k]; ring
+      have hAdiff : h * (∑ k, M.A j k * (f (Y k) - f (Yhat k)))
+                    = h * (∑ k, M.A j k * f (Y k))
+                      - h * (∑ k, M.A j k * f (Yhat k)) := by
+        rw [← mul_sub, ← Finset.sum_sub_distrib]
+        congr 1
+        refine Finset.sum_congr rfl (fun k _ => ?_); ring
+      show Y j - Yhat j - (∑ k, M.U j k * δ k) = _
+      rw [hY, hUδ, hAdiff]; ring
+    -- Bound the Lipschitz piece via aux_515B_lipschitz_bridge.
+    -- Note: `|η k|` reduces definitionally to `|Y k - Yhat k|` since `η` is a `let`.
+    have hbridge' : |h * (∑ k, M.A j k * (f (Y k) - f (Yhat k)))|
+                    ≤ h * L * ∑ k, |M.A j k| * |η k| :=
+      aux_515B_lipschitz_bridge (s := s) (r := s) _hL _hf_lip M.A Y Yhat h _hh j
+    calc |η j - ∑ k, M.U j k * δ k|
+        = |h * (∑ k, M.A j k * (f (Y k) - f (Yhat k)))
+            - (Yhat j - h * (∑ k, M.A j k * f (Yhat k))
+               - (∑ k, M.U j k * y_prev k))| := by rw [hkey]
+      _ ≤ |h * (∑ k, M.A j k * (f (Y k) - f (Yhat k)))|
+            + |Yhat j - h * (∑ k, M.A j k * f (Yhat k))
+               - (∑ k, M.U j k * y_prev k)| := abs_sub _ _
+      _ ≤ h * L * (∑ k, |M.A j k| * |η k|)
+            + h^2 * L^2 * M_bound *
+              ((1/2) * (c j)^2 + ∑ k, |M.A j k * c k|) :=
+          add_le_add hbridge' (hres_j j)
+  -- Apply aux_515B_eta_contraction.
+  have hη_bound : ∀ j, |η j| ≤ ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j :=
+    aux_515B_eta_contraction (s := s) (r := r) M.A M.U _hh _hh_le _h₀_pos _hL _hM
+      _hδ_max_nonneg c _hc_nonneg ell_U phi_A η _hell_U_nonneg _hphi_A_nonneg
+      _hellU_eq _hphiA_eq δ _hδ_max hη_contr
+  -- Construct K and prove the two clauses.
+  refine ⟨fun i => h * (∑ j, M.B i j * f (Y j))
+          + (∑ j, M.V i j * yt_prev j)
+          - (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+          - (∑ j, M.V i j * δ j), ?_, ?_⟩
+  · -- Identity clause: trivial by `ring`.
+    intro i; ring
+  · -- Bound clause.
+    intro i
+    -- Beta-reduce the K-witness in the goal.
+    show |h * (∑ j, M.B i j * f (Y j))
+            + (∑ j, M.V i j * yt_prev j)
+            - (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+            - (∑ j, M.V i j * δ j)| ≤ α * h * δ_max + β * h^2
+    -- K i = h Σ B·(f(Y) - f(Ŷ)) - R_i  (algebra).
+    have hK_rel : h * (∑ j, M.B i j * f (Y j))
+                  + (∑ j, M.V i j * yt_prev j)
+                  - (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+                  - (∑ j, M.V i j * δ j)
+                  = h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))
+                    - ((u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+                       - h * (∑ j, M.B i j * f (Yhat j))
+                       - (∑ j, M.V i j * y_prev j)) := by
+      have hVδ : (∑ j, M.V i j * δ j)
+                  = (∑ j, M.V i j * yt_prev j) - (∑ j, M.V i j * y_prev j) := by
+        rw [← Finset.sum_sub_distrib]
+        refine Finset.sum_congr rfl (fun k _ => ?_)
+        rw [_hδ_def k]; ring
+      have hBdiff : h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))
+                    = h * (∑ j, M.B i j * f (Y j))
+                      - h * (∑ j, M.B i j * f (Yhat j)) := by
+        rw [← mul_sub, ← Finset.sum_sub_distrib]
+        congr 1
+        refine Finset.sum_congr rfl (fun k _ => ?_); ring
+      rw [hVδ, hBdiff]; ring
+    rw [hK_rel]
+    -- Now |LHS - R_i| ≤ |LHS| + |R_i|.
+    -- |LHS| := |h Σ B·(f(Y) - f(Ŷ))| ≤ h L Σ|B|·|η|  (aux_515B_lipschitz_bridge).
+    -- Note: `|η j|` reduces definitionally to `|Y j - Yhat j|` since `η` is a `let`.
+    have hbridge_eta : |h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))|
+                        ≤ h * L * ∑ j, |M.B i j| * |η j| :=
+      aux_515B_lipschitz_bridge (s := s) (r := r) _hL _hf_lip M.B Y Yhat h _hh i
+    -- Bound Σ|B|·|η| ≤ Σ|B|·(ell_U·δ_max + h²L²M·phi_A) using hη_bound.
+    have hsum_eta_bound : (∑ j, |M.B i j| * |η j|)
+                          ≤ ∑ j, |M.B i j| *
+                              (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j) :=
+      Finset.sum_le_sum (fun j _ =>
+        mul_le_mul_of_nonneg_left (hη_bound j) (abs_nonneg _))
+    have hhL_nn : 0 ≤ h * L := mul_nonneg _hh _hL
+    have hbridge_full : |h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))|
+                        ≤ h * L * (∑ j, |M.B i j| *
+                            (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j)) :=
+      hbridge_eta.trans (mul_le_mul_of_nonneg_left hsum_eta_bound hhL_nn)
+    -- Algebraic split: Σ|B|·(ell_U·δ_max + h²L²M·phi_A)
+    --   = (Σ|B|·ell_U)·δ_max + h²L²M·(Σ|B|·phi_A).
+    have hsum_split : (∑ j, |M.B i j| *
+                        (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j))
+                      = (∑ j, |M.B i j| * ell_U j) * δ_max
+                        + h^2 * L^2 * M_bound * (∑ j, |M.B i j| * phi_A j) := by
+      have hsplit : (∑ j, |M.B i j| *
+                        (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j))
+                    = (∑ j, |M.B i j| * (ell_U j * δ_max))
+                      + (∑ j, |M.B i j| * (h^2 * L^2 * M_bound * phi_A j)) := by
+        rw [← Finset.sum_add_distrib]
+        refine Finset.sum_congr rfl (fun j _ => ?_); ring
+      rw [hsplit]
+      congr 1
+      · rw [Finset.sum_mul]; refine Finset.sum_congr rfl (fun j _ => ?_); ring
+      · rw [Finset.mul_sum]; refine Finset.sum_congr rfl (fun j _ => ?_); ring
+    -- Use _hα_def i, _hβ_def i, and h ≤ h₀ to combine.
+    have hα_i : L * (∑ j, |M.B i j| * ell_U j) ≤ α := _hα_def i
+    have hβ_i : L^2 * M_bound *
+                  ((1/2) * |u i| + |v i|
+                   + (∑ j, |M.B i j * c j|)
+                   + h₀ * L * (∑ j, |M.B i j| * phi_A j)) ≤ β := _hβ_def i
+    -- Step A: h L (Σ|B|·ell_U) δ_max ≤ α h δ_max.
+    have hsumBℓ_nn : 0 ≤ ∑ j, |M.B i j| * ell_U j :=
+      Finset.sum_nonneg (fun j _ => mul_nonneg (abs_nonneg _) (_hell_U_nonneg j))
+    have hsumBϕ_nn : 0 ≤ ∑ j, |M.B i j| * phi_A j :=
+      Finset.sum_nonneg (fun j _ => mul_nonneg (abs_nonneg _) (_hphi_A_nonneg j))
+    have hδmax_nn : 0 ≤ δ_max := _hδ_max_nonneg
+    have hh2_nn : 0 ≤ h^2 := by positivity
+    have hhL2M_nn : 0 ≤ h^2 * L^2 * M_bound :=
+      mul_nonneg (mul_nonneg hh2_nn (by positivity)) _hM
+    have hStepA : h * L * ((∑ j, |M.B i j| * ell_U j) * δ_max)
+                  ≤ α * h * δ_max := by
+      have h1 : h * L * ((∑ j, |M.B i j| * ell_U j) * δ_max)
+                = h * δ_max * (L * (∑ j, |M.B i j| * ell_U j)) := by ring
+      rw [h1]
+      have hhδ_nn : 0 ≤ h * δ_max := mul_nonneg _hh hδmax_nn
+      calc h * δ_max * (L * (∑ j, |M.B i j| * ell_U j))
+          ≤ h * δ_max * α := mul_le_mul_of_nonneg_left hα_i hhδ_nn
+        _ = α * h * δ_max := by ring
+    -- Step B: h L (h²L²M Σ|B|·phi_A) ≤ h² L² M (h₀ L Σ|B|·phi_A) (h ≤ h₀).
+    have hLsumBϕ_nn : 0 ≤ L * (∑ j, |M.B i j| * phi_A j) :=
+      mul_nonneg _hL hsumBϕ_nn
+    have hStepB : h * L * (h^2 * L^2 * M_bound * (∑ j, |M.B i j| * phi_A j))
+                  ≤ h^2 * L^2 * M_bound * (h₀ * L * (∑ j, |M.B i j| * phi_A j)) := by
+      have heq : h * L * (h^2 * L^2 * M_bound * (∑ j, |M.B i j| * phi_A j))
+                  = h^2 * L^2 * M_bound * (h * L * (∑ j, |M.B i j| * phi_A j)) := by ring
+      rw [heq]
+      have hLsumBϕ_nn' : 0 ≤ L * (∑ j, |M.B i j| * phi_A j) := hLsumBϕ_nn
+      have hmono : h * L * (∑ j, |M.B i j| * phi_A j)
+                    ≤ h₀ * L * (∑ j, |M.B i j| * phi_A j) := by
+        have : h * (L * (∑ j, |M.B i j| * phi_A j))
+                ≤ h₀ * (L * (∑ j, |M.B i j| * phi_A j)) :=
+          mul_le_mul_of_nonneg_right _hh_le hLsumBϕ_nn'
+        linarith [this]
+      exact mul_le_mul_of_nonneg_left hmono hhL2M_nn
+    -- Combine A and B: bridge_full bound ≤ α h δ_max + h² L² M (h₀ L Σ|B|·phi_A).
+    have hbridge_combined : |h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))|
+                            ≤ α * h * δ_max
+                              + h^2 * L^2 * M_bound *
+                                (h₀ * L * (∑ j, |M.B i j| * phi_A j)) := by
+      calc |h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))|
+          ≤ h * L * (∑ j, |M.B i j| *
+                (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j)) := hbridge_full
+        _ = h * L * ((∑ j, |M.B i j| * ell_U j) * δ_max
+                      + h^2 * L^2 * M_bound * (∑ j, |M.B i j| * phi_A j)) := by
+              rw [hsum_split]
+        _ = h * L * ((∑ j, |M.B i j| * ell_U j) * δ_max)
+            + h * L * (h^2 * L^2 * M_bound * (∑ j, |M.B i j| * phi_A j)) := by ring
+        _ ≤ α * h * δ_max
+            + h^2 * L^2 * M_bound * (h₀ * L * (∑ j, |M.B i j| * phi_A j)) :=
+              add_le_add hStepA hStepB
+    -- Now combine with |R_i|.
+    have hRi_i := hRi i
+    -- The bound: α h δ_max + h² L² M (½|u_i| + |v_i| + Σ|B·c| + h₀ L Σ|B|·phi_A) ≤ α h δ_max + β h^2.
+    have hcombine : α * h * δ_max
+                    + (h^2 * L^2 * M_bound *
+                        (h₀ * L * (∑ j, |M.B i j| * phi_A j))
+                       + h^2 * L^2 * M_bound *
+                          ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|))
+                    ≤ α * h * δ_max + β * h^2 := by
+      -- Rearrange to: α h δ_max + h² · (L²M(...))   ≤ α h δ_max + β h²
+      have hkey : (h^2 * L^2 * M_bound *
+                      (h₀ * L * (∑ j, |M.B i j| * phi_A j))
+                     + h^2 * L^2 * M_bound *
+                        ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|))
+                  = h^2 * (L^2 * M_bound *
+                      ((1/2) * |u i| + |v i|
+                       + (∑ j, |M.B i j * c j|)
+                       + h₀ * L * (∑ j, |M.B i j| * phi_A j))) := by ring
+      rw [hkey]
+      have hh2_nn' : 0 ≤ h^2 := hh2_nn
+      have hmono : h^2 * (L^2 * M_bound *
+                      ((1/2) * |u i| + |v i|
+                       + (∑ j, |M.B i j * c j|)
+                       + h₀ * L * (∑ j, |M.B i j| * phi_A j)))
+                    ≤ h^2 * β := mul_le_mul_of_nonneg_left hβ_i hh2_nn'
+      linarith [hmono]
+    -- Final triangle.
+    calc |h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))
+            - ((u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+               - h * (∑ j, M.B i j * f (Yhat j))
+               - (∑ j, M.V i j * y_prev j))|
+        ≤ |h * (∑ j, M.B i j * (f (Y j) - f (Yhat j)))|
+            + |(u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+               - h * (∑ j, M.B i j * f (Yhat j))
+               - (∑ j, M.V i j * y_prev j)| := abs_sub _ _
+      _ ≤ (α * h * δ_max
+            + h^2 * L^2 * M_bound *
+              (h₀ * L * (∑ j, |M.B i j| * phi_A j)))
+          + h^2 * L^2 * M_bound *
+              ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|) :=
+          add_le_add hbridge_combined hRi_i
+      _ ≤ α * h * δ_max + β * h^2 := by linarith [hcombine]
 
 end OpenMath.Chapter5.Section510
