@@ -1460,4 +1460,137 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
           add_le_add hbridge_combined hRi_i
       _ ≤ α * h * δ_max + β * h^2 := by linarith [hcombine]
 
+/-! ## §515 capstone — Theorem 515D (stability + consistency ⇒ convergence) -/
+
+/-- **Sub-lemma for `thm:515D`**: under stability + consistency, the
+GLM iteration's *output* sequence `Y n n` converges to `u · yex(x)`
+as `n → ∞`.
+
+Proof outline (deferred to cycles 110+):
+1. Iterate `localStepError_bound` across `n` steps to obtain a
+   discrete-Grönwall recurrence in
+   `δ_n m := max_i |Y n m i − (u_i · yex(x_{n,m}) + v_i · h_n · y'(x_{n,m}))|`,
+   where `x_{n,m} := x₀ + m · h_n` and `h_n = (x − x₀)/n`.
+2. Apply `discrete_gronwall_exp_bound` (Chapter 4 helper) to absorb
+   the linear-in-error term into an exponential.
+3. Squeeze as `h_n → 0` using `hφ` (which forces δ_n 0 → 0) and
+   stability (which absorbs the `V^k` factor uniformly in `n`).
+
+This is an *internal helper* for the §515 capstone, not a Butcher
+entity. -/
+private theorem aux_515D_output_tendsto {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (_hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (_hyex_x₀ : yex x₀ = y₀)
+    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    {u v : Fin r → ℝ}
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {φ : ℝ → Fin r → ℝ}
+    (_hφ : ∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
+                          (nhds 0) (nhds (u i * y₀)))
+    {x : ℝ} (_hxx : x₀ < x)
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (_hY_props : ∀ n : ℕ, 0 < n →
+      Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
+      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    Filter.Tendsto (fun n : ℕ => Y n n) Filter.atTop
+        (nhds (fun i => u i * yex x)) := by
+  sorry
+
+/-- **Sub-lemma for `thm:515D`**: under stability + consistency,
+the GLM iteration's *internal-stage* sequence `Y_int n` converges to
+the constant function `fun _ => yex(x)` as `n → ∞`.
+
+Proof outline (deferred to cycle 109): from the stage equation
+`Y_int n i = h_n · ∑_j A_{ij} f(Y_int n j) + ∑_j U_{ij} Y n n j`,
+take `n → ∞`:
+* The first summand vanishes because `h_n → 0` and `f` is bounded
+  along the trajectory (Lipschitz of `f` plus convergence of `Y n n`
+  imply boundedness of `f(Y_int n j)` along a subsequence).
+* The second summand tends to `(U *ᵥ (fun i => u i · yex x)) i =
+  yex(x) · (U *ᵥ u) i = yex(x) · 1 = yex(x)` by continuity of
+  `Matrix.mulVec` and the output convergence assumption.
+
+This is the easier of the two sub-lemmas — pure linear-algebra
+limit. It is an *internal helper* for the §515 capstone. -/
+private theorem aux_515D_stage_tendsto {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (_hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (_hyex_x₀ : yex x₀ = y₀)
+    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    {u v : Fin r → ℝ}
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {φ : ℝ → Fin r → ℝ}
+    (_hφ : ∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
+                          (nhds 0) (nhds (u i * y₀)))
+    {x : ℝ} (_hxx : x₀ < x)
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (_hY_props : ∀ n : ℕ, 0 < n →
+      Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
+      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    Filter.Tendsto Y_int Filter.atTop (nhds (fun _ => yex x)) := by
+  sorry
+
+/-- **Theorem 515D** (Butcher 2008, p. 417) — *A stable and consistent
+general linear method is convergent.*
+
+The textbook proof iterates the per-step error bound from
+`lem:515B` (here: `localStepError_bound`) across `n` steps, applies
+discrete Grönwall to absorb the linear-in-error term into an
+exponential, then takes `h → 0` (i.e. `n → ∞`).
+
+The proof below factors through two internal helpers:
+* `aux_515D_output_tendsto` — output convergence `Y n n → u · yex(x)`.
+* `aux_515D_stage_tendsto` — stage convergence `Y_int n → yex(x)`.
+
+The `u ≠ 0` clause is handled inline: for `s ≥ 1` it follows directly
+from `U·u = 𝟙` (since `(fun _ : Fin s => 1) 0 = 1 ≠ 0`); for `s = 0`
+the GLM has no internal stages and the case is degenerate (the
+iteration reduces to a pure linear recurrence `y_{n+1} = V·y_n` with
+no `f`-dependence). The `s = 0` branch is currently deferred as a
+single inline `sorry`; see issue `thm_515D_s_zero_degenerate.md`.
+
+This is `thm:515D` of `entities/thm_515D.json`. -/
+theorem GeneralLinearMethod.stable_consistent_isConvergent
+    {s r : ℕ} (M : GeneralLinearMethod s r)
+    (hStab : M.IsStable) (hCons : M.IsConsistent) :
+    M.IsConvergent := by
+  intro f L hf_lip x₀ y₀ yex hyex_x₀ hyex_ode
+  obtain ⟨u, v, ⟨hVu, hUu⟩, hCons_eq⟩ := hCons
+  by_cases hs : 0 < s
+  · -- Standard case `0 < s`: derive `u ≠ 0` from `U·u = 𝟙`, then
+    -- dispatch to the two sub-lemmas.
+    refine ⟨u, ?_, ?_⟩
+    · -- u ≠ 0: evaluate `U·u = 𝟙` at index `⟨0, hs⟩` to get
+      -- `(U·u) ⟨0, hs⟩ = 1`. If `u = 0` then `U·u = 0`, giving `1 = 0`.
+      intro hu0
+      have h1 : (M.U *ᵥ u) ⟨0, hs⟩ = (fun _ : Fin s => (1 : ℝ)) ⟨0, hs⟩ :=
+        congrFun hUu ⟨0, hs⟩
+      rw [hu0] at h1
+      simp [Matrix.mulVec, dotProduct] at h1
+    · intro φ hφ x hxx Y Y_int hY_props
+      refine ⟨?_, ?_⟩
+      · exact aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
+                hVu hUu hCons_eq hφ hxx Y Y_int hY_props
+      · exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
+                hVu hUu hCons_eq hφ hxx Y Y_int hY_props
+  · -- s = 0 degenerate case: the GLM has no internal stages, the
+    -- equation `U·u = 𝟙` is vacuous (both sides are the empty
+    -- function in `Fin 0 → ℝ`), and IsConvergent's existential
+    -- `u ≠ 0` is unconstrained. Deferred — see issue
+    -- `thm_515D_s_zero_degenerate.md`.
+    sorry
+
 end OpenMath.Chapter5.Section510

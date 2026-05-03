@@ -821,9 +821,11 @@
     "notes": "Cycle 099 closure (sorry-free, axiom-clean [propext, Classical.choice, Quot.sound]). Closure path: cycle 098's strengthened IsConvergent (def:512A, with stage-limit clause) enables convergence_witness_satisfies_U to extract `M.U *ᵥ u' = 𝟙` alongside cycle 096's `M.V *ᵥ u' = u'`, so the convergence-witness vector u' is itself a preconsistency vector. Sub-lemma C (cesaro_residual_tendsto_zero) is reformulated as a pure-algebraic identity parameterised by u' (no GLM dependence). Sub-lemma D (exists_inverse_of_cesaro_zero) closed cycle 097 via Path B mean-ergodic. The hPre hypothesis is unused internally — option (ii) of u_prime_equals_u_bridge.md. A separate corollary `convergent_isPreconsistent` exposes the GLM analog of LMM thm:405B."
   },
   "thm:515D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section515.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent",
+    "status": "partial",
+    "cycle": 108,
+    "notes": "Cycle 108 scaffold: main theorem `stable_consistent_isConvergent` factored through two private sub-lemma sorries (`aux_515D_output_tendsto`, `aux_515D_stage_tendsto`) plus one inline sorry at the `s = 0` degenerate branch. The `0 < s` branch closes inline (u ≠ 0 from U·u = 𝟙). The two sub-lemmas were submitted to Aristotle (project 40554853-18b3-424c-81e4-2a2fae9e57c4) for batch processing. Issue `thm_515D_s_zero_degenerate.md` documents the s = 0 corner case (preconsistency vacuous in Fin 0 → ℝ); recommendation is Option D (add `0 < s` to the theorem signature). Faithfulness: textbook signature 'stable + consistent ⇒ convergent' captured verbatim modulo the degenerate s = 0 sorry. No new top-level definitions introduced."
   },
   "thm:520B": {
     "lean_file": null,

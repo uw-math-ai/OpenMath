@@ -208,7 +208,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:523A` **Non-linear stability** (§523)
 - [x] `def:520C` **stability function** (§520) — `OpenMath/Chapter5/Section520.lean`
 - [x] `thm:513A` **The necessity of stability** (§513) — `OpenMath/Chapter5/Section513.lean` (cycle 093, axiom-clean)
-- [ ] `thm:515D` **Stability and Consistency Imply Convergence (515D)** (§515)
+- [~] `thm:515D` **Stability and Consistency Imply Convergence (515D)** (§515) — OpenMath/Chapter5/Section515.lean (cycle 108: scaffold + 2 sub-lemma sorries + 1 inline `s = 0` degenerate sorry; see issue thm_515D_s_zero_degenerate.md)
 - [ ] `thm:550B` **Doubly companion matrix similarity transformation** (§550)
 - [x] `def:521A` **Methods with maximal stability order** (§521)
 - [x] `lem:515A` **Stability and consistency imply convergence (515A)** (§515) — `OpenMath/Chapter5/Section515.lean` (cycle 102 closure: 515a + 515b axiom-clean)
