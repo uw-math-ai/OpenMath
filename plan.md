@@ -212,7 +212,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:550B` **Doubly companion matrix similarity transformation** (§550)
 - [x] `def:521A` **Methods with maximal stability order** (§521)
 - [ ] `lem:515A` **Stability and consistency imply convergence (515A)** (§515)
-- [ ] `thm:514A` **The necessity of consistency** (§514)
+- [~] `thm:514A` **The necessity of consistency** (§514) — `OpenMath/Chapter5/Section514.lean` (cycle 094 sorry-first scaffold; gated on `cesaro_inverse_I_minus_V.md`)
 - [ ] `thm:520B` **Stability Matrix for Linear Differential Equation** (§520)
 - [ ] `thm:520D` **Instability Region Boundary Characterization** (§520)
 - [ ] `thm:550A` **Doubly companion matrices** (§550)

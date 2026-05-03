@@ -814,9 +814,11 @@
     "notes": "Convergent ⇒ stable. Cycle 092 scaffolded the structure with 3 sorries; cycle 093 closed all 3 (Aristotle ported Helpers 2 and 5; main theorem ported manually from LMM template Section405.lean:101–227). Axiom-clean."
   },
   "thm:514A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section514.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.convergent_preconsistent_isConsistent",
+    "status": "partial",
+    "cycle": 94,
+    "notes": "Cycle 094 sorry-first scaffold: main theorem + 5 sub-lemmas declared (A: glmConstOneIterate_isGLMSolution, B: glmConstOneIterate_closed_form, C: cesaro_residual_tendsto_zero, D: exists_inverse_of_cesaro_zero (INFRASTRUCTURE GAP — see cesaro_inverse_I_minus_V.md), E: witness_v_of_cesaro_inverse). Main theorem body completed modulo sub-lemma sorries. Aristotle batch submitted for A/B/C/E (project 11f63aa0-7a38-45eb-a6c9-a86fff9b8149)."
   },
   "thm:515D": {
     "lean_file": null,

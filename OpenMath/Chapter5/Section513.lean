@@ -144,11 +144,11 @@ theorem runningMaxNorm_record_above
     have him : i ≤ m := by
       have := Finset.mem_range.mp hi₁
       omega
-    have h_mono : runningMaxNorm z i ≤ runningMaxNorm z m :=
+    have hmono : runningMaxNorm z i ≤ runningMaxNorm z m :=
       runningMaxNorm_monotone z him
-    rw [hi₂] at h_mono
-    -- h_mono : runningMaxNorm z i ≤ z i
-    exact h_mono
+    rw [hi₂] at hmono
+    -- hmono : runningMaxNorm z i ≤ z i
+    exact hmono
 
 /-! ### Helper 3 — `glmZeroIterate`
 
@@ -309,13 +309,13 @@ theorem GeneralLinearMethod.unbounded_zero_iterate_contra
   have h_record : ∀ N : ℕ, ∃ n, N ≤ n ∧ z n = runningMaxNorm z n :=
     fun N => runningMaxNorm_record_above hz_nn hw_unbd N
   -- For sufficiently large n, runningMaxNorm z n > 0.
-  have h_pos : ∃ N₀ : ℕ, ∀ n ≥ N₀, 0 < runningMaxNorm z n := by
+  have hpos : ∃ N₀ : ℕ, ∀ n ≥ N₀, 0 < runningMaxNorm z n := by
     obtain ⟨N₀, hN₀⟩ := hw_unbd 0
     refine ⟨N₀, fun n hn => ?_⟩
     have h₁ : z N₀ ≤ runningMaxNorm z N₀ := runningMaxNorm_ge z N₀
     have h₂ : runningMaxNorm z N₀ ≤ runningMaxNorm z n := runningMaxNorm_monotone z hn
     linarith
-  obtain ⟨N₀, hN₀⟩ := h_pos
+  obtain ⟨N₀, hN₀⟩ := hpos
   -- Threshold beyond which the ratio is < 1/2.
   obtain ⟨N₁, hN₁⟩ := Metric.tendsto_atTop.mp hY (1 / 2 : ℝ) (by norm_num)
   -- Find a record index ≥ max N₀ N₁.
