@@ -2194,7 +2194,7 @@ private theorem rowFAlphaResidual_eval_zero_eq_double_sum
   rowFAlphaResidual_eval_eq_double_sum m l 0
 
 /-- §521 Step D.16c — `ξ = 1` specialisation of D.16a. -/
-private theorem rowFAlphaResidual_eval_one_eq_double_sum
+theorem rowFAlphaResidual_eval_one_eq_double_sum
     (m : LMM s) (l : Fin s) :
     (rowFAlphaResidual m l).eval 1 =
       ∑ k : Fin s, ∑ j : Fin s,
@@ -2380,6 +2380,148 @@ private theorem toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last
   rw [Finset.prod_congr rfl (fun i hi => h_other i (Finset.ne_of_mem_erase hi))]
   rw [Finset.prod_const, Finset.card_erase_of_mem (Finset.mem_univ _),
       Finset.card_univ, Fintype.card_fin]
+
+/-- §521 Step H.1 — Last-column adjugate entries of `(PY 0).charmatrix`
+form the geometric ladder `X^k`. Generalises F.1 (the `k = s-1` diagonal
+case) to every row index `k`.
+
+The proof goes through the row equation
+`A · (adjugate A) = (det A) • I` at off-diagonal entries `(j, ⟨s-1,_⟩)`
+for `j < s - 1`. Each such equation collapses to
+`X · adj(j, last) - adj(j+1, last) = 0`, giving the recurrence
+`adj(j+1, last) = X · adj(j, last)`. Iterating from `k` upward to `s-1`
+together with F.1 as the upper anchor and cancelling `X^(s-1-k)` (a
+non-zero-divisor in `Polynomial ℂ`) gives `adj(k, last) = X^k`. -/
+private theorem toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last_col
+    (m : LMM s) (hs : 0 < s) (k : Fin s) :
+    (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k ⟨s - 1, by omega⟩
+      = (Polynomial.X : Polynomial ℂ) ^ (k : ℕ) := by
+  set A := (toGLM_stabilityMatrixPY m 0).charmatrix with hA_def
+  -- Step 1: recurrence adj(j+1, last) = X * adj(j, last) for j+1 < s.
+  have hRec : ∀ (j : ℕ) (hj1 : j + 1 < s),
+      A.adjugate ⟨j + 1, hj1⟩ ⟨s - 1, by omega⟩
+        = Polynomial.X * A.adjugate ⟨j, by omega⟩ ⟨s - 1, by omega⟩ := by
+    intro j hj1
+    have hj : j < s := by omega
+    have hjne_last : (⟨j, hj⟩ : Fin s) ≠ ⟨s - 1, by omega⟩ := by
+      intro h
+      have : j = s - 1 := congrArg Fin.val h
+      omega
+    have hjnotlast : (⟨j, hj⟩ : Fin s).val + 1 ≠ s := by
+      show j + 1 ≠ s; omega
+    -- mul_adjugate at entry (⟨j, hj⟩, ⟨s-1,_⟩)
+    have hMul := Matrix.mul_adjugate A
+    have h := congrFun (congrFun hMul ⟨j, hj⟩) ⟨s - 1, by omega⟩
+    rw [Matrix.mul_apply, Matrix.smul_apply, Matrix.one_apply_ne hjne_last,
+        smul_eq_mul, mul_zero] at h
+    -- Compute charmatrix entries on row ⟨j, hj⟩.
+    have hCharm : ∀ k' : Fin s, A ⟨j, hj⟩ k' =
+        (if k' = ⟨j, hj⟩ then Polynomial.X else 0) -
+          (if (k' : ℕ) = j + 1 then 1 else 0) := by
+      intro k'
+      rw [hA_def, Matrix.charmatrix_apply,
+          toGLM_stabilityMatrixPY_apply_shift m 0 ⟨j, hj⟩ hjnotlast k']
+      by_cases hkj : k' = ⟨j, hj⟩
+      · subst hkj
+        have hk_ne : ((⟨j, hj⟩ : Fin s) : ℕ) ≠ j + 1 := by show j ≠ j + 1; omega
+        rw [Matrix.diagonal_apply_eq, if_neg hk_ne, if_pos rfl, if_neg hk_ne]
+        simp
+      · rw [Matrix.diagonal_apply_ne _ (Ne.symm hkj), if_neg hkj]
+        by_cases hk1 : (k' : ℕ) = j + 1
+        · rw [if_pos hk1, if_pos hk1, Polynomial.C_1]
+        · rw [if_neg hk1, if_neg hk1, Polynomial.C_0]
+    -- Substitute into h.
+    rw [show (∑ k' : Fin s, A ⟨j, hj⟩ k' * A.adjugate k' ⟨s - 1, by omega⟩) =
+            ∑ k' : Fin s,
+              ((if k' = ⟨j, hj⟩ then Polynomial.X else 0) -
+                (if (k' : ℕ) = j + 1 then 1 else 0))
+                * A.adjugate k' ⟨s - 1, by omega⟩ from
+          Finset.sum_congr rfl (fun k' _ => by rw [hCharm k'])] at h
+    rw [show
+          (∑ k' : Fin s,
+              ((if k' = ⟨j, hj⟩ then Polynomial.X else 0) -
+                (if (k' : ℕ) = j + 1 then 1 else 0))
+                * A.adjugate k' ⟨s - 1, by omega⟩) =
+          (∑ k' : Fin s,
+              (if k' = ⟨j, hj⟩ then Polynomial.X else 0)
+                * A.adjugate k' ⟨s - 1, by omega⟩)
+            - (∑ k' : Fin s,
+                (if (k' : ℕ) = j + 1 then 1 else 0)
+                  * A.adjugate k' ⟨s - 1, by omega⟩) from by
+          rw [← Finset.sum_sub_distrib]
+          refine Finset.sum_congr rfl (fun k' _ => ?_)
+          ring] at h
+    rw [show
+          (∑ k' : Fin s,
+              (if k' = ⟨j, hj⟩ then Polynomial.X else 0)
+                * A.adjugate k' ⟨s - 1, by omega⟩)
+            = Polynomial.X * A.adjugate ⟨j, hj⟩ ⟨s - 1, by omega⟩ from by
+          rw [Finset.sum_eq_single (⟨j, hj⟩ : Fin s)]
+          · rw [if_pos rfl]
+          · intro k' _ hk'; rw [if_neg hk', zero_mul]
+          · intro hmem; exact absurd (Finset.mem_univ _) hmem] at h
+    rw [show
+          (∑ k' : Fin s,
+              (if (k' : ℕ) = j + 1 then 1 else 0)
+                * A.adjugate k' ⟨s - 1, by omega⟩)
+            = A.adjugate ⟨j + 1, hj1⟩ ⟨s - 1, by omega⟩ from by
+          rw [Finset.sum_eq_single (⟨j + 1, hj1⟩ : Fin s)]
+          · rw [if_pos rfl, one_mul]
+          · intro k' _ hk'
+            have hne : (k' : ℕ) ≠ j + 1 := by
+              intro heq; apply hk'; apply Fin.ext; exact heq
+            rw [if_neg hne, zero_mul]
+          · intro hmem; exact absurd (Finset.mem_univ _) hmem] at h
+    -- h : Polynomial.X * adj(⟨j,_⟩) - adj(⟨j+1,_⟩) = 0
+    linear_combination -h
+  -- Step 2: telescope X^n · adj(j, last) = adj(j+n, last) for j+n < s.
+  have hTele : ∀ (n j : ℕ) (hjn : j + n < s),
+      Polynomial.X ^ n * A.adjugate ⟨j, by omega⟩ ⟨s - 1, by omega⟩
+        = A.adjugate ⟨j + n, hjn⟩ ⟨s - 1, by omega⟩ := by
+    intro n
+    induction n with
+    | zero =>
+      intro j hjn
+      simp [pow_zero, one_mul]
+    | succ n ih =>
+      intro j hjn
+      have hjn' : j + n < s := by omega
+      have hjnsucc : (j + n) + 1 < s := by omega
+      have ihn := ih j hjn'
+      have hr := hRec (j + n) hjnsucc
+      calc Polynomial.X ^ (n + 1)
+              * A.adjugate ⟨j, by omega⟩ ⟨s - 1, by omega⟩
+          = Polynomial.X *
+              (Polynomial.X ^ n * A.adjugate ⟨j, by omega⟩ ⟨s - 1, by omega⟩) := by
+            rw [pow_succ]; ring
+        _ = Polynomial.X * A.adjugate ⟨j + n, hjn'⟩ ⟨s - 1, by omega⟩ := by rw [ihn]
+        _ = A.adjugate ⟨(j + n) + 1, hjnsucc⟩ ⟨s - 1, by omega⟩ := hr.symm
+        _ = A.adjugate ⟨j + (n + 1), hjn⟩ ⟨s - 1, by omega⟩ := by
+              have hidx : (⟨(j + n) + 1, hjnsucc⟩ : Fin s)
+                            = ⟨j + (n + 1), hjn⟩ := by
+                apply Fin.ext
+                show (j + n) + 1 = j + (n + 1)
+                omega
+              rw [hidx]
+  -- Step 3: instantiate with j = k, n = s - 1 - k.
+  have hKlt : (k : ℕ) < s := k.isLt
+  have hKle : (k : ℕ) ≤ s - 1 := by omega
+  have hSum : (k : ℕ) + (s - 1 - (k : ℕ)) = s - 1 := by omega
+  have hTeleK := hTele (s - 1 - (k : ℕ)) (k : ℕ) (by omega)
+  rw [show (⟨(k : ℕ) + (s - 1 - (k : ℕ)), by omega⟩ : Fin s)
+        = ⟨s - 1, by omega⟩ from Fin.ext hSum] at hTeleK
+  rw [show (⟨(k : ℕ), by omega⟩ : Fin s) = k from Fin.ext rfl] at hTeleK
+  rw [hA_def, toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last m hs] at hTeleK
+  -- hTeleK : X^(s-1-k) * adj(k, last) = X^(s-1)
+  -- Cancel X^(s-1-k) ≠ 0 in Polynomial ℂ.
+  have hPow : (Polynomial.X : Polynomial ℂ) ^ (s - 1)
+        = (Polynomial.X : Polynomial ℂ) ^ (s - 1 - (k : ℕ))
+            * (Polynomial.X : Polynomial ℂ) ^ (k : ℕ) := by
+    rw [← pow_add]; congr 1; omega
+  rw [hPow] at hTeleK
+  have hX_pow_ne : (Polynomial.X : Polynomial ℂ) ^ (s - 1 - (k : ℕ)) ≠ 0 :=
+    pow_ne_zero _ Polynomial.X_ne_zero
+  exact mul_left_cancel₀ hX_pow_ne hTeleK
 
 /-- §521 Step F.2 — Closed form for `rowYQuot m`: a BDF-independent
 polynomial identity reading the `(s-1, s-1)` entry of the
