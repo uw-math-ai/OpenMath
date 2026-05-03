@@ -1068,4 +1068,140 @@ private theorem rowFAlphaPoly_eq_residual_sum (m : LMM s) :
   unfold rowFAlphaPoly rowFAlphaResidual
   rfl
 
+/-- §521 Step C.10 — Inline helper: each entry of the adjugate of a
+characteristic matrix has `natDegree ≤ n` when the matrix has size `n+1`.
+Standard fact: each `(charmatrix A).adjugate i j` is the determinant of an
+`updateRow` of `(charmatrix A)`; row `j` is replaced by a degree-0 vector,
+the remaining `n` rows have degree-`≤ 1` entries, hence the determinant
+expansion has total degree `≤ n`. -/
+private lemma charmatrix_adjugate_natDegree_le
+    {n : ℕ} (A : Matrix (Fin (n+1)) (Fin (n+1)) ℂ) (i j : Fin (n+1)) :
+    (A.charmatrix.adjugate i j).natDegree ≤ n := by
+  classical
+  rw [Matrix.adjugate_apply, Matrix.det_apply]
+  refine (Polynomial.natDegree_sum_le _ _).trans ?_
+  rw [Finset.fold_max_le]
+  refine ⟨Nat.zero_le _, fun σ _ => ?_⟩
+  refine (Polynomial.natDegree_smul_le _ _).trans ?_
+  refine (Polynomial.natDegree_prod_le _ _).trans ?_
+  calc ∑ k : Fin (n+1),
+        ((A.charmatrix.updateRow j (Pi.single i (1 : Polynomial ℂ))) (σ k) k).natDegree
+      ≤ ∑ k : Fin (n+1), if σ k = j then 0 else 1 := by
+          refine Finset.sum_le_sum (fun k _ => ?_)
+          by_cases h : σ k = j
+          · rw [if_pos h, Matrix.updateRow_apply, if_pos h]
+            by_cases hki : k = i
+            · subst hki; rw [Pi.single_eq_same]; exact Polynomial.natDegree_one.le
+            · rw [Pi.single_eq_of_ne hki]; exact Polynomial.natDegree_zero.le
+          · rw [if_neg h, Matrix.updateRow_apply, if_neg h]
+            refine (Matrix.charmatrix_apply_natDegree_le _ _).trans ?_
+            split_ifs <;> simp
+    _ = n := by
+          rw [Finset.sum_ite, Finset.sum_const_zero, zero_add, Finset.sum_const,
+              smul_eq_mul, mul_one]
+          have hcard :
+              (Finset.univ.filter (fun k : Fin (n+1) => σ k ≠ j)).card = n := by
+            have h : (Finset.univ.filter (fun k : Fin (n+1) => σ k ≠ j))
+                = Finset.univ.erase (σ.symm j) := by
+              ext k
+              simp [Finset.mem_filter, Finset.mem_erase, Equiv.eq_symm_apply (e := σ)]
+            rw [h, Finset.card_erase_of_mem (Finset.mem_univ _),
+                Finset.card_univ, Fintype.card_fin, Nat.add_sub_cancel]
+          exact hcard
+
+/-- §521 Step C.10 — Degree wrapper around `charmatrix_adjugate_natDegree_le`. -/
+private lemma charmatrix_adjugate_degree_lt
+    {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ) (i j : Fin n) :
+    (A.charmatrix.adjugate i j).degree < (n : WithBot ℕ) := by
+  rcases n with _ | n
+  · exact i.elim0
+  refine Polynomial.degree_le_natDegree.trans_lt ?_
+  exact_mod_cast Nat.lt_succ_of_le (charmatrix_adjugate_natDegree_le A i j)
+
+/-- §521 Step C.10 — Inner helper: each entry of
+`(-charmatrix.adjugate) * (-PYHF.map C)` has degree `< s`.  Each term of
+the matrix product is `(-adj) * (-C ..)`, both of which have known degree
+bounds: `adj` entry-wise `< s` (via `charmatrix_adjugate_degree_lt`),
+`C ..` entry-wise `≤ 0`. -/
+private theorem rowFAlphaResidual_matrix_entry_degree_lt
+    (m : LMM s) (k l : Fin s) :
+    ((-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+        (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) k l).degree
+        < (s : WithBot ℕ) := by
+  classical
+  rw [Matrix.mul_apply]
+  refine (Polynomial.degree_sum_le _ _).trans_lt ?_
+  refine (Finset.sup_lt_iff (WithBot.bot_lt_coe _)).mpr ?_
+  intro j _
+  refine (Polynomial.degree_mul_le _ _).trans_lt ?_
+  rw [Matrix.neg_apply, Polynomial.degree_neg,
+      Matrix.neg_apply, Matrix.map_apply, Polynomial.degree_neg]
+  have hadj : ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).degree
+      < (s : WithBot ℕ) := charmatrix_adjugate_degree_lt _ _ _
+  have hCB : (Polynomial.C ((toGLM_stabilityMatrixPYHF m 0) j l)).degree
+      ≤ (0 : WithBot ℕ) := Polynomial.degree_C_le
+  calc ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).degree
+        + (Polynomial.C ((toGLM_stabilityMatrixPYHF m 0) j l)).degree
+      ≤ ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).degree + 0 :=
+          add_le_add (le_refl _) hCB
+    _ = ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).degree := by simp
+    _ < (s : WithBot ℕ) := hadj
+
+/-- §521 Step C.10 — Degree bound for `rowFAlphaResidual m l`: each residual
+entry is the `l`-th component of a `Matrix.vecMul` whose row is
+`Polynomial.C`-valued (degree ≤ 0) and whose matrix factor is a product of
+`(charmatrix.adjugate)` (each entry of degree `< s`) with a
+`Polynomial.C`-valued matrix.  Hence the residual has degree `< s` (the
+`s = 0` case is captured by `⊥ < (0 : WithBot ℕ)`). -/
+private theorem rowFAlphaResidual_degree_lt (m : LMM s) (l : Fin s) :
+    (rowFAlphaResidual m l).degree < (s : WithBot ℕ) := by
+  classical
+  unfold rowFAlphaResidual
+  rw [Matrix.vecMul_eq_sum]
+  simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul]
+  refine (Polynomial.degree_sum_le _ _).trans_lt ?_
+  refine (Finset.sup_lt_iff (WithBot.bot_lt_coe _)).mpr ?_
+  intro k _
+  refine (Polynomial.degree_mul_le _ _).trans_lt ?_
+  have hC : (Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ)).degree ≤ (0 : WithBot ℕ) :=
+    Polynomial.degree_C_le
+  have hM := rowFAlphaResidual_matrix_entry_degree_lt m k l
+  calc (Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ)).degree
+        + ((-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+            (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) k l).degree
+      ≤ 0 + ((-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+            (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) k l).degree :=
+          add_le_add hC (le_refl _)
+    _ = ((-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+            (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) k l).degree := by
+          rw [zero_add]
+    _ < (s : WithBot ℕ) := hM
+
+/-- §521 Step C.10 — Degree bound for `rowFAlphaPoly`. As a sum of
+`rowFAlphaResidual m l * X^l` over `l : Fin s`, with each residual of
+degree `< s` and `X^l` of degree `≤ l < s`, the polynomial's degree is
+strictly below `2 * s - 1` (the `s = 0` case is captured by
+`⊥ < (2 * 0 - 1 : WithBot ℕ)` which holds vacuously since the empty sum
+has degree `⊥`). -/
+theorem rowFAlphaPoly_degree_lt (m : LMM s) :
+    (rowFAlphaPoly m).degree < ((2 * s - 1 : ℕ) : WithBot ℕ) := by
+  classical
+  rw [rowFAlphaPoly_eq_residual_sum]
+  refine (Polynomial.degree_sum_le _ _).trans_lt ?_
+  refine (Finset.sup_lt_iff (WithBot.bot_lt_coe _)).mpr ?_
+  intro l _
+  refine (Polynomial.degree_mul_le _ _).trans_lt ?_
+  rw [Polynomial.degree_X_pow]
+  have hres : (rowFAlphaResidual m l).degree < (s : WithBot ℕ) :=
+    rowFAlphaResidual_degree_lt m l
+  -- (rowFAlphaResidual m l).degree + ↑l < ↑(s + l) ≤ ↑(2*s - 1)
+  have hl : (l : ℕ) < s := l.isLt
+  have hs : 0 < s := lt_of_le_of_lt (Nat.zero_le _) hl
+  calc (rowFAlphaResidual m l).degree + ((l : ℕ) : WithBot ℕ)
+      < (s : WithBot ℕ) + ((l : ℕ) : WithBot ℕ) := by
+        exact WithBot.add_lt_add_right (WithBot.coe_ne_bot) hres
+    _ = ((s + (l : ℕ) : ℕ) : WithBot ℕ) := by push_cast; rfl
+    _ ≤ ((2 * s - 1 : ℕ) : WithBot ℕ) := by
+        exact_mod_cast (by omega : s + (l : ℕ) ≤ 2 * s - 1)
+
 end LMM
