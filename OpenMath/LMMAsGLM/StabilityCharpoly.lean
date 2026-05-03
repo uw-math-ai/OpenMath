@@ -2678,6 +2678,77 @@ theorem rowYQuot_eval_zero (m : LMM s) (hs : 0 < s) :
   · intro h
     exact absurd (Finset.mem_univ _) h
 
+/-- §521 Step H.2 — Closed form for `rowFAlphaResidual.eval 1` for
+**general** (non-BDF) LMMs.
+
+Starting from D.16c (`rowFAlphaResidual_eval_one_eq_double_sum`), the
+inner `j`-sum collapses to a single term at `j = ⟨s-1, _⟩`: at every
+other index, the PYHF block at `z = 0` returns `0` (its definition
+gates on `(j : ℕ) + 1 = s`). At `j = ⟨s-1, _⟩`, the PYHF entry
+collapses to `β(castSucc l)` (the `z`-correction vanishes at `z = 0`).
+The surviving last-column adjugate factor is then closed by H.1
+(`toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last_col`):
+`(adj k ⟨s-1,_⟩).eval 1 = (X^k).eval 1 = 1`. The result is a clean
+product of two scalar sums. -/
+theorem rowFAlphaResidual_eval_one_closed_form
+    (m : LMM s) (hs : 0 < s) (l : Fin s) :
+    (rowFAlphaResidual m l).eval 1
+      = -((m.β (Fin.castSucc l) : ℝ) : ℂ)
+          * ∑ k : Fin s, ((m.α (Fin.castSucc k) : ℝ) : ℂ) := by
+  rw [rowFAlphaResidual_eval_one_eq_double_sum m l]
+  -- Collapse inner j-sum to the single surviving j = ⟨s-1, _⟩ term.
+  have hInner : ∀ k : Fin s,
+      ∑ j : Fin s,
+        ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+          * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval 1
+        = -((m.α (Fin.castSucc k) : ℝ) : ℂ)
+            * ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+    intro k
+    rw [Finset.sum_eq_single (⟨s - 1, by omega⟩ : Fin s)]
+    · -- Surviving j = ⟨s-1, _⟩ term.
+      have hPYHF :
+          (toGLM_stabilityMatrixPYHF m 0) ⟨s - 1, by omega⟩ l
+            = ((m.β (Fin.castSucc l) : ℝ) : ℂ) := by
+        unfold toGLM_stabilityMatrixPYHF
+        rw [if_pos (show ((⟨s - 1, by omega⟩ : Fin s) : ℕ) + 1 = s by
+                      show s - 1 + 1 = s; omega)]
+        ring
+      have hAdj :
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩).eval 1 = 1 := by
+        rw [toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last_col m hs k,
+            Polynomial.eval_pow, Polynomial.eval_X, one_pow]
+      rw [hPYHF, hAdj]
+      push_cast
+      ring
+    · -- j ≠ ⟨s-1, _⟩: PYHF j l = 0.
+      intro j _ hj
+      have hPYHF : (toGLM_stabilityMatrixPYHF m 0) j l = 0 := by
+        unfold toGLM_stabilityMatrixPYHF
+        rw [if_neg]
+        intro heq
+        apply hj
+        apply Fin.ext
+        show (j : ℕ) = s - 1
+        omega
+      rw [hPYHF]
+      ring
+    · intro hmem
+      exact absurd (Finset.mem_univ _) hmem
+  rw [show
+        (∑ k : Fin s, ∑ j : Fin s,
+            ( ((-m.α (Fin.castSucc k) : ℝ) : ℂ)
+                * ((toGLM_stabilityMatrixPYHF m 0) j l) )
+              * ((toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k j).eval 1)
+        = ∑ k : Fin s,
+            (-((m.α (Fin.castSucc k) : ℝ) : ℂ)
+              * ((m.β (Fin.castSucc l) : ℝ) : ℂ)) from
+        Finset.sum_congr rfl (fun k _ => hInner k)]
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl (fun k _ => ?_)
+  ring
+
 /-- §521 Step F.4 — BDF unit-circle scalar identity (headline). Combines
 E.2 (`D_mul_toGLM_charpoly_eval_one_reduced_of_bdf`) with F.3
 (`rowYQuot_eval_one`): the abstract `(rowYQuot m).eval 1` term cancels the
