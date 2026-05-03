@@ -1836,4 +1836,69 @@ theorem D_mul_toGLM_charpoly_eval_one_eq
   simp only [one_pow, mul_one, one_mul] at h
   linear_combination h
 
+/-- §521 Step D.6 — Constant-term evaluation of `(PY(0)).charpoly`. The
+sum `X^s - ∑ l : Fin s, C((-α(castSucc l) : ℂ)) * X^l` evaluated at `0`
+collapses: `X^s` becomes `0` (for `s ≥ 1`) and only the `l = 0` summand
+of the corrective sum survives, contributing `-(-α 0) = α 0`. -/
+theorem toGLM_stabilityMatrixPY_zero_charpoly_eval_zero
+    (m : LMM s) (hs : 0 < s) :
+    ((toGLM_stabilityMatrixPY m 0).charpoly).eval 0 =
+      ((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ) := by
+  rw [toGLM_stabilityMatrixPY_zero_charpoly_eq m]
+  rw [Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_X,
+      Polynomial.eval_finset_sum]
+  rw [zero_pow hs.ne']
+  rw [Finset.sum_eq_single (⟨0, hs⟩ : Fin s)]
+  · simp
+  · intro k _ hk
+    have hk' : (k : ℕ) ≠ 0 := fun h => hk (Fin.ext h)
+    simp [zero_pow hk']
+  · intro h
+    exact absurd (Finset.mem_univ _) h
+
+/-- §521 Step D.7 — Unit-circle evaluation of `(PY(0)).charpoly`. All
+`1^k = 1` powers collapse, leaving
+`1 - ∑ l : Fin s, -α(castSucc l) = 1 + ∑ l : Fin s, α(castSucc l)`.
+Companion to `toGLM_stabilityMatrixPY_zero_charpoly_eval_zero` for the
+unit-disk boundary argument behind `LMM.toGLM_isAStable_iff`. No
+`s ≥ 1` hypothesis is needed: at `s = 0`, both sides collapse to
+`1`. -/
+theorem toGLM_stabilityMatrixPY_zero_charpoly_eval_one (m : LMM s) :
+    ((toGLM_stabilityMatrixPY m 0).charpoly).eval 1 =
+      1 + ∑ l : Fin s, ((m.α (Fin.castSucc l) : ℝ) : ℂ) := by
+  rw [toGLM_stabilityMatrixPY_zero_charpoly_eq m]
+  rw [Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_X,
+      Polynomial.eval_finset_sum, one_pow]
+  have hsum :
+      ∑ l : Fin s,
+          (Polynomial.C ((-m.α (Fin.castSucc l) : ℝ) : ℂ) *
+            (Polynomial.X : Polynomial ℂ) ^ (l : ℕ)).eval 1
+        = -∑ l : Fin s, ((m.α (Fin.castSucc l) : ℝ) : ℂ) := by
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro l _
+    simp [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+      Polynomial.eval_X]
+  rw [hsum]; ring
+
+/-- §521 Step D.8 — Fully concrete coefficient-form of the cycle 708
+`ξ = 0` evaluation. Substitutes the closed forms
+`(PY(0)).charpoly.eval 0 = α 0` (Step D.6) and
+`rowFBetaPoly.eval 0 = β 0` (Step D.4) into the cycle 708 identity
+`D_mul_toGLM_charpoly_eval_zero_eq`. The constant term of the GLM
+stability matrix charpoly (rescaled by `D`) reduces to a closed form
+in `(rowFAlphaPoly m).eval 0`, the bare `α 0` and `β 0` coefficients,
+and `z`. -/
+theorem D_mul_toGLM_charpoly_eval_zero_concrete
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval 0 =
+      - ( (rowFAlphaPoly m).eval 0
+            + ((m.α (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ)
+                * ((m.β (Fin.castSucc ⟨0, hs⟩) : ℝ) : ℂ) ) * z := by
+  rw [D_mul_toGLM_charpoly_eval_zero_eq m hz hs,
+      toGLM_stabilityMatrixPY_zero_charpoly_eval_zero m hs,
+      rowFBetaPoly_eval_zero m hs]
+
 end LMM
