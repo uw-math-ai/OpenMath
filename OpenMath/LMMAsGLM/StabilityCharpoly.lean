@@ -1455,4 +1455,79 @@ theorem toGLM_stabilityMatrixPY_zero_charpoly_eq (m : LMM s) :
   field_simp
   ring
 
+/-- §521 Step C.13b — General bridge between the active stability
+polynomial and the textbook `stabilityPolyPoly`. They differ by a
+`z`-times-correction term that vanishes coefficient-by-coefficient
+when `β(castSucc l) = β_last · α(castSucc l)` (in particular under
+BDF, where every `β(castSucc l) = 0` and the correction collapses to
+`-C(z β_last) · ∑ C(α(castSucc l)) X^l`). -/
+theorem activeStabilityPolyPoly_eq_stabilityPolyPoly_add_correction
+    (m : LMM s) (z : ℂ) :
+    activeStabilityPolyPoly m z =
+      m.stabilityPolyPoly z +
+        Polynomial.C z *
+          ∑ l : Fin s,
+            Polynomial.C
+                (((m.β l.castSucc : ℝ) : ℂ) -
+                  ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ)) *
+              Polynomial.X ^ (l : ℕ) := by
+  have hα_last : ((m.α (Fin.last s) : ℝ) : ℂ) = 1 := by
+    rw [m.normalized]; push_cast; rfl
+  -- Per-summand identity in scalars: this is the load-bearing computation.
+  have hsum_eq :
+      ∀ l : Fin s,
+        Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+            (Polynomial.C (((-m.α l.castSucc : ℝ) : ℂ)) *
+              Polynomial.X ^ (l : ℕ)) =
+          -(Polynomial.C
+                (((m.α l.castSucc : ℝ) : ℂ) -
+                  z * ((m.β l.castSucc : ℝ) : ℂ)) *
+              Polynomial.X ^ (l : ℕ)) -
+            Polynomial.C z *
+              (Polynomial.C
+                  (((m.β l.castSucc : ℝ) : ℂ) -
+                    ((m.β (Fin.last s) : ℝ) : ℂ) *
+                      ((m.α l.castSucc : ℝ) : ℂ)) *
+                Polynomial.X ^ (l : ℕ)) := by
+    intro l
+    rw [← mul_assoc, ← Polynomial.C_mul, ← mul_assoc, ← Polynomial.C_mul,
+      ← neg_mul, ← Polynomial.C_neg, ← sub_mul, ← Polynomial.C_sub]
+    congr 2
+    push_cast
+    ring
+  -- Now expand both sides and match.
+  unfold activeStabilityPolyPoly stabilityPolyPoly
+  rw [toGLM_stabilityMatrixPY_zero_charpoly_eq m, Polynomial.smul_eq_C_mul,
+    Fin.sum_univ_castSucc (f := fun j : Fin (s + 1) =>
+      Polynomial.C (((m.α j : ℝ) : ℂ) - z * ((m.β j : ℝ) : ℂ)) *
+        Polynomial.X ^ (j : ℕ))]
+  rw [hα_last, Fin.val_last]
+  simp only [Fin.val_castSucc]
+  rw [mul_sub, Finset.mul_sum]
+  rw [Finset.sum_congr rfl (fun l _ => hsum_eq l)]
+  rw [Finset.mul_sum]
+  -- Goal:
+  --   C(D) * X^s - ∑_l (-A_l - B_l) = ∑_l A_l + C(D)*X^s + ∑_l B_l
+  rw [Finset.sum_congr rfl (fun (l : Fin s) _ =>
+        show -(Polynomial.C (((m.α l.castSucc : ℝ) : ℂ) -
+                z * ((m.β l.castSucc : ℝ) : ℂ)) * Polynomial.X ^ (l : ℕ)) -
+            Polynomial.C z *
+              (Polynomial.C (((m.β l.castSucc : ℝ) : ℂ) -
+                  ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ)) *
+                Polynomial.X ^ (l : ℕ)) =
+          -(Polynomial.C (((m.α l.castSucc : ℝ) : ℂ) -
+                z * ((m.β l.castSucc : ℝ) : ℂ)) * Polynomial.X ^ (l : ℕ) +
+            Polynomial.C z *
+              (Polynomial.C (((m.β l.castSucc : ℝ) : ℂ) -
+                  ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ)) *
+                Polynomial.X ^ (l : ℕ))) from by ring)]
+  rw [Finset.sum_neg_distrib, sub_neg_eq_add]
+  rw [show ∀ (f g : Fin s → Polynomial ℂ),
+        ∑ l, (f l + g l) = (∑ l, f l) + ∑ l, g l from
+      fun _ _ => Finset.sum_add_distrib]
+  ring
+
 end LMM
