@@ -985,4 +985,44 @@ theorem toGLM_stabilityCharpolyRowF_eq_summand_split_of_bdf
     toGLM_stabilityCharpolyRowF m = 0 :=
   toGLM_stabilityCharpolyRowF_of_bdf m hs hbdf
 
+/-- §521 Step C.8 — Geometric β-coefficient polynomial used in the
+β-summand of `toGLM_stabilityCharpolyRowF`. By cycle 680's
+`toGLM_stabilityCharpolyRowF_eq_summand_split`, the β-summand factors as
+`(toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m`. -/
+noncomputable def rowFBetaPoly (m : LMM s) : Polynomial ℂ :=
+  ∑ k : Fin s,
+    Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ) *
+      (Polynomial.X : Polynomial ℂ) ^ (k : ℕ)
+
+/-- §521 Step C.8 — Restatement of `toGLM_stabilityCharpolyRowF_eq_summand_split`
+with the β-summand factored as `PY.charpoly · rowFBetaPoly m`. -/
+theorem toGLM_stabilityCharpolyRowF_eq_alpha_plus_PY_beta
+    (m : LMM s) (hs : 0 < s) :
+    toGLM_stabilityCharpolyRowF m =
+      ( ∑ l : Fin s,
+          ( Matrix.vecMul
+              (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+              (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+                (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) ) l *
+          (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) )
+      +
+      (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m := by
+  rw [toGLM_stabilityCharpolyRowF_eq_summand_split m hs]
+  rfl
+
+/-- §521 Step C.8 — Degree bound for `rowFBetaPoly`: as a sum of
+`Polynomial.C (β k) * X^k` with `k : Fin s`, the polynomial's degree is
+strictly below `s`. The bound is stated in `Polynomial.degree`
+(`WithBot ℕ`) form so that the empty case `s = 0` is captured by
+`⊥ < (0 : WithBot ℕ)`. -/
+theorem rowFBetaPoly_degree_lt (m : LMM s) :
+    (rowFBetaPoly m).degree < (s : WithBot ℕ) := by
+  classical
+  unfold rowFBetaPoly
+  refine lt_of_le_of_lt (Polynomial.degree_sum_le _ _) ?_
+  refine (Finset.sup_lt_iff (WithBot.bot_lt_coe _)).mpr ?_
+  intro k _
+  refine lt_of_le_of_lt (Polynomial.degree_C_mul_X_pow_le _ _) ?_
+  exact_mod_cast k.isLt
+
 end LMM
