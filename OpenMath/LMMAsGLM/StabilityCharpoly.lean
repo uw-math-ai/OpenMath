@@ -872,4 +872,77 @@ theorem toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_last_col
   rw [toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_eq m]
   exact phfZeroCharmatrixAdjExplicit_last_col s (by have := i.isLt; omega) i
 
+/-! ### Step C.7 — General-RowF column closed forms -/
+
+/-- §521 Step C.7 — Closed form of the β-summand of the past-`h*f`
+adjugate-row entry. Routing the column ⟨s-1, _⟩ projection of the
+scalar-smul `PY.charmatrix.det • PHF.charmatrix.adjugate` through cycle
+674's `toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_last_col`
+collapses each column entry to `PY.charpoly * X^k`, leaving the
+geometric β-coefficient sum on the right. -/
+theorem toGLM_stabilityCharpolyRowF_β_summand_eq
+    (m : LMM s) (hs : 0 < s) :
+    Matrix.vecMul
+        (fun k : Fin s =>
+          Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ))
+        ((toGLM_stabilityMatrixPY m 0).charmatrix.det •
+          (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate)
+        ⟨s - 1, by omega⟩
+      = (toGLM_stabilityMatrixPY m 0).charpoly *
+        ∑ k : Fin s,
+          Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ) *
+            (Polynomial.X : Polynomial ℂ) ^ (k : ℕ) := by
+  classical
+  rw [Matrix.vecMul_smul, Pi.smul_apply, smul_eq_mul]
+  rw [show (toGLM_stabilityMatrixPY m 0).charmatrix.det =
+        (toGLM_stabilityMatrixPY m 0).charpoly from rfl]
+  congr 1
+  show ∑ k : Fin s,
+        Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ) *
+        (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate k
+          ⟨s - 1, by omega⟩
+      = _
+  apply Finset.sum_congr rfl
+  intro k _
+  rw [toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_last_col]
+
+/-- §521 Step C.7 — Column ⟨s-1, _⟩ closed form of the α-summand of the
+past-`h*f` adjugate-row entry. The matrix product
+`(-PY.adj) * (-PYHF.map C) * PHF.adj` is reassociated via
+`Matrix.vecMul_vecMul`, then the `PHF.adj` rightmost factor's
+column ⟨s-1, _⟩ collapses to the geometric power vector `X^l` by
+cycle 674's `toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_last_col`,
+leaving the residual row vector
+`(α-row) · (-PY.adj) · (-PYHF.map C)` paired with `X^l`. -/
+theorem toGLM_stabilityCharpolyRowF_α_summand_col_eq
+    (m : LMM s) (hs : 0 < s) :
+    Matrix.vecMul
+        (fun k : Fin s =>
+          Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+        (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+          (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C) *
+          (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate)
+        ⟨s - 1, by omega⟩
+      = ∑ l : Fin s,
+          ( Matrix.vecMul
+              (fun k =>
+                Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+              (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+                (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) ) l *
+          (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) := by
+  classical
+  rw [← Matrix.vecMul_vecMul]
+  show ∑ l : Fin s,
+        Matrix.vecMul
+            (fun k : Fin s =>
+              Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+            (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+              (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) l *
+          (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate l
+            ⟨s - 1, by omega⟩
+      = _
+  apply Finset.sum_congr rfl
+  intro l _
+  rw [toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_last_col]
+
 end LMM
