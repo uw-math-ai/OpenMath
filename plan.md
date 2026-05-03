@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 52 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 53 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -71,7 +71,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:381B` **Φ-equivalent** (§380)
 - [x] `def:381D` **P -reducible** (§380)
 - [x] `lem:322A` **Methods of order 4** (§322)
-- [ ] `lem:383C` **Existence of Left and Right Inverses** (§383)
+- [x] `lem:383C` **Existence of Left and Right Inverses** (§383)
 - [x] `thm:301A` **Functions on trees** (§301)
 - [ ] `thm:302C` **Rooted Tree Enumeration Formulas** (§302)
 - [ ] `thm:342C` **Gaussian Quadrature Order Conditions Equivalence** (§342)

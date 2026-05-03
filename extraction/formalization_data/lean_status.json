@@ -315,9 +315,10 @@
     "status": "formalized"
   },
   "lem:383C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section383.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section383.exists_inverse_of_isMultiplicative",
+    "notes": "Cycle 081. Existence of left/right inverses in G₁ (multiplicative forest mappings). Constructive: exhibits convInverse α (closed form (-1)^|F| · ∏_{t ∈ F} α({t})) as the explicit witness. Supporting infrastructure: convOne (identity element), isMultiplicative_convOne (identity is in G₁), convInverse_isMultiplicative (the closed form is multiplicative — no hypothesis on α needed), convProduct_singleton_eq_zero / convProduct_singleton_symm_eq_zero (per-singleton zero), convProduct_convInverse / convProduct_convInverse_symm (right/left inverse property by Multiset.induction with multiplicativity). FAITHFULNESS CAVEAT: this proves inverse-existence for our convProduct (multiset sub-selection), not Butcher's convolution (vertex-subset partition). Inverse exists in both algebras; closed form differs (Butcher's involves partition sum, ours is product). See .prover-state/issues/convolution_vertex_vs_multiset.md. Axioms = [propext, Classical.choice, Quot.sound].",
+    "status": "formalized"
   },
   "lem:383D": {
     "lean_file": null,

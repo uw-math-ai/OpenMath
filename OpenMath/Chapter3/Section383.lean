@@ -349,4 +349,173 @@ theorem convProduct_assoc (α β γ : Forest → ℝ) :
     rw [← Multiset.sub_add_eq_sub_sub, add_comm, Multiset.sub_add_cancel hQR']
   rw [h1]
 
+/-! ### Lemma 383C — existence of left and right inverses in G₁ -/
+
+/-- The convolution-product identity element on G₁: equals `1` on the
+empty forest and `0` elsewhere. This is the multiplicative-mapping
+analogue of the unit element in the Runge–Kutta group. -/
+noncomputable def convOne : Forest → ℝ :=
+  fun F => if F = 0 then 1 else 0
+
+/-- Closed-form inverse for a multiplicative forest mapping `α`:
+`convInverse α F = (-1)^|F| · ∏_{t ∈ F} α({t})`.
+
+**Faithfulness note**: Butcher §383 (page 310) constructs the inverse
+β by induction on tree order, using the formula
+`β(t) := -α(t) - φ(t, α, β)` where `φ` involves α and β at
+strictly-smaller trees. In our forest encoding, however, the
+sub-multisets of a single-tree forest `{t}` are just `{∅, {t}}`, so
+the convolution sum on `{t}` collapses to `α({t}) + β({t})` with no
+φ-term. Hence the inductive recurrence reduces to a closed form
+`β({t}) := -α({t})`, which extends multiplicatively to a forest by
+the displayed product. -/
+noncomputable def convInverse (α : Forest → ℝ) : Forest → ℝ :=
+  fun F => (-1) ^ (Multiset.card F) *
+    (F.map (fun t => α ((t ::ₘ 0 : Multiset RootedTree)))).prod
+
+/-- The constant-`convOne` mapping is multiplicative: `convOne 0 = 1`
+and `convOne (s + t) = convOne s · convOne t`. -/
+theorem isMultiplicative_convOne : IsMultiplicative convOne := by
+  refine ⟨?_, ?_⟩
+  · simp [convOne]
+  · intro s t
+    unfold convOne
+    by_cases hs : s = 0
+    · by_cases ht : t = 0
+      · simp [hs, ht]
+      · simp [hs, ht]
+    · by_cases ht : t = 0
+      · simp [hs, ht]
+      · have hst : s + t ≠ 0 := by
+          intro h
+          apply hs
+          have hs_le : s ≤ s + t := Multiset.le_add_right s t
+          rw [h] at hs_le
+          exact Multiset.le_zero.mp hs_le
+        simp [hs, ht, hst]
+
+/-- `convInverse α` is multiplicative for any `α` (multiplicativity of
+α is **not** required — the closed form is multiplicative by
+construction). -/
+theorem convInverse_isMultiplicative (α : Forest → ℝ) :
+    IsMultiplicative (convInverse α) := by
+  refine ⟨?_, ?_⟩
+  · -- convInverse α 0 = 1
+    simp [convInverse]
+  · -- convInverse α (s + t) = convInverse α s * convInverse α t
+    intro s t
+    unfold convInverse
+    rw [Multiset.card_add, Multiset.map_add, Multiset.prod_add, pow_add]
+    ring
+
+/-- Per-singleton zero: `(α · convInverse α)({t}) = 0`. The
+convolution sum on `({t} : Forest)` reduces to
+`α({t}) + convInverse α ({t}) = α({t}) - α({t}) = 0`. -/
+theorem convProduct_singleton_eq_zero
+    {α : Forest → ℝ} (hα : IsMultiplicative α) (t : RootedTree) :
+    convProduct α (convInverse α) ((t ::ₘ 0 : Multiset RootedTree)) = 0 := by
+  unfold convProduct
+  rw [Multiset.powerset_cons, Multiset.powerset_zero]
+  simp only [Multiset.map_add, Multiset.map_singleton,
+             Multiset.sum_add, Multiset.sum_singleton]
+  -- Goal: α (t ::ₘ 0 - 0) * convInverse α 0 + α (t ::ₘ 0 - (t ::ₘ 0)) * convInverse α (t ::ₘ 0) = 0
+  have hsub : (t ::ₘ 0 : Multiset RootedTree) - (t ::ₘ 0) = 0 := tsub_self _
+  rw [hsub, Multiset.sub_zero]
+  -- Goal: α (t ::ₘ 0) * convInverse α 0 + α 0 * convInverse α (t ::ₘ 0) = 0
+  unfold convInverse
+  simp [hα.1, Multiset.card_zero]
+
+/-- Per-singleton zero (symmetric form): `(convInverse α · α)({t}) = 0`. -/
+theorem convProduct_singleton_symm_eq_zero
+    {α : Forest → ℝ} (hα : IsMultiplicative α) (t : RootedTree) :
+    convProduct (convInverse α) α ((t ::ₘ 0 : Multiset RootedTree)) = 0 := by
+  unfold convProduct
+  rw [Multiset.powerset_cons, Multiset.powerset_zero]
+  simp only [Multiset.map_add, Multiset.map_singleton,
+             Multiset.sum_add, Multiset.sum_singleton]
+  have hsub : (t ::ₘ 0 : Multiset RootedTree) - (t ::ₘ 0) = 0 := tsub_self _
+  rw [hsub, Multiset.sub_zero]
+  unfold convInverse
+  simp [hα.1, Multiset.card_zero]
+
+/-- **Right-inverse property**: `convProduct α (convInverse α) = convOne`. -/
+theorem convProduct_convInverse
+    {α : Forest → ℝ} (hα : IsMultiplicative α) :
+    convProduct α (convInverse α) = convOne := by
+  funext F
+  unfold convOne
+  induction F using Multiset.induction with
+  | empty =>
+    -- (αβ)(0) = α(0) · β(0) = 1.
+    show ((Multiset.powerset (0 : Multiset RootedTree)).map _).sum = (if (0 : Forest) = 0 then 1 else 0)
+    rw [Multiset.powerset_zero]
+    simp [hα.1, (convInverse_isMultiplicative α).1]
+  | cons t rest IH =>
+    -- (αβ)(t ::ₘ rest) = (αβ)({t} + rest) = (αβ)({t}) · (αβ)(rest) = 0 · _ = 0.
+    have hαβ : IsMultiplicative (convProduct α (convInverse α)) :=
+      multiplicative_conv hα (convInverse_isMultiplicative α)
+    have hcons : (t ::ₘ rest : Multiset RootedTree) = (t ::ₘ 0) + rest := by
+      rfl
+    rw [hcons, hαβ.2, convProduct_singleton_eq_zero hα]
+    have hne : (t ::ₘ 0 : Multiset RootedTree) + rest ≠ 0 := by
+      intro h
+      have hmem : t ∈ ((t ::ₘ 0 : Multiset RootedTree) + rest) := by
+        rw [Multiset.mem_add]
+        left
+        exact Multiset.mem_cons_self t 0
+      rw [h] at hmem
+      exact (Multiset.notMem_zero t) hmem
+    simp
+
+/-- **Left-inverse property**: `convProduct (convInverse α) α = convOne`. -/
+theorem convProduct_convInverse_symm
+    {α : Forest → ℝ} (hα : IsMultiplicative α) :
+    convProduct (convInverse α) α = convOne := by
+  funext F
+  unfold convOne
+  induction F using Multiset.induction with
+  | empty =>
+    show ((Multiset.powerset (0 : Multiset RootedTree)).map _).sum = (if (0 : Forest) = 0 then 1 else 0)
+    rw [Multiset.powerset_zero]
+    simp [hα.1, (convInverse_isMultiplicative α).1]
+  | cons t rest IH =>
+    have hβα : IsMultiplicative (convProduct (convInverse α) α) :=
+      multiplicative_conv (convInverse_isMultiplicative α) hα
+    have hcons : (t ::ₘ rest : Multiset RootedTree) = (t ::ₘ 0) + rest := by
+      rfl
+    rw [hcons, hβα.2, convProduct_singleton_symm_eq_zero hα]
+    have hne : (t ::ₘ 0 : Multiset RootedTree) + rest ≠ 0 := by
+      intro h
+      have hmem : t ∈ ((t ::ₘ 0 : Multiset RootedTree) + rest) := by
+        rw [Multiset.mem_add]
+        left
+        exact Multiset.mem_cons_self t 0
+      rw [h] at hmem
+      exact (Multiset.notMem_zero t) hmem
+    simp
+
+/-- **Butcher §383 Lemma 383C** — existence of left and right
+inverses for any α ∈ G₁.
+
+> Given α ∈ G₁, there exist a left inverse and a right inverse.
+
+We exhibit `convInverse α` (a closed-form construction) as both a
+left and right inverse, witnessing the existential constructively.
+
+**Faithfulness caveat**: this is the inverse for *our* `convProduct`,
+which uses multiset sub-selection (`R ≤ S` as multisets). Butcher's
+own §383 convolution sums over vertex subsets of `V(S)` (allowing
+edge-removal partitions), which produces a richer convolution and a
+correspondingly richer inverse formula (the partition sum of
+Lemma 383D). The inverse-existence claim is true in both algebras;
+the *closed-form formula* differs. See
+`.prover-state/issues/convolution_vertex_vs_multiset.md` for full
+discussion. -/
+theorem exists_inverse_of_isMultiplicative
+    {α : Forest → ℝ} (hα : IsMultiplicative α) :
+    ∃ β : Forest → ℝ, IsMultiplicative β ∧
+      convProduct α β = convOne ∧ convProduct β α = convOne :=
+  ⟨convInverse α, convInverse_isMultiplicative α,
+   convProduct_convInverse hα, convProduct_convInverse_symm hα⟩
+
 end OpenMath.Chapter3.Section383
