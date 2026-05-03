@@ -2381,4 +2381,121 @@ private theorem toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last
   rw [Finset.prod_const, Finset.card_erase_of_mem (Finset.mem_univ _),
       Finset.card_univ, Fintype.card_fin]
 
+/-- §521 Step F.2 — Closed form for `rowYQuot m`: a BDF-independent
+polynomial identity reading the `(s-1, s-1)` entry of the
+`Matrix.mul_adjugate` identity for `(PY 0).charmatrix`, then substituting
+F.1 (adjugate diagonal = X^(s-1)), cycle 720's
+`rowYQuot_eq_adjugate_sum`, and cycle 692's `(PY 0).charpoly` closed
+form (at `z = 0` the resolvent denominator collapses). -/
+theorem rowYQuot_eq_neg_alpha_sum (m : LMM s) (hs : 0 < s) :
+    rowYQuot m
+      = - ∑ l : Fin s,
+            Polynomial.C ((m.α (Fin.castSucc l) : ℝ) : ℂ)
+              * (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) := by
+  have hz_one : (1 : ℂ) - (0 : ℂ) * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0 := by simp
+  have h1 : (1 : ℂ) - (0 : ℂ) * ((m.β (Fin.last s) : ℝ) : ℂ) = 1 := by ring
+  -- Step 1: (PY 0).charpoly closed form (cycle 692 at z=0).
+  have h_charpoly :
+      (toGLM_stabilityMatrixPY m 0).charpoly =
+        (Polynomial.X : Polynomial ℂ) ^ s -
+          ∑ l : Fin s,
+            Polynomial.C ((-m.α (Fin.castSucc l) : ℝ) : ℂ) *
+              (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) := by
+    rw [toGLM_stabilityMatrixPY_charpoly m 0 hz_one]
+    congr 1
+    refine Finset.sum_congr rfl (fun l _ => ?_)
+    rw [h1, div_one]
+  -- Step 2: (s-1, s-1) entry of charmatrix * adjugate = charpoly.
+  have hMul := Matrix.mul_adjugate (toGLM_stabilityMatrixPY m 0).charmatrix
+  have hEntry :
+      ∑ k : Fin s,
+        (toGLM_stabilityMatrixPY m 0).charmatrix
+            ⟨s - 1, by omega⟩ k *
+          (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+            ⟨s - 1, by omega⟩ =
+        (toGLM_stabilityMatrixPY m 0).charpoly := by
+    have h := congrFun (congrFun hMul ⟨s - 1, by omega⟩) ⟨s - 1, by omega⟩
+    simp only [Matrix.mul_apply, Matrix.smul_apply, Matrix.one_apply_eq,
+               smul_eq_mul, mul_one] at h
+    exact h
+  -- Step 3: charmatrix entry at last row.
+  have hjeq : ((⟨s - 1, by omega⟩ : Fin s) : ℕ) + 1 = s := by
+    show s - 1 + 1 = s; omega
+  have hCharm : ∀ k : Fin s,
+      (toGLM_stabilityMatrixPY m 0).charmatrix ⟨s - 1, by omega⟩ k =
+        (Matrix.diagonal (fun _ : Fin s => (Polynomial.X : Polynomial ℂ)))
+            ⟨s - 1, by omega⟩ k -
+          Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ) := by
+    intro k
+    rw [Matrix.charmatrix_apply]
+    congr 1
+    rw [toGLM_stabilityMatrixPY_apply_last m 0 hz_one ⟨s - 1, by omega⟩ hjeq k]
+    rw [h1, div_one]
+  -- Step 4: split the sum.
+  have hSplit :
+      ∑ k : Fin s,
+        (toGLM_stabilityMatrixPY m 0).charmatrix ⟨s - 1, by omega⟩ k *
+          (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+            ⟨s - 1, by omega⟩ =
+        Polynomial.X *
+          (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate
+            ⟨s - 1, by omega⟩ ⟨s - 1, by omega⟩ -
+        ∑ k : Fin s,
+          Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+            (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+              ⟨s - 1, by omega⟩ := by
+    rw [show (∑ k : Fin s,
+            (toGLM_stabilityMatrixPY m 0).charmatrix ⟨s - 1, by omega⟩ k *
+              (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+                ⟨s - 1, by omega⟩) =
+          ∑ k : Fin s,
+            ((Matrix.diagonal (fun _ : Fin s => (Polynomial.X : Polynomial ℂ)))
+                ⟨s - 1, by omega⟩ k *
+                (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+                  ⟨s - 1, by omega⟩ -
+              Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+                (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+                  ⟨s - 1, by omega⟩) from
+        Finset.sum_congr rfl (fun k _ => by rw [hCharm k]; ring)]
+    rw [Finset.sum_sub_distrib]
+    congr 1
+    rw [Finset.sum_eq_single (⟨s - 1, by omega⟩ : Fin s)]
+    · rw [Matrix.diagonal_apply_eq]
+    · intro k _ hk
+      rw [Matrix.diagonal_apply_ne _ (Ne.symm hk)]
+      ring
+    · intro h
+      exact absurd (Finset.mem_univ _) h
+  -- Step 5: substitute F.1 (adjugate diagonal = X^(s-1)).
+  rw [toGLM_stabilityMatrixPY_zero_charmatrix_adjugate_last m hs] at hSplit
+  -- Step 6: substitute rowYQuot_eq_adjugate_sum.
+  rw [show ∑ k : Fin s,
+        Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ) *
+          (toGLM_stabilityMatrixPY m 0).charmatrix.adjugate k
+            ⟨s - 1, by omega⟩ = rowYQuot m from
+      (rowYQuot_eq_adjugate_sum m hs).symm] at hSplit
+  -- hSplit: ∑ charm * adj = X * X^(s-1) - rowYQuot m
+  rw [hSplit] at hEntry
+  -- hEntry: X * X^(s-1) - rowYQuot m = charpoly
+  rw [h_charpoly] at hEntry
+  -- Collapse X * X^(s-1) into X^s.
+  have hX_pow : Polynomial.X * (Polynomial.X : Polynomial ℂ) ^ (s - 1) =
+      (Polynomial.X : Polynomial ℂ) ^ s := by
+    rw [← pow_succ', show s - 1 + 1 = s from by omega]
+  rw [hX_pow] at hEntry
+  -- hEntry: X^s - rowYQuot m = X^s - ∑ C(-α) * X^l
+  -- Goal: rowYQuot m = -∑ C(α) * X^l
+  have h_sum_eq : ∑ l : Fin s,
+      Polynomial.C ((-m.α (Fin.castSucc l) : ℝ) : ℂ) *
+        (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) =
+      -∑ l : Fin s,
+        Polynomial.C ((m.α (Fin.castSucc l) : ℝ) : ℂ) *
+          (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) := by
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun l _ => ?_)
+    push_cast
+    rw [Polynomial.C_neg]
+    ring
+  linear_combination -hEntry + h_sum_eq
+
 end LMM
