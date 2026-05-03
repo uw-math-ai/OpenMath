@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 55 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 56 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -201,7 +201,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:510A` **preconsistency vector** (§510) — `OpenMath/Chapter5/Section510.lean`
 - [x] `def:510C` **stable** (§510) — `OpenMath/Chapter5/Section510.lean`
 - [ ] `def:530B` **Order relative to starting method (530B)** (§530)
-- [ ] `def:510B` **consistent (GLM)** (§510)
+- [x] `def:510B` **consistent (GLM)** (§510) — `OpenMath/Chapter5/Section510.lean`
 - [ ] `def:530C` **Order relative to starting method (530C)** (§530)
 - [ ] `def:512A` **convergent (GLM)** (§512)
 - [ ] `def:520A` **Introduction** (§520)

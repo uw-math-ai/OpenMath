@@ -106,6 +106,36 @@ def GeneralLinearMethod.IsStable {s r : ℕ}
     (M : GeneralLinearMethod s r) : Prop :=
   ∃ C : ℝ, OpenMath.Chapter1.Section142.PowerBounded C M.V
 
+/-- **Definition 510B** — A GLM is *consistent* if it is preconsistent
+with some preconsistency vector `u`, and additionally there exists a
+vector `v` such that `B·𝟙 + V·v = u + v` (equation 510c).
+
+Butcher (Definition 510B, p. 406): "A general linear method
+`(A, U, B, V)` is *consistent* if it is preconsistent with
+preconsistency vector `u` and there exists a vector `v` such that
+`B·𝟙 + V·v = u + v`."
+
+We existentially quantify both `u` and `v` here so that
+`IsConsistent` is a self-contained predicate on the GLM. The
+preconsistency conditions `V u = u` and `U u = 1` are embedded
+inline (mirroring `IsPreconsistent`); this matches the textbook's
+intent that the same `u` witness preconsistency and consistency
+simultaneously, while still letting downstream callers extract
+`IsPreconsistent` via the `IsConsistent.isPreconsistent` projection
+lemma below. -/
+def GeneralLinearMethod.IsConsistent {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  ∃ u v : Fin r → ℝ,
+    (M.V *ᵥ u = u ∧ M.U *ᵥ u = (fun _ => 1)) ∧
+    M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v
+
+/-- A consistent GLM is preconsistent (the `u` witness lifts). -/
+theorem GeneralLinearMethod.IsConsistent.isPreconsistent
+    {s r : ℕ} {M : GeneralLinearMethod s r}
+    (hC : M.IsConsistent) : M.IsPreconsistent := by
+  obtain ⟨u, _, ⟨hVu, hUu⟩, _⟩ := hC
+  exact ⟨u, hVu, hUu⟩
+
 /-! ### Non-vacuity witness: explicit Euler as a `(1, 1)`-GLM -/
 
 /-- Explicit Euler `y_{n+1} = y_n + h f(y_n)` viewed as a
@@ -144,5 +174,24 @@ theorem explicitEulerGLM_isStable : explicitEulerGLM.IsStable := by
     simp [explicitEulerGLM]
   rw [hV, one_pow]
   exact le_of_eq norm_one
+
+/-- Non-vacuity witness for `IsConsistent`: `explicitEulerGLM` is
+consistent with `u = (fun _ => 1)` and `v = (fun _ => 0)`.
+
+Equation (510c) collapses to `B·𝟙 + V·0 = 1 + 0`, i.e. `1 = 1`,
+since the 1×1 matrices `B = V = !![1]` and the all-ones / all-zeros
+vectors evaluate by `simp`. -/
+theorem explicitEulerGLM_isConsistent :
+    explicitEulerGLM.IsConsistent := by
+  refine ⟨fun _ => 1, fun _ => 0, ⟨?_, ?_⟩, ?_⟩
+  · -- V·u = u
+    funext i; fin_cases i
+    simp [explicitEulerGLM, Matrix.mulVec, dotProduct]
+  · -- U·u = 1
+    funext i; fin_cases i
+    simp [explicitEulerGLM, Matrix.mulVec, dotProduct]
+  · -- B·𝟙 + V·v = u + v
+    funext i; fin_cases i
+    simp [explicitEulerGLM, dotProduct]
 
 end OpenMath.Chapter5.Section510
