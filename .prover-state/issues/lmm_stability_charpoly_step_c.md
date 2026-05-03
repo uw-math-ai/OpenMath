@@ -7,9 +7,27 @@
 real closed forms in `OpenMath/LMMAsGLM/StabilityCharpoly.lean`, and
 `toGLM_stabilityMatrix_charpoly_explicit` is a sorry-free identity.
 
-The next §521 milestone is the iff bridge `LMM.toGLM_isAStable_iff` as a
-root-location argument over the spurious-`X^s` factorisation of
-`toGLM_stabilityMatrix_charpoly_explicit`.
+**Step C.7 assembled (cycle 680).** The two cycle-676 column projection
+identities are now glued into a single closed form
+`toGLM_stabilityCharpolyRowF_eq_summand_split` plus the trivial BDF
+re-export `toGLM_stabilityCharpolyRowF_eq_summand_split_of_bdf`. The RHS
+is the column-decomposed α-summand `∑ l, residual(l) · X^l` plus the
+factored β-summand `PY.charpoly · ∑ k, β_k · X^k`.
+
+**Structural forward look (cycle 680).** The next concrete sub-step had
+been described as a β-summand `X^s` extraction analogue of cycle 672,
+but the column closed form caps the α-summand at `X^(s-1)`, not `X^s`.
+**Therefore there is no general `X^s` factor in `RowF` for non-BDF
+LMMs**, and any `rowFQuot_mul_X_pow_eq_RowF` shape is a dead end (it
+only works in the BDF case where `RowF = 0`).
+
+The path forward for `LMM.toGLM_isAStable_iff` is therefore not "extract
+`X^s` from `RowF`" but rather: prove a sharper factorisation of
+`(toGLM_stabilityMatrix z).charpoly` that does not pull `X^s` out as a
+global factor; instead show the spurious roots (those of the rank-one
+correction term involving `RowF`) all coincide with `X = 0` through some
+other algebraic mechanism (likely degree-counting on the active
+stability poly vs the full charpoly).
 
 ## Cycle 666 — past-`h*f` past-tense (closed)
 

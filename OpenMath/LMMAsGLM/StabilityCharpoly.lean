@@ -946,4 +946,43 @@ theorem toGLM_stabilityCharpolyRowF_α_summand_col_eq
   intro l _
   rw [toGLM_stabilityMatrixPHF_zero_charmatrix_adjugate_last_col]
 
+/-- §521 Step C.7 — Assembled closed form for the past-`h*f`
+adjugate-row entry as the sum of two pieces:
+
+* an α-summand expressed as a column-decomposed sum
+  `∑ l, (residual) · X^l` (cycle 676's
+  `toGLM_stabilityCharpolyRowF_α_summand_col_eq`); and
+* a β-summand factored as `PY.charpoly · (∑ k, β_k · X^k)` (cycle
+  676's `toGLM_stabilityCharpolyRowF_β_summand_eq`).
+
+Direct chain: rewrite `toGLM_stabilityCharpolyRowF_eq_explicit` then
+substitute both Step C.7 column closed forms. -/
+theorem toGLM_stabilityCharpolyRowF_eq_summand_split
+    (m : LMM s) (hs : 0 < s) :
+    toGLM_stabilityCharpolyRowF m =
+      ( ∑ l : Fin s,
+          ( Matrix.vecMul
+              (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+              (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+                (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C)) ) l *
+          (Polynomial.X : Polynomial ℂ) ^ (l : ℕ) )
+      +
+      (toGLM_stabilityMatrixPY m 0).charpoly *
+        ∑ k : Fin s,
+          Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ) *
+            (Polynomial.X : Polynomial ℂ) ^ (k : ℕ) := by
+  rw [toGLM_stabilityCharpolyRowF_eq_explicit m hs,
+      toGLM_stabilityCharpolyRowF_α_summand_col_eq m hs,
+      toGLM_stabilityCharpolyRowF_β_summand_eq m hs]
+
+/-- §521 Step C.7 sanity check — under the BDF hypothesis the assembled
+closed form collapses to `0`, recovering
+`toGLM_stabilityCharpolyRowF_of_bdf`. Re-export only; the proof is the
+existing BDF-branch lemma. -/
+theorem toGLM_stabilityCharpolyRowF_eq_summand_split_of_bdf
+    (m : LMM s) (hs : 0 < s)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    toGLM_stabilityCharpolyRowF m = 0 :=
+  toGLM_stabilityCharpolyRowF_of_bdf m hs hbdf
+
 end LMM
