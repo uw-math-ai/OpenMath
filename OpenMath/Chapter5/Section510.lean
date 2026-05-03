@@ -1,10 +1,12 @@
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 import Mathlib.LinearAlgebra.Matrix.Notation
+import Mathlib.Analysis.Matrix.Normed
 import Mathlib.Data.Real.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.FinCases
+import OpenMath.Chapter1.Section142
 
 /-!
 # Butcher §510 — Preconsistency vector for general linear methods (Definition 510A)
@@ -52,6 +54,7 @@ explicit Euler `y_{n+1} = y_n + h f(y_n)`, with `A = !![0]`,
 namespace OpenMath.Chapter5.Section510
 
 open Matrix
+open scoped Matrix.Norms.Operator
 
 /-- A general linear method (Butcher §510) with `s` internal stages
 and `r` input/output values. The four constituent matrices together
@@ -73,6 +76,35 @@ vector `u : Fin r → ℝ` (the *preconsistency vector*) such that
 def GeneralLinearMethod.IsPreconsistent {s r : ℕ}
     (M : GeneralLinearMethod s r) : Prop :=
   ∃ u : Fin r → ℝ, M.V *ᵥ u = u ∧ M.U *ᵥ u = (fun _ => 1)
+
+/-- **Definition 510C** — A GLM is *stable* if there exists a constant
+`C` such that `‖M.V ^ n‖ ≤ C` for every `n : ℕ`.
+
+This is the GLM instance of Butcher's general matrix-stability notion
+(`def:142A`, `OpenMath.Chapter1.Section142.PowerBounded`), applied to
+the input/output propagation matrix `V`.
+
+Butcher (Definition 510C, p. 407): "A general linear method
+`(A, U, B, V)` is *stable* if there exists a constant `C` such that,
+for all `n = 1, 2, ...,`, `‖V^n‖ ≤ C`."
+
+The textbook quantifies over `n = 1, 2, ...`, while we quantify over
+all `n : ℕ` (including `n = 0`). The two formulations are equivalent:
+`V^0 = 1`, so `‖V^0‖ = ‖1‖` is a fixed constant, and any bound for
+`n ≥ 1` extends to `max(C, ‖1‖)` for all `n`. The full-`ℕ`
+quantification matches the existing `def:142A` `PowerBounded`
+signature exactly, allowing direct reuse.
+
+The matrix norm used is `Matrix.linftyOpNormedRing`
+(`Mathlib.Analysis.Matrix.Normed`), which gives
+`Matrix (Fin r) (Fin r) ℝ` a `SeminormedRing` instance compatible with
+`PowerBounded`. The textbook is silent on which matrix norm is used;
+all matrix norms on a finite-dimensional space are equivalent up to
+changing the bound `C`, so this choice is faithful (cf. the parallel
+discussion in the docstring of `def:142A`). -/
+def GeneralLinearMethod.IsStable {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  ∃ C : ℝ, OpenMath.Chapter1.Section142.PowerBounded C M.V
 
 /-! ### Non-vacuity witness: explicit Euler as a `(1, 1)`-GLM -/
 
@@ -98,5 +130,19 @@ theorem explicitEulerGLM_isPreconsistent :
     funext i
     fin_cases i
     simp [explicitEulerGLM, Matrix.mulVec, dotProduct]
+
+/-- Non-vacuity witness for `IsStable`: `explicitEulerGLM` is stable
+with bound `C = 1`. Its `V` block is the `1 × 1` identity, so every
+power `V^n` is the identity and has linfty operator norm `1`. -/
+theorem explicitEulerGLM_isStable : explicitEulerGLM.IsStable := by
+  refine ⟨1, ?_⟩
+  intro n
+  -- Goal: ‖explicitEulerGLM.V ^ n‖ ≤ 1
+  have hV : explicitEulerGLM.V = (1 : Matrix (Fin 1) (Fin 1) ℝ) := by
+    ext i j
+    fin_cases i; fin_cases j
+    simp [explicitEulerGLM]
+  rw [hV, one_pow]
+  exact le_of_eq norm_one
 
 end OpenMath.Chapter5.Section510
