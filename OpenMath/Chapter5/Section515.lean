@@ -1460,7 +1460,125 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
           add_le_add hbridge_combined hRi_i
       _ ≤ α * h * δ_max + β * h^2 := by linarith [hcombine]
 
-/-! ## §515 capstone — Theorem 515D (stability + consistency ⇒ convergence) -/
+/-! ## §515 capstone — Theorem 515D (stability + consistency ⇒ convergence)
+
+The capstone proof factors through three internal helpers
+(opened cycle 112 as a sorry-first scaffold; `aux_515D_squeeze`
+closed manually, `aux_515D_per_step_recurrence` and
+`aux_515D_gronwall_bound` submitted to Aristotle):
+
+* `aux_515D_per_step_recurrence` — abstract one-step recurrence:
+  `δ (m+1) ≤ V·δ m + α·h·δ m + β·h²` ⇒ `δ m ≤ closed-form`. The
+  source recurrence comes from `localStepError_bound` (lem:515B)
+  combined with stability bookkeeping.
+* `aux_515D_gronwall_bound` — abstract scalar discrete-Grönwall
+  closed-form bound. A thin specialization of
+  `OpenMath.Chapter4.Section404.discrete_gronwall_exp_bound`
+  with `k = 1`.
+* `aux_515D_squeeze` — squeeze argument: a non-negative sequence
+  bounded above by `Real.exp(α·Δx) · δ0_seq n + (Real.exp(α·Δx) − 1) · (β·Δx/n/α)`,
+  with `δ0_seq → 0`, tends to 0.
+
+The body of `aux_515D_output_tendsto` will compose A + B + C in a
+future cycle (see `.prover-state/issues/aux_515D_output_tendsto_hypotheses.md`
+for the strengthened hypotheses required at composition time).
+-/
+
+/-- **Sub-lemma A for `aux_515D_output_tendsto`** — abstract per-step
+recurrence ⇒ closed-form geometric bound.
+
+If a non-negative sequence `δ : ℕ → ℝ` satisfies
+`δ (m+1) ≤ V_norm · δ m + α · h · δ m + β · h²` for all `m`, then
+`δ n ≤ (V_norm + α·h)^n · δ 0 + β · h² · (∑_{k < n} (V_norm + α·h)^k)`.
+
+This is the *closed-form* statement; the §515 application converts to
+the sum-form recurrence `δ n ≤ a + α'·h·k·(∑ i ∈ Ico 1 n, δ i) + β·h²·n`
+required by `discrete_gronwall_exp_bound` (sub-lemma B). -/
+private theorem aux_515D_per_step_recurrence
+    {V_norm α β h : ℝ}
+    (_hV_nn : 0 ≤ V_norm) (_hα_nn : 0 ≤ α) (_hβ_nn : 0 ≤ β) (_hh : 0 ≤ h)
+    (δ : ℕ → ℝ) (_hδ_nn : ∀ m, 0 ≤ δ m)
+    (_hrec : ∀ m, δ (m + 1) ≤ V_norm * δ m + α * h * δ m + β * h^2) :
+    ∀ n, δ n ≤ (V_norm + α * h)^n * δ 0
+              + β * h^2 * (∑ k ∈ Finset.range n, (V_norm + α * h)^k) := by
+  sorry
+
+/-- **Sub-lemma B for `aux_515D_output_tendsto`** — discrete Grönwall
+closed-form (specialization of Section404 helper to `k = 1`).
+
+This is a thin re-statement of
+`OpenMath.Chapter4.Section404.discrete_gronwall_exp_bound` with
+`k = 1`, kept abstract so the §515 caller does not need to thread
+the `k` parameter. -/
+private theorem aux_515D_gronwall_bound
+    (u : ℕ → ℝ) (a α β h : ℝ)
+    (_ha : 0 ≤ a) (_hα_pos : 0 < α) (_hβ_nn : 0 ≤ β) (_hh : 0 ≤ h)
+    (_hu0 : u 0 ≤ a)
+    (_hu_rec : ∀ m, 1 ≤ m →
+      u m ≤ a + α * h * (∑ i ∈ Finset.Ico 1 m, u i)
+              + β * h^2 * (m : ℝ))
+    (n : ℕ) :
+    u n ≤ Real.exp (α * (n : ℝ) * h) * a
+            + (Real.exp (α * (n : ℝ) * h) - 1) * (β * h / α) := by
+  sorry
+
+/-- **Sub-lemma C for `aux_515D_output_tendsto`** — squeeze argument.
+
+Given a non-negative sequence `δ : ℕ → ℝ` bounded above by
+`Real.exp(α·Δx) · δ0_seq n + (Real.exp(α·Δx) − 1) · (β · (Δx/n) / α)`
+for all `n ≥ 1`, with `δ0_seq → 0` and `α > 0`, conclude `δ → 0`.
+
+The two bounding terms each tend to 0:
+* `Real.exp(α·Δx) · δ0_seq n → 0` by `Tendsto.const_mul` on `δ0_seq → 0`.
+* `(Real.exp(α·Δx) − 1) · (β · (Δx/n) / α) = C₂ / n → 0` by
+  `tendsto_one_div_atTop_nhds_zero_nat`.
+Their sum `→ 0`; squeeze with `δ ≥ 0` and the upper bound. -/
+private theorem aux_515D_squeeze
+    {α β : ℝ} (hα_pos : 0 < α) (_hβ_nn : 0 ≤ β)
+    (Δx : ℝ) (_hΔx_pos : 0 < Δx)
+    (δ : ℕ → ℝ) (δ0_seq : ℕ → ℝ)
+    (hδ_nn : ∀ n, 0 ≤ δ n)
+    (hδ0_tendsto : Filter.Tendsto δ0_seq Filter.atTop (nhds 0))
+    (h_bound : ∀ n : ℕ, 0 < n →
+      δ n ≤ Real.exp (α * Δx) * δ0_seq n
+            + (Real.exp (α * Δx) - 1) * (β * (Δx / (n : ℝ)) / α)) :
+    Filter.Tendsto δ Filter.atTop (nhds 0) := by
+  set C₁ : ℝ := Real.exp (α * Δx) with hC₁_def
+  set C₂ : ℝ := (Real.exp (α * Δx) - 1) * (β * Δx / α) with hC₂_def
+  -- C₁ * δ0_seq n → 0
+  have h1 : Filter.Tendsto (fun n : ℕ => C₁ * δ0_seq n) Filter.atTop (nhds 0) := by
+    have h := hδ0_tendsto.const_mul C₁
+    simpa using h
+  -- C₂ * (1 / n) → 0
+  have h2 : Filter.Tendsto (fun n : ℕ => C₂ * (1 / (n : ℝ))) Filter.atTop (nhds 0) := by
+    have h := tendsto_one_div_atTop_nhds_zero_nat.const_mul C₂
+    simpa using h
+  -- Sum → 0
+  have h_upper : Filter.Tendsto
+                  (fun n : ℕ => C₁ * δ0_seq n + C₂ * (1 / (n : ℝ)))
+                  Filter.atTop (nhds 0) := by
+    have h := h1.add h2
+    simpa using h
+  -- Squeeze: 0 ≤ δ n ≤ C₁ * δ0_seq n + C₂ * (1 / n), and the upper → 0.
+  refine squeeze_zero' (f := δ)
+            (g := fun n : ℕ => C₁ * δ0_seq n + C₂ * (1 / (n : ℝ)))
+            ?_ ?_ h_upper
+  · -- 0 ≤ δ n
+    exact Filter.Eventually.of_forall hδ_nn
+  · -- δ n ≤ C₁ * δ0_seq n + C₂ * (1 / n) (eventually for n ≥ 1)
+    filter_upwards [Filter.eventually_ge_atTop 1] with n hn_ge_1
+    have hn_pos : 0 < n := hn_ge_1
+    have hn_ne : (n : ℝ) ≠ 0 := by
+      have h1 : (1 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn_ge_1
+      linarith
+    have hα_ne : α ≠ 0 := ne_of_gt hα_pos
+    have h := h_bound n hn_pos
+    have heq : (Real.exp (α * Δx) - 1) * (β * (Δx / (n : ℝ)) / α)
+                = C₂ * (1 / (n : ℝ)) := by
+      show (Real.exp (α * Δx) - 1) * (β * (Δx / (n : ℝ)) / α)
+            = (Real.exp (α * Δx) - 1) * (β * Δx / α) * (1 / (n : ℝ))
+      field_simp
+    linarith [h]
 
 /-- **Sub-lemma for `thm:515D`**: under stability + consistency, the
 GLM iteration's *output* sequence `Y n n` converges to `u · yex(x)`
