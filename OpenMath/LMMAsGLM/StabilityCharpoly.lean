@@ -1204,4 +1204,58 @@ theorem rowFAlphaPoly_degree_lt (m : LMM s) :
     _ ≤ ((2 * s - 1 : ℕ) : WithBot ℕ) := by
         exact_mod_cast (by omega : s + (l : ℕ) ≤ 2 * s - 1)
 
+/-- §521 Step C.11 — Fully-named consolidated form of
+`toGLM_stabilityMatrix_charpoly_explicit`. Substitutes:
+* `(toGLM_stabilityMatrixPHF m 0).charpoly = X^s`,
+* `toGLM_stabilityCharpolyRowY m = rowYQuot m * X^s`,
+* `toGLM_stabilityCharpolyRowF m =
+     rowFAlphaPoly m + (toGLM_stabilityMatrixPY m 0).charpoly *
+                       rowFBetaPoly m`,
+into the cycle 666 explicit form. The result mentions only the named
+polynomials `rowYQuot`, `rowFAlphaPoly`, `rowFBetaPoly`,
+`(toGLM_stabilityMatrixPY m 0).charpoly`, and `Polynomial.X ^ s`. -/
+theorem toGLM_stabilityMatrix_charpoly_named
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (m.toGLM.stabilityMatrix z).charpoly =
+      (toGLM_stabilityMatrixPY m 0).charpoly *
+          (Polynomial.X : Polynomial ℂ) ^ s -
+        Polynomial.C (1 / (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ))) *
+          ( rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s *
+              Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + ( rowFAlphaPoly m +
+                (toGLM_stabilityMatrixPY m 0).charpoly *
+                  rowFBetaPoly m ) *
+              Polynomial.C z ) := by
+  rw [toGLM_stabilityMatrix_charpoly_explicit m hz hs,
+      toGLM_stabilityMatrixPHF_zero_charpoly,
+      ← rowYQuot_mul_X_pow_eq_RowY m hs,
+      toGLM_stabilityCharpolyRowF_eq_alphaPoly_plus_PY_betaPoly m hs]
+
+/-- §521 Step C.11 stretch — Combined degree bound for the α + PY·β
+named row decomposition of `toGLM_stabilityCharpolyRowF`. Used in the
+eventual iff bridge to bound the rank-one correction polynomial. -/
+theorem rowFNamedSum_degree_lt (m : LMM s) :
+    ( rowFAlphaPoly m +
+        (toGLM_stabilityMatrixPY m 0).charpoly * rowFBetaPoly m ).degree
+      < ((2 * s : ℕ) : WithBot ℕ) := by
+  refine (Polynomial.degree_add_le _ _).trans_lt ?_
+  refine max_lt ?_ ?_
+  · -- α-term: degree < 2*s - 1 ≤ 2*s
+    refine (rowFAlphaPoly_degree_lt m).trans_le ?_
+    exact_mod_cast (by omega : (2 * s - 1 : ℕ) ≤ 2 * s)
+  · -- PY·β term
+    refine (Polynomial.degree_mul_le _ _).trans_lt ?_
+    have hβ : (rowFBetaPoly m).degree < (s : WithBot ℕ) := rowFBetaPoly_degree_lt m
+    have hPne : (toGLM_stabilityMatrixPY m 0).charpoly ≠ 0 :=
+      (Matrix.charpoly_monic _).ne_zero
+    have hPdeg : (toGLM_stabilityMatrixPY m 0).charpoly.degree = (s : WithBot ℕ) := by
+      rw [Polynomial.degree_eq_natDegree hPne, Matrix.charpoly_natDegree_eq_dim]
+      simp
+    rw [hPdeg]
+    have h2s : ((2 * s : ℕ) : WithBot ℕ) = (s : WithBot ℕ) + (s : WithBot ℕ) := by
+      push_cast; ring
+    rw [h2s]
+    exact WithBot.add_lt_add_left WithBot.coe_ne_bot hβ
+
 end LMM
