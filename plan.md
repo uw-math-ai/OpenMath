@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 58 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 59 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -216,7 +216,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:520B` **Stability Matrix for Linear Differential Equation** (§520)
 - [ ] `thm:520D` **Instability Region Boundary Characterization** (§520)
 - [ ] `thm:550A` **Doubly companion matrices** (§550)
-- [ ] `def:520E` **A-stable** (§520)
+- [x] `def:520E` **A-stable** (§520) — OpenMath/Chapter5/Section520.lean
 - [ ] `def:542A` **annihilation conditions** (§542)
 - [ ] `lem:515B` **Stability and Consistency Imply Convergence (515B)** (§515)
 - [ ] `thm:521B` **Maximum stability order for given steps** (§521)

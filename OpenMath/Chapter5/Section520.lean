@@ -207,4 +207,73 @@ theorem explicitEulerGLM_zero_mem_stabilityRegion :
     simp
   rw [hM, one_pow]
 
+/-- **Definition 520E** — A general linear method is *A-stable* if its
+stability matrix `M(z)` is power-bounded for every `z` in the (closed)
+left half complex plane.
+
+Butcher (Definition 520E, p. 419): "A general linear method is
+'A-stable' if `M(z)` is power-bounded for every `z` in the left half
+complex plane."
+
+Encoding choices:
+
+* "Power-bounded" is the existential `PowerBounded` predicate from
+  `OpenMath.Chapter1.Section142` reused via membership in the
+  `stabilityRegion` set defined in `def:520C`. By unfolding,
+  `z ∈ M.stabilityRegion ↔ ∃ C, PowerBounded C (M.stabilityMatrix z)`,
+  so this re-spelling is a literal restatement of the textbook.
+* "Left half complex plane" is encoded as the closed left half-plane
+  `{z : ℂ | z.re ≤ 0}`. The textbook is silent on open vs closed; the
+  closed interpretation is the standard convention in stability
+  theory. -/
+def GeneralLinearMethod.IsAStable {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  ∀ z : ℂ, z.re ≤ 0 → z ∈ M.stabilityRegion
+
+/-- The trivial `(s, r) = (1, 1)` GLM with all four blocks set to the
+zero `1×1` matrix. This is not a Runge–Kutta or LMM in the textbook
+sense — it is the simplest non-vacuity witness for A-stability:
+its stability matrix `M(z) = !![0]` for every `z`, so the trivial
+power bound holds uniformly. -/
+def trivialZeroGLM : GeneralLinearMethod 1 1 where
+  A := !![0]
+  U := !![0]
+  B := !![0]
+  V := !![0]
+
+/-- For the all-zero `(1,1)` GLM, the stability matrix collapses to
+the `1×1` zero matrix at every `z ∈ ℂ`. -/
+theorem trivialZeroGLM_stabilityMatrix (z : ℂ) :
+    trivialZeroGLM.stabilityMatrix z = !![0] := by
+  -- (1 - z • complexify A) = 1 since A = !![0].
+  have hA :
+      (1 - z • complexify trivialZeroGLM.A)
+        = (1 : Matrix (Fin 1) (Fin 1) ℂ) := by
+    ext i j
+    fin_cases i; fin_cases j
+    simp [trivialZeroGLM, complexify]
+  unfold GeneralLinearMethod.stabilityMatrix
+  rw [hA, inv_one]
+  ext i j
+  fin_cases i; fin_cases j
+  simp [trivialZeroGLM, complexify, Matrix.mul_apply]
+
+/-- Non-vacuity witness for `IsAStable`: the `trivialZeroGLM` is
+A-stable. Since `M(z) = !![0]` for every `z`, the powers
+`M(z)^0 = 1`, `M(z)^k = 0` (`k ≥ 1`) are uniformly bounded by
+`‖(1 : Matrix (Fin 1) (Fin 1) ℂ)‖`. -/
+theorem trivialZeroGLM_isAStable : trivialZeroGLM.IsAStable := by
+  intro z _hz
+  refine ⟨‖(1 : Matrix (Fin 1) (Fin 1) ℂ)‖, ?_⟩
+  intro k
+  rw [trivialZeroGLM_stabilityMatrix]
+  have h0 : (!![(0 : ℂ)] : Matrix (Fin 1) (Fin 1) ℂ) = 0 := by
+    ext i j; fin_cases i; fin_cases j; simp
+  rw [h0]
+  cases k with
+  | zero => simp
+  | succ n =>
+      rw [zero_pow (Nat.succ_ne_zero n), norm_zero]
+      exact norm_nonneg _
+
 end OpenMath.Chapter5.Section510
