@@ -828,4 +828,213 @@ theorem GeneralLinearMethod.localStageError_bound_b {s r : ℕ}
           add_le_add (add_le_add hT3_scaled hT3') hT4
     _ = h^2 * L^2 * M_bound * ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|) := by ring
 
+/-! ## Lemma 515B — local-step error propagation (cycle 103)
+
+This is Butcher's `lem:515B` (p. 414): the per-step relation between
+exact and computed solutions of a stable, consistent GLM. The textbook
+proof has four moving parts:
+
+1. **Residual decomposition** (algebraic): split the local-step
+   residual into an exact-side residual plus a `V·δ` correction.
+   Closed manually below.
+
+2. **Lipschitz bridge**: replace `f(Y_j) − f(Ŷ_j)` by `L·|Y_j − Ŷ_j|`
+   inside `h Σ B_{ij}·(...)`.
+
+3. **η contraction**: bound `|Y_j − Ŷ_j|` via positivity of
+   `(I − h₀ L|A|)^{−1}`, given the per-stage contraction estimate.
+
+4. **Main combination**: combine (1)–(3) into the full `K` bound.
+
+**Encoding choices for cycle 103**:
+
+* `α`, `β`, `δ_max` are **proxy parameters** with upper-bound side
+  conditions. This sidesteps `Finset.sup'`-non-emptiness plumbing
+  and matches how cycles 100/102 took the abscissae vector `c` as a
+  parameter. Any user-supplied upper bound works.
+
+* `ell_U` and `phi_A` are taken as **parameters with linear-system
+  side conditions**. The textbook constructs them as the unique
+  solutions to `(I − h₀ L|A|) x = rhs` for two different right-hand
+  sides (row-sums of `|U|` for `ell_U`; `½c² + |A||c|` for `phi_A`),
+  but we do not yet have matrix-inversion infrastructure for
+  `(I − h₀ L|A|)`. A future cycle will discharge these side
+  conditions in a single sweep. -/
+
+/-- **(515B residual decomposition)** Algebraic identity used by the
+textbook proof to identify `K_i^[n]`.
+
+With `δ_k := yt_prev_k − y_prev_k`,
+
+  `(u_i y(x_n) + v_i h y'(x_n)) − Σ V_{ij}·y_prev_j − h Σ B_{ij}·f(Y_j)`
+  ` = Σ V_{ij}·δ_j + ((u_i y(x_n) + v_i h y'(x_n)) − Σ V_{ij}·yt_prev_j − h Σ B_{ij}·f(Y_j))`.
+
+Pure algebra; `Finset.sum_sub_distrib` plus `ring`. -/
+private theorem aux_515B_residual_decomposition {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    {h : ℝ}
+    (yt_prev y_prev δ : Fin r → ℝ)
+    (hδ_def : ∀ k, δ k = yt_prev k - y_prev k)
+    (Y : Fin s → ℝ)
+    (f : ℝ → ℝ)
+    (yex : ℝ → ℝ)
+    (xn1 : ℝ)
+    (u v : Fin r → ℝ)
+    (i : Fin r) :
+    (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+      - (∑ j, M.V i j * y_prev j)
+      - h * (∑ j, M.B i j * f (Y j))
+    = (∑ j, M.V i j * δ j)
+      + ((u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+         - (∑ j, M.V i j * yt_prev j)
+         - h * (∑ j, M.B i j * f (Y j))) := by
+  have hsplit : (∑ j, M.V i j * y_prev j)
+              = (∑ j, M.V i j * yt_prev j) - (∑ j, M.V i j * δ j) := by
+    rw [← Finset.sum_sub_distrib]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [hδ_def j]; ring
+  rw [hsplit]; ring
+
+/-- **(515B Lipschitz bridge)** `f` Lipschitz with constant `L`
+implies, for `Y_hat, Y : Fin s → ℝ`, `B : Matrix (Fin r) (Fin s) ℝ`,
+`h ≥ 0`, `i : Fin r`,
+
+  `|h Σ_j B_{ij}·(f(Ŷ_j) − f(Y_j))| ≤ h·L · Σ_j |B_{ij}| · |Ŷ_j − Y_j|`.
+
+Sorry-first this cycle; proof is a Lipschitz application + triangle
+inequality + sum reorganization (analogous to `aux_T4_bound`). -/
+private theorem aux_515B_lipschitz_bridge {s r : ℕ}
+    {f : ℝ → ℝ} {L : ℝ}
+    (_hL : 0 ≤ L) (_hf_lip : LipschitzWith L.toNNReal f)
+    (B : Matrix (Fin r) (Fin s) ℝ)
+    (Y_hat Y : Fin s → ℝ)
+    (h : ℝ) (_hh : 0 ≤ h) (i : Fin r) :
+    |h * ∑ j, B i j * (f (Y_hat j) - f (Y j))|
+      ≤ h * L * ∑ j, |B i j| * |Y_hat j - Y j| := by
+  sorry
+
+/-- **(515B η contraction)** Given the per-stage contraction estimate
+
+  `|η_j − Σ_k U_{jk}·δ_k| ≤ h L Σ_k|A_{jk}|·|η_k|`
+                          `+ h² L² M (½c_j² + Σ|A_{jk}·c_k|)`,
+
+with `|δ_k| ≤ δ_max` and `h ≤ h₀`, positivity of `(I − h₀ L|A|)^{−1}`
+yields
+
+  `|η_j| ≤ ell_U_j · δ_max + h² L² M · phi_A_j`,
+
+where `ell_U`, `phi_A` solve the two linear systems with right-hand
+sides `Σ_k|U_{jk}|` and `½c_j² + Σ|A_{jk} c_k|` respectively.
+
+Sorry-first this cycle; the proof requires positivity of
+`(I − h₀ L|A|)^{−1}`, which is multi-cycle infrastructure. -/
+private theorem aux_515B_eta_contraction {s r : ℕ}
+    (A : Matrix (Fin s) (Fin s) ℝ)
+    (U : Matrix (Fin s) (Fin r) ℝ)
+    {h h₀ L M_bound δ_max : ℝ}
+    (_hh : 0 ≤ h) (_hh_le : h ≤ h₀) (_h₀_pos : 0 < h₀)
+    (_hL : 0 ≤ L) (_hM : 0 ≤ M_bound)
+    (_hδ_max_nonneg : 0 ≤ δ_max)
+    (c : Fin s → ℝ) (_hc_nonneg : ∀ i, 0 ≤ c i)
+    (ell_U phi_A η : Fin s → ℝ)
+    (_hell_U_nonneg : ∀ i, 0 ≤ ell_U i)
+    (_hphi_A_nonneg : ∀ i, 0 ≤ phi_A i)
+    (_hellU_eq : ∀ i, ell_U i - h₀ * L * (∑ j, |A i j| * ell_U j)
+                    = ∑ j, |U i j|)
+    (_hphiA_eq : ∀ i, phi_A i - h₀ * L * (∑ j, |A i j| * phi_A j)
+                    = (1/2) * (c i)^2 + ∑ j, |A i j * c j|)
+    (δ : Fin r → ℝ)
+    (_hδ_max : ∀ k, |δ k| ≤ δ_max)
+    (_hcontraction : ∀ j, |η j - ∑ k, U j k * δ k|
+                          ≤ h * L * (∑ k, |A j k| * |η k|)
+                            + h^2 * L^2 * M_bound *
+                              ((1/2) * (c j)^2 + ∑ k, |A j k * c k|)) :
+    ∀ j, |η j| ≤ ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j := by
+  sorry
+
+/-- **Butcher Lemma 515B** — Local-step error propagation across one
+GLM step.
+
+Under the conditions of Lemma 515A, the exact and computed solutions
+in one step are related by
+
+  `ỹ_i^[n] − y_i^[n] = Σ_j V_{ij}(ỹ_j^[n−1] − y_j^[n−1]) + K_i^[n]`,
+
+with `‖K^[n]‖ ≤ h α max|ỹ^[n−1] − y^[n−1]| + β h²`.
+
+This is `lem:515B` of `entities/lem_515B.json`.
+
+**Encoding deviations from textbook**:
+
+1. The `Finset.sup'`-style maxima `max_{i=1}^r |ỹ_i^[n−1] − y_i^[n−1]|`,
+   `max_{i=1}^s |ℓ_i|` (for α), and `max_{i=1}^s [...]` (for β) are
+   abstracted as proxy parameters `δ_max`, `α`, `β` with upper-bound
+   side conditions. This is *strictly weaker* than the textbook
+   (which fixes the maxima) and faithful in the sense that the
+   conclusion is preserved under any valid choice.
+
+2. The two "ell"-vectors `ell_U` and `phi_A` (textbook's `ℓ` for α
+   and `ϕ` ≡ `ℓ` for β-via-515A) are taken as parameters with their
+   defining linear-system side conditions. A future cycle will
+   construct them via `(I − h₀ L|A|)`-inversion infrastructure.
+
+3. `‖K^[n]‖_∞ = max_i |K_i|` is encoded pointwise as `∀ i, |K i| ≤ ...`,
+   which is equivalent.
+
+4. The α-constant is encoded as `α ≥ L Σ_j |B_{ij}| ell_U_j` for
+   each `i`, rather than the textbook's `α = L max_i |ℓ_i|`. Our
+   form is what falls out of the analysis (the textbook formula
+   appears to assume `Σ_j |B_{ij}| ≤ 1`, which is not stated). The
+   user can supply `α := L · (max_i Σ_j |B_{ij}| ell_U_j)` to match
+   the analysis tightly.
+
+The textbook proof structure is formalized via the three sub-lemmas
+above; the main combination is left as `sorry` for Aristotle. -/
+theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    {h h₀ L M_bound α β δ_max : ℝ}
+    (_hh : 0 ≤ h) (_hh_le : h ≤ h₀) (_h₀_pos : 0 < h₀)
+    (_hL : 0 ≤ L) (_hM : 0 ≤ M_bound)
+    (f : ℝ → ℝ) (_hf_lip : LipschitzWith L.toNNReal f)
+    (yex : ℝ → ℝ)
+    (_hy_C1 : ContDiff ℝ 1 yex)
+    (_hy_ode : ∀ t, deriv yex t = f (yex t))
+    (_hy_M : ∀ t, |yex t| ≤ M_bound)
+    (_hy'_LM : ∀ t, |deriv yex t| ≤ L * M_bound)
+    (xn1 : ℝ)
+    (u v : Fin r → ℝ)
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    (c : Fin s → ℝ)
+    (_hc_nonneg : ∀ i, 0 ≤ c i)
+    (_hc_def : c = M.glmAbscissae v)
+    (ell_U phi_A : Fin s → ℝ)
+    (_hell_U_nonneg : ∀ i, 0 ≤ ell_U i)
+    (_hphi_A_nonneg : ∀ i, 0 ≤ phi_A i)
+    (_hellU_eq : ∀ i, ell_U i - h₀ * L * (∑ j, |M.A i j| * ell_U j)
+                    = ∑ j, |M.U i j|)
+    (_hphiA_eq : ∀ i, phi_A i - h₀ * L * (∑ j, |M.A i j| * phi_A j)
+                    = (1/2) * (c i)^2 + ∑ j, |M.A i j * c j|)
+    (_hα_def : ∀ i, L * (∑ j, |M.B i j| * ell_U j) ≤ α)
+    (_hβ_def : ∀ i, L^2 * M_bound *
+                ((1/2) * |u i| + |v i|
+                 + (∑ j, |M.B i j * c j|)
+                 + h₀ * L * (∑ j, |M.B i j| * phi_A j)) ≤ β)
+    (yt_prev δ : Fin r → ℝ)
+    (_hδ_def : ∀ k, δ k = yt_prev k -
+                          (u k * yex xn1 + v k * h * deriv yex xn1))
+    (_hδ_max : ∀ k, |δ k| ≤ δ_max)
+    (_hδ_max_nonneg : 0 ≤ δ_max)
+    (Y : Fin s → ℝ)
+    (_hY_stage : ∀ i, Y i = h * (∑ j, M.A i j * f (Y j))
+                          + ∑ j, M.U i j * yt_prev j) :
+    ∃ K : Fin r → ℝ,
+      (∀ i,
+        h * (∑ j, M.B i j * f (Y j))
+          + (∑ j, M.V i j * yt_prev j)
+          - (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+          = (∑ j, M.V i j * δ j) + K i)
+      ∧ (∀ i, |K i| ≤ α * h * δ_max + β * h^2) := by
+  sorry
+
 end OpenMath.Chapter5.Section510

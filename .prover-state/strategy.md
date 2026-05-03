@@ -1,294 +1,467 @@
-# Cycle 102 Strategy — close `localStageError_bound_b` (515b)
+# Cycle 103 strategy — open `lem:515B` with sorry-first scaffold
 
-## Status snapshot
+## Status (start of cycle 103)
 
-- **Sorry count: 1.** The lone remaining sorry is at
-  `OpenMath/Chapter5/Section515.lean:629` inside
-  `GeneralLinearMethod.localStageError_bound_b` (Butcher inequality
-  515b of `lem:515A`).
-- **Cycle 101 closed (515a)** via the T1+T2+T3+T4 decomposition with
-  four private helpers (`aux_T1_eq_zero`, `aux_T2_eq_zero`,
-  `aux_T3_bound`, `aux_T4_bound`) plus
-  `aux_y_diff_norm_bound` (cycle 100). Score = +2, axiom-clean.
-- **Aristotle**: not contributing this cycle. Skip the polling step.
+* `lem:515A` is **complete** as of cycle 102 — both inequalities
+  (515a) `localStageError_bound_a` and (515b) `localStageError_bound_b`
+  are sorry-free in `OpenMath/Chapter5/Section515.lean` and
+  axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+* §515 has **0 sorries** at HEAD = `a78292a`.
+* Aristotle: no pending submissions.
 
-## Priority 1 — close `localStageError_bound_b` (the only sorry)
+## This cycle's target — `lem:515B`
 
-This cycle's deliverable is the (515b) mirror of (515a). The
-textbook decomposition is structurally analogous but with five key
-adjustments:
+**Entity ID**: `lem:515B` ("Stability and Consistency Imply
+Convergence (515B)", Butcher §515, p. 414).
 
-1. **Output-side coefficients** `B`/`V` instead of `A`/`U`.
-2. **Different matrix shape**: `B : Matrix (Fin r) (Fin s) ℝ` and
-   `V : Matrix (Fin r) (Fin r) ℝ`, so the row index of the goal is
-   `Fin r`.
-3. **Integration over `[0, 1]`** (one fixed step from `xn1` to
-   `xn1 + h`) instead of `[0, c_i]`.
-4. **Extra `T3'` term** capturing `v_i · h · (y'(xn) − y'(xn1))`.
-5. **Algebraic identity uses** `V·u = u` (replacing `U·u = 𝟙`) and
-   `B·𝟙 + V·v = u + v` (replacing `c = A·𝟙 + U·v`).
+**Path**: `extraction/formalization_data/entities/lem_515B.json`
+(read this FIRST before writing any Lean).
 
-### Mathematical decomposition (verify before coding!)
+**File**: continue in `OpenMath/Chapter5/Section515.lean` (do NOT
+create a new file — keep all of §515 in one place).
 
-For the LHS of (515b):
-```
-X_b := u_i·y(xn) + v_i·h·y'(xn)
-       − h·Σ_j B_{ij}·f(yex(xn1+h c_j))
-       − Σ_j V_{ij}·(u_j·y(xn1) + v_j·h·y'(xn1))
-```
-where `xn = xn1 + h`. Substitute:
+### Textbook statement (verbatim from `entities/lem_515B.json`)
 
-* **FTC** `y(xn1+h) − y(xn1) = h·∫_0^1 f(yex(xn1+hξ)) dξ` (apply
-  `aux_T1_eq_zero` at `c_i := 1`).
-* **Add/subtract** `f(yex(xn1)) = y'(xn1)`:
-  `u_i·y(xn) = u_i·y(xn1) + u_i·h·y'(xn1) + T3b_int`
-  where `T3b_int := u_i·h·∫_0^1 (f(yex(xn1+hξ)) − f(yex(xn1))) dξ`.
-* **Bridge** `y'(xn) − y'(xn1) = f(yex(xn1+h)) − f(yex(xn1))`
-  (via `hy_ode`):
-  `v_i·h·y'(xn) = v_i·h·y'(xn1) + T3'b`
-  where `T3'b := v_i·h·(f(yex(xn1+h)) − f(yex(xn1)))`.
-* **Add/subtract** `y'(xn1)` in the B-sum:
-  `h·Σ B_{ij}·f(yex(xn1+h c_j))
-     = (Σ B_{ij})·h·y'(xn1) + T4b`
-  where `T4b := h·Σ B_{ij}·(f(yex(xn1+h c_j)) − f(yex(xn1)))`.
-* **V-sum unfolds** via `V·u = u`:
-  `Σ V_{ij}·(u_j y(xn1) + v_j·h·y'(xn1))
-     = u_i·y(xn1) + (Σ V_{ij} v_j)·h·y'(xn1)`.
+> Under the conditions of Lemma 515A, the exact solution and the
+> computed solution in a step are related by
+>
+>   `ỹ_i^{[n]} − y_i^{[n]} = Σ_{j=1}^r V_{ij}(ỹ_j^{[n−1]} − y_j^{[n−1]}) + K_i^{[n]}`,
+>
+> where
+>
+>   `‖K^{[n]}‖ ≤ h α max_{i=1}^r |ỹ_i^{[n−1]} − y_i^{[n−1]}| + β h²`,
+>
+> with α and β:
+>
+>   `α = L max_{i=1}^s |ℓ_i|`,
+>   `β = L² M max_{i=1}^s [½|u_i| + |v_i| + Σ_j |b_{ij} c_j| + h₀ L Σ_j |b_{ij}| ϕ_j]`,
+>
+> where ℓ solves
+>   `Σ_{j=1}^s (δ_{ij} − h₀ L |a_{ij}|) ℓ_j = Σ_{j=1}^s |U_{ij}|`,
+> and ϕ is as in Lemma 515A:
+>   `Σ_{j=1}^s (δ_{ij} − h₀ L |a_{ij}|) ϕ_j = ½ c_i² + Σ_j |a_{ij} c_j|`.
 
-Combining, the leading-order terms in `y(xn1)` and `h·y'(xn1)`
-must cancel. The `h·y'(xn1)` coefficient is
-`u_i + v_i − Σ B_{ij} − Σ V_{ij} v_j`, which equals zero by
-**consistency** `B·𝟙 + V·v = u + v`:
-`(B·𝟙)_i + (V·v)_i = u_i + v_i  ⇒  Σ B_{ij} + Σ V_{ij} v_j = u_i + v_i`.
+**IMPORTANT — two different "ell" vectors.** The textbook uses
+**two distinct vectors**, both unique solutions to
+`(I − h₀L|A|) x = rhs` with different RHS:
 
-So `X_b = T3b_int + T3'b − T4b`, and
-```
-|X_b| ≤ |T3b_int| + |T3'b| + |T4b|
-      ≤ ½·|u_i|·h²L²M + |v_i|·h²L²M + h²L²M·Σ|B_{ij} c_j|
-      = h²L²M·(½|u_i| + |v_i| + Σ|B_{ij} c_j|)
-```
-matching the textbook bound exactly.
+* `ℓ_U` (for `α`): RHS is `Σ_k |U_{·k}|`, i.e. row-sums of `|U|`.
+* `ϕ_A` (for `β`, identified with `lem:515A`'s `ϕ`): RHS is
+  `½c² + |A||c|`.
 
-### Step 1 — refactor `aux_T4_bound` to general row dim
+The line "where ϕ is as in Lemma 515A" in the JSON refers ONLY
+to the second vector, not the first. Encode them as TWO separate
+parameters.
 
-`aux_T4_bound` (Section515.lean:371) currently takes
-`A : Matrix (Fin s) (Fin s) ℝ` and `i : Fin s`. For the (515b) call
-we need it on `M.B : Matrix (Fin r) (Fin s) ℝ` with `i : Fin r`.
+We do NOT have matrix-invertibility / Banach contraction
+infrastructure for `(I − h₀L|A|)` yet; we will **continue cycle
+100/102's pattern** of taking these vectors as **parameters with
+linear-system side conditions**, NOT constructing them. This
+avoids adding multi-cycle linear-algebra infrastructure inside
+this cycle.
 
-**Refactor in place**: change `{s : ℕ}` to `{s r : ℕ}`, change
-`A : Matrix (Fin s) (Fin s) ℝ` to `A : Matrix (Fin r) (Fin s) ℝ`,
-and change `i : Fin s` to `i : Fin r`. The proof body is unchanged
-— it never uses the row index structurally. Update the call site in
-`localStageError_bound_a` (line 521): the call already passes `M.A`
-with `r := s` implicitly; verify Lean's unification still infers
-the right row dim by recompiling Section515.lean after the rename.
+## Approach — sorry-first scaffold + Aristotle batch
 
-### Step 2 — add `aux_T3'_bound` (new helper)
+### Priority 1 — read the data (5 min)
 
-For the `T3'b` term:
+1. `cat extraction/formalization_data/entities/lem_515B.json` — confirm
+   the statement above. If you find a discrepancy with the strategy's
+   reading (especially around the two-ell question), file a short
+   note in `.prover-state/issues/lem_515B_two_ells.md` documenting
+   which reading the Lean adopts and why. Do NOT silently change
+   the strategy.
+
+### Priority 2 — sorry-first scaffold of `lem:515B` (~150 LOC, ≤45 min)
+
+Add to `OpenMath/Chapter5/Section515.lean`, at the bottom of the
+existing `namespace OpenMath.Chapter5.Section510` block (after
+`localStageError_bound_b` ends ~line 829).
+
+The signature must include parameters representing **both** the
+previous-step error and the cycle-102 hypotheses. Recommended shape:
+
 ```lean
-private theorem aux_T3'_bound
-    {f : ℝ → ℝ} {L M_bound : ℝ}
+/-- **Butcher Lemma 515B** — local error propagation across one
+GLM step.
+
+`α`, `β`, and the auxiliary vectors `ell_U`, `phi_A` are
+abstracted as parameters with their defining equations.
+A future cycle (once `(I − h₀L|A|)`-inversion infrastructure is
+in place) will construct `ell_U` and `phi_A` and discharge the
+side conditions. -/
+theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    -- numerical parameters
+    {h h₀ L M_bound : ℝ}
+    (hh_nonneg : 0 ≤ h) (hh_le : h ≤ h₀) (h₀_pos : 0 < h₀)
     (hL : 0 ≤ L) (hM : 0 ≤ M_bound)
-    (hf_lip : LipschitzWith L.toNNReal f)
-    {y : ℝ → ℝ}
-    (hy_C1 : ContDiff ℝ 1 y)
-    (hy_ode : ∀ t, deriv y t = f (y t))
-    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
-    (x h : ℝ) (hh : 0 ≤ h) (vi : ℝ) :
-    |vi * h * (f (y (x + h)) - f (y x))|
-      ≤ |vi| * (h^2 * L^2 * M_bound) := by
-  -- |f(y(x+h)) - f(y x)| ≤ L * |y(x+h) - y x| ≤ L * (h * 1 * (L * M))
-  -- via Lipschitz + aux_y_diff_norm_bound at ξ = 1.
-```
-**Proof sketch**: Lipschitz of `f` gives
-`|f(y(x+h)) − f(y x)| ≤ L · |y(x+h) − y x|` (use the same
-`hf_lip.dist_le_mul` + `Real.dist_eq` + `Real.coe_toNNReal` chain
-as in `aux_T3_bound`/`aux_T4_bound`). Then need
-`|y(x+h) - y x| = |y(x + h*1) - y x|`. Apply
-`aux_y_diff_norm_bound _hL _hM hy_C1 hy_ode hf_y_bound x h hh 1`
-to get `|y(x + h*1) − y x| ≤ h · |1| · (L · M_bound) = h · L · M`.
-Multiply through by `|vi · h|`:
-`|vi · h · (f − f)| = |vi| · h · |f − f|` (using `abs_mul` twice
-and `abs_of_nonneg hh`)
-`≤ |vi| · h · L · h · L · M = |vi| · h² · L² · M`.
-Close with `ring`.
-
-Note: `x + h*1 = x + h` requires a `simp` step after invoking
-`aux_y_diff_norm_bound` since the latter's conclusion is in the
-`x + h*ξ` shape.
-
-### Step 3 — add `aux_T2_b_eq_zero` (new helper)
-
-Algebraic identity using `V·u = u` and `B·𝟙 + V·v = u + v`:
-```lean
-private theorem aux_T2_b_eq_zero {s r : ℕ}
-    (B : Matrix (Fin r) (Fin s) ℝ) (V : Matrix (Fin r) (Fin r) ℝ)
+    -- f and the exact solution yex
+    (f : ℝ → ℝ) (hf_lip : LipschitzWith L.toNNReal f)
+    (yex : ℝ → ℝ)
+    (hy_C1 : ContDiff ℝ 1 yex)
+    (hy_ode : ∀ t, deriv yex t = f (yex t))
+    (hy_M : ∀ t, |yex t| ≤ M_bound)
+    (hy'_LM : ∀ t, |deriv yex t| ≤ L * M_bound)
+    (xn1 : ℝ)
+    -- consistency vectors
     (u v : Fin r → ℝ)
-    (hVu : V *ᵥ u = u)
-    (hCons : B *ᵥ (fun _ => 1) + V *ᵥ v = u + v)
-    {y : ℝ → ℝ} (xn1 h : ℝ) (i : Fin r) :
-    u i * y xn1 + (u i + v i) * h * deriv y xn1
-      - (∑ j, V i j * (u j * y xn1 + v j * h * deriv y xn1))
-      - (∑ j, B i j * h * deriv y xn1) = 0 := by
+    (hVu : M.V *ᵥ u = u) (hUu : M.U *ᵥ u = (fun _ => 1))
+    (hCons : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    (c : Fin s → ℝ)
+    (hc_nonneg : ∀ i, 0 ≤ c i)
+    (hc_def : c = M.glmAbscissae v)
+    -- Aux vectors (parameters with linear-system side conditions)
+    (ell_U phi_A : Fin s → ℝ)
+    (hell_U_nonneg : ∀ i, 0 ≤ ell_U i)
+    (hphi_A_nonneg : ∀ i, 0 ≤ phi_A i)
+    (hellU_eq : ∀ i,
+      ell_U i - h₀ * L * (∑ j, |M.A i j| * ell_U j)
+        = ∑ j, |M.U i j|)
+    (hphiA_eq : ∀ i,
+      phi_A i - h₀ * L * (∑ j, |M.A i j| * phi_A j)
+        = (1/2) * (c i)^2 + ∑ j, |M.A i j * c j|)
+    -- Previous-step error δ_k = ỹ_k^{[n−1]} − y_k^{[n−1]}, plus the two
+    -- previous-step vectors so the input on the y-side is hy_prev (not
+    -- the textbook proxy `u_j y(xn1) + v_j h y'(xn1)`).
+    (yt_prev y_prev : Fin r → ℝ)
+    (δ : Fin r → ℝ)
+    (hδ_def : ∀ k, δ k = yt_prev k - y_prev k)
+    -- Computed stage Y satisfies the implicit GLM stage equation against y_prev.
+    (Y : Fin s → ℝ)
+    (hY_stage : ∀ i,
+      Y i = h * (∑ j, M.A i j * f (Y j))
+            + ∑ j, M.U i j * y_prev j) :
+    ∃ K : Fin r → ℝ,
+      -- (1) the propagation identity
+      (∀ i,
+        (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+          - (∑ j, M.V i j * y_prev j)
+          - h * (∑ j, M.B i j * f (Y j))
+          = (∑ j, M.V i j * δ j) + K i)
+      -- (2) the K bound
+    ∧ (∀ i,
+        |K i|
+        ≤ h * (L * (Finset.univ.sup'
+                ⟨Finset.univ_nonempty_of_pos s_pos⟩
+                (fun k : Fin s => ell_U k)))
+              * (Finset.univ.sup'
+                ⟨Finset.univ_nonempty_of_pos r_pos⟩
+                (fun k : Fin r => |δ k|))
+          + (L^2 * M_bound *
+             Finset.univ.sup' ⟨Finset.univ_nonempty_of_pos s_pos⟩
+               (fun k : Fin s =>
+                 (1/2) * |u k| + |v k|
+                 + (∑ j, |M.B k j * c j|)
+                 + h₀ * L * (∑ j, |M.B k j| * phi_A j))) * h^2) := by
+  sorry
 ```
-**Proof sketch**: same shape as `aux_T2_eq_zero` (Section515.lean:237).
-Distribute the V-sum into y-part and h·y'-part exactly as
-`hU_split` did for `U`; show `Σ V_{ij} u_j = u_i` (via
-`(V *ᵥ u) i = ∑ V_{ij} u_j` rfl + `hVu`); show
-`Σ B_{ij} + Σ V_{ij} v_j = u_i + v_i` from
-`(B·𝟙) i = Σ B_{ij}` (rfl-unfold + `simp` to drop `*1`) and
-`(V·v) i = Σ V_{ij} v_j` (rfl) plus `hCons`. Close with `ring`.
 
-### Step 4 — close `localStageError_bound_b`
+**Practical pitfalls in stating this**:
 
-Mirror `localStageError_bound_a`'s proof body (Section515.lean:497–591)
-exactly, with these substitutions:
+1. `Finset.univ.sup'` requires a non-emptiness witness. Either:
+   - Add `(s_pos : 0 < s)` and `(r_pos : 0 < r)` as hypotheses
+     (textbook-faithful — methods with 0 stages or 0 inputs don't
+     exist), and pull witness via `Finset.univ_nonempty_of_pos`
+     (verify name with `lean_local_search`).
+   - Or use `Finset.sup` / `iSup` over `[CompleteLattice ℝ]` (no —
+     ℝ isn't `CompleteLattice`).
+   - Or embed the entire sup'-bound argument in a proxy `(α β : ℝ)`
+     parameters with side conditions
+     `hα_eq : α = L * max ...` and `hβ_eq : β = L² M · max ...`
+     similarly to how cycles 100/102 handled `c`. **This is the
+     recommended path** — it sidesteps the sup'-non-emptiness
+     plumbing entirely. Then the bound is plain
+     `|K i| ≤ h * α * δ_max + β * h²` with `δ_max` itself a
+     parameter satisfying `(hδ_max : ∀ k, |δ k| ≤ δ_max)`.
 
-| (515a) | (515b) |
-|---|---|
-| Integral upper bound `c i` | `1` |
-| `(c i)^2 / 2` term | `1/2` (i.e. `½ |u_i|`) |
-| `Σ A i j * h * deriv yex xn1` | `Σ B i j * h * deriv yex xn1` |
-| `aux_T2_eq_zero ... A U u v _hUu c hc_def_eq` | `aux_T2_b_eq_zero ... M.B M.V u v _hVu _hCons` |
-| `aux_T3_bound ... (c i) (_hc_nonneg i)` | `aux_T3_bound ... 1 (by norm_num : (0:ℝ) ≤ 1)`, gives `½·h²L²M·1²`; multiply by `|u_i|` via separate calc step |
-| no T3' term | new `aux_T3'_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound xn1 h _hh (v i)` |
-| `aux_T4_bound ... M.A c xn1 h _hh i` | `aux_T4_bound ... M.B c xn1 h _hh i` (after Step 1 refactor) |
-| `linear_combination hT1 + hT2 - hT3_expand + hT4_expand + hsumA_swap - (c i * h) * hy'0` | `linear_combination` with new coefficients reflecting the (515b) structure |
+2. The side-condition `hellU_eq` uses `Σ_j |M.A i j| * ell_U j` for
+   the matrix-vector product `(|A| · ell_U) i`. Don't confuse with
+   `Matrix.mulVec` — write the explicit Finset.sum to keep
+   `linear_combination`/`ring` friendly.
 
-The final `linear_combination` step is the most error-prone. The
-coefficient structure mirrors (515a) but with:
-- `hT1` multiplied by `u i` (since `T3b_int` carries the `u_i`
-  factor)
-- new `hT3'b_def` term (the `T3'b` definition unfolded)
-- `hsumA_swap` becomes `hsumB_swap` (Σ B over `deriv yex` ↔ Σ B
-  over `f(yex)`)
-- `(c i * h) * hy'0` becomes `(u i + v i) * h * hy'0` (matching
-  the `(u i + v i) * h * deriv y xn1` term in `aux_T2_b_eq_zero`)
+3. The textbook's `‖K^{[n]}‖` is the **vector ∞-norm**, but in
+   Butcher's notation `‖K^{[n]}‖ = max_i |K_i^{[n]}|`. Our
+   formulation states it pointwise as `∀ i, |K i| ≤ ...`, which
+   is equivalent (and stronger when `δ_max` is the actual `max|δ|`).
+   This is faithful — document.
 
-If `linear_combination` fails, use the backup plan below. Spend
-**at most 30 minutes** attempting `linear_combination` directly
-before falling back to manual decomposition.
+**Recommended FINAL signature shape (with α, β proxies)**:
 
-### Step 5 — verification
+```lean
+theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
+    (s_pos : 0 < s) (r_pos : 0 < r)
+    (M : GeneralLinearMethod s r)
+    {h h₀ L M_bound α β δ_max : ℝ}
+    -- ... (same numeric/f/yex hypotheses as above) ...
+    -- ... (same consistency hypotheses) ...
+    -- Aux vectors and proxies
+    (ell_U phi_A : Fin s → ℝ)
+    (hell_U_nonneg : ∀ i, 0 ≤ ell_U i)
+    (hphi_A_nonneg : ∀ i, 0 ≤ phi_A i)
+    (hellU_eq : ∀ i, ell_U i - h₀ * L * (∑ j, |M.A i j| * ell_U j)
+                  = ∑ j, |M.U i j|)
+    (hphiA_eq : ∀ i, phi_A i - h₀ * L * (∑ j, |M.A i j| * phi_A j)
+                  = (1/2) * (c i)^2 + ∑ j, |M.A i j * c j|)
+    (hα_def : ∀ i, L * ell_U i ≤ α)
+    (hβ_def : ∀ i, L^2 * M_bound *
+                ((1/2) * |u i| + |v i|
+                 + (∑ j, |M.B i j * c j|)
+                 + h₀ * L * (∑ j, |M.B i j| * phi_A j)) ≤ β)
+    -- Previous step
+    (yt_prev y_prev δ : Fin r → ℝ)
+    (hδ_def : ∀ k, δ k = yt_prev k - y_prev k)
+    (hδ_max : ∀ k, |δ k| ≤ δ_max)
+    (hδ_max_nonneg : 0 ≤ δ_max)
+    -- Stage equation
+    (Y : Fin s → ℝ)
+    (hY_stage : ∀ i, Y i = h * (∑ j, M.A i j * f (Y j))
+                          + ∑ j, M.U i j * y_prev j) :
+    ∃ K : Fin r → ℝ,
+      (∀ i, …propagation identity…)
+      ∧ (∀ i, |K i| ≤ h * α * δ_max + β * h^2) := by
+  sorry
+```
 
-Run all three checks **in the exact order below** (per
-`tautology_scanner_false_positives.md` re: stale-cache `sorryAx`):
+**Compile check after writing**: `lake env lean OpenMath/Chapter5/Section515.lean`
+must succeed. Expected output: at most 1 `declaration uses sorry`
+warning (the new `localStepError_bound`). NO existing sorries
+should appear (file currently has 0).
+
+### Priority 3 — decompose into 4 named sub-lemmas (~80 LOC, ≤30 min)
+
+The textbook proof structure:
+
+1. **(515c invocation)**: from cycle 102's `localStageError_bound_b`,
+   `|y_i^{[n]} − h Σ b_{ij} f(Ŷ_j) − Σ V_{ij} y_j^{[n−1]}|
+       ≤ h²L²M(½|u_i|+|v_i|+Σ|b_{ij}c_j|)`. Here `Ŷ_j = yex(xn1+h c_j)`.
+
+2. **(Lipschitz bridge → 515d)**: bound
+   `h Σ |b_{ij}| |f(Ŷ_j) − f(Y_j)| ≤ hL Σ|b_{ij}| |Ŷ_j − Y_j|`.
+
+3. **(η stage estimate)**: from the stage equation
+   `|Ỹ_j − Y_j − Σ U_{jk} δ_k| ≤ hL Σ|a_{jk}| |Ỹ_k − Y_k|`,
+   conclude `|Ỹ_j − Y_j| ≤ ell_U_j · max|δ_k|` (uses `hellU_eq`
+   plus `h ≤ h₀`).
+
+4. **(Composition)**: combine (1)+(2)+(3) into the `K` bound.
+
+Sub-lemmas to scaffold (each as `private theorem aux_515B_*` with
+`sorry`):
+
+* `aux_515B_residual_decomposition`: the algebraic identity
+  separating `Σ V·δ` from `K_i`. **Closed manually this cycle**
+  (no sorry).
+* `aux_515B_lipschitz_bridge`: Lipschitz application to
+  `f(Ŷ_j) − f(Y_j)`. → Submit to Aristotle.
+* `aux_515B_eta_contraction`: the `(I − h₀L|A|)` inversion.
+  Hypothesis: `∀ j, |Ỹ_j − Y_j − Σ U_{jk} δ_k| ≤ hL Σ|a_{jk}| |Ỹ_k − Y_k|`.
+  Conclusion: `∀ j, |Ỹ_j − Y_j| ≤ ell_U_j · max|δ_k|`. → Submit to
+  Aristotle (this is the hardest piece).
+* `aux_515B_main_combination`: final composition (1)+(2)+(3).
+  → Submit to Aristotle.
+
+If `aux_515B_residual_decomposition` is more than ~15 lines,
+decompose it further. The expected proof is **purely algebraic**:
+it should close via `ring` after introducing
+`δ k := yt_prev k - y_prev k` and rewriting
+`Σ M.V i j * y_prev j = Σ M.V i j * yt_prev j − Σ M.V i j * δ j`.
+
+### Priority 4 — submit ~5 jobs to Aristotle (~10 min)
+
+CLAUDE.md directs you to submit ~5 jobs and sleep 30 minutes.
+
+Stage submissions in
+`.prover-state/aristotle_submissions/cycle_103/` matching the
+cycle 100/101 layout (`decomposition_attempt.lean` +
+`sub_lemmas.lean`). Submit:
+
+1. `aux_515B_lipschitz_bridge` (cheap).
+2. `aux_515B_eta_contraction` (hardest).
+3. `aux_515B_main_combination` (medium).
+4. The full `localStepError_bound` itself (long shot, but free
+   compute).
+5. A bonus: a stronger version of `aux_515B_lipschitz_bridge`
+   that combines the Lipschitz step with the cycle-102
+   `aux_T3'_bound` pattern (composition of pointwise Lipschitz
+   estimates).
+
+Use `mcp__aristotle__submit_directory` with the
+`cycle_103/` directory. After submitting, do **not** poll. Sleep
+~30 min OR proceed with manual proof of
+`aux_515B_residual_decomposition` while Aristotle runs. Check
+Aristotle ONCE near end of cycle.
+
+### Priority 5 — manually close `aux_515B_residual_decomposition` (≤30 min)
+
+Expected ~10–15 lines. The proof is purely algebraic:
+
+```lean
+private theorem aux_515B_residual_decomposition {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    {h : ℝ}
+    (yt_prev y_prev δ : Fin r → ℝ)
+    (hδ_def : ∀ k, δ k = yt_prev k - y_prev k)
+    (Y : Fin s → ℝ)
+    (f : ℝ → ℝ)
+    (yex : ℝ → ℝ)
+    (xn1 : ℝ)
+    (u v : Fin r → ℝ)
+    (i : Fin r) :
+    (u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+      - (∑ j, M.V i j * y_prev j)
+      - h * (∑ j, M.B i j * f (Y j))
+    = (∑ j, M.V i j * δ j)
+      + ((u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
+         - (∑ j, M.V i j * yt_prev j)
+         - h * (∑ j, M.B i j * f (Y j))) := by
+  -- Σ V·y_prev = Σ V·yt_prev - Σ V·δ.
+  have hsplit : ∑ j, M.V i j * y_prev j
+              = (∑ j, M.V i j * yt_prev j) - (∑ j, M.V i j * δ j) := by
+    rw [← Finset.sum_sub_distrib]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [hδ_def j]; ring
+  rw [hsplit]; ring
+```
+
+Test with `lean_multi_attempt` or compile incrementally — if `ring`
+chokes on the trailing expression, try `linarith` or rewrite the
+subtraction with `sub_sub_eq_add_sub`.
+
+### Priority 6 — task results, faithfulness, commit
+
+Write `.prover-state/task_results/cycle_103.md` documenting:
+
+* Sorry count: 0 → N (count after this cycle).
+* What sub-lemmas were stubbed; which closed manually; which
+  submitted to Aristotle.
+* Faithfulness: explicitly note the textbook deviation around the
+  `α, β, δ_max` proxy parameters (vs. textbook `Finset.sup'`-style
+  max-of-vector). The proxies are weaker (any upper bound works,
+  not just the tight max), but the conclusion is preserved.
+* Faithfulness: carry through `_hc_nonneg` and document.
+* Faithfulness: the `r_pos` and `s_pos` hypotheses if used.
+* Aristotle submission ID and timestamp (NOT polled).
+
+Then commit. Format the message as:
+`Cycle 103 — open lem:515B with sorry-first scaffold (NN sub-lemmas, MM closed)`.
+
+Verify the commit landed:
 
 ```bash
-lake env lean OpenMath/Chapter5/Section515.lean    # standalone compile
-lake build OpenMath.Chapter5.Section515            # update .olean cache
+git log -1 --format='%H %s'
+git diff HEAD~1 HEAD --stat
+git rev-parse HEAD
+git rev-parse origin/Main/Experiments
 ```
 
-Then in Lean:
-```
-#print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.localStageError_bound_b
-#print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.localStageError_bound_a
-```
+If `HEAD` and `origin/Main/Experiments` disagree, push. Cycle 071's
+"staged but not committed" pattern must NOT recur.
 
-Both should show `[propext, Classical.choice, Quot.sound]` only.
-Standalone compile should report **0 sorry** in `Section515.lean`.
+## What NOT to do this cycle
 
-## Priority 2 — update `lean_status.json` and write task results
+* Do **NOT** attempt to construct `ell_U` or `phi_A` as outputs of
+  Banach contraction or `(I − h₀L|A|)` inversion this cycle. That
+  is multi-cycle infrastructure. Take them as **parameters** with
+  linear-system side conditions, mirroring how cycles 100/102 took
+  `c` (the abscissae vector). A future cycle can build
+  `(I − h₀L|A|)`-inversion infrastructure once and discharge BOTH
+  side conditions in a single sweep.
+* Do **NOT** create a new file for §515. Keep all of §515 in
+  `OpenMath/Chapter5/Section515.lean`. The file is currently 831
+  lines; cycle 103 will add ~250 lines, ending around 1080. This is
+  acceptable.
+* Do **NOT** try to close `lem:515B` end-to-end in one cycle.
+  CLAUDE.md's rule: "structure + 1–2 sub-lemmas closed per cycle"
+  is sufficient.
+* Do **NOT** poll Aristotle more than once. Submit, sleep ~30 min
+  (or work manually in parallel), check once at end of cycle.
+  Cycle 102 wisely skipped Aristotle entirely; this cycle should
+  re-engage with a fresh batch of sub-lemmas where Aristotle has
+  good odds.
+* Do **NOT** raise `maxHeartbeats` above 200000.
+* Do **NOT** introduce `axiom`/`constant` to bypass the
+  `(I − h₀L|A|)`-inversion gap. If a step seems to require it,
+  stop and file a blocker issue in `.prover-state/issues/`.
+* Do **NOT** be tempted to inline more than one sub-lemma's proof
+  into the main theorem. Keeping them separate makes Aristotle
+  resubmissions clean and lets future cycles ablate independently.
+* Do **NOT** repeat the cycle 071 "staged but not committed"
+  failure: verify with `git log -1` and
+  `git diff HEAD~1 HEAD --stat` at end of cycle that your work is
+  in a real commit.
+* Do **NOT** revisit the "commit failure" framing if the prompt's
+  evaluator surfaces a phantom verdict. Cycles 008/014/015/040
+  consultant notes have established the pattern: verify with
+  `git rev-parse HEAD` vs `origin/Main/Experiments`; ignore stale
+  `attempts.md` carry-overs.
 
-If Priority 1 succeeds:
+## Scope guard (must-haves vs nice-to-haves)
 
-* **Update** `extraction/formalization_data/lean_status.json`: mark
-  `lem:515A` from `partial` to `formalized` (both 515a and 515b
-  closed).
-* **Update** `plan.md`: change `[~]` to `[x]` on the `lem:515A`
-  row in Chapter 5 and note "(cycle 102 closure: 515a + 515b
-  axiom-clean)". Also bump "Progress: 63 / 175" to "64 / 175"
-  (`lem:515A` was previously partial-counted; verify the count is
-  consistent with `lean_status.json`).
-* **Write** `.prover-state/task_results/cycle_102.md` with the
-  standard format including a faithfulness check that flags the
-  inherited `0 ≤ c i` restriction (carries over from cycle 101)
-  and notes `lem:515A` is now complete.
+**Must-have for cycle 103 to be a +1 or +2 score**:
+* `lem:515B` scaffolded as `localStepError_bound` with
+  textbook-faithful signature (including `δ` parameter and the
+  `α·h·δ_max` first term).
+* At least one named sub-lemma closed manually
+  (`aux_515B_residual_decomposition` is the recommended target).
+* Aristotle batch submitted (3–5 pieces).
+* `lake env lean OpenMath/Chapter5/Section515.lean` compiles
+  with the new theorem (sorry's allowed in sub-lemmas, top-level
+  decomposition is sorry-free if `aux_515B_residual_decomposition`
+  is closed).
+* `task_results/cycle_103.md` written, commit pushed to
+  `origin/Main/Experiments`.
 
-## Priority 3 — pre-commit faithfulness audit
+**Nice-to-have**:
+* If Aristotle returns proofs during the cycle (e.g.
+  `aux_515B_lipschitz_bridge` is short enough), incorporate them.
+* If `aux_515B_eta_contraction` is shorter than expected
+  (≤30 LOC), close it manually.
+* If you spot a clean way to discharge `aux_515B_lipschitz_bridge`
+  via the cycle-102 `aux_T3'_bound` pattern, take it.
 
-For each new lemma introduced this cycle:
+**Out of scope (do not attempt)**:
+* `(I − h₀L|A|)`-inversion infrastructure (a future cycle).
+* `lem:515C` (accumulated error estimate) — depends on `lem:515B`.
+* `thm:515D` (full convergence theorem) — depends on `lem:515B`
+  AND `lem:515C`.
+* Any §551 / §535 / §523 / §521 / §520 work.
+* Any Chapter 3 work.
 
-* `aux_T3'_bound`: not a textbook-numbered lemma; sub-bound for
-  `T3'b`. No divergence (sign-symmetric in `vi` because of
-  `|vi|`).
-* `aux_T2_b_eq_zero`: not a textbook-numbered lemma; algebraic
-  identity. No divergence.
-* `aux_T4_bound` (refactored): same statement modulo row dim
-  generalization. No semantic change.
-* `localStageError_bound_b` (textbook entity `lem:515A`,
-  inequality 515b): same `(hc_nonneg : ∀ i, 0 ≤ c i)` faithfulness
-  divergence as cycle 101's (515a). No new divergence; document in
-  the docstring + cycle 102 task result.
+## Memory aids (apply these reflexively)
 
-## What NOT to try (explicitly)
+* `add_le_add_right h c` produces `a + c ≤ b + c`, NOT
+  `c + a ≤ c + b`. Use `gcongr` or `linarith [h]` instead — see
+  `feedback_add_le_add_left_dispatch.md`.
+* For sum-le-sum via injective reindexing, use
+  `← Finset.sum_image hinj` then
+  `Finset.sum_le_sum_of_subset_of_nonneg` — see
+  `feedback_finset_sum_le_sum_nbij_nonexistent.md`.
+* For triangle inequality on sums, the Mathlib name is
+  `abs_add_le`, NOT `abs_add` (cycle 102 finding).
+* For monotone calc cascades over absolute values, prefer
+  `gcongr; exact <key_lemma>` over `add_le_add_right` /
+  `mul_le_mul_of_nonneg_left` to avoid unification ambiguity
+  (cycle 102 finding).
+* `set X := ...` followed by `linear_combination` works
+  cleanly: `ring` treats the `set` abbreviation as opaque
+  (cycle 102 finding).
+* When specializing `aux_T3_bound` at `c_i := 1`, plain `simpa`
+  collapses `(1/2) * h^2 * L^2 * M_bound * 1^2` →
+  `(1/2) * h^2 * L^2 * M_bound` (cycle 102 finding).
+* `Finset.sum_sub_distrib` swaps `∑(a − b)` ↔ `(∑a) − (∑b)` and
+  is the right tool for splitting `Σ V·y_prev` into `Σ V·ỹ_prev − Σ V·δ`.
 
-* **Do NOT** raise `maxHeartbeats` above 200000.
-* **Do NOT** try to bound `T3'b` by `aux_T3_bound` directly — the
-  T3 helper integrates over `[0, c_i]` whereas T3'b is a single
-  *point evaluation* `f(yex(xn1+h)) − f(yex(xn1))`. They are
-  different shapes; `aux_T3'_bound` is genuinely new.
-* **Do NOT** rewrite `aux_T4_bound`'s row index from `Fin s` to
-  `Fin r'` and then try to make it polymorphic over BOTH dims by
-  using a sigma type — just generalize to two index params
-  `{s r : ℕ}` and a matrix `Matrix (Fin r) (Fin s) ℝ`. The cycle
-  101 callsite will continue to work with `r := s` inferred (the
-  unification is unambiguous because `M.A` has type
-  `Matrix (Fin s) (Fin s) ℝ`).
-* **Do NOT** try `linarith` in place of `linear_combination` for
-  the algebraic decomposition. Cycle 101 confirmed `linarith`
-  treats products as opaque atoms and fails to bridge `c i * h *
-  deriv yex xn1` ↔ `h * c i * f (yex xn1)`. Use
-  `linear_combination` from the start.
-* **Do NOT** introduce `axiom`/`constant`. Every step has a
-  Mathlib-grounded proof.
-* **Do NOT** edit `scripts/autonomous_loop.py`; the prompt-builder
-  staleness phantoms are loop-maintainer territory (see
-  `tautology_scanner_false_positives.md`).
-* **Do NOT** poll Aristotle more than once. Per cycle 101, the
-  current batch is at 2% and not contributing — skip the poll
-  entirely this cycle.
-* **Do NOT** redefine `IsConvergent`, `IsConsistent`, or
-  `IsStable`. The (515b) proof consumes only the algebraic
-  hypotheses bundled in `localStageError_bound_b`'s signature.
-* **Do NOT** start `lem:515B` (`ϕ` linear-system bound) yet — it
-  depends on (515a) AND (515b) AND a new contraction argument
-  for `(I − h₀L|A|) ϕ = ½c² + |A||c|`. Save for cycle 103+.
-* **Do NOT** weaken or bypass the cycle 101 `0 ≤ c i` hypothesis.
-  The cycle 102 (515b) must inherit the same restriction
-  consistently — both inequalities (515a) and (515b) take the
-  same `_hc_nonneg` parameter.
+## Cross-references
 
-## Backup plan (if `linear_combination` blocks in Step 4)
-
-If the algebraic-identity step fails to close in 30 minutes:
-
-1. **Decompose into smaller `have` lemmas**, each proving one
-   piece of the cancellation: e.g.
-   `have h_uy_split : u i * yex (xn1 + h) = u i * yex xn1 +
-       u i * h * deriv yex xn1 + T3b_int_signed`.
-   Then close the final equality with chained `rw`s + `ring`.
-2. **Worst case**, leave (515b) as a `sorry` and commit
-   the four new helpers (`aux_T3'_bound`, `aux_T2_b_eq_zero`, the
-   `aux_T4_bound` refactor) as a +1 partial progress cycle. Sorry
-   count would remain at 1 but the helper infrastructure is now
-   ready for cycle 103 to consume.
-
-The cycle should **not** end with score < +1. Even the worst-case
-backup commits real infrastructure progress (three new
-sub-lemmas).
-
-## File touchpoints
-
-* `OpenMath/Chapter5/Section515.lean` — primary file, all changes
-  here.
-* `extraction/formalization_data/lean_status.json` — Priority 2.
-* `plan.md` — Priority 2 (status checkbox).
-* `.prover-state/task_results/cycle_102.md` — Priority 2.
-
-No edits expected to:
-* `OpenMath/Chapter5/Section512.lean`, `Section510.lean`,
-  `Section513.lean`, `Section514.lean` (definitions stable).
-* `Section404.lean` (LMM analog, unaffected by GLM §515 work).
-* Any extraction or scripts/ files.
+* `extraction/formalization_data/entities/lem_515B.json` — textbook
+  statement. Read this first.
+* `OpenMath/Chapter5/Section515.lean:516–829` — cycle 100/101/102's
+  `localStageError_bound_a` and `localStageError_bound_b`. The
+  proof of `lem:515B` will invoke `localStageError_bound_b` directly.
+* `.prover-state/task_results/cycle_102.md` — most recent cycle's
+  record, with the suggestion to scaffold `lem:515B`.
+* `.prover-state/issues/u_prime_equals_u_bridge.md` — RESOLVED in
+  cycle 099; included for §515 context only, no impact on cycle 103.
+* `.prover-state/issues/glm_isconvergent_strengthened.md` — context
+  for `def:512A`'s strengthening; matters for `thm:515D` later but
+  NOT this cycle.
