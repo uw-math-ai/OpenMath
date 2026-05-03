@@ -3146,4 +3146,21 @@ theorem D_mul_toGLM_charpoly_eval_general
   rw [hDiff]
   ring
 
+/-- §521 Step K.1 — Polynomial-level lift of J.4. Both sides are
+polynomials in the indeterminate over ℂ; J.4 establishes per-ξ
+evaluation equality, and `Polynomial.funext` over the infinite integral
+domain ℂ upgrades that to polynomial equality. Drops the BDF hypothesis
+from `D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_of_bdf`. -/
+theorem D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly
+    (m : LMM s) {z : ℂ}
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    Polynomial.C (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        (m.toGLM.stabilityMatrix z).charpoly =
+      (Polynomial.X : Polynomial ℂ) ^ s * m.stabilityPolyPoly z := by
+  apply Polynomial.funext
+  intro ξ
+  simp only [Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_X,
+    Polynomial.eval_C]
+  exact D_mul_toGLM_charpoly_eval_general m ξ hz hs
+
 end LMM
