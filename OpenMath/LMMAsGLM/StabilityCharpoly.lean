@@ -525,4 +525,57 @@ theorem rowYQuot_mul_X_pow_eq_RowY (m : LMM s) (hs : 0 < s) :
   unfold rowYQuot
   rw [dif_neg (by omega : ¬ s = 0)]
 
+/-- §521 Step C.5 — Under the BDF hypothesis (only `β_last` is non-zero),
+the past-`h*f` adjugate row entry of the rank-one contraction vanishes.
+
+Both summands of `toGLM_stabilityCharpolyRowF_eq_explicit` collapse:
+
+* The β-summand row vector is `Polynomial.C (m.β (Fin.castSucc k))`,
+  which is zero under BDF since `Fin.castSucc k ≠ Fin.last s`.
+* The α-summand routes through `(toGLM_stabilityMatrixPYHF m 0).map C`,
+  which is zero under BDF by `toGLM_stabilityMatrixPYHF_eq_zero_of_bdf`.
+-/
+theorem toGLM_stabilityCharpolyRowF_of_bdf
+    (m : LMM s) (hs : 0 < s)
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0) :
+    toGLM_stabilityCharpolyRowF m = 0 := by
+  classical
+  rw [toGLM_stabilityCharpolyRowF_eq_explicit m hs]
+  -- α-summand: PYHF(0) = 0 ⇒ entire matrix product = 0 ⇒ vecMul = 0.
+  have hPYHF : (toGLM_stabilityMatrixPYHF m 0).map Polynomial.C = 0 := by
+    rw [toGLM_stabilityMatrixPYHF_eq_zero_of_bdf m 0 hbdf]
+    exact Matrix.map_zero _ Polynomial.C_0
+  have hαsumm :
+      Matrix.vecMul
+          (fun k => Polynomial.C ((-m.α (Fin.castSucc k) : ℝ) : ℂ))
+          (-(toGLM_stabilityMatrixPY m 0).charmatrix.adjugate *
+            (-(toGLM_stabilityMatrixPYHF m 0).map Polynomial.C) *
+            (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate)
+          ⟨s - 1, by omega⟩ = 0 := by
+    rw [hPYHF, neg_zero, Matrix.mul_zero, Matrix.zero_mul,
+        Matrix.vecMul_zero]
+    rfl
+  -- β-summand: row vector is 0 under BDF.
+  have hβrow :
+      (fun k : Fin s => Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ))
+        = (0 : Fin s → Polynomial ℂ) := by
+    funext k
+    have hkne : (Fin.castSucc k : Fin (s + 1)) ≠ Fin.last s := by
+      intro hl
+      have : (k : ℕ) = s := by
+        have := congrArg (Fin.val) hl
+        simpa [Fin.castSucc, Fin.last] using this
+      exact absurd this (by have := k.isLt; omega)
+    have hβ : m.β (Fin.castSucc k) = 0 := hbdf (Fin.castSucc k) hkne
+    simp [hβ]
+  have hβsumm :
+      Matrix.vecMul
+          (fun k => Polynomial.C ((m.β (Fin.castSucc k) : ℝ) : ℂ))
+          ((toGLM_stabilityMatrixPY m 0).charmatrix.det •
+            (toGLM_stabilityMatrixPHF m 0).charmatrix.adjugate)
+          ⟨s - 1, by omega⟩ = 0 := by
+    rw [hβrow, Matrix.zero_vecMul]
+    rfl
+  rw [hαsumm, hβsumm, add_zero]
+
 end LMM
