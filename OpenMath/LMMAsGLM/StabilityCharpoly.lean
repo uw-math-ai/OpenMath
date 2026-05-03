@@ -1564,4 +1564,63 @@ theorem D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_plus_residual
       activeStabilityPolyPoly_eq_stabilityPolyPoly_add_correction m z]
   ring
 
+/-- §521 Step C.15 — BDF consistency check between the cycle 698 general
+LMM textbook headline and the cycle 643 BDF headline. The "extra"
+`X^s · C(z) · correction − residual` terms in the general identity must
+collapse to zero under BDF; equivalently, the residual equals the
+`X^s · C(z) · correction` summand under BDF. Direct subtraction of the
+two headlines. -/
+theorem residual_eq_X_pow_mul_correction_of_bdf
+    (m : LMM s) {z : ℂ}
+    (hbdf : ∀ l : Fin (s + 1), l ≠ Fin.last s → m.β l = 0)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    rowYQuot m * (Polynomial.X : Polynomial ℂ) ^ s *
+        Polynomial.C (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+      + ( rowFAlphaPoly m +
+            (toGLM_stabilityMatrixPY m 0).charpoly *
+              rowFBetaPoly m ) *
+          Polynomial.C z
+    =
+    (Polynomial.X : Polynomial ℂ) ^ s *
+      ( Polynomial.C z *
+          ∑ l : Fin s,
+            Polynomial.C
+                (((m.β l.castSucc : ℝ) : ℂ) -
+                  ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ)) *
+              Polynomial.X ^ (l : ℕ) ) := by
+  have hgen :=
+    D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_plus_residual m hz hs
+  have hbd :=
+    D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_of_bdf m z hbdf hz
+  linear_combination hgen - hbd
+
+/-- §521 Step C.16 — Scalar evaluation of the cycle 698 textbook
+headline at an arbitrary complex point `ξ`. Distributes
+`Polynomial.eval ξ` over the polynomial identity, exposing the
+matrix charpoly evaluation in terms of the textbook scalar
+stability function. -/
+theorem D_mul_toGLM_charpoly_eval_eq
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) (hs : 0 < s) :
+    (1 - z * ((m.β (Fin.last s) : ℝ) : ℂ)) *
+        ((m.toGLM.stabilityMatrix z).charpoly).eval ξ =
+      ξ^s * (m.stabilityPolyPoly z).eval ξ
+        + ξ^s * (z *
+            ∑ l : Fin s,
+              ( ((m.β l.castSucc : ℝ) : ℂ)
+                  - ((m.β (Fin.last s) : ℝ) : ℂ) *
+                    ((m.α l.castSucc : ℝ) : ℂ) ) * ξ^(l : ℕ))
+        - ( (rowYQuot m).eval ξ * ξ^s *
+              (z * ((m.β (Fin.last s) : ℝ) : ℂ))
+          + ( (rowFAlphaPoly m).eval ξ +
+                ((toGLM_stabilityMatrixPY m 0).charpoly).eval ξ *
+                  (rowFBetaPoly m).eval ξ ) * z ) := by
+  have h :=
+    D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly_plus_residual m hz hs
+  have := congrArg (Polynomial.eval ξ) h
+  simpa [Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_sub,
+    Polynomial.eval_pow, Polynomial.eval_X, Polynomial.eval_C,
+    Polynomial.eval_finset_sum] using this
+
 end LMM
