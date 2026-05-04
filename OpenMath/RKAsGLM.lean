@@ -1543,6 +1543,13 @@ theorem rkRKF45_mainMethod_toGLM_hasOrderGe2 :
     ⟨rkRKF45_main_order5.1.1, rkRKF45_main_order5.1.2.1⟩
     rkRKF45_consistent.main_consistent
 
+/-- §530 — Runge–Kutta–Fehlberg 4(5) main method embeds as a GLM of
+order ≥ 1. -/
+theorem rkRKF45_mainMethod_toGLM_hasOrderGe1 :
+    rkRKF45.mainMethod.toGLM.HasOrderGe1 :=
+  rkRKF45.mainMethod.toGLM_hasOrderGe1
+    rkRKF45_consistent.main_consistent
+
 /-- §530 — Dormand–Prince 5(4) main method (order 5) embeds as a GLM of
 order ≥ 5. -/
 theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe5 :
@@ -1571,6 +1578,12 @@ theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe2 :
     rkDOPRI5.mainMethod.toGLM.HasOrderGe2 :=
   rkDOPRI5.mainMethod.toGLM_hasOrderGe2
     ⟨rkDOPRI5_main_order5.1.1, rkDOPRI5_main_order5.1.2.1⟩
+    rkDOPRI5_consistent.main_consistent
+
+/-- §530 — Dormand–Prince 5(4) main method embeds as a GLM of order ≥ 1. -/
+theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe1 :
+    rkDOPRI5.mainMethod.toGLM.HasOrderGe1 :=
+  rkDOPRI5.mainMethod.toGLM_hasOrderGe1
     rkDOPRI5_consistent.main_consistent
 
 /-! ### §530 — Embedded-pair embed-method GLM order witnesses
