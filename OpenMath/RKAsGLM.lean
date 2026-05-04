@@ -302,6 +302,35 @@ theorem rkSDIRK2_toGLM_hasOrderGe2 :
     rkSDIRK2.toGLM.HasOrderGe2 :=
   rkSDIRK2.toGLM_hasOrderGe2 rkSDIRK2_order2 rkSDIRK2_consistent
 
+/-- §530 sanity — the explicit midpoint method embeds as a GLM
+of order ≥ 2. -/
+theorem rkMidpoint_toGLM_hasOrderGe2 :
+    rkMidpoint.toGLM.HasOrderGe2 :=
+  rkMidpoint.toGLM_hasOrderGe2 rkMidpoint_order2 rkMidpoint_consistent
+
+/-- §530 sanity — the classical 4-stage RK4 method has order 4 and so
+embeds as a GLM of order ≥ 2 (project `HasOrderGe4` to `HasOrderGe2`). -/
+theorem rkRK4_toGLM_hasOrderGe2 :
+    rk4.toGLM.HasOrderGe2 :=
+  rk4.toGLM_hasOrderGe2
+    ⟨rk4_order4.1, rk4_order4.2.1⟩ rk4_consistent
+
+/-- §530 sanity — the 2-stage Gauss–Legendre method has order 4 and so
+embeds as a GLM of order ≥ 2. -/
+theorem rkGaussLegendre2_toGLM_hasOrderGe2 :
+    rkGaussLegendre2.toGLM.HasOrderGe2 :=
+  rkGaussLegendre2.toGLM_hasOrderGe2
+    ⟨rkGaussLegendre2_order4.1, rkGaussLegendre2_order4.2.1⟩
+    rkGaussLegendre2_consistent
+
+/-- §530 sanity — the 3-stage Gauss–Legendre method has order 6 (≥ 4)
+and so embeds as a GLM of order ≥ 2. -/
+theorem rkGaussLegendre3_toGLM_hasOrderGe2 :
+    rkGaussLegendre3.toGLM.HasOrderGe2 :=
+  rkGaussLegendre3.toGLM_hasOrderGe2
+    ⟨rkGaussLegendre3_order4.1, rkGaussLegendre3_order4.2.1⟩
+    rkGaussLegendre3_consistent
+
 /-- Implicit Euler is A-stable after the §502 embedding into GLMs. -/
 theorem rkImplicitEuler_toGLM_isAStable :
     (rkImplicitEuler).toGLM.IsAStable := by

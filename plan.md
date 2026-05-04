@@ -872,7 +872,13 @@ error bound for one specific scheme:
 - [~] **§530 Possible definitions of order** — order via local
   truncation error vs effective order. Cycle 760 landed `HasOrderGe1`
   predicate, RK bridge, and `rkEuler` / `rkImplicitMidpoint` order-1
-  witnesses; `HasOrderGe2` and higher remain open.
+  witnesses. Cycle 762 added the `HasOrderGe2` predicate, the
+  `toGLM_hasOrderGe2` RK bridge, and the `rkImplicitMidpoint`
+  order-2 witness. Cycle 764 added the `HasOrderGe2 → HasOrderGe1`
+  projection plus `rkHeun` and `rkSDIRK2` order-2 witnesses. Cycle 766
+  added `rkMidpoint`, `rk4`, `rkGaussLegendre2`, and `rkGaussLegendre3`
+  order-2 witnesses (the latter three projecting `HasOrderGe4` to
+  `HasOrderGe2` inline). `HasOrderGe3` and higher remain open.
 - [ ] **§531 Local and global truncation errors** for GLMs.
 - [ ] **§532 Algebraic analysis of order** — tree-based order conditions
   (extends §31).
