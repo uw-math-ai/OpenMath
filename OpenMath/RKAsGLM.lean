@@ -1668,3 +1668,164 @@ theorem rkDOPRI5_embedMethod_toGLM_hasOrderGe1 :
     rkDOPRI5.embedMethod.toGLM.HasOrderGe1 :=
   rkDOPRI5.embedMethod.toGLM_hasOrderGe1
     rkDOPRI5_consistent.embed_consistent
+
+/-! ### §530 — Tier A: missing `_toGLM_hasOrderGe1` ladder rung
+
+For every consistent RK tableau already in the codebase, project the
+tableau-level consistency through the bridge `toGLM_hasOrderGe1` to a
+GLM-side `HasOrderGe1` witness. This fills in the bottom rung of the
+GLM-order witness ladder for the §530 method roster. -/
+
+/-- §530 sanity — `rkHeun` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkHeun_toGLM_hasOrderGe1 :
+    rkHeun.toGLM.HasOrderGe1 :=
+  rkHeun.toGLM_hasOrderGe1 rkHeun_consistent
+
+/-- §530 sanity — `rkSDIRK2` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkSDIRK2_toGLM_hasOrderGe1 :
+    rkSDIRK2.toGLM.HasOrderGe1 :=
+  rkSDIRK2.toGLM_hasOrderGe1 rkSDIRK2_consistent
+
+/-- §530 sanity — `rkSDIRK3` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkSDIRK3_toGLM_hasOrderGe1 :
+    rkSDIRK3.toGLM.HasOrderGe1 :=
+  rkSDIRK3.toGLM_hasOrderGe1 rkSDIRK3_consistent
+
+/-- §530 sanity — `rkMidpoint` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkMidpoint_toGLM_hasOrderGe1 :
+    rkMidpoint.toGLM.HasOrderGe1 :=
+  rkMidpoint.toGLM_hasOrderGe1 rkMidpoint_consistent
+
+/-- §530 sanity — `rk4` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkRK4_toGLM_hasOrderGe1 :
+    rk4.toGLM.HasOrderGe1 :=
+  rk4.toGLM_hasOrderGe1 rk4_consistent
+
+/-- §530 sanity — `rkGaussLegendre2` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkGaussLegendre2_toGLM_hasOrderGe1 :
+    rkGaussLegendre2.toGLM.HasOrderGe1 :=
+  rkGaussLegendre2.toGLM_hasOrderGe1 rkGaussLegendre2_consistent
+
+/-- §530 sanity — `rkGaussLegendre3` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkGaussLegendre3_toGLM_hasOrderGe1 :
+    rkGaussLegendre3.toGLM.HasOrderGe1 :=
+  rkGaussLegendre3.toGLM_hasOrderGe1 rkGaussLegendre3_consistent
+
+/-- §530 sanity — `rkRadauIA2` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkRadauIA2_toGLM_hasOrderGe1 :
+    rkRadauIA2.toGLM.HasOrderGe1 :=
+  rkRadauIA2.toGLM_hasOrderGe1 rkRadauIA2_consistent
+
+/-- §530 sanity — `rkRadauIIA2` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkRadauIIA2_toGLM_hasOrderGe1 :
+    rkRadauIIA2.toGLM.HasOrderGe1 :=
+  rkRadauIIA2.toGLM_hasOrderGe1 rkRadauIIA2_consistent
+
+/-- §530 sanity — `rkRadauIA3` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkRadauIA3_toGLM_hasOrderGe1 :
+    rkRadauIA3.toGLM.HasOrderGe1 :=
+  rkRadauIA3.toGLM_hasOrderGe1 rkRadauIA3_consistent
+
+/-- §530 sanity — `rkRadauIIA3` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkRadauIIA3_toGLM_hasOrderGe1 :
+    rkRadauIIA3.toGLM.HasOrderGe1 :=
+  rkRadauIIA3.toGLM_hasOrderGe1 rkRadauIIA3_consistent
+
+/-- §530 sanity — `rkLobattoIIIA2` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkLobattoIIIA2_toGLM_hasOrderGe1 :
+    rkLobattoIIIA2.toGLM.HasOrderGe1 :=
+  rkLobattoIIIA2.toGLM_hasOrderGe1 rkLobattoIIIA2_consistent
+
+/-- §530 sanity — `rkLobattoIIIC2` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkLobattoIIIC2_toGLM_hasOrderGe1 :
+    rkLobattoIIIC2.toGLM.HasOrderGe1 :=
+  rkLobattoIIIC2.toGLM_hasOrderGe1 rkLobattoIIIC2_consistent
+
+/-- §530 sanity — `rkLobattoIIIA3` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkLobattoIIIA3_toGLM_hasOrderGe1 :
+    rkLobattoIIIA3.toGLM.HasOrderGe1 :=
+  rkLobattoIIIA3.toGLM_hasOrderGe1 rkLobattoIIIA3_consistent
+
+/-- §530 sanity — `rkLobattoIIIB3` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkLobattoIIIB3_toGLM_hasOrderGe1 :
+    rkLobattoIIIB3.toGLM.HasOrderGe1 :=
+  rkLobattoIIIB3.toGLM_hasOrderGe1 rkLobattoIIIB3_consistent
+
+/-- §530 sanity — `rkLobattoIIIC3` is consistent and so embeds as a
+GLM of order ≥ 1. -/
+theorem rkLobattoIIIC3_toGLM_hasOrderGe1 :
+    rkLobattoIIIC3.toGLM.HasOrderGe1 :=
+  rkLobattoIIIC3.toGLM_hasOrderGe1 rkLobattoIIIC3_consistent
+
+/-! ### §530 — Tier B: intermediate Radau3 / SDIRK3 projections
+
+Project the headline tableau-level order certificates for SDIRK3
+(`order3`), Radau IA 3-stage (`order5`) and Radau IIA 3-stage (`order5`)
+down to the lower-rung GLM-order witnesses by the right-nested `∧`
+accessor pattern. -/
+
+/-- §530 — SDIRK3 has order 3 ⇒ HasOrderGe2. -/
+theorem rkSDIRK3_toGLM_hasOrderGe2 :
+    rkSDIRK3.toGLM.HasOrderGe2 :=
+  rkSDIRK3.toGLM_hasOrderGe2
+    ⟨rkSDIRK3_order3.1, rkSDIRK3_order3.2.1⟩
+    rkSDIRK3_consistent
+
+/-- §530 — Radau IA 3-stage has order 5 ⇒ HasOrderGe2. -/
+theorem rkRadauIA3_toGLM_hasOrderGe2 :
+    rkRadauIA3.toGLM.HasOrderGe2 :=
+  rkRadauIA3.toGLM_hasOrderGe2
+    ⟨rkRadauIA3_order5.1.1, rkRadauIA3_order5.1.2.1⟩
+    rkRadauIA3_consistent
+
+/-- §530 — Radau IA 3-stage has order 5 ⇒ HasOrderGe3. -/
+theorem rkRadauIA3_toGLM_hasOrderGe3 :
+    rkRadauIA3.toGLM.HasOrderGe3 :=
+  rkRadauIA3.toGLM_hasOrderGe3
+    ⟨rkRadauIA3_order5.1.1, rkRadauIA3_order5.1.2.1,
+     rkRadauIA3_order5.1.2.2.1, rkRadauIA3_order5.1.2.2.2.1⟩
+    rkRadauIA3_consistent
+
+/-- §530 — Radau IA 3-stage has order 5 ⇒ HasOrderGe4. -/
+theorem rkRadauIA3_toGLM_hasOrderGe4 :
+    rkRadauIA3.toGLM.HasOrderGe4 :=
+  rkRadauIA3.toGLM_hasOrderGe4
+    rkRadauIA3_order5.1
+    rkRadauIA3_consistent
+
+/-- §530 — Radau IIA 3-stage has order 5 ⇒ HasOrderGe2. -/
+theorem rkRadauIIA3_toGLM_hasOrderGe2 :
+    rkRadauIIA3.toGLM.HasOrderGe2 :=
+  rkRadauIIA3.toGLM_hasOrderGe2
+    ⟨rkRadauIIA3_order5.1.1, rkRadauIIA3_order5.1.2.1⟩
+    rkRadauIIA3_consistent
+
+/-- §530 — Radau IIA 3-stage has order 5 ⇒ HasOrderGe3. -/
+theorem rkRadauIIA3_toGLM_hasOrderGe3 :
+    rkRadauIIA3.toGLM.HasOrderGe3 :=
+  rkRadauIIA3.toGLM_hasOrderGe3
+    ⟨rkRadauIIA3_order5.1.1, rkRadauIIA3_order5.1.2.1,
+     rkRadauIIA3_order5.1.2.2.1, rkRadauIIA3_order5.1.2.2.2.1⟩
+    rkRadauIIA3_consistent
+
+/-- §530 — Radau IIA 3-stage has order 5 ⇒ HasOrderGe4. -/
+theorem rkRadauIIA3_toGLM_hasOrderGe4 :
+    rkRadauIIA3.toGLM.HasOrderGe4 :=
+  rkRadauIIA3.toGLM_hasOrderGe4
+    rkRadauIIA3_order5.1
+    rkRadauIIA3_consistent
