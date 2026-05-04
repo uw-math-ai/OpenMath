@@ -236,7 +236,26 @@ theorem toGLM_isConvergent (t : ButcherTableau s) (ht : t.IsConsistent) :
     t.toGLM.IsConvergent :=
   ⟨t.toGLM_isConsistent ht, t.toGLM_isStable⟩
 
+/-- **§530 / §502 bridge** — Every consistent RK tableau embeds as a
+GLM of order ≥ 1. This is a one-line wrapper around
+`toGLM_isConsistent`. -/
+theorem toGLM_hasOrderGe1 (t : ButcherTableau s)
+    (ht : t.IsConsistent) : t.toGLM.HasOrderGe1 :=
+  t.toGLM_isConsistent ht
+
 end ButcherTableau
+
+/-- **§530 sanity** — `rkEuler` (forward Euler) embeds as a GLM
+of order ≥ 1. -/
+theorem rkEuler_toGLM_hasOrderGe1 :
+    (rkEuler).toGLM.HasOrderGe1 :=
+  rkEuler.toGLM_hasOrderGe1 rkEuler_consistent
+
+/-- **§530 sanity** — `rkImplicitMidpoint` embeds as a GLM
+of order ≥ 1. -/
+theorem rkImplicitMidpoint_toGLM_hasOrderGe1 :
+    (rkImplicitMidpoint).toGLM.HasOrderGe1 :=
+  rkImplicitMidpoint.toGLM_hasOrderGe1 rkImplicitMidpoint_consistent
 
 /-- Implicit Euler is A-stable after the §502 embedding into GLMs. -/
 theorem rkImplicitEuler_toGLM_isAStable :

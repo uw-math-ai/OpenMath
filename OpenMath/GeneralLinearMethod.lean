@@ -158,6 +158,20 @@ equivalence with sequence-level convergence is §515. -/
 def IsConvergent (m : GeneralLinearMethod s r) : Prop :=
   m.IsConsistent ∧ m.IsStable
 
+/-- **Butcher §530** — A general linear method `(A, U, B, V)` has
+**order at least 1** if it is §510-consistent. This packages the
+Nordsieck input decomposition `(q, q')` together with the
+first-derivative compatibility identity, which is precisely the
+order-1 local-truncation-error condition for the GLM update on the
+scalar autonomous test problem `y' = f(y)`.
+
+Higher-order analogues (§530 order ≥ 2, ≥ 3, …) extend this with
+additional Nordsieck input vectors `q'', q''', …` and the
+corresponding Taylor-coefficient identities. Those are follow-up
+work; the order-1 case below is what cycle 760 commits. -/
+def HasOrderGe1 (m : GeneralLinearMethod s r) : Prop :=
+  m.IsConsistent
+
 /-! ## §520 — Stability Matrix -/
 
 /-- Complex lift of the `A` block. -/

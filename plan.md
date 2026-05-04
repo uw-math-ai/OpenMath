@@ -869,8 +869,10 @@ error bound for one specific scheme:
   (cycle 758).
 
 ### §53 The Order of General Linear Methods
-- [ ] **§530 Possible definitions of order** — order via local
-  truncation error vs effective order.
+- [~] **§530 Possible definitions of order** — order via local
+  truncation error vs effective order. Cycle 760 landed `HasOrderGe1`
+  predicate, RK bridge, and `rkEuler` / `rkImplicitMidpoint` order-1
+  witnesses; `HasOrderGe2` and higher remain open.
 - [ ] **§531 Local and global truncation errors** for GLMs.
 - [ ] **§532 Algebraic analysis of order** — tree-based order conditions
   (extends §31).
@@ -1145,15 +1147,37 @@ let the queue empty.
 
 ## Current Target
 
-**Next target — §530 / §531 GLM order definition.** Cycle 758 closed
-§525 G-symplectic GLMs in the index-form predicate style (new module
-`OpenMath/GSymplecticGLM.lean`, RK-side bridge, GL 1/2/3 witnesses),
-mirroring the §541/§542/§543 cycle layout. The remaining
-predicate-level extensions in §52–§55 are §530/§531 (GLM order) and
-§55 IRKS (lower priority).
+**Next target — §530 GLM order ≥ 2.** Cycle 760 landed the order-≥ 1
+scaffold for §530: `GeneralLinearMethod.HasOrderGe1` (defined as
+`IsConsistent`) in `OpenMath/GeneralLinearMethod.lean`, the bridge
+`ButcherTableau.toGLM_hasOrderGe1`, and concrete witnesses
+`rkEuler_toGLM_hasOrderGe1` and `rkImplicitMidpoint_toGLM_hasOrderGe1`
+in `OpenMath/RKAsGLM.lean`. This continues the cycle-758 cycle-layout
+shape (predicate + RK bridge + concrete witnesses).
 
-Cycle 759 should land a small, sorry-first scaffold for **§530 GLM
-order via local truncation error**:
+Cycle 761 should extend to **`HasOrderGe2`** — the order-2 Nordsieck
+compatibility identity for general GLMs, with `rkImplicitMidpoint`
+as the concrete witness (order 2 is exactly where implicit midpoint
+is sharp). The order-2 predicate adds a second Nordsieck input vector
+`q''` and the corresponding Taylor coefficient identity. Use
+`rkImplicitMidpoint` (order 2 by §35) as the existence witness; do
+**not** attempt to prove `rkEuler.toGLM.HasOrderGe2` (it is order 1
+only, so the witness lemma should be sharp).
+
+**Do not** attempt §544–§547 ARK examples (need `r ≥ 2` and LMM-style
+charpoly factorisation; see `disproven.md`). **Do not** attempt the
+§55 IRKS scaffold ahead of §530 — the IRKS predicate involves the
+minimal polynomial of `M(z)`, which is closer to LMM charpoly
+territory that has stalled. **Do not** modify the closed
+§541/§542/§543/§525 predicates; downstream RK bridges depend on
+their exact shape.
+
+---
+
+## (Old current-target text — superseded by cycle 760 above)
+
+Original cycle-759 description (kept for context, no longer the
+active target):
 
 - Add `GeneralLinearMethod.HasOrder` (or a §530-faithful name) in
   `OpenMath/GeneralLinearMethod.lean`, defined via the Taylor-expansion
