@@ -1800,6 +1800,74 @@ theorem adamsBashforth3_toGLM_hasOrderGe2 :
     all_goals simp [LMM.toGLM, adamsBashforth3, Fin.addCases, Fin.sum_univ_succ]
     all_goals norm_num
 
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Moulton 3-step
+
+`adamsMoulton3` (`s = 3`, six GLM input slots `Fin 6`, implicit, order 4)
+embeds as a GLM of order ≥ 2. Same natural Nordsieck Taylor template as
+BDF2 (`q'' j = j²` on past-`y`, `2 j` on past-`h·f`); the
+`(Uq'')_0`-shift used at HasOrderGe3 for AM2 is not needed at level 2. -/
+theorem adamsMoulton3_toGLM_hasOrderGe2 :
+    adamsMoulton3.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 3) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 3 => (1 : ℝ)) (fun _ : Fin 3 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 3) k),
+    fun k : Fin (2 * 3) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 3 => ((j : ℕ) : ℝ)) (fun _ : Fin 3 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 3) k),
+    fun k : Fin (2 * 3) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 3 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 3 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 3) k),
+    ?_, ?_, ?_, ?_⟩
+  · exact adamsMoulton3.toGLM_V_nordsieckQ_eq adamsMoulton3_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ]
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+
+theorem adamsMoulton3_toGLM_hasOrderGe1 :
+    adamsMoulton3.toGLM.HasOrderGe1 :=
+  adamsMoulton3_toGLM_hasOrderGe2.toHasOrderGe1
+
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — BDF3
+
+`bdf3` (`s = 3`, six GLM input slots `Fin 6`, implicit, order 3) embeds
+as a GLM of order ≥ 2. Same natural Nordsieck Taylor template as BDF2.
+HasOrderGe3 hits the heartbeat cap on the q''' obligation (cycle 780),
+but HasOrderGe2 — only q'/q'' on `Fin 6` — closes within budget. -/
+theorem bdf3_toGLM_hasOrderGe2 :
+    bdf3.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 3) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 3 => (1 : ℝ)) (fun _ : Fin 3 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 3) k),
+    fun k : Fin (2 * 3) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 3 => ((j : ℕ) : ℝ)) (fun _ : Fin 3 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 3) k),
+    fun k : Fin (2 * 3) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 3 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 3 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 3) k),
+    ?_, ?_, ?_, ?_⟩
+  · exact bdf3.toGLM_V_nordsieckQ_eq bdf3_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, bdf3, Fin.addCases, Fin.sum_univ_succ]; norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf3, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf3, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+
+theorem bdf3_toGLM_hasOrderGe1 :
+    bdf3.toGLM.HasOrderGe1 :=
+  bdf3_toGLM_hasOrderGe2.toHasOrderGe1
+
 /-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Bashforth 4-step
 
 `adamsBashforth4` (`s = 4`, eight GLM input slots `Fin 8`, explicit with
