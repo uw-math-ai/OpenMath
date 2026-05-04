@@ -172,6 +172,30 @@ work; the order-1 case below is what cycle 760 commits. -/
 def HasOrderGe1 (m : GeneralLinearMethod s r) : Prop :=
   m.IsConsistent
 
+/-- **Butcher §530** — A general linear method `(A, U, B, V)` has
+**order at least 2** if there exist Nordsieck input vectors
+`q, q', q'' : Fin r → ℝ` (interpreting each input quantity as carrying
+`q · y_n + q' · h y'_n + q'' · h² y''_n / 2` content) such that:
+
+* `V q = q` and `U q = 𝟙_s`        (preconsistency, order 0)
+* `(B 𝟙_s) + V q' = q + q'`        (first-derivative compatibility)
+* `2 · (B c) + V q'' = q + 2 q' + q''`  (second-derivative compatibility)
+
+where `c_j := ∑ i, A j i + ∑ l, U j l · q' l` is the derived stage
+abscissa coming from the `O(h)` term of the stage Taylor expansion.
+The `2·` form is just to keep the predicate in the rationals without
+divisions; geometrically the right-hand side matches the `h²/2`
+coefficient of `e^h · (q + q' h + q'' h² / 2)`. -/
+def HasOrderGe2 (m : GeneralLinearMethod s r) : Prop :=
+  ∃ q q' q'' : Fin r → ℝ,
+    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧
+    (∀ i : Fin s, ∑ k, m.U i k * q k = 1) ∧
+    (∀ k : Fin r, (∑ j, m.B k j) + ∑ l, m.V k l * q' l = q k + q' k) ∧
+    (∀ k : Fin r,
+      2 * (∑ j, m.B k j * ((∑ i, m.A j i) + ∑ l, m.U j l * q' l)) +
+        ∑ l, m.V k l * q'' l =
+      q k + 2 * q' k + q'' k)
+
 /-! ## §520 — Stability Matrix -/
 
 /-- Complex lift of the `A` block. -/

@@ -243,6 +243,31 @@ theorem toGLM_hasOrderGe1 (t : ButcherTableau s)
     (ht : t.IsConsistent) : t.toGLM.HasOrderGe1 :=
   t.toGLM_isConsistent ht
 
+/-- **§530 / §502 bridge** — Every consistent RK tableau of order ≥ 2
+embeds as a GLM of order ≥ 2. Witnesses: `q ≡ 1`, `q' ≡ 0`, `q'' ≡ 0`.
+The first three identities collapse exactly as in
+`toGLM_isConsistent`. The fourth (second-derivative) identity becomes
+`2 · ∑ j, t.b j * (∑ i, t.A j i) = 1`, which under `hC.row_sum`
+rewrites to `2 · ∑ j, t.b j * t.c j = 1`, i.e. `t.order2`. -/
+theorem toGLM_hasOrderGe2 (t : ButcherTableau s)
+    (h2 : t.HasOrderGe2) (hC : t.IsConsistent) :
+    t.toGLM.HasOrderGe2 := by
+  refine ⟨fun _ => 1, fun _ => 0, fun _ => 0, ?_, ?_, ?_, ?_⟩
+  · intro k
+    simp [toGLM_V]
+  · intro i
+    simp [toGLM_U]
+  · intro k
+    simp only [toGLM_V, toGLM_B, mul_zero, Finset.sum_const_zero, add_zero]
+    exact h2.1
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb2 : ∑ j, t.b j * t.c j = 1 / 2 := h2.2
+    rw [hb2]; norm_num
+
 end ButcherTableau
 
 /-- **§530 sanity** — `rkEuler` (forward Euler) embeds as a GLM
@@ -256,6 +281,14 @@ of order ≥ 1. -/
 theorem rkImplicitMidpoint_toGLM_hasOrderGe1 :
     (rkImplicitMidpoint).toGLM.HasOrderGe1 :=
   rkImplicitMidpoint.toGLM_hasOrderGe1 rkImplicitMidpoint_consistent
+
+/-- **§530 sanity** — `rkImplicitMidpoint` embeds as a GLM
+of order ≥ 2. (Order 2 is the sharp order of implicit midpoint;
+do **not** state an order-≥ 3 analogue for this method.) -/
+theorem rkImplicitMidpoint_toGLM_hasOrderGe2 :
+    (rkImplicitMidpoint).toGLM.HasOrderGe2 :=
+  rkImplicitMidpoint.toGLM_hasOrderGe2
+    rkImplicitMidpoint_order2 rkImplicitMidpoint_consistent
 
 /-- Implicit Euler is A-stable after the §502 embedding into GLMs. -/
 theorem rkImplicitEuler_toGLM_isAStable :
