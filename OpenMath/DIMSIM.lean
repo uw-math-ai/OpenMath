@@ -171,3 +171,66 @@ theorem rkSDIRK2_toGLM_isDIMSIMType2 :
 theorem rkSDIRK2_toGLM_isDIMSIMType4 :
     (rkSDIRK2.toGLM).IsDIMSIMType4 :=
   rkSDIRK2.toGLM_isDIMSIMType4_of_isSDIRK rkSDIRK2_isSDIRK
+
+/-! ## §542 — Runge–Kutta stability of general linear methods
+
+Butcher §542 isolates the design criterion that the stability matrix
+`M(z)` has at most one non-zero eigenvalue, so that the spurious
+eigenvalues introduced by the multivalue input vector are forced to
+zero and only a single RK-flavoured eigenvalue survives. We encode
+"at most one non-zero eigenvalue" as "any two non-zero roots of the
+characteristic polynomial are equal", which sidesteps multiplicity
+bookkeeping. -/
+
+namespace GeneralLinearMethod
+
+variable {s r : ℕ}
+
+/-- Butcher §542 — **Runge–Kutta stability**. A GLM has Runge–Kutta
+stability if for every complex `z`, the stability matrix `M(z)` has at
+most one non-zero eigenvalue, encoded as "any two non-zero roots of
+the characteristic polynomial are equal". -/
+def IsRungeKuttaStable (m : GeneralLinearMethod s r) : Prop :=
+  ∀ z : ℂ, ∀ μ₁ μ₂ : ℂ,
+    (m.stabilityMatrix z).charpoly.IsRoot μ₁ → μ₁ ≠ 0 →
+    (m.stabilityMatrix z).charpoly.IsRoot μ₂ → μ₂ ≠ 0 →
+    μ₁ = μ₂
+
+end GeneralLinearMethod
+
+namespace ButcherTableau
+
+variable {s : ℕ}
+
+/-- Every RK-as-GLM is Runge–Kutta stable in the §542 sense, because
+the embedding has `r = 1` and the `1×1` stability matrix has a single
+characteristic root, hence at most one non-zero eigenvalue. -/
+theorem toGLM_isRungeKuttaStable (t : ButcherTableau s) :
+    (t.toGLM).IsRungeKuttaStable := by
+  intro z μ₁ μ₂ h₁ _ h₂ _
+  rw [toGLM_stabilityMatrix] at h₁ h₂
+  exact ((charpoly_fin_one_const_isRoot_iff _ _).mp h₁).trans
+    ((charpoly_fin_one_const_isRoot_iff _ _).mp h₂).symm
+
+end ButcherTableau
+
+/-- Forward Euler embeds with §542 Runge–Kutta stability. -/
+theorem rkEuler_toGLM_isRungeKuttaStable :
+    (rkEuler.toGLM).IsRungeKuttaStable :=
+  rkEuler.toGLM_isRungeKuttaStable
+
+/-- Implicit Euler embeds with §542 Runge–Kutta stability. -/
+theorem rkImplicitEuler_toGLM_isRungeKuttaStable :
+    (rkImplicitEuler.toGLM).IsRungeKuttaStable :=
+  rkImplicitEuler.toGLM_isRungeKuttaStable
+
+/-- 2-stage SDIRK embeds with §542 Runge–Kutta stability. -/
+theorem rkSDIRK2_toGLM_isRungeKuttaStable :
+    (rkSDIRK2.toGLM).IsRungeKuttaStable :=
+  rkSDIRK2.toGLM_isRungeKuttaStable
+
+/-- Forward Euler embeds as a type-3 DIMSIM that is also §542
+Runge–Kutta stable. -/
+theorem rkEuler_toGLM_type3_isRungeKuttaStable :
+    (rkEuler.toGLM).IsDIMSIMType3 ∧ (rkEuler.toGLM).IsRungeKuttaStable :=
+  ⟨rkEuler_toGLM_isDIMSIMType3, rkEuler_toGLM_isRungeKuttaStable⟩

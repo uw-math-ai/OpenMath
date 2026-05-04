@@ -91,7 +91,7 @@ private lemma charpoly_fin_one_const (a : ℂ) :
   rw [Matrix.charpoly]
   simp [Matrix.charmatrix]
 
-private lemma charpoly_fin_one_const_isRoot_iff (a μ : ℂ) :
+lemma charpoly_fin_one_const_isRoot_iff (a μ : ℂ) :
     (Matrix.charpoly
         (((fun (_ : Fin 1) (_ : Fin 1) => a) :
           Matrix (Fin 1) (Fin 1) ℂ))).IsRoot μ ↔ μ = a := by

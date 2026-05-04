@@ -879,8 +879,8 @@ error bound for one specific scheme:
 - [ ] **§540 Design criteria for general linear methods**.
 - [x] **§541 The types of DIMSIM methods** — Type 1/2/3/4 classification
   (`OpenMath/DIMSIM.lean`, cycle 748).
-- [ ] **§542 Runge–Kutta stability** — the condition `M(z)` has a single
-  non-zero eigenvalue.
+- [x] **§542 Runge–Kutta stability** — the condition `M(z)` has a single
+  non-zero eigenvalue (`OpenMath/DIMSIM.lean`, cycle 752).
 - [ ] **§543 Almost Runge–Kutta methods (ARK)**.
 - [ ] **§544–§546 Concrete ARK methods** (3-stage order 3,
   4-stage order 4, 5-stage order 5).
@@ -1040,6 +1040,14 @@ error bound for one specific scheme:
   type 2/3/4 witnesses** in `OpenMath/DIMSIM.lean` — `IsSDIRK →
   IsDIMSIMType2/4`, `IsExplicit → IsDIMSIMType3`, and concrete
   witnesses for `rkEuler` (type 3) and `rkSDIRK2` (types 2/4).
+- **Cycle 752 added §542 Runge–Kutta stability for GLMs** — the
+  `IsRungeKuttaStable` predicate ("any two non-zero charpoly roots of
+  `M(z)` are equal") in `OpenMath/DIMSIM.lean`, plus the RK-side
+  sanity bridge `ButcherTableau.toGLM_isRungeKuttaStable` (trivial
+  because `r = 1`) and concrete witnesses for `rkEuler`,
+  `rkImplicitEuler`, and `rkSDIRK2`. Hoisted
+  `ButcherTableau.charpoly_fin_one_const_isRoot_iff` from `private`
+  to public so the bridge can reuse the §520 helper.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1121,32 +1129,36 @@ let the queue empty.
 
 ## Current Target
 
-**Next target — Butcher §54 RK-side DIMSIM bridges and concrete
-type 2/3/4 witnesses.** Append to `OpenMath/DIMSIM.lean` (target
-total file ≤ 200 lines).
+**Next target — Butcher §543 Almost Runge–Kutta methods (ARK)
+structural conditions.** Append to `OpenMath/DIMSIM.lean` (currently
+~265 lines after the cycle 752 §542 work; well under the size cap).
 
-Cycle 748 landed the §541 type 1/2/3/4 predicates over
-`GeneralLinearMethod s r` plus a single type-1 witness for forward
-Euler. To make the §541 surface productive for §542 RK stability
-and §543 ARK work, cycle 750 consolidates the RK-side bridges:
+Cycle 752 landed §542 Runge–Kutta stability for GLMs as the predicate
+`IsRungeKuttaStable m := ∀ z, any two non-zero charpoly roots of
+`m.stabilityMatrix z` are equal`, plus the RK-side sanity bridge
+`ButcherTableau.toGLM_isRungeKuttaStable` (trivial via the §520
+`charpoly_fin_one_const_isRoot_iff` helper, which was hoisted from
+`private` to public for this purpose).
 
-- `ButcherTableau.toGLM_isRankOneV` — every RK-as-GLM has rank-one
-  `V` because `r = 1` makes `V k l = 1` definitionally.
-- `ButcherTableau.toGLM_isDIMSIMType3_of_isExplicit` — every
-  explicit RK embeds as a type-3 DIMSIM.
-- `ButcherTableau.toGLM_isLowerTriangular_of_isSDIRK` /
-  `toGLM_hasConstantDiagonal_of_isSDIRK` /
-  `toGLM_isDIMSIMType2_of_isSDIRK` /
-  `toGLM_isDIMSIMType4_of_isSDIRK` — every SDIRK embeds as a
-  type-2 (and hence type-4) DIMSIM.
-- Concrete witnesses: `rkEuler_toGLM_isDIMSIMType3`,
-  `rkSDIRK2_toGLM_isDIMSIMType2`, `rkSDIRK2_toGLM_isDIMSIMType4`.
+Next cycle should:
 
-Next cycle should pivot to §542 Runge–Kutta stability for GLMs
-(the predicate that `M(z)` has at most one non-zero eigenvalue,
-with the trivial RK sanity check that follows because `r = 1`
-makes `M(z)` a 1×1 matrix and trivially has at most one non-zero
-eigenvalue).
+- Introduce an `IsAlmostRungeKutta` predicate that combines §542 RK
+  stability with the §543 leading-sub-eigenstructure constraint
+  (Butcher's design: the spurious eigenvalues are forced to zero
+  *and* the sub-leading eigenstructure has a prescribed nilpotent
+  shape). A reasonable sorry-first encoding is:
+  `IsRungeKuttaStable m ∧ ∀ z, ∀ μ, charpoly μ → μ ≠ 0 → μ.re ≤ ...`.
+  Pick the precise sub-eigenstructure clause directly from §543
+  Definition 540 of the textbook; do not freelance.
+- Prove the RK-side sanity check, which is again trivial because
+  `r = 1` collapses any sub-eigenstructure constraint.
+- Land concrete witnesses for `rkEuler`, `rkImplicitEuler`,
+  `rkSDIRK2` mirroring the cycle 752 §542 pattern.
+
+**Do not** attempt §543 for non-trivial GLMs (LMM-as-GLM, DIMSIM
+type 1/2/3/4 with `r ≥ 2`); the disproven-identities log shows
+that LMM charpoly factorisation has consumed dozens of cycles, and
+RK-side is the deliverable.
 
 ---
 
