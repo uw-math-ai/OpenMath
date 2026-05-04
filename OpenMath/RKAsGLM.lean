@@ -3,6 +3,7 @@ import OpenMath.GeneralLinearMethod
 import OpenMath.SDIRK
 import OpenMath.SDIRK3
 import OpenMath.RadauIIA3
+import OpenMath.RadauIA3
 import OpenMath.GaussLegendre3
 import OpenMath.LobattoIIIA
 import OpenMath.LobattoIIIA3
@@ -363,6 +364,88 @@ theorem toGLM_hasOrderGe4 (t : ButcherTableau s)
                 t.b j * t.A j i * t.A i i' * t.c i' := by
         simp [Finset.mul_sum, mul_assoc]
       rw [hreshape]; exact hb4
+    rw [key]; norm_num
+
+/-- **§530 / §502 bridge** — Every consistent RK tableau of order ≥ 5
+embeds as a GLM of order ≥ 5. Witnesses: `q ≡ 1`, `q' ≡ 0`,
+`q'' ≡ 0`, `q''' ≡ 0`, `q'''' ≡ 0`, `q''''' ≡ 0`. The first six
+identities collapse exactly as in `toGLM_hasOrderGe4`. The new seventh
+(fifth-derivative) identity reduces under RK Nordsieck to
+`120 · ∑_j b_j (∑_i A_ji (∑_i' A_ii' (∑_i'' A_i'i'' * c_i''))) = 1`,
+i.e. `t.order5i` after reshape. -/
+theorem toGLM_hasOrderGe5 (t : ButcherTableau s)
+    (h5 : t.HasOrderGe5) (hC : t.IsConsistent) :
+    t.toGLM.HasOrderGe5 := by
+  refine ⟨fun _ => 1, fun _ => 0, fun _ => 0, fun _ => 0,
+          fun _ => 0, fun _ => 0,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro k; simp [toGLM_V]
+  · intro i; simp [toGLM_U]
+  · intro k
+    simp only [toGLM_V, toGLM_B, mul_zero, Finset.sum_const_zero, add_zero]
+    exact h5.1.1
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb2 : ∑ j, t.b j * t.c j = 1 / 2 := h5.1.2.1
+    rw [hb2]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb3 : ∑ i : Fin s, ∑ j : Fin s, t.b i * t.A i j * t.c j = 1 / 6 :=
+      h5.1.2.2.2.1
+    have key : (∑ j : Fin s, t.b j * ∑ i, t.A j i * t.c i) = 1 / 6 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j * ∑ i, t.A j i * t.c i)
+            = ∑ j : Fin s, ∑ i, t.b j * t.A j i * t.c i := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]; exact hb3
+    rw [key]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb4 : ∑ i : Fin s, ∑ j : Fin s, ∑ k' : Fin s,
+        t.b i * t.A i j * t.A j k' * t.c k' = 1 / 24 :=
+      h5.1.2.2.2.2.2.2.2
+    have key :
+        (∑ j : Fin s, t.b j *
+          ∑ i, t.A j i * ∑ i', t.A i i' * t.c i') = 1 / 24 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j *
+            ∑ i, t.A j i * ∑ i', t.A i i' * t.c i')
+            = ∑ j : Fin s, ∑ i, ∑ i',
+                t.b j * t.A j i * t.A i i' * t.c i' := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]; exact hb4
+    rw [key]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb5 : t.order5i := h5.2.2.2.2.2.2.2.2.2
+    have key :
+        (∑ j : Fin s, t.b j *
+          ∑ i, t.A j i *
+            ∑ i', t.A i i' *
+              ∑ i'', t.A i' i'' * t.c i'') = 1 / 120 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j *
+            ∑ i, t.A j i *
+              ∑ i', t.A i i' *
+                ∑ i'', t.A i' i'' * t.c i'')
+            = ∑ j : Fin s, ∑ i, ∑ i',
+                t.b j * t.A j i * t.A i i' *
+                  ∑ i'', t.A i' i'' * t.c i'' := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]
+      exact hb5
     rw [key]; norm_num
 
 end ButcherTableau
@@ -1132,3 +1215,24 @@ theorem rkLobattoIIIC3_toGLM_isAStable :
   intro z hz
   rw [rkLobattoIIIC3_stabilityFunction_eq z hz]
   exact lobIIIC3_aStable z hz
+
+/-- §530 sanity — Gauss–Legendre 3-stage has order 6 (≥ 5) and so
+embeds as a GLM of order ≥ 5. -/
+theorem rkGaussLegendre3_toGLM_hasOrderGe5 :
+    rkGaussLegendre3.toGLM.HasOrderGe5 :=
+  rkGaussLegendre3.toGLM_hasOrderGe5
+    rkGaussLegendre3_order5 rkGaussLegendre3_consistent
+
+/-- §530 sanity — Radau IIA 3-stage has order 5 and so embeds as a
+GLM of order ≥ 5. -/
+theorem rkRadauIIA3_toGLM_hasOrderGe5 :
+    rkRadauIIA3.toGLM.HasOrderGe5 :=
+  rkRadauIIA3.toGLM_hasOrderGe5
+    rkRadauIIA3_order5 rkRadauIIA3_consistent
+
+/-- §530 sanity — Radau IA 3-stage has order 5 and so embeds as a
+GLM of order ≥ 5. -/
+theorem rkRadauIA3_toGLM_hasOrderGe5 :
+    rkRadauIA3.toGLM.HasOrderGe5 :=
+  rkRadauIA3.toGLM_hasOrderGe5
+    rkRadauIA3_order5 rkRadauIA3_consistent
