@@ -268,6 +268,44 @@ theorem toGLM_hasOrderGe2 (t : ButcherTableau s)
     have hb2 : ∑ j, t.b j * t.c j = 1 / 2 := h2.2
     rw [hb2]; norm_num
 
+/-- **§530 / §502 bridge** — Every consistent RK tableau of order ≥ 3
+embeds as a GLM of order ≥ 3. Witnesses: `q ≡ 1`, `q' ≡ 0`,
+`q'' ≡ 0`, `q''' ≡ 0`. The first four identities collapse exactly as
+in `toGLM_hasOrderGe2`. The fifth (third-derivative) identity reduces
+under RK Nordsieck (q' = q'' = 0) to
+`6 · ∑_j b_j ∑_i A_ji * c_i = 1`, i.e. `t.order3b`. -/
+theorem toGLM_hasOrderGe3 (t : ButcherTableau s)
+    (h3 : t.HasOrderGe3) (hC : t.IsConsistent) :
+    t.toGLM.HasOrderGe3 := by
+  refine ⟨fun _ => 1, fun _ => 0, fun _ => 0, fun _ => 0,
+          ?_, ?_, ?_, ?_, ?_⟩
+  · intro k; simp [toGLM_V]
+  · intro i; simp [toGLM_U]
+  · intro k
+    simp only [toGLM_V, toGLM_B, mul_zero, Finset.sum_const_zero, add_zero]
+    exact h3.1
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb2 : ∑ j, t.b j * t.c j = 1 / 2 := h3.2.1
+    rw [hb2]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb3 : ∑ i : Fin s, ∑ j : Fin s, t.b i * t.A i j * t.c j = 1 / 6 :=
+      h3.2.2.2
+    have key : (∑ j : Fin s, t.b j * ∑ i, t.A j i * t.c i) = 1 / 6 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j * ∑ i, t.A j i * t.c i)
+            = ∑ j : Fin s, ∑ i, t.b j * t.A j i * t.c i := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]; exact hb3
+    rw [key]; norm_num
+
 end ButcherTableau
 
 /-- **§530 sanity** — `rkEuler` (forward Euler) embeds as a GLM
@@ -329,6 +367,46 @@ theorem rkGaussLegendre3_toGLM_hasOrderGe2 :
     rkGaussLegendre3.toGLM.HasOrderGe2 :=
   rkGaussLegendre3.toGLM_hasOrderGe2
     ⟨rkGaussLegendre3_order4.1, rkGaussLegendre3_order4.2.1⟩
+    rkGaussLegendre3_consistent
+
+/-- §530 sanity — `rkSDIRK3` (singly diagonally implicit RK3) embeds
+as a GLM of order ≥ 3. Order 3 is sharp for SDIRK3
+(`rkSDIRK3_not_order4`); do **not** state an order-≥ 4 analogue. -/
+theorem rkSDIRK3_toGLM_hasOrderGe3 :
+    rkSDIRK3.toGLM.HasOrderGe3 :=
+  rkSDIRK3.toGLM_hasOrderGe3 rkSDIRK3_order3 rkSDIRK3_consistent
+
+/-- §530 sanity — RK4 has order 4 and so embeds as a GLM
+of order ≥ 3. The order-3 hypothesis is extracted from the order-4
+certificate. -/
+theorem rkRK4_toGLM_hasOrderGe3 :
+    rk4.toGLM.HasOrderGe3 :=
+  rk4.toGLM_hasOrderGe3
+    ⟨rk4_order4.1, rk4_order4.2.1,
+     rk4_order4.2.2.1, rk4_order4.2.2.2.1⟩
+    rk4_consistent
+
+/-- §530 sanity — Gauss–Legendre 2-stage has order 4 and so embeds
+as a GLM of order ≥ 3. The order-3 hypothesis is extracted from the
+order-4 certificate. -/
+theorem rkGaussLegendre2_toGLM_hasOrderGe3 :
+    rkGaussLegendre2.toGLM.HasOrderGe3 :=
+  rkGaussLegendre2.toGLM_hasOrderGe3
+    ⟨rkGaussLegendre2_order4.1,
+     rkGaussLegendre2_order4.2.1,
+     rkGaussLegendre2_order4.2.2.1,
+     rkGaussLegendre2_order4.2.2.2.1⟩
+    rkGaussLegendre2_consistent
+
+/-- §530 sanity — Gauss–Legendre 3-stage has order 6 and so embeds
+as a GLM of order ≥ 3. -/
+theorem rkGaussLegendre3_toGLM_hasOrderGe3 :
+    rkGaussLegendre3.toGLM.HasOrderGe3 :=
+  rkGaussLegendre3.toGLM_hasOrderGe3
+    ⟨rkGaussLegendre3_order4.1,
+     rkGaussLegendre3_order4.2.1,
+     rkGaussLegendre3_order4.2.2.1,
+     rkGaussLegendre3_order4.2.2.2.1⟩
     rkGaussLegendre3_consistent
 
 /-- Implicit Euler is A-stable after the §502 embedding into GLMs. -/

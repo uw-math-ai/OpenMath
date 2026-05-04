@@ -206,6 +206,40 @@ theorem HasOrderGe2.toHasOrderGe1 {s r : ℕ}
   obtain ⟨q, q', _q'', hVq, hUq, hBq', _⟩ := h
   exact ⟨q, q', hVq, hUq, hBq'⟩
 
+/-- **Butcher §530** — A general linear method `(A, U, B, V)` has
+**order at least 3** if there exist Nordsieck input vectors
+`q, q', q'', q''' : Fin r → ℝ` such that the §510 preconsistency
+identities hold together with the first-, second-, and
+third-derivative Taylor compatibility identities for the GLM update.
+The third-derivative identity uses the order-1 stage abscissa
+`c_j := (∑ i, A j i) + ∑ l, U j l * q' l` together with the
+order-2 stage moment `(A·c)_j + (U q'')_j`. The leading `6 ·`
+factor matches the `h³/6!` Taylor coefficient. -/
+def HasOrderGe3 (m : GeneralLinearMethod s r) : Prop :=
+  ∃ q q' q'' q''' : Fin r → ℝ,
+    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧
+    (∀ i : Fin s, ∑ k, m.U i k * q k = 1) ∧
+    (∀ k : Fin r, (∑ j, m.B k j) + ∑ l, m.V k l * q' l = q k + q' k) ∧
+    (∀ k : Fin r,
+      2 * (∑ j, m.B k j * ((∑ i, m.A j i) + ∑ l, m.U j l * q' l)) +
+        ∑ l, m.V k l * q'' l =
+      q k + 2 * q' k + q'' k) ∧
+    (∀ k : Fin r,
+      6 * (∑ j, m.B k j *
+            ((∑ i, m.A j i * ((∑ i', m.A i i') + ∑ l, m.U i l * q' l)) +
+              ∑ l, m.U j l * q'' l)) +
+        ∑ l, m.V k l * q''' l =
+      q k + 3 * q' k + 3 * q'' k + q''' k)
+
+/-- §530 monotonicity — order ≥ 3 implies order ≥ 2. The order-≥ 3
+witness `(q, q', q'', q''')` projects to the order-≥ 2 witness
+`(q, q', q'')` by dropping the third-derivative identity. -/
+theorem HasOrderGe3.toHasOrderGe2 {s r : ℕ}
+    {m : GeneralLinearMethod s r} (h : m.HasOrderGe3) :
+    m.HasOrderGe2 := by
+  obtain ⟨q, q', q'', _q''', hVq, hUq, hBq', hBq'', _⟩ := h
+  exact ⟨q, q', q'', hVq, hUq, hBq', hBq''⟩
+
 /-! ## §520 — Stability Matrix -/
 
 /-- Complex lift of the `A` block. -/
