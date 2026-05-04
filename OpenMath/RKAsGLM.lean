@@ -290,6 +290,18 @@ theorem rkImplicitMidpoint_toGLM_hasOrderGe2 :
   rkImplicitMidpoint.toGLM_hasOrderGe2
     rkImplicitMidpoint_order2 rkImplicitMidpoint_consistent
 
+/-- §530 sanity — Heun's method (explicit RK2) embeds as a GLM
+of order ≥ 2. -/
+theorem rkHeun_toGLM_hasOrderGe2 :
+    rkHeun.toGLM.HasOrderGe2 :=
+  rkHeun.toGLM_hasOrderGe2 rkHeun_order2 rkHeun_consistent
+
+/-- §530 sanity — SDIRK2 (the singly-diagonally-implicit RK2 method)
+embeds as a GLM of order ≥ 2. -/
+theorem rkSDIRK2_toGLM_hasOrderGe2 :
+    rkSDIRK2.toGLM.HasOrderGe2 :=
+  rkSDIRK2.toGLM_hasOrderGe2 rkSDIRK2_order2 rkSDIRK2_consistent
+
 /-- Implicit Euler is A-stable after the §502 embedding into GLMs. -/
 theorem rkImplicitEuler_toGLM_isAStable :
     (rkImplicitEuler).toGLM.IsAStable := by

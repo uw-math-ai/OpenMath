@@ -196,6 +196,16 @@ def HasOrderGe2 (m : GeneralLinearMethod s r) : Prop :=
         ∑ l, m.V k l * q'' l =
       q k + 2 * q' k + q'' k)
 
+/-- §530 monotonicity — order ≥ 2 implies order ≥ 1. The order-≥ 2
+witness `(q, q', q'')` projects to the consistency / order-≥ 1
+witness `(q, q')` by dropping the second-derivative compatibility
+identity. -/
+theorem HasOrderGe2.toHasOrderGe1 {s r : ℕ}
+    {m : GeneralLinearMethod s r} (h : m.HasOrderGe2) :
+    m.HasOrderGe1 := by
+  obtain ⟨q, q', _q'', hVq, hUq, hBq', _⟩ := h
+  exact ⟨q, q', hVq, hUq, hBq'⟩
+
 /-! ## §520 — Stability Matrix -/
 
 /-- Complex lift of the `A` block. -/
