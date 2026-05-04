@@ -234,3 +234,61 @@ Runge–Kutta stable. -/
 theorem rkEuler_toGLM_type3_isRungeKuttaStable :
     (rkEuler.toGLM).IsDIMSIMType3 ∧ (rkEuler.toGLM).IsRungeKuttaStable :=
   ⟨rkEuler_toGLM_isDIMSIMType3, rkEuler_toGLM_isRungeKuttaStable⟩
+
+/-! ## §543 — Almost Runge–Kutta methods
+
+Butcher §543 promotes §542 RK stability with the additional structural
+demand that the spurious eigenvalues of `M(z)` at `z = 0` are forced to
+zero. The textbook example (505a) has `σ(M(0)) = (1, 0, 0)`, so the
+principal eigenvalue is `1` and the two spurious eigenvalues are `0`.
+On the RK side (`r = 1`) this collapses trivially because `M(0)` is a
+`1×1` matrix with sole eigenvalue `1`. -/
+
+namespace GeneralLinearMethod
+
+variable {s r : ℕ}
+
+/-- Butcher §543 — **Almost Runge–Kutta**. A GLM is ARK if it is §542
+Runge–Kutta stable and the spurious eigenvalues of its stability matrix
+at `z = 0` are zero, i.e. every characteristic root of `M(0)` other
+than `1` equals `0`. -/
+def IsAlmostRungeKutta (m : GeneralLinearMethod s r) : Prop :=
+  m.IsRungeKuttaStable ∧
+    ∀ μ : ℂ, (m.stabilityMatrix 0).charpoly.IsRoot μ → μ ≠ 1 → μ = 0
+
+end GeneralLinearMethod
+
+namespace ButcherTableau
+
+variable {s : ℕ}
+
+/-- Every RK-as-GLM is ARK in the §543 sense. The spurious-eigenvalue
+clause is vacuous because `M(0)` is `1×1` with sole charpoly root
+`stabilityFunction t 0 = 1`. -/
+theorem toGLM_isAlmostRungeKutta (t : ButcherTableau s) :
+    (t.toGLM).IsAlmostRungeKutta := by
+  refine ⟨t.toGLM_isRungeKuttaStable, ?_⟩
+  intro μ hμ hne
+  rw [toGLM_stabilityMatrix] at hμ
+  have h := (charpoly_fin_one_const_isRoot_iff _ _).mp hμ
+  have hstab : ButcherTableau.stabilityFunction t (0 : ℂ) = 1 := by
+    simp [ButcherTableau.stabilityFunction]
+  rw [hstab] at h
+  exact (hne h).elim
+
+end ButcherTableau
+
+/-- Forward Euler embeds as ARK. -/
+theorem rkEuler_toGLM_isAlmostRungeKutta :
+    (rkEuler.toGLM).IsAlmostRungeKutta :=
+  rkEuler.toGLM_isAlmostRungeKutta
+
+/-- Implicit Euler embeds as ARK. -/
+theorem rkImplicitEuler_toGLM_isAlmostRungeKutta :
+    (rkImplicitEuler.toGLM).IsAlmostRungeKutta :=
+  rkImplicitEuler.toGLM_isAlmostRungeKutta
+
+/-- 2-stage SDIRK embeds as ARK. -/
+theorem rkSDIRK2_toGLM_isAlmostRungeKutta :
+    (rkSDIRK2.toGLM).IsAlmostRungeKutta :=
+  rkSDIRK2.toGLM_isAlmostRungeKutta
