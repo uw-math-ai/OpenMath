@@ -1,4 +1,5 @@
 import OpenMath.RKAsGLM
+import OpenMath.SDIRK
 
 /-!
 # Butcher §54 — DIMSIM type 1/2/3/4 classification
@@ -109,3 +110,64 @@ end ButcherTableau
 theorem rkEuler_toGLM_isDIMSIMType1 :
     (rkEuler.toGLM).IsDIMSIMType1 :=
   rkEuler.toGLM_isDIMSIMType1_of_isExplicit rkEuler_explicit
+
+/-! ## §54 — RK-side rank-one `V` and type-2/3/4 bridges -/
+
+namespace ButcherTableau
+
+variable {s : ℕ}
+
+/-- The output-propagation block of any RK-as-GLM is rank one because
+`r = 1` collapses `V` to the constant `1`. -/
+theorem toGLM_isRankOneV (t : ButcherTableau s) :
+    (t.toGLM).IsRankOneV :=
+  ⟨fun _ => 1, fun _ => 1, by intro k l; simp⟩
+
+/-- Every explicit RK embeds as a type-3 DIMSIM. -/
+theorem toGLM_isDIMSIMType3_of_isExplicit {t : ButcherTableau s}
+    (h : t.IsExplicit) : (t.toGLM).IsDIMSIMType3 :=
+  ⟨t.toGLM_isDIMSIMType1_of_isExplicit h, t.toGLM_isRankOneV⟩
+
+/-- An SDIRK tableau embeds with a lower-triangular `A` block. -/
+theorem toGLM_isLowerTriangular_of_isSDIRK {t : ButcherTableau s}
+    (h : t.IsSDIRK) : (t.toGLM).IsLowerTriangular := by
+  intro i j hij
+  exact h.lower_tri i j hij
+
+/-- An SDIRK tableau embeds with a constant-diagonal `A` block. -/
+theorem toGLM_hasConstantDiagonal_of_isSDIRK {t : ButcherTableau s}
+    (h : t.IsSDIRK) : (t.toGLM).HasConstantDiagonal := by
+  rcases Nat.eq_zero_or_pos s with hs | hs
+  · refine ⟨0, ?_⟩
+    intro i
+    exact (Fin.elim0 (hs ▸ i))
+  · refine ⟨t.A ⟨0, hs⟩ ⟨0, hs⟩, fun i => ?_⟩
+    exact h.const_diag i ⟨0, hs⟩
+
+/-- Every SDIRK embeds as a type-2 DIMSIM. -/
+theorem toGLM_isDIMSIMType2_of_isSDIRK {t : ButcherTableau s}
+    (h : t.IsSDIRK) : (t.toGLM).IsDIMSIMType2 :=
+  ⟨t.toGLM_isLowerTriangular_of_isSDIRK h,
+   t.toGLM_hasConstantDiagonal_of_isSDIRK h⟩
+
+/-- Every SDIRK embeds as a type-4 DIMSIM (type-2 plus rank-one `V`). -/
+theorem toGLM_isDIMSIMType4_of_isSDIRK {t : ButcherTableau s}
+    (h : t.IsSDIRK) : (t.toGLM).IsDIMSIMType4 :=
+  ⟨t.toGLM_isDIMSIMType2_of_isSDIRK h, t.toGLM_isRankOneV⟩
+
+end ButcherTableau
+
+/-- Forward Euler embeds as a type-3 DIMSIM. -/
+theorem rkEuler_toGLM_isDIMSIMType3 :
+    (rkEuler.toGLM).IsDIMSIMType3 :=
+  rkEuler.toGLM_isDIMSIMType3_of_isExplicit rkEuler_explicit
+
+/-- 2-stage SDIRK embeds as a type-2 DIMSIM. -/
+theorem rkSDIRK2_toGLM_isDIMSIMType2 :
+    (rkSDIRK2.toGLM).IsDIMSIMType2 :=
+  rkSDIRK2.toGLM_isDIMSIMType2_of_isSDIRK rkSDIRK2_isSDIRK
+
+/-- 2-stage SDIRK embeds as a type-4 DIMSIM. -/
+theorem rkSDIRK2_toGLM_isDIMSIMType4 :
+    (rkSDIRK2.toGLM).IsDIMSIMType4 :=
+  rkSDIRK2.toGLM_isDIMSIMType4_of_isSDIRK rkSDIRK2_isSDIRK

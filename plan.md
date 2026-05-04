@@ -877,7 +877,8 @@ error bound for one specific scheme:
 
 ### §54 Methods with Runge–Kutta Stability
 - [ ] **§540 Design criteria for general linear methods**.
-- [ ] **§541 The types of DIMSIM methods** — Type 1/2/3/4 classification.
+- [x] **§541 The types of DIMSIM methods** — Type 1/2/3/4 classification
+  (`OpenMath/DIMSIM.lean`, cycle 748).
 - [ ] **§542 Runge–Kutta stability** — the condition `M(z)` has a single
   non-zero eigenvalue.
 - [ ] **§543 Almost Runge–Kutta methods (ARK)**.
@@ -1035,6 +1036,10 @@ error bound for one specific scheme:
   `OpenMath/MilneDevice.lean` lands the `MilneDevicePair sP sC p`
   structure, `milneFactor`, `localErrorEstimate`, and the concrete
   AB4 / AM3 instance with `milneAB4AM3.milneFactor = -(19/270)`.
+- **Cycle 750 consolidated §54 RK-side DIMSIM bridges and concrete
+  type 2/3/4 witnesses** in `OpenMath/DIMSIM.lean` — `IsSDIRK →
+  IsDIMSIMType2/4`, `IsExplicit → IsDIMSIMType3`, and concrete
+  witnesses for `rkEuler` (type 3) and `rkSDIRK2` (types 2/4).
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1116,22 +1121,32 @@ let the queue empty.
 
 ## Current Target
 
-**Next target — Butcher §54 DIMSIM type 1/2/3/4 classification.**
-New file `OpenMath/DIMSIM.lean` (target ≤ 250 lines).
+**Next target — Butcher §54 RK-side DIMSIM bridges and concrete
+type 2/3/4 witnesses.** Append to `OpenMath/DIMSIM.lean` (target
+total file ≤ 200 lines).
 
-Butcher §541 classifies "Diagonally Implicit Multistage Integration
-Methods" (DIMSIMs) by which of `A` and `V` are restricted: type 1
-methods are **explicit** (`A` strictly lower triangular) with `V`
-unrestricted; type 2 are **diagonally implicit** (`A` lower
-triangular with constant diagonal) with `V` unrestricted; type 3
-specialise type 1 to `V` of rank one (an explicit method with a
-single output history quantity, useful for parallel implementation);
-type 4 specialise type 2 the same way.
+Cycle 748 landed the §541 type 1/2/3/4 predicates over
+`GeneralLinearMethod s r` plus a single type-1 witness for forward
+Euler. To make the §541 surface productive for §542 RK stability
+and §543 ARK work, cycle 750 consolidates the RK-side bridges:
 
-This cycle lands the predicates as `Prop`-valued definitions over
-`GeneralLinearMethod s r`, plus a single sanity check: every
-RK-as-GLM embedding of an explicit RK method is a type-1 DIMSIM
-(specialise to forward Euler for the concrete witness).
+- `ButcherTableau.toGLM_isRankOneV` — every RK-as-GLM has rank-one
+  `V` because `r = 1` makes `V k l = 1` definitionally.
+- `ButcherTableau.toGLM_isDIMSIMType3_of_isExplicit` — every
+  explicit RK embeds as a type-3 DIMSIM.
+- `ButcherTableau.toGLM_isLowerTriangular_of_isSDIRK` /
+  `toGLM_hasConstantDiagonal_of_isSDIRK` /
+  `toGLM_isDIMSIMType2_of_isSDIRK` /
+  `toGLM_isDIMSIMType4_of_isSDIRK` — every SDIRK embeds as a
+  type-2 (and hence type-4) DIMSIM.
+- Concrete witnesses: `rkEuler_toGLM_isDIMSIMType3`,
+  `rkSDIRK2_toGLM_isDIMSIMType2`, `rkSDIRK2_toGLM_isDIMSIMType4`.
+
+Next cycle should pivot to §542 Runge–Kutta stability for GLMs
+(the predicate that `M(z)` has at most one non-zero eigenvalue,
+with the trivial RK sanity check that follows because `r = 1`
+makes `M(z)` a 1×1 matrix and trivially has at most one non-zero
+eigenvalue).
 
 ---
 
