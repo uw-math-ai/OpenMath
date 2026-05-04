@@ -1897,6 +1897,71 @@ theorem adamsBashforth4_toGLM_hasOrderGe2 :
     all_goals simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ]
     all_goals norm_num
 
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Moulton 4-step
+
+`adamsMoulton4` (`s = 4`, eight GLM input slots `Fin 8`, implicit, order 5)
+embeds as a GLM of order ≥ 2. Same natural Nordsieck Taylor template as
+AM3/BDF3. -/
+theorem adamsMoulton4_toGLM_hasOrderGe2 :
+    adamsMoulton4.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 4 => (1 : ℝ)) (fun _ : Fin 4 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 4 => ((j : ℕ) : ℝ)) (fun _ : Fin 4 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 4 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 4 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    ?_, ?_, ?_, ?_⟩
+  · exact adamsMoulton4.toGLM_V_nordsieckQ_eq adamsMoulton4_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, adamsMoulton4, Fin.addCases, Fin.sum_univ_succ]
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsMoulton4, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsMoulton4, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+
+theorem adamsMoulton4_toGLM_hasOrderGe1 :
+    adamsMoulton4.toGLM.HasOrderGe1 :=
+  adamsMoulton4_toGLM_hasOrderGe2.toHasOrderGe1
+
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — BDF4
+
+`bdf4` (`s = 4`, eight GLM input slots `Fin 8`, implicit, order 4) embeds
+as a GLM of order ≥ 2. Same natural Nordsieck Taylor template as BDF3. -/
+theorem bdf4_toGLM_hasOrderGe2 :
+    bdf4.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 4 => (1 : ℝ)) (fun _ : Fin 4 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 4 => ((j : ℕ) : ℝ)) (fun _ : Fin 4 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 4 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 4 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    ?_, ?_, ?_, ?_⟩
+  · exact bdf4.toGLM_V_nordsieckQ_eq bdf4_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ]; norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+
+theorem bdf4_toGLM_hasOrderGe1 :
+    bdf4.toGLM.HasOrderGe1 :=
+  bdf4_toGLM_hasOrderGe2.toHasOrderGe1
+
 /-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 2-step
 
 `adamsMoulton2` (`s = 2`, four GLM input slots `Fin 4`, order 3) embeds
