@@ -448,6 +448,114 @@ theorem toGLM_hasOrderGe5 (t : ButcherTableau s)
       exact hb5
     rw [key]; norm_num
 
+/-- §530 — Embed an `s`-stage RK tableau of order ≥ 6 as a general linear method
+of order ≥ 6. The first seven identities collapse exactly as in
+`toGLM_hasOrderGe5`. The new eighth (sixth-derivative) identity reduces under
+RK Nordsieck to
+`720 · ∑_j b_j (∑_i A_ji (∑_i' A_ii' (∑_i'' A_i'i'' (∑_i''' A_i''i''' * c_i''')))) = 1`,
+i.e. `t.order6t` after reshape. -/
+theorem toGLM_hasOrderGe6 (t : ButcherTableau s)
+    (h6 : t.HasOrderGe6) (hC : t.IsConsistent) :
+    t.toGLM.HasOrderGe6 := by
+  refine ⟨fun _ => 1, fun _ => 0, fun _ => 0, fun _ => 0,
+          fun _ => 0, fun _ => 0, fun _ => 0,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro k; simp [toGLM_V]
+  · intro i; simp [toGLM_U]
+  · intro k
+    simp only [toGLM_V, toGLM_B, mul_zero, Finset.sum_const_zero, add_zero]
+    exact h6.1.1.1
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb2 : ∑ j, t.b j * t.c j = 1 / 2 := h6.1.1.2.1
+    rw [hb2]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb3 : ∑ i : Fin s, ∑ j : Fin s, t.b i * t.A i j * t.c j = 1 / 6 :=
+      h6.1.1.2.2.2.1
+    have key : (∑ j : Fin s, t.b j * ∑ i, t.A j i * t.c i) = 1 / 6 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j * ∑ i, t.A j i * t.c i)
+            = ∑ j : Fin s, ∑ i, t.b j * t.A j i * t.c i := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]; exact hb3
+    rw [key]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb4 : ∑ i : Fin s, ∑ j : Fin s, ∑ k' : Fin s,
+        t.b i * t.A i j * t.A j k' * t.c k' = 1 / 24 :=
+      h6.1.1.2.2.2.2.2.2.2
+    have key :
+        (∑ j : Fin s, t.b j *
+          ∑ i, t.A j i * ∑ i', t.A i i' * t.c i') = 1 / 24 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j *
+            ∑ i, t.A j i * ∑ i', t.A i i' * t.c i')
+            = ∑ j : Fin s, ∑ i, ∑ i',
+                t.b j * t.A j i * t.A i i' * t.c i' := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]; exact hb4
+    rw [key]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb5 : t.order5i := h6.1.2.2.2.2.2.2.2.2.2
+    have key :
+        (∑ j : Fin s, t.b j *
+          ∑ i, t.A j i *
+            ∑ i', t.A i i' *
+              ∑ i'', t.A i' i'' * t.c i'') = 1 / 120 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j *
+            ∑ i, t.A j i *
+              ∑ i', t.A i i' *
+                ∑ i'', t.A i' i'' * t.c i'')
+            = ∑ j : Fin s, ∑ i, ∑ i',
+                t.b j * t.A j i * t.A i i' *
+                  ∑ i'', t.A i' i'' * t.c i'' := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]
+      exact hb5
+    rw [key]; norm_num
+  · intro k
+    simp only [toGLM_V, toGLM_B, toGLM_A, toGLM_U, mul_zero,
+      Finset.sum_const_zero, add_zero]
+    have hcj : ∀ j, (∑ i, t.A j i) = t.c j := fun j => (hC.row_sum j).symm
+    simp_rw [hcj]
+    have hb6 : t.order6t :=
+      h6.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2
+    have key :
+        (∑ j : Fin s, t.b j *
+          ∑ i, t.A j i *
+            ∑ i', t.A i i' *
+              ∑ i'', t.A i' i'' *
+                ∑ i''', t.A i'' i''' * t.c i''') = 1 / 720 := by
+      have hreshape :
+          (∑ j : Fin s, t.b j *
+            ∑ i, t.A j i *
+              ∑ i', t.A i i' *
+                ∑ i'', t.A i' i'' *
+                  ∑ i''', t.A i'' i''' * t.c i''')
+            = ∑ j : Fin s, ∑ i, ∑ i',
+                t.b j * t.A j i * t.A i i' *
+                  ∑ i'', t.A i' i'' *
+                    ∑ i''', t.A i'' i''' * t.c i''' := by
+        simp [Finset.mul_sum, mul_assoc]
+      rw [hreshape]
+      exact hb6
+    rw [key]; norm_num
+
 end ButcherTableau
 
 /-- **§530 sanity** — `rkEuler` (forward Euler) embeds as a GLM
@@ -1236,3 +1344,12 @@ theorem rkRadauIA3_toGLM_hasOrderGe5 :
     rkRadauIA3.toGLM.HasOrderGe5 :=
   rkRadauIA3.toGLM_hasOrderGe5
     rkRadauIA3_order5 rkRadauIA3_consistent
+
+/-- §530 sanity — Gauss–Legendre 3-stage has order 6 (= 2s for s = 3,
+the maximum possible for any s-stage RK method) and so embeds as a
+GLM of order ≥ 6. This is the unique RK witness in the codebase for
+order 6. -/
+theorem rkGaussLegendre3_toGLM_hasOrderGe6 :
+    rkGaussLegendre3.toGLM.HasOrderGe6 :=
+  rkGaussLegendre3.toGLM_hasOrderGe6
+    rkGaussLegendre3_order6 rkGaussLegendre3_consistent

@@ -340,6 +340,77 @@ theorem HasOrderGe5.toHasOrderGe4 {s r : ℕ}
     hVq, hUq, hBq', hBq'', hBq''', hBq'''', _⟩ := h
   exact ⟨q, q', q'', q''', q'''', hVq, hUq, hBq', hBq'', hBq''', hBq''''⟩
 
+/-- **Butcher §530** — A general linear method `(A, U, B, V)` has
+**order at least 6** if there exist Nordsieck input vectors
+`q, q', q'', q''', q'''', q''''', q'''''' : Fin r → ℝ` such that the §510
+preconsistency identities hold together with the first- through
+sixth-derivative Taylor compatibility identities for the GLM update.
+The sixth-derivative identity uses the order-1 stage abscissa,
+the order-2 stage moment, the order-3 stage moment, the order-4 stage
+moment, and the order-5 stage moment. The leading `720 ·` factor
+matches the `h⁶/6!` Taylor coefficient. -/
+def HasOrderGe6 (m : GeneralLinearMethod s r) : Prop :=
+  ∃ q q' q'' q''' q'''' q''''' q'''''' : Fin r → ℝ,
+    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧
+    (∀ i : Fin s, ∑ k, m.U i k * q k = 1) ∧
+    (∀ k : Fin r, (∑ j, m.B k j) + ∑ l, m.V k l * q' l = q k + q' k) ∧
+    (∀ k : Fin r,
+      2 * (∑ j, m.B k j * ((∑ i, m.A j i) + ∑ l, m.U j l * q' l)) +
+        ∑ l, m.V k l * q'' l =
+      q k + 2 * q' k + q'' k) ∧
+    (∀ k : Fin r,
+      6 * (∑ j, m.B k j *
+            ((∑ i, m.A j i * ((∑ i', m.A i i') + ∑ l, m.U i l * q' l)) +
+              ∑ l, m.U j l * q'' l)) +
+        ∑ l, m.V k l * q''' l =
+      q k + 3 * q' k + 3 * q'' k + q''' k) ∧
+    (∀ k : Fin r,
+      24 * (∑ j, m.B k j *
+            ((∑ i, m.A j i *
+              ((∑ i', m.A i i' *
+                ((∑ i'', m.A i' i'') + ∑ l, m.U i' l * q' l)) +
+                ∑ l, m.U i l * q'' l)) +
+              ∑ l, m.U j l * q''' l)) +
+        ∑ l, m.V k l * q'''' l =
+      q k + 4 * q' k + 6 * q'' k + 4 * q''' k + q'''' k) ∧
+    (∀ k : Fin r,
+      120 * (∑ j, m.B k j *
+            ((∑ i, m.A j i *
+              ((∑ i', m.A i i' *
+                ((∑ i'', m.A i' i'' *
+                  ((∑ i''', m.A i'' i''') + ∑ l, m.U i'' l * q' l)) +
+                  ∑ l, m.U i' l * q'' l)) +
+                ∑ l, m.U i l * q''' l)) +
+              ∑ l, m.U j l * q'''' l)) +
+        ∑ l, m.V k l * q''''' l =
+      q k + 5 * q' k + 10 * q'' k + 10 * q''' k + 5 * q'''' k + q''''' k) ∧
+    (∀ k : Fin r,
+      720 * (∑ j, m.B k j *
+            ((∑ i, m.A j i *
+              ((∑ i', m.A i i' *
+                ((∑ i'', m.A i' i'' *
+                  ((∑ i''', m.A i'' i''' *
+                    ((∑ i'''', m.A i''' i'''') + ∑ l, m.U i''' l * q' l)) +
+                    ∑ l, m.U i'' l * q'' l)) +
+                  ∑ l, m.U i' l * q''' l)) +
+                ∑ l, m.U i l * q'''' l)) +
+              ∑ l, m.U j l * q''''' l)) +
+        ∑ l, m.V k l * q'''''' l =
+      q k + 6 * q' k + 15 * q'' k + 20 * q''' k + 15 * q'''' k +
+        6 * q''''' k + q'''''' k)
+
+/-- §530 monotonicity — order ≥ 6 implies order ≥ 5. The order-≥ 6
+witness `(q, q', q'', q''', q'''', q''''', q'''''')` projects to the
+order-≥ 5 witness `(q, q', q'', q''', q'''', q''''')` by dropping the
+sixth-derivative identity. -/
+theorem HasOrderGe6.toHasOrderGe5 {s r : ℕ}
+    {m : GeneralLinearMethod s r} (h : m.HasOrderGe6) :
+    m.HasOrderGe5 := by
+  obtain ⟨q, q', q'', q''', q'''', q''''', _q'''''',
+    hVq, hUq, hBq', hBq'', hBq''', hBq'''', hBq''''', _⟩ := h
+  exact ⟨q, q', q'', q''', q'''', q''''',
+    hVq, hUq, hBq', hBq'', hBq''', hBq'''', hBq'''''⟩
+
 /-! ## §520 — Stability Matrix -/
 
 /-- Complex lift of the `A` block. -/
