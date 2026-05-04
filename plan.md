@@ -216,8 +216,10 @@ codebase.
   `rkRKF45_embed_order4`, `rkRKF45_embed_not_order5`,
   `rkRKF45_errorWeights_sum`).
 - [ ] **§335 Verner 6(5) / 7(8)** embedded pairs (low priority).
-- [ ] **§336 Dormand–Prince 5(4) (DOPRI5)** embedded pair: tableau,
-  consistency, orders 5 and 4, FSAL, error-weight closure.
+- [x] **§336 Dormand–Prince 5(4) (DOPRI5)** embedded pair
+  (`OpenMath/EmbeddedRK.lean`: tableau, consistency, orders 5/4,
+  FSAL, stiffly accurate, error weights sum to zero,
+  embed-not-order-5 and main-not-order-6 negative checks).
 
 ### §34 Implicit Runge–Kutta Methods
 - [x] **§340 Introduction**: implicit Euler / implicit midpoint
@@ -1032,6 +1034,10 @@ error bound for one specific scheme:
   weighted adjugate sum `1`, while IIIC3 has determinant
   `lobIIIC3Denom z / 24` and weighted adjugate sum
   `(z ^ 2 - 6*z + 24) / 24`.
+- **Cycle 744 closed §336 housekeeping; promoted §463 Milne device** —
+  `OpenMath/MilneDevice.lean` lands the `MilneDevicePair sP sC p`
+  structure, `milneFactor`, `localErrorEstimate`, and the concrete
+  AB4 / AM3 instance with `milneAB4AM3.milneFactor = -(19/270)`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1067,12 +1073,10 @@ error bound for one specific scheme:
 3. **Butcher §215 — Asymptotic error formula for the Euler method.**
     Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
     ODE. Extends `OpenMath/EulerConvergence.lean`.
-4. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
-    Same template as §334. Extends `OpenMath/EmbeddedRK.lean`.
-5. **Butcher §463 — Milne device for local error estimation.** New
+4. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-6. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
+5. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
     Cycle 627 opened the GLM A-stability predicate and RK bridge.
     Cycles 630–632 landed three concrete LMM-side transports
     (`backwardEuler_toGLM_isAStable`,
@@ -1097,16 +1101,16 @@ error bound for one specific scheme:
     stability for GLMs; (c) further concrete LMM A-stability transports
     (e.g. AM2 / AB2) are now one-shot consequences of the iff bridge
     and only worth pursuing if explicitly demanded.
-7. **Butcher §54 — DIMSIM types and ARK methods.** New file
+6. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
-8. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+7. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
     `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
     property F.
-9. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+8. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
     §365 (effective order definition / DESIRE) plus §389 algebraic
     interpretation. Builds on Current Target.
-10. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+9. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
 When this list reaches under five items, any planner cycle that lands
@@ -1118,28 +1122,26 @@ let the queue empty.
 
 ## Current Target
 
-**Next target — Butcher §336 Dormand–Prince 5(4) (DOPRI5) embedded pair
-(Backlog item #4).** Extends `OpenMath/EmbeddedRK.lean` (currently 509
-lines). Mirror the cycle 494 RKF45 closure with one new tableau and
-parallel order-condition checks: 7-stage `EmbeddedRKPair 7`, FSAL,
-explicit, consistent, error-weights sum to zero, embedding has order 4
-but not 5, main has order 5 but not 6.
+**Next target — Butcher §463 Milne device for local error estimation.**
+New file `OpenMath/MilneDevice.lean` (target ≤ 250 lines).
 
-Tableau (standard DOPRI5; Hairer–Nørsett–Wanner Vol. I §II.5):
-```
-c = ![0, 1/5, 3/10, 4/5, 8/9, 1, 1]
-A row 0: ![0, 0, 0, 0, 0, 0, 0]
-A row 1: ![1/5, 0, 0, 0, 0, 0, 0]
-A row 2: ![3/40, 9/40, 0, 0, 0, 0, 0]
-A row 3: ![44/45, -56/15, 32/9, 0, 0, 0, 0]
-A row 4: ![19372/6561, -25360/2187, 64448/6561, -212/729, 0, 0, 0]
-A row 5: ![9017/3168, -355/33, 46732/5247, 49/176, -5103/18656, 0, 0]
-A row 6: ![35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0]
-b    = ![35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0]
-bHat = ![5179/57600, 0, 7571/16695, 393/640, -92097/339200, 187/2100, 1/40]
-```
-Note: `b = A.row 6` (FSAL); `b 1 = bHat 1 = 0`; only `bHat 6` nonzero
-on the FSAL slot.
+The classical Milne device pairs an explicit Adams–Bashforth predictor
+with an implicit Adams–Moulton corrector of the **same order** and
+estimates the corrector's local truncation error from the
+predictor / corrector difference. The standard pair at order 4 is
+
+- predictor: `adamsBashforth4` — order 4, error constant `C^P = 251/720`
+- corrector: `adamsMoulton3`   — order 4, error constant `C^C = -19/720`
+
+The Milne local-error estimate for the corrector is
+
+    LTE^C_n ≈ (C^C / (C^P - C^C)) · (y^C_n − y^P_n)
+            = (-19 / 270) · (y^C_n − y^P_n)
+
+This cycle lands the structural definitions plus the concrete
+AB4 / AM3 instance and the Milne error-constant ratio identity. The
+quantitative LTE asymptotic statement is deferred (it requires the
+§215 asymptotic-error machinery).
 
 ---
 
