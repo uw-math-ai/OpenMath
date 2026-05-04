@@ -1765,6 +1765,18 @@ theorem adamsMoulton2_toGLM_hasOrderGe3 :
     all_goals simp [LMM.toGLM, adamsMoulton2, Fin.addCases, Fin.sum_univ_succ]
     all_goals norm_num
 
+/-- §530 projection — `adamsMoulton2.toGLM` has order ≥ 2 by dropping
+the third-derivative obligation from `adamsMoulton2_toGLM_hasOrderGe3`. -/
+theorem adamsMoulton2_toGLM_hasOrderGe2 :
+    adamsMoulton2.toGLM.HasOrderGe2 :=
+  adamsMoulton2_toGLM_hasOrderGe3.toHasOrderGe2
+
+/-- §530 projection — `adamsMoulton2.toGLM` has order ≥ 1 by dropping
+the second-derivative obligation. -/
+theorem adamsMoulton2_toGLM_hasOrderGe1 :
+    adamsMoulton2.toGLM.HasOrderGe1 :=
+  adamsMoulton2_toGLM_hasOrderGe2.toHasOrderGe1
+
 namespace Matrix
 
 /-- §521 helper — auxiliary cardinality split for `Finset n`-indexed sums:
