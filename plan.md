@@ -863,8 +863,10 @@ error bound for one specific scheme:
 - [ ] **§523 Non-linear stability** — algebraic stability for GLMs.
 - [ ] **§524 Reducible linear multistep methods and G-stability** —
   reuses §451.
-- [ ] **§525 G-symplectic methods** — symplectic GLMs (extends §37 to
-  the GLM setting).
+- [x] **§525 G-symplectic methods** — symplectic GLMs (extends §37 to
+  the GLM setting). `IsGSymplectic` predicate, RK-side bridge, and
+  Gauss–Legendre 1/2/3 witnesses live in `OpenMath/GSymplecticGLM.lean`
+  (cycle 758).
 
 ### §53 The Order of General Linear Methods
 - [ ] **§530 Possible definitions of order** — order via local
@@ -1054,6 +1056,14 @@ error bound for one specific scheme:
   RK-side trivial bridge land in `OpenMath/DIMSIM.lean` with three RK
   concrete witnesses. **Cycle 756 extends RK witnesses to `rkSDIRK3`
   for §541/§542/§543.**
+- **Cycle 758 closed §525 G-symplectic GLMs** — new module
+  `OpenMath/GSymplecticGLM.lean` lands the `IsGSymplectic` predicate
+  in index form (`Fin r → Fin r → ℝ` weight matrix), the RK-side
+  bridge `ButcherTableau.toGLM_isGSymplectic_of_isSymplectic` (with
+  `G ≡ 1`, `D := t.b`, collapsing via `r = 1`), and the three
+  Gauss–Legendre witnesses
+  `rkGaussLegendre{1,2,3}_toGLM_isGSymplectic`. Mirrors the
+  §541 / §542 / §543 cycle layout.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1135,35 +1145,36 @@ let the queue empty.
 
 ## Current Target
 
-**Next target — pivot away from the §54 RK-side witness ladder.**
-Cycle 756 closed the small follow-on of extending §541/§542/§543
-RK-side witnesses to `rkSDIRK3` (in `OpenMath/DIMSIM.lean`). The
-RK-side §541–§543 surface is now fully populated for the available
-SDIRK witnesses; further RK-side witnesses would just enumerate
-tableaux without adding mathematical content, and any §544+ work is
-blocked on `r ≥ 2` GLM charpoly factorisation (see `disproven.md`
-and the open `lmm_*charpoly*` issues).
+**Next target — §530 / §531 GLM order definition.** Cycle 758 closed
+§525 G-symplectic GLMs in the index-form predicate style (new module
+`OpenMath/GSymplecticGLM.lean`, RK-side bridge, GL 1/2/3 witnesses),
+mirroring the §541/§542/§543 cycle layout. The remaining
+predicate-level extensions in §52–§55 are §530/§531 (GLM order) and
+§55 IRKS (lower priority).
 
-Cycle 757 should choose **one** of the following predicate-level
-extensions (planner picks; do not preempt). Each is a small, sorry-
-first scaffold mirroring the §541 / §542 / §543 cycle pattern:
+Cycle 759 should land a small, sorry-first scaffold for **§530 GLM
+order via local truncation error**:
 
-- **§525 G-symplectic methods.** New module
-  `OpenMath/GSymplecticGLM.lean` with an `IsGSymplectic` predicate
-  on `GeneralLinearMethod s r` (RK-side reduction collapses to the
-  existing §37 RK symplectic predicate).
-- **§530 / §531 GLM order definition.** `GeneralLinearMethod.HasOrder p`
-  via local truncation error in `OpenMath/GeneralLinearMethod.lean`,
-  plus the RK-as-GLM sanity bridge using existing `OneStepConvergence`
-  order predicates.
-- **§55 IRKS predicate scaffold.** `IsInherentlyRKStable` in a new
-  module `OpenMath/IRKS.lean`. Lower priority because the predicate
-  involves the minimal polynomial of `M(z)`, which is closer to LMM
-  charpoly territory that has stalled.
+- Add `GeneralLinearMethod.HasOrder` (or a §530-faithful name) in
+  `OpenMath/GeneralLinearMethod.lean`, defined via the Taylor-expansion
+  local truncation error of the GLM update. Index form, scalar test
+  problem `y' = f(x, y)` is sufficient for the predicate; the full
+  vector-valued formulation can come later.
+- Bridge: `ButcherTableau.toGLM_hasOrder_of_hasOrderGe` connecting the
+  RK-as-GLM embedding to the existing §31 order predicates
+  (`HasOrderGe1`, `HasOrderGe2`, …) at small `p`. The trivial cases
+  (orders 1–2) should follow by `simp` plus the existing RK
+  consistency / row-sum lemmas; higher orders can be left as
+  `[ ]` follow-ups.
+- Concrete sanity witness: at least one RK method (e.g. `rkEuler` at
+  order 1, `rkImplicitMidpoint` at order 2).
 
 **Do not** attempt §544–§547 ARK examples (need `r ≥ 2` and LMM-style
-charpoly factorisation; see `disproven.md`). **Do not** modify the
-closed §541/§542/§543 predicates; downstream RK bridges depend on
+charpoly factorisation; see `disproven.md`). **Do not** attempt the
+§55 IRKS scaffold ahead of §530 — the IRKS predicate involves the
+minimal polynomial of `M(z)`, which is closer to LMM charpoly
+territory that has stalled. **Do not** modify the closed
+§541/§542/§543/§525 predicates; downstream RK bridges depend on
 their exact shape.
 
 ---
