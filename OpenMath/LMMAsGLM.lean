@@ -1651,6 +1651,10 @@ theorem bdf2_toGLM_hasOrderGe1 :
     bdf2.toGLM.HasOrderGe1 :=
   bdf2.toGLM_hasOrderGe1 bdf2_consistent
 
+theorem adamsBashforth2_toGLM_hasOrderGe1 :
+    adamsBashforth2.toGLM.HasOrderGe1 :=
+  adamsBashforth2.toGLM_hasOrderGe1 adamsBashforth2_consistent
+
 /-! ### §530 LMM-as-GLM order-≥ 2 witness — trapezoidal rule
 
 The trapezoidal rule (`s = 1`, two GLM input slots `Fin 2`) embeds as a
@@ -1718,6 +1722,38 @@ theorem bdf2_toGLM_hasOrderGe2 :
     all_goals norm_num
   · intro k; fin_cases k
     all_goals simp [LMM.toGLM, bdf2, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Bashforth 2-step
+
+`adamsBashforth2` (`s = 2`, four GLM input slots `Fin 4`, explicit with
+`β_s = 0`) embeds as a GLM of order ≥ 2. The witness uses the natural
+Nordsieck Taylor template (no shift): `q' j = j` on past-`y` and `1`
+on past-`h·f`, `q'' j = j²` on past-`y` and `2 j` on past-`h·f`.
+Because AB2 is explicit, the implicit-row contribution (β_s · …)
+vanishes, making this a strictly easier case than BDF2. -/
+theorem adamsBashforth2_toGLM_hasOrderGe2 :
+    adamsBashforth2.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 2 => (1 : ℝ)) (fun _ : Fin 2 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 2 => ((j : ℕ) : ℝ)) (fun _ : Fin 2 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 2 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 2 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    ?_, ?_, ?_, ?_⟩
+  · exact adamsBashforth2.toGLM_V_nordsieckQ_eq adamsBashforth2_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, adamsBashforth2, Fin.addCases, Fin.sum_univ_succ]
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsBashforth2, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsBashforth2, Fin.addCases, Fin.sum_univ_succ]
     all_goals norm_num
 
 /-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 2-step
