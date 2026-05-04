@@ -881,7 +881,9 @@ error bound for one specific scheme:
   (`OpenMath/DIMSIM.lean`, cycle 748).
 - [x] **§542 Runge–Kutta stability** — the condition `M(z)` has a single
   non-zero eigenvalue (`OpenMath/DIMSIM.lean`, cycle 752).
-- [ ] **§543 Almost Runge–Kutta methods (ARK)**.
+- [x] **§543 Almost Runge–Kutta methods (ARK)** — `IsAlmostRungeKutta`
+  predicate plus RK-side trivial bridge (`OpenMath/DIMSIM.lean`,
+  cycle 754).
 - [ ] **§544–§546 Concrete ARK methods** (3-stage order 3,
   4-stage order 4, 5-stage order 5).
 - [ ] **§547 ARK methods for stiff problems**.
@@ -1048,6 +1050,10 @@ error bound for one specific scheme:
   `rkImplicitEuler`, and `rkSDIRK2`. Hoisted
   `ButcherTableau.charpoly_fin_one_const_isRoot_iff` from `private`
   to public so the bridge can reuse the §520 helper.
+- **Cycle 754 closed §543 GLM ARK** — `IsAlmostRungeKutta` and the
+  RK-side trivial bridge land in `OpenMath/DIMSIM.lean` with three RK
+  concrete witnesses. **Cycle 756 extends RK witnesses to `rkSDIRK3`
+  for §541/§542/§543.**
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1129,36 +1135,36 @@ let the queue empty.
 
 ## Current Target
 
-**Next target — Butcher §543 Almost Runge–Kutta methods (ARK)
-structural conditions.** Append to `OpenMath/DIMSIM.lean` (currently
-~265 lines after the cycle 752 §542 work; well under the size cap).
+**Next target — pivot away from the §54 RK-side witness ladder.**
+Cycle 756 closed the small follow-on of extending §541/§542/§543
+RK-side witnesses to `rkSDIRK3` (in `OpenMath/DIMSIM.lean`). The
+RK-side §541–§543 surface is now fully populated for the available
+SDIRK witnesses; further RK-side witnesses would just enumerate
+tableaux without adding mathematical content, and any §544+ work is
+blocked on `r ≥ 2` GLM charpoly factorisation (see `disproven.md`
+and the open `lmm_*charpoly*` issues).
 
-Cycle 752 landed §542 Runge–Kutta stability for GLMs as the predicate
-`IsRungeKuttaStable m := ∀ z, any two non-zero charpoly roots of
-`m.stabilityMatrix z` are equal`, plus the RK-side sanity bridge
-`ButcherTableau.toGLM_isRungeKuttaStable` (trivial via the §520
-`charpoly_fin_one_const_isRoot_iff` helper, which was hoisted from
-`private` to public for this purpose).
+Cycle 757 should choose **one** of the following predicate-level
+extensions (planner picks; do not preempt). Each is a small, sorry-
+first scaffold mirroring the §541 / §542 / §543 cycle pattern:
 
-Next cycle should:
+- **§525 G-symplectic methods.** New module
+  `OpenMath/GSymplecticGLM.lean` with an `IsGSymplectic` predicate
+  on `GeneralLinearMethod s r` (RK-side reduction collapses to the
+  existing §37 RK symplectic predicate).
+- **§530 / §531 GLM order definition.** `GeneralLinearMethod.HasOrder p`
+  via local truncation error in `OpenMath/GeneralLinearMethod.lean`,
+  plus the RK-as-GLM sanity bridge using existing `OneStepConvergence`
+  order predicates.
+- **§55 IRKS predicate scaffold.** `IsInherentlyRKStable` in a new
+  module `OpenMath/IRKS.lean`. Lower priority because the predicate
+  involves the minimal polynomial of `M(z)`, which is closer to LMM
+  charpoly territory that has stalled.
 
-- Introduce an `IsAlmostRungeKutta` predicate that combines §542 RK
-  stability with the §543 leading-sub-eigenstructure constraint
-  (Butcher's design: the spurious eigenvalues are forced to zero
-  *and* the sub-leading eigenstructure has a prescribed nilpotent
-  shape). A reasonable sorry-first encoding is:
-  `IsRungeKuttaStable m ∧ ∀ z, ∀ μ, charpoly μ → μ ≠ 0 → μ.re ≤ ...`.
-  Pick the precise sub-eigenstructure clause directly from §543
-  Definition 540 of the textbook; do not freelance.
-- Prove the RK-side sanity check, which is again trivial because
-  `r = 1` collapses any sub-eigenstructure constraint.
-- Land concrete witnesses for `rkEuler`, `rkImplicitEuler`,
-  `rkSDIRK2` mirroring the cycle 752 §542 pattern.
-
-**Do not** attempt §543 for non-trivial GLMs (LMM-as-GLM, DIMSIM
-type 1/2/3/4 with `r ≥ 2`); the disproven-identities log shows
-that LMM charpoly factorisation has consumed dozens of cycles, and
-RK-side is the deliverable.
+**Do not** attempt §544–§547 ARK examples (need `r ≥ 2` and LMM-style
+charpoly factorisation; see `disproven.md`). **Do not** modify the
+closed §541/§542/§543 predicates; downstream RK bridges depend on
+their exact shape.
 
 ---
 

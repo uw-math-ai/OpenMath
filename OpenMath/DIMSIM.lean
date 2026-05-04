@@ -1,5 +1,6 @@
 import OpenMath.RKAsGLM
 import OpenMath.SDIRK
+import OpenMath.SDIRK3
 
 /-!
 # Butcher §54 — DIMSIM type 1/2/3/4 classification
@@ -172,6 +173,16 @@ theorem rkSDIRK2_toGLM_isDIMSIMType4 :
     (rkSDIRK2.toGLM).IsDIMSIMType4 :=
   rkSDIRK2.toGLM_isDIMSIMType4_of_isSDIRK rkSDIRK2_isSDIRK
 
+/-- 3-stage SDIRK embeds as a type-2 DIMSIM. -/
+theorem rkSDIRK3_toGLM_isDIMSIMType2 :
+    (rkSDIRK3.toGLM).IsDIMSIMType2 :=
+  rkSDIRK3.toGLM_isDIMSIMType2_of_isSDIRK rkSDIRK3_isSDIRK
+
+/-- 3-stage SDIRK embeds as a type-4 DIMSIM. -/
+theorem rkSDIRK3_toGLM_isDIMSIMType4 :
+    (rkSDIRK3.toGLM).IsDIMSIMType4 :=
+  rkSDIRK3.toGLM_isDIMSIMType4_of_isSDIRK rkSDIRK3_isSDIRK
+
 /-! ## §542 — Runge–Kutta stability of general linear methods
 
 Butcher §542 isolates the design criterion that the stability matrix
@@ -228,6 +239,11 @@ theorem rkImplicitEuler_toGLM_isRungeKuttaStable :
 theorem rkSDIRK2_toGLM_isRungeKuttaStable :
     (rkSDIRK2.toGLM).IsRungeKuttaStable :=
   rkSDIRK2.toGLM_isRungeKuttaStable
+
+/-- 3-stage SDIRK embeds with §542 Runge–Kutta stability. -/
+theorem rkSDIRK3_toGLM_isRungeKuttaStable :
+    (rkSDIRK3.toGLM).IsRungeKuttaStable :=
+  rkSDIRK3.toGLM_isRungeKuttaStable
 
 /-- Forward Euler embeds as a type-3 DIMSIM that is also §542
 Runge–Kutta stable. -/
@@ -292,3 +308,8 @@ theorem rkImplicitEuler_toGLM_isAlmostRungeKutta :
 theorem rkSDIRK2_toGLM_isAlmostRungeKutta :
     (rkSDIRK2.toGLM).IsAlmostRungeKutta :=
   rkSDIRK2.toGLM_isAlmostRungeKutta
+
+/-- 3-stage SDIRK embeds as ARK. -/
+theorem rkSDIRK3_toGLM_isAlmostRungeKutta :
+    (rkSDIRK3.toGLM).IsAlmostRungeKutta :=
+  rkSDIRK3.toGLM_isAlmostRungeKutta
