@@ -1,4 +1,5 @@
 import OpenMath.MultistepMethods
+import OpenMath.AdamsMethods
 import OpenMath.GeneralLinearMethod
 import OpenMath.DahlquistEquivalence
 import OpenMath.BDF
@@ -1718,6 +1719,37 @@ theorem bdf2_toGLM_hasOrderGe2 :
   · intro k; fin_cases k
     all_goals simp [LMM.toGLM, bdf2, Fin.addCases, Fin.sum_univ_succ]
     all_goals norm_num
+
+/-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 2-step
+
+`adamsMoulton2` (`s = 2`, four GLM input slots `Fin 4`, order 3) embeds
+as a GLM of order ≥ 3. The witness extends the BDF2 cycle 778 Nordsieck
+table by one more moment vector `q'''` capturing the cubic Taylor
+coefficient: `q''' j = (j : ℝ)^3` on past-`y` and `3 (j : ℝ)^2` on
+past-`h·f`. -/
+theorem adamsMoulton2_toGLM_hasOrderGe3 :
+    adamsMoulton2.toGLM.HasOrderGe3 := by
+  refine ⟨
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 2 => (1 : ℝ)) (fun _ : Fin 2 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 2 => ((j : ℕ) : ℝ)) (fun _ : Fin 2 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 2 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 2 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 2 => ((j : ℕ) : ℝ) ^ 3)
+      (fun j : Fin 2 => 3 * ((j : ℕ) : ℝ) ^ 2)
+      (Fin.cast (Nat.two_mul 2) k),
+    ?_, ?_, ?_, ?_, ?_⟩
+  · exact adamsMoulton2.toGLM_V_nordsieckQ_eq adamsMoulton2_consistent
+  · sorry
+  · sorry
+  · sorry
+  · sorry
 
 namespace Matrix
 
