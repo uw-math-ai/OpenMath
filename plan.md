@@ -849,8 +849,13 @@ error bound for one specific scheme:
   `LMM.toGLM_stabilityDefect_zero` in `OpenMath/LMMAsGLM.lean`).
   Cycle 657 added the 3-stage Lobatto IIIA / IIIC RK-side GLM
   A-stability transports in `OpenMath/RKAsGLM.lean`.
-  Remaining §521 milestone is the LMM-side iff bridge
-  `LMM.toGLM_isAStable_iff` (needs general-`s` charpoly factorisation).
+  Cycle 740 landed the general-`s` LMM-side iff bridge
+  `LMM.toGLM_isAStable_iff` in
+  `OpenMath/LMMAsGLM/StabilityCharpolyEval.lean`, with the eval-form
+  charpoly root iffs `toGLM_charpoly_eval_eq_zero_iff` /
+  `toGLM_charpoly_eval_ne_zero_iff` (Steps L.1 / L.2). Together with
+  the cycle 736 polynomial identity K.1, this closes the §521 LMM-side
+  A-stability iff bridge with no BDF restriction.
 - [ ] **§522 Outline proof of the Butcher–Chipman conjecture** — order
   of `M(z)` as approximation to `exp(z) · I`. (Outline only; full proof
   out of scope for this cycle.)
@@ -1081,17 +1086,19 @@ error bound for one specific scheme:
     specialization in `OpenMath/RKAsGLM.lean`.
     Cycle 636 mirrored cycle 635 on the LMM side
     (`LMM.nordsieckQ`, `LMM.toGLM_V_nordsieckQ_eq`,
-    `LMM.toGLM_stabilityDefect_zero` in `OpenMath/LMMAsGLM.lean`); the
-    next §521 milestone (the iff bridge) remains.
-    Next milestones, in priority order:
-    (1) prove the LMM-side iff bridge `LMM.toGLM_isAStable_iff` using
-    the general-`s` charpoly factorisation
-    `charpoly(M(z)) = X^s · π(·, z)` up to scaling, leveraging the
-    block-decomposition pattern from cycle 632; (2) only after the
-    iff bridge lands consider further concrete LMM A-stability transports
-    — **not** `am2` / `ab2` next. Later §522 can
-    record the Butcher–Chipman conjecture outline: order of `M(z)` as
-    approximation to `exp(z) · I`.
+    `LMM.toGLM_stabilityDefect_zero` in `OpenMath/LMMAsGLM.lean`).
+    Cycle 736 landed the cycle-736 polynomial identity K.1
+    `D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly`. Cycle 740
+    landed the §521 LMM-side iff bridge `LMM.toGLM_isAStable_iff` in
+    `OpenMath/LMMAsGLM/StabilityCharpolyEval.lean` (with eval-form
+    helpers `toGLM_charpoly_eval_eq_zero_iff` /
+    `toGLM_charpoly_eval_ne_zero_iff`). The §521 LMM iff bridge is
+    closed at the headline level. Remaining §521 milestones are:
+    (a) §522 outline of the Butcher–Chipman conjecture (order of `M(z)`
+    as an approximation to `exp(z) · I`); (b) §523 non-linear / algebraic
+    stability for GLMs; (c) further concrete LMM A-stability transports
+    (e.g. AM2 / AB2) are now one-shot consequences of the iff bridge
+    and only worth pursuing if explicitly demanded.
 8. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
@@ -1113,26 +1120,33 @@ let the queue empty.
 
 ## Current Target
 
-**Butcher §521 — LMM-to-GLM A-stability iff bridge.**
-Active file: `OpenMath/LMMAsGLM.lean`. The concrete RK-side GLM
-A-stability transports through the planned Lobatto 3-stage candidates
-are closed as of cycle 657. The remaining §521 milestone is the
-LMM-side iff bridge:
+**Butcher §521 LMM-to-GLM A-stability iff bridge — CLOSED (cycle 740).**
+The headline `LMM.toGLM_isAStable_iff` lives in
+`OpenMath/LMMAsGLM/StabilityCharpolyEval.lean` together with the
+eval-form charpoly root iffs
+`toGLM_charpoly_eval_eq_zero_iff` / `toGLM_charpoly_eval_ne_zero_iff`.
+This finishes Backlog item #7's iff-bridge sub-goal and removes the
+last load-bearing §521 algebraic obstruction.
 
-Concrete next targets:
-- Prove, or sharply decompose, `LMM.toGLM_isAStable_iff` for a general
-  `s`-step LMM embedded as a GLM.
-- Start from the BDF-specialized bridge
-  `LMM.toGLM_isAStable_iff_of_bdf` and the direct BDF2 block
-  factorisation already in `OpenMath/LMMAsGLM.lean`.
-- Isolate the general-`s` charpoly factorisation
-  `charpoly(M(z)) = X^s · π(·, z)` up to the scalar denominator
-  factor, using the rank-one / companion-style block decomposition
-  tracked in
-  `.prover-state/issues/lmm_toGLM_general_charpoly_rank_one.md`.
-- If the full iff is still too large for one cycle, land a named helper
-  for one side of the block determinant or write a structured issue
-  explaining the exact algebraic obstruction.
+**Next target — Butcher §111 Linear systems of differential equations
+(Backlog item #3).** New file `OpenMath/LinearODE.lean`. Goal: state
+and prove the closed-form solution `y(x) = exp((x − x₀) A) y₀` for
+linear ODEs with constant matrix coefficient, as a thin re-export of
+Mathlib `Matrix.exp` plus `Matrix.exp_add` for commuting matrices.
+
+Concrete next steps:
+- Stub `OpenMath/LinearODE.lean` with the statement and a sorry-first
+  proof skeleton; verify imports compile.
+- Identify the precise Mathlib API: `Matrix.exp`,
+  `Matrix.hasDerivAt_exp` (or local equivalent), `Matrix.exp_add`,
+  and the linear-ODE uniqueness lemma in `OpenMath/LinearODE.lean`'s
+  scope.
+- If a needed lemma (e.g. derivative of `Matrix.exp` along a real
+  parameter) is missing from this Mathlib version, build a local
+  helper in `OpenMath/LinearODE.lean` rather than upstreaming.
+- Alternative if §111 reveals a sizable Mathlib gap: pivot to
+  Backlog item #6 (Butcher §463 Milne device) and write a structured
+  issue file noting the §111 obstruction.
 
 ---
 

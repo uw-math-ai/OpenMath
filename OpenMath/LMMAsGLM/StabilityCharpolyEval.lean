@@ -1658,5 +1658,97 @@ theorem D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly
     Polynomial.eval_C]
   exact D_mul_toGLM_charpoly_eval_general m ξ hz hs
 
+/-- §521 Step L.1 — General (non-BDF) eval-form root iff. Direct
+evaluation of the cycle 736 polynomial identity K.1
+`D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly` at `ξ`. Mirrors
+`toGLM_charpoly_eval_eq_zero_iff_of_bdf` (Step C.19 / cycle 706) without
+the BDF hypothesis. -/
+theorem toGLM_charpoly_eval_eq_zero_iff [NeZero s]
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    ((m.toGLM.stabilityMatrix z).charpoly).eval ξ = 0 ↔
+      ξ = 0 ∨ (m.stabilityPolyPoly z).eval ξ = 0 := by
+  have hs : 0 < s := Nat.pos_of_ne_zero (NeZero.ne s)
+  have h := D_mul_toGLM_charpoly_eq_X_pow_mul_stabilityPolyPoly m hz hs
+  have heval := congrArg (Polynomial.eval ξ) h
+  simp only [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+    Polynomial.eval_X] at heval
+  constructor
+  · intro hcp
+    rw [hcp, mul_zero] at heval
+    rcases mul_eq_zero.mp heval.symm with hxs | hsp
+    · exact Or.inl ((pow_eq_zero_iff hs.ne').mp hxs)
+    · exact Or.inr hsp
+  · intro h
+    rcases h with hξ0 | hsp
+    · subst hξ0
+      rw [zero_pow hs.ne', zero_mul] at heval
+      exact (mul_eq_zero.mp heval).resolve_left hz
+    · rw [hsp, mul_zero] at heval
+      exact (mul_eq_zero.mp heval).resolve_left hz
+
+/-- §521 Step L.2 — De Morgan dual of Step L.1. Natural input to the
+unit-disk root-counting argument behind `LMM.toGLM_isAStable_iff`. -/
+theorem toGLM_charpoly_eval_ne_zero_iff [NeZero s]
+    (m : LMM s) {z : ℂ} (ξ : ℂ)
+    (hz : 1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    ((m.toGLM.stabilityMatrix z).charpoly).eval ξ ≠ 0 ↔
+      ξ ≠ 0 ∧ (m.stabilityPolyPoly z).eval ξ ≠ 0 := by
+  rw [Ne, toGLM_charpoly_eval_eq_zero_iff m ξ hz, not_or]
+
+/-- §521 Step L.3 — General LMM A-stability iff bridge. The §503
+LMM-as-GLM embedding preserves A-stability in both directions, with no
+BDF restriction. The denominator hypothesis `hβ_last` is the same
+non-vanishing-on-the-closed-left-half-plane condition that already
+appears in `toGLM_isAStable_iff_of_bdf`; for concrete LMMs it is a
+short side calculation. -/
+theorem toGLM_isAStable_iff
+    (m : LMM s)
+    (hβ_last : ∀ z : ℂ, z.re ≤ 0 →
+      1 - z * ((m.β (Fin.last s) : ℝ) : ℂ) ≠ 0) :
+    m.toGLM.IsAStable ↔ m.IsAStable := by
+  refine ⟨fun hG => ?_, fun ha => ?_⟩
+  · -- (⇒) GLM A-stable ⟹ LMM A-stable
+    intro z hz_re ξ hξ
+    by_cases hs : s = 0
+    · subst hs
+      exfalso
+      apply hβ_last z hz_re
+      have hα0 : m.α 0 = 1 := by
+        have := m.normalized
+        simpa [Fin.last] using this
+      have hξ' : (1 : ℂ) - z * ((m.β 0 : ℝ) : ℂ) = 0 := by
+        have := hξ
+        simp [LMM.stabilityPoly, LMM.rhoC, LMM.sigmaC, hα0] at this
+        exact this
+      simpa [Fin.last] using hξ'
+    · haveI : NeZero s := ⟨hs⟩
+      apply hG z hz_re ξ
+      show ((m.toGLM.stabilityMatrix z).charpoly).eval ξ = 0
+      rw [toGLM_charpoly_eval_eq_zero_iff m ξ (hβ_last z hz_re)]
+      right
+      rw [stabilityPolyPoly_eval]
+      exact hξ
+  · -- (⇐) LMM A-stable ⟹ GLM A-stable
+    intro z hz_re μ hμ
+    by_cases hs : s = 0
+    · subst hs
+      exfalso
+      have hcp : ((m.toGLM.stabilityMatrix z).charpoly).eval μ = 0 :=
+        Polynomial.IsRoot.eq_zero hμ
+      have hone : ((m.toGLM.stabilityMatrix z).charpoly).eval μ = 1 := by
+        simp [Matrix.charpoly, Matrix.charmatrix, Matrix.det_isEmpty]
+      rw [hone] at hcp
+      exact one_ne_zero hcp
+    · haveI : NeZero s := ⟨hs⟩
+      have hcp : ((m.toGLM.stabilityMatrix z).charpoly).eval μ = 0 :=
+        Polynomial.IsRoot.eq_zero hμ
+      rcases (toGLM_charpoly_eval_eq_zero_iff m μ
+                (hβ_last z hz_re)).mp hcp with hμ0 | hsp
+      · rw [hμ0]; simp
+      · apply ha z hz_re
+        rw [← stabilityPolyPoly_eval]
+        exact hsp
+
 
 end LMM
