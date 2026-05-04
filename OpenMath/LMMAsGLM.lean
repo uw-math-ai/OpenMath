@@ -1663,6 +1663,10 @@ theorem adamsBashforth4_toGLM_hasOrderGe1 :
     adamsBashforth4.toGLM.HasOrderGe1 :=
   adamsBashforth4.toGLM_hasOrderGe1 adamsBashforth4_consistent
 
+theorem adamsBashforth5_toGLM_hasOrderGe1 :
+    adamsBashforth5.toGLM.HasOrderGe1 :=
+  adamsBashforth5.toGLM_hasOrderGe1 adamsBashforth5_consistent
+
 /-! ### §530 LMM-as-GLM order-≥ 2 witness — trapezoidal rule
 
 The trapezoidal rule (`s = 1`, two GLM input slots `Fin 2`) embeds as a
@@ -1794,6 +1798,35 @@ theorem adamsBashforth3_toGLM_hasOrderGe2 :
     all_goals norm_num
   · intro k; fin_cases k
     all_goals simp [LMM.toGLM, adamsBashforth3, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Bashforth 4-step
+
+`adamsBashforth4` (`s = 4`, eight GLM input slots `Fin 8`, explicit with
+`β_s = 0`, order 4) embeds as a GLM of order ≥ 2. Same natural Nordsieck
+Taylor template as AB2/AB3 (no shift). -/
+theorem adamsBashforth4_toGLM_hasOrderGe2 :
+    adamsBashforth4.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 4 => (1 : ℝ)) (fun _ : Fin 4 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 4 => ((j : ℕ) : ℝ)) (fun _ : Fin 4 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    fun k : Fin (2 * 4) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 4 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 4 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 4) k),
+    ?_, ?_, ?_, ?_⟩
+  · exact adamsBashforth4.toGLM_V_nordsieckQ_eq adamsBashforth4_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ]
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ]
     all_goals norm_num
 
 /-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 2-step
