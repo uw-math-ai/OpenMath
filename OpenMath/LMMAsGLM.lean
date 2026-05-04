@@ -1650,6 +1650,75 @@ theorem bdf2_toGLM_hasOrderGe1 :
     bdf2.toGLM.HasOrderGe1 :=
   bdf2.toGLM_hasOrderGe1 bdf2_consistent
 
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — trapezoidal rule
+
+The trapezoidal rule (`s = 1`, two GLM input slots `Fin 2`) embeds as a
+GLM of order ≥ 2. The witness uses `(q, q', q'')` with
+`q = (1, 0)` (past-`y` indicator), `q' = (0, 1)` (Nordsieck `h·y'_n`
+content), and `q'' = 0` — the second-derivative identity collapses to
+`2 (B c) = q + 2 q'` because the trapezoid `B`-block already carries the
+order-2 Taylor content directly (`B[0,0] = 1/2`, `B[1,0] = 1`,
+`c_0 = 1`). -/
+theorem trapezoidalRule_toGLM_hasOrderGe2 :
+    trapezoidalRule.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 1) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 1 => (1 : ℝ)) (fun _ : Fin 1 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 1) k),
+    fun k : Fin (2 * 1) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 1 => ((j : ℕ) : ℝ)) (fun _ : Fin 1 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 1) k),
+    fun _ : Fin (2 * 1) => (0 : ℝ),
+    ?_, ?_, ?_, ?_⟩
+  · -- V q = q. The witness is `LMM.nordsieckQ 1` definitionally; reuse the
+    -- exposed cycle 614 lemma.
+    exact trapezoidalRule.toGLM_V_nordsieckQ_eq trapezoidalRule_consistent
+  · -- U q = 𝟙. Single stage; one obligation indexed by `i : Fin 1`.
+    intro i; fin_cases i
+    simp [LMM.toGLM, trapezoidalRule, Fin.addCases]
+  · -- (B 𝟙) + V q' = q + q'. The trapezoid coefficients close both `Fin 2`
+    -- cases by direct expansion.
+    intro k; fin_cases k
+    all_goals simp [LMM.toGLM, trapezoidalRule, Fin.addCases, Fin.sum_univ_two]
+    all_goals norm_num
+  · -- 2 (B c) + V q'' = q + 2 q' + q''. With `q'' ≡ 0` this collapses to
+    -- `2 (B c) = q + 2 q'`; `c_0 = 1` for trapezoid and both rows verify.
+    intro k; fin_cases k
+    all_goals simp [LMM.toGLM, trapezoidalRule, Fin.addCases, Fin.sum_univ_two]
+    all_goals norm_num
+
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — BDF2
+
+BDF2 (`s = 2`, four GLM input slots `Fin 4`) embeds as a GLM of order ≥ 2.
+The witness uses the Nordsieck Taylor-moment table:
+`q' j = (j : ℝ)` on past-`y` and `1` on past-`h·f`,
+`q'' j = (j : ℝ)²` on past-`y` and `2 (j : ℝ)` on past-`h·f`. For
+BDF2 (s = 2) this gives `q'' = (0, 1, 0, 2)`, which matches the
+constraint solution of the second-derivative compatibility identity. -/
+theorem bdf2_toGLM_hasOrderGe2 :
+    bdf2.toGLM.HasOrderGe2 := by
+  refine ⟨
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun _ : Fin 2 => (1 : ℝ)) (fun _ : Fin 2 => (0 : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 2 => ((j : ℕ) : ℝ)) (fun _ : Fin 2 => (1 : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    fun k : Fin (2 * 2) => Fin.addCases (motive := fun _ => ℝ)
+      (fun j : Fin 2 => ((j : ℕ) : ℝ) ^ 2)
+      (fun j : Fin 2 => 2 * ((j : ℕ) : ℝ))
+      (Fin.cast (Nat.two_mul 2) k),
+    ?_, ?_, ?_, ?_⟩
+  · exact bdf2.toGLM_V_nordsieckQ_eq bdf2_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, bdf2, Fin.addCases, Fin.sum_univ_succ]; norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf2, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf2, Fin.addCases, Fin.sum_univ_succ]
+    all_goals norm_num
+
 namespace Matrix
 
 /-- §521 helper — auxiliary cardinality split for `Finset n`-indexed sums:
