@@ -1572,3 +1572,99 @@ theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe2 :
   rkDOPRI5.mainMethod.toGLM_hasOrderGe2
     ⟨rkDOPRI5_main_order5.1.1, rkDOPRI5_main_order5.1.2.1⟩
     rkDOPRI5_consistent.main_consistent
+
+/-! ### §530 — Embedded-pair embed-method GLM order witnesses
+
+For each `EmbeddedRKPair`, the embed method has its own tableau-level
+order certificate; project it through the matching `toGLM_hasOrderGeN`
+bridge. The embed methods cap one order below the main method (Heun
+forward Euler is order 1, BS3(2) embed is order 2, RKF45/DOPRI5 embeds
+are order 4); the corresponding negative certificates live in
+`OpenMath/EmbeddedRK.lean`. -/
+
+/-- §530 — Heun–Euler 2(1) embed method (forward Euler) embeds as a GLM
+of order ≥ 1. The embed is forward Euler, so order 2 is unavailable
+(see `rkHeunEuler21_embed_not_order2`). -/
+theorem rkHeunEuler21_embedMethod_toGLM_hasOrderGe1 :
+    rkHeunEuler21.embedMethod.toGLM.HasOrderGe1 :=
+  rkHeunEuler21.embedMethod.toGLM_hasOrderGe1
+    rkHeunEuler21_consistent.embed_consistent
+
+/-- §530 — Heun–Euler 2(1) main method (Heun, order 2) embeds as a GLM
+of order ≥ 1. -/
+theorem rkHeunEuler21_mainMethod_toGLM_hasOrderGe1 :
+    rkHeunEuler21.mainMethod.toGLM.HasOrderGe1 :=
+  rkHeunEuler21.mainMethod.toGLM_hasOrderGe1
+    rkHeunEuler21_consistent.main_consistent
+
+/-- §530 — Bogacki–Shampine 3(2) embed method (order 2) embeds as a GLM
+of order ≥ 2. -/
+theorem rkBS32_embedMethod_toGLM_hasOrderGe2 :
+    rkBS32.embedMethod.toGLM.HasOrderGe2 :=
+  rkBS32.embedMethod.toGLM_hasOrderGe2
+    rkBS32_embed_order2
+    rkBS32_consistent.embed_consistent
+
+/-- §530 — Bogacki–Shampine 3(2) embed method embeds as a GLM of order ≥ 1. -/
+theorem rkBS32_embedMethod_toGLM_hasOrderGe1 :
+    rkBS32.embedMethod.toGLM.HasOrderGe1 :=
+  rkBS32.embedMethod.toGLM_hasOrderGe1
+    rkBS32_consistent.embed_consistent
+
+/-- §530 — Runge–Kutta–Fehlberg 4(5) embed method (order 4) embeds as a
+GLM of order ≥ 4. -/
+theorem rkRKF45_embedMethod_toGLM_hasOrderGe4 :
+    rkRKF45.embedMethod.toGLM.HasOrderGe4 :=
+  rkRKF45.embedMethod.toGLM_hasOrderGe4
+    rkRKF45_embed_order4
+    rkRKF45_consistent.embed_consistent
+
+/-- §530 — RKF45 embed method embeds as a GLM of order ≥ 3. -/
+theorem rkRKF45_embedMethod_toGLM_hasOrderGe3 :
+    rkRKF45.embedMethod.toGLM.HasOrderGe3 :=
+  rkRKF45.embedMethod.toGLM_hasOrderGe3
+    ⟨rkRKF45_embed_order4.1, rkRKF45_embed_order4.2.1,
+     rkRKF45_embed_order4.2.2.1, rkRKF45_embed_order4.2.2.2.1⟩
+    rkRKF45_consistent.embed_consistent
+
+/-- §530 — RKF45 embed method embeds as a GLM of order ≥ 2. -/
+theorem rkRKF45_embedMethod_toGLM_hasOrderGe2 :
+    rkRKF45.embedMethod.toGLM.HasOrderGe2 :=
+  rkRKF45.embedMethod.toGLM_hasOrderGe2
+    ⟨rkRKF45_embed_order4.1, rkRKF45_embed_order4.2.1⟩
+    rkRKF45_consistent.embed_consistent
+
+/-- §530 — RKF45 embed method embeds as a GLM of order ≥ 1. -/
+theorem rkRKF45_embedMethod_toGLM_hasOrderGe1 :
+    rkRKF45.embedMethod.toGLM.HasOrderGe1 :=
+  rkRKF45.embedMethod.toGLM_hasOrderGe1
+    rkRKF45_consistent.embed_consistent
+
+/-- §530 — Dormand–Prince 5(4) embed method (order 4) embeds as a GLM
+of order ≥ 4. -/
+theorem rkDOPRI5_embedMethod_toGLM_hasOrderGe4 :
+    rkDOPRI5.embedMethod.toGLM.HasOrderGe4 :=
+  rkDOPRI5.embedMethod.toGLM_hasOrderGe4
+    rkDOPRI5_embed_order4
+    rkDOPRI5_consistent.embed_consistent
+
+/-- §530 — DOPRI5 embed method embeds as a GLM of order ≥ 3. -/
+theorem rkDOPRI5_embedMethod_toGLM_hasOrderGe3 :
+    rkDOPRI5.embedMethod.toGLM.HasOrderGe3 :=
+  rkDOPRI5.embedMethod.toGLM_hasOrderGe3
+    ⟨rkDOPRI5_embed_order4.1, rkDOPRI5_embed_order4.2.1,
+     rkDOPRI5_embed_order4.2.2.1, rkDOPRI5_embed_order4.2.2.2.1⟩
+    rkDOPRI5_consistent.embed_consistent
+
+/-- §530 — DOPRI5 embed method embeds as a GLM of order ≥ 2. -/
+theorem rkDOPRI5_embedMethod_toGLM_hasOrderGe2 :
+    rkDOPRI5.embedMethod.toGLM.HasOrderGe2 :=
+  rkDOPRI5.embedMethod.toGLM_hasOrderGe2
+    ⟨rkDOPRI5_embed_order4.1, rkDOPRI5_embed_order4.2.1⟩
+    rkDOPRI5_consistent.embed_consistent
+
+/-- §530 — DOPRI5 embed method embeds as a GLM of order ≥ 1. -/
+theorem rkDOPRI5_embedMethod_toGLM_hasOrderGe1 :
+    rkDOPRI5.embedMethod.toGLM.HasOrderGe1 :=
+  rkDOPRI5.embedMethod.toGLM_hasOrderGe1
+    rkDOPRI5_consistent.embed_consistent
