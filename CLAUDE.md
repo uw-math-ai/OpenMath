@@ -15,7 +15,8 @@ Semi-autonomous formalization of *Numerical Methods for Ordinary Differential Eq
 5. **Prove remaining**: Use Lean LSP tools (`lean_goal`, `lean_multi_attempt`, search tools) for what Aristotle didn't solve.
 6. **Pre-commit faithfulness check (MANDATORY)**: Before committing, run the checklist in the section below.
 7. **Write results**: Before finishing, write `.prover-state/task_results/cycle_<NNN>.md` documenting what you tried, what worked, what failed, and suggested next steps. If blocked, write an issue file in `.prover-state/issues/`.
-8. **Commit**: Verify all modified files compile, then commit and push.
+8. **Update `plan.md`**: Reflect any completed items, newly opened sorry's, or shifted priorities so the plan stays current.
+9. **Commit**: Verify all modified files compile, then commit and push.
 
 ## Rules
 
