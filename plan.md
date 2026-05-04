@@ -745,11 +745,11 @@ error bound for one specific scheme:
 - [ ] **§454 Concluding remarks**.
 
 ### §46 Implementation Issues *(open; lower priority)*
-- [ ] **§460–§462** — survey, data representation, variable stepsize for
-  Nordsieck methods. Largely implementation.
-- [x] **§463 Milne device** for local error estimation
-  (`OpenMath/MilneDevice.lean`: `milneAB4AM3`,
-  `milneFactor = -(19/270)`).
+- [ ] **§460–§463** — survey, data representation, variable stepsize for
+  Nordsieck methods, local error estimation. Largely implementation;
+  the local-error-estimation §463 piece is the Milne device and is
+  worth a dedicated file
+  (`OpenMath/MilneDevice.lean`).
 
 ---
 
@@ -1038,10 +1038,6 @@ error bound for one specific scheme:
   `OpenMath/MilneDevice.lean` lands the `MilneDevicePair sP sC p`
   structure, `milneFactor`, `localErrorEstimate`, and the concrete
   AB4 / AM3 instance with `milneAB4AM3.milneFactor = -(19/270)`.
-- **Cycle 744 closed §463 Milne device** —
-  `OpenMath/MilneDevice.lean` lands `MilneDevicePair`, `milneFactor`,
-  `localErrorEstimate`, and the AB4/AM3 instance with
-  `milneFactor = -19/270`.
 - **Largest real gap:** **Chapter 5 (General Linear Methods)** —
   now opened at §500 but still the broadest remaining part of Butcher
   that is not duplicated elsewhere.
@@ -1077,7 +1073,10 @@ error bound for one specific scheme:
 3. **Butcher §215 — Asymptotic error formula for the Euler method.**
     Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
     ODE. Extends `OpenMath/EulerConvergence.lean`.
-4. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
+4. **Butcher §463 — Milne device for local error estimation.** New
+    file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
+    error from the difference, classical estimate.
+5. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
     Cycle 627 opened the GLM A-stability predicate and RK bridge.
     Cycles 630–632 landed three concrete LMM-side transports
     (`backwardEuler_toGLM_isAStable`,
@@ -1102,16 +1101,16 @@ error bound for one specific scheme:
     stability for GLMs; (c) further concrete LMM A-stability transports
     (e.g. AM2 / AB2) are now one-shot consequences of the iff bridge
     and only worth pursuing if explicitly demanded.
-5. **Butcher §54 — DIMSIM types and ARK methods.** New file
+6. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
-6. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+7. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
     `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
     property F.
-7. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+8. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
     §365 (effective order definition / DESIRE) plus §389 algebraic
     interpretation. Builds on Current Target.
-8. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+9. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
 When this list reaches under five items, any planner cycle that lands
@@ -1123,26 +1122,26 @@ let the queue empty.
 
 ## Current Target
 
-**Next target — Butcher §215 Euler asymptotic error formula.** New
-file `OpenMath/EulerAsymptoticError.lean` (target ≤ 250 lines).
+**Next target — Butcher §463 Milne device for local error estimation.**
+New file `OpenMath/MilneDevice.lean` (target ≤ 250 lines).
 
-For the explicit Euler method `y_{n+1} = y_n + h · f(x_n, y_n)`, the
-global error `e_n := y_n − y(x_n)` admits the asymptotic expansion
+The classical Milne device pairs an explicit Adams–Bashforth predictor
+with an implicit Adams–Moulton corrector of the **same order** and
+estimates the corrector's local truncation error from the
+predictor / corrector difference. The standard pair at order 4 is
 
-    e_n = h · ψ(x_n) + O(h²)
+- predictor: `adamsBashforth4` — order 4, error constant `C^P = 251/720`
+- corrector: `adamsMoulton3`   — order 4, error constant `C^C = -19/720`
 
-as `h → 0` with `n · h = x_n − x₀` fixed, where `ψ` is the unique
-solution of the variational equation
+The Milne local-error estimate for the corrector is
 
-    ψ'(x) = f_y(x, y(x)) · ψ(x) + (1/2) · y''(x),     ψ(x₀) = 0.
+    LTE^C_n ≈ (C^C / (C^P - C^C)) · (y^C_n − y^P_n)
+            = (-19 / 270) · (y^C_n − y^P_n)
 
-This cycle lands `variationalRHS`, the data bundle
-`EulerAsymptoticInput`, the variational `variationalSolution` together
-with its Picard-Lindelöf existence proof, and the sorry-first
-headline `euler_asymptotic_error`. The quantitative discrete-Gronwall
-+ second-order-LTE expansion combiner that closes the headline is
-deferred to a follow-up cycle (a structured issue file should record
-the precise Mathlib seam if the closure is blocked).
+This cycle lands the structural definitions plus the concrete
+AB4 / AM3 instance and the Milne error-constant ratio identity. The
+quantitative LTE asymptotic statement is deferred (it requires the
+§215 asymptotic-error machinery).
 
 ---
 
