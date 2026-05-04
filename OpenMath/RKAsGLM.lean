@@ -8,8 +8,10 @@ import OpenMath.GaussLegendre3
 import OpenMath.LobattoIIIA
 import OpenMath.LobattoIIIA3
 import OpenMath.LobattoIIIB
+import OpenMath.LobattoIIIB3
 import OpenMath.LobattoIIIC
 import OpenMath.LobattoIIIC3
+import OpenMath.RadauIA2
 
 /-!
 # Butcher §502 — Runge–Kutta methods as general linear methods
@@ -1353,3 +1355,124 @@ theorem rkGaussLegendre3_toGLM_hasOrderGe6 :
     rkGaussLegendre3.toGLM.HasOrderGe6 :=
   rkGaussLegendre3.toGLM_hasOrderGe6
     rkGaussLegendre3_order6 rkGaussLegendre3_consistent
+
+/-! ### §530 — order witnesses for IRK 2-stage / 3-stage families
+
+Plug-and-play GLM-side bridges feeding existing tableau-level
+order and consistency certificates through `toGLM_hasOrderGeN`. -/
+
+/-- §530 sanity — Lobatto IIIA 2-stage has order 2 and so embeds as
+a GLM of order ≥ 2. -/
+theorem rkLobattoIIIA2_toGLM_hasOrderGe2 :
+    rkLobattoIIIA2.toGLM.HasOrderGe2 :=
+  rkLobattoIIIA2.toGLM_hasOrderGe2
+    rkLobattoIIIA2_order2 rkLobattoIIIA2_consistent
+
+/-- §530 sanity — Lobatto IIIC 2-stage has order 2 and so embeds as
+a GLM of order ≥ 2. -/
+theorem rkLobattoIIIC2_toGLM_hasOrderGe2 :
+    rkLobattoIIIC2.toGLM.HasOrderGe2 :=
+  rkLobattoIIIC2.toGLM_hasOrderGe2
+    rkLobattoIIIC2_order2 rkLobattoIIIC2_consistent
+
+/-- §530 sanity — Radau IA 2-stage has order 3 and so embeds as a
+GLM of order ≥ 2 (project `HasOrderGe3` to `HasOrderGe2`). -/
+theorem rkRadauIA2_toGLM_hasOrderGe2 :
+    rkRadauIA2.toGLM.HasOrderGe2 :=
+  rkRadauIA2.toGLM_hasOrderGe2
+    ⟨rkRadauIA2_order3.1, rkRadauIA2_order3.2.1⟩
+    rkRadauIA2_consistent
+
+/-- §530 sanity — Radau IA 2-stage has order 3 and so embeds as a
+GLM of order ≥ 3. -/
+theorem rkRadauIA2_toGLM_hasOrderGe3 :
+    rkRadauIA2.toGLM.HasOrderGe3 :=
+  rkRadauIA2.toGLM_hasOrderGe3
+    rkRadauIA2_order3 rkRadauIA2_consistent
+
+/-- §530 sanity — Radau IIA 2-stage has order 3 and so embeds as a
+GLM of order ≥ 2 (project `HasOrderGe3` to `HasOrderGe2`). -/
+theorem rkRadauIIA2_toGLM_hasOrderGe2 :
+    rkRadauIIA2.toGLM.HasOrderGe2 :=
+  rkRadauIIA2.toGLM_hasOrderGe2
+    ⟨rkRadauIIA2_order3.1, rkRadauIIA2_order3.2.1⟩
+    rkRadauIIA2_consistent
+
+/-- §530 sanity — Radau IIA 2-stage has order 3 and so embeds as a
+GLM of order ≥ 3. -/
+theorem rkRadauIIA2_toGLM_hasOrderGe3 :
+    rkRadauIIA2.toGLM.HasOrderGe3 :=
+  rkRadauIIA2.toGLM_hasOrderGe3
+    rkRadauIIA2_order3 rkRadauIIA2_consistent
+
+/-- §530 sanity — Lobatto IIIA 3-stage has order 4 and so embeds as
+a GLM of order ≥ 2. -/
+theorem rkLobattoIIIA3_toGLM_hasOrderGe2 :
+    rkLobattoIIIA3.toGLM.HasOrderGe2 :=
+  rkLobattoIIIA3.toGLM_hasOrderGe2
+    ⟨rkLobattoIIIA3_order4.1, rkLobattoIIIA3_order4.2.1⟩
+    rkLobattoIIIA3_consistent
+
+/-- §530 sanity — Lobatto IIIA 3-stage has order 4 and so embeds as
+a GLM of order ≥ 3. -/
+theorem rkLobattoIIIA3_toGLM_hasOrderGe3 :
+    rkLobattoIIIA3.toGLM.HasOrderGe3 :=
+  rkLobattoIIIA3.toGLM_hasOrderGe3
+    ⟨rkLobattoIIIA3_order4.1, rkLobattoIIIA3_order4.2.1,
+     rkLobattoIIIA3_order4.2.2.1, rkLobattoIIIA3_order4.2.2.2.1⟩
+    rkLobattoIIIA3_consistent
+
+/-- §530 sanity — Lobatto IIIA 3-stage has order 4 and so embeds as
+a GLM of order ≥ 4. -/
+theorem rkLobattoIIIA3_toGLM_hasOrderGe4 :
+    rkLobattoIIIA3.toGLM.HasOrderGe4 :=
+  rkLobattoIIIA3.toGLM_hasOrderGe4
+    rkLobattoIIIA3_order4 rkLobattoIIIA3_consistent
+
+/-- §530 sanity — Lobatto IIIB 3-stage has order 4 and so embeds as
+a GLM of order ≥ 2. -/
+theorem rkLobattoIIIB3_toGLM_hasOrderGe2 :
+    rkLobattoIIIB3.toGLM.HasOrderGe2 :=
+  rkLobattoIIIB3.toGLM_hasOrderGe2
+    ⟨rkLobattoIIIB3_order4.1, rkLobattoIIIB3_order4.2.1⟩
+    rkLobattoIIIB3_consistent
+
+/-- §530 sanity — Lobatto IIIB 3-stage has order 4 and so embeds as
+a GLM of order ≥ 3. -/
+theorem rkLobattoIIIB3_toGLM_hasOrderGe3 :
+    rkLobattoIIIB3.toGLM.HasOrderGe3 :=
+  rkLobattoIIIB3.toGLM_hasOrderGe3
+    ⟨rkLobattoIIIB3_order4.1, rkLobattoIIIB3_order4.2.1,
+     rkLobattoIIIB3_order4.2.2.1, rkLobattoIIIB3_order4.2.2.2.1⟩
+    rkLobattoIIIB3_consistent
+
+/-- §530 sanity — Lobatto IIIB 3-stage has order 4 and so embeds as
+a GLM of order ≥ 4. -/
+theorem rkLobattoIIIB3_toGLM_hasOrderGe4 :
+    rkLobattoIIIB3.toGLM.HasOrderGe4 :=
+  rkLobattoIIIB3.toGLM_hasOrderGe4
+    rkLobattoIIIB3_order4 rkLobattoIIIB3_consistent
+
+/-- §530 sanity — Lobatto IIIC 3-stage has order 4 and so embeds as
+a GLM of order ≥ 2. -/
+theorem rkLobattoIIIC3_toGLM_hasOrderGe2 :
+    rkLobattoIIIC3.toGLM.HasOrderGe2 :=
+  rkLobattoIIIC3.toGLM_hasOrderGe2
+    ⟨rkLobattoIIIC3_order4.1, rkLobattoIIIC3_order4.2.1⟩
+    rkLobattoIIIC3_consistent
+
+/-- §530 sanity — Lobatto IIIC 3-stage has order 4 and so embeds as
+a GLM of order ≥ 3. -/
+theorem rkLobattoIIIC3_toGLM_hasOrderGe3 :
+    rkLobattoIIIC3.toGLM.HasOrderGe3 :=
+  rkLobattoIIIC3.toGLM_hasOrderGe3
+    ⟨rkLobattoIIIC3_order4.1, rkLobattoIIIC3_order4.2.1,
+     rkLobattoIIIC3_order4.2.2.1, rkLobattoIIIC3_order4.2.2.2.1⟩
+    rkLobattoIIIC3_consistent
+
+/-- §530 sanity — Lobatto IIIC 3-stage has order 4 and so embeds as
+a GLM of order ≥ 4. -/
+theorem rkLobattoIIIC3_toGLM_hasOrderGe4 :
+    rkLobattoIIIC3.toGLM.HasOrderGe4 :=
+  rkLobattoIIIC3.toGLM_hasOrderGe4
+    rkLobattoIIIC3_order4 rkLobattoIIIC3_consistent
