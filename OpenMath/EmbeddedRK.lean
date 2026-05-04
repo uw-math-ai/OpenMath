@@ -488,6 +488,211 @@ theorem rkRKF45_errorWeights_sum :
     ∑ i : Fin 6, rkRKF45.errorWeights i = 0 :=
   rkRKF45.errorWeights_sum_zero rkRKF45_consistent
 
+/-! ## Dormand–Prince 5(4) (DOPRI5) Embedded Pair (Butcher §336) -/
+
+/-- The **Dormand–Prince 5(4) (DOPRI5)** embedded pair (Butcher §336).
+  7-stage explicit FSAL pair with order 5 main method and order 4 embedding.
+  ```
+    0     |
+    1/5   | 1/5
+    3/10  | 3/40         9/40
+    4/5   | 44/45       -56/15        32/9
+    8/9   | 19372/6561  -25360/2187   64448/6561  -212/729
+    1     | 9017/3168   -355/33       46732/5247   49/176     -5103/18656
+    1     | 35/384       0            500/1113     125/192    -2187/6784   11/84
+    ------|---------------------------------------------------------------------------
+          | 35/384       0            500/1113     125/192    -2187/6784   11/84    0    (order 5, main)
+          | 5179/57600   0            7571/16695   393/640    -92097/339200 187/2100 1/40 (order 4, embed)
+  ```
+  Reference: Dormand & Prince, "A family of embedded Runge–Kutta formulae",
+  J. Comput. Appl. Math. 6 (1980), 19–26; Hairer–Nørsett–Wanner Vol. I §II.5. -/
+noncomputable def rkDOPRI5 : EmbeddedRKPair 7 where
+  A := ![
+    ![0,           0,             0,           0,          0,            0,      0],
+    ![1/5,         0,             0,           0,          0,            0,      0],
+    ![3/40,        9/40,          0,           0,          0,            0,      0],
+    ![44/45,      -56/15,         32/9,        0,          0,            0,      0],
+    ![19372/6561, -25360/2187,    64448/6561, -212/729,    0,            0,      0],
+    ![9017/3168,  -355/33,        46732/5247,  49/176,    -5103/18656,   0,      0],
+    ![35/384,      0,             500/1113,    125/192,   -2187/6784,    11/84,  0]]
+  b := ![35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0]
+  bHat := ![5179/57600, 0, 7571/16695, 393/640, -92097/339200, 187/2100, 1/40]
+  c := ![0, 1/5, 3/10, 4/5, 8/9, 1, 1]
+
+namespace rkDOPRI5Aux
+
+/-- Explicit unfolding of a sum over `Fin 7` (mirrors `Fin.sum_univ_six`). -/
+private lemma sum_univ_seven {α} [AddCommMonoid α] (f : Fin 7 → α) :
+    ∑ i : Fin 7, f i = f 0 + f 1 + f 2 + f 3 + f 4 + f 5 + f 6 := by
+  simp [Fin.sum_univ_succ, add_assoc]
+
+end rkDOPRI5Aux
+
+open rkDOPRI5Aux
+
+/-- DOPRI5 is explicit. -/
+theorem rkDOPRI5_explicit : rkDOPRI5.IsExplicit := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;> simp_all [rkDOPRI5, EmbeddedRKPair.mainMethod]
+
+/-- DOPRI5 is consistent (both methods). -/
+theorem rkDOPRI5_consistent : rkDOPRI5.IsConsistent where
+  main_consistent := by
+    refine ⟨?_, ?_⟩
+    · simp [rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven]; norm_num
+    · intro i; fin_cases i <;>
+        simp [rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven] <;> norm_num
+  embed_consistent := by
+    refine ⟨?_, ?_⟩
+    · simp [rkDOPRI5, EmbeddedRKPair.embedMethod, sum_univ_seven]; norm_num
+    · intro i; fin_cases i <;>
+        simp [rkDOPRI5, EmbeddedRKPair.embedMethod, sum_univ_seven] <;> norm_num
+
+/-- The DOPRI5 main method is stiffly accurate: b = last row of A. -/
+theorem rkDOPRI5_main_stifflyAccurate : rkDOPRI5.mainMethod.IsStifflyAccurate := by
+  intro i; fin_cases i <;> simp [rkDOPRI5, EmbeddedRKPair.mainMethod]
+
+/-- **DOPRI5 has the FSAL property**: the main method is stiffly accurate
+  and the first node is c₁ = 0. This means only 6 new function evaluations
+  per step instead of 7.
+  Reference: Dormand–Prince (1980). -/
+theorem rkDOPRI5_FSAL : EmbeddedRKPair.HasFSAL rkDOPRI5 where
+  stiffly_accurate := rkDOPRI5_main_stifflyAccurate
+  first_node_zero := by simp [rkDOPRI5]
+
+/-- Error weights of DOPRI5 sum to zero. -/
+theorem rkDOPRI5_errorWeights_sum :
+    ∑ i : Fin 7, rkDOPRI5.errorWeights i = 0 :=
+  rkDOPRI5.errorWeights_sum_zero rkDOPRI5_consistent
+
+/-! ### Embedding order conditions (order 4 only) -/
+
+private lemma rkDOPRI5_embed_order1 : rkDOPRI5.embedMethod.order1 := by
+  simp [ButcherTableau.order1, rkDOPRI5, EmbeddedRKPair.embedMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_embed_order2 : rkDOPRI5.embedMethod.order2 := by
+  simp [ButcherTableau.order2, rkDOPRI5, EmbeddedRKPair.embedMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_embed_order3a : rkDOPRI5.embedMethod.order3a := by
+  simp [ButcherTableau.order3a, rkDOPRI5, EmbeddedRKPair.embedMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_embed_order3b : rkDOPRI5.embedMethod.order3b := by
+  simp only [ButcherTableau.order3b, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.embedMethod]; norm_num
+
+private lemma rkDOPRI5_embed_order4a : rkDOPRI5.embedMethod.order4a := by
+  simp [ButcherTableau.order4a, rkDOPRI5, EmbeddedRKPair.embedMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_embed_order4b : rkDOPRI5.embedMethod.order4b := by
+  simp only [ButcherTableau.order4b, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.embedMethod]; norm_num
+
+private lemma rkDOPRI5_embed_order4c : rkDOPRI5.embedMethod.order4c := by
+  simp only [ButcherTableau.order4c, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.embedMethod]; norm_num
+
+private lemma rkDOPRI5_embed_order4d : rkDOPRI5.embedMethod.order4d := by
+  simp only [ButcherTableau.order4d, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.embedMethod]; norm_num
+
+/-- The DOPRI5 embedding method has order at least 4. -/
+theorem rkDOPRI5_embed_order4 : rkDOPRI5.embedMethod.HasOrderGe4 :=
+  ⟨rkDOPRI5_embed_order1, rkDOPRI5_embed_order2,
+   rkDOPRI5_embed_order3a, rkDOPRI5_embed_order3b,
+   rkDOPRI5_embed_order4a, rkDOPRI5_embed_order4b,
+   rkDOPRI5_embed_order4c, rkDOPRI5_embed_order4d⟩
+
+/-- The DOPRI5 embedding does NOT have order 5: the order5a condition
+  ∑ b̂ᵢ cᵢ⁴ = 1/5 fails for `bHat`. -/
+theorem rkDOPRI5_embed_not_order5 : ¬rkDOPRI5.embedMethod.HasOrderGe5 := by
+  intro ⟨_, h5a, _⟩
+  simp [ButcherTableau.order5a, rkDOPRI5, EmbeddedRKPair.embedMethod, sum_univ_seven] at h5a
+  norm_num at h5a
+
+/-! ### Main method order conditions (order 5) -/
+
+private lemma rkDOPRI5_main_order1 : rkDOPRI5.mainMethod.order1 := by
+  simp [ButcherTableau.order1, rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_main_order2 : rkDOPRI5.mainMethod.order2 := by
+  simp [ButcherTableau.order2, rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_main_order3a : rkDOPRI5.mainMethod.order3a := by
+  simp [ButcherTableau.order3a, rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_main_order3b : rkDOPRI5.mainMethod.order3b := by
+  simp only [ButcherTableau.order3b, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order4a : rkDOPRI5.mainMethod.order4a := by
+  simp [ButcherTableau.order4a, rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_main_order4b : rkDOPRI5.mainMethod.order4b := by
+  simp only [ButcherTableau.order4b, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order4c : rkDOPRI5.mainMethod.order4c := by
+  simp only [ButcherTableau.order4c, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order4d : rkDOPRI5.mainMethod.order4d := by
+  simp only [ButcherTableau.order4d, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5a : rkDOPRI5.mainMethod.order5a := by
+  simp [ButcherTableau.order5a, rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven]; norm_num
+
+private lemma rkDOPRI5_main_order5b : rkDOPRI5.mainMethod.order5b := by
+  simp only [ButcherTableau.order5b, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5c : rkDOPRI5.mainMethod.order5c := by
+  simp only [ButcherTableau.order5c, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5d : rkDOPRI5.mainMethod.order5d := by
+  simp only [ButcherTableau.order5d, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5e : rkDOPRI5.mainMethod.order5e := by
+  simp only [ButcherTableau.order5e, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5f : rkDOPRI5.mainMethod.order5f := by
+  simp only [ButcherTableau.order5f, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5g : rkDOPRI5.mainMethod.order5g := by
+  simp only [ButcherTableau.order5g, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5h : rkDOPRI5.mainMethod.order5h := by
+  simp only [ButcherTableau.order5h, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+private lemma rkDOPRI5_main_order5i : rkDOPRI5.mainMethod.order5i := by
+  simp only [ButcherTableau.order5i, sum_univ_seven]
+  simp [rkDOPRI5, EmbeddedRKPair.mainMethod]; norm_num
+
+/-- The DOPRI5 main method has order at least 5. -/
+theorem rkDOPRI5_main_order5 : rkDOPRI5.mainMethod.HasOrderGe5 :=
+  ⟨⟨rkDOPRI5_main_order1, rkDOPRI5_main_order2,
+    rkDOPRI5_main_order3a, rkDOPRI5_main_order3b,
+    rkDOPRI5_main_order4a, rkDOPRI5_main_order4b,
+    rkDOPRI5_main_order4c, rkDOPRI5_main_order4d⟩,
+   rkDOPRI5_main_order5a, rkDOPRI5_main_order5b,
+   rkDOPRI5_main_order5c, rkDOPRI5_main_order5d,
+   rkDOPRI5_main_order5e, rkDOPRI5_main_order5f,
+   rkDOPRI5_main_order5g, rkDOPRI5_main_order5h,
+   rkDOPRI5_main_order5i⟩
+
+/-- The DOPRI5 main method does NOT have order 6: the order6a condition
+  ∑ bᵢ cᵢ⁵ = 1/6 fails for `b`. -/
+theorem rkDOPRI5_main_not_order6 : ¬rkDOPRI5.mainMethod.HasOrderGe6 := by
+  intro ⟨_, h6a, _⟩
+  simp [ButcherTableau.order6a, rkDOPRI5, EmbeddedRKPair.mainMethod, sum_univ_seven] at h6a
+  norm_num at h6a
+
 /-! ## Summary Table
 
 | Pair        | Stages | Main Order | Embed Order | FSAL? | Explicit? |
@@ -495,15 +700,18 @@ theorem rkRKF45_errorWeights_sum :
 | Heun–Euler  | 2      | 2          | 1           | ✗     | ✓         |
 | BS3(2)      | 4      | 3          | 2           | ✓     | ✓         |
 | RKF45       | 6      | 5          | 4           | ✗     | ✓         |
+| DOPRI5      | 7      | 5          | 4           | ✓     | ✓         |
 
 Key properties:
 - All pairs are explicit and consistent
 - Error estimate comes "for free" from the weight difference d = b − b̂
-- BS3(2) has FSAL: only 3 new function evaluations per step (not 4)
-- RKF45 (Fehlberg 1969) is the classical embedded 4(5) pair, widely used
-  in early adaptive Runge–Kutta solvers
+- BS3(2) and DOPRI5 have FSAL (one fewer new evaluation per step)
+- RKF45 (Fehlberg 1969) is the classical embedded 4(5) pair
+- DOPRI5 (Dormand–Prince 1980) is the standard adaptive 5(4) pair used
+  in MATLAB's `ode45` and many production solvers
 - The error weights always sum to zero for consistent pairs
 
 Reference: Iserles, *A First Course in the Numerical Analysis of Differential Equations*,
-Section 2.7 and Chapter 5; Fehlberg (1969); Bogacki–Shampine (1989).
+Section 2.7 and Chapter 5; Fehlberg (1969); Bogacki–Shampine (1989);
+Dormand–Prince (1980); Hairer–Nørsett–Wanner Vol. I §II.5.
 -/

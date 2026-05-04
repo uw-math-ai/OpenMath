@@ -69,9 +69,11 @@ codebase.
   - [x] Perturbation bound (`PicardLindelof.perturbation_bound`)
   - [x] Combined `exists_unique`
   - [x] Existence via bisection induction (`PicardLindelof.exists_solution`)
-- [ ] **§111 Linear systems of differential equations** — matrix
-  exponential form `y(x) = exp((x − x₀)A) y₀`. Likely a thin re-export of
-  Mathlib `Matrix.exp` (new file `OpenMath/LinearODE.lean`).
+- [x] **§111 Linear systems of differential equations** —
+  matrix exponential closed form `y(x) = exp((x − x₀) • A) y₀`,
+  initial condition, time derivative `(d/dx)y = A·y`, and
+  one-parameter group law `exp((s+t)•A) = exp(s•A) · exp(t•A)` for
+  scalar multiples (`OpenMath/LinearODE.lean`, cycle 582).
 - [x] **§112 Stiff differential equations** — informal definition
   (`OpenMath/Stiffness.lean`, `OpenMath/StiffEquations.lean`).
 
@@ -1062,19 +1064,15 @@ error bound for one specific scheme:
    ⟹ convergence` for GLMs. The existing
    `OpenMath/DahlquistEquivalence.lean` is a special case; the GLM
    version reduces to the same companion-matrix spectral bound.
-3. **Butcher §111 — Linear systems of differential equations.** New
-   file `OpenMath/LinearODE.lean`. `y(x) = exp((x − x₀) A) y₀` as a
-   thin re-export of Mathlib `Matrix.exp` plus `Matrix.exp_add` for
-   commuting matrices.
-4. **Butcher §215 — Asymptotic error formula for the Euler method.**
+3. **Butcher §215 — Asymptotic error formula for the Euler method.**
     Leading-order term `e_n ≈ h ψ(xₙ)` with `ψ` solving the variational
     ODE. Extends `OpenMath/EulerConvergence.lean`.
-5. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
+4. **Butcher §336 — Dormand–Prince 5(4) (DOPRI5) embedded pair.**
     Same template as §334. Extends `OpenMath/EmbeddedRK.lean`.
-6. **Butcher §463 — Milne device for local error estimation.** New
+5. **Butcher §463 — Milne device for local error estimation.** New
     file `OpenMath/MilneDevice.lean`. Predictor / corrector pair, local
     error from the difference, classical estimate.
-7. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
+6. **Butcher §521 — A-stability and stability-order milestones for `M(z)`.**
     Cycle 627 opened the GLM A-stability predicate and RK bridge.
     Cycles 630–632 landed three concrete LMM-side transports
     (`backwardEuler_toGLM_isAStable`,
@@ -1099,16 +1097,16 @@ error bound for one specific scheme:
     stability for GLMs; (c) further concrete LMM A-stability transports
     (e.g. AM2 / AB2) are now one-shot consequences of the iff bridge
     and only worth pursuing if explicitly demanded.
-8. **Butcher §54 — DIMSIM types and ARK methods.** New file
+7. **Butcher §54 — DIMSIM types and ARK methods.** New file
     `OpenMath/DIMSIM.lean`. §541 type 1/2/3/4 classification, §543 ARK
     structural conditions.
-9. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
+8. **Butcher §55 — Inherent Runge–Kutta stability (IRKS).** New file
     `OpenMath/IRKS.lean`. Doubly companion matrices, derivation,
     property F.
-10. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
+9. **Butcher §38 follow-up — Effective order.** `OpenMath/EffectiveOrder.lean`.
     §365 (effective order definition / DESIRE) plus §389 algebraic
     interpretation. Builds on Current Target.
-11. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
+10. **Butcher §443 — Order arrows for LMMs.** Explicit LMM-side
     restatement of order arrows in `OpenMath/PadeOrderStars.lean` or a
     new sibling. Reuses the §354 / §355 machinery.
 When this list reaches under five items, any planner cycle that lands
@@ -1120,33 +1118,28 @@ let the queue empty.
 
 ## Current Target
 
-**Butcher §521 LMM-to-GLM A-stability iff bridge — CLOSED (cycle 740).**
-The headline `LMM.toGLM_isAStable_iff` lives in
-`OpenMath/LMMAsGLM/StabilityCharpolyEval.lean` together with the
-eval-form charpoly root iffs
-`toGLM_charpoly_eval_eq_zero_iff` / `toGLM_charpoly_eval_ne_zero_iff`.
-This finishes Backlog item #7's iff-bridge sub-goal and removes the
-last load-bearing §521 algebraic obstruction.
+**Next target — Butcher §336 Dormand–Prince 5(4) (DOPRI5) embedded pair
+(Backlog item #4).** Extends `OpenMath/EmbeddedRK.lean` (currently 509
+lines). Mirror the cycle 494 RKF45 closure with one new tableau and
+parallel order-condition checks: 7-stage `EmbeddedRKPair 7`, FSAL,
+explicit, consistent, error-weights sum to zero, embedding has order 4
+but not 5, main has order 5 but not 6.
 
-**Next target — Butcher §111 Linear systems of differential equations
-(Backlog item #3).** New file `OpenMath/LinearODE.lean`. Goal: state
-and prove the closed-form solution `y(x) = exp((x − x₀) A) y₀` for
-linear ODEs with constant matrix coefficient, as a thin re-export of
-Mathlib `Matrix.exp` plus `Matrix.exp_add` for commuting matrices.
-
-Concrete next steps:
-- Stub `OpenMath/LinearODE.lean` with the statement and a sorry-first
-  proof skeleton; verify imports compile.
-- Identify the precise Mathlib API: `Matrix.exp`,
-  `Matrix.hasDerivAt_exp` (or local equivalent), `Matrix.exp_add`,
-  and the linear-ODE uniqueness lemma in `OpenMath/LinearODE.lean`'s
-  scope.
-- If a needed lemma (e.g. derivative of `Matrix.exp` along a real
-  parameter) is missing from this Mathlib version, build a local
-  helper in `OpenMath/LinearODE.lean` rather than upstreaming.
-- Alternative if §111 reveals a sizable Mathlib gap: pivot to
-  Backlog item #6 (Butcher §463 Milne device) and write a structured
-  issue file noting the §111 obstruction.
+Tableau (standard DOPRI5; Hairer–Nørsett–Wanner Vol. I §II.5):
+```
+c = ![0, 1/5, 3/10, 4/5, 8/9, 1, 1]
+A row 0: ![0, 0, 0, 0, 0, 0, 0]
+A row 1: ![1/5, 0, 0, 0, 0, 0, 0]
+A row 2: ![3/40, 9/40, 0, 0, 0, 0, 0]
+A row 3: ![44/45, -56/15, 32/9, 0, 0, 0, 0]
+A row 4: ![19372/6561, -25360/2187, 64448/6561, -212/729, 0, 0, 0]
+A row 5: ![9017/3168, -355/33, 46732/5247, 49/176, -5103/18656, 0, 0]
+A row 6: ![35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0]
+b    = ![35/384, 0, 500/1113, 125/192, -2187/6784, 11/84, 0]
+bHat = ![5179/57600, 0, 7571/16695, 393/640, -92097/339200, 187/2100, 1/40]
+```
+Note: `b = A.row 6` (FSAL); `b 1 = bHat 1 = 0`; only `bHat 6` nonzero
+on the FSAL slot.
 
 ---
 
