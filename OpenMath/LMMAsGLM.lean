@@ -1616,7 +1616,39 @@ theorem toGLM_stabilityDefect_zero (m : LMM s) (hm : m.IsConsistent) :
   intro k
   exact m.toGLM_V_nordsieckQ_eq hm k
 
+/-- **§530 / §503 bridge** — Every consistent LMM embeds as a
+GLM of order ≥ 1. This is the LMM-side mirror of
+`ButcherTableau.toGLM_hasOrderGe1` and is a one-line wrapper around
+`toGLM_isConsistent`. -/
+theorem toGLM_hasOrderGe1 (m : LMM s) (hm : m.IsConsistent) :
+    m.toGLM.HasOrderGe1 :=
+  m.toGLM_isConsistent hm
+
 end LMM
+
+/-! ### §530 LMM-as-GLM order-≥ 1 witnesses
+
+Concrete consistent LMMs of step `s = 1` (forward Euler, backward Euler,
+trapezoidal rule) and `s = 2` (BDF2) exhibit `HasOrderGe1` for their
+GLM embeddings. Each witness is a one-line application of
+`LMM.toGLM_hasOrderGe1` to the corresponding `_consistent` lemma in
+`OpenMath/MultistepMethods.lean`. -/
+
+theorem forwardEuler_toGLM_hasOrderGe1 :
+    forwardEuler.toGLM.HasOrderGe1 :=
+  forwardEuler.toGLM_hasOrderGe1 forwardEuler_consistent
+
+theorem backwardEuler_toGLM_hasOrderGe1 :
+    backwardEuler.toGLM.HasOrderGe1 :=
+  backwardEuler.toGLM_hasOrderGe1 backwardEuler_consistent
+
+theorem trapezoidalRule_toGLM_hasOrderGe1 :
+    trapezoidalRule.toGLM.HasOrderGe1 :=
+  trapezoidalRule.toGLM_hasOrderGe1 trapezoidalRule_consistent
+
+theorem bdf2_toGLM_hasOrderGe1 :
+    bdf2.toGLM.HasOrderGe1 :=
+  bdf2.toGLM_hasOrderGe1 bdf2_consistent
 
 namespace Matrix
 
