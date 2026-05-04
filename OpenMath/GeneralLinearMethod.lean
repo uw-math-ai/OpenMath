@@ -240,6 +240,50 @@ theorem HasOrderGe3.toHasOrderGe2 {s r : ℕ}
   obtain ⟨q, q', q'', _q''', hVq, hUq, hBq', hBq'', _⟩ := h
   exact ⟨q, q', q'', hVq, hUq, hBq', hBq''⟩
 
+/-- **Butcher §530** — A general linear method `(A, U, B, V)` has
+**order at least 4** if there exist Nordsieck input vectors
+`q, q', q'', q''', q'''' : Fin r → ℝ` such that the §510
+preconsistency identities hold together with the first-, second-,
+third-, and fourth-derivative Taylor compatibility identities for
+the GLM update. The fourth-derivative identity uses the order-1
+stage abscissa `c_j := (∑ i, A j i) + ∑ l, U j l * q' l` together
+with the order-2 stage moment `(A·c)_j + (U q'')_j` and the
+order-3 stage moment `(A · order-2-moment)_j + (U q''')_j`. The
+leading `24 ·` factor matches the `h⁴/4!` Taylor coefficient. -/
+def HasOrderGe4 (m : GeneralLinearMethod s r) : Prop :=
+  ∃ q q' q'' q''' q'''' : Fin r → ℝ,
+    (∀ k : Fin r, ∑ l, m.V k l * q l = q k) ∧
+    (∀ i : Fin s, ∑ k, m.U i k * q k = 1) ∧
+    (∀ k : Fin r, (∑ j, m.B k j) + ∑ l, m.V k l * q' l = q k + q' k) ∧
+    (∀ k : Fin r,
+      2 * (∑ j, m.B k j * ((∑ i, m.A j i) + ∑ l, m.U j l * q' l)) +
+        ∑ l, m.V k l * q'' l =
+      q k + 2 * q' k + q'' k) ∧
+    (∀ k : Fin r,
+      6 * (∑ j, m.B k j *
+            ((∑ i, m.A j i * ((∑ i', m.A i i') + ∑ l, m.U i l * q' l)) +
+              ∑ l, m.U j l * q'' l)) +
+        ∑ l, m.V k l * q''' l =
+      q k + 3 * q' k + 3 * q'' k + q''' k) ∧
+    (∀ k : Fin r,
+      24 * (∑ j, m.B k j *
+            ((∑ i, m.A j i *
+              ((∑ i', m.A i i' *
+                ((∑ i'', m.A i' i'') + ∑ l, m.U i' l * q' l)) +
+                ∑ l, m.U i l * q'' l)) +
+              ∑ l, m.U j l * q''' l)) +
+        ∑ l, m.V k l * q'''' l =
+      q k + 4 * q' k + 6 * q'' k + 4 * q''' k + q'''' k)
+
+/-- §530 monotonicity — order ≥ 4 implies order ≥ 3. The order-≥ 4
+witness `(q, q', q'', q''', q'''')` projects to the order-≥ 3 witness
+`(q, q', q'', q''')` by dropping the fourth-derivative identity. -/
+theorem HasOrderGe4.toHasOrderGe3 {s r : ℕ}
+    {m : GeneralLinearMethod s r} (h : m.HasOrderGe4) :
+    m.HasOrderGe3 := by
+  obtain ⟨q, q', q'', q''', _q'''', hVq, hUq, hBq', hBq'', hBq''', _⟩ := h
+  exact ⟨q, q', q'', q''', hVq, hUq, hBq', hBq'', hBq'''⟩
+
 /-! ## §520 — Stability Matrix -/
 
 /-- Complex lift of the `A` block. -/
