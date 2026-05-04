@@ -879,6 +879,9 @@ error bound for one specific scheme:
   added `rkMidpoint`, `rk4`, `rkGaussLegendre2`, and `rkGaussLegendre3`
   order-2 witnesses (the latter three projecting `HasOrderGe4` to
   `HasOrderGe2` inline). `HasOrderGe3` and higher remain open.
+  Cycle 792 added the four embedded-pair main-method `toGLM_hasOrderGeN`
+  witnesses (Heun–Euler 2(1), BS3(2), RKF45, DOPRI5) plus their
+  lower-order projections (12 theorems total).
 - [ ] **§531 Local and global truncation errors** for GLMs.
 - [ ] **§532 Algebraic analysis of order** — tree-based order conditions
   (extends §31).

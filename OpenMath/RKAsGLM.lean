@@ -12,6 +12,7 @@ import OpenMath.LobattoIIIB3
 import OpenMath.LobattoIIIC
 import OpenMath.LobattoIIIC3
 import OpenMath.RadauIA2
+import OpenMath.EmbeddedRK
 
 /-!
 # Butcher §502 — Runge–Kutta methods as general linear methods
@@ -1476,3 +1477,98 @@ theorem rkLobattoIIIC3_toGLM_hasOrderGe4 :
     rkLobattoIIIC3.toGLM.HasOrderGe4 :=
   rkLobattoIIIC3.toGLM_hasOrderGe4
     rkLobattoIIIC3_order4 rkLobattoIIIC3_consistent
+
+/-! ### §530 — Embedded-pair main-method GLM order witnesses
+
+For each `EmbeddedRKPair`, the main method already has a tableau-level
+order certificate; project it through the matching `toGLM_hasOrderGeN`
+bridge. -/
+
+/-- §530 — Heun–Euler 2(1) main method (Heun, order 2) embeds as a GLM of
+order ≥ 2. -/
+theorem rkHeunEuler21_mainMethod_toGLM_hasOrderGe2 :
+    rkHeunEuler21.mainMethod.toGLM.HasOrderGe2 :=
+  rkHeunEuler21.mainMethod.toGLM_hasOrderGe2
+    rkHeunEuler21_main_order2
+    rkHeunEuler21_consistent.main_consistent
+
+/-- §530 — Bogacki–Shampine 3(2) main method (order 3) embeds as a GLM of
+order ≥ 3. -/
+theorem rkBS32_mainMethod_toGLM_hasOrderGe3 :
+    rkBS32.mainMethod.toGLM.HasOrderGe3 :=
+  rkBS32.mainMethod.toGLM_hasOrderGe3
+    rkBS32_main_order3
+    rkBS32_consistent.main_consistent
+
+/-- §530 — Bogacki–Shampine 3(2) main method embeds as a GLM of order ≥ 2. -/
+theorem rkBS32_mainMethod_toGLM_hasOrderGe2 :
+    rkBS32.mainMethod.toGLM.HasOrderGe2 :=
+  rkBS32.mainMethod.toGLM_hasOrderGe2
+    ⟨rkBS32_main_order3.1, rkBS32_main_order3.2.1⟩
+    rkBS32_consistent.main_consistent
+
+/-- §530 — Bogacki–Shampine 3(2) main method embeds as a GLM of order ≥ 1. -/
+theorem rkBS32_mainMethod_toGLM_hasOrderGe1 :
+    rkBS32.mainMethod.toGLM.HasOrderGe1 :=
+  rkBS32.mainMethod.toGLM_hasOrderGe1
+    rkBS32_consistent.main_consistent
+
+/-- §530 — Runge–Kutta–Fehlberg 4(5) main method (order 5) embeds as a
+GLM of order ≥ 5. -/
+theorem rkRKF45_mainMethod_toGLM_hasOrderGe5 :
+    rkRKF45.mainMethod.toGLM.HasOrderGe5 :=
+  rkRKF45.mainMethod.toGLM_hasOrderGe5
+    rkRKF45_main_order5
+    rkRKF45_consistent.main_consistent
+
+/-- §530 — RKF45 main method embeds as a GLM of order ≥ 4. -/
+theorem rkRKF45_mainMethod_toGLM_hasOrderGe4 :
+    rkRKF45.mainMethod.toGLM.HasOrderGe4 :=
+  rkRKF45.mainMethod.toGLM_hasOrderGe4
+    rkRKF45_main_order5.1
+    rkRKF45_consistent.main_consistent
+
+/-- §530 — RKF45 main method embeds as a GLM of order ≥ 3. -/
+theorem rkRKF45_mainMethod_toGLM_hasOrderGe3 :
+    rkRKF45.mainMethod.toGLM.HasOrderGe3 :=
+  rkRKF45.mainMethod.toGLM_hasOrderGe3
+    ⟨rkRKF45_main_order5.1.1, rkRKF45_main_order5.1.2.1,
+     rkRKF45_main_order5.1.2.2.1, rkRKF45_main_order5.1.2.2.2.1⟩
+    rkRKF45_consistent.main_consistent
+
+/-- §530 — RKF45 main method embeds as a GLM of order ≥ 2. -/
+theorem rkRKF45_mainMethod_toGLM_hasOrderGe2 :
+    rkRKF45.mainMethod.toGLM.HasOrderGe2 :=
+  rkRKF45.mainMethod.toGLM_hasOrderGe2
+    ⟨rkRKF45_main_order5.1.1, rkRKF45_main_order5.1.2.1⟩
+    rkRKF45_consistent.main_consistent
+
+/-- §530 — Dormand–Prince 5(4) main method (order 5) embeds as a GLM of
+order ≥ 5. -/
+theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe5 :
+    rkDOPRI5.mainMethod.toGLM.HasOrderGe5 :=
+  rkDOPRI5.mainMethod.toGLM_hasOrderGe5
+    rkDOPRI5_main_order5
+    rkDOPRI5_consistent.main_consistent
+
+/-- §530 — DOPRI5 main method embeds as a GLM of order ≥ 4. -/
+theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe4 :
+    rkDOPRI5.mainMethod.toGLM.HasOrderGe4 :=
+  rkDOPRI5.mainMethod.toGLM_hasOrderGe4
+    rkDOPRI5_main_order5.1
+    rkDOPRI5_consistent.main_consistent
+
+/-- §530 — DOPRI5 main method embeds as a GLM of order ≥ 3. -/
+theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe3 :
+    rkDOPRI5.mainMethod.toGLM.HasOrderGe3 :=
+  rkDOPRI5.mainMethod.toGLM_hasOrderGe3
+    ⟨rkDOPRI5_main_order5.1.1, rkDOPRI5_main_order5.1.2.1,
+     rkDOPRI5_main_order5.1.2.2.1, rkDOPRI5_main_order5.1.2.2.2.1⟩
+    rkDOPRI5_consistent.main_consistent
+
+/-- §530 — DOPRI5 main method embeds as a GLM of order ≥ 2. -/
+theorem rkDOPRI5_mainMethod_toGLM_hasOrderGe2 :
+    rkDOPRI5.mainMethod.toGLM.HasOrderGe2 :=
+  rkDOPRI5.mainMethod.toGLM_hasOrderGe2
+    ⟨rkDOPRI5_main_order5.1.1, rkDOPRI5_main_order5.1.2.1⟩
+    rkDOPRI5_consistent.main_consistent
