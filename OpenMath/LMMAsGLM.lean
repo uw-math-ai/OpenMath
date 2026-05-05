@@ -2350,6 +2350,96 @@ theorem adamsBashforth4_toGLM_hasOrderGe3 :
       AB4GE3.qN, AB4GE3.q'N, AB4GE3.q''N]
     all_goals norm_num
 
+/-! ### §530 LMM-as-GLM order-≥ 3 witness — BDF 4-step
+
+`bdf4` (`s = 4`, eight GLM input slots `Fin 8`, implicit, order 4)
+embeds as a GLM of order ≥ 3. The shift constant is
+`C := s² − 2 β_s s = 16 − 2·(12/25)·4 = 304/25` for `β_s = 12/25`.
+Same helper-extraction recipe as AB4GE3: each `Fin 8` case in the
+q''' obligation gets its own block, and any cases that exceed the
+heartbeat budget are factored into separate private theorems. -/
+namespace BDF4GE3
+
+private noncomputable def qN : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 4 => (1 : ℝ)) (fun _ : Fin 4 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 4) k)
+
+private noncomputable def q'N : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 4 => ((j : ℕ) : ℝ)) (fun _ : Fin 4 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 4) k)
+
+private noncomputable def q''N : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 4 => ((j : ℕ) : ℝ) ^ 2 - 304/25)
+    (fun j : Fin 4 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 4) k)
+
+private noncomputable def q'''N : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 4 => ((j : ℕ) : ℝ) ^ 3 - 3 * (304/25) * ((j : ℕ) : ℝ))
+    (fun j : Fin 4 => 3 * (((j : ℕ) : ℝ) ^ 2 - 304/25))
+    (Fin.cast (Nat.two_mul 4) k)
+
+/-- Helper for the last `Fin 8` case (`k = 7`) of `q'''_obligation`.
+Factored into a private theorem so it gets a fresh heartbeat budget. -/
+private theorem q'''_obligation_seven :
+    6 * (∑ j, bdf4.toGLM.B (⟨7, by decide⟩ : Fin 8) j *
+            ((∑ i, bdf4.toGLM.A j i *
+                ((∑ i', bdf4.toGLM.A i i') +
+                  ∑ l, bdf4.toGLM.U i l * q'N l)) +
+              ∑ l, bdf4.toGLM.U j l * q''N l)) +
+        ∑ l, bdf4.toGLM.V (⟨7, by decide⟩ : Fin 8) l * q'''N l =
+      qN ⟨7, by decide⟩ + 3 * q'N ⟨7, by decide⟩ +
+        3 * q''N ⟨7, by decide⟩ + q'''N ⟨7, by decide⟩ := by
+  simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation (k : Fin 8) :
+    6 * (∑ j, bdf4.toGLM.B k j *
+            ((∑ i, bdf4.toGLM.A j i *
+                ((∑ i', bdf4.toGLM.A i i') +
+                  ∑ l, bdf4.toGLM.U i l * q'N l)) +
+              ∑ l, bdf4.toGLM.U j l * q''N l)) +
+        ∑ l, bdf4.toGLM.V k l * q'''N l =
+      qN k + 3 * q'N k + 3 * q''N k + q'''N k := by
+  fin_cases k
+  · simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · exact q'''_obligation_seven
+
+end BDF4GE3
+
+theorem bdf4_toGLM_hasOrderGe3 :
+    bdf4.toGLM.HasOrderGe3 := by
+  refine ⟨BDF4GE3.qN, BDF4GE3.q'N, BDF4GE3.q''N, BDF4GE3.q'''N,
+    ?_, ?_, ?_, ?_, BDF4GE3.q'''_obligation⟩
+  · exact bdf4.toGLM_V_nordsieckQ_eq bdf4_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ, BDF4GE3.qN]
+    norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      BDF4GE3.qN, BDF4GE3.q'N]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, bdf4, Fin.addCases, Fin.sum_univ_succ,
+      BDF4GE3.qN, BDF4GE3.q'N, BDF4GE3.q''N]
+    all_goals norm_num
+
 namespace Matrix
 
 /-- §521 helper — auxiliary cardinality split for `Finset n`-indexed sums:
