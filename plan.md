@@ -213,7 +213,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:521A` **Methods with maximal stability order** (§521)
 - [x] `lem:515A` **Stability and consistency imply convergence (515A)** (§515) — `OpenMath/Chapter5/Section515.lean` (cycle 102 closure: 515a + 515b axiom-clean)
 - [x] `thm:514A` **The necessity of consistency** (§514) — `OpenMath/Chapter5/Section514.lean` (cycle 099 closure; option (ii) sidestep, axiom-clean)
-- [ ] `thm:520B` **Stability Matrix for Linear Differential Equation** (§520)
+- [x] `thm:520B` **Stability Matrix for Linear Differential Equation** (§520) — `OpenMath/Chapter5/Section520.lean::GeneralLinearMethod.stabilityMatrix_linearTest_step` (cycle 125, axiom-clean)
 - [ ] `thm:520D` **Instability Region Boundary Characterization** (§520)
 - [ ] `thm:550A` **Doubly companion matrices** (§550)
 - [x] `def:520E` **A-stable** (§520) — OpenMath/Chapter5/Section520.lean

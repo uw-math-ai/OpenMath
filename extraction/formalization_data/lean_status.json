@@ -828,9 +828,10 @@
     "notes": "Cycle 124 — closed the body of `aux_515D_max_deviation_geometric_bound` (Section515.lean:2360, ~360 LOC body), the last §515D sorry. Capstone `stable_consistent_isConvergent` is now AXIOM-CLEAN: `#print axioms` returns only `[propext, Classical.choice, Quot.sound]`. Decomposition: (1) New private helper `aux_515D_delta_closed_form` (Section515.lean:2207, ~30 LOC) proves the pure-algebraic vectorial closed form `δ m = V^m·δ 0 + ∑_{k<m} V^(m−1−k)·R k` by induction on m. (2) New private helper `aux_515D_iterated_V_bound_linfty` (Section515.lean:2257, ~70 LOC) bridges the L∞-operator-norm scope of `M.IsStable` (defined in Section510.lean with `Matrix.Norms.Operator` open) to the sup'-form bound the capstone needs — placed in a sub-section opening `Matrix.Norms.Operator` since Section515.lean's body opens `Matrix.Norms.Frobenius` (incompatible scopes). The original `aux_515D_iterated_V_bound` (cycle 120, Frobenius-norm hypothesis) is now superseded for the capstone path — kept in file for backward narrowing audit but not invoked. (3) Main body composes: K-bound (cycle 123) per-step → δ-recurrence → closed form → sup' splitting → sum-form Grönwall (cycle 117). For the Grönwall hypothesis (which requires the recurrence ∀ m ≥ 1, even m > n), uses a truncated u_seq m := if m ≤ n then δ_max m else 0 so the bound holds vacuously for m > n. Branches on α = 0 vs α > 0; α = 0 branch direct from sum-form bound, α > 0 branch invokes Grönwall and substitutes n·h_n = x − x₀. NO §513 / §514 cascade regression — all build clean. Tautology scanner: 0 hits. Faithfulness: signature stable from cycle 123 (only divergences are pre-existing `_hc_nn` and `_hc_le_one` propagation; no new hypotheses introduced). All §515D sorries closed."
   },
   "thm:520B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section520.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stabilityMatrix_linearTest_step",
+    "status": "formalized",
+    "cycle": 125
   },
   "thm:520D": {
     "lean_file": null,

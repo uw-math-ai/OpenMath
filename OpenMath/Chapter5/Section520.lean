@@ -367,6 +367,89 @@ def GeneralLinearMethod.HasStabilityOrder {s r : ℕ}
     (fun z : ℂ => M.stabilityFunction (Complex.exp z) z)
     (fun z : ℂ => z ^ (p + 1))
 
+/-- **Theorem 520B** — Stability matrix governs one step of a GLM
+applied to the linear test equation `y' = q·y` with `z = h·q`.
+
+For the linear test equation, `f(y) = q·y` so `F = q·Y` (stage
+derivatives = `q` times stage values). The GLM step
+`Y = h·A·F + U·y^[n−1]`, `y^[n] = h·B·F + V·y^[n−1]` reduces, with
+`z := h·q`, to `Y = z·A·Y + U·y^[n−1]` and
+`y^[n] = z·B·Y + V·y^[n−1]`. Provided `(I − z·A)` is invertible,
+solving the stage equation gives `Y = (I − z·A)⁻¹·U·y^[n−1]` and
+substituting into the output collapses to `y^[n] = M(z)·y^[n−1]`.
+
+Butcher (Theorem 520B, p. 397): "Let `M(z)` denote the stability
+matrix for a general linear method. Then, for a linear differential
+equation (520a), (520b) holds with `z = hq`."
+
+Encoding choices:
+
+* The textbook's `f(y) = qy` ⇒ `F = qY` substitution and `z = hq`
+  parameter are pre-applied, so `hY_stage` is the post-substitution
+  stage equation `Y = z·A·Y + U·yPrev` and the conclusion is
+  `z·B·Y + V·yPrev = M(z)·yPrev`. This faithfully captures the
+  textbook content without re-introducing the stripped `q`/`h`/`f`
+  apparatus.
+* `IsUnit (1 - z • complexify M.A)` is added as a hypothesis to
+  surface the textbook's tacit invertibility assumption (Mathlib's
+  `Matrix.inv` returns junk-zero on singular matrices, so this
+  theorem is genuinely false without invertibility).
+* `Y` is parameterised (rather than instantiated as
+  `(I − z·A)⁻¹·U·yPrev`), letting downstream callers supply any
+  stage witness satisfying the stage equation. -/
+theorem GeneralLinearMethod.stabilityMatrix_linearTest_step
+    {s r : ℕ} (M : GeneralLinearMethod s r) (z : ℂ)
+    (h_inv : IsUnit (1 - z • complexify M.A))
+    (yPrev : Fin r → ℂ) (Y : Fin s → ℂ)
+    (hY_stage : Y = z • complexify M.A *ᵥ Y
+                    + complexify M.U *ᵥ yPrev) :
+    z • complexify M.B *ᵥ Y + complexify M.V *ᵥ yPrev
+      = M.stabilityMatrix z *ᵥ yPrev := by
+  -- Step 1: rearrange `hY_stage` to `(1 - z • A) *ᵥ Y = U *ᵥ yPrev`.
+  have h_stage_solved :
+      (1 - z • complexify M.A) *ᵥ Y = complexify M.U *ᵥ yPrev := by
+    rw [Matrix.sub_mulVec, Matrix.one_mulVec, Matrix.smul_mulVec]
+    -- Goal: Y - z • complexify M.A *ᵥ Y = complexify M.U *ᵥ yPrev
+    nth_rewrite 1 [hY_stage]
+    abel
+  -- Step 2: apply `(1 - z • A)⁻¹` on the left to recover `Y`.
+  have h_det : IsUnit (1 - z • complexify M.A).det :=
+    (Matrix.isUnit_iff_isUnit_det _).mp h_inv
+  have h_inv_mul :
+      (1 - z • complexify M.A)⁻¹ * (1 - z • complexify M.A) = 1 :=
+    Matrix.nonsing_inv_mul _ h_det
+  have hY_solved :
+      Y = ((1 - z • complexify M.A)⁻¹ * complexify M.U) *ᵥ yPrev := by
+    have h := congrArg
+      (fun w : Fin s → ℂ => (1 - z • complexify M.A)⁻¹ *ᵥ w)
+      h_stage_solved
+    simp only at h
+    rw [Matrix.mulVec_mulVec, Matrix.mulVec_mulVec, h_inv_mul,
+        Matrix.one_mulVec] at h
+    exact h
+  -- Step 3: substitute `Y` into the output and combine.
+  rw [hY_solved]
+  unfold GeneralLinearMethod.stabilityMatrix
+  -- Goal: z • B *ᵥ (((1 - z•A)⁻¹ * U) *ᵥ yPrev) + V *ᵥ yPrev
+  --     = (V + z • B * (1 - z•A)⁻¹ * U) *ᵥ yPrev
+  rw [Matrix.mulVec_mulVec, ← Matrix.smul_mulVec, ← Matrix.add_mulVec,
+      add_comm]
+  -- Goal (matrix-equality after `congr 1`-style):
+  -- (V + z • (B * ((1-z•A)⁻¹ * U))) *ᵥ yPrev
+  --   = (V + z • B * (1-z•A)⁻¹ * U) *ᵥ yPrev
+  congr 2
+  rw [Matrix.smul_mul, Matrix.smul_mul, Matrix.mul_assoc]
+
+/-- Non-vacuity: at `z = 0`, the linear-test step says
+`y^[n] = V·y^[n−1]` (since `M(0) = V`). The trivial stage witness
+`Y := U·y^[n−1]` satisfies the stage equation `Y = 0·A·Y + U·yPrev`
+trivially, and the output `0·B·Y + V·yPrev = V·yPrev` matches
+`M(0)·yPrev = V·yPrev`. -/
+theorem GeneralLinearMethod.stabilityMatrix_linearTest_step_at_zero
+    {s r : ℕ} (M : GeneralLinearMethod s r) (yPrev : Fin r → ℂ) :
+    complexify M.V *ᵥ yPrev = M.stabilityMatrix 0 *ᵥ yPrev := by
+  rw [M.stabilityMatrix_at_zero]
+
 /-- Closed-form stability function of explicit Euler:
 `Φ_explicitEuler(w, z) = w − 1 − z`.
 

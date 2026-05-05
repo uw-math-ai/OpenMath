@@ -1710,7 +1710,7 @@ private lemma aux_515D_one_add_pow_le_exp (c : ℝ) (_hc : 0 ≤ c) (n : ℕ) :
 /-- Helper: discrete Grönwall closed-form with `(1 + α·h)` base. -/
 private theorem aux_515D_discrete_gronwall_raw
     (u : ℕ → ℝ) (a α β h : ℝ)
-    (ha : 0 ≤ a) (hα_pos : 0 < α) (hβ_nn : 0 ≤ β) (hh : 0 ≤ h)
+    (ha : 0 ≤ a) (hα_pos : 0 < α) (_hβ_nn : 0 ≤ β) (hh : 0 ≤ h)
     (hu0 : u 0 ≤ a)
     (hu_rec : ∀ m, 1 ≤ m →
       u m ≤ a + α * h * (∑ i ∈ Finset.Ico 1 m, u i)
