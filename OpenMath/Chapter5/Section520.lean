@@ -617,6 +617,48 @@ theorem explicitEulerGLM_isIRKStable :
     · intro i _ hi
       exact absurd (Subsingleton.elim i 0) hi
 
+/-- A degenerate `s = 1, r = 2` GLM used solely as a *substantive*
+non-vacuity witness for `IsIRKStable` (cycle 133). The row-0 output
+is forward-Euler-like; the row-1 output is a passively-decoupled
+zero channel (`B[1][0] = 0`, `V[1][·] = 0`). The point of this method
+is NOT numerical interest; it is to exhibit a `def:551A` witness in
+which the `∀ i : Fin r, i ≠ 0 → …` clauses are non-vacuously
+discharged at `i = 1`.
+
+This complements `explicitEulerGLM` (whose `r = 1` makes the
+row-1+ residual clauses vacuous over an empty index set) by
+providing an instance where the same clauses must be discharged
+by direct entry-wise computation. -/
+def padded2DEulerGLM : GeneralLinearMethod 1 2 where
+  A := !![0]
+  U := !![1, 0]
+  B := !![1; 0]
+  V := !![1, 0; 0, 0]
+
+/-- **Substantive** non-vacuity witness for `IsIRKStable`:
+`padded2DEulerGLM` (s = 1, r = 2) is inherently Runge–Kutta stable
+with `X = 0`. Unlike the cycle 131 witness `explicitEulerGLM`
+(r = 1), the `∀ i ≠ 0` quantifiers in the residual clauses here
+range over the *non-empty* index `i = 1`, so the conclusion follows
+from direct entry-wise computation rather than vacuous instantiation. -/
+theorem padded2DEulerGLM_isIRKStable :
+    padded2DEulerGLM.IsIRKStable := by
+  refine ⟨?_, 0, ?_, ?_⟩
+  · -- (551a): V's first column equals e₀.
+    intro i
+    fin_cases i <;> simp [padded2DEulerGLM]
+  · -- B*A − 0*B = B*A, with row 1 = 0 because B[1][0] = 0.
+    intro i j hi
+    fin_cases i
+    · exact absurd rfl hi
+    · fin_cases j
+      simp [padded2DEulerGLM]
+  · -- B*U − 0*V + V*0 = B*U, with row 1 = [0, 0] because B[1][0] = 0.
+    intro i j hi
+    fin_cases i
+    · exact absurd rfl hi
+    · fin_cases j <;> simp [padded2DEulerGLM]
+
 /-! ### Theorem 520D — Instability Region Boundary Characterization
 
 Butcher (Theorem 520D, p. 419): "The instability region for `(A, U, B, V)`

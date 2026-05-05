@@ -1,330 +1,277 @@
-# Cycle 132 Strategy
+# Cycle 133 Strategy
 
-## TL;DR
+## State summary
 
-Primary target: **register `thm:142D` (i ⇔ ii) as a partial formalization** by
-adding a textbook-numbered alias for the existing
-`OpenMath.Chapter1.Section142.convergent_iff_minpoly_roots_lt_one`
-(cycle 005), updating `lean_status.json` and `plan.md`, and documenting
-the deferred (iii)/(iv) Jordan/Schur clauses. Progress 68 → 69 / 175.
+* Branch tip: `022e140 Cycle 132 — register thm:142D (i⇔ii) partial via textbook-named alias (axiom-clean)`.
+* No sorry's anywhere in `OpenMath/`.
+* Progress: 69 / 175.
+* No pending Aristotle results.
+* Cycles 128–132 produced a chain of small **definitional** /
+  **registration** deliverables (def:525A, def:542A, def:551A, thm:142D
+  partial). The non-vacuity witnesses for `def:542A` and `def:551A` are
+  **structurally vacuous on the row-1+ clauses** because they are
+  instantiated at `r = 1`, so the `∀ i ≠ 0, …` quantifiers range over
+  an empty index set.
+* Cycle 132's "Suggested next approach" lists three concrete options;
+  this strategy adopts option 1 (substantive r=2 IRK-stability witness)
+  as Priority 1 because it directly closes the structural-vacuity gap
+  introduced by cycles 130 and 131. Option 2 (`thm:551B`) is held as a
+  stretch goal for the back of the cycle if Priority 1 lands early.
 
-Stretch goal (only if primary is in the bag): **substantive r=2 IRK-stability
-witness** that genuinely exercises the cycle 131 `IsIRKStable` predicate
-(the cycle 131 witness is vacuous on the row-0 clauses for `r = 1`,
-see §C below).
+## Priority 1 — Substantive r=2 witness for `def:551A` (~80 LOC)
 
-## Why this target
+### What
 
-### Context audit — what's actually tractable
+Strengthen the non-vacuity of `GeneralLinearMethod.IsIRKStable`
+(`OpenMath/Chapter5/Section520.lean:586`) by constructing a small
+`s = 1, r = 2` GLM and proving it is IRK-stable. Unlike
+`explicitEulerGLM_isIRKStable` (cycle 131), which has `r = 1` and so
+satisfies `∀ i : Fin 1, i ≠ 0 → …` vacuously, the new witness has
+`r = 2` and so the row-1 clauses become genuine universal statements
+over `i = 1` that must be discharged by direct calculation.
 
-I examined every "natural next" candidate suggested by the cycle 131
-worker and the upcoming entries in `plan.md`:
+### Where
 
-| Candidate | Status |
-|---|---|
-| Substantive `implicitMidpointGLM_isIRKStable` | Vacuous for `r = 1` regardless of `X`, see §C |
-| `def:530A` non-degenerate | Needs `StartingMethod` + generalized RK infra (heavy) |
-| `thm:535A` underlying one-step method (GLM) | Requires `thm:422A`, rooted-tree machinery; transitive blocker |
-| `thm:541A` DIMSIM types | Transitive deps include `def:310A`, `thm:301A`, `thm:532A` etc. — none formalized |
-| `thm:551B` Single non-zero eigenvalue | Requires §550 doubly companion matrix infra |
-| `thm:521B` Maximum stability order | Contour integrals + partial fractions |
-| `thm:431A` Schur criterion | Rouché's theorem, complex polynomial root counting (medium-heavy) |
-| `def:451A` G-stable | One-leg method infra not built; matrix `M` from (451e) underspecified in extracted text |
-| `thm:142C / E / F` | (iii)/(iv) clauses or perturbation-via-Schur blocked on Jordan/Schur per `jordan_canonical_form_missing.md` |
+Add the new GLM definition and witness theorem **immediately after**
+`explicitEulerGLM_isIRKStable` at `Section520.lean:619` (i.e. before
+the `/-! ### Theorem 520D …` heading at line 620). Keep the cycle 131
+witness in place — the new substantive witness *complements* it; it
+does not replace it.
 
-The §142 entries are partially recoverable: `thm:142D` (i ⇔ ii) is
-already proven in `Section142.lean` lines 311–337 from cycle 005 —
-the `convergent_iff_minpoly_roots_lt_one` packaging. This makes it
-the **cleanest single-cycle entity bump available**: the proof is
-already in the codebase, only the entity registration is missing.
+### Construction (concrete)
 
-### Why this beats freelancing
-
-Per CLAUDE.md "Follow the strategy. Do not cherry-pick easy goals".
-This target is NOT cherry-picking — it is recovering an already-proven
-theorem that was filed under an internal name and never registered as
-its textbook ID. The `convergent_iff_minpoly_roots_lt_one` docstring
-explicitly says "Butcher §142, Theorem 142D — clauses (i) ⇔ (ii)";
-the entity record `thm:142D` just hasn't been credited.
-
-This is the same pattern used for `def:356A` (DJ-irreducibility
-component formalized, AN-stability deferred) and `def:381E`
-(IsIrreducible formalized, reducedMethod construction deferred).
-
-## Primary deliverable — `thm:142D` (i ⇔ ii) partial
-
-### Step 1 — Add textbook-named alias
-
-Edit `OpenMath/Chapter1/Section142.lean` after the existing
-`convergent_iff_minpoly_roots_lt_one` (currently ends ~line 337) to
-add a thin alias that carries the textbook ID as the Lean symbol:
+Read `OpenMath/Chapter5/Section510.lean` first to confirm the field
+list of `GeneralLinearMethod`. Then add:
 
 ```lean
-/-- Butcher §142, Theorem 142D — partial formalization (clauses
-(i) ⇔ (ii) only).
-
-Statement: A square complex matrix `A` is convergent (`A^n → 0`) if
-and only if every root of its minimal polynomial lies in the open
-unit disc.
-
-The full 4-way TFAE in Butcher's textbook also includes:
-* (iii) Jordan canonical form has all diagonal elements in the open
-  unit disc.
-* (iv) ∃ non-singular `S` with `‖S⁻¹AS‖_∞ < 1`.
-
-Both (iii) and (iv) are deferred — they require a Jordan canonical
-form / rescaled Schur decomposition, which is not yet in Mathlib.
-See `.prover-state/issues/jordan_canonical_form_missing.md`. -/
-theorem thm_142D
-    (A : Matrix m m ℂ) :
-    Convergent A ↔ ∀ μ : ℂ, μ ∈ (minpoly ℂ A).roots → ‖μ‖ < 1 :=
-  convergent_iff_minpoly_roots_lt_one A
+/-- A degenerate `s = 1, r = 2` GLM used solely as a *substantive*
+non-vacuity witness for `IsIRKStable` (cycle 133). The row-0 output
+is forward-Euler-like; the row-1 output is a passively-decoupled
+zero channel. The point of this method is NOT numerical interest;
+it is to exhibit a `def:551A` witness in which the
+`∀ i : Fin r, i ≠ 0 → …` clauses are non-vacuously discharged. -/
+def padded2DEulerGLM : GeneralLinearMethod 1 2 where
+  A := !![0]
+  U := !![1, 0]
+  B := !![1; 0]
+  V := !![1, 0; 0, 0]
 ```
 
-Place inside the existing `namespace OpenMath.Chapter1.Section142`
-section block (you'll see `end ConvergenceCharacterizations` and
-`end OpenMath.Chapter1.Section142` near the bottom — insert *before*
-both `end`s, in the same `ConvergenceCharacterizations` section that
-holds `convergent_iff_minpoly_roots_lt_one`).
-
-Naming follows the established convention from cycle 131
-(`def:551A` → `IsIRKStable`, etc.) — the textbook number embedded
-in the symbol so future lookups can grep by number.
-
-### Step 2 — Update `lean_status.json`
-
-Locate the row for `thm:142D` in
-`extraction/formalization_data/lean_status.json` and update. First
-check the schema by examining an existing `partial` row (e.g.
-`def:356A` or `def:381E`) so you match the existing field
-conventions. Then update:
-
-* `lean_file` → `OpenMath/Chapter1/Section142.lean`
-* `lean_symbol` → `OpenMath.Chapter1.Section142.thm_142D`
-* `formalization_status` → `partial`
-* `notes` (or whatever the schema field is): "Clauses (i) ⇔ (ii)
-  only via Gelfand bridge (cycle 005). Clauses (iii) Jordan
-  canonical form and (iv) Schur similarity are deferred — Mathlib
-  lacks Jordan/Schur. See
-  `.prover-state/issues/jordan_canonical_form_missing.md`."
-
-### Step 3 — Update `plan.md`
-
-Change the §142 Chapter 1 row for `thm:142D` from `[ ]` to `[~]` with
-a status note:
-
-```markdown
-- [~] `thm:142D` **Convergence Equivalence for Matrix Powers** (§142) — `OpenMath/Chapter1/Section142.lean::thm_142D` (cycle 132, partial: i ⇔ ii via Gelfand; iii/iv blocked on Jordan canonical form per `jordan_canonical_form_missing.md`)
-```
-
-Update the "Progress" header at the top of `plan.md` from 68 / 175
-to 69 / 175 (or 68.5 / 175 depending on convention — match how
-prior partials like `def:356A` were counted).
-
-### Step 4 — Verify axiom-clean
-
-```bash
-lake env lean OpenMath/Chapter1/Section142.lean
-```
-
-Then via `lean_verify` MCP or by adding a temporary scratch:
-
-```
-#print axioms OpenMath.Chapter1.Section142.thm_142D
-```
-
-Expected: `[propext, Classical.choice, Quot.sound]` only. Should
-trivially follow since `thm_142D` is a one-line alias of
-`convergent_iff_minpoly_roots_lt_one`, which already passes
-axiom-clean checks.
-
-### Step 5 — Faithfulness check
-
-Quote the textbook statement of `thm:142D` from
-`extraction/formalization_data/entities/thm_142D.json` in
-`task_results/cycle_132.md`'s faithfulness section. Note explicitly
-that:
-
-* The Lean statement captures clauses (i) ⇔ (ii) only.
-* Clauses (iii)/(iv) are deferred with a documented blocker
-  (`jordan_canonical_form_missing.md`).
-* This is the same partial-formalization pattern used for `def:356A`
-  (DJ-irreducibility component, AN-stability deferred) and
-  `def:381E` (IsIrreducible only, reducedMethod deferred).
-
-Do **NOT** package (iii)/(iv) as `True ↔ True` placeholders or
-encode them as `sorry`'d Iff clauses — that is the explicit
-anti-pattern flagged in the cycle 005 strategy. A partial Iff with
-two clauses is the right shape; (iii)/(iv) are not present at all,
-not stubbed.
-
-## Stretch goal — substantive r=2 IRK-stability witness
-
-**Only attempt if Steps 1–5 are committed AND > 30 minutes of cycle
-remain.** If not, defer to cycle 133.
-
-### Why the cycle 131 worker's "implicit-midpoint" suggestion is wrong
-
-The cycle 131 task results suggest a "substantive
-`implicitMidpointGLM_isIRKStable`" witness, claiming:
-
-> s = 1, so the row-0 clause is non-vacuous: we'd need
-> `(B·A − 0) 0 j = 0` which fails
-
-This analysis is **incorrect**. Reading the predicate at
-`OpenMath/Chapter5/Section520.lean:586–596`:
+(If `GeneralLinearMethod` has additional structural fields beyond
+`A, U, B, V` — e.g. `c : Fin s → ℝ` for abscissae — supply zero or
+the canonical defaults. Mimic the pattern used by `explicitEulerGLM`
+elsewhere in the file.)
 
 ```lean
-def GeneralLinearMethod.IsIRKStable {s r : ℕ} [NeZero r]
-    (M : GeneralLinearMethod s r) : Prop :=
-  (∀ i : Fin r, M.V i 0 = if i = 0 then 1 else 0) ∧
-  ∃ X : Matrix (Fin r) (Fin r) ℝ,
-    (∀ (i : Fin r) (j : Fin s), i ≠ 0 →
-      (M.B * M.A - X * M.B) i j = 0) ∧
-    (∀ i j : Fin r, i ≠ 0 →
-      (M.B * M.U - X * M.V + M.V * X) i j = 0)
+/-- **Substantive** non-vacuity witness for `IsIRKStable`:
+`padded2DEulerGLM` (s = 1, r = 2) is inherently Runge–Kutta stable
+with `X = 0`. Unlike the cycle 131 witness `explicitEulerGLM`
+(r = 1), the `∀ i ≠ 0` quantifiers in the residual clauses here
+range over the *non-empty* index `i = 1`, so the conclusion follows
+from direct entry-wise computation rather than vacuous instantiation. -/
+theorem padded2DEulerGLM_isIRKStable :
+    padded2DEulerGLM.IsIRKStable := by
+  refine ⟨?_, 0, ?_, ?_⟩
+  · -- (551a): V's first column equals e₀.
+    intro i
+    fin_cases i <;> simp [padded2DEulerGLM]
+  · -- B*A − 0*B = B*A, with row 1 = 0 because B[1][0] = 0.
+    intro i j hi
+    fin_cases i
+    · exact absurd rfl hi
+    · fin_cases j
+      simp [padded2DEulerGLM, Matrix.mul_apply, Fin.sum_univ_succ,
+            Fin.sum_univ_zero]
+  · -- B*U − 0*V + V*0 = B*U, with row 1 = [0, 0] because B[1][0] = 0.
+    intro i j hi
+    fin_cases i
+    · exact absurd rfl hi
+    · fin_cases j <;>
+        simp [padded2DEulerGLM, Matrix.mul_apply, Fin.sum_univ_succ,
+              Fin.sum_univ_zero]
 ```
 
-The row-constraint clauses iterate over `i : Fin r`, NOT `Fin s`.
-For implicit-midpoint with `r = 1`, no `i ≠ 0` exists in `Fin 1`, so
-both row-0 clauses are vacuously true regardless of `X`. The
-substantive witness for implicit-midpoint reduces to the trivial
-`X := 0` witness, which is what cycle 131 already shipped for
-explicit Euler. Implicit-midpoint adds nothing.
+### Why this is substantive (vs. cycle 131)
 
-### What a genuine substantive witness needs
+Under `Fin 2`, the clauses `∀ i : Fin 2, i ≠ 0 → P i` are NOT
+vacuously true — they apply concretely at `i = 1`. The proof above
+must therefore actually compute `(B * A) 1 0` and `(B * U) 1 j`
+and verify they equal 0. This is a real (if small) calculation
+on a non-empty index, contrasted with cycle 131 where `Fin 1`
+makes `∀ i, i ≠ 0 → …` vacuously true via
+`absurd (Subsingleton.elim i 0) hi`.
 
-A non-vacuous IRK-stability witness requires `r ≥ 2`. Sketch:
+### Verification checklist
 
-```lean
-def GeneralLinearMethod.dummyR2 : GeneralLinearMethod 1 2 :=
-  { A := !![0]
-    U := !![1, 0]
-    B := !![1; 0]    -- shape Fin 2 × Fin 1
-    V := !![1, 1; 0, 0] }
+After landing the construction:
+
+1. `lake env lean OpenMath/Chapter5/Section520.lean` must exit 0.
+2. `lake build OpenMath.Chapter5.Section520` must exit 0 (so the
+   `.olean` is up to date for downstream files and for the axiom check).
+3. `#print axioms OpenMath.Chapter5.Section520.padded2DEulerGLM_isIRKStable`
+   must return `[propext, Classical.choice, Quot.sound]` only.
+4. `#print axioms OpenMath.Chapter5.Section520.explicitEulerGLM_isIRKStable`
+   must STILL return the same axiom-clean set (no regression).
+5. **No new `sorry`** introduced anywhere.
+
+### Faithfulness analysis (do NOT skip)
+
+The new witness must clear the pre-commit faithfulness checklist
+in `CLAUDE.md`. For `padded2DEulerGLM`:
+
+* It is a *new* `def`, but it is NOT a *named mathematical concept* —
+  it is an instance/witness, analogous to the existing
+  `explicitEulerGLM` and `implicitMidpointGLM`. Faithfulness check
+  ("definition matches textbook") is therefore N/A; faithfulness check
+  for *witnesses* reduces to "does this object actually satisfy the
+  predicate, with the predicate unchanged?". Yes — the proof discharges
+  `IsIRKStable` directly.
+
+For `padded2DEulerGLM_isIRKStable`:
+
+* Conclusion `padded2DEulerGLM.IsIRKStable`. No hypotheses. No
+  tautology / identity / hypothesis-strength concerns — the proof is
+  genuinely entry-wise computation.
+* The cycle 131 witness `explicitEulerGLM_isIRKStable` is preserved
+  verbatim. The new witness is additive evidence of non-vacuity.
+
+The cycle 133 task results §"Faithfulness check" must explicitly
+record:
+
+> Entity ID: def:551A. Lean predicate `IsIRKStable` already captures
+> textbook conditions (cycle 131); this cycle adds a second non-vacuity
+> witness (`padded2DEulerGLM_isIRKStable`) where the row-1 quantifiers
+> are non-vacuous. Captures: same predicate, no change. Justification
+> for divergence: none — this is strengthening evidence, not a
+> definition change.
+
+### Approach guardrails (do NOT do these)
+
+* **Do NOT modify the `def:551A` predicate** to "make it stronger".
+  The textbook signature is fixed and was settled in cycle 131; the
+  point of this cycle is to exhibit a more substantive *inhabitant*,
+  not to change the predicate.
+* **Do NOT construct a witness with `r = 1`** — that is exactly the
+  vacuity case cycle 131 already covered.
+* **Do NOT include the textbook §551 method-class context**
+  (`p = q`, `s = r = p + 1`, `A` diagonally implicit, `λ ≥ 0`,
+  `ρ(V̇) = 0`) inside the witness GLM. Those are scope conditions
+  for *which* methods are studied, not part of the IRK-stability
+  predicate. The cycle 131 docstring on the predicate is explicit
+  about this — repeating the same scoping in the witness would be
+  hypothesis smuggling on the witness side.
+* **Do NOT reach for Aristotle.** The proof is two ~5-line direct
+  computations; round-trip cost would dwarf the proof.
+
+### If the proof is harder than expected
+
+If `simp` plus `Matrix.mul_apply` does not close the row-1 clauses
+in one step:
+
+1. Try `decide` after fully concretising `padded2DEulerGLM` (the
+   matrix entries are literal rationals, so decidability should
+   reduce the goal).
+2. Try `Fin.sum_univ_two` / `Fin.sum_univ_one` instead of
+   `Fin.sum_univ_succ`.
+3. As a fallback, prove the two row-1 clauses as separate `have`
+   blocks using `Matrix.mul_apply` + direct numerical computation.
+
+Do **not** generalise the GLM (e.g. parameterise `V[1][1] = λ`) to
+"hide" the proof complexity — keep the witness fully concrete.
+
+### Update `lean_status.json`?
+
+`def:551A` is already `formalized` in `lean_status.json` (cycle 131).
+Do NOT downgrade or modify the row — adding a second witness does
+not change the formalization status. Optionally append a short note
+in the `notes` field if the schema permits.
+
+### Update `plan.md`?
+
+Bump the `def:551A` row's status note to mention the substantive
+witness, e.g.:
+
+```
+- [x] `def:551A` **Inherent Runge–Kutta stability** (§551) —
+  OpenMath/Chapter5/Section520.lean (cycle 131 predicate +
+  vacuous r=1 witness; cycle 133 substantive r=2 witness
+  `padded2DEulerGLM_isIRKStable`)
 ```
 
-(Verify the field types/shapes match `Section510.lean`'s
-`GeneralLinearMethod` structure before constructing — `B` and `V`
-shapes are `Fin r × Fin s` and `Fin r × Fin r` respectively.)
+The progress count stays at 69 / 175 (still 1 entity).
 
-For this `dummyR2`, the IRK-stability witness needs `X : Matrix
-(Fin 2) (Fin 2) ℝ` such that:
+### Commit message template
 
-* V's first column = `e₀` clause: `V 0 0 = 1` (true: V[0][0] = 1),
-  `V 1 0 = 0` (true: V[1][0] = 0). ✓
-* `(B*A - X*B) i j = 0` for `i = 1, j = 0` (one index pair).
-* `(B*U - X*V + V*X) i j = 0` for `i = 1, j ∈ {0, 1}` (two pairs).
+```
+Cycle 133 — strengthen def:551A non-vacuity via substantive r=2
+witness padded2DEulerGLM_isIRKStable (axiom-clean)
+```
 
-Pick `X = !![0, 1; 0, 0]` (or another candidate from staring at the
-textbook form) and verify the three constraints unfold cleanly via
-`fin_cases i; fin_cases j; simp [dummyR2, Matrix.mul_apply, Fin.sum_univ_succ]`.
-The X choice may need iteration — start with `X := 0` to see what
-fails, then patch.
+## Priority 2 (stretch — only if Priority 1 lands with >25 min remaining)
 
-### Stretch budget
+Attempt `thm:551B` *Single Non Zero Eigenvalue Stability* by reading
+its entity record at `extraction/formalization_data/entities/thm_551B.json`,
+sketching whether the textbook proof requires the §550 doubly-companion-
+matrix infrastructure, and either:
 
-~80 LOC max (definition + witness theorem + axiom-clean check). If
-the X-algebra doesn't close cleanly within ~45 min of attempt time,
-**stop and revert** the stretch work; ship the primary deliverable
-alone. Do not let the stretch goal delay the primary commit.
+(a) **If the proof reduces to a short spectral argument on `V` alone**
+    (e.g. `V` upper-triangular with single non-zero eigenvalue ⇒
+    stable), proceed with a sorry-first scaffold then close.
 
-If you do land the stretch goal: bump entity count further (still
-68/175 since IRK-stability is a property of `def:551A`, not a new
-entity — but document the strengthening in
-`task_results/cycle_132.md` and update `def:551A`'s row in
-`lean_status.json` to note the substantive witness).
+(b) **If §550 infrastructure is required**, write a one-paragraph
+    issue at `.prover-state/issues/thm_551B_blocked_on_550.md`
+    documenting the dependency and stop. Do NOT introduce a partial
+    scaffold for thm:551B in this cycle if (b) applies.
 
-## What NOT to try
+This priority is genuinely optional. It is fine — and expected — for
+cycle 133 to land Priority 1 only.
 
-1. **Do not attempt `thm:142D` (iii) or (iv)** — both require Jordan
-   canonical form / rescaled Schur infrastructure. Per
-   `jordan_canonical_form_missing.md`, this is multi-cycle Mathlib
-   work and explicitly out of scope.
+## What NOT to attempt this cycle
 
-2. **Do not encode (iii)/(iv) as `True ↔ True` placeholders or
-   sorry'd Iff clauses.** That is the cycle 005 anti-pattern. The
-   faithful approach is partial formalization with an explicit
-   deferral note — (iii)/(iv) are absent from the Lean statement,
-   not stubbed.
+* `thm:142D` clauses (iii) / (iv) — Mathlib still lacks Jordan
+  canonical form and rescaled Schur. Per
+  `.prover-state/issues/jordan_canonical_form_missing.md`, this is a
+  3–5 cycle infrastructure investment and is not on the critical path.
+* `def:381F` (P-equivalent) — blocked on the deferred `reducedMethod`
+  construction (`.prover-state/issues/reduced_method_deferred.md`).
+* `thm:356C`, `cor:356D`, `thm:357D` — blocked on the deferred
+  AN-stability infrastructure (`.prover-state/issues/AN_stability_deferred.md`).
+* `def:530A`, `thm:535A`, `thm:541A`, `def:451A` — each requires
+  substantial new structural definitions and is unlikely to fit in a
+  single cycle.
+* **Do NOT modify `scripts/autonomous_loop.py`** — loop-maintainer
+  territory per `.prover-state/issues/tautology_scanner_false_positives.md`.
+* **Do NOT introduce `axiom` or `constant`** anywhere.
+* **Do NOT raise `maxHeartbeats`** above 200000 — the proof is small
+  enough that the default bound is plentiful.
+* **Do NOT use Aristotle for this cycle** — the deliverable is two
+  ~5-line entry-wise computations; submission overhead exceeds proof
+  cost.
 
-3. **Do not pursue the cycle 131 worker's `implicitMidpointGLM_isIRKStable`
-   suggestion as written.** As shown in §"Stretch goal" above, it's
-   vacuous for `r = 1`. Skip implicit-midpoint entirely; if you go
-   for substantive, do `r = 2`.
+## Cycle deliverable bar
 
-4. **Do not pivot to `def:530A` / `thm:535A` / `thm:541A` /
-   `def:451A`.** These all need substantial new infrastructure
-   (starting methods, generalized RK, rooted-tree elementary
-   differentials, one-leg methods, equation 451e expansion) — cannot
-   be closed in one cycle.
+* **Acceptable**: Priority 1 lands axiom-clean with `lean_status.json`
+  + `plan.md` updated, faithfulness check completed, commit pushed.
+  Progress stays 69 / 175.
+* **Better**: Priority 1 + Priority 2(a) lands with `thm:551B`
+  closed (advancing 69 → 70 / 175).
+* **Acceptable fallback**: Priority 1 + Priority 2(b) (thm:551B
+  blocker issue file written, no scaffold introduced). Progress
+  stays 69 / 175 but the next cycle has a clear plan.
+* **Unacceptable**: zero changes. Per `CLAUDE.md`, "a cycle with
+  zero changes is unacceptable. At minimum, decompose a sorry or
+  write an issue." Priority 1 is approximately 80 LOC including
+  proof; this is a clean single-cycle deliverable.
 
-5. **Do not attempt `thm:431A` Schur criterion.** Although Rouché's
-   theorem is in Mathlib, the polynomial-root-counting plumbing is
-   medium-effort and not aligned with the §142 cycle target.
-   Defer to a future cycle dedicated to §43.
+## Pointers
 
-6. **Do not raise `maxHeartbeats`.** Per CLAUDE.md.
-
-7. **Do not introduce `axiom` or `constant`.** Per CLAUDE.md.
-
-8. **Do not edit `scripts/autonomous_loop.py`** or rebuild the
-   tautology scanner. Loop maintainer's territory; see
-   `tautology_scanner_false_positives.md`.
-
-9. **Do not reattempt the cycle 005 (i) ⇒ (ii) Gelfand bridge** — it's
-   already in the codebase as `convergent_imp_minpoly_roots_lt_one`
-   (line 161) and `minpoly_roots_lt_one_imp_convergent` (line 311).
-   Reuse via the alias.
-
-10. **Do not delete or rename `convergent_iff_minpoly_roots_lt_one`**
-    when adding `thm_142D`. Keep both — `thm_142D` is an alias, not a
-    replacement. Existing callers (if any) continue to use the
-    `convergent_iff_*` name.
-
-## Pre-commit checklist
-
-Before committing:
-
-- [ ] `lake env lean OpenMath/Chapter1/Section142.lean` exits 0.
-- [ ] `#print axioms OpenMath.Chapter1.Section142.thm_142D` shows
-      `[propext, Classical.choice, Quot.sound]` only.
-- [ ] `lean_status.json` row for `thm:142D` shows
-      `formalization_status: "partial"` with correct
-      `lean_file` / `lean_symbol`.
-- [ ] `plan.md` row for `thm:142D` reads `[~]` with the deferral
-      note.
-- [ ] `plan.md` progress header reflects the new count.
-- [ ] No new sorry's introduced anywhere.
-- [ ] No regression in any existing axiom-clean theorem.
-- [ ] Faithfulness check section in `cycle_132.md` quotes the
-      textbook statement and explicitly notes the (iii)/(iv) deferral
-      with a pointer to `jordan_canonical_form_missing.md`.
-- [ ] If stretch goal landed: `dummyR2.IsIRKStable` (or chosen name)
-      verified axiom-clean; `def:551A` row noted as having
-      substantive witness; `task_results` documents both pieces.
-
-## Cycle results format
-
-Write `.prover-state/task_results/cycle_132.md` per the CLAUDE.md
-template. The "Faithfulness check" section is non-optional given
-this is a partial formalization — explicitly flag the divergence
-(deferred clauses (iii)/(iv)).
-
-## Suggested next-cycle direction (for cycle 133 planner)
-
-After cycle 132, the natural follow-ups are:
-
-1. **Substantive r=2 IRK-stability witness** if not done as stretch
-   in cycle 132.
-
-2. **`thm:551B` Single Non Zero Eigenvalue Stability** — uses the
-   cycle 131 `IsIRKStable` predicate; closes a downstream consumer.
-   Requires deciding on §550 doubly companion matrix infra (small,
-   ~50 LOC) — could be bundled into cycle 133.
-
-3. **`thm:431A` Schur criterion** — Mathlib has Rouché's theorem;
-   medium-effort, unblocks §43 stability work in Chapter 4.
-
-The §142 (iii)/(iv) and the heavy §53/§54 infrastructure entries
-should remain deferred until they become genuinely blocking.
+* Cycle 131 implementation (mirror this style):
+  `OpenMath/Chapter5/Section520.lean:586-619`.
+* `GeneralLinearMethod` structure:
+  `OpenMath/Chapter5/Section510.lean` (read this first to confirm
+  the field list before writing `padded2DEulerGLM`).
+* Existing concrete-GLM examples (for matrix-literal patterns):
+  search `Section520.lean` and `Section510.lean` for
+  `explicitEulerGLM` and `implicitMidpointGLM`.
+* Faithfulness checklist: `CLAUDE.md` §"Pre-Commit Faithfulness
+  Checklist".
