@@ -263,4 +263,23 @@ theorem implicitMidpointGLM_isConsistent :
   · funext i; fin_cases i
     simp [implicitMidpointGLM, dotProduct]
 
+/-! ### Non-vacuity witness: backward Euler as a `(1, 1)`-GLM -/
+
+/-- The (1, 1) GLM realising backward Euler `y_{n+1} = y_n + h·f(y_{n+1})`.
+The single stage `Y` satisfies `Y = U·y_n + h·A·f(Y) = y_n + h·f(Y)`,
+and the output `y_{n+1} = V·y_n + h·B·f(Y) = y_n + h·f(Y) = Y`. The
+all-ones tableau `A = U = B = V = !![1]` gives stability function
+`R(z) = 1/(1 − z)`, the canonical Padé(0, 1) approximant of `exp(z)`.
+This is the canonical *positive substantive* L-stable witness (Butcher
+§520; cf. BDF1 in §351). Unlike `trivialZeroGLM` (whose
+`M(z) ≡ 0` vacuously satisfies every stability predicate), backward
+Euler genuinely realises an A-stable *and* L-stable scalar method:
+`|R(z)| ≤ 1` for `Re(z) ≤ 0` (A-stability) and `|R(z)| → 0` as
+`|z| → ∞` (L-stability). -/
+noncomputable def backwardEulerGLM : GeneralLinearMethod 1 1 where
+  A := !![1]
+  U := !![1]
+  B := !![1]
+  V := !![1]
+
 end OpenMath.Chapter5.Section510

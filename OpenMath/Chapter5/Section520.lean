@@ -631,6 +631,197 @@ theorem implicitMidpointGLM_not_isLStable :
   have hcontra : (1/2 : ENNReal) ≤ (1/4 : ENNReal) := le_trans hbn hk
   norm_num at hcontra
 
+/-! ### Substantive positive L-stability witness — backward Euler
+
+Backward Euler is the canonical *positive substantive* witness for
+`def:520F` (L-stability). Its stability function
+`R(z) = 1/(1 − z)` is the Padé(0, 1) approximant of `exp(z)`, and
+satisfies BOTH `|R(z)| ≤ 1` on the closed left half-plane (A-stability)
+AND `|R(z)| → 0` as `|z| → ∞` (the L-stability cocompact limit).
+Compared with the cycle-088 trivial `M(z) ≡ 0` witness, this is a
+genuine integrator (BDF1) of textbook record. -/
+
+/-- Closed-form stability matrix of `backwardEulerGLM` at any `z ≠ 1`:
+`M(z) = !![1/(1 − z)]`.
+
+The hypothesis `z ≠ 1` is mathematically essential — at `z = 1` the
+linear-system matrix `(I − z·A) = !![0]` is singular and `M(z)` is
+genuinely undefined (Mathlib's junk-zero convention applies). This
+mirrors `implicitMidpointGLM_stabilityMatrix`'s `Re(z) ≤ 0` hypothesis
+but is *weaker*: the L-stability proof needs the formula on regions
+where `‖z‖ → ∞` (including large positive-real `z`), so we cannot
+restrict to the left half-plane. -/
+theorem backwardEulerGLM_stabilityMatrix
+    (z : ℂ) (hz : z ≠ 1) :
+    backwardEulerGLM.stabilityMatrix z = !![1 / (1 - z)] := by
+  -- (1 - z) ≠ 0 from z ≠ 1.
+  have hne : (1 - z) ≠ 0 := sub_ne_zero.mpr (Ne.symm hz)
+  -- The 1×1 matrix `(1 - z • A) = !![1 - z]` since A = !![1].
+  have hA :
+      (1 - z • complexify backwardEulerGLM.A)
+        = !![1 - z] := by
+    ext i j
+    fin_cases i; fin_cases j
+    simp [backwardEulerGLM, complexify]
+  unfold GeneralLinearMethod.stabilityMatrix
+  rw [hA]
+  rw [Matrix.inv_subsingleton]
+  ext i j
+  fin_cases i; fin_cases j
+  simp [backwardEulerGLM, complexify, Matrix.mul_apply,
+        Matrix.diagonal, Ring.inverse_eq_inv]
+  field_simp
+  ring
+
+/-- For complex `z` in the closed left half-plane, the Padé(0, 1)
+magnitude is bounded by 1: `|1 / (1 − z)| ≤ 1` whenever `Re(z) ≤ 0`.
+
+Proof sketch: `‖1/(1-z)‖ = 1/‖1-z‖`, so it suffices to show
+`‖1-z‖ ≥ 1`. Squaring,
+`‖1-z‖² = (1-z.re)² + z.im² ≥ (1-z.re)² ≥ 1`
+since `z.re ≤ 0` makes `1 - z.re ≥ 1`. -/
+theorem padeZeroOne_norm_le_one_of_re_nonpos
+    {z : ℂ} (hz : z.re ≤ 0) :
+    ‖(1 : ℂ) / (1 - z)‖ ≤ 1 := by
+  have hre : (1 - z).re = 1 - z.re := by simp [Complex.sub_re]
+  have hne : (1 - z) ≠ 0 := by
+    intro h
+    have : (1 - z).re = 0 := by rw [h]; simp
+    rw [hre] at this; linarith
+  have hbpos : 0 < ‖1 - z‖ := norm_pos_iff.mpr hne
+  rw [norm_div, norm_one, div_le_one hbpos]
+  -- Reduce to `1 ≤ ‖1 − z‖²`.
+  have h_sq_ge : (1 : ℝ) ≤ ‖1 - z‖ ^ 2 := by
+    rw [Complex.sq_norm, Complex.normSq_apply]
+    have h2re : (1 - z).re = 1 - z.re := hre
+    have h2im : (1 - z).im = -z.im := by simp [Complex.sub_im]
+    rw [h2re, h2im]
+    nlinarith [hz, sq_nonneg z.im, sq_nonneg z.re]
+  -- Conclude `1 ≤ ‖1 - z‖` from squared inequality.
+  have hb_nn : 0 ≤ ‖1 - z‖ := norm_nonneg _
+  nlinarith [h_sq_ge, sq_nonneg (‖1 - z‖ - 1), hb_nn]
+
+/-- **Substantive positive non-vacuity witness for `IsAStable`** —
+`backwardEulerGLM` is A-stable. This is the canonical positive
+substantive witness: unlike `trivialZeroGLM` (cycle 088,
+`M(z) ≡ 0` vacuously) and complementing `implicitMidpointGLM`
+(cycle 135, A-stable but not L-stable, see below). Power-boundedness
+of the `1×1` stability matrix follows from `|1/(1−z)| ≤ 1` on the
+closed left half-plane. -/
+theorem backwardEulerGLM_isAStable :
+    backwardEulerGLM.IsAStable := by
+  intro z hz
+  -- z.re ≤ 0 ⇒ z ≠ 1 (since (1:ℂ).re = 1).
+  have hzne : z ≠ (1 : ℂ) := by
+    intro h
+    rw [h] at hz
+    norm_num at hz
+  refine ⟨1, ?_⟩
+  intro k
+  rw [backwardEulerGLM_stabilityMatrix z hzne]
+  rw [norm_pow_fin_one]
+  exact pow_le_one₀ (norm_nonneg _)
+          (padeZeroOne_norm_le_one_of_re_nonpos hz)
+
+/-- Auxiliary: `‖1/(1 − z)‖ → 0` as `‖z‖ → ∞` along `cocompact ℂ`.
+This is the analytic core of `backwardEulerGLM_isLStable`'s
+non-A-stability conjunct.
+
+Proof outline:
+1. `‖z‖ → ∞` along `cocompact ℂ` (Mathlib's
+   `tendsto_norm_cocompact_atTop`).
+2. On `‖z‖ > 1`, the reverse triangle inequality gives
+   `‖1 - z‖ ≥ ‖z‖ - 1`, hence
+   `‖1/(1 - z)‖ = 1/‖1 - z‖ ≤ 1/(‖z‖ - 1)`.
+3. `1/(r - 1) → 0` as `r → ∞`.
+4. Squeeze. -/
+private theorem norm_one_div_sub_tendsto_zero_cocompact :
+    Filter.Tendsto (fun z : ℂ => ‖(1 : ℂ) / (1 - z)‖)
+      (Filter.cocompact ℂ) (nhds 0) := by
+  -- Step 1: ‖z‖ → ∞ on cocompact ℂ.
+  have h_norm_tend : Filter.Tendsto (fun z : ℂ => ‖z‖)
+      (Filter.cocompact ℂ) Filter.atTop :=
+    tendsto_norm_cocompact_atTop
+  -- Step 2: r ↦ 1/(r - 1) → 0 as r → ∞ in ℝ.
+  have h_inv_tend : Filter.Tendsto (fun r : ℝ => 1 / (r - 1))
+      Filter.atTop (nhds 0) := by
+    have h_shift : Filter.Tendsto (fun r : ℝ => r - 1)
+        Filter.atTop Filter.atTop :=
+      Filter.tendsto_atTop_add_const_right _ _ Filter.tendsto_id
+    have := h_shift.inv_tendsto_atTop
+    simpa [one_div] using this
+  -- Step 3: Compose to get (fun z => 1/(‖z‖ - 1)) → 0 cocompactly.
+  have h_comp : Filter.Tendsto (fun z : ℂ => 1 / (‖z‖ - 1))
+      (Filter.cocompact ℂ) (nhds 0) :=
+    h_inv_tend.comp h_norm_tend
+  -- Step 4: Squeeze ‖1/(1-z)‖ between 0 and 1/(‖z‖ - 1) eventually.
+  refine squeeze_zero' ?_ ?_ h_comp
+  · -- 0 ≤ ‖1/(1-z)‖ eventually.
+    exact Filter.Eventually.of_forall (fun z => norm_nonneg _)
+  · -- ‖1/(1-z)‖ ≤ 1/(‖z‖ - 1) eventually on ‖z‖ > 1.
+    have h_eventually_gt : ∀ᶠ z in Filter.cocompact ℂ, 1 < ‖z‖ := by
+      have := h_norm_tend.eventually_gt_atTop (1 : ℝ)
+      exact this
+    filter_upwards [h_eventually_gt] with z hz_gt
+    -- Reverse triangle: ‖1 - z‖ ≥ ‖z‖ - 1.
+    have h_rev : ‖z‖ - 1 ≤ ‖1 - z‖ := by
+      have := norm_sub_norm_le (1 : ℂ) z
+      have h1 : ‖(1 : ℂ)‖ = 1 := norm_one
+      rw [h1] at this
+      -- this : 1 - ‖z‖ ≤ ‖1 - z‖. We want ‖z‖ - 1 ≤ ‖1 - z‖.
+      have h2 : ‖z - 1‖ = ‖1 - z‖ := by rw [← norm_neg]; ring_nf
+      have h3 := norm_sub_norm_le z (1 : ℂ)
+      rw [h1] at h3
+      linarith [h2.symm ▸ h3]
+    -- ‖z‖ - 1 > 0 from hz_gt.
+    have h_pos : 0 < ‖z‖ - 1 := by linarith
+    have h_pos_norm : 0 < ‖1 - z‖ := lt_of_lt_of_le h_pos h_rev
+    rw [norm_div, norm_one]
+    rw [div_le_div_iff₀ h_pos_norm h_pos]
+    linarith
+
+/-- **Substantive positive non-vacuity witness for `IsLStable`** —
+`backwardEulerGLM` is L-stable. This completes the four-corner
+witness coverage of A-stability × L-stability:
+
+| Witness | A-stable? | L-stable? |
+|---|---|---|
+| `trivialZeroGLM` (cycle 088) | ✓ (vacuous, `M ≡ 0`) | ✓ (vacuous) |
+| `implicitMidpointGLM` (cycles 135, 137) | ✓ (substantive) | ✗ |
+| `explicitEulerGLM` (cycle 137) | ✗ | ✗ |
+| `backwardEulerGLM` (this cycle) | **✓** | **✓** (substantive) |
+
+Proof: A-stability is `backwardEulerGLM_isAStable`; the cocompact
+limit follows from `norm_one_div_sub_tendsto_zero_cocompact` once
+we bridge the spectral radius of `M(z) = !![1/(1-z)]` to the scalar
+norm `‖1/(1-z)‖`. -/
+theorem backwardEulerGLM_isLStable :
+    backwardEulerGLM.IsLStable := by
+  refine ⟨backwardEulerGLM_isAStable, ?_⟩
+  -- z ≠ 1 eventually along cocompact ℂ.
+  have h_eventually_ne : ∀ᶠ z in Filter.cocompact ℂ, z ≠ (1 : ℂ) := by
+    have h_cpt : IsCompact ({1} : Set ℂ) := isCompact_singleton
+    have h_compl : ({1} : Set ℂ)ᶜ ∈ Filter.cocompact ℂ :=
+      h_cpt.compl_mem_cocompact
+    filter_upwards [h_compl] with z hz hzeq
+    exact hz (by rw [hzeq]; rfl)
+  -- Bridge spectralRadius (M(z)) = ‖1/(1-z)‖₊ for z ≠ 1.
+  have h_bridge : ∀ᶠ z in Filter.cocompact ℂ,
+      spectralRadius ℂ (backwardEulerGLM.stabilityMatrix z)
+        = (‖(1 / (1 - z) : ℂ)‖₊ : ENNReal) := by
+    filter_upwards [h_eventually_ne] with z hz
+    rw [backwardEulerGLM_stabilityMatrix z hz, spectralRadius_fin_one]
+  rw [Filter.tendsto_congr' h_bridge]
+  -- Goal: Tendsto (fun z => (‖1/(1-z)‖₊ : ENNReal)) cocompact (𝓝 0).
+  -- Lift via ENNReal.tendsto_coe.
+  rw [show (0 : ENNReal) = ((0 : NNReal) : ENNReal) from by simp]
+  rw [ENNReal.tendsto_coe]
+  -- Goal: Tendsto (fun z => ‖1/(1-z)‖₊) cocompact (𝓝 0) in NNReal.
+  rw [← NNReal.tendsto_coe]
+  push_cast
+  -- Goal: Tendsto (fun z => ‖1/(1-z)‖) cocompact (𝓝 0) in ℝ.
+  exact norm_one_div_sub_tendsto_zero_cocompact
+
 /-- **Definition 521A** — A general linear method *has stability order* `p`
 if its stability function `Φ(w, z)` satisfies
 `Φ(exp(z), z) = O(z^(p+1))` as `z → 0` in `ℂ`.

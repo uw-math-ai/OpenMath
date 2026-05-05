@@ -45,3 +45,6 @@ Cycle 114: lake wrapper recursion bug (lake binary at /tmp/lean4-toolchain/bin/l
 
 ### Cycle 119
 Cycle 119 direct manual closure of `aux_515D_max_deviation_geometric_bound` (Priority 1) blocked by two structural issues identified at outset: (a) `0 ≤ M.glmAbscissae v` is not derivable from `IsConsistent` — `glmAbscissae` can take arbitrary real values in Butcher's formulation; `aux_515D_construct_ell_U_phi_A` (cycle 114) requires this as a precondition. (b) Iterated-V bound: `aux_515D_per_step_recurrence` produces `(V_inf_norm + α·h)^n` where `V_inf_norm = max_i Σ_j |M.V i j|`; bounding this by an exponential requires either `V_inf_norm ≤ 1` (false for general stable GLMs) or an operator-norm bridge from `IsStable`'s `∃ C, ∀ k, ‖V^k‖ ≤ C` to the `sup'`-form `Finset.sup' (fun i => |(V^k *ᵥ x) i|) ≤ C' · Finset.sup' (fun i => |x i|)` — requires `Matrix.linfty_opNorm` infrastructure.
+
+### Cycle 141
+Cycle 141: Aristotle Job A (thm:550A general-n) canceled after 24h at 6% — confirmed intractable for the prover; manual cofactor-expansion induction required for future attempts.
