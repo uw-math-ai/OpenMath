@@ -194,4 +194,45 @@ theorem explicitEulerGLM_isConsistent :
     funext i; fin_cases i
     simp [explicitEulerGLM, dotProduct]
 
+/-! ### Non-vacuity witness: implicit midpoint as a `(1, 1)`-GLM -/
+
+/-- The implicit midpoint method as a `(s, r) = (1, 1)` general
+linear method. The single stage `Y₁ = (h/2) f(Y₁) + y[n]` and the
+output `y[n+1] = h f(Y₁) + y[n]` recover the classical implicit
+midpoint rule (cf. Butcher §234 written in Runge–Kutta tableau as
+`c = 1/2, A = 1/2, b = 1`, then transcribed into GLM form via the
+trivial `r = 1` embedding). The GLM tableau is
+
+```
+A = !![1/2],   U = !![1]
+B = !![1],     V = !![1]
+```
+
+This is a substantively non-trivial named GLM in `(s, r) = (1, 1)`:
+unlike `explicitEulerGLM` (which has `A = 0`), the diagonal entry
+`A = 1/2` makes the method *implicit*. It is the canonical
+textbook example of a symplectic integrator and is used as a
+substantive non-vacuity witness for `IsGSymplectic` (see
+`implicitMidpointGLM_isGSymplectic` in
+`OpenMath.Chapter5.Section525`). -/
+noncomputable def implicitMidpointGLM : GeneralLinearMethod 1 1 where
+  A := !![1/2]
+  U := !![1]
+  B := !![1]
+  V := !![1]
+
+/-- Non-vacuity witness for `IsPreconsistent`: `implicitMidpointGLM`
+is preconsistent with `u = (fun _ => 1)`. The proof mirrors
+`explicitEulerGLM_isPreconsistent` exactly because the `U` and `V`
+blocks coincide. -/
+theorem implicitMidpointGLM_isPreconsistent :
+    implicitMidpointGLM.IsPreconsistent := by
+  refine ⟨fun _ => 1, ?_, ?_⟩
+  · funext i
+    fin_cases i
+    simp [implicitMidpointGLM, Matrix.mulVec, dotProduct]
+  · funext i
+    fin_cases i
+    simp [implicitMidpointGLM, Matrix.mulVec, dotProduct]
+
 end OpenMath.Chapter5.Section510

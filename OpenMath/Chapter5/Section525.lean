@@ -1,5 +1,6 @@
 import Mathlib.LinearAlgebra.Matrix.PosDef
 import Mathlib.LinearAlgebra.Matrix.IsDiag
+import Mathlib.Data.Real.StarOrdered
 import OpenMath.Chapter5.Section510
 
 /-!
@@ -75,9 +76,11 @@ trivially G-symplectic with `G = 0` and `D = 0`. Every condition
 This is a *degenerate* witness — every GLM trivially satisfies
 `IsGSymplectic` with `G = D = 0`. It establishes inhabitation of
 the predicate, but does not exhibit a substantively G-symplectic
-method. Butcher's intended non-trivial example is the explicit
-2×2 method of equation (525d), whose witness involves `√3`
-arithmetic and is deferred to a future cycle. -/
+method. The *substantively* non-trivial witness is provided by
+`implicitMidpointGLM_isGSymplectic` (with
+`G = D = (1 : Matrix (Fin 1) (Fin 1) ℝ)`). Butcher's intended
+2×2 example (eq. (525d)) involves `√3` arithmetic and is deferred
+to a future cycle. -/
 theorem explicitEulerGLM_isGSymplectic :
     explicitEulerGLM.IsGSymplectic := by
   refine ⟨0, 0, Matrix.PosSemidef.zero, Matrix.isDiag_zero, ?_, ?_, ?_⟩
@@ -87,6 +90,45 @@ theorem explicitEulerGLM_isGSymplectic :
     simp
   · -- 0 * A + Aᵀ * 0 = Bᵀ * 0 * B
     simp
+
+/-- Substantively non-trivial G-symplectic witness: the implicit
+midpoint method (as a `(s, r) = (1, 1)` general linear method)
+is G-symplectic with the *non-zero* witness
+`G = D = (1 : Matrix (Fin 1) (Fin 1) ℝ)`.
+
+This complements `explicitEulerGLM_isGSymplectic` (whose
+`G = D = 0` witness trivially satisfies (525a)–(525c) for *every*
+GLM) by demonstrating that `IsGSymplectic` has discriminating
+content. Indeed `explicitEulerGLM` (with `A = !![0]`) does *not*
+admit the witness `G = D = 1`: equation (525c) would require
+`D · A + Aᵀ · D = Bᵀ · G · B`, i.e. `0 = 1`. So this witness
+genuinely separates `implicitMidpointGLM` from
+`explicitEulerGLM` at the level of G-symplectic structure.
+
+The three matrix equations all collapse under the chosen witness:
+* (525a) `Vᵀ · G · V = 1 · 1 · 1 = 1 = G`,
+* (525b) `D · U = 1 · 1 = 1 = 1 · 1 · 1 = Bᵀ · G · V`,
+* (525c) `D · A + Aᵀ · D = (1/2) + (1/2) = 1 = 1 · 1 · 1 = Bᵀ · G · B`.
+
+Implicit midpoint is the canonical textbook example of a
+symplectic integrator (Butcher §234, p. ~104), making this the
+mathematically intended substantive witness for the predicate. -/
+theorem implicitMidpointGLM_isGSymplectic :
+    implicitMidpointGLM.IsGSymplectic := by
+  refine ⟨1, 1, Matrix.PosSemidef.one, Matrix.isDiag_one, ?_, ?_, ?_⟩
+  · -- (525a) Vᵀ * 1 * V = 1, with V = !![1]
+    ext i j
+    fin_cases i; fin_cases j
+    simp [implicitMidpointGLM, Matrix.mul_apply]
+  · -- (525b) 1 * U = Bᵀ * 1 * V, with U = B = V = !![1]
+    ext i j
+    fin_cases i; fin_cases j
+    simp [implicitMidpointGLM, Matrix.mul_apply]
+  · -- (525c) 1 * A + Aᵀ * 1 = Bᵀ * 1 * B, with A = !![1/2], B = !![1]
+    ext i j
+    fin_cases i; fin_cases j
+    simp [implicitMidpointGLM, Matrix.mul_apply, Matrix.add_apply]
+    norm_num
 
 end GeneralLinearMethod
 
