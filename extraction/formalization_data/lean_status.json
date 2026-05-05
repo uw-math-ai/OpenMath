@@ -357,9 +357,9 @@
     "status": "formalized"
   },
   "lem:515C": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section515.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.accumulatedError_bound",
+    "status": "formalized"
   },
   "thm:101A": {
     "lean_file": "OpenMath/Chapter1/Section101.lean",

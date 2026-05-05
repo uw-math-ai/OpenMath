@@ -567,11 +567,11 @@ theorem GeneralLinearMethod.instabilityRegion_supseteq_outside_disc
     intro n
     have hwn_mem : w ^ n ∈ spectrum ℂ (M.stabilityMatrix z ^ n) :=
       spectrum.pow_mem_pow _ _ hw_mem
-    have h_norm : ‖w ^ n‖
+    have hnorm : ‖w ^ n‖
         ≤ ‖M.stabilityMatrix z ^ n‖ * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ :=
       spectrum.norm_le_norm_mul_of_mem hwn_mem
-    rw [norm_pow] at h_norm
-    exact h_norm
+    rw [norm_pow] at hnorm
+    exact hnorm
   -- `‖w‖ > 1` so `‖w‖^n → ∞`; pick `n` with `‖w‖^n > C·‖1‖`.
   have htend : Filter.Tendsto (fun n : ℕ => ‖w‖ ^ n) Filter.atTop Filter.atTop :=
     tendsto_pow_atTop_atTop_of_one_lt hw_norm
@@ -620,10 +620,10 @@ private theorem GeneralLinearMethod.stabilityRegion_imp_spectralRadius_le_one
     intro k
     have hμk : μ ^ k ∈ spectrum ℂ (M.stabilityMatrix z ^ k) :=
       spectrum.pow_mem_pow _ _ hμ
-    have h_norm_le := spectrum.norm_le_norm_mul_of_mem hμk
-    rw [norm_pow] at h_norm_le
+    have hnorm_le := spectrum.norm_le_norm_mul_of_mem hμk
+    rw [norm_pow] at hnorm_le
     calc ‖μ‖ ^ k
-        ≤ ‖M.stabilityMatrix z ^ k‖ * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := h_norm_le
+        ≤ ‖M.stabilityMatrix z ^ k‖ * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := hnorm_le
       _ ≤ C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := by
           gcongr
           exact hC k

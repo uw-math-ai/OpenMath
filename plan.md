@@ -223,7 +223,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:523B` **Nonlinear Stability via Positive Semidefiniteness** (§523)
 - [x] `def:520F` **L Stability Condition for Linear Methods** (§520) — OpenMath/Chapter5/Section520.lean
 - [ ] `def:551A` **Inherent Runge–Kutta stability** (§551)
-- [ ] `lem:515C` **Accumulated error estimate for multistep methods** (§515)
+- [x] `lem:515C` **Accumulated error estimate for multistep methods** (§515) — `OpenMath/Chapter5/Section515.lean::GeneralLinearMethod.accumulatedError_bound` (cycle 127, axiom-clean: thin public wrapper around the cycle-119/124 helper `aux_515D_max_deviation_geometric_bound`. Existential `∃ C_init C_lin ≥ 0, ‖E^[n]‖_∞ ≤ C_init·‖E^[0]‖_∞ + C_lin·h_n` form unifies Butcher's α>0 / α=0 cases. With this §515 = Stability+Consistency⇒Convergence is 100% complete: 515A, 515B, 515C, 515D all formalized.)
 - [ ] `thm:535A` **The underlying one-step method (GLM)** (§535)
 - [ ] `thm:551B` **Single Non Zero Eigenvalue Stability** (§551)
 - [ ] `thm:553A` **Derivation of methods with IRK stability** (§553)

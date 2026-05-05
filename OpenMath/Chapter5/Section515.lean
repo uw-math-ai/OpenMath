@@ -2865,6 +2865,91 @@ private theorem aux_515D_max_deviation_geometric_bound {s r : ℕ}
       ring
     linarith [h_lin_eq, hbnd_n]
 
+/-- **Lemma 515C** (Butcher 2008, p. 416) — *Accumulated error estimate for
+multistep methods.*
+
+For a stable + consistent GLM `M` applied to an IVP `y' = f(y), y(x₀) = y₀`
+with smooth exact solution `yex`, suppose the iteration `Y n` runs `n` steps
+of size `h_n := (x − x₀)/n` and the input procedure produces approximate
+values `Y n 0` near `u · y₀` (linearised "starting" state). Then there exist
+non-negative constants `C_init` and `C_lin` (depending on `M`, `L`,
+`M_bound`, and the interval length `x − x₀`) such that, for every `n > 0`:
+
+```
+sup_i |Y n n i − (u i · yex(x) + v i · h_n · yex'(x))|
+  ≤ C_init · sup_i |Y n 0 i − (u i · yex(x₀) + v i · h_n · yex'(x₀))|
+    + C_lin · h_n.
+```
+
+This is the Lean-faithful statement of Butcher's Lemma 515C. In Butcher's
+`α, β, C` parameterisation,
+* `α > 0`: `C_init = exp(αC(x − x₀))`,
+  `C_lin = (β/α)(exp(αC(x − x₀)) − 1)`;
+* `α = 0`: `C_init = 1`, `C_lin = C·β·(x − x₀)`
+  (different functional shape — captured here uniformly by the existential).
+
+The proof is a thin re-export of the cycle-119/124 helper
+`aux_515D_max_deviation_geometric_bound`, which encapsulates the full
+discrete-Grönwall closed-form argument (per-step K-bound from cycle 123 +
+iterated-V `L∞` bound from cycle 119 + closed-form δ expansion from
+cycle 124). The helper's body does the real proof work; this wrapper simply
+makes the public textbook-aligned name available.
+
+**Faithfulness divergences** (inherited from the §515D helper chain):
+* `Nonempty (Fin r)` instance — the textbook implicitly assumes the GLM
+  has at least one external history component (`r ≥ 1`); the `r = 0`
+  case has an empty `Finset.univ`, making `sup'` ill-defined.
+* `hc_nn` / `hc_le_one` — Butcher's proof uses the abscissae conditions
+  implicitly via the consistency relation; we expose them explicitly
+  (see `.prover-state/issues/stable_consistent_isConvergent_hc_nn.md`).
+* `M_bound`, `hyex_C1`, `hyex_M`, `hyex'_LM`, `h_norm` — the
+  strengthened `IsConvergent`-style smoothness package; see
+  `.prover-state/issues/is_convergent_strengthened.md` and
+  `glm_isconvergent_strengthened.md` for the per-cycle history.
+* Output norm: `Finset.sup'` of componentwise absolute values is the
+  Lean realisation of Butcher's `‖·‖_∞` notation for `r`-vectors.
+
+This is `lem:515C` of `entities/lem_515C.json`. -/
+theorem GeneralLinearMethod.accumulatedError_bound {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    {u v : Fin r → ℝ}
+    (hVu : M.V *ᵥ u = u) (hUu : M.U *ᵥ u = (fun _ => 1))
+    (hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {x : ℝ} (hxx : x₀ < x)
+    {M_bound : ℝ} (hM_nn : 0 ≤ M_bound)
+    (hyex_C1 : ContDiff ℝ 1 yex)
+    (hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
+    (hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
+    (h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
+    (hc_le_one : ∀ i, M.glmAbscissae v i ≤ 1)
+    [Nonempty (Fin r)]
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (hY_iter : ∀ n : ℕ, 0 < n →
+      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    ∃ C_init C_lin : ℝ, 0 ≤ C_init ∧ 0 ≤ C_lin ∧
+      ∀ n : ℕ, 0 < n →
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |Y n n i -
+            (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x)|)
+        ≤ C_init *
+            Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |Y n 0 i -
+                (u i * yex x₀ + v i * ((x - x₀) / (n : ℝ)) * deriv yex x₀)|)
+          + C_lin * ((x - x₀) / (n : ℝ)) :=
+  aux_515D_max_deviation_geometric_bound M hStab hf_lip hyex_x₀ hyex_ode
+    hVu hUu hCons_eq hxx hM_nn hyex_C1 hyex_M hyex'_LM h_norm
+    hc_nn hc_le_one Y Y_int hY_iter
+
 /-- **Sub-lemma E for `aux_515D_componentwise_deviation_tendsto_zero`** —
 existence of a uniform max-abs deviation bound sequence that tends to 0.
 
