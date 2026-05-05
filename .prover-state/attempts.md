@@ -39,3 +39,6 @@ Cycle 112 sub-lemma B (`aux_515D_gronwall_bound`): calling `Section404.discrete_
 
 ### Cycle 113
 Cycle 113: Attempted to land aux_515D_construct_ell_U_phi_A (M-matrix constructor for ell_U/phi_A side-condition vectors) but lake env lean on Section515.lean (~2300 lines) hung past 20 minutes and LSP failed to start; reverted draft unverified. Architectural audit confirmed that IsConvergent strengthening with global ∀t,|yex t|≤M_bound is incompatible with §514's convergence_witness_satisfies_U which uses yex=id (unbounded).
+
+### Cycle 114
+Cycle 114: lake wrapper recursion bug (lake binary at /tmp/lean4-toolchain/bin/lake had been overwritten with a self-exec wrapper) caused cycle 113's 20-min hang; fixed by copying elan's real lake binary to lake-real and updating wrapper. Cycle 113 Aristotle proofs (aux_515D_per_step_recurrence, aux_515D_discrete_gronwall_raw) required `import Mathlib.Tactic.Cases` for `induction'` and a `simp only [Finset.mul_sum, mul_add, mul_left_comm]` before `ring` in the recurrence proof.

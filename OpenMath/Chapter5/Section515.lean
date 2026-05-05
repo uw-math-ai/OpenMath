@@ -120,20 +120,27 @@ derivative bound directly. -/
 
 /-- **Preliminary bound** for §515 (Butcher 2008, p. 412): if `y` is
 a `C¹` solution to `y'(t) = f(y(t))` with `|f(y(t))| ≤ L · M_bound`
-for all `t`, then for any `x`, `h ≥ 0`, and `ξ ∈ ℝ`,
+for `t` in the closed interval between `x` and `x + h·ξ`, then
 
   `|y(x + h·ξ) − y(x)| ≤ h · |ξ| · (L · M_bound)`.
 
 The bound is symmetric in the sign of `ξ` (handled by `|ξ|` and
-`|h·ξ| = h · |ξ|` for `h ≥ 0`). -/
+`|h·ξ| = h · |ξ|` for `h ≥ 0`).
+
+**Cycle 115 refactor (Phase 1 of Solution A)**: `hf_y_bound` was
+previously a *global* bound `∀ t, |f (y t)| ≤ L M`; it is now
+*localized* to `Set.uIoc x (x + h * ξ)` (the half-open interval used
+internally by the FTC bound). This is a strict weakening of the
+hypothesis surface; existing call sites with global bounds can supply
+the weaker form trivially. -/
 lemma aux_y_diff_norm_bound
     {f : ℝ → ℝ} {L M_bound : ℝ}
     (_hL : 0 ≤ L) (_hM : 0 ≤ M_bound)
     {y : ℝ → ℝ}
     (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
-    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
-    (x h : ℝ) (hh : 0 ≤ h) (ξ : ℝ) :
+    (x h : ℝ) (hh : 0 ≤ h) (ξ : ℝ)
+    (hf_y_bound : ∀ t ∈ Set.uIoc x (x + h * ξ), |f (y t)| ≤ L * M_bound) :
     |y (x + h * ξ) - y x| ≤ h * |ξ| * (L * M_bound) := by
   -- Step 1: f∘y is continuous (it equals deriv y, which is continuous from C¹ y).
   have hfy_cont : Continuous (fun t => f (y t)) := by
@@ -156,9 +163,9 @@ lemma aux_y_diff_norm_bound
     intervalIntegral.integral_eq_sub_of_hasDerivAt (fun t _ => hderiv t) hint
   -- Step 5: bound the integral by L * M_bound.
   have hC : ∀ t ∈ Set.uIoc x (x + h * ξ), ‖f (y t)‖ ≤ L * M_bound := by
-    intro t _
+    intro t ht
     rw [Real.norm_eq_abs]
-    exact hf_y_bound t
+    exact hf_y_bound t ht
   have hbound :
       |∫ t in x..(x + h * ξ), f (y t)| ≤ (L * M_bound) * |h * ξ| := by
     have hb := intervalIntegral.norm_integral_le_of_norm_le_const hC
@@ -293,8 +300,8 @@ private theorem aux_T3_bound
     {y : ℝ → ℝ}
     (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
-    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
-    (x h : ℝ) (hh : 0 ≤ h) (c_i : ℝ) (hc_i : 0 ≤ c_i) :
+    (x h : ℝ) (hh : 0 ≤ h) (c_i : ℝ) (hc_i : 0 ≤ c_i)
+    (hf_y_bound : ∀ t ∈ Set.uIcc x (x + h * c_i), |f (y t)| ≤ L * M_bound) :
     |h * ∫ ξ in (0 : ℝ)..c_i, (f (y (x + h * ξ)) - f (y x))|
       ≤ (1/2) * h^2 * L^2 * M_bound * c_i^2 := by
   -- Continuity of f∘y.
@@ -314,11 +321,22 @@ private theorem aux_T3_bound
   have hpt_bound : ∀ ξ ∈ Set.Icc (0:ℝ) c_i,
       |f (y (x + h * ξ)) - f (y x)| ≤ h * ξ * (L * (L * M_bound)) := by
     intro ξ hξ
+    have hξ_nn : 0 ≤ ξ := hξ.1
+    have hξ_le : ξ ≤ c_i := hξ.2
+    -- Per-`ξ` interval bound from per-`c_i` interval bound (cycle 115).
+    have hsub_uIcc : Set.uIcc x (x + h * ξ) ⊆ Set.uIcc x (x + h * c_i) := by
+      have hle1 : x ≤ x + h * ξ := by nlinarith
+      have hle2 : x ≤ x + h * c_i := by nlinarith
+      rw [Set.uIcc_of_le hle1, Set.uIcc_of_le hle2]
+      exact Set.Icc_subset_Icc_right (by nlinarith)
+    have hf_y_bound_local : ∀ t ∈ Set.uIoc x (x + h * ξ),
+        |f (y t)| ≤ L * M_bound := by
+      intro t ht
+      exact hf_y_bound t (hsub_uIcc (Set.uIoc_subset_uIcc ht))
     have h1 : |f (y (x + h * ξ)) - f (y x)|
               ≤ L * |y (x + h * ξ) - y x| := hLip_abs _ _
     have h2 : |y (x + h * ξ) - y x| ≤ h * |ξ| * (L * M_bound) :=
-      aux_y_diff_norm_bound hL hM hy_C1 hy_ode hf_y_bound x h hh ξ
-    have hξ_nn : 0 ≤ ξ := hξ.1
+      aux_y_diff_norm_bound hL hM hy_C1 hy_ode x h hh ξ hf_y_bound_local
     have habs_ξ : |ξ| = ξ := abs_of_nonneg hξ_nn
     rw [habs_ξ] at h2
     have h3 : L * |y (x + h * ξ) - y x| ≤ L * (h * ξ * (L * M_bound)) := by
@@ -382,10 +400,11 @@ private theorem aux_T4_bound {s r : ℕ}
     {y : ℝ → ℝ}
     (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
-    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
     (A : Matrix (Fin r) (Fin s) ℝ)
     (c : Fin s → ℝ)
-    (x h : ℝ) (hh : 0 ≤ h) (i : Fin r) :
+    (x h : ℝ) (hh : 0 ≤ h) (i : Fin r)
+    (hf_y_bound : ∀ j : Fin s, ∀ t ∈ Set.uIcc x (x + h * c j),
+        |f (y t)| ≤ L * M_bound) :
     |h * ∑ j, A i j * (f (y (x + h * c j)) - f (y x))|
       ≤ h^2 * L^2 * M_bound * ∑ j, |A i j * c j| := by
   -- Lipschitz bridge.
@@ -411,8 +430,13 @@ private theorem aux_T4_bound {s r : ℕ}
     intro j
     have h1 : |f (y (x + h * c j)) - f (y x)|
               ≤ L * |y (x + h * c j) - y x| := hLip_abs _ _
+    -- Per-`j` compact-interval bound -> per-ξ uIoc bound (cycle 115).
+    have hf_y_bound_local : ∀ t ∈ Set.uIoc x (x + h * c j),
+        |f (y t)| ≤ L * M_bound := by
+      intro t ht
+      exact hf_y_bound j t (Set.uIoc_subset_uIcc ht)
     have h2 : |y (x + h * c j) - y x| ≤ h * |c j| * (L * M_bound) :=
-      aux_y_diff_norm_bound hL hM hy_C1 hy_ode hf_y_bound x h hh (c j)
+      aux_y_diff_norm_bound hL hM hy_C1 hy_ode x h hh (c j) hf_y_bound_local
     have hLM_nn : 0 ≤ L * M_bound := mul_nonneg hL hM
     have h3 : L * |y (x + h * c j) - y x| ≤ L * (h * |c j| * (L * M_bound)) :=
       mul_le_mul_of_nonneg_left h2 hL
@@ -462,8 +486,8 @@ private theorem aux_T3'_bound
     {y : ℝ → ℝ}
     (hy_C1 : ContDiff ℝ 1 y)
     (hy_ode : ∀ t, deriv y t = f (y t))
-    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)
-    (x h : ℝ) (hh : 0 ≤ h) (vi : ℝ) :
+    (x h : ℝ) (hh : 0 ≤ h) (vi : ℝ)
+    (hf_y_bound : ∀ t ∈ Set.uIcc x (x + h), |f (y t)| ≤ L * M_bound) :
     |vi * h * (f (y (x + h)) - f (y x))|
       ≤ |vi| * (h^2 * L^2 * M_bound) := by
   -- Lipschitz bridge.
@@ -475,8 +499,15 @@ private theorem aux_T3'_bound
     rw [hcoe] at hd
     exact hd
   -- |y(x+h) - y x| ≤ h * (L * M_bound) via aux_y_diff_norm_bound at ξ = 1.
+  have hf_y_bound_local : ∀ t ∈ Set.uIoc x (x + h * 1),
+      |f (y t)| ≤ L * M_bound := by
+    intro t ht
+    have hsub : Set.uIcc x (x + h * 1) = Set.uIcc x (x + h) := by ring_nf
+    have ht' : t ∈ Set.uIcc x (x + h * 1) := Set.uIoc_subset_uIcc ht
+    rw [hsub] at ht'
+    exact hf_y_bound t ht'
   have hy_diff_bound : |y (x + h) - y x| ≤ h * (L * M_bound) := by
-    have h1 := aux_y_diff_norm_bound hL hM hy_C1 hy_ode hf_y_bound x h hh 1
+    have h1 := aux_y_diff_norm_bound hL hM hy_C1 hy_ode x h hh 1 hf_y_bound_local
     have hxh : x + h * 1 = x + h := by ring
     rw [hxh, abs_one, mul_one] at h1
     exact h1
@@ -579,15 +610,17 @@ theorem GeneralLinearMethod.localStageError_bound_a {s r : ℕ}
     (yex : ℝ → ℝ)
     (_hy_C1 : ContDiff ℝ 1 yex)
     (_hy_ode : ∀ t, deriv yex t = f (yex t))
-    (_hy_M : ∀ t, |yex t| ≤ M_bound)
-    (_hy'_LM : ∀ t, |deriv yex t| ≤ L * M_bound)
     (xn1 : ℝ)
     (u v : Fin r → ℝ)
     (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
     (_hCons : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
     (c : Fin s → ℝ)
     (_hc_nonneg : ∀ i, 0 ≤ c i)
-    (_hc_def : c = M.glmAbscissae v) :
+    (_hc_def : c = M.glmAbscissae v)
+    (_hy_M_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+        |yex t| ≤ M_bound)
+    (_hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+        |deriv yex t| ≤ L * M_bound) :
     ∀ i : Fin s,
       |yex (xn1 + h * c i)
         - h * (∑ j, M.A i j * f (yex (xn1 + h * c j)))
@@ -595,9 +628,10 @@ theorem GeneralLinearMethod.localStageError_bound_a {s r : ℕ}
       ≤ h^2 * L^2 * M_bound *
         ((1/2) * (c i)^2 + ∑ j, |M.A i j * c j|) := by
   intro i
-  -- Bridge: |f(yex t)| ≤ L * M_bound from |deriv yex t| ≤ L * M_bound via hy_ode.
-  have hf_yex_bound : ∀ t, |f (yex t)| ≤ L * M_bound := by
-    intro t; rw [← _hy_ode t]; exact _hy'_LM t
+  -- Bridge: per-`j` |f(yex t)| ≤ L * M_bound from per-`j` |deriv yex t| bound.
+  have hf_yex_bound : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+      |f (yex t)| ≤ L * M_bound := by
+    intro j t ht; rw [← _hy_ode t]; exact _hy'_LM_local j t ht
   -- T1 = 0 (FTC telescoping).
   have hT1 : yex (xn1 + h * c i) - yex xn1
               - h * ∫ ξ in (0 : ℝ)..(c i), f (yex (xn1 + h * ξ)) = 0 :=
@@ -612,13 +646,13 @@ theorem GeneralLinearMethod.localStageError_bound_a {s r : ℕ}
   -- T3 bound (Lipschitz + integral of |ξ|).
   have hT3 : |h * ∫ ξ in (0:ℝ)..(c i), (f (yex (xn1 + h * ξ)) - f (yex xn1))|
               ≤ (1/2) * h^2 * L^2 * M_bound * (c i)^2 :=
-    aux_T3_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
-      xn1 h _hh (c i) (_hc_nonneg i)
+    aux_T3_bound _hL _hM _hf_lip _hy_C1 _hy_ode
+      xn1 h _hh (c i) (_hc_nonneg i) (hf_yex_bound i)
   -- T4 bound (Lipschitz + |Σ| ≤ Σ |·|).
   have hT4 : |h * ∑ j, M.A i j * (f (yex (xn1 + h * c j)) - f (yex xn1))|
               ≤ h^2 * L^2 * M_bound * ∑ j, |M.A i j * c j| :=
-    aux_T4_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
-      M.A c xn1 h _hh i
+    aux_T4_bound _hL _hM _hf_lip _hy_C1 _hy_ode
+      M.A c xn1 h _hh i hf_yex_bound
   -- Continuity of integrand for splitting T3.
   have hfy_cont : Continuous (fun t => f (yex t)) := by
     have heq : (fun t => f (yex t)) = deriv yex := by
@@ -708,15 +742,21 @@ theorem GeneralLinearMethod.localStageError_bound_b {s r : ℕ}
     (yex : ℝ → ℝ)
     (_hy_C1 : ContDiff ℝ 1 yex)
     (_hy_ode : ∀ t, deriv yex t = f (yex t))
-    (_hy_M : ∀ t, |yex t| ≤ M_bound)
-    (_hy'_LM : ∀ t, |deriv yex t| ≤ L * M_bound)
     (xn1 : ℝ)
     (u v : Fin r → ℝ)
     (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
     (_hCons : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
     (c : Fin s → ℝ)
     (_hc_nonneg : ∀ i, 0 ≤ c i)
-    (_hc_def : c = M.glmAbscissae v) :
+    (_hc_def : c = M.glmAbscissae v)
+    (_hy_M_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+        |yex t| ≤ M_bound)
+    (_hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+        |deriv yex t| ≤ L * M_bound)
+    (_hy_M_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
+        |yex t| ≤ M_bound)
+    (_hy'_LM_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
+        |deriv yex t| ≤ L * M_bound) :
     ∀ i : Fin r,
       |(u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
         - h * (∑ j, M.B i j * f (yex (xn1 + h * c j)))
@@ -724,9 +764,22 @@ theorem GeneralLinearMethod.localStageError_bound_b {s r : ℕ}
       ≤ h^2 * L^2 * M_bound *
         ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|) := by
   intro i
-  -- Bridge: |f(yex t)| ≤ L * M_bound from |deriv yex t| ≤ L * M_bound via hy_ode.
-  have hf_yex_bound : ∀ t, |f (yex t)| ≤ L * M_bound := by
-    intro t; rw [← _hy_ode t]; exact _hy'_LM t
+  -- Bridges: per-`j` and endpoint forms of |f(yex t)| ≤ L * M_bound from
+  -- the corresponding |deriv yex t| bounds via hy_ode.
+  have hf_yex_bound : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+      |f (yex t)| ≤ L * M_bound := by
+    intro j t ht; rw [← _hy_ode t]; exact _hy'_LM_local j t ht
+  have hf_yex_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
+      |f (yex t)| ≤ L * M_bound := by
+    intro t ht; rw [← _hy_ode t]; exact _hy'_LM_endpoint t ht
+  -- Endpoint bound rephrased in the form `Set.uIcc xn1 (xn1 + h * 1)` to
+  -- match `aux_T3_bound` with c_i := 1.
+  have hf_yex_endpoint_at_one : ∀ t ∈ Set.uIcc xn1 (xn1 + h * 1),
+      |f (yex t)| ≤ L * M_bound := by
+    intro t ht
+    have hsub : Set.uIcc xn1 (xn1 + h * 1) = Set.uIcc xn1 (xn1 + h) := by ring_nf
+    rw [hsub] at ht
+    exact hf_yex_endpoint t ht
   -- T1 = 0 (FTC telescoping at c_i := 1, then bridge xn1 + h * 1 = xn1 + h).
   have hT1 : yex (xn1 + h) - yex xn1
               - h * ∫ ξ in (0 : ℝ)..1, f (yex (xn1 + h * ξ)) = 0 := by
@@ -742,19 +795,19 @@ theorem GeneralLinearMethod.localStageError_bound_b {s r : ℕ}
   -- T3 bound at c_i := 1 (then 1^2 = 1 gives ½ h² L² M_bound).
   have hT3 : |h * ∫ ξ in (0:ℝ)..1, (f (yex (xn1 + h * ξ)) - f (yex xn1))|
               ≤ (1/2) * h^2 * L^2 * M_bound := by
-    have h0 := aux_T3_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
-                xn1 h _hh 1 (by norm_num : (0:ℝ) ≤ 1)
+    have h0 := aux_T3_bound _hL _hM _hf_lip _hy_C1 _hy_ode
+                xn1 h _hh 1 (by norm_num : (0:ℝ) ≤ 1) hf_yex_endpoint_at_one
     simpa using h0
   -- T3' bound (point-evaluation Lipschitz, new helper this cycle).
   have hT3' : |v i * h * (f (yex (xn1 + h)) - f (yex xn1))|
               ≤ |v i| * (h^2 * L^2 * M_bound) :=
-    aux_T3'_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
-      xn1 h _hh (v i)
+    aux_T3'_bound _hL _hM _hf_lip _hy_C1 _hy_ode
+      xn1 h _hh (v i) hf_yex_endpoint
   -- T4 bound for B (after row-dim refactor of aux_T4_bound).
   have hT4 : |h * ∑ j, M.B i j * (f (yex (xn1 + h * c j)) - f (yex xn1))|
               ≤ h^2 * L^2 * M_bound * ∑ j, |M.B i j * c j| :=
-    aux_T4_bound _hL _hM _hf_lip _hy_C1 _hy_ode hf_yex_bound
-      M.B c xn1 h _hh i
+    aux_T4_bound _hL _hM _hf_lip _hy_C1 _hy_ode
+      M.B c xn1 h _hh i hf_yex_bound
   -- Continuity of integrand for splitting T3 over [0, 1].
   have hfy_cont : Continuous (fun t => f (yex t)) := by
     have heq : (fun t => f (yex t)) = deriv yex := by
@@ -1349,6 +1402,17 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
   let Yhat : Fin s → ℝ := fun j => yex (xn1 + h * c j)
   let y_prev : Fin r → ℝ := fun k => u k * yex xn1 + v k * h * deriv yex xn1
   let η : Fin s → ℝ := fun j => Y j - Yhat j
+  -- Cycle 115 Phase 1: derive the localized hypotheses required by the
+  -- refactored 515A helpers from the capstone's global hypotheses. Cycle
+  -- 116 will strengthen this signature to take the localized forms directly.
+  have _hy_M_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+      |yex t| ≤ M_bound := fun _ t _ => _hy_M t
+  have _hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+      |deriv yex t| ≤ L * M_bound := fun _ t _ => _hy'_LM t
+  have _hy_M_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
+      |yex t| ≤ M_bound := fun t _ => _hy_M t
+  have _hy'_LM_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
+      |deriv yex t| ≤ L * M_bound := fun t _ => _hy'_LM t
   -- 515A (b) bound: exact-side residual R_i.
   have hRi : ∀ i : Fin r, |(u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
                 - h * (∑ j, M.B i j * f (Yhat j))
@@ -1356,14 +1420,16 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
                 ≤ h^2 * L^2 * M_bound *
                   ((1/2) * |u i| + |v i| + ∑ j, |M.B i j * c j|) :=
     M.localStageError_bound_b _hh _hL _hM f _hf_lip yex _hy_C1 _hy_ode
-        _hy_M _hy'_LM xn1 u v _hVu _hUu _hCons c _hc_nonneg _hc_def
+        xn1 u v _hVu _hUu _hCons c _hc_nonneg _hc_def
+        _hy_M_local _hy'_LM_local _hy_M_endpoint _hy'_LM_endpoint
   -- 515A (a) bound: per-stage exact residual.
   have hres_j : ∀ j : Fin s, |Yhat j - h * (∑ k, M.A j k * f (Yhat k))
                                - (∑ k, M.U j k * y_prev k)|
                             ≤ h^2 * L^2 * M_bound *
                               ((1/2) * (c j)^2 + ∑ k, |M.A j k * c k|) :=
     M.localStageError_bound_a _hh _hL _hM f _hf_lip yex _hy_C1 _hy_ode
-        _hy_M _hy'_LM xn1 u v _hVu _hUu _hCons c _hc_nonneg _hc_def
+        xn1 u v _hVu _hUu _hCons c _hc_nonneg _hc_def
+        _hy_M_local _hy'_LM_local
   -- η contraction estimate: the per-stage Lipschitz + residual bound.
   have hη_contr : ∀ j, |η j - ∑ k, M.U j k * δ k|
                         ≤ h * L * (∑ k, |M.A j k| * |η k|)

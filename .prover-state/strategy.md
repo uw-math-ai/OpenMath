@@ -1,350 +1,346 @@
-# Cycle 114 — Strategy
+# Cycle 115 Strategy — Phase 1 of Solution A: localize `M_bound` in `localStepError_bound` family
 
-## TL;DR
+## Context
 
-**RESET FROM PRIOR STRATEGY.** The cycle 113 audit established that
-the full body composition + `IsConvergent` strengthening path
-documented in the previous strategy.md is **blocked** by a §514
-cascade conflict: `convergence_witness_satisfies_U`
-(`OpenMath/Chapter5/Section514.lean:496`) applies `IsConvergent` to
-the IVP `yex = id`, which is unbounded — fundamentally incompatible
-with the proposed `(∀ t, |yex t| ≤ M_bound)` hypothesis. See
-`.prover-state/issues/cycle_113_isconvergent_strengthening_514_blocker.md`
-for the full analysis.
+Cycle 114 landed `aux_515D_construct_ell_U_phi_A` (M-matrix `ell_U`/`phi_A`
+constructor) and fixed the lake-wrapper recursion bug that hung cycle 113.
+The remaining sorry — `aux_515D_output_tendsto` body composition at
+`OpenMath/Chapter5/Section515.lean:1793` — cannot be cleanly closed until
+the §514 cascade conflict (documented in
+`.prover-state/issues/cycle_113_isconvergent_strengthening_514_blocker.md`)
+is resolved.
 
-**Cycle 114 deliverable**: land `aux_515D_construct_ell_U_phi_A`
-cleanly — the M-matrix-based constructor for `ell_U` and `phi_A`
-that cycle 113 drafted and reverted unverified. This is concrete,
-self-contained infrastructure that:
-- Uses already-landed cycle 106 M-matrix machinery
-  (`OpenMath/Chapter5/MMatrix.lean`).
-- Touches NO consumer of `IsConvergent` (no §513 / §514 cascade
-  risk).
-- Is the load-bearing primitive for cycle 115+ body composition.
-- Was the cycle 113 forward step that did not land due to slow
-  build verification — cycle 114 fixes that with a scratch-file-first
-  development workflow.
+The favored resolution path is **Solution A**: localize the `M_bound`
+hypothesis from "global" (`∀ t, |yex t| ≤ M_bound`) to "compact-interval"
+(`∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound`). This makes a future
+`IsConvergent` strengthening compatible with §514's `yex = id` consumer
+(`Section514.lean:496`) because `id` IS bounded on `[0, 1]`.
 
-Sorry count target: 1 → 1 (same). The new helper is added
-**without** touching the existing sorry at
-`OpenMath/Chapter5/Section515.lean:1671`. Score expectation: +1
-to +2 depending on how quickly the helper lands and whether the
-§514 cascade resolution gets scaffolded as bonus work.
+Solution A is a multi-cycle refactor. **Cycle 115 owns Phase 1 only**:
+refactor the helper chain that consumes `hy_M` / `hy'_LM` / `hf_y_bound`
+to take compact-interval bounds. This is one cohesive change inside
+`OpenMath/Chapter5/Section515.lean` with NO impact on §513 / §514 (since
+those files don't touch these private/protected helpers).
 
-## Aristotle status
+Cycles 116 and 117 will then handle (respectively) the `IsConvergent`
+strengthening + §513/§514 verification, and the
+`aux_515D_output_tendsto` body composition.
 
-**No pending results.** Optional parallel submission described in
-Priority 2 below. Do NOT block on it.
+## Aristotle results
 
-## Priority 1 — Develop `aux_515D_construct_ell_U_phi_A` in a scratch file
+None pending. Cycle 115 should NOT submit Aristotle this cycle —
+the refactors are mechanical signature replacements where Aristotle
+gives little leverage. Save Aristotle compute for cycle 117 body
+composition.
 
-**Use the existing untracked scratch file `test_aux_515D.lean`** at
-the repo root (Mathlib-only imports; minutes-to-build instead of
-20+ for the full Section515.lean). The cycle 113 sub-lemma A/B
-proofs were developed there before transplant; do the same.
+## Phase 1 deliverable (cycle 115 target)
 
-The target helper signature:
+Refactor the following helpers in `OpenMath/Chapter5/Section515.lean`
+to consume *compact-interval* bounds. The dependency chain is:
+
+```
+aux_y_diff_norm_bound  (line 129)
+   ↓ used by
+aux_T3_bound  (line 289)         aux_T4_bound  (line 378)
+   ↓ both used by
+localStageError_bound_a  (574)   localStageError_bound_b  (703)
+   ↓ both used by
+GeneralLinearMethod.localStepError_bound  (1302)
+```
+
+### Step 1 — refactor `aux_y_diff_norm_bound` (highest priority)
+
+Current signature at `Section515.lean:129–137`:
+```lean
+lemma aux_y_diff_norm_bound
+    {f : ℝ → ℝ} {L M_bound : ℝ}
+    (_hL : 0 ≤ L) (_hM : 0 ≤ M_bound)
+    {y : ℝ → ℝ}
+    (hy_C1 : ContDiff ℝ 1 y)
+    (hy_ode : ∀ t, deriv y t = f (y t))
+    (hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)   -- GLOBAL
+    (x h : ℝ) (hh : 0 ≤ h) (ξ : ℝ) :
+    |y (x + h * ξ) - y x| ≤ h * |ξ| * (L * M_bound)
+```
+
+The proof body (line 158–161) only uses `hf_y_bound t` for
+`t ∈ Set.uIoc x (x + h*ξ)`. Refactor `hf_y_bound` to:
+```lean
+    (hf_y_bound : ∀ t ∈ Set.uIoc x (x + h * ξ), |f (y t)| ≤ L * M_bound)
+```
+and update the `hC` block at line 158 to consume the membership directly:
+```lean
+have hC : ∀ t ∈ Set.uIoc x (x + h * ξ), ‖f (y t)‖ ≤ L * M_bound := by
+  intro t ht
+  rw [Real.norm_eq_abs]
+  exact hf_y_bound t ht
+```
+
+You will need to reorder parameters so `(x h ξ)` are introduced
+BEFORE `hf_y_bound` (since the bound depends on them). Move `(ξ : ℝ)`
+up next to `(x h : ℝ)`.
+
+### Step 2 — refactor `aux_T3_bound` and `aux_T4_bound`
+
+Both currently take `(hf_y_bound : ∀ t, |f (y t)| ≤ L * M_bound)`
+(at lines 296 and 385). Both pass it to `aux_y_diff_norm_bound`.
+
+For `aux_T3_bound`: the integration variable is `ξ ∈ [0, c_i]`, so
+the relevant evaluation interval is `Set.uIcc x (x + h * c_i)` (the
+union of all `Set.uIcc x (x + h * ξ)` for `ξ ∈ [0, c_i]`). Refactor:
+```lean
+(hf_y_bound : ∀ t ∈ Set.uIcc x (x + h * c_i), |f (y t)| ≤ L * M_bound)
+```
+At line 320 where `aux_y_diff_norm_bound` is invoked, supply the
+restriction-to-sub-interval slice via `Set.uIoc_subset_uIcc` (or
+manual interval inclusion). Helpful Mathlib lemmas:
+* `Set.uIoc_subset_uIcc`
+* `Set.uIcc_of_le`, `Set.uIcc_of_ge`
+* `Set.mem_uIcc`
+
+For `aux_T4_bound`: the function is sampled at `y(x + h * c_j)` for
+each `j : Fin s`. Refactor to:
+```lean
+(hf_y_bound : ∀ j : Fin s, ∀ t ∈ Set.uIcc x (x + h * c j),
+    |f (y t)| ≤ L * M_bound)
+```
+At line 415 where `aux_y_diff_norm_bound` is invoked, pass
+`hf_y_bound j` (specialized to the loop index `j`).
+
+### Step 3 — refactor `localStageError_bound_a` and `localStageError_bound_b`
+
+Both currently take:
+```lean
+(_hy_M : ∀ t, |yex t| ≤ M_bound)             -- GLOBAL
+(_hy'_LM : ∀ t, |deriv yex t| ≤ L * M_bound) -- GLOBAL
+```
+at lines 582–583 and 711–712. Both then derive `hf_yex_bound` at
+lines 599–600 / 729 via:
+```lean
+have hf_yex_bound : ∀ t, |f (yex t)| ≤ L * M_bound := by
+  intro t; rw [← _hy_ode t]; exact _hy'_LM t
+```
+and pass that GLOBAL `hf_yex_bound` to `aux_T3_bound`/`aux_T4_bound`.
+
+After Step 2, refactor as:
+```lean
+(_hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+    |deriv yex t| ≤ L * M_bound)
+```
+
+(Note: `_hy_M` itself is unused in the proof body of
+`localStageError_bound_a` — it has a leading underscore — but it's
+needed for the consistent contract surface. Keep its name and just
+swap to a per-`j` compact-interval form for parallelism. Same for
+the `localStageError_bound_b` version, which uses indices in `Fin s`
+for `c j`.)
+
+Then update the `hf_yex_bound` derivation per-`j`:
+```lean
+have hf_yex_bound : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+    |f (yex t)| ≤ L * M_bound := by
+  intro j t ht; rw [← _hy_ode t]; exact _hy'_LM_local j t ht
+```
+and pass `hf_yex_bound i` (for the relevant index) to `aux_T3_bound`,
+and `hf_yex_bound` (the full per-`j` version) to `aux_T4_bound`.
+
+### Step 4 — refactor `GeneralLinearMethod.localStepError_bound`
+
+The capstone helper at `Section515.lean:1302–1347`. Currently takes:
+```lean
+(_hy_M : ∀ t, |yex t| ≤ M_bound)               -- GLOBAL
+(_hy'_LM : ∀ t, |deriv yex t| ≤ L * M_bound)   -- GLOBAL
+```
+at lines 1311–1312, and passes them through to
+`localStageError_bound_a`/`_b` at lines 1358 and 1365.
+
+Refactor to take the per-`j` compact-interval form matching Step 3:
+```lean
+(_hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+    |deriv yex t| ≤ L * M_bound)
+```
+The `_hy_M` hypothesis can either (a) be dropped entirely since it's
+unused in the body, OR (b) be kept as a per-`j` parallel for the
+contract surface. Recommendation: drop it if unused; keep if it makes
+the consumer side cleaner. Verify by `rg "_hy_M[^_]" OpenMath/Chapter5/Section515.lean`
+to confirm it's not consumed downstream.
+
+Then propagate the new `_hy'_LM_local` to the call sites at
+lines 1358 and 1365 (just pass through).
+
+If Step 4 turns out to be heavier than the budget allows, **defer it
+to cycle 116** and ship Steps 1–3 only. Cycle 116 would then close
+Step 4 plus the `IsConvergent` strengthening together.
+
+## Development workflow (mandatory)
+
+Per cycle 114's lessons:
+
+1. **Scratch-file first**: open `test_phase1_step1.lean` in the project
+   root, write the new `aux_y_diff_norm_bound` signature + body, and
+   verify it compiles via `lake env lean test_phase1_step1.lean` BEFORE
+   transplanting into `Section515.lean`. The scratch file should
+   `import Mathlib` plus any Section515 prerequisites.
+
+2. **Once each Step compiles in scratch**, transplant into
+   `Section515.lean` and verify the FULL file builds via
+   `lake env lean OpenMath/Chapter5/Section515.lean`.
+
+3. **Do this Step-by-Step**, not all at once. Each Step touches a
+   different lemma; transplant + verify per Step to localize any
+   compile failures.
+
+4. **Verify §513 and §514 still compile** after Steps 1–4:
+   ```bash
+   lake env lean OpenMath/Chapter5/Section513.lean
+   lake env lean OpenMath/Chapter5/Section514.lean
+   ```
+   They should — Phase 1 doesn't touch their public interfaces, only
+   the helpers' signatures (which §513/§514 don't directly invoke).
+
+5. **Axiom-check the refactored helpers** via a scratch file:
+   ```lean
+   import OpenMath.Chapter5.Section515
+   #print axioms GeneralLinearMethod.localStepError_bound
+   #print axioms GeneralLinearMethod.localStageError_bound_a
+   #print axioms GeneralLinearMethod.localStageError_bound_b
+   #print axioms aux_T3_bound
+   #print axioms aux_T4_bound
+   #print axioms aux_y_diff_norm_bound
+   ```
+   Expect `[propext, Classical.choice, Quot.sound]` only.
+
+## What NOT to do this cycle
+
+- **Do NOT strengthen `GeneralLinearMethod.IsConvergent`** at
+  `OpenMath/Chapter5/Section512.lean:138`. That's cycle 116 work; it
+  depends on Phase 1 landing first.
+- **Do NOT modify `OpenMath/Chapter5/Section513.lean` or
+  `OpenMath/Chapter5/Section514.lean`** beyond confirming they still
+  build. The §514 cascade conflict is real, but Phase 1 doesn't
+  trigger it (the helpers' callers in §513/§514 are NONE — only
+  `IsConvergent` consumers cascade).
+- **Do NOT attempt to compose the body of `aux_515D_output_tendsto`**
+  this cycle. That's cycle 117+ once the cascade is resolved.
+- **Do NOT pursue Solutions B / C / D** from
+  `cycle_113_isconvergent_strengthening_514_blocker.md`. The audit
+  identified Solution A as cheapest and most faithful.
+- **Do NOT inline the `aux_515D_construct_ell_U_phi_A` helper**
+  anywhere — it's already landed in cycle 114 and ready for cycle 117
+  to consume.
+- **Do NOT use `Set.Ico` or `Set.Ioc` for the bound restriction** —
+  the helpers integrate over closed intervals, and `Set.uIcc` /
+  `Set.uIoc` are the right primitives because they handle both
+  orientations of the interval. The proof inside
+  `aux_y_diff_norm_bound` already uses `Set.uIoc`; align with it.
+- **Do NOT raise `maxHeartbeats`** above 200000.
+- **Do NOT introduce `axiom`/`constant`** to bypass any obligation.
+- **Do NOT submit anything to Aristotle this cycle**. The refactors
+  are mechanical; Aristotle's premise selection adds no leverage
+  on signature replacements. Save the compute for cycle 117 body
+  composition.
+- **Do NOT recreate the lake-wrapper recursion bug** — cycle 114's
+  fix is in place at `/tmp/lean4-toolchain/bin/lake-real` with a
+  one-line `exec` wrapper at `/tmp/lean4-toolchain/bin/lake`. If
+  `lake env lean` hangs past 5 min on a small file, check the
+  wrapper before assuming Lean is the problem.
+- **Do NOT pursue the Path B mean ergodic theorem work** for
+  `cesaro_inverse_I_minus_V.md` this cycle. That's an orthogonal
+  §514 blocker not on the §515D critical path.
+- **Do NOT delete or modify `aux_515D_construct_ell_U_phi_A`,
+  `aux_515D_per_step_recurrence`, `aux_515D_gronwall_bound`,
+  `aux_515D_squeeze`, or `aux_515D_stage_eventually_bounded`**.
+  These cycle 110–114 deliverables are what cycle 117's body
+  composition will consume.
+
+## Failed approaches not to repeat
+
+- **Cycle 110 inlining of M-matrix arguments inside
+  `aux_515D_stage_tendsto`**: rejected by the strategy at the time;
+  the M-matrix work was correctly factored into a separate file
+  (`MMatrix.lean`, cycles 105–106) and the cycle-114 helper. Don't
+  re-inline.
+- **Cycle 113 attempt to land `aux_515D_construct_ell_U_phi_A`
+  without scratch-file verification**: hit the lake wrapper bug
+  and burned the cycle to score 0. Cycle 114's pattern of
+  scratch-file-first development is the canonical workflow. Apply
+  it here too.
+- **Cycle 113 Aristotle outputs that "compiled in isolation but
+  hadn't been verified in Section515.lean"**: cycle 114 had to
+  repair `aux_515D_per_step_recurrence` and
+  `aux_515D_discrete_gronwall_raw` for missing
+  `import Mathlib.Tactic.Cases` and a missing
+  `simp only [Finset.mul_sum, mul_add, mul_left_comm]` before `ring`.
+  Lesson: if you do submit anything to Aristotle, any returned
+  proof MUST be re-verified inside the full Section515.lean import
+  context, not just on the standalone submission.
+- **Cycle 098 / 097 attempts to bypass the §514 cascade by tweaking
+  the `IsConvergent` signature without first establishing the
+  helper-chain compatibility**: don't repeat. Helper signatures must
+  be settled BEFORE the public predicate signature changes — that's
+  the whole point of doing Phase 1 (cycle 115) before Phase 2
+  (cycle 116).
+
+## Backup plan if Step 4 (`localStepError_bound`) blows the budget
+
+If Steps 1–3 take longer than expected (target: complete by
+~75 minutes wall-clock), ship Steps 1–3 only and **defer Step 4 to
+cycle 116**. The intermediate state (helpers refactored to compact-
+interval, capstone still on global) is still a clean compile because
+the capstone simply derives the per-`j` compact bounds inline from
+its own global hypothesis at the call sites:
 
 ```lean
-import Mathlib
-import OpenMath.Chapter5.MMatrix
-
-open scoped Matrix.Norms.Frobenius
-
-private theorem aux_515D_construct_ell_U_phi_A
-    {s r : ℕ} [DecidableEq (Fin s)]
-    (A : Matrix (Fin s) (Fin s) ℝ)
-    (U : Matrix (Fin s) (Fin r) ℝ)
-    {h₀ L : ℝ} (h₀_pos : 0 < h₀) (hL : 0 ≤ L)
-    (c : Fin s → ℝ) (hc_nonneg : ∀ i, 0 ≤ c i)
-    (h_norm : ‖((h₀ * L) • A.map (fun a => |a|) :
-                 Matrix (Fin s) (Fin s) ℝ)‖ < 1) :
-    ∃ ell_U phi_A : Fin s → ℝ,
-      (∀ i, 0 ≤ ell_U i) ∧
-      (∀ i, 0 ≤ phi_A i) ∧
-      (∀ i, ell_U i - h₀ * L * (∑ j, |A i j| * ell_U j)
-              = ∑ j, |U i j|) ∧
-      (∀ i, phi_A i - h₀ * L * (∑ j, |A i j| * phi_A j)
-              = (1/2) * (c i)^2 + ∑ j, |A i j * c j|)
+-- inside localStepError_bound, before invoking the refactored helpers:
+have _hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+    |deriv yex t| ≤ L * M_bound :=
+  fun j t _ => _hy'_LM t
 ```
 
-Construction blueprint:
+Document the deferral in `.prover-state/task_results/cycle_115.md` as
+"Step 4 deferred to cycle 116; signature change ready, just need to
+rewire the call sites at Section515.lean:1358 and 1365."
 
-1. Let `Mpos := (h₀ * L) • A.map (fun a => |a|)`. By the hypothesis
-   `h_norm`, `‖Mpos‖ < 1`, so `Mpos` is "small" in Frobenius norm.
-2. By inspection, `Mpos.EntrywiseNonneg` follows from
-   `mul_nonneg (mul_nonneg h₀_pos.le hL) (abs_nonneg _)` plus the
-   `Matrix.smul_apply` and `Matrix.map_apply` unfolds. Establish
-   this as `hMpos_nn : Mpos.EntrywiseNonneg`.
-3. Define `bU : Fin s → ℝ := fun i => ∑ j, |U i j|` and
-   `bA : Fin s → ℝ := fun i => (1/2) * (c i)^2 + ∑ j, |A i j * c j|`.
-   Both are pointwise non-negative (sum of `abs` for `bU`; sum of a
-   square plus sum of `abs` for `bA`).
-4. Apply `Matrix.EntrywiseNonneg.inv_one_sub_of_norm_lt_one` (cycle
-   106 helper) to get
-   `(Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos))
-     .EntrywiseNonneg`.
-5. Define
-   `ell_U := (Ring.inverse ((1 : Matrix _ _ _) - Mpos)) *ᵥ bU`
-   and
-   `phi_A := (Ring.inverse ((1 : Matrix _ _ _) - Mpos)) *ᵥ bA`.
-   Non-negativity follows from
-   `EntrywiseNonneg.mulVec_nonneg`.
-6. The defining equations follow from
-   `(1 - Mpos) *ᵥ ((Ring.inverse (1 - Mpos)) *ᵥ b) = b`,
-   which is `Matrix.mulVec_mulVec` + `Ring.inverse_mul_cancel` +
-   `Matrix.one_mulVec`. Rearranging gives
-   `ell_U - Mpos *ᵥ ell_U = bU`, which expands via
-   `Matrix.smul_mulVec` and `Matrix.map_mulVec` to the textbook
-   form `ell_U i - h₀ L · ∑ j |A i j| · ell_U j = ∑ j |U i j|`.
+## Faithfulness flag for cycle 115's pre-commit check
 
-**Use `lean_multi_attempt` to iterate fast** on the equation
-unfoldings. The cycle 107 `aux_515B_eta_contraction` proof
-(`OpenMath/Chapter5/Section515.lean:931–1136`) consumes exactly
-this construction's outputs — read its handling of `Mpos`,
-`hMpos_nn`, and `hMpos_mulVec` for the unfold pattern (around
-lines 999–1014).
+The Phase 1 refactor introduces a *strict weakening* of the helper
+hypotheses (compact-interval bound is implied by global bound, so
+all existing call sites can supply the new form by trivial
+restriction). No faithfulness divergence is created at this layer.
+The faithfulness divergence at the `IsConvergent` layer (the
+`M_bound` strengthening overall) is documented in
+`is_convergent_strengthened.md` (LMM precedent) and will be
+extended in cycle 116.
 
-### Verification protocol for the scratch file
+For the cycle 115 pre-commit check:
 
-```bash
-lake env lean test_aux_515D.lean
-```
+* **No new `def` or `theorem`** is introduced — only signature
+  refactors of existing helpers. Skip the entity-ID / textbook-quote
+  step.
+* **Tautology check**: N/A (no new theorems).
+* **Hypothesis strength check**: PASSES (each refactored helper now
+  takes a *weaker* hypothesis than before).
+* **Absent theorem check**: confirm no proof comment promises content
+  that was lost in the refactor.
 
-Should exit with no errors. Then run
+## Suggested cycle 115 task results template
 
-```bash
-echo '#print axioms aux_515D_construct_ell_U_phi_A' >> test_aux_515D.lean
-lake env lean test_aux_515D.lean
-```
+Document under "Worked on": `Section515.lean` Phase 1 helper-chain
+refactor for Solution A.
 
-Expect `[propext, Classical.choice, Quot.sound]` only.
+Document under "Approach": list which Steps (1–4) landed and the
+exact lines/signatures changed.
 
-## Priority 2 — Optional Aristotle parallel (low-risk hedge)
+Document under "Result": SUCCESS/PARTIAL/FAILED with which Steps
+shipped.
 
-While Priority 1 is in flight, optionally submit an Aristotle batch
-on `aux_515D_construct_ell_U_phi_A` as a parallel attempt. The
-helper is an M-matrix inversion + matrix-vector unfolding — closer
-in shape to cycle 112's sub-lemma A/B (which Aristotle closed
-cleanly) than to the GLM-specific plumbing Aristotle has historically
-struggled on (cycles 094, 096, 103). Reasonable to submit; do **not**
-block on the result.
+Document under "Faithfulness check": confirm that the refactor is a
+strict *weakening* of helper hypotheses (not strengthening), so
+existing consumers in §513/§514 still compile by trivial supply of
+the weaker bound from their stronger ones.
 
-If submitted: project ID goes in
-`.prover-state/aristotle_submissions/cycle_114/README.md` per
-convention. Check exactly **once** at the end of the cycle (no
-mid-cycle polling per CLAUDE.md).
-
-## Priority 3 — Transplant into Section515.lean
-
-After the scratch-file proof is verified, copy the
-`aux_515D_construct_ell_U_phi_A` body into
-`OpenMath/Chapter5/Section515.lean`. Insertion point: between
-`aux_515B_eta_contraction` (ends ~line 1136) and
-`GeneralLinearMethod.localStepError_bound` (begins line 1183).
-This places it adjacent to the M-matrix helper it consumes and
-ahead of any future caller.
-
-Make sure to:
-- Open the `Matrix.Norms.Frobenius` scope at the top of the file
-  (or locally around the helper). Check whether
-  `aux_515B_eta_contraction` already opens this scope; if yes,
-  no change needed.
-- Adjust `[DecidableEq (Fin s)]` instance handling — `Fin s` should
-  already have `DecidableEq` via `Fin.decidableEq`; if the local
-  context needs `[DecidableEq (Fin s)]` explicitly, add it.
-
-### Verification protocol for Section515.lean
-
-Build is **slow** (~20 min per cycle 113 task results). Strategy:
-1. Save the scratch-file-verified helper.
-2. Edit `Section515.lean` to insert the helper.
-3. Run `lake env lean OpenMath/Chapter5/Section515.lean` in the
-   background with a 30-minute timeout.
-4. While it builds, prepare commit message and update task results.
-5. If the build completes successfully, commit and verify axioms.
-6. If the build hangs past 30 min OR fails: revert the
-   `Section515.lean` edit, keep the scratch file as the cycle 114
-   deliverable (the helper IS verified in `test_aux_515D.lean`,
-   just not yet integrated). Cycle 115 picks up integration.
-
-## Priority 4 — Bonus: scaffold §514 cascade resolution path
-
-If Priorities 1–3 land with time to spare (≤ 1 hour into the
-cycle), use the remainder to scaffold (without touching
-`IsConvergent`) the **localized** version of `localStepError_bound`
-suitable for the cycle 115 cascade. Specifically:
-
-Add a new theorem
-`GeneralLinearMethod.localStepError_bound_compact` in
-Section515.lean with hypothesis
-`(_hy_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)` (compact-interval
-form) instead of the global form, and prove it as a wrapper of
-`localStepError_bound` plus a "global ⇒ compact" weakening. This
-gives cycle 115 a tested alternative entry point for §514's
-`yex = id` consumer (where `M_bound := |x|` works on `[0, x]`).
-
-This is **strictly bonus** — only attempt if the helper has landed
-cleanly and there is real time. Do NOT start it before the helper.
-
-## Priority 5 — Documentation
-
-After landing the helper:
-
-1. Update `.prover-state/issues/aux_515D_output_tendsto_hypotheses.md`
-   to mark `aux_515D_construct_ell_U_phi_A` as **CLOSED cycle 114**
-   (replacing the cycle 113 "drafted but reverted" status).
-2. Append to
-   `.prover-state/issues/cycle_113_isconvergent_strengthening_514_blocker.md`
-   a "Cycle 114 update" section noting the helper landed and which
-   of Solutions A/B/C/D the planner now favors. Tentatively favor
-   **Solution A** (localize `M_bound` to `Set.Icc x₀ x`) because:
-   - It is the only fully faithfulness-preserving path.
-   - The cycle 114 helper output is compatible with both global
-     and localized `M_bound` forms.
-   - §514's `yex = id` IVP becomes compatible (`|id t| ≤ |x|` on
-     `[0, x]`).
-3. Update `plan.md` thm:515D row note to reflect cycle 114 status:
-   helper landed, body composition deferred to cycle 115 with
-   chosen cascade path.
-4. Write `.prover-state/task_results/cycle_114.md` per CLAUDE.md
-   format.
-
-## What NOT to try (failed approaches from history)
-
-* **Do NOT pursue the cycle 113 strategy's `IsConvergent`
-  strengthening.** The global `M_bound` clause is incompatible
-  with §514's `yex = id` consumer (audit confirmed cycle 113).
-  Any path forward requires localizing `M_bound` first or
-  replacing §514's witness IVP with a smooth-bounded one. Both
-  are out of scope for cycle 114.
-* **Do NOT touch `Section512.lean::IsConvergent`,
-  `Section513.lean`, or `Section514.lean`.** These cascade ahead
-  of any `IsConvergent` strengthening; resolving cycle 113's
-  blocker is a separate cycle's work.
-* **Do NOT submit the body composition of `aux_515D_output_tendsto`
-  to Aristotle.** Per cycle 113's strategy: it is GLM-specific
-  plumbing. The cycle 114 helper construction is acceptable to
-  submit (Priority 2, optional).
-* **Do NOT inline-develop `aux_515D_construct_ell_U_phi_A`
-  directly inside `Section515.lean`.** Cycle 113 attempted this
-  and reverted unverified because the 2140-line file builds
-  slowly and the LSP server failed. Use `test_aux_515D.lean` as
-  the development sandbox FIRST.
-* **Do NOT raise `maxHeartbeats`** above 200000. If a single
-  tactic block is slow, decompose into more `have` clauses
-  (CLAUDE.md rule).
-* **Do NOT introduce `axiom`/`constant`** for any step of the
-  helper construction. The M-matrix infrastructure (cycle 106)
-  is already complete; no axioms needed.
-* **Do NOT remove the existing sorry at
-  `OpenMath/Chapter5/Section515.lean:1671`** by faking a body —
-  the body composition stays sorry'd until cycle 115 (after the
-  cascade question is resolved).
-* **Do NOT use `Finset.sum_le_sum_nbij'`** for any sum-reindexing
-  step — it does not exist in Mathlib (cycle 050 dead end).
-* **Do NOT use `add_le_add_left hA c`** to produce `a + c ≤ b + c`
-  — it produces `c + a ≤ c + b`. Use `linarith [hA]` or `gcongr`.
-* **Do NOT modify `OpenMath/Chapter5/MMatrix.lean`.** It is
-  complete (cycle 106) and provides exactly what the helper needs.
-
-## Fallback plans
-
-**If the helper hand-proof stalls (90+ min on Priority 1):**
-
-* Submit the helper to Aristotle (skip the "optional" — make it
-  primary) and pivot to Priority 4 bonus work (the
-  `localStepError_bound_compact` wrapper) while waiting. Aristotle
-  has 30 min sleep window; it may close the helper while you
-  scaffold the wrapper.
-
-**If the scratch-file helper lands but Section515.lean integration
-times out:**
-
-* Commit the verified `test_aux_515D.lean` as
-  `OpenMath/Chapter5/Section515D_Helper.lean` (a new module). Make
-  Section515.lean import it later. Cycle 115 handles integration.
-  Sorry count: 1 → 1 (same). Score: +1 (verified helper landed
-  in repo, ready for cycle 115 consumption).
-
-**If both the helper AND integration fail:**
-
-* Land **only** the documentation update of
-  `cycle_113_isconvergent_strengthening_514_blocker.md` plus
-  whichever scratch-file progress was made (commit the partial
-  work in `test_aux_515D.lean` for cycle 115 to pick up).
-  Sorry count: 1 → 1 (no Lean delta). Score: 0 — documentation
-  only, but no regression.
-
-## Scoring rubric
-
-* **+2**: helper lands in `OpenMath/Chapter5/Section515.lean`,
-  axiom-clean, full Section515 build passes, cascade documentation
-  updated, plus `localStepError_bound_compact` wrapper if time
-  permits.
-* **+1**: helper lands either in Section515.lean OR as a
-  standalone module (`test_aux_515D.lean` committed under
-  `OpenMath/`), axiom-clean, ready for cycle 115 consumption.
-* **0**: no Lean delta but cascade resolution path documented
-  (Solution A favored, hypothesis derivability re-confirmed,
-  cycle 115 plan written).
-* **−1 or worse**: REGRESSION (sorry count goes up, or §513/§514
-  break, or `lake build` fails on a previously-clean module).
-
-## Worker checklist
-
-Before committing:
-
-- [ ] `lake env lean test_aux_515D.lean` (or wherever the helper
-      lives) exits 0.
-- [ ] `#print axioms aux_515D_construct_ell_U_phi_A` shows only
-      `[propext, Classical.choice, Quot.sound]`.
-- [ ] If integrated: `lake env lean OpenMath/Chapter5/Section515.lean`
-      exits 0 (allow 30 min timeout).
-- [ ] Sorry count delta verified by grep over `OpenMath/` for
-      `sorry` (excluding comments). Expected: 1 → 1.
-- [ ] §513 / §514 / §512 still build clean (run quick spot-check
-      via `lake env lean` on each — they should be unaffected
-      since the cascade is NOT touched this cycle).
-- [ ] `aux_515D_output_tendsto_hypotheses.md` updated to mark
-      the helper closed.
-- [ ] `cycle_113_isconvergent_strengthening_514_blocker.md`
-      updated with cycle 114 status + favored solution.
-- [ ] `plan.md` thm:515D row note updated.
-- [ ] `cycle_114.md` task results written, including:
-      - Faithfulness check (the helper introduces no new
-        textbook-named concept; M-matrix construction is
-        infrastructure, not a Butcher entity).
-      - Dead ends (any tactic blocks that needed >2 attempts).
-      - Suggested next approach: cycle 115 should pursue
-        Solution A (localize `M_bound`) per the audit, then
-        compose `aux_515D_output_tendsto`'s body using the
-        cycle 114 helper.
-
-## References
-
-* `.prover-state/issues/cycle_113_isconvergent_strengthening_514_blocker.md`
-  — the audit that ruled out the cycle 113 strategy.
-* `.prover-state/issues/aux_515D_output_tendsto_hypotheses.md`
-  — per-hypothesis derivability analysis; cycle 113 sketch of
-  this helper.
-* `.prover-state/task_results/cycle_113.md` — cycle 113 result
-  documenting the audit, the inherited A/B closures, and the
-  reverted helper draft.
-* `OpenMath/Chapter5/MMatrix.lean::EntrywiseNonneg.inv_one_sub_of_norm_lt_one`
-  — the cycle 106 M-matrix inversion lemma that the helper
-  construction wraps.
-* `OpenMath/Chapter5/MMatrix.lean::EntrywiseNonneg.mulVec_nonneg`
-  — used to lift entrywise-nonneg matrix to non-negative output
-  vector.
-* `OpenMath/Chapter5/Section515.lean:931–1136` — cycle 107
-  `aux_515B_eta_contraction` proof, the canonical example of
-  `Mpos`/`hMpos_nn`/`hMpos_mulVec` plumbing in this codebase.
-  Read it before writing the helper to match style.
-* `OpenMath/Chapter5/Section515.lean:1183–1221` —
-  `localStepError_bound`'s signature, showing exactly what the
-  helper's outputs feed into (the `_hellU_eq` and `_hphiA_eq`
-  side conditions).
-* `test_aux_515D.lean` (untracked, repo root) — the cycle 113
-  scratch file used for sub-lemmas A/B; reuse for cycle 114
-  helper development.
+Document under "Suggested next approach": cycle 116 should pursue
+Phase 2 — strengthen `GeneralLinearMethod.IsConvergent` in
+Section512.lean to require the localized hypotheses, then verify
+§513 / §514 still build by supplying `M_bound := 0` (for `yex = 0`)
+and `M_bound := |x|` on `Set.Icc 0 x` (for `yex = id`).
