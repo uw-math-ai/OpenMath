@@ -36,17 +36,24 @@ The textbook uses 1-based indexing `α₁,…,αₙ` while Lean's `Fin n` is
 textbook's `α₁` and `α (n-1)` to `αₙ`. All formulas below use this
 convention.
 
-## Cycle 138 status
+## Cycle 139 status
 
 * `doublyCompanionMatrix` defined index-by-index over ℂ.
 * Sanity helper `doublyCompanionMatrix_one_eq` reduces the `n = 1` case
   to the explicit `1 × 1` matrix `!![-α 0 - β 0]`.
 * `alphaPoly`, `betaPoly` defined.
-* General-`n` `doublyCompanionMatrix_det_factorization` is **stated with
-  `sorry`**; see issue `thm_550A_general_n.md` for the eigenvalue-density
-  argument deferral.
 * `doublyCompanionMatrix_det_factorization_n_one` closes the `n = 1`
-  specialisation as a genuine witness.
+  specialisation as a genuine (axiom-clean) witness.
+* The general-`n` factorisation statement
+  (`det(I − zX) = α(z)β(z) + O(z^{n+1})`) is **deferred** to a future
+  cycle — see `.prover-state/issues/thm_550A_general_n.md`. The
+  cycle-138 sorry-first scaffold has been **removed** in cycle 139:
+  carrying an open `sorry` was scored a regression by the supervisor,
+  so the statement is restored to absent until the closure
+  infrastructure (cofactor-expansion induction or eigenvalue-density
+  argument) is in place. Two Aristotle jobs targeting the general-`n`
+  proof are still in flight; if either returns cleanly, a future cycle
+  will reinstate the statement together with the proof body.
 -/
 
 namespace OpenMath.Chapter5.Section550
@@ -108,24 +115,6 @@ noncomputable def alphaPoly {n : ℕ} (α : Fin n → ℂ) (z : ℂ) : ℂ :=
 /-- The polynomial `β(z) = 1 + β₁ z + β₂ z² + ⋯ + βₙ zⁿ`. -/
 noncomputable def betaPoly {n : ℕ} (β : Fin n → ℂ) (z : ℂ) : ℂ :=
   1 + ∑ i : Fin n, β i * z ^ (i.val + 1)
-
-/-- **Theorem 550A (Butcher §550, p. 457).** For the doubly companion
-matrix `X` built from coefficient vectors `α, β : Fin n → ℂ`,
-`det(I − z X) = α(z) · β(z) + O(zⁿ⁺¹)` as `z → 0` in ℂ.
-
-The general-`n` proof requires the eigenvalue-density argument from
-Butcher's text (specialise to distinct non-zero eigenvalues by density,
-compute on that dense set via the polynomial identity in (550c), extend
-by continuity of the charpoly coefficients in the matrix entries). The
-assembly is multi-cycle work — see `.prover-state/issues/thm_550A_general_n.md`. -/
-theorem doublyCompanionMatrix_det_factorization
-    {n : ℕ} (α β : Fin n → ℂ) :
-    Asymptotics.IsBigO (nhds (0 : ℂ))
-      (fun z : ℂ =>
-        (1 - z • doublyCompanionMatrix α β).det
-          - alphaPoly α z * betaPoly β z)
-      (fun z : ℂ => z ^ (n + 1)) := by
-  sorry
 
 /-- **Theorem 550A at `n = 1`.** With single coefficients `α 0` and
 `β 0`,

@@ -227,9 +227,11 @@
     "status": "formalized"
   },
   "def:530A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section530.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section530.StartingMethod.IsNonDegenerate",
+    "status": "formalized",
+    "cycle": 139,
+    "notes": "Cycle 139: opened §530 with `GeneralizedRungeKuttaMethod` (530a tableau: c, A, b₀, b), `StartingMethod` (length-r dependent sequence with heterogeneous stages), and the `IsDegenerate` / `IsNonDegenerate` predicates. Non-vacuity witnessed by `trivialStartingMethod_isNonDegenerate` (r=1, b₀=1) and refutability by `zeroStartingMethod_isDegenerate` (r=1, b₀=0). All three public theorems axiom-clean (`[propext, Classical.choice, Quot.sound]`). Definition matches the textbook verbatim — `IsDegenerate` is `∀ i, b₀^{(i)} = 0`, `IsNonDegenerate := ¬ IsDegenerate`."
   },
   "def:530B": {
     "lean_file": null,
@@ -881,10 +883,10 @@
   },
   "thm:550A": {
     "lean_file": "OpenMath/Chapter5/Section550.lean",
-    "lean_symbol": "OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization",
+    "lean_symbol": "OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_one",
     "status": "partial",
-    "cycle": 138,
-    "notes": "n=1 specialization closed axiom-clean as `doublyCompanionMatrix_det_factorization_n_one`. General n stated with sorry; deferred per issue `thm_550A_general_n.md` (eigenvalue-density argument is multi-cycle work; cofactor expansion / induction sketched as alternatives). Aristotle jobs submitted: project IDs 7062c2a2 (general n) and 70f26d67 (n=2)."
+    "cycle": 139,
+    "notes": "n=1 witness only: `doublyCompanionMatrix_det_factorization_n_one` closes the n=1 specialisation axiom-clean. The general-n statement (`doublyCompanionMatrix_det_factorization`) was sorry-first in cycle 138 and **removed** in cycle 139 — see `.prover-state/issues/thm_550A_general_n.md` for the closure-infrastructure deferral (cofactor-expansion induction or eigenvalue-density argument). Definitions `doublyCompanionMatrix`, `alphaPoly`, `betaPoly` and the `_one_eq` simp lemma remain. Aristotle jobs from cycle 138 (project IDs 7062c2a2 general-n / 70f26d67 n=2) were still IN_PROGRESS at cycle 139 poll; if either returns cleanly, the general-n statement and proof will be reinstated."
   },
   "thm:550B": {
     "lean_file": null,
