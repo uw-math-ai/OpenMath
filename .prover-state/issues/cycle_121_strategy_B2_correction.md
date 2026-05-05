@@ -276,3 +276,43 @@ attempted. Cycle 122's planner should:
 * `OpenMath/Chapter5/Section515.lean:1835` — `aux_515D_iterated_V_bound`
   (cycle 120, the load-bearing iterated-V bound).
 * `OpenMath/Chapter5/Section515.lean:1995` — the `sorry` to close.
+
+## Cycle 122 update — Path B narrowing landed
+
+Cycle 122 implemented Path B (the corrected-signature narrowing helper):
+
+* **New private helper** `aux_515D_per_step_K_bound`
+  (`Section515.lean:1898`, sorry'd body) with the analytically-correct
+  residual shape
+
+  ```
+  |R(m) i| ≤ α · h_n · sup_j |δ(m) j| + β · h_n²
+  ```
+
+  matching `localStepError_bound`'s output. The strategy's broken
+  `K_R · h²` shape is NOT used.
+
+* **`_hc_nn` propagated** through the §515D internal chain:
+  `aux_515D_max_deviation_geometric_bound` ← `..._bound_tendsto_zero`
+  ← `..._componentwise_deviation_tendsto_zero` ← `aux_515D_output_tendsto`
+  ← `stable_consistent_isConvergent` (added as `hc_nn_witness`).
+  See `.prover-state/issues/stable_consistent_isConvergent_hc_nn.md`
+  for the faithfulness divergence record.
+
+* **No §513 / §514 cascade regression** — both still build cleanly.
+  The cascade is contained inside `Section515.lean`.
+
+* **Body composition of `aux_515D_max_deviation_geometric_bound`
+  (Step 4 of the cycle 122 strategy)**: deferred. The recipe is
+  fully analytical (closed-form expansion + iterated V bound +
+  sum-form Grönwall + α=0 case split), but the full composition is
+  ~120-150 LOC and exceeds a single-cycle implementation budget when
+  combined with the structural narrowing + cascade work + faithfulness
+  documentation. Cycle 123 should attempt it.
+
+The §515D `sorry` count is now **2** (in `aux_515D_per_step_K_bound`'s
+body and `aux_515D_max_deviation_geometric_bound`'s body), down from
+**1 broad sorry** in `aux_515D_max_deviation_geometric_bound` covering
+the entire ~150-LOC analytical claim. The narrowing splits the locus
+into a focused per-step claim (the new helper) and an outer composition
+that is tractable from cycle 120's iterated V bound.

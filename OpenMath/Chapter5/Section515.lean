@@ -1923,6 +1923,79 @@ private theorem aux_515D_iterated_V_bound {r : ℕ}
     _ = (r : ℝ) * (C * s_x) := hcard
     _ = ((r : ℝ) * C) * s_x := by ring
 
+/-- **(515D narrower helper — cycle 122 Path B narrowing)** Per-step K-bound
+for the vectorial recurrence with the analytically-correct residual shape.
+
+For each `n ≥ 1` and each step `m + 1 ≤ n`, the residual
+  `R(m) i := Y n (m+1) i − target(m+1) i − (M.V *ᵥ δ(m)) i`
+satisfies
+  `|R(m) i| ≤ α · h_n · sup_j |δ(m) j| + β · h_n²`,
+with `α, β ≥ 0` non-negative constants depending on the GLM and problem
+data, where `δ(k) i := Y n k i − target(k) i` and
+`target(k) i := u_i · yex(x₀ + k·h_n) + v_i · h_n · deriv yex(x₀ + k·h_n)`.
+
+This lemma packages the per-step application of `localStepError_bound`
+(`Section515.lean:1355`, Butcher Lemma 515B) plus
+`aux_515D_construct_ell_U_phi_A` (`Section515.lean:1213`). Its body is
+left as `sorry` in cycle 122; Path A composition above it consumes only
+this conclusion.
+
+**Faithfulness**: the residual shape `α · h · δ_max + β · h²` is the
+exact bound provided by `localStepError_bound`. The `α · h · δ_max`
+term is genuinely propagation-coupled (cycle 121 correction issue);
+attempting a pure `O(h²)` shape is analytically incorrect.
+
+**Hypothesis `_hc_nn`**: required by `aux_515D_construct_ell_U_phi_A`
+to construct `ell_U`, `phi_A` via M-matrix inversion. Propagated
+upstream from this signature; see
+`.prover-state/issues/stable_consistent_isConvergent_hc_nn.md` for the
+faithfulness divergence note. -/
+private theorem aux_515D_per_step_K_bound {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (_hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (_hyex_x₀ : yex x₀ = y₀)
+    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    {u v : Fin r → ℝ}
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {x : ℝ} (_hxx : x₀ < x)
+    {M_bound : ℝ} (_hM_nn : 0 ≤ M_bound)
+    (_hyex_C1 : ContDiff ℝ 1 yex)
+    (_hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
+    (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
+    (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
+    [Nonempty (Fin r)]
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (_hY_iter : ∀ n : ℕ, 0 < n →
+      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    ∃ α β : ℝ, 0 ≤ α ∧ 0 ≤ β ∧
+      ∀ n : ℕ, 0 < n → ∀ m : ℕ, m + 1 ≤ n → ∀ i : Fin r,
+        |Y n (m+1) i
+            - (u i * yex (x₀ + ((m+1) : ℕ) * ((x - x₀) / (n : ℝ)))
+               + v i * ((x - x₀) / (n : ℝ))
+                 * deriv yex (x₀ + ((m+1) : ℕ) * ((x - x₀) / (n : ℝ))))
+            - (M.V *ᵥ (fun j : Fin r =>
+                  Y n m j
+                    - (u j * yex (x₀ + (m : ℕ) * ((x - x₀) / (n : ℝ)))
+                       + v j * ((x - x₀) / (n : ℝ))
+                         * deriv yex (x₀ + (m : ℕ) * ((x - x₀) / (n : ℝ)))))) i|
+          ≤ α * ((x - x₀) / (n : ℝ))
+              * Finset.sup' Finset.univ Finset.univ_nonempty
+                  (fun j : Fin r =>
+                    |Y n m j
+                      - (u j * yex (x₀ + (m : ℕ) * ((x - x₀) / (n : ℝ)))
+                         + v j * ((x - x₀) / (n : ℝ))
+                           * deriv yex (x₀ + (m : ℕ) * ((x - x₀) / (n : ℝ))))|)
+            + β * ((x - x₀) / (n : ℝ))^2 := by
+  sorry
+
 /-- **(515D narrower helper — cycle 119 decomposition fallback)** Closed-form
 geometric bound on the max-abs deviation at step `n` of the GLM iteration.
 
@@ -1975,6 +2048,7 @@ private theorem aux_515D_max_deviation_geometric_bound {s r : ℕ}
     (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
     [Nonempty (Fin r)]
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_iter : ∀ n : ℕ, 0 < n →
@@ -2042,6 +2116,7 @@ private theorem aux_515D_max_deviation_bound_tendsto_zero {s r : ℕ}
     (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
@@ -2064,7 +2139,7 @@ private theorem aux_515D_max_deviation_bound_tendsto_zero {s r : ℕ}
     obtain ⟨C_init, C_lin, hC_init_nn, hC_lin_nn, hbound⟩ :=
       aux_515D_max_deviation_geometric_bound (s := s) (r := r) M _hStab _hf_lip
         _hyex_x₀ _hyex_ode _hVu _hUu _hCons_eq _hxx _hM_nn _hyex_C1 _hyex_M
-        _hyex'_LM _h_norm Y Y_int
+        _hyex'_LM _h_norm _hc_nn Y Y_int
         (fun n hn => ⟨(_hY_props n hn).2.1, (_hY_props n hn).2.2⟩)
     -- `h_n := (x - x₀) / n`.
     set h_n : ℕ → ℝ := fun n => (x - x₀) / (n : ℝ) with hh_n_def
@@ -2285,6 +2360,7 @@ private theorem aux_515D_componentwise_deviation_tendsto_zero {s r : ℕ}
     (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
@@ -2300,7 +2376,7 @@ private theorem aux_515D_componentwise_deviation_tendsto_zero {s r : ℕ}
   -- Cycle 118 decomposition fallback: extract the max-abs bound sequence.
   obtain ⟨δ_seq, _hδ_nn, hδ_tendsto, hδ_bound⟩ :=
     aux_515D_max_deviation_bound_tendsto_zero M _hStab _hf_lip _hyex_x₀ _hyex_ode
-      _hVu _hUu _hCons_eq _hφ _hxx _hM_nn _hyex_C1 _hyex_M _hyex'_LM _h_norm
+      _hVu _hUu _hCons_eq _hφ _hxx _hM_nn _hyex_C1 _hyex_M _hyex'_LM _h_norm _hc_nn
       Y Y_int _hY_props
   -- Convert the max-abs limit to the per-component limit via squeeze.
   refine squeeze_zero_norm' ?_ hδ_tendsto
@@ -2348,6 +2424,7 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
     (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
@@ -2363,7 +2440,7 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
   -- deviation tends to 0.
   have hdev := aux_515D_componentwise_deviation_tendsto_zero M _hStab _hf_lip
     _hyex_x₀ _hyex_ode _hVu _hUu _hCons_eq _hφ _hxx _hM_nn _hyex_C1 _hyex_M
-    _hyex'_LM _h_norm Y Y_int _hY_props i
+    _hyex'_LM _h_norm _hc_nn Y Y_int _hY_props i
   -- Auxiliary: `h_n := (x - x₀)/n → 0`.
   have hh_to_0 : Filter.Tendsto (fun n : ℕ => (x - x₀) / (n : ℝ))
                     Filter.atTop (nhds 0) := by
@@ -2843,10 +2920,16 @@ analysis.
 This is `thm:515D` of `entities/thm_515D.json`. -/
 theorem GeneralLinearMethod.stable_consistent_isConvergent
     {s r : ℕ} (hs : 0 < s) (M : GeneralLinearMethod s r)
-    (hStab : M.IsStable) (hCons : M.IsConsistent) :
+    (hStab : M.IsStable) (hCons : M.IsConsistent)
+    (hc_nn_witness : ∀ u v : Fin r → ℝ,
+        ((M.V *ᵥ u = u ∧ M.U *ᵥ u = (fun _ => 1)) ∧
+          M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v) →
+        ∀ i, 0 ≤ M.glmAbscissae v i) :
     M.IsConvergent := by
   intro f L hf_lip x₀ y₀ yex hyex_x₀ hyex_ode
   obtain ⟨u, v, ⟨hVu, hUu⟩, hCons_eq⟩ := hCons
+  have hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i :=
+    hc_nn_witness u v ⟨⟨hVu, hUu⟩, hCons_eq⟩
   refine ⟨u, ?_, ?_⟩
   · -- u ≠ 0: evaluate `U·u = 𝟙` at index `⟨0, hs⟩` to get
     -- `(U·u) ⟨0, hs⟩ = 1`. If `u = 0` then `U·u = 0`, giving `1 = 0`.
@@ -2859,7 +2942,7 @@ theorem GeneralLinearMethod.stable_consistent_isConvergent
         Y Y_int hY_props
     have h_output := aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
                        hVu hUu hCons_eq hφ hxx hM_nn hyex_C1 hyex_M hyex'_LM
-                       h_norm Y Y_int hY_props
+                       h_norm hc_nn Y Y_int hY_props
     refine ⟨h_output, ?_⟩
     exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
             hVu hUu hCons_eq hφ hxx Y Y_int hY_props h_output

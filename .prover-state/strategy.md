@@ -1,426 +1,423 @@
-# Cycle 121 strategy
+# Cycle 122 Strategy — close §515D via corrected vectorial sum-form Grönwall
 
-## Heading status
+## TL;DR
 
-* Branch tip: `cdb72a8 Cycle 120 — close aux_515D_iterated_V_bound (Path A from issue file)`.
-* Single sorry remaining in `OpenMath/Chapter5/Section515.lean` (line 1995):
-  `aux_515D_max_deviation_geometric_bound` body (cycle 119 narrowing,
-  signature unchanged in cycle 120).
-* Cycle 120 was scored **−1** for "3 suspected vacuous proof(s) introduced".
-  The 3 hits are at `Section515.lean:1921, 1922, 1923` — calc-step closers
-  `:= h_abs_sum`, `:= h_sum_bd`, `:= h_card` inside cycle 120's new
-  `aux_515D_iterated_V_bound`. **All three are scanner false positives**
-  per the standing
-  `.prover-state/issues/tautology_scanner_false_positives.md`. Cycle 121
-  MUST address this before doing structural work, or the cycle will
-  REVERT.
-* Aristotle Jobs running: 2 (`63045685-0543-4d65-91a4-8466337472bd`),
-  3 (`e68b3d59-d608-42e1-9da2-413b3742c168`). Both `IN_PROGRESS` at end
-  of cycle 120. Job 4 was cancelled by cycle 120.
+Cycle 121 was hygiene-only and produced a detailed analytical
+correction to the previous strategy. **Read that correction issue
+FIRST**:
+`.prover-state/issues/cycle_121_strategy_B2_correction.md`.
+It documents an analytical bug in cycle 121's Backup B2 path
+(the `K_R · h²` residual claim is unprovable) and provides the
+correct vectorial sum-form composition recipe.
 
-## Priority 0 — fix scanner regression (5 min, MANDATORY first)
+Cycle 122 deliverable: **narrow the §515D sorry one more layer
+using the analytically-correct K-bound shape** (Path B in the
+correction issue). Stretch goal: close the body in full (Path A).
 
-The cycle 120 worker introduced 3 false-positive matches against
-`scripts/autonomous_loop.py`'s `TAUTOLOGY_PATTERNS`. Apply the standing
-cycle-015 cosmetic workaround (rename `h_<name>` → `h<name>` to drop
-the underscore).
+The remaining sorry is at
+`OpenMath/Chapter5/Section515.lean:1995` inside
+`aux_515D_max_deviation_geometric_bound`.
 
-**Concrete edits in `OpenMath/Chapter5/Section515.lean`** (inside
-`aux_515D_iterated_V_bound`, lines ~1900–1923):
+## Priority 0 — Mandatory reading (5 minutes)
 
-| Line(s) | Old name | New name |
-|---|---|---|
-| 1900 (declaration), 1921 (calc closer) | `h_abs_sum` | `habs_sum` |
-| 1908 (declaration), 1922 (calc closer) | `h_sum_bd`  | `hsum_bd`  |
-| 1918 (declaration), 1923 (calc closer) | `h_card`    | `hcard`    |
+Read all of:
 
-Six edits total (3 declarations + 3 calc closers). Use `Edit` tool
-with `replace_all=false` and disambiguate via surrounding context;
-each name occurs exactly twice in the file.
+1. `.prover-state/issues/cycle_121_strategy_B2_correction.md` —
+   the corrected analytical outline. The full vectorial path
+   (Path A) and the narrowed-helper fallback (Path B) are both
+   spelled out there. Internalise the residual bound
 
-**Verification** (run after edits):
+   `|K m i| ≤ α · h_n · sup_j |δ(m) j| + β · h_n²`
 
-```bash
-rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/
-```
+   (NOT `K_R · h²`). The `α · h · δ_max` term is genuine and
+   comes from `localStepError_bound`'s output
+   (`Section515.lean:1407`).
 
-Expected: 0 matches.
+2. `.prover-state/issues/aux_515D_iterated_V_bound.md` (the
+   cycle 120 closure note at the bottom). Confirms that
+   `aux_515D_iterated_V_bound` (declared by cycle 120 around
+   `Section515.lean:1854`) gives
+   `sup_i |((V^k) *ᵥ x) i| ≤ C₀ · sup_j |x j|`
+   for any `k`, any `x`, with `C₀ := r · C` derived from
+   `M.IsStable`.
 
-```bash
-lake env lean OpenMath/Chapter5/Section515.lean
-```
+3. `aux_515D_max_deviation_geometric_bound`'s signature
+   (`Section515.lean:1961-1995`) — the target. Note especially
+   that it does **not** currently take `_hc_nn` as a hypothesis;
+   that gap is what blocked the cycle 121 attempt and will be
+   propagated through this cycle.
 
-Expected: same warning profile as cycle 120 (one `sorry` warning at
-line 1995, plus the pre-existing simp-arg / unused-variable lint on
-older lines). NO new errors — α-renaming is semantics-preserving.
+4. `localStepError_bound`'s signature
+   (`Section515.lean:1355-1407`) — confirm the K-bound output
+   shape `|K i| ≤ α * h * δ_max + β * h^2` and the requirement
+   for `_hc_nonneg : ∀ i, 0 ≤ c i`.
 
-**Append to** `.prover-state/issues/tautology_scanner_false_positives.md`:
+5. `M.glmAbscissae` definition (`Section515.lean:98-100`):
+   `M.glmAbscissae v = M.A *ᵥ 1 + M.U *ᵥ v`. Neither term is
+   forced non-negative by `IsConsistent` / `IsStable` — confirms
+   Path A1 (internal proof of `0 ≤ c`) is not viable.
 
-> Cycle 121: applied the cosmetic rename workaround to
-> `aux_515D_iterated_V_bound` (lines 1900, 1908, 1918, 1921, 1922,
-> 1923). The bug-D1 (block-comment line drift) and bug-D2
-> (over-firing on `:= h_<name>` calc closers) remain unfixed in
-> `scripts/autonomous_loop.py`. Each new helper introduced by
-> cycle ≥116 has had to apply this rename; aggregate maintenance
-> cost now exceeds the one-time D1+D2 fix.
+## Priority 1 — Narrow the §515D sorry via Path B (primary deliverable)
 
-This is loop-maintainer territory — do NOT edit
-`scripts/autonomous_loop.py` from the worker.
+**Goal**: replace the current sorry with a composition that uses
+ONE new private helper (sorry body), so the §515D analytical
+core is isolated to a focused per-step K-bound claim with the
+analytically-correct shape.
 
-## Priority 1 — Aristotle hygiene (5 min, single poll only)
+### Step 1 — Introduce the new helper
 
-Per CLAUDE.md "do not poll repeatedly", run ONE
-`mcp__aristotle__get_status` per job, then act:
-
-```text
-mcp__aristotle__get_status({project_id: "63045685-0543-4d65-91a4-8466337472bd"})  // Job 2: cycle 117 aux_515D_componentwise_deviation_tendsto_zero
-mcp__aristotle__get_status({project_id: "e68b3d59-d608-42e1-9da2-413b3742c168"})  // Job 3: cycle 118 aux_515D_max_deviation_bound_tendsto_zero
-```
-
-**Job 3 disposition**: cycle 119's narrowing already closed the
-target body (`aux_515D_max_deviation_bound_tendsto_zero`, see
-`Section515.lean:2025`). Any returned proof is redundant. **Cancel
-Job 3 unconditionally** (`mcp__aristotle__cancel_project`); free
-the slot.
-
-**Job 2 disposition**: cycle 117's
-`aux_515D_componentwise_deviation_tendsto_zero` body composition
-also already landed (cycle 118's decomposition fallback closed it).
-**If `COMPLETE`**, briefly inspect the returned proof; if it offers
-a substantively cleaner approach for the existing body, log to
-`task_results/cycle_121.md` "Discovery" but do NOT swap it in
-unless trivially compatible — the cycle 118 manual proof has known
-axioms. **Otherwise cancel.**
-
-Do NOT re-poll, do NOT submit a new Aristotle job for Priority 2 in
-this cycle (the body composition is best done manually; an
-Aristotle submission only matters if Backup B2 is triggered, see
-"Open Aristotle hypothesis budget" below).
-
-## Priority 2 — close `aux_515D_max_deviation_geometric_bound` (the only remaining §515D sorry)
-
-Target: `OpenMath/Chapter5/Section515.lean:1961-1995`. Compose the
-body using cycle 120's `aux_515D_iterated_V_bound` plus
-`localStepError_bound` (cycle 116 strengthened). The cycle 119
-narrower output shape is
-
-```
-∃ C_init C_lin : ℝ, 0 ≤ C_init ∧ 0 ≤ C_lin ∧
-  ∀ n : ℕ, 0 < n →
-    sup'_i |Y n n i − (u i · yex x + v i · h_n · deriv yex x)|
-      ≤ C_init · sup'_j |Y n 0 j − (u j · yex x₀ + v j · h_n · deriv yex x₀)|
-        + C_lin · h_n
-```
-
-where `h_n := (x − x₀)/n`.
-
-### Recommended path: vectorial-recurrence composition
-
-This path **avoids** the `0 ≤ M.glmAbscissae v` (`_hc_nn`)
-hypothesis that `aux_515D_construct_ell_U_phi_A` (cycle 114)
-requires. Per cycle 120 update notes in
-`.prover-state/issues/aux_515D_iterated_V_bound.md`, propagating
-`_hc_nn` upstream is high-risk for §513 / §514 cascade integrity.
-The vectorial-recurrence path bypasses M-matrix construction
-entirely and routes through the cycle-120 iterated-V bound +
-cycle-116 `localStepError_bound`.
-
-**Outline (~150 LOC)**:
-
-1. **Setup vector deviation**. For fixed `n > 0`, set
-   `h_n : ℝ := (x - x₀) / n` and define
-   `target_seq : ℕ → Fin r → ℝ`,
-   `target_seq m i := u i * yex (x₀ + m * h_n) + v i * h_n * deriv yex (x₀ + m * h_n)`.
-   Define `δ : ℕ → Fin r → ℝ`, `δ m i := Y n m i - target_seq m i`.
-
-2. **Vectorial recurrence**. Extract
-   `hY_iter : M.IsGLMSolution h_n f (Y n) ∧ stage_eq` from
-   `_hY_iter n hn`. From `M.IsGLMSolution`, the output equation is
-   `Y n (m+1) = h_n • (M.B *ᵥ (f ∘ Y_int_full m)) + M.V *ᵥ Y n m`
-   where `Y_int_full m : Fin s → ℝ` is the stage at micro-step `m`
-   (defined inside `IsGLMSolution`). Combine with the consistency
-   constraints `_hVu`, `_hUu`, `_hCons_eq` and the ODE
-   `deriv yex t = f (yex t)` to derive
-
-       δ (m+1) = M.V *ᵥ δ m + R m
-
-   where the residual `R : ℕ → Fin r → ℝ` is
-
-       R m i = h_n · (M.B *ᵥ (fun j => f (Y_int_full m j) - f (yex (x₀ + (m+1)·h_n)))) i
-              + per-step truncation error term
-
-   Both pieces are quantitatively bounded below.
-
-3. **Per-step residual bound** (load-bearing, ~50 LOC). Show
-   `∃ K_R : ℝ, 0 ≤ K_R ∧ ∀ m, m < n → sup'_i |R m i| ≤ K_R · h_n²`.
-
-   Two contributions to `R m`:
-
-   (a) **Stage-difference contribution**:
-       `h_n · (M.B *ᵥ (f ∘ Y_int_full m - f ∘ exact_target_int m))`.
-       Apply `localStepError_bound` (`Section515.lean:1355`,
-       cycle 116 strengthened). Its conclusion bounds the
-       max-abs of `Y_int_full m - exact_target_int m` by
-       `(stage-error-coefficient) · h_n`. Multiply by `‖M.B‖_∞`
-       and `(L : ℝ)` (Lipschitz `f`) to get an `O(h_n²)` bound.
-
-       Required hypotheses for `localStepError_bound`:
-       `_hM_nn`, `_hyex_C1`, `_hyex_M`, `_hyex'_LM`, `_h_norm` —
-       ALL already in `aux_515D_max_deviation_geometric_bound`'s
-       signature (per cycle 116 strengthening). NO new hypotheses
-       required.
-
-   (b) **Truncation contribution from the consistency rewrite**:
-       constant `O(h_n²)` per step, bounded via Taylor remainder
-       on `yex` using `_hyex_C1` + `_hyex_M`. Use Mathlib's
-       `taylor_mean_remainder` or `taylor_within_apply` if
-       available; otherwise prove inline via `intervalIntegral`
-       FTC plus `_hyex'_LM` (the derivative bound).
-
-   Combine (a) and (b) into a single constant `K_R` independent of
-   `n` (depends only on `M`, `L`, `M_bound`, `x - x₀`).
-
-4. **Closed-form expansion**. By induction on `m`,
-
-       δ m = (M.V)^m *ᵥ δ 0 + ∑_{k=0}^{m-1} (M.V)^(m-1-k) *ᵥ R k.
-
-   Prove this as a sub-`have` via `Nat.rec` or direct induction on
-   `m`. Standard `Matrix.mulVec_add`, `Matrix.mulVec_mulVec`,
-   `pow_succ` rewrites.
-
-5. **Sup' bounds via cycle-120 iterated-V**. Apply
-   `aux_515D_iterated_V_bound` (`Section515.lean:1835`) to extract
-   `C₀ : ℝ` with `0 ≤ C₀` and `∀ k z, sup'_i |((M.V)^k *ᵥ z) i|
-   ≤ C₀ · sup'_j |z j|`. Then:
-
-   - First term:
-     `sup'_i |((M.V)^n *ᵥ δ 0) i| ≤ C₀ · sup'_j |δ 0 j|`.
-   - Each summand:
-     `sup'_i |((M.V)^(n-1-k) *ᵥ R k) i| ≤ C₀ · sup'_j |R k j|
-                                          ≤ C₀ · K_R · h_n²`.
-   - Sum of `n` summands: `n · C₀ · K_R · h_n² = C₀ · K_R · (x − x₀) · h_n`
-     (using `n · h_n = x − x₀`).
-
-   Apply `Finset.sup'_le` + `abs_add_le` + linarith to combine the
-   two bounds.
-
-6. **Output the existential**. Set
-   `C_init := C₀`,
-   `C_lin := C₀ · K_R · (x − x₀)`.
-   Both non-negative (linarith from `hC₀_nn`, `hK_R_nn`, `_hxx`).
-   Discharge the goal directly.
-
-### Faithfulness check
-
-* **No new hypothesis on `aux_515D_max_deviation_geometric_bound`**.
-  The signature in cycle 119 is preserved; only the body changes.
-* **No `_hc_nn` propagation**: §513 / §514 cascade integrity is
-  preserved by avoiding `aux_515D_construct_ell_U_phi_A`.
-* **No new faithfulness divergence on the capstone**. The only
-  pre-existing divergence is the cycle 116 Frobenius hypothesis
-  on `IsConvergent` (already documented in
-  `glm_isconvergent_strengthened.md`).
-
-### Backup plan B2 — if vectorial-recurrence path stalls past ~150 LOC
-
-Introduce ONE narrower sub-helper, `aux_515D_residual_bound`, with
-signature
+Add a new `private theorem aux_515D_per_step_K_bound` immediately
+above `aux_515D_max_deviation_geometric_bound` (around line 1960).
+**Crucial**: use the corrected residual shape from the cycle 121
+correction issue, NOT the strategy's broken `K_R · h²` form.
 
 ```lean
-private theorem aux_515D_residual_bound {s r : ℕ}
+/-- **Per-step K-bound for the vectorial recurrence (Path B
+narrowing, cycle 122).**
+
+For each `n ≥ 1` and each step `m + 1 ≤ n`, the residual
+  `R(m) := δ(m+1) − M.V *ᵥ δ(m)`
+satisfies the analytically correct shape
+
+  `|R(m) i| ≤ α · h_n · sup_j |δ(m) j| + β · h_n²`,
+
+with `α, β` non-negative constants depending on the GLM and the
+problem data, where `δ(k) i := Y n k i − target(k) i` and
+`target(k) i := u_i · yex(x₀ + k·h_n) + v_i · h_n · deriv yex(x₀ + k·h_n)`.
+
+This lemma packages the per-step application of
+`localStepError_bound` (Section515.lean:1355) plus
+`aux_515D_construct_ell_U_phi_A` (Section515.lean:1213). Its body
+remains `sorry`-d in cycle 122; the body composition is gated on
+the `_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i` hypothesis (now
+propagated through the §515D helper chain). -/
+private theorem aux_515D_per_step_K_bound {s r : ℕ}
     (M : GeneralLinearMethod s r)
-    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    (_hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
     {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
-    (hyex_x₀ : yex x₀ = y₀)
-    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    (_hyex_x₀ : yex x₀ = y₀)
+    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
     {u v : Fin r → ℝ}
-    (hVu : M.V *ᵥ u = u) (hUu : M.U *ᵥ u = (fun _ => 1))
-    (hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
-    {x : ℝ} (hxx : x₀ < x)
-    {M_bound : ℝ} (hM_nn : 0 ≤ M_bound)
-    (hyex_C1 : ContDiff ℝ 1 yex)
-    (hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
-    (hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
-    (h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
-                Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {x : ℝ} (_hxx : x₀ < x)
+    {M_bound : ℝ} (_hM_nn : 0 ≤ M_bound)
+    (_hyex_C1 : ContDiff ℝ 1 yex)
+    (_hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
+    (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
+    (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)   -- NEW propagated hypothesis
     [Nonempty (Fin r)]
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
-    (hY_iter : ∀ n, 0 < n →
+    (_hY_iter : ∀ n : ℕ, 0 < n →
       M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
-      (∀ i, Y_int n i = ...)) :
-    ∃ K_R : ℝ, 0 ≤ K_R ∧
-      ∀ n : ℕ, 0 < n →
-        ∀ m : ℕ, m < n →
-          let h_n : ℝ := (x - x₀) / (n : ℝ)
-          let target := fun (k : ℕ) (i : Fin r) =>
-            u i * yex (x₀ + k * h_n) + v i * h_n * deriv yex (x₀ + k * h_n)
-          Finset.sup' Finset.univ Finset.univ_nonempty
-            (fun i : Fin r =>
-              |(Y n (m+1) i - target (m+1) i) -
-               (M.V *ᵥ (fun j => Y n m j - target m j)) i|)
-          ≤ K_R * ((x - x₀) / (n : ℝ))^2
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    ∃ α β : ℝ, 0 ≤ α ∧ 0 ≤ β ∧
+      ∀ n : ℕ, 0 < n → ∀ m : ℕ, m + 1 ≤ n →
+        let h_n := (x - x₀) / (n : ℝ)
+        let target := fun (k : ℕ) (i : Fin r) =>
+          u i * yex (x₀ + (k : ℝ) * h_n)
+            + v i * h_n * deriv yex (x₀ + (k : ℝ) * h_n)
+        let δ := fun (k : ℕ) (i : Fin r) => Y n k i - target k i
+        ∀ i : Fin r,
+          |Y n (m+1) i - target (m+1) i - (M.V *ᵥ (δ m)) i|
+            ≤ α * h_n
+                * Finset.sup' Finset.univ Finset.univ_nonempty
+                    (fun j => |δ m j|)
+              + β * h_n^2 := by
+  sorry
 ```
 
-Body: `sorry`. Estimated ~80 LOC for the outer composition once
-this helper is assumed. Fall back to this only if step 3 above
-proves to consume more than ~80 LOC of the cycle 121 budget.
+Use `camelCase` hypothesis names (`hStab`, `hfLip`, `hcNn`, etc.)
+to avoid the standing tautology-scanner regression. The
+underscore-prefixed `_hc_nn` form above is for the SIGNATURE; in
+the body, bind via `(hcNn := _hc_nn)` style if you reference it
+by hand.
 
-This narrows the §515D sorry to a clean self-contained per-step
-residual statement — natural Aristotle target for cycle 122.
+### Step 2 — Cascade-impact audit BEFORE editing
 
-### Lean LSP / tactical guidance
+Confirm that the propagated `_hc_nn` is contained inside §515D's
+helper chain only:
 
-* For step 4 (closed-form expansion induction): the canonical
-  pattern is `induction m with | zero => ... | succ m ih => ...`
-  inside a local `have` block. The successor case telescopes via
-  `ih` + `pow_succ` + `Matrix.mulVec_mulVec` rewrites.
-* For step 5 (sup'-bound combination): use
-  `Finset.sup'_le` to introduce per-`i` goals, then `abs_add_le` /
-  `abs_sum_le_sum_abs` followed by `linarith` with the
-  `hC₀_nn`, `hK_R_nn`, `_hxx` hypotheses in scope.
-* `aux_515D_iterated_V_bound` produces an `∃ C', 0 ≤ C' ∧ ...`
-  shape. Destructure with `obtain ⟨C₀, hC₀_nn, hC₀⟩ := ...` then
-  use `hC₀ k z` for each invocation.
-* For Mathlib taylor-remainder lookup (step 3b), try
-  `lean_loogle "taylor_mean_remainder"` or
-  `lean_leansearch "Taylor remainder one variable"`. If Mathlib's
-  API mismatches, fall back to an inline FTC argument:
+* §513 (`convergent_isStable` in `Section513.lean`) does NOT call
+  `aux_515D_max_deviation_geometric_bound`. **Unaffected** by
+  the propagation.
+* §514 (`convergent_isPreconsistent` /
+  `convergent_preconsistent_isConsistent` in `Section514.lean`)
+  does NOT call `aux_515D_max_deviation_geometric_bound`.
+  **Unaffected.**
+* The forward chain inside §515D is:
+  `aux_515D_max_deviation_geometric_bound`
+   ← `aux_515D_max_deviation_bound_tendsto_zero` (cycle 118)
+   ← `aux_515D_componentwise_deviation_tendsto_zero` (cycle 117,
+      `Section515.lean:2268`)
+   ← `aux_515D_output_tendsto`
+   ← `stable_consistent_isConvergent` (capstone).
 
-      yex (x₀ + (m+1)·h_n) - (yex (x₀ + m·h_n) + h_n · deriv yex (x₀ + m·h_n))
-        = ∫_{x₀ + m·h_n}^{x₀ + (m+1)·h_n} (deriv yex t - deriv yex (x₀ + m·h_n)) dt
+So `_hc_nn` propagates **only inside §515D's helper chain**. Each
+intermediate caller takes `_hc_nn` as a hypothesis and forwards it.
+At the §515D capstone level, `_hc_nn` becomes a hypothesis on
+`stable_consistent_isConvergent` itself — a faithfulness
+divergence to be documented (Step 6 below).
 
-  with the integrand bounded by `2 · L · M_bound` on the compact
-  sub-interval (a crude bound, but adequate for the `O(h_n²)`
-  conclusion).
-* Use `lean_multi_attempt` rather than `lean_run_code` for testing
-  intermediate tactics — `lean_run_code` is rate-limited and
-  unsuitable for an iterative tactical session.
+If, while editing, you discover that any of §513 / §514 / §515D's
+non-§515D-internal consumers genuinely needs `_hc_nn`, **STOP** and
+rewrite the strategy as a planning-only deliverable (cycle 123 will
+re-plan).
 
-## What NOT to do (explicit blacklist)
+### Step 3 — Add `_hc_nn` to `aux_515D_max_deviation_geometric_bound`
 
-* **Do NOT** propagate `(_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)` to
-  `aux_515D_max_deviation_geometric_bound` or any of its callers.
-  Cycle 120 update in
-  `.prover-state/issues/aux_515D_iterated_V_bound.md` and
+Add `(_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)` to the signature of
+`aux_515D_max_deviation_geometric_bound` (line 1961). Place it
+just above `[Nonempty (Fin r)]` to match the strategy's natural
+hypothesis ordering.
+
+### Step 4 — Compose the body of `aux_515D_max_deviation_geometric_bound`
+
+Use the corrected vectorial sum-form Grönwall recipe from the
+cycle 121 correction issue (§"What is actually true and provable"
++ §"Recommended path for cycle 122"):
+
+```text
+1. Setup (~10 LOC): set h_n := (x − x₀)/n, target, δ, δ_max(m).
+2. K-bound (~10 LOC): apply aux_515D_per_step_K_bound to extract
+   α, β with ∀ n m i, |R(m) i| ≤ α·h_n·δ_max(m) + β·h_n².
+3. Iterated V (~5 LOC): obtain ⟨C₀, hC₀_nn, hC₀⟩ from
+   aux_515D_iterated_V_bound applied to M.V and _hStab.
+4. Closed-form expansion (~30 LOC): induction on m showing
+   δ(m) = V^m·δ(0) + Σ_{k<m} V^(m−1−k)·K(k)
+   (where K(k) := δ(k+1) − V·δ(k)).
+5. Sum-form bound (~25 LOC): apply hC₀ entrywise to derive
+   sup_i|δ(m) i| ≤ a + α'·h_n·Σ_{k<m} sup_i|δ(k) i| + β'·h_n²·m
+   with a := (C₀ + C₀·α·h_n)·sup_i|δ(0) i|, α' := C₀·α, β' := C₀·β.
+   (Split the K(k) sum at k=0 and absorb δ(0) into a.)
+6. Grönwall (~15 LOC): apply aux_515D_gronwall_bound
+   (Section515.lean:1742) to get the closed-form exp(α'·Δx)
+   bound. Handle α'=0 edge via `by_cases` on `α'`.
+7. Output (~10 LOC): set
+     C_init := C₀ · (1 + α·(x−x₀)) · exp(C₀·α·(x−x₀))
+     C_lin  := (exp(C₀·α·(x−x₀)) − 1) · (β/α)   -- α > 0 branch
+     C_lin  := C₀·β·(x−x₀)                      -- α = 0 branch
+   Discharge non-negativity via positivity / linarith.
+```
+
+Total: ~105 LOC outer composition. Build incrementally — verify
+compile after each step. If Step 4 (induction on `m`) blows up
+heartbeats, split into a separate private lemma
+`aux_515D_delta_closed_form`.
+
+### Step 5 — Propagate `_hc_nn` up the §515D-internal chain
+
+Add `(_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)` to the signatures of:
+
+* `aux_515D_max_deviation_bound_tendsto_zero` (cycle 118 helper)
+* `aux_515D_componentwise_deviation_tendsto_zero` (cycle 117,
+  `Section515.lean:2268`)
+* `aux_515D_output_tendsto`
+* `stable_consistent_isConvergent` (the §515D capstone)
+
+In each case, the body of the calling lemma threads `_hc_nn`
+through to the callee. The cascade work is mechanical text edit
+plus the body-edit at the capstone (where `_hc_nn` becomes a
+named hypothesis on the theorem signature itself, supplied by
+the caller of `IsConvergent`).
+
+### Step 6 — Document the faithfulness divergence
+
+Create `.prover-state/issues/stable_consistent_isConvergent_hc_nn.md`
+explaining:
+
+* The textbook (Butcher §515) does NOT require `0 ≤ c` on the
+  GLM abscissae. The textbook implicitly assumes well-behaved
+  abscissae for the methods of interest (e.g. Runge–Kutta-style
+  GLMs with `c ∈ [0, 1]`).
+* Our formalisation requires it because
+  `aux_515D_construct_ell_U_phi_A` (cycle 114) consumes it as a
+  hypothesis to construct the M-matrix bounds via
+  `Matrix.EntrywiseNonneg.inv_one_sub_of_norm_lt_one` (which only
+  applies to entrywise-non-negative inputs).
+* Cycle 122 propagates `_hc_nn` upstream rather than refactoring
+  `aux_515D_construct_ell_U_phi_A` (refactor would be ~3 cycles
+  of effort and is not on the critical path).
+* Future remediation: revisit if a downstream consumer (e.g.
+  applying `IsConvergent` to an explicit GLM with negative
+  abscissae) is genuinely blocked.
+
+Also update `.prover-state/issues/cycle_121_strategy_B2_correction.md`
+with a "Cycle 122 update" section recording the narrowing.
+
+### Step 7 — Verify
+
+* `lake env lean OpenMath/Chapter5/Section515.lean` must exit 0.
+* Run `lake build OpenMath.Chapter5.Section515` to refresh the
+  olean cache (per cycle 072 lesson — `lake env lean` does NOT
+  update the cache).
+* The ONE remaining `sorry` in §515D should be in
+  `aux_515D_per_step_K_bound`'s body, NOT in
+  `aux_515D_max_deviation_geometric_bound`.
+* Tautology scanner: run
+  `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter5/Section515.lean`
+  — must return 0 hits.
+* Run `#print axioms` on
+  `OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent`
+  via a small test file or `lean_verify`. Expected:
+  `[propext, sorryAx, Classical.choice, Quot.sound]` with `sorryAx`
+  traceable only to `aux_515D_per_step_K_bound`'s body.
+* Build §513 / §514 to confirm no cascade regressions:
+  `lake env lean OpenMath/Chapter5/Section513.lean` and
+  `lake env lean OpenMath/Chapter5/Section514.lean`. Both must
+  exit 0.
+
+## Priority 2 — Aristotle (single-shot submission)
+
+Submit `aux_515D_per_step_K_bound`'s body as ONE Aristotle project
+once Priority 1 is committed. Use the abstract-axioms pattern
+from cycle 116. Submit ONCE; do NOT poll this cycle (CLAUDE.md is
+explicit). Cycle 123 will check the result.
+
+Do NOT submit the outer composition
+(`aux_515D_max_deviation_geometric_bound` body) to Aristotle — it
+is being closed manually this cycle.
+
+## Priority 3 (stretch) — Close `aux_515D_per_step_K_bound`'s body
+
+If Priority 1 (Steps 1–7) lands quickly (< ~2 hours of cycle
+time remaining), attempt the body of `aux_515D_per_step_K_bound`
+directly. Recipe:
+
+1. **Define h_n, target, δ, δ_max.** Match the signature's `let`
+   bindings.
+2. **Apply `aux_515D_construct_ell_U_phi_A`** (`Section515.lean:1213`)
+   with `c := M.glmAbscissae v`, `_hc_nonneg := _hc_nn`, and
+   `h_norm := _h_norm`. Extract `ell_U`, `phi_A` and the four
+   side conditions.
+3. **Set α, β.** From `aux_515D_construct_ell_U_phi_A`'s output:
+   ```
+   α := (L : ℝ) * Finset.sup' Finset.univ Finset.univ_nonempty
+            (fun i => ∑ j, |M.B i j| * ell_U j)
+   β := (L : ℝ)^2 * M_bound *
+          Finset.sup' Finset.univ Finset.univ_nonempty
+            (fun i => (1/2) * |u i| + |v i|
+                       + (∑ j, |M.B i j * (M.glmAbscissae v) j|)
+                       + (x - x₀) * (L : ℝ)
+                          * (∑ j, |M.B i j| * phi_A j))
+   ```
+   (`α` and `β` come from the `_hα_def` / `_hβ_def` bounds in
+   `localStepError_bound`'s signature; the `sup'` here is a
+   uniform-over-`i` envelope so it satisfies `_hα_def` /
+   `_hβ_def` for each `i`.)
+4. **For each `n ≥ 1, m+1 ≤ n`**: apply `localStepError_bound`
+   with
+   * `h := h_n`, `h₀ := x − x₀` (so `h ≤ h₀` since `n ≥ 1`),
+   * `xn1 := x₀ + m · h_n`,
+   * `yt_prev := Y n m`,
+   * `c := M.glmAbscissae v` with `_hc_nonneg := _hc_nn`,
+   * the `_hα_def` / `_hβ_def` choices supply the chosen α, β,
+   * stage values come from `_hY_iter`'s `IsGLMSolution`
+     decomposition.
+   Extract `K : Fin r → ℝ` with the per-step recurrence.
+5. **Convert to sup'-norm form**: use `Finset.sup'_le` /
+   `Finset.le_sup'` to bound
+   `sup_i |K(m) i| ≤ α·h·sup_j|δ(m) j| + β·h²`
+   from `localStepError_bound`'s conclusion `|K i| ≤ α·h·δ_max + β·h²`.
+
+Estimated ~100 LOC if all hypotheses align cleanly. If any
+hypothesis mismatch shows up, leave the helper sorry'd and let
+Aristotle (Priority 2) try in parallel.
+
+## Explicit DO-NOT list
+
+* **DO NOT** treat the cycle 121 correction issue's analysis as
+  optional. Read it before writing any Lean.
+* **DO NOT** attempt the strategy's old `K_R · h²` residual claim.
+  It is analytically wrong; the `α · h · δ_max` term cannot be
+  absorbed (cycle 121 issue file shows the algebraic obstruction).
+  Use the corrected shape from this strategy's Step 1.
+* **DO NOT** invoke `aux_515D_per_step_recurrence`
+  (`Section515.lean:1681`) directly on the sup-norm. Its scalar
+  `(V_norm + α·h)^n` form blows up for stable but non-contracting
+  `V` (cycle 118 dead end). Use the **vectorial** path:
+  closed-form expansion + cycle 120 iterated V bound +
+  `aux_515D_gronwall_bound` (sum-form).
+* **DO NOT** try Path A1 (internal proof of `0 ≤ M.glmAbscissae v`).
+  `M.glmAbscissae v = M.A *ᵥ 1 + M.U *ᵥ v` (`Section515.lean:98–100`)
+  — neither term is forced non-negative by `IsConsistent` /
+  `IsStable` / `IsPreconsistent`. Path A1 is not viable; this
+  strategy uses Path A2 (propagate `_hc_nn` upstream as a
+  documented faithfulness divergence).
+* **DO NOT** modify §513 (`convergent_isStable`) or §514
+  (`convergent_isPreconsistent`,
+  `convergent_preconsistent_isConsistent`). They do not consume
+  `_hc_nn`. The cascade audit (Step 2 above) confirms this. If
+  a §513/§514 build break appears, STOP and re-plan — it means
+  the propagation has gone wider than expected.
+* **DO NOT** raise `maxHeartbeats` above 200000. If the
+  closed-form-expansion induction (Step 4) is slow, decompose
+  into separate `have` blocks per induction step or split into
+  a separate private lemma.
+* **DO NOT** introduce new `axiom`/`constant` declarations.
+* **DO NOT** edit `scripts/autonomous_loop.py` to fix the
+  scanner — that is loop-maintainer territory
+  (`.prover-state/issues/tautology_scanner_false_positives.md`).
+  Use camelCase hypothesis names this cycle.
+* **DO NOT** poll Aristotle more than once this cycle. CLAUDE.md
+  is explicit. Submit Priority 2 once; do not check status until
+  cycle 123.
+* **DO NOT** rename, delete, or restructure the cycle 120
+  `aux_515D_iterated_V_bound` lemma — it is the load-bearing
+  tool for Step 4–5 of Priority 1 and was renamed in cycle 121.
+  Touching it again risks scanner regression.
+* **DO NOT** widen the `IsConvergent`, `IsConsistent`, or
+  `IsStable` definitions. The propagated `_hc_nn` lives on
+  `stable_consistent_isConvergent`'s signature directly, NOT
+  inside `IsConvergent`. Adding it inside `IsConvergent` would
+  break §513 / §514 cascades again (cycle 113 lesson).
+
+## Bookkeeping
+
+* If Priority 1 lands cleanly (one-helper narrowing achieved):
+  update `lean_status.json`'s `thm:515D` row to record cycle 122
+  with status still `partial`.
+* Do NOT mark `thm:515D` as `formalized` unless
+  `aux_515D_per_step_K_bound`'s body is also closed (Priority 3
+  succeeds).
+* Update `plan.md`'s §515 row only if status changes to
+  `formalized`. Otherwise update only the inline note for the
+  `thm:515D` row.
+* Append a cycle 122 update note to
   `.prover-state/issues/aux_515D_output_tendsto_hypotheses.md`
-  flagged this as high-risk for §513 / §514 cascade integrity.
-* **Do NOT** invoke `aux_515D_construct_ell_U_phi_A` (cycle 114)
-  in this cycle. It requires `_hc_nn` per its signature; the
-  vectorial-recurrence path above bypasses it entirely.
-* **Do NOT** invoke `aux_515D_per_step_recurrence` (cycle 113
-  scalar form) directly. It requires the `V_norm + α·h ≤ 1`
-  telescoping condition that fails for general stable GLMs (cycle
-  118 dead end). Use `aux_515D_iterated_V_bound` (cycle 120) for
-  iterated-V bounds instead.
-* **Do NOT** invoke `aux_515D_gronwall_bound` (cycle 113) for the
-  same reason — it consumes a sum-form bound that the vectorial
-  recurrence does not produce naturally.
-* **Do NOT** edit `scripts/autonomous_loop.py` from the worker.
-  Scanner false-positive fixes go in
-  `tautology_scanner_false_positives.md`, not the script.
-* **Do NOT** raise `maxHeartbeats` above 200000. If the closed-form
-  induction in step 4 or the sup'-bound chain in step 5 times out,
-  decompose into a private sub-`have` block — do NOT raise the
-  limit.
-* **Do NOT** use unicode `𝟙` as identifier suffix (cycle 099 dead
-  end). ASCII identifiers only (`B1`, etc.).
-* **Do NOT** use `Matrix.linfty_opNorm_mulVec` directly in §515 —
-  the file opens `scoped Matrix.Norms.Frobenius`, so the default
-  matrix norm is Frobenius, and `linfty_opNorm_mulVec` will not
-  typecheck without scope manipulation. Cycle 120 already
-  rediscovered this (see `task_results/cycle_120.md` "Dead ends"
-  §1). If you need a `linfty_opNorm`-style bound, use the
-  cycle-120 `aux_515D_iterated_V_bound` helper, which already
-  bridges Frobenius `‖V^k‖` to a sup'-form vector bound.
-* **Do NOT** poll Aristotle more than once per job per cycle.
-  Single poll, then act.
-* **Do NOT** introduce `axiom` or `constant` declarations.
-* **Do NOT** "spot-clean" the unused-variable warning at line 1713
-  or the simp-arg lint at line 1722; both are pre-existing and
-  unrelated to cycle 121's scope.
-* **Do NOT** use `h_<name>` as a hypothesis identifier anywhere in
-  newly-introduced code. The scanner regex flags `:= h_<word>` and
-  `exact h_<word>` as vacuous-proof candidates. Use `h<name>` /
-  `hxxx` style throughout the cycle 121 body (and any new helpers
-  introduced under Backup B2).
+  documenting the new narrowing and the `_hc_nn` propagation.
+* Append a cycle 122 update to
+  `.prover-state/issues/cycle_121_strategy_B2_correction.md`
+  recording resolution of the strategy bug.
 
-## Pre-commit checklist (CLAUDE.md §"Pre-Commit Faithfulness Checklist")
+## Cycle 122 minimum bar
 
-After Priority 0 + 1 + 2 land:
+A successful cycle 122 must:
 
-1. `lake env lean OpenMath/Chapter5/Section515.lean` succeeds with
-   ZERO `sorry` warnings (Priority 2 closed) OR exactly ONE `sorry`
-   warning (Backup B2 — at the new `aux_515D_residual_bound`).
-2. `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
-   returns 0 matches (Priority 0 confirmation, post-edit and
-   post-cycle-121-body).
-3. `lake build OpenMath.Chapter5.Section515` then
-   `#print axioms GeneralLinearMethod.stable_consistent_isConvergent`:
-   - **Priority 2 path success**: returns `[propext, Classical.choice,
-     Quot.sound]` only — no `sorryAx`. Update `lean_status.json`'s
-     `thm:515D` row from `partial` → `formalized`. Update
-     `plan.md` `thm:515D` row from `[~]` → `[x]`. Move `thm:515D`
-     into the "65/175 → 66/175" tally.
-   - **Priority 2 Backup B2**: returns `[propext, sorryAx,
-     Classical.choice, Quot.sound]` (the new `aux_515D_residual_bound`
-     sorry). Leave `lean_status.json` and `plan.md` as
-     `partial` / `[~]`. Bump cycle reference to 121.
-4. Faithfulness check on body composition: only the cycle-116
-   pre-existing Frobenius divergence on `IsConvergent` should
-   appear. NO new hypothesis on either
-   `aux_515D_max_deviation_geometric_bound` or any caller. Document
-   in `task_results/cycle_121.md` §"Faithfulness check" with
-   explicit "no new divergence introduced this cycle" line.
-5. Tautology scanner re-run against HEAD (post-commit) returns 0
-   hits — verify before pushing.
+1. Either close `aux_515D_max_deviation_geometric_bound`'s body
+   in full (using cycle 120's iterated V bound) — closing the
+   §515D helper chain modulo `aux_515D_per_step_K_bound`'s sorry,
+   **or** close `aux_515D_per_step_K_bound` directly (Priority 3),
+   **or** at minimum land a structurally-correct narrowing
+   (Priority 1 Steps 1–7) so the remaining sorry is in a focused
+   per-step K-bound helper with the analytically-correct shape
+   AND `_hc_nn` propagated through the §515D internal chain.
+2. Compile clean
+   (`lake env lean OpenMath/Chapter5/Section515.lean` exits 0).
+3. Tautology scanner: 0 hits in `Section515.lean`.
+4. `#print axioms stable_consistent_isConvergent` shows
+   `sorryAx` traceable only to the new K-bound helper (or the
+   geometric-bound body if Priority 1 Steps 4 is also achieved).
+5. No unintended cascade regressions in §513 / §514 / §515 (run
+   `lake build OpenMath.Chapter5.Section515` to check).
 
-## Deliverable bar
-
-* **Priority 2 success**: `thm:515D` closed → §515 capstone is
-  formalized → unblocks the entire §515 block plus §513/§514's
-  iff direction (the `IsConvergent ↔ IsStable ∧ IsConsistent`
-  packager). This is the cycle's high-water target.
-* **Priority 2 Backup B2**: §515D sorry narrowed to a clean
-  per-step residual helper. Cycle 122 then closes
-  `aux_515D_residual_bound` (likely tractable for Aristotle since
-  it is a self-contained scalar `O(h²)` bound). Acceptable
-  fallback.
-* **Below the line**: if even Priority 2 stalls and only Priority 0
-  + 1 land, the cycle is a hygiene-only cycle. Score should still
-  be ≥0 since the scanner regression was the cause of the cycle 120
-  −1 score. File a follow-up issue documenting the stall point so
-  cycle 122's planner can reroute.
-
-## Open Aristotle hypothesis budget
-
-Do NOT submit any new Aristotle jobs in cycle 121 EXCEPT in the
-Backup B2 case. Submitting now costs ~30 min of latency in cycle
-122's start; cycle 121's vectorial-recurrence composition is best
-done manually in one focused session.
-
-If Backup B2 triggers (cycle 121 ends with `aux_515D_residual_bound`
-sorry'd), submit ONE Aristotle job at the END of cycle 121
-(post-commit) targeting `aux_515D_residual_bound`. Use the
-`abstract-axioms` pattern (cycle 116 precedent): inline the
-hypotheses as `axiom`s in a self-contained `.lean` file, drop
-`aux_515D_residual_bound` as a `theorem` to prove. Cycle 122 polls
-the result.
-
-## Cross-references
-
-* `.prover-state/issues/aux_515D_iterated_V_bound.md` — cycle 120
-  Path A closure record; documents the `_hc_nn` cascade concern.
-* `.prover-state/issues/aux_515D_output_tendsto_hypotheses.md` —
-  full §515D blocker history.
-* `.prover-state/issues/cycle_113_isconvergent_strengthening_514_blocker.md`
-  — `_hc_nn` cascade analysis (why we don't propagate).
-* `.prover-state/issues/glm_isconvergent_strengthened.md` —
-  cycle 116 Frobenius divergence (already documented).
-* `.prover-state/issues/tautology_scanner_false_positives.md` —
-  scanner-bug standing issue.
-* `OpenMath/Chapter5/Section515.lean:1355` — `localStepError_bound`
-  capstone (cycle 116 strengthened).
-* `OpenMath/Chapter5/Section515.lean:1835` — cycle 120
-  `aux_515D_iterated_V_bound` (post-rename: lines may shift by
-  ±0; the rename is α-preserving so the line is unchanged).
-* `OpenMath/Chapter5/Section515.lean:1995` — the sorry to close.
+A cycle that narrows the locus from
+`aux_515D_max_deviation_geometric_bound` (currently a ~150-LOC
+analytical claim) to `aux_515D_per_step_K_bound` (~80-LOC focused
+per-step claim with the correct shape) is a **genuine forward
+step** even if no Aristotle proofs return.

@@ -428,3 +428,47 @@ NOT derivable from `IsConsistent`. Cycle 121 must decide whether to
 propagate `0 ≤ c` upward (high risk for §513 / §514 cascade integrity
 per Backup B3 of cycle 120 strategy) or accept it as a local
 hypothesis with documented divergence.
+
+## Cycle 122 update
+
+Cycle 122 implemented Path B from
+`.prover-state/issues/cycle_121_strategy_B2_correction.md`:
+
+* **New private helper** `aux_515D_per_step_K_bound`
+  (`Section515.lean:1898`, sorry'd body) packages the per-step
+  application of `localStepError_bound` + `aux_515D_construct_ell_U_phi_A`,
+  with the analytically-correct residual shape
+  `|R(m) i| ≤ α · h_n · sup_j |δ(m) j| + β · h_n²`.
+
+* **`_hc_nn` resolution** (open faithfulness divergence above):
+  cycle 122 propagates `_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i` upstream
+  through the §515D internal chain rather than refactoring
+  `aux_515D_construct_ell_U_phi_A`. The capstone
+  `stable_consistent_isConvergent` now takes a `hc_nn_witness`
+  hypothesis. This is documented in
+  `.prover-state/issues/stable_consistent_isConvergent_hc_nn.md`.
+
+* **No §513 / §514 cascade regression** confirmed by build:
+  `lake env lean OpenMath/Chapter5/Section513.lean` and
+  `lake env lean OpenMath/Chapter5/Section514.lean` both exit 0.
+  The hypothesis lives on the §515D capstone signature, not inside
+  `IsConvergent`, so §513 / §514 (which consume `IsConvergent`) are
+  unaffected.
+
+* **`aux_515D_max_deviation_geometric_bound` body composition (Step 4
+  of the cycle 122 strategy)**: deferred to cycle 123. The recipe is
+  fully analytical (closed-form expansion + iterated V bound +
+  sum-form Grönwall + α=0 case split, ~120-150 LOC), but does not
+  fit in a single cycle alongside the structural narrowing + cascade
+  work + faithfulness documentation.
+
+**Sorry-count delta this cycle**: +1 net (new
+`aux_515D_per_step_K_bound` body sorry; the geometric_bound sorry
+remains in place pending Step 4 composition). The advance is
+structural: the locus of the §515D analytical core is now split
+into a focused per-step claim (with the analytically-correct shape)
+and an outer composition (tractable from cycle 120's iterated V
+bound).
+
+**Status of `thm:515D`**: still `partial`. Two sorries remain in
+§515D's helper chain.
