@@ -322,6 +322,131 @@ theorem trivialZeroGLM_isLStable : trivialZeroGLM.IsLStable := by
   rw [hfun]
   exact tendsto_const_nhds
 
+/-! ### Substantive A-stability witness — implicit midpoint -/
+
+/-- Closed-form stability matrix of `implicitMidpointGLM` on the closed
+left half-plane: `M(z) = !![(1 + z/2) / (1 - z/2)]`.
+
+The hypothesis `hz : z.re ≤ 0` ensures `1 - z/2 ≠ 0` (its real part is
+`≥ 1`), so the `1×1` matrix `(I − z·A) = !![1 − z/2]` is non-singular and
+its inverse is `!![1/(1 − z/2)]`. Then `M(z) = V + z·B·(I−z·A)⁻¹·U`
+collapses entrywise to `1 + z/(1 − z/2) = (1 + z/2)/(1 − z/2)` — the
+canonical Padé(1,1) approximant of `exp(z)`. -/
+theorem implicitMidpointGLM_stabilityMatrix
+    (z : ℂ) (hz : z.re ≤ 0) :
+    implicitMidpointGLM.stabilityMatrix z
+      = !![(1 + z / 2) / (1 - z / 2)] := by
+  -- Real part of `1 - z/2` is `≥ 1`, so `1 - z/2 ≠ 0`.
+  have hre : (1 - z / 2).re = 1 - z.re / 2 := by
+    simp [Complex.sub_re]
+  have hne : (1 - z / 2) ≠ 0 := by
+    intro h
+    have : (1 - z / 2).re = 0 := by rw [h]; simp
+    rw [hre] at this
+    linarith
+  -- The 1×1 matrix `(1 - z • A) = !![1 - z/2]`.
+  have hA :
+      (1 - z • complexify implicitMidpointGLM.A)
+        = !![1 - z / 2] := by
+    ext i j
+    fin_cases i; fin_cases j
+    simp [implicitMidpointGLM, complexify]
+    ring
+  -- Equivalent non-zero hypothesis: `2 - z ≠ 0` (used by field_simp).
+  have hne2 : (2 : ℂ) - z ≠ 0 := by
+    intro h
+    apply hne
+    have : (1 - z / 2 : ℂ) = (2 - z) / 2 := by ring
+    rw [this, h]; simp
+  unfold GeneralLinearMethod.stabilityMatrix
+  rw [hA]
+  -- Use `Matrix.inv_subsingleton` for `Fin 1`.
+  rw [Matrix.inv_subsingleton]
+  ext i j
+  fin_cases i; fin_cases j
+  simp [implicitMidpointGLM, complexify, Matrix.mul_apply,
+        Matrix.diagonal, Ring.inverse_eq_inv]
+  rw [eq_div_iff hne]
+  field_simp
+  ring
+
+/-- For complex `z` in the closed left half-plane, the Padé(1,1)
+magnitude is bounded by 1: `|(1 + z/2)/(1 − z/2)| ≤ 1` whenever
+`Re(z) ≤ 0`.
+
+Proof sketch: `|a/b|² = |a|²/|b|²`, so it suffices to show
+`|1 + z/2|² ≤ |1 − z/2|²`. Expanding via `Complex.normSq` the difference is
+`Re((1 + z/2)·conj(1 + z/2)) − Re((1 − z/2)·conj(1 − z/2)) = 2·Re(z)`,
+which is `≤ 0` by hypothesis. -/
+theorem padeOneOne_norm_le_one_of_re_nonpos
+    {z : ℂ} (hz : z.re ≤ 0) :
+    ‖(1 + z / 2) / (1 - z / 2)‖ ≤ 1 := by
+  -- `1 - z/2 ≠ 0` (real part ≥ 1).
+  have hre : (1 - z / 2).re = 1 - z.re / 2 := by simp [Complex.sub_re]
+  have hne : (1 - z / 2) ≠ 0 := by
+    intro h
+    have : (1 - z / 2).re = 0 := by rw [h]; simp
+    rw [hre] at this
+    linarith
+  have hbpos : 0 < ‖1 - z / 2‖ := norm_pos_iff.mpr hne
+  rw [norm_div, div_le_one hbpos]
+  -- Goal: ‖1 + z/2‖ ≤ ‖1 - z/2‖. Square both sides via normSq.
+  have h_sq_le : ‖1 + z / 2‖ ^ 2 ≤ ‖1 - z / 2‖ ^ 2 := by
+    rw [Complex.sq_norm, Complex.sq_norm]
+    -- normSq (1 + z/2) ≤ normSq (1 - z/2)
+    -- LHS = (1 + z.re/2)^2 + (z.im/2)^2
+    -- RHS = (1 - z.re/2)^2 + (z.im/2)^2
+    -- Difference = (1+z.re/2)^2 - (1-z.re/2)^2 = 2·z.re ≤ 0.
+    have h1re : (1 + z / 2).re = 1 + z.re / 2 := by simp [Complex.add_re]
+    have h1im : (1 + z / 2).im = z.im / 2 := by simp [Complex.add_im]
+    have h2re : (1 - z / 2).re = 1 - z.re / 2 := hre
+    have h2im : (1 - z / 2).im = -(z.im / 2) := by simp [Complex.sub_im]
+    rw [Complex.normSq_apply, Complex.normSq_apply,
+        h1re, h1im, h2re, h2im]
+    nlinarith [hz, sq_nonneg z.re, sq_nonneg z.im, sq_nonneg (z.im / 2)]
+  -- Conclude `‖1+z/2‖ ≤ ‖1-z/2‖` from squared inequality.
+  exact abs_le_of_sq_le_sq' h_sq_le (norm_nonneg _) |>.2
+
+/-- 1×1 matrix powers collapse to scalar powers: `!![a]^k = !![a^k]`. -/
+private theorem fin_one_pow (a : ℂ) (k : ℕ) :
+    ((!![a] : Matrix (Fin 1) (Fin 1) ℂ)) ^ k = !![a ^ k] := by
+  induction k with
+  | zero =>
+      ext i j; fin_cases i; fin_cases j; simp
+  | succ n ihn =>
+      rw [pow_succ, ihn]
+      ext i j; fin_cases i; fin_cases j
+      simp [Matrix.mul_apply, pow_succ]
+
+/-- L∞-operator norm of a `1×1` complex matrix collapses to the single
+entry's absolute value: `‖!![a]‖ = ‖a‖`. -/
+private theorem norm_fin_one (a : ℂ) :
+    ‖(!![a] : Matrix (Fin 1) (Fin 1) ℂ)‖ = ‖a‖ := by
+  rw [Matrix.linfty_opNorm_def]
+  simp
+
+/-- 1×1 matrix-power norm bridge: `‖!![a]^k‖ = ‖a‖^k`. -/
+private theorem norm_pow_fin_one (a : ℂ) (k : ℕ) :
+    ‖((!![a] : Matrix (Fin 1) (Fin 1) ℂ)) ^ k‖ = ‖a‖ ^ k := by
+  rw [fin_one_pow, norm_fin_one, norm_pow]
+
+/-- **Substantive non-vacuity witness for `IsAStable`** —
+`implicitMidpointGLM` is A-stable. This complements the trivial
+`trivialZeroGLM_isAStable` (cycle 088, with `M(z) = 0` everywhere): the
+implicit midpoint method is a *substantive* A-stable method whose
+stability function `R(z) = (1 + z/2)/(1 − z/2)` is the canonical
+Padé(1,1) approximant of `exp(z)`. Power-boundedness of the `1×1`
+stability matrix follows from the magnitude bound `|R(z)| ≤ 1` on the
+closed left half-plane. -/
+theorem implicitMidpointGLM_isAStable :
+    implicitMidpointGLM.IsAStable := by
+  intro z hz
+  refine ⟨1, ?_⟩
+  intro k
+  rw [implicitMidpointGLM_stabilityMatrix z hz]
+  rw [norm_pow_fin_one]
+  exact pow_le_one₀ (norm_nonneg _) (padeOneOne_norm_le_one_of_re_nonpos hz)
+
 /-- **Definition 521A** — A general linear method *has stability order* `p`
 if its stability function `Φ(w, z)` satisfies
 `Φ(exp(z), z) = O(z^(p+1))` as `z → 0` in `ℂ`.

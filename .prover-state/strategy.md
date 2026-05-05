@@ -1,322 +1,246 @@
-# Cycle 134 — Strategy
+# Cycle 135 strategy — substantive A-stability witness
 
-## Goal (this cycle)
+## TL;DR
 
-**Strengthen `def:542A` (Runge–Kutta stability) non-vacuity by adding a
-substantive `r = 2` witness `padded2DEulerGLM_isRKStable`** alongside
-the cycle 130 vacuous-by-`r=1` witness `explicitEulerGLM_isRKStable`.
+Strengthen `def:520E` (A-stability) non-vacuity by proving
+`implicitMidpointGLM.IsAStable`. Mirrors the cycle 133/134 pattern of
+replacing trivial witnesses (currently `trivialZeroGLM_isAStable` with
+`M(z) = 0` for all `z`) with a substantive textbook example
+(`implicitMidpointGLM`, the canonical Padé(1,1) A-stable method).
 
-This mirrors what cycle 133 did for `def:551A` (added
-`padded2DEulerGLM_isIRKStable`). The same `padded2DEulerGLM` from
-`OpenMath/Chapter5/Section520.lean:632` is reused.
+This is a 1-cycle deliverable. No Aristotle batch necessary on the
+critical path; the proof is ~80–120 LOC of explicit complex arithmetic.
+File issues if a sub-lemma proves harder than expected.
 
-### Why this is the highest-leverage cycle next
+## Why this target
 
-* `def:542A`'s cycle 130 witness `explicitEulerGLM_isRKStable` discharges
-  the factorisation `Φ(w, z) = w^{r−1} · (w − R(z))` *trivially* at
-  `r = 1`: `w^0 · (w − R(z)) = w − R(z)` matches Φ structurally.
-  The clause "factorisation is non-trivial" is therefore **vacuously**
-  satisfied — the same kind of vacuity that cycle 132/133 fixed for
-  `def:551A`.
-* For `r ≥ 2`, the factorisation is a real claim about the structure of
-  `det(wI − M(z))`. Exhibiting an `r = 2` GLM where `Φ(w, z) = w · (w − R(z))`
-  closes the structural-vacuity gap.
-* `padded2DEulerGLM` (cycle 133) is purpose-built for this: its `M(z)`
-  has the explicit form `!![1+z, 0; 0, 0]` (verified by hand below),
-  giving `Φ(w, z) = w · (w − (1+z))` — exactly the `w^{r−1}(w − R(z))`
-  shape with `R(z) = 1 + z`.
+* **No Aristotle results pending; no sorries in the codebase.** Cycle 134
+  closed cleanly. Per CLAUDE.md, a cycle with zero changes is unacceptable;
+  the next move must be a substantive forward step.
+* **Clean target.** `implicitMidpointGLM` is already defined
+  (`OpenMath/Chapter5/Section510.lean:218`, `A = !![1/2]`, `U = B = V =
+  !![1]`) and already has `IsPreconsistent`, `IsStable`, `IsConsistent`,
+  `IsGSymplectic` non-vacuity witnesses (cycle 129). Adding the A-stability
+  witness is the natural next strengthening.
+* **Why not cycle 134's other suggestions:**
+  - `thm:551B` (Single Non-Zero Eigenvalue Stability) — BLOCKED on
+    `thm:550A`/`thm:550B` (doubly companion matrices), which depend on
+    `cor:550C` and an unbuilt §550 infrastructure stack. Multi-cycle.
+  - `def:381F` (P-equivalent) — BLOCKED on the deferred reduced-method
+    construction (see `.prover-state/issues/reduced_method_deferred.md`).
+  - `lem:351A` (Criteria for A-stability) — would need a freshly defined
+    RK stability function `R(z) = 1 + zb^T(I-zA)^{-1}1` for `RKTableau`,
+    which doesn't exist yet. 2-cycle effort minimum.
+  - Negative witness `¬ explicitEulerGLM.IsAStable` — viable as a fallback
+    (see Backup plan below) but the positive-witness pattern is what
+    cycles 133/134 established and the supervisor scored +2 on; stick
+    with it.
+* **Stability function is the famous Padé(1,1):** `R(z) = (1+z/2)/(1-z/2)`.
+  `|R(z)| ≤ 1 ↔ Re(z) ≤ 0` is the textbook Möbius-transform calculation.
 
-### The math (do not deviate)
+## Primary plan
 
-Per `OpenMath/Chapter5/Section520.lean:632`:
+Add to `OpenMath/Chapter5/Section520.lean`, in the section between
+`trivialZeroGLM_isLStable` (line ~323) and the §521A `HasStabilityOrder`
+docstring (line ~325). Place all new theorems together so the
+implicit-midpoint A-stability cluster is contiguous.
 
-```
-padded2DEulerGLM : GeneralLinearMethod 1 2
-  A := !![0]
-  U := !![1, 0]
-  B := !![1; 0]
-  V := !![1, 0; 0, 0]
-```
-
-Stability matrix `M(z) = V + z·B·(I − z·A)⁻¹·U`:
-
-* `(1 − z · complexify A) = (1 : Matrix (Fin 1) (Fin 1) ℂ)` (since `A = !![0]`).
-* `(...)⁻¹ = 1`.
-* `z • complexify B = !![z; 0]`.
-* `!![z; 0] * !![1] * !![1, 0] = !![z, 0; 0, 0]`.
-* `M(z) = !![1, 0; 0, 0] + !![z, 0; 0, 0] = !![1+z, 0; 0, 0]`.
-
-Stability function `Φ(w, z) = det(wI − M(z))`:
-
-* `wI − M(z) = !![w − (1+z), 0; 0, w]`.
-* `det = (w − (1+z)) · w − 0 · 0 = w · (w − (1+z))`.
-
-So `Φ(w, z) = w^{2−1} · (w − R(z))` with `R(z) := 1 + z`.
-
-## Concrete deliverables
-
-Add three theorems to `OpenMath/Chapter5/Section520.lean`, immediately
-**after** the existing `explicitEulerGLM_isRKStable` block (line 543)
-and **before** the `### Definition 551A` section header (line 545):
-
-### 1. `padded2DEulerGLM_stabilityMatrix` — closed-form M(z)
+### Step 1 — closed-form stability matrix on the closed left half-plane
 
 ```lean
-/-- Closed-form stability matrix of `padded2DEulerGLM`:
-`M(z) = !![1 + z, 0; 0, 0]`.
-
-Computation: `(1 − z·A) = !![1]` since `A = !![0]`, so
-`(1 − z·A)⁻¹ = !![1]`. Then `z·B·(1−z·A)⁻¹·U = !![z, 0; 0, 0]`,
-which added to `V = !![1, 0; 0, 0]` gives `!![1+z, 0; 0, 0]`. -/
-theorem padded2DEulerGLM_stabilityMatrix (z : ℂ) :
-    padded2DEulerGLM.stabilityMatrix z =
-      !![1 + z, 0; 0, 0] := by
-  -- mirror the explicitEulerGLM_stabilityMatrix proof structure (line 123)
-  have hA :
-      (1 - z • complexify padded2DEulerGLM.A)
-        = (1 : Matrix (Fin 1) (Fin 1) ℂ) := by
-    ext i j
-    fin_cases i; fin_cases j
-    simp [padded2DEulerGLM, complexify]
-  unfold GeneralLinearMethod.stabilityMatrix
-  rw [hA, inv_one]
-  ext i j
-  fin_cases i <;> fin_cases j <;>
-    simp [padded2DEulerGLM, complexify, Matrix.mul_apply,
-          Fin.sum_univ_succ, Fin.sum_univ_zero]
+/-- Closed-form stability matrix of `implicitMidpointGLM` on the closed
+left half-plane: `M(z) = !![(1 + z/2) / (1 - z/2)]`. The hypothesis
+`hz : z.re ≤ 0` ensures `1 - z/2 ≠ 0` (its real part is `≥ 1`), so the
+1×1 matrix `(I - z·A)` is invertible and the resolvent is the scalar
+inverse `1/(1 - z/2)`. -/
+theorem implicitMidpointGLM_stabilityMatrix
+    (z : ℂ) (hz : z.re ≤ 0) :
+    implicitMidpointGLM.stabilityMatrix z
+      = !![(1 + z / 2) / (1 - z / 2)] := by
+  sorry
 ```
 
-If the closing `simp` set is overkill (linter unused-args warning),
-trim to `simp [padded2DEulerGLM, complexify, Matrix.mul_apply]` —
-the matrix-literal simp lemmas in `Mathlib.Data.Matrix.Notation`
-should handle the small-`Fin` summations automatically (per cycle 133
-finding).
+Proof shape: imitate `explicitEulerGLM_stabilityMatrix`
+(`Section520.lean:124-136`) and `padded2DEulerGLM_stabilityMatrix`
+(line ~668, cycle 134). Key differences from explicit Euler:
 
-### 2. `padded2DEulerGLM_stabilityFunction` — closed-form Φ(w, z)
+1. `(1 - z • complexify M.A) = !![1 - z/2]` (NOT `!![1]`), so we cannot
+   `rw [inv_one]` — instead invert via `Matrix.inv_def` /
+   `Matrix.inv_fin_one` for 1×1 non-singular matrices.
+2. Need `1 - z/2 ≠ 0` to invert. Derive it from `hz`:
+   `(1 - z/2).re = 1 - z.re/2 ≥ 1` (since `z.re ≤ 0`), so `≥ 1 > 0`,
+   hence `(1 - z/2) ≠ 0` via `Complex.ne_zero_of_re_pos` or `ne_of_apply_ne re`.
+
+If `Matrix.inv_fin_one` doesn't exist by that name, use
+`Matrix.det_fin_one`-based hand expansion or `Matrix.nonsing_inv_apply`.
+Verify with `lean_local_search "Matrix.inv_fin_one"` first.
+
+### Step 2 — Padé(1,1) magnitude bound
 
 ```lean
-/-- Closed-form stability function of `padded2DEulerGLM`:
-`Φ(w, z) = w · (w − (1 + z))`.
-
-This is the `(s, r) = (1, 2)` case of `Φ(w, z) = det(wI − M(z))`
-with `M(z) = !![1+z, 0; 0, 0]`. The `2×2` determinant of the
-upper-triangular matrix `!![w − (1+z), 0; 0, w]` is the product
-of its diagonal entries `(w − (1+z)) · w = w · (w − (1+z))`. -/
-theorem padded2DEulerGLM_stabilityFunction (w z : ℂ) :
-    padded2DEulerGLM.stabilityFunction w z =
-      w * (w - (1 + z)) := by
-  unfold GeneralLinearMethod.stabilityFunction
-  rw [padded2DEulerGLM_stabilityMatrix]
-  rw [Matrix.det_fin_two]
-  simp [Matrix.smul_apply, Matrix.one_apply]
-  ring
+/-- For complex `z` in the closed left half-plane, the Padé(1,1)
+magnitude is bounded by 1: `|(1+z/2)/(1-z/2)| ≤ 1` whenever
+`Re(z) ≤ 0`. -/
+theorem padeOneOne_norm_le_one_of_re_nonpos
+    {z : ℂ} (hz : z.re ≤ 0) :
+    ‖(1 + z / 2) / (1 - z / 2)‖ ≤ 1 := by
+  sorry
 ```
 
-If `Matrix.det_fin_two` does not exist in pinned Mathlib, fall back to
-`simp [Matrix.det_succ_row_zero, Fin.sum_univ_succ, Fin.sum_univ_zero]`
-followed by `ring`. (`Matrix.det_fin_two` is in
-`Mathlib.LinearAlgebra.Matrix.Determinant.Basic` — verify with
-`lean_local_search "det_fin_two"` if needed.)
+Proof shape: convert to `normSq`, expand, simplify.
 
-### 3. `padded2DEulerGLM_isRKStable` — the substantive witness
+```
+‖(1+z/2)/(1-z/2)‖ ≤ 1
+  ↔ ‖1+z/2‖² ≤ ‖1-z/2‖²    (since 1-z/2 ≠ 0)
+  ↔ Complex.normSq (1+z/2) ≤ Complex.normSq (1-z/2)
+```
+
+Then `Complex.normSq` expansion:
+```
+normSq (1+z/2) = (1 + z.re/2)² + (z.im/2)²
+normSq (1-z/2) = (1 - z.re/2)² + (z.im/2)²
+diff = (1+z.re/2)² - (1-z.re/2)² = 2 · z.re ≤ 0  (by hz)
+```
+
+Use `Complex.normSq_div`, `Complex.normSq_add`, `Complex.normSq_sub`, or
+manually via `Complex.sq_abs` / `Complex.normSq_eq_abs`. Likely easiest:
+`Complex.norm_div`, then `div_le_one_iff_le` with `‖1-z/2‖ > 0`,
+square both sides via `Real.sqrt`, finish with `Complex.normSq_apply`
+(or `Complex.normSq` definition) + `nlinarith` / `linarith` /
+hand-expansion.
+
+### Step 3 — main A-stability theorem
 
 ```lean
-/-- **Substantive** non-vacuity witness for `IsRKStable`:
-`padded2DEulerGLM` (s = 1, r = 2) has Runge–Kutta stability with
-stability function `R(z) = 1 + z`.
-
-Unlike the cycle 130 witness `explicitEulerGLM_isRKStable`
-(`r = 1`, where `w^{r−1} = w^0 = 1` makes the factorisation trivial),
-the `r = 2` case requires a genuine factorisation of a quadratic in `w`.
-From `padded2DEulerGLM_stabilityFunction`,
-`Φ(w, z) = w · (w − (1 + z)) = w^{2−1} · (w − R(z))` with
-`R(z) := 1 + z`. -/
-theorem padded2DEulerGLM_isRKStable :
-    padded2DEulerGLM.IsRKStable := by
-  refine ⟨fun z => 1 + z, ?_⟩
-  intro w z
-  rw [padded2DEulerGLM_stabilityFunction]
-  -- Goal: w * (w - (1 + z)) = w ^ (2 - 1) * (w - (1 + z))
-  simp [pow_one]
-  ring
+/-- **Substantive non-vacuity witness for `IsAStable`** —
+`implicitMidpointGLM` is A-stable. This complements the trivial
+`trivialZeroGLM_isAStable` (cycle 088, with `M(z) = 0` everywhere): the
+implicit midpoint method is a *substantive* A-stable method whose
+stability function `R(z) = (1+z/2)/(1-z/2)` is the canonical Padé(1,1)
+approximant of `exp(z)`. Power-boundedness of the 1×1 stability matrix
+follows from the magnitude bound `|R(z)| ≤ 1` on the closed left
+half-plane. -/
+theorem implicitMidpointGLM_isAStable :
+    implicitMidpointGLM.IsAStable := by
+  intro z hz
+  -- z ∈ stabilityRegion: ∃ C, PowerBounded C (M(z))
+  refine ⟨1, ?_⟩
+  intro k
+  rw [implicitMidpointGLM_stabilityMatrix z hz]
+  -- Goal: ‖!![(1+z/2)/(1-z/2)] ^ k‖ ≤ 1
+  sorry
 ```
 
-Note `r - 1` here is `2 - 1 = 1` (Nat.sub), so `w ^ (r - 1) = w ^ 1 = w`.
-The `simp [pow_one]` reduces `w ^ 1` to `w`; `ring` then closes.
-If `pow_one` doesn't fire under the `r - 1` Nat.sub, add `show 2 - 1 = 1`
-+ `norm_num` first, or use `simp only [show (2 : ℕ) - 1 = 1 from rfl, pow_one]`.
+Inner sorry plan: `!![a]^k = !![a^k]` (use induction on `k` with
+`Matrix.pow_succ` + `mul_apply` simp on 1×1, OR hunt for an existing
+`Matrix.pow_fin_one` / `Matrix.fin_one_pow`-flavored lemma; otherwise
+write a private helper). Then
+`‖!![a^k]‖ ≤ ‖a^k‖ = ‖a‖^k ≤ 1^k = 1` via `‖a‖ ≤ 1` from Step 2.
 
-## What NOT to do
+The matrix-norm-of-1×1 → scalar bridge in the `linftyOpNorm` scope:
+search `Matrix.linfty_opNorm` first — for `r = 1`, the L∞-operator
+norm is just the row sum which for a 1×1 matrix collapses to
+`|a 0 0|`. Likely lemma: `Matrix.linfty_opNorm_fin_one` or
+hand-proof via `Matrix.linfty_opNorm_def` + `Finset.sup_singleton`.
 
-* **Do NOT modify `IsRKStable` or `padded2DEulerGLM`.** Both are stable
-  cycle-130/133 deliverables. This cycle adds new theorems only.
-* **Do NOT add a new GLM.** Reusing `padded2DEulerGLM` is by design —
-  it lets the same s=1, r=2 witness object discharge non-vacuity for
-  three predicates (cycle 133 IRK-stability; cycle 134 RK-stability;
-  potentially `def:520E` A-stability and `def:520F` L-stability if
-  proxied through `R(z) = 1 + z`).
-* **Do NOT add Aristotle jobs.** The total proof is ≤ 40 LOC of
-  matrix algebra; Aristotle round-trip overhead exceeds the manual
-  cost. Cycle 133 reached this same conclusion on a structurally
-  identical task.
-* **Do NOT raise `maxHeartbeats`.** If `padded2DEulerGLM_stabilityMatrix`
-  is slow, decompose by proving `z • complexify B * 1 * complexify U =
-  !![z, 0; 0, 0]` as a separate `have`, then rewrite into the main
-  goal.
-* **Do NOT update `lean_status.json`.** `def:542A` is already
-  `formalized` (its `lean_symbol` is the `IsRKStable` predicate, which
-  is unchanged). Adding a substantive witness is strengthening
-  evidence, not a status change — same logic as cycle 133's `def:551A`
-  handling.
-* **Do NOT update `plan.md`'s entity-count number.** `def:542A` is
-  already counted at 69/175. Append a note to the `def:542A` row
-  pointing at the new substantive witness, mirroring cycle 133's
-  edit to the `def:551A` row.
-* **Do NOT pursue `thm:551B`, `thm:553A`, `thm:520B` companion lemmas,
-  or §550 doubly-companion-matrix infrastructure.** Those are
-  multi-cycle items. This cycle is a single-priority structural
-  closure.
-* **Do NOT add a third witness GLM.** One substantive witness per
-  predicate is enough for the non-vacuity contract.
-* **Do NOT take the cycle-prompt's "What I'm stuck on" framing
-  (if any) at face value if it claims commit failure / scanner false
-  positive.** Per cycles 008/014/015/040/121 consultant analyses,
-  these are stale `attempts.md` carry-overs; verify against `HEAD`
-  with `git log -1 --format='%H %s'` before reacting.
+If the matrix-norm bridge proves fiddly, alternative tactic: expand
+`!![a]^k = !![a^k]` explicitly via a helper (≤ 10 LOC), then bound
+`‖!![a^k]‖` directly entry-wise. The cycle 134
+`padded2DEulerGLM_stabilityMatrix` proof and the cycle 088
+`trivialZeroGLM_isAStable` proof both manipulate 1×1 norms — read those
+as templates.
 
-## Pre-commit checklist (mandatory; mirror cycle 133 §"Faithfulness check")
+## Backup plan — if Step 1 or Step 2 stalls past 90 minutes of effort
 
-For each of the three new theorems:
+**Backup A (recommended fallback):** Pivot to the negative witness
+`¬ explicitEulerGLM.IsAStable`. This is shorter (no inverse-of-non-trivial
+matrix; explicit Euler has `R(z) = 1 + z`):
 
-* **`padded2DEulerGLM_stabilityMatrix`** — N/A for textbook entity
-  ID. This is a computational closed-form lemma about a witness
-  object, not a textbook concept. The "faithfulness" question reduces
-  to "does the closed form actually equal `M(z)`?", verified by the
-  proof (which mechanically unfolds the definition).
+1. Show `(-3 : ℂ).re ≤ 0` (trivial) but `(-3 : ℂ) ∉ explicitEulerGLM.stabilityRegion`.
+2. From `explicitEulerGLM_stabilityMatrix (-3) = !![1 + (-3)] = !![-2]`,
+   show `‖!![-2]^k‖ = 2^k` via induction.
+3. Use `tendsto_pow_atTop_atTop_of_one_lt` (with `1 < |-2|`) to derive
+   `Tendsto (fun k => ‖M(-3)^k‖) atTop atTop`; then any constant `C`
+   bound is contradicted at sufficiently large `k`.
 
-* **`padded2DEulerGLM_stabilityFunction`** — same as above.
+If pivoting, document the pivot in `.prover-state/task_results/cycle_135.md`
+under "Dead ends" with the specific blocker that triggered it.
 
-* **`padded2DEulerGLM_isRKStable`** — entity ID `def:542A`.
-  - Quote textbook statement (from
-    `extraction/formalization_data/entities/def_542A.json`):
-    > "A general linear method `(A, U, B, V)` has 'Runge–Kutta
-    > stability' if the characteristic polynomial given by (542a) has
-    > the form `Φ(w, z) = w^{r−1}(w − R(z))`."
-  - Lean statement captures: **same content** as cycle 130. The
-    `IsRKStable` predicate is unchanged. This theorem exhibits a
-    second inhabitant (`padded2DEulerGLM`) of the same predicate. No
-    divergence.
-  - Tautology check: conclusion `padded2DEulerGLM.IsRKStable` is not
-    a hypothesis (zero hypotheses).
-  - Identity check: the proof is not `exact h` — it produces an
-    explicit `R := fun z => 1 + z` and then proves the `∀ w z`
-    factorisation by unfolding to the closed form from theorem 2.
-  - Substantive vs vacuous check: **substantive**. With `r = 2`,
-    `w ^ (r − 1) = w ^ 1 = w`, so the factorisation is a genuine
-    statement that `Φ(w, z)` has `w` as a root for every `z`, plus
-    the second factor `(w − R(z))`. The cycle 130 `r = 1` witness
-    has `w ^ 0 = 1`, making the factorisation a trivial restatement
-    of `Φ(w, z) = w − R(z)`.
+**Backup B (only if both stall):** File an issue
+`.prover-state/issues/oneByOne_matrix_pow_norm.md` documenting the
+1×1-matrix-power-norm gap discovered, then commit Steps 1+2 (sorry-free
+closed-form lemmas) without Step 3. This still satisfies the cycle bar
+("decompose a sorry or write an issue") but loses the witness deliverable.
 
-## Build verification (mandatory before commit)
+## What NOT to try
 
-In order:
+* **Do not** raise `maxHeartbeats` if Step 3 is slow — decompose the
+  matrix-pow-norm reasoning into a private 1×1 helper.
+* **Do not** introduce `axiom`/`constant` for the matrix-power-norm
+  bridge. If the lemma `‖!![a]^k‖ = ‖a‖^k` (or `‖!![a^k]‖ = ‖a‖^k`)
+  isn't in Mathlib, write it by hand as a private helper in the same
+  file (≤ 15 LOC by induction).
+* **Do not** attempt `thm:551B`, `def:381F`, or `lem:351A` — all are
+  blocked per the "Why this target" section above.
+* **Do not** generalize to "any A-stable Padé approximant" or build a
+  generic `padeOneOne` infrastructure. Keep the proof concrete to the
+  implicit midpoint witness.
+* **Do not** poll Aristotle — there are no pending submissions, and
+  this cycle's analytical content (complex magnitude calculation +
+  matrix-pow-norm) is faster to prove manually than batch-submit.
+* **Do not** modify `def:520E.IsAStable`'s definition or the
+  `stabilityRegion`/`PowerBounded` infrastructure. The witness must
+  satisfy the existing predicate as-is.
 
-1. `lake env lean OpenMath/Chapter5/Section520.lean` — must exit 0,
-   no warnings, no errors, no `sorry`.
-2. `lake build OpenMath.Chapter5.Section520` — must complete
-   successfully.
-3. Axiom check on each new theorem (in a scratch `.lean` file or via
-   `#print axioms` appended to the bottom of `Section520.lean` and
-   removed before commit):
-   * `#print axioms padded2DEulerGLM_stabilityMatrix`
-   * `#print axioms padded2DEulerGLM_stabilityFunction`
-   * `#print axioms padded2DEulerGLM_isRKStable`
+## Hygiene
 
-   All three must print `[propext, Classical.choice, Quot.sound]`
-   (axiom-clean — no `sorryAx`).
-4. Regression check on cycle 130/133 witnesses (axiom-clean must be
-   preserved):
-   * `#print axioms explicitEulerGLM_isRKStable`
-   * `#print axioms padded2DEulerGLM_isIRKStable`
-   * `#print axioms explicitEulerGLM_isIRKStable`
+* **Build verification:** `lake env lean OpenMath/Chapter5/Section520.lean`
+  to verify the file compiles. Then `lake build OpenMath.Chapter5.Section520`
+  before `#print axioms` (per CLAUDE.md note: `lake env lean` alone does
+  NOT update the .olean cache, leading to stale-cache `sorryAx` false
+  positives).
+* **Axiom check:** `#print axioms
+  OpenMath.Chapter5.Section510.implicitMidpointGLM_isAStable` should
+  return `[propext, Classical.choice, Quot.sound]` (or just
+  `[propext, Quot.sound, Classical.choice]` — order varies).
+* **Faithfulness check:** `def:520E` is a *definition*, not a theorem;
+  the new witness theorem `implicitMidpointGLM_isAStable` is a
+  theorem about a previously-defined object. The pre-commit checklist
+  applies:
+  - Tautology: conclusion is `IsAStable`, not a hypothesis.
+  - Identity check: proof is non-trivial — uses Padé magnitude bound.
+  - Hypothesis strength: zero hypotheses on the new theorem.
+* **Tautology scanner:** if the proof needs `have h_<name>` /
+  `exact h_<name>` patterns, use the no-underscore convention
+  (`hname` / `exact hname`) per the standing
+  `tautology_scanner_false_positives.md` workaround.
+* **lean_status.json:** the `def:520E` row should already exist
+  (cycle 088 marked it formalized); update its `notes` to reference
+  the new substantive witness, and bump cycle reference to 135. Plan.md
+  row for `def:520E` should be updated to reflect the substantive
+  (not just trivial) witness.
 
-## Plan / status edits (mandatory)
+## Deliverable bar
 
-* **`plan.md`** — find the `def:542A` row (currently
-  `[x] def:542A …  (cycle 130, axiom-clean; predicate +
-  explicitEulerGLM_isRKStable witness with R(z) = 1 + z)`). Append a
-  cycle 134 note in the same shape as cycle 133's `def:551A` edit:
-  e.g. `… (cycle 130 predicate + explicitEulerGLM_isRKStable r=1
-  vacuous witness; cycle 134 substantive r=2 witness
-  padded2DEulerGLM_isRKStable via padded2DEulerGLM (reused from
-  cycle 133); both axiom-clean.)`.
-* **`lean_status.json`** — DO NOT edit. `def:542A` remains
-  `formalized`.
+Minimum: Steps 1 and 2 closed (sorry-free), with Step 3 as a sorry'd
+scaffold + an issue file documenting the matrix-pow-norm gap.
 
-## Task results (mandatory)
+Target: All three steps closed (sorry-free), axiom-clean, with
+`implicitMidpointGLM_isAStable` axiom-clean.
 
-Write `.prover-state/task_results/cycle_134.md` with:
+Stretch: Also derive `implicitMidpointGLM.HasStabilityOrder p` for
+some `p ≥ 2` (the Padé(1,1) is order 2 — but this is bonus, NOT in
+scope this cycle).
 
-* **Worked on**: `def:542A` substantive `r = 2` non-vacuity witness.
-* **Approach**: reuse `padded2DEulerGLM` from cycle 133; build closed
-  forms for `M(z)` and `Φ(w, z)`; close `IsRKStable` with `R(z) = 1 + z`.
-* **Result**: SUCCESS / FAILED — explanation; if SUCCESS, list the
-  three new theorems and their axiom-clean status.
-* **Faithfulness check**: full per-theorem block per the checklist
-  above.
-* **Dead ends**: anything that didn't fire (`Matrix.det_fin_two`
-  unavailable? `inv_one` not applying? `pow_one` not firing under
-  `Nat.sub`? etc.).
-* **Discovery**: any new pattern learned that future witness cycles
-  can reuse.
-* **Suggested next approach**: based on the resulting state, the
-  most likely next planner moves are
-  (1) `thm:551B` — Single Non Zero Eigenvalue Stability — read
-      `extraction/formalization_data/entities/thm_551B.json` to
-      classify the prerequisite stack first;
-  (2) Open the next leaf-node Chapter 3 entity (e.g. `def:381F`
-      P-equivalent, `lem:351A` criteria for A-stability, or one of
-      the §302 enumeration lemmas);
-  (3) Negative-witness work on `def:520E` A-stability — `R(z) = 1+z`
-      is *not* A-stable; this would be a different shape from the
-      positive-witness pattern of cycles 130–134 and may be deferred.
+## Cycle 134 cleanup
 
-## Risks and mitigations
+Cycle 134 task results suggested `padded2DEulerGLM_stabilityMatrix`
+and `padded2DEulerGLM_stabilityFunction` as natural building blocks.
+Those are already landed (cycles 130, 133, 134) and visible at
+`Section520.lean:668-680` (approximately). They are NOT consumed by
+this cycle's plan (different witness, different stability function),
+but they confirm the recipe pattern (`Matrix.det_fin_two` /
+`Matrix.det_fin_one` + `simp [Matrix.smul_apply]; ring`) that the
+implicit-midpoint closed-form proof should mirror.
 
-* **Risk**: `Matrix.det_fin_two`'s simp normal form may not match the
-  expected `(M 0 0) * (M 1 1) - (M 0 1) * (M 1 0)` shape under the
-  `wI - M(z)` substitution.
-  - **Mitigation**: after `rw [padded2DEulerGLM_stabilityMatrix]`,
-    apply `Matrix.det_fin_two` then `simp` with explicit lemmas
-    `Matrix.sub_apply`, `Matrix.smul_apply`, `Matrix.one_apply` to
-    normalise. Worst case, fall back to
-    `simp [Matrix.det_succ_row_zero, Fin.sum_univ_succ,
-    Fin.sum_univ_zero, Matrix.smul_apply, Matrix.one_apply]; ring`.
-* **Risk**: `pow_one` doesn't fire because Lean sees `w ^ (2 - 1 : ℕ)`
-  with the `Nat.sub` not reduced.
-  - **Mitigation**: `show w * (w - (1 + z)) = w ^ 1 * (w - (1 + z))`
-    + `rw [pow_one]`. Or `simp only [show (2 : ℕ) - 1 = 1 from rfl,
-    pow_one]`.
-* **Risk**: matrix multiplication closure in step 1 fails on
-  individual `Fin` indices because `Matrix.mul_apply` doesn't unfold
-  cleanly.
-  - **Mitigation**: explicitly `unfold Matrix.mul Matrix.HMul.hMul`
-    + `simp [Fin.sum_univ_succ, Fin.sum_univ_zero,
-    padded2DEulerGLM, complexify]` per index. Worst case, prove each
-    of the four entries `M(z) i j` for `(i,j) ∈ Fin 2 × Fin 2` as
-    individual `have`s and assemble.
-* **Risk**: `lake build` cache invalidation forces a long re-elaborate.
-  - **Mitigation**: time budget. If `lake env lean
-    OpenMath/Chapter5/Section520.lean` exits 0 standalone, the file
-    is correct — `lake build` is the final regression check, not the
-    inner-loop verification tool.
-
-## Cycle budget
-
-* New code: ~40 LOC (3 theorems + docstrings).
-* Edits to `plan.md`: 1 line.
-* No edits to `lean_status.json`, no new files (other than
-  `task_results/cycle_134.md`).
-* Single commit.
-* Expected total wall time: 60–90 minutes including verification.
+No housekeeping pending from cycle 134.

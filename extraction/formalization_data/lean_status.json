@@ -206,7 +206,8 @@
   "def:520E": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsAStable",
-    "status": "formalized"
+    "status": "formalized",
+    "notes": "Cycle 088 trivial witness `trivialZeroGLM_isAStable` (M(z)=0). Cycle 135 substantive witness `implicitMidpointGLM_isAStable` — the implicit midpoint method with stability function R(z)=(1+z/2)/(1-z/2), the canonical Padé(1,1) approximant of exp(z). Axiom-clean."
   },
   "def:520F": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
