@@ -2185,6 +2185,79 @@ theorem bdf3_toGLM_hasOrderGe3 :
       BDF3GE3.qN, BDF3GE3.q'N, BDF3GE3.q''N]
     all_goals norm_num
 
+/-! ### §530 LMM-as-GLM order-≥ 3 witness — adamsMoulton3
+
+`adamsMoulton3` (`s = 3`, six GLM input slots `Fin 6`, implicit, order 4)
+embeds as a GLM of order ≥ 3. The shift constant is
+`C := s² − 2 β_s s = 9 − 2·(3/8)·3 = 27/4` for `β_s = 9/24 = 3/8`.
+Same helper-extraction recipe as AB3GE3 / BDF3GE3: the q''' obligation
+lives on `Fin 6` and exhausts the heartbeat budget when discharged
+inline, so the four Nordsieck vectors and the q''' obligation are
+factored as `private` declarations inside `namespace AM3GE3`. -/
+namespace AM3GE3
+
+private noncomputable def qN : Fin (2 * 3) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 3 => (1 : ℝ)) (fun _ : Fin 3 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 3) k)
+
+private noncomputable def q'N : Fin (2 * 3) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 3 => ((j : ℕ) : ℝ)) (fun _ : Fin 3 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 3) k)
+
+private noncomputable def q''N : Fin (2 * 3) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 3 => ((j : ℕ) : ℝ) ^ 2 - 27/4)
+    (fun j : Fin 3 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 3) k)
+
+private noncomputable def q'''N : Fin (2 * 3) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 3 => ((j : ℕ) : ℝ) ^ 3 - 3 * (27/4) * ((j : ℕ) : ℝ))
+    (fun j : Fin 3 => 3 * (((j : ℕ) : ℝ) ^ 2 - 27/4))
+    (Fin.cast (Nat.two_mul 3) k)
+
+private theorem q'''_obligation (k : Fin 6) :
+    6 * (∑ j, adamsMoulton3.toGLM.B k j *
+            ((∑ i, adamsMoulton3.toGLM.A j i *
+                ((∑ i', adamsMoulton3.toGLM.A i i') +
+                  ∑ l, adamsMoulton3.toGLM.U i l * q'N l)) +
+              ∑ l, adamsMoulton3.toGLM.U j l * q''N l)) +
+        ∑ l, adamsMoulton3.toGLM.V k l * q'''N l =
+      qN k + 3 * q'N k + 3 * q''N k + q'''N k := by
+  fin_cases k
+  · simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+
+end AM3GE3
+
+theorem adamsMoulton3_toGLM_hasOrderGe3 :
+    adamsMoulton3.toGLM.HasOrderGe3 := by
+  refine ⟨AM3GE3.qN, AM3GE3.q'N, AM3GE3.q''N, AM3GE3.q'''N,
+    ?_, ?_, ?_, ?_, AM3GE3.q'''_obligation⟩
+  · exact adamsMoulton3.toGLM_V_nordsieckQ_eq adamsMoulton3_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ, AM3GE3.qN]
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      AM3GE3.qN, AM3GE3.q'N]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsMoulton3, Fin.addCases, Fin.sum_univ_succ,
+      AM3GE3.qN, AM3GE3.q'N, AM3GE3.q''N]
+    all_goals norm_num
+
 namespace Matrix
 
 /-- §521 helper — auxiliary cardinality split for `Finset n`-indexed sums:
