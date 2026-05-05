@@ -2258,6 +2258,98 @@ theorem adamsMoulton3_toGLM_hasOrderGe3 :
       AM3GE3.qN, AM3GE3.q'N, AM3GE3.q''N]
     all_goals norm_num
 
+/-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Bashforth 4-step
+
+`adamsBashforth4` (`s = 4`, eight GLM input slots `Fin 8`, explicit with
+`β_s = 0`, order 4) embeds as a GLM of order ≥ 3. The shift constant is
+`C := s² − 2 β_s s = 16 − 0 = 16`. Same helper-extraction recipe as
+AB3GE3 / BDF3GE3 / AM3GE3: the q''' obligation lives on `Fin 8` and
+exhausts the heartbeat budget when discharged inline, so the four
+Nordsieck vectors and the q''' obligation are factored as `private`
+declarations inside `namespace AB4GE3`. -/
+namespace AB4GE3
+
+private noncomputable def qN : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 4 => (1 : ℝ)) (fun _ : Fin 4 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 4) k)
+
+private noncomputable def q'N : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 4 => ((j : ℕ) : ℝ)) (fun _ : Fin 4 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 4) k)
+
+private noncomputable def q''N : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 4 => ((j : ℕ) : ℝ) ^ 2 - 16)
+    (fun j : Fin 4 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 4) k)
+
+private noncomputable def q'''N : Fin (2 * 4) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 4 => ((j : ℕ) : ℝ) ^ 3 - 3 * 16 * ((j : ℕ) : ℝ))
+    (fun j : Fin 4 => 3 * (((j : ℕ) : ℝ) ^ 2 - 16))
+    (Fin.cast (Nat.two_mul 4) k)
+
+/-- Helper for the last `Fin 8` case (`k = 7`) of `q'''_obligation`. Factored
+into its own private theorem so it gets a fresh heartbeat budget; the
+inline `simp; norm_num` block consistently exhausts the 200000 limit at
+this case. -/
+private theorem q'''_obligation_seven :
+    6 * (∑ j, adamsBashforth4.toGLM.B (⟨7, by decide⟩ : Fin 8) j *
+            ((∑ i, adamsBashforth4.toGLM.A j i *
+                ((∑ i', adamsBashforth4.toGLM.A i i') +
+                  ∑ l, adamsBashforth4.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth4.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth4.toGLM.V (⟨7, by decide⟩ : Fin 8) l * q'''N l =
+      qN ⟨7, by decide⟩ + 3 * q'N ⟨7, by decide⟩ +
+        3 * q''N ⟨7, by decide⟩ + q'''N ⟨7, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation (k : Fin 8) :
+    6 * (∑ j, adamsBashforth4.toGLM.B k j *
+            ((∑ i, adamsBashforth4.toGLM.A j i *
+                ((∑ i', adamsBashforth4.toGLM.A i i') +
+                  ∑ l, adamsBashforth4.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth4.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth4.toGLM.V k l * q'''N l =
+      qN k + 3 * q'N k + 3 * q''N k + q'''N k := by
+  fin_cases k
+  · simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · exact q'''_obligation_seven
+
+end AB4GE3
+
+theorem adamsBashforth4_toGLM_hasOrderGe3 :
+    adamsBashforth4.toGLM.HasOrderGe3 := by
+  refine ⟨AB4GE3.qN, AB4GE3.q'N, AB4GE3.q''N, AB4GE3.q'''N,
+    ?_, ?_, ?_, ?_, AB4GE3.q'''_obligation⟩
+  · exact adamsBashforth4.toGLM_V_nordsieckQ_eq adamsBashforth4_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ, AB4GE3.qN]
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      AB4GE3.qN, AB4GE3.q'N]
+    all_goals norm_num
+  · intro k; fin_cases k
+    all_goals simp [LMM.toGLM, adamsBashforth4, Fin.addCases, Fin.sum_univ_succ,
+      AB4GE3.qN, AB4GE3.q'N, AB4GE3.q''N]
+    all_goals norm_num
+
 namespace Matrix
 
 /-- §521 helper — auxiliary cardinality split for `Finset n`-indexed sums:
