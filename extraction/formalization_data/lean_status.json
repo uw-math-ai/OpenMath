@@ -207,14 +207,14 @@
     "lean_file": "OpenMath/Chapter5/Section520.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsAStable",
     "status": "formalized",
-    "notes": "Cycle 088 trivial witness `trivialZeroGLM_isAStable` (M(z)=0). Cycle 135 substantive witness `implicitMidpointGLM_isAStable` — the implicit midpoint method with stability function R(z)=(1+z/2)/(1-z/2), the canonical Padé(1,1) approximant of exp(z). Axiom-clean."
+    "notes": "Cycle 088 trivial witness `trivialZeroGLM_isAStable` (M(z)=0). Cycle 135 substantive witness `implicitMidpointGLM_isAStable` \u2014 the implicit midpoint method with stability function R(z)=(1+z/2)/(1-z/2), the canonical Pad\u00e9(1,1) approximant of exp(z). Axiom-clean."
   },
   "def:520F": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsLStable",
     "status": "formalized",
     "cycle": 137,
-    "notes": "Cycle 088 trivial positive witness `trivialZeroGLM_isLStable` (M(z)=0). Cycle 137 negative witnesses: `explicitEulerGLM_not_isLStable` (one-line, follows from cycle 136 not-A-stable) and `implicitMidpointGLM_not_isLStable` (substantive — Padé(1,1) is A-stable but ρ(M(z))→1 not 0 along z=-(n+2:ℂ) sequence). Axiom-clean."
+    "notes": "Cycle 088 trivial positive witness `trivialZeroGLM_isLStable` (M(z)=0). Cycle 137 negative witnesses: `explicitEulerGLM_not_isLStable` (one-line, follows from cycle 136 not-A-stable) and `implicitMidpointGLM_not_isLStable` (substantive \u2014 Pad\u00e9(1,1) is A-stable but \u03c1(M(z))\u21921 not 0 along z=-(n+2:\u2102) sequence). Axiom-clean."
   },
   "def:521A": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
@@ -230,8 +230,8 @@
     "lean_file": "OpenMath/Chapter5/Section530.lean",
     "lean_symbol": "OpenMath.Chapter5.Section530.StartingMethod.IsNonDegenerate",
     "status": "formalized",
-    "cycle": 139,
-    "notes": "Cycle 139: opened §530 with `GeneralizedRungeKuttaMethod` (530a tableau: c, A, b₀, b), `StartingMethod` (length-r dependent sequence with heterogeneous stages), and the `IsDegenerate` / `IsNonDegenerate` predicates. Non-vacuity witnessed by `trivialStartingMethod_isNonDegenerate` (r=1, b₀=1) and refutability by `zeroStartingMethod_isDegenerate` (r=1, b₀=0). All three public theorems axiom-clean (`[propext, Classical.choice, Quot.sound]`). Definition matches the textbook verbatim — `IsDegenerate` is `∀ i, b₀^{(i)} = 0`, `IsNonDegenerate := ¬ IsDegenerate`."
+    "cycle": 141,
+    "notes": "Cycle 139: opened \u00a7530 with GeneralizedRungeKuttaMethod (530a tableau: c, A, b\u2080, b), StartingMethod (length-r dependent sequence with heterogeneous stages), and the IsDegenerate / IsNonDegenerate predicates. Non-vacuity witnessed by trivialStartingMethod_isNonDegenerate (r=1, b\u2080=1) and refutability by zeroStartingMethod_isDegenerate (r=1, b\u2080=0). Cycle 141: heterogeneous-stages witness added \u2014 nontrivialTwoStageGRK (s=2, b\u2080=2), mixedStartingMethod (r=2, stages 0=1, stages 1=2) with mixedStartingMethod_isNonDegenerate; mixedStartingMethod_stages_neq confirms the dependent stages : Fin r \u2192 \u2115 design is genuinely needed; stretch zero2StartingMethod_isDegenerate witnesses degeneracy at r=2. All theorems axiom-clean ([propext, Classical.choice, Quot.sound]). Definition still matches the textbook verbatim."
   },
   "def:530B": {
     "lean_file": null,
@@ -414,7 +414,7 @@
   "thm:142D": {
     "lean_file": "OpenMath/Chapter1/Section142.lean",
     "lean_symbol": "OpenMath.Chapter1.Section142.thm_142D",
-    "notes": "Clauses (i) ⇔ (ii) only via Gelfand bridge (cycles 005/132). Clauses (iii) Jordan canonical form and (iv) Schur similarity are deferred — Mathlib lacks Jordan/Schur. See .prover-state/issues/jordan_canonical_form_missing.md.",
+    "notes": "Clauses (i) \u21d4 (ii) only via Gelfand bridge (cycles 005/132). Clauses (iii) Jordan canonical form and (iv) Schur similarity are deferred \u2014 Mathlib lacks Jordan/Schur. See .prover-state/issues/jordan_canonical_form_missing.md.",
     "status": "in_progress"
   },
   "thm:142E": {
@@ -886,7 +886,7 @@
     "lean_symbol": "OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_one, OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_two",
     "status": "partial",
     "cycle": 140,
-    "notes": "Two stepping-stone witnesses, both axiom-clean: (1) `_n_one` closes n=1 (cycle 138); (2) `_n_two` closes n=2 (cycle 140 via Aristotle Job B project 70f26d67-b37e-4eda-b946-64c9f4616612, COMPLETE; proof inlined verbatim using `Matrix.det_fin_two` + `IsBigO.of_bound` with explicit constant `‖-(α 0 * β 1) - β 0 * α 1‖ + ‖α 1 * β 1‖`). Aristotle Job A (project 7062c2a2-4a8b-4fae-b694-9355e06427a9) targeting general-n was still IN_PROGRESS at 4% during cycle 140 poll. The general-n statement (`doublyCompanionMatrix_det_factorization`) remains absent from the file — see `.prover-state/issues/thm_550A_general_n.md` for the closure-infrastructure deferral (cofactor-expansion induction or eigenvalue-density argument). Definitions `doublyCompanionMatrix`, `alphaPoly`, `betaPoly` and the `_one_eq` simp lemma remain."
+    "notes": "Two stepping-stone witnesses, both axiom-clean: (1) `_n_one` closes n=1 (cycle 138); (2) `_n_two` closes n=2 (cycle 140 via Aristotle Job B project 70f26d67-b37e-4eda-b946-64c9f4616612, COMPLETE; proof inlined verbatim using `Matrix.det_fin_two` + `IsBigO.of_bound` with explicit constant `\u2016-(\u03b1 0 * \u03b2 1) - \u03b2 0 * \u03b1 1\u2016 + \u2016\u03b1 1 * \u03b2 1\u2016`). Aristotle Job A (project 7062c2a2-4a8b-4fae-b694-9355e06427a9) targeting general-n was still IN_PROGRESS at 4% during cycle 140 poll. The general-n statement (`doublyCompanionMatrix_det_factorization`) remains absent from the file \u2014 see `.prover-state/issues/thm_550A_general_n.md` for the closure-infrastructure deferral (cofactor-expansion induction or eigenvalue-density argument). Definitions `doublyCompanionMatrix`, `alphaPoly`, `betaPoly` and the `_one_eq` simp lemma remain."
   },
   "thm:550B": {
     "lean_file": null,

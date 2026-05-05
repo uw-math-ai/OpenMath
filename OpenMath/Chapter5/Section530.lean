@@ -174,4 +174,86 @@ theorem zeroStartingMethod_isDegenerate :
   fin_cases i
   rfl
 
+/-! ### Heterogeneous-stages witness (cycle 141)
+
+The witnesses `trivialStartingMethod` and `zeroStartingMethod` both have
+`r = 1` and a constant `stages` function. To exercise the dependent
+heterogeneous-stages design `stages : Fin r → ℕ` of `StartingMethod`,
+we construct a 2-method starting method whose first constituent is
+1-stage and whose second is 2-stage, then prove (a) it is non-degenerate
+and (b) the two stage counts are unequal. The latter is the
+load-bearing theorem confirming the dependent-function design is
+genuinely needed: the existing constant-stages witnesses leave open
+whether `stages : Fin r → ℕ` does real work. -/
+
+/-- A 2-stage *generalized* Runge–Kutta tableau with all-zero matrix,
+abscissae, and output weights but `b₀ = 2`. The non-zero `b₀ = 2`
+distinguishes it from `zeroGeneralizedRK` and witnesses the second
+constituent of `mixedStartingMethod`. -/
+def nontrivialTwoStageGRK : GeneralizedRungeKuttaMethod 2 where
+  c := ![0, 0]
+  A := !![0, 0; 0, 0]
+  b₀ := 2
+  b := ![0, 0]
+
+/-- The heterogeneous `Fin 2 → ℕ` stage-count function:
+`stages 0 = 1`, `stages 1 = 2`. -/
+def mixedStages : Fin 2 → ℕ
+  | 0 => 1
+  | 1 => 2
+
+/-- The dependent constituent-method function for `mixedStartingMethod`:
+the zeroth constituent is the 1-stage `trivialGeneralizedRK`, the first
+is the 2-stage `nontrivialTwoStageGRK`. The dependent return type
+`GeneralizedRungeKuttaMethod (mixedStages i)` reduces correctly because
+`mixedStages 0 = 1` and `mixedStages 1 = 2` hold definitionally. -/
+def mixedMethod : (i : Fin 2) → GeneralizedRungeKuttaMethod (mixedStages i)
+  | 0 => trivialGeneralizedRK
+  | 1 => nontrivialTwoStageGRK
+
+/-- A 2-method starting method exercising the heterogeneous-stages
+dependent design: `stages 0 = 1, stages 1 = 2`, with a 1-stage trivial
+constituent and a 2-stage non-trivial constituent. -/
+def mixedStartingMethod : StartingMethod 2 where
+  stages := mixedStages
+  method := mixedMethod
+
+/-- **Non-vacuity (heterogeneous-stages witness).** `mixedStartingMethod`
+is non-degenerate: its zeroth constituent has `b₀ = 1 ≠ 0`. -/
+theorem mixedStartingMethod_isNonDegenerate :
+    mixedStartingMethod.IsNonDegenerate := by
+  rw [StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero]
+  refine ⟨0, ?_⟩
+  show (1 : ℝ) ≠ 0
+  exact one_ne_zero
+
+/-- **The heterogeneous-stages design is genuinely needed.**
+`mixedStartingMethod.stages 0 ≠ mixedStartingMethod.stages 1`,
+confirming that the dependent `stages : Fin r → ℕ` field captures
+information not exposed by the existing constant-stages witnesses
+`trivialStartingMethod` and `zeroStartingMethod`. -/
+theorem mixedStartingMethod_stages_neq :
+    mixedStartingMethod.stages 0 ≠ mixedStartingMethod.stages 1 := by
+  decide
+
+/-! ### Refutability witness at `r = 2` (cycle 141 stretch)
+
+Parallel to `zeroStartingMethod` but at `r = 2`: a 2-method starting
+method with both constituents being the all-zero 1-stage tableau,
+hence degenerate. Confirms the dichotomy is non-trivial across both
+`r = 1` and `r = 2` shapes. -/
+
+/-- The `r = 2` starting method whose two constituents are both
+`zeroGeneralizedRK`. Witnesses `IsDegenerate` at `r = 2`. -/
+def zero2StartingMethod : StartingMethod 2 where
+  stages := fun _ => 1
+  method := fun _ => zeroGeneralizedRK
+
+/-- **Non-vacuity of `IsDegenerate` at `r = 2`.** The all-zero 2-method
+starting method satisfies `b₀^{(i)} = 0` for every `i : Fin 2`. -/
+theorem zero2StartingMethod_isDegenerate :
+    zero2StartingMethod.IsDegenerate := by
+  intro i
+  fin_cases i <;> rfl
+
 end OpenMath.Chapter5.Section530

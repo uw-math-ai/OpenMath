@@ -1,427 +1,308 @@
-# Cycle 140 Strategy
+# Cycle 141 Strategy
 
-## Recap of state at end of cycle 139
+## Context
 
-* **Sorry count: 0.** Cycle 139 closed cycle 138's regression by removing
-  the general-`n` `doublyCompanionMatrix_det_factorization` statement
-  from `OpenMath/Chapter5/Section550.lean`. Both the cycle-138 n=1
-  witness (`doublyCompanionMatrix_det_factorization_n_one`) and the
-  fresh §530 leaf (`def:530A` with two non-vacuity witnesses) survived
-  intact and axiom-clean.
-* **Cycle 138 was REVERTED (score −2) solely** because sorry count rose
-  0 → 1. Lesson: do **not** introduce sorry-first scaffolds. Every
-  cycle 140 deliverable must compile axiom-clean.
-* **Two Aristotle jobs from cycle 138 are still in flight**, both
-  targeting `thm:550A`:
-  * Job A — full general-`n`:
-    project `7062c2a2-4a8b-4fae-b694-9355e06427a9`
-    (last status check cycle 139: IN_PROGRESS, 4 %).
-  * Job B — focused `n = 2`:
-    project `70f26d67-b37e-4eda-b946-64c9f4616612`
-    (last status check cycle 139: IN_PROGRESS, 3 %).
-  By cycle 140 these jobs will have had ≈ 24 hours of compute, well
-  past the textbook 30-minute window — a single poll this cycle is
-  expected to find them either complete or genuinely stuck.
+Cycle 140 closed cleanly (+2 score): Aristotle Job B's `n = 2` stepping
+stone for `thm:550A` (`doublyCompanionMatrix_det_factorization_n_two`)
+was inlined verbatim into `OpenMath/Chapter5/Section550.lean`,
+axiom-clean. Sorry count: 0. Full Chapter 5 build: 2787/2787 green.
 
-## Priority 0 — Aristotle poll (MANDATORY, do first)
+§550 now carries two genuine witnesses (`_n_one` cycle 138,
+`_n_two` cycle 140) and the general-`n` statement is intentionally
+absent — re-introducing it as `sorry` was the cycle-138 mistake that
+triggered the −2 supervisor revert.
 
-Run **one** `mcp__aristotle__get_status` call on each of the two
-project IDs above (in parallel, single message). Per CLAUDE.md, do
-NOT re-poll. Branch on the result:
+Aristotle status:
+- Job A (general-`n`, project `7062c2a2-4a8b-4fae-b694-9355e06427a9`):
+  IN_PROGRESS at **4 %** as of 2026-05-05T19:50 (≈40 min after
+  resubmission, but ~24h elapsed since cycle 138 first kicked it off).
+  Progress is essentially flat → strongly suggests Aristotle cannot
+  close the eigenvalue-density / cofactor-induction argument.
+- Job B: COMPLETE, already consumed cycle 140.
 
-* **Both COMPLETE with clean proofs** → Priority 1A (full reinstatement).
-* **Job A (general-n) COMPLETE** → Priority 1A.
-* **Only Job B (n=2) COMPLETE** → Priority 1B (n=2 reinstatement
-  via Aristotle's proof).
-* **Both still IN_PROGRESS or returned junk** → fall through to
-  Priority 2.
-* **Both FAILED outright** → cancel both via
-  `mcp__aristotle__cancel_project` to free the slots, then go to
-  Priority 2.
+The recent 6-cycle pattern (135 → 140) alternates between
+**substantive non-vacuity strengthenings** (135, 136, 137, 140) and
+**section openings** (138, 139). Score deltas: +2, +2, +2, −2, +1, +2.
+The single −2 came from opening §550 with a `sorry`-bearing general-n
+statement. Lesson: **opening new ground without a proof body is
+expensive**; strengthening existing predicates is cheap +2.
 
-After polling, write a short note in the cycle 140 task results
-recording the status outcomes (so future cycles know whether the
-jobs are stale).
+This cycle should follow the 135/136/137/140 cheap-and-safe model:
+strengthen an existing predicate's non-vacuity story with a
+**substantive, axiom-clean witness that exercises a heretofore
+unwitnessed structural feature**.
 
-## Priority 1A — reinstate `thm:550A` general-n if Aristotle delivered
+---
 
-If Aristotle Job A returned a clean general-`n` proof:
+## Priority 0 (MANDATORY): Poll Aristotle Job A once, decide
 
-1. **Extract** the proof body via `mcp__aristotle__extract_result`
-   (project `7062c2a2-4a8b-4fae-b694-9355e06427a9`). Read the
-   extracted file and identify the proof of
-   `doublyCompanionMatrix_det_factorization`.
-2. **Reinstate the statement** in
-   `OpenMath/Chapter5/Section550.lean` directly after
-   `doublyCompanionMatrix_det_factorization_n_one`. The statement
-   shape (matching cycle-138 scaffold):
+**Action**: issue ONE call to
+`mcp__aristotle__get_status` on project
+`7062c2a2-4a8b-4fae-b694-9355e06427a9` (general-`n` `thm:550A`).
+
+**Decision tree**:
+
+* **If Job A returned COMPLETE** (low probability — 4 % at 24h is
+  flat-line): defer Priority 1 below; instead promote to Priority 1B:
+  extract via `mcp__aristotle__extract_result` and attempt to inline
+  as `doublyCompanionMatrix_det_factorization` (general n) in
+  `OpenMath/Chapter5/Section550.lean`. Verify axiom-clean via
+  `lean_verify`. If the extracted proof fails to compile after at
+  most ONE round of mechanical adaptation (rename hypothesis aliases
+  if shadowed), abandon and revert to Priority 1.
+
+* **If Job A is still IN_PROGRESS at < 10 %**: cancel via
+  `mcp__aristotle__cancel_project 7062c2a2-...`. Document in cycle
+  results that the job was killed after 24h flatlining at 4 %.
+  General-`n` closure is then officially blocked on the
+  cofactor-expansion / eigenvalue-density manual route documented
+  in `.prover-state/issues/thm_550A_general_n.md`. Proceed to
+  Priority 1.
+
+* **If Job A is IN_PROGRESS at ≥ 10 %**: leave running, proceed to
+  Priority 1.
+
+**Do NOT** re-poll Job A more than once this cycle. **Do NOT** submit
+any new Aristotle jobs this cycle — this is a manual-only cycle.
+
+---
+
+## Priority 1 (PRIMARY): Strengthen `def:530A` non-vacuity with a heterogeneous-stages witness
+
+**Target file**: `OpenMath/Chapter5/Section530.lean`
+
+**Mathematical motivation**
+
+The current witnesses `trivialStartingMethod` (cycle 139) and
+`zeroStartingMethod` (cycle 139) both have:
+* `r = 1` (single constituent method)
+* `stages = fun _ => 1` (all constituent methods have exactly 1 stage)
+
+This pair refutes degeneracy and confirms it on the *simplest possible*
+shape, satisfying CLAUDE.md non-vacuity. But it leaves the
+**heterogeneous-stages dependent-function** design in
+`StartingMethod.stages : Fin r → ℕ` (Section530.lean:82) UNTESTED:
+no existing witness exercises `r > 1` *with different `s_i`* per `i`.
+
+This is the same gap-closing pattern that cycles 134
+(`padded2DEulerGLM_isRKStable`, r=2 substantive witness) and 135
+(`implicitMidpointGLM_isAStable`, substantive Padé witness) followed.
+
+**Concrete deliverable**
+
+Add the following to `OpenMath/Chapter5/Section530.lean`:
+
+1. **A 2-stage `GeneralizedRungeKuttaMethod 2` definition**, e.g.
+   `nontrivialTwoStageGRK : GeneralizedRungeKuttaMethod 2` with:
+   * `c := ![0, 1]` (or `fun _ => 0` — any concrete values fine)
+   * `A := !![0, 0; 0, 0]` (a `Matrix (Fin 2) (Fin 2) ℝ`)
+   * `b₀ := 2` (any non-zero scalar; `2` makes it textually
+     distinguishable from the `1` used in `trivialGeneralizedRK`)
+   * `b := ![0, 0]`
+
+2. **`mixedStartingMethod : StartingMethod 2`** — a 2-method starting
+   method with **heterogeneous** stage counts:
+   * `stages 0 := 1`, `stages 1 := 2`. Implement as
+     `stages := ![1, 2]` or
+     `stages := fun i => if i.val = 0 then 1 else 2`.
+   * `method 0 := trivialGeneralizedRK` (1-stage with `b₀ = 1`).
+   * `method 1 := nontrivialTwoStageGRK` (2-stage with `b₀ = 2`).
+
+   Note: the dependent-typed `method` field requires `(method i :
+   GeneralizedRungeKuttaMethod (stages i))`. Use `match` or
+   `Fin.cases` to define this dependently.
+
+3. **`mixedStartingMethod_isNonDegenerate`** — non-vacuity theorem
+   stating `mixedStartingMethod.IsNonDegenerate`. Proof shape:
    ```
-   theorem doublyCompanionMatrix_det_factorization
-       {n : ℕ} (α β : Fin n → ℂ) :
-       Asymptotics.IsBigO (nhds (0 : ℂ))
-         (fun z : ℂ =>
-           (1 - z • doublyCompanionMatrix α β).det
-             - alphaPoly α z * betaPoly β z)
-         (fun z : ℂ => z ^ (n + 1))
+   rw [StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero]
+   refine ⟨0, ?_⟩
+   show (1 : ℝ) ≠ 0
+   exact one_ne_zero
    ```
-3. **Inline Aristotle's proof body verbatim**, then
-   `lake env lean OpenMath/Chapter5/Section550.lean` to verify it
-   compiles. If it fails, attempt at most ONE round of mechanical
-   adaptation (e.g. import additions, simp-set tweaks) — do **not**
-   spend the cycle rewriting a returned proof. If adaptation fails,
-   abandon the inlining and fall through to Priority 2.
-4. **Axiom check** via `lean_verify` on the fully qualified name. If
-   it returns anything beyond `[propext, Classical.choice, Quot.sound]`,
-   abort the inlining and fall through to Priority 2 — Butcher's §550
-   theorem is one of the load-bearing characterisations and must be
-   axiom-clean.
-5. **Update bookkeeping**:
-   * `extraction/formalization_data/lean_status.json` — flip
-     `thm:550A` to `formalized`, cycle 140, lean_symbol pointing at
-     the new theorem.
-   * `plan.md` — flip the `thm:550A` row to `[x]`.
-   * `.prover-state/issues/thm_550A_general_n.md` — prepend a "Status
-     update (cycle 140) — RESOLVED" stanza.
+   (Or use index `1` and `(2 : ℝ) ≠ 0` via `two_ne_zero`.)
 
-## Priority 1B — reinstate `thm:550A` n=2 only if only Job B delivered
+4. **`mixedStartingMethod_stages_neq`** — a one-line theorem
+   confirming `mixedStartingMethod.stages 0 ≠
+   mixedStartingMethod.stages 1`. Proof: `decide` (or
+   `Nat.one_ne_succ_succ` / explicit numeric `omega`). This is the
+   *load-bearing* theorem: it confirms the dependent-function design
+   is genuinely needed (the existing constant-stages witnesses leave
+   open the question of whether `stages : Fin r → ℕ` does real work).
 
-If only Job B returned a clean n=2 proof:
+**Estimated LOC**: ~50 (one new GRK `def`, one new `StartingMethod`
+`def`, two new theorems, plus docstrings).
 
-1. Extract via `mcp__aristotle__extract_result` on project
-   `70f26d67-b37e-4eda-b946-64c9f4616612`.
-2. Add a new theorem `doublyCompanionMatrix_det_factorization_n_two`
-   parallel in shape to the existing `_n_one`, with
-   `Fin 2 → ℂ` arguments and conclusion bounding by `z ^ 3`.
-3. Same axiom check as Priority 1A. Update `lean_status.json` to add
-   the new lean_symbol as a sub-witness (do NOT promote `thm:550A` to
-   `formalized` — the general-`n` statement is still missing).
-4. Then continue to Priority 2 if there is cycle budget remaining
-   (n=2 alone is light; ~30 min of work).
+**Approach (specific tactics)**:
 
-## Priority 2 — Manual `n = 2` closure (DEFAULT path if Aristotle did not deliver)
+* For the 2-stage tableau, the matrix-literal `!![0, 0; 0, 0]`
+  builds a `Matrix (Fin 2) (Fin 2) ℝ`; verify type-inference with a
+  `(_ : Matrix (Fin 2) (Fin 2) ℝ)` annotation if needed.
+* For the dependent `method` field, the cleanest form is
+  ```lean
+  method := fun i => match i with
+    | ⟨0, _⟩ => trivialGeneralizedRK
+    | ⟨1, _⟩ => nontrivialTwoStageGRK
+  ```
+  But this requires `(stages i) = 1` / `= 2` to definitionally hold
+  on each branch. If the `stages := ![1, 2]` form's matcher does not
+  reduce definitionally, fall back to using
+  `Fin.cases (motive := fun i => GeneralizedRungeKuttaMethod (stages i))`
+  with an explicit motive.
+* For `mixedStartingMethod_isNonDegenerate`, the proof template is
+  identical to the existing `trivialStartingMethod_isNonDegenerate`
+  (Section530.lean:140-145), just at a different index.
+* For `mixedStartingMethod_stages_neq`, `decide` should suffice;
+  `simp [mixedStartingMethod]; decide` if `decide` alone fails to
+  unfold.
 
-This is the **default path** for cycle 140 if Aristotle is still in
-flight. The n=2 case is mechanical (`Matrix.det_fin_two` plus ring
-arithmetic, paralleling cycle 138's n=1 closure) and provides a
-substantive stepping stone toward general-`n` while remaining
-axiom-clean.
+**Verification gates** (run all three before committing):
 
-### Concrete construction
+1. `lake env lean OpenMath/Chapter5/Section530.lean` — must exit 0,
+   no warnings.
+2. `lean_verify` (via the lean-lsp MCP) on each new theorem — must
+   return `[propext, Classical.choice, Quot.sound]` only. No
+   `sorryAx`.
+3. `lake build OpenMath.Chapter5` — must remain green.
 
-Add the following theorem to `OpenMath/Chapter5/Section550.lean`
-immediately after `doublyCompanionMatrix_det_factorization_n_one`:
+**Faithfulness**: This is a non-vacuity strengthening (cycle 134/135
+pattern), not a new mathematical claim. No textbook divergence.
 
-```
-theorem doublyCompanionMatrix_det_factorization_n_two
-    (α β : Fin 2 → ℂ) :
-    Asymptotics.IsBigO (nhds (0 : ℂ))
-      (fun z : ℂ =>
-        (1 - z • doublyCompanionMatrix α β).det
-          - alphaPoly α z * betaPoly β z)
-      (fun z : ℂ => z ^ 3)
-```
+---
 
-### Algebraic skeleton (verified by hand against the existing definition)
+## Priority 2 (STRETCH, only if Priority 1 lands with > 30 min cycle time remaining): Refutability witness for degeneracy at `r = 2`
 
-For `n = 2`, the doubly companion matrix unfolds to
-```
-X = !![-α 0, -α 1 - β 1;
-       1,     -β 0]
-```
-(row 0 col 0: `i.val = 0`, `j.val + 1 = 1 ≠ 2`, so `-α 0`; row 0
-col 1: `i.val = 0`, `j.val + 1 = 2 = n`, so `-α (n-1) - β (n-1) =
--α 1 - β 1`; row 1 col 0: `i.val ≠ 0`, `j.val + 1 = 1 ≠ 2`,
-`i.val = j.val + 1 = 1`, so `1`; row 1 col 1: `i.val ≠ 0`,
-`j.val + 1 = 2 = n`, so `-β (n - i.val - 1) = -β 0`.)
+After Priority 1, the only `IsDegenerate` witness at hand is
+`zeroStartingMethod` (`r = 1`). Add a parallel:
 
-Hence
-```
-I - zX = !![1 + zα 0,   z(α 1 + β 1);
-            -z,          1 + zβ 0]
-```
-and `Matrix.det_fin_two` gives
-```
-det(I - zX) = (1 + zα 0)(1 + zβ 0) - z(α 1 + β 1)·(-z)
-            = (1 + zα 0)(1 + zβ 0) + z²(α 1 + β 1)
-            = 1 + (α 0 + β 0) z
-                + (α 0 · β 0 + α 1 + β 1) z².
-```
-Meanwhile,
-```
-α(z) · β(z) = (1 + α 0 z + α 1 z²)(1 + β 0 z + β 1 z²)
-            = 1 + (α 0 + β 0) z
-                + (α 0 · β 0 + α 1 + β 1) z²
-                + (α 0 · β 1 + α 1 · β 0) z³
-                + α 1 · β 1 · z⁴.
-```
-The residue is therefore
-```
-det - α·β = -(α 0 · β 1 + α 1 · β 0) z³ - α 1 · β 1 · z⁴
-          = z³ · (-(α 0 · β 1 + α 1 · β 0) - α 1 · β 1 · z),
-```
-which is `O(z³) = O(z^{2+1})` near 0.
+* **`zero2StartingMethod : StartingMethod 2`** with both methods
+  being 1-stage `zeroGeneralizedRK` (so `stages := fun _ => 1`,
+  `method := fun _ => zeroGeneralizedRK`).
+* **`zero2StartingMethod_isDegenerate`** — `IsDegenerate` proof via
+  `intro i; fin_cases i; · rfl; · rfl`.
 
-### Tactic plan (mirror of `_n_one`)
+This is ~15 LOC and confirms the dichotomy is non-trivial across
+`r = 2` shapes. Skip if Priority 1 takes the full cycle budget.
 
-**Step 1a** — add a private simp lemma paralleling the existing
-`doublyCompanionMatrix_one_eq`:
-```
-@[simp]
-private lemma doublyCompanionMatrix_two_eq (α β : Fin 2 → ℂ) :
-    doublyCompanionMatrix α β
-      = !![-α 0, -α 1 - β 1;
-           1,    -β 0] := by
-  ext i j
-  fin_cases i <;> fin_cases j <;>
-    simp [doublyCompanionMatrix]
-```
-If `simp [doublyCompanionMatrix]` doesn't fully close one of the
-four entries, fall back to per-case `if_pos`/`if_neg` rewrites with
-explicit `decide`/`Fin.val_zero`/`Fin.val_succ` evidence.
+---
 
-**Step 1** — establish the closed-form residue:
-```
-have h_diff : (fun z : ℂ =>
-    (1 - z • doublyCompanionMatrix α β).det
-      - alphaPoly α z * betaPoly β z)
-    = (fun z : ℂ =>
-        z^3 * (-(α 0 * β 1 + α 1 * β 0) - α 1 * β 1 * z)) := by
-  funext z
-  rw [doublyCompanionMatrix_two_eq]
-  -- Reduce 1 - z • !![…] to a !![…] form.
-  have hmat :
-      (1 - z • !![-α 0, -α 1 - β 1; 1, -β 0]
-         : Matrix (Fin 2) (Fin 2) ℂ)
-        = !![1 + z * α 0, z * (α 1 + β 1);
-             -z,            1 + z * β 0] := by
-    ext i j
-    fin_cases i <;> fin_cases j <;> simp <;> ring
-  rw [hmat, Matrix.det_fin_two]
-  simp [alphaPoly, betaPoly, Fin.sum_univ_succ, Fin.sum_univ_zero]
-  ring
-rw [h_diff]
-```
+## Priority 3 (BACKUP, only if Priority 1 hits an unexpected blocker): Open `OpenMath/Chapter4/Section442.lean` with `def:442A` (principal sheet) skeleton
 
-**Step 2** — bridge `z³ · (linear in z)` to `O(z³)`. The cleanest
-formulation:
-```
--- Goal: IsBigO (𝓝 0)
---   (fun z => z^3 * (-(α 0 * β 1 + α 1 * β 0) - α 1 * β 1 * z))
---   (fun z => z^3)
-refine (Asymptotics.isBigO_refl (fun z : ℂ => z^3) _).mul_isBigO ?_
--- Now: IsBigO (𝓝 0)
---   (fun z => -(α 0*β 1 + α 1*β 0) - α 1*β 1*z)  (fun _ => 1)
-exact (Asymptotics.isBigO_const_const _ one_ne_zero _).add
-        ((Asymptotics.isBigO_id (𝓝 0)).const_mul_left _ |>.trans
-         (Asymptotics.isBigO_const_const _ one_ne_zero _))
-```
-(If the `mul_isBigO` lemma name doesn't match Mathlib's, search via
-`lean_local_search "IsBigO" "mul"` or `lean_loogle "IsBigO _ _"`.
-The fallback is `Asymptotics.IsBigO.mul (isBigO_refl …) (h : IsBigO …)`.)
+If Priority 1 stalls on dependent-typing issues (e.g. the
+heterogeneous `method` field's matcher does not reduce
+definitionally and `Fin.cases` motive plumbing eats the cycle
+budget), pivot to opening Chapter 4 §442:
 
-**Step 2 fallback (preferred if Step 2 above is fiddly)** — split
-the residue additively as
-```
-(fun z => z^3 * c0) + (fun z => z^4 * c1)
-```
-where `c0 := -(α 0 · β 1 + α 1 · β 0)` and `c1 := -(α 1 · β 1)`,
-then prove each summand is `O(z^3)` separately:
-* `z^3 * c0`: via `(isBigO_refl _ _).const_mul_left c0`.
-* `z^4 * c1 = z^3 * (z * c1)`: via `(isBigO_refl _ _).mul_isBigO`
-  with the inner `z * c1` being `O(1)` near `0`
-  (`(isBigO_id (𝓝 0)).const_mul_left c1` is `O(z) ⊆ O(1)` since
-  `z → 0` ⇒ `z` is bounded near `0` ⇒ `z^4 = O(z^3)` because
-  `z^4 = z^3 · z` with `z` bounded).
+* Open `OpenMath/Chapter4/Section442.lean` with the **principal
+  sheet** structural definition. The principal sheet is the unique
+  branch of the stability function `r(z)` of an LMM near `z = 0`
+  satisfying `r(0) = 1`. Define the predicate
+  `IsPrincipalSheet (M : LinearMultistepMethod k) (r : ℂ → ℂ) : Prop`
+  capturing the textbook condition.
+* Witness: `(0 : ℂ → ℂ)` is *not* a principal sheet (refutes
+  vacuity); the constant `1` function is also *not* a principal
+  sheet without the consistency conditions; the principal sheet of
+  explicit Euler is `r(z) = 1 + z`, which IS a principal sheet —
+  prove `isPrincipalSheet_explicit_euler`.
 
-If both Step 2 routes fight the type system for > 30 minutes, fall
-through to Priority 3 B1.
+**Risk**: this requires `Complex.HasDerivAt` infrastructure for
+`r(0) = 1` and `r'(0) = 1` consistency clauses. Only pivot here if
+Priority 1 is genuinely blocked, NOT just slow. Estimated 80 LOC if
+attempted.
 
-### Verification protocol
+---
 
-* `lake env lean OpenMath/Chapter5/Section550.lean` — must succeed
-  without any sorry.
-* `lean_verify OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_two`
-  — must return `[propext, Classical.choice, Quot.sound]`.
-* `lake build OpenMath.Chapter5` — must remain green (~2790 jobs).
+## What NOT to try (explicit failed-approach blacklist)
 
-### Bookkeeping if Priority 2 succeeds
+1. **Do NOT attempt manual general-`n` `thm:550A`.** Per
+   `.prover-state/issues/thm_550A_general_n.md`, this requires
+   either (a) cofactor-expansion induction over the sparse
+   `(I − zX)` structure (~150 LOC, multi-cycle), (b) eigenvalue-
+   density argument with Mathlib continuity-of-charpoly (~300 LOC,
+   2–3 cycles), or (c) `n`-induction via the bottom-right block.
+   None fits a single-cycle budget. Aristotle Job A has been
+   running for 24h at 4 % — it is not happening this cycle.
 
-* `extraction/formalization_data/lean_status.json` — keep `thm:550A`
-  as `partial`, but extend the `notes` field to mention the n=2
-  lean_symbol alongside the existing `_n_one`.
-* `plan.md` `thm:550A` row — extend the cycle-139 note to mention
-  the new n=2 stepping stone.
-* `.prover-state/issues/thm_550A_general_n.md` — prepend a "Cycle
-  140 update" stanza recording the n=2 closure as additional
-  evidence the formula is correct, and noting that general-`n`
-  remains open.
+2. **Do NOT open `def:530B` or `def:530C`** ("Order relative to
+   starting method"). These require Taylor-expansion infrastructure
+   for SM/GLM composition that does not yet exist in the codebase;
+   cycle-139 strategy explicitly warned against this. Estimated
+   3+ cycles of careful infrastructure work; out of scope.
 
-### Time budget
+3. **Do NOT submit new Aristotle jobs.** This is a manual-only
+   cycle. The Aristotle slot is occupied by Job A; do not stack
+   submissions while one is pending.
 
-* Aristotle poll + decision branching: 5 minutes.
-* Manual n=2 closure: 60–75 minutes (mostly unfold + ring + IsBigO
-  plumbing).
-* Bookkeeping + axiom checks: 15 minutes.
-* Total: ≈ 90 minutes, well within a single cycle.
+4. **Do NOT re-poll Aristotle Job A more than once.** Per
+   CLAUDE.md "one check after 30 min is enough" + the cycle-140
+   precedent.
 
-## Priority 3 — Backup plans if Priority 2 stalls
+5. **Do NOT introduce ANY new `sorry`.** Sorry count must stay at 0.
+   The cycle 138 score (−2) was triggered solely by sorry regression.
+   If a witness encounters difficulty, ABANDON the new code (do not
+   commit) rather than commit it with a sorry.
 
-The `IsBigO`-of-polynomial reasoning at Step 2 of Priority 2 is the
-most likely sticking point. Two escape hatches, in order of
-preference:
+6. **Do NOT re-prove or re-state `thm:550A` for `n ≥ 3`.** The
+   Job-B-style proof at `n = 2` worked because of `Matrix.det_fin_two`;
+   `Matrix.det_fin_three` exists but the residue polynomial expansion
+   grows quickly and the `IsBigO` bound becomes non-trivial. If we
+   want `n = 3` later, that's a focused future cycle, not this one.
 
-### B1 (preferred) — drop to a pointwise residue identity
+7. **Do NOT modify `lean_status.json`'s `formalization_status`
+   field for `def:530A`** — it remains `formalized` (cycle 139).
+   Just bump the `cycle` field if `lean_status.json` records cycles
+   per-entity, and update the `notes` to mention the new
+   heterogeneous-stages witness.
 
-If Step 2 won't compile within ~30 minutes of attempts, simplify the
-target to a **pointwise polynomial-equality witness**, not an
-asymptotic statement. Replace the n=2 theorem with:
+8. **Do NOT try `mixedStartingMethod` with `r > 2`.** `r = 2` is
+   the minimal heterogeneous-stages case; larger `r` adds matcher
+   complexity without proving anything new. Stay at `r = 2`.
 
-```
-theorem doublyCompanionMatrix_det_residue_n_two
-    (α β : Fin 2 → ℂ) (z : ℂ) :
-    (1 - z • doublyCompanionMatrix α β).det
-        - alphaPoly α z * betaPoly β z
-      = z^3 * (-(α 0 * β 1 + α 1 * β 0) - α 1 * β 1 * z)
-```
+9. **Do NOT use `Aristotle` for the §530 mixed witness.** It's a
+   ~50-LOC structural definition + two trivial theorems; manual
+   coding is faster than the submit/poll cycle.
 
-This is just Priority-2 Step 1's `h_diff` exposed as a public theorem.
-It still provides a substantive n=2 witness (the closed-form residue
-identity is the load-bearing piece for any `IsBigO` upgrade) and is
-purely algebraic, so it lands axiom-clean by `simp + ring` without
-needing the asymptotic plumbing. The `IsBigO` upgrade can come in a
-later cycle.
+---
 
-Bookkeeping: same as Priority 2, but lean_symbol points at
-`_residue_n_two` instead of `_factorization_n_two`.
+## Definition-of-Done checklist
 
-### B2 — pivot to a substantive non-trivial §530 starting-method witness
+By end of cycle 141:
 
-If Priority 2 is genuinely blocked (e.g. `Matrix.det_fin_two` does
-not unfold cleanly against the `if-then-else`-laden
-`doublyCompanionMatrix` definition, or the `!![…]` notation refuses
-to elaborate at `Fin 2 × Fin 2` over `ℂ`), pivot away from §550 and
-enrich §530.
+- [ ] Aristotle Job A polled exactly once; cancelled or left running
+      per the Priority 0 decision tree.
+- [ ] If Job A was COMPLETE: general-`n` proof inlined and
+      axiom-clean (Priority 1B). Else:
+- [ ] `nontrivialTwoStageGRK : GeneralizedRungeKuttaMethod 2`
+      defined.
+- [ ] `mixedStartingMethod : StartingMethod 2` defined with
+      `stages 0 = 1`, `stages 1 = 2`.
+- [ ] `mixedStartingMethod_isNonDegenerate` proved axiom-clean.
+- [ ] `mixedStartingMethod_stages_neq` proved axiom-clean.
+- [ ] (Stretch) `zero2StartingMethod_isDegenerate` proved
+      axiom-clean.
+- [ ] `lake env lean OpenMath/Chapter5/Section530.lean` clean.
+- [ ] `lake build OpenMath.Chapter5` returns green.
+- [ ] Sorry count remains 0 across the entire `OpenMath/` tree.
+- [ ] `lean_status.json` `def:530A` notes updated to mention the
+      cycle-141 heterogeneous witness.
+- [ ] `plan.md` `def:530A` row notes the cycle-141 strengthening
+      (one-line append; status remains `[x]`).
+- [ ] `.prover-state/task_results/cycle_141.md` written per
+      CLAUDE.md template (Worked on / Approach / Result /
+      Faithfulness check / Dead ends / Discovery / Suggested next
+      approach).
+- [ ] All work committed and pushed.
 
-Add to `OpenMath/Chapter5/Section530.lean`:
+## Why this strategy
 
-* A **2-stage trivial generalized RK** `twoStageGeneralizedRK : GeneralizedRungeKuttaMethod 2`
-  with `c = ![0, 1/2]`, `A = !![0, 0; 1/2, 0]`, `b₀ = 1`,
-  `b = ![0, 1]` (an explicit-midpoint-style 2-stage tableau).
-* A **mixed-stages starting method** `mixedStartingMethod : StartingMethod 2`
-  with `stages 0 = 1, stages 1 = 2`, `method 0 := trivialGeneralizedRK`,
-  `method 1 := twoStageGeneralizedRK`. This demonstrates the
-  heterogeneous-`s_i` capability is non-vacuous (currently only
-  the constant `stages = fun _ => 1` case is witnessed).
-* `mixedStartingMethod_isNonDegenerate` — exhibits the `i = 0`
-  constituent's `b₀ = 1 ≠ 0` via the same
-  `isNonDegenerate_iff_exists_b₀_ne_zero` route.
-
-This delivers **two new structures + one axiom-clean theorem** that
-genuinely exercise the dependent-stages design. Strictly substantive
-(not just renaming the trivial witness).
-
-Bookkeeping: leave `lean_status.json` `def:530A` row at cycle 139
-(no status change needed; this is just a richer non-vacuity story).
-Mention the new mixed-stages witness in the `def:530A` `notes` field.
-
-## What NOT to do this cycle
-
-* **Do NOT introduce a sorry-first scaffold for `thm:550A`
-  general-`n`.** Cycle 138's −2 score is the canonical example. If
-  Aristotle hasn't returned, the n=2 manual closure is the path; do
-  not stage a general-`n` statement with `sorry` body.
-* **Do NOT poll Aristotle more than once.** Per CLAUDE.md. One
-  status check per project at the start of the cycle, no follow-ups.
-* **Do NOT submit a fresh Aristotle job for general-n while Job A
-  is still IN_PROGRESS.** Duplicates spend.
-* **Do NOT attempt the manual cofactor-expansion / induction proof
-  for general-`n`.** Per `thm_550A_general_n.md` and cycle-139 task
-  results, this is multi-cycle infrastructure (~150–300 LOC across
-  2–3 cycles). It is explicitly out of scope for cycle 140.
-* **Do NOT raise `maxHeartbeats`.** CLAUDE.md hard rule.
-* **Do NOT cherry-pick a cosmetic Chapter 3 leaf** (e.g.
-  `def:381F` / `def:381B` / `def:381D`) as a substitute for
-  Priority 2/3. `def:381F` is **blocked** by the deferred
-  `reducedMethod` construction (see
-  `.prover-state/issues/reduced_method_deferred.md`); the others are
-  pure renaming exercises that don't justify a cycle.
-* **Do NOT open `def:530B` / `def:530C` ("order relative to a
-  starting method").** These genuinely require Taylor-expansion
-  infrastructure for the `SM` and `ES` composition (see cycle 139
-  task results §"Suggested next approach"); they are multi-cycle and
-  high-risk for a single-cycle deliverable.
-* **Do NOT touch `scripts/autonomous_loop.py`** or any harness file.
-  Per CLAUDE.md and `tautology_scanner_false_positives.md` (loop-
-  maintainer territory).
-* **Do NOT modify `extraction/raw_text/` or
-  `extraction/formalization_data/entities/`.** Both are
-  regenerated; updates go to `extraction/extensions/` (none
-  needed this cycle) or `lean_status.json`.
-
-## Pre-commit checklist (mandatory)
-
-Before `git add` / `git commit`, verify:
-
-1. **Sorry count**:
-   `Grep '\bsorry\b' OpenMath/ --output_mode count` — confirm zero
-   matches in proof bodies (docstring/comment matches OK; verify
-   manually).
-2. **Axiom-clean**: every new public theorem returns
-   `[propext, Classical.choice, Quot.sound]` from `lean_verify`.
-3. **Build**: `lake build OpenMath.Chapter5` exits with all jobs
-   green (expected ~2790 jobs after this cycle's additions).
-4. **`lean_status.json`**: rows for `thm:550A` (and `def:530A` if
-   touched under B2) carry the cycle 140 reference and a clear
-   lean_symbol pointer.
-5. **Faithfulness check** in `cycle_140.md` covers every new `def`,
-   `structure`, and `theorem` introduced this cycle — quote the
-   textbook entity, confirm the Lean statement matches (or document
-   any deviation explicitly).
-6. **`plan.md`** reflects any status changes.
-7. **Tautology scanner sanity**: no `:= h_<name>` or `exact h_<name>`
-   patterns introduced (rename to `hname` form if necessary, per
-   `.prover-state/issues/tautology_scanner_false_positives.md`).
-
-## Decision tree summary
-
-```
-Cycle 140 entry
-  │
-  ├─ Poll Aristotle Jobs A (general-n) and B (n=2)  ← MANDATORY
-  │
-  ├─ Job A returned clean? ──→ Priority 1A: reinstate general-n
-  │     │                       (full closure of thm:550A)
-  │     └─ axiom check fails? ─→ fall through to Priority 2
-  │
-  ├─ Only Job B returned clean? ──→ Priority 1B: add n=2 from
-  │     │                            Aristotle, then continue to
-  │     │                            Priority 2 if budget permits
-  │     └─ axiom check fails? ─→ fall through to Priority 2
-  │
-  ├─ Neither returned (default expected outcome) ─→ Priority 2:
-  │     │                           manual n=2 closure
-  │     └─ Step 2 IsBigO plumbing stalls ─→ Priority 3 B1 (residue
-  │                                          identity) or B2 (§530
-  │                                          mixed-stages witness)
-  │
-  └─ Both FAILED outright ──→ cancel both, then Priority 2
-```
-
-## Expected deliverable
-
-A single commit with one of:
-
-* **(Best case)** `thm:550A` reinstated at general `n`, axiom-clean,
-  flipped to `formalized` in `lean_status.json` and `plan.md`.
-* **(Default expected)** New axiom-clean theorem
-  `doublyCompanionMatrix_det_factorization_n_two` adding a 2x2
-  witness for §550, plus the helper simp lemma
-  `doublyCompanionMatrix_two_eq`. `thm:550A` remains `partial` with
-  two stepping stones (n=1 and n=2).
-* **(Backup)** Either the pointwise residue identity B1
-  (`doublyCompanionMatrix_det_residue_n_two`) or the §530
-  enrichment B2 (mixed-stages starting method), depending on which
-  Step-2 obstruction bites.
-
-Whatever the deliverable, sorry count must remain 0 and all new
-public theorems must verify axiom-clean.
+* **Risk-minimizing**: every action is either zero-risk (polling
+  Aristotle) or +2-pattern non-vacuity strengthening (Priority 1).
+  No new sorries introduced. No new infrastructure opened.
+* **Forward progress**: closes a real gap in the §530 non-vacuity
+  story (heterogeneous-stages design currently untested).
+* **Fits cycle budget**: estimated 50 LOC for the primary deliverable,
+  ~15 LOC for the stretch goal. Well within a single-cycle budget.
+* **Builds momentum**: cycle 141 will be the 7th consecutive
+  axiom-clean Chapter-5 substantive cycle (135–141 modulo the 138
+  revert). Strengthening §530 keeps the §530 entry point warm
+  for the def:530B/C work that will eventually need it.

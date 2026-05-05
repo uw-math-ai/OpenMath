@@ -197,7 +197,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 ## Chapter 5 — General Linear Methods  (35 entities)
 
 - [ ] `cor:550C` **Inverse of companion matrix derivative basis** (§550)
-- [x] `def:530A` **non-degenerate** (§530) — `OpenMath/Chapter5/Section530.lean` (cycle 139: opens §530 with the `GeneralizedRungeKuttaMethod` (530a) tableau, `StartingMethod` dependent-sequence structure, and the `IsDegenerate` / `IsNonDegenerate` predicates. Non-vacuity witnessed by `trivialStartingMethod_isNonDegenerate` (r=1, b₀=1 ≠ 0); `zeroStartingMethod_isDegenerate` confirms refutability. All three public theorems axiom-clean.)
+- [x] `def:530A` **non-degenerate** (§530) — `OpenMath/Chapter5/Section530.lean` (cycle 139: opens §530 with the `GeneralizedRungeKuttaMethod` (530a) tableau, `StartingMethod` dependent-sequence structure, and the `IsDegenerate` / `IsNonDegenerate` predicates. Non-vacuity witnessed by `trivialStartingMethod_isNonDegenerate` (r=1, b₀=1 ≠ 0); `zeroStartingMethod_isDegenerate` confirms refutability. All three public theorems axiom-clean. Cycle 141: heterogeneous-stages witness added — `nontrivialTwoStageGRK` (s=2, b₀=2), `mixedStartingMethod` (r=2, `stages 0 = 1`, `stages 1 = 2`) with `mixedStartingMethod_isNonDegenerate`; `mixedStartingMethod_stages_neq` confirms the dependent `stages : Fin r → ℕ` design is genuinely needed; `zero2StartingMethod_isDegenerate` witnesses degeneracy at r=2.)
 - [x] `def:510A` **preconsistency vector** (§510) — `OpenMath/Chapter5/Section510.lean`
 - [x] `def:510C` **stable** (§510) — `OpenMath/Chapter5/Section510.lean`
 - [ ] `def:530B` **Order relative to starting method (530B)** (§530)
