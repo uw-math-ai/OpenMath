@@ -239,9 +239,9 @@
     "status": "unformalized"
   },
   "def:542A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section520.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsRKStable",
+    "status": "formalized"
   },
   "def:551A": {
     "lean_file": null,

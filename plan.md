@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 66 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 67 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -217,7 +217,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `thm:520D` **Instability Region Boundary Characterization** (§520) — `OpenMath/Chapter5/Section520.lean` (cycle 126, axiom-clean: closed both directions of §520D. Direction (1) `instabilityRegion_subseteq_closed_disc_zeros` (`instabilityRegion ⊆ {z : ∃ w, ‖w‖ ≥ 1, Φ(w,z) = 0}`) and direction (2) `instabilityRegion_supseteq_outside_disc` (`{z : ∃ w, ‖w‖ > 1, Φ(w,z) = 0} ⊆ instabilityRegion`). Decomposed via four private sub-lemmas: D1 `stabilityFunction_eq_zero_iff_mem_spectrum` bridges `Φ(w,z) = 0 ↔ w ∈ spectrum ℂ M(z)` via `Matrix.eval_charpoly` + `mem_spectrum_iff_isRoot_charpoly`; D3 `stabilityRegion_imp_spectralRadius_le_one` from PowerBounded gives `spectralRadius ≤ 1` via `spectrum.pow_mem_pow` + `tendsto_pow_atTop_atTop_of_one_lt`; D4 `instabilityRegion_imp_spectralRadius_ge_one` is the contrapositive via Section142's `minpoly_roots_lt_one_imp_convergent` + `Filter.Tendsto.bddAbove_range`; direction (1) combines D1 + D4 + `spectrum.exists_nnnorm_eq_spectralRadius` (case-splitting on `Nonempty (Fin r)` for the empty-matrix degeneracy); direction (2) is direct via D1 + spectral pow-norm bound. All public theorems axiom-clean.)
 - [ ] `thm:550A` **Doubly companion matrices** (§550)
 - [x] `def:520E` **A-stable** (§520) — OpenMath/Chapter5/Section520.lean
-- [ ] `def:542A` **annihilation conditions** (§542)
+- [x] `def:542A` **Runge–Kutta stability** (§542) — OpenMath/Chapter5/Section520.lean (cycle 130, axiom-clean; predicate + `explicitEulerGLM_isRKStable` witness with `R(z) = 1 + z`)
 - [x] `lem:515B` **Stability and Consistency Imply Convergence (515B)** (§515) — OpenMath/Chapter5/Section515.lean (cycle 107: `aux_515B_eta_contraction` closed via M-matrix comparison principle with explicit `‖(h₀L)·|A|‖<1` Frobenius hypothesis)
 - [ ] `thm:521B` **Maximum stability order for given steps** (§521)
 - [ ] `thm:523B` **Nonlinear Stability via Positive Semidefiniteness** (§523)

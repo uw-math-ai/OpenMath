@@ -1,358 +1,283 @@
-# Strategy — cycle 128
+# Cycle 130 strategy
 
-## Context recap
+## Status snapshot
 
-Cycle 127 closed `lem:515C` as a thin public wrapper over the existing
-helper, completing **§515 at 100%** (4/4: 515A/B/C/D all axiom-clean).
-There is **no pending Aristotle work**, **no open `sorry`s** in the
-tree, and **no in-progress theorem**. We need to pick a fresh target.
+* No pending Aristotle results; no in-flight jobs.
+* No sorries on the branch (verified via `## Sorry locations` in the
+  prompt).
+* Cycle 129 closure landed at `5eb5ae0` — `def:525A` is now witnessed
+  axiom-clean by *both* `explicitEulerGLM` (trivial G=D=0 witness) and
+  `implicitMidpointGLM` (substantive G=D=1 witness).
+* Progress: 66 / 175 entities formalized.
 
-## Target — `def:525A` (G-symplectic methods)
+## Target
 
-**Primary deliverable**: formalize `def:525A` "G-symplectic methods"
-(Butcher §525, p. 429) in a new file `OpenMath/Chapter5/Section525.lean`,
-plus a non-vacuity witness.
+**Primary**: `def:542A` — *Runge–Kutta stability* of a general linear
+method (Butcher §542, page 445).
 
-### Why this target (not `def:530A`, not `thm:535A`, not `thm:550A`)
+**Secondary** (do this *after* primary lands and only if budget
+permits): two mirror lemmas
+`implicitMidpointGLM_isStable` and
+`implicitMidpointGLM_isConsistent` in
+`OpenMath/Chapter5/Section510.lean`. Cycle 129 task results
+flagged these as "one-line proofs" mirroring the existing
+`explicitEulerGLM_*` pair — the `V` blocks coincide so the proofs
+will copy verbatim modulo the structure name.
 
-* `def:530A` (non-degenerate starting method) requires a *new datatype*
-  for "starting method = sequence of generalized Runge–Kutta methods"
-  including the equation-(530a) RK structure. That's an
-  infrastructure cycle, not a definition cycle. Defer.
-* `thm:535A` (underlying one-step method GLM) consumes §530 order
-  theory which doesn't exist yet. Defer.
-* `thm:550A` (doubly companion matrices) needs a new datatype. Defer.
-* `def:551A` (Inherent RK stability) transitively depends on `def:542A`,
-  `thm:550A`, `cor:550C` — all unformalized. Defer.
-* `def:525A` is **pure matrix algebra on the existing
-  `GeneralLinearMethod` structure** (Section510.lean:63). Three
-  equations on `(A, U, B, V)` plus existence of auxiliary matrices
-  `G` (PSD symmetric) and `D` (diagonal). The transitive-deps list
-  in `entities/def_525A.json` cites §530 entries — but those are
-  LLM-identified false dependencies (the literal definition does
-  NOT reference any §530 concept). Verify by re-reading the
-  `statement_text` field before proceeding.
+These are explicitly *secondary*. If primary takes longer than
+expected, ship primary alone — do NOT bundle.
 
-### Textbook content (verbatim from `entities/def_525A.json`)
+## Why `def:542A` is the right pick
 
-> A general linear method `(A, U, B, V)` is G-symplectic if there
-> exists a positive semi-definite symmetric `r × r` matrix `G` and an
-> `s × s` diagonal matrix `D` such that
->   `Vᵀ G V = G`     (525a)
->   `D U = Bᵀ G V`   (525b)
->   `D A + Aᵀ D = Bᵀ G B`   (525c)
+* It is a leaf definition (no proof obligations beyond non-vacuity).
+* All the infrastructure it needs is already in
+  `OpenMath/Chapter5/Section520.lean`:
+  * `GeneralLinearMethod.stabilityMatrix` (line 96).
+  * `GeneralLinearMethod.stabilityFunction` (line 150,
+    `(w • 1 − M(z)).det` = `Φ(w,z)`).
+  * `explicitEulerGLM_stabilityFunction` (line 461) gives
+    `Φ(w,z) = w − 1 − z` — this *is* the witness equation modulo a
+    rearrangement.
+* It unblocks two downstream entities directly: `def:551A`
+  ("Inherent Runge–Kutta stability") and the §550–§553 cluster's
+  hooks into RK-stability.
+* The textbook example `r = 1` (which both `explicitEulerGLM` and
+  `implicitMidpointGLM` satisfy) gives a clean, unconditional
+  non-vacuity witness without any 2×2 Mathlib gymnastics.
 
-### Step 1 — read inputs (MANDATORY before coding)
+## Textbook statement (verbatim from `entities/def_542A.json`)
 
-1. Open `extraction/formalization_data/entities/def_525A.json`.
-   Confirm:
-   * `kind = "definition"`,
-   * the three equations as quoted above,
-   * **the literal statement does not mention "starting method",
-     "order", or any §530 concept**. (The `transitive_dependencies`
-     list is misleading here; the LLM heuristically attached §530
-     entries that the definition itself does not invoke.)
-2. Open `OpenMath/Chapter5/Section510.lean` lines 63–148. Confirm
-   `GeneralLinearMethod s r` has fields `A : Matrix (Fin s) (Fin s) ℝ`,
-   `U : Matrix (Fin s) (Fin r) ℝ`, `B : Matrix (Fin r) (Fin s) ℝ`,
-   `V : Matrix (Fin r) (Fin r) ℝ`. Confirm `explicitEulerGLM`
-   (line 144) exists with `A = !![0], U = !![1], B = !![1], V = !![1]`.
+> A general linear method `(A, U, B, V)` has 'Runge–Kutta stability'
+> if the characteristic polynomial given by (542a) has the form
+>
+>     `Φ(w, z) = w^(r−1) (w − R(z))`.
+>
+> For a method with Runge–Kutta stability, the rational function
+> `R(z)` is known as the 'stability function' of the method.
 
-### Step 2 — search Mathlib before defining
+`Φ(w, z) := det(wI − M(z))` per (542a). Our existing
+`GeneralLinearMethod.stabilityFunction` is *exactly* this `Φ`
+(verified by `stabilityFunction_eq_zero_iff_mem_spectrum` at
+Section520.lean:528, which uses `Matrix.eval_charpoly`).
 
-Per CLAUDE.md "Before creating any new definition, use Lean LSP search
-tools to check whether an equivalent Mathlib definition already exists":
+## Encoding choices
 
-* `lean_local_search "Symplectic"` — confirm there is no Mathlib
-  predicate matching G-symplectic GLMs. (Mathlib has
-  `SymplecticGroup` and `Matrix.IsSymplectic`, but those are about
-  preserving an antisymmetric bilinear form on `K^{2n}`, NOT this
-  notion.)
-* `lean_local_search "PosSemidef"` — confirm
-  `Matrix.PosSemidef` exists (it does, in
-  `Mathlib.LinearAlgebra.Matrix.PosDef`) and use it for the `G` PSD
-  + symmetric condition. (Mathlib's `PosSemidef` already bundles
-  `IsHermitian` over ℝ ⇒ symmetric.)
-* `lean_local_search "Matrix.IsDiag"` — `Matrix.IsDiag` is the
-  Mathlib predicate for diagonal matrices; use it.
-
-### Step 3 — write the predicate
-
-In a new file `OpenMath/Chapter5/Section525.lean`:
+Add to `OpenMath/Chapter5/Section520.lean` (extending the existing
+`OpenMath.Chapter5.Section510` namespace where `stabilityFunction`
+lives — *not* a new file; this keeps the §520/§542 stability cluster
+together in one place):
 
 ```lean
-import OpenMath.Chapter5.Section510
-
-namespace OpenMath.Chapter5.Section510
-
-namespace GeneralLinearMethod
-
-variable {s r : ℕ}
-
-/-- Butcher §525 def:525A — A general linear method `(A, U, B, V)` is
-**G-symplectic** if there exist a PSD symmetric `r × r` matrix `G` and
-a diagonal `s × s` matrix `D` satisfying
-
-* (525a) `Vᵀ G V = G`,
-* (525b) `D U = Bᵀ G V`,
-* (525c) `D A + Aᵀ D = Bᵀ G B`. -/
-def IsGSymplectic (M : GeneralLinearMethod s r) : Prop :=
-  ∃ (G : Matrix (Fin r) (Fin r) ℝ) (D : Matrix (Fin s) (Fin s) ℝ),
-    G.PosSemidef ∧ D.IsDiag ∧
-    M.V.transpose * G * M.V = G ∧
-    D * M.U = M.B.transpose * G * M.V ∧
-    D * M.A + M.A.transpose * D = M.B.transpose * G * M.B
+/-- §542A: a general linear method `M : GeneralLinearMethod s r`
+has *Runge–Kutta stability* if its stability function `Φ(w, z)`
+factorises as `w^(r−1) · (w − R z)` for some scalar function
+`R : ℂ → ℂ`. Such an `R` is then called the *stability function*
+of `M` (a rational function in the textbook). -/
+def GeneralLinearMethod.IsRKStable {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  ∃ R : ℂ → ℂ, ∀ w z : ℂ,
+    M.stabilityFunction w z = w ^ (r - 1) * (w - R z)
 ```
 
-Verify shapes:
-* `B : Matrix (Fin r) (Fin s) ℝ` ⇒ `Bᵀ : Matrix (Fin s) (Fin r) ℝ`.
-* `Bᵀ * G : Matrix (Fin s) (Fin r) ℝ`,
-  `Bᵀ * G * V : Matrix (Fin s) (Fin r) ℝ`.
-* `D * U : Matrix (Fin s) (Fin r) ℝ`. Shapes match for (525b). ✓
-* `D * A + Aᵀ * D : Matrix (Fin s) (Fin s) ℝ`;
-  `Bᵀ * G * B : Matrix (Fin s) (Fin s) ℝ`. ✓
-* `Vᵀ * G * V, G : Matrix (Fin r) (Fin r) ℝ`. ✓
+Notes:
 
-### Step 4 — non-vacuity witness (MANDATORY per CLAUDE.md)
+* `r - 1` is natural-number subtraction. For `r = 0`, `r - 1 = 0`
+  and the equation collapses to `Φ(w,z) = w − R(z)` — but `r = 0`
+  means `Φ(w, z) = det (w • 1 − M(z))` over the empty matrix, which
+  is `1`, so `1 = w − R z` is solvable only by an `R` *depending on
+  `w`* — i.e. NOT solvable as a function of `z` alone (for the
+  fixed `R z`, varying `w` would give `1 = w₁ − R z = w₂ − R z`
+  forcing `w₁ = w₂`, contradiction). The `r = 0` branch is therefore
+  never RK-stable, which is the right behaviour.
+* For `r ≥ 1`, `r − 1` is the textbook `r − 1`.
+* Use `R : ℂ → ℂ` (not `RatFunc ℂ`) — the textbook calls `R` rational
+  but the *predicate* statement only needs a function. If a
+  downstream theorem (e.g. §550A/B) requires rationality, it can be
+  added then. Do NOT pre-emptively bring in `RatFunc`.
 
-Add to the same file:
+## Witness statement
 
 ```lean
-/-- Non-vacuity witness for `IsGSymplectic`: `explicitEulerGLM` is
-trivially G-symplectic with `G = 0, D = 0`. (This is a vacuous-style
-witness — Butcher's intended non-trivial example is the 2×2 method
-of equation (525d), which is deferred to a future cycle because of
-its `√3` arithmetic.) -/
-theorem explicitEulerGLM_isGSymplectic :
-    explicitEulerGLM.IsGSymplectic := by
-  refine ⟨0, 0, ?_, ?_, ?_, ?_, ?_⟩
-  · -- 0 is PosSemidef
-    exact Matrix.PosSemidef.zero
-  · -- 0 is diagonal
-    intro i j _
-    rfl  -- 0 i j = 0 by defn of zero matrix
-  · -- Vᵀ * 0 * V = 0
-    simp
-  · -- D * U = Bᵀ * 0 * V
-    simp
-  · -- 0 * A + Aᵀ * 0 = Bᵀ * 0 * B
-    simp
+/-- §542 non-vacuity: explicit Euler GLM has Runge–Kutta
+stability with `R(z) = 1 + z`. -/
+theorem explicitEulerGLM_isRKStable :
+    explicitEulerGLM.IsRKStable := by
+  refine ⟨fun z => 1 + z, ?_⟩
+  intro w z
+  rw [explicitEulerGLM_stabilityFunction]
+  -- Goal: w - 1 - z = w ^ (1 - 1) * (w - (1 + z))
+  -- Simplify: 1 - 1 = 0, w^0 = 1, then `ring`.
+  simp [pow_zero]
+  ring
 ```
 
-If `Matrix.PosSemidef.zero` doesn't exist with that exact name:
-* `lean_local_search "PosSemidef" + "zero"`,
-* `lean_loogle "Matrix.PosSemidef 0"`,
-* fallback: prove inline via `⟨isHermitian_zero, by intro x; simp⟩`
-  (since `PosSemidef M = IsHermitian M ∧ ∀ x, 0 ≤ x ⬝ M *ᵥ x`).
+A second witness on `implicitMidpointGLM` is **out of scope** for
+this cycle. Reason: it requires computing
+`implicitMidpointGLM.stabilityFunction w z` from scratch, which
+involves `(I - z·!![1/2])⁻¹` over `ℂ`. That's clean math but ~50
+LOC of matrix-inverse plumbing, and we already have the `r=1` slot
+filled by explicit Euler. Defer to a later cycle if/when needed.
 
-If `Matrix.IsDiag` is defined as `∀ i j, i ≠ j → M i j = 0`, then
-`intro i j _; rfl` works because `(0 : Matrix _ _ ℝ) i j = 0`. If
-the shape differs, search with `lean_hover_info` on `Matrix.IsDiag`
-and adjust.
+## Step-by-step recipe (worker action items)
 
-### Step 5 — Aristotle batch (recommended, parallel; only ONE job)
+1. **Read first** (~3 min):
+   * `extraction/formalization_data/entities/def_542A.json` (statement
+     + context).
+   * `OpenMath/Chapter5/Section520.lean` lines 96–200 (look at how
+     `stabilityFunction` is defined and how
+     `explicitEulerGLM_stabilityFunction` is proved at line 461).
+   * `OpenMath/Chapter5/Section510.lean` lines 144–195 (witness
+     pattern for `explicitEulerGLM_isPreconsistent` /
+     `_isStable` / `_isConsistent`).
 
-The witness should close manually in <30 minutes. **However**, since
-this cycle is short and Aristotle is free compute, submit ONE job
-once the file compiles with the witness as `sorry`. This gives a
-backup if the `Matrix.PosSemidef.zero` / `Matrix.IsDiag` naming
-proves fiddly.
+2. **Decide insertion point**: append `IsRKStable` and
+   `explicitEulerGLM_isRKStable` to `OpenMath/Chapter5/Section520.lean`
+   inside `namespace OpenMath.Chapter5.Section510`, after
+   `explicitEulerGLM_hasStabilityOrder_one` (around line ~500). Do
+   NOT make a new file.
 
-* Job 1: prove `explicitEulerGLM_isGSymplectic`. Standalone — feed
-  the file content (no extra context needed) since it imports only
-  `OpenMath.Chapter5.Section510`.
+3. **Encode the predicate** as shown in §"Encoding choices" above.
 
-DO NOT submit the predicate definition itself — Aristotle proves
-theorems, not declarations. Sleep ≥30 min before checking, per
-CLAUDE.md. Do NOT poll twice. If Aristotle returns a cleaner proof
-than the manual `simp` chain, use it; otherwise keep the manual
-proof.
+4. **Encode the witness** as shown in §"Witness statement" above.
+   Verify with `lake env lean OpenMath/Chapter5/Section520.lean`.
+   Expected wall time: ≤ 90s. The `simp [pow_zero]; ring` closer
+   may need adjustment — if `r - 1 = 0` doesn't reduce by `simp`
+   alone, try the fallback ladder in §"Backup plan" below.
 
-### Step 6 — pre-commit faithfulness checklist (CLAUDE.md §"Pre-Commit")
-
-For the new `def IsGSymplectic`:
-
-* [ ] Quote the textbook statement (from
-      `entities/def_525A.json`'s `statement_text`) in the docstring.
-* [ ] Confirm the three matrix equations match the textbook
-      letter-for-letter: `Vᵀ G V = G`, `D U = Bᵀ G V`,
-      `D A + Aᵀ D = Bᵀ G B`. NO transposed indices, NO swapped
-      `B/V`, NO sign errors.
-* [ ] **Definition smuggling check**: the predicate quantifies
-      existentially over `G` and `D`; we are NOT defining
-      G-symplectic via a *characterization* (e.g. via the stability
-      function being unitary) and then claiming the textbook
-      definition follows. The Lean predicate IS the textbook
-      definition.
-* [ ] PSD condition: `G.PosSemidef` in Mathlib bundles
-      `IsHermitian` (which over ℝ means symmetric) plus the
-      non-negative quadratic-form condition. This matches Butcher's
-      "positive semi-definite symmetric" exactly.
-
-For `explicitEulerGLM_isGSymplectic`:
-
-* [ ] **Tautology check**: the conclusion `IsGSymplectic` is the
-      goal; no hypothesis matches the conclusion. ✓
-* [ ] **Non-vacuity disclaimer**: the witness `(G, D) = (0, 0)` is
-      a degenerate (trivial) witness — every GLM trivially
-      satisfies the predicate with `G = 0, D = 0`. The witness
-      *establishes inhabitability* of the predicate but does NOT
-      exhibit a substantively G-symplectic method. This is
-      acceptable for non-vacuity per CLAUDE.md, but document the
-      caveat in the witness docstring and propose Butcher's eq
-      (525d) explicit 2×2 method as future work (Step 8 stretch
-      goal).
-
-### Step 7 — bookkeeping
-
-* Update `extraction/formalization_data/lean_status.json`: set
-  `def:525A` to `formalized`, `lean_file =
-  "OpenMath/Chapter5/Section525.lean"`, `lean_symbol =
-  "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsGSymplectic"`,
-  bump cycle reference to 128.
-* Update `plan.md`: change `def:525A` row from `[ ]` to `[x]`
-  with cycle-128 commentary.
-* Verify single-file build: `lake env lean
-  OpenMath/Chapter5/Section525.lean` exits 0.
-* Verify axiom-cleanness: `lake build
-  OpenMath.Chapter5.Section525` (so the `.olean` is fresh — per
-  cycle 072's note, `lake env lean` does NOT update the cache),
-  then `#print axioms
-  OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitEulerGLM_isGSymplectic`
-  must return `[propext, Classical.choice, Quot.sound]` ONLY.
-* Tautology scanner: run
-  `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
-  and confirm no NEW hits in `Section525.lean`. (The pre-existing
-  `Section514.lean:601 — exact h_norm_obligation` carry-over is
-  expected and not a regression.)
-
-### Step 8 — commit
-
-Commit message format (matches recent §515 cycles):
-
-```
-Cycle 128 — formalize def:525A G-symplectic methods (axiom-clean)
-```
-
-Files touched:
-* `OpenMath/Chapter5/Section525.lean` (new, ~50 LOC).
-* `extraction/formalization_data/lean_status.json` (one row).
-* `plan.md` (one row, plus bumping the progress counter from 65 to
-  66 entities done).
-
-## What NOT to do this cycle
-
-* **Do NOT target `def:530A`** "non-degenerate starting method" — it
-  requires a new datatype for "starting method as sequence of
-  generalized RK methods" plus the eq-(530a) generalized-RK
-  structure, which is an infrastructure cycle, not a definition
-  cycle. The `entities/def_530A.json` `dependencies = []` is
-  misleading — the *content* depends on the §530a generalized RK
-  framework, which we don't have.
-* **Do NOT target `thm:535A`** — it transitively depends on §530
-  order theory (`def:530B`, `def:530C`), which we don't have.
-* **Do NOT target `thm:550A`** — it requires a new "doubly
-  companion matrix" datatype and is best deferred until after
-  §525/§530 lay the type-theoretic groundwork.
-* **Do NOT introduce a new structure** for the textbook's eq (525d)
-  explicit 2×2 witness this cycle. The `√3`-arithmetic check is
-  doable but eats the cycle's budget. Use the `(G, D) = (0, 0)`
-  trivial witness for non-vacuity and document the (525d) witness
-  as future work.
-* **Do NOT raise `maxHeartbeats`** above 200000 (CLAUDE.md hard
-  rule). The witness proof is `simp`-tier and should close
-  trivially; if it doesn't, decompose rather than bumping
-  heartbeats.
-* **Do NOT submit the `IsGSymplectic` predicate definition to
-  Aristotle** — Aristotle proves theorems, not types. Only the
-  witness proof goes to Aristotle.
-* **Do NOT modify `scripts/autonomous_loop.py`** — loop-maintainer
-  territory per `tautology_scanner_false_positives.md`.
-* **Do NOT modify any §515 file** (Section515.lean is closed at
-  axiom-clean and any edit risks regression). The only file
-  modifications this cycle are the new `Section525.lean`,
-  `lean_status.json`, and `plan.md`.
-* **Do NOT use Mathlib's `SymplecticGroup` or
-  `Matrix.IsSymplectic`** — those are about preserving an
-  antisymmetric bilinear form on `K^{2n}` and are NOT the
-  textbook's G-symplectic concept. Verify the Mathlib
-  `IsSymplectic` definition before considering reuse; the names
-  collide but the concepts do not.
-* **Do NOT** follow the cycle 127 worker's "trim §520
-  unused-`simp` warnings" suggestion — it is hygiene-only and
-  should not absorb cycle time when there's a substantive
-  deliverable available.
-* **Do NOT** worker-edit `scripts/autonomous_loop.py` even if the
-  scanner false-positive issue is mentioned (the standing
-  workaround — drop the underscore in any new `h_<name>` binders
-  in `Section525.lean` — applies if any new closer triggers it,
-  but the `simp`-tier witness shouldn't introduce any).
-
-## Backup plan — if the witness `simp` chain fails
-
-If `simp` cannot discharge the matrix equations on `explicitEulerGLM`
-with `G = 0, D = 0`:
-
-1. Try `decide` (since matrices are concrete `Fin 1 × Fin 1`).
-2. Try entrywise `ext; fin_cases; simp [explicitEulerGLM]` —
-   pattern from `explicitEulerGLM_isPreconsistent` (Section510.lean:152).
-3. Try `Matrix.mul_zero, Matrix.zero_mul, add_zero` simp lemmas
-   explicitly in the `simp only`.
-4. If still stuck, the issue is naming — `Matrix.PosSemidef.zero`
-   may be absent. Inline:
-   ```lean
-   refine ⟨isHermitian_zero, ?_⟩
-   intro x
-   simp [Matrix.zero_mulVec, dotProduct_zero]
+5. **Axiom-clean check**:
    ```
-5. For `Matrix.IsDiag` of `0`: search `lean_local_search "IsDiag"`
-   and unfold; the definition is `∀ i j, i ≠ j → M i j = 0` and
-   `(0 : Matrix _ _ ℝ) i j = 0` by definition.
+   #print axioms explicitEulerGLM_isRKStable
+   ```
+   Expected: `[propext, Classical.choice, Quot.sound]`. If `sorryAx`
+   appears, the `simp; ring` closer is incomplete. (Note: per
+   prior cycle's discovery, `lake env lean <file>` does NOT update
+   the `.olean` cache — run `lake build OpenMath.Chapter5.Section520`
+   before `#print axioms` to avoid stale-cache `sorryAx` false
+   positives.)
 
-If the witness genuinely cannot close in one cycle (extremely
-unlikely given the matrices are zero), file
-`.prover-state/issues/def_525A_witness_blocker.md` with the
-specific Mathlib API gap and pivot the cycle to **Plan B**.
+6. **Update `extraction/formalization_data/lean_status.json`**:
+   set `def:542A` row to `formalized`, with `lean_file` =
+   `OpenMath/Chapter5/Section520.lean` and `lean_symbol` =
+   `OpenMath.Chapter5.Section510.GeneralLinearMethod.IsRKStable`,
+   matching the cycle-128 schema for `def:525A` (look at the row
+   for that entity if unsure of the JSON shape).
 
-## Plan B — if `def:525A` proves intractable: `def:541A` (DIMSIM types)
+7. **Update `plan.md`** Chapter 5 §54 row for `def:542A` from
+   `[ ]` to `[x]` with a brief annotation
+   `OpenMath/Chapter5/Section520.lean (cycle 130, axiom-clean)` and
+   bump the progress counter from 66 to 67.
 
-Read `entities/def_541A.json`. DIMSIM (Diagonally Implicit Multistage
-Integration Methods) types are pure shape constraints on the GLM
-matrices: `A` lower triangular with constant diagonal, plus stage-
-order conditions. This is similar in flavour to `def:525A` (matrix
-predicates on existing GLM infrastructure). Apply the same six-step
-recipe.
+8. **Faithfulness checklist** (mandatory per CLAUDE.md):
+   * Quote textbook statement in `cycle_130.md` task results.
+   * Confirm `IsRKStable` captures `Φ(w,z) = w^{r-1}(w − R(z))`
+     verbatim (it does — direct transcription).
+   * Definition smuggling check: we are NOT defining RK stability
+     as the existence of an `R` extracted from `Φ` (which would be
+     vacuous); we are defining it as the *factorisation existing*,
+     which has real algebraic content (vacuous for `r = 0`,
+     non-trivial for `r ≥ 1`). ✓
+   * Tautology check on the witness: the conclusion `IsRKStable` is
+     existential over `R`; the witness `R z := 1 + z` is computed,
+     not extracted from a hypothesis. ✓
 
-## Cycle deliverable bar
+9. **(SECONDARY, only if 8 finishes within ~60 min wall)**:
+   add `implicitMidpointGLM_isStable` and
+   `implicitMidpointGLM_isConsistent` to `Section510.lean`
+   immediately after `implicitMidpointGLM_isPreconsistent` (line
+   ~228). Both proofs should copy `explicitEulerGLM_isStable`
+   (line 167) and `explicitEulerGLM_isConsistent` (line 184)
+   verbatim modulo the GLM structure name — the `V` and `U`
+   matrices are identical (`!![1]`) so the proofs go through. If
+   either deviates by more than 2 lines from the explicit Euler
+   version, STOP — there's an unexpected dependency on `A` and you
+   should ship just the primary.
 
-* **Minimum** (per CLAUDE.md "A cycle with zero changes is
-  unacceptable"): the predicate definition with the textbook
-  docstring committed, even if the witness is left as `sorry` with
-  a blocker issue.
-* **Target**: predicate + axiom-clean witness + status updates +
-  commit. Should land in ~1 hour of worker time.
-* **Stretch goal**: additionally state (without proving) the
-  textbook's (525d) explicit 2×2 example as
+10. **Write `cycle_130.md`** per the CLAUDE.md template, including
+    the faithfulness check from step 8 and a list of any deviations
+    in step 9. Commit with message
+    `Cycle 130 — formalize def:542A Runge–Kutta stability (axiom-clean)`
+    plus a one-line note about the secondary deliverables if they
+    landed.
 
-  ```lean
-  /-- Butcher §525 eq (525d) — the explicit 2×2 G-symplectic
-  example presented in Butcher (2006). The proof of
-  `IsGSymplectic` is deferred to a future cycle (the witness
-  matrices `G = diag(1, 1 + 2√3/3), D = diag(1/2, 1/2)` involve
-  `√3` arithmetic that does not fit this cycle). -/
-  noncomputable def example525d : GeneralLinearMethod 2 2 where
-    A := !![ (3 + Real.sqrt 3) / 6, 0;
-             -Real.sqrt 3, (3 + Real.sqrt 3) / 6 ]
-    U := !![ 1, -(3 + 2 * Real.sqrt 3) / 3;
-             1, (3 + 2 * Real.sqrt 3) / 3 ]
-    B := !![ 1/2, 1/2;
-             1/2, -1/2 ]
-    V := !![ 1, 0;
-             0, -1 ]
-  ```
+11. **Push**.
 
-  Do NOT prove `example525d.IsGSymplectic` this cycle — just
-  record the definition with a docstring noting it as future
-  work. This sets up a faithful witness for a follow-up cycle.
-  Skip the stretch goal entirely if it pushes the cycle past
-  the 1-hour mark; the target deliverable is what counts.
+## What NOT to try (explicitly rejected approaches)
+
+* **Do NOT** start §550 doubly-companion-matrix infrastructure this
+  cycle (`thm:550A`, `thm:550B`, `cor:550C`). It is multi-cycle work
+  per the cycle 129 worker's notes and would not produce a
+  committable single-cycle deliverable.
+* **Do NOT** attempt the Butcher (525d) 2×2 G-symplectic witness
+  this cycle. Cycle 129 explicitly recategorised it as "additional
+  polish" rather than load-bearing now that the implicit-midpoint
+  witness lands; it is no longer time-critical and would consume the
+  cycle's budget without advancing the entity count.
+* **Do NOT** attempt `thm:521B` ("Maximum stability order for given
+  steps") this cycle. Its textbook proof uses contour integrals,
+  partial fractions, and rational-function complexity arguments —
+  multi-cycle work requiring infrastructure we don't have.
+* **Do NOT** attempt `def:530A` ("non-degenerate") this cycle. It
+  depends on a notion of "starting method" (a sequence of generalized
+  Runge–Kutta methods) that is not yet formalized; the dependency
+  list in its JSON is empty only because the extractor missed the
+  upstream "starting method" structure.
+* **Do NOT** introduce `RatFunc ℂ` for `R(z)`. Plain `ℂ → ℂ` is
+  sufficient for the predicate; the textbook's "rational" adjective
+  is informational, not structural for this definition.
+* **Do NOT** add an `(r_pos : 0 < r)` hypothesis to `IsRKStable`.
+  The `r = 0` case being unsatisfiable is the correct behaviour
+  (matches the textbook's implicit `r ≥ 1`).
+* **Do NOT** make `explicitEulerGLM_isRKStable` use
+  `decide` or `omega` — it's a real algebraic identity over `ℂ`,
+  the closer must be `ring` (post-simplification of `w^0`).
+* **Do NOT** create `OpenMath/Chapter5/Section542.lean` for this
+  one definition. Section520 already contains `IsAStable`,
+  `IsLStable`, `HasStabilityOrder`, and the §520D
+  instability-region work — it is the established home for stability
+  predicates. A new file would fragment the cluster.
+* **Do NOT** poll Aristotle this cycle (no jobs are in flight, and
+  this work is not Aristotle-suitable — predicate definition +
+  10-line `simp; ring` closer).
+* **Do NOT** edit `scripts/autonomous_loop.py` (loop-maintainer
+  territory; see standing
+  `tautology_scanner_false_positives.md`).
+* **Do NOT** raise `maxHeartbeats`.
+
+## Backup plan if the primary stalls
+
+Most likely failure mode: `simp [pow_zero]; ring` doesn't close the
+witness because `r - 1` for `r = 1` doesn't reduce automatically.
+
+Fallback ladder, in order of preference:
+
+1. Spell out `(1 : ℕ) - 1 = 0` explicitly:
+   ```lean
+   have hr : (1 : ℕ) - 1 = 0 := rfl
+   rw [hr, pow_zero, one_mul]
+   ring
+   ```
+2. Use `Nat.sub_self` if `rfl` doesn't fire.
+3. Use `show w - 1 - z = w ^ 0 * (w - (1 + z)); rw [pow_zero,
+   one_mul]; ring`.
+4. If all of the above fail (would be surprising), the closer is
+   `convert ?_ using 2` followed by manual rewrite — but this is
+   strong evidence of a mis-statement. Re-check the predicate
+   shape against the textbook before spending > 15 min on the
+   closer.
+
+If after 30 min the witness still doesn't close, STOP and write
+the issue file
+`.prover-state/issues/def_542A_witness_blocker.md` with the goal
+state and a diagnosis. A failed witness on the textbook's
+canonical `r = 1` example is itself a meaningful cycle output.
+
+## Score budget
+
+* Primary alone (def:542A formalized + axiom-clean witness +
+  lean_status + plan.md): score 2.
+* Primary + secondary (implicitMidpointGLM_isStable +
+  implicitMidpointGLM_isConsistent): score 2 (the secondary
+  is upkeep, doesn't change the entity count).
+* Primary stall but issue file written: score 1.
+* No commit lands: score ≤ 0 (CLAUDE.md "zero-changes is
+  unacceptable").

@@ -235,4 +235,32 @@ theorem implicitMidpointGLM_isPreconsistent :
     fin_cases i
     simp [implicitMidpointGLM, Matrix.mulVec, dotProduct]
 
+/-- Non-vacuity witness for `IsStable`: `implicitMidpointGLM` is stable
+with bound `C = 1`. Its `V` block is the `1 × 1` identity (matching
+`explicitEulerGLM`), so every power `V^n` is the identity and has
+linfty operator norm `1`. -/
+theorem implicitMidpointGLM_isStable : implicitMidpointGLM.IsStable := by
+  refine ⟨1, ?_⟩
+  intro n
+  have hV : implicitMidpointGLM.V = (1 : Matrix (Fin 1) (Fin 1) ℝ) := by
+    ext i j
+    fin_cases i; fin_cases j
+    simp [implicitMidpointGLM]
+  rw [hV, one_pow]
+  exact le_of_eq norm_one
+
+/-- Non-vacuity witness for `IsConsistent`: `implicitMidpointGLM` is
+consistent with `u = (fun _ => 1)` and `v = (fun _ => 0)`. The proof
+mirrors `explicitEulerGLM_isConsistent` exactly because the `B`, `U`,
+and `V` blocks coincide between the two GLMs. -/
+theorem implicitMidpointGLM_isConsistent :
+    implicitMidpointGLM.IsConsistent := by
+  refine ⟨fun _ => 1, fun _ => 0, ⟨?_, ?_⟩, ?_⟩
+  · funext i; fin_cases i
+    simp [implicitMidpointGLM, Matrix.mulVec, dotProduct]
+  · funext i; fin_cases i
+    simp [implicitMidpointGLM, Matrix.mulVec, dotProduct]
+  · funext i; fin_cases i
+    simp [implicitMidpointGLM, dotProduct]
+
 end OpenMath.Chapter5.Section510

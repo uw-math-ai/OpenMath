@@ -489,6 +489,59 @@ theorem explicitEulerGLM_hasStabilityOrder_one :
   rw [hΦ]
   exact Complex.exp_sub_sum_range_isBigO_pow 2
 
+/-! ### Definition 542A — Runge–Kutta stability -/
+
+/-- **Definition 542A** — A general linear method `(A, U, B, V)` has
+*Runge–Kutta stability* (RK stability) if its characteristic polynomial
+`Φ(w, z) = det(wI − M(z))` factorises as
+
+    Φ(w, z) = w^(r−1) · (w − R(z))
+
+for some scalar function `R : ℂ → ℂ`. The function `R` is then called
+the *stability function* of the method.
+
+Butcher (Definition 542A, p. 445): "A general linear method
+`(A, U, B, V)` has 'Runge–Kutta stability' if the characteristic
+polynomial given by (542a) has the form `Φ(w, z) = w^{r−1}(w − R(z))`.
+For a method with Runge–Kutta stability, the rational function `R(z)`
+is known as the 'stability function' of the method."
+
+Encoding choices:
+
+* `Φ(w, z)` is the existing `M.stabilityFunction w z` from `def:520C`,
+  which is exactly `det(w·I − M(z))` (equation 542a).
+* The textbook calls `R` a *rational* function. We encode `R` as a plain
+  `ℂ → ℂ`: the predicate only requires the factorisation to hold, and
+  rationality of `R` is a downstream consequence (see e.g. `def:551A`)
+  rather than part of the definitional content. Pre-emptively forcing
+  `RatFunc ℂ` would be definition smuggling on the hypothesis side.
+* For `r = 0`, `r − 1 = 0` (`Nat.sub`) and the factorisation reduces to
+  `Φ(w, z) = w − R(z)`. But `r = 0` means `M(z)` is the empty matrix,
+  so `Φ(w, z) = det(w·1 − M(z)) = 1` is constant in `w`; the
+  factorisation `1 = w − R(z)` then has no solution for `R` (varying
+  `w` would force `R z` to take two distinct values). The `r = 0`
+  case is therefore correctly never RK-stable, matching the textbook's
+  implicit `r ≥ 1`. -/
+def GeneralLinearMethod.IsRKStable {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  ∃ R : ℂ → ℂ, ∀ w z : ℂ,
+    M.stabilityFunction w z = w ^ (r - 1) * (w - R z)
+
+/-- Non-vacuity witness for `IsRKStable`: `explicitEulerGLM` has
+Runge–Kutta stability with stability function `R(z) = 1 + z`.
+
+For `r = 1`, the factorisation `Φ(w, z) = w^0 · (w − R(z)) = w − R(z)`
+matches `explicitEulerGLM_stabilityFunction`'s closed form
+`Φ(w, z) = w − 1 − z` with `R(z) := 1 + z`. -/
+theorem explicitEulerGLM_isRKStable :
+    explicitEulerGLM.IsRKStable := by
+  refine ⟨fun z => 1 + z, ?_⟩
+  intro w z
+  rw [explicitEulerGLM_stabilityFunction]
+  -- Goal: w - 1 - z = w ^ (1 - 1) * (w - (1 + z))
+  simp [pow_zero]
+  ring
+
 /-! ### Theorem 520D — Instability Region Boundary Characterization
 
 Butcher (Theorem 520D, p. 419): "The instability region for `(A, U, B, V)`
