@@ -834,9 +834,11 @@
     "cycle": 125
   },
   "thm:520D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section520.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.instabilityRegion_subseteq_closed_disc_zeros",
+    "status": "formalized",
+    "cycle": 126,
+    "notes": "thm:520D is encoded as two public theorems: instabilityRegion_subseteq_closed_disc_zeros (direction (1): instabilityRegion ⊆ {z : ∃ w, ‖w‖ ≥ 1, Φ(w,z) = 0}) and instabilityRegion_supseteq_outside_disc (direction (2): {z : ∃ w, ‖w‖ > 1, Φ(w,z) = 0} ⊆ instabilityRegion)."
   },
   "thm:521B": {
     "lean_file": null,

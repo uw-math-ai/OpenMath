@@ -1,6 +1,8 @@
+import Mathlib.Analysis.Normed.Algebra.GelfandFormula
 import Mathlib.Analysis.Normed.Algebra.Spectrum
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Data.Complex.Basic
+import Mathlib.LinearAlgebra.Matrix.Charpoly.Eigs
 import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
 import Mathlib.LinearAlgebra.Matrix.Notation
 import Mathlib.Tactic.FinCases
@@ -486,5 +488,245 @@ theorem explicitEulerGLM_hasStabilityOrder_one :
     ring
   rw [hΦ]
   exact Complex.exp_sub_sum_range_isBigO_pow 2
+
+/-! ### Theorem 520D — Instability Region Boundary Characterization
+
+Butcher (Theorem 520D, p. 419): "The instability region for `(A, U, B, V)`
+is a subset of the set of points `z`, such that `Φ(w, z) = 0`, where
+`|w| ≥ 1`. The instability region is a superset of the points defined
+by `Φ(w, z) = 0`, where `|w| > 1`."
+
+This decomposes into two inclusions about
+`M.instabilityRegion = (M.stabilityRegion)ᶜ`:
+1. `instabilityRegion ⊆ { z : ∃ w, |w| ≥ 1 ∧ Φ(w, z) = 0 }`
+2. `instabilityRegion ⊇ { z : ∃ w, |w| > 1 ∧ Φ(w, z) = 0 }`
+
+We route through the spectrum of `M(z)` via the bridge lemma D1
+(`stabilityFunction_eq_zero_iff_mem_spectrum`): zeros of `Φ(·, z)` are
+exactly the spectrum of `M.stabilityMatrix z`. From there:
+
+* Direction (2) is direct: an eigenvalue `w` with `‖w‖ > 1` forces
+  `‖w‖^n ≤ ‖M(z)^n‖ * ‖(1)‖`, contradicting power-boundedness.
+* Direction (1) goes via the spectral radius: power-boundedness
+  bounds `spectralRadius M(z) ≤ 1` (D3), so its contrapositive says
+  unstable `z` has `spectralRadius M(z) ≥ 1` (D4); pick the
+  spectrum element realising the spectral radius
+  (`spectrum.exists_nnnorm_eq_spectralRadius`).
+-/
+
+section InstabilityRegion520D
+
+variable {s r : ℕ}
+
+/-- **Sub-lemma D1** — `Φ(w, z) = 0` iff `w` is in the spectrum of
+`M.stabilityMatrix z`.
+
+This bridges the textbook's `Φ(w, z)` (encoded as `det(w·I − M(z))`)
+with Mathlib's `spectrum ℂ M(z)`. Under the field `ℂ`, both forms
+coincide via `Matrix.mem_spectrum_iff_isRoot_charpoly` and
+`Matrix.eval_charpoly`. -/
+private theorem GeneralLinearMethod.stabilityFunction_eq_zero_iff_mem_spectrum
+    (M : GeneralLinearMethod s r) (w z : ℂ) :
+    M.stabilityFunction w z = 0 ↔ w ∈ spectrum ℂ (M.stabilityMatrix z) := by
+  rw [Matrix.mem_spectrum_iff_isRoot_charpoly]
+  unfold GeneralLinearMethod.stabilityFunction
+  have h_eq : (w • (1 : Matrix (Fin r) (Fin r) ℂ) - M.stabilityMatrix z)
+              = ((Matrix.scalar (Fin r)) w - M.stabilityMatrix z) := by
+    rw [Matrix.scalar_apply, ← Matrix.smul_one_eq_diagonal]
+  rw [h_eq, ← Matrix.eval_charpoly]
+  rfl
+
+/-- **Sub-lemma D2 = direction (2) of thm:520D** — If the stability
+matrix `M(z)` has an eigenvalue strictly outside the closed unit disc,
+then `z` lies in the instability region.
+
+Proof: from `‖w‖ > 1` and `Φ(w, z) = 0` (an eigenvalue equation by D1),
+we get `w^n ∈ spectrum (M(z)^n)` for every `n`, hence
+`‖w‖^n = ‖w^n‖ ≤ ‖M(z)^n‖ · ‖(1)‖`. Power-boundedness would force
+`‖w‖^n` bounded, but `‖w‖ > 1` makes `‖w‖^n → ∞`, contradiction. -/
+theorem GeneralLinearMethod.instabilityRegion_supseteq_outside_disc
+    (M : GeneralLinearMethod s r) {z : ℂ}
+    (hz : ∃ w : ℂ, 1 < ‖w‖ ∧ M.stabilityFunction w z = 0) :
+    z ∈ M.instabilityRegion := by
+  obtain ⟨w, hw_norm, hw_zero⟩ := hz
+  have hw_mem : w ∈ spectrum ℂ (M.stabilityMatrix z) :=
+    (M.stabilityFunction_eq_zero_iff_mem_spectrum w z).mp hw_zero
+  -- Goal: z ∈ (M.stabilityRegion)ᶜ
+  unfold GeneralLinearMethod.instabilityRegion
+  rw [Set.mem_compl_iff]
+  unfold GeneralLinearMethod.stabilityRegion
+  rw [Set.mem_setOf_eq]
+  push_neg
+  intro C
+  unfold OpenMath.Chapter1.Section142.PowerBounded
+  push_neg
+  -- For each `n`, `w^n ∈ σ(M(z)^n)`, hence `‖w‖^n ≤ ‖M(z)^n‖ · ‖1‖`.
+  have hnorm_one_nn : (0 : ℝ) ≤ ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := norm_nonneg _
+  have hbound : ∀ n : ℕ,
+      ‖w‖ ^ n ≤ ‖M.stabilityMatrix z ^ n‖ * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := by
+    intro n
+    have hwn_mem : w ^ n ∈ spectrum ℂ (M.stabilityMatrix z ^ n) :=
+      spectrum.pow_mem_pow _ _ hw_mem
+    have h_norm : ‖w ^ n‖
+        ≤ ‖M.stabilityMatrix z ^ n‖ * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ :=
+      spectrum.norm_le_norm_mul_of_mem hwn_mem
+    rw [norm_pow] at h_norm
+    exact h_norm
+  -- `‖w‖ > 1` so `‖w‖^n → ∞`; pick `n` with `‖w‖^n > C·‖1‖`.
+  have htend : Filter.Tendsto (fun n : ℕ => ‖w‖ ^ n) Filter.atTop Filter.atTop :=
+    tendsto_pow_atTop_atTop_of_one_lt hw_norm
+  obtain ⟨N, hN⟩ : ∃ N : ℕ,
+      C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ + 1 ≤ ‖w‖ ^ N :=
+    (Filter.tendsto_atTop_atTop.mp htend
+      (C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ + 1)).imp fun N hN => hN N le_rfl
+  refine ⟨N, ?_⟩
+  -- Goal (after push_neg): `C < ‖M(z)^N‖`. Argue by contradiction.
+  by_contra hMN
+  push_neg at hMN
+  have hbN := hbound N
+  have hmul_le :
+      ‖M.stabilityMatrix z ^ N‖ * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖
+        ≤ C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ :=
+    mul_le_mul_of_nonneg_right hMN hnorm_one_nn
+  linarith [hbN, hmul_le, hN]
+
+/-- **Sub-lemma D3** — If `z ∈ M.stabilityRegion`, then the spectral
+radius of `M(z)` is at most `1`.
+
+Proof outline: from `PowerBounded C (M(z))` we have `‖M(z)^k‖ ≤ C` for
+all `k`. Every `μ ∈ spectrum ℂ M(z)` satisfies `‖μ‖^k = ‖μ^k‖ ≤
+‖M(z)^k‖ · ‖1‖ ≤ C · ‖1‖` (via `spectrum.pow_mem_pow` and
+`spectrum.norm_le_norm_mul_of_mem`). If `‖μ‖ > 1`, then
+`‖μ‖^k → ∞`, contradicting the uniform bound. Hence `‖μ‖ ≤ 1` for
+every `μ ∈ σ`, so `spectralRadius ≤ 1`. -/
+private theorem GeneralLinearMethod.stabilityRegion_imp_spectralRadius_le_one
+    (M : GeneralLinearMethod s r) {z : ℂ}
+    (hz : z ∈ M.stabilityRegion) :
+    spectralRadius ℂ (M.stabilityMatrix z) ≤ 1 := by
+  obtain ⟨C, hC⟩ := hz
+  -- spectralRadius ℂ a = ⨆ k ∈ σ a, (‖k‖₊ : ℝ≥0∞).
+  refine iSup₂_le ?_
+  intro μ hμ
+  -- Goal: (‖μ‖₊ : ℝ≥0∞) ≤ 1.
+  by_contra h_lt
+  push_neg at h_lt
+  -- h_lt : 1 < (‖μ‖₊ : ℝ≥0∞).
+  have h_norm : 1 < ‖μ‖ := by
+    have h_nn : (1 : NNReal) < ‖μ‖₊ := ENNReal.one_lt_coe_iff.mp h_lt
+    exact_mod_cast h_nn
+  -- Power-boundedness gives ‖μ‖^k ≤ C·‖1‖ for all k.
+  have hbound : ∀ k : ℕ,
+      ‖μ‖ ^ k ≤ C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := by
+    intro k
+    have hμk : μ ^ k ∈ spectrum ℂ (M.stabilityMatrix z ^ k) :=
+      spectrum.pow_mem_pow _ _ hμ
+    have h_norm_le := spectrum.norm_le_norm_mul_of_mem hμk
+    rw [norm_pow] at h_norm_le
+    calc ‖μ‖ ^ k
+        ≤ ‖M.stabilityMatrix z ^ k‖ * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := h_norm_le
+      _ ≤ C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ := by
+          gcongr
+          exact hC k
+  -- ‖μ‖ > 1 forces ‖μ‖^k → ∞, contradicting hbound.
+  have htend : Filter.Tendsto (fun k : ℕ => ‖μ‖ ^ k) Filter.atTop Filter.atTop :=
+    tendsto_pow_atTop_atTop_of_one_lt h_norm
+  obtain ⟨K, hK⟩ : ∃ K : ℕ,
+      C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ + 1 ≤ ‖μ‖ ^ K :=
+    (Filter.tendsto_atTop_atTop.mp htend
+      (C * ‖(1 : Matrix (Fin r) (Fin r) ℂ)‖ + 1)).imp fun K hK => hK K le_rfl
+  linarith [hbound K, hK]
+
+/-- **Sub-lemma D4** — If `z ∈ M.instabilityRegion`, then the spectral
+radius of `M(z)` is at least `1`.
+
+Proof outline: contrapositive. Assume `spectralRadius M(z) < 1`. Each
+root `μ` of `minpoly ℂ M(z)` is a charpoly root (since
+`minpoly ∣ charpoly`), hence in the spectrum
+(`Matrix.mem_spectrum_iff_isRoot_charpoly`); so
+`(‖μ‖₊ : ℝ≥0∞) ≤ spectralRadius < 1`, hence `‖μ‖ < 1`. By
+`Section142.minpoly_roots_lt_one_imp_convergent`, the matrix is
+convergent (`M(z)^n → 0`); a convergent sequence is norm-bounded
+(`Filter.Tendsto.norm` + `bddAbove_range`), giving the
+power-boundedness witness for `z ∈ M.stabilityRegion`. -/
+private theorem GeneralLinearMethod.instabilityRegion_imp_spectralRadius_ge_one
+    (M : GeneralLinearMethod s r) {z : ℂ}
+    (hz : z ∈ M.instabilityRegion) :
+    1 ≤ spectralRadius ℂ (M.stabilityMatrix z) := by
+  by_contra h_lt
+  push_neg at h_lt
+  -- h_lt : spectralRadius ℂ M(z) < 1
+  apply hz
+  unfold GeneralLinearMethod.stabilityRegion
+  rw [Set.mem_setOf_eq]
+  -- Step 1: minpoly roots have norm < 1
+  have h_minpoly :
+      ∀ μ : ℂ, μ ∈ (minpoly ℂ (M.stabilityMatrix z)).roots → ‖μ‖ < 1 := by
+    intro μ hμ_root
+    have hμ_minpoly : (minpoly ℂ (M.stabilityMatrix z)).IsRoot μ :=
+      (Polynomial.mem_roots
+        (minpoly.ne_zero (Matrix.isIntegral _))).mp hμ_root
+    have h_dvd : minpoly ℂ (M.stabilityMatrix z) ∣ (M.stabilityMatrix z).charpoly :=
+      (M.stabilityMatrix z).minpoly_dvd_charpoly
+    have hμ_charpoly : (M.stabilityMatrix z).charpoly.IsRoot μ :=
+      hμ_minpoly.dvd h_dvd
+    have hμ_spec : μ ∈ spectrum ℂ (M.stabilityMatrix z) :=
+      Matrix.mem_spectrum_iff_isRoot_charpoly.mpr hμ_charpoly
+    have h_le : (‖μ‖₊ : ENNReal) ≤ spectralRadius ℂ (M.stabilityMatrix z) :=
+      le_iSup₂ (f := fun k _ => (‖k‖₊ : ENNReal)) μ hμ_spec
+    have h_lt' : (‖μ‖₊ : ENNReal) < 1 := lt_of_le_of_lt h_le h_lt
+    have h_lt_nn : ‖μ‖₊ < (1 : NNReal) := ENNReal.coe_lt_one_iff.mp h_lt'
+    exact_mod_cast h_lt_nn
+  -- Step 2: convergent
+  have h_conv :
+      OpenMath.Chapter1.Section142.Convergent (M.stabilityMatrix z) :=
+    OpenMath.Chapter1.Section142.minpoly_roots_lt_one_imp_convergent _ h_minpoly
+  -- Step 3: convergent → power-bounded
+  have h_norm_tend :
+      Filter.Tendsto (fun n : ℕ => ‖M.stabilityMatrix z ^ n‖)
+        Filter.atTop (nhds 0) := by
+    have := h_conv.norm
+    simpa using this
+  obtain ⟨C, hC⟩ :
+      BddAbove (Set.range (fun n : ℕ => ‖M.stabilityMatrix z ^ n‖)) :=
+    h_norm_tend.bddAbove_range
+  exact ⟨C, fun k => hC (Set.mem_range_self k)⟩
+
+/-- **Theorem 520D direction (1)** — If `z` is in the instability
+region, then the stability matrix `M(z)` has an eigenvalue with
+`|w| ≥ 1`, equivalently `Φ(w, z) = 0`.
+
+Proof: D4 gives `1 ≤ spectralRadius M(z)`. Pick `w ∈ spectrum`
+attaining the spectral radius
+(`spectrum.exists_nnnorm_eq_spectralRadius`); then `‖w‖ ≥ 1`. Apply
+D1 in reverse to obtain `Φ(w, z) = 0`. -/
+theorem GeneralLinearMethod.instabilityRegion_subseteq_closed_disc_zeros
+    (M : GeneralLinearMethod s r) {z : ℂ}
+    (hz : z ∈ M.instabilityRegion) :
+    ∃ w : ℂ, 1 ≤ ‖w‖ ∧ M.stabilityFunction w z = 0 := by
+  -- When `r = 0`, `Matrix (Fin 0) (Fin 0) ℂ` is a subsingleton, so
+  -- `M(z)^k = 0` for all `k` and `z` is in the stability region —
+  -- contradicting `hz`. Otherwise, the spectral-radius route applies.
+  cases isEmpty_or_nonempty (Fin r) with
+  | inl _ =>
+    exfalso
+    apply hz
+    refine ⟨0, ?_⟩
+    intro k
+    have h_zero : M.stabilityMatrix z ^ k = (0 : Matrix (Fin r) (Fin r) ℂ) :=
+      Subsingleton.elim _ _
+    rw [h_zero, norm_zero]
+  | inr _ =>
+    have h_sr : 1 ≤ spectralRadius ℂ (M.stabilityMatrix z) :=
+      M.instabilityRegion_imp_spectralRadius_ge_one hz
+    obtain ⟨w, hw_mem, hw_eq⟩ :=
+      spectrum.exists_nnnorm_eq_spectralRadius (M.stabilityMatrix z)
+    refine ⟨w, ?_, ?_⟩
+    · -- `(‖w‖₊ : ℝ≥0∞) = spectralRadius ≥ 1`, so `‖w‖ ≥ 1` in ℝ.
+      have h1 : (1 : ENNReal) ≤ ((‖w‖₊ : NNReal) : ENNReal) := hw_eq ▸ h_sr
+      have h2 : (1 : NNReal) ≤ ‖w‖₊ := ENNReal.one_le_coe_iff.mp h1
+      exact_mod_cast h2
+    · exact (M.stabilityFunction_eq_zero_iff_mem_spectrum w z).mpr hw_mem
+
+end InstabilityRegion520D
 
 end OpenMath.Chapter5.Section510
