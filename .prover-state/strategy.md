@@ -1,391 +1,427 @@
-# Cycle 138 Strategy — Open §550 with `thm:550A` infrastructure + n=1 verification
+# Cycle 140 Strategy
 
-## Context (don't repeat)
+## Recap of state at end of cycle 139
 
-- Cycle 137 closed `def:520F` non-vacuity with two negative L-stability witnesses.
-- The non-vacuity strengthening cadence (cycles 128–137) has run its course
-  for `def:520E`/`def:520F`/`def:525A`/`def:542A`/`def:551A`. **Pivot to a
-  real theorem this cycle.**
-- No pending Aristotle results.
-- The cycle 137 worker explicitly suggested three options. After audit:
-  - `thm:551B` — depends on `thm:550A` AND `thm:550B`. Don't try yet.
-  - `thm:521B` — requires polynomial complexity-sequence representation
-    of `stabilityFunction` and contour-integral arguments. Per the
-    `def:521A` docstring (`Section520.lean:658-670`), this representation
-    is **deferred** as multi-cycle infrastructure. Don't try.
-  - `thm:550A` — pure linear algebra, foundation for both §551 and §553.
-    **This is the cycle 138 target.**
+* **Sorry count: 0.** Cycle 139 closed cycle 138's regression by removing
+  the general-`n` `doublyCompanionMatrix_det_factorization` statement
+  from `OpenMath/Chapter5/Section550.lean`. Both the cycle-138 n=1
+  witness (`doublyCompanionMatrix_det_factorization_n_one`) and the
+  fresh §530 leaf (`def:530A` with two non-vacuity witnesses) survived
+  intact and axiom-clean.
+* **Cycle 138 was REVERTED (score −2) solely** because sorry count rose
+  0 → 1. Lesson: do **not** introduce sorry-first scaffolds. Every
+  cycle 140 deliverable must compile axiom-clean.
+* **Two Aristotle jobs from cycle 138 are still in flight**, both
+  targeting `thm:550A`:
+  * Job A — full general-`n`:
+    project `7062c2a2-4a8b-4fae-b694-9355e06427a9`
+    (last status check cycle 139: IN_PROGRESS, 4 %).
+  * Job B — focused `n = 2`:
+    project `70f26d67-b37e-4eda-b946-64c9f4616612`
+    (last status check cycle 139: IN_PROGRESS, 3 %).
+  By cycle 140 these jobs will have had ≈ 24 hours of compute, well
+  past the textbook 30-minute window — a single poll this cycle is
+  expected to find them either complete or genuinely stuck.
 
-## Primary target: `thm:550A` (Doubly companion matrices)
+## Priority 0 — Aristotle poll (MANDATORY, do first)
 
-Textbook statement (`entities/thm_550A.json`, Butcher p. 457): for the
-**doubly companion matrix** `X` built from coefficients
-`α₁,…,αₙ, β₁,…,βₙ` per equation (550a),
+Run **one** `mcp__aristotle__get_status` call on each of the two
+project IDs above (in parallel, single message). Per CLAUDE.md, do
+NOT re-poll. Branch on the result:
+
+* **Both COMPLETE with clean proofs** → Priority 1A (full reinstatement).
+* **Job A (general-n) COMPLETE** → Priority 1A.
+* **Only Job B (n=2) COMPLETE** → Priority 1B (n=2 reinstatement
+  via Aristotle's proof).
+* **Both still IN_PROGRESS or returned junk** → fall through to
+  Priority 2.
+* **Both FAILED outright** → cancel both via
+  `mcp__aristotle__cancel_project` to free the slots, then go to
+  Priority 2.
+
+After polling, write a short note in the cycle 140 task results
+recording the status outcomes (so future cycles know whether the
+jobs are stale).
+
+## Priority 1A — reinstate `thm:550A` general-n if Aristotle delivered
+
+If Aristotle Job A returned a clean general-`n` proof:
+
+1. **Extract** the proof body via `mcp__aristotle__extract_result`
+   (project `7062c2a2-4a8b-4fae-b694-9355e06427a9`). Read the
+   extracted file and identify the proof of
+   `doublyCompanionMatrix_det_factorization`.
+2. **Reinstate the statement** in
+   `OpenMath/Chapter5/Section550.lean` directly after
+   `doublyCompanionMatrix_det_factorization_n_one`. The statement
+   shape (matching cycle-138 scaffold):
+   ```
+   theorem doublyCompanionMatrix_det_factorization
+       {n : ℕ} (α β : Fin n → ℂ) :
+       Asymptotics.IsBigO (nhds (0 : ℂ))
+         (fun z : ℂ =>
+           (1 - z • doublyCompanionMatrix α β).det
+             - alphaPoly α z * betaPoly β z)
+         (fun z : ℂ => z ^ (n + 1))
+   ```
+3. **Inline Aristotle's proof body verbatim**, then
+   `lake env lean OpenMath/Chapter5/Section550.lean` to verify it
+   compiles. If it fails, attempt at most ONE round of mechanical
+   adaptation (e.g. import additions, simp-set tweaks) — do **not**
+   spend the cycle rewriting a returned proof. If adaptation fails,
+   abandon the inlining and fall through to Priority 2.
+4. **Axiom check** via `lean_verify` on the fully qualified name. If
+   it returns anything beyond `[propext, Classical.choice, Quot.sound]`,
+   abort the inlining and fall through to Priority 2 — Butcher's §550
+   theorem is one of the load-bearing characterisations and must be
+   axiom-clean.
+5. **Update bookkeeping**:
+   * `extraction/formalization_data/lean_status.json` — flip
+     `thm:550A` to `formalized`, cycle 140, lean_symbol pointing at
+     the new theorem.
+   * `plan.md` — flip the `thm:550A` row to `[x]`.
+   * `.prover-state/issues/thm_550A_general_n.md` — prepend a "Status
+     update (cycle 140) — RESOLVED" stanza.
+
+## Priority 1B — reinstate `thm:550A` n=2 only if only Job B delivered
+
+If only Job B returned a clean n=2 proof:
+
+1. Extract via `mcp__aristotle__extract_result` on project
+   `70f26d67-b37e-4eda-b946-64c9f4616612`.
+2. Add a new theorem `doublyCompanionMatrix_det_factorization_n_two`
+   parallel in shape to the existing `_n_one`, with
+   `Fin 2 → ℂ` arguments and conclusion bounding by `z ^ 3`.
+3. Same axiom check as Priority 1A. Update `lean_status.json` to add
+   the new lean_symbol as a sub-witness (do NOT promote `thm:550A` to
+   `formalized` — the general-`n` statement is still missing).
+4. Then continue to Priority 2 if there is cycle budget remaining
+   (n=2 alone is light; ~30 min of work).
+
+## Priority 2 — Manual `n = 2` closure (DEFAULT path if Aristotle did not deliver)
+
+This is the **default path** for cycle 140 if Aristotle is still in
+flight. The n=2 case is mechanical (`Matrix.det_fin_two` plus ring
+arithmetic, paralleling cycle 138's n=1 closure) and provides a
+substantive stepping stone toward general-`n` while remaining
+axiom-clean.
+
+### Concrete construction
+
+Add the following theorem to `OpenMath/Chapter5/Section550.lean`
+immediately after `doublyCompanionMatrix_det_factorization_n_one`:
 
 ```
-X = [[-α₁, -α₂, ..., -α_{n-1}, -αₙ - βₙ],
-     [1, 0, ..., 0, -β_{n-1}],
-     [0, 1, ..., 0, -β_{n-2}],
-     ...,
-     [0, 0, ..., 1, -β₁]]
-```
-
-with `α(z) := 1 + α₁z + … + αₙ zⁿ` and `β(z) := 1 + β₁z + … + βₙ zⁿ`,
-the characteristic polynomial of `X` and `det(I − zX)` satisfy
-
-```
-det(I − zX) = α(z)·β(z) + O(z^{n+1})        as z → 0  in ℂ.
-```
-
-(The "reciprocal" identity `1 + γ₁z + γ₂z² + … + γₙ zⁿ = det(I − zX)`
-where `γᵢ` are the charpoly coefficients is a generic matrix fact —
-not specific to doubly companion matrices.)
-
-## Cycle 138 deliverable
-
-A new file `OpenMath/Chapter5/Section550.lean` with:
-
-1. **The doubly companion matrix definition.**
-2. **Verification at `n = 1`.**
-3. **Sorry-first scaffold for general `n`.**
-4. **Issue file documenting the general-`n` deferral.**
-5. **`OpenMath/Chapter5.lean` updated** to `import OpenMath.Chapter5.Section550`.
-
-This is a "structure + 1 closure" cycle. The `n = 1` closure is a
-**genuine** witness (textbook identity discharged for the smallest
-case), not vacuous.
-
-### Step 1 — Create the file (~30 min)
-
-Create `OpenMath/Chapter5/Section550.lean` with this header skeleton.
-Open under namespace `OpenMath.Chapter5.Section550` (new namespace —
-do NOT reuse `Section510` here; §550 is its own narrative thread).
-
-```lean
-import Mathlib.Analysis.Asymptotics.AsymptoticEquivalent
-import Mathlib.Analysis.Asymptotics.Defs
-import Mathlib.Data.Complex.Basic
-import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
-import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
-import Mathlib.LinearAlgebra.Matrix.Notation
-
-/-!
-# Butcher §550 — Doubly companion matrices (Theorem 550A)
-…
--/
-
-namespace OpenMath.Chapter5.Section550
-
-open Complex Asymptotics
-```
-
-### Step 2 — Define `doublyCompanionMatrix` (~50 LOC)
-
-Define over `ℂ` directly (the textbook works over ℂ via eigenvalue
-analysis; using `ℂ` from the start avoids a later complexification
-detour). The cleanest formulation uses index-by-index entries — do
-NOT try to use `Matrix.companion` from Mathlib (it's the standard
-companion matrix, not the doubly version).
-
-```lean
-/-- **Doubly companion matrix** (550a). Indexed by `Fin n × Fin n`,
-where `n ≥ 1`. The entries follow the textbook layout:
-* row 0 holds `−α_{j+1}` for j < n−1, and `−αₙ − βₙ` at column n−1
-* rows 1..n−1 hold a sub-diagonal `1` (i.e., `X[i, i−1] = 1`) and a
-  last-column entry `−β_{n−i}`.
-* All other entries are `0`.
-
-We encode the coefficients `α, β : Fin n → ℂ` as the vectors
-`(α₁,…,αₙ)` and `(β₁,…,βₙ)` (Fin-indexed, so `α k` means `α_{k+1}`
-in textbook indexing). -/
-def doublyCompanionMatrix {n : ℕ} (α β : Fin n → ℂ) :
-    Matrix (Fin n) (Fin n) ℂ := fun i j =>
-  if i.val = 0 then
-    if j.val = n - 1 then
-      -α ⟨n-1, by omega⟩ - β ⟨n-1, by omega⟩
-    else
-      -α j  -- row 0, columns 0..n-2: `-α_{j+1}` (textbook 1-indexed)
-  else if i.val = j.val + 1 then
-    1  -- sub-diagonal
-  else if j.val = n - 1 then
-    -β ⟨n - i.val, by omega⟩  -- last column entries
-  else
-    0
-```
-
-**Faithfulness check**: the textbook indexes α and β starting at 1;
-our `Fin n` indexes start at 0, so `α 0` corresponds to textbook
-`α₁`, `α (n−1)` corresponds to textbook `αₙ`. Document this in the
-docstring prominently.
-
-**Edge cases**: at `n = 0`, `Fin 0 → ℂ` is the empty function and
-the matrix is the empty (0×0) matrix; the theorem becomes vacuous
-(`O(z^1)` is just `IsBigO _ id`, true of the constant function 0).
-At `n = 1`, `i.val = 0 = j.val` and `j.val = n - 1 = 0`, so the
-single entry is `-α 0 - β 0` (which matches the textbook (550a)
-specialised at n=1: `[[-α₁ - β₁]]`).
-
-**Sanity helper**: prove
-`doublyCompanionMatrix_one_eq : doublyCompanionMatrix α β = !![-α 0 - β 0]`
-for `n = 1`. Use `Matrix.ext` + `fin_cases` + `decide` or `simp`.
-
-### Step 3 — State `thm:550A` and prove the n=1 case (~80 LOC)
-
-```lean
-/-- The polynomial `α(z) = 1 + α₁z + … + αₙ zⁿ` (textbook indexing). -/
-def alphaPoly {n : ℕ} (α : Fin n → ℂ) (z : ℂ) : ℂ :=
-  1 + ∑ i : Fin n, α i * z ^ (i.val + 1)
-
-/-- The polynomial `β(z) = 1 + β₁z + … + βₙ zⁿ`. -/
-def betaPoly {n : ℕ} (β : Fin n → ℂ) (z : ℂ) : ℂ :=
-  1 + ∑ i : Fin n, β i * z ^ (i.val + 1)
-
-/-- **Theorem 550A** — for the doubly companion matrix `X` with
-coefficient vectors `α, β`,
-`det(I − zX) = α(z)·β(z) + O(z^{n+1})` as `z → 0`.
-
-Butcher §550 Theorem 550A, p. 457. -/
-theorem doublyCompanionMatrix_det_factorization
-    {n : ℕ} (α β : Fin n → ℂ) :
+theorem doublyCompanionMatrix_det_factorization_n_two
+    (α β : Fin 2 → ℂ) :
     Asymptotics.IsBigO (nhds (0 : ℂ))
       (fun z : ℂ =>
         (1 - z • doublyCompanionMatrix α β).det
           - alphaPoly α z * betaPoly β z)
-      (fun z : ℂ => z ^ (n + 1)) := by
-  sorry  -- see issue thm_550A_general_n.md
+      (fun z : ℂ => z ^ 3)
 ```
 
-Then prove the **n = 1 specialization** as a witness:
+### Algebraic skeleton (verified by hand against the existing definition)
 
-```lean
-/-- `thm:550A` at `n = 1`: with single coefficients α₁, β₁,
-`det(I − zX) = 1 + (α₁ + β₁)z`, while `α(z)·β(z) = 1 + (α₁+β₁)z + α₁β₁z²`,
-so the difference is `−α₁β₁ z²`, which is `O(z²) = O(z^{1+1})`. -/
-theorem doublyCompanionMatrix_det_factorization_n_one
-    (α β : Fin 1 → ℂ) :
-    Asymptotics.IsBigO (nhds (0 : ℂ))
-      (fun z : ℂ =>
-        (1 - z • doublyCompanionMatrix α β).det
-          - alphaPoly α z * betaPoly β z)
-      (fun z : ℂ => z ^ 2) := by
-  -- (1 - zX).det = 1 - z · (-α 0 - β 0) = 1 + (α 0 + β 0) z
-  -- α(z)·β(z) = (1 + α 0 · z)(1 + β 0 · z) = 1 + (α 0 + β 0) z + (α 0)(β 0) z²
-  -- difference = -(α 0)(β 0) z²
-  have h_diff : ∀ z : ℂ,
-      (1 - z • doublyCompanionMatrix α β).det
+For `n = 2`, the doubly companion matrix unfolds to
+```
+X = !![-α 0, -α 1 - β 1;
+       1,     -β 0]
+```
+(row 0 col 0: `i.val = 0`, `j.val + 1 = 1 ≠ 2`, so `-α 0`; row 0
+col 1: `i.val = 0`, `j.val + 1 = 2 = n`, so `-α (n-1) - β (n-1) =
+-α 1 - β 1`; row 1 col 0: `i.val ≠ 0`, `j.val + 1 = 1 ≠ 2`,
+`i.val = j.val + 1 = 1`, so `1`; row 1 col 1: `i.val ≠ 0`,
+`j.val + 1 = 2 = n`, so `-β (n - i.val - 1) = -β 0`.)
+
+Hence
+```
+I - zX = !![1 + zα 0,   z(α 1 + β 1);
+            -z,          1 + zβ 0]
+```
+and `Matrix.det_fin_two` gives
+```
+det(I - zX) = (1 + zα 0)(1 + zβ 0) - z(α 1 + β 1)·(-z)
+            = (1 + zα 0)(1 + zβ 0) + z²(α 1 + β 1)
+            = 1 + (α 0 + β 0) z
+                + (α 0 · β 0 + α 1 + β 1) z².
+```
+Meanwhile,
+```
+α(z) · β(z) = (1 + α 0 z + α 1 z²)(1 + β 0 z + β 1 z²)
+            = 1 + (α 0 + β 0) z
+                + (α 0 · β 0 + α 1 + β 1) z²
+                + (α 0 · β 1 + α 1 · β 0) z³
+                + α 1 · β 1 · z⁴.
+```
+The residue is therefore
+```
+det - α·β = -(α 0 · β 1 + α 1 · β 0) z³ - α 1 · β 1 · z⁴
+          = z³ · (-(α 0 · β 1 + α 1 · β 0) - α 1 · β 1 · z),
+```
+which is `O(z³) = O(z^{2+1})` near 0.
+
+### Tactic plan (mirror of `_n_one`)
+
+**Step 1a** — add a private simp lemma paralleling the existing
+`doublyCompanionMatrix_one_eq`:
+```
+@[simp]
+private lemma doublyCompanionMatrix_two_eq (α β : Fin 2 → ℂ) :
+    doublyCompanionMatrix α β
+      = !![-α 0, -α 1 - β 1;
+           1,    -β 0] := by
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [doublyCompanionMatrix]
+```
+If `simp [doublyCompanionMatrix]` doesn't fully close one of the
+four entries, fall back to per-case `if_pos`/`if_neg` rewrites with
+explicit `decide`/`Fin.val_zero`/`Fin.val_succ` evidence.
+
+**Step 1** — establish the closed-form residue:
+```
+have h_diff : (fun z : ℂ =>
+    (1 - z • doublyCompanionMatrix α β).det
+      - alphaPoly α z * betaPoly β z)
+    = (fun z : ℂ =>
+        z^3 * (-(α 0 * β 1 + α 1 * β 0) - α 1 * β 1 * z)) := by
+  funext z
+  rw [doublyCompanionMatrix_two_eq]
+  -- Reduce 1 - z • !![…] to a !![…] form.
+  have hmat :
+      (1 - z • !![-α 0, -α 1 - β 1; 1, -β 0]
+         : Matrix (Fin 2) (Fin 2) ℂ)
+        = !![1 + z * α 0, z * (α 1 + β 1);
+             -z,            1 + z * β 0] := by
+    ext i j
+    fin_cases i <;> fin_cases j <;> simp <;> ring
+  rw [hmat, Matrix.det_fin_two]
+  simp [alphaPoly, betaPoly, Fin.sum_univ_succ, Fin.sum_univ_zero]
+  ring
+rw [h_diff]
+```
+
+**Step 2** — bridge `z³ · (linear in z)` to `O(z³)`. The cleanest
+formulation:
+```
+-- Goal: IsBigO (𝓝 0)
+--   (fun z => z^3 * (-(α 0 * β 1 + α 1 * β 0) - α 1 * β 1 * z))
+--   (fun z => z^3)
+refine (Asymptotics.isBigO_refl (fun z : ℂ => z^3) _).mul_isBigO ?_
+-- Now: IsBigO (𝓝 0)
+--   (fun z => -(α 0*β 1 + α 1*β 0) - α 1*β 1*z)  (fun _ => 1)
+exact (Asymptotics.isBigO_const_const _ one_ne_zero _).add
+        ((Asymptotics.isBigO_id (𝓝 0)).const_mul_left _ |>.trans
+         (Asymptotics.isBigO_const_const _ one_ne_zero _))
+```
+(If the `mul_isBigO` lemma name doesn't match Mathlib's, search via
+`lean_local_search "IsBigO" "mul"` or `lean_loogle "IsBigO _ _"`.
+The fallback is `Asymptotics.IsBigO.mul (isBigO_refl …) (h : IsBigO …)`.)
+
+**Step 2 fallback (preferred if Step 2 above is fiddly)** — split
+the residue additively as
+```
+(fun z => z^3 * c0) + (fun z => z^4 * c1)
+```
+where `c0 := -(α 0 · β 1 + α 1 · β 0)` and `c1 := -(α 1 · β 1)`,
+then prove each summand is `O(z^3)` separately:
+* `z^3 * c0`: via `(isBigO_refl _ _).const_mul_left c0`.
+* `z^4 * c1 = z^3 * (z * c1)`: via `(isBigO_refl _ _).mul_isBigO`
+  with the inner `z * c1` being `O(1)` near `0`
+  (`(isBigO_id (𝓝 0)).const_mul_left c1` is `O(z) ⊆ O(1)` since
+  `z → 0` ⇒ `z` is bounded near `0` ⇒ `z^4 = O(z^3)` because
+  `z^4 = z^3 · z` with `z` bounded).
+
+If both Step 2 routes fight the type system for > 30 minutes, fall
+through to Priority 3 B1.
+
+### Verification protocol
+
+* `lake env lean OpenMath/Chapter5/Section550.lean` — must succeed
+  without any sorry.
+* `lean_verify OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_two`
+  — must return `[propext, Classical.choice, Quot.sound]`.
+* `lake build OpenMath.Chapter5` — must remain green (~2790 jobs).
+
+### Bookkeeping if Priority 2 succeeds
+
+* `extraction/formalization_data/lean_status.json` — keep `thm:550A`
+  as `partial`, but extend the `notes` field to mention the n=2
+  lean_symbol alongside the existing `_n_one`.
+* `plan.md` `thm:550A` row — extend the cycle-139 note to mention
+  the new n=2 stepping stone.
+* `.prover-state/issues/thm_550A_general_n.md` — prepend a "Cycle
+  140 update" stanza recording the n=2 closure as additional
+  evidence the formula is correct, and noting that general-`n`
+  remains open.
+
+### Time budget
+
+* Aristotle poll + decision branching: 5 minutes.
+* Manual n=2 closure: 60–75 minutes (mostly unfold + ring + IsBigO
+  plumbing).
+* Bookkeeping + axiom checks: 15 minutes.
+* Total: ≈ 90 minutes, well within a single cycle.
+
+## Priority 3 — Backup plans if Priority 2 stalls
+
+The `IsBigO`-of-polynomial reasoning at Step 2 of Priority 2 is the
+most likely sticking point. Two escape hatches, in order of
+preference:
+
+### B1 (preferred) — drop to a pointwise residue identity
+
+If Step 2 won't compile within ~30 minutes of attempts, simplify the
+target to a **pointwise polynomial-equality witness**, not an
+asymptotic statement. Replace the n=2 theorem with:
+
+```
+theorem doublyCompanionMatrix_det_residue_n_two
+    (α β : Fin 2 → ℂ) (z : ℂ) :
+    (1 - z • doublyCompanionMatrix α β).det
         - alphaPoly α z * betaPoly β z
-        = -(α 0 * β 0) * z ^ 2 := by
-    intro z
-    rw [doublyCompanionMatrix_one_eq]
-    simp only [alphaPoly, betaPoly, Fin.sum_univ_one]
-    -- Reduce 1 - z • !![-α 0 - β 0] to !![1 + z * (α 0 + β 0)] then
-    -- use Matrix.det_fin_one.
-    have : (1 - z • !![-α 0 - β 0] : Matrix (Fin 1) (Fin 1) ℂ)
-            = !![1 + z * (α 0 + β 0)] := by
-      ext i j; fin_cases i; fin_cases j
-      simp [Matrix.smul_apply, sub_eq_add_neg]; ring
-    rw [this, Matrix.det_fin_one]
-    simp; ring
-  -- Use h_diff to bound the LHS by `‖α 0 * β 0‖ · ‖z^2‖`.
-  refine Asymptotics.IsBigO.of_bound ‖α 0 * β 0‖ ?_
-  filter_upwards with z
-  rw [h_diff]
-  rw [Complex.norm_neg, Complex.norm_mul, Complex.norm_pow]
-  ring_nf
-  rfl  -- or `simp` if ring_nf leaves a trivial residue
+      = z^3 * (-(α 0 * β 1 + α 1 * β 0) - α 1 * β 1 * z)
 ```
 
-**Verify with `lean_multi_attempt`** at every `simp`/`ring`/`refine`
-boundary before stitching the proof. The endgame can be sensitive
-to elaboration order. Three viable backup endgames if the
-`IsBigO.of_bound` route doesn't fire cleanly:
+This is just Priority-2 Step 1's `h_diff` exposed as a public theorem.
+It still provides a substantive n=2 witness (the closed-form residue
+identity is the load-bearing piece for any `IsBigO` upgrade) and is
+purely algebraic, so it lands axiom-clean by `simp + ring` without
+needing the asymptotic plumbing. The `IsBigO` upgrade can come in a
+later cycle.
 
-1. `simp only [h_diff]; exact (isBigO_const_mul_self _ _ _).neg_left`-style.
-2. Build `IsBigO` from `Filter.eventually_le` directly via
-   `‖f z‖ ≤ ‖α 0 * β 0‖ * ‖z^2‖`.
-3. Prove the function `equals` `fun z => -(α 0 * β 0) * z^2`
-   (which is automatic from `h_diff`), then close via
-   `Asymptotics.isBigO_const_mul_self` followed by `congr`.
+Bookkeeping: same as Priority 2, but lean_symbol points at
+`_residue_n_two` instead of `_factorization_n_two`.
 
-If `lean_multi_attempt` shows none of these close, **decompose
-further** into a sub-lemma `f z = g z * z^2` for an appropriate
-constant `g z`, and feed that to `Asymptotics.IsBigO.const_mul_left`
-plus `Asymptotics.isBigO_refl`.
+### B2 — pivot to a substantive non-trivial §530 starting-method witness
 
-### Step 4 — Update plumbing (~15 min)
+If Priority 2 is genuinely blocked (e.g. `Matrix.det_fin_two` does
+not unfold cleanly against the `if-then-else`-laden
+`doublyCompanionMatrix` definition, or the `!![…]` notation refuses
+to elaborate at `Fin 2 × Fin 2` over `ℂ`), pivot away from §550 and
+enrich §530.
 
-* Add `import OpenMath.Chapter5.Section550` to `OpenMath/Chapter5.lean`.
-  (Note: `OpenMath/Chapter5.lean` is currently missing imports for
-  `Section514`, `Section515`, `Section525` — DO NOT add those; they
-  may be intentionally deferred from the chapter's hub. Only add
-  `Section550`. If lake build complains about a missing transitive
-  dep, leave the new file out of the hub and import it directly
-  wherever needed; document in the cycle results.)
-* Update `extraction/formalization_data/lean_status.json` for
-  `thm:550A`: status `partial`, `lean_file` =
-  `OpenMath/Chapter5/Section550.lean`, `lean_symbol` =
-  `OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization`,
-  `cycle` = 138, plus a new annotation pointing to the
-  `_n_one` witness theorem.
-* Update `plan.md` Chapter 5 row for `thm:550A`: `[ ]` → `[~]` with
-  a note "n=1 closed; general n deferred (issue
-  `thm_550A_general_n.md`)".
+Add to `OpenMath/Chapter5/Section530.lean`:
 
-### Step 5 — Document the general-n deferral
+* A **2-stage trivial generalized RK** `twoStageGeneralizedRK : GeneralizedRungeKuttaMethod 2`
+  with `c = ![0, 1/2]`, `A = !![0, 0; 1/2, 0]`, `b₀ = 1`,
+  `b = ![0, 1]` (an explicit-midpoint-style 2-stage tableau).
+* A **mixed-stages starting method** `mixedStartingMethod : StartingMethod 2`
+  with `stages 0 = 1, stages 1 = 2`, `method 0 := trivialGeneralizedRK`,
+  `method 1 := twoStageGeneralizedRK`. This demonstrates the
+  heterogeneous-`s_i` capability is non-vacuous (currently only
+  the constant `stages = fun _ => 1` case is witnessed).
+* `mixedStartingMethod_isNonDegenerate` — exhibits the `i = 0`
+  constituent's `b₀ = 1 ≠ 0` via the same
+  `isNonDegenerate_iff_exists_b₀_ne_zero` route.
 
-Write `.prover-state/issues/thm_550A_general_n.md` documenting:
+This delivers **two new structures + one axiom-clean theorem** that
+genuinely exercise the dependent-stages design. Strictly substantive
+(not just renaming the trivial witness).
 
-* The textbook proof (eigenvalue density argument): distinct,
-  non-zero eigenvalues form a dense set in coefficient space;
-  charpoly coefficients are continuous; reduce to the dense case
-  via direct eigenvalue calculation, then extend by continuity.
-* Why the general case is deferred: density-based argument requires
-  several Mathlib pieces in concert (continuity of charpoly
-  coefficients in matrix entries, density of "distinct eigenvalues"
-  in coefficient space, identity-of-analytic-functions extension by
-  continuity). Each is available in Mathlib, but the assembly is
-  multi-cycle.
-* Possible solutions:
-  (i) Direct cofactor-expansion of `det(I − zX)` for general `n` —
-      compute the determinant entry-by-entry by exploiting the
-      sparse structure of `X`. Tedious (~150 LOC) but plausible
-      single-cycle work for cycle 139 if Aristotle batch is
-      inconclusive.
-  (ii) Eigenvalue-density argument (the textbook's path). ~300 LOC
-       across 2–3 cycles.
-  (iii) An induction on `n` via row-reduction. The doubly companion
-        matrix has a recursive structure (the `(n−1) × (n−1)`
-        bottom-right block of `X` is itself a doubly companion
-        matrix shifted down). This may be the cleanest; sketch it
-        out in cycle 139.
-* Cross-reference: blocks `thm:551B` (which uses `thm:550A` for the
-  M(z) eigenvalue analysis).
+Bookkeeping: leave `lean_status.json` `def:530A` row at cycle 139
+(no status change needed; this is just a richer non-vacuity story).
+Mention the new mixed-stages witness in the `def:530A` `notes` field.
 
-### Step 6 — Aristotle batch (parallel to manual work)
+## What NOT to do this cycle
 
-Submit two jobs at the START of the cycle (so they run in the
-background while you work on Steps 1–5):
+* **Do NOT introduce a sorry-first scaffold for `thm:550A`
+  general-`n`.** Cycle 138's −2 score is the canonical example. If
+  Aristotle hasn't returned, the n=2 manual closure is the path; do
+  not stage a general-`n` statement with `sorry` body.
+* **Do NOT poll Aristotle more than once.** Per CLAUDE.md. One
+  status check per project at the start of the cycle, no follow-ups.
+* **Do NOT submit a fresh Aristotle job for general-n while Job A
+  is still IN_PROGRESS.** Duplicates spend.
+* **Do NOT attempt the manual cofactor-expansion / induction proof
+  for general-`n`.** Per `thm_550A_general_n.md` and cycle-139 task
+  results, this is multi-cycle infrastructure (~150–300 LOC across
+  2–3 cycles). It is explicitly out of scope for cycle 140.
+* **Do NOT raise `maxHeartbeats`.** CLAUDE.md hard rule.
+* **Do NOT cherry-pick a cosmetic Chapter 3 leaf** (e.g.
+  `def:381F` / `def:381B` / `def:381D`) as a substitute for
+  Priority 2/3. `def:381F` is **blocked** by the deferred
+  `reducedMethod` construction (see
+  `.prover-state/issues/reduced_method_deferred.md`); the others are
+  pure renaming exercises that don't justify a cycle.
+* **Do NOT open `def:530B` / `def:530C` ("order relative to a
+  starting method").** These genuinely require Taylor-expansion
+  infrastructure for the `SM` and `ES` composition (see cycle 139
+  task results §"Suggested next approach"); they are multi-cycle and
+  high-risk for a single-cycle deliverable.
+* **Do NOT touch `scripts/autonomous_loop.py`** or any harness file.
+  Per CLAUDE.md and `tautology_scanner_false_positives.md` (loop-
+  maintainer territory).
+* **Do NOT modify `extraction/raw_text/` or
+  `extraction/formalization_data/entities/`.** Both are
+  regenerated; updates go to `extraction/extensions/` (none
+  needed this cycle) or `lean_status.json`.
 
-* **Job A**: the general-`n` `doublyCompanionMatrix_det_factorization`
-  theorem with the full `n = 1` proof shown as guidance, plus a
-  reference to the textbook's eigenvalue-density argument in the
-  prompt.
-* **Job B**: a focused sub-lemma stating the polynomial identity
-  *exactly* (not asymptotically):
-  `(1 - z • doublyCompanionMatrix α β).det = alphaPoly α z * betaPoly β z + ∑ i ∈ Finset.Ioc n (2*n), (γ i) * z^i`
-  for some coefficients `γ i` derivable from α and β. The asymptotic
-  `IsBigO` then follows directly. This may be more amenable than
-  Job A's full asymptotic form.
+## Pre-commit checklist (mandatory)
 
-Don't poll Aristotle this cycle. Submit and proceed with manual work.
+Before `git add` / `git commit`, verify:
 
-## What NOT to try
+1. **Sorry count**:
+   `Grep '\bsorry\b' OpenMath/ --output_mode count` — confirm zero
+   matches in proof bodies (docstring/comment matches OK; verify
+   manually).
+2. **Axiom-clean**: every new public theorem returns
+   `[propext, Classical.choice, Quot.sound]` from `lean_verify`.
+3. **Build**: `lake build OpenMath.Chapter5` exits with all jobs
+   green (expected ~2790 jobs after this cycle's additions).
+4. **`lean_status.json`**: rows for `thm:550A` (and `def:530A` if
+   touched under B2) carry the cycle 140 reference and a clear
+   lean_symbol pointer.
+5. **Faithfulness check** in `cycle_140.md` covers every new `def`,
+   `structure`, and `theorem` introduced this cycle — quote the
+   textbook entity, confirm the Lean statement matches (or document
+   any deviation explicitly).
+6. **`plan.md`** reflects any status changes.
+7. **Tautology scanner sanity**: no `:= h_<name>` or `exact h_<name>`
+   patterns introduced (rename to `hname` form if necessary, per
+   `.prover-state/issues/tautology_scanner_false_positives.md`).
 
-1. **Do NOT attempt `thm:551B` or `thm:550B`.** Both depend on `thm:550A`
-   PLUS additional infrastructure (similarity transformation, Jordan
-   block computations). One step at a time.
+## Decision tree summary
 
-2. **Do NOT attempt general-`n` `thm:550A` manually this cycle.**
-   The eigenvalue density argument is multi-cycle work. Sorry-first
-   it and document. If by some chance Aristotle returns a clean proof
-   in time (unlikely — typical IN_PROGRESS at 30 min poll is < 5%),
-   incorporate it next cycle.
+```
+Cycle 140 entry
+  │
+  ├─ Poll Aristotle Jobs A (general-n) and B (n=2)  ← MANDATORY
+  │
+  ├─ Job A returned clean? ──→ Priority 1A: reinstate general-n
+  │     │                       (full closure of thm:550A)
+  │     └─ axiom check fails? ─→ fall through to Priority 2
+  │
+  ├─ Only Job B returned clean? ──→ Priority 1B: add n=2 from
+  │     │                            Aristotle, then continue to
+  │     │                            Priority 2 if budget permits
+  │     └─ axiom check fails? ─→ fall through to Priority 2
+  │
+  ├─ Neither returned (default expected outcome) ─→ Priority 2:
+  │     │                           manual n=2 closure
+  │     └─ Step 2 IsBigO plumbing stalls ─→ Priority 3 B1 (residue
+  │                                          identity) or B2 (§530
+  │                                          mixed-stages witness)
+  │
+  └─ Both FAILED outright ──→ cancel both, then Priority 2
+```
 
-3. **Do NOT use `Mathlib.LinearAlgebra.Matrix.Charpoly.Eigs`'s eigenvalue
-   results to close the `n = 1` case.** They require the matrix to be
-   over an algebraically closed field with extra structure. For `n = 1`,
-   stick to direct `Matrix.det_fin_one` calculation.
+## Expected deliverable
 
-4. **Do NOT introduce a `class` for "doubly companion structure".**
-   A plain `def` returning a `Matrix` is sufficient. Adding a
-   typeclass/predicate would be over-engineering.
+A single commit with one of:
 
-5. **Do NOT pick a different target.** The worker may be tempted by
-   "easier" non-vacuity strengthenings (e.g.
-   `implicitMidpointGLM_hasStabilityOrder_two` for `def:521A`). The
-   cadence has run its course — pivoting to a real theorem is the
-   explicit cycle 138 mandate. If you hit a deadlock on `thm:550A`,
-   write an issue file and commit a partial scaffold rather than
-   pivoting away.
+* **(Best case)** `thm:550A` reinstated at general `n`, axiom-clean,
+  flipped to `formalized` in `lean_status.json` and `plan.md`.
+* **(Default expected)** New axiom-clean theorem
+  `doublyCompanionMatrix_det_factorization_n_two` adding a 2x2
+  witness for §550, plus the helper simp lemma
+  `doublyCompanionMatrix_two_eq`. `thm:550A` remains `partial` with
+  two stepping stones (n=1 and n=2).
+* **(Backup)** Either the pointwise residue identity B1
+  (`doublyCompanionMatrix_det_residue_n_two`) or the §530
+  enrichment B2 (mixed-stages starting method), depending on which
+  Step-2 obstruction bites.
 
-6. **Do NOT raise `maxHeartbeats`** above 200000. The `n = 1`
-   determinant computation should not need any heartbeat tweaks.
-
-7. **Do NOT touch Section520/Section525 work.** Cycle 137's commit
-   `dd5e986` is the clean baseline.
-
-8. **Do NOT reuse the `OpenMath.Chapter5.Section510` namespace** for
-   the new §550 work. Each section deserves its own namespace; the
-   `Section510` namespace was reused historically for §512–§520
-   deliverables only because they all rest on the same
-   `GeneralLinearMethod` structure. §550 is a new, distinct narrative
-   (matrix-theoretic, not GLM-specific). Use `OpenMath.Chapter5.Section550`.
-
-9. **Do NOT add `import` of `Section515`, `Section514`, or `Section525`
-   to `OpenMath/Chapter5.lean`** as part of cycle 138 plumbing. Those
-   are missing from the hub (verified — see `Grep` output) but the
-   reason is unclear; touching them is out of scope.
-
-## Success criteria
-
-The cycle counts as a substantive forward step (score ≥ +1) if at
-least three of the following are true:
-
-- [ ] `OpenMath/Chapter5/Section550.lean` exists, builds clean
-      (`lake env lean OpenMath/Chapter5/Section550.lean` exits 0).
-- [ ] `doublyCompanionMatrix` is defined with correct entries
-      (verify with `n = 1` and `n = 2` instances via `decide` or
-      explicit `Matrix.ext`).
-- [ ] `doublyCompanionMatrix_det_factorization_n_one` is closed
-      axiom-clean (`#print axioms` returns
-      `[propext, Classical.choice, Quot.sound]`).
-- [ ] `doublyCompanionMatrix_det_factorization` is stated (sorry-first
-      OK) with the IsBigO conclusion matching the textbook.
-- [ ] `OpenMath/Chapter5.lean` imports `Section550`.
-- [ ] `lean_status.json` and `plan.md` reflect `thm:550A` partial.
-- [ ] `.prover-state/issues/thm_550A_general_n.md` documents the
-      deferral.
-- [ ] Aristotle batch submitted (project IDs recorded in
-      `.prover-state/aristotle_submissions/cycle_138/README.md`).
-
-A bonus closure of `n = 2`
-`doublyCompanionMatrix_det_factorization_n_two` (specifically, the
-textbook claim at `n = 2` with explicit α₁, α₂, β₁, β₂) would push
-the cycle to score +2. The `n = 2` computation is ~80 LOC of direct
-`det_fin_two` calculation; not required but feasible if Steps 1–5
-finish under-budget.
-
-## Pre-commit checklist
-
-- `lake env lean OpenMath/Chapter5/Section550.lean` exits 0 (no errors,
-  warnings only on the sorry'd general-n theorem).
-- `lake env lean OpenMath/Chapter5.lean` exits 0 (after the import is
-  added).
-- `#print axioms OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_one`
-  returns `[propext, Classical.choice, Quot.sound]`.
-- Tautology scanner returns 0 hits across `OpenMath/`.
-- `extraction/formalization_data/lean_status.json` validates against
-  the JSON schema (status is `partial`, `cycle` set to 138).
-- `plan.md` row for `thm:550A` is `[~]` and references the new file +
-  issue.
-- Faithfulness check: cite `entities/thm_550A.json` in the docstring;
-  confirm the Lean statement matches Butcher's (550a) layout exactly
-  (NOT a paraphrase). Document the 0-vs-1 indexing convention
-  prominently in the `doublyCompanionMatrix` docstring.
-
-## Suggested cycle 139 plan (preview)
-
-If cycle 138 lands the structure as described, cycle 139's options are:
-
-1. **Close `n = 2` of `thm:550A`** as a stepping stone toward general
-   `n` (still concrete computation; ~80 LOC).
-2. **Incorporate Aristotle returns** for general `n` (if any).
-3. **Manual general-`n` proof via cofactor expansion or induction**
-   (~150 LOC over 1–2 cycles).
-4. **Pivot to `thm:550B`** (similarity transformation) once `thm:550A`
-   is fully closed — but `thm:550B` itself depends on (550d), the
-   single-`n`-fold-eigenvalue case, so its formalisation has its own
-   complexity.
-
-Don't decide cycle 139 in cycle 138. Land the cycle 138 deliverables
-and let the planner re-evaluate.
+Whatever the deliverable, sorry count must remain 0 and all new
+public theorems must verify axiom-clean.

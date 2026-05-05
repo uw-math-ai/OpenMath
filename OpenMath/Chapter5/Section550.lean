@@ -154,4 +154,41 @@ theorem doublyCompanionMatrix_det_factorization_n_one
   -- `IsBigO` of `-(c) * z^2` against `z^2`.
   exact (isBigO_refl (fun z : ℂ => z ^ 2) _).const_mul_left _
 
+/-- **Theorem 550A at `n = 2`.** With coefficients `α 0, α 1, β 0, β 1`,
+* `det(I - z X) = 1 + (α 0 + β 0) z + (α 0 · β 0 + α 1 + β 1) z²`,
+* `α(z) · β(z) = 1 + (α 0 + β 0) z + (α 0 · β 0 + α 1 + β 1) z²
+                  + (α 0 · β 1 + α 1 · β 0) z³ + (α 1 · β 1) z⁴`,
+
+so the residue is `-(α 0 · β 1 + α 1 · β 0) z³ - (α 1 · β 1) z⁴`,
+which is `O(z³) = O(z^{2+1})` near `0`.
+
+Proof obtained from Aristotle (cycle 140 Job B,
+project `70f26d67-b37e-4eda-b946-64c9f4616612`). -/
+theorem doublyCompanionMatrix_det_factorization_n_two
+    (α β : Fin 2 → ℂ) :
+    Asymptotics.IsBigO (nhds (0 : ℂ))
+      (fun z : ℂ =>
+        (1 - z • doublyCompanionMatrix α β).det
+          - alphaPoly α z * betaPoly β z)
+      (fun z : ℂ => z ^ 3) := by
+  unfold alphaPoly betaPoly
+  unfold doublyCompanionMatrix
+  norm_num [Fin.sum_univ_two, Matrix.det_fin_two]
+  ring_nf
+  suffices h_factor :
+      (fun z : ℂ => z ^ 3 * (-(α 0 * β 1) - β 0 * α 1 - z * α 1 * β 1))
+        =O[nhds 0] (fun z : ℂ => z ^ 3) by
+    convert h_factor using 2
+    ring
+  refine Asymptotics.IsBigO.of_bound
+      (‖-(α 0 * β 1) - β 0 * α 1‖ + ‖α 1 * β 1‖) ?_
+  rw [Metric.eventually_nhds_iff]
+  refine ⟨1, by norm_num, fun y hy => ?_⟩
+  norm_num [mul_assoc, mul_comm, mul_left_comm]
+  exact mul_le_mul_of_nonneg_left
+    (le_trans (norm_sub_le _ _)
+      (by simpa [norm_mul] using
+        mul_le_mul_of_nonneg_right hy.le (by positivity)))
+    (by positivity)
+
 end OpenMath.Chapter5.Section550

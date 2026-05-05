@@ -1,5 +1,43 @@
 # Issue: General-`n` proof of `thm:550A` (Doubly companion matrix factorization)
 
+## Status update (cycle 140) — n=2 STEPPING STONE ADDED
+
+Aristotle Job B (project `70f26d67-b37e-4eda-b946-64c9f4616612`,
+focused on `n = 2`) returned **COMPLETE** during the cycle 140 poll.
+Its proof was inlined verbatim as
+`doublyCompanionMatrix_det_factorization_n_two`
+(axiom-clean: `[propext, Classical.choice, Quot.sound]`). The proof
+uses `Matrix.det_fin_two` to evaluate the determinant explicitly,
+factors out `z^3` from the residue, and concludes the `IsBigO` via
+`Asymptotics.IsBigO.of_bound` with an explicit constant
+`‖-(α 0 * β 1) - β 0 * α 1‖ + ‖α 1 * β 1‖`. The `‖y‖ < 1`
+neighborhood handles the higher-order `α 1 · β 1 · z⁴` term by
+dominating `‖z‖ ≤ 1`.
+
+Aristotle Job A (project `7062c2a2-4a8b-4fae-b694-9355e06427a9`,
+general `n`) was still IN_PROGRESS at 4% (last update
+2026-05-05T19:50:00, ≈40 minutes after submission). It was **left
+running** rather than cancelled; a future cycle should poll once
+more. If it eventually returns cleanly, the general-n statement and
+proof can be reinstated; otherwise the deferral plan below remains
+in force.
+
+The n=2 closure provides a second axiom-clean witness alongside the
+n=1 case, and confirms the closed-form residue formula
+`-(α 0 · β 1 + α 1 · β 0) z³ - (α 1 · β 1) z⁴` is correct. This is
+useful evidence for whoever eventually attacks general `n` (the
+residue's leading coefficient pattern is `-(α_i · β_{n-i})` summed
+over `i = 0..n-1` — visible already at n=1 and n=2).
+
+**State after cycle 140** (file `OpenMath/Chapter5/Section550.lean`):
+
+* `doublyCompanionMatrix` — kept
+* `doublyCompanionMatrix_one_eq` simp lemma — kept
+* `alphaPoly`, `betaPoly` — kept
+* `doublyCompanionMatrix_det_factorization_n_one` — kept (axiom-clean, cycle 138)
+* `doublyCompanionMatrix_det_factorization_n_two` — **added** (axiom-clean, cycle 140)
+* `doublyCompanionMatrix_det_factorization` (general n) — still **absent**
+
 ## Status update (cycle 139)
 
 The cycle-138 `sorry`-first scaffold for the general-`n` theorem has

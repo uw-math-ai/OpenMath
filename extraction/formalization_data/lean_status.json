@@ -883,10 +883,10 @@
   },
   "thm:550A": {
     "lean_file": "OpenMath/Chapter5/Section550.lean",
-    "lean_symbol": "OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_one",
+    "lean_symbol": "OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_one, OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_two",
     "status": "partial",
-    "cycle": 139,
-    "notes": "n=1 witness only: `doublyCompanionMatrix_det_factorization_n_one` closes the n=1 specialisation axiom-clean. The general-n statement (`doublyCompanionMatrix_det_factorization`) was sorry-first in cycle 138 and **removed** in cycle 139 — see `.prover-state/issues/thm_550A_general_n.md` for the closure-infrastructure deferral (cofactor-expansion induction or eigenvalue-density argument). Definitions `doublyCompanionMatrix`, `alphaPoly`, `betaPoly` and the `_one_eq` simp lemma remain. Aristotle jobs from cycle 138 (project IDs 7062c2a2 general-n / 70f26d67 n=2) were still IN_PROGRESS at cycle 139 poll; if either returns cleanly, the general-n statement and proof will be reinstated."
+    "cycle": 140,
+    "notes": "Two stepping-stone witnesses, both axiom-clean: (1) `_n_one` closes n=1 (cycle 138); (2) `_n_two` closes n=2 (cycle 140 via Aristotle Job B project 70f26d67-b37e-4eda-b946-64c9f4616612, COMPLETE; proof inlined verbatim using `Matrix.det_fin_two` + `IsBigO.of_bound` with explicit constant `‖-(α 0 * β 1) - β 0 * α 1‖ + ‖α 1 * β 1‖`). Aristotle Job A (project 7062c2a2-4a8b-4fae-b694-9355e06427a9) targeting general-n was still IN_PROGRESS at 4% during cycle 140 poll. The general-n statement (`doublyCompanionMatrix_det_factorization`) remains absent from the file — see `.prover-state/issues/thm_550A_general_n.md` for the closure-infrastructure deferral (cofactor-expansion induction or eigenvalue-density argument). Definitions `doublyCompanionMatrix`, `alphaPoly`, `betaPoly` and the `_one_eq` simp lemma remain."
   },
   "thm:550B": {
     "lean_file": null,
