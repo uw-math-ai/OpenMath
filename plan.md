@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 67 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 68 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -222,7 +222,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:521B` **Maximum stability order for given steps** (§521)
 - [ ] `thm:523B` **Nonlinear Stability via Positive Semidefiniteness** (§523)
 - [x] `def:520F` **L Stability Condition for Linear Methods** (§520) — OpenMath/Chapter5/Section520.lean
-- [ ] `def:551A` **Inherent Runge–Kutta stability** (§551)
+- [x] `def:551A` **Inherent Runge–Kutta stability** (§551) — OpenMath/Chapter5/Section520.lean (cycle 131, axiom-clean; predicate + `explicitEulerGLM_isIRKStable` witness with `X = 0`, vacuously satisfied first-row constraints; encodes only the textbook definition's two conditions, not the method-class context `ρ(V̇)=0`/`p=q`/diagonally implicit)
 - [x] `lem:515C` **Accumulated error estimate for multistep methods** (§515) — `OpenMath/Chapter5/Section515.lean::GeneralLinearMethod.accumulatedError_bound` (cycle 127, axiom-clean: thin public wrapper around the cycle-119/124 helper `aux_515D_max_deviation_geometric_bound`. Existential `∃ C_init C_lin ≥ 0, ‖E^[n]‖_∞ ≤ C_init·‖E^[0]‖_∞ + C_lin·h_n` form unifies Butcher's α>0 / α=0 cases. With this §515 = Stability+Consistency⇒Convergence is 100% complete: 515A, 515B, 515C, 515D all formalized.)
 - [ ] `thm:535A` **The underlying one-step method (GLM)** (§535)
 - [ ] `thm:551B` **Single Non Zero Eigenvalue Stability** (§551)

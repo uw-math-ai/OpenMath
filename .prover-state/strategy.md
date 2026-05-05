@@ -1,283 +1,354 @@
-# Cycle 130 strategy
+# Cycle 131 — Strategy
 
-## Status snapshot
+## TL;DR
 
-* No pending Aristotle results; no in-flight jobs.
-* No sorries on the branch (verified via `## Sorry locations` in the
-  prompt).
-* Cycle 129 closure landed at `5eb5ae0` — `def:525A` is now witnessed
-  axiom-clean by *both* `explicitEulerGLM` (trivial G=D=0 witness) and
-  `implicitMidpointGLM` (substantive G=D=1 witness).
-* Progress: 66 / 175 entities formalized.
+**Primary**: formalise `def:551A` *Inherent Runge–Kutta stability* in
+`OpenMath/Chapter5/Section520.lean`. Predicate + 1×1 trivial
+non-vacuity witness via `explicitEulerGLM`. Pattern is the same as
+cycle 130 (`def:542A`) and cycle 128 (`def:525A`): encode the textbook
+conditions, prove a trivial-dimension witness, land axiom-clean.
+Progress goes 67 → 68 / 175.
 
-## Target
+**Backup A** (only if the primary deliverable cannot land within
+budget): substantive `implicitMidpointGLM_isRKStable` with
+`R(z) = (1 + z/2)/(1 − z/2)` per cycle 130's "Suggested next approach"
+item 3. Bumps the existing `def:542A` witness slot to a substantive
+inhabitant; ~25 LOC using `Matrix.det_fin_one`. Does NOT bump entity
+count, but is a useful strengthening if §550 infra blocks the
+primary path.
 
-**Primary**: `def:542A` — *Runge–Kutta stability* of a general linear
-method (Butcher §542, page 445).
+There are **no sorry's in the codebase** and **no pending Aristotle
+results**, so this cycle is a clean greenfield definition + witness
+landing.
 
-**Secondary** (do this *after* primary lands and only if budget
-permits): two mirror lemmas
-`implicitMidpointGLM_isStable` and
-`implicitMidpointGLM_isConsistent` in
-`OpenMath/Chapter5/Section510.lean`. Cycle 129 task results
-flagged these as "one-line proofs" mirroring the existing
-`explicitEulerGLM_*` pair — the `V` blocks coincide so the proofs
-will copy verbatim modulo the structure name.
+## A. Primary deliverable — `def:551A` Inherent Runge–Kutta stability
 
-These are explicitly *secondary*. If primary takes longer than
-expected, ship primary alone — do NOT bundle.
+### Textbook statement (`extraction/formalization_data/entities/def_551A.json`)
 
-## Why `def:542A` is the right pick
-
-* It is a leaf definition (no proof obligations beyond non-vacuity).
-* All the infrastructure it needs is already in
-  `OpenMath/Chapter5/Section520.lean`:
-  * `GeneralLinearMethod.stabilityMatrix` (line 96).
-  * `GeneralLinearMethod.stabilityFunction` (line 150,
-    `(w • 1 − M(z)).det` = `Φ(w,z)`).
-  * `explicitEulerGLM_stabilityFunction` (line 461) gives
-    `Φ(w,z) = w − 1 − z` — this *is* the witness equation modulo a
-    rearrangement.
-* It unblocks two downstream entities directly: `def:551A`
-  ("Inherent Runge–Kutta stability") and the §550–§553 cluster's
-  hooks into RK-stability.
-* The textbook example `r = 1` (which both `explicitEulerGLM` and
-  `implicitMidpointGLM` satisfy) gives a clean, unconditional
-  non-vacuity witness without any 2×2 Mathlib gymnastics.
-
-## Textbook statement (verbatim from `entities/def_542A.json`)
-
-> A general linear method `(A, U, B, V)` has 'Runge–Kutta stability'
-> if the characteristic polynomial given by (542a) has the form
+> A general linear method `(A, U, B, V)` is "inherently Runge–Kutta
+> stable" if `V` is of the form (551a) and the two matrices
 >
->     `Φ(w, z) = w^(r−1) (w − R(z))`.
+>     `BA − XB`   and   `BU − XV + VX`
 >
-> For a method with Runge–Kutta stability, the rational function
-> `R(z)` is known as the 'stability function' of the method.
+> are zero except for their first rows, where `X` is some matrix.
 
-`Φ(w, z) := det(wI − M(z))` per (542a). Our existing
-`GeneralLinearMethod.stabilityFunction` is *exactly* this `Φ`
-(verified by `stabilityFunction_eq_zero_iff_mem_spectrum` at
-Section520.lean:528, which uses `Matrix.eval_charpoly`).
+Equation (551a):
+```
+V = [[1, v],
+     [0, V̇]]
+```
+with `ρ(V̇) = 0` (per the textbook `Context`).
 
-## Encoding choices
+Bookkeeping (also from the textbook context):
+* `p = q`, `s = r = p + 1`, `A` diagonally implicit, `λ ≥ 0` on its
+  diagonal.
 
-Add to `OpenMath/Chapter5/Section520.lean` (extending the existing
-`OpenMath.Chapter5.Section510` namespace where `stabilityFunction`
-lives — *not* a new file; this keeps the §520/§542 stability cluster
-together in one place):
+### Encoding decision — what goes IN the predicate vs. left to context
+
+The textbook's `Context` block lists side-conditions (`p = q`,
+`s = r`, `A` diagonally implicit, `λ ≥ 0`, `ρ(V̇) = 0`) that the
+*definition* itself does NOT mention — they describe the methods
+the textbook is *interested in* when discussing IRK stability,
+not which methods *are* IRK-stable. The definition (the LaTeX
+`\begin{definition}...\end{definition}` block) names exactly two
+conditions:
+
+1. `V` has the form (551a) — i.e. `V[0][0] = 1`, `V[i][0] = 0` for
+   `i > 0`, leaving `V[0][1..]` and `V[1..][1..]` free.
+2. `∃ X, BA − XB` and `BU − XV + VX` are zero except for their
+   first rows.
+
+**Strategy: encode exactly these two conditions in `IsIRKStable`.
+Nothing more.** Including `ρ(V̇) = 0` or `A` diagonally implicit
+would be hypothesis smuggling — the textbook treats them as
+*assumptions about which methods we study*, not as part of the
+IRK-stable predicate. (Compare to `def:542A` cycle 130, which
+similarly encoded only the factorisation, leaving `R` rationality
+to downstream theorems.)
+
+### Exact Lean shape (target signature)
+
+Place between `IsRKStable` and the existing §521 block in
+`OpenMath/Chapter5/Section520.lean` (justification: `def:551A`
+imports `def:542A` directly and adds no fresh imports beyond what
+Section520 already opens — `Matrix`, `Fin`, `Complex`, etc.).
 
 ```lean
-/-- §542A: a general linear method `M : GeneralLinearMethod s r`
-has *Runge–Kutta stability* if its stability function `Φ(w, z)`
-factorises as `w^(r−1) · (w − R z)` for some scalar function
-`R : ℂ → ℂ`. Such an `R` is then called the *stability function*
-of `M` (a rational function in the textbook). -/
-def GeneralLinearMethod.IsRKStable {s r : ℕ}
+/-- **Definition 551A (Inherent Runge–Kutta stability).**
+
+A general linear method `(A, U, B, V)` is *inherently Runge–Kutta
+stable* if:
+
+1. The `V` block has the form `V[0][0] = 1`, `V[i][0] = 0` for
+   `i ≠ 0` (i.e. its first column is the standard basis vector
+   `e₀`).
+2. There exists a matrix `X : Matrix (Fin r) (Fin r) ℝ` such that
+   the matrices `B·A − X·B` and `B·U − X·V + V·X` are zero outside
+   their first rows.
+
+This is Butcher's eq (551b)/(551c) condition; see §551 p. 460.
+Method-class side-conditions (`p = q`, `s = r = p + 1`, `A`
+diagonally implicit, `ρ(V̇) = 0`) are CONTEXT for which methods
+are studied — they are NOT part of this predicate. Compare
+`def:542A` (cycle 130), which similarly encodes only the
+factorisation. -/
+def GeneralLinearMethod.IsIRKStable {s r : ℕ}
     (M : GeneralLinearMethod s r) : Prop :=
-  ∃ R : ℂ → ℂ, ∀ w z : ℂ,
-    M.stabilityFunction w z = w ^ (r - 1) * (w - R z)
+  -- V has the block form (551a): first column is e₀.
+  (∀ i : Fin r, M.V i 0 = if i = 0 then 1 else 0) ∧
+  ∃ X : Matrix (Fin r) (Fin r) ℝ,
+    -- BA − XB has all entries 0 outside row 0.
+    (∀ (i : Fin r) (j : Fin s), i ≠ 0 →
+      (M.B * M.A - X * M.B) i j = 0) ∧
+    -- BU − XV + VX has all entries 0 outside row 0.
+    (∀ i j : Fin r, i ≠ 0 →
+      (M.B * M.U - X * M.V + M.V * X) i j = 0)
 ```
 
-Notes:
+Notes on the encoding choices:
 
-* `r - 1` is natural-number subtraction. For `r = 0`, `r - 1 = 0`
-  and the equation collapses to `Φ(w,z) = w − R(z)` — but `r = 0`
-  means `Φ(w, z) = det (w • 1 − M(z))` over the empty matrix, which
-  is `1`, so `1 = w − R z` is solvable only by an `R` *depending on
-  `w`* — i.e. NOT solvable as a function of `z` alone (for the
-  fixed `R z`, varying `w` would give `1 = w₁ − R z = w₂ − R z`
-  forcing `w₁ = w₂`, contradiction). The `r = 0` branch is therefore
-  never RK-stable, which is the right behaviour.
-* For `r ≥ 1`, `r − 1` is the textbook `r − 1`.
-* Use `R : ℂ → ℂ` (not `RatFunc ℂ`) — the textbook calls `R` rational
-  but the *predicate* statement only needs a function. If a
-  downstream theorem (e.g. §550A/B) requires rationality, it can be
-  added then. Do NOT pre-emptively bring in `RatFunc`.
+* The "first column of V is e₀" form captures (551a) without needing
+  to extract a sub-matrix `V̇`. We are saying `V[0][0] = 1` and
+  `V[i][0] = 0` for `i > 0`. The `v` row-vector and `V̇` block remain
+  free — exactly what the textbook says.
+* "Zero except for first rows" → `i ≠ 0 → (·) i j = 0` for all `j`.
+  This is the cleanest faithful translation; no sub-matrix
+  extraction needed.
+* The `r = 0` edge case: `Fin 0` is empty, so both clauses are
+  vacuously true and `IsIRKStable` is trivially satisfied. Acceptable
+  behaviour for a degenerate empty-matrix GLM (compare cycle 130's
+  `def:542A` `r = 0` analysis).
 
-## Witness statement
+### Non-vacuity witness — `explicitEulerGLM_isIRKStable`
+
+`explicitEulerGLM` has `s = r = 1`. With only one row, "zero except
+for first row" is vacuously true (only `i = 0` exists). The first
+column of `V = !![1]` is `!![1]`, satisfying clause (1) trivially:
+`V 0 0 = 1` and there are no `i ≠ 0` indices. So the witness is:
 
 ```lean
-/-- §542 non-vacuity: explicit Euler GLM has Runge–Kutta
-stability with `R(z) = 1 + z`. -/
-theorem explicitEulerGLM_isRKStable :
-    explicitEulerGLM.IsRKStable := by
-  refine ⟨fun z => 1 + z, ?_⟩
-  intro w z
-  rw [explicitEulerGLM_stabilityFunction]
-  -- Goal: w - 1 - z = w ^ (1 - 1) * (w - (1 + z))
-  -- Simplify: 1 - 1 = 0, w^0 = 1, then `ring`.
-  simp [pow_zero]
-  ring
+theorem explicitEulerGLM_isIRKStable :
+    explicitEulerGLM.IsIRKStable := by
+  refine ⟨?_, ?_⟩
+  · intro i
+    -- V[i][0] = 1 if i = 0 else 0; for r = 1 only i = 0 exists.
+    fin_cases i
+    simp [explicitEulerGLM]
+  · -- Pick X = 0; both clauses are vacuous since i : Fin 1 forces i = 0.
+    refine ⟨0, ?_, ?_⟩
+    · intro i j hi
+      exact absurd (Subsingleton.elim i 0) hi
+    · intro i j hi
+      exact absurd (Subsingleton.elim i 0) hi
 ```
 
-A second witness on `implicitMidpointGLM` is **out of scope** for
-this cycle. Reason: it requires computing
-`implicitMidpointGLM.stabilityFunction w z` from scratch, which
-involves `(I - z·!![1/2])⁻¹` over `ℂ`. That's clean math but ~50
-LOC of matrix-inverse plumbing, and we already have the `r=1` slot
-filled by explicit Euler. Defer to a later cycle if/when needed.
+Fallback closer if `Subsingleton.elim` doesn't fire cleanly:
+`fin_cases i; exact absurd rfl hi`. Or extract `i.val = 0` via
+`Fin.val_eq_zero_iff` then `omega`.
 
-## Step-by-step recipe (worker action items)
+### Proof tactics — try in this order
 
-1. **Read first** (~3 min):
-   * `extraction/formalization_data/entities/def_542A.json` (statement
-     + context).
-   * `OpenMath/Chapter5/Section520.lean` lines 96–200 (look at how
-     `stabilityFunction` is defined and how
-     `explicitEulerGLM_stabilityFunction` is proved at line 461).
-   * `OpenMath/Chapter5/Section510.lean` lines 144–195 (witness
-     pattern for `explicitEulerGLM_isPreconsistent` /
-     `_isStable` / `_isConsistent`).
+1. `refine ⟨?_, ?_⟩` to split the conjunction.
+2. Clause 1 (V's first column): `intro i; fin_cases i; simp
+   [explicitEulerGLM]`. If `simp` doesn't close it, the goal will
+   be `(!![1]) 0 0 = 1` which is `rfl` after `Matrix.cons_val_zero`.
+3. Clause 2 (∃ X): `refine ⟨0, ?_, ?_⟩` then
+   `intro i j hi; exact absurd (Subsingleton.elim i 0) hi`. If
+   `Subsingleton.elim` doesn't typecheck on `Fin 1`, fall back to
+   `fin_cases i; exact absurd rfl hi`.
 
-2. **Decide insertion point**: append `IsRKStable` and
-   `explicitEulerGLM_isRKStable` to `OpenMath/Chapter5/Section520.lean`
-   inside `namespace OpenMath.Chapter5.Section510`, after
-   `explicitEulerGLM_hasStabilityOrder_one` (around line ~500). Do
-   NOT make a new file.
+## B. Placement and scope
 
-3. **Encode the predicate** as shown in §"Encoding choices" above.
+Insert the new code in `OpenMath/Chapter5/Section520.lean` immediately
+**after** `explicitEulerGLM_isRKStable` (cycle 130 deliverable, near
+the bottom of the file). This colocates the two §54/§55 stability
+predicates that share infrastructure. Do NOT create a new
+`Section551.lean` for a single definition + 1-line witness — the
+file overhead isn't worth it; we can split later if §55 grows.
 
-4. **Encode the witness** as shown in §"Witness statement" above.
-   Verify with `lake env lean OpenMath/Chapter5/Section520.lean`.
-   Expected wall time: ≤ 90s. The `simp [pow_zero]; ring` closer
-   may need adjustment — if `r - 1 = 0` doesn't reduce by `simp`
-   alone, try the fallback ladder in §"Backup plan" below.
+Estimated total: ~50 LOC (predicate + docstring + witness).
 
-5. **Axiom-clean check**:
+## C. Required hygiene
+
+1. **Update `extraction/formalization_data/lean_status.json`** for
+   `def:551A`:
+   ```json
+   {
+     "id": "def:551A",
+     "status": "formalized",
+     "lean_file": "OpenMath/Chapter5/Section520.lean",
+     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsIRKStable",
+     "cycle": 131,
+     "axioms": ["propext", "Classical.choice", "Quot.sound"]
+   }
    ```
-   #print axioms explicitEulerGLM_isRKStable
+   (Match the existing field shape used for `def:542A` cycle 130.)
+2. **Update `plan.md`** §55 row for `def:551A`: change `[ ]` to `[x]`,
+   add annotation `def:551A — OpenMath/Chapter5/Section520.lean`.
+   Bump progress count `67 / 175` → `68 / 175`.
+3. **Verify axiom-clean** after `lake build`:
    ```
-   Expected: `[propext, Classical.choice, Quot.sound]`. If `sorryAx`
-   appears, the `simp; ring` closer is incomplete. (Note: per
-   prior cycle's discovery, `lake env lean <file>` does NOT update
-   the `.olean` cache — run `lake build OpenMath.Chapter5.Section520`
-   before `#print axioms` to avoid stale-cache `sorryAx` false
-   positives.)
-
-6. **Update `extraction/formalization_data/lean_status.json`**:
-   set `def:542A` row to `formalized`, with `lean_file` =
-   `OpenMath/Chapter5/Section520.lean` and `lean_symbol` =
-   `OpenMath.Chapter5.Section510.GeneralLinearMethod.IsRKStable`,
-   matching the cycle-128 schema for `def:525A` (look at the row
-   for that entity if unsure of the JSON shape).
-
-7. **Update `plan.md`** Chapter 5 §54 row for `def:542A` from
-   `[ ]` to `[x]` with a brief annotation
-   `OpenMath/Chapter5/Section520.lean (cycle 130, axiom-clean)` and
-   bump the progress counter from 66 to 67.
-
-8. **Faithfulness checklist** (mandatory per CLAUDE.md):
-   * Quote textbook statement in `cycle_130.md` task results.
-   * Confirm `IsRKStable` captures `Φ(w,z) = w^{r-1}(w − R(z))`
-     verbatim (it does — direct transcription).
-   * Definition smuggling check: we are NOT defining RK stability
-     as the existence of an `R` extracted from `Φ` (which would be
-     vacuous); we are defining it as the *factorisation existing*,
-     which has real algebraic content (vacuous for `r = 0`,
-     non-trivial for `r ≥ 1`). ✓
-   * Tautology check on the witness: the conclusion `IsRKStable` is
-     existential over `R`; the witness `R z := 1 + z` is computed,
-     not extracted from a hypothesis. ✓
-
-9. **(SECONDARY, only if 8 finishes within ~60 min wall)**:
-   add `implicitMidpointGLM_isStable` and
-   `implicitMidpointGLM_isConsistent` to `Section510.lean`
-   immediately after `implicitMidpointGLM_isPreconsistent` (line
-   ~228). Both proofs should copy `explicitEulerGLM_isStable`
-   (line 167) and `explicitEulerGLM_isConsistent` (line 184)
-   verbatim modulo the GLM structure name — the `V` and `U`
-   matrices are identical (`!![1]`) so the proofs go through. If
-   either deviates by more than 2 lines from the explicit Euler
-   version, STOP — there's an unexpected dependency on `A` and you
-   should ship just the primary.
-
-10. **Write `cycle_130.md`** per the CLAUDE.md template, including
-    the faithfulness check from step 8 and a list of any deviations
-    in step 9. Commit with message
-    `Cycle 130 — formalize def:542A Runge–Kutta stability (axiom-clean)`
-    plus a one-line note about the secondary deliverables if they
-    landed.
-
-11. **Push**.
-
-## What NOT to try (explicitly rejected approaches)
-
-* **Do NOT** start §550 doubly-companion-matrix infrastructure this
-  cycle (`thm:550A`, `thm:550B`, `cor:550C`). It is multi-cycle work
-  per the cycle 129 worker's notes and would not produce a
-  committable single-cycle deliverable.
-* **Do NOT** attempt the Butcher (525d) 2×2 G-symplectic witness
-  this cycle. Cycle 129 explicitly recategorised it as "additional
-  polish" rather than load-bearing now that the implicit-midpoint
-  witness lands; it is no longer time-critical and would consume the
-  cycle's budget without advancing the entity count.
-* **Do NOT** attempt `thm:521B` ("Maximum stability order for given
-  steps") this cycle. Its textbook proof uses contour integrals,
-  partial fractions, and rational-function complexity arguments —
-  multi-cycle work requiring infrastructure we don't have.
-* **Do NOT** attempt `def:530A` ("non-degenerate") this cycle. It
-  depends on a notion of "starting method" (a sequence of generalized
-  Runge–Kutta methods) that is not yet formalized; the dependency
-  list in its JSON is empty only because the extractor missed the
-  upstream "starting method" structure.
-* **Do NOT** introduce `RatFunc ℂ` for `R(z)`. Plain `ℂ → ℂ` is
-  sufficient for the predicate; the textbook's "rational" adjective
-  is informational, not structural for this definition.
-* **Do NOT** add an `(r_pos : 0 < r)` hypothesis to `IsRKStable`.
-  The `r = 0` case being unsatisfiable is the correct behaviour
-  (matches the textbook's implicit `r ≥ 1`).
-* **Do NOT** make `explicitEulerGLM_isRKStable` use
-  `decide` or `omega` — it's a real algebraic identity over `ℂ`,
-  the closer must be `ring` (post-simplification of `w^0`).
-* **Do NOT** create `OpenMath/Chapter5/Section542.lean` for this
-  one definition. Section520 already contains `IsAStable`,
-  `IsLStable`, `HasStabilityOrder`, and the §520D
-  instability-region work — it is the established home for stability
-  predicates. A new file would fragment the cluster.
-* **Do NOT** poll Aristotle this cycle (no jobs are in flight, and
-  this work is not Aristotle-suitable — predicate definition +
-  10-line `simp; ring` closer).
-* **Do NOT** edit `scripts/autonomous_loop.py` (loop-maintainer
-  territory; see standing
-  `tautology_scanner_false_positives.md`).
-* **Do NOT** raise `maxHeartbeats`.
-
-## Backup plan if the primary stalls
-
-Most likely failure mode: `simp [pow_zero]; ring` doesn't close the
-witness because `r - 1` for `r = 1` doesn't reduce automatically.
-
-Fallback ladder, in order of preference:
-
-1. Spell out `(1 : ℕ) - 1 = 0` explicitly:
-   ```lean
-   have hr : (1 : ℕ) - 1 = 0 := rfl
-   rw [hr, pow_zero, one_mul]
-   ring
+   #print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.IsIRKStable
+   #print axioms OpenMath.Chapter5.Section510.explicitEulerGLM_isIRKStable
    ```
-2. Use `Nat.sub_self` if `rfl` doesn't fire.
-3. Use `show w - 1 - z = w ^ 0 * (w - (1 + z)); rw [pow_zero,
-   one_mul]; ring`.
-4. If all of the above fail (would be surprising), the closer is
-   `convert ?_ using 2` followed by manual rewrite — but this is
-   strong evidence of a mis-statement. Re-check the predicate
-   shape against the textbook before spending > 15 min on the
-   closer.
+   Both should return `[propext, Classical.choice, Quot.sound]` only.
+   IMPORTANT: per cycle 072 lesson, run `lake build OpenMath.Chapter5.Section520`
+   *before* `#print axioms` to refresh the `.olean` cache (otherwise
+   stale-cache `sorryAx` false positives).
+4. **Tautology scanner check**: after the edit, run
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
+   from project root. Expected: zero new hits beyond pre-cycle
+   baseline. The `hi` binder name (without underscore) is fine.
 
-If after 30 min the witness still doesn't close, STOP and write
-the issue file
-`.prover-state/issues/def_542A_witness_blocker.md` with the goal
-state and a diagnosis. A failed witness on the textbook's
-canonical `r = 1` example is itself a meaningful cycle output.
+## D. What NOT to do
 
-## Score budget
+* Do **NOT** include `ρ(V̇) = 0`, `p = q`, `s = r = p + 1`, `A`
+  diagonally implicit, or `λ ≥ 0` in the `IsIRKStable` predicate.
+  These are textbook *context* about which methods are studied,
+  not part of the IRK-stability *predicate*. Putting them in would
+  be hypothesis smuggling — exactly the failure mode flagged in
+  the planner-faithfulness-spotcheck memory and the cycle 113/123
+  `_hc_nn`/`_hc_le_one` analysis.
+* Do **NOT** introduce `axiom`/`constant` declarations.
+* Do **NOT** raise `maxHeartbeats` above 200000.
+* Do **NOT** create a new `OpenMath/Chapter5/Section551.lean` for
+  this single definition — colocate in `Section520.lean` per §B.
+* Do **NOT** attempt the substantive `implicitMidpointGLM_isIRKStable`
+  witness this cycle. Trivial 1×1 explicit-Euler witness is
+  sufficient for non-vacuity. A substantive witness would require
+  computing `BA − XB`, `BU − XV + VX` for a 2×2 implicit-midpoint
+  encoding (s = r = 2 to make the predicate non-vacuous on more
+  than the row-vacuous level), which is multi-cycle scope.
+* Do **NOT** define a `V_dot` projection or a `IsBlockOne v V_dot`
+  helper structure for the V-form clause. The direct
+  "first column is e₀" formulation is faithful, terse, and avoids
+  building infrastructure that downstream theorems may not need.
+  If `thm:551B` or `thm:553A` later needs `V̇`, build the projection
+  *then* — not preemptively.
+* Do **NOT** try to formalise `thm:550A` (Doubly companion matrices)
+  this cycle. The dependency listed on `def:551A` is `llm_dependency`
+  (weak); we do NOT need doubly companion matrices to STATE IRK
+  stability. They become relevant for `thm:551B` / `thm:553A`
+  characterisations.
+* Do **NOT** poll Aristotle. There are no pending submissions and
+  the cycle is a clean greenfield landing.
+* Do **NOT** modify `scripts/autonomous_loop.py` or any loop
+  infrastructure (per CLAUDE.md and the standing
+  `tautology_scanner_false_positives.md` issue).
 
-* Primary alone (def:542A formalized + axiom-clean witness +
-  lean_status + plan.md): score 2.
-* Primary + secondary (implicitMidpointGLM_isStable +
-  implicitMidpointGLM_isConsistent): score 2 (the secondary
-  is upkeep, doesn't change the entity count).
-* Primary stall but issue file written: score 1.
-* No commit lands: score ≤ 0 (CLAUDE.md "zero-changes is
-  unacceptable").
+## E. Aristotle batch (NOT needed this cycle)
+
+The witness is a 5-line trivial closure on a 1×1 method; the
+predicate body has no `sorry`. Aristotle would have nothing
+useful to attack. **Skip the batch this cycle.**
+
+If the primary closure unexpectedly stalls (e.g. the witness's
+matrix-entry simp doesn't fire), then submit a single-job batch
+asking Aristotle to close `explicitEulerGLM_isIRKStable` — with
+the predicate body and the GLM definition as context. Sleep 30
+min; check once; proceed with manual closure either way per
+CLAUDE.md.
+
+## F. Backup deliverable (only if primary stalls past 90 min)
+
+If the primary stalls — e.g. the `Subsingleton.elim` fallback ladder
+all fails on `Fin 1`, or the matrix-arithmetic `simp` produces a
+goal that doesn't reduce — pivot to:
+
+**Backup A — substantive `implicitMidpointGLM_isRKStable`**
+
+Add a *substantive* `implicitMidpointGLM_isRKStable` companion to
+the existing trivial witness (cycle 130 already has the witness via
+the explicit-Euler-shape factorisation; this backup adds the
+implicit-midpoint witness with a non-trivial rational `R`).
+
+* Mathematical recipe: `M(z) = V + zB(I−zA)⁻¹U`. With
+  `A = !![1/2]`, `(I − z·A) = !![1 − z/2]`, so
+  `(I − z·A)⁻¹ = !![1/(1 − z/2)]`. Then
+  `M(z) = !![1] + z · !![1] · !![1/(1−z/2)] · !![1]
+        = !![1 + z/(1−z/2)]
+        = !![(1 − z/2 + z)/(1 − z/2)]
+        = !![(1 + z/2)/(1 − z/2)]`.
+  Hence `Φ(w, z) = w − (1 + z/2)/(1 − z/2)`, factoring as
+  `w^0 · (w − R(z))` with `R(z) = (1 + z/2)/(1 − z/2)`.
+* Lean tools: `Matrix.det_fin_one`, `Matrix.inv_def`, `field_simp` /
+  `Complex.field_simp`. Watch the `1 − z/2 = 0` singularity — guard
+  with `(hz : 1 - z/2 ≠ 0)` or work in the algebraic-completion form
+  using polynomial-clearing `(1 − z/2) · M(z) = ...`. The
+  factorisation in `IsRKStable` doesn't require explicit
+  invertibility because it's a polynomial identity in `w` for fixed
+  `z`; if `(1 − z/2)` vanishes choose `R(z) := 0` (the degenerate
+  case). Estimated ~25 LOC.
+* Updates: add a new theorem name `implicitMidpointGLM_isRKStable`
+  (do NOT overwrite the existing `explicitEulerGLM_isRKStable`
+  cycle 130 attribution). `lean_status.json` for `def:542A` may
+  optionally gain a `secondary_witness` field, but the primary
+  status row stays as cycle 130's.
+
+This does NOT bump entity count (67/175 stays), but it strengthens
+non-vacuity for `def:542A`.
+
+If the primary AND backup A both stall past the cycle budget,
+pivot to **Backup B**: write an issue file
+`.prover-state/issues/cycle_131_def_551A_blockers.md` documenting
+the stall point (specific tactic that didn't fire, specific term
+that didn't unify) and propose the Aristotle batch for cycle 132.
+A cycle with a structured issue file + minimal commit is acceptable
+under CLAUDE.md ("a cycle with zero changes is unacceptable; at
+minimum decompose a sorry or write an issue").
+
+## G. Faithfulness checklist (run BEFORE commit)
+
+Per CLAUDE.md "Pre-Commit Faithfulness Checklist":
+
+* [ ] `def:551A` JSON quote pasted into the cycle 131 task results.
+* [ ] Confirm `IsIRKStable`'s body matches the textbook's two
+      conditions (V form + ∃ X with first-row-only nonzero
+      residuals). Confirm we're NOT smuggling `ρ(V̇) = 0` /
+      `A` diagonally implicit / `p = q` etc. into the predicate.
+* [ ] **Definition smuggling check**: confirm the predicate is NOT
+      defined as something tautologically true on the trivial
+      witness alone. The 1×1 case being vacuous is fine —
+      every dimension-`r ≥ 2` GLM is constrained by the predicate.
+* [ ] **Tautology check**: `explicitEulerGLM_isIRKStable`'s
+      conclusion `explicitEulerGLM.IsIRKStable` is NOT a hypothesis
+      of the theorem (there are no hypotheses). Genuine work is
+      done in the proof. ✓
+* [ ] **Hypothesis strength check**: predicate has no hypotheses.
+      Witness theorem has no hypotheses. ✓
+* [ ] **Absent theorem check**: no `sorry`-promised content;
+      both deliverables are fully proved. ✓
+* [ ] **Axiom check**: `[propext, Classical.choice, Quot.sound]`
+      only, after `lake build` cache refresh. ✓
+
+## H. Commit message template
+
+```
+Cycle 131 — formalize def:551A Inherent Runge–Kutta stability (axiom-clean)
+
+* New predicate `GeneralLinearMethod.IsIRKStable` in
+  OpenMath/Chapter5/Section520.lean encoding Butcher §551:
+  V's first column is e₀, plus ∃ X with BA-XB and BU-XV+VX
+  zero outside their first rows.
+* Non-vacuity: explicitEulerGLM (s=r=1) trivially satisfies.
+* Faithfulness: predicate encodes ONLY the textbook definition's
+  two conditions; method-class context (ρ(V̇)=0, p=q, A
+  diagonally implicit) deliberately not smuggled in.
+* lean_status.json + plan.md updated; progress 67 → 68 / 175.
+```
+
+## I. End-of-cycle bookkeeping
+
+After commit, write `.prover-state/task_results/cycle_131.md`
+with the standard sections (Worked on / Approach / Result /
+Faithfulness check / Dead ends / Discovery / Suggested next).
+For "Suggested next approach", point at one of:
+
+* `def:530A` *non-degenerate* (§53 leaf, definition shape).
+* `thm:541A` *DIMSIM types* (classification, may need lookup).
+* `thm:535A` *underlying one-step method (GLM)* (theorem, §535).
+* Substantive `implicitMidpointGLM_isIRKStable` strengthening
+  (parallel to backup A).
+
+The planner can pick based on availability of dependencies and
+cycle-pacing.

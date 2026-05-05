@@ -542,6 +542,81 @@ theorem explicitEulerGLM_isRKStable :
   simp [pow_zero]
   ring
 
+/-! ### Definition 551A — Inherent Runge–Kutta stability -/
+
+/-- **Definition 551A (Inherent Runge–Kutta stability).**
+
+A general linear method `(A, U, B, V)` is *inherently Runge–Kutta
+stable* if:
+
+1. The `V` block has the form `V[0][0] = 1`, `V[i][0] = 0` for
+   `i ≠ 0` (i.e. its first column is the standard basis vector
+   `e₀`). This is equation (551a).
+2. There exists a real `r × r` matrix `X` such that the residual
+   matrices `B·A − X·B` and `B·U − X·V + V·X` are zero outside
+   their first rows.
+
+Butcher (Definition 551A, p. 460): "A general linear method
+`(A, U, B, V)` is `inherently Runge–Kutta stable' if `V` is of
+the form (551a) and the two matrices `BA − XB` and
+`BU − XV + VX` are zero except for their first rows, where `X`
+is some matrix."
+
+Encoding choices:
+
+* The `V`-form clause (551a) is encoded directly as
+  "first column is `e₀`": `V[0][0] = 1` and `V[i][0] = 0` for
+  `i ≠ 0`. The `v` row-vector and the `V̇` block remain free,
+  exactly as the textbook leaves them.
+* "Zero except for first rows" is encoded as
+  `i ≠ 0 → (·) i j = 0` for all `j`, which is the cleanest
+  faithful translation without requiring an explicit
+  sub-matrix extraction.
+* Method-class side-conditions from the textbook `Context` block
+  (`p = q`, `s = r = p + 1`, `A` diagonally implicit, `λ ≥ 0`,
+  `ρ(V̇) = 0`) describe the *family of methods studied* when
+  IRK stability is discussed; they are NOT part of the
+  IRK-stability *predicate* itself. Including them would be
+  hypothesis smuggling.
+* The `[NeZero r]` instance argument captures the textbook's
+  implicit `r ≥ 1` assumption (equation 551a's block form
+  `V = [[1, v], [0, V̇]]` requires at least a `1 × 1` `V`). The
+  `s = 0` case is harmless: the `B·A − X·B` clause is then
+  vacuously satisfied. -/
+def GeneralLinearMethod.IsIRKStable {s r : ℕ} [NeZero r]
+    (M : GeneralLinearMethod s r) : Prop :=
+  -- (551a): V's first column is the standard basis vector e₀.
+  (∀ i : Fin r, M.V i 0 = if i = 0 then 1 else 0) ∧
+  ∃ X : Matrix (Fin r) (Fin r) ℝ,
+    -- B·A − X·B is zero outside row 0.
+    (∀ (i : Fin r) (j : Fin s), i ≠ 0 →
+      (M.B * M.A - X * M.B) i j = 0) ∧
+    -- B·U − X·V + V·X is zero outside row 0.
+    (∀ i j : Fin r, i ≠ 0 →
+      (M.B * M.U - X * M.V + M.V * X) i j = 0)
+
+/-- Non-vacuity witness for `IsIRKStable`: `explicitEulerGLM`
+(s = r = 1, V = !![1]) is inherently Runge–Kutta stable.
+
+For `r = 1`, only the index `i = 0` exists in `Fin 1`, so the
+"zero outside row 0" clauses are vacuously satisfied for any
+choice of `X`. We pick `X := 0`. The `V`-form clause reduces
+to `V 0 0 = 1`, which holds since `V = !![1]`. -/
+theorem explicitEulerGLM_isIRKStable :
+    explicitEulerGLM.IsIRKStable := by
+  refine ⟨?_, ?_⟩
+  · -- (551a) clause: V's first column is e₀.
+    intro i
+    fin_cases i
+    simp [explicitEulerGLM]
+  · -- ∃ X clause: pick X = 0; both residual constraints are
+    -- vacuously satisfied since Fin 1 forces i = 0.
+    refine ⟨0, ?_, ?_⟩
+    · intro i _ hi
+      exact absurd (Subsingleton.elim i 0) hi
+    · intro i _ hi
+      exact absurd (Subsingleton.elim i 0) hi
+
 /-! ### Theorem 520D — Instability Region Boundary Characterization
 
 Butcher (Theorem 520D, p. 419): "The instability region for `(A, U, B, V)`

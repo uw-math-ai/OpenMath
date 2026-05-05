@@ -244,9 +244,9 @@
     "status": "formalized"
   },
   "def:551A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section520.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsIRKStable",
+    "status": "formalized"
   },
   "lem:110B": {
     "lean_file": "OpenMath/Chapter1/Section110.lean",
