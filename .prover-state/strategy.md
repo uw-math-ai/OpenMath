@@ -1,423 +1,459 @@
-# Cycle 122 Strategy — close §515D via corrected vectorial sum-form Grönwall
+# Cycle 124 Strategy — close `aux_515D_max_deviation_geometric_bound`
 
-## TL;DR
+## Status snapshot (post-cycle-123)
 
-Cycle 121 was hygiene-only and produced a detailed analytical
-correction to the previous strategy. **Read that correction issue
-FIRST**:
-`.prover-state/issues/cycle_121_strategy_B2_correction.md`.
-It documents an analytical bug in cycle 121's Backup B2 path
-(the `K_R · h²` residual claim is unprovable) and provides the
-correct vectorial sum-form composition recipe.
+* §515D sorry count: **1**, at `OpenMath/Chapter5/Section515.lean:2271`
+  (body of `aux_515D_max_deviation_geometric_bound`, signature at line 2235).
+* All upstream helpers needed for closure are CLOSED and available:
+  * `aux_515D_per_step_K_bound` (cycle 123, line 1953) —
+    `∃ α β ≥ 0, ∀ n m i, |Y(m+1) i − target_{m+1} i − (V·δ(m)) i| ≤ α·h_n·sup'_j |δ(m) j| + β·h_n²`.
+  * `aux_515D_iterated_V_bound` (cycle 120, line 1835) —
+    `∃ C' ≥ 0, ∀ k x, sup'_i |((V^k) *ᵥ x) i| ≤ C' · sup'_j |x j|`.
+  * `aux_515D_gronwall_bound` (cycle 117, line 1742) — sum-form
+    discrete Grönwall with closed-form `exp(α·n·h)·a + (exp(α·n·h) − 1)·(βh/α)`.
+  * `aux_515D_construct_ell_U_phi_A` (cycle 114) — already consumed by
+    cycle 123's helper; no need to invoke directly here.
+* No pending Aristotle results; no Aristotle work needed this cycle.
+* `Section513`/`Section514`/`Section515` all build clean.
+  `#print axioms stable_consistent_isConvergent` shows
+  `[propext, sorryAx, Classical.choice, Quot.sound]` — `sorryAx`
+  traces solely to the line 2271 sorry.
 
-Cycle 122 deliverable: **narrow the §515D sorry one more layer
-using the analytically-correct K-bound shape** (Path B in the
-correction issue). Stretch goal: close the body in full (Path A).
+## Priority 1 — close the body of `aux_515D_max_deviation_geometric_bound`
 
-The remaining sorry is at
-`OpenMath/Chapter5/Section515.lean:1995` inside
-`aux_515D_max_deviation_geometric_bound`.
+This is the **only** §515D sorry. Closing it makes
+`stable_consistent_isConvergent` axiom-clean (drops `sorryAx`) and
+flips `lean_status.json` `thm:515D` from `partial` → `formalized`.
 
-## Priority 0 — Mandatory reading (5 minutes)
+### Recipe (~150–200 LOC, follow verbatim)
 
-Read all of:
+The body lives at `Section515.lean:2235-2271`. Hypotheses already
+include everything you need: `_hStab`, `_hf_lip`, `_hyex_x₀`,
+`_hyex_ode`, `_hVu`, `_hUu`, `_hCons_eq`, `_hxx`, `_hM_nn`,
+`_hyex_C1`, `_hyex_M`, `_hyex'_LM`, `_h_norm`, `_hc_nn`, `_hc_le_one`,
+`[Nonempty (Fin r)]`, `Y`, `Y_int`, `_hY_iter`. Conclusion is
 
-1. `.prover-state/issues/cycle_121_strategy_B2_correction.md` —
-   the corrected analytical outline. The full vectorial path
-   (Path A) and the narrowed-helper fallback (Path B) are both
-   spelled out there. Internalise the residual bound
+```
+∃ C_init C_lin ≥ 0, ∀ n > 0,
+  sup'_i |Y n n i − (u_i · yex(x) + v_i · h_n · deriv yex(x))|
+    ≤ C_init · sup'_j |Y n 0 j − (u_j · yex(x₀) + v_j · h_n · deriv yex(x₀))|
+        + C_lin · h_n
+```
 
-   `|K m i| ≤ α · h_n · sup_j |δ(m) j| + β · h_n²`
+where `h_n := (x − x₀) / n`.
 
-   (NOT `K_R · h²`). The `α · h · δ_max` term is genuine and
-   comes from `localStepError_bound`'s output
-   (`Section515.lean:1407`).
-
-2. `.prover-state/issues/aux_515D_iterated_V_bound.md` (the
-   cycle 120 closure note at the bottom). Confirms that
-   `aux_515D_iterated_V_bound` (declared by cycle 120 around
-   `Section515.lean:1854`) gives
-   `sup_i |((V^k) *ᵥ x) i| ≤ C₀ · sup_j |x j|`
-   for any `k`, any `x`, with `C₀ := r · C` derived from
-   `M.IsStable`.
-
-3. `aux_515D_max_deviation_geometric_bound`'s signature
-   (`Section515.lean:1961-1995`) — the target. Note especially
-   that it does **not** currently take `_hc_nn` as a hypothesis;
-   that gap is what blocked the cycle 121 attempt and will be
-   propagated through this cycle.
-
-4. `localStepError_bound`'s signature
-   (`Section515.lean:1355-1407`) — confirm the K-bound output
-   shape `|K i| ≤ α * h * δ_max + β * h^2` and the requirement
-   for `_hc_nonneg : ∀ i, 0 ≤ c i`.
-
-5. `M.glmAbscissae` definition (`Section515.lean:98-100`):
-   `M.glmAbscissae v = M.A *ᵥ 1 + M.U *ᵥ v`. Neither term is
-   forced non-negative by `IsConsistent` / `IsStable` — confirms
-   Path A1 (internal proof of `0 ≤ c`) is not viable.
-
-## Priority 1 — Narrow the §515D sorry via Path B (primary deliverable)
-
-**Goal**: replace the current sorry with a composition that uses
-ONE new private helper (sorry body), so the §515D analytical
-core is isolated to a focused per-step K-bound claim with the
-analytically-correct shape.
-
-### Step 1 — Introduce the new helper
-
-Add a new `private theorem aux_515D_per_step_K_bound` immediately
-above `aux_515D_max_deviation_geometric_bound` (around line 1960).
-**Crucial**: use the corrected residual shape from the cycle 121
-correction issue, NOT the strategy's broken `K_R · h²` form.
+#### Step 1 — Setup (~15 LOC)
 
 ```lean
-/-- **Per-step K-bound for the vectorial recurrence (Path B
-narrowing, cycle 122).**
+have hΔx_pos : 0 < x - x₀ := sub_pos.mpr _hxx
+have hΔx_nn : 0 ≤ x - x₀ := hΔx_pos.le
+set h_n : ℕ → ℝ := fun n => (x - x₀) / (n : ℝ) with hh_n_def
+-- target sequence: target n k i := u_i · yex(x₀ + k·h_n) + v_i · h_n · deriv yex(...)
+set target : ℕ → ℕ → Fin r → ℝ := fun n k i =>
+  u i * yex (x₀ + (k : ℕ) * h_n n)
+    + v i * h_n n * deriv yex (x₀ + (k : ℕ) * h_n n)
+  with htarget_def
+-- δ-sequence: δ n k i := Y n k i - target n k i
+set δ : ℕ → ℕ → Fin r → ℝ := fun n k i => Y n k i - target n k i
+  with hδ_def
+-- δ_max n k := sup'_i |δ n k i|
+set δ_max : ℕ → ℕ → ℝ := fun n k =>
+  Finset.univ.sup' Finset.univ_nonempty (fun i : Fin r => |δ n k i|)
+  with hδ_max_def
+have hδ_max_nn : ∀ n k, 0 ≤ δ_max n k := by
+  intro n k
+  rcases (inferInstance : Nonempty (Fin r)) with ⟨i₀⟩
+  exact (abs_nonneg _).trans (Finset.le_sup' _ (Finset.mem_univ i₀))
+```
 
-For each `n ≥ 1` and each step `m + 1 ≤ n`, the residual
-  `R(m) := δ(m+1) − M.V *ᵥ δ(m)`
-satisfies the analytically correct shape
+#### Step 2 — Extract α, β from `aux_515D_per_step_K_bound` (~10 LOC)
 
-  `|R(m) i| ≤ α · h_n · sup_j |δ(m) j| + β · h_n²`,
+```lean
+obtain ⟨α, β, hα_nn, hβ_nn, hKbnd⟩ :=
+  aux_515D_per_step_K_bound M _hStab _hf_lip _hyex_x₀ _hyex_ode _hVu _hUu
+    _hCons_eq _hxx _hM_nn _hyex_C1 _hyex_M _hyex'_LM _h_norm
+    _hc_nn _hc_le_one Y Y_int _hY_iter
+```
 
-with `α, β` non-negative constants depending on the GLM and the
-problem data, where `δ(k) i := Y n k i − target(k) i` and
-`target(k) i := u_i · yex(x₀ + k·h_n) + v_i · h_n · deriv yex(x₀ + k·h_n)`.
+`hKbnd : ∀ n > 0, ∀ m + 1 ≤ n, ∀ i, |Y n (m+1) i − target_{m+1} i − (V·δ_m) i| ≤ α·h_n·δ_max n m + β·h_n²`.
 
-This lemma packages the per-step application of
-`localStepError_bound` (Section515.lean:1355) plus
-`aux_515D_construct_ell_U_phi_A` (Section515.lean:1213). Its body
-remains `sorry`-d in cycle 122; the body composition is gated on
-the `_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i` hypothesis (now
-propagated through the §515D helper chain). -/
-private theorem aux_515D_per_step_K_bound {s r : ℕ}
-    (M : GeneralLinearMethod s r)
-    (_hStab : M.IsStable)
-    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
-    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
-    (_hyex_x₀ : yex x₀ = y₀)
-    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
-    {u v : Fin r → ℝ}
-    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
-    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
-    {x : ℝ} (_hxx : x₀ < x)
-    {M_bound : ℝ} (_hM_nn : 0 ≤ M_bound)
-    (_hyex_C1 : ContDiff ℝ 1 yex)
-    (_hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
-    (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
-    (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
-                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
-    (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)   -- NEW propagated hypothesis
-    [Nonempty (Fin r)]
-    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
-    (_hY_iter : ∀ n : ℕ, 0 < n →
-      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
-      (∀ i, Y_int n i =
-              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
-              + (∑ j, M.U i j * Y n n j))) :
-    ∃ α β : ℝ, 0 ≤ α ∧ 0 ≤ β ∧
-      ∀ n : ℕ, 0 < n → ∀ m : ℕ, m + 1 ≤ n →
-        let h_n := (x - x₀) / (n : ℝ)
-        let target := fun (k : ℕ) (i : Fin r) =>
-          u i * yex (x₀ + (k : ℝ) * h_n)
-            + v i * h_n * deriv yex (x₀ + (k : ℝ) * h_n)
-        let δ := fun (k : ℕ) (i : Fin r) => Y n k i - target k i
-        ∀ i : Fin r,
-          |Y n (m+1) i - target (m+1) i - (M.V *ᵥ (δ m)) i|
-            ≤ α * h_n
-                * Finset.sup' Finset.univ Finset.univ_nonempty
-                    (fun j => |δ m j|)
-              + β * h_n^2 := by
+The K-bound LHS is precisely `R(m) i` where
+`R n m i := Y n (m+1) i − target n (m+1) i − (M.V *ᵥ δ n m) i`.
+
+#### Step 3 — Extract C₀ from `aux_515D_iterated_V_bound` (~10 LOC)
+
+`M.IsStable` unfolds to `∃ C, ∀ k, ‖M.V^k‖ ≤ C` (no `0 ≤ C` clause).
+Bridge to the helper's expected `∃ C, 0 ≤ C ∧ ...` shape via `max C 0`:
+
+```lean
+obtain ⟨C_raw, hC_pow⟩ := _hStab
+have hStab_helper : ∃ C : ℝ, 0 ≤ C ∧ ∀ k : ℕ, ‖M.V ^ k‖ ≤ C := by
+  refine ⟨max C_raw 0, le_max_right _ _, ?_⟩
+  intro k
+  exact (hC_pow k).trans (le_max_left _ _)
+obtain ⟨C₀, hC₀_nn, hC₀_bnd⟩ := aux_515D_iterated_V_bound M.V hStab_helper
+```
+
+Now `hC₀_bnd : ∀ k x, sup'_i |((M.V^k) *ᵥ x) i| ≤ C₀ · sup'_j |x j|`.
+**Confirm `IsStable`'s definition** in `Section510.lean` first — if
+the unfolded form differs, adjust the destructuring (it may have a
+named `C_glm` field or similar).
+
+#### Step 4 — Establish the per-step recurrence identity (~20 LOC)
+
+The key algebraic identity is:
+
+```
+Y n (m+1) i = (M.V *ᵥ Y n m) i + (M.B *ᵥ (h_n • f∘Y_int_at_step_m)) i
+```
+
+(from `M.IsGLMSolution h_n f (Y n)` in `_hY_iter n hn`'s output side).
+Subtracting `target_{m+1} i` and rearranging gives the identity
+
+```
+δ n (m+1) i = (M.V *ᵥ δ n m) i + R n m i
+```
+
+where `R n m i := Y n (m+1) i − target_{m+1} i − (V·δ_m) i` is the
+quantity bounded by `hKbnd`.
+
+This identity is purely algebraic — it does NOT require unfolding the
+GLM iteration, just the `δ`-definition plus `M.V *ᵥ (Y n m − target n m) =
+M.V *ᵥ Y n m − M.V *ᵥ target n m`. Prove inline:
+
+```lean
+have hδ_rec : ∀ n k i, δ n (k+1) i = (M.V *ᵥ δ n k) i + R n k i := by
+  intros n k i
+  simp [δ_def, R_def, Matrix.mulVec_sub]
+  ring
+```
+
+(define `R` via `set` first to keep proof clean.)
+
+#### Step 5 — Closed-form expansion via induction (~35 LOC)
+
+Prove the vectorial closed form:
+
+```
+δ n m = (V^m) *ᵥ δ n 0 + Σ_{k ∈ range m} (V^(m−1−k)) *ᵥ R n k
+```
+
+By induction on `m`:
+
+* `m = 0`: `δ n 0 = V^0 · δ n 0 = δ n 0 + Σ ∅`, immediate via
+  `pow_zero, Matrix.one_mulVec, Finset.sum_range_zero`.
+* `m + 1` (with IH on `m`): from `hδ_rec n m` plus IH:
+  ```
+  δ n (m+1) = V·δ n m + R n m
+            = V · (V^m · δ n 0 + Σ_{k<m} V^(m−1−k) · R n k) + R n m
+            = V^(m+1) · δ n 0 + Σ_{k<m} V^(m−k) · R n k + V^0 · R n m
+            = V^(m+1) · δ n 0 + Σ_{k<m+1} V^((m+1)−1−k) · R n k
+  ```
+  Uses `Matrix.mulVec_add`, `Matrix.mulVec_smul`, `pow_succ`,
+  `Matrix.mul_mulVec`, `Finset.sum_range_succ`, plus
+  `Matrix.mulVec_sum` to commute `V` past the sum.
+  The reindexing `m + 1 − 1 − k = m − k` for `k < m` and
+  `m + 1 − 1 − m = 0` is `omega`-discharged.
+
+```lean
+have hδ_closed : ∀ n, 0 < n → ∀ m, m ≤ n → ∀ i : Fin r,
+    δ n m i = ((M.V ^ m) *ᵥ δ n 0) i +
+      ∑ k ∈ Finset.range m,
+        ((M.V ^ (m - 1 - k)) *ᵥ (R n k)) i := by
+  intro n hn m hmn i
+  induction m with
+  | zero => simp [pow_zero, Matrix.one_mulVec]
+  | succ m ih =>
+    -- Apply ih at m (with m ≤ n inherited from m+1 ≤ n)
+    have hm_le : m ≤ n := Nat.le_of_lt hmn  -- hmn : m+1 ≤ n
+    -- Use hδ_rec and pow_succ + Matrix.mul_mulVec
+    sorry
+```
+
+If induction is heartbeat-heavy, factor as a private helper
+`aux_515D_delta_closed_form` (Priority 2 below).
+
+#### Step 6 — Sum-form bound on `δ_max` (~30 LOC)
+
+For each `n > 0` and `1 ≤ m ≤ n`, derive
+
+```
+δ_max n m ≤ C₀ · δ_max n 0
+            + (C₀ · α) · h_n · (∑_{k ∈ Ico 1 m} δ_max n k)
+            + (C₀ · β) · h_n² · (m : ℝ)
+```
+
+(NOTE: the sum is over `Ico 1 m` — that's the index range
+`aux_515D_gronwall_bound` expects.)
+
+Derivation: take `sup'_i |·|` on both sides of `hδ_closed`, apply
+triangle inequality, then use `hC₀_bnd` term-by-term:
+
+```
+sup'_i |(V^m · δ n 0) i|         ≤ C₀ · δ_max n 0
+sup'_i |(V^(m−1−k) · R n k) i|  ≤ C₀ · sup'_i |R n k i|
+                                ≤ C₀ · (α · h_n · δ_max n k + β · h_n²)   [hKbnd]
+```
+
+Then the sum-of-sup' is bounded by sum-of-RHS:
+
+```
+δ_max n m ≤ C₀ · δ_max n 0 + C₀ · Σ_{k=0}^{m-1} (α·h_n·δ_max n k + β·h_n²)
+        = C₀ · δ_max n 0
+            + C₀·α·h_n · (Σ_{k=0}^{m-1} δ_max n k)
+            + C₀·β·h_n² · m
+```
+
+To convert `Σ_{k=0}^{m-1}` to `Σ_{k ∈ Ico 1 m}`, split off `k = 0`:
+
+```
+Σ_{k=0}^{m-1} δ_max n k = δ_max n 0 + Σ_{k ∈ Ico 1 m} δ_max n k
+```
+
+Absorbing the `δ_max n 0` term into the leading constant:
+
+```
+δ_max n m ≤ (C₀ + C₀·α·h_n) · δ_max n 0
+            + C₀·α·h_n · (Σ_{k ∈ Ico 1 m} δ_max n k)
+            + C₀·β·h_n² · m
+```
+
+Since `h_n ≤ x − x₀` (for `n ≥ 1`), `(C₀ + C₀·α·h_n) ≤ C₀ · (1 + α·(x − x₀))`.
+Use this as the `a` in `aux_515D_gronwall_bound`.
+
+```lean
+have hsum_form : ∀ n, 0 < n → ∀ m, 1 ≤ m → m ≤ n →
+    δ_max n m ≤ (C₀ * (1 + α * (x - x₀))) * δ_max n 0
+                + (C₀ * α) * h_n n * (∑ k ∈ Finset.Ico 1 m, δ_max n k)
+                + (C₀ * β) * (h_n n)^2 * (m : ℝ) := by
   sorry
 ```
 
-Use `camelCase` hypothesis names (`hStab`, `hfLip`, `hcNn`, etc.)
-to avoid the standing tautology-scanner regression. The
-underscore-prefixed `_hc_nn` form above is for the SIGNATURE; in
-the body, bind via `(hcNn := _hc_nn)` style if you reference it
-by hand.
+#### Step 7 — Apply Grönwall and emit `C_init`, `C_lin` (~30 LOC)
 
-### Step 2 — Cascade-impact audit BEFORE editing
+Two cases:
 
-Confirm that the propagated `_hc_nn` is contained inside §515D's
-helper chain only:
+**Case `α > 0`:** apply `aux_515D_gronwall_bound` with
+`a := C₀ · (1 + α·(x − x₀)) · δ_max n 0`, `α' := C₀·α`, `β' := C₀·β`,
+`h := h_n n`. At `m = n`, since `n · h_n = x − x₀`:
 
-* §513 (`convergent_isStable` in `Section513.lean`) does NOT call
-  `aux_515D_max_deviation_geometric_bound`. **Unaffected** by
-  the propagation.
-* §514 (`convergent_isPreconsistent` /
-  `convergent_preconsistent_isConsistent` in `Section514.lean`)
-  does NOT call `aux_515D_max_deviation_geometric_bound`.
-  **Unaffected.**
-* The forward chain inside §515D is:
-  `aux_515D_max_deviation_geometric_bound`
-   ← `aux_515D_max_deviation_bound_tendsto_zero` (cycle 118)
-   ← `aux_515D_componentwise_deviation_tendsto_zero` (cycle 117,
-      `Section515.lean:2268`)
-   ← `aux_515D_output_tendsto`
-   ← `stable_consistent_isConvergent` (capstone).
-
-So `_hc_nn` propagates **only inside §515D's helper chain**. Each
-intermediate caller takes `_hc_nn` as a hypothesis and forwards it.
-At the §515D capstone level, `_hc_nn` becomes a hypothesis on
-`stable_consistent_isConvergent` itself — a faithfulness
-divergence to be documented (Step 6 below).
-
-If, while editing, you discover that any of §513 / §514 / §515D's
-non-§515D-internal consumers genuinely needs `_hc_nn`, **STOP** and
-rewrite the strategy as a planning-only deliverable (cycle 123 will
-re-plan).
-
-### Step 3 — Add `_hc_nn` to `aux_515D_max_deviation_geometric_bound`
-
-Add `(_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)` to the signature of
-`aux_515D_max_deviation_geometric_bound` (line 1961). Place it
-just above `[Nonempty (Fin r)]` to match the strategy's natural
-hypothesis ordering.
-
-### Step 4 — Compose the body of `aux_515D_max_deviation_geometric_bound`
-
-Use the corrected vectorial sum-form Grönwall recipe from the
-cycle 121 correction issue (§"What is actually true and provable"
-+ §"Recommended path for cycle 122"):
-
-```text
-1. Setup (~10 LOC): set h_n := (x − x₀)/n, target, δ, δ_max(m).
-2. K-bound (~10 LOC): apply aux_515D_per_step_K_bound to extract
-   α, β with ∀ n m i, |R(m) i| ≤ α·h_n·δ_max(m) + β·h_n².
-3. Iterated V (~5 LOC): obtain ⟨C₀, hC₀_nn, hC₀⟩ from
-   aux_515D_iterated_V_bound applied to M.V and _hStab.
-4. Closed-form expansion (~30 LOC): induction on m showing
-   δ(m) = V^m·δ(0) + Σ_{k<m} V^(m−1−k)·K(k)
-   (where K(k) := δ(k+1) − V·δ(k)).
-5. Sum-form bound (~25 LOC): apply hC₀ entrywise to derive
-   sup_i|δ(m) i| ≤ a + α'·h_n·Σ_{k<m} sup_i|δ(k) i| + β'·h_n²·m
-   with a := (C₀ + C₀·α·h_n)·sup_i|δ(0) i|, α' := C₀·α, β' := C₀·β.
-   (Split the K(k) sum at k=0 and absorb δ(0) into a.)
-6. Grönwall (~15 LOC): apply aux_515D_gronwall_bound
-   (Section515.lean:1742) to get the closed-form exp(α'·Δx)
-   bound. Handle α'=0 edge via `by_cases` on `α'`.
-7. Output (~10 LOC): set
-     C_init := C₀ · (1 + α·(x−x₀)) · exp(C₀·α·(x−x₀))
-     C_lin  := (exp(C₀·α·(x−x₀)) − 1) · (β/α)   -- α > 0 branch
-     C_lin  := C₀·β·(x−x₀)                      -- α = 0 branch
-   Discharge non-negativity via positivity / linarith.
+```
+δ_max n n ≤ exp(C₀·α·(x−x₀)) · C₀ · (1 + α·(x − x₀)) · δ_max n 0
+            + (exp(C₀·α·(x−x₀)) − 1) · (C₀·β · h_n / (C₀·α))
+        = exp(C₀·α·(x−x₀)) · C₀ · (1 + α·(x−x₀)) · δ_max n 0
+            + (exp(C₀·α·(x−x₀)) − 1) · (β/α) · h_n
 ```
 
-Total: ~105 LOC outer composition. Build incrementally — verify
-compile after each step. If Step 4 (induction on `m`) blows up
-heartbeats, split into a separate private lemma
-`aux_515D_delta_closed_form`.
+So `C_init := exp(C₀·α·(x−x₀)) · C₀ · (1 + α·(x − x₀))`,
+`C_lin := (exp(C₀·α·(x−x₀)) − 1) · (β/α)`.
 
-### Step 5 — Propagate `_hc_nn` up the §515D-internal chain
+**Case `α = 0`:** the `α·h·Σ δ_max` term vanishes. From Step 6:
 
-Add `(_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)` to the signatures of:
+```
+δ_max n m ≤ C₀ · δ_max n 0 + C₀·β·h_n² · m
+```
 
-* `aux_515D_max_deviation_bound_tendsto_zero` (cycle 118 helper)
-* `aux_515D_componentwise_deviation_tendsto_zero` (cycle 117,
-  `Section515.lean:2268`)
-* `aux_515D_output_tendsto`
-* `stable_consistent_isConvergent` (the §515D capstone)
+At `m = n`: `δ_max n n ≤ C₀ · δ_max n 0 + C₀·β·h_n·(x − x₀)`. So
+`C_init := C₀`, `C_lin := C₀ · β · (x − x₀)`.
 
-In each case, the body of the calling lemma threads `_hc_nn`
-through to the callee. The cascade work is mechanical text edit
-plus the body-edit at the capstone (where `_hc_nn` becomes a
-named hypothesis on the theorem signature itself, supplied by
-the caller of `IsConvergent`).
+```lean
+by_cases hα_pos : 0 < α
+· -- α > 0 branch: invoke aux_515D_gronwall_bound
+  refine ⟨Real.exp (C₀ * α * (x - x₀)) * C₀ * (1 + α * (x - x₀)),
+          (Real.exp (C₀ * α * (x - x₀)) - 1) * (β / α), ?_, ?_, ?_⟩
+  · -- C_init ≥ 0
+    have hexp_pos : 0 < Real.exp (C₀ * α * (x - x₀)) := Real.exp_pos _
+    have h1 : 0 ≤ 1 + α * (x - x₀) := by positivity
+    positivity
+  · -- C_lin ≥ 0: exp ≥ 1, β/α ≥ 0
+    have h_exp_ge_one : 1 ≤ Real.exp (C₀ * α * (x - x₀)) :=
+      Real.one_le_exp (by positivity)
+    have hβα_nn : 0 ≤ β / α := div_nonneg hβ_nn hα_pos.le
+    have : 0 ≤ Real.exp (C₀ * α * (x - x₀)) - 1 := by linarith
+    exact mul_nonneg this hβα_nn
+  intro n hn
+  -- Apply aux_515D_gronwall_bound to (fun m => δ_max n m), at m = n
+  have hgron := aux_515D_gronwall_bound (fun m => δ_max n m)
+    (C₀ * (1 + α * (x - x₀)) * δ_max n 0)  -- a
+    (C₀ * α)                                -- α'
+    (C₀ * β)                                -- β'
+    (h_n n)                                 -- h
+    (by positivity)                          -- ha
+    (by positivity)                          -- hα_pos'
+    (mul_nonneg hC₀_nn hβ_nn)                -- hβ'_nn
+    (div_nonneg hΔx_nn (Nat.cast_nonneg _))  -- hh_nn
+    (by sorry : δ_max n 0 ≤ _)              -- hu0 (use hsum_form at m=1? or trivial)
+    (by sorry : ∀ m, 1 ≤ m → δ_max n m ≤ _) -- hu_rec via hsum_form
+    n
+  -- Massage hgron's conclusion into the conclusion shape using
+  -- (n : ℝ) · h_n n = x - x₀, then β'/α' = β/α.
+  sorry
+· -- α = 0 branch: direct from hsum_form with empty sum
+  push_neg at hα_pos
+  have hα0 : α = 0 := le_antisymm hα_pos hα_nn
+  refine ⟨C₀, C₀ * β * (x - x₀), hC₀_nn, by positivity, ?_⟩
+  intro n hn
+  have hsum := hsum_form n hn n (Nat.one_le_iff_ne_zero.mpr hn.ne') le_rfl
+  rw [hα0] at hsum
+  simp [zero_mul, mul_zero, add_zero] at hsum
+  have hΣrange : (n : ℝ) * h_n n = x - x₀ := by
+    field_simp [hh_n_def]
+    exact (mul_comm _ _).trans (mul_div_cancel₀ _ (by exact_mod_cast hn.ne'))
+  -- δ_max n n ≤ C₀ · δ_max n 0 + C₀ · β · h_n² · n
+  --        = C₀ · δ_max n 0 + (C₀ · β · (x − x₀)) · h_n
+  sorry
+```
 
-### Step 6 — Document the faithfulness divergence
+The conclusion's first sup' (the `Y n 0 j − ...` form) **equals**
+`δ_max n 0` definitionally — verify this:
 
-Create `.prover-state/issues/stable_consistent_isConvergent_hc_nn.md`
-explaining:
+```
+target n 0 j = u_j · yex(x₀ + 0 · h_n) + v_j · h_n · deriv yex(x₀ + 0 · h_n)
+            = u_j · yex(x₀) + v_j · h_n · deriv yex(x₀)
+```
 
-* The textbook (Butcher §515) does NOT require `0 ≤ c` on the
-  GLM abscissae. The textbook implicitly assumes well-behaved
-  abscissae for the methods of interest (e.g. Runge–Kutta-style
-  GLMs with `c ∈ [0, 1]`).
-* Our formalisation requires it because
-  `aux_515D_construct_ell_U_phi_A` (cycle 114) consumes it as a
-  hypothesis to construct the M-matrix bounds via
-  `Matrix.EntrywiseNonneg.inv_one_sub_of_norm_lt_one` (which only
-  applies to entrywise-non-negative inputs).
-* Cycle 122 propagates `_hc_nn` upstream rather than refactoring
-  `aux_515D_construct_ell_U_phi_A` (refactor would be ~3 cycles
-  of effort and is not on the critical path).
-* Future remediation: revisit if a downstream consumer (e.g.
-  applying `IsConvergent` to an explicit GLM with negative
-  abscissae) is genuinely blocked.
+This is exactly the conclusion's initial-deviation expression. So
+`δ_max n 0 = sup'_j |Y n 0 j − (u_j · yex(x₀) + v_j · h_n · deriv yex(x₀))|`
+by `simp [δ_def, target_def, mul_comm, ...]` or `rfl`-up-to-`Nat.cast_zero`.
 
-Also update `.prover-state/issues/cycle_121_strategy_B2_correction.md`
-with a "Cycle 122 update" section recording the narrowing.
+### Avoid these failure modes (from previous cycles)
 
-### Step 7 — Verify
+1. **DO NOT** invoke `aux_515D_per_step_recurrence` (cycle 113) on a
+   *scalar* `δ_max` recurrence — that path produces the
+   `(V_norm + α·h)^n` blow-up identified in cycle 118 as a dead end.
+   Use the **vectorial** closed form (Step 5) chained with
+   `aux_515D_iterated_V_bound`.
+2. **DO NOT** attempt the Backup B2 strategy from
+   `cycle_121_strategy_B2_correction.md` with the broken `K_R · h²`
+   shape — `aux_515D_per_step_K_bound` (cycle 123) already
+   encapsulates the analytically-correct `α·h·δ_max + β·h²` shape;
+   use it.
+3. **DO NOT** propagate new hypotheses to the capstone signature
+   beyond the existing `_hc_nn` + `_hc_le_one`. Everything else is
+   already in scope.
+4. **DO NOT** raise `maxHeartbeats`. If Step 5's induction is
+   heartbeat-heavy, factor it into a private helper
+   `aux_515D_delta_closed_form` (Priority 2 fallback).
+5. **DO NOT** strengthen `M.IsStable`'s shape — bridge via `max C 0`
+   as in Step 3.
+6. **DO NOT** use Aristotle for this body — the proof requires tight
+   composition with five §515 helpers; Aristotle will fail without
+   extensive axiomatic stubs. Manual composition only.
+7. **DO NOT** rename `hδ_*`/`hα_*`/`hβ_*`/`hC₀_*` to the
+   underscore-prefixed `h_<name>` form — that triggers the tautology
+   scanner. Keep all new hypothesis names underscore-free where they
+   are the body of an `exact`/`:= h_*` closer (see
+   `tautology_scanner_false_positives.md`).
+8. **DO NOT** factor `R n m i := ...` and the cycle-123 helper's
+   internal `K_term_eq` together — cycle 123's helper proof is
+   already closed; touching it risks regressions. Re-derive the
+   `δ`-recurrence identity (Step 4) inline, fresh.
 
-* `lake env lean OpenMath/Chapter5/Section515.lean` must exit 0.
-* Run `lake build OpenMath.Chapter5.Section515` to refresh the
-  olean cache (per cycle 072 lesson — `lake env lean` does NOT
-  update the cache).
-* The ONE remaining `sorry` in §515D should be in
-  `aux_515D_per_step_K_bound`'s body, NOT in
-  `aux_515D_max_deviation_geometric_bound`.
-* Tautology scanner: run
-  `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter5/Section515.lean`
-  — must return 0 hits.
-* Run `#print axioms` on
-  `OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent`
-  via a small test file or `lean_verify`. Expected:
-  `[propext, sorryAx, Classical.choice, Quot.sound]` with `sorryAx`
-  traceable only to `aux_515D_per_step_K_bound`'s body.
-* Build §513 / §514 to confirm no cascade regressions:
-  `lake env lean OpenMath/Chapter5/Section513.lean` and
-  `lake env lean OpenMath/Chapter5/Section514.lean`. Both must
-  exit 0.
+### Verification gates (in order, ALL must pass before commit)
 
-## Priority 2 — Aristotle (single-shot submission)
-
-Submit `aux_515D_per_step_K_bound`'s body as ONE Aristotle project
-once Priority 1 is committed. Use the abstract-axioms pattern
-from cycle 116. Submit ONCE; do NOT poll this cycle (CLAUDE.md is
-explicit). Cycle 123 will check the result.
-
-Do NOT submit the outer composition
-(`aux_515D_max_deviation_geometric_bound` body) to Aristotle — it
-is being closed manually this cycle.
-
-## Priority 3 (stretch) — Close `aux_515D_per_step_K_bound`'s body
-
-If Priority 1 (Steps 1–7) lands quickly (< ~2 hours of cycle
-time remaining), attempt the body of `aux_515D_per_step_K_bound`
-directly. Recipe:
-
-1. **Define h_n, target, δ, δ_max.** Match the signature's `let`
-   bindings.
-2. **Apply `aux_515D_construct_ell_U_phi_A`** (`Section515.lean:1213`)
-   with `c := M.glmAbscissae v`, `_hc_nonneg := _hc_nn`, and
-   `h_norm := _h_norm`. Extract `ell_U`, `phi_A` and the four
-   side conditions.
-3. **Set α, β.** From `aux_515D_construct_ell_U_phi_A`'s output:
+1. `lake env lean OpenMath/Chapter5/Section515.lean` exits 0
+   (warnings allowed; pre-existing linter on `hβ_nn`).
+2. `lake env lean OpenMath/Chapter5/Section513.lean` exits 0.
+3. `lake env lean OpenMath/Chapter5/Section514.lean` exits 0.
+4. `lake build OpenMath.Chapter5.Section515` (rebuild .olean to
+   avoid stale-cache `sorryAx` false positives — CRITICAL per
+   `attempts.md` cycle 072 note).
+5. `#print axioms
+   OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent`
+   returns `[propext, Classical.choice, Quot.sound]` ONLY (no
+   `sorryAx`). If `sorryAx` appears, the cycle is INCOMPLETE — do
+   NOT mark `thm:515D` as `formalized`.
+6. Tautology scanner: 0 hits via
    ```
-   α := (L : ℝ) * Finset.sup' Finset.univ Finset.univ_nonempty
-            (fun i => ∑ j, |M.B i j| * ell_U j)
-   β := (L : ℝ)^2 * M_bound *
-          Finset.sup' Finset.univ Finset.univ_nonempty
-            (fun i => (1/2) * |u i| + |v i|
-                       + (∑ j, |M.B i j * (M.glmAbscissae v) j|)
-                       + (x - x₀) * (L : ℝ)
-                          * (∑ j, |M.B i j| * phi_A j))
+   grep -nE ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' \
+     OpenMath/Chapter5/Section515.lean
    ```
-   (`α` and `β` come from the `_hα_def` / `_hβ_def` bounds in
-   `localStepError_bound`'s signature; the `sup'` here is a
-   uniform-over-`i` envelope so it satisfies `_hα_def` /
-   `_hβ_def` for each `i`.)
-4. **For each `n ≥ 1, m+1 ≤ n`**: apply `localStepError_bound`
-   with
-   * `h := h_n`, `h₀ := x − x₀` (so `h ≤ h₀` since `n ≥ 1`),
-   * `xn1 := x₀ + m · h_n`,
-   * `yt_prev := Y n m`,
-   * `c := M.glmAbscissae v` with `_hc_nonneg := _hc_nn`,
-   * the `_hα_def` / `_hβ_def` choices supply the chosen α, β,
-   * stage values come from `_hY_iter`'s `IsGLMSolution`
-     decomposition.
-   Extract `K : Fin r → ℝ` with the per-step recurrence.
-5. **Convert to sup'-norm form**: use `Finset.sup'_le` /
-   `Finset.le_sup'` to bound
-   `sup_i |K(m) i| ≤ α·h·sup_j|δ(m) j| + β·h²`
-   from `localStepError_bound`'s conclusion `|K i| ≤ α·h·δ_max + β·h²`.
+7. **If steps 1–6 all pass**: update
+   `extraction/formalization_data/lean_status.json` `thm:515D` row:
+   `"status": "formalized"`, `"cycle": 124`. Move from `partial`.
+8. Update `plan.md` Chapter 5 row for `thm:515D` from `[~]` → `[x]`,
+   add the `OpenMath/Chapter5/Section515.lean` reference and update
+   the inline note to "(cycle 124: §515D fully closed; capstone
+   axiom-clean)".
+9. Update issue files:
+   * Append a "Cycle 124 update — §515D fully closed" section to
+     `.prover-state/issues/aux_515D_output_tendsto_hypotheses.md`.
+   * Mark `.prover-state/issues/cycle_121_strategy_B2_correction.md`
+     as RESOLVED at top.
+   * Mark `.prover-state/issues/aux_515D_iterated_V_bound.md` as
+     fully consumed.
 
-Estimated ~100 LOC if all hypotheses align cleanly. If any
-hypothesis mismatch shows up, leave the helper sorry'd and let
-Aristotle (Priority 2) try in parallel.
+## Priority 2 — Backup plan if Step 5 induction stalls
 
-## Explicit DO-NOT list
+If the closed-form expansion in Step 5 produces a Lean elaboration
+failure (heartbeat overflow, `motive`-handling issue, or unification
+stall), fall back to **factoring a single helper**:
 
-* **DO NOT** treat the cycle 121 correction issue's analysis as
-  optional. Read it before writing any Lean.
-* **DO NOT** attempt the strategy's old `K_R · h²` residual claim.
-  It is analytically wrong; the `α · h · δ_max` term cannot be
-  absorbed (cycle 121 issue file shows the algebraic obstruction).
-  Use the corrected shape from this strategy's Step 1.
-* **DO NOT** invoke `aux_515D_per_step_recurrence`
-  (`Section515.lean:1681`) directly on the sup-norm. Its scalar
-  `(V_norm + α·h)^n` form blows up for stable but non-contracting
-  `V` (cycle 118 dead end). Use the **vectorial** path:
-  closed-form expansion + cycle 120 iterated V bound +
-  `aux_515D_gronwall_bound` (sum-form).
-* **DO NOT** try Path A1 (internal proof of `0 ≤ M.glmAbscissae v`).
-  `M.glmAbscissae v = M.A *ᵥ 1 + M.U *ᵥ v` (`Section515.lean:98–100`)
-  — neither term is forced non-negative by `IsConsistent` /
-  `IsStable` / `IsPreconsistent`. Path A1 is not viable; this
-  strategy uses Path A2 (propagate `_hc_nn` upstream as a
-  documented faithfulness divergence).
-* **DO NOT** modify §513 (`convergent_isStable`) or §514
-  (`convergent_isPreconsistent`,
-  `convergent_preconsistent_isConsistent`). They do not consume
-  `_hc_nn`. The cascade audit (Step 2 above) confirms this. If
-  a §513/§514 build break appears, STOP and re-plan — it means
-  the propagation has gone wider than expected.
-* **DO NOT** raise `maxHeartbeats` above 200000. If the
-  closed-form-expansion induction (Step 4) is slow, decompose
-  into separate `have` blocks per induction step or split into
-  a separate private lemma.
-* **DO NOT** introduce new `axiom`/`constant` declarations.
-* **DO NOT** edit `scripts/autonomous_loop.py` to fix the
-  scanner — that is loop-maintainer territory
-  (`.prover-state/issues/tautology_scanner_false_positives.md`).
-  Use camelCase hypothesis names this cycle.
-* **DO NOT** poll Aristotle more than once this cycle. CLAUDE.md
-  is explicit. Submit Priority 2 once; do not check status until
-  cycle 123.
-* **DO NOT** rename, delete, or restructure the cycle 120
-  `aux_515D_iterated_V_bound` lemma — it is the load-bearing
-  tool for Step 4–5 of Priority 1 and was renamed in cycle 121.
-  Touching it again risks scanner regression.
-* **DO NOT** widen the `IsConvergent`, `IsConsistent`, or
-  `IsStable` definitions. The propagated `_hc_nn` lives on
-  `stable_consistent_isConvergent`'s signature directly, NOT
-  inside `IsConvergent`. Adding it inside `IsConvergent` would
-  break §513 / §514 cascades again (cycle 113 lesson).
+```lean
+private theorem aux_515D_delta_closed_form {s r : ℕ}
+    (V : Matrix (Fin r) (Fin r) ℝ)
+    (δ : ℕ → Fin r → ℝ) (R : ℕ → Fin r → ℝ)
+    (hδ_rec : ∀ k i, δ (k+1) i = (V *ᵥ δ k) i + R k i)
+    (m : ℕ) (i : Fin r) :
+    δ m i = ((V ^ m) *ᵥ δ 0) i +
+      ∑ k ∈ Finset.range m, ((V ^ (m - 1 - k)) *ᵥ R k) i := by
+  sorry  -- left for cycle 125
+```
 
-## Bookkeeping
+Then use this helper in the geometric bound's body. Net sorry count:
+1 → 1 (+1 helper sorry, −1 main sorry — NET ZERO). This matches the
+cycle 122 narrowing pattern.
 
-* If Priority 1 lands cleanly (one-helper narrowing achieved):
-  update `lean_status.json`'s `thm:515D` row to record cycle 122
-  with status still `partial`.
-* Do NOT mark `thm:515D` as `formalized` unless
-  `aux_515D_per_step_K_bound`'s body is also closed (Priority 3
-  succeeds).
-* Update `plan.md`'s §515 row only if status changes to
-  `formalized`. Otherwise update only the inline note for the
-  `thm:515D` row.
-* Append a cycle 122 update note to
-  `.prover-state/issues/aux_515D_output_tendsto_hypotheses.md`
-  documenting the new narrowing and the `_hc_nn` propagation.
-* Append a cycle 122 update to
-  `.prover-state/issues/cycle_121_strategy_B2_correction.md`
-  recording resolution of the strategy bug.
+**Acceptable fallback only if:**
+* Direct inline induction in the body produces a verified Lean
+  failure (heartbeat overflow, `motive` issue) — verify by
+  attempting first.
+* The new helper's signature is genuinely cleaner.
 
-## Cycle 122 minimum bar
+**NOT acceptable**: factoring the iterated-V invocation (cycle 120),
+the K-bound (cycle 123), or the Grönwall (cycle 117). Those exist;
+use them.
 
-A successful cycle 122 must:
+## Priority 3 — Hygiene (only if Priority 1 closes early with budget)
 
-1. Either close `aux_515D_max_deviation_geometric_bound`'s body
-   in full (using cycle 120's iterated V bound) — closing the
-   §515D helper chain modulo `aux_515D_per_step_K_bound`'s sorry,
-   **or** close `aux_515D_per_step_K_bound` directly (Priority 3),
-   **or** at minimum land a structurally-correct narrowing
-   (Priority 1 Steps 1–7) so the remaining sorry is in a focused
-   per-step K-bound helper with the analytically-correct shape
-   AND `_hc_nn` propagated through the §515D internal chain.
-2. Compile clean
-   (`lake env lean OpenMath/Chapter5/Section515.lean` exits 0).
-3. Tautology scanner: 0 hits in `Section515.lean`.
-4. `#print axioms stable_consistent_isConvergent` shows
-   `sorryAx` traceable only to the new K-bound helper (or the
-   geometric-bound body if Priority 1 Steps 4 is also achieved).
-5. No unintended cascade regressions in §513 / §514 / §515 (run
-   `lake build OpenMath.Chapter5.Section515` to check).
+If Priority 1 lands cleanly with cycle budget remaining (unlikely
+given ~150–200 LOC + verification overhead), run:
 
-A cycle that narrows the locus from
-`aux_515D_max_deviation_geometric_bound` (currently a ~150-LOC
-analytical claim) to `aux_515D_per_step_K_bound` (~80-LOC focused
-per-step claim with the correct shape) is a **genuine forward
-step** even if no Aristotle proofs return.
+* Tautology scanner pass — verify no new `h_<name>` introductions in
+  the new code.
+* `#print axioms` audit on the three §513/§514 `convergent_*`
+  consumers to confirm no regression.
+* Trim stale issue file content per supervisor's earlier guidance
+  (do NOT remove issue files entirely; mark RESOLVED instead).
+
+Do NOT attempt to start Chapter 4/5 next-target work in this cycle.
+The cycle 124 ROI is concentrated in closing §515D's last sorry; a
+clean close + faithful documentation is the deliverable.
+
+## Faithfulness gate
+
+The current §515D capstone signature carries TWO documented
+faithfulness divergences:
+
+1. `_hc_nn` propagation
+   (`stable_consistent_isConvergent_hc_nn.md`).
+2. `_hc_le_one` propagation (cycle 123 update in same file).
+
+These are **stable** for cycle 124 — do NOT add new ones. If a new
+hypothesis seems necessary during composition, **stop and audit**:
+the upstream helpers (cycle 114, 116, 117, 120, 123) all close
+without further hypotheses on the inputs already in scope. Any new
+hypothesis indicates a missed substitution, a stale signature, or a
+bug in the recipe.
+
+## Score expectation
+
+* **Successful Priority 1 close**: §515D sorry count 1 → 0,
+  `thm:515D` partial → formalized, capstone axiom-clean. **+2**.
+  (§515D was the largest open Chapter-5 entity; closing it unblocks
+  forward planning toward §520-§553.)
+* **Priority 2 fallback (helper factoring)**: net 0 sorry change,
+  structural narrowing to a focused inductive lemma. **+1**.
+* **Failure to close + no factored helper**: must produce a
+  substantive issue file documenting the obstruction. Worth **0**;
+  missing both = **−1**.

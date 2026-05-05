@@ -472,3 +472,31 @@ bound).
 
 **Status of `thm:515D`**: still `partial`. Two sorries remain in
 §515D's helper chain.
+
+---
+
+## Cycle 124 update — §515D fully closed
+
+`thm:515D` is now `formalized`. The capstone
+`stable_consistent_isConvergent` is axiom-clean
+(`#print axioms` returns `[propext, Classical.choice, Quot.sound]`).
+
+Final §515D sorry was the body of
+`aux_515D_max_deviation_geometric_bound`, closed via:
+
+1. **`aux_515D_delta_closed_form`** (new private helper,
+   Section515.lean:2207) — pure algebraic vectorial closed form
+   `δ m = V^m·δ 0 + ∑_{k<m} V^(m−1−k)·R k` proven by induction on m.
+2. **`aux_515D_iterated_V_bound_linfty`** (new private helper,
+   Section515.lean:2257) — sup'-form iterated V bound derived
+   directly from `M.IsStable`'s L∞-operator-norm content. Placed in
+   a sub-section that opens `Matrix.Norms.Operator`, sidestepping the
+   norm-scope incompatibility with the file's Frobenius scope.
+3. Main body: composes K-bound (cycle 123), δ-recurrence,
+   closed form, sup' splitting, and sum-form Grönwall (cycle 117),
+   branching on α = 0 vs α > 0. Truncated `u_seq m := if m ≤ n
+   then δ_max m else 0` extends the recurrence vacuously for m > n
+   so the Grönwall hypothesis ∀ m ≥ 1 is satisfied.
+
+No new faithfulness divergences beyond the cycle 122/123
+`_hc_nn`/`_hc_le_one` propagation. NO §513/§514 cascade regression.

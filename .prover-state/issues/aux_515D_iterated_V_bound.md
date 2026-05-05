@@ -1,4 +1,20 @@
-# Issue: Iterated V-norm bound from `M.IsStable` for §515D
+# Issue: Iterated V-norm bound from `M.IsStable` for §515D — RESOLVED cycle 124
+
+**Resolution (cycle 124)**: This issue is FULLY CONSUMED. Cycle 120's
+`aux_515D_iterated_V_bound` (Frobenius-norm hypothesis) is no longer
+the active path — instead cycle 124 introduced
+`aux_515D_iterated_V_bound_linfty` (Section515.lean:2257) in a
+sub-section that opens `Matrix.Norms.Operator`, since `M.IsStable` is
+L∞-operator-norm-bounded (defined in Section510.lean with that scope)
+and Section515's Frobenius scope was incompatible. The `linfty`
+variant produces the same sup'-form bound directly from `M.IsStable`'s
+L∞-operator content via `Matrix.linfty_opNNNorm_def`. Cycle 120's
+`aux_515D_iterated_V_bound` remains in the file as a
+Frobenius-flavoured alternative (kept for narrowing audit) but is
+unused on the §515D capstone path. Capstone
+`stable_consistent_isConvergent` is now axiom-clean.
+
+---
 
 ## Blocker
 

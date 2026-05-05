@@ -2197,6 +2197,131 @@ private theorem aux_515D_per_step_K_bound {s r : ℕ}
   rw [hY_next_minus_target]
   exact hK_bd i
 
+/-- **(515D narrower helper — cycle 124 closed-form expansion)** Pure
+algebraic closed form for a vectorial recurrence
+`δ(k+1) = V *ᵥ δ k + R k`:
+
+`δ m = V^m *ᵥ δ 0 + Σ_{k ∈ range m} V^(m-1-k) *ᵥ R k`.
+
+Proven by induction on `m`. The succ step uses `pow_succ'` to commute
+`V` past the iterated power, `Matrix.mulVec_sum` / `Matrix.mulVec_add`
+to distribute, and the index identity `m + 1 - 1 - k = (m - 1 - k) + 1`
+for `k < m`. -/
+private theorem aux_515D_delta_closed_form {r : ℕ}
+    (V : Matrix (Fin r) (Fin r) ℝ)
+    (δ : ℕ → Fin r → ℝ) (R : ℕ → Fin r → ℝ)
+    (hδ_rec : ∀ k, δ (k + 1) = V *ᵥ δ k + R k)
+    (m : ℕ) :
+    δ m = (V ^ m) *ᵥ δ 0 +
+      ∑ k ∈ Finset.range m, (V ^ (m - 1 - k)) *ᵥ R k := by
+  induction m with
+  | zero => simp [pow_zero, Matrix.one_mulVec, Finset.sum_range_zero]
+  | succ m ih =>
+    rw [hδ_rec m, ih, Matrix.mulVec_add]
+    rw [Matrix.mulVec_mulVec]
+    rw [show V * V ^ m = V ^ (m + 1) from (pow_succ' V m).symm]
+    rw [Matrix.mulVec_sum]
+    rw [Finset.sum_range_succ]
+    have hlast :
+        V ^ (m + 1 - 1 - m) *ᵥ R m = R m := by
+      have hidx : m + 1 - 1 - m = 0 := by omega
+      rw [hidx, pow_zero, Matrix.one_mulVec]
+    have hsum_eq : ∀ k ∈ Finset.range m,
+        V *ᵥ (V ^ (m - 1 - k) *ᵥ R k)
+          = V ^ (m + 1 - 1 - k) *ᵥ R k := by
+      intro k hk
+      rw [Finset.mem_range] at hk
+      rw [Matrix.mulVec_mulVec]
+      have hidx : m + 1 - 1 - k = (m - 1 - k) + 1 := by omega
+      rw [show V * V ^ (m - 1 - k) = V ^ ((m - 1 - k) + 1)
+            from (pow_succ' V (m - 1 - k)).symm, hidx]
+    rw [Finset.sum_congr rfl hsum_eq, hlast]
+    abel
+
+section AuxL_Linfty_VBound
+open scoped Matrix.Norms.Operator
+
+/-- **(515D narrower helper — cycle 124 norm-scope bridge)** Iterated-V
+sup' bound from `M.IsStable` directly, **without** going through
+`aux_515D_iterated_V_bound`'s Frobenius hypothesis.
+
+`M.IsStable` is defined in `Section510.lean` with `Matrix.Norms.Operator`
+open, so `‖V^k‖ ≤ C` therein is the L∞ operator norm
+(`max_i ∑_j |V^k_{i,j}|`). The body of `Section515.lean` opens
+`Matrix.Norms.Frobenius` instead, which is incompatible with
+`Matrix.linfty_opNorm_mulVec`. This helper is placed in a small section
+that opens `Matrix.Norms.Operator` instead, so the L∞-operator-norm
+machinery is in scope, and produces a sup'-form bound (no norms in the
+conclusion) that the main capstone body — back in Frobenius scope —
+can consume. -/
+private theorem aux_515D_iterated_V_bound_linfty {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (hStab : M.IsStable)
+    [Nonempty (Fin r)] :
+    ∃ C' : ℝ, 0 ≤ C' ∧ ∀ k : ℕ, ∀ x : Fin r → ℝ,
+      Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |((M.V ^ k) *ᵥ x) i|)
+      ≤ C' * Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |x i|) := by
+  obtain ⟨C, hC⟩ := hStab
+  refine ⟨max C 0, le_max_right _ _, ?_⟩
+  intro k x
+  set s_x : ℝ := Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |x i|) with hs_x_def
+  have hs_x_nn : 0 ≤ s_x := by
+    obtain ⟨i₀⟩ := (inferInstance : Nonempty (Fin r))
+    exact (abs_nonneg _).trans
+      (Finset.le_sup' (fun i : Fin r => |x i|) (Finset.mem_univ i₀))
+  have hxj : ∀ j : Fin r, |x j| ≤ s_x := fun j =>
+    Finset.le_sup' (fun i : Fin r => |x i|) (Finset.mem_univ j)
+  -- The L∞-operator norm of `V^k` bounds each row sum:
+  -- `Σ_j ‖(V^k) i j‖₊ ≤ ‖V^k‖₊` (via `linfty_opNNNorm_def` + `Finset.le_sup`).
+  have h_row_nn : ∀ i : Fin r,
+      (∑ j : Fin r, ‖(M.V ^ k) i j‖₊) ≤ ‖M.V ^ k‖₊ := by
+    intro i
+    have hdef := Matrix.linfty_opNNNorm_def (M.V ^ k)
+    rw [hdef]
+    exact Finset.le_sup (f := fun i' : Fin r => ∑ j : Fin r,
+                                     ‖(M.V ^ k) i' j‖₊)
+      (Finset.mem_univ i)
+  -- Coerce to ℝ and replace `‖·‖` with `|·|` for real entries.
+  have h_row_real : ∀ i : Fin r,
+      (∑ j : Fin r, |(M.V ^ k) i j|) ≤ ‖M.V ^ k‖ := by
+    intro i
+    have hcoe := NNReal.coe_le_coe.mpr (h_row_nn i)
+    have heq : (NNReal.toReal
+                (∑ j : Fin r, ‖(M.V ^ k) i j‖₊))
+                = ∑ j : Fin r, |(M.V ^ k) i j| := by
+      rw [NNReal.coe_sum]
+      refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [coe_nnnorm, Real.norm_eq_abs]
+    rw [show NNReal.toReal (‖M.V ^ k‖₊) = ‖M.V ^ k‖ from coe_nnnorm _] at hcoe
+    rw [heq] at hcoe
+    exact hcoe
+  apply Finset.sup'_le
+  intro i _
+  have hmv : ((M.V ^ k) *ᵥ x) i = ∑ j : Fin r, (M.V ^ k) i j * x j := rfl
+  rw [hmv]
+  have habs_sum : |∑ j : Fin r, (M.V ^ k) i j * x j|
+      ≤ ∑ j : Fin r, |(M.V ^ k) i j| * |x j| := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    refine Finset.sum_le_sum (fun j _ => ?_)
+    rw [abs_mul]
+  have hfactor_out : ∑ j : Fin r, |(M.V ^ k) i j| * |x j|
+      ≤ (∑ j : Fin r, |(M.V ^ k) i j|) * s_x := by
+    rw [Finset.sum_mul]
+    refine Finset.sum_le_sum (fun j _ => ?_)
+    exact mul_le_mul_of_nonneg_left (hxj j) (abs_nonneg _)
+  have h_row_le_C : (∑ j : Fin r, |(M.V ^ k) i j|) ≤ max C 0 :=
+    ((h_row_real i).trans (hC k)).trans (le_max_left _ _)
+  calc |∑ j : Fin r, (M.V ^ k) i j * x j|
+      ≤ ∑ j : Fin r, |(M.V ^ k) i j| * |x j| := habs_sum
+    _ ≤ (∑ j : Fin r, |(M.V ^ k) i j|) * s_x := hfactor_out
+    _ ≤ max C 0 * s_x :=
+        mul_le_mul_of_nonneg_right h_row_le_C hs_x_nn
+
+end AuxL_Linfty_VBound
+
 /-- **(515D narrower helper — cycle 119 decomposition fallback)** Closed-form
 geometric bound on the max-abs deviation at step `n` of the GLM iteration.
 
@@ -2268,7 +2393,477 @@ private theorem aux_515D_max_deviation_geometric_bound {s r : ℕ}
               (fun i : Fin r => |Y n 0 i -
                 (u i * yex x₀ + v i * ((x - x₀) / (n : ℝ)) * deriv yex x₀)|)
           + C_lin * ((x - x₀) / (n : ℝ)) := by
-  sorry
+  -- Step 1 — overall setup
+  have hΔx_pos : 0 < x - x₀ := sub_pos.mpr _hxx
+  have hΔx_nn : 0 ≤ x - x₀ := hΔx_pos.le
+  -- Step 2 — extract α, β, hKbnd from K-bound helper.
+  obtain ⟨α, β, hα_nn, hβ_nn, hKbnd⟩ :=
+    aux_515D_per_step_K_bound M _hStab _hf_lip _hyex_x₀ _hyex_ode _hVu _hUu
+      _hCons_eq _hxx _hM_nn _hyex_C1 _hyex_M _hyex'_LM _h_norm
+      _hc_nn _hc_le_one Y Y_int _hY_iter
+  -- Step 3 — invoke the L∞-flavoured iterated-V helper, inflate to C₀ ≥ 1.
+  obtain ⟨C_raw₀, hC_raw₀_nn, hC_raw₀_bnd⟩ :=
+    aux_515D_iterated_V_bound_linfty M _hStab
+  set C₀ : ℝ := max C_raw₀ 1 with hC₀_def
+  have hC₀_one_le : 1 ≤ C₀ := le_max_right _ _
+  have hC₀_pos : 0 < C₀ := lt_of_lt_of_le zero_lt_one hC₀_one_le
+  have hC₀_nn : 0 ≤ C₀ := hC₀_pos.le
+  have hC₀_bnd : ∀ k : ℕ, ∀ z : Fin r → ℝ,
+      Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |((M.V ^ k) *ᵥ z) i|)
+      ≤ C₀ * Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |z i|) := by
+    intro k z
+    have hsup_nn : 0 ≤ Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |z i|) := by
+      obtain ⟨i₀⟩ := (inferInstance : Nonempty (Fin r))
+      exact (abs_nonneg _).trans
+        (Finset.le_sup' (fun i : Fin r => |z i|) (Finset.mem_univ i₀))
+    refine (hC_raw₀_bnd k z).trans ?_
+    exact mul_le_mul_of_nonneg_right (le_max_left _ _) hsup_nn
+  -- Branch on whether α > 0.
+  by_cases hα_pos : 0 < α
+  · -- ===== α > 0 branch — invoke discrete Grönwall =====
+    refine
+      ⟨Real.exp (C₀ * α * (x - x₀)) * (1 + C₀ * (1 + α * (x - x₀))),
+       (Real.exp (C₀ * α * (x - x₀)) - 1) * (β / α), ?_, ?_, ?_⟩
+    · have hexp_pos : 0 < Real.exp (C₀ * α * (x - x₀)) := Real.exp_pos _
+      have hαΔx_nn : 0 ≤ α * (x - x₀) := mul_nonneg hα_pos.le hΔx_nn
+      have h_one_plus_nn : 0 ≤ 1 + α * (x - x₀) := by linarith
+      have h_C₀_term_nn : 0 ≤ C₀ * (1 + α * (x - x₀)) :=
+        mul_nonneg hC₀_nn h_one_plus_nn
+      have h_init_factor_nn : 0 ≤ 1 + C₀ * (1 + α * (x - x₀)) := by linarith
+      exact mul_nonneg hexp_pos.le h_init_factor_nn
+    · have hexp_arg_nn : 0 ≤ C₀ * α * (x - x₀) :=
+        mul_nonneg (mul_nonneg hC₀_nn hα_pos.le) hΔx_nn
+      have h_exp_ge_one : 1 ≤ Real.exp (C₀ * α * (x - x₀)) :=
+        Real.one_le_exp hexp_arg_nn
+      have hβα_nn : 0 ≤ β / α := div_nonneg hβ_nn hα_pos.le
+      have hexp_minus_nn : 0 ≤ Real.exp (C₀ * α * (x - x₀)) - 1 := by linarith
+      exact mul_nonneg hexp_minus_nn hβα_nn
+    intro n hn_pos
+    set h_n : ℝ := (x - x₀) / (n : ℝ) with hh_n_def
+    have hn_real_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn_pos
+    have hh_n_pos : 0 < h_n := div_pos hΔx_pos hn_real_pos
+    have hh_n_nn : 0 ≤ h_n := hh_n_pos.le
+    have hn_h_n_eq : (n : ℝ) * h_n = x - x₀ := by
+      rw [hh_n_def, mul_div_assoc']
+      field_simp
+    have hh_n_le_Δx : h_n ≤ x - x₀ := by
+      have hone_le_n : (1 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn_pos
+      rw [hh_n_def, div_le_iff₀ hn_real_pos]
+      nlinarith [hΔx_nn]
+    set target : ℕ → Fin r → ℝ := fun k i =>
+        u i * yex (x₀ + (k : ℕ) * h_n)
+          + v i * h_n * deriv yex (x₀ + (k : ℕ) * h_n)
+      with htarget_def
+    set δ : ℕ → Fin r → ℝ := fun k i => Y n k i - target k i with hδ_def
+    set R : ℕ → Fin r → ℝ := fun k i =>
+        Y n (k+1) i - target (k+1) i - (M.V *ᵥ δ k) i
+      with hR_def
+    set δ_max : ℕ → ℝ := fun k =>
+      Finset.univ.sup' Finset.univ_nonempty (fun i : Fin r => |δ k i|)
+      with hδ_max_def
+    have hδ_max_nn : ∀ k, 0 ≤ δ_max k := by
+      intro k
+      obtain ⟨i₀⟩ := (inferInstance : Nonempty (Fin r))
+      exact (abs_nonneg _).trans
+        (Finset.le_sup' (fun i : Fin r => |δ k i|) (Finset.mem_univ i₀))
+    have hδ_le_max : ∀ k j, |δ k j| ≤ δ_max k := by
+      intro k j
+      exact Finset.le_sup' (fun i : Fin r => |δ k i|) (Finset.mem_univ j)
+    have hδ_rec : ∀ k, δ (k + 1) = M.V *ᵥ δ k + R k := by
+      intro k
+      funext i
+      show Y n (k+1) i - target (k+1) i =
+           (M.V *ᵥ δ k) i + (Y n (k+1) i - target (k+1) i - (M.V *ᵥ δ k) i)
+      ring
+    have hδ_closed : ∀ m,
+        δ m = (M.V ^ m) *ᵥ δ 0 +
+          ∑ k ∈ Finset.range m, (M.V ^ (m - 1 - k)) *ᵥ R k :=
+      fun m => aux_515D_delta_closed_form M.V δ R hδ_rec m
+    have hR_bnd : ∀ k, k + 1 ≤ n → ∀ i,
+        |R k i| ≤ α * h_n * δ_max k + β * h_n^2 := by
+      intro k hk i
+      exact hKbnd n hn_pos k hk i
+    have hR_sup_bnd : ∀ k, k + 1 ≤ n →
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |R k i|)
+        ≤ α * h_n * δ_max k + β * h_n^2 := by
+      intro k hk
+      apply Finset.sup'_le
+      intro i _
+      exact hR_bnd k hk i
+    have hsum_form : ∀ m, m ≤ n →
+        δ_max m ≤ C₀ * δ_max 0
+                  + (C₀ * α) * h_n * (∑ k ∈ Finset.range m, δ_max k)
+                  + (C₀ * β) * h_n^2 * (m : ℝ) := by
+      intro m hmn
+      have hsup_bnd :
+          δ_max m ≤
+            Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |((M.V ^ m) *ᵥ δ 0) i|)
+            + ∑ k ∈ Finset.range m,
+                Finset.sup' Finset.univ Finset.univ_nonempty
+                  (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|) := by
+        apply Finset.sup'_le
+        intro i _
+        have hδm_eq : δ m i =
+            ((M.V ^ m) *ᵥ δ 0) i +
+              ∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i := by
+          have h := hδ_closed m
+          have h' := congrFun h i
+          simpa using h'
+        rw [hδm_eq]
+        have habs_le : |((M.V ^ m) *ᵥ δ 0) i +
+              ∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ |((M.V ^ m) *ᵥ δ 0) i|
+              + |∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i| :=
+          abs_add_le _ _
+        have habs_sum_le :
+            |∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ ∑ k ∈ Finset.range m, |((M.V ^ (m - 1 - k)) *ᵥ R k) i| :=
+          Finset.abs_sum_le_sum_abs _ _
+        have hcomp_to_sup : ∀ k ∈ Finset.range m,
+            |((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun j : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) j|) := by
+          intro k _
+          exact Finset.le_sup'
+            (fun j : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) j|)
+            (Finset.mem_univ i)
+        have hsum_le_sup :
+            ∑ k ∈ Finset.range m, |((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ ∑ k ∈ Finset.range m,
+                Finset.sup' Finset.univ Finset.univ_nonempty
+                  (fun j : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) j|) :=
+          Finset.sum_le_sum hcomp_to_sup
+        have hi_sup : |((M.V ^ m) *ᵥ δ 0) i|
+            ≤ Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun j : Fin r => |((M.V ^ m) *ᵥ δ 0) j|) :=
+          Finset.le_sup'
+            (fun j : Fin r => |((M.V ^ m) *ᵥ δ 0) j|) (Finset.mem_univ i)
+        linarith
+      have hVm_δ0 :
+          Finset.sup' Finset.univ Finset.univ_nonempty
+            (fun i : Fin r => |((M.V ^ m) *ᵥ δ 0) i|)
+          ≤ C₀ * δ_max 0 := hC₀_bnd m (δ 0)
+      have hVk_Rk : ∀ k ∈ Finset.range m,
+          Finset.sup' Finset.univ Finset.univ_nonempty
+            (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|)
+          ≤ C₀ * (α * h_n * δ_max k + β * h_n^2) := by
+        intro k hk
+        have hkn : k + 1 ≤ n := by
+          rw [Finset.mem_range] at hk
+          omega
+        calc Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|)
+            ≤ C₀ * Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun i : Fin r => |R k i|) := hC₀_bnd (m - 1 - k) (R k)
+          _ ≤ C₀ * (α * h_n * δ_max k + β * h_n^2) :=
+              mul_le_mul_of_nonneg_left (hR_sup_bnd k hkn) hC₀_nn
+      have hsum_le_C₀ :
+          ∑ k ∈ Finset.range m,
+            Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|)
+          ≤ ∑ k ∈ Finset.range m, C₀ * (α * h_n * δ_max k + β * h_n^2) :=
+        Finset.sum_le_sum hVk_Rk
+      have hsum_simp :
+          ∑ k ∈ Finset.range m, C₀ * (α * h_n * δ_max k + β * h_n^2)
+          = (C₀ * α) * h_n * (∑ k ∈ Finset.range m, δ_max k)
+            + (C₀ * β) * h_n^2 * (m : ℝ) := by
+        have hexpand :
+            ∑ k ∈ Finset.range m, C₀ * (α * h_n * δ_max k + β * h_n^2)
+            = ∑ k ∈ Finset.range m,
+                (C₀ * α * h_n * δ_max k + C₀ * β * h_n^2) := by
+          refine Finset.sum_congr rfl (fun k _ => ?_)
+          ring
+        rw [hexpand, Finset.sum_add_distrib, ← Finset.mul_sum,
+            Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        ring
+      linarith
+    -- Truncated sequence so the Grönwall recurrence holds for all m ≥ 1.
+    set u_seq : ℕ → ℝ := fun m => if m ≤ n then δ_max m else 0
+      with hu_seq_def
+    set a_const : ℝ := (1 + C₀ * (1 + α * (x - x₀))) * δ_max 0 with ha_def
+    have hu_seq_nn : ∀ m, 0 ≤ u_seq m := by
+      intro m
+      by_cases hm : m ≤ n
+      · simp [hu_seq_def, hm, hδ_max_nn m]
+      · simp [hu_seq_def, hm]
+    have hu_seq_n_eq : u_seq n = δ_max n := by simp [hu_seq_def]
+    have hu_seq_0_eq : u_seq 0 = δ_max 0 := by
+      have h0 : (0 : ℕ) ≤ n := Nat.zero_le _
+      simp [hu_seq_def, h0]
+    have hαΔx_nn : 0 ≤ α * (x - x₀) := mul_nonneg hα_pos.le hΔx_nn
+    have h_one_plus_nn : 0 ≤ 1 + α * (x - x₀) := by linarith
+    have h_C₀_term_nn : 0 ≤ C₀ * (1 + α * (x - x₀)) :=
+      mul_nonneg hC₀_nn h_one_plus_nn
+    have h_a_factor_ge_one : (1 : ℝ) ≤ 1 + C₀ * (1 + α * (x - x₀)) := by
+      linarith
+    have ha_nn : 0 ≤ a_const := by
+      rw [ha_def]
+      exact mul_nonneg (by linarith) (hδ_max_nn 0)
+    have h_a_dom : C₀ * δ_max 0 ≤ a_const := by
+      rw [ha_def]
+      have h_C₀_le : C₀ ≤ 1 + C₀ * (1 + α * (x - x₀)) := by
+        have h_inner_ge_one : 1 ≤ 1 + α * (x - x₀) := by linarith
+        have h_C₀_le_inner : C₀ ≤ C₀ * (1 + α * (x - x₀)) := by
+          nlinarith [hC₀_nn]
+        linarith
+      exact mul_le_mul_of_nonneg_right h_C₀_le (hδ_max_nn 0)
+    have hu0 : u_seq 0 ≤ a_const := by
+      rw [hu_seq_0_eq, ha_def]
+      calc δ_max 0 = 1 * δ_max 0 := by ring
+        _ ≤ (1 + C₀ * (1 + α * (x - x₀))) * δ_max 0 :=
+            mul_le_mul_of_nonneg_right h_a_factor_ge_one (hδ_max_nn 0)
+    have hu_rec : ∀ m, 1 ≤ m →
+        u_seq m ≤ a_const + (C₀ * α) * h_n * (∑ k ∈ Finset.Ico 1 m, u_seq k)
+                  + (C₀ * β) * h_n^2 * (m : ℝ) := by
+      intro m hm
+      by_cases hmn : m ≤ n
+      · have hum_eq : u_seq m = δ_max m := by simp [hu_seq_def, hmn]
+        have hsum_eq :
+            ∑ k ∈ Finset.Ico 1 m, u_seq k = ∑ k ∈ Finset.Ico 1 m, δ_max k := by
+          refine Finset.sum_congr rfl (fun k hk => ?_)
+          rw [Finset.mem_Ico] at hk
+          have hkn : k ≤ n := le_trans (Nat.le_of_lt hk.2) hmn
+          simp [hu_seq_def, hkn]
+        rw [hum_eq, hsum_eq]
+        have hbound := hsum_form m hmn
+        have hsum_split :
+            ∑ k ∈ Finset.range m, δ_max k
+            = δ_max 0 + ∑ k ∈ Finset.Ico 1 m, δ_max k := by
+          rw [Finset.range_eq_Ico, ← Finset.sum_Ico_consecutive δ_max
+                (Nat.zero_le 1) hm,
+              show Finset.Ico 0 1 = ({0} : Finset ℕ) from by
+                ext k; simp [Finset.mem_Ico, Nat.lt_one_iff]]
+          simp
+        rw [hsum_split] at hbound
+        have hαh_le_Δx : α * h_n ≤ α * (x - x₀) :=
+          mul_le_mul_of_nonneg_left hh_n_le_Δx hα_nn
+        have h_C₀αh_nn : 0 ≤ C₀ * α * h_n :=
+          mul_nonneg (mul_nonneg hC₀_nn hα_nn) hh_n_nn
+        have h_δ0_nn := hδ_max_nn 0
+        nlinarith
+      · push_neg at hmn
+        have hum_zero : u_seq m = 0 := by
+          have hnot_le : ¬ m ≤ n := Nat.not_le.mpr hmn
+          simp [hu_seq_def, hnot_le]
+        rw [hum_zero]
+        have h_sum_nn : 0 ≤ ∑ k ∈ Finset.Ico 1 m, u_seq k :=
+          Finset.sum_nonneg (fun k _ => hu_seq_nn k)
+        have h_C₀α_nn : 0 ≤ C₀ * α := mul_nonneg hC₀_nn hα_nn
+        have h_term1 : 0 ≤ (C₀ * α) * h_n * (∑ k ∈ Finset.Ico 1 m, u_seq k) :=
+          mul_nonneg (mul_nonneg h_C₀α_nn hh_n_nn) h_sum_nn
+        have h_C₀β_nn : 0 ≤ C₀ * β := mul_nonneg hC₀_nn hβ_nn
+        have h_term2 : 0 ≤ (C₀ * β) * h_n^2 * (m : ℝ) :=
+          mul_nonneg (mul_nonneg h_C₀β_nn (sq_nonneg _)) (Nat.cast_nonneg _)
+        linarith
+    have hC₀α_pos : 0 < C₀ * α := mul_pos hC₀_pos hα_pos
+    have hC₀β_nn : 0 ≤ C₀ * β := mul_nonneg hC₀_nn hβ_nn
+    have hgron := aux_515D_gronwall_bound u_seq a_const (C₀ * α) (C₀ * β) h_n
+                    ha_nn hC₀α_pos hC₀β_nn hh_n_nn hu0 hu_rec n
+    rw [hu_seq_n_eq] at hgron
+    have hexp_arg_eq : C₀ * α * (n : ℝ) * h_n = C₀ * α * (x - x₀) := by
+      rw [mul_assoc, hn_h_n_eq]
+    rw [hexp_arg_eq] at hgron
+    have hC₀_ne : C₀ ≠ 0 := ne_of_gt hC₀_pos
+    have hα_ne : α ≠ 0 := ne_of_gt hα_pos
+    have h_div_simp : C₀ * β * h_n / (C₀ * α) = β * h_n / α := by
+      field_simp
+    rw [h_div_simp] at hgron
+    have hxn_eq : x₀ + ((n : ℕ) : ℝ) * h_n = x := by
+      push_cast
+      linarith [hn_h_n_eq]
+    have hx0_eq : x₀ + ((0 : ℕ) : ℝ) * h_n = x₀ := by push_cast; ring
+    have hLHS_eq :
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |Y n n i -
+            (u i * yex x + v i * h_n * deriv yex x)|)
+        = δ_max n := by
+      rw [show x = x₀ + ((n : ℕ) : ℝ) * h_n from hxn_eq.symm]
+    have hRHS_sup_eq :
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |Y n 0 i -
+            (u i * yex x₀ + v i * h_n * deriv yex x₀)|)
+        = δ_max 0 := by
+      rw [show x₀ = x₀ + ((0 : ℕ) : ℝ) * h_n from hx0_eq.symm]
+    rw [hLHS_eq, hRHS_sup_eq]
+    rw [ha_def] at hgron
+    have h_div_split :
+        (Real.exp (C₀ * α * (x - x₀)) - 1) * (β * h_n / α)
+        = (Real.exp (C₀ * α * (x - x₀)) - 1) * (β / α) * h_n := by ring
+    rw [h_div_split] at hgron
+    have hC_init_factor :
+        Real.exp (C₀ * α * (x - x₀)) *
+          ((1 + C₀ * (1 + α * (x - x₀))) * δ_max 0)
+        = Real.exp (C₀ * α * (x - x₀)) * (1 + C₀ * (1 + α * (x - x₀)))
+            * δ_max 0 := by ring
+    rw [hC_init_factor] at hgron
+    exact hgron
+  · -- ===== α = 0 branch =====
+    push_neg at hα_pos
+    have hα0 : α = 0 := le_antisymm hα_pos hα_nn
+    refine ⟨C₀, C₀ * β * (x - x₀), hC₀_nn, ?_, ?_⟩
+    · exact mul_nonneg (mul_nonneg hC₀_nn hβ_nn) hΔx_nn
+    intro n hn_pos
+    set h_n : ℝ := (x - x₀) / (n : ℝ) with hh_n_def
+    have hn_real_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn_pos
+    have hh_n_pos : 0 < h_n := div_pos hΔx_pos hn_real_pos
+    have hh_n_nn : 0 ≤ h_n := hh_n_pos.le
+    have hn_h_n_eq : (n : ℝ) * h_n = x - x₀ := by
+      rw [hh_n_def, mul_div_assoc']
+      field_simp
+    set target : ℕ → Fin r → ℝ := fun k i =>
+        u i * yex (x₀ + (k : ℕ) * h_n)
+          + v i * h_n * deriv yex (x₀ + (k : ℕ) * h_n)
+      with htarget_def
+    set δ : ℕ → Fin r → ℝ := fun k i => Y n k i - target k i with hδ_def
+    set R : ℕ → Fin r → ℝ := fun k i =>
+        Y n (k+1) i - target (k+1) i - (M.V *ᵥ δ k) i
+      with hR_def
+    set δ_max : ℕ → ℝ := fun k =>
+      Finset.univ.sup' Finset.univ_nonempty (fun i : Fin r => |δ k i|)
+      with hδ_max_def
+    have hδ_max_nn : ∀ k, 0 ≤ δ_max k := by
+      intro k
+      obtain ⟨i₀⟩ := (inferInstance : Nonempty (Fin r))
+      exact (abs_nonneg _).trans
+        (Finset.le_sup' (fun i : Fin r => |δ k i|) (Finset.mem_univ i₀))
+    have hδ_le_max : ∀ k j, |δ k j| ≤ δ_max k := by
+      intro k j
+      exact Finset.le_sup' (fun i : Fin r => |δ k i|) (Finset.mem_univ j)
+    have hδ_rec : ∀ k, δ (k + 1) = M.V *ᵥ δ k + R k := by
+      intro k
+      funext i
+      show Y n (k+1) i - target (k+1) i =
+           (M.V *ᵥ δ k) i + (Y n (k+1) i - target (k+1) i - (M.V *ᵥ δ k) i)
+      ring
+    have hδ_closed : ∀ m,
+        δ m = (M.V ^ m) *ᵥ δ 0 +
+          ∑ k ∈ Finset.range m, (M.V ^ (m - 1 - k)) *ᵥ R k :=
+      fun m => aux_515D_delta_closed_form M.V δ R hδ_rec m
+    have hR_bnd : ∀ k, k + 1 ≤ n → ∀ i,
+        |R k i| ≤ β * h_n^2 := by
+      intro k hk i
+      have h := hKbnd n hn_pos k hk i
+      rw [hα0] at h
+      simp only [zero_mul, zero_add] at h
+      exact h
+    have hR_sup_bnd : ∀ k, k + 1 ≤ n →
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |R k i|)
+        ≤ β * h_n^2 := by
+      intro k hk
+      apply Finset.sup'_le
+      intro i _
+      exact hR_bnd k hk i
+    have hsum_form0 : ∀ m, m ≤ n →
+        δ_max m ≤ C₀ * δ_max 0 + (C₀ * β) * h_n^2 * (m : ℝ) := by
+      intro m hmn
+      have hsup_bnd :
+          δ_max m ≤
+            Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |((M.V ^ m) *ᵥ δ 0) i|)
+            + ∑ k ∈ Finset.range m,
+                Finset.sup' Finset.univ Finset.univ_nonempty
+                  (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|) := by
+        apply Finset.sup'_le
+        intro i _
+        have hδm_eq : δ m i =
+            ((M.V ^ m) *ᵥ δ 0) i +
+              ∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i := by
+          have h := hδ_closed m
+          have h' := congrFun h i
+          simpa using h'
+        rw [hδm_eq]
+        have habs_le : |((M.V ^ m) *ᵥ δ 0) i +
+              ∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ |((M.V ^ m) *ᵥ δ 0) i|
+              + |∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i| :=
+          abs_add_le _ _
+        have habs_sum_le :
+            |∑ k ∈ Finset.range m, ((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ ∑ k ∈ Finset.range m, |((M.V ^ (m - 1 - k)) *ᵥ R k) i| :=
+          Finset.abs_sum_le_sum_abs _ _
+        have hcomp_to_sup : ∀ k ∈ Finset.range m,
+            |((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun j : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) j|) := by
+          intro k _
+          exact Finset.le_sup'
+            (fun j : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) j|)
+            (Finset.mem_univ i)
+        have hsum_le_sup :
+            ∑ k ∈ Finset.range m, |((M.V ^ (m - 1 - k)) *ᵥ R k) i|
+            ≤ ∑ k ∈ Finset.range m,
+                Finset.sup' Finset.univ Finset.univ_nonempty
+                  (fun j : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) j|) :=
+          Finset.sum_le_sum hcomp_to_sup
+        have hi_sup : |((M.V ^ m) *ᵥ δ 0) i|
+            ≤ Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun j : Fin r => |((M.V ^ m) *ᵥ δ 0) j|) :=
+          Finset.le_sup'
+            (fun j : Fin r => |((M.V ^ m) *ᵥ δ 0) j|) (Finset.mem_univ i)
+        linarith
+      have hVm_δ0 :
+          Finset.sup' Finset.univ Finset.univ_nonempty
+            (fun i : Fin r => |((M.V ^ m) *ᵥ δ 0) i|)
+          ≤ C₀ * δ_max 0 := hC₀_bnd m (δ 0)
+      have hVk_Rk : ∀ k ∈ Finset.range m,
+          Finset.sup' Finset.univ Finset.univ_nonempty
+            (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|)
+          ≤ C₀ * (β * h_n^2) := by
+        intro k hk
+        have hkn : k + 1 ≤ n := by
+          rw [Finset.mem_range] at hk
+          omega
+        calc Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|)
+            ≤ C₀ * Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun i : Fin r => |R k i|) := hC₀_bnd (m - 1 - k) (R k)
+          _ ≤ C₀ * (β * h_n^2) :=
+              mul_le_mul_of_nonneg_left (hR_sup_bnd k hkn) hC₀_nn
+      have hsum_le_C₀ :
+          ∑ k ∈ Finset.range m,
+            Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |((M.V ^ (m - 1 - k)) *ᵥ R k) i|)
+          ≤ ∑ k ∈ Finset.range m, C₀ * (β * h_n^2) :=
+        Finset.sum_le_sum hVk_Rk
+      have hsum_const :
+          ∑ k ∈ Finset.range m, C₀ * (β * h_n^2)
+          = (C₀ * β) * h_n^2 * (m : ℝ) := by
+        rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        ring
+      linarith
+    have hbnd_n := hsum_form0 n le_rfl
+    have hh_n_sq_mul_n : h_n^2 * (n : ℝ) = h_n * (x - x₀) := by
+      have : h_n^2 * (n : ℝ) = h_n * ((n : ℝ) * h_n) := by ring
+      rw [this, hn_h_n_eq]
+    have hxn_eq : x₀ + ((n : ℕ) : ℝ) * h_n = x := by
+      push_cast
+      linarith [hn_h_n_eq]
+    have hx0_eq : x₀ + ((0 : ℕ) : ℝ) * h_n = x₀ := by push_cast; ring
+    have hLHS_eq :
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |Y n n i -
+            (u i * yex x + v i * h_n * deriv yex x)|)
+        = δ_max n := by
+      rw [show x = x₀ + ((n : ℕ) : ℝ) * h_n from hxn_eq.symm]
+    have hRHS_sup_eq :
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |Y n 0 i -
+            (u i * yex x₀ + v i * h_n * deriv yex x₀)|)
+        = δ_max 0 := by
+      rw [show x₀ = x₀ + ((0 : ℕ) : ℝ) * h_n from hx0_eq.symm]
+    rw [hLHS_eq, hRHS_sup_eq]
+    have h_lin_eq : (C₀ * β) * h_n^2 * (n : ℝ) = (C₀ * β * (x - x₀)) * h_n := by
+      have hsq := hh_n_sq_mul_n
+      have : (C₀ * β) * h_n^2 * (n : ℝ) = (C₀ * β) * (h_n^2 * (n : ℝ)) := by ring
+      rw [this, hsq]
+      ring
+    linarith [h_lin_eq, hbnd_n]
 
 /-- **Sub-lemma E for `aux_515D_componentwise_deviation_tendsto_zero`** —
 existence of a uniform max-abs deviation bound sequence that tends to 0.

@@ -1,4 +1,16 @@
-# Issue: Cycle 121 strategy Backup B2 has an analytical bug; corrected outline for cycle 122
+# Issue: Cycle 121 strategy Backup B2 has an analytical bug; corrected outline for cycle 122 — RESOLVED cycle 124
+
+**Resolution (cycle 124)**: This issue is RESOLVED. The B2 path was
+abandoned in cycle 122 in favour of Path B (per-step K-bound
+`α·h·δ_max + β·h²` shape, encapsulated in cycle 123's
+`aux_515D_per_step_K_bound`). Cycle 124 closed
+`aux_515D_max_deviation_geometric_bound`'s body using Path B
+composition + closed-form δ expansion (helper:
+`aux_515D_delta_closed_form`) + iterated-V bound (helper:
+`aux_515D_iterated_V_bound_linfty`) + sum-form Grönwall (cycle 117).
+No B2 was ever needed. Capstone is axiom-clean.
+
+---
 
 ## Blocker
 
