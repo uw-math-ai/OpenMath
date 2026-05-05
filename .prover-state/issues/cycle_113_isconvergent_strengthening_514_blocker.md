@@ -160,12 +160,46 @@ makes a smaller forward step (M-matrix-based `ell_U/phi_A`
 constructor helper) to unblock the body composition once the
 signature question is resolved.
 
+## Cycle 114 update
+
+The cycle 114 worker landed `aux_515D_construct_ell_U_phi_A` in
+`OpenMath/Chapter5/Section515.lean` (between
+`aux_515B_eta_contraction` and `localStepError_bound`). This
+infrastructure does NOT touch the §514 cascade or the
+`IsConvergent` definition; it is the load-bearing primitive for
+the future body composition of `aux_515D_output_tendsto` once
+the cascade question is resolved.
+
+**Solution A is now the favored path** for cycle 115:
+
+1. The helper output `(ell_U i, phi_A i)` is compatible with both
+   the global and the localized `M_bound` forms — its hypothesis
+   `‖(h₀ L) • |A|‖ < 1` is unchanged regardless of which `M_bound`
+   form `localStepError_bound` consumes.
+2. §514's `yex = id` consumer becomes compatible with the
+   localized form: `M_bound := |x|` works on `Set.Icc 0 x` since
+   `|id t| ≤ |x|` for `t ∈ [0, x]`.
+3. Solutions B (smooth-bounded replacement IVP) and C (local
+   derivation in capstone) are strictly more expensive than A.
+4. Solution D (regress §514) is unattractive because it adds new
+   sorries.
+
+Cycle 115 should refactor `localStepError_bound` (and helpers
+`localStageError_bound_a/b`, `aux_T3_bound`, `aux_T4_bound`) to
+consume `∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound`, then strengthen
+`IsConvergent`'s clause (with the localized form), then verify
+§513 / §514 still build, then compose the body of
+`aux_515D_output_tendsto` using the cycle 114 helper plus the
+A/B/C sub-lemmas.
+
 ## Cross-references
 
 * `aux_515D_output_tendsto_hypotheses.md` — original hypothesis
-  inventory.
+  inventory; cycle 114 update marks the helper as CLOSED.
 * `glm_isconvergent_strengthened.md` — cycle 098 precedent
   (compatible — only added stage-limit clause, no boundedness).
 * `is_convergent_strengthened.md` — LMM analog precedent.
 * `OpenMath/Chapter5/Section514.lean:496` —
   `convergence_witness_satisfies_U` (the breaking consumer).
+* `OpenMath/Chapter5/Section515.lean::aux_515D_construct_ell_U_phi_A`
+  — the cycle 114 helper.

@@ -36,3 +36,6 @@ Cycle 099: unicode `𝟙` as an identifier suffix (e.g. `B𝟙`) breaks the Lean
 
 ### Cycle 112
 Cycle 112 sub-lemma B (`aux_515D_gronwall_bound`): calling `Section404.discrete_gronwall_exp_bound` directly did not fit cleanly (parameter/shape mismatch with `k` stride vs. the `α*h` form); worker instead built `aux_515D_discrete_gronwall_raw` from scratch via `Nat.strong_induction_on` + `Finset.sum_Ico_succ_top` + `nlinarith`, then wrapped with `aux_515D_one_add_pow_le_exp` to convert the `(1+αh)^n` base to `exp(α·n·h)` form. Section404 helper remains unused.
+
+### Cycle 113
+Cycle 113: Attempted to land aux_515D_construct_ell_U_phi_A (M-matrix constructor for ell_U/phi_A side-condition vectors) but lake env lean on Section515.lean (~2300 lines) hung past 20 minutes and LSP failed to start; reverted draft unverified. Architectural audit confirmed that IsConvergent strengthening with global ∀t,|yex t|≤M_bound is incompatible with §514's convergence_witness_satisfies_U which uses yex=id (unbounded).

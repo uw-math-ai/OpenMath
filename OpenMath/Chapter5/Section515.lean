@@ -4,6 +4,7 @@ import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 import Mathlib.Analysis.Calculus.Deriv.Basic
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Topology.MetricSpace.Lipschitz
+import Mathlib.Tactic.Cases
 import OpenMath.Chapter5.Section512
 import OpenMath.Chapter5.MMatrix
 
@@ -1135,6 +1136,124 @@ private theorem aux_515B_eta_contraction {s r : ℕ}
               = (ell_U j * δ_max + h^2 * L^2 * M_bound * phi_A j) - |η j| := rfl
   linarith [heq ▸ hj]
 
+/-- **(515D helper)** Construct `ell_U` and `phi_A` solving the linear
+systems
+
+  `ell_U i − h₀ L Σ_j |A_{ij}| ell_U j = Σ_j |U_{ij}|`,
+  `phi_A i − h₀ L Σ_j |A_{ij}| phi_A j = ½ c_i² + Σ_j |A_{ij} c_j|`,
+
+via M-matrix inversion of `(I − h₀ L |A|)`. The Frobenius-norm
+hypothesis `‖(h₀ L) • |A|‖ < 1` ensures invertibility and componentwise
+positivity of the inverse, hence non-negativity of the solutions.
+
+This realizes the existential side conditions of
+`aux_515B_eta_contraction` and `localStepError_bound`, closing the
+"a future cycle will construct them" comment in the §515B docstring
+(see Encoding Deviations point 2 below). Cycle 114 lands this helper
+after cycle 113 drafted but reverted it unverified.
+
+Faithfulness: this is internal infrastructure, not a Butcher entity.
+The two linear systems match Butcher §515's `ϕ` (and analog `ℓ`)
+definitions verbatim. The Frobenius-norm hypothesis is strictly
+stronger than Butcher's `h₀ L ‖A‖_∞ < 1`; this divergence is
+inherited from `aux_515B_eta_contraction` (cycle 107). -/
+private theorem aux_515D_construct_ell_U_phi_A
+    {s r : ℕ}
+    (A : Matrix (Fin s) (Fin s) ℝ)
+    (U : Matrix (Fin s) (Fin r) ℝ)
+    {h₀ L : ℝ} (h₀_pos : 0 < h₀) (hL : 0 ≤ L)
+    (c : Fin s → ℝ) (_hc_nonneg : ∀ i, 0 ≤ c i)
+    (h_norm : ‖((h₀ * L) • A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1) :
+    ∃ ell_U phi_A : Fin s → ℝ,
+      (∀ i, 0 ≤ ell_U i) ∧
+      (∀ i, 0 ≤ phi_A i) ∧
+      (∀ i, ell_U i - h₀ * L * (∑ j, |A i j| * ell_U j)
+              = ∑ j, |U i j|) ∧
+      (∀ i, phi_A i - h₀ * L * (∑ j, |A i j| * phi_A j)
+              = (1/2) * (c i)^2 + ∑ j, |A i j * c j|) := by
+  -- Set up the M-matrix Mpos = (h₀ * L) • |A|.
+  set Mpos : Matrix (Fin s) (Fin s) ℝ := (h₀ * L) • A.map (fun a => |a|)
+    with hMpos_def
+  have hh₀L_nn : 0 ≤ h₀ * L := mul_nonneg h₀_pos.le hL
+  -- Mpos is entrywise non-negative.
+  have hMpos_nn : Mpos.EntrywiseNonneg := by
+    intro i j
+    show 0 ≤ ((h₀ * L) • A.map (fun a => |a|)) i j
+    simp only [Matrix.smul_apply, Matrix.map_apply, smul_eq_mul]
+    exact mul_nonneg hh₀L_nn (abs_nonneg _)
+  -- Compute (Mpos *ᵥ v) i = h₀ L Σ_k |A i k| · v k.
+  have hMpos_mulVec : ∀ (v : Fin s → ℝ) (i : Fin s),
+      (Mpos *ᵥ v) i = h₀ * L * ∑ k, |A i k| * v k := by
+    intro v i
+    have h1 : (Mpos *ᵥ v) i = ∑ k, Mpos i k * v k := rfl
+    rw [h1, Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun k _ => ?_)
+    show ((h₀ * L) • A.map (fun a => |a|)) i k * v k = h₀ * L * (|A i k| * v k)
+    rw [Matrix.smul_apply, Matrix.map_apply, smul_eq_mul]
+    ring
+  -- Right-hand sides for the two linear systems.
+  set bU : Fin s → ℝ := fun i => ∑ j, |U i j| with hbU_def
+  set bA : Fin s → ℝ := fun i => (1/2) * (c i)^2 + ∑ j, |A i j * c j|
+    with hbA_def
+  have hbU_nn : ∀ i, 0 ≤ bU i :=
+    fun i => Finset.sum_nonneg (fun j _ => abs_nonneg _)
+  have hbA_nn : ∀ i, 0 ≤ bA i := by
+    intro i
+    show 0 ≤ (1/2) * (c i)^2 + ∑ j, |A i j * c j|
+    have h1 : 0 ≤ (1/2) * (c i)^2 :=
+      mul_nonneg (by norm_num) (sq_nonneg _)
+    have h2 : 0 ≤ ∑ j, |A i j * c j| :=
+      Finset.sum_nonneg (fun j _ => abs_nonneg _)
+    linarith
+  -- Inverse positivity via the cycle 106 M-matrix lemma.
+  have h_unit : IsUnit ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos) :=
+    isUnit_one_sub_of_norm_lt_one h_norm
+  have h_inv_pos :
+      (Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos)).EntrywiseNonneg :=
+    hMpos_nn.inv_one_sub_of_norm_lt_one h_norm
+  -- Define ell_U, phi_A as the inversion outputs.
+  refine ⟨Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos) *ᵥ bU,
+          Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos) *ᵥ bA,
+          ?_, ?_, ?_, ?_⟩
+  · -- 0 ≤ ell_U.
+    intro i
+    exact h_inv_pos.mulVec_nonneg hbU_nn i
+  · -- 0 ≤ phi_A.
+    intro i
+    exact h_inv_pos.mulVec_nonneg hbA_nn i
+  · -- ell_U solves its linear system.
+    intro i
+    set ell : Fin s → ℝ :=
+      Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos) *ᵥ bU with hell_def
+    have key : ((1 - Mpos) *ᵥ ell) i = bU i := by
+      show ((1 - Mpos) *ᵥ
+              (Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos) *ᵥ bU)) i
+            = bU i
+      rw [Matrix.mulVec_mulVec, Ring.mul_inverse_cancel _ h_unit,
+          Matrix.one_mulVec]
+    have lhs_eq : ((1 - Mpos) *ᵥ ell) i = ell i - (Mpos *ᵥ ell) i := by
+      rw [Matrix.sub_mulVec, Pi.sub_apply, Matrix.one_mulVec]
+    rw [lhs_eq, hMpos_mulVec ell i] at key
+    show ell i - h₀ * L * (∑ j, |A i j| * ell j) = bU i
+    linarith [key]
+  · -- phi_A solves its linear system.
+    intro i
+    set phi : Fin s → ℝ :=
+      Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos) *ᵥ bA with hphi_def
+    have key : ((1 - Mpos) *ᵥ phi) i = bA i := by
+      show ((1 - Mpos) *ᵥ
+              (Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - Mpos) *ᵥ bA)) i
+            = bA i
+      rw [Matrix.mulVec_mulVec, Ring.mul_inverse_cancel _ h_unit,
+          Matrix.one_mulVec]
+    have lhs_eq : ((1 - Mpos) *ᵥ phi) i = phi i - (Mpos *ᵥ phi) i := by
+      rw [Matrix.sub_mulVec, Pi.sub_apply, Matrix.one_mulVec]
+    rw [lhs_eq, hMpos_mulVec phi i] at key
+    show phi i - h₀ * L * (∑ j, |A i j| * phi j)
+          = (1/2) * (c i)^2 + ∑ j, |A i j * c j|
+    exact key
+
 /-- **Butcher Lemma 515B** — Local-step error propagation across one
 GLM step.
 
@@ -1503,7 +1622,9 @@ private theorem aux_515D_per_step_recurrence
               + β * h^2 * (∑ k ∈ Finset.range n, (V_norm + α * h)^k) := by
   intro n
   induction' n with n ih <;>
-    simp_all +decide [pow_succ', mul_assoc, Finset.mul_sum _ _ _, Finset.sum_range_succ']
+    simp_all +decide [pow_succ', mul_assoc, Finset.mul_sum _ _ _,
+                       Finset.sum_range_succ', Finset.sum_add_distrib, mul_add,
+                       add_mul]
   convert le_trans (hrec n)
     (add_le_add
       (add_le_add
@@ -1511,6 +1632,7 @@ private theorem aux_515D_per_step_recurrence
         (mul_le_mul_of_nonneg_left
           (mul_le_mul_of_nonneg_left ih hh) hα_nn))
       le_rfl) using 1
+  simp only [Finset.mul_sum, mul_add, mul_left_comm]
   ring
 
 /-- Helper: `(1 + c)^n ≤ exp(n · c)` for `c ≥ 0`. -/

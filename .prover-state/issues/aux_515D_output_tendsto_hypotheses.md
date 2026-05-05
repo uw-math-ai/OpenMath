@@ -167,3 +167,28 @@ derive bounds locally inside the capstone, or accept §514 regression).
 side-conditions from M-matrix infrastructure. This is the
 load-bearing primitive for cycle 115's body composition once the
 signature question is resolved.
+
+## Cycle 114 update
+
+**`aux_515D_construct_ell_U_phi_A` is now CLOSED** (cycle 114).
+
+- The helper landed in `OpenMath/Chapter5/Section515.lean` between
+  `aux_515B_eta_contraction` (line 1136) and the `localStepError_bound`
+  docstring (line 1138).
+- Verified by axiom-clean compile of `test_aux_515D.lean`
+  (scratch sandbox, untracked) — exit code 0, ~21 minutes
+  (slow due to `import Mathlib` on GPFS-backed olean cache).
+- The proof is a direct M-matrix inversion of `(I − h₀ L |A|)`
+  via `Matrix.EntrywiseNonneg.inv_one_sub_of_norm_lt_one` (cycle
+  106) plus `Ring.mul_inverse_cancel` for the linear-system
+  recovery, following the cycle 107 plumbing pattern from
+  `aux_515B_eta_contraction`.
+
+**Body composition status**: still deferred to cycle 115. The
+helper alone does not unblock the body of `aux_515D_output_tendsto`
+— the §514 cascade conflict (see
+`cycle_113_isconvergent_strengthening_514_blocker.md`) must be
+resolved first. The helper IS the load-bearing primitive that
+cycle 115's body composition will consume after the cascade
+question is resolved (Solution A: localize `M_bound` to
+`Set.Icc x₀ x`).
