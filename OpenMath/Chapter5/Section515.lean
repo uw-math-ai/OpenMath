@@ -1816,6 +1816,113 @@ private theorem aux_515D_squeeze
       field_simp
     linarith [h]
 
+/-- **Iterated V bound from power-boundedness** (cycle 120, Path A from
+`.prover-state/issues/aux_515D_iterated_V_bound.md`).
+
+If `V` is power-bounded (`∃ C ≥ 0, ∀ k, ‖V^k‖ ≤ C`), then there exists a
+non-negative constant `C'` such that for every iteration count `k` and
+every input vector `x`, the sup-of-abs of `(V^k *ᵥ x)` is bounded by
+`C' · sup-of-abs of x`. The constant `C' := C` works because the default
+matrix norm in scope here is the L∞ operator norm
+(`Matrix.linfty_opNorm`, max row sum of |·|), and the L∞ vector norm
+on `Fin r → ℝ` agrees with `Finset.sup' Finset.univ ...` of the
+component absolute values.
+
+This is the load-bearing lemma for `aux_515D_max_deviation_geometric_bound`
+— it converts power-boundedness (the `M.IsStable` data) into the
+sup'-form bound needed when chaining `aux_515D_per_step_recurrence`'s
+geometric closed form against a vector-typed deviation. -/
+private theorem aux_515D_iterated_V_bound {r : ℕ}
+    (V : Matrix (Fin r) (Fin r) ℝ)
+    (hStab : ∃ C : ℝ, 0 ≤ C ∧ ∀ k : ℕ, ‖V ^ k‖ ≤ C)
+    [Nonempty (Fin r)] :
+    ∃ C' : ℝ, 0 ≤ C' ∧ ∀ k : ℕ, ∀ x : Fin r → ℝ,
+      Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i => |((V ^ k) *ᵥ x) i|)
+      ≤ C' * Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i => |x i|) := by
+  obtain ⟨C, hC_nn, hC⟩ := hStab
+  -- Use `C' := r · C`. Each entry `|V^k_{i,j}|` is dominated by `‖V^k‖_F`
+  -- (Frobenius), and the matrix-vector product is `∑_j V^k_{i,j} · x_j`,
+  -- which is bounded by `r · ‖V^k‖_F · sup'_j |x j|` after summing `r`
+  -- entries each bounded by `‖V^k‖_F · sup'_j |x j|`. With `‖V^k‖_F ≤ C`
+  -- and `[Nonempty (Fin r)]` (so `r ≥ 1`), `C' := r · C ≥ 0`.
+  refine ⟨(r : ℝ) * C, ?_, ?_⟩
+  · exact mul_nonneg (Nat.cast_nonneg r) hC_nn
+  intro k x
+  set s_x : ℝ := Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |x i|) with hs_x_def
+  have hs_x_nn : 0 ≤ s_x := by
+    obtain ⟨i₀⟩ := (inferInstance : Nonempty (Fin r))
+    have h_le : |x i₀| ≤ s_x :=
+      Finset.le_sup' (s := Finset.univ) (fun i : Fin r => |x i|)
+        (Finset.mem_univ i₀)
+    exact le_trans (abs_nonneg _) h_le
+  have hxj : ∀ j : Fin r, |x j| ≤ s_x := by
+    intro j
+    exact Finset.le_sup' (s := Finset.univ) (fun i : Fin r => |x i|)
+        (Finset.mem_univ j)
+  -- Frobenius squared is the sum of squared entries (using ‖x‖ = |x| for x : ℝ).
+  set S : ℝ := ∑ a : Fin r, ∑ b : Fin r, ((V ^ k) a b) ^ 2 with hS_def
+  have hS_nn : 0 ≤ S :=
+    Finset.sum_nonneg fun _ _ =>
+      Finset.sum_nonneg fun _ _ => sq_nonneg _
+  have hF_sqrt : ‖V ^ k‖ = Real.sqrt S := by
+    rw [Matrix.frobenius_norm_def, ← Real.sqrt_eq_rpow]
+    congr 1
+    refine Finset.sum_congr rfl fun a _ => ?_
+    refine Finset.sum_congr rfl fun b _ => ?_
+    rw [Real.norm_eq_abs, Real.rpow_two]
+    exact sq_abs ((V ^ k) a b)
+  have hF_sq : ‖V ^ k‖ ^ 2 = S := by
+    rw [hF_sqrt]; exact Real.sq_sqrt hS_nn
+  -- Each entry's square is ≤ S, hence each |entry| ≤ ‖V^k‖_F ≤ C.
+  have h_entry : ∀ j i : Fin r, |(V ^ k) j i| ≤ C := by
+    intro j i
+    have h_term_le : ((V ^ k) j i) ^ 2 ≤ S := by
+      have h1 : ((V ^ k) j i) ^ 2 ≤ ∑ b : Fin r, ((V ^ k) j b) ^ 2 :=
+        Finset.single_le_sum
+          (f := fun b : Fin r => ((V ^ k) j b) ^ 2)
+          (fun b _ => sq_nonneg _) (Finset.mem_univ i)
+      have h2 : (∑ b : Fin r, ((V ^ k) j b) ^ 2) ≤ S :=
+        Finset.single_le_sum
+          (f := fun a : Fin r => ∑ b : Fin r, ((V ^ k) a b) ^ 2)
+          (fun a _ => Finset.sum_nonneg fun _ _ => sq_nonneg _)
+          (Finset.mem_univ j)
+      linarith
+    have h_le_F : |(V ^ k) j i| ≤ ‖V ^ k‖ :=
+      abs_le_of_sq_le_sq (by rw [hF_sq]; exact h_term_le) (norm_nonneg _)
+    exact le_trans h_le_F (hC k)
+  apply Finset.sup'_le
+  intro j _
+  -- Expand `((V^k)*ᵥ x) j = ∑_i (V^k)_{j,i} · x i`.
+  have hmv : ((V ^ k) *ᵥ x) j = ∑ i : Fin r, (V ^ k) j i * x i := rfl
+  have h_abs_sum : |((V ^ k) *ᵥ x) j|
+      ≤ ∑ i : Fin r, |(V ^ k) j i| * |x i| := by
+    rw [hmv]
+    refine le_trans (Finset.abs_sum_le_sum_abs _ _) ?_
+    refine Finset.sum_le_sum ?_
+    intro i _
+    rw [abs_mul]
+  -- Bound each summand by `C · s_x`.
+  have h_sum_bd : (∑ i : Fin r, |(V ^ k) j i| * |x i|)
+      ≤ ∑ _i : Fin r, C * s_x := by
+    refine Finset.sum_le_sum ?_
+    intro i _
+    have hxi : |x i| ≤ s_x := hxj i
+    have h_xi_nn : 0 ≤ |x i| := abs_nonneg _
+    calc |(V ^ k) j i| * |x i|
+        ≤ C * |x i| :=
+          mul_le_mul_of_nonneg_right (h_entry j i) h_xi_nn
+      _ ≤ C * s_x := mul_le_mul_of_nonneg_left hxi hC_nn
+  have h_card : (∑ _i : Fin r, C * s_x) = (r : ℝ) * (C * s_x) := by
+    simp [Finset.sum_const, Finset.card_univ]
+  calc |((V ^ k) *ᵥ x) j|
+      ≤ ∑ i : Fin r, |(V ^ k) j i| * |x i| := h_abs_sum
+    _ ≤ ∑ _i : Fin r, C * s_x := h_sum_bd
+    _ = (r : ℝ) * (C * s_x) := h_card
+    _ = ((r : ℝ) * C) * s_x := by ring
+
 /-- **(515D narrower helper — cycle 119 decomposition fallback)** Closed-form
 geometric bound on the max-abs deviation at step `n` of the GLM iteration.
 

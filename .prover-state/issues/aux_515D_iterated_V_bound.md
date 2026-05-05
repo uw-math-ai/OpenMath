@@ -116,6 +116,59 @@ becomes a clean sub-step.
 
 Once Path A is closed, the §515D capstone closes fully.
 
+## Cycle 120 update — Path A CLOSED
+
+Path A landed in cycle 120 at `OpenMath/Chapter5/Section515.lean:1854`.
+
+The lemma is now a `private theorem` axiom-clean except for standard
+Lean axioms (`propext`, `Classical.choice`, `Quot.sound`).
+
+**Constant choice**: `C' := r · C` (with `r : ℕ` cast to `ℝ`). The
+proof bypasses the `Matrix.linfty_opNorm` ↔ Frobenius bridge entirely
+(which would have required a `√r` factor and a non-default norm scope
+switch). Instead it uses the entrywise Frobenius bound
+`|V^k_{i,j}| ≤ ‖V^k‖_F` (proved inline via `Matrix.frobenius_norm_def`
++ `Real.sq_sqrt` + `abs_le_of_sq_le_sq`), then a crude row-sum bound
+`∑_i |V^k_{j,i}| ≤ r · max_i |V^k_{j,i}| ≤ r · C`, and finally an
+elementwise `Finset.sup'_le` argument. Total ~75 LOC.
+
+**Why the elementwise approach worked here**:
+- Section515.lean opens `scoped Matrix.Norms.Frobenius`, so the default
+  `‖·‖` for matrices is the Frobenius norm — making
+  `Matrix.linfty_opNorm_mulVec` (which expects the linfty op norm
+  instance to be default) *not directly applicable* without scope
+  manipulation.
+- The crude `r · C` bound avoids the bridge altogether by working
+  entrywise.
+- For §515D, the constant doesn't have to be tight — only that it
+  exists and is non-negative; `r · C` works fine downstream.
+
+**What remains**: Cycle 120 chose NOT to attempt the body composition
+of `aux_515D_max_deviation_geometric_bound` (Priority 2 of the cycle
+120 strategy). Per the strategy's "If only iterated-V helper closes:
+net advance is +1 closed sub-helper" branch, this is a valid outcome.
+The remaining sorry sits at `OpenMath/Chapter5/Section515.lean:1961`
+(the geometric_bound itself).
+
+The composition of `aux_515D_max_deviation_geometric_bound`'s body
+(now armed with `aux_515D_iterated_V_bound`) is the cycle 121 target.
+It will require:
+1. Adding `0 ≤ M.glmAbscissae v` as a hypothesis (Step 2a of cycle
+   120 strategy) and propagating it upstream — high-risk for §513
+   / §514 cascade integrity (see Backup B3 of cycle 120 strategy).
+2. M-matrix construction (cycle 114 helper).
+3. Per-step recurrence chain via `localStepError_bound` (cycle 116).
+4. Closed-form via `aux_515D_per_step_recurrence` (cycle 113).
+5. Geometric sum bound + invocation of
+   `aux_515D_iterated_V_bound` (cycle 120, this file).
+6. Combine into the two-term `C_init · δ_init + C_lin · h_n` shape.
+
+Estimated ~120 LOC. Cycle 121 should plan whether to:
+- (a) Attempt the full composition with `0 ≤ c` propagated upstream
+  (high risk).
+- (b) Introduce one further narrower helper per Backup B2 of cycle
+  120 strategy, sorry'd, to isolate the per-step chain.
+
 ## Cross-references
 
 * `OpenMath/Chapter5/Section515.lean:1819` —

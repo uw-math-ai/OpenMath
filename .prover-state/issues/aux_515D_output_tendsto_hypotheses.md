@@ -393,3 +393,38 @@ per-step ↔ Grönwall bridge):
 The cycle 119 strategy explicitly authorizes this Backup B1
 narrowing as the fallback. The new helper is documented with the
 composition recipe in its docstring.
+
+## Cycle 120 update
+
+Cycle 120 closed Path A of `.prover-state/issues/aux_515D_iterated_V_bound.md`
+by introducing and proving the new helper
+`aux_515D_iterated_V_bound` at
+`OpenMath/Chapter5/Section515.lean:1854`. This is the
+"iterated-V-bound piece" referenced in step 5 above.
+
+**Sorry-count delta this cycle**: −0 net (one helper added with full
+proof; the geometric_bound sorry remains at the new location
+`Section515.lean:1961`). The advance is structural rather than
+numeric: the iterated-V infrastructure is now available for cycle
+121's geometric_bound body composition.
+
+**Status of `thm:515D`**: still `partial`. The sorry at the
+geometric_bound is now armed with `aux_515D_iterated_V_bound` for
+the iterated-V piece, narrowing cycle 121's composition target.
+
+**What's needed for cycle 121**: close the body of
+`aux_515D_max_deviation_geometric_bound`. The composition recipe
+above (steps 1–6) is now fully resourced:
+* Step 5's iterated-V piece is `aux_515D_iterated_V_bound` (cycle 120).
+* Step 1's M-matrix piece is `aux_515D_construct_ell_U_phi_A` (cycle 114).
+* Step 4's closed-form piece is `aux_515D_per_step_recurrence` (cycle 113).
+* Step 3's per-step bound is `localStepError_bound` (cycle 116
+  strengthened).
+
+**Open faithfulness divergence (carried forward from cycle 119
+strategy)**: `aux_515D_construct_ell_U_phi_A` requires
+`0 ≤ M.glmAbscissae v` as a hypothesis. Cycle 119 confirmed this is
+NOT derivable from `IsConsistent`. Cycle 121 must decide whether to
+propagate `0 ≤ c` upward (high risk for §513 / §514 cascade integrity
+per Backup B3 of cycle 120 strategy) or accept it as a local
+hypothesis with documented divergence.
