@@ -481,7 +481,32 @@ theorem GeneralLinearMethod.convergent_isStable
         rw [hf_def]; ring
       rw [h_A_zero, zero_add]
   -- Step 7: apply hConv' to obtain `Y n n → fun i => u i * yex 1 = 0`.
-  have hconv_pair := hConv' start hstart_tendsto 1 hxx Y Y_int hY_props
+  -- Cycle 116: also discharge the four localized M_bound clauses
+  -- (Solution A). For `yex ≡ 0` and Lipschitz constant `L = 0`, all four
+  -- clauses are trivial: `M_bound := 0` is a uniform bound on `|0|`, the
+  -- derivative of `0` is `0` (so its bound is `0 ≤ 0 · 0 = 0`), and the
+  -- Frobenius contraction `‖((1-0) · 0) • A.map abs‖ < 1` reduces to
+  -- `‖0‖ < 1` since `0 • _ = 0`.
+  have hyex_C1 : ContDiff ℝ 1 yex := by
+    rw [hyex_def]; exact contDiff_const
+  have hyex_M : ∀ t ∈ Set.Icc (0 : ℝ) 1, |yex t| ≤ 0 := by
+    intro t _
+    rw [hyex_def]; simp
+  have hyex'_LM : ∀ t ∈ Set.Icc (0 : ℝ) 1, |deriv yex t| ≤ ((0 : NNReal) : ℝ) * 0 := by
+    intro t _
+    rw [hyex_def]
+    show |deriv (fun _ : ℝ => (0 : ℝ)) t| ≤ ((0 : NNReal) : ℝ) * 0
+    simp
+  have h_norm : @norm _ Matrix.frobeniusNormedRing.toNorm
+                  (((1 - 0 : ℝ) * ((0 : NNReal) : ℝ)) • M.A.map (fun a => |a|))
+                < 1 := by
+    open scoped Matrix.Norms.Frobenius in
+    show ‖(((1 - 0 : ℝ) * ((0 : NNReal) : ℝ)) • M.A.map (fun a => |a|) :
+          Matrix (Fin s) (Fin s) ℝ)‖ < 1
+    have h0 : (1 - 0 : ℝ) * ((0 : NNReal) : ℝ) = 0 := by push_cast; ring
+    rw [h0, zero_smul, norm_zero]; norm_num
+  have hconv_pair := hConv' start hstart_tendsto 1 hxx 0 le_rfl hyex_C1
+                       hyex_M hyex'_LM h_norm Y Y_int hY_props
   have hconv : Filter.Tendsto (fun n : ℕ => Y n n)
                  Filter.atTop (nhds (fun i => u i * yex 1)) := hconv_pair.1
   -- yex 1 = 0, so the limit is the zero vector.

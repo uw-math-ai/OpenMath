@@ -76,3 +76,49 @@ for the full closure narrative.
 * `u_prime_equals_u_bridge.md` — option (iii) chosen here.
 * `is_convergent_strengthened.md` — LMM precedent for a
   faithfulness-divergent strengthening of `IsConvergent`.
+
+## Cycle 116 strengthening — localized `M_bound` (Solution A)
+
+In addition to the cycle 098 stage-limit clause documented above,
+cycle 116 added FOUR new universally-quantified clauses to
+`IsConvergent` (`OpenMath/Chapter5/Section512.lean:171`):
+
+1. `∀ M_bound : ℝ, 0 ≤ M_bound →`
+2. `ContDiff ℝ 1 yex →`
+3. `(∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound) →`
+4. `(∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound) →`
+5. `‖((x - x₀) * (L : ℝ)) • M.A.map (·|·|) : Matrix‖_F < 1 →`
+
+These hypotheses are required by `localStepError_bound`'s capstone
+signature (cycle 116 Phase 2: `Section515.lean:1355`) and propagated
+to `aux_515D_output_tendsto` for cycle 117's body composition.
+
+**Distinguishing feature from prior strengthenings**: the
+`Set.Icc x₀ x` localization (clauses 3 and 4) is what makes §514's
+`yex = id` consumer compatible — `id` is bounded on `[0, 1]` even
+though it is unbounded globally. Per the cycle 113 audit
+(`cycle_113_isconvergent_strengthening_514_blocker.md`), the
+*global* `(∀ t, |yex t| ≤ M_bound)` form would have made
+`IsConvergent` inapplicable to any `yex` with non-trivial growth,
+breaking §514. The localization is **Solution A** of that audit.
+
+### Cycle 116 cascade — option (b) fallback for §514
+
+Clause 5 (Frobenius bound) is NOT trivially satisfiable for §514's
+trivial IVP at `x = 1, L = 1`: it specializes to
+`‖A.map abs‖_F < 1`, which is a property of the matrix `A`, not
+universally true. Cycle 116 took the **fallback** of propagating
+this bound as a hypothesis to the affected §514 theorems:
+
+* `convergence_witness_satisfies_U` — gains
+  `h_norm_obligation : ‖A.map abs‖_F < 1`
+* `convergent_isPreconsistent` — same propagation
+* `convergent_preconsistent_isConsistent` — same propagation
+
+§513's `convergent_isStable` does NOT need propagation because its
+trivial IVP uses `L = 0`, making `‖0 • A.map abs‖_F = 0 < 1`
+trivially.
+
+A future cycle MAY restructure §514 (Solution-A option (a)) to
+choose `x` small enough that the Frobenius bound holds via
+`lim_{x→0} x · A = 0`, removing the propagated hypothesis.

@@ -1,4 +1,5 @@
 import Mathlib.Analysis.Calculus.Deriv.Basic
+import Mathlib.Analysis.Matrix.Normed
 import Mathlib.Topology.MetricSpace.Lipschitz
 import Mathlib.Topology.Order.Basic
 import OpenMath.Chapter5.Section510
@@ -69,6 +70,7 @@ namespace OpenMath.Chapter5.Section510
 
 open Matrix
 open scoped BigOperators
+open scoped Matrix.Norms.Frobenius
 
 /-! ## §512 — Convergence (def:512A) -/
 
@@ -146,7 +148,26 @@ of the n-step run, satisfying the GLM stage equation
 exact solution at the target time). This is needed to extract
 `U · u' = 𝟙` for the `u' = u` bridge in `thm:514A`; see
 `.prover-state/issues/glm_isconvergent_strengthened.md` and
-`.prover-state/issues/u_prime_equals_u_bridge.md`. -/
+`.prover-state/issues/u_prime_equals_u_bridge.md`.
+
+**Strengthening (cycle 116, faithfulness divergent — Solution A)**:
+Adds four LOCALIZED hypotheses required by `localStepError_bound`
+(Section515 lem:515B). These are localized to `Set.Icc x₀ x` (NOT
+global) so that §514's `yex = id` consumer remains compatible (`id`
+is bounded on `[0, 1]` even though it is unbounded globally):
+
+* `M_bound` with `0 ≤ M_bound`,
+* `ContDiff ℝ 1 yex`,
+* `∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound`,
+* `∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ L * M_bound`,
+* `‖((x - x₀) * L) • A.map (fun a => |a|)‖ < 1` (Frobenius
+  contraction, propagated from `aux_515B_eta_contraction` cycle 107).
+
+The `Set.Icc x₀ x` localization (vs. global) is the distinguishing
+feature from earlier strengthenings — see the cycle 113 audit in
+`.prover-state/issues/cycle_113_isconvergent_strengthening_514_blocker.md`
+and the per-hypothesis derivability analysis in
+`.prover-state/issues/aux_515D_output_tendsto_hypotheses.md`. -/
 def GeneralLinearMethod.IsConvergent {s r : ℕ}
     (M : GeneralLinearMethod s r) : Prop :=
   ∀ (f : ℝ → ℝ) (L : NNReal), LipschitzWith L f →
@@ -158,6 +179,13 @@ def GeneralLinearMethod.IsConvergent {s r : ℕ}
       (∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
                        (nhds 0) (nhds (u i * y₀))) →
     ∀ x : ℝ, x₀ < x →
+    -- Cycle 116 strengthening (Solution A — localized M_bound).
+    ∀ M_bound : ℝ, 0 ≤ M_bound →
+      ContDiff ℝ 1 yex →
+      (∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound) →
+      (∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound) →
+      ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+          Matrix (Fin s) (Fin s) ℝ)‖ < 1 →
     ∀ Y : ℕ → ℕ → Fin r → ℝ,
     ∀ Y_int : ℕ → Fin s → ℝ,
       (∀ n : ℕ, 0 < n →

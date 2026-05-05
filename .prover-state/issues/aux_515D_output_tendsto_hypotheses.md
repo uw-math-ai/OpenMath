@@ -192,3 +192,58 @@ resolved first. The helper IS the load-bearing primitive that
 cycle 115's body composition will consume after the cascade
 question is resolved (Solution A: localize `M_bound` to
 `Set.Icc x₀ x`).
+
+## Cycle 116 update — Solution A LANDED (Phase 2)
+
+**Strengthening LANDED.** Both `localStepError_bound`'s capstone
+signature (`Section515.lean:1355`) and
+`GeneralLinearMethod.IsConvergent` (`Section512.lean:171`) now
+expose the four localized hypotheses required for body composition:
+
+| Hypothesis (now in `IsConvergent` and `aux_515D_output_tendsto`) |
+|---|
+| `(M_bound : ℝ) (hM_nn : 0 ≤ M_bound)` |
+| `(hyex_C1 : ContDiff ℝ 1 yex)` |
+| `(hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)` |
+| `(hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)` |
+| `(h_norm : ‖((x - x₀) * L) • A.map abs : Matrix‖_F < 1)` |
+
+`aux_515D_output_tendsto` (`Section515.lean:1836`) inherits the
+same hypotheses; its body still has one `sorry` (cycle 117
+deliverable).
+
+**§513 / §514 cascade verification (cycle 116)**:
+
+- §513 (`convergent_isStable`): clean migration. `yex ≡ 0, L = 0`
+  ⇒ all four localized clauses trivial; Frobenius contraction
+  reduces to `‖0‖_F < 1`.
+- §514 (`convergence_witness_satisfies_U` and dependents): used
+  Solution-A option (b) fallback. Changed `LipschitzWith 0 f` to
+  `LipschitzWith 1 f` (any L ≥ 1 works for `yex = id`); discharged
+  the four localized clauses inline; propagated the Frobenius
+  obligation `‖A.map abs‖_F < 1` as a hypothesis to
+  `convergence_witness_satisfies_U`,
+  `convergent_isPreconsistent`, and
+  `convergent_preconsistent_isConsistent`.
+
+**What's needed for cycle 117**: compose the body of
+`aux_515D_output_tendsto` using:
+
+1. `aux_515D_construct_ell_U_phi_A` (cycle 114) — supplies
+   `ell_U`, `phi_A`.
+2. `localStepError_bound` (cycle 116 strengthened) — applied
+   per step at `xn1 := x₀ + m · (x-x₀)/n`, `h := (x-x₀)/n`.
+3. `aux_515D_per_step_recurrence` (cycle 113) — chains the
+   per-step bounds.
+4. `aux_515D_gronwall_bound` (cycle 113) — closed form.
+5. `aux_515D_squeeze` (cycle 112) — extracts `δ → 0`.
+6. `aux_515D_stage_eventually_bounded` (cycle 111) +
+   `aux_515D_stage_tendsto` (cycle 110) — stage-side limit.
+
+The localization restriction `Set.Icc x₀ x` ⊇ `Set.uIcc xn1 (xn1 + h)`
+for each step (since `xn1 ∈ [x₀, x - h]` and `xn1 + h ≤ x`), so the
+hypotheses transfer cleanly via `Set.uIcc_subset_Icc`-style lemmas.
+
+Cycle 116 also submitted Aristotle Job 1 (project
+`9ef8f033-59d5-4557-b040-cf327e6a7063`) attempting the body
+composition independently. Cycle 117 will check the result.

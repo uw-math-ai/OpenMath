@@ -492,10 +492,28 @@ The fourth conclusion exposes the Cesàro-sum form of the limit
 
 This is the load-bearing helper for `thm:514A`. The cycle 098
 strengthening of `IsConvergent` (with the stage-limit clause) is
-exactly what enables the `U *ᵥ u' = 𝟙` extraction in Step 8. -/
+exactly what enables the `U *ᵥ u' = 𝟙` extraction in Step 8.
+
+**Cycle 116 cascade fallback (Solution A → option (b) propagation)**:
+the cycle 116 strengthening of `IsConvergent` (Solution A: localized
+`M_bound` to `Set.Icc x₀ x`) requires the consumer to discharge a
+Frobenius-norm contraction `‖((x - x₀) * L) • A.map abs‖ < 1` at the
+chosen `(x, L)`. For `yex = id` we use `L := 1` (since `|deriv id| = 1`
+forces `L ≥ 1`); thus the obligation specializes to
+`‖(1 : ℝ) • A.map abs‖ = ‖A.map abs‖ < 1` (Frobenius). Per the cycle
+113 audit (`cycle_113_isconvergent_strengthening_514_blocker.md`), the
+clean Solution A discharge required option (a) restructuring (small
+`x` chosen so the bound holds via `lim_{x→0} x·A = 0`). For this
+cycle we use the FALLBACK (option b): propagate the bound as a
+hypothesis. -/
 private theorem GeneralLinearMethod.convergence_witness_satisfies_U
     {s r : ℕ} (M : GeneralLinearMethod s r)
-    (hConv : M.IsConvergent) :
+    (hConv : M.IsConvergent)
+    -- Cycle 116 fallback: Frobenius bound on `A.map abs` (the obligation
+    -- left over from instantiating IsConvergent's localized M_bound at
+    -- the trivial IVP `f ≡ 1, yex = id, x₀ = 0, x = 1, L = 1`).
+    (h_norm_obligation : @norm _ Matrix.frobeniusNormedRing.toNorm
+      (M.A.map (fun a => |a|)) < 1) :
     ∃ u' : Fin r → ℝ,
       u' ≠ 0 ∧
       M.V *ᵥ u' = u' ∧
@@ -506,9 +524,13 @@ private theorem GeneralLinearMethod.convergence_witness_satisfies_U
               (M.V ^ k) *ᵥ (M.B *ᵥ (fun _ => (1 : ℝ)))))
         Filter.atTop (nhds u') := by
   -- Step 1: trivial IVP setup (f ≡ 1, x₀ = 0, y₀ = 0, yex = id).
+  -- Cycle 116: use `L := 1` (any L ≥ 1 works; L = 0 is incompatible with
+  -- |deriv id| = 1 ≤ L · M_bound).
   set f : ℝ → ℝ := fun _ => (1 : ℝ) with hf_def
   set yex : ℝ → ℝ := id with hyex_def
-  have hf_lip : LipschitzWith 0 f := by rw [hf_def]; exact LipschitzWith.const _
+  have hf_lip : LipschitzWith 1 f := by
+    rw [hf_def]
+    exact (LipschitzWith.const (1 : ℝ)).weaken (by norm_num)
   have hyex_x₀ : yex 0 = 0 := rfl
   have hyex_ode : ∀ x : ℝ, HasDerivAt yex (f (yex x)) x := by
     intro x
@@ -516,7 +538,7 @@ private theorem GeneralLinearMethod.convergence_witness_satisfies_U
     exact hasDerivAt_id x
   -- Step 2: extract u' from hConv.
   obtain ⟨u', hu'_ne, hConv'⟩ :=
-    hConv f 0 hf_lip 0 0 yex hyex_x₀ hyex_ode
+    hConv f 1 hf_lip 0 0 yex hyex_x₀ hyex_ode
   -- Step 3: instantiate hConv' at φ ≡ 0, x = 1, Y := glmConstOneIterate (1/n).
   set φ : ℝ → Fin r → ℝ := fun _ _ => (0 : ℝ) with hφ_def
   set Y : ℕ → ℕ → Fin r → ℝ :=
@@ -551,7 +573,34 @@ private theorem GeneralLinearMethod.convergence_witness_satisfies_U
             (∑ j, M.A i j * (((1 - 0) / (n : ℝ)) * f (Y_int n j)))
             + (∑ j, M.U i j * Y n n j)
       simp only [hf_def]
-  have hConv_pair := hConv' φ hφ_tendsto 1 hxx Y Y_int hY_props
+  -- Cycle 116: discharge the four localized hypotheses on `[0, 1]`.
+  -- For `yex = id` and `L := 1`: `M_bound := 1`, `|id t| = |t| ≤ 1`,
+  -- `|deriv id t| = 1 ≤ 1 · 1`, and `‖A.map abs‖ < 1` is the propagated
+  -- `h_norm_obligation`.
+  have hyex_C1 : ContDiff ℝ 1 yex := by
+    rw [hyex_def]; exact contDiff_id
+  have hyex_M : ∀ t ∈ Set.Icc (0 : ℝ) 1, |yex t| ≤ 1 := by
+    intro t ht
+    rw [hyex_def]
+    show |t| ≤ 1
+    obtain ⟨h0, h1⟩ := Set.mem_Icc.mp ht
+    rw [abs_of_nonneg h0]; exact h1
+  have hyex'_LM : ∀ t ∈ Set.Icc (0 : ℝ) 1,
+      |deriv yex t| ≤ ((1 : NNReal) : ℝ) * 1 := by
+    intro t _
+    rw [hyex_def]
+    show |deriv (fun x : ℝ => x) t| ≤ ((1 : NNReal) : ℝ) * 1
+    rw [deriv_id'']
+    push_cast
+    norm_num
+  have h_norm : @norm _ Matrix.frobeniusNormedRing.toNorm
+                  (((1 - 0 : ℝ) * ((1 : NNReal) : ℝ)) • M.A.map (fun a => |a|))
+                < 1 := by
+    have h0 : (1 - 0 : ℝ) * ((1 : NNReal) : ℝ) = 1 := by push_cast; ring
+    rw [h0, one_smul]
+    exact h_norm_obligation
+  have hConv_pair := hConv' φ hφ_tendsto 1 hxx 1 (by norm_num) hyex_C1
+                       hyex_M hyex'_LM h_norm Y Y_int hY_props
   have hY_lim : Filter.Tendsto (fun n : ℕ => Y n n)
                   Filter.atTop (nhds (fun i => u' i * yex 1)) :=
     hConv_pair.1
@@ -694,8 +743,15 @@ is preconsistent. The convergence-witness vector `u'` extracted from
 is non-zero — i.e. `u'` is itself a preconsistency vector. -/
 theorem GeneralLinearMethod.convergent_isPreconsistent
     {s r : ℕ} (M : GeneralLinearMethod s r)
-    (hConv : M.IsConvergent) : M.IsPreconsistent := by
-  obtain ⟨u', _, hVu, hUu, _⟩ := M.convergence_witness_satisfies_U hConv
+    (hConv : M.IsConvergent)
+    -- Cycle 116 cascade: propagated h_norm obligation from
+    -- `convergence_witness_satisfies_U`. See its docstring for the
+    -- Solution-A fallback rationale.
+    (h_norm_obligation : @norm _ Matrix.frobeniusNormedRing.toNorm
+      (M.A.map (fun a => |a|)) < 1) :
+    M.IsPreconsistent := by
+  obtain ⟨u', _, hVu, hUu, _⟩ :=
+    M.convergence_witness_satisfies_U hConv h_norm_obligation
   exact ⟨u', hVu, hUu⟩
 
 /-! ### Main theorem: `thm:514A`
@@ -721,11 +777,16 @@ is non-trivial in general, but `IsConsistent` is existential, so
 separately as `convergent_isPreconsistent`. -/
 theorem GeneralLinearMethod.convergent_preconsistent_isConsistent
     {s r : ℕ} (M : GeneralLinearMethod s r)
-    (hConv : M.IsConvergent) (_hPre : M.IsPreconsistent) :
+    (hConv : M.IsConvergent) (_hPre : M.IsPreconsistent)
+    -- Cycle 116 cascade: propagated h_norm obligation from
+    -- `convergence_witness_satisfies_U`. See its docstring for the
+    -- Solution-A fallback rationale.
+    (h_norm_obligation : @norm _ Matrix.frobeniusNormedRing.toNorm
+      (M.A.map (fun a => |a|)) < 1) :
     M.IsConsistent := by
   -- Extract the convergence-witness vector u' (cycle 099 closure).
   obtain ⟨u', _hu'_ne, hVu', hUu', hY_lim⟩ :=
-    M.convergence_witness_satisfies_U hConv
+    M.convergence_witness_satisfies_U hConv h_norm_obligation
   -- Get power-boundedness of V via the §513 stability theorem.
   have hStable := M.convergent_isStable hConv
   have hPB : ∃ K : ℝ, ∀ n, ‖M.V ^ n‖ ≤ K := hStable.powerBound

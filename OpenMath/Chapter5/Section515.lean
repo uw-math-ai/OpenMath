@@ -1361,8 +1361,6 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
     (yex : ℝ → ℝ)
     (_hy_C1 : ContDiff ℝ 1 yex)
     (_hy_ode : ∀ t, deriv yex t = f (yex t))
-    (_hy_M : ∀ t, |yex t| ≤ M_bound)
-    (_hy'_LM : ∀ t, |deriv yex t| ≤ L * M_bound)
     (xn1 : ℝ)
     (u v : Fin r → ℝ)
     (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
@@ -1390,6 +1388,15 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
     (Y : Fin s → ℝ)
     (_hY_stage : ∀ i, Y i = h * (∑ j, M.A i j * f (Y j))
                           + ∑ j, M.U i j * yt_prev j)
+    -- Cycle 116 Phase 2: localized M_bound hypotheses (strengthened from
+    -- the previous global `_hy_M`/`_hy'_LM` to match the 515A helpers).
+    (_hy_M_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+        |yex t| ≤ M_bound)
+    (_hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+        |deriv yex t| ≤ L * M_bound)
+    (_hy_M_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h), |yex t| ≤ M_bound)
+    (_hy'_LM_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
+        |deriv yex t| ≤ L * M_bound)
     (_h_norm : ‖((h₀ * L) • M.A.map (fun x => |x|) : Matrix (Fin s) (Fin s) ℝ)‖ < 1) :
     ∃ K : Fin r → ℝ,
       (∀ i,
@@ -1402,17 +1409,9 @@ theorem GeneralLinearMethod.localStepError_bound {s r : ℕ}
   let Yhat : Fin s → ℝ := fun j => yex (xn1 + h * c j)
   let y_prev : Fin r → ℝ := fun k => u k * yex xn1 + v k * h * deriv yex xn1
   let η : Fin s → ℝ := fun j => Y j - Yhat j
-  -- Cycle 115 Phase 1: derive the localized hypotheses required by the
-  -- refactored 515A helpers from the capstone's global hypotheses. Cycle
-  -- 116 will strengthen this signature to take the localized forms directly.
-  have _hy_M_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
-      |yex t| ≤ M_bound := fun _ t _ => _hy_M t
-  have _hy'_LM_local : ∀ j : Fin s, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
-      |deriv yex t| ≤ L * M_bound := fun _ t _ => _hy'_LM t
-  have _hy_M_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
-      |yex t| ≤ M_bound := fun t _ => _hy_M t
-  have _hy'_LM_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h),
-      |deriv yex t| ≤ L * M_bound := fun t _ => _hy'_LM t
+  -- Cycle 116 Phase 2: localized M_bound hypotheses are supplied directly
+  -- in the signature (no inline derivation needed; the §515D consumer
+  -- localizes from `Set.Icc x₀ x` per Solution A).
   -- 515A (b) bound: exact-side residual R_i.
   have hRi : ∀ i : Fin r, |(u i * yex (xn1 + h) + v i * h * deriv yex (xn1 + h))
                 - h * (∑ j, M.B i j * f (Yhat j))
@@ -1847,6 +1846,13 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
     (_hφ : ∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
                           (nhds 0) (nhds (u i * y₀)))
     {x : ℝ} (_hxx : x₀ < x)
+    -- Cycle 116: localized M_bound hypotheses inherited from `IsConvergent`.
+    {M_bound : ℝ} (_hM_nn : 0 ≤ M_bound)
+    (_hyex_C1 : ContDiff ℝ 1 yex)
+    (_hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
+    (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
+    (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
@@ -2318,9 +2324,11 @@ theorem GeneralLinearMethod.stable_consistent_isConvergent
       congrFun hUu ⟨0, hs⟩
     rw [hu0] at h1
     simp [Matrix.mulVec, dotProduct] at h1
-  · intro φ hφ x hxx Y Y_int hY_props
+  · intro φ hφ x hxx M_bound hM_nn hyex_C1 hyex_M hyex'_LM h_norm
+        Y Y_int hY_props
     have h_output := aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
-                       hVu hUu hCons_eq hφ hxx Y Y_int hY_props
+                       hVu hUu hCons_eq hφ hxx hM_nn hyex_C1 hyex_M hyex'_LM
+                       h_norm Y Y_int hY_props
     refine ⟨h_output, ?_⟩
     exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
             hVu hUu hCons_eq hφ hxx Y Y_int hY_props h_output

@@ -87,6 +87,41 @@ specific `yex = id` problem in §514 was not analyzed. The IVPs in
 specific IVPs. §513's IVP is bounded (`yex = 0`); §514's is not
 (`yex = id`).
 
+## Status (cycle 116): Solution A IMPLEMENTED
+
+* **Cycle 115 (Phase 1)**: localized helper-chain hypotheses
+  (`localStageError_bound_a/b`, `aux_T3_bound`, `aux_T4_bound`) to
+  consume `Set.uIcc xn1 (xn1 + h * c j)` form rather than global.
+* **Cycle 116 (Phase 2)**: strengthened
+  - `localStepError_bound`'s capstone signature
+    (`Section515.lean:1355`) to take the four localized
+    hypotheses (`_hy_M_local`, `_hy'_LM_local`, `_hy_M_endpoint`,
+    `_hy'_LM_endpoint`) directly — no inline derivation needed.
+  - `GeneralLinearMethod.IsConvergent` (`Section512.lean:171`) to
+    expose `M_bound`, `ContDiff ℝ 1 yex`, the two
+    `Set.Icc x₀ x` bounds, and the Frobenius contraction
+    `‖((x - x₀) * L) • A.map abs‖_F < 1`.
+  - `aux_515D_output_tendsto`'s signature
+    (`Section515.lean:1836`) to inherit the same five hypotheses
+    for cycle 117's body composition.
+  - `stable_consistent_isConvergent`'s body to thread the new
+    hypotheses to `aux_515D_output_tendsto`.
+* **§513 cascade**: clean — `f ≡ 0` ⇒ `L = 0` ⇒ all four clauses
+  trivial and the Frobenius contraction reduces to `‖0‖ < 1`.
+* **§514 cascade**: required option (b) fallback — the Frobenius
+  obligation `‖A.map abs‖_F < 1` (specialized at `x = 1, L = 1`,
+  the values forced by `yex = id`) is propagated as a hypothesis
+  to `convergence_witness_satisfies_U`,
+  `convergent_isPreconsistent`, and
+  `convergent_preconsistent_isConsistent`. See
+  `glm_isconvergent_strengthened.md` for the full discussion.
+
+Axiom-clean status: `localStepError_bound`, `convergent_isStable`,
+`convergent_isPreconsistent`, `convergent_preconsistent_isConsistent`
+all return `[propext, Classical.choice, Quot.sound]`.
+`stable_consistent_isConvergent` retains its `sorryAx` from the
+cycle-117 deliverable `aux_515D_output_tendsto`.
+
 ## Possible solutions
 
 ### Solution A: Localize `M_bound` to `[x₀, x]`
