@@ -1,255 +1,391 @@
-# Cycle 137 Strategy
+# Cycle 138 Strategy — Open §550 with `thm:550A` infrastructure + n=1 verification
 
-## Context
+## Context (don't repeat)
 
-Cycle 136 closed `explicitEulerGLM_not_isAStable` (negative A-stability
-witness for `def:520E`), completing the non-vacuity triangle for that
-predicate (trivial-positive, substantive-positive, negative). The
-cycle 136 task results recommended `¬ explicitEulerGLM.IsLStable`
-as the natural single-cycle follow-up.
+- Cycle 137 closed `def:520F` non-vacuity with two negative L-stability witnesses.
+- The non-vacuity strengthening cadence (cycles 128–137) has run its course
+  for `def:520E`/`def:520F`/`def:525A`/`def:542A`/`def:551A`. **Pivot to a
+  real theorem this cycle.**
+- No pending Aristotle results.
+- The cycle 137 worker explicitly suggested three options. After audit:
+  - `thm:551B` — depends on `thm:550A` AND `thm:550B`. Don't try yet.
+  - `thm:521B` — requires polynomial complexity-sequence representation
+    of `stabilityFunction` and contour-integral arguments. Per the
+    `def:521A` docstring (`Section520.lean:658-670`), this representation
+    is **deferred** as multi-cycle infrastructure. Don't try.
+  - `thm:550A` — pure linear algebra, foundation for both §551 and §553.
+    **This is the cycle 138 target.**
 
-We will follow that recommendation **and** add a second L-stability
-result that genuinely strengthens the non-vacuity story for `def:520F`:
-a proof that `implicitMidpointGLM` — the cycle 135 *positive*
-A-stability witness — is **not** L-stable. This pair reproduces the
-textbook contrast (Padé(1,1) is A-stable but not L-stable, see
-Butcher §520, p. 419) and broadens `IsLStable`'s non-vacuity into
-the same triangle shape `def:520E` now has.
+## Primary target: `thm:550A` (Doubly companion matrices)
 
-There are no Aristotle results to incorporate this cycle.
+Textbook statement (`entities/thm_550A.json`, Butcher p. 457): for the
+**doubly companion matrix** `X` built from coefficients
+`α₁,…,αₙ, β₁,…,βₙ` per equation (550a),
 
-## Tasks (in order)
-
-### Task 1 — `explicitEulerGLM_not_isLStable` (one-line follow-up)
-
-**Target file**: `OpenMath/Chapter5/Section520.lean`, immediately
-after the cycle 136 theorem `explicitEulerGLM_not_isAStable`.
-
-**Definition shape** (verified — `Section520.lean:298–304`):
-
-```lean
-def GeneralLinearMethod.IsLStable {s r : ℕ}
-    (M : GeneralLinearMethod s r) : Prop :=
-  M.IsAStable ∧
-  Filter.Tendsto
-    (fun z : ℂ => spectralRadius ℂ (M.stabilityMatrix z))
-    (Filter.cocompact ℂ)
-    (nhds 0)
+```
+X = [[-α₁, -α₂, ..., -α_{n-1}, -αₙ - βₙ],
+     [1, 0, ..., 0, -β_{n-1}],
+     [0, 1, ..., 0, -β_{n-2}],
+     ...,
+     [0, 0, ..., 1, -β₁]]
 ```
 
-**Proof**: since `IsLStable` is `IsAStable ∧ ...`, the negation
-follows from cycle 136's `explicitEulerGLM_not_isAStable` by
-projecting the conjunction:
+with `α(z) := 1 + α₁z + … + αₙ zⁿ` and `β(z) := 1 + β₁z + … + βₙ zⁿ`,
+the characteristic polynomial of `X` and `det(I − zX)` satisfy
 
-```lean
-/-- Negative non-vacuity witness for `def:520F`: `explicitEulerGLM`
-is not L-stable, since L-stability requires A-stability and cycle 136
-showed `explicitEulerGLM` is not A-stable. -/
-theorem explicitEulerGLM_not_isLStable :
-    ¬ explicitEulerGLM.IsLStable :=
-  fun h => explicitEulerGLM_not_isAStable h.1
+```
+det(I − zX) = α(z)·β(z) + O(z^{n+1})        as z → 0  in ℂ.
 ```
 
-That's it. Verify with `lake env lean OpenMath/Chapter5/Section520.lean`
-and `#print axioms` (expect `[propext, Classical.choice, Quot.sound]`).
+(The "reciprocal" identity `1 + γ₁z + γ₂z² + … + γₙ zⁿ = det(I − zX)`
+where `γᵢ` are the charpoly coefficients is a generic matrix fact —
+not specific to doubly companion matrices.)
 
-### Task 2 — `implicitMidpointGLM_not_isLStable` (substantive negative witness)
+## Cycle 138 deliverable
 
-**Target file**: same — append after Task 1.
+A new file `OpenMath/Chapter5/Section550.lean` with:
 
-**Mathematical content**: `implicitMidpointGLM` has stability function
-`R(z) = (1 + z/2)/(1 − z/2)` (cycle 135). As `|z| → ∞`, `|R(z)| → 1`,
-so `spectralRadius (M(z)) → 1`, not `0`. Hence `IsLStable`'s
-`Tendsto … cocompact … (nhds 0)` clause fails.
+1. **The doubly companion matrix definition.**
+2. **Verification at `n = 1`.**
+3. **Sorry-first scaffold for general `n`.**
+4. **Issue file documenting the general-`n` deferral.**
+5. **`OpenMath/Chapter5.lean` updated** to `import OpenMath.Chapter5.Section550`.
 
-**Proof recipe** (planner sketch — verify each lemma name with
-`lean_local_search` / `lean_loogle` before committing):
+This is a "structure + 1 closure" cycle. The `n = 1` closure is a
+**genuine** witness (textbook identity discharged for the smallest
+case), not vacuous.
 
-1. Specialize the negation by destructuring the conjunction; we
-   attack the second conjunct
-   `Tendsto (fun z => spectralRadius (M(z))) cocompact (𝓝 0)`.
+### Step 1 — Create the file (~30 min)
 
-2. Pick a divergent witness sequence in the **closed left half-plane**
-   so cycle 135's `implicitMidpointGLM_stabilityMatrix` (which
-   carries the `z.re ≤ 0` hypothesis) fires directly. Recommended:
-   `n : ℕ ↦ (-(n + 2 : ℝ) : ℂ)`. Then `(-(n+2)).re = -(n+2) ≤ 0`,
-   and `|R(-(n+2))| = |(1 - (n+2)/2) / (1 + (n+2)/2)|
-                    = |(-n/2)/((n+4)/2)| = n/(n+4) → 1` as `n → ∞`.
+Create `OpenMath/Chapter5/Section550.lean` with this header skeleton.
+Open under namespace `OpenMath.Chapter5.Section550` (new namespace —
+do NOT reuse `Section510` here; §550 is its own narrative thread).
 
-3. Compute `spectralRadius` of `!![a]` for `a : ℂ`. The 1×1
-   matrix's spectrum is `{a}`, so `spectralRadius ℂ !![a] = ‖a‖₊`.
-   Useful tools to search for first:
-   - `lean_local_search "spectralRadius"` — look for an
-     existing 1×1 lemma.
-   - If absent, prove a tiny private helper
-     `spectralRadius_of_fin_one : spectralRadius ℂ !![a] = ‖a‖₊`
-     reusing the cycle-135 `fin_one_pow` / `norm_fin_one` style.
+```lean
+import Mathlib.Analysis.Asymptotics.AsymptoticEquivalent
+import Mathlib.Analysis.Asymptotics.Defs
+import Mathlib.Data.Complex.Basic
+import Mathlib.LinearAlgebra.Matrix.Charpoly.Coeff
+import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
+import Mathlib.LinearAlgebra.Matrix.Notation
 
-4. Show `‖R(-(n+2))‖ = n/(n+4)`. Use the cycle-135 private
-   `norm_fin_one` to extract the scalar norm; then
-   `Complex.norm_div`, `Complex.norm_real`, and `abs_of_nonneg`
-   to reduce to `n/(n+4)`.
+/-!
+# Butcher §550 — Doubly companion matrices (Theorem 550A)
+…
+-/
 
-5. Show `(n : ℝ) → ∞` ⇒ `n/(n+4) → 1`. Mathlib lemma:
-   `Filter.Tendsto.div` or via
-   `(n+4)/(n+4) - 4/(n+4) = n/(n+4)` and `4/(n+4) → 0`. Search
-   `lean_loogle "Tendsto _ _ atTop _ (nhds 1)"` for a direct hit.
+namespace OpenMath.Chapter5.Section550
 
-6. Bridge subsequence-divergence to `cocompact`-divergence: the
-   embedding `(fun n : ℕ => -(n+2 : ℂ))` tends to `cocompact ℂ`
-   along `Filter.atTop`. Find via
-   `lean_loogle "Tendsto _ Filter.atTop (Filter.cocompact ℂ)"`.
-   The standard pattern is `Filter.tendsto_norm_atTop` plus the
-   cocompact-iff-norm-tends-to-infinity characterisation
-   (`Complex.tendsto_norm_atTop_iff_cocompact` or similar — verify
-   name).
+open Complex Asymptotics
+```
 
-7. Conclude `¬ IsLStable` via `Filter.Tendsto.unique` (the parent
-   net would force the sub-net to converge to `0`; we have the
-   sub-net converging to `1`; `0 ≠ 1`).
+### Step 2 — Define `doublyCompanionMatrix` (~50 LOC)
 
-**Estimated LOC**: 40–60 lines, depending on how much of the
-spectralRadius-of-1×1 plumbing already exists.
+Define over `ℂ` directly (the textbook works over ℂ via eigenvalue
+analysis; using `ℂ` from the start avoids a later complexification
+detour). The cleanest formulation uses index-by-index entries — do
+NOT try to use `Matrix.companion` from Mathlib (it's the standard
+companion matrix, not the doubly version).
 
-**Mathlib search to do FIRST** (do not skip — this is where the
-estimate could blow up):
+```lean
+/-- **Doubly companion matrix** (550a). Indexed by `Fin n × Fin n`,
+where `n ≥ 1`. The entries follow the textbook layout:
+* row 0 holds `−α_{j+1}` for j < n−1, and `−αₙ − βₙ` at column n−1
+* rows 1..n−1 hold a sub-diagonal `1` (i.e., `X[i, i−1] = 1`) and a
+  last-column entry `−β_{n−i}`.
+* All other entries are `0`.
 
-- `lean_local_search "spectralRadius"` plus `"fin"` for the 1×1
-  spectralRadius lemma.
-- `lean_loogle "Tendsto _ Filter.atTop (Filter.cocompact ℂ)"` for the
-  `(n : ℂ)` → cocompact bridge.
-- `lean_local_search "spectrum_one_eq_singleton"` (verify name).
-- `lean_local_search "tendsto_norm_atTop_iff_cocompact"` for the
-  cocompact characterisation.
+We encode the coefficients `α, β : Fin n → ℂ` as the vectors
+`(α₁,…,αₙ)` and `(β₁,…,βₙ)` (Fin-indexed, so `α k` means `α_{k+1}`
+in textbook indexing). -/
+def doublyCompanionMatrix {n : ℕ} (α β : Fin n → ℂ) :
+    Matrix (Fin n) (Fin n) ℂ := fun i j =>
+  if i.val = 0 then
+    if j.val = n - 1 then
+      -α ⟨n-1, by omega⟩ - β ⟨n-1, by omega⟩
+    else
+      -α j  -- row 0, columns 0..n-2: `-α_{j+1}` (textbook 1-indexed)
+  else if i.val = j.val + 1 then
+    1  -- sub-diagonal
+  else if j.val = n - 1 then
+    -β ⟨n - i.val, by omega⟩  -- last column entries
+  else
+    0
+```
 
-If the spectralRadius-of-1×1 plumbing or the cocompact bridge turns
-out to require nontrivial new infrastructure (>30 LOC by itself),
-fall back per Backup B1 below.
+**Faithfulness check**: the textbook indexes α and β starting at 1;
+our `Fin n` indexes start at 0, so `α 0` corresponds to textbook
+`α₁`, `α (n−1)` corresponds to textbook `αₙ`. Document this in the
+docstring prominently.
+
+**Edge cases**: at `n = 0`, `Fin 0 → ℂ` is the empty function and
+the matrix is the empty (0×0) matrix; the theorem becomes vacuous
+(`O(z^1)` is just `IsBigO _ id`, true of the constant function 0).
+At `n = 1`, `i.val = 0 = j.val` and `j.val = n - 1 = 0`, so the
+single entry is `-α 0 - β 0` (which matches the textbook (550a)
+specialised at n=1: `[[-α₁ - β₁]]`).
+
+**Sanity helper**: prove
+`doublyCompanionMatrix_one_eq : doublyCompanionMatrix α β = !![-α 0 - β 0]`
+for `n = 1`. Use `Matrix.ext` + `fin_cases` + `decide` or `simp`.
+
+### Step 3 — State `thm:550A` and prove the n=1 case (~80 LOC)
+
+```lean
+/-- The polynomial `α(z) = 1 + α₁z + … + αₙ zⁿ` (textbook indexing). -/
+def alphaPoly {n : ℕ} (α : Fin n → ℂ) (z : ℂ) : ℂ :=
+  1 + ∑ i : Fin n, α i * z ^ (i.val + 1)
+
+/-- The polynomial `β(z) = 1 + β₁z + … + βₙ zⁿ`. -/
+def betaPoly {n : ℕ} (β : Fin n → ℂ) (z : ℂ) : ℂ :=
+  1 + ∑ i : Fin n, β i * z ^ (i.val + 1)
+
+/-- **Theorem 550A** — for the doubly companion matrix `X` with
+coefficient vectors `α, β`,
+`det(I − zX) = α(z)·β(z) + O(z^{n+1})` as `z → 0`.
+
+Butcher §550 Theorem 550A, p. 457. -/
+theorem doublyCompanionMatrix_det_factorization
+    {n : ℕ} (α β : Fin n → ℂ) :
+    Asymptotics.IsBigO (nhds (0 : ℂ))
+      (fun z : ℂ =>
+        (1 - z • doublyCompanionMatrix α β).det
+          - alphaPoly α z * betaPoly β z)
+      (fun z : ℂ => z ^ (n + 1)) := by
+  sorry  -- see issue thm_550A_general_n.md
+```
+
+Then prove the **n = 1 specialization** as a witness:
+
+```lean
+/-- `thm:550A` at `n = 1`: with single coefficients α₁, β₁,
+`det(I − zX) = 1 + (α₁ + β₁)z`, while `α(z)·β(z) = 1 + (α₁+β₁)z + α₁β₁z²`,
+so the difference is `−α₁β₁ z²`, which is `O(z²) = O(z^{1+1})`. -/
+theorem doublyCompanionMatrix_det_factorization_n_one
+    (α β : Fin 1 → ℂ) :
+    Asymptotics.IsBigO (nhds (0 : ℂ))
+      (fun z : ℂ =>
+        (1 - z • doublyCompanionMatrix α β).det
+          - alphaPoly α z * betaPoly β z)
+      (fun z : ℂ => z ^ 2) := by
+  -- (1 - zX).det = 1 - z · (-α 0 - β 0) = 1 + (α 0 + β 0) z
+  -- α(z)·β(z) = (1 + α 0 · z)(1 + β 0 · z) = 1 + (α 0 + β 0) z + (α 0)(β 0) z²
+  -- difference = -(α 0)(β 0) z²
+  have h_diff : ∀ z : ℂ,
+      (1 - z • doublyCompanionMatrix α β).det
+        - alphaPoly α z * betaPoly β z
+        = -(α 0 * β 0) * z ^ 2 := by
+    intro z
+    rw [doublyCompanionMatrix_one_eq]
+    simp only [alphaPoly, betaPoly, Fin.sum_univ_one]
+    -- Reduce 1 - z • !![-α 0 - β 0] to !![1 + z * (α 0 + β 0)] then
+    -- use Matrix.det_fin_one.
+    have : (1 - z • !![-α 0 - β 0] : Matrix (Fin 1) (Fin 1) ℂ)
+            = !![1 + z * (α 0 + β 0)] := by
+      ext i j; fin_cases i; fin_cases j
+      simp [Matrix.smul_apply, sub_eq_add_neg]; ring
+    rw [this, Matrix.det_fin_one]
+    simp; ring
+  -- Use h_diff to bound the LHS by `‖α 0 * β 0‖ · ‖z^2‖`.
+  refine Asymptotics.IsBigO.of_bound ‖α 0 * β 0‖ ?_
+  filter_upwards with z
+  rw [h_diff]
+  rw [Complex.norm_neg, Complex.norm_mul, Complex.norm_pow]
+  ring_nf
+  rfl  -- or `simp` if ring_nf leaves a trivial residue
+```
+
+**Verify with `lean_multi_attempt`** at every `simp`/`ring`/`refine`
+boundary before stitching the proof. The endgame can be sensitive
+to elaboration order. Three viable backup endgames if the
+`IsBigO.of_bound` route doesn't fire cleanly:
+
+1. `simp only [h_diff]; exact (isBigO_const_mul_self _ _ _).neg_left`-style.
+2. Build `IsBigO` from `Filter.eventually_le` directly via
+   `‖f z‖ ≤ ‖α 0 * β 0‖ * ‖z^2‖`.
+3. Prove the function `equals` `fun z => -(α 0 * β 0) * z^2`
+   (which is automatic from `h_diff`), then close via
+   `Asymptotics.isBigO_const_mul_self` followed by `congr`.
+
+If `lean_multi_attempt` shows none of these close, **decompose
+further** into a sub-lemma `f z = g z * z^2` for an appropriate
+constant `g z`, and feed that to `Asymptotics.IsBigO.const_mul_left`
+plus `Asymptotics.isBigO_refl`.
+
+### Step 4 — Update plumbing (~15 min)
+
+* Add `import OpenMath.Chapter5.Section550` to `OpenMath/Chapter5.lean`.
+  (Note: `OpenMath/Chapter5.lean` is currently missing imports for
+  `Section514`, `Section515`, `Section525` — DO NOT add those; they
+  may be intentionally deferred from the chapter's hub. Only add
+  `Section550`. If lake build complains about a missing transitive
+  dep, leave the new file out of the hub and import it directly
+  wherever needed; document in the cycle results.)
+* Update `extraction/formalization_data/lean_status.json` for
+  `thm:550A`: status `partial`, `lean_file` =
+  `OpenMath/Chapter5/Section550.lean`, `lean_symbol` =
+  `OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization`,
+  `cycle` = 138, plus a new annotation pointing to the
+  `_n_one` witness theorem.
+* Update `plan.md` Chapter 5 row for `thm:550A`: `[ ]` → `[~]` with
+  a note "n=1 closed; general n deferred (issue
+  `thm_550A_general_n.md`)".
+
+### Step 5 — Document the general-n deferral
+
+Write `.prover-state/issues/thm_550A_general_n.md` documenting:
+
+* The textbook proof (eigenvalue density argument): distinct,
+  non-zero eigenvalues form a dense set in coefficient space;
+  charpoly coefficients are continuous; reduce to the dense case
+  via direct eigenvalue calculation, then extend by continuity.
+* Why the general case is deferred: density-based argument requires
+  several Mathlib pieces in concert (continuity of charpoly
+  coefficients in matrix entries, density of "distinct eigenvalues"
+  in coefficient space, identity-of-analytic-functions extension by
+  continuity). Each is available in Mathlib, but the assembly is
+  multi-cycle.
+* Possible solutions:
+  (i) Direct cofactor-expansion of `det(I − zX)` for general `n` —
+      compute the determinant entry-by-entry by exploiting the
+      sparse structure of `X`. Tedious (~150 LOC) but plausible
+      single-cycle work for cycle 139 if Aristotle batch is
+      inconclusive.
+  (ii) Eigenvalue-density argument (the textbook's path). ~300 LOC
+       across 2–3 cycles.
+  (iii) An induction on `n` via row-reduction. The doubly companion
+        matrix has a recursive structure (the `(n−1) × (n−1)`
+        bottom-right block of `X` is itself a doubly companion
+        matrix shifted down). This may be the cleanest; sketch it
+        out in cycle 139.
+* Cross-reference: blocks `thm:551B` (which uses `thm:550A` for the
+  M(z) eigenvalue analysis).
+
+### Step 6 — Aristotle batch (parallel to manual work)
+
+Submit two jobs at the START of the cycle (so they run in the
+background while you work on Steps 1–5):
+
+* **Job A**: the general-`n` `doublyCompanionMatrix_det_factorization`
+  theorem with the full `n = 1` proof shown as guidance, plus a
+  reference to the textbook's eigenvalue-density argument in the
+  prompt.
+* **Job B**: a focused sub-lemma stating the polynomial identity
+  *exactly* (not asymptotically):
+  `(1 - z • doublyCompanionMatrix α β).det = alphaPoly α z * betaPoly β z + ∑ i ∈ Finset.Ioc n (2*n), (γ i) * z^i`
+  for some coefficients `γ i` derivable from α and β. The asymptotic
+  `IsBigO` then follows directly. This may be more amenable than
+  Job A's full asymptotic form.
+
+Don't poll Aristotle this cycle. Submit and proceed with manual work.
 
 ## What NOT to try
 
-- **Do NOT redo cycle 136 work.** `explicitEulerGLM_not_isAStable`
-  is already in `Section520.lean` (axiom-clean). Task 1 invokes it
-  directly via `h.1` — do not re-derive the matrix-norm bound.
+1. **Do NOT attempt `thm:551B` or `thm:550B`.** Both depend on `thm:550A`
+   PLUS additional infrastructure (similarity transformation, Jordan
+   block computations). One step at a time.
 
-- **Do NOT use cycle 135's `implicitMidpointGLM_stabilityMatrix`
-  closed form on a positive-real `z`.** That lemma carries the
-  hypothesis `z.re ≤ 0`; calling it with `z = (n : ℂ)` for `n ≥ 1`
-  fails the hypothesis. Use the negative-real witness sequence
-  `n ↦ -(n+2 : ℂ)` (or equivalent left-half-plane divergent
-  sequence) instead.
+2. **Do NOT attempt general-`n` `thm:550A` manually this cycle.**
+   The eigenvalue density argument is multi-cycle work. Sorry-first
+   it and document. If by some chance Aristotle returns a clean proof
+   in time (unlikely — typical IN_PROGRESS at 30 min poll is < 5%),
+   incorporate it next cycle.
 
-- **Do NOT raise `maxHeartbeats`.** If Task 2 stalls on a single
-  goal, decompose into private helpers (`spectralRadius_at_neg_n`,
-  `padeOneOne_norm_neg_n_eq`, etc.).
+3. **Do NOT use `Mathlib.LinearAlgebra.Matrix.Charpoly.Eigs`'s eigenvalue
+   results to close the `n = 1` case.** They require the matrix to be
+   over an algebraically closed field with extra structure. For `n = 1`,
+   stick to direct `Matrix.det_fin_one` calculation.
 
-- **Do NOT introduce `axiom` or `constant`** for any
-  spectralRadius / Filter / cocompact lemma. If Mathlib lacks
-  exactly the bridge you want, prove it as a private helper in the
-  same file (the cycle 135 pattern: small private bridges
-  `fin_one_pow`, `norm_fin_one`, `norm_pow_fin_one` for analogous
-  matrix-norm reductions).
+4. **Do NOT introduce a `class` for "doubly companion structure".**
+   A plain `def` returning a `Matrix` is sufficient. Adding a
+   typeclass/predicate would be over-engineering.
 
-- **Do NOT expand scope to other `def:520F` witnesses or pivot to
-  Padé order analysis (`HasStabilityOrder 2`).** Cycle 136 task
-  results listed those as backup paths; they are >150 LOC and
-  belong in their own cycle.
+5. **Do NOT pick a different target.** The worker may be tempted by
+   "easier" non-vacuity strengthenings (e.g.
+   `implicitMidpointGLM_hasStabilityOrder_two` for `def:521A`). The
+   cadence has run its course — pivoting to a real theorem is the
+   explicit cycle 138 mandate. If you hit a deadlock on `thm:550A`,
+   write an issue file and commit a partial scaffold rather than
+   pivoting away.
 
-- **Do NOT touch Chapter 3 / 4 entries this cycle.** Tempting
-  options like `def:381F` (P-equivalent — blocked on `def:381E`'s
-  deferred `reducedMethod` per
-  `.prover-state/issues/reduced_method_deferred.md`), `def:530A`
-  (needs StartingMethod structure), `thm:431A` (needs Rouché's
-  theorem), `def:451A` (needs one-leg method + matrix M from
-  (451e)), and `thm:343B` (needs `B(η)/C(η)/D(η)/E(η,ζ)` simplifying
-  assumptions) are all multi-cycle infrastructure investments and
-  are out of scope for cycle 137.
+6. **Do NOT raise `maxHeartbeats`** above 200000. The `n = 1`
+   determinant computation should not need any heartbeat tweaks.
 
-- **Do NOT submit Aristotle for Task 1 or Task 2.** Both are short
-  and tightly coupled to private helpers we control. The 30-min
-  round-trip cost dominates the per-task work; manual is faster
-  (matching cycle 134/135/136's pattern).
+7. **Do NOT touch Section520/Section525 work.** Cycle 137's commit
+   `dd5e986` is the clean baseline.
 
-## Backup plans
+8. **Do NOT reuse the `OpenMath.Chapter5.Section510` namespace** for
+   the new §550 work. Each section deserves its own namespace; the
+   `Section510` namespace was reused historically for §512–§520
+   deliverables only because they all rest on the same
+   `GeneralLinearMethod` structure. §550 is a new, distinct narrative
+   (matrix-theoretic, not GLM-specific). Use `OpenMath.Chapter5.Section550`.
 
-### B1 — if Task 2's spectralRadius / cocompact plumbing requires >40 LOC by itself
+9. **Do NOT add `import` of `Section515`, `Section514`, or `Section525`
+   to `OpenMath/Chapter5.lean`** as part of cycle 138 plumbing. Those
+   are missing from the hub (verified — see `Grep` output) but the
+   reason is unclear; touching them is out of scope.
 
-Defer Task 2's *rigorous* implementation. In its place, file an
-issue
-`.prover-state/issues/lstable_negative_implicit_midpoint_deferred.md`
-documenting the mathematical fact and the Mathlib gap (e.g.
-"missing `spectralRadius` of 1×1 matrix lemma; specific name to
-build is `Matrix.spectralRadius_fin_one_eq_nnnorm`"). Land Task 1
-alone; the cycle still produces a non-zero net change (Task 1 +
-issue file). This satisfies CLAUDE.md's "minimum: decompose a sorry
-or write an issue" rule.
+## Success criteria
 
-### B2 — if Task 2 is *easy* (<30 LOC) with existing plumbing
+The cycle counts as a substantive forward step (score ≥ +1) if at
+least three of the following are true:
 
-Bonus: also add a vacuous L-stability witness for `padded2DEulerGLM`
-(cycle 133/134's r=2 padded explicit Euler GLM). Read
-`Section520.lean` to confirm its stability matrix shape; if it has
-the explicit-Euler block structure that fails A-stability at
-`z = -3`, mirror Task 1's pattern with `padded2DEulerGLM_not_isAStable`
-followed by `padded2DEulerGLM_not_isLStable`. This is one-liner
-mirroring of Task 1 once the negative A-stability witness lands.
+- [ ] `OpenMath/Chapter5/Section550.lean` exists, builds clean
+      (`lake env lean OpenMath/Chapter5/Section550.lean` exits 0).
+- [ ] `doublyCompanionMatrix` is defined with correct entries
+      (verify with `n = 1` and `n = 2` instances via `decide` or
+      explicit `Matrix.ext`).
+- [ ] `doublyCompanionMatrix_det_factorization_n_one` is closed
+      axiom-clean (`#print axioms` returns
+      `[propext, Classical.choice, Quot.sound]`).
+- [ ] `doublyCompanionMatrix_det_factorization` is stated (sorry-first
+      OK) with the IsBigO conclusion matching the textbook.
+- [ ] `OpenMath/Chapter5.lean` imports `Section550`.
+- [ ] `lean_status.json` and `plan.md` reflect `thm:550A` partial.
+- [ ] `.prover-state/issues/thm_550A_general_n.md` documents the
+      deferral.
+- [ ] Aristotle batch submitted (project IDs recorded in
+      `.prover-state/aristotle_submissions/cycle_138/README.md`).
 
-### B3 — if BOTH tasks close cleanly with time to spare
+A bonus closure of `n = 2`
+`doublyCompanionMatrix_det_factorization_n_two` (specifically, the
+textbook claim at `n = 2` with explicit α₁, α₂, β₁, β₂) would push
+the cycle to score +2. The `n = 2` computation is ~80 LOC of direct
+`det_fin_two` calculation; not required but feasible if Steps 1–5
+finish under-budget.
 
-Read `extraction/formalization_data/entities/def_530A.json` (already
-inspected: requires building a `StartingMethod` structure with
-generalized Runge–Kutta methods and `b_0^{(i)}` coefficients —
-**NOT a single-cycle deliverable**). Do NOT start the implementation;
-instead, file an infrastructure issue
-`.prover-state/issues/starting_method_structure_needed.md`
-documenting the prerequisites for §530.
+## Pre-commit checklist
 
-## Pre-commit faithfulness checklist (per CLAUDE.md)
+- `lake env lean OpenMath/Chapter5/Section550.lean` exits 0 (no errors,
+  warnings only on the sorry'd general-n theorem).
+- `lake env lean OpenMath/Chapter5.lean` exits 0 (after the import is
+  added).
+- `#print axioms OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_one`
+  returns `[propext, Classical.choice, Quot.sound]`.
+- Tautology scanner returns 0 hits across `OpenMath/`.
+- `extraction/formalization_data/lean_status.json` validates against
+  the JSON schema (status is `partial`, `cycle` set to 138).
+- `plan.md` row for `thm:550A` is `[~]` and references the new file +
+  issue.
+- Faithfulness check: cite `entities/thm_550A.json` in the docstring;
+  confirm the Lean statement matches Butcher's (550a) layout exactly
+  (NOT a paraphrase). Document the 0-vs-1 indexing convention
+  prominently in the `doublyCompanionMatrix` docstring.
 
-For each new theorem this cycle:
+## Suggested cycle 139 plan (preview)
 
-- [ ] Tautology check: conclusion is `¬ IsLStable …` — not
-  syntactically equal to any hypothesis.
-- [ ] Identity check: Task 1 is `fun h => ... h.1` (∧-projection,
-  not the identity function — the projection itself does
-  meaningful work selecting the A-stable conjunct). Task 2 does
-  real norm/spectral computation. Neither is `exact h`/`id` over
-  the goal.
-- [ ] Hypothesis-strength check: theorems take no hypotheses.
-- [ ] Definition smuggling check: `IsLStable` was defined faithfully
-  in cycle 088 (`IsAStable ∧ spectralRadius → 0`); we are
-  *negating* it for specific GLMs, not redefining.
-- [ ] Absent-theorem check: no `sorry` or "to be proved later"
-  comments anywhere in the new theorems' bodies.
-- [ ] No new structures introduced; no need to provide instances.
+If cycle 138 lands the structure as described, cycle 139's options are:
 
-## Updates to make alongside the proofs
+1. **Close `n = 2` of `thm:550A`** as a stepping stone toward general
+   `n` (still concrete computation; ~80 LOC).
+2. **Incorporate Aristotle returns** for general `n` (if any).
+3. **Manual general-`n` proof via cofactor expansion or induction**
+   (~150 LOC over 1–2 cycles).
+4. **Pivot to `thm:550B`** (similarity transformation) once `thm:550A`
+   is fully closed — but `thm:550B` itself depends on (550d), the
+   single-`n`-fold-eigenvalue case, so its formalisation has its own
+   complexity.
 
-- `extraction/formalization_data/lean_status.json`: `def:520F` row —
-  bump `cycle` field to 137 and refresh notes to mention both
-  the trivial positive (cycle 088) and the new negative witness(es).
-  Keep `status: formalized` (no change).
-- `plan.md`: §520 row for `def:520F` — append cycle-137 note about
-  negative witness completing the non-vacuity story.
-- `.prover-state/task_results/cycle_137.md`: standard format per
-  CLAUDE.md (Worked on / Approach / Result / Faithfulness check /
-  Dead ends / Discovery / Suggested next approach).
-
-## Suggested cycle 138 direction (for the next planner)
-
-After cycle 137 lands, the non-vacuity story for `def:520E`,
-`def:520F`, `def:525A`, `def:542A`, `def:551A` will all have at
-least one substantive witness, and `def:520E` and `def:520F` will
-have negative witnesses. The natural next step is to **shift away
-from non-vacuity strengthening** and attack a real theorem:
-
-- `thm:551B` Single Non Zero Eigenvalue Stability — small statement,
-  builds on cycle 131/133's `def:551A`.
-- `thm:521B` Maximum stability order for given steps — small
-  statement, builds on `def:521A`.
-- `thm:550A` Doubly companion matrices — pure linear algebra,
-  potentially Mathlib-light.
-
-Cycle 138 planner should pick one and commit; the
-non-vacuity-strengthening cadence (cycles 128–137) has consumed
-~10 cycles and should yield to substantive theorem work.
+Don't decide cycle 139 in cycle 138. Land the cycle 138 deliverables
+and let the planner re-evaluate.

@@ -880,9 +880,11 @@
     "status": "unformalized"
   },
   "thm:550A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section550.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization",
+    "status": "partial",
+    "cycle": 138,
+    "notes": "n=1 specialization closed axiom-clean as `doublyCompanionMatrix_det_factorization_n_one`. General n stated with sorry; deferred per issue `thm_550A_general_n.md` (eigenvalue-density argument is multi-cycle work; cofactor expansion / induction sketched as alternatives). Aristotle jobs submitted: project IDs 7062c2a2 (general n) and 70f26d67 (n=2)."
   },
   "thm:550B": {
     "lean_file": null,
