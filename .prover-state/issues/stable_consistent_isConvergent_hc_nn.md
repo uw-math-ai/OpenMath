@@ -110,4 +110,73 @@ convergent`, see also:
   requirement).
 * `OpenMath/Chapter5/Section510.lean:126` — `IsConsistent` (does not
   encode `c ≥ 0`).
-* `OpenMath/Chapter5/Section510.lean:98` — `glmAbscissae` definition.
+* `OpenMath/Chapter5/Section515.lean:98` — `glmAbscissae` definition.
+
+## Cycle 123 update: `_hc_le_one` extension
+
+Cycle 123 closed the body of `aux_515D_per_step_K_bound` by
+specialising `localStepError_bound` (Lemma 515B). The latter's
+*localised* M_bound clauses
+
+```
+(_hy_M_local : ∀ j, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j), |yex t| ≤ M_bound)
+(_hy'_LM_local : ∀ j, ∀ t ∈ Set.uIcc xn1 (xn1 + h * c j),
+                          |deriv yex t| ≤ L * M_bound)
+```
+
+require the per-stage path `[xn1, xn1 + h_n * c_j]` to be contained
+inside `[x₀, x]` (so the global hypotheses `_hyex_M`, `_hyex'_LM`
+discharge them). With `xn1 = x₀ + m·h_n` and `m + 1 ≤ n`, this
+inclusion holds iff `c_j ≤ 1`. The hypothesis `_hc_nn` alone is
+insufficient.
+
+Cycle 123 therefore adds a *second* faithfulness divergence in the
+form of the new hypothesis
+
+```
+(_hc_le_one : ∀ i, M.glmAbscissae v i ≤ 1)
+```
+
+propagated through:
+
+* `aux_515D_per_step_K_bound` (cycle 122 narrower).
+* `aux_515D_max_deviation_geometric_bound` (cycle 119 helper).
+* `aux_515D_max_deviation_bound_tendsto_zero`.
+* `aux_515D_componentwise_deviation_tendsto_zero`.
+* `aux_515D_output_tendsto`.
+* `stable_consistent_isConvergent` capstone — `hc_nn_witness`
+  conclusion is now
+
+  ```
+  (∀ i, 0 ≤ M.glmAbscissae v i) ∧ (∀ i, M.glmAbscissae v i ≤ 1)
+  ```
+
+### Faithfulness rationale
+
+Butcher's general linear methods (§5) admit abscissae anywhere in
+ℝ in principle. The standard convention in classical RK / GLM
+practice is `c_j ∈ [0, 1]` (one-step interval normalisation), and
+all of Butcher's worked examples in Ch. 2/3/5 satisfy this. For
+non-standard abscissae (e.g. extrapolation methods with `c_j > 1`),
+the M_bound hypothesis would have to be supplied on the larger
+interval `[x₀, x + (max c_j - 1) · h_n]`, which the textbook does
+implicitly when stating its convergence theorem.
+
+The `_hc_le_one` hypothesis is satisfiable in practice: callers
+provide it as part of `hc_nn_witness` at the application site,
+just as they already supply `_hc_nn`. §513/§514 are unaffected
+(they consume `IsConvergent` directly, not §515D internals).
+
+### Future remediation (parallel to `_hc_nn`)
+
+A textbook-faithful unconditional proof would either:
+
+* Extend the `M_bound` localisation to `[x₀, x + (1 ⊔ max c_j -
+  1) · h_n]` (uniform for all `n`), letting the caller supply a
+  bigger `M_bound` interval.
+* Refactor `localStepError_bound` to produce per-stage M_bound
+  clauses on the abscissa-dependent intervals only, with a
+  separate stretching step for `c_j > 1`.
+
+Both refactors are out of scope for the §515D closure; they would
+benefit a future Chapter-5 unconditional cleanup pass.

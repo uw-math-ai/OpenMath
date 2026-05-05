@@ -1968,6 +1968,7 @@ private theorem aux_515D_per_step_K_bound {s r : ℕ}
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
     (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
+    (_hc_le_one : ∀ i, M.glmAbscissae v i ≤ 1)
     [Nonempty (Fin r)]
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_iter : ∀ n : ℕ, 0 < n →
@@ -1994,7 +1995,207 @@ private theorem aux_515D_per_step_K_bound {s r : ℕ}
                          + v j * ((x - x₀) / (n : ℝ))
                            * deriv yex (x₀ + (m : ℕ) * ((x - x₀) / (n : ℝ))))|)
             + β * ((x - x₀) / (n : ℝ))^2 := by
-  sorry
+  -- (A) Setup: h₀ = x - x₀, L coerced.
+  set h₀ : ℝ := x - x₀ with hh₀_def
+  have hh₀_pos : 0 < h₀ := sub_pos.mpr _hxx
+  have hh₀_nn : 0 ≤ h₀ := hh₀_pos.le
+  have hLnn : 0 ≤ (L : ℝ) := L.coe_nonneg
+  have hM_nn : 0 ≤ M_bound := _hM_nn
+  -- Lipschitz coercion bridge.
+  have hf_lip_real : LipschitzWith ((L : ℝ).toNNReal) f :=
+    Real.toNNReal_coe ▸ _hf_lip
+  -- ODE in deriv form.
+  have hyex_ode_deriv : ∀ t, deriv yex t = f (yex t) :=
+    fun t => (_hyex_ode t).deriv
+  -- (B) Construct ell_U, phi_A via the cycle 114 helper.
+  set c : Fin s → ℝ := M.glmAbscissae v with hc_def
+  obtain ⟨ell_U, phi_A, hell_U_nn, hphi_A_nn, hell_U_eq, hphi_A_eq⟩ :=
+    aux_515D_construct_ell_U_phi_A (s := s) (r := r) M.A M.U
+      hh₀_pos hLnn c _hc_nn _h_norm
+  -- (C) Define α and β as Finset.sup' over per-i constants.
+  set α₀ : Fin r → ℝ := fun i => (L : ℝ) * (∑ j, |M.B i j| * ell_U j)
+    with hα₀_def
+  set β₀ : Fin r → ℝ := fun i =>
+    (L : ℝ)^2 * M_bound *
+      ((1/2) * |u i| + |v i| + (∑ j, |M.B i j * c j|)
+       + h₀ * (L : ℝ) * (∑ j, |M.B i j| * phi_A j))
+    with hβ₀_def
+  set α : ℝ := Finset.univ.sup' Finset.univ_nonempty α₀ with hα_def
+  set β : ℝ := Finset.univ.sup' Finset.univ_nonempty β₀ with hβ_def
+  -- Per-i α₀ ≥ 0 and β₀ ≥ 0.
+  have hα₀_nn : ∀ i, 0 ≤ α₀ i := fun i =>
+    mul_nonneg hLnn
+      (Finset.sum_nonneg
+        (fun j _ => mul_nonneg (abs_nonneg _) (hell_U_nn j)))
+  have hβ₀_nn : ∀ i, 0 ≤ β₀ i := by
+    intro i
+    have hsq : 0 ≤ (L : ℝ)^2 := sq_nonneg _
+    have hpre : 0 ≤ (L : ℝ)^2 * M_bound := mul_nonneg hsq hM_nn
+    have hbracket : 0 ≤ (1/2 : ℝ) * |u i| + |v i| + (∑ j, |M.B i j * c j|)
+                      + h₀ * (L : ℝ) * (∑ j, |M.B i j| * phi_A j) := by
+      have h1 : 0 ≤ (1/2 : ℝ) * |u i| := mul_nonneg (by norm_num) (abs_nonneg _)
+      have h2 : 0 ≤ |v i| := abs_nonneg _
+      have h3 : 0 ≤ (∑ j, |M.B i j * c j|) :=
+        Finset.sum_nonneg (fun j _ => abs_nonneg _)
+      have h4 : 0 ≤ h₀ * (L : ℝ) * (∑ j, |M.B i j| * phi_A j) := by
+        apply mul_nonneg (mul_nonneg hh₀_nn hLnn)
+        exact Finset.sum_nonneg (fun j _ => mul_nonneg (abs_nonneg _) (hphi_A_nn j))
+      linarith
+    show (0 : ℝ) ≤ β₀ i
+    exact mul_nonneg hpre hbracket
+  -- α and β non-negativity via sup'.
+  have hα_nn : 0 ≤ α := by
+    rcases (inferInstance : Nonempty (Fin r)) with ⟨i₀⟩
+    exact (hα₀_nn i₀).trans (Finset.le_sup' α₀ (Finset.mem_univ i₀))
+  have hβ_nn : 0 ≤ β := by
+    rcases (inferInstance : Nonempty (Fin r)) with ⟨i₀⟩
+    exact (hβ₀_nn i₀).trans (Finset.le_sup' β₀ (Finset.mem_univ i₀))
+  -- Per-i α and β bounds (from sup' definition).
+  have hα_def_i : ∀ i, (L : ℝ) * (∑ j, |M.B i j| * ell_U j) ≤ α := by
+    intro i
+    exact Finset.le_sup' α₀ (Finset.mem_univ i)
+  have hβ_def_i : ∀ i, (L : ℝ)^2 * M_bound *
+        ((1/2) * |u i| + |v i| + (∑ j, |M.B i j * c j|)
+         + h₀ * (L : ℝ) * (∑ j, |M.B i j| * phi_A j)) ≤ β := by
+    intro i
+    exact Finset.le_sup' β₀ (Finset.mem_univ i)
+  refine ⟨α, β, hα_nn, hβ_nn, ?_⟩
+  intro n hn_pos m hm_le i
+  -- (D) Per-(n, m) setup: h_n, xn1, δm, δ_max.
+  set h_n : ℝ := (x - x₀) / (n : ℝ) with hh_n_def
+  have hn_real_pos : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn_pos
+  have hh_n_pos : 0 < h_n := div_pos hh₀_pos hn_real_pos
+  have hh_n_nn : 0 ≤ h_n := hh_n_pos.le
+  have hh_n_le_h₀ : h_n ≤ h₀ := by
+    show (x - x₀) / (n : ℝ) ≤ x - x₀
+    have hone_le_n : (1 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn_pos
+    rw [div_le_iff₀ hn_real_pos]
+    nlinarith [hh₀_nn]
+  set xn1 : ℝ := x₀ + (m : ℝ) * h_n with hxn1_def
+  set δm : Fin r → ℝ := fun j =>
+    Y n m j - (u j * yex (x₀ + (m : ℕ) * h_n)
+              + v j * h_n * deriv yex (x₀ + (m : ℕ) * h_n))
+    with hδm_def
+  set δ_max : ℝ :=
+    Finset.univ.sup' Finset.univ_nonempty (fun j : Fin r => |δm j|)
+    with hδmax_def
+  rcases (inferInstance : Nonempty (Fin r)) with ⟨i₀⟩
+  have hδmax_nn : 0 ≤ δ_max :=
+    (abs_nonneg _).trans
+      (Finset.le_sup' (fun j : Fin r => |δm j|) (Finset.mem_univ i₀))
+  have hδm_max : ∀ j, |δm j| ≤ δ_max :=
+    fun j => Finset.le_sup' (fun j : Fin r => |δm j|) (Finset.mem_univ j)
+  -- (E) Extract internal stage from IsGLMSolution at step m.
+  have hGLM : M.IsGLMSolution h_n f (Y n) := (_hY_iter n hn_pos).1
+  obtain ⟨Y_stage, hY_stage_eq, hY_next_eq⟩ := hGLM m
+  -- Convert hY_stage_eq from `∑ A · (h_n · f Y)` form to `h_n * (∑ A · f Y)` form.
+  have hY_stage_form : ∀ i, Y_stage i =
+      h_n * (∑ j, M.A i j * f (Y_stage j))
+      + ∑ j, M.U i j * Y n m j := by
+    intro i
+    rw [hY_stage_eq i, Finset.mul_sum]
+    refine congrArg (· + _) (Finset.sum_congr rfl (fun j _ => by ring))
+  -- Convert hY_next_eq similarly.
+  have hY_next_form : ∀ i, Y n (m + 1) i =
+      h_n * (∑ j, M.B i j * f (Y_stage j))
+      + ∑ j, M.V i j * Y n m j := by
+    intro i
+    rw [hY_next_eq i, Finset.mul_sum]
+    refine congrArg (· + _) (Finset.sum_congr rfl (fun j _ => by ring))
+  -- (F) xn1 ≥ x₀ and xn1 + h_n ≤ x.
+  have hm_real_nn : (0 : ℝ) ≤ (m : ℝ) := by exact_mod_cast Nat.zero_le _
+  have hxn1_lo : x₀ ≤ xn1 := by
+    rw [hxn1_def]
+    have h1 : 0 ≤ (m : ℝ) * h_n := mul_nonneg hm_real_nn hh_n_nn
+    linarith
+  have hxn1_plus_h_le : xn1 + h_n ≤ x := by
+    -- (m + 1) * h_n ≤ n * h_n = x - x₀.
+    have hm_succ_real_le : ((m : ℝ) + 1) ≤ (n : ℝ) := by exact_mod_cast hm_le
+    have hmul : ((m : ℝ) + 1) * h_n ≤ (n : ℝ) * h_n :=
+      mul_le_mul_of_nonneg_right hm_succ_real_le hh_n_nn
+    have hn_h_n : (n : ℝ) * h_n = x - x₀ := by
+      rw [hh_n_def, mul_div_assoc']
+      field_simp
+    rw [hxn1_def]
+    nlinarith [hmul, hn_h_n]
+  -- (G) Localized M_bound clauses from global _hyex_M / _hyex'_LM.
+  have hyex_M_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h_n), |yex t| ≤ M_bound := by
+    intro t ht
+    rw [Set.uIcc_of_le (by linarith)] at ht
+    exact _hyex_M t ⟨le_trans hxn1_lo ht.1, le_trans ht.2 hxn1_plus_h_le⟩
+  have hyex'_LM_endpoint : ∀ t ∈ Set.uIcc xn1 (xn1 + h_n),
+      |deriv yex t| ≤ (L : ℝ) * M_bound := by
+    intro t ht
+    rw [Set.uIcc_of_le (by linarith)] at ht
+    exact _hyex'_LM t ⟨le_trans hxn1_lo ht.1, le_trans ht.2 hxn1_plus_h_le⟩
+  have hyex_M_local : ∀ j, ∀ t ∈ Set.uIcc xn1 (xn1 + h_n * c j),
+      |yex t| ≤ M_bound := by
+    intro j t ht
+    have hcj_nn : 0 ≤ c j := _hc_nn j
+    have hcj_le_one : c j ≤ 1 := _hc_le_one j
+    have hh_n_cj_nn : 0 ≤ h_n * c j := mul_nonneg hh_n_nn hcj_nn
+    have hh_n_cj_le_h_n : h_n * c j ≤ h_n := by
+      have := mul_le_mul_of_nonneg_left hcj_le_one hh_n_nn
+      linarith
+    rw [Set.uIcc_of_le (by linarith)] at ht
+    exact _hyex_M t ⟨le_trans hxn1_lo ht.1,
+                     by linarith [ht.2, hxn1_plus_h_le]⟩
+  have hyex'_LM_local : ∀ j, ∀ t ∈ Set.uIcc xn1 (xn1 + h_n * c j),
+      |deriv yex t| ≤ (L : ℝ) * M_bound := by
+    intro j t ht
+    have hcj_nn : 0 ≤ c j := _hc_nn j
+    have hcj_le_one : c j ≤ 1 := _hc_le_one j
+    have hh_n_cj_nn : 0 ≤ h_n * c j := mul_nonneg hh_n_nn hcj_nn
+    have hh_n_cj_le_h_n : h_n * c j ≤ h_n := by
+      have := mul_le_mul_of_nonneg_left hcj_le_one hh_n_nn
+      linarith
+    rw [Set.uIcc_of_le (by linarith)] at ht
+    exact _hyex'_LM t ⟨le_trans hxn1_lo ht.1,
+                     by linarith [ht.2, hxn1_plus_h_le]⟩
+  -- (H) δm matches δ_def shape: δm k = Y n m k - (u k · yex xn1 + v k · h_n · deriv yex xn1).
+  have hδm_eq : ∀ k, δm k =
+      Y n m k - (u k * yex xn1 + v k * h_n * deriv yex xn1) := by
+    intro k
+    rfl
+  -- (I) Apply localStepError_bound.
+  obtain ⟨K, hK_id, hK_bd⟩ :=
+    M.localStepError_bound (h := h_n) (h₀ := h₀) (L := (L : ℝ)) (M_bound := M_bound)
+      (α := α) (β := β) (δ_max := δ_max)
+      hh_n_nn hh_n_le_h₀ hh₀_pos hLnn hM_nn
+      f hf_lip_real yex _hyex_C1 hyex_ode_deriv xn1 u v _hVu _hUu _hCons_eq
+      c _hc_nn rfl
+      ell_U phi_A hell_U_nn hphi_A_nn hell_U_eq hphi_A_eq
+      hα_def_i hβ_def_i
+      (Y n m) δm hδm_eq
+      hδm_max hδmax_nn
+      Y_stage hY_stage_form
+      hyex_M_local hyex'_LM_local hyex_M_endpoint hyex'_LM_endpoint
+      _h_norm
+  -- (J) Bridge xn1 + h_n to x₀ + (m+1)*h_n.
+  have h_target_eq :
+      xn1 + h_n = x₀ + ((m+1) : ℕ) * h_n := by
+    rw [hxn1_def]
+    push_cast
+    ring
+  -- (K) Match the K identity to the conclusion.
+  have hY_next_minus_target :
+      Y n (m + 1) i
+        - (u i * yex (xn1 + h_n) + v i * h_n * deriv yex (xn1 + h_n))
+        - (M.V *ᵥ δm) i = K i := by
+    have hVdef : (M.V *ᵥ δm) i = ∑ j, M.V i j * δm j := rfl
+    have h1 := hK_id i
+    rw [hY_next_form i, hVdef]
+    linarith [h1]
+  -- (L) Final goal: rewrite using h_target_eq, then K identity, then bound.
+  rw [← h_target_eq]
+  -- Goal: |Y n (m+1) i - (u i * yex (xn1 + h_n) + v i * h_n * deriv yex (xn1 + h_n))
+  --       - (M.V *ᵥ δm) i| ≤ α * h_n * δ_max + β * h_n^2
+  -- Note: the goal's δm (as fun) needs to definitionally match our δm.
+  show |Y n (m + 1) i
+        - (u i * yex (xn1 + h_n) + v i * h_n * deriv yex (xn1 + h_n))
+        - (M.V *ᵥ δm) i| ≤ α * h_n * δ_max + β * h_n^2
+  rw [hY_next_minus_target]
+  exact hK_bd i
 
 /-- **(515D narrower helper — cycle 119 decomposition fallback)** Closed-form
 geometric bound on the max-abs deviation at step `n` of the GLM iteration.
@@ -2049,6 +2250,7 @@ private theorem aux_515D_max_deviation_geometric_bound {s r : ℕ}
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
     (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
+    (_hc_le_one : ∀ i, M.glmAbscissae v i ≤ 1)
     [Nonempty (Fin r)]
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_iter : ∀ n : ℕ, 0 < n →
@@ -2117,6 +2319,7 @@ private theorem aux_515D_max_deviation_bound_tendsto_zero {s r : ℕ}
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
     (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
+    (_hc_le_one : ∀ i, M.glmAbscissae v i ≤ 1)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
@@ -2139,7 +2342,7 @@ private theorem aux_515D_max_deviation_bound_tendsto_zero {s r : ℕ}
     obtain ⟨C_init, C_lin, hC_init_nn, hC_lin_nn, hbound⟩ :=
       aux_515D_max_deviation_geometric_bound (s := s) (r := r) M _hStab _hf_lip
         _hyex_x₀ _hyex_ode _hVu _hUu _hCons_eq _hxx _hM_nn _hyex_C1 _hyex_M
-        _hyex'_LM _h_norm _hc_nn Y Y_int
+        _hyex'_LM _h_norm _hc_nn _hc_le_one Y Y_int
         (fun n hn => ⟨(_hY_props n hn).2.1, (_hY_props n hn).2.2⟩)
     -- `h_n := (x - x₀) / n`.
     set h_n : ℕ → ℝ := fun n => (x - x₀) / (n : ℝ) with hh_n_def
@@ -2361,6 +2564,7 @@ private theorem aux_515D_componentwise_deviation_tendsto_zero {s r : ℕ}
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
     (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
+    (_hc_le_one : ∀ i, M.glmAbscissae v i ≤ 1)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
@@ -2377,7 +2581,7 @@ private theorem aux_515D_componentwise_deviation_tendsto_zero {s r : ℕ}
   obtain ⟨δ_seq, _hδ_nn, hδ_tendsto, hδ_bound⟩ :=
     aux_515D_max_deviation_bound_tendsto_zero M _hStab _hf_lip _hyex_x₀ _hyex_ode
       _hVu _hUu _hCons_eq _hφ _hxx _hM_nn _hyex_C1 _hyex_M _hyex'_LM _h_norm _hc_nn
-      Y Y_int _hY_props
+      _hc_le_one Y Y_int _hY_props
   -- Convert the max-abs limit to the per-component limit via squeeze.
   refine squeeze_zero_norm' ?_ hδ_tendsto
   filter_upwards [Filter.eventually_gt_atTop 0] with n hn
@@ -2425,6 +2629,7 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
     (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
                  Matrix (Fin s) (Fin s) ℝ)‖ < 1)
     (_hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i)
+    (_hc_le_one : ∀ i, M.glmAbscissae v i ≤ 1)
     (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
     (_hY_props : ∀ n : ℕ, 0 < n →
       Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
@@ -2440,7 +2645,7 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
   -- deviation tends to 0.
   have hdev := aux_515D_componentwise_deviation_tendsto_zero M _hStab _hf_lip
     _hyex_x₀ _hyex_ode _hVu _hUu _hCons_eq _hφ _hxx _hM_nn _hyex_C1 _hyex_M
-    _hyex'_LM _h_norm _hc_nn Y Y_int _hY_props i
+    _hyex'_LM _h_norm _hc_nn _hc_le_one Y Y_int _hY_props i
   -- Auxiliary: `h_n := (x - x₀)/n → 0`.
   have hh_to_0 : Filter.Tendsto (fun n : ℕ => (x - x₀) / (n : ℝ))
                     Filter.atTop (nhds 0) := by
@@ -2924,11 +3129,12 @@ theorem GeneralLinearMethod.stable_consistent_isConvergent
     (hc_nn_witness : ∀ u v : Fin r → ℝ,
         ((M.V *ᵥ u = u ∧ M.U *ᵥ u = (fun _ => 1)) ∧
           M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v) →
-        ∀ i, 0 ≤ M.glmAbscissae v i) :
+        (∀ i, 0 ≤ M.glmAbscissae v i) ∧
+        (∀ i, M.glmAbscissae v i ≤ 1)) :
     M.IsConvergent := by
   intro f L hf_lip x₀ y₀ yex hyex_x₀ hyex_ode
   obtain ⟨u, v, ⟨hVu, hUu⟩, hCons_eq⟩ := hCons
-  have hc_nn : ∀ i, 0 ≤ M.glmAbscissae v i :=
+  obtain ⟨hc_nn, hc_le_one⟩ :=
     hc_nn_witness u v ⟨⟨hVu, hUu⟩, hCons_eq⟩
   refine ⟨u, ?_, ?_⟩
   · -- u ≠ 0: evaluate `U·u = 𝟙` at index `⟨0, hs⟩` to get
@@ -2942,7 +3148,7 @@ theorem GeneralLinearMethod.stable_consistent_isConvergent
         Y Y_int hY_props
     have h_output := aux_515D_output_tendsto M hStab hf_lip hyex_x₀ hyex_ode
                        hVu hUu hCons_eq hφ hxx hM_nn hyex_C1 hyex_M hyex'_LM
-                       h_norm hc_nn Y Y_int hY_props
+                       h_norm hc_nn hc_le_one Y Y_int hY_props
     refine ⟨h_output, ?_⟩
     exact aux_515D_stage_tendsto M hStab hf_lip hyex_x₀ hyex_ode
             hVu hUu hCons_eq hφ hxx Y Y_int hY_props h_output
