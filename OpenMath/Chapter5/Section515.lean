@@ -1816,28 +1816,102 @@ private theorem aux_515D_squeeze
       field_simp
     linarith [h]
 
+/-- **(515D narrower helper — cycle 119 decomposition fallback)** Closed-form
+geometric bound on the max-abs deviation at step `n` of the GLM iteration.
+
+There exist constants `C_init`, `C_lin ≥ 0` such that, for every `n > 0`,
+the sup over `i : Fin r` of the deviation
+`|Y n n i − (u i · yex(x) + v i · h_n · deriv yex(x))|` is bounded by
+`C_init · (initial-deviation sup at h_n) + C_lin · h_n`, where
+`h_n := (x − x₀)/n`.
+
+This isolates the *analytical core* of `thm:515D`'s proof — the
+discrete-Grönwall closed-form output produced by chaining
+`localStepError_bound` (cycle 116) per step, then applying
+`aux_515D_per_step_recurrence` (cycle 113) and bounding the geometric
+sum via the stability constant from `M.IsStable`. The conclusion's
+two-term shape exactly mirrors the input bound of `aux_515D_squeeze`
+(cycle 112), so the cycle 118 helper's body composes cleanly with this
+helper plus a limit argument on the initial deviation (via `_hφ` and
+`h_n → 0`).
+
+**Cycle 119 fallback rationale**: cycle 118 noted a structural blocker
+at the per-step → sum-form Grönwall bridge: the cycle 113 scalar
+`aux_515D_per_step_recurrence` produces `(V_norm + α·h)^n` which only
+maps to `aux_515D_gronwall_bound`'s sum-form input under
+`V_norm ≤ 1` (telescoping), but `M.IsStable`'s `‖V^k‖ ≤ C` only gives
+power-boundedness. Bridging requires a vector-typed iterated-V bound
+(see `.prover-state/issues/aux_515D_iterated_V_bound.md` for the
+analytical outline). Rather than chain a third decomposition layer,
+this cycle introduces ONE narrower helper whose conclusion is the
+clean two-term geometric form, and closes cycle 118's helper body
+via composition + per-component limit argument.
+
+The hypotheses are a subset of those of
+`aux_515D_max_deviation_bound_tendsto_zero` (cycle 118 helper):
+`_hφ` is dropped here since the geometric bound is in terms of the
+initial deviation directly (without invoking `_hφ`'s limit). -/
+private theorem aux_515D_max_deviation_geometric_bound {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (_hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (_hyex_x₀ : yex x₀ = y₀)
+    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    {u v : Fin r → ℝ}
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {x : ℝ} (_hxx : x₀ < x)
+    {M_bound : ℝ} (_hM_nn : 0 ≤ M_bound)
+    (_hyex_C1 : ContDiff ℝ 1 yex)
+    (_hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
+    (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
+    (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    [Nonempty (Fin r)]
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (_hY_iter : ∀ n : ℕ, 0 < n →
+      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    ∃ C_init C_lin : ℝ, 0 ≤ C_init ∧ 0 ≤ C_lin ∧
+      ∀ n : ℕ, 0 < n →
+        Finset.sup' Finset.univ Finset.univ_nonempty
+          (fun i : Fin r => |Y n n i -
+            (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x)|)
+        ≤ C_init *
+            Finset.sup' Finset.univ Finset.univ_nonempty
+              (fun i : Fin r => |Y n 0 i -
+                (u i * yex x₀ + v i * ((x - x₀) / (n : ℝ)) * deriv yex x₀)|)
+          + C_lin * ((x - x₀) / (n : ℝ)) := by
+  sorry
+
 /-- **Sub-lemma E for `aux_515D_componentwise_deviation_tendsto_zero`** —
-existence of a uniform max-abs deviation bound sequence that tends to 0
-(DEFERRED — cycle 118 decomposition fallback).
+existence of a uniform max-abs deviation bound sequence that tends to 0.
 
 For some non-negative scalar sequence `δ_seq : ℕ → ℝ` tending to 0, the
 deviation `Y n n i − (u i · yex(x) + v i · h_n · deriv yex(x))` is
 uniformly bounded over `i : Fin r` by `δ_seq n` (eventually for `n > 0`).
 
-This captures the genuine analytical content: the discrete-Grönwall +
-squeeze argument applied to the per-step max-abs deviation. The
-conversion from this scalar limit to per-component limits is the body
-of `aux_515D_componentwise_deviation_tendsto_zero` below (a clean
-4-line composition via `squeeze_zero_norm'`).
+**Cycle 119 closure (decomposition fallback iteration)**: cycle 118
+introduced this helper as a `sorry`-body stub. Cycle 119 closes its
+body by composing `aux_515D_max_deviation_geometric_bound` (the new
+narrower helper above, which encapsulates the discrete-Grönwall
+geometric closed-form output) with a per-component limit argument
+on the initial deviation, using `_hφ` (starting procedure → `u · y₀`)
+and `(x − x₀)/n → 0` (linear correction vanishes).
 
-Cycle 118 introduces this helper as a `sorry`-body stub per the
-cycle 118 strategy's *Backup plan* (decomposition fallback): rather
-than force the full 200-400 LOC discrete-Grönwall body in a single
-cycle, we narrow the sorry to its analytical core. The intended
-cycle 119 closure: instantiate `δ_seq n` from the discrete-Grönwall
-closed-form output of `aux_515D_squeeze`, with constants `α`, `β`
-derived from `aux_515D_construct_ell_U_phi_A` (cycle 114) +
-`localStepError_bound` (cycle 116 strengthened).
+`δ_seq n := C_init · (initial-deviation sup at h_n) + C_lin · h_n` for
+`n > 0` (and `0` for `n = 0`). Both summands vanish as `n → ∞`:
+* The first because the initial-deviation sup tends to 0 — each
+  component `|Y n 0 j − (u_j · y₀ + v_j · h_n · yex'(x₀))|` tends to 0
+  via `_hφ j ∘ (h_n → 0)`, and finite sup of zero-tending sequences is
+  zero-tending.
+* The second because `(x − x₀)/n → 0`.
+
+The bound clause is direct: `|·| ≤ sup'_i |·|` (Finset.le_sup') chains
+into the geometric helper's RHS via `δ_seq`'s definition.
 
 The hypotheses are exactly those of
 `aux_515D_componentwise_deviation_tendsto_zero`. -/
@@ -1874,7 +1948,187 @@ private theorem aux_515D_max_deviation_bound_tendsto_zero {s r : ℕ}
       ∀ n : ℕ, 0 < n → ∀ i : Fin r,
         |Y n n i - (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x)|
           ≤ δ_seq n := by
-  sorry
+  -- `Fin r` may be empty; in the `r = 0` case the bound clause is
+  -- vacuously true (no `i : Fin r`), so any non-negative sequence
+  -- tending to 0 (e.g., `fun _ => 0`) works as `δ_seq`.
+  by_cases hr : Nonempty (Fin r)
+  · -- Main case: `Fin r` non-empty. Apply the cycle 119 geometric helper.
+    letI : Nonempty (Fin r) := hr
+    obtain ⟨C_init, C_lin, hC_init_nn, hC_lin_nn, hbound⟩ :=
+      aux_515D_max_deviation_geometric_bound (s := s) (r := r) M _hStab _hf_lip
+        _hyex_x₀ _hyex_ode _hVu _hUu _hCons_eq _hxx _hM_nn _hyex_C1 _hyex_M
+        _hyex'_LM _h_norm Y Y_int
+        (fun n hn => ⟨(_hY_props n hn).2.1, (_hY_props n hn).2.2⟩)
+    -- `h_n := (x - x₀) / n`.
+    set h_n : ℕ → ℝ := fun n => (x - x₀) / (n : ℝ) with hh_n_def
+    -- `δ_init n := sup_j |Y n 0 j - (u j · yex x₀ + v j · h_n · yex'(x₀))|`.
+    set δ_init : ℕ → ℝ := fun n =>
+      Finset.sup' Finset.univ Finset.univ_nonempty
+        (fun i : Fin r => |Y n 0 i -
+          (u i * yex x₀ + v i * h_n n * deriv yex x₀)|)
+      with hδ_init_def
+    -- `δ_seq n := C_init · δ_init n + C_lin · h_n n` for `n > 0`, else 0.
+    set δ_seq : ℕ → ℝ := fun n =>
+      if 0 < n then C_init * δ_init n + C_lin * h_n n else 0
+      with hδ_seq_def
+    -- Differentiable claims about `h_n`.
+    have hh_n_to_0 : Filter.Tendsto h_n Filter.atTop (nhds 0) := by
+      have h1 : Filter.Tendsto (fun n : ℕ => (1 : ℝ) / (n : ℝ))
+                  Filter.atTop (nhds 0) := tendsto_one_div_atTop_nhds_zero_nat
+      have h2 := h1.const_mul (x - x₀)
+      simpa [h_n, mul_div_assoc'] using h2
+    -- Per-component limit of the initial-deviation seq.
+    have hcomp_to_0 : ∀ j : Fin r, Filter.Tendsto
+        (fun n : ℕ => |Y n 0 j -
+          (u j * yex x₀ + v j * h_n n * deriv yex x₀)|)
+        Filter.atTop (nhds 0) := by
+      intro j
+      -- Eventually for `n ≥ 1`: `Y n 0 j = φ (h_n n) j`.
+      have hev_eq : ∀ᶠ n : ℕ in Filter.atTop,
+          (|Y n 0 j - (u j * yex x₀ + v j * h_n n * deriv yex x₀)| : ℝ) =
+          |φ (h_n n) j - (u j * y₀ + v j * h_n n * deriv yex x₀)| := by
+        filter_upwards [Filter.eventually_gt_atTop 0] with n hn
+        rw [(_hY_props n hn).1, _hyex_x₀]
+      -- `φ (h_n n) j → u j · y₀` via composition.
+      have hφj : Filter.Tendsto (fun n : ℕ => φ (h_n n) j)
+                  Filter.atTop (nhds (u j * y₀)) :=
+        (_hφ j).comp hh_n_to_0
+      -- `v j · h_n · deriv yex x₀ → 0`.
+      have hvterm : Filter.Tendsto
+          (fun n : ℕ => v j * h_n n * deriv yex x₀)
+          Filter.atTop (nhds 0) := by
+        have := hh_n_to_0.const_mul (v j)
+        have := this.mul_const (deriv yex x₀)
+        simpa [mul_assoc] using this
+      -- `(u j · y₀ + v j · h_n · yex'(x₀)) → u j · y₀`.
+      have htarget : Filter.Tendsto
+          (fun n : ℕ => u j * y₀ + v j * h_n n * deriv yex x₀)
+          Filter.atTop (nhds (u j * y₀)) := by
+        have hconst : Filter.Tendsto (fun _ : ℕ => u j * y₀)
+                        Filter.atTop (nhds (u j * y₀)) := tendsto_const_nhds
+        have := hconst.add hvterm
+        simpa using this
+      -- Subtract to get `→ 0`.
+      have hsub : Filter.Tendsto
+          (fun n : ℕ => φ (h_n n) j -
+            (u j * y₀ + v j * h_n n * deriv yex x₀))
+          Filter.atTop (nhds 0) := by
+        have := hφj.sub htarget
+        simpa using this
+      -- Take absolute value.
+      have habs : Filter.Tendsto
+          (fun n : ℕ => |φ (h_n n) j -
+            (u j * y₀ + v j * h_n n * deriv yex x₀)|)
+          Filter.atTop (nhds 0) := by
+        have := (continuous_abs.tendsto _).comp hsub
+        simpa using this
+      -- Stitch: rewrite eventually-equal sequences.
+      exact habs.congr' (hev_eq.mono (fun _ h => h.symm))
+    -- `δ_init n → 0`. Use that finite sup of zero-tending sequences → 0.
+    -- Bound: `δ_init n ≤ ∑_j |dev_j n|`, and the sum tends to 0.
+    have hδ_init_to_0 : Filter.Tendsto δ_init Filter.atTop (nhds 0) := by
+      -- The sum bound.
+      set s_seq : ℕ → ℝ := fun n =>
+        ∑ j : Fin r, |Y n 0 j -
+          (u j * yex x₀ + v j * h_n n * deriv yex x₀)|
+        with hs_seq_def
+      have hs_seq_to_0 : Filter.Tendsto s_seq Filter.atTop (nhds 0) := by
+        have h := tendsto_finset_sum (Finset.univ : Finset (Fin r))
+                  (fun j _ => hcomp_to_0 j)
+        simpa [s_seq] using h
+      -- `δ_init n ≤ s_seq n` and `0 ≤ δ_init n`.
+      refine squeeze_zero ?_ ?_ hs_seq_to_0
+      · intro n
+        show 0 ≤ δ_init n
+        rcases hr with ⟨i₀⟩
+        show 0 ≤ Finset.sup' Finset.univ Finset.univ_nonempty
+                  (fun i : Fin r => |Y n 0 i -
+                    (u i * yex x₀ + v i * h_n n * deriv yex x₀)|)
+        exact (abs_nonneg _).trans
+          (Finset.le_sup' (f := fun i : Fin r => |Y n 0 i -
+            (u i * yex x₀ + v i * h_n n * deriv yex x₀)|)
+            (Finset.mem_univ i₀))
+      · intro n
+        show δ_init n ≤ s_seq n
+        show Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun i : Fin r => |Y n 0 i -
+                  (u i * yex x₀ + v i * h_n n * deriv yex x₀)|)
+              ≤ s_seq n
+        refine Finset.sup'_le _ _ (fun i _ => ?_)
+        exact Finset.single_le_sum
+          (f := fun j : Fin r => |Y n 0 j -
+            (u j * yex x₀ + v j * h_n n * deriv yex x₀)|)
+          (fun _ _ => abs_nonneg _) (Finset.mem_univ i)
+    -- Non-negativity of `δ_init`.
+    have hδ_init_nn : ∀ n, 0 ≤ δ_init n := by
+      intro n
+      show 0 ≤ Finset.sup' Finset.univ Finset.univ_nonempty
+                (fun i : Fin r => |Y n 0 i -
+                  (u i * yex x₀ + v i * h_n n * deriv yex x₀)|)
+      rcases hr with ⟨i₀⟩
+      exact (abs_nonneg _).trans
+        (Finset.le_sup' (f := fun i : Fin r => |Y n 0 i -
+          (u i * yex x₀ + v i * h_n n * deriv yex x₀)|)
+          (Finset.mem_univ i₀))
+    -- Conclude with the three clauses.
+    refine ⟨δ_seq, ?_, ?_, ?_⟩
+    · -- 0 ≤ δ_seq n.
+      intro n
+      by_cases hn : 0 < n
+      · simp only [δ_seq, hn, if_true]
+        have hh_n_nn : 0 ≤ h_n n := by
+          show 0 ≤ (x - x₀) / (n : ℝ)
+          exact div_nonneg (sub_pos.mpr _hxx).le (by exact_mod_cast Nat.zero_le _)
+        have h1 : 0 ≤ C_init * δ_init n :=
+          mul_nonneg hC_init_nn (hδ_init_nn n)
+        have h2 : 0 ≤ C_lin * h_n n :=
+          mul_nonneg hC_lin_nn hh_n_nn
+        linarith
+      · simp [δ_seq, hn]
+    · -- Tendsto δ_seq atTop (nhds 0).
+      -- δ_seq agrees eventually with C_init · δ_init + C_lin · h_n.
+      have hh_main : Filter.Tendsto
+          (fun n : ℕ => C_init * δ_init n + C_lin * h_n n)
+          Filter.atTop (nhds 0) := by
+        have h1 : Filter.Tendsto (fun n : ℕ => C_init * δ_init n)
+                    Filter.atTop (nhds 0) := by
+          have := hδ_init_to_0.const_mul C_init
+          simpa using this
+        have h2 : Filter.Tendsto (fun n : ℕ => C_lin * h_n n)
+                    Filter.atTop (nhds 0) := by
+          have := hh_n_to_0.const_mul C_lin
+          simpa using this
+        have := h1.add h2
+        simpa using this
+      -- Show δ_seq congrues with this on the eventual filter.
+      apply hh_main.congr'
+      filter_upwards [Filter.eventually_gt_atTop 0] with n hn
+      simp only [δ_seq, hn, if_true]
+    · -- Bound clause.
+      intro n hn i
+      have hbound_n := hbound n hn
+      -- LHS ≤ sup'_i |·|.
+      have hi_le := Finset.le_sup'
+        (f := fun j : Fin r => |Y n n j -
+          (u j * yex x + v j * h_n n * deriv yex x)|)
+        (Finset.mem_univ i)
+      simp only [δ_seq, hn, if_true]
+      -- Stitch hi_le ≤ hbound_n's RHS = δ_seq n.
+      have hgoal : |Y n n i -
+              (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x)|
+            ≤ C_init * δ_init n + C_lin * h_n n := by
+        have h_eq : |Y n n i -
+                  (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x)|
+              = |Y n n i - (u i * yex x + v i * h_n n * deriv yex x)| := rfl
+        rw [h_eq]
+        exact hi_le.trans hbound_n
+      exact hgoal
+  · -- Edge case: `r = 0` (Fin r empty). Bound clause is vacuous.
+    -- Any non-negative sequence tending to 0 works; pick `fun _ => 0`.
+    refine ⟨fun _ => 0, fun _ => le_refl _, tendsto_const_nhds, ?_⟩
+    intro n hn i
+    -- `Fin r` empty contradicts `i : Fin r`.
+    exact (hr ⟨i⟩).elim
 
 /-- **Sub-lemma D for `aux_515D_output_tendsto`** — componentwise
 deviation tends to zero.

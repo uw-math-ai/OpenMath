@@ -319,3 +319,77 @@ strategy's Steps 1–9 outline applies directly:
 The helper is a viable Aristotle Job 2 candidate if cycle 118
 manual composition stalls — submit with the abstract-axioms pattern
 from cycle 116.
+
+## Cycle 119 update — Backup B1 second iteration
+
+**Outcome**: cycle 119's `aux_515D_max_deviation_bound_tendsto_zero`
+body is now **fully closed** via composition with a new narrower
+helper `aux_515D_max_deviation_geometric_bound`
+(`OpenMath/Chapter5/Section515.lean:1819`). Net delta: the cycle 118
+sorry moves from `aux_515D_max_deviation_bound_tendsto_zero`
+(line 1854 prior) to `aux_515D_max_deviation_geometric_bound`
+(line 1854 now — the new helper). Sorry count remains 1; locus
+narrows to a focused geometric-bound existential.
+
+**New helper signature (cycle 119 narrower)**:
+
+```
+∃ C_init C_lin : ℝ, 0 ≤ C_init ∧ 0 ≤ C_lin ∧
+  ∀ n : ℕ, 0 < n →
+    sup'_i |Y n n i - target_i n|
+      ≤ C_init · sup'_j |Y n 0 j - initial_target_j n|
+        + C_lin · ((x - x₀) / n)
+```
+
+This isolates the discrete-Grönwall closed-form output (the 200-400
+LOC analytical core gated by:
+1. M-matrix `(I − h₀L|A|)`-inversion to construct `ell_U`, `phi_A`.
+2. Per-step `localStepError_bound` chained across `m = 0, …, n-1`.
+3. Vector-typed iterated-V bound (the cycle 118 stall point — see
+   `.prover-state/issues/aux_515D_iterated_V_bound.md`).
+4. Geometric closed-form via `aux_515D_per_step_recurrence` +
+   `aux_515D_one_add_pow_le_exp`).
+
+**Cycle 118 helper's body composition** (cycle 119, fully verified):
+
+1. Apply `aux_515D_max_deviation_geometric_bound` to extract
+   `C_init`, `C_lin` and the geometric bound `hbound`.
+2. Define `h_n n := (x − x₀) / n` and the initial-deviation sup'
+   `δ_init n := sup'_j |Y n 0 j − (u_j · y₀ + v_j · h_n · yex'(x₀))|`.
+3. Define `δ_seq n := if n > 0 then C_init · δ_init n + C_lin · h_n n
+   else 0`.
+4. Prove `δ_seq n ≥ 0` by case split on `n > 0`.
+5. Prove `δ_init → 0` per-component via `_hφ ∘ (h_n → 0)` plus
+   `_hyex_x₀` bridging, then squeeze sup' below the finite sum
+   (`squeeze_zero` + `tendsto_finset_sum`).
+6. Prove `δ_seq → 0` via `(C_init · δ_init + C_lin · h_n)`'s
+   add-of-tendsto and `Tendsto.congr'` on the eventual filter.
+7. Prove the bound clause via `Finset.le_sup'` (per-component ≤ sup')
+   + `hbound`.
+8. Edge case `r = 0`: `Fin r` empty, bound vacuous, pick
+   `δ_seq := fun _ => 0`.
+
+**Status of `thm:515D`**: still `partial` (one sorry remains, in
+the new helper). `lean_status.json` cycle reference bumped to 119.
+Per cycle 119 strategy Priority 2: "If only partially closed
+(Backup plan B1 executed): Update only the cycle-118-update note in
+this file to point at the new narrower helper. Leave
+`lean_status.json` `thm:515D` as `partial`. Plan.md row stays `[~]`."
+
+**What's needed for cycle 120**: close
+`aux_515D_max_deviation_geometric_bound`. The Backup B1 helper
+isolates the genuine discrete-Grönwall analytical content. The path
+forward (cycle 119 strategy Priority 1 outline, sidesteps cycle 118's
+per-step ↔ Grönwall bridge):
+1. Apply `aux_515D_construct_ell_U_phi_A` (cycle 114) with `h₀ := x − x₀`.
+2. Derive `α`, `β` constants from `M.B`, `ell_U`, `phi_A`.
+3. For each `n > 0`, set up the per-step recurrence on `δ_per_n n m`
+   via `localStepError_bound` (cycle 116 strengthened) per-step.
+4. Apply `aux_515D_per_step_recurrence` (cycle 113) for closed form.
+5. Bound `(V_inf_norm + α·h)^n` via `aux_515D_one_add_pow_le_exp` +
+   stability constant from `_hStab` (the iterated-V-bound piece).
+6. Sum via geometric series + take the sup'.
+
+The cycle 119 strategy explicitly authorizes this Backup B1
+narrowing as the fallback. The new helper is documented with the
+composition recipe in its docstring.
