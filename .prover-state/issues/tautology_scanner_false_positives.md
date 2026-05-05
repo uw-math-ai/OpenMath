@@ -142,3 +142,19 @@ a one-time D1+D2 fix is well worth the maintainer's time.
 - Cycle 015 task results — applied the cosmetic rename for
   `Section112.lean:126` (`h_inner` → `hinner`) and for the new
   Section212/Section213 off-step lemmas.
+
+## Cycle 121 update
+
+Cycle 121 applied the cosmetic rename workaround to
+`aux_515D_iterated_V_bound` in `OpenMath/Chapter5/Section515.lean`
+(lines 1900, 1908, 1918, 1921, 1922, 1923):
+* `h_abs_sum` → `habs_sum`
+* `h_sum_bd`  → `hsum_bd`
+* `h_card`    → `hcard`
+
+The bug-D1 (block-comment line drift) and bug-D2 (over-firing on
+`:= h_<name>` / `exact h_<name>` calc-step closers) remain unfixed
+in `scripts/autonomous_loop.py`. Each new helper introduced by
+cycle ≥116 has had to apply this rename; aggregate maintenance
+cost now exceeds the one-time D1+D2 fix. This is loop-maintainer
+territory — workers do NOT edit `scripts/autonomous_loop.py`.

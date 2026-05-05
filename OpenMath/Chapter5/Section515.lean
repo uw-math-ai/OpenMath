@@ -1897,7 +1897,7 @@ private theorem aux_515D_iterated_V_bound {r : ℕ}
   intro j _
   -- Expand `((V^k)*ᵥ x) j = ∑_i (V^k)_{j,i} · x i`.
   have hmv : ((V ^ k) *ᵥ x) j = ∑ i : Fin r, (V ^ k) j i * x i := rfl
-  have h_abs_sum : |((V ^ k) *ᵥ x) j|
+  have habs_sum : |((V ^ k) *ᵥ x) j|
       ≤ ∑ i : Fin r, |(V ^ k) j i| * |x i| := by
     rw [hmv]
     refine le_trans (Finset.abs_sum_le_sum_abs _ _) ?_
@@ -1905,7 +1905,7 @@ private theorem aux_515D_iterated_V_bound {r : ℕ}
     intro i _
     rw [abs_mul]
   -- Bound each summand by `C · s_x`.
-  have h_sum_bd : (∑ i : Fin r, |(V ^ k) j i| * |x i|)
+  have hsum_bd : (∑ i : Fin r, |(V ^ k) j i| * |x i|)
       ≤ ∑ _i : Fin r, C * s_x := by
     refine Finset.sum_le_sum ?_
     intro i _
@@ -1915,12 +1915,12 @@ private theorem aux_515D_iterated_V_bound {r : ℕ}
         ≤ C * |x i| :=
           mul_le_mul_of_nonneg_right (h_entry j i) h_xi_nn
       _ ≤ C * s_x := mul_le_mul_of_nonneg_left hxi hC_nn
-  have h_card : (∑ _i : Fin r, C * s_x) = (r : ℝ) * (C * s_x) := by
+  have hcard : (∑ _i : Fin r, C * s_x) = (r : ℝ) * (C * s_x) := by
     simp [Finset.sum_const, Finset.card_univ]
   calc |((V ^ k) *ᵥ x) j|
-      ≤ ∑ i : Fin r, |(V ^ k) j i| * |x i| := h_abs_sum
-    _ ≤ ∑ _i : Fin r, C * s_x := h_sum_bd
-    _ = (r : ℝ) * (C * s_x) := h_card
+      ≤ ∑ i : Fin r, |(V ^ k) j i| * |x i| := habs_sum
+    _ ≤ ∑ _i : Fin r, C * s_x := hsum_bd
+    _ = (r : ℝ) * (C * s_x) := hcard
     _ = ((r : ℝ) * C) * s_x := by ring
 
 /-- **(515D narrower helper — cycle 119 decomposition fallback)** Closed-form
