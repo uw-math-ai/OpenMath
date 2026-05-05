@@ -1816,19 +1816,79 @@ private theorem aux_515D_squeeze
       field_simp
     linarith [h]
 
+/-- **Sub-lemma D for `aux_515D_output_tendsto`** — componentwise
+deviation tends to zero (DEFERRED — cycle 117 decomposition fallback).
+
+For each component `i : Fin r`, the deviation
+    `Y n n i − (u i · yex(x) + v i · h_n · deriv yex(x))`
+(where `h_n := (x − x₀)/n`, with `x₀ + n · h_n = x` for `n > 0`)
+tends to `0` as `n → ∞`.
+
+This is the genuine analytical work behind `aux_515D_output_tendsto`:
+combining cycle 110-116 helpers (`aux_515D_construct_ell_U_phi_A`,
+`localStepError_bound`, `aux_515D_per_step_recurrence`,
+`aux_515D_gronwall_bound`, `aux_515D_squeeze`) to derive a discrete
+Grönwall closed-form bound on the per-step max-deviation, then squeeze
+it to zero using `_hφ`'s starting-procedure convergence.
+
+Cycle 117 introduces this helper as a `sorry`-body stub via the
+strategy's *decomposition fallback*: the body of
+`aux_515D_output_tendsto` (immediately below) becomes a clean
+~30-LOC composition that bridges this deviation limit to the target
+output limit `Y n n → u · yex(x)` via the auxiliary fact
+`v · h_n · deriv yex x → 0` (linear-in-h correction term vanishes).
+
+The hypotheses are exactly those of `aux_515D_output_tendsto`. -/
+private theorem aux_515D_componentwise_deviation_tendsto_zero {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (_hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (_hyex_x₀ : yex x₀ = y₀)
+    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    {u v : Fin r → ℝ}
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {φ : ℝ → Fin r → ℝ}
+    (_hφ : ∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
+                          (nhds 0) (nhds (u i * y₀)))
+    {x : ℝ} (_hxx : x₀ < x)
+    {M_bound : ℝ} (_hM_nn : 0 ≤ M_bound)
+    (_hyex_C1 : ContDiff ℝ 1 yex)
+    (_hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
+    (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
+    (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (_hY_props : ∀ n : ℕ, 0 < n →
+      Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
+      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    ∀ i : Fin r, Filter.Tendsto
+      (fun n : ℕ => Y n n i -
+        (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x))
+      Filter.atTop (nhds 0) := by
+  sorry
+
 /-- **Sub-lemma for `thm:515D`**: under stability + consistency, the
 GLM iteration's *output* sequence `Y n n` converges to `u · yex(x)`
 as `n → ∞`.
 
-Proof outline (deferred to cycles 110+):
-1. Iterate `localStepError_bound` across `n` steps to obtain a
-   discrete-Grönwall recurrence in
-   `δ_n m := max_i |Y n m i − (u_i · yex(x_{n,m}) + v_i · h_n · y'(x_{n,m}))|`,
-   where `x_{n,m} := x₀ + m · h_n` and `h_n = (x − x₀)/n`.
-2. Apply `discrete_gronwall_exp_bound` (Chapter 4 helper) to absorb
-   the linear-in-error term into an exponential.
-3. Squeeze as `h_n → 0` using `hφ` (which forces δ_n 0 → 0) and
-   stability (which absorbs the `V^k` factor uniformly in `n`).
+Proof outline (cycle 117 — composed via decomposition fallback):
+1. Reduce vector-Tendsto to per-component via `tendsto_pi_nhds`.
+2. Invoke `aux_515D_componentwise_deviation_tendsto_zero` (cycle 117
+   stub, body deferred to cycle 118) to get the deviation
+   `Y n n i − (u i · yex(x) + v i · h_n · deriv yex(x)) → 0`.
+3. Show the linear correction `v i · h_n · deriv yex(x) → 0` since
+   `h_n = (x − x₀)/n → 0`.
+4. Add the two zeros plus the constant `u i · yex(x)` and rewrite
+   the sum as `Y n n i` via `ring`.
+
+The genuine discrete-Grönwall analysis (steps from the cycle 117
+strategy) is encapsulated inside the deviation sub-lemma; here we
+only assemble the final tendsto from three terms.
 
 This is an *internal helper* for the §515 capstone, not a Butcher
 entity. -/
@@ -1862,7 +1922,43 @@ private theorem aux_515D_output_tendsto {s r : ℕ}
               + (∑ j, M.U i j * Y n n j))) :
     Filter.Tendsto (fun n : ℕ => Y n n) Filter.atTop
         (nhds (fun i => u i * yex x)) := by
-  sorry
+  rw [tendsto_pi_nhds]
+  intro i
+  -- Sub-lemma D (cycle 117 decomposition fallback): the componentwise
+  -- deviation tends to 0.
+  have hdev := aux_515D_componentwise_deviation_tendsto_zero M _hStab _hf_lip
+    _hyex_x₀ _hyex_ode _hVu _hUu _hCons_eq _hφ _hxx _hM_nn _hyex_C1 _hyex_M
+    _hyex'_LM _h_norm Y Y_int _hY_props i
+  -- Auxiliary: `h_n := (x - x₀)/n → 0`.
+  have hh_to_0 : Filter.Tendsto (fun n : ℕ => (x - x₀) / (n : ℝ))
+                    Filter.atTop (nhds 0) := by
+    have h1 : Filter.Tendsto (fun n : ℕ => (1 : ℝ) / (n : ℝ))
+                Filter.atTop (nhds 0) := tendsto_one_div_atTop_nhds_zero_nat
+    have h2 := h1.const_mul (x - x₀)
+    simpa [mul_div_assoc'] using h2
+  -- Linear correction: `v i · h_n · deriv yex x → 0`.
+  have hVterm : Filter.Tendsto
+      (fun n : ℕ => v i * ((x - x₀) / (n : ℝ)) * deriv yex x)
+      Filter.atTop (nhds 0) := by
+    have h1 : Filter.Tendsto (fun n : ℕ => v i * ((x - x₀) / (n : ℝ)))
+                Filter.atTop (nhds 0) := by
+      have := hh_to_0.const_mul (v i)
+      simpa using this
+    have h2 := h1.mul_const (deriv yex x)
+    simpa using h2
+  -- Combine: `Y n n i = (deviation) + (v · h_n · y'(x)) + (u i · yex x)`.
+  have h_const : Filter.Tendsto (fun _ : ℕ => u i * yex x)
+                  Filter.atTop (nhds (u i * yex x)) := tendsto_const_nhds
+  have h_combined : Filter.Tendsto
+      (fun n : ℕ =>
+        (Y n n i -
+          (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x))
+        + v i * ((x - x₀) / (n : ℝ)) * deriv yex x
+        + u i * yex x)
+      Filter.atTop (nhds (u i * yex x)) := by
+    have h1 := (hdev.add hVterm).add h_const
+    simpa using h1
+  exact h_combined.congr (fun n => by ring)
 
 /-- **Helper for `aux_515D_stage_tendsto` (closed cycle 111)**:
 under stability + consistency + Lipschitz `f`, plus output convergence

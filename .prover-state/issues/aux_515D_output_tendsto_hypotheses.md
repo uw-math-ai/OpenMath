@@ -247,3 +247,75 @@ hypotheses transfer cleanly via `Set.uIcc_subset_Icc`-style lemmas.
 Cycle 116 also submitted Aristotle Job 1 (project
 `9ef8f033-59d5-4557-b040-cf327e6a7063`) attempting the body
 composition independently. Cycle 117 will check the result.
+
+## Cycle 117 update — body composed via decomposition fallback
+
+**Outcome**: body of `aux_515D_output_tendsto` lands; ONE new sorry
+remains in the cycle 117 stub helper.
+
+* Aristotle Job 1 single-poll: `IN_PROGRESS / 23%` at
+  2026-05-05 ~07:50 UTC. Per CLAUDE.md (do NOT re-poll), treated as a
+  miss. Manual composition path executed.
+* Decomposition fallback as recommended by the cycle 117 strategy:
+  introduced ONE new private helper
+  `aux_515D_componentwise_deviation_tendsto_zero`
+  (`OpenMath/Chapter5/Section515.lean`, just above
+  `aux_515D_output_tendsto`'s docstring) with hypotheses identical
+  to `aux_515D_output_tendsto`'s and conclusion
+  ```
+  ∀ i : Fin r, Filter.Tendsto
+    (fun n : ℕ =>
+      Y n n i - (u i * yex x + v i * ((x - x₀) / n) * deriv yex x))
+    Filter.atTop (nhds 0)
+  ```
+  Body remains `sorry` — the genuine discrete-Grönwall analysis
+  (per-step recurrence → closed form → squeeze) is encapsulated here
+  for cycle 118.
+* Body of `aux_515D_output_tendsto` is a clean ~30-LOC composition:
+  1. `rw [tendsto_pi_nhds]; intro i`
+  2. invoke `aux_515D_componentwise_deviation_tendsto_zero` to get
+     the deviation tendsto
+  3. derive `(x - x₀) / n → 0` from
+     `tendsto_one_div_atTop_nhds_zero_nat`
+  4. derive `v i * ((x - x₀) / n) * deriv yex x → 0` via
+     `Tendsto.const_mul` + `Tendsto.mul_const`
+  5. add the three tendsto's (`hdev + hVterm + tendsto_const_nhds`)
+     with `Tendsto.add` and unify the limits via `simpa`
+  6. close with `Tendsto.congr (fun n => by ring)` to rewrite the
+     summed function back to `Y n n i`.
+* Build OK (`lake build OpenMath.Chapter5.Section515` — 8.9s
+  re-elaborate after dependencies, 1m 19s wall). Single `sorry`
+  warning at line 1873 (the deviation helper).
+* `#print axioms` of
+  `OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent`
+  returns `[propext, sorryAx, Classical.choice, Quot.sound]` — the
+  `sorryAx` traces solely to
+  `aux_515D_componentwise_deviation_tendsto_zero`.
+* `lean_status.json` row for `thm:515D` updated to cycle 117; status
+  remains `partial` per cycle 117 strategy ("update to `formalized`
+  ONLY if `aux_515D_output_tendsto` is fully closed").
+* `plan.md` §515 row updated.
+
+**What's needed for cycle 118**: close
+`aux_515D_componentwise_deviation_tendsto_zero`. The cycle 117
+strategy's Steps 1–9 outline applies directly:
+1. (within the helper) introduce `Δx`, `Lr` constants.
+2. apply `aux_515D_construct_ell_U_phi_A` once.
+3. derive `α`, `β` from M.B / M.A constants and the M-matrix outputs.
+4. set up the deviation `δ : ℕ → ℕ → ℝ` (max-abs over `Fin r`).
+5. for each `n > 0`, iterate `localStepError_bound` across
+   `m = 0, …, n-1` and bound each `K i` to derive the per-step
+   inequality `δ n (m+1) ≤ V_norm·δ n m + α·h_n·δ n m + β·h_n²`.
+6. apply `aux_515D_per_step_recurrence` to get the closed-form
+   `(V_norm + α·h_n)^m`-bound.
+7. apply `aux_515D_gronwall_bound` to convert to exp-form.
+8. show `δ n 0 → 0` from `_hφ` (the `(x-x₀)/n → 0` composed with
+   per-component `_hφ i`).
+9. apply `aux_515D_squeeze` to conclude `δ n n → 0`.
+10. (final): convert max-abs deviation tendsto-zero to per-component
+    tendsto-zero via `Finset.sup'`-style bound; this is the simplest
+    step and just unfolds `δ`'s definition.
+
+The helper is a viable Aristotle Job 2 candidate if cycle 118
+manual composition stalls — submit with the abstract-axioms pattern
+from cycle 116.
