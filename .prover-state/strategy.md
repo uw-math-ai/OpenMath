@@ -1,214 +1,255 @@
-# Cycle 136 — Strategy
+# Cycle 137 Strategy
 
-## Snapshot
+## Context
 
-- Branch tip: `8562b96 Cycle 135 — strengthen def:520E A-stability via substantive Padé(1,1) witness implicitMidpointGLM_isAStable (axiom-clean)`.
-- Progress: 69 / 175.
-- No sorries anywhere in `OpenMath/`.
-- No pending Aristotle jobs.
-- Cycle 135 just landed `implicitMidpointGLM_isAStable` (substantive Padé(1,1) witness), the closed-form `implicitMidpointGLM_stabilityMatrix`, the `padeOneOne_norm_le_one_of_re_nonpos` Möbius-transform bound, and three private `Fin 1` matrix-norm helpers. Axiom-clean.
+Cycle 136 closed `explicitEulerGLM_not_isAStable` (negative A-stability
+witness for `def:520E`), completing the non-vacuity triangle for that
+predicate (trivial-positive, substantive-positive, negative). The
+cycle 136 task results recommended `¬ explicitEulerGLM.IsLStable`
+as the natural single-cycle follow-up.
 
-## Aristotle results to incorporate
+We will follow that recommendation **and** add a second L-stability
+result that genuinely strengthens the non-vacuity story for `def:520F`:
+a proof that `implicitMidpointGLM` — the cycle 135 *positive*
+A-stability witness — is **not** L-stable. This pair reproduces the
+textbook contrast (Padé(1,1) is A-stable but not L-stable, see
+Butcher §520, p. 419) and broadens `IsLStable`'s non-vacuity into
+the same triangle shape `def:520E` now has.
 
-None. Skip the Aristotle-first step; proceed directly to manual proof.
+There are no Aristotle results to incorporate this cycle.
 
-## Target
+## Tasks (in order)
 
-**Add the *negative* A-stability witness `¬ explicitEulerGLM.IsAStable`** to
-`OpenMath/Chapter5/Section520.lean`, alongside the existing positive
-witnesses (`trivialZeroGLM_isAStable`, `implicitMidpointGLM_isAStable`).
+### Task 1 — `explicitEulerGLM_not_isLStable` (one-line follow-up)
 
-Why this entity, this cycle:
+**Target file**: `OpenMath/Chapter5/Section520.lean`, immediately
+after the cycle 136 theorem `explicitEulerGLM_not_isAStable`.
 
-- Cycle 135's task results explicitly list it as the cleanest follow-up
-  ("Negative A-stability witness — Backup-A direction"), and the cycle
-  135 strategy described it as out-of-scope for that cycle but ready
-  to land next.
-- After cycle 135, `def:520E`'s non-vacuity story has a *trivial*
-  positive witness and a *substantive* positive witness. A negative
-  witness is the missing leg: it proves `IsAStable` is non-vacuous in
-  both directions — a real predicate, not satisfied by every GLM.
-- The proof reuses cycle 088's `explicitEulerGLM_stabilityMatrix`
-  (`M(z) = !![1+z]`, file line 123) verbatim. No new infrastructure
-  needed.
-- Single-cycle scope. Estimated ~80 LOC including the inevitable
-  norm/`Fin 1`-power bookkeeping.
-- Matches the cycles 133/134/135 cadence of one focused
-  predicate-non-vacuity addition per cycle.
-
-The new public theorem to land:
+**Definition shape** (verified — `Section520.lean:298–304`):
 
 ```lean
-theorem explicitEulerGLM_not_isAStable :
-    ¬ explicitEulerGLM.IsAStable
+def GeneralLinearMethod.IsLStable {s r : ℕ}
+    (M : GeneralLinearMethod s r) : Prop :=
+  M.IsAStable ∧
+  Filter.Tendsto
+    (fun z : ℂ => spectralRadius ℂ (M.stabilityMatrix z))
+    (Filter.cocompact ℂ)
+    (nhds 0)
 ```
 
-## Approach (specific)
-
-Pick the witness `z := (-3 : ℂ)`. Then:
-
-- `z.re = -3 ≤ 0`, so `IsAStable` would force `z ∈ stabilityRegion`,
-  i.e. `∃ C, PowerBounded C (M(z))`.
-- `M(z) = explicitEulerGLM.stabilityMatrix (-3) = !![1 + (-3)] = !![-2]`
-  via the existing `explicitEulerGLM_stabilityMatrix` lemma.
-- `M(z)^k = !![(-2)^k]` (matrix-power lifts to scalar via the
-  cycle-135 private helper `fin_one_pow`).
-- `‖M(z)^k‖ = ‖(-2 : ℂ)^k‖ = 2^k` via the cycle-135 helper
-  `norm_pow_fin_one` plus `Complex.norm_neg` / `Complex.norm_ofNat`.
-- For any candidate `C`, eventually `2^k > C` (Archimedean +
-  `pow_unbounded_of_one_lt`), contradicting `‖M(z)^k‖ ≤ C ∀ k`.
-
-### Step-by-step proof skeleton
+**Proof**: since `IsLStable` is `IsAStable ∧ ...`, the negation
+follows from cycle 136's `explicitEulerGLM_not_isAStable` by
+projecting the conjunction:
 
 ```lean
-theorem explicitEulerGLM_not_isAStable :
-    ¬ explicitEulerGLM.IsAStable := by
-  intro hStab
-  -- Specialise A-stability at z = -3.
-  have hz_re : ((-3 : ℂ)).re ≤ 0 := by
-    rw [show ((-3 : ℂ)).re = -3 from by simp]; norm_num
-  obtain ⟨C, hC⟩ := hStab (-3 : ℂ) hz_re
-  -- Reduce ‖M(-3)^k‖ to 2^k.
-  have hM : explicitEulerGLM.stabilityMatrix (-3 : ℂ) = !![(-2 : ℂ)] := by
-    rw [explicitEulerGLM_stabilityMatrix]
-    -- !![1 + (-3)] = !![-2]
-    ext i j; fin_cases i; fin_cases j; simp; ring
-  -- Simplify each iterate's norm to (2 : ℝ)^k.
-  have hnorm : ∀ k, ‖(explicitEulerGLM.stabilityMatrix (-3 : ℂ))^k‖
-                       = (2 : ℝ)^k := by
-    intro k
-    rw [hM, norm_pow_fin_one]
-    rw [show ‖(-2 : ℂ)‖ = 2 from by
-          rw [show (-2 : ℂ) = -(2 : ℂ) from by ring,
-              norm_neg, Complex.norm_ofNat]]
-  -- Pick k with 2^k > C.
-  obtain ⟨k, hk⟩ : ∃ k : ℕ, C < (2 : ℝ)^k := by
-    -- Archimedean / `pow_unbounded_of_one_lt`
-    obtain ⟨k, hk⟩ := pow_unbounded_of_one_lt C (by norm_num : (1 : ℝ) < 2)
-    exact ⟨k, hk⟩
-  -- Contradict the bound.
-  have hCk := hC k
-  rw [hnorm] at hCk
-  linarith
+/-- Negative non-vacuity witness for `def:520F`: `explicitEulerGLM`
+is not L-stable, since L-stability requires A-stability and cycle 136
+showed `explicitEulerGLM` is not A-stable. -/
+theorem explicitEulerGLM_not_isLStable :
+    ¬ explicitEulerGLM.IsLStable :=
+  fun h => explicitEulerGLM_not_isAStable h.1
 ```
 
-The only fiddly bit is the `hM` step (`!![1 + (-3)] = !![-2]` as a
-`Matrix (Fin 1) (Fin 1) ℂ`). If `ext i j; fin_cases i; fin_cases j;
-simp; ring` does not close it, fall back to `Matrix.cons_val_zero` /
-`Matrix.cons_val_fin_one` rewrites — see the `fin_cases` recipe in
-`norm_fin_one` (line 423) for the exact incantation.
+That's it. Verify with `lake env lean OpenMath/Chapter5/Section520.lean`
+and `#print axioms` (expect `[propext, Classical.choice, Quot.sound]`).
 
-If `pow_unbounded_of_one_lt` has a different name in pinned Mathlib,
-`lean_local_search "pow_unbounded"` and `lean_loogle "_ < _ ^ _"` are
-both fast.
+### Task 2 — `implicitMidpointGLM_not_isLStable` (substantive negative witness)
 
-## Faithfulness check (run before commit)
+**Target file**: same — append after Task 1.
 
-- The theorem conclusion `¬ explicitEulerGLM.IsAStable` is a *negation*
-  of a definition (no textbook entity `id`); no JSON statement to
-  cross-check. The mathematical content matches the textbook fact
-  that explicit Euler's stability region is the closed unit disc
-  centred at `-1`, and `-3` lies *outside* that disc.
-- Tautology check: conclusion is a negation of `IsAStable`; not a
-  hypothesis.
-- Identity check: proof does real work (norm calculation +
-  Archimedean argument).
-- Hypothesis-strength check: theorem takes no hypotheses.
-- Absent-theorem check: no helper sorries.
-- Update `lean_status.json` row for `def:520E` cycle reference to 136
-  if you choose to track non-vacuity-strength alongside the existing
-  `formalized` status. Otherwise no JSON change.
-- Update `plan.md` Chapter 5 section to note the negative witness in
-  the `def:520E` row.
+**Mathematical content**: `implicitMidpointGLM` has stability function
+`R(z) = (1 + z/2)/(1 − z/2)` (cycle 135). As `|z| → ∞`, `|R(z)| → 1`,
+so `spectralRadius (M(z)) → 1`, not `0`. Hence `IsLStable`'s
+`Tendsto … cocompact … (nhds 0)` clause fails.
+
+**Proof recipe** (planner sketch — verify each lemma name with
+`lean_local_search` / `lean_loogle` before committing):
+
+1. Specialize the negation by destructuring the conjunction; we
+   attack the second conjunct
+   `Tendsto (fun z => spectralRadius (M(z))) cocompact (𝓝 0)`.
+
+2. Pick a divergent witness sequence in the **closed left half-plane**
+   so cycle 135's `implicitMidpointGLM_stabilityMatrix` (which
+   carries the `z.re ≤ 0` hypothesis) fires directly. Recommended:
+   `n : ℕ ↦ (-(n + 2 : ℝ) : ℂ)`. Then `(-(n+2)).re = -(n+2) ≤ 0`,
+   and `|R(-(n+2))| = |(1 - (n+2)/2) / (1 + (n+2)/2)|
+                    = |(-n/2)/((n+4)/2)| = n/(n+4) → 1` as `n → ∞`.
+
+3. Compute `spectralRadius` of `!![a]` for `a : ℂ`. The 1×1
+   matrix's spectrum is `{a}`, so `spectralRadius ℂ !![a] = ‖a‖₊`.
+   Useful tools to search for first:
+   - `lean_local_search "spectralRadius"` — look for an
+     existing 1×1 lemma.
+   - If absent, prove a tiny private helper
+     `spectralRadius_of_fin_one : spectralRadius ℂ !![a] = ‖a‖₊`
+     reusing the cycle-135 `fin_one_pow` / `norm_fin_one` style.
+
+4. Show `‖R(-(n+2))‖ = n/(n+4)`. Use the cycle-135 private
+   `norm_fin_one` to extract the scalar norm; then
+   `Complex.norm_div`, `Complex.norm_real`, and `abs_of_nonneg`
+   to reduce to `n/(n+4)`.
+
+5. Show `(n : ℝ) → ∞` ⇒ `n/(n+4) → 1`. Mathlib lemma:
+   `Filter.Tendsto.div` or via
+   `(n+4)/(n+4) - 4/(n+4) = n/(n+4)` and `4/(n+4) → 0`. Search
+   `lean_loogle "Tendsto _ _ atTop _ (nhds 1)"` for a direct hit.
+
+6. Bridge subsequence-divergence to `cocompact`-divergence: the
+   embedding `(fun n : ℕ => -(n+2 : ℂ))` tends to `cocompact ℂ`
+   along `Filter.atTop`. Find via
+   `lean_loogle "Tendsto _ Filter.atTop (Filter.cocompact ℂ)"`.
+   The standard pattern is `Filter.tendsto_norm_atTop` plus the
+   cocompact-iff-norm-tends-to-infinity characterisation
+   (`Complex.tendsto_norm_atTop_iff_cocompact` or similar — verify
+   name).
+
+7. Conclude `¬ IsLStable` via `Filter.Tendsto.unique` (the parent
+   net would force the sub-net to converge to `0`; we have the
+   sub-net converging to `1`; `0 ≠ 1`).
+
+**Estimated LOC**: 40–60 lines, depending on how much of the
+spectralRadius-of-1×1 plumbing already exists.
+
+**Mathlib search to do FIRST** (do not skip — this is where the
+estimate could blow up):
+
+- `lean_local_search "spectralRadius"` plus `"fin"` for the 1×1
+  spectralRadius lemma.
+- `lean_loogle "Tendsto _ Filter.atTop (Filter.cocompact ℂ)"` for the
+  `(n : ℂ)` → cocompact bridge.
+- `lean_local_search "spectrum_one_eq_singleton"` (verify name).
+- `lean_local_search "tendsto_norm_atTop_iff_cocompact"` for the
+  cocompact characterisation.
+
+If the spectralRadius-of-1×1 plumbing or the cocompact bridge turns
+out to require nontrivial new infrastructure (>30 LOC by itself),
+fall back per Backup B1 below.
 
 ## What NOT to try
 
-- **Do NOT** attempt to use `Matrix.norm_le_iff` or
-  `Matrix.linfty_opNorm_def` directly on `!![(-2)^k]`. The cycle-135
-  helpers (`fin_one_pow`, `norm_fin_one`, `norm_pow_fin_one`) already
-  encapsulate the bridge `‖!![a]^k‖ = ‖a‖^k`; reuse them instead of
-  re-deriving.
-- **Do NOT** unfold `IsAStable` past the first `intro hStab`. The
-  predicate is `∀ z, z.re ≤ 0 → z ∈ M.stabilityRegion`, so applying
-  `hStab (-3) hz_re` directly gives `∃ C, PowerBounded C ...`.
-- **Do NOT** try to close `hM` (`!![1 + (-3)] = !![-2]`) with bare
-  `decide` or `norm_num` — `ℂ` is not a decidable ring; need
-  `ext + fin_cases + simp + ring` or equivalent.
-- **Do NOT** weaken the witness from `z = -3` to `z = -2`. At `z = -2`,
-  `M(z) = !![−1]`, with `‖M(z)^k‖ = 1` for all `k`, which IS
-  power-bounded (with `C = 1`). The boundary `|1+z| = 1` corresponds
-  exactly to the boundary of the stability region.
-- **Do NOT** introduce `axiom`/`constant`. The proof is closed in
-  Mathlib + cycle-135 helpers; no infrastructure gap.
-- **Do NOT** raise `maxHeartbeats`. The proof is light.
-- **Do NOT** spawn Aristotle for this — manual proof is faster than
-  the 30-minute submit/sleep cycle for an ~80-LOC routine norm
-  calculation.
-- **Do NOT** edit `scripts/autonomous_loop.py`. (Standing rule.)
+- **Do NOT redo cycle 136 work.** `explicitEulerGLM_not_isAStable`
+  is already in `Section520.lean` (axiom-clean). Task 1 invokes it
+  directly via `h.1` — do not re-derive the matrix-norm bound.
 
-## Backup paths (if primary stalls within ~60 min)
+- **Do NOT use cycle 135's `implicitMidpointGLM_stabilityMatrix`
+  closed form on a positive-real `z`.** That lemma carries the
+  hypothesis `z.re ≤ 0`; calling it with `z = (n : ℂ)` for `n ≥ 1`
+  fails the hypothesis. Use the negative-real witness sequence
+  `n ↦ -(n+2 : ℂ)` (or equivalent left-half-plane divergent
+  sequence) instead.
 
-### B1 — Padé(1,1) order-2 stability for implicit midpoint
+- **Do NOT raise `maxHeartbeats`.** If Task 2 stalls on a single
+  goal, decompose into private helpers (`spectralRadius_at_neg_n`,
+  `padeOneOne_norm_neg_n_eq`, etc.).
 
-Cycle 135's strategy noted this as a stretch goal. Show
-`implicitMidpointGLM.HasStabilityOrder 2`. Requires computing
-`Φ(exp z, z) = (1 - z/2) · (exp z - (1+z/2)/(1-z/2))` and showing it
-is `O(z^3)` near `0`.
+- **Do NOT introduce `axiom` or `constant`** for any
+  spectralRadius / Filter / cocompact lemma. If Mathlib lacks
+  exactly the bridge you want, prove it as a private helper in the
+  same file (the cycle 135 pattern: small private bridges
+  `fin_one_pow`, `norm_fin_one`, `norm_pow_fin_one` for analogous
+  matrix-norm reductions).
 
-Mathlib hooks: `Complex.exp_sub_sum_range_isBigO_pow 3` or
-equivalent Taylor-remainder lemmas; `Asymptotics.IsBigO`. The
-`HasStabilityOrder` definition lives at
-`OpenMath/Chapter5/Section520.lean:491`.
+- **Do NOT expand scope to other `def:520F` witnesses or pivot to
+  Padé order analysis (`HasStabilityOrder 2`).** Cycle 136 task
+  results listed those as backup paths; they are >150 LOC and
+  belong in their own cycle.
 
-This is heavier (~150 LOC) and depends on holomorphic-function /
-big-O machinery we have not used yet in §520. Prefer B2 below if
-B1 looks stuck.
+- **Do NOT touch Chapter 3 / 4 entries this cycle.** Tempting
+  options like `def:381F` (P-equivalent — blocked on `def:381E`'s
+  deferred `reducedMethod` per
+  `.prover-state/issues/reduced_method_deferred.md`), `def:530A`
+  (needs StartingMethod structure), `thm:431A` (needs Rouché's
+  theorem), `def:451A` (needs one-leg method + matrix M from
+  (451e)), and `thm:343B` (needs `B(η)/C(η)/D(η)/E(η,ζ)` simplifying
+  assumptions) are all multi-cycle infrastructure investments and
+  are out of scope for cycle 137.
 
-### B2 — Negative L-stability witness
+- **Do NOT submit Aristotle for Task 1 or Task 2.** Both are short
+  and tightly coupled to private helpers we control. The 30-min
+  round-trip cost dominates the per-task work; manual is faster
+  (matching cycle 134/135/136's pattern).
 
-Show `¬ explicitEulerGLM.IsLStable` (`def:520F`). This is *strictly
-weaker* than the primary target's content: L-stability requires
-A-stability, so a disproof of A-stability already gives the disproof
-of L-stability as a one-liner (`fun h => explicitEulerGLM_not_isAStable h.1`).
-Land this as a one-line corollary alongside the primary theorem if
-time permits — it adds a second non-vacuity-strengthening data point
-at near-zero cost.
+## Backup plans
 
-### B3 — Pivot to a fresh entity
+### B1 — if Task 2's spectralRadius / cocompact plumbing requires >40 LOC by itself
 
-If both B1 and B2 prove unexpectedly difficult, pick one of these
-Chapter 3 / Chapter 5 leaves (single-cycle scope each):
+Defer Task 2's *rigorous* implementation. In its place, file an
+issue
+`.prover-state/issues/lstable_negative_implicit_midpoint_deferred.md`
+documenting the mathematical fact and the Mathlib gap (e.g.
+"missing `spectralRadius` of 1×1 matrix lemma; specific name to
+build is `Matrix.spectralRadius_fin_one_eq_nnnorm`"). Land Task 1
+alone; the cycle still produces a non-zero net change (Task 1 +
+issue file). This satisfies CLAUDE.md's "minimum: decompose a sorry
+or write an issue" rule.
 
-- `def:381F` *P-equivalent* (§380, Chapter 3): definition only;
-  builds on `def:381E` (already partial). Cleanest entry point if
-  bailing on §520.
-- `def:530A` *non-degenerate* (§530, Chapter 5): definition only.
-- `def:530B` / `def:530C` *Order relative to starting method*
-  (§530, Chapter 5): definitions; would unblock §530-§534 work.
+### B2 — if Task 2 is *easy* (<30 LOC) with existing plumbing
 
-Don't pursue B3 unless primary AND B1/B2 both stall — stay focused
-on the substantive single deliverable.
+Bonus: also add a vacuous L-stability witness for `padded2DEulerGLM`
+(cycle 133/134's r=2 padded explicit Euler GLM). Read
+`Section520.lean` to confirm its stability matrix shape; if it has
+the explicit-Euler block structure that fails A-stability at
+`z = -3`, mirror Task 1's pattern with `padded2DEulerGLM_not_isAStable`
+followed by `padded2DEulerGLM_not_isLStable`. This is one-liner
+mirroring of Task 1 once the negative A-stability witness lands.
 
-## Order of operations
+### B3 — if BOTH tasks close cleanly with time to spare
 
-1. (5 min) Read the cycle-135 helpers `fin_one_pow`, `norm_fin_one`,
-   `norm_pow_fin_one` in `Section520.lean:411-440` to confirm signatures.
-2. (10 min) Verify `explicitEulerGLM_stabilityMatrix` (line 123) and
-   confirm `M(-3) = !![-2]` reduces cleanly with
-   `ext + fin_cases + simp + ring`.
-3. (15 min) Look up `pow_unbounded_of_one_lt` (or equivalent) via
-   `lean_local_search`.
-4. (40 min) Write the proof per the skeleton above. Sorry-first if
-   any sub-step looks fiddly; verify with
-   `lake env lean OpenMath/Chapter5/Section520.lean` after each
-   reduction.
-5. (5 min) Run `lake build OpenMath.Chapter5.Section520` then
-   `#print axioms OpenMath.Chapter5.Section510.explicitEulerGLM_not_isAStable`
-   to confirm `[propext, Classical.choice, Quot.sound]`.
-6. (5 min) If B2 closes trivially, add `explicitEulerGLM_not_isLStable`
-   as a one-liner.
-7. (5 min) Update `plan.md` (§520 row note) and `lean_status.json`
-   if appropriate.
-8. (5 min) Write `cycle_136.md` task results, faithfulness section,
-   commit + push.
-9. **Do not poll Aristotle** — none submitted.
+Read `extraction/formalization_data/entities/def_530A.json` (already
+inspected: requires building a `StartingMethod` structure with
+generalized Runge–Kutta methods and `b_0^{(i)}` coefficients —
+**NOT a single-cycle deliverable**). Do NOT start the implementation;
+instead, file an infrastructure issue
+`.prover-state/issues/starting_method_structure_needed.md`
+documenting the prerequisites for §530.
+
+## Pre-commit faithfulness checklist (per CLAUDE.md)
+
+For each new theorem this cycle:
+
+- [ ] Tautology check: conclusion is `¬ IsLStable …` — not
+  syntactically equal to any hypothesis.
+- [ ] Identity check: Task 1 is `fun h => ... h.1` (∧-projection,
+  not the identity function — the projection itself does
+  meaningful work selecting the A-stable conjunct). Task 2 does
+  real norm/spectral computation. Neither is `exact h`/`id` over
+  the goal.
+- [ ] Hypothesis-strength check: theorems take no hypotheses.
+- [ ] Definition smuggling check: `IsLStable` was defined faithfully
+  in cycle 088 (`IsAStable ∧ spectralRadius → 0`); we are
+  *negating* it for specific GLMs, not redefining.
+- [ ] Absent-theorem check: no `sorry` or "to be proved later"
+  comments anywhere in the new theorems' bodies.
+- [ ] No new structures introduced; no need to provide instances.
+
+## Updates to make alongside the proofs
+
+- `extraction/formalization_data/lean_status.json`: `def:520F` row —
+  bump `cycle` field to 137 and refresh notes to mention both
+  the trivial positive (cycle 088) and the new negative witness(es).
+  Keep `status: formalized` (no change).
+- `plan.md`: §520 row for `def:520F` — append cycle-137 note about
+  negative witness completing the non-vacuity story.
+- `.prover-state/task_results/cycle_137.md`: standard format per
+  CLAUDE.md (Worked on / Approach / Result / Faithfulness check /
+  Dead ends / Discovery / Suggested next approach).
+
+## Suggested cycle 138 direction (for the next planner)
+
+After cycle 137 lands, the non-vacuity story for `def:520E`,
+`def:520F`, `def:525A`, `def:542A`, `def:551A` will all have at
+least one substantive witness, and `def:520E` and `def:520F` will
+have negative witnesses. The natural next step is to **shift away
+from non-vacuity strengthening** and attack a real theorem:
+
+- `thm:551B` Single Non Zero Eigenvalue Stability — small statement,
+  builds on cycle 131/133's `def:551A`.
+- `thm:521B` Maximum stability order for given steps — small
+  statement, builds on `def:521A`.
+- `thm:550A` Doubly companion matrices — pure linear algebra,
+  potentially Mathlib-light.
+
+Cycle 138 planner should pick one and commit; the
+non-vacuity-strengthening cadence (cycles 128–137) has consumed
+~10 cycles and should yield to substantive theorem work.

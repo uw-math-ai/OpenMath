@@ -485,6 +485,152 @@ theorem explicitEulerGLM_not_isAStable :
   rw [hnorm] at hCk
   linarith
 
+/-! ### Negative L-stability witness — explicit Euler -/
+
+/-- **Negative non-vacuity witness for `IsLStable`** —
+`explicitEulerGLM` is *not* L-stable. Since `IsLStable` is defined as the
+conjunction `IsAStable ∧ ρ(M(z)) → 0`, the negation follows immediately
+from cycle 136's `explicitEulerGLM_not_isAStable` by projecting the
+A-stability conjunct: any L-stable method must in particular be A-stable,
+so a non-A-stable method cannot be L-stable. -/
+theorem explicitEulerGLM_not_isLStable :
+    ¬ explicitEulerGLM.IsLStable :=
+  fun h => explicitEulerGLM_not_isAStable h.1
+
+/-! ### Negative L-stability witness — implicit midpoint (substantive) -/
+
+/-- Spectral radius of a `1×1` complex matrix `!![a]` collapses to the
+absolute value of its entry: `ρ(!![a]) = ‖a‖₊` (in `ENNReal`).
+
+Proof: a `1×1` matrix is diagonal in `Mathlib`'s sense, so
+`spectrum_diagonal` gives `spectrum ℂ !![a] = Set.range (fun _ => a) = {a}`,
+and the spectral radius's `iSup` over a singleton collapses to `‖a‖₊`. -/
+private theorem spectralRadius_fin_one (a : ℂ) :
+    spectralRadius ℂ (!![a] : Matrix (Fin 1) (Fin 1) ℂ) = (‖a‖₊ : ENNReal) := by
+  have heq : (!![a] : Matrix (Fin 1) (Fin 1) ℂ)
+              = (algebraMap ℂ (Matrix (Fin 1) (Fin 1) ℂ)) a := by
+    ext i j; fin_cases i; fin_cases j
+    simp [Algebra.algebraMap_eq_smul_one]
+  unfold spectralRadius
+  rw [heq, spectrum.scalar_eq]
+  simp
+
+/-- **Substantive negative non-vacuity witness for `IsLStable`** —
+`implicitMidpointGLM` is *not* L-stable, even though it *is* A-stable
+(cycle 135's `implicitMidpointGLM_isAStable`). This reproduces the textbook
+contrast that the canonical Padé(1,1) approximant `R(z) = (1 + z/2)/(1 − z/2)`
+of `exp(z)` is A-stable but not L-stable, since `|R(z)| → 1` (not `0`)
+as `|z| → ∞`.
+
+Mathematically: along the negative-real witness sequence
+`z_n = −(n+2 : ℂ)`, the stability matrix collapses to
+`M(z_n) = !![−n/(n+4)]`, so `ρ(M(z_n)) = n/(n+4) → 1`. If
+`Tendsto ρ(M(·)) cocompact (𝓝 0)` held, composing with `n ↦ z_n`
+(which goes to cocompact) would force `n/(n+4) → 0`, but
+`n/(n+4) > 1/2` for all `n ≥ 5`, contradicting eventual `≤ 1/2`. -/
+theorem implicitMidpointGLM_not_isLStable :
+    ¬ implicitMidpointGLM.IsLStable := by
+  rintro ⟨_, hRho⟩
+  -- Witness sequence in the closed left half-plane diverging to ∞.
+  set g : ℕ → ℂ := fun n => -((n : ℂ) + 2) with hg_def
+  -- (a) g sends atTop to cocompact ℂ.
+  have hg_cocompact : Filter.Tendsto g Filter.atTop (Filter.cocompact ℂ) := by
+    refine tendsto_cocompact_of_tendsto_dist_comp_atTop (0 : ℂ) ?_
+    -- dist (g n) 0 = ‖g n‖ = ‖-((n:ℂ)+2)‖ = n + 2.
+    have hnorm : ∀ n : ℕ, dist (g n) (0 : ℂ) = (n : ℝ) + 2 := by
+      intro n
+      have hg_n : g n = -((n : ℂ) + 2) := rfl
+      rw [hg_n, dist_zero_right, norm_neg]
+      have : ((n : ℂ) + 2) = ((((n : ℝ) + 2) : ℝ) : ℂ) := by push_cast; ring
+      rw [this, Complex.norm_real]
+      exact abs_of_nonneg (by positivity)
+    -- Now use Tendsto (fun n => (n:ℝ) + 2) atTop atTop.
+    have hraw : Filter.Tendsto (fun n : ℕ => (n : ℝ) + 2) Filter.atTop Filter.atTop := by
+      exact (tendsto_natCast_atTop_atTop (R := ℝ)).atTop_add tendsto_const_nhds
+    refine hraw.congr (fun n => ?_)
+    exact (hnorm n).symm
+  -- (b) Compose to get Tendsto on the sub-sequence.
+  have hcomp : Filter.Tendsto
+      (fun n : ℕ => spectralRadius ℂ (implicitMidpointGLM.stabilityMatrix (g n)))
+      Filter.atTop (nhds 0) :=
+    hRho.comp hg_cocompact
+  -- (c) Closed form on this sequence: spectralRadius (M(g n)) = n/(n+4).
+  have hg_re_le : ∀ n : ℕ, (g n).re ≤ 0 := by
+    intro n
+    have hg_n : g n = -((n : ℂ) + 2) := rfl
+    rw [hg_n]
+    simp [Complex.neg_re, Complex.add_re]
+    have : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
+    linarith
+  -- Lower bound: for n ≥ 4, spectralRadius (M(g n)) ≥ 1/2 in ENNReal.
+  have hbound : ∀ n : ℕ, 4 ≤ n →
+      (1/2 : ENNReal) ≤ spectralRadius ℂ (implicitMidpointGLM.stabilityMatrix (g n)) := by
+    intro n hn
+    rw [implicitMidpointGLM_stabilityMatrix (g n) (hg_re_le n), spectralRadius_fin_one]
+    -- Goal: (1/2 : ENNReal) ≤ ↑‖(1 + g n / 2) / (1 - g n / 2)‖₊
+    have hg_n : g n = -((n : ℂ) + 2) := rfl
+    -- Ratio reduces to embedded-real `-n / (n+4)`.
+    have h_ratio :
+        (1 + g n / 2) / (1 - g n / 2)
+          = (((-(n : ℝ) / ((n : ℝ) + 4)) : ℝ) : ℂ) := by
+      rw [hg_n]
+      have h_num_complex : (1 + (-((n : ℂ) + 2)) / 2) = -((n : ℂ)) / 2 := by ring
+      have h_den_complex : (1 - (-((n : ℂ) + 2)) / 2) = ((n : ℂ) + 4) / 2 := by ring
+      rw [h_num_complex, h_den_complex, div_div_div_cancel_right₀ (by norm_num : (2:ℂ) ≠ 0)]
+      push_cast
+      ring
+    rw [h_ratio]
+    -- Real-valued norm = |n/(n+4)| = n/(n+4).
+    have h_norm : ‖(((-(n : ℝ) / ((n : ℝ) + 4)) : ℝ) : ℂ)‖
+                    = (n : ℝ) / ((n : ℝ) + 4) := by
+      rw [Complex.norm_real, Real.norm_eq_abs]
+      have hge0 : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
+      rw [abs_div, abs_neg, abs_of_nonneg hge0,
+          abs_of_pos (by linarith : (0 : ℝ) < (n : ℝ) + 4)]
+    -- Real bound: 1/2 ≤ n/(n+4) for n ≥ 4.
+    have hreal_bound : (1 : ℝ) / 2 ≤ (n : ℝ) / ((n : ℝ) + 4) := by
+      have hn4 : (4 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+      have hpos : (0 : ℝ) < (n : ℝ) + 4 := by linarith
+      rw [le_div_iff₀ hpos]
+      have h2 : (2 : ℝ) ≠ 0 := by norm_num
+      field_simp
+      linarith
+    -- Convert real bound to NNReal bound on ‖x‖₊.
+    have hge0 : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
+    have hpos_nn : (0 : ℝ) < (n : ℝ) + 4 := by linarith
+    have hr_nonneg : (0 : ℝ) ≤ (n : ℝ) / ((n : ℝ) + 4) := by positivity
+    have h_nnnorm :
+        ‖(((-(n : ℝ) / ((n : ℝ) + 4)) : ℝ) : ℂ)‖₊
+          = (⟨(n : ℝ) / ((n : ℝ) + 4), hr_nonneg⟩ : NNReal) := by
+      apply NNReal.eq
+      rw [coe_nnnorm, h_norm]
+      rfl
+    rw [h_nnnorm]
+    -- Lift to ENNReal: (1/2 : ENNReal) ≤ (n/(n+4) : NNReal : ENNReal).
+    have hennreal_one_half : (1/2 : ENNReal) = ((1/2 : NNReal) : ENNReal) := by
+      rw [ENNReal.coe_div (by norm_num : (2:NNReal) ≠ 0)]
+      simp
+    rw [hennreal_one_half, ENNReal.coe_le_coe]
+    -- NNReal: (1/2 : NNReal) ≤ ⟨n/(n+4), _⟩.
+    rw [show (1/2 : NNReal) = (⟨1/2, by norm_num⟩ : NNReal) from by
+      apply NNReal.eq
+      simp]
+    exact hreal_bound
+  -- Apply ENNReal.tendsto_atTop_zero with ε = 1/4 to derive contradiction.
+  rw [ENNReal.tendsto_atTop_zero] at hcomp
+  obtain ⟨N, hN⟩ := hcomp ((1 : ENNReal) / 4) (by
+    have h_eq : (1 : ENNReal) / 4 = ((1/4 : NNReal) : ENNReal) := by
+      rw [ENNReal.coe_div (by norm_num : (4 : NNReal) ≠ 0)]
+      simp
+    rw [h_eq]
+    refine ENNReal.coe_pos.mpr ?_
+    norm_num)
+  have hk := hN (max N 4) (le_max_left _ _)
+  have hbn := hbound (max N 4) (le_max_right _ _)
+  -- Combine: 1/2 ≤ spectralRadius ≤ 1/4 in ENNReal, impossible.
+  have hcontra : (1/2 : ENNReal) ≤ (1/4 : ENNReal) := le_trans hbn hk
+  norm_num at hcontra
+
 /-- **Definition 521A** — A general linear method *has stability order* `p`
 if its stability function `Φ(w, z)` satisfies
 `Φ(exp(z), z) = O(z^(p+1))` as `z → 0` in `ℂ`.

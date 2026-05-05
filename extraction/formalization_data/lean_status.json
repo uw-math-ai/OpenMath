@@ -212,7 +212,9 @@
   "def:520F": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsLStable",
-    "status": "formalized"
+    "status": "formalized",
+    "cycle": 137,
+    "notes": "Cycle 088 trivial positive witness `trivialZeroGLM_isLStable` (M(z)=0). Cycle 137 negative witnesses: `explicitEulerGLM_not_isLStable` (one-line, follows from cycle 136 not-A-stable) and `implicitMidpointGLM_not_isLStable` (substantive — Padé(1,1) is A-stable but ρ(M(z))→1 not 0 along z=-(n+2:ℂ) sequence). Axiom-clean."
   },
   "def:521A": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
