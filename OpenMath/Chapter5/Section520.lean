@@ -447,6 +447,44 @@ theorem implicitMidpointGLM_isAStable :
   rw [norm_pow_fin_one]
   exact pow_le_one₀ (norm_nonneg _) (padeOneOne_norm_le_one_of_re_nonpos hz)
 
+/-! ### Negative A-stability witness — explicit Euler -/
+
+/-- **Negative non-vacuity witness for `IsAStable`** —
+`explicitEulerGLM` is *not* A-stable. Together with the positive
+witnesses `trivialZeroGLM_isAStable` (cycle 088) and
+`implicitMidpointGLM_isAStable` (cycle 135), this completes the
+non-vacuity story for `def:520E`: A-stability is a real, non-trivial
+predicate, satisfied by some GLMs and refuted by others.
+
+Mathematically: explicit Euler's stability region is the closed unit
+disc centred at `−1`, and the witness `z := −3` lies strictly outside
+that disc. Specifically, `M(z) = !![1 + z]` (cycle 088), so
+`M(−3) = !![−2]`, and `‖M(−3)^k‖ = 2^k → ∞` violates power-boundedness
+at `z = −3` despite `Re(−3) = −3 ≤ 0`. -/
+theorem explicitEulerGLM_not_isAStable :
+    ¬ explicitEulerGLM.IsAStable := by
+  intro hStab
+  -- Specialise A-stability at `z = -3` (Re(-3) = -3 ≤ 0).
+  have hz_re : ((-3 : ℂ)).re ≤ 0 := by simp
+  obtain ⟨C, hC⟩ := hStab (-3 : ℂ) hz_re
+  -- Reduce M(-3) = !![1 + (-3)] = !![-2].
+  have hM : explicitEulerGLM.stabilityMatrix (-3 : ℂ) = !![(-2 : ℂ)] := by
+    rw [explicitEulerGLM_stabilityMatrix]
+    ext i j; fin_cases i; fin_cases j; simp; ring
+  -- Norm of (-2 : ℂ) is 2.
+  have hnorm_neg2 : ‖(-2 : ℂ)‖ = 2 := by
+    rw [show (-2 : ℂ) = -(2 : ℂ) from by ring, norm_neg, Complex.norm_ofNat]
+  -- Each iterate's norm collapses to 2^k.
+  have hnorm : ∀ k, ‖(explicitEulerGLM.stabilityMatrix (-3 : ℂ)) ^ k‖
+                       = (2 : ℝ) ^ k := by
+    intro k
+    rw [hM, norm_pow_fin_one, hnorm_neg2]
+  -- Pick k with 2^k > C (Archimedean / pow_unbounded_of_one_lt).
+  obtain ⟨k, hk⟩ := pow_unbounded_of_one_lt C (by norm_num : (1 : ℝ) < 2)
+  have hCk := hC k
+  rw [hnorm] at hCk
+  linarith
+
 /-- **Definition 521A** — A general linear method *has stability order* `p`
 if its stability function `Φ(w, z)` satisfies
 `Φ(exp(z), z) = O(z^(p+1))` as `z → 0` in `ℂ`.
