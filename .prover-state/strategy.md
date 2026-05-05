@@ -1,363 +1,358 @@
-# Cycle 127 strategy
+# Strategy — cycle 128
 
-## Context (read first)
+## Context recap
 
-Cycle 126 closed `thm:520D` (both directions, axiom-clean) but the
-supervisor capped the score at −1 because the semantic-sorry scanner
-reported two new false-positive hits in `OpenMath/Chapter5/Section520.lean`:
+Cycle 127 closed `lem:515C` as a thin public wrapper over the existing
+helper, completing **§515 at 100%** (4/4: 515A/B/C/D all axiom-clean).
+There is **no pending Aristotle work**, **no open `sorry`s** in the
+tree, and **no in-progress theorem**. We need to pick a fresh target.
 
-| File:Line | Closer | Why it's a false positive |
-|---|---|---|
-| `OpenMath/Chapter5/Section520.lean:574` | `exact h_norm` | Closes `hbound n` after `rw [norm_pow] at h_norm` reshapes the hypothesis (real proof work). |
-| `OpenMath/Chapter5/Section520.lean:626` | `:= h_norm_le` | Closes a calc step after `rw [norm_pow] at h_norm_le` reshapes the hypothesis (real proof work). |
+## Target — `def:525A` (G-symplectic methods)
 
-These are the **standing scanner D2 over-firing pattern** documented in
-`.prover-state/issues/tautology_scanner_false_positives.md` (cycles 010,
-013, 014, 015, 121 all hit it). The fix is the established cosmetic
-rename: drop the underscore in the hypothesis name.
+**Primary deliverable**: formalize `def:525A` "G-symplectic methods"
+(Butcher §525, p. 429) in a new file `OpenMath/Chapter5/Section525.lean`,
+plus a non-vacuity witness.
 
-## Aristotle status
+### Why this target (not `def:530A`, not `thm:535A`, not `thm:550A`)
 
-No pending Aristotle results. **Mandatory**: submit a batch this cycle
-(per CLAUDE.md "Aristotle-first" rule) for the substantive work in
-Priority 1 below — see Aristotle plan in §P1 Step 4.
+* `def:530A` (non-degenerate starting method) requires a *new datatype*
+  for "starting method = sequence of generalized Runge–Kutta methods"
+  including the equation-(530a) RK structure. That's an
+  infrastructure cycle, not a definition cycle. Defer.
+* `thm:535A` (underlying one-step method GLM) consumes §530 order
+  theory which doesn't exist yet. Defer.
+* `thm:550A` (doubly companion matrices) needs a new datatype. Defer.
+* `def:551A` (Inherent RK stability) transitively depends on `def:542A`,
+  `thm:550A`, `cor:550C` — all unformalized. Defer.
+* `def:525A` is **pure matrix algebra on the existing
+  `GeneralLinearMethod` structure** (Section510.lean:63). Three
+  equations on `(A, U, B, V)` plus existence of auxiliary matrices
+  `G` (PSD symmetric) and `D` (diagonal). The transitive-deps list
+  in `entities/def_525A.json` cites §530 entries — but those are
+  LLM-identified false dependencies (the literal definition does
+  NOT reference any §530 concept). Verify by re-reading the
+  `statement_text` field before proceeding.
 
-## Priorities
+### Textbook content (verbatim from `entities/def_525A.json`)
 
-### P0 (mandatory, ~10 min) — Hygiene fix for cycle 126 scanner regression
+> A general linear method `(A, U, B, V)` is G-symplectic if there
+> exists a positive semi-definite symmetric `r × r` matrix `G` and an
+> `s × s` diagonal matrix `D` such that
+>   `Vᵀ G V = G`     (525a)
+>   `D U = Bᵀ G V`   (525b)
+>   `D A + Aᵀ D = Bᵀ G B`   (525c)
 
-Apply the standing cosmetic rename workaround. Concrete edits in
-`OpenMath/Chapter5/Section520.lean`:
+### Step 1 — read inputs (MANDATORY before coding)
 
-**Fix 1 — `instabilityRegion_supseteq_outside_disc` (lines 564–574)**:
-Rename `h_norm` → `hnorm` at the four touch-points:
+1. Open `extraction/formalization_data/entities/def_525A.json`.
+   Confirm:
+   * `kind = "definition"`,
+   * the three equations as quoted above,
+   * **the literal statement does not mention "starting method",
+     "order", or any §530 concept**. (The `transitive_dependencies`
+     list is misleading here; the LLM heuristically attached §530
+     entries that the definition itself does not invoke.)
+2. Open `OpenMath/Chapter5/Section510.lean` lines 63–148. Confirm
+   `GeneralLinearMethod s r` has fields `A : Matrix (Fin s) (Fin s) ℝ`,
+   `U : Matrix (Fin s) (Fin r) ℝ`, `B : Matrix (Fin r) (Fin s) ℝ`,
+   `V : Matrix (Fin r) (Fin r) ℝ`. Confirm `explicitEulerGLM`
+   (line 144) exists with `A = !![0], U = !![1], B = !![1], V = !![1]`.
 
-- Line 570: `have h_norm : ‖w ^ n‖`  →  `have hnorm : ‖w ^ n‖`
-- Line 573: `rw [norm_pow] at h_norm`  →  `rw [norm_pow] at hnorm`
-- Line 574: `exact h_norm`  →  `exact hnorm`
+### Step 2 — search Mathlib before defining
 
-(Verify with `Grep` that no other `h_norm` references exist in this
-function; the binder is local to the `have hbound` block.)
+Per CLAUDE.md "Before creating any new definition, use Lean LSP search
+tools to check whether an equivalent Mathlib definition already exists":
 
-**Fix 2 — `stabilityRegion_imp_spectralRadius_le_one` (lines 618–626)**:
-Rename `h_norm_le` → `hnorm_le` at the three touch-points:
+* `lean_local_search "Symplectic"` — confirm there is no Mathlib
+  predicate matching G-symplectic GLMs. (Mathlib has
+  `SymplecticGroup` and `Matrix.IsSymplectic`, but those are about
+  preserving an antisymmetric bilinear form on `K^{2n}`, NOT this
+  notion.)
+* `lean_local_search "PosSemidef"` — confirm
+  `Matrix.PosSemidef` exists (it does, in
+  `Mathlib.LinearAlgebra.Matrix.PosDef`) and use it for the `G` PSD
+  + symmetric condition. (Mathlib's `PosSemidef` already bundles
+  `IsHermitian` over ℝ ⇒ symmetric.)
+* `lean_local_search "Matrix.IsDiag"` — `Matrix.IsDiag` is the
+  Mathlib predicate for diagonal matrices; use it.
 
-- Line 623: `have h_norm_le := spectrum.norm_le_norm_mul_of_mem hμk`  →  `have hnorm_le := …`
-- Line 624: `rw [norm_pow] at h_norm_le`  →  `rw [norm_pow] at hnorm_le`
-- Line 626: `_ := h_norm_le`  →  `_ := hnorm_le`
+### Step 3 — write the predicate
 
-There is also a separate `h_norm` binder at line 614 (`have h_norm : 1 < ‖μ‖`)
-in the same function that does NOT trigger the scanner (no `exact h_norm` /
-`:= h_norm` line-end closer). Leave it alone — renaming out of caution
-expands the diff unnecessarily.
-
-**Verification after both fixes**:
-
-```bash
-# Must return at most one hit (the pre-existing Section514:601 carry-over).
-rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/
-```
-
-The pre-existing hit at `OpenMath/Chapter5/Section514.lean:601`
-(`exact h_norm_obligation`) is **not** a cycle-126 regression — it has
-been there since cycle 116 (Frobenius-bound propagation, see
-`is_convergent_strengthened.md`). Do **not** rename it this cycle —
-the binder name is faithfulness-documented and renaming would obscure
-its provenance. Document in cycle results that the residual count of
-1 is the pre-existing Section514:601 carry-over.
-
-Then `lake env lean OpenMath/Chapter5/Section520.lean` must exit 0
-(α-equivalent renames; build status unchanged).
-
-**Do NOT** modify `scripts/autonomous_loop.py` — the underlying scanner
-bugs D1/D2 are loop-maintainer territory per
-`tautology_scanner_false_positives.md` and CLAUDE.md.
-
-### P1 (substantive, primary deliverable) — Close `lem:515C`
-
-**Target**: a new public theorem
-`OpenMath.Chapter5.Section515.GeneralLinearMethod.accumulatedError_bound`
-formalising Butcher Lemma 515C (p. 415, "Accumulated error estimate
-for multistep methods").
-
-**Why this target now**: §515D's `aux_515D_max_deviation_geometric_bound`
-(cycle 119, body closed cycle 124) is essentially the per-step form of
-`lem:515C`. The textbook proof of 515C goes:
-
-1. `E^[i] = (V ⊗ I) E^[i−1] + K^[i]`  ← exactly cycle 123's `aux_515D_per_step_K_bound`.
-2. Closed-form expansion `E^[i] = V^i·E^[0] + Σ V^(i−1−k)·K^[k]`  ← exactly cycle 124's `aux_515D_delta_closed_form`.
-3. Sup'-bound `‖E^[i]‖_∞ ≤ C·‖E^[0]‖_∞ + Σ C·‖K^[i−j]‖_∞`  ← exactly cycle 124's `aux_515D_iterated_V_bound_linfty`.
-4. Difference-equation solution `η_i = (1 + hαC)^i η_0 + (βh/α)((1+hαC)^i − 1)`  ← the closed form embedded in `aux_515D_max_deviation_geometric_bound`'s body (cycle 124).
-
-So **`lem:515C` is a public re-packaging of `aux_515D_max_deviation_geometric_bound`**.
-The textbook headline form uses `exp(αC(x−x₀))`; our cycle 119/124
-helper uses `(1 + hαC)^i` (or in the cycle 119 abstraction
-`C_init`/`C_lin`). Bridge via cycle 113's `aux_515D_one_add_pow_le_exp`.
-
-#### Step-by-step plan
-
-**Step 1 — read the entity data and the existing helper signature**.
-
-Required reads (do these first, BEFORE editing):
-
-```
-extraction/formalization_data/entities/lem_515C.json
-OpenMath/Chapter5/Section515.lean   (focus: aux_515D_max_deviation_geometric_bound)
-```
-
-For the helper, search the file for the literal string
-`aux_515D_max_deviation_geometric_bound`. The cycle 119 narrowing
-docstring + cycle 124 body update should make the hypothesis package
-explicit. Note exactly which hypotheses the helper takes.
-
-**Step 2 — sorry-first scaffold**.
-
-Write the public theorem with the textbook-aligned signature, using
-the SAME hypothesis names as the helper (so the body is mechanical):
+In a new file `OpenMath/Chapter5/Section525.lean`:
 
 ```lean
-/-- **Lemma 515C** (Butcher §515, p. 415) — Accumulated error estimate.
+import OpenMath.Chapter5.Section510
 
-For a stable + consistent GLM applied to an IVP with `n` steps of
-size `h_n = (x − x₀)/n`, the accumulated error
-`E^[i] := Y n i − target i` (where `target` is the linearized exact
-solution per `aux_515D_max_deviation_geometric_bound`) satisfies, for
-all `n > 0` and `i ≤ n`:
+namespace OpenMath.Chapter5.Section510
 
-  ‖E^[i]‖_∞ ≤ C_init · ‖E^[0]‖_∞ + C_lin · h_n,
+namespace GeneralLinearMethod
 
-where `C_init` and `C_lin` are non-negative constants determined by
-`M`, `L`, `M_bound`, and the interval length `(x − x₀)`.
+variable {s r : ℕ}
 
-This is the Lean-faithful form of Butcher's Lemma 515C; in the
-textbook's `α, β, C` parameterization, `C_init = exp(αC(x − x₀))`
-and `C_lin = (β/α)(exp(αC(x − x₀)) − 1)` for `α > 0`, and
-`C_init = 1`, `C_lin = C·i·β·h_n` for `α = 0` (different functional
-shape, captured here by the existential).
+/-- Butcher §525 def:525A — A general linear method `(A, U, B, V)` is
+**G-symplectic** if there exist a PSD symmetric `r × r` matrix `G` and
+a diagonal `s × s` matrix `D` satisfying
 
-Faithfulness divergences (inherited from
-`stable_consistent_isConvergent`):
-* `hc_witness` — `0 ≤ glmAbscissae ∧ glmAbscissae ≤ 1`
-  (see `stable_consistent_isConvergent_hc_nn.md`).
-* Strengthened `IsConvergent`-style hypotheses `(M_bound, hyex_C1,
-  hyex_M, hyex'_LM, h_norm_F)` (see `is_convergent_strengthened.md`
-  and `glm_isconvergent_strengthened.md`).
--/
-theorem GeneralLinearMethod.accumulatedError_bound
-    {s r : ℕ} (hs : 0 < s) (M : GeneralLinearMethod s r)
-    -- (full hypothesis package: paste from aux_515D_max_deviation_geometric_bound)
-    : ∃ C_init C_lin : ℝ, 0 ≤ C_init ∧ 0 ≤ C_lin ∧
-        ∀ n : ℕ, 0 < n → ∀ i : ℕ, i ≤ n →
-          (sup'-form bound, copy from helper) := by
-  sorry
+* (525a) `Vᵀ G V = G`,
+* (525b) `D U = Bᵀ G V`,
+* (525c) `D A + Aᵀ D = Bᵀ G B`. -/
+def IsGSymplectic (M : GeneralLinearMethod s r) : Prop :=
+  ∃ (G : Matrix (Fin r) (Fin r) ℝ) (D : Matrix (Fin s) (Fin s) ℝ),
+    G.PosSemidef ∧ D.IsDiag ∧
+    M.V.transpose * G * M.V = G ∧
+    D * M.U = M.B.transpose * G * M.V ∧
+    D * M.A + M.A.transpose * D = M.B.transpose * G * M.B
 ```
 
-The exact hypothesis list MUST be copied verbatim from
-`aux_515D_max_deviation_geometric_bound` (modulo `private` removal).
-Do NOT improvise — get the signature right by literally copying.
+Verify shapes:
+* `B : Matrix (Fin r) (Fin s) ℝ` ⇒ `Bᵀ : Matrix (Fin s) (Fin r) ℝ`.
+* `Bᵀ * G : Matrix (Fin s) (Fin r) ℝ`,
+  `Bᵀ * G * V : Matrix (Fin s) (Fin r) ℝ`.
+* `D * U : Matrix (Fin s) (Fin r) ℝ`. Shapes match for (525b). ✓
+* `D * A + Aᵀ * D : Matrix (Fin s) (Fin s) ℝ`;
+  `Bᵀ * G * B : Matrix (Fin s) (Fin s) ℝ`. ✓
+* `Vᵀ * G * V, G : Matrix (Fin r) (Fin r) ℝ`. ✓
 
-Verify the scaffold compiles: `lake env lean OpenMath/Chapter5/Section515.lean`
-must exit 0 with one new sorry warning at the new theorem.
+### Step 4 — non-vacuity witness (MANDATORY per CLAUDE.md)
 
-**Step 3 — body closure (manual, attempt first)**.
-
-The body should be a one-line application:
+Add to the same file:
 
 ```lean
-exact aux_515D_max_deviation_geometric_bound hs hStab hCons hc_witness
-        hf_lip hyex_x₀ hyex_ode hxx hM_nn hyex_C1 hyex_M hyex'_LM h_norm_F
-        (Y := Y) (φ := φ) hY hφ hY_init
+/-- Non-vacuity witness for `IsGSymplectic`: `explicitEulerGLM` is
+trivially G-symplectic with `G = 0, D = 0`. (This is a vacuous-style
+witness — Butcher's intended non-trivial example is the 2×2 method
+of equation (525d), which is deferred to a future cycle because of
+its `√3` arithmetic.) -/
+theorem explicitEulerGLM_isGSymplectic :
+    explicitEulerGLM.IsGSymplectic := by
+  refine ⟨0, 0, ?_, ?_, ?_, ?_, ?_⟩
+  · -- 0 is PosSemidef
+    exact Matrix.PosSemidef.zero
+  · -- 0 is diagonal
+    intro i j _
+    rfl  -- 0 i j = 0 by defn of zero matrix
+  · -- Vᵀ * 0 * V = 0
+    simp
+  · -- D * U = Bᵀ * 0 * V
+    simp
+  · -- 0 * A + Aᵀ * 0 = Bᵀ * 0 * B
+    simp
 ```
 
-If the signatures align EXACTLY (which they should, by construction),
-this closes in ≤ 5 lines. Verify build + axiom check.
+If `Matrix.PosSemidef.zero` doesn't exist with that exact name:
+* `lean_local_search "PosSemidef" + "zero"`,
+* `lean_loogle "Matrix.PosSemidef 0"`,
+* fallback: prove inline via `⟨isHermitian_zero, by intro x; simp⟩`
+  (since `PosSemidef M = IsHermitian M ∧ ∀ x, 0 ≤ x ⬝ M *ᵥ x`).
 
-**If the signatures DON'T align** (most likely cause: the helper takes
-slightly different `Y` / `φ` shape than the textbook-faithful public
-form expects), then there are two paths:
+If `Matrix.IsDiag` is defined as `∀ i j, i ≠ j → M i j = 0`, then
+`intro i j _; rfl` works because `(0 : Matrix _ _ ℝ) i j = 0`. If
+the shape differs, search with `lean_hover_info` on `Matrix.IsDiag`
+and adjust.
 
-(a) **Adjust the public signature to match the helper exactly** —
-    accept the divergence and document in the docstring + an issue
-    file `.prover-state/issues/lem_515C_signature_divergence.md`.
-(b) **Construct a thin adapter** between the textbook-shape `Y` /
-    `target` and the helper's parameterization. Estimated 30–80 LOC.
+### Step 5 — Aristotle batch (recommended, parallel; only ONE job)
 
-Prefer (a) for cycle 127 — saves time and the divergence is small.
-Reserve (b) for a follow-up cycle if a downstream consumer cares.
+The witness should close manually in <30 minutes. **However**, since
+this cycle is short and Aristotle is free compute, submit ONE job
+once the file compiles with the witness as `sorry`. This gives a
+backup if the `Matrix.PosSemidef.zero` / `Matrix.IsDiag` naming
+proves fiddly.
 
-**Step 4 — Aristotle-first contingency**.
+* Job 1: prove `explicitEulerGLM_isGSymplectic`. Standalone — feed
+  the file content (no extra context needed) since it imports only
+  `OpenMath.Chapter5.Section510`.
 
-If by mid-cycle Step 3's manual closure is bogged down (e.g.
-signature mismatch requires > 100 LOC of bridging), STOP manual
-work and submit to Aristotle:
+DO NOT submit the predicate definition itself — Aristotle proves
+theorems, not declarations. Sleep ≥30 min before checking, per
+CLAUDE.md. Do NOT poll twice. If Aristotle returns a cleaner proof
+than the manual `simp` chain, use it; otherwise keep the manual
+proof.
 
-* **Job 1**: full sorry'd theorem `accumulatedError_bound` with
-  `aux_515D_max_deviation_geometric_bound` available as a premise.
-* **Job 2**: a target-form variant where the bound is in
-  Butcher's `exp(αC(x−x₀))` form rather than the helper's
-  `C_init` / `C_lin` form (lets Aristotle attempt the bridge).
-* **Job 3**: an `α = 0` specialised variant (so the case-split is
-  isolated).
+### Step 6 — pre-commit faithfulness checklist (CLAUDE.md §"Pre-Commit")
 
-Submit all three at once, set the standard 30-min sleep timer (per
-CLAUDE.md), check ONCE at the end of cycle, and process whatever
-returned. If nothing returned, leave the scaffold + Aristotle jobs
-in flight for cycle 128.
+For the new `def IsGSymplectic`:
 
-#### Faithfulness obligations
+* [ ] Quote the textbook statement (from
+      `entities/def_525A.json`'s `statement_text`) in the docstring.
+* [ ] Confirm the three matrix equations match the textbook
+      letter-for-letter: `Vᵀ G V = G`, `D U = Bᵀ G V`,
+      `D A + Aᵀ D = Bᵀ G B`. NO transposed indices, NO swapped
+      `B/V`, NO sign errors.
+* [ ] **Definition smuggling check**: the predicate quantifies
+      existentially over `G` and `D`; we are NOT defining
+      G-symplectic via a *characterization* (e.g. via the stability
+      function being unitary) and then claiming the textbook
+      definition follows. The Lean predicate IS the textbook
+      definition.
+* [ ] PSD condition: `G.PosSemidef` in Mathlib bundles
+      `IsHermitian` (which over ℝ means symmetric) plus the
+      non-negative quadratic-form condition. This matches Butcher's
+      "positive semi-definite symmetric" exactly.
 
-Per CLAUDE.md "Pre-Commit Faithfulness Checklist":
+For `explicitEulerGLM_isGSymplectic`:
 
-1. **Tautology check**: the conclusion (`∃ C_init C_lin, … ∀ n, …`) is
-   NOT a re-statement of any single hypothesis. ✓
-2. **Identity check**: the proof routes through real Grönwall /
-   iterated-V machinery (the cycle 124 helper body), not a direct
-   `exact <hypothesis>`. ✓ (Even though the wrapper itself IS one
-   line, the load-bearing helper does real proof work — this is
-   precisely the "thin wrapper around a closed lemma" pattern, which
-   is legitimate.)
-3. **Hypothesis strength check**: `hc_witness`, `M_bound` localized,
-   `h_norm_F` are inherited from the §515D helper chain and are known
-   faithfulness divergences. The docstring MUST cite
-   `stable_consistent_isConvergent_hc_nn.md`,
-   `is_convergent_strengthened.md`, and
-   `glm_isconvergent_strengthened.md`.
-4. **Definition smuggling check**: `lem:515C` is a *theorem*, not a
-   definition. The proof must derive the bound from
-   stability + consistency + the local-step error chain. ✓ (via the
-   cycle 124 helper).
-5. **Absent theorem check**: any auxiliary helper added must actually
-   exist. ✓ (we are reusing existing helpers).
+* [ ] **Tautology check**: the conclusion `IsGSymplectic` is the
+      goal; no hypothesis matches the conclusion. ✓
+* [ ] **Non-vacuity disclaimer**: the witness `(G, D) = (0, 0)` is
+      a degenerate (trivial) witness — every GLM trivially
+      satisfies the predicate with `G = 0, D = 0`. The witness
+      *establishes inhabitability* of the predicate but does NOT
+      exhibit a substantively G-symplectic method. This is
+      acceptable for non-vacuity per CLAUDE.md, but document the
+      caveat in the witness docstring and propose Butcher's eq
+      (525d) explicit 2×2 method as future work (Step 8 stretch
+      goal).
 
-Update `extraction/formalization_data/lean_status.json` for `lem:515C`:
-- `status: formalized`, `cycle: 127`, `file:
-  OpenMath/Chapter5/Section515.lean`, `defined_names:
-  ["GeneralLinearMethod.accumulatedError_bound"]` — ONLY if the body
-  closes (no sorry's). Otherwise leave as `partial` or `not_started`
-  per pre-cycle state.
+### Step 7 — bookkeeping
 
-Update `plan.md` row for `lem:515C` to `[x]` ONLY if fully closed.
+* Update `extraction/formalization_data/lean_status.json`: set
+  `def:525A` to `formalized`, `lean_file =
+  "OpenMath/Chapter5/Section525.lean"`, `lean_symbol =
+  "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsGSymplectic"`,
+  bump cycle reference to 128.
+* Update `plan.md`: change `def:525A` row from `[ ]` to `[x]`
+  with cycle-128 commentary.
+* Verify single-file build: `lake env lean
+  OpenMath/Chapter5/Section525.lean` exits 0.
+* Verify axiom-cleanness: `lake build
+  OpenMath.Chapter5.Section525` (so the `.olean` is fresh — per
+  cycle 072's note, `lake env lean` does NOT update the cache),
+  then `#print axioms
+  OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitEulerGLM_isGSymplectic`
+  must return `[propext, Classical.choice, Quot.sound]` ONLY.
+* Tautology scanner: run
+  `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/`
+  and confirm no NEW hits in `Section525.lean`. (The pre-existing
+  `Section514.lean:601 — exact h_norm_obligation` carry-over is
+  expected and not a regression.)
 
-### P2 (fallback if P1's signature alignment is hopeless) — Pivot to `def:530A`
+### Step 8 — commit
 
-If Step 1 reveals that `aux_515D_max_deviation_geometric_bound`'s
-parameterization is so divergent from Butcher's lem:515C that aligning
-them requires > 200 LOC of refactoring (very unlikely given the
-direct correspondence noted above), pivot to:
+Commit message format (matches recent §515 cycles):
 
-**`def:530A`** — non-degenerate starting method. Pure predicate.
-Statement: a starting method `S` defined by generalized RK methods
-is *non-degenerate* if at least one `b₀^(i) ≠ 0` for `i ∈ Fin r`.
-
-**Caveat**: this requires §530 generalized-RK starting-method
-infrastructure (the `(530a)` method form) which is NOT yet in the
-codebase. So the cycle would build:
-
-1. `OpenMath/Chapter5/Section530.lean` (new file).
-2. The `(530a)` generalized-RK starting-method structure.
-3. The `IsNonDegenerate` predicate.
-4. A non-vacuity witness (e.g. a constant-zero starting method
-   trivially has all `b₀^(i) = 0`, so it is *degenerate* — supply a
-   witness with a single non-zero `b₀^(i)`).
-
-Total P2 effort: ~150 LOC structure + ~30 LOC witness + lean_status +
-plan.md updates. Lower payoff than P1 (does not close §515).
-
-### P3 (cleanup, no pressure) — Section 515 unused-`simp` warnings
-
-Cycle 126 worker noted unused-simp warnings in `Section515.lean` were
-left untouched. If P0 + P1 land with margin, scan with
-`lake env lean OpenMath/Chapter5/Section515.lean 2>&1 | grep -i unused`
-and trim 5–10 of the easiest. Skip if any time pressure — non-blocking.
-
-## What NOT to try
-
-1. **Do NOT** weaken `aux_515D_max_deviation_geometric_bound`'s
-   `_hc_nn` / `_hc_le_one` hypotheses for the public `lem:515C`. Those
-   divergences are documented in `stable_consistent_isConvergent_hc_nn.md`
-   and removing them is multi-cycle refactor work, out of scope.
-
-2. **Do NOT** attempt to refactor `aux_515D_max_deviation_geometric_bound`
-   itself (e.g. to remove the `target := u·yex + v·h·yex'` linearization).
-   The cycle 124 body is axiom-clean and load-bearing for
-   `stable_consistent_isConvergent`; touching it risks regressing the
-   §515D capstone.
-
-3. **Do NOT** modify `scripts/autonomous_loop.py` even if scanner
-   false positives keep recurring. The standing
-   `tautology_scanner_false_positives.md` issue is loop-maintainer
-   territory. (CLAUDE.md + cycle-015 strategy explicit.)
-
-4. **Do NOT** introduce `axiom`/`constant` to bypass any sorry.
-
-5. **Do NOT** rename the pre-existing `h_norm_obligation` at
-   `Section514.lean:601`. It is faithfulness-documented (cycle 116
-   Frobenius-bound propagation). The cycle-126 regression is the
-   *new* hits in Section520.lean only.
-
-6. **Do NOT** raise `maxHeartbeats` above 200000. Decompose instead.
-
-7. **Do NOT** start `thm:521B` (Maximum stability order), `thm:550A`
-   (Doubly companion matrices), or `thm:550B` this cycle, even though
-   the cycle 126 worker suggested them. They are multi-cycle (require
-   polynomial reformulation of `stabilityFunction` or the
-   doubly-companion-matrix datatype) — not single-cycle deliverables.
-
-8. **Do NOT** attempt `def:442A` (A-stability via Riemann surface).
-   The Riemann-surface infrastructure is non-trivial complex-analysis
-   work absent from the codebase — multi-cycle.
-
-9. **Do NOT** poll Aristotle more than once if a batch is submitted in
-   Step 4. Per CLAUDE.md: submit, sleep 30 min, check once. If
-   results are still pending after one check, treat as miss and
-   proceed manually next cycle.
-
-10. **Do NOT** retry the cycle 126 attempts at `thm:520D` direction
-    bridging — that work is committed and shipped. This cycle is
-    forward-looking only.
-
-## Pre-commit checklist (verify before commit)
-
-```bash
-# Scanner false positives must be ≤ 1 (the pre-existing Section514:601 carry-over).
-rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/
-
-# Section520 must compile clean (P0 hygiene).
-lake env lean OpenMath/Chapter5/Section520.lean
-
-# Section515 must compile clean (P1 substantive).
-lake env lean OpenMath/Chapter5/Section515.lean
-
-# §515D capstone must remain axiom-clean (no regression).
-lake build OpenMath.Chapter5.Section515
-# Then in the file (or via a scratch script):
-#   #print axioms OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent
-# Expected: [propext, Classical.choice, Quot.sound]
-
-# §513 / §514 cascade integrity.
-lake env lean OpenMath/Chapter5/Section513.lean
-lake env lean OpenMath/Chapter5/Section514.lean
+```
+Cycle 128 — formalize def:525A G-symplectic methods (axiom-clean)
 ```
 
-If P1 lands fully:
-- Update `extraction/formalization_data/lean_status.json` row for
-  `lem:515C`: status `formalized`, cycle `127`.
-- Update `plan.md` §515 row for `lem:515C` to `[x]`.
-- §515 will then be 100% complete (515A, 515B, 515C, 515D all `[x]`).
+Files touched:
+* `OpenMath/Chapter5/Section525.lean` (new, ~50 LOC).
+* `extraction/formalization_data/lean_status.json` (one row).
+* `plan.md` (one row, plus bumping the progress counter from 65 to
+  66 entities done).
 
-If P1 only scaffolds + Aristotle-pending:
-- Leave `lem:515C` status as `partial`.
-- Document scaffold + Aristotle submission in
-  `.prover-state/task_results/cycle_127.md`.
+## What NOT to do this cycle
 
-## Expected cycle outcome
+* **Do NOT target `def:530A`** "non-degenerate starting method" — it
+  requires a new datatype for "starting method as sequence of
+  generalized RK methods" plus the eq-(530a) generalized-RK
+  structure, which is an infrastructure cycle, not a definition
+  cycle. The `entities/def_530A.json` `dependencies = []` is
+  misleading — the *content* depends on the §530a generalized RK
+  framework, which we don't have.
+* **Do NOT target `thm:535A`** — it transitively depends on §530
+  order theory (`def:530B`, `def:530C`), which we don't have.
+* **Do NOT target `thm:550A`** — it requires a new "doubly
+  companion matrix" datatype and is best deferred until after
+  §525/§530 lay the type-theoretic groundwork.
+* **Do NOT introduce a new structure** for the textbook's eq (525d)
+  explicit 2×2 witness this cycle. The `√3`-arithmetic check is
+  doable but eats the cycle's budget. Use the `(G, D) = (0, 0)`
+  trivial witness for non-vacuity and document the (525d) witness
+  as future work.
+* **Do NOT raise `maxHeartbeats`** above 200000 (CLAUDE.md hard
+  rule). The witness proof is `simp`-tier and should close
+  trivially; if it doesn't, decompose rather than bumping
+  heartbeats.
+* **Do NOT submit the `IsGSymplectic` predicate definition to
+  Aristotle** — Aristotle proves theorems, not types. Only the
+  witness proof goes to Aristotle.
+* **Do NOT modify `scripts/autonomous_loop.py`** — loop-maintainer
+  territory per `tautology_scanner_false_positives.md`.
+* **Do NOT modify any §515 file** (Section515.lean is closed at
+  axiom-clean and any edit risks regression). The only file
+  modifications this cycle are the new `Section525.lean`,
+  `lean_status.json`, and `plan.md`.
+* **Do NOT use Mathlib's `SymplecticGroup` or
+  `Matrix.IsSymplectic`** — those are about preserving an
+  antisymmetric bilinear form on `K^{2n}` and are NOT the
+  textbook's G-symplectic concept. Verify the Mathlib
+  `IsSymplectic` definition before considering reuse; the names
+  collide but the concepts do not.
+* **Do NOT** follow the cycle 127 worker's "trim §520
+  unused-`simp` warnings" suggestion — it is hygiene-only and
+  should not absorb cycle time when there's a substantive
+  deliverable available.
+* **Do NOT** worker-edit `scripts/autonomous_loop.py` even if the
+  scanner false-positive issue is mentioned (the standing
+  workaround — drop the underscore in any new `h_<name>` binders
+  in `Section525.lean` — applies if any new closer triggers it,
+  but the `simp`-tier witness shouldn't introduce any).
 
-* **Floor (P0 only)**: hygiene fix lands; semantic-sorry scanner
-  returns to baseline (1 pre-existing Section514:601 carry-over);
-  cycle 126's −1 regression is reverted. Score ≥ 0.
-* **Target (P0 + P1 sorry-first scaffold + Aristotle batch)**: scanner
-  baseline + new public `lem:515C` scaffold + 3 Aristotle jobs in
-  flight. Score ≥ +1.
-* **Stretch (P0 + P1 fully closed)**: §515 completed (4/4 entities);
-  axiom-clean public wrapper around cycle-124 capstone; faithfulness
-  divergence documented. Score ≥ +2.
+## Backup plan — if the witness `simp` chain fails
+
+If `simp` cannot discharge the matrix equations on `explicitEulerGLM`
+with `G = 0, D = 0`:
+
+1. Try `decide` (since matrices are concrete `Fin 1 × Fin 1`).
+2. Try entrywise `ext; fin_cases; simp [explicitEulerGLM]` —
+   pattern from `explicitEulerGLM_isPreconsistent` (Section510.lean:152).
+3. Try `Matrix.mul_zero, Matrix.zero_mul, add_zero` simp lemmas
+   explicitly in the `simp only`.
+4. If still stuck, the issue is naming — `Matrix.PosSemidef.zero`
+   may be absent. Inline:
+   ```lean
+   refine ⟨isHermitian_zero, ?_⟩
+   intro x
+   simp [Matrix.zero_mulVec, dotProduct_zero]
+   ```
+5. For `Matrix.IsDiag` of `0`: search `lean_local_search "IsDiag"`
+   and unfold; the definition is `∀ i j, i ≠ j → M i j = 0` and
+   `(0 : Matrix _ _ ℝ) i j = 0` by definition.
+
+If the witness genuinely cannot close in one cycle (extremely
+unlikely given the matrices are zero), file
+`.prover-state/issues/def_525A_witness_blocker.md` with the
+specific Mathlib API gap and pivot the cycle to **Plan B**.
+
+## Plan B — if `def:525A` proves intractable: `def:541A` (DIMSIM types)
+
+Read `entities/def_541A.json`. DIMSIM (Diagonally Implicit Multistage
+Integration Methods) types are pure shape constraints on the GLM
+matrices: `A` lower triangular with constant diagonal, plus stage-
+order conditions. This is similar in flavour to `def:525A` (matrix
+predicates on existing GLM infrastructure). Apply the same six-step
+recipe.
+
+## Cycle deliverable bar
+
+* **Minimum** (per CLAUDE.md "A cycle with zero changes is
+  unacceptable"): the predicate definition with the textbook
+  docstring committed, even if the witness is left as `sorry` with
+  a blocker issue.
+* **Target**: predicate + axiom-clean witness + status updates +
+  commit. Should land in ~1 hour of worker time.
+* **Stretch goal**: additionally state (without proving) the
+  textbook's (525d) explicit 2×2 example as
+
+  ```lean
+  /-- Butcher §525 eq (525d) — the explicit 2×2 G-symplectic
+  example presented in Butcher (2006). The proof of
+  `IsGSymplectic` is deferred to a future cycle (the witness
+  matrices `G = diag(1, 1 + 2√3/3), D = diag(1/2, 1/2)` involve
+  `√3` arithmetic that does not fit this cycle). -/
+  noncomputable def example525d : GeneralLinearMethod 2 2 where
+    A := !![ (3 + Real.sqrt 3) / 6, 0;
+             -Real.sqrt 3, (3 + Real.sqrt 3) / 6 ]
+    U := !![ 1, -(3 + 2 * Real.sqrt 3) / 3;
+             1, (3 + 2 * Real.sqrt 3) / 3 ]
+    B := !![ 1/2, 1/2;
+             1/2, -1/2 ]
+    V := !![ 1, 0;
+             0, -1 ]
+  ```
+
+  Do NOT prove `example525d.IsGSymplectic` this cycle — just
+  record the definition with a docstring noting it as future
+  work. This sets up a faithful witness for a follow-up cycle.
+  Skip the stretch goal entirely if it pushes the cycle past
+  the 1-hour mark; the target deliverable is what counts.

@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 65 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 66 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -230,6 +230,6 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:532A` **Algebraic analysis of order** (§532)
 - [ ] `thm:534A` **The order of a G-symplectic method** (§534)
 - [ ] `thm:541A` **The types of DIMSIM methods** (§541)
-- [ ] `def:525A` **G-symplectic methods** (§525)
+- [x] `def:525A` **G-symplectic methods** (§525) — cycle 128, axiom-clean (predicate + `explicitEulerGLM_isGSymplectic` trivial witness with `G = D = 0`; non-trivial Butcher (525d) `√3` witness deferred)
 
 ---

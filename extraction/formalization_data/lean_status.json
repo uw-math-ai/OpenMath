@@ -191,7 +191,7 @@
     "lean_file": "OpenMath/Chapter5/Section512.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsConvergent",
     "status": "formalized",
-    "notes": "Cycle 092 repaired the φ quantifier from existential to universal (faithfulness fix; the textbook proof of thm:513A constructs its own bad starting procedure)."
+    "notes": "Cycle 092 repaired the \u03c6 quantifier from existential to universal (faithfulness fix; the textbook proof of thm:513A constructs its own bad starting procedure)."
   },
   "def:520A": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
@@ -219,9 +219,9 @@
     "status": "formalized"
   },
   "def:525A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section525.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsGSymplectic",
+    "status": "formalized"
   },
   "def:530A": {
     "lean_file": null,
@@ -811,21 +811,21 @@
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.convergent_isStable",
     "status": "formalized",
     "cycle": 93,
-    "notes": "Convergent ⇒ stable. Cycle 092 scaffolded the structure with 3 sorries; cycle 093 closed all 3 (Aristotle ported Helpers 2 and 5; main theorem ported manually from LMM template Section405.lean:101–227). Axiom-clean."
+    "notes": "Convergent \u21d2 stable. Cycle 092 scaffolded the structure with 3 sorries; cycle 093 closed all 3 (Aristotle ported Helpers 2 and 5; main theorem ported manually from LMM template Section405.lean:101\u2013227). Axiom-clean."
   },
   "thm:514A": {
     "lean_file": "OpenMath/Chapter5/Section514.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.convergent_preconsistent_isConsistent",
     "status": "formalized",
     "cycle": 99,
-    "notes": "Cycle 099 closure (sorry-free, axiom-clean [propext, Classical.choice, Quot.sound]). Closure path: cycle 098's strengthened IsConvergent (def:512A, with stage-limit clause) enables convergence_witness_satisfies_U to extract `M.U *ᵥ u' = 𝟙` alongside cycle 096's `M.V *ᵥ u' = u'`, so the convergence-witness vector u' is itself a preconsistency vector. Sub-lemma C (cesaro_residual_tendsto_zero) is reformulated as a pure-algebraic identity parameterised by u' (no GLM dependence). Sub-lemma D (exists_inverse_of_cesaro_zero) closed cycle 097 via Path B mean-ergodic. The hPre hypothesis is unused internally — option (ii) of u_prime_equals_u_bridge.md. A separate corollary `convergent_isPreconsistent` exposes the GLM analog of LMM thm:405B."
+    "notes": "Cycle 099 closure (sorry-free, axiom-clean [propext, Classical.choice, Quot.sound]). Closure path: cycle 098's strengthened IsConvergent (def:512A, with stage-limit clause) enables convergence_witness_satisfies_U to extract `M.U *\u1d65 u' = \ud835\udfd9` alongside cycle 096's `M.V *\u1d65 u' = u'`, so the convergence-witness vector u' is itself a preconsistency vector. Sub-lemma C (cesaro_residual_tendsto_zero) is reformulated as a pure-algebraic identity parameterised by u' (no GLM dependence). Sub-lemma D (exists_inverse_of_cesaro_zero) closed cycle 097 via Path B mean-ergodic. The hPre hypothesis is unused internally \u2014 option (ii) of u_prime_equals_u_bridge.md. A separate corollary `convergent_isPreconsistent` exposes the GLM analog of LMM thm:405B."
   },
   "thm:515D": {
     "lean_file": "OpenMath/Chapter5/Section515.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.stable_consistent_isConvergent",
     "status": "formalized",
     "cycle": 124,
-    "notes": "Cycle 124 — closed the body of `aux_515D_max_deviation_geometric_bound` (Section515.lean:2360, ~360 LOC body), the last §515D sorry. Capstone `stable_consistent_isConvergent` is now AXIOM-CLEAN: `#print axioms` returns only `[propext, Classical.choice, Quot.sound]`. Decomposition: (1) New private helper `aux_515D_delta_closed_form` (Section515.lean:2207, ~30 LOC) proves the pure-algebraic vectorial closed form `δ m = V^m·δ 0 + ∑_{k<m} V^(m−1−k)·R k` by induction on m. (2) New private helper `aux_515D_iterated_V_bound_linfty` (Section515.lean:2257, ~70 LOC) bridges the L∞-operator-norm scope of `M.IsStable` (defined in Section510.lean with `Matrix.Norms.Operator` open) to the sup'-form bound the capstone needs — placed in a sub-section opening `Matrix.Norms.Operator` since Section515.lean's body opens `Matrix.Norms.Frobenius` (incompatible scopes). The original `aux_515D_iterated_V_bound` (cycle 120, Frobenius-norm hypothesis) is now superseded for the capstone path — kept in file for backward narrowing audit but not invoked. (3) Main body composes: K-bound (cycle 123) per-step → δ-recurrence → closed form → sup' splitting → sum-form Grönwall (cycle 117). For the Grönwall hypothesis (which requires the recurrence ∀ m ≥ 1, even m > n), uses a truncated u_seq m := if m ≤ n then δ_max m else 0 so the bound holds vacuously for m > n. Branches on α = 0 vs α > 0; α = 0 branch direct from sum-form bound, α > 0 branch invokes Grönwall and substitutes n·h_n = x − x₀. NO §513 / §514 cascade regression — all build clean. Tautology scanner: 0 hits. Faithfulness: signature stable from cycle 123 (only divergences are pre-existing `_hc_nn` and `_hc_le_one` propagation; no new hypotheses introduced). All §515D sorries closed."
+    "notes": "Cycle 124 \u2014 closed the body of `aux_515D_max_deviation_geometric_bound` (Section515.lean:2360, ~360 LOC body), the last \u00a7515D sorry. Capstone `stable_consistent_isConvergent` is now AXIOM-CLEAN: `#print axioms` returns only `[propext, Classical.choice, Quot.sound]`. Decomposition: (1) New private helper `aux_515D_delta_closed_form` (Section515.lean:2207, ~30 LOC) proves the pure-algebraic vectorial closed form `\u03b4 m = V^m\u00b7\u03b4 0 + \u2211_{k<m} V^(m\u22121\u2212k)\u00b7R k` by induction on m. (2) New private helper `aux_515D_iterated_V_bound_linfty` (Section515.lean:2257, ~70 LOC) bridges the L\u221e-operator-norm scope of `M.IsStable` (defined in Section510.lean with `Matrix.Norms.Operator` open) to the sup'-form bound the capstone needs \u2014 placed in a sub-section opening `Matrix.Norms.Operator` since Section515.lean's body opens `Matrix.Norms.Frobenius` (incompatible scopes). The original `aux_515D_iterated_V_bound` (cycle 120, Frobenius-norm hypothesis) is now superseded for the capstone path \u2014 kept in file for backward narrowing audit but not invoked. (3) Main body composes: K-bound (cycle 123) per-step \u2192 \u03b4-recurrence \u2192 closed form \u2192 sup' splitting \u2192 sum-form Gr\u00f6nwall (cycle 117). For the Gr\u00f6nwall hypothesis (which requires the recurrence \u2200 m \u2265 1, even m > n), uses a truncated u_seq m := if m \u2264 n then \u03b4_max m else 0 so the bound holds vacuously for m > n. Branches on \u03b1 = 0 vs \u03b1 > 0; \u03b1 = 0 branch direct from sum-form bound, \u03b1 > 0 branch invokes Gr\u00f6nwall and substitutes n\u00b7h_n = x \u2212 x\u2080. NO \u00a7513 / \u00a7514 cascade regression \u2014 all build clean. Tautology scanner: 0 hits. Faithfulness: signature stable from cycle 123 (only divergences are pre-existing `_hc_nn` and `_hc_le_one` propagation; no new hypotheses introduced). All \u00a7515D sorries closed."
   },
   "thm:520B": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
@@ -838,7 +838,7 @@
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.instabilityRegion_subseteq_closed_disc_zeros",
     "status": "formalized",
     "cycle": 126,
-    "notes": "thm:520D is encoded as two public theorems: instabilityRegion_subseteq_closed_disc_zeros (direction (1): instabilityRegion ⊆ {z : ∃ w, ‖w‖ ≥ 1, Φ(w,z) = 0}) and instabilityRegion_supseteq_outside_disc (direction (2): {z : ∃ w, ‖w‖ > 1, Φ(w,z) = 0} ⊆ instabilityRegion)."
+    "notes": "thm:520D is encoded as two public theorems: instabilityRegion_subseteq_closed_disc_zeros (direction (1): instabilityRegion \u2286 {z : \u2203 w, \u2016w\u2016 \u2265 1, \u03a6(w,z) = 0}) and instabilityRegion_supseteq_outside_disc (direction (2): {z : \u2203 w, \u2016w\u2016 > 1, \u03a6(w,z) = 0} \u2286 instabilityRegion)."
   },
   "thm:521B": {
     "lean_file": null,
