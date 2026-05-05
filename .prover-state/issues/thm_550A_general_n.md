@@ -1,5 +1,50 @@
 # Issue: General-`n` proof of `thm:550A` (Doubly companion matrix factorization)
 
+## Status update (cycle 144) — n=3 STEPPING STONE ADDED
+
+`doublyCompanionMatrix_det_factorization_n_three` landed axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). Strategy:
+
+1. Reduce `doublyCompanionMatrix α β` at `n = 3` to an explicit
+   `!![…]` form via `ext i j; fin_cases i <;> fin_cases j <;> simp […]`
+   (mirroring the cycle 138 `_one_eq` simp lemma but inline, since
+   the explicit matrix is only used in this one proof).
+2. Reduce `1 - z • X` to a second explicit `!![…]` form by a second
+   `fin_cases` block.
+3. Use `Matrix.det_fin_three` to expand the determinant; collapse the
+   polynomial identity with `simp [alphaPoly, betaPoly,
+   Fin.sum_univ_three]; ring`.
+4. Close the `IsBigO` via `Asymptotics.IsBigO.of_bound` with constant
+   `‖a‖ + ‖b‖ + ‖c‖`, where the residue factors as
+   `z^4 · (a + z·b + z²·c)` with
+   * `a := -(α 0 · β 2) - β 0 · α 2 - β 1 · α 1`,
+   * `b := -(β 1 · α 2) - α 1 · β 2`,
+   * `c := -(α 2 · β 2)`.
+   Bound via repeated `norm_add_le` + `mul_le_of_le_one_left` exploiting
+   `‖z‖ ≤ 1`.
+
+**Three data points (n = 1, 2, 3)** now confirm the leading-coefficient
+pattern `−Σᵢ αᵢ · β_{n−i} z^{n+1}` predicted by Theorem 550A. Higher-
+order coefficients also match the `α(z) · β(z)` expansion exactly. The
+cancellation of `z⁰`–`z³` in `det(I − zX) − α(z)·β(z)` is the textbook
+content; verified explicitly at `n = 3` by the `ring` step above.
+
+General-`n` closure remains **deferred** per the prior status updates
+below. Cycle 141 cancelled the Aristotle general-`n` job at 6% after
+24h; manual cofactor-expansion or eigenvalue-density argument is
+multi-cycle infrastructure. The n=3 stepping stone leaves sorry count
+unchanged at 0 and adds one more axiom-clean witness.
+
+**State after cycle 144** (file `OpenMath/Chapter5/Section550.lean`):
+
+* `doublyCompanionMatrix` — kept
+* `doublyCompanionMatrix_one_eq` simp lemma — kept
+* `alphaPoly`, `betaPoly` — kept
+* `doublyCompanionMatrix_det_factorization_n_one` — kept (axiom-clean, cycle 138)
+* `doublyCompanionMatrix_det_factorization_n_two` — kept (axiom-clean, cycle 140)
+* `doublyCompanionMatrix_det_factorization_n_three` — **added** (axiom-clean, cycle 144)
+* `doublyCompanionMatrix_det_factorization` (general n) — still **absent**
+
 ## Status update (cycle 140) — n=2 STEPPING STONE ADDED
 
 Aristotle Job B (project `70f26d67-b37e-4eda-b946-64c9f4616612`,

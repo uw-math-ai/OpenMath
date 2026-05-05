@@ -191,4 +191,83 @@ theorem doublyCompanionMatrix_det_factorization_n_two
         mul_le_mul_of_nonneg_right hy.le (by positivity)))
     (by positivity)
 
+/-- **Theorem 550A at `n = 3`.** Direct expansion via `Matrix.det_fin_three`
+gives
+* `det(I - z X) = 1 + (α 0 + β 0) z + (α 0 · β 0 + α 1 + β 1) z²
+                    + (α 0 · β 1 + α 1 · β 0 + α 2 + β 2) z³`,
+* `α(z) · β(z) = 1 + (α 0 + β 0) z + (α 0 · β 0 + α 1 + β 1) z²
+                    + (α 0 · β 1 + α 1 · β 0 + α 2 + β 2) z³
+                    + (α 0 · β 2 + α 1 · β 1 + α 2 · β 0) z⁴
+                    + (α 1 · β 2 + α 2 · β 1) z⁵ + (α 2 · β 2) z⁶`,
+
+so the residue is
+`-(α 0 · β 2 + α 1 · β 1 + α 2 · β 0) z⁴ - (α 1 · β 2 + α 2 · β 1) z⁵
+    - (α 2 · β 2) z⁶ = O(z⁴) = O(z^{3+1})`. -/
+theorem doublyCompanionMatrix_det_factorization_n_three
+    (α β : Fin 3 → ℂ) :
+    Asymptotics.IsBigO (nhds (0 : ℂ))
+      (fun z : ℂ =>
+        (1 - z • doublyCompanionMatrix α β).det
+          - alphaPoly α z * betaPoly β z)
+      (fun z : ℂ => z ^ 4) := by
+  -- Step 1: rewrite the residue pointwise to its factored form `z^4 * inner`.
+  have h_diff : (fun z : ℂ =>
+      (1 - z • doublyCompanionMatrix α β).det
+        - alphaPoly α z * betaPoly β z)
+      = (fun z : ℂ => z ^ 4 *
+          (-(α 0 * β 2) - β 0 * α 2 - β 1 * α 1
+              + z * (-(β 1 * α 2) - α 1 * β 2) + z ^ 2 * (-(α 2 * β 2)))) := by
+    funext z
+    -- Reduce the doubly-companion matrix at n = 3 to an explicit !![…] form.
+    have hX : doublyCompanionMatrix α β =
+        !![-α 0, -α 1, -α 2 - β 2;
+           1,     0,    -β 1;
+           0,     1,    -β 0] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;> simp [doublyCompanionMatrix]
+    rw [hX]
+    -- Reduce `1 - z • X` to an explicit !![…] form.
+    have hmat :
+        (1 - z • !![-α 0, -α 1, -α 2 - β 2;
+                    1,     0,    -β 1;
+                    0,     1,    -β 0] : Matrix (Fin 3) (Fin 3) ℂ)
+          = !![1 + z * α 0,   z * α 1,    z * (α 2 + β 2);
+               -z,            1,          z * β 1;
+               0,             -z,         1 + z * β 0] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        first | (simp; ring) | simp
+    rw [hmat, Matrix.det_fin_three]
+    simp [alphaPoly, betaPoly, Fin.sum_univ_three]
+    ring
+  rw [h_diff]
+  -- Step 2: prove `z^4 * inner =O[nhds 0] z^4`.
+  refine Asymptotics.IsBigO.of_bound
+      (‖-(α 0 * β 2) - β 0 * α 2 - β 1 * α 1‖ + ‖-(β 1 * α 2) - α 1 * β 2‖
+          + ‖-(α 2 * β 2)‖) ?_
+  rw [Metric.eventually_nhds_iff]
+  refine ⟨1, by norm_num, fun y hy => ?_⟩
+  rw [Complex.dist_eq, sub_zero] at hy
+  set a := -(α 0 * β 2) - β 0 * α 2 - β 1 * α 1 with ha_def
+  set b := -(β 1 * α 2) - α 1 * β 2 with hb_def
+  set c := -(α 2 * β 2) with hc_def
+  -- Bound the inner factor: ‖a + y * b + y^2 * c‖ ≤ ‖a‖ + ‖b‖ + ‖c‖.
+  have h_inner : ‖a + y * b + y ^ 2 * c‖ ≤ ‖a‖ + ‖b‖ + ‖c‖ := by
+    have hyb : ‖y * b‖ ≤ ‖b‖ := by
+      rw [norm_mul]; exact mul_le_of_le_one_left (norm_nonneg _) hy.le
+    have hyc : ‖y ^ 2 * c‖ ≤ ‖c‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 2 ≤ 1 ^ 2 := by gcongr
+        _ = 1 := one_pow _
+    have h1 : ‖a + y * b + y ^ 2 * c‖ ≤ ‖a + y * b‖ + ‖y ^ 2 * c‖ := norm_add_le _ _
+    have h2 : ‖a + y * b‖ ≤ ‖a‖ + ‖y * b‖ := norm_add_le _ _
+    linarith
+  -- Multiply through by ‖y^4‖.
+  rw [norm_mul]
+  calc ‖y ^ 4‖ * ‖a + y * b + y ^ 2 * c‖
+      ≤ ‖y ^ 4‖ * (‖a‖ + ‖b‖ + ‖c‖) :=
+        mul_le_mul_of_nonneg_left h_inner (norm_nonneg _)
+    _ = (‖a‖ + ‖b‖ + ‖c‖) * ‖y ^ 4‖ := by ring
+
 end OpenMath.Chapter5.Section550
