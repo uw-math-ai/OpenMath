@@ -1,362 +1,259 @@
-# Cycle 142 Strategy
+# Cycle 143 Strategy
 
-## Status snapshot
+## State summary
 
-* Sorry count: **0** (full Chapter 5 build green at `4154007`).
-* No pending Aristotle results (Job A general-`n` `thm:550A` cancelled
-  cycle 141 at 6 % after 24 h; treated as intractable).
-* Cycle 141 score: +2 — heterogeneous-stages witness in §530.
-* Recent string: cycles 137 (+2), 139 (+1), 140 (+2), 141 (+2). The
-  reliable +score path has been **add a substantive witness to an
-  existing predicate**.
+- **Sorry count**: 0 (all of Chapter 5 is sorry-clean as of cycle 142).
+- **Recent score trend**: +1, +2, +2, +2 (cycles 139–142). Strong run.
+- **Last cycle (142)**: closed `backwardEulerGLM_isLStable` — completing
+  the 4-corner coverage matrix for `def:520F` (A-stable × L-stable,
+  positive × negative). Axiom-clean.
+- **No pending Aristotle results.** Cycle-141 Job A (thm:550A
+  general-n) was cancelled at 6%; manual cofactor expansion is the
+  only path forward, deferred per `thm_550A_general_n.md`.
+- **Plan progress**: 69/175 entities (Chapter 5 is the active
+  chapter, with 11/35 done).
 
-## Decision: pivot from cycle-141's §442 recommendation to a §520 L-stability witness
+## Cycle 143 target — Priority 1 (PRIMARY)
 
-Cycle 141's task results suggested opening Chapter 4 §442 (`def:442A`
-principal sheet) "to spread chapter coverage". I am **overruling that
-recommendation** for cycle 142.
+**Add an r=2 substantive L-stable witness `padded2DBackwardEulerGLM_isLStable`
+to `def:520F`** in `OpenMath/Chapter5/Section520.lean`.
 
-Reason: I read `entities/def_442A.json` carefully. The textbook
-statement bundles five distinct concepts (A-stable Φ, Riemann surface
-`R_Φ`, order stars, order arrows, principal sheet) and the principal
-sheet itself is defined as *"a neighbourhood of (0, 1) for which the
-relationship between z and w is injective"* — i.e. a complex-analytic
-local-injectivity condition on the Riemann surface of `Φ(w, z) = 0`.
-Faithful Lean encoding requires:
+This mirrors the cycle 133/134 pattern that successfully strengthened
+`def:551A` and `def:542A` non-vacuity from r=1 (vacuous/trivial) to
+r=2 (substantive). Two successful precedents for this exact move
+shape; both scored +2.
 
-* Two-variable complex polynomial / characteristic polynomial of the
-  stability matrix (not yet wired up — `def:442A`'s Φ is LMM-side and
-  differs from §520's `Φ_M`).
-* Riemann surface infrastructure (the zero set viewed as a multi-sheet
-  cover of ℂ; Mathlib has germs / `AnalyticAt` but no off-the-shelf
-  Riemann-surface API).
-* Local-injectivity predicate on a neighbourhood of `(0, 1)`.
+### Why this target
 
-This is multi-cycle infrastructure work, not a single-cycle witness
-add.
+1. **Low risk, well-precedented**: Cycles 133 and 134 closed
+   essentially the same problem shape (block-pad an r=1 GLM into r=2
+   to discharge `i ≠ 0` clauses non-vacuously). Both axiom-clean,
+   both scored +2.
+2. **Reuses cycle-142 infrastructure**: `backwardEulerGLM_stabilityMatrix`
+   is the load-bearing closed form, plus `padeZeroOne_norm_le_one_of_re_nonpos`
+   and `norm_one_div_sub_tendsto_zero_cocompact` are already in scope.
+3. **Strengthens a 4-corner-covered predicate**: `def:520F` already
+   has positive trivial, positive substantive (`backwardEulerGLM`),
+   and two negative witnesses. An r=2 substantive witness adds genuine
+   non-vacuity strength beyond the r=1 case (matrix-power norm in r=2
+   tests the block structure, not just scalar magnitude).
+4. **Single-cycle scope**: estimated ~150 LOC, mostly mechanical
+   block-padding + reuse of cycle-142 lemmas.
 
-The §530B/C alternatives (the natural follow-on from cycles 139/141)
-are also expensive: `def:530B` requires defining "SM" (apply M after
-applying S to y₀) and "ES" (apply S to the exact-solution shift) plus
-a `O(h^{p+1})` comparison. Both `applyStartingMethod` and
-`applyGLMStep` are ≈ 60 LOC each. Total ~250 LOC, with high risk that
-the predicate ends up faithfulness-divergent.
+### Implementation outline
 
-**Better cycle-142 target**: complete the cycle-135/136/137 stability
-witness story by adding the canonical **substantive L-stable witness:
-backward Euler**. This is a textbook-canonical example, mirrors cycle
-135's `implicitMidpointGLM_isAStable` pattern almost exactly, and
-delivers a +2 score with low risk.
+#### Step 0 — locate `padded2DEulerGLM` from cycles 133/134
 
-### Witness coverage gap this fixes
+**FIRST**: find the cycle-133 `padded2DEulerGLM` definition and
+the cycle-133/134 witness theorems. They live in either
+`OpenMath/Chapter5/Section510.lean` or `Section520.lean`. Use:
 
-Current `IsLStable` witness story in `Section520.lean`:
-
-| Witness | A-stable? | L-stable? | Substantive? |
-|---|---|---|---|
-| `trivialZeroGLM` (cycle 088) | ✓ | ✓ | NO (`M(z) ≡ 0` is vacuous) |
-| `implicitMidpointGLM` (cycle 135/137) | ✓ | ✗ | yes (negative L-stab) |
-| `explicitEulerGLM` (cycle 136/137) | ✗ | ✗ | yes (negatives) |
-| **MISSING** | ✓ | ✓ | **canonical positive** |
-
-Backward Euler with `M(z) = 1/(1−z)` is precisely the canonical
-substantive positive witness: A-stable (`|1/(1−z)| ≤ 1` for
-`Re(z) ≤ 0`) AND L-stable (`|M(z)| → 0` as `|z| → ∞`). Adding it
-closes the 4-corner coverage matrix.
-
-## Primary task — `backwardEulerGLM` + L-stability witness
-
-### Step 1 — Define `backwardEulerGLM` in `Section510.lean`
-
-Place next to `implicitMidpointGLM` (line ~218, before
-`implicitMidpointGLM_isPreconsistent`). Keeps all canonical GLM
-definitions in one file.
-
-```lean
-/-- The (1, 1) GLM realising backward Euler `y_{n+1} = y_n + h·f(y_{n+1})`.
-The single stage `Y` satisfies `Y = U·y_n + h·A·f(Y) = y_n + h·f(Y)`,
-and the output `y_{n+1} = V·y_n + h·B·f(Y) = y_n + h·f(Y) = Y`.
-The all-ones tableau gives stability function `R(z) = 1/(1 − z)`,
-the canonical Padé(0,1) approximant of `exp(z)`. -/
-noncomputable def backwardEulerGLM : GeneralLinearMethod 1 1 where
-  A := !![1]
-  U := !![1]
-  B := !![1]
-  V := !![1]
+```
+Grep pattern="padded2DEulerGLM" path=OpenMath/Chapter5/
 ```
 
-### Step 2 — Closed-form stability matrix (in `Section520.lean`)
+Read the surrounding lines to learn:
+- The exact file location (where to add the new GLM definition).
+- The block-padding pattern (which entries are non-zero, where the
+  `i = 0` block lives, what the `i = 1` rows/cols look like).
+- The proof tactics used for the cycle 133/134 r=2 witnesses
+  (these are the canonical templates).
 
-Append after the cycle-137 `implicitMidpointGLM_not_isLStable` block
-(line ~580). Mirror cycle-135's
-`implicitMidpointGLM_stabilityMatrix` (line 335-371) verbatim, swapping
-`!![1 − z/2]` → `!![1 − z]` and `(2 − z) ≠ 0` → `(1 − z) ≠ 0`. Note
-that here we want a *more general* hypothesis `z ≠ 1` (not just
-`Re(z) ≤ 0`) because Step 5's cocompact-tendsto leg requires the
-formula to hold on `‖z‖ → ∞` regions, which include large positive-real
-`z`.
+Copy the padding pattern verbatim; only the underlying r=1 block
+changes (backward Euler vs. explicit Euler).
 
-```lean
-/-- Closed-form stability matrix for backward Euler at `z ≠ 1`:
-    `M(z) = !![1 / (1 − z)]`. -/
-theorem backwardEulerGLM_stabilityMatrix
-    (z : ℂ) (hz : z ≠ 1) :
-    backwardEulerGLM.stabilityMatrix z = !![1 / (1 - z)] := by
-  have hne : (1 - z) ≠ 0 := sub_ne_zero.mpr (Ne.symm hz)
-  have hA :
-      (1 - z • complexify backwardEulerGLM.A) = !![1 - z] := by
-    ext i j; fin_cases i; fin_cases j
-    simp [backwardEulerGLM, complexify]
-  unfold GeneralLinearMethod.stabilityMatrix
-  rw [hA, Matrix.inv_subsingleton]
-  ext i j; fin_cases i; fin_cases j
-  simp [backwardEulerGLM, complexify, Matrix.mul_apply,
-        Matrix.diagonal, Ring.inverse_eq_inv]
-  rw [eq_div_iff hne]
-  field_simp
-  ring
-```
+#### Step 1 — define `padded2DBackwardEulerGLM`
 
-### Step 3 — Magnitude bound for A-stability
+Place next to `padded2DEulerGLM`. Use the cycle-133 padding scheme,
+substituting backward-Euler tableau entries (`A = U = B = V = !![1]`
+in the r=1 block, padded with zeros). Concretely the scheme will
+look like
 
 ```lean
-/-- For `Re(z) ≤ 0`, `|1/(1 − z)| ≤ 1`. -/
-theorem padeZeroOne_norm_le_one_of_re_nonpos
-    {z : ℂ} (hz : z.re ≤ 0) :
-    ‖(1 : ℂ) / (1 - z)‖ ≤ 1 := by
-  have hre : (1 - z).re = 1 - z.re := by simp [Complex.sub_re]
-  have hne : (1 - z) ≠ 0 := by
-    intro h
-    have : (1 - z).re = 0 := by rw [h]; simp
-    rw [hre] at this; linarith
-  have hbpos : 0 < ‖1 - z‖ := norm_pos_iff.mpr hne
-  rw [norm_div, norm_one, div_le_one hbpos]
-  -- Square both sides: 1 ≤ ‖1 − z‖² via normSq.
-  have h_sq_ge : (1 : ℝ) ≤ ‖1 - z‖ ^ 2 := by
-    rw [Complex.sq_norm, Complex.normSq_apply]
-    have h2re : (1 - z).re = 1 - z.re := hre
-    have h2im : (1 - z).im = -z.im := by simp [Complex.sub_im]
-    rw [h2re, h2im]
-    nlinarith [hz, sq_nonneg z.im, sq_nonneg z.re]
-  have hb_nn : 0 ≤ ‖1 - z‖ := norm_nonneg _
-  nlinarith [h_sq_ge, sq_nonneg (‖1 - z‖ - 1), hb_nn]
+noncomputable def padded2DBackwardEulerGLM : GeneralLinearMethod 2 2 :=
+  { A := !![1, 0; 0, 0]
+    U := !![1, 0; 0, 0]    -- match cycle-133's U-padding pattern
+    B := !![1, 0; 0, 0]
+    V := !![1, 0; 0, 0] }
 ```
 
-If the closing `nlinarith` balks at deriving `1 ≤ ‖1−z‖` from
-`1 ≤ ‖1−z‖²`, fallback: use `Real.one_le_iff_one_le_sq` or
-`abs_le_of_sq_le_sq` style.
+but **read cycle 133's padding to confirm the U/V padding scheme**;
+do not invent it freshly.
 
-### Step 4 — A-stability witness
+#### Step 2 — closed-form stability matrix
 
 ```lean
-theorem backwardEulerGLM_isAStable :
-    backwardEulerGLM.IsAStable := by
-  intro z hz
-  -- z.re ≤ 0 ⇒ z ≠ 1.
-  have hzne : z ≠ (1 : ℂ) := by
-    intro h; rw [h] at hz; norm_num at hz
-  refine ⟨1, ?_⟩
-  intro k
-  rw [backwardEulerGLM_stabilityMatrix z hzne]
-  rw [norm_pow_fin_one]
-  exact pow_le_one₀ (norm_nonneg _)
-          (padeZeroOne_norm_le_one_of_re_nonpos hz)
+theorem padded2DBackwardEulerGLM_stabilityMatrix (z : ℂ) (hne : z ≠ 1) :
+    padded2DBackwardEulerGLM.stabilityMatrix z = !![1/(1-z), 0; 0, 0]
 ```
 
-### Step 5 — L-stability cocompact limit
+Proof strategy: `(I − zA) = !![1−z, 0; 0, 1]` is invertible iff
+`z ≠ 1`. Inverse is `!![1/(1−z), 0; 0, 1]`. Multiply through:
+`V + zB(I−zA)⁻¹U = 0 + z·!![1,0;0,0]·!![1/(1−z),0;0,1]·!![1,0;0,0]
+= !![z/(1-z), 0; 0, 0]`. Then `1 + z/(1-z) = 1/(1-z)` gives the
+result.
 
-This is the load-bearing analytical step. Two components:
+If `Matrix.inv_subsingleton` doesn't fit (it's `Subsingleton`-based
+and may only fire on 1×1), use the explicit 2×2 inverse formula
+via `Matrix.det_fin_two` and `Matrix.adjugate` or compute by
+showing `M * !![1/(1-z), 0; 0, 1] = 1` via `Matrix.ext` + `fin_cases`.
 
-(a) `‖z‖ → ∞` along `cocompact ℂ`. The Mathlib name is plausibly
-    `tendsto_norm_cocompact_atTop` or `Filter.tendsto_norm_atTop_iff_cocompact`.
-    Use `lean_local_search "cocompact"` and `lean_loogle "Tendsto _ (cocompact _)
-    Filter.atTop"` to find the exact name. Backup: it can also be derived
-    from `Bornology.cobounded_eq_cocompact` for proper metric spaces +
-    `Metric.tendsto_cobounded_iff_norm_atTop`.
+#### Step 3 — A-stability witness `padded2DBackwardEulerGLM_isAStable`
 
-(b) `‖1/(1-z)‖ → 0` as `‖z‖ → ∞`. Standard chain via
-    `‖1-z‖ ≥ ‖z‖ - 1` (reverse triangle, `norm_sub_norm_le` or
-    `abs_norm_sub_norm_le`) plus `Tendsto.div`-style squeeze.
+The matrix-power `M(z)^k` for `M(z) = !![a, 0; 0, 0]` (with `a := 1/(1-z)`):
+- `k = 0`: identity matrix.
+- `k ≥ 1`: `!![a^k, 0; 0, 0]` (computable by induction on `k`, or
+  by `Matrix.mul_fin_two`).
 
-Concrete proof skeleton:
+For the L∞ operator norm (the default in `M.IsStable`/`IsAStable`
+scope), `‖!![a^k, 0; 0, 0]‖_∞ = ‖a^k‖ = ‖a‖^k ≤ 1` by cycle 142's
+`padeZeroOne_norm_le_one_of_re_nonpos`.
+
+For `k = 0`, `‖I‖_∞ = 1`. So the witness `C := 1` works for all `k`.
+
+**Verify the matrix norm scope** in Section520 first (search for
+`open scoped Matrix.Norms`). Cycle 142's `backwardEulerGLM_isAStable`
+shows the canonical pattern; copy it.
+
+Sub-helper (private) needed:
 
 ```lean
-theorem backwardEulerGLM_isLStable :
-    backwardEulerGLM.IsLStable := by
-  refine ⟨backwardEulerGLM_isAStable, ?_⟩
-  -- (a) z ≠ 1 eventually along cocompact ℂ.
-  have h_eventually_ne :
-      ∀ᶠ z in Filter.cocompact ℂ, z ≠ (1 : ℂ) := by
-    have h_cpt : IsCompact ({1} : Set ℂ) := isCompact_singleton
-    have := h_cpt.compl_mem_cocompact
-    filter_upwards [this] with z hz
-    intro hz1; exact hz (by rw [hz1]; rfl)
-  -- (b) Bridge spectralRadius to ‖1/(1-z)‖ for z ≠ 1.
-  have h_bridge :
-      ∀ᶠ z in Filter.cocompact ℂ,
-        spectralRadius ℂ (backwardEulerGLM.stabilityMatrix z)
-          = (‖(1 / (1 - z) : ℂ)‖₊ : ENNReal) := by
-    filter_upwards [h_eventually_ne] with z hz
-    rw [backwardEulerGLM_stabilityMatrix z hz, spectralRadius_fin_one]
-  -- (c) ‖1/(1-z)‖ → 0 cocompactly via ‖z‖ → ∞ + reverse triangle.
-  rw [Filter.tendsto_congr' h_bridge]
-  -- Goal: Tendsto (fun z => (‖1/(1-z)‖₊ : ENNReal)) cocompact (𝓝 0).
-  -- Strategy: lift via ENNReal.tendsto_coe + ‖1/(1-z)‖ → 0 in ℝ≥0.
-  sorry
+private lemma fin_two_pow_diag_with_zero (a : ℂ) (k : ℕ) :
+    (!![a, 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ)^k =
+      if k = 0 then 1 else !![a^k, 0; 0, 0]
 ```
 
-The final `sorry` should close via:
+Proof by induction on `k`, using `Matrix.mul_fin_two` for the step
+case.
 
-1. `Tendsto (fun z => ‖z‖) cocompact atTop` (the cocompact name).
-2. `‖1 - z‖ ≥ ‖z‖ - 1` (reverse triangle).
-3. `‖1/(1 - z)‖ = 1/‖1 - z‖ ≤ 1/(‖z‖ - 1)` for `‖z‖ > 1`.
-4. `Tendsto (fun r => 1/(r - 1)) atTop (𝓝 0)`.
-5. Squeeze (`Tendsto.le_of_lt` style) + `ENNReal` lift.
+#### Step 4 — L-stability witness `padded2DBackwardEulerGLM_isLStable`
 
-If exact lemma names elude `lean_local_search`, factor out a
-private helper
+Combine Step 3 with the cocompact spectral-radius limit. The
+spectral radius of `!![a, 0; 0, 0]` equals `‖a‖₊` (eigenvalues are
+`a` and `0`). Apply cycle 142's `norm_one_div_sub_tendsto_zero_cocompact`
+to push `ρ(M(z)) → 0` along `cocompact ℂ`.
+
+Sub-helper (private) needed:
 
 ```lean
-private theorem norm_one_div_sub_tendsto_zero_cocompact :
-    Filter.Tendsto (fun z : ℂ => ‖(1 : ℂ) / (1 - z)‖)
-      (Filter.cocompact ℂ) (nhds 0) := by
-  ...
+private lemma spectralRadius_diag_2_with_zero (a : ℂ) :
+    spectralRadius ℂ (!![a, 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ) = ↑‖a‖₊
 ```
 
-with its own focused proof, then compose. **DO NOT** introduce a
-sorry in this helper; close it fully.
+Proof routes:
+1. Direct: spectrum of `!![a, 0; 0, 0]` is `{0, a}` (compute via
+   `Matrix.det_fin_two` characteristic polynomial). Spectral
+   radius is `max ‖0‖ ‖a‖ = ‖a‖`.
+2. Or: copy cycle 137's `spectralRadius_fin_one` proof technique
+   and adapt for the diagonal-2 case.
 
-### Step 6 — Faithfulness check + plan.md + lean_status.json bump
+Choose route 1 if Mathlib's `Matrix.charpoly` API on `Fin 2` is
+clean; route 2 if not.
 
-* Document in the `backwardEulerGLM` docstring: textbook stability
-  function `R(z) = 1/(1-z)` is Padé(0,1) of `exp(z)`. Cite Butcher
-  §351 / §520 (BDF1) for the textbook source.
-* No new sorry. No new axiom. No `maxHeartbeats` change.
-* Update `plan.md` §520 row for `def:520F` to mention the new positive
-  substantive witness.
-* `extraction/formalization_data/lean_status.json` `def:520F` row
-  cycle bumped to 142.
+### Verification gates (all must pass)
+
+- `lake env lean OpenMath/Chapter5/Section520.lean` clean.
+- `lake env lean OpenMath/Chapter5/Section510.lean` clean (if you
+  edit it to add the GLM definition).
+- `lake build OpenMath.Chapter5` clean.
+- `mcp__lean-lsp__lean_verify` on `padded2DBackwardEulerGLM_isLStable`
+  AND `padded2DBackwardEulerGLM_isAStable` returns axioms
+  `[propext, Classical.choice, Quot.sound]` ONLY. **No `sorryAx`.**
+- `grep -rn '\bsorry\b' --include='*.lean' OpenMath/`: no actual
+  `sorry` in proof bodies (doc-comment refs OK).
+- Tautology scanner: 0 hits on the new declarations.
 
 ## What NOT to try
 
-1. **Do NOT submit anything to Aristotle this cycle.** The Aristotle
-   Job A history (24 h, 6 %, cancelled) shows large cycle-5 stability
-   problems are flat. Backward Euler L-stability is too small to
-   benefit from Aristotle parallelism, and the cycle-135 / cycle-137
-   manual templates close it directly.
-2. **Do NOT attempt `def:442A` principal sheet.** Riemann surface +
-   local injectivity + complex-analytic order-star infrastructure is
-   2–3 cycles minimum.
-3. **Do NOT attempt `def:530B` order-relative-to-starting-method.**
-   `applyStartingMethod` + `applyGLMStep` + `O(h^{p+1})` comparison
-   is 200+ LOC with high faithfulness-divergence risk. Defer.
-4. **Do NOT submit `thm:550A` general-`n` to Aristotle again.** Three
-   cycles (138 partial, 140 n=2 stepping, 141 cancelled) confirm the
-   eigenvalue-density / cofactor-induction is intractable for the
-   prover. Per `thm_550A_general_n.md`, manual cofactor-expansion is
-   the next path; this is a multi-cycle commitment.
-5. **Do NOT add another `r > 2` heterogeneous-stages §530 witness.**
-   Cycle 141's task results explicitly forbid this.
-6. **Do NOT modify `scripts/autonomous_loop.py`.** The
-   `tautology_scanner_false_positives.md` is loop-maintainer territory.
-7. **Do NOT raise `maxHeartbeats`** above 200000.
-8. **Do NOT introduce `axiom`** for any complex-analysis gap.
-9. **Do NOT generalize `backwardEulerGLM` to a `(s, r) = (1, r)`
-   family** (e.g. "padded backward Euler"). Stay at (1, 1) — the
-   cycle-135 `implicitMidpointGLM` precedent shows that the canonical
-   scalar witness is sufficient for non-vacuity, and cycles 133/134
-   already exercised the `r = 2` shape for `IsRKStable`/`IsIRKStable`.
-10. **Do NOT rename or refactor existing private helpers**
-    (`fin_one_pow`, `norm_fin_one`, `norm_pow_fin_one`,
-    `spectralRadius_fin_one`). Reuse them as-is.
-11. **Do NOT route the L-stability proof through
-    `Filter.tendsto_norm_atTop` from `Filter.atTop ℝ`** — `cocompact ℂ`
-    requires the complex-norm version. Use the cocompact-side lemmas
-    directly.
+1. **Do NOT touch `thm:550A` general-n.** Cycle 141 confirmed
+   Aristotle cannot do it (cancelled at 6% after 24h); cycles 138–140
+   already delivered n=1 and n=2 stepping stones. The general-n
+   manual proof needs cofactor-expansion induction infrastructure
+   that is multi-cycle work; **out of scope** for cycle 143.
+2. **Do NOT open `def:442A` (principal sheet).** Riemann surface +
+   local injectivity infrastructure is multi-cycle work. Cycle 142's
+   strategy explicitly overruled this option for the same reason.
+3. **Do NOT open `def:530B` or `def:530C`.** Per cycle 142 strategy,
+   the `applyStartingMethod`/`applyGLMStep` infrastructure (~250 LOC)
+   is too expensive for a single cycle and risks faithfulness
+   divergence. Save for a dedicated infra cycle.
+4. **Do NOT raise `maxHeartbeats`** above 200000. Decompose if
+   needed.
+5. **Do NOT introduce `axiom` or `constant`.** No exceptions.
+6. **Do NOT submit to Aristotle this cycle.** Problem is small enough
+   that manual is faster, and there are no pending submissions.
+   Cycle 142 succeeded without Aristotle on the same problem shape.
+7. **Do NOT rely on `Matrix.inv_subsingleton` for the 2×2 case.**
+   It's `Subsingleton`-based and is for 1×1 matrices only. Use the
+   explicit 2×2 inverse formula via direct computation.
+8. **Do NOT redefine `IsAStable` or `IsLStable`.** They were
+   stabilised in cycles 088/137; reuse them directly.
+9. **Do NOT silently change the matrix norm scope.** Section520 has
+   a default norm scope (check for `open scoped Matrix.Norms.…`); if
+   the L-stability witness needs an operator-norm bound that
+   conflicts with the default, do it in a sub-section that opens
+   the alternate scope (cycle 124's pattern in Section515).
+10. **Do NOT invent a fresh padding pattern.** Read cycle 133/134's
+    `padded2DEulerGLM` and copy its block-padding scheme verbatim,
+    only swapping the r=1 block content.
 
-## Verification gates
+## Backup plan — if the r=2 backward-Euler witness stalls
 
-Run all of these before claiming success. Cycle 138's score-`-2`
-regression came from skipping the sorry-count check.
+If matrix power computation gets stuck (e.g., `Matrix.mul_fin_two`
+case analysis blows up) or if the spectral-radius helper proves
+unexpectedly hard, fall back in this order:
 
-```bash
-# 1. Sorry count must remain 0 across all of OpenMath/.
-grep -rn '\bsorry\b' --include='*.lean' OpenMath/
-# Expected: empty
+### Backup A (preferred fallback): `thm:550A` n=3 stepping stone
 
-# 2. Section510 + Section520 must build clean.
-lake env lean OpenMath/Chapter5/Section510.lean
-lake env lean OpenMath/Chapter5/Section520.lean
+Add `doublyCompanionMatrix_det_factorization_n_three` axiom-clean
+via `Matrix.det_fin_three`. Same pattern as cycle 138 (n=1) and
+cycle 140 (n=2). The residue's leading coefficients should follow
+the pattern `-(α_i · β_{n-i})` summed over `i = 0..n-1` (visible at
+n=1, n=2; the n=3 case will give a third data point for the eventual
+general-n proof). Estimated ~80 LOC. Axiom-clean win.
 
-# 3. Full Chapter 5 build green.
-lake build OpenMath.Chapter5
+### Backup B (if A also stalls): degenerate-pair witness expansion for §530
 
-# 4. Axiom check on the three new theorems via mcp__lean-lsp__lean_verify:
-#    OpenMath.Chapter5.Section520.backwardEulerGLM_stabilityMatrix
-#    OpenMath.Chapter5.Section520.backwardEulerGLM_isAStable
-#    OpenMath.Chapter5.Section520.backwardEulerGLM_isLStable
-#    Expected: [propext, Classical.choice, Quot.sound] only — NO sorryAx.
-```
+Cycle 141 added `mixedStartingMethod` (heterogeneous stages r=2)
+for `def:530A`. A natural follow-up: a *third* witness exercising
+a different degeneracy axis — e.g. `r=3` with stages `(1, 1, 2)` or
+`(1, 2, 1)` — to further strengthen the non-vacuity story. Pattern
+mirrors cycle 141 verbatim. ~100 LOC.
 
-## Backup plan (if Step 5's cocompact limit stalls)
+### Backup C (last resort): documentation cycle
 
-If Step 5 is taking > 60 % of the cycle budget:
+If all proof work blocks, write or update `.prover-state/issues/`
+files documenting the failure mode discovered. Ensure at minimum
+one issue file is touched so the cycle has a non-zero diff (per
+CLAUDE.md "A cycle with zero changes is unacceptable"). Score will
+be 0 or low-positive at best, but avoids regression.
 
-**Preferred fallback** — Land Steps 1–4 only (substantive A-stability
-witness `backwardEulerGLM_isAStable`), defer L-stability. **DO NOT**
-introduce a `sorry` in the file — instead, simply do not write
-`backwardEulerGLM_isLStable` at all, and write a structured issue file
-`.prover-state/issues/backwardEulerGLM_lstability_cocompact.md`
-documenting:
-- The cocompact-bridge attempt and what stalled.
-- The Mathlib lemmas you tried and which exist / don't exist.
-- A concrete plan for cycle 143 (the `norm_one_div_sub_tendsto_zero_cocompact`
-  helper sketch).
+## Pre-commit checklist (mandatory)
 
-This satisfies the "clean cycle, no sorry rise" rule (cycle 138's
-score `-2` lesson). Sorry count stays at 0; A-stability witness is a
-genuine +1 score; the deferred L-stability is properly scoped for
-cycle 143.
+For every new `def`, `theorem`, `lemma`:
 
-**Anti-fallback** — DO NOT introduce a `sorry` in
-`backwardEulerGLM_isLStable`. Cycle 138 was scored `-2` precisely for
-sorry count rising 0→1; the same fate awaits this cycle if you ship a
-sorry'd L-stability theorem.
+- [ ] Tautology check: no proof body is `exact <hypothesis>` of the
+      conclusion's literal shape.
+- [ ] Identity check: no theorem is a single-`exact` re-export.
+- [ ] Hypothesis strength check: every hypothesis is necessary
+      (especially `z ≠ 1` if you reuse cycle-142's bridge).
+- [ ] Faithfulness: `padded2DBackwardEulerGLM` is a *named instance*,
+      not a new mathematical concept — no `entities/<id>.json` lookup
+      needed (matches cycle 133/134 precedent).
+- [ ] `#print axioms` on the public theorems shows only
+      `[propext, Classical.choice, Quot.sound]`.
+- [ ] No private helper has unused hypotheses (Lean's linter will
+      catch `_`-prefixed or genuinely unused — do a final pass).
 
-## Suggested cycle-143 next target
+## Task results to write
 
-Once L-stability lands (whether this cycle or 143):
-
-* **Add `padded2DBackwardEulerGLM` r=2 witness** for `IsLStable`
-  (mirrors cycles 133/134's `padded2DEulerGLM` for IRK-stability).
-  Cheapest +score path.
-* **Open `def:530B` with sorry-first scaffold** — having backward
-  Euler in hand, we have a substantive concrete GLM to use for the
-  trivial-witness `M.HasOrderRelativeTo trivialStartingMethod 0`.
-  Medium risk.
-* **Open `def:442A` Riemann-surface infrastructure** — high risk,
-  multi-cycle. Defer until critical path requires it.
-
-Pick based on cycle-142's actual closing time. If Steps 1–5 all close
-cleanly in < 1 h, cycle 143 can attempt the padded r=2 witness as a
-bonus.
-
-## Pointers / lemma cheat sheet
-
-* Cycle 135 reference proof: `Section520.lean:335–448` (`implicitMidpointGLM`
-  closed-form + A-stability). **Copy this pattern verbatim.**
-* Cycle 137 reference proof: `Section520.lean:531–589`
-  (`implicitMidpointGLM_not_isLStable`). Reverses the spectral-radius
-  argument; useful for understanding `spectralRadius_fin_one` usage.
-* `Section520.lean:411–431`: private helpers `fin_one_pow`,
-  `norm_fin_one`, `norm_pow_fin_one`. **In scope; reuse.**
-* `Section520.lean:508–518`: private helper `spectralRadius_fin_one`.
-  **In scope; reuse for Step 5.**
-* Mathlib: `Matrix.inv_subsingleton`, `Ring.inverse_eq_inv`,
-  `Complex.sub_re`, `Complex.sub_im`, `Complex.normSq_apply`,
-  `Complex.sq_norm`, `norm_pos_iff`, `norm_nonneg`, `norm_div`,
-  `norm_one`, `pow_le_one₀`, `IsCompact.compl_mem_cocompact`,
-  `isCompact_singleton`.
-* For Step 5 cocompact bridge, search:
-  `lean_local_search "cocompact"` and
-  `lean_loogle "Tendsto _ (Filter.cocompact _) Filter.atTop"`.
+`.prover-state/task_results/cycle_143.md`, including:
+- Worked on
+- Approach (specific lemmas + tactics used; cite which cycle-133/134
+  pattern was reused)
+- Result (SUCCESS / PARTIAL / FAILED)
+- Faithfulness check (per new theorem)
+- Dead ends
+- Discovery (especially: matrix-norm scope confirmation, padding
+  pattern observations)
+- Suggested next approach for cycle 144

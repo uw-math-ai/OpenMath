@@ -822,6 +822,160 @@ theorem backwardEulerGLM_isLStable :
   -- Goal: Tendsto (fun z => ‖1/(1-z)‖) cocompact (𝓝 0) in ℝ.
   exact norm_one_div_sub_tendsto_zero_cocompact
 
+/-! ### r = 2 substantive L-stability witness — padded backward Euler
+
+Cycle 143 strengthens cycle 142's positive substantive L-stability
+side `backwardEulerGLM_isLStable` (r = 1) with an r = 2 variant.
+The padding scheme mirrors cycle 133's `padded2DEulerGLM` verbatim,
+swapping the inner r = 1 forward-Euler block (`A = !![0]`) for the
+backward-Euler one (`A = U = B = V = !![1]`). The matrix-power norm
+bound at r = 2 exercises the 2 × 2 block structure, not just the
+scalar `‖1/(1−z)‖` collapse seen at r = 1. -/
+
+/-- Cycle 143 — `(s, r) = (1, 2)` GLM lifting cycle 142's
+backward-Euler r = 1 block (`A = U = B = V = !![1]`) into a 2 × 2
+frame with a passively-decoupled row-1 zero channel
+(`B[1][0] = 0`, `V[1][·] = 0`). The padding is identical to
+cycle 133's `padded2DEulerGLM`; only the r = 1 inner block content
+changes. -/
+def padded2DBackwardEulerGLM : GeneralLinearMethod 1 2 where
+  A := !![1]
+  U := !![1, 0]
+  B := !![1; 0]
+  V := !![1, 0; 0, 0]
+
+/-- Closed-form stability matrix of `padded2DBackwardEulerGLM` for
+`z ≠ 1`: `M(z) = !![1/(1 − z), 0; 0, 0]`.
+
+The hypothesis `z ≠ 1` is inherited from the inner r = 1 backward-
+Euler block (cycle 142): `(I − z·A) = !![1 − z]` is singular precisely
+at `z = 1`. Computation: via `inv_subsingleton` on `Fin 1`,
+`(I − z·A)⁻¹ = !![1/(1 − z)]`. Multiplying
+`z·B·(I − z·A)⁻¹·U` gives `!![z/(1 − z), 0; 0, 0]`, and adding
+`V = !![1, 0; 0, 0]` collapses `1 + z/(1 − z)` to `1/(1 − z)`. -/
+theorem padded2DBackwardEulerGLM_stabilityMatrix
+    (z : ℂ) (hz : z ≠ 1) :
+    padded2DBackwardEulerGLM.stabilityMatrix z =
+      !![1 / (1 - z), 0; 0, 0] := by
+  have hne : (1 - z) ≠ 0 := sub_ne_zero.mpr (Ne.symm hz)
+  -- (I - z·A) = !![1 - z] since A = !![1].
+  have hA :
+      (1 - z • complexify padded2DBackwardEulerGLM.A)
+        = !![1 - z] := by
+    ext i j
+    fin_cases i; fin_cases j
+    simp [padded2DBackwardEulerGLM, complexify]
+  unfold GeneralLinearMethod.stabilityMatrix
+  rw [hA, Matrix.inv_subsingleton]
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [padded2DBackwardEulerGLM, complexify, Matrix.mul_apply,
+          Matrix.diagonal, Ring.inverse_eq_inv]
+  -- Only the (0, 0) goal survives; close via field_simp + ring.
+  field_simp
+  ring
+
+/-- The 2 × 2 matrix `!![a, 0; 0, 0]` equals `Matrix.diagonal ![a, 0]`,
+unfolding the rank-1 padding into Mathlib's diagonal form. Used to
+collapse the `linftyOp` norm via `Matrix.norm_diagonal`. -/
+private lemma padded_2x2_eq_diagonal (a : ℂ) :
+    (!![a, 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ)
+      = Matrix.diagonal ![a, 0] := by
+  ext i j
+  fin_cases i <;> fin_cases j <;> simp [Matrix.diagonal]
+
+/-- Upper bound on the default `linftyOp` matrix norm of
+`!![a, 0; 0, 0]`: `‖!![a, 0; 0, 0]‖ ≤ ‖a‖`. Routed via
+`Matrix.linfty_opNorm_diagonal`: the matrix is the diagonal of
+`![a, 0]`, whose Pi-norm sup over `Fin 2` is bounded by `‖a‖`
+since the second component is `0`. (Equality also holds, but the
+bound is all the downstream proofs need.) -/
+private lemma norm_padded_2x2_le (a : ℂ) :
+    ‖(!![a, 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ)‖ ≤ ‖a‖ := by
+  rw [padded_2x2_eq_diagonal, Matrix.linfty_opNorm_diagonal]
+  -- Goal: ‖![a, 0]‖ ≤ ‖a‖. Use pi_norm_le_iff_of_nonempty.
+  rw [pi_norm_le_iff_of_nonempty (r := ‖a‖)]
+  intro i
+  fin_cases i <;> simp
+
+/-- **Substantive positive non-vacuity witness for `IsAStable`** —
+`padded2DBackwardEulerGLM` is A-stable. Strengthens cycle 142's r = 1
+witness `backwardEulerGLM_isAStable` to r = 2: the closed-form
+stability matrix `!![1/(1 − z), 0; 0, 0]` has operator norm
+`‖1/(1 − z)‖ ≤ 1` on the closed left half-plane (cycle 142's
+`padeZeroOne_norm_le_one_of_re_nonpos`), so by submultiplicativity
+of the norm, `‖M(z)^k‖ ≤ ‖M(z)‖^k ≤ 1` uniformly in `k`. -/
+theorem padded2DBackwardEulerGLM_isAStable :
+    padded2DBackwardEulerGLM.IsAStable := by
+  intro z hz
+  -- z.re ≤ 0 ⇒ z ≠ 1.
+  have hzne : z ≠ (1 : ℂ) := by
+    intro h
+    rw [h] at hz
+    norm_num at hz
+  refine ⟨1, ?_⟩
+  intro k
+  rw [padded2DBackwardEulerGLM_stabilityMatrix z hzne]
+  have hM_norm :
+      ‖(!![1 / (1 - z), 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ)‖ ≤ 1 :=
+    (norm_padded_2x2_le _).trans
+      (padeZeroOne_norm_le_one_of_re_nonpos hz)
+  calc ‖(!![1 / (1 - z), 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ) ^ k‖
+      ≤ ‖(!![1 / (1 - z), 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ)‖ ^ k :=
+        norm_pow_le _ _
+    _ ≤ (1 : ℝ) ^ k := pow_le_pow_left₀ (norm_nonneg _) hM_norm k
+    _ = 1 := one_pow k
+
+/-- **Substantive positive non-vacuity witness for `IsLStable`** —
+`padded2DBackwardEulerGLM` is L-stable. Strengthens cycle 142's r = 1
+witness `backwardEulerGLM_isLStable` to r = 2.
+
+A-stability is `padded2DBackwardEulerGLM_isAStable`. The cocompact
+spectral-radius limit follows from
+`spectrum.spectralRadius_le_nnnorm` (which gives
+`spectralRadius(M(z)) ≤ ‖M(z)‖₊`) combined with cycle 142's
+`norm_one_div_sub_tendsto_zero_cocompact`: for `z ≠ 1`,
+`‖M(z)‖ = ‖1/(1 − z)‖ → 0` as `‖z‖ → ∞`. -/
+theorem padded2DBackwardEulerGLM_isLStable :
+    padded2DBackwardEulerGLM.IsLStable := by
+  refine ⟨padded2DBackwardEulerGLM_isAStable, ?_⟩
+  -- z ≠ 1 eventually along cocompact ℂ.
+  have h_eventually_ne : ∀ᶠ z in Filter.cocompact ℂ, z ≠ (1 : ℂ) := by
+    have h_cpt : IsCompact ({1} : Set ℂ) := isCompact_singleton
+    have h_compl : ({1} : Set ℂ)ᶜ ∈ Filter.cocompact ℂ :=
+      h_cpt.compl_mem_cocompact
+    filter_upwards [h_compl] with z hz hzeq
+    exact hz (by rw [hzeq]; rfl)
+  -- Bound: spectralRadius(M(z)) ≤ (‖1/(1-z)‖₊ : ENNReal) for z ≠ 1.
+  have h_bound : ∀ᶠ z in Filter.cocompact ℂ,
+      spectralRadius ℂ (padded2DBackwardEulerGLM.stabilityMatrix z)
+        ≤ (‖(1 / (1 - z) : ℂ)‖₊ : ENNReal) := by
+    filter_upwards [h_eventually_ne] with z hz
+    rw [padded2DBackwardEulerGLM_stabilityMatrix z hz]
+    have h1 := spectrum.spectralRadius_le_nnnorm
+      (𝕜 := ℂ) (!![1 / (1 - z), 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ)
+    have h2 :
+        (‖(!![1 / (1 - z), 0; 0, 0] : Matrix (Fin 2) (Fin 2) ℂ)‖₊ : ENNReal)
+          ≤ (‖(1 / (1 - z) : ℂ)‖₊ : ENNReal) := by
+      rw [ENNReal.coe_le_coe, ← NNReal.coe_le_coe, coe_nnnorm, coe_nnnorm]
+      exact norm_padded_2x2_le _
+    exact h1.trans h2
+  -- Upper-bound limit: (‖1/(1-z)‖₊ : ENNReal) → 0 cocompactly.
+  have h_upper : Filter.Tendsto
+      (fun z : ℂ => (‖(1 / (1 - z) : ℂ)‖₊ : ENNReal))
+      (Filter.cocompact ℂ) (nhds 0) := by
+    rw [show (0 : ENNReal) = ((0 : NNReal) : ENNReal) from by simp]
+    rw [ENNReal.tendsto_coe]
+    rw [← NNReal.tendsto_coe]
+    push_cast
+    exact norm_one_div_sub_tendsto_zero_cocompact
+  -- Combine via ENNReal squeeze: 0 ≤ ρ ≤ upper bound.
+  rw [ENNReal.tendsto_nhds_zero]
+  intro ε hε
+  rw [ENNReal.tendsto_nhds_zero] at h_upper
+  filter_upwards [h_bound, h_upper ε hε] with z hz_le hz_up
+  exact hz_le.trans hz_up
+
 /-- **Definition 521A** — A general linear method *has stability order* `p`
 if its stability function `Φ(w, z)` satisfies
 `Φ(exp(z), z) = O(z^(p+1))` as `z → 0` in `ℂ`.
