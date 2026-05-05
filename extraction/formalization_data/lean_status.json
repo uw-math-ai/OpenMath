@@ -408,7 +408,8 @@
   },
   "thm:142D": {
     "lean_file": "OpenMath/Chapter1/Section142.lean",
-    "lean_symbol": "OpenMath.Chapter1.Section142.convergent_iff_minpoly_roots_lt_one",
+    "lean_symbol": "OpenMath.Chapter1.Section142.thm_142D",
+    "notes": "Clauses (i) ⇔ (ii) only via Gelfand bridge (cycles 005/132). Clauses (iii) Jordan canonical form and (iv) Schur similarity are deferred — Mathlib lacks Jordan/Schur. See .prover-state/issues/jordan_canonical_form_missing.md.",
     "status": "in_progress"
   },
   "thm:142E": {

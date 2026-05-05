@@ -336,6 +336,29 @@ theorem convergent_iff_minpoly_roots_lt_one
   ⟨convergent_imp_minpoly_roots_lt_one A,
    minpoly_roots_lt_one_imp_convergent A⟩
 
+/-- Butcher §142, Theorem 142D — partial formalization (clauses
+(i) ⇔ (ii) only).
+
+A square complex matrix `A` is convergent (`A^n → 0`) if and only if
+every root of its minimal polynomial lies in the open unit disc.
+
+The full 4-way TFAE in Butcher's textbook also includes:
+* (iii) The Jordan canonical form of `A` has all diagonal elements
+  in the open unit disc.
+* (iv) There exists a non-singular matrix `S` with `‖S⁻¹AS‖_∞ < 1`.
+
+Both (iii) and (iv) are deferred — they require a Jordan canonical
+form / rescaled Schur decomposition, which is not yet in Mathlib.
+See `.prover-state/issues/jordan_canonical_form_missing.md`.
+
+This is a textbook-numbered alias of
+`convergent_iff_minpoly_roots_lt_one` (cycle 005); the alias carries
+the textbook number `142D` for entity-graph cross-referencing. -/
+theorem thm_142D
+    (A : Matrix m m ℂ) :
+    Convergent A ↔ ∀ μ : ℂ, μ ∈ (minpoly ℂ A).roots → ‖μ‖ < 1 :=
+  convergent_iff_minpoly_roots_lt_one A
+
 end ConvergenceCharacterizations
 
 end OpenMath.Chapter1.Section142

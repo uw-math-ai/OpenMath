@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 68 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only)
+**Progress: 69 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only; `thm:142D` partial — clauses (i)⇔(ii) only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -38,7 +38,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:142A` **power-boundedness** (§142)
 - [x] `thm:101A` **The Kepler problem** (§101)
 - [x] `thm:123B` **Area invariance for Hamiltonian parallelograms** (§123)
-- [ ] `thm:142D` **Convergence Equivalence for Matrix Powers** (§142)
+- [~] `thm:142D` **Convergence Equivalence for Matrix Powers** (§142) — `OpenMath/Chapter1/Section142.lean::thm_142D` (cycle 132, partial: i⇔ii via Gelfand; iii/iv blocked on Jordan canonical form per `jordan_canonical_form_missing.md`)
 - [x] `def:112A` **one-sided Lipschitz condition** (§112)
 - [x] `def:142B` **convergent (matrix)** (§142)
 - [x] `lem:110B` **Contraction Mapping Fixed Point Existence** (§110)
