@@ -659,6 +659,61 @@ theorem padded2DEulerGLM_isIRKStable :
     · exact absurd rfl hi
     · fin_cases j <;> simp [padded2DEulerGLM]
 
+/-- Closed-form stability matrix of `padded2DEulerGLM`:
+`M(z) = !![1 + z, 0; 0, 0]`.
+
+Computation: `(1 − z·A) = !![1]` since `A = !![0]`, so
+`(1 − z·A)⁻¹ = !![1]`. Then `z·B·(1−z·A)⁻¹·U = !![z, 0; 0, 0]`,
+which added to `V = !![1, 0; 0, 0]` gives `!![1+z, 0; 0, 0]`. -/
+theorem padded2DEulerGLM_stabilityMatrix (z : ℂ) :
+    padded2DEulerGLM.stabilityMatrix z =
+      !![1 + z, 0; 0, 0] := by
+  have hA :
+      (1 - z • complexify padded2DEulerGLM.A)
+        = (1 : Matrix (Fin 1) (Fin 1) ℂ) := by
+    ext i j
+    fin_cases i; fin_cases j
+    simp [padded2DEulerGLM, complexify]
+  unfold GeneralLinearMethod.stabilityMatrix
+  rw [hA, inv_one]
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [padded2DEulerGLM, complexify, Matrix.mul_apply]
+
+/-- Closed-form stability function of `padded2DEulerGLM`:
+`Φ(w, z) = w · (w − (1 + z))`.
+
+This is the `(s, r) = (1, 2)` case of `Φ(w, z) = det(wI − M(z))`
+with `M(z) = !![1+z, 0; 0, 0]`. The `2×2` determinant of the
+upper-triangular matrix `!![w − (1+z), 0; 0, w]` is the product
+of its diagonal entries `(w − (1+z)) · w = w · (w − (1+z))`. -/
+theorem padded2DEulerGLM_stabilityFunction (w z : ℂ) :
+    padded2DEulerGLM.stabilityFunction w z =
+      w * (w - (1 + z)) := by
+  unfold GeneralLinearMethod.stabilityFunction
+  rw [padded2DEulerGLM_stabilityMatrix]
+  rw [Matrix.det_fin_two]
+  simp [Matrix.smul_apply]
+  ring
+
+/-- **Substantive** non-vacuity witness for `IsRKStable`:
+`padded2DEulerGLM` (s = 1, r = 2) has Runge–Kutta stability with
+stability function `R(z) = 1 + z`.
+
+Unlike the cycle 130 witness `explicitEulerGLM_isRKStable`
+(`r = 1`, where `w^{r−1} = w^0 = 1` makes the factorisation trivial),
+the `r = 2` case requires a genuine factorisation of a quadratic in `w`.
+From `padded2DEulerGLM_stabilityFunction`,
+`Φ(w, z) = w · (w − (1 + z)) = w^{2−1} · (w − R(z))` with
+`R(z) := 1 + z`. -/
+theorem padded2DEulerGLM_isRKStable :
+    padded2DEulerGLM.IsRKStable := by
+  refine ⟨fun z => 1 + z, ?_⟩
+  intro w z
+  rw [padded2DEulerGLM_stabilityFunction]
+  -- Goal: w * (w - (1 + z)) = w ^ (2 - 1) * (w - (1 + z))
+  simp [pow_one]
+
 /-! ### Theorem 520D — Instability Region Boundary Characterization
 
 Butcher (Theorem 520D, p. 419): "The instability region for `(A, U, B, V)`
