@@ -89,6 +89,20 @@ continuity).
 * Submitted A and B to Aristotle (project IDs in
   `.prover-state/aristotle_submissions/cycle_112/README.md`).
 
+## What was tried (cycle 113)
+
+* Polled Aristotle once: both sub-lemma A
+  (`aux_515D_per_step_recurrence`) and sub-lemma B
+  (`aux_515D_gronwall_bound`) returned COMPLETE.
+* Incorporated Aristotle's proofs verbatim, with hypothesis-name
+  rename from `_h*` (cycle 112 scaffold) to `h*` (since the proof
+  bodies reference them).
+* Sub-lemma B required two new private helpers:
+  `aux_515D_one_add_pow_le_exp` and `aux_515D_discrete_gronwall_raw`.
+* Capstone signature **not** strengthened — body composition
+  remains deferred to cycle 114 with all three sub-lemmas now
+  available.
+
 The capstone signature is intentionally NOT strengthened this cycle
 because:
 1. The body of `aux_515D_output_tendsto` is still `sorry`, so the
@@ -99,12 +113,57 @@ because:
 
 ## Possible solutions
 
-1. **Cycle 113**: incorporate Aristotle results for A and B,
-   compose the body using A + B + C, strengthen helper +
-   capstone signatures together, document the divergence.
-2. **Cycle 114+**: weaken the helper signature by deriving the
+1. **Cycle 114**: A + B + C now closed (cycle 113); compose the
+   body using all three, strengthen helper + capstone signatures
+   together, document the divergence.
+2. **Cycle 115+**: weaken the helper signature by deriving the
    missing hypotheses on the compact interval `[x₀, x]` from
    `IsConvergent`'s base hypotheses. This is the
    faithfulness-restoring move.
 3. **Block on Mathlib**: if a cleaner Mathlib API emerges for
    "C¹ on compact interval ⇒ bounded derivative", switch to it.
+
+## Cycle 113 audit (this run, labeled "Cycle 114" by the planner)
+
+**Outcome**: deferred body composition; identified §514 cascade
+blocker; landed M-matrix-based `ell_U/phi_A` constructor helper as
+infrastructure for cycle 115+ body composition.
+
+**Key audit finding**: the strategy's recommended strengthening of
+`IsConvergent` with `(∀ t, |yex t| ≤ M_bound)` cannot be
+straightforwardly cascaded to §514, because §514's
+`convergence_witness_satisfies_U` (Section514.lean:496) applies
+`IsConvergent` to the trivial IVP `yex = id` (which is unbounded).
+By the autonomous-ODE constraint `deriv yex = f ∘ yex` plus
+globally-Lipschitz `f`, all non-constant `yex` are generically
+unbounded — so `IsConvergent` becomes vacuously inapplicable to
+any §514-style witness-extraction IVP.
+
+See `cycle_113_isconvergent_strengthening_514_blocker.md` for the
+full analysis and four candidate solutions (localize bound to
+`[x₀, x]`, replace `yex = id` with a smooth bounded function,
+derive bounds locally inside the capstone, or accept §514 regression).
+
+**Per-hypothesis cycle-115+ derivability** (re-confirmed):
+
+* `hyex_C1`: derivable globally from `hyex_ode` + Lipschitz `f` ⇒
+  `Continuous (deriv yex)` ⇒ `ContDiff ℝ 1 yex`. No localization
+  needed.
+* `hM_nn`, `hyex_M`: NOT derivable globally for `yex = id`.
+  Localizable to `Set.Icc x₀ x` via continuity + compactness.
+  Requires `localStepError_bound` refactor to consume compact-
+  interval bounds.
+* `hyex'_LM`: same compact-interval restriction needed.
+* `h_norm`: NOT derivable as written (the strategy's `((x - x₀) * L)`
+  form). Derivable by choosing `h₀ := min (x - x₀, threshold)` for
+  small `threshold`, since the iteration's `h_n = (x - x₀)/n` is
+  eventually `< threshold`. The strategy's strict form is overly
+  restrictive — relax to `∃ h₀ > 0, h_n ≤ h₀ eventually ∧
+  ‖h₀ • (L * |A|)‖ < 1`.
+
+**Cycle 113 forward step**: built `aux_515D_construct_ell_U_phi_A`
+(Section515.lean, near `aux_515D_output_tendsto`), which constructs
+`ell_U` and `phi_A` satisfying the `localStepError_bound`
+side-conditions from M-matrix infrastructure. This is the
+load-bearing primitive for cycle 115's body composition once the
+signature question is resolved.

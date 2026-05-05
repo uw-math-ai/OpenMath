@@ -33,3 +33,6 @@ Cycle 097: `LinearMap.orthogonal_ker` does not exist in Mathlib — Loogle retur
 
 ### Cycle 99
 Cycle 099: unicode `𝟙` as an identifier suffix (e.g. `B𝟙`) breaks the Lean parser — use ASCII identifiers (`B1`, etc.) and reserve `𝟙` for operators/notation only. For `V^(k+1) *ᵥ u' = u'` induction after `rw [pow_succ, ← Matrix.mulVec_mulVec]`, the goal becomes `V^k *ᵥ (V *ᵥ u') = u'`; `ih` does not match the inner `V *ᵥ u'` subterm, so rewrite `hVu'` first (reducing `V *ᵥ u'` to `u'`) then apply `ih`: correct order is `rw [pow_succ, ← Matrix.mulVec_mulVec, hVu', ih]`.
+
+### Cycle 112
+Cycle 112 sub-lemma B (`aux_515D_gronwall_bound`): calling `Section404.discrete_gronwall_exp_bound` directly did not fit cleanly (parameter/shape mismatch with `k` stride vs. the `α*h` form); worker instead built `aux_515D_discrete_gronwall_raw` from scratch via `Nat.strong_induction_on` + `Finset.sum_Ico_succ_top` + `nlinarith`, then wrapped with `aux_515D_one_add_pow_le_exp` to convert the `(1+αh)^n` base to `exp(α·n·h)` form. Section404 helper remains unused.

@@ -1496,12 +1496,54 @@ the sum-form recurrence `δ n ≤ a + α'·h·k·(∑ i ∈ Ico 1 n, δ i) + β�
 required by `discrete_gronwall_exp_bound` (sub-lemma B). -/
 private theorem aux_515D_per_step_recurrence
     {V_norm α β h : ℝ}
-    (_hV_nn : 0 ≤ V_norm) (_hα_nn : 0 ≤ α) (_hβ_nn : 0 ≤ β) (_hh : 0 ≤ h)
+    (hV_nn : 0 ≤ V_norm) (hα_nn : 0 ≤ α) (_hβ_nn : 0 ≤ β) (hh : 0 ≤ h)
     (δ : ℕ → ℝ) (_hδ_nn : ∀ m, 0 ≤ δ m)
-    (_hrec : ∀ m, δ (m + 1) ≤ V_norm * δ m + α * h * δ m + β * h^2) :
+    (hrec : ∀ m, δ (m + 1) ≤ V_norm * δ m + α * h * δ m + β * h^2) :
     ∀ n, δ n ≤ (V_norm + α * h)^n * δ 0
               + β * h^2 * (∑ k ∈ Finset.range n, (V_norm + α * h)^k) := by
-  sorry
+  intro n
+  induction' n with n ih <;>
+    simp_all +decide [pow_succ', mul_assoc, Finset.mul_sum _ _ _, Finset.sum_range_succ']
+  convert le_trans (hrec n)
+    (add_le_add
+      (add_le_add
+        (mul_le_mul_of_nonneg_left ih hV_nn)
+        (mul_le_mul_of_nonneg_left
+          (mul_le_mul_of_nonneg_left ih hh) hα_nn))
+      le_rfl) using 1
+  ring
+
+/-- Helper: `(1 + c)^n ≤ exp(n · c)` for `c ≥ 0`. -/
+private lemma aux_515D_one_add_pow_le_exp (c : ℝ) (_hc : 0 ≤ c) (n : ℕ) :
+    (1 + c) ^ n ≤ Real.exp (↑n * c) := by
+  have h_exp : Real.exp (n * c) = (Real.exp c) ^ n := Real.exp_nat_mul c n
+  exact h_exp.symm ▸ pow_le_pow_left₀ (by positivity)
+    (by linarith [Real.add_one_le_exp c]) _
+
+/-- Helper: discrete Grönwall closed-form with `(1 + α·h)` base. -/
+private theorem aux_515D_discrete_gronwall_raw
+    (u : ℕ → ℝ) (a α β h : ℝ)
+    (ha : 0 ≤ a) (hα_pos : 0 < α) (hβ_nn : 0 ≤ β) (hh : 0 ≤ h)
+    (hu0 : u 0 ≤ a)
+    (hu_rec : ∀ m, 1 ≤ m →
+      u m ≤ a + α * h * (∑ i ∈ Finset.Ico 1 m, u i)
+              + β * h ^ 2 * (m : ℝ))
+    (n : ℕ) :
+    u n ≤ (1 + α * h) ^ n * a
+            + ((1 + α * h) ^ n - 1) * (β * h / α) := by
+  induction' n using Nat.strong_induction_on with n ih
+  rcases n with (_ | n) <;> simp_all +decide [Finset.sum_Ico_succ_top]
+  refine le_trans (hu_rec _ n.succ_pos) ?_
+  refine' le_trans (add_le_add_three le_rfl
+    (mul_le_mul_of_nonneg_left
+      (Finset.sum_le_sum fun i hi => ih i <| by linarith [Finset.mem_Ico.mp hi])
+      (by positivity)) le_rfl) _
+  induction n <;>
+    simp_all +decide [Finset.sum_Ico_succ_top, pow_succ']
+  · nlinarith [mul_div_cancel₀ (β * h) hα_pos.ne', mul_nonneg hα_pos.le hh]
+  · rename_i k hk
+    have := hk fun m hm => ih m (by linarith)
+    nlinarith [mul_nonneg hα_pos.le hh, mul_div_cancel₀ (β * h) hα_pos.ne']
 
 /-- **Sub-lemma B for `aux_515D_output_tendsto`** — discrete Grönwall
 closed-form (specialization of Section404 helper to `k = 1`).
@@ -1512,15 +1554,22 @@ This is a thin re-statement of
 the `k` parameter. -/
 private theorem aux_515D_gronwall_bound
     (u : ℕ → ℝ) (a α β h : ℝ)
-    (_ha : 0 ≤ a) (_hα_pos : 0 < α) (_hβ_nn : 0 ≤ β) (_hh : 0 ≤ h)
-    (_hu0 : u 0 ≤ a)
-    (_hu_rec : ∀ m, 1 ≤ m →
+    (ha : 0 ≤ a) (hα_pos : 0 < α) (hβ_nn : 0 ≤ β) (hh : 0 ≤ h)
+    (hu0 : u 0 ≤ a)
+    (hu_rec : ∀ m, 1 ≤ m →
       u m ≤ a + α * h * (∑ i ∈ Finset.Ico 1 m, u i)
               + β * h^2 * (m : ℝ))
     (n : ℕ) :
     u n ≤ Real.exp (α * (n : ℝ) * h) * a
             + (Real.exp (α * (n : ℝ) * h) - 1) * (β * h / α) := by
-  sorry
+  refine le_trans
+    (aux_515D_discrete_gronwall_raw u a α β h ha hα_pos hβ_nn hh hu0 hu_rec n) ?_
+  gcongr
+  · convert aux_515D_one_add_pow_le_exp (α * h) (by positivity) n using 1
+    ring
+  · convert aux_515D_one_add_pow_le_exp (α * h)
+      (mul_nonneg hα_pos.le hh) n using 1
+    ring
 
 /-- **Sub-lemma C for `aux_515D_output_tendsto`** — squeeze argument.
 
