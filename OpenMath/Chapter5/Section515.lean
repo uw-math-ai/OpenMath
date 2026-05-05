@@ -1816,8 +1816,68 @@ private theorem aux_515D_squeeze
       field_simp
     linarith [h]
 
+/-- **Sub-lemma E for `aux_515D_componentwise_deviation_tendsto_zero`** —
+existence of a uniform max-abs deviation bound sequence that tends to 0
+(DEFERRED — cycle 118 decomposition fallback).
+
+For some non-negative scalar sequence `δ_seq : ℕ → ℝ` tending to 0, the
+deviation `Y n n i − (u i · yex(x) + v i · h_n · deriv yex(x))` is
+uniformly bounded over `i : Fin r` by `δ_seq n` (eventually for `n > 0`).
+
+This captures the genuine analytical content: the discrete-Grönwall +
+squeeze argument applied to the per-step max-abs deviation. The
+conversion from this scalar limit to per-component limits is the body
+of `aux_515D_componentwise_deviation_tendsto_zero` below (a clean
+4-line composition via `squeeze_zero_norm'`).
+
+Cycle 118 introduces this helper as a `sorry`-body stub per the
+cycle 118 strategy's *Backup plan* (decomposition fallback): rather
+than force the full 200-400 LOC discrete-Grönwall body in a single
+cycle, we narrow the sorry to its analytical core. The intended
+cycle 119 closure: instantiate `δ_seq n` from the discrete-Grönwall
+closed-form output of `aux_515D_squeeze`, with constants `α`, `β`
+derived from `aux_515D_construct_ell_U_phi_A` (cycle 114) +
+`localStepError_bound` (cycle 116 strengthened).
+
+The hypotheses are exactly those of
+`aux_515D_componentwise_deviation_tendsto_zero`. -/
+private theorem aux_515D_max_deviation_bound_tendsto_zero {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (_hStab : M.IsStable)
+    {f : ℝ → ℝ} {L : NNReal} (_hf_lip : LipschitzWith L f)
+    {x₀ y₀ : ℝ} {yex : ℝ → ℝ}
+    (_hyex_x₀ : yex x₀ = y₀)
+    (_hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)
+    {u v : Fin r → ℝ}
+    (_hVu : M.V *ᵥ u = u) (_hUu : M.U *ᵥ u = (fun _ => 1))
+    (_hCons_eq : M.B *ᵥ (fun _ => 1) + M.V *ᵥ v = u + v)
+    {φ : ℝ → Fin r → ℝ}
+    (_hφ : ∀ i : Fin r, Filter.Tendsto (fun h : ℝ => φ h i)
+                          (nhds 0) (nhds (u i * y₀)))
+    {x : ℝ} (_hxx : x₀ < x)
+    {M_bound : ℝ} (_hM_nn : 0 ≤ M_bound)
+    (_hyex_C1 : ContDiff ℝ 1 yex)
+    (_hyex_M : ∀ t ∈ Set.Icc x₀ x, |yex t| ≤ M_bound)
+    (_hyex'_LM : ∀ t ∈ Set.Icc x₀ x, |deriv yex t| ≤ (L : ℝ) * M_bound)
+    (_h_norm : ‖(((x - x₀) * (L : ℝ)) • M.A.map (fun a => |a|) :
+                 Matrix (Fin s) (Fin s) ℝ)‖ < 1)
+    (Y : ℕ → ℕ → Fin r → ℝ) (Y_int : ℕ → Fin s → ℝ)
+    (_hY_props : ∀ n : ℕ, 0 < n →
+      Y n 0 = φ ((x - x₀) / (n : ℝ)) ∧
+      M.IsGLMSolution ((x - x₀) / (n : ℝ)) f (Y n) ∧
+      (∀ i, Y_int n i =
+              (∑ j, M.A i j * (((x - x₀) / (n : ℝ)) * f (Y_int n j)))
+              + (∑ j, M.U i j * Y n n j))) :
+    ∃ δ_seq : ℕ → ℝ,
+      (∀ n, 0 ≤ δ_seq n) ∧
+      Filter.Tendsto δ_seq Filter.atTop (nhds 0) ∧
+      ∀ n : ℕ, 0 < n → ∀ i : Fin r,
+        |Y n n i - (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x)|
+          ≤ δ_seq n := by
+  sorry
+
 /-- **Sub-lemma D for `aux_515D_output_tendsto`** — componentwise
-deviation tends to zero (DEFERRED — cycle 117 decomposition fallback).
+deviation tends to zero.
 
 For each component `i : Fin r`, the deviation
     `Y n n i − (u i · yex(x) + v i · h_n · deriv yex(x))`
@@ -1837,6 +1897,11 @@ strategy's *decomposition fallback*: the body of
 ~30-LOC composition that bridges this deviation limit to the target
 output limit `Y n n → u · yex(x)` via the auxiliary fact
 `v · h_n · deriv yex x → 0` (linear-in-h correction term vanishes).
+
+Cycle 118 narrows the sorry further: the body now invokes
+`aux_515D_max_deviation_bound_tendsto_zero` (cycle 118 stub) and
+extracts the per-component limit via `squeeze_zero_norm'`. The deeper
+analytical content is in the new stub helper.
 
 The hypotheses are exactly those of `aux_515D_output_tendsto`. -/
 private theorem aux_515D_componentwise_deviation_tendsto_zero {s r : ℕ}
@@ -1870,7 +1935,16 @@ private theorem aux_515D_componentwise_deviation_tendsto_zero {s r : ℕ}
       (fun n : ℕ => Y n n i -
         (u i * yex x + v i * ((x - x₀) / (n : ℝ)) * deriv yex x))
       Filter.atTop (nhds 0) := by
-  sorry
+  intro i
+  -- Cycle 118 decomposition fallback: extract the max-abs bound sequence.
+  obtain ⟨δ_seq, _hδ_nn, hδ_tendsto, hδ_bound⟩ :=
+    aux_515D_max_deviation_bound_tendsto_zero M _hStab _hf_lip _hyex_x₀ _hyex_ode
+      _hVu _hUu _hCons_eq _hφ _hxx _hM_nn _hyex_C1 _hyex_M _hyex'_LM _h_norm
+      Y Y_int _hY_props
+  -- Convert the max-abs limit to the per-component limit via squeeze.
+  refine squeeze_zero_norm' ?_ hδ_tendsto
+  filter_upwards [Filter.eventually_gt_atTop 0] with n hn
+  simpa [Real.norm_eq_abs] using hδ_bound n hn i
 
 /-- **Sub-lemma for `thm:515D`**: under stability + consistency, the
 GLM iteration's *output* sequence `Y n n` converges to `u · yex(x)`
