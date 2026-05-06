@@ -207,14 +207,15 @@
     "lean_file": "OpenMath/Chapter5/Section520.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsAStable",
     "status": "formalized",
-    "notes": "Cycle 088 trivial witness `trivialZeroGLM_isAStable` (M(z)=0). Cycle 135 substantive witness `implicitMidpointGLM_isAStable` \u2014 the implicit midpoint method with stability function R(z)=(1+z/2)/(1-z/2), the canonical Pad\u00e9(1,1) approximant of exp(z). Axiom-clean."
+    "cycle": 146,
+    "notes": "Cycle 088 trivial witness `trivialZeroGLM_isAStable` (M(z)=0). Cycle 135 substantive witness `implicitMidpointGLM_isAStable` \u2014 the implicit midpoint method with stability function R(z)=(1+z/2)/(1-z/2), the canonical Pad\u00e9(1,1) approximant of exp(z). Cycle 136 r=1 negative witness `explicitEulerGLM_not_isAStable` at z=-3. Cycle 143 r=2 positive witness `padded2DBackwardEulerGLM_isAStable`. Cycle 146 r=2 negative witness `padded2DEulerGLM_not_isAStable` at z=-3 via Theorem 520D direction (2) `instabilityRegion_supseteq_outside_disc` with the eigenvalue w=-2 (zero of \u03a6(\u00b7,-3) = w(w-(1+z))). Saturates four-corner A-stable\u00d7non-A-stable coverage at r=2. Axiom-clean."
   },
   "def:520F": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",
     "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.IsLStable",
     "status": "formalized",
-    "cycle": 142,
-    "notes": "Cycle 088 trivial positive witness `trivialZeroGLM_isLStable` (M(z)=0). Cycle 137 negative witnesses: `explicitEulerGLM_not_isLStable` (one-line, follows from cycle 136 not-A-stable) and `implicitMidpointGLM_not_isLStable` (substantive \u2014 Pad\u00e9(1,1) is A-stable but \u03c1(M(z))\u21921 not 0 along z=-(n+2:\u2102) sequence). Cycle 142 substantive *positive* witness `backwardEulerGLM_isLStable`: backward Euler R(z)=1/(1-z) is the canonical Pad\u00e9(0,1) approximant, A-stable and L-stable. Closed-form `backwardEulerGLM_stabilityMatrix` (z\u22601), magnitude bound `padeZeroOne_norm_le_one_of_re_nonpos`, cocompact limit via `tendsto_norm_cocompact_atTop` + reverse-triangle squeeze through private helper `norm_one_div_sub_tendsto_zero_cocompact`. Closes the four-corner A-stable\u00d7L-stable witness coverage matrix. Axiom-clean."
+    "cycle": 146,
+    "notes": "Cycle 088 trivial positive witness `trivialZeroGLM_isLStable` (M(z)=0). Cycle 137 negative witnesses: `explicitEulerGLM_not_isLStable` (one-line, follows from cycle 136 not-A-stable) and `implicitMidpointGLM_not_isLStable` (substantive \u2014 Pad\u00e9(1,1) is A-stable but \u03c1(M(z))\u21921 not 0 along z=-(n+2:\u2102) sequence). Cycle 142 substantive *positive* witness `backwardEulerGLM_isLStable`: backward Euler R(z)=1/(1-z) is the canonical Pad\u00e9(0,1) approximant, A-stable and L-stable. Closed-form `backwardEulerGLM_stabilityMatrix` (z\u22601), magnitude bound `padeZeroOne_norm_le_one_of_re_nonpos`, cocompact limit via `tendsto_norm_cocompact_atTop` + reverse-triangle squeeze through private helper `norm_one_div_sub_tendsto_zero_cocompact`. Closes the four-corner A-stable\u00d7L-stable witness coverage matrix. Axiom-clean. Cycle 143 r=2 positive witness `padded2DBackwardEulerGLM_isLStable`. Cycle 146 r=2 negative witness `padded2DEulerGLM_not_isLStable`: one-line companion via IsLStable=IsAStable\u2227\u2026 projection from cycle 146's not-A-stable witness. Saturates four-corner L-stable\u00d7non-L-stable coverage at r=2. Axiom-clean."
   },
   "def:521A": {
     "lean_file": "OpenMath/Chapter5/Section520.lean",

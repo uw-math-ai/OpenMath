@@ -1608,4 +1608,71 @@ theorem GeneralLinearMethod.instabilityRegion_subseteq_closed_disc_zeros
 
 end InstabilityRegion520D
 
+/-! ### Negative A/L-stability witnesses — padded 2-D explicit Euler (r = 2)
+
+These two theorems strengthen cycle 136/137's r = 1 negative witnesses
+`explicitEulerGLM_not_isAStable` / `explicitEulerGLM_not_isLStable` to
+the r = 2 padded form `padded2DEulerGLM`. Together with cycle 143's
+positive r = 2 witnesses
+`padded2DBackwardEulerGLM_isAStable` / `padded2DBackwardEulerGLM_isLStable`,
+this saturates the four-corner non-vacuity coverage of `def:520E` and
+`def:520F` at r = 2 (mirroring the four-corner saturation already
+achieved at r = 1 by cycles 088/135/136/137/142).
+
+Placed here (after the section 520D infrastructure) rather than next to
+`padded2DEulerGLM_isRKStable` so the proof can reuse
+`instabilityRegion_supseteq_outside_disc` (Theorem 520D direction (2))
+as a black box; an inline proof at the earlier insertion point would
+need to forward-reference the private bridge lemma
+`stabilityFunction_eq_zero_iff_mem_spectrum` and replicate the
+`spectrum.pow_mem_pow` machinery, roughly tripling the proof length. -/
+
+/-- **Negative non-vacuity witness for `IsAStable`** (r = 2 strengthening) —
+`padded2DEulerGLM` is *not* A-stable. This lifts cycle 136's r = 1 witness
+`explicitEulerGLM_not_isAStable` to r = 2, completing the four-corner
+non-vacuity coverage of `def:520E` at r = 2 (paired with the positive
+r = 2 witness `padded2DBackwardEulerGLM_isAStable` from cycle 143).
+
+Mathematically: explicit Euler's stability region is the closed unit disc
+centred at `−1`; the r = 2 rank-1 zero padding does not enlarge it,
+because the closed-form stability matrix `M(z) = !![1+z, 0; 0, 0]`
+(`padded2DEulerGLM_stabilityMatrix`) places the entire content in the
+`(0, 0)` entry. At `z = −3 ∈ {Re ≤ 0}`, the closed-form stability
+function `Φ(w, z) = w·(w − (1 + z))`
+(`padded2DEulerGLM_stabilityFunction`) vanishes at `w = −2`, and
+`‖−2‖ = 2 > 1` lies strictly outside the unit disc. Theorem 520D
+direction (2) (`instabilityRegion_supseteq_outside_disc`) then places
+`z = −3` in the instability region, contradicting A-stability's
+demand that the closed left half-plane lie inside the stability
+region. -/
+theorem padded2DEulerGLM_not_isAStable :
+    ¬ padded2DEulerGLM.IsAStable := by
+  intro hStab
+  -- z = -3 has Re(-3) = -3 ≤ 0, so A-stability puts it in stabilityRegion.
+  have hz_re : ((-3 : ℂ)).re ≤ 0 := by simp
+  have hz_stab : (-3 : ℂ) ∈ padded2DEulerGLM.stabilityRegion := hStab _ hz_re
+  -- Φ(-2, -3) = (-2) · ((-2) - (1 + -3)) = (-2) · 0 = 0.
+  have hPhi_zero :
+      padded2DEulerGLM.stabilityFunction (-2 : ℂ) (-3 : ℂ) = 0 := by
+    rw [padded2DEulerGLM_stabilityFunction]; ring
+  -- ‖-2‖ = 2 > 1 in ℂ.
+  have hw_norm : (1 : ℝ) < ‖(-2 : ℂ)‖ := by
+    rw [show (-2 : ℂ) = -(2 : ℂ) from by ring, norm_neg, Complex.norm_ofNat]
+    norm_num
+  -- Theorem 520D dir (2): z = -3 ∈ instabilityRegion = (stabilityRegion)ᶜ.
+  have h_in : (-3 : ℂ) ∈ padded2DEulerGLM.instabilityRegion :=
+    padded2DEulerGLM.instabilityRegion_supseteq_outside_disc
+      ⟨(-2 : ℂ), hw_norm, hPhi_zero⟩
+  -- z ∈ S and z ∈ Sᶜ is a contradiction.
+  exact h_in hz_stab
+
+/-- **Negative non-vacuity witness for `IsLStable`** (r = 2 strengthening) —
+`padded2DEulerGLM` is *not* L-stable. Mirrors cycle 137's r = 1 witness
+`explicitEulerGLM_not_isLStable` exactly: since `IsLStable` is the
+conjunction `IsAStable ∧ ρ(M(·)) → 0 cocompactly`, its negation follows
+from the A-stability conjunct via `padded2DEulerGLM_not_isAStable`. -/
+theorem padded2DEulerGLM_not_isLStable :
+    ¬ padded2DEulerGLM.IsLStable :=
+  fun h => padded2DEulerGLM_not_isAStable h.1
+
 end OpenMath.Chapter5.Section510

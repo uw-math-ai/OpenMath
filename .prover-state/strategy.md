@@ -1,351 +1,238 @@
-# Cycle 145 Strategy
+# Cycle 146 Strategy — Strengthen `def:520E` / `def:520F` non-vacuity with r=2 negative witnesses (`padded2DEulerGLM_not_isAStable`, `padded2DEulerGLM_not_isLStable`)
 
-## Context summary
+## Context
 
-* No pending Aristotle results; sorry count is 0.
-* Cycle 144 closed Priority 1 cleanly (axiom-clean
-  `doublyCompanionMatrix_det_factorization_n_three`, the third
-  concrete-`n` stepping stone for Theorem 550A).
-* `thm:550A` now has axiom-clean witnesses at `n = 1, 2, 3`. The
-  general-`n` proof remains deferred per
-  `.prover-state/issues/thm_550A_general_n.md` (Aristotle Job A
-  cancelled at 6 % after 24 h in cycle 141; manual cofactor expansion
-  remains multi-cycle infrastructure work).
-* Cycle 144's discovery: the **explicit-`!![…]` matrix expansion**
-  (cycle 138 `_one_eq` style) is the robust template for `det_fin_n`
-  proofs over `doublyCompanionMatrix` at small `n` — pre-extract via
-  `ext i j; fin_cases i <;> fin_cases j <;> simp
-  [doublyCompanionMatrix]`, then a second `fin_cases` block reduces
-  `1 - z • X`, then `Matrix.det_fin_n` + `simp; ring` closes the
-  polynomial identity. The `unfold doublyCompanionMatrix` + `norm_num`
-  shortcut from cycle 140 (n = 2) does **not** transfer to higher `n`
-  because the if-then-else chain on `j.val + 1 = n` doesn't decide
-  fully under `simp only`.
+Cycle 145 added `doublyCompanionMatrix_det_factorization_n_four`
+(axiom-clean), bringing `thm:550A` concrete-`n` coverage to four data
+points (n = 1, 2, 3, 4). The cycle 145 worker explicitly flagged n = 5
+as **risky** (~250 LOC, possibly `maxHeartbeats`-blocking) with
+*diminishing returns* in the absence of a closure-infrastructure plan
+for general `n`. Their explicit suggestion was to **pivot** to a
+smaller, surer non-vacuity strengthening.
 
-## Priority 1 (PRIMARY): thm:550A n = 4 stepping stone
+The cleanest small win is to extend the r = 2 negative coverage of
+`def:520E` (A-stability) and `def:520F` (L-stability) by lifting
+cycle 137's r = 1 negative `explicitEulerGLM_not_isAStable` /
+`explicitEulerGLM_not_isLStable` to the existing 2-D padded form
+`padded2DEulerGLM` (already defined in `Section520.lean:1286`,
+already used as the substantive r = 2 witness for `IsRKStable`,
+`IsIRKStable`, and the closed-form `padded2DEulerGLM_stabilityMatrix`
+at line 1322).
 
-**Target.** Add a fourth concrete-`n` axiom-clean witness for
-Theorem 550A:
+This mirrors the matrix:
+
+| width  | A-stable +ve  | A-stable −ve  | L-stable +ve         | L-stable −ve         |
+|--------|---------------|---------------|----------------------|----------------------|
+| r = 1  | ✓ (cyc 088/135/142) | ✓ (cyc 136)   | ✓ (cyc 088/142)      | ✓ (cyc 137)          |
+| r = 2  | ✓ (cyc 143)   | **CYCLE 146** | ✓ (cyc 143)          | **CYCLE 146**        |
+
+Cycle 146 fills the two empty cells, giving symmetric four-corner
+coverage at both r = 1 and r = 2.
+
+## Priority 1 — Add `padded2DEulerGLM_not_isAStable` and `padded2DEulerGLM_not_isLStable` (axiom-clean, ~80 LOC)
+
+**Target file**: `OpenMath/Chapter5/Section520.lean`.
+
+**Insertion point**: insert immediately after
+`padded2DEulerGLM_isRKStable` (around line 1369) and before the
+"Theorem 520D" section header (around line 1371). Keep the two new
+theorems together as a paired ✓/✗ pair.
+
+### Step 1 — Closed-form `M(-3)` for `padded2DEulerGLM`
+
+`padded2DEulerGLM_stabilityMatrix` (line 1322) gives
+`M(z) = !![1 + z, 0; 0, 0]` for any `z`. Specialize at `z = -3`:
+`M(-3) = !![-2, 0; 0, 0]`. Note this is a **2×2** matrix (not 1×1
+collapsed), so the proof has to genuinely handle a 2×2 norm and a
+2×2 power, not the 1×1 collapse used in cycle 136's
+`explicitEulerGLM_not_isAStable`.
+
+### Step 2 — Bound `‖M(-3)^k‖` from below
+
+Two viable routes — **prefer Route A** (simpler):
+
+**Route A: spectral radius lower bound.**
+The matrix `M(-3) = !![-2, 0; 0, 0]` is diagonal (all off-diagonal
+entries are zero). The spectrum of a diagonal matrix is the set of
+its diagonal entries: `spectrum ℂ M(-3) = {-2, 0}`. So
+`spectralRadius ℂ M(-3) = ‖-2‖₊ = 2`. By
+`spectrum.pow_mem_pow`, `(-2)^k ∈ spectrum ℂ (M(-3)^k)`, so
+`‖(-2)^k‖ ≤ ‖M(-3)^k‖` (use `Matrix.spectralRadius_le_nnnorm` or
+`spectrum_norm_le` for a fixed eigenvalue → matrix norm bound).
+Thus `2^k ≤ ‖M(-3)^k‖`, contradicting `‖M(-3)^k‖ ≤ C` for k large
+via `pow_unbounded_of_one_lt`.
+
+The relevant Mathlib bridge for Route A is in cycle 126's `Section520.lean`
+(see `instabilityRegion_supseteq_outside_disc` proof, around the
+`spectrum.pow_mem_pow` invocation). Re-use that pattern:
+```
+have h_eig : (-2 : ℂ) ∈ spectrum ℂ (padded2DEulerGLM.stabilityMatrix (-3)) := by
+  rw [padded2DEulerGLM_stabilityMatrix]
+  -- Use Matrix.spectrum_diagonal or a direct construction via mem_spectrum_iff_isRoot_charpoly
+  ...
+have h_eig_pow : ((-2 : ℂ))^k ∈ spectrum ℂ (padded2DEulerGLM.stabilityMatrix (-3))^k :=
+  spectrum.pow_mem_pow _ h_eig _
+have h_norm_lb : ‖((-2 : ℂ))^k‖ ≤ ‖(padded2DEulerGLM.stabilityMatrix (-3))^k‖ := by
+  -- bridge: every spectrum element has norm ≤ matrix norm
+  ...
+```
+
+**Route B (fallback if Route A's `spectrum_diagonal` bridge bogs down):
+direct entry-wise computation.**
+Compute `M(-3)^k` directly. Since `M(-3)` is diagonal,
+`M(-3)^k = !![(-2)^k, 0; 0, 0]`. The matrix norm (under
+`Section520.lean`'s default scope, which is L∞-operator norm — verify by
+checking `Section510.lean`'s scope import) of `!![a, 0; 0, 0]` is `‖a‖`.
+So `‖M(-3)^k‖ = 2^k`, and `pow_unbounded_of_one_lt 2 (by norm_num)`
+gives the contradiction directly. This mirrors cycle 136's r=1
+template more closely.
+
+For Route B, use `Matrix.linfty_opNorm_diagonal` (search for it
+under `Matrix.Norms.Operator` scope — see cycle 143's
+`padded_2x2_eq_diagonal` + `Matrix.linfty_opNorm_diagonal` pattern at
+`Section520.lean` near line 920).
+
+### Step 3 — Pick `k` and conclude
+
+Following cycle 136 (Section520.lean:482-486):
+```
+obtain ⟨k, hk⟩ := pow_unbounded_of_one_lt C (by norm_num : (1 : ℝ) < 2)
+have hCk := hC k
+-- bridge to ‖M(-3)^k‖
+linarith
+```
+
+### Step 4 — `padded2DEulerGLM_not_isLStable` is one-liner
 
 ```lean
-theorem doublyCompanionMatrix_det_factorization_n_four
-    (α β : Fin 4 → ℂ) :
-    Asymptotics.IsBigO (nhds (0 : ℂ))
-      (fun z : ℂ =>
-        (1 - z • doublyCompanionMatrix α β).det
-          - alphaPoly α z * betaPoly β z)
-      (fun z : ℂ => z ^ 5)
+theorem padded2DEulerGLM_not_isLStable :
+    ¬ padded2DEulerGLM.IsLStable :=
+  fun h => padded2DEulerGLM_not_isAStable h.1
 ```
 
-(Note `z ^ (n + 1) = z ^ 5` for `n = 4`.)
+This mirrors cycle 137's `explicitEulerGLM_not_isLStable` exactly.
 
-**Location**: `OpenMath/Chapter5/Section550.lean`, immediately after
-`doublyCompanionMatrix_det_factorization_n_three` (currently the last
-declaration in the namespace, ending around line 272).
+### Faithfulness
 
-**Why this target**:
+* New theorems are *negative non-vacuity witnesses* for `def:520E`
+  (A-stability) and `def:520F` (L-stability). They confirm both
+  predicates remain meaningfully refutable at r = 2 (not just r = 1).
+* No new definitions, no new structure fields. No risk of
+  faithfulness divergence — the predicates are unchanged.
+* Mathematical content: explicit Euler's stability region is the
+  closed unit disc centred at -1, and `z = -3` lies outside it. The
+  r = 2 padding does NOT change this boundary because the stability
+  matrix is `!![1+z, 0; 0, 0]` with the (0, 0) entry carrying the
+  full content. This is the textbook fact that "passively-decoupled
+  zero channels do not improve A-stability".
 
-1. Mechanical extension following the proven cycle 144 template.
-2. Establishes a fourth data point confirming the textbook
-   leading-coefficient pattern
-   `det(I − zX) − α(z)·β(z) ≡ −Σᵢ αᵢ·β_{n−i} · z^{n+1} + O(z^{n+2})`.
-3. Builds toward general-`n` proof by accumulating concrete data with
-   explicit residue closed forms.
-4. Single-cycle, axiom-clean target with realistic ~150–200 LOC
-   budget.
-5. Strict net advance (sorry count stays at 0; one new public
-   theorem).
+## Priority 2 (BACKUP — only if Priority 1 closes in <30 min) — Submit Aristotle batch for `thm:550A` general-`n`
 
-## Approach (follow cycle 144 n = 3 template verbatim)
+Cycle 141 cancelled the prior general-`n` Aristotle job at 6% after 24 h
+as intractable. **Do NOT re-submit the same general-`n` formulation.**
 
-### Step 0 (read precedent — first action of the cycle)
+Instead, batch-submit ~3 narrower Aristotle jobs targeting:
 
-Open `OpenMath/Chapter5/Section550.lean` and re-read
-`doublyCompanionMatrix_det_factorization_n_three` (lines ~206–272).
-The proof sequence is:
+* `doublyCompanionMatrix_det_factorization_n_five` — concrete `n = 5`,
+  same template as cycle 145 (`Matrix.det_succ_row_zero` + `det_fin_three`).
+  This is the n=5 stepping stone the worker flagged as risky for direct
+  manual attempt; Aristotle may handle it where direct attempt is
+  marginal.
+* A focused `Matrix.det_succ_row_zero`-induction sub-lemma: "if
+  `det(I − zX_n) = α(z)·β(z) + O(z^{n+1})`, then
+  `det(I − zX_{n+1}) = α(z)·β(z) + O(z^{n+2})`" — the inductive
+  step. May be tractable as a focused proof if the cofactor
+  expansion of an `(n+1)×(n+1)` doubly companion matrix can be
+  matched against the `n×n` block.
+* (Optional) A `polynomial-coefficient-density` formulation: prove the
+  identity for symbolic `α, β : Fin n → ℂ[z]` then specialise — may
+  exploit `Polynomial`'s definitional equality more aggressively
+  than the `IsBigO` approach.
 
-1. `have h_diff : (residue) = (fun z => z^4 * (a + z * b + z² * c)) := by`
-2. `funext z; ext-and-fin-cases` to extract `doublyCompanionMatrix α β`
-   as an explicit `!![…]` matrix `hX`.
-3. `rw [hX]; ext-and-fin-cases` to expand `1 − z • X` as another
-   explicit `!![…]` matrix `hmat`.
-4. `rw [hmat, Matrix.det_fin_n]; simp [alphaPoly, betaPoly,
-   Fin.sum_univ_n]; ring` to close the polynomial identity.
-5. `rw [h_diff]`; then `IsBigO.of_bound C` with constant
-   `‖a‖ + ‖b‖ + ‖c‖ + …`.
-6. `Metric.eventually_nhds_iff` + `⟨1, by norm_num, fun y hy => ?_⟩`
-   localize to `‖y‖ < 1`.
-7. Triangle-inequality chain for the inner-factor norm.
-8. Multiply through by `‖y^(n+1)‖` and close with `ring`.
+Submit at the start of cycle 146 if Priority 1 closes early. Sleep
+30 min. Skip processing this cycle if Priority 1 takes the full cycle;
+process results in cycle 147+. **Per CLAUDE.md, do NOT re-poll within
+the cycle.**
 
-### Step 1 (paper algebra — DO THIS BEFORE TOUCHING LEAN)
+## Priority 3 (HOUSEKEEPING) — Re-fold cycle 145 issue/plan updates
 
-The `n = 4` doubly companion matrix `X = doublyCompanionMatrix α β`
-has shape (per the `doublyCompanionMatrix` definition; verify by
-checking the case-split on each `(i, j)` of `Fin 4 × Fin 4`):
+Cycle 145 closed without further updates to issue files; verify
+`.prover-state/issues/thm_550A_general_n.md` already records the
+n = 4 closure (cycle 144 update was the last entry). If the n = 4
+closure is missing, append a "Status update (cycle 145)" section
+mirroring the cycle 140 / 144 entries.
 
-```
-X = !![−α 0,  −α 1,  −α 2,  −α 3 − β 3;
-       1,     0,     0,     −β 2;
-       0,     1,     0,     −β 1;
-       0,     0,     1,     −β 0]
-```
+## What NOT to try this cycle
 
-Then `1 − z • X` is
+* **Do NOT attempt the n = 5 stepping stone for `thm:550A` directly.**
+  The cycle 145 worker explicitly flagged ~250 LOC and possible
+  `maxHeartbeats` blowup; cycle 146 should pivot to the negative-
+  witness strengthening above. n = 5 may return as Priority 2 via
+  Aristotle batch only.
+* **Do NOT attempt the general-`n` proof of `thm:550A` directly.**
+  Cycle 141 cancelled a 24h Aristotle attempt at 6%; cycle 142 did
+  not retry; manual cofactor-expansion induction has not been
+  scaffolded. Stay deferred per
+  `.prover-state/issues/thm_550A_general_n.md`.
+* **Do NOT open `def:530B` (Order relative to starting method) this
+  cycle.** Encoding requires Taylor-expansion infrastructure to
+  define the SM-vs-ES residual that does not yet exist in our
+  codebase; a single-cycle attempt risks producing a vacuous or
+  smuggled definition. Defer until a planned multi-cycle §530B/C
+  cycle that includes the necessary Taylor framework.
+* **Do NOT modify `IsAStable` or `IsLStable` predicate definitions.**
+  The cycle 88/135/137/142 multi-witness coverage already saturates
+  the four corners at r = 1; cycle 143 + cycle 146 saturate r = 2.
+  Predicate stability is critical for the existing axiom-clean
+  witness chain.
+* **Do NOT change `padded2DEulerGLM`'s definition** (line 1286). It
+  is consumed by `padded2DEulerGLM_isRKStable` (cycle 134) and
+  `padded2DEulerGLM_isIRKStable` (cycle 133). Any change cascades.
+* **Do NOT raise `maxHeartbeats`** above 200000. The new proofs are
+  small (~80 LOC); maxHeartbeats should not even be a concern.
+* **Do NOT inline-rewrite `padded2DEulerGLM_stabilityMatrix`** —
+  reference the existing closed-form theorem at line 1322 via `rw`.
+* **Do NOT introduce `axiom`/`constant`** declarations.
+* **Do NOT modify `scripts/autonomous_loop.py`** (per CLAUDE.md +
+  prior cycles). The tautology scanner false-positive issue
+  (`tautology_scanner_false_positives.md`) remains the loop
+  maintainer's responsibility, not the worker's. If a regex hit
+  appears, apply the standard cosmetic rename (`h_<name>` → `h<name>`).
 
-```
-!![1 + z·α 0,   z·α 1,    z·α 2,    z·(α 3 + β 3);
-   −z,          1,        0,        z·β 2;
-   0,           −z,       1,        z·β 1;
-   0,           0,        −z,       1 + z·β 0]
-```
+## Verification checklist (run before commit)
 
-Compute `det(1 − z • X)` via cofactor expansion or `Matrix.det_fin_four`.
-The `Matrix.det_fin_four` lemma exists in Mathlib (verify with
-`lean_local_search "det_fin_four"` or `Grep` first; if absent, fall
-back to manual cofactor expansion along the first column or use
-`Matrix.det_succ_column_zero` recursively — see Step 4 fallback).
+1. `lake env lean OpenMath/Chapter5/Section520.lean` — must compile
+   clean, no errors, no warnings beyond the existing Mathlib lints.
+2. `#print axioms OpenMath.Chapter5.Section520.padded2DEulerGLM_not_isAStable`
+   should return `[propext, Classical.choice, Quot.sound]`.
+3. `#print axioms OpenMath.Chapter5.Section520.padded2DEulerGLM_not_isLStable`
+   should return the same set.
+4. Sorry count remains at 0 across the entire `OpenMath/` tree:
+   the `Grep` pattern `\bsorry\b|sorryAx` must return only docstring
+   mentions.
+5. `lake build OpenMath.Chapter5.Section520` must finish under 5 min
+   on first run (cache may already cover dependencies).
 
-Compute `alphaPoly α z · betaPoly β z` symbolically up to `z⁵`. The
-product is a polynomial of degree `2·4 = 8`. The cancellation of the
-`z⁰…z⁴` terms is the textbook content; the residue should be:
+## Plan-level updates after success
 
-* leading `z⁵` coefficient: `−(α 0·β 3 + α 1·β 2 + α 2·β 1 + α 3·β 0)`
-  (the convolution `−Σᵢ αᵢ·β_{n−i}` at `n = 4`).
-* `z⁶`: `−(α 1·β 3 + α 2·β 2 + α 3·β 1)`.
-* `z⁷`: `−(α 2·β 3 + α 3·β 2)`.
-* `z⁸`: `−(α 3·β 3)`.
+* `plan.md` Chapter 5 row for `def:520E`: append cycle-146 reference
+  noting the r=2 negative witness `padded2DEulerGLM_not_isAStable`
+  closes the four-corner coverage at r = 2.
+* `plan.md` Chapter 5 row for `def:520F`: append cycle-146 reference
+  noting `padded2DEulerGLM_not_isLStable` closes the four-corner
+  coverage at r = 2.
+* `lean_status.json` rows for `def:520E` and `def:520F`: bump
+  `last_updated_cycle` to 146; status remains `formalized` (already
+  was — these are non-vacuity strengthenings, not new entities).
+* No new entries in `.prover-state/issues/` are expected.
 
-Factor the residue as `z^5 · (a + z·b + z²·c + z³·d)` with
-* `a := −(α 0·β 3 + α 1·β 2 + α 2·β 1 + α 3·β 0)`
-* `b := −(α 1·β 3 + α 2·β 2 + α 3·β 1)`
-* `c := −(α 2·β 3 + α 3·β 2)`
-* `d := −(α 3·β 3)`
+## Estimated cycle effort
 
-**WRITE THE PAPER ALGEBRA INTO A SCRATCH NOTE FIRST.** Verify the
-cancellation of `z⁰…z⁴` terms explicitly before writing Lean. The
-worker MUST not skip this step — if the residue's leading
-coefficients are wrong, the `ring` step in Lean will fail and waste
-cycle time.
+* Priority 1: ~60–90 min (paper algebra is trivial; Lean encoding
+  ~80 LOC closely mirrors cycle 136 + cycle 143 patterns).
+* Priority 2 (Aristotle batch): ~15 min to compose + submit, plus
+  the unattended 30-min sleep window. Skip if Priority 1 dominates.
+* Priority 3 (housekeeping): ~10 min if needed.
 
-### Step 2 (Lean encoding — follow cycle 144 template)
-
-```lean
-theorem doublyCompanionMatrix_det_factorization_n_four
-    (α β : Fin 4 → ℂ) :
-    Asymptotics.IsBigO (nhds (0 : ℂ))
-      (fun z : ℂ =>
-        (1 - z • doublyCompanionMatrix α β).det
-          - alphaPoly α z * betaPoly β z)
-      (fun z : ℂ => z ^ 5) := by
-  -- Step 1: rewrite the residue pointwise.
-  have h_diff : (fun z : ℂ =>
-      (1 - z • doublyCompanionMatrix α β).det
-        - alphaPoly α z * betaPoly β z)
-      = (fun z : ℂ => z ^ 5 *
-          (a + z * b + z ^ 2 * c + z ^ 3 * d)) := by
-    funext z
-    -- 2a: reduce X to !![…].
-    have hX : doublyCompanionMatrix α β =
-        !![-α 0,  -α 1,  -α 2,  -α 3 - β 3;
-           1,     0,     0,     -β 2;
-           0,     1,     0,     -β 1;
-           0,     0,     1,     -β 0] := by
-      ext i j
-      fin_cases i <;> fin_cases j <;> simp [doublyCompanionMatrix]
-    rw [hX]
-    -- 2b: reduce `1 - z • X` to !![…].
-    have hmat :
-        (1 - z • !![…the matrix above…] : Matrix (Fin 4) (Fin 4) ℂ)
-          = !![1 + z * α 0,   z * α 1,    z * α 2,    z * (α 3 + β 3);
-               -z,            1,          0,          z * β 2;
-               0,             -z,         1,          z * β 1;
-               0,             0,          -z,         1 + z * β 0] := by
-      ext i j
-      fin_cases i <;> fin_cases j <;>
-        first | (simp; ring) | simp
-    rw [hmat, Matrix.det_fin_four]   -- or fallback per Step 4
-    simp [alphaPoly, betaPoly, Fin.sum_univ_four]
-    ring
-  rw [h_diff]
-  -- Step 3: IsBigO bound.
-  refine Asymptotics.IsBigO.of_bound (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖) ?_
-  rw [Metric.eventually_nhds_iff]
-  refine ⟨1, by norm_num, fun y hy => ?_⟩
-  rw [Complex.dist_eq, sub_zero] at hy
-  -- Bound: ‖a + y·b + y²·c + y³·d‖ ≤ ‖a‖ + ‖b‖ + ‖c‖ + ‖d‖.
-  have h_inner : ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖
-                   ≤ ‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ := by
-    have hyb : ‖y * b‖ ≤ ‖b‖ := by
-      rw [norm_mul]; exact mul_le_of_le_one_left (norm_nonneg _) hy.le
-    have hyc : ‖y ^ 2 * c‖ ≤ ‖c‖ := by
-      rw [norm_mul, norm_pow]
-      refine mul_le_of_le_one_left (norm_nonneg _) ?_
-      calc ‖y‖ ^ 2 ≤ 1 ^ 2 := by gcongr
-        _ = 1 := one_pow _
-    have hyd : ‖y ^ 3 * d‖ ≤ ‖d‖ := by
-      rw [norm_mul, norm_pow]
-      refine mul_le_of_le_one_left (norm_nonneg _) ?_
-      calc ‖y‖ ^ 3 ≤ 1 ^ 3 := by gcongr
-        _ = 1 := one_pow _
-    have h1 : ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖
-                ≤ ‖a + y * b + y ^ 2 * c‖ + ‖y ^ 3 * d‖ := norm_add_le _ _
-    have h2 : ‖a + y * b + y ^ 2 * c‖
-                ≤ ‖a + y * b‖ + ‖y ^ 2 * c‖ := norm_add_le _ _
-    have h3 : ‖a + y * b‖ ≤ ‖a‖ + ‖y * b‖ := norm_add_le _ _
-    linarith
-  rw [norm_mul]
-  calc ‖y ^ 5‖ * ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖
-      ≤ ‖y ^ 5‖ * (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖) :=
-        mul_le_mul_of_nonneg_left h_inner (norm_nonneg _)
-    _ = (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖) * ‖y ^ 5‖ := by ring
-```
-
-Use `set a := … with ha_def` etc. to introduce the four bound
-constants cleanly (cycle 144 used three; here we have four).
-
-### Step 3 (axiom check + faithfulness)
-
-After the proof compiles:
-
-1. `lean_verify
-   OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_four`
-   — must return `[propext, Classical.choice, Quot.sound]` only.
-2. `lake build OpenMath.Chapter5.Section550` — must succeed.
-3. Add a docstring quoting the textbook entity row, mirroring the
-   cycle 144 docstring on `_n_three`.
-4. Update `extraction/formalization_data/lean_status.json` row for
-   `thm:550A` (status remains `partial`; bump the cycle pointer to
-   145 and add a one-line note about n = 4).
-
-### Step 4 (fallback if `Matrix.det_fin_four` is absent)
-
-Verify Mathlib has `Matrix.det_fin_four` BEFORE writing the body:
-
-```
-lean_local_search "det_fin_four"
-```
-
-If absent (Mathlib only has `det_fin_one`, `det_fin_two`,
-`det_fin_three`), use cofactor expansion along the first column:
-
-```lean
-rw [Matrix.det_succ_column_zero]
-simp [Fin.sum_univ_four, Matrix.det_fin_three]
-ring
-```
-
-Or expand fully via `Matrix.det_succ_row_zero` recursively. Either
-form should close the polynomial identity once combined with `simp
-[alphaPoly, betaPoly, Fin.sum_univ_four]; ring`.
-
-If neither approach works in the polynomial-identity step, **stop
-and pivot to Backup Plan A (Priority 2 below)**. Do NOT raise
-`maxHeartbeats` and do NOT introduce sorries.
-
-## What NOT to do
-
-* **Do NOT use the cycle 140 (n = 2) `unfold + norm_num` shortcut.**
-  Per cycle 144 dead end #1, this does not generalise — `simp only`
-  cannot decide the nested `j.val + 1 = n` if-then-else chains at
-  `n ≥ 3`. Use the explicit `!![…]` matrix template from cycle 144.
-* **Do NOT raise `maxHeartbeats` above 200000.** Decompose into
-  helper lemmas or split the determinant expansion.
-* **Do NOT introduce `axiom` or `constant` declarations.**
-* **Do NOT introduce sorries** — single-cycle-axiom-clean is the
-  bar.
-* **Do NOT attempt general-`n` thm:550A this cycle.** Per
-  `.prover-state/issues/thm_550A_general_n.md`, this is multi-cycle
-  infrastructure work (cofactor-expansion induction or
-  eigenvalue-density argument). Cycle 141 cancelled an Aristotle
-  general-`n` job at 6 %; the prover cannot solve it directly.
-* **Do NOT chase Aristotle this cycle.** No outstanding jobs; do not
-  submit new general-`n` jobs. Manual mechanical extension is
-  faster and more reliable for n = 4.
-* **Do NOT use `add_le_add_right (norm_add_le _ _) _`.** Per cycle
-  144 dead end #2 + memory entry
-  `feedback_add_le_add_left_dispatch.md`, the dispatch quirk
-  produces the wrong-direction inequality. Use `linarith` over
-  intermediate `have h1 / h2 / h3 : … := norm_add_le _ _` lemmas
-  instead.
-* **Do NOT use `mul_le_mul_of_nonneg_left h_inner (by positivity)`
-  on `C * ‖y⁵‖` when the common factor is on the right.** Per cycle
-  144 dead end #3, restructure with `calc … _ = (‖a‖+…) * ‖y⁵‖ := by
-  ring` and apply `mul_le_mul_of_nonneg_left` against `‖y⁵‖` on the
-  left.
-
-## Aristotle policy this cycle
-
-* No outstanding jobs. Do NOT submit new jobs — n = 4 is mechanical
-  per the cycle 144 template, and Aristotle's general-`n`
-  performance has been confirmed unreliable (cycle 141 cancellation).
-* If the worker stalls past ~60 % of the cycle budget, pivot to
-  Priority 2 (Backup A).
-
-## Priority 2 (BACKUP A — if Priority 1 stalls): def:530A r = 3 heterogeneous-stages witness
-
-If the n = 4 expansion blows up (e.g. `Matrix.det_fin_four` absent
-AND cofactor expansion does not close cleanly), pivot to a smaller
-single-cycle deliverable: strengthen `def:530A` non-vacuity with an
-r = 3 heterogeneous-stages witness building on cycle 141's r = 2
-design.
-
-**Target**: add `nontrivialThreeStageGRK` (s = 3, b₀ ≠ 0),
-`mixedStartingMethod3` (r = 3, distinct stages e.g. `1, 2, 3`),
-plus the non-degeneracy + stage-distinctness theorems
-`mixedStartingMethod3_isNonDegenerate`,
-`mixedStartingMethod3_stages_pairwise_neq` — all axiom-clean.
-
-**Location**: `OpenMath/Chapter5/Section530.lean`, after the cycle
-141 r = 2 witnesses.
-
-**Estimated**: ~80–100 LOC. The cycle 141 design is the template;
-generalisation from r = 2 to r = 3 is mechanical.
-
-## Priority 3 (BACKUP B — if Priorities 1 and 2 both stall): def:520F r = 2 negative L-stable witness
-
-Lift cycle 137's r = 1 negative L-stable witness
-`implicitMidpointGLM_not_isLStable` to r = 2 via the same
-1-channel padding scheme as `padded2DBackwardEulerGLM` (cycle 143):
-
-**Target**:
-`padded2DImplicitMidpointGLM_not_isLStable`
-in `OpenMath/Chapter5/Section520.lean`. The r = 2 lifted method is
-A-stable but not L-stable (same as the r = 1 base), strengthening
-the r = 2 negative-witness coverage.
-
-**Estimated**: ~120 LOC.
-
-## Hygiene checks (mandatory at end of cycle, regardless of priority)
-
-1. `lake build OpenMath.Chapter5.Section550` (or
-   `Section530`/`Section520` for backups) — must succeed.
-2. `lean_verify` on the new theorem — must return only the standard
-   axioms.
-3. **Faithfulness check** (per CLAUDE.md):
-   - Quote the textbook statement from
-     `extraction/formalization_data/entities/thm_550A.json` (or
-     `def_530A.json` / `def_520F.json`).
-   - Confirm the Lean statement captures the same content at the
-     specialised `n` / `r`.
-   - Tautology check: conclusion not equal to any hypothesis.
-   - Identity check: proof is multi-step, not `exact h`.
-   - Hypothesis strength check: only the genuinely needed
-     hypotheses (`α β : Fin 4 → ℂ` for Priority 1).
-4. **Update `lean_status.json`**: bump cycle pointer for the
-   touched entity.
-5. **Update `plan.md`**: add a one-line note in the relevant entity
-   row reflecting the new witness.
-6. **Write `task_results/cycle_145.md`** documenting work done,
-   approach taken, dead ends, and suggested next approach for
-   cycle 146.
-7. **Commit + push** to `Main/Experiments`. Verify
-   `git rev-parse HEAD == git rev-parse origin/Main/Experiments`
-   before declaring the cycle complete.
-
-## Estimated cycle budget
-
-* Priority 1 (n = 4 stepping stone): 150–250 LOC, ~60–90 min if
-  paper algebra is correct on first attempt.
-* Priority 2 (def:530A r = 3): 80–100 LOC, ~45–60 min.
-* Priority 3 (def:520F r = 2 negative): ~120 LOC, ~60 min.
+Total: well under one cycle's budget, with high confidence of axiom-
+clean closure.
