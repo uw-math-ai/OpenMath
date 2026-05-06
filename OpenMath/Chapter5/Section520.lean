@@ -1289,6 +1289,19 @@ def padded2DEulerGLM : GeneralLinearMethod 1 2 where
   B := !![1; 0]
   V := !![1, 0; 0, 0]
 
+/-- A 3-padded explicit-Euler GLM `(s, r) = (1, 3)` (cycle 159):
+row 0 carries the genuine explicit-Euler step (`U[0,0] = 1`,
+`B[0,0] = 1`); rows 1 and 2 are passively decoupled zero channels
+(`B[1][·] = B[2][·] = 0`, `V[1][·] = V[2][·] = 0`). Lifts cycle
+133's `padded2DEulerGLM` from r = 2 to r = 3. Used by Section 530
+to land the `r = 3` non-vacuity witnesses for `def:530B` and
+`def:530C`. -/
+def padded3DEulerGLM : GeneralLinearMethod 1 3 where
+  A := !![0]
+  U := !![1, 0, 0]
+  B := !![1; 0; 0]
+  V := !![1, 0, 0; 0, 0, 0; 0, 0, 0]
+
 /-- **Substantive** non-vacuity witness for `IsIRKStable`:
 `padded2DEulerGLM` (s = 1, r = 2) is inherently Runge–Kutta stable
 with `X = 0`. Unlike the cycle 131 witness `explicitEulerGLM`

@@ -447,3 +447,102 @@ remains untouched.
   hypothesis pack) would be a clean cycle 159+ refactor on top of
   this helper, generalising it over the Taylor degree once a second
   use-case appears.
+
+## Cycle 159 update — r = 3 non-vacuity witnesses landed
+
+Lifted the cycle 156/157 r = 2 padded-Euler Path-A non-vacuity grid
+to r = 3, mirroring the cycle 156 → cycle 157 lift. New artefacts:
+
+### In `OpenMath/Chapter5/Section520.lean`
+* `padded3DEulerGLM : GeneralLinearMethod 1 3` — the 3-row padded
+  explicit-Euler GLM (`A = !![0]`, `U = !![1, 0, 0]`,
+  `B = !![1; 0; 0]`, `V = !![1, 0, 0; 0, 0, 0; 0, 0, 0]`). Lifts
+  cycle 133's `padded2DEulerGLM` from r = 2 to r = 3. No new
+  Section520 corollaries (`IsRKStable`, `IsIRKStable`, A-stability
+  negative witness, etc.) added — out of scope this cycle.
+
+### In `OpenMath/Chapter5/Section530.lean`
+* `pad3CompatMethod : Fin 3 → GeneralizedRungeKuttaMethod 1` — index
+  0 is `trivialGeneralizedRK` (active channel, b₀ = 1); indices 1
+  and 2 are `zeroGeneralizedRK` (inactive zero channels).
+* `pad3CompatStartingMethod : StartingMethod 3` — wraps
+  `pad3CompatMethod` with `stages = fun _ => 1`. Meshes with
+  `padded3DEulerGLM`'s row-1 and row-2 zero channels.
+* `pad3CompatStartingMethod_isNonDegenerate` — non-degenerate at
+  index 0 via `b₀ = 1 ≠ 0` (uses
+  `StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero`).
+* `pad3CompatStartingMethod_constituents_isExplicit` — three-arm
+  `fin_cases i` proof: index 0 cites `trivialGeneralizedRK_isExplicit`;
+  indices 1 and 2 close the 1×1 strict-lower-triangular condition
+  vacuously via `intro a b _; fin_cases a; fin_cases b; rfl`.
+* `padded3DEulerGLM_isExplicit` — `A = !![0]` is vacuously
+  strict-lower-triangular at `s = 1`.
+* `pad3CompatStartingMethod_applyExplicit` — three-component closed
+  form: `![y₀ + h * f y₀, 0, 0]`. Index 0 cites
+  `trivialGeneralizedRK_explicitApply`; indices 1 and 2 cite the
+  cycle 156 private helper `zeroGeneralizedRK_explicitApply`.
+* `padded3DEulerGLM_hasOrderZero_pad3CompatStarting` (p = 0,
+  cycle 159 substantive deliverable). Three-arm `fin_cases i` proof:
+  - **i = 0 channel**: identical to cycle 156's i = 0 channel — SM[0]
+    and ES[0] reduce to the cycle-153 explicit-Euler closed form
+    `(y₀ + h·f y₀) + h·f(y₀ + h·f y₀)` and `yex(x₀+h) + h·f(yex(x₀+h))`;
+    T1 + T2 decomposition (T1 little-o(h) via `HasDerivAt`, T2 O(h)
+    via Lipschitz + continuity-driven eventual `|·| ≤ 1`).
+  - **i = 1 channel**: SM[1] = ES[1] = 0; close by
+    `Asymptotics.isBigO_zero`.
+  - **i = 2 channel**: identical to i = 1.
+* `padded3DEulerGLM_hasOrderOne_pad3CompatStarting` (p = 1,
+  cycle 159 substantive deliverable + cycle 158 portability
+  validation). Three-arm `fin_cases i` proof:
+  - **i = 0 channel**: SM[0] / ES[0] closed-form rewrites identical
+    to cycle 157's i = 0 closure; an `h^(1+1) = h^2` collapse; then a
+    one-line `exact taylor_lipschitz_explicitEuler_orderOne_diff_isBigO
+      hf_lip hyex_x₀ hyex_C2 hyex_ode`. This is the third call site
+    for the cycle 158 helper, validating its portability.
+  - **i = 1 channel**: SM[1] = ES[1] = 0; zero-collapse with
+    exponent `h^(1+1)`, identical structure to cycle 157's i = 1.
+  - **i = 2 channel**: identical to i = 1.
+* `padded3DEulerGLM_hasOrderZero` (def:530C wrapper, p = 0) —
+  4-line existential closure exhibiting `pad3CompatStartingMethod` as
+  the witness, citing `pad3CompatStartingMethod_isNonDegenerate`,
+  `pad3CompatStartingMethod_constituents_isExplicit`, and
+  `padded3DEulerGLM_hasOrderZero_pad3CompatStarting`.
+* `padded3DEulerGLM_hasOrderOne` (def:530C wrapper, p = 1) —
+  analogous to the p = 0 wrapper.
+
+### Outcome
+* `lake env lean OpenMath/Chapter5/Section520.lean` exits 0.
+* `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+* `lake env lean OpenMath/Chapter5.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter5/Section520.lean` → 0 (unchanged).
+* `grep -c sorry OpenMath/Chapter5/Section530.lean` → 0 (unchanged).
+* All eight new theorems axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`):
+  - `padded3DEulerGLM_isExplicit`
+  - `pad3CompatStartingMethod_isNonDegenerate`
+  - `pad3CompatStartingMethod_constituents_isExplicit`
+  - `pad3CompatStartingMethod_applyExplicit`
+  - `padded3DEulerGLM_hasOrderZero_pad3CompatStarting`
+  - `padded3DEulerGLM_hasOrderOne_pad3CompatStarting`
+  - `padded3DEulerGLM_hasOrderZero`
+  - `padded3DEulerGLM_hasOrderOne`
+* No regression on cycle 153/154/155/156/157/158 theorems —
+  re-verified axiom-clean.
+* `lean_status.json` updated: `def:530B` and `def:530C` cycle bumped
+  from 157 to 159; both remain `partial` (Path B implicit branch
+  still deferred).
+* Path A status of def:530B/C: still `[~]`. Path B (implicit) remains
+  deferred per the unchanged blockers above.
+
+### What r = 3 unblocks for future cycles
+* Generalising the cycle 158 helper over the Taylor degree (a p = 2
+  parametric helper) becomes a cleaner refactor with the helper now
+  validated at three call sites.
+* Higher-order GLM order witnesses (a substantive p ≥ 2 witness
+  requires a higher-order GLM such as RK2 or midpoint, since explicit
+  Euler is a 1st-order method whose SM−ES diff is genuinely O(h²),
+  NOT O(h³)).
+* The shape of the r = 3 lift suggests an `r`-parametric padded GLM
+  family `paddedRDEulerGLM (r : ℕ)` could be defined, with all
+  current witnesses replaced by `r`-induction; this is a multi-cycle
+  refactor.

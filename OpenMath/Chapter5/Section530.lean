@@ -366,6 +366,49 @@ theorem padCompatStartingMethod_constituents_isExplicit :
     fin_cases a; fin_cases b
     rfl
 
+/-- Constituent function for `pad3CompatStartingMethod` (cycle 159):
+index `0` gets `trivialGeneralizedRK` (`b₀ = 1`, exercises the active
+channel); indices `1` and `2` both get `zeroGeneralizedRK`
+(`b₀ = 0`, the inactive zero channels). All three are 1-stage and
+explicit. -/
+def pad3CompatMethod : (i : Fin 3) → GeneralizedRungeKuttaMethod 1
+  | 0 => trivialGeneralizedRK
+  | 1 => zeroGeneralizedRK
+  | 2 => zeroGeneralizedRK
+
+/-- A 3-method starting method (`r = 3`, cycle 159) that meshes with
+`padded3DEulerGLM`'s zero row-1 and row-2 channels: row 0 active
+(`trivialGeneralizedRK`, `b₀ = 1`), rows 1 and 2 inactive
+(`zeroGeneralizedRK`, `b₀ = 0`). Non-degenerate at index `0`.
+Lifts cycle 156's `padCompatStartingMethod` from r = 2 to r = 3. -/
+def pad3CompatStartingMethod : StartingMethod 3 where
+  stages := fun _ => 1
+  method := pad3CompatMethod
+
+/-- **Non-vacuity (cycle 159).** `pad3CompatStartingMethod` is
+non-degenerate via its index-0 constituent (`b₀ = 1 ≠ 0`). -/
+theorem pad3CompatStartingMethod_isNonDegenerate :
+    pad3CompatStartingMethod.IsNonDegenerate := by
+  rw [StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero]
+  refine ⟨0, ?_⟩
+  show (1 : ℝ) ≠ 0
+  exact one_ne_zero
+
+/-- All three constituents of `pad3CompatStartingMethod` are
+explicit: `trivialGeneralizedRK` and the two `zeroGeneralizedRK`
+copies all have the 1×1 zero `A`-block. -/
+theorem pad3CompatStartingMethod_constituents_isExplicit :
+    ∀ i : Fin 3, (pad3CompatStartingMethod.method i).IsExplicit := by
+  intro i
+  fin_cases i
+  · exact trivialGeneralizedRK_isExplicit
+  · intro a b _
+    fin_cases a; fin_cases b
+    rfl
+  · intro a b _
+    fin_cases a; fin_cases b
+    rfl
+
 /-! #### Positive witness (non-vacuous): Heun-style 2-stage explicit method
 
 `explicit2StageGRK` has `A = !![0, 0; 1, 0]`, with a non-trivial
@@ -584,6 +627,25 @@ theorem padCompatStartingMethod_applyExplicit
   · show zeroGeneralizedRK.explicitApply f y₀ h = 0
     exact zeroGeneralizedRK_explicitApply f y₀ h
 
+/-- **Component-wise closed form for
+`pad3CompatStartingMethod.applyExplicit` (cycle 159).** The active
+row-0 channel returns one explicit-Euler step `y₀ + h · f(y₀)` (via
+`trivialGeneralizedRK`); the inactive row-1 and row-2 channels each
+return `0` (via `zeroGeneralizedRK`). Lifts cycle 156's
+`padCompatStartingMethod_applyExplicit` from r = 2 to r = 3. -/
+theorem pad3CompatStartingMethod_applyExplicit
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    pad3CompatStartingMethod.applyExplicit f y₀ h
+      = ![y₀ + h * f y₀, 0, 0] := by
+  funext i
+  fin_cases i
+  · show trivialGeneralizedRK.explicitApply f y₀ h = y₀ + h * f y₀
+    exact trivialGeneralizedRK_explicitApply f y₀ h
+  · show zeroGeneralizedRK.explicitApply f y₀ h = 0
+    exact zeroGeneralizedRK_explicitApply f y₀ h
+  · show zeroGeneralizedRK.explicitApply f y₀ h = 0
+    exact zeroGeneralizedRK_explicitApply f y₀ h
+
 end OpenMath.Chapter5.Section530
 
 /-! ### Explicit general linear methods + the `SM` operator
@@ -672,6 +734,19 @@ non-vacuity witness `padded2DEulerGLM_hasOrderZero_padCompatStarting`
 for `HasOrderRelativeTo_explicit`. -/
 theorem padded2DEulerGLM_isExplicit :
     padded2DEulerGLM.IsExplicit := by
+  intro i j _
+  fin_cases i; fin_cases j
+  rfl
+
+/-- **Non-vacuity (positive direction, cycle 159): the 3-padded
+`(s, r) = (1, 3)` Euler GLM is explicit.** The 1×1 `A`-block
+`!![0]` of `padded3DEulerGLM` (Section520) is vacuously
+strict-lower triangular at `s = 1`. Used by the `r = 3`
+non-vacuity witnesses
+`padded3DEulerGLM_hasOrderZero_pad3CompatStarting` and
+`padded3DEulerGLM_hasOrderOne_pad3CompatStarting`. -/
+theorem padded3DEulerGLM_isExplicit :
+    padded3DEulerGLM.IsExplicit := by
   intro i j _
   fin_cases i; fin_cases j
   rfl
@@ -1517,6 +1592,441 @@ theorem padded2DEulerGLM_hasOrderOne
           padCompatStartingMethod_isNonDegenerate,
           ?_⟩
   exact padded2DEulerGLM_hasOrderOne_padCompatStarting
+          hf_lip hyex_x₀ hyex_C2 hyex_ode
+
+/-- **`r = 3` non-vacuity (def:530B Path A, cycle 159).** The 3-padded
+`(s, r) = (1, 3)` GLM `padded3DEulerGLM` has order `0` relative to
+`pad3CompatStartingMethod` on any IVP whose exact solution `yex`
+satisfies `yex x₀ = y₀` and `HasDerivAt yex (f y₀) x₀`, with `f`
+Lipschitz with constant `L`.
+
+The row-0 channel reduces to the same explicit-Euler closed form as
+the cycle 153 `(s, r) = (1, 1)` and cycle 156 `r = 2` witnesses; the
+row-1 and row-2 channels are identically zero on both `SM` and `ES`
+(zero-collapse via `Asymptotics.isBigO_zero`). Lifts cycle 156's
+r = 2 witness to r = 3. -/
+theorem padded3DEulerGLM_hasOrderZero_pad3CompatStarting
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_deriv : HasDerivAt yex (f y₀) x₀) :
+    HasOrderRelativeTo_explicit padded3DEulerGLM pad3CompatStartingMethod
+      pad3CompatStartingMethod_constituents_isExplicit
+      padded3DEulerGLM_isExplicit
+      0 f yex x₀ y₀ := by
+  intro i
+  fin_cases i
+  · -- i = 0 case: identical algebraic shape to cycles 153 and 156.
+    change (fun h : ℝ =>
+          applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              padded3DEulerGLM_isExplicit f y₀ h 0
+            - applyExactThenStarting_explicit pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                f yex x₀ h 0)
+        =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (0 + 1))
+    -- SM[0] closed form
+    have hSM : ∀ h : ℝ,
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 0
+          = (y₀ + h * f y₀) + h * f (y₀ + h * f y₀) := by
+      intro h
+      show (h * ∑ i : Fin 1,
+          padded3DEulerGLM.B 0 i
+            * f (padded3DEulerGLM.explicitStageValue f
+                    (pad3CompatStartingMethod.applyExplicit f y₀ h) h i))
+          + (padded3DEulerGLM.V *ᵥ pad3CompatStartingMethod.applyExplicit f y₀ h) 0
+          = _
+      rw [pad3CompatStartingMethod_applyExplicit]
+      unfold OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitStageValue
+      simp [padded3DEulerGLM, Matrix.mulVec, dotProduct, Fin.sum_univ_three]
+      ring
+    -- ES[0] closed form
+    have hES : ∀ h : ℝ,
+        applyExactThenStarting_explicit pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            f yex x₀ h 0
+          = yex (x₀ + h) + h * f (yex (x₀ + h)) := by
+      intro h
+      show pad3CompatStartingMethod.applyExplicit f (yex (x₀ + h)) h 0
+          = yex (x₀ + h) + h * f (yex (x₀ + h))
+      rw [pad3CompatStartingMethod_applyExplicit]
+      rfl
+    -- Rewrite the difference into closed form
+    have hcongr :
+        (fun h : ℝ =>
+            applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                padded3DEulerGLM_isExplicit f y₀ h 0
+              - applyExactThenStarting_explicit pad3CompatStartingMethod
+                  pad3CompatStartingMethod_constituents_isExplicit
+                  f yex x₀ h 0)
+          = (fun h : ℝ =>
+              ((y₀ + h * f y₀) - yex (x₀ + h))
+                + h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))) := by
+      funext h
+      rw [hSM, hES]
+      ring
+    rw [hcongr]
+    -- Collapse `h ^ (0 + 1)` to `h`.
+    have hpow : (fun h : ℝ => h ^ (0 + 1)) = (fun h : ℝ => h) := by
+      funext h; simp
+    rw [hpow]
+    -- T1 = (y₀ + h·f y₀) - yex(x₀+h) is o(h), hence O(h).
+    have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+        =O[nhds (0 : ℝ)] (fun h => h) := by
+      have hderiv :
+          (fun h : ℝ => yex (x₀ + h) - yex x₀ - h • f y₀)
+            =o[nhds (0 : ℝ)] fun h => h :=
+        hasDerivAt_iff_isLittleO_nhds_zero.mp hyex_deriv
+      have h1 : (fun h : ℝ => yex (x₀ + h) - y₀ - h * f y₀)
+          =o[nhds (0 : ℝ)] fun h => h := by
+        have := hderiv
+        rw [hyex_x₀] at this
+        simpa [smul_eq_mul] using this
+      have h2 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+          =o[nhds (0 : ℝ)] fun h => h := by
+        have := h1.neg_left
+        refine this.congr' ?_ (Filter.Eventually.of_forall fun _ => rfl)
+        exact Filter.Eventually.of_forall fun h => by ring
+      exact h2.isBigO
+    -- T2 = h * (f(y₀ + h·f y₀) - f(yex(x₀+h))) is O(h) via Lipschitz.
+    have hT2 : (fun h : ℝ => h * (f (y₀ + h * f y₀) - f (yex (x₀ + h))))
+        =O[nhds (0 : ℝ)] (fun h => h) := by
+      have hcontA : ContinuousAt (fun h : ℝ => y₀ + h * f y₀) 0 := by
+        exact (continuous_const.add (continuous_id.mul continuous_const)).continuousAt
+      have hcontB : ContinuousAt (fun h : ℝ => yex (x₀ + h)) 0 := by
+        have h_inner : ContinuousAt (fun h : ℝ => x₀ + h) 0 :=
+          (continuous_const.add continuous_id).continuousAt
+        have h_outer : ContinuousAt yex ((fun h : ℝ => x₀ + h) 0) := by
+          simpa using hyex_deriv.continuousAt
+        exact h_outer.comp h_inner
+      have hdiff_tendsto :
+          Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
+            (nhds 0) (nhds 0) := by
+        have htend : Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
+            (nhds 0) (nhds (y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0))) :=
+          (hcontA.sub hcontB).tendsto
+        have h0 : y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0) = 0 := by simp [hyex_x₀]
+        rw [h0] at htend
+        exact htend
+      have hbound : ∀ᶠ h : ℝ in nhds 0,
+          |y₀ + h * f y₀ - yex (x₀ + h)| < 1 := by
+        have hone : (0 : ℝ) < 1 := by norm_num
+        have h_in := (Metric.tendsto_nhds.mp hdiff_tendsto) 1 hone
+        filter_upwards [h_in] with h hh
+        rw [Real.dist_0_eq_abs] at hh
+        exact hh
+      refine .of_bound (↑L) ?_
+      filter_upwards [hbound] with h hh
+      have hlip := hf_lip.dist_le_mul (y₀ + h * f y₀) (yex (x₀ + h))
+      rw [Real.dist_eq, Real.dist_eq] at hlip
+      have hLnn : (0 : ℝ) ≤ L := L.coe_nonneg
+      have habsh : (0 : ℝ) ≤ |h| := abs_nonneg _
+      calc ‖h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))‖
+          = |h| * |f (y₀ + h * f y₀) - f (yex (x₀ + h))| := by
+            rw [Real.norm_eq_abs, abs_mul]
+        _ ≤ |h| * (↑L * |y₀ + h * f y₀ - yex (x₀ + h)|) :=
+            mul_le_mul_of_nonneg_left hlip habsh
+        _ ≤ |h| * (↑L * 1) := by
+            have hh' : |y₀ + h * f y₀ - yex (x₀ + h)| ≤ 1 := hh.le
+            have : ↑L * |y₀ + h * f y₀ - yex (x₀ + h)| ≤ ↑L * 1 :=
+              mul_le_mul_of_nonneg_left hh' hLnn
+            exact mul_le_mul_of_nonneg_left this habsh
+        _ = ↑L * ‖h‖ := by rw [Real.norm_eq_abs]; ring
+    -- Combine
+    exact hT1.add hT2
+  · -- i = 1 case: SM[1] = 0, ES[1] = 0, Diff = 0.
+    change (fun h : ℝ =>
+          applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              padded3DEulerGLM_isExplicit f y₀ h 1
+            - applyExactThenStarting_explicit pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                f yex x₀ h 1)
+        =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (0 + 1))
+    have hSM1 : ∀ h : ℝ,
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 1 = 0 := by
+      intro h
+      show (h * ∑ i : Fin 1,
+          padded3DEulerGLM.B 1 i
+            * f (padded3DEulerGLM.explicitStageValue f
+                    (pad3CompatStartingMethod.applyExplicit f y₀ h) h i))
+          + (padded3DEulerGLM.V *ᵥ pad3CompatStartingMethod.applyExplicit f y₀ h) 1
+          = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      simp [padded3DEulerGLM, Matrix.mulVec, dotProduct, Fin.sum_univ_three]
+    have hES1 : ∀ h : ℝ,
+        applyExactThenStarting_explicit pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            f yex x₀ h 1 = 0 := by
+      intro h
+      show pad3CompatStartingMethod.applyExplicit f (yex (x₀ + h)) h 1 = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      rfl
+    have hcongr : (fun h : ℝ =>
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 1
+          - applyExactThenStarting_explicit pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              f yex x₀ h 1) = (fun _ : ℝ => (0 : ℝ)) := by
+      funext h; rw [hSM1, hES1]; ring
+    rw [hcongr]
+    exact Asymptotics.isBigO_zero _ _
+  · -- i = 2 case: identical structure to i = 1.
+    change (fun h : ℝ =>
+          applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              padded3DEulerGLM_isExplicit f y₀ h 2
+            - applyExactThenStarting_explicit pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                f yex x₀ h 2)
+        =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (0 + 1))
+    have hSM2 : ∀ h : ℝ,
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 2 = 0 := by
+      intro h
+      show (h * ∑ i : Fin 1,
+          padded3DEulerGLM.B 2 i
+            * f (padded3DEulerGLM.explicitStageValue f
+                    (pad3CompatStartingMethod.applyExplicit f y₀ h) h i))
+          + (padded3DEulerGLM.V *ᵥ pad3CompatStartingMethod.applyExplicit f y₀ h) 2
+          = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      simp [padded3DEulerGLM, Matrix.mulVec, dotProduct, Fin.sum_univ_three]
+    have hES2 : ∀ h : ℝ,
+        applyExactThenStarting_explicit pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            f yex x₀ h 2 = 0 := by
+      intro h
+      show pad3CompatStartingMethod.applyExplicit f (yex (x₀ + h)) h 2 = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      rfl
+    have hcongr : (fun h : ℝ =>
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 2
+          - applyExactThenStarting_explicit pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              f yex x₀ h 2) = (fun _ : ℝ => (0 : ℝ)) := by
+      funext h; rw [hSM2, hES2]; ring
+    rw [hcongr]
+    exact Asymptotics.isBigO_zero _ _
+
+/-- **`r = 3`, `p = 1` non-vacuity (def:530B Path A, cycle 159).**
+Mechanical port of `padded2DEulerGLM_hasOrderOne_padCompatStarting`
+(cycle 157) to the 3-padded `(s, r) = (1, 3)` setting. The padded GLM
+`padded3DEulerGLM` has order `1` relative to `pad3CompatStartingMethod`
+under the cycle-154 hypothesis pack: `f` Lipschitz, `yex` is `C²`,
+full ODE relation `∀ x, HasDerivAt yex (f (yex x)) x`, and
+`yex x₀ = y₀`.
+
+The row-0 channel is identical to cycle 154/157's Taylor + Lipschitz
+closure (closed forms match exactly across the `padCompat` and
+`pad3Compat` starts on the active row 0), and discharges via the
+cycle-158 shared helper
+`taylor_lipschitz_explicitEuler_orderOne_diff_isBigO` as a one-line
+invocation — validating its portability to a third call site. The
+row-1 and row-2 channels are identically zero on both `SM` and `ES`
+(cycle 156/157 zero-collapse pattern, exponent `h ^ 2`). -/
+theorem padded3DEulerGLM_hasOrderOne_pad3CompatStarting
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    HasOrderRelativeTo_explicit padded3DEulerGLM pad3CompatStartingMethod
+      pad3CompatStartingMethod_constituents_isExplicit
+      padded3DEulerGLM_isExplicit
+      1 f yex x₀ y₀ := by
+  intro i
+  fin_cases i
+  · -- i = 0 case: identical algebraic shape to cycles 154 and 157.
+    change (fun h : ℝ =>
+          applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              padded3DEulerGLM_isExplicit f y₀ h 0
+            - applyExactThenStarting_explicit pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                f yex x₀ h 0)
+        =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1))
+    -- SM[0] closed form
+    have hSM : ∀ h : ℝ,
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 0
+          = (y₀ + h * f y₀) + h * f (y₀ + h * f y₀) := by
+      intro h
+      show (h * ∑ i : Fin 1,
+          padded3DEulerGLM.B 0 i
+            * f (padded3DEulerGLM.explicitStageValue f
+                    (pad3CompatStartingMethod.applyExplicit f y₀ h) h i))
+          + (padded3DEulerGLM.V *ᵥ pad3CompatStartingMethod.applyExplicit f y₀ h) 0
+          = _
+      rw [pad3CompatStartingMethod_applyExplicit]
+      unfold OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitStageValue
+      simp [padded3DEulerGLM, Matrix.mulVec, dotProduct, Fin.sum_univ_three]
+      ring
+    -- ES[0] closed form
+    have hES : ∀ h : ℝ,
+        applyExactThenStarting_explicit pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            f yex x₀ h 0
+          = yex (x₀ + h) + h * f (yex (x₀ + h)) := by
+      intro h
+      show pad3CompatStartingMethod.applyExplicit f (yex (x₀ + h)) h 0
+          = yex (x₀ + h) + h * f (yex (x₀ + h))
+      rw [pad3CompatStartingMethod_applyExplicit]
+      rfl
+    -- Rewrite SM[0] − ES[0] into the helper's input form.
+    have hcongr :
+        (fun h : ℝ =>
+            applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                padded3DEulerGLM_isExplicit f y₀ h 0
+              - applyExactThenStarting_explicit pad3CompatStartingMethod
+                  pad3CompatStartingMethod_constituents_isExplicit
+                  f yex x₀ h 0)
+          = (fun h : ℝ =>
+              ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+                - (yex (x₀ + h) + h * f (yex (x₀ + h)))) := by
+      funext h
+      rw [hSM, hES]
+    rw [hcongr]
+    -- Collapse `h ^ (1 + 1)` to `h ^ 2`.
+    have hpow : (fun h : ℝ => h ^ (1 + 1)) = (fun h : ℝ => h ^ 2) := by
+      funext h; ring
+    rw [hpow]
+    -- Discharge via the cycle-158 shared helper.
+    exact taylor_lipschitz_explicitEuler_orderOne_diff_isBigO
+      hf_lip hyex_x₀ hyex_C2 hyex_ode
+  · -- i = 1 case: SM[1] = ES[1] = 0; the difference is identically zero.
+    change (fun h : ℝ =>
+          applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              padded3DEulerGLM_isExplicit f y₀ h 1
+            - applyExactThenStarting_explicit pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                f yex x₀ h 1)
+        =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1))
+    have hSM1 : ∀ h : ℝ,
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 1 = 0 := by
+      intro h
+      show (h * ∑ i : Fin 1,
+          padded3DEulerGLM.B 1 i
+            * f (padded3DEulerGLM.explicitStageValue f
+                    (pad3CompatStartingMethod.applyExplicit f y₀ h) h i))
+          + (padded3DEulerGLM.V *ᵥ pad3CompatStartingMethod.applyExplicit f y₀ h) 1
+          = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      simp [padded3DEulerGLM, Matrix.mulVec, dotProduct, Fin.sum_univ_three]
+    have hES1 : ∀ h : ℝ,
+        applyExactThenStarting_explicit pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            f yex x₀ h 1 = 0 := by
+      intro h
+      show pad3CompatStartingMethod.applyExplicit f (yex (x₀ + h)) h 1 = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      rfl
+    have hcongr : (fun h : ℝ =>
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 1
+          - applyExactThenStarting_explicit pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              f yex x₀ h 1) = (fun _ : ℝ => (0 : ℝ)) := by
+      funext h; rw [hSM1, hES1]; ring
+    rw [hcongr]
+    exact Asymptotics.isBigO_zero _ _
+  · -- i = 2 case: identical structure to i = 1.
+    change (fun h : ℝ =>
+          applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              padded3DEulerGLM_isExplicit f y₀ h 2
+            - applyExactThenStarting_explicit pad3CompatStartingMethod
+                pad3CompatStartingMethod_constituents_isExplicit
+                f yex x₀ h 2)
+        =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1))
+    have hSM2 : ∀ h : ℝ,
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 2 = 0 := by
+      intro h
+      show (h * ∑ i : Fin 1,
+          padded3DEulerGLM.B 2 i
+            * f (padded3DEulerGLM.explicitStageValue f
+                    (pad3CompatStartingMethod.applyExplicit f y₀ h) h i))
+          + (padded3DEulerGLM.V *ᵥ pad3CompatStartingMethod.applyExplicit f y₀ h) 2
+          = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      simp [padded3DEulerGLM, Matrix.mulVec, dotProduct, Fin.sum_univ_three]
+    have hES2 : ∀ h : ℝ,
+        applyExactThenStarting_explicit pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            f yex x₀ h 2 = 0 := by
+      intro h
+      show pad3CompatStartingMethod.applyExplicit f (yex (x₀ + h)) h 2 = 0
+      rw [pad3CompatStartingMethod_applyExplicit]
+      rfl
+    have hcongr : (fun h : ℝ =>
+        applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
+            pad3CompatStartingMethod_constituents_isExplicit
+            padded3DEulerGLM_isExplicit f y₀ h 2
+          - applyExactThenStarting_explicit pad3CompatStartingMethod
+              pad3CompatStartingMethod_constituents_isExplicit
+              f yex x₀ h 2) = (fun _ : ℝ => (0 : ℝ)) := by
+      funext h; rw [hSM2, hES2]; ring
+    rw [hcongr]
+    exact Asymptotics.isBigO_zero _ _
+
+/-- **Non-vacuity of `HasOrder_explicit` at `r = 3`, `p = 0` (cycle 159).**
+Mirrors `padded2DEulerGLM_hasOrderZero` shape: exhibits
+`pad3CompatStartingMethod` as the existential witness for
+`padded3DEulerGLM`. The starting method is non-degenerate
+(`pad3CompatStartingMethod_isNonDegenerate`) and has explicit constituents
+(`pad3CompatStartingMethod_constituents_isExplicit`); the
+`HasOrderRelativeTo_explicit` component is supplied by
+`padded3DEulerGLM_hasOrderZero_pad3CompatStarting`. -/
+theorem padded3DEulerGLM_hasOrderZero
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_deriv : HasDerivAt yex (f y₀) x₀) :
+    HasOrder_explicit padded3DEulerGLM padded3DEulerGLM_isExplicit
+      0 f yex x₀ y₀ := by
+  refine ⟨pad3CompatStartingMethod,
+          pad3CompatStartingMethod_constituents_isExplicit,
+          pad3CompatStartingMethod_isNonDegenerate,
+          ?_⟩
+  exact padded3DEulerGLM_hasOrderZero_pad3CompatStarting
+          hf_lip hyex_x₀ hyex_deriv
+
+/-- **Non-vacuity of `HasOrder_explicit` at `r = 3`, `p = 1` (cycle 159).**
+Refines `padded3DEulerGLM_hasOrderZero` to `p = 1` under the cycle-154
+hypothesis pack (`LipschitzWith L f`, `ContDiff ℝ 2 yex`, full ODE
+relation, `yex x₀ = y₀`). The starting method is
+`pad3CompatStartingMethod`; the `HasOrderRelativeTo_explicit` component
+is supplied by `padded3DEulerGLM_hasOrderOne_pad3CompatStarting`. -/
+theorem padded3DEulerGLM_hasOrderOne
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    HasOrder_explicit padded3DEulerGLM padded3DEulerGLM_isExplicit
+      1 f yex x₀ y₀ := by
+  refine ⟨pad3CompatStartingMethod,
+          pad3CompatStartingMethod_constituents_isExplicit,
+          pad3CompatStartingMethod_isNonDegenerate,
+          ?_⟩
+  exact padded3DEulerGLM_hasOrderOne_pad3CompatStarting
           hf_lip hyex_x₀ hyex_C2 hyex_ode
 
 end OrderRelativeTo
