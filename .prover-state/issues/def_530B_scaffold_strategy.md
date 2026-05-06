@@ -144,9 +144,43 @@ vacuous) once operators close — it's not the case that
 
 * **Cycle 150**: rollback (this issue file documents the rollback
   rationale). No further def:530B work.
-* **Cycle 151+**: planner decides Path A vs Path B based on which
-  upstream theorems (e.g. order conditions in §530+) require which
-  scope.
+* **Cycle 151**: Path A Step 1 — `IsExplicit` predicate +
+  non-vacuity witnesses landed (axiom-clean, no sorries). See update
+  below.
+* **Cycle 152**: Path A Step 2 (planned) — define
+  `applyStartingThenStep_explicit` and `applyExactThenStarting_explicit`
+  with hypothesis `∀ i, IsExplicit (S.method i)`. Body via direct
+  recursion on stage index using `Finset.sum` over already-computed
+  earlier stages. Estimated ~80-120 LOC.
+* **Cycle 153** (planned): Path A Step 3 — define
+  `HasOrderRelativeTo_explicit` and prove the trivial-IVP non-vacuity
+  witness for explicit Euler × `trivialStartingMethod` with order
+  `p = 0`. Estimated ~50-80 LOC.
+
+## Cycle 151 update — Path A Step 1 complete
+
+Path A Step 1 landed in
+`OpenMath/Chapter5/Section530.lean` (cycle 151):
+
+* `def GeneralizedRungeKuttaMethod.IsExplicit` — strict-lower-triangular
+  predicate `∀ i j, i.val ≤ j.val → A i j = 0`. Captures "no implicit
+  stage equations".
+* `theorem trivialGeneralizedRK_isExplicit` — positive (vacuous, s = 1)
+  witness.
+* `noncomputable def explicit2StageGRK` (Heun-style
+  `A = !![0,0;1,0]`) + `theorem explicit2StageGRK_isExplicit` —
+  positive (non-vacuous, s = 2) witness with a genuine non-zero
+  strict-lower entry.
+* `noncomputable def implicit2StageGRK` (`A 0 0 = 1/2`) +
+  `theorem implicit2StageGRK_not_isExplicit` — negative witness,
+  exhibiting the predicate is genuinely refutable.
+
+All three theorems verified axiom-clean
+(`propext, Classical.choice, Quot.sound` only) via `lean_verify`.
+
+Step 2 target for cycle 152 is the explicit-only operators. Direct
+recursion on stage index (no fixed-point machinery needed) leveraging
+the strict-lower-triangular `A` from `IsExplicit`.
 
 ## Cross-reference
 

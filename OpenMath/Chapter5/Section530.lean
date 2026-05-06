@@ -256,4 +256,105 @@ theorem zero2StartingMethod_isDegenerate :
   intro i
   fin_cases i <;> rfl
 
+/-! ### Explicit generalized Runge–Kutta methods (cycle 151, def:530B Path A Step 1)
+
+Butcher's §530 implicitly distinguishes *explicit* generalized Runge–Kutta
+methods — those whose stage equations
+`Y_i = y₀ + h · Σⱼ A_{ij} · f(Y_j)` can be evaluated by direct recursion
+on the stage index `i = 0, 1, …, s-1` — from *implicit* ones, which
+require solving a fixed-point system. The recursion succeeds exactly
+when the coefficient matrix `A` is *strictly lower triangular*:
+`A i j = 0` whenever `i ≤ j` (i.e. on or above the diagonal).
+
+The textbook does not name the predicate, but uses the property
+implicitly when discussing methods like classical RK4. We capture it
+here as a Lean-internal helper for def:530B, where it will gate the
+"explicit-only" operators `applyStartingThenStep_explicit` and
+`applyExactThenStarting_explicit` (cycle 152 target). -/
+
+/-- **Explicitness predicate.** A generalized Runge–Kutta method is
+*explicit* if its coefficient matrix `A` is strictly lower triangular:
+`A i j = 0` whenever `i ≤ j`.
+
+This is the Lean encoding of "no implicit stage equations": for an
+explicit method, the stage value `Y_i` depends only on the previously
+computed `Y_0, …, Y_{i-1}`, so the stages can be evaluated by direct
+recursion sidestepping the fixed-point machinery required for general
+(implicit) methods.
+
+This predicate is a Lean-internal helper, not a textbook entity:
+Butcher §530 uses the explicit/implicit distinction implicitly when
+discussing methods like classical RK4, but does not name a separate
+predicate. -/
+def GeneralizedRungeKuttaMethod.IsExplicit
+    {s : ℕ} (M : GeneralizedRungeKuttaMethod s) : Prop :=
+  ∀ i j : Fin s, i.val ≤ j.val → M.A i j = 0
+
+/-! #### Positive witness (vacuous): trivial 1-stage method
+
+`trivialGeneralizedRK` has `A = !![0]`, so it is trivially explicit. -/
+
+/-- **Non-vacuity (positive direction): the trivial 1-stage method is
+explicit.** Vacuous case at `s = 1`: the only matrix entry is `A 0 0`,
+which is zero in `trivialGeneralizedRK`. -/
+theorem trivialGeneralizedRK_isExplicit :
+    trivialGeneralizedRK.IsExplicit := by
+  intro i j _
+  fin_cases i; fin_cases j
+  rfl
+
+/-! #### Positive witness (non-vacuous): Heun-style 2-stage explicit method
+
+`explicit2StageGRK` has `A = !![0, 0; 1, 0]`, with a non-trivial
+strict-lower entry at `(1, 0)`. This shows `IsExplicit` admits methods
+whose `A`-matrix is not identically zero — the Heun-style coupling
+that distinguishes a real explicit method from the vacuous trivial
+one. -/
+
+/-- A 2-stage explicit generalized Runge–Kutta tableau with
+`A = !![0, 0; 1, 0]` (Heun-style strict-lower-triangular coupling),
+`b₀ = 0, b = ![1/2, 1/2], c = ![0, 1]`. The non-zero entry `A 1 0 = 1`
+witnesses that `IsExplicit` does not collapse to "the matrix is zero":
+a genuine non-vacuous explicit method. -/
+noncomputable def explicit2StageGRK : GeneralizedRungeKuttaMethod 2 where
+  c := ![0, 1]
+  A := !![0, 0; 1, 0]
+  b₀ := 0
+  b := ![1/2, 1/2]
+
+/-- **Non-vacuity (positive direction, non-vacuous): the Heun-style
+2-stage method is explicit.** The strict-lower-triangular shape
+`A = !![0, 0; 1, 0]` satisfies `A i j = 0` for all `i ≤ j`. -/
+theorem explicit2StageGRK_isExplicit :
+    explicit2StageGRK.IsExplicit := by
+  intro i j hij
+  fin_cases i <;> fin_cases j <;> simp_all [explicit2StageGRK]
+
+/-! #### Negative witness: 2-stage implicit method
+
+`implicit2StageGRK` has a non-zero diagonal entry `A 0 0 = 1/2`, so it
+violates `IsExplicit`. Witnesses non-vacuity in the negative direction:
+the predicate is genuinely refutable. -/
+
+/-- A 2-stage *implicit* generalized Runge–Kutta tableau with
+`A = !![1/2, 0; 0, 1/2]` (a non-zero diagonal, so the stage equations
+are coupled fixed-point equations). Witnesses non-vacuity of the
+*negation* of `IsExplicit`. -/
+noncomputable def implicit2StageGRK : GeneralizedRungeKuttaMethod 2 where
+  c := ![0, 0]
+  A := !![1/2, 0; 0, 1/2]
+  b₀ := 0
+  b := ![1/2, 1/2]
+
+/-- **Non-vacuity (negative direction): an implicit method is not
+explicit.** `implicit2StageGRK` has `A 0 0 = 1/2 ≠ 0`, so it fails the
+strict-lower-triangular condition at `(0, 0)`. Together with
+`trivialGeneralizedRK_isExplicit` and `explicit2StageGRK_isExplicit`,
+this confirms the explicit/implicit dichotomy is non-trivial. -/
+theorem implicit2StageGRK_not_isExplicit :
+    ¬ implicit2StageGRK.IsExplicit := by
+  intro h
+  have h00 := h ⟨0, by omega⟩ ⟨0, by omega⟩ (le_refl _)
+  simp [implicit2StageGRK] at h00
+
 end OpenMath.Chapter5.Section530

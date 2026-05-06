@@ -1,5 +1,29 @@
 # Issue: General-`n` proof of `thm:550A` (Doubly companion matrix factorization)
 
+## Status update (cycle 151) — ARISTOTLE GENERAL-`n` JOB CANCELLED
+
+Aristotle project `2c4630b2-2998-4d4a-af88-c2f83fbd9eda` (cycle 148
+fire-and-forget general-`n` attempt) was **cancelled** in cycle 151
+at 21 % completion, ~89 hours after submission.
+
+This mirrors the cycle-141 cancellation of project
+`7062c2a2-4a8b-4fae-b694-9355e06427a9` (analogous cycle-138 Job A,
+cancelled at 6 % after 24 h). Two failed long-running attempts
+constitute sufficient evidence that the prover cannot close
+`doublyCompanionMatrix_det_factorization` for general `n` without
+the upstream infrastructure (cofactor-expansion induction or
+eigenvalue-density argument) — both multi-cycle work.
+
+**No further Aristotle submissions for the general-`n` proof.** Save
+the job slot for tractable submissions. The deferral remains in
+force; closure path is structural, not search-based.
+
+The seven concrete-`n` axiom-clean stepping stones (n = 1..7) remain
+in `OpenMath/Chapter5/Section550.lean` as the empirical evidence base
+for the leading-coefficient pattern. Cycle 150's task results note
+the seven-`n` data set is now strong enough that further stepping
+stones (n = 8) provide marginal value; effort should pivot.
+
 ## Status update (cycle 150) — n=7 STEPPING STONE ADDED
 
 `doublyCompanionMatrix_det_factorization_n_seven` landed axiom-clean
