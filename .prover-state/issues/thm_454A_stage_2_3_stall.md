@@ -118,3 +118,44 @@ Path A. Cycle 167 should:
 The cycle 166 deliverables are not wasted: `IsAStable`,
 `aeval_αPoly_eq`, `aeval_βPoly_eq`, `vanW`, `vanW₁`, and
 `explicitEulerLMM_not_isAStable` all carry forward unchanged.
+
+## Cycle 167 update
+
+**Path A landed**: cycle 167 shipped `gTopLeft_quadForm_eq` and
+`gBottomRight_quadForm_eq` as standalone named theorems in
+`Section454.lean` (alongside ten private boundary-case
+sub-lemmas), and refactored `Section451.gTopLeft` /
+`Section451.gBottomRight` to be polymorphic in the scalar ring
+`R` (only `[Zero R]` needed). Both main theorems are
+axiom-clean (`[propext, Classical.choice, Quot.sound]`); BDF2
+witnesses in `Section451.lean` rebuilt without modification.
+
+**Stage 2 status**: ✓ DONE.
+
+**Stage 3 status**: still open.
+`algebraic_identity_454A` was NOT attempted in cycle 167
+(Priority 3 stretch goal deferred — Priority 2 took the cycle
+budget after a `simp only [Matrix.dotProduct]` dead end).
+Cycle 168 should now have a short path:
+
+1. Assemble `algebraic_identity_454A` from the two new
+   quadratic-form lemmas + `aeval_αPoly_eq` / `aeval_βPoly_eq`
+   + the `vanW.succ = w • vanW.castSucc` shift identity.
+2. Add the two complex-lift PSD/PD helpers
+   (`complexLift_posSemidef_of_real_posSemidef`,
+   `complexLift_re_dotProduct_pos_of_real_posDef`) — likely a
+   fresh `Section454Aux.lean`.
+3. Combine into `gStable_isAStable` and the BDF2 corollary
+   `bdf2LMM_isAStable`.
+
+**Pattern that worked (Path A): named-decomposition with
+≤5-line sub-lemmas in `private` scope.** If cycle 168 hits any
+further elaboration stall on `algebraic_identity_454A`, the
+remediation is to factor *that* proof into the same
+named-decomposition pattern.
+
+**Pitfall to avoid**: `simp only [Matrix.dotProduct]` does not
+fire — `dotProduct` is at root namespace in current Mathlib,
+not `Matrix.dotProduct`. Use `show ∑ i, _ * _ = _` to expose
+the sum form directly, then `Fin.sum_univ_castSucc` /
+`Fin.sum_univ_succ`.

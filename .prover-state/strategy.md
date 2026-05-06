@@ -1,364 +1,367 @@
-# Cycle 165 strategy — pivot to `def:451A` G-stable
+# Cycle 167 Strategy
 
-## TL;DR
+## Context (carry-over from cycle 166)
 
-**Pivot to a fresh entity.** After 9 consecutive cycles on
-`def:530B`/`def:530C` Path A (cycles 156–164: r-extensions, two
-helper extractions, parametric refactor across three phases),
-returns are diminishing and the entity remains `[~]` partial
-because Path B (implicit branch) requires multi-cycle Mathlib
-fixed-point infrastructure.
+Cycle 166 shipped Path 3 fallback for thm:454A:
+* `LinearMultistepMethod.IsAStable` predicate (boundary-locus form,
+  axiom-clean).
+* `aeval_αPoly_eq` / `aeval_βPoly_eq` bridging lemmas (§410 polynomial
+  form ↔ §451 vector form, axiom-clean).
+* `vanW`, `vanW₁` Vandermonde test vectors.
+* `explicitEulerLMM_not_isAStable` refutability witness (axiom-clean).
 
-The cycle 164 task results recommended cycle-165 retirement of
-the hand-written instances. **Do not pursue retirement this cycle.**
-Reason: a quick audit shows 438 references to `padded{2,3,4}DEulerGLM`
-/ `pad{Compat,3Compat,4Compat}StartingMethod` in
-`OpenMath/Chapter5/Section530.lean`, plus six independent stability
-witnesses in `OpenMath/Chapter5/Section520.lean`
-(`padded2DEulerGLM_isIRKStable`, `_stabilityMatrix`,
-`_stabilityFunction`, `_isRKStable`, `_not_isAStable`,
-`_not_isLStable`) tied to the hand-written `padded2DEulerGLM`
-that cite def:520E / def:520F / def:542A / def:551A non-vacuity.
-Full retirement is multi-cycle. Pursuing it as a single cycle
-would either cascade through these stability witnesses or land
-a fragile partial cleanup.
+What stalled: `algebraic_identity_454A` (the §451e quadratic-form
+identity). Direct proof unfolded `M.gMatrix`, `gTopLeft`,
+`gBottomRight` simultaneously and manipulated nested dependent
+if-then-else under `Fin.sum_univ_castSucc` / `Fin.sum_univ_succ`.
+Lean elaboration hung 10+ min without output across two retries.
+Root cause: `simp` blows up on the unfolded matrix entries inside a
+single proof body.
 
-The right move is to **claim a fresh `[ ]` entity**:
-**`def:451A` (G-stable, §451)**. It is dependency-free
-(`dependencies: []` per its entity record), has a clean
-mathematical statement (positive semi-definiteness of an explicit
-matrix), and admits a textbook-supplied non-vacuity witness
-(BDF2). Single-cycle deliverable bar: definition + non-vacuity
-witness, axiom-clean.
+Aristotle batch (project `89e8a962-b3eb-4f7d-b397-c77bf18773d4`) was at
+11% when cycle 166 ended.
 
----
+Sorry count: **0**. Path A from
+`.prover-state/issues/thm_454A_stage_2_3_stall.md` is the recommended
+closure path.
 
-## Priority 1 — Formalize `def:451A` (G-stable)
+## Priority order (descending)
 
-Target file: **new** `OpenMath/Chapter4/Section451.lean`. (Section
-451 sits in Chapter 4 §451; do not crowd Section404.lean further.)
+### Priority 1 — Aristotle single-poll
 
-### Mathematical content (Butcher §451, p. 363)
+Run `mcp__aristotle__get_status` ONCE on
+`89e8a962-b3eb-4f7d-b397-c77bf18773d4`. **DO NOT re-poll.** Three
+outcomes:
 
-> A one-leg method `[α, β]` is "G-stable" if `M` given by (451e)
-> is positive semi-definite.
+* **COMPLETE with proofs**: extract via `mcp__aristotle__extract_result`.
+  If a clean proof of `algebraic_identity_454A` or
+  `gStable_isAStable` arrives, paste it into `Section454.lean` and
+  validate with `lake env lean OpenMath/Chapter4/Section454.lean`.
+  If accepted, also pull the dependent witnesses
+  (`bdf2LMM_isAStable`) — but only if the dependency chain is
+  self-consistent. **Verify axioms** on every accepted theorem with
+  `lean_verify` (target `[propext, Classical.choice, Quot.sound]`
+  exactly). Do NOT accept proofs that introduce other axioms.
+* **IN_PROGRESS / FAILED**: cancel via
+  `mcp__aristotle__cancel_project` (free the slot — cycle 166's
+  retrospective shows the prover unlikely to land at 11% after 35+
+  min) and proceed to Priority 2 manually.
+* **Returned only partial proofs** (e.g. `gTopLeft_quadForm_eq` but
+  not the others): incorporate the partial(s), then proceed to
+  Priority 2 with the remaining sub-goals.
 
-Equation (451e), reproduced verbatim from `extraction/raw_text/ch04.txt`
-near "(451e)":
+After incorporating Aristotle output, if the cycle's deliverable bar
+is met (see Priority 4), STOP and write task results. Otherwise
+continue.
 
-```
-M = αβᵀ + βαᵀ − [G 0; 0 0] + [0 0; 0 G]
-```
+### Priority 2 — Factor quadratic-form lemmas as standalone named theorems
 
-where `α, β : Fin (k+1) → ℝ` are the coefficient column vectors
-in the convention `α = (1, −α₁, −α₂, …, −α_k)` and
-`β = (β₀, β₁, …, β_k)`, and `G : Matrix (Fin k) (Fin k) ℝ` is a
-**chosen** symmetric matrix. The blocks `[G 0; 0 0]` and `[0 0; 0 G]`
-embed `G` into the top-left and bottom-right `k × k` corner of a
-`(k+1) × (k+1)` matrix respectively.
+This is the cycle 166 stall remediation per
+`thm_454A_stage_2_3_stall.md` Path A. **The key insight is to give
+each quadratic-form computation its own proof obligation in its own
+top-level theorem, so Lean elaborates them independently.** Inline
+proofs in cycle 166 hung because the two computations interact
+through nested if-then-else expansion in a single proof body.
 
-### Concrete Lean shape
+Add these as standalone theorems **directly in `Section454.lean`**
+(not in `Section451.lean` — keeping new bridging-only material in
+the §454 file simplifies imports and per-file `lake env lean`
+validation).
 
-```lean
-namespace OpenMath.Chapter4.Section451
+Place them after `aeval_βPoly_eq` and before any A-stability
+witness, in the existing `OpenMath.Chapter4.Section454` namespace.
 
-open OpenMath.Chapter4.Section404 (LinearMultistepMethod)
+#### Step 2a — `gTopLeft_quadForm_eq`
 
-/-- The textbook's α-vector for §451: `(1, -α₁, …, -α_k)`. Recall
-that our `LinearMultistepMethod` uses the convention `α 0 = -1`,
-so the textbook's α-vector is the entrywise negation of `M.α`. -/
-def LinearMultistepMethod.alphaVec {k : ℕ} (M : LinearMultistepMethod k) :
-    Fin (k + 1) → ℝ := fun i => -M.α i
-
-/-- The textbook's β-vector. -/
-def LinearMultistepMethod.betaVec {k : ℕ} (M : LinearMultistepMethod k) :
-    Fin (k + 1) → ℝ := M.β
-
-/-- Embed a `Fin k`-indexed symmetric matrix `G` into the top-left
-`k × k` block of a `Fin (k+1)` square matrix; zero on the last row
-and column. -/
-def gTopLeft {k : ℕ} (G : Matrix (Fin k) (Fin k) ℝ) :
-    Matrix (Fin (k + 1)) (Fin (k + 1)) ℝ :=
-  Matrix.of fun i j =>
-    if h : i.val < k ∧ j.val < k then
-      G ⟨i.val, h.1⟩ ⟨j.val, h.2⟩
-    else 0
-
-/-- Embed `G` into the bottom-right `k × k` block. -/
-def gBottomRight {k : ℕ} (G : Matrix (Fin k) (Fin k) ℝ) :
-    Matrix (Fin (k + 1)) (Fin (k + 1)) ℝ :=
-  Matrix.of fun i j =>
-    if h : 0 < i.val ∧ 0 < j.val then
-      G ⟨i.val - 1, by omega⟩ ⟨j.val - 1, by omega⟩
-    else 0
-
-/-- Butcher's matrix `M` from (451e): `αβᵀ + βαᵀ − [G 0; 0 0] + [0 0; 0 G]`. -/
-def LinearMultistepMethod.gMatrix {k : ℕ}
-    (M : LinearMultistepMethod k)
-    (G : Matrix (Fin k) (Fin k) ℝ) :
-    Matrix (Fin (k + 1)) (Fin (k + 1)) ℝ :=
-  Matrix.vecMulVec M.alphaVec M.betaVec
-    + Matrix.vecMulVec M.betaVec M.alphaVec
-    - gTopLeft G
-    + gBottomRight G
-
-/-- Butcher def:451A — a one-leg method (LMM treated as one-leg) is
-**G-stable** if there exists a symmetric, positive-definite `G` such
-that `M.gMatrix G` is positive semi-definite. -/
-def LinearMultistepMethod.IsGStable {k : ℕ}
-    (M : LinearMultistepMethod k) : Prop :=
-  ∃ G : Matrix (Fin k) (Fin k) ℝ, G.IsSymm ∧ G.PosDef ∧
-    (M.gMatrix G).PosSemidef
-```
-
-### Non-vacuity witness — BDF2
-
-The textbook provides BDF2 explicitly:
-
-> `[α(z), β(z)] = (1 − (4/3)z + (1/3)z², 2/3)`
-
-Translating: BDF2 is a 2-step LMM (`k = 2`) with
-`α₁ = 4/3, α₂ = -1/3, β₀ = 2/3, β₁ = β₂ = 0`. (Care: the
-textbook polynomial uses the convention
-`α(z) = 1 - (4/3)z + (1/3)z²` where `1` is the `z⁰` coefficient,
-so the LMM's `α 1 = 4/3` and `α 2 = -1/3`. For our
-`LinearMultistepMethod` with `α 0 = -1`, set
-`α 0 := -1, α 1 := 4/3, α 2 := -1/3`, and
-`β 0 := 2/3, β 1 := 0, β 2 := 0`.)
-
-The textbook also supplies the witness `G`:
-
-> `G = ((10/9, -4/9), (-4/9, 2/9))`
+Recommended signature (polymorphic `R`):
 
 ```lean
-def bdf2LMM : LinearMultistepMethod 2 where
-  α := fun i => match i with
-    | ⟨0, _⟩ => -1
-    | ⟨1, _⟩ => 4/3
-    | ⟨2, _⟩ => -1/3
-  β := fun i => match i with
-    | ⟨0, _⟩ => 2/3
-    | ⟨1, _⟩ => 0
-    | ⟨2, _⟩ => 0
-  α_zero := rfl
-
-def bdf2GWitness : Matrix (Fin 2) (Fin 2) ℝ :=
-  !![10/9, -4/9; -4/9, 2/9]
-
-theorem bdf2LMM_isGStable : bdf2LMM.IsGStable := by
-  refine ⟨bdf2GWitness, ?_, ?_, ?_⟩
-  · -- IsSymm: G = Gᵀ. Verify by `ext i j; fin_cases i <;> fin_cases j <;> rfl`.
-    sorry
-  · -- PosDef. The textbook gives this; verify by `Matrix.PosDef` definition
-    -- on a 2×2 matrix with leading 10/9 > 0 and det = 20/81 - 16/81 = 4/81 > 0.
-    sorry
-  · -- PosSemidef of `M.gMatrix G`. Per textbook, M reduces to:
-    --   [3/4 - g_11, -8/9 - g_12, 2/9;
-    --    -8/9 - g_12, g_11 - g_22, g_12;
-    --    2/9, g_12, g_22]
-    -- With g_11 = 10/9, g_12 = -4/9, g_22 = 2/9, the off-diagonal
-    -- entries reduce, and entry-wise verification (or rank-1 check)
-    -- yields `M.gMatrix G ≥ 0`. Concretely: compute each of the 9
-    -- entries via `simp` + `norm_num`; check PosSemidef by
-    -- `Matrix.PosSemidef.fromBlocks_of_iff` or by a Cholesky-style
-    -- factor exhibiting M = LLᵀ.
-    sorry
+theorem gTopLeft_quadForm_eq {R : Type*} [CommRing R] [StarRing R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
+    star W ⬝ᵥ (gTopLeft G *ᵥ W) =
+      star (fun i : Fin k => W i.castSucc) ⬝ᵥ
+        (G *ᵥ (fun i : Fin k => W i.castSucc)) := by
+  ...
 ```
 
-The three `sorry`s are deliberate stepping stones for the cycle 165
-worker. **Sorry-first ladder**:
+This requires `gTopLeft` to be polymorphic in `R` (it currently
+specialises to `ℝ` in `Section451.lean:68`). **Refactor**
+`gTopLeft` and `gBottomRight` to take a `Matrix (Fin k) (Fin k) R`
+for any `R` with zero. Same for `gMatrix` if needed (likely yes,
+since cycle 168 will instantiate `gMatrix` over ℂ).
 
-1. **Step 1 — definitions + scaffold**: Introduce `alphaVec`,
-   `betaVec`, `gTopLeft`, `gBottomRight`, `gMatrix`, `IsGStable`,
-   `bdf2LMM`, `bdf2GWitness`, `bdf2LMM_isGStable` with three
-   `sorry`s. Verify the file compiles.
-2. **Step 2 — IsSymm**: 4 `Fin.cases` × `rfl` (~5 lines). Trivial.
-3. **Step 3 — PosDef**: Use `Matrix.PosDef.of_two_dim` (search
-   Mathlib) or unfold to `Matrix.PosDef` and prove via
-   `Matrix.PosSemidef.of_pos_diag_pos_det` analogue. Concrete: a
-   2×2 symmetric matrix `[a, b; b, c]` is `PosDef` iff `a > 0` and
-   `a*c - b² > 0`. For us, `10/9 > 0` and
-   `(10/9)(2/9) - (-4/9)² = 20/81 - 16/81 = 4/81 > 0`. Build via
-   inner-product expansion `⟨v, M v⟩ = a v₀² + 2b v₀ v₁ + c v₁²`
-   and complete-the-square. Backup: search Mathlib for
-   `Matrix.PosDef` 2×2 lemmas.
-4. **Step 4 — PosSemidef of M(G)**: Compute `M(G)` entry-wise.
-   Suggest: factor `M(G) = vvᵀ` for some `v : Fin 3 → ℝ` if M
-   turns out rank-1, or `M(G) = LLᵀ` more generally — both close
-   `PosSemidef` immediately via `Matrix.posSemidef_self_mul_transpose`
-   (verify name). Compute the 9 entries first; if they are all
-   small rationals, `decide` or `norm_num` should discharge.
-   Backup: use `Matrix.PosSemidef.diagonal` after reducing M to a
-   diagonal form via row/col operations.
+The refactor is ~5 line edits each (replace `ℝ` with `R`, add
+`[Zero R]`). Verify the existing §451 BDF2 witnesses still typecheck
+(they instantiate at `R := ℝ` definitionally — should be `rfl`-clean).
 
-### Faithfulness check (apply at end of cycle)
+**Proof body** (the actual stall point):
 
-For `IsGStable`:
-- [ ] Open `extraction/formalization_data/entities/def_451A.json`
-  and quote the textbook statement (already extracted at top of
-  this strategy).
-- [ ] Confirm Lean type matches: `IsGStable` is an existential
-  quantifier over `G` symmetric + PosDef + `M.gMatrix G` PosSemidef.
-  The textbook says "G-stable if M is positive semi-definite",
-  parameterised by an unstated G. Standard reading: G-stable iff
-  *exists* such G. Document this convention in the docstring.
-- [ ] **Definition smuggling check**: do not encode "G-stable" as
-  the consequence (e.g. "stable for all dissipative IVPs"). It
-  must be the definitional matrix condition. ✓ (definition above
-  matches textbook).
+Strategy: `Matrix.dotProduct` unfolds to
+`Σ i, star (W i) * (gTopLeft G *ᵥ W) i`. For `i = Fin.last k`, the
+`gTopLeft` row is identically zero, so the term vanishes. For
+`i = i'.castSucc` with `i' : Fin k`, the row matches `G i'`'s
+mulVec of the truncated `W`.
 
-For `bdf2LMM_isGStable`:
-- [ ] Tautology check: conclusion is `bdf2LMM.IsGStable`; not
-  `True ↔ True`, not `id`-shaped. ✓
-- [ ] Identity check: proof is a `refine` with three sub-proofs
-  (witness `G`, three properties), not `exact h`. ✓
-- [ ] Hypothesis strength check: no hypotheses; the witness is
-  unconditional. ✓
+Write the proof in *small named sub-lemmas* in `private` scope to
+avoid the cycle 166 elaboration blowup:
 
----
+1. `gTopLeft_apply_castSucc` — show
+   `gTopLeft G i.castSucc j.castSucc = G i j` for `i j : Fin k`.
+   Proof: unfold `gTopLeft, Matrix.of_apply`, `dif_pos` on
+   `i.castSucc.val < k ∧ j.castSucc.val < k` (which holds via
+   `Fin.castSucc_lt_last` + `Fin.is_lt`-style facts).
+2. `gTopLeft_apply_last_row` — show
+   `gTopLeft G (Fin.last k) j = 0` for any `j : Fin (k+1)`.
+   Proof: `dif_neg` on `(Fin.last k).val = k`, contradicting
+   `< k`.
+3. `gTopLeft_apply_last_col` — show
+   `gTopLeft G i (Fin.last k) = 0` for any `i : Fin (k+1)`.
+   Symmetric to step 2.
+4. `gTopLeft_mulVec_castSucc` — show
+   `(gTopLeft G *ᵥ W) i.castSucc = G *ᵥ (fun j => W j.castSucc) i`.
+   Proof: unfold `mulVec`, sum over `Fin (k+1)` using
+   `Fin.sum_univ_castSucc`, the last term vanishes via
+   `gTopLeft_apply_last_col`, the rest matches via
+   `gTopLeft_apply_castSucc`.
+5. `gTopLeft_mulVec_last` — show
+   `(gTopLeft G *ᵥ W) (Fin.last k) = 0`. Proof: unfold `mulVec`,
+   each row entry vanishes via `gTopLeft_apply_last_row`,
+   `Finset.sum_const_zero`.
+6. **Main theorem** `gTopLeft_quadForm_eq`: unfold `dotProduct` on
+   LHS, split sum via `Fin.sum_univ_castSucc`, apply
+   `gTopLeft_mulVec_castSucc` and `gTopLeft_mulVec_last`, simplify
+   `star _ * 0 = 0`, conclude by `dotProduct` reverse-unfold on RHS.
 
-## Priority 2 (backup) — Aristotle batch for the three sorry's
+Each sub-lemma should be ≤ 5 lines. **Validate each one
+individually** with `lake env lean` (or `lean_verify`) before
+proceeding to the next. If a sub-lemma takes > 60 s to elaborate,
+something is wrong — pause and decompose further.
 
-If priority-1 Step 1 lands and Steps 2/3/4 take longer than
-expected, batch-submit Steps 2, 3, 4 to Aristotle as parallel
-sub-jobs (~5 jobs is the CLAUDE.md target):
+#### Step 2b — `gBottomRight_quadForm_eq`
 
-* **Job A**: `bdf2GWitness.IsSymm` (5 LOC; trivial).
-* **Job B**: `bdf2GWitness.PosDef` (~30 LOC; 2×2 specialisation).
-* **Job C**: `(bdf2LMM.gMatrix bdf2GWitness).PosSemidef` (~50 LOC;
-  compute matrix entry-wise, factor as `LLᵀ` or apply rank-1
-  closure).
+Symmetric to Step 2a, but the boundary case is `i = 0`
+(`Fin.castSucc` becomes `Fin.succ`, `Fin.last` becomes `0`).
 
-Submit at the **start** of cycle 165 (before manual proof attempts)
-so the 30-min CLAUDE.md sleep window overlaps the Step-1 scaffold
-work. Single poll after manual closure of Step 2 (~30 min in).
+```lean
+theorem gBottomRight_quadForm_eq {R : Type*} [CommRing R] [StarRing R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
+    star W ⬝ᵥ (gBottomRight G *ᵥ W) =
+      star (fun i : Fin k => W i.succ) ⬝ᵥ
+        (G *ᵥ (fun i : Fin k => W i.succ)) := by
+  ...
+```
 
----
+Six private sub-lemmas mirroring Step 2a:
+1. `gBottomRight_apply_succ` — `gBottomRight G i.succ j.succ = G i j`.
+2. `gBottomRight_apply_zero_row` — `gBottomRight G 0 j = 0`.
+3. `gBottomRight_apply_zero_col` — `gBottomRight G i 0 = 0`.
+4. `gBottomRight_mulVec_succ` — analogous.
+5. `gBottomRight_mulVec_zero` — analogous.
+6. Main theorem using `Fin.sum_univ_succ` (head-split, opposite of
+   `Fin.sum_univ_castSucc`).
 
-## Priority 3 — Update tracking files
+#### Step 2c — Validate
 
-1. **`extraction/formalization_data/lean_status.json`**: bump
-   `def:451A` from `not_started` → `formalized` (or whatever the
-   schema uses; check sibling rows). Cycle pointer: 165.
-2. **`plan.md`**: flip `def:451A` row from `[ ]` to `[x]`. Bump
-   the progress count from 69 / 175 → 70 / 175.
-3. **No other plan.md edits this cycle** — leave `def:530B`/
-   `def:530C` rows as-is (they remain `[~]` per the cycle 164
-   state; nothing changed).
+After Steps 2a + 2b land, run:
+* `lake env lean OpenMath/Chapter4/Section454.lean` — confirm exit 0
+  within 3 min.
+* `lake env lean OpenMath/Chapter4/Section451.lean` — regression
+  guard for the polymorphism refactor (BDF2 witnesses must still
+  build).
+* `lake build OpenMath.Chapter4.Section451 OpenMath.Chapter4.Section454`
+  — full elaboration + .olean caching before `#print axioms`.
+* `lean_verify
+  OpenMath.Chapter4.Section454.gTopLeft_quadForm_eq` and
+  `OpenMath.Chapter4.Section454.gBottomRight_quadForm_eq` —
+  confirm axioms are exactly `[propext, Classical.choice, Quot.sound]`.
 
----
+**Deliverable bar for Priority 2**: Steps 2a + 2b axiom-clean in
+`Section454.lean`, all six private sub-lemmas + two main theorems.
 
-## What NOT to do this cycle
+### Priority 3 — Stretch: `algebraic_identity_454A` (only if > 30 min spare)
 
-1. **Do NOT pursue the cycle-165 retirement plan from cycle 164's
-   task results.** A quick audit shows 438 references to
-   `padded{2,3,4}DEulerGLM` / `pad{2,3,4}CompatStartingMethod` in
-   Section530.lean, plus six stability witnesses in Section520.lean
-   tied to `padded2DEulerGLM` (`_isIRKStable`, `_stabilityMatrix`,
-   `_stabilityFunction`, `_isRKStable`, `_not_isAStable`,
-   `_not_isLStable`). Full retirement requires either porting all
-   stability witnesses to `paddedREulerGLM 1` (cascading through
-   def:520E / def:520F / def:542A / def:551A non-vacuity) or
-   landing a fragile partial cleanup. Both are multi-cycle scope.
-   Defer to a dedicated cleanup cycle when the planner judges the
-   parametric family fully stable. For cycle 165, prioritize entity
-   count over technical-debt cleanup.
+If Priority 2 lands cleanly with > 30 min remaining, attempt the
+identity. Statement (over ℂ, using `gMatrix` polymorphised over R):
 
-2. **Do NOT extend the def:530B/C Path A r-grid further** (e.g. to
-   `r = 5` or `p = 2`). Six consecutive r-extension cycles
-   (156–161) plus three refactor cycles (162–164) have saturated
-   the value extractable from this approach. The next genuine
-   advance on def:530B/C requires Path B (implicit branch via
-   `ContractingWith` / `Function.IsFixedPt`), which is multi-cycle
-   Mathlib infrastructure and out of scope for cycle 165. See
-   `.prover-state/issues/def_530B_scaffold_strategy.md`.
+```lean
+theorem algebraic_identity_454A {k : ℕ}
+    (M : LinearMultistepMethod k) (G : Matrix (Fin k) (Fin k) ℂ)
+    (w : ℂ) :
+    star (vanW w) ⬝ᵥ
+        ((M.gMatrix (R := ℂ) G * 0 + ...) *ᵥ vanW w) -- (placeholder; finalise to use Complex-lifted alphaVec/betaVec)
+      = ...
+```
 
-3. **Do NOT generalise the cycle 158/160 helpers further** (e.g.
-   to a Taylor-degree-parametric helper at degree `p+1`). The
-   two helpers (one per `p ∈ {0, 1}`) are sufficient for current
-   Path A non-vacuity; further generalisation has no concrete
-   downstream consumer.
+(Exact statement: see Butcher §454 proof p. 387 around equation
+(454a). The identity says `star W · M(G) · W = 2 α(w) β(w) - (1 - |w|²) star W₁ · G · W₁`.)
 
-4. **Do NOT attempt `thm:550A` general-`n`.** Two failed
-   long-running Aristotle attempts (cycle 141 cancelled at 6 %
-   after 24 h; cycle 148 cancelled at 21 % after 89 h, per
-   `.prover-state/issues/thm_550A_general_n.md`). Closure path is
-   structural (cofactor-expansion induction or eigenvalue
-   density), and requires cofactor-expansion or charpoly
-   continuity infrastructure that is multi-cycle Mathlib work. Do
-   not submit further Aristotle jobs for this target.
+**Proof recipe:**
+1. Unfold `gMatrix = vecMulVec α β + vecMulVec β α - gTopLeft G + gBottomRight G`.
+2. Distribute `*ᵥ W` over the four-term sum, then `star W ⬝ᵥ` over
+   the four-term sum.
+3. The two `vecMulVec` terms each become a product of dot products
+   (use `Matrix.dotProduct_vecMulVec` or unfold). Apply
+   `aeval_αPoly_eq` and `aeval_βPoly_eq` (cycle 166) to identify
+   these with `aeval w (αPoly M)` and `aeval w (βPoly M)`. (Note
+   that `vanW i = w^i.val` exactly, so the dot product
+   `α-vec ⬝ᵥ vanW = Σ alphaVec j · w^j` matches.)
+4. The `gTopLeft G` term collapses via `gTopLeft_quadForm_eq` to a
+   quadratic form on the truncated Vandermonde
+   `(fun i => vanW (i.castSucc)) = (fun i : Fin k => w^i.val) = vanW₁ w`.
+5. The `gBottomRight G` term collapses via
+   `gBottomRight_quadForm_eq` to a quadratic form on the *shifted*
+   Vandermonde `(fun i => vanW (i.succ)) = (fun i : Fin k => w^(i+1))
+   = w • vanW₁ w` (since `w^(i+1) = w * w^i`).
+6. Pull `w` out of the `gBottomRight` quadratic form via
+   `Matrix.dotProduct_smul` / linearity in both arguments — the
+   `star (w • _) ⬝ᵥ (G *ᵥ (w • _)) = (star w) * w * (star _ ⬝ᵥ (G *ᵥ _))
+   = ‖w‖² * star W₁ ⬝ᵥ (G *ᵥ W₁)`.
+7. Combine: `gBottomRight - gTopLeft` quadratic forms give
+   `(‖w‖² - 1) * (G-quadratic-form on W₁)`, i.e.
+   `−(1 − ‖w‖²) * (G-quadratic-form on W₁)`, matching the textbook
+   RHS.
 
-5. **Do NOT introduce `axiom` or `constant` declarations** for any
-   step (CLAUDE.md absolute rule).
+**If this stretch step times out**: revert it cleanly (delete the
+theorem statement and its proof body; do NOT leave a sorry). Ship
+Priority 2 only. Do NOT block on this.
 
-6. **Do NOT raise `maxHeartbeats`** above 200000. If `decide` /
-   `norm_num` on the BDF2 matrix `M(G)` reduction stalls, decompose
-   the entry-wise check into per-`(i,j)` lemmas (9 sub-lemmas) and
-   close each with `simp; norm_num`.
+### Priority 4 — Cycle deliverable bar
 
-7. **Do NOT modify `scripts/autonomous_loop.py`.** The standing
-   tautology-scanner false-positive issue
-   (`tautology_scanner_false_positives.md`) is loop-maintainer
-   territory. If a closer of shape `:= h_*` or `exact h_*` appears,
-   apply the cosmetic `h_<name>` → `h<name>` rename workaround.
+Minimum bar (positive score): Priority 1 incorporated + Priority 2
+shipped (six sub-lemmas + two main theorems axiom-clean). This
+unblocks cycle 168 to assemble `algebraic_identity_454A` and
+`gStable_isAStable` from named pieces.
 
----
+Do NOT attempt Priority 3 unless Priority 2 has > 30 min spare. The
+cycle 166 retrospective is clear: monolithic proofs of the §454e
+identity stall Lean elaboration. Build incrementally.
 
-## Pre-commit checklist (apply before pushing)
+## What NOT to try
 
-1. `lake env lean OpenMath/Chapter4/Section451.lean` → exit 0.
-2. `grep -c sorry OpenMath/Chapter4/Section451.lean` → 0.
-3. `lean_verify OpenMath.Chapter4.Section451.bdf2LMM_isGStable` →
-   `[propext, Classical.choice, Quot.sound]` only.
-4. `lake build OpenMath.Chapter4.Section451` → no regressions.
-5. Tautology scanner clean:
-   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter4/Section451.lean`
-   → no hits.
-6. Faithfulness check (above) signed off.
-7. `lean_status.json` and `plan.md` updated; `extraction/`
-   directories untouched (per CLAUDE.md "never edit
-   `extraction/raw_text/` or `extraction/formalization_data/entities/`").
-8. **Imports added to `OpenMath.lean`**: add `import
-   OpenMath.Chapter4.Section451` so the new file ships with
-   `lake build OpenMath`.
+* **Do NOT inline `algebraic_identity_454A` in `Section454.lean`
+  with a single `simp [...] ; ring` or
+  `simp only [...] ; Fin.sum_univ_castSucc ; dif_neg` body.** This
+  is exactly what stalled cycle 166 — Lean's elaboration of nested
+  dependent if-then-else over `Fin (k+1) × Fin (k+1)` blows up. Use
+  the named sub-lemma decomposition in Priority 2.
+* **Do NOT use `decide` or `fin_cases` at general `k`.** They only
+  fire at concrete `k`. The identities are universally quantified
+  over `k : ℕ`.
+* **Do NOT raise `maxHeartbeats`** above 200000 (CLAUDE.md). If a
+  sub-lemma exceeds default heartbeats, decompose further.
+* **Do NOT skip the polymorphism refactor.** Trying to state
+  `gTopLeft_quadForm_eq` over ℝ first and lift to ℂ later via
+  `.map (algebraMap ℝ ℂ)` introduces type-coercion churn that will
+  recreate the elaboration blowup downstream. Polymorphic `R` from
+  the start is cleaner. (Backup B1 below addresses what to do if
+  the refactor stalls.)
+* **Do NOT touch `Section451.lean`'s BDF2 witness or
+  `bdf2_gMatrix_eq_smul_vecMulVec` proof.** They are axiom-clean
+  and their § 451 namespace proof structure is independent. Only
+  refactor the `gTopLeft`/`gBottomRight`/`gMatrix` *definitions* to
+  be polymorphic; the BDF2 lemmas instantiate at `R := ℝ` and
+  should rebuild automatically.
+* **Do NOT re-poll Aristotle.** Single-poll discipline per CLAUDE.md.
+  If cycle 166's project is still IN_PROGRESS at < 30%, cancel it.
+* **Do NOT re-attempt cycle 166's stalled monolithic proof** verbatim.
+  The approach is dead.
+* **Do NOT introduce `axiom` or `constant`** to bypass the stall.
+* **Do NOT pivot to a different entity.** thm:454A is the active
+  multi-cycle target; cycles 166–169 are the planned arc per the
+  issue file.
+* **Do NOT add `[Star R]` or `[StarRing R]` instances to the
+  refactored `gTopLeft`/`gBottomRight` definitions** — they only
+  need `[Zero R]` to be defined. The star structure enters in the
+  *quadratic-form lemmas* (where `star W` is taken). Keep the
+  definition typeclass-light to maximise generality.
 
----
+## Faithfulness checks
 
-## Cycle deliverable bar
+For every new `theorem` introduced this cycle, run the checklist in
+CLAUDE.md §"Pre-Commit Faithfulness Checklist":
 
-* **Minimum (score ≥ 1)**: definitions + scaffold + at least one
-  of the three `bdf2LMM_isGStable` sub-proofs closed (Step 2 — the
-  trivial `IsSymm` step). Sorry count ≤ 2 in the new file. Cycle
-  documented in `task_results/cycle_165.md`.
-* **Target (score = 2)**: all three sub-proofs closed,
-  `bdf2LMM_isGStable` axiom-clean. Sorry count = 0. `def:451A`
-  flipped to `[x]` in `plan.md`. Adds one entity to the formalized
-  count (69 → 70).
-* **Stretch (not required)**: also state the textbook's
-  observation that PosDef implies symmetric for real matrices, so
-  the `IsSymm` field of `IsGStable` is redundant; refactor
-  `IsGStable` to drop it. Or extend with an additional witness
-  (e.g. trapezoidal rule). Pursue only if Steps 1–4 land in the
-  first half of the cycle.
+* For each of the six private sub-lemmas + two quadratic-form
+  identities: tautology check, identity check, hypothesis-strength
+  check, absent-theorem check.
+* For the polymorphism refactor of `gTopLeft`/`gBottomRight`
+  (and possibly `gMatrix`): no semantic change. Ensure
+  `gTopLeft (R := ℝ)` is *definitionally* equal to the old
+  `gTopLeft`. The BDF2 witness in `Section451.lean` must still
+  typecheck without alteration. Run
+  `lake env lean OpenMath/Chapter4/Section451.lean` after the
+  refactor to confirm zero regression.
 
----
+The two main theorems are bridging lemmas, not entities. They are
+mathematically content-bearing (`gTopLeft G`'s quadratic form
+factoring through `Fin k → R`'s truncation is the genuine §454e
+algebraic content) but do not need a `lean_status.json` row update.
 
-## Cross-references
+## Build & verification commands
 
-* `extraction/formalization_data/entities/def_451A.json` —
-  textbook statement (full LaTeX; quoted at top of this strategy).
-* `extraction/raw_text/ch04.txt`, near "(451e)" — equation
-  (451e) verbatim with the embedding-block notation.
-* `OpenMath/Chapter4/Section404.lean:53` — `LinearMultistepMethod`
-  structure (reuse for one-leg methods).
-* `Mathlib.LinearAlgebra.Matrix.PosDef` — `Matrix.PosDef`,
-  `Matrix.PosSemidef`, related lemmas. Search via
-  `lean_local_search "PosDef"` / `lean_local_search "PosSemidef"`
-  before relying on specific lemma names.
-* `.prover-state/issues/def_530B_scaffold_strategy.md` — long-form
-  history of the def:530B/C Path A work; closes with cycle 164's
-  reconciliation deliverable. Path B (implicit branch) remains
-  multi-cycle deferred.
-* `.prover-state/task_results/cycle_164.md` — most recent cycle's
-  result document; recommends retirement (which this strategy
-  defers per the audit above).
+* `lake env lean OpenMath/Chapter4/Section454.lean` — primary
+  validation. Should exit 0 within 3 min.
+* `lake env lean OpenMath/Chapter4/Section451.lean` — regression
+  guard for the polymorphism refactor.
+* `lake build OpenMath.Chapter4.Section454` (after first
+  `lake env lean` succeeds) — full elaboration + .olean caching
+  before running `#print axioms`.
+* `lean_verify` on each new theorem — confirm axioms are exactly
+  `[propext, Classical.choice, Quot.sound]`.
+
+PATH note (from CLAUDE.md): if `lake` hangs, check that
+`/tmp/lake-bin:/tmp/lean4-toolchain/bin` is first in PATH. The
+GPFS-hosted toolchain causes multi-minute hangs.
+
+## Task results expectations
+
+Write `.prover-state/task_results/cycle_167.md` with:
+* What landed (which sub-lemmas closed, axiom-clean).
+* If Aristotle returned anything, document the proofs that were
+  incorporated.
+* If Priority 3 was attempted, document whether it landed or was
+  reverted.
+* Faithfulness check entries for each new theorem.
+* Suggested next approach for cycle 168 (the final assembly into
+  `algebraic_identity_454A` and `gStable_isAStable`).
+
+Update `.prover-state/issues/thm_454A_stage_2_3_stall.md` with a
+"Cycle 167 update" section noting which Stage 2 sub-lemmas landed
+and whether the original "Path A" plan needs revision based on what
+Lean actually did this cycle.
+
+Do NOT flip the `plan.md` row for thm:454A. Status remains
+unformalized; cycle 167 builds the stepping stones.
+
+## Backup plan (Priority 2 stalls)
+
+If the polymorphism refactor of `gTopLeft`/`gBottomRight` causes
+breakage in `Section451.lean` that takes > 30 min to fix:
+
+* **Backup B1**: keep `gTopLeft`/`gBottomRight` ℝ-only. Define
+  parallel ℂ-valued versions inline in `Section454.lean`:
+  ```lean
+  private def gTopLeftC {k : ℕ} (G : Matrix (Fin k) (Fin k) ℂ) :
+      Matrix (Fin (k + 1)) (Fin (k + 1)) ℂ :=
+    Matrix.of fun i j =>
+      if h : i.val < k ∧ j.val < k then
+        G ⟨i.val, h.1⟩ ⟨j.val, h.2⟩
+      else 0
+  ```
+  State the quadratic-form lemmas over ℂ directly. Acceptable but
+  introduces redundancy. Cycle 168 can revisit the polymorphism
+  question separately.
+* **Backup B2**: ship only `gTopLeft_quadForm_eq` Step 2a and its
+  five private sub-lemmas this cycle. Defer
+  `gBottomRight_quadForm_eq` to cycle 168. Still positive forward
+  motion; one quadratic-form lemma + sub-lemmas is half the work
+  cycle 168 would need to do.
+* **Backup B3**: if a sub-lemma proof itself stalls (the named
+  decomposition is *supposed* to avoid this, but if `simp` still
+  blows up on the dependent-`if` unfolding), Aristotle-batch the
+  stalled sub-lemma in a fresh project. Use cycle 167 to land
+  whichever sub-lemmas didn't stall; rely on Aristotle return for
+  cycle 168.
+
+In all backup paths, the cycle is positive-score if **at least one**
+of {`gTopLeft_quadForm_eq`, `gBottomRight_quadForm_eq`} lands
+axiom-clean, OR Aristotle's batch returned a usable contribution.

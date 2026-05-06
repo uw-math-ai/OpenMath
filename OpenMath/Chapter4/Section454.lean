@@ -147,6 +147,133 @@ theorem aeval_βPoly_eq {k : ℕ} (M : LinearMultistepMethod k) (w : ℂ) :
   refine Finset.sum_congr rfl fun i _ => ?_
   exact aeval_C_mul_X_pow_real _ _ _
 
+/-! ## Quadratic-form factorisation of `gTopLeft` and `gBottomRight`
+
+The §454 proof of Theorem 454A computes
+`star W ⬝ᵥ (gTopLeft G *ᵥ W)` and
+`star W ⬝ᵥ (gBottomRight G *ᵥ W)` separately and identifies them
+with quadratic forms on a truncated/shifted Vandermonde vector.
+Cycle 166's monolithic proof of the §451e identity stalled Lean
+elaboration because both block embeddings unfolded simultaneously
+under nested dependent if-then-else. We factor the two
+computations as standalone named theorems with their own boundary-
+case sub-lemmas (each ≤ 5 lines) so Lean elaborates each piece
+independently. -/
+
+private theorem gTopLeft_apply_castSucc {R : Type*} [Zero R] {k : ℕ}
+    (G : Matrix (Fin k) (Fin k) R) (i j : Fin k) :
+    gTopLeft G i.castSucc j.castSucc = G i j := by
+  unfold gTopLeft
+  rw [Matrix.of_apply, dif_pos ⟨i.is_lt, j.is_lt⟩]
+  rfl
+
+private theorem gTopLeft_apply_last_row {R : Type*} [Zero R] {k : ℕ}
+    (G : Matrix (Fin k) (Fin k) R) (j : Fin (k + 1)) :
+    gTopLeft G (Fin.last k) j = 0 := by
+  unfold gTopLeft
+  rw [Matrix.of_apply, dif_neg]
+  exact fun h => absurd h.1 (by simp [Fin.val_last])
+
+private theorem gTopLeft_apply_last_col {R : Type*} [Zero R] {k : ℕ}
+    (G : Matrix (Fin k) (Fin k) R) (i : Fin (k + 1)) :
+    gTopLeft G i (Fin.last k) = 0 := by
+  unfold gTopLeft
+  rw [Matrix.of_apply, dif_neg]
+  exact fun h => absurd h.2 (by simp [Fin.val_last])
+
+private theorem gTopLeft_mulVec_castSucc {R : Type*} [NonAssocSemiring R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) (i : Fin k) :
+    (gTopLeft G *ᵥ W) i.castSucc =
+      (G *ᵥ (fun j : Fin k => W j.castSucc)) i := by
+  show (∑ j, gTopLeft G i.castSucc j * W j) =
+       ∑ j, G i j * W j.castSucc
+  rw [Fin.sum_univ_castSucc]
+  rw [gTopLeft_apply_last_col, zero_mul, add_zero]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  rw [gTopLeft_apply_castSucc]
+
+private theorem gTopLeft_mulVec_last {R : Type*} [NonAssocSemiring R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
+    (gTopLeft G *ᵥ W) (Fin.last k) = 0 := by
+  show (∑ j, gTopLeft G (Fin.last k) j * W j) = 0
+  refine Finset.sum_eq_zero fun j _ => ?_
+  rw [gTopLeft_apply_last_row, zero_mul]
+
+/-- **Quadratic-form factorisation for `gTopLeft G`.**
+The quadratic form `star W ⬝ᵥ (gTopLeft G *ᵥ W)` on the
+`(k+1)`-vector `W` collapses to the quadratic form of `G` on the
+truncated `k`-vector `(W ∘ Fin.castSucc)`. -/
+theorem gTopLeft_quadForm_eq {R : Type*} [CommRing R] [StarRing R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
+    star W ⬝ᵥ (gTopLeft G *ᵥ W) =
+      star (fun i : Fin k => W i.castSucc) ⬝ᵥ
+        (G *ᵥ (fun i : Fin k => W i.castSucc)) := by
+  show (∑ i, star (W i) * (gTopLeft G *ᵥ W) i) =
+       ∑ i : Fin k, star (W i.castSucc) *
+         (G *ᵥ (fun j : Fin k => W j.castSucc)) i
+  rw [Fin.sum_univ_castSucc]
+  rw [gTopLeft_mulVec_last, mul_zero, add_zero]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [gTopLeft_mulVec_castSucc]
+
+private theorem gBottomRight_apply_succ {R : Type*} [Zero R] {k : ℕ}
+    (G : Matrix (Fin k) (Fin k) R) (i j : Fin k) :
+    gBottomRight G i.succ j.succ = G i j := by
+  unfold gBottomRight
+  rw [Matrix.of_apply,
+    dif_pos (⟨by simp [Fin.val_succ], by simp [Fin.val_succ]⟩ :
+              0 < i.succ.val ∧ 0 < j.succ.val)]
+  congr 1
+
+private theorem gBottomRight_apply_zero_row {R : Type*} [Zero R] {k : ℕ}
+    (G : Matrix (Fin k) (Fin k) R) (j : Fin (k + 1)) :
+    gBottomRight G 0 j = 0 := by
+  unfold gBottomRight
+  rw [Matrix.of_apply, dif_neg]
+  exact fun h => absurd h.1 (by simp)
+
+private theorem gBottomRight_apply_zero_col {R : Type*} [Zero R] {k : ℕ}
+    (G : Matrix (Fin k) (Fin k) R) (i : Fin (k + 1)) :
+    gBottomRight G i 0 = 0 := by
+  unfold gBottomRight
+  rw [Matrix.of_apply, dif_neg]
+  exact fun h => absurd h.2 (by simp)
+
+private theorem gBottomRight_mulVec_succ {R : Type*} [NonAssocSemiring R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) (i : Fin k) :
+    (gBottomRight G *ᵥ W) i.succ =
+      (G *ᵥ (fun j : Fin k => W j.succ)) i := by
+  show (∑ j, gBottomRight G i.succ j * W j) =
+       ∑ j, G i j * W j.succ
+  rw [Fin.sum_univ_succ]
+  rw [gBottomRight_apply_zero_col, zero_mul, zero_add]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  rw [gBottomRight_apply_succ]
+
+private theorem gBottomRight_mulVec_zero {R : Type*} [NonAssocSemiring R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
+    (gBottomRight G *ᵥ W) 0 = 0 := by
+  show (∑ j, gBottomRight G 0 j * W j) = 0
+  refine Finset.sum_eq_zero fun j _ => ?_
+  rw [gBottomRight_apply_zero_row, zero_mul]
+
+/-- **Quadratic-form factorisation for `gBottomRight G`.**
+The quadratic form `star W ⬝ᵥ (gBottomRight G *ᵥ W)` collapses to
+the quadratic form of `G` on the shifted `k`-vector
+`(W ∘ Fin.succ)`. -/
+theorem gBottomRight_quadForm_eq {R : Type*} [CommRing R] [StarRing R]
+    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
+    star W ⬝ᵥ (gBottomRight G *ᵥ W) =
+      star (fun i : Fin k => W i.succ) ⬝ᵥ
+        (G *ᵥ (fun i : Fin k => W i.succ)) := by
+  show (∑ i, star (W i) * (gBottomRight G *ᵥ W) i) =
+       ∑ i : Fin k, star (W i.succ) *
+         (G *ᵥ (fun j : Fin k => W j.succ)) i
+  rw [Fin.sum_univ_succ]
+  rw [gBottomRight_mulVec_zero, mul_zero, zero_add]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [gBottomRight_mulVec_succ]
+
 /-! ## Refutability — explicit Euler is NOT A-stable -/
 
 /-- **Non-vacuity (negative).** Explicit Euler is not A-stable.

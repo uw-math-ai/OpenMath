@@ -64,18 +64,23 @@ def LinearMultistepMethod.betaVec {k : ℕ} (M : LinearMultistepMethod k) :
     Fin (k + 1) → ℝ := M.β
 
 /-- Embed a `Fin k × Fin k` matrix `G` into the top-left `k × k` block of a
-`Fin (k+1) × Fin (k+1)` matrix; zero on the last row and last column. -/
-def gTopLeft {k : ℕ} (G : Matrix (Fin k) (Fin k) ℝ) :
-    Matrix (Fin (k + 1)) (Fin (k + 1)) ℝ :=
+`Fin (k+1) × Fin (k+1)` matrix; zero on the last row and last column.
+
+Polymorphic in the scalar ring `R` (only `[Zero R]` is needed), so the
+same definition is reusable when the §454 proof lifts the matrix to ℂ. -/
+def gTopLeft {R : Type*} [Zero R] {k : ℕ} (G : Matrix (Fin k) (Fin k) R) :
+    Matrix (Fin (k + 1)) (Fin (k + 1)) R :=
   Matrix.of fun i j =>
     if h : i.val < k ∧ j.val < k then
       G ⟨i.val, h.1⟩ ⟨j.val, h.2⟩
     else 0
 
 /-- Embed a `Fin k × Fin k` matrix `G` into the bottom-right `k × k` block of
-a `Fin (k+1) × Fin (k+1)` matrix; zero on the first row and first column. -/
-def gBottomRight {k : ℕ} (G : Matrix (Fin k) (Fin k) ℝ) :
-    Matrix (Fin (k + 1)) (Fin (k + 1)) ℝ :=
+a `Fin (k+1) × Fin (k+1)` matrix; zero on the first row and first column.
+
+Polymorphic in the scalar ring `R` (only `[Zero R]` is needed). -/
+def gBottomRight {R : Type*} [Zero R] {k : ℕ} (G : Matrix (Fin k) (Fin k) R) :
+    Matrix (Fin (k + 1)) (Fin (k + 1)) R :=
   Matrix.of fun i j =>
     if h : 0 < i.val ∧ 0 < j.val then
       G ⟨i.val - 1, by omega⟩ ⟨j.val - 1, by omega⟩

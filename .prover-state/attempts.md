@@ -48,3 +48,6 @@ Cycle 119 direct manual closure of `aux_515D_max_deviation_geometric_bound` (Pri
 
 ### Cycle 141
 Cycle 141: Aristotle Job A (thm:550A general-n) canceled after 24h at 6% — confirmed intractable for the prover; manual cofactor-expansion induction required for future attempts.
+
+### Cycle 166
+Cycle 166 Section454.lean: Inline proof of `algebraic_identity_454A` via `Matrix.dotProduct`/`Matrix.mulVec` unfolded under `Fin.sum_univ_castSucc`/`Fin.sum_univ_succ` with `dif_neg` on boundary cases — Lean elaboration hung 10+ min without output across two retries. Root cause: nested dependent if-then-else over `Fin (k+1) × Fin (k+1)` inside matrix-entry sums blows up elaboration. Fix: factor boundary quadratic-form lemmas (`gTopLeft_quadForm_eq`, `gBottomRight_quadForm_eq`) as standalone named theorems before attempting the composite identity.
