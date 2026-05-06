@@ -1943,6 +1943,158 @@ theorem adamsBashforth5_toGLM_hasOrderGe3 :
     all_goals simp [LMM.toGLM, adamsBashforth5, Fin.addCases,
       Fin.sum_univ_succ, AB5GE3.qN]
 
+/-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 5-step
+
+`adamsMoulton5` (`s = 5`, ten GLM input slots `Fin 10`, implicit with
+`β_s = 475/1440 ≠ 0`, classical order 6) embeds as a GLM of order ≥ 3.
+The shift constant is `C := s² − 2 β_s s = 25 − 2·(475/1440)·5 =
+25 − 475/144 = 3125 / 144`. Same helper-extraction recipe as AB5GE3
+(cycle 1142). -/
+namespace AM5GE3
+
+private noncomputable def qN : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 5 => (1 : ℝ)) (fun _ : Fin 5 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q'N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ)) (fun _ : Fin 5 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q''N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ) ^ 2 - 3125 / 144)
+    (fun j : Fin 5 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q'''N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ) ^ 3 - 3 * (3125 / 144) * ((j : ℕ) : ℝ))
+    (fun j : Fin 5 => 3 * (((j : ℕ) : ℝ) ^ 2 - 3125 / 144))
+    (Fin.cast (Nat.two_mul 5) k)
+
+/-- q' obligation for AM5GE3 — extracted as a private theorem (fresh
+heartbeat budget per `Fin 10` row). -/
+private theorem q'_obligation (k : Fin 10) :
+    (∑ j, adamsMoulton5.toGLM.B k j) +
+        ∑ l, adamsMoulton5.toGLM.V k l * q'N l =
+      qN k + q'N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N]
+  all_goals norm_num
+
+/-- q'' obligation for AM5GE3 — extracted as a private theorem (fresh
+heartbeat budget); same shape as the AB5GE3 q''-row but with the
+implicit AM5 weights and the shifted q''N (j² − 3125/144 on past-`y`). -/
+private theorem q''_obligation (k : Fin 10) :
+    2 * (∑ j, adamsMoulton5.toGLM.B k j *
+          ((∑ i, adamsMoulton5.toGLM.A j i) +
+            ∑ l, adamsMoulton5.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton5.toGLM.V k l * q''N l =
+      qN k + 2 * q'N k + q''N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]
+  all_goals norm_num
+
+/-- Helper for the `k = 4` case (last past-`y` row) of `q'''_obligation`.
+Factored into a private theorem so it gets a fresh heartbeat budget. -/
+private theorem q'''_obligation_four :
+    6 * (∑ j, adamsMoulton5.toGLM.B (⟨4, by decide⟩ : Fin 10) j *
+            ((∑ i, adamsMoulton5.toGLM.A j i *
+                ((∑ i', adamsMoulton5.toGLM.A i i') +
+                  ∑ l, adamsMoulton5.toGLM.U i l * q'N l)) +
+              ∑ l, adamsMoulton5.toGLM.U j l * q''N l)) +
+        ∑ l, adamsMoulton5.toGLM.V (⟨4, by decide⟩ : Fin 10) l * q'''N l =
+      qN ⟨4, by decide⟩ + 3 * q'N ⟨4, by decide⟩ +
+        3 * q''N ⟨4, by decide⟩ + q'''N ⟨4, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+/-- Helper for the `k = 7` case of `q'''_obligation`. Factored
+into a private theorem so it gets a fresh heartbeat budget; the inline
+`simp; norm_num` block exhausts the 200000 limit at this case on the
+`Fin 10` AM5 row. -/
+private theorem q'''_obligation_seven :
+    6 * (∑ j, adamsMoulton5.toGLM.B (⟨7, by decide⟩ : Fin 10) j *
+            ((∑ i, adamsMoulton5.toGLM.A j i *
+                ((∑ i', adamsMoulton5.toGLM.A i i') +
+                  ∑ l, adamsMoulton5.toGLM.U i l * q'N l)) +
+              ∑ l, adamsMoulton5.toGLM.U j l * q''N l)) +
+        ∑ l, adamsMoulton5.toGLM.V (⟨7, by decide⟩ : Fin 10) l * q'''N l =
+      qN ⟨7, by decide⟩ + 3 * q'N ⟨7, by decide⟩ +
+        3 * q''N ⟨7, by decide⟩ + q'''N ⟨7, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+/-- Helper for the `k = 8` case of `q'''_obligation`. Factored into a
+private theorem so it gets a fresh heartbeat budget. -/
+private theorem q'''_obligation_eight :
+    6 * (∑ j, adamsMoulton5.toGLM.B (⟨8, by decide⟩ : Fin 10) j *
+            ((∑ i, adamsMoulton5.toGLM.A j i *
+                ((∑ i', adamsMoulton5.toGLM.A i i') +
+                  ∑ l, adamsMoulton5.toGLM.U i l * q'N l)) +
+              ∑ l, adamsMoulton5.toGLM.U j l * q''N l)) +
+        ∑ l, adamsMoulton5.toGLM.V (⟨8, by decide⟩ : Fin 10) l * q'''N l =
+      qN ⟨8, by decide⟩ + 3 * q'N ⟨8, by decide⟩ +
+        3 * q''N ⟨8, by decide⟩ + q'''N ⟨8, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+/-- Helper for the `k = 9` case (last past-`h·f` row) of `q'''_obligation`.
+Factored into a private theorem so it gets a fresh heartbeat budget. -/
+private theorem q'''_obligation_nine :
+    6 * (∑ j, adamsMoulton5.toGLM.B (⟨9, by decide⟩ : Fin 10) j *
+            ((∑ i, adamsMoulton5.toGLM.A j i *
+                ((∑ i', adamsMoulton5.toGLM.A i i') +
+                  ∑ l, adamsMoulton5.toGLM.U i l * q'N l)) +
+              ∑ l, adamsMoulton5.toGLM.U j l * q''N l)) +
+        ∑ l, adamsMoulton5.toGLM.V (⟨9, by decide⟩ : Fin 10) l * q'''N l =
+      qN ⟨9, by decide⟩ + 3 * q'N ⟨9, by decide⟩ +
+        3 * q''N ⟨9, by decide⟩ + q'''N ⟨9, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation (k : Fin 10) :
+    6 * (∑ j, adamsMoulton5.toGLM.B k j *
+            ((∑ i, adamsMoulton5.toGLM.A j i *
+                ((∑ i', adamsMoulton5.toGLM.A i i') +
+                  ∑ l, adamsMoulton5.toGLM.U i l * q'N l)) +
+              ∑ l, adamsMoulton5.toGLM.U j l * q''N l)) +
+        ∑ l, adamsMoulton5.toGLM.V k l * q'''N l =
+      qN k + 3 * q'N k + 3 * q''N k + q'''N k := by
+  fin_cases k
+  · simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · exact q'''_obligation_four
+  · simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · exact q'''_obligation_seven
+  · exact q'''_obligation_eight
+  · exact q'''_obligation_nine
+
+end AM5GE3
+
+theorem adamsMoulton5_toGLM_hasOrderGe3 :
+    adamsMoulton5.toGLM.HasOrderGe3 := by
+  refine ⟨AM5GE3.qN, AM5GE3.q'N, AM5GE3.q''N, AM5GE3.q'''N,
+    ?_, ?_, AM5GE3.q'_obligation, AM5GE3.q''_obligation,
+    AM5GE3.q'''_obligation⟩
+  · exact adamsMoulton5.toGLM_V_nordsieckQ_eq adamsMoulton5_consistent
+  · intro i; fin_cases i
+    all_goals simp [LMM.toGLM, adamsMoulton5, Fin.addCases,
+      Fin.sum_univ_succ, AM5GE3.qN]
+
 /-! ### §530 LMM-as-GLM order-≥ 2 witness — trapezoidal rule
 
 The trapezoidal rule (`s = 1`, two GLM input slots `Fin 2`) embeds as a
