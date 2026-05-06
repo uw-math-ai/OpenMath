@@ -1,5 +1,69 @@
 # Issue: General-`n` proof of `thm:550A` (Doubly companion matrix factorization)
 
+## Status update (cycle 147) — n=5 STEPPING STONE ADDED
+
+`doublyCompanionMatrix_det_factorization_n_five` landed axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). Strategy was identical
+to cycle 145's n=4 template — the only structural change is one
+extra layer of Laplace expansion (since Mathlib has no
+`Matrix.det_fin_four`):
+
+1. Reduce `doublyCompanionMatrix α β` at `n = 5` to an explicit
+   `!![…]` form via `ext i j; fin_cases i <;> fin_cases j <;>
+   simp [doublyCompanionMatrix]`.
+2. Reduce `1 - z • X` to a second explicit `!![…]` form by a second
+   `fin_cases` block with `first | (simp; ring) | simp`.
+3. Expand the 5×5 determinant via `Matrix.det_succ_row_zero` (one
+   Laplace step), then expand each 4×4 minor again via
+   `Matrix.det_succ_row_zero (n := 3)` (a second Laplace step), then
+   `Matrix.det_fin_three` closes each 3×3 minor. The single
+   `simp [Fin.sum_univ_five, Fin.sum_univ_four,
+    Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three,
+    alphaPoly, betaPoly, …]; ring` closed the polynomial identity
+   in one shot (no Fallback A needed).
+4. Close the `IsBigO` via `Asymptotics.IsBigO.of_bound` with constant
+   `‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖`, where the residue factors as
+   `z^6 · (a + z·b + z²·c + z³·d + z⁴·e)` with the five convolution
+   coefficients
+   * `a := -(α 0·β 4) - α 1·β 3 - α 2·β 2 - α 3·β 1 - α 4·β 0`,
+   * `b := -(α 1·β 4) - α 2·β 3 - α 3·β 2 - α 4·β 1`,
+   * `c := -(α 2·β 4) - α 3·β 3 - α 4·β 2`,
+   * `d := -(α 3·β 4) - α 4·β 3`,
+   * `e := -(α 4·β 4)`.
+   Bound via repeated `norm_add_le` + `mul_le_of_le_one_left`
+   exploiting `‖z‖ ≤ 1`.
+
+In parallel, Aristotle project `9643742d-aac9-4e57-9f7a-2ba69a5f25ee`
+was submitted with the same target and an n=4-template-included
+self-contained snippet. At the post-build poll (~11 minutes in) it
+was still IN_PROGRESS at 5% — manual closure won.
+
+**Five data points (n = 1, 2, 3, 4, 5)** now confirm the leading-
+coefficient pattern `−Σᵢ αᵢ · β_{n−i} z^{n+1}` predicted by Theorem
+550A. Higher-order coefficients also match the `α(z) · β(z)`
+expansion exactly. The cancellation of `z⁰`–`z⁵` in
+`det(I − zX) − α(z)·β(z)` is the textbook content; verified
+explicitly at `n = 5` by the `ring` step above.
+
+General-`n` closure remains **deferred**. The simp-on-the-recursive
+`det_succ_row_zero` worked at n=4 and n=5 in single passes, which
+is encouraging evidence that the cofactor-expansion induction (the
+textbook's "direct" path, distinct from the eigenvalue-density
+argument) may be tractable when the right inductive invariant is
+identified. That remains multi-cycle infrastructure scope.
+
+**State after cycle 147** (file `OpenMath/Chapter5/Section550.lean`):
+
+* `doublyCompanionMatrix` — kept
+* `doublyCompanionMatrix_one_eq` simp lemma — kept
+* `alphaPoly`, `betaPoly` — kept
+* `doublyCompanionMatrix_det_factorization_n_one` — kept (axiom-clean, cycle 138)
+* `doublyCompanionMatrix_det_factorization_n_two` — kept (axiom-clean, cycle 140)
+* `doublyCompanionMatrix_det_factorization_n_three` — kept (axiom-clean, cycle 144)
+* `doublyCompanionMatrix_det_factorization_n_four` — kept (axiom-clean, cycle 145)
+* `doublyCompanionMatrix_det_factorization_n_five` — **added** (axiom-clean, cycle 147)
+* `doublyCompanionMatrix_det_factorization` (general n) — still **absent**
+
 ## Status update (cycle 144) — n=3 STEPPING STONE ADDED
 
 `doublyCompanionMatrix_det_factorization_n_three` landed axiom-clean
