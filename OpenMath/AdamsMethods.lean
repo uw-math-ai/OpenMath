@@ -615,6 +615,15 @@ theorem adamsMoulton7_consistent : adamsMoulton7.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton7, Fin.sum_univ_succ],
    by simp [LMM.sigma, adamsMoulton7, Fin.sum_univ_succ]; norm_num⟩
 
+/-- Adams–Moulton 8-step is consistent. -/
+theorem adamsMoulton8_consistent : adamsMoulton8.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsMoulton8, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsMoulton8, Fin.sum_univ_succ]; norm_num⟩
+
+/-- Adams–Moulton 8-step is implicit (β₈ = 1070017/3628800 ≠ 0). -/
+theorem adamsMoulton8_implicit : adamsMoulton8.IsImplicit := by
+  simp [LMM.IsImplicit, adamsMoulton8, Fin.last]
+
 /-- Adams–Moulton 9-step is consistent. -/
 theorem adamsMoulton9_consistent : adamsMoulton9.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton9, Fin.sum_univ_succ],
