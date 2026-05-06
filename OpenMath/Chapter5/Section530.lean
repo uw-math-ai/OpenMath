@@ -1,6 +1,9 @@
 import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.Matrix.Notation
 import Mathlib.Tactic.FinCases
+import Mathlib.Analysis.Asymptotics.Defs
+import Mathlib.Analysis.Calculus.Deriv.Basic
+import Mathlib.Topology.MetricSpace.Lipschitz
 import OpenMath.Chapter5.Section510
 
 /-!
@@ -569,5 +572,208 @@ theorem explicitEulerGLM_isExplicit : explicitEulerGLM.IsExplicit := by
   intro i j _
   fin_cases i; fin_cases j
   rfl
+
+/-! ### Order relative to a starting method (cycle 153, def:530B Path A Step 3)
+
+Definition 530B (Butcher §530, p. 432) classifies a general linear method
+`M` as having *order `p` relative to* a (non-degenerate) starting method
+`S` if `SM(y₀, h)` and `ES(y₀, h)` agree to within `O(h^{p+1})` as `h →
+0`. The textbook definition allows `M` to be implicit; we restrict to
+the explicit branch (Path A of `def_530B_scaffold_strategy.md`) so that
+the operators `applyStartingThenStep_explicit` and
+`applyExactThenStarting_explicit` (cycle 152) close without requiring
+fixed-point machinery. The implicit Path B variant remains future work.
+
+The `p = 0` non-vacuity witness `explicitEulerGLM_hasOrderZero_trivialStarting`
+demonstrates that the predicate admits at least one substantive solution
+under natural IVP hypotheses (Lipschitz `f`, exact-solution derivative
+`yex' = f y₀` at `x₀`, initial value matched). -/
+
+section OrderRelativeTo
+
+open Asymptotics Filter
+
+/-- **Definition 530B (Butcher §530, p. 432) — explicit-only variant.**
+A general linear method `M` has *order `p`* relative to a (non-degenerate)
+starting method `S` (with both `M` and every `S_i` explicit) at the
+initial value problem `(f, x₀, y₀, yex)` if the difference between the
+two `Fin r`-vectors
+
+  * `SM(y₀, h)` =
+    `applyStartingThenStep_explicit M S hS hM f y₀ h`
+  * `ES(y₀, h)` =
+    `applyExactThenStarting_explicit S hS f yex x₀ h`
+
+is `O(h^{p+1})` componentwise as `h → 0`.
+
+Internal helper for the explicit-only branch of def:530B per
+`def_530B_scaffold_strategy.md`. The Path-B implicit variant via
+fixed-point machinery remains deferred.
+
+`HasOrderRelativeTo_explicit` does **not** itself impose
+non-degeneracy of `S`; downstream consumers should pair it with an
+explicit `S.IsNonDegenerate` hypothesis where needed. -/
+def HasOrderRelativeTo_explicit
+    {s r : ℕ}
+    (M : OpenMath.Chapter5.Section510.GeneralLinearMethod s r)
+    (S : StartingMethod r)
+    (hS : ∀ i, (S.method i).IsExplicit)
+    (hM : M.IsExplicit)
+    (p : ℕ)
+    (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ y₀ : ℝ) : Prop :=
+  ∀ i : Fin r,
+    (fun h : ℝ =>
+        applyStartingThenStep_explicit M S hS hM f y₀ h i
+          - applyExactThenStarting_explicit S hS f yex x₀ h i)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (p + 1))
+
+/-- **Non-vacuity (Path A Step 3, p = 0).** The explicit Euler GLM has
+order `0` relative to the trivial starting method on any IVP whose exact
+solution `yex` satisfies `yex x₀ = y₀` and `HasDerivAt yex (f y₀) x₀`,
+with `f` Lipschitz with constant `L`.
+
+Witnesses that `HasOrderRelativeTo_explicit` is genuinely satisfiable on
+the most degenerate non-trivial GLM × starting-method shape
+`(s, r) = (1, 1)`. The `p = 0` claim corresponds to `O(h)` agreement
+between SM and ES (the textbook classifies explicit Euler as order 1
+relative to the canonical starting method, but proving `p = 1` requires
+a `ContDiff ℝ 2 yex` hypothesis and a second-order Taylor expansion;
+that refinement is deferred to a future cycle). -/
+theorem explicitEulerGLM_hasOrderZero_trivialStarting
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_deriv : HasDerivAt yex (f y₀) x₀) :
+    HasOrderRelativeTo_explicit explicitEulerGLM trivialStartingMethod
+      (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+      explicitEulerGLM_isExplicit
+      0 f yex x₀ y₀ := by
+  intro i
+  fin_cases i
+  -- Canonicalize the goal so that `i = 0 : Fin 1` is in the application form
+  -- expected by the closed-form lemmas below.
+  change (fun h : ℝ =>
+        applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
+            (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+            explicitEulerGLM_isExplicit f y₀ h 0
+          - applyExactThenStarting_explicit trivialStartingMethod
+              (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+              f yex x₀ h 0)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (0 + 1))
+  -- Step 1a: SM[0] closed form
+  have hSM : ∀ h : ℝ,
+      applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
+          (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+          explicitEulerGLM_isExplicit f y₀ h 0
+        = (y₀ + h * f y₀) + h * f (y₀ + h * f y₀) := by
+    intro h
+    show (h * ∑ i : Fin 1,
+        explicitEulerGLM.B 0 i
+          * f (explicitEulerGLM.explicitStageValue f
+                  (trivialStartingMethod.applyExplicit f y₀ h) h i))
+        + (explicitEulerGLM.V *ᵥ trivialStartingMethod.applyExplicit f y₀ h) 0
+        = _
+    rw [trivialStartingMethod_applyExplicit]
+    unfold OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitStageValue
+    simp [explicitEulerGLM, Matrix.mulVec, dotProduct]
+    ring
+  -- Step 1b: ES[0] closed form (cycle 152 sanity lemma)
+  have hES : ∀ h : ℝ,
+      applyExactThenStarting_explicit trivialStartingMethod
+          (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+          f yex x₀ h 0
+        = yex (x₀ + h) + h * f (yex (x₀ + h)) := by
+    intro h
+    rw [trivialStartingMethod_applyExactThenStarting_explicit]
+  -- Step 2: rewrite the difference into closed form
+  have hcongr :
+      (fun h : ℝ =>
+          applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
+              (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+              explicitEulerGLM_isExplicit f y₀ h 0
+            - applyExactThenStarting_explicit trivialStartingMethod
+                (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+                f yex x₀ h 0)
+        = (fun h : ℝ =>
+            ((y₀ + h * f y₀) - yex (x₀ + h))
+              + h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))) := by
+    funext h
+    rw [hSM, hES]
+    ring
+  rw [hcongr]
+  -- Collapse `h ^ (0 + 1)` to `h`.
+  have hpow : (fun h : ℝ => h ^ (0 + 1)) = (fun h : ℝ => h) := by
+    funext h; simp
+  rw [hpow]
+  -- Step 3: T1 = (y₀ + h·f y₀) - yex(x₀+h) is o(h), hence O(h).
+  have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+      =O[nhds (0 : ℝ)] (fun h => h) := by
+    have h_deriv :
+        (fun h : ℝ => yex (x₀ + h) - yex x₀ - h • f y₀)
+          =o[nhds (0 : ℝ)] fun h => h :=
+      hasDerivAt_iff_isLittleO_nhds_zero.mp hyex_deriv
+    have h1 : (fun h : ℝ => yex (x₀ + h) - y₀ - h * f y₀)
+        =o[nhds (0 : ℝ)] fun h => h := by
+      have := h_deriv
+      rw [hyex_x₀] at this
+      simpa [smul_eq_mul] using this
+    have h2 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+        =o[nhds (0 : ℝ)] fun h => h := by
+      have := h1.neg_left
+      refine this.congr' ?_ (Filter.Eventually.of_forall fun _ => rfl)
+      exact Filter.Eventually.of_forall fun h => by ring
+    exact h2.isBigO
+  -- Step 4: T2 = h * (f(y₀ + h·f y₀) - f(yex(x₀+h))) is O(h) via Lipschitz.
+  have hT2 : (fun h : ℝ => h * (f (y₀ + h * f y₀) - f (yex (x₀ + h))))
+      =O[nhds (0 : ℝ)] (fun h => h) := by
+    -- The pointwise bound `|h * (f a - f b)| ≤ L * |h|` holds whenever
+    -- `|y₀ + h·f y₀ - yex(x₀+h)| ≤ 1`.  Both sides of the diff tend to
+    -- `y₀` as `h → 0`, so the difference tends to `0`, i.e. is eventually
+    -- bounded by `1` near `h = 0`.
+    have hcontA : ContinuousAt (fun h : ℝ => y₀ + h * f y₀) 0 := by
+      exact (continuous_const.add (continuous_id.mul continuous_const)).continuousAt
+    have hcontB : ContinuousAt (fun h : ℝ => yex (x₀ + h)) 0 := by
+      have h_inner : ContinuousAt (fun h : ℝ => x₀ + h) 0 :=
+        (continuous_const.add continuous_id).continuousAt
+      have h_outer : ContinuousAt yex ((fun h : ℝ => x₀ + h) 0) := by
+        simpa using hyex_deriv.continuousAt
+      exact h_outer.comp h_inner
+    have hdiff_tendsto :
+        Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
+          (nhds 0) (nhds 0) := by
+      have htend : Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
+          (nhds 0) (nhds (y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0))) :=
+        (hcontA.sub hcontB).tendsto
+      have h0 : y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0) = 0 := by simp [hyex_x₀]
+      rw [h0] at htend
+      exact htend
+    have hbound : ∀ᶠ h : ℝ in nhds 0,
+        |y₀ + h * f y₀ - yex (x₀ + h)| < 1 := by
+      have hone : (0 : ℝ) < 1 := by norm_num
+      have h_in := (Metric.tendsto_nhds.mp hdiff_tendsto) 1 hone
+      filter_upwards [h_in] with h hh
+      rw [Real.dist_0_eq_abs] at hh
+      exact hh
+    refine .of_bound (↑L) ?_
+    filter_upwards [hbound] with h hh
+    have hlip := hf_lip.dist_le_mul (y₀ + h * f y₀) (yex (x₀ + h))
+    rw [Real.dist_eq, Real.dist_eq] at hlip
+    have hLnn : (0 : ℝ) ≤ L := L.coe_nonneg
+    have habsh : (0 : ℝ) ≤ |h| := abs_nonneg _
+    calc ‖h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))‖
+        = |h| * |f (y₀ + h * f y₀) - f (yex (x₀ + h))| := by
+          rw [Real.norm_eq_abs, abs_mul]
+      _ ≤ |h| * (↑L * |y₀ + h * f y₀ - yex (x₀ + h)|) :=
+          mul_le_mul_of_nonneg_left hlip habsh
+      _ ≤ |h| * (↑L * 1) := by
+          have hh' : |y₀ + h * f y₀ - yex (x₀ + h)| ≤ 1 := hh.le
+          have : ↑L * |y₀ + h * f y₀ - yex (x₀ + h)| ≤ ↑L * 1 :=
+            mul_le_mul_of_nonneg_left hh' hLnn
+          exact mul_le_mul_of_nonneg_left this habsh
+      _ = ↑L * ‖h‖ := by rw [Real.norm_eq_abs]; ring
+  -- Step 5: combine
+  exact hT1.add hT2
+
+end OrderRelativeTo
 
 end OpenMath.Chapter5.Section530

@@ -253,6 +253,70 @@ reductions, then the public:
   strategy's 150-LOC target but within its 200-LOC abort threshold).
   Concentrated in Step 2e GLM-side block.
 
+## Cycle 153 update — Path A Step 3 complete
+
+Path A Step 3 landed in `OpenMath/Chapter5/Section530.lean` (cycle
+153), axiom-clean, sorry count remained 0.
+
+### Predicate `HasOrderRelativeTo_explicit`
+
+* `def HasOrderRelativeTo_explicit M S hS hM p f yex x₀ y₀` —
+  componentwise `=O[nhds (0:ℝ)] (fun h => h ^ (p+1))` on the SM−ES
+  diff, where SM = `applyStartingThenStep_explicit` and ES =
+  `applyExactThenStarting_explicit` (cycle 152 operators). The
+  predicate does NOT itself impose `S.IsNonDegenerate`; downstream
+  callers add it at the use site.
+* New imports: `Mathlib.Analysis.Asymptotics.Defs`,
+  `Mathlib.Analysis.Calculus.Deriv.Basic`,
+  `Mathlib.Topology.MetricSpace.Lipschitz`.
+
+### `p = 0` non-vacuity witness
+
+* `theorem explicitEulerGLM_hasOrderZero_trivialStarting` — under
+  `LipschitzWith L f`, `HasDerivAt yex (f y₀) x₀`, `yex x₀ = y₀`,
+  the SM−ES diff is `O(h)` componentwise. Proof outline:
+  1. **Closed forms**: `hSM` reduces SM[0] to
+     `(y₀ + h·f y₀) + h·f(y₀ + h·f y₀)` via
+     `unfold OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitStageValue`
+     and `simp [explicitEulerGLM, Matrix.mulVec, dotProduct]`. `hES`
+     reuses `trivialStartingMethod_applyExactThenStarting_explicit`.
+  2. **T1 + T2 decomposition**: rewrite SM[0]−ES[0] as
+     `T1(h) + T2(h)` where T1 = `(y₀ + h·f y₀) − yex(x₀+h)` and
+     T2 = `h · (f(y₀ + h·f y₀) − f(yex(x₀+h)))`.
+  3. **T1 = O(h)**: `hasDerivAt_iff_isLittleO_nhds_zero.mp` of
+     `hyex_deriv` gives the canonical little-o; rewrite via
+     `hyex_x₀` and `smul_eq_mul`; negate via `IsLittleO.neg_left`;
+     promote to `IsBigO` via `IsLittleO.isBigO`.
+  4. **T2 = O(h)**: bound `|h · (f a − f b)| ≤ L · |h|` whenever
+     `|a − b| ≤ 1`. Continuity of `a, b` at 0 with `a(0) = b(0) = y₀`
+     gives the eventual `< 1` bound (via
+     `Metric.tendsto_nhds.mp + Real.dist_0_eq_abs`). Closure via
+     `IsBigO.of_bound (↑L) ?_` + `LipschitzWith.dist_le_mul`.
+  5. **Combine**: `hT1.add hT2`, then `simp` collapses
+     `h ^ (0 + 1)` → `h`.
+
+### Verification
+
+* `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+* `lake build OpenMath.Chapter5.Section530` succeeds.
+* `grep -c sorry` → 0.
+* `lean_verify
+  OpenMath.Chapter5.Section530.explicitEulerGLM_hasOrderZero_trivialStarting`
+  → `[propext, Classical.choice, Quot.sound]` only.
+
+### Notes for cycle 154+
+
+* **Stretch refinement**: `p = 1` witness via `ContDiff ℝ 2 yex` +
+  second-order Taylor remainder around `x₀` would match Butcher's
+  textbook classification of explicit Euler as order 1 relative to
+  the canonical starting method. Estimated +50–100 LOC.
+* **Path B (implicit branch)**: still deferred. Requires
+  `ContractingWith` / `Function.IsFixedPt` infrastructure for the
+  stage-equation system when `A` is not strictly lower-triangular.
+* File grew 573 → 776 LOC (+203 LOC), slightly above the strategy's
+  80-LOC target but the closed-form algebra in `hSM` plus the
+  IsBigO bookkeeping in T2 were unavoidable.
+
 ## Cross-reference
 
 `def:530B` blocks (per dependency graph):
