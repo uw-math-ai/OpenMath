@@ -610,6 +610,11 @@ theorem adamsMoulton6_implicit : adamsMoulton6.β 6 ≠ 0 := by
   change (19087 / 60480 : ℝ) ≠ 0
   norm_num
 
+/-- Adams–Moulton 7-step is consistent. -/
+theorem adamsMoulton7_consistent : adamsMoulton7.IsConsistent :=
+  ⟨by simp [LMM.rho, adamsMoulton7, Fin.sum_univ_succ],
+   by simp [LMM.sigma, adamsMoulton7, Fin.sum_univ_succ]; norm_num⟩
+
 /-- Adams–Moulton 9-step is consistent. -/
 theorem adamsMoulton9_consistent : adamsMoulton9.IsConsistent :=
   ⟨by simp [LMM.rho, adamsMoulton9, Fin.sum_univ_succ],
