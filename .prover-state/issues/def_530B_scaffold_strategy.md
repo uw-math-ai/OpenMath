@@ -688,3 +688,114 @@ to r = 3, mirroring the cycle 156 → cycle 157 lift. New artefacts:
 * Path B (implicit method via `ContractingWith` /
   `Function.IsFixedPt`) remains deferred per the original
   multi-cycle infrastructure plan above.
+
+## Cycle 162 update: r-parametric refactor (Phase A landed)
+
+### Context
+Cycles 156–161 alternated r-extensions and helper-extraction
+refactors on `def:530B`/`def:530C` Path A (six consecutive cycles).
+The cycle 161 worker explicitly flagged "diminishing returns on
+r = 5": each additional hand-written r-lift adds ≈300 LOC of
+duplication with no new mathematical content. The cycle 162
+strategy committed to **option 1** (r-parametric refactor, Phase A
+only) over **option 2** (pivot to a fresh entity), as the
+highest-confidence single-cycle deliverable.
+
+### What cycle 162 landed
+* **Section520** — parametric padded GLM family
+  `paddedREulerGLM (r : ℕ) : GeneralLinearMethod 1 (r + 1)` placed
+  immediately after `padded4DEulerGLM`. Body uses `Matrix.of` with
+  index-0 conditional active entries:
+  ```
+  A := !![0]
+  U := Matrix.of fun (_ : Fin 1) (j : Fin (r + 1)) =>
+         if j.val = 0 then 1 else 0
+  B := Matrix.of fun (i : Fin (r + 1)) (_ : Fin 1) =>
+         if i.val = 0 then 1 else 0
+  V := Matrix.of fun (i j : Fin (r + 1)) =>
+         if i.val = 0 ∧ j.val = 0 then 1 else 0
+  ```
+  Conceptually specialises to `explicitEulerGLM` (`r = 0`),
+  `padded2DEulerGLM` (`r = 1`), `padded3DEulerGLM` (`r = 2`),
+  `padded4DEulerGLM` (`r = 3`); reconciliation lemmas are Phase B.3
+  work.
+* **Section530** — parametric starting family:
+  - `padCompatMethodR (r : ℕ) : Fin (r + 1) → GeneralizedRungeKuttaMethod 1`
+    `:= fun i => if i.val = 0 then trivialGeneralizedRK else zeroGeneralizedRK`,
+  - `padCompatStartingMethodR (r : ℕ) : StartingMethod (r + 1)`
+    with `stages := fun _ => 1` and `method := padCompatMethodR r`.
+* **Four basic structure lemmas** (all axiom-clean):
+  - `paddedREulerGLM_isExplicit (r : ℕ)` — vacuous closure on the
+    1×1 `A`-block (mirrors `padded4DEulerGLM_isExplicit`).
+  - `padCompatStartingMethodR_isNonDegenerate (r : ℕ)` — witness
+    `⟨0, Nat.succ_pos r⟩` with `b₀ = 1` from `trivialGeneralizedRK`,
+    via `StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero`.
+  - `padCompatStartingMethodR_constituents_isExplicit (r : ℕ)` —
+    case-split on `i.val = 0`: index 0 cites
+    `trivialGeneralizedRK_isExplicit`, `i ≠ 0` closes vacuously on
+    the 1×1 `A`-block of `zeroGeneralizedRK`.
+  - `padCompatStartingMethodR_applyExplicit (r : ℕ) (f : ℝ → ℝ) (h y₀ : ℝ)`
+    — closed form `fun i => if i.val = 0 then y₀ + h * f y₀ else 0`,
+    discharged via `by_cases hi : i.val = 0` then citing
+    `trivialGeneralizedRK_explicitApply` (cycle 152) at index 0 and
+    private `zeroGeneralizedRK_explicitApply` (cycle 156) elsewhere.
+
+### Outcome
+* `lake env lean OpenMath/Chapter5/Section520.lean` exits 0.
+* `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+* `lake env lean OpenMath/Chapter5.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter5/Section{520,530}.lean` → 0
+  (unchanged).
+* All four new theorems axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`):
+  - `OpenMath.Chapter5.Section530.paddedREulerGLM_isExplicit`
+  - `OpenMath.Chapter5.Section530.padCompatStartingMethodR_isNonDegenerate`
+  - `OpenMath.Chapter5.Section530.padCompatStartingMethodR_constituents_isExplicit`
+  - `OpenMath.Chapter5.Section530.padCompatStartingMethodR_applyExplicit`
+* The new definitions (`paddedREulerGLM`, `padCompatMethodR`,
+  `padCompatStartingMethodR`) compile and elaborate cleanly.
+
+### Phase B (deferred to cycle 163)
+
+* **Phase B.1** — parametric witnesses
+  `paddedREulerGLM_hasOrderZero_padCompatStartingR (r : ℕ)` and
+  `_hasOrderOne_padCompatStartingR (r : ℕ)`. Closure pattern:
+  case-split on `i.val = 0`. At `i.val = 0`, one-line invocation
+  of cycle 158/160's Taylor + Lipschitz helpers after the standard
+  SM[0]/ES[0] closed-form rewrites. At `i.val ≠ 0`, zero-collapse
+  via `Asymptotics.isBigO_zero` (the `applyExplicit` closed form
+  yields 0; `paddedREulerGLM r`'s row-i-active-channel is also 0
+  because the `B` and `V` rows for `i ≥ 1` are zero). Estimated
+  ~150–250 LOC for both.
+* **Phase B.2** — parametric `def:530C` wrappers
+  `paddedREulerGLM_hasOrderZero (r : ℕ)` and `_hasOrderOne (r : ℕ)`,
+  trivial corollaries citing Phase B.1 with
+  `padCompatStartingMethodR r` as the existential witness and
+  `padCompatStartingMethodR_isNonDegenerate r` for the
+  non-degeneracy clause.
+* **Phase B.3** (optional / stretch) — reconciliation lemmas
+  `paddedREulerGLM_zero_eq_explicitEulerGLM`,
+  `paddedREulerGLM_one_eq_padded2DEulerGLM`,
+  `paddedREulerGLM_two_eq_padded3DEulerGLM`,
+  `paddedREulerGLM_three_eq_padded4DEulerGLM`. The `Matrix.of`
+  body vs `!![..]` body unfold differently, so these likely close
+  by `ext + simp` / `decide` rather than `rfl`. Ship only if they
+  close cleanly; do not block on them.
+
+After Phase B lands cleanly, the planner pivots to a fresh entity
+(see cycle 162 strategy's backup pivot candidate list:
+`def:451A` G-stable, `def:422B` underlying one-step method,
+`def:442A` principal sheet, `thm:535A` underlying one-step method
+(GLM), `thm:541A` types of DIMSIM methods).
+
+### What cycle 162 establishes
+* The r-parametric infrastructure for `def:530B`/`def:530C` Path A
+  is now in place. Future r-extensions of the structural side
+  (definitions and basic lemmas) require zero new code: any
+  needed concrete instance follows by specialising the parametric
+  family at a numeral.
+* The hand-written `r ∈ {1, 2, 3, 4}` instances coexist with the
+  parametric family. Cycle 163 (Phase B.3) can ship reconciliation
+  lemmas; if those close cleanly, cycle 164+ can begin retiring
+  the hand-written instances — but this is downstream cleanup,
+  not blocking.

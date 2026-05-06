@@ -1315,6 +1315,28 @@ def padded4DEulerGLM : GeneralLinearMethod 1 4 where
   B := !![1; 0; 0; 0]
   V := !![1, 0, 0, 0; 0, 0, 0, 0; 0, 0, 0, 0; 0, 0, 0, 0]
 
+/-- The `r + 1`-row padded explicit-Euler GLM (parametric family,
+cycle 162 Phase A). Row 0 carries the active explicit-Euler channel
+(`U[0,0] = 1`, `B[0,0] = 1`, `V[0,0] = 1`); rows `1, …, r` are
+passively-decoupled zero channels (`U[·,j] = B[i,·] = V[i,·] = 0`
+for `i ≥ 1`, and likewise `U[0, j] = V[0, j] = 0` for `j ≥ 1`).
+Conceptually specialises to the existing hand-written instances:
+`paddedREulerGLM 0` ↔ `explicitEulerGLM` (r = 1 in old indexing),
+`paddedREulerGLM 1` ↔ `padded2DEulerGLM`, `paddedREulerGLM 2` ↔
+`padded3DEulerGLM`, `paddedREulerGLM 3` ↔ `padded4DEulerGLM`.
+Reconciliation lemmas are deferred to cycle 163 Phase B.3.
+
+Used by Section 530 to land the parametric `r + 1` non-vacuity
+infrastructure for `def:530B` and `def:530C`. -/
+noncomputable def paddedREulerGLM (r : ℕ) : GeneralLinearMethod 1 (r + 1) where
+  A := !![0]
+  U := Matrix.of fun (_ : Fin 1) (j : Fin (r + 1)) =>
+         if j.val = 0 then (1 : ℝ) else 0
+  B := Matrix.of fun (i : Fin (r + 1)) (_ : Fin 1) =>
+         if i.val = 0 then (1 : ℝ) else 0
+  V := Matrix.of fun (i j : Fin (r + 1)) =>
+         if i.val = 0 ∧ j.val = 0 then (1 : ℝ) else 0
+
 /-- **Substantive** non-vacuity witness for `IsIRKStable`:
 `padded2DEulerGLM` (s = 1, r = 2) is inherently Runge–Kutta stable
 with `X = 0`. Unlike the cycle 131 witness `explicitEulerGLM`

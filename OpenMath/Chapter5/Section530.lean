@@ -456,6 +456,79 @@ theorem pad4CompatStartingMethod_constituents_isExplicit :
     fin_cases a; fin_cases b
     rfl
 
+/-! ### `r + 1`-method parametric starting family (cycle 162 Phase A)
+
+Consolidates cycles 156/159/161's three hand-written `padCompat`
+families into a single parametric family
+`padCompatStartingMethodR (r : ℕ) : StartingMethod (r + 1)`. Index 0
+gets the active `trivialGeneralizedRK` channel (`b₀ = 1`); indices
+`1, …, r` are passively-decoupled `zeroGeneralizedRK` channels
+(`b₀ = 0`). All `r + 1` constituents are 1-stage and explicit.
+
+Pairs with the parametric `paddedREulerGLM r` (Section520) for the
+parametric `r + 1` non-vacuity witnesses for `def:530B` and
+`def:530C`. The witnesses (`HasOrderRelativeTo_explicit`) themselves
+are deferred to cycle 163 Phase B.1. -/
+
+/-- Constituent function for `padCompatStartingMethodR r` (cycle 162
+Phase A): index `0` gets `trivialGeneralizedRK` (`b₀ = 1`,
+exercises the active channel); indices `1, …, r` all get
+`zeroGeneralizedRK` (`b₀ = 0`, the inactive zero channels).
+Conceptually specialises to the existing hand-written
+`padCompatMethod`/`pad3CompatMethod`/`pad4CompatMethod`
+constituents at `r ∈ {1, 2, 3}`. -/
+noncomputable def padCompatMethodR (r : ℕ) :
+    Fin (r + 1) → GeneralizedRungeKuttaMethod 1 :=
+  fun i => if i.val = 0 then trivialGeneralizedRK else zeroGeneralizedRK
+
+/-- An `r + 1`-method starting method (cycle 162 Phase A) compatible
+with `paddedREulerGLM r`'s zero row-`{1, …, r}` channels: row 0
+active (`trivialGeneralizedRK`, `b₀ = 1`), rows `1, …, r` inactive
+(`zeroGeneralizedRK`, `b₀ = 0`). Non-degenerate at index `0`.
+Conceptually specialises to the existing hand-written
+`padCompatStartingMethod`/`pad3CompatStartingMethod`/
+`pad4CompatStartingMethod` at `r ∈ {1, 2, 3}`. Reconciliation
+lemmas deferred to cycle 163 Phase B.3. -/
+noncomputable def padCompatStartingMethodR (r : ℕ) :
+    StartingMethod (r + 1) where
+  stages := fun _ => 1
+  method := padCompatMethodR r
+
+/-- **Non-vacuity (cycle 162 Phase A).** `padCompatStartingMethodR r`
+is non-degenerate via its index-0 constituent (`b₀ = 1 ≠ 0`).
+Generalises cycles 156/159/161's `padCompatStartingMethod_isNonDegenerate`,
+`pad3CompatStartingMethod_isNonDegenerate`,
+`pad4CompatStartingMethod_isNonDegenerate` to all `r ≥ 0`. -/
+theorem padCompatStartingMethodR_isNonDegenerate (r : ℕ) :
+    (padCompatStartingMethodR r).IsNonDegenerate := by
+  rw [StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero]
+  refine ⟨⟨0, Nat.succ_pos r⟩, ?_⟩
+  unfold padCompatStartingMethodR padCompatMethodR
+  simp
+  show (1 : ℝ) ≠ 0
+  exact one_ne_zero
+
+/-- All `r + 1` constituents of `padCompatStartingMethodR r` are
+explicit: `trivialGeneralizedRK` and `zeroGeneralizedRK` both have
+the 1×1 zero `A`-block. Generalises cycles 156/159/161's
+`padCompatStartingMethod_constituents_isExplicit`,
+`pad3CompatStartingMethod_constituents_isExplicit`,
+`pad4CompatStartingMethod_constituents_isExplicit` to all
+`r ≥ 0`. -/
+theorem padCompatStartingMethodR_constituents_isExplicit (r : ℕ) :
+    ∀ i : Fin (r + 1),
+      ((padCompatStartingMethodR r).method i).IsExplicit := by
+  intro i
+  show (padCompatMethodR r i).IsExplicit
+  unfold padCompatMethodR
+  by_cases hi : i.val = 0
+  · simp [hi]
+    exact trivialGeneralizedRK_isExplicit
+  · simp [hi]
+    intro a b _
+    fin_cases a; fin_cases b
+    rfl
+
 /-! #### Positive witness (non-vacuous): Heun-style 2-stage explicit method
 
 `explicit2StageGRK` has `A = !![0, 0; 1, 0]`, with a non-trivial
@@ -714,6 +787,30 @@ theorem pad4CompatStartingMethod_applyExplicit
   · show zeroGeneralizedRK.explicitApply f y₀ h = 0
     exact zeroGeneralizedRK_explicitApply f y₀ h
 
+/-- **Component-wise closed form for
+`padCompatStartingMethodR.applyExplicit` (cycle 162 Phase A).** The
+active row-0 channel returns one explicit-Euler step `y₀ + h · f(y₀)`
+(via `trivialGeneralizedRK`); the inactive rows `1, …, r` each return
+`0` (via `zeroGeneralizedRK`). Generalises cycles 156/159/161's
+`padCompatStartingMethod_applyExplicit`,
+`pad3CompatStartingMethod_applyExplicit`,
+`pad4CompatStartingMethod_applyExplicit` to all `r ≥ 0`. -/
+theorem padCompatStartingMethodR_applyExplicit (r : ℕ)
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    (padCompatStartingMethodR r).applyExplicit f y₀ h
+      = fun i => if i.val = 0 then y₀ + h * f y₀ else 0 := by
+  funext i
+  show ((padCompatStartingMethodR r).method i).explicitApply f y₀ h
+        = if i.val = 0 then y₀ + h * f y₀ else 0
+  show (padCompatMethodR r i).explicitApply f y₀ h
+        = if i.val = 0 then y₀ + h * f y₀ else 0
+  unfold padCompatMethodR
+  by_cases hi : i.val = 0
+  · simp [hi]
+    exact trivialGeneralizedRK_explicitApply f y₀ h
+  · simp [hi]
+    exact zeroGeneralizedRK_explicitApply f y₀ h
+
 end OpenMath.Chapter5.Section530
 
 /-! ### Explicit general linear methods + the `SM` operator
@@ -828,6 +925,20 @@ non-vacuity witnesses
 `padded4DEulerGLM_hasOrderOne_pad4CompatStarting`. -/
 theorem padded4DEulerGLM_isExplicit :
     padded4DEulerGLM.IsExplicit := by
+  intro i j _
+  fin_cases i; fin_cases j
+  rfl
+
+/-- **Non-vacuity (positive direction, cycle 162 Phase A): the
+parametric `(s, r + 1)` padded Euler GLM is explicit for every
+`r : ℕ`.** The 1×1 `A`-block `!![0]` of `paddedREulerGLM r`
+(Section520) is vacuously strict-lower triangular at `s = 1`,
+identically to the four hand-written instances `explicitEulerGLM`
+(`r = 0` in this indexing) and `padded{2,3,4}DEulerGLM`
+(`r ∈ {1, 2, 3}`). Generalises cycles 156/159/161's
+`padded{2,3,4}DEulerGLM_isExplicit` to all `r ≥ 0`. -/
+theorem paddedREulerGLM_isExplicit (r : ℕ) :
+    (paddedREulerGLM r).IsExplicit := by
   intro i j _
   fin_cases i; fin_cases j
   rfl

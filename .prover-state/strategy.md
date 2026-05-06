@@ -1,393 +1,405 @@
-# Cycle 161 Strategy
+# Cycle 162 Strategy
 
-## Status snapshot
+## Context
 
-* **Sorry count: 0** — clean.
-* Cycle 160 (just landed, score 1): refactored the cycle 153 / 156 /
-  159 inline T1+T2 closure body at p = 0 into a private helper
-  `taylor_lipschitz_explicitEuler_orderZero_diff_isBigO`, mirroring
-  cycle 158's p = 1 helper extraction. Net −83 LOC; all thirteen
-  affected theorems re-verified axiom-clean.
-* `def:530B`/`def:530C` Path A non-vacuity grid stands at
-  r ∈ {1, 2, 3} × p ∈ {0, 1} — saturated through r = 3.
-* Path B (implicit, fixed-point) remains deferred per
-  `.prover-state/issues/def_530B_scaffold_strategy.md`.
-* No pending Aristotle results.
-* No active blockers escalated by the previous cycle.
+Cycle 161 saturated the `def:530B`/`def:530C` Path A non-vacuity grid
+to `r ∈ {1, 2, 3, 4} × p ∈ {0, 1}`. **Six consecutive cycles**
+(156–161) have now worked on the same pair of entities, alternating
+between r-extensions (156, 157, 159, 161) and helper-extraction
+refactors (158, 160). The cycle 161 worker explicitly flagged
+**"diminishing returns on r = 5"** — each additional r-lift costs
+≈300 LOC of duplication with no new mathematical content.
 
-## What I considered
+The cycle 161 task results recommended one of two paths for cycle
+162:
+1. r-parametric refactor (consolidate cycles 156/159/161's three
+   padded GLM pairs into a single parametric family).
+2. Pivot to a fresh entity from the cycle 160 candidate list.
 
-| Candidate | Verdict |
-|---|---|
-| **Option 1** — `r`-parametric `paddedRDEulerGLM (r : ℕ)` family (cycle 160 worker's #1, recommended). | Genuinely multi-cycle: the existing `padded{2,3}DEulerGLM` use literal `!![…]` matrices (Section520.lean:1286–1303), so generalising to `Matrix.of (fun i j => …)` plus per-row case analysis is a structural rewrite, not a port. Phase A (definitions + IsExplicit) alone is ~150 LOC; phase B (order witnesses by induction on r) needs new induction infrastructure because each `r` is a distinct GLM type. Sorry-first scaffolding is ruled out by the cycle 138/149 rollback precedent. Single-cycle delivery would land foundation only (score ≤ 1, risk of stall). Defer to cycle 162+ once the r = 4 data point validates the pattern. |
-| **Option 2 — r = 4 mechanical lift (Backup A from cycle 160 strategy).** | Mechanical port of cycle 159's r = 3 work. ≈8 axiom-clean theorems; ≈300 LOC. Cycles 158 + 160 helpers reduce both i = 0 channels (p = 0 and p = 1) to one-liners. Validates both helpers at a fourth call site, strengthening the case for option 1 in cycle 162. Known-tractable single-cycle deliverable. **Selected.** |
-| Option 3 — p = 2 witness via second-order GLM (RK2 / midpoint). | Explicit Euler is genuinely first-order: `SM − ES` for explicit Euler is `O(h²)` not `O(h³)`. A p = 2 witness needs a higher-order GLM, which means: a new GLM definition, a new `c`-coefficients-matched starting method, a Taylor-degree-3 helper sibling of cycles 158/160. Multi-cycle. |
-| Option 4 — Path B (implicit method via `ContractingWith`). | Multi-cycle infrastructure deferred per the standing issue. |
-| Pivot to fresh entity (cycle 160 strategy's table re-checked: `def:451A`, `def:422B`, `thm:381G`, `thm:521B`). | All flagged multi-cycle by cycle 160's planner; revisiting them this cycle without scouting is high-variance. |
+This strategy commits to **option 1** (r-parametric refactor,
+**Phase A** only). Reason: it is the highest-confidence single-cycle
+deliverable, well-scoped (≈150–200 LOC), and sets up cycle 163 for a
+clean parametric-witness consolidation in Phase B. After Phase B
+lands, the planner pivots away from `def:530B/C` to a fresh entity —
+state on these entities will then be a single parametric pair plus
+inductive witnesses, instead of three hand-written pairs of
+duplicated code.
 
-## Cycle 161 target — r = 4 mechanical lift (Backup A)
+## Priority 0 — pre-flight checks (5 min)
 
-**Goal**: lift cycles 156/157/159's r ∈ {2, 3} non-vacuity grid for
-`def:530B`/`def:530C` Path A to r = 4 by mirroring cycle 159's r = 3
-deliverables. This produces 8 axiom-clean theorems with sorry count
-held at 0, validates cycles 158 + 160 helpers at a fourth call site
-each, and provides the four-data-point evidence base that cycle 162
-will need to commit to the r-parametric refactor.
+* Verify the cycle 161 commit is on the branch tip:
+  ```
+  git log -1 --format='%H %s'
+  ```
+  Expected: `8e56a89 Cycle 161 — def:530B/C Path A r = 4 × p ∈ {0, 1} witnesses (axiom-clean)`.
+* Verify sorry count is 0:
+  ```
+  grep -c sorry OpenMath/Chapter5/Section{520,530}.lean
+  ```
+  Expected: `0` for both. **If non-zero**, abort the refactor and
+  diagnose the regression instead.
+* Spot-check that all eight cycle-161 declarations
+  (`padded{2,3,4}DEulerGLM_hasOrder{Zero,One}` plus
+  `padded{2,3,4}DEulerGLM_hasOrder{Zero,One}_pad{2,3,4}CompatStarting`)
+  exist in `OpenMath/Chapter5/Section530.lean`.
 
-**Note on duplication**: yes, this adds ≈300 LOC of duplication that
-the eventual cycle 162+ r-parametric refactor will eliminate. That is
-acceptable single-cycle cost — option 1's multi-cycle scope is the
-larger risk, and r = 4 is the lowest-effort way to confirm cycles
-158/160 helpers continue to apply mechanically before committing to
-a parametric rewrite.
+## Priority 1 — r-parametric refactor Phase A (PRIMARY DELIVERABLE)
 
-## Concrete steps
+**Goal**: introduce a single parametric family that covers all
+`r ≥ 1` and prove its basic structure lemmas axiom-clean.
+**Out of scope this cycle**: parametric witnesses
+(`HasOrderRelativeTo_explicit`) and reconciliation with existing
+`r ∈ {1, 2, 3, 4}` instances. Both are **Phase B / cycle 163** work.
 
-### Step 1 — Confirm context (5 min)
+### Step 1.1 — design choice (fixed; do not deviate)
 
-Use `lean_file_outline` on `OpenMath/Chapter5/Section520.lean` and
-`OpenMath/Chapter5/Section530.lean`. Locate:
-* `padded3DEulerGLM` definition (Section520, ≈line 1299).
-* `padded3DEulerGLM_isExplicit`, `padded3DEulerGLM_isIRKStable` /
-  related theorems (Section520, after the definition).
-* `pad3CompatMethod`, `pad3CompatStartingMethod`, the four
-  `pad3CompatStartingMethod_*` helpers, and the two
-  `padded3DEulerGLM_hasOrder{Zero,One}_pad3CompatStarting` witnesses
-  + `padded3DEulerGLM_hasOrder{Zero,One}` def:530C wrappers
-  (Section530).
-* The two cycle-158/160 helpers
-  `taylor_lipschitz_explicitEuler_orderZero_diff_isBigO` and
-  `taylor_lipschitz_explicitEuler_orderOne_diff_isBigO` (Section530).
-* The cycle-156 private helper `zeroGeneralizedRK_explicitApply`
-  (Section530, near `padCompatStartingMethod_applyExplicit`) — this
-  must be reused at r = 4, NOT re-introduced.
+Use `r + 1` indexing rather than `r` with a hypothesis. This avoids
+`NeZero` / `0 < r` pollution and makes the existing instances natural
+specialisations conceptually:
+- `paddedREulerGLM 0` ↔ `explicitEulerGLM` (r = 1 in old indexing)
+- `paddedREulerGLM 1` ↔ `padded2DEulerGLM`
+- `paddedREulerGLM 2` ↔ `padded3DEulerGLM`
+- `paddedREulerGLM 3` ↔ `padded4DEulerGLM`
 
-Do NOT use bare `Read` on these files (each is >1500 LOC). Use
-`lean_file_outline` for skeletons + targeted `Read` with `offset`
-+ `limit`.
+(Reconciliation lemmas for these correspondences are Phase B.3 work,
+NOT cycle 162.)
 
-### Step 2 — Add `padded4DEulerGLM` to Section520
+### Step 1.2 — define the parametric GLM (Section520)
 
-Place immediately after `padded3DEulerGLM` (≈line 1303). The
-4×4 V matrix follows the same pattern as r = 3: row 0 is `[1, 0, 0, 0]`
-(the active channel); rows 1, 2, 3 are zero rows.
+In `OpenMath/Chapter5/Section520.lean`, immediately after
+`padded4DEulerGLM`, add:
 
 ```lean
-/-- A 4-padded explicit-Euler GLM `(s, r) = (1, 4)` (cycle 161):
-row 0 carries the genuine explicit-Euler step (`U[0,0] = 1`,
-`B[0,0] = 1`); rows 1, 2, 3 are passively decoupled zero channels
-(`B[i][·] = 0`, `V[i][·] = 0` for `i ≥ 1`). Lifts cycle 159's
-`padded3DEulerGLM` from r = 3 to r = 4. Used by Section 530 to
-land the `r = 4` non-vacuity witnesses for `def:530B` and
-`def:530C`. -/
-def padded4DEulerGLM : GeneralLinearMethod 1 4 where
+/-- The `r + 1`-row padded explicit-Euler GLM (parametric family).
+    Row 0 is the active explicit-Euler channel; rows 1, …, r are
+    passively-decoupled zero channels. Conceptually specialises to
+    `explicitEulerGLM` (at r = 0), `padded2DEulerGLM` (at r = 1),
+    `padded3DEulerGLM` (at r = 2), `padded4DEulerGLM` (at r = 3).
+    Reconciliation lemmas deferred to Phase B.3 (cycle 163). -/
+noncomputable def paddedREulerGLM (r : ℕ) : GeneralLinearMethod 1 (r + 1) where
   A := !![0]
-  U := !![1, 0, 0, 0]
-  B := !![1; 0; 0; 0]
-  V := !![1, 0, 0, 0; 0, 0, 0, 0; 0, 0, 0, 0; 0, 0, 0, 0]
+  U := Matrix.of fun (_ : Fin 1) (j : Fin (r + 1)) =>
+         if j.val = 0 then (1 : ℝ) else 0
+  B := Matrix.of fun (i : Fin (r + 1)) (_ : Fin 1) =>
+         if i.val = 0 then (1 : ℝ) else 0
+  V := Matrix.of fun (i j : Fin (r + 1)) =>
+         if i.val = 0 ∧ j.val = 0 then (1 : ℝ) else 0
 ```
 
-**Out of scope for cycle 161**: the analogous `IsRKStable`,
-`IsIRKStable`, `IsAStable` (negative), `IsLStable` (negative)
-witnesses for `padded4DEulerGLM` that cycles 133/134/146 produced
-for `padded2DEulerGLM`. Cycle 159 deliberately left them out for
-`padded3DEulerGLM` ("No new Section520 corollaries (...) added —
-out of scope this cycle"). Follow the cycle 159 precedent.
+(Verify the field names `A`, `U`, `B`, `V` against the actual
+`GeneralLinearMethod` structure in `Section510.lean` before writing —
+the existing instances `padded{2,3,4}DEulerGLM` already use these
+names, so this should match.)
 
-### Step 3 — Add `pad4CompatMethod`, `pad4CompatStartingMethod`, support helpers to Section530
+### Step 1.3 — define the parametric starting method (Section530)
 
-Place immediately after `pad3CompatStartingMethod_applyExplicit`'s
-closing block (search for `end pad3CompatStartingMethod_applyExplicit`
-or the tail of cycle 159's helpers). Mirror the cycle 159 layout
-exactly:
+In `OpenMath/Chapter5/Section530.lean`, immediately after
+`pad4CompatStartingMethod` (and its support theorems), add:
 
 ```lean
-/-- Per-row constituent generalized-RK methods compatible with
-`padded4DEulerGLM` (cycle 161). Index 0 is the active explicit-Euler
-channel via `trivialGeneralizedRK`; indices 1, 2, 3 are zero
-channels via `zeroGeneralizedRK`. -/
-def pad4CompatMethod : Fin 4 → GeneralizedRungeKuttaMethod 1
-  | ⟨0, _⟩ => trivialGeneralizedRK
-  | ⟨1, _⟩ => zeroGeneralizedRK
-  | ⟨2, _⟩ => zeroGeneralizedRK
-  | ⟨3, _⟩ => zeroGeneralizedRK
+/-- The `r + 1`-method starting family compatible with
+    `paddedREulerGLM r`. Index 0 is the active
+    `trivialGeneralizedRK` channel; indices 1, …, r are
+    passively-decoupled `zeroGeneralizedRK` channels. -/
+noncomputable def padCompatMethodR (r : ℕ) :
+    Fin (r + 1) → GeneralizedRungeKuttaMethod 1 :=
+  fun i => if i.val = 0 then trivialGeneralizedRK else zeroGeneralizedRK
 
-/-- Cycle 161 starting method paired with `padded4DEulerGLM`:
-row 0 active (`b₀ = 1`), rows 1, 2, 3 inactive (`b₀ = 0`). -/
-noncomputable def pad4CompatStartingMethod : StartingMethod 4 :=
-  ⟨fun _ => 1, pad4CompatMethod⟩
-
-theorem pad4CompatStartingMethod_isNonDegenerate :
-    pad4CompatStartingMethod.IsNonDegenerate := by
-  rw [StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero]
-  refine ⟨⟨0, by omega⟩, ?_⟩
-  simp [pad4CompatStartingMethod, pad4CompatMethod, trivialGeneralizedRK]
-
-theorem pad4CompatStartingMethod_constituents_isExplicit :
-    ∀ i, ((pad4CompatStartingMethod.method i)).IsExplicit := by
-  intro i
-  fin_cases i
-  · exact trivialGeneralizedRK_isExplicit
-  · intro a b _; fin_cases a; fin_cases b; rfl
-  · intro a b _; fin_cases a; fin_cases b; rfl
-  · intro a b _; fin_cases a; fin_cases b; rfl
-
-theorem padded4DEulerGLM_isExplicit : padded4DEulerGLM.IsExplicit := by
-  intro i j _; fin_cases i; fin_cases j; rfl
-
-theorem pad4CompatStartingMethod_applyExplicit
-    (f : ℝ → ℝ) (y₀ h : ℝ) :
-    pad4CompatStartingMethod.applyExplicit
-        pad4CompatStartingMethod_constituents_isExplicit f y₀ h
-      = ![y₀ + h * f y₀, 0, 0, 0] := by
-  funext i
-  fin_cases i
-  · -- Index 0: active trivialGeneralizedRK
-    exact trivialGeneralizedRK_explicitApply f y₀ h
-  · -- Index 1: zero channel
-    exact zeroGeneralizedRK_explicitApply f y₀ h
-  · exact zeroGeneralizedRK_explicitApply f y₀ h
-  · exact zeroGeneralizedRK_explicitApply f y₀ h
+noncomputable def padCompatStartingMethodR (r : ℕ) : StartingMethod (r + 1) where
+  stages := fun _ => 1
+  method := padCompatMethodR r
 ```
 
-The exact `trivialGeneralizedRK_explicitApply` /
-`zeroGeneralizedRK_explicitApply` invocations should be lifted
-verbatim from `pad3CompatStartingMethod_applyExplicit` (cycle 159).
-If the function-extensionality + `fin_cases` shape needs adjustment
-(e.g. `Fin.cases` vs `Matrix.cons`), use `lean_multi_attempt` with
-the cycle 159 closure as a template.
+(Again, verify the `StartingMethod` field names against
+`Section530.lean`'s existing definition.)
 
-### Step 4 — Add the two `HasOrderRelativeTo_explicit` witnesses to Section530
+### Step 1.4 — prove the four basic structure lemmas
 
-Place immediately after `padded3DEulerGLM_hasOrderOne_pad3CompatStarting`.
-Use the cycle 159 r = 3 witnesses as templates; the only
-substantive difference is r = 4 has four `fin_cases` arms instead
-of three.
+In `OpenMath/Chapter5/Section530.lean`, after the definitions in
+Step 1.3, add **exactly four** axiom-clean theorems matching the
+shape of the existing `pad{2,3,4}` infrastructure:
 
-#### Step 4a — `padded4DEulerGLM_hasOrderZero_pad4CompatStarting` (p = 0)
+1. **`paddedREulerGLM_isExplicit`** —
+   ```lean
+   theorem paddedREulerGLM_isExplicit (r : ℕ) :
+       (paddedREulerGLM r).IsExplicit
+   ```
+   The `A`-block is `!![0]` (1×1), so the strict-lower-triangular
+   condition is vacuous on `Fin 1`. Proof template:
+   `intro i j _; fin_cases i; fin_cases j; rfl`. (Mirrors
+   cycle 161's `padded4DEulerGLM_isExplicit` exactly — the `A`-block
+   is identical across all r.)
 
-Structure (mirrors cycle 159's p = 0 witness):
+2. **`padCompatStartingMethodR_isNonDegenerate`** —
+   ```lean
+   theorem padCompatStartingMethodR_isNonDegenerate (r : ℕ) :
+       (padCompatStartingMethodR r).IsNonDegenerate
+   ```
+   Use the helper `StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero`
+   (the bridge cycles 156/159/161 used). Witness at `i := ⟨0,
+   Nat.succ_pos r⟩` with `b₀ = 1` from `trivialGeneralizedRK`.
+   Proof sketch:
+   ```lean
+   refine StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero.mpr
+     ⟨⟨0, Nat.succ_pos r⟩, ?_⟩
+   simp [padCompatStartingMethodR, padCompatMethodR,
+         trivialGeneralizedRK]
+   ```
 
-```lean
-theorem padded4DEulerGLM_hasOrderZero_pad4CompatStarting
-    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
-    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
-    (hyex_x₀ : yex x₀ = y₀)
-    (hyex_deriv_x₀ : HasDerivAt yex (f y₀) x₀) :
-    HasOrderRelativeTo_explicit padded4DEulerGLM pad4CompatStartingMethod
-      pad4CompatStartingMethod_constituents_isExplicit
-      padded4DEulerGLM_isExplicit
-      0 f yex x₀ y₀ := by
-  intro i
-  fin_cases i
-  · -- i = 0: active channel — apply cycle-160 helper as one-liner
-    -- Closed-form rewrites for SM[0] and ES[0] follow cycle 159's
-    -- i = 0 closure verbatim, then the cycle-160 helper closes.
-    sorry  -- replace with the i = 0 closure body (≈30 LOC, port from cycle 159)
-  · -- i = 1: zero channel — `Asymptotics.isBigO_zero`
-    sorry  -- replace with cycle 159's i = 1 zero-collapse (≈10 LOC)
-  · -- i = 2: zero channel — same
-    sorry
-  · -- i = 3: zero channel — same
-    sorry
+3. **`padCompatStartingMethodR_constituents_isExplicit`** —
+   ```lean
+   theorem padCompatStartingMethodR_constituents_isExplicit (r : ℕ) :
+       ∀ i, ((padCompatStartingMethodR r).method i).IsExplicit
+   ```
+   Case-split on `i.val = 0`:
+   ```lean
+   intro i
+   by_cases hi : i.val = 0
+   · simp [padCompatStartingMethodR, padCompatMethodR, hi]
+     exact trivialGeneralizedRK_isExplicit
+   · simp [padCompatStartingMethodR, padCompatMethodR, hi]
+     intro a b _
+     fin_cases a; fin_cases b; rfl
+   ```
+   (The 1×1 strict-lower-triangular case for `zeroGeneralizedRK`
+   closes vacuously; cycles 156/159/161 used the same shape.)
+
+4. **`padCompatStartingMethodR_applyExplicit`** —
+   ```lean
+   theorem padCompatStartingMethodR_applyExplicit (r : ℕ)
+       (f : ℝ → ℝ) (h y₀ : ℝ) :
+       (padCompatStartingMethodR r).applyExplicit
+         (padCompatStartingMethodR_constituents_isExplicit r)
+         f h y₀
+       = fun i => if i.val = 0 then y₀ + h * f y₀ else 0
+   ```
+   `ext i; by_cases hi : i.val = 0`. At `i.val = 0`, cite
+   `trivialGeneralizedRK_explicitApply` (cycle 152). At `i.val ≠ 0`,
+   cite the cycle 156 private helper `zeroGeneralizedRK_explicitApply`.
+   The exact `simp` set should mirror what cycles 156/159/161 used
+   for `pad{2,3,4}CompatStartingMethod_applyExplicit`. Verify the
+   helper name `zeroGeneralizedRK_explicitApply` is reachable (it is
+   private to Section530 per the cycle 156 update).
+
+### Step 1.5 — verification (per declaration)
+
+After each declaration, immediately:
+1. `lake env lean OpenMath/Chapter5/Section530.lean` — exit 0.
+2. `lean_verify` (MCP) on the just-added declaration — confirm
+   `[propext, Classical.choice, Quot.sound]` ONLY.
+3. **If `sorryAx` appears** (or any non-standard axiom), STOP and
+   diagnose. Do NOT commit with sorries (cycle 138/149 rollback
+   precedent).
+
+After all four are clean:
+```
+lake env lean OpenMath/Chapter5/Section520.lean
+lake env lean OpenMath/Chapter5/Section530.lean
+lake env lean OpenMath/Chapter5.lean
+grep -c sorry OpenMath/Chapter5/Section{520,530}.lean   # both → 0
 ```
 
-For the i = 0 channel: copy verbatim the cycle 159 i = 0 channel body
-of `padded3DEulerGLM_hasOrderZero_pad3CompatStarting`. The `applyExplicit`
-component values may differ in shape (Matrix.cons depth at index 0
-on a `Fin 4` matrix vs a `Fin 3` matrix), so be prepared for a
-`Matrix.cons_val_zero` / `Matrix.cons_val_succ` simp invocation in
-the closed-form rewrites.
+### Step 1.6 — commit and update state files
 
-For the i ≥ 1 channels: the body should be a textually-identical
-copy of cycle 159's i = 1 (or i = 2) zero-collapse, since those
-cases differ only in the `Fin r` index value.
-
-#### Step 4b — `padded4DEulerGLM_hasOrderOne_pad4CompatStarting` (p = 1)
-
-Mirror cycle 159's p = 1 witness. The i = 0 channel is again
-discharged by a one-line invocation of the cycle-158 helper
-`taylor_lipschitz_explicitEuler_orderOne_diff_isBigO` after the
-SM[0]/ES[0] closed-form rewrites and an `h^(1+1) = h^2` collapse.
-The i = 1, 2, 3 channels are zero-collapses with exponent `h^(1+1)`.
-
-### Step 5 — Add the two def:530C wrappers to Section530
-
-Place immediately after the cycle 159 def:530C wrappers. Pure
-existential closure citing the two witnesses from Step 4:
-
-```lean
-theorem padded4DEulerGLM_hasOrderZero
-    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
-    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
-    (hyex_x₀ : yex x₀ = y₀)
-    (hyex_deriv_x₀ : HasDerivAt yex (f y₀) x₀) :
-    HasOrder_explicit padded4DEulerGLM padded4DEulerGLM_isExplicit
-      0 f yex x₀ y₀ := by
-  refine ⟨pad4CompatStartingMethod,
-          pad4CompatStartingMethod_constituents_isExplicit, ?_, ?_⟩
-  · exact pad4CompatStartingMethod_isNonDegenerate
-  · exact padded4DEulerGLM_hasOrderZero_pad4CompatStarting hf_lip hyex_x₀ hyex_deriv_x₀
-```
-
-Likewise for `padded4DEulerGLM_hasOrderOne`. Match the cycle 159
-wrappers' hypothesis lists exactly (the p = 1 wrapper takes a
-stronger hypothesis package: `ContDiff ℝ 2 yex` plus the genuine
-ODE relation `∀ x, HasDerivAt yex (f (yex x)) x`).
-
-### Step 6 — Verification
-
-1. `lake env lean OpenMath/Chapter5/Section520.lean` exits 0.
-2. `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
-3. `lake env lean OpenMath/Chapter5.lean` exits 0.
-4. `grep -c sorry OpenMath/Chapter5/Section520.lean` → 0.
-5. `grep -c sorry OpenMath/Chapter5/Section530.lean` → 0.
-6. `lean_verify` axiom-clean check on each new declaration:
-   - `OpenMath.Chapter5.Section520.padded4DEulerGLM` (definition,
-     should report no axioms)
-   - `OpenMath.Chapter5.Section530.pad4CompatStartingMethod_isNonDegenerate`
-   - `OpenMath.Chapter5.Section530.pad4CompatStartingMethod_constituents_isExplicit`
-   - `OpenMath.Chapter5.Section530.padded4DEulerGLM_isExplicit`
-   - `OpenMath.Chapter5.Section530.pad4CompatStartingMethod_applyExplicit`
-   - `OpenMath.Chapter5.Section530.padded4DEulerGLM_hasOrderZero_pad4CompatStarting`
-   - `OpenMath.Chapter5.Section530.padded4DEulerGLM_hasOrderOne_pad4CompatStarting`
-   - `OpenMath.Chapter5.Section530.padded4DEulerGLM_hasOrderZero`
-   - `OpenMath.Chapter5.Section530.padded4DEulerGLM_hasOrderOne`
-
-   Expected for each theorem:
-   `[propext, Classical.choice, Quot.sound]`.
-
-7. Tautology-scanner regex
-   `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` clean on
-   both files.
-
-### Step 7 — Bookkeeping
-
-* Update `extraction/formalization_data/lean_status.json` row for
-  `def:530B` and `def:530C`: bump `cycle` field from 160 to 161;
-  status remains `partial` (Path B still deferred).
-* Update the cycle row in `plan.md` for `def:530B` and `def:530C`
-  to mention the cycle 161 r = 4 lift.
+* Update `extraction/formalization_data/lean_status.json` rows for
+  `def:530B` and `def:530C`: bump `cycle` to 162. **Status remains
+  `partial`** (Path B implicit branch still deferred; Phase A is
+  parametric infrastructure, not full closure).
+* Update `plan.md` rows for `def:530B` and `def:530C` to reflect
+  the cycle 162 parametric infrastructure landing (one bullet each
+  at the end of the existing summary).
 * Update `.prover-state/issues/def_530B_scaffold_strategy.md` with
-  a new "Cycle 161 update" subsection describing the r = 4
-  deliverables (mirror the cycle-159 update format).
-* Write `.prover-state/task_results/cycle_161.md` per the standard
-  format.
+  a new "Cycle 162 update" section noting the parametric refactor
+  Phase A landing and the deferred Phase B (parametric witness
+  consolidation + reconciliation lemmas — see Priority 2 below).
+* Commit message:
+  `Cycle 162 — def:530B/C Path A r-parametric infrastructure (Phase A, axiom-clean)`.
 
-## What NOT to try
+## Priority 2 — Phase B planning notes (DO NOT IMPLEMENT THIS CYCLE)
 
-* Do **NOT** attempt the r-parametric refactor (option 1) this
-  cycle. It is multi-cycle work; this cycle's brief is r = 4 lift
-  only. The four-data-point baseline (r ∈ {1, 2, 3, 4}) created by
-  this cycle is the prerequisite for cycle 162's parametric
-  attempt.
-* Do **NOT** attempt p = 2 witness — explicit Euler's SM−ES is
-  genuinely `O(h²)`, so p = 2 needs a higher-order GLM. Out of
-  scope.
-* Do **NOT** add the analogous `IsRKStable`, `IsIRKStable`,
-  `IsAStable` (negative), `IsLStable` (negative) witnesses for
-  `padded4DEulerGLM`. Cycle 159 deliberately omitted these for
-  `padded3DEulerGLM` and the same scope discipline applies here.
-* Do **NOT** re-introduce `zeroGeneralizedRK_explicitApply` or
-  `trivialGeneralizedRK_explicitApply` — both are already defined
-  (former in cycle 156, latter in cycle 152) and reused by the
-  cycle 159 r = 3 closures.
-* Do **NOT** sorry-first scaffold the whole r = 4 grid. Cycles
-  138 / 149 rolled back sorry-first scaffolds with score −2; the
-  cycle 159 precedent is to land each axiom-clean as you go. If
-  Step 4a's i = 0 channel stalls, fall back to delivering only the
-  Step 2/3 infrastructure plus Step 4a's i ≥ 1 zero-collapses (no
-  net sorry change), and write the rest as deferred to cycle 162.
-* Do **NOT** modify `scripts/autonomous_loop.py` — the
-  tautology-scanner rename workaround is established (cycle 121's
-  precedent and `tautology_scanner_false_positives.md`). If Lean
-  hypothesis names trigger the regex, rename `h_<name>` →
-  `h<name>` at the four touch-points.
-* Do **NOT** raise `maxHeartbeats` above 200000.
-* Do **NOT** start a new Aristotle batch. r = 4 lift is mechanical
-  port territory; Aristotle adds no value here.
-* Do **NOT** poll any prior Aristotle projects (`2c4630b2-…` for
-  thm:550A, `9643742d-…` etc.). They are either cancelled or
-  deprioritized; not on this cycle's path.
+Document for cycle 163 in the issue file update of Step 1.6:
 
-## Backup plans
+* **Phase B.1**: parametric witnesses
+  `paddedREulerGLM_hasOrderZero_padCompatStartingR (r : ℕ)` and
+  `_hasOrderOne_padCompatStartingR (r : ℕ)`. Closure via case-split
+  on `i.val = 0`: at `i.val = 0`, one-line invocation of cycle
+  158/160's Taylor + Lipschitz helpers; at `i.val ≠ 0`,
+  zero-collapse via `Asymptotics.isBigO_zero`. Estimated ~150–250
+  LOC.
+* **Phase B.2**: parametric `def:530C` wrappers
+  `paddedREulerGLM_hasOrderZero (r : ℕ)` and `_hasOrderOne (r : ℕ)`,
+  trivial corollaries citing Phase B.1.
+* **Phase B.3** (optional / stretch): reconciliation lemmas
+  `paddedREulerGLM_zero_eq_explicitEulerGLM`,
+  `paddedREulerGLM_one_eq_padded2DEulerGLM`, etc. Likely close by
+  `rfl`/`ext + simp` since the matrix bodies match definitionally
+  modulo `Fin (r+1)` ↔ `Fin {1,2,3,4}` indexing. Ship only if they
+  close cleanly; do not block on them.
 
-### Backup A — Step 4a's i = 0 channel stalls
+After Phase B lands cleanly, the planner pivots to a fresh entity
+(see backup pivot candidate list at the bottom of this file).
 
-If the SM[0]/ES[0] closed-form rewrites in
-`padded4DEulerGLM_hasOrderZero_pad4CompatStarting` fail to reduce
-to the cycle-160 helper's input shape after one round of
-`lean_multi_attempt` debugging:
+## What NOT to do this cycle
 
-* Land Steps 2, 3, and 4b (p = 1) only. The p = 1 witness's i = 0
-  channel uses the cycle-158 helper, which has been validated at
-  three call sites (cycles 154/157/159) so should port mechanically.
-* Skip Step 4a entirely (do not commit a sorry'd version). Document
-  the deferral in `cycle_161.md` and update the
-  `def_530B_scaffold_strategy.md` issue file accordingly.
-* Net deliverable: 7 axiom-clean theorems instead of 9 (Section520
-  definition + 4 Section530 helpers + p = 1 witness + p = 1
-  wrapper). Sorry count remains 0.
+1. **Do NOT attempt r = 5 lift.** The cycle 161 worker confirmed
+   diminishing returns; further hand-written `padded5DEulerGLM`
+   instances add zero mathematical content and contradict this
+   strategy's commitment to consolidation.
 
-### Backup B — Section520 definition or Section530 helpers stall
+2. **Do NOT introduce sorries.** The cycle 138 (`thm:550A` general-n
+   sorry-first scaffold) and cycle 149 (`def:530B` operator-body
+   sorry-first scaffold) rollback precedent is in force. The four
+   lemmas in Priority 1 Step 1.4 are mechanical structural facts
+   that can and must be closed axiom-clean within the cycle.
 
-Highly unlikely (cycle 159 r = 3 used the same template), but if a
-Lean tactic fails:
+3. **Do NOT attempt the parametric witnesses
+   (`HasOrderRelativeTo_explicit`) this cycle.** That is Phase B.1.
+   The cycle-153/154 closure work shows the witnesses themselves
+   take 200+ LOC each. Combined with Phase A's 150–200 LOC,
+   attempting both in one cycle exceeds a comfortable single-cycle
+   budget and risks a stalled commit.
 
-* Submit the failing fragment as a fire-and-forget Aristotle job
-  (single submission, not five). Do NOT poll until cycle 162.
-* In the meantime, strip the cycle to whatever has compiled
-  axiom-clean. As long as ≥1 new axiom-clean theorem lands and
-  sorry count holds at 0, the cycle has positive net progress.
+4. **Do NOT attempt to replace existing `r ∈ {1, 2, 3, 4}`
+   instances** with corollaries of the parametric family this cycle.
+   Reconciliation is Phase B.3. Let the parametric family **coexist**
+   with the existing instances.
 
-### Backup C — Pivot to r-parametric refactor (option 1) Phase A
+5. **Do NOT pivot to a fresh entity (e.g. `def:451A`, `def:422B`)
+   yet.** This strategy commits to the refactor. The pivot is queued
+   for cycle 164+ (after Phase B closes). See the backup candidate
+   list at the end of this file.
 
-If Step 2/3 lands smoothly but reveals a structural simplification
-that makes option 1 more tractable than estimated, consider
-abandoning Step 4 and instead:
+6. **Do NOT modify any of cycles 138–161's existing helpers or
+   theorems.** The parametric family is purely additive
+   infrastructure; touching the existing axiom-clean witnesses
+   risks regressions.
 
-* Define `paddedRDEulerGLM (r : ℕ) (hr : 0 < r) : GeneralLinearMethod 1 r`
-  using `Matrix.of (fun i j => if i = 0 ∧ j = 0 then 1 else 0)`-style
-  parametric construction.
-* Prove `paddedRDEulerGLM_isExplicit` for general `r`.
-* Define `padRCompatStartingMethod (r : ℕ) (hr : 0 < r) : StartingMethod r`
-  parametrically and prove
-  `padRCompatStartingMethod_isNonDegenerate`.
-* Show definitional / propositional equality with the existing
-  `padded2DEulerGLM`, `padded3DEulerGLM`, `padded4DEulerGLM` (if
-  Step 2 landed), `pad{2,3,4}CompatStartingMethod` instances.
+7. **Do NOT modify `scripts/autonomous_loop.py`** (worker rule). If
+   the tautology-scanner regex flags any of the four new lemmas,
+   apply the standard cosmetic rename `h_<name>` → `h<name>` per
+   `.prover-state/issues/tautology_scanner_false_positives.md`.
 
-This is **not the recommended path** — only invoke it if Steps 2/3
-produce evidence that the parametric construction is materially
-simpler than estimated. Default behavior is to complete Step 4
-mechanically.
+8. **Do NOT raise `maxHeartbeats` above 200000.** If a `simp; ring`
+   times out on `padCompatStartingMethodR_applyExplicit` (the most
+   `simp`-heavy of the four), decompose by adding a private helper
+   that handles the `i.val = 0` case separately, like cycles
+   156/159/161 did.
 
-## Faithfulness check reminders
+## Failed approaches to avoid (from `attempts` history)
 
-Per CLAUDE.md, run for every new `def` or `theorem` introduced
-this cycle. The r = 4 lift introduces zero new mathematical
-content — it is a parametric extension of cycles 156/159's r ∈
-{2, 3} non-vacuity grid for `def:530B` (Order relative to
-starting method, Path A) and `def:530C` (Order, Path A
-existential). The faithfulness check is a no-op (no textbook
-divergence introduced); document this in `cycle_161.md` per the
-cycle 159 precedent.
+* **Sorry-first scaffold for new definitions** — cycles 138 (thm:550A
+  general-n) and 149 (def:530B operator bodies) both regressed
+  because a sorry was added without a clear single-cycle closure
+  path. Phase A's four lemmas are all closable in this cycle by
+  direct construction; do NOT scaffold any of them with sorry.
+* **Aristotle for parametric structural lemmas** — historical
+  Aristotle performance on parametric `Fin`-indexed sums and
+  decidable-equality case splits has been weak (cycle 141 cancelled
+  at 6%, cycle 148 still IN_PROGRESS at 18% as of cycle 150 poll —
+  see `thm_550A_general_n.md`). Do NOT submit Phase A lemmas to
+  Aristotle; close them manually.
+* **`Fin.sum_univ_<n>` for parametric `r`** — these fire only at
+  concrete `n`. For parametric `r + 1`, use
+  `Finset.sum_eq_single 0 ... ...` or `Fin.sum_univ_succ` /
+  `Finset.sum_ite_eq` family instead.
+* **`fin_cases i` for parametric `Fin (r + 1)`** — same issue.
+  Use `by_cases h : i.val = 0` (with `omega` discharge of side
+  obligations) or `Fin.cases` / `Fin.induction` for case splits.
+* **Definitional equality reliance for reconciliation** —
+  `paddedREulerGLM 1 = padded2DEulerGLM` is NOT `rfl` in general
+  (the `Matrix.of`-based body vs `!![..]` body unfold differently).
+  Don't rely on it; the reconciliation is Phase B.3.
 
-In particular:
-* No new textbook-named concepts (the relevant entities are
-  `def:530B`/`def:530C`, already introduced in cycles 151–155).
-* No new `class`/`structure` declarations.
-* No tautology-pattern violations expected.
-* Hypothesis-strength check: the witness signatures should match
-  cycle 159's r = 3 witnesses verbatim. If a hypothesis is added
-  or strengthened, that is a deviation requiring justification —
-  flag it explicitly.
+## Backup plan (only if Phase A's design hits a structural blocker)
 
-## Bottom line
+If, while implementing Step 1.4, a structural blocker appears that
+is genuinely irresolvable in this cycle (NOT just slow Lean
+elaboration — that's what `decide` / `simp` / `omega` tuning is for):
 
-Cycle 161 = mechanical r = 4 port of cycle 159's r = 3
-deliverables. Target: 8–9 axiom-clean theorems in Section520 +
-Section530, sorry count held at 0, cycles 158/160 helpers
-validated at fourth call sites. Estimated 60–90 minutes worker
-time. Score expectation: 2 (substantive non-vacuity additions per
-the 156/157/159 precedent).
+* **Backup A1**: scope down to **Steps 1.2 + 1.3 only** (definitions
+  without structure lemmas). Land the parametric family as a
+  sorry-free definition; defer all four lemmas to cycle 163.
+  Phase B then becomes Phase B.0 (the four lemmas) + Phase B.1/2/3
+  as originally planned. Cycle score likely +1 (clean partial);
+  cycle 163 picks up smoothly.
+
+* **Backup A2** (only if A1 also fails — unlikely): pivot
+  immediately to **`def:451A` G-stable** (Chapter 4 §451). First
+  step: read `extraction/formalization_data/entities/def_451A.json`
+  to determine textbook content. If the definition involves a
+  positive-definite matrix `G` and a one-leg method, the LMM
+  infrastructure in `OpenMath/Chapter4/Section404.lean` should
+  suffice for a single-cycle definition + non-vacuity witness.
+  This is genuinely a cycle 164+ task per Priority 2's "pivot to a
+  fresh entity" plan; doing it under Backup A2 is suboptimal but
+  acceptable.
+
+* **Backup A3** (last resort): document the structural blocker as a
+  new issue file `.prover-state/issues/r_parametric_<descriptor>.md`,
+  revert any partial Phase A code so the file builds clean, and
+  submit a cycle that LANDS THE ISSUE FILE (zero new sorries; no
+  Lean-content advance, but documents the dead end for cycle 163).
+
+## Mathlib hooks (Phase A only)
+
+| Goal | Lemma |
+|---|---|
+| Specialise `Matrix.of` to entries | `Matrix.of_apply` |
+| Sum with one non-zero entry | `Finset.sum_eq_single` |
+| Indicator-style `if`-sums | `Finset.sum_ite_eq` / `Finset.sum_ite_eq'` |
+| Case-split on `Fin (r+1)` | `Fin.cases`, or `by_cases h : i.val = 0` |
+| `0 < r + 1` | `Nat.succ_pos r` |
+| Non-degeneracy bridge | `StartingMethod.isNonDegenerate_iff_exists_b₀_ne_zero` (existing helper, used by cycles 156/159/161) |
+| `b₀ ≠ 0` for `trivialGeneralizedRK` | unfolds to `(1 : ℝ) ≠ 0` |
+| Index-0 closed-form | `trivialGeneralizedRK_explicitApply` (cycle 152) |
+| Index-`> 0` closed-form | `zeroGeneralizedRK_explicitApply` (private helper, cycle 156) |
+
+## Expected cycle 162 deliverable shape
+
+* **Files modified**:
+  - `OpenMath/Chapter5/Section520.lean` (one new `def`).
+  - `OpenMath/Chapter5/Section530.lean` (two new `def`s + four new
+    `theorem`s).
+  - `extraction/formalization_data/lean_status.json` (cycle bumps
+    on `def:530B`, `def:530C`).
+  - `plan.md` (one bullet each on the `def:530B` and `def:530C`
+    rows).
+  - `.prover-state/issues/def_530B_scaffold_strategy.md` (cycle 162
+    update + Phase B planning notes).
+* **LOC delta**: +150 to +200 LOC, concentrated in
+  `Section530.lean`.
+* **Sorry count**: 0 → 0 (unchanged).
+* **Axiom check**: all four new theorems report
+  `[propext, Classical.choice, Quot.sound]` only.
+* **Tautology scanner**: clean.
+* **Path A status of `def:530B/C`**: still `[~]` (parametric
+  infrastructure landed; parametric witnesses deferred to cycle
+  163; Path B implicit branch still deferred).
+
+## Plan progress impact and post-Phase-B pivot queue
+
+This cycle does NOT advance `plan.md`'s 69/175 entity count (no new
+`[x]` entities). Cycle 162's contribution is **structural
+consolidation**, valued at the same level as the cycle 158/160
+helper-extraction refactors (likely supervisor score +1).
+
+The pivot to a fresh entity comes after cycle 163's Phase B closes.
+**Candidate list for cycle 164+** (in approximate order of estimated
+tractability — NOT to be acted on this cycle):
+
+1. **`def:451A` G-stable** (§451, Chapter 4 LMM). Definition +
+   non-vacuity witness. Estimated 1 cycle.
+2. **`def:422B` underlying one-step method** (§422, Chapter 4 LMM).
+   Definition + companion theorem (`thm:422A`). Estimated 1–2
+   cycles.
+3. **`def:442A` principal sheet** (§441, Chapter 4 LMM).
+   Definition. Estimated 1 cycle.
+4. **`thm:535A` underlying one-step method (GLM)** (§535,
+   Chapter 5). Theorem; analog of `thm:422A` but at the GLM level.
+   Estimated 2 cycles.
+5. **`thm:541A` types of DIMSIM methods** (§541, Chapter 5).
+   Classification theorem. Estimated 2–3 cycles.
+
+Cycle 163's planner should pick the top tractable candidate after
+Phase B lands. Worker should **not** scout these candidates this
+cycle.
