@@ -1,310 +1,331 @@
-# Cycle 148 — strategy
+# Cycle 149 Strategy
 
-## Snapshot
+## Status snapshot
 
-- Sorry count: **0** (clean).
-- Last cycle (147): closed `doublyCompanionMatrix_det_factorization_n_five`
-  axiom-clean as the fifth concrete-`n` stepping stone for `thm:550A`.
-  Manual proof landed before Aristotle progress (Aristotle project
-  `9643742d-…` was IN_PROGRESS at 5% at the post-build poll; do NOT
-  re-poll it — per CLAUDE.md, single-poll rule applies).
-- The cycle 147 recipe (one-shot `simp […]; ring` after two-layer
-  `Matrix.det_succ_row_zero` Laplace expansion) generalised cleanly
-  from cycle 145's n=4 template **without** Fallback A. Five concrete
-  data points (n = 1, 2, 3, 4, 5) now confirm the leading-coefficient
-  pattern `−Σᵢ αᵢ · β_{n−i} z^{n+1}` of Theorem 550A.
-- No pending Aristotle results awaiting incorporation.
+- Sorry count: **0** (clean baseline maintained for 9+ consecutive cycles).
+- Last 5 cycles: 144 (n=3) → 145 (n=4) → 146 (def:520E/F r=2 negative
+  witnesses) → 147 (n=5) → 148 (n=6 + Aristotle general-n submission).
+- Plan progress: 69 / 175 entities.
+- thm:515D (the §515 capstone) is closed and axiom-clean since cycle 124.
+- thm:550A: six concrete-`n` axiom-clean stepping stones (n = 1..6);
+  general-n still deferred. Aristotle project
+  `2c4630b2-2998-4d4a-af88-c2f83fbd9eda` was submitted in cycle 148
+  packaging all six closed proofs as in-context templates.
 
-## What to work on this cycle
+## Priority 0 (≤5 min) — Aristotle single-poll
 
-**Priority 1 (mandatory): close
-`doublyCompanionMatrix_det_factorization_n_six` axiom-clean in
-`OpenMath/Chapter5/Section550.lean`** as the sixth concrete-`n`
-stepping stone for `thm:550A`.
+**Action**: Run `mcp__aristotle__get_status` ONCE on project
+`2c4630b2-2998-4d4a-af88-c2f83fbd9eda`. Per CLAUDE.md single-poll
+discipline: this is the cycle's only allowed Aristotle poll on
+this project; do NOT re-poll within this cycle.
 
-**Rationale.** Cycle 147 demonstrated that the cycle 145 template
-generalises in *one cycle per rung* with a single-shot `simp […]; ring`
-collapse (no Fallback A needed). The marginal cost of an additional
-rung is minimal and continues to accumulate evidence for the eventual
-general-`n` cofactor-expansion induction. After this rung, the
-planner will judge whether to attempt general-`n` directly (cycle
-149+) or pivot to other §5 work.
+### Decision tree
 
-**Priority 2 (parallel, fire-and-forget): submit a single Aristotle
-project for the *general-`n`* statement** with **all five n=1..5
-proofs** included as in-context templates and a clear inductive
-sketch in the prompt. This is a long-shot — cycle 141 cancelled an
-Aristotle general-`n` job at 24h/6%, and cycle 147's general-`n`
-adjacent attempt also stalled at 5% — but submission cost is zero
-for the worker, and a hit would close out `thm:550A` entirely. **Do
-NOT poll this job during the cycle**; just submit, record the project
-ID in `.prover-state/aristotle_submissions/cycle_148/`, and let it
-run.
+- **If COMPLETE with a clean proof body**:
+  1. `mcp__aristotle__extract_result` to retrieve the Lean code.
+  2. Reinstate the general-`n` statement
+     `doublyCompanionMatrix_det_factorization` in
+     `OpenMath/Chapter5/Section550.lean` (cycle 139 removed it; cycle 148
+     packaged all six concrete-n proofs as in-context templates).
+  3. Verify with `lake env lean OpenMath/Chapter5/Section550.lean`.
+  4. `lean_verify` to confirm `[propext, Classical.choice, Quot.sound]`
+     only — REJECT if any other axiom appears.
+  5. Update `extraction/formalization_data/lean_status.json`:
+     `thm:550A` → `formalized` (drop `partial`).
+  6. Update `plan.md` line 218 (thm:550A row): drop the `[~]` and
+     replace with `[x]`; trim the long status comment to a single
+     line referencing the general-n closure cycle.
+  7. Update `.prover-state/issues/thm_550A_general_n.md` with a
+     "RESOLVED cycle 149" header noting Aristotle closure.
+  8. Commit + push. Cycle done.
+  9. Skip Priority 1.
 
-**Priority 3 (only if Priorities 1 and 2 are both delivered):**
-update the `thm:550A` row of `extraction/formalization_data/lean_status.json`
-and the §5 row of `plan.md` to reference cycle 148. Status remains
-`partial` (n=6 is still a stepping stone). Append a short n=6 status
-update to `.prover-state/issues/thm_550A_general_n.md`.
+- **If FAILED, CANCELLED, or returns garbage** (e.g. uses `sorry`,
+  invokes `axiom`, references missing definitions): do NOT spend
+  cycle time debugging Aristotle output. Cancel the project via
+  `mcp__aristotle__cancel_project` and move directly to Priority 1.
 
-## How to do Priority 1 (concrete recipe)
+- **If still IN_PROGRESS at any percentage**: leave it running, move
+  to Priority 1. Do NOT cancel — a future cycle may poll it again.
+  (Cycle 141's Aristotle Job A was cancelled at 6% after 24h, which
+  is the historical baseline for "intractable" — anything earlier
+  than that is still potentially viable.)
 
-Open `OpenMath/Chapter5/Section550.lean`. Insert
-`doublyCompanionMatrix_det_factorization_n_six` after
-`doublyCompanionMatrix_det_factorization_n_five` (line 502, just before
-`end OpenMath.Chapter5.Section550`). The template is the cycle 147
-proof (lines 395–501) with **three** mechanical changes:
+## Priority 1 (60–90 min) — Open `def:530B` with sorry-first scaffold
 
-### Change 1: bump the matrix size from 5×5 to 6×6
+**Target**: `def:530B` "Order relative to starting method (530B)"
+(`extraction/formalization_data/entities/def_530B.json`, page 432).
 
-Replace the explicit `!![…]` 5×5 matrix forms (cycle 147 lines 414–419
-for `hX`, lines 425–434 for `hmat`) with their 6×6 analogues. The
-sub-diagonal grows by one entry; the last column gets one more
-`-β k` value; row 0 gets one more `-α k` entry. Concretely:
+**Why this target**:
+- Builds directly on cycle 139's §530 `StartingMethod` infrastructure
+  in `OpenMath/Chapter5/Section530.lean` (already 259 LOC,
+  `trivialStartingMethod` + `mixedStartingMethod` non-vacuity
+  witnesses landed).
+- Topologically next: `def:530B` is the only `[ ]` entry in §530 with
+  all dependencies satisfied (`def:530A` done cycle 139). `def:530C`
+  depends on `def:530B` and is a one-line existential corollary.
+- §550 ladder has hit diminishing returns per cycle 148 task results
+  ("n=7 unlikely to be worth the cycle").
+- def:525A G-symplecticity already has BOTH trivial (cycle 128
+  `explicitEulerGLM_isGSymplectic` G=D=0) AND substantive
+  (`implicitMidpointGLM_isGSymplectic` G=D=1) witnesses in
+  `OpenMath/Chapter5/Section525.lean`; chasing the Butcher (525d)
+  √3 witness adds a 3rd witness without adding non-vacuity content.
+  Skip.
 
-```lean
-have hX : doublyCompanionMatrix α β =
-    !![-α 0, -α 1, -α 2, -α 3, -α 4, -α 5 - β 5;
-       1,     0,    0,    0,    0,    -β 4;
-       0,     1,    0,    0,    0,    -β 3;
-       0,     0,    1,    0,    0,    -β 2;
-       0,     0,    0,    1,    0,    -β 1;
-       0,     0,    0,    0,    1,    -β 0] := by
-  ext i j
-  fin_cases i <;> fin_cases j <;> simp [doublyCompanionMatrix]
-```
+**Textbook content** (Butcher §530, p. 432):
+> "Consider a general linear method M and a non-degenerate starting
+> method S. The method M has order p relative to S if the results
+> found from SM and ES agree to within O(h^{p+1})."
 
-and the corresponding `1 - z • X` (sign flip on `-α k → +z·α k`,
-and lower-triangle `1`s become `-z`):
+The textbook compares two `(Fin r) → ℝ` vectors:
+- `SM(y₀, h)` — first apply starting method `S` to `y₀` to produce
+  `r` initial values; then carry out one step of `M` with stepsize
+  `h` to produce a new `r`-vector of approximations.
+- `ES(y₀, h)` — first advance the exact solution forward by time
+  `h` to `y(x₀+h)`; then apply each member of `S` to `y(x₀+h)`.
 
-```lean
-have hmat :
-    (1 - z • !![…6×6 explicit form…] : Matrix (Fin 6) (Fin 6) ℂ)
-      = !![1 + z * α 0,  z * α 1,  z * α 2,  z * α 3,  z * α 4,  z * (α 5 + β 5);
-           -z,           1,        0,        0,        0,        z * β 4;
-           0,            -z,       1,        0,        0,        z * β 3;
-           0,            0,        -z,       1,        0,        z * β 2;
-           0,            0,        0,        -z,       1,        z * β 1;
-           0,            0,        0,        0,        -z,       1 + z * β 0] := by
-  ext i j
-  fin_cases i <;> fin_cases j <;>
-    first | (simp; ring) | simp
-```
+"Agree to within `O(h^{p+1})`" means
+`‖SM(y₀, h) - ES(y₀, h)‖ = O(h^{p+1})` as `h → 0`.
 
-### Change 2: add `Matrix.det_succ_row_zero (n := 4)` to the simp set
+### Sorry-first scaffold (Lean shape)
 
-Cycle 147's two-layer Laplace (`det_succ_row_zero` outer + `(n := 3)`
-inner closing into `det_fin_three`) becomes a **three-layer** Laplace
-for n=6 (since Mathlib has no `det_fin_four`):
-
-* outer `det_succ_row_zero`: 6×6 → six 5×5 minors
-* `det_succ_row_zero (n := 4)`: each 5×5 → five 4×4 minors
-* `det_succ_row_zero (n := 3)`: each 4×4 → four 3×3 minors
-* `Matrix.det_fin_three`: closes each 3×3 minor.
-
-So the closing simp set is:
+In `OpenMath/Chapter5/Section530.lean`, add (after the existing
+`mixedStartingMethod` block):
 
 ```lean
-rw [Matrix.det_succ_row_zero]
-simp [Fin.sum_univ_six, Fin.sum_univ_five, Fin.sum_univ_four,
-  Matrix.det_succ_row_zero (n := 4),
-  Matrix.det_succ_row_zero (n := 3),
-  Matrix.det_fin_three,
-  alphaPoly, betaPoly,
-  Matrix.cons_val_zero, Matrix.cons_val_one,
-  Matrix.submatrix_apply, Fin.succ_zero_eq_one,
-  Matrix.cons_val_fin_one, Fin.succAbove]
-ring
+section OrderRelativeToStartingMethod
+
+variable {s r : ℕ}
+
+/-- The vector `SM(y₀, h)` from def:530B: starting method `S`
+constructs initial approximations from `y₀`, then GLM `M` carries
+out one step. -/
+noncomputable def applyStartingThenStep
+    (M : GeneralLinearMethod s r) (S : StartingMethod r)
+    (f : ℝ → ℝ) (y₀ : ℝ) (h : ℝ) : Fin r → ℝ :=
+  sorry  -- compose: S applied to y₀ → r-vector; then one M-step
+         -- of size h on that r-vector with RHS f.
+
+/-- The vector `ES(y₀, h)` from def:530B: exact-solution evolution
+by time `h`, then starting method `S` applied to `y(x₀+h)`. -/
+noncomputable def applyExactThenStarting
+    (S : StartingMethod r) (yex : ℝ → ℝ) (x₀ h : ℝ) : Fin r → ℝ :=
+  sorry  -- compose: yex(x₀+h) → ℝ; then S applied to that scalar
+         -- gives r-vector.
+
+/-- Definition 530B: M has order `p` relative to non-degenerate
+starting method `S` if `SM` and `ES` agree to `O(h^{p+1})`. -/
+def GeneralLinearMethod.HasOrderRelativeTo
+    (M : GeneralLinearMethod s r) (S : StartingMethod r)
+    (_hS : S.IsNonDegenerate) (p : ℕ) : Prop :=
+  ∀ (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ y₀ : ℝ),
+    yex x₀ = y₀ → (∀ t, HasDerivAt yex (f (yex t)) t) →
+    (fun h : ℝ =>
+      applyStartingThenStep M S f y₀ h
+        - applyExactThenStarting S yex x₀ h)
+    =O[nhds 0] (fun h => h ^ (p + 1))
+
+end OrderRelativeToStartingMethod
 ```
 
-If `Fin.sum_univ_six` is not in Mathlib (verify via
-`mcp__lean-lsp__lean_local_search`; cycle 147 used `Fin.sum_univ_five`
-and `Fin.sum_univ_four` successfully), expand the outer sum manually
-via `Fin.sum_univ_succ` (six unfoldings) before the simp. **Do not
-add this concern to the strategy unless verification fails.**
+(Adjust sub-namespaces / `noncomputable` markers as needed for
+existing scope. Use `import Mathlib.Analysis.Asymptotics.Asymptotics`
+or a similar location for `=O[nhds 0]` if not already imported in
+Section530.)
 
-### Change 3: list **six** convolution coefficients in `IsBigO.of_bound`
+### Definition smuggling check
 
-The residue factors as `z^7 · (a + z·b + z²·c + z³·d + z⁴·e + z⁵·f)`
-where, mirroring the cycle 147 convolution pattern (with a, b, c, d, e
-as the cycle 147 coefficients shifted up by one β-index):
+CRITICAL: `applyStartingThenStep` and `applyExactThenStarting` are
+*operations on real-valued functions*, not Prop. They must compute
+the textbook quantities faithfully. Specifically:
 
-```
-a := -(α 0 · β 5) - α 1 · β 4 - α 2 · β 3 - α 3 · β 2 - α 4 · β 1 - α 5 · β 0
-b := -(α 1 · β 5) - α 2 · β 4 - α 3 · β 3 - α 4 · β 2 - α 5 · β 1
-c := -(α 2 · β 5) - α 3 · β 4 - α 4 · β 3 - α 5 · β 2
-d := -(α 3 · β 5) - α 4 · β 4 - α 5 · β 3
-e := -(α 4 · β 5) - α 5 · β 4
-f := -(α 5 · β 5)
-```
+- `applyStartingThenStep` should match Butcher's notation `SM`: the
+  starting method `S` constructs `r` initial approximations
+  `y₀^{[i]} ≈ y(x₀ + b₀^{(i)} h)` (or some variant — read §530
+  closely), then the GLM applies `[A U; B V]` to produce `r` outputs.
+- `applyExactThenStarting` should match Butcher's `ES`: advance the
+  *exact* `yex` by `h`, then apply each starting-method
+  generalized-RK to `yex(x₀+h)` to produce an `r`-vector.
 
-The constant in `IsBigO.of_bound` is the sum of six norms;
-the inner-factor bound becomes a five-step `norm_add_le` cascade
-(plus `mul_le_of_le_one_left` for each `y^k * x` factor) ending with
-`linarith`. The cycle 147 proof body lines 451–501 transcribe almost
-verbatim — replace `‖y ^ 6‖ * (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖)` with
-`‖y ^ 7‖ * (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖ + ‖f‖)` and add one more
-`hyf : ‖y ^ 5 * f‖ ≤ ‖f‖` plus one more `norm_add_le` step.
+The textbook's "ES" notation specifically means `E ∘ S` where `E`
+is the exact-flow operator and `S` is the starting method. Make
+sure the order of composition matches what §530 actually says.
 
-### Sanity gate before closing
+If the precise textbook semantics is unclear after a careful read
+of `extraction/raw_text/ch05.txt §530`, write a structured issue
+file (`.prover-state/issues/def_530B_SM_ES_semantics.md`) and
+defer the operator definitions to a planning cycle.
 
-After `h_diff`'s `funext z; ... ; ring` step, **manually verify the
-expected residue** by running `mcp__lean-lsp__lean_goal` mid-tactic if
-the `ring` step fails. The most likely failure modes, ranked:
+### Non-vacuity strategy
 
-1. **Sign error in the explicit `!![…]` matrix `hX`.** The
-   `doublyCompanionMatrix` definition's last column entry for `i ≥ 1`
-   is `-β (n - i - 1)` (per the file preamble); double-check that
-   row 1 column 5 is `-β 4` (not `-β 5` and not `-β 3`), row 2 column
-   5 is `-β 3`, etc. The pattern: row `i` column `n-1` is `-β (n - i - 1)`,
-   so for n=6 that is row 1 = `-β 4`, row 2 = `-β 3`, row 3 = `-β 2`,
-   row 4 = `-β 1`, row 5 = `-β 0`. (The cycle 147 proof matches this
-   pattern at n=5: row 1 = `-β 3`, …, row 4 = `-β 0`.)
+After the scaffold compiles (sorry'd or with skeleton bodies), add a
+non-vacuity witness — preferably **sorry-first** with the goal of
+closing it later, or **vacuously-trivial** if the predicate is
+satisfied for any nonexistent / minimal witness.
 
-2. **Convolution coefficient typo.** The cycle 147 coefficients are
-   `a = -(α 0 · β 4) - α 1 · β 3 - α 2 · β 2 - α 3 · β 1 - α 4 · β 0`.
-   For n=6, the `a` coefficient appends `- α 5 · β 0` and shifts
-   each `β k → β (k+1)` for the existing terms. **Do this shift
-   carefully** — a mistake here means `ring` fails at h_diff.
+Two candidate witnesses, in order of cleanness:
 
-3. **`simp` doesn't close after Laplace.** If the three-layer simp
-   set above leaves residual unfolded `Matrix.cons` cells, add
-   `Fin.succAbove_succ`, `Fin.succAbove_zero`, or
-   `Matrix.cons_val_succ` to the simp list. Cycle 147 did NOT need
-   these (they were absorbed by the existing simp set), but with one
-   more Laplace layer they may surface.
+1. **Trivial GLM × trivial starting method, `p = 0` order**:
+   The `explicitEulerGLM` (`(s, r) = (1, 1)`) paired with
+   `trivialStartingMethod` (single-stage with `b₀ = 1`) — verify
+   they trivially agree at `h = 0` (both sides equal `y₀`), so the
+   `O(h)` bound is trivially attained. Encode as:
+   ```lean
+   theorem explicitEulerGLM_hasOrderZero_trivialStarting :
+     explicitEulerGLM.HasOrderRelativeTo trivialStartingMethod
+       trivialStartingMethod_isNonDegenerate 0 := by
+     sorry
+   ```
+   Submit to Aristotle; close manually if Aristotle fails.
 
-### If Priority 1 stalls (Fallback A)
+2. **Refutability witness**: pair some GLM with a starting method
+   for which order > 0 fails. This rules out `HasOrderRelativeTo`
+   being trivially-true.
 
-Write a private helper `det_fin_four_explicit` of the shape
+The cycle deliverable bar is: scaffold compiles + non-vacuity
+witness exists (sorry-first OK if the proof body is non-trivial).
+Per CLAUDE.md "If you use an equivalent formulation, add an
+explicit equivalence lemma" — if `applyStartingThenStep` ends up
+diverging from the textbook `SM`, prove the equivalence as a
+separate lemma in the same cycle or document the divergence in an
+issue file.
 
-```lean
-private lemma det_fin_four_explicit (M : Matrix (Fin 4) (Fin 4) ℂ) :
-    M.det = ‹explicit 24-term formula in M i j› := by
-  rw [Matrix.det_succ_row_zero]
-  simp [Fin.sum_univ_four, Matrix.det_succ_row_zero (n := 3),
-        Matrix.det_fin_three, Matrix.submatrix_apply, Fin.succAbove]
-  ring
-```
+### Aristotle batch (parallel to manual work)
 
-and add it to the simp set. This costs ~30 LOC but breaks the simp
-tree depth into two more manageable layers. Recommended **only if**
-the one-shot `simp […]; ring` times out (>200000 heartbeats) or
-leaves residual goals.
+Once the scaffold compiles with sorry'd bodies for
+`applyStartingThenStep`, `applyExactThenStarting`, and the
+non-vacuity witness, batch-submit them to Aristotle (~3 jobs).
+Use `mcp__aristotle__submit_file` with the entire scaffold as
+context.
 
-### If Priority 1 still stalls (Fallback B)
+Single-poll the batch at the END of the cycle (or defer the poll
+to cycle 150 if the cycle clock is up).
 
-Submit a focused **n=6** Aristotle batch separately from the
-Priority 2 general-`n` job, with the cycle 147 n=5 proof included
-as the in-context template. This is a fresh project; do NOT reuse
-the Priority 2 project. Sleep 30 minutes; then incorporate. (Cycle
-140 succeeded with this pattern at n=2, where Aristotle Job B
-returned a clean proof while Job A on general-`n` stayed at 4%.)
+## Priority 2 (5–10 min) — Housekeeping
 
-## How to do Priority 2 (Aristotle parallel submission)
+- Update `plan.md` Chapter 5 row for `def:530B`: change `[ ]` to
+  `[~]` (in-progress) with a brief status note (sorry'd scaffold +
+  non-vacuity witness; cycle 149 reference).
+- Update `extraction/formalization_data/lean_status.json` row for
+  `def:530B`: `unformalized` → `partial` with cycle 149 reference.
+- Cycle results in `.prover-state/task_results/cycle_149.md` per
+  CLAUDE.md format.
 
-1. Create `.prover-state/aristotle_submissions/cycle_148/general_n.lean`
-   as a self-contained snippet:
-   - Imports: as in `Section550.lean` lines 1–6.
-   - Definitions: `doublyCompanionMatrix`, `alphaPoly`, `betaPoly`
-     verbatim from `Section550.lean`.
-   - In-context templates: copy *all five* closed proofs
-     (`_n_one`, `_n_two`, `_n_three`, `_n_four`, `_n_five`) verbatim.
-     This gives Aristotle the n=1..5 closed forms to inductively
-     extrapolate from.
-   - Target: a single `theorem doublyCompanionMatrix_det_factorization
-     {n : ℕ} (α β : Fin n → ℂ) : Asymptotics.IsBigO …` with body
-     `sorry`, plus a comment block with a strong-induction sketch
-     pointing at three plausible attack vectors:
-     (a) cofactor expansion along row 0, recursive on the bottom-right
-         (n−1)×(n−1) sub-block (which is itself a `doublyCompanionMatrix
-         α' β'` for shifted indices);
-     (b) eigenvalue-density argument (textbook proof) via
-         continuity of charpoly coefficients in matrix entries; or
-     (c) direct induction with `Fin.induction` and the cycle 145/147
-         template instantiation as the inductive step.
+## What NOT to try (explicit blacklist)
 
-2. Submit via `mcp__aristotle__submit_directory` on the cycle_148/
-   directory. Record the project ID in
-   `.prover-state/aristotle_submissions/cycle_148/README.md`.
+1. **Do NOT continue the n=7 / n=8 thm:550A ladder.** Cycle 148 task
+   results explicitly flagged this as diminishing returns. Six rungs
+   is enough in-context evidence; further laddering is busy-work
+   without payoff. Aristotle's general-n submission is the correct
+   path forward.
 
-3. **Do NOT poll the project during this cycle.** A future cycle (149
-   or later) will check it once.
+2. **Do NOT attempt manual general-`n` closure of thm:550A this
+   cycle.** It is multi-cycle infrastructure work (cofactor
+   expansion induction or eigenvalue-density argument). Cycle 141
+   confirmed Aristotle gave up at 6% after 24h on the eigenvalue
+   path. If cycle 149's poll comes back IN_PROGRESS, just wait —
+   do not duplicate the effort manually.
 
-## What NOT to do
+3. **Do NOT re-poll Aristotle project `2c4630b2-…` more than once.**
+   CLAUDE.md single-poll rule. The poll is the cycle's only Aristotle
+   interaction with that project.
 
-- Do **NOT** raise `maxHeartbeats` above 200000. If the three-layer
-  `simp […]; ring` hits the budget, use Fallback A (`det_fin_four_explicit`
-  helper) to break the proof tree.
-- Do **NOT** try to close the **general-`n`** statement manually this
-  cycle. Cycle 141 cancelled Aristotle's general-`n` attempt after 24h
-  at 6%; the manual cofactor-expansion induction requires identifying
-  the right inductive invariant (the residue's vector of convolution
-  coefficients, indexed by k, satisfies a shift-by-one recurrence
-  relative to the (n−1)×(n−1) sub-block — but encoding this cleanly is
-  multi-cycle infrastructure work).
-- Do **NOT** re-poll Aristotle project `9643742d-…` (cycle 147 n=5
-  attempt). It is concluded from the worker's perspective; the manual
-  proof landed.
-- Do **NOT** re-attempt the Aristotle general-`n` jobs from cycles
-  138/141 (`7062c2a2-…`, `70f26d67-…` first job) — both have been
-  cancelled or stalled past usefulness. The Priority 2 submission
-  this cycle is a **fresh** attempt with the n=1..5 templates as
-  in-context evidence.
-- Do **NOT** modify the existing axiom-clean proofs n=1..5. They
-  are committed and stable; any "simplification" risks introducing
-  regressions.
-- Do **NOT** introduce new helpers or rewrite the cycle 147 template.
-  The strategy is a verbatim three-mechanical-change extension; novelty
-  is unwarranted at this rung.
-- Do **NOT** edit `extraction/raw_text/` or
-  `extraction/formalization_data/entities/` (regenerated files; per
-  CLAUDE.md and `extraction/EXTENSIBILITY.md`).
-- Do **NOT** spend time on §513/§514/§515 cascade verification — the
-  §550 work is structurally isolated from those files.
-- Do **NOT** chase competing Chapter 5 priorities (e.g. `def:525A`
-  G-symplectic substantive witness, `def:530B/C` order-relative-to-
-  starting-method, `thm:521B` max stability order) this cycle. The
-  n=6 deliverable is the focused single-cycle target.
+4. **Do NOT chase the def:525A Butcher (525d) √3 witness.** def:525A
+   non-vacuity is already saturated: cycle 128 has both trivial
+   (G=D=0, explicitEulerGLM) AND substantive (G=D=1,
+   implicitMidpointGLM) witnesses in
+   `OpenMath/Chapter5/Section525.lean`. The Butcher (525d) witness
+   would be a 3rd witness primarily useful for supporting thm:534A's
+   order-4 analysis, which is far downstream and not on the critical
+   path.
 
-## Pre-commit faithfulness check
+5. **Do NOT raise `maxHeartbeats`** above 200000. If
+   `applyStartingThenStep` / `applyExactThenStarting` proofs hit
+   the timeout, decompose into helper lemmas.
 
-For the new theorem `doublyCompanionMatrix_det_factorization_n_six`:
+6. **Do NOT introduce `axiom` or `constant` declarations** for the
+   SM/ES operators. If their definition is unclear from the
+   textbook, defer to a planning cycle (issue file) rather than
+   axiomatising.
 
-- Entity: `thm:550A`. Quote the textbook statement from
-  `extraction/formalization_data/entities/thm_550A.json`:
-  > "1 + γ₁z + γ₂z² + ⋯ + γₙzⁿ = det(I − zX) = α(z)β(z) + O(z^{n+1})."
-- Lean statement: specialisation at `n = 6`. The conclusion
-  `(1 - z • doublyCompanionMatrix α β).det - alphaPoly α z * betaPoly β z
-   =O[nhds 0] (z ^ 7)` matches the textbook `O(z^{n+1})` at `n = 6`
-  (so `z^7`). **Faithful — same content as the textbook for the n=6 case.**
-- Tautology check: the conclusion is an `IsBigO` claim; not present
-  among the hypotheses (`α β : Fin 6 → ℂ` only). ✓
-- Identity check: proof is a multi-stage matrix-determinant
-  computation, not `exact h`. ✓
-- Hypothesis strength: `α, β : Fin 6 → ℂ` are universal in the textbook
-  too (no method-class restriction). ✓
-- No new `def`/`structure`/`class` introduced.
+7. **Do NOT silently weaken `def:530B`'s statement to a tautology.**
+   Per CLAUDE.md pre-commit faithfulness checklist: the predicate
+   must capture the *primary mathematical meaning* (Butcher's
+   "agree to within `O(h^{p+1})`"), not a syntactic simplification.
+   If your scaffold collapses to `True ∧ True` or a vacuous
+   quantifier pattern, escalate to an issue file.
 
-## Acceptance criteria
+8. **Do NOT modify `scripts/autonomous_loop.py`.** Loop-maintainer
+   territory; existing tautology-scanner false-positive issue
+   (cycle 015 issue file) remains unfixed but is not blocking.
 
-A successful cycle 148 delivers ALL of:
+9. **Do NOT batch-submit to Aristotle before the manual scaffold
+   compiles.** Aristotle needs the scaffold's sorry'd bodies to
+   know what it's targeting. Submission before compile = wasted
+   compute.
 
-1. `doublyCompanionMatrix_det_factorization_n_six` lands axiom-clean
-   in `OpenMath/Chapter5/Section550.lean`.
-2. `lake env lean OpenMath/Chapter5/Section550.lean` exits 0 (expect
-   ~8–10 minutes wall-clock, similar to cycle 147).
-3. `mcp__lean-lsp__lean_verify
-   OpenMath.Chapter5.Section550.doublyCompanionMatrix_det_factorization_n_six`
-   returns `axioms = [propext, Classical.choice, Quot.sound]`.
-4. Sorry count remains 0.
-5. Aristotle Priority 2 job submitted (project ID recorded in
-   `.prover-state/aristotle_submissions/cycle_148/README.md`).
-6. Task results written to `.prover-state/task_results/cycle_148.md`.
-7. `plan.md` and `lean_status.json` updated for Priority 3 (status
-   stays `partial`).
+## Backup plans (if Priority 1 stalls)
 
-A partial-success outcome (Priority 1 lands, Priority 2 not submitted,
-or vice versa) is acceptable as a +1 cycle. A regression (any new
-sorry, or any axiom change beyond the standard three) is a hard fail
-and must be reverted before commit.
+- **B1 (semantic ambiguity in SM/ES)**: if `applyStartingThenStep`
+  and `applyExactThenStarting` cannot be cleanly defined from
+  Butcher's text alone, write
+  `.prover-state/issues/def_530B_SM_ES_semantics.md` documenting
+  the ambiguity (which clause depends on `b₀^{(i)}`? which on
+  `c^{(i)}`? what is the abscissa pattern?). Land the issue + a
+  partial scaffold (just the predicate skeleton + a sorry'd
+  non-vacuity) as the cycle deliverable. Sorry count goes 0 → 1
+  but the sorry locus is well-documented.
+
+- **B2 (def:530B too heavy)**: if the SM/ES operators take more
+  than 60 min of cycle time, scope down to: just the
+  `HasOrderRelativeTo` predicate signature (with sorry'd
+  `applyStartingThenStep` + sorry'd `applyExactThenStarting` body)
+  + sorry'd non-vacuity witness. Document in cycle results. Cycle
+  150 closes the operator definitions and the witness.
+
+- **B3 (Aristotle returns mid-cycle COMPLETE for thm:550A)**:
+  abandon Priority 1 mid-stream, incorporate the general-n proof,
+  and close thm:550A. Cycle 150 then opens def:530B fresh.
+
+- **B4 (zero-progress fallback)**: if both Aristotle and the
+  def:530B scaffold both stall, write a substantive issue file
+  documenting the def:530B ambiguity (as B1) and commit. Per
+  CLAUDE.md: "A cycle with zero changes is unacceptable. At minimum,
+  decompose a sorry or write an issue."
+
+## Pre-commit checklist (must run before `git push`)
+
+Per CLAUDE.md pre-commit faithfulness checklist:
+
+- [ ] `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+- [ ] `lean_verify` on each new public definition / theorem returns
+      `[propext, Classical.choice, Quot.sound]` (or `sorryAx` only
+      if the sorry locus is documented in the cycle results).
+- [ ] Sorry count vs. cycle 148 baseline: 0. Cycle 149 may end
+      with sorry count 0 (Aristotle path), 1 (sorry-first scaffold
+      with non-vacuity sorry'd), or up to 3 (def:530B operators +
+      predicate non-vacuity all sorry'd). Document in cycle results.
+- [ ] No new `axiom` or `constant` declarations.
+- [ ] `extraction/formalization_data/entities/def_530B.json`
+      consulted; predicate matches the textbook statement (or
+      divergence documented in an issue file).
+- [ ] `plan.md` and `lean_status.json` reflect the cycle outcome.
+- [ ] `.prover-state/task_results/cycle_149.md` written per CLAUDE.md
+      format.
+
+## Estimated timeline
+
+- Priority 0 (Aristotle poll): 5 min.
+- Priority 1 (def:530B scaffold + sorry-first witness + Aristotle
+  batch submission): 60–90 min.
+- Priority 2 (housekeeping + commit): 10 min.
+
+Total: **75–105 min**.
+
+Cycle 149 is a "structural" cycle, not an analytical one. The
+deliverable bar is "scaffold lands clean" not "all sorries closed".
+Per the cycle 148 pattern (sorry count → 0 maintained), the worker
+should NOT push toward zero sorries at the cost of analytical
+correctness or rushed semantics. A sorry-first scaffold with
+documented faithfulness is the correct shape.
