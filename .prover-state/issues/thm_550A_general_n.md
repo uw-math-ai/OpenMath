@@ -1,5 +1,36 @@
 # Issue: General-`n` proof of `thm:550A` (Doubly companion matrix factorization)
 
+## Status update (cycle 150) — n=7 STEPPING STONE ADDED
+
+`doublyCompanionMatrix_det_factorization_n_seven` landed axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). Strategy was the cycle 148
+four-layer Laplace template (7×7 → seven 6×6 minors via outer
+`Matrix.det_succ_row_zero`; each 6×6 → six 5×5 via `(n := 5)`; each 5×5
+→ five 4×4 via `(n := 4)`; each 4×4 → four 3×3 via `(n := 3)`; close
+each 3×3 minor by `Matrix.det_fin_three`). The naive one-shot
+`simp […]; ring` blew past 200 000 heartbeats (timeout at `whnf`
+during simp normalization of the ~5 040-monomial raw expansion plus
+the alphaPoly·betaPoly polynomial product), so the matrix-expansion
+`simp` was factored into a `private lemma matrix7_oneMinusZSmul_det`
+that proves only `det(...) = explicit polynomial of degree 7 in z`.
+The main theorem then `rw [hmat, matrix7_oneMinusZSmul_det]` and
+finishes the alphaPoly·betaPoly residue identity in a separate
+small `simp [alphaPoly, betaPoly, Fin.sum_univ_seven]; ring`. Total
+build time ~8 min; both halves fit within default heartbeats.
+
+`IsBigO.of_bound` on the seven-term inner factor
+`a + z·b + z²·c + z³·d + z⁴·e + z⁵·f + z⁶·g`. Seven concrete `n`
+data points (n = 1..7) now confirm the leading-coefficient pattern
+`−Σᵢ αᵢ · β_{n−i} · z^{n+1}`.
+
+Cycle 150 single-poll on Aristotle project
+`2c4630b2-2998-4d4a-af88-c2f83fbd9eda` (cycle 148 fire-and-forget
+general-n attempt) returned IN_PROGRESS at 18 % — left running per
+strategy. Cycle 151+ will decide on cancellation or further polls.
+
+**Seven concrete n's (n = 1..7) now confirm the leading-coefficient
+pattern.**
+
 ## Status update (cycle 148) — n=6 STEPPING STONE ADDED
 
 `doublyCompanionMatrix_det_factorization_n_six` landed axiom-clean

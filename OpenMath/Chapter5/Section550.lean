@@ -649,4 +649,203 @@ theorem doublyCompanionMatrix_det_factorization_n_six
         mul_le_mul_of_nonneg_left h_inner (norm_nonneg _)
     _ = (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖ + ‖f‖) * ‖y ^ 7‖ := by ring
 
+/-- Helper: explicit 7×7 determinant for the `1 - z • doublyCompanion` shape.
+Factored out of `doublyCompanionMatrix_det_factorization_n_seven` so the
+matrix-expansion `simp` and the alphaPoly/betaPoly polynomial difference
+each fit within the default heartbeat budget. -/
+private lemma matrix7_oneMinusZSmul_det
+    (α β : Fin 7 → ℂ) (z : ℂ) :
+    (!![1 + z * α 0, z * α 1, z * α 2, z * α 3, z * α 4, z * α 5,
+            z * (α 6 + β 6);
+         -z, 1, 0, 0, 0, 0, z * β 5;
+         0, -z, 1, 0, 0, 0, z * β 4;
+         0, 0, -z, 1, 0, 0, z * β 3;
+         0, 0, 0, -z, 1, 0, z * β 2;
+         0, 0, 0, 0, -z, 1, z * β 1;
+         0, 0, 0, 0, 0, -z, 1 + z * β 0]
+            : Matrix (Fin 7) (Fin 7) ℂ).det
+      = 1 + (α 0 + β 0) * z
+        + (α 0 * β 0 + α 1 + β 1) * z ^ 2
+        + (α 0 * β 1 + α 1 * β 0 + α 2 + β 2) * z ^ 3
+        + (α 0 * β 2 + α 1 * β 1 + α 2 * β 0 + α 3 + β 3) * z ^ 4
+        + (α 0 * β 3 + α 1 * β 2 + α 2 * β 1 + α 3 * β 0 + α 4 + β 4) * z ^ 5
+        + (α 0 * β 4 + α 1 * β 3 + α 2 * β 2 + α 3 * β 1 + α 4 * β 0
+            + α 5 + β 5) * z ^ 6
+        + (α 0 * β 5 + α 1 * β 4 + α 2 * β 3 + α 3 * β 2 + α 4 * β 1
+            + α 5 * β 0 + α 6 + β 6) * z ^ 7 := by
+  rw [Matrix.det_succ_row_zero]
+  simp [Fin.sum_univ_seven, Fin.sum_univ_six, Fin.sum_univ_five,
+    Fin.sum_univ_four,
+    Matrix.det_succ_row_zero (n := 5),
+    Matrix.det_succ_row_zero (n := 4),
+    Matrix.det_succ_row_zero (n := 3),
+    Matrix.det_fin_three,
+    Matrix.cons_val_zero, Matrix.cons_val_one,
+    Matrix.submatrix_apply, Fin.succ_zero_eq_one,
+    Matrix.cons_val_fin_one, Fin.succAbove]
+  ring
+
+/-- **Theorem 550A at `n = 7`.** Expanding `det(I − z·X)` along the first row
+four times (via `Matrix.det_succ_row_zero` for the 7×7 → 6×6 step, again for
+6×6 → 5×5, again for 5×5 → 4×4, again for 4×4 → 3×3), then closing each 3×3
+minor by `Matrix.det_fin_three`, yields a polynomial of degree exactly `7`
+in `z`, whose coefficients agree with `α(z) · β(z)` up through `z^7`. The
+residue is therefore the convolution sum starting at `z^8`:
+* z^8: `-(α 0·β 6 + α 1·β 5 + α 2·β 4 + α 3·β 3 + α 4·β 2 + α 5·β 1 + α 6·β 0)`
+* z^9: `-(α 1·β 6 + α 2·β 5 + α 3·β 4 + α 4·β 3 + α 5·β 2 + α 6·β 1)`
+* z^10: `-(α 2·β 6 + α 3·β 5 + α 4·β 4 + α 5·β 3 + α 6·β 2)`
+* z^11: `-(α 3·β 6 + α 4·β 5 + α 5·β 4 + α 6·β 3)`
+* z^12: `-(α 4·β 6 + α 5·β 5 + α 6·β 4)`
+* z^13: `-(α 5·β 6 + α 6·β 5)`
+* z^14: `-(α 6·β 6)`
+all of which are dominated by `O(z^8)` near `0`. This is the seventh
+concrete-`n` axiom-clean stepping stone for Theorem 550A.
+
+The determinant computation is factored into the private helper
+`matrix7_oneMinusZSmul_det` so the matrix-expansion `simp` (whose
+heartbeat consumption scales as `n!`) runs in isolation from the
+alphaPoly/betaPoly polynomial difference. -/
+theorem doublyCompanionMatrix_det_factorization_n_seven
+    (α β : Fin 7 → ℂ) :
+    Asymptotics.IsBigO (nhds (0 : ℂ))
+      (fun z : ℂ =>
+        (1 - z • doublyCompanionMatrix α β).det
+          - alphaPoly α z * betaPoly β z)
+      (fun z : ℂ => z ^ 8) := by
+  -- Step 1: rewrite the residue pointwise to its factored form `z^8 * inner`.
+  have h_diff : (fun z : ℂ =>
+      (1 - z • doublyCompanionMatrix α β).det
+        - alphaPoly α z * betaPoly β z)
+      = (fun z : ℂ => z ^ 8 *
+          (-(α 0 * β 6) - α 1 * β 5 - α 2 * β 4 - α 3 * β 3 - α 4 * β 2
+              - α 5 * β 1 - α 6 * β 0
+            + z * (-(α 1 * β 6) - α 2 * β 5 - α 3 * β 4 - α 4 * β 3
+                    - α 5 * β 2 - α 6 * β 1)
+            + z ^ 2 * (-(α 2 * β 6) - α 3 * β 5 - α 4 * β 4 - α 5 * β 3
+                        - α 6 * β 2)
+            + z ^ 3 * (-(α 3 * β 6) - α 4 * β 5 - α 5 * β 4 - α 6 * β 3)
+            + z ^ 4 * (-(α 4 * β 6) - α 5 * β 5 - α 6 * β 4)
+            + z ^ 5 * (-(α 5 * β 6) - α 6 * β 5)
+            + z ^ 6 * (-(α 6 * β 6)))) := by
+    funext z
+    -- Reduce the doubly-companion matrix at n = 7 to an explicit !![…] form.
+    have hX : doublyCompanionMatrix α β =
+        !![-α 0, -α 1, -α 2, -α 3, -α 4, -α 5, -α 6 - β 6;
+           1,     0,    0,    0,    0,    0,    -β 5;
+           0,     1,    0,    0,    0,    0,    -β 4;
+           0,     0,    1,    0,    0,    0,    -β 3;
+           0,     0,    0,    1,    0,    0,    -β 2;
+           0,     0,    0,    0,    1,    0,    -β 1;
+           0,     0,    0,    0,    0,    1,    -β 0] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;> simp [doublyCompanionMatrix]
+    rw [hX]
+    -- Reduce `1 - z • X` to an explicit !![…] form.
+    have hmat :
+        (1 - z • !![-α 0, -α 1, -α 2, -α 3, -α 4, -α 5, -α 6 - β 6;
+                    1,     0,    0,    0,    0,    0,    -β 5;
+                    0,     1,    0,    0,    0,    0,    -β 4;
+                    0,     0,    1,    0,    0,    0,    -β 3;
+                    0,     0,    0,    1,    0,    0,    -β 2;
+                    0,     0,    0,    0,    1,    0,    -β 1;
+                    0,     0,    0,    0,    0,    1,    -β 0]
+              : Matrix (Fin 7) (Fin 7) ℂ)
+          = !![1 + z * α 0, z * α 1, z * α 2, z * α 3, z * α 4, z * α 5,
+                  z * (α 6 + β 6);
+               -z, 1, 0, 0, 0, 0, z * β 5;
+               0, -z, 1, 0, 0, 0, z * β 4;
+               0, 0, -z, 1, 0, 0, z * β 3;
+               0, 0, 0, -z, 1, 0, z * β 2;
+               0, 0, 0, 0, -z, 1, z * β 1;
+               0, 0, 0, 0, 0, -z, 1 + z * β 0] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        first | (simp; ring) | simp
+    rw [hmat, matrix7_oneMinusZSmul_det]
+    -- Now the LHS is the explicit polynomial; expand alphaPoly · betaPoly.
+    simp [alphaPoly, betaPoly, Fin.sum_univ_seven]
+    ring
+  rw [h_diff]
+  -- Step 2: prove `z^8 * inner =O[nhds 0] z^8`.
+  refine Asymptotics.IsBigO.of_bound
+      (‖-(α 0 * β 6) - α 1 * β 5 - α 2 * β 4 - α 3 * β 3 - α 4 * β 2
+          - α 5 * β 1 - α 6 * β 0‖
+        + ‖-(α 1 * β 6) - α 2 * β 5 - α 3 * β 4 - α 4 * β 3 - α 5 * β 2
+            - α 6 * β 1‖
+        + ‖-(α 2 * β 6) - α 3 * β 5 - α 4 * β 4 - α 5 * β 3 - α 6 * β 2‖
+        + ‖-(α 3 * β 6) - α 4 * β 5 - α 5 * β 4 - α 6 * β 3‖
+        + ‖-(α 4 * β 6) - α 5 * β 5 - α 6 * β 4‖
+        + ‖-(α 5 * β 6) - α 6 * β 5‖
+        + ‖-(α 6 * β 6)‖) ?_
+  rw [Metric.eventually_nhds_iff]
+  refine ⟨1, by norm_num, fun y hy => ?_⟩
+  rw [Complex.dist_eq, sub_zero] at hy
+  set a := -(α 0 * β 6) - α 1 * β 5 - α 2 * β 4 - α 3 * β 3 - α 4 * β 2
+              - α 5 * β 1 - α 6 * β 0 with ha_def
+  set b := -(α 1 * β 6) - α 2 * β 5 - α 3 * β 4 - α 4 * β 3 - α 5 * β 2
+              - α 6 * β 1 with hb_def
+  set c := -(α 2 * β 6) - α 3 * β 5 - α 4 * β 4 - α 5 * β 3 - α 6 * β 2
+              with hc_def
+  set d := -(α 3 * β 6) - α 4 * β 5 - α 5 * β 4 - α 6 * β 3 with hd_def
+  set e := -(α 4 * β 6) - α 5 * β 5 - α 6 * β 4 with he_def
+  set f := -(α 5 * β 6) - α 6 * β 5 with hf_def
+  set g := -(α 6 * β 6) with hg_def
+  -- Bound the inner factor:
+  --   ‖a + y·b + y²·c + y³·d + y⁴·e + y⁵·f + y⁶·g‖
+  --      ≤ ‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖ + ‖f‖ + ‖g‖.
+  have h_inner :
+      ‖a + y * b + y ^ 2 * c + y ^ 3 * d + y ^ 4 * e + y ^ 5 * f + y ^ 6 * g‖
+        ≤ ‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖ + ‖f‖ + ‖g‖ := by
+    have hyb : ‖y * b‖ ≤ ‖b‖ := by
+      rw [norm_mul]; exact mul_le_of_le_one_left (norm_nonneg _) hy.le
+    have hyc : ‖y ^ 2 * c‖ ≤ ‖c‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 2 ≤ 1 ^ 2 := by gcongr
+        _ = 1 := one_pow _
+    have hyd : ‖y ^ 3 * d‖ ≤ ‖d‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 3 ≤ 1 ^ 3 := by gcongr
+        _ = 1 := one_pow _
+    have hye : ‖y ^ 4 * e‖ ≤ ‖e‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 4 ≤ 1 ^ 4 := by gcongr
+        _ = 1 := one_pow _
+    have hyf : ‖y ^ 5 * f‖ ≤ ‖f‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 5 ≤ 1 ^ 5 := by gcongr
+        _ = 1 := one_pow _
+    have hyg : ‖y ^ 6 * g‖ ≤ ‖g‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 6 ≤ 1 ^ 6 := by gcongr
+        _ = 1 := one_pow _
+    have h1 :
+        ‖a + y * b + y ^ 2 * c + y ^ 3 * d + y ^ 4 * e + y ^ 5 * f + y ^ 6 * g‖
+          ≤ ‖a + y * b + y ^ 2 * c + y ^ 3 * d + y ^ 4 * e + y ^ 5 * f‖
+              + ‖y ^ 6 * g‖ := norm_add_le _ _
+    have h2 :
+        ‖a + y * b + y ^ 2 * c + y ^ 3 * d + y ^ 4 * e + y ^ 5 * f‖
+          ≤ ‖a + y * b + y ^ 2 * c + y ^ 3 * d + y ^ 4 * e‖
+              + ‖y ^ 5 * f‖ := norm_add_le _ _
+    have h3 : ‖a + y * b + y ^ 2 * c + y ^ 3 * d + y ^ 4 * e‖
+                ≤ ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖ + ‖y ^ 4 * e‖ :=
+      norm_add_le _ _
+    have h4 : ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖
+                ≤ ‖a + y * b + y ^ 2 * c‖ + ‖y ^ 3 * d‖ := norm_add_le _ _
+    have h5 : ‖a + y * b + y ^ 2 * c‖
+                ≤ ‖a + y * b‖ + ‖y ^ 2 * c‖ := norm_add_le _ _
+    have h6 : ‖a + y * b‖ ≤ ‖a‖ + ‖y * b‖ := norm_add_le _ _
+    linarith
+  -- Multiply through by ‖y^8‖.
+  rw [norm_mul]
+  calc ‖y ^ 8‖ * ‖a + y * b + y ^ 2 * c + y ^ 3 * d + y ^ 4 * e + y ^ 5 * f
+                    + y ^ 6 * g‖
+      ≤ ‖y ^ 8‖ * (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖ + ‖f‖ + ‖g‖) :=
+        mul_le_mul_of_nonneg_left h_inner (norm_nonneg _)
+    _ = (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖ + ‖f‖ + ‖g‖) * ‖y ^ 8‖ := by ring
+
 end OpenMath.Chapter5.Section550
