@@ -1667,6 +1667,64 @@ theorem adamsBashforth5_toGLM_hasOrderGe1 :
     adamsBashforth5.toGLM.HasOrderGe1 :=
   adamsBashforth5.toGLM_hasOrderGe1 adamsBashforth5_consistent
 
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Bashforth 5-step
+
+`adamsBashforth5` (`s = 5`, ten GLM input slots `Fin 10`, explicit with
+`β_s = 0`, order 5) embeds as a GLM of order ≥ 2. Cycle 786 noted that
+inline `all_goals simp; all_goals norm_num` on the `Fin 10` q'-row
+exceeds the 200 000 heartbeat ceiling; the cycle 800 helper-extraction
+recipe (per-case `Fin 10` literals as private theorems) discharges
+each branch on a fresh budget. Natural Nordsieck Taylor template
+(no shift). -/
+namespace AB5GE2
+
+private noncomputable def qN : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 5 => (1 : ℝ)) (fun _ : Fin 5 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q'N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ)) (fun _ : Fin 5 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q''N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ) ^ 2)
+    (fun j : Fin 5 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private theorem q'_obligation (k : Fin 10) :
+    (∑ j, adamsBashforth5.toGLM.B k j) +
+        ∑ l, adamsBashforth5.toGLM.V k l * q'N l =
+      qN k + q'N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsBashforth5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N]
+  all_goals norm_num
+
+private theorem q''_obligation (k : Fin 10) :
+    2 * (∑ j, adamsBashforth5.toGLM.B k j *
+          ((∑ i, adamsBashforth5.toGLM.A j i) +
+            ∑ l, adamsBashforth5.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth5.toGLM.V k l * q''N l =
+      qN k + 2 * q'N k + q''N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsBashforth5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]
+  all_goals norm_num
+
+end AB5GE2
+
+theorem adamsBashforth5_toGLM_hasOrderGe2 :
+    adamsBashforth5.toGLM.HasOrderGe2 := by
+  refine ⟨AB5GE2.qN, AB5GE2.q'N, AB5GE2.q''N,
+    ?_, ?_, AB5GE2.q'_obligation, AB5GE2.q''_obligation⟩
+  · exact adamsBashforth5.toGLM_V_nordsieckQ_eq adamsBashforth5_consistent
+  · intro i; fin_cases i
+    all_goals simp [LMM.toGLM, adamsBashforth5, Fin.addCases, Fin.sum_univ_succ,
+      AB5GE2.qN]
+
 /-! ### §530 LMM-as-GLM order-≥ 2 witness — trapezoidal rule
 
 The trapezoidal rule (`s = 1`, two GLM input slots `Fin 2`) embeds as a
