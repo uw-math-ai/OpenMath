@@ -799,3 +799,74 @@ After Phase B lands cleanly, the planner pivots to a fresh entity
   lemmas; if those close cleanly, cycle 164+ can begin retiring
   the hand-written instances — but this is downstream cleanup,
   not blocking.
+
+
+## Cycle 163 update — Path A r-parametric refactor Phase B closure
+
+### Phase A status: SHIPPED (cycle 162)
+* All Phase A definitions and four basic structure lemmas remain
+  axiom-clean and undisturbed by cycle 163's additions.
+
+### Phase B.1 status: SHIPPED (cycle 163)
+* `paddedREulerGLM_hasOrderZero_padCompatStartingR (r : ℕ)` (p=0)
+  and `paddedREulerGLM_hasOrderOne_padCompatStartingR (r : ℕ)` (p=1)
+  parametric `HasOrderRelativeTo_explicit` witnesses landed,
+  axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+* Closure recipe used: `by_cases hi : i.val = 0` (instead of
+  `fin_cases i`, which only fires at concrete `r`).
+  - **`i.val = 0` channel**: routes through five new private
+    unfolding helpers (`paddedREulerGLM_{U,B,V}_apply`,
+    `paddedREulerGLM_U_mulVec_zero`,
+    `paddedREulerGLM_V_mulVec_apply`,
+    `paddedREulerGLM_explicitStageValue_zero`) and two closed-form
+    helpers (`paddedREulerGLM_applyStartingThenStep_explicit_apply`,
+    `paddedREulerGLM_applyExactThenStarting_explicit_apply`) that
+    collapse SM[i] / ES[i] to the canonical
+    `(y₀ + h·f y₀) + h·f(y₀ + h·f y₀)` and
+    `yex(x₀ + h) + h·f(yex(x₀ + h))`; the substantive Taylor +
+    Lipschitz closure then discharges via the cycle 158/160 shared
+    helpers as one-line `exact` invocations.
+  - **`i.val ≠ 0` channel**: collapses to identically zero via the
+    same closed-form helpers and `Asymptotics.isBigO_zero`.
+  - The five "unfolding" helpers reduce `Matrix.of fun i j => if …`
+    bodies to indicator form by `rfl`; the two `_mulVec` helpers
+    use `Finset.sum_eq_single (0 : Fin (r + 1))` to collapse the
+    indicator sums to the apex term.
+
+### Phase B.2 status: SHIPPED (cycle 163)
+* `paddedREulerGLM_hasOrderZero (r : ℕ)` (p=0) and
+  `paddedREulerGLM_hasOrderOne (r : ℕ)` (p=1) `HasOrder_explicit`
+  wrappers landed, axiom-clean. Each is a one-line existential
+  closure exhibiting `padCompatStartingMethodR r` as the witness,
+  with non-degeneracy / explicit-constituent clauses supplied by
+  the cycle 162 Phase A helpers and the
+  `HasOrderRelativeTo_explicit` component supplied by Phase B.1.
+
+### Phase B.3 status: NOT ATTEMPTED (deferred to cycle 164)
+* The four reconciliation lemmas
+  (`paddedREulerGLM 0 = explicitEulerGLM`,
+  `paddedREulerGLM 1 = padded2DEulerGLM`,
+  `paddedREulerGLM 2 = padded3DEulerGLM`,
+  `paddedREulerGLM 3 = padded4DEulerGLM`, plus analogous starting
+  family reconciliations) and any retirement of the hand-written
+  `r ∈ {1, 2, 3, 4}` instances remain available for cycle 164.
+  Cycle 163 elected to ship Phase B.1 + B.2 cleanly without
+  attempting B.3, keeping reconciliation as an incremental future
+  step.
+
+### What cycle 163 establishes
+* The parametric `HasOrderRelativeTo_explicit` and
+  `HasOrder_explicit` families now subsume all four hand-written
+  `r ∈ {1, 2, 3, 4}` × `p ∈ {0, 1}` Path A non-vacuity pairs. Any
+  future extension to additional concrete `r` values reduces to
+  specialisation: no new code per `r` is needed.
+* The five `paddedREulerGLM_{U,B,V}_apply` /
+  `paddedREulerGLM_{U,V}_mulVec_*` /
+  `paddedREulerGLM_explicitStageValue_zero` helpers are now
+  available infrastructure for any future computations that need
+  to evaluate / sum over the parametric matrix entries — for
+  example, the eventual Phase B.3 reconciliation lemmas.
+* Path A on `def:530B`/`def:530C` now stands fully parametric
+  through the explicit-Euler GLM × passive-zero starting method
+  family. Closing Path B (implicit method via `ContractingWith` /
+  fixed-point) remains multi-cycle infrastructure work.

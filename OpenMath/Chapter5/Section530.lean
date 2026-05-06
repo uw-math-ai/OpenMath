@@ -2594,6 +2594,330 @@ theorem padded4DEulerGLM_hasOrderOne
   exact padded4DEulerGLM_hasOrderOne_pad4CompatStarting
           hf_lip hyex_x₀ hyex_C2 hyex_ode
 
+/-! ### Cycle 163 Phase B.1 — parametric `r`-indexed witnesses
+
+Two parametric `HasOrderRelativeTo_explicit` theorems indexed by
+`r : ℕ`, replacing the four hand-written `r ∈ {1, 2, 3, 4}` ×
+`p ∈ {0, 1}` pairs (cycles 153/155/156/157/159/161) with two
+parametric proofs. The `i.val = 0` channel is the substantive
+Taylor + Lipschitz closure (cycle 158/160 helpers); the `i.val ≠ 0`
+channels collapse to identically zero. -/
+
+/-- Row-0 entries of `paddedREulerGLM r`'s `U` block evaluate
+indicator-style: column `j` is `1` iff `j.val = 0`, and `0` otherwise.
+Internal helper for cycle 163 Phase B.1. -/
+private lemma paddedREulerGLM_U_apply (r : ℕ) (j : Fin (r + 1)) :
+    (paddedREulerGLM r).U 0 j = if j.val = 0 then (1 : ℝ) else 0 :=
+  rfl
+
+/-- `B`-block entries of `paddedREulerGLM r` evaluate indicator-style:
+row `i` is `1` iff `i.val = 0`, and `0` otherwise (the only column is
+`0 : Fin 1`). Internal helper for cycle 163 Phase B.1. -/
+private lemma paddedREulerGLM_B_apply (r : ℕ) (i : Fin (r + 1))
+    (k : Fin 1) :
+    (paddedREulerGLM r).B i k = if i.val = 0 then (1 : ℝ) else 0 :=
+  rfl
+
+/-- `V`-block entries of `paddedREulerGLM r` evaluate indicator-style:
+the entry at `(i, j)` is `1` iff both `i.val = 0` and `j.val = 0`, and
+`0` otherwise. Internal helper for cycle 163 Phase B.1. -/
+private lemma paddedREulerGLM_V_apply (r : ℕ) (i j : Fin (r + 1)) :
+    (paddedREulerGLM r).V i j =
+      if i.val = 0 ∧ j.val = 0 then (1 : ℝ) else 0 :=
+  rfl
+
+/-- The dot product `(paddedREulerGLM r).U *ᵥ v` at the single row 0
+collapses to `v 0`: the indicator `if j.val = 0 then 1 else 0` selects
+exactly the index `0 : Fin (r + 1)`. Internal helper for cycle 163
+Phase B.1. -/
+private lemma paddedREulerGLM_U_mulVec_zero (r : ℕ)
+    (v : Fin (r + 1) → ℝ) :
+    ((paddedREulerGLM r).U *ᵥ v) 0 = v 0 := by
+  show ∑ j : Fin (r + 1), (paddedREulerGLM r).U 0 j * v j = v 0
+  rw [Finset.sum_eq_single (0 : Fin (r + 1))]
+  · rw [paddedREulerGLM_U_apply]
+    simp
+  · intro j _ hj
+    have hjval : j.val ≠ 0 := fun hv => hj (Fin.ext hv)
+    rw [paddedREulerGLM_U_apply]
+    simp [hjval]
+  · intro hcontra
+    exact absurd (Finset.mem_univ _) hcontra
+
+/-- The dot product `(paddedREulerGLM r).V *ᵥ v` at row `i` collapses
+to `v 0` if `i.val = 0` and to `0` otherwise: the indicator
+`if i.val = 0 ∧ j.val = 0 then 1 else 0` selects exactly the index
+`0 : Fin (r + 1)` in the `i.val = 0` channel and is identically zero
+in the `i.val ≠ 0` channels. Internal helper for cycle 163
+Phase B.1. -/
+private lemma paddedREulerGLM_V_mulVec_apply (r : ℕ)
+    (v : Fin (r + 1) → ℝ) (i : Fin (r + 1)) :
+    ((paddedREulerGLM r).V *ᵥ v) i =
+      if i.val = 0 then v 0 else 0 := by
+  show ∑ j : Fin (r + 1), (paddedREulerGLM r).V i j * v j
+        = if i.val = 0 then v 0 else 0
+  by_cases hi : i.val = 0
+  · rw [if_pos hi]
+    rw [Finset.sum_eq_single (0 : Fin (r + 1))]
+    · rw [paddedREulerGLM_V_apply]
+      simp [hi]
+    · intro j _ hj
+      have hjval : j.val ≠ 0 := fun hv => hj (Fin.ext hv)
+      rw [paddedREulerGLM_V_apply]
+      simp [hi, hjval]
+    · intro hcontra
+      exact absurd (Finset.mem_univ _) hcontra
+  · rw [if_neg hi]
+    apply Finset.sum_eq_zero
+    intro j _
+    rw [paddedREulerGLM_V_apply]
+    simp [hi]
+
+/-- `paddedREulerGLM r`'s internal stage value at the single stage
+`0 : Fin 1` collapses to `(U *ᵥ y_input) 0 = y_input 0` (the `Fin 0`
+sum in the recursion body is empty). Internal helper for cycle 163
+Phase B.1. -/
+private lemma paddedREulerGLM_explicitStageValue_zero (r : ℕ)
+    (f : ℝ → ℝ) (y_input : Fin (r + 1) → ℝ) (h : ℝ) :
+    (paddedREulerGLM r).explicitStageValue f y_input h 0 = y_input 0 := by
+  unfold OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitStageValue
+  simp [paddedREulerGLM_U_mulVec_zero]
+
+/-- `applyStartingThenStep_explicit` against `paddedREulerGLM r` and
+`padCompatStartingMethodR r` collapses componentwise: the row-0 channel
+returns the closed-form two-Euler-step `(y₀ + h·f y₀) + h · f(y₀ + h·f y₀)`,
+and rows `1, …, r` return identically `0` (passive zero channels).
+Internal helper for cycle 163 Phase B.1; the form is identical for
+both `p = 0` and `p = 1` witnesses. -/
+private lemma paddedREulerGLM_applyStartingThenStep_explicit_apply
+    (r : ℕ) (f : ℝ → ℝ) (y₀ h : ℝ) (i : Fin (r + 1)) :
+    applyStartingThenStep_explicit (paddedREulerGLM r)
+        (padCompatStartingMethodR r)
+        (padCompatStartingMethodR_constituents_isExplicit r)
+        (paddedREulerGLM_isExplicit r) f y₀ h i
+      = if i.val = 0 then
+          (y₀ + h * f y₀) + h * f (y₀ + h * f y₀)
+        else 0 := by
+  show (h * ∑ k : Fin 1,
+        (paddedREulerGLM r).B i k
+          * f ((paddedREulerGLM r).explicitStageValue f
+                  ((padCompatStartingMethodR r).applyExplicit f y₀ h) h k))
+      + ((paddedREulerGLM r).V
+            *ᵥ (padCompatStartingMethodR r).applyExplicit f y₀ h) i
+      = if i.val = 0 then (y₀ + h * f y₀) + h * f (y₀ + h * f y₀) else 0
+  rw [padCompatStartingMethodR_applyExplicit]
+  rw [Fin.sum_univ_one]
+  rw [paddedREulerGLM_B_apply]
+  rw [paddedREulerGLM_explicitStageValue_zero]
+  rw [paddedREulerGLM_V_mulVec_apply]
+  by_cases hi : i.val = 0
+  · simp [hi]; ring
+  · simp [hi]
+
+/-- `applyExactThenStarting_explicit` against `padCompatStartingMethodR r`
+collapses componentwise: the row-0 channel returns the closed form
+`yex(x₀ + h) + h · f(yex(x₀ + h))`, and rows `1, …, r` return
+identically `0`. Internal helper for cycle 163 Phase B.1. -/
+private lemma paddedREulerGLM_applyExactThenStarting_explicit_apply
+    (r : ℕ) (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ h : ℝ) (i : Fin (r + 1)) :
+    applyExactThenStarting_explicit (padCompatStartingMethodR r)
+        (padCompatStartingMethodR_constituents_isExplicit r)
+        f yex x₀ h i
+      = if i.val = 0 then
+          yex (x₀ + h) + h * f (yex (x₀ + h))
+        else 0 := by
+  show (padCompatStartingMethodR r).applyExplicit f (yex (x₀ + h)) h i
+      = if i.val = 0 then yex (x₀ + h) + h * f (yex (x₀ + h)) else 0
+  rw [padCompatStartingMethodR_applyExplicit]
+
+/-- **`def:530B` Path A, parametric `p = 0` non-vacuity (cycle 163
+Phase B.1).** For every `r : ℕ`, the parametric padded Euler GLM
+`paddedREulerGLM r` has order `0` relative to the parametric padded
+starting method `padCompatStartingMethodR r` on any IVP whose exact
+solution `yex` satisfies `yex x₀ = y₀` and
+`HasDerivAt yex (f y₀) x₀`, with `f` Lipschitz with constant `L`.
+
+Subsumes the four hand-written `r ∈ {1, 2, 3, 4}` instances
+(cycles 153/156/159/161): the row-0 (active) channel discharges via
+the cycle 160 shared helper
+`taylor_lipschitz_explicitEuler_orderZero_diff_isBigO`; rows
+`1, …, r` (passive zero channels) collapse via
+`Asymptotics.isBigO_zero`. -/
+theorem paddedREulerGLM_hasOrderZero_padCompatStartingR (r : ℕ)
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_deriv : HasDerivAt yex (f y₀) x₀) :
+    HasOrderRelativeTo_explicit
+      (paddedREulerGLM r) (padCompatStartingMethodR r)
+      (padCompatStartingMethodR_constituents_isExplicit r)
+      (paddedREulerGLM_isExplicit r)
+      0 f yex x₀ y₀ := by
+  intro i
+  by_cases hi : i.val = 0
+  · -- i.val = 0 channel: substantive Taylor + Lipschitz closure.
+    have hcongr :
+        (fun h : ℝ =>
+            applyStartingThenStep_explicit (paddedREulerGLM r)
+                (padCompatStartingMethodR r)
+                (padCompatStartingMethodR_constituents_isExplicit r)
+                (paddedREulerGLM_isExplicit r) f y₀ h i
+              - applyExactThenStarting_explicit
+                  (padCompatStartingMethodR r)
+                  (padCompatStartingMethodR_constituents_isExplicit r)
+                  f yex x₀ h i)
+          = (fun h : ℝ =>
+              ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+                - (yex (x₀ + h) + h * f (yex (x₀ + h)))) := by
+      funext h
+      rw [paddedREulerGLM_applyStartingThenStep_explicit_apply,
+          paddedREulerGLM_applyExactThenStarting_explicit_apply]
+      simp [hi]
+    rw [hcongr]
+    -- Collapse `h ^ (0 + 1)` to `h`.
+    have hpow : (fun h : ℝ => h ^ (0 + 1)) = (fun h : ℝ => h) := by
+      funext h; simp
+    rw [hpow]
+    -- Discharge via the cycle-160 shared helper.
+    exact taylor_lipschitz_explicitEuler_orderZero_diff_isBigO
+      hf_lip hyex_x₀ hyex_deriv
+  · -- i.val ≠ 0 channel: SM[i] = ES[i] = 0; Diff = 0.
+    have hcongr :
+        (fun h : ℝ =>
+            applyStartingThenStep_explicit (paddedREulerGLM r)
+                (padCompatStartingMethodR r)
+                (padCompatStartingMethodR_constituents_isExplicit r)
+                (paddedREulerGLM_isExplicit r) f y₀ h i
+              - applyExactThenStarting_explicit
+                  (padCompatStartingMethodR r)
+                  (padCompatStartingMethodR_constituents_isExplicit r)
+                  f yex x₀ h i)
+          = (fun _ : ℝ => (0 : ℝ)) := by
+      funext h
+      rw [paddedREulerGLM_applyStartingThenStep_explicit_apply,
+          paddedREulerGLM_applyExactThenStarting_explicit_apply]
+      simp [hi]
+    rw [hcongr]
+    exact Asymptotics.isBigO_zero _ _
+
+/-- **`def:530B` Path A, parametric `p = 1` non-vacuity (cycle 163
+Phase B.1).** For every `r : ℕ`, the parametric padded Euler GLM
+`paddedREulerGLM r` has order `1` relative to the parametric padded
+starting method `padCompatStartingMethodR r` under the cycle-154
+hypothesis pack: `f` Lipschitz, `yex` is `C²`, full ODE relation
+`∀ x, HasDerivAt yex (f (yex x)) x`, and `yex x₀ = y₀`.
+
+Subsumes the four hand-written `r ∈ {1, 2, 3, 4}` instances
+(cycles 155/157/159/161): the row-0 (active) channel discharges via
+the cycle 158 shared helper
+`taylor_lipschitz_explicitEuler_orderOne_diff_isBigO`; rows
+`1, …, r` (passive zero channels) collapse via
+`Asymptotics.isBigO_zero`. -/
+theorem paddedREulerGLM_hasOrderOne_padCompatStartingR (r : ℕ)
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    HasOrderRelativeTo_explicit
+      (paddedREulerGLM r) (padCompatStartingMethodR r)
+      (padCompatStartingMethodR_constituents_isExplicit r)
+      (paddedREulerGLM_isExplicit r)
+      1 f yex x₀ y₀ := by
+  intro i
+  by_cases hi : i.val = 0
+  · -- i.val = 0 channel: substantive Taylor + Lipschitz closure.
+    have hcongr :
+        (fun h : ℝ =>
+            applyStartingThenStep_explicit (paddedREulerGLM r)
+                (padCompatStartingMethodR r)
+                (padCompatStartingMethodR_constituents_isExplicit r)
+                (paddedREulerGLM_isExplicit r) f y₀ h i
+              - applyExactThenStarting_explicit
+                  (padCompatStartingMethodR r)
+                  (padCompatStartingMethodR_constituents_isExplicit r)
+                  f yex x₀ h i)
+          = (fun h : ℝ =>
+              ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+                - (yex (x₀ + h) + h * f (yex (x₀ + h)))) := by
+      funext h
+      rw [paddedREulerGLM_applyStartingThenStep_explicit_apply,
+          paddedREulerGLM_applyExactThenStarting_explicit_apply]
+      simp [hi]
+    rw [hcongr]
+    -- Collapse `h ^ (1 + 1)` to `h ^ 2`.
+    have hpow : (fun h : ℝ => h ^ (1 + 1)) = (fun h : ℝ => h ^ 2) := by
+      funext h; ring
+    rw [hpow]
+    -- Discharge via the cycle-158 shared helper.
+    exact taylor_lipschitz_explicitEuler_orderOne_diff_isBigO
+      hf_lip hyex_x₀ hyex_C2 hyex_ode
+  · -- i.val ≠ 0 channel: SM[i] = ES[i] = 0; Diff = 0.
+    have hcongr :
+        (fun h : ℝ =>
+            applyStartingThenStep_explicit (paddedREulerGLM r)
+                (padCompatStartingMethodR r)
+                (padCompatStartingMethodR_constituents_isExplicit r)
+                (paddedREulerGLM_isExplicit r) f y₀ h i
+              - applyExactThenStarting_explicit
+                  (padCompatStartingMethodR r)
+                  (padCompatStartingMethodR_constituents_isExplicit r)
+                  f yex x₀ h i)
+          = (fun _ : ℝ => (0 : ℝ)) := by
+      funext h
+      rw [paddedREulerGLM_applyStartingThenStep_explicit_apply,
+          paddedREulerGLM_applyExactThenStarting_explicit_apply]
+      simp [hi]
+    rw [hcongr]
+    exact Asymptotics.isBigO_zero _ _
+
+/-- **`def:530C` parametric `p = 0` non-vacuity (cycle 163 Phase B.2).**
+For every `r : ℕ`, the parametric padded Euler GLM `paddedREulerGLM r`
+has order `0` (in the existential `HasOrder_explicit` sense) under the
+cycle-153 hypothesis pack. Exhibits `padCompatStartingMethodR r` as
+the existential witness; non-degeneracy and explicit-constituent status
+are supplied by the cycle 162 helpers
+`padCompatStartingMethodR_isNonDegenerate` and
+`padCompatStartingMethodR_constituents_isExplicit`; the
+`HasOrderRelativeTo_explicit` component is supplied by
+`paddedREulerGLM_hasOrderZero_padCompatStartingR`. Subsumes the four
+hand-written `r ∈ {1, 2, 3, 4}` instances. -/
+theorem paddedREulerGLM_hasOrderZero (r : ℕ)
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_deriv : HasDerivAt yex (f y₀) x₀) :
+    HasOrder_explicit (paddedREulerGLM r) (paddedREulerGLM_isExplicit r)
+      0 f yex x₀ y₀ := by
+  refine ⟨padCompatStartingMethodR r,
+          padCompatStartingMethodR_constituents_isExplicit r,
+          padCompatStartingMethodR_isNonDegenerate r,
+          ?_⟩
+  exact paddedREulerGLM_hasOrderZero_padCompatStartingR r
+          hf_lip hyex_x₀ hyex_deriv
+
+/-- **`def:530C` parametric `p = 1` non-vacuity (cycle 163 Phase B.2).**
+For every `r : ℕ`, the parametric padded Euler GLM `paddedREulerGLM r`
+has order `1` (in the existential `HasOrder_explicit` sense) under the
+cycle-154 hypothesis pack. Exhibits `padCompatStartingMethodR r` as
+the existential witness; the `HasOrderRelativeTo_explicit` component
+is supplied by `paddedREulerGLM_hasOrderOne_padCompatStartingR`.
+Subsumes the four hand-written `r ∈ {1, 2, 3, 4}` instances. -/
+theorem paddedREulerGLM_hasOrderOne (r : ℕ)
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    HasOrder_explicit (paddedREulerGLM r) (paddedREulerGLM_isExplicit r)
+      1 f yex x₀ y₀ := by
+  refine ⟨padCompatStartingMethodR r,
+          padCompatStartingMethodR_constituents_isExplicit r,
+          padCompatStartingMethodR_isNonDegenerate r,
+          ?_⟩
+  exact paddedREulerGLM_hasOrderOne_padCompatStartingR r
+          hf_lip hyex_x₀ hyex_C2 hyex_ode
+
 end OrderRelativeTo
 
 end OpenMath.Chapter5.Section530
