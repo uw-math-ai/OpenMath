@@ -1,5 +1,28 @@
 # Issue: General-`n` proof of `thm:550A` (Doubly companion matrix factorization)
 
+## Status update (cycle 148) — n=6 STEPPING STONE ADDED
+
+`doublyCompanionMatrix_det_factorization_n_six` landed axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). Strategy was the cycle 147
+n=5 recipe with three mechanical changes: (a) bump matrix size to 6×6,
+(b) add `Matrix.det_succ_row_zero (n := 4)` to the simp set so a
+**three-layer** Laplace expansion (6×6 → 5×5 minors via outer
+`det_succ_row_zero`; 5×5 → 4×4 via `(n := 4)`; 4×4 → 3×3 via
+`(n := 3)`; close each 3×3 minor by `det_fin_three`) collapses by
+one-shot `simp […]; ring`, (c) list six convolution coefficients in
+`IsBigO.of_bound` and add one more `norm_add_le` step plus one more
+`mul_le_of_le_one_left` sub-bound (`hyf : ‖y ^ 5 * f‖ ≤ ‖f‖`). No
+fallback A (no `det_fin_four_explicit` helper) was needed — the
+one-shot simp closed the residue exactly as for n=5. Six concrete `n`
+data points (n = 1..6) now confirm the leading-coefficient pattern
+`−Σᵢ αᵢ · β_{n−i} · z^{n+1}`.
+
+Cycle 148 also submitted **Aristotle project
+`2c4630b2-2998-4d4a-af88-c2f83fbd9eda`** for the general-`n` statement
+with all six closed proofs as in-context templates and a strong-induction
+sketch (cofactor expansion / eigenvalue density / `Fin.induction`).
+Single-poll discipline applies: do NOT re-poll until cycle 149+.
+
 ## Status update (cycle 147) — n=5 STEPPING STONE ADDED
 
 `doublyCompanionMatrix_det_factorization_n_five` landed axiom-clean

@@ -649,4 +649,58 @@ theorem doublyCompanionMatrix_det_factorization_n_six
         mul_le_mul_of_nonneg_left h_inner (norm_nonneg _)
     _ = (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ + ‖e‖ + ‖f‖) * ‖y ^ 7‖ := by ring
 
+/-!
+## TARGET — general `n` factorization (Theorem 550A)
+
+Six concrete-`n` axiom-clean proofs above (n = 1, 2, 3, 4, 5, 6) confirm
+the leading-coefficient pattern:
+  residue = − Σᵢ αᵢ · β_{n−i} · z^{n+1} + (higher-order terms in z).
+
+The full convolution structure of the residue is, for general `n`,
+  Σ_{k=0}^{n-1} c_k · z^{n+1+k}
+where `c_k = − Σ_{i+j=k+1, i ≤ n-1, j ≤ n-1} α_{n-1-j} · β_{n-1-i}`
+(or equivalent — see the n=1..6 proofs above for the explicit pattern).
+
+### Strong-induction sketch — three plausible attack vectors
+
+**Vector (a) — cofactor expansion along row 0, recursive on bottom-right
+sub-block.** The bottom-right `(n-1) × (n-1)` sub-block of the doubly
+companion matrix is itself (up to sign and column shifts) a doubly
+companion matrix `doublyCompanionMatrix α' β'` with α', β' shifted by
+one index. Apply `Matrix.det_succ_row_zero`, separate row 0 entries
+into the α-part (first `n-1` columns) and the (αₙ + βₙ)-corner, and
+package the recursion as a strong induction on `n`.
+
+**Vector (b) — eigenvalue density.** Butcher's textbook proof: the
+result is continuous in α, β; the set of (α, β) for which X has
+distinct non-zero eigenvalues is dense; on that dense set, plug in
+`λ = z⁻¹` for each eigenvalue λ. Requires a continuity argument
+(coefficients of charpoly are polynomials in matrix entries) and a
+density argument (perturbation sends repeated eigenvalues to distinct
+ones).
+
+**Vector (c) — direct induction with `Fin.induction`.** Use the
+cycle 145/147/148 template instantiation as the inductive step.
+This requires identifying the right inductive invariant (the residue's
+vector of convolution coefficients, indexed by k, satisfies a
+shift-by-one recurrence relative to the (n-1) sub-block).
+
+### What is to be filled
+
+The single `sorry` below: prove the general-`n` factorization for
+`α β : Fin n → ℂ`. Acceptable proof routes: any of (a), (b), (c)
+above, or a wholly different approach. The six concrete-`n` closed
+proofs above are in-context templates of the convolution residue's
+shape; reuse the matrix manipulation tactics if useful.
+-/
+
+theorem doublyCompanionMatrix_det_factorization
+    {n : ℕ} (α β : Fin n → ℂ) :
+    Asymptotics.IsBigO (nhds (0 : ℂ))
+      (fun z : ℂ =>
+        (1 - z • doublyCompanionMatrix α β).det
+          - alphaPoly α z * betaPoly β z)
+      (fun z : ℂ => z ^ (n + 1)) := by
+  sorry
+
 end OpenMath.Chapter5.Section550
