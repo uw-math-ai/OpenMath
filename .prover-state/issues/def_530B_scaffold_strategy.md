@@ -401,3 +401,49 @@ sufficiently regular" assumption.
 * `def:530C` (variants of order)
 * §530+ order-condition theorems (cycle-by-cycle as planner targets
   them).
+
+## Cycle 158 update — refactor of cycles 154+157 i=0 closures
+
+Extracted the Taylor + Lipschitz machinery shared by the cycle 154 and
+cycle 157 (i=0 channel) Path-A witnesses into a single private helper
+`taylor_lipschitz_explicitEuler_orderOne_diff_isBigO` placed
+immediately before `explicitEulerGLM_hasOrderOne_trivialStarting`.
+Its conclusion is the closed-form `SM[0] − ES[0] =O[nhds 0] (h ↦ h²)`
+in the shape that both witnesses reach after their algebraic closed-
+form rewrites for SM[0] and ES[0]:
+
+```
+((y₀ + h · f y₀) + h · f (y₀ + h · f y₀))
+  − (yex (x₀ + h) + h · f (yex (x₀ + h)))
+=O[nhds 0] (fun h => h ^ 2)
+```
+
+Both witnesses now apply the helper as a one-liner after their
+SM[0]/ES[0] rewrites and an `h^(1+1) = h^2` collapse. The cycle
+156/157 i=1 channel (zero-collapse via `Asymptotics.isBigO_zero`)
+remains untouched.
+
+### Outcome
+* `lake env lean OpenMath/Chapter5/Section530.lean` and
+  `lake env lean OpenMath/Chapter5.lean` both exit 0.
+* `grep -c sorry OpenMath/Chapter5/Section530.lean` → 0 (unchanged).
+* All four affected theorems remain axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`):
+  - `taylor_lipschitz_explicitEuler_orderOne_diff_isBigO` (new)
+  - `explicitEulerGLM_hasOrderOne_trivialStarting` (refactored)
+  - `padded2DEulerGLM_hasOrderOne_padCompatStarting` (refactored)
+  - `padded2DEulerGLM_hasOrderOne` (def:530C wrapper, transitive)
+* Cycle 153/155/156 theorems untouched and remain axiom-clean.
+* File LOC: 1600 → 1524 (−76 LOC).
+* Path A status of def:530B/C: still `[~]`. Path B (implicit) remains
+  deferred — `lean_status.json` does NOT change this cycle.
+
+### What the helper unblocks for future cycles
+* A future Path-A witness at `r = 3` or `(s, r) = (k, 1)` for `k > 1`
+  whose `i = 0` channel reduces to the same explicit-Euler shape can
+  apply the helper as a one-line corollary instead of porting the
+  ~140 LOC Taylor + Lipschitz body.
+* A `p = 2` parametric variant (Taylor at degree 3 + matching
+  hypothesis pack) would be a clean cycle 159+ refactor on top of
+  this helper, generalising it over the Taylor degree once a second
+  use-case appears.
