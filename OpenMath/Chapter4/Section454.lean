@@ -1,6 +1,7 @@
 import Mathlib
 import OpenMath.Chapter4.Section410
 import OpenMath.Chapter4.Section451
+import OpenMath.Chapter4.Section454Aux
 
 /-!
 # Butcher §454 — A-stability for LMMs (Theorem 454A scaffolding)
@@ -274,6 +275,173 @@ theorem gBottomRight_quadForm_eq {R : Type*} [CommRing R] [StarRing R]
   refine Finset.sum_congr rfl fun i _ => ?_
   rw [gBottomRight_mulVec_succ]
 
+/-! ## §454 algebraic identity — `algebraic_identity_454A`
+
+The §454 proof of Theorem 454A computes
+`star W ⬝ᵥ ((M.gMatrix G).map (algebraMap ℝ ℂ) *ᵥ W)` for `W = vanW w`
+over ℂ and identifies it with `α(w) β̄(w) + ᾱ(w) β(w)`
+plus a remainder involving `(1 - ‖w‖²)` and the inner-block
+quadratic form on `vanW₁`. This is the textbook formula on p. 387
+that bridges the matrix definition of G-stability to A-stability.
+
+Per cycle 167's named-decomposition playbook, we factor the proof
+into ≤10-line `private` named pieces (1.A through 1.E) that the
+public theorem `algebraic_identity_454A` (1.F) assembles via
+single-line `rw`s. -/
+
+/-! ### 1.A. Map commutation lemmas -/
+
+private theorem gTopLeft_map_eq {R S : Type*} [CommSemiring R] [CommSemiring S]
+    (φ : R →+* S) {k : ℕ} (G : Matrix (Fin k) (Fin k) R) :
+    (gTopLeft G).map φ = gTopLeft (G.map φ) := by
+  ext i j
+  unfold gTopLeft
+  rw [Matrix.map_apply, Matrix.of_apply, Matrix.of_apply]
+  split_ifs with h
+  · rw [Matrix.map_apply]
+  · exact φ.map_zero
+
+private theorem gBottomRight_map_eq {R S : Type*} [CommSemiring R] [CommSemiring S]
+    (φ : R →+* S) {k : ℕ} (G : Matrix (Fin k) (Fin k) R) :
+    (gBottomRight G).map φ = gBottomRight (G.map φ) := by
+  ext i j
+  unfold gBottomRight
+  rw [Matrix.map_apply, Matrix.of_apply, Matrix.of_apply]
+  split_ifs with h
+  · rw [Matrix.map_apply]
+  · exact φ.map_zero
+
+private theorem vecMulVec_map_eq {R S : Type*} [CommSemiring R] [CommSemiring S]
+    (φ : R →+* S) {n m : ℕ} (a : Fin n → R) (b : Fin m → R) :
+    (Matrix.vecMulVec a b).map φ =
+      Matrix.vecMulVec (fun i => φ (a i)) (fun j => φ (b j)) := by
+  ext i j
+  simp [Matrix.vecMulVec_apply, Matrix.map_apply, φ.map_mul]
+
+private theorem gMatrix_map_eq {k : ℕ} (M : LinearMultistepMethod k)
+    (G : Matrix (Fin k) (Fin k) ℝ) :
+    (M.gMatrix G).map (algebraMap ℝ ℂ) =
+      Matrix.vecMulVec (fun i => (M.alphaVec i : ℂ)) (fun j => (M.betaVec j : ℂ))
+      + Matrix.vecMulVec (fun i => (M.betaVec i : ℂ)) (fun j => (M.alphaVec j : ℂ))
+      - gTopLeft (G.map (algebraMap ℝ ℂ))
+      + gBottomRight (G.map (algebraMap ℝ ℂ)) := by
+  unfold LinearMultistepMethod.gMatrix
+  rw [Matrix.map_add _ (map_add _),
+      Matrix.map_sub _ (map_sub _),
+      Matrix.map_add _ (map_add _),
+      vecMulVec_map_eq, vecMulVec_map_eq, gTopLeft_map_eq, gBottomRight_map_eq]
+  rfl
+
+/-! ### 1.B. vecMulVec quadratic-form lift -/
+
+private theorem vecMulVec_dotProduct_lift {n : ℕ}
+    (a b : Fin n → ℝ) (W : Fin n → ℂ) :
+    star W ⬝ᵥ
+      (Matrix.vecMulVec (fun i => (a i : ℂ)) (fun j => (b j : ℂ)) *ᵥ W) =
+    (star W ⬝ᵥ (fun i => (a i : ℂ))) * ((fun j => (b j : ℂ)) ⬝ᵥ W) := by
+  show (∑ i, star (W i) * ∑ j, (a i : ℂ) * (b j : ℂ) * W j) =
+       (∑ i, star (W i) * (a i : ℂ)) * (∑ j, (b j : ℂ) * W j)
+  rw [Finset.sum_mul_sum]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl fun j _ => ?_
+  ring
+
+/-! ### 1.C. aeval-via-dotProduct identities -/
+
+private theorem aeval_αPoly_as_dotProduct {k : ℕ}
+    (M : LinearMultistepMethod k) (w : ℂ) :
+    (fun i : Fin (k + 1) => (M.alphaVec i : ℂ)) ⬝ᵥ vanW (k := k) w =
+      Polynomial.aeval w (αPoly M) := by
+  rw [aeval_αPoly_eq]
+  rfl
+
+private theorem aeval_βPoly_as_dotProduct {k : ℕ}
+    (M : LinearMultistepMethod k) (w : ℂ) :
+    (fun i : Fin (k + 1) => (M.betaVec i : ℂ)) ⬝ᵥ vanW (k := k) w =
+      Polynomial.aeval w (βPoly M) := by
+  rw [aeval_βPoly_eq]
+  rfl
+
+private theorem star_vanW_dotProduct_alpha {k : ℕ}
+    (M : LinearMultistepMethod k) (w : ℂ) :
+    star (vanW (k := k) w) ⬝ᵥ (fun i : Fin (k + 1) => (M.alphaVec i : ℂ)) =
+      star (Polynomial.aeval w (αPoly M)) := by
+  rw [aeval_αPoly_eq, star_sum]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  show star (vanW w i) * (M.alphaVec i : ℂ) = star ((M.alphaVec i : ℂ) * w ^ i.val)
+  rw [vanW_apply, StarMul.star_mul, Complex.star_def, Complex.conj_ofReal]
+
+private theorem star_vanW_dotProduct_beta {k : ℕ}
+    (M : LinearMultistepMethod k) (w : ℂ) :
+    star (vanW (k := k) w) ⬝ᵥ (fun i : Fin (k + 1) => (M.betaVec i : ℂ)) =
+      star (Polynomial.aeval w (βPoly M)) := by
+  rw [aeval_βPoly_eq, star_sum]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  show star (vanW w i) * (M.betaVec i : ℂ) = star ((M.betaVec i : ℂ) * w ^ i.val)
+  rw [vanW_apply, StarMul.star_mul, Complex.star_def, Complex.conj_ofReal]
+
+/-! ### 1.D. Vandermonde shift identities -/
+
+private theorem vanW_castSucc_eq_vanW₁ {k : ℕ} (w : ℂ) :
+    (fun i : Fin k => vanW (k := k) w i.castSucc) = vanW₁ (k := k) w := by
+  funext i; rfl
+
+private theorem vanW_succ_eq_smul_vanW₁ {k : ℕ} (w : ℂ) :
+    (fun i : Fin k => vanW (k := k) w i.succ) = w • vanW₁ (k := k) w := by
+  funext i
+  show w ^ (i.val + 1) = w * w ^ i.val
+  rw [pow_succ, mul_comm]
+
+/-! ### 1.E. smul-quadratic-form / normSq collapse -/
+
+private theorem star_smul_dotProduct_smul {k : ℕ}
+    (G : Matrix (Fin k) (Fin k) ℂ) (W : Fin k → ℂ) (z : ℂ) :
+    star (z • W) ⬝ᵥ (G *ᵥ (z • W)) =
+      (star z * z) * (star W ⬝ᵥ (G *ᵥ W)) := by
+  rw [Matrix.mulVec_smul, dotProduct_smul, star_smul, smul_dotProduct,
+      smul_eq_mul, smul_eq_mul]
+  ring
+
+private theorem star_w_mul_w_eq_normSq_complex (w : ℂ) :
+    (star w) * w = ((‖w‖^2 : ℝ) : ℂ) := by
+  rw [mul_comm, Complex.star_def, Complex.mul_conj, ← Complex.normSq_eq_norm_sq]
+
+/-! ### 1.F. The §454 algebraic identity (Theorem 454A's algebraic core) -/
+
+/-- **§454 algebraic identity (`algebraic_identity_454A`).** For any LMM `M`,
+auxiliary `k × k` real matrix `G`, and complex `w`,
+
+  `W^* · M(G) · W = α(w)* · β(w) + β(w)* · α(w)
+                    - (1 - ‖w‖²) · W₁^* · G · W₁`
+
+where `W = (1, w, …, wᵏ)`, `W₁ = (1, w, …, wᵏ⁻¹)`, `M(G)` is the §451e
+quadratic-form matrix, and `α, β` are the §410 polynomials.
+
+This is the textbook identity from Butcher §454, p. 387: in the proof of
+Theorem 454A, Butcher rearranges `α(w)β̄(w) + ᾱ(w)β(w) = W^* M W + (1 -
+|w|²) ∑_{j,l} g_{jl} wʲ⁻¹ w̄ˡ⁻¹`. -/
+theorem algebraic_identity_454A {k : ℕ}
+    (M : LinearMultistepMethod k)
+    (G : Matrix (Fin k) (Fin k) ℝ) (w : ℂ) :
+    star (vanW (k := k) w) ⬝ᵥ
+      ((M.gMatrix G).map (algebraMap ℝ ℂ) *ᵥ vanW (k := k) w) =
+    star (Polynomial.aeval w (αPoly M)) * Polynomial.aeval w (βPoly M)
+      + star (Polynomial.aeval w (βPoly M)) * Polynomial.aeval w (αPoly M)
+      - (1 - ((‖w‖^2 : ℝ) : ℂ)) *
+          (star (vanW₁ (k := k) w) ⬝ᵥ
+            (G.map (algebraMap ℝ ℂ) *ᵥ vanW₁ (k := k) w)) := by
+  rw [gMatrix_map_eq]
+  rw [Matrix.add_mulVec, Matrix.sub_mulVec, Matrix.add_mulVec,
+      dotProduct_add, dotProduct_sub, dotProduct_add]
+  rw [vecMulVec_dotProduct_lift, vecMulVec_dotProduct_lift]
+  rw [star_vanW_dotProduct_alpha, star_vanW_dotProduct_beta,
+      aeval_βPoly_as_dotProduct, aeval_αPoly_as_dotProduct]
+  rw [gTopLeft_quadForm_eq, gBottomRight_quadForm_eq]
+  rw [vanW_castSucc_eq_vanW₁, vanW_succ_eq_smul_vanW₁]
+  rw [star_smul_dotProduct_smul, star_w_mul_w_eq_normSq_complex]
+  ring
+
 /-! ## Refutability — explicit Euler is NOT A-stable -/
 
 /-- **Non-vacuity (negative).** Explicit Euler is not A-stable.
@@ -322,5 +490,151 @@ theorem explicitEulerLMM_not_isAStable :
     rw [this, Complex.ofReal_re]
   rw [heq] at hpos
   norm_num at hpos
+
+end OpenMath.Chapter4.Section454
+
+namespace OpenMath.Chapter4.Section404
+
+open OpenMath.Chapter4.Section454
+open OpenMath.Chapter4.Section410
+open OpenMath.Chapter4.Section454Aux
+
+/-! ## §454 Theorem 454A — a G-stable LMM is A-stable
+
+The proof composes the algebraic identity (`algebraic_identity_454A`)
+with the complex-lift PSD/PD helpers from `Section454Aux`. We
+decompose into seven private named pieces (Steps 4–8 below + two
+glue lemmas), each ≤ ~25 LOC, per cycle 168's named-decomposition
+playbook. -/
+
+/-- **Step 4.** The LHS of the §454 identity has non-negative real
+part, by PSD-ness of `M.gMatrix G` (lifted to ℂ via `algebraMap ℝ ℂ`)
+and `Section454Aux.complexLift_re_dotProduct_nonneg_of_real_posSemidef`. -/
+private theorem gMatrix_quadForm_re_nonneg
+    {k : ℕ} {M : LinearMultistepMethod k} {G : Matrix (Fin k) (Fin k) ℝ}
+    (hPSD : (M.gMatrix G).PosSemidef) (w : ℂ) :
+    0 ≤ (star (vanW (k := k) w) ⬝ᵥ
+          ((M.gMatrix G).map (algebraMap ℝ ℂ) *ᵥ vanW (k := k) w)).re :=
+  (complexLift_re_dotProduct_nonneg_of_real_posSemidef hPSD _).1
+
+/-- **Step 5.** The inner-block quadratic form of `G` on `vanW₁ w`
+has strictly positive real part, by PD-ness of `G` and the
+non-vanishing witness `vanW₁ w 0 = 1`. Requires `0 < k` so that
+`Fin k` is inhabited. -/
+private theorem G_quadForm_W₁_re_pos
+    {k : ℕ} {G : Matrix (Fin k) (Fin k) ℝ} (hPD : G.PosDef) {w : ℂ}
+    (hk : 0 < k) :
+    0 < (star (vanW₁ (k := k) w) ⬝ᵥ
+          (G.map (algebraMap ℝ ℂ) *ᵥ vanW₁ (k := k) w)).re := by
+  refine complexLift_re_dotProduct_pos_of_real_posDef hPD ?_
+  intro hzero
+  have h0 : vanW₁ (k := k) w ⟨0, hk⟩ = 1 := by
+    show w ^ (0 : ℕ) = 1
+    exact pow_zero w
+  have h0' : vanW₁ (k := k) w ⟨0, hk⟩ = 0 := by
+    rw [hzero]; rfl
+  rw [h0'] at h0
+  exact one_ne_zero h0.symm
+
+/-- **Step 6.** `1 - ‖w‖²` is strictly positive when `‖w‖ < 1`,
+extracted as the real part of the complex coercion `(1 : ℂ) -
+((‖w‖² : ℝ) : ℂ)`. -/
+private theorem one_sub_normSq_re_pos {w : ℂ} (hw : ‖w‖ < 1) :
+    (0 : ℝ) < ((1 : ℂ) - ((‖w‖ ^ 2 : ℝ) : ℂ)).re := by
+  rw [Complex.sub_re, Complex.one_re, Complex.ofReal_re]
+  have hw_nn : 0 ≤ ‖w‖ := norm_nonneg _
+  nlinarith [sq_nonneg ‖w‖, hw, hw_nn]
+
+/-- **Step 8.** From `0 < (star α · β).re` and `β ≠ 0`, conclude
+`0 < (α / β).re`. The complex-arithmetic finisher. -/
+private theorem alpha_div_beta_re_pos_of_star_alpha_beta_re_pos
+    {α β : ℂ} (hβ : β ≠ 0) (h : 0 < (star α * β).re) :
+    0 < (α / β).re := by
+  rw [Complex.div_re]
+  have hstar : (star α * β).re = α.re * β.re + α.im * β.im := by
+    show ((starRingEnd ℂ) α * β).re = α.re * β.re + α.im * β.im
+    rw [Complex.mul_re, Complex.conj_re, Complex.conj_im]
+    ring
+  rw [hstar] at h
+  have hnsq : 0 < Complex.normSq β := Complex.normSq_pos.mpr hβ
+  have h_eq :
+      α.re * β.re / Complex.normSq β + α.im * β.im / Complex.normSq β
+        = (α.re * β.re + α.im * β.im) / Complex.normSq β := by
+    rw [← add_div]
+  rw [h_eq]
+  exact div_pos h hnsq
+
+/-- **Glue lemma.** The two cross terms in `α(w)β̄(w) + ᾱ(w)β(w)`
+have equal real parts, since each is the conjugate of the other. -/
+private theorem star_beta_alpha_re_eq_star_alpha_beta_re (α β : ℂ) :
+    (star β * α).re = (star α * β).re := by
+  show ((starRingEnd ℂ) β * α).re = ((starRingEnd ℂ) α * β).re
+  rw [Complex.mul_re, Complex.mul_re, Complex.conj_re, Complex.conj_im,
+      Complex.conj_re, Complex.conj_im]
+  ring
+
+/-- **Glue lemma.** Multiplying the complex coercion of a real number
+by another complex number, the real part factors as `c.re * z.re`
+because the imaginary part of the coercion is zero. -/
+private theorem mul_re_of_real_complex (r : ℝ) (z : ℂ) :
+    (((1 : ℂ) - ((r : ℝ) : ℂ)) * z).re =
+      ((1 : ℂ) - ((r : ℝ) : ℂ)).re * z.re := by
+  rw [Complex.mul_re]
+  have him : ((1 : ℂ) - ((r : ℝ) : ℂ)).im = 0 := by
+    rw [Complex.sub_im, Complex.one_im, Complex.ofReal_im, sub_zero]
+  rw [him, zero_mul, sub_zero]
+
+/-- **Step 7.** From G-stability of `M`, `‖w‖ < 1`, and `0 < k`,
+the real part of `star (α(w)) · β(w)` is strictly positive. This is
+the analytic core of Theorem 454A.
+
+Take `.re` of `algebraic_identity_454A`. The LHS is `≥ 0` by Step 4,
+the cross-term sum collapses to `2 · Re(star α · β)`, and the
+remainder term is `(1 - ‖w‖²) · (W₁* G W₁).re`, both factors
+strictly positive (Steps 5 and 6). Linear arithmetic finishes. -/
+private theorem star_alpha_beta_re_pos
+    {k : ℕ} {M : LinearMultistepMethod k} (hG : M.IsGStable)
+    {w : ℂ} (hw : ‖w‖ < 1) (hk : 0 < k) :
+    0 < (star (Polynomial.aeval w (αPoly M)) *
+          Polynomial.aeval w (βPoly M)).re := by
+  obtain ⟨G, _, hPD, hPSD⟩ := hG
+  have hid := algebraic_identity_454A M G w
+  have hLHS_nn := gMatrix_quadForm_re_nonneg hPSD w
+  have hW₁_pos := G_quadForm_W₁_re_pos hPD (w := w) hk
+  have hOnemNorm := one_sub_normSq_re_pos hw
+  have hsymm := star_beta_alpha_re_eq_star_alpha_beta_re
+    (Polynomial.aeval w (αPoly M)) (Polynomial.aeval w (βPoly M))
+  have hid_re := congrArg Complex.re hid
+  rw [Complex.sub_re, Complex.add_re, mul_re_of_real_complex, hsymm] at hid_re
+  nlinarith [hLHS_nn, hOnemNorm, hW₁_pos,
+             mul_pos hOnemNorm hW₁_pos]
+
+/-- **Butcher Theorem 454A — a G-stable LMM is A-stable**
+(§454, p. 387).
+
+We use the boundary-locus form of A-stability (the `IsAStable`
+predicate): `∀ w, ‖w‖ < 1 ∧ β(w) ≠ 0 ⇒ Re(α(w)/β(w)) > 0`.
+
+**Faithfulness divergence.** The textbook statement does not list a
+hypothesis `0 < k`, but Butcher implicitly assumes `k ≥ 1` throughout
+§451–§454 (an LMM with `k = 0` is degenerate). We add the precondition
+explicitly. -/
+theorem LinearMultistepMethod.gStable_isAStable {k : ℕ}
+    (M : LinearMultistepMethod k) (hk : 0 < k) (hG : M.IsGStable) :
+    M.IsAStable := by
+  intro w hw_norm hβw
+  have hpos := star_alpha_beta_re_pos hG hw_norm hk
+  exact alpha_div_beta_re_pos_of_star_alpha_beta_re_pos hβw hpos
+
+end OpenMath.Chapter4.Section404
+
+namespace OpenMath.Chapter4.Section454
+
+open OpenMath.Chapter4.Section451
+
+/-- **BDF2 is A-stable.** Direct corollary of cycle 165's
+`bdf2LMM_isGStable` and Theorem 454A (`gStable_isAStable`). -/
+theorem bdf2LMM_isAStable : bdf2LMM.IsAStable :=
+  bdf2LMM.gStable_isAStable (by norm_num) bdf2LMM_isGStable
 
 end OpenMath.Chapter4.Section454

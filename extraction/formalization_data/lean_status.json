@@ -813,9 +813,11 @@
     "status": "unformalized"
   },
   "thm:454A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section454.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.gStable_isAStable",
+    "status": "formalized",
+    "cycle": 169,
+    "notes": "Theorem 454A — a G-stable LMM is A-stable. Closed via Step 7 (algebraic_identity_454A + complex-lift PSD/PD helpers from Section454Aux) + Step 8 (Re(α/β) > 0 from Re(star α · β) > 0). Faithfulness divergence: added precondition `0 < k` (textbook implicitly assumes k ≥ 1; LMM with k = 0 is degenerate). BDF2 corollary `bdf2LMM_isAStable` shipped in same cycle. Axiom-clean."
   },
   "thm:513A": {
     "lean_file": "OpenMath/Chapter5/Section513.lean",

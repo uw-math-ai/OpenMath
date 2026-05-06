@@ -1,367 +1,474 @@
-# Cycle 167 Strategy
+# Cycle 169 strategy — close `thm:454A` (`gStable_isAStable`) and the BDF2 corollary
 
-## Context (carry-over from cycle 166)
+## Standing context
 
-Cycle 166 shipped Path 3 fallback for thm:454A:
-* `LinearMultistepMethod.IsAStable` predicate (boundary-locus form,
-  axiom-clean).
-* `aeval_αPoly_eq` / `aeval_βPoly_eq` bridging lemmas (§410 polynomial
-  form ↔ §451 vector form, axiom-clean).
-* `vanW`, `vanW₁` Vandermonde test vectors.
-* `explicitEulerLMM_not_isAStable` refutability witness (axiom-clean).
+* Sorry count: **0**. Do not regress.
+* `thm:454A` (Concluding remarks on G-stability) is the active target.
+  Cycle 166 landed `IsAStable` + the explicit-Euler refutability witness;
+  cycle 167 landed the `gTopLeft`/`gBottomRight` quadratic-form lemmas;
+  cycle 168 landed `algebraic_identity_454A` (the §451e identity over ℂ)
+  with thirteen private named sub-pieces 1.A–1.F, **plus** the two
+  complex-lift PSD/PD helpers in `OpenMath/Chapter4/Section454Aux.lean`
+  (closed by Aristotle, all axiom-clean).
+* Aristotle queue: empty (cycle 168's job COMPLETED). No pending poll.
+* All §454 / §454Aux artefacts are axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`).
 
-What stalled: `algebraic_identity_454A` (the §451e quadratic-form
-identity). Direct proof unfolded `M.gMatrix`, `gTopLeft`,
-`gBottomRight` simultaneously and manipulated nested dependent
-if-then-else under `Fin.sum_univ_castSucc` / `Fin.sum_univ_succ`.
-Lean elaboration hung 10+ min without output across two retries.
-Root cause: `simp` blows up on the unfolded matrix entries inside a
-single proof body.
+What is left to close `thm:454A`:
 
-Aristotle batch (project `89e8a962-b3eb-4f7d-b397-c77bf18773d4`) was at
-11% when cycle 166 ended.
+1. The main theorem itself, `LinearMultistepMethod.gStable_isAStable`
+   (Theorem 454A, Butcher §454, p. 387).
+2. The BDF2 corollary `bdf2LMM_isAStable` — wires together cycle 165's
+   `bdf2LMM_isGStable` and (1).
 
-Sorry count: **0**. Path A from
-`.prover-state/issues/thm_454A_stage_2_3_stall.md` is the recommended
-closure path.
+Both fit in cycle 169 if (1) closes cleanly. If (1) stalls past ~250 LOC
+or hits a complex-arithmetic blowup, ship (1) only and defer (2) to
+cycle 170.
 
-## Priority order (descending)
+---
 
-### Priority 1 — Aristotle single-poll
+## Priority 1 — `gStable_isAStable` (Theorem 454A)
 
-Run `mcp__aristotle__get_status` ONCE on
-`89e8a962-b3eb-4f7d-b397-c77bf18773d4`. **DO NOT re-poll.** Three
-outcomes:
+### Statement
 
-* **COMPLETE with proofs**: extract via `mcp__aristotle__extract_result`.
-  If a clean proof of `algebraic_identity_454A` or
-  `gStable_isAStable` arrives, paste it into `Section454.lean` and
-  validate with `lake env lean OpenMath/Chapter4/Section454.lean`.
-  If accepted, also pull the dependent witnesses
-  (`bdf2LMM_isAStable`) — but only if the dependency chain is
-  self-consistent. **Verify axioms** on every accepted theorem with
-  `lean_verify` (target `[propext, Classical.choice, Quot.sound]`
-  exactly). Do NOT accept proofs that introduce other axioms.
-* **IN_PROGRESS / FAILED**: cancel via
-  `mcp__aristotle__cancel_project` (free the slot — cycle 166's
-  retrospective shows the prover unlikely to land at 11% after 35+
-  min) and proceed to Priority 2 manually.
-* **Returned only partial proofs** (e.g. `gTopLeft_quadForm_eq` but
-  not the others): incorporate the partial(s), then proceed to
-  Priority 2 with the remaining sub-goals.
-
-After incorporating Aristotle output, if the cycle's deliverable bar
-is met (see Priority 4), STOP and write task results. Otherwise
-continue.
-
-### Priority 2 — Factor quadratic-form lemmas as standalone named theorems
-
-This is the cycle 166 stall remediation per
-`thm_454A_stage_2_3_stall.md` Path A. **The key insight is to give
-each quadratic-form computation its own proof obligation in its own
-top-level theorem, so Lean elaborates them independently.** Inline
-proofs in cycle 166 hung because the two computations interact
-through nested if-then-else expansion in a single proof body.
-
-Add these as standalone theorems **directly in `Section454.lean`**
-(not in `Section451.lean` — keeping new bridging-only material in
-the §454 file simplifies imports and per-file `lake env lean`
-validation).
-
-Place them after `aeval_βPoly_eq` and before any A-stability
-witness, in the existing `OpenMath.Chapter4.Section454` namespace.
-
-#### Step 2a — `gTopLeft_quadForm_eq`
-
-Recommended signature (polymorphic `R`):
+Place this in `OpenMath/Chapter4/Section454.lean`, **inside the existing
+`namespace OpenMath.Chapter4.Section404`** block (between the `IsAStable`
+def at line 68 and the `end OpenMath.Chapter4.Section404` at line 75 —
+or, easier, immediately after that `end`, adding a fresh `namespace
+OpenMath.Chapter4.Section404` block dedicated to the theorem). The
+file already imports `Section451` (G-stability) and `Section410`
+(αPoly/βPoly), so no new top-level imports are needed for the
+theorem itself; you DO need
 
 ```lean
-theorem gTopLeft_quadForm_eq {R : Type*} [CommRing R] [StarRing R]
-    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
-    star W ⬝ᵥ (gTopLeft G *ᵥ W) =
-      star (fun i : Fin k => W i.castSucc) ⬝ᵥ
-        (G *ᵥ (fun i : Fin k => W i.castSucc)) := by
-  ...
+import OpenMath.Chapter4.Section454Aux
 ```
 
-This requires `gTopLeft` to be polymorphic in `R` (it currently
-specialises to `ℝ` in `Section451.lean:68`). **Refactor**
-`gTopLeft` and `gBottomRight` to take a `Matrix (Fin k) (Fin k) R`
-for any `R` with zero. Same for `gMatrix` if needed (likely yes,
-since cycle 168 will instantiate `gMatrix` over ℂ).
-
-The refactor is ~5 line edits each (replace `ℝ` with `R`, add
-`[Zero R]`). Verify the existing §451 BDF2 witnesses still typecheck
-(they instantiate at `R := ℝ` definitionally — should be `rfl`-clean).
-
-**Proof body** (the actual stall point):
-
-Strategy: `Matrix.dotProduct` unfolds to
-`Σ i, star (W i) * (gTopLeft G *ᵥ W) i`. For `i = Fin.last k`, the
-`gTopLeft` row is identically zero, so the term vanishes. For
-`i = i'.castSucc` with `i' : Fin k`, the row matches `G i'`'s
-mulVec of the truncated `W`.
-
-Write the proof in *small named sub-lemmas* in `private` scope to
-avoid the cycle 166 elaboration blowup:
-
-1. `gTopLeft_apply_castSucc` — show
-   `gTopLeft G i.castSucc j.castSucc = G i j` for `i j : Fin k`.
-   Proof: unfold `gTopLeft, Matrix.of_apply`, `dif_pos` on
-   `i.castSucc.val < k ∧ j.castSucc.val < k` (which holds via
-   `Fin.castSucc_lt_last` + `Fin.is_lt`-style facts).
-2. `gTopLeft_apply_last_row` — show
-   `gTopLeft G (Fin.last k) j = 0` for any `j : Fin (k+1)`.
-   Proof: `dif_neg` on `(Fin.last k).val = k`, contradicting
-   `< k`.
-3. `gTopLeft_apply_last_col` — show
-   `gTopLeft G i (Fin.last k) = 0` for any `i : Fin (k+1)`.
-   Symmetric to step 2.
-4. `gTopLeft_mulVec_castSucc` — show
-   `(gTopLeft G *ᵥ W) i.castSucc = G *ᵥ (fun j => W j.castSucc) i`.
-   Proof: unfold `mulVec`, sum over `Fin (k+1)` using
-   `Fin.sum_univ_castSucc`, the last term vanishes via
-   `gTopLeft_apply_last_col`, the rest matches via
-   `gTopLeft_apply_castSucc`.
-5. `gTopLeft_mulVec_last` — show
-   `(gTopLeft G *ᵥ W) (Fin.last k) = 0`. Proof: unfold `mulVec`,
-   each row entry vanishes via `gTopLeft_apply_last_row`,
-   `Finset.sum_const_zero`.
-6. **Main theorem** `gTopLeft_quadForm_eq`: unfold `dotProduct` on
-   LHS, split sum via `Fin.sum_univ_castSucc`, apply
-   `gTopLeft_mulVec_castSucc` and `gTopLeft_mulVec_last`, simplify
-   `star _ * 0 = 0`, conclude by `dotProduct` reverse-unfold on RHS.
-
-Each sub-lemma should be ≤ 5 lines. **Validate each one
-individually** with `lake env lean` (or `lean_verify`) before
-proceeding to the next. If a sub-lemma takes > 60 s to elaborate,
-something is wrong — pause and decompose further.
-
-#### Step 2b — `gBottomRight_quadForm_eq`
-
-Symmetric to Step 2a, but the boundary case is `i = 0`
-(`Fin.castSucc` becomes `Fin.succ`, `Fin.last` becomes `0`).
+added near the top of `Section454.lean` (the file currently does not
+import the Aux module).
 
 ```lean
-theorem gBottomRight_quadForm_eq {R : Type*} [CommRing R] [StarRing R]
-    {k : ℕ} (G : Matrix (Fin k) (Fin k) R) (W : Fin (k + 1) → R) :
-    star W ⬝ᵥ (gBottomRight G *ᵥ W) =
-      star (fun i : Fin k => W i.succ) ⬝ᵥ
-        (G *ᵥ (fun i : Fin k => W i.succ)) := by
-  ...
+/-- **Butcher Theorem 454A — a G-stable LMM is A-stable** (§454, p. 387). -/
+theorem LinearMultistepMethod.gStable_isAStable {k : ℕ}
+    (M : LinearMultistepMethod k) (hG : M.IsGStable) :
+    M.IsAStable := by
+  sorry
 ```
 
-Six private sub-lemmas mirroring Step 2a:
-1. `gBottomRight_apply_succ` — `gBottomRight G i.succ j.succ = G i j`.
-2. `gBottomRight_apply_zero_row` — `gBottomRight G 0 j = 0`.
-3. `gBottomRight_apply_zero_col` — `gBottomRight G i 0 = 0`.
-4. `gBottomRight_mulVec_succ` — analogous.
-5. `gBottomRight_mulVec_zero` — analogous.
-6. Main theorem using `Fin.sum_univ_succ` (head-split, opposite of
-   `Fin.sum_univ_castSucc`).
+### Proof recipe (sorry-first → close incrementally)
 
-#### Step 2c — Validate
+Math sketch (from Butcher, with Lean-friendly bookkeeping):
 
-After Steps 2a + 2b land, run:
-* `lake env lean OpenMath/Chapter4/Section454.lean` — confirm exit 0
-  within 3 min.
-* `lake env lean OpenMath/Chapter4/Section451.lean` — regression
-  guard for the polymorphism refactor (BDF2 witnesses must still
-  build).
-* `lake build OpenMath.Chapter4.Section451 OpenMath.Chapter4.Section454`
-  — full elaboration + .olean caching before `#print axioms`.
-* `lean_verify
-  OpenMath.Chapter4.Section454.gTopLeft_quadForm_eq` and
-  `OpenMath.Chapter4.Section454.gBottomRight_quadForm_eq` —
-  confirm axioms are exactly `[propext, Classical.choice, Quot.sound]`.
+```
+star W ⬝ᵥ ((M.gMatrix G).map ι *ᵥ W)            -- (1)
+  = (W^* α) · β  +  (W^* β) · α                  -- (2)
+  − (1 − ‖w‖²) · (star W₁ ⬝ᵥ (G.map ι *ᵥ W₁))    -- (3)
+```
 
-**Deliverable bar for Priority 2**: Steps 2a + 2b axiom-clean in
-`Section454.lean`, all six private sub-lemmas + two main theorems.
+Take `.re` of both sides:
+* LHS .re ≥ 0 by `complexLift_re_dotProduct_nonneg_of_real_posSemidef`
+  applied to `M.gMatrix G` (the `hPSD` clause of G-stability).
+* The first two terms of RHS sum to `2 · (star α · β).re` (real, since
+  `z + star z = 2 · z.re` for `z = star α · β`).
+* `(star W₁ ⬝ᵥ (G.map ι *ᵥ W₁)).re > 0` by
+  `complexLift_re_dotProduct_pos_of_real_posDef` applied to `G` (the
+  `hPD` clause), using `vanW₁ w ≠ 0` because `vanW₁ w 0 = 1 ≠ 0`.
+* `1 − ‖w‖² > 0` because `‖w‖ < 1`.
 
-### Priority 3 — Stretch: `algebraic_identity_454A` (only if > 30 min spare)
+So:
+```
+0 ≤ 2 · (star (α(w)) · β(w)).re − (positive real) · (positive real)
+```
 
-If Priority 2 lands cleanly with > 30 min remaining, attempt the
-identity. Statement (over ℂ, using `gMatrix` polymorphised over R):
+i.e. `0 < (star (α(w)) · β(w)).re`. Then divide by `‖β(w)‖² > 0` (which
+is real-positive because `β(w) ≠ 0`) to get `0 < (α(w) / β(w)).re` via
+`Complex.div_re` or the direct identity `(α / β).re = (star β · α).re /
+‖β‖²` and the algebraic step `(star α · β).re = (star β · α).re` (since
+`(star α · β).re = (α · star β).re` for the conjugate-symmetric pair).
+
+### Concrete Lean step plan
+
+Decompose into named `private` helpers (per cycle 167's Stage 2 + cycle
+168's Stage 3 named-decomposition playbook). Each helper ≤ 15 LOC.
+
+**Step 1 — extract G-stability data.**
+```lean
+obtain ⟨G, hSymm, hPD, hPSD⟩ := hG
+intro w hw_norm hβw
+```
+Goal: `0 < (Polynomial.aeval w (αPoly M) / Polynomial.aeval w (βPoly M)).re`.
+
+**Step 2 — set up names.** Introduce shorthand `α := aeval w (αPoly M)`,
+`β := aeval w (βPoly M)`, `W := vanW w`, `W₁ := vanW₁ w`. Use `set` so
+the hypothesis names are stable.
+
+**Step 3 — apply the algebraic identity.**
+```lean
+have hid := algebraic_identity_454A M G w
+```
+This gives Eq (1) = (2) − (3) over ℂ.
+
+**Step 4 — bound the LHS real part from below by 0** (private helper
+`gMatrix_quadForm_re_nonneg`):
 
 ```lean
-theorem algebraic_identity_454A {k : ℕ}
-    (M : LinearMultistepMethod k) (G : Matrix (Fin k) (Fin k) ℂ)
-    (w : ℂ) :
-    star (vanW w) ⬝ᵥ
-        ((M.gMatrix (R := ℂ) G * 0 + ...) *ᵥ vanW w) -- (placeholder; finalise to use Complex-lifted alphaVec/betaVec)
-      = ...
+private theorem gMatrix_quadForm_re_nonneg
+    {k : ℕ} {M : LinearMultistepMethod k} {G : Matrix (Fin k) (Fin k) ℝ}
+    (hPSD : (M.gMatrix G).PosSemidef) (w : ℂ) :
+    0 ≤ (star (vanW (k := k) w) ⬝ᵥ
+          ((M.gMatrix G).map (algebraMap ℝ ℂ) *ᵥ vanW (k := k) w)).re :=
+  (OpenMath.Chapter4.Section454Aux
+      .complexLift_re_dotProduct_nonneg_of_real_posSemidef hPSD _).1
 ```
 
-(Exact statement: see Butcher §454 proof p. 387 around equation
-(454a). The identity says `star W · M(G) · W = 2 α(w) β(w) - (1 - |w|²) star W₁ · G · W₁`.)
+(Note the dot-product convention from Section454Aux uses the same
+`star W ⬝ᵥ (A.map ι *ᵥ W)` order — verify by reading the helper's
+signature first; if the orientation differs, swap via `dotProduct_comm`
+or transpose.)
 
-**Proof recipe:**
-1. Unfold `gMatrix = vecMulVec α β + vecMulVec β α - gTopLeft G + gBottomRight G`.
-2. Distribute `*ᵥ W` over the four-term sum, then `star W ⬝ᵥ` over
-   the four-term sum.
-3. The two `vecMulVec` terms each become a product of dot products
-   (use `Matrix.dotProduct_vecMulVec` or unfold). Apply
-   `aeval_αPoly_eq` and `aeval_βPoly_eq` (cycle 166) to identify
-   these with `aeval w (αPoly M)` and `aeval w (βPoly M)`. (Note
-   that `vanW i = w^i.val` exactly, so the dot product
-   `α-vec ⬝ᵥ vanW = Σ alphaVec j · w^j` matches.)
-4. The `gTopLeft G` term collapses via `gTopLeft_quadForm_eq` to a
-   quadratic form on the truncated Vandermonde
-   `(fun i => vanW (i.castSucc)) = (fun i : Fin k => w^i.val) = vanW₁ w`.
-5. The `gBottomRight G` term collapses via
-   `gBottomRight_quadForm_eq` to a quadratic form on the *shifted*
-   Vandermonde `(fun i => vanW (i.succ)) = (fun i : Fin k => w^(i+1))
-   = w • vanW₁ w` (since `w^(i+1) = w * w^i`).
-6. Pull `w` out of the `gBottomRight` quadratic form via
-   `Matrix.dotProduct_smul` / linearity in both arguments — the
-   `star (w • _) ⬝ᵥ (G *ᵥ (w • _)) = (star w) * w * (star _ ⬝ᵥ (G *ᵥ _))
-   = ‖w‖² * star W₁ ⬝ᵥ (G *ᵥ W₁)`.
-7. Combine: `gBottomRight - gTopLeft` quadratic forms give
-   `(‖w‖² - 1) * (G-quadratic-form on W₁)`, i.e.
-   `−(1 − ‖w‖²) * (G-quadratic-form on W₁)`, matching the textbook
-   RHS.
+**Step 5 — strict positivity of the inner-block term** (private helper
+`G_quadForm_W₁_re_pos`):
 
-**If this stretch step times out**: revert it cleanly (delete the
-theorem statement and its proof body; do NOT leave a sorry). Ship
-Priority 2 only. Do NOT block on this.
+```lean
+private theorem G_quadForm_W₁_re_pos
+    {k : ℕ} {G : Matrix (Fin k) (Fin k) ℝ} (hPD : G.PosDef) {w : ℂ}
+    (hk : 0 < k) :
+    0 < (star (vanW₁ (k := k) w) ⬝ᵥ
+          (G.map (algebraMap ℝ ℂ) *ᵥ vanW₁ (k := k) w)).re := by
+  refine
+    OpenMath.Chapter4.Section454Aux
+      .complexLift_re_dotProduct_pos_of_real_posDef hPD ?_
+  -- vanW₁ w ≠ 0 because vanW₁ w ⟨0, hk⟩ = 1.
+  intro hzero
+  have h0 : vanW₁ (k := k) w ⟨0, hk⟩ = 1 := by simp [vanW₁_apply]
+  have h0' : vanW₁ (k := k) w ⟨0, hk⟩ = 0 := by rw [hzero]; rfl
+  rw [h0'] at h0
+  exact one_ne_zero h0.symm
+```
 
-### Priority 4 — Cycle deliverable bar
+The `k = 0` case is handled at the **top level** of `gStable_isAStable`:
+when `k = 0`, `αPoly M = 1` and `βPoly M = 0` (the empty `Finset.sum`),
+so `β(w) = 0` contradicts `hβw`. Use `rcases Nat.eq_zero_or_pos k with
+hk0 | hkpos` and dispose of the `k = 0` branch by computing
+`Polynomial.aeval w (βPoly M) = 0` from `Fin.sum_univ_zero`.
 
-Minimum bar (positive score): Priority 1 incorporated + Priority 2
-shipped (six sub-lemmas + two main theorems axiom-clean). This
-unblocks cycle 168 to assemble `algebraic_identity_454A` and
-`gStable_isAStable` from named pieces.
+**Step 6 — `1 − ‖w‖² > 0` over ℂ** (private helper
+`one_sub_normSq_re_pos`):
 
-Do NOT attempt Priority 3 unless Priority 2 has > 30 min spare. The
-cycle 166 retrospective is clear: monolithic proofs of the §454e
-identity stall Lean elaboration. Build incrementally.
+```lean
+private theorem one_sub_normSq_re_pos {w : ℂ} (hw : ‖w‖ < 1) :
+    (0 : ℝ) < ((1 : ℂ) - ((‖w‖ ^ 2 : ℝ) : ℂ)).re := by
+  rw [Complex.sub_re, Complex.one_re, Complex.ofReal_re]
+  nlinarith [sq_nonneg ‖w‖, sq_nonneg (1 - ‖w‖), hw, norm_nonneg w]
+```
 
-## What NOT to try
+(The exact form of the `(‖w‖^2 : ℝ) : ℂ` coercion in
+`algebraic_identity_454A`'s statement is `((‖w‖^2 : ℝ) : ℂ)` —
+verify from `Section454.lean:430`.)
 
-* **Do NOT inline `algebraic_identity_454A` in `Section454.lean`
-  with a single `simp [...] ; ring` or
-  `simp only [...] ; Fin.sum_univ_castSucc ; dif_neg` body.** This
-  is exactly what stalled cycle 166 — Lean's elaboration of nested
-  dependent if-then-else over `Fin (k+1) × Fin (k+1)` blows up. Use
-  the named sub-lemma decomposition in Priority 2.
-* **Do NOT use `decide` or `fin_cases` at general `k`.** They only
-  fire at concrete `k`. The identities are universally quantified
-  over `k : ℕ`.
-* **Do NOT raise `maxHeartbeats`** above 200000 (CLAUDE.md). If a
-  sub-lemma exceeds default heartbeats, decompose further.
-* **Do NOT skip the polymorphism refactor.** Trying to state
-  `gTopLeft_quadForm_eq` over ℝ first and lift to ℂ later via
-  `.map (algebraMap ℝ ℂ)` introduces type-coercion churn that will
-  recreate the elaboration blowup downstream. Polymorphic `R` from
-  the start is cleaner. (Backup B1 below addresses what to do if
-  the refactor stalls.)
-* **Do NOT touch `Section451.lean`'s BDF2 witness or
-  `bdf2_gMatrix_eq_smul_vecMulVec` proof.** They are axiom-clean
-  and their § 451 namespace proof structure is independent. Only
-  refactor the `gTopLeft`/`gBottomRight`/`gMatrix` *definitions* to
-  be polymorphic; the BDF2 lemmas instantiate at `R := ℝ` and
-  should rebuild automatically.
-* **Do NOT re-poll Aristotle.** Single-poll discipline per CLAUDE.md.
-  If cycle 166's project is still IN_PROGRESS at < 30%, cancel it.
-* **Do NOT re-attempt cycle 166's stalled monolithic proof** verbatim.
-  The approach is dead.
-* **Do NOT introduce `axiom` or `constant`** to bypass the stall.
-* **Do NOT pivot to a different entity.** thm:454A is the active
-  multi-cycle target; cycles 166–169 are the planned arc per the
-  issue file.
-* **Do NOT add `[Star R]` or `[StarRing R]` instances to the
-  refactored `gTopLeft`/`gBottomRight` definitions** — they only
-  need `[Zero R]` to be defined. The star structure enters in the
-  *quadratic-form lemmas* (where `star W` is taken). Keep the
-  definition typeclass-light to maximise generality.
+**Step 7 — combine into `Re(star α · β) > 0`** (private helper
+`star_alpha_beta_re_pos`):
 
-## Faithfulness checks
+```lean
+private theorem star_alpha_beta_re_pos
+    {k : ℕ} {M : LinearMultistepMethod k} (hG : M.IsGStable)
+    {w : ℂ} (hw : ‖w‖ < 1) (hk : 0 < k) :
+    0 < (star (Polynomial.aeval w (αPoly M)) *
+          Polynomial.aeval w (βPoly M)).re
+```
 
-For every new `theorem` introduced this cycle, run the checklist in
-CLAUDE.md §"Pre-Commit Faithfulness Checklist":
+Proof plan: extract G + hPSD + hPD; apply the identity; take `.re`;
+use Steps 4 + 5 + 6; the `(star β · α).re = (star α · β).re`
+equality follows from `Complex.add_re`, `Complex.mul_comm`, and
+`Complex.conj_mul`-style identities, OR more directly from
+`(star x) + x = 2 * x.re` applied at `x := star α · β` plus
+recognising `star β · α = star (star α · β)`. This is the only
+arithmetic-heavy step; budget 30–40 LOC.
 
-* For each of the six private sub-lemmas + two quadratic-form
-  identities: tautology check, identity check, hypothesis-strength
-  check, absent-theorem check.
-* For the polymorphism refactor of `gTopLeft`/`gBottomRight`
-  (and possibly `gMatrix`): no semantic change. Ensure
-  `gTopLeft (R := ℝ)` is *definitionally* equal to the old
-  `gTopLeft`. The BDF2 witness in `Section451.lean` must still
-  typecheck without alteration. Run
-  `lake env lean OpenMath/Chapter4/Section451.lean` after the
-  refactor to confirm zero regression.
+**Step 8 — divide through `‖β‖²`** (private helper
+`alpha_div_beta_re_pos_of_star_alpha_beta_re_pos`):
 
-The two main theorems are bridging lemmas, not entities. They are
-mathematically content-bearing (`gTopLeft G`'s quadratic form
-factoring through `Fin k → R`'s truncation is the genuine §454e
-algebraic content) but do not need a `lean_status.json` row update.
+```lean
+private theorem alpha_div_beta_re_pos_of_star_alpha_beta_re_pos
+    {α β : ℂ} (hβ : β ≠ 0) (h : 0 < (star α * β).re) :
+    0 < (α / β).re := by
+  rw [Complex.div_re]
+  have hnsq : 0 < β.re^2 + β.im^2 := by
+    have : β.re^2 + β.im^2 = Complex.normSq β := by
+      rw [Complex.normSq]; ring
+    rw [this]
+    exact Complex.normSq_pos.mpr hβ
+  -- (α / β).re = (α.re · β.re + α.im · β.im) / (β.re² + β.im²)
+  -- (star α · β).re = α.re · β.re + α.im · β.im (since star α has flipped imaginary).
+  have hstar : (star α * β).re = α.re * β.re + α.im * β.im := by
+    simp [Complex.star_def, Complex.mul_re, Complex.conj_re, Complex.conj_im]
+    ring
+  rw [hstar] at h
+  -- normSq β = β.re² + β.im²; rewrite Complex.div_re's output if needed.
+  -- The goal after `rw [Complex.div_re]` is roughly
+  --   0 < (α.re * β.re + α.im * β.im) / Complex.normSq β
+  -- which matches `h / hnsq` via `div_pos`.
+  sorry  -- finalize after verifying Complex.div_re's exact unfolding
+```
 
-## Build & verification commands
+(Verify the exact unfolding of `Complex.div_re` in Mathlib — it may
+already give the desired form modulo ring rearrangement. If
+`Complex.div_re` outputs `(α.re * β.re + α.im * β.im) / Complex.normSq β`
+directly, then `exact div_pos h hnsq` closes it after recasting
+`β.re^2 + β.im^2` to `Complex.normSq β`.)
 
-* `lake env lean OpenMath/Chapter4/Section454.lean` — primary
-  validation. Should exit 0 within 3 min.
-* `lake env lean OpenMath/Chapter4/Section451.lean` — regression
-  guard for the polymorphism refactor.
-* `lake build OpenMath.Chapter4.Section454` (after first
-  `lake env lean` succeeds) — full elaboration + .olean caching
-  before running `#print axioms`.
-* `lean_verify` on each new theorem — confirm axioms are exactly
-  `[propext, Classical.choice, Quot.sound]`.
+**Step 9 — assemble.** The main proof becomes a ~15-line composition:
 
-PATH note (from CLAUDE.md): if `lake` hangs, check that
-`/tmp/lake-bin:/tmp/lean4-toolchain/bin` is first in PATH. The
-GPFS-hosted toolchain causes multi-minute hangs.
+```lean
+theorem LinearMultistepMethod.gStable_isAStable ... := by
+  intro w hw_norm hβw
+  rcases Nat.eq_zero_or_pos k with hk | hk
+  · -- k = 0 vacuous: βPoly M = 0, so hβw gives False
+    exfalso
+    apply hβw
+    subst hk
+    -- βPoly M = ∑ i : Fin 1, C (M.β i) * X^(i.val) — actually Fin (0+1).
+    -- Need to compute this carefully. βPoly's exact form is in Section410.
+    simp [βPoly]
+  exact alpha_div_beta_re_pos_of_star_alpha_beta_re_pos hβw
+    (star_alpha_beta_re_pos hG hw_norm hk)
+```
 
-## Task results expectations
+**Critical caveat for the `k = 0` branch**: read `βPoly` from
+`OpenMath/Chapter4/Section410.lean` first to confirm its exact shape at
+`k = 0`. If `βPoly M = ∑ i : Fin (k+1), C (M.β i) * X^i.val`, then at
+`k = 0` the sum has one term `C (M.β 0) * X^0 = C (M.β 0)`, which is
+NOT trivially zero — `M.β 0` could be non-zero (and indeed for the
+trivial `LinearMultistepMethod 0`, `M.β 0` is freely chosen). In that
+case the `k = 0` branch needs a different argument. Three options:
 
-Write `.prover-state/task_results/cycle_167.md` with:
-* What landed (which sub-lemmas closed, axiom-clean).
-* If Aristotle returned anything, document the proofs that were
-  incorporated.
-* If Priority 3 was attempted, document whether it landed or was
-  reverted.
-* Faithfulness check entries for each new theorem.
-* Suggested next approach for cycle 168 (the final assembly into
-  `algebraic_identity_454A` and `gStable_isAStable`).
+1. **(preferred)** Add `(hk : 0 < k)` to `gStable_isAStable`'s
+   signature. Faithfulness divergence: textbook implicitly assumes
+   `k ≥ 1` (LMMs with `k = 0` are degenerate). Document in the docstring
+   and in `lean_status.json`. Mirrors cycle 109's `0 < s` precondition
+   on `thm:515D`.
+2. Examine whether `IsGStable` at `k = 0` forces `M.β 0 = 0` via the
+   gMatrix structure (possible but requires inspection).
+3. Inhabit a `LinearMultistepMethod 0` and check whether `IsAStable`
+   trivialises.
 
-Update `.prover-state/issues/thm_454A_stage_2_3_stall.md` with a
-"Cycle 167 update" section noting which Stage 2 sub-lemmas landed
-and whether the original "Path A" plan needs revision based on what
-Lean actually did this cycle.
+**Adopt option 1 unless option 2 is provably trivial.** This is the
+cleanest unblock.
 
-Do NOT flip the `plan.md` row for thm:454A. Status remains
-unformalized; cycle 167 builds the stepping stones.
+### Implementation order
 
-## Backup plan (Priority 2 stalls)
+1. **First**: read `OpenMath/Chapter4/Section410.lean` (specifically the
+   definition of `βPoly`) to determine the `k = 0` behaviour. This
+   informs whether option 1 / 2 / 3 above is needed.
+2. Write the theorem skeleton + the seven private helper signatures with
+   `sorry` bodies. Verify the file compiles (`lake env lean
+   OpenMath/Chapter4/Section454.lean`). This validates the helper
+   shapes before any proof work.
+3. Close Step 6 (`one_sub_normSq_re_pos`) — easy, ~5 LOC.
+4. Close Step 4 (`gMatrix_quadForm_re_nonneg`) — one-liner against
+   `complexLift_re_dotProduct_nonneg_of_real_posSemidef`.
+5. Close Step 5 (`G_quadForm_W₁_re_pos` at `k ≥ 1`) — short.
+6. Close Step 8 (`alpha_div_beta_re_pos_of_star_alpha_beta_re_pos`) —
+   pure complex arithmetic, ~15 LOC.
+7. Close Step 7 (`star_alpha_beta_re_pos`) — the hardest of the seven;
+   budget 30–40 LOC. This is where the `algebraic_identity_454A` is
+   consumed; `Complex.add_re`, `Complex.sub_re`, `Complex.mul_re`,
+   `Complex.ofReal_re`, plus a `linarith`-style finisher should suffice.
+8. Close Step 9 (the main theorem). The `k = 0` branch is the only
+   non-mechanical bit; if you adopt option 1, add `hk : 0 < k` and the
+   branch disappears entirely.
 
-If the polymorphism refactor of `gTopLeft`/`gBottomRight` causes
-breakage in `Section451.lean` that takes > 30 min to fix:
+### Scratch notes for the prover
 
-* **Backup B1**: keep `gTopLeft`/`gBottomRight` ℝ-only. Define
-  parallel ℂ-valued versions inline in `Section454.lean`:
-  ```lean
-  private def gTopLeftC {k : ℕ} (G : Matrix (Fin k) (Fin k) ℂ) :
-      Matrix (Fin (k + 1)) (Fin (k + 1)) ℂ :=
-    Matrix.of fun i j =>
-      if h : i.val < k ∧ j.val < k then
-        G ⟨i.val, h.1⟩ ⟨j.val, h.2⟩
-      else 0
-  ```
-  State the quadratic-form lemmas over ℂ directly. Acceptable but
-  introduces redundancy. Cycle 168 can revisit the polymorphism
-  question separately.
-* **Backup B2**: ship only `gTopLeft_quadForm_eq` Step 2a and its
-  five private sub-lemmas this cycle. Defer
-  `gBottomRight_quadForm_eq` to cycle 168. Still positive forward
-  motion; one quadratic-form lemma + sub-lemmas is half the work
-  cycle 168 would need to do.
-* **Backup B3**: if a sub-lemma proof itself stalls (the named
-  decomposition is *supposed* to avoid this, but if `simp` still
-  blows up on the dependent-`if` unfolding), Aristotle-batch the
-  stalled sub-lemma in a fresh project. Use cycle 167 to land
-  whichever sub-lemmas didn't stall; rely on Aristotle return for
-  cycle 168.
+* `Section454Aux.lean` opens `Matrix Complex` at line 35 and uses
+  `algebraMap ℝ ℂ` as the lift map. `algebraic_identity_454A` uses the
+  same `algebraMap ℝ ℂ`. **Convention is consistent.**
+* `Section454Aux`'s namespace is `OpenMath.Chapter4.Section454Aux`. To
+  shorten references, you may add `open OpenMath.Chapter4.Section454Aux`
+  inside the proof block (or near the top of `Section454.lean` after the
+  imports).
+* `vanW₁ w 0 = 1` (per `vanW₁_apply` and `pow_zero`); this is the
+  non-vanishing witness for Step 5 at `k ≥ 1`.
+* If `Complex.div_re` does not unfold to the convenient form, fall back
+  to `Complex.div_eq_mul_inv` + `Complex.inv_re` + manual rearrangement
+  (more LOC but guaranteed available).
+* The `1 - ((‖w‖^2 : ℝ) : ℂ)` term in the identity is **not** equal to
+  `(1 : ℂ) - ‖w‖^2` (the latter is ill-typed); always go through the
+  explicit ℝ → ℂ coercion, mirroring the way it appears in
+  `algebraic_identity_454A`'s statement.
+* Section451's `IsGStable` definition (line 111) destructures as
+  `⟨G, hSymm, hPD, hPSD⟩`. The `hSymm` field is unused in this proof
+  but must still be destructured.
 
-In all backup paths, the cycle is positive-score if **at least one**
-of {`gTopLeft_quadForm_eq`, `gBottomRight_quadForm_eq`} lands
-axiom-clean, OR Aristotle's batch returned a usable contribution.
+### Pitfalls to avoid
+
+* **DO NOT** unfold `M.gMatrix` directly inside `gStable_isAStable`'s
+  body. Cycle 166 stalled Lean elaboration this way; cycles 167 + 168
+  fixed it by going through `algebraic_identity_454A` and the named
+  block-quadratic-form lemmas. The helper `gMatrix_map_eq` (cycle 168,
+  `Section454.lean:320`) is already the only place where `M.gMatrix`
+  unfolds; do not duplicate that work.
+* **DO NOT** try to prove `(star α · β).re = (star β · α).re` via
+  `Complex.mul_comm` alone — the conjugates differ. Use
+  `(star α · β) + (star β · α) = 2 · (star α · β).re` (since
+  `star β · α = star (star α · β)` and `x + star x = 2 · x.re`).
+* **DO NOT** attempt to handle the `k = 0` edge case via complicated
+  case analysis — adopt option 1 (`hk : 0 < k` precondition).
+* **DO NOT** raise `maxHeartbeats`. Decompose further if any sub-proof
+  blows up.
+* **DO NOT** modify `OpenMath/Chapter4/Section454Aux.lean`. It is
+  axiom-clean and Aristotle-finished; just consume its two public
+  theorems.
+
+---
+
+## Priority 2 — `bdf2LMM_isAStable` (BDF2 corollary)
+
+Place this immediately after `gStable_isAStable` in
+`Section454.lean` (or in `Section451.lean` after `bdf2LMM_isGStable`,
+whichever produces the cleanest namespacing — `Section454.lean` is
+preferred since the file already opens both `Section410` and `Section451`).
+
+```lean
+/-- **BDF2 is A-stable.** A direct consequence of cycle 165's
+`bdf2LMM_isGStable` and Theorem 454A. -/
+theorem bdf2LMM_isAStable :
+    OpenMath.Chapter4.Section451.bdf2LMM.IsAStable :=
+  OpenMath.Chapter4.Section451.bdf2LMM.gStable_isAStable
+    (by norm_num)  -- supplies the `hk : 0 < k` precondition (k = 2)
+    OpenMath.Chapter4.Section451.bdf2LMM_isGStable
+```
+
+(One-liner if option 1 was adopted in Priority 1, with `hk : 0 < 2`
+discharged by `norm_num` or `decide`. Verify the namespace path —
+`bdf2LMM` lives in `Section451`'s namespace.)
+
+---
+
+## Faithfulness check (mandatory before commit)
+
+For `gStable_isAStable`:
+
+* **Entity ID**: `thm:454A`. Quote from
+  `extraction/formalization_data/entities/thm_454A.json`:
+  `statement_text` reads "A G-stable LMM is A-stable" (Butcher §454,
+  Theorem 454A).
+* **Lean signature**: `(M : LinearMultistepMethod k) (hk : 0 < k)
+  (hG : M.IsGStable) : M.IsAStable`. Captures the textbook
+  implication; the `hk` precondition is a faithfulness divergence
+  documented in the docstring (textbook implicitly assumes `k ≥ 1`).
+* **`IsAStable` is the boundary-locus form** (already documented in
+  `Section454.lean`'s file-level docstring; do not invent a new
+  divergence).
+* **No new `axiom` / `constant`.** No `maxHeartbeats` bumps.
+* **Tautology check**: the hypothesis `hG` is unfolded and consumed
+  (G-stability provides `G`, `hPSD`, `hPD` — all three are used).
+  Conclusion `0 < (α/β).re` is genuine, not a hypothesis.
+
+For `bdf2LMM_isAStable`: corollary of two prior theorems, no new
+mathematical content; the `IsAStable` predicate is non-vacuous in this
+direction (positive witness; the negative direction is the cycle 166
+`explicitEulerLMM_not_isAStable`).
+
+---
+
+## What NOT to try (failed approaches from the issue history)
+
+* **Inline matrix-vector unfolding under nested if-then-else** — cycle
+  166 stalled Lean elaboration ≥10 min this way. The
+  `gTopLeft_quadForm_eq` / `gBottomRight_quadForm_eq` (cycle 167) +
+  `algebraic_identity_454A` (cycle 168) decomposition is the working
+  pattern. **Stay above this layer.**
+* **Aristotle batch on the main theorem** — Aristotle had two failed
+  long-running general-`n` attempts on `thm:550A` (cycles 141, 151)
+  and is unlikely to handle this composition. Manual is faster.
+  Aristotle is fine for the helpers that are pure complex arithmetic
+  (Step 8) if manual stalls, but the main composition is straightforward.
+* **`simp only [Matrix.dotProduct]`** — `dotProduct` is at root namespace
+  in current Mathlib, not `Matrix.dotProduct` (recorded mistake from
+  cycle 167). Use `show ∑ i, _ * _ = _` to expose sums, OR just rely on
+  the existing named `_quadForm_eq` / `_dotProduct_lift` lemmas.
+* **Deferring `k = 0`** without adopting option 1 — leaving a `sorry`
+  in the `k = 0` branch regresses sorry count and supervisor scores
+  negative. Either prove it via `βPoly = 0 ⇒ β(w) = 0` (only if
+  `βPoly` at `k = 0` is genuinely zero, verify first), or add the
+  `hk : 0 < k` precondition.
+
+---
+
+## Verification before commit (mandatory)
+
+1. `lake env lean OpenMath/Chapter4/Section454.lean` exits 0 (no
+   errors, no `sorry` warnings).
+2. `grep -c sorry OpenMath/Chapter4/Section454.lean` → 0.
+3. `grep -c sorry OpenMath/Chapter4/Section454Aux.lean` → 0
+   (unchanged — should still be 0).
+4. `lean_verify
+   OpenMath.Chapter4.Section404.LinearMultistepMethod.gStable_isAStable`
+   returns `[propext, Classical.choice, Quot.sound]` only.
+5. `lean_verify
+   OpenMath.Chapter4.Section454.bdf2LMM_isAStable` (or whatever
+   namespace it lands in) likewise axiom-clean — only if Priority 2 lands.
+6. Tautology scanner: `grep -nE
+   ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$'
+   OpenMath/Chapter4/Section454.lean` returns no hits. (If you must
+   introduce an `h_*` named hypothesis as a `rw … at` target, rename to
+   `h*` per cycle 015's standing workaround.)
+7. `lean_status.json` row for `thm:454A` updated to `formalized`,
+   cycle 169 (only if Priority 1 lands).
+8. `plan.md` Chapter 4 row for `thm:454A` flipped from `[ ]` to `[x]`
+   (only if Priority 1 lands).
+9. Issue file `.prover-state/issues/thm_454A_stage_2_3_stall.md` updated
+   with a "Cycle 169 update — Stage 3 closed" section noting the
+   `hk : 0 < k` faithfulness divergence (if option 1 is adopted).
+
+---
+
+## Cycle deliverable bar
+
+* **Minimum (score ≥ 0)**: `gStable_isAStable` closed axiom-clean
+  (Priority 1 only). Sorry count remains 0. `bdf2LMM_isAStable`
+  deferred to cycle 170 with a one-line note in `task_results/cycle_169.md`.
+* **Target (score = 2)**: both Priority 1 and Priority 2 land axiom-clean
+  in the same commit. `thm:454A` row flips from `[ ]` to `[x]` in
+  `plan.md`. Progress: 70 → 71/175 entities.
+* **Stretch (score > 2)**: also begin a fresh entity; recommended pivot
+  per cycle 162's backup pivot list — `def:422B` (underlying one-step
+  method) or `def:442A` (principal sheet). Both are pure structural
+  definitions; non-vacuity should fit in <100 LOC. Skip the stretch if
+  Priority 1 takes longer than expected; do not jeopardise the
+  axiom-cleanliness of `gStable_isAStable` to chase the stretch.
+
+---
+
+## Backup plans
+
+* **B1 — `star_alpha_beta_re_pos` blows up.** If the Step 7 proof
+  exceeds ~80 LOC or hits a `simp` divergence, decompose further:
+  introduce a private helper for `(star α · β).re + (star β · α).re =
+  2 · (star α · β).re` and a separate helper for the `re`-extraction
+  from `algebraic_identity_454A`. Each ≤ 20 LOC. Cycle 168's pattern
+  scales here.
+* **B2 — `Complex.div_re` shape mismatch in Step 8.** Fall back to
+  `Complex.div_eq_mul_inv` + `Complex.normSq_pos` + manual arithmetic.
+  If still stuck, factor a private helper `complex_re_div_pos_iff`
+  with the exact sign condition.
+* **B3 — `k = 0` branch closure stalls.** Adopt option 1 (`hk : 0 < k`
+  precondition). Document the divergence and move on.
+* **B4 — Step 7 needs the imaginary-part identity.** Note that
+  `algebraic_identity_454A`'s LHS has both `.re` and `.im`. The PSD
+  helper from Aux gives `(LHS).re ≥ 0 ∧ (LHS).im = 0`. The RHS
+  `.im = 0` follows from the `.im = 0` clauses of (2) and (3) since
+  both terms are real (the `(star α * β + star β * α)` form is its
+  own conjugate, and the inner-block term is real-times-PSD-quadratic).
+  But for the proof you only need `.re`, so skip the `.im` analysis
+  unless `Complex.add_re` / `Complex.sub_re` rewriting requires it.
+
+If multiple backups fire and the cycle hits the 90-minute soft-budget
+mark with no clear path, fall back to **B-Final**: ship the seven
+helper skeletons with their `sorry` bodies, plus the closed ones (Steps
+4, 6, 8 are easy and should land first). This regresses sorry count 0
+→ N for some N ≤ 4, but produces a structurally complete scaffold that
+cycle 170 can finish in <30 LOC. **Only invoke B-Final if all of
+B1/B2/B3/B4 fail simultaneously.** The cycle 168 worker did not need
+any backups; this should be the rare path.

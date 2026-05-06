@@ -159,3 +159,59 @@ fire — `dotProduct` is at root namespace in current Mathlib,
 not `Matrix.dotProduct`. Use `show ∑ i, _ * _ = _` to expose
 the sum form directly, then `Fin.sum_univ_castSucc` /
 `Fin.sum_univ_succ`.
+
+---
+
+## Cycle 169 update — Stage 3 CLOSED
+
+`gStable_isAStable` (the main `thm:454A`) and `bdf2LMM_isAStable`
+(BDF2 corollary) both landed axiom-clean in cycle 169.
+
+**Decomposition used.** Seven private named pieces, all in
+`Section454.lean`'s `OpenMath.Chapter4.Section404` namespace
+(after the existing `Section454` block):
+
+* `gMatrix_quadForm_re_nonneg` — Step 4: LHS.re ≥ 0 via PSD lift.
+* `G_quadForm_W₁_re_pos` — Step 5: W₁* G W₁ has Re > 0 via PD
+  lift; non-vanishing of `vanW₁` follows from `vanW₁ w 0 = 1`.
+* `one_sub_normSq_re_pos` — Step 6: `0 < 1 - ‖w‖²`.
+* `alpha_div_beta_re_pos_of_star_alpha_beta_re_pos` — Step 8:
+  `Re(α/β) > 0` from `Re(star α · β) > 0`, via `Complex.div_re`
+  and `Complex.normSq_pos`.
+* `star_beta_alpha_re_eq_star_alpha_beta_re` — glue: cross-term
+  symmetry `(star β · α).re = (star α · β).re`.
+* `mul_re_of_real_complex` — glue: `((1 - r) · z).re = (1 - r).re · z.re`
+  for real-coerced `r`, since the imaginary part of the coercion
+  vanishes.
+* `star_alpha_beta_re_pos` — Step 7: the analytic core. Composes
+  `algebraic_identity_454A` + the four bound helpers via
+  `congrArg Complex.re` + `nlinarith`.
+
+**Faithfulness divergence — `0 < k` precondition.** Adopted
+the strategy's option 1: added `(hk : 0 < k)` to
+`gStable_isAStable`. Recorded in the docstring and in
+`lean_status.json`. BDF2 has `k = 2` so the corollary discharges
+this with `by norm_num`.
+
+**Pitfalls hit and fixed.**
+
+1. `Complex.star_def` rewrite did not fire after `Complex.mul_re`
+   because Mathlib elaborates `star : ℂ → ℂ` to `starRingEnd ℂ`
+   already; the working pattern is
+   `show (starRingEnd ℂ) z * w = ...` followed by
+   `Complex.conj_re` / `Complex.conj_im`.
+2. `div_add_div_same` is deprecated (direction reversed); use
+   `← add_div` instead.
+3. The naive `rw [star_beta_alpha_re_eq_star_alpha_beta_re]`
+   matches BOTH cross-term occurrences via metavariable
+   instantiation and rewrites them in opposite directions. Fix:
+   instantiate the lemma at the specific arguments first
+   (`have hsymm := star_beta_alpha_re_eq_star_alpha_beta_re α β`)
+   then `rw [hsymm]`.
+
+**Verification.**
+
+* `lake env lean OpenMath/Chapter4/Section454.lean` — clean.
+* `grep -c sorry OpenMath/Chapter4/Section454{,Aux}.lean` — 0/0.
+* `#print axioms` on both new theorems →
+  `[propext, Classical.choice, Quot.sound]`.

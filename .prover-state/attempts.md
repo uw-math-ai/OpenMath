@@ -51,3 +51,6 @@ Cycle 141: Aristotle Job A (thm:550A general-n) canceled after 24h at 6% — con
 
 ### Cycle 166
 Cycle 166 Section454.lean: Inline proof of `algebraic_identity_454A` via `Matrix.dotProduct`/`Matrix.mulVec` unfolded under `Fin.sum_univ_castSucc`/`Fin.sum_univ_succ` with `dif_neg` on boundary cases — Lean elaboration hung 10+ min without output across two retries. Root cause: nested dependent if-then-else over `Fin (k+1) × Fin (k+1)` inside matrix-entry sums blows up elaboration. Fix: factor boundary quadratic-form lemmas (`gTopLeft_quadForm_eq`, `gBottomRight_quadForm_eq`) as standalone named theorems before attempting the composite identity.
+
+### Cycle 167
+Cycle 167 Section454.lean: `simp only [Matrix.dotProduct]` does not fire — `dotProduct` lives at root namespace, not `Matrix.dotProduct`; use `show ∑ i, ...` to expose the sum form directly before applying `Fin.sum_univ_castSucc`/`Fin.sum_univ_succ`. Stale .olean after polymorphism refactor of Section451 caused downstream 'Application type mismatch'; fix by `rm Section451.olean* && lake build`. Aristotle batch cancelled at 18% after 80+ min (cycle-166 carry-over); single-poll-then-cancel discipline confirmed correct.

@@ -170,7 +170,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `def:402A` **convergent (LMM)** (§402) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `def:422B` **underlying one-step method** (§422)
 - [ ] `def:442A` **principal sheet** (§441)
-- [ ] `thm:454A` **Concluding remarks on G-stability** (§454)
+- [x] `thm:454A` **Concluding remarks on G-stability** (§454) — `OpenMath/Chapter4/Section454.lean` (cycle 169; BDF2 A-stability corollary in same file)
 - [x] `def:404B` **consistent (LMM)** (§404)
 - [x] `def:403A` **stability in the sense of Dahlquist** (§403) — OpenMath/Chapter4/Section404.lean
 - [x] `def:406A` **local truncation error** (§406) — `OpenMath/Chapter4/Section404.lean`
