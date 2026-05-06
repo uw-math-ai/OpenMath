@@ -317,6 +317,84 @@ Path A Step 3 landed in `OpenMath/Chapter5/Section530.lean` (cycle
   80-LOC target but the closed-form algebra in `hSM` plus the
   IsBigO bookkeeping in T2 were unavoidable.
 
+## Cycle 154 update — Path A Step 4 complete (`p = 1`)
+
+The "stretch refinement" listed above is now landed. `p = 1` witness
+`explicitEulerGLM_hasOrderOne_trivialStarting` lives in
+`OpenMath/Chapter5/Section530.lean` immediately after the cycle-153
+`p = 0` witness, axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+
+### Statement signature
+
+```lean
+theorem explicitEulerGLM_hasOrderOne_trivialStarting
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    HasOrderRelativeTo_explicit explicitEulerGLM trivialStartingMethod
+      (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+      explicitEulerGLM_isExplicit
+      1 f yex x₀ y₀
+```
+
+Hypothesis upgrades from cycle 153:
+1. `HasDerivAt yex (f y₀) x₀` (point-only) → `∀ x, HasDerivAt yex (f (yex x)) x` (genuine ODE).
+2. `ContDiff ℝ 2 yex` newly added (needed for second-order Taylor).
+
+Both upgrades are well within Butcher's implicit "exact solution
+sufficiently regular" assumption.
+
+### Proof recipe (concrete)
+
+1. **Cycle-153 boilerplate** (intro, fin_cases, change, hSM/hES
+   closed forms, hcongr, hpow). Identical to cycle 153 modulo
+   `h ^ (1+1)` → `h^2` collapse via `ring`.
+2. **T1 = O(h²)** via Taylor:
+   * `htaylor := taylor_isLittleO (n := 2) convex_univ (Set.mem_univ _) hyex_C2.contDiffOn`
+     after `simpa [nhdsWithin_univ]`.
+   * `hT_eval` evaluates `taylorWithinEval yex 2 Set.univ x₀ (x₀+h)`
+     via `taylor_within_apply` + `simp_only` with
+     `Finset.sum_range_succ`, `iteratedDerivWithin_univ`,
+     `iteratedDeriv_zero`, `Nat.factorial`, `smul_eq_mul`,
+     `pow_zero`, `pow_one`, `mul_one`, `one_mul`, `inv_one`,
+     followed by `ring`.
+   * `hderiv_x0 : iteratedDeriv 1 yex x₀ = f y₀` via
+     `iteratedDeriv_one` + `(hyex_ode x₀).deriv` + `hyex_x₀`.
+   * Compose `htaylor` with `h ↦ x₀ + h` via `IsLittleO.comp_tendsto`,
+     `congr'` away the `((x₀+h) - x₀)^2 = h^2` conversion.
+   * Decompose `T1 = -(yex(x₀+h) - taylor₂(x₀+h)) - (h²/2)·iteratedDeriv 2 yex x₀`,
+     bound the constant-times-h² term with
+     `Asymptotics.isBigO_const_mul_self`, sum + negate.
+3. **T2 = O(h²)** via Lipschitz + T1:
+   * `obtain ⟨C, hCpos, hC⟩ := hT1.exists_pos`, then
+     `Asymptotics.isBigOWith_iff` to expose the absolute bound.
+   * Eventual `|h| ≤ 1` via `Set.Ioo (-1) 1` open-set argument.
+   * Calc chain: `|h · (f a − f b)| ≤ |h| · L · |a − b| = |h| · L · |T1|
+     ≤ |h| · L · C · h² ≤ L · C · h²` (last step uses `|h| ≤ 1`).
+4. **Combine**: `hT1.add hT2`.
+
+### Verification
+
+* `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter5/Section530.lean` → 0.
+* `lean_verify
+  OpenMath.Chapter5.Section530.explicitEulerGLM_hasOrderOne_trivialStarting`
+  → `[propext, Classical.choice, Quot.sound]` only.
+* Cycle-153 theorem still axiom-clean (rename was α-equivalent).
+* File grew 776 → 989 LOC (+213 LOC).
+* New imports: `Mathlib.Analysis.Calculus.Taylor`,
+  `Mathlib.Analysis.Calculus.IteratedDeriv.Defs`.
+
+### Cycle 155+ stretch
+
+* **Path B (implicit branch)** still deferred — same blocker as before.
+* Step 5 candidates: broaden the `(M × S, p)` coverage matrix with a
+  `padded2DEulerGLM × mixedStartingMethod` witness (cycles 133/141)
+  to non-trivial `r = 2` indexing; or pivot to `def:530C` (variants
+  of order) if planner judges it tractable as a Path A consequence.
+
 ## Cross-reference
 
 `def:530B` blocks (per dependency graph):

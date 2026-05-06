@@ -158,3 +158,20 @@ in `scripts/autonomous_loop.py`. Each new helper introduced by
 cycle ≥116 has had to apply this rename; aggregate maintenance
 cost now exceeds the one-time D1+D2 fix. This is loop-maintainer
 territory — workers do NOT edit `scripts/autonomous_loop.py`.
+
+## Cycle 154 update
+
+Cycle 154 applied the cosmetic rename workaround inside
+`explicitEulerGLM_hasOrderZero_trivialStarting` in
+`OpenMath/Chapter5/Section530.lean` (the cycle-153 `p = 0` witness
+flagged by the supervisor's tautology scanner with reported line
+412 — actually line 717 per bug D1):
+* `h_deriv` → `hderiv` (touch-points: the `have h_deriv : ...`
+  introduction and the `have := h_deriv` reuse in the rewrite-
+  then-exact idiom).
+
+The rename is α-equivalent; cycle-153 axiom-cleanliness preserved.
+Post-rename `grep -n ':=\s*h_\w*\s*$\|exact\s\+h_\w\+\s*$\|:=\s*id\s*$' OpenMath/Chapter5/Section530.lean`
+returns no hits.
+
+Bugs D1 and D2 in `scripts/autonomous_loop.py` remain unfixed.

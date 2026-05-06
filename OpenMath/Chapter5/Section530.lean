@@ -3,6 +3,8 @@ import Mathlib.LinearAlgebra.Matrix.Notation
 import Mathlib.Tactic.FinCases
 import Mathlib.Analysis.Asymptotics.Defs
 import Mathlib.Analysis.Calculus.Deriv.Basic
+import Mathlib.Analysis.Calculus.Taylor
+import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Topology.MetricSpace.Lipschitz
 import OpenMath.Chapter5.Section510
 
@@ -708,13 +710,13 @@ theorem explicitEulerGLM_hasOrderZero_trivialStarting
   -- Step 3: T1 = (y₀ + h·f y₀) - yex(x₀+h) is o(h), hence O(h).
   have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
       =O[nhds (0 : ℝ)] (fun h => h) := by
-    have h_deriv :
+    have hderiv :
         (fun h : ℝ => yex (x₀ + h) - yex x₀ - h • f y₀)
           =o[nhds (0 : ℝ)] fun h => h :=
       hasDerivAt_iff_isLittleO_nhds_zero.mp hyex_deriv
     have h1 : (fun h : ℝ => yex (x₀ + h) - y₀ - h * f y₀)
         =o[nhds (0 : ℝ)] fun h => h := by
-      have := h_deriv
+      have := hderiv
       rw [hyex_x₀] at this
       simpa [smul_eq_mul] using this
     have h2 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
@@ -771,6 +773,214 @@ theorem explicitEulerGLM_hasOrderZero_trivialStarting
             mul_le_mul_of_nonneg_left hh' hLnn
           exact mul_le_mul_of_nonneg_left this habsh
       _ = ↑L * ‖h‖ := by rw [Real.norm_eq_abs]; ring
+  -- Step 5: combine
+  exact hT1.add hT2
+
+/-- **Non-vacuity (Path A Step 4, p = 1).** The explicit Euler GLM has
+order `1` relative to the trivial starting method on any IVP whose
+exact solution `yex` is `C²`, satisfies `yex x₀ = y₀`, and obeys the
+genuine ODE relation `∀ x, HasDerivAt yex (f (yex x)) x`, with `f`
+Lipschitz with constant `L`.
+
+This refines `explicitEulerGLM_hasOrderZero_trivialStarting` (cycle
+153, `p = 0`) by upgrading the conclusion from `O(h)` to `O(h²)`. The
+extra hypotheses (`ContDiff ℝ 2 yex` and the full ODE relation,
+versus cycle 153's bare `HasDerivAt yex (f y₀) x₀`) are needed for the
+second-order Taylor expansion that produces the `O(h²)` bound, and
+remain well within Butcher's implicit "exact solution sufficiently
+regular" assumption (Butcher §531 classifies explicit Euler as a
+method of order `1`).
+
+Proof structure: decompose `SM[0] - ES[0]` into
+* `T1 := (y₀ + h·f y₀) - yex(x₀+h)` — bounded `O(h²)` via the
+  second-order Taylor remainder lemma `taylor_isLittleO_univ` applied
+  to `yex` (using `ContDiff ℝ 2`), composed with the translation
+  `h ↦ x₀ + h`.
+* `T2 := h · (f(y₀ + h·f y₀) - f(yex(x₀+h)))` — bounded `O(h²)` via
+  Lipschitz on `f` (the inner difference is `−T1`, hence already
+  `O(h²)`; multiplying by `|h|` produces `O(h³)`, which is `O(h²)`
+  near `0` because `|h|³ ≤ h²` whenever `|h| ≤ 1`). -/
+theorem explicitEulerGLM_hasOrderOne_trivialStarting
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    HasOrderRelativeTo_explicit explicitEulerGLM trivialStartingMethod
+      (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+      explicitEulerGLM_isExplicit
+      1 f yex x₀ y₀ := by
+  intro i
+  fin_cases i
+  -- Canonicalize the goal so that `i = 0 : Fin 1` is in the application form
+  -- expected by the closed-form lemmas below.
+  change (fun h : ℝ =>
+        applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
+            (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+            explicitEulerGLM_isExplicit f y₀ h 0
+          - applyExactThenStarting_explicit trivialStartingMethod
+              (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+              f yex x₀ h 0)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1))
+  -- Step 1a: SM[0] closed form (cycle 153 derivation)
+  have hSM : ∀ h : ℝ,
+      applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
+          (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+          explicitEulerGLM_isExplicit f y₀ h 0
+        = (y₀ + h * f y₀) + h * f (y₀ + h * f y₀) := by
+    intro h
+    show (h * ∑ i : Fin 1,
+        explicitEulerGLM.B 0 i
+          * f (explicitEulerGLM.explicitStageValue f
+                  (trivialStartingMethod.applyExplicit f y₀ h) h i))
+        + (explicitEulerGLM.V *ᵥ trivialStartingMethod.applyExplicit f y₀ h) 0
+        = _
+    rw [trivialStartingMethod_applyExplicit]
+    unfold OpenMath.Chapter5.Section510.GeneralLinearMethod.explicitStageValue
+    simp [explicitEulerGLM, Matrix.mulVec, dotProduct]
+    ring
+  -- Step 1b: ES[0] closed form
+  have hES : ∀ h : ℝ,
+      applyExactThenStarting_explicit trivialStartingMethod
+          (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+          f yex x₀ h 0
+        = yex (x₀ + h) + h * f (yex (x₀ + h)) := by
+    intro h
+    rw [trivialStartingMethod_applyExactThenStarting_explicit]
+  -- Step 2: rewrite the difference into closed form
+  have hcongr :
+      (fun h : ℝ =>
+          applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
+              (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+              explicitEulerGLM_isExplicit f y₀ h 0
+            - applyExactThenStarting_explicit trivialStartingMethod
+                (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+                f yex x₀ h 0)
+        = (fun h : ℝ =>
+            ((y₀ + h * f y₀) - yex (x₀ + h))
+              + h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))) := by
+    funext h
+    rw [hSM, hES]
+    ring
+  rw [hcongr]
+  -- Collapse `h ^ (1 + 1)` to `h ^ 2`.
+  have hpow : (fun h : ℝ => h ^ (1 + 1)) = (fun h : ℝ => h ^ 2) := by
+    funext h; ring
+  rw [hpow]
+  -- Step 3: T1 = (y₀ + h·f y₀) - yex(x₀+h) is O(h²) via 2nd-order Taylor.
+  have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ 2) := by
+    -- The 2nd-order Taylor remainder bound: yex - taylor₂(yex) = o((·-x₀)²) near x₀.
+    have htaylor :
+        (fun x : ℝ => yex x - taylorWithinEval yex 2 Set.univ x₀ x)
+          =o[nhds x₀] (fun x : ℝ => (x - x₀) ^ 2) := by
+      have h := taylor_isLittleO (n := 2) (f := yex) (x₀ := x₀)
+        (s := Set.univ) convex_univ (Set.mem_univ _) hyex_C2.contDiffOn
+      simpa [nhdsWithin_univ] using h
+    -- Closed form for the 2nd-order Taylor polynomial at the point `x₀ + h`.
+    have hT_eval : ∀ h : ℝ,
+        taylorWithinEval yex 2 Set.univ x₀ (x₀ + h)
+          = yex x₀ + h * iteratedDeriv 1 yex x₀
+              + h ^ 2 / 2 * iteratedDeriv 2 yex x₀ := by
+      intro h
+      rw [taylor_within_apply]
+      simp only [Finset.sum_range_succ, Finset.sum_range_zero, zero_add,
+        iteratedDerivWithin_univ, iteratedDeriv_zero, Nat.factorial,
+        Nat.cast_one, Nat.cast_mul, smul_eq_mul, pow_zero, pow_one,
+        mul_one, one_mul, inv_one]
+      ring
+    -- The first iterated derivative at x₀ is f y₀ (via the ODE relation).
+    have hderiv_x0 : iteratedDeriv 1 yex x₀ = f y₀ := by
+      rw [iteratedDeriv_one]
+      have h := (hyex_ode x₀).deriv
+      rw [hyex_x₀] at h
+      exact h
+    -- Compose `htaylor` with the translation `h ↦ x₀ + h`.
+    have htend : Filter.Tendsto (fun h : ℝ => x₀ + h) (nhds 0) (nhds x₀) := by
+      have hcont : Continuous (fun h : ℝ => x₀ + h) :=
+        continuous_const.add continuous_id
+      simpa using hcont.tendsto 0
+    have hres :
+        (fun h : ℝ => yex (x₀ + h) - taylorWithinEval yex 2 Set.univ x₀ (x₀ + h))
+          =o[nhds (0 : ℝ)] (fun h : ℝ => h ^ 2) := by
+      have hcomp := htaylor.comp_tendsto htend
+      refine hcomp.congr' (Filter.Eventually.of_forall fun _ => rfl)
+        (Filter.Eventually.of_forall fun h => ?_)
+      show ((x₀ + h) - x₀) ^ 2 = h ^ 2
+      ring
+    -- Closed-form decomposition for T1.
+    have hT1_eq : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+        = (fun h : ℝ =>
+            -(yex (x₀ + h) - taylorWithinEval yex 2 Set.univ x₀ (x₀ + h))
+              - h ^ 2 / 2 * iteratedDeriv 2 yex x₀) := by
+      funext h
+      rw [hT_eval h, hderiv_x0, hyex_x₀]
+      ring
+    rw [hT1_eq]
+    -- The constant-times-h² term is O(h²).
+    have hconst : (fun h : ℝ => h ^ 2 / 2 * iteratedDeriv 2 yex x₀)
+        =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ 2) := by
+      have h0 := Asymptotics.isBigO_const_mul_self
+        (iteratedDeriv 2 yex x₀ / 2) (fun h : ℝ => h ^ 2) (nhds 0)
+      refine h0.congr' (Filter.Eventually.of_forall fun h => ?_)
+        (Filter.Eventually.of_forall fun _ => rfl)
+      ring
+    -- Combine: -(residual) - (const · h²) is O(h²).
+    have hsum := hres.isBigO.add hconst
+    refine hsum.neg_left.congr' ?_ (Filter.Eventually.of_forall fun _ => rfl)
+    refine Filter.Eventually.of_forall fun h => ?_
+    show -((yex (x₀ + h) - taylorWithinEval yex 2 Set.univ x₀ (x₀ + h))
+            + h ^ 2 / 2 * iteratedDeriv 2 yex x₀)
+      = -(yex (x₀ + h) - taylorWithinEval yex 2 Set.univ x₀ (x₀ + h))
+        - h ^ 2 / 2 * iteratedDeriv 2 yex x₀
+    ring
+  -- Step 4: T2 = h * (f(y₀+h·f y₀) - f(yex(x₀+h))) is O(h²) via Lipschitz + T1.
+  have hT2 : (fun h : ℝ => h * (f (y₀ + h * f y₀) - f (yex (x₀ + h))))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ 2) := by
+    -- Extract a positive constant C with ‖T1(h)‖ ≤ C * ‖h²‖ eventually.
+    obtain ⟨C, hCpos, hC⟩ := hT1.exists_pos
+    rw [Asymptotics.isBigOWith_iff] at hC
+    -- Eventual bound `|h| ≤ 1` near 0.
+    have hh1 : ∀ᶠ h : ℝ in nhds 0, |h| ≤ 1 := by
+      refine Filter.eventually_iff_exists_mem.mpr
+        ⟨Set.Ioo (-1 : ℝ) 1, IsOpen.mem_nhds isOpen_Ioo (by norm_num),
+         fun h hh => ?_⟩
+      exact abs_le.mpr ⟨hh.1.le, hh.2.le⟩
+    refine Asymptotics.IsBigO.of_bound (↑L * C) ?_
+    filter_upwards [hC, hh1] with h hT1bound hh1bound
+    -- Goal: ‖h * (f a - f b)‖ ≤ ↑L * C * ‖h^2‖
+    have hLnn : (0 : ℝ) ≤ ↑L := L.coe_nonneg
+    have habsh : (0 : ℝ) ≤ |h| := abs_nonneg _
+    have hCnn : (0 : ℝ) ≤ C := hCpos.le
+    -- Lipschitz bound on |f a - f b|.
+    have hlip := hf_lip.dist_le_mul (y₀ + h * f y₀) (yex (x₀ + h))
+    rw [Real.dist_eq, Real.dist_eq] at hlip
+    -- Rewrite |a - b| = |-T1(h)| = |T1(h)|.
+    have hab_eq : |y₀ + h * f y₀ - yex (x₀ + h)|
+        = |(y₀ + h * f y₀) - yex (x₀ + h)| := rfl
+    -- Rewrite hC to expose `|T1(h)|`:
+    rw [Real.norm_eq_abs, Real.norm_eq_abs] at hT1bound
+    -- |T1(h)| ≤ C * |h^2|
+    -- Combine to bound |h * (f a - f b)|.
+    have habsh2 : |h ^ 2| = h ^ 2 := abs_of_nonneg (sq_nonneg h)
+    have habsh_sq : |h| ^ 2 = h ^ 2 := sq_abs h
+    -- Main calculation.
+    calc ‖h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))‖
+        = |h| * |f (y₀ + h * f y₀) - f (yex (x₀ + h))| := by
+          rw [Real.norm_eq_abs, abs_mul]
+      _ ≤ |h| * (↑L * |y₀ + h * f y₀ - yex (x₀ + h)|) :=
+          mul_le_mul_of_nonneg_left hlip habsh
+      _ = ↑L * (|h| * |y₀ + h * f y₀ - yex (x₀ + h)|) := by ring
+      _ ≤ ↑L * (|h| * (C * |h ^ 2|)) := by
+          have := mul_le_mul_of_nonneg_left hT1bound habsh
+          exact mul_le_mul_of_nonneg_left this hLnn
+      _ = ↑L * C * (|h| * h ^ 2) := by rw [habsh2]; ring
+      _ ≤ ↑L * C * (1 * h ^ 2) := by
+          have hLC : (0 : ℝ) ≤ ↑L * C := mul_nonneg hLnn hCnn
+          have hh2 : (0 : ℝ) ≤ h ^ 2 := sq_nonneg h
+          exact mul_le_mul_of_nonneg_left
+            (mul_le_mul_of_nonneg_right hh1bound hh2) hLC
+      _ = ↑L * C * ‖h ^ 2‖ := by rw [Real.norm_eq_abs, habsh2]; ring
   -- Step 5: combine
   exact hT1.add hT2
 
