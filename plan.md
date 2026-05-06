@@ -180,7 +180,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `thm:410C` **Order condition via generating functions** (§410) — `OpenMath/Chapter4/Section410.lean` (cycle 076)
 - [ ] `thm:422A` **The underlying one-step method (LMM)** (§422)
 - [ ] `thm:441C` **Maximum order bound for stable linear multistep methods** (§441)
-- [ ] `lem:441B` **Maximum order coefficients negativity** (§441)
+- [~] `lem:441B` **Maximum order coefficients negativity** (§441) — `OpenMath/Chapter4/Section441.lean` Phase A: `aPoly` def + explicit-Euler witness; headline `aPoly_even_coeff_neg` is `sorry` (cycle 171)
 - [x] `thm:405A` **Necessity of conditions for convergence** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 072)
 - [x] `thm:406C` **Global error bound for linear multistep methods** (§406)
 - [x] `thm:410A` **Criteria for order** (§410) — `OpenMath/Chapter4/Section410.lean` (cycle 074)
