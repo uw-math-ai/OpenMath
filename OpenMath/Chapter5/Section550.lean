@@ -270,4 +270,108 @@ theorem doublyCompanionMatrix_det_factorization_n_three
         mul_le_mul_of_nonneg_left h_inner (norm_nonneg _)
     _ = (‖a‖ + ‖b‖ + ‖c‖) * ‖y ^ 4‖ := by ring
 
+/-- **Theorem 550A at `n = 4`.** Expanding `det(I − z·X)` along the first row
+(via `Matrix.det_succ_row_zero` and three 3×3 minors via `Matrix.det_fin_three`)
+yields a polynomial of degree exactly `4` in `z`:
+* `det(I - z X) = 1 + (α 0 + β 0) z + (α 0·β 0 + α 1 + β 1) z²
+                    + (α 0·β 1 + α 1·β 0 + α 2 + β 2) z³
+                    + (α 0·β 2 + α 1·β 1 + α 2·β 0 + α 3 + β 3) z⁴`,
+while
+* `α(z)·β(z) = (above) + (α 0·β 3 + α 1·β 2 + α 2·β 1 + α 3·β 0) z⁵
+                    + (α 1·β 3 + α 2·β 2 + α 3·β 1) z⁶
+                    + (α 2·β 3 + α 3·β 2) z⁷ + (α 3·β 3) z⁸`,
+so the residue is the convolution
+`-(α 0·β 3 + α 1·β 2 + α 2·β 1 + α 3·β 0) z⁵ - … - (α 3·β 3) z⁸ = O(z^{4+1})`.
+This is the fourth concrete-`n` axiom-clean stepping stone for Theorem 550A. -/
+theorem doublyCompanionMatrix_det_factorization_n_four
+    (α β : Fin 4 → ℂ) :
+    Asymptotics.IsBigO (nhds (0 : ℂ))
+      (fun z : ℂ =>
+        (1 - z • doublyCompanionMatrix α β).det
+          - alphaPoly α z * betaPoly β z)
+      (fun z : ℂ => z ^ 5) := by
+  -- Step 1: rewrite the residue pointwise to its factored form `z^5 * inner`.
+  have h_diff : (fun z : ℂ =>
+      (1 - z • doublyCompanionMatrix α β).det
+        - alphaPoly α z * betaPoly β z)
+      = (fun z : ℂ => z ^ 5 *
+          (-(α 0 * β 3) - α 1 * β 2 - α 2 * β 1 - α 3 * β 0
+            + z * (-(α 1 * β 3) - α 2 * β 2 - α 3 * β 1)
+            + z ^ 2 * (-(α 2 * β 3) - α 3 * β 2)
+            + z ^ 3 * (-(α 3 * β 3)))) := by
+    funext z
+    -- Reduce the doubly-companion matrix at n = 4 to an explicit !![…] form.
+    have hX : doublyCompanionMatrix α β =
+        !![-α 0, -α 1, -α 2, -α 3 - β 3;
+           1,     0,    0,    -β 2;
+           0,     1,    0,    -β 1;
+           0,     0,    1,    -β 0] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;> simp [doublyCompanionMatrix]
+    rw [hX]
+    -- Reduce `1 - z • X` to an explicit !![…] form.
+    have hmat :
+        (1 - z • !![-α 0, -α 1, -α 2, -α 3 - β 3;
+                    1,     0,    0,    -β 2;
+                    0,     1,    0,    -β 1;
+                    0,     0,    1,    -β 0] : Matrix (Fin 4) (Fin 4) ℂ)
+          = !![1 + z * α 0,   z * α 1,    z * α 2,    z * (α 3 + β 3);
+               -z,            1,          0,          z * β 2;
+               0,             -z,         1,          z * β 1;
+               0,             0,          -z,         1 + z * β 0] := by
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        first | (simp; ring) | simp
+    rw [hmat]
+    -- Expand the 4x4 determinant via Laplace along row 0, then use det_fin_three
+    -- on each 3x3 minor.
+    rw [Matrix.det_succ_row_zero]
+    simp [Fin.sum_univ_four, Matrix.det_fin_three, alphaPoly, betaPoly,
+      Matrix.cons_val_zero, Matrix.cons_val_one,
+      Matrix.submatrix_apply, Fin.succ_zero_eq_one,
+      Matrix.cons_val_fin_one, Fin.succAbove]
+    ring
+  rw [h_diff]
+  -- Step 2: prove `z^5 * inner =O[nhds 0] z^5`.
+  refine Asymptotics.IsBigO.of_bound
+      (‖-(α 0 * β 3) - α 1 * β 2 - α 2 * β 1 - α 3 * β 0‖
+        + ‖-(α 1 * β 3) - α 2 * β 2 - α 3 * β 1‖
+        + ‖-(α 2 * β 3) - α 3 * β 2‖
+        + ‖-(α 3 * β 3)‖) ?_
+  rw [Metric.eventually_nhds_iff]
+  refine ⟨1, by norm_num, fun y hy => ?_⟩
+  rw [Complex.dist_eq, sub_zero] at hy
+  set a := -(α 0 * β 3) - α 1 * β 2 - α 2 * β 1 - α 3 * β 0 with ha_def
+  set b := -(α 1 * β 3) - α 2 * β 2 - α 3 * β 1 with hb_def
+  set c := -(α 2 * β 3) - α 3 * β 2 with hc_def
+  set d := -(α 3 * β 3) with hd_def
+  -- Bound the inner factor:
+  --   ‖a + y * b + y^2 * c + y^3 * d‖ ≤ ‖a‖ + ‖b‖ + ‖c‖ + ‖d‖.
+  have h_inner :
+      ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖ ≤ ‖a‖ + ‖b‖ + ‖c‖ + ‖d‖ := by
+    have hyb : ‖y * b‖ ≤ ‖b‖ := by
+      rw [norm_mul]; exact mul_le_of_le_one_left (norm_nonneg _) hy.le
+    have hyc : ‖y ^ 2 * c‖ ≤ ‖c‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 2 ≤ 1 ^ 2 := by gcongr
+        _ = 1 := one_pow _
+    have hyd : ‖y ^ 3 * d‖ ≤ ‖d‖ := by
+      rw [norm_mul, norm_pow]
+      refine mul_le_of_le_one_left (norm_nonneg _) ?_
+      calc ‖y‖ ^ 3 ≤ 1 ^ 3 := by gcongr
+        _ = 1 := one_pow _
+    have h1 : ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖
+                ≤ ‖a + y * b + y ^ 2 * c‖ + ‖y ^ 3 * d‖ := norm_add_le _ _
+    have h2 : ‖a + y * b + y ^ 2 * c‖
+                ≤ ‖a + y * b‖ + ‖y ^ 2 * c‖ := norm_add_le _ _
+    have h3 : ‖a + y * b‖ ≤ ‖a‖ + ‖y * b‖ := norm_add_le _ _
+    linarith
+  -- Multiply through by ‖y^5‖.
+  rw [norm_mul]
+  calc ‖y ^ 5‖ * ‖a + y * b + y ^ 2 * c + y ^ 3 * d‖
+      ≤ ‖y ^ 5‖ * (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖) :=
+        mul_le_mul_of_nonneg_left h_inner (norm_nonneg _)
+    _ = (‖a‖ + ‖b‖ + ‖c‖ + ‖d‖) * ‖y ^ 5‖ := by ring
+
 end OpenMath.Chapter5.Section550
