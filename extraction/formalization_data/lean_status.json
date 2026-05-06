@@ -793,9 +793,11 @@
     "status": "unformalized"
   },
   "thm:431A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section431.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section431.strongly_stable_imp_lead_gt_const",
+    "status": "partial",
+    "cycle": 170,
+    "notes": "Partial: IsStronglyStable predicate + 3 witnesses + schurReduce + schur_identity_coeff (Butcher's wP_{n-1}(w) = a_0 P_n(w) - a_n w^n P_n(w^{-1}) algebraic identity in coefficient form) + necessity direction of (431e) via Vieta. Sufficiency direction blocked on missing Mathlib Rouche; see .prover-state/issues/rouche_theorem_missing.md."
   },
   "thm:441C": {
     "lean_file": null,

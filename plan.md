@@ -166,7 +166,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 
 - [x] `def:404A` **preconsistent** (§404) — `OpenMath/Chapter4/Section404.lean`
 - [x] `def:451A` **G-stable** (§451) — `OpenMath/Chapter4/Section451.lean`
-- [ ] `thm:431A` **Stability regions** (§431)
+- [~] `thm:431A` **Stability regions** (§431) — `OpenMath/Chapter4/Section431.lean` (cycle 170, partial: predicate + Schur algebraic identity + necessity direction of (431e); sufficiency blocked on Mathlib gap, see `.prover-state/issues/rouche_theorem_missing.md`)
 - [x] `def:402A` **convergent (LMM)** (§402) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `def:422B` **underlying one-step method** (§422)
 - [ ] `def:442A` **principal sheet** (§441)
