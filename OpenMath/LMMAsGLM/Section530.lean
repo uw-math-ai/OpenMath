@@ -1096,6 +1096,268 @@ theorem adamsBashforth6_toGLM_hasOrderGe2 :
     all_goals simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
       AB6GE2.qN]
 
+/-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Bashforth 6-step
+
+`adamsBashforth6` (`s = 6`, twelve GLM input slots `Fin 12`, explicit
+with `β_s = 0`, classical order 6) embeds as a GLM of order ≥ 3. The
+shift constant is `C := s² − 2·β_s·s = 36`. Same helper-extraction
+recipe as AB5GE3 (cycle 1142), with `Fin 10 → Fin 12` size bump and the
+heartbeat-driven per-row split from AB6GE2 (cycle 1154). -/
+namespace AB6GE3
+
+private noncomputable def qN : Fin (2 * 6) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 6 => (1 : ℝ)) (fun _ : Fin 6 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 6) k)
+
+private noncomputable def q'N : Fin (2 * 6) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 6 => ((j : ℕ) : ℝ)) (fun _ : Fin 6 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 6) k)
+
+private noncomputable def q''N : Fin (2 * 6) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 6 => ((j : ℕ) : ℝ) ^ 2 - 36)
+    (fun j : Fin 6 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 6) k)
+
+private noncomputable def q'''N : Fin (2 * 6) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 6 => ((j : ℕ) : ℝ) ^ 3 - 3 * 36 * ((j : ℕ) : ℝ))
+    (fun j : Fin 6 => 3 * (((j : ℕ) : ℝ) ^ 2 - 36))
+    (Fin.cast (Nat.two_mul 6) k)
+
+private theorem q'_obligation (k : Fin 12) :
+    (∑ j, adamsBashforth6.toGLM.B k j) +
+        ∑ l, adamsBashforth6.toGLM.V k l * q'N l =
+      qN k + q'N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N]
+  all_goals norm_num
+
+private theorem q''_obligation_five :
+    2 * (∑ j, adamsBashforth6.toGLM.B (⟨5, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨5, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨5, by decide⟩ + 2 * q'N ⟨5, by decide⟩ + q''N ⟨5, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_six :
+    2 * (∑ j, adamsBashforth6.toGLM.B (⟨6, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨6, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨6, by decide⟩ + 2 * q'N ⟨6, by decide⟩ + q''N ⟨6, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]
+
+private theorem q''_obligation_seven :
+    2 * (∑ j, adamsBashforth6.toGLM.B (⟨7, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨7, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨7, by decide⟩ + 2 * q'N ⟨7, by decide⟩ + q''N ⟨7, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_eight :
+    2 * (∑ j, adamsBashforth6.toGLM.B (⟨8, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨8, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨8, by decide⟩ + 2 * q'N ⟨8, by decide⟩ + q''N ⟨8, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_nine :
+    2 * (∑ j, adamsBashforth6.toGLM.B (⟨9, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨9, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨9, by decide⟩ + 2 * q'N ⟨9, by decide⟩ + q''N ⟨9, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_ten :
+    2 * (∑ j, adamsBashforth6.toGLM.B (⟨10, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨10, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨10, by decide⟩ + 2 * q'N ⟨10, by decide⟩ + q''N ⟨10, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_eleven :
+    2 * (∑ j, adamsBashforth6.toGLM.B (⟨11, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨11, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨11, by decide⟩ + 2 * q'N ⟨11, by decide⟩ + q''N ⟨11, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation (k : Fin 12) :
+    2 * (∑ j, adamsBashforth6.toGLM.B k j *
+          ((∑ i, adamsBashforth6.toGLM.A j i) +
+            ∑ l, adamsBashforth6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsBashforth6.toGLM.V k l * q''N l =
+      qN k + 2 * q'N k + q''N k := by
+  fin_cases k
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · exact q''_obligation_five
+  · exact q''_obligation_six
+  · exact q''_obligation_seven
+  · exact q''_obligation_eight
+  · exact q''_obligation_nine
+  · exact q''_obligation_ten
+  · exact q''_obligation_eleven
+
+private theorem q'''_obligation_five :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨5, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨5, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨5, by decide⟩ + 3 * q'N ⟨5, by decide⟩ +
+        3 * q''N ⟨5, by decide⟩ + q'''N ⟨5, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation_seven :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨7, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨7, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨7, by decide⟩ + 3 * q'N ⟨7, by decide⟩ +
+        3 * q''N ⟨7, by decide⟩ + q'''N ⟨7, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation_eight :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨8, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨8, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨8, by decide⟩ + 3 * q'N ⟨8, by decide⟩ +
+        3 * q''N ⟨8, by decide⟩ + q'''N ⟨8, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation_nine :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨9, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨9, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨9, by decide⟩ + 3 * q'N ⟨9, by decide⟩ +
+        3 * q''N ⟨9, by decide⟩ + q'''N ⟨9, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation_ten :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨10, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨10, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨10, by decide⟩ + 3 * q'N ⟨10, by decide⟩ +
+        3 * q''N ⟨10, by decide⟩ + q'''N ⟨10, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation_eleven :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨11, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨11, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨11, by decide⟩ + 3 * q'N ⟨11, by decide⟩ +
+        3 * q''N ⟨11, by decide⟩ + q'''N ⟨11, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation_four :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨4, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨4, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨4, by decide⟩ + 3 * q'N ⟨4, by decide⟩ +
+        3 * q''N ⟨4, by decide⟩ + q'''N ⟨4, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation_six :
+    6 * (∑ j, adamsBashforth6.toGLM.B (⟨6, by decide⟩ : Fin 12) j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V (⟨6, by decide⟩ : Fin 12) l * q'''N l =
+      qN ⟨6, by decide⟩ + 3 * q'N ⟨6, by decide⟩ +
+        3 * q''N ⟨6, by decide⟩ + q'''N ⟨6, by decide⟩ := by
+  simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N, q'''N]; norm_num
+
+private theorem q'''_obligation (k : Fin 12) :
+    6 * (∑ j, adamsBashforth6.toGLM.B k j *
+            ((∑ i, adamsBashforth6.toGLM.A j i *
+                ((∑ i', adamsBashforth6.toGLM.A i i') +
+                  ∑ l, adamsBashforth6.toGLM.U i l * q'N l)) +
+              ∑ l, adamsBashforth6.toGLM.U j l * q''N l)) +
+        ∑ l, adamsBashforth6.toGLM.V k l * q'''N l =
+      qN k + 3 * q'N k + 3 * q''N k + q'''N k := by
+  fin_cases k
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · simp [LMM.toGLM, adamsBashforth6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N, q'''N]; norm_num
+  · exact q'''_obligation_four
+  · exact q'''_obligation_five
+  · exact q'''_obligation_six
+  · exact q'''_obligation_seven
+  · exact q'''_obligation_eight
+  · exact q'''_obligation_nine
+  · exact q'''_obligation_ten
+  · exact q'''_obligation_eleven
+
+end AB6GE3
+
+theorem adamsBashforth6_toGLM_hasOrderGe3 :
+    adamsBashforth6.toGLM.HasOrderGe3 := by
+  refine ⟨AB6GE3.qN, AB6GE3.q'N, AB6GE3.q''N, AB6GE3.q'''N,
+    ?_, ?_, AB6GE3.q'_obligation, AB6GE3.q''_obligation,
+    AB6GE3.q'''_obligation⟩
+  · exact adamsBashforth6.toGLM_V_nordsieckQ_eq adamsBashforth6_consistent
+  · intro i; fin_cases i
+    all_goals simp [LMM.toGLM, adamsBashforth6, Fin.addCases,
+      Fin.sum_univ_succ, AB6GE3.qN]
+
 /-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 2-step
 
 `adamsMoulton2` (`s = 2`, four GLM input slots `Fin 4`, order 3) embeds
