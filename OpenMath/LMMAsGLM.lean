@@ -2390,6 +2390,66 @@ theorem bdf4_toGLM_hasOrderGe1 :
     bdf4.toGLM.HasOrderGe1 :=
   bdf4_toGLM_hasOrderGe2.toHasOrderGe1
 
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — BDF5
+
+`bdf5` (`s = 5`, ten GLM input slots `Fin 10`, implicit with
+`β_s = 60/137 ≠ 0`, classical order 5) embeds as a GLM of order ≥ 2.
+Same helper-extraction recipe as AM5GE2 (cycle 1144) and natural
+Nordsieck Taylor template (no shift, matching BDF3GE2 / BDF4GE2). -/
+namespace BDF5GE2
+
+private noncomputable def qN : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 5 => (1 : ℝ)) (fun _ : Fin 5 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q'N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ)) (fun _ : Fin 5 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q''N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ) ^ 2)
+    (fun j : Fin 5 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private theorem q'_obligation (k : Fin 10) :
+    (∑ j, bdf5.toGLM.B k j) +
+        ∑ l, bdf5.toGLM.V k l * q'N l =
+      qN k + q'N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, bdf5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N]
+  all_goals norm_num
+
+private theorem q''_obligation (k : Fin 10) :
+    2 * (∑ j, bdf5.toGLM.B k j *
+          ((∑ i, bdf5.toGLM.A j i) +
+            ∑ l, bdf5.toGLM.U j l * q'N l)) +
+        ∑ l, bdf5.toGLM.V k l * q''N l =
+      qN k + 2 * q'N k + q''N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, bdf5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]
+  all_goals norm_num
+
+end BDF5GE2
+
+theorem bdf5_toGLM_hasOrderGe2 :
+    bdf5.toGLM.HasOrderGe2 := by
+  refine ⟨BDF5GE2.qN, BDF5GE2.q'N, BDF5GE2.q''N,
+    ?_, ?_, BDF5GE2.q'_obligation, BDF5GE2.q''_obligation⟩
+  · exact bdf5.toGLM_V_nordsieckQ_eq bdf5_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, bdf5, Fin.addCases, Fin.sum_univ_succ,
+      BDF5GE2.qN]
+    norm_num
+
+theorem bdf5_toGLM_hasOrderGe1 :
+    bdf5.toGLM.HasOrderGe1 :=
+  bdf5_toGLM_hasOrderGe2.toHasOrderGe1
+
 /-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 2-step
 
 `adamsMoulton2` (`s = 2`, four GLM input slots `Fin 4`, order 3) embeds
