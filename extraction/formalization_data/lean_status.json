@@ -168,9 +168,9 @@
     "status": "unformalized"
   },
   "def:451A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter4/Section451.lean",
+    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.IsGStable",
+    "status": "formalized"
   },
   "def:510A": {
     "lean_file": "OpenMath/Chapter5/Section510.lean",

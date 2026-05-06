@@ -13,7 +13,7 @@
 - `[ ]` Not started
 - `[!]` Deferred — depends on a later chapter; pick up after that chapter is done
 
-**Progress: 69 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only; `thm:142D` partial — clauses (i)⇔(ii) only)
+**Progress: 70 / 175** entities done (5 chapters; `def:356A` partial — DJ-irreducibility component only; `thm:142D` partial — clauses (i)⇔(ii) only)
 
 ## Order
 Process chapters in order Ch.1 → Ch.5. Within each chapter, follow the listed
@@ -165,7 +165,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 ## Chapter 4 — Linear Multistep Methods  (27 entities)
 
 - [x] `def:404A` **preconsistent** (§404) — `OpenMath/Chapter4/Section404.lean`
-- [ ] `def:451A` **G-stable** (§451)
+- [x] `def:451A` **G-stable** (§451) — `OpenMath/Chapter4/Section451.lean`
 - [ ] `thm:431A` **Stability regions** (§431)
 - [x] `def:402A` **convergent (LMM)** (§402) — `OpenMath/Chapter4/Section404.lean`
 - [ ] `def:422B` **underlying one-step method** (§422)
