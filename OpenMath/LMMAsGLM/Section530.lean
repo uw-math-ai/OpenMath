@@ -1358,6 +1358,145 @@ theorem adamsBashforth6_toGLM_hasOrderGe3 :
     all_goals simp [LMM.toGLM, adamsBashforth6, Fin.addCases,
       Fin.sum_univ_succ, AB6GE3.qN]
 
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Moulton 6-step
+
+`adamsMoulton6` (`s = 6`, twelve GLM input slots `Fin 12`, implicit
+with `β_s = 19087/60480`, classical order 7) embeds as a GLM of order
+≥ 2. Same helper-extraction recipe as AB6GE2 (cycle 1154), with the
+unshifted natural Nordsieck Taylor template (the GE2 obligations do not
+feel the `s² − 2 β_s s` constant — that enters at GE3). -/
+namespace AM6GE2
+
+private noncomputable def qN : Fin (2 * 6) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 6 => (1 : ℝ)) (fun _ : Fin 6 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 6) k)
+
+private noncomputable def q'N : Fin (2 * 6) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 6 => ((j : ℕ) : ℝ)) (fun _ : Fin 6 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 6) k)
+
+private noncomputable def q''N : Fin (2 * 6) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 6 => ((j : ℕ) : ℝ) ^ 2)
+    (fun j : Fin 6 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 6) k)
+
+private theorem q'_obligation (k : Fin 12) :
+    (∑ j, adamsMoulton6.toGLM.B k j) +
+        ∑ l, adamsMoulton6.toGLM.V k l * q'N l =
+      qN k + q'N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N]
+  all_goals norm_num
+
+/-- Heavy `k = 5` case (last past-`y` row) for `q''_obligation` —
+factored as a private theorem so it gets a fresh heartbeat budget. -/
+private theorem q''_obligation_five :
+    2 * (∑ j, adamsMoulton6.toGLM.B (⟨5, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V (⟨5, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨5, by decide⟩ + 2 * q'N ⟨5, by decide⟩ + q''N ⟨5, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_six :
+    2 * (∑ j, adamsMoulton6.toGLM.B (⟨6, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V (⟨6, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨6, by decide⟩ + 2 * q'N ⟨6, by decide⟩ + q''N ⟨6, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]
+
+private theorem q''_obligation_seven :
+    2 * (∑ j, adamsMoulton6.toGLM.B (⟨7, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V (⟨7, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨7, by decide⟩ + 2 * q'N ⟨7, by decide⟩ + q''N ⟨7, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_eight :
+    2 * (∑ j, adamsMoulton6.toGLM.B (⟨8, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V (⟨8, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨8, by decide⟩ + 2 * q'N ⟨8, by decide⟩ + q''N ⟨8, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_nine :
+    2 * (∑ j, adamsMoulton6.toGLM.B (⟨9, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V (⟨9, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨9, by decide⟩ + 2 * q'N ⟨9, by decide⟩ + q''N ⟨9, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_ten :
+    2 * (∑ j, adamsMoulton6.toGLM.B (⟨10, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V (⟨10, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨10, by decide⟩ + 2 * q'N ⟨10, by decide⟩ + q''N ⟨10, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation_eleven :
+    2 * (∑ j, adamsMoulton6.toGLM.B (⟨11, by decide⟩ : Fin 12) j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V (⟨11, by decide⟩ : Fin 12) l * q''N l =
+      qN ⟨11, by decide⟩ + 2 * q'N ⟨11, by decide⟩ + q''N ⟨11, by decide⟩ := by
+  simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]; norm_num
+
+private theorem q''_obligation (k : Fin 12) :
+    2 * (∑ j, adamsMoulton6.toGLM.B k j *
+          ((∑ i, adamsMoulton6.toGLM.A j i) +
+            ∑ l, adamsMoulton6.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton6.toGLM.V k l * q''N l =
+      qN k + 2 * q'N k + q''N k := by
+  fin_cases k
+  · simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]
+  · simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+      qN, q'N, q''N]; norm_num
+  · exact q''_obligation_five
+  · exact q''_obligation_six
+  · exact q''_obligation_seven
+  · exact q''_obligation_eight
+  · exact q''_obligation_nine
+  · exact q''_obligation_ten
+  · exact q''_obligation_eleven
+
+end AM6GE2
+
+theorem adamsMoulton6_toGLM_hasOrderGe2 :
+    adamsMoulton6.toGLM.HasOrderGe2 := by
+  refine ⟨AM6GE2.qN, AM6GE2.q'N, AM6GE2.q''N,
+    ?_, ?_, AM6GE2.q'_obligation, AM6GE2.q''_obligation⟩
+  · exact adamsMoulton6.toGLM_V_nordsieckQ_eq adamsMoulton6_consistent
+  · intro i; fin_cases i
+    all_goals simp [LMM.toGLM, adamsMoulton6, Fin.addCases, Fin.sum_univ_succ,
+      AM6GE2.qN]
+
+theorem adamsMoulton6_toGLM_hasOrderGe1 :
+    adamsMoulton6.toGLM.HasOrderGe1 :=
+  adamsMoulton6_toGLM_hasOrderGe2.toHasOrderGe1
+
 /-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Moulton 2-step
 
 `adamsMoulton2` (`s = 2`, four GLM input slots `Fin 4`, order 3) embeds
