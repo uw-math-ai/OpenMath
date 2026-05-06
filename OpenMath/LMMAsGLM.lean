@@ -1725,6 +1725,67 @@ theorem adamsBashforth5_toGLM_hasOrderGe2 :
     all_goals simp [LMM.toGLM, adamsBashforth5, Fin.addCases, Fin.sum_univ_succ,
       AB5GE2.qN]
 
+/-! ### §530 LMM-as-GLM order-≥ 2 witness — Adams–Moulton 5-step
+
+`adamsMoulton5` (`s = 5`, ten GLM input slots `Fin 10`, implicit with
+`β_s = 475/1440 ≠ 0`, classical order 6) embeds as a GLM of order ≥ 2.
+Same helper-extraction recipe as AB5GE2 (cycle 1140), with the AM3GE2
+β_s ≠ 0 treatment of the U·𝟙 closure row (cycle 802 BDF3GE3 noted that
+the implicit closure row may need `norm_num` after `simp`). Natural
+Nordsieck Taylor template (no shift). -/
+namespace AM5GE2
+
+private noncomputable def qN : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun _ : Fin 5 => (1 : ℝ)) (fun _ : Fin 5 => (0 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q'N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ)) (fun _ : Fin 5 => (1 : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private noncomputable def q''N : Fin (2 * 5) → ℝ := fun k =>
+  Fin.addCases (motive := fun _ => ℝ)
+    (fun j : Fin 5 => ((j : ℕ) : ℝ) ^ 2)
+    (fun j : Fin 5 => 2 * ((j : ℕ) : ℝ))
+    (Fin.cast (Nat.two_mul 5) k)
+
+private theorem q'_obligation (k : Fin 10) :
+    (∑ j, adamsMoulton5.toGLM.B k j) +
+        ∑ l, adamsMoulton5.toGLM.V k l * q'N l =
+      qN k + q'N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N]
+  all_goals norm_num
+
+private theorem q''_obligation (k : Fin 10) :
+    2 * (∑ j, adamsMoulton5.toGLM.B k j *
+          ((∑ i, adamsMoulton5.toGLM.A j i) +
+            ∑ l, adamsMoulton5.toGLM.U j l * q'N l)) +
+        ∑ l, adamsMoulton5.toGLM.V k l * q''N l =
+      qN k + 2 * q'N k + q''N k := by
+  fin_cases k
+  all_goals simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+    qN, q'N, q''N]
+  all_goals norm_num
+
+end AM5GE2
+
+theorem adamsMoulton5_toGLM_hasOrderGe2 :
+    adamsMoulton5.toGLM.HasOrderGe2 := by
+  refine ⟨AM5GE2.qN, AM5GE2.q'N, AM5GE2.q''N,
+    ?_, ?_, AM5GE2.q'_obligation, AM5GE2.q''_obligation⟩
+  · exact adamsMoulton5.toGLM_V_nordsieckQ_eq adamsMoulton5_consistent
+  · intro i; fin_cases i
+    simp [LMM.toGLM, adamsMoulton5, Fin.addCases, Fin.sum_univ_succ,
+      AM5GE2.qN]
+
+theorem adamsMoulton5_toGLM_hasOrderGe1 :
+    adamsMoulton5.toGLM.HasOrderGe1 :=
+  adamsMoulton5_toGLM_hasOrderGe2.toHasOrderGe1
+
 /-! ### §530 LMM-as-GLM order-≥ 3 witness — Adams–Bashforth 5-step
 
 `adamsBashforth5` (`s = 5`, ten GLM input slots `Fin 10`, explicit with
