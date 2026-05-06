@@ -612,3 +612,79 @@ to r = 3, mirroring the cycle 156 → cycle 157 lift. New artefacts:
 * Path B (implicit method via `ContractingWith` /
   `Function.IsFixedPt`) remains deferred per the original
   multi-cycle infrastructure plan above.
+
+## Cycle 161 update — r = 4 non-vacuity witnesses landed
+
+### What changed
+* Added `padded4DEulerGLM` `(s, r) = (1, 4)` to
+  `OpenMath/Chapter5/Section520.lean` — V matrix `!![1, 0, 0, 0; 0,
+  0, 0, 0; 0, 0, 0, 0; 0, 0, 0, 0]`, with row 0 the active
+  explicit-Euler channel and rows 1, 2, 3 zero channels (passively
+  decoupled). Lifts cycle 159's `padded3DEulerGLM` to r = 4 by the
+  same row-padding scheme.
+* Added `pad4CompatMethod`, `pad4CompatStartingMethod`, and four
+  axiom-clean support theorems to `OpenMath/Chapter5/Section530.lean`:
+  - `pad4CompatStartingMethod_isNonDegenerate` (b₀ ≠ 0 at index 0)
+  - `pad4CompatStartingMethod_constituents_isExplicit` (all four
+    constituents have 1×1 zero `A`-block)
+  - `padded4DEulerGLM_isExplicit` (1×1 zero `A`-block)
+  - `pad4CompatStartingMethod_applyExplicit` (closed form
+    `![y₀ + h·f y₀, 0, 0, 0]`, mirroring cycle 159's r = 3 closed
+    form with one extra zero entry).
+* Added two new `HasOrderRelativeTo_explicit` witnesses at r = 4
+  (Path A):
+  - `padded4DEulerGLM_hasOrderZero_pad4CompatStarting` (p = 0;
+    i = 0 channel = one-line invocation of cycle-160 helper after
+    SM[0]/ES[0] closed-form rewrites and `h^(0+1) = h` collapse;
+    rows 1, 2, 3 = zero-collapse via `Asymptotics.isBigO_zero`)
+  - `padded4DEulerGLM_hasOrderOne_pad4CompatStarting` (p = 1;
+    i = 0 channel = one-line invocation of cycle-158 helper after
+    closed-form rewrites and `h^(1+1) = h^2` collapse; rows 1, 2,
+    3 = zero-collapse).
+* Added two def:530C wrappers `padded4DEulerGLM_hasOrderZero` (p=0)
+  and `padded4DEulerGLM_hasOrderOne` (p=1), exhibiting
+  `pad4CompatStartingMethod` as the existential witness and citing
+  the new HasOrderRelativeTo witnesses.
+
+### Outcome
+* `lake env lean OpenMath/Chapter5/Section520.lean` exits 0.
+* `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+* `lake env lean OpenMath/Chapter5.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter5/Section{520,530}.lean` → 0
+  (unchanged).
+* All nine new declarations axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`):
+  - `OpenMath.Chapter5.Section510.padded4DEulerGLM` (definition)
+  - `pad4CompatStartingMethod_isNonDegenerate`
+  - `pad4CompatStartingMethod_constituents_isExplicit`
+  - `padded4DEulerGLM_isExplicit`
+  - `pad4CompatStartingMethod_applyExplicit`
+  - `padded4DEulerGLM_hasOrderZero_pad4CompatStarting`
+  - `padded4DEulerGLM_hasOrderOne_pad4CompatStarting`
+  - `padded4DEulerGLM_hasOrderZero` (def:530C wrapper)
+  - `padded4DEulerGLM_hasOrderOne` (def:530C wrapper)
+* Tautology-scanner regex
+  `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` clean.
+
+### What cycle 161 establishes
+* Path A non-vacuity grid for `def:530B`/`def:530C` now stands at
+  r ∈ {1, 2, 3, 4} × p ∈ {0, 1} — saturated through r = 4. Eight
+  axiom-clean HasOrderRelativeTo witnesses and eight axiom-clean
+  HasOrder wrappers across the grid.
+* Cycle 158's `taylor_lipschitz_explicitEuler_orderOne_diff_isBigO`
+  helper validated at a fourth call site (cycles 154, 157, 159, 161).
+* Cycle 160's `taylor_lipschitz_explicitEuler_orderZero_diff_isBigO`
+  helper validated at a fourth call site (cycles 153, 156, 159, 161).
+* The r = 4 lift is mechanical port territory: each new r adds
+  ≈300 LOC of duplication, but the i = 0 channel is now uniformly
+  one-line per (r, p) pair, with only the r-row Fin index in the
+  zero-collapse closures varying.
+* Four-data-point baseline (r ∈ {1, 2, 3, 4}) is now in place,
+  enabling cycle 162+ to commit to an r-parametric refactor
+  (`paddedRDEulerGLM (r : ℕ)`) that replaces these four pairs with
+  a single inductive pair of HasOrderRelativeTo theorems.
+
+### Path B status (unchanged)
+* Path B (implicit method via `ContractingWith` /
+  `Function.IsFixedPt`) remains deferred per the original
+  multi-cycle infrastructure plan above.
