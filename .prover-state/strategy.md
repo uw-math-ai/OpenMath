@@ -1,346 +1,465 @@
-# Cycle 151 Strategy
+# Cycle 152 Strategy — def:530B Path A Step 2: explicit-only operators
 
-## Status snapshot
+## TL;DR
 
-- Sorry count: **0** (cycle 150 restored from cycle 149's regression).
-- Cycle 150 score: **+2** (sorry restored to 0; n=7 stepping stone
-  added axiom-clean).
-- Last 5 cycles: 146 (r=2 negative witnesses +2) → 147 (n=5 +2) →
-  148 (n=6 + Aristotle submission +2) → 149 (def:530B scaffold −2
-  reverted) → 150 (rollback + n=7 +2).
-- thm:515D capstone remains closed and axiom-clean since cycle 124.
-- thm:550A: seven concrete-`n` axiom-clean stepping stones
-  (n = 1..7); general-n deferred. Aristotle project
-  `2c4630b2-2998-4d4a-af88-c2f83fbd9eda` (cycle 148) returned
-  IN_PROGRESS at 18% on cycle 150's poll, ~48h after submission.
+Cycle 151 landed Path A Step 1 (`GeneralizedRungeKuttaMethod.IsExplicit`
++ vacuous/non-vacuous/negative witnesses) axiom-clean in
+`OpenMath/Chapter5/Section530.lean`. Sorry count: **0**.
+No pending Aristotle results.
 
-## Posture
+**Cycle 152 target**: build the explicit-only operators
+`applyStartingThenStep_explicit` and `applyExactThenStarting_explicit`
+that the cycle 151 task results mark as the next deliverable
+(estimated 80–120 LOC).
 
-We are not in recovery mode. The repo is on a clean tip with zero
-sorries. Pivot to forward progress.
+Stay strictly within `Section530.lean`. **Do NOT** pivot to thm:550A
+general-`n` (deferred per cycles 141/151), cor:550C (depends on
+thm:550A), or def:530C (downstream of def:530B).
 
-This cycle targets **def:530B Path A Step 1** — introduce the
-`IsExplicit` predicate on `GeneralizedRungeKuttaMethod` together with
-positive and negative witnesses. This is the recommended path forward
-per the cycle-150 task results "Suggested next approach" and per
-`.prover-state/issues/def_530B_scaffold_strategy.md`. It is a clean
-single-cycle deliverable with bounded scope (~50-80 LOC), axiom-clean
-expected, and lays the foundation for cycle 152's Step 2 (defining
-the explicit-only operators `applyStartingThenStep_explicit` /
-`applyExactThenStarting_explicit`, the load-bearing primitives for
-def:530B itself).
+---
 
-## Priority 0 — Aristotle housekeeping (~5 min, MANDATORY first)
+## Priority 0 — Aristotle housekeeping
 
-The cycle-148 Aristotle project `2c4630b2-2998-4d4a-af88-c2f83fbd9eda`
-(general-`n` thm:550A) was at 18% after ~48h as of cycle 150. This
-matches the cycle-141 pattern (analogous Job A cancelled at 6% after
-24h) — clear evidence of intractability for the prover.
+**None.** Cycle 151 cancelled project
+`2c4630b2-2998-4d4a-af88-c2f83fbd9eda` (cycle 148 fire-and-forget
+general-`n` thm:550A). No active Aristotle jobs. Do **NOT** submit
+new ones this cycle — the operators are pure-recursive function
+definitions, well outside Aristotle's strength zone.
 
-**Action**: cancel the project via `mcp__aristotle__cancel_project`
-with id `2c4630b2-2998-4d4a-af88-c2f83fbd9eda`. Do NOT re-poll first
-— CLAUDE.md "one check after 30 min is enough" already exhausted by
-cycle 150's poll.
+---
 
-After cancelling, update `.prover-state/issues/thm_550A_general_n.md`:
-add a paragraph noting cycle-151 cancellation alongside the existing
-cycle-141 cancellation record. The general-`n` closure remains
-deferred per the same multi-cycle infrastructure scope (cofactor
-expansion induction or eigenvalue density).
+## Priority 1 — Path A Step 2 operators
 
-Do NOT submit a fresh Aristotle job for the general-`n` proof this
-cycle. Two failed long-running attempts (cycles 141 and 148) are
-sufficient evidence; further submissions waste a job slot.
+The textbook def:530B (Butcher §530, p. 432) compares two compositions
+of a starting method `S : StartingMethod r` with a GLM
+`M : GeneralLinearMethod s r`:
 
-## Priority 1 — def:530B Path A Step 1: `IsExplicit` predicate + witnesses (substantive)
+* `SM(y₀, h)` ≡ apply each `Sᵢ` to scalar `y₀` to produce `r` initial
+  approximations, then take one `M`-step.
+* `ES(y₀, h)` ≡ advance the exact solution by `h` (yielding scalar
+  `yex(x₀ + h)`), then apply each `Sᵢ` to that scalar.
 
-**Target file**: `OpenMath/Chapter5/Section530.lean`.
+For a generalized Runge–Kutta method `S = (c, A, b₀, b)` the
+canonical interpretation is:
 
-**What landed in cycle 139/141** (still in the file, do NOT touch):
-- `GeneralizedRungeKuttaMethod` structure (with `s : ℕ`, `b₀ : ℂ`,
-  `b : Fin s → ℂ`, `A : Matrix (Fin s) (Fin s) ℂ`).
-- `StartingMethod` (the dependent-sequence wrapper).
-- `IsDegenerate` / `IsNonDegenerate` predicates.
-- Witnesses: `trivialGeneralizedRK`, `nontrivialTwoStageGRK`,
-  `trivialStartingMethod`, `zeroStartingMethod`, `mixedStartingMethod`,
-  `zero2StartingMethod`, plus their `_isNonDegenerate` /
-  `_isDegenerate` companions.
+* Stage equations: `Y_j = b₀ · y₀ + h · Σ_k A_{jk} · f(Y_k)`.
+* Output:        `S(y₀, h) = b₀ · y₀ + h · Σ_j b_j · f(Y_j)`.
 
-**Pre-flight read**: open `OpenMath/Chapter5/Section530.lean` and
-locate (a) the exact field names of `GeneralizedRungeKuttaMethod`
-(b₀/b/A or different), (b) the concrete `A`-matrix definitions of
-`trivialGeneralizedRK` and `nontrivialTwoStageGRK`, and (c) any
-structure axioms (e.g. on `b`, `b₀`) that constrain valid
-constructions. The strategy below assumes the cycle-139/141 record
-is accurate; verify before encoding.
+When `A` is strict-lower-triangular (`IsExplicit`), the stage equations
+are not implicit: each `Y_j` depends only on `Y_0, …, Y_{j-1}` and so
+can be evaluated by direct recursion on the stage index `j`. This is
+what cycle 152 will encode.
 
-### 1.1 Add the predicate
+### Step 2a — Stage-value recursion for an explicit GRK method
 
-Add the predicate after the cycle-139/141 infrastructure (locate the
-right insertion point — likely just before the cycle 138-150
-`doublyCompanionMatrix` section), in a new `section` or extension
-of the existing namespace:
+Add immediately below `implicit2StageGRK_not_isExplicit` (current line
+358 of `OpenMath/Chapter5/Section530.lean`):
 
 ```lean
-/-- A generalized Runge-Kutta method is *explicit* if its coefficient
-matrix `A` is strictly lower triangular: `A i j = 0` whenever `i ≤ j`.
-For an explicit method, the stage equations
-`Y i = y₀ + h · Σⱼ A i j · f(Y j)` can be evaluated by direct
-recursion on `i = 0, 1, …, s-1`, sidestepping the implicit
-fixed-point machinery required for general (implicit) methods. -/
-def GeneralizedRungeKuttaMethod.IsExplicit
-    {s : ℕ} (M : GeneralizedRungeKuttaMethod s) : Prop :=
+/-! ### Stage-value recursion for explicit generalized RK methods
+(cycle 152, def:530B Path A Step 2) -/
+
+/-- Given a generalized Runge–Kutta method `M`, the stage value
+`Y_j = b₀ · y₀ + h · Σ_{k < j} A_{jk} · f(Y_k)` defined by direct
+recursion on `j`. The recursion terminates because each call sums
+only over `Fin j.val`, whose elements are strictly less than `j.val`.
+
+The body does **not** use `IsExplicit` — the recursion sums only over
+`k < j` regardless of `A`'s shape. The `IsExplicit` hypothesis is
+needed downstream when proving this matches the textbook stage
+equation `Y_j = b₀·y₀ + h·Σ_k A_{jk}·f(Y_k)` (the `k ≥ j` terms
+vanish iff `A` is strict-lower-triangular). -/
+noncomputable def GeneralizedRungeKuttaMethod.explicitStageValue
+    {s : ℕ} (M : GeneralizedRungeKuttaMethod s)
+    (f : ℝ → ℝ) (y₀ h : ℝ) (j : Fin s) : ℝ :=
+  M.b₀ * y₀ + h * ∑ k : Fin j.val,
+    M.A j ⟨k.val, by omega⟩
+      * f (M.explicitStageValue f y₀ h ⟨k.val, by omega⟩)
+termination_by j.val
+decreasing_by
+  simp_wf
+  exact k.isLt
+```
+
+If Lean's WF elaborator rejects the recursive call inside the
+`Finset.sum`, fall back to `Nat.strongRecOn`:
+
+```lean
+noncomputable def GeneralizedRungeKuttaMethod.explicitStageValue
+    {s : ℕ} (M : GeneralizedRungeKuttaMethod s)
+    (f : ℝ → ℝ) (y₀ h : ℝ) : Fin s → ℝ := fun j =>
+  Nat.strongRecOn j.val (motive := fun n => n < s → ℝ)
+    (fun n IH hn =>
+      M.b₀ * y₀ + h * ∑ k : Fin n,
+        M.A ⟨n, hn⟩ ⟨k.val, by omega⟩
+          * f (IH k.val k.isLt (by omega)))
+    j.isLt
+```
+
+Either form is acceptable; pick whichever Lean accepts on the first
+`lake env lean` pass. Mark `noncomputable` because `b₀ : ℝ` and `A`
+involve real arithmetic.
+
+### Step 2b — Closed-form output of an explicit GRK method
+
+```lean
+/-- The scalar output of one application of an explicit generalized
+Runge–Kutta method to scalar `y₀` with step `h`:
+`S(y₀, h) = b₀ · y₀ + h · Σ_j b_j · f(Y_j)`,
+where `Y_j` are computed by `explicitStageValue`. -/
+noncomputable def GeneralizedRungeKuttaMethod.explicitApply
+    {s : ℕ} (M : GeneralizedRungeKuttaMethod s)
+    (f : ℝ → ℝ) (y₀ h : ℝ) : ℝ :=
+  M.b₀ * y₀ + h * ∑ j : Fin s, M.b j * f (M.explicitStageValue f y₀ h j)
+```
+
+### Step 2c — Lift to a `StartingMethod`
+
+```lean
+/-- For each constituent `S_i` of a starting method, compute the
+scalar output of `S_i` applied to `y₀` with step `h` via
+`explicitApply`. This produces the `Fin r → ℝ` initial-input vector
+consumed by the GLM step in `applyStartingThenStep_explicit`. -/
+noncomputable def StartingMethod.applyExplicit
+    {r : ℕ} (S : StartingMethod r)
+    (f : ℝ → ℝ) (y₀ h : ℝ) : Fin r → ℝ :=
+  fun i => (S.method i).explicitApply f y₀ h
+```
+
+### Step 2d — `applyExactThenStarting_explicit` (the easy operator)
+
+This side does **not** need `M` at all (it just advances the exact
+solution to time `x₀ + h` and feeds that scalar through `S`):
+
+```lean
+/-- Textbook `ES(y₀, h)` operator (Butcher §530, def:530B): advance the
+exact solution `yex` by `h`, then apply each constituent `S_i` to
+that scalar. The result is a `Fin r → ℝ` vector of starting-method
+outputs. The `IsExplicit` hypothesis on every `S_i` marks this as
+the "explicit-only" variant per the cycle 151 issue file plan; it is
+unused in the body (the recursion in `explicitStageValue` works
+regardless), but downstream proofs (cycle 153 order witness) consume
+the hypothesis to match this definition with the textbook
+stage-equation form. -/
+noncomputable def applyExactThenStarting_explicit
+    {r : ℕ} (S : StartingMethod r)
+    (_hS : ∀ i, (S.method i).IsExplicit)
+    (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ h : ℝ) : Fin r → ℝ :=
+  S.applyExplicit f (yex (x₀ + h)) h
+```
+
+### Step 2e — `applyStartingThenStep_explicit` (the operator that uses M)
+
+The M-step itself involves M's *own* stage equations. To keep
+cycle 152 self-contained, add a parallel `GeneralLinearMethod.IsExplicit`
+predicate and assume both `S` and `M` are explicit. The cycle 153
+witness target (`explicitEulerGLM × trivialStartingMethod`) satisfies
+this because `explicitEulerGLM.A = !![0]` is vacuously
+strict-lower triangular at `s = 1`.
+
+This requires importing Section510, since `GeneralLinearMethod` lives
+there. **Do NOT** do this if it inflates the cycle past the 150 LOC
+budget — see "Backup plan" below for the fallback that defers Step
+2e to cycle 153.
+
+If proceeding, modify the imports and add to Section530.lean:
+
+```lean
+-- At top of Section530.lean (in addition to existing imports), add:
+import OpenMath.Chapter5.Section510
+
+-- After `namespace OpenMath.Chapter5.Section530`, add:
+open OpenMath.Chapter5.Section510
+
+-- ...then in the new "explicit GLM" sub-section:
+
+/-- A general linear method's stage matrix `A` is strict-lower
+triangular, so its internal stages can be evaluated by direct
+recursion. This is the GLM analog of
+`GeneralizedRungeKuttaMethod.IsExplicit`. -/
+def GeneralLinearMethod.IsExplicit
+    {s r : ℕ} (M : GeneralLinearMethod s r) : Prop :=
   ∀ i j : Fin s, i.val ≤ j.val → M.A i j = 0
+
+/-- The internal stage value `Y_i` of an explicit GLM applied to an
+input `r`-vector `y_input : Fin r → ℝ` with step `h`:
+`Y_i = (M.U *ᵥ y_input) i + h · Σ_{k < i} M.A i k · f(Y_k)`. -/
+noncomputable def GeneralLinearMethod.explicitStageValue
+    {s r : ℕ} (M : GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (y_input : Fin r → ℝ) (h : ℝ) (i : Fin s) : ℝ :=
+  (M.U *ᵥ y_input) i + h * ∑ k : Fin i.val,
+    M.A i ⟨k.val, by omega⟩
+      * f (M.explicitStageValue f y_input h ⟨k.val, by omega⟩)
+termination_by i.val
+decreasing_by simp_wf; exact k.isLt
+
+/-- Textbook `SM(y₀, h)` operator (Butcher §530, def:530B): apply each
+`S_i` to `y₀` to produce `y_input := S.applyExplicit f y₀ h`, then
+take one `M`-step. The output of the `M`-step is
+`y_new[ℓ] = h · Σ_i M.B ℓ i · f(Y_i) + (M.V *ᵥ y_input) ℓ`. -/
+noncomputable def applyStartingThenStep_explicit
+    {s r : ℕ} (M : GeneralLinearMethod s r)
+    (S : StartingMethod r)
+    (_hS : ∀ i, (S.method i).IsExplicit)
+    (_hM : M.IsExplicit)
+    (f : ℝ → ℝ) (y₀ h : ℝ) : Fin r → ℝ :=
+  let y_input := S.applyExplicit f y₀ h
+  fun ℓ =>
+    h * ∑ i : Fin s,
+      M.B ℓ i * f (M.explicitStageValue f y_input h i)
+    + (M.V *ᵥ y_input) ℓ
 ```
 
-Notes:
-- Strict lower triangular means `A i j = 0` when `j ≥ i`. The
-  spelling `i.val ≤ j.val` captures both `i = j` (diagonal) and
-  `i < j` (above diagonal) — i.e. NOT below diagonal.
-- Pick whichever spelling unifies with downstream Mathlib lemmas.
-  Quick `lean_local_search "BlockTriangular"` and
-  `lean_local_search "lowerTriangular"` BEFORE committing to the
-  signature — if Mathlib has a clean predicate, prefer it for
-  ergonomic reuse.
+If the `import OpenMath.Chapter5.Section510` triggers a cyclic
+import or a slow build, **abort Step 2e** and document in the cycle
+results file that the GLM-side operator was deferred to cycle 153
+(when it can be folded in alongside the order predicate). Step 2a-d
+already constitute a credible cycle deliverable.
 
-### 1.2 Add three witnesses (or two, see decision rule)
+### Step 2f — Non-vacuity sanity computations
 
-**Positive witness 1** — vacuous case at s = 1:
+To meet the CLAUDE.md "every new structure/def gets a witness" rule
+(and to confirm the operators reduce correctly on the cycle 153
+target configuration), prove:
+
 ```lean
-theorem trivialGeneralizedRK_isExplicit :
-    trivialGeneralizedRK.IsExplicit := by
-  intro i j _
-  fin_cases i; fin_cases j
-  -- exact closer depends on trivialGeneralizedRK.A definition;
-  -- if A 0 0 = 0, `rfl` closes; else `simp [trivialGeneralizedRK]`
-  rfl
+/-- **Non-vacuity sanity**: for the trivial starting method
+(r = 1, b₀ = 1, b = 1, A = 0), `applyExplicit` reduces to
+`y₀ + h · f(y₀)` (one step of explicit Euler). -/
+theorem trivialStartingMethod_applyExplicit
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    trivialStartingMethod.applyExplicit f y₀ h
+      = fun (_ : Fin 1) => y₀ + h * f y₀ := by
+  funext i; fin_cases i
+  unfold StartingMethod.applyExplicit
+    GeneralizedRungeKuttaMethod.explicitApply
+    GeneralizedRungeKuttaMethod.explicitStageValue
+  simp [trivialStartingMethod, trivialGeneralizedRK]
 ```
 
-If `trivialGeneralizedRK` has `A 0 0 = 0` (which the cycle-139 record
-implies — it's the trivial 1-stage method with `b₀ = 1`), the witness
-closes with `rfl` or a one-line `simp`. If `A 0 0 ≠ 0`, this witness
-won't fly — fall back to a freshly-constructed `explicit1StageGRK`
-trivially with `A := 0`.
+If the `simp` chain doesn't close it directly, fall back to a
+manual reduction:
 
-**Positive witness 2** — non-trivial s = 2 case (DECISION REQUIRED):
-Read `nontrivialTwoStageGRK`'s `A` definition first. If it is
-strictly lower triangular (e.g. `A := !![0, 0; 1, 0]`), prove
-`nontrivialTwoStageGRK_isExplicit` directly:
 ```lean
-theorem nontrivialTwoStageGRK_isExplicit :
-    nontrivialTwoStageGRK.IsExplicit := by
-  intro i j hij
-  fin_cases i <;> fin_cases j <;>
-    first | (exfalso; omega) | (simp [nontrivialTwoStageGRK]) | rfl
+  -- The Fin 0 sum in explicitStageValue 0 vanishes:
+  --   stageValue 0 = b₀ * y₀ + h * (∑ k : Fin 0, …) = 1 * y₀ + h * 0 = y₀.
+  -- The Fin 1 sum in explicitApply collapses to b 0 * f(stageValue 0):
+  --   applyExplicit = b₀ * y₀ + h * (b 0 * f y₀) = y₀ + h * f y₀.
+  rw [show (∑ k : Fin 0, (0 : ℝ)) = 0 from Finset.sum_empty]
+  -- ... finish via `simp` or `ring`.
 ```
-If it is NOT strictly lower triangular (e.g. `A 0 0 ≠ 0`, since
-cycle 141 may have built it for the heterogeneous-stages design
-rather than for explicit-method coverage):
-- Construct a fresh `explicit2StageGRK : GeneralizedRungeKuttaMethod 2`
-  with `A := !![0, 0; 1, 0]` (Heun-style stage matrix), and prove
-  `explicit2StageGRK_isExplicit` for it.
-- Optionally also prove `nontrivialTwoStageGRK_not_isExplicit` if
-  it gives non-vacuity coverage in the negative direction without
-  needing a fresh `implicit2StageGRK` (see Negative Witness below).
 
-**Decision rule**: read `nontrivialTwoStageGRK`'s `A` definition
-first. The CLAUDE.md non-vacuity rule requires at least ONE positive
-witness AND at least ONE negative witness for `IsExplicit` to be
-meaningful. Build the witness portfolio accordingly.
+Add a parallel sanity computation for the `ES` side:
 
-**Negative witness** — implicit method:
 ```lean
-/-- A 2-stage implicit method (with `A 0 0 = 1/2`) that is *not*
-explicit. Witnesses non-vacuity in the negative direction for
-`IsExplicit`. -/
-def implicit2StageGRK : GeneralizedRungeKuttaMethod 2 where
-  b₀ := 1
-  b := fun _ => (1 : ℂ) / 2
-  A := !![1/2, 0; 0, 1/2]
-
-theorem implicit2StageGRK_not_isExplicit :
-    ¬ implicit2StageGRK.IsExplicit := by
-  intro h
-  have h00 := h ⟨0, by omega⟩ ⟨0, by omega⟩ (le_refl _)
-  -- h00 : implicit2StageGRK.A ⟨0, _⟩ ⟨0, _⟩ = 0, i.e. (1 : ℂ) / 2 = 0
-  simp [implicit2StageGRK] at h00
-  -- norm_num at h00 if simp doesn't finish
+/-- **Non-vacuity sanity** for the `ES` side: with the trivial
+starting method (whose single constituent is explicit), advancing
+`yex` by `h` then applying `S` produces
+`yex(x₀ + h) + h · f(yex(x₀ + h))`. -/
+theorem trivialStartingMethod_applyExactThenStarting_explicit
+    (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ h : ℝ) :
+    applyExactThenStarting_explicit trivialStartingMethod
+        (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+        f yex x₀ h
+      = fun (_ : Fin 1) => yex (x₀ + h) + h * f (yex (x₀ + h)) := by
+  funext i; fin_cases i
+  unfold applyExactThenStarting_explicit
+  rw [trivialStartingMethod_applyExplicit]
 ```
 
-If the `GeneralizedRungeKuttaMethod` structure has axioms on `b`,
-`b₀` (e.g. `b₀ + Σ b = 1` consistency), pick `b`/`b₀` values
-satisfying them. The negative witness only needs `A 0 0 ≠ 0`; the
-remaining fields are bookkeeping.
+(If proceeding with Step 2e, also add an
+`explicitEulerGLM_isExplicit : explicitEulerGLM.IsExplicit` one-liner
+plus `applyStartingThenStep_explicit` reducing on
+`explicitEulerGLM × trivialStartingMethod`. The body of
+`explicitEulerGLM_isExplicit` is `intro i j _; fin_cases i; fin_cases
+j; rfl`, since `explicitEulerGLM.A = !![0]` is `0` at `(0, 0)`.)
 
-### 1.3 Bookkeeping
+### Implementation order
 
-- `extraction/formalization_data/lean_status.json`: no entity row
-  changes (def:530B remains `unformalized`; `IsExplicit` is helper
-  infrastructure, not a textbook entity).
-- `plan.md`: no row changes for def:530B; if there's space, add a
-  brief annotation under def:530B's `[ ]` row noting Path A Step 1
-  is complete (cycle 151).
-- `.prover-state/issues/def_530B_scaffold_strategy.md`: append a
-  cycle-151 update noting that Path A Step 1 (the `IsExplicit`
-  predicate + witnesses) is **complete**, and outline cycle 152's
-  Step 2 target (defining `applyStartingThenStep_explicit` and
-  `applyExactThenStarting_explicit` with `∀ i, IsExplicit (S.method i)`
-  hypothesis; bodies via direct recursion on stage index using
-  `Finset.sum` over already-computed earlier stages).
-- `.prover-state/issues/thm_550A_general_n.md`: append a cycle-151
-  paragraph recording the cancellation of project
-  `2c4630b2-2998-4d4a-af88-c2f83fbd9eda` (companion to the cycle-141
-  cancellation record). Note: the deferral remains in force; closure
-  needs cofactor-expansion induction or eigenvalue-density
-  infrastructure (multi-cycle).
+1. Steps 2a, 2b, 2c, 2d — minimum viable cycle 152. Land first.
+2. Step 2f's first two sanity theorems
+   (`trivialStartingMethod_applyExplicit`,
+   `trivialStartingMethod_applyExactThenStarting_explicit`).
+3. **Verify**:
+   * `lake env lean OpenMath/Chapter5/Section530.lean` — clean.
+   * `lake build OpenMath.Chapter5.Section530` — clean.
+   * `grep -n "sorry" OpenMath/Chapter5/Section530.lean` — empty.
+   * `lean_verify` on each new theorem returns
+     `[propext, Classical.choice, Quot.sound]` only (no `sorryAx`).
+4. **Then**, only if the above closes cleanly with budget remaining,
+   land Step 2e (the `M`-side operator) and its sanity computation.
 
-## What NOT to try (explicit blacklist)
+### LOC budget
 
-1. **Do NOT attempt the operator bodies** (`applyStartingThenStep`,
-   `applyExactThenStarting`, the `HasOrderRelativeTo` predicate, or
-   any non-vacuity witness for def:530B itself) this cycle. Cycle 149
-   tried the sorry-first scaffold and was scored −2 because the
-   operator bodies are indivisible multivariate fixed-point
-   computations that cannot be decomposed into named sub-lemmas. Path
-   A Step 2 (operator bodies) is cycle 152's target, AFTER `IsExplicit`
-   lands in this cycle. Do NOT regress.
+Steps 2a–2d + 2f sanity ≈ 60–90 LOC. Step 2e + GLM sanity ≈ 40–60
+LOC. Combined target: **≤ 150 LOC** of additions to
+`Section530.lean`. If draft exceeds 200 LOC, drop Step 2e to cycle
+153.
 
-2. **Do NOT raise `maxHeartbeats`**. CLAUDE.md absolute rule. If any
-   `IsExplicit` witness proof is slow (unlikely at s ≤ 2), decompose
-   the matrix case-split, do not crank the heartbeat ceiling.
+---
 
-3. **Do NOT submit Aristotle for `IsExplicit` witnesses**. The
-   witnesses are 2-line `fin_cases` + `rfl`/`norm_num` proofs.
-   Aristotle adds latency without value at this scale.
+## Priority 2 (stretch, only if Priority 1 closes ≤ 60 minutes)
 
-4. **Do NOT re-poll Aristotle project
-   `2c4630b2-2998-4d4a-af88-c2f83fbd9eda` before cancelling.** Cycle
-   150's poll already exhausted the CLAUDE.md "one check" rule. Just
-   cancel and move on.
+If Step 2e and its sanity also land, draft a **named `private
+lemma`** isolating the `(s = 1, r = 1)` × `trivialStartingMethod`
+case for cycle 153's witness, but leave the body as `sorry` is
+**FORBIDDEN** — instead, draft the lemma as a *theorem statement
+in a comment* referenced by the cycle 152 task results file:
 
-5. **Do NOT submit a fresh Aristotle general-`n` thm:550A job.** Two
-   failed long-running attempts (cycles 141 and 148) are sufficient
-   evidence that the prover cannot close it without infrastructure
-   work (cofactor-expansion induction or eigenvalue density). Save
-   the job slot for genuinely tractable submissions.
-
-6. **Do NOT extend the n-stepping-stone series for thm:550A to n=8**.
-   Cycle 150 task results explicitly note "the seven-`n` data set is
-   already strong evidence for the leading-coefficient pattern" and
-   that marginal value is now low. Cycle 151's effort is better spent
-   on def:530B Path A.
-
-7. **Do NOT introduce `axiom` or `constant` declarations**. CLAUDE.md
-   absolute rule. If `IsExplicit` runs into a Mathlib gap (unlikely —
-   strict-lower-triangular is straightforward), file an issue rather
-   than axiomatising.
-
-8. **Do NOT modify `scripts/autonomous_loop.py`** or any loop
-   infrastructure. The standing
-   `tautology_scanner_false_positives.md` issue is loop-maintainer
-   territory; workers do not patch it.
-
-9. **Do NOT touch the cycle 139/141 infrastructure**
-   (`GeneralizedRungeKuttaMethod`, `StartingMethod`, `IsDegenerate`,
-   etc.) beyond reading. The `IsExplicit` predicate is purely
-   additive — no existing definitions need changes. Touching them
-   risks cascade regressions on the 8 axiom-clean witnesses already
-   in §530.
-
-10. **Do NOT use the cosmetic `h_<name>` workaround for the
-    tautology scanner.** All new hypothesis names should use
-    `h<name>` (no underscore) from the start to avoid scanner false
-    positives — this is the standing convention from cycle 121
-    (`tautology_scanner_false_positives.md`).
-
-11. **Do NOT pivot to a different entity** (thm:541A, thm:535A,
-    cor:550C, etc.) this cycle. def:530B is the highest-leverage
-    target — it unblocks §530+ order theory. Cor:550C and thm:550B
-    depend on the deferred general-`n` thm:550A. Other Chapter-5
-    targets either depend on def:530B (e.g. def:530C) or are
-    standalone but lower-impact. Stay on def:530B Path A.
-
-## Minimum acceptable deliverable
-
-If Priority 1's witness portfolio runs into snags (e.g.
-`nontrivialTwoStageGRK`'s `A` turns out to be implicit, breaking
-Witness 2, OR a structure axiom on `b` rules out the natural
-`implicit2StageGRK` construction), the **minimum** acceptable
-deliverable for a +2 score is:
-
-* The `IsExplicit` predicate (axiom-clean).
-* ONE positive witness (the trivial s=1 method, OR a freshly
-  constructed `explicit1StageGRK` if `trivialGeneralizedRK.A 0 0 ≠ 0`).
-* ONE negative witness (a freshly constructed `implicit2StageGRK` or
-  similar — pick whatever satisfies the structure axioms).
-* The Priority 0 Aristotle cancellation.
-* The two issue-file updates (def:530B scaffold strategy + thm:550A
-  general-n).
-
-This satisfies the CLAUDE.md non-vacuity rule (at least one positive
-and one negative witness, both axiom-clean), introduces no sorries,
-and lays the foundation for cycle 152.
-
-## Faithfulness check (mandatory pre-commit)
-
-For each new `def`/`theorem` introduced this cycle:
-
-* `IsExplicit`: not a textbook entity. Internal helper for def:530B
-  Path A. Document in the docstring that this is a **strict
-  refinement** of the textbook's `GeneralizedRungeKuttaMethod` —
-  Butcher §530 does not single out the explicit case as a named
-  predicate, but uses it implicitly when discussing methods like
-  classical RK4. The docstring should make clear the strict
-  lower-triangular requirement (`A i j = 0` when `i ≤ j`) is the
-  Lean encoding of "no implicit stage equations".
-
-* Each witness: tautology check (the conclusion is a `Prop` about a
-  specific `M`'s `A`-entries — not a hypothesis re-export). Identity
-  check (proofs are `fin_cases` + `rfl`/`norm_num`, not `exact h_*`).
-
-* Spot-check via `lean_verify` (axiom check + source scan) on each
-  named theorem before commit.
-
-## Build verification
-
-After Priority 1 lands, run:
-```
-lake env lean OpenMath/Chapter5/Section530.lean
-```
-Confirm clean compile (no errors, no sorry warnings).
-
-For each new public `theorem`, refresh the cache with
-```
-lake build OpenMath.Chapter5.Section530
-```
-THEN run `#print axioms <fully-qualified-name>` (via `lean_verify`
-or by reading the `.olean`). Expected:
-`[propext, Classical.choice, Quot.sound]` only.
-
-Per CLAUDE.md cycle-072 note: `lake env lean <file>` does NOT update
-the `.olean` cache, so `#print axioms` against a stale cache can
-report `sorryAx` false positives. ALWAYS `lake build` first.
-
-## Suggested commit message
-
-```
-Cycle 151 — def:530B Path A Step 1: IsExplicit predicate + non-vacuity witnesses (axiom-clean)
+```text
+-- Cycle 153 witness target (stated here for planning, NOT introduced
+-- as a `sorry`-bodied declaration):
+--
+--   (applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
+--      (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+--      explicitEulerGLM_isExplicit f y₀ 0)
+--   = (applyExactThenStarting_explicit trivialStartingMethod
+--      (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+--      f (fun _ => y₀) 0 0)
+--
+-- (i.e. at h = 0, both sides equal `fun _ => y₀`.)
 ```
 
-(Or the minimum-deliverable variant if Witness 2 was skipped.)
+If even drafting the comment takes > 15 min, skip it and let cycle
+153 plan it from scratch.
 
-## Cycle 152 preview (for context, do NOT pursue this cycle)
+---
 
-Path A Step 2: define `applyStartingThenStep_explicit` and
-`applyExactThenStarting_explicit` taking the `IsExplicit` hypothesis,
-with bodies via direct recursion on stage index — each stage `j`'s
-`Y_j` is a `Finset.sum` over already-computed `Y_0, …, Y_{j-1}`.
-The `IsExplicit` constraint guarantees `A i j = 0` for `j ≥ i`, so
-the sum is well-defined without an implicit fixed-point. Estimated
-~80-120 LOC.
+## What NOT to do
 
-Path A Step 3 (cycle 153): define `HasOrderRelativeTo_explicit` and
-prove the trivial-IVP non-vacuity witness for explicit Euler ×
-trivialStartingMethod with order `p = 0`. Estimated ~50-80 LOC.
+* **Do NOT** add a `sorry`. Sorry count must remain 0.
+  Cycle 149 was rolled back (score −2) precisely because it raised
+  sorry count 0 → 3.
+* **Do NOT** define `applyStartingThenStep` or
+  `applyExactThenStarting` *without* the `_explicit` suffix and
+  without the `IsExplicit` hypothesis. The general implicit case is
+  Path B (deferred per the issue file
+  `def_530B_scaffold_strategy.md`), and attempting it would either
+  re-introduce a `sorry` or require fixed-point machinery that
+  inflates the cycle past 200 LOC.
+* **Do NOT** define `HasOrderRelativeTo` or
+  `HasOrderRelativeTo_explicit` predicates this cycle. That is
+  cycle 153 (Path A Step 3); the `Asymptotics` machinery can wait.
+* **Do NOT** import `Mathlib.Analysis.Asymptotics.Defs` or any
+  `HasDerivAt` modules — they are only needed for the order
+  predicate.
+* **Do NOT** raise `maxHeartbeats` (CLAUDE.md). If a `simp` chain
+  in Step 2f exceeds 200 000, decompose: prove
+  `(trivialGeneralizedRK.explicitStageValue f y₀ h 0) = y₀` as a
+  separate `private lemma` first, then combine.
+* **Do NOT** mark new `def`s computable — they involve real
+  arithmetic via `b₀ : ℝ` and matrix entries. Cycle 151 caught this
+  the hard way; mark `noncomputable` on the *first* try.
+* **Do NOT** restate the textbook def:530B order condition this
+  cycle. The operators alone are the deliverable; the predicate
+  uses them and lands in cycle 153.
+* **Do NOT** submit Aristotle jobs. Recursive function definitions
+  with `termination_by` are outside Aristotle's strength zone, and
+  the job slot should be saved for tractable proof obligations.
+* **Do NOT** retry the cycle 149 sorry-first scaffold approach.
+  Cycle 150 explicitly rolled back that pattern; the cycle 151 →
+  152 cadence is to land *closed* sub-deliverables one step at a
+  time, never sorry placeholders.
+* **Do NOT** touch `OpenMath/Chapter5/Section520.lean`,
+  `Section515.lean`, or any other Chapter 5 file *other than*
+  `Section530.lean`. Step 2e's `import OpenMath.Chapter5.Section510`
+  is the only allowed cross-file change, and it's an import-only
+  modification (no edits to `Section510.lean`).
+* **Do NOT** poll the cancelled Aristotle project
+  `2c4630b2-…` — it was cancelled in cycle 151.
+* **Do NOT** pivot to thm:550A general-`n` proof. Two failed
+  long-running Aristotle attempts (cycle 138 and cycle 148, the
+  latter cancelled cycle 151 at 21 % after 89 h) plus the manual
+  cofactor-expansion infrastructure scope make this multi-cycle
+  work. Stay on def:530B Path A.
 
-Total Path A closure: cycles 151 + 152 + 153 = 3 cycles.
+---
+
+## Backup plan if Step 2a's recursion fails to elaborate
+
+Two tried-and-true fallbacks:
+
+**Fallback B1**: switch from the inline `Finset.sum` recursion to
+`Nat.strongRecOn` (template given in Step 2a above). Lean's WF
+elaborator sometimes balks at recursive calls inside finset sums but
+accepts them inside `Nat.strongRecOn` motive functions.
+
+**Fallback B2**: build the full vector via tail-recursive
+extension. Define a helper `buildStages : (n : ℕ) → n ≤ s → (Fin n →
+ℝ)` that prepends to a list, then index. More verbose but guaranteed
+to terminate without WF acrobatics.
+
+**Fallback B3**: parameterise. If neither B1 nor B2 closes within
+30 min, retreat to a *parameterised* `applyExplicit` that takes the
+stage vector `Y : Fin s → ℝ` as an additional argument together
+with a hypothesis that it satisfies the explicit stage equation.
+This is strictly weaker but preserves zero-sorry status:
+
+```lean
+noncomputable def GeneralizedRungeKuttaMethod.explicitApplyParam
+    {s : ℕ} (M : GeneralizedRungeKuttaMethod s)
+    (f : ℝ → ℝ) (y₀ h : ℝ)
+    (Y : Fin s → ℝ)
+    (_hY : ∀ j, Y j = M.b₀ * y₀ + h * ∑ k : Fin j.val,
+                        M.A j ⟨k.val, by omega⟩ * f (Y ⟨k.val, by omega⟩)) :
+    ℝ :=
+  M.b₀ * y₀ + h * ∑ j : Fin s, M.b j * f (Y j)
+```
+
+This sidesteps the WF check entirely. The non-vacuity witness
+`trivialStartingMethod_applyExplicit` still works by supplying the
+trivial `Y := fun _ => y₀` and discharging the hypothesis directly
+on the `s = 1` case.
+
+If even Fallback B3 fails (which would be unprecedented for a
+straightforward Finset sum), **STOP and write an issue file** at
+`.prover-state/issues/explicitStageValue_termination.md` documenting
+the obstruction, then commit only Steps 2c, 2d (lifted forms that
+take an abstract per-method `applyOne : ℝ → ℝ → ℝ` argument). Even
+that meets the CLAUDE.md "minimum: decompose a sorry or write an
+issue" rule.
+
+---
+
+## Verification checklist (before commit)
+
+1. **Compile**: `lake env lean OpenMath/Chapter5/Section530.lean`
+   exits clean.
+2. **Build**: `lake build OpenMath.Chapter5.Section530` exits clean.
+3. **Sorry count**: `grep -n "sorry" OpenMath/Chapter5/Section530.lean`
+   returns nothing.
+4. **Axiom check**: every new `theorem` axiom-checks via
+   `lean_verify` to `[propext, Classical.choice, Quot.sound]` only —
+   no `sorryAx`, no extra axioms.
+5. **Faithfulness**: each new `def` / `theorem` is documented with a
+   docstring referencing Butcher §530 and noting whether the entity
+   is internal helper or textbook concept. Internal helpers
+   (`explicitStageValue`, `explicitApply`, `applyExplicit`,
+   `IsExplicit` for GLMs) are NOT textbook entities — say so
+   explicitly in the docstring per the cycle 151 IsExplicit precedent.
+6. **Plan/status update**: append a "Cycle 152 update" line to the
+   `def:530B` row in `plan.md` mentioning Path A Step 2 progress.
+   `extraction/formalization_data/lean_status.json` row for
+   `def:530B` stays `partial` (the order predicate from cycle 153
+   is still missing).
+7. **Cycle results file**: write
+   `.prover-state/task_results/cycle_152.md` per the CLAUDE.md
+   template (Worked on, Approach, Result, Faithfulness check,
+   Dead ends, Discovery, Suggested next approach).
+8. **Issue file update**: append a "Cycle 152 update" section to
+   `.prover-state/issues/def_530B_scaffold_strategy.md` summarising
+   what landed and what (if anything) deferred to cycle 153.
+
+---
+
+## Cycle 153 preview (do NOT start this cycle)
+
+* Define `HasOrderRelativeTo_explicit` predicate using
+  `Asymptotics.IsBigO` of `(SM - ES) : ℝ → (Fin r → ℝ)` against
+  `h^{p+1}`.
+* Prove the trivial-IVP non-vacuity witness for `explicitEulerGLM ×
+  trivialStartingMethod` with order `p = 0`.
+* Estimated 50–80 LOC.
+
+This is the natural sequel; cycle 152's deliverable is exactly the
+infrastructure it consumes.

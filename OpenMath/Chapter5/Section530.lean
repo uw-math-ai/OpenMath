@@ -1,6 +1,7 @@
 import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.Matrix.Notation
 import Mathlib.Tactic.FinCases
+import OpenMath.Chapter5.Section510
 
 /-!
 # Butcher §530 — Possible definitions of order: non-degenerate starting methods (Definition 530A)
@@ -356,5 +357,217 @@ theorem implicit2StageGRK_not_isExplicit :
   intro h
   have h00 := h ⟨0, by omega⟩ ⟨0, by omega⟩ (le_refl _)
   simp [implicit2StageGRK] at h00
+
+/-! ### Stage-value recursion for explicit generalized RK methods
+(cycle 152, def:530B Path A Step 2)
+
+For an explicit generalized Runge–Kutta method `M = (c, A, b₀, b)`
+with strict-lower-triangular `A`, the stage equations
+`Y_j = b₀·y₀ + h·Σ_k A_{jk}·f(Y_k)` collapse from a fixed-point
+system to a direct recursion in the stage index `j`: the `k ≥ j`
+terms vanish (since `A j k = 0` there), so each `Y_j` depends only on
+`Y_0, …, Y_{j-1}`.
+
+The body of `explicitStageValue` does **not** require `IsExplicit`:
+the recursion sums only over `k < j` regardless of `A`'s shape. The
+hypothesis is needed downstream when proving this matches the
+textbook's full-range stage equation form. The Lean-internal helper
+operators in this section are NOT textbook entities — they are the
+faithful encoding of the canonical stage-value/output formulae. -/
+
+/-- Stage value `Y_j = b₀ · y₀ + h · Σ_{k < j} A_{jk} · f(Y_k)` of a
+generalized Runge–Kutta method, defined by direct recursion on the
+stage index `j` (well-founded on `j.val`, since each recursive call
+sums only over `Fin j.val` whose elements are strictly less than `j.val`).
+
+For an *explicit* method (strict-lower-triangular `A`), this matches
+the textbook stage equation `Y_j = b₀·y₀ + h·Σ_k A_{jk}·f(Y_k)` since
+the omitted `k ≥ j` terms have `A_{jk} = 0`. Internal helper for
+`def:530B`; not a textbook entity. -/
+noncomputable def GeneralizedRungeKuttaMethod.explicitStageValue
+    {s : ℕ} (M : GeneralizedRungeKuttaMethod s)
+    (f : ℝ → ℝ) (y₀ h : ℝ) (j : Fin s) : ℝ :=
+  M.b₀ * y₀ + h * ∑ k : Fin j.val,
+    M.A j ⟨k.val, by omega⟩
+      * f (M.explicitStageValue f y₀ h ⟨k.val, by omega⟩)
+termination_by j.val
+decreasing_by exact k.isLt
+
+/-- Scalar output of one application of an explicit generalized
+Runge–Kutta method to scalar `y₀` with step `h`:
+`S(y₀, h) = b₀ · y₀ + h · Σ_j b_j · f(Y_j)`,
+where `Y_j` are computed by `explicitStageValue`. Internal helper for
+`def:530B`; not a textbook entity. -/
+noncomputable def GeneralizedRungeKuttaMethod.explicitApply
+    {s : ℕ} (M : GeneralizedRungeKuttaMethod s)
+    (f : ℝ → ℝ) (y₀ h : ℝ) : ℝ :=
+  M.b₀ * y₀ + h * ∑ j : Fin s, M.b j * f (M.explicitStageValue f y₀ h j)
+
+/-- For each constituent method `S_i` of a starting method `S`,
+compute the scalar output of `S_i` applied to `y₀` with step `h` via
+`GeneralizedRungeKuttaMethod.explicitApply`. Produces the
+`Fin r → ℝ` initial-input vector consumed by the GLM step in
+`applyStartingThenStep_explicit`. Internal helper for `def:530B`; not
+a textbook entity. -/
+noncomputable def StartingMethod.applyExplicit
+    {r : ℕ} (S : StartingMethod r)
+    (f : ℝ → ℝ) (y₀ h : ℝ) : Fin r → ℝ :=
+  fun i => (S.method i).explicitApply f y₀ h
+
+/-- Textbook `ES(y₀, h)` operator (Butcher §530, def:530B): advance
+the exact solution `yex` by `h`, then apply each constituent `S_i`
+to that scalar. Returns a `Fin r → ℝ` vector of starting-method
+outputs. The `IsExplicit` hypothesis on every `S_i` marks this as
+the "explicit-only" variant per `def_530B_scaffold_strategy.md`; it
+is unused in the body (the recursion in `explicitStageValue` sums
+only over earlier stages regardless of `A`'s shape), but downstream
+order-condition proofs (cycle 153 `HasOrderRelativeTo_explicit`) will
+consume the hypothesis. -/
+noncomputable def applyExactThenStarting_explicit
+    {r : ℕ} (S : StartingMethod r)
+    (_hS : ∀ i, (S.method i).IsExplicit)
+    (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ h : ℝ) : Fin r → ℝ :=
+  S.applyExplicit f (yex (x₀ + h)) h
+
+/-! ### Non-vacuity sanity computations -/
+
+/-- The `Fin 0` summation in the stage recursion at `j = 0` is empty,
+so the stage value of any 1-stage method on its zeroth (and only)
+stage reduces to `b₀ · y₀`. Helper lemma decomposing the cycle 152
+sanity computations. -/
+private lemma explicitStageValue_zero_of_one_stage
+    (M : GeneralizedRungeKuttaMethod 1) (f : ℝ → ℝ) (y₀ h : ℝ) :
+    M.explicitStageValue f y₀ h 0 = M.b₀ * y₀ := by
+  rw [GeneralizedRungeKuttaMethod.explicitStageValue]
+  simp
+
+/-- For `trivialGeneralizedRK` the stage value at `j = 0` is just
+`y₀`, since `b₀ = 1`. -/
+private lemma trivialGeneralizedRK_explicitStageValue_zero
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    trivialGeneralizedRK.explicitStageValue f y₀ h 0 = y₀ := by
+  rw [explicitStageValue_zero_of_one_stage]
+  show (1 : ℝ) * y₀ = y₀
+  ring
+
+/-- For `trivialGeneralizedRK`, `explicitApply` reduces to one
+explicit-Euler step `y₀ + h · f(y₀)`. -/
+private lemma trivialGeneralizedRK_explicitApply
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    trivialGeneralizedRK.explicitApply f y₀ h = y₀ + h * f y₀ := by
+  unfold GeneralizedRungeKuttaMethod.explicitApply
+  rw [Fin.sum_univ_one, trivialGeneralizedRK_explicitStageValue_zero]
+  show (trivialGeneralizedRK.b₀) * y₀
+        + h * (trivialGeneralizedRK.b 0 * f y₀)
+      = y₀ + h * f y₀
+  show (1 : ℝ) * y₀ + h * ((1 : ℝ) * f y₀) = y₀ + h * f y₀
+  ring
+
+/-- **Non-vacuity sanity (`SE` operator on the trivial 1-stage
+explicit method):** for the trivial starting method (`r = 1, b₀ = 1,
+b = 1, A = 0`), `applyExplicit` reduces to `y₀ + h · f(y₀)`, i.e. one
+step of explicit Euler. -/
+theorem trivialStartingMethod_applyExplicit
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    trivialStartingMethod.applyExplicit f y₀ h
+      = fun (_ : Fin 1) => y₀ + h * f y₀ := by
+  funext i
+  fin_cases i
+  show trivialGeneralizedRK.explicitApply f y₀ h = y₀ + h * f y₀
+  exact trivialGeneralizedRK_explicitApply f y₀ h
+
+/-- **Non-vacuity sanity (`ES` operator):** with the trivial starting
+method (whose single constituent is explicit), advancing the exact
+solution `yex` by `h` then applying `S` produces
+`yex(x₀ + h) + h · f(yex(x₀ + h))`, i.e. one step of explicit Euler
+launched from the time-`h` exact value. -/
+theorem trivialStartingMethod_applyExactThenStarting_explicit
+    (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ h : ℝ) :
+    applyExactThenStarting_explicit trivialStartingMethod
+        (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
+        f yex x₀ h
+      = fun (_ : Fin 1) => yex (x₀ + h) + h * f (yex (x₀ + h)) := by
+  unfold applyExactThenStarting_explicit
+  rw [trivialStartingMethod_applyExplicit]
+
+end OpenMath.Chapter5.Section530
+
+/-! ### Explicit general linear methods + the `SM` operator
+(cycle 152, def:530B Path A Step 2e)
+
+This sub-section bundles a parallel `IsExplicit` predicate for GLMs
+(strict-lower-triangular `A`-block) with the textbook `SM(y₀, h)`
+operator: apply each `S_i` to `y₀` to produce the input vector, then
+take one `M`-step. The recursion machinery mirrors
+`GeneralizedRungeKuttaMethod.explicitStageValue` exactly.
+
+The `IsExplicit` hypotheses are not used in the recursion bodies (the
+sums in `explicitStageValue` only ever reference earlier stages
+regardless of `A`'s shape). They mark this as the "explicit-only"
+variant per `def_530B_scaffold_strategy.md` and will be consumed
+downstream when proving the textbook-form stage equations from these
+recursion-form bodies. -/
+
+namespace OpenMath.Chapter5.Section510.GeneralLinearMethod
+
+open Matrix
+
+/-- **Explicitness predicate for general linear methods.** A GLM is
+*explicit* if its internal-stage matrix `A` is strictly lower
+triangular: `A i j = 0` whenever `i ≤ j`. Internal helper for
+def:530B; not a textbook entity. The textbook discusses
+explicit/implicit GLMs implicitly but does not name a predicate. -/
+def IsExplicit {s r : ℕ}
+    (M : OpenMath.Chapter5.Section510.GeneralLinearMethod s r) : Prop :=
+  ∀ i j : Fin s, i.val ≤ j.val → M.A i j = 0
+
+/-- The GLM internal stage value `Y_i = (M.U *ᵥ y_input) i + h ·
+Σ_{k < i} M.A_{ik} · f(Y_k)`, defined by direct recursion on `i.val`.
+Mirrors `GeneralizedRungeKuttaMethod.explicitStageValue`. Internal
+helper for def:530B; not a textbook entity. -/
+noncomputable def explicitStageValue {s r : ℕ}
+    (M : OpenMath.Chapter5.Section510.GeneralLinearMethod s r)
+    (f : ℝ → ℝ) (y_input : Fin r → ℝ) (h : ℝ) (i : Fin s) : ℝ :=
+  (M.U *ᵥ y_input) i + h * ∑ k : Fin i.val,
+    M.A i ⟨k.val, by omega⟩
+      * f (M.explicitStageValue f y_input h ⟨k.val, by omega⟩)
+termination_by i.val
+decreasing_by exact k.isLt
+
+end OpenMath.Chapter5.Section510.GeneralLinearMethod
+
+namespace OpenMath.Chapter5.Section530
+
+open Matrix
+open OpenMath.Chapter5.Section510
+
+/-- Textbook `SM(y₀, h)` operator (Butcher §530, def:530B): apply each
+constituent `S_i` to `y₀` to produce the initial-input
+`Fin r → ℝ` vector `y_input`, then take one `M`-step. The output
+vector is `y_new[ℓ] = h · Σ_i M.B_{ℓi} · f(Y_i) + (M.V *ᵥ y_input) ℓ`,
+where the internal stages `Y_i` are computed by
+`GeneralLinearMethod.explicitStageValue`. The `IsExplicit`
+hypotheses on `S` and `M` mark this as the "explicit-only" variant
+per `def_530B_scaffold_strategy.md`; they are unused in the body but
+will be consumed by downstream order-condition proofs. -/
+noncomputable def applyStartingThenStep_explicit
+    {s r : ℕ}
+    (M : GeneralLinearMethod s r)
+    (S : StartingMethod r)
+    (_hS : ∀ i, (S.method i).IsExplicit)
+    (_hM : M.IsExplicit)
+    (f : ℝ → ℝ) (y₀ h : ℝ) : Fin r → ℝ :=
+  let y_input := S.applyExplicit f y₀ h
+  fun ℓ =>
+    h * ∑ i : Fin s, M.B ℓ i * f (M.explicitStageValue f y_input h i)
+      + (M.V *ᵥ y_input) ℓ
+
+/-- **Non-vacuity (positive direction): explicit Euler GLM is
+explicit.** The 1×1 `A`-block `!![0]` is vacuously strict-lower
+triangular at `s = 1`. -/
+theorem explicitEulerGLM_isExplicit : explicitEulerGLM.IsExplicit := by
+  intro i j _
+  fin_cases i; fin_cases j
+  rfl
 
 end OpenMath.Chapter5.Section530

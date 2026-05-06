@@ -182,6 +182,77 @@ Step 2 target for cycle 152 is the explicit-only operators. Direct
 recursion on stage index (no fixed-point machinery needed) leveraging
 the strict-lower-triangular `A` from `IsExplicit`.
 
+## Cycle 152 update — Path A Step 2 complete (2a–2f + 2e)
+
+Path A Step 2 landed in `OpenMath/Chapter5/Section530.lean` (cycle
+152), axiom-clean, sorry count remained 0.
+
+### GRK-side recursion + operators (Steps 2a–2d)
+
+* `noncomputable def GeneralizedRungeKuttaMethod.explicitStageValue` —
+  WF recursion on `j.val`, body
+  `b₀·y₀ + h·Σ_{k < j} A_{jk}·f(Y_k)`. Termination by `j.val`,
+  `decreasing_by exact k.isLt` (no `simp_wf` needed).
+* `noncomputable def GeneralizedRungeKuttaMethod.explicitApply` —
+  closed-form output `b₀·y₀ + h·Σ_j b_j·f(Y_j)`.
+* `noncomputable def StartingMethod.applyExplicit` — per-constituent
+  lift to a `Fin r → ℝ` initial-input vector.
+* `noncomputable def applyExactThenStarting_explicit` — textbook
+  `ES` operator, with unused `_hS : ∀ i, IsExplicit (S.method i)`
+  hypothesis marking the explicit-only variant.
+
+### GLM-side recursion + operator (Step 2e)
+
+Lives in a re-opened
+`namespace OpenMath.Chapter5.Section510.GeneralLinearMethod` block
+(Lean rejects cross-namespace `def Foo.X` declarations from inside
+a third namespace). Imports
+`OpenMath.Chapter5.Section510` (no cycle introduced).
+
+* `def GeneralLinearMethod.IsExplicit` — strict-lower-triangular
+  `A`-block.
+* `noncomputable def GeneralLinearMethod.explicitStageValue` —
+  same WF recursion shape as the GRK version, with
+  `(M.U *ᵥ y_input) i` as the base term instead of `M.b₀ · y₀`.
+* `noncomputable def applyStartingThenStep_explicit` (in
+  `Section530`'s namespace) — textbook `SM` operator with
+  unused `_hS, _hM` IsExplicit hypotheses.
+
+### Sanity computations (Step 2f)
+
+Three private helpers (`explicitStageValue_zero_of_one_stage`,
+`trivialGeneralizedRK_explicitStageValue_zero`,
+`trivialGeneralizedRK_explicitApply`) decompose the closed-form
+reductions, then the public:
+
+* `theorem trivialStartingMethod_applyExplicit` — full `SE` reduction
+  to `(fun _ => y₀ + h * f y₀)`.
+* `theorem trivialStartingMethod_applyExactThenStarting_explicit` —
+  `ES` reduction to
+  `(fun _ => yex(x₀+h) + h * f(yex(x₀+h)))`.
+* `theorem explicitEulerGLM_isExplicit` — vacuous (s = 1) GLM
+  IsExplicit witness; ready for cycle 153 consumption.
+
+### Verification
+
+* `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+* `lake build OpenMath.Chapter5.Section530` succeeds.
+* `grep -c sorry` → 0.
+* `lean_verify` axiom-clean on all three new theorems.
+
+### Notes for cycle 153
+
+* The `SM` half of the cycle 153 witness goal can reuse
+  `trivialGeneralizedRK_explicitApply` directly; the `ES` half is
+  already proved.
+* The `_hS`, `_hM` IsExplicit hypotheses on the operators are
+  currently unused. They will be consumed when proving
+  textbook-form stage equations from the recursion-form bodies
+  (likely as part of the `HasOrderRelativeTo_explicit` proof).
+* File grew from 360 → 573 lines (+213 LOC, slightly above the
+  strategy's 150-LOC target but within its 200-LOC abort threshold).
+  Concentrated in Step 2e GLM-side block.
+
 ## Cross-reference
 
 `def:530B` blocks (per dependency graph):

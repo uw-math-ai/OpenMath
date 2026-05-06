@@ -235,10 +235,10 @@
     "notes": "Cycle 139: opened \u00a7530 with GeneralizedRungeKuttaMethod (530a tableau: c, A, b\u2080, b), StartingMethod (length-r dependent sequence with heterogeneous stages), and the IsDegenerate / IsNonDegenerate predicates. Non-vacuity witnessed by trivialStartingMethod_isNonDegenerate (r=1, b\u2080=1) and refutability by zeroStartingMethod_isDegenerate (r=1, b\u2080=0). Cycle 141: heterogeneous-stages witness added \u2014 nontrivialTwoStageGRK (s=2, b\u2080=2), mixedStartingMethod (r=2, stages 0=1, stages 1=2) with mixedStartingMethod_isNonDegenerate; mixedStartingMethod_stages_neq confirms the dependent stages : Fin r \u2192 \u2115 design is genuinely needed; stretch zero2StartingMethod_isDegenerate witnesses degeneracy at r=2. All theorems axiom-clean ([propext, Classical.choice, Quot.sound]). Definition still matches the textbook verbatim."
   },
   "def:530B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized",
-    "notes": "Cycle 149 introduced a sorry-first scaffold (`applyStartingThenStep`, `applyExactThenStarting`, `HasOrderRelativeTo`, `explicitEulerGLM_hasOrderZero_trivialStarting`) but the operator bodies are not decomposable into named sub-helpers — they are indivisible multivariate fixed-point computations to solve implicit stage equations. Cycle 150 rolled back per cycle 139 precedent (sorry-count regression −2 in cycle 149). Closure requires multi-cycle infrastructure: Path A (explicit-only restricted operators with an `IsExplicit` predicate, ~2-3 cycles) or Path B (general implicit via `ContractingWith` / `Function.IsFixedPt`, ~3-5 cycles). See `.prover-state/issues/def_530B_scaffold_strategy.md`."
+    "lean_file": "OpenMath/Chapter5/Section530.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section530.applyExactThenStarting_explicit",
+    "status": "partial",
+    "notes": "Cycle 151: Path A Step 1 (IsExplicit predicate + 3 non-vacuity witnesses) landed axiom-clean. Cycle 152: Path A Step 2 (operators) complete \u2014 GeneralizedRungeKuttaMethod.{explicitStageValue, explicitApply}, StartingMethod.applyExplicit, applyExactThenStarting_explicit, applyStartingThenStep_explicit, plus GLM-side Section510.GeneralLinearMethod.{IsExplicit, explicitStageValue} and three axiom-clean sanity theorems (trivialStartingMethod_applyExplicit, trivialStartingMethod_applyExactThenStarting_explicit, explicitEulerGLM_isExplicit). Cycle 153 target: HasOrderRelativeTo_explicit predicate + p=0 non-vacuity witness on explicit Euler \u00d7 trivialStartingMethod. See .prover-state/issues/def_530B_scaffold_strategy.md."
   },
   "def:530C": {
     "lean_file": null,
