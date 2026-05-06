@@ -984,6 +984,71 @@ theorem explicitEulerGLM_hasOrderOne_trivialStarting
   -- Step 5: combine
   exact hT1.add hT2
 
+/-- **Order of a general linear method (Definition 530C, Path A).**
+A GLM `M` has order `p` (relative to *some* non-degenerate starting
+method) if there exists `S : StartingMethod r` whose constituent
+methods are all explicit and which is non-degenerate, such that
+`M` has order `p` relative to `S` in the sense of
+`HasOrderRelativeTo_explicit`.
+
+Faithful to Butcher's def:530C (§530, p. 432) restricted to the
+explicit branch: the textbook's "`M` has order `p`" universally
+quantifies over methods (explicit + implicit); Path A captures the
+explicit case. Path B (implicit) is deferred — see
+`.prover-state/issues/def_530B_scaffold_strategy.md`.
+
+The `S.IsNonDegenerate` clause is included verbatim from the
+textbook ("there exists a non-degenerate starting method `S`"). -/
+def HasOrder_explicit
+    {s r : ℕ}
+    (M : OpenMath.Chapter5.Section510.GeneralLinearMethod s r)
+    (hM : M.IsExplicit)
+    (p : ℕ)
+    (f : ℝ → ℝ) (yex : ℝ → ℝ) (x₀ y₀ : ℝ) : Prop :=
+  ∃ (S : StartingMethod r) (hS : ∀ i, (S.method i).IsExplicit),
+    S.IsNonDegenerate ∧
+    HasOrderRelativeTo_explicit M S hS hM p f yex x₀ y₀
+
+/-- **Non-vacuity of `HasOrder_explicit` at `p = 0`.** Witnesses
+def:530C (Path A) at the `(s, r) = (1, 1)` shape by exhibiting the
+trivial starting method as the existential witness. The starting
+method `trivialStartingMethod` is non-degenerate
+(`trivialStartingMethod_isNonDegenerate`) and explicit
+(`trivialGeneralizedRK_isExplicit`); the `HasOrderRelativeTo_explicit`
+component is supplied by `explicitEulerGLM_hasOrderZero_trivialStarting`
+(cycle 153). -/
+theorem explicitEulerGLM_hasOrderZero
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_deriv : HasDerivAt yex (f y₀) x₀) :
+    HasOrder_explicit explicitEulerGLM explicitEulerGLM_isExplicit
+      0 f yex x₀ y₀ := by
+  refine ⟨trivialStartingMethod,
+          (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit),
+          trivialStartingMethod_isNonDegenerate,
+          ?_⟩
+  exact explicitEulerGLM_hasOrderZero_trivialStarting hf_lip hyex_x₀ hyex_deriv
+
+/-- **Non-vacuity of `HasOrder_explicit` at `p = 1`.** Refines
+`explicitEulerGLM_hasOrderZero` to order `1` using the cycle-154
+witness `explicitEulerGLM_hasOrderOne_trivialStarting`, which requires
+the exact solution `yex` to be `C²` and to satisfy the genuine ODE
+relation `∀ x, HasDerivAt yex (f (yex x)) x`. -/
+theorem explicitEulerGLM_hasOrderOne
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    HasOrder_explicit explicitEulerGLM explicitEulerGLM_isExplicit
+      1 f yex x₀ y₀ := by
+  refine ⟨trivialStartingMethod,
+          (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit),
+          trivialStartingMethod_isNonDegenerate,
+          ?_⟩
+  exact explicitEulerGLM_hasOrderOne_trivialStarting hf_lip hyex_x₀ hyex_C2 hyex_ode
+
 end OrderRelativeTo
 
 end OpenMath.Chapter5.Section530
