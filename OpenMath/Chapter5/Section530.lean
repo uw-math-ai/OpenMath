@@ -529,6 +529,88 @@ theorem padCompatStartingMethodR_constituents_isExplicit (r : ℕ) :
     fin_cases a; fin_cases b
     rfl
 
+/-! #### Phase B.3 reconciliation lemmas (cycle 164)
+
+These four lemmas exhibit the parametric `padCompatStartingMethodR r`
+family as the common generalisation of the existing hand-written
+starting methods `trivialStartingMethod` (cycle 137 — but shape-wise
+this is r = 0), `padCompatStartingMethod` (cycle 156),
+`pad3CompatStartingMethod` (cycle 159), and `pad4CompatStartingMethod`
+(cycle 161). Each lemma is closed by `mk.injEq` reduction followed
+by funext + fin_cases on the constituent index. -/
+
+/-- **Phase B.3 reconciliation (r = 0).** The parametric `r + 1`
+starting method at `r = 0` reduces to the cycle 137 hand-written
+witness `trivialStartingMethod` (a `StartingMethod 1` whose single
+constituent is `trivialGeneralizedRK`). -/
+theorem padCompatStartingMethodR_zero_eq_trivialStartingMethod :
+    padCompatStartingMethodR 0 = trivialStartingMethod := by
+  refine StartingMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, heq_of_eq ?_⟩
+  funext i
+  fin_cases i
+  show padCompatMethodR 0 ⟨0, _⟩ = trivialGeneralizedRK
+  unfold padCompatMethodR
+  simp
+
+/-- **Phase B.3 reconciliation (r = 1).** The parametric `r + 1`
+starting method at `r = 1` reduces to the cycle 156 hand-written
+witness `padCompatStartingMethod` (a `StartingMethod 2` whose row 0
+is `trivialGeneralizedRK` and row 1 is `zeroGeneralizedRK`). -/
+theorem padCompatStartingMethodR_one_eq_padCompatStartingMethod :
+    padCompatStartingMethodR 1 = padCompatStartingMethod := by
+  refine StartingMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, heq_of_eq ?_⟩
+  funext i
+  fin_cases i
+  · show padCompatMethodR 1 ⟨0, _⟩ = padCompatMethod ⟨0, _⟩
+    unfold padCompatMethodR padCompatMethod
+    simp
+  · show padCompatMethodR 1 ⟨1, _⟩ = padCompatMethod ⟨1, _⟩
+    unfold padCompatMethodR padCompatMethod
+    simp
+
+/-- **Phase B.3 reconciliation (r = 2).** The parametric `r + 1`
+starting method at `r = 2` reduces to the cycle 159 hand-written
+witness `pad3CompatStartingMethod` (a `StartingMethod 3`). -/
+theorem padCompatStartingMethodR_two_eq_pad3CompatStartingMethod :
+    padCompatStartingMethodR 2 = pad3CompatStartingMethod := by
+  refine StartingMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, heq_of_eq ?_⟩
+  funext i
+  fin_cases i
+  · show padCompatMethodR 2 ⟨0, _⟩ = pad3CompatMethod ⟨0, _⟩
+    unfold padCompatMethodR pad3CompatMethod
+    simp
+  · show padCompatMethodR 2 ⟨1, _⟩ = pad3CompatMethod ⟨1, _⟩
+    unfold padCompatMethodR pad3CompatMethod
+    simp
+  · show padCompatMethodR 2 ⟨2, _⟩ = pad3CompatMethod ⟨2, _⟩
+    unfold padCompatMethodR pad3CompatMethod
+    simp
+
+/-- **Phase B.3 reconciliation (r = 3).** The parametric `r + 1`
+starting method at `r = 3` reduces to the cycle 161 hand-written
+witness `pad4CompatStartingMethod` (a `StartingMethod 4`). -/
+theorem padCompatStartingMethodR_three_eq_pad4CompatStartingMethod :
+    padCompatStartingMethodR 3 = pad4CompatStartingMethod := by
+  refine StartingMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, heq_of_eq ?_⟩
+  funext i
+  fin_cases i
+  · show padCompatMethodR 3 ⟨0, _⟩ = pad4CompatMethod ⟨0, _⟩
+    unfold padCompatMethodR pad4CompatMethod
+    simp
+  · show padCompatMethodR 3 ⟨1, _⟩ = pad4CompatMethod ⟨1, _⟩
+    unfold padCompatMethodR pad4CompatMethod
+    simp
+  · show padCompatMethodR 3 ⟨2, _⟩ = pad4CompatMethod ⟨2, _⟩
+    unfold padCompatMethodR pad4CompatMethod
+    simp
+  · show padCompatMethodR 3 ⟨3, _⟩ = pad4CompatMethod ⟨3, _⟩
+    unfold padCompatMethodR pad4CompatMethod
+    simp
+
 /-! #### Positive witness (non-vacuous): Heun-style 2-stage explicit method
 
 `explicit2StageGRK` has `A = !![0, 0; 1, 0]`, with a non-trivial

@@ -1337,6 +1337,59 @@ noncomputable def paddedREulerGLM (r : ℕ) : GeneralLinearMethod 1 (r + 1) wher
   V := Matrix.of fun (i j : Fin (r + 1)) =>
          if i.val = 0 ∧ j.val = 0 then (1 : ℝ) else 0
 
+/-! #### Phase B.3 reconciliation lemmas (cycle 164)
+
+These four lemmas exhibit the parametric `paddedREulerGLM r` family
+as the common generalisation of the cycle-131/133/159/161 hand-written
+instances `explicitEulerGLM`, `padded2DEulerGLM`, `padded3DEulerGLM`,
+and `padded4DEulerGLM`. Each lemma is closed by matrix-wise extension
+followed by `fin_cases` on the row/column indices and `simp` with the
+two GLM bodies. -/
+
+/-- **Phase B.3 reconciliation (r = 0).** The parametric padded
+explicit-Euler GLM at `r = 0` reduces to the cycle 131 hand-written
+witness `explicitEulerGLM` (a `(s, r) = (1, 1)` GLM). -/
+theorem paddedREulerGLM_zero_eq_explicitEulerGLM :
+    paddedREulerGLM 0 = explicitEulerGLM := by
+  refine GeneralLinearMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, ?_, ?_, ?_⟩
+  all_goals
+    ext i j
+    fin_cases i; fin_cases j; simp
+
+/-- **Phase B.3 reconciliation (r = 1).** The parametric padded
+explicit-Euler GLM at `r = 1` reduces to the cycle 133 hand-written
+witness `padded2DEulerGLM` (a `(s, r) = (1, 2)` GLM). -/
+theorem paddedREulerGLM_one_eq_padded2DEulerGLM :
+    paddedREulerGLM 1 = padded2DEulerGLM := by
+  refine GeneralLinearMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, ?_, ?_, ?_⟩
+  all_goals
+    ext i j
+    fin_cases i <;> fin_cases j <;> simp
+
+/-- **Phase B.3 reconciliation (r = 2).** The parametric padded
+explicit-Euler GLM at `r = 2` reduces to the cycle 159 hand-written
+witness `padded3DEulerGLM` (a `(s, r) = (1, 3)` GLM). -/
+theorem paddedREulerGLM_two_eq_padded3DEulerGLM :
+    paddedREulerGLM 2 = padded3DEulerGLM := by
+  refine GeneralLinearMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, ?_, ?_, ?_⟩
+  all_goals
+    ext i j
+    fin_cases i <;> fin_cases j <;> simp
+
+/-- **Phase B.3 reconciliation (r = 3).** The parametric padded
+explicit-Euler GLM at `r = 3` reduces to the cycle 161 hand-written
+witness `padded4DEulerGLM` (a `(s, r) = (1, 4)` GLM). -/
+theorem paddedREulerGLM_three_eq_padded4DEulerGLM :
+    paddedREulerGLM 3 = padded4DEulerGLM := by
+  refine GeneralLinearMethod.mk.injEq .. |>.mpr ?_
+  refine ⟨rfl, ?_, ?_, ?_⟩
+  all_goals
+    ext i j
+    fin_cases i <;> fin_cases j <;> simp
+
 /-- **Substantive** non-vacuity witness for `IsIRKStable`:
 `padded2DEulerGLM` (s = 1, r = 2) is inherently Runge–Kutta stable
 with `X = 0`. Unlike the cycle 131 witness `explicitEulerGLM`
