@@ -805,6 +805,113 @@ def HasOrderRelativeTo_explicit
           - applyExactThenStarting_explicit S hS f yex x₀ h i)
       =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (p + 1))
 
+/-- **(Cycle 160) Shared little-o + Lipschitz closure for explicit-Euler-style
+scalar SM−ES diffs at `p = 0`.** Order-zero sibling of cycle 158's
+`taylor_lipschitz_explicitEuler_orderOne_diff_isBigO`. Given an exact
+solution `yex` satisfying `yex x₀ = y₀` and `HasDerivAt yex (f y₀) x₀`,
+with `f` Lipschitz, the residual
+
+  `((y₀ + h · f y₀) + h · f (y₀ + h · f y₀))`
+  `  − (yex (x₀ + h) + h · f (yex (x₀ + h)))`
+
+is `O(h)` near `0`. This is the closed-form `SM[0] − ES[0]` for the
+explicit-Euler GLM × explicit-Euler stage at index `0` once the
+`trivialStartingMethod` (cycle 153) and the `i = 0` channels of
+`padCompatStartingMethod` (cycle 156) and `pad3CompatStartingMethod`
+(cycle 159) have been algebraically reduced; extracting it as a
+private helper lets all three p = 0 witnesses cite the proof verbatim.
+
+Proof structure: split the residual into
+
+* `T1 := (y₀ + h·f y₀) − yex(x₀+h)` — `o(h)` (hence `O(h)`) via the
+  little-o characterization of `HasDerivAt` at `0`,
+* `T2 := h · (f(y₀ + h·f y₀) − f(yex(x₀+h)))` — `O(h)` via the
+  Lipschitz pointwise bound combined with the `|·| ≤ 1` clause
+  supplied by continuity of the inner difference at `h = 0`. -/
+private theorem taylor_lipschitz_explicitEuler_orderZero_diff_isBigO
+    {f : ℝ → ℝ} {L : NNReal} (hf_lip : LipschitzWith L f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_deriv : HasDerivAt yex (f y₀) x₀) :
+    (fun h : ℝ =>
+        ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+          - (yex (x₀ + h) + h * f (yex (x₀ + h))))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h) := by
+  -- Decompose into T1 + T2 form.
+  have hsplit :
+      (fun h : ℝ =>
+          ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+            - (yex (x₀ + h) + h * f (yex (x₀ + h))))
+        = (fun h : ℝ =>
+            ((y₀ + h * f y₀) - yex (x₀ + h))
+              + h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))) := by
+    funext h; ring
+  rw [hsplit]
+  -- T1 = (y₀ + h·f y₀) - yex(x₀+h) is o(h), hence O(h).
+  have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+      =O[nhds (0 : ℝ)] (fun h => h) := by
+    have hderiv :
+        (fun h : ℝ => yex (x₀ + h) - yex x₀ - h • f y₀)
+          =o[nhds (0 : ℝ)] fun h => h :=
+      hasDerivAt_iff_isLittleO_nhds_zero.mp hyex_deriv
+    have h1 : (fun h : ℝ => yex (x₀ + h) - y₀ - h * f y₀)
+        =o[nhds (0 : ℝ)] fun h => h := by
+      have := hderiv
+      rw [hyex_x₀] at this
+      simpa [smul_eq_mul] using this
+    have h2 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
+        =o[nhds (0 : ℝ)] fun h => h := by
+      have := h1.neg_left
+      refine this.congr' ?_ (Filter.Eventually.of_forall fun _ => rfl)
+      exact Filter.Eventually.of_forall fun h => by ring
+    exact h2.isBigO
+  -- T2 = h * (f(y₀ + h·f y₀) - f(yex(x₀+h))) is O(h) via Lipschitz.
+  have hT2 : (fun h : ℝ => h * (f (y₀ + h * f y₀) - f (yex (x₀ + h))))
+      =O[nhds (0 : ℝ)] (fun h => h) := by
+    have hcontA : ContinuousAt (fun h : ℝ => y₀ + h * f y₀) 0 := by
+      exact (continuous_const.add (continuous_id.mul continuous_const)).continuousAt
+    have hcontB : ContinuousAt (fun h : ℝ => yex (x₀ + h)) 0 := by
+      have hinner : ContinuousAt (fun h : ℝ => x₀ + h) 0 :=
+        (continuous_const.add continuous_id).continuousAt
+      have houter : ContinuousAt yex ((fun h : ℝ => x₀ + h) 0) := by
+        simpa using hyex_deriv.continuousAt
+      exact houter.comp hinner
+    have hdiff_tendsto :
+        Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
+          (nhds 0) (nhds 0) := by
+      have htend : Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
+          (nhds 0) (nhds (y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0))) :=
+        (hcontA.sub hcontB).tendsto
+      have h0 : y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0) = 0 := by simp [hyex_x₀]
+      rw [h0] at htend
+      exact htend
+    have hbound : ∀ᶠ h : ℝ in nhds 0,
+        |y₀ + h * f y₀ - yex (x₀ + h)| < 1 := by
+      have hone : (0 : ℝ) < 1 := by norm_num
+      have hin := (Metric.tendsto_nhds.mp hdiff_tendsto) 1 hone
+      filter_upwards [hin] with h hh
+      rw [Real.dist_0_eq_abs] at hh
+      exact hh
+    refine .of_bound (↑L) ?_
+    filter_upwards [hbound] with h hh
+    have hlip := hf_lip.dist_le_mul (y₀ + h * f y₀) (yex (x₀ + h))
+    rw [Real.dist_eq, Real.dist_eq] at hlip
+    have hLnn : (0 : ℝ) ≤ L := L.coe_nonneg
+    have habsh : (0 : ℝ) ≤ |h| := abs_nonneg _
+    calc ‖h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))‖
+        = |h| * |f (y₀ + h * f y₀) - f (yex (x₀ + h))| := by
+          rw [Real.norm_eq_abs, abs_mul]
+      _ ≤ |h| * (↑L * |y₀ + h * f y₀ - yex (x₀ + h)|) :=
+          mul_le_mul_of_nonneg_left hlip habsh
+      _ ≤ |h| * (↑L * 1) := by
+          have hh' : |y₀ + h * f y₀ - yex (x₀ + h)| ≤ 1 := hh.le
+          have : ↑L * |y₀ + h * f y₀ - yex (x₀ + h)| ≤ ↑L * 1 :=
+            mul_le_mul_of_nonneg_left hh' hLnn
+          exact mul_le_mul_of_nonneg_left this habsh
+      _ = ↑L * ‖h‖ := by rw [Real.norm_eq_abs]; ring
+  -- Combine
+  exact hT1.add hT2
+
 /-- **Non-vacuity (Path A Step 3, p = 0).** The explicit Euler GLM has
 order `0` relative to the trivial starting method on any IVP whose exact
 solution `yex` satisfies `yex x₀ = y₀` and `HasDerivAt yex (f y₀) x₀`,
@@ -863,7 +970,7 @@ theorem explicitEulerGLM_hasOrderZero_trivialStarting
         = yex (x₀ + h) + h * f (yex (x₀ + h)) := by
     intro h
     rw [trivialStartingMethod_applyExactThenStarting_explicit]
-  -- Step 2: rewrite the difference into closed form
+  -- Step 2: rewrite SM[0] − ES[0] into the helper's input form.
   have hcongr :
       (fun h : ℝ =>
           applyStartingThenStep_explicit explicitEulerGLM trivialStartingMethod
@@ -873,84 +980,18 @@ theorem explicitEulerGLM_hasOrderZero_trivialStarting
                 (fun i => by fin_cases i; exact trivialGeneralizedRK_isExplicit)
                 f yex x₀ h 0)
         = (fun h : ℝ =>
-            ((y₀ + h * f y₀) - yex (x₀ + h))
-              + h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))) := by
+            ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+              - (yex (x₀ + h) + h * f (yex (x₀ + h)))) := by
     funext h
     rw [hSM, hES]
-    ring
   rw [hcongr]
   -- Collapse `h ^ (0 + 1)` to `h`.
   have hpow : (fun h : ℝ => h ^ (0 + 1)) = (fun h : ℝ => h) := by
     funext h; simp
   rw [hpow]
-  -- Step 3: T1 = (y₀ + h·f y₀) - yex(x₀+h) is o(h), hence O(h).
-  have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
-      =O[nhds (0 : ℝ)] (fun h => h) := by
-    have hderiv :
-        (fun h : ℝ => yex (x₀ + h) - yex x₀ - h • f y₀)
-          =o[nhds (0 : ℝ)] fun h => h :=
-      hasDerivAt_iff_isLittleO_nhds_zero.mp hyex_deriv
-    have h1 : (fun h : ℝ => yex (x₀ + h) - y₀ - h * f y₀)
-        =o[nhds (0 : ℝ)] fun h => h := by
-      have := hderiv
-      rw [hyex_x₀] at this
-      simpa [smul_eq_mul] using this
-    have h2 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
-        =o[nhds (0 : ℝ)] fun h => h := by
-      have := h1.neg_left
-      refine this.congr' ?_ (Filter.Eventually.of_forall fun _ => rfl)
-      exact Filter.Eventually.of_forall fun h => by ring
-    exact h2.isBigO
-  -- Step 4: T2 = h * (f(y₀ + h·f y₀) - f(yex(x₀+h))) is O(h) via Lipschitz.
-  have hT2 : (fun h : ℝ => h * (f (y₀ + h * f y₀) - f (yex (x₀ + h))))
-      =O[nhds (0 : ℝ)] (fun h => h) := by
-    -- The pointwise bound `|h * (f a - f b)| ≤ L * |h|` holds whenever
-    -- `|y₀ + h·f y₀ - yex(x₀+h)| ≤ 1`.  Both sides of the diff tend to
-    -- `y₀` as `h → 0`, so the difference tends to `0`, i.e. is eventually
-    -- bounded by `1` near `h = 0`.
-    have hcontA : ContinuousAt (fun h : ℝ => y₀ + h * f y₀) 0 := by
-      exact (continuous_const.add (continuous_id.mul continuous_const)).continuousAt
-    have hcontB : ContinuousAt (fun h : ℝ => yex (x₀ + h)) 0 := by
-      have h_inner : ContinuousAt (fun h : ℝ => x₀ + h) 0 :=
-        (continuous_const.add continuous_id).continuousAt
-      have h_outer : ContinuousAt yex ((fun h : ℝ => x₀ + h) 0) := by
-        simpa using hyex_deriv.continuousAt
-      exact h_outer.comp h_inner
-    have hdiff_tendsto :
-        Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
-          (nhds 0) (nhds 0) := by
-      have htend : Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
-          (nhds 0) (nhds (y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0))) :=
-        (hcontA.sub hcontB).tendsto
-      have h0 : y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0) = 0 := by simp [hyex_x₀]
-      rw [h0] at htend
-      exact htend
-    have hbound : ∀ᶠ h : ℝ in nhds 0,
-        |y₀ + h * f y₀ - yex (x₀ + h)| < 1 := by
-      have hone : (0 : ℝ) < 1 := by norm_num
-      have h_in := (Metric.tendsto_nhds.mp hdiff_tendsto) 1 hone
-      filter_upwards [h_in] with h hh
-      rw [Real.dist_0_eq_abs] at hh
-      exact hh
-    refine .of_bound (↑L) ?_
-    filter_upwards [hbound] with h hh
-    have hlip := hf_lip.dist_le_mul (y₀ + h * f y₀) (yex (x₀ + h))
-    rw [Real.dist_eq, Real.dist_eq] at hlip
-    have hLnn : (0 : ℝ) ≤ L := L.coe_nonneg
-    have habsh : (0 : ℝ) ≤ |h| := abs_nonneg _
-    calc ‖h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))‖
-        = |h| * |f (y₀ + h * f y₀) - f (yex (x₀ + h))| := by
-          rw [Real.norm_eq_abs, abs_mul]
-      _ ≤ |h| * (↑L * |y₀ + h * f y₀ - yex (x₀ + h)|) :=
-          mul_le_mul_of_nonneg_left hlip habsh
-      _ ≤ |h| * (↑L * 1) := by
-          have hh' : |y₀ + h * f y₀ - yex (x₀ + h)| ≤ 1 := hh.le
-          have : ↑L * |y₀ + h * f y₀ - yex (x₀ + h)| ≤ ↑L * 1 :=
-            mul_le_mul_of_nonneg_left hh' hLnn
-          exact mul_le_mul_of_nonneg_left this habsh
-      _ = ↑L * ‖h‖ := by rw [Real.norm_eq_abs]; ring
-  -- Step 5: combine
-  exact hT1.add hT2
+  -- Step 3: discharge via the cycle-160 shared helper.
+  exact taylor_lipschitz_explicitEuler_orderZero_diff_isBigO
+    hf_lip hyex_x₀ hyex_deriv
 
 /-- **(Cycle 158) Shared Taylor + Lipschitz closure for explicit-Euler-style
 scalar SM−ES diffs at `p = 1`.** Given a `C²` exact solution `yex`
@@ -1302,7 +1343,7 @@ theorem padded2DEulerGLM_hasOrderZero_padCompatStarting
           = yex (x₀ + h) + h * f (yex (x₀ + h))
       rw [padCompatStartingMethod_applyExplicit]
       rfl
-    -- Rewrite the difference into closed form
+    -- Rewrite SM[0] − ES[0] into the helper's input form.
     have hcongr :
         (fun h : ℝ =>
             applyStartingThenStep_explicit padded2DEulerGLM padCompatStartingMethod
@@ -1312,80 +1353,18 @@ theorem padded2DEulerGLM_hasOrderZero_padCompatStarting
                   padCompatStartingMethod_constituents_isExplicit
                   f yex x₀ h 0)
           = (fun h : ℝ =>
-              ((y₀ + h * f y₀) - yex (x₀ + h))
-                + h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))) := by
+              ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+                - (yex (x₀ + h) + h * f (yex (x₀ + h)))) := by
       funext h
       rw [hSM, hES]
-      ring
     rw [hcongr]
     -- Collapse `h ^ (0 + 1)` to `h`.
     have hpow : (fun h : ℝ => h ^ (0 + 1)) = (fun h : ℝ => h) := by
       funext h; simp
     rw [hpow]
-    -- T1 = (y₀ + h·f y₀) - yex(x₀+h) is o(h), hence O(h).
-    have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
-        =O[nhds (0 : ℝ)] (fun h => h) := by
-      have hderiv :
-          (fun h : ℝ => yex (x₀ + h) - yex x₀ - h • f y₀)
-            =o[nhds (0 : ℝ)] fun h => h :=
-        hasDerivAt_iff_isLittleO_nhds_zero.mp hyex_deriv
-      have h1 : (fun h : ℝ => yex (x₀ + h) - y₀ - h * f y₀)
-          =o[nhds (0 : ℝ)] fun h => h := by
-        have := hderiv
-        rw [hyex_x₀] at this
-        simpa [smul_eq_mul] using this
-      have h2 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
-          =o[nhds (0 : ℝ)] fun h => h := by
-        have := h1.neg_left
-        refine this.congr' ?_ (Filter.Eventually.of_forall fun _ => rfl)
-        exact Filter.Eventually.of_forall fun h => by ring
-      exact h2.isBigO
-    -- T2 = h * (f(y₀ + h·f y₀) - f(yex(x₀+h))) is O(h) via Lipschitz.
-    have hT2 : (fun h : ℝ => h * (f (y₀ + h * f y₀) - f (yex (x₀ + h))))
-        =O[nhds (0 : ℝ)] (fun h => h) := by
-      have hcontA : ContinuousAt (fun h : ℝ => y₀ + h * f y₀) 0 := by
-        exact (continuous_const.add (continuous_id.mul continuous_const)).continuousAt
-      have hcontB : ContinuousAt (fun h : ℝ => yex (x₀ + h)) 0 := by
-        have h_inner : ContinuousAt (fun h : ℝ => x₀ + h) 0 :=
-          (continuous_const.add continuous_id).continuousAt
-        have h_outer : ContinuousAt yex ((fun h : ℝ => x₀ + h) 0) := by
-          simpa using hyex_deriv.continuousAt
-        exact h_outer.comp h_inner
-      have hdiff_tendsto :
-          Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
-            (nhds 0) (nhds 0) := by
-        have htend : Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
-            (nhds 0) (nhds (y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0))) :=
-          (hcontA.sub hcontB).tendsto
-        have h0 : y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0) = 0 := by simp [hyex_x₀]
-        rw [h0] at htend
-        exact htend
-      have hbound : ∀ᶠ h : ℝ in nhds 0,
-          |y₀ + h * f y₀ - yex (x₀ + h)| < 1 := by
-        have hone : (0 : ℝ) < 1 := by norm_num
-        have h_in := (Metric.tendsto_nhds.mp hdiff_tendsto) 1 hone
-        filter_upwards [h_in] with h hh
-        rw [Real.dist_0_eq_abs] at hh
-        exact hh
-      refine .of_bound (↑L) ?_
-      filter_upwards [hbound] with h hh
-      have hlip := hf_lip.dist_le_mul (y₀ + h * f y₀) (yex (x₀ + h))
-      rw [Real.dist_eq, Real.dist_eq] at hlip
-      have hLnn : (0 : ℝ) ≤ L := L.coe_nonneg
-      have habsh : (0 : ℝ) ≤ |h| := abs_nonneg _
-      calc ‖h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))‖
-          = |h| * |f (y₀ + h * f y₀) - f (yex (x₀ + h))| := by
-            rw [Real.norm_eq_abs, abs_mul]
-        _ ≤ |h| * (↑L * |y₀ + h * f y₀ - yex (x₀ + h)|) :=
-            mul_le_mul_of_nonneg_left hlip habsh
-        _ ≤ |h| * (↑L * 1) := by
-            have hh' : |y₀ + h * f y₀ - yex (x₀ + h)| ≤ 1 := hh.le
-            have : ↑L * |y₀ + h * f y₀ - yex (x₀ + h)| ≤ ↑L * 1 :=
-              mul_le_mul_of_nonneg_left hh' hLnn
-            exact mul_le_mul_of_nonneg_left this habsh
-        _ = ↑L * ‖h‖ := by rw [Real.norm_eq_abs]; ring
-    -- Combine
-    exact hT1.add hT2
+    -- Discharge via the cycle-160 shared helper.
+    exact taylor_lipschitz_explicitEuler_orderZero_diff_isBigO
+      hf_lip hyex_x₀ hyex_deriv
   · -- i = 1 case: SM[1] = 0, ES[1] = 0, Diff = 0.
     change (fun h : ℝ =>
           applyStartingThenStep_explicit padded2DEulerGLM padCompatStartingMethod
@@ -1653,7 +1632,7 @@ theorem padded3DEulerGLM_hasOrderZero_pad3CompatStarting
           = yex (x₀ + h) + h * f (yex (x₀ + h))
       rw [pad3CompatStartingMethod_applyExplicit]
       rfl
-    -- Rewrite the difference into closed form
+    -- Rewrite SM[0] − ES[0] into the helper's input form.
     have hcongr :
         (fun h : ℝ =>
             applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod
@@ -1663,80 +1642,18 @@ theorem padded3DEulerGLM_hasOrderZero_pad3CompatStarting
                   pad3CompatStartingMethod_constituents_isExplicit
                   f yex x₀ h 0)
           = (fun h : ℝ =>
-              ((y₀ + h * f y₀) - yex (x₀ + h))
-                + h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))) := by
+              ((y₀ + h * f y₀) + h * f (y₀ + h * f y₀))
+                - (yex (x₀ + h) + h * f (yex (x₀ + h)))) := by
       funext h
       rw [hSM, hES]
-      ring
     rw [hcongr]
     -- Collapse `h ^ (0 + 1)` to `h`.
     have hpow : (fun h : ℝ => h ^ (0 + 1)) = (fun h : ℝ => h) := by
       funext h; simp
     rw [hpow]
-    -- T1 = (y₀ + h·f y₀) - yex(x₀+h) is o(h), hence O(h).
-    have hT1 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
-        =O[nhds (0 : ℝ)] (fun h => h) := by
-      have hderiv :
-          (fun h : ℝ => yex (x₀ + h) - yex x₀ - h • f y₀)
-            =o[nhds (0 : ℝ)] fun h => h :=
-        hasDerivAt_iff_isLittleO_nhds_zero.mp hyex_deriv
-      have h1 : (fun h : ℝ => yex (x₀ + h) - y₀ - h * f y₀)
-          =o[nhds (0 : ℝ)] fun h => h := by
-        have := hderiv
-        rw [hyex_x₀] at this
-        simpa [smul_eq_mul] using this
-      have h2 : (fun h : ℝ => (y₀ + h * f y₀) - yex (x₀ + h))
-          =o[nhds (0 : ℝ)] fun h => h := by
-        have := h1.neg_left
-        refine this.congr' ?_ (Filter.Eventually.of_forall fun _ => rfl)
-        exact Filter.Eventually.of_forall fun h => by ring
-      exact h2.isBigO
-    -- T2 = h * (f(y₀ + h·f y₀) - f(yex(x₀+h))) is O(h) via Lipschitz.
-    have hT2 : (fun h : ℝ => h * (f (y₀ + h * f y₀) - f (yex (x₀ + h))))
-        =O[nhds (0 : ℝ)] (fun h => h) := by
-      have hcontA : ContinuousAt (fun h : ℝ => y₀ + h * f y₀) 0 := by
-        exact (continuous_const.add (continuous_id.mul continuous_const)).continuousAt
-      have hcontB : ContinuousAt (fun h : ℝ => yex (x₀ + h)) 0 := by
-        have h_inner : ContinuousAt (fun h : ℝ => x₀ + h) 0 :=
-          (continuous_const.add continuous_id).continuousAt
-        have h_outer : ContinuousAt yex ((fun h : ℝ => x₀ + h) 0) := by
-          simpa using hyex_deriv.continuousAt
-        exact h_outer.comp h_inner
-      have hdiff_tendsto :
-          Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
-            (nhds 0) (nhds 0) := by
-        have htend : Tendsto (fun h : ℝ => y₀ + h * f y₀ - yex (x₀ + h))
-            (nhds 0) (nhds (y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0))) :=
-          (hcontA.sub hcontB).tendsto
-        have h0 : y₀ + (0 : ℝ) * f y₀ - yex (x₀ + 0) = 0 := by simp [hyex_x₀]
-        rw [h0] at htend
-        exact htend
-      have hbound : ∀ᶠ h : ℝ in nhds 0,
-          |y₀ + h * f y₀ - yex (x₀ + h)| < 1 := by
-        have hone : (0 : ℝ) < 1 := by norm_num
-        have h_in := (Metric.tendsto_nhds.mp hdiff_tendsto) 1 hone
-        filter_upwards [h_in] with h hh
-        rw [Real.dist_0_eq_abs] at hh
-        exact hh
-      refine .of_bound (↑L) ?_
-      filter_upwards [hbound] with h hh
-      have hlip := hf_lip.dist_le_mul (y₀ + h * f y₀) (yex (x₀ + h))
-      rw [Real.dist_eq, Real.dist_eq] at hlip
-      have hLnn : (0 : ℝ) ≤ L := L.coe_nonneg
-      have habsh : (0 : ℝ) ≤ |h| := abs_nonneg _
-      calc ‖h * (f (y₀ + h * f y₀) - f (yex (x₀ + h)))‖
-          = |h| * |f (y₀ + h * f y₀) - f (yex (x₀ + h))| := by
-            rw [Real.norm_eq_abs, abs_mul]
-        _ ≤ |h| * (↑L * |y₀ + h * f y₀ - yex (x₀ + h)|) :=
-            mul_le_mul_of_nonneg_left hlip habsh
-        _ ≤ |h| * (↑L * 1) := by
-            have hh' : |y₀ + h * f y₀ - yex (x₀ + h)| ≤ 1 := hh.le
-            have : ↑L * |y₀ + h * f y₀ - yex (x₀ + h)| ≤ ↑L * 1 :=
-              mul_le_mul_of_nonneg_left hh' hLnn
-            exact mul_le_mul_of_nonneg_left this habsh
-        _ = ↑L * ‖h‖ := by rw [Real.norm_eq_abs]; ring
-    -- Combine
-    exact hT1.add hT2
+    -- Discharge via the cycle-160 shared helper.
+    exact taylor_lipschitz_explicitEuler_orderZero_diff_isBigO
+      hf_lip hyex_x₀ hyex_deriv
   · -- i = 1 case: SM[1] = 0, ES[1] = 0, Diff = 0.
     change (fun h : ℝ =>
           applyStartingThenStep_explicit padded3DEulerGLM pad3CompatStartingMethod

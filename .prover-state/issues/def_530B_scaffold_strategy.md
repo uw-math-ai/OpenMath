@@ -546,3 +546,69 @@ to r = 3, mirroring the cycle 156 → cycle 157 lift. New artefacts:
   family `paddedRDEulerGLM (r : ℕ)` could be defined, with all
   current witnesses replaced by `r`-induction; this is a multi-cycle
   refactor.
+
+## Cycle 160 update — shared T1+T2 helper landed at p = 0
+
+### What changed
+* Extracted the cycle-153 inline T1+T2 closure (used verbatim by
+  cycles 153, 156, and 159 at the i = 0 channel) into a new private
+  helper `taylor_lipschitz_explicitEuler_orderZero_diff_isBigO`,
+  placed before `explicitEulerGLM_hasOrderZero_trivialStarting` in
+  `OpenMath/Chapter5/Section530.lean`.
+* Helper signature mirrors cycle 158's `..._orderOne_diff_isBigO`:
+  takes `hf_lip`, `hyex_x₀`, `hyex_deriv : HasDerivAt yex (f y₀) x₀`,
+  and produces
+  `((y₀ + h·f y₀) + h·f (y₀ + h·f y₀))
+   − (yex (x₀ + h) + h·f (yex (x₀ + h)))  =O[nhds 0] (fun h => h)`.
+* Refactored three call sites to discharge with a one-liner after
+  SM[0]/ES[0] closed-form rewrites and the `h^(0+1) = h` collapse:
+  - `explicitEulerGLM_hasOrderZero_trivialStarting` (cycle 153)
+  - `padded2DEulerGLM_hasOrderZero_padCompatStarting` (cycle 156,
+    i = 0 channel only — i = 1 zero-collapse untouched)
+  - `padded3DEulerGLM_hasOrderZero_pad3CompatStarting` (cycle 159,
+    i = 0 channel only — i = 1, i = 2 zero-collapse untouched)
+* Cycle 158's p = 1 helper and its three call sites
+  (cycles 154/157/159 i = 0) untouched; re-verified axiom-clean to
+  confirm no upstream breakage.
+
+### Outcome
+* `lake env lean OpenMath/Chapter5/Section530.lean` exits 0.
+* `lake env lean OpenMath/Chapter5.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter5/Section530.lean` → 0 (unchanged).
+* All thirteen affected theorems axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`):
+  - new helper `taylor_lipschitz_explicitEuler_orderZero_diff_isBigO`
+  - cycle 158 helper `taylor_lipschitz_explicitEuler_orderOne_diff_isBigO`
+  - `explicitEulerGLM_hasOrderZero_trivialStarting`
+  - `explicitEulerGLM_hasOrderOne_trivialStarting`
+  - `padded2DEulerGLM_hasOrderZero_padCompatStarting`
+  - `padded2DEulerGLM_hasOrderOne_padCompatStarting`
+  - `padded3DEulerGLM_hasOrderZero_pad3CompatStarting`
+  - `padded3DEulerGLM_hasOrderOne_pad3CompatStarting`
+  - all six def:530C wrappers (`explicitEulerGLM_hasOrder{Zero,One}`,
+    `padded2DEulerGLM_hasOrder{Zero,One}`,
+    `padded3DEulerGLM_hasOrder{Zero,One}`)
+* File 2034 → 1951 LOC (−83 LOC).
+* Tautology-scanner regex
+  `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` clean.
+
+### What cycles 158 + 160 together unblock
+* The i = 0 explicit-Euler channel at p ∈ {0, 1} now factors through
+  exactly two parametric helpers (one per Taylor degree). Any future
+  r-extension reduces to one-line invocations on the i = 0 channel,
+  with the r-parametric machinery (closed-form SM[i]/ES[i] expansions
+  and zero-collapse on i ≥ 1) being the only per-r work.
+* An r-parametric padded GLM family
+  `paddedRDEulerGLM (r : ℕ)` would replace cycles 153/156/159's
+  three pairs of HasOrderRelativeTo witnesses with a single pair of
+  inductive theorems. The two helpers extracted in cycles 158 and 160
+  remain the i = 0 base case.
+* A future Taylor-degree-parametric helper covering p ∈ ℕ (using
+  `taylor_isLittleO` at degree `p + 1`) would unify the two helpers
+  in cycles 158 and 160 into one. The two-helper shape is sufficient
+  for current Path A non-vacuity at p ∈ {0, 1}.
+
+### Path B status (unchanged)
+* Path B (implicit method via `ContractingWith` /
+  `Function.IsFixedPt`) remains deferred per the original
+  multi-cycle infrastructure plan above.
