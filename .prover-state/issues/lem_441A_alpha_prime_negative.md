@@ -81,3 +81,72 @@ leading-coefficient-positive convention is on `−α(z)`, the
 the real-analytic argument is structurally identical but uses a
 different sign convention). The ρ-side route is the textbook's
 canonical argument and should be followed in cycles 175+.
+
+## Cycle 175 update
+
+Step (3) of the ρ-side chain above is now formalised:
+`ρPoly_no_real_root_gt_one` (axiom-clean) in
+`OpenMath/Chapter4/Section441.lean`. The argument went through
+the strategy's primary recipe (`pow_unbounded_of_one_lt` from
+Cycle 136's `Section520.lean::explicitEulerGLM_not_isAStable`),
+no Bernoulli fallback needed. Auxiliary infrastructure:
+`geomSeq_isHomogeneousSolution_of_ρPoly_isRoot` (private helper,
+"real root z₀ ⇒ n ↦ z₀^n is a homogeneous solution"), pattern
+reusable for cycle 176's simple-root claim.
+
+Remaining chain:
+
+* **Step 4** (cycle 176, Phase B.2): simple root at 1. Argument
+  via the unbounded sequence `n ↦ (n : ℝ)` solving the homogeneous
+  recurrence when `(z-1)² ∣ ρ`. Mirrors cycle 175's auxiliary
+  lemma skeleton with `n` instead of `z₀^n`.
+* **Step 3+4 → ρ'(1) > 0** (cycle 177, Phase B.3): IVT-style sign
+  analysis: stability + preconsistency ⇒ ρ no real root in `(1, ∞)`
+  + ρ(1) = 0 + ρ → +∞ ⇒ ρ > 0 on `(1, ∞)` ⇒ ρ'(1) ≥ 0. Simple-
+  root strengthening from cycle 176 ⇒ ρ'(1) > 0.
+* **Close `lem:441A` a₁ > 0** (cycle 178, Phase B.4): one-line
+  composition of cycle 174's bridge (`a₁ = 2·ρ'(1)`) with cycle
+  177's `ρ'(1) > 0`.
+* **Phase C** (cycle 178+): `aᵢ ≥ 0` for `i ≥ 2` half — complex-
+  root decomposition via `Re(ζ) ≤ 0` for roots ζ of `aPoly`.
+
+BDF2 sanity witness `bdf2LMM_aPoly_coeff_one_eq` (a₁ = 4/3) added
+this cycle replaces the long-stalled `bdf2LMM_aPoly_eq` closed-
+form goal — single coefficient, exercises the cycle 174 bridge on
+a non-trivial method.
+
+## Cycle 176 update
+
+Step (4) of the ρ-side chain above is now formalised:
+`ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent` (axiom-clean,
+expected) in `OpenMath/Chapter4/Section441.lean`. Stability +
+preconsistency ⇒ `ρ'(1) ≠ 0` (the simple-root-at-1 condition).
+
+Argument: under preconsistency `Σᵢ αᵢ = 1` and `ρ'(1) = 0` (assumed
+for contradiction), the unbounded sequence `y_n := (n : ℝ)` solves the
+(403a) homogeneous recurrence (private aux
+`idSeq_isHomogeneousSolution_of_preconsistent_ρPoly_deriv_zero`).
+This contradicts `IsStable`'s requirement that homogeneous solutions
+are uniformly bounded — `exists_nat_gt C` gives `n > C` while
+`hC : |n| ≤ C`. The full template parallels cycle 175's
+`ρPoly_no_real_root_gt_one` recipe with the unbounded sequence
+swapped from `n ↦ z₀^n` to `n ↦ (n : ℝ)`.
+
+Remaining chain:
+
+* **Step 3+4 → ρ'(1) > 0** (cycle 177, Phase B.3): IVT-style sign
+  analysis combining cycle 175's `ρPoly_no_real_root_gt_one` with
+  `ρ(1) = 0`, `Polynomial.continuous`, `Polynomial.tendsto_atTop_*`
+  to get `ρ > 0` on `(1, ∞)`, then `ρ'(1) ≥ 0`. Strengthen to `> 0`
+  via cycle 176's `ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent`.
+* **Close `lem:441A` a₁ > 0** (cycle 178, Phase B.4): one-line
+  composition of cycle 174's bridge (`a₁ = 2·ρ'(1)`) with cycle
+  177's `ρ'(1) > 0`.
+* **Phase C** (cycle 179+): `aᵢ ≥ 0` for `i ≥ 2` half — complex-
+  root decomposition via `Re(ζ) ≤ 0` for roots ζ of `aPoly`.
+
+BDF2 sanity witness `bdf2LMM_ρPoly_deriv_eval_one_eq` (`ρ'(1) = 2/3`)
+added this cycle. Numerically witnesses Phase B.2 on the canonical
+`k = 2` example and consolidates with cycle 175's
+`bdf2LMM_aPoly_coeff_one_eq` (`a₁ = 4/3 = 2·(2/3)`) — the cycle 174
+bridge `a₁ = 2·ρ'(1)` made explicit on a non-trivial method.

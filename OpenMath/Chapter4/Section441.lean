@@ -1,5 +1,6 @@
 import OpenMath.Chapter4.Section404
 import OpenMath.Chapter4.Section410
+import OpenMath.Chapter4.Section451
 
 /-!
 # Butcher §441 — Maximum order for a convergent k-step method (Phase A)
@@ -441,7 +442,16 @@ Combining cycle 173's `aPoly_coeff_one_eq_neg_two_alpha_deriv_at_one_of_preconsi
 (`a₁ = −2·α'(1)`) with the cycle 174 bridge `ρ'(1) = −α'(1)`
 (under preconsistency) gives Butcher's identity `a₁ = 2·ρ'(1)`. This
 reduces the `lem:441A` `a₁ > 0` half to the polynomial-root claim
-`ρ'(1) > 0`, exactly matching the textbook strategy on p. 376. -/
+`ρ'(1) > 0`, exactly matching the textbook strategy on p. 376.
+
+Note (cycle 175): Butcher's text on p. 376 reads `ρ'(1) = a₁`, but
+the calculation above (and the algebraic derivation via `α'(1)`)
+yields the relation `a₁ = 2·ρ'(1)`, off by a factor of 2 from the
+textbook line. Numerical verification on explicit Euler (a₁ = 2,
+ρ'(1) = 1) and BDF2 (a₁ = 4/3, ρ'(1) = 2/3) confirms the factor of
+2; the textbook line appears to drop the leading 2. The textbook
+*strategy* is unaffected: `a₁ > 0 ↔ ρ'(1) > 0` is the load-bearing
+claim, and that biconditional holds with either constant. -/
 theorem LinearMultistepMethod.aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent
     {k : ℕ} (M : LinearMultistepMethod k) (hPre : M.IsPreconsistent) :
     M.aPoly.coeff 1 = 2 * M.ρPoly.derivative.eval 1 := by
@@ -449,11 +459,166 @@ theorem LinearMultistepMethod.aPoly_coeff_one_eq_two_rho_deriv_at_one_of_precons
   rw [M.ρPoly_deriv_eval_one_eq_neg_alpha_deriv_at_one_of_preconsistent hPre]
   ring
 
+/-- **Auxiliary: a real root of `ρPoly` yields a geometric homogeneous
+solution.** If `z₀` satisfies `ρ(z₀) = 0`, then `n ↦ z₀^n` solves the
+homogeneous recurrence (403a). This is the standard "characteristic-
+root → solution" link for linear difference equations: substituting
+`y_n := z₀^n` into the recurrence reduces to `ρ(z₀) = 0`. -/
+private theorem geomSeq_isHomogeneousSolution_of_ρPoly_isRoot
+    {k : ℕ} (M : LinearMultistepMethod k) {z₀ : ℝ}
+    (hroot : M.ρPoly.IsRoot z₀) :
+    M.IsHomogeneousSolution (fun n : ℕ => z₀ ^ n) := by
+  unfold LinearMultistepMethod.IsHomogeneousSolution
+  intro m
+  -- From `hroot` (= `M.ρPoly.eval z₀ = 0`) extract
+  -- `z₀^k = ∑ i, M.α i.succ * z₀^(k-(i.val+1))`.
+  have hroot_eq : z₀ ^ k = ∑ i : Fin k, M.α i.succ * z₀ ^ (k - (i.val + 1)) := by
+    have hev := hroot
+    unfold Polynomial.IsRoot at hev
+    unfold LinearMultistepMethod.ρPoly at hev
+    simp only [Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_X,
+               Polynomial.eval_finset_sum, Polynomial.eval_mul,
+               Polynomial.eval_C] at hev
+    linarith
+  -- Goal (after beta-reduction): z₀^(m+k) = ∑ i, M.α i.succ * z₀^(m+k-(i.val+1))
+  show z₀ ^ (m + k) = ∑ i : Fin k, M.α i.succ * z₀ ^ (m + k - (i.val + 1))
+  rw [pow_add, hroot_eq, Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i _
+  have hile : i.val + 1 ≤ k := i.isLt
+  have hsub : m + k - (i.val + 1) = m + (k - (i.val + 1)) := by omega
+  rw [hsub, pow_add]
+  ring
+
+/-- **Stability ⇒ ρ has no real root > 1.** Butcher §441 p. 376
+(implicit step of the `lem:441A` `a₁ > 0` argument).
+
+If `M : LinearMultistepMethod k` is Dahlquist-stable (`M.IsStable` of
+§403A) and `z₀ : ℝ` is a real root of the characteristic polynomial
+`ρ` (`M.ρPoly.IsRoot z₀`), then `z₀ ≤ 1`.
+
+Textbook proof: a real root `z₀ > 1` of `ρ` would mean the geometric
+sequence `y_n := z₀^n` solves the homogeneous recurrence (403a) — but
+`|z₀^n| = z₀^n → ∞` since `z₀ > 1`, contradicting boundedness of all
+homogeneous solutions. -/
+theorem LinearMultistepMethod.ρPoly_no_real_root_gt_one
+    {k : ℕ} (M : LinearMultistepMethod k)
+    (hStable : M.IsStable) {z₀ : ℝ} (hroot : M.ρPoly.IsRoot z₀) :
+    z₀ ≤ 1 := by
+  by_contra hgt
+  push_neg at hgt   -- hgt : 1 < z₀
+  -- Build the geometric homogeneous solution.
+  have hsol : M.IsHomogeneousSolution (fun n : ℕ => z₀ ^ n) :=
+    geomSeq_isHomogeneousSolution_of_ρPoly_isRoot M hroot
+  -- Stability gives a uniform bound C.
+  obtain ⟨C, hC⟩ := hStable _ hsol
+  -- But z₀^n is eventually > C (Archimedean property).
+  obtain ⟨n, hn_pow⟩ := pow_unbounded_of_one_lt C hgt
+  -- Combine: |z₀^n| ≤ C and z₀^n > C contradict (z₀^n ≥ 0).
+  have habs_le : |z₀ ^ n| ≤ C := hC n
+  have hpos : 0 ≤ z₀ ^ n :=
+    pow_nonneg (le_of_lt (lt_trans zero_lt_one hgt)) n
+  have habs_eq : |z₀ ^ n| = z₀ ^ n := abs_of_nonneg hpos
+  linarith [habs_eq ▸ habs_le, hn_pow]
+
+/-- **Auxiliary: `ρ(1) = 0` and `ρ'(1) = 0` (under preconsistency)
+yield the unbounded homogeneous solution `n ↦ n`.**
+
+Under preconsistency `Σᵢ αᵢ = 1` and `ρ'(1) = Σᵢ αᵢ · (i+1) = 0`
+(via the unconditional closed form for `ρ'(1)`), the sequence
+`y_n := (n : ℝ)` satisfies the (403a) homogeneous recurrence
+`y(m+k) = Σᵢ αᵢ y(m+k-i)` for all `m`. -/
+private theorem idSeq_isHomogeneousSolution_of_preconsistent_ρPoly_deriv_zero
+    {k : ℕ} (M : LinearMultistepMethod k)
+    (hPre : M.IsPreconsistent)
+    (hDeriv : M.ρPoly.derivative.eval 1 = 0) :
+    M.IsHomogeneousSolution (fun n : ℕ => (n : ℝ)) := by
+  unfold LinearMultistepMethod.IsHomogeneousSolution
+  intro m
+  -- Extract `Σᵢ αᵢ = 1` from preconsistency.
+  have hpre : (∑ i : Fin k, M.α i.succ) = 1 := by
+    unfold LinearMultistepMethod.IsPreconsistent at hPre
+    linarith
+  -- From `ρ'(1) = 0` plus the unconditional closed form,
+  -- derive `Σᵢ αᵢ · (i+1) = 0`.
+  have hsum_zero : (∑ i : Fin k, M.α i.succ * ((i.val : ℝ) + 1)) = 0 := by
+    have hev := M.ρPoly_deriv_eval_one_unconditional
+    rw [hDeriv] at hev
+    have hdistrib :
+        (∑ i : Fin k, M.α i.succ * ((k : ℝ) - ((i.val : ℝ) + 1))) =
+        (k : ℝ) * (∑ i : Fin k, M.α i.succ) -
+          ∑ i : Fin k, M.α i.succ * ((i.val : ℝ) + 1) := by
+      rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
+      apply Finset.sum_congr rfl
+      intros i _
+      ring
+    rw [hdistrib, hpre] at hev
+    linarith
+  -- Goal (after beta-reduction):
+  --   ((m + k : ℕ) : ℝ) = ∑ i, M.α i.succ * ((m + k - (i.val + 1) : ℕ) : ℝ)
+  show ((m + k : ℕ) : ℝ)
+        = ∑ i : Fin k, M.α i.succ * ((m + k - (i.val + 1) : ℕ) : ℝ)
+  have hrhs_eq :
+      (∑ i : Fin k, M.α i.succ * ((m + k - (i.val + 1) : ℕ) : ℝ))
+      = ((m : ℝ) + (k : ℝ)) * (∑ i : Fin k, M.α i.succ)
+        - ∑ i : Fin k, M.α i.succ * ((i.val : ℝ) + 1) := by
+    rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro i _
+    have hile : i.val + 1 ≤ k := i.isLt
+    have hcast :
+        ((m + k - (i.val + 1) : ℕ) : ℝ)
+          = (m : ℝ) + (k : ℝ) - ((i.val : ℝ) + 1) := by
+      have h1 : m + k - (i.val + 1) = m + (k - (i.val + 1)) := by omega
+      rw [h1]
+      push_cast [Nat.cast_sub hile]
+      ring
+    rw [hcast]
+    ring
+  rw [hrhs_eq, hpre, hsum_zero]
+  push_cast
+  ring
+
+/-- **Stability + preconsistency ⇒ `ρ'(1) ≠ 0` (simple root at 1).**
+
+Butcher §441 p. 376 (the simple-root half of the `lem:441A` `a₁ > 0`
+argument).
+
+If `M : LinearMultistepMethod k` is Dahlquist-stable (`M.IsStable`)
+and preconsistent (`M.IsPreconsistent`), then the characteristic
+polynomial's derivative `ρ'` does not vanish at 1.
+
+Combined with cycle 175's `ρPoly_no_real_root_gt_one` and a future
+cycle's IVT-style `ρ > 0` on `(1, ∞)` argument, this will give
+`ρ'(1) > 0` — the load-bearing quantitative statement of `lem:441A`.
+
+Textbook proof: a vanishing `ρ'(1)` (combined with `ρ(1) = 0` from
+preconsistency) would mean the unbounded sequence `y_n := n` solves
+the (403a) homogeneous recurrence — contradicting boundedness of all
+homogeneous solutions under stability. -/
+theorem LinearMultistepMethod.ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k)
+    (hStable : M.IsStable) (hPre : M.IsPreconsistent) :
+    M.ρPoly.derivative.eval 1 ≠ 0 := by
+  intro hDeriv
+  -- Build the unbounded homogeneous solution.
+  have hsol : M.IsHomogeneousSolution (fun n : ℕ => (n : ℝ)) :=
+    idSeq_isHomogeneousSolution_of_preconsistent_ρPoly_deriv_zero M hPre hDeriv
+  -- Stability gives a uniform bound C.
+  obtain ⟨C, hC⟩ := hStable _ hsol
+  -- But ℕ is unbounded as ℝ (Archimedean property).
+  obtain ⟨n, hngt⟩ := exists_nat_gt C
+  have habs : |(n : ℝ)| ≤ C := hC n
+  have hpos : 0 ≤ (n : ℝ) := Nat.cast_nonneg n
+  have habs_eq : |(n : ℝ)| = (n : ℝ) := abs_of_nonneg hpos
+  linarith
+
 end OpenMath.Chapter4.Section404
 
 namespace OpenMath.Chapter4.Section441
 
 open OpenMath.Chapter4.Section404
+open OpenMath.Chapter4.Section451
 
 /-- **Non-vacuity witness — explicit Euler's `a(z)` is `2X`.**
 
@@ -483,5 +648,48 @@ theorem explicitEulerLMM_ρPoly_eq :
     explicitEulerLMM.ρPoly = Polynomial.X - 1 := by
   unfold LinearMultistepMethod.ρPoly
   simp [explicitEulerLMM]
+
+/-- **BDF2 is preconsistent.** The textbook `α₁ = 4/3, α₂ = -1/3`
+satisfy `α₁ + α₂ = 1`, so `bdf2LMM` is preconsistent (Butcher §404a). -/
+theorem bdf2LMM_isPreconsistent : bdf2LMM.IsPreconsistent := by
+  simp [LinearMultistepMethod.IsPreconsistent, bdf2LMM, Fin.sum_univ_two]
+  norm_num
+
+/-- **`a₀ = 0` for BDF2.** Direct corollary of preconsistency
+(`aPoly_coeff_zero_of_preconsistent`). -/
+theorem bdf2LMM_aPoly_coeff_zero_eq :
+    bdf2LMM.aPoly.coeff 0 = 0 :=
+  bdf2LMM.aPoly_coeff_zero_of_preconsistent bdf2LMM_isPreconsistent
+
+/-- **BDF2 `a₁` sanity witness.** Combining cycle 174's bridge
+`a₁ = 2·ρ'(1)` (under preconsistency) with the unconditional closed
+form `ρ'(1) = k − Σᵢ αᵢ(k − (i+1))`, the BDF2 method's `aPoly`
+coefficient at degree 1 is `4/3`.
+
+Numerically: `ρ'(1) = 2 − [(4/3)·1 + (−1/3)·0] = 2/3`, so
+`a₁ = 2·(2/3) = 4/3`.
+
+This witnesses Butcher's §441 a-coefficient calculation on the
+canonical `k = 2` example, sidestepping the deferred full closed
+form `bdf2LMM.aPoly = C(4/3) X + C(8/3) X²` (cycle 172/173). -/
+theorem bdf2LMM_aPoly_coeff_one_eq :
+    bdf2LMM.aPoly.coeff 1 = 4 / 3 := by
+  rw [bdf2LMM.aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent
+        bdf2LMM_isPreconsistent]
+  rw [LinearMultistepMethod.ρPoly_deriv_eval_one_unconditional]
+  simp [bdf2LMM, Fin.sum_univ_two]
+  norm_num
+
+/-- **BDF2 has a simple root at 1.** Direct corollary of the
+unconditional ρ'(1) closed form: `ρ'(1) = 2 − [(4/3)·1 + (−1/3)·0]
+= 2/3 ≠ 0`. Witnesses cycle 176's
+`ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent` numerically
+on the canonical `k = 2` example. The bridge `a₁ = 2·ρ'(1)` (cycle
+174) is made explicit on `k = 2`: `a₁ = 4/3 = 2·(2/3) = 2·ρ'(1)`. -/
+theorem bdf2LMM_ρPoly_deriv_eval_one_eq :
+    bdf2LMM.ρPoly.derivative.eval 1 = 2 / 3 := by
+  rw [LinearMultistepMethod.ρPoly_deriv_eval_one_unconditional]
+  simp [bdf2LMM, Fin.sum_univ_two]
+  norm_num
 
 end OpenMath.Chapter4.Section441
