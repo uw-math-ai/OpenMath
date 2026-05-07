@@ -746,6 +746,56 @@ theorem LinearMultistepMethod.ρPoly_pos_on_Ioi_one
     have hζ_gt_one : 1 < ζ := lt_of_lt_of_le hz1 hζ_mem.1
     linarith
 
+/-- **`ρ'(1) > 0` for stable preconsistent k-step LMMs.** Butcher §441
+p. 376 (Phase B.3 Step 2 of `lem:441A`'s `a₁ > 0` argument).
+
+If `M : LinearMultistepMethod k` with `0 < k` is Dahlquist-stable and
+preconsistent, then `ρ'(1) > 0`.
+
+Textbook proof: by `ρPoly_pos_on_Ioi_one` (cycle 177), `ρ(z) > 0` for
+`z > 1`. Combined with `ρ(1) = 0` (cycle 174), the slope `(ρ(1+h) -
+ρ(1))/h` is strictly positive for every `h > 0`. Taking the limit as
+`h → 0⁺` gives `ρ'(1) ≥ 0` (limit of nonnegative is nonnegative). By
+`ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent` (cycle 176),
+`ρ'(1) ≠ 0`, so `ρ'(1) > 0`.
+
+Lean structure: convert `Polynomial.hasDerivAt` to a slope-Tendsto via
+`HasDerivAt.tendsto_slope`, restrict the punctured neighbourhood
+filter `𝓝[≠] 1` down to the right-sided neighbourhood `𝓝[>] 1` via
+`Filter.Tendsto.mono_left`, then apply `ge_of_tendsto` with the
+eventual non-negativity claim. -/
+theorem LinearMultistepMethod.ρPoly_deriv_eval_one_pos_of_stable_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hk : 0 < k)
+    (hStable : M.IsStable) (hPre : M.IsPreconsistent) :
+    0 < M.ρPoly.derivative.eval 1 := by
+  have hne : M.ρPoly.derivative.eval 1 ≠ 0 :=
+    M.ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent hStable hPre
+  have hderiv : HasDerivAt (fun z : ℝ => M.ρPoly.eval z)
+                  (M.ρPoly.derivative.eval 1) 1 :=
+    M.ρPoly.hasDerivAt 1
+  have hρ1 : M.ρPoly.eval 1 = 0 :=
+    M.ρPoly_eval_one_eq_zero_of_preconsistent hPre
+  have hpos : ∀ z : ℝ, 1 < z → 0 < M.ρPoly.eval z :=
+    M.ρPoly_pos_on_Ioi_one hk hStable hPre
+  have hslope : Filter.Tendsto (slope (fun z : ℝ => M.ρPoly.eval z) 1)
+                  (nhdsWithin 1 (Set.Ioi 1))
+                  (nhds (M.ρPoly.derivative.eval 1)) := by
+    refine Filter.Tendsto.mono_left hderiv.tendsto_slope ?_
+    exact nhdsWithin_mono _ (fun z hz => ne_of_gt hz)
+  have hslope_nonneg : ∀ᶠ z in nhdsWithin (1 : ℝ) (Set.Ioi 1),
+      0 ≤ slope (fun w : ℝ => M.ρPoly.eval w) 1 z := by
+    refine Filter.eventually_iff.mpr (Filter.mem_of_superset self_mem_nhdsWithin ?_)
+    intro z hz
+    show 0 ≤ slope (fun w : ℝ => M.ρPoly.eval w) 1 z
+    have hnum : 0 < M.ρPoly.eval z - M.ρPoly.eval 1 := by
+      rw [hρ1, sub_zero]; exact hpos z hz
+    have hden : 0 < z - 1 := sub_pos.mpr hz
+    rw [slope_def_field]
+    positivity
+  have hge : 0 ≤ M.ρPoly.derivative.eval 1 :=
+    ge_of_tendsto hslope hslope_nonneg
+  exact lt_of_le_of_ne hge (Ne.symm hne)
+
 end OpenMath.Chapter4.Section404
 
 namespace OpenMath.Chapter4.Section441
@@ -823,6 +873,18 @@ theorem bdf2LMM_ρPoly_deriv_eval_one_eq :
     bdf2LMM.ρPoly.derivative.eval 1 = 2 / 3 := by
   rw [LinearMultistepMethod.ρPoly_deriv_eval_one_unconditional]
   simp [bdf2LMM, Fin.sum_univ_two]
+  norm_num
+
+/-- **BDF2 numerical sanity for `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`.**
+Lifts cycle 176's closed form `bdf2LMM.ρPoly.derivative.eval 1 = 2/3`
+to a strict positivity witness, numerically verifying cycle 178's
+`ρPoly_deriv_eval_one_pos_of_stable_preconsistent` on the canonical
+`k = 2` example. Pairs with `bdf2LMM_aPoly_coeff_one_eq` (cycle 175,
+`a₁ = 4/3`) to confirm the sign half of the cycle 174 bridge
+`a₁ = 2·ρ'(1)` for BDF2: `4/3 > 0` and `2·(2/3) = 4/3 > 0`. -/
+theorem bdf2LMM_ρPoly_deriv_eval_one_pos :
+    0 < bdf2LMM.ρPoly.derivative.eval 1 := by
+  rw [bdf2LMM_ρPoly_deriv_eval_one_eq]
   norm_num
 
 /-- **BDF2 numerical sanity for `ρPoly_pos_on_Ioi_one`.** For BDF2,

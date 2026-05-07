@@ -199,3 +199,65 @@ Remaining chain:
   applied to cycle 178's strict positivity.
 * **Cycle 180+, Phase C → aᵢ ≥ 0 for i ≥ 2**: complex-root
   decomposition argument (Butcher §441 p. 376). Multi-cycle.
+
+## Cycle 178 update — Phase B.3 Step 2 closed: `ρ'(1) > 0`
+
+Added `LinearMultistepMethod.ρPoly_deriv_eval_one_pos_of_stable_preconsistent`
+(axiom-clean):
+
+```lean
+theorem ρPoly_deriv_eval_one_pos_of_stable_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hk : 0 < k)
+    (hStable : M.IsStable) (hPre : M.IsPreconsistent) :
+    0 < M.ρPoly.derivative.eval 1
+```
+
+Proof recipe (~50 LOC, one theorem, no private helpers needed):
+
+1. `Polynomial.hasDerivAt M.ρPoly 1` gives
+   `HasDerivAt (fun z => M.ρPoly.eval z) (M.ρPoly.derivative.eval 1) 1`.
+2. `HasDerivAt.tendsto_slope` on the above produces a `Tendsto`
+   from `nhdsWithin 1 {1}ᶜ` to `nhds (ρ'(1))`.
+3. `Filter.Tendsto.mono_left` + `nhdsWithin_mono _ (fun z hz =>
+   ne_of_gt hz)` restricts the slope-tendsto to
+   `nhdsWithin 1 (Set.Ioi 1) ≤ nhdsWithin 1 {1}ᶜ`.
+4. Eventual non-negativity on `Ioi 1`: for any `z > 1`,
+   `slope (M.ρPoly.eval) 1 z = (ρ(z) − ρ(1)) / (z − 1)`. The numerator
+   `> 0` from cycle 174's `ρ(1) = 0` + cycle 177's `ρ > 0` on `(1, ∞)`;
+   the denominator `> 0` from `1 < z`. `slope_def_field` unfolds the
+   slope; `positivity` closes. Note: after `Filter.eventually_iff.mpr
+   (Filter.mem_of_superset self_mem_nhdsWithin ...)`, the goal is
+   `z ∈ {x | 0 ≤ slope ... x}` — use `show 0 ≤ slope ...` to coerce
+   set-membership to the underlying proposition before
+   `slope_def_field` rewrites.
+5. `ge_of_tendsto` (using the `nhdsGT_neBot` instance for
+   `(nhdsWithin (1 : ℝ) (Set.Ioi 1)).NeBot`) gives `0 ≤ ρ'(1)`.
+6. `lt_of_le_of_ne` with cycle 176's `≠ 0` (via `Ne.symm`) gives
+   `0 < ρ'(1)`.
+
+BDF2 sanity witness `bdf2LMM_ρPoly_deriv_eval_one_pos`:
+`0 < bdf2LMM.ρPoly.derivative.eval 1` via cycle 176's closed form
+`bdf2LMM_ρPoly_deriv_eval_one_eq` (`= 2/3`) + `norm_num`. Three lines.
+
+Phase status: B.1.β (cycle 175) + B.2 (cycle 176) + B.3 Step 1
+(cycle 177) + B.3 Step 2 (cycle 178) all closed.
+
+Remaining chain:
+
+* **Cycle 179, Phase B.4 → close `a₁ > 0`**: one-line corollary
+  via cycle 174's bridge:
+
+  ```lean
+  theorem aPoly_coeff_one_pos_of_stable_preconsistent
+      {k : ℕ} (M : LinearMultistepMethod k) (hk : 0 < k)
+      (hStable : M.IsStable) (hPre : M.IsPreconsistent) :
+      0 < M.aPoly.coeff 1 := by
+    rw [M.aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent hPre]
+    have := M.ρPoly_deriv_eval_one_pos_of_stable_preconsistent hk hStable hPre
+    linarith
+  ```
+
+  Plus BDF2 sanity `bdf2LMM_aPoly_coeff_one_pos` via cycle 175's
+  `bdf2LMM_aPoly_coeff_one_eq = 4/3` + `norm_num`.
+* **Cycle 180+, Phase C → aᵢ ≥ 0 for i ≥ 2**: complex-root
+  decomposition (Butcher §441 p. 376). Multi-cycle.
