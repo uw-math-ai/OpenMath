@@ -347,3 +347,10 @@ continue Section381 follow-up work (e.g. promote
 the heterogeneous-stage Φ-equivalent witness for `paddedEuler` ↔
 `paddedEuler.pReduced pairPartition`, which Butcher's §380
 discussion implicitly relies on but is not yet a Lean theorem).
+
+**Cycle 187 update (7th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, near-zero CPU). Pivoting to Priority 2 Section381
+follow-up per cycle 187 strategy (Deliverable A: ship
+`PReducesTo M M' → PhiEquivalent M M'` implication, plus
+Deliverable B refactor if time permits).

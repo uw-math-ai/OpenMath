@@ -90,3 +90,12 @@ Cycle 180: closed bdf2LMM_aPoly_eq via Polynomial.funext + ring; key trick: pre-
 
 ### Cycle 182
 Cycle 182 Phase C.2: worker wrote proof drafts for ρPoly_complex_root_norm_le_one_of_stable (re/im part decomposition → IsHomogeneousSolution × 2 → stability bounds → ‖ζ‖^n bounded → contradiction via pow_unbounded_of_one_lt), αPoly_complex_root_norm_ge_one_of_stable (private cleared-reciprocity helper w^k·ρ.aeval w⁻¹ = α.aeval w via pow_mul_pow_sub + mul_inv_cancel₀; then norm_inv + inv_le_one₀), and aPoly_complex_root_re_nonpos_of_stable (case ζ=-1 trivial; ζ≠-1: Phase C.1 Möbius bridge → αPoly root → Step 2 → ‖ψ(ζ)‖≥1 → ‖1-ζ‖≥‖1+ζ‖ → normSq expansion → -4·Re ζ ≥ 0 → linarith). Three 13-20+ min compile attempts all killed due to GPFS I/O throttling (lean at 0.7-1.5% CPU, disk-wait threads). Section441.lean reverted to HEAD; draft preserved at .prover-state/cycle_182_draft_section441.lean. Build remains clean at cycle 181 state (1227 LOC, 0 sorries).
+
+### Cycle 184
+Cycle 184 Front A: Applied Aristotle's namespace fix (LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable explicit qualification on line 1529) and attempted 20-min compile of cycle 182 draft — timed out at EXIT=124, fourth consecutive GPFS-blocked attempt. Reverted to HEAD. Front B: def:381F PEquivalent first compile failed with namespace error (PEquivalent/PReducesTo unqualified inside Section381 namespace block); fixed by dot-notation + explicit RKTableau. qualification.
+
+### Cycle 185
+Cycle 185 Section441: 5th consecutive GPFS-blocked smoke test on HEAD Section441.lean — timeout 300s, EXIT=143, 0.272s user/0.511s sys over 300s wall. The GPFS pathology appears to be load-specific to Section441's large Mathlib.Analysis.* transitive closure rather than a cluster-wide outage (Section381 compiled healthy at ~4s rebuild). Draft not attempted locally per strategy decision tree.
+
+### Cycle 186
+Cycle 186: Priority 0 GPFS smoke test on HEAD Section441.lean — 6th consecutive timeout (EXIT=124, 5m wall, 0.16% CPU, no zombie processes active). Priority 2: promoted 4 inline example/have witnesses to public named theorems in Section381.lean (paddedEuler_isPReducibleVia_pairPartition, paddedEuler_isPReducible, paddedEuler_pReducesTo_pReduced, paddedEuler_pEquivalent_pReduced); all axiom-clean, file compiles in 1m23s, sorry count 0→0. B2 (Φ-equivalence witness) deferred per strategy gating: PReducesTo→PhiEquivalent not yet shipped.

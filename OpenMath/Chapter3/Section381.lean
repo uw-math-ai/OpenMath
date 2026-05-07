@@ -693,14 +693,149 @@ example : paddedEuler.PEquivalent paddedEuler := by
     rintro ⟨sBar, hLt, P, _⟩
     obtain rfl : sBar = 0 := Nat.lt_one_iff.mp hLt
     exact (P.block 0).elim0
-  have hReduced :
-      RKTableau.PReducesTo paddedEuler (paddedEuler.pReduced pairPartition) :=
-    RKTableau.PReducesTo.step pairPartition (by decide)
-      (by intro _ _ _ _ _ _; simp [paddedEuler])
-      (RKTableau.PReducesTo.refl _)
-  have hEquiv :
-      paddedEuler.PEquivalent (paddedEuler.pReduced pairPartition) :=
-    RKTableau.PEquivalent.of_pReducesTo hReduced
-  exact hEquiv.trans_of_middle_not_pReducible hEquiv.symm hMid_irr
+  exact paddedEuler_pEquivalent_pReduced.trans_of_middle_not_pReducible
+    paddedEuler_pEquivalent_pReduced.symm hMid_irr
+
+/- ### Φ-equivalence is implied by P-reduction (Butcher §380)
+
+The two `derivativeWeight_pReduced` / `derivativeWeightProd_pReduced`
+helpers below are proved by mutual induction on the rooted-tree
+structure, paralleling `derivativeWeight`'s mutual recursion through
+`RootedTree` and `List RootedTree` (Section 312). The key fact: the
+row-sum-constancy condition `IsPReducibleVia` ensures the recursive
+sum over `Fin s` regroups into the `Fin sBar` sum that defines the
+reduced method's coefficient `â_{IJ}`. -/
+
+mutual
+  /-- *P-reduction preserves derivative weights stage-by-stage.*
+  Helper for `pReduced_phiEquivalent`; companion to
+  `derivativeWeightProd_pReduced` for the list-helper level. -/
+  private theorem derivativeWeight_pReduced {s sBar : ℕ}
+      (M : RKTableau s) {P : PPartition s sBar}
+      (h : M.IsPReducibleVia P) :
+      ∀ (t : RootedTree) (i : Fin s),
+      M.derivativeWeight i t
+        = (M.pReduced P).derivativeWeight (P.block i) t
+    | RootedTree.mk children, i => by
+        show M.derivativeWeightProd i children
+            = (M.pReduced P).derivativeWeightProd (P.block i) children
+        exact derivativeWeightProd_pReduced M h children i
+
+  /-- List-helper companion to `derivativeWeight_pReduced`. -/
+  private theorem derivativeWeightProd_pReduced {s sBar : ℕ}
+      (M : RKTableau s) {P : PPartition s sBar}
+      (h : M.IsPReducibleVia P) :
+      ∀ (children : List RootedTree) (i : Fin s),
+      M.derivativeWeightProd i children
+        = (M.pReduced P).derivativeWeightProd (P.block i) children
+    | [], _ => rfl
+    | t :: ts, i => by
+        show (∑ j : Fin s, M.A i j * M.derivativeWeight j t)
+                * M.derivativeWeightProd i ts
+            = (∑ J : Fin sBar, (M.pReduced P).A (P.block i) J
+                                * (M.pReduced P).derivativeWeight J t)
+              * (M.pReduced P).derivativeWeightProd (P.block i) ts
+        rw [derivativeWeightProd_pReduced M h ts i]
+        congr 1
+        have hSumRewrite :
+            (∑ j : Fin s, M.A i j * M.derivativeWeight j t)
+              = ∑ j : Fin s,
+                  M.A i j * (M.pReduced P).derivativeWeight (P.block j) t :=
+          Finset.sum_congr rfl (fun j _ => by
+            rw [derivativeWeight_pReduced M h t j])
+        rw [hSumRewrite,
+            show
+              (∑ j : Fin s,
+                  M.A i j * (M.pReduced P).derivativeWeight (P.block j) t)
+                = ∑ J : Fin sBar,
+                    ∑ j ∈ Finset.univ.filter
+                            (fun j : Fin s => P.block j = J),
+                      M.A i j
+                        * (M.pReduced P).derivativeWeight (P.block j) t
+            from
+              (Finset.sum_fiberwise
+                  (Finset.univ : Finset (Fin s)) P.block
+                  (fun j => M.A i j
+                              * (M.pReduced P).derivativeWeight
+                                  (P.block j) t)).symm]
+        refine Finset.sum_congr rfl (fun J _ => ?_)
+        have hSubst :
+            (∑ j ∈ Finset.univ.filter (fun j : Fin s => P.block j = J),
+                M.A i j * (M.pReduced P).derivativeWeight (P.block j) t)
+              = ∑ j ∈ Finset.univ.filter
+                        (fun j : Fin s => P.block j = J),
+                  M.A i j * (M.pReduced P).derivativeWeight J t :=
+          Finset.sum_congr rfl (fun j hj => by
+            rw [(Finset.mem_filter.mp hj).2])
+        rw [hSubst, ← Finset.sum_mul,
+            RKTableau.pReduced_A_apply M h (P.block i) J i rfl]
+end
+
+/-- *P-reduction preserves elementary weights.*
+
+Each P-reduction step regroups the elementary-weight sum
+`Σ_i b_i Φᵢ(t)` into the reduced sum `Σ_I b̂_I Φ̂_I(t)`:
+row-sum-constancy makes the per-stage derivative weights agree on each
+block (`derivativeWeight_pReduced`), and the textbook partition
+`b̂_I = Σ_{i ∈ P_I} b_i` collapses the regrouped `b`-sum via
+`pReduced_b_apply`. -/
+theorem pReduced_phiEquivalent {s sBar : ℕ}
+    (M : RKTableau s) {P : PPartition s sBar}
+    (h : M.IsPReducibleVia P) :
+    PhiEquivalent M (M.pReduced P) := by
+  intro t
+  show ∑ i : Fin s, M.b i * M.derivativeWeight i t
+      = ∑ I : Fin sBar,
+          (M.pReduced P).b I * (M.pReduced P).derivativeWeight I t
+  have hSumRewrite :
+      (∑ i : Fin s, M.b i * M.derivativeWeight i t)
+        = ∑ i : Fin s,
+            M.b i * (M.pReduced P).derivativeWeight (P.block i) t :=
+    Finset.sum_congr rfl (fun i _ => by
+      rw [derivativeWeight_pReduced M h t i])
+  rw [hSumRewrite,
+      show
+        (∑ i : Fin s,
+            M.b i * (M.pReduced P).derivativeWeight (P.block i) t)
+          = ∑ I : Fin sBar,
+              ∑ i ∈ Finset.univ.filter (fun i : Fin s => P.block i = I),
+                M.b i * (M.pReduced P).derivativeWeight (P.block i) t
+      from
+        (Finset.sum_fiberwise
+            (Finset.univ : Finset (Fin s)) P.block
+            (fun i => M.b i
+                        * (M.pReduced P).derivativeWeight
+                            (P.block i) t)).symm]
+  refine Finset.sum_congr rfl (fun I _ => ?_)
+  have hSubst :
+      (∑ i ∈ Finset.univ.filter (fun i : Fin s => P.block i = I),
+          M.b i * (M.pReduced P).derivativeWeight (P.block i) t)
+        = ∑ i ∈ Finset.univ.filter (fun i : Fin s => P.block i = I),
+            M.b i * (M.pReduced P).derivativeWeight I t :=
+    Finset.sum_congr rfl (fun i hi => by
+      rw [(Finset.mem_filter.mp hi).2])
+  rw [hSubst, ← Finset.sum_mul,
+      show (∑ i ∈ Finset.univ.filter (fun i : Fin s => P.block i = I),
+              M.b i)
+            = (M.pReduced P).b I
+        from (RKTableau.pReduced_b_apply M P I).symm]
+
+/-- *Φ-equivalence is implied by P-reduction.*
+
+If `M` P-reduces (in zero or more steps) to `M'`, then `M` and `M'`
+agree on every elementary weight (def:381B). This formalises the
+P-side of Butcher's §380 narrative ("P-reducible methods agree on
+elementary weights"); the implication is implicit in the textbook's
+treatment of equivalence/reducibility but is not stated as a numbered
+result. The 0-reduction analogue will fold in cleanly when the
+0-step `PReducesTo` constructor is added (see `def:381E` deferred-
+construction issue). -/
+theorem PhiEquivalent.of_pReducesTo {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'}
+    (h : RKTableau.PReducesTo M M') : PhiEquivalent M M' := by
+  induction h with
+  | refl M => exact PhiEquivalent.refl M
+  | step P _hLt hVia _hRest IH =>
+      exact PhiEquivalent.trans (pReduced_phiEquivalent _ hVia) IH
 
 end OpenMath.Chapter3.Section381
