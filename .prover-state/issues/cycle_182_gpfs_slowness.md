@@ -139,3 +139,53 @@ explicit, fast tactics throughout:
 * CLAUDE.md PATH note (`/tmp/lake-bin:/tmp/lean4-toolchain/bin`):
   this workaround IS in effect; doesn't fix today's GPFS read
   slowness.
+
+## Cycle 183 update (2026-05-07)
+
+**Re-attempted today; same slowness pattern.** Cycle 183's smoke test
+(`time lake env lean OpenMath/Chapter4/Section441.lean`, HEAD/cycle 181
+state) ran for 12 minutes with the lean process at 0:07 CPU time and
+no progress logged. Killed and reverted to fallback per strategy
+threshold (>10 min ⇒ abort).
+
+**Root cause partially identified**: a stuck `find / -name
+Mathlib.Data.Complex.Basic.lean` process (PID 77987) had been running
+in `D` state since 10:12 AM (2 hours), using 9 minutes of CPU time —
+this is a kernel-disk-wait artifact from a *prior* Claude Code
+session's exploratory tooling (likely a search query). It was almost
+certainly contributing to GPFS contention by holding kernel-side disk
+locks against `/mmfs1`.
+
+**Killed**: PID 77987 (find) and PID 77921 (orphaned bash wrapper) at
+12:32. After killing the find:
+* A smoke test on `OpenMath/Chapter4/Section451.lean` (242 LOC,
+  smaller and only depends on Section404) launched at 12:31, ran with
+  variable CPU (initially 9%, then 1.8%) — see `attempts.md` for
+  outcome.
+* Did NOT re-attempt Section441.lean directly; instead followed
+  Step 4 fallback per cycle 183 strategy.
+
+**Fallback executed (Step 4a, cycle 183)**:
+* Submitted `cycle_182_draft_section441.lean` to Aristotle as project
+  `7c4d0ffb-e6c1-4ef4-b8f5-688d256bac44` at 12:31, prompt: "Verify
+  this proof and identify any errors". The draft has full proofs
+  (no sorries) — Aristotle will either confirm the compile or
+  surface specific tactic errors that can be fixed in cycle 184.
+
+**Loop-maintainer recommendation amended**: the `find / -name`
+artifact suggests a tooling issue — Claude Code subagents or other
+exploratory tools may be launching `find /` queries that, when
+abandoned, leave the kernel in a degraded state on this cluster. A
+periodic janitor task to kill long-running `find` processes
+(>30 min, in `D` state, owned by the user) would help. Add to
+`scripts/` if there's appetite. Check `attempts.md` for cycle 184+
+heartbeat behavior — if today's issue recurs, this is the first place
+to look.
+
+**Cycle 184 entry point**: poll Aristotle project
+`7c4d0ffb-e6c1-4ef4-b8f5-688d256bac44`. If COMPLETE with successful
+verification ⇒ overwrite Section441.lean with the verified draft and
+proceed. If COMPLETE with errors ⇒ apply the suggested fixes locally.
+If still RUNNING after another 30 min ⇒ try Section441.lean compile
+again on a clean shell (now that find/zombie processes are killed,
+GPFS contention may be cleared).
