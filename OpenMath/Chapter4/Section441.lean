@@ -1,4 +1,5 @@
 import OpenMath.Chapter4.Section404
+import OpenMath.Chapter4.Section410
 
 /-!
 # Butcher §441 — Maximum order for a convergent k-step method (Phase A)
@@ -48,14 +49,18 @@ This file currently provides:
 * `LinearMultistepMethod.aPoly_natDegree_le` — degree bound.
 * `explicitEulerLMM_aPoly_eq` — non-vacuity witness at `k = 1`.
 
-A `k = 2` BDF2 closed-form witness was attempted in cycle 172 but
-deferred: the polynomial identity
+A `k = 2` BDF2 closed-form witness was attempted again in cycle
+173 but deferred for the second time: the polynomial identity
 `bdf2LMM.aPoly = C(4/3) X + C(8/3) X²` is straightforward to
-verify by hand but `ring` (the obvious finisher) does not fold
-`Polynomial.C` constants automatically (`C(4/3) - C(-1/3) = C(5/3)`
-is not in `ring`'s normal form). The standalone algebraic check
-appears in `.prover-state/issues/lem_441B_misinterpretation.md`
-as the explicit refutation of cycle 171's misreading.
+verify by hand but `ring` does not fold `Polynomial.C` constants
+when divisions are involved (`C(4/3) - C(-1/3) = C(5/3)` is
+outside `ring`'s normal form). A `Polynomial.ext` skeleton
+encounters the issue that the simp set for resolving
+`Polynomial.coeff` of mixed numeral / `C` expressions on
+`Polynomial ℝ` is incomplete without further helpers. The
+standalone algebraic check appears in
+`.prover-state/issues/lem_441B_misinterpretation.md` as the
+explicit refutation of cycle 171's misreading.
 
 ## Lemma 441B — DEFERRED
 
@@ -164,6 +169,286 @@ theorem LinearMultistepMethod.aPoly_natDegree_le
         ≤ (k - (i.val + 1)) + (i.val + 1) := Nat.add_le_add hCmul hpow2
       _ = k := Nat.sub_add_cancel hile
 
+/-- **`aPoly.coeff 0 = 0` for preconsistent LMMs.**
+
+Setting `z = 0` in `a(z) = (1+z)^k − Σᵢ αᵢ (1+z)^{k−i} (1−z)^i`
+gives `a(0) = 1 − Σᵢ αᵢ`, which equals `0` by preconsistency.
+
+This is `lem:441A`'s implicit claim that `a₀ = 0` (Butcher's
+`a(z) = a₀ + a₁z + ⋯` expansion has `a₀ = 0` for any preconsistent
+method, since `α(1) = 0`). -/
+theorem LinearMultistepMethod.aPoly_coeff_zero_of_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hPre : M.IsPreconsistent) :
+    M.aPoly.coeff 0 = 0 := by
+  rw [Polynomial.coeff_zero_eq_eval_zero]
+  unfold LinearMultistepMethod.aPoly
+  unfold LinearMultistepMethod.IsPreconsistent at hPre
+  simp only [Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_add,
+             Polynomial.eval_one, Polynomial.eval_X, Polynomial.eval_finset_sum,
+             Polynomial.eval_mul, Polynomial.eval_C, add_zero, sub_zero, one_pow, mul_one]
+  linarith
+
+/-- **Closed form for `a₁` (unconditional).** Butcher §441 p. 376.
+
+For ANY `k`-step LMM (no preconsistency assumed), the coefficient
+of `z` in `a(z)` decomposes as
+
+  `a₁ = k · (1 − Σᵢ αᵢ) − 2 · α'(1)`,
+
+where `α(z) = 1 − Σᵢ αᵢ z^i` is the §410 generating polynomial.
+Under preconsistency the first term vanishes (since `Σ αᵢ = 1`),
+recovering Butcher's identity `a₁ = −2α'(1)`. -/
+theorem LinearMultistepMethod.aPoly_coeff_one_unconditional
+    {k : ℕ} (M : LinearMultistepMethod k) :
+    M.aPoly.coeff 1 =
+      (k : ℝ) * (1 - ∑ i : Fin k, M.α i.succ)
+        - 2 * (OpenMath.Chapter4.Section410.αPoly M).derivative.eval 1 := by
+  -- Helper A: ((1 - X)^n).coeff 0 = 1
+  have h_one_sub_X_coeff_zero : ∀ n : ℕ,
+      ((1 - Polynomial.X : Polynomial ℝ) ^ n).coeff 0 = 1 := by
+    intro n
+    rw [Polynomial.coeff_zero_eq_eval_zero]
+    simp
+  -- Helper B: ((1 - X)^n).coeff 1 = -n
+  have h_one_sub_X_coeff_one : ∀ n : ℕ,
+      ((1 - Polynomial.X : Polynomial ℝ) ^ n).coeff 1 = -(n : ℝ) := by
+    intro n
+    induction n with
+    | zero =>
+      rw [pow_zero, Polynomial.coeff_one]
+      simp
+    | succ m ih =>
+      rw [pow_succ, Polynomial.mul_coeff_one, ih, h_one_sub_X_coeff_zero]
+      have h1 : ((1 - Polynomial.X : Polynomial ℝ)).coeff 0 = 1 := by
+        rw [Polynomial.coeff_sub, Polynomial.coeff_one_zero, Polynomial.coeff_X_zero]
+        ring
+      have h2 : ((1 - Polynomial.X : Polynomial ℝ)).coeff 1 = -1 := by
+        rw [Polynomial.coeff_sub, Polynomial.coeff_one, Polynomial.coeff_X]
+        norm_num
+      rw [h1, h2]
+      push_cast
+      ring
+  -- Per-summand coefficient formula
+  have h_summand : ∀ i : Fin k,
+      (Polynomial.C (M.α i.succ) *
+        (1 + Polynomial.X) ^ (k - (i.val + 1)) *
+        (1 - Polynomial.X) ^ (i.val + 1)).coeff 1 =
+      M.α i.succ * ((k : ℝ) - 2 * ((i.val : ℝ) + 1)) := by
+    intro i
+    rw [Polynomial.mul_coeff_one]
+    rw [Polynomial.coeff_C_mul, Polynomial.coeff_C_mul]
+    rw [Polynomial.coeff_one_add_X_pow, Polynomial.coeff_one_add_X_pow]
+    rw [h_one_sub_X_coeff_zero, h_one_sub_X_coeff_one]
+    rw [Nat.choose_zero_right, Nat.choose_one_right]
+    have hile : i.val + 1 ≤ k := i.isLt
+    push_cast [Nat.cast_sub hile]
+    ring
+  -- Step 1: Compute aPoly.coeff 1 in terms of α values
+  have h_lhs : M.aPoly.coeff 1 =
+      (k : ℝ) - ∑ i : Fin k, M.α i.succ * ((k : ℝ) - 2 * ((i.val : ℝ) + 1)) := by
+    unfold LinearMultistepMethod.aPoly
+    rw [Polynomial.coeff_sub, Polynomial.coeff_one_add_X_pow, Nat.choose_one_right]
+    rw [Polynomial.finset_sum_coeff]
+    congr 1
+    apply Finset.sum_congr rfl
+    intros i _
+    exact h_summand i
+  -- Step 2: Compute αPoly.derivative.eval 1
+  have h_alpha_deriv :
+      (OpenMath.Chapter4.Section410.αPoly M).derivative.eval 1 =
+        -∑ i : Fin k, M.α i.succ * ((i.val : ℝ) + 1) := by
+    unfold OpenMath.Chapter4.Section410.αPoly
+    rw [Polynomial.derivative_sub, Polynomial.derivative_one, zero_sub]
+    rw [Polynomial.derivative_sum]
+    rw [Polynomial.eval_neg, Polynomial.eval_finset_sum]
+    rw [neg_inj]
+    apply Finset.sum_congr rfl
+    intros i _
+    rw [Polynomial.derivative_C_mul_X_pow]
+    rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow, Polynomial.eval_X,
+        one_pow, mul_one]
+    push_cast
+    ring
+  -- Step 3: Combine
+  rw [h_lhs, h_alpha_deriv]
+  -- Decompose `∑ αᵢ·(k − 2(i+1))` into `k·∑ αᵢ − 2·∑ αᵢ(i+1)`.
+  have h_decomp :
+      (∑ i : Fin k, M.α i.succ * ((k : ℝ) - 2 * ((i.val : ℝ) + 1))) =
+      (k : ℝ) * (∑ i : Fin k, M.α i.succ) -
+        2 * ∑ i : Fin k, M.α i.succ * ((i.val : ℝ) + 1) := by
+    rw [Finset.mul_sum, Finset.mul_sum, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intros i _
+    ring
+  rw [h_decomp]
+  ring
+
+/-- **Butcher §441 p. 376 calculation `a₁ = −2 α'(1)`.**
+
+Under preconsistency, the `kα(1)` term vanishes (since `α(1) = 0`),
+so the coefficient `a₁` reduces to `−2 α'(1)`. This is the precise
+identity Butcher writes as `kα(1) − 2α'(1) = −2α'(1)` on p. 376
+and is the starting point of `lem:441A`'s `a₁ > 0` argument. -/
+theorem LinearMultistepMethod.aPoly_coeff_one_eq_neg_two_alpha_deriv_at_one_of_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hPre : M.IsPreconsistent) :
+    M.aPoly.coeff 1 = -2 * (OpenMath.Chapter4.Section410.αPoly M).derivative.eval 1 := by
+  rw [M.aPoly_coeff_one_unconditional]
+  have hpre : (∑ i : Fin k, M.α i.succ) = 1 := by
+    unfold LinearMultistepMethod.IsPreconsistent at hPre
+    linarith
+  rw [hpre]
+  ring
+
+/-- **Butcher §441 stability polynomial `ρ(z)`** (p. 375).
+
+For a `k`-step LMM with textbook coefficients `α₁, …, αₖ` (stored
+as `M.α i.succ` for `i : Fin k`),
+
+  `ρ(z) = z^k − α₁·z^{k−1} − α₂·z^{k−2} − ⋯ − αₖ`.
+
+Sign convention: matches Butcher; `M.α 0 = -1` is the normalisation
+factor and is NOT used here (only `M.α i.succ` for `i : Fin k`).
+The substitution `i ↦ i.val + 1` gives the textbook indexing
+`α₁, α₂, …, αₖ` from our `Fin k`-indexed `M.α i.succ`. -/
+noncomputable def LinearMultistepMethod.ρPoly
+    {k : ℕ} (M : LinearMultistepMethod k) : Polynomial ℝ :=
+  Polynomial.X ^ k -
+    ∑ i : Fin k,
+      Polynomial.C (M.α i.succ) * Polynomial.X ^ (k - (i.val + 1))
+
+/-- **Evaluation of `ρPoly` at `1` (unconditional).** Butcher §441 p. 375.
+
+For ANY `k`-step LMM (no preconsistency assumed),
+`ρ(1) = 1 − Σ αᵢ`. -/
+theorem LinearMultistepMethod.ρPoly_eval_one
+    {k : ℕ} (M : LinearMultistepMethod k) :
+    M.ρPoly.eval 1 = 1 - ∑ i : Fin k, M.α i.succ := by
+  unfold LinearMultistepMethod.ρPoly
+  simp only [Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_X,
+             one_pow, Polynomial.eval_finset_sum, Polynomial.eval_mul,
+             Polynomial.eval_C, mul_one]
+
+/-- **`ρ(1) = 0` for preconsistent LMMs.** Butcher §441 p. 376.
+
+Under preconsistency (`Σ αᵢ = 1`), the unconditional formula
+`ρ(1) = 1 − Σ αᵢ` collapses to `0`. This is the textbook fact
+"`ρ(1) = 0`" used as the entry point of the `ρ'(1) > 0` argument. -/
+theorem LinearMultistepMethod.ρPoly_eval_one_eq_zero_of_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hPre : M.IsPreconsistent) :
+    M.ρPoly.eval 1 = 0 := by
+  rw [M.ρPoly_eval_one]
+  unfold LinearMultistepMethod.IsPreconsistent at hPre
+  linarith
+
+/-- **Degree bound on `ρPoly`.** As a polynomial in `z`, `ρ(z)` has
+degree at most `k`: it is the difference of `X^k` and a sum of
+monomials `C(αᵢ) · X^(k-(i+1))`, each of degree at most `k`. -/
+theorem LinearMultistepMethod.ρPoly_natDegree_le
+    {k : ℕ} (M : LinearMultistepMethod k) :
+    M.ρPoly.natDegree ≤ k := by
+  unfold LinearMultistepMethod.ρPoly
+  refine (Polynomial.natDegree_sub_le _ _).trans ?_
+  refine max_le ?_ ?_
+  · refine Polynomial.natDegree_pow_le.trans ?_
+    simp
+  · refine (Polynomial.natDegree_sum_le _ _).trans ?_
+    refine Finset.sup_le ?_
+    intro i _
+    refine (Polynomial.natDegree_C_mul_le _ _).trans ?_
+    refine Polynomial.natDegree_pow_le.trans ?_
+    have hsub : k - (i.val + 1) ≤ k := Nat.sub_le _ _
+    calc (k - (i.val + 1)) * (Polynomial.X : Polynomial ℝ).natDegree
+        ≤ (k - (i.val + 1)) * 1 := by simp
+      _ = k - (i.val + 1) := mul_one _
+      _ ≤ k := hsub
+
+/-- **`ρ'(1)` closed form (unconditional).** Butcher §441 p. 376.
+
+For ANY `k`-step LMM (no preconsistency assumed),
+
+  `ρ'(1) = k − Σᵢ αᵢ · (k − (i+1))`.
+
+When `i.val + 1 = k` (the constant term `αₖ`), the multiplier
+`(k - (i+1))` is `0` and the term vanishes — consistent with the
+textbook formula `ρ'(1) = k − (k−1)α₁ − (k−2)α₂ − ⋯ − αₖ₋₁`. -/
+theorem LinearMultistepMethod.ρPoly_deriv_eval_one_unconditional
+    {k : ℕ} (M : LinearMultistepMethod k) :
+    M.ρPoly.derivative.eval 1 =
+      (k : ℝ) - ∑ i : Fin k, M.α i.succ * ((k : ℝ) - ((i.val : ℝ) + 1)) := by
+  unfold LinearMultistepMethod.ρPoly
+  rw [Polynomial.derivative_sub]
+  rw [Polynomial.derivative_X_pow]
+  rw [Polynomial.derivative_sum]
+  rw [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
+      Polynomial.eval_pow, Polynomial.eval_X, one_pow, mul_one]
+  congr 1
+  rw [Polynomial.eval_finset_sum]
+  apply Finset.sum_congr rfl
+  intros i _
+  rw [Polynomial.derivative_C_mul_X_pow]
+  rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+      Polynomial.eval_X, one_pow, mul_one]
+  have hile : i.val + 1 ≤ k := i.isLt
+  push_cast [Nat.cast_sub hile]
+  ring
+
+/-- **Bridge identity: `ρ'(1) = −α'(1)` under preconsistency.**
+Butcher §441 p. 376 (the line "We calculate the value of `a₁` …
+to be `kα(1) − 2α'(1)`").
+
+Algebraically, expanding `ρ'(1) = k − Σ αᵢ(k − (i+1))` and using
+`Σ αᵢ = 1` gives `ρ'(1) = Σ αᵢ(i+1)`, which equals `−α'(1)` since
+`α(z) = 1 − Σ αᵢ z^{i+1}`. This is purely algebraic — no real-
+analytic Mathlib hooks needed. -/
+theorem LinearMultistepMethod.ρPoly_deriv_eval_one_eq_neg_alpha_deriv_at_one_of_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hPre : M.IsPreconsistent) :
+    M.ρPoly.derivative.eval 1 =
+      -(OpenMath.Chapter4.Section410.αPoly M).derivative.eval 1 := by
+  rw [M.ρPoly_deriv_eval_one_unconditional]
+  have h_alpha_deriv :
+      (OpenMath.Chapter4.Section410.αPoly M).derivative.eval 1 =
+        -∑ i : Fin k, M.α i.succ * ((i.val : ℝ) + 1) := by
+    unfold OpenMath.Chapter4.Section410.αPoly
+    rw [Polynomial.derivative_sub, Polynomial.derivative_one, zero_sub]
+    rw [Polynomial.derivative_sum]
+    rw [Polynomial.eval_neg, Polynomial.eval_finset_sum]
+    rw [neg_inj]
+    apply Finset.sum_congr rfl
+    intros i _
+    rw [Polynomial.derivative_C_mul_X_pow]
+    rw [Polynomial.eval_mul, Polynomial.eval_C, Polynomial.eval_pow,
+        Polynomial.eval_X, one_pow, mul_one]
+    push_cast
+    ring
+  rw [h_alpha_deriv]
+  have hpre : (∑ i : Fin k, M.α i.succ) = 1 := by
+    unfold LinearMultistepMethod.IsPreconsistent at hPre
+    linarith
+  have hdistrib :
+      (∑ i : Fin k, M.α i.succ * ((k : ℝ) - ((i.val : ℝ) + 1))) =
+      (k : ℝ) * (∑ i : Fin k, M.α i.succ) -
+        ∑ i : Fin k, M.α i.succ * ((i.val : ℝ) + 1) := by
+    rw [Finset.mul_sum, ← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intros i _
+    ring
+  rw [hdistrib, hpre]
+  ring
+
+/-- **Headline identity: `a₁ = 2·ρ'(1)` under preconsistency.**
+
+Combining cycle 173's `aPoly_coeff_one_eq_neg_two_alpha_deriv_at_one_of_preconsistent`
+(`a₁ = −2·α'(1)`) with the cycle 174 bridge `ρ'(1) = −α'(1)`
+(under preconsistency) gives Butcher's identity `a₁ = 2·ρ'(1)`. This
+reduces the `lem:441A` `a₁ > 0` half to the polynomial-root claim
+`ρ'(1) > 0`, exactly matching the textbook strategy on p. 376. -/
+theorem LinearMultistepMethod.aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hPre : M.IsPreconsistent) :
+    M.aPoly.coeff 1 = 2 * M.ρPoly.derivative.eval 1 := by
+  rw [M.aPoly_coeff_one_eq_neg_two_alpha_deriv_at_one_of_preconsistent hPre]
+  rw [M.ρPoly_deriv_eval_one_eq_neg_alpha_deriv_at_one_of_preconsistent hPre]
+  ring
+
 end OpenMath.Chapter4.Section404
 
 namespace OpenMath.Chapter4.Section441
@@ -184,5 +469,19 @@ theorem explicitEulerLMM_aPoly_eq :
   unfold LinearMultistepMethod.aPoly
   simp [explicitEulerLMM]
   ring
+
+/-- **Non-vacuity witness — explicit Euler's `ρ(z) = z − 1`.**
+
+For `k = 1`, `α₁ = 1` (explicit Euler, see
+`Section404.lean::explicitEulerLMM`):
+
+  `ρ(z) = z − α₁·z^0 = z − 1`.
+
+This confirms the `ρPoly` formula matches Butcher's §441
+characteristic polynomial on the smallest non-trivial example. -/
+theorem explicitEulerLMM_ρPoly_eq :
+    explicitEulerLMM.ρPoly = Polynomial.X - 1 := by
+  unfold LinearMultistepMethod.ρPoly
+  simp [explicitEulerLMM]
 
 end OpenMath.Chapter4.Section441

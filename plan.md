@@ -185,7 +185,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [x] `thm:406C` **Global error bound for linear multistep methods** (§406)
 - [x] `thm:410A` **Criteria for order** (§410) — `OpenMath/Chapter4/Section410.lean` (cycle 074)
 - [ ] `thm:422C` **Convergence of Linear Multistep Methods** (§422)
-- [ ] `lem:441A` **Maximum order for a convergent k-step method** (§441)
+- [ ] `lem:441A` **Maximum order for a convergent k-step method** (§441) — cycle 173 added algebraic identities `aPoly_coeff_zero_of_preconsistent`, `aPoly_coeff_one_unconditional`, `aPoly_coeff_one_eq_neg_two_alpha_deriv_at_one_of_preconsistent`; cycle 174 added `ρPoly` definition + bridge lemmas `ρPoly_eval_one`, `ρPoly_eval_one_eq_zero_of_preconsistent`, `ρPoly_natDegree_le`, `ρPoly_deriv_eval_one_unconditional`, `ρPoly_deriv_eval_one_eq_neg_alpha_deriv_at_one_of_preconsistent`, the headline corollary `aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent` (`a₁ = 2·ρ'(1)`), and non-vacuity `explicitEulerLMM_ρPoly_eq`; the `a₁ > 0` half now reduces to `ρ'(1) > 0` for stable preconsistent LMMs, deferred per `.prover-state/issues/lem_441A_alpha_prime_negative.md`; BDF2 closed-form witness `bdf2LMM_aPoly_eq` deferred again (cycle 172/173) — `Polynomial.ext` proof skeleton intractable without further mathlib `Polynomial.C` arithmetic helpers
 - [x] `thm:405B` **Convergent linear multistep method is preconsistent** (§405) — `OpenMath/Chapter4/Section405.lean` (cycle 069)
 - [x] `thm:406D` **Convergence from Stability and Consistency** (§406)
 - [x] `thm:410D` **Order Condition for Linear Multistep Methods (410D)** (§410) — `OpenMath/Chapter4/Section410.lean` (cycle 079)
