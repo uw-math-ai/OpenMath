@@ -445,6 +445,18 @@ theorem PEquivalent.of_pReducesTo {s s' : ℕ}
     PEquivalent M M' :=
   ⟨s', M', h, PReducesTo.refl M'⟩
 
+/-- A method is P-equivalent to its 0-reduction. Direct corollary of the
+`zeroStep` constructor of `PReducesTo` combined with
+`PEquivalent.of_pReducesTo`. -/
+theorem PEquivalent.of_isZeroReducibleVia {s : ℕ}
+    (M : RKTableau s) {inP1 : Fin s → Bool}
+    (hP0 : ∃ i, inP1 i = false)
+    (h : M.IsZeroReducibleVia inP1) :
+    PEquivalent M (M.zeroReduced inP1) :=
+  PEquivalent.of_pReducesTo
+    (PReducesTo.zeroStep inP1 hP0 h
+      (PReducesTo.refl (M.zeroReduced inP1)))
+
 /-- If `M` is irreducible (def:381E — neither P-reducible nor 0-reducible),
 then any reduction sequence starting from `M` is the reflexive (zero-step)
 one. The `step` constructor would furnish `IsPReducible M`; the `zeroStep`
@@ -1093,6 +1105,29 @@ theorem PhiEquivalent.of_pReducesTo {s s' : ℕ}
   | zeroStep inP1 _hP0 hVia _hRest IH =>
       exact PhiEquivalent.trans (zeroReduced_phiEquivalent _ hVia) IH
 
+end OpenMath.Chapter3.Section381
+
+namespace OpenMath.Chapter3.Section312.RKTableau
+
+open OpenMath.Chapter3.Section381
+
+/-- Butcher §380 — `def:381F` ⇒ `def:381B`: P-equivalent methods are
+Φ-equivalent. The easy direction of `thm:381H`. The reverse direction
+(`PhiEquivalent → PEquivalent`) requires `thm:314A` (independence of
+elementary differentials) and is genuinely harder; deferred. -/
+theorem PEquivalent.toPhiEquivalent {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} :
+    PEquivalent M M' → PhiEquivalent M M'
+  | ⟨_, _, hM, hM'⟩ =>
+      (PhiEquivalent.of_pReducesTo hM).trans
+        (PhiEquivalent.of_pReducesTo hM').symm
+
+end OpenMath.Chapter3.Section312.RKTableau
+
+namespace OpenMath.Chapter3.Section381
+
+open OpenMath.Chapter3.Section310 OpenMath.Chapter3.Section312
+
 /-- Non-vacuity witness for Φ-equivalence under 0-reduction:
 `paddedEuler` is Φ-equivalent to its 1-stage 0-reduced form. Consumes
 `paddedEuler_pReducesTo_zeroReduced` through `PhiEquivalent.of_pReducesTo`,
@@ -1101,5 +1136,22 @@ exercising the `zeroStep` case of the latter's induction. Companion to
 theorem paddedEuler_phiEquivalent_zeroReduced :
     PhiEquivalent paddedEuler (paddedEuler.zeroReduced ![true, false]) :=
   PhiEquivalent.of_pReducesTo paddedEuler_pReducesTo_zeroReduced
+
+/-- `paddedEuler` is Φ-equivalent to itself via the `def:381F → def:381B`
+bridge applied to the reflexive P-equivalence witness. Trivial but exercises
+`PEquivalent.toPhiEquivalent` on the canonical reflexive case. -/
+theorem paddedEuler_phiEquivalent_self_via_PEquivalent :
+    PhiEquivalent paddedEuler paddedEuler :=
+  (RKTableau.PEquivalent.refl paddedEuler).toPhiEquivalent
+
+/-- `paddedEuler` is Φ-equivalent to its 0-reduction via the
+`def:381F → def:381B` bridge. Composes `paddedEuler_pEquivalent_zeroReduced`
+with `PEquivalent.toPhiEquivalent`, giving an alternative derivation of
+`paddedEuler_phiEquivalent_zeroReduced` that goes through the
+P-equivalence intermediary. -/
+theorem paddedEuler_phiEquivalent_zeroReduced_via_PEquivalent :
+    PhiEquivalent paddedEuler
+      (paddedEuler.zeroReduced ![true, false]) :=
+  paddedEuler_pEquivalent_zeroReduced.toPhiEquivalent
 
 end OpenMath.Chapter3.Section381

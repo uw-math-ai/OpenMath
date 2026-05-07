@@ -1,353 +1,418 @@
-# Cycle 188 Strategy
+# Cycle 189 strategy
 
-## Status snapshot
+## TL;DR
 
-* HEAD: `75e5797` "Cycle 187 — §380 PhiEquivalent.of_pReducesTo
-  (P-reduction ⇒ Φ-equivalence); §441 Phase C.2 GPFS-blocked (7th)"
-* Sorry count: **0** project-wide.
-* §441 Phase C.2 has been GPFS-blocked for **seven consecutive
-  cycles** (cycles 182–187). The cycle 182 proof draft is preserved
-  at `.prover-state/cycle_182_draft_section441.lean` with the cycle
-  184 namespace fix (line 1529) recorded in
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`.
-* No pending Aristotle results (cycle 184 polled
-  `7c4d0ffb-…` to COMPLETE_WITH_ERRORS; the namespace fix is already
-  extracted; further submissions are paused per cycle 187 strategy).
+1. **Priority 0** (≤5 min): GPFS smoke test on `Section441.lean` HEAD. 9th
+   attempt; if it completes, ship Phase C.2 of `lem:441A` (Priority 1).
+   If it times out (the overwhelmingly likely outcome — 8 consecutive
+   timeouts), abort and proceed to Priority 2.
+2. **Priority 1, conditional**: Phase C.2 of `lem:441A` from the
+   preserved cycle 182 draft + cycle 184 namespace fix.
+3. **Priority 2 (default, this is what you will almost certainly do)**:
+   Ship `PEquivalent.toPhiEquivalent` — the headline `def:381F → def:381B`
+   bridge that closes the easy direction of `thm:381H`. ~5–15 LOC,
+   axiom-clean, exercises every cycle 184–188 deliverable. Plus
+   `PEquivalent.of_isZeroReducibleVia` and a mixed-reduction witness
+   chain using cycle 188's `zeroStep`.
 
-## CRITICAL — ignore the "stuck on" framing in the prompt
+There are no Aristotle results pending. There are 0 sorries in the
+codebase. The cycle 188 deliverables are all axiom-clean and committed
+at `0434ee0`. `Section381.lean` has substantial momentum (cycles
+184–188) and is the natural focus while §441 is GPFS-blocked.
 
-The cycle 188 prompt's "What I'm stuck on" framing — about the
-factor-of-2 between `a₁ = 2·ρ'(1)` and Butcher's stated `ρ'(1) = a₁`
-— is a **stale `attempts.md` carry-over from cycle 174**, not an
-open blocker. It was diagnosed as a Butcher textbook typo
-(p. 376) by:
+**DO NOT** treat any prompt's "stuck on" framing as a real blocker.
+Per `phantom_commit_verdict_pattern.md` and the cycle 180 / 184 / 185
+/ 186 / 187 / 188 update notes in `cycle_182_gpfs_slowness.md`, the
+GPFS regression is loop-maintainer territory; you cannot fix it from
+the worker side.
 
-* The cycle 174 consultant note
-  (`.prover-state/issues/consultant_advice_cycle_174.md` §A) — full
-  algebraic re-derivation + numerical sanity checks on explicit
-  Euler (`a₁ = 2`, `ρ'(1) = 1`) and BDF2 (`a₁ = 4/3`, `ρ'(1) = 2/3`).
-* The cycle 180 consultant note
-  (`.prover-state/issues/consultant_advice_cycle_180.md`) — re-
-  verification + escalation that this phantom keeps propagating.
+---
 
-**Phase B of `lem:441A` is fully closed at HEAD** (cycle 179 headline
-at `OpenMath/Chapter4/Section441.lean:913`,
-`aPoly_coeff_one_pos_of_stable_preconsistent`, axiom-clean). DO NOT
-audit the cycle 174 chain. DO NOT redirect the proof strategy. The
-chain `a₁ = −2α'(1)` → `ρ'(1) = −α'(1)` → `a₁ = 2·ρ'(1)` →
-`ρ'(1) > 0` → `a₁ > 0` is mathematically faithful and was independently
-re-verified by two consultants.
+## Priority 0 — GPFS smoke test (≤5 min, abort threshold)
 
-If you need to confirm: run
+Pre-flight: `ps -u $USER -o pid,stat,wchan,etime,comm | grep -E "^[ ]*[0-9]+ +D"` — verify no D-state zombies are active before
+running the smoke test (this was the cycle 183 hazard).
 
-```
-git log -1 --format='%H %s'
-grep -c sorry OpenMath/Chapter4/Section441.lean
-grep -n "aPoly_coeff_one_pos_of_stable_preconsistent" \
-  OpenMath/Chapter4/Section441.lean
-```
+Then run exactly:
 
-You should see the cycle 187 commit, sorry count 0, and the Phase B
-headline at line 913.
-
-## Priority 0 — GPFS smoke test (≤5 min budget, then move on)
-
-Run exactly once at the start of the cycle:
-
-```
+```bash
 time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean
 ```
 
-* **If EXIT=0 in <5 min** (GPFS recovered): proceed to **Priority 1**.
-* **If EXIT=124 (timeout)** — the 8th consecutive timeout: do not
-  retry. Do not poll Aristotle (no pending jobs). Append one row to
-  `.prover-state/issues/cycle_182_gpfs_slowness.md` documenting the
-  8th timeout (CPU/wall numbers from the `time` output) and pivot
-  to **Priority 2**. Worker MUST NOT modify
-  `scripts/autonomous_loop.py` or attempt cluster-side fixes — that
-  is loop-maintainer territory per CLAUDE.md.
+Decision tree:
 
-Do NOT spend more than 5 minutes total on Priority 0.
+* **Exit 0 in <5 min** ⇒ GPFS recovered. Proceed to Priority 1.
+* **EXIT=124 (timeout) or EXIT=143** ⇒ 9th consecutive failure.
+  Append a one-line update to
+  `.prover-state/issues/cycle_182_gpfs_slowness.md` documenting
+  the 9th timeout (CPU time, wall time), then proceed to Priority 2.
+  Do NOT retry, do NOT increase the timeout, do NOT investigate
+  the kernel. The pattern is well-established.
 
-## Priority 1 — Phase C.2 (only if Priority 0 EXIT=0)
+---
 
-Steps:
+## Priority 1 — Phase C.2 closure of `lem:441A` (CONDITIONAL on GPFS healthy)
 
-1. Copy `.prover-state/cycle_182_draft_section441.lean` over
-   `OpenMath/Chapter4/Section441.lean`.
-2. Apply the cycle 184 namespace fix at line 1529:
-   `M.αPoly_complex_root_norm_ge_one_of_stable hStable hψ_ne hψ_isRoot`
-   →
-   `LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable M hStable hψ_ne hψ_isRoot`
-3. `lake env lean OpenMath/Chapter4/Section441.lean` — must exit 0
-   in <8 min. If it exits with errors, surface them but DO NOT
-   attempt new tactic engineering this cycle; the draft is
-   Aristotle-audited modulo the namespace fix.
-4. `lean_verify` the three new public theorems
-   (`ρPoly_complex_root_norm_le_one_of_stable`,
-   `αPoly_complex_root_norm_ge_one_of_stable`,
-   `aPoly_complex_root_re_nonpos_of_stable`) — expect
-   `[propext, Classical.choice, Quot.sound]` only.
-5. Update `extraction/formalization_data/lean_status.json`,
-   `plan.md`, and `lem_441A_phase_C_scoping.md` to mark Phase C.2
-   closed.
+**Skip this section entirely if Priority 0 timed out.** Continue to
+Priority 2.
 
-If anything in steps 3–5 fails: revert `Section441.lean` to HEAD
-and pivot to Priority 2. Do NOT leave the file with sorries or
-errors.
+If Priority 0 succeeded:
 
-## Priority 2 — 0-reduction analogue of cycle 187 work (~150 LOC)
+1. Replace `OpenMath/Chapter4/Section441.lean` with the cycle 182
+   draft preserved at
+   `.prover-state/cycle_182_draft_section441.lean`.
+2. Apply the cycle 184 namespace fix on draft line 1529 (the only
+   non-stub change Aristotle suggested):
 
-This is the main expected deliverable. Builds directly on cycle
-187's `PhiEquivalent.of_pReducesTo` and closes the lacuna its
-docstring identifies (`OpenMath/Chapter3/Section381.lean:830-832`):
+   ```diff
+   -      M.αPoly_complex_root_norm_ge_one_of_stable hStable hψ_ne hψ_isRoot
+   +      LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable M
+   +        hStable hψ_ne hψ_isRoot
+   ```
 
-> "The 0-reduction analogue will fold in cleanly when the 0-step
-> `PReducesTo` constructor is added (see `def:381E` deferred-
-> construction issue)."
+3. Run `time timeout 1200 lake env lean OpenMath/Chapter4/Section441.lean`.
+4. If clean: verify `#print axioms` on each new theorem returns
+   `[propext, Classical.choice, Quot.sound]`.
+5. Update `extraction/formalization_data/lean_status.json` row for
+   `lem:441A` from `partial` (with the Phase C.2 deferral note) to
+   reflect Phase C.2 closure (Phase C.3/C.4 still partial).
+6. Update `plan.md` row for `lem:441A` accordingly.
+7. Commit. Title: `Cycle 189 — §441 lem:441A Phase C.2: Re(ζ) ≤ 0 for stable a-roots`.
 
-### Deliverable A — extend `RKTableau.PReducesTo` with `zeroStep`
+If the compile produces specific errors after the namespace fix:
+fix them locally up to a 30-minute time budget. If you run past 30
+minutes, revert and proceed to Priority 2 — the cycle 182 draft was
+written carefully but Lean elaboration on a 1568-LOC file is
+inherently fragile, and Section381 work is more valuable per cycle
+than further Section441 wrestling.
 
-In `OpenMath/Chapter3/Section381.lean`, in the
-`RKTableau.PReducesTo` inductive at line 393, add a third
-constructor between `step` and the closing `end`:
+---
+
+## Priority 2 — Section381 follow-up (DEFAULT)
+
+This is what you will almost certainly do. All deliverables below are
+axiom-clean targets, sorry count remains 0, and exercise the cycle
+184–188 infrastructure productively.
+
+The relevant `Section381.lean` line numbers (verified at HEAD `0434ee0`):
+
+* `PhiEquivalent.refl` line 127, `.symm` line 131, `.trans` line 137.
+* `IsZeroReducibleVia` line 199, `IsZeroReducible` line 212.
+* `zeroReduced_*` lemmas lines 243–260.
+* `IsPReducibleVia` line 272, `IsPReducible` line 284.
+* `IsIrreducible` line 353.
+* `PReducesTo` (constructors `refl` / `step` / `zeroStep`) ~lines 380–425.
+* `PEquivalent` def line 428: `∃ sBar Mbar, PReducesTo M Mbar ∧ PReducesTo M' Mbar`.
+* `PEquivalent.refl` line 433, `.symm` line 437,
+  `.of_pReducesTo` line 443.
+* `eq_of_isIrreducible_of_pReducesTo` line 457.
+* `PEquivalent.trans_of_middle_isIrreducible` line 483.
+* `def:381A Equivalent` line 557.
+* Non-vacuity witness block starts ~line 580 (`pairPartition`,
+  `paddedEuler_*` witnesses).
+
+### Deliverable A (HEADLINE) — `PEquivalent.toPhiEquivalent`
+
+Ship the bridge from `def:381F` (P-equivalence) to `def:381B`
+(Φ-equivalence). This is the easy direction of `thm:381H`
+("Equivalent ↔ P-equivalent ↔ Φ-equivalent") and consumes every
+cycle 184–188 §380 deliverable in a single 5-line proof.
+
+**Statement** (place after `PEquivalent.trans_of_middle_isIrreducible`,
+i.e. after line 497, in the `OpenMath.Chapter3.Section312.RKTableau`
+namespace):
 
 ```lean
-  /-- One 0-reduction step: `M` is 0-reducible via `inP1` (P₀
-  non-empty), and the result `M.zeroReduced inP1` reduces further
-  (in zero or more steps) to `M''`. The non-emptiness `hP0` keeps
-  this faithful to Butcher §380 def:381C, which requires P₀ to
-  contain at least one stage; without it, the trivial all-stages-
-  in-P₁ partition would admit vacuous "0-reductions" that do not
-  decrease the stage count. -/
-  | zeroStep {s s'' : ℕ}
-      {M : RKTableau s} {M'' : RKTableau s''}
-      (inP1 : Fin s → Bool) (_hP0 : ∃ i, inP1 i = false)
-      (_h : M.IsZeroReducibleVia inP1) :
-      PReducesTo (M.zeroReduced inP1) M'' → PReducesTo M M''
+/-- Butcher §380 — `def:381F` ⇒ `def:381B`: P-equivalent methods are
+Φ-equivalent. The easy direction of thm:381H. The reverse direction
+(`PhiEquivalent → PEquivalent`) requires `thm:314A` (independence of
+elementary differentials) and is genuinely harder; deferred. -/
+theorem PEquivalent.toPhiEquivalent {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} :
+    PEquivalent M M' → PhiEquivalent M M'
+  | ⟨_, _, hM, hM'⟩ =>
+      (PhiEquivalent.of_pReducesTo hM).trans
+        (PhiEquivalent.of_pReducesTo hM').symm
 ```
 
-Note the field ordering matches `step`: partition data first,
-non-triviality side-condition second, the
-`IsZeroReducibleVia`/`IsPReducibleVia` predicate third, then the
-recursive `PReducesTo`. This matches the destructuring discipline
-used by `eq_of_not_isPReducible_of_pReducesTo` (which currently
-matches on `refl` and `step`; see Deliverable C below).
+This composes:
+* `PhiEquivalent.of_pReducesTo` (cycle 187, extended in cycle 188 to
+  handle `zeroStep`) — gives `PhiEquivalent M Mbar`.
+* `PhiEquivalent.of_pReducesTo` again — gives `PhiEquivalent M' Mbar`.
+* `PhiEquivalent.symm` (line 131) — flips to `PhiEquivalent Mbar M'`.
+* `PhiEquivalent.trans` (line 137) — composes.
 
-### Deliverable B — `zeroReduced_phiEquivalent`
+The `PEquivalent` definition `∃ sBar Mbar, PReducesTo M Mbar ∧
+PReducesTo M' Mbar` (line 428) destructures cleanly via pattern
+matching.
 
-Add a new public theorem mirroring `pReduced_phiEquivalent`
-(`Section381.lean:782`):
+**Verify with `lean_verify
+OpenMath.Chapter3.Section312.RKTableau.PEquivalent.toPhiEquivalent`
+that axioms = `[propext, Classical.choice, Quot.sound]` only.**
+
+### Deliverable B — `PEquivalent.of_isZeroReducibleVia`
+
+Direct corollary mirroring `PEquivalent.of_pReducesTo` but for
+0-reduction (using cycle 188's `zeroStep` constructor). Place
+immediately after `PEquivalent.of_pReducesTo` (line 446):
 
 ```lean
-theorem zeroReduced_phiEquivalent {s : ℕ}
+/-- A method is P-equivalent to its 0-reduction. Direct corollary
+of cycle 188's `PReducesTo.zeroStep` constructor combined with
+`PEquivalent.of_pReducesTo`. -/
+theorem PEquivalent.of_isZeroReducibleVia {s : ℕ}
     (M : RKTableau s) {inP1 : Fin s → Bool}
+    (hP0 : ∃ i, inP1 i = false)
     (h : M.IsZeroReducibleVia inP1) :
-    PhiEquivalent M (M.zeroReduced inP1)
+    PEquivalent M (M.zeroReduced inP1) :=
+  PEquivalent.of_pReducesTo
+    (PReducesTo.zeroStep inP1 hP0 h
+      (PReducesTo.refl (M.zeroReduced inP1)))
 ```
 
-**Proof structure** (analogous to cycle 187's `pReduced_phiEquivalent`
-but simpler — the embedding `zeroReducedEmb` is an *injection*, not
-a representative choice, so no `Classical.choose` plumbing):
-
-1. **Two private mutual helpers**
-   `derivativeWeight_zeroReduced` (over `RootedTree`) and
-   `derivativeWeightProd_zeroReduced` (over `List RootedTree`):
-
-   ```
-   ∀ (t : RootedTree) (I : Fin sBar'),
-     M.derivativeWeight (zeroReducedEmb inP1 I) t
-       = (M.zeroReduced inP1).derivativeWeight I t
-   ```
-
-   where `sBar' := (Finset.univ.filter (fun i => inP1 i = true)).card`.
-
-   In the `t :: ts` recursive step the inner sum is
-
-   ```
-   ∑ j : Fin s, M.A (emb I) j * M.derivativeWeight j t
-   ```
-
-   Use `Finset.sum_filter_ne` (or a direct `Finset.sum_subset` /
-   `Finset.sum_eq_sum_of_subset_of_zero_on_sdiff`) to discard the
-   `inP1 j = false` terms — they vanish because `M.A (emb I) j = 0`
-   when `emb I ∈ P₁` and `j ∈ P₀` (this is the second clause of
-   `IsZeroReducibleVia`, `h.2 (emb I) j (emb_inP1_eq_true …) hj`).
-   The surviving sum over `{j | inP1 j = true}` reindexes via
-   `zeroReducedEmb` to a sum over `Fin sBar'`. Use
-   `Finset.sum_image`-style or the bijection lemma
-   `Equiv.sum_comp` to perform the reindex, then apply the
-   `derivativeWeight_zeroReduced` IH on each summand.
-
-2. **Main theorem `zeroReduced_phiEquivalent`** uses the helpers
-   plus the outer `Σ_i b_i Φᵢ(t)` decomposition: split the sum at
-   `inP1 i`, kill the `inP1 i = false` half via `h.1` (which gives
-   `M.b i = 0`), reindex the surviving half via `zeroReducedEmb`,
-   and apply `derivativeWeight_zeroReduced`.
-
-**Required helper — `zeroReducedEmb_inP1_eq_true`**: prove
-`inP1 (zeroReducedEmb inP1 I) = true` for every `I`. The embedding
-is defined to land in the filtered subtype (see
-`Section381.lean:219-228`), so this should be a one-line `simp` or
-`Finset.mem_filter`-driven extraction. Look for existing supporting
-lemmas around `zeroReducedEmb` first; if absent, add this as a
-private helper before the mutual block.
-
-### Deliverable C — extend `PhiEquivalent.of_pReducesTo`
-
-Update the existing `induction h with` (line 836) to handle the
-new `zeroStep` constructor:
+Constructor signature reference (verified from cycle 188 prompt):
 
 ```lean
-  | refl M => exact PhiEquivalent.refl M
-  | step P _hLt hVia _hRest IH =>
-      exact PhiEquivalent.trans (pReduced_phiEquivalent _ hVia) IH
-  | zeroStep inP1 _hP0 hVia _hRest IH =>
-      exact PhiEquivalent.trans (zeroReduced_phiEquivalent _ hVia) IH
+| zeroStep {s s'' : ℕ}
+    {M : RKTableau s} {M'' : RKTableau s''}
+    (inP1 : Fin s → Bool) (_hP0 : ∃ i, inP1 i = false)
+    (_h : M.IsZeroReducibleVia inP1) :
+    PReducesTo (M.zeroReduced inP1) M'' → PReducesTo M M''
 ```
 
-Also extend `eq_of_not_isPReducible_of_pReducesTo`
-(`Section381.lean:439`): currently it matches on `refl` and `step`.
-Decide whether the `zeroStep` case needs a new hypothesis on
-non-0-reducibility, OR whether the existing
-`hIrr : ¬ M.IsPReducible` is genuinely insufficient and the lemma
-needs renaming/strengthening. The cleanest move is probably to
-**add a parallel lemma** `eq_of_not_isReducible_of_pReducesTo` that
-takes both `¬ M.IsPReducible` and `¬ M.IsZeroReducible` (i.e.
-`M.IsIrreducible` per `Section381.lean:354`) and case-splits on
-all three constructors. Mark the original lemma as deprecated only
-if downstream usage allows it; otherwise leave it in place and add
-the stronger sibling.
+so the explicit call shape is
+`PReducesTo.zeroStep inP1 hP0 h (PReducesTo.refl (M.zeroReduced inP1))`.
 
-`PEquivalent.trans_of_middle_not_pReducible` (line 472) consumes
-`eq_of_not_isPReducible_of_pReducesTo` — if you keep the original,
-its proof is unaffected; if you rename, update the call site here.
+### Deliverable C — Φ-equivalence witnesses for `paddedEuler` via the bridge
 
-### Deliverable D — non-vacuity witness using `zeroStep`
-
-Add a small witness exercising the new constructor on a tableau
-that is genuinely 0-reducible (paddedEuler is the obvious choice
-— line 605 already has
-`paddedEuler.IsZeroReducibleVia ![true, false]`):
+Ship two corollaries that exercise Deliverable A on existing cycle
+184–188 witnesses. Place these in the `### Non-vacuity witnesses`
+block (around line 580 onward, after
+`paddedEuler_phiEquivalent_zeroReduced` from cycle 188):
 
 ```lean
-example :
-    RKTableau.PReducesTo paddedEuler
+/-- Cycle 189 — `paddedEuler` is Φ-equivalent to itself via the
+`def:381F → def:381B` bridge applied to cycle 184's reflexive
+P-equivalence witness. Trivial but exercises `toPhiEquivalent`. -/
+theorem paddedEuler_phiEquivalent_self_via_PEquivalent :
+    PhiEquivalent paddedEuler paddedEuler :=
+  (PEquivalent.refl paddedEuler).toPhiEquivalent
+
+/-- Cycle 189 — `paddedEuler` is Φ-equivalent to its 0-reduction via
+the `def:381F → def:381B` bridge. Composes cycle 188's
+`paddedEuler_pEquivalent_zeroReduced` with `toPhiEquivalent`,
+giving an alternative derivation of cycle 188's
+`paddedEuler_phiEquivalent_zeroReduced`. -/
+theorem paddedEuler_phiEquivalent_zeroReduced_via_PEquivalent :
+    PhiEquivalent paddedEuler
       (paddedEuler.zeroReduced ![true, false]) :=
-  RKTableau.PReducesTo.zeroStep ![true, false]
-    (by decide)  -- ∃ i, inP1 i = false
-    (by …)       -- IsZeroReducibleVia witness, reuse the example at line 605
-    (RKTableau.PReducesTo.refl _)
+  paddedEuler_pEquivalent_zeroReduced.toPhiEquivalent
 ```
 
-If the existing `example` at line 605 is convertible to a `theorem`
-without breaking elaboration, do that and reuse it; otherwise inline
-the same `decide`-style proof.
+The second of these is *not* a tautology vs. cycle 188's
+`paddedEuler_phiEquivalent_zeroReduced` — it goes through the
+P-equivalence intermediary, validating that the two derivations
+agree.
 
-### Hypothesis discipline
+If `paddedEuler_pEquivalent_zeroReduced` from cycle 188 used a
+different partition spelling than `![true, false]`, copy whatever
+cycle 188 used verbatim. Check via `grep -n
+paddedEuler_pEquivalent_zeroReduced
+OpenMath/Chapter3/Section381.lean` and read the surrounding context.
 
-**Faithfulness check for Deliverable A** — the `_hP0 : ∃ i, inP1 i = false`
-side condition is faithful to Butcher §380 def:381C ("there is at
-least one stage in P₀"; see `Section381.lean:202-216`); without it,
-the trivial all-stages-in-P₁ partition would admit vacuous
-0-reductions that don't decrease the stage count, paralleling the
-cycle 185 fix to `step`'s `_hLt : sBar < s` requirement.
+---
 
-**Faithfulness check for Deliverable B** — Butcher's narrative around
-0-reduction (§380, p. 302) treats Φ-preservation as obvious because
-deleted stages have weight zero; we formalise this via the two clauses
-of `IsZeroReducibleVia`. Document in the docstring of
-`zeroReduced_phiEquivalent` that this is the textbook's implicit
-"deleted stages don't contribute to elementary weights" observation.
+## Verification checklist
 
-## What NOT to do this cycle
+After Priority 2 deliverables A+B+C land:
 
-* Do NOT audit cycle 174's `aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent`
-  bridge (line 455 of `Section441.lean`). The factor-of-2 is a
-  Butcher typo, independently re-verified by two consultants.
-* Do NOT rewrite `bdf2LMM_aPoly_eq` via `Polynomial.ext` —
-  cycles 172/173 stalled on this; the cycle 180 `Polynomial.funext +
-  ring` recipe (`Section441.lean:947`) is the canonical closure.
-* Do NOT poll Aristotle — no pending jobs from cycle 187.
-* Do NOT submit new Aristotle jobs this cycle — the cycle 184
-  C.2 proof is fully audited and only awaits GPFS recovery.
-* Do NOT modify `scripts/autonomous_loop.py` — see
-  `tautology_scanner_false_positives.md` and
-  `phantom_commit_verdict_pattern.md`. The "stuck on"-framing
-  phantom in the prompt is a separate occurrence of the same
-  prompt-builder bug.
-* Do NOT raise `maxHeartbeats` above 200000.
-* Do NOT introduce `axiom` / `constant` declarations.
-* Do NOT attempt the full `def:381E` reduced-method fixed-point
-  construction this cycle — that is multi-cycle infrastructure (see
-  `.prover-state/issues/reduced_method_deferred.md`). Deliverables
-  A–D above add the 0-reduction *step* to `PReducesTo`, which is
-  strictly less ambitious and unblocks future cycles' work on
-  `def:381F`'s textbook formulation, `thm:381G`, and `thm:381H`.
-* Do NOT use `conv_lhs => ext j` on `Finset.sum`-shaped goals — it
-  doesn't descend through the sum's λ-binder. Use
-  `Finset.sum_congr rfl (fun j _ => …)` plus an explicit
-  `have hSumRewrite` rewrite (cycle 187 discovery).
-* Do NOT attach docstrings to the `mutual` keyword itself — Lean
-  rejects with "unexpected token 'mutual'". Attach to each individual
-  private theorem inside the block (cycle 187 fix).
+1. `time timeout 1200 lake env lean OpenMath/Chapter3/Section381.lean`
+   exits 0. Expected build time ~3 min (cycle 188 baseline).
+2. `grep -c sorry OpenMath/Chapter3/Section381.lean` returns `0`.
+3. Tautology scanner: `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section381.lean` returns no hits.
+4. `lean_verify` on each new public theorem returns
+   `[propext, Classical.choice, Quot.sound]`. Specifically:
+   - `OpenMath.Chapter3.Section312.RKTableau.PEquivalent.toPhiEquivalent`
+   - `OpenMath.Chapter3.Section312.RKTableau.PEquivalent.of_isZeroReducibleVia`
+   - `OpenMath.Chapter3.Section381.paddedEuler_phiEquivalent_self_via_PEquivalent`
+   - `OpenMath.Chapter3.Section381.paddedEuler_phiEquivalent_zeroReduced_via_PEquivalent`
 
-## Verification gate
+   (Adjust namespace prefix if cycle 184–188 used `Section381` for
+   the witness theorems — `grep -n "namespace OpenMath"
+   OpenMath/Chapter3/Section381.lean` will show the actual ladder.)
 
-Before committing:
+5. No regression on cycle 184–188 theorems
+   (`PhiEquivalent.of_pReducesTo`, `PEquivalent.refl`,
+   `PEquivalent.symm`, `PEquivalent.trans_of_middle_isIrreducible`,
+   `paddedEuler_phiEquivalent_zeroReduced`,
+   `paddedEuler_pEquivalent_zeroReduced`,
+   `eq_of_isIrreducible_of_pReducesTo`, etc.).
 
-1. `lake env lean OpenMath/Chapter3/Section381.lean` exits 0.
-2. `grep -c sorry OpenMath/Chapter3/Section381.lean` returns 0.
-3. `lean_verify` on `pReduced_phiEquivalent` (cycle 187, regression
-   check), `zeroReduced_phiEquivalent` (new), and
-   `PhiEquivalent.of_pReducesTo` (now extended) — all expected to
-   return `[propext, Classical.choice, Quot.sound]`.
-4. Tautology-scanner regex check:
-   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section381.lean`
-   should return no new entries beyond pre-existing rows.
-5. Pre-commit faithfulness checklist (CLAUDE.md):
-   * For each new theorem: textbook reference, hypothesis-strength
-     audit, no tautological `:= h` closer that smuggles a hypothesis
-     as a conclusion.
-   * Document the `_hP0` side condition's role in the
-     `zeroStep` docstring.
+---
 
-## Backup plan if Deliverable B stalls
+## What NOT to try
 
-If the mutual induction in `zeroReduced_phiEquivalent` blows up on
-the reindexing step (the `j ↦ zeroReducedEmb inP1 …` bijection),
-DO NOT commit a `sorry`. Fall back to:
+* **Do NOT attempt `PEquivalent.trans` (full version).** The general
+  transitivity requires confluence of P-reduction (any two reduction
+  sequences from a common source can be completed to a common
+  target). Cycle 188's `PEquivalent.trans_of_middle_isIrreducible`
+  covers the easy case; full transitivity is multi-cycle work and
+  explicitly deferred per the cycle 184/188 docstrings.
 
-* Ship Deliverable A only (extend `PReducesTo` with `zeroStep`),
-  plus Deliverable D's non-vacuity witness, plus a
-  `zeroReduced_phiEquivalent` theorem that takes additional
-  faithfulness-preserving hypotheses (e.g. specialised to the
-  case `s' := (filter inP1).card`) — but only if it can be closed
-  fully axiom-clean. If not, ship A + D only and document
-  Φ-preservation as a deferred follow-up for cycle 189 in
-  `.prover-state/issues/reduced_method_deferred.md` (extend the
-  existing entry).
-* Deliverable C's `zeroStep` case in `PhiEquivalent.of_pReducesTo`
-  cannot land without B; if B fails, leave Deliverable C out as
-  well, and add a TODO comment at line 836 documenting the gap.
+* **Do NOT attempt `thm:381G`** ("Irreducible Runge Kutta Stage
+  Distinguishability"). Per
+  `extraction/formalization_data/entities/thm_381G.json`, it depends
+  on `thm:314A` (Independence of the elementary differentials),
+  which is `[ ]` not started in `plan.md`. You cannot ship a
+  faithful `thm:381G` without first formalising `thm:314A` —
+  multi-cycle infrastructure scope.
 
-## Backup plan if Priority 2 stalls entirely
+* **Do NOT attempt the reverse `PhiEquivalent → PEquivalent`
+  direction of `thm:381H`.** Same blocker: textbook proof goes via
+  `thm:381G`, which needs `thm:314A`.
 
-If Deliverable A's inductive constructor refuses to elaborate
-(unlikely but possible if Lean's mutual-inductive checker objects
-to the heterogeneous stage counts), fall back to:
+* **Do NOT attempt `def:381E`'s `reducedMethod` fixed-point
+  construction.** Multi-cycle work per
+  `.prover-state/issues/reduced_method_deferred.md`. Cycle 188's
+  `zeroStep` constructor extension is one of several building
+  blocks; the construction itself requires strong induction on
+  stage count + termination argument that is not in scope for
+  cycle 189.
 
-* **Plan B**: promote the `paddedEuler.IsZeroReducibleVia`
-  example at `Section381.lean:605` to a public named theorem
-  `paddedEuler_isZeroReducibleVia_split` and pair it with a
-  derived `paddedEuler.IsZeroReducible` named witness. Pure
-  promotion work, ~10 LOC, axiom-clean, mirrors cycle 186's
-  inline-example-to-named-theorem promotion pattern.
-* **Plan C**: pivot to scoping `thm:381G` (irreducible methods are
-  stage-distinguishable) — read
-  `extraction/formalization_data/entities/thm_381G.json` and write
-  a sorry-free predicate-level deliverable plus a non-vacuity
-  witness if tractable in one cycle.
+* **Do NOT modify `scripts/autonomous_loop.py`.** Per CLAUDE.md and
+  every consultant note since cycle 014, the GPFS / prompt-builder
+  / tautology-scanner issues are all loop-maintainer territory.
+  If you observe new false-positive scanner hits or another
+  phantom verdict, append to
+  `.prover-state/issues/tautology_scanner_false_positives.md` or
+  `phantom_commit_verdict_pattern.md` — do NOT patch the supervisor.
 
-Plan C requires reading the JSON and is exploratory; only fall back
-to it if Plans A and B both stall.
+* **Do NOT raise `maxHeartbeats` above 200000.** None of the
+  Priority 2 deliverables need it — they are all 5–15 LOC composing
+  existing axiom-clean lemmas.
+
+* **Do NOT chase an Aristotle batch this cycle.** Deliverables A+B+C
+  are too small for Aristotle to add value (each is 5–10 LOC of
+  pure composition). Reserve Aristotle slots for substantive proofs.
+
+* **Do NOT poll the cycle 184 Aristotle project
+  `7c4d0ffb-e6c1-4ef4-b8f5-688d256bac44`** further. It returned
+  `COMPLETE_WITH_ERRORS` in cycle 184 with the namespace fix
+  identified; the only remaining blocker is GPFS, which Aristotle
+  cannot help with.
+
+* **Do NOT re-derive Phase B of `lem:441A`.** It is closed at
+  `Section441.lean:913` (`aPoly_coeff_one_pos_of_stable_preconsistent`,
+  cycle 179), axiom-clean. Multiple consultant notes (cycles 174,
+  180) verify this.
+
+* **Do NOT add comments referencing the current cycle, "from
+  cycle 188", "as discussed above", etc., inside *theorem
+  statements* and *bodies*.** Docstrings on new theorems may
+  reference Butcher § numbers and the cycle's textbook target
+  (e.g. "thm:381H easy direction"); they should NOT include
+  process narration. Per CLAUDE.md hygiene rules.
+
+---
+
+## Pre-commit faithfulness checklist (mandatory)
+
+For each of Deliverable A, B, C:
+
+* **Tautology check**: does the conclusion appear verbatim as a
+  hypothesis? **No.** Deliverable A's conclusion `PhiEquivalent M M'`
+  does not appear in `PEquivalent M M'`'s unfolding (different
+  predicates with different definitions — one is a Φ-value
+  pointwise equality, the other is the existence of a common
+  reduct).
+* **Identity check**: is the proof a single `exact h`? **No.**
+  Deliverable A composes three named lemmas
+  (`PhiEquivalent.of_pReducesTo`, `.symm`, `.trans`); B composes
+  `PEquivalent.of_pReducesTo` + cycle 188's `PReducesTo.zeroStep`;
+  C composes Deliverable A with cycle 184/188 named witnesses.
+* **Hypothesis strength check**: are any hypotheses stronger than
+  textbook? **No.** Deliverable A takes only `PEquivalent M M'`;
+  Deliverable B takes the standard `IsZeroReducibleVia` +
+  non-empty-P₀ pair (matching cycle 188's `zeroStep` constructor).
+* **Definition smuggling check**: no new `def`/`structure`
+  introduced. All deliverables are pure theorems.
+
+---
+
+## End-of-cycle deliverables
+
+1. `OpenMath/Chapter3/Section381.lean` — four new public theorems
+   (Deliverables A, B, plus two witnesses in C). LOC delta ~25–35.
+2. `.prover-state/task_results/cycle_189.md` — standard format,
+   document axiom-cleanliness verification on each new theorem
+   (see `cycle_188.md` for the template).
+3. `plan.md` — no row updates needed (Deliverables A+B+C are §380
+   infrastructure that doesn't move any plan.md row from `[ ]` to
+   `[x]`; the def:381F row stays `[~]` partial since `thm:381H`
+   reverse direction remains deferred). Update the existing
+   def:381F status note to add cycle 189's contribution.
+4. `extraction/formalization_data/lean_status.json` — no row
+   updates needed for the same reason.
+5. Commit titled
+   `Cycle 189 — §380 PEquivalent.toPhiEquivalent (def:381F → def:381B); zeroReducible corollary; mixed witnesses`.
+
+If GPFS recovered and Priority 1 ran instead, replace the commit
+title with
+`Cycle 189 — §441 lem:441A Phase C.2: Re(ζ) ≤ 0 for stable a-roots`
+and update `plan.md` + `lean_status.json` for `lem:441A` Phase C.2
+closure.
+
+---
+
+## Branch back / fallback plans
+
+### A: Deliverable A fails to elaborate
+
+The most likely cause is a `PhiEquivalent.symm` type-class hiccup at
+the cross-stage-count boundary (`PhiEquivalent {s s' : ℕ}` applied at
+`{sBar, s'}`). Diagnose by:
+
+1. `lean_goal` at the `(PhiEquivalent.of_pReducesTo hM').symm` step.
+2. If the goal shape is `PhiEquivalent ?Mbar ?M'` instead of
+   `PhiEquivalent ?M' ?Mbar`, swap the order: write the proof as
+   ```lean
+   PEquivalent.toPhiEquivalent
+     | ⟨_, _, hM, hM'⟩ =>
+         PhiEquivalent.trans
+           (PhiEquivalent.of_pReducesTo hM)
+           ((PhiEquivalent.of_pReducesTo hM').symm)
+   ```
+   with explicit parenthesization, or split into named `have` steps
+   to expose intermediate types.
+
+### B: Deliverable B fails (positional vs. named arguments to `zeroStep`)
+
+Diagnose via `lean_hover_info` on `PReducesTo.zeroStep` to confirm
+the exact signature. If named arguments are needed:
+```lean
+PReducesTo.zeroStep (inP1 := inP1) (_hP0 := hP0) (_h := h)
+  (PReducesTo.refl (M.zeroReduced inP1))
+```
+
+### C: Deliverable C fails (witness regression)
+
+The most likely cause is that `paddedEuler_pEquivalent_zeroReduced`
+(cycle 188) used a *different* canonical partition than
+`![true, false]`. Check the cycle 188 commit (`0434ee0`) for the
+exact partition — `git show 0434ee0 -- OpenMath/Chapter3/Section381.lean
+| grep -A2 paddedEuler_pEquivalent_zeroReduced`. Copy the literal
+verbatim.
+
+### D: All three deliverables fail and you have <30 min remaining
+
+Backup deliverable: ship ONLY `PEquivalent.toPhiEquivalent`
+(Deliverable A) and skip B + C. A on its own is the headline; B + C
+are enrichments. Update the commit title and task_results
+accordingly. Sorry count remains 0.
+
+### E: All three deliverables succeed with 30+ min remaining
+
+Optional stretch: scan `Section381.lean` for any other inline
+`example`/`have` blocks that could be cleanly promoted to public
+named theorems (cycle 186 promotion pattern). Do NOT introduce new
+mathematical content beyond what's in this strategy.

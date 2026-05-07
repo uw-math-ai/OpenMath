@@ -364,3 +364,12 @@ Pivoting to Priority 2: extend `RKTableau.PReducesTo` with a
 `PhiEquivalent.of_pReducesTo` to handle the new constructor, and
 add a non-vacuity witness using `paddedEuler` (per cycle 188
 strategy Deliverables A–D).
+
+**Cycle 189 update (9th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.047s, user 0m0.291s, sys 0m0.909s — CPU =
+0.40% of wall, identical near-zero pattern). Pivoting to
+Priority 2: ship `PEquivalent.toPhiEquivalent` (def:381F →
+def:381B bridge), `PEquivalent.of_isZeroReducibleVia`, and two
+`paddedEuler` Φ-equivalent witnesses via the bridge (per cycle
+189 strategy Deliverables A–C).
