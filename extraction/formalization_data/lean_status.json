@@ -352,9 +352,9 @@
     "status": "unformalized"
   },
   "lem:441B": {
-    "lean_file": "OpenMath/Chapter4/Section441.lean",
-    "lean_symbol": "OpenMath.Chapter4.Section404.LinearMultistepMethod.aPoly_even_coeff_neg",
-    "status": "partial"
+    "lean_file": null,
+    "lean_symbol": null,
+    "status": "unformalized"
   },
   "lem:515A": {
     "lean_file": "OpenMath/Chapter5/Section515.lean",
