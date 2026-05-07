@@ -189,3 +189,52 @@ proceed. If COMPLETE with errors ⇒ apply the suggested fixes locally.
 If still RUNNING after another 30 min ⇒ try Section441.lean compile
 again on a clean shell (now that find/zombie processes are killed,
 GPFS contention may be cleared).
+
+## Cycle 184 update (2026-05-07)
+
+**Aristotle returned COMPLETE_WITH_ERRORS** (project
+`7c4d0ffb-e6c1-4ef4-b8f5-688d256bac44`, last_updated 12:50 PDT). The
+returned `ARISTOTLE_SUMMARY.md` claims the cycle 182 draft compiles
+"with no errors" against Aristotle-authored stubs of
+`Section404`/`410`/`451`. The only modification Aristotle made to
+the cycle 182 draft itself was a one-line namespace fix on line
+1529: `M.αPoly_complex_root_norm_ge_one_of_stable hStable hψ_ne hψ_isRoot`
+→ `LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable
+M hStable hψ_ne hψ_isRoot`. The fix is genuinely correct: the
+theorem lives in the `Section441` namespace (line 1419, after
+`namespace OpenMath.Chapter4.Section441` at line 950), so dot
+notation through `M : LinearMultistepMethod k` (whose type is
+defined in `Section404`) fails to resolve.
+
+**Local verification still blocked by GPFS slowness**. A clean HEAD
+compile (`time timeout 480 lake env lean OpenMath/Chapter4/Section441.lean`,
+unchanged from cycle 181) timed out at 8 minutes with near-zero CPU
+(0.271s user, 0.525s sys over 480s wall). After applying the
+namespace fix and replacing HEAD's `Section441.lean` with the cycle
+182 draft + fix (1568 LOC), a 20-minute local compile attempt also
+timed out (EXIT=124) — the fourth failed local-compile attempt (cycles
+182 × 2, 183, 184). Reverted `Section441.lean` to the cycle 181
+HEAD state.
+
+**Pivoted to Option 3A** per cycle 184 strategy: shipped `def:381F`
+(P-equivalent) in `OpenMath/Chapter3/Section381.lean`. Definition-
+only deliverable, axiom-clean target, ~70 LOC over HEAD; expected to
+compile cleanly even with GPFS degraded since Section381 is much
+smaller (~520 LOC HEAD vs Section441's 1227 LOC) and already part of
+the lake cache from prior cycles.
+
+**GPFS state at end of cycle 184**: still degraded. No `find /`
+zombie was running (the cycle 183 cleanup persisted), so the
+slowness has a different (likely transient cluster-load) cause.
+Recommend cycle 185 retry the HEAD `Section441.lean` smoke test
+before any Phase C.2 attempt; if it completes in <5 min, re-attempt
+the cycle 182 draft + namespace fix locally.
+
+**Cycle 185 entry point**: re-attempt `Section441.lean` smoke test
+on HEAD. If GPFS healthy, replace HEAD with the cycle 182 draft +
+the cycle 184 namespace fix (preserved at
+`.prover-state/cycle_182_draft_section441.lean` plus the diff at
+line 1529); ship Phase C.2. If GPFS still degraded, continue Step 3
+pivot — Option 3B (`def:422B`) is next, OR continue with `def:381F`
+follow-up theorems (e.g. `PEquivalent.trans` over the heterogeneous
+size-changing reduction relation).

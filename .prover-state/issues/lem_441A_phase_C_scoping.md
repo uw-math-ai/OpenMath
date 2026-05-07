@@ -410,6 +410,48 @@ a clean shell (post-zombie-kill GPFS state may now be healthy).
 
 Phase C.2 status: **drafted, awaiting verification (Aristotle path)**.
 
+#### Cycle 184 update (2026-05-07) — Phase C.2 verification still blocked
+
+Cycle 184 polled Aristotle project
+`7c4d0ffb-e6c1-4ef4-b8f5-688d256bac44`: status
+`COMPLETE_WITH_ERRORS` at 12:50 PDT. The Aristotle response surfaced
+a single real bug — a namespace-resolution error on line 1529:
+
+```
+-      M.αPoly_complex_root_norm_ge_one_of_stable hStable hψ_ne hψ_isRoot
++      LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable M
++        hStable hψ_ne hψ_isRoot
+```
+
+(The αPoly theorem lives in the `Section441` namespace, but
+`M : LinearMultistepMethod k` is typed against `Section404`, so dot
+notation tries to look up
+`Section404.LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable`
+which does not exist.) Aristotle's other "fixes" were stub
+replacements for `Section404`/`410`/`451` and do not apply to our
+real codebase. `diff` of the Aristotle-modified file vs the cycle
+182 draft confirms the namespace edit is the sole non-stub change.
+
+GPFS was still degraded: a clean HEAD smoke test timed out at 8 min
+with near-zero CPU. Per Branch 1B of the cycle 184 strategy, applied
+the namespace fix locally and attempted a 20-minute compile of the
+fixed draft; that also timed out (EXIT=124). Reverted
+`Section441.lean` to the cycle 181 HEAD. The fourth local-compile
+attempt is now logged in `cycle_182_gpfs_slowness.md`.
+
+**Cycle 185 entry point**: re-attempt local compile of the HEAD
+`Section441.lean` first. If it completes in <5 min, GPFS has
+recovered and we can replace HEAD with the cycle 182 draft + the
+namespace fix (preserved in
+`.prover-state/cycle_182_draft_section441.lean` line 1529 — the
+exact one-line diff is documented above). If GPFS is still degraded,
+either continue Phase C.2 deferral and pivot (next cycle's Option 3
+candidates: `def:422B` underlying one-step method, or `PEquivalent`
+follow-up theorems) or escalate the GPFS issue.
+
+Phase C.2 status: **drafted, namespace fix identified and ready,
+local verification blocked by GPFS**.
+
 ### Phase C.2 — Stability ⇒ `aPoly` roots in closed left half-plane (1 cycle)
 
 Deliverables:

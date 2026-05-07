@@ -1,129 +1,259 @@
-# Cycle 183 Strategy
+# Cycle 184 Strategy — ship Phase C.2 of `lem:441A` via Aristotle verification path
 
-## Status going in
+## Context
 
-* HEAD: `457f68c Cycle 182 — §441 lem:441A Phase C.2 proof draft (compile blocked by GPFS slowness)`.
-* `OpenMath/Chapter4/Section441.lean`: 1227 LOC, 0 sorries, axiom-clean (cycle 181 state). Phase B closed (cycle 179, `a₁ > 0`). Phase C.1 closed (cycle 181, Möbius bridge).
-* **Phase C.2 proof draft preserved at `.prover-state/cycle_182_draft_section441.lean` (1568 LOC, +341 LOC over HEAD).** Cycle 182 wrote three substantive theorems closing the textbook "Re ζ ≤ 0" claim but **could not verify the compile** because GPFS olean loading was running 30+ minutes per attempt. See `.prover-state/issues/cycle_182_gpfs_slowness.md`.
-* No pending Aristotle results.
+- Cycle 182 wrote a complete proof draft for **Phase C.2 of `lem:441A`**
+  (3 substantive theorems + 4 private helpers, +341 LOC over HEAD,
+  preserved at `.prover-state/cycle_182_draft_section441.lean`).
+- Cycles 182 and 183 were blocked by **GPFS olean-loading slowness**
+  (>10 min compile time vs the cycle 181 baseline of ~3 min).
+- Cycle 183 killed a stuck `find /` zombie process (PID 77987, in `D`
+  state for 2+ hours from a prior session) and submitted the draft to
+  Aristotle for parallel verification: project
+  **`7c4d0ffb-e6c1-4ef4-b8f5-688d256bac44`** at 12:31 PDT 2026-05-07.
+  Status at end of cycle 183: IN_PROGRESS at 3 %.
+- HEAD `OpenMath/Chapter4/Section441.lean` is at cycle 181
+  (1227 LOC, 0 sorries, axiom-clean). The cycle 182 draft has 0
+  sorries — the Aristotle submission asks Aristotle to confirm the
+  compile or surface specific tactic errors that can be fixed in
+  cycle 184.
 
-## Top priority — verify and ship cycle 182's Phase C.2 draft
+## Top priority
 
-The cycle 182 draft is mathematically sound (uses only Phase B-validated Mathlib idioms; the per-step decomposition Step 1 → Step 2 → Step 3 mirrors the textbook exactly). The blocker was infrastructure (cluster I/O), not proofs. **Cycle 183 should re-attempt the verification.**
+**Get Phase C.2 verified and committed**, by whichever path is open.
+Do NOT freelance into Phase C.3 or new entities until Phase C.2 is
+shipped — the 3 drafted theorems form a complete textbook unit
+(Butcher §441 p. 376 stability ⇒ `Re ζ ≤ 0`) and deferring further
+would compound the C.2 stall.
 
-### Step 1 — GPFS speed smoke test (5 min budget)
+## Step 0 — Process janitor (≤2 min, MANDATORY before any compile)
 
-Before touching `OpenMath/Chapter4/Section441.lean`, run a cheap smoke test to gauge today's filesystem performance:
+The cycle 183 root-cause investigation found a 2-hour-stuck `find /`
+zombie was holding GPFS disk locks. Cleanup is cheap and may save
+10+ minutes per failed compile attempt:
+
+```bash
+ps -eo pid,user,stat,etime,cmd | grep -E "find / -name" | grep -v grep
+ps -eo pid,user,stat,etime,cmd | grep -E "lake|lean" | grep -v grep | head
+```
+
+Kill any `find /` processes you own that are in `D` (disk-wait)
+state and >30 min old. Do NOT kill processes owned by other users.
+If you launched a `lake build` in a previous cycle and forgot, kill
+that too.
+
+## Step 1 — Poll Aristotle ONCE (≤2 min)
+
+Use `mcp__aristotle__get_status` with project_id
+`7c4d0ffb-e6c1-4ef4-b8f5-688d256bac44`. Branch on the response.
+
+### Branch 1A — COMPLETE with successful verification
+
+This is the happy path. Aristotle confirms the cycle 182 draft
+compiles cleanly.
+
+1. Overwrite locally:
+   ```bash
+   cp .prover-state/cycle_182_draft_section441.lean \
+      OpenMath/Chapter4/Section441.lean
+   ```
+2. Verify locally with a generous timeout (Aristotle confirmed it
+   compiles, but local GPFS may still be slow):
+   ```bash
+   time lake env lean OpenMath/Chapter4/Section441.lean
+   ```
+   Allow up to 20 min. If it completes cleanly, proceed.
+3. Run `lean_verify` (axiom check) on the three new public theorems:
+   - `OpenMath.Chapter4.Section404.LinearMultistepMethod.ρPoly_complex_root_norm_le_one_of_stable`
+   - `OpenMath.Chapter4.Section404.LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable`
+   - `OpenMath.Chapter4.Section404.LinearMultistepMethod.aPoly_complex_root_re_nonpos_of_stable`
+
+   Expected: `[propext, Classical.choice, Quot.sound]` only.
+4. Bookkeeping (mandatory four files): see "Bookkeeping checklist"
+   at the bottom of this strategy.
+5. Commit and push (file-by-file `git add`, NOT `git add -A`).
+
+### Branch 1B — COMPLETE with errors
+
+Aristotle found compile errors. Apply fixes:
+
+1. Read every error message Aristotle returned. Likely culprits:
+   - **simp-set ordering** — a `simp only [..., aeval_*, ...]` may
+     need a different lemma order or a missing
+     `Polynomial.eval_X` / `Polynomial.eval_pow` rewrite.
+   - **`Complex.normSq_apply` vs `Complex.normSq_def`** — Mathlib
+     may have only one of these spellings; use whichever Aristotle
+     references.
+   - **`pow_mul_pow_sub` argument order** — needs `i ≤ k`; the
+     draft expects this from `Fin.isLt` but the rewrite direction
+     may need swapping.
+   - **`mul_inv_cancel₀`** — guard hypothesis `a ≠ 0` may need an
+     explicit `Complex.ofReal_ne_zero.mpr` or a `field_simp` setup.
+2. Apply fixes to `OpenMath/Chapter4/Section441.lean` (NOT the
+   preserved draft — keep that as the cycle 182 record).
+3. Re-verify locally. If the second compile attempt also stalls
+   (>20 min wall, <5 % CPU), submit a *minimal* Aristotle job
+   containing only the fixed theorem(s); do not block the cycle on
+   it. Continue with bookkeeping.
+4. Bookkeeping + commit as in Branch 1A.
+
+### Branch 1C — still IN_PROGRESS
+
+Do **NOT** poll again this cycle. Per CLAUDE.md, one poll per
+cycle. Proceed to Step 2 (local fallback) with strict time budget.
+
+## Step 2 — Local fallback (Branch 1C only) (≤25 min total)
+
+### Step 2a — GPFS health check
+
+Quick smoke test on HEAD's `Section441.lean`:
 
 ```bash
 time lake env lean OpenMath/Chapter4/Section441.lean
 ```
 
-This is the HEAD (cycle 181) version — known to compile clean. Expected: ≤ 5 min. If it takes > 10 min, today's GPFS is still slow → **abort to Step 4 fallback**.
+Hard timeout: **8 min**. If it completes cleanly in <8 min, GPFS is
+healthy enough to proceed. If not, kill the lean process and skip to
+Step 2c.
 
-### Step 2 — Apply the draft
-
-If smoke test passes:
-
-```bash
-cp .prover-state/cycle_182_draft_section441.lean OpenMath/Chapter4/Section441.lean
-```
-
-The draft adds these theorems (line numbers in the draft):
-- L817: `complexPow_re_isHomogeneousSolution_of_ρPoly_isRoot` (private helper)
-- L854: `complexPow_im_isHomogeneousSolution_of_ρPoly_isRoot` (private helper)
-- L899: `LinearMultistepMethod.ρPoly_complex_root_norm_le_one_of_stable` (Step 1 main)
-- L1376: `ρPoly_aeval_inv_eq_zero_of_αPoly_aeval_complex_eq_zero` (private helper)
-- L1419: `LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable` (Step 2 main)
-- L1457: `aPoly_aeval_one_complex_eq_two_pow` (private helper)
-- L1487: `LinearMultistepMethod.aPoly_complex_root_re_nonpos_of_stable` (Step 3 main = textbook "Re ζ ≤ 0")
-
-### Step 3 — Verify and fix
+### Step 2b — Ship draft (GPFS-healthy path)
 
 ```bash
-lake env lean OpenMath/Chapter4/Section441.lean
+cp .prover-state/cycle_182_draft_section441.lean \
+   OpenMath/Chapter4/Section441.lean
+time lake env lean OpenMath/Chapter4/Section441.lean
 ```
 
-**Outcome A (clean compile)**: Verify axiom-cleanliness on the three public theorems via `lean_verify` (one for each):
-- `OpenMath.Chapter4.Section404.LinearMultistepMethod.ρPoly_complex_root_norm_le_one_of_stable`
-- `OpenMath.Chapter4.Section404.LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable`
-- `OpenMath.Chapter4.Section404.LinearMultistepMethod.aPoly_complex_root_re_nonpos_of_stable`
+Allow up to 20 min for the draft compile. The draft is +341 LOC of
+new complex-arithmetic content — expect ~2× HEAD's compile time
+even on a healthy filesystem. If it completes cleanly, follow
+Branch 1A's Steps 3–5.
 
-Each should return `[propext, Classical.choice, Quot.sound]` only.
+If the draft compile fails with errors (rather than stalling),
+analyze them. Likely fixes follow Branch 1B's playbook. Apply,
+retry, ship.
 
-Then proceed to Step 5 (commit + bookkeeping).
+### Step 2c — GPFS still degraded (skip to bookkeeping + pivot)
 
-**Outcome B (specific tactic errors)**: Most likely 1–3 errors due to simp-set ordering or naming. Standard fixes:
-- `simp only [..., aeval_*, ...]` arg order — try permuting; use `simp?` at the failing point.
-- `Complex.coe_algebraMap` may need different spelling (try `Polynomial.aeval_C` directly + `RingHom.coe_*` lemmas).
-- `pow_mul_pow_sub` may need `le_of_lt (Fin.isLt _)` rather than `Nat.le_of_lt_succ`.
-- For `aeval_one_complex = 2^k`: if `(1 - 1)^(i+1) = 0` doesn't close via simp, use `Polynomial.aeval_one` + explicit `Finset.sum_eq_zero` with per-term `(1-1) = 0`.
+If Step 2a stalled (>8 min on a clean HEAD compile), GPFS is still
+degraded. Do **not** attempt the draft locally — it would consume
+the rest of the cycle without progress.
 
-Fix the specific errors using `lean_diagnostic_messages` to identify them, then re-compile. Budget: 60 min for fixing typical errors. If errors are structural (e.g. a Mathlib lemma we cited doesn't exist), see Step 4.
+Instead:
 
-**Outcome C (GPFS slow again, or compile hangs > 30 min)**: Revert to HEAD via `git checkout HEAD -- OpenMath/Chapter4/Section441.lean` and proceed to Step 4 fallback.
+1. Update `.prover-state/issues/cycle_182_gpfs_slowness.md` with the
+   cycle 184 GPFS state and the still-in-flight Aristotle project ID.
+2. Pivot to Step 3 for the rest of the cycle.
 
-### Step 4 — Fallback if GPFS is still slow OR compile reveals structural gap
+## Step 3 — Pivot (Branch 1C + Step 2c only)
 
-**Option 4a (preferred): Submit Phase C.2 to Aristotle**
+If Phase C.2 cannot ship this cycle, the rest of the cycle should
+produce something committable. **Do not attempt Phase C.3** (real
+factorisation, 250–400 LOC, highest risk per scoping doc).
 
-The three theorems are independent enough to submit as one job. Inject `sorry` at the three main theorems' bodies of the draft (in a copy, not the live file), then submit via `mcp__aristotle__submit_file`. After submission, sleep 30 min, poll once. If complete, incorporate. If not, leave running and pivot per Option 4b.
+The following are bounded single-cycle deliverables compatible with
+GPFS-degraded conditions (each touches ≤200 LOC and adds no new
+heavy imports, so olean loading is tolerable):
 
-**Option 4b: Pivot to a fresh deliverable that doesn't touch Section441.lean**
+### Option 3A (PREFERRED) — `def:381F` (P-equivalent)
 
-Avoid Section441.lean entirely if today's GPFS makes it un-compilable. Candidates from `plan.md`:
+Definition-only deliverable. `def:381B` (Φ-equivalent) and
+`def:381D` (P-reducible) are already formalised in
+`OpenMath/Chapter3/Section381.lean`; `def:381F` is the direct
+algebraic analogue. Recipe:
 
-1. **`def:451A` G-stable** (chapter 4 §451) — definition-only deliverable. Per `lean_status.json`, status currently `formalized` cycle 169 — verify; if not yet shipped, single-cycle definition + non-vacuity witness via `bdf2LMM`.
-2. **`def:422B` underlying one-step method** — chapter 4 §422 entry point. Definition-only.
-3. **`def:442A` principal sheet** — chapter 4 §442 entry point. Definition-only.
-4. **`thm:535A` underlying one-step method (GLM)** — chapter 5 §535 entry point.
+1. Read `extraction/formalization_data/entities/def_381F.json` for
+   the precise textbook statement.
+2. Add the predicate alongside `def:381B` / `def:381D` in
+   `OpenMath/Chapter3/Section381.lean`.
+3. Provide at least one non-vacuity witness (e.g. an LMM is
+   P-equivalent to itself, or to its own P-reduced form when
+   reducible). Aim for axiom-clean.
 
-Recommend **#3 `def:442A`** as the pivot target: it opens §442 (the principal sheet of order arrows), the next §441-cluster section, and a definition-only ship is low-risk. Read `extraction/formalization_data/entities/def_442A.json` first to confirm scope.
+### Option 3B — `def:422B` (underlying one-step method)
 
-### Step 5 — Bookkeeping (only if Step 3 Outcome A or B succeeds)
+Definition-only deliverable. Section
+`OpenMath/Chapter4/Section422.lean` likely doesn't exist yet —
+create it. Read
+`extraction/formalization_data/entities/def_422B.json` for the
+statement; pair with at least one explicit-method witness.
 
-Once Phase C.2 verifies axiom-clean:
+Either option is a clean axiom-clean win, ~80–150 LOC, with no GPFS
+dependency for new imports beyond what HEAD already loads.
 
-1. Update `extraction/formalization_data/lean_status.json`:
-   - `lem:441A`: still `partial` (Phase C.3 + C.4 remain — `aᵢ ≥ 0` for `i ≥ 2` via real factorisation), but bump cycle to 183 with note "Phase C.2 closed: `Re ζ ≤ 0` for complex roots of `aPoly`."
+## What NOT to do (strict)
 
-2. Update `.prover-state/issues/lem_441A_phase_C_scoping.md`:
-   - Add Cycle 183 update marking Phase C.2 closed.
-   - Confirm Phase C.3 (real factorisation) is the next phase.
+- Do **NOT** poll Aristotle more than once. CLAUDE.md is explicit;
+  the supervisor flags repeat polls.
+- Do **NOT** attempt the cycle 182 draft locally without a working
+  Aristotle path OR a confirmed GPFS-healthy state (Step 2a passed).
+  Three failed local-compile attempts (cycles 182 × 2 + 183) is
+  enough; a fourth is wasteful.
+- Do **NOT** attempt `Polynomial.ext + simp + ring` recipes
+  (cycles 172, 173 stalled). The cycle 180 `Polynomial.funext + ring`
+  recipe is the canonical closure for `Polynomial ℝ` constant
+  arithmetic; reuse if any new BDF2 closed-form witness is needed.
+- Do **NOT** attempt Phase C.3 (real factorisation via conjugate-
+  pair quadratics). Per `lem_441A_phase_C_scoping.md` §3, Phase C.3
+  is the highest-risk multi-cycle phase and should follow Phase
+  C.2's ship.
+- Do **NOT** introduce `axiom`, `constant`, or `sorry` to bypass
+  any blocker. The cycle 182 draft has zero sorries; preserve that.
+- Do **NOT** raise `maxHeartbeats` above 200000.
+- Do **NOT** edit `scripts/autonomous_loop.py` from the worker side.
+  GPFS-related janitor recommendations belong in the issue file
+  (`cycle_182_gpfs_slowness.md`), not the loop infrastructure.
+- Do **NOT** spend cycle time chasing alleged "commit-not-reaching-
+  repo" verdicts. Per `phantom_commit_verdict_pattern.md`, the
+  supervisor's diff detector has been emitting false negatives for
+  cycles 176–179. Run `git show --stat HEAD -- OpenMath/Chapter4/`
+  to verify your commit landed; trust git, not propagated
+  `attempts.md` rows.
+- Do **NOT** revert any cycle 174–181 work. Phase B is closed
+  (cycle 179) and Phase C.1 is shipped (cycle 181).
+- Do **NOT** weaken the cycle 182 draft theorem statements when
+  applying Aristotle-suggested fixes. If a tactic fails, look for
+  an alternative tactic; if no proof goes through, file a sub-issue
+  and pivot to Step 3 rather than commit a `sorry`.
 
-3. Update `plan.md` Chapter 4 row for `lem:441A`: keep `[~]` (still partial), update progress note to mention Phase C.2 closed.
+## Faithfulness reminder
 
-4. Delete `.prover-state/cycle_182_draft_section441.lean` (no longer needed — content is in the live file).
+The cycle 182 draft's three new public theorems each correspond to
+one explicit step in Butcher §441 p. 376:
 
-5. Write `.prover-state/task_results/cycle_183.md`.
+- `ρPoly_complex_root_norm_le_one_of_stable`: stability ⇒
+  ρ-roots in the closed unit disc (real + imaginary part homogeneous
+  solutions, both bounded by stability ⇒ `‖ζ^n‖² = ζ^n.re² + ζ^n.im²`
+  uniformly bounded ⇒ `‖ζ‖ ≤ 1`).
+- `αPoly_complex_root_norm_ge_one_of_stable`: reciprocity bridge
+  `ρ(w⁻¹) ↔ α(w)` lifts the disc constraint to the disc exterior.
+- `aPoly_complex_root_re_nonpos_of_stable`: cycle 181 Möbius bridge
+  + the αPoly disc-exterior constraint + `‖1−ζ‖² − ‖1+ζ‖² = −4 Re ζ`
+  ⇒ `Re ζ ≤ 0`.
 
-6. Commit and push.
+These are the exact Butcher steps; the draft's structure is
+deliberately conservative (explicit `eq_of_sub_eq_zero` instead of
+`linear_combination`; `pow_le_pow_left₀` instead of `gcongr`;
+`linarith` instead of `nlinarith`) to minimise tactic-side risk.
 
-## What NOT to try
+## Bookkeeping checklist (every successful branch must hit all four)
 
-* **Do NOT re-attempt `bdf2LMM_aPoly_eq` via `Polynomial.ext` or `simp + ring`.** Cycles 172/173 stalled on this; cycle 180 closed it via `Polynomial.funext + ring + match-reduction` and that is the canonical recipe. The cycle 180 closed form is at line ~1096 of the draft and should compile as-is.
-* **Do NOT modify `scripts/autonomous_loop.py`.** Per CLAUDE.md, this is loop-maintainer territory. The cycle 182 GPFS issue is documented in `cycle_182_gpfs_slowness.md`.
-* **Do NOT raise `maxHeartbeats` above 200000.** Cycle 150 hit 200000 on a similar n=7 stepping-stone for §550; the fix was decomposition, not bumping. If a tactic in the cycle 182 draft hits the heartbeat limit, decompose the offending step into a private helper rather than bumping the limit.
-* **Do NOT try `linear_combination` or `nlinarith` for the residue identities.** Cycle 182 specifically replaced these with `eq_of_sub_eq_zero` + explicit `ring` for performance reasons. Keep that discipline.
-* **Do NOT introduce `axiom` or `constant` for any Phase C step.** Phase C.2 closes via standard Mathlib polynomial + complex-analysis hooks — no axiom needed.
-* **Do NOT poll Aristotle more than once per cycle.** If you submit in Option 4a, sleep 30 min, poll once, then move on regardless of result.
-* **Do NOT take phantom-commit-verdict warnings at face value.** Cycles 176–180 produced six false positives diagnosed in `phantom_commit_verdict_pattern.md`. The cycle 182 commit DOES land (`457f68c`, includes the +1568-line draft as an untracked-then-committed file). Ignore any "Section441.lean was never staged" verdict from the supervisor — verify with `git show --stat HEAD` if needed.
-* **Do NOT spend more than 60 min on a single tactic-error fix.** If a fix isn't producing within an hour, decompose the offending theorem into smaller helpers OR pivot to Option 4b.
-* **Do NOT poll the Aristotle general-`n` jobs from §550.** Per `thm_550A_general_n.md` cycle 151 update, both long-running attempts were cancelled and no further submissions are recommended.
+1. `extraction/formalization_data/lean_status.json` — `lem:441A`
+   row cycle reference bumped to 184; status remains `partial`
+   (Phase C.3 + C.4 still to come per scoping doc).
+2. `plan.md` — concise update line on the `lem:441A` row noting
+   "Phase C.2 closed cycle 184".
+3. `.prover-state/issues/lem_441A_phase_C_scoping.md` — Phase C.2
+   marked closed; Phase C.3 highlighted as next substantive target.
+4. `.prover-state/task_results/cycle_184.md` — full cycle log per
+   CLAUDE.md task-results format.
 
-## Cycle scope summary
+## Recommended Aristotle action (Step 1 contingency)
 
-| Outcome | Cycle 183 deliverable | Phase C status |
-|---|---|---|
-| 3A (clean compile) | Ship Phase C.2: 3 public + 3 private theorems, axiom-clean | C.2 closed; C.3 next |
-| 3B (fixable errors) | Same as 3A after error fixes | Same |
-| 3C/4a (Aristotle path) | Sorry-first scaffold submitted; await result | C.2 in flight |
-| 3C/4b (pivot) | `def:442A` or another definition-only ship | C.2 deferred |
-
-The substantive goal is **Outcome 3A**. Treat 4a/4b as safety nets only if today's GPFS performance makes 3A infeasible.
-
-## Next-cycle preview
-
-If cycle 183 lands Phase C.2 (Outcome 3A or 3B), cycle 184 should begin **Phase C.3** (real factorisation of `aPoly` into linear/quadratic factors with `ξ ≤ 0`). This is the highest-risk Phase C step per `lem_441A_phase_C_scoping.md`, estimated at 250–400 LOC over 1–2 cycles. Mathlib hooks needed: `Polynomial.aeval_conj`, `Polynomial.IsRoot.map_conj`, conjugate-root pairing.
-
-If cycle 183 falls back to 4a/4b, cycle 184 will resume Phase C.2 (depending on Aristotle / GPFS state).
+If Step 1 returns Branch 1B (errors), do not re-submit the same
+draft to Aristotle this cycle — apply fixes manually based on the
+error report. If Step 2c bites and Phase C.2 must defer to cycle
+185, do not submit a new full-file Aristotle job either (the
+in-flight one is still the canonical reference). The exception is
+Step 2b mid-fail with specific errors: a small follow-up Aristotle
+job covering just the broken theorem(s) is appropriate.

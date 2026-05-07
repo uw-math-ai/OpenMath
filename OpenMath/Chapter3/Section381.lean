@@ -353,6 +353,77 @@ of the "reduced method") is deferred — see
 def IsIrreducible {s : ℕ} (M : RKTableau s) : Prop :=
   ¬ M.IsZeroReducible ∧ ¬ M.IsPReducible
 
+/- ### Definition 381F — P-equivalent Runge–Kutta methods
+
+Butcher §380 Definition 381F (page 303), quoted verbatim from
+`def_381F.json`:
+
+> Two Runge–Kutta methods are 'P-equivalent' if each of them reduces
+> to the same reduced method.
+
+The textbook's *reduced method* (def:381E, page 303) is "P-reduce
+then 0-reduce", iterated until irreducible. The full iterated
+"reduced method" infrastructure depends on a fixed-point construction
+that is currently deferred (see
+`.prover-state/issues/reduced_method_deferred.md`). The encoding
+below captures the **P-only flavour** of the textbook definition:
+two methods are P-equivalent if they share a common P-reduced form
+reachable in zero or more P-reduction steps. The 0-reduction
+strengthening will fold in cleanly once the reduced-method
+construction lands — extending `PReducesTo` by a 0-reduction
+constructor and re-using the same `∃ Mbar, ... ∧ ...` shape for
+`PEquivalent`.
+
+The P-only encoding is faithful to the P-side of the textbook
+definition; methods that already differ only by 0-reduction (a
+strictly weaker reduction) will require the 0-step extension. The
+non-vacuity witness via `paddedEuler` exercises a non-trivial
+P-reduction and confirms the predicate is satisfiable beyond
+reflexivity. -/
+
+/-- Reflexive-transitive closure of single-step P-reduction.
+
+`PReducesTo M M'` holds when `M'` can be obtained from `M` by zero or
+more P-reduction steps. Each step picks a P-partition `P` together
+with a proof that `M.IsPReducibleVia P`, then replaces the current
+method with the resulting P-reduced form `M.pReduced P`. The relation
+is heterogeneous in the stage-count parameter: each non-trivial
+P-reduction strictly decreases the stage count (`sBar < s`), but the
+reflexivity case keeps it constant. -/
+inductive PReducesTo : {s s' : ℕ} → RKTableau s → RKTableau s' → Prop where
+  /-- Zero-step (reflexive) case: every method reduces to itself. -/
+  | refl {s : ℕ} (M : RKTableau s) : PReducesTo M M
+  /-- One step: `M` is P-reducible via partition `P`, and the result
+  `M.pReduced P` reduces further (in zero or more steps) to `M''`. -/
+  | step {s sBar s'' : ℕ}
+      {M : RKTableau s} {M'' : RKTableau s''}
+      (P : PPartition s sBar) (_h : M.IsPReducibleVia P) :
+      PReducesTo (M.pReduced P) M'' → PReducesTo M M''
+
+/-- Butcher §380 Definition 381F — two Runge–Kutta methods are
+*P-equivalent* if each of them P-reduces (in zero or more steps) to a
+common reduced form. See the comment block above for the relationship
+to the full textbook "reduced method" of def:381E. -/
+def PEquivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
+  ∃ (sBar : ℕ) (Mbar : RKTableau sBar),
+    PReducesTo M Mbar ∧ PReducesTo M' Mbar
+
+/-- P-equivalence is reflexive. -/
+theorem PEquivalent.refl {s : ℕ} (M : RKTableau s) : PEquivalent M M :=
+  ⟨s, M, PReducesTo.refl M, PReducesTo.refl M⟩
+
+/-- P-equivalence is symmetric (swap the two reduction witnesses). -/
+theorem PEquivalent.symm {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} :
+    PEquivalent M M' → PEquivalent M' M
+  | ⟨sBar, Mbar, hM, hM'⟩ => ⟨sBar, Mbar, hM', hM⟩
+
+/-- A method is P-equivalent to anything it P-reduces to. -/
+theorem PEquivalent.of_pReducesTo {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} (h : PReducesTo M M') :
+    PEquivalent M M' :=
+  ⟨s', M', h, PReducesTo.refl M'⟩
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step
@@ -447,6 +518,18 @@ example : paddedEuler.IsPReducible :=
   ⟨1, by decide, pairPartition, by
     intro _ _ _ _ _ _
     simp [paddedEuler]⟩
+
+/-- Non-vacuity witness for `def:381F` (P-equivalent): `paddedEuler` is
+P-equivalent to its 1-stage P-reduction via `pairPartition`. The
+reduction step is the textbook's row-sum-constancy P-reduction
+(def:381D); the witness exercises the `step` constructor of
+`PReducesTo`, beyond reflexivity. -/
+example :
+    paddedEuler.PEquivalent (paddedEuler.pReduced pairPartition) :=
+  RKTableau.PEquivalent.of_pReducesTo
+    (RKTableau.PReducesTo.step pairPartition
+      (by intro _ _ _ _ _ _; simp [paddedEuler])
+      (RKTableau.PReducesTo.refl _))
 
 /- ### Non-vacuous witness for 0-reducibility
 
