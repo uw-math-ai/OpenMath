@@ -557,27 +557,38 @@ def pairPartition : PPartition 2 1 where
 /-- `paddedEuler` is P-reducible-via the trivial partition: the
 row-sum-constancy condition holds because every entry of
 `paddedEuler.A` is zero. -/
-example : paddedEuler.IsPReducibleVia pairPartition := by
+theorem paddedEuler_isPReducibleVia_pairPartition :
+    paddedEuler.IsPReducibleVia pairPartition := by
   intro _ _ _ _ _ _
   simp [paddedEuler]
 
 /-- Hence `paddedEuler` is P-reducible. -/
-example : paddedEuler.IsPReducible :=
-  ⟨1, by decide, pairPartition, by
-    intro _ _ _ _ _ _
-    simp [paddedEuler]⟩
+theorem paddedEuler_isPReducible : paddedEuler.IsPReducible :=
+  ⟨1, by decide, pairPartition, paddedEuler_isPReducibleVia_pairPartition⟩
+
+/-- Non-trivial single-step P-reduction: `paddedEuler` (2 stages) reduces
+to its 1-stage P-reduced form via `pairPartition`. Exercises the `step`
+constructor of `PReducesTo` (cycle 185 made `step` require the strict
+stage-decrease side condition `sBar < s`); composed with `refl` for
+the tail of the chain. -/
+theorem paddedEuler_pReducesTo_pReduced :
+    RKTableau.PReducesTo paddedEuler (paddedEuler.pReduced pairPartition) :=
+  RKTableau.PReducesTo.step pairPartition (by decide)
+    paddedEuler_isPReducibleVia_pairPartition
+    (RKTableau.PReducesTo.refl _)
 
 /-- Non-vacuity witness for `def:381F` (P-equivalent): `paddedEuler` is
 P-equivalent to its 1-stage P-reduction via `pairPartition`. The
 reduction step is the textbook's row-sum-constancy P-reduction
 (def:381D); the witness exercises the `step` constructor of
-`PReducesTo`, beyond reflexivity. -/
-example :
+`PReducesTo`, beyond reflexivity, on heterogeneous stage counts
+(2 ↦ 1). Cycle 185 used this fact internally inside the
+`paddedEuler.PEquivalent paddedEuler` proof; cycle 186 promotes it to
+a public theorem so downstream P-equivalence work has a named
+non-reflexive witness to consume. -/
+theorem paddedEuler_pEquivalent_pReduced :
     paddedEuler.PEquivalent (paddedEuler.pReduced pairPartition) :=
-  RKTableau.PEquivalent.of_pReducesTo
-    (RKTableau.PReducesTo.step pairPartition (by decide)
-      (by intro _ _ _ _ _ _; simp [paddedEuler])
-      (RKTableau.PReducesTo.refl _))
+  RKTableau.PEquivalent.of_pReducesTo paddedEuler_pReducesTo_pReduced
 
 /- ### Non-vacuous witness for 0-reducibility
 
