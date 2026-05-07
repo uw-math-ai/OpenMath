@@ -349,7 +349,8 @@
   "lem:441A": {
     "lean_file": null,
     "lean_symbol": null,
-    "status": "unformalized"
+    "status": "partial",
+    "notes": "Cycle 171: aPoly definition + degree bound (Phase A). Cycle 173: aPoly_coeff_zero_of_preconsistent (a₀ = 0) + aPoly_coeff_one_unconditional + aPoly_coeff_one_eq_neg_two_alpha_deriv_at_one_of_preconsistent (a₁ = -2α'(1)) — Phase A complete on the a-side. Cycle 174: ρPoly definition + ρPoly_eval_one + ρPoly_eval_one_eq_zero_of_preconsistent + ρPoly_natDegree_le + ρPoly_deriv_eval_one_unconditional + ρPoly_deriv_eval_one_eq_neg_alpha_deriv_at_one_of_preconsistent + headline corollary aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent (a₁ = 2·ρ'(1)). Cycle 175: Phase B.1.β complete — geomSeq_isHomogeneousSolution_of_ρPoly_isRoot (private) + ρPoly_no_real_root_gt_one (stability ⇒ no real root > 1, axiom-clean). Cycle 176: Phase B.2 complete — idSeq_isHomogeneousSolution_of_preconsistent_ρPoly_deriv_zero (private) + ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent (axiom-clean). Cycle 177: Phase B.3 Step 1 complete — four private leading-coefficient helpers (ρPoly_coeff_top_eq_one, ρPoly_natDegree_eq_k, ρPoly_leadingCoeff_eq_one, ρPoly_tendsto_atTop) + main theorem ρPoly_pos_on_Ioi_one (stable + preconsistent + 0 < k ⇒ ρ > 0 on (1, ∞), via IVT + cycle 175's no-real-root-gt-1; axiom-clean). BDF2 sanity bdf2LMM_ρPoly_pos_at_two = 5/3 > 0. Status now 'partial': cycles 178 (ρ'(1) ≥ 0 via one-sided derivative limit + ≠ 0 ⇒ > 0) + 179 (a₁ > 0 closure via cycle 174 bridge) remain. aᵢ ≥ 0 for i ≥ 2 (Phase C, complex-root decomposition) is multi-cycle work after Phase B closes."
   },
   "lem:441B": {
     "lean_file": null,

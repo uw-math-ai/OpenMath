@@ -613,6 +613,139 @@ theorem LinearMultistepMethod.ρPoly_deriv_eval_one_ne_zero_of_stable_preconsist
   have habs_eq : |(n : ℝ)| = (n : ℝ) := abs_of_nonneg hpos
   linarith
 
+/-- **Leading coefficient of `ρPoly` at degree `k` is `1`.**
+
+The polynomial `ρ(z) = z^k − Σ αᵢ z^{k−(i+1)}` has its `k`-th
+coefficient equal to `1`: the `X^k` term contributes `1`, and the
+subtracted sum has natDegree at most `k−1` (each summand `C(αᵢ) ·
+X^{k−(i+1)}` has natDegree `≤ k − (i+1) ≤ k − 1` since `i+1 ≥ 1`
+and `0 < k`), so does not contribute to the `k`-th coefficient. -/
+private theorem LinearMultistepMethod.ρPoly_coeff_top_eq_one
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k) :
+    M.ρPoly.coeff k = 1 := by
+  unfold LinearMultistepMethod.ρPoly
+  have hsum_lt : (∑ i : Fin k,
+      Polynomial.C (M.α i.succ) * Polynomial.X ^ (k - (i.val + 1))).natDegree < k := by
+    have hsum_le :
+        (∑ i : Fin k,
+            Polynomial.C (M.α i.succ) * Polynomial.X ^ (k - (i.val + 1))).natDegree
+          ≤ k - 1 :=
+      Polynomial.natDegree_sum_le_of_forall_le
+        (s := (Finset.univ : Finset (Fin k)))
+        (f := fun i : Fin k =>
+          Polynomial.C (M.α i.succ) * Polynomial.X ^ (k - (i.val + 1)))
+        (n := k - 1)
+        (by
+          intro i _
+          refine (Polynomial.natDegree_C_mul_X_pow_le _ _).trans ?_
+          have hi : i.val + 1 ≤ k := i.isLt
+          omega)
+    omega
+  rw [Polynomial.coeff_sub_eq_left_of_lt hsum_lt]
+  rw [Polynomial.coeff_X_pow, if_pos rfl]
+
+/-- **`natDegree` of `ρPoly` is exactly `k`.** Combines the upper
+bound `ρPoly_natDegree_le` (cycle 172) with the lower bound from
+`ρPoly_coeff_top_eq_one`: a polynomial whose `k`-th coefficient is
+nonzero has natDegree at least `k`. -/
+private theorem LinearMultistepMethod.ρPoly_natDegree_eq_k
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k) :
+    M.ρPoly.natDegree = k := by
+  apply Nat.le_antisymm M.ρPoly_natDegree_le
+  apply Polynomial.le_natDegree_of_ne_zero
+  rw [M.ρPoly_coeff_top_eq_one hk]
+  exact one_ne_zero
+
+/-- **`ρPoly` is monic.** Direct corollary of Helpers 1 and 2:
+`leadingCoeff = coeff (natDegree)` reduces to `coeff k = 1`. -/
+private theorem LinearMultistepMethod.ρPoly_leadingCoeff_eq_one
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k) :
+    M.ρPoly.leadingCoeff = 1 := by
+  unfold Polynomial.leadingCoeff
+  rw [M.ρPoly_natDegree_eq_k hk, M.ρPoly_coeff_top_eq_one hk]
+
+/-- **`ρ(z) → +∞` as `z → +∞`.** Butcher §441 p. 376 (implicit
+step in the `ρ > 0` on `(1, ∞)` argument). The polynomial `ρ` has
+positive degree `k > 0` and leading coefficient `1 ≥ 0`, so
+Mathlib's `tendsto_atTop_of_leadingCoeff_nonneg` applies. -/
+private theorem LinearMultistepMethod.ρPoly_tendsto_atTop
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k) :
+    Filter.Tendsto (fun z : ℝ => M.ρPoly.eval z)
+      Filter.atTop Filter.atTop := by
+  have h_nd : M.ρPoly.natDegree = k := M.ρPoly_natDegree_eq_k hk
+  have h_ne : M.ρPoly ≠ 0 := by
+    intro hzero
+    have hcoeff := M.ρPoly_coeff_top_eq_one hk
+    rw [hzero, Polynomial.coeff_zero] at hcoeff
+    exact one_ne_zero hcoeff.symm
+  have hdeg : 0 < M.ρPoly.degree := by
+    rw [Polynomial.degree_eq_natDegree h_ne, h_nd]
+    exact_mod_cast hk
+  have hlc : 0 ≤ M.ρPoly.leadingCoeff := by
+    rw [M.ρPoly_leadingCoeff_eq_one hk]
+    exact zero_le_one
+  exact Polynomial.tendsto_atTop_of_leadingCoeff_nonneg M.ρPoly hdeg hlc
+
+/-- **`ρ > 0` on `(1, ∞)` for stable preconsistent k-step LMMs.**
+Butcher §441 p. 376 (Phase B.3 Step 1 of `lem:441A`'s `a₁ > 0`
+argument).
+
+If `M : LinearMultistepMethod k` with `0 < k` is Dahlquist-stable
+and preconsistent, then for every real `z > 1`, `ρ(z) > 0`.
+
+Textbook proof (combining cycle 174's `ρ(1) = 0`, cycle 175's "no
+real root > 1" under stability, leading-coefficient `1 > 0`, and
+the IVT): `ρ` tends to `+∞` at `+∞` (Helper 4). If `ρ(z) ≤ 0` for
+some `z > 1`, then either `ρ(z) = 0` (a real root > 1, ruled out
+by cycle 175) or `ρ(z) < 0` (the IVT on `[z, w']` for some `w' > z`
+with `ρ(w') ≥ 1` produces a root `ζ ∈ [z, w']` with `ζ > 1`,
+again contradicting cycle 175).
+
+The `_hPre` hypothesis is propagated for downstream-signature
+alignment (Phase B.3 Step 2 + B.4 use it); it is unused in this
+proof. -/
+theorem LinearMultistepMethod.ρPoly_pos_on_Ioi_one
+    {k : ℕ} (hk : 0 < k) (M : LinearMultistepMethod k)
+    (hStable : M.IsStable) (_hPre : M.IsPreconsistent) :
+    ∀ z : ℝ, 1 < z → 0 < M.ρPoly.eval z := by
+  intro z hz1
+  by_contra hle
+  push_neg at hle  -- hle : M.ρPoly.eval z ≤ 0
+  rcases eq_or_lt_of_le hle with heq | hlt
+  · -- ρ(z) = 0 ⇒ z is a real root > 1, ruled out by cycle 175.
+    have hroot : M.ρPoly.IsRoot z := heq
+    have hzle : z ≤ 1 := M.ρPoly_no_real_root_gt_one hStable hroot
+    linarith
+  · -- ρ(z) < 0. Use ρPoly_tendsto_atTop to get w' > z with ρ(w') ≥ 1,
+    -- then IVT on [z, w'] yields ζ ∈ [z, w'] with ρ(ζ) = 0 and ζ > 1.
+    have htend := M.ρPoly_tendsto_atTop hk
+    rw [Filter.tendsto_atTop_atTop] at htend
+    obtain ⟨w, hw⟩ := htend 1
+    set w' := max w z + 1 with hw'_def
+    have hw'_ge_w : w ≤ w' := by
+      have := le_max_left w z
+      simp [w']
+      linarith
+    have hw'_gt_z : z < w' := by
+      have := le_max_right w z
+      simp [w']
+      linarith
+    have hρw' : 1 ≤ M.ρPoly.eval w' := hw _ hw'_ge_w
+    have hcont : ContinuousOn (fun x : ℝ => M.ρPoly.eval x) (Set.Icc z w') :=
+      M.ρPoly.continuous.continuousOn
+    have hzero_mem :
+        (0 : ℝ) ∈ Set.Icc (M.ρPoly.eval z) (M.ρPoly.eval w') := by
+      refine ⟨le_of_lt hlt, ?_⟩
+      linarith
+    have hivt :=
+      intermediate_value_Icc (le_of_lt hw'_gt_z) hcont hzero_mem
+    obtain ⟨ζ, hζ_mem, hζ_eval⟩ := hivt
+    have hζ_root : M.ρPoly.IsRoot ζ := hζ_eval
+    have hζ_le_one : ζ ≤ 1 :=
+      M.ρPoly_no_real_root_gt_one hStable hζ_root
+    have hζ_gt_one : 1 < ζ := lt_of_lt_of_le hz1 hζ_mem.1
+    linarith
+
 end OpenMath.Chapter4.Section404
 
 namespace OpenMath.Chapter4.Section441
@@ -689,6 +822,16 @@ on the canonical `k = 2` example. The bridge `a₁ = 2·ρ'(1)` (cycle
 theorem bdf2LMM_ρPoly_deriv_eval_one_eq :
     bdf2LMM.ρPoly.derivative.eval 1 = 2 / 3 := by
   rw [LinearMultistepMethod.ρPoly_deriv_eval_one_unconditional]
+  simp [bdf2LMM, Fin.sum_univ_two]
+  norm_num
+
+/-- **BDF2 numerical sanity for `ρPoly_pos_on_Ioi_one`.** For BDF2,
+`ρ(z) = z² − (4/3)z + 1/3`, so `ρ(2) = 4 − 8/3 + 1/3 = 5/3 > 0`.
+Direct numerical witness; does not route through
+`ρPoly_pos_on_Ioi_one` (which would require `bdf2LMM.IsStable`,
+not yet shipped). -/
+theorem bdf2LMM_ρPoly_pos_at_two : 0 < bdf2LMM.ρPoly.eval 2 := by
+  unfold LinearMultistepMethod.ρPoly
   simp [bdf2LMM, Fin.sum_univ_two]
   norm_num
 

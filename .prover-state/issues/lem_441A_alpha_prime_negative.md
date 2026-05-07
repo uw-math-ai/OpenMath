@@ -150,3 +150,52 @@ added this cycle. Numerically witnesses Phase B.2 on the canonical
 `k = 2` example and consolidates with cycle 175's
 `bdf2LMM_aPoly_coeff_one_eq` (`a₁ = 4/3 = 2·(2/3)`) — the cycle 174
 bridge `a₁ = 2·ρ'(1)` made explicit on a non-trivial method.
+
+## Cycle 177 update — Phase B.3 Step 1 closed: `ρ > 0` on `(1, ∞)`
+
+Added `LinearMultistepMethod.ρPoly_pos_on_Ioi_one` (axiom-clean) plus
+four private leading-coefficient helpers:
+
+* `ρPoly_coeff_top_eq_one` — `M.ρPoly.coeff k = 1` (using
+  `Polynomial.coeff_sub_eq_left_of_lt` after bounding the
+  subtracted-sum natDegree by `k − 1`).
+* `ρPoly_natDegree_eq_k` — combines Helper 1's `≠ 0` lower bound
+  with cycle 172's `M.ρPoly_natDegree_le` upper bound via
+  `Polynomial.le_natDegree_of_ne_zero`.
+* `ρPoly_leadingCoeff_eq_one` — five-line corollary of Helpers 1 + 2.
+* `ρPoly_tendsto_atTop` — invokes
+  `Polynomial.tendsto_atTop_of_leadingCoeff_nonneg` with
+  `0 < ρ.degree` (from `degree_eq_natDegree` + Helper 2 + `0 < k`)
+  and `0 ≤ leadingCoeff` (from Helper 3's `= 1`).
+
+Main theorem: assume `M.IsStable`, `M.IsPreconsistent`, `0 < k`, and
+`z > 1`. By contradiction suppose `ρ(z) ≤ 0`. Two cases:
+
+* `ρ(z) = 0`: `z` is a real root of `ρ` greater than 1, ruled out
+  by cycle 175's `ρPoly_no_real_root_gt_one`.
+* `ρ(z) < 0`: tendency to `+∞` (Helper 4) gives `w' > z` with
+  `ρ(w') ≥ 1`. IVT on `[z, w']` (`intermediate_value_Icc` with
+  `Polynomial.continuous.continuousOn`) yields `ζ ∈ [z, w']` with
+  `ρ(ζ) = 0`. Since `ζ ≥ z > 1`, contradicting cycle 175 again.
+
+The `_hPre` hypothesis is propagated for downstream-signature
+alignment but not consumed in this proof.
+
+BDF2 sanity witness `bdf2LMM_ρPoly_pos_at_two = 5/3 > 0`. Direct
+numerical evaluation; does not route through
+`ρPoly_pos_on_Ioi_one` (would require `bdf2LMM.IsStable`, not yet
+shipped).
+
+Remaining chain:
+
+* **Cycle 178, Phase B.3 Step 2 → ρ'(1) > 0**: derive `ρ'(1) ≥ 0`
+  from `ρ(1) = 0` (cycle 174) + `ρ ≥ 0` on `[1, 1+ε)` (cycle 177
+  applied with strict-bound argument) via the one-sided difference
+  quotient `(ρ(1+h) − ρ(1))/h ≥ 0` for `h > 0` and `ge_of_tendsto`.
+  Strengthen to `> 0` via cycle 176's
+  `ρPoly_deriv_eval_one_ne_zero_of_stable_preconsistent`.
+* **Cycle 179, Phase B.4 → close `a₁ > 0`**: one-line corollary
+  via cycle 174's `aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent`
+  applied to cycle 178's strict positivity.
+* **Cycle 180+, Phase C → aᵢ ≥ 0 for i ≥ 2**: complex-root
+  decomposition argument (Butcher §441 p. 376). Multi-cycle.
