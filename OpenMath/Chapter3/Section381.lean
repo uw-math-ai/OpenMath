@@ -393,8 +393,8 @@ reflexivity case keeps it constant. -/
 inductive PReducesTo : {s s' : ℕ} → RKTableau s → RKTableau s' → Prop where
   /-- Zero-step (reflexive) case: every method reduces to itself. -/
   | refl {s : ℕ} (M : RKTableau s) : PReducesTo M M
-  /-- One step: `M` is P-reducible via a non-trivial partition `P`
-  (`sBar < s`), and the result `M.pReduced P` reduces further (in
+  /-- One P-reduction step: `M` is P-reducible via a non-trivial partition
+  `P` (`sBar < s`), and the result `M.pReduced P` reduces further (in
   zero or more steps) to `M''`. The non-triviality `hLt` keeps this
   relation faithful to Butcher §380's textbook P-reduction, which
   strictly decreases the stage count; without it, the discrete
@@ -406,6 +406,20 @@ inductive PReducesTo : {s s' : ℕ} → RKTableau s → RKTableau s' → Prop wh
       (P : PPartition s sBar) (_hLt : sBar < s)
       (_h : M.IsPReducibleVia P) :
       PReducesTo (M.pReduced P) M'' → PReducesTo M M''
+  /-- One 0-reduction step: `M` is 0-reducible via `inP1` (with `P₀`
+  non-empty), and the result `M.zeroReduced inP1` reduces further (in
+  zero or more steps) to `M''`. The non-emptiness `hP0` keeps this
+  faithful to Butcher §380 def:381C, which requires P₀ to contain at
+  least one stage; without it, the trivial all-stages-in-P₁ partition
+  would admit vacuous "0-reductions" that do not decrease the stage
+  count. The two clauses of `IsZeroReducibleVia` (b vanishes on P₀ and
+  A vanishes on P₁ × P₀) together with non-empty P₀ are exactly the
+  textbook's def:381C hypotheses. -/
+  | zeroStep {s s'' : ℕ}
+      {M : RKTableau s} {M'' : RKTableau s''}
+      (inP1 : Fin s → Bool) (_hP0 : ∃ i, inP1 i = false)
+      (_h : M.IsZeroReducibleVia inP1) :
+      PReducesTo (M.zeroReduced inP1) M'' → PReducesTo M M''
 
 /-- Butcher §380 Definition 381F — two Runge–Kutta methods are
 *P-equivalent* if each of them P-reduces (in zero or more steps) to a
@@ -431,43 +445,54 @@ theorem PEquivalent.of_pReducesTo {s s' : ℕ}
     PEquivalent M M' :=
   ⟨s', M', h, PReducesTo.refl M'⟩
 
-/-- If `M` is not P-reducible, then any P-reduction sequence starting
-from `M` is the reflexive (zero-step) one. The `step` constructor
-requires a non-trivial partition (`sBar < s`) witnessing
-`IsPReducibleVia`, which together would furnish `IsPReducible M` —
-contradicting the hypothesis. -/
-theorem eq_of_not_isPReducible_of_pReducesTo {s s' : ℕ}
+/-- If `M` is irreducible (def:381E — neither P-reducible nor 0-reducible),
+then any reduction sequence starting from `M` is the reflexive (zero-step)
+one. The `step` constructor would furnish `IsPReducible M`; the `zeroStep`
+constructor would furnish `IsZeroReducible M`; both contradict
+`IsIrreducible`.
+
+This strengthens cycles 185–187's `eq_of_not_isPReducible_of_pReducesTo`
+(which only needed `¬ IsPReducible`) to handle the `zeroStep` constructor
+added in cycle 188. -/
+theorem eq_of_isIrreducible_of_pReducesTo {s s' : ℕ}
     {M : RKTableau s} {M' : RKTableau s'}
-    (hIrr : ¬ M.IsPReducible) (h : PReducesTo M M') :
+    (hIrr : M.IsIrreducible) (h : PReducesTo M M') :
     s' = s ∧ HEq M' M := by
   cases h with
   | refl => exact ⟨rfl, HEq.rfl⟩
-  | step P hLt hVia _ => exact absurd ⟨_, hLt, P, hVia⟩ hIrr
+  | step P hLt hVia _ => exact absurd ⟨_, hLt, P, hVia⟩ hIrr.2
+  | zeroStep inP1 hP0 hVia _ => exact absurd ⟨inP1, hP0, hVia⟩ hIrr.1
 
 /-- *Transitivity of P-equivalence over an irreducible middle method.*
-If `M₂` is not P-reducible, then `PEquivalent M₁ M₂` and
+If `M₂` is irreducible (def:381E), then `PEquivalent M₁ M₂` and
 `PEquivalent M₂ M₃` together yield `PEquivalent M₁ M₃`.
 
 The general `PEquivalent.trans` over arbitrary middle methods would
-require confluence of P-reduction (any two P-reduction sequences from
+require confluence of P-reduction (any two reduction sequences from
 a common source can be completed to a common target). When `M₂` is
-already irreducible, both reductions out of `M₂` are forced to be
-reflexive (`eq_of_not_isPReducible_of_pReducesTo`), so the witnesses
+irreducible, both reductions out of `M₂` are forced to be reflexive
+(`eq_of_isIrreducible_of_pReducesTo`), so the witnesses
 `PReducesTo M₁ M₂` and `PReducesTo M₃ M₂` extracted from the
-hypotheses combine directly via the existing common reduct `M₂`. -/
-theorem PEquivalent.trans_of_middle_not_pReducible {s₁ s₂ s₃ : ℕ}
+hypotheses combine directly via the existing common reduct `M₂`.
+
+Strengthens cycle 185's `trans_of_middle_not_pReducible` (which only
+required `¬ IsPReducible`) to require full irreducibility — necessary
+because cycle 188's `zeroStep` constructor admits 0-reductions out of
+a non-P-reducible middle, so the original lemma's reflexive-only
+conclusion no longer holds with only the weaker hypothesis. -/
+theorem PEquivalent.trans_of_middle_isIrreducible {s₁ s₂ s₃ : ℕ}
     {M₁ : RKTableau s₁} {M₂ : RKTableau s₂} {M₃ : RKTableau s₃}
     (h₁₂ : PEquivalent M₁ M₂) (h₂₃ : PEquivalent M₂ M₃)
-    (hIrr : ¬ M₂.IsPReducible) :
+    (hIrr : M₂.IsIrreducible) :
     PEquivalent M₁ M₃ := by
   refine ⟨s₂, M₂, ?_, ?_⟩
   · obtain ⟨sA, MA, h1A, h2A⟩ := h₁₂
-    obtain ⟨hsA, hMA⟩ := eq_of_not_isPReducible_of_pReducesTo hIrr h2A
+    obtain ⟨hsA, hMA⟩ := eq_of_isIrreducible_of_pReducesTo hIrr h2A
     subst hsA
     obtain rfl : MA = M₂ := eq_of_heq hMA
     exact h1A
   · obtain ⟨sB, MB, h2B, h3B⟩ := h₂₃
-    obtain ⟨hsB, hMB⟩ := eq_of_not_isPReducible_of_pReducesTo hIrr h2B
+    obtain ⟨hsB, hMB⟩ := eq_of_isIrreducible_of_pReducesTo hIrr h2B
     subst hsB
     obtain rfl : MB = M₂ := eq_of_heq hMB
     exact h3B
@@ -601,8 +626,10 @@ witnesses 0-reducibility:
 * `P₀ ≠ ∅` ✔ (stage `1` lies in `P₀`). -/
 
 /-- `paddedEuler` is 0-reducible-via the partition `![true, false]`
-(i.e. `P₁ = {0}`, `P₀ = {1}`). -/
-example : paddedEuler.IsZeroReducibleVia ![true, false] := by
+(i.e. `P₁ = {0}`, `P₀ = {1}`). Promoted to a named theorem in cycle 188
+so that `zeroStep`-based reduction witnesses can consume it directly. -/
+theorem paddedEuler_isZeroReducibleVia_split :
+    paddedEuler.IsZeroReducibleVia ![true, false] := by
   refine ⟨?_, ?_⟩
   · intro i hi
     fin_cases i <;> simp_all [paddedEuler]
@@ -610,13 +637,31 @@ example : paddedEuler.IsZeroReducibleVia ![true, false] := by
     simp [paddedEuler]
 
 /-- Hence `paddedEuler` is 0-reducible. -/
-example : paddedEuler.IsZeroReducible :=
-  ⟨![true, false], ⟨1, by decide⟩, by
-    refine ⟨?_, ?_⟩
-    · intro i hi
-      fin_cases i <;> simp_all [paddedEuler]
-    · intro i j hi hj
-      simp [paddedEuler]⟩
+theorem paddedEuler_isZeroReducible : paddedEuler.IsZeroReducible :=
+  ⟨![true, false], ⟨1, by decide⟩, paddedEuler_isZeroReducibleVia_split⟩
+
+/-- Non-trivial single-step 0-reduction: `paddedEuler` (2 stages)
+reduces to its 1-stage 0-reduced form via the `![true, false]` partition.
+Exercises the `zeroStep` constructor of `PReducesTo` (introduced in
+cycle 188), composed with `refl` for the tail of the chain. The
+`(by decide)` discharges `∃ i, inP1 i = false` (witness `i = 1`). -/
+theorem paddedEuler_pReducesTo_zeroReduced :
+    RKTableau.PReducesTo paddedEuler
+      (paddedEuler.zeroReduced ![true, false]) :=
+  RKTableau.PReducesTo.zeroStep ![true, false] (by decide)
+    paddedEuler_isZeroReducibleVia_split
+    (RKTableau.PReducesTo.refl _)
+
+/-- Non-vacuity witness for `def:381F` exercising the `zeroStep`
+constructor: `paddedEuler` is P-equivalent to its 1-stage 0-reduced
+form via a single 0-reduction step. Consumes
+`paddedEuler_pReducesTo_zeroReduced` through
+`PEquivalent.of_pReducesTo`. The Φ-equivalence companion
+`paddedEuler_phiEquivalent_zeroReduced` is below the definition of
+`PhiEquivalent.of_pReducesTo`. -/
+theorem paddedEuler_pEquivalent_zeroReduced :
+    paddedEuler.PEquivalent (paddedEuler.zeroReduced ![true, false]) :=
+  RKTableau.PEquivalent.of_pReducesTo paddedEuler_pReducesTo_zeroReduced
 
 /- ### Non-vacuous witness for irreducibility
 
@@ -673,27 +718,54 @@ theorem equivalent_explicitEuler_self :
   rw [hy₁, hy₁']
   simp [RKTableau.explicitEuler, hY0, hY'0]
 
-/- ### Non-vacuity witness for `PEquivalent.trans_of_middle_not_pReducible`
+/- ### Non-vacuity witness for `PEquivalent.trans_of_middle_isIrreducible`
 
-The 1-stage tableau `paddedEuler.pReduced pairPartition` is irreducible
-(the same `sBar < 1` ⇒ `sBar = 0` ⇒ `Fin 0` empty argument used for
-`explicitEuler`). Combined with the non-trivial reduction
-`paddedEuler →ᴾ paddedEuler.pReduced pairPartition` (already exhibited
-above), trans-through-an-irreducible-middle yields
-`paddedEuler.PEquivalent paddedEuler` exercising the non-trivial step
-constructor in both directions — strictly beyond the reflexivity
-witness `PEquivalent.refl`. -/
+The 1-stage tableau `paddedEuler.pReduced pairPartition` is irreducible:
+
+* Not 0-reducible: the only partition `inP1 : Fin 1 → Bool` with
+  `(∃ i, inP1 i = false)` has `inP1 0 = false`, which forces `b 0 = 0`.
+  But `(paddedEuler.pReduced pairPartition).b 0 = 1` (sum of
+  `paddedEuler.b 0 = 1` and `paddedEuler.b 1 = 0` over the trivial
+  block `pairPartition⁻¹{0} = {0, 1}`).
+* Not P-reducible: `sBar < 1` ⇒ `sBar = 0` ⇒ `Fin 0` empty.
+
+Combined with the non-trivial reduction
+`paddedEuler →ᴾ paddedEuler.pReduced pairPartition`, trans-through-an-
+irreducible-middle yields `paddedEuler.PEquivalent paddedEuler`
+exercising the non-trivial `step` constructor in both directions —
+strictly beyond the reflexivity witness `PEquivalent.refl`. -/
 
 /-- Non-vacuity witness for `def:381F` exercising
-`PEquivalent.trans_of_middle_not_pReducible`: `paddedEuler` is
+`PEquivalent.trans_of_middle_isIrreducible`: `paddedEuler` is
 P-equivalent to itself via the trans-through-the-1-stage-reduction,
 not just via the reflexive witness. -/
 example : paddedEuler.PEquivalent paddedEuler := by
-  have hMid_irr : ¬ (paddedEuler.pReduced pairPartition).IsPReducible := by
-    rintro ⟨sBar, hLt, P, _⟩
-    obtain rfl : sBar = 0 := Nat.lt_one_iff.mp hLt
-    exact (P.block 0).elim0
-  exact paddedEuler_pEquivalent_pReduced.trans_of_middle_not_pReducible
+  have hMidPReducedB :
+      (paddedEuler.pReduced pairPartition).b 0 = 1 := by
+    show (∑ i ∈ Finset.univ.filter
+              (fun i : Fin 2 => pairPartition.block i = 0),
+            paddedEuler.b i) = 1
+    have hFilter :
+        (Finset.univ.filter
+            (fun i : Fin 2 => pairPartition.block i = 0))
+          = Finset.univ := by
+      ext i
+      simp [pairPartition]
+    rw [hFilter]
+    simp [paddedEuler, Fin.sum_univ_two]
+  have hMid_irr : (paddedEuler.pReduced pairPartition).IsIrreducible := by
+    refine ⟨?_, ?_⟩
+    · -- ¬ IsZeroReducible
+      rintro ⟨inP1, ⟨i, hiF⟩, hbZero, _⟩
+      fin_cases i
+      have hb0 : (paddedEuler.pReduced pairPartition).b 0 = 0 :=
+        hbZero 0 hiF
+      linarith [hMidPReducedB]
+    · -- ¬ IsPReducible
+      rintro ⟨sBar, hLt, P, _⟩
+      obtain rfl : sBar = 0 := Nat.lt_one_iff.mp hLt
+      exact (P.block 0).elim0
+  exact paddedEuler_pEquivalent_pReduced.trans_of_middle_isIrreducible
     paddedEuler_pEquivalent_pReduced.symm hMid_irr
 
 /- ### Φ-equivalence is implied by P-reduction (Butcher §380)
@@ -820,16 +892,197 @@ theorem pReduced_phiEquivalent {s sBar : ℕ}
             = (M.pReduced P).b I
         from (RKTableau.pReduced_b_apply M P I).symm]
 
+/- ### Φ-equivalence is implied by 0-reduction (Butcher §380)
+
+The 0-reduction analogue of `pReduced_phiEquivalent`. Butcher's narrative
+around 0-reduction (§380, p. 302) treats Φ-preservation as obvious because
+deleted stages have weight zero; we formalise this via the two clauses of
+`IsZeroReducibleVia`. Proof structure parallels the P-reduction case:
+two private mutual helpers establish stage-by-stage agreement, and the
+main theorem reindexes the outer `Σ_i b_i Φᵢ(t)` decomposition.
+
+The reindexing is simpler than in the P-reduction case — `zeroReducedEmb`
+is a literal injection from `Fin sBar'` into `Fin s` (no `Classical.choose`
+representative plumbing), so each new stage corresponds to a unique old
+stage in `P₁`. The `inP1 i = false` summands are killed via the two
+clauses of `IsZeroReducibleVia` (`b i = 0` for the outer sum, `A i j = 0`
+for the inner sum). -/
+
+/-- The 0-reduction order embedding lands inside `P₁`: every reindexed
+stage `(zeroReducedEmb inP1) I` satisfies `inP1 _ = true`. Used by the
+mutual derivative-weight helpers to identify which old-stage indices the
+embedding produces. -/
+private theorem zeroReducedEmb_inP1_eq_true {s : ℕ}
+    (inP1 : Fin s → Bool)
+    (I : Fin (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card) :
+    inP1 (RKTableau.zeroReducedEmb inP1 I) = true := by
+  have h := Finset.orderEmbOfFin_mem
+    (Finset.univ.filter (fun i : Fin s => inP1 i = true)) rfl I
+  exact (Finset.mem_filter.mp h).2
+
+mutual
+  /-- *0-reduction preserves derivative weights stage-by-stage.*
+  Helper for `zeroReduced_phiEquivalent`; companion to
+  `derivativeWeightProd_zeroReduced` for the list-helper level. -/
+  private theorem derivativeWeight_zeroReduced {s : ℕ}
+      (M : RKTableau s) {inP1 : Fin s → Bool}
+      (h : M.IsZeroReducibleVia inP1) :
+      ∀ (t : RootedTree)
+        (I : Fin (Finset.univ.filter
+                    (fun i : Fin s => inP1 i = true)).card),
+      M.derivativeWeight (RKTableau.zeroReducedEmb inP1 I) t
+        = (M.zeroReduced inP1).derivativeWeight I t
+    | RootedTree.mk children, I => by
+        show M.derivativeWeightProd (RKTableau.zeroReducedEmb inP1 I) children
+            = (M.zeroReduced inP1).derivativeWeightProd I children
+        exact derivativeWeightProd_zeroReduced M h children I
+
+  /-- List-helper companion to `derivativeWeight_zeroReduced`. -/
+  private theorem derivativeWeightProd_zeroReduced {s : ℕ}
+      (M : RKTableau s) {inP1 : Fin s → Bool}
+      (h : M.IsZeroReducibleVia inP1) :
+      ∀ (children : List RootedTree)
+        (I : Fin (Finset.univ.filter
+                    (fun i : Fin s => inP1 i = true)).card),
+      M.derivativeWeightProd (RKTableau.zeroReducedEmb inP1 I) children
+        = (M.zeroReduced inP1).derivativeWeightProd I children
+    | [], _ => rfl
+    | t :: ts, I => by
+        show (∑ j : Fin s,
+                M.A (RKTableau.zeroReducedEmb inP1 I) j
+                  * M.derivativeWeight j t)
+              * M.derivativeWeightProd (RKTableau.zeroReducedEmb inP1 I) ts
+            = (∑ J :
+                Fin (Finset.univ.filter
+                        (fun i : Fin s => inP1 i = true)).card,
+                  (M.zeroReduced inP1).A I J
+                    * (M.zeroReduced inP1).derivativeWeight J t)
+              * (M.zeroReduced inP1).derivativeWeightProd I ts
+        rw [derivativeWeightProd_zeroReduced M h ts I]
+        congr 1
+        have hEmbTrue :
+            inP1 (RKTableau.zeroReducedEmb inP1 I) = true :=
+          zeroReducedEmb_inP1_eq_true inP1 I
+        -- Step 1: discard `inP1 j = false` summands (their `M.A` factor is 0).
+        have hStep1 :
+            (∑ j : Fin s,
+                M.A (RKTableau.zeroReducedEmb inP1 I) j
+                  * M.derivativeWeight j t)
+              = ∑ j ∈ Finset.univ.filter (fun j : Fin s => inP1 j = true),
+                  M.A (RKTableau.zeroReducedEmb inP1 I) j
+                    * M.derivativeWeight j t := by
+          symm
+          apply Finset.sum_subset (Finset.filter_subset _ _)
+          intro j _ hj_notin
+          have hjFalse : inP1 j = false := by
+            have hjNotTrue : inP1 j ≠ true := fun hjT =>
+              hj_notin (Finset.mem_filter.mpr ⟨Finset.mem_univ j, hjT⟩)
+            cases hh : inP1 j with
+            | false => rfl
+            | true => exact absurd hh hjNotTrue
+          rw [h.2 (RKTableau.zeroReducedEmb inP1 I) j hEmbTrue hjFalse,
+              zero_mul]
+        rw [hStep1]
+        -- Step 2: reindex the surviving `Fin s` sum back to `Fin sBar'` via
+        -- `zeroReducedEmb`. We use `Finset.sum_bij` to avoid the dependent-
+        -- type issue that breaks `rw [image_orderEmbOfFin_univ.symm]` (the
+        -- RHS sum's index type is `Fin filter.card`).
+        symm
+        refine Finset.sum_bij
+          (fun J _ => RKTableau.zeroReducedEmb inP1 J)
+          (fun J _ => Finset.mem_filter.mpr
+            ⟨Finset.mem_univ _, zeroReducedEmb_inP1_eq_true inP1 J⟩)
+          (fun J₁ _ J₂ _ heq =>
+            (RKTableau.zeroReducedEmb inP1).injective heq)
+          ?_ ?_
+        · intro b hb
+          have hImg : Finset.image (RKTableau.zeroReducedEmb inP1)
+                        Finset.univ
+                = Finset.univ.filter (fun j : Fin s => inP1 j = true) := by
+            show Finset.image
+              ⇑((Finset.univ.filter
+                    (fun i : Fin s => inP1 i = true)).orderEmbOfFin rfl)
+              Finset.univ = _
+            exact Finset.image_orderEmbOfFin_univ _ rfl
+          have hbImg : b ∈ Finset.image
+              (RKTableau.zeroReducedEmb inP1) Finset.univ := hImg.symm ▸ hb
+          rcases Finset.mem_image.mp hbImg with ⟨J, hJ_mem, hJ_eq⟩
+          exact ⟨J, hJ_mem, hJ_eq⟩
+        · intro J _
+          rw [derivativeWeight_zeroReduced M h t J]
+          rfl
+end
+
+/-- *0-reduction preserves elementary weights.*
+
+Each 0-reduction step regroups `Σ_i b_i Φᵢ(t)` over `Fin s` into the
+reduced sum `Σ_I b̂_I Φ̂_I(t)` over `Fin (#P₁)`: the `inP1 i = false`
+summands vanish because `b i = 0` (clause 1 of `IsZeroReducibleVia`),
+and the surviving `inP1 i = true` summands reindex through the order
+embedding `zeroReducedEmb`. The per-stage derivative-weight agreement
+is `derivativeWeight_zeroReduced`; the textbook restriction
+`b̂_I = b_{emb I}` holds definitionally on `M.zeroReduced inP1`. -/
+theorem zeroReduced_phiEquivalent {s : ℕ}
+    (M : RKTableau s) {inP1 : Fin s → Bool}
+    (h : M.IsZeroReducibleVia inP1) :
+    PhiEquivalent M (M.zeroReduced inP1) := by
+  intro t
+  show ∑ i : Fin s, M.b i * M.derivativeWeight i t
+      = ∑ I : Fin (Finset.univ.filter
+                    (fun i : Fin s => inP1 i = true)).card,
+          (M.zeroReduced inP1).b I
+            * (M.zeroReduced inP1).derivativeWeight I t
+  -- Step 1: discard `inP1 i = false` summands (their `M.b` factor is 0).
+  have hStep1 :
+      (∑ i : Fin s, M.b i * M.derivativeWeight i t)
+        = ∑ i ∈ Finset.univ.filter (fun i : Fin s => inP1 i = true),
+            M.b i * M.derivativeWeight i t := by
+    symm
+    apply Finset.sum_subset (Finset.filter_subset _ _)
+    intro i _ hi_notin
+    have hiFalse : inP1 i = false := by
+      have hiNotTrue : inP1 i ≠ true := fun hiT =>
+        hi_notin (Finset.mem_filter.mpr ⟨Finset.mem_univ i, hiT⟩)
+      cases hh : inP1 i with
+      | false => rfl
+      | true => exact absurd hh hiNotTrue
+    rw [h.1 i hiFalse, zero_mul]
+  rw [hStep1]
+  -- Step 2: reindex the surviving `Fin s` sum back to `Fin sBar'` via
+  -- `zeroReducedEmb`. Use `Finset.sum_bij` to avoid dependent-type issues
+  -- with the RHS index type `Fin filter.card`.
+  symm
+  refine Finset.sum_bij
+    (fun I _ => RKTableau.zeroReducedEmb inP1 I)
+    (fun I _ => Finset.mem_filter.mpr
+      ⟨Finset.mem_univ _, zeroReducedEmb_inP1_eq_true inP1 I⟩)
+    (fun I₁ _ I₂ _ heq =>
+      (RKTableau.zeroReducedEmb inP1).injective heq)
+    ?_ ?_
+  · intro b hb
+    have hImg : Finset.image (RKTableau.zeroReducedEmb inP1) Finset.univ
+          = Finset.univ.filter (fun i : Fin s => inP1 i = true) := by
+      show Finset.image
+        ⇑((Finset.univ.filter
+              (fun i : Fin s => inP1 i = true)).orderEmbOfFin rfl)
+        Finset.univ = _
+      exact Finset.image_orderEmbOfFin_univ _ rfl
+    have hbImg : b ∈ Finset.image
+        (RKTableau.zeroReducedEmb inP1) Finset.univ := hImg.symm ▸ hb
+    rcases Finset.mem_image.mp hbImg with ⟨I, hI_mem, hI_eq⟩
+    exact ⟨I, hI_mem, hI_eq⟩
+  · intro I _
+    rw [derivativeWeight_zeroReduced M h t I]
+    rfl
+
 /-- *Φ-equivalence is implied by P-reduction.*
 
-If `M` P-reduces (in zero or more steps) to `M'`, then `M` and `M'`
-agree on every elementary weight (def:381B). This formalises the
-P-side of Butcher's §380 narrative ("P-reducible methods agree on
-elementary weights"); the implication is implicit in the textbook's
-treatment of equivalence/reducibility but is not stated as a numbered
-result. The 0-reduction analogue will fold in cleanly when the
-0-step `PReducesTo` constructor is added (see `def:381E` deferred-
-construction issue). -/
+If `M` P-reduces (in zero or more steps) to `M'` — through any mix of
+P-reduction (`step`) and 0-reduction (`zeroStep`) — then `M` and `M'`
+agree on every elementary weight (def:381B). This formalises Butcher's
+§380 narrative ("reducible methods agree on elementary weights"); the
+implication is implicit in the textbook's treatment of
+equivalence/reducibility but is not stated as a numbered result. -/
 theorem PhiEquivalent.of_pReducesTo {s s' : ℕ}
     {M : RKTableau s} {M' : RKTableau s'}
     (h : RKTableau.PReducesTo M M') : PhiEquivalent M M' := by
@@ -837,5 +1090,16 @@ theorem PhiEquivalent.of_pReducesTo {s s' : ℕ}
   | refl M => exact PhiEquivalent.refl M
   | step P _hLt hVia _hRest IH =>
       exact PhiEquivalent.trans (pReduced_phiEquivalent _ hVia) IH
+  | zeroStep inP1 _hP0 hVia _hRest IH =>
+      exact PhiEquivalent.trans (zeroReduced_phiEquivalent _ hVia) IH
+
+/-- Non-vacuity witness for Φ-equivalence under 0-reduction:
+`paddedEuler` is Φ-equivalent to its 1-stage 0-reduced form. Consumes
+`paddedEuler_pReducesTo_zeroReduced` through `PhiEquivalent.of_pReducesTo`,
+exercising the `zeroStep` case of the latter's induction. Companion to
+`paddedEuler_pEquivalent_zeroReduced` above. -/
+theorem paddedEuler_phiEquivalent_zeroReduced :
+    PhiEquivalent paddedEuler (paddedEuler.zeroReduced ![true, false]) :=
+  PhiEquivalent.of_pReducesTo paddedEuler_pReducesTo_zeroReduced
 
 end OpenMath.Chapter3.Section381

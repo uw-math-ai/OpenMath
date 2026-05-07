@@ -354,3 +354,13 @@ discussion implicitly relies on but is not yet a Lean theorem).
 follow-up per cycle 187 strategy (Deliverable A: ship
 `PReducesTo M M' → PhiEquivalent M M'` implication, plus
 Deliverable B refactor if time permits).
+
+**Cycle 188 update (8th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.036s, user 0m0.253s, sys 0m0.535s — CPU =
+0.26% of wall, the same near-zero pattern as cycles 182–187).
+Pivoting to Priority 2: extend `RKTableau.PReducesTo` with a
+`zeroStep` constructor, ship `zeroReduced_phiEquivalent`, extend
+`PhiEquivalent.of_pReducesTo` to handle the new constructor, and
+add a non-vacuity witness using `paddedEuler` (per cycle 188
+strategy Deliverables A–D).
