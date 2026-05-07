@@ -304,6 +304,48 @@ LOC budget: ~150 LOC (definition + identity proof + BDF2 witness).
 Aristotle suitability: medium — the algebraic identity is the bottleneck
 and is structural rather than computational.
 
+#### Cycle 181 update (2026-05-07) — Phase C.1 SHIPPED
+
+Cycle 181 closed Phase C.1 in full. Delivered (axiom-clean,
+sorry-clean, ~250 LOC):
+
+* `mobiusTransform : ℕ → Polynomial ℝ → Polynomial ℝ` — homogenised
+  parameterised version (degree `n` independent of `p.natDegree`,
+  per the §441 textbook substitution `ψ(z) = (1−z)/(1+z)` with the
+  Lean convenience that `n = k` is fixed by the LMM step count, not
+  by `αPoly.natDegree` which can drop below `k` when `αₖ = 0`).
+* `aPoly_eq_mobiusTransform_αPoly` — the algebraic bridge
+  `M.aPoly = mobiusTransform k (Section410.αPoly M)`. Proof:
+  `Polynomial.funext` recipe (cycle 180 template) + `Finset.sum_range_succ'`
+  + αPoly coefficient computations (`αPoly_coeff_zero`, `αPoly_coeff_succ`)
+  + `Fin.sum_univ_eq_sum_range` reindex + `ring`.
+* `aPoly_aeval_eq_mul_αPoly_aeval` — multiplicative bridge for
+  `ζ : ℂ` with `1 + ζ ≠ 0`:
+  `aPoly.aeval ζ = (1 + ζ)^k · αPoly.aeval ((1 − ζ) / (1 + ζ))`.
+  Proof: routes through the polynomial bridge + `eval₂` expansion +
+  `field_simp` to factor out `(1 + ζ)^k`.
+* `aPoly_aeval_eq_zero_iff_αPoly_aeval_at_mobiusArg` — complex-side
+  root bridge for `ζ ≠ −1`. Direct corollary of the multiplicative
+  identity + `mul_eq_zero` + `pow_ne_zero`.
+* `bdf2LMM_aPoly_eq_mobiusTransform` and
+  `bdf2LMM_mobiusTransform_αPoly_eq` — BDF2 sanity witnesses
+  composing with cycle 180's `bdf2LMM_aPoly_eq` closed form.
+
+Bridge target chosen: `αPoly` (Section410). Reasoning: Butcher's
+textbook substitution `α(w) = 1 − Σᵢ αᵢ w^i` matches our §410 sign
+convention `αPoly = 1 − Σᵢ αᵢ X^(i+1)` directly; routing through
+`ρPoly = z^k − α₁z^{k−1} − ⋯ − αₖ` would have required an
+additional reflection identity. The factorisation
+`a(z) = (1+z)^k · α(ψ(z))` then follows by direct substitution.
+
+`ζ = −1` boundary case: NOT handled separately in cycle 181. The
+strategy listed it as optional and the cycle's deliverable bar
+was met without it. Recommended for Phase C.2 (where it pairs
+naturally with the `αₖ = 0` → degree-drop analysis under
+stability).
+
+Phase C.2 ready to start in cycle 182.
+
 ### Phase C.2 — Stability ⇒ `aPoly` roots in closed left half-plane (1 cycle)
 
 Deliverables:

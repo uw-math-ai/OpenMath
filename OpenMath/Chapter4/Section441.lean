@@ -974,4 +974,254 @@ theorem bdf2LMM_aPoly_coeff_two_pos : 0 < bdf2LMM.aPoly.coeff 2 := by
   rw [bdf2LMM_aPoly_coeff_two_eq]
   norm_num
 
+/-! ## Phase C.1 — Möbius algebraic bridge
+
+This section opens Phase C of `lem:441A` (Butcher §441 p. 376) by
+introducing the *Möbius transform* of a polynomial and proving the
+algebraic bridge identity that connects `aPoly` to the §410
+characteristic polynomial `αPoly`.
+
+The textbook substitution is `ψ(z) = (1−z)/(1+z)`, which sends the
+exterior `|w| > 1` of the closed unit disc to the right half plane
+`Re(z) > 0` (and conversely). Under this substitution Butcher's
+`a(z) = (1+z)^k − Σᵢ αᵢ (1+z)^{k−i}(1−z)^i` factors as
+
+  `a(z) = (1+z)^k · α(ψ(z))`,
+
+where `α(w) = 1 − Σᵢ αᵢ w^i` is the §410 generating polynomial.
+This factorisation is the crux of §441's proof: stability of `M`
+(no roots of `ρ` outside `|w| ≤ 1`, simple roots on the boundary)
+translates via `ψ` to a *real-coefficient factorisation* of `aPoly`
+into linear factors `(1 + cᵢ X)` and quadratic factors with
+non-negative coefficients — from which `aᵢ ≥ 0` follows by induction.
+
+To avoid division in `ℝ[X]`, we encode the substitution via the
+homogenised `mobiusTransform n p`, which evaluates `p` at the
+projective point `(1−X : 1+X)` with total degree `n`.
+
+Phase C.1 (this cycle) ships:
+
+* `mobiusTransform` — the homogenised transform.
+* `aPoly_eq_mobiusTransform_αPoly` — the algebraic bridge.
+* `aPoly_aeval_eq_mul_αPoly_aeval` — pointwise identity at any
+  complex argument, expressing `aPoly(ζ) = (1+ζ)^k · αPoly(ψ(ζ))`.
+* `aPoly_aeval_eq_zero_iff_αPoly_aeval_at_mobiusArg` — complex-side
+  root bridge for `ζ ≠ −1`.
+* BDF2 numerical sanity witness composing with `bdf2LMM_aPoly_eq`.
+
+Phases C.2–C.4 (stability ⇒ left-half-plane root pattern, real
+factorisation, closure) are scheduled for cycles 182+. See
+`.prover-state/issues/lem_441A_phase_C_scoping.md` for the parent
+plan. -/
+
+/-- **Möbius transform of a real polynomial (homogenised).**
+
+Given `n : ℕ` and `p : Polynomial ℝ`, the *Möbius transform of `p`
+at total degree `n`* is the polynomial
+
+  `mobiusTransform n p = Σᵢ₌₀ⁿ (p.coeff i) · (1 − X)^i · (1 + X)^{n−i}`.
+
+Mathematically this is the homogeneous evaluation of `p` at the
+projective ratio `(1 − X) / (1 + X)` with total degree `n`: when
+`p.natDegree ≤ n` and `(1 + X)` is invertible (e.g. evaluated at
+`x ≠ −1`), one has
+
+  `mobiusTransform n p = (1 + X)^n · p((1 − X) / (1 + X))`
+
+as a rational-function identity. The polynomial form avoids the
+division and is what we use throughout §441.
+
+Used to bridge `aPoly` (Section441) and `αPoly` (Section410): see
+`aPoly_eq_mobiusTransform_αPoly`.
+
+The total-degree parameter `n` is independent of `p.natDegree`
+because §441's substitution requires homogenisation at the LMM
+step count `k`, not at `αPoly.natDegree` (which can drop below `k`
+when `αₖ = 0`, e.g. for Adams-Bashforth methods). -/
+noncomputable def mobiusTransform (n : ℕ) (p : Polynomial ℝ) : Polynomial ℝ :=
+  ∑ i ∈ Finset.range (n + 1),
+    Polynomial.C (p.coeff i) *
+    (1 - Polynomial.X) ^ i * (1 + Polynomial.X) ^ (n - i)
+
+/-- **`αPoly`'s constant coefficient is 1.**
+
+By the §410 sign convention `αPoly M = 1 − Σⱼ αⱼ X^(j+1)`, the
+constant term comes from the leading `1` (every `X^(j+1)` term has
+zero constant coefficient since `j+1 ≥ 1`). -/
+private lemma αPoly_coeff_zero {k : ℕ} (M : LinearMultistepMethod k) :
+    (OpenMath.Chapter4.Section410.αPoly M).coeff 0 = 1 := by
+  unfold OpenMath.Chapter4.Section410.αPoly
+  rw [Polynomial.coeff_sub, Polynomial.coeff_one_zero,
+      Polynomial.finset_sum_coeff]
+  have h : ∀ j : Fin k,
+      (Polynomial.C (M.α j.succ) * Polynomial.X ^ (j.val + 1)).coeff 0 = 0 := by
+    intro j
+    rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+        if_neg (Nat.succ_ne_zero j.val).symm]
+    ring
+  simp [h]
+
+/-- **`αPoly`'s coefficient at `j+1` (for `j : Fin k`) equals `-αⱼ`.**
+
+By the §410 sign convention `αPoly M = 1 − Σⱼ' αⱼ' X^(j'+1)`, the
+coefficient of `X^(j+1)` for `j : Fin k` comes solely from the
+`j' = j` summand. -/
+private lemma αPoly_coeff_succ {k : ℕ} (M : LinearMultistepMethod k)
+    (j : Fin k) :
+    (OpenMath.Chapter4.Section410.αPoly M).coeff (j.val + 1) = -M.α j.succ := by
+  unfold OpenMath.Chapter4.Section410.αPoly
+  rw [Polynomial.coeff_sub, Polynomial.coeff_one,
+      if_neg (Nat.succ_ne_zero j.val), Polynomial.finset_sum_coeff]
+  rw [Finset.sum_eq_single j]
+  · rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow, if_pos rfl]
+    ring
+  · intro j' _ hne
+    rw [Polynomial.coeff_C_mul, Polynomial.coeff_X_pow]
+    have hne' : j.val + 1 ≠ j'.val + 1 := by
+      intro h
+      apply hne
+      apply Fin.ext
+      exact Nat.succ_injective h.symm
+    rw [if_neg hne']
+    ring
+  · intro hj
+    exact absurd (Finset.mem_univ j) hj
+
+/-- **§441 algebraic bridge — `aPoly = mobiusTransform k αPoly`.**
+
+This is the polynomial form of Butcher's textbook identity (§441
+p. 376) `a(z) = (1+z)^k · α(ψ(z))`, with `ψ(z) = (1−z)/(1+z)`.
+Homogenising at `k` clears the denominator `(1+z)^k`, giving the
+polynomial identity
+
+  `aPoly = Σᵢ₌₀ᵏ (αPoly.coeff i) · (1 − X)^i · (1 + X)^(k−i)`.
+
+The proof splits the RHS sum at `i = 0` (the `(1 + X)^k` term),
+substitutes `αPoly.coeff 0 = 1` and `αPoly.coeff (j+1) = −αⱼ` (for
+`j : Fin k`), and reindexes the remaining range-`k` sum to `Fin k`
+to match `aPoly`'s definition.
+
+This is the workhorse of Phase C: every subsequent step of the
+factorisation argument routes through this identity. -/
+theorem aPoly_eq_mobiusTransform_αPoly {k : ℕ}
+    (M : LinearMultistepMethod k) :
+    M.aPoly = mobiusTransform k (OpenMath.Chapter4.Section410.αPoly M) := by
+  apply Polynomial.funext
+  intro x
+  unfold LinearMultistepMethod.aPoly mobiusTransform
+  simp only [Polynomial.eval_sub, Polynomial.eval_finset_sum,
+             Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_add,
+             Polynomial.eval_one, Polynomial.eval_X, Polynomial.eval_C]
+  rw [Finset.sum_range_succ' (fun i =>
+        (OpenMath.Chapter4.Section410.αPoly M).coeff i *
+          (1 - x) ^ i * (1 + x) ^ (k - i)) k]
+  simp only [pow_zero, mul_one, Nat.sub_zero]
+  rw [αPoly_coeff_zero M]
+  rw [show (∑ i ∈ Finset.range k,
+        (OpenMath.Chapter4.Section410.αPoly M).coeff (i + 1) *
+          (1 - x) ^ (i + 1) * (1 + x) ^ (k - (i + 1)))
+      = ∑ j : Fin k,
+        (OpenMath.Chapter4.Section410.αPoly M).coeff (j.val + 1) *
+          (1 - x) ^ (j.val + 1) * (1 + x) ^ (k - (j.val + 1)) from ?_]
+  · simp_rw [αPoly_coeff_succ M]
+    have hexpand :
+        ∀ j : Fin k,
+          (-M.α j.succ) * (1 - x) ^ (j.val + 1) * (1 + x) ^ (k - (j.val + 1))
+            = -(M.α j.succ * (1 + x) ^ (k - (j.val + 1)) * (1 - x) ^ (j.val + 1)) := by
+      intro j
+      ring
+    simp_rw [hexpand, Finset.sum_neg_distrib]
+    ring
+  · rw [Fin.sum_univ_eq_sum_range
+        (fun i => (OpenMath.Chapter4.Section410.αPoly M).coeff (i + 1) *
+          (1 - x) ^ (i + 1) * (1 + x) ^ (k - (i + 1)))]
+
+/-- **§441 multiplicative bridge — `aPoly(ζ) = (1+ζ)^k · αPoly(ψ(ζ))`.**
+
+For `ζ : ℂ` with `1 + ζ ≠ 0`, evaluating the Phase C.1 algebraic
+bridge `aPoly = mobiusTransform k αPoly` at `ζ` yields the
+multiplicative identity
+
+  `aPoly.aeval ζ = (1 + ζ)^k · αPoly.aeval ((1 − ζ) / (1 + ζ))`.
+
+The proof routes through the polynomial bridge, expands the
+`mobiusTransform` summands via `eval₂`, and factors out `(1+ζ)^k`
+using the algebraic identity `(1−ζ)^i · (1+ζ)^(k−i) = (1+ζ)^k ·
+((1−ζ)/(1+ζ))^i` (valid because `(1+ζ)^i ≠ 0`).
+
+The hypothesis `αPoly.natDegree ≤ k` (cycle 073's `αPoly_natDegree_le`)
+is used to identify the truncated sum `Σᵢ₌₀ᵏ αPoly.coeff i · w^i` with
+`αPoly.aeval w`. -/
+theorem aPoly_aeval_eq_mul_αPoly_aeval {k : ℕ} (M : LinearMultistepMethod k)
+    (ζ : ℂ) (hζ : (1 : ℂ) + ζ ≠ 0) :
+    Polynomial.aeval ζ M.aPoly =
+      (1 + ζ) ^ k *
+        Polynomial.aeval ((1 - ζ) / (1 + ζ))
+          (OpenMath.Chapter4.Section410.αPoly M) := by
+  rw [Polynomial.aeval_def, Polynomial.aeval_def]
+  rw [aPoly_eq_mobiusTransform_αPoly M]
+  unfold mobiusTransform
+  rw [Polynomial.eval₂_finset_sum]
+  rw [Polynomial.eval₂_eq_sum_range' (algebraMap ℝ ℂ)
+        (Nat.lt_succ_of_le (OpenMath.Chapter4.Section410.αPoly_natDegree_le M))]
+  rw [Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro i hi
+  have hi_le : i ≤ k := Nat.lt_succ_iff.mp (Finset.mem_range.mp hi)
+  rw [Polynomial.eval₂_mul, Polynomial.eval₂_mul, Polynomial.eval₂_pow,
+      Polynomial.eval₂_pow, Polynomial.eval₂_sub, Polynomial.eval₂_add,
+      Polynomial.eval₂_C, Polynomial.eval₂_X, Polynomial.eval₂_one]
+  have hpow : (1 + ζ : ℂ) ^ k = (1 + ζ) ^ i * (1 + ζ) ^ (k - i) := by
+    rw [← pow_add]
+    congr 1
+    omega
+  have hpowi_ne : (1 + ζ : ℂ) ^ i ≠ 0 := pow_ne_zero _ hζ
+  rw [hpow, div_pow]
+  field_simp
+
+/-- **§441 complex-side root bridge.**
+
+For `ζ : ℂ` with `ζ ≠ −1`, `ζ` is a root of `aPoly` iff its Möbius
+image `ψ(ζ) = (1 − ζ) / (1 + ζ)` is a root of `αPoly`. The boundary
+case `ζ = −1` corresponds to a degree drop in `αPoly` (i.e. `αₖ = 0`),
+which is handled separately in Phase C.2.
+
+This is the workhorse complex-analytic bridge that translates
+stability of `M` (no `ρ`-roots outside `|w| ≤ 1`) into a constraint
+on `aPoly`'s roots — the next step in §441's factorisation argument. -/
+theorem aPoly_aeval_eq_zero_iff_αPoly_aeval_at_mobiusArg {k : ℕ}
+    (M : LinearMultistepMethod k) (ζ : ℂ) (hζ : ζ ≠ -1) :
+    Polynomial.aeval ζ M.aPoly = 0 ↔
+      Polynomial.aeval ((1 - ζ) / (1 + ζ))
+        (OpenMath.Chapter4.Section410.αPoly M) = 0 := by
+  have h1pζ : (1 : ℂ) + ζ ≠ 0 := by
+    intro h
+    apply hζ
+    linear_combination h
+  have hpow : (1 + ζ : ℂ) ^ k ≠ 0 := pow_ne_zero _ h1pζ
+  rw [aPoly_aeval_eq_mul_αPoly_aeval M ζ h1pζ]
+  constructor
+  · intro h
+    rcases mul_eq_zero.mp h with h | h
+    · exact absurd h hpow
+    · exact h
+  · intro h
+    rw [h, mul_zero]
+
+/-- **BDF2 numerical sanity for the Möbius bridge.** Specialises
+`aPoly_eq_mobiusTransform_αPoly` to the canonical `k = 2` example. -/
+theorem bdf2LMM_aPoly_eq_mobiusTransform :
+    bdf2LMM.aPoly =
+      mobiusTransform 2 (OpenMath.Chapter4.Section410.αPoly bdf2LMM) :=
+  aPoly_eq_mobiusTransform_αPoly bdf2LMM
+
+/-- **BDF2 closed form for `mobiusTransform 2 αPoly`.** Composes the
+cycle 180 closed form (`bdf2LMM_aPoly_eq`) with the Phase C.1 bridge
+to yield a fully evaluated form for the Möbius transform on BDF2. -/
+theorem bdf2LMM_mobiusTransform_αPoly_eq :
+    mobiusTransform 2 (OpenMath.Chapter4.Section410.αPoly bdf2LMM) =
+      Polynomial.C (4 / 3) * Polynomial.X +
+      Polynomial.C (8 / 3) * Polynomial.X ^ 2 := by
+  rw [← aPoly_eq_mobiusTransform_αPoly bdf2LMM, bdf2LMM_aPoly_eq]
+
 end OpenMath.Chapter4.Section441
