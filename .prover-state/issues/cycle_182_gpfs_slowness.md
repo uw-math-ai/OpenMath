@@ -238,3 +238,49 @@ line 1529); ship Phase C.2. If GPFS still degraded, continue Step 3
 pivot — Option 3B (`def:422B`) is next, OR continue with `def:381F`
 follow-up theorems (e.g. `PEquivalent.trans` over the heterogeneous
 size-changing reduction relation).
+
+## Cycle 185 update (2026-05-07)
+
+**GPFS still degraded for Section441.lean**: smoke test
+`time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean`
+on HEAD (unchanged since cycle 184) timed out at 5 minutes with
+near-zero CPU (0.272s user, 0.511s sys over 300s wall) — the 5th
+consecutive attempt to compile Section441 blocked by the same GPFS
+pathology. No `find /` zombie was active (pre-flight `ps -u $USER`
+returned no D-state processes). Reverted to Priority 2 per the
+cycle 185 strategy decision tree.
+
+**Section381.lean compiles fine**: `lake env lean
+OpenMath/Chapter3/Section381.lean` baseline at 70s clean, follow-up
+recompiles at ~4s (cached), so the GPFS pathology is specific to
+Section441's larger mathlib transitive load (`Mathlib.Analysis.*`
+heavy) and not a global cluster-wide issue. Section381's transitive
+imports (`Mathlib.Topology.MetricSpace.Lipschitz`) are much lighter.
+The 5-min timeout on Section441 with negligible CPU is consistent
+with mathlib olean fetching being the bottleneck, not Lean
+elaboration.
+
+**Cycle 185 deliverable**: shipped `def:381F` follow-up per Priority 2:
+* Tightened `PReducesTo.step` to require `sBar < s` (closing a
+  soundness gap between the docstring and the constructor — the
+  docstring already promised non-trivial reductions strictly
+  decrease the stage count).
+* Added `eq_of_not_isPReducible_of_pReducesTo` (irreducible source
+  forces the reduction sequence to be reflexive) and
+  `PEquivalent.trans_of_middle_not_pReducible` (transitivity of
+  P-equivalence through a non-P-reducible middle).
+* Added a non-trivial witness `paddedEuler.PEquivalent paddedEuler`
+  that goes via the irreducible 1-stage middle
+  `paddedEuler.pReduced pairPartition`, exercising `step` and
+  `trans` together — strictly beyond the cycle 184 reflexivity
+  witness.
+
+Both new theorems are axiom-clean (`[propext, Classical.choice,
+Quot.sound]`).
+
+**Cycle 186 entry point**: GPFS recovery still required for Phase
+C.2 verification. If next-cycle smoke test on Section441.lean (HEAD)
+times out for the 6th consecutive attempt, escalate to the
+loop-maintainer for cluster-admin consultation per the
+recommendation block above (this issue file). If it completes
+healthy, ship the cycle 182 draft + cycle 184 namespace fix.

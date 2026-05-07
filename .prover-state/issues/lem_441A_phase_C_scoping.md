@@ -452,6 +452,43 @@ follow-up theorems) or escalate the GPFS issue.
 Phase C.2 status: **drafted, namespace fix identified and ready,
 local verification blocked by GPFS**.
 
+#### Cycle 185 update (2026-05-07) — Phase C.2 still GPFS-blocked, P-equivalence trans landed instead
+
+Cycle 185's Priority 0 GPFS smoke test (`time timeout 300 lake env
+lean OpenMath/Chapter4/Section441.lean` on HEAD) timed out at 5 min
+with negligible CPU (0.272s user, 0.511s sys over 300s wall) — the
+**5th consecutive Section441 compile timeout**. No D-state zombie
+processes were active. Pivoted to Priority 2 (`PEquivalent`
+follow-up) per the strategy decision tree.
+
+Priority 2 deliverable shipped (`OpenMath/Chapter3/Section381.lean`):
+
+* `PReducesTo.step` constructor tightened to require `sBar < s`
+  (closing a soundness gap — the docstring at lines 386–392 already
+  promised non-trivial steps strictly decrease the stage count, but
+  the constructor admitted the discrete partition vacuously).
+* `RKTableau.eq_of_not_isPReducible_of_pReducesTo` — irreducible
+  source forces every reduction sequence to be reflexive.
+* `RKTableau.PEquivalent.trans_of_middle_not_pReducible` —
+  transitivity of P-equivalence through a non-P-reducible middle
+  (the unrestricted `trans` requires P-reduction confluence and
+  remains deferred).
+* Non-trivial witness `paddedEuler.PEquivalent paddedEuler` via
+  trans through the irreducible 1-stage middle
+  `paddedEuler.pReduced pairPartition`, exercising both the new
+  step hypothesis and the new trans theorem (strictly beyond
+  cycle 184's reflexivity witness).
+
+Both new theorems axiom-clean
+(`[propext, Classical.choice, Quot.sound]`).
+
+**Cycle 186 entry point**: GPFS recovery still required for Phase
+C.2. If next-cycle smoke test on HEAD `Section441.lean` times out
+for the **6th consecutive attempt**, escalate to the loop-maintainer
+for cluster-admin consultation per the recommendation block in
+`cycle_182_gpfs_slowness.md`. If GPFS recovers, ship the cycle 182
+draft + cycle 184 namespace fix (preserved diff above).
+
 ### Phase C.2 — Stability ⇒ `aPoly` roots in closed left half-plane (1 cycle)
 
 Deliverables:

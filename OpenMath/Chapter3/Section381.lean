@@ -393,11 +393,18 @@ reflexivity case keeps it constant. -/
 inductive PReducesTo : {s s' : ℕ} → RKTableau s → RKTableau s' → Prop where
   /-- Zero-step (reflexive) case: every method reduces to itself. -/
   | refl {s : ℕ} (M : RKTableau s) : PReducesTo M M
-  /-- One step: `M` is P-reducible via partition `P`, and the result
-  `M.pReduced P` reduces further (in zero or more steps) to `M''`. -/
+  /-- One step: `M` is P-reducible via a non-trivial partition `P`
+  (`sBar < s`), and the result `M.pReduced P` reduces further (in
+  zero or more steps) to `M''`. The non-triviality `hLt` keeps this
+  relation faithful to Butcher §380's textbook P-reduction, which
+  strictly decreases the stage count; without it, the discrete
+  partition (`sBar = s`, each stage in its own block) would
+  vacuously satisfy `IsPReducibleVia` for every tableau and admit
+  trivial "reductions" that do not reflect the textbook intent. -/
   | step {s sBar s'' : ℕ}
       {M : RKTableau s} {M'' : RKTableau s''}
-      (P : PPartition s sBar) (_h : M.IsPReducibleVia P) :
+      (P : PPartition s sBar) (_hLt : sBar < s)
+      (_h : M.IsPReducibleVia P) :
       PReducesTo (M.pReduced P) M'' → PReducesTo M M''
 
 /-- Butcher §380 Definition 381F — two Runge–Kutta methods are
@@ -423,6 +430,47 @@ theorem PEquivalent.of_pReducesTo {s s' : ℕ}
     {M : RKTableau s} {M' : RKTableau s'} (h : PReducesTo M M') :
     PEquivalent M M' :=
   ⟨s', M', h, PReducesTo.refl M'⟩
+
+/-- If `M` is not P-reducible, then any P-reduction sequence starting
+from `M` is the reflexive (zero-step) one. The `step` constructor
+requires a non-trivial partition (`sBar < s`) witnessing
+`IsPReducibleVia`, which together would furnish `IsPReducible M` —
+contradicting the hypothesis. -/
+theorem eq_of_not_isPReducible_of_pReducesTo {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'}
+    (hIrr : ¬ M.IsPReducible) (h : PReducesTo M M') :
+    s' = s ∧ HEq M' M := by
+  cases h with
+  | refl => exact ⟨rfl, HEq.rfl⟩
+  | step P hLt hVia _ => exact absurd ⟨_, hLt, P, hVia⟩ hIrr
+
+/-- *Transitivity of P-equivalence over an irreducible middle method.*
+If `M₂` is not P-reducible, then `PEquivalent M₁ M₂` and
+`PEquivalent M₂ M₃` together yield `PEquivalent M₁ M₃`.
+
+The general `PEquivalent.trans` over arbitrary middle methods would
+require confluence of P-reduction (any two P-reduction sequences from
+a common source can be completed to a common target). When `M₂` is
+already irreducible, both reductions out of `M₂` are forced to be
+reflexive (`eq_of_not_isPReducible_of_pReducesTo`), so the witnesses
+`PReducesTo M₁ M₂` and `PReducesTo M₃ M₂` extracted from the
+hypotheses combine directly via the existing common reduct `M₂`. -/
+theorem PEquivalent.trans_of_middle_not_pReducible {s₁ s₂ s₃ : ℕ}
+    {M₁ : RKTableau s₁} {M₂ : RKTableau s₂} {M₃ : RKTableau s₃}
+    (h₁₂ : PEquivalent M₁ M₂) (h₂₃ : PEquivalent M₂ M₃)
+    (hIrr : ¬ M₂.IsPReducible) :
+    PEquivalent M₁ M₃ := by
+  refine ⟨s₂, M₂, ?_, ?_⟩
+  · obtain ⟨sA, MA, h1A, h2A⟩ := h₁₂
+    obtain ⟨hsA, hMA⟩ := eq_of_not_isPReducible_of_pReducesTo hIrr h2A
+    subst hsA
+    obtain rfl : MA = M₂ := eq_of_heq hMA
+    exact h1A
+  · obtain ⟨sB, MB, h2B, h3B⟩ := h₂₃
+    obtain ⟨hsB, hMB⟩ := eq_of_not_isPReducible_of_pReducesTo hIrr h2B
+    subst hsB
+    obtain rfl : MB = M₂ := eq_of_heq hMB
+    exact h3B
 
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
@@ -527,7 +575,7 @@ reduction step is the textbook's row-sum-constancy P-reduction
 example :
     paddedEuler.PEquivalent (paddedEuler.pReduced pairPartition) :=
   RKTableau.PEquivalent.of_pReducesTo
-    (RKTableau.PReducesTo.step pairPartition
+    (RKTableau.PReducesTo.step pairPartition (by decide)
       (by intro _ _ _ _ _ _; simp [paddedEuler])
       (RKTableau.PReducesTo.refl _))
 
@@ -613,5 +661,35 @@ theorem equivalent_explicitEuler_self :
     exact hs
   rw [hy₁, hy₁']
   simp [RKTableau.explicitEuler, hY0, hY'0]
+
+/- ### Non-vacuity witness for `PEquivalent.trans_of_middle_not_pReducible`
+
+The 1-stage tableau `paddedEuler.pReduced pairPartition` is irreducible
+(the same `sBar < 1` ⇒ `sBar = 0` ⇒ `Fin 0` empty argument used for
+`explicitEuler`). Combined with the non-trivial reduction
+`paddedEuler →ᴾ paddedEuler.pReduced pairPartition` (already exhibited
+above), trans-through-an-irreducible-middle yields
+`paddedEuler.PEquivalent paddedEuler` exercising the non-trivial step
+constructor in both directions — strictly beyond the reflexivity
+witness `PEquivalent.refl`. -/
+
+/-- Non-vacuity witness for `def:381F` exercising
+`PEquivalent.trans_of_middle_not_pReducible`: `paddedEuler` is
+P-equivalent to itself via the trans-through-the-1-stage-reduction,
+not just via the reflexive witness. -/
+example : paddedEuler.PEquivalent paddedEuler := by
+  have hMid_irr : ¬ (paddedEuler.pReduced pairPartition).IsPReducible := by
+    rintro ⟨sBar, hLt, P, _⟩
+    obtain rfl : sBar = 0 := Nat.lt_one_iff.mp hLt
+    exact (P.block 0).elim0
+  have hReduced :
+      RKTableau.PReducesTo paddedEuler (paddedEuler.pReduced pairPartition) :=
+    RKTableau.PReducesTo.step pairPartition (by decide)
+      (by intro _ _ _ _ _ _; simp [paddedEuler])
+      (RKTableau.PReducesTo.refl _)
+  have hEquiv :
+      paddedEuler.PEquivalent (paddedEuler.pReduced pairPartition) :=
+    RKTableau.PEquivalent.of_pReducesTo hReduced
+  exact hEquiv.trans_of_middle_not_pReducible hEquiv.symm hMid_irr
 
 end OpenMath.Chapter3.Section381
