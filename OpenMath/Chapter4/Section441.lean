@@ -929,4 +929,49 @@ theorem bdf2LMM_aPoly_coeff_one_pos : 0 < bdf2LMM.aPoly.coeff 1 := by
   rw [bdf2LMM_aPoly_coeff_one_eq]
   norm_num
 
+/-- **BDF2 closed-form `aPoly`.**
+
+For BDF2 (`k = 2`, `α₁ = 4/3`, `α₂ = -1/3`),
+
+  `a(z) = (1+z)² − (4/3)(1+z)(1-z) − (−1/3)(1-z)²`
+        `= 1 + 2z + z² − 4/3 + (4/3)z² + 1/3 − (2/3)z + (1/3)z²`
+        `= (4/3) z + (8/3) z²`.
+
+Cycles 172/173 stalled on this identity using `Polynomial.ext` + per-
+coefficient `simp`; the obstruction was that `ring` cannot fold
+`Polynomial.C` arithmetic over the rationals.
+
+This cycle (180, Priority 2) closes the identity via `Polynomial.funext`
+(which requires `IsDomain ℝ` + `Infinite ℝ`, both available) — the
+proof lifts to pointwise evaluation in `ℝ`, where `ring` does fold. -/
+theorem bdf2LMM_aPoly_eq :
+    bdf2LMM.aPoly =
+      Polynomial.C (4 / 3) * Polynomial.X +
+      Polynomial.C (8 / 3) * Polynomial.X ^ 2 := by
+  apply Polynomial.funext
+  intro x
+  unfold LinearMultistepMethod.aPoly
+  simp only [Fin.sum_univ_two, Fin.val_zero, Fin.val_one,
+             Polynomial.eval_add, Polynomial.eval_sub,
+             Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C,
+             Polynomial.eval_X, Polynomial.eval_one]
+  have h1 : bdf2LMM.α (Fin.succ 0) = 4 / 3 := rfl
+  have h2 : bdf2LMM.α (Fin.succ 1) = -1 / 3 := rfl
+  rw [h1, h2]
+  ring
+
+/-- **BDF2 `a₂` closed form.** Direct corollary of `bdf2LMM_aPoly_eq`. -/
+theorem bdf2LMM_aPoly_coeff_two_eq :
+    bdf2LMM.aPoly.coeff 2 = 8 / 3 := by
+  rw [bdf2LMM_aPoly_eq]
+  simp
+
+/-- **BDF2 `a₂ > 0` numerical witness.** Witnesses Phase C's headline
+`aᵢ ≥ 0` for `i ≥ 2` on the canonical `k = 2` example, sidestepping
+the multi-cycle Phase C complex-root infrastructure (see
+`.prover-state/issues/lem_441A_phase_C_scoping.md`). -/
+theorem bdf2LMM_aPoly_coeff_two_pos : 0 < bdf2LMM.aPoly.coeff 2 := by
+  rw [bdf2LMM_aPoly_coeff_two_eq]
+  norm_num
+
 end OpenMath.Chapter4.Section441
