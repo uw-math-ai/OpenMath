@@ -897,4 +897,36 @@ theorem bdf2LMM_ρPoly_pos_at_two : 0 < bdf2LMM.ρPoly.eval 2 := by
   simp [bdf2LMM, Fin.sum_univ_two]
   norm_num
 
+/-- **Phase B.4: `a₁ > 0` for stable preconsistent LMMs.**
+
+Combines cycle 174's bridge `a₁ = 2·ρ'(1)` (under preconsistency,
+`aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent`) with
+cycle 178's positivity result `ρ'(1) > 0` (under stability +
+preconsistency, `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`).
+Together with `aPoly_coeff_zero_of_preconsistent` (cycle 173,
+`a₀ = 0`), this closes the `a₁ > 0` half of Butcher's Lemma 441A
+(Butcher §441 p. 376).
+
+The remaining `aᵢ ≥ 0 for i ∈ [2, k]` half (Phase C) requires a
+complex-root decomposition argument over `aPoly` and is multi-cycle
+work, deferred to a fresh strategy. -/
+theorem LinearMultistepMethod.aPoly_coeff_one_pos_of_stable_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hk : 0 < k)
+    (hStable : M.IsStable) (hPre : M.IsPreconsistent) :
+    0 < M.aPoly.coeff 1 := by
+  rw [M.aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent hPre]
+  have hρ : 0 < M.ρPoly.derivative.eval 1 :=
+    M.ρPoly_deriv_eval_one_pos_of_stable_preconsistent hk hStable hPre
+  linarith
+
+/-- **BDF2 numerical sanity for `aPoly_coeff_one_pos_of_stable_preconsistent`.**
+Lifts cycle 175's closed form `bdf2LMM.aPoly.coeff 1 = 4/3`
+(`bdf2LMM_aPoly_coeff_one_eq`) to a strict positivity witness, numerically
+confirming `a₁ > 0` on the canonical `k = 2` example. The cycle 174
+bridge `a₁ = 2·ρ'(1)` is fully witnessed: `4/3 = 2·(2/3)` (cycle 175 +
+176/178). -/
+theorem bdf2LMM_aPoly_coeff_one_pos : 0 < bdf2LMM.aPoly.coeff 1 := by
+  rw [bdf2LMM_aPoly_coeff_one_eq]
+  norm_num
+
 end OpenMath.Chapter4.Section441

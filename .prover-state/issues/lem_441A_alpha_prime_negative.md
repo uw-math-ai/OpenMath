@@ -261,3 +261,33 @@ Remaining chain:
   `bdf2LMM_aPoly_coeff_one_eq = 4/3` + `norm_num`.
 * **Cycle 180+, Phase C → aᵢ ≥ 0 for i ≥ 2**: complex-root
   decomposition (Butcher §441 p. 376). Multi-cycle.
+
+## Cycle 179 update — Phase B.4 closed: `a₁ > 0`
+
+Status: ✅ **closed** (axiom-clean).
+
+Added two theorems to `OpenMath/Chapter4/Section441.lean`:
+
+* `LinearMultistepMethod.aPoly_coeff_one_pos_of_stable_preconsistent`
+  — generic statement: under `0 < k`, `IsStable`, `IsPreconsistent`,
+  `0 < M.aPoly.coeff 1`. Three-tactic proof: `rw` the cycle 174
+  bridge, name cycle 178's positivity hypothesis, `linarith`.
+* `bdf2LMM_aPoly_coeff_one_pos` — BDF2 numerical witness:
+  `0 < bdf2LMM.aPoly.coeff 1` via cycle 175's
+  `bdf2LMM_aPoly_coeff_one_eq = 4/3` + `norm_num`.
+
+Both pass `#print axioms` with `[propext, Classical.choice,
+Quot.sound]` only.
+
+Phase B (`a₁ > 0` half of `lem:441A`) is fully closed via the chain
+B.1.α (cycle 174 bridge `a₁ = 2·ρ'(1)`) → B.1.β (cycle 175 `no real
+root > 1`) → B.2 (cycle 176 `ρ'(1) ≠ 0`) → B.3 Step 1 (cycle 177 `ρ
+> 0` on `(1, ∞)`) → B.3 Step 2 (cycle 178 `ρ'(1) > 0`) → B.4 (cycle
+179 `a₁ > 0`).
+
+`lem:441A` remains `partial` in `lean_status.json` because the
+textbook statement also asserts `aᵢ ≥ 0` for `i = 2, …, k`. That
+half (Phase C — complex-root decomposition over `aPoly`) is
+multi-cycle work, deferred. See the §7 stretch-goal scoping in the
+cycle 179 strategy doc and the original stretch-goal analysis in
+this file (Phase C section above).
