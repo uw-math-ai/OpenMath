@@ -373,3 +373,13 @@ Priority 2: ship `PEquivalent.toPhiEquivalent` (def:381F →
 def:381B bridge), `PEquivalent.of_isZeroReducibleVia`, and two
 `paddedEuler` Φ-equivalent witnesses via the bridge (per cycle
 189 strategy Deliverables A–C).
+
+**Cycle 190 update (10th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.056s, user 0m0.321s, sys 0m0.533s — CPU =
+0.28% of wall, identical near-zero pattern). 10 consecutive
+timeouts confirm the GPFS regression remains entrenched and is
+not transient cluster load. Pivoting to Priority 2: ship
+`PEquivalent.eq_of_isIrreducible_of_middle` (canonical-form
+constructor) plus `paddedEuler` non-vacuity witness via the
+new constructor (per cycle 190 strategy Deliverables A–B).

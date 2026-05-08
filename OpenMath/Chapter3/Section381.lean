@@ -509,6 +509,25 @@ theorem PEquivalent.trans_of_middle_isIrreducible {s₁ s₂ s₃ : ℕ}
     obtain rfl : MB = M₂ := eq_of_heq hMB
     exact h3B
 
+/-- *Canonical-form constructor for P-equivalence through a common
+irreducible middle.* If two methods `M`, `M'` both P-reduce to a common
+intermediate `N`, they are P-equivalent (def:381F).
+
+The `_hN : N.IsIrreducible` hypothesis is documentation-only: the
+existential constructor of `PEquivalent` does not consume it. It is
+included so that downstream callers signal the intended use case
+(reducing to a normal form) at the source-code level by supplying an
+`IsIrreducible` proof at the `_hN` slot. The proof would still go
+through with a weaker (or no) hypothesis; the strength is a contract,
+not a logical requirement. Cycle 190 deliverable A. -/
+theorem PEquivalent.eq_of_isIrreducible_of_middle
+    {s s' sBar : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} {N : RKTableau sBar}
+    (_hN : N.IsIrreducible)
+    (h₁ : PReducesTo M N) (h₂ : PReducesTo M' N) :
+    PEquivalent M M' :=
+  ⟨sBar, N, h₁, h₂⟩
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step
@@ -1153,5 +1172,48 @@ theorem paddedEuler_phiEquivalent_zeroReduced_via_PEquivalent :
     PhiEquivalent paddedEuler
       (paddedEuler.zeroReduced ![true, false]) :=
   paddedEuler_pEquivalent_zeroReduced.toPhiEquivalent
+
+/-- The 1-stage tableau `paddedEuler.pReduced pairPartition` is irreducible
+(neither 0-reducible nor P-reducible). Lifted from the inline witness in
+the `paddedEuler.PEquivalent paddedEuler` example earlier in this file
+(cycle 188 era) so that downstream witnesses can cite it as a named
+helper. Cycle 190 deliverable B prerequisite. -/
+private theorem paddedEuler_pReduced_pairPartition_isIrreducible :
+    (paddedEuler.pReduced pairPartition).IsIrreducible := by
+  have hMidPReducedB :
+      (paddedEuler.pReduced pairPartition).b 0 = 1 := by
+    show (∑ i ∈ Finset.univ.filter
+              (fun i : Fin 2 => pairPartition.block i = 0),
+            paddedEuler.b i) = 1
+    have hFilter :
+        (Finset.univ.filter
+            (fun i : Fin 2 => pairPartition.block i = 0))
+          = Finset.univ := by
+      ext i
+      simp [pairPartition]
+    rw [hFilter]
+    simp [paddedEuler, Fin.sum_univ_two]
+  refine ⟨?_, ?_⟩
+  · rintro ⟨inP1, ⟨i, hiF⟩, hbZero, _⟩
+    fin_cases i
+    have hb0 : (paddedEuler.pReduced pairPartition).b 0 = 0 :=
+      hbZero 0 hiF
+    linarith [hMidPReducedB]
+  · rintro ⟨sBar, hLt, P, _⟩
+    obtain rfl : sBar = 0 := Nat.lt_one_iff.mp hLt
+    exact (P.block 0).elim0
+
+/-- Non-vacuity witness for `PEquivalent.eq_of_isIrreducible_of_middle`:
+`paddedEuler` is P-equivalent to itself, witnessed via the common
+irreducible middle `paddedEuler.pReduced pairPartition`. Exercises the
+canonical-form constructor on a non-trivial heterogeneous-stage
+(2 ↦ 1) reduction chain, going through both the new constructor and
+the existing irreducibility witness. Cycle 190 deliverable B. -/
+theorem paddedEuler_pEquivalent_self_via_pReduced :
+    paddedEuler.PEquivalent paddedEuler :=
+  RKTableau.PEquivalent.eq_of_isIrreducible_of_middle
+    paddedEuler_pReduced_pairPartition_isIrreducible
+    paddedEuler_pReducesTo_pReduced
+    paddedEuler_pReducesTo_pReduced
 
 end OpenMath.Chapter3.Section381
