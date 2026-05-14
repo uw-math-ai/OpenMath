@@ -130,7 +130,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:352A` **Padé approximations to the exponential function** (§352)
 - [x] `thm:357C` **Algebraic Stability Implies BN Stability** (§357) — `OpenMath/Chapter3/Section357.lean`
 - [ ] `thm:363A` **Singly implicit methods** (§363)
-- [ ] `thm:384A` **A homomorphism between two groups** (§384)
+- [~] `thm:384A` **A homomorphism between two groups** (§384) — partial: cycle 223 shipped the `PhiEquivalent`-side setoids (`PhiEquivalent.setoid` / `setoidSigma`); cycles 224–225 shipped per-stage `derivativeWeight_compose_castAdd` / `_natAdd` infrastructure; cycle 226 shipped `derivativeWeightWithSrc_subst_M₁` + `compose_elementaryWeight_decomp` + the left-action `compose_phiEquivalent_compose_left` (`PhiEquivalent M₁ M₁'` ⟹ `PhiEquivalent (M₁.compose M₂) (M₁'.compose M₂)`). Right-action (varying M₂) blocked on Connes-Kreimer-style M₂-side sum equality; see `.prover-state/issues/cycle_226_compose_phi_right_action.md`.
 - [ ] `def:388F` **Algebraic condition for group commutators** (§388)
 - [ ] `thm:315A` **Conditions for order** (§315)
 - [ ] `thm:353A` **A-stability of Gauss and related methods** (§353)

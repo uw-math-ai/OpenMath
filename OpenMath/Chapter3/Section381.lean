@@ -2748,6 +2748,117 @@ end
 
 end
 
+/- ### `derivativeWeightWithSrc` substitution under `PhiEquivalent M₁ M₁'`
+(cycle 226)
+
+When the "source" tableau `M₁` is replaced by a Φ-equivalent partner
+`M₁'`, the helper `derivativeWeightWithSrc` is unchanged on every
+tree and stage. The mutual induction mirrors cycle 225's
+`derivativeWeight_compose_natAdd` template: at each leaf-attachment
+point `hPhi₁ t` substitutes `M₁'.elementaryWeight t` for
+`M₁.elementaryWeight t`; the recursive call propagates the
+substitution through `derivativeWeightWithSrc`'s self-reference. -/
+
+section
+open OpenMath.Chapter3.Section310
+
+mutual
+  /-- *Per-stage source-method `M₁`-substitution* for
+  `derivativeWeightWithSrc`. Companion to
+  `derivativeWeightWithSrcProd_subst_M₁`. -/
+  private theorem derivativeWeightWithSrc_subst_M₁ {s₁ s₁' s₂ : ℕ}
+      {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+      (M₂ : RKTableau s₂) (hPhi₁ : PhiEquivalent M₁ M₁') :
+      ∀ (t : RootedTree) (i : Fin s₂),
+        M₂.derivativeWeightWithSrc M₁ i t
+          = M₂.derivativeWeightWithSrc M₁' i t
+    | RootedTree.mk children, i => by
+        show M₂.derivativeWeightWithSrcProd M₁ i children
+              = M₂.derivativeWeightWithSrcProd M₁' i children
+        exact derivativeWeightWithSrcProd_subst_M₁ M₂ hPhi₁ children i
+
+  /-- List-helper companion to `derivativeWeightWithSrc_subst_M₁`. -/
+  private theorem derivativeWeightWithSrcProd_subst_M₁ {s₁ s₁' s₂ : ℕ}
+      {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+      (M₂ : RKTableau s₂) (hPhi₁ : PhiEquivalent M₁ M₁') :
+      ∀ (children : List RootedTree) (i : Fin s₂),
+        M₂.derivativeWeightWithSrcProd M₁ i children
+          = M₂.derivativeWeightWithSrcProd M₁' i children
+    | [], _ => rfl
+    | t :: ts, i => by
+        show (M₁.elementaryWeight t
+                + ∑ j : Fin s₂,
+                    M₂.A i j * M₂.derivativeWeightWithSrc M₁ j t)
+              * M₂.derivativeWeightWithSrcProd M₁ i ts
+            = (M₁'.elementaryWeight t
+                + ∑ j : Fin s₂,
+                    M₂.A i j * M₂.derivativeWeightWithSrc M₁' j t)
+              * M₂.derivativeWeightWithSrcProd M₁' i ts
+        rw [derivativeWeightWithSrcProd_subst_M₁ M₂ hPhi₁ ts i]
+        congr 1
+        rw [hPhi₁ t]
+        congr 1
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        rw [derivativeWeightWithSrc_subst_M₁ M₂ hPhi₁ t j]
+end
+
+end
+
+section
+open OpenMath.Chapter3.Section310
+
+/-- *Cycle 225's elementary-weight decomposition of `compose`.* For
+any composite `M₁.compose M₂` and any rooted tree `t`, the elementary
+weight splits as `M₁.elementaryWeight t` (the top-block contribution,
+collapsed via cycle 224's `derivativeWeight_compose_castAdd`) plus
+the bottom-block sum `∑ M₂.b i * M₂.derivativeWeightWithSrc M₁ i t`
+(via cycle 225's `derivativeWeight_compose_natAdd`).
+
+Stated explicitly here so cycle 226's `compose_phiEquivalent_compose_left`
+can rewrite each side of its goal into this canonical form. -/
+private theorem compose_elementaryWeight_decomp {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (t : RootedTree) :
+    (M₁.compose M₂).elementaryWeight t
+      = M₁.elementaryWeight t
+        + ∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t := by
+  show ∑ j : Fin (s₁ + s₂),
+          (M₁.compose M₂).b j * (M₁.compose M₂).derivativeWeight j t
+        = (∑ k : Fin s₁, M₁.b k * M₁.derivativeWeight k t)
+            + ∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t
+  rw [Fin.sum_univ_add]
+  congr 1
+  · refine Finset.sum_congr rfl (fun k _ => ?_)
+    rw [compose_b_castAdd, derivativeWeight_compose_castAdd M₁ M₂ t k]
+  · refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [compose_b_natAdd, derivativeWeight_compose_natAdd M₁ M₂ t i]
+
+/-- *Φ-equivalence respects `compose` on the left.* If
+`PhiEquivalent M₁ M₁'`, then composing with any fixed second factor
+`M₂` preserves Φ-equivalence:
+`PhiEquivalent (M₁.compose M₂) (M₁'.compose M₂)`.
+
+This is the "left-action" half of the §383 group-homomorphism
+package (cycle 226). The "right-action" half (varying `M₂`) is the
+structurally harder Connes-Kreimer-style direction; see
+`.prover-state/issues/cycle_226_compose_phi_right_action.md` for the
+issue and the path forward in cycle 227+.
+
+Proof: apply cycle 225's `compose_elementaryWeight_decomp` to both
+sides. The top halves agree by `hPhi₁ t`; the bottom halves agree by
+cycle 226's `derivativeWeightWithSrc_subst_M₁`. -/
+theorem compose_phiEquivalent_compose_left {s₁ s₁' s₂ : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    (M₂ : RKTableau s₂) (hPhi₁ : PhiEquivalent M₁ M₁') :
+    PhiEquivalent (M₁.compose M₂) (M₁'.compose M₂) := by
+  intro t
+  rw [compose_elementaryWeight_decomp M₁ M₂ t,
+      compose_elementaryWeight_decomp M₁' M₂ t, hPhi₁ t]
+  congr 1
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  rw [derivativeWeightWithSrc_subst_M₁ M₂ hPhi₁ t i]
+
+end
+
 /-- *Composition preserves explicitness.* The composite `M₁.compose M₂`
 is explicit iff both factors are. The four blocks behave as follows:
 top-left `M₁.A i j` (zero when `i ≤ j` by `M₁.IsExplicit`); top-right
@@ -3814,5 +3925,32 @@ example :
       : Quotient RKTableau.Equivalent.setoidSigma.{0})
       = (1 : Quotient RKTableau.Equivalent.setoidSigma.{0}) :=
   inv_mul_cancel _
+
+/-- *Cycle 226 non-vacuity for `compose_phiEquivalent_compose_left`
+(homogeneous).* Trivially `paddedEuler.compose paddedEuler` is
+Φ-equivalent to itself via the reflexive left-action invocation. -/
+example :
+    PhiEquivalent
+        (paddedEuler.compose paddedEuler)
+        (paddedEuler.compose paddedEuler) :=
+  RKTableau.compose_phiEquivalent_compose_left paddedEuler
+    (PhiEquivalent.refl paddedEuler)
+
+/-- *Cycle 226 non-vacuity for `compose_phiEquivalent_compose_left`
+(heterogeneous-stage).* Φ-equivalence of `paddedEuler` and its
+P-reduction `paddedEuler.pReduced pairPartition` (cycle 187's
+`pReduced_phiEquivalent` on the cycle 186 P-reducibility witness)
+lifts through left-composition with a fixed second factor
+`paddedEuler` to a heterogeneous-stage Φ-equivalence:
+`paddedEuler.compose paddedEuler` (4 stages) is Φ-equivalent to
+`(paddedEuler.pReduced pairPartition).compose paddedEuler`
+(3 stages = 1 + 2). -/
+example :
+    PhiEquivalent
+        (paddedEuler.compose paddedEuler)
+        ((paddedEuler.pReduced pairPartition).compose paddedEuler) :=
+  RKTableau.compose_phiEquivalent_compose_left paddedEuler
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition)
 
 end OpenMath.Chapter3.Section381
