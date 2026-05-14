@@ -482,3 +482,131 @@ hand, the natural next deliverables are:
 
 These are cycle 219+ work; cycle 218 ships `composeQ` and the
 bracketed corollary, period.
+
+---
+
+## Cycle 219 update — §382 group identity element shipped
+
+Cycle 219 closes the **identity element** of the §382 group structure
+on `Quotient Equivalent.setoidSigma`, the first of the four deliverables
+sketched in the cycle 218 outlook above (identity, inverse,
+associativity, and the `Group` instance package).
+
+### Six new symbols (all in `OpenMath/Chapter3/Section381.lean`, inside
+`namespace OpenMath.Chapter3.Section312.RKTableau`, immediately after
+cycle 218's `composeQ_eq_of_equivalent`):
+
+1. **`RKTableau.id : RKTableau 0`** — the 0-stage no-op tableau.
+   Defined as `{A := 0, b := 0, c := 0}` — the `Zero` instances on
+   `Matrix (Fin 0) (Fin 0) ℝ` and `Fin 0 → ℝ` (Pi.Zero) infer cleanly;
+   no `Fin.elim0` needed in the body. **`explicitEuler` is NOT the
+   identity** — it advances by `H • f y₀`, which is exactly what we
+   don't want from a no-op tableau. The 0-stage tableau is the unique
+   no-op (its `b` sum is empty, so the output update is `y₀ + h • 0 = y₀`).
+
+2. **`@[simp] RKTableau.id_isRKOneStep_iff`** — the load-bearing
+   reduction lemma `RKTableau.id.IsRKOneStep f y₀ h y₁ ↔ y₁ = y₀`.
+   Both directions close by `simpa` through Lean's empty `Fin 0` sum
+   collapse (no explicit `Fin.sum_univ_zero` or `Finset.sum_empty`
+   needed — `simp` handles it via the universe-zero sum lemmas already
+   in the default simp set). The reverse direction provides
+   `Fin.elim0` as the stage tuple witness.
+
+3. **`RKTableau.compose_id_equivalent.{u} {s} (M : RKTableau s) :
+   @Equivalent.{u} (s + 0) s (M.compose RKTableau.id) M`** — right
+   identity law at the `Equivalent` level. HOMOGENEOUS-stage since
+   `s + 0 = s` is definitionally equal in Lean 4 (`Nat.add` recurses
+   on the second argument), so no HEq plumbing is needed despite the
+   heterogeneous-looking signature. Proof sketch: extract intermediate
+   `y_mid` from the composite step via cycle 214's
+   `compose_isRKOneStep_iff.mp`, collapse the right-factor
+   `RKTableau.id.IsRKOneStep f y_mid H y₁` to `y₁ = y_mid` via the new
+   `id_isRKOneStep_iff`, rewrite, and discharge the remaining `y_mid =
+   y₁'` against `M.equivalent_self` (cycle 203) applied at `y₀`.
+
+4. **`RKTableau.id_compose_equivalent.{u} {s} (M : RKTableau s) :
+   @Equivalent.{u} (0 + s) s (RKTableau.id.compose M) M`** — left
+   identity law at the `Equivalent` level. Unlike (3), the stage
+   arithmetic `0 + s = s` is NOT definitionally equal (it requires
+   `Nat.zero_add`), so this is a genuinely heterogeneous-stage
+   `@Equivalent (0 + s) s` claim. However, the proof works at the
+   abstract `IsRKOneStep` level which never inspects stage counts —
+   identical in shape to cycle 217's heterogeneous
+   `compose_equivalent_compose`. Mirror of (3) with sides swapped:
+   factor via `compose_isRKOneStep_iff`, collapse the left-factor
+   `id.IsRKOneStep f y₀ H y_mid` to `y_mid = y₀` via
+   `id_isRKOneStep_iff`, rewrite `h_M_step` to fire from `y₀`, then
+   discharge against `M.equivalent_self`.
+
+5. **`RKTableau.composeQ_id_left.{u} (q : Quotient
+   Equivalent.setoidSigma.{u}) : composeQ ⟦⟨0, RKTableau.id⟩⟧ q = q`** —
+   the quotient-level left identity law. Immediate consequence of (4)
+   via `Quotient.inductionOn` on `q`, destructure the underlying
+   `⟨s, M⟩`, reduce `composeQ ⟦⟨0, id⟩⟧ ⟦⟨s, M⟩⟧` to `⟦⟨0+s, id.compose
+   M⟩⟧` (definitional through `Quotient.lift₂_mk`), and apply
+   `Quotient.sound (id_compose_equivalent M)` to identify the two
+   classes.
+
+6. **`RKTableau.composeQ_id_right.{u} (q : Quotient
+   Equivalent.setoidSigma.{u}) : composeQ q ⟦⟨0, RKTableau.id⟩⟧ = q`** —
+   the quotient-level right identity law. Symmetric to (5), uses
+   `compose_id_equivalent` from (3).
+
+### Non-vacuity (P6)
+
+Two `example`s in `namespace OpenMath.Chapter3.Section381` (at the end
+of the file, after cycle 218's `composeQ` non-vacuity examples)
+exercise the quotient-level laws on the cycle 030 backbone:
+`composeQ ⟦⟨0, RKTableau.id⟩⟧ ⟦⟨2, paddedEuler⟩⟧ = ⟦⟨2, paddedEuler⟩⟧`
+and the right-handed mirror.
+
+### Risk retrospective (cycle 219 strategy §C)
+
+- **R1 (empty-Finset.sum unfolding)**: did NOT fire — `simpa` on both
+  directions of `id_isRKOneStep_iff` handles the empty `Fin 0` sum
+  collapse, the `h • 0 = 0` simplification, and the `y₀ + 0 = y₀`
+  cleanup automatically; no explicit `Fin.sum_univ_zero` or
+  `Finset.sum_empty` needed.
+- **R2 (`Fin.elim0` vs `0` for `RKTableau.id`'s body)**: did NOT fire
+  — `0` worked cleanly for all three RKTableau fields (`A`, `b`, `c`).
+  The `Zero` instances are inferred via Matrix's `Pi.Zero` and the
+  function-space `Pi.Zero`.
+- **R3 (heterogeneous universe annotation in P4)**: did NOT fire —
+  explicit `.{u}` on `Equivalent` works on first compile.
+- **R4 (`compose_isRKOneStep_iff` arity at `M = id`)**: did NOT fire —
+  Lean infers `s₁ = 0` from `RKTableau.id`'s type without explicit
+  annotation (no need to pass `s₁ := 0` explicitly).
+- **R5 (`Quotient.ind` motive inference)**: did NOT fire — chose
+  `Quotient.inductionOn q` over `Quotient.ind` for cleaner syntax (the
+  `motive` is inferred from the goal type without explicit
+  specification).
+- **R6 (spurious `.{u}` on `RKTableau`)**: did NOT fire — universe
+  annotations applied only to `Equivalent.{u}` and
+  `Equivalent.setoidSigma.{u}`, never to `RKTableau` references
+  (mindful of cycle 218's dead end where this fired).
+
+All six new symbols `[propext, Classical.choice, Quot.sound]`
+axiom-clean (no `sorryAx`); cycle 218's `composeQ` and
+`composeQ_eq_of_equivalent` re-verified axiom-clean — no regressions.
+
+### Cycle 220+ outlook — §382 inverse element
+
+The natural next step is the **inverse element**. Butcher §382 defines
+the inverse method by negating the step size: applying `M` with
+step `-h` undoes one step of `M` with step `+h`. The Lean construction
+needs reading of Butcher §382's inverse-construction formula carefully
+— this is a cycle 220 deliverable with its own pre-flight scoping.
+
+Once inverses are in hand, **associativity** is cycle 221+: an
+`Equivalent`-level `compose_assoc` claim, lifted to the quotient via
+`Quotient.ind₃` + `Quotient.sound`. This finesses cycle 210's
+deferred `compose_assoc` HEq plumbing (the on-the-nose `s₁ + (s₂ + s₃)
+= (s₁ + s₂) + s₃` HEq dance is replaced by an abstract-`N`-level
+`Equivalent` claim). See `.prover-state/issues/compose_assoc_HEq_plumbing.md`
+for the cycle 219 update noting this finesse.
+
+After §382 group structure closes (identity + inverse + associativity),
+**`instance : Group (Quotient Equivalent.setoidSigma)`** is cycle 222+
+bookkeeping. From there, §383 (group homomorphisms via Φ), §384
+(homomorphism to the elementary-weight group), and §388 (subgroups
+and quotient groups) all consume the `Group` instance directly.

@@ -527,3 +527,5 @@ foundation: `RKStageMap` def + non-vacuity witness on
 `paddedEuler` as the shortest path to closing
 `PEquivalent → Equivalent`), per cycle 201 strategy. Section441
 Phase C.2 remains GPFS-blocked.
+2026-05-14 02:32:53
+  Cycle 219 — 36th consecutive timeout (EXIT=124 after 300s, near-zero CPU). Skipping §441 path per strategy §A.

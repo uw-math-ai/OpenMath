@@ -148,3 +148,46 @@ textbook statement of "group of RK methods". If Butcher works with an
 equivalence quotient, plan `thm:382A` directly without compose_assoc.
 If Butcher works with raw RKTableau, plan a cycle to investigate
 Option B vs Option C.
+
+---
+
+## Cycle 219 update — finessable via `Quotient.sound`
+
+With cycle 218's `composeQ : Quotient Equivalent.setoidSigma →
+Quotient Equivalent.setoidSigma → Quotient Equivalent.setoidSigma`
+and cycle 219's identity element (`RKTableau.id` + four absorption
+lemmas on `composeQ`), the on-the-nose `compose_assoc` HEq blocker
+documented above is **finessable** through `Quotient.sound`:
+
+- The on-the-nose statement `M₁.compose (M₂.compose M₃) =
+  (M₁.compose M₂).compose M₃` requires HEq plumbing because the
+  stage-count types `RKTableau (s₁ + (s₂ + s₃))` and
+  `RKTableau ((s₁ + s₂) + s₃)` are NOT definitionally equal in
+  Lean 4 (they require `Nat.add_assoc`).
+
+- However, the **quotient-level** statement
+  `composeQ (composeQ p q) r = composeQ p (composeQ q r)` for
+  `p q r : Quotient Equivalent.setoidSigma` does NOT require any
+  HEq plumbing: the stage-count Σ-projection lives *inside* the
+  representative, not in the output type. So associativity reduces
+  to an `Equivalent`-level claim
+  `@Equivalent (s₁ + (s₂ + s₃)) ((s₁ + s₂) + s₃)
+    (M₁.compose (M₂.compose M₃)) ((M₁.compose M₂).compose M₃)`,
+  which can be proved by abstract-`N`-level reasoning over
+  `IsRKOneStep` (the same technique cycle 217 used for
+  heterogeneous-stage `compose_equivalent_compose`).
+
+- The `Quotient`-level `composeQ_assoc` theorem then becomes a
+  `Quotient.inductionOn₃` + `Quotient.sound` corollary of the
+  `Equivalent`-level associativity claim — identical in shape to
+  cycle 219's `composeQ_id_left`/`composeQ_id_right`.
+
+This is the cycle 221+ entry point. Cycle 220's deliverable is the
+**inverse element** (Butcher §382's inverse construction); cycle 221+
+ships the `Equivalent`-level associativity + the `composeQ_assoc`
+corollary; cycle 222+ packages the four (`Group`) axioms as
+`instance : Group (Quotient Equivalent.setoidSigma)`.
+
+The on-the-nose `compose_assoc` blocker documented above remains
+unresolved at the `RKTableau`-level, but it is no longer load-bearing
+for the §382 group structure — the quotient route bypasses it.

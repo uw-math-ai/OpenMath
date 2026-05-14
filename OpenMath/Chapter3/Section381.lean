@@ -2783,6 +2783,125 @@ theorem composeQ_eq_of_equivalent.{u}
   exact Quotient.sound
     (compose_equivalent_compose M₁ M₁' M₂ M₂' hEq₁ hEq₂)
 
+/-- *The §382 group identity element* — the trivial 0-stage Runge–Kutta
+tableau. Its single one-step output is `y₀` (the input value), because
+the empty stage tuple gives an empty sum in the output formula
+`y₁ = y₀ + h • ∑ (i : Fin 0), b i • f (Y i) = y₀ + h • 0 = y₀`.
+
+Together with `compose` (cycle 209), this furnishes the identity
+element of the §382 group of equivalence classes of Runge–Kutta methods
+(Butcher §382). The left and right absorption laws `id.compose M ≡ M`
+and `M.compose id ≡ M` are proved as `id_compose_equivalent` and
+`compose_id_equivalent` below; their quotient-level corollaries
+`composeQ_id_left` and `composeQ_id_right` follow by `Quotient.ind` +
+`Quotient.sound`.
+
+Note: `explicitEuler` is *not* the identity — it advances by
+`H • f y₀`, which is exactly what we don't want from a no-op tableau.
+The 0-stage tableau is the unique no-op. -/
+def id : RKTableau 0 where
+  A := 0
+  b := 0
+  c := 0
+
+/-- *The 0-stage method is a no-op.* `RKTableau.id` produces output
+`y₁` from `y₀` iff `y₁ = y₀`: there are no stages to compute, so the
+output sum `∑ (i : Fin 0), id.b i • f (Y i)` is empty and the update
+formula reduces to `y₁ = y₀ + h • 0 = y₀`. Load-bearing reduction
+lemma for the §382-group identity-element absorption laws below. -/
+@[simp] theorem id_isRKOneStep_iff
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (y₀ : N) (h : ℝ) (y₁ : N) :
+    RKTableau.id.IsRKOneStep f y₀ h y₁ ↔ y₁ = y₀ := by
+  constructor
+  · rintro ⟨_, _, hout⟩
+    simpa using hout
+  · intro hy
+    refine ⟨Fin.elim0, ?_, ?_⟩
+    · intro i; exact Fin.elim0 i
+    · simpa using hy
+
+/-- *Right identity law for `RKTableau.compose` at the `Equivalent`
+level — half of the §382 group identity element.* Composing any
+`M : RKTableau s` with the 0-stage no-op `RKTableau.id` on the right
+produces a method equivalent to `M`. The proof factors a composite
+`(M.compose id)` step via cycle 214's `compose_isRKOneStep_iff`,
+collapses the second factor's `id.IsRKOneStep` to a trivial output
+equality via `id_isRKOneStep_iff` (cycle 219 P2), and discharges
+the remaining uniqueness against `M.equivalent_self` (cycle 203).
+
+Note: the stage-count arithmetic `s + 0 = s` is *definitionally* equal
+in Lean 4 (`Nat.add` recurses on the second argument), so this is a
+HOMOGENEOUS-stage `@Equivalent s s` claim disguised as the
+heterogeneous `@Equivalent (s + 0) s` — no HEq plumbing needed. -/
+theorem compose_id_equivalent.{u} {s : ℕ} (M : RKTableau s) :
+    @Equivalent.{u} (s + 0) s (M.compose RKTableau.id) M := by
+  intro N _ _ _ f L hL
+  obtain ⟨h₀, hh₀_pos, hM_uniq⟩ := M.equivalent_self f L hL
+  refine ⟨h₀, hh₀_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y₁ y₁' h_compose h_M
+  obtain ⟨y_mid, h_M_step, h_id_step⟩ :=
+    (compose_isRKOneStep_iff M RKTableau.id f y₀ H y₁).mp h_compose
+  rw [id_isRKOneStep_iff] at h_id_step
+  rw [h_id_step]
+  exact hM_uniq y₀ H hH_pos hH_le y_mid y₁' h_M_step h_M
+
+/-- *Left identity law for `RKTableau.compose` at the `Equivalent`
+level — the other half of the §382 group identity element.* Composing
+the 0-stage no-op `RKTableau.id` on the left of any `M : RKTableau s`
+produces a method equivalent to `M`. Unlike the right identity law
+(`compose_id_equivalent`), the stage arithmetic `0 + s = s` is NOT
+definitionally equal (it requires `Nat.zero_add`), so this is a
+genuinely heterogeneous-stage `@Equivalent (0 + s) s` claim. The
+proof works at the abstract `IsRKOneStep` level which never inspects
+stage counts — identical in shape to cycle 217's heterogeneous
+`compose_equivalent_compose`. Mirror of `compose_id_equivalent` with
+sides swapped: factor via `compose_isRKOneStep_iff`, collapse the
+left-factor `id.IsRKOneStep` to `y_mid = y₀` via `id_isRKOneStep_iff`,
+rewrite the right-factor `M.IsRKOneStep` to fire from `y₀`, then
+discharge against `M.equivalent_self`. -/
+theorem id_compose_equivalent.{u} {s : ℕ} (M : RKTableau s) :
+    @Equivalent.{u} (0 + s) s (RKTableau.id.compose M) M := by
+  intro N _ _ _ f L hL
+  obtain ⟨h₀, hh₀_pos, hM_uniq⟩ := M.equivalent_self f L hL
+  refine ⟨h₀, hh₀_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y₁ y₁' h_compose h_M
+  obtain ⟨y_mid, h_id_step, h_M_step⟩ :=
+    (compose_isRKOneStep_iff RKTableau.id M f y₀ H y₁).mp h_compose
+  rw [id_isRKOneStep_iff] at h_id_step
+  rw [h_id_step] at h_M_step
+  exact hM_uniq y₀ H hH_pos hH_le y₁ y₁' h_M_step h_M
+
+/-- *Left identity law for `composeQ` at the quotient level —
+the bracketed (382f) form of the §382 group identity element.* The
+equivalence class `⟦⟨0, id⟩⟧` is a left identity for `composeQ`:
+`composeQ ⟦⟨0, id⟩⟧ q = q` for every `q`. Immediate `Quotient.ind` +
+`Quotient.sound` consequence of `id_compose_equivalent` (cycle 219
+P4). -/
+theorem composeQ_id_left.{u} (q : Quotient Equivalent.setoidSigma.{u}) :
+    composeQ
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩) q
+      = q := by
+  refine Quotient.inductionOn q ?_
+  rintro ⟨s, M⟩
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (id_compose_equivalent M)
+
+/-- *Right identity law for `composeQ` at the quotient level —
+the bracketed (382f) form of the §382 group identity element.* The
+equivalence class `⟦⟨0, id⟩⟧` is a right identity for `composeQ`:
+`composeQ q ⟦⟨0, id⟩⟧ = q` for every `q`. Immediate `Quotient.ind` +
+`Quotient.sound` consequence of `compose_id_equivalent` (cycle 219
+P3). -/
+theorem composeQ_id_right.{u} (q : Quotient Equivalent.setoidSigma.{u}) :
+    composeQ q
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩)
+      = q := by
+  refine Quotient.inductionOn q ?_
+  rintro ⟨s, M⟩
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_id_equivalent M)
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -2947,5 +3066,35 @@ example :
   RKTableau.composeQ_eq_of_equivalent
     paddedEuler_equivalent_pReduced
     paddedEuler_equivalent_pReduced
+
+/-- *Non-vacuity for `composeQ_id_left` (cycle 219 P6).* The
+quotient-level left absorption law exercised on the cycle 030
+non-vacuity backbone: pre-composing the class of `⟨0, RKTableau.id⟩`
+with the class of `⟨2, paddedEuler⟩` returns the class of
+`⟨2, paddedEuler⟩` unchanged. -/
+example :
+    RKTableau.composeQ
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨0, RKTableau.id⟩)
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+      = Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩ :=
+  RKTableau.composeQ_id_left _
+
+/-- *Non-vacuity for `composeQ_id_right` (cycle 219 P6).* The
+quotient-level right absorption law exercised on the cycle 030
+non-vacuity backbone: post-composing the class of `⟨2, paddedEuler⟩`
+with the class of `⟨0, RKTableau.id⟩` returns the class of
+`⟨2, paddedEuler⟩` unchanged. -/
+example :
+    RKTableau.composeQ
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨0, RKTableau.id⟩)
+      = Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩ :=
+  RKTableau.composeQ_id_right _
 
 end OpenMath.Chapter3.Section381
