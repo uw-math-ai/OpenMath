@@ -1894,6 +1894,19 @@ theorem Equivalent.trans.{u} {s s' s'' : ℕ}
   calc y₁ = y₂ := hConcl₁ h hh_pos hh_le_₁ y₁ y₂ hY₁ hY₂
     _ = y₃ := hConcl₂ h hh_pos hh_le_₂ y₂ y₃ hY₂ hY₃
 
+/-- *Setoid instance on fixed-stage `RKTableau s`.* Combines cycles 203
+(reflexivity), 204 (symmetry), 206 (transitivity) into the standard
+Mathlib `Setoid` typeclass, enabling `Quotient (RKTableau.Equivalent.setoid s)`
+as the natural ambient type for fixed-stage equivalence classes of
+Runge–Kutta methods. The heterogeneous-stages quotient required by
+Butcher's §382 group construction (where two methods with different `s`,
+`s'` may live in the same class via the `Equivalent.{u}` heterogeneous
+predicate) is a separate Σ-typed construction; see
+`.prover-state/issues/thm_382A_path.md` for the path. -/
+instance Equivalent.setoid.{u} (s : ℕ) : Setoid (RKTableau s) where
+  r M M' := @Equivalent.{u} _ _ M M'
+  iseqv := ⟨equivalent_self, @Equivalent.symm.{u} _ _, @Equivalent.trans.{u} _ _ _⟩
+
 /-- *Per-step P-reduction preserves equivalence.* If `M` is P-reducible
 via partition `P` (def:381D), then `M` is equivalent (def:381A) to the
 P-reduced method `M.pReduced P`. Textbook §380 page 304: the stage
@@ -2272,6 +2285,24 @@ setting. -/
 theorem paddedEuler_equivalent_self :
     paddedEuler.Equivalent paddedEuler :=
   paddedEuler.equivalent_self
+
+/-- *Non-vacuity for `Equivalent.setoid`.* The setoid's reflexivity
+applied to `paddedEuler` reproduces cycle 204's
+`paddedEuler_equivalent_self` (axiom-clean witness that `paddedEuler` is
+self-equivalent at stage count 2). Exercises the typeclass lookup and
+confirms `Setoid.refl _` resolves via the cycle 211 instance. -/
+example : @Setoid.r _ (RKTableau.Equivalent.setoid 2) paddedEuler paddedEuler := by
+  show paddedEuler.Equivalent paddedEuler
+  exact paddedEuler.equivalent_self
+
+/-- *Non-vacuity for `Equivalent.setoid`'s `Quotient` interaction.*
+Forming the `Quotient`-class of `paddedEuler` under the cycle 211 setoid
+yields a well-typed term of type `Quotient (RKTableau.Equivalent.setoid 2)`;
+two equal underlying tableaux project to equal classes via `Quotient.mk`.
+Exercises the setoid through the standard Mathlib `Quotient` API. -/
+example : @Quotient.mk _ (RKTableau.Equivalent.setoid 2) paddedEuler
+        = @Quotient.mk _ (RKTableau.Equivalent.setoid 2) paddedEuler :=
+  rfl
 
 /-- *Non-vacuity witness for `PReducesTo.toEquivalent` (cycle 207)
 exercising the `step` constructor.* `paddedEuler` is
