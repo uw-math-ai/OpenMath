@@ -1,381 +1,422 @@
-# Cycle 204 Strategy
+# Cycle 206 Strategy — §380 `Equivalent.trans` (option b: side-hypothesis)
 
-## Context recap
+## TL;DR
 
-Cycle 203 shipped `RKTableau.equivalent_self : M.Equivalent M` (33 LOC,
-axiom-clean, `OpenMath/Chapter3/Section381.lean:1714`), closing the
-cycle-030 deferral `equivalent_self_general_deferred.md` via the
-cycles 201/202 Banach contraction foundation. Sorry count = 0;
-axiom-clean across the §380 cluster.
+Ship `Equivalent.trans` in `OpenMath/Chapter3/Section381.lean` via
+**option (b) — add `[CompleteSpace N]` as a side-hypothesis on the
+trans theorem itself**, NOT by strengthening the `Equivalent`
+definition. This completes the refl + symm + trans equivalence-
+relation triple for `Equivalent` and unblocks cycle 207+ work on
+`PReducesTo → Equivalent` (deferred direction (2) of thm:381H).
 
-`§441 Phase C.2` remains GPFS-blocked (23 consecutive timeouts across
-cycles 182–203). The loop-maintainer escalation in
-`phantom_commit_verdict_pattern.md` / `cycle_182_gpfs_slowness.md`
-still stands — worker MUST NOT spend cycle time on this.
+**Skip §441 Phase C.2 GPFS smoke test (26th consecutive).** Standing
+pattern across cycles 182–205; failure mode unchanged (EXIT=124 at
+300s, near-zero CPU, no zombies). Loop-maintainer territory.
 
-The cycle-203 worker's "Suggested next approach" prioritised:
-1. `paddedEuler.equivalent_self` specialisation (≈5 LOC).
-2. `thm:381H` direction 2 (`PEquivalent → Equivalent`) — multi-cycle,
-   ~1.5 cycles by their own estimate.
-3. Tighter sup-norm row bound in `RKStageMap_lipschitz` — cosmetic.
-4. `RKStageMap.fixedPoint_unique` corollary (~15 LOC).
+---
 
-Cycle 204 commits to (1) + (4) + a P3 stretch toward `Equivalent.symm`.
-(2) is explicitly OUT OF SCOPE — see "What NOT to try" §A.
+## §A. §441 Phase C.2 — SKIP (26th consecutive cycle)
 
-## Priority 0 — SKIP §441 Phase C.2 smoke test (24th)
+GPFS pathology on `OpenMath/Chapter4/Section441.lean` has reproduced
+on every smoke-test attempt since cycle 182 (25 consecutive 5-min
+timeouts at near-zero CPU). Per the standing instructions in
+`.prover-state/issues/cycle_182_gpfs_slowness.md`, this is
+**loop-maintainer territory** — workers do NOT edit
+`scripts/autonomous_loop.py` and do NOT attempt the C.2 closure
+until a loop-maintainer signal indicates GPFS recovery.
 
-Per the strategy decision tree in `cycle_182_gpfs_slowness.md`: 23
-consecutive `Section441.lean` smoke-test timeouts (cycles 182–203),
-each at near-zero CPU (~0.2–0.4 % of wall) consistent with GPFS
-olean-loading contention. Worker MUST NOT run `lake env lean
-OpenMath/Chapter4/Section441.lean` this cycle. The cycle 182 draft
-(`.prover-state/cycle_182_draft_section441.lean`) plus the cycle 184
-namespace fix (`Section441.lean:1529`,
-`M.αPoly_… → LinearMultistepMethod.αPoly_…`) remain preserved for
-the loop-maintainer.
+**Action this cycle**: do not run a Section441 smoke test. Do not
+poll for GPFS recovery. Proceed directly to §B.
 
-If the worker wants to do a quick sanity check that GPFS is still
-degraded, run `time timeout 30 ls -la
-OpenMath/Chapter4/Section441.lean` instead (read-only stat, ~10 ms
-on healthy GPFS). Do NOT escalate to a Lean compile.
+If `attempts.md` carries a phantom "factor-of-2 still blocking",
+"Section441.lean missing from commit", or similar §441-related
+verdict, treat as a known stale propagation (per
+`.prover-state/issues/phantom_commit_verdict_pattern.md`) and
+ignore. Phase B closes at `Section441.lean:913`
+(`aPoly_coeff_one_pos_of_stable_preconsistent`, cycle 179); Phase
+C.1 lands at `Section441.lean:455+` (cycle 181). **Do not
+re-audit any of this.**
 
-## Priority 1 — `paddedEuler_equivalent_self` corollary (≤8 LOC)
+---
 
-**Target file**: `OpenMath/Chapter3/Section381.lean`. Place the new
-theorem inside the `OpenMath.Chapter3.Section381` namespace (re-opened
-at line 1750) — i.e. **after** the existing `paddedEuler_*` corollary
-block, **near line 1846** (after
-`paddedEuler_pReducesTo_pReduced_via_pEquivalent_extraction`). This
-keeps all `paddedEuler_*` corollaries grouped.
+## §B. Primary deliverable — `Equivalent.trans` via option (b)
 
-**Statement** (verbatim — copy-paste this):
+### Planner decision: adopt **option (b)** — side-hypothesis variant
+
+Cycle 205's task results flagged this as a planner judgment call.
+Per the worker's framing of the three options:
+
+* **(a) Strengthen `Equivalent` definition with `[CompleteSpace N]`.**
+  Requires re-verifying cycle 030's `equivalent_explicitEuler_self`,
+  cycle 203's `equivalent_self`, cycle 204's `Equivalent.symm` +
+  `paddedEuler_equivalent_self` all compile under the extra
+  typeclass binder. Multi-cycle risk if a downstream witness
+  inadvertently relies on the un-strengthened def.
+
+* **(b) Side-hypothesis on `trans` only.** Add `[CompleteSpace N]`
+  to the trans theorem signature. N is determined by the two
+  Equivalent hypotheses; typeclass synthesis picks up the
+  instance automatically at every call site. **ADOPTED.**
+
+* **(c) Defer trans entirely.** Leaves the equivalence-relation
+  closure with refl + symm only. Rejected — coherence of the
+  presentation suffers, and the cycle 201–205 Banach infrastructure
+  was built specifically to enable this.
+
+### Reasoning for (b)
+
+1. **Zero retroactive cost.** No edits to refl (cycle 203), symm
+   (cycle 204), `paddedEuler_equivalent_self` (cycle 204),
+   `equivalent_explicitEuler_self` (cycle 030). All four remain
+   axiom-clean as currently stated.
+2. **Textbook faithful.** Butcher §380 does not impose completeness
+   — the textbook works over ℝⁿ where it is automatic. Surfacing it
+   as an instance hypothesis on the one consumer that genuinely
+   needs it (trans, which invokes Banach existence on the middle
+   method) is honest about the implementation-level dependency.
+3. **No caller burden in practice.** Every concrete RK method of
+   interest lives on ℝ, ℝⁿ, or a finite-dim normed space — all
+   trivially `CompleteSpace`. The instance fires automatically at
+   every call site.
+4. **Universe-polymorphism alignment.** Per cycle 204's discovery,
+   `Equivalent.{u_1}` is universe-polymorphic; trans needs an
+   explicit shared `.{u}` annotation across both hypotheses and
+   the goal. The side-hypothesis approach makes this annotation
+   localised to one theorem rather than the def.
+
+### Implementation recipe — `Equivalent.trans`
+
+**Placement**: in `OpenMath/Chapter3/Section381.lean`, namespace
+`OpenMath.Chapter3.Section312.RKTableau`, immediately after cycle
+204's `Equivalent.symm`.
+
+**Target signature** (skeleton; adjust to match the exact
+`Equivalent` def shape after reading the source):
 
 ```lean
-/-- *§380 def:381A non-vacuity witness for `paddedEuler`.* The
-2-stage padded explicit-Euler tableau is equivalent (in the sense
-of def:381A) to itself. Immediate corollary of
-`RKTableau.equivalent_self` (cycle 203) specialised at `paddedEuler`;
-strengthens cycle 030's `equivalent_explicitEuler_self` to the
-heterogeneous-stage (`s = 2`) setting. -/
-theorem paddedEuler_equivalent_self :
+theorem Equivalent.trans.{u}
+    {s : ℕ} {N : Type u} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    [CompleteSpace N]
+    {M M' M'' : RKTableau s}
+    (h₁ : Equivalent.{u} (N := N) M M')
+    (h₂ : Equivalent.{u} (N := N) M' M'') :
+    Equivalent.{u} (N := N) M M''
+```
+
+The explicit `.{u}` annotation on the theorem AND on every
+`Equivalent` reference is mandatory — cycle 204's `Equivalent.symm`
+hit an "Application type mismatch: N has type Type u_2 but expected
+Type u_1" error without it. **Preemptively apply.**
+
+### Step 1 — Read the source before writing tactics
+
+Use the Read tool on `OpenMath/Chapter3/Section381.lean` to locate:
+
+1. The `Equivalent` definition (confirm exact quantifier structure:
+   `∃ h₀ > 0, ∀ h, |h| < h₀ → ...` or some variant).
+2. `Equivalent.symm` (cycle 204) — mirror its universe-annotation
+   pattern.
+3. `IsRKOneStep_exists` (cycle 205 P2) — signature and the exact
+   smallness hypothesis it consumes.
+4. `RKStageMap_contracting` (cycle 202) — confirms the smallness
+   threshold is `|h| · L · C < 1` where `C := ∑ᵢⱼ |M.A i j|`.
+5. `equivalent_self` (cycle 203) — its threshold construction
+   `h₀ := 1/(2*(L*C+1))` is the template for the smallness-bridge
+   in trans.
+
+### Step 2 — Bridge the smallness thresholds
+
+This is the only substantive analytical step. Each of M, M', M''
+has its own
+```
+C_X := ∑ᵢⱼ |X.A i j|
+```
+and `IsRKOneStep_exists` requires `|h| · L · C_X < 1` for the
+specific method X on which existence is invoked. For trans, we
+invoke existence on M' (the middle).
+
+If `Equivalent`'s definition is universally quantified over h₀
+existentially (the likely shape based on cycle 203's
+construction), the trans body shape is:
+
+```lean
+-- (Adjust intros to match Equivalent's actual quantifier list.)
+intro f L hf_lip y₀
+obtain ⟨h₀₁, h₀₁_pos, hConcl₁⟩ := h₁ f L hf_lip y₀
+obtain ⟨h₀₂, h₀₂_pos, hConcl₂⟩ := h₂ f L hf_lip y₀
+-- M' existence threshold:
+set C_M' : ℝ := ∑ i, ∑ j, |M'.A i j| with hC_M'_def
+have hC_M'_nn : 0 ≤ C_M' := by
+  apply Finset.sum_nonneg; intro i _
+  apply Finset.sum_nonneg; intro j _
+  exact abs_nonneg _
+set h₀_M' : ℝ := 1 / (2 * (L * C_M' + 1)) with hh₀_M'_def
+have h₀_M'_pos : 0 < h₀_M' := by
+  apply one_div_pos.mpr
+  nlinarith [(L : ℝ).coe_nonneg]  -- L : NNReal ⇒ (L : ℝ) ≥ 0
+refine ⟨min h₀₁ (min h₀₂ h₀_M'), ?_, ?_⟩
+· exact lt_min h₀₁_pos (lt_min h₀₂_pos h₀_M'_pos)
+intro h hh y₁ y₃ hy₁ hy₃
+have hbound_M' : |h| < h₀_M' :=
+  lt_of_lt_of_le hh (le_trans (min_le_right _ _) (min_le_right _ _))
+have h_small_M' : |h| * L * C_M' < 1 := by
+  -- From hbound_M' : |h| < 1/(2*(L*C_M'+1)),
+  -- deduce |h| * (2*(L*C_M'+1)) < 1 via le_div_iff₀.
+  -- Then nlinarith closes |h|·L·C_M' < 1 (cycle 203 recipe).
+  have h2 : 0 < 2 * (L * C_M' + 1) := by nlinarith [(L : ℝ).coe_nonneg]
+  rw [lt_div_iff₀ h2] at hbound_M'  -- ⚠ direction may need adjusting
+  nlinarith [(L : ℝ).coe_nonneg, abs_nonneg h]
+obtain ⟨y₂, hy₂⟩ := M'.IsRKOneStep_exists hf_lip y₀ h_small_M'
+have hbound₁ : |h| < h₀₁ := lt_of_lt_of_le hh (min_le_left _ _)
+have hbound₂ : |h| < h₀₂ :=
+  lt_of_lt_of_le hh (le_trans (min_le_right _ _) (min_le_left _ _))
+calc y₁ = y₂ := hConcl₁ h hbound₁ y₁ y₂ hy₁ hy₂
+  _   = y₃ := hConcl₂ h hbound₂ y₂ y₃ hy₂ hy₃
+```
+
+⚠ This skeleton is a planner sketch — the *exact* shape (intros,
+existential/universal quantifier order, smallness-hypothesis
+direction in `IsRKOneStep_exists`) depends on cycle 205's literal
+signature and on the `Equivalent` def. **Read the source first.**
+
+### Step 3 — Verify axiom-clean
+
+Use:
+```
+lean_verify OpenMath.Chapter3.Section312.RKTableau.Equivalent.trans
+```
+Expected: `[propext, Classical.choice, Quot.sound]` (the standard
+trio). If the proof is fully constructive after `obtain`/`refine`
+resolution, `Classical.choice` may be absent — that's also fine.
+
+### LOC budget
+
+~30 LOC including docstring. Body proper ~20 LOC after the
+smallness-bridge derivation. **If your draft exceeds 50 LOC, stop
+and reconsider** — there is likely a cleaner threshold construction
+you are missing. Cycle 203's `equivalent_self` body is the
+canonical reference for the threshold algebra.
+
+### Aristotle suitability
+
+**Low.** This is careful threshold-bookkeeping with universe-
+annotation requirements and a specific Banach-existence call site.
+Manual closure is faster than prompting Aristotle through the
+.{u} / `IsRKOneStep_exists` / `min` plumbing. **Do not submit.**
+
+---
+
+## §C. Stretch deliverable (only if §B closes with margin)
+
+### `paddedEuler` non-vacuity for `IsRKOneStep_exists` (~5 LOC)
+
+Cycle 205 §D flagged this as a low-priority sanity check. ~5 LOC
+specialisation, e.g.:
+
+```lean
+example (y₀ : ℝ) (h : ℝ)
+    (h_small : |h| * (1 : ℝ) *
+      (∑ i, ∑ j, |paddedEuler.A i j|) < 1) :
+    ∃ y₁, paddedEuler.IsRKOneStep id y₀ h y₁ :=
+  paddedEuler.IsRKOneStep_exists LipschitzWith.id y₀ h_small
+```
+
+Confirms the cycle 205 existence helper fires non-vacuously on a
+concrete tableau over ℝ (where `CompleteSpace ℝ` is automatic).
+
+### Trivial trans corollary at `paddedEuler`
+
+If both §B and the above land, add:
+
+```lean
+theorem paddedEuler_equivalent_self_trans
+    (h₁ : paddedEuler.Equivalent paddedEuler)
+    (h₂ : paddedEuler.Equivalent paddedEuler) :
     paddedEuler.Equivalent paddedEuler :=
-  paddedEuler.equivalent_self
+  h₁.trans h₂
 ```
 
-**Recipe**: one-line `:=` proof. Axiom-clean by transitivity through
-cycle 203's already-axiom-clean theorem.
+Trivially true since trans is total at the same method; the value
+is exercising `[CompleteSpace ℝ]` instance synthesis on a concrete
+method.
 
-**If the dot-notation `paddedEuler.equivalent_self` fails to resolve**
-(e.g. because the namespace isn't open in `Section381`), replace
-with the fully-qualified name:
-`OpenMath.Chapter3.Section312.RKTableau.equivalent_self paddedEuler`.
+**Only attempt §C if §B closes within ~30 LOC and there is genuine
+margin.** Do not let stretch work jeopardise §B.
 
-**Verification**:
-* `lake env lean OpenMath/Chapter3/Section381.lean` — warm rebuild
-  ≤10 s (cycle 203 baseline was 6.9 s).
+---
+
+## §D. What NOT to try
+
+1. **DO NOT attempt option (a) (strengthen the `Equivalent` def).**
+   The planner has decided: option (b) is adopted. No freelancing
+   on the def shape this cycle.
+
+2. **DO NOT modify cycle 203's `equivalent_self`, cycle 204's
+   `Equivalent.symm`, `paddedEuler_equivalent_self`,
+   `RKStageMap_fixedPoint_unique`, or cycle 205's
+   `RKStageMap_fixedPoint_exists`, `IsRKOneStep_exists`.** They
+   are axiom-clean and load-bearing. Touching them risks
+   regression for zero benefit.
+
+3. **DO NOT skip the explicit `.{u}` universe annotation.** Cycle
+   204's `Equivalent.symm` confirmed `Equivalent` is universe-
+   polymorphic, and auto-bound universes pick fresh levels per
+   reference. Apply the annotation preemptively to every
+   `Equivalent` reference in the trans signature AND the goal
+   statement.
+
+4. **DO NOT run a Section441 smoke test.** GPFS pathology
+   unresolved (25 consecutive timeouts). See §A.
+
+5. **DO NOT poll Aristotle.** No outstanding jobs.
+
+6. **DO NOT introduce `axiom` or `constant`.** Cycle 205 shipped
+   `IsRKOneStep_exists` axiom-clean; trans must remain so.
+
+7. **DO NOT raise `maxHeartbeats` above 200000.** If a tactic
+   times out, decompose rather than raise the limit.
+
+8. **DO NOT attempt PReducesTo → Equivalent** (deferred direction
+   (2) of thm:381H). It is the natural cycle 207+ target once
+   trans is in hand — multi-cycle work involving the iteration-
+   invariant "`Yᵢ⁽ᵏ⁾ = Yⱼ⁽ᵏ⁾` for `i, j` in same partition
+   block". Out of scope for cycle 206.
+
+9. **DO NOT freelance into a different §380 entity (`thm:382A`,
+   `thm:382B`, `thm:384A`, `thm:386A`, etc.).** Closing the
+   equivalence-relation triple (refl + symm + trans) is the high-
+   value capstone for the `Equivalent` infrastructure that cycles
+   201–205 built. Ship trans before opening a new sub-cluster.
+
+10. **DO NOT touch `scripts/autonomous_loop.py`.** Loop-maintainer
+    territory.
+
+11. **DO NOT edit `extraction/raw_text/` or
+    `extraction/formalization_data/entities/`.** Both are
+    regenerated.
+
+12. **DO NOT use the `linear_combination` tactic on smallness
+    arithmetic.** Cycle 203 closed `|h| · L · C < 1` from
+    `|h| ≤ h₀ = 1/(2*(L*C+1))` via `le_div_iff₀ + nlinarith`. Reuse
+    that recipe verbatim; don't experiment with alternatives.
+
+---
+
+## §E. Pre-commit faithfulness check
+
+Run the CLAUDE.md checklist on the new `Equivalent.trans`:
+
+* **Tautology check**: conclusion `M.Equivalent M''` is not among
+  the hypotheses `M.Equivalent M'` and `M'.Equivalent M''`.
+  ✓ Pass.
+* **Identity check**: proof is NOT `exact h₁` or `exact h₂` — it
+  constructs the chain through a middle existence witness via
+  `IsRKOneStep_exists`. ✓ Pass.
+* **Hypothesis strength check**: `[CompleteSpace N]` is a new
+  instance hypothesis vs. Butcher's textbook signature. **Document
+  in the docstring**:
+  > Faithfulness note: Butcher §380 does not impose completeness;
+  > we add `[CompleteSpace N]` as an instance hypothesis here
+  > because the proof invokes Banach existence
+  > (`IsRKOneStep_exists`, cycle 205) on the middle method. All
+  > concrete methods of interest over ℝⁿ have `CompleteSpace`
+  > automatic, so this is a no-op at every call site. See
+  > `.prover-state/issues/equivalent_self_general_deferred.md`
+  > for the broader Banach infrastructure context.
+* **Absent theorem check**: no theorem is promised in a comment
+  but unwritten.
+
+---
+
+## §F. Pre-commit hygiene checks
+
+* `lake env lean OpenMath/Chapter3/Section381.lean` exits 0.
+* `grep -c sorry OpenMath/Chapter3/Section381.lean` returns 0.
+* Tautology scanner clean:
+  ```
+  grep -nE ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' \
+    OpenMath/Chapter3/Section381.lean
+  ```
+  returns nothing.
 * `lean_verify
-  OpenMath.Chapter3.Section381.paddedEuler_equivalent_self` →
-  `[propext, Classical.choice, Quot.sound]`.
+  OpenMath.Chapter3.Section312.RKTableau.Equivalent.trans` returns
+  `[propext, Classical.choice, Quot.sound]` (or a subset).
+* No regression on cycle 203/204/205 theorems — spot-check via
+  `lean_verify`:
+  - `RKTableau.equivalent_self`
+  - `RKTableau.Equivalent.symm`
+  - `RKTableau.paddedEuler_equivalent_self`
+  - `RKTableau.RKStageMap_fixedPoint_unique`
+  - `RKTableau.RKStageMap_fixedPoint_exists`
+  - `RKTableau.IsRKOneStep_exists`
 
-## Priority 2 — `RKStageMap_fixedPoint_unique` named lemma (~25–35 LOC)
+---
 
-Abstract out the Banach uniqueness pattern from cycle 203's
-`equivalent_self` proof so future PReducesTo / Equivalent /
-existence-uniqueness consumers can call it as a one-liner instead
-of re-deriving via `ContractingWith.eq_or_edist_eq_top_of_fixedPoints`
-+ `edist_ne_top` each time.
+## §G. Cycle 207 setup
 
-**Target file**: `OpenMath/Chapter3/Section381.lean`. Place
-immediately **after** `RKStageMap_contracting` (ends at line 1699)
-and **before** the docstring for `equivalent_self` (starts at line
-1701). Lives in the `OpenMath.Chapter3.Section312.RKTableau`
-namespace.
+After cycle 206 ships trans:
 
-**Statement** (verbatim — copy-paste this signature):
+* The equivalence-relation triple (refl + symm + trans) is
+  complete. Cycle 207 can update `Equivalent`'s docstring to
+  market it as a proper equivalence relation on complete normed
+  spaces.
+* The natural cycle 207 substantive target is **`PReducesTo →
+  Equivalent`** (thm:381H deferred direction (2)). Cycle 205's
+  `IsRKOneStep_exists` plus cycle 206's `Equivalent.trans` are
+  the load-bearing prerequisites; the remaining work is the
+  iteration-invariant "`Yᵢ⁽ᵏ⁾ = Yⱼ⁽ᵏ⁾` for `i, j` in same
+  partition block" (likely 2–3 cycles).
+* Alternative pivots (`thm:382A`, `thm:382B`, `thm:384A`,
+  `thm:386A`, a fresh §388 entity) remain available if the cycle
+  207 planner judges PReducesTo → Equivalent of lower marginal
+  value than opening a new sub-cluster.
 
-```lean
-/-- *Banach uniqueness of `RKStageMap` fixed points* under the
-smallness condition `|h| · L · C < 1` (where `C := Σ_{i,j} |aᵢⱼ|`).
-Any two stage tuples `Y, Y' : Fin s → N` that are both fixed points
-of `M.RKStageMap h f y₀` agree pointwise. Extracts the Banach
-uniqueness step from `equivalent_self`'s proof body so downstream
-consumers (e.g. `PReducesTo → Equivalent`, future
-`Equivalent.trans`) can cite it directly. Generalised from scalar
-`ℝ` to any normed `ℝ`-space `N` (cycle 202's polymorphic
-foundation). -/
-theorem RKStageMap_fixedPoint_unique {s : ℕ} (M : RKTableau s)
-    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (h : ℝ) {f : N → N} {L : NNReal} (hf : LipschitzWith L f)
-    (y₀ : N)
-    (h_small : |h| * (L : ℝ) *
-      (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) < 1)
-    {Y Y' : Fin s → N}
-    (hY : M.RKStageMap h f y₀ Y = Y)
-    (hY' : M.RKStageMap h f y₀ Y' = Y') :
-    Y = Y' := by
-  have hContract := M.RKStageMap_contracting h hf y₀ h_small
-  rcases hContract.eq_or_edist_eq_top_of_fixedPoints hY hY' with
-    hEq | hInf
-  · exact hEq
-  · exact absurd hInf (edist_ne_top Y Y')
+---
+
+## §H. Pre-flight git verification (mandatory)
+
+Before writing any Lean, run:
+
+```bash
+git log -1 --format='%H %s'
+git rev-parse HEAD
+git rev-parse origin/butcher-experiments
 ```
 
-**Recipe** (mirrors cycle 203's lines 1732–1745, factored as a
-standalone lemma):
+Expected: HEAD on `02f2ee0 Cycle 205 — §380 Banach FP existence
+half`, HEAD == origin/butcher-experiments. If they disagree,
+investigate; if they agree, ignore any `attempts.md` phantom
+verdicts and proceed.
 
-1. Invoke `M.RKStageMap_contracting h hf y₀ h_small` to obtain
-   `ContractingWith` packaging.
-2. Apply `ContractingWith.eq_or_edist_eq_top_of_fixedPoints` — note
-   `hY` and `hY'` are already in `Function.IsFixedPt`-shape
-   (`M.RKStageMap h f y₀ Y = Y` IS `Function.IsFixedPt … Y` by
-   unfolding; no `show` line needed in the lemma body).
-3. The `edist = ⊤` branch is impossible because `Fin s → N` inherits
-   `PseudoMetricSpace` from the Pi instance; close via
-   `edist_ne_top Y Y'`.
+Confirm cycle 205 deliverables present at HEAD:
 
-**Internal refactor of `equivalent_self`** (optional but recommended;
-≤−5 LOC delta). Replace lines 1732 + 1741–1745 of cycle 203's body:
-
-```lean
-  have hContract := M.RKStageMap_contracting h hL y₀ h_small
-  …
-  have hY_eq : Y = Y' := by
-    rcases hContract.eq_or_edist_eq_top_of_fixedPoints hY_fix hY'_fix with
-      hEq | hInf
-    · exact hEq
-    · exact absurd hInf (edist_ne_top Y Y')
+```bash
+grep -n "RKStageMap_fixedPoint_exists\|IsRKOneStep_exists" \
+  OpenMath/Chapter3/Section381.lean
 ```
 
-with the single line
+Both should appear in the file. Confirm sorry-clean:
 
-```lean
-  have hY_eq : Y = Y' :=
-    M.RKStageMap_fixedPoint_unique h hL y₀ h_small hY_fix hY'_fix
+```bash
+grep -c sorry OpenMath/Chapter3/Section381.lean
 ```
 
-(and drop the now-unused `have hContract` line above). This keeps
-cycle 203's theorem semantically unchanged but makes its proof
-~5 LOC shorter and exhibits the new lemma in production.
+Returns 0. If any of these fail, **stop and investigate** rather
+than re-doing cycle 205 work.
 
-**Verification**:
-* `lake env lean OpenMath/Chapter3/Section381.lean` — warm rebuild.
-* `lean_verify
-  OpenMath.Chapter3.Section312.RKTableau.RKStageMap_fixedPoint_unique`
-  → axiom-clean.
-* Re-`lean_verify` `equivalent_self` after the internal refactor — must
-  remain axiom-clean.
+---
 
-## Priority 3 — `Equivalent.symm` (≤15 LOC, stretch if budget remains)
+## §I. Summary
 
-`Equivalent` (def:381A, line 968) is `∃ h₀ > 0, ∀ h, 0 < h → h ≤ h₀
-→ ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
-y₁ = y₁'`. Symmetry follows because `=` is symmetric on the outputs
-— swap which IsRKOneStep witness is "first" vs "second", flip the
-final equality via `Eq.symm`.
+* **Primary**: ship `Equivalent.trans` (option b — side-hypothesis
+  `[CompleteSpace N]`). ~30 LOC, axiom-clean, completes the
+  refl + symm + trans equivalence-relation triple.
+* **Stretch (only with margin)**: `paddedEuler` non-vacuity for
+  `IsRKOneStep_exists` + trivial paddedEuler trans corollary.
+* **Skip**: §441 Phase C.2 (GPFS-blocked, 26th consecutive).
+* **Defer**: PReducesTo → Equivalent (cycle 207+).
 
-**Target file**: `OpenMath/Chapter3/Section381.lean`. Place
-immediately after `equivalent_self` (line 1746) inside the
-`OpenMath.Chapter3.Section312.RKTableau` namespace. This groups all
-`Equivalent` infrastructure together at the end of the namespace
-block.
-
-**Statement** (verbatim):
-
-```lean
-/-- *Symmetry of `def:381A` equivalence.* If `M` is equivalent to
-`M'` then `M'` is equivalent to `M`. The output-equality conclusion
-`y₁ = y₁'` is symmetric in the outputs; this lemma repackages the
-hypotheses with the IsRKOneStep witnesses swapped and applies
-`Eq.symm`. -/
-theorem Equivalent.symm {s s' : ℕ}
-    {M : RKTableau s} {M' : RKTableau s'}
-    (hEq : M.Equivalent M') : M'.Equivalent M := by
-  intro N _ _ f L hL y₀
-  obtain ⟨h₀, h₀_pos, hUniq⟩ := hEq f L hL y₀
-  refine ⟨h₀, h₀_pos, ?_⟩
-  intro hstep hstep_pos hstep_le y₁ y₁' hY hY'
-  exact (hUniq hstep hstep_pos hstep_le y₁' y₁ hY' hY).symm
-```
-
-**Recipe**: pattern-match on the `Equivalent M M'` witness to extract
-`h₀` and the uniqueness implication. Reuse the same `h₀`. Swap the
-order of `(y₁, y₁')` and the order of `(hY, hY')` when invoking
-`hUniq`; apply `Eq.symm` to flip the resulting equality.
-
-**Likely-gotcha**: the `Equivalent` definition takes `N` as an
-implicit type argument with two instance arguments
-(`[NormedAddCommGroup N] [NormedSpace ℝ N]`). The `intro N _ _ f L
-hL y₀` line must match that shape — confirm via the cycle 203
-`equivalent_self` proof (line 1715) which uses the same `intro`
-pattern.
-
-**Verification**: axiom-clean by composition; warm rebuild.
-
-## What NOT to try
-
-### A. Do NOT attempt `thm:381H` direction 2 (PEquivalent → Equivalent) in this cycle
-
-Per `thm_381H_deferred.md` and the cycle 203 task results, this is
-~1.5 cycles of work. The textbook proof requires:
-
-1. **Banach fixed-point convergence of the implicit-stage iteration
-   starting from a constant tuple** — partially shipped via cycle
-   203's `equivalent_self`, but the "iteration sequence from
-   `Yᵢ⁽⁰⁾ := η`" form is not yet abstracted.
-2. **The iteration-invariant `Yᵢ⁽ᵏ⁾ = Yⱼ⁽ᵏ⁾` for `i, j` in the same
-   partition block** — natural induction on `k` using
-   `IsPReducibleVia`'s row-sum-constancy condition. Requires
-   defining `M.stageIterate : ℕ → Fin s → N` as a recursive
-   function and proving the block-equality preservation lemma.
-
-If you attempt this and it doesn't close, you'll either ship a sorry
-(cycle-200 rollback precedent: `score = -2` for sorry increase) or
-revert. **Just don't start.** The cycle-204 P2 deliverable
-(`RKStageMap_fixedPoint_unique`) is the right *preparatory* step;
-cycle 205 can pick up the actual direction-2 attempt with that
-infrastructure in hand.
-
-### B. Do NOT modify cycle 203's `equivalent_self` threshold or definition
-
-The threshold `1 / (2 * (L * C + 1))` is constructive and works.
-The cycle 203 task results noted a potential refinement to the
-tighter sup-norm row bound `max_i Σⱼ |aᵢⱼ|`, but this is purely
-cosmetic — DO NOT pursue. The optional internal refactor in P2
-(replacing 4 lines of inline Banach uniqueness with a call to
-`RKStageMap_fixedPoint_unique`) is acceptable; anything beyond that
-is out of scope.
-
-### C. Do NOT run §441 Phase C.2 smoke tests
-
-Per Priority 0. The 23-consecutive-timeout history is conclusive;
-worker time is better spent on §380 / §381 incremental work.
-Loop-maintainer escalation is in force; do not duplicate it.
-
-### D. Do NOT modify `RKStageMap`, `RKStageMap_dist_le`, `RKStageMap_lipschitz`, or `RKStageMap_contracting` definitions or signatures
-
-These are cycle 201/202 deliverables and consumed by cycle 203's
-`equivalent_self`. The P2 lemma `RKStageMap_fixedPoint_unique` is an
-ADDITIVE wrapper; it does not change anything in the existing four.
-
-### E. Do NOT introduce any `axiom`, `constant`, or `sorry`
-
-CLAUDE.md rule. Sorry count must remain at 0 across the entire repo
-at end-of-cycle. If P3 fails to close, REVERT — do not commit a
-sorry'd scaffold. Same applies to P2's internal refactor of
-`equivalent_self`; if the refactor breaks the axiom-clean status,
-revert to the cycle 203 body.
-
-### F. Do NOT raise `maxHeartbeats` above 200000
-
-CLAUDE.md rule. None of the P1–P3 proofs should need anywhere near
-this — the cycle 203 `equivalent_self` proof closed at default
-heartbeats; the P2/P3 lemmas are structurally simpler.
-
-### G. Do NOT poll Aristotle
-
-No active Aristotle jobs in the queue per `attempts.md`. No P1–P3
-deliverable is well-suited for Aristotle (they are short, structural,
-and consume named Mathlib lemmas / cycle-203 infrastructure
-directly). Save the slot for future infrastructure work.
-
-### H. Do NOT modify any §441 file or `cycle_182_draft_section441.lean`
-
-The draft is preserved for the loop-maintainer to verify once GPFS
-recovers. Worker MUST NOT touch it.
-
-### I. Do NOT edit `scripts/autonomous_loop.py`
-
-Loop-maintainer territory per CLAUDE.md and
-`tautology_scanner_false_positives.md`.
-
-### J. Do NOT attempt `Equivalent.trans`
-
-Substantially harder than `symm` because the threshold for the
-composition is `min h₀ h₀'` AND the IsRKOneStep witnesses on either
-side of the composition use the SAME `h` value but DIFFERENT
-methods — requiring an *existence* bridge for the middle method's
-output, which is NOT given by `Equivalent` alone. The full trans
-proof needs a `RKStageMap_fixedPoint_exists` helper (Banach
-existence via `ContractingWith.fixedPoint` / `efixedPoint`) which
-is ≥30 additional LOC of its own. This is genuinely useful for
-cycle 205+ but does not fit in cycle 204's budget without risking
-the sorry-count constraint. **Stretch out** — leave for cycle 205.
-
-## Verification protocol (end of cycle)
-
-1. **Compile**: `lake env lean OpenMath/Chapter3/Section381.lean` —
-   expect warm rebuild ≤10 s. If it exceeds 30 s, something is
-   structurally wrong; investigate.
-2. **Sorry count**: `grep -c sorry OpenMath/Chapter3/Section381.lean`
-   → must be 0. Repo-wide via `Grep` tool on `^[^/]*sorry` outside
-   docstrings: ensure no new sorries anywhere.
-3. **Axiom check**: `lean_verify` on each new theorem
-   (`paddedEuler_equivalent_self`, `RKStageMap_fixedPoint_unique`,
-   `Equivalent.symm`). Each must report
-   `[propext, Classical.choice, Quot.sound]` only.
-4. **Regression check**: re-`lean_verify` `equivalent_self` (cycle
-   203 deliverable) after any P2 internal refactor — must remain
-   axiom-clean.
-5. **Tautology scanner**: `grep -nE
-   ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$'
-   OpenMath/Chapter3/Section381.lean` — expected 0 hits. If new
-   hits appear from P1–P3 code, rename `h_<name> → h<name>` per the
-   `tautology_scanner_false_positives.md` cosmetic workaround. Do
-   NOT touch the scanner itself.
-
-## End-of-cycle tasks
-
-* Write `.prover-state/task_results/cycle_204.md` per CLAUDE.md
-  format. Include:
-  - Which of P1/P2/P3 landed (P0 is "skipped per strategy" — note
-    only).
-  - Faithfulness check for each new theorem (entity ID if applicable,
-    or "infrastructure corollary of def:381A — non-vacuity / Banach
-    uniqueness abstraction / equivalence-relation closure").
-  - Dead ends (if any).
-  - Discovery (if any tactic patterns worth recording).
-  - Suggested next approach for cycle 205 (most likely: Banach
-    existence helper `RKStageMap_fixedPoint_exists` + `Equivalent.trans`,
-    *then* attempt `PReducesTo M (M.pReduced P) → Equivalent M (M.pReduced P)`).
-* Update `plan.md` — `def:381A` row already `[x]`; cycle 204's new
-  lemmas are infrastructure / non-vacuity witnesses, not new entity
-  closures, so plan.md likely does NOT need changes. Confirm.
-* Update `lean_status.json` — likely no changes this cycle.
-* Append cycle 204 row to `.prover-state/attempts.md` per loop
-  template.
-* Commit + push (worker handles via standard workflow). Commit
-  message template:
-  `Cycle 204 — §380 paddedEuler_equivalent_self (P1, ~5 LOC) +
-   RKStageMap_fixedPoint_unique abstraction (P2, ~25 LOC) +
-   Equivalent.symm (P3, ~12 LOC) + equivalent_self internal refactor
-   (~−5 LOC); axiom-clean, sorry count remains 0; §441 Phase C.2
-   GPFS-blocked (24th, skipped per strategy)` — adjust to reflect
-   which priorities actually landed.
-
-## Reasoning for prioritisation
-
-**P1 is the smallest tractable win** (≤8 LOC, axiom-clean by
-construction); it banks a quick deliverable and gives the cycle a
-floor against any later P2/P3 stalls.
-
-**P2 is the highest-leverage *infrastructure* move**: it abstracts
-the Banach uniqueness pattern out of `equivalent_self`'s body so any
-future PReducesTo / Equivalent / existence-uniqueness consumer can
-call it as a one-liner. This is exactly the kind of small named
-lemma that compounds — every future cycle dealing with implicit
-stage equations will likely consume it. The optional internal
-refactor of `equivalent_self` to consume the new lemma exhibits it
-in production without changing any axiom-cleanliness.
-
-**P3 is moderate-leverage *content***: `Equivalent.symm` together
-with cycle 203's reflexivity gives us two-thirds of "Equivalent is
-an equivalence relation". Trans is the third leg but is materially
-harder (see §J); we explicitly stretch it out to cycle 205+ to
-avoid the cycle 200 rollback pattern.
-
-The composite cycle 204 deliverable, if all of P1–P3 lands, is
-~40–45 LOC of new theorems plus a ~5 LOC simplification of cycle
-203's proof — a strong "infrastructure cycle" footprint that
-compounds into cycle 205+'s anticipated `Equivalent.trans` and
-thm:381H direction 2 work.
+Sorry count must remain 0. No new axioms. No `maxHeartbeats`
+bumps. No edits to existing axiom-clean theorems. Document the
+`[CompleteSpace N]` side-hypothesis as a faithfulness note in the
+trans docstring per §E.

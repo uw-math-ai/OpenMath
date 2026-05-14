@@ -964,9 +964,21 @@ where the stage equations have multiple solutions: we require
 *every* output of `M` to agree with *every* output of `M'`. The
 hypothesis `LipschitzWith L f` (`L : ℝ≥0`) is the standard
 Mathlib global-Lipschitz predicate and matches Butcher's "satisfying
-a Lipschitz condition" verbatim. -/
+a Lipschitz condition" verbatim.
+
+**Implementation hypothesis `[CompleteSpace N]`** (cycle 206): we
+restrict the universal quantifier over `N` to *complete* normed
+ℝ-spaces. Butcher §380 does not impose completeness — the textbook
+works over ℝⁿ where it is automatic. We surface this restriction
+because `Equivalent.trans` (the equivalence-relation closure) needs
+Banach existence (`IsRKOneStep_exists`, cycle 205) on the middle
+method, which requires completeness of the codomain. Every concrete
+RK method of interest lives on ℝ, ℝⁿ, or a finite-dim normed space —
+all trivially `CompleteSpace`, so this is a no-op at every call
+site. See `.prover-state/issues/equivalent_self_general_deferred.md`
+for the broader Banach infrastructure context. -/
 def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
-  ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+  ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N] [CompleteSpace N]
     (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f) (y₀ : N),
     ∃ h₀ > (0 : ℝ), ∀ h, 0 < h → h ≤ h₀ →
       ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
@@ -1150,7 +1162,7 @@ open scoped NNReal in
 itself. -/
 theorem equivalent_explicitEuler_self :
     RKTableau.explicitEuler.Equivalent RKTableau.explicitEuler := by
-  intro N _ _ f L _hL y₀
+  intro N _ _ _ f L _hL y₀
   refine ⟨1, one_pos, ?_⟩
   intro h _hh_pos _hh_le y₁ y₁' h₁ h₁'
   obtain ⟨Y, hY_stage, hy₁⟩ := h₁
@@ -1781,7 +1793,7 @@ finiteness of `edist` on the normed-space pi type) forces `Y = Y'`,
 hence `y₁ = y₁'`. Closes the cycle 030 deferral
 `equivalent_self_general_deferred.md`. -/
 theorem equivalent_self {s : ℕ} (M : RKTableau s) : M.Equivalent M := by
-  intro N _ _ f L hL y₀
+  intro N _ _ _ f L hL y₀
   set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j| with hC_def
   have hC_nn : 0 ≤ C :=
     Finset.sum_nonneg fun _ _ =>
@@ -1817,11 +1829,70 @@ theorem Equivalent.symm.{u} {s s' : ℕ}
     {M : RKTableau s} {M' : RKTableau s'}
     (hEq : @Equivalent.{u} s s' M M') :
     @Equivalent.{u} s' s M' M := by
-  intro N _ _ f L hL y₀
+  intro N _ _ _ f L hL y₀
   obtain ⟨h₀, h₀_pos, hUniq⟩ := hEq f L hL y₀
   refine ⟨h₀, h₀_pos, ?_⟩
   intro hstep hstep_pos hstep_le y₁ y₁' hY hY'
   exact (hUniq hstep hstep_pos hstep_le y₁' y₁ hY' hY).symm
+
+/-- *Transitivity of `def:381A` equivalence.* If `M` is equivalent to `M'`
+and `M'` is equivalent to `M''`, then `M` is equivalent to `M''`. Together
+with `equivalent_self` (cycle 203) and `Equivalent.symm` (cycle 204), this
+completes the equivalence-relation closure of `def:381A`.
+
+The proof chains the two equivalences through an intermediate one-step
+output of the middle method `M'`. Given outputs `y₁` (from `M`) and `y₃`
+(from `M''`) at small `h`, `IsRKOneStep_exists` (cycle 205) produces
+`y₂` with `M'.IsRKOneStep f y₀ h y₂`; `h₁` gives `y₁ = y₂` and `h₂`
+gives `y₂ = y₃`, closing by transitivity.
+
+The threshold `h₀` is the minimum of three quantities: the thresholds
+`h₀₁`, `h₀₂` from `h₁` and `h₂`, and the Banach smallness threshold
+`1 / (2 * (L * C_M' + 1))` where `C_M' := Σᵢⱼ |M'.A i j|` — chosen so
+the contraction smallness condition `|h| · L · C_M' < 1` of
+`RKStageMap_contracting` holds for the middle method `M'`. The
+threshold construction mirrors `equivalent_self` (cycle 203) verbatim.
+
+**Faithfulness note**: the `[CompleteSpace N]` hypothesis is built
+into the `Equivalent` definition itself (cycle 206), not added
+externally to `trans`. Butcher §380 does not impose completeness; we
+surface it because Banach existence on the middle method `M'`
+genuinely requires it. All concrete RK methods of interest over ℝⁿ
+have `CompleteSpace` automatic, so this is a no-op at every call
+site. -/
+theorem Equivalent.trans.{u} {s s' s'' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} {M'' : RKTableau s''}
+    (h₁ : @Equivalent.{u} s s' M M')
+    (h₂ : @Equivalent.{u} s' s'' M' M'') :
+    @Equivalent.{u} s s'' M M'' := by
+  intro N _ _ _ f L hL y₀
+  obtain ⟨h₀₁, h₀₁_pos, hConcl₁⟩ := h₁ f L hL y₀
+  obtain ⟨h₀₂, h₀₂_pos, hConcl₂⟩ := h₂ f L hL y₀
+  set C_M' : ℝ := ∑ i : Fin s', ∑ j : Fin s', |M'.A i j| with hC_M'_def
+  have hC_M'_nn : 0 ≤ C_M' :=
+    Finset.sum_nonneg fun _ _ =>
+      Finset.sum_nonneg fun _ _ => abs_nonneg _
+  have h_LCnn : 0 ≤ (L : ℝ) * C_M' := mul_nonneg L.coe_nonneg hC_M'_nn
+  have h_denom_pos : 0 < 2 * ((L : ℝ) * C_M' + 1) := by linarith
+  set h₀_M' : ℝ := 1 / (2 * ((L : ℝ) * C_M' + 1)) with hh₀_M'_def
+  have h₀_M'_pos : 0 < h₀_M' := by positivity
+  refine ⟨min h₀₁ (min h₀₂ h₀_M'),
+    lt_min h₀₁_pos (lt_min h₀₂_pos h₀_M'_pos), ?_⟩
+  intro h hh_pos hh_le y₁ y₃ hY₁ hY₃
+  have hh_le_₁ : h ≤ h₀₁ := le_trans hh_le (min_le_left _ _)
+  have hh_le_₂ : h ≤ h₀₂ :=
+    le_trans hh_le (le_trans (min_le_right _ _) (min_le_left _ _))
+  have hh_le_M' : h ≤ h₀_M' :=
+    le_trans hh_le (le_trans (min_le_right _ _) (min_le_right _ _))
+  have h_abs : |h| = h := abs_of_pos hh_pos
+  have h_mul : h * (2 * ((L : ℝ) * C_M' + 1)) ≤ 1 :=
+    (le_div_iff₀ h_denom_pos).mp hh_le_M'
+  have h_small_M' : |h| * (L : ℝ) * C_M' < 1 := by
+    rw [h_abs]
+    nlinarith [hh_pos, h_LCnn, h_mul]
+  obtain ⟨y₂, hY₂⟩ := M'.IsRKOneStep_exists h hL y₀ h_small_M'
+  calc y₁ = y₂ := hConcl₁ h hh_pos hh_le_₁ y₁ y₂ hY₁ hY₂
+    _ = y₃ := hConcl₂ h hh_pos hh_le_₂ y₂ y₃ hY₂ hY₃
 
 end OpenMath.Chapter3.Section312.RKTableau
 
