@@ -2367,6 +2367,17 @@ Internal infrastructure for the future `thm:382A` formalization; the
 full closure of `thm:381H` (and hence `thm:382A`) remains blocked on
 `thm:381G` per `.prover-state/issues/thm_381H_deferred.md`. -/
 
+/-- *Explicitness predicate for `RKTableau`.* A Runge–Kutta tableau is
+*explicit* if its coefficient matrix `A` is zero on and above the
+diagonal: `A i j = 0` whenever `i.val ≤ j.val`.
+
+Lean-internal helper parallel to Section530's
+`GeneralizedRungeKuttaMethod.IsExplicit`; Butcher's textbook uses the
+explicit/implicit distinction informally throughout §38 without
+introducing a separately named predicate. -/
+def IsExplicit {s : ℕ} (M : RKTableau s) : Prop :=
+  ∀ i j : Fin s, i.val ≤ j.val → M.A i j = 0
+
 /-- *Composition of two Runge–Kutta methods* per Butcher §382 equation
 (382a), p. 285. Given `M₁ : RKTableau s₁` and `M₂ : RKTableau s₂`, the
 composition `M₁.compose M₂ : RKTableau (s₁ + s₂)` performs one full
@@ -2438,6 +2449,42 @@ def compose {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
     (M₁.compose M₂).A (Fin.natAdd s₁ i) (Fin.natAdd s₁ j) = M₂.A i j := by
   simp [compose]
 
+/-- *Composition preserves explicitness.* The composite `M₁.compose M₂`
+is explicit iff both factors are. The four blocks behave as follows:
+top-left `M₁.A i j` (zero when `i ≤ j` by `M₁.IsExplicit`); top-right
+`0` (trivially zero); bottom-left `M₁.b j` (irrelevant because the row
+index `s₁ + i₂` strictly exceeds the column index `j₁ < s₁`, so the
+`i.val ≤ j.val` hypothesis is contradicted); bottom-right `M₂.A i j`
+(zero when `i ≤ j` by `M₂.IsExplicit`). -/
+theorem compose_isExplicit_iff {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+    (M₁.compose M₂).IsExplicit ↔ M₁.IsExplicit ∧ M₂.IsExplicit := by
+  refine ⟨fun h => ⟨fun i j hij => ?_, fun i j hij => ?_⟩, ?_⟩
+  · have := h (Fin.castAdd s₂ i) (Fin.castAdd s₂ j) hij
+    rwa [compose_A_topLeft] at this
+  · have := h (Fin.natAdd s₁ i) (Fin.natAdd s₁ j)
+      (by show s₁ + i.val ≤ s₁ + j.val; omega)
+    rwa [compose_A_botRight] at this
+  · rintro ⟨h₁, h₂⟩ i j hij
+    rcases lt_or_ge i.val s₁ with hi | hi
+    · rcases lt_or_ge j.val s₁ with hj | hj
+      · have hi_eq : i = Fin.castAdd s₂ ⟨i.val, hi⟩ := Fin.ext rfl
+        have hj_eq : j = Fin.castAdd s₂ ⟨j.val, hj⟩ := Fin.ext rfl
+        rw [hi_eq, hj_eq, compose_A_topLeft]
+        exact h₁ _ _ hij
+      · have hi_eq : i = Fin.castAdd s₂ ⟨i.val, hi⟩ := Fin.ext rfl
+        have hj_eq : j = Fin.natAdd s₁ ⟨j.val - s₁, by omega⟩ :=
+          Fin.ext (by show j.val = s₁ + (j.val - s₁); omega)
+        rw [hi_eq, hj_eq, compose_A_topRight]
+    · rcases lt_or_ge j.val s₁ with hj | hj
+      · exact absurd hij (by omega)
+      · have hi_eq : i = Fin.natAdd s₁ ⟨i.val - s₁, by omega⟩ :=
+          Fin.ext (by show i.val = s₁ + (i.val - s₁); omega)
+        have hj_eq : j = Fin.natAdd s₁ ⟨j.val - s₁, by omega⟩ :=
+          Fin.ext (by show j.val = s₁ + (j.val - s₁); omega)
+        rw [hi_eq, hj_eq, compose_A_botRight]
+        exact h₂ _ _ (by show i.val - s₁ ≤ j.val - s₁; omega)
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -2467,5 +2514,21 @@ example :
     (paddedEuler.compose paddedEuler).b (Fin.castAdd 2 ⟨0, by norm_num⟩)
       = paddedEuler.b ⟨0, by norm_num⟩ :=
   RKTableau.compose_b_castAdd paddedEuler paddedEuler ⟨0, by norm_num⟩
+
+/-- *`paddedEuler` is explicit.* Its coefficient matrix is the zero
+matrix (`paddedEuler.A = 0`), so the `IsExplicit` predicate holds
+vacuously: every entry is zero, so in particular every entry on or
+above the diagonal is zero. -/
+theorem paddedEuler_isExplicit : paddedEuler.IsExplicit := by
+  intro _ _ _
+  simp [paddedEuler]
+
+/-- *Non-vacuity for `compose_isExplicit_iff` (cycle 210 P1).* The
+composition of two explicit methods is explicit; here both factors are
+`paddedEuler`, giving a concrete 4-stage explicit method via the
+forward direction of the iff. Exercises P1 on a concrete pair. -/
+example : (paddedEuler.compose paddedEuler).IsExplicit :=
+  (RKTableau.compose_isExplicit_iff paddedEuler paddedEuler).mpr
+    ⟨paddedEuler_isExplicit, paddedEuler_isExplicit⟩
 
 end OpenMath.Chapter3.Section381
