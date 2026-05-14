@@ -160,17 +160,53 @@ remains open.
   `composeQ_phi_left_act` definition. Three-factor `paddedEuler`
   non-vacuity at `s₁ = s₂ = s₃ = 2` verifies the new mutual pair
   on a concrete trio.
-- **Cycle 231 outlook**: ship the bottom-block partner
-  `derivativeWeightWithSrc_compose_natAdd` (a 6-tuple
-  `(M₁, M₂, M₃, t, k)` consumer of cycle 230's lemma + cycle
-  225's `compose_elementaryWeight_decomp` + the standard
-  `Fin.sum_univ_add` block split on `compose_A_botLeft = M₂.b j`
-  / `compose_A_botRight = M₃.A k k'`). Once both halves land,
-  cycle 232 ships `compose_assoc_phiEquivalent` (three-factor
-  associativity at the PhiEquivalent level), mirroring cycle
-  221's `compose_equivalent_compose_assoc` at the §382 level.
+- **Cycle 231 update (path B taken)**: Aristotle still IN_PROGRESS
+  at 29 % on the single permitted poll (growth 24 % → 29 % since
+  cycle 230, ≈ 5 %/cycle, several-day ETA). Cycle 231 shipped the
+  bottom-block partner mutual block:
+  `derivativeWeightWithSrc_compose_natAdd` (per-tree) +
+  `derivativeWeightWithSrcProd_compose_natAdd` (list-helper),
+  both `private` and axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`). For
+  `M₂.compose M₃`'s bottom-block stage `natAdd s₂ k`, the
+  composite source-method-threaded derivative weight on `M₁`
+  reduces to `M₃`'s own source-method-threaded derivative weight
+  at stage `k` *threaded from the combined source `M₁.compose M₂`*
+  (because the bottom block of `M₂.compose M₃` corresponds to
+  `M₃`'s stages starting from a state already advanced through
+  `M₁` and then `M₂`). The proof bridges cycle 225's
+  `compose_elementaryWeight_decomp` (exposing `(M₁.compose
+  M₂).elementaryWeight t` as `M₁.elementaryWeight t + ∑ M₂.b
+  · M₂.derivativeWeightWithSrc M₁`) with cycle 230's top-block
+  lemma and the cycle 231 mutual partner itself; the
+  `compose_A_botLeft = M₂.b j` / `compose_A_botRight = M₃.A k k'`
+  simp set splits the LHS block-sum, cycle 230 collapses the top
+  half, the IH collapses the bottom half, and `ring` resolves the
+  residual associativity. ~95 LOC at `Section381.lean` lines
+  ~2933–3025 (inserted between cycle 230's top-block `end` and
+  cycle 227's `composeQ_phi_left_act` doc block). Three-factor
+  `paddedEuler` non-vacuity at `s₁ = s₂ = s₃ = 2` verifies the
+  new mutual pair on a concrete trio (added at file's bottom-end
+  alongside cycle 230's witness). Warm-rebuild 6.35s (well under
+  §F.3 30s red-flag threshold; comparable to cycle 230's 6.0s).
+- **Cycle 232 outlook**: with cycle 230 + cycle 231 both landed,
+  cycle 232 can finally ship `compose_assoc_phiEquivalent`
+  (three-factor associativity at the PhiEquivalent level),
+  mirroring cycle 221's `compose_equivalent_compose_assoc` at
+  the §382 level. The recipe: apply `compose_elementaryWeight_decomp`
+  to both sides of the target Φ-equivalence, then route the LHS
+  via cycle 230 (top-block) + cycle 231 (bottom-block) and the
+  RHS via the same lemmas with shifted source/range — the proof
+  is essentially a `Fin.sum_univ_add` rearrangement followed by
+  per-summand routing through the four mutual lemmas. Estimated
+  ~50–80 LOC.
+- **Cycle 233+ outlook**: Aristotle (project
+  `176aa964-db7b-40f8-a01c-05247c186ec5`) growth trajectory
+  suggests 32–36 % at cycle 232 poll. If still IN_PROGRESS,
+  continue path-B infrastructure for the `Group` instance on
+  `Quotient PhiEquivalent.setoidSigma` once associativity lands.
 - Open: the right-action half (M₂-side sum equality) and the
-  full `compose_phiEquivalent_compose`. Cycle 230 did NOT
+  full `compose_phiEquivalent_compose`. Cycle 231 did NOT
   attempt this; the Aristotle delegation remains the primary
   path A and the path-B infrastructure builds toward
   associativity rather than the right-action.
