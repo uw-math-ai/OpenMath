@@ -247,6 +247,53 @@ example (d g h : ℝ) (F Y : Fin 1 → ℝ) (y_prev y_next : Fin 1 → ℝ)
   explicitEulerGLM.algebraicStability_identity _ _ (Matrix.isSymm_diagonal _)
     h F Y y_prev y_next hStage hOut
 
+/-- *Algebraic-stability residual form (§523 corollary of
+`algebraicStability_identity`).* Under the same hypotheses as
+`algebraicStability_identity` (symmetric `D` and the GLM step
+equations `hStage`, `hOut`), the difference `‖y_next‖²_G − ‖y_prev‖²_G`
+factors as `2⟨hF, Y⟩_D − ‖hF ⊕ y_prev‖²_M`.
+
+This is the textbook stepping-stone between `thm:523A`'s identity
+(an equation of three terms) and `thm:523B`'s inequality. No sign
+hypotheses are needed: it is a pure algebraic rearrangement. -/
+theorem GeneralLinearMethod.algebraicStability_residual
+    (M : GeneralLinearMethod s r)
+    (D : Matrix (Fin s) (Fin s) ℝ)
+    (G : Matrix (Fin r) (Fin r) ℝ)
+    (hD : D.IsSymm)
+    (h : ℝ) (F Y : Fin s → ℝ) (y_prev y_next : Fin r → ℝ)
+    (hStage : ∀ i, Y i = h * (∑ j, M.A i j * F j) + ∑ j, M.U i j * y_prev j)
+    (hOut : ∀ i, y_next i = h * (∑ j, M.B i j * F j) + ∑ j, M.V i j * y_prev j) :
+    y_next ⬝ᵥ (G *ᵥ y_next) - y_prev ⬝ᵥ (G *ᵥ y_prev)
+      = 2 * ((fun i => h * F i) ⬝ᵥ (D *ᵥ Y))
+        - (Sum.elim (fun i => h * F i) y_prev)
+            ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
+                  Sum.elim (fun i => h * F i) y_prev) := by
+  have hId := M.algebraicStability_identity D G hD h F Y y_prev y_next hStage hOut
+  linarith
+
+/-! ### Non-vacuity witness for `algebraicStability_residual`
+
+Mirroring the identity's non-vacuity example: at `(s, r) = (1, 1)`
+on `explicitEulerGLM` with `D = diagonal d`, `G = diagonal g`,
+`Matrix.isSymm_diagonal` discharges `D.IsSymm`. -/
+
+example (d g h : ℝ) (F Y : Fin 1 → ℝ) (y_prev y_next : Fin 1 → ℝ)
+    (hStage : ∀ i, Y i =
+      h * (∑ j, explicitEulerGLM.A i j * F j) + ∑ j, explicitEulerGLM.U i j * y_prev j)
+    (hOut : ∀ i, y_next i =
+      h * (∑ j, explicitEulerGLM.B i j * F j) + ∑ j, explicitEulerGLM.V i j * y_prev j) :
+    y_next ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_next)
+      - y_prev ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_prev)
+      = 2 * ((fun i => h * F i) ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => d) *ᵥ Y))
+        - (Sum.elim (fun i => h * F i) y_prev)
+            ⬝ᵥ (explicitEulerGLM.algebraicStabilityMatrix
+                  (Matrix.diagonal (fun _ : Fin 1 => d))
+                  (Matrix.diagonal (fun _ : Fin 1 => g)) *ᵥ
+                  Sum.elim (fun i => h * F i) y_prev) :=
+  explicitEulerGLM.algebraicStability_residual _ _
+    (Matrix.isSymm_diagonal _) h F Y y_prev y_next hStage hOut
+
 /-- **Theorem 523B** (Butcher §523, p. 428) — *Non-linear stability
 of a general linear method.*
 
@@ -309,5 +356,87 @@ example (d g h : ℝ) (F Y : Fin 1 → ℝ) (y_prev y_next : Fin 1 → ℝ)
       ≤ y_prev ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_prev) :=
   explicitEulerGLM.algebraicStability_inequality _ _
     (Matrix.isSymm_diagonal _) hPSD h F Y y_prev y_next hStage hOut hDiss
+
+/-- *Algebraic-stability strict-contraction form (§523 strengthening of
+`algebraicStability_inequality`).* Under the PSD hypothesis on the
+algebraic-stability matrix `M(D, G)`, symmetric `D`, and a strict
+dissipativity bound
+`2⟨hF, Y⟩_D ≤ −(c − 1) · ‖hF ⊕ y_prev‖²_M` for some `c ≥ 1`, the GLM
+step is contracting with explicit residual
+`(c − 1) · ‖hF ⊕ y_prev‖²_M`:
+```
+‖y_next‖²_G  +  (c − 1) · ‖hF ⊕ y_prev‖²_M  ≤  ‖y_prev‖²_G.
+```
+At `c = 1` this recovers `algebraicStability_inequality` (with the
+dissipativity bound `2⟨hF, Y⟩_D ≤ 0`, which is `⟨hF, Y⟩_D ≤ 0` times
+2). The proof is a one-shot `linarith` from
+`algebraicStability_residual` plus the PSD non-negativity of the
+M-quadratic form.
+
+**Faithfulness note**: this is NOT a textbook entity — it is a
+strict-contraction strengthening of Butcher's `thm:523B` useful for
+quantitative applications. Documented as infrastructure, not as a
+new entity row. -/
+theorem GeneralLinearMethod.algebraicStability_contracting
+    (M : GeneralLinearMethod s r)
+    (D : Matrix (Fin s) (Fin s) ℝ)
+    (G : Matrix (Fin r) (Fin r) ℝ)
+    (hD : D.IsSymm)
+    (hM_psd : (M.algebraicStabilityMatrix D G).PosSemidef)
+    (h : ℝ) (F Y : Fin s → ℝ) (y_prev y_next : Fin r → ℝ)
+    (hStage : ∀ i, Y i = h * (∑ j, M.A i j * F j) + ∑ j, M.U i j * y_prev j)
+    (hOut : ∀ i, y_next i = h * (∑ j, M.B i j * F j) + ∑ j, M.V i j * y_prev j)
+    (c : ℝ) (_hc : 1 ≤ c)
+    (hContract : 2 * ((fun i => h * F i) ⬝ᵥ (D *ᵥ Y))
+                  ≤ -(c - 1) * ((Sum.elim (fun i => h * F i) y_prev)
+                    ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
+                          Sum.elim (fun i => h * F i) y_prev))) :
+    y_next ⬝ᵥ (G *ᵥ y_next)
+      + (c - 1) * ((Sum.elim (fun i => h * F i) y_prev)
+          ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
+                Sum.elim (fun i => h * F i) y_prev))
+      ≤ y_prev ⬝ᵥ (G *ᵥ y_prev) := by
+  have hRes := M.algebraicStability_residual D G hD h F Y y_prev y_next hStage hOut
+  have hMq :
+      0 ≤ (Sum.elim (fun i => h * F i) y_prev)
+            ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
+                  Sum.elim (fun i => h * F i) y_prev) := by
+    simpa using hM_psd.dotProduct_mulVec_nonneg
+      (Sum.elim (fun i => h * F i) y_prev)
+  linarith
+
+/-! ### Non-vacuity witness for `algebraicStability_contracting`
+
+Mirroring the inequality's non-vacuity example: at `(s, r) = (1, 1)`
+on `explicitEulerGLM` with `D = diagonal d`, `G = diagonal g`,
+`Matrix.isSymm_diagonal` discharges `D.IsSymm`. The PSD hypothesis,
+the step equations, the contraction parameter `c ≥ 1`, and the
+contraction bound are taken as parameters. -/
+
+example (d g h : ℝ) (F Y : Fin 1 → ℝ) (y_prev y_next : Fin 1 → ℝ)
+    (hPSD : (explicitEulerGLM.algebraicStabilityMatrix
+              (Matrix.diagonal (fun _ : Fin 1 => d))
+              (Matrix.diagonal (fun _ : Fin 1 => g))).PosSemidef)
+    (hStage : ∀ i, Y i =
+      h * (∑ j, explicitEulerGLM.A i j * F j) + ∑ j, explicitEulerGLM.U i j * y_prev j)
+    (hOut : ∀ i, y_next i =
+      h * (∑ j, explicitEulerGLM.B i j * F j) + ∑ j, explicitEulerGLM.V i j * y_prev j)
+    (c : ℝ) (hc : 1 ≤ c)
+    (hContract : 2 * ((fun i => h * F i) ⬝ᵥ
+                       (Matrix.diagonal (fun _ : Fin 1 => d) *ᵥ Y))
+                  ≤ -(c - 1) * ((Sum.elim (fun i => h * F i) y_prev)
+                    ⬝ᵥ (explicitEulerGLM.algebraicStabilityMatrix
+                          (Matrix.diagonal (fun _ : Fin 1 => d))
+                          (Matrix.diagonal (fun _ : Fin 1 => g)) *ᵥ
+                          Sum.elim (fun i => h * F i) y_prev))) :
+    y_next ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_next)
+      + (c - 1) * ((Sum.elim (fun i => h * F i) y_prev)
+          ⬝ᵥ (explicitEulerGLM.algebraicStabilityMatrix
+                (Matrix.diagonal (fun _ : Fin 1 => d))
+                (Matrix.diagonal (fun _ : Fin 1 => g)) *ᵥ
+                Sum.elim (fun i => h * F i) y_prev))
+      ≤ y_prev ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_prev) :=
+  explicitEulerGLM.algebraicStability_contracting _ _
+    (Matrix.isSymm_diagonal _) hPSD h F Y y_prev y_next hStage hOut c hc hContract
 
 end OpenMath.Chapter5.Section510
