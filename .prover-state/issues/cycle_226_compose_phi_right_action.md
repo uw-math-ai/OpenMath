@@ -215,3 +215,75 @@ remains open.
   `Quotient PhiEquivalent.setoidSigma`) is still blocked on
   this issue. The respect obligation requires the full
   `compose_phiEquivalent_compose`, not just the left action.
+
+## Cycle 232 update — RESOLVED via Aristotle path A
+
+- **Aristotle status**: project `176aa964-db7b-40f8-a01c-05247c186ec5`
+  reached **COMPLETE at 100 %** between cycle 231 (poll at 29 %)
+  and cycle 232 start. Single poll at cycle 232 start returned
+  successful proof of `derivativeWeightWithSrcSum_M₂_phi_eq`.
+- **Proof strategy** (per `ARISTOTLE_SUMMARY.md`): generalized
+  weight-compatibility induction. Three new private symbols
+  added at `OpenMath/Chapter3/Section381.lean`:
+  - `derivativeWeightProd_append` (DP is multiplicative over
+    list append) — standard list induction.
+  - `private mutual gen_dws_eq` / `gen_dwsp_eq` (tree- and
+    list-level generalized claim). The list-level claim
+    parameterizes a **trailing factor `f : List RootedTree`**
+    that threads through the induction; in the cons-case
+    kept-child subterm, the updated-weights compatibility is
+    propagated by the list-IH on the *shorter* `cs` with the
+    *longer* trailing factor `f ++ [RootedTree.mk g]`. This
+    breaks the circularity that defeated direct per-summand
+    reasoning (the four ruled-out approaches in this issue).
+  - `derivativeWeightWithSrcSum_M₂_phi_eq` (the M₂-side sum
+    equality) — proved by specializing `gen_dwsp_eq` with
+    `w = M₂.b`, `w' = M₂'.b`, `f = []`, where weight
+    compatibility is exactly `hPhi₂` applied at each
+    `RootedTree.mk g`.
+- **Public theorems shipped**:
+  - `compose_phiEquivalent_compose_right` — the right-action
+    counterpart of cycle 226's
+    `compose_phiEquivalent_compose_left`. Proof: apply cycle
+    225's `compose_elementaryWeight_decomp` to both sides;
+    the `M₁.elementaryWeight t` summand matches trivially,
+    and the bottom-block sums agree by
+    `derivativeWeightWithSrcSum_M₂_phi_eq`.
+  - `compose_phiEquivalent_compose` — the full bilinear
+    result. Proof: combine left (cycle 226) + right (cycle
+    232) by `.trans` at the intermediate `M₁'.compose M₂`.
+  - `noncomputable def composeQ_phi : Quotient
+    PhiEquivalent.setoidSigma → Quotient
+    PhiEquivalent.setoidSigma → Quotient
+    PhiEquivalent.setoidSigma` via `Quotient.lift₂`. The
+    well-definedness witness consumed by `Quotient.lift₂`
+    is exactly `compose_phiEquivalent_compose`.
+  - `@[simp] composeQ_phi_mk` (rfl) and
+    `@[simp] composeQ_phi_eq_left_act_mk` (rfl, bridging to
+    cycle 227's partial left-action).
+- **Axiom status**: all symbols
+  `[propext, Classical.choice, Quot.sound]` only.
+- **Sorry count**: 0 (46th consecutive clean cycle).
+- **LOC**: ~280 LOC inserted between cycle 231's `end` (line
+  3021 in HEAD before edit) and cycle 227's
+  `composeQ_phi_left_act` doc block, plus the `composeQ_phi`
+  block after `composeQ_phi_left_act_eq_of_phiEquivalent`.
+  Five non-vacuity examples at file's end.
+- **Connes–Kreimer formalization**: still NOT done — Aristotle's
+  proof avoids it entirely via the trailing-factor trick.
+  This issue is closed for the *right-action* obligation; the
+  Connes–Kreimer machinery may still be useful for future
+  developments (e.g., explicit B-series expansion at the
+  rooted-tree level).
+- **Cycle 233+ outlook**: The `Group` instance on `Quotient
+  PhiEquivalent.setoidSigma` is the natural next step.
+  Required: associativity (consume cycle 232's full
+  `compose_phiEquivalent_compose` to lift cycle 221's
+  `compose_equivalent_compose_assoc` to the Φ-quotient via
+  a `compose_assoc_phiEquivalent` analog — but at the
+  PhiEquivalent level via the new infrastructure rather than
+  the path-B route the cycle 232 strategy outlined),
+  identity (cycles 228/229's `composeQ_phi_left_act_id_*`
+  generalized to `composeQ_phi`), inverse (lift
+  `inverse_equivalent_inverse` at the Φ-level).
+- **Status**: **CLOSED** for the right-action obligation.

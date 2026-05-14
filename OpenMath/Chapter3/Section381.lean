@@ -3020,6 +3020,212 @@ end
 
 end
 
+/- ### Right-action half of `compose_phiEquivalent_compose` (cycle 232)
+
+Aristotle (project `176aa964-db7b-40f8-a01c-05247c186ec5`,
+COMPLETE 2026-05-14) closed the M₂-side equality
+`derivativeWeightWithSrcSum_M₂_phi_eq` via a
+generalized-weight-compatibility induction that avoids the explicit
+Connes–Kreimer Hopf-algebra machinery. The core trick: prove a
+parameterized claim where the *trailing factor* `f : List RootedTree`
+threads through the induction, so the cons-case compatibility
+propagation reduces the new-weights compatibility to the list-IH on
+the *shorter* `cs` with the *longer* `f ++ [mk g]`. This breaks the
+circularity that defeats per-summand reasoning.
+
+The right-action `compose_phiEquivalent_compose_right` then follows
+from this sum-equality plus cycle 225's elementary-weight
+decomposition. Combining the left-action (cycle 226) and right-action
+(cycle 232) yields the full bilinear `compose_phiEquivalent_compose`,
+which unblocks `composeQ_phi` (a full `Quotient.lift₂`-based binary
+operation on the Φ-quotient). -/
+
+section
+open OpenMath.Chapter3.Section310
+
+/-- *Multiplicativity of `derivativeWeightProd` over list append.* The
+derivative-weight-product over a concatenated list factors as the
+product of the per-sublist derivative-weights. Standard list-induction.
+Used as a helper in the generalized weight-compatibility claim. -/
+private theorem derivativeWeightProd_append {s : ℕ} (M : RKTableau s)
+    (i : Fin s) (f g : List RootedTree) :
+    M.derivativeWeightProd i (f ++ g) =
+      M.derivativeWeightProd i f * M.derivativeWeightProd i g := by
+  induction f with
+  | nil => simp [derivativeWeightProd]
+  | cons t ts ih =>
+      simp only [List.cons_append, derivativeWeightProd]
+      rw [ih, mul_assoc]
+
+mutual
+  /-- *Generalized tree-level weight-compatibility claim.* For any
+  pair of weight functions `(w, w')` such that
+  `∑ wᵢ · M₂.derivativeWeightProd i g = ∑ w'ᵢ' · M₂'.derivativeWeightProd i' g`
+  holds for *every* list `g` (which is exactly Φ-equivalence applied
+  to `M₂.elementaryWeight (mk g) = M₂'.elementaryWeight (mk g)`),
+  the weighted `derivativeWeightWithSrc` sums agree on every tree `t`.
+  Reduces to the list-level claim (`gen_dwsp_eq`) on the tree's
+  children with trailing factor `f = []`. -/
+  private theorem gen_dws_eq {s₁ s₂ s₂' : ℕ}
+      (M₁ : RKTableau s₁) {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+      (hPhi₂ : PhiEquivalent M₂ M₂') :
+      ∀ (t : RootedTree)
+        (w : Fin s₂ → ℝ) (w' : Fin s₂' → ℝ),
+        (∀ g : List RootedTree,
+          ∑ i, w i * M₂.derivativeWeightProd i g =
+          ∑ i', w' i' * M₂'.derivativeWeightProd i' g) →
+        ∑ i, w i * M₂.derivativeWeightWithSrc M₁ i t =
+        ∑ i', w' i' * M₂'.derivativeWeightWithSrc M₁ i' t
+    | RootedTree.mk children, w, w', hcompat => by
+        show ∑ i, w i * M₂.derivativeWeightWithSrcProd M₁ i children =
+              ∑ i', w' i' * M₂'.derivativeWeightWithSrcProd M₁ i' children
+        have h := gen_dwsp_eq M₁ hPhi₂ children [] w w' hcompat
+        simp only [derivativeWeightProd, mul_one] at h
+        exact h
+
+  /-- *Generalized list-level weight-compatibility claim — the heart
+  of the Connes–Kreimer-style induction.* For any pair of
+  weight-compatible `(w, w')` and any *trailing factor* `f`, the
+  weighted `derivativeWeightWithSrcProd · derivativeWeightProd(f)`
+  sums agree. The `f` parameter is essential: in the cons case
+  `c :: cs`, the kept-child subterm's compatibility propagates
+  through the list-IH on `cs` at the *longer* trailing factor
+  `f ++ [RootedTree.mk g]`. -/
+  private theorem gen_dwsp_eq {s₁ s₂ s₂' : ℕ}
+      (M₁ : RKTableau s₁) {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+      (hPhi₂ : PhiEquivalent M₂ M₂') :
+      ∀ (cs : List RootedTree) (f : List RootedTree)
+        (w : Fin s₂ → ℝ) (w' : Fin s₂' → ℝ),
+        (∀ g : List RootedTree,
+          ∑ i, w i * M₂.derivativeWeightProd i g =
+          ∑ i', w' i' * M₂'.derivativeWeightProd i' g) →
+        ∑ i, w i * M₂.derivativeWeightWithSrcProd M₁ i cs *
+              M₂.derivativeWeightProd i f =
+        ∑ i', w' i' * M₂'.derivativeWeightWithSrcProd M₁ i' cs *
+              M₂'.derivativeWeightProd i' f
+    | [], f, w, w', hcompat => by
+        simp only [derivativeWeightWithSrcProd, mul_one]
+        exact hcompat f
+    | c :: cs, f, w, w', hcompat => by
+        simp only [derivativeWeightWithSrcProd]
+        have lhs_split : ∀ {s : ℕ} (M : RKTableau s) (ww : Fin s → ℝ),
+            (∑ i, ww i * ((M₁.elementaryWeight c +
+              ∑ j, M.A i j * M.derivativeWeightWithSrc M₁ j c) *
+              M.derivativeWeightWithSrcProd M₁ i cs) *
+              M.derivativeWeightProd i f)
+            = M₁.elementaryWeight c *
+                (∑ i, ww i * M.derivativeWeightWithSrcProd M₁ i cs *
+                  M.derivativeWeightProd i f)
+              + ∑ j, (∑ i, ww i * M.A i j *
+                    M.derivativeWeightWithSrcProd M₁ i cs *
+                    M.derivativeWeightProd i f) *
+                  M.derivativeWeightWithSrc M₁ j c := by
+          intro s M ww
+          simp +decide [ mul_assoc, mul_add, add_mul, Finset.mul_sum _ _ _,
+            Finset.sum_add_distrib, mul_comm, mul_left_comm, Finset.sum_mul ]
+          rw [Finset.sum_comm]
+        rw [lhs_split M₂ w, lhs_split M₂' w']
+        congr 1
+        · congr 1
+          exact gen_dwsp_eq M₁ hPhi₂ cs f w w' hcompat
+        · apply gen_dws_eq M₁ hPhi₂ c
+            (fun j => ∑ i, w i * M₂.A i j *
+              M₂.derivativeWeightWithSrcProd M₁ i cs *
+              M₂.derivativeWeightProd i f)
+            (fun j' => ∑ i', w' i' * M₂'.A i' j' *
+              M₂'.derivativeWeightWithSrcProd M₁ i' cs *
+              M₂'.derivativeWeightProd i' f)
+          intro g
+          have key : ∀ {s : ℕ} (M : RKTableau s) (ww : Fin s → ℝ),
+              (∑ j, (∑ i, ww i * M.A i j *
+                M.derivativeWeightWithSrcProd M₁ i cs *
+                M.derivativeWeightProd i f) *
+                M.derivativeWeightProd j g)
+              = ∑ i, ww i * M.derivativeWeightWithSrcProd M₁ i cs *
+                  M.derivativeWeightProd i (f ++ [RootedTree.mk g]) := by
+            intros s M ww
+            simp [Finset.sum_mul, Finset.mul_sum, Finset.sum_add_distrib,
+              mul_assoc, mul_comm, mul_left_comm]
+            rw [Finset.sum_comm]
+            simp +decide [ Finset.sum_mul _ _ _, mul_assoc, mul_comm,
+              mul_left_comm, Finset.mul_sum _ _ _, Finset.sum_add_distrib,
+              derivativeWeightProd_append ]
+            congr! 1
+            simp +decide [ Finset.mul_sum _ _ _, mul_assoc, mul_comm,
+              mul_left_comm, derivativeWeightProd ]
+            exact Finset.sum_congr rfl fun _ _ => by
+              rw [show M.derivativeWeight _ (RootedTree.mk g)
+                    = M.derivativeWeightProd _ g from rfl]
+              ring
+          rw [key M₂ w, key M₂' w']
+          exact gen_dwsp_eq M₁ hPhi₂ cs (f ++ [RootedTree.mk g]) w w' hcompat
+end
+
+/-- *M₂-side sum equality under Φ-equivalence (cycle 232, Aristotle).*
+Given `PhiEquivalent M₂ M₂'`, the bottom-block contribution
+`∑ M₂.b i * M₂.derivativeWeightWithSrc M₁ i t` to
+`(M₁.compose M₂).elementaryWeight t` (via cycle 225's
+`compose_elementaryWeight_decomp`) is invariant under `M₂ → M₂'`.
+Proved by specializing `gen_dwsp_eq` with `w = M₂.b`, `w' = M₂'.b`,
+and `f = []`; the compatibility hypothesis is exactly `hPhi₂` applied
+at each `RootedTree.mk g`. -/
+private theorem derivativeWeightWithSrcSum_M₂_phi_eq {s₁ s₂ s₂' : ℕ}
+    (M₁ : RKTableau s₁)
+    {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+    (hPhi₂ : PhiEquivalent M₂ M₂') :
+    ∀ (t : RootedTree),
+      (∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t)
+        = ∑ i : Fin s₂', M₂'.b i * M₂'.derivativeWeightWithSrc M₁ i t := by
+  intro ⟨children⟩
+  show ∑ i, M₂.b i * M₂.derivativeWeightWithSrcProd M₁ i children
+      = ∑ i', M₂'.b i' * M₂'.derivativeWeightWithSrcProd M₁ i' children
+  have h := gen_dwsp_eq M₁ hPhi₂ children [] M₂.b M₂'.b
+    (fun g => by
+      change M₂.elementaryWeight (RootedTree.mk g)
+          = M₂'.elementaryWeight (RootedTree.mk g)
+      exact hPhi₂ (RootedTree.mk g))
+  simp only [derivativeWeightProd, mul_one] at h
+  exact h
+
+/-- *Φ-equivalence respects `compose` on the right.* If
+`PhiEquivalent M₂ M₂'`, then composing on the right preserves
+Φ-equivalence: `PhiEquivalent (M₁.compose M₂) (M₁.compose M₂')`.
+Counterpart of cycle 226's `compose_phiEquivalent_compose_left`;
+together they yield the full bilinear `compose_phiEquivalent_compose`.
+Proof: apply cycle 225's `compose_elementaryWeight_decomp` to both
+sides; the `M₁.elementaryWeight t` summand matches trivially, and
+the bottom-block sums agree by `derivativeWeightWithSrcSum_M₂_phi_eq`. -/
+theorem compose_phiEquivalent_compose_right {s₁ s₂ s₂' : ℕ}
+    (M₁ : RKTableau s₁)
+    {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+    (hPhi₂ : PhiEquivalent M₂ M₂') :
+    PhiEquivalent (M₁.compose M₂) (M₁.compose M₂') := by
+  intro t
+  rw [compose_elementaryWeight_decomp M₁ M₂ t,
+      compose_elementaryWeight_decomp M₁ M₂' t,
+      derivativeWeightWithSrcSum_M₂_phi_eq M₁ hPhi₂ t]
+
+/-- *§383 group-homomorphism Phase 3 — central bilinear result.* If
+both factors of a composition are Φ-equivalent (potentially at
+distinct stage counts), then so are the composites:
+`PhiEquivalent (M₁.compose M₂) (M₁'.compose M₂')`. Proof: combine
+`compose_phiEquivalent_compose_left` (vary M₁, cycle 226) with
+`compose_phiEquivalent_compose_right` (vary M₂, cycle 232) by
+transitivity at the intermediate composite `M₁'.compose M₂`. This is
+the well-definedness witness consumed by `composeQ_phi` to lift
+`compose` to a full binary operation on `Quotient
+PhiEquivalent.setoidSigma`. -/
+theorem compose_phiEquivalent_compose {s₁ s₁' s₂ s₂' : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+    (hPhi₁ : PhiEquivalent M₁ M₁')
+    (hPhi₂ : PhiEquivalent M₂ M₂') :
+    PhiEquivalent (M₁.compose M₂) (M₁'.compose M₂') :=
+  (compose_phiEquivalent_compose_left M₂ hPhi₁).trans
+    (compose_phiEquivalent_compose_right M₁' hPhi₂)
+
+end
+
 /-! ### Partial `composeQ_phi` — left action only (cycle 227)
 
 The full binary `composeQ_phi : Quotient PhiEquivalent.setoidSigma →
@@ -3090,6 +3296,62 @@ theorem composeQ_phi_left_act_eq_of_phiEquivalent
         ⟨s₂, M₂⟩ := by
   show Quotient.mk _ _ = Quotient.mk _ _
   exact Quotient.sound (compose_phiEquivalent_compose_left M₂ hPhi₁)
+
+/-! ### Full `composeQ_phi` — binary operation on `Quotient PhiEquivalent.setoidSigma` (cycle 232)
+
+With cycle 232's `compose_phiEquivalent_compose` in hand (assembled
+from the left-action cycle 226 plus the right-action shipped this
+cycle), `compose` lifts to a full binary operation on the Φ-quotient
+via `Quotient.lift₂`. This is the §383 group-homomorphism Phase 3
+deliverable: the lifted operation on which the `Group` instance on
+`Quotient PhiEquivalent.setoidSigma` will be defined (associativity,
+identity, inverse all deferred to subsequent cycles, but the binary
+operation itself is now axiom-clean and definitionally well-behaved). -/
+
+/-- *Full `compose` lifted to the Φ-quotient.* Both arguments are
+`PhiEquivalent.setoidSigma`-quotient classes; the result is the class
+of `M₁.compose M₂` (at stage count `s₁ + s₂`). Well-definedness is
+exactly cycle 232's `compose_phiEquivalent_compose`. -/
+noncomputable def composeQ_phi :
+    Quotient PhiEquivalent.setoidSigma →
+    Quotient PhiEquivalent.setoidSigma →
+    Quotient PhiEquivalent.setoidSigma :=
+  Quotient.lift₂
+    (fun (p q : Σ s : ℕ, RKTableau s) =>
+      Quotient.mk PhiEquivalent.setoidSigma ⟨p.1 + q.1, p.2.compose q.2⟩)
+    (by
+      rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩ ⟨s₁', M₁'⟩ ⟨s₂', M₂'⟩ hPhi₁ hPhi₂
+      apply Quotient.sound
+      show @PhiEquivalent (s₁ + s₂) (s₁' + s₂')
+        (M₁.compose M₂) (M₁'.compose M₂')
+      exact compose_phiEquivalent_compose hPhi₁ hPhi₂)
+
+/-- *Unfold lemma for `composeQ_phi` on concrete representatives.*
+Holds by `rfl` because `Quotient.lift₂ f h ⟦x⟧ ⟦y⟧ = f x y` reduces
+definitionally. -/
+@[simp] theorem composeQ_phi_mk
+    {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+    composeQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩)
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₂, M₂⟩) =
+      Quotient.mk PhiEquivalent.setoidSigma
+        ⟨s₁ + s₂, M₁.compose M₂⟩ :=
+  rfl
+
+/-- *Bridge: `composeQ_phi` reduces to `composeQ_phi_left_act` when
+the right argument is in fact a quotient class.* Holds by `rfl`
+because both lifts unfold to the same `Quotient.mk` of the composite
+representative. This shows the cycle 227 partial left-action is
+consistent with (and subsumed by) the cycle 232 full binary
+operation. -/
+@[simp] theorem composeQ_phi_eq_left_act_mk
+    {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+    composeQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩)
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₂, M₂⟩) =
+      composeQ_phi_left_act
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩) ⟨s₂, M₂⟩ :=
+  rfl
 
 /-- *Composition preserves explicitness.* The composite `M₁.compose M₂`
 is explicit iff both factors are. The four blocks behave as follows:
@@ -4432,5 +4694,84 @@ example :
       Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩ :=
   RKTableau.composeQ_phi_left_act_id_right
     (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
+
+/-- *Cycle 232 non-vacuity for `compose_phiEquivalent_compose_right`
+(homogeneous).* The right-action half of the §383 group-homomorphism
+package on the trivial self-Φ-equivalence of `paddedEuler` produces
+the trivial Φ-equivalence of `paddedEuler.compose paddedEuler`. -/
+example :
+    PhiEquivalent
+        (paddedEuler.compose paddedEuler)
+        (paddedEuler.compose paddedEuler) :=
+  RKTableau.compose_phiEquivalent_compose_right paddedEuler
+    (PhiEquivalent.refl paddedEuler)
+
+/-- *Cycle 232 non-vacuity for `compose_phiEquivalent_compose_right`
+(heterogeneous-stage).* Fixing the left factor `paddedEuler` and
+varying the right factor along the cycle 187 P-reduction
+Φ-equivalence yields a heterogeneous-stage Φ-equivalence:
+`paddedEuler.compose paddedEuler` (4 stages = 2 + 2) is Φ-equivalent
+to `paddedEuler.compose (paddedEuler.pReduced pairPartition)`
+(3 stages = 2 + 1). -/
+example :
+    PhiEquivalent
+        (paddedEuler.compose paddedEuler)
+        (paddedEuler.compose (paddedEuler.pReduced pairPartition)) :=
+  RKTableau.compose_phiEquivalent_compose_right paddedEuler
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition)
+
+/-- *Cycle 232 non-vacuity for `compose_phiEquivalent_compose`
+(full bilinear, both factors heterogeneous-stage).* Varying both
+factors along the cycle 187 P-reduction Φ-equivalence produces a
+Φ-equivalence of composites at distinct stage sums: `paddedEuler.compose
+paddedEuler` (4 stages = 2 + 2) is Φ-equivalent to `(paddedEuler.pReduced
+pairPartition).compose (paddedEuler.pReduced pairPartition)`
+(2 stages = 1 + 1). This is the canonical use case for the
+`Quotient.lift₂`-based `composeQ_phi`. -/
+example :
+    PhiEquivalent
+        (paddedEuler.compose paddedEuler)
+        ((paddedEuler.pReduced pairPartition).compose
+          (paddedEuler.pReduced pairPartition)) :=
+  RKTableau.compose_phiEquivalent_compose
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition)
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition)
+
+/-- *Cycle 232 non-vacuity for `composeQ_phi` (homogeneous).* The
+full binary Φ-quotient operation on `⟦⟨2, paddedEuler⟩⟧` and
+`⟦⟨2, paddedEuler⟩⟧` is the class of `paddedEuler.compose paddedEuler`
+(4 stages). Holds by `rfl` because `Quotient.lift₂` reduces
+definitionally on quotient classes. -/
+example :
+    RKTableau.composeQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩) =
+      Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨4, paddedEuler.compose paddedEuler⟩ :=
+  rfl
+
+/-- *Cycle 232 non-vacuity for `composeQ_phi`
+(heterogeneous-stage well-definedness).* Distinct representative
+stage sums (`2 + 2 = 4` and `1 + 1 = 2`) of Φ-equivalent factors
+land in the same `composeQ_phi` class — the genuine well-definedness
+check that the cycle 232 `compose_phiEquivalent_compose` enables. -/
+example :
+    RKTableau.composeQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩) =
+      RKTableau.composeQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨1, paddedEuler.pReduced pairPartition⟩)
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨1, paddedEuler.pReduced pairPartition⟩) := by
+  apply Quotient.sound
+  exact RKTableau.compose_phiEquivalent_compose
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition)
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition)
 
 end OpenMath.Chapter3.Section381
