@@ -3226,6 +3226,84 @@ theorem compose_phiEquivalent_compose {s₁ s₁' s₂ s₂' : ℕ}
 
 end
 
+/-! ### §383 group-homomorphism Phase 4.1 — associativity at PhiEquivalent (cycle 233)
+
+With cycle 232's `compose_phiEquivalent_compose` shipped, the
+`Quotient.lift₂`-based `composeQ_phi` is well-defined. The next piece
+of the §383 `Group` instance is associativity: `compose` is
+associative at the `PhiEquivalent` level across heterogeneous stage
+counts `(s₁ + s₂) + s₃` vs `s₁ + (s₂ + s₃)`, so `composeQ_phi` is
+associative on the Φ-quotient.
+
+Proof recipe: apply cycle 225's `compose_elementaryWeight_decomp` to
+each side. The RHS bottom-block sum
+`∑ i : Fin (s₂ + s₃), (M₂.compose M₃).b i *
+  (M₂.compose M₃).derivativeWeightWithSrc M₁ i t`
+decomposes via `Fin.sum_univ_add` together with cycle 230's
+`derivativeWeightWithSrc_compose_castAdd` and cycle 231's
+`derivativeWeightWithSrc_compose_natAdd` (plus `compose_b_castAdd` /
+`compose_b_natAdd`) into the matching pair of sums in the LHS
+decomposition. `ring` then closes.
+
+This is the §383 analog of cycle 221's `compose_equivalent_compose_assoc`
+at the §382 `Equivalent`-quotient level (which finessed cycle 210's
+deferred on-the-nose `compose_assoc` HEq blocker the same way: the
+stage-count Σ-projection lives inside the quotient representative, so
+`Quotient.sound` discharges the heterogeneous-stage mismatch). Cycle
+233 ships only the associativity axiom; identity (cycle 234 target)
+and inverse (cycle 235+ targets) remain to be lifted from cycles
+228/229's partial-action laws to full-binary laws on `composeQ_phi`. -/
+
+section
+open OpenMath.Chapter3.Section310
+
+/-- *Associativity of `compose` at `PhiEquivalent` (heterogeneous
+stage form).* Composition of `RKTableau`s is associative up to
+Φ-equivalence: `(M₁ · M₂) · M₃ ~Φ~ M₁ · (M₂ · M₃)` at heterogeneous
+stage counts `(s₁ + s₂) + s₃` vs `s₁ + (s₂ + s₃)`. The `@` prefix
+on `PhiEquivalent` makes the heterogeneous-stage nature explicit, as
+in cycle 221's `compose_equivalent_compose_assoc`.
+
+Proof: apply `compose_elementaryWeight_decomp` (cycle 225) to all
+three composites; the LHS expands to
+`M₁.elementaryWeight t + ∑_{j : Fin s₂} M₂.b j * M₂.dWWS M₁ j t +
+  ∑_{k : Fin s₃} M₃.b k * M₃.dWWS (M₁ · M₂) k t`,
+while the RHS becomes
+`M₁.elementaryWeight t +
+  ∑_{i : Fin (s₂ + s₃)} (M₂ · M₃).b i * (M₂ · M₃).dWWS M₁ i t`.
+The RHS sum splits via `Fin.sum_univ_add` and reduces via cycles
+230 / 231 + `compose_b_castAdd` / `compose_b_natAdd` to the LHS pair
+of sums, after which `ring` closes the equation. -/
+theorem compose_assoc_phiEquivalent {s₁ s₂ s₃ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (M₃ : RKTableau s₃) :
+    @PhiEquivalent ((s₁ + s₂) + s₃) (s₁ + (s₂ + s₃))
+      ((M₁.compose M₂).compose M₃) (M₁.compose (M₂.compose M₃)) := by
+  intro t
+  rw [compose_elementaryWeight_decomp (M₁.compose M₂) M₃ t,
+      compose_elementaryWeight_decomp M₁ M₂ t,
+      compose_elementaryWeight_decomp M₁ (M₂.compose M₃) t]
+  rw [show
+        (∑ i : Fin (s₂ + s₃),
+            (M₂.compose M₃).b i
+              * (M₂.compose M₃).derivativeWeightWithSrc M₁ i t)
+          = (∑ j : Fin s₂,
+                M₂.b j * M₂.derivativeWeightWithSrc M₁ j t)
+            + ∑ k : Fin s₃,
+                M₃.b k
+                  * M₃.derivativeWeightWithSrc (M₁.compose M₂) k t
+      from ?_]
+  · ring
+  · rw [Fin.sum_univ_add]
+    congr 1
+    · refine Finset.sum_congr rfl (fun j _ => ?_)
+      rw [compose_b_castAdd,
+          derivativeWeightWithSrc_compose_castAdd M₁ M₂ M₃ t j]
+    · refine Finset.sum_congr rfl (fun k _ => ?_)
+      rw [compose_b_natAdd,
+          derivativeWeightWithSrc_compose_natAdd M₁ M₂ M₃ t k]
+
+end
+
 /-! ### Partial `composeQ_phi` — left action only (cycle 227)
 
 The full binary `composeQ_phi : Quotient PhiEquivalent.setoidSigma →
@@ -3352,6 +3430,28 @@ operation. -/
       composeQ_phi_left_act
         (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩) ⟨s₂, M₂⟩ :=
   rfl
+
+/-- *Associativity of `composeQ_phi` at the Φ-quotient level — the
+first §383 group axiom in bracketed form (cycle 233).* Immediate
+`Quotient.inductionOn₃` + `Quotient.sound` consequence of
+`compose_assoc_phiEquivalent`. This is the §383 analog of cycle 221's
+`composeQ_assoc` at the §382 `Equivalent`-quotient level.
+
+Cycle 233 ships this as the first of three §383 group axioms;
+cycle 234+ will lift cycles 228/229's partial-action identity laws
+to the full-binary `composeQ_phi_id_{left,right}`, and a later cycle
+will ship the inverse axioms. With all three, the `Group` instance
+on `Quotient PhiEquivalent.setoidSigma` follows by
+`Group.ofLeftAxioms` (analogous to cycle 222's §382 group
+instance). -/
+theorem composeQ_phi_assoc
+    (p q r : Quotient PhiEquivalent.setoidSigma) :
+    composeQ_phi (composeQ_phi p q) r
+      = composeQ_phi p (composeQ_phi q r) := by
+  refine Quotient.inductionOn₃ p q r ?_
+  rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩ ⟨s₃, M₃⟩
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_assoc_phiEquivalent M₁ M₂ M₃)
 
 /-- *Composition preserves explicitness.* The composite `M₁.compose M₂`
 is explicit iff both factors are. The four blocks behave as follows:
@@ -4773,5 +4873,27 @@ example :
       paddedEuler_isPReducibleVia_pairPartition)
     (pReduced_phiEquivalent paddedEuler
       paddedEuler_isPReducibleVia_pairPartition)
+
+/-- *Cycle 233 non-vacuity for `compose_assoc_phiEquivalent`
+(three-factor heterogeneous-stage form).* The associativity axiom of
+`compose` at `PhiEquivalent` fires on three copies of `paddedEuler`,
+exercising the heterogeneous-stage signature `(2 + 2) + 2` vs
+`2 + (2 + 2)`. -/
+example :
+    @PhiEquivalent ((2 + 2) + 2) (2 + (2 + 2))
+      ((paddedEuler.compose paddedEuler).compose paddedEuler)
+      (paddedEuler.compose (paddedEuler.compose paddedEuler)) :=
+  RKTableau.compose_assoc_phiEquivalent paddedEuler paddedEuler paddedEuler
+
+/-- *Cycle 233 non-vacuity for `composeQ_phi_assoc`.* The
+quotient-level associativity axiom of `composeQ_phi` fires on three
+copies of `⟦⟨2, paddedEuler⟩⟧`, exercising the Φ-quotient binary
+operation's associativity end-to-end. -/
+example :
+    let q : Quotient RKTableau.PhiEquivalent.setoidSigma :=
+      Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩
+    RKTableau.composeQ_phi (RKTableau.composeQ_phi q q) q
+      = RKTableau.composeQ_phi q (RKTableau.composeQ_phi q q) :=
+  RKTableau.composeQ_phi_assoc _ _ _
 
 end OpenMath.Chapter3.Section381
