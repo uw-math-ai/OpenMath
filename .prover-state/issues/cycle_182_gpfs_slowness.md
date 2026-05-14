@@ -383,3 +383,10 @@ not transient cluster load. Pivoting to Priority 2: ship
 `PEquivalent.eq_of_isIrreducible_of_middle` (canonical-form
 constructor) plus `paddedEuler` non-vacuity witness via the
 new constructor (per cycle 190 strategy Deliverables A–B).
+
+**Cycle 191 update (11th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.047s, user 0m1.002s, sys 0m2.387s — CPU =
+0.68% of wall, identical near-zero pattern). No zombies. 11
+consecutive timeouts. Pivoting to Priority 2: ship
+`PReducesTo.of_isZeroReducibleVia` (per cycle 191 strategy).

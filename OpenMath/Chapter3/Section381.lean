@@ -475,6 +475,20 @@ theorem eq_of_isIrreducible_of_pReducesTo {s s' : ℕ}
   | step P hLt hVia _ => exact absurd ⟨_, hLt, P, hVia⟩ hIrr.2
   | zeroStep inP1 hP0 hVia _ => exact absurd ⟨inP1, hP0, hVia⟩ hIrr.1
 
+/-- A method P-reduces (in one step) to its 0-reduction. Direct
+corollary of the `zeroStep` constructor. The `refl` continuation
+witnesses that no further reduction is required.
+
+This is the `PReducesTo`-level analog of cycle 189's
+`PEquivalent.of_isZeroReducibleVia`: the latter wraps this lemma
+with `PEquivalent.of_pReducesTo`. Cycle 191 deliverable. -/
+theorem PReducesTo.of_isZeroReducibleVia {s : ℕ}
+    (M : RKTableau s) {inP1 : Fin s → Bool}
+    (hP0 : ∃ i, inP1 i = false)
+    (h : M.IsZeroReducibleVia inP1) :
+    PReducesTo M (M.zeroReduced inP1) :=
+  PReducesTo.zeroStep inP1 hP0 h (PReducesTo.refl _)
+
 /-- *Transitivity of P-equivalence over an irreducible middle method.*
 If `M₂` is irreducible (def:381E), then `PEquivalent M₁ M₂` and
 `PEquivalent M₂ M₃` together yield `PEquivalent M₁ M₃`.
