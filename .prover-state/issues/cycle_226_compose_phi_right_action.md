@@ -134,10 +134,48 @@ remains open.
 - Cycle 226: shipped `derivativeWeightWithSrc_subst_M₁` (mutual,
   ~30 LOC) + `compose_elementaryWeight_decomp` (~20 LOC) +
   `compose_phiEquivalent_compose_left` (~10 LOC).
+- Cycle 227: partial composition lift `composeQ_phi_left_act`
+  (one-sided `Quotient.lift`) shipped as a workaround consuming
+  only the left-action half.
+- Cycles 228 / 229: left- and right-identity laws shipped on the
+  one-sided `composeQ_phi_left_act` (`id_compose_phiEquivalent`,
+  `compose_id_phiEquivalent`).
+- **Cycle 230 update (path B taken)**: Aristotle project
+  `176aa964-db7b-40f8-a01c-05247c186ec5` was IN_PROGRESS at 24 %
+  on the single permitted poll (growth pattern: 9 % → 11 % →
+  17 % → 24 % across cycles 227–230, ≈ 2–7 %/cycle). Cycle 230
+  built **infrastructure** for cycle 232's
+  `compose_assoc_phiEquivalent` rather than retrying the
+  right-action: shipped the top-block mutual block
+  `derivativeWeightWithSrc_compose_castAdd` (per-tree) +
+  `derivativeWeightWithSrcProd_compose_castAdd` (list-helper),
+  both `private` and axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`). For
+  `M₂.compose M₃`'s top-block stage `castAdd s₃ j`, the
+  composite source-method-threaded derivative weight on `M₁`
+  reduces to `M₂`'s own source-method-threaded derivative weight
+  at stage `j`. ~50 LOC at `Section381.lean` lines ~2862–2920,
+  inserted between cycle 226's
+  `compose_phiEquivalent_compose_left` `end` and cycle 227's
+  `composeQ_phi_left_act` definition. Three-factor `paddedEuler`
+  non-vacuity at `s₁ = s₂ = s₃ = 2` verifies the new mutual pair
+  on a concrete trio.
+- **Cycle 231 outlook**: ship the bottom-block partner
+  `derivativeWeightWithSrc_compose_natAdd` (a 6-tuple
+  `(M₁, M₂, M₃, t, k)` consumer of cycle 230's lemma + cycle
+  225's `compose_elementaryWeight_decomp` + the standard
+  `Fin.sum_univ_add` block split on `compose_A_botLeft = M₂.b j`
+  / `compose_A_botRight = M₃.A k k'`). Once both halves land,
+  cycle 232 ships `compose_assoc_phiEquivalent` (three-factor
+  associativity at the PhiEquivalent level), mirroring cycle
+  221's `compose_equivalent_compose_assoc` at the §382 level.
 - Open: the right-action half (M₂-side sum equality) and the
-  full `compose_phiEquivalent_compose`.
-- Downstream impact: cycle 227's planned `composeQ_phi` (the
-  `Quotient.lift₂` lift to `Quotient PhiEquivalent.setoidSigma`)
-  is blocked on this issue. The `composeQ_phi` lift's respect
-  obligation requires the full `compose_phiEquivalent_compose`,
-  not just the left action.
+  full `compose_phiEquivalent_compose`. Cycle 230 did NOT
+  attempt this; the Aristotle delegation remains the primary
+  path A and the path-B infrastructure builds toward
+  associativity rather than the right-action.
+- Downstream impact: cycle 227's planned full
+  `composeQ_phi` (the `Quotient.lift₂` lift to
+  `Quotient PhiEquivalent.setoidSigma`) is still blocked on
+  this issue. The respect obligation requires the full
+  `compose_phiEquivalent_compose`, not just the left action.

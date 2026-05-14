@@ -2859,6 +2859,77 @@ theorem compose_phiEquivalent_compose_left {s₁ s₁' s₂ : ℕ}
 
 end
 
+/- ### Top-block `derivativeWeightWithSrc` unfolding for `compose` (cycle 230)
+
+The cycle 230 (path B) analogue of cycle 224's
+`derivativeWeight_compose_castAdd`, lifted to the
+`derivativeWeightWithSrc` (cycle 225) helper. For a `castAdd`-indexed
+stage in the top block of `M₂.compose M₃`, the composite source-method-
+threaded derivative weight reduces to `M₂`'s own source-method-threaded
+derivative weight at that stage, with the bottom block of
+`M₂.compose M₃` collapsing via `compose_A_topRight = 0`. This is the
+top-block half of `derivativeWeightWithSrc_compose`; together with the
+bottom-block partner (cycle 231 target) and cycle 225's
+`compose_elementaryWeight_decomp`, it will unblock
+`compose_assoc_phiEquivalent` (cycle 232 target). -/
+
+section
+open OpenMath.Chapter3.Section310
+
+mutual
+  /-- *Top-block derivative-weight-with-source reduction.* For a stage
+  `castAdd s₃ j` in the top block of `M₂.compose M₃`, the composite
+  derivative-weight-with-source on `M₁` equals `M₂`'s
+  derivative-weight-with-source on `M₁` at stage `j`. The bottom block
+  of `M₂.compose M₃` does not contribute (because
+  `compose_A_topRight = 0`). Companion to
+  `derivativeWeightWithSrcProd_compose_castAdd`. -/
+  private theorem derivativeWeightWithSrc_compose_castAdd
+      {s₁ s₂ s₃ : ℕ}
+      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (M₃ : RKTableau s₃) :
+      ∀ (t : RootedTree) (j : Fin s₂),
+        (M₂.compose M₃).derivativeWeightWithSrc M₁ (Fin.castAdd s₃ j) t
+          = M₂.derivativeWeightWithSrc M₁ j t
+    | RootedTree.mk children, j => by
+        show (M₂.compose M₃).derivativeWeightWithSrcProd M₁
+                (Fin.castAdd s₃ j) children
+            = M₂.derivativeWeightWithSrcProd M₁ j children
+        exact derivativeWeightWithSrcProd_compose_castAdd
+                M₁ M₂ M₃ children j
+
+  /-- List-helper companion to
+  `derivativeWeightWithSrc_compose_castAdd`. -/
+  private theorem derivativeWeightWithSrcProd_compose_castAdd
+      {s₁ s₂ s₃ : ℕ}
+      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (M₃ : RKTableau s₃) :
+      ∀ (children : List RootedTree) (j : Fin s₂),
+        (M₂.compose M₃).derivativeWeightWithSrcProd M₁
+            (Fin.castAdd s₃ j) children
+          = M₂.derivativeWeightWithSrcProd M₁ j children
+    | [], _ => rfl
+    | t :: ts, j => by
+        show (M₁.elementaryWeight t
+                + ∑ k : Fin (s₂ + s₃),
+                    (M₂.compose M₃).A (Fin.castAdd s₃ j) k
+                      * (M₂.compose M₃).derivativeWeightWithSrc M₁ k t)
+              * (M₂.compose M₃).derivativeWeightWithSrcProd M₁
+                  (Fin.castAdd s₃ j) ts
+            = (M₁.elementaryWeight t
+                + ∑ j' : Fin s₂,
+                    M₂.A j j' * M₂.derivativeWeightWithSrc M₁ j' t)
+              * M₂.derivativeWeightWithSrcProd M₁ j ts
+        rw [derivativeWeightWithSrcProd_compose_castAdd M₁ M₂ M₃ ts j]
+        congr 1
+        congr 1
+        rw [Fin.sum_univ_add]
+        simp only [compose_A_topLeft, compose_A_topRight,
+          zero_mul, Finset.sum_const_zero, add_zero]
+        refine Finset.sum_congr rfl (fun j' _ => ?_)
+        rw [derivativeWeightWithSrc_compose_castAdd M₁ M₂ M₃ t j']
+end
+
+end
+
 /-! ### Partial `composeQ_phi` — left action only (cycle 227)
 
 The full binary `composeQ_phi : Quotient PhiEquivalent.setoidSigma →
@@ -3868,6 +3939,22 @@ example (t : RootedTree) (i : Fin 2) :
         (Fin.natAdd 2 i) t
       = paddedEuler.derivativeWeightWithSrc paddedEuler i t :=
   RKTableau.derivativeWeight_compose_natAdd paddedEuler paddedEuler t i
+
+/-- *Non-vacuity for `derivativeWeightWithSrc_compose_castAdd`
+(cycle 230 P2 / path B).* Three-factor `paddedEuler` compose witness:
+on a top-block stage `castAdd 2 j` of `paddedEuler.compose paddedEuler`,
+the composite derivative-weight-with-source on `paddedEuler` agrees
+with `paddedEuler`'s own derivative-weight-with-source on `paddedEuler`
+at stage `j`. Exercises the new mutual pair on the three-method
+dependency `(M₁, M₂, M₃) = (paddedEuler, paddedEuler, paddedEuler)`,
+mirroring cycle 224's top-block witness but with the source-method
+threading layer engaged. -/
+example (t : RootedTree) (j : Fin 2) :
+    (paddedEuler.compose paddedEuler).derivativeWeightWithSrc
+        paddedEuler (Fin.castAdd 2 j) t
+      = paddedEuler.derivativeWeightWithSrc paddedEuler j t :=
+  RKTableau.derivativeWeightWithSrc_compose_castAdd
+    paddedEuler paddedEuler paddedEuler t j
 
 /-- *`paddedEuler` is explicit.* Its coefficient matrix is the zero
 matrix (`paddedEuler.A = 0`), so the `IsExplicit` predicate holds
