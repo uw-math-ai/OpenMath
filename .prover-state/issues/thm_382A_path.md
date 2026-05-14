@@ -336,3 +336,70 @@ Estimated cycle 216 LOC: ~30 LOC refactor churn + ~20 LOC compose proof
   Closes the bracketed (382f) form `[m₁·m₂] = [m̂₁·m̂₂]`. ~50 LOC.
 - **Cycle 219+**: §382 group structure (identity element + inverse +
   associativity), §383 lemmas, §384 thm:384A, etc.
+
+## Cycle 217 update — heterogeneous form closed
+
+Cycle 217 shipped the heterogeneous-stage form of
+`compose_equivalent_compose` (§B of the cycle 217 strategy), confirming
+the mechanical-port hypothesis from cycle 216's task results.
+`OpenMath/Chapter3/Section381.lean` lines 2708–2729: signature
+generalised from fixed-stage `{s₁ s₂ : ℕ}` to heterogeneous
+`{s₁ s₁' s₂ s₂' : ℕ}`; body byte-for-byte identical to cycle 216.
+Compiled cleanly on first attempt (warm rebuild 6.2s); call site of
+cycle 215's `paddedEuler_equivalent_self`-driven non-vacuity example
+required no edit (Lean unifies all four implicit stage counts to `2`
+from the `paddedEuler : RKTableau 2` annotations).
+
+Cycle 217 P2 (heterogeneous non-vacuity) shipped: a `2+2` vs `1+1`
+composite-`Equivalent` witness threading `paddedEuler_equivalent_pReduced`
+through both sides — the *actually relevant* heterogeneous test case
+that the homogeneous P2 (cycle 216) couldn't exercise.
+
+Axiom-clean (`[propext, Classical.choice, Quot.sound]`) on
+`compose_equivalent_compose`; no regressions on cycle 213's
+`compose_of_isRKOneStep` or cycle 214's `compose_isRKOneStep_iff`.
+
+### Cycle 218 entry point — `composeQ` via `Quotient.lift₂`
+
+The heterogeneous-stage `compose_equivalent_compose` (cycle 217) is
+precisely the respect obligation for a binary `composeQ` operation
+on the Σ-typed quotient `Quotient (RKTableau.Equivalent.setoidSigma)`.
+
+Target signature (cycle 218):
+
+```lean
+def composeQ :
+    Quotient RKTableau.Equivalent.setoidSigma →
+    Quotient RKTableau.Equivalent.setoidSigma →
+    Quotient RKTableau.Equivalent.setoidSigma := by
+  refine Quotient.lift₂ (fun p q =>
+    Quotient.mk' ⟨p.1 + q.1, p.2.compose q.2⟩) ?_
+  rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩ ⟨s₁', M₁'⟩ ⟨s₂', M₂'⟩ hEq₁ hEq₂
+  apply Quotient.sound
+  show (M₁.compose M₂).Equivalent (M₁'.compose M₂')
+  exact RKTableau.compose_equivalent_compose M₁ M₁' M₂ M₂' hEq₁ hEq₂
+```
+
+The respect obligation unpacks `Setoid.r` on Σ-typed inputs to
+heterogeneous `Equivalent` (cycle 212's `setoidSigma.iseqv` definition
+forwards the second projection's `Equivalent`), and the conclusion is
+cycle 217's theorem applied directly.
+
+**Risk for cycle 218's planner**: `Quotient.lift₂` accepts a binary
+operation `α → α → β` where `β` does not depend on the inputs. In
+our case `composeQ`'s output type `Quotient setoidSigma` is independent
+of the inputs (the dependence on `s₁ + s₂` is *inside* the Σ-packed
+element, not the output type), so plain `Quotient.lift₂` suffices —
+no `Quotient.hrecOn₂` needed.
+
+**Risk on Σ-relation unfolding**: cycle 212 defines
+`Equivalent.setoidSigma` with `Setoid.r ⟨s₁, M₁⟩ ⟨s₁', M₁'⟩` unfolding
+to `Equivalent M₁ M₁'` (heterogeneous form). Cycle 218 should
+double-check via `show` reframing (cycle 211/212 precedent) that the
+respect obligation destructures cleanly.
+
+LOC estimate: ~10 LOC for `composeQ` + ~10 LOC for non-vacuity examples
+(`composeQ ⟦⟨2, paddedEuler⟩⟧ ⟦⟨2, paddedEuler⟩⟧ = ⟦⟨4, paddedEuler.compose paddedEuler⟩⟧`
+plus the heterogeneous reduction equivalent via cycle 217 P2 witness).
+The (382f) bracketed form `[m₁·m₂] = [m̂₁·m̂₂]` then follows from
+`Quotient.sound` on cycle 217's theorem.

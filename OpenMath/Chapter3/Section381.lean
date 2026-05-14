@@ -2674,10 +2674,10 @@ theorem compose_isRKOneStep_iff {s₁ s₂ : ℕ}
   · rintro ⟨y_mid, h₁, h₂⟩
     exact compose_of_isRKOneStep M₁ M₂ h₁ h₂
 
-/-- *Composition descends to equivalence classes — fixed-stage (382g)
-form of `thm:382A` (Butcher §382, p. 285).* If `M₁ ≡ M₁'` and
-`M₂ ≡ M₂'` (both at matching stage counts `s₁`, `s₂`), then
-`M₁.compose M₂ ≡ M₁'.compose M₂'`. Cycle 216 closes the cycle 215
+/-- *Composition descends to equivalence classes — heterogeneous-stage
+(382g) form of `thm:382A` (Butcher §382, p. 285).* If `M₁ ≡ M₁'` and
+`M₂ ≡ M₂'` (at arbitrary stage counts `s₁`, `s₁'`, `s₂`, `s₂'`), then
+`M₁.compose M₂ ≡ M₁'.compose M₂'`. Cycle 216 closed the cycle 215
 sorry-scaffold via the route B.1 recipe enabled by the cycle 216
 `Equivalent` uniform-threshold refactor (`∃ h₀, ∀ y₀, ...`): factor
 the composite step via cycle 214's `compose_isRKOneStep_iff` to
@@ -2691,6 +2691,13 @@ threshold is `y_mid'`-independent. Pre-refactor (cycle 215), the
 quantifier order `∀ y₀, ∃ h₀, ...` produced `H₂(y_mid')` depending
 on `y_mid'` which itself depended on `H` — a circular dependency.
 
+**Cycle 217**: generalised from fixed-stage (`s₁ s₂ : ℕ`) to
+heterogeneous-stage (`s₁ s₁' s₂ s₂' : ℕ`); body unchanged from
+cycle 216, only the signature generalised. The proof operates at
+the abstract `N` level and uses `compose_isRKOneStep_iff`
+independently on each side, so stage-count matching is never
+required.
+
 **Faithfulness note (textbook (382f) bracketed form)**: Butcher
 states `thm:382A` as `[m₁·m₂] = [m̂₁·m̂₂]` using the equivalence-class
 bracket; the body then proves the equivalent (382g) form
@@ -2698,19 +2705,14 @@ bracket; the body then proves the equivalent (382g) form
 statement is the (382g) form. The bracketed (382f) form requires
 the `composeQ` lift on cycle 212's `Equivalent.setoidSigma` via
 `Quotient.lift₂` and is deferred — cross-reference
-`.prover-state/issues/thm_382A_path.md`.
-
-**Faithfulness note (fixed-stage restriction)**: the textbook
-statement allows `m₁`, `m̂₁` (resp. `m₂`, `m̂₂`) to have different
-stage counts; our signature uses the fixed-stage form
-`M₁ M₁' : RKTableau s₁`, `M₂ M₂' : RKTableau s₂`. The
-heterogeneous-stage lift is a natural cycle 217+ extension. -/
+`.prover-state/issues/thm_382A_path.md`. -/
 theorem compose_equivalent_compose.{u}
-    {s₁ s₂ : ℕ}
-    (M₁ M₁' : RKTableau s₁) (M₂ M₂' : RKTableau s₂)
-    (hEq₁ : @Equivalent.{u} s₁ s₁ M₁ M₁')
-    (hEq₂ : @Equivalent.{u} s₂ s₂ M₂ M₂') :
-    @Equivalent.{u} (s₁ + s₂) (s₁ + s₂) (M₁.compose M₂) (M₁'.compose M₂') := by
+    {s₁ s₁' s₂ s₂' : ℕ}
+    (M₁ : RKTableau s₁) (M₁' : RKTableau s₁')
+    (M₂ : RKTableau s₂) (M₂' : RKTableau s₂')
+    (hEq₁ : @Equivalent.{u} s₁ s₁' M₁ M₁')
+    (hEq₂ : @Equivalent.{u} s₂ s₂' M₂ M₂') :
+    @Equivalent.{u} (s₁ + s₂) (s₁' + s₂') (M₁.compose M₂) (M₁'.compose M₂') := by
   intro N _ _ _ f L hL
   obtain ⟨H₁, hH₁_pos, hEq₁_app⟩ := hEq₁ f L hL
   obtain ⟨H₂, hH₂_pos, hEq₂_app⟩ := hEq₂ f L hL
@@ -2836,5 +2838,25 @@ example : (paddedEuler.compose paddedEuler).Equivalent
   RKTableau.compose_equivalent_compose paddedEuler paddedEuler
     paddedEuler paddedEuler
     paddedEuler_equivalent_self paddedEuler_equivalent_self
+
+/-- *Non-vacuity for the heterogeneous-stage cycle 217 form of
+`compose_equivalent_compose` (`thm:382A` 382g).* Composing
+`paddedEuler` (2-stage) with `paddedEuler` (2-stage) is `Equivalent`
+to composing `paddedEuler.pReduced pairPartition` (1-stage) with
+`paddedEuler.pReduced pairPartition` (1-stage) — a genuinely
+heterogeneous-stage assertion (`4 = 2 + 2` on the left, `2 = 1 + 1`
+on the right). Routes through cycle 208's
+`paddedEuler_equivalent_pReduced` applied twice. -/
+example :
+    @RKTableau.Equivalent
+      (2 + 2) (1 + 1)
+      (paddedEuler.compose paddedEuler)
+      ((paddedEuler.pReduced pairPartition).compose
+        (paddedEuler.pReduced pairPartition)) :=
+  RKTableau.compose_equivalent_compose
+    paddedEuler (paddedEuler.pReduced pairPartition)
+    paddedEuler (paddedEuler.pReduced pairPartition)
+    paddedEuler_equivalent_pReduced
+    paddedEuler_equivalent_pReduced
 
 end OpenMath.Chapter3.Section381
