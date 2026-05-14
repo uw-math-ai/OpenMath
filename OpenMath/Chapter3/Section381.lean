@@ -2574,6 +2574,52 @@ theorem compose_isExplicit_iff {s₁ s₂ : ℕ}
         rw [hi_eq, hj_eq, compose_A_botRight]
         exact h₂ _ _ (by show i.val - s₁ ≤ j.val - s₁; omega)
 
+/-- *Reverse direction of the (forthcoming) `compose_isRKOneStep_iff`
+bridge — algebraic, no smallness or Lipschitz needed.* Sequential
+`M₁` and `M₂` one-step outputs at step size `H` (with `M₂` starting
+from `M₁`'s output `y_mid`) assemble into a single one-step output of
+`M₁.compose M₂` at the *same* step size `H` — Butcher §382 (382b–e),
+read right-to-left. The composite stage tuple is `Fin.append Y₁ Y₂`;
+the top block recovers `M₁`'s stage equations via `compose_A_topLeft`
++ `compose_A_topRight = 0`, while the bottom block recovers `M₂`'s
+stage equations after absorbing `M₁`'s output formula through
+`compose_A_botLeft = M₁.b j` and `compose_A_botRight = M₂.A i j`.
+The output equation splits identically through `compose_b_castAdd`
+and `compose_b_natAdd`. Together with the forward direction
+(deferred to a subsequent cycle, requiring Lipschitz + small `H` for
+existential `y_mid` extraction via `IsRKOneStep_exists`), this
+discharges Gap A of the path to `thm:382A` per
+`.prover-state/issues/compose_isRKOneStep_iff_scoping.md`. -/
+theorem compose_of_isRKOneStep {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {y₀ : N} {H : ℝ} {y_mid y_final : N}
+    (h₁ : M₁.IsRKOneStep f y₀ H y_mid)
+    (h₂ : M₂.IsRKOneStep f y_mid H y_final) :
+    (M₁.compose M₂).IsRKOneStep f y₀ H y_final := by
+  obtain ⟨Y₁, hY₁_stage, hY₁_out⟩ := h₁
+  obtain ⟨Y₂, hY₂_stage, hY₂_out⟩ := h₂
+  refine ⟨Fin.append Y₁ Y₂, ?_, ?_⟩
+  · intro i
+    induction i using Fin.addCases with
+    | left i₁ =>
+      rw [Fin.append_left, Fin.sum_univ_add]
+      simp only [compose_A_topLeft, compose_A_topRight,
+        Fin.append_left, Fin.append_right,
+        zero_smul, Finset.sum_const_zero, add_zero]
+      exact hY₁_stage i₁
+    | right i₂ =>
+      rw [Fin.append_right, Fin.sum_univ_add]
+      simp only [compose_A_botLeft, compose_A_botRight,
+        Fin.append_left, Fin.append_right]
+      rw [smul_add, ← add_assoc, ← hY₁_out]
+      exact hY₂_stage i₂
+  · rw [Fin.sum_univ_add]
+    simp only [compose_b_castAdd, compose_b_natAdd,
+      Fin.append_left, Fin.append_right]
+    rw [smul_add, ← add_assoc, ← hY₁_out]
+    exact hY₂_out
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -2619,5 +2665,32 @@ forward direction of the iff. Exercises P1 on a concrete pair. -/
 example : (paddedEuler.compose paddedEuler).IsExplicit :=
   (RKTableau.compose_isExplicit_iff paddedEuler paddedEuler).mpr
     ⟨paddedEuler_isExplicit, paddedEuler_isExplicit⟩
+
+/-- *Concrete `IsRKOneStep` witness for `paddedEuler`.* Since
+`paddedEuler.A = 0`, every constant stage tuple `fun _ => y₀` solves
+the (trivial) stage equations, and `paddedEuler.b = ![1, 0]` makes the
+output exactly `y₀ + H • f y₀` — explicit Euler's update through a
+padded 2-stage frame. -/
+theorem paddedEuler_isRKOneStep {N : Type*} [NormedAddCommGroup N]
+    [NormedSpace ℝ N] (f : N → N) (y₀ : N) (H : ℝ) :
+    paddedEuler.IsRKOneStep f y₀ H (y₀ + H • f y₀) := by
+  refine ⟨fun _ => y₀, ?_, ?_⟩
+  · intro i
+    simp [paddedEuler]
+  · simp [paddedEuler, Fin.sum_univ_two]
+
+/-- *Non-vacuity for `compose_of_isRKOneStep` (cycle 213 P1).* Two
+sequential `paddedEuler` steps (taking the output of the first as the
+input of the second) assemble into a single one-step output of
+`paddedEuler.compose paddedEuler`, the 4-stage composite. Concrete
+exercise of the reverse direction of the `compose_isRKOneStep_iff`
+bridge on the `paddedEuler` non-vacuity backbone. -/
+example {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (y₀ : N) (H : ℝ) :
+    (paddedEuler.compose paddedEuler).IsRKOneStep f y₀ H
+      ((y₀ + H • f y₀) + H • f (y₀ + H • f y₀)) :=
+  RKTableau.compose_of_isRKOneStep paddedEuler paddedEuler
+    (paddedEuler_isRKOneStep f y₀ H)
+    (paddedEuler_isRKOneStep f (y₀ + H • f y₀) H)
 
 end OpenMath.Chapter3.Section381

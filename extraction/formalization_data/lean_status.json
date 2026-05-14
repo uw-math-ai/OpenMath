@@ -685,7 +685,8 @@
   "thm:382A": {
     "lean_file": null,
     "lean_symbol": null,
-    "status": "unformalized"
+    "status": "unformalized",
+    "note": "Gap A reverse direction shipped cycle 213: RKTableau.compose_of_isRKOneStep (OpenMath/Chapter3/Section381.lean, ~30 LOC, axiom-clean). Algebraic block-by-block assembly of the composite stage tuple via Fin.append Y₁ Y₂ + cycle 209's compose_A_*/compose_b_* simp lemmas; no Lipschitz/smallness needed. Forward direction (Gap A) and Σ-typed setoid lift (Gap B partially closed cycle 212 via Equivalent.setoidSigma; lift of compose to the quotient still pending) deferred per .prover-state/issues/compose_isRKOneStep_iff_scoping.md and .prover-state/issues/thm_382A_path.md."
   },
   "thm:382B": {
     "lean_file": null,
