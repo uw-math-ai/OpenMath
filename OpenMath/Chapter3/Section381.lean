@@ -1894,6 +1894,241 @@ theorem Equivalent.trans.{u} {s s' s'' : ℕ}
   calc y₁ = y₂ := hConcl₁ h hh_pos hh_le_₁ y₁ y₂ hY₁ hY₂
     _ = y₃ := hConcl₂ h hh_pos hh_le_₂ y₂ y₃ hY₂ hY₃
 
+/-- *Per-step P-reduction preserves equivalence.* If `M` is P-reducible
+via partition `P` (def:381D), then `M` is equivalent (def:381A) to the
+P-reduced method `M.pReduced P`. Textbook §380 page 304: the stage
+values of `M` are constant on each partition block — encoded here via
+Banach uniqueness applied to a *lift* of the P-reduced stages
+`Y_lifted i := Y' (P.block i)`, which we verify is a fixed point of
+`M.RKStageMap`. By cycle 204's `RKStageMap_fixedPoint_unique`, this
+forces `Y = Y_lifted`; the output of `M` then collapses to the output
+of `M.pReduced P` by grouping `M.b i • f (Y i)` over blocks via
+`Finset.sum_fiberwise`. Closes the per-step half of the deferred
+direction `PReducesTo → Equivalent` of `thm:381H`. Combined with
+`Equivalent.trans` (cycle 206) and `equivalent_self` (cycle 203), the
+inductive lift to a full `PReducesTo M M' → Equivalent M M'` is
+mechanical. -/
+theorem pReduced_equivalent.{u}
+    {s sBar : ℕ} {M : RKTableau s} {P : PPartition s sBar}
+    (hP : M.IsPReducibleVia P) :
+    @Equivalent.{u} s sBar M (M.pReduced P) := by
+  intro N _ _ _ f L hL y₀
+  set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j| with hC_def
+  have hC_nn : 0 ≤ C :=
+    Finset.sum_nonneg fun _ _ =>
+      Finset.sum_nonneg fun _ _ => abs_nonneg _
+  have h_LCnn : 0 ≤ (L : ℝ) * C := mul_nonneg L.coe_nonneg hC_nn
+  have h_denom_pos : 0 < 2 * ((L : ℝ) * C + 1) := by linarith
+  refine ⟨1 / (2 * ((L : ℝ) * C + 1)), by positivity, ?_⟩
+  intro h hh_pos hh_le y₁ y₁' hY hY'
+  obtain ⟨Y, hY_stage, hY_out⟩ := hY
+  obtain ⟨Y', hY'_stage, hY'_out⟩ := hY'
+  have h_abs : |h| = h := abs_of_pos hh_pos
+  have h_mul : h * (2 * ((L : ℝ) * C + 1)) ≤ 1 :=
+    (le_div_iff₀ h_denom_pos).mp hh_le
+  have h_small : |h| * (L : ℝ) * C < 1 := by
+    rw [h_abs]
+    nlinarith [hh_pos, h_LCnn, h_mul]
+  -- Lift Y' across P-blocks: `Y_lifted i := Y' (P.block i)`.
+  set Y_lifted : Fin s → N := fun i => Y' (P.block i) with hY_lifted_def
+  -- The lift is a fixed point of M's stage map.
+  have hY_lifted_fix : M.RKStageMap h f y₀ Y_lifted = Y_lifted := by
+    funext i
+    show y₀ + h • ∑ j, M.A i j • f (Y_lifted j) = Y' (P.block i)
+    rw [hY'_stage (P.block i)]
+    congr 1
+    congr 1
+    rw [← Finset.sum_fiberwise (s := (Finset.univ : Finset (Fin s)))
+          (g := P.block) (f := fun j => M.A i j • f (Y_lifted j))]
+    refine Finset.sum_congr rfl fun J _ => ?_
+    rw [pReduced_A_apply M hP (P.block i) J i rfl, Finset.sum_smul]
+    refine Finset.sum_congr rfl fun j hj => ?_
+    have hjblock : P.block j = J := (Finset.mem_filter.mp hj).2
+    show M.A i j • f (Y' (P.block j)) = M.A i j • f (Y' J)
+    rw [hjblock]
+  -- Extract Y = Y_lifted via Banach uniqueness.
+  have hY_fix : M.RKStageMap h f y₀ Y = Y := by
+    funext i; exact (hY_stage i).symm
+  have hY_eq : Y = Y_lifted :=
+    M.RKStageMap_fixedPoint_unique h hL y₀ h_small hY_fix hY_lifted_fix
+  -- Collapse outputs: group `M.b i • f (Y i)` over P-blocks.
+  rw [hY_out, hY'_out, hY_eq]
+  congr 1
+  congr 1
+  rw [← Finset.sum_fiberwise (s := (Finset.univ : Finset (Fin s)))
+        (g := P.block) (f := fun i => M.b i • f (Y_lifted i))]
+  refine Finset.sum_congr rfl fun J _ => ?_
+  rw [pReduced_b_apply, Finset.sum_smul]
+  refine Finset.sum_congr rfl fun i hi => ?_
+  have hiblock : P.block i = J := (Finset.mem_filter.mp hi).2
+  show M.b i • f (Y' (P.block i)) = M.b i • f (Y' J)
+  rw [hiblock]
+
+/-- *Per-step 0-reduction preserves equivalence.* If `M` is 0-reducible
+via the Boolean predicate `inP1` (def:381C), then `M` is equivalent
+(def:381A) to the 0-reduced method `M.zeroReduced inP1`. The proof
+uses the project-down dual of `pReduced_equivalent`: define
+`Z J := Y (zeroReducedEmb inP1 J)` (project M's stage values onto
+P₁); show `Z` is a fixed point of `(M.zeroReduced inP1).RKStageMap`
+by splitting M's stage sum over P₀/P₁ (the P₀ part vanishes because
+`A` is zero from P₁ to P₀) and reindexing the P₁ part via the order
+embedding; then Banach uniqueness on the smaller stage map yields
+`Z = Y'`. The output collapse splits `M.b i • f(Y i)` over P₀/P₁ —
+the P₀ part vanishes (because `b` is zero on P₀) and the P₁ part
+reindexes to the zero-reduced output formula. Closes the per-step
+half of the `zeroStep` case of `PReducesTo → Equivalent`. -/
+theorem zeroReduced_equivalent.{u}
+    {s : ℕ} {M : RKTableau s} {inP1 : Fin s → Bool}
+    (_hP0 : ∃ i, inP1 i = false)
+    (h0 : M.IsZeroReducibleVia inP1) :
+    @Equivalent.{u} s _ M (M.zeroReduced inP1) := by
+  intro N _ _ _ f L hL y₀
+  -- Use C_zr (the zero-reduced map's row-sum) as the contraction constant.
+  set C_zr : ℝ :=
+      ∑ I : Fin (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card,
+      ∑ J : Fin (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card,
+        |(M.zeroReduced inP1).A I J| with hC_zr_def
+  have hC_zr_nn : 0 ≤ C_zr :=
+    Finset.sum_nonneg fun _ _ =>
+      Finset.sum_nonneg fun _ _ => abs_nonneg _
+  have h_LCnn : 0 ≤ (L : ℝ) * C_zr := mul_nonneg L.coe_nonneg hC_zr_nn
+  have h_denom_pos : 0 < 2 * ((L : ℝ) * C_zr + 1) := by linarith
+  refine ⟨1 / (2 * ((L : ℝ) * C_zr + 1)), by positivity, ?_⟩
+  intro h hh_pos hh_le y₁ y₁' hY hY'
+  obtain ⟨Y, hY_stage, hY_out⟩ := hY
+  obtain ⟨Y', hY'_stage, hY'_out⟩ := hY'
+  have h_abs : |h| = h := abs_of_pos hh_pos
+  have h_mul : h * (2 * ((L : ℝ) * C_zr + 1)) ≤ 1 :=
+    (le_div_iff₀ h_denom_pos).mp hh_le
+  have h_small : |h| * (L : ℝ) * C_zr < 1 := by
+    rw [h_abs]
+    nlinarith [hh_pos, h_LCnn, h_mul]
+  -- Project Y onto P₁: `Z J := Y (zeroReducedEmb inP1 J)`.
+  set Z : Fin (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card → N :=
+    fun J => Y (zeroReducedEmb inP1 J) with hZ_def
+  -- Key Finset fact: image of zeroReducedEmb = filter (inP1 · = true).
+  have hImage :
+      Finset.image (zeroReducedEmb inP1) (Finset.univ) =
+        Finset.univ.filter (fun i : Fin s => inP1 i = true) :=
+    Finset.image_orderEmbOfFin_univ _ rfl
+  have hEmbInj :
+      Set.InjOn (zeroReducedEmb inP1)
+        (↑(Finset.univ :
+          Finset (Fin (Finset.univ.filter
+              (fun i : Fin s => inP1 i = true)).card)) : Set _) :=
+    (zeroReducedEmb inP1).toEmbedding.injective.injOn
+  have hP1_emb : ∀ J, inP1 (zeroReducedEmb inP1 J) = true := by
+    intro J
+    have hmem : zeroReducedEmb inP1 J ∈
+        Finset.univ.filter (fun i : Fin s => inP1 i = true) :=
+      Finset.orderEmbOfFin_mem _ rfl J
+    exact (Finset.mem_filter.mp hmem).2
+  -- Z is a fixed point of `(M.zeroReduced inP1).RKStageMap`.
+  have hZ_fix : (M.zeroReduced inP1).RKStageMap h f y₀ Z = Z := by
+    funext J
+    show y₀ + h • ∑ K, (M.zeroReduced inP1).A J K • f (Z K) =
+        Y (zeroReducedEmb inP1 J)
+    rw [hY_stage (zeroReducedEmb inP1 J)]
+    congr 1
+    congr 1
+    -- Goal: ∑ K, (M.zeroReduced inP1).A J K • f (Z K)
+    --     = ∑ j, M.A (zeroReducedEmb inP1 J) j • f (Y j)
+    -- Split RHS sum into P₁ and P₀ parts; P₀ part vanishes by h0.2.
+    have hsplit :
+        (∑ j, M.A (zeroReducedEmb inP1 J) j • f (Y j))
+          = (∑ j ∈ Finset.univ.filter (fun j : Fin s => inP1 j = true),
+                M.A (zeroReducedEmb inP1 J) j • f (Y j))
+            + (∑ j ∈ Finset.univ.filter (fun j : Fin s => ¬ inP1 j = true),
+                M.A (zeroReducedEmb inP1 J) j • f (Y j)) := by
+      rw [Finset.sum_filter_add_sum_filter_not]
+    have hP0_zero :
+        (∑ j ∈ Finset.univ.filter (fun j : Fin s => ¬ inP1 j = true),
+            M.A (zeroReducedEmb inP1 J) j • f (Y j)) = 0 := by
+      apply Finset.sum_eq_zero
+      intro j hj
+      have hjP0 : ¬ inP1 j = true := (Finset.mem_filter.mp hj).2
+      have hjFalse : inP1 j = false := by
+        cases hb : inP1 j with
+        | true => exact absurd hb hjP0
+        | false => rfl
+      have hAzero : M.A (zeroReducedEmb inP1 J) j = 0 :=
+        h0.2 _ _ (hP1_emb J) hjFalse
+      rw [hAzero, zero_smul]
+    rw [hsplit, hP0_zero, add_zero]
+    -- Convert LHS into the filter sum via sum_congr + sum_image + hImage.
+    have hSumImg :
+        (∑ K, M.A (zeroReducedEmb inP1 J) (zeroReducedEmb inP1 K) •
+              f (Y (zeroReducedEmb inP1 K)))
+          = ∑ j ∈ Finset.image (zeroReducedEmb inP1) Finset.univ,
+              M.A (zeroReducedEmb inP1 J) j • f (Y j) :=
+      (Finset.sum_image (f := fun j : Fin s =>
+          M.A (zeroReducedEmb inP1 J) j • f (Y j)) hEmbInj).symm
+    calc ∑ K, (M.zeroReduced inP1).A J K • f (Z K)
+        = ∑ K, M.A (zeroReducedEmb inP1 J) (zeroReducedEmb inP1 K) •
+            f (Y (zeroReducedEmb inP1 K)) :=
+          Finset.sum_congr rfl fun K _ => by rw [zeroReduced_A_apply]
+      _ = ∑ j ∈ Finset.image (zeroReducedEmb inP1) Finset.univ,
+            M.A (zeroReducedEmb inP1 J) j • f (Y j) := hSumImg
+      _ = ∑ j ∈ Finset.univ.filter (fun j : Fin s => inP1 j = true),
+            M.A (zeroReducedEmb inP1 J) j • f (Y j) := by
+          rw [hImage]
+  -- Banach uniqueness on the zero-reduced stage map: Z = Y'.
+  have hY'_fix : (M.zeroReduced inP1).RKStageMap h f y₀ Y' = Y' := by
+    funext J; exact (hY'_stage J).symm
+  have hZ_eq : Z = Y' :=
+    (M.zeroReduced inP1).RKStageMap_fixedPoint_unique h hL y₀ h_small
+      hZ_fix hY'_fix
+  -- Output collapse.
+  rw [hY_out, hY'_out]
+  congr 1
+  congr 1
+  -- Goal: ∑ i, M.b i • f (Y i) = ∑ J, (M.zeroReduced inP1).b J • f (Y' J)
+  have hsplit_b :
+      (∑ i, M.b i • f (Y i))
+        = (∑ i ∈ Finset.univ.filter (fun i : Fin s => inP1 i = true),
+              M.b i • f (Y i))
+          + (∑ i ∈ Finset.univ.filter (fun i : Fin s => ¬ inP1 i = true),
+              M.b i • f (Y i)) := by
+    rw [Finset.sum_filter_add_sum_filter_not]
+  have hP0_b_zero :
+      (∑ i ∈ Finset.univ.filter (fun i : Fin s => ¬ inP1 i = true),
+          M.b i • f (Y i)) = 0 := by
+    apply Finset.sum_eq_zero
+    intro i hi
+    have hiP0 : ¬ inP1 i = true := (Finset.mem_filter.mp hi).2
+    have hiFalse : inP1 i = false := by
+      cases hb : inP1 i with
+      | true => exact absurd hb hiP0
+      | false => rfl
+    rw [h0.1 _ hiFalse, zero_smul]
+  rw [hsplit_b, hP0_b_zero, add_zero]
+  calc ∑ i ∈ Finset.univ.filter (fun i : Fin s => inP1 i = true),
+          M.b i • f (Y i)
+      = ∑ i ∈ Finset.image (zeroReducedEmb inP1) Finset.univ,
+          M.b i • f (Y i) := by rw [hImage]
+    _ = ∑ J, M.b (zeroReducedEmb inP1 J) • f (Y (zeroReducedEmb inP1 J)) :=
+        Finset.sum_image (f := fun j : Fin s => M.b j • f (Y j)) hEmbInj
+    _ = ∑ J, (M.zeroReduced inP1).b J • f (Y' J) :=
+        Finset.sum_congr rfl fun J _ => by
+          rw [zeroReduced_b_apply, ← hZ_eq]
+
+/-- *Reflexive-transitive closure of P-reduction implies def:381A
+equivalence.* Closes the deferred direction (2) of `thm:381H`
+(`PReducesTo → Equivalent`), composing cycle 203's `equivalent_self`
+(refl case), cycle 207's `pReduced_equivalent` (step case),
+`zeroReduced_equivalent` (zeroStep case), and cycle 206's
+`Equivalent.trans`. -/
+theorem PReducesTo.toEquivalent.{u}
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (h : PReducesTo M M') :
+    @Equivalent.{u} s s' M M' := by
+  induction h with
+  | refl M => exact equivalent_self M
+  | step P _hLt hVia _h_tail ih =>
+      exact Equivalent.trans (pReduced_equivalent hVia) ih
+  | zeroStep inP1 hP0 hVia _h_tail ih =>
+      exact Equivalent.trans (zeroReduced_equivalent hP0 hVia) ih
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381
