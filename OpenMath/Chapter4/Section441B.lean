@@ -169,6 +169,117 @@ theorem cInverseLog_one_eq_neg_one_sixth : cInverseLog 1 = -1 / 6 := by
   rw [hex]
   linarith
 
+/-- **Closed form `c₄ = -2/45`** (Butcher §441 p. 376 follow-on).
+
+Computed by extracting the `X⁴` coefficient from
+`cInverseLogSeries * cSeries = 1`. The contributing terms in
+`antidiagonal 4 = {(0,4),(1,3),(2,2),(3,1),(4,0)}` are:
+* `coeff 0 cIL * coeff 4 cS = 2 · cInverseLog 2`
+* `coeff 2 cIL * coeff 2 cS = (2/3) · (-1/6) = -1/9`
+* `coeff 4 cIL * coeff 0 cS = (2/5) · (1/2) = 1/5`
+* odd-index `cIL` terms vanish.
+
+Together: `2 · cInverseLog 2 - 1/9 + 1/5 = 0`,
+so `cInverseLog 2 = -2/45`. -/
+theorem cInverseLog_two_eq : cInverseLog 2 = -2 / 45 := by
+  have hmul := cInverseLogSeries_mul_cSeries_eq_one
+  have hcoeff : (PowerSeries.coeff (R := ℝ) 4) (cInverseLogSeries * cSeries)
+      = (PowerSeries.coeff (R := ℝ) 4) (1 : PowerSeries ℝ) := by
+    rw [hmul]
+  rw [PowerSeries.coeff_mul, PowerSeries.coeff_one] at hcoeff
+  simp only [show (4 : ℕ) ≠ 0 by decide, if_false] at hcoeff
+  rw [show (Finset.antidiagonal 4 : Finset (ℕ × ℕ)) =
+      {(0, 4), (1, 3), (2, 2), (3, 1), (4, 0)} from by decide] at hcoeff
+  rw [show ({(0, 4), (1, 3), (2, 2), (3, 1), (4, 0)} : Finset (ℕ × ℕ)) =
+      insert (0, 4) (insert (1, 3) (insert (2, 2) (insert (3, 1)
+        {(4, 0)}))) from rfl] at hcoeff
+  rw [Finset.sum_insert (by decide), Finset.sum_insert (by decide),
+      Finset.sum_insert (by decide), Finset.sum_insert (by decide),
+      Finset.sum_singleton] at hcoeff
+  rw [coeff_cInverseLogSeries 0, coeff_cInverseLogSeries 1,
+      coeff_cInverseLogSeries 2, coeff_cInverseLogSeries 3,
+      coeff_cInverseLogSeries 4] at hcoeff
+  simp only [show Even (0 : ℕ) from ⟨0, by decide⟩,
+             show ¬ Even (1 : ℕ) from Nat.not_even_one,
+             show Even (2 : ℕ) from ⟨1, by decide⟩,
+             show ¬ Even (3 : ℕ) from by decide,
+             show Even (4 : ℕ) from ⟨2, by decide⟩,
+             if_true, if_false] at hcoeff
+  have h0 : (PowerSeries.coeff (R := ℝ) 0) cSeries = 1 / 2 := by
+    have := cInverseLog_zero_eq_half
+    unfold cInverseLog at this
+    simpa using this
+  have h2 : (PowerSeries.coeff (R := ℝ) 2) cSeries = -1 / 6 := by
+    have := cInverseLog_one_eq_neg_one_sixth
+    unfold cInverseLog at this
+    simpa using this
+  rw [h0, h2] at hcoeff
+  norm_num at hcoeff
+  unfold cInverseLog
+  have hex : (2 * 2 : ℕ) = 4 := by norm_num
+  rw [hex]
+  linarith
+
+/-- **Closed form `c₆ = -22/945`** (Butcher §441 p. 376 follow-on).
+
+Computed by extracting the `X⁶` coefficient from
+`cInverseLogSeries * cSeries = 1`. The contributing terms in
+`antidiagonal 6 = {(0,6),(1,5),(2,4),(3,3),(4,2),(5,1),(6,0)}` are:
+* `coeff 0 cIL * coeff 6 cS = 2 · cInverseLog 3`
+* `coeff 2 cIL * coeff 4 cS = (2/3) · (-2/45) = -4/135`
+* `coeff 4 cIL * coeff 2 cS = (2/5) · (-1/6) = -1/15`
+* `coeff 6 cIL * coeff 0 cS = (2/7) · (1/2) = 1/7`
+* odd-index `cIL` terms vanish.
+
+Together: `2 · cInverseLog 3 - 4/135 - 1/15 + 1/7 = 0`,
+so `cInverseLog 3 = -22/945`. -/
+theorem cInverseLog_three_eq : cInverseLog 3 = -22 / 945 := by
+  have hmul := cInverseLogSeries_mul_cSeries_eq_one
+  have hcoeff : (PowerSeries.coeff (R := ℝ) 6) (cInverseLogSeries * cSeries)
+      = (PowerSeries.coeff (R := ℝ) 6) (1 : PowerSeries ℝ) := by
+    rw [hmul]
+  rw [PowerSeries.coeff_mul, PowerSeries.coeff_one] at hcoeff
+  simp only [show (6 : ℕ) ≠ 0 by decide, if_false] at hcoeff
+  rw [show (Finset.antidiagonal 6 : Finset (ℕ × ℕ)) =
+      {(0, 6), (1, 5), (2, 4), (3, 3), (4, 2), (5, 1), (6, 0)} from by decide] at hcoeff
+  rw [show ({(0, 6), (1, 5), (2, 4), (3, 3), (4, 2), (5, 1), (6, 0)} : Finset (ℕ × ℕ)) =
+      insert (0, 6) (insert (1, 5) (insert (2, 4) (insert (3, 3)
+        (insert (4, 2) (insert (5, 1) {(6, 0)}))))) from rfl] at hcoeff
+  rw [Finset.sum_insert (by decide), Finset.sum_insert (by decide),
+      Finset.sum_insert (by decide), Finset.sum_insert (by decide),
+      Finset.sum_insert (by decide), Finset.sum_insert (by decide),
+      Finset.sum_singleton] at hcoeff
+  rw [coeff_cInverseLogSeries 0, coeff_cInverseLogSeries 1,
+      coeff_cInverseLogSeries 2, coeff_cInverseLogSeries 3,
+      coeff_cInverseLogSeries 4, coeff_cInverseLogSeries 5,
+      coeff_cInverseLogSeries 6] at hcoeff
+  simp only [show Even (0 : ℕ) from ⟨0, by decide⟩,
+             show ¬ Even (1 : ℕ) from Nat.not_even_one,
+             show Even (2 : ℕ) from ⟨1, by decide⟩,
+             show ¬ Even (3 : ℕ) from by decide,
+             show Even (4 : ℕ) from ⟨2, by decide⟩,
+             show ¬ Even (5 : ℕ) from by decide,
+             show Even (6 : ℕ) from ⟨3, by decide⟩,
+             if_true, if_false] at hcoeff
+  have h0 : (PowerSeries.coeff (R := ℝ) 0) cSeries = 1 / 2 := by
+    have := cInverseLog_zero_eq_half
+    unfold cInverseLog at this
+    simpa using this
+  have h2 : (PowerSeries.coeff (R := ℝ) 2) cSeries = -1 / 6 := by
+    have := cInverseLog_one_eq_neg_one_sixth
+    unfold cInverseLog at this
+    simpa using this
+  have h4 : (PowerSeries.coeff (R := ℝ) 4) cSeries = -2 / 45 := by
+    have := cInverseLog_two_eq
+    unfold cInverseLog at this
+    simpa using this
+  rw [h0, h2, h4] at hcoeff
+  norm_num at hcoeff
+  unfold cInverseLog
+  have hex : (2 * 3 : ℕ) = 6 := by norm_num
+  rw [hex]
+  linarith
+
 /-- **Non-vacuity P5 witness** — `c₀ > 0`. -/
 theorem cInverseLog_zero_pos : 0 < cInverseLog 0 := by
   rw [cInverseLog_zero_eq_half]; norm_num
@@ -178,6 +289,16 @@ of Butcher's induction for Phase C, and the first non-trivial
 instance of the negativity claim of `lem:441B`. -/
 theorem cInverseLog_one_neg : cInverseLog 1 < 0 := by
   rw [cInverseLog_one_eq_neg_one_sixth]; norm_num
+
+/-- **Non-vacuity witness** — `c₄ < 0`, immediate from the closed-form
+`cInverseLog 2 = -2/45`. -/
+theorem cInverseLog_two_neg : cInverseLog 2 < 0 := by
+  rw [cInverseLog_two_eq]; norm_num
+
+/-- **Non-vacuity witness** — `c₆ < 0`, immediate from the closed-form
+`cInverseLog 3 = -22/945`. -/
+theorem cInverseLog_three_neg : cInverseLog 3 < 0 := by
+  rw [cInverseLog_three_eq]; norm_num
 
 /-! ## Phase C — strict negativity of `cInverseLog n` for `n ≥ 1`
 
@@ -420,5 +541,15 @@ theorem cInverseLog_neg : ∀ n : ℕ, 1 ≤ n → cInverseLog n < 0 := by
     -- From hKey: 2(2n+1) · cIL n + (positive) + (≥0) = 0
     -- So 2(2n+1) · cIL n < 0, hence cIL n < 0
     nlinarith [hKey, h2term_pos, h_rest_nonneg, h2n_pos]
+
+/-! ## Cross-check: closed-form witnesses ⟹ Phase C negativity -/
+
+/-- Sanity check: the cycle-238 general headline `cInverseLog_neg` recovers
+the same sign as the closed-form `cInverseLog_two_eq`. -/
+example : cInverseLog 2 < 0 := cInverseLog_neg 2 (by norm_num)
+
+/-- Sanity check: the cycle-238 general headline `cInverseLog_neg` recovers
+the same sign as the closed-form `cInverseLog_three_eq`. -/
+example : cInverseLog 3 < 0 := cInverseLog_neg 3 (by norm_num)
 
 end OpenMath.Chapter4.Section441B
