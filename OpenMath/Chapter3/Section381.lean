@@ -2653,6 +2653,101 @@ end
 
 end
 
+/- ### Bottom-block derivativeWeight unfolding for `compose` (cycle 225)
+
+The cycle 225 partner of cycle 224's `derivativeWeight_compose_castAdd`
+pair. For a `natAdd`-indexed stage (one of `M₂`'s stages inside
+`M₁.compose M₂`), the composite derivative weight reduces to a new
+helper `M₂.derivativeWeightWithSrc M₁` which threads `M₁`'s elementary
+weight into each leaf-attachment point — recording `M₁`'s contribution
+to the starting value used by `M₂`'s stages. Unlike the top block,
+the bottom-block A-row has both a `M₁.b j₁` (top half) and a
+`M₂.A i j₂` (bottom half) contribution to the inner sum; the top
+half collapses via cycle 224, while the bottom half retains a
+recursive `(compose).derivativeWeight (natAdd s₁ j) t` factor that
+needs the mutual partner. -/
+
+section
+open OpenMath.Chapter3.Section310
+
+mutual
+  /-- *Derivative weight relative to a source method.* For the
+  bottom-block stages of `M₁.compose M₂`, the per-tree derivative
+  weight at stage `M₂`'s `i` recursively accumulates `M₁`'s elementary
+  weight at each leaf-attachment point (representing `M₁`'s
+  contribution to the starting value used by `M₂`'s stage). Cycle 225
+  closed-form partner of `derivativeWeight_compose_natAdd`. -/
+  noncomputable def derivativeWeightWithSrc {s₁ s₂ : ℕ}
+      (M₂ : RKTableau s₂) (M₁ : RKTableau s₁) :
+      Fin s₂ → RootedTree → ℝ
+    | i, RootedTree.mk children =>
+        M₂.derivativeWeightWithSrcProd M₁ i children
+
+  /-- List-helper companion to `derivativeWeightWithSrc`. -/
+  noncomputable def derivativeWeightWithSrcProd {s₁ s₂ : ℕ}
+      (M₂ : RKTableau s₂) (M₁ : RKTableau s₁) :
+      Fin s₂ → List RootedTree → ℝ
+    | _, [] => 1
+    | i, t :: ts =>
+        (M₁.elementaryWeight t
+          + ∑ j : Fin s₂, M₂.A i j * M₂.derivativeWeightWithSrc M₁ j t)
+        * M₂.derivativeWeightWithSrcProd M₁ i ts
+end
+
+mutual
+  /-- *Bottom-block derivative-weight reduction.* For a stage
+  `natAdd s₁ i` in the bottom block of `M₁.compose M₂`, the
+  composite derivative weight equals `M₂`'s derivative-weight-with-
+  source on tree `t`. Companion to `derivativeWeightProd_compose_natAdd`. -/
+  private theorem derivativeWeight_compose_natAdd {s₁ s₂ : ℕ}
+      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+      ∀ (t : RootedTree) (i : Fin s₂),
+        (M₁.compose M₂).derivativeWeight (Fin.natAdd s₁ i) t
+          = M₂.derivativeWeightWithSrc M₁ i t
+    | RootedTree.mk children, i => by
+        show (M₁.compose M₂).derivativeWeightProd (Fin.natAdd s₁ i) children
+            = M₂.derivativeWeightWithSrcProd M₁ i children
+        exact derivativeWeightProd_compose_natAdd M₁ M₂ children i
+
+  /-- List-helper companion to `derivativeWeight_compose_natAdd`. -/
+  private theorem derivativeWeightProd_compose_natAdd {s₁ s₂ : ℕ}
+      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+      ∀ (children : List RootedTree) (i : Fin s₂),
+        (M₁.compose M₂).derivativeWeightProd (Fin.natAdd s₁ i) children
+          = M₂.derivativeWeightWithSrcProd M₁ i children
+    | [], _ => rfl
+    | t :: ts, i => by
+        show (∑ j : Fin (s₁ + s₂),
+                (M₁.compose M₂).A (Fin.natAdd s₁ i) j
+                  * (M₁.compose M₂).derivativeWeight j t)
+              * (M₁.compose M₂).derivativeWeightProd (Fin.natAdd s₁ i) ts
+            = (M₁.elementaryWeight t
+                + ∑ j₂ : Fin s₂,
+                    M₂.A i j₂ * M₂.derivativeWeightWithSrc M₁ j₂ t)
+              * M₂.derivativeWeightWithSrcProd M₁ i ts
+        rw [derivativeWeightProd_compose_natAdd M₁ M₂ ts i]
+        congr 1
+        rw [Fin.sum_univ_add]
+        simp only [compose_A_botLeft, compose_A_botRight]
+        rw [show
+              (∑ j₁ : Fin s₁,
+                  M₁.b j₁
+                    * (M₁.compose M₂).derivativeWeight (Fin.castAdd s₂ j₁) t)
+                = ∑ j₁ : Fin s₁, M₁.b j₁ * M₁.derivativeWeight j₁ t
+            from Finset.sum_congr rfl (fun j₁ _ => by
+              rw [derivativeWeight_compose_castAdd M₁ M₂ t j₁])]
+        rw [show
+              (∑ j₂ : Fin s₂,
+                  M₂.A i j₂
+                    * (M₁.compose M₂).derivativeWeight (Fin.natAdd s₁ j₂) t)
+                = ∑ j₂ : Fin s₂, M₂.A i j₂ * M₂.derivativeWeightWithSrc M₁ j₂ t
+            from Finset.sum_congr rfl (fun j₂ _ => by
+              rw [derivativeWeight_compose_natAdd M₁ M₂ t j₂])]
+        rfl
+end
+
+end
+
 /-- *Composition preserves explicitness.* The composite `M₁.compose M₂`
 is explicit iff both factors are. The four blocks behave as follows:
 top-left `M₁.A i j` (zero when `i ≤ j` by `M₁.IsExplicit`); top-right
@@ -3420,6 +3515,17 @@ example (t : RootedTree) (i : Fin 2) :
         (Fin.castAdd 2 i) t
       = paddedEuler.derivativeWeight i t :=
   RKTableau.derivativeWeight_compose_castAdd paddedEuler paddedEuler t i
+
+/-- *Non-vacuity for `derivativeWeight_compose_natAdd` (cycle 225 P2).*
+On a bottom-block stage `natAdd 2 i`, the composite derivative weight
+through `paddedEuler.compose paddedEuler` agrees with `paddedEuler`'s
+`derivativeWeightWithSrc paddedEuler` at stage `i`. Exercises the
+cycle 225 mutual pair on a concrete pair of methods. -/
+example (t : RootedTree) (i : Fin 2) :
+    (paddedEuler.compose paddedEuler).derivativeWeight
+        (Fin.natAdd 2 i) t
+      = paddedEuler.derivativeWeightWithSrc paddedEuler i t :=
+  RKTableau.derivativeWeight_compose_natAdd paddedEuler paddedEuler t i
 
 /-- *`paddedEuler` is explicit.* Its coefficient matrix is the zero
 matrix (`paddedEuler.A = 0`), so the `IsExplicit` predicate holds
