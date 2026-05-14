@@ -1,255 +1,318 @@
-# Cycle 195 Strategy
+# Cycle 199 strategy
 
 ## Context
 
-Cycle 194 confirmed the 14th consecutive GPFS-blocked smoke test on
-`OpenMath/Chapter4/Section441.lean` (Phase C.2 of `lem:441A` remains
-draft-only at `.prover-state/cycle_182_draft_section441.lean` with
-the cycle-184 namespace fix on line 1529). Section381 continued to
-compile healthily; cycle 194 shipped three new axiom-clean theorems
-(`PEquivalent.pReducesTo_of_left_isIrreducible`,
-`PEquivalent.pReducesTo_of_right_isIrreducible`,
-`PEquivalent.eq_of_both_isIrreducible_homogeneous`) plus two
-non-vacuity `example` witnesses. Sorry count remains 0.
+Cycle 198 shipped `pEquivalent_iff_exists_common_irreducible_reduct`
+axiom-clean (the def:381F existential characterization consuming cycle
+197's `reducedMethod_exists` + cycle 192's `PReducesTo.trans`), plus a
+`paddedEuler` non-vacuity example exercising the forward direction.
+File `OpenMath/Chapter3/Section381.lean` is at 1657 LOC, 0 sorries,
+all new declarations axiom-clean.
 
-The cycle 194 task results §"Suggested next approach" §2 explicitly
-names the cycle-195 target: a stage-count descent lemma for
-`PReducesTo` that opens the path to def:381E `reducedMethod`.
+Section441 GPFS pathology is now at 18 consecutive cycles (17 calendar
+days). It is loop-maintainer territory; worker-side smoke tests are
+purely diagnostic.
 
-## Priority 0 — MANDATORY: Section441 GPFS smoke test (15th attempt)
+No Aristotle jobs are pending.
 
-This must run FIRST. It is one-shot only (no retries, no longer
-timeout) and the decision tree is binary:
+Sorry count: 0 across the entire codebase.
+
+## Priorities
+
+### P0 — Section441 GPFS smoke test (mandatory, single attempt)
+
+Run this command exactly once. Do NOT retry, do NOT vary the timeout,
+do NOT attempt the cycle 182 draft. The 18-cycle pattern is fully
+established; this is diagnostic logging only.
 
 ```bash
-ps -u "$USER" -o pid,stat,wchan,etime,comm | grep -E "^[ ]*[0-9]+ +D"
+# Pre-flight: confirm no D-state zombies
+ps -u $USER -o pid,stat,wchan,etime,comm | grep -E "^[ ]*[0-9]+ +D" \
+  || echo "(no D-state processes)"
+
+# Smoke test
 time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean
 ```
 
-- **Branch A (expected, GPFS still degraded)**: `EXIT=124` (or 143),
-  wall ≈ 300s, CPU < 1%. Log the 15th timeout in
-  `.prover-state/issues/cycle_182_gpfs_slowness.md` under a new
-  "Cycle 195 update (15th timeout)" section, then proceed to
-  Priority 1.
-- **Branch B (GPFS recovered)**: exit 0 in < 5 min. Apply the cycle
-  184 namespace fix (line 1529:
-  `M.αPoly_complex_root_norm_ge_one_of_stable …`
-  →
-  `LinearMultistepMethod.αPoly_complex_root_norm_ge_one_of_stable M …`)
-  to the cycle 182 draft preserved at
-  `.prover-state/cycle_182_draft_section441.lean`, then replace
-  `OpenMath/Chapter4/Section441.lean` with the fixed draft and ship
-  Phase C.2 of `lem:441A`. If Branch B fires, skip Priorities 1 and
-  2 entirely — Phase C.2 is the much higher-value deliverable.
+Expected: EXIT=124, real ≈ 5m0.03s, near-zero CPU. Append the
+result to `.prover-state/issues/cycle_182_gpfs_slowness.md` as the
+"Cycle 199 update (19th timeout)" entry following the format of cycles
+192–198. If by some miracle it completes in < 5 minutes, STOP and
+pivot to applying the cycle 182 draft + cycle 184 namespace fix
+(preserved at `.prover-state/cycle_182_draft_section441.lean`,
+line 1529: `M.αPoly_…` → `LinearMultistepMethod.αPoly_…`).
 
-**Do NOT** spend more than the budgeted 5 min on this. Branch A has
-fired 14 times in a row; expect it again.
+### P1 — `pEquivalent_irreducible_reduct_unique` (canonical-form wrapper)
 
-## Priority 1 (substantive, Branch A path) — `PReducesTo` stage-count descent
+**This is the cycle 199 substantive deliverable.** Ship the
+heterogeneous-stage uniqueness companion to cycle 198's iff, formalizing
+"the common irreducible reduct of a P-equivalence is unique up to
+heterogeneous-stage `HEq`".
 
-### Goal
+This is the highest-confidence single-cycle deliverable available:
+the strategy is fully specified by cycle 198's discovery #2 ("a
+separate `pEquivalent_irreducible_reduct_unique` theorem... would be a
+clean ~10-LOC follow-up"), and the closure path is mechanical given
+the infrastructure already shipped:
 
-Ship the stage-count-descent infrastructure for `PReducesTo` in
-`OpenMath/Chapter3/Section381.lean`. The cycle 194 results §2
-identified this as a "small, single-cycle deliverable" that is a
-genuine stepping stone toward the still-deferred def:381E
-`reducedMethod` construction (see
-`.prover-state/issues/reduced_method_deferred.md`).
+* cycle 193's `PEquivalent.eq_of_both_isIrreducible` — two irreducible
+  P-equivalent methods coincide up to `HEq`.
+* cycle 198's iff — provides the two `PReducesTo M M''` reduction
+  legs ending at an irreducible reduct.
+* cycle 188's `eq_of_isIrreducible_of_pReducesTo` — irreducible
+  endpoint extraction along a `PReducesTo` chain.
 
-### What to ship — three theorems, axiom-clean, in `OpenMath.Chapter3.Section312.RKTableau` namespace
+**Pre-flight: verify exact lemma names.** Before writing the proof,
+run these `Grep` queries on `OpenMath/Chapter3/Section381.lean` to
+confirm the actual names (cycle 198 task results occasionally
+paraphrase from memory):
 
-Place them immediately after cycle 194's
-`PEquivalent.eq_of_both_isIrreducible_homogeneous`
-(`OpenMath/Chapter3/Section381.lean:619` area, before the
-`end OpenMath.Chapter3.Section312.RKTableau` at line 691).
+* `Grep -n "eq_of_both_isIrreducible" OpenMath/Chapter3/Section381.lean`
+  — confirm cycle 193's heterogeneous-stage extraction lemma name and
+  exact argument order.
+* `Grep -n "eq_of_isIrreducible_of_pReducesTo" OpenMath/Chapter3/Section381.lean`
+  — confirm cycle 188's lemma name. If the actual name differs, use
+  whatever `Grep` reports.
+* `Grep -n "paddedEuler_pReduced.*isIrreducible" OpenMath/Chapter3/Section381.lean`
+  — confirm cycle 190's irreducibility witness for the non-vacuity
+  example.
 
-#### 1. `PReducesTo.size_le`
-
-```lean
-/-- Stage-count monotonicity: every P-reduction sequence is
-non-increasing on the underlying stage-count parameter. The reflexive
-case preserves it; the `step` and `zeroStep` cases strictly decrease
-it (see `PReducesTo.size_lt_of_step` and `_of_zeroStep`). -/
-theorem PReducesTo.size_le {s s' : ℕ}
-    {M : RKTableau s} {M' : RKTableau s'}
-    (h : PReducesTo M M') : s' ≤ s
-```
-
-**Proof shape**: `induction h with` over the three constructors.
-
-* `refl _` ⇒ `Nat.le.refl` (or `le_refl s`).
-* `step P hLt _h hRest ih` ⇒ `hLt : sBar < s` and `ih : s'' ≤ sBar`,
-  combine via `le_trans ih (Nat.le_of_lt hLt)`.
-* `zeroStep inP1 hP0 _h hRest ih` ⇒ need to show
-  `(Finset.univ.filter (fun i : Fin s => inP1 i = true)).card < s`
-  from `hP0 : ∃ i, inP1 i = false`, then chain
-  `le_trans ih (Nat.le_of_lt ‹|P₁| < s›)`. The "filter card strictly
-  less than universe card" fact may exist as a named Mathlib lemma —
-  verify with `lean_local_search "Finset.card_filter"` /
-  `lean_loogle "Finset.filter ?p ?s |>.card < ?s.card"` before
-  committing. Likely candidate names: `Finset.card_filter_lt`,
-  `Finset.card_lt_univ_iff_ne_univ`. If no direct lemma exists,
-  build the inequality inline as a `have`:
-
-  ```lean
-  have h_partition :
-      (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card +
-        (Finset.univ.filter (fun i : Fin s => inP1 i = false)).card =
-        s := by
-    rw [Finset.filter_card_add_filter_neg_card_eq_card]
-    -- needs the predicate to be decidable; (· = true) is
-    simp
-  have h_neg_pos :
-      0 < (Finset.univ.filter (fun i : Fin s => inP1 i = false)).card := by
-    obtain ⟨i, hi⟩ := hP0
-    exact Finset.card_pos.mpr ⟨i, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hi⟩⟩
-  omega
-  ```
-
-  Verify the exact name `Finset.filter_card_add_filter_neg_card_eq_card`
-  with `lean_local_search` before committing — Mathlib's
-  partition-by-predicate lemma may be named differently (e.g.
-  `Finset.filter_card_add_filter_neg_card`).
-
-#### 2. `PReducesTo.size_lt_of_step`
+**Target statement** (insert at `OpenMath/Chapter3/Section381.lean`
+immediately after cycle 198's iff, around line 870):
 
 ```lean
-/-- A single non-trivial P-reduction step (`step` constructor) strictly
-decreases the stage count. Direct consequence of the constructor's
-`sBar < s` hypothesis composed with `size_le` on the continuation. -/
-theorem PReducesTo.size_lt_of_step {s sBar s'' : ℕ}
-    {M : RKTableau s} {M'' : RKTableau s''}
-    (P : PPartition s sBar) (hLt : sBar < s)
-    (hRed : M.IsPReducibleVia P)
-    (hRest : PReducesTo (M.pReduced P) M'') :
-    s'' < s
+/-- The common irreducible reduct of a P-equivalence is unique up to
+heterogeneous-stage `HEq`. Formalizes Butcher §380 def:381F's
+"reduces to the same reduced method" beyond existence: when both legs
+of a P-equivalence terminate at irreducible reducts, those reducts
+coincide up to stage count.
+
+Consumes cycle 198's iff to extract a common irreducible reduct, then
+cycle 188's `eq_of_isIrreducible_of_pReducesTo` to identify each of
+the user-supplied irreducible reducts with that common one. -/
+theorem pEquivalent_irreducible_reduct_unique
+    {s s' s₁ s₂ : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    {M₁ : RKTableau s₁} {M₂ : RKTableau s₂}
+    (h₁ : PReducesTo M M₁) (h₁irr : M₁.IsIrreducible)
+    (h₂ : PReducesTo M' M₂) (h₂irr : M₂.IsIrreducible)
+    (hEquiv : PEquivalent M M') :
+    s₁ = s₂ ∧ HEq M₁ M₂ := by
+  sorry  -- replace per proof recipe below; commit MUST be sorry-free
 ```
 
-**Proof**: `lt_of_le_of_lt hRest.size_le hLt`. One liner.
+**Proof recipe** (target ~8-15 LOC, **no `sorry` in final commit**):
 
-#### 3. `PReducesTo.size_lt_of_zeroStep`
+Step A. Apply cycle 198's iff to `hEquiv`:
+```lean
+obtain ⟨s₃, M₃, hMM₃, hM'M₃, hM₃irr⟩ :=
+  (pEquivalent_iff_exists_common_irreducible_reduct M M').mp hEquiv
+```
+
+Step B. Identify `M₁` with `M₃` via cycle 188's lemma applied to the
+two reduction paths from `M` (the `h₁` path ends at the irreducible
+`M₁`; the `hMM₃` path ends at the irreducible `M₃`; both starting from
+`M`):
+```lean
+-- The exact destructuring depends on whether cycle 188's lemma
+-- returns `s₁ = s₃ ∧ HEq M₁ M₃` or some equivalent form.  Use Grep
+-- to verify its signature before this step.
+obtain ⟨hs₁₃, hM₁₃⟩ := eq_of_isIrreducible_of_pReducesTo … h₁ h₁irr hMM₃ hM₃irr
+```
+
+Step C. Symmetrically identify `M₂` with `M₃`:
+```lean
+obtain ⟨hs₂₃, hM₂₃⟩ := eq_of_isIrreducible_of_pReducesTo … h₂ h₂irr hM'M₃ hM₃irr
+```
+
+Step D. Combine: `s₁ = s₂` by `hs₁₃.trans hs₂₃.symm`; `HEq M₁ M₂` by
+`hM₁₃.trans hM₂₃.symm` (or `HEq.trans` if `.trans` is not on `HEq`'s
+dot-notation in current Mathlib — check via `Grep "HEq.trans"
+$LAKE_HOME/packages/mathlib`).
+
+**Fallback if cycle 188's lemma signature doesn't yield directly
+matching `s = s' ∧ HEq`**: cycle 188's
+`eq_of_isIrreducible_of_pReducesTo` may instead conclude `PReducesTo` is
+reflexive in the irreducible-source case (its docstring per the
+session context says "irreducible source forces every reduction
+sequence to be reflexive"). In that case, the proof recipe shifts to:
+
+* Step B': cycle 188 applied to `h₁` + `h₁irr` gives that the
+  reduction is reflexive — i.e. `s = s₁` and `HEq M M₁`. But we
+  need this on the `M --> M₁` and `M --> M₃` paths starting from a
+  potentially-reducible `M`. The right invocation is via cycle 188
+  applied at the *terminus* `M₁`, not the source `M`. **Inspect
+  the cycle 188 lemma's signature carefully with `Grep -A 5
+  "eq_of_isIrreducible_of_pReducesTo"` before committing to either
+  proof recipe variant.**
+
+**If the recipes above both stall**, the alternative closure path is
+direct via cycle 193:
+
+* Build `PEquivalent M₁ M₂` from `h₁` + `h₂` + `hEquiv` by composing
+  `PEquivalent.of_pReducesTo h₁`'s `.symm` with `hEquiv` with
+  `PEquivalent.of_pReducesTo h₂`. Verify which `PEquivalent.trans`
+  variant exists in Section381 (cycle 185's
+  `PEquivalent.trans_of_middle_isIrreducible` or cycle 188's
+  successor) and route through the right one.
+* Apply `PEquivalent.eq_of_both_isIrreducible h₁irr h₂irr` to that
+  `PEquivalent M₁ M₂`. This returns `s₁ = s₂ ∧ HEq M₁ M₂` directly.
+
+The cycle 193 route is preferred if any signature mismatches arise
+because it bundles the goal shape exactly. **Use whichever recipe's
+lemma signatures match cleanly after `Grep` verification.**
+
+**Non-vacuity witness (P1 stretch, ship if proof closes cleanly)**:
+add an `example` immediately after the theorem demonstrating the
+trivial reflexive case on `paddedEuler.pReduced pairPartition`:
 
 ```lean
-/-- A single 0-reduction step (`zeroStep` constructor) strictly
-decreases the stage count, because `hP0 : ∃ i, inP1 i = false` forces
-`|P₁| < s`. -/
-theorem PReducesTo.size_lt_of_zeroStep {s s'' : ℕ}
-    {M : RKTableau s} {M'' : RKTableau s''}
-    (inP1 : Fin s → Bool) (hP0 : ∃ i, inP1 i = false)
-    (h : M.IsZeroReducibleVia inP1)
-    (hRest : PReducesTo (M.zeroReduced inP1) M'') :
-    s'' < s
+example :
+    (1 : ℕ) = 1 ∧
+    HEq (paddedEuler.pReduced pairPartition)
+        (paddedEuler.pReduced pairPartition) :=
+  pEquivalent_irreducible_reduct_unique
+    (PReducesTo.refl _) paddedEuler_pReduced_pairPartition_isIrreducible
+    (PReducesTo.refl _) paddedEuler_pReduced_pairPartition_isIrreducible
+    (PEquivalent.refl _)
 ```
 
-**Proof**: extract `|P₁| < s` from `hP0` (use the same Finset
-argument as in `size_le`'s `zeroStep` case; factor into a `have`
-shared between the two if convenient — or expose as a separate
-`private` lemma `card_filter_true_lt_of_exists_false` first).
-Then `lt_of_le_of_lt hRest.size_le ‹|P₁| < s›`.
+(Verify the exact name of cycle 190's irreducibility witness via the
+`Grep` from the pre-flight checklist.)
 
-### Verification
+### P2 — recon `thm:381G` for cycle 200+
 
-After each Edit, run:
+This is **read-only** work this cycle. Do NOT attempt to ship
+thm:381G in cycle 199 — it is the natural next textbook target but its
+scope is unknown (the cycle 198 worker flagged it as the "highest-
+leverage" but did not assess complexity).
 
-1. `time lake env lean OpenMath/Chapter3/Section381.lean` → expect
-   `EXIT=0`. Cold compile took 1m22s in cycle 194; the warm rebuild
-   should be faster but the new edits will invalidate the cached
-   `.olean`.
-2. `grep -c "^[^/-]*\bsorry\b" OpenMath/Chapter3/Section381.lean`
-   → must print `0`.
-3. `lean_verify
-   OpenMath.Chapter3.Section312.RKTableau.PReducesTo.size_le` (and
-   the two `size_lt_of_*` siblings) → each must return
-   `[propext, Classical.choice, Quot.sound]`. Use `lean_verify` (the
-   MCP tool), NOT `#print axioms` against a fresh `lake env lean
-   --stdin` snippet — the latter pattern hits the stale-`.olean`
-   trap.
+Steps:
 
-### What NOT to try (failed in prior cycles)
+1. Read `extraction/formalization_data/entities/thm_381G.json` to get
+   the textbook statement and dependency list.
+2. Read the relevant Butcher §380 prose around the §380 / thm:381G
+   discussion. Use `Grep -n "381G\|Irreducible Runge"
+   extraction/raw_text/ch03.txt` to find the location, then read a
+   ~50-line window around the hit.
+3. Add a 5-10 line note to the cycle 199 task results documenting:
+   * The textbook statement (verbatim quote).
+   * Whether the dependencies are all satisfied (look up each in
+     `extraction/formalization_data/lean_status.json`).
+   * Rough LOC estimate (small / medium / large).
+   * Whether it appears to be a single-cycle deliverable or
+     multi-cycle infrastructure work.
 
-* **Do NOT** attempt the full def:381E `reducedMethod` construction
-  this cycle. It requires a well-foundedness instance plus
-  `Classical.choose` destructors on `IsPReducible`/`IsZeroReducible`
-  exposing the partition witnesses, which is multi-cycle scope per
-  `.prover-state/issues/reduced_method_deferred.md`. The Priority 1
-  deliverables (`size_le` + the two strict-descent lemmas) are
-  *prerequisites* for that work but stop short of the construction
-  itself.
-* **Do NOT** state `PReducesTo` well-foundedness as a single
-  `WellFoundedRelation` instance. The relation is heterogeneous in
-  the stage-count type, so a `WellFoundedRelation` instance requires
-  packaging into `Σ s, RKTableau s` first — that packaging is itself
-  multi-cycle Lean-engineering work.
-* **Do NOT** reuse the cycle 193/194 templates for
-  `eq_of_isIrreducible_of_pReducesTo` composition — that's a
-  different lemma family (irreducibility, not stage-count descent).
-* **Do NOT** raise `maxHeartbeats`. The three theorems should each
-  close in ≤ 200000 with simple induction.
-* **Do NOT** edit `scripts/autonomous_loop.py` even if the
-  supervisor flags this cycle's commit as "not reaching repo".
-  Follow `.prover-state/issues/phantom_commit_verdict_pattern.md` —
-  verify with `git show --stat <sha> -- OpenMath/Chapter3/Section381.lean`
-  and log a confirmation row in `attempts.md` if a false positive
-  fires.
+This recon unblocks cycle 200's planner to make an informed pivot
+decision. Do NOT start the proof.
 
-## Priority 2 (stretch, only if Priority 1 closes early) — promote cycle 194 examples
+## What NOT to do
 
-`OpenMath/Chapter3/Section381.lean:1368` is currently an `example`
-recovering `paddedEuler.PReducesTo (paddedEuler.pReduced pairPartition)`
-via cycle 194's `pReducesTo_of_right_isIrreducible`. Promote to:
+1. **Do NOT attempt the Section441 cycle 182 draft.** 18 consecutive
+   GPFS timeouts; the failure mode is fully systemic. One smoke test,
+   one log entry, move on.
 
-```lean
-theorem paddedEuler_pReducesTo_pReduced_via_isIrreducible :
-    paddedEuler.PReducesTo (paddedEuler.pReduced pairPartition) :=
-  paddedEuler_pEquivalent_pReduced.pReducesTo_of_right_isIrreducible
-    paddedEuler_pReduced_pairPartition_isIrreducible
-```
+2. **Do NOT modify `scripts/autonomous_loop.py`.** Per CLAUDE.md
+   and the standing
+   `.prover-state/issues/tautology_scanner_false_positives.md` and
+   `.prover-state/issues/phantom_commit_verdict_pattern.md` issues,
+   prompt-builder bugs are loop-maintainer territory.
 
-so downstream test files can reference it. Keep the existing
-docstring (it already explains the cycle 194 context). Verify
-axiom-clean.
+3. **Do NOT introduce `axiom` or `constant` declarations.** The
+   cycle 199 target uses cycle 188/193/198 infrastructure that is
+   already axiom-clean; the closure must remain axiom-clean.
 
-Optionally also promote the `example` at line 1379 (the homogeneous
-HEq → Eq trivial case via reflexivity) and line 1351 (the
-heterogeneous-stage trivial case) under similar names
-(e.g. `paddedEuler_pReduced_pairPartition_eq_self_via_isIrreducible`).
+4. **Do NOT raise `maxHeartbeats` above 200000.** The cycle 199 target
+   is a ~10-LOC tactic proof; if it explodes elaboration-time-wise,
+   decompose into named helpers rather than bumping the budget.
 
-Skip Priority 2 entirely if Priority 1 consumed the cycle budget —
-it is cosmetic, not load-bearing.
+5. **Do NOT poll Aristotle.** No jobs are in flight, and one-shot
+   single-cycle theorems do not benefit from batch submission.
 
-## Post-cycle bookkeeping
+6. **Do NOT attempt `thm:381G`'s proof.** P2 is recon only — read the
+   entity data and Butcher prose, write a short summary, do NOT start
+   tactic work. If P1 closes early, defer the proof to next cycle.
 
-1. Update `OpenMath/Chapter3/Section381.lean` namespace block.
-2. Update `extraction/formalization_data/lean_status.json` — the
-   `def:381F` row's `last_cycle` to 195 (this is the only row
-   carrying that field; do not retrofit others).
-3. Update `plan.md` Chapter 3 `def:381F` row's narrative paragraph
-   with a "Cycle 195: shipped …" sentence following the existing
-   cycle-by-cycle bullet format.
-4. Write `.prover-state/task_results/cycle_195.md` per CLAUDE.md
-   template.
-5. Commit + push. Verify with `git log -1 --format='%H %s'` +
-   `git rev-parse origin/butcher-experiments`.
+7. **Do NOT attempt the constructive `noncomputable def reducedMethod`.**
+   This requires either a Σ-wrapper `WellFoundedRelation` or
+   `Decidable IsPReducible`/`IsZeroReducible` instances — both
+   multi-cycle engineering. Cycle 198's existential iff has reduced
+   the demand for the constructive version (def:381F is now closed
+   under the existential reading); the multi-cycle cost is not
+   justified yet.
 
-## Why this is the right cycle target
+8. **Do NOT pack uniqueness into the cycle 198 iff itself.** Strategy
+   reasoning: cycle 198's iff is a clean existential characterization
+   matching Butcher's textbook prose. The uniqueness wrapper belongs
+   as a separate theorem (cycle 199's P1 target) so consumers can pick
+   the level of strength they need.
 
-The §441 line is paralyzed by GPFS (14-cycle pathology, loop-
-maintainer territory). The §380 P-reducibility line continues to
-ship 2-3 axiom-clean theorems per cycle. The descent-on-stage-count
-lemmas are exactly the structural infrastructure required before the
-def:381E `reducedMethod` construction can land, and they are
-single-cycle scoped (3 lemmas, ≤ 60 LOC, no new imports, no new
-definitions, no faithfulness divergence).
+9. **Do NOT use underscore-prefixed unused hypothesis names without
+   intentional rationale.** Per
+   `.prover-state/issues/tautology_scanner_false_positives.md`, the
+   underscore-prefix marks "unused on purpose" — apply it only when
+   the hypothesis is genuinely propagated for signature symmetry or
+   downstream caller convenience. Cycle 199's P1 theorem should
+   actively consume all five hypotheses; if one becomes unused during
+   proof, restructure the proof rather than silencing with `_`.
 
-Compare to the multi-cycle alternative (the full `reducedMethod` via
-`WellFoundedRelation` on a Σ-typed wrapper) which would require:
-(a) defining the Σ-wrapper structure, (b) lifting `PReducesTo` to
-the wrapper, (c) discharging the `WellFoundedRelation` instance,
-(d) using `Classical.choose` destructors on the existential
-predicates to extract partition witnesses, (e) proving the
-fixed-point equation. That sequence is at minimum 3-4 cycles of
-work, suitable only as a long-form plan once §441 unblocks.
+10. **Do NOT skip the GPFS smoke test even though we expect it to
+    fail.** The single-attempt diagnostic log is the only signal the
+    loop-maintainer has that the pathology continues; skipping it
+    breaks the established 18-cycle pattern documented in
+    `cycle_182_gpfs_slowness.md`.
 
-The cycle 195 deliverable is the smallest forward step that
-genuinely advances the def:381E roadmap; it ships in one cycle and
-opens the door to all subsequent reducedMethod work.
+11. **Do NOT guess lemma names from session-context summaries.** Cycle
+    198's task results and the plan.md narrative sometimes paraphrase
+    lemma names. ALWAYS verify via `Grep` against the actual source
+    file before invoking a lemma in a tactic.
+
+12. **Do NOT attempt `Polynomial.ext` skeletons or
+    `Polynomial.coeff` per-coefficient closures** — those are
+    Section441 territory and irrelevant to the Section381 cycle 199
+    target. Listed here only because the cycle 172/173 stall pattern
+    occasionally tempts return attempts; ignore.
+
+## Verification checklist (run before commit)
+
+1. `lake env lean OpenMath/Chapter3/Section381.lean` exits 0.
+2. `grep -c sorry OpenMath/Chapter3/Section381.lean` returns 0.
+3. `wc -l OpenMath/Chapter3/Section381.lean` shows file growth in the
+   +15 to +40 LOC range (theorem + docstring + optional example).
+4. `lean_verify` on
+   `OpenMath.Chapter3.Section312.RKTableau.pEquivalent_irreducible_reduct_unique`
+   returns axioms `[propext, Classical.choice, Quot.sound]` only.
+5. Tautology scanner clean:
+   `Grep -E ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section381.lean`
+   returns nothing new.
+6. `.prover-state/issues/cycle_182_gpfs_slowness.md` has the cycle 199
+   update appended.
+7. `.prover-state/task_results/cycle_199.md` documents:
+   * P0 smoke test result (EXIT code, timing, CPU).
+   * P1 deliverable (theorem signature, proof recipe used,
+     non-vacuity witness if shipped).
+   * P2 thm:381G recon summary.
+   * Faithfulness check on the new theorem (def:381F textbook
+     statement, how the uniqueness theorem captures "same reduced
+     method").
+8. Commit message follows the established format:
+   `Cycle 199 — §380 pEquivalent_irreducible_reduct_unique
+   (heterogeneous-stage canonical-form wrapper consuming cycle 198's
+   iff + cycle 188/193 extraction lemmas); §441 Phase C.2
+   GPFS-blocked (19th)`.
+
+## Success criteria
+
+* **Score-1 minimum**: P0 smoke test logged + P1 ships axiom-clean
+  with 0 sorries.
+* **Score-2 target**: P1 ships + non-vacuity witness ships + P2 recon
+  written.
+* **Score-0 failure**: P1 stalls on a tactic mismatch (most likely
+  cause: misremembered name of cycle 188's extraction lemma or
+  cycle 184/185's trans variant). Mitigation: use `Grep` to verify
+  every lemma name before writing the proof.
+
+If P1's proof stalls past 90 minutes of cumulative attempt time,
+ROLLBACK and ship only the P0 smoke test + P2 recon, with the P1
+attempt preserved as a draft at
+`.prover-state/cycle_199_draft_uniqueness.lean` for cycle 200 to
+salvage.

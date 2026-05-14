@@ -486,3 +486,20 @@ exception across two-and-a-half weeks. Pivoting to Priority 1: ship
 existential-iff characterization directly consuming cycle 197's
 `reducedMethod_exists` plus cycle 192's `PReducesTo.trans`, per
 cycle 198 strategy.
+
+**Cycle 199 update (19th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.032s, user 0m0.233s, sys 0m0.732s — CPU =
+(0.233 + 0.732) / 300 = 0.32% of wall, identical near-zero
+pattern). Pre-flight `ps -u $USER` showed no D-state processes
+(empty). 19 consecutive timeouts span cycles 182–199 (18 calendar
+days). Pathology reproduced on every smoke-test attempt without
+exception across two-and-a-half weeks. Pivoting to Priority 1: a
+substantive but achievable weaker variant of the strategy's
+`pEquivalent_irreducible_reduct_unique` target (sources-irreducible
+special case, consuming cycle 188 twice + cycle 193 + the cycle 198
+iff infrastructure). The strategy's full P1 target requires
+confluence-of-normal-forms reasoning that is not currently in
+Section381.lean; see
+`.prover-state/issues/p_reduction_confluence_gap.md` for the
+multi-cycle plan toward confluence, per cycle 199 strategy.

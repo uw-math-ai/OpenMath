@@ -863,6 +863,50 @@ theorem pEquivalent_iff_exists_common_irreducible_reduct
   · rintro ⟨s'', M'', hMM'', hM'M'', _hIrr⟩
     exact ⟨s'', M'', hMM'', hM'M''⟩
 
+/-- *Heterogeneous-stage uniqueness of irreducible reducts — special case
+where both sources are already irreducible.*
+
+If two irreducible methods `M` and `M'` are `PEquivalent`, then any
+`PReducesTo` chains `h₁ : M → M₁` and `h₂ : M' → M₂` produce reducts
+`M₁`, `M₂` that coincide up to heterogeneous-stage `HEq`. Cycle 188's
+`eq_of_isIrreducible_of_pReducesTo` forces both chains to be reflexive
+(`M₁ ≃ M`, `M₂ ≃ M'` up to `HEq`), so this lemma is a corollary of
+cycle 193's `PEquivalent.eq_of_both_isIrreducible` composed with two
+applications of cycle 188 and an `HEq` chain.
+
+The general statement — uniqueness of the irreducible reduct when the
+sources `M`, `M'` are *not* a priori irreducible — is the natural
+continuation of cycle 198's `pEquivalent_iff_exists_common_irreducible_reduct`
+but requires confluence of `PReducesTo` (Newman's lemma applied to the
+abstract rewriting system defined by `step` / `zeroStep`), which is not
+currently in `Section381.lean`. The multi-cycle plan toward the general
+statement is documented at
+`.prover-state/issues/p_reduction_confluence_gap.md` (cycle 199 issue).
+This lemma is the strictly-weaker single-cycle deliverable that an
+ergonomic call-site API for the special case, without depending on the
+unfinished confluence infrastructure.
+
+Note that the target irreducibility hypotheses `M₁.IsIrreducible`,
+`M₂.IsIrreducible` are *not* required: cycle 188 forces `M₁ ≃ M` and
+`M₂ ≃ M'`, so the targets inherit irreducibility from the sources
+automatically. Cycle 199 deliverable. -/
+theorem pEquivalent_irreducible_reduct_unique_of_sources_irreducible
+    {s s' s₁ s₂ : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'}
+    {M₁ : RKTableau s₁} {M₂ : RKTableau s₂}
+    (hMirr : M.IsIrreducible) (hM'irr : M'.IsIrreducible)
+    (h₁ : PReducesTo M M₁) (h₂ : PReducesTo M' M₂)
+    (hEquiv : PEquivalent M M') :
+    s₁ = s₂ ∧ HEq M₁ M₂ := by
+  obtain ⟨h₁eq, h₁heq⟩ := eq_of_isIrreducible_of_pReducesTo hMirr h₁
+  obtain ⟨h₂eq, h₂heq⟩ := eq_of_isIrreducible_of_pReducesTo hM'irr h₂
+  obtain ⟨h₃eq, h₃heq⟩ :=
+    PEquivalent.eq_of_both_isIrreducible hMirr hM'irr hEquiv
+  subst h₁eq
+  subst h₂eq
+  subst h₃eq
+  exact ⟨rfl, (h₁heq.trans h₃heq.symm).trans h₂heq.symm⟩
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step
@@ -1637,6 +1681,25 @@ example :
     paddedEuler_pReduced_pairPartition_isIrreducible
     paddedEuler_pReduced_pairPartition_isIrreducible
     (RKTableau.PEquivalent.refl (paddedEuler.pReduced pairPartition))
+
+/-- Non-vacuity witness for
+`pEquivalent_irreducible_reduct_unique_of_sources_irreducible`: the
+1-stage `paddedEuler.pReduced pairPartition` is irreducible (cycle 190
+witness), so the cycle 199 sources-irreducible uniqueness theorem fires
+on the trivial reflexive case where both `PReducesTo` chains and the
+`PEquivalent` hypothesis are all reflexive. Exercises the cycle 188 ×
+cycle 193 × `HEq.trans` composition path on a concrete irreducible
+example. Cycle 199 deliverable. -/
+example :
+    (1 : ℕ) = 1 ∧
+    HEq (paddedEuler.pReduced pairPartition)
+        (paddedEuler.pReduced pairPartition) :=
+  RKTableau.pEquivalent_irreducible_reduct_unique_of_sources_irreducible
+    paddedEuler_pReduced_pairPartition_isIrreducible
+    paddedEuler_pReduced_pairPartition_isIrreducible
+    (RKTableau.PReducesTo.refl _)
+    (RKTableau.PReducesTo.refl _)
+    (RKTableau.PEquivalent.refl _)
 
 /-- *Non-vacuity for `IsPReducible` destructors.* `paddedEuler` is
 P-reducible (cycle 186 witness `paddedEuler_isPReducible`); the
