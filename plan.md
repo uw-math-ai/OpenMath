@@ -101,7 +101,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:306A` **Taylor’s theorem** (§306)
 - [ ] `thm:344A` **Methods based on Radau and Lobatto quadrature** (§344)
 - [ ] `thm:381G` **Irreducible Runge Kutta Stage Distinguishability** (§380)
-- [~] `thm:381H` **Runge Kutta Equivalence Conditions** (§380) — `OpenMath/Chapter3/Section381.lean` (cycle 200) — `equivalent_iff_pEquivalent_iff_phiEquivalent` statement-only scaffold with 1 of 4 iff directions closed (`PEquivalent → PhiEquivalent` via cycle 187's `PEquivalent.toPhiEquivalent`); 3 remaining directions tracked-sorry per `.prover-state/issues/thm_381H_deferred.md`. `PhiEquivalent → PEquivalent` and `Equivalent → PEquivalent` blocked on thm:381G + tableau-combine construction (4–5 cycles each, shared infrastructure). `PEquivalent → Equivalent` blocked on Banach-fixed-point convergence for implicit-stage iteration (2–3 cycles). Statement is fully faithful to Butcher §380.8627–8628 (no irreducibility, preconsistency, or stability hypotheses beyond the two RK methods).
+- [ ] `thm:381H` **Runge Kutta Equivalence Conditions** (§380)
 - [x] `def:357A` **B-stability** (§357) — `OpenMath/Chapter3/Section357.lean`
 - [x] `def:381A` **equivalent** (§380) — `OpenMath/Chapter3/Section381.lean`
 - [ ] `lem:310B` **Elementary Differential Weight Formula** (§310)

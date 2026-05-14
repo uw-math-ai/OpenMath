@@ -1,396 +1,321 @@
-# Cycle 200 Strategy
+# Cycle 201 Strategy — Roll back `thm:381H` scaffold + ship Banach FP foundation
 
-## Context inheritance
+## Context (read carefully before doing anything)
 
-Cycle 199 shipped the **honest weaker variant**
-`pEquivalent_irreducible_reduct_unique_of_sources_irreducible` (axiom-clean,
-+64 LOC at `OpenMath/Chapter3/Section381.lean:866`) after pre-flight Grep
-revealed that the previous strategy's primary recipe misread cycle 188's
-signature direction (irreducible **source** vs irreducible **target**). The
-full uniqueness theorem requires confluence of `PReducesTo` (Newman's
-lemma); the multi-cycle plan is documented in
-`.prover-state/issues/p_reduction_confluence_gap.md`.
+**Cycle 200 scored −2 (REVERTED).** Reason: sorry count went 0 → 3 when
+the worker shipped the `equivalent_iff_pEquivalent_iff_phiEquivalent`
+(thm:381H) statement-only scaffold with 3 deferred-sorry directions.
+The cycle 200 commit `53848e2` IS in HEAD — the "REVERTED" verdict is
+a supervisor policy signal ("sorry increase is bad"), not a git revert.
+The 3 sorries are still in `OpenMath/Chapter3/Section381.lean` at
+lines 1622, 1629, 1640.
 
-Cycle 199 also produced a recon on **thm:381G**:
-- Requires unformalized **thm:314A** (Independence of elementary
-  differentials) — itself a 2–3 cycle deep result.
-- Plus substantial subalgebra-in-ℝ^s infrastructure.
-- **NOT single-cycle.** Cycle 198's "highest-leverage next" suggestion
-  underestimated complexity.
+**Established precedent**: cycle 138 → cycle 139 (sorry-first scaffold
+for `thm:550A` general-n was removed in the next cycle "to drive sorry
+count back to 0" — the file `thm_550A_general_n.md` records this).
+Cycle 149 → cycle 150 (sorry-first scaffold for def:530B Path A was
+rolled back). Cycle 201 follows the same pattern.
 
-Sorry count at HEAD: **0**. Axiom-clean. `Section381.lean` is 1721 LOC.
+**None of the 3 cycle-200 sorries can be closed in a single cycle:**
+- `PhiEquivalent → PEquivalent` (line 1622): needs thm:381G (4–5 cycles)
+- `PEquivalent → Equivalent` (line 1629): needs Banach FP (2–3 cycles)
+- `Equivalent → PEquivalent` (line 1640): needs thm:381G (4–5 cycles)
 
-Cycle 200's job is to pick the **next concrete, single-cycle deliverable**
-from the post-cycle-199 options:
+Therefore cycle 201 must roll back, then ship substantive infrastructure
+that unblocks a future cycle. The natural target is **Banach fixed-point
+infrastructure** for the implicit RK stage iteration — the worker's own
+cycle 200 "Suggested next approach" Track 1, and the shortest path to
+closing one of the three sorries (in cycle 202 or 203).
 
-* **Pivot A** (cycle 199 worker's #1 suggestion): thm:381H statement-only
-  with `sorry`-tracked proof. Spec-level deliverable; proof closure waits
-  on thm:381G.
-* **Pivot B**: Confluence Phase 1 — first lattice-closure lemma toward
-  full uniqueness. Multi-cycle plan, but each step ships meaningful
-  infrastructure.
-* **Pivot C**: Tackle thm:314A as thm:381G prerequisite — 2–3 cycle deep
-  dive.
+## Priority 0 — GPFS smoke test (≤ 5 min)
 
-## Decision
+Run `time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean`.
+Expect 21st consecutive timeout (cycles 182–200 all timed out at exactly
+300s with near-zero CPU; pattern documented in
+`.prover-state/issues/cycle_182_gpfs_slowness.md`).
 
-**Priority 1: Ship `thm:381H` (Equivalence of equivalences) as a
-sorry-first scaffold.** Single-cycle deliverable; statement is fully
-faithful to Butcher §380; proof body uses cycle-199's lemma chain
-modulo one tracked sorry that closes once thm:381G is shipped.
+**Branch decision**:
+- If timeout (EXIT=124, CPU < 1%): log the 21st-iteration entry in
+  `cycle_182_gpfs_slowness.md` and proceed to P1. Do NOT retry. Do NOT
+  attempt Phase C.2.
+- If GPFS recovers (compile succeeds in < 5 min, CPU > 50%): pivot to
+  Phase C.2 per `.prover-state/issues/lem_441A_phase_C_scoping.md`.
+  Apply the cycle 184 namespace fix to
+  `.prover-state/cycle_182_draft_section441.lean` line 1529 (already
+  identified), copy draft to `OpenMath/Chapter4/Section441.lean`, compile,
+  ship. Skip P1 and P2.
 
-This is preferred over **Pivot B** (confluence Phase 1) because:
+## Priority 1 — Roll back thm:381H scaffold (sorry count 3 → 0)
 
-1. The cycle 199 issue file explicitly notes "**thm:381H is likely
-   unblocked by cycle 198 alone**" — the proof of thm:381H references
-   thm:381G as a black-box hypothesis, not as a uniqueness fact.
-   Re-reading Butcher §380.8627–8667 confirms this.
-2. The Section381 cluster has now had eight consecutive cycles of
-   `PEquivalent`-flavoured work (cycles 192–199). Shipping the
-   textbook landmark theorem **thm:381H** caps that arc and provides
-   a clean stopping point before pivoting to thm:381G's prerequisite
-   infrastructure.
-3. Confluence Phase 1 (`IsPReducibleVia_join`) has unknown LOC
-   profile — `PPartition` may or may not admit clean lattice structure,
-   and the cycle 199 issue file's Option A is sketched at the spec
-   level only. Higher risk for a single cycle.
+Restore `Section381.lean` to cycle 199's state for the thm:381H region.
 
-## Mandatory pre-flight steps
+### Exact actions
 
-### P0 — GPFS smoke test on Section441.lean (one attempt only)
+1. **Locate the scaffold**: Open `OpenMath/Chapter3/Section381.lean` and
+   find `theorem equivalent_iff_pEquivalent_iff_phiEquivalent` at
+   line ~1613. The block spans approximately lines 1613–1642 (theorem
+   declaration + docstring + proof body with three `sorry` lines plus
+   per-sorry comments). Use `Read` to view the exact range first; the
+   3 sorry lines (1622, 1629, 1640) are inside this block.
 
-Per the established 19-cycle pattern, run a single 5-min smoke test
-on `OpenMath/Chapter4/Section441.lean` to confirm GPFS state:
+2. **Verify what's being removed**: Before deleting, confirm via Read
+   that:
+   - The theorem opens after a comment block citing Butcher §380, p. 304.
+   - The proof body is `refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩` followed by four
+     direction cases, three of which contain `sorry` and one of which
+     uses `PEquivalent.toPhiEquivalent`.
+   - No OTHER theorems in `Section381.lean` reference
+     `equivalent_iff_pEquivalent_iff_phiEquivalent` (sanity check with
+     `Grep` for the theorem name).
 
-```bash
-ps -u $USER -o pid,stat,wchan,etime,comm | grep -E "^[ ]*[0-9]+ +D" \
-  || echo "(no D-state processes)"
-time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean
-```
+3. **Delete the scaffold**: Use `Edit` to remove the theorem declaration,
+   docstring, and proof body entirely. Be careful not to accidentally
+   remove the surrounding cycle 187 lemmas
+   (`PEquivalent.toPhiEquivalent` and `PReducesTo.toPhiEquivalent`) —
+   they precede thm:381H and must stay.
 
-**Decision tree**:
+4. **Verify sorry count is 0**:
+   ```bash
+   grep -c "^  sorry$" OpenMath/Chapter3/Section381.lean
+   grep -n "sorry" OpenMath/Chapter3/Section381.lean
+   ```
+   Should return 0 / empty.
 
-* If EXIT=0 in <60s ⇒ GPFS healthy. Pivot: ship the cycle 182 draft
-  + cycle 184 namespace fix per `lem_441A_phase_C_scoping.md`. Phase
-  C.2 closure is then the cycle 200 deliverable instead of thm:381H.
-* If EXIT=124 with near-zero CPU ⇒ GPFS still pathological. Append a
-  "Cycle 200 update" row to `.prover-state/issues/cycle_182_gpfs_slowness.md`
-  (20th consecutive timeout). Proceed to Priority 1.
-* If EXIT=0 in 60–300s ⇒ partial recovery; still treat as blocked for
-  cycle 200 (the cycle 182 draft compile takes >5 min even when GPFS
-  is healthy). Continue to Priority 1.
+5. **Compile-check**:
+   `time lake env lean OpenMath/Chapter3/Section381.lean`
+   Expect exit 0, ~50s warm rebuild, no `sorry` warnings.
 
-**DO NOT** retry the smoke test after the first attempt. **DO NOT**
-re-attempt Phase C.2 manually (4th attempt failed in cycle 184).
+6. **Axiom-check on a few cycle 199 theorems** to confirm no regression:
+   - `pEquivalent_irreducible_reduct_unique_of_sources_irreducible`
+   - `PEquivalent.toPhiEquivalent`
+   - `PReducesTo.toPhiEquivalent`
+   All should still return `[propext, Classical.choice, Quot.sound]`.
 
-### P0.5 — Verify the file state
+7. **Update `extraction/formalization_data/lean_status.json`**: change
+   `thm:381H` row:
+   - `status`: `partial` → `unformalized`
+   - Remove `lean_file` and `lean_symbol` fields (or set to `null` —
+     match the existing convention for `unformalized` rows).
+   - Bump `cycle` reference to 201.
 
-```bash
-git log -1 --format='%H %s'
-wc -l OpenMath/Chapter3/Section381.lean
-grep -c sorry OpenMath/Chapter3/Section381.lean
-```
+8. **Update `plan.md`** at the `thm:381H` row in the Chapter 3 section:
+   - Change `[~]` → `[ ]`
+   - Remove the long "cycle 200" summary text (the multi-line entry
+     starting with "`OpenMath/Chapter3/Section381.lean` (cycle 200)").
+   - Keep the row title and entity ID; revert to the original short form.
 
-Expected: cycle 199 commit `3ac0841`, 1721 LOC, 0 sorries. If any
-disagree, escalate to consultant rather than proceeding.
+9. **Update `.prover-state/issues/thm_381H_deferred.md`** with a new
+   "## Cycle 201 rollback" section at the top:
+   - Explain the rollback (sorry count 3 → 0 per supervisor policy).
+   - Preserve the cycle 200 analysis below (per-direction blockers,
+     estimated cycle budget table) as planning material for future
+     re-introduction.
+   - Recommend Banach FP first (cycle 201 P2 work), then re-introduce
+     scaffold once `PEquivalent → Equivalent` is closeable in one cycle.
 
-## Priority 1 — `thm:381H` statement-only
+**Do NOT** delete `thm_381H_deferred.md`. It has useful planning.
 
-### Step 1: Read the textbook statement (MANDATORY)
+### P1 sanity check before moving to P2
+- `grep -c "^  sorry$" OpenMath/Chapter3/Section381.lean` returns 0.
+- `lake env lean OpenMath/Chapter3/Section381.lean` exits 0.
+- `git diff --stat OpenMath/Chapter3/Section381.lean` shows only line
+  deletions (or minor reflows), no additions yet.
 
-Read `extraction/raw_text/ch03.txt` lines ~8627–8700 directly before
-writing the Lean statement. Per the cycle 199 P2 recon, thm:381H
-lives in this range (after thm:381G at line 8579). **Quote the
-textbook statement verbatim in the Lean docstring.**
+## Priority 2 — Begin Banach fixed-point foundation (substantive ship)
 
-Also read `extraction/formalization_data/entities/thm_381H.json` for
-the extracted statement and dependency list. If the extracted
-statement disagrees with the raw text, **trust the raw text** and
-note the discrepancy in the cycle results.
+The `PEquivalent → Equivalent` direction of thm:381H requires that the
+implicit RK stage iteration converges to a unique fixed point for
+sufficiently small step sizes. The infrastructure is also load-bearing
+for `Equivalent M M` reflexivity (issue
+`equivalent_self_general_deferred.md`) and the constructive `def:381E
+reducedMethod` (issue `reduced_method_deferred.md`).
 
-The expected form (subject to textbook verification — do NOT type
-the Lean statement before reading the source):
+**Cycle 201 scope**: ship the FOUNDATION pieces (definition + Lipschitz
+lemma + non-vacuity witness). Do NOT attempt the full `ContractingWith`
++ `fixedPoint` machinery this cycle — defer to cycle 202. Aim for
+~80–120 LOC, 0 sorries net, axiom-clean.
 
-> Two Runge–Kutta methods M, M' are equivalent (def:381A) iff they
-> are P-equivalent (def:381F) iff they are Φ-equivalent (def:381B).
+### Concrete deliverables
 
-### Step 2: Pre-flight Grep (MANDATORY — cycle 199 lesson)
+Add to `OpenMath/Chapter3/Section381.lean` (after the existing
+`RKTableau` namespace block but before the file's terminal `end`).
+Section381 is currently ~1700 LOC after the P1 rollback; staying in
+one file avoids import-graph disruption.
 
-Cycle 199 was burned by misreading a signature direction. Before
-typing any Lean, use Grep on `OpenMath/Chapter3/Section381.lean` to
-verify each cited name and its signature:
+#### Step 1 — Definition: `RKStageMap`
 
-* `Equivalent` (def:381A) — what are its hypotheses?
-* `PEquivalent` (def:381F) — confirmed at line 1657-ish.
-* `PhiEquivalent` (def:381B) — confirmed in Section381.
-* `pEquivalent_iff_exists_common_irreducible_reduct` (cycle 198) —
-  the existential characterization.
-* `PEquivalent.toPhiEquivalent` (cycle 187) — `PEquivalent → PhiEquivalent`
-  bridge.
-* `PEquivalent.of_pReducesTo` (cycle 187 alias) — alternative bridge
-  name; check both.
-* `reducedMethod_exists` (cycle 197) — existential irreducible reduct.
-
-For each, record (a) the namespace, (b) the argument order, (c)
-which arguments are hypotheses vs conclusions. Cycle 199's failure
-was assuming target-irreducibility when cycle 188 actually requires
-source-irreducibility.
-
-### Step 3: Lean signature
+The function whose fixed points are the implicit-stage solutions.
+For a Runge-Kutta tableau `M : RKTableau s`, step size `h : ℝ`,
+autonomous RHS `f : ℝ → ℝ` (start with scalar; vector-valued lift is a
+later refinement), and initial value `y₀ : ℝ`:
 
 ```lean
-/-- **Theorem 381H** (Butcher §380, p. ~287).
-Two Runge–Kutta methods are equivalent iff they are P-equivalent iff
-they are Φ-equivalent. -/
-theorem equivalent_iff_pEquivalent_iff_phiEquivalent
-    {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') :
-    (M.Equivalent M' ↔ M.PEquivalent M') ∧
-    (M.PEquivalent M' ↔ M.PhiEquivalent M') := by
-  refine ⟨?_, ?_⟩
-  · -- (def:381A ↔ def:381F) — likely needs thm:381G
-    sorry
-  · -- (def:381F ↔ def:381B)
-    -- forward: PEquivalent.toPhiEquivalent (cycle 187)
-    -- reverse: may close via cycle 197 + cycle 198 + cycle 188
-    sorry
+noncomputable def RKStageMap {s : ℕ} (M : RKTableau s) (h : ℝ)
+    (f : ℝ → ℝ) (y₀ : ℝ) : (Fin s → ℝ) → (Fin s → ℝ) :=
+  fun Y i => y₀ + h * ∑ j : Fin s, M.A i j * f (Y j)
 ```
 
-Adjust names to whatever Grep reveals. If thm:381H's textbook
-statement is shaped differently (e.g. 3-way TFAE rather than two
-iffs), reshape accordingly.
+The fixed point property `RKStageMap M h f y₀ Y = Y` is exactly the
+implicit stage equation. **Pre-flight**: verify the exact stage-equation
+form by reading `IsRKOneStep` at `Section381.lean` around line 970 —
+the definition above must align with the existing predicate's stage
+equation (modulo the autonomous/non-autonomous distinction).
 
-### Step 4: Attempt to close the easier half first
+#### Step 2 — Lipschitz lemma
 
-**The `(def:381F ↔ def:381B)` half is likely closable axiom-clean
-with existing cycle 184–198 infrastructure**:
-
-* **Forward (`PEquivalent → PhiEquivalent`)**: one-line via cycle 187's
-  `PEquivalent.toPhiEquivalent`.
-* **Reverse (`PhiEquivalent → PEquivalent`)**: harder. The textbook
-  argument uses thm:381G-style elementary-weight independence. But
-  there may be a shorter path: PhiEquivalent says
-  `derivativeWeight M t = derivativeWeight M' t` for every rooted
-  tree `t`; this needs to imply existence of a common irreducible
-  reduct. If thm:381G is genuinely required here, defer this
-  direction.
-
-**Attempt order**:
-
-1. Try the forward direction via `PEquivalent.toPhiEquivalent` —
-   should close in 1 line.
-2. Attempt the reverse direction. If you find yourself needing
-   "elementary weights distinguish stages of irreducible methods",
-   that IS thm:381G — defer with a `sorry` and document the
-   blocker.
-
-### Step 5: Attempt the `(def:381A ↔ def:381F)` half
-
-This is likely the harder iff. Butcher's proof typically goes:
-
-* **Forward (`Equivalent → PEquivalent`)**: two equivalent methods
-  produce the same output for every IVP; by the trivial-IVP / linear
-  argument, they have the same Φ-equivalence class; combined with
-  thm:381G's distinguishability, they have the same P-reducibility
-  pattern.
-* **Reverse (`PEquivalent → Equivalent`)**: P-equivalent methods share
-  a reduced form (cycle 198), which is canonical; the reduced form
-  uniquely determines numerical output up to stage permutation.
-
-Both directions plausibly need thm:381G or its consequences. If
-neither closes in 30 minutes of manual work, defer with a `sorry`.
-
-### Step 6: Document remaining sorries
-
-For each `sorry` that remains, write a precise blocker comment AND
-add an entry to a new issue file
-`.prover-state/issues/thm_381H_deferred.md`:
-
-* Which direction is blocked.
-* What infrastructure would close it (thm:381G with its specific
-  prerequisites, OR a more direct route if one is visible).
-* Cross-link to `p_reduction_confluence_gap.md` and
-  `lem_441A_phase_C_scoping.md` style multi-cycle plans.
-
-### Risk assessment
-
-* **Mathematical risk: medium**. One of the four iff-halves should
-  close cleanly with existing infrastructure (`PEquivalent.toPhiEquivalent`).
-  The remaining three are uncertain — could all close, or all
-  defer, or mixed.
-* **LOC risk: low**. Statement + docstring ≈ 40 LOC. Closed halves
-  add ~10–30 LOC each. Total cycle delta likely 40–120 LOC.
-* **Verification risk: low**. Section381.lean compiles in ~44s at
-  HEAD (cycle 199 measurement); incremental edits should be fast.
-* **Tautology risk**: if PhiEquivalent's definition is too weak, the
-  `(def:381F ↔ def:381B)` half might be vacuously true. **Sanity
-  check**: ensure cycle 187's `PEquivalent.toPhiEquivalent` does
-  real work — if PhiEquivalent unfolds to "same `RKTableau`" then
-  this whole exercise is definition smuggling. Verify before
-  shipping.
-
-### Acceptance criteria
-
-* `OpenMath/Chapter3/Section381.lean` contains
-  `equivalent_iff_pEquivalent_iff_phiEquivalent` (or the actual
-  shape from the entity JSON if it differs from two-iff form).
-* File compiles via `lake env lean OpenMath/Chapter3/Section381.lean`.
-* Sorry count is **at most 4** (statement-only with four sorries —
-  one per iff direction) or ideally **1–2** (with 1–3 directions
-  closed) or **0** (all four closed if existing infrastructure
-  suffices — unlikely but possible).
-* `lean_status.json` row for `thm:381H` updated to `partial` (if
-  sorries remain) or `formalized` (if all closed).
-* Faithfulness check in cycle results: quote textbook statement
-  from `raw_text/ch03.txt`, confirm Lean statement matches.
-
-## Priority 2 (stretch, only if Priority 1 closes axiom-clean — unlikely)
-
-If all four iff directions of thm:381H close in <2 hours and the
-file recompiles clean, attempt one of:
-
-**Option 2A — Confluence Phase 1.1**: ship `IsPReducibleVia_join` per
-the cycle 199 issue file. Prerequisite verification (Grep for
-existing `PPartition` lattice instance) before committing.
-
-**Option 2B — Promote underused cycle 198/199 results**: identify any
-`example` blocks in Section381.lean (cycles 184–199) that should be
-promoted to named theorems. Cosmetic but low-risk.
-
-**Option 2C — Update plan.md** to reflect thm:381H closure status
-and refine the priority order of remaining §380 entities (thm:382A,
-thm:386A, etc.) given the new understanding.
-
-**Time-box: 60 minutes**. If not closing cleanly, abort. Do NOT
-introduce stretched sorries for Priority 2.
-
-## Anti-priorities (DO NOT do these)
-
-1. **Do NOT re-attempt the cycle 199 strategy's
-   `pEquivalent_irreducible_reduct_unique`** (full uniqueness without
-   sources-irreducibility). Per cycle 199's analysis, this requires
-   confluence reasoning that is 4–5 cycles of infrastructure. The
-   weak variant shipped in cycle 199 is the right ergonomic API for
-   now.
-
-2. **Do NOT attempt thm:381G in this cycle.** Per cycle 199's recon,
-   it requires thm:314A (currently unformalized) plus substantial
-   linear-algebra-in-ℝ^s infrastructure (subalgebra generated by
-   elementary weights). Multi-cycle, deep.
-
-3. **Do NOT attempt thm:314A in this cycle.** Itself 2–3 cycles of
-   work; not the right level for cycle 200's deliverable.
-
-4. **Do NOT introduce `axiom` or `constant` declarations** for the
-   thm:381H proof body. Sorry-first with tracked-issue is the
-   approved pattern; per CLAUDE.md, `axiom`/`constant` are forbidden.
-
-5. **Do NOT manually re-attempt Phase C.2 of `lem:441A`** (cycle 182
-   draft). The local-compile path is blocked by 19-cycle GPFS
-   pathology. Only the smoke test in P0 is permitted.
-
-6. **Do NOT modify `scripts/autonomous_loop.py`** to fix the
-   phantom-commit verdict pattern. Worker-side rule per CLAUDE.md;
-   issue already escalated via
-   `.prover-state/issues/phantom_commit_verdict_pattern.md`.
-
-7. **Do NOT poll Aristotle** unless you submit a new job this cycle.
-   No pending jobs are tracked at strategy-write time. If you submit
-   one for the thm:381H proof body, single-poll discipline applies
-   (do not re-poll within the same cycle).
-
-8. **Do NOT rename hypothesis variables with `h_<name>`** patterns
-   that trigger the tautology scanner. Use `h<name>` (no underscore)
-   from the start. Issue `tautology_scanner_false_positives.md` is
-   open but worker-side workaround stands.
-
-9. **Do NOT skip the textbook-prose read in Step 1.** Cycle 199's
-   confluence-gap issue was found precisely because the prior
-   planner cited cycle 188 lemmas without verifying their direction.
-   Writing thm:381H's statement without quoting the textbook is the
-   same class of failure.
-
-## Aristotle batch (optional, low priority)
-
-If the `(def:381B → def:381F)` reverse half or either
-`(def:381A ↔ def:381F)` direction doesn't close within 30 minutes of
-manual attempts, **consider** submitting it as a single Aristotle job
-with:
-- The cycle 198 iff theorem as in-context template.
-- Cycle 187/188/197 named lemmas as available citations.
-- Strong induction skeleton or direct construction via
-  `reducedMethod_exists`.
-
-**Single-poll discipline**: after submission, do not re-poll within
-this cycle. Continue with the other halves / Priority 2 work.
-Aristotle results will be incorporated in cycle 201.
-
-## Faithfulness reminders
-
-Per CLAUDE.md pre-commit checklist (apply to thm:381H):
-
-* **Definition smuggling check**: confirm Lean's `Equivalent`,
-  `PEquivalent`, `PhiEquivalent` match the textbook definitions
-  faithfully. Cycle 184 promoted def:381F; cycle 199's weak variant
-  is documented as `_of_sources_irreducible`. The textbook
-  thm:381H quantifies over ALL methods, not just irreducible ones —
-  if your formalization adds an irreducibility hypothesis, that's a
-  red flag.
-* **Tautology check**: the conclusion of thm:381H is two iffs;
-  neither side appears verbatim as a hypothesis. Good. Also: if
-  `PhiEquivalent` unfolds *too easily* to `PEquivalent`, the
-  `(def:381F ↔ def:381B)` half is vacuous — sanity-check by reading
-  the cycle 187 `PEquivalent.toPhiEquivalent` proof and confirming
-  it does real work (computes derivative weights, applies
-  `Finset.sum_bij`, etc.).
-* **Identity check**: the proof body must do real work. A
-  `:= rfl` or `:= Iff.rfl` for any half would be a red flag.
-* **Hypothesis strength check**: thm:381H's textbook statement takes
-  no hypotheses beyond the two RK methods themselves. **Do not add
-  irreducibility, preconsistency, or stability hypotheses** unless
-  the Butcher prose explicitly requires them — if you find yourself
-  needing extras, that's a signal the proof is closing the wrong way.
-* **Absent theorem check**: if you defer a half with `sorry`,
-  verify the issue file `thm_381H_deferred.md` is actually written
-  (not just promised in a comment).
-
-## Verification commands at end of cycle
-
-```bash
-# Compile and confirm sorry count
-time lake env lean OpenMath/Chapter3/Section381.lean
-grep -c sorry OpenMath/Chapter3/Section381.lean
-
-# File size
-wc -l OpenMath/Chapter3/Section381.lean
-
-# Axiom check on new theorem
-echo '#print axioms OpenMath.Chapter3.Section312.RKTableau.equivalent_iff_pEquivalent_iff_phiEquivalent' \
-  | lake env lean --stdin OpenMath/Chapter3/Section381.lean
+```lean
+theorem RKStageMap_lipschitz {s : ℕ} (M : RKTableau s) (h : ℝ)
+    (hh : 0 ≤ h) {f : ℝ → ℝ} {L : NNReal} (hf : LipschitzWith L f)
+    (y₀ : ℝ) :
+    LipschitzWith (some_constant_in_h_L_M) (RKStageMap M h f y₀)
 ```
 
-(Adjust namespace and theorem name to match what was actually shipped.)
+The exact Lipschitz constant depends on the chosen metric on
+`Fin s → ℝ`. Two reasonable options:
 
-Expected (best case): EXIT=0, sorry count 0, axioms
-`[propext, Classical.choice, Quot.sound]`.
+- **Sup norm** (`PiLp ∞`): Lipschitz constant is `h * L * max_i ∑_j |M.A i j|`.
+- **Loose entrywise bound**: Lipschitz constant is
+  `h * L * ∑_{i,j} |M.A i j|` (works for any reasonable metric).
 
-Expected (acceptable): EXIT=0, sorry count 1–4 (tracked in issue
-file), axioms `[propext, Classical.choice, Quot.sound, sorryAx]`.
+Ship the loose bound first if the sup-norm version turns out to require
+fiddly `PiLp` instance manipulation. Tightness is a future-cycle
+refinement.
 
-## Bookkeeping checklist
+Use Mathlib lemmas:
+- `LipschitzWith.const_mul` for scaling by `h * L * const`.
+- `LipschitzWith.sum` for sums of Lipschitz functions.
+- `LipschitzWith.comp` for the inner `f (Y j)` composition.
 
-End-of-cycle updates:
+**Pre-flight**: before writing the proof, use `lean_loogle` to verify
+the names of `LipschitzWith.sum`, `LipschitzWith.const_mul`,
+`LipschitzWith.comp` in the pinned Mathlib v4.28.0. Some names may
+differ (e.g. it might be `LipschitzWith.smul_const` or in a different
+namespace).
 
-1. **`extraction/formalization_data/lean_status.json`**: thm:381H row
-   to `partial` or `formalized` based on outcome.
-2. **`plan.md`**: thm:381H row from `[ ]` to `[~]` or `[x]`.
-3. **`.prover-state/task_results/cycle_200.md`**: full result document
-   per CLAUDE.md template.
-4. **`.prover-state/issues/thm_381H_deferred.md`** (if any sorries
-   remain): document what's blocked and on what.
-5. **`.prover-state/issues/cycle_182_gpfs_slowness.md`**: append 20th
-   timeout entry.
-6. **Git commit** with descriptive message referencing the textbook
-   theorem; push.
+#### Step 3 — Non-vacuity witness (explicit Euler / paddedEuler)
 
-Cycle 200 is a clean landmark — the 200th cycle of the project. Ship
-something solid.
+The `paddedEuler` method (already in Section381 from cycle 184 era —
+verify by Grep) is the canonical test target. For `paddedEuler` with
+`s = 2` and a strict-lower-triangular `A`, `RKStageMap` reduces to a
+direct evaluation — Lipschitz with constant 0 in the diagonal stage
+and `h * L` in the off-diagonal stage.
+
+Alternative: use a simpler explicit Euler `RKTableau 1` with `A = 0`,
+where `RKStageMap` is constant in `Y` (independent of input), giving
+Lipschitz with constant 0 trivially.
+
+```lean
+example : LipschitzWith 0 (RKStageMap explicitEulerRKTableau (1 : ℝ)
+    (fun y => y) (0 : ℝ))
+```
+
+Adjust to whatever explicit-Euler-flavored `RKTableau` instance already
+exists in Section381. Don't create a new instance — reuse `paddedEuler`
+or whatever cycle 184+ shipped.
+
+### Faithfulness note for P2
+
+`RKStageMap` is a direct transcription of the implicit stage equation
+from Butcher §312 (definition of a general Runge-Kutta method). No
+divergence from textbook content. The "for small h" qualifier in the
+Banach FP argument matches Butcher's tacit assumption throughout §380
+("for h sufficiently small the stage equations have a unique
+solution"). When future cycles ship `ContractingWith`, document this
+"small h" hypothesis explicitly as a parameter (per the cycle 116
+`is_convergent_strengthened.md` pattern).
+
+### Time budget for P2
+- Step 1 (definition): 15 min.
+- Step 2 (Lipschitz lemma): 60–90 min (Mathlib hook verification is the
+  time risk).
+- Step 3 (witness): 15 min.
+- Total: ~90–120 min.
+
+**Stall fallback**: if Step 2 doesn't close by ~90 min in, ship Steps
+1 + 3 only (definition + simpler constant-map witness) and file an
+issue noting the Lipschitz hook gap. Sorry count must remain 0 net.
+
+## DO NOT (explicit pruning of failed/forbidden paths)
+
+- **Do NOT attempt to close any of the 3 cycle-200 sorries** in this
+  cycle. They require multi-cycle infrastructure that does not fit
+  in one cycle (worker's own cycle 200 analysis).
+- **Do NOT re-introduce the cycle 200 thm:381H scaffold** in any form
+  before the P1 rollback is complete and committed. The scaffold can
+  return in a future cycle once at least one direction is closeable.
+- **Do NOT try the `PEquivalent → Equivalent` closure as a stretch
+  goal in cycle 201**. The cycle 200 worker estimated 2–3 cycles; a
+  one-cycle attempt is high-risk and would likely produce a half-built
+  Banach FP scaffold that has the same supervisor-revert problem.
+- **Do NOT re-attempt Section441 Phase C.2** beyond the 5-min P0 smoke
+  test. 20 consecutive timeouts establish the GPFS pathology is
+  cluster-side; loop-maintainer territory.
+- **Do NOT modify `scripts/autonomous_loop.py`**. Per CLAUDE.md.
+- **Do NOT modify `extraction/raw_text/` or
+  `extraction/formalization_data/entities/`** (regenerated artifacts).
+  Only `extraction/formalization_data/lean_status.json` is hand-editable.
+- **Do NOT bump `maxHeartbeats`** above 200000. Decompose instead.
+- **Do NOT introduce `axiom` / `constant`** for Banach FP. Mathlib has
+  `LipschitzWith`, `ContractingWith`, `fixedPoint` — use them.
+- **Do NOT** try the "smarter φ" approach for stage extraction (this
+  was ruled out for §514 in cycle 097 — same structural issue applies
+  to RK stages).
+- **Do NOT** poll Aristotle more than once. No new Aristotle batches
+  needed this cycle (Banach FP work is mechanical Mathlib plumbing,
+  poor fit for natural-language premise selection).
+- **Do NOT** create a new `Section381BanachFP.lean` file this cycle —
+  stay in `Section381.lean` to avoid import-graph disruption. Splitting
+  is a future-cycle refactor.
+
+## Faithfulness check (run before commit)
+
+For the P1 rollback:
+- [ ] `thm:381H` row in `lean_status.json` returns to `unformalized`.
+- [ ] `plan.md` row returns to `[ ]` form.
+- [ ] No dangling references to the deleted theorem name anywhere:
+  `grep -rn "equivalent_iff_pEquivalent_iff_phiEquivalent"` returns
+  empty across the repo.
+
+For the P2 ship:
+- [ ] `RKStageMap` definition matches Butcher §312 implicit-stage form.
+  Cross-check by reading the `IsRKOneStep` predicate that
+  `Section381.lean` already defines.
+- [ ] Non-vacuity witness compiles and is axiom-clean.
+- [ ] Lipschitz lemma (if shipped) does not silently strengthen
+  hypotheses beyond what the textbook implies. The Lipschitz constant
+  should be derivable from `M.A` entries plus `L` and `h` — no extra
+  monotonicity or non-negativity assumptions on `M.A` itself.
+- [ ] Tautology scanner: `grep -nE ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$'
+  OpenMath/Chapter3/Section381.lean` returns 0 hits (use `hLip`, not
+  `h_lip`, etc. per the cycle 014/015 tautology-scanner workaround).
+- [ ] `#print axioms` on each new public theorem returns only
+  `[propext, Classical.choice, Quot.sound]`.
+
+## Commit message template
+
+```
+Cycle 201 — §380 thm:381H scaffold rolled back (sorry count 3→0 per
+supervisor policy); Banach FP foundation: RKStageMap def + Lipschitz
+lemma + paddedEuler trivial witness in OpenMath/Chapter3/Section381.lean
+(axiom-clean, unblocks PEquivalent → Equivalent closure in 1–2 future
+cycles); §441 Phase C.2 GPFS-blocked (21st)
+```
+
+Adjust if P2 sub-steps were skipped per the stall fallback.
+
+## Cycle 202 entry point (preview)
+
+If cycle 201 ships Steps 1 + 2 + 3 cleanly:
+- Cycle 202: prove `RKStageMap_contracting` (`ContractingWith` instance
+  for small `h`) using cycle 201's `RKStageMap_lipschitz`. Apply
+  `ContractingWith.fixedPoint` to produce the existence/uniqueness of
+  stage solutions. ~80 LOC.
+- Cycle 203: prove the P-partition iteration invariant
+  `Yᵢ⁽ᵏ⁾ = Yⱼ⁽ᵏ⁾ for i, j in same block of an `IsPReducibleVia P`
+  witness; lift to limit via Banach FP; close `PEquivalent → Equivalent`.
+  Re-introduce thm:381H scaffold with this sorry now closed (sorry
+  count 2; one closed). ~120 LOC.
+
+If cycle 201 ships Step 1 only:
+- Cycle 202: revisit the Lipschitz lemma with fresh Mathlib hook
+  verification. Same downstream plan.

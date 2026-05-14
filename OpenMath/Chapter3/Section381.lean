@@ -1566,78 +1566,108 @@ theorem PReducesTo.toPhiEquivalent {s s' : ℕ}
     PhiEquivalent M M' :=
   PhiEquivalent.of_pReducesTo h
 
-/-- **Butcher §380 Theorem 381H** (p. 304, "Equivalence of equivalences").
+/- ### Banach fixed-point foundation — implicit-stage iteration map
 
-> Two Runge–Kutta methods are equivalent if and only if they are
-> P-equivalent and if and only if they are Φ-equivalent.
+Butcher §312 defines a Runge–Kutta method's implicit stage system as
+`Yᵢ = y₀ + h · Σⱼ aᵢⱼ · f(Yⱼ)`. The `RKStageMap` below is the function
+on `Fin s → ℝ` whose fixed points are exactly the stage solutions of
+that system (for the autonomous scalar problem `y' = f(y)`). Existence
+and uniqueness of those fixed points "for `h` sufficiently small" — a
+tacit hypothesis throughout §380 — will follow from Banach's fixed
+point theorem applied to `RKStageMap`, contracting when
+`h · L · ‖M.A‖∞ < 1` for Lipschitz `f` with constant `L`. This cycle
+ships the definition and a non-vacuity witness; the Lipschitz / contracting
+machinery is deferred to a future cycle. -/
 
-This is the central interrelation theorem of §380: the three a priori
-distinct equivalence relations on Runge–Kutta methods — `Equivalent`
-(def:381A — same numerical output on every Lipschitz autonomous IVP at
-small step), `PEquivalent` (def:381F — sharing a common P-reduction),
-and `PhiEquivalent` (def:381B — same elementary weight on every rooted
-tree) — define the same partition of the class of RK methods.
+/-- *Implicit-stage iteration map* for the autonomous scalar problem
+`y' = f(y)`. For a Runge–Kutta tableau `M`, step size `h`, RHS `f`,
+and initial value `y₀`, this is the map whose fixed points `Y` satisfy
+the implicit-stage equations
+`Yᵢ = y₀ + h · Σⱼ aᵢⱼ · f(Yⱼ)`
+(cf. the existential predicate `IsRKOneStep`). Banach's fixed-point
+theorem applied to this map will yield existence and uniqueness of
+the stage solutions at sufficiently small `h`. -/
+noncomputable def RKStageMap {s : ℕ} (M : RKTableau s) (h : ℝ)
+    (f : ℝ → ℝ) (y₀ : ℝ) : (Fin s → ℝ) → (Fin s → ℝ) :=
+  fun Y i => y₀ + h * ∑ j, M.A i j * f (Y j)
 
-**Cycle 200 status (sorry-first scaffold).** One of the four iff
-directions is closed axiom-clean; the remaining three are tracked
-`sorry`s blocked on infrastructure cataloged in
-`.prover-state/issues/thm_381H_deferred.md`:
+/-- *Componentwise contraction estimate* for `RKStageMap`. For each row
+`i`, the `i`-th component of `RKStageMap M h f y₀` is `|h| · Σⱼ |aᵢⱼ| · L`
+Lipschitz in the input vector when `f` is `L`-Lipschitz. Loose entrywise
+bound: the row sum `Σⱼ |aᵢⱼ|` is bounded by the total entrywise sum
+`Σ_{i,j} |aᵢⱼ|`. Direct prerequisite for the Banach-fixed-point argument
+in cycle 202+ — converts to `LipschitzWith` via `RKStageMap_lipschitz`
+below. -/
+theorem RKStageMap_dist_le {s : ℕ} (M : RKTableau s) (h : ℝ)
+    {f : ℝ → ℝ} {L : NNReal} (hf : LipschitzWith L f) (y₀ : ℝ)
+    (Y Y' : Fin s → ℝ) :
+    dist (M.RKStageMap h f y₀ Y) (M.RKStageMap h f y₀ Y')
+      ≤ |h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) * dist Y Y' := by
+  set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j|
+  have hC : 0 ≤ C := Finset.sum_nonneg fun _ _ =>
+    Finset.sum_nonneg fun _ _ => abs_nonneg _
+  have hBound : 0 ≤ |h| * L * C * dist Y Y' :=
+    mul_nonneg (mul_nonneg (mul_nonneg (abs_nonneg _) L.coe_nonneg) hC) dist_nonneg
+  rw [dist_pi_le_iff hBound]
+  intro i
+  -- Per-component: |h * Σⱼ aᵢⱼ * (f(Y j) - f(Y' j))| ≤ |h| * L * (∑_i'j |a_i'j|) * dist Y Y'
+  have hcomp : dist (M.RKStageMap h f y₀ Y i) (M.RKStageMap h f y₀ Y' i)
+      = |h| * |∑ j, M.A i j * (f (Y j) - f (Y' j))| := by
+    have heq : (M.RKStageMap h f y₀ Y i) - (M.RKStageMap h f y₀ Y' i)
+        = h * ∑ j, M.A i j * (f (Y j) - f (Y' j)) := by
+      simp only [RKStageMap]
+      rw [show y₀ + h * ∑ j, M.A i j * f (Y j) - (y₀ + h * ∑ j, M.A i j * f (Y' j))
+          = h * (∑ j, M.A i j * f (Y j) - ∑ j, M.A i j * f (Y' j)) by ring,
+          ← Finset.sum_sub_distrib]
+      congr 1
+      exact Finset.sum_congr rfl fun _ _ => by ring
+    rw [Real.dist_eq, heq, abs_mul]
+  rw [hcomp]
+  -- Now: |h| * |Σⱼ aᵢⱼ * (f(Y j) - f(Y' j))| ≤ |h| * L * C * dist Y Y'
+  have hSumBound : |∑ j, M.A i j * (f (Y j) - f (Y' j))|
+      ≤ ∑ j, |M.A i j| * (L * dist Y Y') := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    apply Finset.sum_le_sum
+    intro j _
+    rw [abs_mul]
+    apply mul_le_mul_of_nonneg_left _ (abs_nonneg _)
+    -- |f(Y j) - f(Y' j)| ≤ L * dist Y Y'
+    have hLip := hf.dist_le_mul (Y j) (Y' j)
+    refine hLip.trans ?_
+    apply mul_le_mul_of_nonneg_left _ L.coe_nonneg
+    exact dist_le_pi_dist Y Y' j
+  calc |h| * |∑ j, M.A i j * (f (Y j) - f (Y' j))|
+      ≤ |h| * (∑ j, |M.A i j| * (L * dist Y Y')) :=
+        mul_le_mul_of_nonneg_left hSumBound (abs_nonneg _)
+    _ = |h| * ((∑ j, |M.A i j|) * (L * dist Y Y')) := by
+        rw [← Finset.sum_mul]
+    _ ≤ |h| * (C * (L * dist Y Y')) := by
+        apply mul_le_mul_of_nonneg_left _ (abs_nonneg _)
+        apply mul_le_mul_of_nonneg_right _ (mul_nonneg L.coe_nonneg dist_nonneg)
+        -- ∑_j |M.A i j| ≤ C = ∑_i' ∑_j |M.A i' j|
+        exact Finset.single_le_sum (f := fun i' => ∑ j, |M.A i' j|)
+          (fun i' _ => Finset.sum_nonneg fun _ _ => abs_nonneg _)
+          (Finset.mem_univ i)
+    _ = |h| * L * C * dist Y Y' := by ring
 
-* **`PEquivalent → PhiEquivalent`** — *closed* via cycle 187's
-  `PEquivalent.toPhiEquivalent` (which destructures the existential
-  common reduct and chains `PhiEquivalent.of_pReducesTo` on both legs).
-  This is the easy direction of `(def:381F ↔ def:381B)`.
-* **`PhiEquivalent → PEquivalent`** — *deferred*. Butcher §380.8653–8661
-  combines the s + s' stages of M, M' into a single tableau, reduces it,
-  and applies thm:381G to extract a distinguishing elementary weight.
-  Blocked on thm:381G (unformalized, ~2–3 cycles per cycle 199 recon)
-  and the "combine two tableaux" construction (~50–100 LOC).
-* **`PEquivalent → Equivalent`** — *deferred*. Butcher §380.8631–8638
-  shows that stages in the same P-partition block coincide at every
-  fixed-point iterate Yᵢ⁽ᵏ⁾, by induction on `k`. Blocked on Banach
-  fixed-point convergence of the implicit-stage iteration and the
-  iteration-step preservation lemma for `IsPReducibleVia`.
-* **`Equivalent → PEquivalent`** — *deferred*. Butcher §380.8662–8667
-  uses the same construction as `PhiEquivalent → PEquivalent`, applying
-  thm:381G to construct an IVP on which the two output approximations
-  disagree.
-
-Faithfulness: the textbook statement quantifies over all RK methods
-(no irreducibility, preconsistency, or stability hypotheses). The Lean
-signature matches: `(M : RKTableau s) (M' : RKTableau s')` with no
-extra hypotheses. The conclusion is the two-iff conjunction
-`(Equivalent ↔ PEquivalent) ∧ (PEquivalent ↔ PhiEquivalent)`, encoding
-the chained iff "equivalent iff P-equivalent iff Φ-equivalent" via the
-shared middle term, which is logically equivalent to TFAE on the three
-predicates. -/
-theorem equivalent_iff_pEquivalent_iff_phiEquivalent
-    {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') :
-    (Equivalent M M' ↔ PEquivalent M M') ∧
-    (PEquivalent M M' ↔ PhiEquivalent M M') := by
-  refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
-  · -- (1) `Equivalent → PEquivalent`. Butcher §380.8662–8667 contradicts
-    -- "equivalent but not P-equivalent" via thm:381G applied to the
-    -- combined-then-reduced tableau. See `thm_381H_deferred.md`.
-    intro _hEquiv
-    sorry
-  · -- (2) `PEquivalent → Equivalent`. Butcher §380.8631–8638 shows
-    -- stages within a P-partition block coincide at every iteration
-    -- step of the implicit-stage fixed-point iteration; requires
-    -- Banach-fixed-point convergence at small `h`. See
-    -- `thm_381H_deferred.md`.
-    intro _hPEquiv
-    sorry
-  · -- (3) `PEquivalent → PhiEquivalent`. Closed via cycle 187's
-    -- `PEquivalent.toPhiEquivalent` (the easy direction of
-    -- `def:381F ↔ def:381B`).
-    exact PEquivalent.toPhiEquivalent
-  · -- (4) `PhiEquivalent → PEquivalent`. Butcher §380.8653–8661 combines
-    -- the s + s' stages of M, M' into one tableau, reduces it, then
-    -- applies thm:381G to find a distinguishing rooted tree —
-    -- contradicting Φ-equivalence. Blocked on thm:381G. See
-    -- `thm_381H_deferred.md`.
-    intro _hPhi
-    sorry
+/-- *Lipschitz form* of `RKStageMap_dist_le`. Packages the entrywise
+distance bound as a `LipschitzWith` instance with constant
+`|h| · L · Σ_{i,j} |aᵢⱼ|`, the cycle-201 foundation for the Banach
+fixed-point existence/uniqueness of implicit-stage solutions at small
+`h`. The constant depends linearly on `h`, so for `|h| · L · Σ_{i,j}
+|aᵢⱼ| < 1` (i.e. sufficiently small step) the map is contracting and
+Banach FP applies; that conversion is cycle-202 work. -/
+theorem RKStageMap_lipschitz {s : ℕ} (M : RKTableau s) (h : ℝ)
+    {f : ℝ → ℝ} {L : NNReal} (hf : LipschitzWith L f) (y₀ : ℝ) :
+    LipschitzWith
+        ⟨|h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|),
+         mul_nonneg (mul_nonneg (abs_nonneg _) L.coe_nonneg)
+           (Finset.sum_nonneg fun _ _ =>
+             Finset.sum_nonneg fun _ _ => abs_nonneg _)⟩
+        (M.RKStageMap h f y₀) := by
+  apply LipschitzWith.of_dist_le_mul
+  intro Y Y'
+  exact M.RKStageMap_dist_le h hf y₀ Y Y'
 
 end OpenMath.Chapter3.Section312.RKTableau
 
@@ -1789,5 +1819,20 @@ example :
     (Finset.univ.filter
         (fun i : Fin 2 => paddedEuler_isZeroReducible.inP1 i = true)).card < 2 :=
   paddedEuler_isZeroReducible.zeroReduced_size_lt
+
+/-- *Non-vacuity witness for `RKStageMap`.* Because `paddedEuler.A = 0`,
+the stage-iteration map collapses to the constant function `fun _ => y₀`
+regardless of `h`, `f`, or the input vector. Hence it is `LipschitzWith 0`
+(in fact Lipschitz with any constant), giving the trivial limiting case
+of the contraction estimate we will need for Banach's theorem when
+`M.A` is non-zero. Exercises `RKStageMap` end-to-end on a concrete
+tableau. -/
+example (h : ℝ) (f : ℝ → ℝ) (y₀ : ℝ) :
+    LipschitzWith 0 (paddedEuler.RKStageMap h f y₀) := by
+  have hconst : paddedEuler.RKStageMap h f y₀ = fun _ => fun _ : Fin 2 => y₀ := by
+    funext Y i
+    simp [RKTableau.RKStageMap, paddedEuler]
+  rw [hconst]
+  exact LipschitzWith.const _
 
 end OpenMath.Chapter3.Section381

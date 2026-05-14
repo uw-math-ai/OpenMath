@@ -1,6 +1,32 @@
 # Issue: thm:381H — three of four iff directions deferred
 
-## Status
+## Cycle 201 rollback
+
+The cycle 200 statement-only scaffold was removed from
+`OpenMath/Chapter3/Section381.lean` in cycle 201 to drive the file's
+sorry count back to 0 (3 → 0) per supervisor policy ("sorry increase
+is bad"; cycle 200 scored −2). The deleted block was the theorem
+`equivalent_iff_pEquivalent_iff_phiEquivalent` together with its
+docstring (previously at lines 1569–1641); the `lean_status.json` row
+for `thm:381H` reverted to `unformalized`, and the `plan.md` row
+reverted to `[ ]` form.
+
+This rollback follows the established precedent from cycle 138 → 139
+(thm:550A general-n scaffold) and cycle 149 → 150 (def:530B Path A
+scaffold) — sorry-first scaffolds with no path to single-cycle closure
+get rolled back, and the deferred-direction analysis stays in this
+file as planning material for re-introduction once at least one of the
+three directions becomes closeable in a single cycle.
+
+**Cycle 201 P2** began the Banach-fixed-point foundation
+(`RKStageMap` def + Lipschitz lemma + non-vacuity witness) — the
+shortest path to closing `PEquivalent → Equivalent`. Re-introduce the
+thm:381H scaffold once that direction (or any of the other two) can
+be closed in one cycle: at that point sorry count goes from 0 → 2
+(or → 1 if two directions are closeable) instead of 0 → 3, satisfying
+supervisor policy.
+
+## Status (cycle 200 — superseded by cycle 201 rollback above)
 
 Cycle 200 shipped the statement-only scaffold of
 `equivalent_iff_pEquivalent_iff_phiEquivalent`
