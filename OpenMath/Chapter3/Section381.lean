@@ -1935,6 +1935,57 @@ instance Equivalent.setoidSigma.{u} : Setoid (Σ s : ℕ, RKTableau s) where
      fun {p q r} h₁ h₂ =>
        @Equivalent.trans.{u} p.1 q.1 r.1 p.2 q.2 r.2 h₁ h₂⟩
 
+/-- *Setoid instance on fixed-stage `RKTableau s` for def:381B.*
+Combines `PhiEquivalent.refl`, `PhiEquivalent.symm`, `PhiEquivalent.trans`
+(cycle 030 era, lines 129–142) into the standard Mathlib `Setoid`
+typeclass, enabling `Quotient (PhiEquivalent.setoid s)` as the natural
+ambient type for fixed-stage Φ-equivalence classes of Runge–Kutta
+methods. Companion to cycle 211's `Equivalent.setoid` — the §382 group
+lives on `Equivalent`-quotients; the PhiEquivalent quotients will be
+the codomain of the §383+ group homomorphism `Φ`. -/
+instance PhiEquivalent.setoid (s : ℕ) : Setoid (RKTableau s) where
+  r M M' := PhiEquivalent M M'
+  iseqv := ⟨PhiEquivalent.refl, PhiEquivalent.symm, PhiEquivalent.trans⟩
+
+example :
+    @Setoid.r _ (PhiEquivalent.setoid 2) paddedEuler paddedEuler :=
+  PhiEquivalent.refl paddedEuler
+
+/-- *Heterogeneous Σ-typed setoid for def:381B `PhiEquivalent`.*
+Companion to the fixed-stage `PhiEquivalent.setoid s`: this Σ-typed
+variant is needed for the (cycle 224+) Φ-quotient
+`Quotient PhiEquivalent.setoidSigma`, which will be the codomain of the
+(eventual) group homomorphism from cycle 222's
+`Quotient Equivalent.setoidSigma`. Two methods with *different* stage
+counts may live in the same Φ-equivalence class because PhiEquivalent
+is itself heterogeneous-stage (def:381B's
+`∀ t, elementaryWeight M t = elementaryWeight M' t` doesn't compare
+stage counts directly). -/
+instance PhiEquivalent.setoidSigma : Setoid (Σ s : ℕ, RKTableau s) where
+  r p q := @PhiEquivalent p.1 q.1 p.2 q.2
+  iseqv :=
+    ⟨fun p => PhiEquivalent.refl p.2,
+     fun {_ _} h => PhiEquivalent.symm h,
+     fun {_ _ _} h₁ h₂ => PhiEquivalent.trans h₁ h₂⟩
+
+example :
+    @Setoid.r _ PhiEquivalent.setoidSigma
+      ⟨2, paddedEuler⟩ ⟨2, paddedEuler⟩ :=
+  PhiEquivalent.refl paddedEuler
+
+example :
+    @Setoid.r _ PhiEquivalent.setoidSigma
+      ⟨2, paddedEuler⟩ ⟨1, paddedEuler.pReduced pairPartition⟩ :=
+  pReduced_phiEquivalent paddedEuler
+    paddedEuler_isPReducibleVia_pairPartition
+
+example :
+    @Quotient.mk _ PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩
+      = @Quotient.mk _ PhiEquivalent.setoidSigma
+          ⟨1, paddedEuler.pReduced pairPartition⟩ :=
+  Quotient.sound (pReduced_phiEquivalent paddedEuler
+    paddedEuler_isPReducibleVia_pairPartition)
+
 /-- *Per-step P-reduction preserves equivalence.* If `M` is P-reducible
 via partition `P` (def:381D), then `M` is equivalent (def:381A) to the
 P-reduced method `M.pReduced P`. Textbook §380 page 304: the stage
