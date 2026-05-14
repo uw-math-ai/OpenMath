@@ -1722,6 +1722,51 @@ theorem RKStageMap_fixedPoint_unique {s : ℕ} (M : RKTableau s)
   · exact hEq
   · exact absurd hInf (edist_ne_top Y Y')
 
+/-- *Banach existence of `RKStageMap` fixed points* under the smallness
+condition `|h| · L · C < 1` (where `C := Σ_{i,j} |aᵢⱼ|`) and completeness
+of the codomain `N`. The Banach fixed-point theorem applied to the
+`ContractingWith` packaging in `RKStageMap_contracting` yields a stage
+tuple `Y : Fin s → N` satisfying `M.RKStageMap h f y₀ Y = Y`. Combined
+with cycle 204's `RKStageMap_fixedPoint_unique`, this gives existence-
+and-uniqueness of stage solutions for implicit RK methods at small `h`.
+
+The `[CompleteSpace N]` hypothesis is necessary: `ContractingWith.fixedPoint`
+in Mathlib requires the codomain to be complete, and `Fin s → N` inherits
+completeness from `N` via `Pi.completeSpace`. For finite-dimensional `N`
+(e.g. ℝ, ℝⁿ) this is automatic. -/
+theorem RKStageMap_fixedPoint_exists {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N] [CompleteSpace N]
+    (h : ℝ) {f : N → N} {L : NNReal} (hf : LipschitzWith L f)
+    (y₀ : N)
+    (h_small : |h| * (L : ℝ) *
+      (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) < 1) :
+    ∃ Y : Fin s → N, M.RKStageMap h f y₀ Y = Y := by
+  have hContract := M.RKStageMap_contracting h hf y₀ h_small
+  haveI : Nonempty (Fin s → N) := ⟨fun _ => y₀⟩
+  exact ⟨ContractingWith.fixedPoint _ hContract, hContract.fixedPoint_isFixedPt⟩
+
+/-- *Existence of one-step output* for any RK tableau at sufficiently
+small step size, given `[CompleteSpace N]` and Lipschitz `f`. Direct
+corollary of `RKStageMap_fixedPoint_exists` (Banach existence) packaging
+the stage tuple `Y` into an `IsRKOneStep` witness via the output formula
+`y₁ := y₀ + h • Σᵢ M.b i • f (Y i)`. With cycle 204's uniqueness, this
+closes the existence-and-uniqueness story for implicit RK methods at
+small `h` and is the missing prerequisite for closing
+`Equivalent.trans` and `PEquivalent → Equivalent` (the two deferred
+directions of `thm:381H` requiring an intermediate-method output to
+bridge through). -/
+theorem IsRKOneStep_exists {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N] [CompleteSpace N]
+    (h : ℝ) {f : N → N} {L : NNReal} (hf : LipschitzWith L f)
+    (y₀ : N)
+    (h_small : |h| * (L : ℝ) *
+      (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) < 1) :
+    ∃ y₁ : N, M.IsRKOneStep f y₀ h y₁ := by
+  obtain ⟨Y, hY_fix⟩ := M.RKStageMap_fixedPoint_exists h hf y₀ h_small
+  refine ⟨y₀ + h • ∑ i, M.b i • f (Y i), Y, ?_, rfl⟩
+  intro i
+  exact (congrFun hY_fix i).symm
+
 /-- *Reflexivity of `def:381A` equivalence.* Every Runge–Kutta tableau is
 equivalent to itself in the sense of def:381A: for every autonomous
 Lipschitz RHS `f` and initial value `y₀`, there is a step-size threshold
