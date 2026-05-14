@@ -95,7 +95,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:314A` **Independence of the elementary differentials** (§314)
 - [ ] `thm:355F` **A stability condition for Runge Kutta methods** (§355)
 - [~] `def:356A` **irreducibility in the sense of Dahlquist and Jeltsch** (§356) — DJ-irreducibility formalized in `OpenMath/Chapter3/Section356.lean`; AN-stability component deferred (see `.prover-state/issues/AN_stability_deferred.md`)
-- [ ] `lem:319A` **Global truncation error (RK)** (§319)
+- [~] `lem:319A` **Global truncation error (RK)** (§319) — `OpenMath/Chapter3/Section319.lean` (cycle 244, Phase 1) — `RKTableau.stage_diff_recurrence` and `RKTableau.output_diff_recurrence` ship the two intermediate inequalities (`‖Yᵢ - Zᵢ‖ ≤ ‖y₀ - z₀‖ + h L ∑ⱼ |aᵢⱼ| ‖Yⱼ - Zⱼ‖` and `‖y₁ - z₁‖ ≤ ‖y₀ - z₀‖ + h L ∑ᵢ |bᵢ| ‖Yᵢ - Zᵢ‖`) plus the bundled wrapper `RKTableau.lem_319A_recurrences` against `IsRKOneStep` witnesses; all axiom-clean. Non-vacuity witness on `paddedEuler` with `f := id`. Phase 2 (headline `(1 + h L^†) ‖y₀ - z₀‖` bound) deferred: requires inverting `(I − h₀ L |A|)` via M-matrix machinery currently in `OpenMath/Chapter5/MMatrix.lean`, which Chapter 3 cannot import without a circular dependency. Phase 2 plan is either relocate the MMatrix module or re-derive the Neumann-series inversion inline.
 - [ ] `lem:359A` **The V and W transformations** (§359)
 - [ ] `thm:304A` **Enumerating non-rooted trees** (§304)
 - [ ] `thm:306A` **Taylor’s theorem** (§306)

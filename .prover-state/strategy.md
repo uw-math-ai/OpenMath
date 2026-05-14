@@ -1,314 +1,407 @@
-# Cycle 243 Strategy
+# Cycle 244 strategy — `lem:319A` Phase 1: stage/output difference recurrences
 
-## Context (read first)
+## §A — Aristotle-results inbox
 
-Cycle 242 closed `thm:523B` (algebraic-stability inequality) axiom-clean,
-completing §523 in full (`thm:523A` cycle 241 + `thm:523B` cycle 242).
-The cycle 242 task results suggested three candidates for cycle 243:
+Empty. No pending Aristotle results to incorporate. Aristotle path
+not used this cycle (planning a structural Lean ship; no submission
+recommended unless Phase 1 stalls).
 
-1. **`thm:521B`** (Maximum stability order for given steps) — flagged as
-   "single-cycle candidate if it reduces to a degree-counting argument".
-2. **`thm:535A`** (Underlying one-step method, GLM) — likely needs §530-§534.
-3. **§523 residual helper** — stretch, ~10 LOC.
+## §B — Target
 
-Planner inspected entity JSONs:
+**`lem:319A` Phase 1** — Butcher §319 "Global truncation error
+(RK)" lemma (p. 188).
 
-* **`thm:521B`** is **NOT a single-cycle target**. Butcher's proof
-  requires contour integration (`(1/2πi) ∮ φ(t) exp_p*(tz) dt` over a
-  counter-clockwise contour `C` with radius `R > k`), partial-fraction
-  expansion of `φ(t) = Π (t+j)^{-νj-1}`, and an existence + non-existence
-  induction on `k`. Multi-cycle infrastructure (Mathlib's contour-integral
-  framework + identity-of-meromorphic-functions arguments).
-* **`thm:541A`** (DIMSIM types) is similarly NOT single-cycle — Taylor
-  expansion analysis plus §532 order-theory infrastructure.
-* **`def:422B`** (underlying one-step method, LMM) — definitional but
-  references `G_1` (group of elementary weight functions on trees) and
-  the (422a) defining equation; requires §388 group infrastructure not
-  fully in place.
-* **`def:388F`** (commutator condition) — definitionally short but
-  requires a tree-horizontal-product `tu` that is not yet in
-  `OpenMath/Chapter3/Section301.lean`.
+The textbook lemma states:
 
-**Conclusion**: among the planner-suggested candidates, only the **§523
-residual helper** is a certain single-cycle ship. To make the cycle
-substantive, P1 ships the residual helper *and* P2 investigates one
-additional fresh entity for cycle 244 planning purposes.
+> Let `f : ℝ^m → ℝ^m` satisfy a Lipschitz condition with constant
+> `L`. Let `y₀, z₀ ∈ ℝ^m` be two input values to a step with the
+> RK method `(A, b, c)`, using stepsize `h ≤ h₀` where
+> `h₀ L ρ(|A|) < 1`, and let `y₁, z₁` be the corresponding output
+> values. Then
+>
+>   `‖y₁ − z₁‖ ≤ (1 + h L^†) ‖y₀ − z₀‖`,
+>
+> where `L^† = L |b|^T (I − h₀ L |A|)^{−1} 𝟙`.
 
----
+The textbook proof has **two structural inequalities** plus an
+M-matrix inversion that derives the `L^†` constant. **Cycle 244
+ships only the two structural inequalities** (Phase 1). The
+`L^†` closed-form derivation requires inverting `(I − h₀ L |A|)`
+via M-matrix machinery (currently only in
+`OpenMath/Chapter5/MMatrix.lean`), which would create a
+Chapter-3-imports-Chapter-5 cycle. Phase 2 (cycle 245+) handles
+this either by relocating MMatrix or re-building the small piece
+needed inline.
 
-## Priority 1 (ship target) — `algebraicStability_residual`
+### Phase 1 deliverables (cycle 244)
 
-**Location**: `OpenMath/Chapter5/Section523.lean`, **insert immediately after** `algebraicStability_identity` (line 222) and **before** its non-vacuity `example` block (line 234). Place the new theorem in the same `namespace OpenMath.Chapter5.Section510` block.
+Create new file `OpenMath/Chapter3/Section319.lean` with two
+public theorems plus a bundled wrapper:
 
-**Statement** (exact signature — copy verbatim, no modifications):
+#### Deliverable D1 — stage-difference recurrence
 
 ```lean
-/-- *Algebraic-stability residual form (§523 corollary of
-`algebraicStability_identity`).* Under the same hypotheses as
-`algebraicStability_identity` (symmetric `D` and the GLM step
-equations `hStage`, `hOut`), the difference `‖y_next‖²_G − ‖y_prev‖²_G`
-factors as `2⟨hF, Y⟩_D − ‖hF ⊕ y_prev‖²_M`.
-
-This is the textbook stepping-stone between `thm:523A`'s identity
-(an equation of three terms) and `thm:523B`'s inequality. No sign
-hypotheses are needed: it is a pure algebraic rearrangement. -/
-theorem GeneralLinearMethod.algebraicStability_residual
-    (M : GeneralLinearMethod s r)
-    (D : Matrix (Fin s) (Fin s) ℝ)
-    (G : Matrix (Fin r) (Fin r) ℝ)
-    (hD : D.IsSymm)
-    (h : ℝ) (F Y : Fin s → ℝ) (y_prev y_next : Fin r → ℝ)
-    (hStage : ∀ i, Y i = h * (∑ j, M.A i j * F j) + ∑ j, M.U i j * y_prev j)
-    (hOut : ∀ i, y_next i = h * (∑ j, M.B i j * F j) + ∑ j, M.V i j * y_prev j) :
-    y_next ⬝ᵥ (G *ᵥ y_next) - y_prev ⬝ᵥ (G *ᵥ y_prev)
-      = 2 * ((fun i => h * F i) ⬝ᵥ (D *ᵥ Y))
-        - (Sum.elim (fun i => h * F i) y_prev)
-            ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
-                  Sum.elim (fun i => h * F i) y_prev) := by
-  have hId := M.algebraicStability_identity D G hD h F Y y_prev y_next hStage hOut
-  linarith
+theorem RKTableau.stage_diff_recurrence {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {L : ℝ} (hL : 0 ≤ L) (hf_lip : LipschitzWith L.toNNReal f)
+    {y₀ z₀ : N} {h : ℝ} (hh : 0 ≤ h)
+    {Y Z : Fin s → N}
+    (hY_stage : ∀ i, Y i = y₀ + h • ∑ j, M.A i j • f (Y j))
+    (hZ_stage : ∀ i, Z i = z₀ + h • ∑ j, M.A i j • f (Z j))
+    (i : Fin s) :
+    ‖Y i - Z i‖ ≤ ‖y₀ - z₀‖ + h * L * ∑ j, |M.A i j| * ‖Y j - Z j‖
 ```
 
-**Expected proof body**: 2 lines (`have hId := …; linarith`). The
-identity from cycle 241 has the shape `‖y_next‖²_G = ‖y_prev‖²_G + …`,
-so rearranging to `‖y_next‖²_G − ‖y_prev‖²_G = …` is a `linarith` away.
+Proof recipe:
+1. Subtract `hY_stage i` from `hZ_stage i`:
+   `Y i - Z i = (y₀ - z₀) + h • ∑ j, M.A i j • (f (Y j) - f (Z j))`.
+2. Take norms; apply triangle inequality:
+   `‖Y i - Z i‖ ≤ ‖y₀ - z₀‖ + ‖h • ∑ j, M.A i j • (f (Y j) - f (Z j))‖`.
+3. Pull `h` out via `norm_smul` + `abs_of_nonneg hh`:
+   `‖h • ⋯‖ = h * ‖∑ ⋯‖`.
+4. Bound the sum norm via `norm_sum_le`:
+   `‖∑ j, M.A i j • (f (Y j) - f (Z j))‖ ≤ ∑ j, ‖M.A i j • (f (Y j) - f (Z j))‖`.
+5. Each summand: `‖M.A i j • (f (Y j) - f (Z j))‖
+   = |M.A i j| * ‖f (Y j) - f (Z j)‖ ≤ |M.A i j| * (L * ‖Y j - Z j‖)`
+   via `norm_smul`, `Real.norm_eq_abs`, plus
+   `LipschitzWith.dist_le_mul` bridged to `Real.dist_eq`/`abs`-form.
+6. Combine: `∑ j, |M.A i j| * (L * ‖Y j - Z j‖)
+   = L * ∑ j, |M.A i j| * ‖Y j - Z j‖` via `← Finset.mul_sum`.
+7. Multiply through by `h` and finish with `linarith`.
 
-**Risk**: very low. The identity is named, `linarith` handles the linear
-rearrangement of three real-valued terms.
-
-**Faithfulness check (mandatory)**:
-
-* Entity ID: this is a *new helper lemma* not in
-  `extraction/formalization_data/entities/`. It is **infrastructure
-  for §523**, not a textbook entity. Document this in the docstring
-  (already in the template above). Do **NOT** add a `lean_status.json`
-  row for it.
-* Tautology check: conclusion is *not* a hypothesis; the equation
-  reorganises three terms from `hId`. ✓
-* Identity check: proof is `linarith` after `have hId`, not `exact h`. ✓
-* Hypothesis strength: identical hypothesis set as
-  `algebraicStability_identity` (cycle 241). No new strengthening. ✓
-* Smuggling: no new `def`, `structure`, or `class`. ✓
-
-**Non-vacuity** (mandatory, immediately after the theorem):
-
-Add a one-witness `example` mirroring cycle 241/242's pattern at
-`(s, r) = (1, 1)` `explicitEulerGLM` with `D = Matrix.diagonal d`,
-`G = Matrix.diagonal g`. Take `hStage`/`hOut` as hypotheses (no
-concrete construction needed). The example body is:
+#### Deliverable D2 — output-difference recurrence
 
 ```lean
-example (d g h : ℝ) (F Y : Fin 1 → ℝ) (y_prev y_next : Fin 1 → ℝ)
-    (hStage : ∀ i, Y i =
-      h * (∑ j, explicitEulerGLM.A i j * F j) + ∑ j, explicitEulerGLM.U i j * y_prev j)
-    (hOut : ∀ i, y_next i =
-      h * (∑ j, explicitEulerGLM.B i j * F j) + ∑ j, explicitEulerGLM.V i j * y_prev j) :
-    y_next ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_next)
-      - y_prev ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_prev)
-      = 2 * ((fun i => h * F i) ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => d) *ᵥ Y))
-        - (Sum.elim (fun i => h * F i) y_prev)
-            ⬝ᵥ (explicitEulerGLM.algebraicStabilityMatrix
-                  (Matrix.diagonal (fun _ : Fin 1 => d))
-                  (Matrix.diagonal (fun _ : Fin 1 => g)) *ᵥ
-                  Sum.elim (fun i => h * F i) y_prev) :=
-  explicitEulerGLM.algebraicStability_residual _ _
-    (Matrix.isSymm_diagonal _) h F Y y_prev y_next hStage hOut
+theorem RKTableau.output_diff_recurrence {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {L : ℝ} (hL : 0 ≤ L) (hf_lip : LipschitzWith L.toNNReal f)
+    {y₀ z₀ y₁ z₁ : N} {h : ℝ} (hh : 0 ≤ h)
+    {Y Z : Fin s → N}
+    (hY_out : y₁ = y₀ + h • ∑ i, M.b i • f (Y i))
+    (hZ_out : z₁ = z₀ + h • ∑ i, M.b i • f (Z i)) :
+    ‖y₁ - z₁‖ ≤ ‖y₀ - z₀‖ + h * L * ∑ i, |M.b i| * ‖Y i - Z i‖
 ```
 
-**Verification checklist**:
+Proof recipe: identical to D1 with `(M.b i, y₁, z₁)` substituted
+for `(M.A i j, Y i, Z i)`. The output formulae are *not implicit*
+(no fixed-point recursion), so the proof skeleton is genuinely
+shorter than D1 — same six steps without any sum-over-stage-index
+gymnastics.
 
-1. `mcp__lean-lsp__lean_diagnostic_messages` on
-   `OpenMath/Chapter5/Section523.lean` returns no errors and no
-   warnings.
-2. `mcp__lean-lsp__lean_verify` on
-   `OpenMath.Chapter5.Section510.GeneralLinearMethod.algebraicStability_residual`
-   returns exactly `[propext, Classical.choice, Quot.sound]`.
-3. `grep -c sorry OpenMath/Chapter5/Section523.lean` returns 0.
-
-This ships independently of P2. If P2 stalls, P1 alone is a valid
-cycle deliverable (~30 LOC of substantive content).
-
----
-
-## Priority 2 (stretch) — investigate fresh `[ ]` entity
-
-**Only attempt P2 after P1 lands.** If P1 hits any unexpected blocker
-(non-existent Mathlib lemma, etc.), stop and document.
-
-### P2 deliverables, in increasing order of ambition
-
-**(P2a) Companion §523 lemma — preferred if budget allows**
-
-Add ONE small companion lemma to `Section523.lean`. Candidate
-signature:
+#### Deliverable D3 — bundled IsRKOneStep wrapper
 
 ```lean
-/-- *Algebraic-stability via dissipativity bound.* Under the PSD
-hypotheses on `M`, symmetric `D`, and a strict dissipativity bound
-`⟨hF, Y⟩_D ≤ −c · ‖hF ⊕ y_prev‖²_M / 2` (for some `c ≥ 1`), the
-GLM step is strictly contracting:
-`‖y_next‖²_G + (c − 1) · ‖hF ⊕ y_prev‖²_M ≤ ‖y_prev‖²_G`. -/
-theorem GeneralLinearMethod.algebraicStability_contracting
-    (M : GeneralLinearMethod s r)
-    (D : Matrix (Fin s) (Fin s) ℝ)
-    (G : Matrix (Fin r) (Fin r) ℝ)
-    (hD : D.IsSymm)
-    (hM_psd : (M.algebraicStabilityMatrix D G).PosSemidef)
-    (h : ℝ) (F Y : Fin s → ℝ) (y_prev y_next : Fin r → ℝ)
-    (hStage : ∀ i, Y i = h * (∑ j, M.A i j * F j) + ∑ j, M.U i j * y_prev j)
-    (hOut : ∀ i, y_next i = h * (∑ j, M.B i j * F j) + ∑ j, M.V i j * y_prev j)
-    (c : ℝ) (hc : 1 ≤ c)
-    (hContract : 2 * ((fun i => h * F i) ⬝ᵥ (D *ᵥ Y))
-                  ≤ -(c - 1) * ((Sum.elim (fun i => h * F i) y_prev)
-                    ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
-                          Sum.elim (fun i => h * F i) y_prev))) :
-    y_next ⬝ᵥ (G *ᵥ y_next)
-      + (c - 1) * ((Sum.elim (fun i => h * F i) y_prev)
-          ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
-                Sum.elim (fun i => h * F i) y_prev))
-      ≤ y_prev ⬝ᵥ (G *ᵥ y_prev) := by
-  have hRes := M.algebraicStability_residual D G hD h F Y y_prev y_next hStage hOut
-  have hMq :
-      0 ≤ (Sum.elim (fun i => h * F i) y_prev)
-            ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
-                  Sum.elim (fun i => h * F i) y_prev) := by
-    simpa using hM_psd.dotProduct_mulVec_nonneg _
-  linarith
+theorem RKTableau.lem_319A_recurrences {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {L : ℝ} (hL : 0 ≤ L) (hf_lip : LipschitzWith L.toNNReal f)
+    {y₀ z₀ y₁ z₁ : N} {h : ℝ} (hh : 0 ≤ h)
+    (h_y : M.IsRKOneStep f y₀ h y₁) (h_z : M.IsRKOneStep f z₀ h z₁) :
+    ∃ Y Z : Fin s → N,
+      (∀ i, ‖Y i - Z i‖ ≤ ‖y₀ - z₀‖ + h * L * ∑ j, |M.A i j| * ‖Y j - Z j‖)
+      ∧ ‖y₁ - z₁‖ ≤ ‖y₀ - z₀‖ + h * L * ∑ i, |M.b i| * ‖Y i - Z i‖
 ```
 
-This generalises cycle 242's `algebraicStability_inequality` (the
-`c = 1` case recovers it after the `(c - 1)` term vanishes). Proof
-is a `linarith` from the residual (P1) + the PSD bound (cycle 242
-pattern). Estimated ~25 LOC + non-vacuity example.
+Body: destructure `h_y` to obtain `Y, hY_stage, hY_out`; destructure
+`h_z` to obtain `Z, hZ_stage, hZ_out`. Apply D1 universally over
+`i`, apply D2. Package as the existential.
 
-**Faithfulness**: NOT a textbook entity (`thm:523B` is Butcher's
-named inequality; this is a strict-contraction strengthening
-useful for `thm:523` applications). Document accordingly. No new
-`lean_status.json` row.
+#### Deliverable D4 — non-vacuity witness (mandatory)
 
-If P2a elaborates within ~15 min: ship it. If not: switch to P2b.
+Add at end of file, after the public deliverables:
 
-**(P2b) Document cycle-244 candidate — fallback if P2a stalls**
+```lean
+example : ∀ (y₀ z₀ y₁ z₁ : ℝ) (h : ℝ) (hh : 0 ≤ h),
+    paddedEuler.IsRKOneStep (fun y => y) y₀ h y₁ →
+    paddedEuler.IsRKOneStep (fun y => y) z₀ h z₁ →
+    ∃ Y Z : Fin 2 → ℝ,
+      (∀ i, ‖Y i - Z i‖ ≤ ‖y₀ - z₀‖ + h * 1 * ∑ j, |paddedEuler.A i j| * ‖Y j - Z j‖)
+      ∧ ‖y₁ - z₁‖ ≤ ‖y₀ - z₀‖ + h * 1 * ∑ i, |paddedEuler.b i| * ‖Y i - Z i‖
+```
 
-Write a 2-paragraph note at the end of
-`.prover-state/task_results/cycle_243.md` identifying ONE concrete
-fresh `[ ]` row from `plan.md` that is NOT blocked by:
-- `AN_stability_deferred.md`
-- `jordan_canonical_form_missing.md`
-- `rouche_theorem_missing.md`
-- `cycle_182_gpfs_slowness.md` (§441 cluster)
-- the §388 tree-horizontal-product gap (e.g. `def:388F`)
-- the §380 thm:381G / thm:381H prerequisite gap
+with `f := id : ℝ → ℝ` (Lipschitz with constant 1 via `LipschitzWith.id`).
+Use `paddedEuler` (the canonical non-vacuity carrier from cycles
+184+, `RKTableau 2`). If verification step (§L) reveals a different
+single-stage exported tableau is preferred, swap.
 
-Useful candidates to investigate:
-- `lem:319A` (Global truncation error, RK) — analogous to
-  `thm:212A` for Euler; check `Section213.lean` for the shape
-  template, and `entities/lem_319A.json` for hypotheses.
-- `def:442A` (Principal sheet, §441) — definition only; check
-  whether it requires §441 infrastructure (likely blocked by GPFS)
-  or is self-contained.
-- `cor:550C` (Inverse of companion matrix derivative basis) —
-  corollary to cycles 138-150's doubly-companion-matrix work;
-  check if the seven concrete-`n` stepping stones suffice.
-- `thm:443A` (Order arrows for linear multistep methods, §441) —
-  also §441-cluster, GPFS-blocked.
+## §C — Mathlib hook inventory
 
-Read entity JSONs via `cat
-extraction/formalization_data/entities/<id>.json`. Write the
-cycle 244 planner-note in the cycle results' "Suggested next
-approach" section: include statement, recommended Lean file
-location, dependency footprint, and estimated LOC.
+Hooks needed for D1/D2 (all expected present, but the worker
+should `lean_local_search` to confirm exact names):
 
-Do NOT attempt the proof in cycle 243.
+| Goal | Lemma | Notes |
+|---|---|---|
+| Triangle inequality on norm | `norm_add_le` | std |
+| Difference of norms | `norm_sub_le` | std |
+| Pull scalar out of norm | `norm_smul` | std |
+| `‖h • x‖ = |h| * ‖x‖` for `h : ℝ` | `norm_smul` + `Real.norm_eq_abs` | std |
+| `|h| = h` when `h ≥ 0` | `abs_of_nonneg` | std |
+| `‖∑ x‖ ≤ ∑ ‖x‖` | `norm_sum_le` | std |
+| Lipschitz bound | `LipschitzWith.dist_le_mul` | bridge `dist` ↔ `‖·‖` |
+| `dist a b = ‖a - b‖` (norm space) | `dist_eq_norm` | std |
+| Pull constant out of sum | `← Finset.mul_sum` | std |
+| Sum manipulation | `Finset.sum_congr`, `Finset.sum_le_sum` | std |
+| Final close | `linarith` / `ring` / `nlinarith` | std |
 
----
+The `LipschitzWith L.toNNReal f` ↔ `‖f a - f b‖ ≤ L * ‖a - b‖`
+bridge is the same one cycles 064 / 065 / 066 used heavily in §406B.
+Look for an existing private helper in §406B / §515; if none, write
+a 1-line helper inline. Pattern:
 
-## What NOT to attempt
+```lean
+have habs : ‖f a - f b‖ ≤ L * ‖a - b‖ := by
+  have := hf_lip.dist_le_mul a b
+  simpa [dist_eq_norm, Real.coe_toNNReal _ hL] using this
+```
 
-* **Do NOT touch `thm:521B`**. Multi-cycle (contour integration +
-  partial fractions). Investigated and ruled out by cycle 243 planner.
-* **Do NOT touch `thm:541A`**. Multi-cycle (Taylor expansion analysis
-  + §532 order theory).
-* **Do NOT touch `def:422B`, `def:388D`, `def:388F`**. All require
-  tree-product or §388-group-quotient machinery not yet in
-  `Section301.lean` / `Section381.lean`.
-* **Do NOT touch §441 path**. Per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`, 44 consecutive
-  GPFS timeouts on `Section441.lean` smoke tests. The cycle 240
-  worker sidestepped this by creating new `Section441B.lean`; do
-  not regress.
-* **Do NOT modify `scripts/autonomous_loop.py`**. Per CLAUDE.md
-  and `phantom_commit_verdict_pattern.md` — loop-maintainer
-  territory.
-* **Do NOT raise `maxHeartbeats`** above 200000.
-* **Do NOT introduce `axiom` or `constant`**.
-* **Do NOT poll Aristotle** — no jobs were submitted by cycle 242.
-* **Do NOT alter cycle 241/242 deliverables**
-  (`algebraicStability_identity`, `algebraicStability_inequality`,
-  or `algebraicStabilityMatrix`). P1's `linarith` consumes
-  `algebraicStability_identity` verbatim; do not refactor it.
+## §D — File layout
 
----
+**Create new file**: `OpenMath/Chapter3/Section319.lean`.
 
-## Past failures to avoid (from attempts.md)
+Imports needed (minimal):
+```lean
+import OpenMath.Chapter3.Section381   -- for RKTableau, IsRKOneStep, paddedEuler
+import Mathlib.Topology.MetricSpace.Lipschitz  -- for LipschitzWith
+import Mathlib.Analysis.Normed.Group.Basic  -- for norm_sum_le, norm_smul
+```
 
-* Cycle 219's `Equivalent.symm` first attempt failed due to
-  universe-polymorphism issue (`auto-bound universes pick fresh
-  levels per reference`). Section523.lean does not have this concern
-  (no `Equivalent` references), but be aware if you investigate any
-  §381-related entities in P2.
-* Cycle 167 `Section454.lean` learned that `simp only [Matrix.dotProduct]`
-  does NOT fire — `dotProduct` is at root namespace, not
-  `Matrix.dotProduct`. If you write any `dotProduct` simp invocations
-  for P2a, use bare `dotProduct` (already open via `open Matrix` in
-  `Section523.lean` line 63).
-* Cycle 226's direct tree-induction approaches for compose
-  Φ-equivalence failed structurally — **do not** try direct tree
-  induction for any §388/§383 entity without first checking whether
-  Aristotle has been delegated.
+If `paddedEuler` lives in a different module's namespace
+(`OpenMath.Chapter3.Section312.RKTableau.paddedEuler` is likely),
+qualify properly in the non-vacuity example.
 
----
+**Aggregator update**: add `import OpenMath.Chapter3.Section319` to
+`OpenMath/Chapter3.lean` if that aggregator file exists. Check via
+`ls OpenMath/Chapter3*.lean`. If a flat module aggregator is in
+place at `OpenMath.lean`, update there too.
 
-## Cycle 243 execution order
+## §E — Faithfulness check (run before commit)
 
-1. **(5 min)** Read `OpenMath/Chapter5/Section523.lean` to confirm
-   structure (already inspected by planner; file is 314 LOC, no
-   sorries, axiom-clean through cycle 242). Use `mcp__lean-lsp__lean_file_outline`
-   for a token-efficient overview if needed.
-2. **(15 min)** Insert P1 theorem + non-vacuity example via `Edit`
-   tool. Run `mcp__lean-lsp__lean_diagnostic_messages` after each
-   insertion.
-3. **(5 min)** Run `mcp__lean-lsp__lean_verify` on the new theorem;
-   confirm axiom-clean (expected
-   `[propext, Classical.choice, Quot.sound]`).
-4. **(P2 budget, ~30 min)** Either ship P2a if it elaborates within
-   the first ~15 min of attempting, OR drop to P2b.
-5. **(15 min)** Write `.prover-state/task_results/cycle_243.md`
-   following CLAUDE.md template. Include faithfulness check section
-   even though P1 is a helper (document the "not a textbook entity"
-   status explicitly).
-6. **(5 min)** Commit: stage the modified file
-   (`OpenMath/Chapter5/Section523.lean`) and the task results.
-   Mention "Cycle 243 — §523 algebraicStability_residual SHIPPED"
-   in the commit subject. Push.
+For each new theorem (D1, D2, D3):
 
-Total budget: ~70 min P1 path; ~100 min including P2.
+- [ ] Quote the entity `lem:319A` textbook statement (already
+      reproduced in §B above) and identify which structural
+      sub-claim each deliverable captures:
+    * D1 ↔ Butcher's intermediate stage-difference inequality
+      (proof, line 2 of `proof_text`).
+    * D2 ↔ Butcher's intermediate output-difference inequality
+      (proof, line 3 of `proof_text`).
+    * D3 ↔ packaging of D1 + D2 against the `IsRKOneStep` predicate.
+- [ ] **Documented divergence**: the headline `‖y₁ − z₁‖ ≤
+      (1 + h L^†) ‖y₀ − z₀‖` form is **not** shipped in cycle 244.
+      The `L^†` constant requires inverting `(I − h₀ L |A|)` via
+      M-matrix machinery
+      (`Matrix.EntrywiseNonneg.inv_one_sub_of_norm_lt_one` from
+      `OpenMath/Chapter5/MMatrix.lean`, cycle 106), which is
+      currently in Chapter 5 and would create a circular
+      dependency if imported into Chapter 3. Phase 2 (cycle 245+)
+      will either (a) relocate the MMatrix piece to a shared
+      utility module, or (b) re-derive the needed M-matrix
+      inversion inline in `Section319.lean` against just the
+      Frobenius/L∞ norm bound `‖h₀ L |A|‖ < 1`. Either path is
+      single-cycle work once D1/D2/D3 are landed.
+- [ ] **Tautology check**: D1 and D2 conclusions are inequalities
+      involving `‖Y i - Z i‖` / `‖y₁ - z₁‖`, not present as
+      hypotheses. ✓
+- [ ] **Identity check**: proofs are sequences of triangle
+      inequality + Lipschitz bound + sum manipulation, not `exact h`. ✓
+- [ ] **Hypothesis strength**:
+    * `0 ≤ h` is unavoidable (the bound depends on `h`'s sign).
+    * `0 ≤ L` is unavoidable (the bound is a multiple of `L`).
+    * `LipschitzWith L.toNNReal f` is the textbook hypothesis
+      verbatim.
+    * `IsRKOneStep` matches Butcher's "input/output values to a
+      step with method (A, b, c)".
 
----
+  No extra hypotheses beyond the textbook. ✓
+- [ ] `lean_status.json` row for `lem:319A`: status `unformalized`
+      → `partial` (cycle 244 ships intermediate inequalities; the
+      headline `(1 + h L^†)` form is deferred to Phase 2). Add a
+      `lean_file: "OpenMath/Chapter3/Section319.lean"` and
+      `lean_symbol: "RKTableau.lem_319A_recurrences"` entry.
+- [ ] `plan.md` row for `lem:319A`: change `[ ]` → `[~]` with a
+      one-line note: "Phase 1 (intermediate inequalities) shipped
+      cycle 244; Phase 2 (L^† closed form via M-matrix inversion)
+      deferred."
 
-## Success criteria
+## §F — What NOT to try
 
-* `OpenMath/Chapter5/Section523.lean` compiles cleanly, 0 sorries,
-  axiom-clean.
-* `algebraicStability_residual` axiom-clean
-  (`[propext, Classical.choice, Quot.sound]`).
-* Non-vacuity example present and typechecks.
-* `task_results/cycle_243.md` documents the deliverable + a
-  cycle-244-planner-friendly note (P2b at minimum, P2a if shipped).
-* No regression on cycles 241/242 landmarks
-  (`algebraicStability_identity`, `algebraicStability_inequality`,
-  `algebraicStabilityMatrix`).
+* Do **NOT** attempt to derive the `L^†` closed form in cycle 244.
+  The M-matrix inversion `(I − h₀ L |A|)^{−1}` is in
+  `OpenMath/Chapter5/MMatrix.lean` (cycle 106), which Chapter 3
+  cannot import without creating a circular dependency. If you
+  attempt to inline it: the proof requires `Matrix.EntrywiseNonneg`
+  + Neumann series infrastructure (~150 LOC) which dwarfs the
+  cycle's deliverable bar.
+* Do **NOT** introduce `axiom` or `constant`. The `L^†` constant
+  is computable in principle (M-matrix inversion is constructive
+  via the geometric series).
+* Do **NOT** raise `maxHeartbeats` above 200000.
+* Do **NOT** define a new `IsRKOneStep`-style predicate. Reuse the
+  cycle 030 one in `Section381.lean` (line 924).
+* Do **NOT** specialise to `f : ℝ → ℝ` (scalar). The textbook
+  statement is for `ℝ^m`; our `IsRKOneStep` is generic over
+  `[NormedAddCommGroup N] [NormedSpace ℝ N]`. Use that generality.
+  The non-vacuity D4 *example* may specialise to `ℝ` for clarity.
+* Do **NOT** edit `extraction/raw_text/` or
+  `extraction/formalization_data/entities/`. Those are regenerated.
+* Do **NOT** edit `scripts/autonomous_loop.py` (worker rule, per
+  CLAUDE.md and standing `tautology_scanner_false_positives.md`
+  issue).
+* Do **NOT** attempt `cor:550C` (worker's cycle 243 fallback
+  suggestion). It depends on `thm:550B`, which depends on
+  `thm:550A`'s general-`n` closure (deferred per
+  `thm_550A_general_n.md`; Aristotle cancelled at 21% in cycle 151).
+* Do **NOT** attempt `thm:535A` (Underlying one-step method, GLM).
+  Per `entities/thm_535A.json`, this requires tree-indexed B-series
+  functions (`ξ`, `η`, `θ`) and induction on tree order — multi-cycle
+  infrastructure not yet in place.
+* Do **NOT** attempt `def:422B`. Same blocker — requires the LMM
+  side of the §383 group infrastructure and tree-indexed mappings.
+* Do **NOT** attempt `def:442A`. Requires Riemann-surface
+  infrastructure for stability functions.
 
-Counts as substantive cycle even if P2 yields only the cycle-244
-note: P1 alone ships a textbook-stepping-stone helper completing
-§523's three-form identity-residual-inequality story.
+## §G — Risk register and mitigations
+
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| R1: `paddedEuler` not the right non-vacuity carrier | low | Verify via §L. If `Section381.lean` exports a single-stage `explicitEulerLMM_RK` ≠ `paddedEuler`, prefer it. Worst case: any concrete `RKTableau s` instance with `s ≥ 1` works. |
+| R2: `LipschitzWith.dist_le_mul` produces NNReal-tinged inequality | medium | The bridge `dist a b = ‖a - b‖` + `Real.coe_toNNReal _ hL` clears it. Look for the existing pattern in `OpenMath/Chapter4/Section406.lean` cycles 064–067 if needed (e.g. `joint_lipschitz_pair_bound` in §406). |
+| R3: `norm_smul` with `h : ℝ` and `x : N` produces `‖h‖` instead of `|h|` | low | `Real.norm_eq_abs` is the bridge. Standard pattern. |
+| R4: Sum-norm `‖∑‖ ≤ ∑‖·‖` lemma name drift | low | `norm_sum_le` is canonical; `Finset.norm_sum_le` is the alternate. Use `lean_local_search "norm_sum"`. |
+| R5: GPFS slowness on the new file's first compile | low | New files have always compiled cleanly in cycles 222–243. The §441 GPFS pathology is specific to that file's heavy `Mathlib.Analysis.*` transitive load; `Section319.lean` only imports Section381 + a few light Mathlib modules. Expected compile time <10s. |
+| R6: `Finset.sum_le_sum` in mid-proof needs an explicit pointwise hypothesis | low | Standard intro pattern: `apply Finset.sum_le_sum; intro j _; ...`. |
+| R7: Confusion between `L : ℝ` (taken with `0 ≤ L`) and `L : ℝ≥0` (LipschitzWith's argument) | medium | Use the `(L : ℝ)` + `L.toNNReal` pattern that cycles 064–067 and 215+ have used successfully. The non-negativity `hL` is the bridge that lets `Real.coe_toNNReal _ hL` convert back. |
+| R8: `Finset.mul_sum` direction — `c * ∑ f = ∑ c * f` or vice versa? | low | Try `Finset.mul_sum` first; if direction reversed, use `← Finset.mul_sum`. The `nlinarith`/`linarith` finishes will be tolerant. |
+
+## §H — Exit criteria (in order, hard ABORT thresholds)
+
+1. **D1 + D4 (non-vacuity for D1 only) shipped** ≤ 60 minutes of
+   worker time → continue to D2.
+2. **D2 shipped** in ≤ 30 minutes → continue to D3.
+3. **D3 shipped** ≤ 15 minutes → finalise (faithfulness check,
+   commit, lean_status.json, plan.md updates).
+
+If D1 stalls past 60 minutes: **abort to fallback** (§I). Do NOT
+introduce sorries to "ship" a scaffolded D1 (cycle 200 / cycle 201
+precedent — sorry-first scaffolds with no path to single-cycle
+closure get rolled back, costing a cycle).
+
+If D1 ships but D2 stalls past 30 minutes: ship D1 + non-vacuity
+witness only; reformulate the cycle deliverable as "Phase 1a" with
+D2 deferred. Update lean_status.json accordingly (still `partial`,
+but with a narrower scope note).
+
+## §I — Fallback (only if D1 itself stalls)
+
+Pivot to a **§383 elementary-weight algebra small win** analogous
+to cycle 239 (`elementaryWeightQ_phi`). Specifically, ship one
+small named lemma extending the §383 group's `elementaryWeightQ_phi`
+interaction with `composeQ_phi` — e.g. an explicit zero-on-trivial-tree
+corollary, or an `@[simp]` reduction lemma for `elementaryWeightQ_phi`
+on a specific tree shape. Estimated 30–50 LOC, axiom-clean,
+low-risk ship.
+
+The fallback target should be:
+```lean
+@[simp] theorem elementaryWeightQ_phi_paddedEuler_vertex :
+    elementaryWeightQ_phi ⟦⟨2, paddedEuler⟩⟧ RootedTree.vertex = 1
+```
+or similar — a concrete numerical witness for cycle 239's lift on a
+non-trivial method. This is strictly bonus content (0 sorries,
+small LOC, builds on cycle 239's infrastructure).
+
+## §J — Commit message template
+
+```
+Cycle 244 — §319 lem:319A Phase 1 (stage/output difference recurrences) SHIPPED.
+
+New file OpenMath/Chapter3/Section319.lean (~120 LOC, 0 sorries):
+* RKTableau.stage_diff_recurrence — Lipschitz-bound stage-by-stage
+  difference recurrence for two RK steps from distinct inputs.
+* RKTableau.output_diff_recurrence — Lipschitz-bound output-difference
+  recurrence given the stage tuples.
+* RKTableau.lem_319A_recurrences — bundled existential form against
+  IsRKOneStep witnesses.
+* Non-vacuity witness on paddedEuler with f := id.
+
+All declarations axiom-clean ([propext, Classical.choice, Quot.sound]).
+
+Faithfulness divergence: the headline (1 + h L^†) bound from
+Butcher's lem:319A statement requires inverting (I − h₀ L |A|) via
+M-matrix machinery currently in Chapter 5. Phase 2 (relocating or
+re-deriving the M-matrix inversion) deferred to cycle 245+.
+
+lean_status.json: lem:319A unformalized → partial.
+plan.md: lem:319A [ ] → [~] with Phase 1/2 split note.
+```
+
+## §K — Why this target now
+
+* Worker's cycle 243 task results explicitly recommended `lem:319A`
+  as primary target with `cor:550C` as fallback. Dependencies
+  (def:110A, lem:110B, thm:110C) are all formalized in Chapter 1,
+  and `IsRKOneStep` from cycle 030 + `paddedEuler` from cycle 184
+  supply the structural carriers.
+* `cor:550C` is blocked (depends on thm:550B which depends on
+  thm:550A general-n closure, deferred per `thm_550A_general_n.md`).
+* Other Chapter-3 / Chapter-4 candidates (`thm:535A`, `def:422B`,
+  `def:442A`, `def:388D`) all require multi-cycle tree-indexed
+  function infrastructure that is not yet in place.
+* Phase 1 is structurally complete — Butcher's proof literally
+  consists of these two intermediate inequalities plus the
+  M-matrix inversion. Shipping Phase 1 alone constitutes
+  substantive textbook capture with a clear documented divergence.
+* The §523 (cycles 241–243) momentum has run its natural course
+  (identity → residual → inequality is a complete three-form
+  story); pivoting to a fresh chapter avoids over-cycling.
+* `Section319.lean` is a clean greenfield file — no GPFS pathology
+  risk (the §441 issue is file-specific to that file's Mathlib
+  transitive-load profile, not a global cluster issue).
+
+## §L — Note A: which RK tableau to use for the non-vacuity witness
+
+Quick verification step at the start of cycle 244:
+```bash
+grep -n "^def \(explicitEuler\|paddedEuler\)" OpenMath/Chapter3/Section381.lean
+grep -n "^noncomputable def \(explicitEuler\|paddedEuler\)" OpenMath/Chapter3/Section381.lean
+```
+
+Pick whichever single-stage (or two-stage) RK tableau is exported
+publicly. The non-vacuity witness only requires that *some* concrete
+`RKTableau` exists; the choice does not affect the soundness of D1/D2/D3.
+
+If the file exports `paddedEuler : RKTableau 2`, use it (consistent
+with cycles 184–243's non-vacuity carrier). The 2-stage zero
+channel collapses cleanly under `f := id`, so the stage-diff
+recurrence holds vacuously on the second stage.
+
+If the file exports a single-stage `explicitEuler : RKTableau 1`
+(cycle 030), prefer it for cleaner unfolding in the example body.
+
+## §M — Updated cycle 245+ outlook
+
+After cycle 244 lands D1/D2/D3:
+
+* **Cycle 245**: Phase 2 — derive the headline `‖y₁ − z₁‖
+  ≤ (1 + h L^†) ‖y₀ − z₀‖` form via M-matrix inversion. Two
+  approaches:
+  - **Option α (recommended)**: relocate `OpenMath/Chapter5/MMatrix.lean`
+    to a chapter-neutral location like `OpenMath/MMatrix.lean`,
+    update Section515 imports. Minimal disruption (it's a leaf
+    utility module).
+  - **Option β**: re-derive the needed `(I − h₀ L |A|)^{−1}`
+    inversion inline in `Section319.lean` using the same
+    `hasSum_geom_series_inverse` Neumann-series argument as
+    cycle 106's MMatrix lemma. ~80 LOC, more code but isolates
+    the inversion to where it's used.
+
+* **Cycle 246+**: `thm:319B` (Global truncation error bound via
+  local error accumulation) — the headline §319 theorem that
+  consumes `lem:319A`. Likely requires Picard–Lindelöf solution
+  existence (already partially formalised in
+  `OpenMath/Chapter1/Section110.lean`; see
+  `picard_lindelof_bound_strengthening.md` for the standing gap).
+
+The §319 cluster (lem:319A + thm:319B) is the natural
+prerequisite for the §322–§324 RK order-condition theorems that
+are still `[ ]` in the plan, so this cycle's Phase 1 ship has
+significant downstream value.

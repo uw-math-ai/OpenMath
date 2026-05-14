@@ -287,9 +287,9 @@
     "status": "unformalized"
   },
   "lem:319A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section319.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.lem_319A_recurrences",
+    "status": "partial"
   },
   "lem:322A": {
     "lean_file": "OpenMath/Chapter3/Section322.lean",
