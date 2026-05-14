@@ -2859,6 +2859,77 @@ theorem compose_phiEquivalent_compose_left {s₁ s₁' s₂ : ℕ}
 
 end
 
+/-! ### Partial `composeQ_phi` — left action only (cycle 227)
+
+The full binary `composeQ_phi : Quotient PhiEquivalent.setoidSigma →
+Quotient PhiEquivalent.setoidSigma → Quotient PhiEquivalent.setoidSigma`
+requires both `compose_phiEquivalent_compose_left` (cycle 226) and a
+`compose_phiEquivalent_compose_right` half (deferred — see
+`.prover-state/issues/cycle_226_compose_phi_right_action.md`).
+
+`composeQ_phi_left_act` is the *one-sided* lift: the left argument is
+a `PhiEquivalent.setoidSigma`-quotient class, the right is a raw
+representative `(Σ s, RKTableau s)`. It captures the
+left-multiplication action of an Φ-equivalence class of Runge–Kutta
+methods on a raw representative, supplying the §383 group-homomorphism
+chain with genuine, axiom-clean Φ-quotient infrastructure ahead of the
+full binary operation.
+-/
+
+/-- *One-sided left-action lift of `compose` to `Quotient
+PhiEquivalent.setoidSigma`.* The left argument is a Φ-equivalence
+class; the right argument is a raw `Σ s, RKTableau s` representative.
+Well-definedness in the left argument is exactly cycle 226's
+`compose_phiEquivalent_compose_left`; the right argument is *not*
+required to be a quotient class because the right-action half of
+Butcher's §383 group-homomorphism story (varying `M₂` under
+`PhiEquivalent`) is still open. -/
+noncomputable def composeQ_phi_left_act :
+    Quotient PhiEquivalent.setoidSigma →
+    (Σ s : ℕ, RKTableau s) → Quotient PhiEquivalent.setoidSigma :=
+  fun p q => Quotient.lift
+    (fun r : Σ s : ℕ, RKTableau s =>
+      Quotient.mk PhiEquivalent.setoidSigma
+        ⟨r.1 + q.1, r.2.compose q.2⟩)
+    (by
+      rintro ⟨s₁, M₁⟩ ⟨s₁', M₁'⟩ hPhi₁
+      apply Quotient.sound
+      show @PhiEquivalent (s₁ + q.1) (s₁' + q.1)
+        (M₁.compose q.2) (M₁'.compose q.2)
+      exact compose_phiEquivalent_compose_left q.2 hPhi₁)
+    p
+
+/-- *Unfold lemma for `composeQ_phi_left_act` on concrete
+representatives.* Holds by `rfl` because `Quotient.lift f h ⟦x⟧ = f x`
+reduces definitionally. -/
+@[simp] theorem composeQ_phi_left_act_mk
+    {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+    composeQ_phi_left_act
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩)
+        ⟨s₂, M₂⟩ =
+      Quotient.mk PhiEquivalent.setoidSigma
+        ⟨s₁ + s₂, M₁.compose M₂⟩ :=
+  rfl
+
+/-- *Well-definedness of the left action under Φ-equivalence.* If
+`M₁` and `M₁'` are Φ-equivalent (def:381B), then their left-actions
+on any fixed raw right factor `⟨s₂, M₂⟩` agree as
+`PhiEquivalent.setoidSigma`-quotient classes — an immediate corollary
+of cycle 226's `compose_phiEquivalent_compose_left` via
+`Quotient.sound`. -/
+theorem composeQ_phi_left_act_eq_of_phiEquivalent
+    {s₁ s₁' s₂ : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    (M₂ : RKTableau s₂)
+    (hPhi₁ : PhiEquivalent M₁ M₁') :
+    composeQ_phi_left_act
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩) ⟨s₂, M₂⟩ =
+      composeQ_phi_left_act
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁', M₁'⟩)
+        ⟨s₂, M₂⟩ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_phiEquivalent_compose_left M₂ hPhi₁)
+
 /-- *Composition preserves explicitness.* The composite `M₁.compose M₂`
 is explicit iff both factors are. The four blocks behave as follows:
 top-left `M₁.A i j` (zero when `i ≤ j` by `M₁.IsExplicit`); top-right
@@ -3950,6 +4021,38 @@ example :
         (paddedEuler.compose paddedEuler)
         ((paddedEuler.pReduced pairPartition).compose paddedEuler) :=
   RKTableau.compose_phiEquivalent_compose_left paddedEuler
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition)
+
+/-- *Cycle 227 non-vacuity for `composeQ_phi_left_act` (homogeneous).*
+The left-action of the Φ-equivalence class `⟦⟨2, paddedEuler⟩⟧` on the
+raw representative `⟨2, paddedEuler⟩` produces the class of
+`paddedEuler.compose paddedEuler` (4 stages). -/
+example :
+    RKTableau.composeQ_phi_left_act
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
+        ⟨2, paddedEuler⟩ =
+      Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨4, paddedEuler.compose paddedEuler⟩ :=
+  rfl
+
+/-- *Cycle 227 non-vacuity for `composeQ_phi_left_act`
+(heterogeneous-stage).* If `M₁` and `M₁'` are Φ-equivalent (e.g.
+`paddedEuler` and `paddedEuler.pReduced pairPartition` via cycle
+187's `pReduced_phiEquivalent` on the cycle 186 P-reducibility
+witness), then their left-actions on the fixed raw right factor
+`⟨2, paddedEuler⟩` agree as `PhiEquivalent.setoidSigma`-quotient
+classes — even though the underlying stage counts (`2 + 2 = 4` vs
+`1 + 2 = 3`) differ. -/
+example :
+    RKTableau.composeQ_phi_left_act
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
+        ⟨2, paddedEuler⟩ =
+      RKTableau.composeQ_phi_left_act
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨1, paddedEuler.pReduced pairPartition⟩)
+        ⟨2, paddedEuler⟩ :=
+  RKTableau.composeQ_phi_left_act_eq_of_phiEquivalent paddedEuler
     (pReduced_phiEquivalent paddedEuler
       paddedEuler_isPReducibleVia_pairPartition)
 

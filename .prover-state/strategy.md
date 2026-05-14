@@ -1,443 +1,476 @@
-# Cycle 225 Strategy
+# Cycle 227 strategy
 
-## Headline
+## TL;DR
 
-Ship the **bottom-block `derivativeWeight` analog for `compose`** in
-`OpenMath/Chapter3/Section381.lean`, complementing cycle 224's
-top-block pair (`derivativeWeight_compose_castAdd` /
-`derivativeWeightProd_compose_castAdd`). This is the cycle 224
-"Suggested next approach §225" — Option A (auxiliary function
-`derivativeWeightWithSrc`) is mandatory; Option B (direct mutual
-induction without a new function) is not viable because the
-bottom-block formula has a genuinely recursive term that needs a
-name.
+§383 group-homomorphism path **Phase 3 follow-up**. The cycle 226 left-action
+`compose_phiEquivalent_compose_left` is axiom-clean; the right-action half
+(varying `M₂`) is blocked and was submitted to Aristotle at end of
+cycle 226. **Priority 0**: a single poll on that Aristotle project.
+**Priority 1**: branches on the Aristotle result —
+- If COMPLETE with a clean proof, **incorporate the full
+  `compose_phiEquivalent_compose`** and ship the downstream
+  `composeQ_phi` (`Quotient.lift₂`) + bracketed-form corollary.
+- If NOT solved, ship `composeQ_phi_left_act` — a one-sided
+  `Quotient.lift` consuming **only** cycle 226's left-action. This
+  is genuine, axiom-clean infrastructure that the §383 group-hom
+  path needs regardless of when the full binary operation lands.
 
-Sorry count must remain 0 (cycle 224 was the 38th consecutive clean
-cycle since the cycle 201 rollback; do not break the streak).
+Sorry count stays at **0** (target: 41st consecutive clean cycle since
+the cycle 201 rollback). Skip §441 Phase C.2 (43rd consecutive GPFS
+block).
 
-## A. §441 Phase C.2 — SKIP
+---
 
-Do **not** run the §441 GPFS smoke test. We are at 41 consecutive
-timeouts spanning cycles 182–224 (43 calendar days). The pattern is
-fully entrenched and re-attempting wastes 5 minutes for no signal.
-Per the standing escalation in
-`.prover-state/issues/cycle_182_gpfs_slowness.md`, cluster recovery
-is loop-maintainer territory. Go straight to §B work.
+## A. §441 Phase C.2 — SKIP (43rd consecutive GPFS block)
 
-## B. Priority 1 deliverables — bottom-block `derivativeWeight`
+`OpenMath/Chapter4/Section441.lean` has timed out on every smoke test
+since cycle 182. **Do NOT attempt a smoke test or compile** of
+Section441.lean. The cycle 182 draft + cycle 184 namespace fix at
+`.prover-state/cycle_182_draft_section441.lean` remain frozen until
+GPFS recovers; the loop-maintainer escalation
+(`.prover-state/issues/phantom_commit_verdict_pattern.md` and the
+GPFS-pathology note in `.prover-state/issues/cycle_182_gpfs_slowness.md`)
+is in force.
 
-### B.0 Where the work lands
+---
 
-Insert immediately **after** cycle 224's `end ... end` block at
-`OpenMath/Chapter3/Section381.lean:2654`, before the
-`compose_isExplicit_iff` theorem at line 2656.
+## B. Priority 0 — Aristotle single poll (5 min, hard cap)
 
-The new declarations live inside the existing
-`namespace OpenMath.Chapter3.Section312.RKTableau` block. The
-`RootedTree` namespace clash from cycle 224's "Dead end #1" still
-applies — wrap the new `mutual ... end` block (and the auxiliary
-`mutual` def block) in:
+The cycle 226 worker submitted the M₂-side sum equality (the
+right-action of `compose_phiEquivalent_compose`) to Aristotle at
+`2026-05-14T15:50:23 UTC`:
 
-```lean
-section
-open OpenMath.Chapter3.Section310
+- **project_id**: `176aa964-db7b-40f8-a01c-05247c186ec5`
+- Submission time ≈ 20 h before cycle 227 starts.
 
-mutual ... end  -- defs
+Run **exactly one** poll at the start of the cycle:
 
-mutual ... end  -- proofs
-
-end
+```
+mcp__aristotle__get_status (or refresh_status if needed) with
+project_id "176aa964-db7b-40f8-a01c-05247c186ec5"
 ```
 
-This is documented in cycle 224 results as a "reusable trick"; reuse
-it verbatim. Use ONE wrapper around BOTH `mutual` blocks (they share
-the namespace scope; defs come first so the proof block can name
-them).
+Then immediately branch:
 
-### B.1 (P1) — Auxiliary function `derivativeWeightWithSrc`
+### B.1 — Aristotle status = COMPLETE (or COMPLETE_WITH_ERRORS but
+the right-action proof verifies)
 
-Define a mutual pair of `noncomputable def`s in the
-`OpenMath.Chapter3.Section312.RKTableau` namespace. The name
-`derivativeWeightWithSrc M₂ M₁` reads as "M₂'s derivative weight,
-with M₁ as the *source* method providing initial-value contributions
-at each leaf-attachment point":
+- Download the result with `mcp__aristotle__download_result` and
+  `mcp__aristotle__extract_result`.
+- Identify the Lean proof of either:
+  (a) the **M₂-side sum equality** `∑ i, M₂.b i *
+      M₂.derivativeWeightWithSrc M₁ i t = ∑ i', M₂'.b i' *
+      M₂'.derivativeWeightWithSrc M₁ i' t` under `PhiEquivalent M₂ M₂'`,
+      OR
+  (b) the **full right-action** `PhiEquivalent M₂ M₂' →
+      PhiEquivalent (M₁.compose M₂) (M₁.compose M₂')`, OR
+  (c) the **full theorem** `compose_phiEquivalent_compose`.
+- **Verify locally** by adding the symbol(s) to
+  `OpenMath/Chapter3/Section381.lean` after cycle 226's
+  `compose_phiEquivalent_compose_left` (`Section381.lean:2858`),
+  recompile (`lake env lean OpenMath/Chapter3/Section381.lean`,
+  EXIT must be 0), and run `lean_verify` to confirm axiom-clean.
+- Then go to **§D** below to ship the downstream `composeQ_phi`
+  infrastructure.
 
-```lean
-mutual
-  /-- *Derivative weight relative to a source method.* For the bottom-
-  block stages of `M₁.compose M₂`, the per-tree derivative weight
-  recursively accumulates `M₁`'s elementary weight at each
-  leaf-attachment point (representing M₁'s contribution to the
-  starting value used by M₂'s stage `i`). Cycle 225 closed-form
-  partner of `derivativeWeight_compose_natAdd`. -/
-  noncomputable def derivativeWeightWithSrc {s₁ s₂ : ℕ}
-      (M₂ : RKTableau s₂) (M₁ : RKTableau s₁) :
-      Fin s₂ → RootedTree → ℝ
-    | i, RootedTree.mk children =>
-        M₂.derivativeWeightWithSrcProd M₁ i children
+### B.2 — Aristotle status = IN_PROGRESS / FAILED / NOT_FOUND
 
-  /-- List-helper companion to `derivativeWeightWithSrc`. -/
-  noncomputable def derivativeWeightWithSrcProd {s₁ s₂ : ℕ}
-      (M₂ : RKTableau s₂) (M₁ : RKTableau s₁) :
-      Fin s₂ → List RootedTree → ℝ
-    | _, [] => 1
-    | i, t :: ts =>
-        (M₁.elementaryWeight t
-          + ∑ j : Fin s₂, M₂.A i j * M₂.derivativeWeightWithSrc M₁ j t)
-        * M₂.derivativeWeightWithSrcProd M₁ i ts
-end
-```
+- **Do NOT re-poll.** Per CLAUDE.md, one check per cycle.
+- Proceed to **§E** (left-action-only `Quotient.lift` infrastructure).
 
-**Termination**: Lean should infer well-foundedness from the
-`children`/`t :: ts` structural recursion (same template as cycle
-187's `derivativeWeight` definition in Section312). If
-`decreasing_by` complains, find Section312's `derivativeWeight`
-definition with `lean_local_search "derivativeWeight"`, copy
-whatever `decreasing_by` block it uses.
+### B.3 — Aristotle status = COMPLETE but the proof does NOT verify
 
-**Why this shape?** The bottom-block A-row is `(M₁.b j₁, M₂.A i j₂)`
-(cycle 209's `compose_A_botLeft = M₁.b j` and
-`compose_A_botRight = M₂.A i j`). Splitting the `Fin (s₁+s₂)` sum
-via `Fin.sum_univ_add`:
+- The most likely failure modes are namespace drift (cycle 184
+  precedent) or `derivativeWeightWithSrc` being unavailable in
+  Aristotle's stub Section381. Spend at most 15 minutes on
+  mechanical fixes (namespace prefixes, `open` directives).
+- If still not verifying after 15 minutes, **abandon** and
+  proceed to **§E**.
 
-* Top half: `∑ j₁, M₁.b j₁ * (compose).derivativeWeight (castAdd s₂ j₁) t`
-  collapses via cycle 224's `derivativeWeight_compose_castAdd` to
-  `∑ j₁, M₁.b j₁ * M₁.derivativeWeight j₁ t = M₁.elementaryWeight t`.
-* Bottom half: `∑ j₂, M₂.A i j₂ * (compose).derivativeWeight (natAdd s₁ j₂) t`
-  retains the recursive `(compose).derivativeWeight (natAdd s₁ j₂) t`
-  factor — exactly what the mutual partner picks up via
-  `M₂.derivativeWeightWithSrc M₁ j₂ t`.
+---
 
-So the `t :: ts` body
-`(M₁.elementaryWeight t + ∑ j, M₂.A i j * derivativeWeightWithSrc M₁ j t) * ...prod ts`
-is the closed-form analog of the recursive sum.
+## C. (intentionally skipped — branching already in §B)
 
-### B.2 (P1) — Mutual identity `derivativeWeight_compose_natAdd`
+---
 
-In a second `mutual` block (still inside the
-`section ... open Section310 ... end` wrapper), prove:
+## D. Priority 1A — full right-action available, ship `composeQ_phi`
+
+Reachable only if §B.1 succeeds. Deliverables:
+
+### D.1 — `compose_phiEquivalent_compose` (full)
+
+If Aristotle returned only the M₂-side sum equality (case (a) in §B.1),
+package it into:
 
 ```lean
-mutual
-  /-- *Bottom-block derivative-weight reduction.* For a stage
-  `natAdd s₁ i` in the bottom block of `M₁.compose M₂`, the composite
-  derivative weight equals `M₂`'s derivative-weight-with-source on
-  tree `t`. Companion to `derivativeWeightProd_compose_natAdd`. -/
-  private theorem derivativeWeight_compose_natAdd {s₁ s₂ : ℕ}
-      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
-      ∀ (t : RootedTree) (i : Fin s₂),
-        (M₁.compose M₂).derivativeWeight (Fin.natAdd s₁ i) t
-          = M₂.derivativeWeightWithSrc M₁ i t
-    | RootedTree.mk children, i => by
-        show (M₁.compose M₂).derivativeWeightProd (Fin.natAdd s₁ i) children
-            = M₂.derivativeWeightWithSrcProd M₁ i children
-        exact derivativeWeightProd_compose_natAdd M₁ M₂ children i
-
-  /-- List-helper companion to `derivativeWeight_compose_natAdd`. -/
-  private theorem derivativeWeightProd_compose_natAdd {s₁ s₂ : ℕ}
-      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
-      ∀ (children : List RootedTree) (i : Fin s₂),
-        (M₁.compose M₂).derivativeWeightProd (Fin.natAdd s₁ i) children
-          = M₂.derivativeWeightWithSrcProd M₁ i children
-    | [], _ => rfl
-    | t :: ts, i => by
-        -- Mirrors cycle 224's derivativeWeightProd_compose_castAdd
-        -- recipe at lines 2638–2651, with two differences:
-        --   (a) compose_A_botLeft / compose_A_botRight in place of
-        --       compose_A_topLeft / compose_A_topRight
-        --   (b) NEITHER half is zero, so we route the top half
-        --       through cycle 224 and the bottom half through the
-        --       mutual partner.
-        show (∑ j : Fin (s₁ + s₂),
-                (M₁.compose M₂).A (Fin.natAdd s₁ i) j
-                  * (M₁.compose M₂).derivativeWeight j t)
-              * (M₁.compose M₂).derivativeWeightProd (Fin.natAdd s₁ i) ts
-            = (M₁.elementaryWeight t
-                + ∑ j₂ : Fin s₂,
-                    M₂.A i j₂ * M₂.derivativeWeightWithSrc M₁ j₂ t)
-              * M₂.derivativeWeightWithSrcProd M₁ i ts
-        rw [derivativeWeightProd_compose_natAdd M₁ M₂ ts i]
-        congr 1
-        rw [Fin.sum_univ_add]
-        simp only [compose_A_botLeft, compose_A_botRight]
-        -- Top half: rewrite via cycle 224's per-tree mutual partner.
-        rw [show
-              (∑ j₁ : Fin s₁,
-                  M₁.b j₁ * (M₁.compose M₂).derivativeWeight (Fin.castAdd s₂ j₁) t)
-                = ∑ j₁ : Fin s₁, M₁.b j₁ * M₁.derivativeWeight j₁ t
-            from Finset.sum_congr rfl (fun j₁ _ => by
-              rw [derivativeWeight_compose_castAdd M₁ M₂ t j₁])]
-        -- Bottom half: rewrite via the mutual partner just below.
-        rw [show
-              (∑ j₂ : Fin s₂,
-                  M₂.A i j₂ * (M₁.compose M₂).derivativeWeight (Fin.natAdd s₁ j₂) t)
-                = ∑ j₂ : Fin s₂, M₂.A i j₂ * M₂.derivativeWeightWithSrc M₁ j₂ t
-            from Finset.sum_congr rfl (fun j₂ _ => by
-              rw [derivativeWeight_compose_natAdd M₁ M₂ t j₂])]
-        -- Now the goal is:
-        --   (∑ j₁, M₁.b j₁ * M₁.derivativeWeight j₁ t)
-        --   + (∑ j₂, M₂.A i j₂ * M₂.derivativeWeightWithSrc M₁ j₂ t)
-        --     = M₁.elementaryWeight t
-        --       + (∑ j₂, M₂.A i j₂ * M₂.derivativeWeightWithSrc M₁ j₂ t)
-        -- Close by rewriting ∑ j₁, M₁.b j₁ * M₁.derivativeWeight j₁ t
-        -- to M₁.elementaryWeight t via the elementaryWeight unfold.
-        rfl  -- if elementaryWeight is definitionally the sum;
-             -- otherwise see R1 below for the recovery.
-end
+theorem compose_phiEquivalent_compose_right
+    {s₁ s₂ s₂' : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (M₂' : RKTableau s₂')
+    (hPhi₂ : PhiEquivalent M₂ M₂') :
+    PhiEquivalent (M₁.compose M₂) (M₁.compose M₂') := by
+  intro t
+  rw [compose_elementaryWeight_decomp M₁ M₂ t,
+      compose_elementaryWeight_decomp M₁ M₂' t]
+  congr 1
+  exact <the_M2_side_equality_from_aristotle> M₁ hPhi₂ t
 ```
 
-### B.3 (P2) — `paddedEuler` non-vacuity witness
-
-Outside the namespace block (in `namespace OpenMath.Chapter3.Section381`,
-after cycle 224's P2 example at the end of the file), add:
+Then combine left + right actions via `PhiEquivalent.trans`:
 
 ```lean
-/-- Cycle 225 P2 non-vacuity: `derivativeWeight_compose_natAdd` lifted
-to the concrete pair `(paddedEuler, paddedEuler)`. -/
-example (t : OpenMath.Chapter3.Section310.RootedTree) (i : Fin 2) :
-    (paddedEuler.compose paddedEuler).derivativeWeight (Fin.natAdd 2 i) t
-      = paddedEuler.derivativeWeightWithSrc paddedEuler i t :=
-  RKTableau.derivativeWeight_compose_natAdd paddedEuler paddedEuler t i
+theorem compose_phiEquivalent_compose
+    {s₁ s₁' s₂ s₂' : ℕ}
+    (M₁ : RKTableau s₁) (M₁' : RKTableau s₁')
+    (M₂ : RKTableau s₂) (M₂' : RKTableau s₂')
+    (hPhi₁ : PhiEquivalent M₁ M₁') (hPhi₂ : PhiEquivalent M₂ M₂') :
+    PhiEquivalent (M₁.compose M₂) (M₁'.compose M₂') :=
+  (compose_phiEquivalent_compose_left M₂ hPhi₁).trans
+    (compose_phiEquivalent_compose_right M₁' hPhi₂)
 ```
 
-The `Fin.natAdd 2 i` arity should match (paddedEuler is `RKTableau 2`,
-so `s₁ = 2`). If Lean balks at implicit-argument inference, pass
-`(s₁ := 2) (s₂ := 2)` explicitly.
+**Faithfulness note**: `PhiEquivalent.trans` exists per cycle 030's
+`PhiEquivalent` setoid construction (line ~135 in Section381.lean).
+Verify the exact name with `lean_local_search "PhiEquivalent.trans"`
+before writing the proof.
 
-## C. Verification (mandatory before commit)
+### D.2 — `composeQ_phi` via `Quotient.lift₂`
 
-1. `lake env lean OpenMath/Chapter3/Section381.lean` — must exit 0.
-   Time budget: ≤2 minutes warm rebuild (cycle 223 baseline 8.276s,
-   cycle 224 6.088s; small additions should stay similar). If
-   compile exceeds 2 minutes, abort and roll back per §G.
-2. `mcp__lean-lsp__lean_verify` on each new symbol:
-   * `OpenMath.Chapter3.Section312.RKTableau.derivativeWeightWithSrc`
-   * `OpenMath.Chapter3.Section312.RKTableau.derivativeWeightWithSrcProd`
-   * `OpenMath.Chapter3.Section312.RKTableau.derivativeWeight_compose_natAdd`
-   * `OpenMath.Chapter3.Section312.RKTableau.derivativeWeightProd_compose_natAdd`
+Mirror cycle 218's `composeQ`:
 
-   The two `noncomputable def`s in B.1 may include an additional
-   `WellFounded.fix` or similar axiom from well-founded-recursion
-   machinery — that's expected. The two private theorems in B.2
-   must report axioms `[propext, Classical.choice, Quot.sound]`
-   only. `sorryAx` must not appear in any of the four.
-3. Spot-check regressions on cycle 224 + landmarks via `lean_verify`:
-   * `OpenMath.Chapter3.Section312.RKTableau.derivativeWeight_compose_castAdd`
-     (cycle 224)
-   * `OpenMath.Chapter3.Section312.RKTableau.composeQ_eq_of_equivalent`
-     (cycle 218)
-   * `OpenMath.Chapter3.Section312.RKTableau.instGroup` (cycle 222)
+```lean
+noncomputable def composeQ_phi :
+    Quotient PhiEquivalent.setoidSigma →
+    Quotient PhiEquivalent.setoidSigma →
+    Quotient PhiEquivalent.setoidSigma := by
+  refine Quotient.lift₂
+    (fun p q => Quotient.mk' ⟨p.1 + q.1, p.2.compose q.2⟩) ?_
+  rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩ ⟨s₁', M₁'⟩ ⟨s₂', M₂'⟩ hPhi₁ hPhi₂
+  apply Quotient.sound
+  show @PhiEquivalent (s₁ + s₂) (s₁' + s₂')
+        (M₁.compose M₂) (M₁'.compose M₂')
+  exact compose_phiEquivalent_compose M₁ M₁' M₂ M₂' hPhi₁ hPhi₂
+```
 
-   All must remain at the same axiom triple; no regressions.
-4. Sorry count: `grep -c sorry OpenMath/Chapter3/Section381.lean`
-   must remain 0 (39th consecutive clean cycle since cycle 201).
+### D.3 — Bracketed-form corollary
 
-## D. What NOT to try
+```lean
+theorem composeQ_phi_eq_of_phiEquivalent
+    {s₁ s₁' s₂ s₂' : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+    (hPhi₁ : PhiEquivalent M₁ M₁') (hPhi₂ : PhiEquivalent M₂ M₂') :
+    composeQ_phi ⟦⟨s₁, M₁⟩⟧ ⟦⟨s₂, M₂⟩⟧ =
+      composeQ_phi ⟦⟨s₁', M₁'⟩⟧ ⟦⟨s₂', M₂'⟩⟧ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound
+    (compose_phiEquivalent_compose M₁ M₁' M₂ M₂' hPhi₁ hPhi₂)
+```
 
-1. **Do not attempt P3 (`compose_phiEquivalent_compose`) this cycle.**
-   Per cycle 224 task results "Suggested next approach", the bottom-
-   block formula is the prerequisite; assembling
-   `compose_phiEquivalent_compose` from cycle 224 (top) + cycle 225
-   (bottom) is itself a substantive cycle. Cycle 226+ work.
-2. **Do not attempt Option B (direct mutual induction without
-   auxiliary function).** Per cycle 224 task results "Suggested next
-   approach", the bottom-block formula contains a genuinely recursive
-   `(compose).derivativeWeight (natAdd s₁ j) t` term that does not
-   eliminate cleanly. Without a name (the auxiliary function
-   `derivativeWeightWithSrc`), the closed form cannot be stated.
-   Option A is the only viable path.
-3. **Do not redefine `compose`, `compose_A_botLeft`, `compose_A_botRight`,
-   or any cycle 209 simp lemmas.** They are correct as-is (cycle 224
-   confirmed the `compose_A_topLeft`/`topRight` analogs work for the
-   top-block recipe; the same simp set drives the bottom block).
-4. **Do not omit the `section ... open Section310 ... end` wrapper.**
-   Cycle 224's "Dead end #1" documents that unqualified `RootedTree`
-   inside `Section312.RKTableau` resolves to a different type. The
-   wrapper is mandatory for both the def block and the proof block.
-   Use ONE wrapper around BOTH `mutual` blocks.
-5. **Do not run the §441 smoke test.** 41 consecutive timeouts. Per
-   §A above.
-6. **Do not raise `maxHeartbeats`.** Per CLAUDE.md. If the second
-   `mutual` block times out at 200000 heartbeats, decompose the
-   `t :: ts` proof into a private `Fin.sum_univ_add` + simp-set
-   helper that handles the four-block split in isolation, separate
-   from the per-summand mutual recursion. Cycle 150's pattern at
-   `matrix7_oneMinusZSmul_det` is the precedent — if a single proof
-   blows past heartbeats, factor the structural part from the
-   per-summand recursion.
-7. **Do not change the `compose` definition** (Section381.lean line
-   ~2410). Cycle 209's encoding is consumed by 30+ downstream
-   theorems; refactoring would cascade.
-8. **Do not introduce `axiom` or `constant` declarations.** Per
-   CLAUDE.md.
-9. **Do not commit `sorry`-scaffolded versions of B.1 or B.2.**
-   Sorry count must stay 0. If B.1 or B.2 cannot be closed within
-   §F budget, abort per §G — do NOT ship a sorry-first scaffold.
-   Cycle 200's thm:381H scaffold (sorry count 0 → 3) was rolled
-   back in cycle 201 with score −2; same precedent applies.
+### D.4 — Non-vacuity (P2)
 
-## E. Risk register (pre-flagged, recovery plans inline)
+Two examples in `namespace OpenMath.Chapter3.Section381` at the end of
+the file:
 
-* **R1 — `M₁.elementaryWeight` definitional shape.** `rfl` at the
-  end of B.2's proof closes only if `elementaryWeight M t = ∑ i,
-  M.b i * M.derivativeWeight i t` definitionally. **Recovery**: if
-  not, run `lean_local_search "elementaryWeight"` for the unfold
-  lemma (likely `RKTableau.elementaryWeight_eq` or similar — cycle
-  187's `pReduced_phiEquivalent` proof at `Section381.lean:1322`
-  unfolds elementaryWeight via `show ∑ i, ...`, so the same trick
-  works here). Apply via
-  `show (∑ j₁, M₁.b j₁ * M₁.derivativeWeight j₁ t) + _ = M₁.elementaryWeight t + _`
-  followed by `rfl`, OR insert `rw [← elementaryWeight_eq]` /
-  `unfold elementaryWeight`. Estimated 5-minute recovery.
+(i) Homogeneous:
+```lean
+example : composeQ_phi ⟦⟨2, paddedEuler⟩⟧ ⟦⟨2, paddedEuler⟩⟧ =
+    ⟦⟨4, paddedEuler.compose paddedEuler⟩⟧ := rfl
+```
 
-* **R2 — `Fin.sum_univ_add` rewrites both halves the wrong way.** The
-  rewrite produces `∑ j₁ : Fin s₁, ... + ∑ j₂ : Fin s₂, ...` from
-  `∑ j : Fin (s₁ + s₂), ...`. Cycle 224's recipe used this exact
-  step at line 2647 — it's already validated. **Recovery**: not
-  expected to fire.
+(ii) Heterogeneous via `paddedEuler_phiEquivalent_pReduced`
+(promoted by cycle 187):
+```lean
+example : composeQ_phi ⟦⟨2, paddedEuler⟩⟧ ⟦⟨2, paddedEuler⟩⟧ =
+    composeQ_phi ⟦⟨1, paddedEuler.pReduced pairPartition⟩⟧
+                 ⟦⟨1, paddedEuler.pReduced pairPartition⟩⟧ :=
+  composeQ_phi_eq_of_phiEquivalent
+    paddedEuler_phiEquivalent_pReduced
+    paddedEuler_phiEquivalent_pReduced
+```
 
-* **R3 — `compose_A_botLeft` / `compose_A_botRight` simp lemma
-  names.** Cycle 209's task results name them as stated; cycle 213's
-  `compose_of_isRKOneStep` proof uses the same names. **Recovery**:
-  if names have drifted, `lean_local_search "compose_A_bot"` finds
-  them.
+### D.5 — Budget
 
-* **R4 — Auxiliary function termination.** The mutual recursion
-  pattern in B.1 mirrors cycle 187's `derivativeWeight` /
-  `derivativeWeightProd` mutual definition (in Section312, find via
-  `lean_local_search "derivativeWeight"`). Lean's well-foundedness
-  inference handled cycle 187 cleanly; same template should work
-  here. **Recovery**: if termination fails, copy the `decreasing_by`
-  block (if any) from Section312's `derivativeWeight` definition.
+~80 LOC across D.1–D.4 (D.1 is ~15 LOC if Aristotle's sum equality
+is concise; D.2 is ~12 LOC; D.3 is ~10 LOC; D.4 is ~20 LOC; the rest
+is docstrings).
 
-* **R5 — `paddedEuler.derivativeWeightWithSrc paddedEuler i t`
-  arity in P2.** `paddedEuler : RKTableau 2`, so
-  `derivativeWeightWithSrc` expects `s₂ = 2`, `s₁ = 2`. Should
-  infer cleanly. **Recovery**: if Lean balks, pass
-  `(s₁ := 2) (s₂ := 2)` explicitly to both
-  `derivativeWeightWithSrc` and `derivativeWeight_compose_natAdd`
-  in the example.
+---
 
-* **R6 — Heartbeats on the `t :: ts` proof.** The single-shot proof
-  has two large rewrites (top + bottom half). If it exceeds 200000
-  heartbeats, factor as in §D point 6 above. **Recovery**: introduce
-  `private theorem fin_sum_univ_add_split_natAdd_block` proving the
-  four-block split numerically:
-  ```
-  ∀ (X : Fin (s₁+s₂) → ℝ),
-    ∑ j : Fin (s₁+s₂), (M₁.compose M₂).A (Fin.natAdd s₁ i) j * X j
-    = (∑ j₁ : Fin s₁, M₁.b j₁ * X (Fin.castAdd s₂ j₁))
-      + (∑ j₂ : Fin s₂, M₂.A i j₂ * X (Fin.natAdd s₁ j₂))
-  ```
-  Then the `t :: ts` proof becomes a one-line `rw` against this
-  helper. Each of the two parts (helper + main proof) fits within
-  heartbeats independently.
+## E. Priority 1B — Aristotle did NOT solve, ship `composeQ_phi_left_act`
 
-* **R7 — Cycle 224 `derivativeWeight_compose_castAdd` is `private`.**
-  It's marked `private` in cycle 224 (per the task results), but it
-  lives in the same namespace block as B.2's mutual partners, so
-  visibility is preserved. **Recovery**: not expected to fire; if
-  it does, either drop the `private` modifier on cycle 224's
-  declarations (one-line edit, no semantic change) or move B.2 to
-  the same `section` scope.
+Reachable from §B.2 or §B.3. The full binary `composeQ_phi` requires
+both actions; with only the left action, we can still ship a
+**one-sided** lift that is genuine, useful infrastructure:
 
-## F. Time budget and abort criteria
+`composeQ_phi_left_act : Quotient PhiEquivalent.setoidSigma →
+                         (Σ s, RKTableau s) → Quotient PhiEquivalent.setoidSigma`
 
-* B.1 (def block): ≤30 minutes. If the `noncomputable def` does not
-  type-check after 30 minutes, abort to §G.
-* B.2 (proof block): ≤60 minutes. If either mutual partner stalls
-  past 60 minutes, attempt R6 decomposition; if that also stalls
-  another 30 minutes, abort to §G.
-* B.3 (P2 example): ≤10 minutes. If it does not type-check
-  immediately, drop to a weaker form (e.g. concrete `i := 0` or a
-  fully numerical RHS).
-* Total cycle budget: ≤2.5 hours. After 2.5 hours, save partial
-  work to `.prover-state/cycle_225_draft_section381.lean` and abort.
+This treats the right argument as a **raw representative** (not a
+quotient class). Well-definedness needs only that the LEFT argument
+respects `PhiEquivalent`, which is exactly cycle 226's
+`compose_phiEquivalent_compose_left`.
 
-## G. Abort and rollback policy
+### E.1 — Definition
 
-If B.1 or B.2 cannot be closed within budget:
+```lean
+noncomputable def composeQ_phi_left_act :
+    Quotient PhiEquivalent.setoidSigma →
+    (Σ s, RKTableau s) → Quotient PhiEquivalent.setoidSigma := by
+  refine fun p q => Quotient.lift
+    (fun (r : Σ s, RKTableau s) =>
+      Quotient.mk' ⟨r.1 + q.1, r.2.compose q.2⟩) ?_ p
+  rintro ⟨s₁, M₁⟩ ⟨s₁', M₁'⟩ hPhi₁
+  apply Quotient.sound
+  show @PhiEquivalent (s₁ + q.1) (s₁' + q.1)
+        (M₁.compose q.2) (M₁'.compose q.2)
+  exact compose_phiEquivalent_compose_left q.2 hPhi₁
+```
 
-1. **Do not commit `sorry`-scaffolded versions.** Cycle 200's
-   thm:381H scaffold (sorry count 0 → 3) was supervisor-rolled back
-   in cycle 201 (score −2). Same precedent applies here.
-2. Save the partial work to
-   `.prover-state/cycle_225_draft_section381.lean` (a new untracked
-   file). Do NOT modify `OpenMath/Chapter3/Section381.lean`.
-3. Write `.prover-state/issues/cycle_225_partial.md` documenting:
-   what was attempted, what compiled, what didn't, and the specific
-   stall point (def termination? proof tactic? heartbeats? mutual
-   partner unification?).
-4. Cycle 226 strategy can resume from the draft.
-5. The cycle still satisfies CLAUDE.md "minimum: decompose a sorry
-   or write an issue" via the issue file.
+Place it in `namespace OpenMath.Chapter3.Section312.RKTableau`
+immediately after cycle 226's
+`compose_phiEquivalent_compose_left` (`Section381.lean:2858`).
 
-## H. Faithfulness check (pre-commit, mandatory)
+### E.2 — `@[simp]` unfold lemma
 
-* `derivativeWeightWithSrc` and `derivativeWeightWithSrcProd` are
-  internal helper definitions — no textbook entity ID applies. They
-  are pure mathematical bookkeeping for the bottom-block recursion of
-  `compose`'s derivative weight. The docstring in B.1 makes this
-  explicit ("Cycle 225 closed-form partner of
-  `derivativeWeight_compose_natAdd`"). ✓
-* `derivativeWeight_compose_natAdd` and
-  `derivativeWeightProd_compose_natAdd` are private mutual partners
-  for the (forthcoming) `compose_phiEquivalent_compose`. Same status
-  as cycle 224's `derivativeWeight_compose_castAdd` pair. No
-  textbook entity ID applies. ✓
-* Tautology check: the conclusions of both new mutual identities are
-  genuine *equalities* between two different recursive expressions
-  (`(M₁.compose M₂).derivativeWeight (natAdd s₁ i) t` vs
-  `M₂.derivativeWeightWithSrc M₁ i t`). Not hypothesis re-exports. ✓
-* Identity check: B.2's `t :: ts` proof performs real rewriting
-  (Fin.sum_univ_add + four-block simp + per-summand mutual recursion
-  via cycle 224 + per-summand mutual recursion via the new partner +
-  elementaryWeight unfold). Not `exact h`-style. ✓
-* Hypothesis strength: only `M₁ M₂` (no extra hypotheses). Minimal. ✓
-* Absent theorem check: B.2's mutual partners exist as written; no
-  `sorry`-promised theorems introduced. ✓
-* Definition smuggling: `derivativeWeightWithSrc`'s body uses
-  `M₁.elementaryWeight` (an existing concept) at the leaf-attachment
-  point. This is the correct mathematical content (M₁'s contribution
-  to the starting value for M₂'s stage), not a smuggled
-  characterization. ✓
+```lean
+@[simp] theorem composeQ_phi_left_act_mk
+    {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+    composeQ_phi_left_act ⟦⟨s₁, M₁⟩⟧ ⟨s₂, M₂⟩ =
+      ⟦⟨s₁ + s₂, M₁.compose M₂⟩⟧ := rfl
+```
 
-## I. After successful close
+### E.3 — Well-definedness theorem (the left-action lift theorem)
 
-Update:
+```lean
+theorem composeQ_phi_left_act_eq_of_phiEquivalent
+    {s₁ s₁' s₂ : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    (M₂ : RKTableau s₂)
+    (hPhi₁ : PhiEquivalent M₁ M₁') :
+    composeQ_phi_left_act ⟦⟨s₁, M₁⟩⟧ ⟨s₂, M₂⟩ =
+      composeQ_phi_left_act ⟦⟨s₁', M₁'⟩⟧ ⟨s₂, M₂⟩ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_phiEquivalent_compose_left M₂ hPhi₁)
+```
 
-* `lean_status.json` — no row to flip; cycle 225 ships infrastructure
-  helpers, not a textbook entity.
-* `plan.md` — no row to flip for the same reason.
-* `.prover-state/task_results/cycle_225.md` — document the
-  deliverables (B.1, B.2, B.3), the verification outcomes, any risk
-  triggers (R1–R7) that fired, and the cycle 226+ outlook.
+### E.4 — Non-vacuity (P2)
 
-The cycle 226 outlook should propose:
+In `namespace OpenMath.Chapter3.Section381`:
 
-* **Cycle 226**: ship `compose_phiEquivalent_compose` (the
-  `PhiEquivalent`-respect lemma for `compose`) by composing cycle
-  224's `derivativeWeight_compose_castAdd` (top half) with cycle
-  225's `derivativeWeight_compose_natAdd` (bottom half), threaded
-  through `Fin.sum_univ_add` on the `(compose).b`-sum. The `b`
-  vector is `Fin.append M₁.b M₂.b` (cycle 209), so the sum splits
-  cleanly into top-block (collapses to `M₁.elementaryWeight t` via
-  cycle 224) + bottom-block (uses cycle 225's
-  `derivativeWeightWithSrc`). Then `PhiEquivalent.elementaryWeight`
-  of `M₁` vs `M₁'` (and `M₂` vs `M₂'`) closes the per-tree equality.
-  Estimated ~80 LOC.
-* **Cycle 227**: ship `composeQ_phi : Quotient PhiEquivalent.setoidSigma →
-  Quotient PhiEquivalent.setoidSigma → Quotient PhiEquivalent.setoidSigma`
-  via `Quotient.lift₂` consuming cycle 226's lemma. Mirror of cycle
-  218's `composeQ`.
-* **Cycle 228**: ship `composeQ_phi_id_left` / `composeQ_phi_id_right`
-  identity laws on the new quotient (mirror of cycle 219).
-* **Cycle 229+**: assemble `instance : Group (Quotient
-  PhiEquivalent.setoidSigma)` via `Group.ofLeftAxioms` (mirror of
-  cycle 222's `instGroup`).
-* **Cycle 230**: ship `thm:384A` (Φ as a group homomorphism between
-  the §382 `Quotient Equivalent.setoidSigma` group and the §383
-  `Quotient PhiEquivalent.setoidSigma` group).
+```lean
+example : composeQ_phi_left_act ⟦⟨2, paddedEuler⟩⟧ ⟨2, paddedEuler⟩ =
+    ⟦⟨4, paddedEuler.compose paddedEuler⟩⟧ := rfl
 
-Cycle 225 is the structural prerequisite for the entire §383+
-group-homomorphism path. Land it cleanly.
+example : composeQ_phi_left_act ⟦⟨2, paddedEuler⟩⟧ ⟨2, paddedEuler⟩ =
+    composeQ_phi_left_act
+      ⟦⟨1, paddedEuler.pReduced pairPartition⟩⟧ ⟨2, paddedEuler⟩ :=
+  composeQ_phi_left_act_eq_of_phiEquivalent paddedEuler
+    paddedEuler_phiEquivalent_pReduced
+```
+
+Confirm `paddedEuler_phiEquivalent_pReduced` is the cycle 187 promoted
+theorem (`Section381.lean:1016`-ish). If the symbol name is slightly
+different (e.g. `paddedEuler_pEquivalent_pReduced.toPhiEquivalent`),
+use the closest available analog.
+
+### E.5 — Budget
+
+~50 LOC across E.1–E.4. The `Quotient.lift` plumbing in E.1 is the
+main work; the rest is mechanical.
+
+### E.6 — Document the partial-ship status
+
+After landing E.1–E.4, append a short comment block right above E.1
+in `Section381.lean`:
+
+```
+/-! ### Partial `composeQ_phi` — left action only
+
+The full binary `composeQ_phi : Quot → Quot → Quot` requires both
+`compose_phiEquivalent_compose_left` (cycle 226) and
+`compose_phiEquivalent_compose_right` (deferred — see
+`.prover-state/issues/cycle_226_compose_phi_right_action.md`).
+
+`composeQ_phi_left_act` is the *one-sided* lift: the left argument
+is a quotient class, the right is a raw representative. Useful for
+formalising the left-multiplication action of the §383 group on
+its underlying set; the full binary operation is a future cycle.
+-/
+```
+
+---
+
+## F. Verification (mandatory, all paths)
+
+After §D or §E lands:
+
+1. `lake env lean OpenMath/Chapter3/Section381.lean` — EXIT must be 0.
+2. `grep -c "^[[:space:]]*sorry[[:space:]]*$\|:= sorry$" OpenMath/Chapter3/Section381.lean`
+   — must be 0 (the cycle 216 docstring `sorry` mention does not
+   count; the tactic-level sorry count must be 0).
+3. **`lean_verify` axiom check** on the new public symbols:
+   - §D path: `composeQ_phi`, `composeQ_phi_eq_of_phiEquivalent`,
+     `compose_phiEquivalent_compose` — each must return
+     `[propext, Classical.choice, Quot.sound]`.
+   - §E path: `composeQ_phi_left_act`,
+     `composeQ_phi_left_act_eq_of_phiEquivalent` — same axiom check.
+4. **Regression spot-checks** (must remain axiom-clean):
+   - `OpenMath.Chapter3.Section312.RKTableau.compose_phiEquivalent_compose_left` (cycle 226).
+   - `OpenMath.Chapter3.Section312.RKTableau.composeQ_eq_of_equivalent` (cycle 218).
+   - `OpenMath.Chapter3.Section312.RKTableau.instGroup` (cycle 222).
+5. Warm rebuild time of `Section381.lean` should be ≤ 15 s. Anything
+   higher than 30 s is a red flag — bisect by commenting out the new
+   additions to identify the offending declaration.
+
+---
+
+## G. What NOT to do (explicit ban list)
+
+- **DO NOT re-poll Aristotle.** One check per cycle (CLAUDE.md).
+- **DO NOT attempt direct tree induction on the M₂-side sum
+  equality.** Cycle 226 confirmed this does not close: the `t :: ts`
+  expansion produces cross-terms
+  `∑ i, j, M₂.b i * M₂.A i j * derivativeWeightWithSrc M₁ j t' *
+  derivativeWeightWithSrcProd M₁ i ts` mixing outer `b`-weighting
+  with inner `A`-recursion; per-summand reasoning fails.
+- **DO NOT try to reduce to cycle 217's `compose_equivalent_compose`
+  via a `PhiEquivalent → Equivalent` lemma.** That implication is
+  Butcher's converse direction (requires Taylor expansion / B-series
+  machinery), not formalized in this project.
+- **DO NOT re-apply `compose_elementaryWeight_decomp` on the
+  right-action goal.** Cycle 226 confirmed this is circular: the
+  decomposition restates the same M₂-side sum equality.
+- **DO NOT modify `compose_phiEquivalent_compose_left`** (cycle 226's
+  shipped left-action). It is axiom-clean and load-bearing.
+- **DO NOT attempt §441 Phase C.2.** 43rd consecutive GPFS block.
+- **DO NOT modify `scripts/autonomous_loop.py`** (loop-maintainer
+  territory; see `.prover-state/issues/phantom_commit_verdict_pattern.md`).
+- **DO NOT introduce `axiom` or `constant` declarations.**
+- **DO NOT raise `maxHeartbeats` above 200000.** If something stalls,
+  decompose into smaller helpers.
+- **DO NOT scaffold a `compose_phiEquivalent_compose_right` with
+  `sorry` body.** Sorry count must remain 0 — see the cycle 200 →
+  201 rollback precedent. If the right-action is not closeable in
+  this cycle (i.e. Aristotle path §B.2/§B.3 was taken), ship §E
+  (left-action-only `Quotient.lift`) cleanly and document the gap
+  in prose (no `sorry`-d declaration).
+
+---
+
+## H. Pre-flagged risks
+
+1. **R1 — `PhiEquivalent.trans` symbol name drift**: if §D.1 needs
+   to compose left-action with right-action, verify the cycle 030
+   transitivity lemma's exact name with `lean_local_search` /
+   `lean_hover_info` before writing the proof. Candidates:
+   `PhiEquivalent.trans` (most likely), `Setoid.iseqv.trans` (via
+   the cycle 223 setoid), or unqualified `.trans` on
+   `Setoid.r`-elements.
+
+2. **R2 — Aristotle's stub Section381 may use different `private`
+   names.** Cycle 184's namespace fix was a one-line patch
+   (`M.αPoly_...` → `LinearMultistepMethod.αPoly_...`). The cycle
+   226 submission includes `derivativeWeightWithSrc` (a cycle 225
+   addition), which may or may not be in Aristotle's stub. If
+   Aristotle's proof references symbols by stub names, port to
+   the real `Section381.lean` namespace.
+
+3. **R3 — `Quotient.lift` may need explicit setoid arguments** in
+   §E.1. Mathlib's curried `Quotient.lift` should infer the source
+   setoid from the function's domain type
+   (`Quotient PhiEquivalent.setoidSigma`), but if Lean complains
+   about ambiguity, supply the setoid explicitly. Defensive `show`
+   after `rintro` (matching cycle 218's pattern) recommended.
+
+4. **R4 — `paddedEuler_phiEquivalent_pReduced` may not be a direct
+   theorem.** Cycle 187 promoted `paddedEuler_pEquivalent_pReduced`;
+   the PhiEquivalent variant may need
+   `paddedEuler_pEquivalent_pReduced.toPhiEquivalent` (via cycle 187's
+   bridge). If §D.4 or §E.4 fails on the witness lookup, try the
+   `.toPhiEquivalent` form; if that also fails, use
+   `PhiEquivalent.refl paddedEuler` for the homogeneous case only
+   and document the heterogeneous case as a known gap.
+
+5. **R5 — `composeQ_phi_left_act` second-argument curry order**:
+   Lean 4's `Quotient.lift` takes the function-to-lift first, then
+   the respect proof, then the quotient class. Make sure the lambda
+   in §E.1 binds `r` (the destructured first argument, the one being
+   lifted) correctly. If Lean complains about implicit argument
+   inference, swap to the explicit `Quotient.lift _ _` form with
+   placeholders.
+
+---
+
+## I. Cycle pacing
+
+- **0–10 min**: Read this strategy. Poll Aristotle (§B).
+- **10–30 min**: Branch based on result.
+  - §D path: incorporate proof, build D.1–D.4.
+  - §E path: build E.1–E.4 + §E.6 doc comment.
+- **30–50 min**: Verification (§F) and axiom checks. Fix any
+  drift (namespace prefixes, symbol names, simp set).
+- **50–60 min**: Update `.prover-state/task_results/cycle_227.md`,
+  `extraction/formalization_data/lean_status.json`, `plan.md` row
+  for `thm:384A`, and (if §D path was taken) close the
+  `.prover-state/issues/cycle_226_compose_phi_right_action.md` issue
+  file with a "Resolved cycle 227" note.
+
+---
+
+## J. Update `lean_status.json` and `plan.md`
+
+### Path §D (full theorem shipped)
+
+- `thm:384A` row: status remains `partial` but with cycle 227 note
+  recording `composeQ_phi` shipped. Full `formalized` status awaits
+  the actual §384 thm:384A "Φ is a group homomorphism" claim, which
+  needs both quotient groups' multiplications to commute under Φ.
+  Cycle 227 ships the *prerequisite* `composeQ_phi`; cycle 228+ will
+  ship the homomorphism theorem itself.
+
+### Path §E (left-action lift only)
+
+- `thm:384A` row: status remains `partial`. Update the note to record
+  cycle 227's `composeQ_phi_left_act` deliverable; note that the full
+  binary `composeQ_phi` remains blocked on the M₂-side right-action.
+
+In both paths, add a sentence in the `plan.md` `thm:384A` row noting
+the cycle 227 outcome (full binary vs left-action-only).
+
+---
+
+## K. Cycle 228+ outlook
+
+### If §D shipped (full `composeQ_phi`)
+
+Next deliverables for the §383+ chain:
+1. **`composeQ_phi_assoc`** — quotient-level associativity for
+   `composeQ_phi`, via `Quotient.inductionOn₃` + cycle 187's
+   `PReducesTo.toPhiEquivalent` applied to the underlying
+   `Equivalent`-level associativity (cycle 221).
+2. **`composeQ_phi_id_left` / `composeQ_phi_id_right`** —
+   identity-element absorption laws on `Quotient PhiEquivalent.setoidSigma`.
+3. **`instance : Group (Quotient PhiEquivalent.setoidSigma)`** —
+   the §383 group structure on the Φ-quotient.
+4. **`thm:384A` proper** — the formal group homomorphism
+   `Φ : Quotient Equivalent.setoidSigma →* Quotient PhiEquivalent.setoidSigma`.
+
+Estimated 3–4 cycles after cycle 227.
+
+### If §E shipped (left-action only)
+
+Next priorities:
+1. **Cycle 228**: re-poll Aristotle on
+   `176aa964-db7b-40f8-a01c-05247c186ec5` once more (single poll
+   discipline applies — at most once per cycle, even on follow-up).
+   If still IN_PROGRESS, consider canceling and submitting a
+   tighter, more focused job specifically on the M₂-side sum
+   equality with cycle 225's `derivativeWeightWithSrc` machinery
+   as in-context templates.
+2. **Cycle 228 alternative**: build the §383 group structure on
+   `Equivalent`-quotient consumers of `composeQ_phi_left_act` (e.g.
+   the action of an `Equivalent`-class on a `PhiEquivalent`-raw
+   representative).
+3. **Cycle 229+**: pursue the Connes-Kreimer Hopf-coproduct
+   formalization (multi-cycle, ~5–10 cycles), or wait for an
+   alternative proof of the right-action to surface.
