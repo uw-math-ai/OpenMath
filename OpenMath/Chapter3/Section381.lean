@@ -2597,6 +2597,62 @@ def compose {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
     (M₁.compose M₂).A (Fin.natAdd s₁ i) (Fin.natAdd s₁ j) = M₂.A i j := by
   simp [compose]
 
+/- ### Top-block derivativeWeight unfolding for `compose` (cycle 224)
+
+The two mutual helpers below establish that, for a `castAdd`-indexed
+stage (i.e. one of `M₁`'s stages inside `M₁.compose M₂`), the composite
+derivative weight reduces to `M₁`'s own derivative weight. This is the
+top-block analogue of cycle 187's `derivativeWeight_pReduced` /
+`derivativeWeightProd_pReduced` pair, with `Fin.sum_univ_add` splitting
+the `Fin (s₁+s₂)` sum into a top half (which collapses via
+`compose_A_topLeft` and the per-tree mutual recursion) and a bottom half
+(which collapses via `compose_A_topRight = 0`). This infrastructure is
+the foundation for the (forthcoming) `compose_phiEquivalent_compose`
+respect lemma. -/
+
+section
+open OpenMath.Chapter3.Section310
+
+mutual
+  /-- *Top-block derivative-weight reduction.* For a stage `castAdd s₂ i`
+  in the top block of `M₁.compose M₂`, the composite derivative weight
+  agrees with `M₁`'s own derivative weight. Companion to
+  `derivativeWeightProd_compose_castAdd`. -/
+  private theorem derivativeWeight_compose_castAdd {s₁ s₂ : ℕ}
+      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+      ∀ (t : RootedTree) (i : Fin s₁),
+        (M₁.compose M₂).derivativeWeight (Fin.castAdd s₂ i) t
+          = M₁.derivativeWeight i t
+    | RootedTree.mk children, i => by
+        show (M₁.compose M₂).derivativeWeightProd (Fin.castAdd s₂ i) children
+            = M₁.derivativeWeightProd i children
+        exact derivativeWeightProd_compose_castAdd M₁ M₂ children i
+
+  /-- List-helper companion to `derivativeWeight_compose_castAdd`. -/
+  private theorem derivativeWeightProd_compose_castAdd {s₁ s₂ : ℕ}
+      (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+      ∀ (children : List RootedTree) (i : Fin s₁),
+        (M₁.compose M₂).derivativeWeightProd (Fin.castAdd s₂ i) children
+          = M₁.derivativeWeightProd i children
+    | [], _ => rfl
+    | t :: ts, i => by
+        show (∑ j : Fin (s₁ + s₂),
+                (M₁.compose M₂).A (Fin.castAdd s₂ i) j
+                  * (M₁.compose M₂).derivativeWeight j t)
+              * (M₁.compose M₂).derivativeWeightProd (Fin.castAdd s₂ i) ts
+            = (∑ j : Fin s₁, M₁.A i j * M₁.derivativeWeight j t)
+              * M₁.derivativeWeightProd i ts
+        rw [derivativeWeightProd_compose_castAdd M₁ M₂ ts i]
+        congr 1
+        rw [Fin.sum_univ_add]
+        simp only [compose_A_topLeft, compose_A_topRight,
+          zero_mul, Finset.sum_const_zero, add_zero]
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        rw [derivativeWeight_compose_castAdd M₁ M₂ t j]
+end
+
+end
+
 /-- *Composition preserves explicitness.* The composite `M₁.compose M₂`
 is explicit iff both factors are. The four blocks behave as follows:
 top-left `M₁.A i j` (zero when `i ≤ j` by `M₁.IsExplicit`); top-right
@@ -3353,6 +3409,17 @@ example :
     (paddedEuler.compose paddedEuler).b (Fin.castAdd 2 ⟨0, by norm_num⟩)
       = paddedEuler.b ⟨0, by norm_num⟩ :=
   RKTableau.compose_b_castAdd paddedEuler paddedEuler ⟨0, by norm_num⟩
+
+/-- *Non-vacuity for `derivativeWeight_compose_castAdd` (cycle 224 P2).*
+On a top-block stage `castAdd 2 i`, the composite derivative weight
+through `paddedEuler.compose paddedEuler` agrees with `paddedEuler`'s
+own derivative weight at stage `i`. Exercises the cycle 224 mutual
+pair on a concrete pair of methods. -/
+example (t : RootedTree) (i : Fin 2) :
+    (paddedEuler.compose paddedEuler).derivativeWeight
+        (Fin.castAdd 2 i) t
+      = paddedEuler.derivativeWeight i t :=
+  RKTableau.derivativeWeight_compose_castAdd paddedEuler paddedEuler t i
 
 /-- *`paddedEuler` is explicit.* Its coefficient matrix is the zero
 matrix (`paddedEuler.A = 0`), so the `IsExplicit` predicate holds
