@@ -535,3 +535,5 @@ Phase C.2 remains GPFS-blocked.
   Cycle 221 — 38th consecutive timeout (EXIT=143 after 300s, near-zero CPU). Skipping §441 path per strategy §A.
 2026-05-14 11:18:00
   Cycle 222 — 39th consecutive timeout (EXIT=124 after 300s, near-zero CPU). Skipping §441 path per strategy §A.
+2026-05-14 11:57:22
+  Cycle 235 — 40th consecutive timeout (EXIT=124 after 300s, real 5m0.030s, user 0m0.229s, sys 0m0.710s — CPU = (0.229 + 0.710) / 300 = 0.31% of wall, identical near-zero pattern). Skipping §441 path per strategy §A.

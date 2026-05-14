@@ -4038,6 +4038,207 @@ def inverse {s : ℕ} (M : RKTableau s) : RKTableau s where
 @[simp] theorem inverse_c {s : ℕ} (M : RKTableau s) (i : Fin s) :
     M.inverse.c i = M.c i - ∑ j, M.b j := rfl
 
+section
+open OpenMath.Chapter3.Section310
+
+mutual
+  /-- *Cycle 235 helper (★★).* The inverse method's `derivativeWeight`
+  factors through cycle 225's `derivativeWeightWithSrc` with `M` as the
+  outer method and `M.inverse` as the source method:
+  `M.inverse.derivativeWeight i t = M.derivativeWeightWithSrc M.inverse i t`.
+
+  This is the load-bearing structural identity behind §383 left
+  inverse absorption. The proof is a mutual induction on the rooted
+  tree / list-of-trees pair; the key algebraic step is
+  `M.inverse.A i j = M.A i j - M.b j` (cycle 220) combined with the
+  unfolding
+  `M.inverse.elementaryWeight c = -∑ j, M.b j * M.inverse.derivativeWeight j c`
+  (via `inverse_b`). -/
+  private theorem inverseDerivativeWeight_eq_derivativeWeightWithSrc_inverse
+      {s : ℕ} (M : RKTableau s) :
+      ∀ (i : Fin s) (t : RootedTree),
+        M.inverse.derivativeWeight i t = M.derivativeWeightWithSrc M.inverse i t
+    | i, RootedTree.mk children => by
+        show M.inverse.derivativeWeightProd i children
+              = M.derivativeWeightWithSrcProd M.inverse i children
+        exact inverseDerivativeWeightProd_eq_derivativeWeightWithSrcProd_inverse
+          M i children
+
+  /-- *List-helper companion of (★★).* -/
+  private theorem inverseDerivativeWeightProd_eq_derivativeWeightWithSrcProd_inverse
+      {s : ℕ} (M : RKTableau s) :
+      ∀ (i : Fin s) (cs : List RootedTree),
+        M.inverse.derivativeWeightProd i cs
+          = M.derivativeWeightWithSrcProd M.inverse i cs
+    | _, [] => rfl
+    | i, c :: cs => by
+        show (∑ j : Fin s, M.inverse.A i j * M.inverse.derivativeWeight j c)
+                * M.inverse.derivativeWeightProd i cs
+              = (M.inverse.elementaryWeight c
+                  + ∑ j : Fin s, M.A i j * M.derivativeWeightWithSrc M.inverse j c)
+                * M.derivativeWeightWithSrcProd M.inverse i cs
+        rw [inverseDerivativeWeightProd_eq_derivativeWeightWithSrcProd_inverse M i cs]
+        congr 1
+        have hIH : ∀ j : Fin s,
+            M.inverse.derivativeWeight j c
+              = M.derivativeWeightWithSrc M.inverse j c :=
+          fun j => inverseDerivativeWeight_eq_derivativeWeightWithSrc_inverse M j c
+        have hElem :
+            M.inverse.elementaryWeight c
+              = -∑ j : Fin s, M.b j * M.derivativeWeightWithSrc M.inverse j c := by
+          show ∑ j : Fin s, M.inverse.b j * M.inverse.derivativeWeight j c
+                = -∑ j : Fin s, M.b j * M.derivativeWeightWithSrc M.inverse j c
+          rw [← Finset.sum_neg_distrib]
+          refine Finset.sum_congr rfl (fun j _ => ?_)
+          rw [inverse_b, hIH j, neg_mul]
+        rw [hElem]
+        have hLHS : (∑ j : Fin s, M.inverse.A i j * M.inverse.derivativeWeight j c)
+              = ∑ j : Fin s, (M.A i j - M.b j)
+                  * M.derivativeWeightWithSrc M.inverse j c := by
+          refine Finset.sum_congr rfl (fun j _ => ?_)
+          rw [inverse_A, hIH j]
+        rw [hLHS,
+            show (∑ j : Fin s, (M.A i j - M.b j)
+                  * M.derivativeWeightWithSrc M.inverse j c)
+                = ∑ j : Fin s,
+                    M.A i j * M.derivativeWeightWithSrc M.inverse j c
+                  - ∑ j : Fin s, M.b j * M.derivativeWeightWithSrc M.inverse j c
+              from by
+                rw [← Finset.sum_sub_distrib]
+                exact Finset.sum_congr rfl (fun j _ => sub_mul _ _ _)]
+        ring
+end
+
+mutual
+  /-- *Cycle 235 helper (★★★).* The dual of (★★):
+  `M.inverse.derivativeWeightWithSrc M i t = M.derivativeWeight i t`.
+
+  The "source"-leaf contribution `M.elementaryWeight c` exactly cancels
+  the `-M.b j` correction in `M.inverse.A i j = M.A i j - M.b j`,
+  leaving the `M.A`-only recursion of `M.derivativeWeight`. Load-bearing
+  for §383 right inverse absorption. -/
+  private theorem inverseDerivativeWeightWithSrc_M_eq_derivativeWeight
+      {s : ℕ} (M : RKTableau s) :
+      ∀ (i : Fin s) (t : RootedTree),
+        M.inverse.derivativeWeightWithSrc M i t = M.derivativeWeight i t
+    | i, RootedTree.mk children => by
+        show M.inverse.derivativeWeightWithSrcProd M i children
+              = M.derivativeWeightProd i children
+        exact inverseDerivativeWeightWithSrcProd_M_eq_derivativeWeightProd
+          M i children
+
+  /-- *List-helper companion of (★★★).* -/
+  private theorem inverseDerivativeWeightWithSrcProd_M_eq_derivativeWeightProd
+      {s : ℕ} (M : RKTableau s) :
+      ∀ (i : Fin s) (cs : List RootedTree),
+        M.inverse.derivativeWeightWithSrcProd M i cs = M.derivativeWeightProd i cs
+    | _, [] => rfl
+    | i, c :: cs => by
+        show (M.elementaryWeight c
+                + ∑ j : Fin s, M.inverse.A i j * M.inverse.derivativeWeightWithSrc M j c)
+              * M.inverse.derivativeWeightWithSrcProd M i cs
+            = (∑ j : Fin s, M.A i j * M.derivativeWeight j c)
+              * M.derivativeWeightProd i cs
+        rw [inverseDerivativeWeightWithSrcProd_M_eq_derivativeWeightProd M i cs]
+        congr 1
+        have hIH : ∀ j : Fin s,
+            M.inverse.derivativeWeightWithSrc M j c = M.derivativeWeight j c :=
+          fun j => inverseDerivativeWeightWithSrc_M_eq_derivativeWeight M j c
+        have hElem :
+            M.elementaryWeight c = ∑ j : Fin s, M.b j * M.derivativeWeight j c := rfl
+        rw [hElem]
+        have hSum : (∑ j : Fin s, M.inverse.A i j * M.inverse.derivativeWeightWithSrc M j c)
+              = ∑ j : Fin s, (M.A i j - M.b j) * M.derivativeWeight j c := by
+          refine Finset.sum_congr rfl (fun j _ => ?_)
+          rw [inverse_A, hIH j]
+        rw [hSum,
+            show (∑ j : Fin s, (M.A i j - M.b j) * M.derivativeWeight j c)
+                = ∑ j : Fin s, M.A i j * M.derivativeWeight j c
+                  - ∑ j : Fin s, M.b j * M.derivativeWeight j c
+              from by
+                rw [← Finset.sum_sub_distrib]
+                exact Finset.sum_congr rfl (fun j _ => sub_mul _ _ _)]
+        ring
+end
+
+/-- *Right inverse absorption at the Φ-equivalence level (cycle 235).*
+`M.compose M.inverse ≡_Φ id`. The §383 analog of cycle 220's
+`compose_inverse_equivalent`, but proved directly at the
+`elementaryWeight` level via (★★★), bypassing the cycle 220
+`IsRKOneStep`-style argument. Together with `inverse_compose_phiEquivalent`,
+this gives the full §383 inverse absorption laws — the data needed for
+cycle 236+'s `composeQ_phi_inverse_{left,right}` and the §383 `Group`
+instance. -/
+theorem compose_inverse_phiEquivalent {s : ℕ} (M : RKTableau s) :
+    @PhiEquivalent (s + s) 0 (M.compose M.inverse) RKTableau.id := by
+  intro t
+  rw [compose_elementaryWeight_decomp M M.inverse t, id_elementaryWeight]
+  show M.elementaryWeight t
+        + ∑ i : Fin s, M.inverse.b i * M.inverse.derivativeWeightWithSrc M i t = 0
+  have h : (∑ i : Fin s, M.inverse.b i * M.inverse.derivativeWeightWithSrc M i t)
+        = -M.elementaryWeight t := by
+    show ∑ i : Fin s, M.inverse.b i * M.inverse.derivativeWeightWithSrc M i t
+          = -∑ i : Fin s, M.b i * M.derivativeWeight i t
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [inverse_b, neg_mul,
+        inverseDerivativeWeightWithSrc_M_eq_derivativeWeight M i t]
+  rw [h]; ring
+
+/-- *Left inverse absorption at the Φ-equivalence level (cycle 235).*
+`M.inverse.compose M ≡_Φ id`. The §383 analog of cycle 220's
+`inverse_compose_equivalent`, proved directly at the `elementaryWeight`
+level via (★★). -/
+theorem inverse_compose_phiEquivalent {s : ℕ} (M : RKTableau s) :
+    @PhiEquivalent (s + s) 0 (M.inverse.compose M) RKTableau.id := by
+  intro t
+  rw [compose_elementaryWeight_decomp M.inverse M t, id_elementaryWeight]
+  show M.inverse.elementaryWeight t
+        + ∑ i : Fin s, M.b i * M.derivativeWeightWithSrc M.inverse i t = 0
+  have h : (∑ i : Fin s, M.b i * M.derivativeWeightWithSrc M.inverse i t)
+        = -M.inverse.elementaryWeight t := by
+    show ∑ i : Fin s, M.b i * M.derivativeWeightWithSrc M.inverse i t
+          = -∑ i : Fin s, M.inverse.b i * M.inverse.derivativeWeight i t
+    rw [← Finset.sum_neg_distrib]
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    rw [inverse_b, neg_mul, neg_neg,
+        ← inverseDerivativeWeight_eq_derivativeWeightWithSrc_inverse M i t]
+  rw [h]; ring
+
+end
+
+/-- *Inverse preserves Φ-equivalence (cycle 235, §383 Phase 4.3).*
+This is the §383 analog of cycle 222's `inverse_equivalent_inverse`.
+The statement asserts that the structural inverse (cycle 220,
+`A i j ↦ A i j − b j`, `b i ↦ −b i`, `c i ↦ c i − ∑ b`) is
+well-defined on PhiEquivalence classes: if two methods have
+identical elementary weights at every rooted tree, then so do their
+structural inverses.
+
+Proof: standard monoid uniqueness-of-inverse. Given both absorption
+laws (`compose_inverse_phiEquivalent` and `inverse_compose_phiEquivalent`,
+cycle 235) and associativity (cycle 233 `compose_assoc_phiEquivalent`)
+plus the identity laws (cycle 229 `id_compose_phiEquivalent` /
+`compose_id_phiEquivalent`), `M.inverse` is the unique two-sided
+inverse of `M` in the §383 PhiEquivalent monoid, derived via:
+M'.inverse ≡ id · M'.inverse ≡ (M.inverse · M) · M'.inverse
+          ≡ M.inverse · (M · M'.inverse) ≡ M.inverse · (M' · M'.inverse)
+          ≡ M.inverse · id ≡ M.inverse. -/
+theorem inverse_phiEquivalent_inverse {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'}
+    (hPhi : PhiEquivalent M M') :
+    PhiEquivalent M.inverse M'.inverse := by
+  refine PhiEquivalent.symm ?_
+  refine (PhiEquivalent.symm (id_compose_phiEquivalent M'.inverse)).trans ?_
+  refine (compose_phiEquivalent_compose_left M'.inverse
+    (PhiEquivalent.symm (inverse_compose_phiEquivalent M))).trans ?_
+  refine (compose_assoc_phiEquivalent M.inverse M M'.inverse).trans ?_
+  refine (compose_phiEquivalent_compose_right M.inverse
+    (compose_phiEquivalent_compose_left M'.inverse hPhi)).trans ?_
+  refine (compose_phiEquivalent_compose_right M.inverse
+    (compose_inverse_phiEquivalent M')).trans ?_
+  exact compose_id_phiEquivalent M.inverse
+
 /-- *Inverse-step inversion lemma.* If a stage tuple `Y` witnesses
 `M.IsRKOneStep f y₀ H y_mid`, then the *same* stage tuple witnesses
 `M.inverse.IsRKOneStep f y_mid H y₀`. This is the load-bearing
@@ -4960,5 +5161,32 @@ example :
     = Quotient.mk RKTableau.PhiEquivalent.setoidSigma
         ⟨2, paddedEuler⟩ :=
   RKTableau.composeQ_phi_id_right _
+
+/-- *Cycle 235 non-vacuity for `inverse_phiEquivalent_inverse`.*
+Reflexive instance — applying the lemma to the reflexive
+`PhiEquivalent paddedEuler paddedEuler` confirms the typeclass
+plumbing fires correctly on the §383 inverse-well-definedness
+axiom. -/
+example : @PhiEquivalent 2 2 paddedEuler.inverse paddedEuler.inverse :=
+  RKTableau.inverse_phiEquivalent_inverse
+    (PhiEquivalent.refl paddedEuler)
+
+/-- *Cycle 235 non-vacuity for `compose_inverse_phiEquivalent`.*
+The §383 right inverse absorption law fires on `paddedEuler`,
+witnessing `(paddedEuler.compose paddedEuler.inverse) ≡_Φ id` at
+stage signature `(2 + 2)` vs `0`. -/
+example :
+    @PhiEquivalent (2 + 2) 0
+      (paddedEuler.compose paddedEuler.inverse) RKTableau.id :=
+  RKTableau.compose_inverse_phiEquivalent paddedEuler
+
+/-- *Cycle 235 non-vacuity for `inverse_compose_phiEquivalent`.*
+The §383 left inverse absorption law fires on `paddedEuler`,
+witnessing `(paddedEuler.inverse.compose paddedEuler) ≡_Φ id` at
+stage signature `(2 + 2)` vs `0`. -/
+example :
+    @PhiEquivalent (2 + 2) 0
+      (paddedEuler.inverse.compose paddedEuler) RKTableau.id :=
+  RKTableau.inverse_compose_phiEquivalent paddedEuler
 
 end OpenMath.Chapter3.Section381
