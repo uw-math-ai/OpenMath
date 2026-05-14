@@ -610,3 +610,75 @@ After §382 group structure closes (identity + inverse + associativity),
 bookkeeping. From there, §383 (group homomorphisms via Φ), §384
 (homomorphism to the elementary-weight group), and §388 (subgroups
 and quotient groups) all consume the `Group` instance directly.
+
+---
+
+## Cycle 221 update — Equivalent-level associativity CLOSED
+
+The cycle 220 outlook is realized. The third §382 group axiom (after
+cycles 219/220's identity and inverse) is now shipped:
+
+1. **`RKTableau.compose_equivalent_compose_assoc.{u}`** at the
+   `Equivalent` level — heterogeneous-stage
+   `@Equivalent ((s₁ + s₂) + s₃) (s₁ + (s₂ + s₃))
+     ((M₁.compose M₂).compose M₃) (M₁.compose (M₂.compose M₃))`
+   (~35 LOC body + docstring at
+   `OpenMath/Chapter3/Section381.lean` line ~3060).
+
+2. **`RKTableau.composeQ_assoc`** at the quotient level — for
+   `p q r : Quotient Equivalent.setoidSigma.{u}`,
+   `composeQ (composeQ p q) r = composeQ p (composeQ q r)` (~10
+   LOC body + docstring, immediately after deliverable 1) via
+   `Quotient.inductionOn₃` + `Quotient.sound`.
+
+The proof recipe generalizes cycles 217 / 219 / 220's abstract-
+`IsRKOneStep`-level technique to three factors: threshold
+`min (min H₁ H₂) H₃` from three `Mᵢ.equivalent_self f L hL`
+applications; factor each side into three sequential single-`Mᵢ`-
+step witnesses via cycle 214's `compose_isRKOneStep_iff` (the LHS
+unfolds as outer `(M₁·M₂)·M₃` then inner `M₁·M₂`; the RHS as outer
+`M₁·(M₂·M₃)` then inner `M₂·M₃`); then three uniqueness chains
+(one per `Mᵢ`) force the three intermediates to agree. The proof
+never inspects stage counts — the heterogeneous-stage signature is
+discharged naturally by abstract-`N`-level reasoning, identical in
+shape to cycle 217's heterogeneous `compose_equivalent_compose`.
+
+Both new symbols verified `[propext, Classical.choice, Quot.sound]`
+axiom-clean. Cycle 218/219/220 landmarks regression-checked
+(`composeQ_eq_of_equivalent`, `composeQ_id_left`, `composeQ_id_right`,
+`composeQ_inverse_right`, `composeQ_inverse_left`); no axioms changed.
+Section381.lean warm rebuild 7.6s. Sorry count: 0.
+
+P3 non-vacuity: triple `paddedEuler` Equivalent witness at
+`((2+2)+2, 2+(2+2))` + quotient-level associativity on three copies
+of `⟦⟨2, paddedEuler⟩⟧`.
+
+### Cycle 222+ outlook — `Group` instance
+
+With three of the four `Group` axioms (identity, inverse, associativity)
+now closed at the quotient level, cycle 222 is positioned for the
+final lift:
+
+1. **`inverse_equivalent_inverse`** (~50 LOC): the missing
+   "function respects equivalence" lemma for `RKTableau.inverse`,
+   `M ≡ M' → M.inverse ≡ M'.inverse`. Proof recipe (similar to
+   `compose_equivalent_compose`): factor a single
+   `M.inverse.IsRKOneStep f y₀ H y₁` witness via cycle 220's
+   `isRKOneStep_of_inverse_isRKOneStep`, leverage `equivalent_self`
+   on `M.inverse` paired with the `M ≡ M'` hypothesis to force
+   `y₁ = y₁'` for two parallel `inverse` witnesses.
+
+2. **`inverseQ`** (~10 LOC): lift `RKTableau.inverse` to
+   `Quotient Equivalent.setoidSigma` via `Quotient.map` with
+   `inverse_equivalent_inverse` as the respect proof (analogous to
+   `composeQ` via `Quotient.lift₂`).
+
+3. **`instance : Group (Quotient Equivalent.setoidSigma)`**:
+   bundle cycle 219's `composeQ_id_left`/`composeQ_id_right`,
+   cycle 220's `composeQ_inverse_right`/`composeQ_inverse_left`,
+   and cycle 221's `composeQ_assoc` into Mathlib's `Group`
+   typeclass. The `mul`/`one`/`inv` are `composeQ` / `⟦⟨0, id⟩⟧`
+   / `inverseQ`.
+
+The §383 group homomorphisms via Φ then consume this `Group`
+instance directly.

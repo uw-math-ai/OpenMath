@@ -191,3 +191,64 @@ corollary; cycle 222+ packages the four (`Group`) axioms as
 The on-the-nose `compose_assoc` blocker documented above remains
 unresolved at the `RKTableau`-level, but it is no longer load-bearing
 for the §382 group structure — the quotient route bypasses it.
+
+---
+
+## Cycle 221 update — Equivalent-level associativity SHIPPED
+
+The cycle 219 outlook is now realized. Cycle 221 closes both:
+
+1. `RKTableau.compose_equivalent_compose_assoc.{u}` at the
+   `Equivalent` level — heterogeneous-stage
+   `@Equivalent ((s₁ + s₂) + s₃) (s₁ + (s₂ + s₃))
+     ((M₁.compose M₂).compose M₃) (M₁.compose (M₂.compose M₃))`
+   (~35 LOC body + docstring at
+   `OpenMath/Chapter3/Section381.lean` line ~3060).
+
+2. `RKTableau.composeQ_assoc` at the quotient level — for
+   `p q r : Quotient Equivalent.setoidSigma.{u}`,
+   `composeQ (composeQ p q) r = composeQ p (composeQ q r)` (~10
+   LOC body + docstring, immediately after deliverable 1).
+
+Proof recipe (the abstract-`IsRKOneStep`-level technique from
+cycles 217 / 219 / 220 generalized to three factors):
+
+- Threshold = `min (min H₁ H₂) H₃` where each `Hᵢ` comes from
+  `Mᵢ.equivalent_self f L hL`. The three `H ≤ Hᵢ` facts factor
+  cleanly via two `min_le_*` chains.
+- Apply `compose_isRKOneStep_iff` twice to each side, factoring
+  the three-factor composite into three sequential single-`Mᵢ`-
+  step witnesses. **LHS** unfolds as outer
+  `(M₁.compose M₂) · M₃` then inner `M₁ · M₂`; **RHS** unfolds
+  as outer `M₁ · (M₂.compose M₃)` then inner `M₂ · M₃`. The two
+  unfoldings introduce different intermediate values:
+  `y_LHS_mid23` and `y_LHS_mid12` on the LHS, `y_RHS_mid1` and
+  `y_RHS_mid12` on the RHS.
+- Three uniqueness chains, one per `Mᵢ`:
+  - `M₁` from `y₀` forces `y_LHS_mid12 = y_RHS_mid1` (the M₁
+    step appears in both decompositions).
+  - `M₂` from common `mid1 = y_RHS_mid1` forces
+    `y_LHS_mid23 = y_RHS_mid12` (after rewriting the LHS M₂
+    step to fire from the corrected base).
+  - `M₃` from common `mid12 = y_RHS_mid12` closes
+    `y_final = y_final'`.
+
+Both new symbols verified axiom-clean
+(`[propext, Classical.choice, Quot.sound]`); regression checks
+on `composeQ_eq_of_equivalent`, `composeQ_id_left`,
+`composeQ_id_right`, `composeQ_inverse_right`,
+`composeQ_inverse_left` all unchanged. Section381.lean warm
+rebuild 7.6s.
+
+The on-the-nose `compose_assoc` blocker documented above remains
+unresolved at the `RKTableau`-level and is now **permanently
+superseded** by the quotient route: §382 group associativity is
+fully discharged via `Quotient.sound` on
+`compose_equivalent_compose_assoc`. With cycles 219/220/221's
+identity / inverse / associativity all closed at the quotient
+level, the §382 group axioms are complete. Cycle 222+ entry
+point: lift `RKTableau.inverse` to `Quotient` (needs
+`inverse_equivalent_inverse`: `M ≡ M' → M.inverse ≡ M'.inverse`,
+~50 LOC via step-inversion + uniqueness chain) for the `inv`
+operation, then assemble the `Group` instance on
+`Quotient Equivalent.setoidSigma`.

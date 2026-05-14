@@ -3055,6 +3055,80 @@ theorem composeQ_inverse_left.{u} {s : ℕ} (M : RKTableau s) :
   show Quotient.mk _ _ = Quotient.mk _ _
   exact Quotient.sound (inverse_compose_equivalent.{u} M)
 
+/-! ### §382 group associativity -/
+
+/-- *Heterogeneous-stage associativity for `RKTableau.compose` at the
+`Equivalent` level — the third §382 group axiom.* For
+`M₁ : RKTableau s₁`, `M₂ : RKTableau s₂`, `M₃ : RKTableau s₃`, the two
+groupings `(M₁ · M₂) · M₃` and `M₁ · (M₂ · M₃)` are `Equivalent` despite
+having different on-the-nose stage counts `(s₁ + s₂) + s₃` vs
+`s₁ + (s₂ + s₃)` (which are propositionally but not definitionally equal).
+The proof works at the abstract `IsRKOneStep` level (same recipe as
+cycles 217/219/220): factor each side into three sequential single-`Mᵢ`-
+steps via cycle 214's `compose_isRKOneStep_iff`, then chain three
+uniqueness applications (one per `Mᵢ`) to force the three intermediates
+to agree. Threshold `min (min H₁ H₂) H₃` from `Mᵢ.equivalent_self`.
+
+This Equivalent-level associativity **finesses cycle 210's deferred
+on-the-nose `compose_assoc` HEq blocker** (per
+`.prover-state/issues/compose_assoc_HEq_plumbing.md`): the stage-count
+Σ-projection lives inside the quotient representative, so
+`Quotient.sound` discharges the heterogeneous-stage mismatch without
+the `Fin.append_assoc` HEq plumbing that blocks the on-the-nose form. -/
+theorem compose_equivalent_compose_assoc.{u} {s₁ s₂ s₃ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (M₃ : RKTableau s₃) :
+    @Equivalent.{u} ((s₁ + s₂) + s₃) (s₁ + (s₂ + s₃))
+      ((M₁.compose M₂).compose M₃) (M₁.compose (M₂.compose M₃)) := by
+  intro N _ _ _ f L hL
+  obtain ⟨H₁, hH₁_pos, hM₁_uniq⟩ := M₁.equivalent_self f L hL
+  obtain ⟨H₂, hH₂_pos, hM₂_uniq⟩ := M₂.equivalent_self f L hL
+  obtain ⟨H₃, hH₃_pos, hM₃_uniq⟩ := M₃.equivalent_self f L hL
+  refine ⟨min (min H₁ H₂) H₃,
+    lt_min (lt_min hH₁_pos hH₂_pos) hH₃_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y_final y_final' h_LHS h_RHS
+  have hH_le_H₁ : H ≤ H₁ :=
+    le_trans hH_le (le_trans (min_le_left _ _) (min_le_left _ _))
+  have hH_le_H₂ : H ≤ H₂ :=
+    le_trans hH_le (le_trans (min_le_left _ _) (min_le_right _ _))
+  have hH_le_H₃ : H ≤ H₃ := le_trans hH_le (min_le_right _ _)
+  -- Decompose LHS via outer `(M₁ · M₂) · M₃`, then inner `M₁ · M₂`.
+  obtain ⟨y_LHS_mid23, h_LHS_compose12, h_LHS_step3⟩ :=
+    (compose_isRKOneStep_iff (M₁.compose M₂) M₃ f y₀ H y_final).mp h_LHS
+  obtain ⟨y_LHS_mid12, h_LHS_step1, h_LHS_step2⟩ :=
+    (compose_isRKOneStep_iff M₁ M₂ f y₀ H y_LHS_mid23).mp h_LHS_compose12
+  -- Decompose RHS via outer `M₁ · (M₂ · M₃)`, then inner `M₂ · M₃`.
+  obtain ⟨y_RHS_mid1, h_RHS_step1, h_RHS_compose23⟩ :=
+    (compose_isRKOneStep_iff M₁ (M₂.compose M₃) f y₀ H y_final').mp h_RHS
+  obtain ⟨y_RHS_mid12, h_RHS_step2, h_RHS_step3⟩ :=
+    (compose_isRKOneStep_iff M₂ M₃ f y_RHS_mid1 H y_final').mp h_RHS_compose23
+  -- Three uniqueness chains: `M₁` from `y₀`, `M₂` from common `mid1`,
+  -- `M₃` from common `mid12`.
+  have hmid1 : y_LHS_mid12 = y_RHS_mid1 :=
+    hM₁_uniq y₀ H hH_pos hH_le_H₁ y_LHS_mid12 y_RHS_mid1
+      h_LHS_step1 h_RHS_step1
+  rw [hmid1] at h_LHS_step2
+  have hmid12 : y_LHS_mid23 = y_RHS_mid12 :=
+    hM₂_uniq y_RHS_mid1 H hH_pos hH_le_H₂ y_LHS_mid23 y_RHS_mid12
+      h_LHS_step2 h_RHS_step2
+  rw [hmid12] at h_LHS_step3
+  exact hM₃_uniq y_RHS_mid12 H hH_pos hH_le_H₃ y_final y_final'
+    h_LHS_step3 h_RHS_step3
+
+/-- *Associativity for `composeQ` at the quotient level — the third
+§382 group axiom in bracketed (382f) form.* Immediate `Quotient.ind₃`
++ `Quotient.sound` consequence of `compose_equivalent_compose_assoc`.
+Together with `composeQ_id_left` / `composeQ_id_right` (cycle 219) and
+`composeQ_inverse_right` / `composeQ_inverse_left` (cycle 220), this
+completes the §382 group axioms on `Quotient Equivalent.setoidSigma`,
+in preparation for the `Group` instance (cycle 222). -/
+theorem composeQ_assoc.{u}
+    (p q r : Quotient Equivalent.setoidSigma.{u}) :
+    composeQ (composeQ p q) r = composeQ p (composeQ q r) := by
+  refine Quotient.inductionOn₃ p q r ?_
+  rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩ ⟨s₃, M₃⟩
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_equivalent_compose_assoc M₁ M₂ M₃)
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -3279,5 +3353,41 @@ example :
       = Quotient.mk RKTableau.Equivalent.setoidSigma
           ⟨0, RKTableau.id⟩ :=
   RKTableau.composeQ_inverse_left paddedEuler
+
+/-- *Non-vacuity for `compose_equivalent_compose_assoc` (cycle 221 P3).*
+Triple composition of `paddedEuler` is `Equivalent` under either
+associativity grouping. Concrete instance at `s₁ = s₂ = s₃ = 2`:
+the stage counts `(2 + 2) + 2` and `2 + (2 + 2)` both reduce to `6` on
+concrete numerals, so this is a homogeneous-stage `@Equivalent 6 6`
+claim despite the heterogeneous-stage signature of the general
+theorem. -/
+example :
+    @RKTableau.Equivalent ((2 + 2) + 2) (2 + (2 + 2))
+      ((paddedEuler.compose paddedEuler).compose paddedEuler)
+      (paddedEuler.compose (paddedEuler.compose paddedEuler)) :=
+  RKTableau.compose_equivalent_compose_assoc
+    paddedEuler paddedEuler paddedEuler
+
+/-- *Non-vacuity for `composeQ_assoc` (cycle 221 P3).* Quotient-level
+associativity exercised on three copies of `⟨2, paddedEuler⟩`. Routes
+through the cycle 030 non-vacuity backbone. -/
+example :
+    RKTableau.composeQ
+        (RKTableau.composeQ
+          (Quotient.mk RKTableau.Equivalent.setoidSigma
+            ⟨2, paddedEuler⟩)
+          (Quotient.mk RKTableau.Equivalent.setoidSigma
+            ⟨2, paddedEuler⟩))
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+      = RKTableau.composeQ
+          (Quotient.mk RKTableau.Equivalent.setoidSigma
+            ⟨2, paddedEuler⟩)
+          (RKTableau.composeQ
+            (Quotient.mk RKTableau.Equivalent.setoidSigma
+              ⟨2, paddedEuler⟩)
+            (Quotient.mk RKTableau.Equivalent.setoidSigma
+              ⟨2, paddedEuler⟩)) :=
+  RKTableau.composeQ_assoc _ _ _
 
 end OpenMath.Chapter3.Section381
