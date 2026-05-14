@@ -1,270 +1,262 @@
-# Cycle 238 Strategy
+# Cycle 239 Strategy
 
-## Headline
+## State at cycle start
 
-**Ship Phase C of `lem:441B`**: strict negativity of `cInverseLog n`
-for `n ≥ 1`. Continue working in `OpenMath/Chapter4/Section441B.lean`
-(created cycle 237) — it has **no transitive `Section441.lean`
-dependency**, only Mathlib, and compiles clean in 3s warm / 7s clean.
-This entirely sidesteps the 42-cycle GPFS pathology blocking
-`Section441.lean`.
+* **Sorry count: 0** across the repo (`plan.md` "Sorry locations" block is
+  empty). 47 consecutive clean cycles since the cycle 201 rollback.
+* **lem:441B is FULLY FORMALIZED** as of cycle 238 (`OpenMath/Chapter4/Section441B.lean`,
+  axiom-clean `cInverseLog_neg`). Phase B (cycle 237) + Phase C (cycle 238).
+* **§383 Group instance shipped** cycle 236 on `Quotient PhiEquivalent.setoidSigma`
+  in `OpenMath/Chapter3/Section381.lean` — `inverseQ_phi`, `inverseQ_phi_mk`,
+  `composeQ_phi_inverseQ_phi_left`, `instGroup_phi`.
+* **§441 Phase C.2 of lem:441A** still drafted at
+  `.prover-state/cycle_182_draft_section441.lean` but blocked by GPFS pathology
+  on `Section441.lean` (42 consecutive timeouts as of cycle 237).
+* **No Aristotle results pending** in `task_results/cycle_238.md`.
 
-If Phase C lands, `lem:441B` closes fully (`partial → formalized`).
+## Decision: pivot to Φ-quotient elementary-weight infrastructure
 
-## Context — what cycle 237 left us
+The cycle 236 task results identified the natural next step as Φ as a
+`MonoidHom`/`GroupHom` from `Quotient Equivalent.setoidSigma` (§382 group) to
+`Quotient PhiEquivalent.setoidSigma` (§383 group). This requires the
+`Equivalent → PhiEquivalent` inclusion lemma, which routes through B-series
+machinery (thm:311B/313B, both unformalized) and is therefore **multi-cycle
+work** (see `.prover-state/issues/thm_381H_deferred.md` for the four-direction
+analysis and the cycle 200 rollback precedent).
 
-* `OpenMath/Chapter4/Section441B.lean` exists with 6 axiom-clean
-  theorems + 3 definitions + 1 helper simp lemma (~190 LOC).
-* `cInverseLogSeries`, `cSeries`, `cInverseLog : ℕ → ℝ` defined.
-* (441c) identity `cInverseLogSeries * cSeries = 1` proved.
-* Base cases: `cInverseLog 0 = 1/2`, `cInverseLog 1 = -1/6`.
-* Sign witnesses: `cInverseLog_zero_pos`, `cInverseLog_one_neg`.
-* `lem:441B` status: `unformalized → partial`.
-* Sorry count: 0.
-* No Aristotle results pending.
+However, there is a cleaner tractable extension of the cycle 236 infrastructure
+that does NOT require `Equivalent → PhiEquivalent`: ship the elementary-weight
+function as a quotient-respecting map on `Quotient PhiEquivalent.setoidSigma`,
+plus its composition-decomposition law. This builds directly on:
 
-## Phase C target
+* cycle 225's `compose_elementaryWeight_decomp` (per-tree decomposition of
+  `(M₁.compose M₂).elementaryWeight t`).
+* cycle 232's full bilinear `composeQ_phi` and well-definedness witness
+  `compose_phiEquivalent_compose`.
+* cycle 236's `Quotient PhiEquivalent.setoidSigma` setoid and `instGroup_phi`.
 
-Headline theorem:
+These are all axiom-clean and in place. The deliverable is single-cycle
+closeable and concretely useful (it's the precise statement of Butcher's
+§384–§386 elementary-weight algebra at the quotient level).
+
+## Priority 0 (5 min, hard cap): Section441 GPFS smoke test
+
+Run:
+
+```bash
+time timeout 60 lake env lean OpenMath/Chapter4/Section441.lean
+```
+
+* **If EXIT=0 in <60s**: GPFS has cleared. Apply the cycle 182 Phase C.2
+  draft + cycle 184 namespace fix (one-line, documented at
+  `cycle_182_gpfs_slowness.md` cycle 184 update). Ship lem:441A Phase C.2 as
+  the cycle deliverable, skip Priority 1/2.
+* **If EXIT=124 or near-zero CPU after 60s**: log as the 43rd consecutive
+  timeout in `cycle_182_gpfs_slowness.md` and proceed to Priority 1. Do NOT
+  retry — the pattern is well-established (cycles 182–237, 42 timeouts).
+
+## Priority 1 (primary deliverable): `elementaryWeightQ_phi` + composition law
+
+### P1.A — Define `elementaryWeightQ_phi`
+
+In `OpenMath/Chapter3/Section381.lean`, after cycle 236's `instGroup_phi`
+block (currently the last block in the `OpenMath.Chapter3.Section312.RKTableau`
+namespace), add the quotient-respecting elementary-weight map:
 
 ```lean
-theorem cInverseLog_neg {n : ℕ} (hn : 1 ≤ n) : cInverseLog n < 0
+/-- The elementary-weight function lifted to `Quotient PhiEquivalent.setoidSigma`.
+For each rooted tree `t`, `elementaryWeightQ_phi q t` returns the common
+elementary weight of any representative of `q`. Well-definedness is
+exactly the definition of `PhiEquivalent`. -/
+noncomputable def elementaryWeightQ_phi
+    (q : Quotient PhiEquivalent.setoidSigma) (t : RootedTree) : ℝ :=
+  Quotient.lift (fun (p : Σ s, RKTableau s) => p.2.elementaryWeight t)
+    (fun a b hab => by
+      -- hab : PhiEquivalent a.2 b.2 after Setoid.r unfolding
+      exact hab t) q
 ```
 
-Per the cycle 237 task results "Suggested next approach", the textbook
-proof (Butcher §441 p. 376) uses identity (441d):
+Plus an `@[simp]` unfold lemma `elementaryWeightQ_phi_mk` closing by `rfl`.
 
-```
-(2(2n+1) + d_2·z² + d_4·z⁴ + ⋯ + d_{2n-2}·z^{2n-2}) · cSeries
-  = 2n + 1 - (2n-1)·z²
-```
+**Risk**: `PhiEquivalent.setoidSigma`'s `Setoid.r` definition may need an
+explicit `show @PhiEquivalent ...` reframing inside the respect proof
+(cycle 211/212/218 precedent on `Equivalent.setoidSigma`). Check cycle 223's
+`PhiEquivalent.setoidSigma` definition in `Section381.lean` first and mirror
+the cycle 218 `composeQ` pattern if needed.
 
-where `d_{2i} := -8(n-i) / ((2i+1)(2i-1))` for `1 ≤ i ≤ n-1`,
-`d_0 := 2(2n+1)`, `d_{2n} := 0`. The `d_{2i}` depend on `n` (the
-*index* in `cInverseLog n`), so the auxiliary series is parametric in
-`n`.
+### P1.B — Per-tree decomposition lemma on the quotient
 
-Extracting the `z^{2n}` coefficient from (441d) gives a recurrence
-that lets a strong induction on `n` conclude `c_{2n} < 0`.
-
-## Phase C plan — 4 sub-steps
-
-### Step C.1 — Define the parametric auxiliary `dSeries`
+Lift cycle 225's `compose_elementaryWeight_decomp` to the `composeQ_phi`
+level via `Quotient.inductionOn₂`:
 
 ```lean
-noncomputable def dSeries (n : ℕ) : PowerSeries ℝ :=
-  PowerSeries.mk fun k =>
-    if k = 0 then 2 * (2 * (n : ℝ) + 1)
-    else if Even k ∧ 1 ≤ k / 2 ∧ k / 2 ≤ n - 1 then
-      -8 * ((n : ℝ) - k / 2) / ((k + 1) * (k - 1))
-    else 0
+theorem elementaryWeightQ_phi_composeQ_phi
+    (q q' : Quotient PhiEquivalent.setoidSigma) (t : RootedTree) :
+    elementaryWeightQ_phi (composeQ_phi q q') t = <RHS-matching-cycle-225> := by
+  refine Quotient.inductionOn₂ q q' ?_
+  rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩
+  show elementaryWeightQ_phi (composeQ_phi ⟦⟨s₁, M₁⟩⟧ ⟦⟨s₂, M₂⟩⟧) t = ...
+  -- Reduce via composeQ_phi_mk + elementaryWeightQ_phi_mk
+  -- Goal collapses to (M₁.compose M₂).elementaryWeight t = ...
+  exact compose_elementaryWeight_decomp M₁ M₂ t
 ```
 
-Verify the closed-form coefficients via `@[simp]` lemmas
-`coeff_dSeries_zero`, `coeff_dSeries_even_inner`,
-`coeff_dSeries_odd_zero`. Mirror cycle 237's
-`coeff_cInverseLogSeries` style for the conditional unfolding.
+The RHS must match cycle 225's exact statement. **First step:** read
+`OpenMath/Chapter3/Section381.lean` for the cycle 225 era symbol
+`compose_elementaryWeight_decomp` (use `Grep` for the exact name) and
+copy its conclusion shape verbatim before writing the new theorem.
 
-### Step C.2 — Prove the (441d) PowerSeries identity
+### P1.C — Identity, inverse, and PhiEquivalent-sound corollaries
+
+Three quick corollary theorems (each ~5–10 LOC):
 
 ```lean
-theorem dSeries_mul_cSeries_eq (n : ℕ) (hn : 1 ≤ n) :
-    dSeries n * cSeries =
-      PowerSeries.C ℝ (2 * (n : ℝ) + 1) -
-      PowerSeries.C ℝ (2 * (n : ℝ) - 1) * PowerSeries.X ^ 2
+/-- Identity element's elementary weight is zero on every rooted tree.
+Reduces by the empty `Fin 0` sum in `RKTableau.id.elementaryWeight`. -/
+theorem elementaryWeightQ_phi_id (t : RootedTree) :
+    elementaryWeightQ_phi
+        (⟦⟨0, RKTableau.id⟩⟧ : Quotient PhiEquivalent.setoidSigma) t = 0 := by
+  show RKTableau.id.elementaryWeight t = 0
+  -- Use cycle 228's `id_elementaryWeight` if shipped, otherwise simp on
+  -- elementaryWeight's empty Fin 0 sum.
+  sorry  -- replace with the actual one-liner after reading cycle 228 result
 ```
 
-Strategy: multiply (441c) by `(2n + 1 - (2n-1)·X²)`. The product
-`(2n + 1 - (2n-1)·X²) · cInverseLogSeries` should equal `dSeries n`
-by direct coefficient-by-coefficient calculation. Then:
-
-```
-dSeries n * cSeries
-  = (2n+1 - (2n-1)·X²) · cInverseLogSeries · cSeries
-  = (2n+1 - (2n-1)·X²) · 1                    [by (441c) from cycle 237]
-  = 2n+1 - (2n-1)·X²
-```
-
-Factor as: first prove the helper
-`private lemma poly_mul_cInverseLogSeries_eq_dSeries (n : ℕ) (hn : 1 ≤ n) :
-  (PowerSeries.C ℝ (2*n+1) - PowerSeries.C ℝ (2*n-1) * X^2) * cInverseLogSeries = dSeries n`
-via `PowerSeries.ext` + per-coefficient evaluation (using
-cycle 237's `coeff_cInverseLogSeries` simp). Then the main identity
-follows from `mul_assoc + mul_comm + the helper +
-cInverseLogSeries_mul_cSeries_eq_one`.
-
-### Step C.3 — Sign of `d_{2i}` for `1 ≤ i ≤ n-1`
+If cycle 228 didn't ship `id_elementaryWeight` as a named theorem (check
+`Grep "id_elementaryWeight"` in `Section381.lean`), ship it as a private
+helper here.
 
 ```lean
-theorem coeff_dSeries_neg (n i : ℕ) (h₁ : 1 ≤ i) (h₂ : i ≤ n - 1) :
-    PowerSeries.coeff ℝ (2 * i) (dSeries n) < 0
+/-- Sound bridge: equal PhiEquivalent representatives yield equal
+quotient-level elementary weights. Direct from `Quotient.sound` + the
+lift definition. -/
+theorem elementaryWeightQ_phi_eq_of_phiEquivalent
+    {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s')
+    (h : PhiEquivalent M M') (t : RootedTree) :
+    elementaryWeightQ_phi (⟦⟨s, M⟩⟧ : Quotient PhiEquivalent.setoidSigma) t
+      = elementaryWeightQ_phi ⟦⟨s', M'⟩⟧ t := by
+  exact congrArg (· t)
+    (congrArg elementaryWeightQ_phi (Quotient.sound (by exact h)))
+  -- (alternative form: rewrite via Quotient.sound then rfl)
 ```
 
-Direct evaluation of the closed form: numerator `-8(n-i)` is negative
-(since `n-i ≥ 1`); denominator `(2i+1)(2i-1)` is positive for `i ≥ 1`.
-Close by `positivity` / `nlinarith` on the explicit form.
+If `elementaryWeightQ_phi_inverseQ_phi` (the inverse formula) requires
+deferring because cycle 235's `inverse_elementaryWeight`-style formula
+doesn't exist yet, **defer it with a TODO comment**. Do NOT block the cycle
+on it.
 
-### Step C.4 — Strong induction headline
+### P1.D — `paddedEuler` non-vacuity
 
-```lean
-theorem cInverseLog_neg : ∀ n : ℕ, 1 ≤ n → cInverseLog n < 0
-```
+Add at least two concrete `example`s in `namespace OpenMath.Chapter3.Section381`
+at the end of the file:
 
-Proof: `Nat.strong_induction_on` on `n`.
+1. `elementaryWeightQ_phi_mk` definitional unfold on `⟦⟨2, paddedEuler⟩⟧`
+   reducing to `paddedEuler.elementaryWeight <some-tree>` (rfl).
+2. Composition law on `composeQ_phi ⟦⟨0, RKTableau.id⟩⟧ ⟦⟨2, paddedEuler⟩⟧`
+   composed with cycle 234's `composeQ_phi_id_left` collapsing the LHS to
+   `⟦⟨2, paddedEuler⟩⟧`, then `elementaryWeightQ_phi` matching paddedEuler's
+   weight.
 
-* `n = 1`: cite cycle 237's `cInverseLog_one_neg`.
-* `n ≥ 2`: extract the `z^{2n}` coefficient from `dSeries n * cSeries =
-  (2n+1) - (2n-1)·X²` via `PowerSeries.coeff_mul` on the LHS and
-  `coeff_C_mul`/`coeff_X_pow` on the RHS. The RHS coefficient is 0
-  at `2n` (for `n ≥ 2`).
+### Estimated LOC and verification
 
-  By `PowerSeries.coeff_mul`, LHS = `∑_{(p,q) ∈ antidiagonal (2n)}
-  dSeries.coeff p · cSeries.coeff q = 0`.
+* Total LOC: ~100–150 over cycle 236's HEAD.
+* All new symbols expected axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+* Compile target: warm rebuild <10s.
+* Verification: `lake env lean OpenMath/Chapter3/Section381.lean` + `lean_verify`
+  on each new public symbol.
 
-  Antidiagonal cases:
-  - `(0, 2n)`: contributes `2(2n+1) · cInverseLog n`.
-  - `(2i, 2n-2i)` for `1 ≤ i ≤ n-1`: contributes `d_{2i} · c_{2n-2i}`,
-    where `d_{2i} < 0` (Step C.3) and `c_{2n-2i} < 0` (strong IH on
-    `cInverseLog (n-i)` since `1 ≤ n-i ≤ n-1 < n`). Each product
-    positive.
-  - `(2n, 0)`: `dSeries.coeff (2n) = 0` (out of range, since `2n > 2(n-1)`).
-  - Odd indices: `dSeries.coeff = 0` (only even powers).
+## Priority 2 (stretch, if Priority 1 ships with cycle budget remaining)
 
-  Rearranging: `2(2n+1) · cInverseLog n = -∑ (positive) < 0`, so
-  `cInverseLog n < 0`. ✓
+Extend `OpenMath/Chapter4/Section441B.lean` with explicit closed forms for
+`cInverseLog 2` and `cInverseLog 3` as cycle 238 sanity witnesses:
 
-**Risk**: the antidiagonal-splitting via `Finset.sum_filter` on
-parity + range is the heaviest manual step. If it stalls beyond
-~80 LOC, fall back to:
-* `Nat.rec` direct induction with explicit `n = 0 | n = 1 | n + 2`
-  cases, OR
-* a `match n with` on `n` then `Fin.sum_univ_*`-style explicit
-  enumeration for small cases combined with a generic step.
+* `cInverseLog_two_eq : cInverseLog 2 = -2/45` — derived from the (441c)
+  `z^4` coefficient: `2·c_4 + (2/3)·c_2 + (2/5)·c_0 = 0`. Use the same
+  `PowerSeries.coeff_mul` antidiagonal-split + `cInverseLog_zero_eq_half` +
+  `cInverseLog_one_eq_neg_one_sixth` machinery from cycle 237's base cases.
+* `cInverseLog_three_eq : cInverseLog 3 = -8/945` — analogous closed form
+  from the `z^6` coefficient.
 
-## DO NOT try (from history)
+These are guaranteed axiom-clean closed-form computations (~30 LOC each).
+**Skip Priority 2 entirely if Priority 1 takes the full cycle budget.**
 
-* **DO NOT** attempt to compile `Section441.lean` directly — 42
-  consecutive 5-min timeouts (cycles 182–237, 56 calendar days).
-  Use `Section441B.lean` exclusively.
-* **DO NOT** import `Mathlib.Data.Nat.Parity` — does not exist in
-  this Mathlib version. The Even-on-Nat lemmas are in
-  `Mathlib.Algebra.Ring.Parity` (cycle 237 dead end).
-* **DO NOT** rely on bare `import Mathlib` — `Section441B.lean` is
-  a stand-alone file and needs explicit imports including
-  `Mathlib.Data.Real.Basic` for `ℝ` (cycle 237 dead end).
-* **DO NOT** use positional `R` argument on `PowerSeries.coeff` /
-  `constantCoeff` — `R` is implicit; use named-implicit `(R := ℝ)`
-  (cycle 237 dead end).
-* **DO NOT** define `cInverseLog` via the (441d) recurrence —
-  circular. The existing cycle 237 definition
-  `cInverseLog n := coeff (2n) cSeries` is correct; (441d) is used in
-  the *proof* of negativity, not in the definition.
-* **DO NOT** smuggle the negativity claim into the *definition* of
-  `cInverseLog`. The negativity must be a *theorem*, not the
-  definition (CLAUDE.md "definition smuggling check").
-* **DO NOT** add an `axiom` or `constant` declaration for any step.
-* **DO NOT** raise `maxHeartbeats` above 200000. Decompose instead.
-* **DO NOT** try `Units.val_inv_eq_inv_val` — after
-  `constantCoeff_invOfUnit` reduction the term is already in
-  `(↑u)⁻¹` form; use `simp [twoUnit]` directly (cycle 237 lesson).
+## What NOT to try
 
-## Procedure — sorry-first discipline
+* **Do NOT attempt `Equivalent → PhiEquivalent` directly.** Confirmed
+  multi-cycle work requiring B-series machinery (thm:311B and thm:313B both
+  unformalized). See `thm_381H_deferred.md` for the four-direction analysis.
+* **Do NOT attempt to bifurcate lem:441A Phase C** into a stand-alone file.
+  Phase C is intrinsically about `aPoly`, which lives in `Section441.lean`;
+  bifurcation would require duplicating the cycle 181 Möbius bridge from
+  `Section441.lean`. The cycle 238 task results' suggestion to consider this
+  was reviewed and rejected as net-negative.
+* **Do NOT attempt thm:441C.** Still blocked on lem:441A Phase C.
+* **Do NOT attempt lem:383D directly.** The textbook formula uses
+  vertex-subset partitions, but our `Section383.lean` uses multiset
+  sub-selection (per `convolution_vertex_vs_multiset.md`). Faithful
+  formalization is multi-cycle.
+* **Do NOT attempt thm:386A or thm:387A.** Both depend transitively on
+  lem:383D.
+* **Do NOT increase `maxHeartbeats`** above 200000. Decompose if needed.
+* **Do NOT touch `scripts/autonomous_loop.py`** — the supervisor's
+  "commit-not-reaching-repo" false-positive pattern is loop-maintainer
+  territory (see `phantom_commit_verdict_pattern.md`).
+* **Do NOT retry the Section441 GPFS smoke test** beyond Priority 0's
+  60-second cap. 42 timeouts establish the pattern.
+* **Do NOT poll Aristotle** more than once if you submit a batch. CLAUDE.md
+  rule.
 
-Per CLAUDE.md's "sorry-first (ABSOLUTE RULE)":
+## Aristotle policy
 
-1. **Open `Section441B.lean`** (the cycle-237 file).
-2. **Add `dSeries`, `coeff_dSeries_*` simp lemmas with sorry'd
-   bodies** (Step C.1). Verify the file compiles
-   (`lake env lean OpenMath/Chapter4/Section441B.lean`).
-3. **Add `dSeries_mul_cSeries_eq` with sorry'd body** (Step C.2).
-4. **Add `coeff_dSeries_neg` with sorry'd body** (Step C.3).
-5. **Add `cInverseLog_neg` with sorry'd body** (Step C.4).
-6. **Compile** — confirm `sorry` count is exactly 4 (one per step).
-7. **Batch-submit the four sorries to Aristotle** with the full
-   `Section441B.lean` as context (free compute — submit per
-   CLAUDE.md "Aristotle-first MANDATORY" via
-   `mcp__aristotle__submit_file` on `Section441B.lean` with the
-   sorries in place). Sleep 30 minutes, poll once.
-8. **In parallel** (during sleep), close the easiest sub-steps
-   manually:
-   - Step C.3 (`coeff_dSeries_neg`) is the smallest (just numerical
-     sign analysis on the explicit closed form). ~15 LOC.
-   - Step C.1 (`dSeries` + coeff simp lemmas). ~30 LOC.
-9. **After Aristotle poll**: incorporate any returned proofs. Then
-   manually finish remaining sorries. Step C.2 and Step C.4 are
-   the substantive ones, ~50 LOC each.
+If P1.B's composition-decomposition lemma stalls during manual proof,
+submit it as an Aristotle job with cycle 225's `compose_elementaryWeight_decomp`
+statement, cycle 232's `composeQ_phi`, and the new `elementaryWeightQ_phi`
+definition as in-context templates. Sleep 30 min. Single poll. Incorporate
+if successful.
 
-## Faithfulness check (mandatory pre-commit)
+DO NOT submit Aristotle for P1.A or P1.C — these are mechanical
+`Quotient.lift` / `Quotient.inductionOn` proofs that should close in one
+manual pass.
 
-Per CLAUDE.md, before commit:
+## Faithfulness discipline
 
-* **Quote textbook**: Butcher §441 p. 376: "Lemma 441B. The
-  coefficients `c₂, c₄, …` are all negative."
-* **Lean statement**: `cInverseLog_neg : ∀ n ≥ 1, cInverseLog n < 0`,
-  where `cInverseLog k := coeff (2k) cSeries` matches Butcher's
-  `c_{2k}` (re-indexed). **Captures: same content** (up to trivial
-  re-indexing — documented in cycle 237 issue file update).
-* **No definition smuggling**: `cInverseLog` is defined as a
-  PowerSeries coefficient of an algebraically-inverted series
-  (not as "the negative sequence"). The negativity is a theorem.
-* **No tautology**: the proof routes through (441d) which is a
-  non-trivial algebraic identity; it is not `id` or `exact h`.
-* **Hypothesis strength**: only `n ≥ 1` (matches Butcher's `c₂, c₄, …`
-  indexing convention starting from `c₂`).
-* **Verify absent-theorem promises**: if any docstring promises
-  helper lemmas, ensure they exist.
+* `elementaryWeightQ_phi` is the quotient-respecting lift of
+  `M.elementaryWeight` (cycle 187 era, faithful Butcher §310). The textbook
+  doesn't explicitly introduce a quotient version, but this is the natural
+  functorial extension and matches Butcher's §384–§386 elementary-weight
+  algebra implicitly. No divergence to document.
+* The composition-decomposition law `elementaryWeightQ_phi_composeQ_phi` is
+  the quotient-level statement of Butcher's "B-series Butcher rule"
+  (cycle 225 already shipped the per-tableau version).
+* If `elementaryWeightQ_phi_inverseQ_phi` requires deferring (see P1.C),
+  document with a TODO comment pointing to a future cycle.
 
-## Cycle 238 deliverable bar
+## Tautology scanner discipline
 
-* **Primary success** (target): `lem:441B` Phase C closed.
-  `cInverseLog_neg` axiom-clean. Update `lean_status.json` row
-  `lem:441B`: `partial → formalized`. Update `plan.md` row:
-  `[~] → [x]`.
-* **Acceptable partial success**: 2-3 of the 4 sub-steps closed
-  (C.1, C.3 most likely); the others remain as sorries with clear
-  closure paths. Sorry count rises ≤ 2 net. `lem:441B` stays
-  `partial` but with substantial progress recorded.
-* **Minimum acceptable**: Step C.1 (the `dSeries` definition +
-  coefficient simp lemmas) lands axiom-clean. This is the
-  infrastructure for cycles 239+. Sorry count rises ≤ 3 net.
+The scanner over-fires on `:= h_<name>` / `exact h_<name>` patterns. Use
+underscore-free names (`hab`, `hq`, `hM`, `ht`) in new code to avoid
+post-cycle cosmetic renames. See `tautology_scanner_false_positives.md` for
+the cosmetic-rename pattern.
 
-## GPFS pathology
+## Pre-commit faithfulness checklist (apply before committing)
 
-Per cycle 182-237 pattern, **DO NOT** run smoke tests on
-`Section441.lean` this cycle (43rd timeout would be wasted compute).
-The pathology is specific to the `Mathlib.Analysis.*` heavy
-transitive load of `Section441.lean`. `Section441B.lean` (Mathlib
-`PowerSeries` + `Polynomial` + `Real`) has no `Mathlib.Analysis.*`
-dependency and is unaffected.
+For each new `def` and `theorem`:
 
-Append a one-liner to
-`.prover-state/issues/cycle_182_gpfs_slowness.md` **only if** you
-observe GPFS issues on `Section441B.lean` itself this cycle. Do not
-add a 43rd entry for `Section441.lean`.
+* [ ] Lean statement matches the intended textbook content (or documented divergence).
+* [ ] No tautology (conclusion ≠ any hypothesis verbatim).
+* [ ] No identity-proof (`exact h_*` or `:= h_*` returning a renamed hypothesis as the entire proof body).
+* [ ] No hypothesis strengthening without documentation.
+* [ ] `#print axioms` returns `[propext, Classical.choice, Quot.sound]` only.
 
-## Backup plan — if Phase C C.2 (441d identity) blocks
+## Cycle 240+ outlook
 
-If Step C.2 (the (441d) PowerSeries identity) proves intractable in
-this cycle (estimated >100 LOC or hits a `simp` blowup), pivot to:
-
-**Option B — close `lem:441B` Phase C for `n = 2` only** as a
-concrete stepping stone, mirroring the §550 thm:550A stepping-stone
-pattern from cycles 138/140/144/145/147/148/150:
-
-```lean
-theorem cInverseLog_two_neg : cInverseLog 2 < 0
-```
-
-Compute `cInverseLog 2` by direct unfolding of the (441c) inverse
-PowerSeries at index 4 (use `coeff_invOfUnit` + `coeff_mul` to set
-up a linear equation in `c_4`). Solve and verify `< 0`.
-
-If even the `n = 2` case stalls, write an issue file
-`.prover-state/issues/lem_441B_phase_C_blockers.md` documenting
-the specific stall point, then pivot the cycle deliverable to
-**`thm:384A` Φ as a group hom**: ship the `Equivalent → PhiEquivalent`
-inclusion lemma (the deferred direction in
-`thm_381H_deferred.md`) as a precursor to `Φ : Quotient
-Equivalent.setoidSigma →* Quotient PhiEquivalent.setoidSigma`. This
-is a different file (`Section381.lean`) and should compile healthy
-(cycle 222 shipped the §382 `Group` instance there at 9.657s warm).
+* If Priority 1 ships cleanly: cycle 240 can pursue
+  `elementaryWeightQ_phi_inverseQ_phi` if it was deferred, OR ship the
+  analogous infrastructure on `Quotient Equivalent.setoidSigma` (which
+  would unblock the `Equivalent → PhiEquivalent` direction once that
+  bridge is built). Alternative: pivot to a tree-combinatorics target in
+  §302 (independent track) or extend Section441B.lean with thm:441C-prep
+  results that don't depend on the GPFS-blocked Section441.lean.
+* If Priority 0 unexpectedly clears GPFS: lem:441A Phase C.2 lands, and
+  cycle 240 can start Phase C.3 (real factorisation via conjugate-pair
+  quadratics, the highest-risk phase per `lem_441A_phase_C_scoping.md`).

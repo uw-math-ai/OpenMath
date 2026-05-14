@@ -4678,6 +4678,105 @@ theorem PReducesTo.toEquivalent_and_toPhiEquivalent.{u}
     @Equivalent.{u} s s' M M' ∧ PhiEquivalent M M' :=
   ⟨h.toEquivalent, h.toPhiEquivalent⟩
 
+/-! ### `elementaryWeightQ_phi` — elementary weight on the Φ-quotient (cycle 239)
+
+The elementary-weight function `M.elementaryWeight t` is by definition
+of `PhiEquivalent` constant on Φ-equivalence classes, so it descends to
+a well-defined function `Quotient PhiEquivalent.setoidSigma → RootedTree → ℝ`.
+This is the natural functorial extension of Butcher's `Φ(t)` to the §383
+group's underlying set, matching the implicit usage in Butcher's §384–§386
+elementary-weight algebra. Composition decomposes via cycle 225's
+`compose_elementaryWeight_decomp` lifted through `Quotient.inductionOn`,
+giving the Φ-quotient analogue of the Butcher composition rule.
+
+Note: the per-stage bottom-block contribution
+`∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t` does *not* in
+general descend to the quotient (it depends on the representative stage
+count), so the decomposition lemma below is stated on representatives
+rather than on the abstract quotient classes — its conclusion is still
+useful for computations on concrete `paddedEuler`-style witnesses. -/
+
+section
+open OpenMath.Chapter3.Section310
+
+/-- *Elementary weight on the Φ-quotient.* The function `M.elementaryWeight t`
+descends to `Quotient PhiEquivalent.setoidSigma` because Φ-equivalence is by
+definition pointwise equality of elementary weights. -/
+noncomputable def elementaryWeightQ_phi
+    (q : Quotient PhiEquivalent.setoidSigma) (t : RootedTree) : ℝ :=
+  Quotient.lift
+    (fun (p : Σ s : ℕ, RKTableau s) => p.2.elementaryWeight t)
+    (by
+      rintro ⟨s, M⟩ ⟨s', M'⟩ hPhi
+      show M.elementaryWeight t = M'.elementaryWeight t
+      exact hPhi t) q
+
+/-- *Definitional unfold for `elementaryWeightQ_phi` on a `Quotient.mk` class.*
+Convenience `simp` lemma stating `elementaryWeightQ_phi ⟦⟨s, M⟩⟧ t =
+M.elementaryWeight t` by definition of `Quotient.lift`. -/
+@[simp] theorem elementaryWeightQ_phi_mk
+    {s : ℕ} (M : RKTableau s) (t : RootedTree) :
+    elementaryWeightQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) t
+      = M.elementaryWeight t := rfl
+
+/-- *§383 elementary-weight composition decomposition (representative form).*
+Quotient-level lift of cycle 225's `compose_elementaryWeight_decomp`: at the
+class-of-representatives level, `elementaryWeightQ_phi` of a `composeQ_phi`
+factors as the top-block sum `M₁.elementaryWeight t` plus the bottom-block
+sum `∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t`. The RHS uses
+the chosen representatives `M₁, M₂` because the bottom-block sum's stage
+count `s₂` does not descend to the abstract Φ-quotient. -/
+theorem elementaryWeightQ_phi_composeQ_phi_mk
+    {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (t : RootedTree) :
+    elementaryWeightQ_phi
+        (composeQ_phi
+          (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩)
+          (Quotient.mk PhiEquivalent.setoidSigma ⟨s₂, M₂⟩)) t
+      = elementaryWeightQ_phi
+          (Quotient.mk PhiEquivalent.setoidSigma ⟨s₁, M₁⟩) t
+        + ∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t := by
+  show (M₁.compose M₂).elementaryWeight t
+      = M₁.elementaryWeight t
+        + ∑ i : Fin s₂, M₂.b i * M₂.derivativeWeightWithSrc M₁ i t
+  exact compose_elementaryWeight_decomp M₁ M₂ t
+
+/-- *Identity-class elementary weight vanishes on every tree.* The §383
+identity element `⟦⟨0, RKTableau.id⟩⟧` has zero elementary weight on every
+rooted tree, because `RKTableau.id`'s defining `Fin 0` sum is empty. Direct
+corollary of cycle 228's `id_elementaryWeight`. -/
+@[simp] theorem elementaryWeightQ_phi_id (t : RootedTree) :
+    elementaryWeightQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩) t = 0 := by
+  show (RKTableau.id : RKTableau 0).elementaryWeight t = 0
+  exact id_elementaryWeight t
+
+/-- *Soundness bridge for `elementaryWeightQ_phi`.* Φ-equivalent representatives
+yield equal `elementaryWeightQ_phi` values on every tree. This is the
+quotient-level packaging of `PhiEquivalent`'s defining property, useful for
+rewriting elementary weights at the quotient level given a `PhiEquivalent`
+witness. -/
+theorem elementaryWeightQ_phi_eq_of_phiEquivalent
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (hPhi : PhiEquivalent M M') (t : RootedTree) :
+    elementaryWeightQ_phi
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩) t
+      = elementaryWeightQ_phi
+          (Quotient.mk PhiEquivalent.setoidSigma ⟨s', M'⟩) t := by
+  show M.elementaryWeight t = M'.elementaryWeight t
+  exact hPhi t
+
+/-- *Equal classes yield equal elementary weights.* Direct corollary of the
+function-extensionality of `elementaryWeightQ_phi`: if two Φ-quotient classes
+are equal, their elementary weights agree on every tree. Useful for chaining
+`Quotient.sound` rewrites through elementary-weight computations. -/
+theorem elementaryWeightQ_phi_eq_of_eq
+    {q q' : Quotient PhiEquivalent.setoidSigma} (hq : q = q') (t : RootedTree) :
+    elementaryWeightQ_phi q t = elementaryWeightQ_phi q' t := by
+  rw [hq]
+
+end
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381
@@ -5315,5 +5414,71 @@ example :
       : Quotient RKTableau.PhiEquivalent.setoidSigma)
       = (1 : Quotient RKTableau.PhiEquivalent.setoidSigma) :=
   inv_mul_cancel _
+
+/-- *Cycle 239 non-vacuity for `elementaryWeightQ_phi_mk`.* The quotient-
+level elementary-weight function unfolds definitionally on
+`⟦⟨2, paddedEuler⟩⟧` to `paddedEuler.elementaryWeight t`. Exercises the
+`Quotient.lift` plumbing on the cycle 030 non-vacuity backbone. -/
+example (t : RootedTree) :
+    RKTableau.elementaryWeightQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩) t
+      = paddedEuler.elementaryWeight t :=
+  rfl
+
+/-- *Cycle 239 non-vacuity for `elementaryWeightQ_phi_id`.* The §383 identity
+class `⟦⟨0, RKTableau.id⟩⟧` has zero elementary weight on `RootedTree.vertex`.
+-/
+example :
+    RKTableau.elementaryWeightQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
+        RootedTree.vertex = 0 :=
+  RKTableau.elementaryWeightQ_phi_id RootedTree.vertex
+
+/-- *Cycle 239 non-vacuity for `elementaryWeightQ_phi_composeQ_phi_mk`.*
+The composition decomposition lemma fires on
+`composeQ_phi ⟦⟨0, RKTableau.id⟩⟧ ⟦⟨2, paddedEuler⟩⟧` at
+`RootedTree.vertex`, reducing via cycle 228's `id_elementaryWeight` and
+cycle 225's `compose_elementaryWeight_decomp` to the bottom-block sum. -/
+example (t : RootedTree) :
+    RKTableau.elementaryWeightQ_phi
+        (RKTableau.composeQ_phi
+          (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
+          (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)) t
+      = RKTableau.elementaryWeightQ_phi
+          (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩) t
+        + ∑ i : Fin 2,
+            paddedEuler.b i * paddedEuler.derivativeWeightWithSrc RKTableau.id i t :=
+  RKTableau.elementaryWeightQ_phi_composeQ_phi_mk RKTableau.id paddedEuler t
+
+/-- *Cycle 239 non-vacuity for `elementaryWeightQ_phi_eq_of_phiEquivalent`.*
+Φ-equivalent representatives across heterogeneous stage counts yield the same
+quotient-level elementary weight: `paddedEuler` (2 stages) and
+`paddedEuler.pReduced pairPartition` (1 stage) are Φ-equivalent (cycle 187),
+so their `elementaryWeightQ_phi` images agree on every tree. -/
+example (t : RootedTree) :
+    RKTableau.elementaryWeightQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩) t
+      = RKTableau.elementaryWeightQ_phi
+          (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+            ⟨1, paddedEuler.pReduced pairPartition⟩) t :=
+  RKTableau.elementaryWeightQ_phi_eq_of_phiEquivalent
+    (pReduced_phiEquivalent paddedEuler
+      paddedEuler_isPReducibleVia_pairPartition) t
+
+/-- *Cycle 239 non-vacuity bridging `composeQ_phi_id_left` and
+`elementaryWeightQ_phi`.* Composing the §383 identity class on the left of
+`⟦⟨2, paddedEuler⟩⟧` collapses (cycle 234) so that the resulting class's
+elementary weight matches `paddedEuler.elementaryWeight` on every tree. This
+exercises the full pipeline `composeQ_phi_id_left` → `Quotient.sound`
+rewriting → `elementaryWeightQ_phi` unfolding. -/
+example (t : RootedTree) :
+    RKTableau.elementaryWeightQ_phi
+        (RKTableau.composeQ_phi
+          (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
+          (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)) t
+      = paddedEuler.elementaryWeight t := by
+  rw [RKTableau.elementaryWeightQ_phi_eq_of_eq
+        (RKTableau.composeQ_phi_id_left _) t]
+  rfl
 
 end OpenMath.Chapter3.Section381
