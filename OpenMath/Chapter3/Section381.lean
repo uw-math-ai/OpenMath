@@ -766,6 +766,68 @@ theorem IsZeroReducible.zeroReduced_size_lt
         (fun i : Fin s => h.inP1 i = true)).card < s :=
   card_filter_true_lt_of_exists_false h.exists_inP1_false
 
+/-- *Existential witness for def:381E `reducedMethod`.* Every
+Runge–Kutta method P-reduces (in zero or more steps via `PReducesTo`)
+to an irreducible one. This is the *existential* half of the textbook
+def:381E "reduced method" construction: it asserts the *existence* of
+an irreducible reduct, without (yet) constructing it as a definable
+recursive function.
+
+The full constructive `noncomputable def reducedMethod` is deferred
+(see `.prover-state/issues/reduced_method_deferred.md`): it would
+require either a Σ-typed `WellFoundedRelation` instance on
+`(s, M)`-pairs or decidability of `IsPReducible`/`IsZeroReducible`,
+both of which are multi-cycle engineering tasks. The existential
+witness packaged here suffices for *uniqueness* statements about the
+reduced method (e.g. def:381F can be phrased existentially: two
+P-equivalent methods produce reducts that coincide up to `HEq` via
+`PEquivalent.eq_of_both_isIrreducible`).
+
+The proof is strong induction on the stage count `s`, using the
+cycle-195 strict-descent infrastructure (`PReducesTo.size_lt_of_step`
+and `size_lt_of_zeroStep` via the destructor-level restatements
+`IsPReducible.sBar_lt` and `IsZeroReducible.zeroReduced_size_lt`)
+and the cycle-196 witness destructors (`IsPReducible.partition`,
+`IsPReducible.partition_isPReducibleVia`, `IsZeroReducible.inP1`,
+`IsZeroReducible.exists_inP1_false`,
+`IsZeroReducible.inP1_isZeroReducibleVia`). The inductive step
+case-splits on `¬ M.IsIrreducible = M.IsZeroReducible ∨ M.IsPReducible`
+(both branches transitively chain the single-step reduction with the
+IH-supplied tail via `PReducesTo.trans`, cycle 192). The
+non-constructive `Classical.choose`-flavoured destructors and the
+classical `not_and_or`/`not_not` rewrites make this theorem
+`Classical.choice`-axiomatic, which is expected for an existential
+witness over a non-decidable predicate. -/
+theorem reducedMethod_exists {s : ℕ} (M : RKTableau s) :
+    ∃ (s' : ℕ) (M' : RKTableau s'),
+      M.PReducesTo M' ∧ M'.IsIrreducible := by
+  suffices h : ∀ s : ℕ, ∀ M : RKTableau s,
+      ∃ (s' : ℕ) (M' : RKTableau s'),
+        M.PReducesTo M' ∧ M'.IsIrreducible from h s M
+  intro s
+  induction s using Nat.strong_induction_on with
+  | _ s ih =>
+    intro M
+    by_cases hIrr : M.IsIrreducible
+    · exact ⟨s, M, .refl M, hIrr⟩
+    · -- Reducible: 0-reducible or P-reducible (def:381E negated)
+      rw [IsIrreducible, not_and_or, not_not, not_not] at hIrr
+      rcases hIrr with hZ | hP
+      · -- 0-reducible branch — chain `.zeroStep` with the IH-supplied tail
+        have hStep : M.PReducesTo (M.zeroReduced hZ.inP1) :=
+          .zeroStep hZ.inP1 hZ.exists_inP1_false
+            hZ.inP1_isZeroReducibleVia (.refl _)
+        obtain ⟨s', M', hRed, hIrr'⟩ :=
+          ih _ hZ.zeroReduced_size_lt (M.zeroReduced hZ.inP1)
+        exact ⟨s', M', hStep.trans hRed, hIrr'⟩
+      · -- P-reducible branch — chain `.step` with the IH-supplied tail
+        have hStep : M.PReducesTo (M.pReduced hP.partition) :=
+          .step hP.partition hP.sBar_lt
+            hP.partition_isPReducibleVia (.refl _)
+        obtain ⟨s', M', hRed, hIrr'⟩ :=
+          ih hP.sBar hP.sBar_lt (M.pReduced hP.partition)
+        exact ⟨s', M', hStep.trans hRed, hIrr'⟩
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step

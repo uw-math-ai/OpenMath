@@ -159,3 +159,98 @@ be defined is
 
 Both remain multi-cycle engineering and are explicitly out of scope
 for cycle 196. Q1 / Q2 above are unchanged.
+
+## Cycle 197 update — `reducedMethod_exists` shipped (existential half)
+
+The **existential** half of the deferred def:381E construction is now
+landed at HEAD as
+`OpenMath.Chapter3.Section312.RKTableau.reducedMethod_exists`:
+
+```lean
+theorem reducedMethod_exists {s : ℕ} (M : RKTableau s) :
+    ∃ (s' : ℕ) (M' : RKTableau s'),
+      M.PReducesTo M' ∧ M'.IsIrreducible
+```
+
+Axiom-clean (standard `[propext, Classical.choice, Quot.sound]`
+trio — `Classical.choice` is expected: both the destructors and the
+strong-induction case-split on `IsIrreducible` are
+classical-flavoured). Proof recipe: strong induction on the stage
+count `s` (`Nat.strong_induction_on` with the universally quantified
+motive `∀ M : RKTableau s, ∃ s' M', M.PReducesTo M' ∧ M'.IsIrreducible`).
+The inductive step case-splits via `by_cases hIrr : M.IsIrreducible`:
+
+* `hIrr : M.IsIrreducible` case: `⟨s, M, .refl M, hIrr⟩` directly.
+* `¬ M.IsIrreducible` case: unfold the def
+  `IsIrreducible := ¬ M.IsZeroReducible ∧ ¬ M.IsPReducible` and
+  apply `not_and_or` + `not_not` twice to recover
+  `M.IsZeroReducible ∨ M.IsPReducible`. Each branch chains the
+  appropriate single-step constructor (`PReducesTo.zeroStep` /
+  `PReducesTo.step`) with the IH-supplied tail via cycle 192's
+  `PReducesTo.trans`. The IH-arity argument is the strict descent
+  witness from cycle 195 / 196
+  (`hZ.zeroReduced_size_lt` / `hP.sBar_lt`).
+
+End-to-end, the proof consumes:
+
+* cycle 195's measure side (`size_le`, `size_lt_of_step`,
+  `size_lt_of_zeroStep` — though `reducedMethod_exists` only
+  invokes the strict-descent forms via the cycle 196 destructor
+  spec lemmas);
+* cycle 196's extraction side (`IsPReducible.partition`,
+  `IsPReducible.sBar_lt`, `IsPReducible.partition_isPReducibleVia`,
+  `IsZeroReducible.inP1`, `IsZeroReducible.exists_inP1_false`,
+  `IsZeroReducible.inP1_isZeroReducibleVia`,
+  `IsZeroReducible.zeroReduced_size_lt`);
+* cycle 192's transitivity `PReducesTo.trans`.
+
+### What this unblocks for def:381F
+
+Combined with cycle 188's `eq_of_isIrreducible_of_pReducesTo`
+(reduction sequences out of an irreducible source are reflexive)
+and cycle 193's `PEquivalent.eq_of_both_isIrreducible` (two
+irreducible P-equivalent methods coincide up to heterogeneous-stage
+`HEq`), `reducedMethod_exists` lets us phrase def:381F existentially
+without the multi-cycle constructive `reducedMethod` recursion:
+
+> *(def:381F existential form)* Two methods `M`, `M'` are
+> P-equivalent iff there exists a common irreducible reduct: i.e.
+> `∃ s'' (M'' : RKTableau s''), M.PReducesTo M'' ∧ M'.PReducesTo M''
+>   ∧ M''.IsIrreducible`.
+
+This packaging is essentially one cycle of bridging away: extract
+witnesses `(s₁, M₁, …)` and `(s₂, M₂, …)` from
+`reducedMethod_exists` applied to `M` and `M'` respectively, then
+use cycle-193 / cycle-194 lemmas to identify them when the original
+`PEquivalent M M'` hypothesis is supplied. Cycle 198 candidate.
+
+### What still remains for the constructive `reducedMethod`
+
+The cycle 197 existential witness does **not** subsume the full
+def:381E construction. The remaining work is:
+
+* a `noncomputable def reducedMethod : RKTableau s → Σ s', RKTableau s'`
+  recursive function obtained via either
+  - **Option A** (Σ-wrapper `WellFoundedRelation`): derive
+    `WellFoundedRelation (Σ s, RKTableau s)` from cycle 195's
+    `size_lt_of_step`/`size_lt_of_zeroStep` via `WellFounded.onFun`
+    with the first-projection map `(⟨s, M⟩ : Σ s, RKTableau s) ↦ s`,
+    then use `WellFounded.fix` for the recursion;
+  - **Option B** (`Decidable` instances): supply
+    `Decidable (M.IsPReducible)` and `Decidable (M.IsZeroReducible)`
+    so a structural `if … then … else` can be written, terminating
+    by `decreasing_by` annotations citing the cycle 195 strict
+    descent lemmas;
+* a `reducedMethod_spec` lemma showing the constructive reduct
+  satisfies `M.PReducesTo (reducedMethod M).2 ∧
+  (reducedMethod M).2.IsIrreducible` — i.e. that the constructive
+  function realises the cycle 197 existential.
+
+Both options remain multi-cycle engineering. The cycle 197
+existential witness is sufficient for *uniqueness*-flavoured
+downstream applications (def:381F existential phrasing, thm:381H
+canonical-normal-form arguments via cycle 193's
+`eq_of_both_isIrreducible`), so the multi-cycle constructive
+recursion can be deferred until a downstream theorem strictly
+requires computing the reduct rather than asserting its existence.
+Q1 / Q2 above are unchanged.

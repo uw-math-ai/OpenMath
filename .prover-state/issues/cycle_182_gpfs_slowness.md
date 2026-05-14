@@ -456,3 +456,20 @@ days). Pivoting to Priority 1: ship axiom-clean *destructors* for
 `OpenMath/Chapter3/Section381.lean` — the cycle 195 worker's Option
 A recommendation for the next step toward def:381E `reducedMethod`.
 Per cycle 196 strategy.
+
+**Cycle 197 update (17th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.028s, user 0m0.242s, sys 0m0.726s — CPU =
+(0.242 + 0.726) / 300 = 0.32% of wall, identical near-zero
+pattern). Pre-flight `ps -u $USER` showed no D-state processes
+(empty). 17 consecutive timeouts span cycles 182–197 (16 calendar
+days). Pathology reproduced on every smoke-test attempt without
+exception across two-and-a-half weeks. Pivoting to Priority 1: ship
+`RKTableau.reducedMethod_exists` — the existential-witness half of
+the deferred def:381E `reducedMethod` construction, consuming both
+the cycle 195 measure side (`size_le`, `size_lt_of_step`,
+`size_lt_of_zeroStep`) and the cycle 196 extraction side
+(`IsPReducible.{sBar, sBar_lt, partition, partition_isPReducibleVia}`
++ `IsZeroReducible.{inP1, exists_inP1_false,
+inP1_isZeroReducibleVia, zeroReduced_size_lt}`) in a single
+~50-LOC packaging theorem, per cycle 197 strategy.

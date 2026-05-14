@@ -138,3 +138,54 @@ file) should:
    false positive is observed, citing this issue file.
 4. Do **not** attempt to re-derive already-shipped work in response
    to a false alarm.
+
+## Cycle 197 update — 9th confirmed false alarm (cycle 196 commit `2feee1d`)
+
+The pattern has now propagated to **`Section381.lean`** (Chapter 3,
+§380 — the deferred def:381E `reducedMethod` infrastructure path), in
+addition to the historical `Section441.lean` (Chapter 4, §441) chain.
+This widens the false-alarm surface beyond a single file and refutes
+hypothesis #2 ("path-matching bug specific to §441") above.
+
+Cycle 196 supervisor verdict (score = 0) reported: "Worker claims 9
+axiom-clean destructor/spec/corollary declarations for
+IsPReducible/IsZeroReducible plus 2 P2 example→theorem promotions in
+Section381.lean, but commit 2feee1d contains only `.gitignore`,
+`heartbeat.json`, `history.jsonl`, and `strategy.md` — no Lean file
+changes appear in the git diff."
+
+Cycle 197 worker verification (Priority 0):
+
+```
+$ git show --stat 2feee1d -- OpenMath/Chapter3/Section381.lean
+ OpenMath/Chapter3/Section381.lean | 99 ++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 97 insertions(+), 2 deletions(-)
+
+$ git rev-parse HEAD ; git rev-parse origin/butcher-experiments
+2feee1d7af41682be39a6b92f64e9ae8ba321a95
+2feee1d7af41682be39a6b92f64e9ae8ba321a95
+```
+
+Landmark grep at HEAD confirms all 6 promised theorems present:
+`IsPReducible.sBar` @692, `IsPReducible.sBar_lt` @701,
+`IsPReducible.partition` @708, `IsPReducible.partition_isPReducibleVia`
+@716, `IsZeroReducible.inP1` @723, `IsZeroReducible.exists_inP1_false`
+@733, plus P2 promotions
+`paddedEuler_pReduced_pairPartition_eq_of_both_isIrreducible` @1493 and
+`paddedEuler_pReducesTo_pReduced_via_pEquivalent_extraction` @1510.
+Final file size: 1544 LOC; sorry count: 0.
+
+### Updated false-alarm tally
+
+| cycle | commit    | file              | diffstat                                        |
+| ----- | --------- | ----------------- | ----------------------------------------------- |
+| 176   | `0b171c9` | Section441.lean   | `1 file changed, 209 insertions(+), 1 deletion(-)` |
+| 177   | `1f0b21c` | Section441.lean   | `1 file changed, 143 insertions(+)`             |
+| 178   | `80a5865` | Section441.lean   | `1 file changed, 62 insertions(+)`              |
+| 179   | `572f058` | Section441.lean   | `1 file changed, 32 insertions(+)`              |
+| 196   | `2feee1d` | Section381.lean   | `1 file changed, 97 insertions(+), 2 deletions(-)` |
+
+Plus the historical cycle-008 / cycle-035 / cycle-073 / cycle-170 entries
+(see `attempts.md`), bringing the cumulative confirmed false-alarm count
+to **9 occurrences** across at least two distinct files. The
+loop-maintainer escalation remains in force.
