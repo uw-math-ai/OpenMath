@@ -1,461 +1,455 @@
-# Cycle 214 Strategy
+# Cycle 216 strategy — Equivalent uniform-threshold refactor + close cycle 215 sorry
 
-## §A — Skip the §441 Phase C.2 GPFS smoke test
+## §A — Context
 
-Per the 31-cycle pathology recorded in
-`.prover-state/issues/cycle_182_gpfs_slowness.md` (cycles 182–213 all
-timed out at ~5 min wall with ≤0.5% CPU), do **NOT** spend cycle 214
-on another smoke-test attempt at `OpenMath/Chapter4/Section441.lean`.
-The pathology has not abated for 31 consecutive cycles; one more
-attempt provides no signal. Skip Priority-0 entirely and proceed
-straight to the §381 work below.
+Cycle 215 shipped `RKTableau.compose_equivalent_compose` as a
+**sorry-scaffolded** signature (cycle 215 §H abort threshold). The
+supervisor scored cycle 215 = −2 (REVERTED) for the sorry increase
+(0 → 1). The cycle 215 strategy correctly identified the resolution
+path: refactor `Equivalent` to uniform-threshold form
+`∃ h₀, ∀ y₀, ...`. This refactor is **mechanical** (all concrete
+instances already have y₀-uniform thresholds) and **single-cycle**
+in scope (~55 LOC total). Closing it returns sorry count 1 → 0 AND
+ships `thm:382A` (382g) form as the cycle's substantive deliverable.
 
-If you want to record the heartbeat, you may run a single
-`time timeout 60 lake env lean OpenMath/Chapter4/Section441.lean &`
-in the background and forget about it — but do not block on it, do
-not wait for it, and do not let the 60-second timeout consume any
-strategy budget. Strongly preferred: skip entirely.
+Read these files before coding:
+* `.prover-state/issues/compose_equivalent_compose_uniform_threshold.md`
+  — the gap analysis, Option A recipe, and recommendation.
+* `.prover-state/issues/thm_382A_path.md` (Cycle 215 update section)
+  — proposed cycle 216 entry point with draft proof body for
+  `compose_equivalent_compose`.
+* `OpenMath/Chapter3/Section381.lean` lines 968–986 (`Equivalent`
+  definition), 1795–1928 (refl/symm/trans/setoid/setoidSigma),
+  2725–2731 (sorry-scaffolded `compose_equivalent_compose`).
 
-## §B — Priority 1: ship `compose_isRKOneStep_iff` (forward direction + iff)
+Do **NOT** roll back cycle 215's scaffold and walk away. The strategy
+is to **close the sorry** by enabling the proof recipe via the
+refactor. This cycle's success criterion is sorry count 1 → 0 with
+`thm:382A` (382g) form proved axiom-clean.
 
-**Target**: in `OpenMath/Chapter3/Section381.lean`, immediately after
-cycle 213's `compose_of_isRKOneStep` (currently ends at line ~2621,
-just before `PReducesTo.toEquivalent_and_toPhiEquivalent` at line
-2628), add the **full iff**:
+§441 Phase C.2: GPFS-blocked for 33+ consecutive cycles; skip per
+the standing pattern.
 
-```lean
-/-- *Compose factors through `M₁`-then-`M₂` — full iff (Butcher §382 (382b–e)).*
-One step of `M₁.compose M₂` at step size `H` from `y₀` to `y_final`
-factors as sequential `M₁` then `M₂` steps at the *same* `H` (no
-rescaling). Note: this is a *structural* identity that holds
-unconditionally (no Lipschitz, no smallness, no `CompleteSpace`)
-because both directions are purely algebraic — the composite stage
-tuple decomposes into `Fin.append Y₁ Y₂` block-wise, exposing the
-underlying `M₁`/`M₂` stages. Closes Gap A of the path to `thm:382A`
-per `.prover-state/issues/compose_isRKOneStep_iff_scoping.md`. -/
-theorem compose_isRKOneStep_iff {s₁ s₂ : ℕ}
-    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂)
-    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (f : N → N) (y₀ : N) (H : ℝ) (y_final : N) :
-    (M₁.compose M₂).IsRKOneStep f y₀ H y_final ↔
-      ∃ y_mid : N,
-        M₁.IsRKOneStep f y₀ H y_mid ∧
-        M₂.IsRKOneStep f y_mid H y_final
-```
+## §B — Priority 1: refactor `Equivalent` definition (~5 LOC)
 
-**Critical observation that overrides the scoping doc**: the scoping
-doc (`compose_isRKOneStep_iff_scoping.md` §4.2) anticipated the
-forward direction would need `IsRKOneStep_exists` (cycle 205) +
-smallness + Lipschitz. **It does not.** Look at the unpacking pattern
-that cycle 213 used for the reverse direction (lines 2600–2621): it
-provided `Fin.append Y₁ Y₂` directly as the stage tuple, no Banach
-required. The forward direction is the mirror image — project a
-given composite stage tuple `Y_compose` onto `Y_top` and `Y_bot`,
-define `y_mid` *algebraically* as `y₀ + H • ∑ i, M₁.b i • f (Y_top i)`,
-and witness M₁/M₂'s `IsRKOneStep` via these projections. The
-output-equation halves close by `rfl` (for M₁'s, by definition of
-`y_mid`) and by the same `smul_add / ← add_assoc / ← hY₁_out`
-3-step regroup-and-collapse idiom cycle 213 used (for M₂'s).
-
-**No smallness, no Lipschitz, no `[CompleteSpace N]` is needed for
-the iff itself.** Smallness only enters if/when you want
-*uniqueness* of `y_mid`, which is not part of the iff.
-
-## §C — Detailed proof recipe for the forward direction
-
-The reverse direction is one line — invoke cycle 213:
+**Step B.1.** Edit `OpenMath/Chapter3/Section381.lean` at lines 980–985:
 
 ```lean
-theorem compose_isRKOneStep_iff … :
-    (M₁.compose M₂).IsRKOneStep f y₀ H y_final ↔
-      ∃ y_mid : N, … := by
-  refine ⟨?_, ?_⟩
-  · -- forward (the substantive direction, ~30 LOC, see §C.1 below)
-    intro hC
-    obtain ⟨Y_compose, hY_compose_stage, hY_compose_out⟩ := hC
-    -- … build y_mid, Y_top, Y_bot as in §C.1 below
-    sorry  -- placeholder while drafting; close as detailed
-  · -- reverse: invoke cycle 213
-    rintro ⟨y_mid, h₁, h₂⟩
-    exact RKTableau.compose_of_isRKOneStep M₁ M₂ h₁ h₂
+def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
+  ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N] [CompleteSpace N]
+    (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f),
+    ∃ h₀ > (0 : ℝ), ∀ (y₀ : N), ∀ h, 0 < h → h ≤ h₀ →
+      ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
+        y₁ = y₁'
 ```
 
-Do not commit with a `sorry`; the placeholder is for incremental
-drafting only.
+The only change is **moving `(y₀ : N)` from before the `∃ h₀` to
+just inside it** (after `∃ h₀ > (0 : ℝ),`). All four typeclass
+binders on `N` and the `(f : N → N) (L : ℝ≥0) (_hL : ...)` binders
+stay outside the existential.
 
-### §C.1 — Forward direction body (target ~30 LOC, mirror of cycle 213's body)
+Update the docstring (lines ~947–979) to reflect the uniform-threshold
+form. Add a one-line note: "Cycle 216: tightened from y₀-pointwise
+threshold `∀ y₀, ∃ h₀, ...` to uniform threshold `∃ h₀, ∀ y₀, ...`
+per `.prover-state/issues/compose_equivalent_compose_uniform_threshold.md`.
+Every concrete instance had a y₀-independent threshold; the refactor
+exposes this uniformity, which `thm:382A` consumes."
+
+## §C — Priority 2: port refl/symm/trans (~25 LOC churn)
+
+### C.1 — `equivalent_self` (line 1795)
+
+The current body has the structure:
+```
+intro N _ _ _ f L hL y₀                          -- introduces y₀ early
+... set C; hC_nn; h_LCnn; h_denom_pos
+refine ⟨1 / (2 * ((L : ℝ) * C + 1)), by positivity, ?_⟩
+intro h hh_pos hh_le y₁ y₁' hY hY'
+...
+```
+
+The threshold `1 / (2 * ((L : ℝ) * C + 1))` is **y₀-independent**.
+Port by reordering binders:
+
+```
+intro N _ _ _ f L hL                             -- drop y₀ from outer intro
+... set C; hC_nn; h_LCnn; h_denom_pos
+refine ⟨1 / (2 * ((L : ℝ) * C + 1)), by positivity, ?_⟩
+intro y₀ h hh_pos hh_le y₁ y₁' hY hY'            -- introduce y₀ here
+...                                              -- body unchanged
+```
+
+Body lines 1805–1821 port verbatim (they use `y₀`, `Y`, `Y'`, etc. but
+not the binder position).
+
+### C.2 — `Equivalent.symm` (line 1828)
+
+Port:
+```
+intro N _ _ _ f L hL
+obtain ⟨h₀, h₀_pos, hUniq⟩ := hEq f L hL          -- no y₀ argument
+refine ⟨h₀, h₀_pos, ?_⟩
+intro y₀ hstep hstep_pos hstep_le y₁ y₁' hY hY'   -- introduce y₀ here
+exact (hUniq y₀ hstep hstep_pos hstep_le y₁' y₁ hY' hY).symm
+```
+
+The only change beyond binder reorder is passing `y₀` as the first
+argument to `hUniq` (since `hUniq` is now `∀ y₀, ∀ h, ...`).
+
+### C.3 — `Equivalent.trans` (line 1863)
+
+Port:
+```
+intro N _ _ _ f L hL                             -- drop y₀
+obtain ⟨h₀₁, h₀₁_pos, hConcl₁⟩ := h₁ f L hL       -- no y₀ argument
+obtain ⟨h₀₂, h₀₂_pos, hConcl₂⟩ := h₂ f L hL       -- no y₀ argument
+set C_M' : ℝ := ∑ i : Fin s', ∑ j : Fin s', |M'.A i j| with hC_M'_def
+... (hC_M'_nn, h_LCnn, h_denom_pos, h₀_M' definitions UNCHANGED — all y₀-independent)
+refine ⟨min h₀₁ (min h₀₂ h₀_M'), lt_min h₀₁_pos (lt_min h₀₂_pos h₀_M'_pos), ?_⟩
+intro y₀ h hh_pos hh_le y₁ y₃ hY₁ hY₃              -- introduce y₀ here
+... (smallness derivations UNCHANGED)
+obtain ⟨y₂, hY₂⟩ := M'.IsRKOneStep_exists h hL y₀ h_small_M'
+calc y₁ = y₂ := hConcl₁ y₀ h hh_pos hh_le_₁ y₁ y₂ hY₁ hY₂     -- pass y₀ first
+    _ = y₃ := hConcl₂ y₀ h hh_pos hh_le_₂ y₂ y₃ hY₂ hY₃        -- pass y₀ first
+```
+
+Threshold `C_M'`, `h₀_M'`, etc. are all y₀-independent — definitions
+unchanged. Only `hConcl₁` / `hConcl₂` call sites need `y₀` prepended.
+
+### C.4 — Verification after C.1–C.3
+
+Run `lake env lean OpenMath/Chapter3/Section381.lean`. Expected:
+* `equivalent_self`, `Equivalent.symm`, `Equivalent.trans` all
+  compile.
+* Compile time stays ≈ 5–7s warm (per cycles 210–214 baselines).
+* If any of the three fails, **STOP** and abort to §G (Risk
+  analysis) — do NOT continue to §D until refl/symm/trans are all
+  axiom-clean.
+
+Use `lean_verify` to confirm each is axiom-clean
+(`[propext, Classical.choice, Quot.sound]`) before proceeding.
+
+## §D — Priority 3: port downstream consumers (~15 LOC churn)
+
+These consumers either PRODUCE an `Equivalent` (need y₀ binder
+reorder) or CONSUME one (need to pass y₀ to `hConcl`-style hypotheses).
+Port in the order listed; verify build after each.
+
+### D.1 — `equivalent_explicitEuler_self` (line 1163)
+
+Cycle 030 explicit-Euler witness. Port by the same recipe as
+`equivalent_self`: `intro` block drops `y₀`, threshold introduction
+unchanged, `intro y₀` at the body-introduction step.
+
+### D.2 — `paddedEuler_equivalent_self` (line 2305)
+
+Likely a one-line specialization of `equivalent_self paddedEuler`.
+If it's `equivalent_self paddedEuler`, no change needed (the function
+signature is unchanged at the value level; only the *body proof*
+moved binders). Check whether it's a direct `exact equivalent_self _`
+or destructures — adjust accordingly.
+
+### D.3 — `pReduced_equivalent` (line 1944)
+
+Per-step P-reduction preserves equivalence. The body (lines 1948+)
+constructs a threshold and proves uniqueness via Banach. Port by
+the same pattern as `equivalent_self`: drop `y₀` from outer
+`intro`, introduce it after `refine ⟨..., ?_⟩`. The threshold is
+y₀-independent (uses M's C, not y₀).
+
+### D.4 — `zeroReduced_equivalent` (line 2013)
+
+Per-step 0-reduction preserves equivalence. Same recipe as
+`pReduced_equivalent`.
+
+### D.5 — `PReducesTo.toEquivalent` (line 2154)
+
+Induction composing `pReduced_equivalent` / `zeroReduced_equivalent`
+with `Equivalent.trans`. The induction itself doesn't reference
+the binder order — it dispatches to the per-step lemmas. **Likely
+no body change needed** as long as those per-step lemmas have the
+new signature. Verify.
+
+### D.6 — `PEquivalent.toEquivalent` (line 2175)
+
+Existential destructure + double `PReducesTo.toEquivalent` +
+`Equivalent.trans` / `Equivalent.symm`. Again likely no body change.
+Verify.
+
+### D.7 — `paddedEuler_equivalent_pReduced`, `paddedEuler_equivalent_zeroReduced` (cycle 208)
+
+Specializations of the per-step lemmas to `paddedEuler`. Likely
+zero-change once D.3/D.4 port.
+
+### D.8 — `PEquivalent.toEquivalent_and_toPhiEquivalent` (line 2190)
+
+Cycle 208 umbrella. Zero-change.
+
+### D.9 — `Equivalent.setoid` (line 1906)
+
+Setoid instance. The `iseqv` field references `equivalent_self`,
+`Equivalent.symm.{u}`, `Equivalent.trans.{u}`. **Zero-change** —
+only their bodies moved.
+
+### D.10 — `Equivalent.setoidSigma` (line 1922)
+
+Σ-typed setoid. Same as D.9.
+
+### D.11 — Cycle 211/212 non-vacuity examples
+
+Setoid-refl and Quotient.mk examples (~line 2316+). Zero-change.
+
+### D.12 — Verification after D.1–D.11
+
+Run `lake env lean OpenMath/Chapter3/Section381.lean`. Expected
+clean compile in ~7s. Run `lean_verify` on each of:
+* `pReduced_equivalent`
+* `zeroReduced_equivalent`
+* `PReducesTo.toEquivalent`
+* `PEquivalent.toEquivalent`
+* `Equivalent.setoid`
+* `Equivalent.setoidSigma`
+
+All must remain axiom-clean.
+
+## §E — Priority 4: close `compose_equivalent_compose` (~20 LOC body)
+
+Replace the `:= sorry` body at line 2731 with the route B.1 recipe
+from `.prover-state/issues/thm_382A_path.md` (Cycle 215 update,
+Cycle 216 entry point section). Draft body:
 
 ```lean
-intro hC
-obtain ⟨Y_compose, hY_compose_stage, hY_compose_out⟩ := hC
--- Project the composite stage tuple onto the two blocks (inline lambdas
--- are simpler than `set` here — see Risk 5 below).
-refine ⟨y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i)), ?_, ?_⟩
-· -- M₁.IsRKOneStep f y₀ H y_mid: witness with the top projection.
-  refine ⟨fun i₁ => Y_compose (Fin.castAdd s₂ i₁), ?_, rfl⟩
-  intro i₁
-  -- Specialize the composite stage equation at the top-block index.
-  have hstage := hY_compose_stage (Fin.castAdd s₂ i₁)
-  rw [Fin.sum_univ_add] at hstage
-  simp only [compose_A_topLeft, compose_A_topRight,
-    zero_smul, Finset.sum_const_zero, add_zero] at hstage
-  -- hstage now matches the M₁ stage equation on the top projection
-  exact hstage
-· -- M₂.IsRKOneStep f y_mid H y_final: witness with the bottom projection.
-  refine ⟨fun i₂ => Y_compose (Fin.natAdd s₁ i₂), ?_, ?_⟩
-  · -- Stage equation
-    intro i₂
-    have hstage := hY_compose_stage (Fin.natAdd s₁ i₂)
-    rw [Fin.sum_univ_add] at hstage
-    simp only [compose_A_botLeft, compose_A_botRight] at hstage
-    -- hstage : Y_compose (Fin.natAdd s₁ i₂)
-    --   = y₀ + H • (∑ j₁, M₁.b j₁ • f (Y_compose (Fin.castAdd s₂ j₁)) +
-    --                ∑ j₂, M₂.A i₂ j₂ • f (Y_compose (Fin.natAdd s₁ j₂)))
-    rw [smul_add, ← add_assoc] at hstage
-    -- The first parenthesized term is exactly our y_mid (by def). Goal is:
-    -- Y_compose (Fin.natAdd s₁ i₂)
-    --   = (y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i)))
-    --     + H • ∑ j, M₂.A i₂ j • f (Y_compose (Fin.natAdd s₁ j))
-    exact hstage
-  · -- Output equation: y_final = y_mid + H • ∑ i, M₂.b i • f (bottom proj)
-    rw [Fin.sum_univ_add] at hY_compose_out
-    simp only [compose_b_castAdd, compose_b_natAdd] at hY_compose_out
-    rw [smul_add, ← add_assoc] at hY_compose_out
-    exact hY_compose_out
+theorem compose_equivalent_compose.{u}
+    {s₁ s₂ : ℕ}
+    (M₁ M₁' : RKTableau s₁) (M₂ M₂' : RKTableau s₂)
+    (hEq₁ : @Equivalent.{u} s₁ s₁ M₁ M₁')
+    (hEq₂ : @Equivalent.{u} s₂ s₂ M₂ M₂') :
+    @Equivalent.{u} (s₁ + s₂) (s₁ + s₂) (M₁.compose M₂) (M₁'.compose M₂') := by
+  intro N _ _ _ f L hL
+  obtain ⟨H₁, hH₁_pos, hEq₁_app⟩ := hEq₁ f L hL
+  obtain ⟨H₂, hH₂_pos, hEq₂_app⟩ := hEq₂ f L hL
+  refine ⟨min H₁ H₂, lt_min hH₁_pos hH₂_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y_final y_final' h_step h_step'
+  have hH_le_H₁ : H ≤ H₁ := le_trans hH_le (min_le_left _ _)
+  have hH_le_H₂ : H ≤ H₂ := le_trans hH_le (min_le_right _ _)
+  obtain ⟨y_mid, h_M₁_step, h_M₂_step⟩ :=
+    (compose_isRKOneStep_iff M₁ M₂ f y₀ H y_final).mp h_step
+  obtain ⟨y_mid', h_M₁'_step, h_M₂'_step⟩ :=
+    (compose_isRKOneStep_iff M₁' M₂' f y₀ H y_final').mp h_step'
+  have hmid_eq : y_mid = y_mid' :=
+    hEq₁_app y₀ H hH_pos hH_le_H₁ y_mid y_mid' h_M₁_step h_M₁'_step
+  rw [hmid_eq] at h_M₂_step
+  exact hEq₂_app y_mid' H hH_pos hH_le_H₂ y_final y_final' h_M₂_step h_M₂'_step
 ```
 
-### §C.2 — Why `rfl` works for M₁'s output equation
+**Key changes vs cycle 215's failed attempt:**
+* `obtain` of `hEq₁`/`hEq₂` no longer passes `y₀` (refactor moved
+  `y₀` *inside* the existential).
+* `hEq₁_app` and `hEq₂_app` now take `y₀` as a leading argument
+  (because they quantify over `y₀` inside the existential).
+* The critical line: `hEq₂_app y₀_arg H hH_pos hH_le_H₂ y_final
+  y_final' h_M₂_step h_M₂'_step` — the `y₀_arg` is **`y_mid'`**
+  (not the outer `y₀`), which the refactored definition allows
+  because `hEq₂_app` quantifies universally over y₀ inside the
+  existential. The M₂ step in the composite fires from `y_mid'`,
+  which matches the universal binding.
 
-`y_mid := y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i))`
-by definition (literally what's written in `refine ⟨_, ?_, ?_⟩`).
-The output clause of `M₁.IsRKOneStep f y₀ H y_mid` requires
-`y_mid = y₀ + H • ∑ i, M₁.b i • f (Y i)` where `Y` is the witness
-tuple — here `Y = fun i₁ => Y_compose (Fin.castAdd s₂ i₁)`. Same
-RHS by `rfl`. **DO NOT** try to invoke `hY_compose_out` here — that
-is reserved for the M₂ output equation.
+**Also drop the underscore prefixes** on `_hEq₁` / `_hEq₂` — the
+body now consumes them, so they need their real names. Cycle 215
+underscored them to satisfy the unused-variable linter on the
+sorry body.
 
-### §C.3 — `Fin.append_left` / `Fin.append_right` are NOT needed in the forward direction
+**Update the docstring** (lines 2643–2724): replace the long
+"STATUS: scaffolded with `sorry` per cycle 215 abort threshold"
+block with a concise "closed cycle 216 via the cycle 215 strategy's
+route B.1 recipe under the refactored `Equivalent`" note. Keep the
+faithfulness notes (382f vs 382g, fixed-stage restriction).
 
-These cycle-213 simp lemmas operate on the witness pattern
-`Fin.append Y₁ Y₂ (Fin.castAdd _ _)` reducing it to `Y₁ _`. In the
-**forward** direction we are *not* constructing a `Fin.append` —
-we are projecting from an arbitrary `Y_compose`. Drop these from
-the `simp only` set. The relevant lemmas in the forward direction
-are exactly the `compose_A_*` / `compose_b_*` family plus the
-cleanup lemmas `zero_smul`, `Finset.sum_const_zero`, `add_zero`.
-See **Risk 2** below for diagnostic backup.
+## §F — Priority 5: update status records (~10 LOC churn)
 
-### §C.4 — Closure idiom recap (worth reusing verbatim)
+### F.1 — `extraction/formalization_data/lean_status.json`
 
-The 3-step `rw [smul_add, ← add_assoc]` idiom that cycle 213 used
-(plus a `← hY₁_out` step that closed by rewriting against M₁'s
-output formula) reduces here to just `rw [smul_add, ← add_assoc]`
-— no `← hY₁_out` step. The M₂ stage/output equations close once
-the `(y₀ + H • Σ M₁.b · f (Y_top))` block is left-grouped, because
-by definition that block *is* `y_mid`. Lean accepts this by
-definitional equality on the `exact`.
+Update `thm:382A` row:
+* `status`: `"partial"` → `"formalized"`.
+* `cycle`: 215 → 216.
+* `note`: extend with "Cycle 216: closed via `Equivalent`
+  uniform-threshold refactor (Option A from
+  `compose_equivalent_compose_uniform_threshold.md`) — definition
+  tightened to `∃ h₀, ∀ y₀, ...` form; all 9 downstream consumers
+  ported verbatim (binder reorder only, no threshold changes);
+  cycle 215 sorry-scaffold replaced with the route B.1 body
+  (~20 LOC); axiom-clean."
 
-If Lean's elaborator does NOT accept the definitional collapse
-(possible if `simp only` reshuffles the term in unexpected ways),
-fall back to writing the goal explicitly: `show Y_compose
-(Fin.natAdd s₁ i₂) = (y₀ + H • ∑ i, M₁.b i • f (Y_compose
-(Fin.castAdd s₂ i))) + H • ∑ j, M₂.A i₂ j • f (Y_compose
-(Fin.natAdd s₁ j))` before the `exact`, and use `change` if
-needed to force the unfolding.
+### F.2 — `plan.md`
 
-## §D — Anticipated risks (prevention recipes)
+Update `thm:382A` row: `[~]` → `[x]`. Extend the line with the
+cycle 216 closure note.
 
-### Risk 1 — `simp only` does not close the M₁ stage goal exactly
+### F.3 — `.prover-state/issues/compose_equivalent_compose_uniform_threshold.md`
 
-If after `simp only [compose_A_topLeft, compose_A_topRight,
-zero_smul, Finset.sum_const_zero, add_zero]` the hypothesis shape
-is NOT what's expected, use `lean_goal` or `lean_term_goal` MCP at
-the point of the `exact` to inspect the actual shape. Common
-fix: insert `show … = …` between simp and exact to bridge a
-syntactic gap, or add `Fin.castAdd_zero, Fin.natAdd_zero` to the
-simp set if Lean is keeping the abstract `Fin.castAdd s₂ i₁`
-unreduced.
+Add a "Cycle 216 update — CLOSED" section at the top documenting
+the refactor and the final body.
 
-### Risk 2 — Why no `Fin.append_*` in the forward direction
+### F.4 — `.prover-state/issues/thm_382A_path.md`
 
-In cycle 213's reverse direction, the witness tuple was
-`Fin.append Y₁ Y₂`, and the simp set used
-`Fin.append_left, Fin.append_right` to drill through that name
-into `Y₁ _` and `Y₂ _`. In cycle 214's forward direction, the
-witness tuple is *the projection* of `Y_compose` — there is no
-`Fin.append` to drill through. The composite-A and composite-b
-simp lemmas (`compose_A_topLeft`, etc.) operate on the
-**index-side** `Fin.castAdd` / `Fin.natAdd` patterns directly,
-producing the right scalar entries without needing the
-function-side `Fin.append` machinery. **Drop**
-`Fin.append_left, Fin.append_right` from the forward simp set.
+Update the "Recommended cycle plan" section to reflect that cycle
+216 closed the (382g) form. The cycle 217+ outlook (heterogeneous
+form, `composeQ` lift, group structure) remains valid.
 
-If they accidentally fire on an unrelated `Fin.append` somewhere
-in `compose`'s definition expansion, you'll see "useless" goal
-changes — diagnosis: use `lean_goal` before and after the simp to
-spot the regression.
+### F.5 — `.prover-state/task_results/cycle_216.md`
 
-### Risk 3 — The `← add_assoc` rewrite doesn't match the parenthesisation
+Write the cycle results documenting:
+* Worked on: cycle 215 sorry closure via `Equivalent` refactor.
+* Approach: the §B–§E plan above.
+* Result: SUCCESS — `thm:382A` (382g) form axiom-clean, sorry
+  count 1 → 0.
+* Faithfulness check: (382g) form is Butcher's own equivalent
+  reformulation of (382f); fixed-stage is a deferred extension
+  to cycle 217+.
+* Dead ends: cycle 215 non-uniform threshold (now resolved by
+  refactor).
+* Discovery: confirm the issue file's mechanical-port estimate
+  matches reality; record any unexpected sticking points.
+* Suggested next approach: cycle 217 — heterogeneous-stage form
+  of `compose_equivalent_compose`, OR pivot to a fresh entity if
+  the planner deems §382 group structure work multi-cycle.
 
-If the hypothesis after `smul_add` has shape `y₀ + (H • A + H • B)`
-(right-leaning parenthesisation from `smul_add`'s natural form),
-`← add_assoc` rewrites to `(y₀ + H • A) + H • B` (left-leaning).
-If Lean's pretty-printer shows different parens than your mental
-model, **use `lean_goal` MCP to inspect the actual term shape after
-each rewrite; do not guess.** Once you see the actual shape, the
-fix is either an additional `add_comm`-flavour rewrite or an
-explicit `show` to match.
+## §G — Risk analysis and abort thresholds
 
-### Risk 4 — `IsRKOneStep` destructure shape mismatch
+**Risk 1: a downstream consumer's body genuinely depends on
+binder order.** Mitigation: §C.4 verification step catches this
+before §D. If a consumer's body uses something more invasive than
+`hConcl y₀` reordering — e.g. it pattern-matches on the existential
+explicitly or has `y₀` inside its own `set`/`have` chain — flag
+and report. The cycle 215 strategy verified all concrete instances
+have y₀-uniform thresholds; if a consumer turns out to be non-uniform
+internally, that's a new issue (file as a follow-up, don't try to
+fix this cycle).
 
-`IsRKOneStep := ∃ Y, (∀ i, …) ∧ y₁ = …` is anonymous, so the
-pattern `⟨Y, hstage, hout⟩` works (the binary `∧` is flat against
-the anonymous existential, matching the same shape cycle 213 used
-successfully at line 2600). The worker MUST NOT try
-`⟨Y, ⟨hstage, hout⟩⟩` — that would be valid syntax but slightly
-less idiomatic; both work. The danger is using the wrong arity
-(e.g. `⟨Y, hstage⟩` missing `hout`).
+**Risk 2: `lean_verify` reports unexpected axioms.** Mitigation:
+all ports are mechanical binder reorders that preserve the proof
+content. If `sorryAx` appears anywhere in §C or §D output, that's
+a bug — fix immediately. If `Classical.choice` appears in
+`equivalent_self` (which currently doesn't use it), that signals
+the refactor accidentally introduced a non-constructive step;
+investigate.
 
-### Risk 5 — `set Y_top with hY_top` complications
+**Risk 3: `compose_equivalent_compose` body still fails.** Mitigation:
+the cycle 215 type error was specifically the y₀ vs y_mid' mismatch
+on `hEq₂_app`. The refactor (universal binding of y₀ inside the
+existential) directly addresses this. If a *different* error arises
+(e.g. `compose_isRKOneStep_iff.mp` signature mismatch, or a Lean
+4-version-specific elaboration issue), reproduce it and report.
 
-`set` introduces a local definition but does NOT automatically
-rewrite existing hypotheses unless you use `set ... with hY_top`
-followed by manual `rw [← hY_top] at hstage`. **Recommended**:
-skip `set` entirely; inline `Y_top` and `Y_bot` as anonymous `fun
-i₁ => Y_compose (Fin.castAdd s₂ i₁)` lambdas (as the §C.1 recipe
-above shows). The proof body shrinks to ~25 LOC and avoids any
-`set` propagation issues.
+**Risk 4: compile time explodes.** Section381.lean has been ≈4–7s
+warm rebuild for cycles 210–215. If a port pushes it past 20s, that
+suggests an elaboration regression (likely a `simp` set or
+`obtain`-with-named-arg issue). Investigate before continuing.
 
-### Risk 6 — Universe annotation `.{u}` needed?
+**Abort threshold §H (mirrors cycle 215 §H):** if §B or §C cannot
+land cleanly (i.e. refl/symm/trans all axiom-clean) by ~50% cycle
+budget, **STOP the refactor, revert Section381.lean to HEAD, and
+ship a pure rollback of cycle 215's `compose_equivalent_compose`
+sorry-scaffold.** Pure rollback recipe:
 
-**No.** `compose_isRKOneStep_iff` operates at the `IsRKOneStep`
-level (one layer below `Equivalent`). `IsRKOneStep` is not
-universe-polymorphic over the result type (it's parameterised on
-`{N : Type*}` with normed-space classes; that's fine). Cycle 213
-shipped `compose_of_isRKOneStep` without any `.{u}` annotation and
-it is axiom-clean — same applies here. Cycle 204's universe
-discipline is local to `Equivalent` and does not propagate down.
+* Delete lines 2622–2731 (cycle 215 docstring + theorem +
+  `:= sorry`) and the associated cycle 215 example block.
+* Restore `lean_status.json` `thm:382A` row: `partial` →
+  `unformalized`, drop `lean_file`/`lean_symbol`, restore the
+  cycle 213/214 heritage note.
+* Restore `plan.md` `thm:382A` row: `[~]` → `[ ]`.
+* Update `compose_equivalent_compose_uniform_threshold.md` with a
+  "Cycle 216 update — rollback" section explaining the abort.
 
-### Risk 7 — `compose_A_topRight`-generated `0 • f _` does not collapse
+The rollback yields sorry count 1 → 0 cleanly, which is the minimum
+viable cycle deliverable.
 
-After `simp only [compose_A_topRight]`, the term `0 • f (Y_compose
-(Fin.natAdd s₁ j₂))` appears inside an inner sum `∑ j₂, …`. To
-collapse to 0, the simp set needs `zero_smul` followed by
-`Finset.sum_const_zero` (or `Finset.sum_eq_zero` plus per-term
-zero). The recommended simp set
-`[compose_A_topLeft, compose_A_topRight, zero_smul,
-Finset.sum_const_zero, add_zero]` covers this in one pass. If it
-doesn't fire, the issue is term-order — add `mul_zero` or
-`smul_zero` as backup.
+## §H — What NOT to try (explicit blocklist)
 
-## §E — Priority 2: non-vacuity example on `paddedEuler`
+These were ruled out by the cycle 215 worker; do NOT re-attempt:
 
-After the iff theorem, add an `example` immediately after the
-existing cycle 213 paddedEuler example (which currently ends at
-line 2694, in the `OpenMath.Chapter3.Section381` namespace
-block). This exercises the **forward** direction (the `.mp`) on
-the cycle-213 witness:
+1. **Destructure `hEq₂` at `y_mid'`** (without the refactor):
+   produces threshold `H₂(y_mid')` depending on `y_mid'`, which
+   depends on `H` — circular. Only works AFTER the refactor.
+2. **Global infimum** `inf_{y_mid'} H₂(y_mid')`: can be 0 without
+   continuity guarantees. Don't pursue.
+3. **`IsRKOneStep_exists` insertion to canonicalize `y_mid'`**:
+   preserves the circular dependence on `H`. Don't pursue.
+4. **Continuity argument on the extracted threshold function**:
+   no continuity guarantee from the abstract `Equivalent` type.
+   Don't pursue.
+5. **`M̂` notation with combining circumflex**: Lean rejects
+   combining marks in identifiers. Use prime notation
+   (`M₁'`/`M₂'`) per the cycle 215 convention.
+6. **Strengthen via uniform Lipschitz constant or compact-set
+   hypothesis**: that's a different change with broader impact.
+   The uniform-threshold refactor is sufficient.
+7. **Adding a wholly new `EquivalentUniform` predicate alongside
+   `Equivalent`**: creates dual definitions and a long-term
+   maintenance burden. The textbook uses one notion, our Lean
+   should too. Refactor the existing definition.
 
-```lean
-/-- *Non-vacuity for the forward direction of `compose_isRKOneStep_iff`
-(cycle 214 P1).* Extracts the intermediate value `y_mid` from a
-known composite output. The composite output `(y₀ + H • f y₀) + H
-• f (y₀ + H • f y₀)` (cycle 213) factors as `paddedEuler` stepping
-from `y₀` to `y₀ + H • f y₀`, then `paddedEuler` stepping from
-`y₀ + H • f y₀` to the final value. -/
-example {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (f : N → N) (y₀ : N) (H : ℝ) :
-    ∃ y_mid : N,
-      paddedEuler.IsRKOneStep f y₀ H y_mid ∧
-      paddedEuler.IsRKOneStep f y_mid H
-        ((y₀ + H • f y₀) + H • f (y₀ + H • f y₀)) :=
-  (RKTableau.compose_isRKOneStep_iff paddedEuler paddedEuler f y₀ H _).mp
-    (RKTableau.compose_of_isRKOneStep paddedEuler paddedEuler
-      (paddedEuler_isRKOneStep f y₀ H)
-      (paddedEuler_isRKOneStep f (y₀ + H • f y₀) H))
-```
+## §I — Verification commands
 
-This composes cycle 213's reverse-direction witness with cycle 214's
-forward direction — a round-trip through the iff. Useful both as
-non-vacuity and as a sanity check that the forward direction
-correctly retrieves a `y_mid` value (specifically, `y_mid = y₀ + H
-• f y₀` algebraically, though the example only states existence).
+Run these in order:
 
-## §F — Priority 3 (stretch, only if §B and §E ship cleanly with budget remaining): scoping for `thm:382A`
+1. After §B (definition only): `lake env lean
+   OpenMath/Chapter3/Section381.lean` — expect many type errors
+   in §C/§D targets (because their bodies haven't been ported
+   yet). This is normal; the goal here is just to confirm the
+   definition itself parses.
+2. After §C: same compile + `lean_verify
+   OpenMath.Chapter3.Section312.RKTableau.equivalent_self` /
+   `.Equivalent.symm` / `.Equivalent.trans`. All three must be
+   axiom-clean.
+3. After §D: same compile + `lean_verify` on each downstream
+   consumer (D.1–D.11). All axiom-clean.
+4. After §E: same compile + `lean_verify
+   OpenMath.Chapter3.Section312.RKTableau.compose_equivalent_compose`.
+   Must be axiom-clean (`[propext, Classical.choice, Quot.sound]`,
+   NO `sorryAx`).
+5. Final sanity:
+   * `grep -c sorry OpenMath/Chapter3/Section381.lean` — must
+     output `0`.
+   * Cycle 213's `compose_of_isRKOneStep` and cycle 214's
+     `compose_isRKOneStep_iff` re-verify axiom-clean (regression
+     check).
 
-If `compose_isRKOneStep_iff` + the non-vacuity example land within
-the first ~60 minutes of the cycle, write a **scoping document**
-(not Lean code) at `.prover-state/issues/thm_382A_via_382g_scoping.md`
-that sketches the proof of `thm:382A` directly via the (382g)
-reformulation:
+## §J — Aristotle
 
-```
-m₁ ≡ m̂₁ ∧ m₂ ≡ m̂₂ → m₁.compose m₂ ≡ m̂₁.compose m̂₂
-```
+Do not submit Aristotle jobs this cycle. The refactor + close is
+local, mechanical work; Aristotle would only add latency. Save the
+job slot for tractable submissions later (e.g. when §441 Phase C.2
+GPFS recovers).
 
-Per `.prover-state/issues/thm_382A_path.md` §"(382g) reformulation",
-this form avoids Gap B (the Σ-typed quotient packaging) and uses
-only Gap A (closed via cycles 213 + 214). The scoping doc should
-cover:
+## §K — Loop hygiene
 
-1. **Smallness threshold construction**: how to take the *minimum*
-   of the two equivalences' (cycle 206 trans-recipe) thresholds
-   plus a third `H₀ := 1/(2*(L*(C₁+C₂)+1))` term (`C₁`, `C₂`
-   being the compose-row sums of `m₁` and `m₂`).
-2. **Proof sketch**: unpack `hEq₁ : m₁.Equivalent m̂₁` and
-   `hEq₂ : m₂.Equivalent m̂₂`; pick a small `H`; apply
-   `compose_isRKOneStep_iff.mp` to a putative
-   `(m₁.compose m₂).IsRKOneStep f y₀ H y_final` to extract the
-   intermediate `y_mid`; apply `hEq₁` at the M₁ step (which
-   requires `m₁` and `m̂₁` to land at the *same* `y_mid`; this is
-   where smallness + Banach uniqueness via cycle 204's
-   `RKStageMap_fixedPoint_unique` enters); apply `hEq₂` at the M₂
-   step to swap the final output; re-pack via
-   `compose_of_isRKOneStep` (cycle 213) into
-   `m̂₁.compose m̂₂`'s output.
-3. **Key obstacle**: the `hEq₁` swap fires only when `m₁` and
-   `m̂₁` both produce *the same* `y_mid` on the *same* `(f, y₀, H)`.
-   `Equivalent` asserts uniqueness of one-step output, so this is
-   exactly the hypothesis needed — but the threshold construction
-   needs care.
-4. **LOC estimate** and **proof challenges**: estimate 60–100 LOC
-   in cycle 215, ideally with a P1 split of "prove the algebraic
-   half" and "wire up smallness".
+* Do NOT edit `scripts/autonomous_loop.py`.
+* Do NOT raise `maxHeartbeats`.
+* Do NOT introduce `axiom` / `constant`.
+* Commit only after all of §B–§F succeed; if abort §H fires,
+  commit only the pure rollback.
+* §441 Phase C.2: GPFS-blocked (34th consecutive). Skip per
+  standing pattern. Cite `.prover-state/issues/cycle_182_gpfs_slowness.md`
+  in cycle results if attempted.
 
-Do **NOT** attempt to ship `thm:382A` in cycle 214 — the scoping is
-the stretch deliverable; the proof itself is cycle 215+.
+## §L — Cycle deliverable bar
 
-If the iff or non-vacuity stall, **drop P3 entirely**.
+**Minimum viable**: sorry count 1 → 0 (either via successful refactor
++ close, OR via §H abort + cycle 215 rollback).
 
-## §G — What NOT to do
+**Target**: cycle 215 sorry closed via the refactor; `thm:382A`
+(382g) form axiom-clean; status records updated to `formalized`/`[x]`;
+`thm:382A` row in `plan.md` records the cycle 216 closure with the
+refactor context. Five test results axiom-clean: `equivalent_self`,
+`Equivalent.symm`, `Equivalent.trans`, `compose_isRKOneStep_iff`
+(cycle 214 regression check), `compose_equivalent_compose` (this
+cycle's headline).
 
-1. **DO NOT introduce `[CompleteSpace N]` on the iff's signature.**
-   The iff is purely structural and does not require completeness.
-   Including it would make the theorem strictly weaker than
-   necessary and would diverge from cycle 213's
-   `compose_of_isRKOneStep` (which also omits `CompleteSpace`).
-
-2. **DO NOT add smallness or Lipschitz hypotheses to the iff.**
-   Same reason as above — purely algebraic identity. Both
-   directions close without any analytic hypotheses.
-
-3. **DO NOT invoke `IsRKOneStep_exists` (cycle 205) or
-   `RKStageMap_fixedPoint_unique` (cycle 204).** The scoping doc
-   anticipated these would be needed; they are not. The forward
-   direction works by *projection*, not by Banach existence.
-
-4. **DO NOT use the `set Y_top with hY_top; rw [← hY_top] at …`
-   pattern unless necessary.** If your first attempt with `set`
-   produces goals that don't match cleanly, immediately fall back
-   to inlining the projection lambda (as §C.1 shows). Save your
-   time budget.
-
-5. **DO NOT bump sorry count by adding an iff scaffold with a
-   sorry'd forward direction "to be filled later".** Either ship
-   the iff complete (both directions), or skip the iff packaging
-   and ship only a separate `compose_to_isRKOneStep` forward
-   theorem (analogous to cycle 213's `compose_of_isRKOneStep` for
-   the reverse). Avoid the cycle-200 supervisor-scoring incident:
-   sorry count must remain at 0.
-
-6. **DO NOT spend time on the §441 Phase C.2 smoke test.** Per §A,
-   the GPFS pathology has reproduced 31 consecutive times; no
-   signal in attempt 32.
-
-7. **DO NOT attempt `thm:382A` proper in cycle 214.** It is the
-   §F stretch *scoping* deliverable only. The proof itself is
-   multi-cycle work.
-
-8. **DO NOT edit `scripts/autonomous_loop.py` or any supervisor
-   infrastructure.** That is loop-maintainer territory per CLAUDE.md.
-
-9. **DO NOT use `lean_run_code` or `lean_build` for verification
-   unless absolutely necessary** — they are slow. Prefer
-   `lake env lean OpenMath/Chapter3/Section381.lean` for compile
-   checks (Section381 has been warm at ~5–7s for the past 30
-   cycles per the heartbeat).
-
-10. **DO NOT use universe annotations `.{u}`** on
-    `compose_isRKOneStep_iff` or anywhere else in cycle 214.
-    Cycle 213's `compose_of_isRKOneStep` ships axiom-clean
-    without them. They are only needed for `Equivalent`-level
-    work (cycles 204/211/212).
-
-## §H — Verification
-
-After the worker writes the iff + non-vacuity example:
-
-1. `lake env lean OpenMath/Chapter3/Section381.lean` — must exit 0.
-2. `grep -c sorry OpenMath/Chapter3/Section381.lean` — must return 0.
-3. `lean_verify
-   OpenMath.Chapter3.Section312.RKTableau.compose_isRKOneStep_iff`
-   — must return `[propext, Classical.choice, Quot.sound]` only.
-4. Spot-check via `lean_verify` on cycle 213's
-   `OpenMath.Chapter3.Section312.RKTableau.compose_of_isRKOneStep`
-   and cycle 212's
-   `OpenMath.Chapter3.Section312.RKTableau.Equivalent.setoidSigma`
-   to confirm no regressions.
-
-If any of (1)–(3) fail, **do not commit**. Debug, fix, re-verify.
-If a fix requires more than 20 minutes of tactic exploration,
-roll back to a smaller deliverable (e.g. ship `compose_to_isRKOneStep`
-as a separate forward theorem, without the iff packaging) rather
-than committing broken work.
-
-## §I — Faithfulness
-
-The iff is infrastructure for `thm:382A`, not a textbook entity
-itself — no `extraction/formalization_data/entities/*.json` row to
-consult. Document in the docstring that:
-
-- The structural identity is Butcher §382 equations (382b–e), p. 285.
-- It holds *unconditionally* (no smallness/Lipschitz/completeness)
-  because both directions are algebraic.
-- It closes **Gap A** of the path to `thm:382A` per
-  `.prover-state/issues/compose_isRKOneStep_iff_scoping.md` and
-  `.prover-state/issues/thm_382A_path.md`.
-
-After landing, append a "**Cycle 214 update**" section to
-`.prover-state/issues/compose_isRKOneStep_iff_scoping.md` recording:
-- Forward direction shipped axiom-clean.
-- Critical observation: no Banach/smallness/Lipschitz needed
-  (overrides the scoping doc's anticipation).
-- Iff packaging complete.
-- Recommended next entry point: `thm:382A` via the (382g) form
-  (cycle 215, scoped per §F if you took the stretch).
-
-Update the def:381A row of `plan.md` to mention the iff closure
-(brief, one-sentence appendix to the existing cycle 213 paragraph).
-**Do not** update `lean_status.json` for `thm:382A` — that remains
-`unformalized` until cycle 215+ ships the actual theorem. But DO
-update the cycle reference for def:381A's row in `lean_status.json`
-to 214 to record the iff infrastructure landing.
-
-## §J — Time budget
-
-| Step | Target time |
-| --- | --- |
-| Read this strategy + grep cycle 213 lines for reference | 5 min |
-| Write iff statement + reverse direction (1-line) | 5 min |
-| Write forward direction body (P1) | 25 min |
-| Debug + close any tactic stalls | 15 min |
-| Non-vacuity example (§E, P2) | 10 min |
-| Verification (`lake env lean`, `lean_verify`) | 5 min |
-| Faithfulness notes + plan.md + issue update | 10 min |
-| **§F stretch (if budget allows)** | 30 min |
-| Task results + commit | 15 min |
-| **Total without stretch** | **~90 min** |
-| **Total with stretch** | **~120 min** |
-
-If you exceed 90 minutes without §F, skip the stretch entirely and
-commit the iff + non-vacuity. If you exceed 120 minutes with §F
-incomplete, commit what you have minus the stretch doc.
-
-## §K — One-line summary for the worker
-
-**Ship `compose_isRKOneStep_iff` (forward direction algebraic, no
-Banach/smallness/Lipschitz needed — mirror cycle 213's body shape
-with projections instead of `Fin.append`), add a paddedEuler
-non-vacuity example exercising the `.mp` direction, optionally
-write a `thm:382A` scoping doc if time remains. Sorry count must
-remain at 0.**
+**Stretch (do NOT pursue if §B–§E take >70% budget)**: extend
+`compose_equivalent_compose` from fixed-stage `M₁ M₁' : RKTableau s₁`
+to heterogeneous-stages `M₁ : RKTableau s₁, M₁' : RKTableau s₁'`,
+mirroring cycle 217's outlook in `thm_382A_path.md`. Body should
+port directly (the proof works at the abstract space N, not the
+stage count); risk is in the type signature compatibility with cycle
+214's `compose_isRKOneStep_iff`. Skip if not trivially clean.

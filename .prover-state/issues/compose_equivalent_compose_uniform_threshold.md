@@ -1,5 +1,33 @@
 # Issue: `compose_equivalent_compose` blocked on `Equivalent`'s non-uniform threshold
 
+## Cycle 216 update — CLOSED
+
+The Option A refactor landed cleanly in cycle 216:
+
+* `Equivalent` definition (cycle 206) tightened from
+  `∀ y₀, ∃ h₀, ...` to `∃ h₀, ∀ y₀, ...` (one-line binder
+  reorder).
+* All downstream consumers ported by mechanical binder reorder
+  (no threshold changes — every concrete instance already had a
+  y₀-uniform threshold, as predicted): `equivalent_self`,
+  `equivalent_explicitEuler_self`, `Equivalent.symm`,
+  `Equivalent.trans`, `pReduced_equivalent`,
+  `zeroReduced_equivalent`. The `setoid` / `setoidSigma` /
+  `PReducesTo.toEquivalent` / `PEquivalent.toEquivalent` and the
+  paddedEuler witnesses needed no body change.
+* `compose_equivalent_compose` sorry-scaffold replaced (~20 LOC
+  body) with the route B.1 recipe: factor the composite step via
+  cycle 214's `compose_isRKOneStep_iff`; apply `hEq₁` at `y₀` to
+  force `y_mid = y_mid'`; rewrite the M₂ step on the LHS to fire
+  from `y_mid'`; apply `hEq₂` at `y_mid'` (newly admissible
+  because `y₀` is now universally quantified *inside* the
+  existential) to force `y_final = y_final'`.
+* All five target theorems axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`).
+* Sorry count: 1 → 0.
+
+Original gap analysis preserved below for historical reference.
+
 ## Blocker
 
 Cycle 215's target theorem `RKTableau.compose_equivalent_compose`

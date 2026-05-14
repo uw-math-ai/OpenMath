@@ -1,5 +1,28 @@
 # Issue: Path to thm:382A (well-definedness of compose on equivalence classes)
 
+## Cycle 216 update — (382g) form CLOSED
+
+Cycle 216 closed `compose_equivalent_compose` (the (382g) form) per the
+recipe pre-positioned in the Cycle 215 update below:
+
+1. **Equivalent definition refactored** (Option A): `∀ y₀, ∃ h₀, ...`
+   → `∃ h₀, ∀ y₀, ...` (one-line binder reorder).
+2. **All downstream consumers ported** by mechanical binder reorder:
+   `equivalent_self`, `equivalent_explicitEuler_self`, `Equivalent.symm`,
+   `Equivalent.trans`, `pReduced_equivalent`, `zeroReduced_equivalent`.
+   The `setoid`/`setoidSigma`/`PReducesTo.toEquivalent`/
+   `PEquivalent.toEquivalent`/paddedEuler witnesses needed no body change.
+3. **`compose_equivalent_compose` body** replaced the cycle 215 sorry-scaffold
+   with the route B.1 recipe (~20 LOC) verbatim — `hEq₂_app` applied at
+   `y_mid'` is now admissible because y₀ is universally quantified inside
+   the existential.
+4. **Status**: `thm:382A` fixed-stage (382g) form formalized, axiom-clean
+   (`[propext, Classical.choice, Quot.sound]`). Sorry count 1 → 0.
+
+Cycles 217+ outlook unchanged: heterogeneous-stage (382g) form +
+`composeQ` lift via `Quotient.lift₂` + (382f) bracketed form + §382
+group structure.
+
 ## Textbook statement (from `extraction/formalization_data/entities/thm_382A.json`)
 
 > Let $m_1$, $m_2$, $\widehat{m}_1$, $\widehat{m}_2$ denote Runge–Kutta methods, such that

@@ -948,10 +948,10 @@ def IsRKOneStepNonAut {s : ℕ} (M : RKTableau s) {N : Type*}
     y₁ = y₀ + h • ∑ i, M.b i • f (x₀ + M.c i * h) (Y i)
 
 /-- Butcher §380 Definition 381A — two Runge–Kutta methods are
-*equivalent* if, for every autonomous Lipschitz right-hand side `f` and
-every initial value `y₀`, there exists a step-size threshold `h₀ > 0`
-below which any one-step output of the first method coincides with any
-one-step output of the second method.
+*equivalent* if, for every autonomous Lipschitz right-hand side `f`,
+there exists a *uniform* step-size threshold `h₀ > 0` such that, for
+every initial value `y₀`, any one-step output of the first method
+coincides with any one-step output of the second method below `h₀`.
 
 This is **semantic** equivalence (same numerical output on every
 Lipschitz autonomous problem at sufficiently small step), strictly
@@ -976,11 +976,18 @@ method, which requires completeness of the codomain. Every concrete
 RK method of interest lives on ℝ, ℝⁿ, or a finite-dim normed space —
 all trivially `CompleteSpace`, so this is a no-op at every call
 site. See `.prover-state/issues/equivalent_self_general_deferred.md`
-for the broader Banach infrastructure context. -/
+for the broader Banach infrastructure context.
+
+**Cycle 216 refactor**: tightened from y₀-pointwise threshold
+`∀ y₀, ∃ h₀, ...` to uniform threshold `∃ h₀, ∀ y₀, ...` per
+`.prover-state/issues/compose_equivalent_compose_uniform_threshold.md`.
+Every concrete instance had a y₀-independent threshold; the refactor
+exposes this uniformity, which `thm:382A`
+(`compose_equivalent_compose`) consumes. -/
 def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
   ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N] [CompleteSpace N]
-    (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f) (y₀ : N),
-    ∃ h₀ > (0 : ℝ), ∀ h, 0 < h → h ≤ h₀ →
+    (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f),
+    ∃ h₀ > (0 : ℝ), ∀ (y₀ : N), ∀ h, 0 < h → h ≤ h₀ →
       ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
         y₁ = y₁'
 
@@ -1162,9 +1169,9 @@ open scoped NNReal in
 itself. -/
 theorem equivalent_explicitEuler_self :
     RKTableau.explicitEuler.Equivalent RKTableau.explicitEuler := by
-  intro N _ _ _ f L _hL y₀
+  intro N _ _ _ f L _hL
   refine ⟨1, one_pos, ?_⟩
-  intro h _hh_pos _hh_le y₁ y₁' h₁ h₁'
+  intro y₀ h _hh_pos _hh_le y₁ y₁' h₁ h₁'
   obtain ⟨Y, hY_stage, hy₁⟩ := h₁
   obtain ⟨Y', hY'_stage, hy₁'⟩ := h₁'
   have hY0 : Y 0 = y₀ := by
@@ -1793,7 +1800,7 @@ finiteness of `edist` on the normed-space pi type) forces `Y = Y'`,
 hence `y₁ = y₁'`. Closes the cycle 030 deferral
 `equivalent_self_general_deferred.md`. -/
 theorem equivalent_self {s : ℕ} (M : RKTableau s) : M.Equivalent M := by
-  intro N _ _ _ f L hL y₀
+  intro N _ _ _ f L hL
   set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j| with hC_def
   have hC_nn : 0 ≤ C :=
     Finset.sum_nonneg fun _ _ =>
@@ -1801,7 +1808,7 @@ theorem equivalent_self {s : ℕ} (M : RKTableau s) : M.Equivalent M := by
   have h_LCnn : 0 ≤ (L : ℝ) * C := mul_nonneg L.coe_nonneg hC_nn
   have h_denom_pos : 0 < 2 * ((L : ℝ) * C + 1) := by linarith
   refine ⟨1 / (2 * ((L : ℝ) * C + 1)), by positivity, ?_⟩
-  intro h hh_pos hh_le y₁ y₁' hY hY'
+  intro y₀ h hh_pos hh_le y₁ y₁' hY hY'
   obtain ⟨Y, hY_stage, hY_out⟩ := hY
   obtain ⟨Y', hY'_stage, hY'_out⟩ := hY'
   have h_abs : |h| = h := abs_of_pos hh_pos
@@ -1829,11 +1836,11 @@ theorem Equivalent.symm.{u} {s s' : ℕ}
     {M : RKTableau s} {M' : RKTableau s'}
     (hEq : @Equivalent.{u} s s' M M') :
     @Equivalent.{u} s' s M' M := by
-  intro N _ _ _ f L hL y₀
-  obtain ⟨h₀, h₀_pos, hUniq⟩ := hEq f L hL y₀
+  intro N _ _ _ f L hL
+  obtain ⟨h₀, h₀_pos, hUniq⟩ := hEq f L hL
   refine ⟨h₀, h₀_pos, ?_⟩
-  intro hstep hstep_pos hstep_le y₁ y₁' hY hY'
-  exact (hUniq hstep hstep_pos hstep_le y₁' y₁ hY' hY).symm
+  intro y₀ hstep hstep_pos hstep_le y₁ y₁' hY hY'
+  exact (hUniq y₀ hstep hstep_pos hstep_le y₁' y₁ hY' hY).symm
 
 /-- *Transitivity of `def:381A` equivalence.* If `M` is equivalent to `M'`
 and `M'` is equivalent to `M''`, then `M` is equivalent to `M''`. Together
@@ -1865,9 +1872,9 @@ theorem Equivalent.trans.{u} {s s' s'' : ℕ}
     (h₁ : @Equivalent.{u} s s' M M')
     (h₂ : @Equivalent.{u} s' s'' M' M'') :
     @Equivalent.{u} s s'' M M'' := by
-  intro N _ _ _ f L hL y₀
-  obtain ⟨h₀₁, h₀₁_pos, hConcl₁⟩ := h₁ f L hL y₀
-  obtain ⟨h₀₂, h₀₂_pos, hConcl₂⟩ := h₂ f L hL y₀
+  intro N _ _ _ f L hL
+  obtain ⟨h₀₁, h₀₁_pos, hConcl₁⟩ := h₁ f L hL
+  obtain ⟨h₀₂, h₀₂_pos, hConcl₂⟩ := h₂ f L hL
   set C_M' : ℝ := ∑ i : Fin s', ∑ j : Fin s', |M'.A i j| with hC_M'_def
   have hC_M'_nn : 0 ≤ C_M' :=
     Finset.sum_nonneg fun _ _ =>
@@ -1878,7 +1885,7 @@ theorem Equivalent.trans.{u} {s s' s'' : ℕ}
   have h₀_M'_pos : 0 < h₀_M' := by positivity
   refine ⟨min h₀₁ (min h₀₂ h₀_M'),
     lt_min h₀₁_pos (lt_min h₀₂_pos h₀_M'_pos), ?_⟩
-  intro h hh_pos hh_le y₁ y₃ hY₁ hY₃
+  intro y₀ h hh_pos hh_le y₁ y₃ hY₁ hY₃
   have hh_le_₁ : h ≤ h₀₁ := le_trans hh_le (min_le_left _ _)
   have hh_le_₂ : h ≤ h₀₂ :=
     le_trans hh_le (le_trans (min_le_right _ _) (min_le_left _ _))
@@ -1891,8 +1898,8 @@ theorem Equivalent.trans.{u} {s s' s'' : ℕ}
     rw [h_abs]
     nlinarith [hh_pos, h_LCnn, h_mul]
   obtain ⟨y₂, hY₂⟩ := M'.IsRKOneStep_exists h hL y₀ h_small_M'
-  calc y₁ = y₂ := hConcl₁ h hh_pos hh_le_₁ y₁ y₂ hY₁ hY₂
-    _ = y₃ := hConcl₂ h hh_pos hh_le_₂ y₂ y₃ hY₂ hY₃
+  calc y₁ = y₂ := hConcl₁ y₀ h hh_pos hh_le_₁ y₁ y₂ hY₁ hY₂
+    _ = y₃ := hConcl₂ y₀ h hh_pos hh_le_₂ y₂ y₃ hY₂ hY₃
 
 /-- *Setoid instance on fixed-stage `RKTableau s`.* Combines cycles 203
 (reflexivity), 204 (symmetry), 206 (transitivity) into the standard
@@ -1945,7 +1952,7 @@ theorem pReduced_equivalent.{u}
     {s sBar : ℕ} {M : RKTableau s} {P : PPartition s sBar}
     (hP : M.IsPReducibleVia P) :
     @Equivalent.{u} s sBar M (M.pReduced P) := by
-  intro N _ _ _ f L hL y₀
+  intro N _ _ _ f L hL
   set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j| with hC_def
   have hC_nn : 0 ≤ C :=
     Finset.sum_nonneg fun _ _ =>
@@ -1953,7 +1960,7 @@ theorem pReduced_equivalent.{u}
   have h_LCnn : 0 ≤ (L : ℝ) * C := mul_nonneg L.coe_nonneg hC_nn
   have h_denom_pos : 0 < 2 * ((L : ℝ) * C + 1) := by linarith
   refine ⟨1 / (2 * ((L : ℝ) * C + 1)), by positivity, ?_⟩
-  intro h hh_pos hh_le y₁ y₁' hY hY'
+  intro y₀ h hh_pos hh_le y₁ y₁' hY hY'
   obtain ⟨Y, hY_stage, hY_out⟩ := hY
   obtain ⟨Y', hY'_stage, hY'_out⟩ := hY'
   have h_abs : |h| = h := abs_of_pos hh_pos
@@ -2015,7 +2022,7 @@ theorem zeroReduced_equivalent.{u}
     (_hP0 : ∃ i, inP1 i = false)
     (h0 : M.IsZeroReducibleVia inP1) :
     @Equivalent.{u} s _ M (M.zeroReduced inP1) := by
-  intro N _ _ _ f L hL y₀
+  intro N _ _ _ f L hL
   -- Use C_zr (the zero-reduced map's row-sum) as the contraction constant.
   set C_zr : ℝ :=
       ∑ I : Fin (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card,
@@ -2027,7 +2034,7 @@ theorem zeroReduced_equivalent.{u}
   have h_LCnn : 0 ≤ (L : ℝ) * C_zr := mul_nonneg L.coe_nonneg hC_zr_nn
   have h_denom_pos : 0 < 2 * ((L : ℝ) * C_zr + 1) := by linarith
   refine ⟨1 / (2 * ((L : ℝ) * C_zr + 1)), by positivity, ?_⟩
-  intro h hh_pos hh_le y₁ y₁' hY hY'
+  intro y₀ h hh_pos hh_le y₁ y₁' hY hY'
   obtain ⟨Y, hY_stage, hY_out⟩ := hY
   obtain ⟨Y', hY'_stage, hY'_out⟩ := hY'
   have h_abs : |h| = h := abs_of_pos hh_pos
@@ -2670,42 +2677,19 @@ theorem compose_isRKOneStep_iff {s₁ s₂ : ℕ}
 /-- *Composition descends to equivalence classes — fixed-stage (382g)
 form of `thm:382A` (Butcher §382, p. 285).* If `M₁ ≡ M₁'` and
 `M₂ ≡ M₂'` (both at matching stage counts `s₁`, `s₂`), then
-`M₁.compose M₂ ≡ M₁'.compose M₂'`. The textbook strategy routes
-through cycle 214's `compose_isRKOneStep_iff` to extract
-intermediate values `y_mid` (from the LHS composite step) and
-`y_mid'` (from the RHS composite step), and applies `Equivalent`'s
-output-uniqueness twice: `hEq₁` would force `y_mid = y_mid'` (both
-`M₁`/`M₁'` step from the *same* input `y₀`), and `hEq₂` would
-force `y_final = y_final'` (after rewriting, both `M₂`/`M₂'` step
-from the *same* input `y_mid'`).
-
-**STATUS: scaffolded with `sorry` per cycle 215 abort threshold.**
-The body is blocked on a fundamental *quantifier-order* mismatch
-in the current `Equivalent` definition (cycle 206):
-
-```
-def Equivalent ... : ∀ y₀, ∃ h₀ > 0, ∀ h ≤ h₀, ...
-```
-
-When destructuring `hEq₂` at the outer `y₀`, the resulting
-`hEq₂_app` requires both `M₂` and `M₂'` steps to fire from `y₀`
-— but in the composite proof, those steps fire from `y_mid'`,
-not `y₀`. Destructuring `hEq₂` at `y_mid'` instead works
-syntactically but produces a threshold `H₂(y_mid')` that depends
-on `y_mid'`, which itself depends on `H` (introduced *inside*
-the existential). The composite's threshold must be chosen
-before `H` is introduced, creating a circular dependency.
-
-The textbook proof works because Butcher implicitly assumes
-**uniform** smallness (`∃ h₀, ∀ y₀, ...`) — every concrete
-`Equivalent` instance in our codebase has a y₀-uniform
-threshold (e.g. `equivalent_self`'s `1/(2*(L*C+1))` is
-independent of `y₀`), but the *abstract* `Equivalent` type
-does not expose this. See
-`.prover-state/issues/compose_equivalent_compose_uniform_threshold.md`
-for the full gap analysis and proposed cycle 216+ refactor
-(strengthen `Equivalent` to `∃ h₀, ∀ y₀, ...`; all existing
-proofs port verbatim with the binder moved).
+`M₁.compose M₂ ≡ M₁'.compose M₂'`. Cycle 216 closes the cycle 215
+sorry-scaffold via the route B.1 recipe enabled by the cycle 216
+`Equivalent` uniform-threshold refactor (`∃ h₀, ∀ y₀, ...`): factor
+the composite step via cycle 214's `compose_isRKOneStep_iff` to
+extract intermediate values `y_mid` (LHS) and `y_mid'` (RHS); apply
+`hEq₁` at `y₀` to force `y_mid = y_mid'`; rewrite the M₂ step on
+the LHS to fire from `y_mid'`; apply `hEq₂` at `y_mid'` to force
+`y_final = y_final'`. The uniform-threshold refactor is essential:
+applying `hEq₂` at `y_mid'` is only sound because the universal
+quantification over `y₀` is *inside* the existential `h₀`, so the
+threshold is `y_mid'`-independent. Pre-refactor (cycle 215), the
+quantifier order `∀ y₀, ∃ h₀, ...` produced `H₂(y_mid')` depending
+on `y_mid'` which itself depended on `H` — a circular dependency.
 
 **Faithfulness note (textbook (382f) bracketed form)**: Butcher
 states `thm:382A` as `[m₁·m₂] = [m̂₁·m̂₂]` using the equivalence-class
@@ -2720,15 +2704,29 @@ the `composeQ` lift on cycle 212's `Equivalent.setoidSigma` via
 statement allows `m₁`, `m̂₁` (resp. `m₂`, `m̂₂`) to have different
 stage counts; our signature uses the fixed-stage form
 `M₁ M₁' : RKTableau s₁`, `M₂ M₂' : RKTableau s₂`. The
-heterogeneous-stage lift is a natural cycle 216+ extension once
-the uniform-threshold gap is resolved. -/
+heterogeneous-stage lift is a natural cycle 217+ extension. -/
 theorem compose_equivalent_compose.{u}
     {s₁ s₂ : ℕ}
     (M₁ M₁' : RKTableau s₁) (M₂ M₂' : RKTableau s₂)
-    (_hEq₁ : @Equivalent.{u} s₁ s₁ M₁ M₁')
-    (_hEq₂ : @Equivalent.{u} s₂ s₂ M₂ M₂') :
-    @Equivalent.{u} (s₁ + s₂) (s₁ + s₂) (M₁.compose M₂) (M₁'.compose M₂') :=
-  sorry
+    (hEq₁ : @Equivalent.{u} s₁ s₁ M₁ M₁')
+    (hEq₂ : @Equivalent.{u} s₂ s₂ M₂ M₂') :
+    @Equivalent.{u} (s₁ + s₂) (s₁ + s₂) (M₁.compose M₂) (M₁'.compose M₂') := by
+  intro N _ _ _ f L hL
+  obtain ⟨H₁, hH₁_pos, hEq₁_app⟩ := hEq₁ f L hL
+  obtain ⟨H₂, hH₂_pos, hEq₂_app⟩ := hEq₂ f L hL
+  refine ⟨min H₁ H₂, lt_min hH₁_pos hH₂_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y_final y_final' h_step h_step'
+  have hH_le_H₁ : H ≤ H₁ := le_trans hH_le (min_le_left _ _)
+  have hH_le_H₂ : H ≤ H₂ := le_trans hH_le (min_le_right _ _)
+  obtain ⟨y_mid, h_M₁_step, h_M₂_step⟩ :=
+    (compose_isRKOneStep_iff M₁ M₂ f y₀ H y_final).mp h_step
+  obtain ⟨y_mid', h_M₁'_step, h_M₂'_step⟩ :=
+    (compose_isRKOneStep_iff M₁' M₂' f y₀ H y_final').mp h_step'
+  have hmid_eq : y_mid = y_mid' :=
+    hEq₁_app y₀ H hH_pos hH_le_H₁ y_mid y_mid' h_M₁_step h_M₁'_step
+  rw [hmid_eq] at h_M₂_step
+  exact hEq₂_app y_mid' H hH_pos hH_le_H₂ y_final y_final'
+    h_M₂_step h_M₂'_step
 
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
