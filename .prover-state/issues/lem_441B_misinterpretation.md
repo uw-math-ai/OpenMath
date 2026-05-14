@@ -171,3 +171,52 @@ to a future cycle, since Priority 0–4 budget consumed cycle 172.
   `extraction/formalization_data/entities/lem_441B.json`.
 * `OpenMath/Chapter4/Section441.lean::LinearMultistepMethod.aPoly_natDegree_le` —
   cycle 172 degree bound (Phase A infrastructure).
+
+## Cycle 237 update — Phase B SHIPPED (2026-05-14)
+
+The correct `lem:441B` Phase B has shipped axiom-clean in
+**`OpenMath/Chapter4/Section441B.lean`** (new file, ~190 LOC, 6
+public theorems + 1 helper simp lemma). Key public symbols:
+
+| Symbol | Role |
+|---|---|
+| `cInverseLogSeries : PowerSeries ℝ` | LHS of (441c), `2 + (2/3)X² + (2/5)X⁴ + ⋯` |
+| `cInverseLogSeries_constantCoeff_eq_two` | constant term `= 2` (witness for `invOfUnit`) |
+| `cSeries : PowerSeries ℝ` | `cInverseLogSeries.invOfUnit twoUnit` |
+| `cInverseLogSeries_mul_cSeries_eq_one` | the (441c) identity (headline) |
+| `cInverseLog (n : ℕ) : ℝ` | `coeff (2*n) cSeries` (textbook `c_{2n}`) |
+| `cInverseLog_zero_eq_half` | `c₀ = 1/2` |
+| `cInverseLog_one_eq_neg_one_sixth` | `c₂ = -1/6` |
+| `cInverseLog_zero_pos`, `cInverseLog_one_neg` | non-vacuity sign witnesses |
+
+All six named theorems verified axiom-clean
+`[propext, Classical.choice, Quot.sound]`. The file has zero
+`LinearMultistepMethod` references — by construction this is
+the universal-PowerSeries content from Butcher's §441, not the
+LMM-dependent Sequence 1 (`aPoly`) which is `lem:441A`'s
+purview.
+
+`lean_status.json` row for `lem:441B`: `unformalized` →
+`partial` (cycle 237). `plan.md` row: `[ ]` → `[~]` with cycle
+237 closure note.
+
+### Cycle 238+ entry point — Phase C
+
+The strict-negativity claim `∀ n, 1 ≤ n → cInverseLog n < 0`
+remains. Recipe per Butcher p. 376:
+
+1. Define the auxiliary `d`-series from (441d) (parametrised
+   by `n`): `d_{2i}^{(n)} = 2(2n+1)/(2i+1) - 2(2n-1)/(2i-1) =
+   -8(n-i)/((2i+1)(2i-1))` for `1 ≤ i ≤ n`; `d_0^{(n)} =
+   2(2n+1)` and `d_{2n}^{(n)} = 0`.
+2. Prove the (441d) identity by multiplying the (441c)
+   identity (already shipped) by `2n + 1 - (2n-1)z²`.
+3. Prove `d_{2i}^{(n)} < 0` for `1 ≤ i ≤ n-1`.
+4. Strong induction on `n`: extract the `z^{2n}` coefficient
+   from (441d), use the sign of the lower-index `c_{2i}`
+   (induction hypothesis) and the sign of `d_{2i}^{(n)}` to
+   conclude `c_{2n} < 0`.
+
+Estimated 80–150 LOC. Aristotle suitability: medium-low (the
+strong induction + sign analysis combination is harder than
+mechanical computations).
