@@ -2,6 +2,7 @@ import OpenMath.Chapter3.Section310
 import OpenMath.Chapter3.Section312
 import Mathlib.Topology.MetricSpace.Lipschitz
 import Mathlib.Topology.MetricSpace.Contracting
+import Mathlib.Algebra.Group.MinimalAxioms
 
 /-!
 # Butcher §380 — equivalence and reducibility of Runge–Kutta methods
@@ -3129,6 +3130,149 @@ theorem composeQ_assoc.{u}
   show Quotient.mk _ _ = Quotient.mk _ _
   exact Quotient.sound (compose_equivalent_compose_assoc M₁ M₂ M₃)
 
+/-! ### §382 inverse respects equivalence -/
+
+/-- *Inverse respects `Equivalent`.* If `M ≡ M'` heterogeneously (same
+`Equivalent` predicate from cycle 216's uniform-threshold refactor),
+then `M.inverse ≡ M'.inverse`. This is the load-bearing lemma allowing
+`RKTableau.inverse` to lift to a function on
+`Quotient Equivalent.setoidSigma` (P2 below: `inverseQ`).
+
+Proof recipe: given `M.inverse`-step from `y₀` to `y_final` and
+`M'.inverse`-step from `y₀` to `y_final'`, invert each to get
+`M.IsRKOneStep f y_final h y₀` and `M'.IsRKOneStep f y_final' h y₀`
+(via cycle 220's `isRKOneStep_of_inverse_isRKOneStep`). Then use
+`IsRKOneStep_exists` on `M'` at `y_final` (small-`h` Banach
+existence, cycle 205) to obtain `y_alt` with
+`M'.IsRKOneStep f y_final h y_alt`; `hEq` at `y_final` forces
+`y₀ = y_alt`, hence `M'.IsRKOneStep f y_final h y₀`. Re-invert via
+cycle 220's `inverse_isRKOneStep_of_isRKOneStep` to get
+`M'.inverse.IsRKOneStep f y₀ h y_final`. Uniqueness of `M'.inverse`-
+steps from a fixed `y₀` (cycle 203's `equivalent_self M'.inverse`)
+then forces `y_final = y_final'`. Threshold combines `hEq`'s,
+`M'.inverse.equivalent_self`'s, and `M'`'s Banach-smallness via
+`min`. -/
+theorem inverse_equivalent_inverse.{u} {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'}
+    (hEq : @Equivalent.{u} s s' M M') :
+    @Equivalent.{u} s s' M.inverse M'.inverse := by
+  intro N _ _ _ f L hL
+  obtain ⟨h₀_eq, h₀_eq_pos, hEq_app⟩ := hEq f L hL
+  obtain ⟨h₀_M'_inv, h₀_M'_inv_pos, hM'_inv_uniq⟩ :=
+    M'.inverse.equivalent_self f L hL
+  set C_M' : ℝ := ∑ i : Fin s', ∑ j : Fin s', |M'.A i j| with hC_M'_def
+  have hC_M'_nn : 0 ≤ C_M' :=
+    Finset.sum_nonneg fun _ _ =>
+      Finset.sum_nonneg fun _ _ => abs_nonneg _
+  have h_LCnn : 0 ≤ (L : ℝ) * C_M' := mul_nonneg L.coe_nonneg hC_M'_nn
+  have h_denom_pos : 0 < 2 * ((L : ℝ) * C_M' + 1) := by linarith
+  set h₀_M' : ℝ := 1 / (2 * ((L : ℝ) * C_M' + 1)) with hh₀_M'_def
+  have h₀_M'_pos : 0 < h₀_M' := by positivity
+  refine ⟨min h₀_eq (min h₀_M'_inv h₀_M'),
+    lt_min h₀_eq_pos (lt_min h₀_M'_inv_pos h₀_M'_pos), ?_⟩
+  intro y₀ h hh_pos hh_le y_final y_final' h_M_inv_step h_M'_inv_step
+  have hh_le_eq : h ≤ h₀_eq := le_trans hh_le (min_le_left _ _)
+  have hh_le_M'_inv : h ≤ h₀_M'_inv :=
+    le_trans hh_le (le_trans (min_le_right _ _) (min_le_left _ _))
+  have hh_le_M' : h ≤ h₀_M' :=
+    le_trans hh_le (le_trans (min_le_right _ _) (min_le_right _ _))
+  have h_abs : |h| = h := abs_of_pos hh_pos
+  have h_mul : h * (2 * ((L : ℝ) * C_M' + 1)) ≤ 1 :=
+    (le_div_iff₀ h_denom_pos).mp hh_le_M'
+  have h_small_M' : |h| * (L : ℝ) * C_M' < 1 := by
+    rw [h_abs]
+    nlinarith [hh_pos, h_LCnn, h_mul]
+  -- Step 1: Invert M.inverse-step to M-step (direction reversed).
+  have h_M_step : M.IsRKOneStep f y_final h y₀ :=
+    M.isRKOneStep_of_inverse_isRKOneStep h_M_inv_step
+  -- Step 2: Banach existence on M' at y_final.
+  obtain ⟨y_alt, hY_alt⟩ := M'.IsRKOneStep_exists h hL y_final h_small_M'
+  -- Step 3: hEq at y_final forces y₀ = y_alt.
+  have hy₀_eq_y_alt : y₀ = y_alt :=
+    hEq_app y_final h hh_pos hh_le_eq y₀ y_alt h_M_step hY_alt
+  have h_M'_step : M'.IsRKOneStep f y_final h y₀ := by
+    rw [hy₀_eq_y_alt]; exact hY_alt
+  -- Step 4: Invert M'-step back to M'.inverse-step.
+  have h_M'_inv_alt : M'.inverse.IsRKOneStep f y₀ h y_final :=
+    M'.inverse_isRKOneStep_of_isRKOneStep h_M'_step
+  -- Step 5: M'.inverse uniqueness at y₀ gives y_final = y_final'.
+  exact hM'_inv_uniq y₀ h hh_pos hh_le_M'_inv y_final y_final'
+    h_M'_inv_alt h_M'_inv_step
+
+/-- *Lift of `RKTableau.inverse` to `Quotient Equivalent.setoidSigma`.*
+The §382 group inverse operation at the quotient level. Well-
+definedness is `inverse_equivalent_inverse`: equivalent representatives
+map to equivalent inverses. Together with cycle 218's `composeQ`
+and cycle 219's identity class `⟦⟨0, RKTableau.id⟩⟧`, this completes
+the data needed for the §382 `Group` instance (P3 below). -/
+noncomputable def inverseQ.{u} :
+    Quotient Equivalent.setoidSigma.{u} →
+    Quotient Equivalent.setoidSigma.{u} :=
+  Quotient.lift
+    (fun (p : Σ s : ℕ, RKTableau s) =>
+      Quotient.mk Equivalent.setoidSigma.{u} ⟨p.1, p.2.inverse⟩)
+    (by
+      rintro ⟨s, M⟩ ⟨s', M'⟩ hEq
+      apply Quotient.sound
+      show @Equivalent.{u} s s' M.inverse M'.inverse
+      exact inverse_equivalent_inverse hEq)
+
+/-- *Definitional unfold for `inverseQ` on a `Quotient.mk` class.*
+Convenience `simp` lemma stating `inverseQ ⟦⟨s, M⟩⟧ = ⟦⟨s, M.inverse⟩⟧`
+by definition of `Quotient.lift`. -/
+@[simp] theorem inverseQ_mk.{u} {s : ℕ} (M : RKTableau s) :
+    inverseQ.{u} (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M⟩)
+      = Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M.inverse⟩ := rfl
+
+/-- *Left inverse absorption for `inverseQ` against `composeQ` at every
+quotient class.* The pointwise form of `composeQ_inverse_left` over an
+arbitrary representative `q`, used in the `Group` typeclass instance's
+`inv_mul_cancel` field. -/
+theorem composeQ_inverseQ_left.{u} (q : Quotient Equivalent.setoidSigma.{u}) :
+    composeQ (inverseQ q) q
+      = Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩ := by
+  refine Quotient.inductionOn q ?_
+  rintro ⟨s, M⟩
+  show composeQ _ _ = _
+  exact composeQ_inverse_left M
+
+/-! ### §382 `Group` instance on `Quotient Equivalent.setoidSigma`
+
+Assembles the four §382 group axioms (identity from cycle 219,
+inverse from cycle 220, associativity from cycle 221, and `inverseQ`-
+respects-equivalence from this cycle) into the `Group` typeclass on
+`Quotient Equivalent.setoidSigma`. Uses `Group.ofLeftAxioms` for a
+minimal axiom obligation (`mul_assoc`, `one_mul`, `inv_mul_cancel`);
+the right-side analogues follow automatically. -/
+
+noncomputable instance instOne :
+    One (Quotient Equivalent.setoidSigma.{u}) :=
+  ⟨Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩⟩
+
+noncomputable instance instMul :
+    Mul (Quotient Equivalent.setoidSigma.{u}) :=
+  ⟨composeQ⟩
+
+noncomputable instance instInv :
+    Inv (Quotient Equivalent.setoidSigma.{u}) :=
+  ⟨inverseQ⟩
+
+/-- *§382 `Group` instance on `Quotient Equivalent.setoidSigma`.*
+The fourth and final §382 group structure axiom shipping: with cycle
+218's `composeQ` (`Mul`), cycle 219's identity class
+(`⟦⟨0, RKTableau.id⟩⟧` as `One`), cycle 220's inverse-absorption
+laws, cycle 221's associativity, and this cycle's `inverseQ`
+(`Inv`), the four-axiom `Group` typeclass assembles via
+`Group.ofLeftAxioms`. This is the type-class-level statement of
+Butcher §382's "the equivalence classes of Runge–Kutta methods
+form a group under composition" conclusion. -/
+noncomputable instance instGroup :
+    Group (Quotient Equivalent.setoidSigma.{u}) :=
+  Group.ofLeftAxioms
+    composeQ_assoc
+    composeQ_id_left
+    composeQ_inverseQ_left
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -3389,5 +3533,62 @@ example :
             (Quotient.mk RKTableau.Equivalent.setoidSigma
               ⟨2, paddedEuler⟩)) :=
   RKTableau.composeQ_assoc _ _ _
+
+/-- *Non-vacuity for `inverse_equivalent_inverse` (cycle 222 P4).*
+The trivial reflexive instance: `paddedEuler.inverse` is `Equivalent`
+to itself. Routes through cycle 203's `equivalent_self` lifted via
+`inverse_equivalent_inverse` applied to `equivalent_self paddedEuler`. -/
+example :
+    @RKTableau.Equivalent 2 2 paddedEuler.inverse paddedEuler.inverse :=
+  RKTableau.inverse_equivalent_inverse (paddedEuler.equivalent_self)
+
+/-- *Non-vacuity for `inverse_equivalent_inverse` heterogeneous case
+(cycle 222 P4).* The genuinely-relevant test exercising distinct
+stage counts: `paddedEuler.inverse` (2 stages) is `Equivalent` to
+`(paddedEuler.pReduced pairPartition).inverse` (1 stage). Routes
+through cycle 208's `paddedEuler_equivalent_pReduced` lifted via
+`inverse_equivalent_inverse`. -/
+example :
+    @RKTableau.Equivalent 2 1
+      paddedEuler.inverse
+      (paddedEuler.pReduced pairPartition).inverse :=
+  RKTableau.inverse_equivalent_inverse paddedEuler_equivalent_pReduced
+
+/-- *Non-vacuity for `inverseQ_mk` (cycle 222 P4).* The quotient-level
+inverse operation unfolds definitionally on `Quotient.mk` classes:
+`inverseQ ⟦⟨2, paddedEuler⟩⟧ = ⟦⟨2, paddedEuler.inverse⟩⟧`. -/
+example :
+    RKTableau.inverseQ
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+      = Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler.inverse⟩ := rfl
+
+/-- *Non-vacuity for the §382 `Group` instance (cycle 222 P4).*
+Exercises `mul_inv_cancel` via the typeclass: the class of `paddedEuler`
+times its inverse class is the identity class `(1 : Quotient ...)`.
+Routes through Mathlib's `mul_inv_cancel`, which derives from
+`Group.ofLeftAxioms`'s `inv_mul_cancel` field. -/
+example :
+    (Quotient.mk RKTableau.Equivalent.setoidSigma
+        ⟨2, paddedEuler⟩
+      * (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)⁻¹
+      : Quotient RKTableau.Equivalent.setoidSigma.{0})
+      = (1 : Quotient RKTableau.Equivalent.setoidSigma.{0}) :=
+  mul_inv_cancel _
+
+/-- *Non-vacuity for the §382 `Group` instance via `inv_mul_cancel`
+(cycle 222 P4).* The defining `Group.ofLeftAxioms` axiom, exercised
+on the cycle 030 non-vacuity backbone: `⟦⟨2, paddedEuler⟩⟧⁻¹ ·
+⟦⟨2, paddedEuler⟩⟧ = 1`. -/
+example :
+    ((Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)⁻¹
+        * Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩
+      : Quotient RKTableau.Equivalent.setoidSigma.{0})
+      = (1 : Quotient RKTableau.Equivalent.setoidSigma.{0}) :=
+  inv_mul_cancel _
 
 end OpenMath.Chapter3.Section381

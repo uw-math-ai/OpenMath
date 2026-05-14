@@ -252,3 +252,14 @@ point: lift `RKTableau.inverse` to `Quotient` (needs
 ~50 LOC via step-inversion + uniqueness chain) for the `inv`
 operation, then assemble the `Group` instance on
 `Quotient Equivalent.setoidSigma`.
+
+### Cycle 222 confirmation — superseded for good
+
+Cycle 222 closed the `Group` instance on
+`Quotient Equivalent.setoidSigma` **without ever invoking the
+on-the-nose `compose_assoc`**: the four-axiom typeclass instance
+uses `Group.ofLeftAxioms` with cycle 221's `composeQ_assoc` (which
+is `Equivalent`-level associativity lifted via `Quotient.sound`)
+as its `mul_assoc` field. The HEq-plumbing problem documented in
+this issue is therefore permanently bypassed for the §382 group
+construction. Compile clean, axiom-clean, sorry count 0.

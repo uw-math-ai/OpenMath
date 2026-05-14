@@ -682,3 +682,95 @@ final lift:
 
 The §383 group homomorphisms via Φ then consume this `Group`
 instance directly.
+
+### Cycle 222 update — `Group` instance SHIPPED
+
+Cycle 222 closed the §382 `Group` story on `Quotient
+Equivalent.setoidSigma`, completing the four-axiom build started in
+cycles 219/220/221.
+
+**Five new symbols at `OpenMath/Chapter3/Section381.lean` (~150 LOC):**
+
+1. `RKTableau.inverse_equivalent_inverse.{u}` (~50 LOC) — heterogeneous-
+   stage well-definedness `Equivalent M M' → Equivalent M.inverse
+   M'.inverse`. The strategy §B.P1 sketch ("apply hEq_app to force the
+   two M/M' witnesses to agree after step-inversion") did NOT directly
+   work because the two inverted M-/M'-steps start at *different*
+   `y_final` / `y_final'`. Recipe instead mirrors cycle 206's
+   `Equivalent.trans`: invert both witnesses via cycle 220's
+   `isRKOneStep_of_inverse_isRKOneStep`, then invoke cycle 205's
+   `IsRKOneStep_exists` on `M'` at `y_final` to obtain a witness
+   `y_alt` with `M'.IsRKOneStep f y_final h y_alt`, apply `hEq` at
+   `y_final` to force `y₀ = y_alt`, re-invert via
+   `inverse_isRKOneStep_of_isRKOneStep` to obtain
+   `M'.inverse.IsRKOneStep f y₀ h y_final`, then discharge via
+   `M'.inverse.equivalent_self` uniqueness against the original
+   witness `M'.inverse.IsRKOneStep f y₀ h y_final'`. Threshold
+   combines hEq's, `M'.inverse.equivalent_self`'s, and the Banach-
+   smallness threshold for `M'` via `min`.
+
+2. `RKTableau.inverseQ` (~12 LOC) — `noncomputable def` via
+   `Quotient.lift` (matching cycle 218's `composeQ` style; the strategy
+   §B.P2's `Quotient.map` form would have worked too but
+   `Quotient.lift` is the more general primitive already in use).
+
+3. `RKTableau.inverseQ_mk` (~5 LOC, `@[simp]` `rfl`) — definitional
+   unfold for `inverseQ ⟦⟨s, M⟩⟧ = ⟦⟨s, M.inverse⟩⟧`.
+
+4. `RKTableau.composeQ_inverseQ_left` (~7 LOC) — pointwise lift of
+   cycle 220's `composeQ_inverse_left` via `Quotient.inductionOn`.
+
+5. `RKTableau.instOne` / `instMul` / `instInv` / `instGroup` (~25 LOC) —
+   the §382 `Group` typeclass instance assembled via Mathlib's
+   `Group.ofLeftAxioms` (cycle 221's `composeQ_assoc` + cycle 219's
+   `composeQ_id_left` + cycle 222's `composeQ_inverseQ_left`; right-
+   side axioms `mul_one` / `mul_inv_cancel` auto-derived). Required
+   adding `import Mathlib.Algebra.Group.MinimalAxioms`.
+
+P4 non-vacuity (5 examples):
+
+(a) homogeneous `inverse_equivalent_inverse` on `paddedEuler` via
+    `equivalent_self`;
+(b) heterogeneous `inverse_equivalent_inverse` `paddedEuler` ↔
+    `paddedEuler.pReduced pairPartition` via cycle 208's
+    `paddedEuler_equivalent_pReduced` (the genuinely-distinct stage
+    counts 2 vs 1 test);
+(c) `inverseQ_mk` by `rfl`;
+(d) typeclass `mul_inv_cancel` on `⟦⟨2, paddedEuler⟩⟧`;
+(e) typeclass `inv_mul_cancel` on `⟦⟨2, paddedEuler⟩⟧`.
+
+All five new symbols axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). Section381.lean warm
+rebuild 9.657s (35th consecutive cycle of stable §381 health since
+cycle 184 GPFS recovery). Sorry count: 0.
+
+All eight pre-flagged risks R1–R8 from cycle 222 strategy §B / §I
+(step-inversion signature drift, sign of H, heterogeneous stages,
+`.{u}` annotations, `Quotient.map` API, Σ-projection naming,
+`Group` field naming, cycle 220 symbol naming) did NOT fire. Only
+dead end (recovered in 1 file edit): missing `import
+Mathlib.Algebra.Group.MinimalAxioms` for `Group.ofLeftAxioms`.
+
+### Cycle 223+ outlook — §383 group homomorphisms via Φ
+
+With the §382 `Group` instance in hand, the natural next pivot is
+§383's group-homomorphism path:
+
+1. **Tighten `lem:383A` *The Runge–Kutta group* (§383)** statement:
+   `lem:383A` is already `[x]` formalized in `plan.md` (pre-§382
+   cycle line); consider whether the cycle 222 `Group` instance
+   allows expressing `lem:383A` directly as the new `instGroup`.
+
+2. **`PhiEquivalent.toGroupHom`** — the structural bridge from cycle
+   187/193's `PReducesTo.toPhiEquivalent` to a `MonoidHom`/`GroupHom`
+   on the §382 group. Likely cycle 223 P1.
+
+3. **Alternative pivot** — `thm:381G` (Irreducible RK Stage
+   Distinguishability) or `thm:381H` (RK Equivalence Conditions),
+   the two remaining `[ ]` Ch.3 §380 textbook entities, would benefit
+   from the §382 group structure being available downstream.
+
+The §382 `Group` instance is the foundation for *all* §383+
+infrastructure; cycle 222 closes the §382 *meta-formalization*
+story (the underlying mathematical theorem `thm:382A` was closed
+cycle 218; cycle 222 packages it as a typeclass).
