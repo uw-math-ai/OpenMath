@@ -624,6 +624,69 @@ theorem PEquivalent.eq_of_both_isIrreducible_homogeneous
   obtain ⟨_, h_heq⟩ := h.eq_of_both_isIrreducible hM hM'
   exact (eq_of_heq h_heq).symm
 
+/-- *Cardinality helper for 0-reduction.* When the partition predicate
+`inP1` admits at least one `false` element, the surviving stage set
+`P₁ = {i | inP1 i = true}` is a proper subset of the universe and so
+its cardinality is strictly less than `s`. Shared between
+`PReducesTo.size_le`'s `zeroStep` case and
+`PReducesTo.size_lt_of_zeroStep`. -/
+private theorem card_filter_true_lt_of_exists_false {s : ℕ}
+    {inP1 : Fin s → Bool} (hP0 : ∃ i, inP1 i = false) :
+    (Finset.univ.filter (fun i : Fin s => inP1 i = true)).card < s := by
+  have hSubset :
+      (Finset.univ.filter (fun i : Fin s => inP1 i = true)) ⊂
+        (Finset.univ : Finset (Fin s)) := by
+    rw [Finset.filter_ssubset]
+    obtain ⟨i, hi⟩ := hP0
+    exact ⟨i, Finset.mem_univ i, by simp [hi]⟩
+  have hCard := Finset.card_lt_card hSubset
+  simpa [Finset.card_univ, Fintype.card_fin] using hCard
+
+/-- *Stage-count monotonicity for `PReducesTo`.* Every P-reduction
+sequence is non-increasing on the underlying stage-count parameter.
+The `refl` case preserves it; the `step` and `zeroStep` cases strictly
+decrease it (see `PReducesTo.size_lt_of_step` and
+`PReducesTo.size_lt_of_zeroStep`).
+
+Prerequisite for the def:381E `reducedMethod` construction (issue
+`reduced_method_deferred.md`): together with the strict-descent
+siblings, this is the structural infrastructure required to establish
+well-foundedness of `PReducesTo` on a Σ-typed wrapper. -/
+theorem PReducesTo.size_le {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'}
+    (h : PReducesTo M M') : s' ≤ s := by
+  induction h with
+  | refl _ => exact le_refl _
+  | step _ hLt _ _ ih => exact ih.trans hLt.le
+  | zeroStep inP1 hP0 _ _ ih =>
+      exact ih.trans (card_filter_true_lt_of_exists_false hP0).le
+
+/-- *Strict stage-count descent via a P-reduction step.* A single
+non-trivial P-reduction step (`step` constructor of `PReducesTo`,
+parameterised by a partition `P` with `sBar < s`) strictly decreases
+the stage count. Direct consequence of the constructor's `sBar < s`
+hypothesis composed with `size_le` on the continuation. -/
+theorem PReducesTo.size_lt_of_step {s sBar s'' : ℕ}
+    {M : RKTableau s} {M'' : RKTableau s''}
+    (P : PPartition s sBar) (hLt : sBar < s)
+    (_hRed : M.IsPReducibleVia P)
+    (hRest : PReducesTo (M.pReduced P) M'') :
+    s'' < s :=
+  lt_of_le_of_lt hRest.size_le hLt
+
+/-- *Strict stage-count descent via a 0-reduction step.* A single
+0-reduction step (`zeroStep` constructor of `PReducesTo`, requiring
+`hP0 : ∃ i, inP1 i = false`) strictly decreases the stage count,
+because the existence of an `inP1 i = false` witness forces
+`|P₁| < s`. -/
+theorem PReducesTo.size_lt_of_zeroStep {s s'' : ℕ}
+    {M : RKTableau s} {M'' : RKTableau s''}
+    (inP1 : Fin s → Bool) (hP0 : ∃ i, inP1 i = false)
+    (_h : M.IsZeroReducibleVia inP1)
+    (hRest : PReducesTo (M.zeroReduced inP1) M'') :
+    s'' < s :=
+  lt_of_le_of_lt hRest.size_le (card_filter_true_lt_of_exists_false hP0)
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step

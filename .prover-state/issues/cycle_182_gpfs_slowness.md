@@ -432,3 +432,15 @@ the other side `PReducesTo` it directly) plus the homogeneous-stage
 strategy. Section381.lean cold compile measured 1m22s this cycle
 (no warm-cache hit available because the new edits invalidated the
 cached `.olean`); compilation itself remained healthy.
+
+**Cycle 195 update (15th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.031s, user 0m0.238s, sys 0m0.722s — CPU =
+0.32% of wall, identical near-zero pattern). Pre-flight `ps -u
+$USER` showed no D-state processes. 15 consecutive timeouts span
+cycles 182–195 (14 calendar days). The pathology has reproduced on
+every smoke-test attempt without exception. Pivoting to Priority 1:
+ship the stage-count-descent infrastructure for `PReducesTo`
+(`size_le`, `size_lt_of_step`, `size_lt_of_zeroStep`) — prerequisites
+for the still-deferred def:381E `reducedMethod` construction. Per
+cycle 195 strategy.
