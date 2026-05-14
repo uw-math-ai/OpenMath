@@ -1,304 +1,386 @@
-# Cycle 217 strategy — heterogeneous-stage `compose_equivalent_compose`
+# Cycle 218 Strategy — `composeQ` via `Quotient.lift₂` (§382 quotient lift)
 
-## §A — Context
+## §A. Status entering cycle 218
 
-Cycle 216 closed the cycle 215 sorry by refactoring `Equivalent` to
-uniform-threshold form (`∃ h₀, ∀ y₀, ...`) and shipping the
-**fixed-stage** (382g) form of `thm:382A`:
+- **Sorry count: 0** across the repo. No regressions to clean up.
+- **No pending Aristotle results.** Nothing to incorporate.
+- **No active blockers** flagged in `.prover-state/issues/` for the
+  §382 track.
+- Cycle 217 shipped the heterogeneous-stage (382g) form
+  `RKTableau.compose_equivalent_compose` (axiom-clean,
+  `[propext, Classical.choice, Quot.sound]`). The body is
+  byte-for-byte the cycle 216 body, working at the abstract `N`
+  level via cycle 214's `compose_isRKOneStep_iff` applied
+  independently on each side.
+- Cycle 212 shipped `RKTableau.Equivalent.setoidSigma : Setoid (Σ s : ℕ,
+  RKTableau s)`, the heterogeneous Σ-typed setoid (axiom-clean).
+- **§441 Phase C.2 is GPFS-blocked** (34 consecutive timeouts since
+  cycle 184). Per the long-standing remediation: **skip Phase C.2
+  this cycle**, do not attempt the cycle 182 draft compile, no smoke
+  test on `OpenMath/Chapter4/Section441.lean`. The cluster pathology
+  is loop-maintainer territory (see
+  `.prover-state/issues/cycle_182_gpfs_slowness.md`).
 
-```
-theorem compose_equivalent_compose.{u}
-    {s₁ s₂ : ℕ}
-    (M₁ M₁' : RKTableau s₁) (M₂ M₂' : RKTableau s₂)
-    (hEq₁ : @Equivalent.{u} s₁ s₁ M₁ M₁')
-    (hEq₂ : @Equivalent.{u} s₂ s₂ M₂ M₂') :
-    @Equivalent.{u} (s₁ + s₂) (s₁ + s₂) (M₁.compose M₂) (M₁'.compose M₂')
-```
+## §B. Cycle 218 target: `composeQ` (bracketed (382f) form)
 
-Sorry count 0; axiom-clean. The cycle 216 task results' "Suggested
-next approach" identifies the **heterogeneous-stage form** as the
-natural cycle 217 deliverable: replace `M₁ M₁' : RKTableau s₁` and
-`M₂ M₂' : RKTableau s₂` with `M₁ : RKTableau s₁`,
-`M₁' : RKTableau s₁'`, `M₂ : RKTableau s₂`, `M₂' : RKTableau s₂'`
-(four distinct stage counts). This is a prerequisite for the
-`composeQ` lift via `Quotient.lift₂` on cycle 212's
-`Equivalent.setoidSigma` (cycle 218+ work).
+**Ship `RKTableau.composeQ` via `Quotient.lift₂` on cycle 212's
+`Equivalent.setoidSigma`**, plus a corollary capturing the bracketed
+(382f) form `[m₁·m₂] = [m̂₁·m̂₂]` from `thm:382A`.
 
-**Why this is one cycle of work**: the cycle 216 body operates at
-the abstract `N` level (the normed space) and uses
-`compose_isRKOneStep_iff` independently on `(M₁, M₂)` and
-`(M₁', M₂')`. It never assumes the stage counts on the two sides
-match. The proof should port verbatim under a four-stage-counts
-signature change.
+This is the natural cycle-218 continuation pre-scoped in the cycle
+217 task results §"Suggested next approach" and in
+`.prover-state/issues/thm_382A_path.md` (Cycle 217 update section).
+The mathematical content of thm:382A in the bracketed form is
+**one cycle of bridging away**: the respect obligation for
+`Quotient.lift₂` is discharged by cycle 217's
+`compose_equivalent_compose` applied directly.
 
-Read these files before coding:
-* `OpenMath/Chapter3/Section381.lean` lines 2677–2729 (the cycle 216
-  `compose_equivalent_compose` with full body).
-* `OpenMath/Chapter3/Section381.lean` lines 2643–2675 (cycle 214's
-  `compose_isRKOneStep_iff` — already shape-polymorphic in `(s₁, s₂)`).
-* `OpenMath/Chapter3/Section381.lean` lines 968–986 (`Equivalent`
-  definition, cycle 216 uniform-threshold form, heterogeneous-stage
-  by design).
-* `.prover-state/issues/thm_382A_path.md` (Cycles 217+ outlook section).
+### §B.1 P1 deliverable — `composeQ` (~12 LOC)
 
-§441 Phase C.2: GPFS-blocked for 34+ consecutive cycles; **skip** per
-the standing pattern (cf. `.prover-state/issues/cycle_182_gpfs_slowness.md`).
-
-## §B — Priority 1: heterogeneous-stage `compose_equivalent_compose`
-(~10 LOC churn, body unchanged)
-
-**Step B.1.** In `OpenMath/Chapter3/Section381.lean`, generalize the
-cycle 216 `compose_equivalent_compose` at lines 2708–2729. Replace
-the existing theorem with:
+In `OpenMath/Chapter3/Section381.lean`, in the namespace
+`OpenMath.Chapter3.Section312.RKTableau`, immediately after cycle
+212's `Equivalent.setoidSigma` (around line 1928) or after cycle 217's
+`compose_equivalent_compose` example block (around line 2860 —
+**use the latter** since it co-locates the operation with its
+respect-obligation discharger):
 
 ```lean
-theorem compose_equivalent_compose.{u}
-    {s₁ s₁' s₂ s₂' : ℕ}
-    (M₁ : RKTableau s₁) (M₁' : RKTableau s₁')
-    (M₂ : RKTableau s₂) (M₂' : RKTableau s₂')
-    (hEq₁ : @Equivalent.{u} s₁ s₁' M₁ M₁')
-    (hEq₂ : @Equivalent.{u} s₂ s₂' M₂ M₂') :
-    @Equivalent.{u} (s₁ + s₂) (s₁' + s₂')
-      (M₁.compose M₂) (M₁'.compose M₂') := by
-  intro N _ _ _ f L hL
-  obtain ⟨H₁, hH₁_pos, hEq₁_app⟩ := hEq₁ f L hL
-  obtain ⟨H₂, hH₂_pos, hEq₂_app⟩ := hEq₂ f L hL
-  refine ⟨min H₁ H₂, lt_min hH₁_pos hH₂_pos, ?_⟩
-  intro y₀ H hH_pos hH_le y_final y_final' h_step h_step'
-  have hH_le_H₁ : H ≤ H₁ := le_trans hH_le (min_le_left _ _)
-  have hH_le_H₂ : H ≤ H₂ := le_trans hH_le (min_le_right _ _)
-  obtain ⟨y_mid, h_M₁_step, h_M₂_step⟩ :=
-    (compose_isRKOneStep_iff M₁ M₂ f y₀ H y_final).mp h_step
-  obtain ⟨y_mid', h_M₁'_step, h_M₂'_step⟩ :=
-    (compose_isRKOneStep_iff M₁' M₂' f y₀ H y_final').mp h_step'
-  have hmid_eq : y_mid = y_mid' :=
-    hEq₁_app y₀ H hH_pos hH_le_H₁ y_mid y_mid' h_M₁_step h_M₁'_step
-  rw [hmid_eq] at h_M₂_step
-  exact hEq₂_app y_mid' H hH_pos hH_le_H₂ y_final y_final'
-    h_M₂_step h_M₂'_step
+/-- The composition operation `compose` lifted to equivalence classes of
+Runge–Kutta tableaux on the heterogeneous Σ-typed setoid (cycle 212's
+`Equivalent.setoidSigma`). Well-defined by cycle 217's
+`compose_equivalent_compose` (heterogeneous-stage (382g) form of
+thm:382A): the respect obligation reduces to that theorem applied to
+the destructured Σ-pair relation.
+
+This is the bracketed (382f) form's underlying operation —
+`[m₁·m₂] = composeQ ⟦m₁⟧ ⟦m₂⟧`. -/
+noncomputable def composeQ :
+    Quotient Equivalent.setoidSigma →
+    Quotient Equivalent.setoidSigma →
+    Quotient Equivalent.setoidSigma :=
+  Quotient.lift₂
+    (fun p q => Quotient.mk Equivalent.setoidSigma ⟨p.1 + q.1, p.2.compose q.2⟩)
+    (by
+      rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩ ⟨s₁', M₁'⟩ ⟨s₂', M₂'⟩ hEq₁ hEq₂
+      apply Quotient.sound
+      exact compose_equivalent_compose M₁ M₁' M₂ M₂' hEq₁ hEq₂)
 ```
 
-The body is byte-for-byte identical to cycle 216's body. Only the
-signature changes (four stage-count parameters instead of two).
+Estimated 8–15 LOC including docstring.
 
-Update the docstring (lines 2677–2707):
-* Replace "fixed-stage (382g) form" with "heterogeneous-stage (382g)
-  form".
-* Remove the "Faithfulness note (fixed-stage restriction)" paragraph
-  (lines 2703–2707) — the heterogeneous-stage form *is* the faithful
-  statement.
-* Add a one-line note: "Cycle 217: generalised from fixed-stage
-  (`s₁ s₂ : ℕ`) to heterogeneous-stage (`s₁ s₁' s₂ s₂' : ℕ`); body
-  unchanged. The proof operates at the abstract `N` level and uses
-  `compose_isRKOneStep_iff` independently on each side, so stage-count
-  matching is never required."
+### §B.2 P2 deliverables — non-vacuity examples (~12 LOC)
 
-**Step B.2.** Compile-and-verify:
+Right after `composeQ`, two examples in `namespace OpenMath.Chapter3.Section381`
+(or kept in the `RKTableau` namespace if the dot-notation reads
+cleaner — pick whichever lets `paddedEuler` resolve unqualified):
 
-```
-lake env lean OpenMath/Chapter3/Section381.lean
-```
-
-Expected: 0 errors, warm rebuild ≤10s. Then via `lean_verify`:
-
-```
-OpenMath.Chapter3.Section312.RKTableau.compose_equivalent_compose
-```
-
-Expected axioms: `[propext, Classical.choice, Quot.sound]`.
-
-**Step B.3.** Spot-check downstream consumers — the cycle 216
-`example` at lines ~2820+ (`paddedEuler.compose paddedEuler ≡
-paddedEuler.compose paddedEuler` via `compose_equivalent_compose
-paddedEuler paddedEuler paddedEuler paddedEuler …`). This call site
-now passes the four `paddedEuler` arguments with the implicit
-`s₁ s₁' s₂ s₂'` all unifying to `2` — should work without source
-edit because Lean infers the implicit parameters. If it errors, add
-the explicit `(s₁ := 2) (s₁' := 2)` annotations.
-
-## §C — Priority 2: heterogeneous-stage non-vacuity (~10 LOC)
-
-The fixed-stage example exercises only the homogeneous case
-(both sides `RKTableau 2`). For the heterogeneous-stage form, add
-a *new* example immediately after the existing
-`paddedEuler.compose paddedEuler ≡ …` example. Use cycle 208's
-`paddedEuler_equivalent_pReduced : paddedEuler.Equivalent
-(paddedEuler.pReduced pairPartition)` — a genuine heterogeneous-stage
-(`s = 2` vs `s' = 1`) `Equivalent` witness.
-
-Place inside `namespace OpenMath.Chapter3.Section381` (where the
-existing `paddedEuler` examples live, near line ~2820+). The witness:
+**W1** (homogeneous): `composeQ` on two reflexive `⟦⟨2, paddedEuler⟩⟧`
+yields `⟦⟨4, paddedEuler.compose paddedEuler⟩⟧`:
 
 ```lean
-/-- *Non-vacuity for the heterogeneous-stage cycle 217 form of
-`compose_equivalent_compose` (`thm:382A` 382g).* Composing
-`paddedEuler` (2-stage) with `paddedEuler` (2-stage) is `Equivalent`
-to composing `paddedEuler.pReduced pairPartition` (1-stage) with
-`paddedEuler.pReduced pairPartition` (1-stage) — a genuinely
-heterogeneous-stage assertion (`4 = 2 + 2` on the left, `2 = 1 + 1`
-on the right). Routes through cycle 208's
-`paddedEuler_equivalent_pReduced` applied twice. -/
 example :
-    @RKTableau.Equivalent
-      (2 + 2) (1 + 1)
-      (paddedEuler.compose paddedEuler)
-      ((paddedEuler.pReduced pairPartition).compose
-        (paddedEuler.pReduced pairPartition)) :=
-  RKTableau.compose_equivalent_compose
-    paddedEuler (paddedEuler.pReduced pairPartition)
-    paddedEuler (paddedEuler.pReduced pairPartition)
-    paddedEuler_equivalent_pReduced
-    paddedEuler_equivalent_pReduced
+    RKTableau.composeQ
+      (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩)
+      (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩) =
+    Quotient.mk RKTableau.Equivalent.setoidSigma
+      ⟨2 + 2, paddedEuler.compose paddedEuler⟩ :=
+  rfl
 ```
 
-The explicit `@RKTableau.Equivalent (2 + 2) (1 + 1)` qualification
-documents the heterogeneous-stage shape clearly. If Lean accepts a
-less-qualified form (e.g. with the stage counts inferred), prefer
-that.
+If `rfl` fails (likely under a `noncomputable def` that uses
+`Quotient.lift₂` — Lean should still recognise the definitional
+unfolding through `Quotient.lift_mk` reduction), fall back to:
 
-## §D — Priority 3 (stretch): scoping doc for `composeQ` lift
+```lean
+example : ... := by
+  rw [RKTableau.composeQ]
+  rfl
+```
 
-If §B and §C land cleanly with cycle budget remaining, **scope** (not
-implement) cycle 218's `composeQ` lift. Append a "Cycle 217 update —
-heterogeneous form closed" section to
-`.prover-state/issues/thm_382A_path.md` documenting:
+or use `Quotient.lift_mk` / `Quotient.lift₂_mk` explicitly. Try `rfl`
+first; if it fails, follow Risk-1 mitigation in §C.
 
-* The heterogeneous-stage closure (one paragraph).
-* The cycle 218 entry point: define
-  `composeQ : Quotient setoidSigma → Quotient setoidSigma →
-    Quotient setoidSigma` via `Quotient.lift₂` consuming cycle 217's
-  heterogeneous `compose_equivalent_compose`. Sketch the
-  `Quotient.lift₂`-respect obligation: given
-  `⟨s₁, M₁⟩ ≈ ⟨s₁', M₁'⟩` and `⟨s₂, M₂⟩ ≈ ⟨s₂', M₂'⟩` (heterogeneous
-  Σ-typed setoid relation), conclude `⟨s₁ + s₂, M₁.compose M₂⟩ ≈
-  ⟨s₁' + s₂', M₁'.compose M₂'⟩`. The first two relations unfold to
-  heterogeneous `Equivalent` directly; the conclusion is exactly
-  cycle 217's theorem.
-* Risk: `Quotient.lift₂` over Σ-typed setoid requires the binary
-  operation to "respect both arguments"; this is the dependent-stages
-  version where the output's first projection is `s₁ + s₂` (depends
-  on both inputs). May need `Quotient.hrecOn₂` if standard
-  `lift₂` doesn't accept the dependent-output shape. **Flag for
-  cycle 218's planner**, don't try to resolve now.
+**W2** (heterogeneous, the *actually relevant* witness): `composeQ`
+identifies the two heterogeneous representatives from cycle 217's
+P2 example. Using cycle 208's `paddedEuler_equivalent_pReduced`
+twice, the two classes are equal:
 
-Estimated stretch effort: ~20 minutes of writing if §B+§C close
-cleanly. **Do NOT** start the `composeQ` definition this cycle —
-that's cycle 218.
+```lean
+example :
+    RKTableau.composeQ
+      (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩)
+      (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩) =
+    RKTableau.composeQ
+      (Quotient.mk RKTableau.Equivalent.setoidSigma
+         ⟨1, paddedEuler.pReduced pairPartition⟩)
+      (Quotient.mk RKTableau.Equivalent.setoidSigma
+         ⟨1, paddedEuler.pReduced pairPartition⟩) := by
+  congr 1 <;>
+    exact Quotient.sound (show paddedEuler.Equivalent
+      (paddedEuler.pReduced pairPartition) from paddedEuler_equivalent_pReduced)
+```
 
-**Do NOT** introduce any sorries to ship a partial `composeQ`. The
-P1+P2 deliverables alone meet the cycle bar.
+If `congr 1` does not peel both arguments cleanly, fall back to two
+explicit `rw [Quotient.sound paddedEuler_equivalent_pReduced]` or
+construct the equality via `Quotient.sound` directly on the composite
+side citing the cycle 217 P2 heterogeneous example.
 
-## §E — Anticipated risks and mitigations
+### §B.3 P3 stretch — bracketed (382f) form corollary (~10 LOC)
 
-* **Risk 1: implicit-parameter unification fails on the cycle 216
-  example call site.** The cycle 216 example writes
-  `compose_equivalent_compose paddedEuler paddedEuler paddedEuler
-  paddedEuler paddedEuler_equivalent_self paddedEuler_equivalent_self`.
-  Under the new four-stage-count signature, all four `s` parameters
-  unify to `2` via the `paddedEuler : RKTableau 2` annotation. If
-  Lean still complains, add `(s₁ := 2) (s₁' := 2) (s₂ := 2)
-  (s₂' := 2)` named arguments.
-* **Risk 2: `compose_isRKOneStep_iff M₁ M₂` and
-  `compose_isRKOneStep_iff M₁' M₂'` produce different sum-types.**
-  This *can't* matter — each `compose_isRKOneStep_iff` is shape-
-  polymorphic in its two `RKTableau` arguments. The two
-  `.mp` results land in their respective composite types
-  `RKTableau (s₁ + s₂)` and `RKTableau (s₁' + s₂')`. The proof
-  threading is the same; only `y_final`/`y_final'` differ. No
-  HEq plumbing required.
-* **Risk 3: cycle 216 docstring rewrite introduces a stale
-  cross-reference.** Audit lines 2677–2707 carefully — the cycle 216
-  text mentions "fixed-stage (382g) form" and a faithfulness note
-  about the heterogeneous-stage extension being cycle 217+ work.
-  Both lines become outdated; rewrite or remove them. Cross-references
-  to `compose_equivalent_compose_uniform_threshold.md` and
-  `thm_382A_path.md` remain valid.
-* **Risk 4: GPFS pathology re-emerges and `lake env lean` times out
-  on Section381.lean.** Section381.lean has been compiling healthily
-  (warm rebuild ~5–7s) for 33 consecutive cycles. If a timeout
-  fires, retry once after killing any zombie processes; if it
-  persists, ship via incremental edits and fall back to a single
-  smaller deliverable.
+Append a corollary stating thm:382A's bracketed form directly:
 
-None of these risks are blockers. The cycle 216 mechanical-port
-methodology applies: the body is identical, so the only failure
-modes are signature-related.
+```lean
+/-- *(382f) bracketed form of thm:382A.* If `M₁ ≡ M̂₁` and `M₂ ≡ M̂₂` in
+the heterogeneous-stage sense, then their equivalence classes under
+composition coincide: `[M₁ · M₂] = [M̂₁ · M̂₂]`. Immediate corollary of
+cycle 217's `compose_equivalent_compose` via `Quotient.sound`. -/
+theorem composeQ_eq_of_equivalent
+    {s₁ s₁' s₂ s₂' : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+    (hEq₁ : @Equivalent s₁ s₁' M₁ M₁')
+    (hEq₂ : @Equivalent s₂ s₂' M₂ M₂') :
+    composeQ
+      (Quotient.mk Equivalent.setoidSigma ⟨s₁, M₁⟩)
+      (Quotient.mk Equivalent.setoidSigma ⟨s₂, M₂⟩) =
+    composeQ
+      (Quotient.mk Equivalent.setoidSigma ⟨s₁', M₁'⟩)
+      (Quotient.mk Equivalent.setoidSigma ⟨s₂', M₂'⟩) := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_equivalent_compose M₁ M₁' M₂ M₂' hEq₁ hEq₂)
+```
 
-## §F — What NOT to try
+This is the literal Lean-readable form of Butcher's claim
+`[m₁ · m₂] = [m̂₁ · m̂₂]`. **Ship this if P1+P2 land cleanly.**
 
-* **Do NOT** revert cycle 216's refactor. The uniform-threshold form
-  is essential and is the proof's enabling condition.
-* **Do NOT** add `HEq` plumbing or `Fin.cast` machinery. The cycle 217
-  proof has no stage-count arithmetic — it's all `Equivalent`
-  composition at the abstract `N` level.
-* **Do NOT** attempt the `composeQ` definition or its `Quotient.lift₂`
-  body. That's cycle 218 work; scoping doc only.
-* **Do NOT** introduce sorries. The §B body is byte-for-byte cycle
-  216's body; either it ports cleanly or there is a Lean elaboration
-  issue (which should be a one-line fix, not a sorry).
-* **Do NOT** rename `RKTableau.compose_equivalent_compose` to a new
-  name like `compose_equivalent_compose_hetero`. The existing name
-  is the right name for the (382g) form regardless of stage shape;
-  generalising in place is faithful to the textbook signature.
-* **Do NOT** attempt §441 Phase C.2 verification. 34+ GPFS-blocked
-  consecutive cycles; pivot territory remains active.
-* **Do NOT** spawn agents or batch Aristotle for this cycle — the
-  body is mechanical and Aristotle's premise-search is unhelpful
-  for signature-only generalizations.
+## §C. Risk register and mitigations
 
-## §G — Success criteria
+Per the cycle 217 task results, three risks were pre-flagged. Plan
+the mitigations *before* coding:
 
-1. Sorry count stays at 0 across the repo.
-2. `compose_equivalent_compose` has the four-stage-count signature
-   shown in §B.1.
-3. `lean_verify` on
-   `OpenMath.Chapter3.Section312.RKTableau.compose_equivalent_compose`
-   returns `[propext, Classical.choice, Quot.sound]`.
-4. The §C heterogeneous-stage example compiles.
-5. `lean_verify` re-confirms cycle 214's `compose_isRKOneStep_iff`
-   and cycle 213's `compose_of_isRKOneStep` are still axiom-clean
-   (no regressions).
-6. Section381.lean warm rebuild ≤10s.
-7. Update `plan.md` thm:382A row: extend the existing cycle 216
-   entry with "Cycle 217: heterogeneous-stage (382g) form
-   (`{s₁ s₁' s₂ s₂' : ℕ}`) shipped; body unchanged from cycle 216,
-   only the signature generalised. Axiom-clean.".
-8. Update `lean_status.json` thm:382A row: bump cycle reference to
-   217; note that the heterogeneous-stage form (382g) is now
-   formalised. The bracketed (382f) form `[m₁·m₂] = [m̂₁·m̂₂]`
-   still awaits the `composeQ` Quotient lift (cycle 218+).
-9. Write `.prover-state/task_results/cycle_217.md` documenting the
-   port methodology (was it as mechanical as predicted?), any minor
-   surprises, and the cycle 218 entry point.
+### R1 — `Quotient.lift₂` may need explicit setoid arguments
 
-## §H — Abort threshold
+The strategy's first attempt uses Mathlib's curried form. If Lean
+complains about ambiguous source/target setoids, switch to:
 
-If the §B body fails to compile and the fix requires more than a
-one-line change (e.g. a tactic doesn't fire, or the
-`compose_isRKOneStep_iff` call doesn't elaborate against the
-heterogeneous shape), **abort and revert** to cycle 216 HEAD —
-the worker has 30 minutes to diagnose the issue and produce a
-1-2-line fix; beyond that, the assumption of "mechanical port"
-is wrong and a fresh planning cycle is needed. Do NOT ship a
-sorry-scaffolded heterogeneous version; that re-introduces the
-cycle 215 issue.
+```lean
+noncomputable def composeQ :
+    Quotient Equivalent.setoidSigma →
+    Quotient Equivalent.setoidSigma →
+    Quotient Equivalent.setoidSigma :=
+  @Quotient.lift₂
+    (Σ s : ℕ, RKTableau s) (Σ s : ℕ, RKTableau s)
+    (Quotient Equivalent.setoidSigma)
+    Equivalent.setoidSigma Equivalent.setoidSigma
+    (fun p q => Quotient.mk _ ⟨p.1 + q.1, p.2.compose q.2⟩)
+    (...)
+```
 
-If §B closes but §C fails (e.g. `paddedEuler_equivalent_pReduced`
-can't be threaded through `compose_equivalent_compose` because of
-an implicit-argument issue), ship §B alone and defer §C to cycle 218
-alongside the `composeQ` work.
+Pre-flight check: run **one** `lean_loogle` query
+`Quotient.lift₂` to confirm the Mathlib name and arity. **Limit
+loogle/leansearch usage to ≤ 3 queries total this cycle** — search
+tools are rate-limited (3/30s) and the cycle 217 work had no
+search issues, so this should be sufficient. If the name has
+drifted, alternative forms to try: `Quotient.lift_on₂`, `Quotient.map₂`,
+or `Quot.lift₂`. The unbundled `Quot` flavour generally does not
+need explicit setoid args.
 
-## §I — Time budget
+### R2 — `setoidSigma`'s bundled `iseqv` may need `show` reframing
 
-* §B (P1): ~30 minutes (10 LOC signature change + body verbatim
-  port + docstring rewrite + compile + lean_verify).
-* §C (P2): ~15 minutes (10 LOC heterogeneous-stage example +
-  compile).
-* §D (P3 stretch): ~15 minutes if shipping (markdown only,
-  documentation update to `thm_382A_path.md`).
-* Total: ~1 hour for P1+P2; ~75 minutes with P3.
+When destructuring `hEq₁ : Equivalent.setoidSigma.r p p'` via
+`rintro`, the goal may unfold `Setoid.r` to its bundled form
+(an existence statement over `iseqv`) rather than the desired
+`Equivalent` predicate. Mitigation: insert a `show
+p.2.Equivalent p'.2` after the `rintro` so the goal type becomes
+the heterogeneous `Equivalent` predicate cycle 217 expects.
 
-If §B alone consumes >45 minutes, the mechanical-port assumption
-has failed and §H abort threshold should fire. The cycle 216
-budget came in well under 1 hour, suggesting this cycle should
-too.
+If that fails, the cycle 212 task results (or
+`OpenMath/Chapter3/Section381.lean` around the `setoidSigma`
+definition) shows the exact `Setoid.r` unfolding shape — match
+it.
+
+### R3 — Mathlib API name drift between `Quotient.lift₂` / `.lift_on₂`
+
+Same as R1 mitigation: confirm with a single `lean_local_search` or
+`lean_hover_info` on `Quotient.lift₂` early in the cycle, before
+writing the body.
+
+### R4 (new) — `noncomputable` requirement
+
+`Quotient.lift₂` produces a `Quotient`-typed value via
+`Classical.choice` under the hood; `composeQ` will need to be
+declared `noncomputable`. This is already in the §B.1 sketch; do
+not drop the keyword.
+
+### R5 (new) — implicit arity on `compose_equivalent_compose`
+
+Cycle 217's signature takes **four implicit `s` parameters** plus
+**four explicit `RKTableau` parameters** plus **two explicit
+`Equivalent` hypotheses**. In the `rintro` block, pass the four
+tableaux explicitly to `compose_equivalent_compose` (do not rely
+on Lean to infer them from `hEq₁`/`hEq₂`, since those have implicit
+binders too).
+
+## §D. What NOT to attempt this cycle
+
+**Do not** attempt any of the following — each has been ruled out
+or pre-scoped as multi-cycle:
+
+- **`Section441.lean` smoke test or Phase C.2 retry.** 34th
+  consecutive GPFS timeout precedent. Skip entirely.
+- **§382 group axioms (identity, inverse, associativity).** These
+  are cycle 219+ work. Cycle 218's deliverable is the `composeQ`
+  operation alone; group structure builds on top.
+- **`compose_assoc` (HEq plumbing).** Cycle 210 deferred this; see
+  `.prover-state/issues/compose_assoc_HEq_plumbing.md`. Cycle 218's
+  `composeQ` operation may make `compose_assoc` more tractable
+  *eventually* (via `Quotient.sound` on representatives), but that
+  is a cycle 219+ exploration, not this cycle's deliverable.
+- **`thm:381H` scaffold reintroduction.** Per
+  `.prover-state/issues/thm_381H_deferred.md`, scaffold was rolled
+  back in cycle 201 to drive sorry count back to 0. Re-introduce
+  only when at least one direction is single-cycle closeable.
+- **Search-tool spam.** Limit `lean_loogle` / `lean_leansearch` /
+  `lean_state_search` to ≤ 3 total queries (rate-limited 3/30s).
+  The cycle 217 work needed zero queries; cycle 218's API is
+  closely related and should need at most one `Quotient.lift₂`
+  name check.
+- **Refactoring cycle 217's `compose_equivalent_compose`.** Its
+  signature and body are correct; cycle 218 consumes it as a black
+  box.
+- **`maxHeartbeats` bumps.** Not needed — `Quotient.lift₂` is a
+  one-liner.
+- **`axiom`/`constant` declarations.** Never.
+
+## §E. Abort thresholds
+
+Hard rules for cycle 218 to remain a clean ship:
+
+1. **Sorry count must remain 0.** If P1 (`composeQ` definition) does
+   not compile, do NOT sorry-scaffold it. Roll back to HEAD and
+   document the obstruction in a new
+   `.prover-state/issues/composeQ_lift_blocker.md` file. The cycle
+   then becomes a structural-investigation cycle (analogous to
+   cycles 215 / 200) and the deliverable is the issue file plus
+   non-vacuity ground work for cycles 219+. Per the supervisor's
+   strict "sorry count must not increase" policy.
+2. **If P1 lands but P2 (`rfl` examples) fails**, ship P1 + P3
+   only. P2 is non-blocking — the `composeQ_eq_of_equivalent`
+   corollary is the textbook content; concrete numerical
+   reductions on `paddedEuler` are nice-to-have but not load-bearing.
+3. **If R1 (search-tool name drift) consumes more than ~15 minutes**
+   without resolution, switch to the unbundled `Quot.lift₂` /
+   `Quot.mk` API and adapt. The mathematical content is the same.
+4. **If the cycle 217 example (line ~2860) does not compile after
+   P1 is added** (e.g. due to name resolution conflicts on `composeQ`),
+   the issue is cosmetic; rename `composeQ` to `RKTableau.composeQ`
+   explicitly at the cycle 217 example call site or move
+   `composeQ` to a fresh namespace block.
+5. **If any cycle 213/214/216/217 axiom-clean theorem regresses**
+   to a non-axiom-clean state (e.g. `sorryAx` reappears), roll back
+   the cycle 218 changes and abort. Run `lean_verify` on the four
+   landmarks (`compose_of_isRKOneStep`, `compose_isRKOneStep_iff`,
+   `compose_equivalent_compose`, `Equivalent.setoidSigma`) as part
+   of the verification step.
+
+## §F. Step-by-step execution plan
+
+Linear, ~20 LOC across one file edit:
+
+1. **(5 min) Smoke-check Section381 baseline.** Run
+   `lake env lean OpenMath/Chapter3/Section381.lean` once to
+   establish baseline rebuild time (~4–7s warm). If it exceeds 30s
+   without compilation errors, GPFS may be degrading the §381 line —
+   abort the cycle and document. (Section381 has compiled cleanly
+   for 32 consecutive cycles, so this is a precaution, not an
+   expected failure.)
+
+2. **(2 min) Optional one-shot Mathlib name verification.** If
+   uncertain, run `lean_hover_info` on `Quotient.lift₂` at any
+   pre-existing usage in the codebase (search via `Grep` first for
+   "Quotient.lift" in `OpenMath/` to find call sites), or
+   `lean_loogle` with pattern `"Quotient.lift₂"`. Skip this step
+   if you remember the API.
+
+3. **(10 min) Write `composeQ` (P1).** Add the definition at
+   `OpenMath/Chapter3/Section381.lean` immediately after cycle 217's
+   homogeneous + heterogeneous P2 examples (around line 2860 — use
+   `Grep` to locate the cycle 217 example). Compile. If a type
+   error fires, consult R1/R5 mitigations.
+
+4. **(5 min) Write P2 examples.** Two `example` blocks: W1
+   homogeneous via `rfl`, W2 heterogeneous via the cycle 208
+   bridge. Compile. If `rfl` fails on W1, use `by simp` or
+   `by rw [Quotient.lift₂_mk]` (whichever Mathlib provides for the
+   reduction lemma).
+
+5. **(5 min) Write P3 corollary `composeQ_eq_of_equivalent`.**
+   The body is `show ...; exact Quotient.sound
+   (compose_equivalent_compose ...)`. Compile.
+
+6. **(2 min) Verify axiom-cleanliness.** Run `lean_verify` on:
+   - `OpenMath.Chapter3.Section312.RKTableau.composeQ` —
+     expect `[propext, Classical.choice, Quot.sound]` (no
+     `sorryAx`).
+   - `OpenMath.Chapter3.Section312.RKTableau.composeQ_eq_of_equivalent` —
+     same expectation.
+   - `OpenMath.Chapter3.Section312.RKTableau.compose_equivalent_compose`
+     (cycle 217) — expect no regression.
+   - `OpenMath.Chapter3.Section312.RKTableau.Equivalent.setoidSigma`
+     (cycle 212) — expect no regression.
+   - `OpenMath.Chapter3.Section312.RKTableau.compose_isRKOneStep_iff`
+     (cycle 214) — expect no regression.
+
+7. **(5 min) Update tracking files.**
+   - `extraction/formalization_data/lean_status.json`: bump the
+     `thm:382A` row's `note` field to record cycle 218's `composeQ`
+     and `composeQ_eq_of_equivalent`. Status stays `partial` if
+     bracketed form is the only headline — though arguably this
+     cycle CLOSES thm:382A in full (both (382f) bracketed and
+     (382g) heterogeneous), in which case bump to `formalized`.
+     Read the existing row carefully and follow the convention
+     (likely the row uses `formalized` only after every textbook
+     form is shipped; with the bracketed corollary in hand
+     `formalized` is justified).
+   - `plan.md`: extend the `thm:382A` row with a cycle 218 entry
+     noting `composeQ` and the (382f) bracketed corollary. If the
+     status mark on the row changes (e.g. `[x]` retained from
+     cycle 216 — verify by reading the existing row), update
+     accordingly.
+   - `.prover-state/issues/thm_382A_path.md`: append a "Cycle 218
+     update — `composeQ` shipped" section recording the deliverable.
+     Note that the path forward is now §382 group axioms
+     (identity / inverse / associativity), cycles 219+.
+   - `.prover-state/task_results/cycle_218.md`: write the standard
+     cycle-results document per CLAUDE.md template (Worked on,
+     Approach, Result, Faithfulness check, Dead ends, Discovery,
+     Suggested next approach).
+
+8. **(2 min) Commit + push.** Single commit, summary starting
+   "Cycle 218 — §382 `RKTableau.composeQ` ...".
+
+Total estimated wall-clock: **~35–40 minutes** of focused work
+(under the 1-hour-per-cycle target).
+
+## §G. Outlook for cycles 219+ (do not start this cycle)
+
+With cycle 218's `composeQ` in hand, the natural cycle 219 target
+is **§382 group structure**: identity element, inverse element, and
+associativity on `Quotient Equivalent.setoidSigma`. Concrete sketch
+for the planner of cycle 219:
+
+- **Identity**: the empty 0-stage tableau (or `explicitEuler` —
+  check Butcher §382 for the exact identity element; the cycle 030
+  `equivalent_explicitEuler_self` witness suggests `explicitEuler`
+  is in the trivial class). Show `composeQ ⟦identity⟧ q = q` and
+  `composeQ q ⟦identity⟧ = q` for all `q`.
+- **Inverse**: Butcher §382's textbook inverse construction
+  (negate `b`, transpose `A`? — need to read §382 carefully).
+- **Associativity**: this is where cycle 210's deferred
+  `compose_assoc` re-enters. With `composeQ` in hand, associativity
+  on `Quotient` may be tractable via `Quotient.sound` on a clean
+  `Equivalent`-level associativity, even if HEq-on-the-nose
+  `compose_assoc` remains stuck.
+
+These are cycle 219+ work; **do not start them this cycle**. Cycle
+218 ships `composeQ` and the bracketed corollary, period.

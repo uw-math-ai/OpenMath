@@ -2730,6 +2730,59 @@ theorem compose_equivalent_compose.{u}
   exact hEq₂_app y_mid' H hH_pos hH_le_H₂ y_final y_final'
     h_M₂_step h_M₂'_step
 
+/-- *The composition operation `compose` lifted to equivalence classes
+of Runge–Kutta tableaux on the heterogeneous Σ-typed setoid (cycle 212's
+`Equivalent.setoidSigma`).* Well-defined by cycle 217's
+`compose_equivalent_compose` (heterogeneous-stage (382g) form of
+`thm:382A`): the respect obligation reduces to that theorem applied to
+the destructured Σ-pair relations.
+
+This is the *bracketed (382f) form*'s underlying operation —
+`[M₁ · M₂] = composeQ ⟦M₁⟧ ⟦M₂⟧` — completing the heterogeneous
+lift of `RKTableau.compose` to the quotient `Quotient
+Equivalent.setoidSigma`. The stage count of the composite class
+is `p.1 + q.1` (sum of the underlying representative stage counts);
+well-definedness lets distinct representatives with different stage
+sums (e.g. `(2+2) ≠ (1+1)`) live in the same composite class. -/
+noncomputable def composeQ.{u} :
+    Quotient Equivalent.setoidSigma.{u} →
+    Quotient Equivalent.setoidSigma.{u} →
+    Quotient Equivalent.setoidSigma.{u} :=
+  Quotient.lift₂
+    (fun (p q : Σ s : ℕ, RKTableau s) =>
+      Quotient.mk Equivalent.setoidSigma.{u} ⟨p.1 + q.1, p.2.compose q.2⟩)
+    (by
+      rintro ⟨s₁, M₁⟩ ⟨s₂, M₂⟩ ⟨s₁', M₁'⟩ ⟨s₂', M₂'⟩ hEq₁ hEq₂
+      apply Quotient.sound
+      show @Equivalent.{u} (s₁ + s₂) (s₁' + s₂')
+        (M₁.compose M₂) (M₁'.compose M₂')
+      exact compose_equivalent_compose M₁ M₁' M₂ M₂' hEq₁ hEq₂)
+
+/-- *(382f) bracketed form of `thm:382A`.* If `M₁ ≡ M̂₁` and `M₂ ≡ M̂₂`
+in the heterogeneous-stage sense (cycle 217's `compose_equivalent_compose`
+hypothesis shape), then their equivalence classes under `composeQ`
+coincide: `[M₁ · M₂] = [M̂₁ · M̂₂]`. Immediate corollary of cycle 217's
+`compose_equivalent_compose` via `Quotient.sound` applied through
+`composeQ`'s definitional unfolding.
+
+This is the literal Lean-readable form of Butcher's claim
+`[m₁ · m₂] = [m̂₁ · m̂₂]` (Butcher §382 equation 382f). -/
+theorem composeQ_eq_of_equivalent.{u}
+    {s₁ s₁' s₂ s₂' : ℕ}
+    {M₁ : RKTableau s₁} {M₁' : RKTableau s₁'}
+    {M₂ : RKTableau s₂} {M₂' : RKTableau s₂'}
+    (hEq₁ : @Equivalent.{u} s₁ s₁' M₁ M₁')
+    (hEq₂ : @Equivalent.{u} s₂ s₂' M₂ M₂') :
+    composeQ
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s₁, M₁⟩)
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s₂, M₂⟩) =
+      composeQ
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s₁', M₁'⟩)
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s₂', M₂'⟩) := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound
+    (compose_equivalent_compose M₁ M₁' M₂ M₂' hEq₁ hEq₂)
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -2856,6 +2909,42 @@ example :
   RKTableau.compose_equivalent_compose
     paddedEuler (paddedEuler.pReduced pairPartition)
     paddedEuler (paddedEuler.pReduced pairPartition)
+    paddedEuler_equivalent_pReduced
+    paddedEuler_equivalent_pReduced
+
+/-- *Non-vacuity for `composeQ` (cycle 218 P2 W1, homogeneous).*
+`composeQ` applied to two copies of `⟦⟨2, paddedEuler⟩⟧` reduces
+*definitionally* (via `Quotient.lift₂_mk`) to the class
+`⟦⟨2 + 2, paddedEuler.compose paddedEuler⟩⟧`. Exercises the lift on
+the cycle 030 non-vacuity backbone. -/
+example :
+    RKTableau.composeQ
+        (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩)
+        (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩)
+      = Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2 + 2, paddedEuler.compose paddedEuler⟩ :=
+  rfl
+
+/-- *Non-vacuity for `composeQ` (cycle 218 P2 W2, heterogeneous-stage).*
+The heterogeneous case `(2 + 2) ≠ (1 + 1)`: the class of
+`paddedEuler.compose paddedEuler` (4-stage) and the class of
+`(paddedEuler.pReduced pairPartition).compose (paddedEuler.pReduced
+pairPartition)` (2-stage) coincide under `composeQ`. Routes through
+cycle 218's `composeQ_eq_of_equivalent` corollary (the bracketed
+(382f) form of `thm:382A`) with cycle 208's
+`paddedEuler_equivalent_pReduced` on both factors. This is the
+*actually relevant* heterogeneous test — distinct stage sums on the
+two sides, mediated by `Quotient.sound`. -/
+example :
+    RKTableau.composeQ
+        (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩)
+        (Quotient.mk RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩)
+      = RKTableau.composeQ
+          (Quotient.mk RKTableau.Equivalent.setoidSigma
+            ⟨1, paddedEuler.pReduced pairPartition⟩)
+          (Quotient.mk RKTableau.Equivalent.setoidSigma
+            ⟨1, paddedEuler.pReduced pairPartition⟩) :=
+  RKTableau.composeQ_eq_of_equivalent
     paddedEuler_equivalent_pReduced
     paddedEuler_equivalent_pReduced
 

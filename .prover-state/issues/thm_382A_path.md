@@ -403,3 +403,82 @@ LOC estimate: ~10 LOC for `composeQ` + ~10 LOC for non-vacuity examples
 plus the heterogeneous reduction equivalent via cycle 217 P2 witness).
 The (382f) bracketed form `[m₁·m₂] = [m̂₁·m̂₂]` then follows from
 `Quotient.sound` on cycle 217's theorem.
+
+## Cycle 218 update — `composeQ` shipped, (382f) bracketed form CLOSED
+
+Cycle 218 shipped both deliverables clean, no surprises:
+
+1. **`RKTableau.composeQ.{u} : Quotient Equivalent.setoidSigma.{u} →
+   Quotient Equivalent.setoidSigma.{u} → Quotient Equivalent.setoidSigma.{u}`**
+   — `noncomputable def` via `Quotient.lift₂` with the respect
+   obligation discharged by cycle 217's `compose_equivalent_compose`
+   applied directly after `rintro` + `apply Quotient.sound`. A single
+   `show @Equivalent.{u} (s₁ + s₂) (s₁' + s₂') (M₁.compose M₂)
+   (M₁'.compose M₂')` after the rintro stabilises the goal for the
+   final `exact`. Axiom-clean ([propext, Classical.choice, Quot.sound]).
+
+2. **`RKTableau.composeQ_eq_of_equivalent.{u}`** (the (382f) bracketed
+   form of `thm:382A` directly): if `M₁ ≡ M̂₁` and `M₂ ≡ M̂₂`
+   heterogeneous-stage, then `[M₁ · M₂] = [M̂₁ · M̂₂]` in
+   `Quotient Equivalent.setoidSigma`. Body is `show Quotient.mk _ _
+   = Quotient.mk _ _; exact Quotient.sound (compose_equivalent_compose
+   ...)`. Axiom-clean.
+
+3. **P2 non-vacuity (W1 homogeneous)**: `composeQ ⟦⟨2, paddedEuler⟩⟧²
+   = ⟦⟨2+2, paddedEuler.compose paddedEuler⟩⟧` closed by plain `rfl`
+   through `Quotient.lift₂_mk` definitional reduction — no `rw` or
+   `simp` needed.
+
+4. **P2 non-vacuity (W2 heterogeneous)**: `composeQ` on `⟦⟨2,
+   paddedEuler⟩⟧²` and `composeQ` on `⟦⟨1, paddedEuler.pReduced
+   pairPartition⟩⟧²` coincide via `composeQ_eq_of_equivalent` with
+   `paddedEuler_equivalent_pReduced` × 2. The *actually relevant*
+   heterogeneous witness — stage sums `(2+2) ≠ (1+1)` on the two
+   sides, mediated by `Quotient.sound`.
+
+**Pre-flagged risks for cycle 218 (R1–R5 from cycle 218 strategy §C)
+that fired or did not fire:**
+
+- **R1 (Quotient.lift₂ explicit setoid args)**: did NOT fire — Mathlib's
+  curried `Quotient.lift₂` infers both source setoids from the
+  Σ-typed function and the output type. Loogle confirmed signature
+  `Quotient.lift₂ : (α → β → φ) → (∀ a₁ b₁ a₂ b₂, a₁ ≈ a₂ → b₁ ≈ b₂ →
+  f a₁ b₁ = f a₂ b₂) → Quotient s₁ → Quotient s₂ → φ`. No explicit
+  setoid binders needed.
+- **R2 (Σ-relation unfolding `Setoid.r` → `Equivalent`)**: did NOT fire
+  in practice — but defensive `show @Equivalent.{u} ...` after the
+  rintro was added prophylactically and is recommended for future
+  consumers of `setoidSigma` (matches cycle 217 idioms).
+- **R3 (Mathlib API name drift)**: did NOT fire — `Quotient.lift₂`
+  and `Quotient.lift₂_mk` exist at expected names in `Mathlib.Data.Quot`
+  and `Init.Core` respectively.
+- **R4 (`noncomputable`)**: applied as planned; without it Lean would
+  reject the definition because `Quotient.lift₂` uses `Quot.lift`
+  which is itself opaque/noncomputable.
+- **R5 (implicit arity on `compose_equivalent_compose`)**: did NOT fire
+  — passing all four tableaux explicitly (`M₁ M₁' M₂ M₂'`) ahead of
+  `hEq₁ hEq₂` works on first compile, no implicit-stage ambiguity.
+
+**Both textbook forms of `thm:382A` are now closed**: the (382g)
+un-bracketed heterogeneous form (`m₁ · m₂ ≡ m̂₁ · m̂₂`, cycles 215–217)
+and the (382f) bracketed form (`[m₁ · m₂] = [m̂₁ · m̂₂]`, cycle 218).
+`thm:382A`'s row in `lean_status.json` is bumped to `formalized`,
+`lean_symbol` switched to `composeQ_eq_of_equivalent` (the bracketed
+form is the headline statement).
+
+**Cycle 219+ outlook — §382 group structure**: with `composeQ` in
+hand, the natural next deliverables are:
+
+1. **Identity element**: pick the textbook identity (likely the
+   trivial 0-stage tableau or `explicitEuler` — Butcher §382 names it).
+   Prove `composeQ ⟦identity⟧ q = q` and `composeQ q ⟦identity⟧ = q`
+   for all `q : Quotient setoidSigma`.
+2. **Inverse element**: Butcher §382's textbook inverse construction
+   (negate `b`, transpose `A`? — needs careful reading of §382).
+3. **Associativity**: cycle 210's deferred `compose_assoc` may now
+   become tractable on `Quotient` via `Quotient.sound` on an
+   `Equivalent`-level associativity (the HEq plumbing that blocked
+   the on-the-nose `compose_assoc` is finessed by the quotient).
+
+These are cycle 219+ work; cycle 218 ships `composeQ` and the
+bracketed corollary, period.
