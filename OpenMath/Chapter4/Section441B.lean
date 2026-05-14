@@ -179,4 +179,246 @@ instance of the negativity claim of `lem:441B`. -/
 theorem cInverseLog_one_neg : cInverseLog 1 < 0 := by
   rw [cInverseLog_one_eq_neg_one_sixth]; norm_num
 
+/-! ## Phase C — strict negativity of `cInverseLog n` for `n ≥ 1`
+
+Butcher §441 p. 376 proves the headline `lem:441B` claim by strong
+induction on `n`. The induction step multiplies the (441c) identity
+by the polynomial `2n+1 - (2n-1)z²`, producing an auxiliary series
+`dSeries n` with the property `dSeries n * cSeries = 2n+1 - (2n-1)z²`
+(eq. 441d). The `z^{2n}` coefficient of (441d) gives a recurrence
+that forces `cInverseLog n < 0` given the inductive hypothesis on
+smaller indices.
+
+We define `dSeries n` algebraically as
+`(C(2n+1) - C(2n-1)·X²) · cInverseLogSeries`. With this definition,
+the (441d) identity becomes a one-line consequence of (441c) and
+associativity. The closed-form coefficient computation
+`coeff (2i) (dSeries n) = -8(n-i)/((2i+1)(2i-1))` for `i ≥ 1` is
+then proved as a separate lemma.
+-/
+
+/-- **The auxiliary series `dSeries n`** of Butcher's (441d) identity.
+
+Defined algebraically as the product
+`(C(2n+1) - C(2n-1)·X²) · cInverseLogSeries`. By Butcher's calculation
+(p. 376), the coefficient of `X^(2i)` for `1 ≤ i ≤ n` is
+`-8(n-i)/((2i+1)(2i-1))` (in particular `d_{2n} = 0`), the constant
+term is `2(2n+1)`, and odd coefficients vanish. -/
+noncomputable def dSeries (n : ℕ) : PowerSeries ℝ :=
+  (PowerSeries.C (R := ℝ) (2 * (n : ℝ) + 1) -
+    PowerSeries.C (R := ℝ) (2 * (n : ℝ) - 1) * PowerSeries.X ^ 2)
+    * cInverseLogSeries
+
+/-- **(441d) identity** — `dSeries n * cSeries = 2n+1 - (2n-1)·X²`.
+
+Immediate from the algebraic definition of `dSeries`, the (441c)
+identity `cInverseLogSeries * cSeries = 1`, and `mul_assoc`. -/
+theorem dSeries_mul_cSeries_eq (n : ℕ) :
+    dSeries n * cSeries =
+      PowerSeries.C (R := ℝ) (2 * (n : ℝ) + 1) -
+      PowerSeries.C (R := ℝ) (2 * (n : ℝ) - 1) * PowerSeries.X ^ 2 := by
+  unfold dSeries
+  rw [mul_assoc, cInverseLogSeries_mul_cSeries_eq_one, mul_one]
+
+/-- Closed-form: constant term of `dSeries n` is `2(2n+1)`. -/
+@[simp] lemma coeff_dSeries_zero (n : ℕ) :
+    (PowerSeries.coeff (R := ℝ) 0) (dSeries n) = 2 * (2 * (n : ℝ) + 1) := by
+  unfold dSeries
+  rw [PowerSeries.coeff_zero_eq_constantCoeff]
+  simp [cInverseLogSeries_constantCoeff_eq_two]
+  ring
+
+/-- Closed-form: odd coefficients of `dSeries n` vanish. -/
+lemma coeff_dSeries_odd (n k : ℕ) (h : ¬ Even k) :
+    (PowerSeries.coeff (R := ℝ) k) (dSeries n) = 0 := by
+  unfold dSeries
+  rw [sub_mul, map_sub, PowerSeries.coeff_C_mul, mul_assoc,
+      PowerSeries.coeff_C_mul, PowerSeries.coeff_X_pow_mul']
+  simp [coeff_cInverseLogSeries, h]
+  intro hk
+  have : ¬ Even (k - 2) := fun ⟨a, ha⟩ => h ⟨a + 1, by omega⟩
+  simp [this]
+
+/-- Closed-form: the `(2i)`-th coefficient of `dSeries n` for `i ≥ 1`
+is `-8(n-i)/((2i+1)(2i-1))`. -/
+lemma coeff_dSeries_two_mul (n i : ℕ) (hi : 1 ≤ i) :
+    (PowerSeries.coeff (R := ℝ) (2 * i)) (dSeries n) =
+      -8 * ((n : ℝ) - i) / ((2 * (i : ℝ) + 1) * (2 * (i : ℝ) - 1)) := by
+  unfold dSeries
+  rw [sub_mul, map_sub, PowerSeries.coeff_C_mul, mul_assoc,
+      PowerSeries.coeff_C_mul, PowerSeries.coeff_X_pow_mul']
+  have h2i : 2 ≤ 2 * i := by omega
+  have he1 : Even (2 * i) := ⟨i, by ring⟩
+  have he2 : Even (2 * i - 2) := ⟨i - 1, by omega⟩
+  rw [if_pos h2i, coeff_cInverseLogSeries, coeff_cInverseLogSeries,
+      if_pos he1, if_pos he2]
+  have hi1 : (1 : ℝ) ≤ i := by exact_mod_cast hi
+  have hi2 : (2 * (i : ℝ) - 1) ≠ 0 := by linarith
+  have hi3 : (2 * (i : ℝ) + 1) ≠ 0 := by positivity
+  have hcast1 : (((2 * i : ℕ) : ℝ) + 1) = 2 * (i : ℝ) + 1 := by push_cast; ring
+  have hcast2 : (((2 * i - 2 : ℕ) : ℝ) + 1) = 2 * (i : ℝ) - 1 := by
+    have : ((2 * i - 2 : ℕ) : ℝ) = 2 * (i : ℝ) - 2 := by
+      have : (2 * i - 2 : ℕ) = 2 * (i - 1) := by omega
+      rw [this]; push_cast; ring_nf
+      have : (1 : ℝ) ≤ i := hi1
+      have hi' : ((i - 1 : ℕ) : ℝ) = (i : ℝ) - 1 := by
+        rw [Nat.cast_sub hi]; push_cast; ring
+      rw [hi']; ring
+    linarith
+  rw [hcast1, hcast2]
+  field_simp
+  ring
+
+/-- **Sign of `d_{2i}`** for `1 ≤ i ≤ n - 1`: strictly negative.
+
+This is the key intermediate inequality in Butcher's induction. -/
+theorem coeff_dSeries_neg (n i : ℕ) (h₁ : 1 ≤ i) (h₂ : i ≤ n - 1) :
+    (PowerSeries.coeff (R := ℝ) (2 * i)) (dSeries n) < 0 := by
+  rw [coeff_dSeries_two_mul n i h₁]
+  have hi_lt_n : i < n := by omega
+  have hni : (i : ℝ) < (n : ℝ) := by exact_mod_cast hi_lt_n
+  have hi1 : (1 : ℝ) ≤ (i : ℝ) := by exact_mod_cast h₁
+  have hnum : -8 * ((n : ℝ) - i) < 0 := by nlinarith
+  have hden : (2 * (i : ℝ) + 1) * (2 * (i : ℝ) - 1) > 0 := by nlinarith
+  exact div_neg_of_neg_of_pos hnum hden
+
+/-- **Butcher Lemma 441B (headline)** — `cInverseLog n < 0` for all
+`n ≥ 1`. The coefficients `c₂, c₄, c₆, …` in the expansion of
+`z / log((1+z)/(1-z))` are all negative.
+
+Proof: strong induction on `n`. Base case `n = 1` is
+`cInverseLog_one_neg`. Inductive step extracts the `X^(2n)`
+coefficient from the (441d) identity, rearranges to solve for
+`cInverseLog n`, and uses the inductive hypothesis together with
+`coeff_dSeries_neg` to conclude. -/
+theorem cInverseLog_neg : ∀ n : ℕ, 1 ≤ n → cInverseLog n < 0 := by
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n IH =>
+    intro hn
+    -- Split: n = 1 (base case) or n ≥ 2 (inductive step)
+    rcases Nat.lt_or_ge n 2 with hn2 | hn2
+    · -- n < 2 and 1 ≤ n, so n = 1
+      have : n = 1 := by omega
+      rw [this]; exact cInverseLog_one_neg
+    -- n ≥ 2: extract z^(2n) coefficient from (441d)
+    have hKey : (PowerSeries.coeff (R := ℝ) (2 * n)) (dSeries n * cSeries) = 0 := by
+      rw [dSeries_mul_cSeries_eq, map_sub, PowerSeries.coeff_C,
+          PowerSeries.coeff_C_mul, PowerSeries.coeff_X_pow]
+      have h0 : (2 * n : ℕ) ≠ 0 := by omega
+      have h2 : (2 * n : ℕ) ≠ 2 := by omega
+      simp [h0, h2]
+    rw [PowerSeries.coeff_mul] at hKey
+    -- Isolate (0, 2n): pulls out the 2(2n+1)·c_{2n} term
+    have h0mem : ((0 : ℕ), 2 * n) ∈ Finset.antidiagonal (2 * n) := by
+      rw [Finset.mem_antidiagonal]; simp
+    rw [← Finset.add_sum_erase _ _ h0mem] at hKey
+    -- The (0, 2n) term: coeff 0 dSeries · coeff (2n) cSeries
+    -- = 2(2n+1) · cInverseLog n
+    -- The remaining sum (over erased antidiag): need to show > 0
+    -- Then linarith concludes cInverseLog n < 0
+    simp only [coeff_dSeries_zero] at hKey
+    -- hKey : 2*(2*↑n+1) * coeff (2n) cSeries + ∑erase = 0
+    -- coeff (2n) cSeries = cInverseLog n
+    change 2 * (2 * (n : ℝ) + 1) * cInverseLog n + _ = 0 at hKey
+    -- Now show: ∑erase > 0. We split off (2, 2n-2) and bound the rest ≥ 0.
+    have h2mem : ((2 : ℕ), 2 * n - 2) ∈
+        (Finset.antidiagonal (2 * n)).erase (0, 2 * n) := by
+      rw [Finset.mem_erase, Finset.mem_antidiagonal]
+      refine ⟨?_, by omega⟩
+      intro h; simp at h
+    rw [← Finset.add_sum_erase _ _ h2mem] at hKey
+    -- The (2, 2n-2) term: d_2 · c_{2(n-1)}
+    -- = coeff_dSeries_two_mul n 1 _ · cInverseLog (n-1)
+    have hd2_val : (PowerSeries.coeff (R := ℝ) 2) (dSeries n) =
+        -8 * ((n : ℝ) - 1) / ((2 * (1 : ℝ) + 1) * (2 * (1 : ℝ) - 1)) := by
+      have := coeff_dSeries_two_mul n 1 (by omega)
+      simpa using this
+    -- coeff (2*n-2) cSeries = cInverseLog (n-1)
+    have hcLnm1 : (PowerSeries.coeff (R := ℝ) (2 * n - 2)) cSeries = cInverseLog (n - 1) := by
+      have h_eq : 2 * n - 2 = 2 * (n - 1) := by omega
+      rw [h_eq]; rfl
+    -- Apply IH at n-1
+    have hcLnm1_neg : cInverseLog (n - 1) < 0 := IH (n - 1) (by omega) (by omega)
+    -- d_2 < 0 (sign of d_{2·1})
+    have hd2_neg : (PowerSeries.coeff (R := ℝ) 2) (dSeries n) < 0 := by
+      have := coeff_dSeries_neg n 1 (by omega) (by omega)
+      simpa using this
+    -- The (2, 2n-2) term is positive
+    have h2term_pos : (PowerSeries.coeff (R := ℝ) ((2 : ℕ), 2 * n - 2).1) (dSeries n) *
+        (PowerSeries.coeff (R := ℝ) ((2 : ℕ), 2 * n - 2).2) cSeries > 0 := by
+      simp only
+      rw [hcLnm1]
+      exact mul_pos_of_neg_of_neg hd2_neg hcLnm1_neg
+    -- Show ∑double-erase ≥ 0
+    have h_rest_nonneg :
+        (0 : ℝ) ≤ ∑ pq ∈ ((Finset.antidiagonal (2 * n)).erase (0, 2 * n)).erase (2, 2 * n - 2),
+          (PowerSeries.coeff (R := ℝ) pq.1) (dSeries n) *
+          (PowerSeries.coeff (R := ℝ) pq.2) cSeries := by
+      apply Finset.sum_nonneg
+      rintro ⟨p, q⟩ hpq
+      rw [Finset.mem_erase, Finset.mem_erase, Finset.mem_antidiagonal] at hpq
+      obtain ⟨hne2, hne0, hpq_eq⟩ := hpq
+      -- Case split on parity of p
+      by_cases hp_even : Even p
+      · -- p even: p = 2*i
+        obtain ⟨i, hi⟩ := hp_even
+        -- p = i + i = 2*i (using Mathlib's definition Even n ↔ ∃ r, n = r + r)
+        have hp_eq : p = 2 * i := by omega
+        -- i ranges: i = 0 ⇒ p = 0, q = 2n, but excluded (hne0)
+        --           i ≥ 1 ⇒ ...
+        rcases Nat.eq_zero_or_pos i with hi0 | hi1
+        · -- i = 0 ⇒ p = 0 ⇒ pq = (0, 2n), contradicts hne0
+          exfalso; apply hne0
+          ext <;> simp_all
+        -- i ≥ 1
+        -- Subcase: i = 1 ⇒ p = 2 ⇒ pq = (2, 2n-2), contradicts hne2
+        rcases (Nat.lt_or_ge 1 i) with hi_gt1 | hi_le1
+        · -- i ≥ 2: 1 ≤ i and i ≤ n? need to check
+          -- p = 2i, q = 2n - 2i = 2(n-i)
+          -- Need: coeff (2i) dSeries · coeff (2(n-i)) cSeries ≥ 0
+          have hpq_eq2 : 2 * i + q = 2 * n := by rw [← hp_eq]; exact hpq_eq
+          have hi_le_n : i ≤ n := by omega
+          rcases eq_or_lt_of_le hi_le_n with hi_eq_n | hi_lt_n
+          · -- i = n ⇒ p = 2n, q = 0
+            -- coeff (2n) dSeries = d_{2n} = 0 (by coeff_dSeries_two_mul n n)
+            have : (PowerSeries.coeff (R := ℝ) p) (dSeries n) = 0 := by
+              rw [hp_eq, hi_eq_n]
+              rw [coeff_dSeries_two_mul n n (by omega)]
+              ring
+            rw [this]; simp
+          · -- 1 ≤ i ≤ n - 1
+            have hi_le_nm1 : i ≤ n - 1 := by omega
+            -- coeff (2i) dSeries = d_{2i} < 0
+            have hdi_neg : (PowerSeries.coeff (R := ℝ) p) (dSeries n) < 0 := by
+              rw [hp_eq]
+              exact coeff_dSeries_neg n i (by omega) hi_le_nm1
+            -- q = 2(n-i), 1 ≤ n - i ≤ n - 1 (so IH applies)
+            have hq_eq : q = 2 * (n - i) := by omega
+            have hni_pos : 1 ≤ n - i := by omega
+            have hni_lt : n - i < n := by omega
+            have hcL_neg : (PowerSeries.coeff (R := ℝ) q) cSeries = cInverseLog (n - i) := by
+              rw [hq_eq]; rfl
+            have hcLni_neg : cInverseLog (n - i) < 0 := IH (n - i) hni_lt hni_pos
+            rw [hcL_neg]
+            exact le_of_lt (mul_pos_of_neg_of_neg hdi_neg hcLni_neg)
+        · -- i ≤ 1, combined with i ≥ 1 ⇒ i = 1 ⇒ p = 2 ⇒ contradicts hne2
+          have : i = 1 := by omega
+          exfalso; apply hne2
+          subst this
+          have hq : q = 2 * n - 2 := by omega
+          ext
+          · simp [hp_eq]
+          · simp [hq]
+      · -- p odd: coeff p dSeries = 0
+        have : (PowerSeries.coeff (R := ℝ) p) (dSeries n) = 0 :=
+          coeff_dSeries_odd n p hp_even
+        rw [this]; simp
+    -- Combine: hKey says (2·(2n+1)·cIL n) + ((2, 2n-2) term) + (sum) = 0
+    -- (2, 2n-2) term > 0 and sum ≥ 0, so 2·(2n+1)·cIL n ≤ -((2, 2n-2) term) < 0
+    have h2n_pos : (0 : ℝ) < 2 * (2 * (n : ℝ) + 1) := by positivity
+    -- From hKey: 2(2n+1) · cIL n + (positive) + (≥0) = 0
+    -- So 2(2n+1) · cIL n < 0, hence cIL n < 0
+    nlinarith [hKey, h2term_pos, h_rest_nonneg, h2n_pos]
+
 end OpenMath.Chapter4.Section441B
