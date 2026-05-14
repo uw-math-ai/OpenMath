@@ -473,3 +473,16 @@ the cycle 195 measure side (`size_le`, `size_lt_of_step`,
 + `IsZeroReducible.{inP1, exists_inP1_false,
 inP1_isZeroReducibleVia, zeroReduced_size_lt}`) in a single
 ~50-LOC packaging theorem, per cycle 197 strategy.
+
+**Cycle 198 update (18th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.029s, user 0m0.216s, sys 0m0.518s — CPU =
+(0.216 + 0.518) / 300 = 0.24% of wall, identical near-zero
+pattern). Pre-flight `ps -u $USER` showed no D-state processes
+(empty). 18 consecutive timeouts span cycles 182–198 (17 calendar
+days). Pathology reproduced on every smoke-test attempt without
+exception across two-and-a-half weeks. Pivoting to Priority 1: ship
+`pEquivalent_iff_exists_common_irreducible_reduct` — the def:381F
+existential-iff characterization directly consuming cycle 197's
+`reducedMethod_exists` plus cycle 192's `PReducesTo.trans`, per
+cycle 198 strategy.

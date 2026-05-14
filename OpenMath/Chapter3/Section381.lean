@@ -828,6 +828,41 @@ theorem reducedMethod_exists {s : ℕ} (M : RKTableau s) :
           ih hP.sBar hP.sBar_lt (M.pReduced hP.partition)
         exact ⟨s', M', hStep.trans hRed, hIrr'⟩
 
+/-- *Existential characterization of def:381F (P-equivalence).*
+
+Butcher §380 def:381F asserts that two Runge–Kutta methods are
+P-equivalent iff each of them reduces to the same reduced method.
+The constructive `noncomputable def reducedMethod` recursion that
+would produce the canonical reduct as a function of the input is
+deferred (see `.prover-state/issues/reduced_method_deferred.md`),
+but the *existential* reading — that a common irreducible reduct
+exists — is provable directly from cycle 197's
+`reducedMethod_exists` and cycle 192's `PReducesTo.trans`, and
+captures the def:381F content as a `Prop`.
+
+The forward direction destructures `PEquivalent` to a common (not
+necessarily irreducible) reduct `N`, applies `reducedMethod_exists`
+to `N` to obtain an irreducible reduct `M''` of `N`, and chains the
+two reduction sequences via `PReducesTo.trans`.
+
+The reverse direction discards the irreducibility witness (which is
+not required at the `PEquivalent`-level: P-equivalence only demands
+a common reduct, not an irreducible one) and unpacks the
+existential directly.
+
+Cycle 198 deliverable. -/
+theorem pEquivalent_iff_exists_common_irreducible_reduct
+    {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') :
+    PEquivalent M M' ↔
+      ∃ (s'' : ℕ) (M'' : RKTableau s''),
+        PReducesTo M M'' ∧ PReducesTo M' M'' ∧ M''.IsIrreducible := by
+  refine ⟨?_, ?_⟩
+  · rintro ⟨t, N, hMN, hM'N⟩
+    obtain ⟨s'', M'', hNM'', hIrr⟩ := reducedMethod_exists N
+    exact ⟨s'', M'', hMN.trans hNM'', hM'N.trans hNM'', hIrr⟩
+  · rintro ⟨s'', M'', hMM'', hM'M'', _hIrr⟩
+    exact ⟨s'', M'', hMM'', hM'M''⟩
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step
@@ -993,6 +1028,22 @@ form via a single 0-reduction step. Consumes
 theorem paddedEuler_pEquivalent_zeroReduced :
     paddedEuler.PEquivalent (paddedEuler.zeroReduced ![true, false]) :=
   RKTableau.PEquivalent.of_pReducesTo paddedEuler_pReducesTo_zeroReduced
+
+/-- Non-vacuity witness for cycle 198's
+`pEquivalent_iff_exists_common_irreducible_reduct`: applying the
+forward (`.mp`) direction of the iff to
+`paddedEuler_pEquivalent_pReduced` extracts an irreducible common
+reduct of `paddedEuler` and `paddedEuler.pReduced pairPartition`.
+Confirms the def:381F existential characterization fires
+non-vacuously on the heterogeneous-stages (2 → 1) reduction
+exercised by the canonical example. -/
+example :
+    ∃ (s'' : ℕ) (M'' : RKTableau s''),
+      paddedEuler.PReducesTo M''
+      ∧ (paddedEuler.pReduced pairPartition).PReducesTo M''
+      ∧ M''.IsIrreducible :=
+  (RKTableau.pEquivalent_iff_exists_common_irreducible_reduct _ _).mp
+    paddedEuler_pEquivalent_pReduced
 
 /-- Non-vacuity witness for `PReducesTo.trans` (cycle 192): chaining a
 non-trivial P-reduction step with a reflexive tail re-yields the
