@@ -1,5 +1,37 @@
 # Issue: General reflexivity `equivalent_self M` for `def:381A` deferred
 
+## Resolution (cycle 203)
+
+**CLOSED.** Cycle 203 shipped `equivalent_self M : M.Equivalent M` in
+`OpenMath/Chapter3/Section381.lean` (theorem
+`OpenMath.Chapter3.Section312.RKTableau.equivalent_self`), built on the
+cycle 201/202 Banach contraction foundation
+(`RKStageMap`, `RKStageMap_dist_le`, `RKStageMap_lipschitz`,
+`RKStageMap_contracting`).
+
+Proof recipe (as deployed):
+* Threshold `h₀ := 1 / (2 * (L * C + 1))` where
+  `C := Σ_{i,j} |M.A i j|`, giving `0 < h₀` automatically and
+  `|h| · L · C < 1` for `0 < h ≤ h₀` via the rearrangement
+  `h * (2*(L*C+1)) ≤ 1 ⇒ 2*h*L*C ≤ 1 - 2*h < 1` (closed by `nlinarith`).
+* `RKStageMap_contracting` discharges the smallness ⇒ `ContractingWith`
+  link, then `Function.IsFixedPt` witnesses for the two stage tuples
+  `Y, Y'` consume `hY_stage`/`hY'_stage` definitionally.
+* `ContractingWith.eq_or_edist_eq_top_of_fixedPoints` gives the
+  uniqueness disjunction; the `edist = ⊤` branch is closed by
+  `edist_ne_top Y Y'` since `Fin s → N` is a `MetricSpace`.
+* The output rewrite is mechanical: `rw [hY_out, hY'_out, hY_eq]`
+  closes by reflexivity.
+
+Verification: axiom-clean (`[propext, Classical.choice, Quot.sound]`),
+warm rebuild of `Section381.lean` <7s, sorry count remains 0 across
+the repo.
+
+No `lean_status.json` / `plan.md` row change is needed: def:381A's
+predicate + cycle 030 explicit-Euler witness already established the
+formalisation status; the general reflexivity lemma is bonus non-vacuity
+content (a stronger witness for the predicate's non-degeneracy story).
+
 ## Blocker
 
 The general lemma

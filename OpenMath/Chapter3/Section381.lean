@@ -1698,6 +1698,53 @@ theorem RKStageMap_contracting {s : ℕ} (M : RKTableau s) {N : Type*}
       (M.RKStageMap h f y₀) :=
   ⟨by exact_mod_cast hLt, M.RKStageMap_lipschitz h hf y₀⟩
 
+/-- *Reflexivity of `def:381A` equivalence.* Every Runge–Kutta tableau is
+equivalent to itself in the sense of def:381A: for every autonomous
+Lipschitz RHS `f` and initial value `y₀`, there is a step-size threshold
+`h₀ > 0` below which all one-step outputs of `M` coincide. The threshold
+is constructive: `h₀ := 1 / (2 * (L * C + 1))` where
+`C := Σ_{i,j} |M.A i j|` — chosen so the Banach contraction smallness
+condition `|h| · L · C < 1` of `RKStageMap_contracting` holds. Proof:
+given two stage tuples `Y, Y'` witnessing one-step outputs `y₁` and
+`y₁'`, both are fixed points of `M.RKStageMap h f y₀`; Banach uniqueness
+(`ContractingWith.eq_or_edist_eq_top_of_fixedPoints` together with
+finiteness of `edist` on the normed-space pi type) forces `Y = Y'`,
+hence `y₁ = y₁'`. Closes the cycle 030 deferral
+`equivalent_self_general_deferred.md`. -/
+theorem equivalent_self {s : ℕ} (M : RKTableau s) : M.Equivalent M := by
+  intro N _ _ f L hL y₀
+  set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j| with hC_def
+  have hC_nn : 0 ≤ C :=
+    Finset.sum_nonneg fun _ _ =>
+      Finset.sum_nonneg fun _ _ => abs_nonneg _
+  have h_LCnn : 0 ≤ (L : ℝ) * C := mul_nonneg L.coe_nonneg hC_nn
+  have h_denom_pos : 0 < 2 * ((L : ℝ) * C + 1) := by linarith
+  refine ⟨1 / (2 * ((L : ℝ) * C + 1)), by positivity, ?_⟩
+  intro h hh_pos hh_le y₁ y₁' hY hY'
+  obtain ⟨Y, hY_stage, hY_out⟩ := hY
+  obtain ⟨Y', hY'_stage, hY'_out⟩ := hY'
+  have h_abs : |h| = h := abs_of_pos hh_pos
+  have h_mul : h * (2 * ((L : ℝ) * C + 1)) ≤ 1 :=
+    (le_div_iff₀ h_denom_pos).mp hh_le
+  have h_small : |h| * (L : ℝ) * C < 1 := by
+    rw [h_abs]
+    nlinarith [hh_pos, h_LCnn, h_mul]
+  have hContract := M.RKStageMap_contracting h hL y₀ h_small
+  have hY_fix : Function.IsFixedPt (M.RKStageMap h f y₀) Y := by
+    show M.RKStageMap h f y₀ Y = Y
+    funext i
+    exact (hY_stage i).symm
+  have hY'_fix : Function.IsFixedPt (M.RKStageMap h f y₀) Y' := by
+    show M.RKStageMap h f y₀ Y' = Y'
+    funext i
+    exact (hY'_stage i).symm
+  have hY_eq : Y = Y' := by
+    rcases hContract.eq_or_edist_eq_top_of_fixedPoints hY_fix hY'_fix with
+      hEq | hInf
+    · exact hEq
+    · exact absurd hInf (edist_ne_top Y Y')
+  rw [hY_out, hY'_out, hY_eq]
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381
