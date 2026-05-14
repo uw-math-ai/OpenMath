@@ -404,3 +404,15 @@ reorder), plus Priority 3 Option 3A ship of `PReducesTo.trans`
 (per cycle 192 strategy). Section381.lean recompile remained
 healthy at ~4s warm throughout the cycle, confirming the GPFS
 pathology is still Section441-transitive-load-specific.
+
+**Cycle 193 update (13th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=143/124, real 5m0.029s, user 0m0.231s, sys 0m0.479s — CPU =
+0.24% of wall, identical near-zero pattern). Pre-flight `ps -u
+$USER` showed no D-state processes. 13 consecutive timeouts span
+cycles 182–193 (12 calendar days). The pathology has reproduced on
+every smoke-test attempt without exception. Pivoting to Priority 2:
+ship `PEquivalent.eq_of_both_isIrreducible` (canonical-form half of
+def:381E — irreducible P-equivalent methods coincide up to
+heterogeneous-stage `HEq`) per cycle 193 strategy. Section381.lean
+recompile remained healthy at ~4s warm throughout the cycle.

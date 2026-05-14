@@ -561,6 +561,26 @@ theorem PEquivalent.eq_of_isIrreducible_of_middle
     PEquivalent M M' :=
   ⟨sBar, N, h₁, h₂⟩
 
+/-- *Canonical-form half of def:381E.* If two P-equivalent methods are
+both `IsIrreducible`, they coincide up to heterogeneous-stage `HEq`.
+
+Dual to `PEquivalent.eq_of_isIrreducible_of_middle` (cycle 190), which
+handles the case where the existential common reduct is irreducible.
+Here both endpoints are irreducible; the common reduct collapses to
+each endpoint via `eq_of_isIrreducible_of_pReducesTo` (cycle 188),
+forcing the two endpoints to share stage count and tableau data. -/
+theorem PEquivalent.eq_of_both_isIrreducible
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (hM : M.IsIrreducible) (hM' : M'.IsIrreducible)
+    (h : PEquivalent M M') :
+    ∃ heq : s' = s, HEq M' M := by
+  obtain ⟨_, _, h₁, h₂⟩ := h
+  obtain ⟨h₁eq, h₁heq⟩ := eq_of_isIrreducible_of_pReducesTo hM h₁
+  obtain ⟨h₂eq, h₂heq⟩ := eq_of_isIrreducible_of_pReducesTo hM' h₂
+  subst h₁eq
+  subst h₂eq
+  exact ⟨rfl, h₂heq.symm.trans h₁heq⟩
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step
@@ -1195,6 +1215,15 @@ theorem PEquivalent.toPhiEquivalent {s s' : ℕ}
       (PhiEquivalent.of_pReducesTo hM).trans
         (PhiEquivalent.of_pReducesTo hM').symm
 
+/-- One-step bridge: any P-reduction induces Φ-equivalence between its
+endpoints. Direct alias of `PhiEquivalent.of_pReducesTo` provided for
+caller ergonomics, so downstream code can write `h.toPhiEquivalent` on
+a `PReducesTo` hypothesis without first wrapping it in `PEquivalent`. -/
+theorem PReducesTo.toPhiEquivalent {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} (h : PReducesTo M M') :
+    PhiEquivalent M M' :=
+  PhiEquivalent.of_pReducesTo h
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381
@@ -1269,5 +1298,20 @@ theorem paddedEuler_pEquivalent_self_via_pReduced :
     paddedEuler_pReduced_pairPartition_isIrreducible
     paddedEuler_pReducesTo_pReduced
     paddedEuler_pReducesTo_pReduced
+
+/-- Non-vacuity witness for `PEquivalent.eq_of_both_isIrreducible`:
+the 1-stage `paddedEuler.pReduced pairPartition` is irreducible and
+P-equivalent (reflexively) to itself, so the canonical-form theorem
+recovers the trivial `HEq` along the identity-stage axis. Exercises
+the type-level heterogeneous-stage plumbing on a non-trivial
+irreducible witness. Cycle 193 deliverable. -/
+example :
+    ∃ heq : 1 = 1,
+      HEq (paddedEuler.pReduced pairPartition)
+          (paddedEuler.pReduced pairPartition) :=
+  RKTableau.PEquivalent.eq_of_both_isIrreducible
+    paddedEuler_pReduced_pairPartition_isIrreducible
+    paddedEuler_pReduced_pairPartition_isIrreducible
+    (RKTableau.PEquivalent.refl (paddedEuler.pReduced pairPartition))
 
 end OpenMath.Chapter3.Section381
