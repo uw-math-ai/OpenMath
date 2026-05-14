@@ -247,4 +247,67 @@ example (d g h : ℝ) (F Y : Fin 1 → ℝ) (y_prev y_next : Fin 1 → ℝ)
   explicitEulerGLM.algebraicStability_identity _ _ (Matrix.isSymm_diagonal _)
     h F Y y_prev y_next hStage hOut
 
+/-- **Theorem 523B** (Butcher §523, p. 428) — *Non-linear stability
+of a general linear method.*
+
+If the algebraic-stability block matrix `M(D, G)` is positive
+semi-definite, `D` is symmetric, and the step is *dissipative*
+(`⟨hF, Y⟩_D ≤ 0`), then `‖y_next‖²_G ≤ ‖y_prev‖²_G`.
+
+**Faithfulness note**: Butcher's textbook statement reads "if `M` is
+PSD, then `‖y^[n]‖²_G ≤ ‖y^[n−1]‖²_G`". The dissipativity hypothesis
+`⟨hF, Y⟩_D ≤ 0` is implicit in Butcher's §357/§523 framing — the
+underlying ODE must be monotone/dissipative for non-linear stability
+to make sense (same convention as B-stability and algebraic stability
+in §357). We surface this hypothesis explicitly. The hypothesis on
+`D` is symmetry (rather than the textbook's "PSD diagonal"), inherited
+from `algebraicStability_identity` (which only needs `Dᵀ = D`); this
+is a strict generalisation. -/
+theorem GeneralLinearMethod.algebraicStability_inequality
+    (M : GeneralLinearMethod s r)
+    (D : Matrix (Fin s) (Fin s) ℝ)
+    (G : Matrix (Fin r) (Fin r) ℝ)
+    (hD : D.IsSymm)
+    (hM_psd : (M.algebraicStabilityMatrix D G).PosSemidef)
+    (h : ℝ) (F Y : Fin s → ℝ) (y_prev y_next : Fin r → ℝ)
+    (hStage : ∀ i, Y i = h * (∑ j, M.A i j * F j) + ∑ j, M.U i j * y_prev j)
+    (hOut : ∀ i, y_next i = h * (∑ j, M.B i j * F j) + ∑ j, M.V i j * y_prev j)
+    (hDiss : (fun i => h * F i) ⬝ᵥ (D *ᵥ Y) ≤ 0) :
+    y_next ⬝ᵥ (G *ᵥ y_next) ≤ y_prev ⬝ᵥ (G *ᵥ y_prev) := by
+  -- Cycle 241's identity rewrites `‖y_next‖²_G` as a sum/difference of
+  -- three real quantities. Two of them have known signs from the
+  -- hypotheses, and the third is precisely `‖y_prev‖²_G`.
+  have hId := M.algebraicStability_identity D G hD h F Y y_prev y_next hStage hOut
+  -- PSD ⇒ M-quadratic form non-negative. `star x = x` for real `x`
+  -- collapses via `simpa` (ℝ has `TrivialStar`).
+  have hMq :
+      0 ≤ (Sum.elim (fun i => h * F i) y_prev)
+            ⬝ᵥ (M.algebraicStabilityMatrix D G *ᵥ
+                  Sum.elim (fun i => h * F i) y_prev) := by
+    simpa using hM_psd.dotProduct_mulVec_nonneg
+      (Sum.elim (fun i => h * F i) y_prev)
+  linarith
+
+/-! ### Non-vacuity witness at `explicitEulerGLM` for the inequality
+
+We mirror cycle 241's pattern: take `hPSD`, `hStage`, `hOut`, and
+`hDiss` as hypotheses rather than constructing concrete witnesses.
+The example confirms `algebraicStability_inequality` types at
+`(s, r) = (1, 1)` with `D = diagonal d`, `G = diagonal g`. -/
+
+example (d g h : ℝ) (F Y : Fin 1 → ℝ) (y_prev y_next : Fin 1 → ℝ)
+    (hPSD : (explicitEulerGLM.algebraicStabilityMatrix
+              (Matrix.diagonal (fun _ : Fin 1 => d))
+              (Matrix.diagonal (fun _ : Fin 1 => g))).PosSemidef)
+    (hStage : ∀ i, Y i =
+      h * (∑ j, explicitEulerGLM.A i j * F j) + ∑ j, explicitEulerGLM.U i j * y_prev j)
+    (hOut : ∀ i, y_next i =
+      h * (∑ j, explicitEulerGLM.B i j * F j) + ∑ j, explicitEulerGLM.V i j * y_prev j)
+    (hDiss : (fun i => h * F i) ⬝ᵥ
+             (Matrix.diagonal (fun _ : Fin 1 => d) *ᵥ Y) ≤ 0) :
+    y_next ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_next)
+      ≤ y_prev ⬝ᵥ (Matrix.diagonal (fun _ : Fin 1 => g) *ᵥ y_prev) :=
+  explicitEulerGLM.algebraicStability_inequality _ _
+    (Matrix.isSymm_diagonal _) hPSD h F Y y_prev y_next hStage hOut hDiss
+
 end OpenMath.Chapter5.Section510
