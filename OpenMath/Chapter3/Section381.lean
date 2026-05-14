@@ -4239,6 +4239,95 @@ theorem inverse_phiEquivalent_inverse {s s' : ℕ}
     (compose_inverse_phiEquivalent M')).trans ?_
   exact compose_id_phiEquivalent M.inverse
 
+/-! ### §383 `inverseQ_phi` lift + `Group` instance on
+`Quotient PhiEquivalent.setoidSigma` (cycle 236)
+
+Phase 5 of the §383 group-hom path. Assembles the four §383 group
+axioms (associativity from cycle 233's `composeQ_phi_assoc`, identity
+from cycle 234's `composeQ_phi_id_left` / `_id_right`, inverse-
+absorption from cycle 235's `inverse_compose_phiEquivalent`, and
+`inverseQ_phi` well-definedness from this cycle via cycle 235's
+`inverse_phiEquivalent_inverse`) into a `Group` typeclass on
+`Quotient PhiEquivalent.setoidSigma`. Verbatim port of cycle 222's
+§382 `Group` instance work (lines 4513–4579), with `Equivalent`
+swapped for `PhiEquivalent`. -/
+
+/-- *Lift of `RKTableau.inverse` to `Quotient PhiEquivalent.setoidSigma`.*
+The `Inv` operation for the §383 `Group` instance. Well-defined by
+cycle 235's `inverse_phiEquivalent_inverse`: Φ-equivalent methods
+map to Φ-equivalent inverses. The §383 analog of cycle 222's
+`inverseQ`. -/
+noncomputable def inverseQ_phi :
+    Quotient PhiEquivalent.setoidSigma →
+    Quotient PhiEquivalent.setoidSigma :=
+  Quotient.lift
+    (fun (p : Σ s : ℕ, RKTableau s) =>
+      Quotient.mk PhiEquivalent.setoidSigma ⟨p.1, p.2.inverse⟩)
+    (by
+      rintro ⟨s, M⟩ ⟨s', M'⟩ hPhi
+      apply Quotient.sound
+      show PhiEquivalent M.inverse M'.inverse
+      exact inverse_phiEquivalent_inverse hPhi)
+
+/-- *Definitional unfold for `inverseQ_phi` on a `Quotient.mk` class.*
+Convenience `simp` lemma stating `inverseQ_phi ⟦⟨s, M⟩⟧ =
+⟦⟨s, M.inverse⟩⟧` by definition of `Quotient.lift`. Mirror of cycle
+222's `inverseQ_mk`. -/
+@[simp] theorem inverseQ_phi_mk {s : ℕ} (M : RKTableau s) :
+    inverseQ_phi (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)
+      = Quotient.mk PhiEquivalent.setoidSigma ⟨s, M.inverse⟩ := rfl
+
+/-- *Left inverse absorption for `inverseQ_phi` against `composeQ_phi`
+at every quotient class.* Pointwise form of cycle 235's
+`inverse_compose_phiEquivalent` over an arbitrary representative `q`,
+used in the `Group` typeclass instance's `inv_mul_cancel` field.
+Mirror of cycle 222's `composeQ_inverseQ_left`. -/
+theorem composeQ_phi_inverseQ_phi_left
+    (q : Quotient PhiEquivalent.setoidSigma) :
+    composeQ_phi (inverseQ_phi q) q
+      = Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩ := by
+  refine Quotient.inductionOn q ?_
+  rintro ⟨s, M⟩
+  show composeQ_phi _ _ = _
+  exact Quotient.sound (inverse_compose_phiEquivalent M)
+
+/-! ### §383 `Group` instance on `Quotient PhiEquivalent.setoidSigma`
+
+Assembles the four §383 group axioms (identity from cycle 234,
+inverse from cycle 235, associativity from cycle 233, and
+`inverseQ_phi`-respects-Φ-equivalence from this cycle) into the
+`Group` typeclass on `Quotient PhiEquivalent.setoidSigma`. Uses
+`Group.ofLeftAxioms` for a minimal axiom obligation (`mul_assoc`,
+`one_mul`, `inv_mul_cancel`); the right-side analogues follow
+automatically. -/
+
+noncomputable instance instOne_phi :
+    One (Quotient PhiEquivalent.setoidSigma) :=
+  ⟨Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩⟩
+
+noncomputable instance instMul_phi :
+    Mul (Quotient PhiEquivalent.setoidSigma) :=
+  ⟨composeQ_phi⟩
+
+noncomputable instance instInv_phi :
+    Inv (Quotient PhiEquivalent.setoidSigma) :=
+  ⟨inverseQ_phi⟩
+
+/-- *§383 `Group` instance on `Quotient PhiEquivalent.setoidSigma`.*
+The fourth and final §383 group structure axiom shipping: with cycle
+232's `composeQ_phi` (`Mul`), cycle 234's identity class
+(`⟦⟨0, RKTableau.id⟩⟧` as `One`), cycle 235's inverse-absorption
+laws, cycle 233's associativity, and this cycle's `inverseQ_phi`
+(`Inv`), the four-axiom `Group` typeclass assembles via
+`Group.ofLeftAxioms`. The §383 codomain of the (still TODO) group
+homomorphism Φ : §382 group → §383 group from `thm:384A`. -/
+noncomputable instance instGroup_phi :
+    Group (Quotient PhiEquivalent.setoidSigma) :=
+  Group.ofLeftAxioms
+    composeQ_phi_assoc
+    composeQ_phi_id_left
+    composeQ_phi_inverseQ_phi_left
+
 /-- *Inverse-step inversion lemma.* If a stage tuple `Y` witnesses
 `M.IsRKOneStep f y₀ H y_mid`, then the *same* stage tuple witnesses
 `M.inverse.IsRKOneStep f y_mid H y₀`. This is the load-bearing
@@ -5188,5 +5277,43 @@ example :
     @PhiEquivalent (2 + 2) 0
       (paddedEuler.inverse.compose paddedEuler) RKTableau.id :=
   RKTableau.inverse_compose_phiEquivalent paddedEuler
+
+/-- *Cycle 236 non-vacuity for `inverseQ_phi_mk`.* The §383 quotient-
+level inverse operation unfolds definitionally on `Quotient.mk`
+classes: `inverseQ_phi ⟦⟨2, paddedEuler⟩⟧ =
+⟦⟨2, paddedEuler.inverse⟩⟧`. -/
+example :
+    RKTableau.inverseQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+      = Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨2, paddedEuler.inverse⟩ :=
+  rfl
+
+/-- *Cycle 236 non-vacuity for `instGroup_phi.mul_inv_cancel`.*
+Exercises the typeclass-derived right inverse law on the
+`⟦⟨2, paddedEuler⟩⟧` class via the §383 `Group` instance: the class
+of `paddedEuler` times its inverse class is the identity class. -/
+example :
+    ((Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨2, paddedEuler⟩
+        * (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+            ⟨2, paddedEuler⟩)⁻¹)
+      : Quotient RKTableau.PhiEquivalent.setoidSigma)
+      = (1 : Quotient RKTableau.PhiEquivalent.setoidSigma) :=
+  mul_inv_cancel _
+
+/-- *Cycle 236 non-vacuity for `instGroup_phi.inv_mul_cancel`.*
+Exercises the typeclass-derived left inverse law on the
+`⟦⟨2, paddedEuler⟩⟧` class via the §383 `Group` instance: the
+inverse class times the class itself is the identity class. -/
+example :
+    (((Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨2, paddedEuler⟩)⁻¹
+        * Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+            ⟨2, paddedEuler⟩)
+      : Quotient RKTableau.PhiEquivalent.setoidSigma)
+      = (1 : Quotient RKTableau.PhiEquivalent.setoidSigma) :=
+  inv_mul_cancel _
 
 end OpenMath.Chapter3.Section381

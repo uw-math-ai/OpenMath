@@ -1,273 +1,451 @@
-# Cycle 234 — strategy
+# Cycle 236 Strategy
 
-## A. §441 Phase C.2 status — SKIP (47th consecutive)
+## TL;DR
 
-GPFS pathology blocks `lake env lean OpenMath/Chapter4/Section441.lean`
-on every smoke test since cycle 182 (47 consecutive 5-min timeouts,
-~0.2% CPU). This is **loop-maintainer territory**, not worker territory.
-Per `cycle_182_gpfs_slowness.md` and `CLAUDE.md`:
+**Ship the `Group` instance on `Quotient PhiEquivalent.setoidSigma`** —
+the §383 codomain group whose four axioms cycles 233/234/235 have all
+been closing at the `PhiEquivalent` level. Template is verbatim cycle
+222's §382 `Group` instance work; with cycle 235's
+`inverse_phiEquivalent_inverse` + `compose_inverse_phiEquivalent` +
+`inverse_compose_phiEquivalent` now in hand, the lift is mechanical.
 
-* Do NOT re-attempt the §441 Phase C.2 smoke test.
-* Do NOT modify `scripts/autonomous_loop.py`.
-* Do NOT submit the cycle 182 draft to Aristotle (already tried,
-  COMPLETE_WITH_ERRORS verdict captured, blocker is local compile).
+Expected ~80–100 LOC for four new symbols + four `instance` declarations
++ P2 typeclass-level non-vacuity. **Single-cycle deliverable; no
+multi-cycle work, no Aristotle batches.**
 
-The cycle 182 Phase C.2 draft + cycle 184 namespace fix remain
-preserved at `.prover-state/cycle_182_draft_section441.lean` for
-post-GPFS-recovery resumption.
+§441 Phase C.2 — **skip again** (41st consecutive GPFS-timeout cycle).
 
-## B. No Aristotle results to incorporate
+---
 
-No pending Aristotle submissions. Cycle 232's Aristotle-driven
-right-action proof is fully integrated. No polling required this cycle.
+## §A — §441 Phase C.2 status (skip)
 
-## C. Priority 1 (P1) — §383 group-hom path Phase 4.2: identity axioms
+GPFS pathology on `OpenMath/Chapter4/Section441.lean` has now reproduced
+across cycles 182–235 (40+ consecutive smoke-test timeouts, 50+ calendar
+days). Loop-maintainer escalation in
+`.prover-state/issues/cycle_182_gpfs_slowness.md` is in force.
 
-Cycle 233 shipped associativity (`compose_assoc_phiEquivalent` +
-`composeQ_phi_assoc`). Cycle 234 ships the **identity element** axioms
-for the `Group` instance on `Quotient PhiEquivalent.setoidSigma`.
+**Do NOT smoke-test Section441.lean.** Do NOT submit the cycle 182
+draft. Continue Section381-focused work. If GPFS ever recovers, the
+cycle 182 draft + cycle 184 namespace fix are preserved at
+`.prover-state/cycle_182_draft_section441.lean`.
 
-### What to ship
+---
 
-Two new theorems in `OpenMath/Chapter3/Section381.lean`, inside
-`namespace OpenMath.Chapter3.Section312.RKTableau`, placed immediately
-after cycle 233's `composeQ_phi_assoc`:
+## §B — Priority 1: §383 `Group` instance on `Quotient PhiEquivalent.setoidSigma`
 
-**P1.1** `composeQ_phi_id_left`:
+### Context (what's already shipped)
+
+Cycle 232 shipped:
+* `noncomputable def composeQ_phi : Quotient PhiEquivalent.setoidSigma →
+  Quotient PhiEquivalent.setoidSigma → Quotient PhiEquivalent.setoidSigma`
+  via `Quotient.lift₂` (the `Mul` operation).
+* `@[simp] composeQ_phi_mk` rfl unfold.
+
+Cycle 233 shipped:
+* `composeQ_phi_assoc` (associativity at the quotient level).
+
+Cycle 234 shipped:
+* `composeQ_phi_id_left`, `composeQ_phi_id_right` (the identity element
+  is `⟦⟨0, RKTableau.id⟩⟧`).
+
+Cycle 235 shipped:
+* `inverse_phiEquivalent_inverse` (well-definedness of `M.inverse` on
+  PhiEquivalent classes).
+* `compose_inverse_phiEquivalent` (right absorption at PhiEquivalent
+  level).
+* `inverse_compose_phiEquivalent` (left absorption at PhiEquivalent
+  level).
+
+### Cycle 236 deliverables (the four `instance` package)
+
+**Place all new symbols at `OpenMath/Chapter3/Section381.lean` inside
+`namespace OpenMath.Chapter3.Section312.RKTableau`, immediately after
+cycle 235's `inverse_phiEquivalent_inverse` block (around line 4240).**
+The §382 analog sits at lines 4513–4579; mirror that structure with
+`_phi`-suffixed names.
+
+**Deliverable 1: `inverseQ_phi` (~10 LOC).**
+The `Inv` operation, lifting `RKTableau.inverse` through
+`Quotient.lift` with cycle 235's `inverse_phiEquivalent_inverse` as the
+respect witness. Verbatim port of cycle 222's `inverseQ` (line 4513),
+swap `Equivalent` → `PhiEquivalent` everywhere.
 
 ```lean
-theorem composeQ_phi_id_left
-    (q : Quotient PhiEquivalent.setoidSigma) :
-    composeQ_phi (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩) q
-      = q
+/-- *Lift of `RKTableau.inverse` to `Quotient PhiEquivalent.setoidSigma`.*
+The `Inv` operation for the §383 `Group` instance. Well-defined by
+cycle 235's `inverse_phiEquivalent_inverse`: Φ-equivalent methods
+map to Φ-equivalent inverses. -/
+noncomputable def inverseQ_phi :
+    Quotient PhiEquivalent.setoidSigma →
+    Quotient PhiEquivalent.setoidSigma :=
+  Quotient.lift
+    (fun (p : Σ s : ℕ, RKTableau s) =>
+      Quotient.mk PhiEquivalent.setoidSigma ⟨p.1, p.2.inverse⟩)
+    (by
+      rintro ⟨s, M⟩ ⟨s', M'⟩ hPhi
+      apply Quotient.sound
+      show PhiEquivalent M.inverse M'.inverse
+      exact inverse_phiEquivalent_inverse hPhi)
 ```
 
-**P1.2** `composeQ_phi_id_right`:
+**Deliverable 2: `@[simp] inverseQ_phi_mk` (~5 LOC).** Definitional
+unfold, proved by `rfl` (since `Quotient.lift` reduces definitionally
+on `Quotient.mk`). Mirror of cycle 222's `inverseQ_mk` at line 4528.
 
 ```lean
-theorem composeQ_phi_id_right
-    (q : Quotient PhiEquivalent.setoidSigma) :
-    composeQ_phi q (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
-      = q
+@[simp] theorem inverseQ_phi_mk {s : ℕ} (M : RKTableau s) :
+    inverseQ_phi (Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩)
+      = Quotient.mk PhiEquivalent.setoidSigma ⟨s, M.inverse⟩ := rfl
 ```
 
-### Proof recipe (verbatim port of cycle 219's `composeQ_id_{left,right}` template)
-
-For **P1.1**:
+**Deliverable 3: `composeQ_phi_inverseQ_phi_left` (~7 LOC).**
+Pointwise lift of cycle 235's `inverse_compose_phiEquivalent` to all
+quotient classes via `Quotient.inductionOn`. Mirror of cycle 222's
+`composeQ_inverseQ_left` at line 4536.
 
 ```lean
+/-- *Left inverse absorption for `inverseQ_phi` against `composeQ_phi`
+at every quotient class.* Pointwise form of cycle 235's
+`inverse_compose_phiEquivalent`, used in the `Group` typeclass
+instance's `inv_mul_cancel` field. -/
+theorem composeQ_phi_inverseQ_phi_left
+    (q : Quotient PhiEquivalent.setoidSigma) :
+    composeQ_phi (inverseQ_phi q) q
+      = Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩ := by
   refine Quotient.inductionOn q ?_
   rintro ⟨s, M⟩
-  show Quotient.mk _ _ = Quotient.mk _ _
-  exact Quotient.sound (id_compose_phiEquivalent M)
+  show composeQ_phi _ _ = _
+  exact Quotient.sound (inverse_compose_phiEquivalent M)
 ```
 
-For **P1.2**:
+**Risk on the `show` line.** Cycle 222's analog uses
+`show composeQ _ _ = _`. The `composeQ_phi` constructor on a single
+`Quotient.mk` representative reduces by `composeQ_phi_mk` (simp lemma);
+if Lean has trouble matching the LHS pattern, replace with explicit
+`change Quotient.mk PhiEquivalent.setoidSigma ⟨s + 0, _⟩ = _` or
+unfold via `rw [inverseQ_phi_mk, composeQ_phi_mk]` then
+`exact Quotient.sound …`.
+
+**Deliverable 4: `instGroup_phi` typeclass package (~25 LOC).**
+The four-instance bundle assembled via `Group.ofLeftAxioms`. Verbatim
+port of cycle 222's package at lines 4553–4579. The instances live
+inside `namespace OpenMath.Chapter3.Section312.RKTableau` (so they
+attach to the `Quotient PhiEquivalent.setoidSigma` type without name
+clash with the §382 instances under `Equivalent.setoidSigma`).
 
 ```lean
-  refine Quotient.inductionOn q ?_
-  rintro ⟨s, M⟩
-  show Quotient.mk _ _ = Quotient.mk _ _
-  exact Quotient.sound (compose_id_phiEquivalent M)
+/-! ### §383 `Group` instance on `Quotient PhiEquivalent.setoidSigma`
+
+Assembles the four §383 group axioms (associativity from cycle 233,
+identity from cycle 234, inverse from cycle 235's
+`inverse_compose_phiEquivalent`, and `inverseQ_phi` lift from this
+cycle) into the `Group` typeclass on `Quotient PhiEquivalent.setoidSigma`.
+Uses `Group.ofLeftAxioms`; the right-side analogues
+(`mul_one`, `mul_inv_cancel`) follow automatically. -/
+
+noncomputable instance instOne_phi :
+    One (Quotient PhiEquivalent.setoidSigma) :=
+  ⟨Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩⟩
+
+noncomputable instance instMul_phi :
+    Mul (Quotient PhiEquivalent.setoidSigma) :=
+  ⟨composeQ_phi⟩
+
+noncomputable instance instInv_phi :
+    Inv (Quotient PhiEquivalent.setoidSigma) :=
+  ⟨inverseQ_phi⟩
+
+/-- *§383 `Group` instance on `Quotient PhiEquivalent.setoidSigma`.*
+The fourth and final §383 group structure axiom shipping: with cycle
+232's `composeQ_phi` (`Mul`), cycle 234's `⟦⟨0, RKTableau.id⟩⟧` as
+`One`, cycle 235's inverse-absorption laws, cycle 233's associativity,
+and this cycle's `inverseQ_phi` (`Inv`), the four-axiom `Group`
+typeclass assembles via `Group.ofLeftAxioms`. The §383 codomain of
+the homomorphism Φ : §382 group → §383 group (still TODO; see
+`thm:384A`). -/
+noncomputable instance instGroup_phi :
+    Group (Quotient PhiEquivalent.setoidSigma) :=
+  Group.ofLeftAxioms
+    composeQ_phi_assoc
+    composeQ_phi_id_left
+    composeQ_phi_inverseQ_phi_left
 ```
 
-### Ingredients (already shipped, axiom-clean)
+**Required import.** Cycle 222 needed `import Mathlib.Algebra.Group.MinimalAxioms`
+for `Group.ofLeftAxioms`. Verify it's already in the file (it should
+be from cycle 222's work). Run `grep -n "MinimalAxioms"
+OpenMath/Chapter3/Section381.lean`; if absent, add the import at the
+top of the file.
 
-* Cycle 228: `id_compose_phiEquivalent (M : RKTableau s) :
-  @PhiEquivalent (0 + s) s (RKTableau.id.compose M) M`.
-* Cycle 229: `compose_id_phiEquivalent (M : RKTableau s) :
-  @PhiEquivalent (s + 0) s (M.compose RKTableau.id) M`.
-* Cycle 232: `composeQ_phi` (the full binary
-  `Quotient.lift₂` operation).
-* Cycle 232: `composeQ_phi_mk` (`@[simp]` definitional unfold, `rfl`).
+### Deliverable 5: P2 non-vacuity at the typeclass level (~25 LOC)
 
-Both ingredient lemmas were verified axiom-clean in cycles 228/229.
-Use them directly — do NOT re-prove or re-derive them.
-
-### Estimated LOC
-
-~10 LOC per theorem + ~10 LOC docstrings = ~40 LOC total. Compare to
-cycle 219's `composeQ_id_left`/`composeQ_id_right` at the §382
-Equivalent-quotient level, which were also ~10 LOC each.
-
-## D. Priority 2 (P2) — Non-vacuity examples
-
-Add two `example`s in `namespace OpenMath.Chapter3.Section381`, just
-before the trailing `end OpenMath.Chapter3.Section381`, alongside
-cycle 233's non-vacuity examples:
-
-**P2.1** Homogeneous identity-left:
+Place in `namespace OpenMath.Chapter3.Section381` near the end of the
+file (after cycle 235's three `paddedEuler` PhiEquivalent witnesses
+at lines ~5165–5190). Mirror cycle 222's typeclass witnesses (which
+live around lines 4910–4930 of Section381.lean — search for
+`mul_inv_cancel` / `inv_mul_cancel` within the
+`namespace OpenMath.Chapter3.Section381` block).
 
 ```lean
+/-- *Cycle 236 non-vacuity for `inverseQ_phi_mk`.* Definitional unfold
+on `⟦⟨2, paddedEuler⟩⟧`. -/
 example :
-    composeQ_phi
-      (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
-      (Quotient.mk PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
-    = Quotient.mk PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩ :=
-  composeQ_phi_id_left _
+    RKTableau.inverseQ_phi
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+      = Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨2, paddedEuler.inverse⟩ :=
+  rfl
+
+/-- *Cycle 236 non-vacuity for `instGroup_phi.mul_inv_cancel`.*
+Exercises the typeclass-derived right inverse law on the
+`⟦⟨2, paddedEuler⟩⟧` class via the §383 `Group` instance. -/
+example :
+    (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨2, paddedEuler⟩)
+      * (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+            ⟨2, paddedEuler⟩)⁻¹
+      = (1 : Quotient RKTableau.PhiEquivalent.setoidSigma) :=
+  mul_inv_cancel _
+
+/-- *Cycle 236 non-vacuity for `instGroup_phi.inv_mul_cancel`.*
+Exercises the typeclass-derived left inverse law on the
+`⟦⟨2, paddedEuler⟩⟧` class via the §383 `Group` instance. -/
+example :
+    (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨2, paddedEuler⟩)⁻¹
+      * (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+            ⟨2, paddedEuler⟩)
+      = (1 : Quotient RKTableau.PhiEquivalent.setoidSigma) :=
+  inv_mul_cancel _
 ```
 
-**P2.2** Homogeneous identity-right:
+**Risk on the typeclass `*` / `⁻¹` / `1` notation in §381 namespace.**
+The §382 `Group` instance lives on `Quotient Equivalent.setoidSigma`;
+the §383 instance lives on `Quotient PhiEquivalent.setoidSigma`. Lean
+elaborator must pick the right instance from the explicit
+`Quotient.mk` annotation. If it gets confused, annotate explicitly:
+`(... : Quotient RKTableau.PhiEquivalent.setoidSigma) * ...`.
+
+---
+
+## §C — Step-by-step execution plan
+
+1. **(2 min) Verify §441 GPFS state.** One smoke test:
+   `time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean`
+   on HEAD. Expected: timeout (41st consecutive). Log to
+   `cycle_182_gpfs_slowness.md` cycle 236 row + `attempts.md`. Do NOT
+   continue to Section441 work; skip to step 2.
+
+2. **(2 min) Pre-flight verification.**
+   * `grep -n "import Mathlib.Algebra.Group.MinimalAxioms"
+     OpenMath/Chapter3/Section381.lean` — confirm presence (cycle 222
+     added it). If missing, add at top.
+   * `grep -n "inverse_phiEquivalent_inverse\|compose_inverse_phiEquivalent\|inverse_compose_phiEquivalent"
+     OpenMath/Chapter3/Section381.lean` — confirm all three at HEAD.
+   * `grep -n "composeQ_phi_assoc\|composeQ_phi_id_left" OpenMath/Chapter3/Section381.lean`
+     — confirm cycle 233/234 landmarks at HEAD.
+
+3. **(20 min) Insert Deliverables 1–4** in
+   `namespace OpenMath.Chapter3.Section312.RKTableau`, immediately
+   after cycle 235's `inverse_phiEquivalent_inverse` (line ~4240). The
+   §383 instance package mirrors cycle 222's §382 package at lines
+   4513–4579 — copy-paste-edit, swap `Equivalent` → `PhiEquivalent`,
+   `composeQ` → `composeQ_phi`, `inverseQ` → `inverseQ_phi`,
+   `composeQ_assoc` → `composeQ_phi_assoc`, etc.
+
+4. **(10 min) Insert Deliverable 5 (P2 examples)** in
+   `namespace OpenMath.Chapter3.Section381` at the end of the file
+   after cycle 235's witnesses (~line 5190).
+
+5. **(5 min) Compile + axiom-check.** Run:
+   ```
+   time lake env lean OpenMath/Chapter3/Section381.lean
+   ```
+   Expected: clean exit. Warm rebuild ≤ 15 s (file is large; warm
+   times have been ~6–10 s).
+
+6. **(3 min) Axiom verification.** Use `lean_verify` on each of the
+   four new public symbols (`inverseQ_phi`, `inverseQ_phi_mk`,
+   `composeQ_phi_inverseQ_phi_left`, `instGroup_phi`). Expected:
+   `[propext, Classical.choice, Quot.sound]` only.
+
+7. **(5 min) Regression spot-check.** Use `lean_verify` on cycle 232's
+   `composeQ_phi`, cycle 233's `composeQ_phi_assoc`, cycle 234's
+   `composeQ_phi_id_left`, cycle 235's `inverse_phiEquivalent_inverse`.
+   Expected: all axiom-clean (no changes from cycle 235's state).
+
+8. **(3 min) Sorry-count + tautology-scanner verification.**
+   * `grep -cn "^[^-]*sorry[^_]" OpenMath/Chapter3/Section381.lean`
+     should return 0 (the only "sorry" hit is in a docstring at line
+     3589; the regex `[^-]*sorry[^_]` excludes "sorry-scaffold").
+   * `grep -E '\bexact\s+h_\w+\s*$|^[^-]*:= h_\w+\s*$|:=\s*id\s*$'
+     OpenMath/Chapter3/Section381.lean` should return nothing.
+
+9. **(10 min) Documentation updates.**
+   * `extraction/formalization_data/lean_status.json` — update
+     `thm:384A` row: bump cycle to 236; note `instGroup_phi` shipped.
+   * `plan.md` — update `thm:384A` row with cycle 236 outcome
+     (still `[~]` because Φ itself is the cycle 237+ deliverable;
+     cycle 236 closes only the codomain group).
+   * `.prover-state/task_results/cycle_236.md` — full deliverable
+     record per CLAUDE.md format.
+   * `.prover-state/issues/cycle_182_gpfs_slowness.md` — append cycle
+     236 row to the timeout log.
+
+10. **(2 min) Commit.** Single commit message
+    `Cycle 236 — §383 group-hom path Phase 5: Group instance on
+    Quotient PhiEquivalent.setoidSigma SHIPPED.` Body documents the
+    four new symbols + P2 non-vacuity + faithfulness note (the
+    instance is the §384 codomain group, not Φ itself).
+
+**Total target: ~60 min of active work.**
+
+---
+
+## §D — What NOT to try
+
+* **Do NOT smoke-test or modify `Section441.lean`.** GPFS pathology is
+  41st-consecutive. Skip entirely.
+* **Do NOT ship Φ : §382 group → §383 group `MonoidHom`.** That's
+  cycle 237+ work. Cycle 236 ships only the codomain group; the
+  homomorphism requires a separate `Quotient.lift` plus a
+  `Equivalent → PhiEquivalent` direction (the easy direction of
+  `thm:381H`, since `Equivalent ⊆ PhiEquivalent` follows from cycle
+  217's `compose_equivalent_compose` plus the existence of an
+  `Equivalent → PhiEquivalent` lemma which is NOT currently shipped
+  — cycle 237 must check carefully whether this is single-cycle
+  closeable or whether it's the deferred direction in
+  `thm_381H_deferred.md`).
+* **Do NOT batch-submit to Aristotle.** Cycle 222 was a clean
+  single-cycle ship without Aristotle; cycle 236 is the verbatim
+  PhiEquivalent analog. Manual close in <60 min.
+* **Do NOT touch `compose_assoc` (cycle 210's deferred HEq blocker).**
+  Cycle 233's `compose_assoc_phiEquivalent` already finesses it at
+  the `PhiEquivalent` level. Cycle 236 consumes that, not the raw
+  HEq form.
+* **Do NOT introduce `axiom` or `constant` for any of the four
+  axioms.** All four were closed in cycles 232–235; cycle 236 is
+  pure plumbing.
+* **Do NOT raise `maxHeartbeats`.** The proofs are short (≤10 LOC
+  each); default heartbeats are sufficient.
+* **Do NOT attempt to retire cycle 222's `inverseQ`/`instGroup` on
+  the §382 side.** They coexist with the new §383 `_phi`-suffixed
+  instances. Both groups live; cycle 237+'s Φ : G_§382 → G_§383
+  homomorphism *needs* both.
+* **Do NOT rename cycle 235's `inverse_phiEquivalent_inverse`.** It's
+  the load-bearing well-definedness theorem; the cycle 236 work
+  consumes it verbatim through `Quotient.lift`'s respect obligation.
+* **Do NOT spend cycle time on `def:381E`'s `reducedMethod`
+  construction** (`.prover-state/issues/reduced_method_deferred.md`).
+  Multi-cycle work; cycle 236 doesn't need it.
+* **Do NOT spend cycle time on confluence-of-PReducesTo work**
+  (`.prover-state/issues/p_reduction_confluence_gap.md`). Multi-cycle.
+* **Do NOT touch `scripts/autonomous_loop.py`.** Loop-maintainer
+  territory; phantom-verdict pattern (cf.
+  `phantom_commit_verdict_pattern.md`) is still in force but not for
+  workers to patch.
+
+---
+
+## §E — Backup plan (Plan B)
+
+If `Quotient.lift`'s respect obligation fails to discharge cleanly
+(e.g., `show PhiEquivalent _ _` mismatch on the Σ-typed
+`PhiEquivalent.setoidSigma.Setoid.r` unfold), the fallback is
+**`Quotient.map` instead of `Quotient.lift`**:
 
 ```lean
-example :
-    composeQ_phi
-      (Quotient.mk PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
-      (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
-    = Quotient.mk PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩ :=
-  composeQ_phi_id_right _
+noncomputable def inverseQ_phi :
+    Quotient PhiEquivalent.setoidSigma →
+    Quotient PhiEquivalent.setoidSigma :=
+  Quotient.map
+    (fun (p : Σ s : ℕ, RKTableau s) => ⟨p.1, p.2.inverse⟩)
+    (fun ⟨s, M⟩ ⟨s', M'⟩ hPhi => inverse_phiEquivalent_inverse hPhi)
 ```
 
-These mirror cycle 219's r=2 paddedEuler non-vacuity examples for the
-§382 identity laws.
+This is the option cycle 222 strategy §B.P2 floated but did not
+ultimately use. If `Quotient.lift` is finicky, switch to
+`Quotient.map`; both are valid.
 
-## E. What NOT to try
+---
 
-1. **Do NOT** attempt to ship `inverse_phiEquivalent_inverse` (cycle
-   235's target) this cycle. That theorem requires a tree-induction
-   argument on the elementary weight of the inverse method and is
-   non-trivial; bundling it with the identity laws risks blowing the
-   cycle budget.
+## §F — Risk register
 
-2. **Do NOT** attempt to ship the `Group` instance on
-   `Quotient PhiEquivalent.setoidSigma` this cycle. That requires
-   all three axioms (associativity ✓ from cycle 233, identity from
-   cycle 234, inverse from cycle 235+) and is at minimum a cycle 237
-   deliverable.
+* **R1 (Σ-typed Setoid.r unfolding)**: Cycle 222 verified by ad-hoc
+  `show` rewrite; cycle 236 likely needs the same. Pre-typed
+  `show PhiEquivalent M.inverse M'.inverse` mirrors cycle 222 line
+  4522. Should fire cleanly.
+* **R2 (typeclass elaboration in P2 examples)**: Lean must pick
+  `instGroup_phi` over `instGroup` (cycle 222's §382 instance). If
+  ambiguity arises, annotate explicitly with
+  `(... : Quotient RKTableau.PhiEquivalent.setoidSigma)`.
+* **R3 (warm rebuild time after edits)**: §381 is ~5200 LOC. Adding
+  ~150 LOC of new content should not cross the 30 s red-flag
+  threshold; cycle 235's warm rebuild was 6.4 s. If a rebuild
+  exceeds 30 s, investigate whether the new `instance` blocks are
+  triggering universe-instance search loops.
+* **R4 (cycle 222 `inverseQ` name shadowing)**: Both instances are in
+  the same namespace block (`Section312.RKTableau`). Use `_phi`
+  suffix consistently. No shadowing.
+* **R5 (`Group.ofLeftAxioms` argument order)**: Mathlib's signature
+  is `(mul_assoc, one_mul, inv_mul_cancel)`. Verify by `lean_hover_info`
+  if Lean complains.
 
-3. **Do NOT** introduce a heterogeneous-stage variant of
-   `composeQ_phi_id_{left,right}` keyed off raw representatives
-   (i.e. with explicit `s : ℕ`). The textbook content is the
-   quotient-level axiom; the underlying PhiEquivalent-level
-   `id_compose_phiEquivalent` / `compose_id_phiEquivalent` are
-   already heterogeneous-stage (`0 + s` vs `s + 0`) and discharge
-   that complexity inside the `Quotient.sound` application.
+---
 
-4. **Do NOT** use `composeQ_phi_left_act_id_{left,right}` (cycle
-   228/229 partial-action versions) as proof ingredients. Those are
-   structurally weaker because their second argument is a raw
-   representative `Σ s, RKTableau s`, not a quotient class. They
-   were one-sided lifts shipped while cycle 232's full binary
-   `composeQ_phi` was still blocked on the right-action. With the
-   full binary `composeQ_phi` now available (cycle 232), the
-   identity laws lift cleanly via `Quotient.inductionOn` directly
-   from the underlying PhiEquivalent lemmas — do NOT route through
-   the partial-action layer.
+## §G — Cycle 237+ outlook (do not work on this in cycle 236)
 
-5. **Do NOT** attempt P3 / P4 stretch goals (e.g. `inverseQ_phi` or
-   the homomorphism `Φ`). Cycle 233 scored +2 with a focused 2-theorem
-   deliverable; cycle 234 should match that scope.
+With the §383 `Group` instance shipped, the natural cycle 237+
+trajectory is:
 
-6. **Do NOT** invoke `Quotient.lift₂_mk` or other `simp` lemmas
-   inside the proof bodies — the `show Quotient.mk _ _ = Quotient.mk _ _`
-   reframing handles the unfolding by definitional reduction (per
-   cycle 219's template, which the cycle 233 worker followed verbatim
-   for `composeQ_phi_assoc`).
+* **Cycle 237**: ship Φ : `Quotient Equivalent.setoidSigma →
+  Quotient PhiEquivalent.setoidSigma` as a `MonoidHom` or `GroupHom`,
+  via `Quotient.lift` consuming an `Equivalent → PhiEquivalent`
+  inclusion lemma. Cycle 237 planner must check whether this lemma
+  is single-cycle closeable or whether it's the deferred direction
+  in `.prover-state/issues/thm_381H_deferred.md`. If deferred, pivot.
 
-7. **Do NOT** annotate either theorem with `.{u}` universe parameters.
-   `PhiEquivalent` is universe-monomorphic (confirmed by cycle 223
-   when shipping `PhiEquivalent.setoid` / `setoidSigma`); cycle 233
-   shipped `composeQ_phi_assoc` without `.{u}` and it compiled
-   cleanly. Cycle 234 follows the same pattern.
+* **Cycle 238+**: If Φ ships, the §384 textbook theorem is
+  axiom-clean.
 
-## F. Pre-flight checks (run before edits)
+* **Alternative cycle 237**: pivot to `thm:381G` (Irreducible RK
+  Stage Distinguishability) per cycle 199's recon — multi-cycle
+  but no GPFS dependency.
 
-* `lake env lean OpenMath/Chapter3/Section381.lean` warm rebuild
-  baseline. Cycle 233 measured ~6.5s warm; if today's warm rebuild
-  exceeds 60s on the baseline (no edits yet), flag as a §F.3 red flag
-  and pause before proceeding.
+* **Alternative cycle 237**: pivot to a fresh entity entirely (e.g.,
+  `def:422B` underlying one-step LMM, or §535 GLM underlying one-step
+  method). The §380 cluster has been the focus for many consecutive
+  cycles (227–236); a planner pivot may be appropriate after the
+  cycle 236 ship lands.
 
-* Verify the four ingredient symbols exist at HEAD via `lean_verify`:
-  - `OpenMath.Chapter3.Section312.RKTableau.id_compose_phiEquivalent`
-  - `OpenMath.Chapter3.Section312.RKTableau.compose_id_phiEquivalent`
-  - `OpenMath.Chapter3.Section312.RKTableau.composeQ_phi`
-  - `OpenMath.Chapter3.Section312.RKTableau.composeQ_phi_mk`
+---
 
-  All four should return axiom set
-  `[propext, Classical.choice, Quot.sound]`. If any does NOT exist
-  under that exact name, search for the actual name with
-  `lean_local_search` before adapting the proof; do NOT guess at a
-  renamed symbol.
+## §H — Done criteria
 
-## G. Post-flight checks (run after edits)
+Cycle 236 is **done** when:
 
 1. `lake env lean OpenMath/Chapter3/Section381.lean` exits 0.
-2. `grep -c sorry OpenMath/Chapter3/Section381.lean` returns 0.
-3. `lean_verify` on both new theorems
-   (`composeQ_phi_id_left`, `composeQ_phi_id_right`) returns
-   `[propext, Classical.choice, Quot.sound]` only.
-4. Regression spot-checks via `lean_verify` on:
-   - `composeQ_phi` (cycle 232)
-   - `compose_assoc_phiEquivalent` (cycle 233)
-   - `composeQ_phi_assoc` (cycle 233)
-   All should remain axiom-clean.
-5. Warm rebuild time after edits should remain under 60s
-   (cycle 233's baseline was 6.5s; ~40 LOC addition should add <1s).
+2. Four new public symbols (`inverseQ_phi`, `inverseQ_phi_mk`,
+   `composeQ_phi_inverseQ_phi_left`, `instGroup_phi`) plus three
+   instance declarations (`instOne_phi`, `instMul_phi`,
+   `instInv_phi`) all verified axiom-clean via `lean_verify`.
+3. Three P2 `example` blocks (definitional unfold + `mul_inv_cancel`
+   + `inv_mul_cancel` on `⟦⟨2, paddedEuler⟩⟧`) compile clean.
+4. Sorry count on `Section381.lean` remains 0.
+5. Tautology-scanner regex returns no hits.
+6. Regression spot-check confirms cycles 232/233/234/235 landmarks
+   remain axiom-clean.
+7. `.prover-state/task_results/cycle_236.md` written per CLAUDE.md
+   format.
+8. `extraction/formalization_data/lean_status.json` + `plan.md`
+   updated.
+9. `cycle_182_gpfs_slowness.md` cycle 236 row appended (timeout
+   log).
+10. Single commit landed with the deliverable summary.
 
-## H. Faithfulness check
+If any of (1)–(6) fail, do NOT commit; investigate first.
 
-For `composeQ_phi_id_left` and `composeQ_phi_id_right`:
-
-* **Textbook reference**: `thm:384A` (Butcher §384, p. 311) —
-  Φ is a group homomorphism between two groups. The `Group` instance
-  on the codomain `Quotient PhiEquivalent.setoidSigma` is the multi-cycle
-  deliverable; cycle 234 ships piece (b) identity (cycle 233 shipped
-  piece (a) associativity; cycle 235+ ships piece (c) inverse).
-
-* **Faithfulness divergence**: same as cycle 233. The full `thm:384A`
-  is the homomorphism Φ as a `MonoidHom`; cycle 234 ships only one of
-  the three group axioms on the codomain. Status remains `partial` in
-  `lean_status.json`; do NOT mark `thm:384A` as `formalized`.
-
-* **Tautology check**: P1.1 / P1.2 conclusions are equalities of
-  quotient classes; hypotheses are bare quotient classes with no
-  identity assumption. No tautology.
-
-* **Identity-only proof check**: bodies are `Quotient.inductionOn`
-  + `Quotient.sound` — these are doing real definitional work
-  (extracting a representative, applying the underlying PhiEquivalent
-  lemma at that representative, lifting back via `Quotient.sound`).
-  Not a single `exact h` re-export.
-
-* **Hypothesis strength**: minimal — just a quotient class. No
-  Lipschitz, smallness, or other auxiliary constraints.
-
-## I. Bookkeeping updates
-
-* `plan.md` `thm:384A` row: append a cycle 234 note recording the
-  identity-axiom landing (alongside cycle 233's associativity note).
-  Keep status `[~]` (partial).
-
-* `lean_status.json` `thm:384A` row: bump `cycle` to 234, update
-  `notes` to record cycle 234's deliverables. Keep `status` as
-  `partial`.
-
-* `.prover-state/task_results/cycle_234.md`: standard template per
-  `CLAUDE.md`. Document the closing recipe, faithfulness divergence
-  (same shape as cycle 233), and the cycle 235+ outlook
-  (inverse_phiEquivalent_inverse via tree induction on inverse method,
-  Aristotle-batch candidate).
-
-## J. Cycle 235+ outlook (informational, not for cycle 234)
-
-* **Cycle 235**: `inverse_phiEquivalent_inverse` — the §383 analog
-  of cycle 222's `inverse_equivalent_inverse`. Non-trivial:
-  `PhiEquivalent M M' → PhiEquivalent M.inverse M'.inverse` likely
-  requires showing equality of elementary weights of the inverse
-  tableau under the PhiEquivalent hypothesis. Strong Aristotle
-  candidate.
-
-* **Cycle 236**: inverse absorption laws on `composeQ_phi`
-  (analog of cycle 220's `composeQ_inverse_{left,right}`). Requires
-  cycle 235 + a `MonoidHom`-style closed-form on `inverse`'s
-  elementary weight.
-
-* **Cycle 237**: `Group` instance on `Quotient PhiEquivalent.setoidSigma`
-  via `Group.ofLeftAxioms` (analog of cycle 222's `instGroup`).
-
-* **Cycle 238+**: the homomorphism Φ as a `MonoidHom`, closing
-  `thm:384A` proper.
-
-Aristotle queue: nothing pending. Cycle 234's identity lift is too
-small to batch; cycle 235's inverse-PhiEquivalent is the next
-candidate for submission.
+**Single-cycle deliverable.** No multi-cycle scoping. No Aristotle.
+Cycle 222's §382 work establishes the exact template; cycle 236
+ports it.
