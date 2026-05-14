@@ -41,3 +41,7 @@ self_experiment/
 
 # Claude memory files
 memory/
+
+*.err
+*.out
+*.log

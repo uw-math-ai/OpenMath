@@ -1566,6 +1566,79 @@ theorem PReducesTo.toPhiEquivalent {s s' : ℕ}
     PhiEquivalent M M' :=
   PhiEquivalent.of_pReducesTo h
 
+/-- **Butcher §380 Theorem 381H** (p. 304, "Equivalence of equivalences").
+
+> Two Runge–Kutta methods are equivalent if and only if they are
+> P-equivalent and if and only if they are Φ-equivalent.
+
+This is the central interrelation theorem of §380: the three a priori
+distinct equivalence relations on Runge–Kutta methods — `Equivalent`
+(def:381A — same numerical output on every Lipschitz autonomous IVP at
+small step), `PEquivalent` (def:381F — sharing a common P-reduction),
+and `PhiEquivalent` (def:381B — same elementary weight on every rooted
+tree) — define the same partition of the class of RK methods.
+
+**Cycle 200 status (sorry-first scaffold).** One of the four iff
+directions is closed axiom-clean; the remaining three are tracked
+`sorry`s blocked on infrastructure cataloged in
+`.prover-state/issues/thm_381H_deferred.md`:
+
+* **`PEquivalent → PhiEquivalent`** — *closed* via cycle 187's
+  `PEquivalent.toPhiEquivalent` (which destructures the existential
+  common reduct and chains `PhiEquivalent.of_pReducesTo` on both legs).
+  This is the easy direction of `(def:381F ↔ def:381B)`.
+* **`PhiEquivalent → PEquivalent`** — *deferred*. Butcher §380.8653–8661
+  combines the s + s' stages of M, M' into a single tableau, reduces it,
+  and applies thm:381G to extract a distinguishing elementary weight.
+  Blocked on thm:381G (unformalized, ~2–3 cycles per cycle 199 recon)
+  and the "combine two tableaux" construction (~50–100 LOC).
+* **`PEquivalent → Equivalent`** — *deferred*. Butcher §380.8631–8638
+  shows that stages in the same P-partition block coincide at every
+  fixed-point iterate Yᵢ⁽ᵏ⁾, by induction on `k`. Blocked on Banach
+  fixed-point convergence of the implicit-stage iteration and the
+  iteration-step preservation lemma for `IsPReducibleVia`.
+* **`Equivalent → PEquivalent`** — *deferred*. Butcher §380.8662–8667
+  uses the same construction as `PhiEquivalent → PEquivalent`, applying
+  thm:381G to construct an IVP on which the two output approximations
+  disagree.
+
+Faithfulness: the textbook statement quantifies over all RK methods
+(no irreducibility, preconsistency, or stability hypotheses). The Lean
+signature matches: `(M : RKTableau s) (M' : RKTableau s')` with no
+extra hypotheses. The conclusion is the two-iff conjunction
+`(Equivalent ↔ PEquivalent) ∧ (PEquivalent ↔ PhiEquivalent)`, encoding
+the chained iff "equivalent iff P-equivalent iff Φ-equivalent" via the
+shared middle term, which is logically equivalent to TFAE on the three
+predicates. -/
+theorem equivalent_iff_pEquivalent_iff_phiEquivalent
+    {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') :
+    (Equivalent M M' ↔ PEquivalent M M') ∧
+    (PEquivalent M M' ↔ PhiEquivalent M M') := by
+  refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+  · -- (1) `Equivalent → PEquivalent`. Butcher §380.8662–8667 contradicts
+    -- "equivalent but not P-equivalent" via thm:381G applied to the
+    -- combined-then-reduced tableau. See `thm_381H_deferred.md`.
+    intro _hEquiv
+    sorry
+  · -- (2) `PEquivalent → Equivalent`. Butcher §380.8631–8638 shows
+    -- stages within a P-partition block coincide at every iteration
+    -- step of the implicit-stage fixed-point iteration; requires
+    -- Banach-fixed-point convergence at small `h`. See
+    -- `thm_381H_deferred.md`.
+    intro _hPEquiv
+    sorry
+  · -- (3) `PEquivalent → PhiEquivalent`. Closed via cycle 187's
+    -- `PEquivalent.toPhiEquivalent` (the easy direction of
+    -- `def:381F ↔ def:381B`).
+    exact PEquivalent.toPhiEquivalent
+  · -- (4) `PhiEquivalent → PEquivalent`. Butcher §380.8653–8661 combines
+    -- the s + s' stages of M, M' into one tableau, reduces it, then
+    -- applies thm:381G to find a distinguishing rooted tree —
+    -- contradicting Φ-equivalence. Blocked on thm:381G. See
+    -- `thm_381H_deferred.md`.
+    intro _hPhi
+    sorry
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381

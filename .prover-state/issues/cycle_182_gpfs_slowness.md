@@ -503,3 +503,14 @@ confluence-of-normal-forms reasoning that is not currently in
 Section381.lean; see
 `.prover-state/issues/p_reduction_confluence_gap.md` for the
 multi-cycle plan toward confluence, per cycle 199 strategy.
+
+**Cycle 200 update (20th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.032s, user 0m0.245s, sys 0m0.718s — CPU =
+(0.245 + 0.718) / 300 = 0.32% of wall, identical near-zero
+pattern). Pre-flight `ps -u $USER` showed no D-state processes
+(empty). 20 consecutive timeouts span cycles 182–200 (19 calendar
+days). Pathology reproduced on every smoke-test attempt without
+exception across nearly three weeks. Pivoting to Priority 1: ship
+`thm:381H` (Equivalence of equivalences) as a sorry-first scaffold
+in `OpenMath/Chapter3/Section381.lean`, per cycle 200 strategy.
