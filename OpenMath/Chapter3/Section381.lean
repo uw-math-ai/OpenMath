@@ -3970,6 +3970,43 @@ theorem composeQ_phi_left_act_id_right
   show Quotient.mk _ _ = Quotient.mk _ _
   exact Quotient.sound (compose_id_phiEquivalent M)
 
+/-- *Left identity law for `composeQ_phi` at the Φ-quotient level —
+the second §383 group axiom in bracketed form (cycle 234).* The
+equivalence class `⟦⟨0, RKTableau.id⟩⟧` is a left identity for
+`composeQ_phi`: `composeQ_phi ⟦⟨0, id⟩⟧ q = q` for every `q`.
+Immediate `Quotient.inductionOn` + `Quotient.sound` consequence of
+`id_compose_phiEquivalent` (cycle 228). This is the §383 analog of
+cycle 219's `composeQ_id_left` at the §382 `Equivalent`-quotient
+level, now routed through the full binary `composeQ_phi` (cycle 232)
+rather than the cycle-228 partial-action `composeQ_phi_left_act`. -/
+theorem composeQ_phi_id_left
+    (q : Quotient PhiEquivalent.setoidSigma) :
+    composeQ_phi (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩) q
+      = q := by
+  refine Quotient.inductionOn q ?_
+  rintro ⟨s, M⟩
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (id_compose_phiEquivalent M)
+
+/-- *Right identity law for `composeQ_phi` at the Φ-quotient level —
+the second §383 group axiom in bracketed form (cycle 234).* The
+equivalence class `⟦⟨0, RKTableau.id⟩⟧` is a right identity for
+`composeQ_phi`: `composeQ_phi q ⟦⟨0, id⟩⟧ = q` for every `q`.
+Immediate `Quotient.inductionOn` + `Quotient.sound` consequence of
+`compose_id_phiEquivalent` (cycle 229). This is the §383 analog of
+cycle 219's `composeQ_id_right` at the §382 `Equivalent`-quotient
+level, now routed through the full binary `composeQ_phi` (cycle 232)
+rather than the cycle-229 partial-action
+`composeQ_phi_left_act_id_right`. -/
+theorem composeQ_phi_id_right
+    (q : Quotient PhiEquivalent.setoidSigma) :
+    composeQ_phi q (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
+      = q := by
+  refine Quotient.inductionOn q ?_
+  rintro ⟨s, M⟩
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_id_phiEquivalent M)
+
 /-! ### Inverse method (Butcher §382 `thm:382B`)
 
 The §382 group's inverse construction. For `M : RKTableau s` with
@@ -4895,5 +4932,33 @@ example :
     RKTableau.composeQ_phi (RKTableau.composeQ_phi q q) q
       = RKTableau.composeQ_phi q (RKTableau.composeQ_phi q q) :=
   RKTableau.composeQ_phi_assoc _ _ _
+
+/-- *Cycle 234 non-vacuity for `composeQ_phi_id_left`.* The
+Φ-quotient left-identity law fires on `⟦⟨0, RKTableau.id⟩⟧` against
+`⟦⟨2, paddedEuler⟩⟧`, exercising the cycle-232 binary
+`composeQ_phi` with the cycle-228 underlying PhiEquivalent witness. -/
+example :
+    RKTableau.composeQ_phi
+      (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨0, RKTableau.id⟩)
+      (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨2, paddedEuler⟩)
+    = Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨2, paddedEuler⟩ :=
+  RKTableau.composeQ_phi_id_left _
+
+/-- *Cycle 234 non-vacuity for `composeQ_phi_id_right`.* The
+Φ-quotient right-identity law fires on `⟦⟨2, paddedEuler⟩⟧` against
+`⟦⟨0, RKTableau.id⟩⟧`, exercising the cycle-232 binary
+`composeQ_phi` with the cycle-229 underlying PhiEquivalent witness. -/
+example :
+    RKTableau.composeQ_phi
+      (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨2, paddedEuler⟩)
+      (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨0, RKTableau.id⟩)
+    = Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+        ⟨2, paddedEuler⟩ :=
+  RKTableau.composeQ_phi_id_right _
 
 end OpenMath.Chapter3.Section381
