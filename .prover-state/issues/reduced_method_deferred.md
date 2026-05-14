@@ -116,3 +116,46 @@ def:370A, def:381A).
   already implicit in `IsPReducible` (`sBar < s`) and the
   similarly-strict 0-reduction decrease (`#P₁ < s` whenever
   `P₀ ≠ ∅`, which is the side condition on `IsZeroReducible`).
+
+## Cycle 196 update — destructor infrastructure landed
+
+The `Classical.choose` plumbing that the implementation sketch above
+relies on (the
+`let ⟨sBar, _, partition, _⟩ := Classical.choose hP …` /
+`let ⟨inP1, _, _⟩ := Classical.choose hZ …` lines) is now available
+as named API in `OpenMath/Chapter3/Section381.lean` (cycle 196):
+
+* `IsPReducible.sBar` (`Classical.choose`-extracted reduced stage
+  count) and companion spec `IsPReducible.sBar_lt` (`ŝ < s`).
+* `IsPReducible.partition` (extracted `PPartition s h.sBar`) and
+  companion spec `IsPReducible.partition_isPReducibleVia`.
+* `IsZeroReducible.inP1` (extracted `Fin s → Bool` partition
+  predicate) with specs `IsZeroReducible.exists_inP1_false`
+  (`∃ i, inP1 i = false`, i.e. `P₀ ≠ ∅`) and
+  `IsZeroReducible.inP1_isZeroReducibleVia`.
+* Stage-count-descent corollaries `IsPReducible.pReduced_size_lt`
+  and `IsZeroReducible.zeroReduced_size_lt` thread the cycle 195
+  descent infrastructure through the destructors.
+
+These are all axiom-clean (standard
+`[propext, Classical.choice, Quot.sound]` trio) and exercised
+end-to-end by two non-vacuity examples on `paddedEuler`. Together
+with the cycle 195 descent lemmas (`PReducesTo.size_le`,
+`size_lt_of_step`, `size_lt_of_zeroStep`), the future `reducedMethod`
+recursion now has both the *measure* side (descent on stage count)
+and the *extraction* side (named destructors) of the
+well-foundedness story in place.
+
+Status remains `partial`: this is a prerequisite step, not a
+closure. The remaining open work before `reducedMethod` itself can
+be defined is
+
+* a decidability or `Classical.byCases` plumbing decision for
+  branching on `M.IsPReducible ∨ M.IsZeroReducible`, **and**
+* a Σ-wrapper (`Σ s, RKTableau s`) packaging together with a
+  `WellFoundedRelation` instance derived from the cycle 195
+  descent lemmas via `WellFounded.onFun` with a stage-count
+  projection.
+
+Both remain multi-cycle engineering and are explicitly out of scope
+for cycle 196. Q1 / Q2 above are unchanged.

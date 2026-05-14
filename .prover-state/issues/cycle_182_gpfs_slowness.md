@@ -444,3 +444,15 @@ ship the stage-count-descent infrastructure for `PReducesTo`
 (`size_le`, `size_lt_of_step`, `size_lt_of_zeroStep`) — prerequisites
 for the still-deferred def:381E `reducedMethod` construction. Per
 cycle 195 strategy.
+
+**Cycle 196 update (16th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.031s, user 0m0.256s, sys 0m0.693s — CPU =
+(0.256 + 0.693) / 300 = 0.32% of wall, identical near-zero
+pattern). Pre-flight `ps -u $USER` showed no D-state processes
+(empty). 16 consecutive timeouts span cycles 182–196 (15 calendar
+days). Pivoting to Priority 1: ship axiom-clean *destructors* for
+`IsPReducible` / `IsZeroReducible` in
+`OpenMath/Chapter3/Section381.lean` — the cycle 195 worker's Option
+A recommendation for the next step toward def:381E `reducedMethod`.
+Per cycle 196 strategy.

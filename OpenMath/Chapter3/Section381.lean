@@ -687,6 +687,85 @@ theorem PReducesTo.size_lt_of_zeroStep {s s'' : ℕ}
     s'' < s :=
   lt_of_le_of_lt hRest.size_le (card_filter_true_lt_of_exists_false hP0)
 
+/-- *P-reduction witness extractor — reduced stage count.* When `M` is
+P-reducible, extracts the reduced stage count `ŝ` from the existential
+witness. Companion `IsPReducible.sBar_lt` exposes `ŝ < s`. -/
+noncomputable def IsPReducible.sBar {s : ℕ} {M : RKTableau s}
+    (h : M.IsPReducible) : ℕ :=
+  h.choose
+
+/-- *P-reduction witness extractor — strict descent.* The extracted
+reduced stage count is strictly less than `s`. This is the
+non-triviality side condition (`ŝ < s`) of `IsPReducible` exposed at
+the destructor level. -/
+theorem IsPReducible.sBar_lt {s : ℕ} {M : RKTableau s}
+    (h : M.IsPReducible) : h.sBar < s :=
+  h.choose_spec.choose
+
+/-- *P-reduction witness extractor — partition.* The partition
+witnessing P-reducibility, with the extracted stage count as its
+codomain. -/
+noncomputable def IsPReducible.partition {s : ℕ} {M : RKTableau s}
+    (h : M.IsPReducible) : PPartition s h.sBar :=
+  h.choose_spec.choose_spec.choose
+
+/-- *P-reduction witness extractor — row-sum-constancy proof.* The
+extracted partition satisfies the row-sum-constancy condition
+`IsPReducibleVia`. Together with `IsPReducible.partition`, this is the
+full P-reduction certificate. -/
+theorem IsPReducible.partition_isPReducibleVia {s : ℕ} {M : RKTableau s}
+    (h : M.IsPReducible) : M.IsPReducibleVia h.partition :=
+  h.choose_spec.choose_spec.choose_spec
+
+/-- *0-reduction witness extractor — partition predicate.* When `M`
+is 0-reducible, extracts the Boolean partition predicate `inP1`
+witnessing `{1,…,s} = P₀ ∪ P₁` with `P₀ = {i | inP1 i = false}`. -/
+noncomputable def IsZeroReducible.inP1 {s : ℕ} {M : RKTableau s}
+    (h : M.IsZeroReducible) : Fin s → Bool :=
+  h.choose
+
+/-- *0-reduction witness extractor — non-empty P₀.* The extracted
+partition has at least one `false`-indexed element (i.e. `P₀ ≠ ∅`).
+This is the non-triviality hypothesis from `IsZeroReducible`; it is
+exactly the hypothesis that `PReducesTo.size_lt_of_zeroStep`
+(cycle 195) and `card_filter_true_lt_of_exists_false` (cycle 195
+private helper) consume. -/
+theorem IsZeroReducible.exists_inP1_false {s : ℕ} {M : RKTableau s}
+    (h : M.IsZeroReducible) : ∃ i, h.inP1 i = false :=
+  h.choose_spec.1
+
+/-- *0-reduction witness extractor — zero-reducibility proof.* The
+extracted partition satisfies the two zero conditions
+(`IsZeroReducibleVia`: `b` vanishes on `P₀`, and `A` vanishes on
+`P₁ × P₀`). -/
+theorem IsZeroReducible.inP1_isZeroReducibleVia
+    {s : ℕ} {M : RKTableau s}
+    (h : M.IsZeroReducible) : M.IsZeroReducibleVia h.inP1 :=
+  h.choose_spec.2
+
+/-- *Strict stage-count descent via the extracted P-reduction.* The
+`pReduced` of the extracted partition has stage count `h.sBar`, which
+is strictly less than `s`. Direct restatement of `IsPReducible.sBar_lt`
+under the renaming "the pReduced-codomain stage count is strictly less
+than the original stage count", which is the form the future
+`reducedMethod` recursion will consume. -/
+theorem IsPReducible.pReduced_size_lt {s : ℕ} {M : RKTableau s}
+    (h : M.IsPReducible) : h.sBar < s :=
+  h.sBar_lt
+
+/-- *Strict stage-count descent via the extracted 0-reduction.* The
+`zeroReduced` of the extracted partition has stage count
+`(Finset.univ.filter (fun i => h.inP1 i = true)).card`, strictly less
+than `s` because `h.exists_inP1_false` provides a witness of a
+`false`-indexed element (so the `true`-filter is a proper subset of
+`Finset.univ`). Direct application of cycle 195's
+`card_filter_true_lt_of_exists_false` private helper. -/
+theorem IsZeroReducible.zeroReduced_size_lt
+    {s : ℕ} {M : RKTableau s} (h : M.IsZeroReducible) :
+    (Finset.univ.filter
+        (fun i : Fin s => h.inP1 i = true)).card < s :=
+  card_filter_true_lt_of_exists_false h.exists_inP1_false
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step
@@ -1411,7 +1490,7 @@ P-equivalent (reflexively) to itself, so the canonical-form theorem
 recovers the trivial `HEq` along the identity-stage axis. Exercises
 the type-level heterogeneous-stage plumbing on a non-trivial
 irreducible witness. Cycle 193 deliverable. -/
-example :
+theorem paddedEuler_pReduced_pairPartition_eq_of_both_isIrreducible :
     ∃ heq : 1 = 1,
       HEq (paddedEuler.pReduced pairPartition)
           (paddedEuler.pReduced pairPartition) :=
@@ -1428,7 +1507,7 @@ extraction theorem recovers the underlying P-reduction. The output
 matches `paddedEuler_pReducesTo_pReduced` from cycle 186, confirming
 the extraction lemma produces the expected reduct on the canonical
 heterogeneous-stage example. Cycle 194 deliverable. -/
-example :
+theorem paddedEuler_pReducesTo_pReduced_via_pEquivalent_extraction :
     paddedEuler.PReducesTo (paddedEuler.pReduced pairPartition) :=
   paddedEuler_pEquivalent_pReduced.pReducesTo_of_right_isIrreducible
     paddedEuler_pReduced_pairPartition_isIrreducible
@@ -1445,5 +1524,21 @@ example :
     paddedEuler_pReduced_pairPartition_isIrreducible
     paddedEuler_pReduced_pairPartition_isIrreducible
     (RKTableau.PEquivalent.refl (paddedEuler.pReduced pairPartition))
+
+/-- *Non-vacuity for `IsPReducible` destructors.* `paddedEuler` is
+P-reducible (cycle 186 witness `paddedEuler_isPReducible`); the
+destructors produce a partition whose codomain stage count is
+strictly less than 2 (the stage count of `paddedEuler`). -/
+example : paddedEuler_isPReducible.sBar < 2 :=
+  paddedEuler_isPReducible.sBar_lt
+
+/-- *Non-vacuity for `IsZeroReducible` destructors.* `paddedEuler` is
+0-reducible (cycle 188 witness `paddedEuler_isZeroReducible`); the
+destructors expose the strict-descent property
+`(true-filter cardinality) < 2`. -/
+example :
+    (Finset.univ.filter
+        (fun i : Fin 2 => paddedEuler_isZeroReducible.inP1 i = true)).card < 2 :=
+  paddedEuler_isZeroReducible.zeroReduced_size_lt
 
 end OpenMath.Chapter3.Section381
