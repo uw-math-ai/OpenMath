@@ -870,9 +870,10 @@
     "status": "unformalized"
   },
   "thm:523A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter5/Section523.lean",
+    "lean_symbol": "OpenMath.Chapter5.Section510.GeneralLinearMethod.algebraicStability_identity",
+    "status": "formalized",
+    "last_cycle": 241
   },
   "thm:523B": {
     "lean_file": null,
