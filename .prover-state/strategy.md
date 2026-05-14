@@ -1,201 +1,461 @@
-# Cycle 213 Strategy — §382 `compose_of_isRKOneStep` (Gap A reverse direction)
+# Cycle 214 Strategy
 
-## §A. Standing state (read first)
+## §A — Skip the §441 Phase C.2 GPFS smoke test
 
-- **Sorry count: 0** across the repo. HEAD is `bf4c80c` (cycle 212).
-- **Cycle 212 shipped Gap B**: `Equivalent.setoidSigma.{u}` + 3 non-vacuity witnesses + ~280-line scoping doc `.prover-state/issues/compose_isRKOneStep_iff_scoping.md` for Gap A.
-- **§441 Phase C.2 is GPFS-blocked**: 30 consecutive timeouts (cycles 182–212). **DO NOT attempt** a Section441 compile this cycle. The standing escalation in `cycle_182_gpfs_slowness.md` is unchanged — loop-maintainer territory.
-- **Cycle 212 worker's "Suggested next approach"** is explicit and well-scoped: ship the **reverse direction** of `compose_isRKOneStep_iff` this cycle (cycle 213), then ship forward direction next cycle (214), then thm:382A in cycle 215 via the (382g) reformulation.
+Per the 31-cycle pathology recorded in
+`.prover-state/issues/cycle_182_gpfs_slowness.md` (cycles 182–213 all
+timed out at ~5 min wall with ≤0.5% CPU), do **NOT** spend cycle 214
+on another smoke-test attempt at `OpenMath/Chapter4/Section441.lean`.
+The pathology has not abated for 31 consecutive cycles; one more
+attempt provides no signal. Skip Priority-0 entirely and proceed
+straight to the §381 work below.
 
-## §B. What to work on this cycle
+If you want to record the heartbeat, you may run a single
+`time timeout 60 lake env lean OpenMath/Chapter4/Section441.lean &`
+in the background and forget about it — but do not block on it, do
+not wait for it, and do not let the 60-second timeout consume any
+strategy budget. Strongly preferred: skip entirely.
 
-### P1 (primary, ~40 LOC) — `RKTableau.compose_of_isRKOneStep`
+## §B — Priority 1: ship `compose_isRKOneStep_iff` (forward direction + iff)
 
-**Target statement** (from scoping doc §3):
+**Target**: in `OpenMath/Chapter3/Section381.lean`, immediately after
+cycle 213's `compose_of_isRKOneStep` (currently ends at line ~2621,
+just before `PReducesTo.toEquivalent_and_toPhiEquivalent` at line
+2628), add the **full iff**:
 
 ```lean
-/-- *Reverse direction of `compose_isRKOneStep_iff` (algebraic, no
-smallness).* Sequential `M₁`/`M₂` one-step outputs at step size `H`
-assemble into a one-step output of `M₁.compose M₂` at the same `H`. -/
-theorem compose_of_isRKOneStep {s₁ s₂ : ℕ}
+/-- *Compose factors through `M₁`-then-`M₂` — full iff (Butcher §382 (382b–e)).*
+One step of `M₁.compose M₂` at step size `H` from `y₀` to `y_final`
+factors as sequential `M₁` then `M₂` steps at the *same* `H` (no
+rescaling). Note: this is a *structural* identity that holds
+unconditionally (no Lipschitz, no smallness, no `CompleteSpace`)
+because both directions are purely algebraic — the composite stage
+tuple decomposes into `Fin.append Y₁ Y₂` block-wise, exposing the
+underlying `M₁`/`M₂` stages. Closes Gap A of the path to `thm:382A`
+per `.prover-state/issues/compose_isRKOneStep_iff_scoping.md`. -/
+theorem compose_isRKOneStep_iff {s₁ s₂ : ℕ}
     (M₁ : RKTableau s₁) (M₂ : RKTableau s₂)
     {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    {f : N → N} {y₀ : N} {H : ℝ} {y_mid y_final : N}
-    (h₁ : M₁.IsRKOneStep f y₀ H y_mid)
-    (h₂ : M₂.IsRKOneStep f y_mid H y_final) :
-    (M₁.compose M₂).IsRKOneStep f y₀ H y_final
+    (f : N → N) (y₀ : N) (H : ℝ) (y_final : N) :
+    (M₁.compose M₂).IsRKOneStep f y₀ H y_final ↔
+      ∃ y_mid : N,
+        M₁.IsRKOneStep f y₀ H y_mid ∧
+        M₂.IsRKOneStep f y_mid H y_final
 ```
 
-Place it in `OpenMath/Chapter3/Section381.lean` **immediately after `compose_isExplicit_iff`** (cycle 210, around line ~2570). This keeps the `compose`-cluster geographically tight.
+**Critical observation that overrides the scoping doc**: the scoping
+doc (`compose_isRKOneStep_iff_scoping.md` §4.2) anticipated the
+forward direction would need `IsRKOneStep_exists` (cycle 205) +
+smallness + Lipschitz. **It does not.** Look at the unpacking pattern
+that cycle 213 used for the reverse direction (lines 2600–2621): it
+provided `Fin.append Y₁ Y₂` directly as the stage tuple, no Banach
+required. The forward direction is the mirror image — project a
+given composite stage tuple `Y_compose` onto `Y_top` and `Y_bot`,
+define `y_mid` *algebraically* as `y₀ + H • ∑ i, M₁.b i • f (Y_top i)`,
+and witness M₁/M₂'s `IsRKOneStep` via these projections. The
+output-equation halves close by `rfl` (for M₁'s, by definition of
+`y_mid`) and by the same `smul_add / ← add_assoc / ← hY₁_out`
+3-step regroup-and-collapse idiom cycle 213 used (for M₂'s).
 
-### P2 (optional, ~5 LOC) — Sorry-first scaffold for the full iff
+**No smallness, no Lipschitz, no `[CompleteSpace N]` is needed for
+the iff itself.** Smallness only enters if/when you want
+*uniqueness* of `y_mid`, which is not part of the iff.
 
-**Decision (default = SKIP)**: do NOT ship a sorry'd `compose_isRKOneStep_iff` scaffold this cycle. Going from sorry=0 to sorry=1 attracts supervisor scrutiny (cycle 200 was scored −2 for raising sorry 0→3). The reverse direction `compose_of_isRKOneStep` is itself a complete axiom-clean theorem; the iff packaging can land in cycle 214 alongside the forward direction in one clean ship.
+## §C — Detailed proof recipe for the forward direction
 
-Override and ship P2 only if P1 closes in well under the time budget AND you can articulate in the task results why a 0→1 sorry bump is worth it this cycle.
+The reverse direction is one line — invoke cycle 213:
 
-### P3 (stretch, ≤10 min) — `Fin.append` lemma audit for cycle 214
-
-After P1 closes, spend ≤10 minutes verifying the exact Mathlib lemma names for `Fin.append`-related sum splitting. This directly de-risks cycle 214's forward direction (which needs the same machinery on the composite stage tuple).
-
-Use `lean_local_search`, `lean_loogle`, or grep on `.lake/packages/mathlib/Mathlib/Data/Fin/Tuple/`. Candidates to check (in order of usefulness):
-
-- `Fin.sum_univ_castAdd` / `Fin.sum_univ_natAdd` — for `∑ i : Fin (s₁ + s₂), …` split.
-- `Fin.append_left` / `Fin.append_right` / `Fin.append_castAdd` / `Fin.append_natAdd` — for evaluating `Fin.append a b (castAdd s₂ i₁) = a i₁` etc.
-- `Fin.sum_append` — likely does NOT exist as named; report finding.
-- `Finset.sum_sigma`-style alternatives.
-
-Record findings as a brief checklist in the cycle 213 task results under §Discovery.
-
-## §C. Proof recipe for `compose_of_isRKOneStep` (~40 LOC)
-
-The scoping doc §4.1 has the full sketch. Distilling:
-
-**Step 1 — unpack hypotheses**:
 ```lean
-obtain ⟨Y₁, hY₁_stage, hY₁_out⟩ := h₁
-obtain ⟨Y₂, hY₂_stage, hY₂_out⟩ := h₂
+theorem compose_isRKOneStep_iff … :
+    (M₁.compose M₂).IsRKOneStep f y₀ H y_final ↔
+      ∃ y_mid : N, … := by
+  refine ⟨?_, ?_⟩
+  · -- forward (the substantive direction, ~30 LOC, see §C.1 below)
+    intro hC
+    obtain ⟨Y_compose, hY_compose_stage, hY_compose_out⟩ := hC
+    -- … build y_mid, Y_top, Y_bot as in §C.1 below
+    sorry  -- placeholder while drafting; close as detailed
+  · -- reverse: invoke cycle 213
+    rintro ⟨y_mid, h₁, h₂⟩
+    exact RKTableau.compose_of_isRKOneStep M₁ M₂ h₁ h₂
 ```
 
-(Verify the constructor field names by reading `IsRKOneStep` at `Section381.lean:923-928` — they may be `Y`, `stage`, `out` or named differently. Adjust the destructor accordingly.)
+Do not commit with a `sorry`; the placeholder is for incremental
+drafting only.
 
-**Step 2 — define composite stage tuple**:
+### §C.1 — Forward direction body (target ~30 LOC, mirror of cycle 213's body)
+
 ```lean
-refine ⟨Fin.append Y₁ Y₂, ?_, ?_⟩
+intro hC
+obtain ⟨Y_compose, hY_compose_stage, hY_compose_out⟩ := hC
+-- Project the composite stage tuple onto the two blocks (inline lambdas
+-- are simpler than `set` here — see Risk 5 below).
+refine ⟨y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i)), ?_, ?_⟩
+· -- M₁.IsRKOneStep f y₀ H y_mid: witness with the top projection.
+  refine ⟨fun i₁ => Y_compose (Fin.castAdd s₂ i₁), ?_, rfl⟩
+  intro i₁
+  -- Specialize the composite stage equation at the top-block index.
+  have hstage := hY_compose_stage (Fin.castAdd s₂ i₁)
+  rw [Fin.sum_univ_add] at hstage
+  simp only [compose_A_topLeft, compose_A_topRight,
+    zero_smul, Finset.sum_const_zero, add_zero] at hstage
+  -- hstage now matches the M₁ stage equation on the top projection
+  exact hstage
+· -- M₂.IsRKOneStep f y_mid H y_final: witness with the bottom projection.
+  refine ⟨fun i₂ => Y_compose (Fin.natAdd s₁ i₂), ?_, ?_⟩
+  · -- Stage equation
+    intro i₂
+    have hstage := hY_compose_stage (Fin.natAdd s₁ i₂)
+    rw [Fin.sum_univ_add] at hstage
+    simp only [compose_A_botLeft, compose_A_botRight] at hstage
+    -- hstage : Y_compose (Fin.natAdd s₁ i₂)
+    --   = y₀ + H • (∑ j₁, M₁.b j₁ • f (Y_compose (Fin.castAdd s₂ j₁)) +
+    --                ∑ j₂, M₂.A i₂ j₂ • f (Y_compose (Fin.natAdd s₁ j₂)))
+    rw [smul_add, ← add_assoc] at hstage
+    -- The first parenthesized term is exactly our y_mid (by def). Goal is:
+    -- Y_compose (Fin.natAdd s₁ i₂)
+    --   = (y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i)))
+    --     + H • ∑ j, M₂.A i₂ j • f (Y_compose (Fin.natAdd s₁ j))
+    exact hstage
+  · -- Output equation: y_final = y_mid + H • ∑ i, M₂.b i • f (bottom proj)
+    rw [Fin.sum_univ_add] at hY_compose_out
+    simp only [compose_b_castAdd, compose_b_natAdd] at hY_compose_out
+    rw [smul_add, ← add_assoc] at hY_compose_out
+    exact hY_compose_out
 ```
 
-This produces two goals: stage equation and output equation.
+### §C.2 — Why `rfl` works for M₁'s output equation
 
-**Step 3 — stage equation** (for all `i : Fin (s₁ + s₂)`):
+`y_mid := y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i))`
+by definition (literally what's written in `refine ⟨_, ?_, ?_⟩`).
+The output clause of `M₁.IsRKOneStep f y₀ H y_mid` requires
+`y_mid = y₀ + H • ∑ i, M₁.b i • f (Y i)` where `Y` is the witness
+tuple — here `Y = fun i₁ => Y_compose (Fin.castAdd s₂ i₁)`. Same
+RHS by `rfl`. **DO NOT** try to invoke `hY_compose_out` here — that
+is reserved for the M₂ output equation.
 
-Goal shape: `Fin.append Y₁ Y₂ i = y₀ + H • ∑ j, (M₁.compose M₂).A i j • f ((Fin.append Y₁ Y₂) j)`.
+### §C.3 — `Fin.append_left` / `Fin.append_right` are NOT needed in the forward direction
 
-Case-split via `induction i using Fin.addCases` (or `Fin.addCases i`):
+These cycle-213 simp lemmas operate on the witness pattern
+`Fin.append Y₁ Y₂ (Fin.castAdd _ _)` reducing it to `Y₁ _`. In the
+**forward** direction we are *not* constructing a `Fin.append` —
+we are projecting from an arbitrary `Y_compose`. Drop these from
+the `simp only` set. The relevant lemmas in the forward direction
+are exactly the `compose_A_*` / `compose_b_*` family plus the
+cleanup lemmas `zero_smul`, `Finset.sum_const_zero`, `add_zero`.
+See **Risk 2** below for diagnostic backup.
 
-- **Top block** (`i = Fin.castAdd s₂ i₁`):
-  - LHS: `Fin.append Y₁ Y₂ (castAdd s₂ i₁) = Y₁ i₁` via `Fin.append_left` (verify name with `lean_local_search`).
-  - RHS sum splits into top-left + top-right halves. Cycle 209's `compose_A_topLeft` gives `(M₁.compose M₂).A (castAdd s₂ i₁) (castAdd s₂ j₁) = M₁.A i₁ j₁`; `compose_A_topRight = 0` makes top-right vanish.
-  - Close with `hY₁_stage i₁`.
+### §C.4 — Closure idiom recap (worth reusing verbatim)
 
-- **Bottom block** (`i = Fin.natAdd s₁ i₂`):
-  - LHS: `Fin.append Y₁ Y₂ (natAdd s₁ i₂) = Y₂ i₂` via `Fin.append_right`.
-  - RHS sum splits: cycle 209's `compose_A_botLeft = M₁.b j₁` and `compose_A_botRight = M₂.A i₂ j₂`.
-  - Bot-left sum = `(y_mid - y₀) / H` via `hY₁_out`; bot-right sum = `(Y₂ i₂ - y_mid) / H` via `hY₂_stage i₂`.
-  - Combine: `y₀ + H • (bot-left + bot-right) = y₀ + (y_mid - y₀) + (Y₂ i₂ - y_mid) = Y₂ i₂`. Close with `linear_combination` or explicit `ring`-style chain over `•`.
+The 3-step `rw [smul_add, ← add_assoc]` idiom that cycle 213 used
+(plus a `← hY₁_out` step that closed by rewriting against M₁'s
+output formula) reduces here to just `rw [smul_add, ← add_assoc]`
+— no `← hY₁_out` step. The M₂ stage/output equations close once
+the `(y₀ + H • Σ M₁.b · f (Y_top))` block is left-grouped, because
+by definition that block *is* `y_mid`. Lean accepts this by
+definitional equality on the `exact`.
 
-**Step 4 — output equation**:
+If Lean's elaborator does NOT accept the definitional collapse
+(possible if `simp only` reshuffles the term in unexpected ways),
+fall back to writing the goal explicitly: `show Y_compose
+(Fin.natAdd s₁ i₂) = (y₀ + H • ∑ i, M₁.b i • f (Y_compose
+(Fin.castAdd s₂ i))) + H • ∑ j, M₂.A i₂ j • f (Y_compose
+(Fin.natAdd s₁ j))` before the `exact`, and use `change` if
+needed to force the unfolding.
 
-Goal: `y_final = y₀ + H • ∑ i, (M₁.compose M₂).b i • f ((Fin.append Y₁ Y₂) i)`.
+## §D — Anticipated risks (prevention recipes)
 
-The composite `.b` field unfolds to `Fin.append M₁.b M₂.b` (cycle 209 — check via `compose_b_castAdd` / `compose_b_natAdd` simp lemmas, or unfold `RKTableau.compose` directly).
+### Risk 1 — `simp only` does not close the M₁ stage goal exactly
 
-Split the sum into top + bottom via the `Fin.append`-sum lemma from P3 audit. Resulting:
-```
-y₀ + H • (∑ᵢ₁ M₁.b i₁ • f (Y₁ i₁) + ∑ᵢ₂ M₂.b i₂ • f (Y₂ i₂))
-  = (y₀ + H • ∑ᵢ₁ M₁.b i₁ • f (Y₁ i₁)) + H • ∑ᵢ₂ M₂.b i₂ • f (Y₂ i₂)
-  = y_mid + H • ∑ᵢ₂ M₂.b i₂ • f (Y₂ i₂)           -- by hY₁_out
-  = y_final                                        -- by hY₂_out
-```
+If after `simp only [compose_A_topLeft, compose_A_topRight,
+zero_smul, Finset.sum_const_zero, add_zero]` the hypothesis shape
+is NOT what's expected, use `lean_goal` or `lean_term_goal` MCP at
+the point of the `exact` to inspect the actual shape. Common
+fix: insert `show … = …` between simp and exact to bridge a
+syntactic gap, or add `Fin.castAdd_zero, Fin.natAdd_zero` to the
+simp set if Lean is keeping the abstract `Fin.castAdd s₂ i₁`
+unreduced.
 
-Close with `rw [← hY₁_out]; exact hY₂_out.symm` (modulo `simp` plumbing to align the sum-split with the closed-forms).
+### Risk 2 — Why no `Fin.append_*` in the forward direction
 
-## §D. Known risks (preemptive guidance)
+In cycle 213's reverse direction, the witness tuple was
+`Fin.append Y₁ Y₂`, and the simp set used
+`Fin.append_left, Fin.append_right` to drill through that name
+into `Y₁ _` and `Y₂ _`. In cycle 214's forward direction, the
+witness tuple is *the projection* of `Y_compose` — there is no
+`Fin.append` to drill through. The composite-A and composite-b
+simp lemmas (`compose_A_topLeft`, etc.) operate on the
+**index-side** `Fin.castAdd` / `Fin.natAdd` patterns directly,
+producing the right scalar entries without needing the
+function-side `Fin.append` machinery. **Drop**
+`Fin.append_left, Fin.append_right` from the forward simp set.
 
-### Risk 1 — `Fin.sum_univ_addCases` may not be its exact name
+If they accidentally fire on an unrelated `Fin.append` somewhere
+in `compose`'s definition expansion, you'll see "useless" goal
+changes — diagnosis: use `lean_goal` before and after the simp to
+spot the regression.
 
-The Mathlib name could be `Fin.sum_univ_add`, `Fin.sum_univ_castAdd_add_natAdd`, or live as a `Finset.sum_sigma`-flavored variant. Likely candidates (try in order):
+### Risk 3 — The `← add_assoc` rewrite doesn't match the parenthesisation
 
-1. `Fin.sum_univ_add` — most plausible idiomatic name.
-2. `Fin.sum_univ_castSucc` — wrong shape (handles `Fin (n+1)`, not `Fin (a+b)`); listed only to rule out.
-3. Manual: `Fin.sum_univ_eq_sum_range` + index reindex — heavyweight fallback.
+If the hypothesis after `smul_add` has shape `y₀ + (H • A + H • B)`
+(right-leaning parenthesisation from `smul_add`'s natural form),
+`← add_assoc` rewrites to `(y₀ + H • A) + H • B` (left-leaning).
+If Lean's pretty-printer shows different parens than your mental
+model, **use `lean_goal` MCP to inspect the actual term shape after
+each rewrite; do not guess.** Once you see the actual shape, the
+fix is either an additional `add_comm`-flavour rewrite or an
+explicit `show` to match.
 
-If all named lookups miss, fall back to **proving the split manually** as a private helper:
+### Risk 4 — `IsRKOneStep` destructure shape mismatch
+
+`IsRKOneStep := ∃ Y, (∀ i, …) ∧ y₁ = …` is anonymous, so the
+pattern `⟨Y, hstage, hout⟩` works (the binary `∧` is flat against
+the anonymous existential, matching the same shape cycle 213 used
+successfully at line 2600). The worker MUST NOT try
+`⟨Y, ⟨hstage, hout⟩⟩` — that would be valid syntax but slightly
+less idiomatic; both work. The danger is using the wrong arity
+(e.g. `⟨Y, hstage⟩` missing `hout`).
+
+### Risk 5 — `set Y_top with hY_top` complications
+
+`set` introduces a local definition but does NOT automatically
+rewrite existing hypotheses unless you use `set ... with hY_top`
+followed by manual `rw [← hY_top] at hstage`. **Recommended**:
+skip `set` entirely; inline `Y_top` and `Y_bot` as anonymous `fun
+i₁ => Y_compose (Fin.castAdd s₂ i₁)` lambdas (as the §C.1 recipe
+above shows). The proof body shrinks to ~25 LOC and avoids any
+`set` propagation issues.
+
+### Risk 6 — Universe annotation `.{u}` needed?
+
+**No.** `compose_isRKOneStep_iff` operates at the `IsRKOneStep`
+level (one layer below `Equivalent`). `IsRKOneStep` is not
+universe-polymorphic over the result type (it's parameterised on
+`{N : Type*}` with normed-space classes; that's fine). Cycle 213
+shipped `compose_of_isRKOneStep` without any `.{u}` annotation and
+it is axiom-clean — same applies here. Cycle 204's universe
+discipline is local to `Equivalent` and does not propagate down.
+
+### Risk 7 — `compose_A_topRight`-generated `0 • f _` does not collapse
+
+After `simp only [compose_A_topRight]`, the term `0 • f (Y_compose
+(Fin.natAdd s₁ j₂))` appears inside an inner sum `∑ j₂, …`. To
+collapse to 0, the simp set needs `zero_smul` followed by
+`Finset.sum_const_zero` (or `Finset.sum_eq_zero` plus per-term
+zero). The recommended simp set
+`[compose_A_topLeft, compose_A_topRight, zero_smul,
+Finset.sum_const_zero, add_zero]` covers this in one pass. If it
+doesn't fire, the issue is term-order — add `mul_zero` or
+`smul_zero` as backup.
+
+## §E — Priority 2: non-vacuity example on `paddedEuler`
+
+After the iff theorem, add an `example` immediately after the
+existing cycle 213 paddedEuler example (which currently ends at
+line 2694, in the `OpenMath.Chapter3.Section381` namespace
+block). This exercises the **forward** direction (the `.mp`) on
+the cycle-213 witness:
+
 ```lean
-private theorem Fin.sum_univ_addCases {s₁ s₂ : ℕ} {α : Type*} [AddCommMonoid α]
-    (g : Fin (s₁ + s₂) → α) :
-    ∑ i, g i = (∑ i₁ : Fin s₁, g (Fin.castAdd s₂ i₁))
-             + (∑ i₂ : Fin s₂, g (Fin.natAdd s₁ i₂)) := by
-  sorry  -- ≤10 LOC via Finset.sum_disjoint + Finset.image_disjoint
+/-- *Non-vacuity for the forward direction of `compose_isRKOneStep_iff`
+(cycle 214 P1).* Extracts the intermediate value `y_mid` from a
+known composite output. The composite output `(y₀ + H • f y₀) + H
+• f (y₀ + H • f y₀)` (cycle 213) factors as `paddedEuler` stepping
+from `y₀` to `y₀ + H • f y₀`, then `paddedEuler` stepping from
+`y₀ + H • f y₀` to the final value. -/
+example {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (y₀ : N) (H : ℝ) :
+    ∃ y_mid : N,
+      paddedEuler.IsRKOneStep f y₀ H y_mid ∧
+      paddedEuler.IsRKOneStep f y_mid H
+        ((y₀ + H • f y₀) + H • f (y₀ + H • f y₀)) :=
+  (RKTableau.compose_isRKOneStep_iff paddedEuler paddedEuler f y₀ H _).mp
+    (RKTableau.compose_of_isRKOneStep paddedEuler paddedEuler
+      (paddedEuler_isRKOneStep f y₀ H)
+      (paddedEuler_isRKOneStep f (y₀ + H • f y₀) H))
 ```
 
-If you have to ship this helper, mark it `private` and keep it in `Section381.lean` (do not start a new helper file mid-cycle).
+This composes cycle 213's reverse-direction witness with cycle 214's
+forward direction — a round-trip through the iff. Useful both as
+non-vacuity and as a sanity check that the forward direction
+correctly retrieves a `y_mid` value (specifically, `y_mid = y₀ + H
+• f y₀` algebraically, though the example only states existence).
 
-### Risk 2 — `Fin.append` evaluation
+## §F — Priority 3 (stretch, only if §B and §E ship cleanly with budget remaining): scoping for `thm:382A`
 
-`Fin.append Y₁ Y₂ (Fin.castAdd s₂ i₁)` should rewrite to `Y₁ i₁`. The Mathlib name to try first is `Fin.append_left`; alternatives: `Fin.append_castAdd`, `Fin.addCases_castAdd`. If all miss, `unfold Fin.append; simp` is the hammer fallback.
+If `compose_isRKOneStep_iff` + the non-vacuity example land within
+the first ~60 minutes of the cycle, write a **scoping document**
+(not Lean code) at `.prover-state/issues/thm_382A_via_382g_scoping.md`
+that sketches the proof of `thm:382A` directly via the (382g)
+reformulation:
 
-### Risk 3 — composite `.b` field unfolding
+```
+m₁ ≡ m̂₁ ∧ m₂ ≡ m̂₂ → m₁.compose m₂ ≡ m̂₁.compose m̂₂
+```
 
-`(M₁.compose M₂).b = Fin.append M₁.b M₂.b` is *likely* `rfl` (compose is defined as a structure constructor in cycle 209), so a simple `rfl` rewrite or `show` reframing should work. If it doesn't, use the cycle 209 simp lemmas `compose_b_castAdd` / `compose_b_natAdd` (verify names by grepping Section381.lean).
+Per `.prover-state/issues/thm_382A_path.md` §"(382g) reformulation",
+this form avoids Gap B (the Σ-typed quotient packaging) and uses
+only Gap A (closed via cycles 213 + 214). The scoping doc should
+cover:
 
-### Risk 4 — `•` arithmetic vs `*` and `ring`
+1. **Smallness threshold construction**: how to take the *minimum*
+   of the two equivalences' (cycle 206 trans-recipe) thresholds
+   plus a third `H₀ := 1/(2*(L*(C₁+C₂)+1))` term (`C₁`, `C₂`
+   being the compose-row sums of `m₁` and `m₂`).
+2. **Proof sketch**: unpack `hEq₁ : m₁.Equivalent m̂₁` and
+   `hEq₂ : m₂.Equivalent m̂₂`; pick a small `H`; apply
+   `compose_isRKOneStep_iff.mp` to a putative
+   `(m₁.compose m₂).IsRKOneStep f y₀ H y_final` to extract the
+   intermediate `y_mid`; apply `hEq₁` at the M₁ step (which
+   requires `m₁` and `m̂₁` to land at the *same* `y_mid`; this is
+   where smallness + Banach uniqueness via cycle 204's
+   `RKStageMap_fixedPoint_unique` enters); apply `hEq₂` at the M₂
+   step to swap the final output; re-pack via
+   `compose_of_isRKOneStep` (cycle 213) into
+   `m̂₁.compose m̂₂`'s output.
+3. **Key obstacle**: the `hEq₁` swap fires only when `m₁` and
+   `m̂₁` both produce *the same* `y_mid` on the *same* `(f, y₀, H)`.
+   `Equivalent` asserts uniqueness of one-step output, so this is
+   exactly the hypothesis needed — but the threshold construction
+   needs care.
+4. **LOC estimate** and **proof challenges**: estimate 60–100 LOC
+   in cycle 215, ideally with a P1 split of "prove the algebraic
+   half" and "wire up smallness".
 
-The `IsRKOneStep` definition uses `•` (SMul ℝ N), not `*`. At concrete `N = ℝ` this collapses to `*`, but the proof should work uniformly. **Use `linear_combination` over `smul_add` / `add_smul` / `smul_smul` rather than `ring`** — `ring` will fail on `H • x` goals because `•` is not a ring operation. If `linear_combination` doesn't fire, manually distribute `•` via the `smul_*` simp set and close residues with `module` or `noncomm_ring` tactics.
+Do **NOT** attempt to ship `thm:382A` in cycle 214 — the scoping is
+the stretch deliverable; the proof itself is cycle 215+.
 
-### Risk 5 — `IsRKOneStep` field names
+If the iff or non-vacuity stall, **drop P3 entirely**.
 
-Read the actual `IsRKOneStep` definition at `Section381.lean:923` before writing `obtain ⟨Y₁, hY₁_stage, hY₁_out⟩`. The field names may be different (e.g., `stages`, `stage_eq`, `output_eq`). Match exactly.
+## §G — What NOT to do
 
-## §E. What NOT to try
+1. **DO NOT introduce `[CompleteSpace N]` on the iff's signature.**
+   The iff is purely structural and does not require completeness.
+   Including it would make the theorem strictly weaker than
+   necessary and would diverge from cycle 213's
+   `compose_of_isRKOneStep` (which also omits `CompleteSpace`).
 
-- **Do NOT attempt the forward direction** of `compose_isRKOneStep_iff` this cycle. The scoping doc estimates ~70 LOC for the forward direction (requires cycle 205's `IsRKOneStep_exists` + cycle 204's `RKStageMap_fixedPoint_unique` + smallness threshold construction). Combining with the ~40 LOC reverse exceeds a single-cycle budget. Defer to cycle 214 per scoping doc §7.
+2. **DO NOT add smallness or Lipschitz hypotheses to the iff.**
+   Same reason as above — purely algebraic identity. Both
+   directions close without any analytic hypotheses.
 
-- **Do NOT attempt Section441 Phase C.2** (Möbius bridge / αPoly complex roots). GPFS-blocked 30 consecutive cycles. The cycle 182 draft and cycle 184 namespace fix are preserved; resume only when GPFS recovers.
+3. **DO NOT invoke `IsRKOneStep_exists` (cycle 205) or
+   `RKStageMap_fixedPoint_unique` (cycle 204).** The scoping doc
+   anticipated these would be needed; they are not. The forward
+   direction works by *projection*, not by Banach existence.
 
-- **Do NOT attempt `compose_assoc`** (cycle 210 deferred, see `.prover-state/issues/compose_assoc_HEq_plumbing.md`). The HEq plumbing exceeds 30 LOC and is orthogonal to thm:382A's path (which uses the (382g) reformulation, not `compose_assoc`).
+4. **DO NOT use the `set Y_top with hY_top; rw [← hY_top] at …`
+   pattern unless necessary.** If your first attempt with `set`
+   produces goals that don't match cleanly, immediately fall back
+   to inlining the projection lambda (as §C.1 shows). Save your
+   time budget.
 
-- **Do NOT add a Σ-typed `compose_assoc_at_setoid` reformulation**. The cycle 212 Σ-typed setoid was scoped for `[m₁ · m₂]` quotient classes, not associativity. Stay on the cycle 212 worker's recommended path.
+5. **DO NOT bump sorry count by adding an iff scaffold with a
+   sorry'd forward direction "to be filled later".** Either ship
+   the iff complete (both directions), or skip the iff packaging
+   and ship only a separate `compose_to_isRKOneStep` forward
+   theorem (analogous to cycle 213's `compose_of_isRKOneStep` for
+   the reverse). Avoid the cycle-200 supervisor-scoring incident:
+   sorry count must remain at 0.
 
-- **Do NOT bump `maxHeartbeats`** above 200000. If the stage-equation case split blows up, decompose into named private helpers (one per block: `compose_stage_top_eq`, `compose_stage_bot_eq`).
+6. **DO NOT spend time on the §441 Phase C.2 smoke test.** Per §A,
+   the GPFS pathology has reproduced 31 consecutive times; no
+   signal in attempt 32.
 
-- **Do NOT introduce `axiom`/`constant`** for any step. The reverse direction is purely algebraic — every step has a Mathlib name or a ≤10-LOC helper proof.
+7. **DO NOT attempt `thm:382A` proper in cycle 214.** It is the
+   §F stretch *scoping* deliverable only. The proof itself is
+   multi-cycle work.
 
-- **Do NOT use `ring` on `•` goals**. Use `linear_combination` or `smul_*` simp set + `module`.
+8. **DO NOT edit `scripts/autonomous_loop.py` or any supervisor
+   infrastructure.** That is loop-maintainer territory per CLAUDE.md.
 
-- **Do NOT poll Aristotle for general-n thm:550A** (project `2c4630b2` cancelled cycle 151; do not re-submit).
+9. **DO NOT use `lean_run_code` or `lean_build` for verification
+   unless absolutely necessary** — they are slow. Prefer
+   `lake env lean OpenMath/Chapter3/Section381.lean` for compile
+   checks (Section381 has been warm at ~5–7s for the past 30
+   cycles per the heartbeat).
 
-### Failed-approach inventory from prior cycles (do not re-attempt)
+10. **DO NOT use universe annotations `.{u}`** on
+    `compose_isRKOneStep_iff` or anywhere else in cycle 214.
+    Cycle 213's `compose_of_isRKOneStep` ships axiom-clean
+    without them. They are only needed for `Equivalent`-level
+    work (cycles 204/211/212).
 
-- **Cycle 210's `compose_assoc` attempts**: `congr 1` peels wrong layer; `subst hs` fails (Nat.add_assoc is not a free variable); `simp [compose]; rfl` produces syntactically-distinct `Fin.addCases` nestings. See `compose_assoc_HEq_plumbing.md`.
+## §H — Verification
 
-- **Cycle 208's `.symm` dot-notation pitfall**: `Equivalent` is a `∀`-form `def`, not a structure — `Function.symm` is what gets resolved. Use `Equivalent.symm` explicitly. (Not relevant this cycle but informs naming conventions.)
+After the worker writes the iff + non-vacuity example:
 
-- **Cycle 211's implicit-lambda trap on `Setoid.r` unfolds**: `show paddedEuler.Equivalent <target>` is the workaround. (Not relevant this cycle — `compose_of_isRKOneStep` has no Setoid in its statement.)
+1. `lake env lean OpenMath/Chapter3/Section381.lean` — must exit 0.
+2. `grep -c sorry OpenMath/Chapter3/Section381.lean` — must return 0.
+3. `lean_verify
+   OpenMath.Chapter3.Section312.RKTableau.compose_isRKOneStep_iff`
+   — must return `[propext, Classical.choice, Quot.sound]` only.
+4. Spot-check via `lean_verify` on cycle 213's
+   `OpenMath.Chapter3.Section312.RKTableau.compose_of_isRKOneStep`
+   and cycle 212's
+   `OpenMath.Chapter3.Section312.RKTableau.Equivalent.setoidSigma`
+   to confirm no regressions.
 
-- **Cycle 204's universe-polymorphism pitfall**: `Equivalent.{u}` requires explicit shared `.{u}` annotation when both hypothesis and goal mention it. Not relevant this cycle — `compose_of_isRKOneStep` does NOT mention `Equivalent` in its statement (it operates at the `IsRKOneStep` level, one layer below).
+If any of (1)–(3) fail, **do not commit**. Debug, fix, re-verify.
+If a fix requires more than 20 minutes of tactic exploration,
+roll back to a smaller deliverable (e.g. ship `compose_to_isRKOneStep`
+as a separate forward theorem, without the iff packaging) rather
+than committing broken work.
 
-## §F. Verification checklist (run before commit)
+## §I — Faithfulness
 
-1. `lake env lean OpenMath/Chapter3/Section381.lean` exits 0.
-2. `grep -c sorry OpenMath/Chapter3/Section381.lean` returns 0 (or 1 if P2 scaffold shipped — should be 0 by default).
-3. `lean_verify OpenMath.Chapter3.Section312.RKTableau.compose_of_isRKOneStep` returns axiom-clean (`[propext, Classical.choice, Quot.sound]` baseline; `Classical.choice` may appear if any Mathlib `Fin.append` lemma uses it internally — that's fine).
-4. Cycle 211's `Equivalent.setoid.{u}` and cycle 212's `Equivalent.setoidSigma.{u}` still axiom-clean (regression check via `lean_verify`).
-5. No new linter warnings in `Section381.lean` (the existing unused-variable warnings on lines 577 and 2245 are pre-existing — do not "fix" them).
-6. Warm rebuild of `Section381.lean` ≤ 10s. If it balloons past 30s warm, investigate — likely a `simp` chain doing more work than it should.
+The iff is infrastructure for `thm:382A`, not a textbook entity
+itself — no `extraction/formalization_data/entities/*.json` row to
+consult. Document in the docstring that:
 
-## §G. Faithfulness check
+- The structural identity is Butcher §382 equations (382b–e), p. 285.
+- It holds *unconditionally* (no smallness/Lipschitz/completeness)
+  because both directions are algebraic.
+- It closes **Gap A** of the path to `thm:382A` per
+  `.prover-state/issues/compose_isRKOneStep_iff_scoping.md` and
+  `.prover-state/issues/thm_382A_path.md`.
 
-`compose_of_isRKOneStep` is **infrastructure** for thm:382A, not a textbook entity — no `entities/*.json` file to consult. Its conclusion is the algebraic dual of one direction of Butcher §382's implicit identity (that one step of `m₁ · m₂` factors through two sub-steps).
+After landing, append a "**Cycle 214 update**" section to
+`.prover-state/issues/compose_isRKOneStep_iff_scoping.md` recording:
+- Forward direction shipped axiom-clean.
+- Critical observation: no Banach/smallness/Lipschitz needed
+  (overrides the scoping doc's anticipation).
+- Iff packaging complete.
+- Recommended next entry point: `thm:382A` via the (382g) form
+  (cycle 215, scoped per §F if you took the stretch).
 
-- **Tautology check**: NO. The conclusion `(M₁.compose M₂).IsRKOneStep f y₀ H y_final` is genuinely constructed from `h₁` and `h₂`; neither hypothesis matches the conclusion verbatim.
-- **Identity check**: NO. The proof builds a stage tuple via `Fin.append` and discharges two non-trivial obligations.
-- **Hypothesis strength**: minimal. No Lipschitz, no smallness, no `CompleteSpace`. The hypotheses are exactly what's algebraically needed.
-- **Definition smuggling**: not applicable — no new definitions.
-- **Absent theorem**: not applicable — no `sorry`-promised follow-ups.
+Update the def:381A row of `plan.md` to mention the iff closure
+(brief, one-sentence appendix to the existing cycle 213 paragraph).
+**Do not** update `lean_status.json` for `thm:382A` — that remains
+`unformalized` until cycle 215+ ships the actual theorem. But DO
+update the cycle reference for def:381A's row in `lean_status.json`
+to 214 to record the iff infrastructure landing.
 
-## §H. Task results template addendum
+## §J — Time budget
 
-In the cycle 213 task results, explicitly record:
+| Step | Target time |
+| --- | --- |
+| Read this strategy + grep cycle 213 lines for reference | 5 min |
+| Write iff statement + reverse direction (1-line) | 5 min |
+| Write forward direction body (P1) | 25 min |
+| Debug + close any tactic stalls | 15 min |
+| Non-vacuity example (§E, P2) | 10 min |
+| Verification (`lake env lean`, `lean_verify`) | 5 min |
+| Faithfulness notes + plan.md + issue update | 10 min |
+| **§F stretch (if budget allows)** | 30 min |
+| Task results + commit | 15 min |
+| **Total without stretch** | **~90 min** |
+| **Total with stretch** | **~120 min** |
 
-1. Whether P2 (scaffold sorry) was shipped or skipped, and why.
-2. The exact Mathlib lemma names used for `Fin.append` evaluation and `Fin (s₁ + s₂)` sum splitting (these will be needed verbatim in cycle 214's forward direction). Format as: `[name] = [verified-present | not-found | wrong-shape] | [used-as]`.
-3. Total LOC of `compose_of_isRKOneStep` body (target ≤ 50 LOC; report actual).
-4. Warm rebuild time after cycle 213 edits.
-5. Whether any new helper lemmas were extracted (e.g., a `compose_stage_top_eq` / `compose_stage_bot_eq` split if the case-split body got long, or a private `Fin.sum_univ_addCases` helper if Risk 1 fired).
-6. P3 stretch findings (Fin.append audit) — formatted as the checklist from item (2) above.
+If you exceed 90 minutes without §F, skip the stretch entirely and
+commit the iff + non-vacuity. If you exceed 120 minutes with §F
+incomplete, commit what you have minus the stretch doc.
 
-## §I. Bottom line
+## §K — One-line summary for the worker
 
-Ship `compose_of_isRKOneStep` (~40 LOC, axiom-clean, no smallness). Default: skip the iff scaffold sorry (keep sorry count at 0). Audit `Fin.append` lemmas as a P3 stretch to de-risk cycle 214. Target sorry count: **0**.
-
-§441 Phase C.2 GPFS-blocked, skipped (31st consecutive).
+**Ship `compose_isRKOneStep_iff` (forward direction algebraic, no
+Banach/smallness/Lipschitz needed — mirror cycle 213's body shape
+with projections instead of `Fin.append`), add a paddedEuler
+non-vacuity example exercising the `.mp` direction, optionally
+write a `thm:382A` scoping doc if time remains. Sorry count must
+remain at 0.**

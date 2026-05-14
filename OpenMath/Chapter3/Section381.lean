@@ -2620,6 +2620,53 @@ theorem compose_of_isRKOneStep {s₁ s₂ : ℕ}
     rw [smul_add, ← add_assoc, ← hY₁_out]
     exact hY₂_out
 
+/-- *Compose factors through `M₁`-then-`M₂` — full iff (Butcher §382
+(382b–e), p. 285).* One step of `M₁.compose M₂` at step size `H` from
+`y₀` to `y_final` factors as sequential `M₁` then `M₂` steps at the
+*same* `H` (no rescaling). This is a *structural* identity that holds
+unconditionally (no Lipschitz, no smallness, no `CompleteSpace`)
+because both directions are purely algebraic: the reverse direction
+(cycle 213's `compose_of_isRKOneStep`) packages two stage tuples into
+`Fin.append Y₁ Y₂`; the forward direction *projects* a composite
+stage tuple `Y_compose` onto its top (`Fin.castAdd s₂`) and bottom
+(`Fin.natAdd s₁`) blocks and defines `y_mid` algebraically. Closes
+**Gap A** of the path to `thm:382A` per
+`.prover-state/issues/compose_isRKOneStep_iff_scoping.md` and
+`.prover-state/issues/thm_382A_path.md`. -/
+theorem compose_isRKOneStep_iff {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (y₀ : N) (H : ℝ) (y_final : N) :
+    (M₁.compose M₂).IsRKOneStep f y₀ H y_final ↔
+      ∃ y_mid : N,
+        M₁.IsRKOneStep f y₀ H y_mid ∧
+        M₂.IsRKOneStep f y_mid H y_final := by
+  refine ⟨?_, ?_⟩
+  · intro hC
+    obtain ⟨Y_compose, hY_compose_stage, hY_compose_out⟩ := hC
+    refine ⟨y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i)),
+      ?_, ?_⟩
+    · refine ⟨fun i₁ => Y_compose (Fin.castAdd s₂ i₁), ?_, rfl⟩
+      intro i₁
+      have hstage := hY_compose_stage (Fin.castAdd s₂ i₁)
+      rw [Fin.sum_univ_add] at hstage
+      simp only [compose_A_topLeft, compose_A_topRight,
+        zero_smul, Finset.sum_const_zero, add_zero] at hstage
+      exact hstage
+    · refine ⟨fun i₂ => Y_compose (Fin.natAdd s₁ i₂), ?_, ?_⟩
+      · intro i₂
+        have hstage := hY_compose_stage (Fin.natAdd s₁ i₂)
+        rw [Fin.sum_univ_add] at hstage
+        simp only [compose_A_botLeft, compose_A_botRight] at hstage
+        rw [smul_add, ← add_assoc] at hstage
+        exact hstage
+      · rw [Fin.sum_univ_add] at hY_compose_out
+        simp only [compose_b_castAdd, compose_b_natAdd] at hY_compose_out
+        rw [smul_add, ← add_assoc] at hY_compose_out
+        exact hY_compose_out
+  · rintro ⟨y_mid, h₁, h₂⟩
+    exact compose_of_isRKOneStep M₁ M₂ h₁ h₂
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -2692,5 +2739,25 @@ example {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
   RKTableau.compose_of_isRKOneStep paddedEuler paddedEuler
     (paddedEuler_isRKOneStep f y₀ H)
     (paddedEuler_isRKOneStep f (y₀ + H • f y₀) H)
+
+/-- *Non-vacuity for the forward direction of `compose_isRKOneStep_iff`
+(cycle 214 P2).* Extracts an intermediate value `y_mid` from a known
+composite one-step output. The composite output
+`(y₀ + H • f y₀) + H • f (y₀ + H • f y₀)` (from the cycle 213 example
+via `compose_of_isRKOneStep`) factors as `paddedEuler` stepping from
+`y₀` to `y₀ + H • f y₀`, then `paddedEuler` stepping from that
+intermediate value to the final composite output. Round-trips
+cycle 213's reverse-direction witness through cycle 214's forward
+direction, exercising the `.mp` side of the iff. -/
+example {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (y₀ : N) (H : ℝ) :
+    ∃ y_mid : N,
+      paddedEuler.IsRKOneStep f y₀ H y_mid ∧
+      paddedEuler.IsRKOneStep f y_mid H
+        ((y₀ + H • f y₀) + H • f (y₀ + H • f y₀)) :=
+  (RKTableau.compose_isRKOneStep_iff paddedEuler paddedEuler f y₀ H _).mp
+    (RKTableau.compose_of_isRKOneStep paddedEuler paddedEuler
+      (paddedEuler_isRKOneStep f y₀ H)
+      (paddedEuler_isRKOneStep f (y₀ + H • f y₀) H))
 
 end OpenMath.Chapter3.Section381

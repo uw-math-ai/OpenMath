@@ -356,3 +356,90 @@ unpacks `(m₁ · m₂).IsRKOneStep` into the M₁-then-M₂ form (**forward**),
 So both directions are load-bearing for the thm:382A proof. Cycle 214's
 thm:382A direct closure cannot proceed with only the reverse direction
 alone.
+
+## Cycle 214 update — Gap A closed in full (iff packaged)
+
+`RKTableau.compose_isRKOneStep_iff` shipped in
+`OpenMath/Chapter3/Section381.lean` (namespace
+`OpenMath.Chapter3.Section312.RKTableau`), immediately after cycle 213's
+`compose_of_isRKOneStep`. Both directions axiom-clean
+(`[propext, Classical.choice, Quot.sound]`).
+
+### Critical observation — overrides §4.2 of this doc
+
+The scoping doc's §4.2 anticipated the forward direction would need
+`IsRKOneStep_exists` (cycle 205) for *Banach existence of `y_mid`* + a
+smallness threshold + Lipschitz hypothesis. **None of these are needed.**
+The forward direction works by *projection*, not existence:
+
+1. Given `(M₁.compose M₂).IsRKOneStep f y₀ H y_final`, destructure to
+   obtain the composite stage tuple `Y_compose : Fin (s₁+s₂) → N` along
+   with its stage equations and the output equation.
+2. *Define* `y_mid := y₀ + H • ∑ i, M₁.b i • f (Y_compose (Fin.castAdd s₂ i))`
+   algebraically — no fixed-point existence theorem needed.
+3. Witness `M₁.IsRKOneStep f y₀ H y_mid` using the top projection
+   `fun i₁ => Y_compose (Fin.castAdd s₂ i₁)`; the M₁ stage equation
+   follows from the composite stage equation at index `Fin.castAdd s₂ i₁`
+   after `Fin.sum_univ_add` + `compose_A_topLeft`/`compose_A_topRight` simp
+   collapses the bottom-block half to zero. The M₁ output equation closes
+   by `rfl` (the witness tuple plugs into `M₁.b i • f (Y i)` to give
+   *exactly* the y_mid definition).
+4. Witness `M₂.IsRKOneStep f y_mid H y_final` using the bottom projection
+   `fun i₂ => Y_compose (Fin.natAdd s₁ i₂)`; the M₂ stage and output
+   equations close via the same `Fin.sum_univ_add` split + the
+   `compose_A_bot*`/`compose_b_*` simp set + `rw [smul_add, ← add_assoc]`
+   regrouping the M₁-output block as `y_mid`. Both equations close by
+   `exact hY_compose_stage` / `exact hY_compose_out` via definitional
+   collapse on the y_mid binding.
+
+This is a *structural* (algebraic) identity. No `[CompleteSpace N]`,
+Lipschitz, or smallness hypothesis appears anywhere in the iff's
+signature. The 35-LOC proof body mirrors cycle 213's reverse direction
+shape with projections substituted for `Fin.append`. The cycle-205
+machinery the scoping doc anticipated is preserved unused — it will
+re-enter only for `thm:382A`'s proof itself (where `Equivalent`'s
+universal quantification over outputs forces using one-step uniqueness).
+
+### Iff packaging
+
+```
+(M₁.compose M₂).IsRKOneStep f y₀ H y_final ↔
+  ∃ y_mid : N,
+    M₁.IsRKOneStep f y₀ H y_mid ∧
+    M₂.IsRKOneStep f y_mid H y_final
+```
+
+— no hypotheses beyond the normed-space typeclasses on `N`.
+
+### Non-vacuity (cycle 214 P2)
+
+`example` round-tripping cycle 213's reverse-direction `paddedEuler`
+witness through the new `.mp` to extract the intermediate value from
+the 4-stage composite output `(y₀ + H • f y₀) + H • f (y₀ + H • f y₀)`.
+Lives at the end of the `Section381` namespace block right after the
+cycle 213 example.
+
+### Recommended next entry point
+
+Cycle 215 should pursue `thm:382A` via the (382g) reformulation per
+`thm_382A_path.md` and §F of cycle 214's strategy. This avoids Gap B
+(the Σ-typed quotient packaging — cycle 212's `setoidSigma` exists but
+the `composeQ` lift is unbuilt) by working at the `Equivalent`-relation
+level directly:
+
+```
+m₁.Equivalent m̂₁ → m₂.Equivalent m̂₂ →
+  (m₁.compose m₂).Equivalent (m̂₁.compose m̂₂)
+```
+
+Key challenge: `Equivalent` asserts uniqueness of one-step output on
+small `H` with Lipschitz `f`, so to swap `m₁`'s output via `hEq₁` the
+proof needs both `m₁` and `m̂₁` to land on the same `y_mid`. Cycle 214's
+iff *projects out* `y_mid` from a `(m₁.compose m₂)` composite, but to
+push `y_mid` through `m̂₁` requires `IsRKOneStep_exists` on `m̂₁` (small
+`H`) followed by uniqueness via `Equivalent`. The smallness threshold
+construction would compose three minima: cycle 207's per-equivalence
+threshold for `m₁`, the same for `m₂`, and a fresh
+`H₀ := 1/(2·(L·(C₁+C₂)+1))` floor.
+
+Estimated 60–100 LOC across cycles 215–216.
