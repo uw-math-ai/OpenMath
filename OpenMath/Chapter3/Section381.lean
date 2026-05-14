@@ -2667,6 +2667,69 @@ theorem compose_isRKOneStep_iff {s₁ s₂ : ℕ}
   · rintro ⟨y_mid, h₁, h₂⟩
     exact compose_of_isRKOneStep M₁ M₂ h₁ h₂
 
+/-- *Composition descends to equivalence classes — fixed-stage (382g)
+form of `thm:382A` (Butcher §382, p. 285).* If `M₁ ≡ M₁'` and
+`M₂ ≡ M₂'` (both at matching stage counts `s₁`, `s₂`), then
+`M₁.compose M₂ ≡ M₁'.compose M₂'`. The textbook strategy routes
+through cycle 214's `compose_isRKOneStep_iff` to extract
+intermediate values `y_mid` (from the LHS composite step) and
+`y_mid'` (from the RHS composite step), and applies `Equivalent`'s
+output-uniqueness twice: `hEq₁` would force `y_mid = y_mid'` (both
+`M₁`/`M₁'` step from the *same* input `y₀`), and `hEq₂` would
+force `y_final = y_final'` (after rewriting, both `M₂`/`M₂'` step
+from the *same* input `y_mid'`).
+
+**STATUS: scaffolded with `sorry` per cycle 215 abort threshold.**
+The body is blocked on a fundamental *quantifier-order* mismatch
+in the current `Equivalent` definition (cycle 206):
+
+```
+def Equivalent ... : ∀ y₀, ∃ h₀ > 0, ∀ h ≤ h₀, ...
+```
+
+When destructuring `hEq₂` at the outer `y₀`, the resulting
+`hEq₂_app` requires both `M₂` and `M₂'` steps to fire from `y₀`
+— but in the composite proof, those steps fire from `y_mid'`,
+not `y₀`. Destructuring `hEq₂` at `y_mid'` instead works
+syntactically but produces a threshold `H₂(y_mid')` that depends
+on `y_mid'`, which itself depends on `H` (introduced *inside*
+the existential). The composite's threshold must be chosen
+before `H` is introduced, creating a circular dependency.
+
+The textbook proof works because Butcher implicitly assumes
+**uniform** smallness (`∃ h₀, ∀ y₀, ...`) — every concrete
+`Equivalent` instance in our codebase has a y₀-uniform
+threshold (e.g. `equivalent_self`'s `1/(2*(L*C+1))` is
+independent of `y₀`), but the *abstract* `Equivalent` type
+does not expose this. See
+`.prover-state/issues/compose_equivalent_compose_uniform_threshold.md`
+for the full gap analysis and proposed cycle 216+ refactor
+(strengthen `Equivalent` to `∃ h₀, ∀ y₀, ...`; all existing
+proofs port verbatim with the binder moved).
+
+**Faithfulness note (textbook (382f) bracketed form)**: Butcher
+states `thm:382A` as `[m₁·m₂] = [m̂₁·m̂₂]` using the equivalence-class
+bracket; the body then proves the equivalent (382g) form
+`m₁·m₂ ≡ m̂₁·m̂₂` and remarks that this implies (382f). Our Lean
+statement is the (382g) form. The bracketed (382f) form requires
+the `composeQ` lift on cycle 212's `Equivalent.setoidSigma` via
+`Quotient.lift₂` and is deferred — cross-reference
+`.prover-state/issues/thm_382A_path.md`.
+
+**Faithfulness note (fixed-stage restriction)**: the textbook
+statement allows `m₁`, `m̂₁` (resp. `m₂`, `m̂₂`) to have different
+stage counts; our signature uses the fixed-stage form
+`M₁ M₁' : RKTableau s₁`, `M₂ M₂' : RKTableau s₂`. The
+heterogeneous-stage lift is a natural cycle 216+ extension once
+the uniform-threshold gap is resolved. -/
+theorem compose_equivalent_compose.{u}
+    {s₁ s₂ : ℕ}
+    (M₁ M₁' : RKTableau s₁) (M₂ M₂' : RKTableau s₂)
+    (_hEq₁ : @Equivalent.{u} s₁ s₁ M₁ M₁')
+    (_hEq₂ : @Equivalent.{u} s₂ s₂ M₂ M₂') :
+    @Equivalent.{u} (s₁ + s₂) (s₁ + s₂) (M₁.compose M₂) (M₁'.compose M₂') :=
+  sorry
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -2759,5 +2822,21 @@ example {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
     (RKTableau.compose_of_isRKOneStep paddedEuler paddedEuler
       (paddedEuler_isRKOneStep f y₀ H)
       (paddedEuler_isRKOneStep f (y₀ + H • f y₀) H))
+
+/-- *Non-vacuity for `compose_equivalent_compose` (cycle 215 P2).*
+Reflexive equivalence on both factors lifts via the (382g) form to
+reflexive equivalence on the composite: applying
+`compose_equivalent_compose` with `M₁ = M₁' = M₂ = M₂' = paddedEuler`
+and `paddedEuler_equivalent_self` on both factors yields
+`(paddedEuler.compose paddedEuler).Equivalent
+(paddedEuler.compose paddedEuler)`. Trivial witness (it follows
+directly from `equivalent_self` on the composite), but exercises
+the (382g)-form theorem's full signature and type plumbing on a
+concrete pair of tableaux. -/
+example : (paddedEuler.compose paddedEuler).Equivalent
+    (paddedEuler.compose paddedEuler) :=
+  RKTableau.compose_equivalent_compose paddedEuler paddedEuler
+    paddedEuler paddedEuler
+    paddedEuler_equivalent_self paddedEuler_equivalent_self
 
 end OpenMath.Chapter3.Section381

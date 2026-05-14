@@ -177,3 +177,139 @@ Total: **3–5 cycles** of disciplined work, all axiom-clean expected.
 This file is **scoping/documentation only**. Cycle 211 ships the
 fixed-stage setoid + non-vacuity, period. Gap A and Gap B are multi-cycle
 work and must be planned by the next Planner cycle, not freelanced now.
+
+---
+
+## Cycle 215 update — (382g) form sorry-scaffolded; new uniform-threshold gap surfaced
+
+**Cycle 213** shipped Gap A reverse direction `RKTableau.compose_of_isRKOneStep`
+(axiom-clean, no smallness, no Lipschitz; algebraic block-by-block
+assembly via `Fin.append Y₁ Y₂` + cycle 209's compose-simp set + the
+3-step regroup `rw [smul_add, ← add_assoc, ← hY₁_out]`).
+
+**Cycle 214** shipped Gap A in full as an iff via
+`RKTableau.compose_isRKOneStep_iff` (axiom-clean). The forward
+direction turned out to be **purely algebraic** — no Lipschitz, no
+smallness threshold, no `[CompleteSpace N]`, no invocation of cycle
+205's `IsRKOneStep_exists`. Given a composite stage tuple `Y_compose`,
+M₁ and M₂'s stage tuples are *already* `Y_compose ∘ Fin.castAdd s₂` and
+`Y_compose ∘ Fin.natAdd s₁` (no existential construction), and `y_mid`
+is defined algebraically by projection. This overrode the cycle 212
+scoping doc's anticipation of Banach/Lipschitz machinery.
+
+**Cycle 215** attempted to ship the (382g) form
+`RKTableau.compose_equivalent_compose`. The cycle 215 strategy's recipe
+(route B.1, ~20 LOC) routes through cycle 214's iff to extract `y_mid`
+and `y_mid'`, then applies `Equivalent`'s output-uniqueness twice:
+`hEq₁` on `y_mid = y_mid'` (both step from y₀ — clean), then `hEq₂` on
+`y_final = y_final'` (after rewrite, both step from `y_mid'`).
+
+**The recipe FAILS.** The current `Equivalent` definition (cycle 206)
+has the quantifier order `∀ y₀, ∃ h₀, ∀ h ≤ h₀, ...` — non-uniform in
+`y₀`. When `hEq₂` is destructured at the outer `y₀`, the resulting
+output-uniqueness statement requires both `M₂` and `M₂'` steps to fire
+from `y₀`, but the M₂ step in the composite fires from `y_mid'` (not
+`y₀`). Destructuring `hEq₂` at `y_mid'` instead works syntactically
+but produces a threshold `H₂(y_mid')` that depends on `y_mid'`, which
+depends on `H` — circular.
+
+Butcher's textbook proof reads "if h is sufficiently small, then
+y₁ = ŷ₁ because m₁ ≡ m̂₁, and y₂ = ŷ₂ because m₂ ≡ m̂₂", implicitly
+assuming **uniform** smallness across initial values. Every concrete
+`Equivalent` instance in our codebase has a y₀-uniform threshold (e.g.
+`equivalent_self`'s `1/(2*(L*C+1))` is y₀-independent), but the
+abstract type doesn't expose this.
+
+**Cycle 215 deliverable per the abort threshold (§H)**:
+
+1. `RKTableau.compose_equivalent_compose` shipped as a **sorry-scaffolded
+   signature** (fixed-stage form) in `OpenMath/Chapter3/Section381.lean`
+   immediately after cycle 214's `compose_isRKOneStep_iff`. Docstring
+   documents the quantifier-order gap.
+2. P2 paddedEuler reflexive-on-both-factors `example` exercising the
+   scaffolded signature in `namespace OpenMath.Chapter3.Section381`.
+3. New issue file
+   `.prover-state/issues/compose_equivalent_compose_uniform_threshold.md`
+   with full gap analysis, four ruled-out workaround attempts, and the
+   recommended **Option A** (refactor `Equivalent` to uniform form
+   `∃ h₀, ∀ y₀, ...`).
+4. `lean_status.json` thm:382A row updated: `unformalized` → `partial`,
+   with cycle 215 note + link to the new issue file.
+5. `plan.md` thm:382A row: `[ ]` → `[~]` with cycle 215 line.
+
+Sorry count: 0 → 1. Cycle 214's `compose_isRKOneStep_iff` and cycle 213's
+`compose_of_isRKOneStep` remain axiom-clean.
+
+### Cycle 216 entry point (recommended): refactor `Equivalent` to uniform form
+
+Change the `Equivalent` definition at
+`OpenMath/Chapter3/Section381.lean` line ~980 from:
+
+```lean
+def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
+  ∀ {N} [...] (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f) (y₀ : N),
+    ∃ h₀ > (0 : ℝ), ∀ h, 0 < h → h ≤ h₀ →
+      ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
+        y₁ = y₁'
+```
+
+to:
+
+```lean
+def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
+  ∀ {N} [...] (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f),
+    ∃ h₀ > (0 : ℝ), ∀ (y₀ : N), ∀ h, 0 < h → h ≤ h₀ →
+      ∀ y₁ y₁', M.IsRKOneStep f y₀ h y₁ → M'.IsRKOneStep f y₀ h y₁' →
+        y₁ = y₁'
+```
+
+Then update existing proofs:
+- `equivalent_self`: threshold `1/(2*(L*C+1))` is already y₀-independent;
+  port by moving the `intro y₀` after `refine ⟨..., ?_⟩`.
+- `Equivalent.symm`: re-uses input threshold; port by moving the `y₀`
+  binder.
+- `Equivalent.trans`: takes min of three thresholds (all y₀-independent);
+  port similarly. The Banach existence at the middle method M' uses
+  `IsRKOneStep_exists` at y₀ — instantiate at the universally-quantified
+  `y₀` from the inner binder.
+- `PReducesTo.toEquivalent` and downstream: mechanical updates.
+
+After the refactor, retry cycle 215's recipe verbatim — it should close
+cleanly. The body becomes:
+
+```lean
+intro N _ _ _ f L hL
+obtain ⟨H₁, hH₁_pos, hEq₁_app⟩ := hEq₁ f L hL
+obtain ⟨H₂, hH₂_pos, hEq₂_app⟩ := hEq₂ f L hL
+refine ⟨min H₁ H₂, lt_min hH₁_pos hH₂_pos, ?_⟩
+intro y₀ H hH_pos hH_le y_final y_final' h_M₁M₂ h_M₁'M₂'
+have hH_le_H₁ : H ≤ H₁ := le_trans hH_le (min_le_left _ _)
+have hH_le_H₂ : H ≤ H₂ := le_trans hH_le (min_le_right _ _)
+obtain ⟨y_mid, h_M₁_step, h_M₂_step⟩ :=
+  (compose_isRKOneStep_iff M₁ M₂ f y₀ H y_final).mp h_M₁M₂
+obtain ⟨y_mid', h_M₁'_step, h_M₂'_step⟩ :=
+  (compose_isRKOneStep_iff M₁' M₂' f y₀ H y_final').mp h_M₁'M₂'
+have hmid_eq : y_mid = y_mid' :=
+  hEq₁_app y₀ H hH_pos hH_le_H₁ y_mid y_mid' h_M₁_step h_M₁'_step
+rw [hmid_eq] at h_M₂_step
+exact hEq₂_app y_mid' H hH_pos hH_le_H₂ y_final y_final' h_M₂_step h_M₂'_step
+```
+
+The key change: `hEq₂_app` is applied at `y_mid'` (a specific value
+inside the inner forall), which the refactored definition allows because
+`hEq₂_app` quantifies universally over `y₀` inside the existential.
+
+Estimated cycle 216 LOC: ~30 LOC refactor churn + ~20 LOC compose proof
++ ~5 LOC P2 update = ~55 LOC total.
+
+### Cycles 217+ outlook
+
+- **Cycle 217**: heterogeneous-stage form of `compose_equivalent_compose`
+  — replace `s₁ s₂ : ℕ` with `s₁ s₁' s₂ s₂' : ℕ` where M₁ : RKTableau s₁,
+  M₁' : RKTableau s₁', etc. The body should largely port (the proof
+  works at the abstract space N, not the stage count). ~30–50 LOC.
+- **Cycle 218**: `composeQ` lift via `Quotient.lift₂` on cycle 212's
+  `Equivalent.setoidSigma`, consuming cycle 217's heterogeneous form.
+  Closes the bracketed (382f) form `[m₁·m₂] = [m̂₁·m̂₂]`. ~50 LOC.
+- **Cycle 219+**: §382 group structure (identity element + inverse +
+  associativity), §383 lemmas, §384 thm:384A, etc.
