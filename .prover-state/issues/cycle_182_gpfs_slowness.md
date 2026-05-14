@@ -416,3 +416,19 @@ ship `PEquivalent.eq_of_both_isIrreducible` (canonical-form half of
 def:381E — irreducible P-equivalent methods coincide up to
 heterogeneous-stage `HEq`) per cycle 193 strategy. Section381.lean
 recompile remained healthy at ~4s warm throughout the cycle.
+
+**Cycle 194 update (14th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=124, real 5m0.029s, user 0m0.238s, sys 0m0.467s — CPU =
+0.24% of wall, identical near-zero pattern). Pre-flight `ps -u
+$USER` showed no D-state processes. 14 consecutive timeouts span
+cycles 182–194 (13 calendar days). The pathology has reproduced on
+every smoke-test attempt without exception. Pivoting to Priority 2:
+ship `PEquivalent.pReducesTo_of_left_isIrreducible` and
+`PEquivalent.pReducesTo_of_right_isIrreducible` (irreducible-endpoint
+extraction lemmas — when one side of a `PEquivalent` is irreducible,
+the other side `PReducesTo` it directly) plus the homogeneous-stage
+`eq_of_both_isIrreducible_homogeneous` corollary per cycle 194
+strategy. Section381.lean cold compile measured 1m22s this cycle
+(no warm-cache hit available because the new edits invalidated the
+cached `.olean`); compilation itself remained healthy.

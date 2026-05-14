@@ -581,6 +581,49 @@ theorem PEquivalent.eq_of_both_isIrreducible
   subst h₂eq
   exact ⟨rfl, h₂heq.symm.trans h₁heq⟩
 
+/-- *Irreducible-endpoint extraction (left).* If `M.IsIrreducible` and
+`PEquivalent M M'`, then `M'` reduces to `M`. The common reduct in the
+`PEquivalent` existential is forced to coincide with `M` by
+`eq_of_isIrreducible_of_pReducesTo` (cycle 188), so the second leg
+`PReducesTo M' (commonReduct)` becomes `PReducesTo M' M` directly.
+
+Load-bearing for downstream `def:381E reducedMethod` uniqueness work:
+when an irreducible reduct exists, every P-equivalent method reduces
+to it. -/
+theorem PEquivalent.pReducesTo_of_left_isIrreducible
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (hIrr : M.IsIrreducible)
+    (h : PEquivalent M M') :
+    PReducesTo M' M := by
+  obtain ⟨_, MMid, h₁, h₂⟩ := h
+  obtain ⟨h_eq, h_heq⟩ := eq_of_isIrreducible_of_pReducesTo hIrr h₁
+  subst h_eq
+  obtain rfl : MMid = M := eq_of_heq h_heq
+  exact h₂
+
+/-- *Irreducible-endpoint extraction (right).* Symmetric companion of
+`pReducesTo_of_left_isIrreducible`: if `M'.IsIrreducible` and
+`PEquivalent M M'`, then `M` reduces to `M'`. One-line corollary via
+`PEquivalent.symm`. -/
+theorem PEquivalent.pReducesTo_of_right_isIrreducible
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (hIrr : M'.IsIrreducible)
+    (h : PEquivalent M M') :
+    PReducesTo M M' :=
+  h.symm.pReducesTo_of_left_isIrreducible hIrr
+
+/-- Homogeneous-stage corollary of `eq_of_both_isIrreducible`: when the
+two irreducible P-equivalent methods have the same stage count, they
+are literally equal. Drops the heterogeneous `HEq` packaging for caller
+convenience when the stage type is known statically. -/
+theorem PEquivalent.eq_of_both_isIrreducible_homogeneous
+    {s : ℕ} {M M' : RKTableau s}
+    (hM : M.IsIrreducible) (hM' : M'.IsIrreducible)
+    (h : PEquivalent M M') :
+    M = M' := by
+  obtain ⟨_, h_heq⟩ := h.eq_of_both_isIrreducible hM hM'
+  exact (eq_of_heq h_heq).symm
+
 /- ### Definition 381A — equivalent Runge–Kutta methods -/
 
 /-- Predicate form of "method `M` produces output `y₁` after one step
@@ -1310,6 +1353,32 @@ example :
       HEq (paddedEuler.pReduced pairPartition)
           (paddedEuler.pReduced pairPartition) :=
   RKTableau.PEquivalent.eq_of_both_isIrreducible
+    paddedEuler_pReduced_pairPartition_isIrreducible
+    paddedEuler_pReduced_pairPartition_isIrreducible
+    (RKTableau.PEquivalent.refl (paddedEuler.pReduced pairPartition))
+
+/-- Non-vacuity witness for `PEquivalent.pReducesTo_of_right_isIrreducible`:
+`paddedEuler.pReduced pairPartition` is irreducible (cycle 190 helper)
+and `paddedEuler` is P-equivalent to it (cycle 188 via
+`paddedEuler_pEquivalent_pReduced`), so the irreducible-endpoint
+extraction theorem recovers the underlying P-reduction. The output
+matches `paddedEuler_pReducesTo_pReduced` from cycle 186, confirming
+the extraction lemma produces the expected reduct on the canonical
+heterogeneous-stage example. Cycle 194 deliverable. -/
+example :
+    paddedEuler.PReducesTo (paddedEuler.pReduced pairPartition) :=
+  paddedEuler_pEquivalent_pReduced.pReducesTo_of_right_isIrreducible
+    paddedEuler_pReduced_pairPartition_isIrreducible
+
+/-- Non-vacuity witness for the homogeneous-stage corollary
+`PEquivalent.eq_of_both_isIrreducible_homogeneous`: a single irreducible
+1-stage method is equal to itself when extracted from its reflexive
+P-equivalence witness via the new corollary. Trivial but exercises the
+homogeneous-stage path through the `HEq → Eq` collapse. Cycle 194
+deliverable. -/
+example :
+    paddedEuler.pReduced pairPartition = paddedEuler.pReduced pairPartition :=
+  RKTableau.PEquivalent.eq_of_both_isIrreducible_homogeneous
     paddedEuler_pReduced_pairPartition_isIrreducible
     paddedEuler_pReduced_pairPartition_isIrreducible
     (RKTableau.PEquivalent.refl (paddedEuler.pReduced pairPartition))
