@@ -1,321 +1,436 @@
-# Cycle 201 Strategy — Roll back `thm:381H` scaffold + ship Banach FP foundation
+# Cycle 202 strategy
 
-## Context (read carefully before doing anything)
+## TL;DR
 
-**Cycle 200 scored −2 (REVERTED).** Reason: sorry count went 0 → 3 when
-the worker shipped the `equivalent_iff_pEquivalent_iff_phiEquivalent`
-(thm:381H) statement-only scaffold with 3 deferred-sorry directions.
-The cycle 200 commit `53848e2` IS in HEAD — the "REVERTED" verdict is
-a supervisor policy signal ("sorry increase is bad"), not a git revert.
-The 3 sorries are still in `OpenMath/Chapter3/Section381.lean` at
-lines 1622, 1629, 1640.
+Build directly on cycle 201's Banach fixed-point foundation in
+`OpenMath/Chapter3/Section381.lean`. Two concrete targets, both
+axiom-clean, both touching only Section381:
 
-**Established precedent**: cycle 138 → cycle 139 (sorry-first scaffold
-for `thm:550A` general-n was removed in the next cycle "to drive sorry
-count back to 0" — the file `thm_550A_general_n.md` records this).
-Cycle 149 → cycle 150 (sorry-first scaffold for def:530B Path A was
-rolled back). Cycle 201 follows the same pattern.
+1. **P1** — Ship `RKStageMap_contracting`: package
+   `RKStageMap_lipschitz` (cycle 201) plus the smallness hypothesis
+   `|h| * L * (∑ᵢⱼ |aᵢⱼ|) < 1` as a `ContractingWith` instance.
+   Short (~30 LOC). Validates the foundation is correctly shaped for
+   Mathlib's fixed-point API.
+2. **P2** — Generalize `RKStageMap`, `RKStageMap_dist_le`,
+   `RKStageMap_lipschitz`, and the `paddedEuler` witness from scalar
+   `f : ℝ → ℝ` to a normed-space-valued `f : N → N` with
+   `[NormedAddCommGroup N] [NormedSpace ℝ N]`. Mechanical port — the
+   inequality structure is identical, only `abs / Real.dist` must be
+   replaced with `‖·‖ / dist`. Required because `IsRKOneStep` (the
+   downstream consumer) is polymorphic; without it cycle 201's
+   foundation is dead-ended at scalar problems.
 
-**None of the 3 cycle-200 sorries can be closed in a single cycle:**
-- `PhiEquivalent → PEquivalent` (line 1622): needs thm:381G (4–5 cycles)
-- `PEquivalent → Equivalent` (line 1629): needs Banach FP (2–3 cycles)
-- `Equivalent → PEquivalent` (line 1640): needs thm:381G (4–5 cycles)
+Sorry-count target: 0 → 0 (everything axiom-clean).
 
-Therefore cycle 201 must roll back, then ship substantive infrastructure
-that unblocks a future cycle. The natural target is **Banach fixed-point
-infrastructure** for the implicit RK stage iteration — the worker's own
-cycle 200 "Suggested next approach" Track 1, and the shortest path to
-closing one of the three sorries (in cycle 202 or 203).
+Cycle 203 picks up from here with `equivalent_self` (general
+reflexivity, closing half of `equivalent_self_general_deferred.md`)
+once both P1 and P2 are landed.
 
-## Priority 0 — GPFS smoke test (≤ 5 min)
+---
 
-Run `time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean`.
-Expect 21st consecutive timeout (cycles 182–200 all timed out at exactly
-300s with near-zero CPU; pattern documented in
-`.prover-state/issues/cycle_182_gpfs_slowness.md`).
+## Skip P0 (no GPFS smoke test)
 
-**Branch decision**:
-- If timeout (EXIT=124, CPU < 1%): log the 21st-iteration entry in
-  `cycle_182_gpfs_slowness.md` and proceed to P1. Do NOT retry. Do NOT
-  attempt Phase C.2.
-- If GPFS recovers (compile succeeds in < 5 min, CPU > 50%): pivot to
-  Phase C.2 per `.prover-state/issues/lem_441A_phase_C_scoping.md`.
-  Apply the cycle 184 namespace fix to
-  `.prover-state/cycle_182_draft_section441.lean` line 1529 (already
-  identified), copy draft to `OpenMath/Chapter4/Section441.lean`, compile,
-  ship. Skip P1 and P2.
+The §441 Phase C.2 compile has timed out **21 consecutive cycles**
+(cycles 182–201, ≈20 calendar days, all with EXIT=124 / negligible
+CPU). The loop-maintainer escalation is in place at
+`.prover-state/issues/cycle_182_gpfs_slowness.md`. Running a 22nd
+smoke test wastes 5 minutes for no information. **Do not attempt the
+Section441 compile this cycle.** If GPFS recovers between cycles, the
+next planner will pick it up; until then the §441 work is genuinely
+blocked at the maintainer level, not the worker level.
 
-## Priority 1 — Roll back thm:381H scaffold (sorry count 3 → 0)
+(One quick `time timeout 120 lake env lean OpenMath/Chapter4/Section441.lean &`
+in background while you do P1/P2 is fine if you want the 22nd data
+point logged, but don't *wait* on it.)
 
-Restore `Section381.lean` to cycle 199's state for the thm:381H region.
+---
 
-### Exact actions
+## P1 — Ship `RKStageMap_contracting` (~30 LOC, single theorem)
 
-1. **Locate the scaffold**: Open `OpenMath/Chapter3/Section381.lean` and
-   find `theorem equivalent_iff_pEquivalent_iff_phiEquivalent` at
-   line ~1613. The block spans approximately lines 1613–1642 (theorem
-   declaration + docstring + proof body with three `sorry` lines plus
-   per-sorry comments). Use `Read` to view the exact range first; the
-   3 sorry lines (1622, 1629, 1640) are inside this block.
+### Statement
 
-2. **Verify what's being removed**: Before deleting, confirm via Read
-   that:
-   - The theorem opens after a comment block citing Butcher §380, p. 304.
-   - The proof body is `refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩⟩` followed by four
-     direction cases, three of which contain `sorry` and one of which
-     uses `PEquivalent.toPhiEquivalent`.
-   - No OTHER theorems in `Section381.lean` reference
-     `equivalent_iff_pEquivalent_iff_phiEquivalent` (sanity check with
-     `Grep` for the theorem name).
-
-3. **Delete the scaffold**: Use `Edit` to remove the theorem declaration,
-   docstring, and proof body entirely. Be careful not to accidentally
-   remove the surrounding cycle 187 lemmas
-   (`PEquivalent.toPhiEquivalent` and `PReducesTo.toPhiEquivalent`) —
-   they precede thm:381H and must stay.
-
-4. **Verify sorry count is 0**:
-   ```bash
-   grep -c "^  sorry$" OpenMath/Chapter3/Section381.lean
-   grep -n "sorry" OpenMath/Chapter3/Section381.lean
-   ```
-   Should return 0 / empty.
-
-5. **Compile-check**:
-   `time lake env lean OpenMath/Chapter3/Section381.lean`
-   Expect exit 0, ~50s warm rebuild, no `sorry` warnings.
-
-6. **Axiom-check on a few cycle 199 theorems** to confirm no regression:
-   - `pEquivalent_irreducible_reduct_unique_of_sources_irreducible`
-   - `PEquivalent.toPhiEquivalent`
-   - `PReducesTo.toPhiEquivalent`
-   All should still return `[propext, Classical.choice, Quot.sound]`.
-
-7. **Update `extraction/formalization_data/lean_status.json`**: change
-   `thm:381H` row:
-   - `status`: `partial` → `unformalized`
-   - Remove `lean_file` and `lean_symbol` fields (or set to `null` —
-     match the existing convention for `unformalized` rows).
-   - Bump `cycle` reference to 201.
-
-8. **Update `plan.md`** at the `thm:381H` row in the Chapter 3 section:
-   - Change `[~]` → `[ ]`
-   - Remove the long "cycle 200" summary text (the multi-line entry
-     starting with "`OpenMath/Chapter3/Section381.lean` (cycle 200)").
-   - Keep the row title and entity ID; revert to the original short form.
-
-9. **Update `.prover-state/issues/thm_381H_deferred.md`** with a new
-   "## Cycle 201 rollback" section at the top:
-   - Explain the rollback (sorry count 3 → 0 per supervisor policy).
-   - Preserve the cycle 200 analysis below (per-direction blockers,
-     estimated cycle budget table) as planning material for future
-     re-introduction.
-   - Recommend Banach FP first (cycle 201 P2 work), then re-introduce
-     scaffold once `PEquivalent → Equivalent` is closeable in one cycle.
-
-**Do NOT** delete `thm_381H_deferred.md`. It has useful planning.
-
-### P1 sanity check before moving to P2
-- `grep -c "^  sorry$" OpenMath/Chapter3/Section381.lean` returns 0.
-- `lake env lean OpenMath/Chapter3/Section381.lean` exits 0.
-- `git diff --stat OpenMath/Chapter3/Section381.lean` shows only line
-  deletions (or minor reflows), no additions yet.
-
-## Priority 2 — Begin Banach fixed-point foundation (substantive ship)
-
-The `PEquivalent → Equivalent` direction of thm:381H requires that the
-implicit RK stage iteration converges to a unique fixed point for
-sufficiently small step sizes. The infrastructure is also load-bearing
-for `Equivalent M M` reflexivity (issue
-`equivalent_self_general_deferred.md`) and the constructive `def:381E
-reducedMethod` (issue `reduced_method_deferred.md`).
-
-**Cycle 201 scope**: ship the FOUNDATION pieces (definition + Lipschitz
-lemma + non-vacuity witness). Do NOT attempt the full `ContractingWith`
-+ `fixedPoint` machinery this cycle — defer to cycle 202. Aim for
-~80–120 LOC, 0 sorries net, axiom-clean.
-
-### Concrete deliverables
-
-Add to `OpenMath/Chapter3/Section381.lean` (after the existing
-`RKTableau` namespace block but before the file's terminal `end`).
-Section381 is currently ~1700 LOC after the P1 rollback; staying in
-one file avoids import-graph disruption.
-
-#### Step 1 — Definition: `RKStageMap`
-
-The function whose fixed points are the implicit-stage solutions.
-For a Runge-Kutta tableau `M : RKTableau s`, step size `h : ℝ`,
-autonomous RHS `f : ℝ → ℝ` (start with scalar; vector-valued lift is a
-later refinement), and initial value `y₀ : ℝ`:
+Place immediately after `RKStageMap_lipschitz` in
+`OpenMath/Chapter3/Section381.lean` (currently at line ~1670, inside
+`namespace OpenMath.Chapter3.Section312.RKTableau`):
 
 ```lean
-noncomputable def RKStageMap {s : ℕ} (M : RKTableau s) (h : ℝ)
-    (f : ℝ → ℝ) (y₀ : ℝ) : (Fin s → ℝ) → (Fin s → ℝ) :=
-  fun Y i => y₀ + h * ∑ j : Fin s, M.A i j * f (Y j)
+/-- *Contracting form* of `RKStageMap_lipschitz`. When the step size
+`h` is small enough that `|h| * L * (∑ᵢⱼ |aᵢⱼ|) < 1`, the implicit-
+stage iteration map `RKStageMap` is a contraction on `Fin s → ℝ`,
+hence has a unique fixed point by Banach. This is the cycle-202
+foundation for closing `equivalent_self` (def:381A reflexivity) at
+arbitrary `M`; the smallness condition matches Butcher's tacit
+"for h sufficiently small" qualifier in §380. -/
+theorem RKStageMap_contracting {s : ℕ} (M : RKTableau s) (h : ℝ)
+    {f : ℝ → ℝ} {L : NNReal} (hf : LipschitzWith L f) (y₀ : ℝ)
+    (hLt : |h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) < 1) :
+    ContractingWith
+      ⟨|h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|),
+       mul_nonneg (mul_nonneg (abs_nonneg _) L.coe_nonneg)
+         (Finset.sum_nonneg fun _ _ =>
+           Finset.sum_nonneg fun _ _ => abs_nonneg _)⟩
+      (M.RKStageMap h f y₀) := by
+  refine ⟨?_, M.RKStageMap_lipschitz h hf y₀⟩
+  -- Goal: (⟨..., _⟩ : NNReal) < 1
+  exact hLt
 ```
 
-The fixed point property `RKStageMap M h f y₀ Y = Y` is exactly the
-implicit stage equation. **Pre-flight**: verify the exact stage-equation
-form by reading `IsRKOneStep` at `Section381.lean` around line 970 —
-the definition above must align with the existing predicate's stage
-equation (modulo the autonomous/non-autonomous distinction).
+### Closure recipe
 
-#### Step 2 — Lipschitz lemma
+`ContractingWith K f` is defined as `K < 1 ∧ LipschitzWith K f` in
+Mathlib (`Mathlib.Topology.MetricSpace.Contracting`). So this is just
+two-component packaging:
+
+* The `K < 1` half is `hLt` — but note the coercion direction. In
+  Mathlib `ContractingWith` puts `K < 1` first; the comparison is
+  `(K : ℝ≥0) < 1`. With `K := ⟨|h| * L * sum, hK_nn⟩ : NNReal`, the
+  cast `((K : NNReal) : ℝ) = |h| * L * sum` makes `hLt` discharge it
+  directly. If the `refine` produces a goal in `NNReal`-comparison
+  form (`K < 1` as NNReal), use `NNReal.coe_lt_one.mp` or
+  `show (K : ℝ) < 1`.
+* The `LipschitzWith K f` half is verbatim
+  `M.RKStageMap_lipschitz h hf y₀`.
+
+### Verification
+
+```bash
+# Single rebuild (warm cache from cycle 201 makes this ~5s).
+lake env lean OpenMath/Chapter3/Section381.lean
+```
+
+Then check axioms via Lean LSP:
+
+```
+lean_verify "OpenMath.Chapter3.Section312.RKTableau.RKStageMap_contracting"
+```
+
+Expected: `[propext, Classical.choice, Quot.sound]`.
+
+### Common pitfalls
+
+* **`ContractingWith` uses an explicit `NNReal` parameter, not
+  `K : ℝ` with a positivity proof.** Cycle 201's
+  `RKStageMap_lipschitz` already constructs the right NNReal; reuse
+  it verbatim. Do NOT introduce a fresh NNReal — the elaborator must
+  see the same anonymous constructor `⟨..., _⟩` in both
+  `RKStageMap_lipschitz`'s output type and `RKStageMap_contracting`'s
+  output type, otherwise the second conjunct won't unify.
+* **NNReal coercion direction.** `((⟨x, hx⟩ : NNReal) : ℝ) = x`
+  by `NNReal.coe_mk`; `((⟨x, hx⟩ : NNReal) < 1)` reduces to `x < 1`
+  via `NNReal.coe_lt_one` — but you may not need this if the
+  underlying `Subtype.lt` unfolds correctly. Try the bare
+  `exact hLt` first; if it fails, wrap in `show (... : ℝ) < 1` or
+  reach for `NNReal.coe_lt_coe` / `NNReal.lt_iff_lt_of_le_iff_le`.
+
+---
+
+## P2 — Generalize `RKStageMap` to normed-space `N`
+
+### Why this is necessary
+
+`IsRKOneStep` (line 922 of Section381.lean) is defined for
+`{N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]` and
+`f : N → N`. So is `Equivalent` (line 967):
 
 ```lean
-theorem RKStageMap_lipschitz {s : ℕ} (M : RKTableau s) (h : ℝ)
-    (hh : 0 ≤ h) {f : ℝ → ℝ} {L : NNReal} (hf : LipschitzWith L f)
-    (y₀ : ℝ) :
-    LipschitzWith (some_constant_in_h_L_M) (RKStageMap M h f y₀)
+def Equivalent {s s' : ℕ} (M : RKTableau s) (M' : RKTableau s') : Prop :=
+  ∀ {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (f : N → N) (L : ℝ≥0) (_hL : LipschitzWith L f) (y₀ : N),
+    ∃ h₀ > (0 : ℝ), ...
 ```
 
-The exact Lipschitz constant depends on the chosen metric on
-`Fin s → ℝ`. Two reasonable options:
+Cycle 201's scalar `RKStageMap` cannot bridge to either of these. The
+cycle-203+ `equivalent_self M` proof needs the polymorphic version.
 
-- **Sup norm** (`PiLp ∞`): Lipschitz constant is `h * L * max_i ∑_j |M.A i j|`.
-- **Loose entrywise bound**: Lipschitz constant is
-  `h * L * ∑_{i,j} |M.A i j|` (works for any reasonable metric).
+### Mechanical port — what to change
 
-Ship the loose bound first if the sup-norm version turns out to require
-fiddly `PiLp` instance manipulation. Tightness is a future-cycle
-refinement.
+In `OpenMath/Chapter3/Section381.lean` lines 1582–1670 (the
+`RKStageMap` def + two theorems), replace:
 
-Use Mathlib lemmas:
-- `LipschitzWith.const_mul` for scaling by `h * L * const`.
-- `LipschitzWith.sum` for sums of Lipschitz functions.
-- `LipschitzWith.comp` for the inner `f (Y j)` composition.
+```
+{f : ℝ → ℝ}                   →   {N : Type*} [NormedAddCommGroup N]
+                                    [NormedSpace ℝ N] {f : N → N}
+y₀ : ℝ                         →   y₀ : N
+RKStageMap : ... → (Fin s → ℝ) →   RKStageMap : ... → (Fin s → N)
+y₀ + h * Σⱼ M.A i j * f (Y j)  →   y₀ + h • Σⱼ M.A i j • f (Y j)
+abs / Real.dist                →   ‖·‖ / dist (already metric API)
+```
 
-**Pre-flight**: before writing the proof, use `lean_loogle` to verify
-the names of `LipschitzWith.sum`, `LipschitzWith.const_mul`,
-`LipschitzWith.comp` in the pinned Mathlib v4.28.0. Some names may
-differ (e.g. it might be `LipschitzWith.smul_const` or in a different
-namespace).
+The proof bodies for `RKStageMap_dist_le` and `RKStageMap_lipschitz`
+**transfer almost verbatim** because every step uses metric/normed
+inequalities that work uniformly:
 
-#### Step 3 — Non-vacuity witness (explicit Euler / paddedEuler)
+* `dist_pi_le_iff` — works for `Fin s → N` whenever `N` is a
+  `PseudoMetricSpace` (which follows from `NormedAddCommGroup`).
+* `Finset.abs_sum_le_sum_abs` — replace with
+  `norm_sum_le` on the inner
+  `‖∑ⱼ M.A i j • (f(Y j) - f(Y' j))‖ ≤ ∑ⱼ ‖M.A i j • (f(Y j) - f(Y' j))‖`.
+* `abs_mul` — replace with `norm_smul` for the scalar action:
+  `‖M.A i j • v‖ = ‖M.A i j‖ * ‖v‖`. Note that for `M.A i j : ℝ`,
+  `‖M.A i j‖ = |M.A i j|` (real-norm = absolute value), so the
+  outer coefficient `|M.A i j|` stays the same in the bound — use
+  `Real.norm_eq_abs` to bridge.
+* `LipschitzWith.dist_le_mul` — works unchanged (it's already on
+  generic metric spaces).
+* `dist_le_pi_dist` — works unchanged.
+* `Finset.single_le_sum` — works unchanged.
+* `Real.dist_eq` (uses `abs`) — replace with
+  `dist_eq_norm` (the generic version: `dist x y = ‖x - y‖`).
 
-The `paddedEuler` method (already in Section381 from cycle 184 era —
-verify by Grep) is the canonical test target. For `paddedEuler` with
-`s = 2` and a strict-lower-triangular `A`, `RKStageMap` reduces to a
-direct evaluation — Lipschitz with constant 0 in the diagonal stage
-and `h * L` in the off-diagonal stage.
-
-Alternative: use a simpler explicit Euler `RKTableau 1` with `A = 0`,
-where `RKStageMap` is constant in `Y` (independent of input), giving
-Lipschitz with constant 0 trivially.
+The cycle-201 `hcomp`'s critical line
 
 ```lean
-example : LipschitzWith 0 (RKStageMap explicitEulerRKTableau (1 : ℝ)
-    (fun y => y) (0 : ℝ))
+have heq : (M.RKStageMap h f y₀ Y i) - (M.RKStageMap h f y₀ Y' i)
+    = h * ∑ j, M.A i j * (f (Y j) - f (Y' j)) := by
+  simp only [RKStageMap]
+  rw [show y₀ + h * ∑ j, M.A i j * f (Y j)
+        - (y₀ + h * ∑ j, M.A i j * f (Y' j))
+      = h * (∑ j, M.A i j * f (Y j) - ∑ j, M.A i j * f (Y' j)) by ring,
+      ← Finset.sum_sub_distrib]
+  congr 1
+  exact Finset.sum_congr rfl fun _ _ => by ring
 ```
 
-Adjust to whatever explicit-Euler-flavored `RKTableau` instance already
-exists in Section381. Don't create a new instance — reuse `paddedEuler`
-or whatever cycle 184+ shipped.
+becomes (note `•` everywhere):
 
-### Faithfulness note for P2
-
-`RKStageMap` is a direct transcription of the implicit stage equation
-from Butcher §312 (definition of a general Runge-Kutta method). No
-divergence from textbook content. The "for small h" qualifier in the
-Banach FP argument matches Butcher's tacit assumption throughout §380
-("for h sufficiently small the stage equations have a unique
-solution"). When future cycles ship `ContractingWith`, document this
-"small h" hypothesis explicitly as a parameter (per the cycle 116
-`is_convergent_strengthened.md` pattern).
-
-### Time budget for P2
-- Step 1 (definition): 15 min.
-- Step 2 (Lipschitz lemma): 60–90 min (Mathlib hook verification is the
-  time risk).
-- Step 3 (witness): 15 min.
-- Total: ~90–120 min.
-
-**Stall fallback**: if Step 2 doesn't close by ~90 min in, ship Steps
-1 + 3 only (definition + simpler constant-map witness) and file an
-issue noting the Lipschitz hook gap. Sorry count must remain 0 net.
-
-## DO NOT (explicit pruning of failed/forbidden paths)
-
-- **Do NOT attempt to close any of the 3 cycle-200 sorries** in this
-  cycle. They require multi-cycle infrastructure that does not fit
-  in one cycle (worker's own cycle 200 analysis).
-- **Do NOT re-introduce the cycle 200 thm:381H scaffold** in any form
-  before the P1 rollback is complete and committed. The scaffold can
-  return in a future cycle once at least one direction is closeable.
-- **Do NOT try the `PEquivalent → Equivalent` closure as a stretch
-  goal in cycle 201**. The cycle 200 worker estimated 2–3 cycles; a
-  one-cycle attempt is high-risk and would likely produce a half-built
-  Banach FP scaffold that has the same supervisor-revert problem.
-- **Do NOT re-attempt Section441 Phase C.2** beyond the 5-min P0 smoke
-  test. 20 consecutive timeouts establish the GPFS pathology is
-  cluster-side; loop-maintainer territory.
-- **Do NOT modify `scripts/autonomous_loop.py`**. Per CLAUDE.md.
-- **Do NOT modify `extraction/raw_text/` or
-  `extraction/formalization_data/entities/`** (regenerated artifacts).
-  Only `extraction/formalization_data/lean_status.json` is hand-editable.
-- **Do NOT bump `maxHeartbeats`** above 200000. Decompose instead.
-- **Do NOT introduce `axiom` / `constant`** for Banach FP. Mathlib has
-  `LipschitzWith`, `ContractingWith`, `fixedPoint` — use them.
-- **Do NOT** try the "smarter φ" approach for stage extraction (this
-  was ruled out for §514 in cycle 097 — same structural issue applies
-  to RK stages).
-- **Do NOT** poll Aristotle more than once. No new Aristotle batches
-  needed this cycle (Banach FP work is mechanical Mathlib plumbing,
-  poor fit for natural-language premise selection).
-- **Do NOT** create a new `Section381BanachFP.lean` file this cycle —
-  stay in `Section381.lean` to avoid import-graph disruption. Splitting
-  is a future-cycle refactor.
-
-## Faithfulness check (run before commit)
-
-For the P1 rollback:
-- [ ] `thm:381H` row in `lean_status.json` returns to `unformalized`.
-- [ ] `plan.md` row returns to `[ ]` form.
-- [ ] No dangling references to the deleted theorem name anywhere:
-  `grep -rn "equivalent_iff_pEquivalent_iff_phiEquivalent"` returns
-  empty across the repo.
-
-For the P2 ship:
-- [ ] `RKStageMap` definition matches Butcher §312 implicit-stage form.
-  Cross-check by reading the `IsRKOneStep` predicate that
-  `Section381.lean` already defines.
-- [ ] Non-vacuity witness compiles and is axiom-clean.
-- [ ] Lipschitz lemma (if shipped) does not silently strengthen
-  hypotheses beyond what the textbook implies. The Lipschitz constant
-  should be derivable from `M.A` entries plus `L` and `h` — no extra
-  monotonicity or non-negativity assumptions on `M.A` itself.
-- [ ] Tautology scanner: `grep -nE ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$'
-  OpenMath/Chapter3/Section381.lean` returns 0 hits (use `hLip`, not
-  `h_lip`, etc. per the cycle 014/015 tautology-scanner workaround).
-- [ ] `#print axioms` on each new public theorem returns only
-  `[propext, Classical.choice, Quot.sound]`.
-
-## Commit message template
-
-```
-Cycle 201 — §380 thm:381H scaffold rolled back (sorry count 3→0 per
-supervisor policy); Banach FP foundation: RKStageMap def + Lipschitz
-lemma + paddedEuler trivial witness in OpenMath/Chapter3/Section381.lean
-(axiom-clean, unblocks PEquivalent → Equivalent closure in 1–2 future
-cycles); §441 Phase C.2 GPFS-blocked (21st)
+```lean
+have heq : (M.RKStageMap h f y₀ Y i) - (M.RKStageMap h f y₀ Y' i)
+    = h • ∑ j, M.A i j • (f (Y j) - f (Y' j)) := by
+  simp only [RKStageMap]
+  rw [show y₀ + h • ∑ j, M.A i j • f (Y j)
+        - (y₀ + h • ∑ j, M.A i j • f (Y' j))
+      = h • (∑ j, M.A i j • f (Y j) - ∑ j, M.A i j • f (Y' j)) by
+        simp [smul_sub, sub_smul, add_sub_add_left_eq_sub, smul_sum],
+      ← Finset.sum_sub_distrib]
+  congr 1
+  exact Finset.sum_congr rfl fun _ _ => by simp [smul_sub]
 ```
 
-Adjust if P2 sub-steps were skipped per the stall fallback.
+If `ring` / `simp` on the smul-sub algebra is brittle, fall back to
+the `module` tactic (which handles linear-combinations in a normed
+module the way `ring` handles ring identities).
 
-## Cycle 202 entry point (preview)
+### `RKStageMap_lipschitz` port
 
-If cycle 201 ships Steps 1 + 2 + 3 cleanly:
-- Cycle 202: prove `RKStageMap_contracting` (`ContractingWith` instance
-  for small `h`) using cycle 201's `RKStageMap_lipschitz`. Apply
-  `ContractingWith.fixedPoint` to produce the existence/uniqueness of
-  stage solutions. ~80 LOC.
-- Cycle 203: prove the P-partition iteration invariant
-  `Yᵢ⁽ᵏ⁾ = Yⱼ⁽ᵏ⁾ for i, j in same block of an `IsPReducibleVia P`
-  witness; lift to limit via Banach FP; close `PEquivalent → Equivalent`.
-  Re-introduce thm:381H scaffold with this sorry now closed (sorry
-  count 2; one closed). ~120 LOC.
+The `LipschitzWith ⟨...⟩` constant is unchanged — the bound
+`|h| * L * (∑ |aᵢⱼ|)` is the same real number whether the codomain
+is `ℝ` or `N`. Only the body of the proof changes (one-line wrapper
+around the new `_dist_le`).
 
-If cycle 201 ships Step 1 only:
-- Cycle 202: revisit the Lipschitz lemma with fresh Mathlib hook
-  verification. Same downstream plan.
+### `paddedEuler` non-vacuity witness
+
+In the cycle-201 example at the bottom (paddedEuler `LipschitzWith 0`
+witness), the only change is to specialise back to `f : ℝ → ℝ` for
+the example — the scalar instance still works because `ℝ` is itself
+a normed space over `ℝ`. The example body becomes:
+
+```lean
+example (f : ℝ → ℝ) (y₀ : ℝ) :
+    LipschitzWith 0 (paddedEuler.RKStageMap (h := 1) f y₀) := by
+  -- (Same body as cycle 201 — funext + simp [paddedEuler, RKStageMap]
+  -- + LipschitzWith.const, all of which generalize.)
+```
+
+If keeping the example as `f : ℝ → ℝ` with `paddedEuler : RKTableau 2`
+on `ℝ` still type-checks, leave it. Otherwise add a sibling example
+on a generic `N`.
+
+### Verification
+
+```bash
+lake env lean OpenMath/Chapter3/Section381.lean
+```
+
+Then via Lean LSP:
+
+```
+lean_verify "OpenMath.Chapter3.Section312.RKTableau.RKStageMap"
+lean_verify "OpenMath.Chapter3.Section312.RKTableau.RKStageMap_dist_le"
+lean_verify "OpenMath.Chapter3.Section312.RKTableau.RKStageMap_lipschitz"
+lean_verify "OpenMath.Chapter3.Section312.RKTableau.RKStageMap_contracting"
+```
+
+All four should return `[propext, Classical.choice, Quot.sound]`.
+
+### Common pitfalls
+
+* **`ring` vs `module` vs `simp [smul_sub, sub_smul, smul_sum]`.**
+  `ring` does not work in modules over `ℝ` because it expects a
+  commutative ring structure on the value type. Use `module` (Mathlib
+  tactic for module-linear identities) or hand-rolled `simp`. If both
+  fail, `linear_combination` with explicit terms works in modules.
+* **Scalar-action ambiguity.** `h • ∑ j, ...` and `∑ j, h • ...`
+  might not be definitionally equal — use `Finset.smul_sum` to
+  commute. Similarly `M.A i j • (a - b) = M.A i j • a - M.A i j • b`
+  requires `smul_sub`, not `mul_sub`.
+* **`norm_sum_le` is the right name** (not `Finset.norm_sum_le`):
+  `‖∑ i ∈ s, f i‖ ≤ ∑ i ∈ s, ‖f i‖`. Verify with
+  `lean_local_search "norm_sum"` if the name fails.
+* **`Real.norm_eq_abs` bridges `‖x : ℝ‖ = |x|`.** Use it to keep the
+  bound expressed as `|M.A i j|` rather than `‖M.A i j‖`.
+* **Naming clash on `dist_eq_norm`.** Mathlib has both `dist_eq_norm`
+  (additive groups) and `NormedAddCommGroup.dist_eq` (the simp lemma
+  derived from the instance). Either works; `dist_eq_norm` is shorter.
+
+### Aristotle option
+
+If P2 stalls on the `module`/`smul`-arithmetic, submit just the
+generalization to Aristotle as a tightly-scoped batch — the generic
+ports of `_dist_le` and `_lipschitz` are exactly the kind of "rewrite
+the proof by analogy" task Aristotle handles well. **Do not submit
+P1** (it's a 30-LOC packaging that should close in 2 minutes
+manually).
+
+---
+
+## P3 (stretch — only if P1+P2 land cleanly with cycle budget remaining)
+
+If P1 and P2 both compile clean within ~60 minutes of cycle time,
+you have an opening to begin `equivalent_self M` for general `M`.
+The recipe (Butcher §380 tacit argument, formalised):
+
+```lean
+open scoped NNReal in
+theorem equivalent_self {s : ℕ} (M : RKTableau s) :
+    M.Equivalent M := by
+  intro N _ _ f L hL y₀
+  -- Choose h₀ small enough that the contraction condition holds.
+  set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j| with hC_def
+  have hC_nn : 0 ≤ C := Finset.sum_nonneg fun _ _ =>
+    Finset.sum_nonneg fun _ _ => abs_nonneg _
+  -- h₀ := 1 / (2 * (L * C + 1))   -- guarantees |h| ≤ h₀ ⇒ |h|·L·C ≤ 1/2 < 1
+  refine ⟨1 / (2 * (L * C + 1)), by positivity, ?_⟩
+  intro h hh_pos hh_le y₁ y₁' hRK hRK'
+  -- Both stage solutions are fixed points of the (now-contracting) map.
+  have hContract : ContractingWith ⟨|h| * L * C, by positivity⟩
+      (M.RKStageMap h f y₀) := by
+    apply M.RKStageMap_contracting h hL y₀
+    -- Need |h| * L * C < 1, from hh_le.
+    sorry  -- arithmetic; cycle 203
+  obtain ⟨Y, hY_stage, hy₁⟩ := hRK
+  obtain ⟨Y', hY'_stage, hy₁'⟩ := hRK'
+  have hYfix : M.RKStageMap h f y₀ Y = Y := by
+    funext i; exact (hY_stage i).symm
+  have hY'fix : M.RKStageMap h f y₀ Y' = Y' := by
+    funext i; exact (hY'_stage i).symm
+  have hUnique : Y = Y' :=
+    hContract.fixedPoint_unique' hYfix hY'fix
+  rw [hy₁, hy₁', hUnique]
+```
+
+Multiple sorries here — the arithmetic discharge of
+`|h| * L * C < 1` from `h ≤ 1/(2(L·C+1))` is non-trivial (needs
+case-split on `L * C = 0`). And `hContract.fixedPoint_unique'` may
+not be the right Mathlib name; check
+`lean_local_search "ContractingWith.fixedPoint_unique"` or similar.
+**If this stretch goal would leave a sorry behind, do not commit
+it.** Just land P1+P2 and write the recipe into the cycle 202 task
+results for cycle 203 to consume.
+
+---
+
+## NOT to do (failed approaches, supervisor policy, blocked work)
+
+1. **Do NOT attempt the §441 Phase C.2 compile.** 21 consecutive
+   GPFS timeouts (cycles 182–201). Loop-maintainer territory;
+   running it again yields no information.
+2. **Do NOT reintroduce the cycle-200 `thm:381H` scaffold.** Cycle
+   201 rolled it back specifically because sorry count went 0 → 3.
+   Per the cycle 201 rollback note in
+   `.prover-state/issues/thm_381H_deferred.md`, re-introduction
+   must wait until at least one of the three remaining iff-directions
+   can close in the same cycle (so sorry count goes 0 → 2 max). That
+   requires either (a) closing `PEquivalent → Equivalent` first
+   (cycles 202–203 path), or (b) thm:381G prerequisites (4–5 cycles
+   of separate work).
+3. **Do NOT tighten the Lipschitz bound to the sup-norm row form
+   `|h| · L · max_i Σⱼ |aᵢⱼ|`.** Cycle 201 strategically chose the
+   loose entrywise bound `|h| · L · Σ_{i,j} |aᵢⱼ|` to avoid PiLp
+   instance fiddliness. The loose form scales linearly in `h` and
+   is sufficient for Banach FP. Tightness is a future-cycle
+   refinement; don't burn cycle 202 on it.
+4. **Do NOT bump `maxHeartbeats` above 200000.** If a proof stalls,
+   decompose into named helpers — never raise the budget. Per
+   CLAUDE.md.
+5. **Do NOT introduce `axiom` or `constant` declarations.** Every
+   new declaration must be axiom-clean
+   (`[propext, Classical.choice, Quot.sound]` only).
+6. **Do NOT poll Aristotle multiple times in one cycle.** If you
+   submit P2 to Aristotle as a fallback, single-poll discipline
+   applies (CLAUDE.md). Submit, sleep ~30 min, check once.
+7. **Do NOT delete or modify cycle-201 work beyond the P2
+   generalisation.** `RKStageMap`, `RKStageMap_dist_le`,
+   `RKStageMap_lipschitz` are foundational — the P2 generalisation
+   replaces their bodies but keeps their names and roles. Keep the
+   cycle-201 docstrings (they correctly describe the new generalised
+   form too, with minimal edits).
+8. **Do NOT modify `scripts/autonomous_loop.py`.** Workers do not
+   touch the loop machinery (CLAUDE.md). The phantom-verdict /
+   GPFS / scanner issues are loop-maintainer territory.
+
+---
+
+## Verification checklist (before commit)
+
+```bash
+# 1. Single-file compile of Section381.
+time lake env lean OpenMath/Chapter3/Section381.lean
+# Expect ~10s warm rebuild; flag if > 60s.
+
+# 2. Sorry count.
+grep -cE "^[[:space:]]+sorry$" OpenMath/Chapter3/Section381.lean
+# Expect 0.
+
+# 3. Tautology scanner.
+grep -E ":=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$" \
+  OpenMath/Chapter3/Section381.lean
+# Expect no matches (rename `h_<name>` → `h<name>` if any appear,
+# per the standing tautology_scanner_false_positives.md workaround).
+
+# 4. Axiom check on every new theorem (use lean_verify MCP).
+#    All must return [propext, Classical.choice, Quot.sound].
+```
+
+If sorry count rises above 0 or any new theorem fails axiom check,
+**revert the offending edit and re-attempt next cycle**. Do not
+commit a regression. Sorry-count discipline (the cycle 200 → 201
+rollback precedent) is non-negotiable.
+
+---
+
+## Faithfulness checklist (if P3 stretch is attempted)
+
+For `equivalent_self M` (textbook def:381A reflexivity):
+
+* Entity: not a textbook-named theorem; def:381A's reflexivity is
+  asserted implicitly by Butcher when he writes "M is equivalent
+  to M". The Lean type matches def:381A applied diagonally.
+* No new hypothesis strengthening — the smallness `h₀` choice is
+  internal (existentially quantified, matching def:381A's
+  `∃ h₀ > 0, ...` shape).
+* Documents the cycle-202 entry in
+  `equivalent_self_general_deferred.md` as RESOLVED for the
+  diagonal case.
+
+For P1/P2 (no faithfulness concern — these are infrastructure with
+no textbook counterpart).
+
+---
+
+## Cycle 203 preview (so you know where this leads)
+
+Once P1 + P2 land:
+
+* **Cycle 203**: ship `equivalent_self` (general reflexivity) by the
+  P3 recipe above. ~80 LOC. Closes half of
+  `equivalent_self_general_deferred.md`. Sorry-count 0 → 0.
+* **Cycle 204**: lift `equivalent_self` to a P-equivalence-aware
+  variant by combining with the P-partition iteration invariant —
+  i.e. start the `PEquivalent → Equivalent` direction of `thm:381H`.
+* **Cycle 205+**: re-introduce the `thm:381H` scaffold with at most
+  2 remaining sorries (the `PhiEquivalent → PEquivalent` and
+  `Equivalent → PEquivalent` directions, both blocked on `thm:381G`).
+
+This is the spine of §380 closure. Stay on it until either GPFS
+recovers (then re-attack §441 Phase C.2) or one of the §380 cycles
+runs out of room.

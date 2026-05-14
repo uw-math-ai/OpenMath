@@ -1,6 +1,7 @@
 import OpenMath.Chapter3.Section310
 import OpenMath.Chapter3.Section312
 import Mathlib.Topology.MetricSpace.Lipschitz
+import Mathlib.Topology.MetricSpace.Contracting
 
 /-!
 # Butcher §380 — equivalence and reducibility of Runge–Kutta methods
@@ -1570,37 +1571,42 @@ theorem PReducesTo.toPhiEquivalent {s s' : ℕ}
 
 Butcher §312 defines a Runge–Kutta method's implicit stage system as
 `Yᵢ = y₀ + h · Σⱼ aᵢⱼ · f(Yⱼ)`. The `RKStageMap` below is the function
-on `Fin s → ℝ` whose fixed points are exactly the stage solutions of
-that system (for the autonomous scalar problem `y' = f(y)`). Existence
-and uniqueness of those fixed points "for `h` sufficiently small" — a
-tacit hypothesis throughout §380 — will follow from Banach's fixed
-point theorem applied to `RKStageMap`, contracting when
-`h · L · ‖M.A‖∞ < 1` for Lipschitz `f` with constant `L`. This cycle
-ships the definition and a non-vacuity witness; the Lipschitz / contracting
-machinery is deferred to a future cycle. -/
+on `Fin s → N` (for `N` a normed `ℝ`-space) whose fixed points are
+exactly the stage solutions of that system (for the autonomous problem
+`y' = f(y)`). Existence and uniqueness of those fixed points "for `h`
+sufficiently small" — a tacit hypothesis throughout §380 — follow from
+Banach's fixed point theorem applied to `RKStageMap`, contracting when
+`|h| · L · Σ_{i,j} |aᵢⱼ| < 1` for Lipschitz `f` with constant `L`. The
+generalisation from scalar `f : ℝ → ℝ` (cycle 201) to normed-space
+`f : N → N` (cycle 202) is required because `IsRKOneStep` and
+`Equivalent` are both polymorphic over `N`. -/
 
-/-- *Implicit-stage iteration map* for the autonomous scalar problem
+/-- *Implicit-stage iteration map* for the autonomous problem
 `y' = f(y)`. For a Runge–Kutta tableau `M`, step size `h`, RHS `f`,
 and initial value `y₀`, this is the map whose fixed points `Y` satisfy
 the implicit-stage equations
-`Yᵢ = y₀ + h · Σⱼ aᵢⱼ · f(Yⱼ)`
+`Yᵢ = y₀ + h • Σⱼ aᵢⱼ • f(Yⱼ)`
 (cf. the existential predicate `IsRKOneStep`). Banach's fixed-point
-theorem applied to this map will yield existence and uniqueness of
-the stage solutions at sufficiently small `h`. -/
-noncomputable def RKStageMap {s : ℕ} (M : RKTableau s) (h : ℝ)
-    (f : ℝ → ℝ) (y₀ : ℝ) : (Fin s → ℝ) → (Fin s → ℝ) :=
-  fun Y i => y₀ + h * ∑ j, M.A i j * f (Y j)
+theorem applied to this map yields existence and uniqueness of the
+stage solutions at sufficiently small `h` (`RKStageMap_contracting`
+plus `ContractingWith.efixedPoint` in the Mathlib API). -/
+noncomputable def RKStageMap {s : ℕ} (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [NormedSpace ℝ N] (h : ℝ)
+    (f : N → N) (y₀ : N) : (Fin s → N) → (Fin s → N) :=
+  fun Y i => y₀ + h • ∑ j, M.A i j • f (Y j)
 
 /-- *Componentwise contraction estimate* for `RKStageMap`. For each row
 `i`, the `i`-th component of `RKStageMap M h f y₀` is `|h| · Σⱼ |aᵢⱼ| · L`
 Lipschitz in the input vector when `f` is `L`-Lipschitz. Loose entrywise
 bound: the row sum `Σⱼ |aᵢⱼ|` is bounded by the total entrywise sum
 `Σ_{i,j} |aᵢⱼ|`. Direct prerequisite for the Banach-fixed-point argument
-in cycle 202+ — converts to `LipschitzWith` via `RKStageMap_lipschitz`
-below. -/
-theorem RKStageMap_dist_le {s : ℕ} (M : RKTableau s) (h : ℝ)
-    {f : ℝ → ℝ} {L : NNReal} (hf : LipschitzWith L f) (y₀ : ℝ)
-    (Y Y' : Fin s → ℝ) :
+— converts to `LipschitzWith` via `RKStageMap_lipschitz` below, and
+thence to `ContractingWith` via `RKStageMap_contracting`. Generalised
+from scalar `ℝ` (cycle 201) to normed `ℝ`-space `N` (cycle 202). -/
+theorem RKStageMap_dist_le {s : ℕ} (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [NormedSpace ℝ N] (h : ℝ)
+    {f : N → N} {L : NNReal} (hf : LipschitzWith L f) (y₀ : N)
+    (Y Y' : Fin s → N) :
     dist (M.RKStageMap h f y₀ Y) (M.RKStageMap h f y₀ Y')
       ≤ |h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) * dist Y Y' := by
   set C : ℝ := ∑ i : Fin s, ∑ j : Fin s, |M.A i j|
@@ -1610,33 +1616,35 @@ theorem RKStageMap_dist_le {s : ℕ} (M : RKTableau s) (h : ℝ)
     mul_nonneg (mul_nonneg (mul_nonneg (abs_nonneg _) L.coe_nonneg) hC) dist_nonneg
   rw [dist_pi_le_iff hBound]
   intro i
-  -- Per-component: |h * Σⱼ aᵢⱼ * (f(Y j) - f(Y' j))| ≤ |h| * L * (∑_i'j |a_i'j|) * dist Y Y'
+  -- Per-component: ‖h • Σⱼ aᵢⱼ • (f(Y j) - f(Y' j))‖ ≤ |h| · L · (∑_i'j |a_i'j|) · dist Y Y'
   have hcomp : dist (M.RKStageMap h f y₀ Y i) (M.RKStageMap h f y₀ Y' i)
-      = |h| * |∑ j, M.A i j * (f (Y j) - f (Y' j))| := by
+      = |h| * ‖∑ j, M.A i j • (f (Y j) - f (Y' j))‖ := by
     have heq : (M.RKStageMap h f y₀ Y i) - (M.RKStageMap h f y₀ Y' i)
-        = h * ∑ j, M.A i j * (f (Y j) - f (Y' j)) := by
+        = h • ∑ j, M.A i j • (f (Y j) - f (Y' j)) := by
       simp only [RKStageMap]
-      rw [show y₀ + h * ∑ j, M.A i j * f (Y j) - (y₀ + h * ∑ j, M.A i j * f (Y' j))
-          = h * (∑ j, M.A i j * f (Y j) - ∑ j, M.A i j * f (Y' j)) by ring,
+      rw [show y₀ + h • ∑ j, M.A i j • f (Y j) - (y₀ + h • ∑ j, M.A i j • f (Y' j))
+          = h • (∑ j, M.A i j • f (Y j) - ∑ j, M.A i j • f (Y' j)) by
+            rw [add_sub_add_left_eq_sub, ← smul_sub],
           ← Finset.sum_sub_distrib]
       congr 1
-      exact Finset.sum_congr rfl fun _ _ => by ring
-    rw [Real.dist_eq, heq, abs_mul]
+      exact Finset.sum_congr rfl fun _ _ => by rw [← smul_sub]
+    rw [dist_eq_norm, heq, norm_smul, Real.norm_eq_abs]
   rw [hcomp]
-  -- Now: |h| * |Σⱼ aᵢⱼ * (f(Y j) - f(Y' j))| ≤ |h| * L * C * dist Y Y'
-  have hSumBound : |∑ j, M.A i j * (f (Y j) - f (Y' j))|
+  -- Now: |h| · ‖Σⱼ aᵢⱼ • (f(Y j) - f(Y' j))‖ ≤ |h| · L · C · dist Y Y'
+  have hSumBound : ‖∑ j, M.A i j • (f (Y j) - f (Y' j))‖
       ≤ ∑ j, |M.A i j| * (L * dist Y Y') := by
-    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    refine (norm_sum_le _ _).trans ?_
     apply Finset.sum_le_sum
     intro j _
-    rw [abs_mul]
+    rw [norm_smul, Real.norm_eq_abs]
     apply mul_le_mul_of_nonneg_left _ (abs_nonneg _)
-    -- |f(Y j) - f(Y' j)| ≤ L * dist Y Y'
+    -- ‖f(Y j) - f(Y' j)‖ = dist (f(Y j)) (f(Y' j)) ≤ L · dist (Y j) (Y' j) ≤ L · dist Y Y'
+    rw [← dist_eq_norm]
     have hLip := hf.dist_le_mul (Y j) (Y' j)
     refine hLip.trans ?_
     apply mul_le_mul_of_nonneg_left _ L.coe_nonneg
     exact dist_le_pi_dist Y Y' j
-  calc |h| * |∑ j, M.A i j * (f (Y j) - f (Y' j))|
+  calc |h| * ‖∑ j, M.A i j • (f (Y j) - f (Y' j))‖
       ≤ |h| * (∑ j, |M.A i j| * (L * dist Y Y')) :=
         mul_le_mul_of_nonneg_left hSumBound (abs_nonneg _)
     _ = |h| * ((∑ j, |M.A i j|) * (L * dist Y Y')) := by
@@ -1652,13 +1660,15 @@ theorem RKStageMap_dist_le {s : ℕ} (M : RKTableau s) (h : ℝ)
 
 /-- *Lipschitz form* of `RKStageMap_dist_le`. Packages the entrywise
 distance bound as a `LipschitzWith` instance with constant
-`|h| · L · Σ_{i,j} |aᵢⱼ|`, the cycle-201 foundation for the Banach
-fixed-point existence/uniqueness of implicit-stage solutions at small
-`h`. The constant depends linearly on `h`, so for `|h| · L · Σ_{i,j}
-|aᵢⱼ| < 1` (i.e. sufficiently small step) the map is contracting and
-Banach FP applies; that conversion is cycle-202 work. -/
-theorem RKStageMap_lipschitz {s : ℕ} (M : RKTableau s) (h : ℝ)
-    {f : ℝ → ℝ} {L : NNReal} (hf : LipschitzWith L f) (y₀ : ℝ) :
+`|h| · L · Σ_{i,j} |aᵢⱼ|`, the foundation for the Banach fixed-point
+existence/uniqueness of implicit-stage solutions at small `h`. The
+constant depends linearly on `h`, so for `|h| · L · Σ_{i,j} |aᵢⱼ| < 1`
+(i.e. sufficiently small step) the map is contracting and Banach FP
+applies — see `RKStageMap_contracting`. Generalised from scalar `ℝ`
+(cycle 201) to normed `ℝ`-space `N` (cycle 202). -/
+theorem RKStageMap_lipschitz {s : ℕ} (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [NormedSpace ℝ N] (h : ℝ)
+    {f : N → N} {L : NNReal} (hf : LipschitzWith L f) (y₀ : N) :
     LipschitzWith
         ⟨|h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|),
          mul_nonneg (mul_nonneg (abs_nonneg _) L.coe_nonneg)
@@ -1668,6 +1678,25 @@ theorem RKStageMap_lipschitz {s : ℕ} (M : RKTableau s) (h : ℝ)
   apply LipschitzWith.of_dist_le_mul
   intro Y Y'
   exact M.RKStageMap_dist_le h hf y₀ Y Y'
+
+/-- *Contracting form* of `RKStageMap_lipschitz`. When the step size
+`h` is small enough that `|h| · L · (Σ_{i,j} |aᵢⱼ|) < 1`, the implicit-
+stage iteration map `RKStageMap` is a contraction on `Fin s → N`,
+hence has a unique fixed point by Banach. This is the cycle-202
+foundation for closing `equivalent_self` (def:381A reflexivity) at
+arbitrary `M`; the smallness condition matches Butcher's tacit
+"for `h` sufficiently small" qualifier in §380. -/
+theorem RKStageMap_contracting {s : ℕ} (M : RKTableau s) {N : Type*}
+    [NormedAddCommGroup N] [NormedSpace ℝ N] (h : ℝ)
+    {f : N → N} {L : NNReal} (hf : LipschitzWith L f) (y₀ : N)
+    (hLt : |h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) < 1) :
+    ContractingWith
+      ⟨|h| * L * (∑ i : Fin s, ∑ j : Fin s, |M.A i j|),
+       mul_nonneg (mul_nonneg (abs_nonneg _) L.coe_nonneg)
+         (Finset.sum_nonneg fun _ _ =>
+           Finset.sum_nonneg fun _ _ => abs_nonneg _)⟩
+      (M.RKStageMap h f y₀) :=
+  ⟨by exact_mod_cast hLt, M.RKStageMap_lipschitz h hf y₀⟩
 
 end OpenMath.Chapter3.Section312.RKTableau
 
