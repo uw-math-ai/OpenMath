@@ -390,3 +390,17 @@ new constructor (per cycle 190 strategy Deliverables A–B).
 0.68% of wall, identical near-zero pattern). No zombies. 11
 consecutive timeouts. Pivoting to Priority 2: ship
 `PReducesTo.of_isZeroReducibleVia` (per cycle 191 strategy).
+
+**Cycle 192 update (12th timeout)**: GPFS smoke test on
+`OpenMath/Chapter4/Section441.lean` timed out after exactly 300s
+(EXIT=143/124, real 5m0.030s, user 0m0.246s, sys 0m0.456s — CPU =
+0.23% of wall, identical near-zero pattern). Pre-flight `ps -u
+$USER` showed no D-state processes. 12 consecutive timeouts span
+cycles 182–192 (11 calendar days; the same pathology has reproduced
+on every smoke-test attempt). Pivoting to Priority 2: complete the
+cycle 191 deferred refactor of `PEquivalent.of_isZeroReducibleVia`
+(now consumes `PReducesTo.of_isZeroReducibleVia` after the source
+reorder), plus Priority 3 Option 3A ship of `PReducesTo.trans`
+(per cycle 192 strategy). Section381.lean recompile remained
+healthy at ~4s warm throughout the cycle, confirming the GPFS
+pathology is still Section441-transitive-load-specific.

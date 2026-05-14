@@ -445,17 +445,50 @@ theorem PEquivalent.of_pReducesTo {s s' : ℕ}
     PEquivalent M M' :=
   ⟨s', M', h, PReducesTo.refl M'⟩
 
-/-- A method is P-equivalent to its 0-reduction. Direct corollary of the
-`zeroStep` constructor of `PReducesTo` combined with
+/-- A method P-reduces (in one step) to its 0-reduction. Direct
+corollary of the `zeroStep` constructor. The `refl` continuation
+witnesses that no further reduction is required.
+
+This is the `PReducesTo`-level analog of cycle 189's
+`PEquivalent.of_isZeroReducibleVia` (below, which wraps this lemma
+with `PEquivalent.of_pReducesTo`). Cycle 191 deliverable; reordered
+in cycle 192 to precede its `PEquivalent`-level consumer. -/
+theorem PReducesTo.of_isZeroReducibleVia {s : ℕ}
+    (M : RKTableau s) {inP1 : Fin s → Bool}
+    (hP0 : ∃ i, inP1 i = false)
+    (h : M.IsZeroReducibleVia inP1) :
+    PReducesTo M (M.zeroReduced inP1) :=
+  PReducesTo.zeroStep inP1 hP0 h (PReducesTo.refl _)
+
+/-- A method is P-equivalent to its 0-reduction. Direct corollary of
+`PReducesTo.of_isZeroReducibleVia` combined with
 `PEquivalent.of_pReducesTo`. -/
 theorem PEquivalent.of_isZeroReducibleVia {s : ℕ}
     (M : RKTableau s) {inP1 : Fin s → Bool}
     (hP0 : ∃ i, inP1 i = false)
     (h : M.IsZeroReducibleVia inP1) :
     PEquivalent M (M.zeroReduced inP1) :=
-  PEquivalent.of_pReducesTo
-    (PReducesTo.zeroStep inP1 hP0 h
-      (PReducesTo.refl (M.zeroReduced inP1)))
+  PEquivalent.of_pReducesTo (PReducesTo.of_isZeroReducibleVia M hP0 h)
+
+/-- *Transitivity of `PReducesTo`.* Concatenation of two reduction
+sequences. The constructors `step` / `zeroStep` each consume a tail
+reduction, so this proof walks `h₁` and re-applies the same
+constructor at every node, plugging `h₂` in at the previously-`refl`
+endpoint.
+
+Used together with `PReducesTo.of_isZeroReducibleVia` and
+`PEquivalent.of_pReducesTo` to chain witnesses across mixed (P-step,
+0-step) reduction sequences. Cycle 192 deliverable. -/
+theorem PReducesTo.trans
+    {s s' s'' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'} {M'' : RKTableau s''}
+    (h₁ : PReducesTo M M') (h₂ : PReducesTo M' M'') :
+    PReducesTo M M'' := by
+  induction h₁ with
+  | refl => exact h₂
+  | step P hLt hVia _ ih => exact PReducesTo.step P hLt hVia (ih h₂)
+  | zeroStep inP1 hP0 hVia _ ih =>
+      exact PReducesTo.zeroStep inP1 hP0 hVia (ih h₂)
 
 /-- If `M` is irreducible (def:381E — neither P-reducible nor 0-reducible),
 then any reduction sequence starting from `M` is the reflexive (zero-step)
@@ -474,20 +507,6 @@ theorem eq_of_isIrreducible_of_pReducesTo {s s' : ℕ}
   | refl => exact ⟨rfl, HEq.rfl⟩
   | step P hLt hVia _ => exact absurd ⟨_, hLt, P, hVia⟩ hIrr.2
   | zeroStep inP1 hP0 hVia _ => exact absurd ⟨inP1, hP0, hVia⟩ hIrr.1
-
-/-- A method P-reduces (in one step) to its 0-reduction. Direct
-corollary of the `zeroStep` constructor. The `refl` continuation
-witnesses that no further reduction is required.
-
-This is the `PReducesTo`-level analog of cycle 189's
-`PEquivalent.of_isZeroReducibleVia`: the latter wraps this lemma
-with `PEquivalent.of_pReducesTo`. Cycle 191 deliverable. -/
-theorem PReducesTo.of_isZeroReducibleVia {s : ℕ}
-    (M : RKTableau s) {inP1 : Fin s → Bool}
-    (hP0 : ∃ i, inP1 i = false)
-    (h : M.IsZeroReducibleVia inP1) :
-    PReducesTo M (M.zeroReduced inP1) :=
-  PReducesTo.zeroStep inP1 hP0 h (PReducesTo.refl _)
 
 /-- *Transitivity of P-equivalence over an irreducible middle method.*
 If `M₂` is irreducible (def:381E), then `PEquivalent M₁ M₂` and
@@ -707,6 +726,27 @@ form via a single 0-reduction step. Consumes
 theorem paddedEuler_pEquivalent_zeroReduced :
     paddedEuler.PEquivalent (paddedEuler.zeroReduced ![true, false]) :=
   RKTableau.PEquivalent.of_pReducesTo paddedEuler_pReducesTo_zeroReduced
+
+/-- Non-vacuity witness for `PReducesTo.trans` (cycle 192): chaining a
+non-trivial P-reduction step with a reflexive tail re-yields the
+single-step witness. The `step` constructor case of `trans`'s
+induction fires on the left factor; the `refl` continuation is the
+right factor. -/
+example :
+    RKTableau.PReducesTo paddedEuler (paddedEuler.pReduced pairPartition) :=
+  paddedEuler_pReducesTo_pReduced.trans
+    (RKTableau.PReducesTo.refl _)
+
+/-- Non-vacuity witness for `PReducesTo.trans` (cycle 192) exercising
+the `zeroStep` constructor case of the induction: chaining the
+non-trivial 0-reduction `paddedEuler →ᴾ paddedEuler.zeroReduced
+![true, false]` with a reflexive tail re-yields the single-step
+witness. -/
+example :
+    RKTableau.PReducesTo paddedEuler
+      (paddedEuler.zeroReduced ![true, false]) :=
+  paddedEuler_pReducesTo_zeroReduced.trans
+    (RKTableau.PReducesTo.refl _)
 
 /- ### Non-vacuous witness for irreducibility
 
