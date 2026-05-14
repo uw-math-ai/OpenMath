@@ -574,7 +574,7 @@ theorem PEquivalent.eq_of_both_isIrreducible
     {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
     (hM : M.IsIrreducible) (hM' : M'.IsIrreducible)
     (h : PEquivalent M M') :
-    ∃ heq : s' = s, HEq M' M := by
+    ∃ _heq : s' = s, HEq M' M := by
   obtain ⟨_, _, h₁, h₂⟩ := h
   obtain ⟨h₁eq, h₁heq⟩ := eq_of_isIrreducible_of_pReducesTo hM h₁
   obtain ⟨h₂eq, h₂heq⟩ := eq_of_isIrreducible_of_pReducesTo hM' h₂
@@ -2242,7 +2242,7 @@ recovers the trivial `HEq` along the identity-stage axis. Exercises
 the type-level heterogeneous-stage plumbing on a non-trivial
 irreducible witness. Cycle 193 deliverable. -/
 theorem paddedEuler_pReduced_pairPartition_eq_of_both_isIrreducible :
-    ∃ heq : 1 = 1,
+    ∃ _heq : 1 = 1,
       HEq (paddedEuler.pReduced pairPartition)
           (paddedEuler.pReduced pairPartition) :=
   RKTableau.PEquivalent.eq_of_both_isIrreducible
@@ -2354,5 +2354,118 @@ example (h : ℝ) (f : ℝ → ℝ) (y₀ : ℝ) :
     simp [RKTableau.RKStageMap, paddedEuler]
   rw [hconst]
   exact LipschitzWith.const _
+
+end OpenMath.Chapter3.Section381
+
+namespace OpenMath.Chapter3.Section312.RKTableau
+
+open OpenMath.Chapter3.Section381
+
+/-! ### Composition of Runge–Kutta methods (Butcher §382)
+
+Internal infrastructure for the future `thm:382A` formalization; the
+full closure of `thm:381H` (and hence `thm:382A`) remains blocked on
+`thm:381G` per `.prover-state/issues/thm_381H_deferred.md`. -/
+
+/-- *Composition of two Runge–Kutta methods* per Butcher §382 equation
+(382a), p. 285. Given `M₁ : RKTableau s₁` and `M₂ : RKTableau s₂`, the
+composition `M₁.compose M₂ : RKTableau (s₁ + s₂)` performs one full
+step of `M₁` followed by one full step of `M₂` (taking the output of
+the first as the initial value of the second). The block structure of
+the `A`-matrix encodes the two-substep computation: the bottom-left
+block (each row equals `M₁.b`) reflects substituting
+`y₁ = y₀ + h·Σⱼ bⱼ Fⱼ` from (382c) into the second-step stage equations
+(382d). The bottom abscissas `(∑ⱼ M₁.bⱼ) + M₂.cᵢ` come from the same
+substitution into the leftmost c-column of the composite tableau. -/
+def compose {s₁ s₂ : ℕ} (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) :
+    RKTableau (s₁ + s₂) where
+  A i j :=
+    Fin.addCases
+      (motive := fun _ => ℝ)
+      (fun i₁ : Fin s₁ =>
+        Fin.addCases
+          (motive := fun _ => ℝ)
+          (fun j₁ : Fin s₁ => M₁.A i₁ j₁)
+          (fun _  : Fin s₂ => (0 : ℝ))
+          j)
+      (fun i₂ : Fin s₂ =>
+        Fin.addCases
+          (motive := fun _ => ℝ)
+          (fun j₁ : Fin s₁ => M₁.b j₁)
+          (fun j₂ : Fin s₂ => M₂.A i₂ j₂)
+          j)
+      i
+  b := Fin.append M₁.b M₂.b
+  c := Fin.append M₁.c (fun i : Fin s₂ => (∑ j : Fin s₁, M₁.b j) + M₂.c i)
+
+@[simp] theorem compose_b_castAdd {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i : Fin s₁) :
+    (M₁.compose M₂).b (Fin.castAdd s₂ i) = M₁.b i := by
+  simp [compose]
+
+@[simp] theorem compose_b_natAdd {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i : Fin s₂) :
+    (M₁.compose M₂).b (Fin.natAdd s₁ i) = M₂.b i := by
+  simp [compose]
+
+@[simp] theorem compose_c_castAdd {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i : Fin s₁) :
+    (M₁.compose M₂).c (Fin.castAdd s₂ i) = M₁.c i := by
+  simp [compose]
+
+@[simp] theorem compose_c_natAdd {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i : Fin s₂) :
+    (M₁.compose M₂).c (Fin.natAdd s₁ i) = (∑ j : Fin s₁, M₁.b j) + M₂.c i := by
+  simp [compose]
+
+@[simp] theorem compose_A_topLeft {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i j : Fin s₁) :
+    (M₁.compose M₂).A (Fin.castAdd s₂ i) (Fin.castAdd s₂ j) = M₁.A i j := by
+  simp [compose]
+
+@[simp] theorem compose_A_topRight {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i : Fin s₁) (j : Fin s₂) :
+    (M₁.compose M₂).A (Fin.castAdd s₂ i) (Fin.natAdd s₁ j) = 0 := by
+  simp [compose]
+
+@[simp] theorem compose_A_botLeft {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i : Fin s₂) (j : Fin s₁) :
+    (M₁.compose M₂).A (Fin.natAdd s₁ i) (Fin.castAdd s₂ j) = M₁.b j := by
+  simp [compose]
+
+@[simp] theorem compose_A_botRight {s₁ s₂ : ℕ}
+    (M₁ : RKTableau s₁) (M₂ : RKTableau s₂) (i j : Fin s₂) :
+    (M₁.compose M₂).A (Fin.natAdd s₁ i) (Fin.natAdd s₁ j) = M₂.A i j := by
+  simp [compose]
+
+/-- *Umbrella corollary packaging the two closed `thm:381H`-direction
+bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
+with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
+for downstream consumers wanting both equivalence conclusions from a
+single `PReducesTo` hypothesis. -/
+theorem PReducesTo.toEquivalent_and_toPhiEquivalent.{u}
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (h : PReducesTo M M') :
+    @Equivalent.{u} s s' M M' ∧ PhiEquivalent M M' :=
+  ⟨h.toEquivalent, h.toPhiEquivalent⟩
+
+end OpenMath.Chapter3.Section312.RKTableau
+
+namespace OpenMath.Chapter3.Section381
+
+open OpenMath.Chapter3.Section310 OpenMath.Chapter3.Section312
+
+/-- *Non-vacuity for `RKTableau.compose`.* Composition of two
+`paddedEuler` instances yields a 4-stage tableau, exercising the
+new infrastructure end-to-end on a concrete pair of methods. -/
+example : RKTableau 4 := paddedEuler.compose paddedEuler
+
+/-- *Non-vacuity for `compose_b_castAdd`.* The b-vector of
+`paddedEuler.compose paddedEuler` at index `castAdd 2 ⟨0, _⟩` agrees
+with `paddedEuler.b ⟨0, _⟩`. -/
+example :
+    (paddedEuler.compose paddedEuler).b (Fin.castAdd 2 ⟨0, by norm_num⟩)
+      = paddedEuler.b ⟨0, by norm_num⟩ :=
+  RKTableau.compose_b_castAdd paddedEuler paddedEuler ⟨0, by norm_num⟩
 
 end OpenMath.Chapter3.Section381
