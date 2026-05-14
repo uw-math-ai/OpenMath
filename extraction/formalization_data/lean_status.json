@@ -679,7 +679,8 @@
   "thm:381H": {
     "lean_file": null,
     "lean_symbol": null,
-    "status": "unformalized"
+    "status": "unformalized",
+    "note": "2 of 4 iff directions closed: PEquivalent → PhiEquivalent via cycle 187's PEquivalent.toPhiEquivalent; PEquivalent → Equivalent via cycle 207's PReducesTo.toEquivalent + cycle 208's PEquivalent.toEquivalent (OpenMath/Chapter3/Section381.lean, namespace OpenMath.Chapter3.Section312.RKTableau). Remaining 2 directions (Equivalent → PEquivalent, PhiEquivalent → PEquivalent) blocked on thm:381G per .prover-state/issues/thm_381H_deferred.md."
   },
   "thm:382A": {
     "lean_file": null,

@@ -2129,6 +2129,37 @@ theorem PReducesTo.toEquivalent.{u}
   | zeroStep inP1 hP0 hVia _h_tail ih =>
       exact Equivalent.trans (zeroReduced_equivalent hP0 hVia) ih
 
+/-- *§380 def:381F → def:381A bridge.* Every P-equivalent pair is
+`def:381A`-equivalent. Composes cycle 207's `PReducesTo.toEquivalent` on
+both legs of `PEquivalent`'s existential common reduct, then closes via
+`Equivalent.trans` + `Equivalent.symm` (cycles 204, 206).
+
+This is the second of four directions of `thm:381H`
+(def:381F ↔ def:381A ↔ def:381B). The other closed direction is
+`PEquivalent.toPhiEquivalent` (cycle 187); the remaining two
+(`Equivalent → PEquivalent` and `PhiEquivalent → PEquivalent`) are
+blocked on `thm:381G` per `.prover-state/issues/thm_381H_deferred.md`. -/
+theorem PEquivalent.toEquivalent.{u}
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (h : PEquivalent M M') :
+    @Equivalent.{u} s s' M M' := by
+  obtain ⟨_, _, hM, hM'⟩ := h
+  exact Equivalent.trans hM.toEquivalent
+    (Equivalent.symm hM'.toEquivalent)
+
+/-- *§380: the two closed directions of `thm:381H` bundled.* Every
+P-equivalent pair is simultaneously `def:381A`-equivalent and
+`def:381B`-equivalent. Combines `PEquivalent.toEquivalent` (cycle 208,
+this file) with `PEquivalent.toPhiEquivalent` (cycle 187). The two
+remaining iff directions (`def:381A → def:381F` and
+`def:381B → def:381F`) are blocked on `thm:381G` per
+`.prover-state/issues/thm_381H_deferred.md`. -/
+theorem PEquivalent.toEquivalent_and_toPhiEquivalent.{u}
+    {s s' : ℕ} {M : RKTableau s} {M' : RKTableau s'}
+    (h : PEquivalent M M') :
+    @Equivalent.{u} s s' M M' ∧ PhiEquivalent M M' :=
+  ⟨h.toEquivalent, h.toPhiEquivalent⟩
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section381
@@ -2241,6 +2272,25 @@ setting. -/
 theorem paddedEuler_equivalent_self :
     paddedEuler.Equivalent paddedEuler :=
   paddedEuler.equivalent_self
+
+/-- *Non-vacuity witness for `PReducesTo.toEquivalent` (cycle 207)
+exercising the `step` constructor.* `paddedEuler` is
+`def:381A`-equivalent to its 1-stage P-reduction via cycle 207's
+`PReducesTo.toEquivalent` applied to the heterogeneous-stage (2 ↦ 1)
+P-reduction. Composition route: `paddedEuler_pReducesTo_pReduced`
+(cycle 186) → `.toEquivalent`. -/
+theorem paddedEuler_equivalent_pReduced :
+    paddedEuler.Equivalent (paddedEuler.pReduced pairPartition) :=
+  paddedEuler_pReducesTo_pReduced.toEquivalent
+
+/-- *Non-vacuity witness for `PReducesTo.toEquivalent` (cycle 207)
+exercising the `zeroStep` constructor.* `paddedEuler` is
+`def:381A`-equivalent to its 1-stage 0-reduced form via cycle 207's
+`PReducesTo.toEquivalent` applied to the 0-reduction. Composition
+route: `paddedEuler_pReducesTo_zeroReduced` (cycle 188) → `.toEquivalent`. -/
+theorem paddedEuler_equivalent_zeroReduced :
+    paddedEuler.Equivalent (paddedEuler.zeroReduced ![true, false]) :=
+  paddedEuler_pReducesTo_zeroReduced.toEquivalent
 
 /-- Non-vacuity witness for the homogeneous-stage corollary
 `PEquivalent.eq_of_both_isIrreducible_homogeneous`: a single irreducible

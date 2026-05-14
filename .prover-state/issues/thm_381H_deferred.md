@@ -1,5 +1,41 @@
 # Issue: thm:381H — three of four iff directions deferred
 
+## Cycle 208 update
+
+The `PEquivalent → Equivalent` direction (formerly deferred direction
+(2) below) is now **closed** via cycle 208's
+`PEquivalent.toEquivalent` in
+`OpenMath/Chapter3/Section381.lean` (inside namespace
+`OpenMath.Chapter3.Section312.RKTableau`, immediately after
+`PReducesTo.toEquivalent`). Axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). The proof composes
+cycle 207's `PReducesTo.toEquivalent` on both legs of `PEquivalent`'s
+existential common reduct, then closes via
+`Equivalent.trans` + `Equivalent.symm` (cycles 204, 206).
+
+Companion non-vacuity witnesses also shipped this cycle (inside
+namespace `OpenMath.Chapter3.Section381`, after
+`paddedEuler_equivalent_self`):
+* `paddedEuler_equivalent_pReduced`
+* `paddedEuler_equivalent_zeroReduced`
+
+These exercise the `step` and `zeroStep` constructor paths through
+cycle 207's `PReducesTo.toEquivalent`.
+
+Bundled umbrella corollary
+`PEquivalent.toEquivalent_and_toPhiEquivalent` (the two closed
+directions of `thm:381H` packaged together) also shipped axiom-clean.
+
+**Updated status**: 2 of 4 iff directions are now closed
+(`PEquivalent → PhiEquivalent` via cycle 187,
+`PEquivalent → Equivalent` via cycle 208). The remaining two
+(`Equivalent → PEquivalent` and `PhiEquivalent → PEquivalent`,
+deferred directions (1) and (3) below) are still blocked on
+`thm:381G` + the combine-two-tableaux construction. Once at least
+one of those becomes single-cycle closeable, the `thm:381H` umbrella
+scaffold can be re-introduced (sorry count 0 → 2, satisfying
+supervisor policy).
+
 ## Cycle 201 rollback
 
 The cycle 200 statement-only scaffold was removed from
