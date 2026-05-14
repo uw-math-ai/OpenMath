@@ -3287,6 +3287,166 @@ theorem composeQ_id_right.{u} (q : Quotient Equivalent.setoidSigma.{u}) :
   show Quotient.mk _ _ = Quotient.mk _ _
   exact Quotient.sound (compose_id_equivalent M)
 
+/-! ### Left identity for `composeQ_phi_left_act` (cycle 228)
+
+The §383 group-homomorphism analog of cycle 219's `composeQ_id_left`,
+consuming cycle 227's partial left-action `composeQ_phi_left_act`.
+The `PhiEquivalent`-quotient class `⟦⟨0, RKTableau.id⟩⟧` acts as a
+left identity for the partial action — pre-composing the empty
+0-stage method with any raw representative returns the input class.
+
+The proof bridges cycle 225's `compose_elementaryWeight_decomp`
+through `id.elementaryWeight ≡ 0` and a mutual induction
+`derivativeWeightWithSrc M id = M.derivativeWeight` (because the
+"source-method elementary weight" threaded by `derivativeWeightWithSrc`
+collapses to zero when the source is `id`).
+-/
+
+/-- *Empty-sum collapse for `RKTableau.id.elementaryWeight`.* The
+0-stage method's elementary weight is `0` on every rooted tree
+because the defining sum is over `Fin 0`. Load-bearing for the §383
+left identity law `id_compose_phiEquivalent` below. -/
+@[simp] theorem id_elementaryWeight (t : OpenMath.Chapter3.Section310.RootedTree) :
+    (RKTableau.id : RKTableau 0).elementaryWeight t = 0 := by
+  show ∑ i : Fin 0, (RKTableau.id : RKTableau 0).b i *
+        (RKTableau.id : RKTableau 0).derivativeWeight i t = 0
+  exact Finset.sum_empty
+
+section
+open OpenMath.Chapter3.Section310
+
+mutual
+  /-- *Source-method substitution to `id` collapses
+  `derivativeWeightWithSrc` to `derivativeWeight`.* When the
+  source-method `M₁` is `RKTableau.id`, the per-tree helper
+  `derivativeWeightWithSrc` agrees with the plain `derivativeWeight`
+  on every stage and tree. Mutual companion to
+  `derivativeWeightWithSrcProd_id`; mirror of cycle 226's
+  `derivativeWeightWithSrc_subst_M₁` template. -/
+  private theorem derivativeWeightWithSrc_id {s : ℕ} (M : RKTableau s) :
+      ∀ (t : RootedTree) (i : Fin s),
+        M.derivativeWeightWithSrc RKTableau.id i t = M.derivativeWeight i t
+    | RootedTree.mk children, i => by
+        show M.derivativeWeightWithSrcProd RKTableau.id i children
+            = M.derivativeWeightProd i children
+        exact derivativeWeightWithSrcProd_id M children i
+
+  /-- List-helper companion to `derivativeWeightWithSrc_id`. -/
+  private theorem derivativeWeightWithSrcProd_id {s : ℕ} (M : RKTableau s) :
+      ∀ (children : List RootedTree) (i : Fin s),
+        M.derivativeWeightWithSrcProd RKTableau.id i children
+          = M.derivativeWeightProd i children
+    | [], _ => rfl
+    | t :: ts, i => by
+        show ((RKTableau.id : RKTableau 0).elementaryWeight t
+                + ∑ j : Fin s,
+                    M.A i j * M.derivativeWeightWithSrc RKTableau.id j t)
+              * M.derivativeWeightWithSrcProd RKTableau.id i ts
+            = (∑ j : Fin s, M.A i j * M.derivativeWeight j t)
+              * M.derivativeWeightProd i ts
+        rw [derivativeWeightWithSrcProd_id M ts i, id_elementaryWeight,
+            zero_add]
+        congr 1
+        refine Finset.sum_congr rfl (fun j _ => ?_)
+        rw [derivativeWeightWithSrc_id M t j]
+end
+
+end
+
+/-- *Left identity law for `compose` at the `PhiEquivalent` level —
+the §383 group-homomorphism analog of cycle 219's
+`id_compose_equivalent`.* Composing the 0-stage no-op `RKTableau.id`
+on the left of any `M : RKTableau s` produces a method Φ-equivalent
+to `M`.
+
+Proof: `compose_elementaryWeight_decomp` splits the LHS into
+`id.elementaryWeight t + ∑ M.b i * M.derivativeWeightWithSrc id i t`;
+the first term is `0` (empty sum over `Fin 0`, via
+`id_elementaryWeight`), and the second term equals
+`M.elementaryWeight t` because `derivativeWeightWithSrc M id`
+collapses to `M.derivativeWeight` via the cycle 228 mutual induction
+`derivativeWeightWithSrc_id`.
+
+Unlike cycle 219's `id_compose_equivalent` (which factored through
+`compose_isRKOneStep_iff` at the operational level), this proof
+operates directly at the `elementaryWeight` level — matching
+`PhiEquivalent`'s definition. -/
+theorem id_compose_phiEquivalent {s : ℕ} (M : RKTableau s) :
+    @PhiEquivalent (0 + s) s (RKTableau.id.compose M) M := by
+  intro t
+  rw [compose_elementaryWeight_decomp RKTableau.id M t,
+      id_elementaryWeight, zero_add, elementaryWeight_eq]
+  refine Finset.sum_congr rfl (fun i _ => ?_)
+  rw [derivativeWeightWithSrc_id M t i]
+
+/-- *Left identity law for `composeQ_phi_left_act` — the §383 group's
+identity acts trivially on raw representatives.* The
+`PhiEquivalent`-quotient class of `⟨0, RKTableau.id⟩` is a left
+identity for `composeQ_phi_left_act`: pre-composing it with any raw
+representative `⟨s, M⟩` returns the input class
+`⟦⟨s, M⟩⟧`. Immediate `Quotient.sound` consequence of cycle 228's
+`id_compose_phiEquivalent`.
+
+This is the partial-action analog of cycle 219's `composeQ_id_left`
+for the §383 Φ-quotient. The full binary
+`composeQ_phi_id_left : composeQ_phi ⟦⟨0, id⟩⟧ q = q` requires the
+right-action half of the §383 group homomorphism (Aristotle project
+`176aa964-db7b-40f8-a01c-05247c186ec5`, IN_PROGRESS at 11 % at cycle
+228 entry). -/
+theorem composeQ_phi_left_act_id_left {s : ℕ} (M : RKTableau s) :
+    composeQ_phi_left_act
+        (Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩)
+        ⟨s, M⟩ =
+      Quotient.mk PhiEquivalent.setoidSigma ⟨s, M⟩ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (id_compose_phiEquivalent M)
+
+/-- *Right identity law for `compose` at the `PhiEquivalent` level —
+the §383 group-homomorphism analog of cycle 219's
+`compose_id_equivalent`.* Composing the 0-stage no-op `RKTableau.id`
+on the right of any `M : RKTableau s` produces a method Φ-equivalent
+to `M`.
+
+Proof: `compose_elementaryWeight_decomp` splits the LHS into
+`M.elementaryWeight t + ∑ i : Fin 0, ...`; the bottom-block sum
+vanishes because the summation index ranges over the empty
+`Fin 0`, and `add_zero` closes.
+
+Significantly simpler than cycle 228's `id_compose_phiEquivalent`,
+which had to feed in `derivativeWeightWithSrc_id` (a mutual induction
+collapsing the source-method threading to the plain derivative
+weight). The right-symmetric counterpart needs no such induction
+because the entire bottom-block sum is empty. -/
+theorem compose_id_phiEquivalent {s : ℕ} (M : RKTableau s) :
+    @PhiEquivalent (s + 0) s (M.compose RKTableau.id) M := by
+  intro t
+  rw [compose_elementaryWeight_decomp M RKTableau.id t]
+  simp
+
+/-- *Right identity law for `composeQ_phi_left_act` — the §383 group's
+identity acts trivially on the right.* Acting on any
+`PhiEquivalent.setoidSigma`-quotient class `q` with the raw
+representative `⟨0, RKTableau.id⟩` returns `q`. Immediate
+`Quotient.sound` consequence of `compose_id_phiEquivalent` above.
+
+Type-signature asymmetry note: `composeQ_phi_left_act` takes a
+`Quotient` on the LEFT but a raw representative `Σ s, RKTableau s` on
+the RIGHT (cycle 227 only lifted the left argument; the right-action
+half of the §383 homomorphism is gated on Aristotle project
+`176aa964-db7b-40f8-a01c-05247c186ec5`). So the right-identity
+statement uses `⟨0, RKTableau.id⟩` as the raw representative, not its
+quotient class.
+
+Right-symmetric counterpart of cycle 228's
+`composeQ_phi_left_act_id_left`. -/
+theorem composeQ_phi_left_act_id_right
+    (q : Quotient PhiEquivalent.setoidSigma) :
+    composeQ_phi_left_act q ⟨0, RKTableau.id⟩ = q := by
+  refine Quotient.inductionOn q ?_
+  rintro ⟨s, M⟩
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_id_phiEquivalent M)
+
 /-! ### Inverse method (Butcher §382 `thm:382B`)
 
 The §382 group's inverse construction. For `M : RKTableau s` with
@@ -4055,5 +4215,28 @@ example :
   RKTableau.composeQ_phi_left_act_eq_of_phiEquivalent paddedEuler
     (pReduced_phiEquivalent paddedEuler
       paddedEuler_isPReducibleVia_pairPartition)
+
+/-- *Cycle 228 non-vacuity for `composeQ_phi_left_act_id_left`.*
+Pre-composing the §383 identity class `⟦⟨0, RKTableau.id⟩⟧` with the
+raw `⟨2, paddedEuler⟩` returns the class of `⟨2, paddedEuler⟩`,
+exercising the cycle 228 left-identity law on a concrete witness. -/
+example :
+    RKTableau.composeQ_phi_left_act
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨0, RKTableau.id⟩) ⟨2, paddedEuler⟩ =
+      Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩ :=
+  RKTableau.composeQ_phi_left_act_id_left paddedEuler
+
+/-- *Cycle 229 non-vacuity for `composeQ_phi_left_act_id_right`.*
+Right-identity action on the `paddedEuler` class; symmetric counterpart
+of cycle 228's left-identity example. -/
+example :
+    RKTableau.composeQ_phi_left_act
+        (Quotient.mk RKTableau.PhiEquivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+        ⟨0, RKTableau.id⟩ =
+      Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩ :=
+  RKTableau.composeQ_phi_left_act_id_right
+    (Quotient.mk RKTableau.PhiEquivalent.setoidSigma ⟨2, paddedEuler⟩)
 
 end OpenMath.Chapter3.Section381
