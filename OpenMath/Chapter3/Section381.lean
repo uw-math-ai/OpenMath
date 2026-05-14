@@ -2902,6 +2902,159 @@ theorem composeQ_id_right.{u} (q : Quotient Equivalent.setoidSigma.{u}) :
   show Quotient.mk _ _ = Quotient.mk _ _
   exact Quotient.sound (compose_id_equivalent M)
 
+/-! ### Inverse method (Butcher §382 `thm:382B`)
+
+The §382 group's inverse construction. For `M : RKTableau s` with
+tableau `(A, b, c)`, the inverse method `M.inverse : RKTableau s`
+has stages `(A i j − b j, −b i, c i − ∑ j, b j)`. The two
+absorption laws `[m · m⁻¹] = [m⁻¹ · m] = 1` are proved at the
+`Equivalent` level (`compose_inverse_equivalent` /
+`inverse_compose_equivalent`) and then lifted to the quotient
+(`composeQ_inverse_right` / `composeQ_inverse_left`). The proof
+sidesteps Butcher's P-reducibility argument by an abstract
+`IsRKOneStep`-level step-inversion lemma
+(`inverse_isRKOneStep_of_isRKOneStep`). -/
+
+/-- *Inverse method (§382).* For a Runge–Kutta method `M` with
+stages `(A, b, c)`, the inverse method `M.inverse` has stages
+`(A i j − b j,  −b i,  c i − ∑ j, b j)`. This is the §382 group
+inverse construction (Butcher §382 p. 307). Same stage count `s`. -/
+def inverse {s : ℕ} (M : RKTableau s) : RKTableau s where
+  A := fun i j => M.A i j - M.b j
+  b := fun i => -M.b i
+  c := fun i => M.c i - ∑ j, M.b j
+
+@[simp] theorem inverse_A {s : ℕ} (M : RKTableau s) (i j : Fin s) :
+    M.inverse.A i j = M.A i j - M.b j := rfl
+
+@[simp] theorem inverse_b {s : ℕ} (M : RKTableau s) (i : Fin s) :
+    M.inverse.b i = -M.b i := rfl
+
+@[simp] theorem inverse_c {s : ℕ} (M : RKTableau s) (i : Fin s) :
+    M.inverse.c i = M.c i - ∑ j, M.b j := rfl
+
+/-- *Inverse-step inversion lemma.* If a stage tuple `Y` witnesses
+`M.IsRKOneStep f y₀ H y_mid`, then the *same* stage tuple witnesses
+`M.inverse.IsRKOneStep f y_mid H y₀`. This is the load-bearing
+algebraic observation behind the §382 inverse-element absorption
+laws: the stage equation for `M.inverse` (with `A_ij − b_j`) at
+base `y_mid` becomes the stage equation for `M` (with `A_ij`) at
+base `y₀` after absorbing `y_mid = y₀ + H • ∑ b • f(Y)`; and the
+output equation for `M.inverse` (with `−b_i`) at base `y_mid`
+collapses to `y₀ = y_mid − H • ∑ b • f(Y)` which is exactly
+`M`'s output equation rearranged. -/
+theorem inverse_isRKOneStep_of_isRKOneStep {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {y₀ y_mid : N} {H : ℝ}
+    (h : M.IsRKOneStep f y₀ H y_mid) :
+    M.inverse.IsRKOneStep f y_mid H y₀ := by
+  obtain ⟨Y, hY_stage, hY_out⟩ := h
+  refine ⟨Y, ?_, ?_⟩
+  · intro i
+    simp only [inverse_A, sub_smul, Finset.sum_sub_distrib, smul_sub]
+    rw [hY_stage i, hY_out]
+    abel
+  · simp only [inverse_b, neg_smul, Finset.sum_neg_distrib, smul_neg]
+    rw [hY_out]
+    abel
+
+/-- *Inverse-step inversion lemma, symmetric direction.* Given a
+stage tuple `Y` witnessing `M.inverse.IsRKOneStep f y₀ H y_mid`,
+the same `Y` witnesses `M.IsRKOneStep f y_mid H y₀`. Symmetric to
+`inverse_isRKOneStep_of_isRKOneStep`; used in the left absorption
+law's proof. Direct construction (does NOT route through
+`M.inverse.inverse = M`, which requires extra unfold work). -/
+theorem isRKOneStep_of_inverse_isRKOneStep {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {y₀ y_mid : N} {H : ℝ}
+    (h : M.inverse.IsRKOneStep f y₀ H y_mid) :
+    M.IsRKOneStep f y_mid H y₀ := by
+  obtain ⟨Y, hY_stage, hY_out⟩ := h
+  -- `hY_stage i : Y i = y₀ + H • ∑ j, (M.A i j - M.b j) • f (Y j)`
+  -- `hY_out : y_mid = y₀ + H • ∑ i, (-M.b i) • f (Y i)`
+  -- Goal stage: `Y i = y_mid + H • ∑ j, M.A i j • f (Y j)`
+  -- Goal output: `y₀ = y_mid + H • ∑ i, M.b i • f (Y i)`
+  refine ⟨Y, ?_, ?_⟩
+  · intro i
+    have hi := hY_stage i
+    simp only [inverse_A, sub_smul, Finset.sum_sub_distrib, smul_sub] at hi
+    rw [hi, hY_out]
+    simp only [inverse_b, neg_smul, Finset.sum_neg_distrib, smul_neg]
+    abel
+  · have ho := hY_out
+    simp only [inverse_b, neg_smul, Finset.sum_neg_distrib, smul_neg] at ho
+    rw [ho]
+    abel
+
+/-- *Right inverse absorption (§382).* `M · M⁻¹ ≡ id` at the
+`Equivalent` level. Heterogeneous-stage: LHS has `s + s` stages,
+RHS has `0`. The proof factors any composite output via cycle 214's
+`compose_isRKOneStep_iff` into an `M`-step (from `y₀` to `y_mid`)
+followed by an `M.inverse`-step (from `y_mid` to `y_final`). The
+key lemma `inverse_isRKOneStep_of_isRKOneStep` converts the `M`-half
+into an alternative `M.inverse`-step from `y_mid` back to `y₀`,
+which `equivalent_self M.inverse` (cycle 203) forces to coincide
+with the original `M.inverse`-half — hence `y_final = y₀`, matching
+the identity-method output. -/
+theorem compose_inverse_equivalent.{u} {s : ℕ} (M : RKTableau s) :
+    @Equivalent.{u} (s + s) 0 (M.compose M.inverse) RKTableau.id := by
+  intro N _ _ _ f L hL
+  obtain ⟨H₀, hH₀_pos, hEq⟩ := M.inverse.equivalent_self f L hL
+  refine ⟨H₀, hH₀_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y_final y_final' h_compose h_id
+  rw [RKTableau.id_isRKOneStep_iff] at h_id
+  obtain ⟨y_mid, h_M_step, h_Minv_step⟩ :=
+    (compose_isRKOneStep_iff M M.inverse f y₀ H y_final).mp h_compose
+  have h_alt : M.inverse.IsRKOneStep f y_mid H y₀ :=
+    M.inverse_isRKOneStep_of_isRKOneStep h_M_step
+  have hy_final_eq_y₀ : y_final = y₀ :=
+    hEq y_mid H hH_pos hH_le y_final y₀ h_Minv_step h_alt
+  rw [hy_final_eq_y₀, h_id]
+
+/-- *Left inverse absorption (§382).* `M⁻¹ · M ≡ id` at the
+`Equivalent` level. Symmetric to `compose_inverse_equivalent`:
+factor via `compose_isRKOneStep_iff` into an `M.inverse`-step from
+`y₀` to `y_mid` followed by an `M`-step from `y_mid` to `y_final`;
+the symmetric helper `isRKOneStep_of_inverse_isRKOneStep` converts
+the `M.inverse`-half into an `M`-step from `y_mid` back to `y₀`;
+`equivalent_self M` (cycle 203) forces `y_final = y₀`. -/
+theorem inverse_compose_equivalent.{u} {s : ℕ} (M : RKTableau s) :
+    @Equivalent.{u} (s + s) 0 (M.inverse.compose M) RKTableau.id := by
+  intro N _ _ _ f L hL
+  obtain ⟨H₀, hH₀_pos, hEq⟩ := M.equivalent_self f L hL
+  refine ⟨H₀, hH₀_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y_final y_final' h_compose h_id
+  rw [RKTableau.id_isRKOneStep_iff] at h_id
+  obtain ⟨y_mid, h_Minv_step, h_M_step⟩ :=
+    (compose_isRKOneStep_iff M.inverse M f y₀ H y_final).mp h_compose
+  have h_alt : M.IsRKOneStep f y_mid H y₀ :=
+    M.isRKOneStep_of_inverse_isRKOneStep h_Minv_step
+  have hy_final_eq_y₀ : y_final = y₀ :=
+    hEq y_mid H hH_pos hH_le y_final y₀ h_M_step h_alt
+  rw [hy_final_eq_y₀, h_id]
+
+/-- *Right inverse absorption for `composeQ` at the quotient level —
+the bracketed (382f) form of `thm:382B` (right half).* Immediate
+`Quotient.sound` consequence of `compose_inverse_equivalent`. -/
+theorem composeQ_inverse_right.{u} {s : ℕ} (M : RKTableau s) :
+    composeQ.{u}
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M⟩)
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M.inverse⟩)
+      = Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (compose_inverse_equivalent.{u} M)
+
+/-- *Left inverse absorption for `composeQ` at the quotient level —
+the bracketed (382f) form of `thm:382B` (left half).* Immediate
+`Quotient.sound` consequence of `inverse_compose_equivalent`. -/
+theorem composeQ_inverse_left.{u} {s : ℕ} (M : RKTableau s) :
+    composeQ.{u}
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M.inverse⟩)
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M⟩)
+      = Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (inverse_compose_equivalent.{u} M)
+
 /-- *Umbrella corollary packaging the two closed `thm:381H`-direction
 bridges out of `PReducesTo`.* Combines cycle 207's `PReducesTo.toEquivalent`
 with cycle 187/193's `PReducesTo.toPhiEquivalent`; ergonomic hand-hold
@@ -3096,5 +3249,35 @@ example :
       = Quotient.mk RKTableau.Equivalent.setoidSigma
           ⟨2, paddedEuler⟩ :=
   RKTableau.composeQ_id_right _
+
+/-- *Non-vacuity for `composeQ_inverse_right` (cycle 220 P6).* The
+quotient-level right inverse absorption law exercised on the
+cycle 030 non-vacuity backbone: post-composing the class of
+`⟨2, paddedEuler⟩` with the class of `⟨2, paddedEuler.inverse⟩`
+returns the class of `⟨0, RKTableau.id⟩`. -/
+example :
+    RKTableau.composeQ
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler.inverse⟩)
+      = Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨0, RKTableau.id⟩ :=
+  RKTableau.composeQ_inverse_right paddedEuler
+
+/-- *Non-vacuity for `composeQ_inverse_left` (cycle 220 P6).* The
+quotient-level left inverse absorption law exercised on the
+cycle 030 non-vacuity backbone: pre-composing the class of
+`⟨2, paddedEuler.inverse⟩` with the class of `⟨2, paddedEuler⟩`
+returns the class of `⟨0, RKTableau.id⟩`. -/
+example :
+    RKTableau.composeQ
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler.inverse⟩)
+        (Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨2, paddedEuler⟩)
+      = Quotient.mk RKTableau.Equivalent.setoidSigma
+          ⟨0, RKTableau.id⟩ :=
+  RKTableau.composeQ_inverse_left paddedEuler
 
 end OpenMath.Chapter3.Section381

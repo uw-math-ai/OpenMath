@@ -136,7 +136,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `thm:353A` **A-stability of Gauss and related methods** (§353)
 - [ ] `thm:355B` **Order arrow tangency directions theorem** (§355)
 - [ ] `thm:358A` **BN-stability of collocation methods** (§358)
-- [ ] `thm:382B` **Runge Kutta method composition inverse** (§380)
+- [x] `thm:382B` **Runge Kutta method composition inverse** (§380) — `OpenMath/Chapter3/Section381.lean` (cycle 220: shipped `RKTableau.inverse` + step-inversion lemmas + both `Equivalent`-level absorption laws `compose_inverse_equivalent` / `inverse_compose_equivalent` + their quotient-level lifts `composeQ_inverse_right` / `composeQ_inverse_left`; all axiom-clean)
 - [ ] `thm:386A` **Recursive formula for the product** (§386)
 - [x] `def:323A` **internal order q** (§323)
 - [ ] `thm:324C` **Explicit Runge Kutta Order Stage Lower Bound** (§324)

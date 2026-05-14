@@ -1,455 +1,550 @@
-# Cycle 219 Strategy — §382 group identity element on `Quotient Equivalent.setoidSigma`
+# Cycle 220 Strategy — §382 group inverse element
 
-## §A. GPFS smoke test (mandatory; ≤2 min)
+## §A — GPFS smoke test (mandatory, ≤6 min)
 
-§441 Phase C.2 has been GPFS-blocked for **35 consecutive cycles** (since
-cycle 184). Worker MUST run **one** smoke test at start-of-cycle and abort
-the §441 path if it times out:
+Before any §382 work, run **once**:
 
 ```bash
 time timeout 300 lake env lean OpenMath/Chapter4/Section441.lean
 ```
 
-* If it completes in <60s with EXIT=0 ⇒ GPFS recovered. Pivot to applying
-  the cycle 182 draft + cycle 184 namespace fix per
-  `.prover-state/issues/lem_441A_phase_C_scoping.md` Phase C.2 plan.
-  This OVERRIDES the rest of this strategy.
-* If it times out (EXIT=124) or shows the same near-zero CPU pattern
-  (<2% CPU over 5 min wall) ⇒ skip §441, proceed with §B below. Append
-  one line to `.prover-state/issues/cycle_182_gpfs_slowness.md`
-  recording the 36th consecutive timeout. Do NOT escalate further;
-  loop-maintainer is already notified via that issue.
-* Do NOT spend more than the single smoke test on §441. Do NOT poll
-  Aristotle for the cycle 183 draft submission (the namespace fix is
-  already extracted; nothing new to gain by re-polling).
+Expected: 37th consecutive 5-min timeout with near-zero CPU. **If it
+times out, skip §441 Phase C.2 entirely** and proceed to §B below.
+Append one line to `.prover-state/issues/cycle_182_gpfs_slowness.md`
+recording the timeout count (37) and proceed.
 
-## §B. Primary deliverable — §382 group identity element
+If by some surprise it succeeds (<5 min), the cycle 182 draft +
+cycle 184 namespace fix at `.prover-state/cycle_182_draft_section441.lean`
+becomes the new top priority; bail out of this strategy and ship
+that instead. Confirm `head -10 .prover-state/cycle_182_draft_section441.lean`
+exists first.
 
-Cycle 218 closed both textbook forms of `thm:382A` (the bracketed (382f)
-form via `composeQ_eq_of_equivalent` and the un-bracketed (382g) form
-via `compose_equivalent_compose`). The natural cycle 219 next step is
-the §382 group structure on `Quotient Equivalent.setoidSigma`,
-specifically the **identity element** plus its **left and right
-absorption laws**.
+**Do not re-attempt §441 within this cycle if §A times out.**
 
-This is the cycle 218 task results' explicit "Suggested next approach"
-recommendation: cycle 219 ships the identity + one-sided absorptions;
-cycle 220 ships inverses; cycle 221+ associativity (which finally
-finesses cycle 210's deferred `compose_assoc` HEq plumbing through
-`Quotient.sound`).
+---
 
-### B.1. Why the 0-stage tableau is the right identity
+## §B — Main deliverable: §382 inverse element (`thm:382B`)
 
-In Butcher's §382 group, the identity satisfies `M ∘ id ≡ M` and
-`id ∘ M ≡ M` for all `M`. Reading the cycle 209 `compose` definition
-at `OpenMath/Chapter3/Section381.lean:2487`:
+### Target entity
 
-* `(M₁.compose M₂).b = Fin.append M₁.b M₂.b`
-* The output of one composite step is `y₀ + H · ∑ᵢ (M₁.compose M₂).b i · f(Yᵢ)`.
+`thm:382B` (Butcher §382 p. 307) — currently `unformalized` in
+`extraction/formalization_data/lean_status.json`. The textbook
+statement is `[m · m⁻¹] = [m⁻¹ · m] = 1`. Per cycle 219's task
+results' "Suggested next approach", this is **cycle 220's
+deliverable**.
 
-If `M₁ : RKTableau 0` (the 0-stage tableau), its `b : Fin 0 → ℝ` is
-the empty function. The 0-stage tableau contributes no stages and no
-weight, so composing it on either side "does nothing". The textbook
-identity is the no-op tableau.
+### Textbook inverse formula (from `entities/thm_382B.json`)
 
-`explicitEuler` is NOT the identity (it advances by `H · f(y₀)`,
-which is exactly what we don't want from the identity).
+For `M : RKTableau s` with stages `(A, b, c)`, the inverse method
+`M.inverse : RKTableau s` has:
 
-### B.2. Concrete deliverables (priority order)
+* `(M.inverse).A i j := M.A i j − M.b j`
+* `(M.inverse).b i := −M.b i`
+* `(M.inverse).c i := M.c i − ∑ j, M.b j`
 
-#### P1 — `RKTableau.id : RKTableau 0` (definition, ~5 LOC)
+(The stage count stays at `s`.)
 
-Insert at `OpenMath/Chapter3/Section381.lean` immediately after cycle
-218's `composeQ_eq_of_equivalent` (around line ~2780, inside
-`namespace OpenMath.Chapter3.Section312.RKTableau`):
+### Proof technique (abstract-N-level, sidesteps the textbook's P-reducibility argument)
 
-```lean
-/-- The §382 group identity element — the trivial 0-stage Runge–Kutta
-tableau. Its single one-step output is `y₀` (the input value),
-because the empty stage tuple gives an empty sum in the output
-formula `y₁ = y₀ + h • ∑ (i : Fin 0), b i • f (Y i) = y₀`.
+The textbook's proof shows the composite is P-reducible to a method
+with `b = 0`. We take a cleaner Lean route: prove
+`m.compose m.inverse ≡ id` directly at the `IsRKOneStep` level using
+cycle 214's `compose_isRKOneStep_iff` and cycle 219's
+`id_isRKOneStep_iff`. The load-bearing observation:
 
-Together with `compose` (cycle 209), this furnishes the identity
-element of the §382 group of equivalence classes of Runge–Kutta
-methods (Butcher §382). The left and right absorption laws
-`id.compose M ≡ M` and `M.compose id ≡ M` are proved as
-`id_compose_equivalent` and `compose_id_equivalent` below; their
-quotient-level corollaries `composeQ ⟦⟨0, id⟩⟧ q = q` and
-`composeQ q ⟦⟨0, id⟩⟧ = q` follow by `Quotient.ind` + `Quotient.sound`. -/
-def id : RKTableau 0 where
-  A := fun i _ => Fin.elim0 i
-  b := fun i => Fin.elim0 i
-  c := fun i => Fin.elim0 i
+**Lemma (key):** If `M.IsRKOneStep f y₀ H y_mid` with stage tuple
+`Y : Fin s → N`, then `M.inverse.IsRKOneStep f y_mid H y₀` with the
+**same** stage tuple `Y`.
+
+**Proof:** Plug `Y` into `M.inverse`'s stage equation:
+```
+Y i = y₀ + H • ∑ j, M.A i j • f (Y j)                  -- M's stage eq
+    = (y_mid − H • ∑ j, M.b j • f (Y j)) + H • ∑ j, M.A i j • f (Y j)
+                                                       -- (using M's output eq)
+    = y_mid + H • ∑ j, (M.A i j − M.b j) • f (Y j)
+    = y_mid + H • ∑ j, M.inverse.A i j • f (Y j)       -- ✓
+```
+And the output equation:
+```
+y_mid + H • ∑ i, M.inverse.b i • f (Y i)
+  = y_mid + H • ∑ i, (−M.b i) • f (Y i)
+  = y_mid − H • ∑ i, M.b i • f (Y i)
+  = y_mid − (y_mid − y₀)
+  = y₀                                                  -- ✓
 ```
 
-(The `Fin.elim0` discharges the empty-domain functions; alternatively
-the `0` literal if Lean infers `Zero` on the matrix and vector types.
-Try `Fin.elim0` first; fall back to `0` if Lean accepts it more
-cleanly. Don't spend more than 5 minutes on syntactic shape — the
-type matters, not the body.)
+This gives a witness `M.inverse.IsRKOneStep f y_mid H y₀` from the
+`M`-step. Symmetrically, an `M.inverse`-step from `y_mid` back can
+produce an `M`-step from `y₀`. Combined with cycle 203's
+`equivalent_self M.inverse` (which gives uniqueness of M.inverse's
+step at small H), this forces every composite output `y_final = y₀`.
 
-#### P2 — `id_isRKOneStep_iff` helper (~10 LOC)
+### Priorities (linear execution)
 
-The 0-stage IsRKOneStep predicate collapses to `y₁ = y₀`. Ship as a
-clean iff lemma immediately after `RKTableau.id`:
+#### P1 (single-cycle minimum) — Define `RKTableau.inverse`
+
+Add in `OpenMath/Chapter3/Section381.lean`, inside `namespace
+OpenMath.Chapter3.Section312.RKTableau`, immediately after
+`RKTableau.id` and `id_isRKOneStep_iff` (around line 2820):
 
 ```lean
-@[simp] theorem id_isRKOneStep_iff
+/-- *Inverse method (§382).* For a Runge–Kutta method `M` with
+stages `(A, b, c)`, the inverse method `M.inverse` has stages
+`(A i j − b j,  −b i,  c i − ∑ j, b j)`. This is the §382 group
+inverse construction (Butcher §382 p. 307). Same stage count
+`s`. -/
+def inverse {s : ℕ} (M : RKTableau s) : RKTableau s where
+  A := fun i j => M.A i j - M.b j
+  b := fun i => -M.b i
+  c := fun i => M.c i - ∑ j, M.b j
+```
+
+LOC: ~10 with docstring.
+
+#### P2 (the substantive deliverable) — Key step-inversion lemma
+
+Add immediately after the definition:
+
+```lean
+/-- *Inverse-step inversion lemma.* If a stage tuple `Y` witnesses
+`M.IsRKOneStep f y₀ H y_mid`, then the *same* stage tuple witnesses
+`M.inverse.IsRKOneStep f y_mid H y₀`. This is the load-bearing
+algebraic observation behind the §382 inverse-element absorption
+laws. -/
+theorem inverse_isRKOneStep_of_isRKOneStep {s : ℕ} (M : RKTableau s)
     {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (f : N → N) (y₀ : N) (h : ℝ) (y₁ : N) :
-    RKTableau.id.IsRKOneStep f y₀ h y₁ ↔ y₁ = y₀ := by
-  constructor
-  · rintro ⟨Y, _hstage, hout⟩
-    -- The output sum ∑ (i : Fin 0), id.b i • f (Y i) is empty.
-    simp [RKTableau.id] at hout
-    exact hout
-  · intro hy
-    refine ⟨Fin.elim0, ?_, ?_⟩
-    · intro i; exact Fin.elim0 i
-    · simp [RKTableau.id]; exact hy
+    {f : N → N} {y₀ y_mid : N} {H : ℝ}
+    (h : M.IsRKOneStep f y₀ H y_mid) :
+    M.inverse.IsRKOneStep f y_mid H y₀ := by
+  obtain ⟨Y, hY_stage, hY_out⟩ := h
+  refine ⟨Y, ?_, ?_⟩
+  · intro i
+    -- Stage eq for M.inverse at base y_mid, same Y.
+    -- Use hY_stage i (M's stage eq) and hY_out (M's output eq).
+    sorry  -- See §C.1 below for the exact closure
+  · -- Output eq: y_mid + H • ∑ i, (-M.b i) • f (Y i) = y₀
+    sorry  -- See §C.2 below for the exact closure
 ```
 
-This is the load-bearing reduction lemma for both P3 and P4 below.
+**IMPORTANT**: The two `sorry` lines above are *placeholders for
+the closure tactic*, not deliverables. They must be replaced with
+**working tactics that close the goal axiom-clean** before commit.
 
-#### P3 — `compose_id_equivalent` (right identity, easier; ~25 LOC)
+**LOC target**: ~25–35 LOC total. **Time budget**: 30 min.
 
-Note: `s + 0 = s` IS definitionally equal in Lean 4 (`Nat.add` recurses
-on the second argument). So this is a HOMOGENEOUS-stage `Equivalent
-(s := s)` claim — no HEq plumbing needed.
+See §C below for the exact tactic forms most likely to fire.
+
+#### P3 — `compose_inverse_equivalent` (right absorption)
+
+Add after P2:
+
+```lean
+/-- *Right inverse absorption (§382).* `M · M⁻¹ ≡ id` at the
+`Equivalent` level. Heterogeneous-stage: LHS has `s + s` stages,
+RHS has `0`. The proof uses cycle 214's `compose_isRKOneStep_iff`
+to factor any composite output, then `inverse_isRKOneStep_of_isRKOneStep`
+to convert the M-half into an M.inverse-step from y_mid back to y₀,
+then `equivalent_self M.inverse` (cycle 203) to identify the original
+M.inverse-half's output with y₀. -/
+theorem compose_inverse_equivalent.{u} {s : ℕ} (M : RKTableau s) :
+    @Equivalent.{u} (s + s) 0 (M.compose M.inverse) RKTableau.id := by
+  intro N _ _ _ f L hL
+  obtain ⟨H₀, hH₀_pos, hEq⟩ := M.inverse.equivalent_self.{u} f L hL
+  refine ⟨H₀, hH₀_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y_final y_final' h_compose h_id
+  rw [RKTableau.id_isRKOneStep_iff] at h_id
+  obtain ⟨y_mid, h_M_step, h_Minv_step⟩ :=
+    (compose_isRKOneStep_iff M M.inverse f y₀ H y_final).mp h_compose
+  have h_alt : M.inverse.IsRKOneStep f y_mid H y₀ :=
+    M.inverse_isRKOneStep_of_isRKOneStep h_M_step
+  have hy_final_eq_y₀ : y_final = y₀ :=
+    hEq y_mid H hH_pos hH_le y_final y₀ h_Minv_step h_alt
+  rw [hy_final_eq_y₀, h_id]
+```
+
+LOC: ~25.
+
+#### P4 — `inverse_compose_equivalent` (left absorption)
+
+Symmetric to P3. The key difference: we need
+`M.IsRKOneStep f y_mid H y₀` from an `M.inverse.IsRKOneStep f y₀ H
+y_mid`. **Use the §C.4 direct route** — prove a symmetric helper
+`isRKOneStep_of_inverse_isRKOneStep` that gives
+`M.IsRKOneStep f y_mid H y₀` from `M.inverse.IsRKOneStep f y₀ H
+y_mid`. ~15 LOC for the helper + ~25 LOC for `inverse_compose_equivalent`.
+
+Skip `inverse_inverse` (M.inverse.inverse = M) entirely — it's NOT
+definitionally true (subtraction doesn't unfold to `rfl`) and the
+symmetric helper is cleaner.
+
+```lean
+/-- *Inverse-step inversion lemma, symmetric direction.* Given a
+stage tuple `Y` witnessing `M.inverse.IsRKOneStep f y₀ H y_mid`,
+the same `Y` witnesses `M.IsRKOneStep f y_mid H y₀`. -/
+theorem isRKOneStep_of_inverse_isRKOneStep {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {y₀ y_mid : N} {H : ℝ}
+    (h : M.inverse.IsRKOneStep f y₀ H y_mid) :
+    M.IsRKOneStep f y_mid H y₀ := by
+  obtain ⟨Y, hY_stage, hY_out⟩ := h
+  refine ⟨Y, ?_, ?_⟩
+  · -- Symmetric to §C.1: y_mid = y₀ - H•∑b•f(Y), so y₀ = y_mid + H•∑b•f(Y).
+    -- Y i = y₀ + H•∑(A-b)•f(Y) = y_mid + H•∑b•f(Y) + H•∑(A-b)•f(Y) = y_mid + H•∑A•f(Y).
+    sorry  -- Close with §C.1-style tactic
+  · -- Symmetric to §C.2: y_mid + H•∑b•f(Y) = y₀.
+    -- From hY_out: y_mid = y₀ + H•∑(-b)•f(Y) = y₀ - H•∑b•f(Y), so y₀ = y_mid + H•∑b•f(Y).
+    sorry  -- Close with §C.2-style tactic + sign flip
+```
+
+Then:
+
+```lean
+theorem inverse_compose_equivalent.{u} {s : ℕ} (M : RKTableau s) :
+    @Equivalent.{u} (s + s) 0 (M.inverse.compose M) RKTableau.id := by
+  intro N _ _ _ f L hL
+  obtain ⟨H₀, hH₀_pos, hEq⟩ := M.equivalent_self.{u} f L hL
+  refine ⟨H₀, hH₀_pos, ?_⟩
+  intro y₀ H hH_pos hH_le y_final y_final' h_compose h_id
+  rw [RKTableau.id_isRKOneStep_iff] at h_id
+  obtain ⟨y_mid, h_Minv_step, h_M_step⟩ :=
+    (compose_isRKOneStep_iff M.inverse M f y₀ H y_final).mp h_compose
+  have h_alt : M.IsRKOneStep f y_mid H y₀ :=
+    M.isRKOneStep_of_inverse_isRKOneStep h_Minv_step
+  have hy_final_eq_y₀ : y_final = y₀ :=
+    hEq y_mid H hH_pos hH_le y_final y₀ h_M_step h_alt
+  rw [hy_final_eq_y₀, h_id]
+```
+
+LOC: ~40 combined.
+
+#### P5 — Quotient-level absorption laws (mechanical)
+
+Pattern from cycle 219's `composeQ_id_left`/`composeQ_id_right`:
+
+```lean
+theorem composeQ_inverse_right.{u} {s : ℕ} (M : RKTableau s) :
+    composeQ.{u}
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M⟩)
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M.inverse⟩)
+      = Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (M.compose_inverse_equivalent.{u})
+
+theorem composeQ_inverse_left.{u} {s : ℕ} (M : RKTableau s) :
+    composeQ.{u}
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M.inverse⟩)
+        (Quotient.mk Equivalent.setoidSigma.{u} ⟨s, M⟩)
+      = Quotient.mk Equivalent.setoidSigma.{u} ⟨0, RKTableau.id⟩ := by
+  show Quotient.mk _ _ = Quotient.mk _ _
+  exact Quotient.sound (M.inverse_compose_equivalent.{u})
+```
+
+LOC: ~15. Pure bookkeeping.
+
+#### P6 — Non-vacuity witnesses on `paddedEuler`
+
+In `namespace OpenMath.Chapter3.Section381`, after the cycle 219 P6
+examples (around line 3098):
+
+```lean
+example : composeQ.{0}
+    (Quotient.mk Equivalent.setoidSigma.{0} ⟨2, paddedEuler⟩)
+    (Quotient.mk Equivalent.setoidSigma.{0} ⟨2, paddedEuler.inverse⟩)
+  = Quotient.mk Equivalent.setoidSigma.{0} ⟨0, RKTableau.id⟩ :=
+  RKTableau.composeQ_inverse_right paddedEuler
+
+example : composeQ.{0}
+    (Quotient.mk Equivalent.setoidSigma.{0} ⟨2, paddedEuler.inverse⟩)
+    (Quotient.mk Equivalent.setoidSigma.{0} ⟨2, paddedEuler⟩)
+  = Quotient.mk Equivalent.setoidSigma.{0} ⟨0, RKTableau.id⟩ :=
+  RKTableau.composeQ_inverse_left paddedEuler
+```
+
+LOC: ~10. Verifies the laws compose on the cycle 030 backbone.
+
+---
+
+## §C — Tactic-level closure hints (use when P2 / P4 helper goals open)
+
+### §C.1 — Stage-equation closure pattern
+
+Starting goal (after `intro i` and unfolding `M.inverse`):
+```
+Y i = y_mid + H • ∑ j, (M.A i j − M.b j) • f (Y j)
+```
+with `hY_stage : Y i = y₀ + H • ∑ j, M.A i j • f (Y j)` and
+`hY_out : y_mid = y₀ + H • ∑ j, M.b j • f (Y j)`.
 
 Recipe:
-
 ```lean
-theorem compose_id_equivalent.{u} {s : ℕ} (M : RKTableau s) :
-    @Equivalent.{u} (s + 0) s (M.compose RKTableau.id) M := by
-  intro N _ _ _ f L hL
-  -- Reuse M's own equivalent_self threshold (cycle 203).
-  obtain ⟨h₀, hh₀_pos, hM_uniq⟩ := M.equivalent_self f L hL
-  refine ⟨h₀, hh₀_pos, ?_⟩
-  intro y₀ H hH_pos hH_le y₁ y₁' h_compose h_M
-  -- Decompose h_compose via cycle 214's iff:
-  -- (M.compose id).IsRKOneStep f y₀ H y₁ ↔
-  --   ∃ y_mid, M.IsRKOneStep f y₀ H y_mid ∧ id.IsRKOneStep f y_mid H y₁
-  obtain ⟨y_mid, h_M_step, h_id_step⟩ :=
-    (compose_isRKOneStep_iff M RKTableau.id f y₀ H y₁).mp h_compose
-  -- id.IsRKOneStep f y_mid H y₁ ⇒ y₁ = y_mid (by P2)
-  rw [id_isRKOneStep_iff] at h_id_step
-  rw [h_id_step]
-  -- Now y_mid and y₁' are both M.IsRKOneStep outputs from y₀; M's
-  -- output uniqueness (equivalent_self) closes.
-  exact hM_uniq y₀ H hH_pos hH_le y_mid y₁' h_M_step h_M
+simp only [inverse]
+rw [hY_stage i]   -- LHS becomes y₀ + H • ∑ j, M.A i j • f (Y j)
+-- Now goal: y₀ + H•∑A•f(Y) = y_mid + H•∑(A-b)•f(Y)
+-- Replace y_mid via hY_out, then expand the (A-b) sum.
+conv_rhs => rw [hY_out]
+-- Goal: y₀ + H•∑A•f(Y) = (y₀ + H•∑b•f(Y)) + H•∑(A-b)•f(Y)
+simp only [sub_smul, Finset.sum_sub_distrib, smul_sub]
+abel
 ```
 
-#### P4 — `id_compose_equivalent` (left identity; ~25 LOC)
-
-This is the heterogeneous case `0 + s` vs `s`. While `0 + s = s` is
-NOT defeq (it requires `Nat.zero_add`), the proof works at the
-abstract `IsRKOneStep` level which doesn't inspect stage counts —
-identical in shape to cycle 217's heterogeneous
-`compose_equivalent_compose`.
-
-Recipe (mirror of P3 with sides swapped):
-
+If `abel` doesn't close, fall back to:
 ```lean
-theorem id_compose_equivalent.{u} {s : ℕ} (M : RKTableau s) :
-    @Equivalent.{u} (0 + s) s (RKTableau.id.compose M) M := by
-  intro N _ _ _ f L hL
-  obtain ⟨h₀, hh₀_pos, hM_uniq⟩ := M.equivalent_self f L hL
-  refine ⟨h₀, hh₀_pos, ?_⟩
-  intro y₀ H hH_pos hH_le y₁ y₁' h_compose h_M
-  obtain ⟨y_mid, h_id_step, h_M_step⟩ :=
-    (compose_isRKOneStep_iff RKTableau.id M f y₀ H y₁).mp h_compose
-  rw [id_isRKOneStep_iff] at h_id_step
-  rw [h_id_step] at h_M_step
-  exact hM_uniq y₀ H hH_pos hH_le y₁ y₁' h_M_step h_M
+ring_nf
+-- if that also fails:
+have hsplit : ∀ j, (M.A i j - M.b j) • f (Y j)
+              = M.A i j • f (Y j) - M.b j • f (Y j) :=
+  fun j => sub_smul _ _ _
+simp_rw [hsplit, Finset.sum_sub_distrib]
+linarith  -- WRONG; use module / linear_combination instead
 ```
 
-#### P5 — Quotient identity laws (≤15 LOC, stretch goal)
-
-With cycle 218's `composeQ` and the two absorption lemmas from P3/P4
-in hand, the Quotient-level identity laws follow by `Quotient.ind` +
-`Quotient.sound`:
-
+Better: use `linear_combination`:
 ```lean
-theorem composeQ_id_left.{u} (q : Quotient Equivalent.setoidSigma.{u}) :
-    composeQ (Quotient.mk' ⟨0, RKTableau.id⟩) q = q := by
-  refine Quotient.ind (motive := fun q => composeQ _ q = q) ?_ q
-  rintro ⟨s, M⟩
-  -- composeQ ⟦⟨0,id⟩⟧ ⟦⟨s,M⟩⟧ = ⟦⟨0+s, id.compose M⟩⟧ by Quotient.lift₂_mk
-  -- Need: ⟦⟨0+s, id.compose M⟩⟧ = ⟦⟨s, M⟩⟧, i.e. setoidSigma related.
-  apply Quotient.sound
-  show @Equivalent.{u} (0 + s) s (RKTableau.id.compose M) M
-  exact id_compose_equivalent M
+linear_combination hY_stage i - hY_out
+```
+This is the cleanest tactic for "I know A = X and B = Y; conclude
+A - B = X - Y"-style goals.
 
-theorem composeQ_id_right.{u} (q : Quotient Equivalent.setoidSigma.{u}) :
-    composeQ q (Quotient.mk' ⟨0, RKTableau.id⟩) = q := by
-  refine Quotient.ind (motive := fun q => composeQ q _ = q) ?_ q
-  rintro ⟨s, M⟩
-  apply Quotient.sound
-  show @Equivalent.{u} (s + 0) s (M.compose RKTableau.id) M
-  exact compose_id_equivalent M
+### §C.2 — Output-equation closure pattern
+
+Starting goal (after unfolding `M.inverse`):
+```
+y_mid + H • ∑ i, (-M.b i) • f (Y i) = y₀
+```
+with `hY_out : y_mid = y₀ + H • ∑ i, M.b i • f (Y i)`.
+
+Recipe:
+```lean
+simp only [inverse]
+-- Pull negation out of the sum.
+have hsum_neg : ∀ i, (-M.b i) • f (Y i) = -(M.b i • f (Y i)) :=
+  fun i => by rw [neg_smul]
+simp_rw [hsum_neg, Finset.sum_neg_distrib]  -- or `← Finset.sum_neg`
+-- Goal: y_mid + H • -(∑ i, M.b i • f (Y i)) = y₀
+rw [smul_neg]
+-- Goal: y_mid - H • ∑ i, M.b i • f (Y i) = y₀
+linarith [hY_out]   -- WRONG (Y not real); use linear_combination instead
 ```
 
-These are the actual textbook content of "id is the identity element of
-the §382 group". P5 should ship if P1–P4 land within budget; otherwise
-defer to cycle 220 (alongside the inverse work).
-
-#### P6 — Non-vacuity / sanity examples (~10 LOC)
-
-After P5, exercise the laws on `paddedEuler` (in
-`namespace OpenMath.Chapter3.Section381`, after the cycle 218 examples
-near line ~2950):
-
+Cleaner:
 ```lean
-example :
-    composeQ (Quotient.mk' ⟨0, RKTableau.id⟩)
-             (Quotient.mk' ⟨2, paddedEuler⟩)
-      = Quotient.mk' ⟨2, paddedEuler⟩ :=
-  composeQ_id_left _
+linear_combination -hY_out
+```
+(or `linear_combination hY_out` if sign flips the other way).
 
-example :
-    composeQ (Quotient.mk' ⟨2, paddedEuler⟩)
-             (Quotient.mk' ⟨0, RKTableau.id⟩)
-      = Quotient.mk' ⟨2, paddedEuler⟩ :=
-  composeQ_id_right _
+### §C.3 — Risk: `Finset.sum_neg_distrib` vs `Finset.sum_neg`
+
+`lean_loogle` for the actual name if `simp_rw` doesn't fire:
+
+```
+loogle: ∑ i, -f i = -∑ i, f i
 ```
 
-### B.3. Minimum-viable cycle threshold
+Candidates: `Finset.sum_neg_distrib` (older), `Finset.sum_neg`
+(newer Mathlib), or `neg_sum`. Pre-confirm via
+`lean_local_search "Finset.sum_neg"` early in cycle.
 
-* **Must ship**: P1 (definition) + P2 (iff helper) + at least one of
-  P3 or P4 (one absorption law). Sorry count must remain at 0.
-* **Should ship**: P1 + P2 + P3 + P4 (both absorption laws) — the
-  full §382-group-identity at the `Equivalent` level.
-* **Stretch**: P1–P6 — the full `Quotient`-level identity laws with
-  non-vacuity witnesses.
+### §C.4 — Why we use the symmetric helper instead of `M.inverse.inverse = M`
 
-If only P1 + P2 + P3 ship, that's a +1 cycle (substantive but
-incomplete). If P1–P4 ship, that's the standard cycle. If P1–P6 ship,
-that's a strong cycle and unblocks cycle 220 to focus entirely on
-inverses.
+`M.inverse.inverse` unfolds to:
+* `A i j := (M.A i j − M.b j) − (−M.b j) = M.A i j` ✓
+* `b i := −(−M.b i) = M.b i` ✓
+* `c i := (M.c i − ∑ j, M.b j) − ∑ j, (−M.b j) = M.c i` ✓
 
-## §C. Risk register (pre-flighted, with mitigations)
+The unfolding is definitionally clean for `b` and `c`, but `A` and
+`c` involve subtraction-reaching-rewrite that won't be `rfl`. Could
+ship `inverse_inverse` via:
+```lean
+theorem inverse_inverse {s : ℕ} (M : RKTableau s) :
+    M.inverse.inverse = M := by
+  ext <;> simp [inverse]
+```
+**Optional**, only if needed. The symmetric helper `isRKOneStep_of_inverse_isRKOneStep`
+is more direct for P4's needs and doesn't depend on this rewrite.
 
-### R1 (medium, mitigation pre-staged) — Empty-Finset.sum unfolding
+---
 
-`id.IsRKOneStep f y₀ H y₁` requires the worker to prove
-`y₁ = y₀ + H • ∑ (i : Fin 0), id.b i • f(Y i)` collapses to
-`y₁ = y₀`. The empty sum reduces via `Finset.sum_empty` (or
-`Fin.sum_univ_zero`) to `0`, and `H • 0 = 0`, then `y₀ + 0 = y₀`.
-`simp [RKTableau.id]` should fire all of this; if it doesn't, add
-`Finset.sum_empty` or `Fin.sum_univ_zero` explicitly to the simp set.
+## §D — Risk inventory (anticipated, plan in advance)
 
-If `simp` still fails, decompose: `have hsum : (∑ (i : Fin 0), ...) = 0
-:= Finset.sum_empty` (or `Fin.sum_univ_zero`) followed by `rw [hsum,
-smul_zero, add_zero]`.
+* **R1** — `Finset.sum_neg_distrib` / `Finset.sum_neg` name drift.
+  Mitigation: `lean_loogle` early; both signatures are
+  `∀ f, ∑ i, -f i = -∑ i, f i`. Pre-confirm name before P2.
+* **R2** — `linear_combination` may fail on module goals (smul +
+  Finset.sum). Mitigation: `module` tactic instead, or explicit
+  `Finset.sum_add_distrib` + `Finset.sum_sub_distrib` decomposition,
+  closing per-term with `congr; ring` then `Finset.sum_congr rfl`.
+  Cycle 207's `pReduced_equivalent` proof uses similar patterns
+  successfully — review its structure if §C.1 stalls.
+* **R3** — `RKTableau.mk.injEq` / Field projections. The `inverse`
+  definition uses `where` syntax; verify access via `M.inverse.A`,
+  `M.inverse.b`, `M.inverse.c` unfolds cleanly to the formula via
+  `simp only [inverse]`. Mitigation: explicit `show` reframing if
+  unfolds stall.
+* **R4** — `Equivalent`'s uniform-threshold quantifier shape (cycle
+  216 refactor): the order is `∃ h₀, ∀ y₀, ∀ h, ...`. P3 and P4
+  both `obtain ⟨H₀, ...⟩` first, then `intro y₀ H ...` — match
+  cycle 219's `compose_id_equivalent` proof shape exactly.
+* **R5** — `IsRKOneStep`'s instance arguments must be unpacked in
+  `intro N _ _ _ f L hL` — three underscores for
+  `[NormedAddCommGroup N] [NormedSpace ℝ N] [CompleteSpace N]`.
+  Match cycle 219's intro pattern.
+* **R6** — Universe annotations. Every `Equivalent` reference must
+  carry `.{u}`; same for `setoidSigma.{u}` in P5. Apply only to
+  `Equivalent` / `setoidSigma`, NEVER to `RKTableau` (cycle 218
+  dead end).
+* **R7** — `equivalent_self M.inverse` may require explicit
+  universe annotation: `M.inverse.equivalent_self.{u}`. Match the
+  pattern from cycle 219's `compose_id_equivalent` proof.
 
-### R2 (low) — `Fin.elim0` for the `RKTableau.id` definition
+---
 
-The `A : Matrix (Fin 0) (Fin 0) ℝ` field could be defined as:
-* `fun i _ => Fin.elim0 i` (case-split on the impossible domain)
-* `0` (the zero matrix, if Lean infers `Zero` on `Matrix (Fin 0) (Fin 0) ℝ`)
-* `Matrix.of (fun i _ => Fin.elim0 i)`
+## §E — Hard rules
 
-Try `fun i _ => Fin.elim0 i` first (matches `b` and `c` style). If
-Lean rejects, fall back to `0`. If both fail, use
-`Matrix.of (fun i _ => Fin.elim0 i)`. Don't spend more than 5 minutes
-on this — the definition's body matters less than its type.
+* **Sorry count must remain 0 at commit time.** Any `sorry` shown
+  in §B above is a placeholder; replace with working tactics or
+  abort to §F.
+* **No `axiom` / `constant` declarations.**
+* **No `maxHeartbeats` bumps** above the project default.
+* **No re-attempt of §441 Phase C.2** if §A times out (expected).
+* **No modification of `scripts/autonomous_loop.py`** (loop-maintainer
+  territory).
+* **Faithfulness**: `RKTableau.inverse` matches Butcher §382 p. 307
+  *literally* — `A_ij − b_j`, `−b_i`, `c_i − ∑b_j`. Do not "simplify"
+  or reorder.
 
-### R3 (low) — Heterogeneous-stage `Equivalent.{u}` annotation in P4
+---
 
-P4's signature uses `@Equivalent.{u} (0 + s) s ...` — explicit `.{u}`
-on the universe and explicit instance annotation on the source/target
-stage counts. This pattern is from cycle 217 (which generalised
-`compose_equivalent_compose` to heterogeneous stages). If Lean infers
-the universe correctly, the `.{u}` may be omittable; if it complains
-about universe metavariables (cycle 204/206 precedent), add the
-explicit annotation back.
+## §F — Abort threshold and fallback
 
-### R4 (medium) — `compose_isRKOneStep_iff` arity at `M = id`
+* **If P2 stalls** (≥45 min on either the stage- or output-equation
+  closure): do NOT ship a sorry-scaffolded version. Pivot to **Plan
+  B**: ship ONLY P1 (`RKTableau.inverse` definition) plus three
+  trivial `@[simp]` unfold lemmas:
+  ```lean
+  @[simp] theorem inverse_A (M : RKTableau s) (i j : Fin s) :
+      M.inverse.A i j = M.A i j - M.b j := rfl
+  @[simp] theorem inverse_b (M : RKTableau s) (i : Fin s) :
+      M.inverse.b i = -M.b i := rfl
+  @[simp] theorem inverse_c (M : RKTableau s) (i : Fin s) :
+      M.inverse.c i = M.c i - ∑ j, M.b j := rfl
+  ```
+  plus a non-vacuity sanity `example` on `paddedEuler.inverse`.
+  Sorry count remains 0; cycle scores ≥+1 on a partial deliverable.
+* **If §B exceeds 90 min total**: commit whatever axiom-clean
+  subset has shipped (at minimum P1). Defer P3/P4/P5/P6 to cycle
+  221. Update `lean_status.json` accordingly (`thm:382B` stays
+  `unformalized` if only P1 lands; `partial` if P3 lands but P4
+  doesn't; `formalized` only when both absorption laws + their
+  quotient lifts are shipped).
+* **Do not ship anything that breaks cycle 218/219 verification.**
+  Re-run `lean_verify` on:
+  - `OpenMath.Chapter3.Section312.RKTableau.id`
+  - `OpenMath.Chapter3.Section312.RKTableau.composeQ_id_left`
+  - `OpenMath.Chapter3.Section312.RKTableau.composeQ_id_right`
+  - `OpenMath.Chapter3.Section312.RKTableau.composeQ_eq_of_equivalent`
+  before commit. All must remain `[propext, Classical.choice, Quot.sound]`.
 
-Cycle 214's iff takes `M₁ : RKTableau s₁` and `M₂ : RKTableau s₂` as
-explicit arguments. When invoked with `M₁ := RKTableau.id` (so
-`s₁ := 0`), Lean should infer `s₁ = 0` from the type of `RKTableau.id`,
-but if it complains about the implicit `s₁` not being inferred, pass
-`s₁ := 0` explicitly: `compose_isRKOneStep_iff (s₁ := 0) RKTableau.id
-M f y₀ H y₁`.
+---
 
-### R5 (low) — `Quotient.ind` motive inference in P5
+## §G — Housekeeping at end of cycle
 
-`Quotient.ind` requires the `motive` to be specified when not
-trivially inferable. The recipe above passes
-`motive := fun q => composeQ _ q = q`; if Lean infers a different
-motive and complains, supply it explicitly with the underscore
-replaced by the concrete identity-class expression.
+* `extraction/formalization_data/lean_status.json` — update
+  `thm:382B` row's `lean_file` to `OpenMath/Chapter3/Section381.lean`,
+  `lean_symbol` to `OpenMath.Chapter3.Section312.RKTableau.composeQ_inverse_right`
+  (or `compose_inverse_equivalent` if only P3 lands), and `status`
+  per the abort thresholds above.
+* `plan.md` — bump `thm:382B` row from `[ ]` to `[x]` (if both
+  absorption laws + quotient lifts ship) or `[~]` (if partial).
+* `.prover-state/task_results/cycle_220.md` — document deliverables,
+  any pre-flagged risks that fired, and the cycle 221 outlook.
+  Cycle 221+ outlook: §382 associativity at `Equivalent` level
+  (cycle 219 update to `compose_assoc_HEq_plumbing.md` already
+  scopes this — abstract-N-level `Equivalent`-form
+  `compose_equivalent_compose_assoc` plus `Quotient.inductionOn₃`
+  + `Quotient.sound` lift). Then cycle 222 packages all four
+  axioms into `instance : Group (Quotient Equivalent.setoidSigma)`.
+* GPFS smoke test result appended to
+  `.prover-state/issues/cycle_182_gpfs_slowness.md` (one line:
+  cycle 220 — 37th consecutive timeout, EXIT=124).
 
-### R6 (negligible) — RKTableau is NOT universe-polymorphic
+---
 
-Cycle 218 hit this: spurious `.{u}` annotations on `RKTableau s`
-binders cause "too many explicit universe levels" errors. Only
-`Equivalent.{u}` and `Equivalent.setoidSigma.{u}` carry universe
-annotations. The `RKTableau` references in P3/P4 should NOT have
-`.{u}`.
+## §H — Quick reference (load-bearing predecessors)
 
-## §D. Pre-flighted Mathlib hooks (no MCP search needed for cycle 219)
+| Lemma | Location | Used in |
+|---|---|---|
+| `compose_isRKOneStep_iff` (cycle 214) | line ~2670 | P3, P4 |
+| `equivalent_self` (cycle 203) | line 1802 | P3, P4 |
+| `id_isRKOneStep_iff` (cycle 219) | line 2812 | P3, P4 |
+| `compose_id_equivalent` (cycle 219, template) | line 2837 | P3, P4 proof shape |
+| `composeQ` (cycle 218) | line ~2769 | P5 |
+| `Equivalent.setoidSigma.{u}` (cycle 212) | line 1932 | P5 |
+| `Quotient.sound` | Mathlib | P5 |
 
-All needed Mathlib lemmas are already in scope from prior cycles:
+The proof shape for P3 mirrors `compose_id_equivalent` line 2837
+verbatim with `RKTableau.id` swapped for `M.inverse` and
+`id_isRKOneStep_iff` (used for the right-side reduction) replaced
+by the new P2 lemma `inverse_isRKOneStep_of_isRKOneStep` plus
+`equivalent_self M.inverse` for uniqueness. Cycle 219's P3 closed in
+<10 min via this pattern; cycle 220 P3 should be similar once P2
+lands.
 
-| Need | Lemma | Source |
-|------|-------|--------|
-| Empty `Fin 0` sum | `Fin.sum_univ_zero` or `Finset.sum_empty` | `Mathlib.Algebra.BigOperators.Fin` |
-| Empty function | `Fin.elim0` | `Mathlib.Data.Fin.Basic` |
-| Quotient induction | `Quotient.ind` | `Init.Core` |
-| Quotient soundness | `Quotient.sound` | `Init.Core` |
-| Cycle 214's iff | `RKTableau.compose_isRKOneStep_iff` | `Section381.lean:2670` |
-| Cycle 203's M.equivalent_self | `RKTableau.equivalent_self` | `Section381.lean:1802` |
-| Cycle 218's composeQ | `RKTableau.composeQ` | `Section381.lean:~2750` |
-| Cycle 218's lift₂_mk reduction | `Quotient.lift₂_mk` | `Init.Core` (auto-fires by `rfl`) |
+---
 
-If MCP search is needed for any other lemma, **rate-limit-conserve**:
-do at most one `lean_loogle` and one `lean_local_search` for the
-entire cycle. Cycle 218 used exactly one loogle and shipped clean.
+## §I — What NOT to try
 
-## §E. Build and verification protocol
+* **Do NOT attempt the textbook's P-reducibility proof.** Butcher's
+  §382 proof of `thm:382B` shows the composite is P-reducible to a
+  method with `b = 0`. This requires building a partition witness,
+  applying `pReduced`, then showing equivalence to identity. ~3×
+  the LOC of the abstract-N-level route and depends on
+  `IsPReducibleVia` infrastructure that's tangential to cycle 220's
+  scope. Use the `compose_isRKOneStep_iff` + `equivalent_self`
+  route prescribed in §B.
+* **Do NOT try to define `inverse` as `c_i := -c_i + 1` or any
+  alternative formula.** Cycle 174 documented the failure mode of
+  "simplifying" textbook formulas; stick literally to
+  `c_i − ∑ j, b_j`. Even if `c_i − 1 = c_i − ∑ b_j` under
+  preconsistency, the literal Butcher formula is the textbook one.
+* **Do NOT route through `M.inverse.inverse = M` if it doesn't fall
+  out trivially.** Use the symmetric helper instead (§C.4).
+* **Do NOT add `[NeZero s]` or `0 < s` hypotheses.** The textbook
+  formula works for `s = 0` (vacuously — `RKTableau 0` has no
+  stages, `M.inverse` is also a 0-stage tableau, and the composite
+  `M.compose M.inverse : RKTableau (0 + 0) = RKTableau 0` should be
+  `Equivalent` to `RKTableau.id` trivially via the cycle 219
+  identity-element infrastructure). If `s = 0` makes any proof
+  awkward, that's a sign the proof isn't going through correctly,
+  not that we should add a hypothesis.
+* **Do NOT poll Aristotle** — no submissions are in flight, and
+  the §382 inverse construction is a 60-90 min targeted manual
+  proof, not an Aristotle-shaped problem.
+* **Do NOT cherry-pick a different theorem.** §382's inverse is the
+  natural follow-on to cycle 219's identity per the cycle 218/219
+  outlooks. Do not pivot to a different §382 / §383 / §388 entity
+  unless §A indicates a real GPFS recovery.
 
-1. Edit `OpenMath/Chapter3/Section381.lean` per §B above.
-2. Run `time lake env lean OpenMath/Chapter3/Section381.lean`. Expect
-   warm rebuild ~6s; cold ~8s (per cycles 213–218 baseline). If it
-   exceeds 30s wall, something is wrong — abort and re-examine.
-3. Run `lean_verify` on each new symbol:
-   * `OpenMath.Chapter3.Section312.RKTableau.id` — should be a
-     definition with no axiom output, or `[propext, Classical.choice,
-     Quot.sound]` if any classical machinery sneaks in.
-   * `OpenMath.Chapter3.Section312.RKTableau.id_isRKOneStep_iff` —
-     `[propext, Classical.choice, Quot.sound]`.
-   * `OpenMath.Chapter3.Section312.RKTableau.compose_id_equivalent` —
-     same.
-   * `OpenMath.Chapter3.Section312.RKTableau.id_compose_equivalent` —
-     same.
-   * (P5/P6) the Quotient laws and examples — same.
-4. Re-verify cycle 218 landmarks (`composeQ`,
-   `composeQ_eq_of_equivalent`) and cycle 217's
-   `compose_equivalent_compose` for no-regression. All should remain
-   axiom-clean.
-5. Sorry count must remain at 0:
-   `grep -c '\bsorry\b' OpenMath/Chapter3/Section381.lean` → 0.
+---
 
-## §F. Tolerances and abort thresholds
+## §J — Recommended invocation sequence
 
-* **Cycle compile time**: warm rebuild >30s ⇒ investigate before
-  committing; >60s ⇒ abort and roll back, file an issue.
-* **R4 firing**: if `compose_isRKOneStep_iff` arity issues require >15
-  minutes of debugging, ship P1 + P2 + P3 only and defer P4.
-* **R1 firing**: if the empty-Finset.sum collapse takes >30 minutes
-  to discharge, ship P1 + P2 only with a clean signature for P3/P4
-  documented in `.prover-state/issues/thm_382A_path.md`. Sorry count
-  must NOT rise.
-* **Total cycle time**: target ~45 minutes for P1–P4; ~60 minutes for
-  P1–P6. If approaching 90 minutes, ship what's done and defer the
-  rest.
+1. (≤6 min) §A GPFS smoke test → append timeout to issue file.
+2. (≤5 min) Pre-flight `lean_local_search` for `Finset.sum_neg`
+   variant names per R1.
+3. (≤10 min) Ship P1 (`RKTableau.inverse` def). Verify via
+   `lean_verify` after compile.
+4. (30 min) Ship P2 (`inverse_isRKOneStep_of_isRKOneStep`). Use
+   the §C.1 / §C.2 closure recipes; if `abel` / `module` /
+   `linear_combination` fails, decompose to per-term manipulation
+   via cycle 207's `pReduced_equivalent` pattern.
+5. (15 min) Ship P3 (`compose_inverse_equivalent`). Match cycle
+   219's `compose_id_equivalent` proof shape verbatim with the
+   M.inverse substitution.
+6. (15 min) Ship P4 (`isRKOneStep_of_inverse_isRKOneStep` helper +
+   `inverse_compose_equivalent`).
+7. (5 min) Ship P5 (`composeQ_inverse_left`, `composeQ_inverse_right`).
+8. (5 min) Ship P6 (paddedEuler non-vacuity examples).
+9. (10 min) Housekeeping §G.
 
-## §G. Post-cycle housekeeping
-
-After successful build + axiom verification:
-
-1. Update `extraction/formalization_data/lean_status.json`:
-   * `thm:382A` row stays `formalized` (cycle 218's bracketed form is
-     the headline; cycle 219 adds group-structure infrastructure not a
-     new entity-level closure).
-   * Append a brief `note` field addition noting the cycle 219
-     identity-element work, similar to cycle 217/218 cumulative notes
-     on `def:381A`'s row.
-
-2. Update `plan.md`:
-   * Extend the `thm:382A` row's note with one-line cycle 219 summary.
-   * If P5+P6 ship (Quotient laws + non-vacuity), the §382 group
-     structure progress is substantive enough to mention in the row's
-     forward-looking pointer.
-
-3. Update `.prover-state/issues/thm_382A_path.md`:
-   * Append a "Cycle 219 update — §382 group identity element shipped"
-     section documenting the four/six new symbols + the cycle 220
-     entry point (inverse element). ~30–60 lines.
-
-4. Update `.prover-state/issues/compose_assoc_HEq_plumbing.md`:
-   * Append a "Cycle 219 update" note that the Quotient-level
-     associativity (cycle 221+ target) can now be approached via
-     `Quotient.sound` on an `Equivalent`-level `compose_assoc`,
-     finessing the on-the-nose HEq blocker. The `composeQ_assoc`
-     theorem becomes a `Quotient.ind₃` + `Quotient.sound` corollary
-     of an `Equivalent`-level associativity claim.
-
-5. Write `.prover-state/task_results/cycle_219.md` per the standard
-   template (Worked on / Approach / Result / Faithfulness check / Dead
-   ends / Discovery / Suggested next approach).
-
-## §H. What NOT to try
-
-* **Do NOT attempt cycle 210's deferred `compose_assoc` HEq plumbing
-  directly.** That blocker (`compose_assoc_HEq_plumbing.md`) is
-  finessable through `Quotient.sound` (cycle 221+ target), NOT through
-  HEq dance. Cycle 219 ships identity, period.
-
-* **Do NOT attempt the inverse element this cycle.** Butcher §382's
-  inverse construction requires reading the textbook carefully (the
-  formula transforms `(c, A, b)` non-trivially). That's a cycle 220
-  deliverable with its own pre-flight scoping.
-
-* **Do NOT use `explicitEuler` as the identity.** It's a 1-stage method
-  that advances by `H · f(y₀)`, not the no-op identity. The 0-stage
-  tableau is the unique no-op.
-
-* **Do NOT modify `compose`, `Equivalent`, `setoidSigma`, or
-  `composeQ`.** All four are settled (cycles 209, 206, 212, 218
-  respectively); cycle 219 only adds new symbols, doesn't refactor
-  existing ones.
-
-* **Do NOT re-poll Aristotle for the cycle 183 §441 draft submission.**
-  The namespace fix is already extracted; nothing new to gain.
-
-* **Do NOT introduce `axiom` or `constant` declarations.** Per
-  CLAUDE.md.
-
-* **Do NOT increase `maxHeartbeats`.** If a proof times out, decompose
-  per CLAUDE.md.
-
-* **Do NOT spend cycle time on the GPFS phantom-verdict pattern.**
-  Cycles 176–197 documented this exhaustively; the loop maintainer
-  is notified. One smoke test is enough.
-
-* **Do NOT cherry-pick easier fresh-entity work** (e.g. opening
-  `def:451A` or `def:422B`) instead of the §382 group identity.
-  The §382 group structure is the strategically most valuable
-  immediate continuation given cycle 218's `composeQ` infrastructure
-  is one cycle old. Pivoting to a fresh entity now would strand
-  `composeQ` without a clear next consumer.
-
-## §I. Rationale for prioritization
-
-Cycle 218 successfully closed both forms of `thm:382A` and shipped
-`composeQ` as the group operation. Cycles 219 (identity), 220
-(inverse), and 221+ (associativity) form the natural three-cycle
-sequence to package `Quotient Equivalent.setoidSigma` as a Lean
-`Group` instance.
-
-Each step is cleanly bounded and has a known recipe:
-
-* **Cycle 219 (identity)**: pre-flighted in this strategy (§B).
-* **Cycle 220 (inverse)**: requires reading Butcher §382's inverse
-  construction formula. Distinct cycle of work, with its own pre-flight.
-* **Cycle 221+ (associativity)**: finesses cycle 210's deferred
-  `compose_assoc` HEq blocker via Quotient. Distinct cycle.
-* **Cycle 222+ (Group instance)**: package as `instance : Group
-  (Quotient Equivalent.setoidSigma)`. Pure bookkeeping once the
-  three axioms are in place.
-
-This is a 4-cycle commitment to closing §382's group structure. Each
-cycle is bounded and produces axiom-clean theorems. After §382
-group structure is complete, natural follow-ons include §383 (group
-homomorphisms via Φ), §384 (homomorphism to the elementary-weight
-group), and §388 (subgroups and quotient groups) — all of which
-consume the §382 `Group` instance directly.
-
-If §441 GPFS recovers at any point in this 4-cycle window, that
-work takes precedence (cycle 182 draft + cycle 184 namespace fix are
-ready to ship). Until then, the §382 group track is the right
-investment.
+Target total: ~90 min for the full deliverable. Plan B fallback
+(P1 only + simp lemmas + sanity) is achievable in 30 min.
