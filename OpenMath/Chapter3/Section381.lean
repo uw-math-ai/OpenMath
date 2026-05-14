@@ -1907,6 +1907,26 @@ instance Equivalent.setoid.{u} (s : ℕ) : Setoid (RKTableau s) where
   r M M' := @Equivalent.{u} _ _ M M'
   iseqv := ⟨equivalent_self, @Equivalent.symm.{u} _ _, @Equivalent.trans.{u} _ _ _⟩
 
+/-- *Heterogeneous Σ-typed setoid for `def:381A` `Equivalent`.*
+Combines cycles 203 (reflexivity), 204 (symmetry), 206 (transitivity)
+into a `Setoid` on `Σ s : ℕ, RKTableau s` — the natural ambient type
+for Butcher's §382 quotient `[m₁ · m₂]`, where two methods with
+*different* stage counts may live in the same equivalence class.
+
+Companion to the fixed-stage `Equivalent.setoid.{u} s` (cycle 211):
+the homogeneous setoid is useful for fixed-stage reasoning, while
+this Σ-typed variant is needed for the thm:382A statement
+`[m₁ · m₂] = [m̂₁ · m̂₂]` where stage counts of `m₁ · m₂` and
+`m̂₁ · m̂₂` may differ (`s₁ + s₂` vs `ŝ₁ + ŝ₂`). See
+`.prover-state/issues/thm_382A_path.md` (Gap B) for full context. -/
+instance Equivalent.setoidSigma.{u} : Setoid (Σ s : ℕ, RKTableau s) where
+  r p q := @Equivalent.{u} p.1 q.1 p.2 q.2
+  iseqv :=
+    ⟨fun p => @equivalent_self p.1 p.2,
+     fun {p q} h => @Equivalent.symm.{u} p.1 q.1 p.2 q.2 h,
+     fun {p q r} h₁ h₂ =>
+       @Equivalent.trans.{u} p.1 q.1 r.1 p.2 q.2 r.2 h₁ h₂⟩
+
 /-- *Per-step P-reduction preserves equivalence.* If `M` is P-reducible
 via partition `P` (def:381D), then `M` is equivalent (def:381A) to the
 P-reduced method `M.pReduced P`. Textbook §380 page 304: the stage
@@ -2313,6 +2333,44 @@ P-reduction. Composition route: `paddedEuler_pReducesTo_pReduced`
 theorem paddedEuler_equivalent_pReduced :
     paddedEuler.Equivalent (paddedEuler.pReduced pairPartition) :=
   paddedEuler_pReducesTo_pReduced.toEquivalent
+
+/-- *Non-vacuity for `Equivalent.setoidSigma`: homogeneous reflexivity.*
+The Σ-typed setoid restricted to a fixed `⟨2, paddedEuler⟩` reproduces
+the cycle 203 reflexivity witness. Confirms the setoid resolves
+typeclass lookup on a Σ-packaged input. -/
+example : @Setoid.r _ RKTableau.Equivalent.setoidSigma
+    ⟨2, paddedEuler⟩ ⟨2, paddedEuler⟩ := by
+  show paddedEuler.Equivalent paddedEuler
+  exact paddedEuler.equivalent_self
+
+/-- *Non-vacuity for `Equivalent.setoidSigma`: heterogeneous-stage
+equivalence.* The Σ-typed setoid genuinely identifies methods at
+*different* stage counts: `⟨2, paddedEuler⟩` and
+`⟨1, paddedEuler.pReduced pairPartition⟩` via cycle 208's
+`paddedEuler_equivalent_pReduced` (which routes through cycle 207's
+`PReducesTo.toEquivalent` on cycle 186's non-trivial 2 ↦ 1 P-reduction).
+Exercises the Σ-setoid in the *actually-relevant heterogeneous case*
+that motivates its existence. -/
+example : @Setoid.r _ RKTableau.Equivalent.setoidSigma
+    ⟨2, paddedEuler⟩ ⟨1, paddedEuler.pReduced pairPartition⟩ := by
+  show paddedEuler.Equivalent (paddedEuler.pReduced pairPartition)
+  exact paddedEuler_equivalent_pReduced
+
+/-- *Non-vacuity for `Equivalent.setoidSigma`: `Quotient.mk` API on
+heterogeneous stages.* Two Σ-packaged tableaux that are
+`Equivalent.setoidSigma`-related project to the *same* quotient class
+via `Quotient.sound`. Exercises the full quotient-formation pipeline
+that Butcher's §382 group construction will consume: takes
+`paddedEuler_equivalent_pReduced` (cycle 208) and lifts it to
+`[⟨2, paddedEuler⟩] = [⟨1, paddedEuler.pReduced pairPartition⟩]` in
+the Σ-typed quotient. -/
+example :
+    @Quotient.mk _ RKTableau.Equivalent.setoidSigma ⟨2, paddedEuler⟩
+      = @Quotient.mk _ RKTableau.Equivalent.setoidSigma
+        ⟨1, paddedEuler.pReduced pairPartition⟩ := by
+  apply Quotient.sound
+  show paddedEuler.Equivalent (paddedEuler.pReduced pairPartition)
+  exact paddedEuler_equivalent_pReduced
 
 /-- *Non-vacuity witness for `PReducesTo.toEquivalent` (cycle 207)
 exercising the `zeroStep` constructor.* `paddedEuler` is
