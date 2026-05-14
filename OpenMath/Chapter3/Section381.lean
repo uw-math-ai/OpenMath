@@ -1698,6 +1698,30 @@ theorem RKStageMap_contracting {s : ℕ} (M : RKTableau s) {N : Type*}
       (M.RKStageMap h f y₀) :=
   ⟨by exact_mod_cast hLt, M.RKStageMap_lipschitz h hf y₀⟩
 
+/-- *Banach uniqueness of `RKStageMap` fixed points* under the smallness
+condition `|h| · L · C < 1` (where `C := Σ_{i,j} |aᵢⱼ|`). Any two stage
+tuples `Y, Y' : Fin s → N` that are both fixed points of
+`M.RKStageMap h f y₀` agree pointwise. Extracts the Banach uniqueness step
+from `equivalent_self`'s proof body so downstream consumers (e.g.
+`PReducesTo → Equivalent`, future `Equivalent.trans`) can cite it
+directly. Generalised from scalar `ℝ` to any normed `ℝ`-space `N`
+(cycle 202's polymorphic foundation). -/
+theorem RKStageMap_fixedPoint_unique {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    (h : ℝ) {f : N → N} {L : NNReal} (hf : LipschitzWith L f)
+    (y₀ : N)
+    (h_small : |h| * (L : ℝ) *
+      (∑ i : Fin s, ∑ j : Fin s, |M.A i j|) < 1)
+    {Y Y' : Fin s → N}
+    (hY : M.RKStageMap h f y₀ Y = Y)
+    (hY' : M.RKStageMap h f y₀ Y' = Y') :
+    Y = Y' := by
+  have hContract := M.RKStageMap_contracting h hf y₀ h_small
+  rcases hContract.eq_or_edist_eq_top_of_fixedPoints hY hY' with
+    hEq | hInf
+  · exact hEq
+  · exact absurd hInf (edist_ne_top Y Y')
+
 /-- *Reflexivity of `def:381A` equivalence.* Every Runge–Kutta tableau is
 equivalent to itself in the sense of def:381A: for every autonomous
 Lipschitz RHS `f` and initial value `y₀`, there is a step-size threshold
@@ -1729,21 +1753,30 @@ theorem equivalent_self {s : ℕ} (M : RKTableau s) : M.Equivalent M := by
   have h_small : |h| * (L : ℝ) * C < 1 := by
     rw [h_abs]
     nlinarith [hh_pos, h_LCnn, h_mul]
-  have hContract := M.RKStageMap_contracting h hL y₀ h_small
-  have hY_fix : Function.IsFixedPt (M.RKStageMap h f y₀) Y := by
-    show M.RKStageMap h f y₀ Y = Y
+  have hY_fix : M.RKStageMap h f y₀ Y = Y := by
     funext i
     exact (hY_stage i).symm
-  have hY'_fix : Function.IsFixedPt (M.RKStageMap h f y₀) Y' := by
-    show M.RKStageMap h f y₀ Y' = Y'
+  have hY'_fix : M.RKStageMap h f y₀ Y' = Y' := by
     funext i
     exact (hY'_stage i).symm
-  have hY_eq : Y = Y' := by
-    rcases hContract.eq_or_edist_eq_top_of_fixedPoints hY_fix hY'_fix with
-      hEq | hInf
-    · exact hEq
-    · exact absurd hInf (edist_ne_top Y Y')
+  have hY_eq : Y = Y' :=
+    M.RKStageMap_fixedPoint_unique h hL y₀ h_small hY_fix hY'_fix
   rw [hY_out, hY'_out, hY_eq]
+
+/-- *Symmetry of `def:381A` equivalence.* If `M` is equivalent to `M'`
+then `M'` is equivalent to `M`. The output-equality conclusion
+`y₁ = y₁'` is symmetric in the outputs; this lemma repackages the
+hypotheses with the IsRKOneStep witnesses swapped and applies
+`Eq.symm`. -/
+theorem Equivalent.symm.{u} {s s' : ℕ}
+    {M : RKTableau s} {M' : RKTableau s'}
+    (hEq : @Equivalent.{u} s s' M M') :
+    @Equivalent.{u} s' s M' M := by
+  intro N _ _ f L hL y₀
+  obtain ⟨h₀, h₀_pos, hUniq⟩ := hEq f L hL y₀
+  refine ⟨h₀, h₀_pos, ?_⟩
+  intro hstep hstep_pos hstep_le y₁ y₁' hY hY'
+  exact (hUniq hstep hstep_pos hstep_le y₁' y₁ hY' hY).symm
 
 end OpenMath.Chapter3.Section312.RKTableau
 
@@ -1847,6 +1880,16 @@ theorem paddedEuler_pReducesTo_pReduced_via_pEquivalent_extraction :
     paddedEuler.PReducesTo (paddedEuler.pReduced pairPartition) :=
   paddedEuler_pEquivalent_pReduced.pReducesTo_of_right_isIrreducible
     paddedEuler_pReduced_pairPartition_isIrreducible
+
+/-- *§380 def:381A non-vacuity witness for `paddedEuler`.* The 2-stage
+padded explicit-Euler tableau is equivalent (in the sense of def:381A)
+to itself. Immediate corollary of `RKTableau.equivalent_self` (cycle 203)
+specialised at `paddedEuler`; strengthens cycle 030's
+`equivalent_explicitEuler_self` to the heterogeneous-stage (`s = 2`)
+setting. -/
+theorem paddedEuler_equivalent_self :
+    paddedEuler.Equivalent paddedEuler :=
+  paddedEuler.equivalent_self
 
 /-- Non-vacuity witness for the homogeneous-stage corollary
 `PEquivalent.eq_of_both_isIrreducible_homogeneous`: a single irreducible

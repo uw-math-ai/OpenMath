@@ -93,7 +93,7 @@
   "def:381A": {
     "lean_file": "OpenMath/Chapter3/Section381.lean",
     "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.Equivalent",
-    "notes": "Predicate over arbitrary normed spaces; non-vacuity witness on explicitEuler. General reflexivity equivalent_self M deferred \u2014 needs implicit-stage uniqueness via Banach fixed-point at small h.",
+    "notes": "Predicate over arbitrary normed spaces; non-vacuity witnesses on explicitEuler (cycle 030) and paddedEuler (cycle 204 `paddedEuler_equivalent_self`). General reflexivity `equivalent_self M : M.Equivalent M` shipped cycle 203 via cycle 201/202 Banach contraction foundation (threshold h\u2080 := 1/(2*(L*C+1)) with C := \u03a3\u1d62\u2c7c |M.A i j|). Cycle 204 P2 abstracted Banach uniqueness as `RKStageMap_fixedPoint_unique`. Cycle 204 P3 shipped `Equivalent.symm` (second leg of equivalence-relation closure; refl from cycle 203). Trans deferred to cycle 205+ pending `RKStageMap_fixedPoint_exists` helper.",
     "status": "formalized"
   },
   "def:381B": {
