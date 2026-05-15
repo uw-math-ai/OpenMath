@@ -654,6 +654,29 @@ theorem bseriesPartialSum_insert
       bseriesTerm f y₀ h t + bseriesPartialSum f y₀ h S := by
   simp [bseriesPartialSum, Finset.sum_insert ht]
 
+/-- Singleton case (cycle 260): the B-series partial sum over `{t}`
+collapses to the bare summand `bseriesTerm f y₀ h t`. Mechanical
+`Finset.sum_singleton` port; downstream consumer for `lem:310B` Phase
+E small-`r` cases. -/
+theorem bseriesPartialSum_singleton
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) :
+    bseriesPartialSum f y₀ h {t} = bseriesTerm f y₀ h t := by
+  simp [bseriesPartialSum]
+
+/-- Disjoint-union additivity (cycle 260): the B-series partial sum
+over `S₁ ∪ S₂` decomposes additively whenever `S₁` and `S₂` are
+disjoint. Mechanical `Finset.sum_union` port; downstream consumer for
+`lem:310B` Phase E inductive small-`r` cases (split trees of order
+`≤ N` into trees of order exactly `N` and order `< N`). -/
+theorem bseriesPartialSum_union
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) {S₁ S₂ : Finset RootedTree}
+    (hDisj : Disjoint S₁ S₂) :
+    bseriesPartialSum f y₀ h (S₁ ∪ S₂) =
+      bseriesPartialSum f y₀ h S₁ + bseriesPartialSum f y₀ h S₂ := by
+  simp [bseriesPartialSum, Finset.sum_union hDisj]
+
 -- §310 B-series partial sum non-vacuity witnesses (cycle 255).
 
 example (f : ℝ → ℝ) (y₀ h : ℝ) :
@@ -670,6 +693,15 @@ example (f : ℝ → ℝ) (y₀ h : ℝ) :
         insert vertex {cherry} from rfl,
       bseriesPartialSum_insert _ _ _ hcv,
       bseriesPartialSum, Finset.sum_singleton, bseriesTerm_vertex]
+
+-- §310 B-series partial sum singleton non-vacuity witness (cycle 260):
+-- exercises `bseriesPartialSum_singleton` + `bseriesTerm_vertex`.
+
+example (y₀ h : ℝ) :
+    bseriesPartialSum (id : ℝ → ℝ) y₀ h
+        ({vertex} : Finset RootedTree)
+      = h • y₀ := by
+  rw [bseriesPartialSum_singleton, bseriesTerm_vertex]; rfl
 
 /-- If every tree in `S` has order at most `N`, then every `t ∈ S`
 lifts to a `TruncatedRootedTree N`. Useful for stating B-series
@@ -737,6 +769,29 @@ theorem bseriesAlphaPartialSum_insert
       bseriesAlphaTerm f y₀ h t + bseriesAlphaPartialSum f y₀ h S := by
   simp [bseriesAlphaPartialSum, Finset.sum_insert ht]
 
+/-- Singleton case (cycle 260): the α-weighted B-series partial sum
+over `{t}` collapses to the bare α-weighted summand
+`bseriesAlphaTerm f y₀ h t`. Mechanical `Finset.sum_singleton` port;
+matches the cycle-260 `bseriesPartialSum_singleton` shape on the
+α-weighted family. -/
+theorem bseriesAlphaPartialSum_singleton
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) :
+    bseriesAlphaPartialSum f y₀ h {t} = bseriesAlphaTerm f y₀ h t := by
+  simp [bseriesAlphaPartialSum]
+
+/-- Disjoint-union additivity (cycle 260): the α-weighted B-series
+partial sum over `S₁ ∪ S₂` decomposes additively whenever `S₁` and
+`S₂` are disjoint. Mechanical `Finset.sum_union` port; matches the
+cycle-260 `bseriesPartialSum_union` shape on the α-weighted family. -/
+theorem bseriesAlphaPartialSum_union
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) {S₁ S₂ : Finset RootedTree}
+    (hDisj : Disjoint S₁ S₂) :
+    bseriesAlphaPartialSum f y₀ h (S₁ ∪ S₂) =
+      bseriesAlphaPartialSum f y₀ h S₁ + bseriesAlphaPartialSum f y₀ h S₂ := by
+  simp [bseriesAlphaPartialSum, Finset.sum_union hDisj]
+
 -- §310 (310i) α-weighted partial sum non-vacuity witnesses (cycle 256).
 
 example (f : ℝ → ℝ) (y₀ h : ℝ) :
@@ -753,6 +808,16 @@ example (f : ℝ → ℝ) (y₀ h : ℝ) :
         insert vertex {cherry} from rfl,
       bseriesAlphaPartialSum_insert _ _ _ hcv,
       bseriesAlphaPartialSum, Finset.sum_singleton, bseriesAlphaTerm_vertex]
+
+-- §310 (310i) α-weighted partial sum singleton non-vacuity witness
+-- (cycle 260): exercises `bseriesAlphaPartialSum_singleton` +
+-- `bseriesAlphaTerm_vertex`.
+
+example (y₀ h : ℝ) :
+    bseriesAlphaPartialSum (id : ℝ → ℝ) y₀ h
+        ({vertex} : Finset RootedTree)
+      = h • y₀ := by
+  rw [bseriesAlphaPartialSum_singleton, bseriesAlphaTerm_vertex]; rfl
 
 end RootedTree
 
