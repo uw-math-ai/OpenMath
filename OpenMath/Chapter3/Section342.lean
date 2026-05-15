@@ -3638,4 +3638,117 @@ theorem butcherShiftedLegendre_card_roots_le (n : ℕ) :
         Polynomial.card_roots' _
     _ = n := butcherShiftedLegendre_natDegree n
 
+/-- **Butcher §342 (342g), witness for `n = 3`** — `P_3^*` has three
+distinct roots in `(0, 1)`.
+
+Strategy (non-closed-form to avoid the cubic-formula nested radicals):
+* `P_3^*(1/2) = 0` by the parity identity (342c): since `3` is odd,
+  `P_3^*(1 - 1/2) = - P_3^*(1/2)`, so `P_3^*(1/2) = - P_3^*(1/2)`, hence
+  `P_3^*(1/2) = 0`. This is the middle root.
+* The other two roots come from IVT on `[0, 1/5]` and `[4/5, 1]` using
+  the closed form `P_3^*(x) = 20x³ - 30x² + 12x - 1` from
+  `butcherShiftedLegendre_three`:
+  - `P_3^*(0) = -1`, `P_3^*(1/5) = 9/25 > 0` ⇒ root in `(0, 1/5)`.
+  - `P_3^*(4/5) = -9/25 < 0`, `P_3^*(1) = 1` ⇒ root in `(4/5, 1)`.
+* Distinctness follows from the disjoint open intervals
+  `(0, 1/5)`, `{1/2}`, `(4/5, 1)`. -/
+theorem butcherShiftedLegendre_three_roots :
+    ∃ x₁ x₂ x₃ : ℝ,
+      x₁ ≠ x₂ ∧ x₁ ≠ x₃ ∧ x₂ ≠ x₃ ∧
+      x₁ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      x₂ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      x₃ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      (butcherShiftedLegendre 3).eval x₁ = 0 ∧
+      (butcherShiftedLegendre 3).eval x₂ = 0 ∧
+      (butcherShiftedLegendre 3).eval x₃ = 0 := by
+  have hP3 := butcherShiftedLegendre_three
+  have hcont : Continuous (fun x : ℝ => (butcherShiftedLegendre 3).eval x) :=
+    (butcherShiftedLegendre 3).continuous
+  -- Key evaluations of `P_3^*` at five points.
+  have hf_0 : (butcherShiftedLegendre 3).eval (0 : ℝ) = -1 := by
+    rw [hP3]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+  have hf_1 : (butcherShiftedLegendre 3).eval (1 : ℝ) = 1 := by
+    rw [hP3]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_fifth : (butcherShiftedLegendre 3).eval (1 / 5 : ℝ) = 9 / 25 := by
+    rw [hP3]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_four_fifths : (butcherShiftedLegendre 3).eval (4 / 5 : ℝ) = -(9 / 25) := by
+    rw [hP3]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_half : (butcherShiftedLegendre 3).eval (1 / 2 : ℝ) = 0 := by
+    have h := butcherShiftedLegendre_eval_one_sub 3 (1 / 2 : ℝ)
+    rw [show (1 : ℝ) - 1 / 2 = 1 / 2 from by norm_num] at h
+    have hsign : ((-1 : ℝ)) ^ 3 = -1 := by norm_num
+    rw [hsign] at h
+    linarith
+  -- IVT on `[0, 1/5]`: sign flip from `-1` to `9/25` over `Ioo 0 (1/5)`.
+  have hivt_left :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 3).eval x) '' Set.Ioo (0 : ℝ) (1 / 5) := by
+    apply intermediate_value_Ioo (by norm_num : (0 : ℝ) ≤ 1 / 5) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 3).eval (0 : ℝ))
+        ((butcherShiftedLegendre 3).eval (1 / 5 : ℝ))
+    rw [hf_0, hf_one_fifth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨x₁, hx₁_mem, hx₁_eval⟩ := hivt_left
+  -- IVT on `[4/5, 1]`: sign flip from `-9/25` to `1` over `Ioo (4/5) 1`.
+  have hivt_right :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 3).eval x) '' Set.Ioo (4 / 5 : ℝ) 1 := by
+    apply intermediate_value_Ioo (by norm_num : (4 / 5 : ℝ) ≤ 1) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 3).eval (4 / 5 : ℝ))
+        ((butcherShiftedLegendre 3).eval (1 : ℝ))
+    rw [hf_four_fifths, hf_1]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨x₃, hx₃_mem, hx₃_eval⟩ := hivt_right
+  refine ⟨x₁, 1 / 2, x₃, ?_, ?_, ?_, ?_, ?_, ?_, hx₁_eval, hf_half, hx₃_eval⟩
+  · -- `x₁ ≠ 1/2`: `x₁ < 1/5 < 1/2`.
+    obtain ⟨_, hx₁_lt⟩ := hx₁_mem
+    intro h
+    linarith
+  · -- `x₁ ≠ x₃`: `x₁ < 1/5 < 4/5 < x₃`.
+    obtain ⟨_, hx₁_lt⟩ := hx₁_mem
+    obtain ⟨hx₃_gt, _⟩ := hx₃_mem
+    intro h
+    linarith
+  · -- `1/2 ≠ x₃`: `1/2 < 4/5 < x₃`.
+    obtain ⟨hx₃_gt, _⟩ := hx₃_mem
+    intro h
+    linarith
+  · -- `x₁ ∈ (0, 1)`: lift from `Ioo 0 (1/5)`.
+    obtain ⟨hgt, hlt⟩ := hx₁_mem
+    exact ⟨hgt, by linarith⟩
+  · -- `1/2 ∈ (0, 1)`.
+    refine ⟨?_, ?_⟩ <;> norm_num
+  · -- `x₃ ∈ (0, 1)`: lift from `Ioo (4/5) 1`.
+    obtain ⟨hgt, hlt⟩ := hx₃_mem
+    exact ⟨by linarith, hlt⟩
+
+/-- **Butcher §342 (342c) corollary** — for odd `n`, the midpoint
+`x = 1/2` is automatically a root of `P_n^*`.
+
+Proof: parity (342c) applied at `x = 1/2` gives
+`P_n^*(1/2) = P_n^*(1 - 1/2) = (-1)^n · P_n^*(1/2)`. When `n` is odd,
+`(-1)^n = -1`, so `P_n^*(1/2) = -P_n^*(1/2)`, forcing `P_n^*(1/2) = 0`.
+
+This generalises the midpoint-root argument that opens the `n = 1`
+and `n = 3` empirical anchors above, making the corresponding clause
+for every future odd-`n` anchor a one-liner. -/
+theorem butcherShiftedLegendre_eval_half_eq_zero_of_odd
+    (n : ℕ) (hn : Odd n) :
+    (butcherShiftedLegendre n).eval (1 / 2 : ℝ) = 0 := by
+  have h := butcherShiftedLegendre_eval_one_sub n (1 / 2 : ℝ)
+  rw [show (1 : ℝ) - 1 / 2 = 1 / 2 from by norm_num] at h
+  rw [hn.neg_one_pow] at h
+  linarith
+
 end OpenMath.Chapter3.Section342
