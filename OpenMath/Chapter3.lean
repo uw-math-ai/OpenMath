@@ -6,6 +6,7 @@ import OpenMath.Chapter3.Section312
 import OpenMath.Chapter3.Section319
 import OpenMath.Chapter3.Section322
 import OpenMath.Chapter3.Section323
+import OpenMath.Chapter3.Section342
 import OpenMath.Chapter3.Section343
 import OpenMath.Chapter3.Section350
 import OpenMath.Chapter3.Section355

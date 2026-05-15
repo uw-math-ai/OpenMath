@@ -299,9 +299,9 @@
     "status": "formalized"
   },
   "lem:342A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section342.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section342.butcherShiftedLegendre_eval_one",
+    "status": "partial"
   },
   "lem:342B": {
     "lean_file": null,
