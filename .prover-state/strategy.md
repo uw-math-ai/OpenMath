@@ -1,429 +1,397 @@
-# Cycle 254 strategy — `lem:310B` Phase A.0 (B-series term scaffold)
+# Cycle 255 Strategy — §310 B-series partial sum infrastructure
 
-## TL;DR
+## A. Context recap (one paragraph)
 
-Cycle 253 saturated Butcher Table 310(II) row r=5 with 9 axiom-clean
-α-witnesses. The task results explicitly direct cycle 254 to **pivot to
-`lem:310B` Phase A** and **do not extend the witness battery to r=6**.
+Cycle 254 shipped `RootedTree.bseriesTerm` (Phase A.0 of `lem:310B`)
+axiom-clean in `OpenMath/Chapter3/Section301.lean` (lines 548–620 —
+**not** Section310.lean, because `bseriesTerm` depends on `symmetry`
+which lives in Section301; placing it in Section310 would invert the
+import order — see cycle 254 task results "Placement correction"
+section before doing **any** §310 work in cycle 255). Sorry count
+across the repo: 0. Semantic sorry count: 11 (unchanged). Cycle 254
+worker explicitly listed `TruncatedRootedTree` + `bseriesPartialSum`
+as the cycle 255 candidates; this strategy commits to them.
 
-`lem:310B` itself (the Elementary Differential Weight Formula) is
-genuinely multi-cycle: per its `dependencies` field it requires
-`thm:306A` (Taylor's theorem — a multinomial expansion theorem that is
-itself unformalised and non-trivial) plus labeled-tree infrastructure
-(currently absent — needed to state the LHS series (310i) which is a
-sum over labeled rooted trees with orbit divisions). Attempting full
-closure in one cycle would either stall or require sorry-first
-scaffolds, which the cycle 149/150 and cycle 200/201 rollback precedents
-forbid.
+No Aristotle results are pending. No incoming bug reports. No
+supervisor-flagged issues for cycle 254 (the prior `attempts.md`
+entries about phantom verdicts are loop-maintainer territory, not
+worker territory — do NOT chase them).
 
-**Cycle 254 target**: ship Phase A.0 of the `lem:310B` infrastructure:
-define the per-tree B-series term function `bseriesTerm` (the summand
-of equation (310i), an order-`r(t)` term with weight `1/σ(t)` and value
-`F[t](y₀)`), and ship the trivial `t = τ` case of `lem:310B` (the
-"obvious" half per Butcher's own proof) plus the θ-rewriting scaffold
-that the full proof goes through. Axiom-clean, sorry-clean,
-single-cycle, load-bearing prerequisite for any further `lem:310B`
-work.
+## B. Target — single-cycle deliverable
 
-## §A — What to ship
+Ship **Phase A.1 + A.2** of the `lem:310B` roadmap in
+`OpenMath/Chapter3/Section301.lean` (after cycle 254's `bseriesTerm`
+non-vacuity examples, before `end RootedTree`):
 
-### P1 (REQUIRED) — `bseriesTerm` definition (Section310.lean)
+### P1 (REQUIRED) — `TruncatedRootedTree` subtype
 
-Add the per-tree B-series summand to `OpenMath/Chapter3/Section310.lean`
-immediately after the existing `elementaryDiff` definition (currently
-ending at line 199, just before the trailing `end OpenMath.Chapter3.Section310`).
-Add the new declarations *before* the trailing `end` so they live in
-the same namespace block.
-
-Definition (Butcher §310 equation (310i) summand form):
+Add the bounded-order subtype with minimal API:
 
 ```lean
-/-- The per-tree B-series term `(h^r(t) / σ(t)) • F(t)(y₀)`, the
-summand of Butcher's series (310i). For `f` smooth and `y₀ : E`, this
-is the contribution of the rooted tree `t` to the elementary-differential
-expansion of one ODE step. -/
-noncomputable def bseriesTerm
-    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) : E :=
-  (h ^ RootedTree.order t / (RootedTree.symmetry t : ℝ)) •
-    elementaryDiff f y₀ t
+/-- A rooted tree of order at most `N`. The `TruncatedRootedTree N`
+subtype is the natural index set for B-series partial sums truncated
+at order `N` (Butcher §310, the `O(h^{N+1})`-residual form). -/
+def TruncatedRootedTree (N : ℕ) : Type :=
+  { t : RootedTree // order t ≤ N }
+
+namespace TruncatedRootedTree
+
+instance instCoe (N : ℕ) : Coe (TruncatedRootedTree N) RootedTree :=
+  ⟨Subtype.val⟩
+
+/-- Order projection: `order (t : TruncatedRootedTree N) ≤ N`. -/
+def order {N : ℕ} (t : TruncatedRootedTree N) : ℕ :=
+  RootedTree.order t.val
+
+theorem order_le {N : ℕ} (t : TruncatedRootedTree N) : t.order ≤ N :=
+  t.property
+
+end TruncatedRootedTree
 ```
 
-Justification for placing the `(σ(t) : ℝ)` cast in the denominator
-literally rather than via a `Polynomial.C`-style wrapper: cycle 250's
-`alphaWeight` already adopts this convention
-(`OpenMath/Chapter3/Section301.lean:305`); reuse it for consistency.
-`RootedTree.symmetry_pos` (cycle 017) gives `0 < σ(t)` for
-positivity-driven downstream consumers — note for cycle 255 that the
-cast denominator is non-zero, so `field_simp`-style rewriting is safe.
+**Do NOT** attempt a `Fintype (TruncatedRootedTree N)` instance.
+That requires recursing through the nested-inductive structure of
+`RootedTree` and is multi-cycle work (the `Fintype` instance for
+`{ t : RootedTree // order t ≤ N }` would need a decidable
+finite-enumeration of all rooted trees up to order `N`, which is
+mathematically Cayley's formula territory). The `Fintype`-blocked
+path remains deferred for at least 3-5 more cycles.
 
-### P2 (REQUIRED) — Trivial-tree identity (`t = τ` case of `lem:310B`)
+### P2 (REQUIRED) — `bseriesPartialSum` over `Finset RootedTree`
+
+Because `Fintype (TruncatedRootedTree N)` is unavailable, the partial
+sum is parameterized by an arbitrary `Finset RootedTree` (hand-
+enumerated at call sites for small-order witnesses):
 
 ```lean
-/-- `lem:310B` t = τ case: at the trivial tree, the B-series term
-reduces to `h • f y₀`. Butcher's proof of Lemma 310B describes this
-case as "obvious"; in our σ-faithful formalisation it reduces to:
-σ(τ) = 1 (cycle 017), r(τ) = 1 (cycle 017), and `iteratedFDeriv ℝ 0 f
-y₀` collapsing to `f y₀` (the `Fin 0`-indexed empty-tuple input to a
-0-fold derivative). -/
-theorem bseriesTerm_vertex
+/-- B-series partial sum over a finite set of rooted trees. For a
+small hand-enumerated `S`, this approximates the full B-series
+`(310i)` to `O(h^{N+1})` where `N` bounds the orders in `S`. -/
+noncomputable def bseriesPartialSum
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (S : Finset RootedTree) : E :=
+  ∑ t ∈ S, bseriesTerm f y₀ h t
+```
+
+Plus the basic algebraic facts:
+
+```lean
+@[simp]
+theorem bseriesPartialSum_empty
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
     (f : E → E) (y₀ : E) (h : ℝ) :
-    bseriesTerm f y₀ h RootedTree.vertex = h • f y₀ := by
-  unfold bseriesTerm
-  rw [show RootedTree.order RootedTree.vertex = 1 from rfl,
-      show RootedTree.symmetry RootedTree.vertex = 1 from rfl]
-  -- Goal: (h ^ 1 / (1 : ℝ)) • elementaryDiff f y₀ vertex = h • f y₀
-  simp [pow_one, div_one]
-  -- Goal: elementaryDiff f y₀ vertex = f y₀
-  -- vertex = mk [] so elementaryDiff unfolds to iteratedFDeriv ℝ 0 f y₀
-  -- evaluated on the empty `Fin 0 → E` tuple, which is f y₀.
-  show elementaryDiff f y₀ (RootedTree.mk []) = f y₀
-  unfold elementaryDiff
-  simp [iteratedFDeriv_zero_apply]
-```
+    bseriesPartialSum f y₀ h ∅ = 0 := by
+  simp [bseriesPartialSum]
 
-**Risk R-P2.1**: `RootedTree.vertex` may not be a direct `mk []`
-synonym in the cycle 017 file. Check first via `lean_local_search
-"vertex"` in `OpenMath/Chapter3/Section301.lean`. If `vertex` is
-defined as `RootedTree.mk []`, the `show elementaryDiff f y₀ (mk [])`
-step works by `rfl`; if `vertex` is named differently, replace with
-the actual identifier.
-
-**Risk R-P2.2**: `iteratedFDeriv_zero_apply` may have a different
-Mathlib name in the current pin. Backup: use `lean_loogle` with type
-pattern `iteratedFDeriv _ 0 _ _ _ = _`, or `lean_local_search
-"iteratedFDeriv_zero"`. Candidate names to try in `lean_multi_attempt`
-at the failing `simp` line: `["simp [iteratedFDeriv_zero_apply]",
-"simp [iteratedFDeriv_zero_eq_comp]", "rfl",
-"exact iteratedFDeriv_zero_apply _ _"]`.
-
-**Risk R-P2.3**: `order vertex = 1` and `symmetry vertex = 1` may
-not be definitional. The cycle 017 `tau_values` at
-`Section301.lean:267` proves these. If `show ... from rfl` fails,
-swap to `rw [tau_values]` (extracting both equalities) or use inline
-`have h_order : ... := by simp [...]` / `have h_sigma : ... := by
-simp [...]`. Verify by `lean_hover_info` on `order` and `symmetry`
-to check definitional reducibility.
-
-### P3 (REQUIRED) — θ-reweighting scaffold
-
-```lean
-/-- `lem:310B` rearrangement core: at every rooted tree `t`, the
-B-series term is invariant under multiplication by the elementary
-weight `θ(t)` of the exact-solution operator. Since `θ ≡ 1` (cycle
-249, `theta_eq_one`), this is mathematically trivial — but it is the
-pointwise algebraic identity Butcher's `lem:310B` proof goes through
-to relate the labeled and unlabeled forms of (310i).
-
-NOT the full statement of `lem:310B` — the full lemma asserts a
-re-summation identity between a labeled-tree-orbit sum (LHS, requires
-labeled-tree machinery not yet built) and the θ-weighted unlabeled
-sum (RHS). Cycle 254 ships only the pointwise scaffold; the
-re-summation requires `thm:306A` (Taylor's theorem) plus labeled-tree
-infrastructure. -/
-theorem bseriesTerm_eq_theta_smul_bseriesTerm
+theorem bseriesPartialSum_insert
     {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) :
-    bseriesTerm f y₀ h t = (RootedTree.theta t) • bseriesTerm f y₀ h t := by
-  rw [RootedTree.theta_eq_one t, one_smul]
+    (f : E → E) (y₀ : E) (h : ℝ) {t : RootedTree} {S : Finset RootedTree}
+    (ht : t ∉ S) :
+    bseriesPartialSum f y₀ h (insert t S) =
+      bseriesTerm f y₀ h t + bseriesPartialSum f y₀ h S := by
+  simp [bseriesPartialSum, Finset.sum_insert ht]
 ```
 
-**Risk R-P3.1**: `theta_eq_one`'s qualified path. Per grep,
-cycle 249 placed `theta` and `theta_eq_one` inside
-`namespace OpenMath.Chapter3.Section310` (the file's own namespace),
-with `theta` itself inside what is effectively the `RootedTree`
-namespace at file scope. Inside Section310's namespace block, write
-just `theta_eq_one t` (no qualifier). If you have to qualify
-externally, use the dot-notation `t.theta` and fully qualified
-`OpenMath.Chapter3.Section310.theta_eq_one` — verify via
-`lean_local_search "theta_eq_one"`.
+### P3 (REQUIRED) — Non-vacuity witnesses
 
-**Risk R-P3.2**: Reading the cycle 249 grep output more carefully —
-the `def theta` is at line 137, and `theorem theta_eq_one` is at
-line 154. Both are at indent level 2 (inside a `mutual` block?
-indent suggests nesting). Inspect cycle 249's namespace structure
-with `Read OpenMath/Chapter3/Section310.lean offset=120 limit=80`
-before writing P3. If `theta_eq_one` is inside a `mutual` block,
-it may need `(t)` as an explicit argument, not dot-notation.
-
-### P4 (REQUIRED) — Three non-vacuity witnesses
-
-After the three new top-level declarations (and BEFORE the trailing
-`end OpenMath.Chapter3.Section310`), add three concrete `example`
-blocks. They must be in the same namespace block as `bseriesTerm` so
-the name resolves without qualification:
+Compute `bseriesPartialSum` on explicit hand-enumerated Finsets:
 
 ```lean
--- §310 B-series term non-vacuity witnesses (cycle 254).
-
 example (f : ℝ → ℝ) (y₀ h : ℝ) :
-    bseriesTerm f y₀ h RootedTree.vertex = h • f y₀ :=
-  bseriesTerm_vertex f y₀ h
+    bseriesPartialSum f y₀ h {vertex} = h • f y₀ := by
+  rw [bseriesPartialSum, Finset.sum_singleton]
+  exact bseriesTerm_vertex f y₀ h
 
-example (f : ℝ → ℝ) (y₀ h : ℝ) :
-    bseriesTerm f y₀ h RootedTree.cherry =
-      RootedTree.theta RootedTree.cherry • bseriesTerm f y₀ h RootedTree.cherry :=
-  bseriesTerm_eq_theta_smul_bseriesTerm f y₀ h RootedTree.cherry
-
-example (f : ℝ → ℝ) (y₀ h : ℝ) :
-    bseriesTerm f y₀ h RootedTree.broom₃ =
-      RootedTree.theta RootedTree.broom₃ • bseriesTerm f y₀ h RootedTree.broom₃ :=
-  bseriesTerm_eq_theta_smul_bseriesTerm f y₀ h RootedTree.broom₃
+example (f : ℝ → ℝ) (y₀ h : ℝ) (hcv : cherry ≠ vertex) :
+    bseriesPartialSum f y₀ h {vertex, cherry} =
+      h • f y₀ + bseriesTerm f y₀ h cherry := by
+  rw [show ({vertex, cherry} : Finset RootedTree) =
+        insert vertex {cherry} from rfl,
+      bseriesPartialSum_insert _ _ _ (by simp [Finset.mem_singleton, hcv.symm]),
+      bseriesPartialSum, Finset.sum_singleton, bseriesTerm_vertex]
 ```
 
-These should close via the named theorems above (no `by` block
-needed; direct term-mode `exact` shape). They provide regression
-oracles for cycle 255+ work.
+The `hcv : cherry ≠ vertex` hypothesis is needed because Lean cannot
+auto-decide inequality of nested inductive constructors. If
+`DecidableEq RootedTree` is missing, fall back to passing the inequality
+explicitly. If `DecidableEq RootedTree` is already available (it might
+be auto-derived), the example simplifies — check with
+`#synth DecidableEq RootedTree` and `Finset.mem_singleton` simp lemma.
 
-**Risk R-P4.1**: `RootedTree.cherry` / `RootedTree.broom₃`
-definitions. Per cycle 017 they are concrete constants in
-`Section301.lean`, exercised in cycle 251–253 examples. Use the same
-qualification as cycle 251–253. If `cherry` and `broom₃` are defined
-in a different namespace (e.g. directly under `OpenMath.Chapter3.Section301`
-rather than `RootedTree`), adjust the qualification — but the
-cycle 251–253 examples consistently use `cherry` and `broom₃` bare,
-which means they should be in scope here too.
+### P4 (STRETCH — only if P1-P3 use <60% of cycle)
 
-### P5 (STRETCH — DO NOT BLOCK ON) — Order-r homogeneity in h
-
-Only if P1–P4 land in under ~75% of cycle time:
+Add a membership predicate connecting `TruncatedRootedTree N` to a
+`Finset` of trees with bounded order:
 
 ```lean
-/-- B-series term is order-`r(t)` homogeneous in the step size `h`.
-A useful algebraic identity for future cycle 255+ work on summing
-B-series terms across trees of equal order. -/
-theorem bseriesTerm_smul_h
-    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
-    (f : E → E) (y₀ : E) (c h : ℝ) (t : RootedTree) :
-    bseriesTerm f y₀ (c * h) t =
-      c ^ RootedTree.order t • bseriesTerm f y₀ h t := by
-  unfold bseriesTerm
-  rw [mul_pow]
-  rw [show (c ^ RootedTree.order t * h ^ RootedTree.order t) /
-        (RootedTree.symmetry t : ℝ) =
-      c ^ RootedTree.order t *
-        (h ^ RootedTree.order t / (RootedTree.symmetry t : ℝ)) from by ring]
-  rw [mul_smul]
+/-- If every tree in `S` has order at most `N`, then every `t ∈ S`
+lifts to a `TruncatedRootedTree N`. Useful for stating B-series
+truncation results indexed by `TruncatedRootedTree N`. -/
+theorem exists_truncated_of_forall_order_le
+    {N : ℕ} {S : Finset RootedTree}
+    (hS : ∀ t ∈ S, RootedTree.order t ≤ N) :
+    ∀ t ∈ S, ∃ t' : TruncatedRootedTree N, t'.val = t := by
+  intro t ht
+  exact ⟨⟨t, hS t ht⟩, rfl⟩
 ```
 
-**Risk R-P5.1**: the `ring` step is over ℝ-with-explicit-division.
-If it stalls (unlikely on a single rational expression), swap to
-`field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp
-RootedTree.symmetry_pos)]; ring`. **Abort P5 cleanly if either form
-stalls — P5 is stretch, not load-bearing.**
+Skip P4 entirely if P1-P3 isn't axiom-clean by the 60% cycle mark.
 
-## §B — What NOT to do (BINDING)
+## C. Required forbiddens (do NOT attempt this cycle)
 
-* **Do NOT attempt the full `lem:310B`.** Per the entity JSON it
-  depends on `thm:306A` (unformalised, heavy multinomial Taylor) and
-  on labeled-tree machinery (absent). The full statement (310i) cannot
-  even be stated in Lean today. Cycle 254 ships *only* the trivial
-  `t = τ` case + the θ-rewriting scaffold.
+1. **Do NOT attempt full `lem:310B`.** Per cycle 254's faithfulness
+   discussion, the full lemma needs:
+   - `thm:306A` (Taylor's theorem, multinomial expansion) — multi-
+     cycle, unformalized.
+   - Labelled-tree quotient infrastructure (`def:300C`) — absent.
+   - Orbit-counting combinatorial bridge.
+   The pointwise scaffold `bseriesTerm_eq_theta_smul_bseriesTerm` from
+   cycle 254 is the only `lem:310B`-adjacent claim allowed.
+2. **Do NOT attempt small-r `lem:310B` cases** (e.g., "for
+   `TruncatedRootedTree 2`, state and prove `lem:310B`"). The LHS of
+   `lem:310B` is a labelled-tree-orbit sum that we cannot state
+   without `def:300C`. Hand-enumerating doesn't help.
+3. **Do NOT attempt `Fintype (TruncatedRootedTree N)`.** Multi-cycle
+   per §B P1 above.
+4. **Do NOT attempt `lem_311A_order_two`** (cycle 248 P2(a)). It
+   requires the `iteratedFDeriv ℝ 1 ↔ fderiv` Mathlib bridge plus
+   chain-rule extraction of `iteratedDeriv 2 yex x₀`. Estimated 150-
+   250 LOC and 2 cycles; doesn't fit.
+5. **Do NOT pivot to `def:381F` follow-up or `thm:381H`.** Those
+   require the multi-cycle Banach fixed-point bridge
+   (`thm_381H_deferred.md`).
+6. **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`**.
+   Per `cycle_182_gpfs_slowness.md`, that file's transitive
+   Mathlib.Analysis closure triggers 43+ consecutive GPFS timeouts.
+   Cycle 255 work is in Section301.lean only.
+7. **Do NOT raise `maxHeartbeats` above 200000.** If a `simp` set
+   timeout occurs, factor into smaller helpers.
+8. **Do NOT introduce `axiom`/`constant` declarations.**
+9. **Do NOT introduce sorries.** Cycle 254 was sorry-clean; cycle 255
+   must remain sorry-clean. Sorry-first scaffolds for `TruncatedRootedTree`
+   or `bseriesPartialSum` are forbidden — both definitions are
+   short and have natural inhabitants.
+10. **Do NOT edit `scripts/autonomous_loop.py` or the prompt-builder.**
+    Tautology-scanner false positives are loop-maintainer territory.
+11. **Do NOT rename or audit cycle 254's `bseriesTerm`,
+    `bseriesTerm_vertex`, or `bseriesTerm_eq_theta_smul_bseriesTerm`.**
+    They are axiom-clean and load-bearing.
 
-* **Do NOT introduce sorry-first scaffolds for `lem:310B`** (statement
-  with `sorry` body). The cycle 149/150 rollback (def:530B Path A) and
-  cycle 200/201 rollback (thm:381H scaffold) establish that sorry-first
-  deliverables get rolled back. Sorry count must stay at 0 across
-  cycle 254.
+## D. Approach (concrete)
 
-* **Do NOT extend the α-witness battery to r=6.** Per the cycle 253
-  task results: "Butcher Table 310(II) stops at r=5, and the r=6 count
-  is 20 trees (treadmill territory)."
+1. **Read the placement context** (5 min). Verify cycle 254's
+   declarations end at line ~620 of Section301.lean, immediately
+   before `end RootedTree`. The new P1-P4 content goes between the
+   last cycle 254 example and `end RootedTree` — keep everything
+   inside the `OpenMath.Chapter3.Section310.RootedTree` namespace
+   block (cycle 254 added bseriesTerm there; cycle 255 continues).
 
-* **Do NOT introduce `TruncatedRootedTree` + `Fintype` machinery.**
-  These are genuinely needed for `lem:310B` Phase A.1+, but the
-  `Fintype` instance on subtype-of-nested-inductive is multi-cycle.
-  Cycle 254 defers this.
+2. **Ship P1 (10 min)**. Five-ish lines: the `TruncatedRootedTree N`
+   definition, its `instCoe` instance, the `order` projection, and
+   the `order_le` accessor. Verify with `lake env lean
+   OpenMath/Chapter3/Section301.lean`; expect a warm rebuild (cycle
+   254's edits already populated the cache).
 
-* **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
-  43+ consecutive GPFS timeouts since cycle 182 (~12 days). Skip
-  without re-running the smoke test.
+3. **Ship P2 (15 min)**. Three declarations: `bseriesPartialSum`
+   (noncomputable def), `bseriesPartialSum_empty` (@[simp] via
+   `simp [bseriesPartialSum]` → `Finset.sum_empty`), and
+   `bseriesPartialSum_insert` (one-liner via `Finset.sum_insert`).
+   All three should close via `simp` after unfolding. Verify with
+   `lean_verify` on each.
 
-* **Do NOT attempt `lem_311A_order_two`** (the p=2 extension of cycle
-  248's `lem_311A_order_one`). Multi-cycle per cycle 248 consultant
-  analysis.
+4. **Ship P3 (15 min)**. Two `example` blocks. The singleton case is
+   straightforward via `Finset.sum_singleton` + cycle 254's
+   `bseriesTerm_vertex`. The two-element case needs care: if
+   `DecidableEq RootedTree` is auto-derived (check via
+   `#synth DecidableEq RootedTree`), use `Finset.mem_insert` /
+   `Finset.mem_singleton`. If not, pass `cherry ≠ vertex` as an
+   explicit hypothesis (this is the safe path — Lean's nested
+   inductive `RootedTree` may not auto-derive `DecidableEq`).
 
-* **Do NOT attempt `thm:306A` (Taylor's theorem).** Multinomial
-  expansion theorem; multi-cycle infrastructure work.
+   **Discovery loop**: if `cherry ≠ vertex` cannot be proved by
+   `decide` (because of nested inductive Bool issues), provide it
+   as a hypothesis in the example. Document the discovery in the
+   task results for future cycles.
 
-* **Do NOT attempt `def:381F` / `thm:381H` deferred-direction Banach
-  fixed-point bridges** per `thm_381H_deferred.md`. Multi-cycle.
+5. **(Optional) Ship P4 (15 min)**. Only if P1-P3 closed cleanly in
+   <60% of cycle. P4 is a one-line existence theorem; skip if any
+   doubt.
 
-* **Do NOT raise `maxHeartbeats` above 200000.**
+6. **Verification protocol**:
+   - `lake env lean OpenMath/Chapter3/Section301.lean` — must exit 0.
+   - `lake env lean OpenMath/Chapter3.lean` — regression check; must
+     exit 0.
+   - `grep -c sorry OpenMath/Chapter3/Section301.lean` — must be 0.
+   - Tautology scanner regex
+     `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` — must return
+     no matches on the new content (run with `Grep`).
+   - `lean_verify` on each new public declaration (`TruncatedRootedTree`,
+     `TruncatedRootedTree.order`, `TruncatedRootedTree.order_le`,
+     `bseriesPartialSum`, `bseriesPartialSum_empty`,
+     `bseriesPartialSum_insert`) — must return
+     `[propext, Classical.choice, Quot.sound]` only (no `sorryAx`).
 
-* **Do NOT introduce `axiom`/`constant` declarations.**
+## E. Mathlib hooks (verify with `lean_local_search` if any drift)
 
-* **Do NOT edit `scripts/autonomous_loop.py`** (loop-maintainer
-  territory).
-
-* **Do NOT poll any Aristotle project this cycle.** No submissions
-  are planned. If a planned cycle 255+ submission is queued by a
-  future cycle, the single-poll-after-30-min rule from CLAUDE.md
-  applies — not this cycle.
-
-* **Do NOT touch the cycle 251–253 alphaWeight witnesses** in
-  Section301.lean. They are regression oracles.
-
-## §C — Verification commands
-
-After P1–P4 (P5 if stretch lands), run these in order:
-
-```bash
-# 1. Section310 compiles standalone.
-time timeout 180 lake env lean OpenMath/Chapter3/Section310.lean
-# Expected: clean exit (~5–15s warm, ≤120s clean).
-
-# 2. Section301 still compiles (regression check on cycle 250–253 work).
-time timeout 180 lake env lean OpenMath/Chapter3/Section301.lean
-# Expected: clean exit, ≤ 15s warm.
-
-# 3. Aggregator builds.
-time timeout 300 lake env lean OpenMath/Chapter3.lean
-
-# 4. Sorry count unchanged at 0.
-grep -c sorry OpenMath/Chapter3/Section310.lean
-grep -c sorry OpenMath/Chapter3/Section301.lean
-
-# 5. Tautology scanner sweep.
-rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section310.lean
-# Expected: no matches.
-
-# 6. Axiom check on each new theorem (USE `lean_verify` MCP, NOT
-#    `#print axioms` on a standalone file — per CLAUDE.md and the
-#    cycle 192 stale-cache discovery, `#print axioms` on a standalone
-#    Lean invocation can produce false-positive `sorryAx` results
-#    until `lake build` refreshes the cache).
-#    Use lean_verify on:
-#      - OpenMath.Chapter3.Section310.bseriesTerm  (definition)
-#      - OpenMath.Chapter3.Section310.bseriesTerm_vertex
-#      - OpenMath.Chapter3.Section310.bseriesTerm_eq_theta_smul_bseriesTerm
-#      - (P5 stretch) OpenMath.Chapter3.Section310.bseriesTerm_smul_h
-# Expected for each: [propext, Classical.choice, Quot.sound] only.
-```
-
-If step 1 stalls past 180s for a 4-theorem change of this size, the
-GPFS pathology has spread beyond Section441 — escalate via a fresh
-issue file (do not delete `cycle_182_gpfs_slowness.md`; append).
-
-## §D — Risk inventory
-
-| Risk | Severity | Mitigation |
+| Goal | Lemma | Risk |
 |---|---|---|
-| R-P2.1 — `RootedTree.vertex` vs `mk []` mismatch | low | Check cycle 017 file; use whichever name resolves. Both should compile under definitional unfolding. |
-| R-P2.2 — `iteratedFDeriv_zero_apply` name drift | medium | `lean_loogle` / `lean_local_search` for current Mathlib name. Backup: `lean_multi_attempt` with three candidates. |
-| R-P2.3 — `order vertex = 1` / `σ vertex = 1` not `rfl`-closable | medium | Inline `simp [...]` proofs of `h_order` / `h_sigma`; route through cycle 017's `tau_values`. |
-| R-P3.1 — `theta_eq_one` qualified name | low | Inside Section310's namespace block, write just `theta_eq_one t`. If qualification needed, use the fully qualified path. |
-| R-P3.2 — `theta_eq_one` mutual-block argument shape | low | Inspect Section310.lean lines 120–200 before writing P3. |
-| R-P4.1 — `RootedTree.cherry` / `RootedTree.broom₃` qualification | low | Per cycle 251–253, both are in scope as `cherry` and `broom₃`. Match their usage exactly. |
-| R-P5.1 — `ring` over ℝ-with-division stalls | low (stretch only) | Swap to `field_simp; ring`. Abort P5 if both stall. |
-| R-namespace-end | low | `bseriesTerm` declarations must go INSIDE the existing namespace block, BEFORE the trailing `end OpenMath.Chapter3.Section310` (line ~199). The P4 examples can be either inside (term mode `exact`) or outside (would need full qualification). Prefer inside for terseness. |
+| `∑ t ∈ ∅, _ = 0` | `Finset.sum_empty` | low |
+| `∑ t ∈ insert x s, f t = f x + ∑ t ∈ s, f t` (when `x ∉ s`) | `Finset.sum_insert` | low |
+| `∑ t ∈ {x}, f t = f x` | `Finset.sum_singleton` | low |
+| `t ∈ {x} ↔ t = x` | `Finset.mem_singleton` | low |
+| `t ∈ insert x s ↔ t = x ∨ t ∈ s` | `Finset.mem_insert` | low |
+| `Subtype` coercion | `Subtype.val`, `Subtype.coe_mk` | low |
+| `{a, b}` literal `= insert a {b}` | by `rfl` (Lean's `{a, b}` notation) | low |
 
-## §E — Faithfulness check
+All low-risk; all are standard Mathlib. Do **not** spend time on a
+broad Mathlib search before starting — these names are stable. If a
+specific name has drifted, `lean_loogle` on the type pattern returns
+the right one in one query.
 
-Cycle 254 introduces:
+## F. Risk register and mitigations
 
-* `bseriesTerm` — pure scaffold definition. Encodes the (310i)
-  summand verbatim with σ-faithfulness divergence inherited from
-  cycle 017 (recursive (301b) definition vs Butcher §300's automorphism-
-  group definition). Same divergence cycle 250's `alphaWeight`
-  inherits; documented in `Section301.lean`'s file docstring and
-  `.prover-state/issues/symmetry_group_equivalence.md`.
+### R1 — `DecidableEq RootedTree` may not be auto-derived
 
-* `bseriesTerm_vertex` — the `t = τ` half of `lem:310B`. Butcher's
-  proof calls this "obvious"; our Lean form is the algebraic
-  identity `bseriesTerm f y₀ h vertex = h • f y₀`, which is true by
-  definition under σ(τ)=1, r(τ)=1, and `iteratedFDeriv ℝ 0`-collapse.
+If `cherry ≠ vertex` cannot be closed by `decide`, the two-element
+P3 example needs to take the inequality as a hypothesis (as shown in
+§B P3). This is fine: the example still demonstrates
+`bseriesPartialSum_insert` on a non-singleton Finset. Worst case:
+skip the two-element example and ship two singleton examples
+(`{vertex}` and `{cherry}` separately) — still satisfies non-vacuity.
 
-* `bseriesTerm_eq_theta_smul_bseriesTerm` — the θ-rewriting scaffold
-  that Butcher's full lem:310B proof relies on after applying
-  thm:306A. **NOT** the full statement of `lem:310B`; it's the
-  pointwise prerequisite identity. Documented explicitly in the
-  docstring: "NOT the full statement of `lem:310B` — the full lemma
-  asserts a re-summation identity between a labeled-tree-orbit sum
-  (LHS, requires labeled-tree machinery not yet built) and the
-  θ-weighted unlabeled sum (RHS)."
+### R2 — `TruncatedRootedTree`-as-subtype unification quirks
 
-`lean_status.json` row for `lem:310B`: **DO NOT MARK AS FORMALIZED**.
-Cycle 254 ships scaffolding only. Status stays `unformalized`. The
-`plan.md` row stays `[ ]`.
+If Lean has trouble unifying `t : TruncatedRootedTree N` with a
+`RootedTree` argument expecting `mk children`, the `instCoe`
+mechanism may need `@` annotations at call sites. Mitigation: P1's
+deliverable does not require any cycle-255 theorem to consume the
+subtype; the subtype is *scaffold for future cycles*. If P4 (the
+existence theorem) hits a subtype-unification snag, ship P4 with the
+weaker `t' = ⟨t, hS t ht⟩` directly (skipping the implicit
+coercion), or skip P4 entirely.
 
-The cycle 250 `alphaWeight` row reflects (302a) as a definition
-divergence (a closed-form replacing Butcher §302's labeled-counting
-definition). `bseriesTerm` does NOT introduce a parallel divergence —
-the (310i) summand IS literally `(h^r(t) / σ(t)) • F(t)(y₀)` in
-Butcher, so the Lean definition is a faithful transcription.
+### R3 — `bseriesPartialSum_insert`'s simp set might over-fire
 
-## §F — Cycle 255+ outlook
+If `simp [bseriesPartialSum, Finset.sum_insert ht]` over-rewrites or
+loops, fall back to explicit `unfold bseriesPartialSum` + `exact
+Finset.sum_insert ht (fun t => bseriesTerm f y₀ h t)`. The `simp`
+form is shorter; `unfold` is the safe fallback.
 
-After cycle 254 lands:
+### R4 — Section301.lean is now large (>620 LOC)
 
-* **Cycle 255 candidates** (highest leverage first):
-  - Define `TruncatedRootedTree N := { t : RootedTree // order t ≤ N }`
-    plus minimal API (val coercion, monotone embedding to higher N).
-    Avoid attempting `Fintype` instance (multi-cycle).
-  - Ship a "B-series partial sum" definition that sums `bseriesTerm`
-    over a hand-enumerated `Finset` of small trees (e.g., the four
-    r ≤ 3 trees, then the eight r ≤ 4 trees). This gives a working
-    partial B-series without `Fintype`.
-  - Aristotle batch for the `iteratedFDeriv ℝ 1 f y ↔ fderiv ℝ f y`
-    bridge (cycle 248 task results' P2(a) blocker); single-poll
-    after 30 min.
+If the file's elaboration starts to drag, that's an issue for cycles
+256+, not 255. Cycle 255's additions are small (~50-70 LOC) and don't
+add new mathlib transitive imports.
 
-* **Cycle 256+**: with trunc-trees + partial-sum infrastructure in
-  hand, attempt the small-r form of `lem:310B` (state and prove for
-  `TruncatedRootedTree 2` or 3, mechanically expanded) as a stepping
-  stone toward the general form.
+### R5 — `Finset` over `RootedTree` might surface decidability obligations
 
-* **Multi-cycle `lem:310B` general form**: ~5–8 cycles (labeled tree
-  theory + `thm:306A` Taylor + the orbit-counting combinatorial
-  bridge per Butcher's proof). Plan in a dedicated scoping doc when
-  cycle 256+ lands the small-r case.
+`Finset RootedTree` requires `DecidableEq RootedTree` to construct
+non-empty Finsets. If a non-empty Finset literal (`{vertex}`,
+`{vertex, cherry}`) fails to elaborate, add `Classical.decEq` as a
+private instance scoped to the new content (per memory
+`feedback_rootedtree_nested_induction.md`-adjacent practice). Do NOT
+add it at file-top scope (would affect cycle 254's content).
 
-## §G — Bottom-line directive
+## G. Why this target and not something else
 
-Cycle 254 deliverable: P1 + P2 + P3 + P4. Ship as one ~80 LOC
-addition to `OpenMath/Chapter3/Section310.lean`. Single-cycle scope,
-axiom-clean, sorry-clean. P5 only if time permits.
+**Why NOT pivot to a fresh entity?** Cycles 248–254 have built a
+contiguous §310/§311/§312 B-series chain (`theta_eq_one` →
+`lem_311A_order_one` → `alphaWeight` → `alphaWeight_pos` → Table
+310(II) saturation → `bseriesTerm`). Cycle 254 explicitly suggested
+`bseriesPartialSum` as the natural next step. Pivoting now would
+orphan the bseriesTerm investment.
 
-NO Aristotle. NO sorries. NO multi-cycle infrastructure commitments.
-NO `TruncatedRootedTree` / `Fintype` attempts. NO labeled tree
-theory. NO `thm:306A` attempts.
+**Why NOT attack `lem_311A_order_two` (cycle 248 P2(a))?** That's
+genuinely multi-cycle work (the `iteratedFDeriv ℝ 1 ↔ fderiv` bridge
+plus chain-rule extraction). The cycle 254 task results' Discovery
+section identifies this as cycle 256+ scope.
 
-If P1–P4 stall in the first half of the cycle, abort and ship a
-minimal alternative: a single new named theorem of the form
-`bseriesTerm_pos_smul_homogeneity` (rewrite of P5 with a non-
-negativity flavor), or alternatively retreat to a 3-line
-`bseriesTerm_zero` theorem proving `bseriesTerm f y₀ 0 t = 0`
-whenever `0 < order t` (a trivial scaling fact). Sorry count stays
-0 either way.
+**Why NOT attack a `thm:302*` enumeration formula?** Those entities
+(`thm:302A`, `thm:302B`, `thm:302C`) are combinatorial generating-
+function results. They need a `Fintype` instance on
+`RootedTree`-of-bounded-order — i.e. the very `Fintype
+(TruncatedRootedTree N)` we explicitly defer. No path to a single-
+cycle deliverable there.
 
-## §H — Pre-flight checklist
+**Why `TruncatedRootedTree` if we can't ship `Fintype`?** Because
+the *definition* and basic API are tractable; the type carries useful
+structural information (`order_le`) for stating future bounded-order
+theorems. `Fintype` is the hard piece that has to wait.
 
-Before starting P1, verify by `Read` / `Grep` (these are cheap and
-prevent the most common cycle-stall failure modes):
+**Why hand-enumerated `Finset` for `bseriesPartialSum`?** Because
+without `Fintype (TruncatedRootedTree N)` we have no canonical
+"`Finset` of all trees with order ≤ N" — but a user-supplied `Finset`
+works fine for small-order witnesses (e.g. `{vertex, cherry}` is
+exactly an order-≤-2 forest). This shifts the burden from the
+infrastructure to the call site, which is the correct trade-off for
+a single cycle.
 
-1. **`Section310.lean` namespace structure at lines 120–200.** Confirm
-   `theta` lives at file scope inside `namespace OpenMath.Chapter3.Section310`,
-   not inside a sub-namespace. Confirm `theta_eq_one` is accessible
-   bare-named from inside the same namespace.
+## H. Faithfulness assertion
 
-2. **`Section301.lean::tau_values` at line 267.** Confirm it states
-   `order vertex = 1 ∧ symmetry vertex = 1 ∧ density vertex = 1` (or
-   similar). If the structure differs, P2's `show ... from rfl`
-   strategy may need adjustment.
+This cycle introduces NO new mathematical content from Butcher.
+`TruncatedRootedTree N` is a Lean engineering scaffold (Butcher does
+not name it). `bseriesPartialSum` is the natural finite-Finset
+version of Butcher's `(310i)` series; once we shipped `bseriesTerm`
+in cycle 254, partial sums are immediate.
 
-3. **`RootedTree.vertex` definition.** Confirm in Section301.lean
-   that `vertex` is defined as `RootedTree.mk []` (or whichever
-   constructor form). If it's a separate `def`, the `show`
-   manipulation in P2 needs that intermediate `unfold`.
+No new faithfulness divergences. The σ-faithfulness divergence
+(Section301's stipulative recursive `symmetry` vs Butcher §300's
+automorphism-group definition, issue `symmetry_group_equivalence.md`)
+remains the only divergence in this lineage; cycle 255 doesn't touch
+it.
 
-4. **`iteratedFDeriv_zero_apply` Mathlib name.** Run
-   `lean_loogle "iteratedFDeriv _ 0"` or `lean_local_search
-   "iteratedFDeriv_zero"` BEFORE attempting P2's body. If the name
-   differs, pre-load `lean_multi_attempt` candidates.
+## I. Cycle 256+ outlook (informational only — do NOT pre-position)
 
-If checklist items reveal mismatches with the strategy as written,
-adapt P2/P3 locally rather than escalating — the deliverable is the
-mathematical content (B-series term + trivial case + θ-scaffold),
-not the literal Lean text in this strategy.
+After cycle 255 ships:
+
+1. **Cycle 256**: `lem_311A_order_two` — the order-2 Taylor expansion
+   bridge for `lem:311A`. Requires the `iteratedFDeriv ℝ 1 ↔ fderiv`
+   Mathlib bridge (search `lean_loogle "iteratedFDeriv _ 1"` for
+   `iteratedFDeriv_one_apply` or
+   `ContinuousMultilinearMap.curry0`/`curry1`) plus a small ODE-side
+   helper "for `f` C¹ and `yex' = f ∘ yex`, `iteratedDeriv 2 yex x₀ =
+   fderiv f y₀ (f y₀)`". Aristotle-batch-friendly. ~150-250 LOC.
+2. **Cycle 257**: small-r partial `lem:310B` form — state `lem:310B`
+   restricted to a hand-enumerated `Finset` on the RHS, with the LHS
+   reformulated as a partial Taylor expansion via the cycle 256
+   order-2 result. Builds on cycles 254 + 255 + 256.
+3. **Cycle 258+**: the labelled-tree quotient (`def:300C`) work, if/
+   when full `lem:310B` becomes load-bearing.
+
+These are notes for the cycle 256 planner; cycle 255 worker should
+**not** pre-position any of this.
+
+## J. End-of-cycle checklist (verbatim)
+
+Before commit:
+
+- [ ] `lake env lean OpenMath/Chapter3/Section301.lean` exits 0.
+- [ ] `lake env lean OpenMath/Chapter3.lean` exits 0 (regression check).
+- [ ] `grep -c sorry OpenMath/Chapter3/Section301.lean` → 0.
+- [ ] Tautology-scanner regex returns no matches on cycle 255 additions.
+- [ ] `lean_verify` axiom-clean on every new public declaration (no
+      `sorryAx`).
+- [ ] `task_results/cycle_255.md` written with the standard sections
+      (Worked on / Approach / Result / Faithfulness check / Dead ends /
+      Discovery / Suggested next approach). Document P4's status
+      (shipped or skipped) clearly.
+- [ ] `plan.md` row for `lem:310B` **unchanged** (still `[ ]`,
+      `unformalized` — cycle 255 ships scaffold, not closure).
+- [ ] `lean_status.json` row for `lem:310B` **unchanged**.
+- [ ] No `axiom` / `constant` declarations introduced.
+- [ ] No `maxHeartbeats` raise.
+- [ ] No edits to `scripts/autonomous_loop.py`.
+
+## K. Bottom-line directive
+
+Ship `TruncatedRootedTree N` subtype (P1) + `bseriesPartialSum` over
+`Finset` (P2) + two non-vacuity witnesses (P3) in Section301.lean.
+~50-80 LOC, axiom-clean, sorry-clean. P4 is optional stretch.
+
+If any step blocks unexpectedly (e.g. `simp` timeout on a partial-sum
+identity, `DecidableEq` snag, `Finset` literal elaboration failure),
+drop to P1 only and ship the `TruncatedRootedTree` subtype alone —
+even just the subtype definition + `order` accessor is enough cycle
+255 progress and unblocks cycle 256+'s small-r work. The strategy's
+failure mode is **always** "ship less, axiom-clean" rather than
+"ship more, broken".

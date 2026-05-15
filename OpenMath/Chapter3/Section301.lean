@@ -600,6 +600,87 @@ example (f : ℝ → ℝ) (y₀ h : ℝ) :
       theta broom₃ • bseriesTerm f y₀ h broom₃ :=
   bseriesTerm_eq_theta_smul_bseriesTerm f y₀ h broom₃
 
+/- ### Truncated rooted trees + B-series partial sums (cycle 255)
+
+Phase A.1 + A.2 of the `lem:310B` roadmap: the bounded-order subtype
+`TruncatedRootedTree N` (Lean engineering scaffold for future cycles;
+Butcher does not name it), and the partial sum `bseriesPartialSum`
+indexed by a hand-enumerated `Finset RootedTree`.
+
+A `Fintype (TruncatedRootedTree N)` instance is deliberately deferred
+(it would require a decidable finite enumeration of all rooted trees
+up to order `N` — mathematically Cayley's formula territory). Until
+then, partial sums take an explicit `Finset` of trees; for small
+hand-enumerated `S`, `bseriesPartialSum f y₀ h S` approximates
+Butcher's (310i) to `O(h^{N+1})` where `N` bounds the orders in `S`. -/
+
+/-- A rooted tree of order at most `N`. The `TruncatedRootedTree N`
+subtype is the natural index set for B-series partial sums truncated
+at order `N` (Butcher §310, the `O(h^{N+1})`-residual form). -/
+def TruncatedRootedTree (N : ℕ) : Type :=
+  { t : RootedTree // order t ≤ N }
+
+namespace TruncatedRootedTree
+
+/-- Order projection: `order (t : TruncatedRootedTree N) ≤ N`. -/
+def order {N : ℕ} (t : TruncatedRootedTree N) : ℕ :=
+  RootedTree.order t.val
+
+theorem order_le {N : ℕ} (t : TruncatedRootedTree N) : t.order ≤ N :=
+  t.property
+
+end TruncatedRootedTree
+
+/-- B-series partial sum over a finite set of rooted trees. For a
+small hand-enumerated `S`, this approximates the full B-series
+`(310i)` to `O(h^{N+1})` where `N` bounds the orders in `S`. -/
+noncomputable def bseriesPartialSum
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (S : Finset RootedTree) : E :=
+  ∑ t ∈ S, bseriesTerm f y₀ h t
+
+@[simp]
+theorem bseriesPartialSum_empty
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) :
+    bseriesPartialSum f y₀ h ∅ = 0 := by
+  simp [bseriesPartialSum]
+
+theorem bseriesPartialSum_insert
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) {t : RootedTree} {S : Finset RootedTree}
+    (ht : t ∉ S) :
+    bseriesPartialSum f y₀ h (insert t S) =
+      bseriesTerm f y₀ h t + bseriesPartialSum f y₀ h S := by
+  simp [bseriesPartialSum, Finset.sum_insert ht]
+
+-- §310 B-series partial sum non-vacuity witnesses (cycle 255).
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesPartialSum f y₀ h {vertex} = h • f y₀ := by
+  rw [bseriesPartialSum, Finset.sum_singleton]
+  exact bseriesTerm_vertex f y₀ h
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesPartialSum f y₀ h {vertex, cherry} =
+      h • f y₀ + bseriesTerm f y₀ h cherry := by
+  have hcv : (vertex : RootedTree) ∉ ({cherry} : Finset RootedTree) := by
+    simp [Finset.mem_singleton, vertex, cherry]
+  rw [show ({vertex, cherry} : Finset RootedTree) =
+        insert vertex {cherry} from rfl,
+      bseriesPartialSum_insert _ _ _ hcv,
+      bseriesPartialSum, Finset.sum_singleton, bseriesTerm_vertex]
+
+/-- If every tree in `S` has order at most `N`, then every `t ∈ S`
+lifts to a `TruncatedRootedTree N`. Useful for stating B-series
+truncation results indexed by `TruncatedRootedTree N`. -/
+theorem exists_truncated_of_forall_order_le
+    {N : ℕ} {S : Finset RootedTree}
+    (hS : ∀ t ∈ S, RootedTree.order t ≤ N) :
+    ∀ t ∈ S, ∃ t' : TruncatedRootedTree N, t'.val = t := by
+  intro t ht
+  exact ⟨⟨t, hS t ht⟩, rfl⟩
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310
