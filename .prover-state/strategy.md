@@ -1,189 +1,289 @@
-# Strategy — Cycle 285
+# Cycle 286 Strategy — §342 (342f) Aristotle poll + n=10 fallback
 
 ## Context
 
-**Current state at HEAD (`8eb3d0b`)**:
-- `OpenMath/Chapter3/Section342.lean` ~2123 LOC, **0 sorries**, axiom-clean.
-- §342 (342f) ladder closed at n=2..8 (cycles 282/283/284).
-- General §342 (342f) submitted to Aristotle (project `c8b8f138-f875-4263-94ec-74533b5120d7`) cycle 282; **IN_PROGRESS at 12% for two consecutive polls** (cycles 283 and 284 — stalled).
-- §342 (342a) orthogonality, (342b) eval_one, (342c) eval_one_sub, (342d) general norm_sq, (342e) Rodrigues all **closed general** (cycles 271/272/273/277/281).
-- Repo sorry count: 0.
+Cycle 285 cancelled the long-stalled Aristotle project `c8b8f138` (12%
+across three consecutive cycle-polls) and submitted a strengthened
+resubmission **`efe4940e-0931-4fb2-8549-7eafab20d7f7`** at end of cycle
+285 (status: QUEUED). The replacement bundles cycle 281's
+`leadingCoeff = C(2n, n)`, cycle 277's iterated-IBP machinery, explicit
+small-`n` axioms for n=0..8, witnessed recurrence at n=2..8, and the
+verbatim textbook proof sketch.
 
-**Remaining §342 open work**:
-- (342f) general three-term recurrence — Aristotle stalled.
-- (342g) `n` distinct real zeros — scoping doc at `.prover-state/issues/lem_342A_g_zeros_scoping.md`.
+The §342 (342f) ladder now covers n=2..9 (cycle 285 shipped n=9).
+Sorry count: 0. Axiom-clean. `lake env lean OpenMath/Chapter3.lean`
+exits 0.
 
-## Priority order
+## Priority 0 (MANDATORY): Single-poll Aristotle `efe4940e`
 
-### P0 (mandatory) — Single-poll Aristotle `c8b8f138`
+**Tool**: `mcp__aristotle__get_status` on project_id
+`efe4940e-0931-4fb2-8549-7eafab20d7f7`.
 
-Run **exactly one** `mcp__aristotle__get_status` on project `c8b8f138-f875-4263-94ec-74533b5120d7`. Do NOT re-poll (CLAUDE.md rule).
+**Discipline**: ONE poll only. CLAUDE.md prohibits re-polling within
+a cycle. Decide on the single observation.
 
-**Branch decision**:
-- **Branch A (Aristotle COMPLETE)**: Skip P1/P2, integrate analogously to cycle 281's `d4ce527b` integration:
-  - Extract Aristotle's helpers into `OpenMath/Chapter3/Section342RecurrenceHelpers.lean` (new file, mirror cycle 281's `Section342NormSqHelpers.lean` pattern). Place under namespace `OpenMath.Chapter3.Section342Helpers`.
-  - Add the main theorem `butcherShiftedLegendre_recurrence (n : ℕ) (hn : 2 ≤ n) : (n : ℝ) • P_n^* = C(2n-1) · (2X − 1) · P_{n-1}^* − C(n-1) · P_{n-2}^*` to `Section342.lean`.
-  - Verify cycles 282–284's seven concrete witnesses (n=2..8) still compile (they should remain independent direct computations).
-  - Update `extraction/formalization_data/lean_status.json` `lem:342A` cycle reference to 285.
-  - Stretch (P3 below): fire Aristotle on (342g) per `.prover-state/issues/lem_342A_g_zeros_scoping.md`.
+Branch on the result:
 
-- **Branch B (Aristotle IN_PROGRESS at any %)**:
-  - **If still at 12% (third consecutive stall)**: cancel `c8b8f138` and execute P1 (resubmit with stronger prompt) AND P2 (ship n=9 manual ladder rung).
-  - **If percentage has advanced** (e.g. 12% → 17%+): leave it running, skip P1, ship P2 (n=9 manual rung) only.
+### Branch A — Aristotle status COMPLETE (integrate the proof)
 
-- **Branch C (Aristotle COMPLETE_WITH_ERRORS or FAILED)**: Apply suggested fixes if minor (1–2 line patches like the cycle 277 namespace fix); otherwise cancel and execute P1.
+1. `mcp__aristotle__download_result` → retrieve the proof.
+2. Extract helper lemmas into a new file
+   **`OpenMath/Chapter3/Section342RecurrenceHelpers.lean`** under
+   namespace `OpenMath.Chapter3.Section342Helpers` (mirror cycle 281's
+   `Section342NormSqHelpers.lean` pattern). Cycle 281 precedent: helper
+   files isolate substantive Mathlib plumbing (IBP, Beta integrals,
+   arithmetic identities) from the textbook-specific main file.
+3. Ship the general theorem
+   `butcherShiftedLegendre_recurrence (n : ℕ) (hn : 2 ≤ n) :
+   (n : ℝ) • butcherShiftedLegendre n
+     = C (2 * n - 1 : ℝ) · (C 2 · X − C 1) · butcherShiftedLegendre (n − 1)
+       − C (n − 1 : ℝ) · butcherShiftedLegendre (n − 2)` in
+   `OpenMath/Chapter3/Section342.lean`, citing the helper file.
+4. Verify axiom-clean via `mcp__lean-lsp__lean_verify` on each new
+   declaration. Expected: `[propext, Classical.choice, Quot.sound]`.
+5. Confirm n=2..9 explicit witnesses (cycles 282/283/284/285) still
+   compile against the new general theorem (do not remove them — they
+   serve as non-vacuity at the small-n end and are independent direct
+   computations).
+6. Run `lake env lean OpenMath/Chapter3.lean` and confirm exit 0.
+7. Update `extraction/formalization_data/lean_status.json`: `lem:342A`
+   row stays `partial` because (342g) — `P_n^*` has `n` distinct real
+   zeros in `(0, 1)` — is still open. Note (342f) closed in cycle 286.
+8. **P2 stretch (if budget allows)**: fire-and-forget Aristotle on
+   (342g). Submission file recipe in
+   `.prover-state/issues/lem_342A_g_zeros_scoping.md`; cite (342a),
+   (342f), `butcherShiftedLegendre_natDegree`, and the explicit small-n
+   forms as axioms.
 
-### P1 (conditional — only if P0 Branch B "third stall" or Branch C "FAILED") — Cancel + Resubmit Aristotle
+### Branch B — Aristotle status IN_PROGRESS at any %
 
-Cancel `c8b8f138`. Resubmit a strengthened (342f) prompt to a fresh project. Submission target file: `.prover-state/aristotle_submissions/cycle_285/342f_recurrence_v2.lean`. Include the following enrichments over the cycle 282 submission:
+Ship n=10 ladder rung manually. Recipe is mechanical port of cycle
+285's n=9:
 
-1. **Add cycle 277 helper as axiom**: `integral_poly_mul_iterDeriv_vanish` (the iterated-IBP × n orthogonality machinery from cycle 277's (342a) closure). This gives Aristotle the orthogonality lemma without redoing cycle 277's work.
+1. **Verify n=10 coefficients via Python integer arithmetic before
+   touching Lean** (cycle 285 precedent: catches sign / Pascal-identity
+   errors before they hit the build). Use
+   `coeff_shiftedLegendre n k = (-1)^k · C(n,k) · C(n+k, n)` at n=10,
+   then flip by outer Butcher sign `(-1)^10 = +1` (even — no
+   per-coefficient sign flip beyond what `coeff_shiftedLegendre` gives).
+   Leading coefficient: `+C(20, 10) = +184756`. Constant term:
+   `P_10^*(0) = +1` (matches `(-1)^10`). Sanity: `P_10^*(1) = 1`
+   (matches (342b)) — sum of all coefficients should be 1.
 
-2. **Add cycle 281 helper as axiom**: `butcherShiftedLegendre_leadingCoeff` (the `C(2n,n)` leading-coefficient identity, used in cycle 281's general (342d) proof). Gives Aristotle the leading-coefficient bookkeeping.
+2. **Verify n=10 recurrence in Python integer arithmetic before Lean**:
+   `10 · P_10^*(x) ?= 19 · (2x − 1) · P_9^*(x) − 9 · P_8^*(x)` should
+   yield identical descending-coefficient vectors. The `(2n−1, n−1) =
+   (19, 9)` instantiation matches Butcher (342f).
 
-3. **Add textbook proof sketch verbatim**: Quote from `formalization_data/entities/lem_342A.json` the proof sketch for (342f) (induction on `n`; show `Q := n P_n^* − (2n − 1)(2x − 1) P_{n-1}^* + (n − 1) P_{n-2}^*` has degree < n via leading-coefficient cancellation; then `Q ⊥ {P_0^*, …, P_{n-1}^*}` via (342a); conclude `Q = 0` by basis dimension).
+3. **Lean ship — `butcherShiftedLegendre_ten`**: cycle 277/279 even-n
+   template. Outer Butcher sign `(-1)^10 = +1` is trivial (no
+   `(-1)^n` peel-off complications). Recipe:
+   ```
+   unfold butcherShiftedLegendre
+   ext k
+   simp only [coeff_C_mul, coeff_map, coeff_shiftedLegendre]
+   match k with
+   | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 => decide-style
+   | k+11 => Nat.choose_eq_zero_of_lt tail
+   ```
+   With per-arm `norm_num` and `decide`-helpers for the `Nat.choose`
+   evaluations at k=2..9 (cycle 285's exact pattern).
 
-4. **Cite all already-closed pieces** as in-context axioms: `butcherShiftedLegendre_orthogonal`, `_eval_one`, `_eval_one_sub`, `_norm_sq`, `_rodrigues`, `_natDegree`, plus `_zero` through `_eight` explicit forms.
+4. **Lean ship — `butcherShiftedLegendre_recurrence_ten`**: cycle 282+
+   template `Polynomial.funext → rw [_ten, _nine, _eight] → simp [eval_*]
+   → ring`.
 
-Record the new project ID in `task_results/cycle_285.md` for cycle 286's first-poll.
+5. Both theorems verified axiom-clean via `lean_verify`.
 
-### P2 (conditional — only if P0 lands in Branch B) — Ship n=9 ladder rung manually
+6. `lake env lean OpenMath/Chapter3/Section342.lean` exit 0. Aggregator
+   build optional but recommended.
 
-Add two public theorems to `OpenMath/Chapter3/Section342.lean`:
+7. Sorry count remains 0. Leave Aristotle `efe4940e` running for cycle
+   287 poll.
 
-#### Theorem 1: `butcherShiftedLegendre_nine`
+### Branch C — Aristotle status COMPLETE_WITH_ERRORS
 
-Statement: `butcherShiftedLegendre 9 = 48620 X^9 − 218790 X^8 + 411840 X^7 − 420420 X^6 + 252252 X^5 − 90090 X^4 + 18480 X^3 − 1980 X^2 + 90 X − 1` (encoded as a sum of `C(c) * X^k` terms in Lean).
+Apply suggested fixes per cycle 277's pattern. Specifically:
 
-**Coefficient derivation** (paper-verified BEFORE writing Lean):
-- Mathlib's `Polynomial.coeff_shiftedLegendre n k = (-1)^k · C(n,k) · C(n+k,n)` for `k ≤ n`.
-- At `n = 9`, `k ∈ {0..9}`:
-  - `k=0`: `+1 · 1 · 1 = 1`
-  - `k=1`: `−1 · 9 · 10 = −90`
-  - `k=2`: `+1 · 36 · 55 = 1980`
-  - `k=3`: `−1 · 84 · 220 = −18480`
-  - `k=4`: `+1 · 126 · 715 = 90090`
-  - `k=5`: `−1 · 126 · 2002 = −252252`
-  - `k=6`: `+1 · 84 · 5005 = 420420`
-  - `k=7`: `−1 · 36 · 11440 = −411840`
-  - `k=8`: `+1 · 9 · 24310 = 218790`
-  - `k=9`: `−1 · 1 · 48620 = −48620`
-- Outer Butcher sign `(-1)^9 = -1` flips every coefficient → final signs in the statement above.
+1. Read Aristotle's `ARISTOTLE_SUMMARY.md` (via
+   `mcp__aristotle__extract_result` or download).
+2. Diff Aristotle's edited submission against
+   `.prover-state/aristotle_submissions/cycle_285/342f_recurrence_v2.lean`
+   to identify the actual fix (e.g. namespace resolution, simp set
+   ordering, lemma renaming).
+3. Apply the fix locally and retest with `lake env lean
+   OpenMath/Chapter3/Section342RecurrenceHelpers.lean` (or wherever
+   the helpers land).
+4. If the fixes are small (namespace, single-line), ship as
+   Branch A. If they require substantive restructuring (>50 LOC of
+   tactic changes), fall back to Branch B (n=10 ladder rung) and
+   defer integration to cycle 287.
 
-**Sanity check (compute BEFORE writing Lean)**:
-- `P_9^*(0) = -1 = (-1)^9` ✓ (matches `butcherShiftedLegendre_eval_zero`).
-- `P_9^*(1) = -1 + 90 − 1980 + 18480 − 90090 + 252252 − 420420 + 411840 − 218790 + 48620`. Must equal `1` (matches `butcherShiftedLegendre_eval_one`). Run this sum via Python `sum([-1, 90, -1980, 18480, -90090, 252252, -420420, 411840, -218790, 48620])` and confirm `= 1` before committing to the coefficient list. **If the sum is not 1, the coefficient table above has an error — re-derive before writing any Lean.**
+### Branch D — Aristotle status FAILED or CANCELLED
 
-**Recipe** (cycle 280's odd-n template):
-```lean
-theorem butcherShiftedLegendre_nine :
-    butcherShiftedLegendre 9 = … := by
-  unfold butcherShiftedLegendre
-  ext k
-  simp only [coeff_C_mul, coeff_map, coeff_shiftedLegendre]
-  match k with
-  | 0 => simp; norm_num
-  | 1 => simp; norm_num
-  | 2 => simp [show Nat.choose 9 2 = 36 from by decide,
-                show Nat.choose 11 9 = 55 from by decide]; norm_num
-  | 3 => simp [show Nat.choose 9 3 = 84 from by decide,
-                show Nat.choose 12 9 = 220 from by decide]; norm_num
-  | 4 => simp [show Nat.choose 9 4 = 126 from by decide,
-                show Nat.choose 13 9 = 715 from by decide]; norm_num
-  | 5 => simp [show Nat.choose 14 9 = 2002 from by decide]; norm_num
-  | 6 => simp [show Nat.choose 9 6 = 84 from by decide,
-                show Nat.choose 15 9 = 5005 from by decide]; norm_num
-  | 7 => simp [show Nat.choose 9 7 = 36 from by decide,
-                show Nat.choose 16 9 = 11440 from by decide]; norm_num
-  | 8 => simp [show Nat.choose 9 8 = 9 from by decide,
-                show Nat.choose 17 9 = 24310 from by decide]; norm_num
-  | 9 => simp [show Nat.choose 18 9 = 48620 from by decide]; norm_num
-  | k + 10 =>
-    rw [Nat.choose_eq_zero_of_lt (by omega : 9 < k + 10)]
-    simp
+1. Document the failure in
+   `.prover-state/issues/cycle_286_aristotle_failure.md` summarising
+   the strengthened-resubmission attempt outcome.
+2. Execute Branch B (n=10 ladder rung) as the cycle's substantive
+   deliverable.
+3. Escalation note: if cycle 287's cycle 285+286 evidence base
+   shows the strengthened resubmission also fails, the planner
+   should pivot to **manual closure** of (342f) using cycle 281's
+   `leadingCoeff` infrastructure. A 3–4 cycle manual proof is
+   feasible:
+   - Cycle X: form `Q := LHS − RHS` and prove `Q.natDegree < n`
+     via leading-coefficient cancellation
+     (`n · C(2n, n) = 2(2n−1) · C(2n−2, n−1)` Pascal identity).
+   - Cycle X+1: prove `Q.aeval` vanishes on `{P_0^*, …, P_{n−1}^*}`
+     basis via (342a) orthogonality + cycle 277's IBP machinery.
+   - Cycle X+2: combine: `Q.natDegree < n` + Q ⊥ first `n`
+     Legendre polynomials + Mathlib density of polynomials in
+     `L²([0,1])` forces `Q = 0`.
+   - Cycle X+3: cleanup + non-vacuity.
+
+## Priority 1 (only if Branch B/C/D fires AND Branch A is NOT viable next cycle): fire-and-forget Aristotle on (342g)
+
+After shipping the cycle 286 substantive deliverable (either n=10
+rung or Branch A general theorem):
+
+1. Build `.prover-state/aristotle_submissions/cycle_286/342g_zeros.lean`
+   per the recipe in `.prover-state/issues/lem_342A_g_zeros_scoping.md`.
+2. Cite as axioms: (342a) `butcherShiftedLegendre_orthogonal` (cycle
+   277), (342f) `butcherShiftedLegendre_recurrence` if Branch A
+   landed, `butcherShiftedLegendre_natDegree` (cycle 272),
+   `butcherShiftedLegendre_eval_one_sub` (cycle 271, for parity),
+   `butcherShiftedLegendre_eval_one` (cycle 271), and the explicit
+   small-n forms for sanity.
+3. Strategy hint in the prompt: "sign-change contradiction. Suppose
+   `P_n^*` has fewer than `n` sign-change zeros in `(0, 1)`. Take
+   their product polynomial `Q := ∏ᵢ (X − xᵢ)` of degree < n. By
+   (342a), `∫₀¹ P_n^* · Q = 0`. But `P_n^* · Q` has constant sign on
+   `(0, 1)` (by construction of `xᵢ` as the sign-change zeros) and
+   is nonzero on a positive-measure set, so the integral is nonzero.
+   Contradiction."
+4. Submit via `mcp__aristotle__submit_file`. Record project_id in
+   this cycle's task results.
+
+**Skip this priority entirely if Branch A fires** — the cycle 286
+deliverable will already saturate the available LOC budget and
+Aristotle job slot.
+
+## What NOT to attempt
+
+- **DO NOT re-poll Aristotle `efe4940e` within cycle 286.** CLAUDE.md
+  is explicit: one poll per cycle.
+- **DO NOT cancel Aristotle `efe4940e` before single-polling it.**
+  The cycle 285 resubmission was deliberate; only third+ stall (cycle
+  287's poll showing no movement) justifies cancellation.
+- **DO NOT attempt manual general (342f) closure this cycle.** The
+  3–4 cycle plan in Branch D's escalation is for cycle 287+ if
+  Aristotle fails again. Cycle 286's manual ship target is the n=10
+  ladder rung, NOT the general theorem.
+- **DO NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
+  43+ consecutive GPFS timeouts since cycle 182 per
+  `.prover-state/issues/cycle_182_gpfs_slowness.md`. Skip entirely.
+- **DO NOT raise `maxHeartbeats` above 200000.** If n=10 closed-form
+  expansion stalls (which would be surprising — cycles 277/278/279
+  proved the even-n template at depths 4/5/6), decompose into smaller
+  per-coefficient lemmas, do not increase heartbeats.
+- **DO NOT introduce `axiom` or `constant` declarations.** All
+  cycle 286 deliverables must be axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`).
+- **DO NOT introduce `sorry`s.** Cycles 149/150, 200/201, and 138/139
+  all rolled back sorry-first scaffolds for multi-cycle targets.
+  Cycle 286's bar: ship axiom-clean or skip the deliverable.
+- **DO NOT pivot to a fresh entity this cycle.** §342 (342f)
+  closure is mid-flight (Aristotle resubmission live, n=10 manual
+  ladder rung is a clean fallback). Pivoting now would waste the
+  cycle 285 resubmission investment.
+- **DO NOT modify `scripts/autonomous_loop.py`.** Loop-maintainer
+  territory per CLAUDE.md.
+
+## Failed approaches to avoid (from `attempts.md` / prior cycles)
+
+- **Aristotle on (342f) without strengthening**: project `c8b8f138`
+  stalled at 12% for three consecutive cycles (283/284/285). Cycle
+  285 cancelled and resubmitted with cycle 281's `leadingCoeff`,
+  cycle 277's iterated-IBP machinery, n=0..8 explicit forms, and
+  n=2..8 recurrence base cases axiomatized. Do not re-submit a
+  weaker version.
+- **`Polynomial.ext` (cycle 273)**: requires Pascal-style `Nat.choose`
+  identities that `ring` cannot fold. Use `Polynomial.funext + ring`
+  (cycle 180 onward) for `Polynomial ℝ` constant arithmetic; for the
+  explicit-form expansions, use the `coeff_C_mul + coeff_shiftedLegendre
+  + match k` recipe (cycle 276 onward).
+- **(342f) without (342a) orthogonality**: cycle 273 attempted both
+  `Polynomial.ext` and `Polynomial.funext` routes; both require
+  binomial identities that `ring` cannot close, plus Mathlib has no
+  standard Legendre infrastructure. The cycle 277 (342a) closure
+  unblocked Bonnet-style arguments (now used in Aristotle `efe4940e`'s
+  proof sketch).
+- **Section441-touch GPFS smoke tests**: 43+ consecutive timeouts.
+  Skip.
+
+## Verification checklist (must pass before commit)
+
+1. `lake env lean OpenMath/Chapter3/Section342.lean` — exit 0.
+2. (If Branch A) `lake env lean OpenMath/Chapter3/Section342RecurrenceHelpers.lean`
+   — exit 0.
+3. `lake env lean OpenMath/Chapter3.lean` (aggregator) — exit 0.
+4. `mcp__lean-lsp__lean_verify` axiom-clean on each new public theorem.
+5. Sorry count audit: `grep -c sorry OpenMath/Chapter3/Section342.lean`
+   should output `0` (cycle history mentions don't count; check actual
+   proof terms).
+6. Faithfulness check (CLAUDE.md mandatory):
+   - For new `def`s (only Branch A): quote textbook statement from
+     `extraction/formalization_data/entities/lem_342A.json`, confirm
+     Lean type matches.
+   - For new theorems: tautology check (conclusion ≠ hypothesis
+     verbatim), identity check (proof not just `exact h`), hypothesis
+     strength check (no extra hypotheses vs textbook), absent theorem
+     check (no promised `sorry`s in comments).
+7. Update `extraction/formalization_data/lean_status.json` only if a
+   textbook entity status changes (Branch A: `lem:342A` cycle bump to
+   286 but status remains `partial` until (342g) closes; Branch B:
+   `lem:342A` cycle bump only, status unchanged).
+8. Update `plan.md` only if `lem:342A` row's progress note needs
+   updating (append cycle 286 line to the existing partial-status
+   note; do NOT flip `[~]` to `[x]` until (342g) closes).
+
+## Task results structure for cycle 286
+
+Write `.prover-state/task_results/cycle_286.md`:
+
+```markdown
+# Cycle 286 Results
+
+## Worked on
+- P0 (mandatory): single-poll Aristotle `efe4940e`. Result: <status>.
+- P1: <Branch A integration / Branch B n=10 ship / Branch C fixes>.
+- P2 stretch (if applicable): fire-and-forget Aristotle on (342g).
+
+## Approach
+<per branch>
+
+## Result
+<SUCCESS / FAILED — explanation>
+
+## Faithfulness check
+<per CLAUDE.md checklist>
+
+## Dead ends
+<approaches that didn't work and why>
+
+## Discovery
+<anything learned that's useful for cycle 287+>
+
+## Suggested next approach
+<what cycle 287's planner should consider>
 ```
 
-#### Theorem 2: `butcherShiftedLegendre_recurrence_nine`
+## Bottom-line cycle 286 directive
 
-Statement: `(9 : ℝ) • P_9^* = C 17 · (C 2 · X − C 1) · P_8^* − C 8 · P_7^*` (Butcher (342f) at n=9: `(2n − 1, n − 1) = (17, 8)`).
-
-**Algebraic cross-check** (Python integer arithmetic, BEFORE Lean):
-- LHS coefficients in descending-degree order: `9 · [48620, −218790, 411840, −420420, 252252, −90090, 18480, −1980, 90, −1]`
-  `= [437580, −1969110, 3706560, −3783780, 2270268, −810810, 166320, −17820, 810, −9]`.
-- RHS: compute `(2X − 1) · P_8^*` first by convolving `[2, −1]` with `P_8^* = [12870, −51480, 84084, −72072, 34650, −9240, 1260, −72, 1]` (descending degree), then multiply by 17, then subtract `8 · P_7^* = 8 · [3432, −12012, 16632, −11550, 4200, −756, 56, −1]` aligned at the trailing end (degrees 0..7).
-- Verify the two 10-vectors match exactly. **If they don't match, the recurrence coefficients `(17, 8)` are wrong — recheck Butcher (342f) before writing Lean.**
-
-**Recipe** (cycle 282+ template):
-```lean
-theorem butcherShiftedLegendre_recurrence_nine :
-    (9 : ℝ) • butcherShiftedLegendre 9 =
-      C 17 * (C 2 * X − C 1) * butcherShiftedLegendre 8
-        − C 8 * butcherShiftedLegendre 7 := by
-  apply Polynomial.funext
-  intro x
-  rw [butcherShiftedLegendre_nine, butcherShiftedLegendre_eight,
-      butcherShiftedLegendre_seven]
-  simp only [Polynomial.eval_smul, eval_mul, eval_add, eval_sub,
-             eval_pow, eval_C, eval_X, eval_one, smul_eq_mul]
-  ring
-```
-
-**LOC budget**: ~120 LOC total (explicit form ~80 LOC, recurrence witness ~10 LOC, plus ~10 LOC of `--` comments documenting the paper-verified coefficients).
-
-### P3 (stretch — only if P0 Branch A and time remains) — Fire Aristotle on (342g)
-
-Per `.prover-state/issues/lem_342A_g_zeros_scoping.md`:
-- Target: `butcherShiftedLegendre_n_distinct_zeros (n : ℕ) (hn : 0 < n) : ∃ S : Finset ℝ, S.card = n ∧ ∀ x ∈ S, 0 < x ∧ x < 1 ∧ (butcherShiftedLegendre n).IsRoot x`.
-- Strategy: sign-change contradiction via product polynomial `Q := ∏ᵢ (X − xᵢ)` with `∫₀¹ P_n^* · Q = 0` by (342a) yet `≠ 0` by sign-constancy.
-- Cite all of (342a)–(342f) plus `_zero, _one, ..., _eight` (and `_nine` if P2 ships) as in-context axioms.
-- Provide Mathlib hooks in submission: `Polynomial.roots`, `Polynomial.card_roots_le_degree`, `intermediate_value_Ioo`, `Polynomial.continuous`, `Polynomial.IsRoot`.
-- Record new project ID; do NOT poll until cycle 286+.
-
-This is **fire-and-forget** — do NOT manually attempt (342g) in cycle 285.
-
-## What NOT to try
-
-1. **Do NOT attempt (342f) general manually**. Cycle 273's manual attempt stalled because `Polynomial.ext` and `Polynomial.funext` both required Pascal-style binomial identities `ring` couldn't close, and Mathlib has no standard Bonnet-recurrence hook for shifted Legendre polynomials. The proof needs either Aristotle's machinery (via P1's strengthened prompt) or a multi-cycle Mathlib build-out — not a single-cycle ship.
-
-2. **Do NOT poll Aristotle more than once per cycle** (CLAUDE.md rule).
-
-3. **Do NOT modify cycles 271–284's existing theorems** — any of `butcherShiftedLegendre_{zero, one, two, three, four, five, six, seven, eight, eval_one, eval_one_sub, rodrigues, orthogonal, norm_sq, _natDegree}` or any `_norm_sq_n` / `_recurrence_n` witness for n=2..8. They are all axiom-clean and load-bearing.
-
-4. **Do NOT pivot to `lem:310B` Phase A.3** (`TreeAutomorphism` strengthening). It's multi-cycle work per `lem_310B_plan.md` and not appropriate for a single-cycle pivot. If P0 Branch B and bandwidth remains after P2, prefer P3 (fire Aristotle on 342g) over a §310 pivot.
-
-5. **Do NOT raise `maxHeartbeats`**. If the explicit form at n=9 is slow, decompose. Cycle 280 n=7 took ~80 LOC and stayed within defaults; n=9 should scale linearly.
-
-6. **Do NOT use `Polynomial.ext + ring`** for the recurrence witness. Cycle 273 documented this fails due to `Polynomial.C` constant arithmetic outside `ring`'s normal form. Use the cycle 282+ template `Polynomial.funext → intro x → rw [explicit forms] → simp [eval_*] → ring`.
-
-7. **Do NOT introduce sorries**. Cycle 285's bar is "ship axiom-clean or skip the cycle".
-
-8. **Do NOT write new files** unless P0 lands in Branch A (helper file `Section342RecurrenceHelpers.lean` mirrors cycle 281's pattern). All cycle 285 P2 work lives in the existing `OpenMath/Chapter3/Section342.lean`.
-
-9. **Do NOT modify `scripts/autonomous_loop.py`** — loop-maintainer territory per CLAUDE.md.
-
-## Faithfulness checklist (mandatory before commit)
-
-For each new theorem (`_nine`, `_recurrence_nine`, plus any Branch A integration):
-
-- [ ] Statement matches textbook: explicit form derived from `Polynomial.coeff_shiftedLegendre` at n=9; recurrence matches Butcher (342f) at n=9.
-- [ ] No definition smuggling: the textbook (342f) is a polynomial-ring identity, and the Lean version proves the same identity over `ℝ[X]`.
-- [ ] No hypothesis strengthening: both new theorems are unconditional at n=9.
-- [ ] Numerical coefficients cross-checked via Python integer arithmetic BEFORE writing Lean.
-- [ ] `#print axioms` returns `[propext, Classical.choice, Quot.sound]` for both new theorems.
-
-## Verification sequence (end of cycle)
-
-```bash
-lake env lean OpenMath/Chapter3/Section342.lean    # exit 0
-grep -c sorry OpenMath/Chapter3/Section342.lean    # 0
-lake build OpenMath.Chapter3.Section342            # completes
-lake env lean OpenMath/Chapter3.lean               # aggregator clean
-```
-
-Then run `#print axioms` (via standalone test file or `lean_verify` MCP) on each new theorem.
-
-## Cycle 286+ outlook
-
-- If P0 Branch A: cycle 286 polls (342g) Aristotle (if P3 fired), integrates if COMPLETE; otherwise pivots to `lem:310B` Phase A.3 or continues ladder.
-- If P0 Branch B (Aristotle still running): cycle 286 polls again. If three stalled polls AND P1 not yet executed, execute P1. Otherwise continue ladder to n=10.
-- If P0 Branch B and P1 executed in cycle 285: cycle 286 polls the new project ID. If still IN_PROGRESS at low %, continue ladder to n=10 manually.
+1. Single-poll `efe4940e`.
+2. Branch A (COMPLETE) → integrate as helper file + general theorem.
+3. Branch B/C/D → ship n=10 ladder rung manually (cycle 285's n=9
+   template).
+4. P2 stretch (Branch A only): fire-and-forget Aristotle on (342g).
+5. Maintain sorry count 0, axiom-clean discipline, no GPFS-blocked
+   §441 work.
