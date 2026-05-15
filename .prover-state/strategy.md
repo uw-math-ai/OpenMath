@@ -1,282 +1,224 @@
-# Cycle 278 Strategy
+# Cycle 280 Strategy
 
-## State summary
+## Context
 
-Cycle 277 closed **(342a) orthogonality** via Aristotle integration and shipped
-the **n = 4 ladder rung** (`butcherShiftedLegendre_four` +
-`butcherShiftedLegendre_norm_sq_four`). Section342.lean is now ~1043 LOC,
-0 sorries, axiom-clean.
+Cycle 279 SHIPPED §342 (342d) n=6 ladder rung axiom-clean (`butcherShiftedLegendre_six` + `butcherShiftedLegendre_norm_sq_six`). Section342.lean is 1466 LOC, 0 sorries, 0 warnings.
 
-`lem:342A` status (partial):
-- (342a) orthogonality ✅ (cycle 277)
-- (342b) `P_n^*(1) = 1` ✅ (cycle 271)
-- (342c) parity ✅ (cycle 271)
-- (342d) norm-square = `1/(2n+1)` — closed at n ∈ {0, 1, 2, 3, 4}; general n
-  pending Aristotle `d4ce527b` (last poll: 31%, cycle 277)
-- (342e) Rodrigues ✅ (cycle 272)
-- (342f) three-term recurrence — NOT started
-- (342g) `n` distinct real zeros in `(0, 1)` — NOT started
+Aristotle project `d4ce527b-b714-4e51-b0a6-e3d06302d7fa` (general (342d) proof) was at **52%** at cycle 279's poll, up from 33% in cycle 278 — a remarkable +19pp jump in one cycle. Completion by cycle 280 or 281 is plausible.
 
-## Priority 0 — Poll Aristotle `d4ce527b` (single poll, no re-poll)
+§342 (342a) orthogonality landed via Aristotle in cycle 277. The remaining (342) clauses are:
+- (342d) general — Aristotle in progress (52%)
+- (342f) three-term recurrence — blocked on Mathlib Legendre infra
+- (342g) `n` distinct real zeros — deferred
 
-Run **exactly one** `mcp__aristotle__get_status` call on project
-`d4ce527b-b714-4e51-b0a6-e3d06302d7fa` (general (342d) norm-square).
+## Priority 0 — Poll Aristotle `d4ce527b` (BLOCKING, do this FIRST)
 
-**Branch A — COMPLETE / `success: true`**:
-1. `mcp__aristotle__extract_result` to
-   `.prover-state/aristotle_results/cycle_278/d4ce527b/`.
-2. Read `ARISTOTLE_SUMMARY.md`. Confirm 0 sorries and no axioms beyond
-   `[propext, Classical.choice, Quot.sound]`.
-3. Integrate the main theorem as
-   `butcherShiftedLegendre_norm_sq : ∀ n : ℕ, ∫ x in (0:ℝ)..1,
-   (butcherShiftedLegendre n).eval x ^ 2 = 1 / (2 * n + 1)`.
-4. Adapt imports as cycle 277 did (likely needs the same Calculus +
-   Topology + Tactic.Cases imports already present).
-5. Add 3–4 non-vacuity witnesses at small `n` that consume the general
-   theorem and reduce to cycle-274/275/276/277's specific instances by
-   `norm_num`.
-6. Update `lean_status.json` `lem:342A` row: cycle 278, status
-   `partial` (still missing (342f), (342g)).
-7. **DO NOT** also do the Priority 1 ladder work — Aristotle integration
-   was the cycle's substantive deliverable.
+Call `mcp__aristotle__get_status` on project `d4ce527b-b714-4e51-b0a6-e3d06302d7fa`. **Do NOT re-poll.** Single poll only per CLAUDE.md.
 
-**Branch B — IN_PROGRESS / FAILED / COMPLETE_WITH_ERRORS** (most likely
-outcome at ~10%/cycle pace, expecting ~40% at this poll):
-1. Do **NOT** cancel the project.
-2. Proceed to Priority 1 ladder work below.
+### Branch A: Aristotle returns COMPLETE
 
-**Branch C — single poll only**: do not re-poll mid-cycle. If
-IN_PROGRESS at the start, treat as a miss for this cycle.
+Integrate the general (342d) result. Recipe (mirror cycle 277's (342a) integration):
 
-## Priority 1 — Ship n = 5 ladder rung (executed only in Branch B)
+1. Download the result file via `mcp__aristotle__download_result` to `.prover-state/aristotle_results/cycle_280/`.
+2. Read `ARISTOTLE_SUMMARY.md` and the returned `.lean` file.
+3. Inline the helper lemmas + main theorem into `OpenMath/Chapter3/Section342.lean`. Likely additions:
+   - Iterated integration by parts × n (similar to cycle 277's `integral_poly_mul_iterDeriv_vanish`)
+   - Beta integral on ℕ-exponents (`∫₀¹ x^n (1-x)^n dx = (n!)^2 / (2n+1)!`)
+   - Main result: `butcherShiftedLegendre_norm_sq : ∀ n, ∫₀¹ (butcherShiftedLegendre n).eval x ^ 2 ∂x = 1 / (2 * n + 1)`
+4. Rewrite the cycle 274–279 concrete `_norm_sq_{zero..six}` witnesses as one-line corollaries of the general result via `simp` / `norm_num` (or keep them as standalone witnesses if simpler).
+5. Update `lean_status.json`: `lem:342A` may move from `partial` → `partial` (still missing 342f, 342g) but document (342d) is now closed in `plan.md`.
+6. `#print axioms` must return `[propext, Classical.choice, Quot.sound]`. If `MeasureTheory` axioms appear, that is expected for integral results.
+7. Verify build: `lake env lean OpenMath/Chapter3/Section342.lean` + `lake env lean OpenMath/Chapter3.lean`.
 
-Ship two new public theorems in `OpenMath/Chapter3/Section342.lean`,
-inserted immediately after `butcherShiftedLegendre_norm_sq_four`.
+If Aristotle's proof has compile errors (likely surfaces in `COMPLETE_WITH_ERRORS` status), apply minimal fixes (namespace qualifications, simp set adjustments) per the cycle 277 / cycle 184 pattern.
 
-### 1a. `butcherShiftedLegendre_five`
+### Branch B: Aristotle returns IN_PROGRESS
 
-**Coefficient determination**: do NOT commit to a closed form before
-checking with `lean_multi_attempt`. The pattern from cycles 275/276/277:
+Proceed to Priority 1 (manual n=7 ladder rung). Do not cancel the Aristotle job.
 
-  - cycle 275 `_two`: `6X² - 6X + 1` (n=2 even, leading positive, constant `+1`).
-  - cycle 276 `_three`: `20X³ - 30X² + 12X - 1` (n=3 odd, leading positive, constant `-1`).
-  - cycle 277 `_four`: `70X⁴ - 140X³ + 90X² - 20X + 1` (n=4 even, constant `+1`).
-  - Pattern: leading coefficient `Nat.choose (2n) n` (always positive);
-    constant term `(-1)^n`.
+### Branch C: Aristotle returns COMPLETE_WITH_ERRORS
 
-**Probable n=5 closed form** (constant `(-1)^5 = -1`, leading `Nat.choose 10 5 = 252`):
+Download the result, identify the specific errors, apply fixes locally. If errors are non-trivial (>30 min to fix), pivot to Priority 1 and revisit next cycle.
 
-```
-P_5^*(x) = 252·x⁵ - 630·x⁴ + 560·x³ - 210·x² + 30·x - 1
+## Priority 1 — Ship `n = 7` ladder rung (BRANCH B fallback)
+
+Add two new public theorems to `OpenMath/Chapter3/Section342.lean`:
+
+### 1.1 `butcherShiftedLegendre_seven`
+
+**Target:**
+```lean
+theorem butcherShiftedLegendre_seven :
+    butcherShiftedLegendre 7 =
+      Polynomial.C 3432 * Polynomial.X ^ 7
+      - Polynomial.C 12012 * Polynomial.X ^ 6
+      + Polynomial.C 16632 * Polynomial.X ^ 5
+      - Polynomial.C 11550 * Polynomial.X ^ 4
+      + Polynomial.C 4200 * Polynomial.X ^ 3
+      - Polynomial.C 756 * Polynomial.X ^ 2
+      + Polynomial.C 56 * Polynomial.X
+      - Polynomial.C 1
 ```
 
-Sanity at `x = 1`: `252 − 630 + 560 − 210 + 30 − 1 = 1` ✓ (matches
-`butcherShiftedLegendre_eval_one`).
+**Coefficients (verified in cycle 279 task results, odd-`n` so outer `(-1)^7 = -1` flips signs):**
 
-Sanity at `x = 0`: constant term `-1 = (-1)^5` ✓ (matches
-`butcherShiftedLegendre_eval_zero`).
+| k | (-1)^k | C(7,k) | C(7+k,7) | inner | outer (·(-1)) | coeff(k) |
+|---|--------|--------|----------|-------|---------------|----------|
+| 0 |   1    |   1    |    1     |   1   |     -1        |    -1    |
+| 1 |  -1    |   7    |    8     |  -56  |     56        |    56    |
+| 2 |   1    |  21    |   36     |  756  |    -756       |   -756   |
+| 3 |  -1    |  35    |  120     | -4200 |    4200       |   4200   |
+| 4 |   1    |  35    |  330     | 11550 |   -11550      |  -11550  |
+| 5 |  -1    |  21    |  792     |-16632 |    16632      |   16632  |
+| 6 |   1    |   7    | 1716     | 12012 |   -12012      |  -12012  |
+| 7 |  -1    |   1    | 3432     | -3432 |    3432       |   3432   |
 
-**Proof recipe** (cycle-276 `_three` template, mechanically extended to
-k ∈ {0,1,2,3,4,5,k+6}):
+**Sanity checks:**
+- At x=1: `3432 - 12012 + 16632 - 11550 + 4200 - 756 + 56 - 1 = 1` ✓ (matches (342b))
+- At x=0: constant = -1 = `(-1)^7` ✓ (matches `butcherShiftedLegendre_eval_zero`)
+
+**Recipe (mirror cycle 278's `_five` template, odd-`n` case):**
 
 ```lean
-theorem butcherShiftedLegendre_five :
-    butcherShiftedLegendre 5
-      = C 252 * X^5 - C 630 * X^4 + C 560 * X^3
-        - C 210 * X^2 + C 30 * X - C 1 := by
+theorem butcherShiftedLegendre_seven :
+    butcherShiftedLegendre 7 = ... := by
   unfold butcherShiftedLegendre
-  simp only [coeff_C_mul, coeff_map, coeff_shiftedLegendre]
   ext k
+  -- Peel off `C ((-1)^7) * ·` BEFORE simp can collapse it
+  simp only [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+             Polynomial.coeff_shiftedLegendre]
   match k with
   | 0 => simp; norm_num
   | 1 => simp; norm_num
-  | 2 => simp; norm_num
-  | 3 => simp; norm_num
-  | 4 => simp; norm_num
-  | 5 => simp; norm_num
-  | k + 6 => simp [Nat.choose_eq_zero_of_lt (by omega : 5 < k + 6)]
+  | 2 =>
+    have h2a : Nat.choose 7 2 = 21 := by decide
+    have h2b : Nat.choose 9 7 = 36 := by decide
+    simp [h2a, h2b]; norm_num
+  | 3 =>
+    have h3a : Nat.choose 7 3 = 35 := by decide
+    have h3b : Nat.choose 10 7 = 120 := by decide
+    simp [h3a, h3b]; norm_num
+  | 4 =>
+    have h4a : Nat.choose 7 4 = 35 := by decide
+    have h4b : Nat.choose 11 7 = 330 := by decide
+    simp [h4a, h4b]; norm_num
+  | 5 =>
+    have h5a : Nat.choose 7 5 = 21 := by decide
+    have h5b : Nat.choose 12 7 = 792 := by decide
+    simp [h5a, h5b]; norm_num
+  | 6 =>
+    have h6a : Nat.choose 7 6 = 7 := by decide
+    have h6b : Nat.choose 13 7 = 1716 := by decide
+    simp [h6a, h6b]; norm_num
+  | 7 =>
+    have h7 : Nat.choose 14 7 = 3432 := by decide
+    simp [h7]; norm_num
+  | k + 8 =>
+    -- Coefficient is 0 for k ≥ 8
+    simp [Nat.choose_eq_zero_of_lt (by omega : 7 < k + 8)]
 ```
 
-The `simp only [coeff_C_mul, coeff_map, coeff_shiftedLegendre]; ext k`
-peel-off pattern is **mandatory at all n ≥ 3** per cycle 277 dead-end
-discovery. Do NOT try the bare-simp shortcut (cycle 277 confirmed it
-fails at n=4 and will fail at n=5).
+Adjust the per-arm `simp` set / `norm_num` invocation based on what fires; the cycle 278 template should port mechanically. Verify against `mcp__lean-lsp__lean_hover_info` on `Polynomial.coeff_shiftedLegendre` if the formula doesn't unfold as expected.
 
-Per-k arms may need explicit `Nat.choose i j = …` decide-hints (cycle
-277 found `Nat.choose 4 2 = 6` needed an explicit decide-helper at
-n=4, k=2). Discover stuck arms with `lean_multi_attempt` and patch
-inline.
+### 1.2 `butcherShiftedLegendre_norm_sq_seven`
 
-### 1b. `butcherShiftedLegendre_norm_sq_five`
-
-```
-∫ x in (0:ℝ)..1, (butcherShiftedLegendre 5).eval x ^ 2 = 1 / 11
+**Target:**
+```lean
+theorem butcherShiftedLegendre_norm_sq_seven :
+    ∫ x in (0:ℝ)..1, (butcherShiftedLegendre 7).eval x ^ 2 = 1 / 15
 ```
 
-**Proof recipe** (cycle-277 `_four` template scaled to degree-10
-integrand).
+**Strategy:**
+1. Use `butcherShiftedLegendre_seven` to rewrite the integrand to an explicit degree-14 polynomial in `x` (the square of the closed form).
+2. Compute the 15 convolution coefficients `c_0..c_14` of `(P_7^*)^2` BEFORE writing Lean.
+3. Apply 14 nested `intervalIntegral.integral_add` / `integral_sub` + 14 `integral_const_mul` + 14 `integral_pow` ops (`∫₀¹ x^k = 1/(k+1)`).
+4. Close with `ring` to collapse the 15-fraction sum to `1/15`.
 
-1. Expand `(P_5^*(x))^2` as a degree-10 polynomial in `x`. Compute
-   coefficients by convolution of `(a_0, ..., a_5) = (-1, 30, -210,
-   560, -630, 252)` with itself:
-   - `c_k = Σ_{i+j=k} a_i · a_j` for `k ∈ {0, ..., 10}`.
-   - Hand-check at minimum the constant (`c_0 = (-1)^2 = 1`) and
-     leading (`c_10 = 252^2 = 63504`) terms before committing the
-     full expansion.
+**Convolution computation** (compute by hand BEFORE writing Lean; use Python or careful arithmetic):
 
-2. Reduce the integrand pointwise via `eval_pow` + `eval_sub` +
-   `eval_add` + `eval_mul` + `eval_X` + `ring`:
-   ```
-   (P_5^*(x))^2 = c_10·x^10 + … + c_0
-   ```
+With `a_0..a_7 = (-1, 56, -756, 4200, -11550, 16632, -12012, 3432)`,
+`c_k = Σ_{i+j=k} a_i · a_j`:
 
-3. Split the integral via 9 nested `intervalIntegral.integral_add` /
-   `integral_sub` + `integral_const_mul` × 10. Close each
-   `IntervalIntegrable` side-goal with
-   `(Polynomial.continuous _).intervalIntegrable _ _` or
-   `Continuous.intervalIntegrable`.
+- `c_0 = a_0^2 = (-1)^2 = 1`
+- `c_14 = a_7^2 = 3432^2 = 11778624`
 
-4. Each `∫₀¹ x^k` closes with `integral_pow` (k ∈ {1..10}) or
-   `integral_one` (k = 0).
+Compute the intermediate c_k by hand or via a quick Python check (do NOT skip — sign errors here cascade through 14 integral ops). Cross-check `c_0 = 1` and `c_14 = 11778624` before proceeding. A useful quick check: run `python3 -c "import numpy; a=[-1,56,-756,4200,-11550,16632,-12012,3432]; print(numpy.convolve(a,a).tolist())"` to dump all 15 c_k values.
 
-5. `ring` / `norm_num` collapses the final arithmetic to `1/11`.
+**Lean structure** (mirror cycle 279's n=6 recipe, scaled to 14 ops):
 
-**Verification**: cycle 277's `_norm_sq_four` proof in the file is the
-direct template. The expansion grows ≈ 50 LOC per ladder rung.
-
-## Priority 2 (conditional stretch — only if P0=Branch B and P1 ships cleanly with ≥50% cycle budget remaining)
-
-Attempt **(342f) three-term recurrence**:
-
+```lean
+theorem butcherShiftedLegendre_norm_sq_seven :
+    ∫ x in (0:ℝ)..1, (butcherShiftedLegendre 7).eval x ^ 2 = 1 / 15 := by
+  have hP : ∀ x : ℝ, (butcherShiftedLegendre 7).eval x ^ 2 =
+      c_14 * x^14 + c_13 * x^13 + ... + c_1 * x + c_0 := by
+    intro x
+    rw [butcherShiftedLegendre_seven]
+    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    ring
+  simp_rw [hP]
+  -- 14 IntervalIntegrable witnesses (highest-degree to lowest)
+  have hi_x14 : IntervalIntegrable (fun x : ℝ => x^14) MeasureTheory.volume 0 1 :=
+    (continuous_pow 14).intervalIntegrable 0 1
+  -- ... down to hi_x : IntervalIntegrable (fun x : ℝ => x) ...
+  -- 14 integral_pow evaluations
+  have h14 : ∫ x in (0:ℝ)..1, x^14 = 1/15 := by
+    rw [integral_pow]; norm_num
+  -- ... down to h1 : ∫₀¹ x = 1/2 ...
+  -- Cascade of 14 nested integral_add / integral_sub
+  rw [intervalIntegral.integral_add ... ...,
+      intervalIntegral.integral_sub ... ...,
+      ...]
+  rw [intervalIntegral.integral_const_mul, ..., ...]
+  rw [h14, h13, ..., h1, intervalIntegral.integral_one]
+  ring
 ```
-∀ n : ℕ, (n + 1) · P_{n+1}^*(x) = (2n+1) · (2x-1) · P_n^*(x) - n · P_{n-1}^*(x)
+
+The opening-paren count on each integrability witness follows the pattern from cycle 279: 13, 12, ..., 1 for the cascading binary ops. Per cycle 279 Discovery #3, n=7 will need 13 opening parens for the outermost witness.
+
+### 1.3 Non-vacuity witness
+
+```lean
+example : (1 : ℝ) / (2 * (7 : ℕ) + 1) = 1 / 15 := by norm_num
 ```
 
-**Why this is newly tractable**: cycle 273 confirmed `ring` /
-per-coefficient routes fail because Pascal-binomial identities are
-required. But cycle 277's orthogonality opens the inner-product
-expansion route:
+## Priority 2 — Verification & housekeeping
 
-1. `x · P_n^*(x)` has degree `n+1`, so lies in
-   `span_ℝ {P_0^*, P_1^*, ..., P_{n+1}^*}`.
-2. Expand `x · P_n^* = Σ_{k=0..n+1} c_{n,k} · P_k^*`.
-3. By cycle 277's orthogonality and the inner-product formula
-   `c_{n,k} = ⟨x P_n^*, P_k^*⟩ / ⟨P_k^*, P_k^*⟩`, only `c_{n,n-1}`,
-   `c_{n,n}`, `c_{n,n+1}` are nonzero (since
-   `⟨x P_n^*, P_k^*⟩ = ⟨P_n^*, x P_k^*⟩` and `x P_k^*` has degree
-   `k+1 < n` for `k < n-1`).
-4. The three-term shape is then forced. Specific scalar coefficients
-   come from `P_n^*(1) = 1` normalization and (342d) norm-squares.
-
-**Time-box and abort condition**: this is genuinely ≥ 200 LOC and may
-exceed budget. If you start P2 and stall after **30 minutes of focused
-work**, abort, document approach in task results, defer to cycle 279+.
-**DO NOT** introduce sorries.
-
-## Priority 3 (do NOT attempt this cycle)
-
-**(342g) `n` distinct real zeros in `(0, 1)`** would require either (a)
-Mathlib's general orthogonal-polynomial root theorem or (b) a custom
-sign-change argument. Multi-cycle. **Defer.**
+1. `lake env lean OpenMath/Chapter3/Section342.lean` — must exit 0.
+2. `lake build OpenMath.Chapter3.Section342` — must succeed.
+3. `lake env lean OpenMath/Chapter3.lean` (aggregator) — must exit 0.
+4. `grep -c sorry OpenMath/Chapter3/Section342.lean` — must return 0.
+5. `#print axioms butcherShiftedLegendre_seven` — must return `[propext, Classical.choice, Quot.sound]`.
+6. `#print axioms butcherShiftedLegendre_norm_sq_seven` — same.
+7. If Branch A (Aristotle COMPLETE), update `lean_status.json` and `plan.md` to reflect (342d) closure.
 
 ## What NOT to try
 
-1. **Do NOT cancel Aristotle project `d4ce527b`** — keep it running
-   even if this cycle's poll returns IN_PROGRESS.
-2. **Do NOT re-poll Aristotle** — single poll per cycle per CLAUDE.md.
-3. **Do NOT use the bare-simp / cycle-275 even-n shortcut for
-   `butcherShiftedLegendre_five`**. Cycle 277 confirmed the cycle-276
-   peel-off pattern (`simp only [coeff_C_mul, coeff_map,
-   coeff_shiftedLegendre]` prepended to `ext k`) is **mandatory at all
-   n ≥ 3**.
-4. **Do NOT submit a fresh Aristotle job for (342f) recurrence** — the
-   cycle-273 attempt established this needs Pascal-binomial machinery
-   beyond `ring`'s reach. The inner-product expansion route (P2) is
-   the correct fallback.
-5. **Do NOT attempt (342g) zeros this cycle** — defer.
-6. **Do NOT raise `maxHeartbeats` above 200000**. If a per-k arm of
-   `butcherShiftedLegendre_five` stalls, isolate via
-   `lean_multi_attempt` and decompose with explicit `Nat.choose`
-   decide-helpers.
-7. **Do NOT introduce `axiom` or `constant` declarations.**
-8. **Do NOT pivot to a different entity this cycle.** The §342 ladder
-   has momentum — finish n=5 (or general n via Aristotle) before
-   considering other entries.
-9. **Do NOT commit a closed form for `butcherShiftedLegendre_five`
-   without verifying coefficients via `lean_multi_attempt`** at one or
-   two arms first. The hand-computed values above are an educated
-   guess based on the n=2/3/4 pattern, not a proof.
+1. **Do NOT re-poll Aristotle `d4ce527b` more than once.** Single poll per cycle per CLAUDE.md.
+2. **Do NOT attempt (342f) three-term recurrence.** Cycle 273 confirmed this requires Pascal-style binomial identities `ring` can't handle, and Mathlib has no standard Legendre infrastructure. Do not retry without (342a) AND substantial new Mathlib hooks.
+3. **Do NOT skip the `simp only [coeff_C_mul, coeff_map, coeff_shiftedLegendre]` peel-off before `match`.** Without it, `simp` collapses `C ((-1)^7)` and breaks the coefficient extraction (cycle 277 lesson).
+4. **Do NOT use `Polynomial.ext` + `ring` directly.** Cycles 172/173 stalled here for closed-form coefficient identities; the per-coefficient `match k with` pattern from cycles 273–279 is the canonical recipe.
+5. **Do NOT attempt `Section441.lean` work.** 43+ consecutive GPFS timeouts since cycle 182. Skip per `cycle_182_gpfs_slowness.md`.
+6. **Do NOT skip the c_k convolution sanity check.** Cycle 259's Bell-coefficient miscalculation (cycle 258 task results gave `(1,11,7,26,1)` when correct is `(1,7,4,11,1)`) is the cautionary precedent — hand-verify `c_0`, `c_14`, and at least one mid-index `c_k` before writing the polynomial rewrite.
+7. **Do NOT introduce sorries.** Cycle 200/201 rollback precedent: sorry-first scaffolds without a credible single-cycle close get reverted.
+8. **Do NOT modify `scripts/autonomous_loop.py`.** Loop-maintainer territory.
+9. **Do NOT raise `maxHeartbeats` above 200000.** If the cascaded `integral_add`/`integral_sub` rewrites stall, the issue is missing `IntervalIntegrable` witnesses, not heartbeat exhaustion.
+10. **Do NOT introduce `axiom`/`constant` declarations.**
 
-## Pre-commit faithfulness checklist (mandatory)
+## Risk assessment
 
-For each new theorem introduced (likely:
-`butcherShiftedLegendre_five`, `butcherShiftedLegendre_norm_sq_five`,
-and possibly `butcherShiftedLegendre_norm_sq` from Aristotle):
+- **R1 (LOW)**: `Polynomial.coeff_shiftedLegendre` formula. Verified by cycles 271–279 to hold; same simp recipe ports to n=7. If unexpected behavior, use `mcp__lean-lsp__lean_hover_info` on the symbol.
+- **R2 (MEDIUM)**: c_k convolution arithmetic for n=7. 15 coefficients × 8 cross-terms each = 120 multiplications. Use a Python one-liner or Bash `python3 -c "..."` to verify before writing the polynomial rewrite. Sign errors here are the most likely failure mode.
+- **R3 (LOW-MEDIUM)**: 14-deep nested `intervalIntegral.integral_add` / `integral_sub` cascade. Cycle 279 confirmed the pattern scales linearly; n=7 adds 2 ops over n=6. Watch the opening-paren counts.
+- **R4 (LOW)**: `decide`-helpers `Nat.choose n k = …`. All 11 binomial values for n=7 are small (≤3432), so `decide` will close them in milliseconds.
+- **R5 (LOW)**: Section342.lean grows from 1466 → ~1670 LOC. Per cycle 279 Discovery #4, splitting threshold is "after general (342d) lands OR after n=8". Do not split this cycle.
 
-- **`butcherShiftedLegendre_norm_sq_five`**: textbook statement at
-  `extraction/raw_text/ch03.txt` §342 (342d):
-  > `∫₀¹ P_n^*(x)^2 dx = 1/(2n + 1)`
-  At n=5: `1/11`. Lean statement captures **same content** at the
-  specific instance.
-- **`butcherShiftedLegendre_five`**: this is **helper infrastructure**,
-  not a textbook-named entity (cycle 273/275/276/277 precedent).
-- **Definition smuggling check**: `butcherShiftedLegendre` is defined
-  cycle 271 via Mathlib's `shiftedLegendre n` mapped to ℝ. NOT
-  smuggling — orthogonality and norm-squares are proved properties,
-  not bakings-in.
-- **Tautology check**: each new theorem's conclusion is a non-trivial
-  arithmetic / integral / polynomial identity, not a hypothesis
-  re-export.
-- **Hypothesis strength**: theorems take no IVP-style hypotheses;
-  only the implicit polynomial-ring / measure structure from Mathlib.
-- **Identity check**: proof bodies do real work (per-coefficient
-  `coeff_shiftedLegendre` for `_five`; nested
-  `integral_add`/`sub`/`const_mul` + `integral_pow` for `_norm_sq_five`).
-  Not `exact h`.
+## File size projection
 
-## Build sanity (mandatory before commit)
+After cycle 280: Section342.lean expected at ~1670 LOC (Branch B, n=7 added) or ~1500-1800 LOC (Branch A, general (342d) replacing or augmenting concrete witnesses). Splitting can wait per cycle 279 Discovery #4.
 
-Run all four:
-1. `lake env lean OpenMath/Chapter3/Section342.lean` — must exit 0.
-2. `grep -c sorry OpenMath/Chapter3/Section342.lean` — must be `0`.
-3. `#print axioms OpenMath.Chapter3.Section342.butcherShiftedLegendre_norm_sq_five`
-   (and for each new theorem) — must return
-   `[propext, Classical.choice, Quot.sound]` only.
-4. `lake env lean OpenMath/Chapter3.lean` — must exit 0 (aggregator
-   downstream check).
+## Cycle 281+ outlook
 
-## State-file updates (mandatory)
-
-1. `extraction/formalization_data/lean_status.json` `lem:342A` row:
-   bump `cycle` to 278; `formalization_status` stays `partial` (still
-   missing (342f), (342g) in either branch).
-2. `plan.md` `lem:342A` row: append cycle 278 marker / note in the
-   long-form documentation paragraph.
-
-## Task results format (mandatory)
-
-Write `.prover-state/task_results/cycle_278.md` with:
-- **Worked on**: poll result + ladder rung(s) shipped.
-- **Approach**: per-section recipe used (which branch, which template).
-- **Result**: SUCCESS/FAILED per deliverable.
-- **Faithfulness check**: per new theorem.
-- **Dead ends**: any approaches that failed (e.g. if `Nat.choose`
-  decide helpers needed adjustment, document the specific arm and
-  helper used).
-- **Discovery**: anything new about the §342 ladder, the peel-off
-  pattern, or Aristotle project `d4ce527b`'s progress trajectory
-  (note current %, growth rate vs cycle 277).
-- **Suggested next approach**: cycle 279 — based on this cycle's
-  outcome, pick from {Aristotle integration if still pending, n=6
-  ladder rung, (342f) recurrence attempt, pivot to a fresh entity if
-  Aristotle has clearly stalled}.
-
-## Commit message template
-
-Choose one based on outcome:
-
-* Branch A (Aristotle integration): `Cycle 278 — §342 (342d) general
-  norm-square from Aristotle SHIPPED.`
-* Branch B + P1 ships: `Cycle 278 — §342 (342d) n=5 ladder rung SHIPPED.`
-* Branch B + P1 + P2 ships (unlikely): `Cycle 278 — §342 (342d) n=5
-  ladder rung + (342f) recurrence SHIPPED.`
+- **If Branch A landed**: §342 (342a/b/c/d/e) all closed; only (342f) recurrence and (342g) zeros remain. Pivot to (342g) attempt (orthogonality + Sturm-type arguments) or fresh entity (`lem:342B`, `thm:344A`).
+- **If Branch B landed**: continue ladder to n=8 OR pivot to fresh entity. The ladder has diminishing returns; n=8 would push file to ~1900 LOC and is mostly mechanical.
+- **File split**: candidates after cycle 280 or 281 are `Section342Basic.lean` (defn + 342b/c/e), `Section342Orthogonality.lean` (342a + IBP helpers), `Section342NormSquare.lean` (342d ladder + general).

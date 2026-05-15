@@ -569,6 +569,89 @@ theorem butcherShiftedLegendre_six :
       simp [Polynomial.coeff_sub, Polynomial.coeff_add,
             Polynomial.coeff_one, hk]
 
+/-- **Butcher §342 helper — `P_7^* = 3432X^7 - 12012X^6 + 16632X^5 - 11550X^4
++ 4200X^3 - 756X^2 + 56X - 1`**:
+the degree-`7` shifted Legendre polynomial expands explicitly via the
+coefficient formula `(shiftedLegendre 7).coeff k = (-1)^k · C(7,k) · C(7+k, 7)`.
+The relevant values at `k = 0,…,7` are `(1, -56, 756, -4200, 11550, -16632,
+12012, -3432)`; higher slots vanish since `7.choose k = 0` for `k ≥ 8`. The
+outer Butcher sign factor `(-1)^7 = -1` flips every sign, yielding the closed
+form above. Sanity: evaluating at `x = 0` gives `-1` (matches
+`P_7^*(0) = (-1)^7 = -1`); evaluating at `x = 1` gives
+`3432 - 12012 + 16632 - 11550 + 4200 - 756 + 56 - 1 = 1` (matches (342b)). -/
+theorem butcherShiftedLegendre_seven :
+    butcherShiftedLegendre 7 =
+      Polynomial.C 3432 * Polynomial.X ^ 7
+        - Polynomial.C 12012 * Polynomial.X ^ 6
+        + Polynomial.C 16632 * Polynomial.X ^ 5
+        - Polynomial.C 11550 * Polynomial.X ^ 4
+        + Polynomial.C 4200 * Polynomial.X ^ 3
+        - Polynomial.C 756 * Polynomial.X ^ 2
+        + Polynomial.C 56 * Polynomial.X
+        - Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  -- Peel off the `C ((-1)^7) * ·` factor BEFORE simp can collapse
+  -- `C ((-1)^7)` to the polynomial `-1` (which would block `coeff_C_mul`).
+  simp only [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+             Polynomial.coeff_shiftedLegendre]
+  match k with
+  | 0 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_X_pow, Polynomial.coeff_X,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 1 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 2 =>
+      have hch1 : Nat.choose 9 7 = 36 := by decide
+      have hch2 : Nat.choose 7 2 = 21 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 3 =>
+      have hch1 : Nat.choose 10 7 = 120 := by decide
+      have hch2 : Nat.choose 7 3 = 35 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 4 =>
+      have hch1 : Nat.choose 11 7 = 330 := by decide
+      have hch2 : Nat.choose 7 4 = 35 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 5 =>
+      have hch1 : Nat.choose 12 7 = 792 := by decide
+      have hch2 : Nat.choose 7 5 = 21 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 6 =>
+      have hch1 : Nat.choose 13 7 = 1716 := by decide
+      have hch2 : Nat.choose 7 6 = 7 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 7 =>
+      have hch : Nat.choose 14 7 = 3432 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+      norm_num
+  | (k+8) =>
+      have hk : (7 : ℕ).choose (k + 8) = 0 := Nat.choose_eq_zero_of_lt (by omega)
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_one, hk]
+
 /-! ### Non-vacuity witnesses for §342 helpers
 
 These confirm the helper lemmas evaluate correctly on small inputs. -/
@@ -1426,6 +1509,192 @@ theorem butcherShiftedLegendre_norm_sq_six :
       h12, h11, h10, h9, h8, h7, h6, h5, h4, h3, h2, h1, integral_one]
   ring
 
+/-- **Butcher §342 (342d) at `n = 7`**: `∫₀¹ (P_7^*(x))^2 dx = 1/15`.
+
+The `n = 7` instance of (342d). Direct computation:
+`P_7^*(x) = 3432x^7 - 12012x^6 + 16632x^5 - 11550x^4 + 4200x^3 - 756x^2
+            + 56x - 1` (`butcherShiftedLegendre_seven`), so the squared
+coefficient convolution gives
+`(P_7^*(x))^2 = 11778624x^14 − 82450368x^13 + 258450192x^12 − 478846368x^11
+                + 582929424x^10 − 490289184x^9 + 291657828x^8 − 123519792x^7
+                + 36990408x^6 − 7677264x^5 + 1065036x^4 − 93072x^3
+                + 4648x^2 − 112x + 1`.
+Integrating termwise and summing the resulting 15 fractions yields
+`1/15 = 1/(2·7 + 1)`. -/
+theorem butcherShiftedLegendre_norm_sq_seven :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 7).eval x ^ 2 = 1 / 15 := by
+  have hP : ∀ x : ℝ, (butcherShiftedLegendre 7).eval x ^ 2
+      = 11778624 * x ^ 14 - 82450368 * x ^ 13 + 258450192 * x ^ 12
+        - 478846368 * x ^ 11 + 582929424 * x ^ 10 - 490289184 * x ^ 9
+        + 291657828 * x ^ 8 - 123519792 * x ^ 7 + 36990408 * x ^ 6
+        - 7677264 * x ^ 5 + 1065036 * x ^ 4 - 93072 * x ^ 3
+        + 4648 * x ^ 2 - 112 * x + 1 := by
+    intro x
+    rw [butcherShiftedLegendre_seven]
+    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    ring
+  simp_rw [hP]
+  have hi_x14 : IntervalIntegrable (fun x : ℝ => x ^ 14) MeasureTheory.volume 0 1 :=
+    (continuous_pow 14).intervalIntegrable 0 1
+  have hi_x13 : IntervalIntegrable (fun x : ℝ => x ^ 13) MeasureTheory.volume 0 1 :=
+    (continuous_pow 13).intervalIntegrable 0 1
+  have hi_x12 : IntervalIntegrable (fun x : ℝ => x ^ 12) MeasureTheory.volume 0 1 :=
+    (continuous_pow 12).intervalIntegrable 0 1
+  have hi_x11 : IntervalIntegrable (fun x : ℝ => x ^ 11) MeasureTheory.volume 0 1 :=
+    (continuous_pow 11).intervalIntegrable 0 1
+  have hi_x10 : IntervalIntegrable (fun x : ℝ => x ^ 10) MeasureTheory.volume 0 1 :=
+    (continuous_pow 10).intervalIntegrable 0 1
+  have hi_x9 : IntervalIntegrable (fun x : ℝ => x ^ 9) MeasureTheory.volume 0 1 :=
+    (continuous_pow 9).intervalIntegrable 0 1
+  have hi_x8 : IntervalIntegrable (fun x : ℝ => x ^ 8) MeasureTheory.volume 0 1 :=
+    (continuous_pow 8).intervalIntegrable 0 1
+  have hi_x7 : IntervalIntegrable (fun x : ℝ => x ^ 7) MeasureTheory.volume 0 1 :=
+    (continuous_pow 7).intervalIntegrable 0 1
+  have hi_x6 : IntervalIntegrable (fun x : ℝ => x ^ 6) MeasureTheory.volume 0 1 :=
+    (continuous_pow 6).intervalIntegrable 0 1
+  have hi_x5 : IntervalIntegrable (fun x : ℝ => x ^ 5) MeasureTheory.volume 0 1 :=
+    (continuous_pow 5).intervalIntegrable 0 1
+  have hi_x4 : IntervalIntegrable (fun x : ℝ => x ^ 4) MeasureTheory.volume 0 1 :=
+    (continuous_pow 4).intervalIntegrable 0 1
+  have hi_x3 : IntervalIntegrable (fun x : ℝ => x ^ 3) MeasureTheory.volume 0 1 :=
+    (continuous_pow 3).intervalIntegrable 0 1
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h14 : ∫ x in (0 : ℝ)..1, x ^ 14 = 1 / 15 := by
+    rw [integral_pow]; norm_num
+  have h13 : ∫ x in (0 : ℝ)..1, x ^ 13 = 1 / 14 := by
+    rw [integral_pow]; norm_num
+  have h12 : ∫ x in (0 : ℝ)..1, x ^ 12 = 1 / 13 := by
+    rw [integral_pow]; norm_num
+  have h11 : ∫ x in (0 : ℝ)..1, x ^ 11 = 1 / 12 := by
+    rw [integral_pow]; norm_num
+  have h10 : ∫ x in (0 : ℝ)..1, x ^ 10 = 1 / 11 := by
+    rw [integral_pow]; norm_num
+  have h9 : ∫ x in (0 : ℝ)..1, x ^ 9 = 1 / 10 := by
+    rw [integral_pow]; norm_num
+  have h8 : ∫ x in (0 : ℝ)..1, x ^ 8 = 1 / 9 := by
+    rw [integral_pow]; norm_num
+  have h7 : ∫ x in (0 : ℝ)..1, x ^ 7 = 1 / 8 := by
+    rw [integral_pow]; norm_num
+  have h6 : ∫ x in (0 : ℝ)..1, x ^ 6 = 1 / 7 := by
+    rw [integral_pow]; norm_num
+  have h5 : ∫ x in (0 : ℝ)..1, x ^ 5 = 1 / 6 := by
+    rw [integral_pow]; norm_num
+  have h4 : ∫ x in (0 : ℝ)..1, x ^ 4 = 1 / 5 := by
+    rw [integral_pow]; norm_num
+  have h3 : ∫ x in (0 : ℝ)..1, x ^ 3 = 1 / 4 := by
+    rw [integral_pow]; norm_num
+  have h2 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  -- The integrand is left-associative (15 terms = 14 binary ops).
+  rw [intervalIntegral.integral_add
+        ((((((((((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828)).sub (hi_x7.const_mul 123519792)).add
+              (hi_x6.const_mul 36990408)).sub (hi_x5.const_mul 7677264)).add
+              (hi_x4.const_mul 1065036)).sub (hi_x3.const_mul 93072)).add
+              (hi_x2.const_mul 4648)).sub (hi_x.const_mul 112))
+        intervalIntegrable_const,
+      intervalIntegral.integral_sub
+        (((((((((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828)).sub (hi_x7.const_mul 123519792)).add
+              (hi_x6.const_mul 36990408)).sub (hi_x5.const_mul 7677264)).add
+              (hi_x4.const_mul 1065036)).sub (hi_x3.const_mul 93072)).add
+              (hi_x2.const_mul 4648))
+        (hi_x.const_mul 112),
+      intervalIntegral.integral_add
+        ((((((((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828)).sub (hi_x7.const_mul 123519792)).add
+              (hi_x6.const_mul 36990408)).sub (hi_x5.const_mul 7677264)).add
+              (hi_x4.const_mul 1065036)).sub (hi_x3.const_mul 93072))
+        (hi_x2.const_mul 4648),
+      intervalIntegral.integral_sub
+        (((((((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828)).sub (hi_x7.const_mul 123519792)).add
+              (hi_x6.const_mul 36990408)).sub (hi_x5.const_mul 7677264)).add
+              (hi_x4.const_mul 1065036))
+        (hi_x3.const_mul 93072),
+      intervalIntegral.integral_add
+        ((((((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828)).sub (hi_x7.const_mul 123519792)).add
+              (hi_x6.const_mul 36990408)).sub (hi_x5.const_mul 7677264))
+        (hi_x4.const_mul 1065036),
+      intervalIntegral.integral_sub
+        (((((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828)).sub (hi_x7.const_mul 123519792)).add
+              (hi_x6.const_mul 36990408))
+        (hi_x5.const_mul 7677264),
+      intervalIntegral.integral_add
+        ((((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828)).sub (hi_x7.const_mul 123519792))
+        (hi_x6.const_mul 36990408),
+      intervalIntegral.integral_sub
+        (((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184)).add
+              (hi_x8.const_mul 291657828))
+        (hi_x7.const_mul 123519792),
+      intervalIntegral.integral_add
+        ((((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424)).sub (hi_x9.const_mul 490289184))
+        (hi_x8.const_mul 291657828),
+      intervalIntegral.integral_sub
+        (((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368)).add
+              (hi_x10.const_mul 582929424))
+        (hi_x9.const_mul 490289184),
+      intervalIntegral.integral_add
+        ((((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192)).sub (hi_x11.const_mul 478846368))
+        (hi_x10.const_mul 582929424),
+      intervalIntegral.integral_sub
+        (((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368)).add
+              (hi_x12.const_mul 258450192))
+        (hi_x11.const_mul 478846368),
+      intervalIntegral.integral_add
+        ((hi_x14.const_mul 11778624).sub (hi_x13.const_mul 82450368))
+        (hi_x12.const_mul 258450192),
+      intervalIntegral.integral_sub
+        (hi_x14.const_mul 11778624)
+        (hi_x13.const_mul 82450368),
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      h14, h13, h12, h11, h10, h9, h8, h7, h6, h5, h4, h3, h2, h1, integral_one]
+  ring
+
 /-! ### Non-vacuity witnesses for (342d) cases -/
 
 -- (342d) at `n = 0`: matches the closed form `1 / (2 * 0 + 1) = 1`.
@@ -1462,5 +1731,10 @@ example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 5).eval x ^ 2
 example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 6).eval x ^ 2
     = 1 / (2 * (6 : ℕ) + 1) := by
   rw [butcherShiftedLegendre_norm_sq_six]; norm_num
+
+-- (342d) at `n = 7`: matches the closed form `1 / (2 * 7 + 1) = 1/15`.
+example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 7).eval x ^ 2
+    = 1 / (2 * (7 : ℕ) + 1) := by
+  rw [butcherShiftedLegendre_norm_sq_seven]; norm_num
 
 end OpenMath.Chapter3.Section342
