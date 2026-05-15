@@ -1,502 +1,243 @@
-# Cycle 261 strategy
+# Cycle 262 Strategy — Phase A.2 (partial): `LabelledRootedTree` structure + `Fintype` instance + canonical labelling
 
-## §A — Status snapshot
+## §A — Project state at start of cycle
 
-Cycle 260 SHIPPED clean: `lem_310B_plan.md` (774-line multi-phase
-scoping doc) + four `Finset.sum_*` API enrichment lemmas in
-`OpenMath/Chapter3/Section301.lean`. All axiom-clean, repo sorry
-count = 0. No supervisor regression to address.
+- HEAD: `2b0428e Cycle 261 — §300 RootedTree.Vertex + vertices_card (lem:310B Phase A.1) SHIPPED.`
+- Sorry count across repo: **0**. All recent §300/§301/§310/§311 theorems axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+- Cycle 261 just shipped the foundational `RootedTree.Vertex` infrastructure (`OpenMath/Chapter3/Section300.lean`, 179 LOC). Phase A.1 of `.prover-state/issues/lem_310B_plan.md` is **complete**.
+- No Aristotle results pending.
+- No issues currently blocking progress (`lem_310B_plan.md` is a planning doc, not a blocker).
+- §441 GPFS pathology continues to block Phase C.2; skip per §F of this strategy.
 
-Both candidate cycle-261 entry points flagged in the cycle 260 task
-results are credible single-cycle ships:
+## §B — Target this cycle
 
-* **Direction 1**: Phase A.1 of `lem_310B_plan.md` — `RootedTree.Vertex`
-  predicate + `vertices` enumeration + `vertices_card`. Maintains
-  §310/§311 strategic momentum; lays foundation for the multi-cycle
-  `lem:310B` plan (8–14 cycle estimate per §5 of the plan).
-* **Direction 2**: `lem:342A` (342a) shifted-Legendre orthogonality
-  on `[0,1]`. Independent fresh-entity pivot.
+**Ship Phase A.2 (partial) of `lem_310B_plan.md`**: extend `OpenMath/Chapter3/Section300.lean` with the labelling infrastructure that consumes cycle 261's `Vertex`/`vertices`/`vertices_card`.
 
-To keep the supervisor's score trajectory positive (cycle 260
-scored +1), cycle 261 must ship axiom-clean, sorry-clean, with a
-substantive deliverable.
+Specifically, the cycle 262 deliverable is:
 
-## §B — Cycle 261 priority — Direction 1 (RECOMMENDED)
+1. **`Vertex.mem_vertices`** — completeness lemma: `∀ {t} (v : Vertex t), v ∈ vertices t`. Proves cycle 261's `vertices t` Finset enumerates ALL vertices.
 
-Ship **Phase A.1 of `lem_310B_plan.md`**: `RootedTree.Vertex`
-inductive predicate + `RootedTree.vertices` `Finset` enumeration +
-`vertices_card` identity (`(vertices t).card = order t`), with
-three non-vacuity witnesses on `cherry`, `broom₃`, and
-`mk [vertex, cherry]`.
+2. **`Fintype` instance for `Vertex t`** — `noncomputable instance instFintypeVertex : Fintype (Vertex t)` derived from `vertices t` + `Vertex.mem_vertices`.
 
-### Rationale
+3. **`Fintype.card` identity** — `Fintype.card_vertex_eq_order : Fintype.card (Vertex t) = order t`. One-liner corollary of `vertices_card` (cycle 261).
 
-1. **Sequential momentum.** Cycles 254–260 have been §310/§311
-   infrastructure work. Cycle 260's scoping doc explicitly
-   identifies Phase A.1 as the highest-confidence single-cycle
-   entry point into the multi-cycle `lem:310B` plan. Pivoting
-   away now (to Direction 2) loses the planning investment.
-2. **Concrete deliverables already specified.** `lem_310B_plan.md`
-   §7 lists the five concrete artifacts and the axiom-clean
-   target. Worker has minimal scoping work — implement against
-   the plan.
-3. **Cycle 017 template applies directly.** The mutual `density`
-   recursion in `OpenMath/Chapter3/Section301.lean:123-179`
-   (visible at HEAD) is the canonical template for any
-   `RootedTree`-mutual-recursion proof. Three relevant patterns:
-   - Line 123-140: `mutual def density / densityProd` pair,
-     mirroring the `RootedTree.mk` / `List RootedTree` nesting.
-   - Line 142-147: `densityProd_eq_map_prod` reformulation via
-     `List.prod`, allowing standard list-induction reasoning.
-   - Line 164-178: `mutual theorem density_pos / densityProd_pos`,
-     companion positivity statements proved by mutual structural
-     recursion. This is the proof template for `vertices_card`.
+4. **`structure LabelledRootedTree`** — the Phase A.2 datatype:
+   ```lean
+   structure LabelledRootedTree where
+     underlying : RootedTree
+     labelling : Vertex underlying ≃ Fin (order underlying)
+   ```
 
-### Concrete deliverables (5 declarations + 3 examples)
+5. **`canonicalLabelling : (t : RootedTree) → Vertex t ≃ Fin (order t)`** — built via `Fintype.equivFinOfCardEq` (Mathlib) applied to `Fintype.card_vertex_eq_order`.
 
-All in a **NEW file** `OpenMath/Chapter3/Section300.lean`. **Do
-NOT** extend `Section310.lean` or `Section301.lean` — the new
-`Vertex` type is genuinely §300 infrastructure (vertex/edge
-structure of rooted trees), and the planner anticipates
-Phase A.2/A.3 also living in `Section300.lean`. Keeping it
-separate keeps the cycle 017 mutual-recursion proofs in
-`Section301.lean` uncontaminated.
+6. **Three non-vacuity witnesses** — explicit `LabelledRootedTree`s for `vertex`, `cherry`, `broom₃`, each built via `canonicalLabelling`, with `order = n` `rfl` checks.
 
-The new file's `import` line:
+**Explicitly deferred to cycle 263+**:
+- Tree-automorphism `Setoid` on `LabelledRootedTree` and the equivalence "two labellings of `mk [vertex, vertex]` are related by an automorphism". The plan file `lem_310B_plan.md` §"Phase A.2" allocates 1-2 cycles for the full Phase A.2; cycle 262 takes the first half (datatype + canonical labelling) and cycle 263 takes the Setoid + tree-automorphism work. Splitting this way keeps cycle 262 in the ~80-120 LOC range with high single-cycle close confidence.
+
+## §C — Why this split (not the full Phase A.2 in one cycle)
+
+The cycle 261 task results' "Suggested next approach" §"Cycle 262 (recommended)" specifies Phase A.2 with a budget of "150-200 LOC". Two paths:
+
+- **Option 1 (full Phase A.2 in one cycle)**: structure + canonical labelling + tree-automorphism Setoid + non-vacuity. The tree-automorphism definition itself requires either (a) a permutation-group `MulAction` setup on `LabelledRootedTree` or (b) a recursive automorphism predicate matching child-subtree permutations. Both routes are non-trivial; (a) needs `Equiv.Perm`-style plumbing and `MulAction` instances; (b) needs recursive descent on `RootedTree`'s nested-inductive structure. Either path has stall risk.
+
+- **Option 2 (split, this cycle's choice)**: ship the datatype + canonical labelling + Fintype infrastructure first. The tree-automorphism Setoid in cycle 263 then builds on solid foundations. Each cycle stays well within the supervisor's "axiom-clean, sorry count 0" target and the LOC budget per cycle remains modest (~80-120 LOC).
+
+The cycle 200/201 rollback discipline (`equivalent_iff_pEquivalent_iff_phiEquivalent` sorry-first scaffold) and the cycle 149/150 rollback (`def:530B` Path A sorry-first scaffold) both argue against attempting a multi-sub-piece deliverable when any single piece could stall. **Sorry-first scaffolds are forbidden this cycle**: ship axiom-clean or skip the piece.
+
+## §D — Step-by-step recipe
+
+All work goes in `OpenMath/Chapter3/Section300.lean`, extending cycle 261's file. The new content lives **after** the existing `vertices_card` block and the three non-vacuity examples (lines 167-175), but **before** `end RootedTree` (line 177).
+
+### D.1 — Completeness lemma `Vertex.mem_vertices` (~30-50 LOC)
 
 ```lean
-import OpenMath.Chapter3.Section310
+theorem Vertex.mem_vertices : ∀ {t : RootedTree} (v : Vertex t), v ∈ vertices t
+  | mk cs, root => by
+      rw [vertices]
+      exact Finset.mem_insert_self _ _
+  | mk cs, child i v => by
+      rw [vertices]
+      refine Finset.mem_insert_of_mem ?_
+      rw [Finset.mem_biUnion]
+      refine ⟨i, Finset.mem_univ _, ?_⟩
+      rw [Finset.mem_image]
+      exact ⟨v, Vertex.mem_vertices v, rfl⟩
+termination_by t v => t
+decreasing_by
+  simp_wf
+  exact Nat.lt_add_left 1 (List.sizeOf_get cs i)
 ```
 
-since `Vertex` needs the `RootedTree` type defined in
-`Section310.lean`. Add `import OpenMath.Chapter3.Section300` to
-`OpenMath/Chapter3.lean` (the aggregator) so cycle 261's
-deliverables are picked up by `lake build`.
+The well-founded recursion mirrors cycle 261's `vertices` and `vertices_card` structure. The `termination_by t v => t` clause uses `t` as the measure; the `decreasing_by` block discharges `cs.get i < mk cs` via the same `List.sizeOf_get + Nat.lt_add_left` chain used at lines 110 and 163.
 
-#### Deliverable 1 — `RootedTree.Vertex : RootedTree → Type`
+### D.2 — `Fintype` instance + card identity (~10-20 LOC)
 
 ```lean
-namespace OpenMath.Chapter3.Section310
+noncomputable instance instFintypeVertex (t : RootedTree) : Fintype (Vertex t) :=
+  ⟨vertices t, fun v => Vertex.mem_vertices v⟩
 
-namespace RootedTree
-
-/-- A vertex of a rooted tree: either the root, or a vertex of one
-of the children. The `child` constructor packages a child index `i`
-and a vertex of the i-th child. -/
-inductive Vertex : RootedTree → Type
-  | root {cs : List RootedTree} : Vertex (mk cs)
-  | child {cs : List RootedTree} (i : Fin cs.length) :
-      Vertex (cs.get i) → Vertex (mk cs)
-
-end RootedTree
-end OpenMath.Chapter3.Section310
+theorem Fintype.card_vertex_eq_order (t : RootedTree) :
+    Fintype.card (Vertex t) = order t := by
+  show (vertices t).card = order t
+  exact vertices_card t
 ```
 
-Lean's elaborator infers the implicit `cs` argument from the
-`Vertex (mk cs)` target type.
+The `show` reframes `Fintype.card (Vertex t)` (= `(Finset.univ : Finset (Vertex t)).card`) to `(vertices t).card`. Under our `Fintype.mk`, `Finset.univ.card = (vertices t).card` holds because `Finset.univ` is `vertices t` itself. If the `show` doesn't trigger definitional unfolding, fall back to `Finset.card_univ` + `rfl` on the `Fintype.mk` projection.
 
-#### Deliverable 2 — `DecidableEq (Vertex t)` instance
+Risk-1 mitigation: if `show` fails because `Finset.univ.card` doesn't reduce to `(vertices t).card` definitionally, route via
+```lean
+have h : (Finset.univ : Finset (Vertex t)) = vertices t := by
+  ext v; simp [Vertex.mem_vertices v]
+rw [Fintype.card, h, vertices_card]
+```
 
-Lean 4 does NOT auto-derive `DecidableEq` for inductives that
-recurse over nested `List RootedTree` types. Two routes:
+Verify the simpler path first; only escalate to the fallback if needed.
 
-**Route A — mutual decidability (cleaner, ~30 LOC)** mirroring
-the cycle 017 `decEqTree` / `decEqList` block at
-`Section301.lean:73-92`. The key challenge: when two
-`Vertex.child i v` and `Vertex.child j w` are compared, we need
-both `i = j` (for the indices) AND the underlying vertices `v`
-and `w` to be equal under a transport along the index equality.
-The `hij ▸ v` transport is the right primitive but care is needed
-on the `injEq` extraction.
-
-**Route B — noncomputable `Classical.decEq` (1 line, safe
-fallback)**:
+### D.3 — `LabelledRootedTree` structure + canonical labelling (~15 LOC)
 
 ```lean
-noncomputable instance {t : RootedTree} : DecidableEq (Vertex t) :=
-  Classical.decEq _
+/-- A rooted tree together with a chosen bijective labelling of its
+vertices by `Fin (order t)`. Faithful to Butcher §300's `def:300C` —
+see `.prover-state/issues/lem_310B_plan.md` §4.1. -/
+structure LabelledRootedTree where
+  underlying : RootedTree
+  labelling : Vertex underlying ≃ Fin (order underlying)
+
+/-- The canonical labelling of a rooted tree, derived from the
+`Fintype` instance on `Vertex t` (cycle 262) via Mathlib's
+`Fintype.equivFinOfCardEq`. Faithfulness divergence: Butcher's
+labelling is a *choice* (not canonically determined); we expose one
+specific labelling here for non-vacuity. Cycle 263+ will introduce
+the tree-automorphism `Setoid` to recover the textbook's
+quotient-by-symmetry behaviour. -/
+noncomputable def canonicalLabelling (t : RootedTree) :
+    Vertex t ≃ Fin (order t) :=
+  Fintype.equivFinOfCardEq (Fintype.card_vertex_eq_order t)
 ```
 
-`Classical.decEq` only introduces `Classical.choice`, which is
-already in the codebase's axiom baseline. **Route B is acceptable
-and recommended for Phase A.1** — the cycle 261 deliverable's
-mathematical content is `vertices_card`, not computable
-enumeration. A future cycle can replace with Route A if needed.
+If `Fintype.equivFinOfCardEq` does not exist under that exact name in current Mathlib, try `Fintype.equivOfCardEq` or compose `Fintype.equivFin : α ≃ Fin (Fintype.card α)` with a `Fin (Fintype.card (Vertex t)) ≃ Fin (order t)` via `Fin.castIso` (or `finCongr`) on the cycle-262 card identity. Verify early via `lean_local_search "Fintype.equivFinOfCardEq"` or `lean_loogle "Fintype.card _ = _ → _ ≃ _"`.
 
-#### Deliverable 3 — `vertices : (t : RootedTree) → Finset (Vertex t)`
-
-Build via mutual recursion: a `Finset` for `vertices t` and a
-`Finset` for the children's contribution. Sketch:
+### D.4 — Three non-vacuity witnesses (~15 LOC)
 
 ```lean
-mutual
-  noncomputable def vertices : (t : RootedTree) → Finset (Vertex t)
-    | mk cs =>
-        insert Vertex.root (verticesFromChildren cs)
+/-- The canonical labelling of the singleton tree `vertex`. -/
+noncomputable def canonicalVertex : LabelledRootedTree where
+  underlying := vertex
+  labelling := canonicalLabelling vertex
 
-  noncomputable def verticesFromChildren :
-      (cs : List RootedTree) → Finset (Vertex (mk cs))
-    | [] => ∅
-    | _ :: _ =>
-        Finset.univ.biUnion (fun i : Fin cs.length =>
-          (vertices (cs.get i)).image (Vertex.child i))
-end
+/-- The canonical labelling of `cherry`. -/
+noncomputable def canonicalCherry : LabelledRootedTree where
+  underlying := cherry
+  labelling := canonicalLabelling cherry
+
+/-- The canonical labelling of `broom₃`. -/
+noncomputable def canonicalBroom₃ : LabelledRootedTree where
+  underlying := broom₃
+  labelling := canonicalLabelling broom₃
+
+example : canonicalVertex.underlying.order = 1 := rfl
+example : canonicalCherry.underlying.order = 2 := rfl
+example : canonicalBroom₃.underlying.order = 3 := rfl
 ```
 
-**Implementation risks**:
-
-- `Finset.image` requires `DecidableEq (Vertex (mk cs))` (handled
-  by Deliverable 2). The `noncomputable` keyword is needed since
-  Deliverable 2 uses `Classical.decEq` (Route B).
-- `Finset.biUnion` over `Fin cs.length` requires
-  `[Fintype (Fin cs.length)]` (automatic) plus `DecidableEq` on
-  the target (handled).
-- The mutual block must terminate. Structural recursion on the
-  `RootedTree` should work — each recursive call to `vertices` is
-  on a structurally smaller subtree `cs.get i`.
-
-**Fallback if `Finset` is too heavy**: drop down to `List
-(Vertex t)` and prove `vertices_length` instead of
-`vertices_card`. This trades the "set" flavour for fast
-elaboration. Acceptable if Deliverable 3 stalls past 60 minutes.
-
-#### Deliverable 4 — `vertices_card : (vertices t).card = order t`
-
-Mutual structural induction template from `Section301.lean:159-178`
-(`order_pos` / `density_pos`). For the `mk cs` case:
-
-```lean
-mutual
-  theorem vertices_card : ∀ t : RootedTree,
-      (vertices t).card = order t
-    | mk cs => by
-        show (insert Vertex.root (verticesFromChildren cs)).card
-          = 1 + orderSum cs
-        rw [Finset.card_insert_of_not_mem ?_]
-        · congr 1
-          exact verticesFromChildren_card cs
-        · -- Vertex.root ∉ verticesFromChildren cs: by case analysis,
-          -- every member of verticesFromChildren is Vertex.child _ _
-          sorry  -- MUST close — see proof sketch below
-
-  theorem verticesFromChildren_card : ∀ cs : List RootedTree,
-      (verticesFromChildren cs).card = orderSum cs
-    | [] => by simp [verticesFromChildren, orderSum]
-    | t :: ts => by
-        sorry  -- MUST close — uses IH + Finset.card_biUnion +
-               -- disjointness of Vertex.child i vs Vertex.child j for i ≠ j
-end
-```
-
-**Key sub-lemma**: `Vertex.root ∉ verticesFromChildren cs` reduces
-to: every element of `verticesFromChildren cs` is constructed by
-`Vertex.child _ _`, and `Vertex.root ≠ Vertex.child _ _` by
-constructor injectivity (`Vertex.noConfusion` or pattern match on
-the equality).
-
-**Disjointness for `card_biUnion`**: for `i j : Fin cs.length`
-with `i ≠ j`, the images of `(Vertex.child i) ∘ vertices (cs.get i)`
-and `(Vertex.child j) ∘ vertices (cs.get j)` are disjoint because
-`Vertex.child i _ = Vertex.child j _` forces `i = j` (constructor
-injectivity again).
-
-**Sorry count rule**: cycle 261's deliverable MUST ship with
-sorry count = 0. If `vertices_card` cannot be closed cleanly,
-ABORT to §C fallback.
-
-#### Deliverable 5 — Three non-vacuity examples
-
-```lean
-example : (RootedTree.vertices RootedTree.cherry).card = 2 := by
-  rw [RootedTree.vertices_card]; rfl
-
-example : (RootedTree.vertices RootedTree.broom₃).card = 3 := by
-  rw [RootedTree.vertices_card]; rfl
-
-example : (RootedTree.vertices
-            (RootedTree.mk [RootedTree.vertex, RootedTree.cherry])).card
-        = 4 := by
-  rw [RootedTree.vertices_card]; rfl
-```
-
-If `order cherry = 2` requires more than `rfl`, use
-`decide` or `simp [RootedTree.order, RootedTree.orderSum]`.
-
-### Axiom budget
-
-`Classical.choice` (via `Classical.decEq` in Deliverable 2) is in
-the standard `[propext, Classical.choice, Quot.sound]` baseline.
-NO new axioms beyond this trio are acceptable. `#print axioms
-OpenMath.Chapter3.Section310.RootedTree.vertices_card` must
-return exactly `[propext, Classical.choice, Quot.sound]`.
-
-### LOC budget
-
-**Target**: 80–120 LOC for `Section300.lean` (~150 LOC inclusive
-of docstrings + examples + aggregator update). Per cycle 260
-scoping doc.
-
-### Time budget
-
-~2 hours focused work.
-
-## §C — Cycle 261 ABORT threshold and fallback
-
-If Phase A.1's `vertices` definition or `vertices_card` proof
-**stalls beyond 90 minutes** without compilation progress, ABORT
-Direction 1 and pivot to **Direction 2** (`lem:342A` (342a)).
-
-Concrete abort triggers:
-- (a) The `Finset.biUnion` definition refuses to elaborate due to
-  nested-inductive motive issues. Try the `List`-fallback once
-  before aborting.
-- (b) The disjointness proof in `verticesFromChildren_card`
-  requires more than one auxiliary helper lemma.
-- (c) `decEqVertex` mutual block (Route A) exceeds 30 LOC. Switch
-  to Route B (`Classical.decEq`) once before aborting.
-
-The abort criterion mirrors cycle 200's rollback discipline:
-sorry-first scaffolds for multi-cycle targets are FORBIDDEN per
-supervisor policy. Better to ship Direction 2 axiom-clean than
-Direction 1 with a `sorry` in `vertices_card`.
-
-## §D — Direction 2 fallback — `lem:342A` (342a) orthogonality
-
-If Direction 1 aborts per §C, ship a single-cycle deliverable on
-the §342 cluster:
-
-### Concrete deliverable
-
-New file `OpenMath/Chapter3/Section342.lean` shipping:
-
-1. `noncomputable def shiftedLegendre (n : ℕ) : Polynomial ℝ` —
-   the shifted Legendre polynomial `P_n^*(x) := P_n(2x - 1)` on
-   `[0, 1]`. Via Mathlib's `Polynomial.legendre` (verify path
-   with `lean_local_search "legendre"` first thing in the worker
-   session) composed with the linear shift `2X - 1`.
-
-2. `theorem shiftedLegendre_orthogonal {m n : ℕ} (hmn : m ≠ n) :
-   ∫ x in (0:ℝ)..1, (shiftedLegendre m).eval x *
-                    (shiftedLegendre n).eval x = 0` — (342a)
-   orthogonality on `[0, 1]`. Closure: change-of-variables
-   `u := 2x - 1` reduces to Mathlib's orthogonality on `[-1, 1]`
-   plus Jacobian `du/2`. Use
-   `intervalIntegral.integral_comp_mul_left` or similar.
-
-3. `theorem shiftedLegendre_eval_one (n : ℕ) :
-   (shiftedLegendre n).eval 1 = 1` — (342b) normalization.
-   Closure: `P_n(1) = 1` (Mathlib) + `2·1 - 1 = 1`.
-
-4. Three non-vacuity examples for `n = 0, 1, 2` exercising both
-   theorems with explicit Legendre values.
-
-### Risk
-
-**Verify Mathlib's Legendre polynomial API FIRST** before
-committing. Run `lean_local_search "Legendre"` and
-`lean_loogle "Polynomial.*legendre"` at session start. If
-Mathlib's Legendre infrastructure is too sparse to support
-`shiftedLegendre_orthogonal` in a single cycle, ABORT
-Direction 2 and pivot to **Direction 3** (§E).
-
-### Axiom budget
-
-`[propext, Classical.choice, Quot.sound]`. NO new axioms.
-
-### LOC budget
-
-~80–120 LOC.
-
-## §E — Direction 3 last-resort fallback — Section319 helper extraction
-
-If both Direction 1 and Direction 2 abort, ship a **pure
-refactor** extracting three private helpers from
-`OpenMath/Chapter3/Section319.lean` (`geometric_sum_one_plus_pos`,
-`geometric_sum_one_plus_zero`, `pow_one_add_le_exp`) into a new
-file `OpenMath/Helpers/GeometricExp.lean`. Update `Section319.lean`
-to import the new file. ~120 LOC moved, zero new content.
-Cycle-neutral on sorry count but counts as a substantive ship.
-
-This fallback was floated in cycle 248 task results and is a
-guaranteed-clean refactor.
-
-## §F — DO NOT do these (cycle 261 specific)
-
-- **Do NOT extend the order-N specialisation chain** (cycle 259's
-  `lem_311A_order_five` chain). Cycle 259 explicitly cut off the
-  chain at order 5; cycle 260 confirmed. Further extensions are
-  forbidden — combinatorial growth, no new mathematical content,
-  and substantive §311 work requires `lem:310B` Phase A
-  infrastructure.
-
-- **Do NOT ship sorry-first scaffolds for Phase A or any phase
-  of `lem_310B_plan.md`.** Cycle 200/201 rollback and cycle
-  149/150 `def:530B` rollback both forbid sorry-first scaffolds
-  for multi-cycle targets. Every phase must close axiom-clean.
-
-- **Do NOT name the cycle 261 deliverable `lem_310B`.** The
-  Phase A.1 deliverable is `vertices_card` (vertex enumeration
-  scaffold). `lem:310B` is the eventual multi-phase capstone
-  (Phase F.1) and must not be claimed prematurely. Plan.md row
-  for `lem:310B` stays `[ ]` and `lean_status.json` row stays
-  `unformalized` for cycle 261.
-
-- **Do NOT attempt the full `lem:310B` proof.** Multi-cycle work
-  per `lem_310B_plan.md` §5 (8–14 cycles).
-
-- **Do NOT define `Vertex` recursing via `RootedTree.rec`'s
-  motive directly.** The nested inductive `RootedTree | mk :
-  List RootedTree → RootedTree` interacts poorly with non-mutual
-  `Vertex` definitions per the memory
-  `feedback_rootedtree_nested_induction`. The inductive
-  declaration with explicit `root`/`child` constructors above is
-  fine, but the PROOFS of `vertices_card` etc. must use the
-  cycle 017 `mutual theorem` block pattern from
-  `Section301.lean:159-178` — not raw `RootedTree.recOn` /
-  `induction t`.
-
-- **Do NOT compile `OpenMath/Chapter4/Section441.lean`.** GPFS
-  pathology has produced 43+ consecutive timeouts since cycle
-  182. Per `.prover-state/issues/cycle_182_gpfs_slowness.md`,
-  skip any §441 compile attempts entirely. Cycle 260 did NOT
-  touch §441.
-
-- **Do NOT poll any Aristotle projects.** There are no pending
-  Aristotle submissions for cycle 261 (per the cycle 260 task
-  results). No `mcp__aristotle__` calls needed.
-
-- **Do NOT modify `scripts/autonomous_loop.py`.** Loop-maintainer
-  territory per CLAUDE.md.
-
-- **Do NOT raise `maxHeartbeats`** above 200000. If
-  `decEqVertex`'s mutual block stalls, switch to
-  `Classical.decEq` (Route B above).
-
-- **Do NOT introduce `axiom`/`constant` declarations.**
-
-## §G — Worker workflow
-
-1. **(5 min)** Read this strategy file and
-   `.prover-state/issues/lem_310B_plan.md` §3 (project hooks)
-   and §7 (cycle 261 entry point).
-2. **(15 min)** Read `OpenMath/Chapter3/Section301.lean:73-179`
-   for the cycle 017 mutual-recursion templates: `decEqTree`,
-   `density`, `densityProd_eq_map_prod`, `density_eq`,
-   `density_pos`, `densityProd_pos`. These are the canonical
-   patterns for Deliverables 2, 3, and 4.
-3. **(5 min)** Verify `RootedTree.cherry`, `RootedTree.broom₃`,
-   `RootedTree.vertex`, `RootedTree.order`, `RootedTree.orderSum`
-   are at the expected locations in
-   `OpenMath/Chapter3/Section310.lean` (Grep). They are —
-   `cherry` @ line 111, `broom₃` @ line 114, `vertex` @ line 108
-   per HEAD inspection.
-4. **(60–90 min)** Implement Deliverables 1–5 in
-   `OpenMath/Chapter3/Section300.lean`. Run
-   `lake env lean OpenMath/Chapter3/Section300.lean` after each
-   deliverable to catch issues early. **TIMEOUT WATCH**: if any
-   single `lake env lean` call exceeds 5 minutes on
-   `Section300.lean`, suspect a `Decidable` instance loop or a
-   mutual-recursion well-foundedness issue — break the proof
-   down or switch `DecidableEq` to Route B (`Classical.decEq`).
-5. **(10 min)** Add `import OpenMath.Chapter3.Section300` to
-   `OpenMath/Chapter3.lean`. Run `lake env lean
-   OpenMath/Chapter3.lean` to verify the aggregator builds.
-6. **(10 min)** Run `lake build OpenMath.Chapter3.Section300`
-   to refresh the `.olean`, then `#print axioms` on
-   `RootedTree.vertices_card` and confirm
-   `[propext, Classical.choice, Quot.sound]`. This `lake build`
-   step is essential — `lake env lean` does NOT update `.olean`
-   files, so `#print axioms` against the freshly-edited
-   declaration would otherwise report `unknownIdentifier`.
-7. **(5 min)** Tautology-scanner check:
-   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section300.lean`
-   should return no matches.
-8. **(20 min)** Write `.prover-state/task_results/cycle_261.md`
-   per CLAUDE.md template. Faithfulness check on Deliverables 1,
-   3, 4 (the new `def`s and `theorem`).
-9. **(5 min)** Update `extraction/formalization_data/lean_status.json`
-   ONLY IF a textbook entity is closed (NOT the case for Phase
-   A.1 — `vertices_card` is engineering infrastructure, not a
-   Butcher entity). Likewise `plan.md`. Cycle 261's deliverable
-   is engineering scaffolding; neither file needs updating
-   beyond a cosmetic `Recent commits` refresh.
-10. **(5 min)** Commit with a message of the form
-    `Cycle 261 — §300 RootedTree.Vertex + vertices_card (lem:310B Phase A.1) SHIPPED.`
-
-## §H — Faithfulness rationale
-
-Deliverable 1 (`Vertex`): Butcher §300 (p. 139) defines vertices
-informally as "the points of a tree". Our inductive `root` /
-`child` constructors faithfully capture the same notion: every
-vertex is either the root or sits inside a specific child
-position. The `Fin cs.length` index plus the recursive
-`Vertex (cs.get i)` argument matches Butcher's "vertex of the
-i-th subtree" framing verbatim.
-
-Deliverable 3 (`vertices`): the enumeration as a `Finset`
-faithfully represents "the set of vertices" Butcher refers to in
-§300's automorphism-group discussion. Each vertex appears exactly
-once; the `Finset` structure ensures this.
-
-Deliverable 4 (`vertices_card = order`): the natural
-"|V(t)| = r(t)" identity. Butcher's §300 defines `r(t)` as "the
-number of vertices of t", so the identity is by definition;
-formally, it requires the mutual induction on `RootedTree`
-against the cycle 017 `order_eq` recursion.
-
-Phase A.1 has **no faithfulness divergence**. The σ-faithfulness
-gap (`symmetry_group_equivalence.md`) does NOT bite here —
-`vertices` is the literal vertex-set enumeration, not the
-symmetry-group-quotient construction.
-
-## §I — Success criteria (cycle 261 grading checklist)
-
-- [ ] `OpenMath/Chapter3/Section300.lean` exists, ≤ 200 LOC.
-- [ ] `OpenMath/Chapter3.lean` imports `Section300`.
-- [ ] `lake env lean OpenMath/Chapter3/Section300.lean` exits 0.
-- [ ] `lake env lean OpenMath/Chapter3.lean` exits 0.
-- [ ] `lake build OpenMath.Chapter3.Section300` exits 0.
-- [ ] `grep -c sorry OpenMath/Chapter3/Section300.lean` returns 0.
-- [ ] `grep -c sorry OpenMath/Chapter3/Section{301,310,311}.lean`
-      unchanged (no regression on cycle 248–260 deliverables).
-- [ ] `#print axioms OpenMath.Chapter3.Section310.RootedTree.vertices_card`
-      returns `[propext, Classical.choice, Quot.sound]`.
-- [ ] Tautology-scanner regex returns no matches on
-      `Section300.lean`.
-- [ ] `task_results/cycle_261.md` written with the seven CLAUDE.md
-      sections (Worked on / Approach / Result / Faithfulness check
-      / Dead ends / Discovery / Suggested next approach).
-- [ ] Three non-vacuity `example`s verify `vertices_card` fires
-      on `cherry`, `broom₃`, and `mk [vertex, cherry]`.
-- [ ] Commit message of the form
-      `Cycle 261 — §300 RootedTree.Vertex + vertices_card (lem:310B Phase A.1) SHIPPED.`
-
-If Direction 2 (`lem:342A`) or Direction 3 (Section319 refactor)
-is shipped instead, adjust the file/symbol names accordingly.
-The axiom-clean + sorry-clean + non-vacuity criteria apply
-uniformly across all three directions.
-
-## §J — Suggested cycle 262+ trajectory (planning only)
-
-Per `lem_310B_plan.md` §5, if cycle 261 ships Phase A.1 cleanly:
-
-* **Cycle 262**: Phase A.2 — `LabelledRootedTree` structure +
-  tree-automorphism `Setoid`. ~150–200 LOC. Builds on cycle 261's
-  `Vertex` enumeration.
-* **Cycle 263**: Phase A.3 — orbit-size theorem
-  `Nat.card (orbit …) = r(t)!/σ(t)` OR defer per
-  `symmetry_group_equivalence.md`. ~100–150 LOC.
-* **Cycles 264–266**: Phase B (Taylor) or skip per
-  `lem_310B_plan.md` §4.2 bypass.
-* **Cycles 267+**: Phase C (orbit-counting bridge), Phase D
-  (multilinear lift), Phase E (small-r `lem:310B` cases),
-  Phase F (general `lem:310B` capstone). See `lem_310B_plan.md`
-  §5 for the full breakdown.
-
-If cycle 261 ships Direction 2 (`lem:342A`) instead:
-
-* **Cycle 262**: extend `lem:342A` properties (342c parity, 342d
-  norm) or pivot to `lem:342B` (Gaussian quadrature exactness).
-  Per `lem_310B_plan.md` §8.3, `lem:342B` consumes `lem:342A`
-  (342g) so the §342 cluster has a multi-cycle structure of its
-  own.
+The `order = n` `rfl` checks confirm the structure's `underlying` field matches its intended tree (the `order` recursion from `Section310.lean` already produces these values by `rfl` on the small examples).
+
+If `noncomputable def`+`canonicalLabelling` triggers universe / `noncomputable` propagation issues at use sites, swap to `noncomputable abbrev`. Both should work since `LabelledRootedTree` has no decidable-data fields.
+
+## §E — Dead ends to avoid (from prior cycles)
+
+**Do NOT try the approaches that have already failed**:
+
+1. **DecidableEq placement after namespace opening** (cycle 261 dead end): if cycle 262 needs to introduce any new `DecidableEq` or `Fintype` instance, declare it **before** opening any sub-namespace where it'll be used. Cycle 261's `instDecidableEqVertex` is at lines 54-56 (just after `inductive Vertex`); follow this pattern. The new `instFintypeVertex` should live alongside, not inside `namespace Vertex`.
+
+2. **`Option.noConfusion` direct call** (cycle 261 dead end): if a proof needs `False` from an equation between distinct constructors of an indexed inductive (e.g. `Vertex.root = Vertex.child i v`), use `cases h` instead of `Option.noConfusion (h.symm.trans h')`. `cases` auto-invokes the generated `Vertex.noConfusion` and produces `False` directly.
+
+3. **`Fin.sum_univ_succ` without `show` coercion** (cycle 261 dead end + memory `feedback_fin_sum_univ_succ_coerce`): when applying `Fin.sum_univ_succ` to a sum indexed by `Fin (cs.length)` where `cs` matches a pattern like `t :: ts`, prepend `show (∑ i : Fin (ts.length + 1), …) = …` to definitionally coerce the binder type. `rw [Fin.sum_univ_succ]` without this preamble fails with a motive type-correctness error. **Cycle 262 may not need `Fin.sum_univ_succ` at all** — but if any new step does, apply this pattern.
+
+4. **Nested inductive `induction` / `recOn`** (memory `feedback_rootedtree_nested_induction`): direct `induction t` or `RootedTree.recOn` calls fail on `RootedTree`'s nested-inductive structure. The cycle 261 pattern for `vertices_card` (well-founded recursion via `termination_by` and `decreasing_by`) is the canonical workaround. **`Vertex.mem_vertices` in §D.1 MUST follow this pattern** — do not attempt `induction t with` or `RootedTree.recOn`.
+
+5. **`Finset.image` over a Type with non-decidable equality**: cycle 261 used `Classical.decEq` to side-step this. The existing `instDecidableEqVertex` instance auto-applies via instance resolution — no extra plumbing needed in §D.1.
+
+6. **Sorry-first scaffolds** (cycle 200/201 rollback, cycle 149/150 rollback): forbidden this cycle. The sorry count must remain at 0. If any sub-piece doesn't close axiom-clean within the cycle's working budget, **abort that sub-piece and ship only what does close**. Document the abort in the task results, do not commit a `sorry`.
+
+7. **GPFS compile of `Section441.lean`**: do not attempt. 43rd consecutive timeout recorded cycle 239 (`cycle_182_gpfs_slowness.md`). Skip without time investment.
+
+8. **Pivots to `lem:342A` / `lem:342B` / `thm:351B`**: cycle 260's scoping doc enumerated these as alternative entry points, but cycle 261 chose Phase A.1 of `lem:310B`. Cycle 262 should continue the §310 cluster — pivoting now would orphan cycle 261's investment. The pivots remain viable for a future cycle if the §310 path stalls multi-cycle.
+
+## §F — Abort thresholds
+
+If any of the following fire, **abort the current sub-piece and skip to the next** (do NOT commit a `sorry` or partial proof):
+
+1. **>20 minutes elapsed on `Vertex.mem_vertices`** (§D.1). The proof is structural well-founded recursion; if it doesn't compile in 3-4 attempts, it suggests a deeper issue with the recursive pattern. Likely needed escape: factor into a mutual-recursion `mem_vertices` + `mem_vertices_in_list` block (cf. `decEqList` precedent in `Section301.lean`). If still stuck after the mutual factoring, abort §D.1 entirely; cycle 263 retries.
+
+2. **Mathlib API name drift on `Fintype.equivFinOfCardEq`** (§D.3). If the exact name doesn't exist, try the variants noted in §D.3 (5-minute time cap each). If none fit, fall back to a manual `Equiv.ofBijective` construction using `Fintype.bijective_iff_injective_and_card` — but cap this fallback at 10 minutes. If still stuck, **skip §D.3 and §D.4 entirely**; ship only §D.1 + §D.2 as a minimal-but-axiom-clean cycle 262.
+
+3. **GPFS smoke test on `Section441.lean`** — skip without any time investment per §E.7.
+
+4. If §D.1 closes but §D.2 stalls, abort and ship §D.1 only — the completeness lemma is itself useful infrastructure for cycle 263+.
+
+5. **Tautology-scanner false-positive risk**: if any new `:= by exact h_xxx` or `:= h_xxx` pattern is introduced, immediately rename `h_xxx` → `hxxx` (drop underscore) to silence the scanner. The scanner's bug is documented in `tautology_scanner_false_positives.md`. Cycle 262 should pre-emptively use names like `hroot`, `hchild`, `hbu`, etc. without underscores.
+
+## §G — Acceptance criteria
+
+The cycle ships if **all** of the following hold:
+
+- `lake env lean OpenMath/Chapter3/Section300.lean` exits 0.
+- `lake env lean OpenMath/Chapter3.lean` exits 0 (aggregator regression check).
+- `lake build OpenMath.Chapter3.Section300` exits 0.
+- `grep -c sorry OpenMath/Chapter3/Section300.lean` returns 0.
+- All new public theorems / instances axiom-clean. Run `#print axioms` on `Fintype.card_vertex_eq_order` and confirm `[propext, Classical.choice, Quot.sound]` only (`Classical.choice` is expected from the noncomputable `Fintype` instance and `Fintype.equivFinOfCardEq`).
+- The tautology-scanner regex `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` returns no matches on the new code.
+- Non-vacuity examples (§D.4 `example`s) compile by `rfl`.
+
+`lean_status.json` and `plan.md` deliberately **do not change** this cycle — cycle 262 is engineering infrastructure for the multi-cycle `lem:310B` capstone. The `lem:310B` row remains `[ ]` / `unformalized`. The cycle 262 task results note the partial Phase A.2 progress in the `lem:310B` partial-status text without changing the row's `[ ]` mark.
+
+## §H — Cycle 263+ outlook
+
+If §D.1-D.4 all land cleanly, cycle 263 picks up the deferred Phase A.2 work:
+
+- **`treeAutomorphism : RootedTree → Type`** (or `Equiv.Perm`-style) — recursive predicate for tree automorphisms. The key recursive identity is: an automorphism of `mk cs` is a permutation of `Fin cs.length` preserving the *multiset* of subtree-isomorphism classes (i.e. distinct subtrees must map to distinct subtrees of the same isomorphism class), combined with one automorphism per child subtree.
+- **`LabelledRootedTree.Setoid`** — two labellings equivalent if related by a tree-automorphism. Pre-composing the labelling `Vertex t ≃ Fin (order t)` with an `Equiv.Perm (Vertex t)` that's actually a tree-automorphism.
+- **Non-vacuity witness** — exhibit two labellings of `mk [vertex, vertex]` (a tree with σ = 2) that are equivalent under the leaf swap, and one labelling of `cherry` whose only automorphism is the identity.
+
+If §D stalls partway through this cycle, cycle 263 picks up the remaining §D pieces before moving to the Setoid.
+
+If §D fully lands AND cycle 263 also lands Phase A.2's Setoid + automorphism witness, Phase A is **complete** and cycle 264+ can move to Phase B or C per `lem_310B_plan.md` §5.
+
+## §I — Faithfulness check requirement for cycle 262 task results
+
+For each new public def/structure/theorem, the cycle 262 task results must include:
+- Entity ID (or "engineering scaffold" if no textbook entity).
+- Quoted textbook statement (or "engineering scaffold" note).
+- Lean statement capture verdict: same / weaker / stronger / different.
+- Justification for any divergence.
+
+Per `CLAUDE.md` pre-commit checklist:
+- `Vertex.mem_vertices`: same content as the implicit Butcher claim that `vertices t` enumerates the vertex set. Engineering scaffold formalisation of the §300 "set of vertices" notion.
+- `instFintypeVertex`: engineering scaffold (no direct Butcher analogue; just a Lean structure capturing that `Vertex t` is finite).
+- `Fintype.card_vertex_eq_order`: same content as cycle 261's `vertices_card`, reframed for the `Fintype` API. Same Butcher content (`r(t) = |V(t)|`).
+- `LabelledRootedTree`: faithfulness divergence vs Butcher's `def:300C` — we expose a *single canonical* labelling here, not a quotient class. Document this; the textbook treats labellings up to tree-automorphism, which cycle 263's Setoid recovers. Cycle 262 shipping the raw `Equiv` first is a structural pre-step, not a textbook claim, so the divergence is bookkeeping rather than logical.
+- `canonicalLabelling`: engineering scaffold (Butcher does not single out a canonical labelling). Document as such.
+- All non-vacuity examples: same content as the `vertex`/`cherry`/`broom₃` cycle 261 witnesses.
+
+## §J — Out-of-scope items (do NOT attempt this cycle)
+
+- Tree-automorphism Setoid (cycle 263+).
+- Full `lem:310B` (multi-cycle, see `lem_310B_plan.md` §5 phases B-F).
+- `thm:306A` multinomial Taylor (Phase B, deferrable via the multilinear bypass in `lem_310B_plan.md` §4.4).
+- Phase C orbit-counting bridge.
+- Phase D multilinear elementary-differential lift.
+- Small-`r` `lem:310B` instances on `TruncatedRootedTree N` (Phase E).
+- §441 Phase C.2 (GPFS-blocked; 43rd timeout cycle 239).
+- `Equivalent → PEquivalent` / `PhiEquivalent → PEquivalent` directions of `thm:381H` (Banach + thm:381G multi-cycle work).
+- `def:381E` reduced-method constructive recursion (deferred, `reduced_method_deferred.md`).
+- `lem:342A`/`lem:342B`/`thm:351B` pivots (cycle 260 alternative scouts; not the cycle 262 choice).
+- Any modification of `scripts/autonomous_loop.py` (loop-maintainer territory per `CLAUDE.md`).
+- Updating `lean_status.json` or `plan.md` rows (cycle 262 is engineering, not entity closure).
+
+## §K — Summary
+
+Cycle 262 ships Phase A.2 (partial) of the multi-cycle `lem:310B` plan: extend `OpenMath/Chapter3/Section300.lean` with `Vertex.mem_vertices`, a `Fintype (Vertex t)` instance, `Fintype.card_vertex_eq_order`, the `LabelledRootedTree` structure, the `canonicalLabelling` definition, and three non-vacuity `LabelledRootedTree` witnesses. Estimated ~80-120 LOC, axiom-clean, sorry count remains 0. The tree-automorphism Setoid is deferred to cycle 263.
+
+Worker: follow §D's step-by-step recipe in order. Abort early per §F if any sub-piece stalls. Update `.prover-state/task_results/cycle_262.md` per §I when done, then commit and push.

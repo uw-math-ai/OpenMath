@@ -174,6 +174,90 @@ example : (RootedTree.vertices
             (RootedTree.mk [RootedTree.vertex, RootedTree.cherry])).card = 4 := by
   rw [RootedTree.vertices_card]; rfl
 
+/-! ### Phase A.2 (partial) — `LabelledRootedTree` + canonical labelling
+
+`Vertex.mem_vertices` proves the completeness of the `vertices`
+enumeration; this powers a `Fintype (Vertex t)` instance, in turn
+yielding `Fintype.card (Vertex t) = order t` as a reframing of
+`vertices_card`. We then introduce the `LabelledRootedTree`
+structure (a rooted tree with a chosen `Vertex ≃ Fin (order)`
+bijection) and the canonical labelling derived from the `Fintype`
+infrastructure via `Fintype.equivFinOfCardEq`.
+
+Faithfulness divergence: Butcher's `def:300C` treats labelled rooted
+trees up to tree-automorphism (a *quotient* by the symmetry group).
+The structure exposed here singles out one *raw* labelling per
+underlying tree; the tree-automorphism `Setoid` recovering Butcher's
+quotient is deferred to cycle 263+ per
+`.prover-state/issues/lem_310B_plan.md` §4.1. -/
+
+/-- Completeness: every vertex of `t` is in the `vertices t` Finset. -/
+theorem Vertex.mem_vertices : ∀ {t : RootedTree} (v : Vertex t),
+    v ∈ vertices t
+  | mk cs, Vertex.root => by
+      rw [vertices]
+      exact Finset.mem_insert_self _ _
+  | mk cs, Vertex.child i v => by
+      rw [vertices]
+      refine Finset.mem_insert_of_mem ?_
+      rw [Finset.mem_biUnion]
+      refine ⟨i, Finset.mem_univ _, ?_⟩
+      rw [Finset.mem_image]
+      exact ⟨v, Vertex.mem_vertices v, rfl⟩
+termination_by t _ => t
+decreasing_by
+  simp_wf
+  exact Nat.lt_add_left 1 (List.sizeOf_get cs i)
+
+/-- `Vertex t` is a (noncomputable) finite type with `vertices t` as
+its universe Finset. -/
+noncomputable instance instFintypeVertex (t : RootedTree) :
+    Fintype (Vertex t) :=
+  ⟨vertices t, fun v => Vertex.mem_vertices v⟩
+
+/-- `Fintype.card (Vertex t) = order t`, an `API`-side reframing of
+cycle 261's `vertices_card`. -/
+theorem Fintype.card_vertex_eq_order (t : RootedTree) :
+    Fintype.card (Vertex t) = order t := by
+  show (vertices t).card = order t
+  exact vertices_card t
+
+/-- A rooted tree together with a chosen bijective labelling of its
+vertices by `Fin (order t)`. The labelling is a structural choice
+(not canonically determined by `t`); two labellings related by a
+tree-automorphism are textbook-equivalent, but the tree-automorphism
+`Setoid` is deferred to cycle 263+. -/
+structure LabelledRootedTree where
+  underlying : RootedTree
+  labelling : Vertex underlying ≃ Fin (order underlying)
+
+/-- The canonical labelling of a rooted tree, derived from the
+`Fintype` instance on `Vertex t` via Mathlib's
+`Fintype.equivFinOfCardEq`. Engineering scaffold; Butcher does not
+single out a canonical labelling. -/
+noncomputable def canonicalLabelling (t : RootedTree) :
+    Vertex t ≃ Fin (order t) :=
+  Fintype.equivFinOfCardEq (Fintype.card_vertex_eq_order t)
+
+/-- The canonical labelling of the singleton tree `vertex`. -/
+noncomputable def canonicalVertex : LabelledRootedTree where
+  underlying := vertex
+  labelling := canonicalLabelling vertex
+
+/-- The canonical labelling of `cherry`. -/
+noncomputable def canonicalCherry : LabelledRootedTree where
+  underlying := cherry
+  labelling := canonicalLabelling cherry
+
+/-- The canonical labelling of `broom₃`. -/
+noncomputable def canonicalBroom₃ : LabelledRootedTree where
+  underlying := broom₃
+  labelling := canonicalLabelling broom₃
+
+example : canonicalVertex.underlying.order = 1 := rfl
+example : canonicalCherry.underlying.order = 2 := rfl
+example : canonicalBroom₃.underlying.order = 3 := rfl
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310
