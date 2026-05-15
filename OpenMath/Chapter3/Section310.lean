@@ -117,10 +117,16 @@ def broom₃ : RootedTree := mk [vertex, vertex]
 The order-4 first-row tree in Butcher's Table 310(II). -/
 def bushy : RootedTree := mk [vertex, vertex, vertex]
 
+/-- The tree `[τ, τ, τ, τ]`: a root with four child leaves. Order 5.
+The order-5 first-row tree in Butcher's Table 310(II). Sister to
+`bushy = mk [vertex, vertex, vertex]`. -/
+def bushy₄ : RootedTree := mk [vertex, vertex, vertex, vertex]
+
 example : vertex.order = 1 := rfl
 example : cherry.order = 2 := rfl
 example : broom₃.order = 3 := rfl
 example : bushy.order = 4 := rfl
+example : bushy₄.order = 5 := rfl
 
 /- ### `θ(t)` — exact-solution operator weight
 

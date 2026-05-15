@@ -1226,6 +1226,550 @@ theorem bseriesExactTerm_mkMkCherry_scalar
   push_cast
   ring
 
+/- ### Cycle 269 / Phase E.1 — order-5 per-tree scalar closed forms
+
+Nine new `bseriesExactTerm_*_scalar` closed-form theorems for the nine
+unordered rooted trees of order 5 (Butcher Table 310(II) row r=5).
+Each follows the cycle 266–268 mechanical recipe:
+
+1. Unfold `bseriesExactTerm`, rewrite `(r, σ, γ)` by `rfl` reductions.
+2. Establish the inline `elementaryDiff` closed form via
+   `iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod` and the appropriate
+   `Fin.prod_univ_{one,two,three,four}` arity hook.
+3. For one-child wrapping trees, reuse the cycle 266–268
+   `iteratedFDeriv ℝ 1` mechanism.
+4. Reduce nested `iteratedDeriv` via `iteratedDeriv_succ` + `iteratedDeriv_one`.
+5. Close with `smul_eq_mul`, `push_cast`, `ring`.
+
+Together with cycle 268's four order-4 closed forms and cycle 266–267's
+order ≤ 3 closed forms, these 9 lemmas saturate the per-tree library
+through order 5, ready for cycle 270's 17-tree partial-sum bridge to
+cycle 259's `lem_311A_order_five`. -/
+
+/-- **Scalar closed form at `bushy₄ = mk [vertex, vertex, vertex, vertex]`.**
+For `f : ℝ → ℝ`, the exact-solution B-series term at the order-5 tree
+`bushy₄` is `h⁵/120 · (f''''(y₀) · f(y₀)⁴)`.
+
+Cycle 269 / Phase E.1 (T1, order 5, first row of Butcher Table 310(II)
+r=5). Coefficients: `r(bushy₄) = 5`, `σ(bushy₄) = 4! = 24`,
+`γ(bushy₄) = 5`, so `h^r / (σ·γ) = h⁵ / 120`. -/
+theorem bseriesExactTerm_bushy₄_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h bushy₄
+      = h^5 / 120 * (deriv (deriv (deriv (deriv f))) y₀ * (f y₀) ^ 4) := by
+  unfold bseriesExactTerm bushy₄
+  rw [show order (mk [vertex, vertex, vertex, vertex]) = 5 from rfl,
+      show symmetry (mk [vertex, vertex, vertex, vertex]) = 24 from rfl,
+      show density (mk [vertex, vertex, vertex, vertex]) = 5 from rfl]
+  have hED : elementaryDiff f y₀ (mk [vertex, vertex, vertex, vertex])
+      = deriv (deriv (deriv (deriv f))) y₀ * (f y₀) ^ 4 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 4 f y₀
+            (fun i : Fin 4 => elementaryDiff f y₀
+              ([(vertex : RootedTree), vertex, vertex, vertex].get i))
+          = deriv (deriv (deriv (deriv f))) y₀ * (f y₀) ^ 4
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_four,
+        show ([(vertex : RootedTree), vertex, vertex, vertex] :
+              List RootedTree).get (0 : Fin 4) = vertex from rfl,
+        show ([(vertex : RootedTree), vertex, vertex, vertex] :
+              List RootedTree).get (1 : Fin 4) = vertex from rfl,
+        show ([(vertex : RootedTree), vertex, vertex, vertex] :
+              List RootedTree).get (2 : Fin 4) = vertex from rfl,
+        show ([(vertex : RootedTree), vertex, vertex, vertex] :
+              List RootedTree).get (3 : Fin 4) = vertex from rfl,
+        hED_v,
+        show (4 : ℕ) = 3 + 1 from rfl, iteratedDeriv_succ,
+        show (3 : ℕ) = 2 + 1 from rfl, iteratedDeriv_succ,
+        show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [mk [mk [cherry]]]`.** For `f : ℝ → ℝ`,
+the exact-solution B-series term at the order-5 chain `mk [mk [mk [cherry]]]`
+is `h⁵/120 · ((f'(y₀))⁴ · f(y₀))`.
+
+Cycle 269 / Phase E.1 (T9, the depth-5 chain `f'(f'(f'(f'·f)))`).
+Coefficients: `r = 5`, `σ = 1` (single-child chain), `γ = 120 = 5!`,
+so `h^r / (σ·γ) = h⁵ / 120`. -/
+theorem bseriesExactTerm_mkMkMkCherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [mk [mk [cherry]]])
+      = h^5 / 120 * ((deriv f y₀) ^ 4 * f y₀) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [mk [mk [cherry]]]) = 5 from rfl,
+      show symmetry (mk [mk [mk [cherry]]]) = 1 from rfl,
+      show density (mk [mk [mk [cherry]]]) = 120 from rfl]
+  have hED : elementaryDiff f y₀ (mk [mk [mk [cherry]]])
+      = (deriv f y₀) ^ 4 * f y₀ := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_cherry : elementaryDiff f y₀ cherry = deriv f y₀ * f y₀ := by
+      show elementaryDiff f y₀ (mk [vertex]) = deriv f y₀ * f y₀
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀
+                ([(vertex : RootedTree)].get i))
+            = deriv f y₀ * f y₀
+      rw [iteratedFDeriv_one_apply, fderiv_eq_smul_deriv,
+          show [(vertex : RootedTree)].get (0 : Fin 1) = vertex from rfl, hED_v,
+          smul_eq_mul]
+      ring
+    have hED_mkCherry : elementaryDiff f y₀ (mk [cherry])
+        = (deriv f y₀) ^ 2 * f y₀ := by
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀ ([cherry].get i))
+            = (deriv f y₀) ^ 2 * f y₀
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_one,
+          show ([cherry] : List RootedTree).get (0 : Fin 1) = cherry from rfl,
+          hED_cherry, iteratedDeriv_one]
+      ring
+    have hED_mkMkCherry : elementaryDiff f y₀ (mk [mk [cherry]])
+        = (deriv f y₀) ^ 3 * f y₀ := by
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀ ([mk [cherry]].get i))
+            = (deriv f y₀) ^ 3 * f y₀
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_one,
+          show ([mk [cherry]] : List RootedTree).get (0 : Fin 1)
+            = mk [cherry] from rfl,
+          hED_mkCherry, iteratedDeriv_one]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 1 f y₀
+            (fun i : Fin 1 => elementaryDiff f y₀
+              ([mk [mk [cherry]]].get i))
+          = (deriv f y₀) ^ 4 * f y₀
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_one,
+        show ([mk [mk [cherry]]] : List RootedTree).get (0 : Fin 1)
+          = mk [mk [cherry]] from rfl,
+        hED_mkMkCherry, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [vertex, broom₃]`.** For `f : ℝ → ℝ`,
+the exact-solution B-series term at the order-5 tree `mk [vertex, broom₃]`
+is `h⁵/30 · ((f''(y₀))² · f(y₀)³)`.
+
+Cycle 269 / Phase E.1 (T3, Butcher Table 310(II) row r=5).
+Coefficients: `r = 5`, `σ = 2` (σ-recursion at multi-distinct children:
+`1!·σ(v)·1!·σ(broom₃) = 1·1·1·2`), `γ = 15`, so
+`h^r / (σ·γ) = h⁵ / 30`. -/
+theorem bseriesExactTerm_mkVertexBroom₃_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [vertex, broom₃])
+      = h^5 / 30 * ((deriv (deriv f) y₀) ^ 2 * (f y₀) ^ 3) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [vertex, broom₃]) = 5 from rfl,
+      show symmetry (mk [vertex, broom₃]) = 2 from rfl,
+      show density (mk [vertex, broom₃]) = 15 from rfl]
+  have hED : elementaryDiff f y₀ (mk [vertex, broom₃])
+      = (deriv (deriv f) y₀) ^ 2 * (f y₀) ^ 3 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_broom : elementaryDiff f y₀ broom₃
+        = deriv (deriv f) y₀ * (f y₀) ^ 2 := by
+      show elementaryDiff f y₀ (mk [vertex, vertex]) = _
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 2 f y₀
+              (fun i : Fin 2 => elementaryDiff f y₀
+                ([(vertex : RootedTree), vertex].get i))
+            = deriv (deriv f) y₀ * (f y₀) ^ 2
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_two,
+          show ([(vertex : RootedTree), vertex] : List RootedTree).get
+                (0 : Fin 2) = vertex from rfl,
+          show ([(vertex : RootedTree), vertex] : List RootedTree).get
+                (1 : Fin 2) = vertex from rfl,
+          hED_v,
+          show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 2 f y₀
+            (fun i : Fin 2 => elementaryDiff f y₀
+              ([(vertex : RootedTree), broom₃].get i))
+          = (deriv (deriv f) y₀) ^ 2 * (f y₀) ^ 3
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_two,
+        show ([(vertex : RootedTree), broom₃] : List RootedTree).get
+              (0 : Fin 2) = vertex from rfl,
+        show ([(vertex : RootedTree), broom₃] : List RootedTree).get
+              (1 : Fin 2) = broom₃ from rfl,
+        hED_v, hED_broom,
+        show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [bushy]`.** For `f : ℝ → ℝ`,
+the exact-solution B-series term at the order-5 tree `mk [bushy]`
+is `h⁵/120 · (f'''(y₀) · f'(y₀) · f(y₀)³)`.
+
+Cycle 269 / Phase E.1 (T6, the depth-2 tree `f'(f'''(f,f,f))`).
+Coefficients: `r = 5`, `σ = 6` (one-child rule: `σ(mk [t]) = σ(t)`,
+with `σ(bushy) = 3! · σ(v)³ = 6`), `γ = 20`, so
+`h^r / (σ·γ) = h⁵ / 120`. -/
+theorem bseriesExactTerm_mkBushy_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [bushy])
+      = h^5 / 120 * (deriv (deriv (deriv f)) y₀ * deriv f y₀ * (f y₀) ^ 3) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [bushy]) = 5 from rfl,
+      show symmetry (mk [bushy]) = 6 from rfl,
+      show density (mk [bushy]) = 20 from rfl]
+  have hED : elementaryDiff f y₀ (mk [bushy])
+      = deriv (deriv (deriv f)) y₀ * deriv f y₀ * (f y₀) ^ 3 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_bushy : elementaryDiff f y₀ bushy
+        = deriv (deriv (deriv f)) y₀ * (f y₀) ^ 3 := by
+      show elementaryDiff f y₀ (mk [vertex, vertex, vertex]) = _
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 3 f y₀
+              (fun i : Fin 3 => elementaryDiff f y₀
+                ([(vertex : RootedTree), vertex, vertex].get i))
+            = deriv (deriv (deriv f)) y₀ * (f y₀) ^ 3
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_three,
+          show ([(vertex : RootedTree), vertex, vertex] : List RootedTree).get
+                (0 : Fin 3) = vertex from rfl,
+          show ([(vertex : RootedTree), vertex, vertex] : List RootedTree).get
+                (1 : Fin 3) = vertex from rfl,
+          show ([(vertex : RootedTree), vertex, vertex] : List RootedTree).get
+                (2 : Fin 3) = vertex from rfl,
+          hED_v,
+          show (3 : ℕ) = 2 + 1 from rfl, iteratedDeriv_succ,
+          show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 1 f y₀
+            (fun i : Fin 1 => elementaryDiff f y₀ ([bushy].get i))
+          = deriv (deriv (deriv f)) y₀ * deriv f y₀ * (f y₀) ^ 3
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_one,
+        show ([bushy] : List RootedTree).get (0 : Fin 1) = bushy from rfl,
+        hED_bushy, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [mk [broom₃]]`.** For `f : ℝ → ℝ`,
+the exact-solution B-series term at the order-5 tree `mk [mk [broom₃]]`
+is `h⁵/120 · (f''(y₀) · (f'(y₀))² · f(y₀)²)`.
+
+Cycle 269 / Phase E.1 (T8, the depth-3 tree `f'(f'(f''(f,f)))`).
+Coefficients: `r = 5`, `σ = 2` (σ-recursion through TWO one-child
+wrappers: `σ(mk [mk [broom₃]]) = σ(mk [broom₃]) = σ(broom₃) = 2`),
+`γ = 60`, so `h^r / (σ·γ) = h⁵ / 120`. -/
+theorem bseriesExactTerm_mkMkBroom₃_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [mk [broom₃]])
+      = h^5 / 120 *
+          (deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [mk [broom₃]]) = 5 from rfl,
+      show symmetry (mk [mk [broom₃]]) = 2 from rfl,
+      show density (mk [mk [broom₃]]) = 60 from rfl]
+  have hED : elementaryDiff f y₀ (mk [mk [broom₃]])
+      = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_broom : elementaryDiff f y₀ broom₃
+        = deriv (deriv f) y₀ * (f y₀) ^ 2 := by
+      show elementaryDiff f y₀ (mk [vertex, vertex]) = _
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 2 f y₀
+              (fun i : Fin 2 => elementaryDiff f y₀
+                ([(vertex : RootedTree), vertex].get i))
+            = deriv (deriv f) y₀ * (f y₀) ^ 2
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_two,
+          show ([(vertex : RootedTree), vertex] : List RootedTree).get
+                (0 : Fin 2) = vertex from rfl,
+          show ([(vertex : RootedTree), vertex] : List RootedTree).get
+                (1 : Fin 2) = vertex from rfl,
+          hED_v,
+          show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+      ring
+    have hED_mkBroom : elementaryDiff f y₀ (mk [broom₃])
+        = deriv f y₀ * deriv (deriv f) y₀ * (f y₀) ^ 2 := by
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀ ([broom₃].get i))
+            = deriv f y₀ * deriv (deriv f) y₀ * (f y₀) ^ 2
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_one,
+          show ([broom₃] : List RootedTree).get (0 : Fin 1) = broom₃ from rfl,
+          hED_broom, iteratedDeriv_one]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 1 f y₀
+            (fun i : Fin 1 => elementaryDiff f y₀ ([mk [broom₃]].get i))
+          = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_one,
+        show ([mk [broom₃]] : List RootedTree).get (0 : Fin 1)
+          = mk [broom₃] from rfl,
+        hED_mkBroom, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [mk [vertex, cherry]]`.** For
+`f : ℝ → ℝ`, the exact-solution B-series term at the order-5 tree
+`mk [mk [vertex, cherry]]` is `h⁵/40 · (f''(y₀) · (f'(y₀))² · f(y₀)²)`.
+
+Cycle 269 / Phase E.1 (T7, the depth-3 tree `f'(f'(f,f'·f))`).
+Coefficients: `r = 5`, `σ = 1` (one-child wraps an asymmetric
+order-4 tree with `σ = 1`), `γ = 40`, so `h^r / (σ·γ) = h⁵ / 40`. -/
+theorem bseriesExactTerm_mkMkVertexCherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [mk [vertex, cherry]])
+      = h^5 / 40 *
+          (deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [mk [vertex, cherry]]) = 5 from rfl,
+      show symmetry (mk [mk [vertex, cherry]]) = 1 from rfl,
+      show density (mk [mk [vertex, cherry]]) = 40 from rfl]
+  have hED : elementaryDiff f y₀ (mk [mk [vertex, cherry]])
+      = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_cherry : elementaryDiff f y₀ cherry = deriv f y₀ * f y₀ := by
+      show elementaryDiff f y₀ (mk [vertex]) = deriv f y₀ * f y₀
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀
+                ([(vertex : RootedTree)].get i))
+            = deriv f y₀ * f y₀
+      rw [iteratedFDeriv_one_apply, fderiv_eq_smul_deriv,
+          show [(vertex : RootedTree)].get (0 : Fin 1) = vertex from rfl, hED_v,
+          smul_eq_mul]
+      ring
+    have hED_mkVCherry : elementaryDiff f y₀ (mk [vertex, cherry])
+        = deriv (deriv f) y₀ * deriv f y₀ * (f y₀) ^ 2 := by
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 2 f y₀
+              (fun i : Fin 2 => elementaryDiff f y₀
+                ([(vertex : RootedTree), cherry].get i))
+            = deriv (deriv f) y₀ * deriv f y₀ * (f y₀) ^ 2
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_two,
+          show ([(vertex : RootedTree), cherry] : List RootedTree).get
+                (0 : Fin 2) = vertex from rfl,
+          show ([(vertex : RootedTree), cherry] : List RootedTree).get
+                (1 : Fin 2) = cherry from rfl,
+          hED_v, hED_cherry,
+          show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 1 f y₀
+            (fun i : Fin 1 => elementaryDiff f y₀
+              ([mk [vertex, cherry]].get i))
+          = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_one,
+        show ([mk [vertex, cherry]] : List RootedTree).get (0 : Fin 1)
+          = mk [vertex, cherry] from rfl,
+        hED_mkVCherry, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [vertex, vertex, cherry]`.** For
+`f : ℝ → ℝ`, the exact-solution B-series term at the order-5 tree
+`mk [vertex, vertex, cherry]` is `h⁵/20 · (f'''(y₀) · f'(y₀) · f(y₀)³)`.
+
+Cycle 269 / Phase E.1 (T2, Butcher Table 310(II) row r=5).
+Coefficients: `r = 5`, `σ = 2` (`2!·σ(v)²·1!·σ(cherry)¹ = 2`),
+`γ = 10`, so `h^r / (σ·γ) = h⁵ / 20`. -/
+theorem bseriesExactTerm_mkVertexVertexCherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [vertex, vertex, cherry])
+      = h^5 / 20 *
+          (deriv (deriv (deriv f)) y₀ * deriv f y₀ * (f y₀) ^ 3) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [vertex, vertex, cherry]) = 5 from rfl,
+      show symmetry (mk [vertex, vertex, cherry]) = 2 from rfl,
+      show density (mk [vertex, vertex, cherry]) = 10 from rfl]
+  have hED : elementaryDiff f y₀ (mk [vertex, vertex, cherry])
+      = deriv (deriv (deriv f)) y₀ * deriv f y₀ * (f y₀) ^ 3 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_cherry : elementaryDiff f y₀ cherry = deriv f y₀ * f y₀ := by
+      show elementaryDiff f y₀ (mk [vertex]) = deriv f y₀ * f y₀
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀
+                ([(vertex : RootedTree)].get i))
+            = deriv f y₀ * f y₀
+      rw [iteratedFDeriv_one_apply, fderiv_eq_smul_deriv,
+          show [(vertex : RootedTree)].get (0 : Fin 1) = vertex from rfl, hED_v,
+          smul_eq_mul]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 3 f y₀
+            (fun i : Fin 3 => elementaryDiff f y₀
+              ([(vertex : RootedTree), vertex, cherry].get i))
+          = deriv (deriv (deriv f)) y₀ * deriv f y₀ * (f y₀) ^ 3
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_three,
+        show ([(vertex : RootedTree), vertex, cherry] : List RootedTree).get
+              (0 : Fin 3) = vertex from rfl,
+        show ([(vertex : RootedTree), vertex, cherry] : List RootedTree).get
+              (1 : Fin 3) = vertex from rfl,
+        show ([(vertex : RootedTree), vertex, cherry] : List RootedTree).get
+              (2 : Fin 3) = cherry from rfl,
+        hED_v, hED_cherry,
+        show (3 : ℕ) = 2 + 1 from rfl, iteratedDeriv_succ,
+        show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [vertex, mk [cherry]]`.** For
+`f : ℝ → ℝ`, the exact-solution B-series term at the order-5 tree
+`mk [vertex, mk [cherry]]` is `h⁵/30 · (f''(y₀) · (f'(y₀))² · f(y₀)²)`.
+
+Cycle 269 / Phase E.1 (T4, Butcher Table 310(II) row r=5).
+Coefficients: `r = 5`, `σ = 1` (multi-distinct children:
+`1!·σ(v)·1!·σ(mk [cherry]) = 1`), `γ = 30`, so
+`h^r / (σ·γ) = h⁵ / 30`. -/
+theorem bseriesExactTerm_mkVertexMkCherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [vertex, mk [cherry]])
+      = h^5 / 30 *
+          (deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [vertex, mk [cherry]]) = 5 from rfl,
+      show symmetry (mk [vertex, mk [cherry]]) = 1 from rfl,
+      show density (mk [vertex, mk [cherry]]) = 30 from rfl]
+  have hED : elementaryDiff f y₀ (mk [vertex, mk [cherry]])
+      = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_cherry : elementaryDiff f y₀ cherry = deriv f y₀ * f y₀ := by
+      show elementaryDiff f y₀ (mk [vertex]) = deriv f y₀ * f y₀
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀
+                ([(vertex : RootedTree)].get i))
+            = deriv f y₀ * f y₀
+      rw [iteratedFDeriv_one_apply, fderiv_eq_smul_deriv,
+          show [(vertex : RootedTree)].get (0 : Fin 1) = vertex from rfl, hED_v,
+          smul_eq_mul]
+      ring
+    have hED_mkCherry : elementaryDiff f y₀ (mk [cherry])
+        = (deriv f y₀) ^ 2 * f y₀ := by
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀ ([cherry].get i))
+            = (deriv f y₀) ^ 2 * f y₀
+      rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+          Fin.prod_univ_one,
+          show ([cherry] : List RootedTree).get (0 : Fin 1) = cherry from rfl,
+          hED_cherry, iteratedDeriv_one]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 2 f y₀
+            (fun i : Fin 2 => elementaryDiff f y₀
+              ([(vertex : RootedTree), mk [cherry]].get i))
+          = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_two,
+        show ([(vertex : RootedTree), mk [cherry]] : List RootedTree).get
+              (0 : Fin 2) = vertex from rfl,
+        show ([(vertex : RootedTree), mk [cherry]] : List RootedTree).get
+              (1 : Fin 2) = mk [cherry] from rfl,
+        hED_v, hED_mkCherry,
+        show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at `mk [cherry, cherry]`.** For `f : ℝ → ℝ`,
+the exact-solution B-series term at the order-5 tree `mk [cherry, cherry]`
+is `h⁵/40 · (f''(y₀) · (f'(y₀))² · f(y₀)²)`.
+
+Cycle 269 / Phase E.1 (T5, Butcher Table 310(II) row r=5).
+Coefficients: `r = 5`, `σ = 2` (`2!·σ(cherry)² = 2`), `γ = 20`, so
+`h^r / (σ·γ) = h⁵ / 40`. -/
+theorem bseriesExactTerm_mkCherryCherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [cherry, cherry])
+      = h^5 / 40 *
+          (deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [cherry, cherry]) = 5 from rfl,
+      show symmetry (mk [cherry, cherry]) = 2 from rfl,
+      show density (mk [cherry, cherry]) = 20 from rfl]
+  have hED : elementaryDiff f y₀ (mk [cherry, cherry])
+      = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_cherry : elementaryDiff f y₀ cherry = deriv f y₀ * f y₀ := by
+      show elementaryDiff f y₀ (mk [vertex]) = deriv f y₀ * f y₀
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀
+                ([(vertex : RootedTree)].get i))
+            = deriv f y₀ * f y₀
+      rw [iteratedFDeriv_one_apply, fderiv_eq_smul_deriv,
+          show [(vertex : RootedTree)].get (0 : Fin 1) = vertex from rfl, hED_v,
+          smul_eq_mul]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 2 f y₀
+            (fun i : Fin 2 => elementaryDiff f y₀
+              ([cherry, cherry].get i))
+          = deriv (deriv f) y₀ * (deriv f y₀) ^ 2 * (f y₀) ^ 2
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_two,
+        show ([cherry, cherry] : List RootedTree).get
+              (0 : Fin 2) = cherry from rfl,
+        show ([cherry, cherry] : List RootedTree).get
+              (1 : Fin 2) = cherry from rfl,
+        hED_cherry,
+        show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
 /-- Exact-solution B-series, partial-sum form: the §312 exact-solution
 B-series truncated to a hand-supplied `Finset RootedTree`. Differs
 from cycle 256's `bseriesAlphaPartialSum` by the `1/γ(t)` factor in
@@ -1291,6 +1835,15 @@ example (y₀ h : ℝ) :
         ({vertex} : Finset RootedTree)
       = h • y₀ := by
   rw [bseriesExactPartialSum_singleton, bseriesExactTerm_vertex]; rfl
+
+-- Cycle 269 non-vacuity: trivial-ODE exact-solution B-series term at the
+-- order-5 chain `mk [mk [mk [cherry]]]` collapses to zero. Exercises
+-- `bseriesExactTerm_mkMkMkCherry_scalar` end-to-end on `f := 0`.
+example (y₀ h : ℝ) :
+    bseriesExactTerm (fun _ : ℝ => (0 : ℝ)) y₀ h (mk [mk [mk [cherry]]])
+      = 0 := by
+  rw [bseriesExactTerm_mkMkMkCherry_scalar]
+  simp
 
 end RootedTree
 

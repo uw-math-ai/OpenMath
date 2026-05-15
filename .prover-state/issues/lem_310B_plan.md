@@ -611,6 +611,50 @@ chosen).
   closed-form coefficient. All five new theorems axiom-clean.
   Non-vacuity witness on trivial ODE.
 
+  **Cycle 269 update (order-5 per-tree closed forms — Phase E.1
+  Phase 1 of 2 for order 5)**:
+  Nine new per-tree scalar closed forms at `Section301.lean`, one
+  per unordered rooted tree of order 5 (Butcher Table 310(II) row
+  r=5), plus the def alias `bushy₄ := mk [vertex, vertex, vertex,
+  vertex]` at `Section310.lean`:
+
+  * T1 `bseriesExactTerm_bushy₄_scalar` — `h⁵/120 · f''''·f⁴`
+    (σ=24, γ=5).
+  * T2 `bseriesExactTerm_mkVertexVertexCherry_scalar` —
+    `h⁵/20 · f'''·f'·f³` (σ=2, γ=10).
+  * T3 `bseriesExactTerm_mkVertexBroom₃_scalar` —
+    `h⁵/30 · (f'')²·f³` (σ=2 via `1!·σ(v)·1!·σ(broom₃)`, γ=15).
+  * T4 `bseriesExactTerm_mkVertexMkCherry_scalar` —
+    `h⁵/30 · f''·(f')²·f²` (σ=1, γ=30).
+  * T5 `bseriesExactTerm_mkCherryCherry_scalar` —
+    `h⁵/40 · f''·(f')²·f²` (σ=2 via `2!·σ(cherry)²`, γ=20).
+  * T6 `bseriesExactTerm_mkBushy_scalar` —
+    `h⁵/120 · f'''·f'·f³` (σ=6 via one-child rule
+    `σ(mk [t]) = σ(t)`, γ=20).
+  * T7 `bseriesExactTerm_mkMkVertexCherry_scalar` —
+    `h⁵/40 · f''·(f')²·f²` (σ=1, γ=40).
+  * T8 `bseriesExactTerm_mkMkBroom₃_scalar` —
+    `h⁵/120 · f''·(f')²·f²` (σ=2 via TWO one-child wrappers
+    `σ(mk [mk [broom₃]]) = σ(mk [broom₃]) = σ(broom₃) = 2`, γ=60).
+  * T9 `bseriesExactTerm_mkMkMkCherry_scalar` —
+    `h⁵/120 · (f')⁴·f` (σ=1, γ=120 = 5!).
+
+  Bell-coefficient cross-check vs cycle 259's `lem_311A_order_five`
+  `(1, 7, 4, 11, 1)` (all summands scaled to `h⁵/120`):
+  - f''''·f⁴ = T1 → 1 ✓
+  - f'''·f'·f³ = T2(6) + T6(1) = 7 ✓
+  - (f'')²·f³ = T3 → 4 ✓
+  - f''·(f')²·f² = T4(4) + T5(3) + T7(3) + T8(1) = 11 ✓
+  - (f')⁴·f = T9 → 1 ✓
+
+  All nine theorems axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`). Non-vacuity witness
+  on trivial ODE via T9 (`f := 0`). The 17-tree partial-sum bridge
+  `lem_311A_order_five_partialSum` is deferred to cycle 270 (Phase
+  2 of 2). Recipe identical to cycles 266–268: `unfold +
+  iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod + Fin.prod_univ_n
+  + iteratedDeriv_succ × (n−1) + iteratedDeriv_one + ring`.
+
 - **Phase E.2** (1 cycle):
   `lem_310B_truncated_r_le_three` — order ≤ 3, four trees total
   (`vertex`, `cherry`, `broom₃`, `mk [cherry]`). Uses Phase C.2's
