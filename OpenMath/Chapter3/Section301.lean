@@ -911,6 +911,104 @@ theorem bseriesExactTerm_cherry_scalar
   push_cast
   ring
 
+/-- **Scalar closed form at `broom₃ = mk [vertex, vertex]`.** For
+`f : ℝ → ℝ`, the exact-solution B-series term at `broom₃` is
+`h³/6 · (f''(y₀) · f(y₀)²)`.
+
+Cycle 267 / Phase E.1 extension: the order-3 second-derivative term
+of the exact-solution Taylor expansion (Butcher Table 310(II) row
+r=3, first tree). Combined with `bseriesExactTerm_mkCherry_scalar`,
+this discharges the order-3 partial-sum bridge to cycle 257's
+`lem_311A_order_three`.
+
+Coefficients: `r(broom₃) = 3`, `σ(broom₃) = 2`, `γ(broom₃) = 3`, so
+`h^r / (σ · γ) = h³ / (2·3) = h³/6`. -/
+theorem bseriesExactTerm_broom₃_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h broom₃
+      = h^3 / 6 * (deriv (deriv f) y₀ * (f y₀) ^ 2) := by
+  unfold bseriesExactTerm broom₃
+  rw [show order (mk [vertex, vertex]) = 3 from rfl,
+      show symmetry (mk [vertex, vertex]) = 2 from rfl,
+      show density (mk [vertex, vertex]) = 3 from rfl]
+  -- Compute `elementaryDiff f y₀ (mk [vertex, vertex])`.
+  have hED : elementaryDiff f y₀ (mk [vertex, vertex])
+      = deriv (deriv f) y₀ * (f y₀) ^ 2 := by
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 2 f y₀
+            (fun i : Fin 2 => elementaryDiff f y₀
+              ([(vertex : RootedTree), vertex].get i))
+          = deriv (deriv f) y₀ * (f y₀) ^ 2
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_two,
+        show ([(vertex : RootedTree), vertex] : List RootedTree).get (0 : Fin 2)
+          = vertex from rfl,
+        show ([(vertex : RootedTree), vertex] : List RootedTree).get (1 : Fin 2)
+          = vertex from rfl,
+        hED_v,
+        show (2 : ℕ) = 1 + 1 from rfl, iteratedDeriv_succ, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- **Scalar closed form at the depth-2 chain `mk [cherry]`.** For
+`f : ℝ → ℝ`, the exact-solution B-series term at `mk [cherry]` is
+`h³/6 · ((f'(y₀))² · f(y₀))`.
+
+Cycle 267 / Phase E.1 extension: the order-3 first-derivative-squared
+term of the exact-solution Taylor expansion (Butcher Table 310(II)
+row r=3, second tree — the depth-2 chain `f'(f'·f)`). Combined with
+`bseriesExactTerm_broom₃_scalar`, this discharges the order-3
+partial-sum bridge to cycle 257's `lem_311A_order_three`.
+
+Coefficients: `r(mk [cherry]) = 3`, `σ(mk [cherry]) = 1`,
+`γ(mk [cherry]) = 6`, so `h^r / (σ · γ) = h³ / (1·6) = h³/6`. -/
+theorem bseriesExactTerm_mkCherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h (mk [cherry])
+      = h^3 / 6 * ((deriv f y₀) ^ 2 * f y₀) := by
+  unfold bseriesExactTerm
+  rw [show order (mk [cherry]) = 3 from rfl,
+      show symmetry (mk [cherry]) = 1 from rfl,
+      show density (mk [cherry]) = 6 from rfl]
+  -- Compute `elementaryDiff f y₀ (mk [cherry])`.
+  have hED : elementaryDiff f y₀ (mk [cherry])
+      = (deriv f y₀) ^ 2 * f y₀ := by
+    -- Re-derive `elementaryDiff f y₀ cherry = deriv f y₀ * f y₀`
+    -- (the intermediate step of cycle 266's `bseriesExactTerm_cherry_scalar`).
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    have hED_cherry : elementaryDiff f y₀ cherry = deriv f y₀ * f y₀ := by
+      show elementaryDiff f y₀ (mk [vertex]) = deriv f y₀ * f y₀
+      unfold elementaryDiff
+      show iteratedFDeriv ℝ 1 f y₀
+              (fun i : Fin 1 => elementaryDiff f y₀
+                ([(vertex : RootedTree)].get i))
+            = deriv f y₀ * f y₀
+      rw [iteratedFDeriv_one_apply, fderiv_eq_smul_deriv,
+          show [(vertex : RootedTree)].get (0 : Fin 1) = vertex from rfl, hED_v,
+          smul_eq_mul]
+      ring
+    unfold elementaryDiff
+    show iteratedFDeriv ℝ 1 f y₀
+            (fun i : Fin 1 => elementaryDiff f y₀ ([cherry].get i))
+          = (deriv f y₀) ^ 2 * f y₀
+    rw [iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod, smul_eq_mul,
+        Fin.prod_univ_one,
+        show ([cherry] : List RootedTree).get (0 : Fin 1) = cherry from rfl,
+        hED_cherry, iteratedDeriv_one]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
 /-- Exact-solution B-series, partial-sum form: the §312 exact-solution
 B-series truncated to a hand-supplied `Finset RootedTree`. Differs
 from cycle 256's `bseriesAlphaPartialSum` by the `1/γ(t)` factor in

@@ -1444,4 +1444,168 @@ example (x₀ y₀ : ℝ) :
     (x₀ := x₀) (y₀ := y₀) contDiff_const rfl contDiff_const
     (fun x => hasDerivAt_const x y₀)
 
+/-- **§310/§311 Phase E.1 (cycle 267) — partial-sum reformulation of
+`lem_311A_order_three`.** Extends cycle 266's
+`lem_311A_order_two_partialSum` to order 3 by adding the two distinct
+rooted trees of order 3 (`broom₃` and `mk [cherry]`) to the partial
+sum's index set.
+
+Restates cycle 257's `lem_311A_order_three` using the exact-solution
+partial sum `bseriesExactPartialSum f y₀ h {vertex, cherry, broom₃,
+mk [cherry]}` in place of the closed-form polynomial.
+
+The proof rewrites the partial sum via three `_insert` applications
+plus one `_singleton`, then collapses each per-tree summand using
+`bseriesExactTerm_vertex`, `bseriesExactTerm_cherry_scalar`,
+`bseriesExactTerm_broom₃_scalar`, and `bseriesExactTerm_mkCherry_scalar`,
+then invokes `lem_311A_order_three`. The four trees are pairwise
+distinct by `RootedTree.mk.injEq` on their child lists. -/
+theorem lem_311A_order_three_partialSum
+    {f : ℝ → ℝ} (hf_C2 : ContDiff ℝ 2 f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C4 : ContDiff ℝ 4 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h : ℝ => yex (x₀ + h) -
+        (y₀ + OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum
+          f y₀ h
+          ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+            OpenMath.Chapter3.Section310.RootedTree.cherry,
+            OpenMath.Chapter3.Section310.RootedTree.broom₃,
+            OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.cherry]}
+            : Finset OpenMath.Chapter3.Section310.RootedTree)))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (3 + 1)) := by
+  have hbase := lem_311A_order_three hf_C2 hyex_x₀ hyex_C4 hyex_ode
+  -- Non-membership lemmas: the four trees are pairwise distinct via
+  -- `RootedTree.mk.injEq` on their child lists.
+  have h_vertex_ne_cherry :
+      (OpenMath.Chapter3.Section310.RootedTree.vertex :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ≠ OpenMath.Chapter3.Section310.RootedTree.cherry := by
+    simp [OpenMath.Chapter3.Section310.RootedTree.vertex,
+          OpenMath.Chapter3.Section310.RootedTree.cherry]
+  have h_vertex_ne_broom :
+      (OpenMath.Chapter3.Section310.RootedTree.vertex :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ≠ OpenMath.Chapter3.Section310.RootedTree.broom₃ := by
+    simp [OpenMath.Chapter3.Section310.RootedTree.vertex,
+          OpenMath.Chapter3.Section310.RootedTree.broom₃]
+  have h_vertex_ne_mkCherry :
+      (OpenMath.Chapter3.Section310.RootedTree.vertex :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ≠ OpenMath.Chapter3.Section310.RootedTree.mk
+          [OpenMath.Chapter3.Section310.RootedTree.cherry] := by
+    simp [OpenMath.Chapter3.Section310.RootedTree.vertex]
+  have h_cherry_ne_broom :
+      (OpenMath.Chapter3.Section310.RootedTree.cherry :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ≠ OpenMath.Chapter3.Section310.RootedTree.broom₃ := by
+    simp [OpenMath.Chapter3.Section310.RootedTree.cherry,
+          OpenMath.Chapter3.Section310.RootedTree.broom₃]
+  have h_cherry_ne_mkCherry :
+      (OpenMath.Chapter3.Section310.RootedTree.cherry :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ≠ OpenMath.Chapter3.Section310.RootedTree.mk
+          [OpenMath.Chapter3.Section310.RootedTree.cherry] := by
+    simp [OpenMath.Chapter3.Section310.RootedTree.cherry,
+          OpenMath.Chapter3.Section310.RootedTree.vertex]
+  have h_broom_ne_mkCherry :
+      (OpenMath.Chapter3.Section310.RootedTree.broom₃ :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ≠ OpenMath.Chapter3.Section310.RootedTree.mk
+          [OpenMath.Chapter3.Section310.RootedTree.cherry] := by
+    simp [OpenMath.Chapter3.Section310.RootedTree.broom₃,
+          OpenMath.Chapter3.Section310.RootedTree.cherry,
+          OpenMath.Chapter3.Section310.RootedTree.vertex]
+  -- Non-membership for the iterated insertions.
+  have h_v_notin :
+      (OpenMath.Chapter3.Section310.RootedTree.vertex :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ∉ ({OpenMath.Chapter3.Section310.RootedTree.cherry,
+          OpenMath.Chapter3.Section310.RootedTree.broom₃,
+          OpenMath.Chapter3.Section310.RootedTree.mk
+            [OpenMath.Chapter3.Section310.RootedTree.cherry]}
+          : Finset OpenMath.Chapter3.Section310.RootedTree) := by
+    simp [h_vertex_ne_cherry, h_vertex_ne_broom, h_vertex_ne_mkCherry]
+  have h_c_notin :
+      (OpenMath.Chapter3.Section310.RootedTree.cherry :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ∉ ({OpenMath.Chapter3.Section310.RootedTree.broom₃,
+          OpenMath.Chapter3.Section310.RootedTree.mk
+            [OpenMath.Chapter3.Section310.RootedTree.cherry]}
+          : Finset OpenMath.Chapter3.Section310.RootedTree) := by
+    simp [h_cherry_ne_broom, h_cherry_ne_mkCherry]
+  have h_b_notin :
+      (OpenMath.Chapter3.Section310.RootedTree.broom₃ :
+        OpenMath.Chapter3.Section310.RootedTree)
+      ∉ ({OpenMath.Chapter3.Section310.RootedTree.mk
+            [OpenMath.Chapter3.Section310.RootedTree.cherry]}
+          : Finset OpenMath.Chapter3.Section310.RootedTree) := by
+    simp [h_broom_ne_mkCherry]
+  -- Unfold the partial sum to the closed-form polynomial of lem_311A_order_three.
+  have hcongr : ∀ h : ℝ,
+      yex (x₀ + h) -
+          (y₀ + OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum
+            f y₀ h
+            ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+              OpenMath.Chapter3.Section310.RootedTree.cherry,
+              OpenMath.Chapter3.Section310.RootedTree.broom₃,
+              OpenMath.Chapter3.Section310.RootedTree.mk
+                [OpenMath.Chapter3.Section310.RootedTree.cherry]}
+              : Finset OpenMath.Chapter3.Section310.RootedTree))
+        = yex (x₀ + h) -
+            (y₀ + h * f y₀ + h ^ 2 / 2 * (deriv f y₀ * f y₀)
+              + h ^ 3 / 6 * (deriv (deriv f) y₀ * (f y₀) ^ 2
+                              + (deriv f y₀) ^ 2 * f y₀)) := by
+    intro h
+    rw [show ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+              OpenMath.Chapter3.Section310.RootedTree.cherry,
+              OpenMath.Chapter3.Section310.RootedTree.broom₃,
+              OpenMath.Chapter3.Section310.RootedTree.mk
+                [OpenMath.Chapter3.Section310.RootedTree.cherry]}
+              : Finset OpenMath.Chapter3.Section310.RootedTree)
+            = insert OpenMath.Chapter3.Section310.RootedTree.vertex
+                (insert OpenMath.Chapter3.Section310.RootedTree.cherry
+                  (insert OpenMath.Chapter3.Section310.RootedTree.broom₃
+                    {OpenMath.Chapter3.Section310.RootedTree.mk
+                      [OpenMath.Chapter3.Section310.RootedTree.cherry]})) from rfl,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum_insert
+          _ _ _ h_v_notin,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum_insert
+          _ _ _ h_c_notin,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum_insert
+          _ _ _ h_b_notin,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum_singleton,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactTerm_vertex,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactTerm_cherry_scalar,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactTerm_broom₃_scalar,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactTerm_mkCherry_scalar,
+        smul_eq_mul]
+    ring
+  refine hbase.congr' (Filter.Eventually.of_forall fun h => ?_)
+    (Filter.Eventually.of_forall fun _ => rfl)
+  exact (hcongr h).symm
+
+/-- Non-vacuity witness for the cycle-267 Phase E.1 order-3 partial-sum
+bridge: on the trivial ODE `f ≡ 0` with constant exact solution
+`yex ≡ y₀`, the residual `yex(x₀ + h) - (y₀ + bseriesExactPartialSum
+0 y₀ h {vertex, cherry, broom₃, mk [cherry]})` is identically zero,
+hence trivially `O(h^4)`. -/
+example (x₀ y₀ : ℝ) :
+    (fun h : ℝ => (fun _ : ℝ => y₀) (x₀ + h) -
+        (y₀ + OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum
+          (fun _ : ℝ => (0 : ℝ)) y₀ h
+          ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+            OpenMath.Chapter3.Section310.RootedTree.cherry,
+            OpenMath.Chapter3.Section310.RootedTree.broom₃,
+            OpenMath.Chapter3.Section310.RootedTree.mk
+              [OpenMath.Chapter3.Section310.RootedTree.cherry]}
+            : Finset OpenMath.Chapter3.Section310.RootedTree)))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (3 + 1)) :=
+  lem_311A_order_three_partialSum
+    (f := fun _ : ℝ => (0 : ℝ)) (yex := fun _ : ℝ => y₀)
+    (x₀ := x₀) (y₀ := y₀) contDiff_const rfl contDiff_const
+    (fun x => hasDerivAt_const x y₀)
+
 end OpenMath.Chapter3.Section311
