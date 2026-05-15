@@ -2650,4 +2650,150 @@ private lemma n_mul_choose_two_n_n_eq (n : ℕ) (hn : 2 ≤ n) :
   -- Use step2 : C1 * ((n : ℝ) - 1) = C2 * (n : ℝ).
   linear_combination (-2 : ℝ) * step2
 
+/-- **Phase A.1 (b)** (cycle 290): the (342f) residual polynomial
+`Q := n·P_n^* − (2n−1)·(2X−1)·P_{n−1}^* + (n−1)·P_{n−2}^*` has
+`natDegree < n`.
+
+Paper proof (Butcher §342 p. 236):
+- `A := (n : ℝ) • P_n^*` has `natDegree = n` and leading coefficient
+  `n · C(2n, n)`.
+- `B := (2n−1) · (2X − 1) · P_{n−1}^*` has `natDegree = 1 + (n−1) = n`
+  and leading coefficient `(2n−1) · 2 · C(2(n−1), n−1)`.
+- By the cycle 289 binomial identity `n · C(2n, n) = 2(2n−1) · C(2n−2,
+  n−1)`, `A.leadingCoeff = B.leadingCoeff`, so `Polynomial.degree_sub_lt`
+  gives `(A − B).degree < n`.
+- `Cterm := (n−1) · P_{n−2}^*` has `natDegree ≤ n − 2 < n`.
+- Combining via `Polynomial.natDegree_add_le` + `Nat.max_lt`. -/
+theorem recurrence_residual_natDegree_lt (n : ℕ) (hn : 2 ≤ n) :
+    ((n : ℝ) • butcherShiftedLegendre n
+      - Polynomial.C ((2 * n - 1 : ℕ) : ℝ)
+        * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre (n - 1)
+      + Polynomial.C ((n - 1 : ℕ) : ℝ)
+        * butcherShiftedLegendre (n - 2)).natDegree < n := by
+  -- Basic numeric facts from `hn : 2 ≤ n`.
+  have hn_pos : 0 < n := by omega
+  have hn_ne_nat : n ≠ 0 := by omega
+  have hn_ne : (n : ℝ) ≠ 0 := by exact_mod_cast hn_ne_nat
+  have hβ_nat_pos : 0 < 2 * n - 1 := by omega
+  have hβ_real : ((2 * n - 1 : ℕ) : ℝ) = 2 * (n : ℝ) - 1 := by
+    rw [Nat.cast_sub (by omega : 1 ≤ 2 * n)]; push_cast; ring
+  have hβ_ne : ((2 * n - 1 : ℕ) : ℝ) ≠ 0 := by
+    rw [hβ_real]
+    have h : (1 : ℝ) ≤ 2 * (n : ℝ) - 1 := by
+      have : (2 : ℝ) ≤ 2 * (n : ℝ) := by
+        have : (2 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+        linarith
+      linarith
+    linarith
+  -- Convert smul to C-mul, leaving the goal in a uniform C-mul form.
+  rw [Polynomial.smul_eq_C_mul]
+  -- Aliases for readability.
+  set L : Polynomial ℝ :=
+    Polynomial.C 2 * Polynomial.X - Polynomial.C 1 with hL_def
+  set A : Polynomial ℝ :=
+    Polynomial.C (n : ℝ) * butcherShiftedLegendre n with hA_def
+  set B : Polynomial ℝ :=
+    Polynomial.C ((2 * n - 1 : ℕ) : ℝ) * L * butcherShiftedLegendre (n - 1)
+    with hB_def
+  set Cterm : Polynomial ℝ :=
+    Polynomial.C ((n - 1 : ℕ) : ℝ) * butcherShiftedLegendre (n - 2)
+    with hCterm_def
+  -- Goal: (A - B + Cterm).natDegree < n.
+  -- Non-vanishing of the three shifted-Legendre factors.
+  have hPn_ne : butcherShiftedLegendre n ≠ 0 := by
+    intro h
+    have hd := butcherShiftedLegendre_natDegree n
+    rw [h] at hd; simp at hd; omega
+  have hPnm1_ne : butcherShiftedLegendre (n - 1) ≠ 0 := by
+    intro h
+    have hd := butcherShiftedLegendre_natDegree (n - 1)
+    rw [h] at hd; simp at hd; omega
+  -- Step 1: L = C 2 * X - C 1 has natDegree 1 and leadingCoeff 2.
+  have hL_nd : L.natDegree = 1 := by
+    rw [hL_def]; compute_degree!
+  have hL_lc : L.leadingCoeff = 2 := by
+    rw [Polynomial.leadingCoeff, hL_nd, hL_def, Polynomial.coeff_sub,
+        Polynomial.coeff_C_mul, Polynomial.coeff_X_one, Polynomial.coeff_C]
+    norm_num
+  have hL_ne : L ≠ 0 := by
+    intro h; rw [h, Polynomial.leadingCoeff_zero] at hL_lc; norm_num at hL_lc
+  -- Step 2: B = (C β * L) * P_{n-1}. Compute natDegree and leadingCoeff.
+  have hβL_nd : (Polynomial.C ((2 * n - 1 : ℕ) : ℝ) * L).natDegree = 1 := by
+    rw [Polynomial.natDegree_C_mul hβ_ne, hL_nd]
+  have hβL_ne : Polynomial.C ((2 * n - 1 : ℕ) : ℝ) * L ≠ 0 := by
+    intro h
+    have hd : (Polynomial.C ((2 * n - 1 : ℕ) : ℝ) * L).natDegree = 1 := hβL_nd
+    rw [h] at hd; simp at hd
+  have hB_nd : B.natDegree = n := by
+    rw [hB_def, Polynomial.natDegree_mul hβL_ne hPnm1_ne, hβL_nd,
+        butcherShiftedLegendre_natDegree (n - 1)]
+    omega
+  have hβL_lc :
+      (Polynomial.C ((2 * n - 1 : ℕ) : ℝ) * L).leadingCoeff
+        = ((2 * n - 1 : ℕ) : ℝ) * 2 := by
+    rw [Polynomial.leadingCoeff_C_mul_of_isUnit
+          (isUnit_iff_ne_zero.mpr hβ_ne), hL_lc]
+  have hB_lc :
+      B.leadingCoeff
+        = ((2 * n - 1 : ℕ) : ℝ) * 2 * (Nat.choose (2 * (n - 1)) (n - 1) : ℝ) := by
+    rw [hB_def, Polynomial.leadingCoeff_mul, hβL_lc,
+        butcherShiftedLegendre_leadingCoeff (n - 1)]
+  -- Step 3: A.natDegree = n, A.leadingCoeff = n * C(2n, n).
+  have hA_nd : A.natDegree = n := by
+    rw [hA_def, Polynomial.natDegree_C_mul hn_ne]
+    exact butcherShiftedLegendre_natDegree n
+  have hA_lc : A.leadingCoeff = (n : ℝ) * (Nat.choose (2 * n) n : ℝ) := by
+    rw [hA_def, Polynomial.leadingCoeff_C_mul_of_isUnit
+          (isUnit_iff_ne_zero.mpr hn_ne),
+        butcherShiftedLegendre_leadingCoeff n]
+  -- Step 4: Bridge `n - 1` in C(2(n-1), n-1) ↔ C(2n - 2, n - 1) for the helper.
+  have h2nm2_eq : 2 * (n - 1) = 2 * n - 2 := by omega
+  have hB_lc' :
+      B.leadingCoeff
+        = ((2 * n - 1 : ℕ) : ℝ) * 2 * (Nat.choose (2 * n - 2) (n - 1) : ℝ) := by
+    rw [hB_lc, h2nm2_eq]
+  -- Step 5: A.leadingCoeff = B.leadingCoeff via cycle 289 helper.
+  have hAB_lc : A.leadingCoeff = B.leadingCoeff := by
+    rw [hA_lc, hB_lc']
+    have := n_mul_choose_two_n_n_eq n hn
+    linarith [this]
+  -- Step 6: A.degree = B.degree (both = n, computed via natDegree).
+  have hA_ne : A ≠ 0 := by
+    intro h
+    have hd : A.natDegree = n := hA_nd
+    rw [h] at hd; simp at hd; omega
+  have hB_ne : B ≠ 0 := by
+    intro h
+    have hd : B.natDegree = n := hB_nd
+    rw [h] at hd; simp at hd; omega
+  have hA_deg : A.degree = (n : WithBot ℕ) := by
+    rw [Polynomial.degree_eq_natDegree hA_ne, hA_nd]
+  have hB_deg : B.degree = (n : WithBot ℕ) := by
+    rw [Polynomial.degree_eq_natDegree hB_ne, hB_nd]
+  -- Step 7: (A - B).degree < n via Polynomial.degree_sub_lt.
+  have hAB_deg : (A - B).degree < (n : WithBot ℕ) := by
+    have h := Polynomial.degree_sub_lt (hA_deg.trans hB_deg.symm) hA_ne hAB_lc
+    rw [hA_deg] at h
+    exact h
+  have hAB_nd : (A - B).natDegree < n := by
+    by_cases h : A - B = 0
+    · simp [h]; omega
+    · exact (Polynomial.natDegree_lt_iff_degree_lt h).mpr hAB_deg
+  -- Step 8: Cterm.natDegree ≤ n - 2 < n.
+  have hCterm_nd_le : Cterm.natDegree ≤ n - 2 := by
+    rw [hCterm_def]
+    calc (Polynomial.C ((n - 1 : ℕ) : ℝ) * butcherShiftedLegendre (n - 2)).natDegree
+        ≤ (butcherShiftedLegendre (n - 2)).natDegree :=
+          Polynomial.natDegree_C_mul_le _ _
+      _ = n - 2 := butcherShiftedLegendre_natDegree (n - 2)
+  have hCterm_nd : Cterm.natDegree < n := lt_of_le_of_lt hCterm_nd_le (by omega)
+  -- Step 9: Combine via Polynomial.natDegree_add_le.
+  calc (A - B + Cterm).natDegree
+      ≤ max (A - B).natDegree Cterm.natDegree :=
+        Polynomial.natDegree_add_le _ _
+    _ < n := by
+        rw [Nat.max_lt]
+        exact ⟨hAB_nd, hCterm_nd⟩
+
 end OpenMath.Chapter3.Section342
