@@ -1,422 +1,502 @@
-# Cycle 260 Strategy
+# Cycle 261 strategy
 
-## TL;DR
+## §A — Status snapshot
 
-The order-N specialisation chain of `lem:311A` terminates at order 5
-per cycle 259's discovery (the Bell-polynomial expansion grows
-combinatorially beyond order 5, and the substantive §311 content
-requires labelled-tree quotient `def:300C` + `lem:310B` infrastructure).
-Cycle 260 pursues the cycle 259 task-results' **option 1**: write the
-multi-cycle scoping issue for `lem:310B` (no Lean code), plus a small
-B-series API enrichment as P2 to ensure the cycle ships a verifiable
-code change. **P3 entity-pivot scouting** is a stretch goal — read
-entity JSONs for `thm:351B`, `lem:342A`, `lem:342B` and document
-findings for cycle 261+'s planner.
+Cycle 260 SHIPPED clean: `lem_310B_plan.md` (774-line multi-phase
+scoping doc) + four `Finset.sum_*` API enrichment lemmas in
+`OpenMath/Chapter3/Section301.lean`. All axiom-clean, repo sorry
+count = 0. No supervisor regression to address.
 
-## State at cycle 260 start
+Both candidate cycle-261 entry points flagged in the cycle 260 task
+results are credible single-cycle ships:
 
-* Repo sorry count: **0** (axiom-clean across all files).
-* HEAD: `d889695 Cycle 259 — §311 lem_311A_order_five + iteratedDeriv_five_via_ode SHIPPED.`
-* Last 5 cycles all scored 2 (clean ships); no rollback pressure.
-* Aristotle queue: empty.
-* No reported blockers in cycle 259 task results.
-* The cycle 259 task results explicitly recommend **option 1**
-  (`lem:310B` scoping issue) as "the highest-leverage long-term move"
-  because every textbook lemma from `lem:311A` onward depends on
-  `lem:310B`. The same task results note that cycle 200/201 rollback
-  precedent "demands a credible single-cycle close at every step, so
-  the planner should commit to the plan before the worker writes Lean
-  code."
+* **Direction 1**: Phase A.1 of `lem_310B_plan.md` — `RootedTree.Vertex`
+  predicate + `vertices` enumeration + `vertices_card`. Maintains
+  §310/§311 strategic momentum; lays foundation for the multi-cycle
+  `lem:310B` plan (8–14 cycle estimate per §5 of the plan).
+* **Direction 2**: `lem:342A` (342a) shifted-Legendre orthogonality
+  on `[0,1]`. Independent fresh-entity pivot.
 
-## Priorities (in order)
+To keep the supervisor's score trajectory positive (cycle 260
+scored +1), cycle 261 must ship axiom-clean, sorry-clean, with a
+substantive deliverable.
 
-### P1 (REQUIRED) — Write `.prover-state/issues/lem_310B_plan.md`
+## §B — Cycle 261 priority — Direction 1 (RECOMMENDED)
 
-Ship a multi-cycle scoping document (~200 lines markdown, NO Lean
-code) laying out the path from cycle 254/255/256's `bseriesTerm` /
-`bseriesPartialSum` / `bseriesAlphaTerm` infrastructure to the full
-textbook `lem:310B` (Butcher §310, p. 168, "Elementary Differential
-Weight Formula"). This file is the **strategic milestone** of cycle
-260 — it commits to a multi-cycle plan in writing so cycle 261+
-planners can break it down into single-cycle deliverables without
-re-scoping.
+Ship **Phase A.1 of `lem_310B_plan.md`**: `RootedTree.Vertex`
+inductive predicate + `RootedTree.vertices` `Finset` enumeration +
+`vertices_card` identity (`(vertices t).card = order t`), with
+three non-vacuity witnesses on `cherry`, `broom₃`, and
+`mk [vertex, cherry]`.
 
-**Required sections** (use this as a template; deviate only if you
-discover the plan needs different shape):
+### Rationale
 
-1. **§1 Textbook statement (verbatim)**. Quote `lem:310B` from
-   `extraction/formalization_data/entities/lem_310B.json` and the
-   raw text at `extraction/raw_text/ch03.txt` (use `Grep` to locate
-   the §310 passage; quote the relevant ~10–20 lines verbatim).
-   Identify the textbook equation (310i) and the surrounding context
-   (where in Butcher's §310 it sits, what proof techniques are used).
+1. **Sequential momentum.** Cycles 254–260 have been §310/§311
+   infrastructure work. Cycle 260's scoping doc explicitly
+   identifies Phase A.1 as the highest-confidence single-cycle
+   entry point into the multi-cycle `lem:310B` plan. Pivoting
+   away now (to Direction 2) loses the planning investment.
+2. **Concrete deliverables already specified.** `lem_310B_plan.md`
+   §7 lists the five concrete artifacts and the axiom-clean
+   target. Worker has minimal scoping work — implement against
+   the plan.
+3. **Cycle 017 template applies directly.** The mutual `density`
+   recursion in `OpenMath/Chapter3/Section301.lean:123-179`
+   (visible at HEAD) is the canonical template for any
+   `RootedTree`-mutual-recursion proof. Three relevant patterns:
+   - Line 123-140: `mutual def density / densityProd` pair,
+     mirroring the `RootedTree.mk` / `List RootedTree` nesting.
+   - Line 142-147: `densityProd_eq_map_prod` reformulation via
+     `List.prod`, allowing standard list-induction reasoning.
+   - Line 164-178: `mutual theorem density_pos / densityProd_pos`,
+     companion positivity statements proved by mutual structural
+     recursion. This is the proof template for `vertices_card`.
 
-2. **§2 Distilled mathematical content**. Restate `lem:310B` in
-   Lean-friendly form. Identify (a) the labelled-tree quotient
-   structure on the LHS (the sum is over labelled rooted trees with
-   orbit divisions — `def:300C` territory), (b) the `θ`-rewriting
-   bridge from cycle 254's `bseriesTerm_eq_theta_smul_bseriesTerm`,
-   (c) the role of cycle 249's `theta_eq_one`, (d) the role of cycle
-   250's `alphaWeight` and the (302a) closed form
-   `α(t) = r(t)! / (σ(t)·γ(t))`, (e) the role of `thm:306A`'s Taylor
-   theorem / multinomial expansion (currently unformalised — verify
-   with Grep on `OpenMath/Chapter3/`).
+### Concrete deliverables (5 declarations + 3 examples)
 
-3. **§3 Mathlib + project hooks already in place**. List the
-   shipped infrastructure that `lem:310B` can consume, with file
-   paths and theorem names:
-   - Cycle 017: `RootedTree`, `order`, `density`, `symmetry`,
-     `density_eq` (recursion equation for γ).
-   - Cycle 030: `RootedTree.elementaryDiff` (`F[t](f) : N → N`).
-   - Cycle 249: `RootedTree.theta`, `theta_eq_one`.
-   - Cycle 250: `RootedTree.alphaWeight` (the (302a) closed form).
-   - Cycle 251: `RootedTree.alphaWeight_pos` (positivity).
-   - Cycle 254: `RootedTree.bseriesTerm`, `bseriesTerm_vertex`,
-     `bseriesTerm_eq_theta_smul_bseriesTerm` (the cycle 254 P3
-     `θ`-rewriting scaffold).
-   - Cycle 255: `RootedTree.TruncatedRootedTree N`,
-     `bseriesPartialSum`, `bseriesPartialSum_empty`/`_insert`,
-     `exists_truncated_of_forall_order_le`.
-   - Cycle 256: `RootedTree.bseriesAlphaTerm`,
-     `bseriesAlphaTerm_vertex`, `bseriesAlphaPartialSum`,
-     `_empty`/`_insert`.
-   - Cycles 252/253: Table 310(II) α-witness battery through `r=5`.
+All in a **NEW file** `OpenMath/Chapter3/Section300.lean`. **Do
+NOT** extend `Section310.lean` or `Section301.lean` — the new
+`Vertex` type is genuinely §300 infrastructure (vertex/edge
+structure of rooted trees), and the planner anticipates
+Phase A.2/A.3 also living in `Section300.lean`. Keeping it
+separate keeps the cycle 017 mutual-recursion proofs in
+`Section301.lean` uncontaminated.
 
-4. **§4 Missing infrastructure (the gap inventory)**. Identify
-   what's still missing, with concrete cycle-level decomposition:
-   - **§4.1 `def:300C` Labelled rooted trees + quotient**. State
-     Butcher's `def:300C` (labelled rooted tree = `RootedTree` +
-     `(vertices → ordered labels)` modulo automorphism). Estimate:
-     2–4 cycles to scaffold `LabelledRootedTree`, prove the quotient
-     by `RootedTree.symmetry` is well-defined, and build the
-     canonical embedding
-     `RootedTree → Quotient LabelledRootedTree.setoid`.
-   - **§4.2 `thm:306A` Taylor theorem / multinomial expansion**.
-     Check `extraction/formalization_data/entities/thm_306A.json` and
-     `OpenMath/Chapter3/` for any Section306 file (use Grep + Glob).
-     If absent, this is a separate prerequisite. Estimate: 1–3
-     cycles.
-   - **§4.3 Orbit-counting combinatorial bridge**. The LHS of (310i)
-     sums over labelled trees; the RHS sums over unlabelled trees
-     with weight `r(t)!/σ(t)`. The bridge is the orbit-stabilizer
-     theorem applied to the `S_r` action on labellings. Mathlib has
-     `MulAction.card_orbit_mul_card_stabilizer_eq_card_group` —
-     verify with `lean_local_search`. Estimate: 1–2 cycles for the
-     bridge once §4.1 lands.
-   - **§4.4 Multilinear connection to elementary differentials**.
-     The textbook (310i) writes `y(x₀ + h) - y(x₀)` as a sum over
-     `T^*` of `(h^r(t)/σ(t)) · α(t) · F(t)(y₀)`. This requires
-     identifying `y'(x₀)` with `f(y₀)`, `y''(x₀)` with
-     `(F[mk [vertex]])(y₀)`, etc. Cycle 248–259's
-     `iteratedDeriv_*_via_ode` chain has the *scalar* analogue at
-     orders 1–5; for the general `lem:310B` we need the multilinear
-     version on `N`-spaces (per `def:310A`). Estimate: 1–2 cycles to
-     lift the chain-rule identities to multilinear form.
-
-5. **§5 Proposed phase decomposition**. Lay out 5–8 single-cycle
-   phases (each axiom-clean, ≤200 LOC, with a non-vacuity witness on
-   `paddedEuler` or a small concrete tree). Example structure (adapt
-   to what the gap inventory suggests):
-   - Phase A: `LabelledRootedTree` datatype + quotient (1–2 cycles).
-   - Phase B: `thm:306A` Taylor / multinomial (1–3 cycles, deferred).
-   - Phase C: Orbit-counting bridge (1–2 cycles).
-   - Phase D: Multilinear elementary-differential connection
-     (1–2 cycles).
-   - Phase E: Small-`r` `lem:310B` cases on `TruncatedRootedTree N`
-     for `N = 2, 3` (1 cycle each — stepping stones).
-   - Phase F: General `lem:310B` (1–2 cycles, capstone).
-
-6. **§6 Risk assessment**. For each phase, list (a) Mathlib hooks
-   that may be missing, (b) tactic-level risks (motive issues,
-   matching pitfalls), (c) cycles where a sorry-first scaffold is
-   forbidden vs. cycles where it might be appropriate. Cross-
-   reference `.prover-state/issues/symmetry_group_equivalence.md`
-   (cycle 017's σ-faithfulness divergence) and
-   `.prover-state/issues/def_530B_scaffold_strategy.md` (the
-   multi-phase precedent template).
-
-7. **§7 Suggested cycle 261 entry point**. Concretely identify the
-   first cycle's deliverable based on the phase decomposition. Most
-   likely Phase A.1: scaffold the `LabelledRootedTree` datatype with
-   `[vertices : Type]`, `[labelling : vertices → Fin (order t)]`,
-   `[underlying : RootedTree]`, plus a `setoid` instance and the
-   embedding `RootedTree → Quotient LabelledRootedTree.setoid`. Make
-   sure cycle 261's deliverable is **axiom-clean, single-cycle**.
-
-**File location**: `.prover-state/issues/lem_310B_plan.md`.
-
-**Verbatim requirements**:
-- Begin with the standard issue-file frontmatter
-  (`# Issue: lem:310B multi-cycle infrastructure plan`).
-- ~150–250 lines of markdown. Do not pad with filler.
-- Cite specific file paths (`OpenMath/Chapter3/Section301.lean:NNN`)
-  and theorem names. Use Grep/Read to verify each citation actually
-  exists at HEAD — phantom citations are unacceptable.
-- The §5 phase decomposition must list at least 5 phases, each
-  with a 1–3 cycle estimate, axiom-clean target, and a concrete
-  non-vacuity witness.
-- The §4 gap inventory must be specific about which Mathlib lemmas
-  are needed (use `lean_local_search` to verify availability where
-  possible).
-
-### P2 (REQUIRED) — Small B-series API enrichment
-
-Add 2–4 small algebraic-fact theorems for `bseriesPartialSum` /
-`bseriesAlphaPartialSum`. Total budget: ~30–80 LOC. **Goal**: ensure
-the cycle ships an actual Lean diff (not just a markdown file), so
-the supervisor's "cycle with zero code changes" detector doesn't
-fire, AND each theorem provides a small but genuine downstream
-consumer for `lem:310B` Phase E/F's small-`r` cases.
-
-**Candidate deliverables** (pick 2–4 that compose well; recommended:
-all four):
-
-1. **`bseriesPartialSum_singleton`** — `bseriesPartialSum f y₀ h {t}
-   = bseriesTerm f y₀ h t`. One-line proof via
-   `simp [bseriesPartialSum, Finset.sum_singleton]` (or
-   `Finset.sum_singleton` directly). Trivial but useful as a
-   downstream consumer. Place in
-   `OpenMath/Chapter3/Section301.lean` immediately after
-   `bseriesPartialSum_insert`.
-
-2. **`bseriesAlphaPartialSum_singleton`** — same shape on the
-   α-weighted version. Place immediately after
-   `bseriesAlphaPartialSum_insert`.
-
-3. **`bseriesPartialSum_union`** — `Disjoint S₁ S₂ →
-   bseriesPartialSum f y₀ h (S₁ ∪ S₂) = bseriesPartialSum f y₀ h S₁
-   + bseriesPartialSum f y₀ h S₂`. Closes by
-   `Finset.sum_union hDisj`. ~3–5 LOC.
-
-4. **`bseriesAlphaPartialSum_union`** — analogous on α-weighted.
-   ~3–5 LOC.
-
-**Recommended pick**: all four (`singleton` + `union` × both
-families, mechanical `Finset.sum_*` ports, ~20–30 LOC total). Each
-axiom-clean (`[propext, Classical.choice, Quot.sound]`). Add one
-non-vacuity `example` per family at the end of the existing example
-block in `Section301.lean`:
+The new file's `import` line:
 
 ```lean
-example (y₀ h : ℝ) :
-    RootedTree.bseriesPartialSum (id : ℝ → ℝ) y₀ h
-      ({RootedTree.vertex} : Finset RootedTree)
-    = h • y₀ := by
-  rw [RootedTree.bseriesPartialSum_singleton,
-      RootedTree.bseriesTerm_vertex]
+import OpenMath.Chapter3.Section310
 ```
 
-(Use `id : ℝ → ℝ` so the `f y₀ = y₀` evaluation closes by `rfl`; or
-use `fun y => y` if that types better.) Apply the analogous example
-to `bseriesAlphaPartialSum_singleton` citing
-`bseriesAlphaTerm_vertex`.
+since `Vertex` needs the `RootedTree` type defined in
+`Section310.lean`. Add `import OpenMath.Chapter3.Section300` to
+`OpenMath/Chapter3.lean` (the aggregator) so cycle 261's
+deliverables are picked up by `lake build`.
 
-If union-flavoured `example`s are easy (e.g., `{vertex} ∪ {cherry}`
-splits), add them too; if not, skip the union examples (the
-singleton examples plus the cycle 255/256 inline examples already
-exercise the consume side).
+#### Deliverable 1 — `RootedTree.Vertex : RootedTree → Type`
 
-### P3 (STRETCH) — Entity-pivot scouting for cycle 261+
+```lean
+namespace OpenMath.Chapter3.Section310
 
-Use Read to inspect the entity JSON files for the three candidates
-flagged in cycle 259's task results:
-- `extraction/formalization_data/entities/thm_351B.json`
-- `extraction/formalization_data/entities/lem_342A.json`
-- `extraction/formalization_data/entities/lem_342B.json`
+namespace RootedTree
 
-For each, document in a **new** section at the end of P1's
-`lem_310B_plan.md` (titled "§8 Alternative cycle 261 targets
-(entity pivot scouting)"):
-- **Dependencies**: Read the `dependencies` list. Does it
-  transitively require `lem:310B`? (Use Grep on the value to check;
-  cross-reference with `extraction/formalization_data/topo_order.json`
-  if needed.)
-- **Statement**: Quote the `statement_latex` (~3–5 lines) and
-  identify whether it's a definition (easier 1-cycle target) or a
-  theorem (harder, may need prerequisites).
-- **Prior-formalisation status**: Check `prior_formalization` /
-  `lean_symbol` fields if present.
-- **Verdict**: For each, give a 1-line verdict — "Single-cycle
-  entry point: yes/no, because X." Reserve "yes" only for entities
-  whose `dependencies` are all already `[x]` formalized in
-  `plan.md`.
+/-- A vertex of a rooted tree: either the root, or a vertex of one
+of the children. The `child` constructor packages a child index `i`
+and a vertex of the i-th child. -/
+inductive Vertex : RootedTree → Type
+  | root {cs : List RootedTree} : Vertex (mk cs)
+  | child {cs : List RootedTree} (i : Fin cs.length) :
+      Vertex (cs.get i) → Vertex (mk cs)
 
-**Do not attempt** to ship Lean code for any of these in cycle 260.
-The scouting is purely planning material for the cycle 261 planner.
+end RootedTree
+end OpenMath.Chapter3.Section310
+```
 
-If P1 + P2 budget overruns, skip P3 entirely. Better to ship a clean
-P1 + P2 than a rushed P3.
+Lean's elaborator infers the implicit `cs` argument from the
+`Vertex (mk cs)` target type.
 
-## What NOT to try
+#### Deliverable 2 — `DecidableEq (Vertex t)` instance
 
-1. **Do NOT extend the order-N specialisation chain to order 6**.
-   The cycle 259 task results explicitly identified order 5 as the
-   deliberate cutoff. Order 6 Bell coefficients would grow to ~7
-   terms with values likely `(1, 15, 25, 10, 60, 15, 1)` or similar
-   (unverified — these may also be wrong, as cycle 258's hint
-   `(1, 11, 7, 26, 1)` was). The combinatorial growth makes per-
-   order LOC scaling non-linear past order 5, and the substantive
-   §311 content beyond order 5 belongs in `lem:310B` infrastructure.
+Lean 4 does NOT auto-derive `DecidableEq` for inductives that
+recurse over nested `List RootedTree` types. Two routes:
 
-2. **Do NOT attempt the polymorphic ℝ → `N : NormedSpace ℝ` lift of
-   the order 1-5 chain in cycle 260**. The cycle 248 task results
-   flagged this as multi-cycle bookkeeping work (multilinear-map
-   plumbing dead-ends). It belongs after `lem:310B` is in place,
-   not before. Document it in P1's §4.4 (multilinear elementary-
-   differential connection) only as a future deliverable.
+**Route A — mutual decidability (cleaner, ~30 LOC)** mirroring
+the cycle 017 `decEqTree` / `decEqList` block at
+`Section301.lean:73-92`. The key challenge: when two
+`Vertex.child i v` and `Vertex.child j w` are compared, we need
+both `i = j` (for the indices) AND the underlying vertices `v`
+and `w` to be equal under a transport along the index equality.
+The `hij ▸ v` transport is the right primitive but care is needed
+on the `injEq` extraction.
 
-3. **Do NOT attempt `thm:306A` (Taylor's theorem) in cycle 260**.
-   Mathlib has `Polynomial.taylor` and `taylorWithinEval`, plus
-   `taylor_isLittleO` (consumed by cycles 248–259), but the
-   multinomial form needed by `lem:310B` is a substantive addition.
-   Document in P1's §4.2 (Taylor / multinomial) only.
+**Route B — noncomputable `Classical.decEq` (1 line, safe
+fallback)**:
 
-4. **Do NOT scaffold `LabelledRootedTree` Lean code in cycle 260**.
-   That is Phase A of the P1 plan — single-cycle work for cycle
-   261+. Cycle 260's Lean changes are limited to the small P2 API
-   enrichment.
+```lean
+noncomputable instance {t : RootedTree} : DecidableEq (Vertex t) :=
+  Classical.decEq _
+```
 
-5. **Do NOT introduce `axiom` or `constant` declarations**. Per
-   `CLAUDE.md`. Applies to every cycle, no exceptions.
+`Classical.decEq` only introduces `Classical.choice`, which is
+already in the codebase's axiom baseline. **Route B is acceptable
+and recommended for Phase A.1** — the cycle 261 deliverable's
+mathematical content is `vertices_card`, not computable
+enumeration. A future cycle can replace with Route A if needed.
 
-6. **Do NOT raise `maxHeartbeats` above 200000**. The P2 deliverables
-   are mechanical `Finset.sum_*` ports; if any of them require more
-   than default heartbeats, decompose further (likely they don't —
-   `Finset.sum_singleton` / `Finset.sum_union` are O(1)-LOC tactics).
+#### Deliverable 3 — `vertices : (t : RootedTree) → Finset (Vertex t)`
 
-7. **Do NOT introduce new sorries**. The repo sorry count is 0 and
-   must stay 0. Per the cycle 200/201 rollback precedent (and the
-   cycle 149/150 def:530B precedent, and the cycle 138/139 thm:550A
-   precedent), sorry-first scaffolds without a credible single-
-   cycle close are explicitly forbidden.
+Build via mutual recursion: a `Finset` for `vertices t` and a
+`Finset` for the children's contribution. Sketch:
 
-8. **Do NOT pivot to `lem:310B` Lean code directly**. The cycle 259
-   task results explicitly identify the scoping issue as the
-   necessary first step before any Lean code. The cycle 200/201
-   rollback precedent ("planner should commit to the plan before
-   the worker writes Lean code") applies.
+```lean
+mutual
+  noncomputable def vertices : (t : RootedTree) → Finset (Vertex t)
+    | mk cs =>
+        insert Vertex.root (verticesFromChildren cs)
 
-9. **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`**.
-   Per `.prover-state/issues/cycle_182_gpfs_slowness.md`, this file
-   has been GPFS-blocked for 43+ consecutive cycles. Skip per the
-   established §A directive.
+  noncomputable def verticesFromChildren :
+      (cs : List RootedTree) → Finset (Vertex (mk cs))
+    | [] => ∅
+    | _ :: _ =>
+        Finset.univ.biUnion (fun i : Fin cs.length =>
+          (vertices (cs.get i)).image (Vertex.child i))
+end
+```
 
-10. **Do NOT edit `scripts/autonomous_loop.py`**. The tautology-
-    scanner false-positive bug remains loop-maintainer territory
-    per `.prover-state/issues/tautology_scanner_false_positives.md`.
-    If cycle 260 trips the scanner (it shouldn't, given P2's tiny
-    scope), apply the cosmetic `h_*` → `h*` rename workaround
-    rather than fixing the scanner.
+**Implementation risks**:
 
-11. **Do NOT cite Mathlib lemmas or file paths in P1 without
-    verifying them at HEAD**. Phantom citations — Lean names that
-    don't exist, or theorem locations that have drifted — pollute
-    the scoping doc. Use `Grep`, `Read`, or `lean_local_search` to
-    verify each citation. Mark uncertain citations with `(verify)`
-    rather than asserting them as fact.
+- `Finset.image` requires `DecidableEq (Vertex (mk cs))` (handled
+  by Deliverable 2). The `noncomputable` keyword is needed since
+  Deliverable 2 uses `Classical.decEq` (Route B).
+- `Finset.biUnion` over `Fin cs.length` requires
+  `[Fintype (Fin cs.length)]` (automatic) plus `DecidableEq` on
+  the target (handled).
+- The mutual block must terminate. Structural recursion on the
+  `RootedTree` should work — each recursive call to `vertices` is
+  on a structurally smaller subtree `cs.get i`.
 
-12. **Do NOT use Aristotle this cycle**. P1 is a planning document
-    (Aristotle is not useful for English-prose markdown); P2 is
-    trivial one-line `Finset.sum_*` ports (Aristotle overhead
-    exceeds value). Save Aristotle slots for substantive proof
-    work in cycles 261+.
+**Fallback if `Finset` is too heavy**: drop down to `List
+(Vertex t)` and prove `vertices_length` instead of
+`vertices_card`. This trades the "set" flavour for fast
+elaboration. Acceptable if Deliverable 3 stalls past 60 minutes.
 
-## Concrete verification checklist (run after each priority)
+#### Deliverable 4 — `vertices_card : (vertices t).card = order t`
 
-After P1 (scoping issue):
-- [ ] File exists at `.prover-state/issues/lem_310B_plan.md`.
-- [ ] All §1–§7 sections present (§8 optional per P3 stretch).
-- [ ] Every cited Lean file path / theorem name has been verified
-      with Grep or Read at HEAD.
-- [ ] Phase decomposition lists at least 5 phases.
-- [ ] No internal "TODO" or unfilled placeholders.
-- [ ] Length ~150–250 lines.
+Mutual structural induction template from `Section301.lean:159-178`
+(`order_pos` / `density_pos`). For the `mk cs` case:
 
-After P2 (B-series API enrichment):
-- [ ] `lake env lean OpenMath/Chapter3/Section301.lean` exits 0.
-- [ ] `lake env lean OpenMath/Chapter3.lean` exits 0 (aggregator).
-- [ ] `grep -c sorry OpenMath/Chapter3/Section301.lean` returns 0.
-- [ ] `#print axioms` on each new theorem returns
-      `[propext, Classical.choice, Quot.sound]`.
-- [ ] Each new theorem has a non-vacuity `example` exercising it
-      (singleton family at minimum; union family only if it
-      composes cleanly).
-- [ ] Tautology scanner regex
-      `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` on
-      `Section301.lean` returns no matches.
+```lean
+mutual
+  theorem vertices_card : ∀ t : RootedTree,
+      (vertices t).card = order t
+    | mk cs => by
+        show (insert Vertex.root (verticesFromChildren cs)).card
+          = 1 + orderSum cs
+        rw [Finset.card_insert_of_not_mem ?_]
+        · congr 1
+          exact verticesFromChildren_card cs
+        · -- Vertex.root ∉ verticesFromChildren cs: by case analysis,
+          -- every member of verticesFromChildren is Vertex.child _ _
+          sorry  -- MUST close — see proof sketch below
 
-After P3 (if attempted):
-- [ ] §8 section added to `lem_310B_plan.md`.
-- [ ] Each of `thm:351B`, `lem:342A`, `lem:342B` has a 1-line
-      verdict.
-- [ ] Each verdict's "dependencies all formalized?" claim verified
-      against `plan.md` `[x]` rows.
+  theorem verticesFromChildren_card : ∀ cs : List RootedTree,
+      (verticesFromChildren cs).card = orderSum cs
+    | [] => by simp [verticesFromChildren, orderSum]
+    | t :: ts => by
+        sorry  -- MUST close — uses IH + Finset.card_biUnion +
+               -- disjointness of Vertex.child i vs Vertex.child j for i ≠ j
+end
+```
 
-## Faithfulness check (P2 only — P1 is a planning doc)
+**Key sub-lemma**: `Vertex.root ∉ verticesFromChildren cs` reduces
+to: every element of `verticesFromChildren cs` is constructed by
+`Vertex.child _ _`, and `Vertex.root ≠ Vertex.child _ _` by
+constructor injectivity (`Vertex.noConfusion` or pattern match on
+the equality).
 
-For each new theorem in P2:
-- It's a `bseriesPartialSum`/`bseriesAlphaPartialSum` algebraic
-  identity matching `Finset.sum_*` shape — no textbook attribution
-  required.
-- The non-vacuity `example` uses scalar `ℝ → ℝ` to exercise the
-  rewrite chain.
-- No new `def`, `class`, or `structure`. No definition smuggling.
-- Statement matches the Mathlib `Finset.sum_*` template; the proof
-  is a `simp`/`rw`-style closure.
+**Disjointness for `card_biUnion`**: for `i j : Fin cs.length`
+with `i ≠ j`, the images of `(Vertex.child i) ∘ vertices (cs.get i)`
+and `(Vertex.child j) ∘ vertices (cs.get j)` are disjoint because
+`Vertex.child i _ = Vertex.child j _` forces `i = j` (constructor
+injectivity again).
 
-## Tone and discipline notes
+**Sorry count rule**: cycle 261's deliverable MUST ship with
+sorry count = 0. If `vertices_card` cannot be closed cleanly,
+ABORT to §C fallback.
 
-- This is a planning-heavy cycle. P1 is the strategic deliverable;
-  P2 is the "ensure the cycle ships a code diff" requirement.
-- Cycle 260's success is measured primarily by whether the
-  `lem_310B_plan.md` scoping doc is concrete enough that cycle 261's
-  planner can decompose it into a single-cycle target without
-  re-scoping. Aim for that bar.
-- If you find during P1's gap inventory that `lem:310B` is **harder
-  than 5–8 phases** (e.g., requires building a full proof-relevant
-  symmetric-group action on multisets), document that finding
-  honestly in §6 (risk assessment) and adjust the §5 phase count up.
-  Do not artificially compress the estimate.
-- If you find during P3 scouting that `thm:351B` / `lem:342A` /
-  `lem:342B` all transitively depend on `lem:310B`, document it
-  plainly. The §8 verdict will then be "no single-cycle entry
-  points in the §34/§35 cluster without first completing the
-  `lem:310B` chain" — and the cycle 261 planner will route through
-  Phase A of the §5 plan instead.
+#### Deliverable 5 — Three non-vacuity examples
 
-## Cross-references
+```lean
+example : (RootedTree.vertices RootedTree.cherry).card = 2 := by
+  rw [RootedTree.vertices_card]; rfl
 
-* `extraction/formalization_data/entities/lem_310B.json` — target
-  entity, read this first.
-* `extraction/formalization_data/entities/lem_311A.json` — adjacent
-  partial-formalisation entity, cycles 248–259.
-* `extraction/raw_text/ch03.txt` — Butcher's §310 text (use Grep
-  to locate the (310i) equation and surrounding ~30 lines).
-* `OpenMath/Chapter3/Section301.lean` — current home of
-  `bseriesTerm`, `bseriesPartialSum`, `alphaWeight`, `bseriesAlphaTerm`,
-  `bseriesAlphaPartialSum`.
-* `OpenMath/Chapter3/Section310.lean` — `elementaryDiff` definition
-  (cycle 030).
-* `OpenMath/Chapter3/Section311.lean` — order-1 through order-5
-  Taylor specialisations (cycles 248/256/257/258/259).
-* `.prover-state/task_results/cycle_259.md` — most recent task
-  results with the explicit option-1 recommendation.
-* `.prover-state/issues/symmetry_group_equivalence.md` — cycle 017
-  σ-faithfulness divergence precedent; will need to be cited from
-  P1's §6 risk assessment.
-* `.prover-state/issues/def_530B_scaffold_strategy.md` — multi-phase
-  scoping precedent (cycles 149/150 → 151/152/.../164); template
-  for `lem_310B_plan.md`'s §5 phase decomposition.
+example : (RootedTree.vertices RootedTree.broom₃).card = 3 := by
+  rw [RootedTree.vertices_card]; rfl
 
-## Bottom-line directive
+example : (RootedTree.vertices
+            (RootedTree.mk [RootedTree.vertex, RootedTree.cherry])).card
+        = 4 := by
+  rw [RootedTree.vertices_card]; rfl
+```
 
-Write a substantive, verified, multi-cycle scoping issue
-(`.prover-state/issues/lem_310B_plan.md`) for the `lem:310B`
-textbook goal, plus 20–30 LOC of small `Finset.sum_*` API
-enrichment for the B-series partial-sum families in
-`OpenMath/Chapter3/Section301.lean` (2–4 `singleton`/`union`
-lemmas + 1–2 non-vacuity examples). Optionally scout `thm:351B` /
-`lem:342A` / `lem:342B` entity JSONs and document findings as a
-§8 appendix to the scoping doc. **No Lean code beyond the small
-P2 enrichment.** Ship axiom-clean, sorry count remains 0, repo
-cleanly compiles.
+If `order cherry = 2` requires more than `rfl`, use
+`decide` or `simp [RootedTree.order, RootedTree.orderSum]`.
+
+### Axiom budget
+
+`Classical.choice` (via `Classical.decEq` in Deliverable 2) is in
+the standard `[propext, Classical.choice, Quot.sound]` baseline.
+NO new axioms beyond this trio are acceptable. `#print axioms
+OpenMath.Chapter3.Section310.RootedTree.vertices_card` must
+return exactly `[propext, Classical.choice, Quot.sound]`.
+
+### LOC budget
+
+**Target**: 80–120 LOC for `Section300.lean` (~150 LOC inclusive
+of docstrings + examples + aggregator update). Per cycle 260
+scoping doc.
+
+### Time budget
+
+~2 hours focused work.
+
+## §C — Cycle 261 ABORT threshold and fallback
+
+If Phase A.1's `vertices` definition or `vertices_card` proof
+**stalls beyond 90 minutes** without compilation progress, ABORT
+Direction 1 and pivot to **Direction 2** (`lem:342A` (342a)).
+
+Concrete abort triggers:
+- (a) The `Finset.biUnion` definition refuses to elaborate due to
+  nested-inductive motive issues. Try the `List`-fallback once
+  before aborting.
+- (b) The disjointness proof in `verticesFromChildren_card`
+  requires more than one auxiliary helper lemma.
+- (c) `decEqVertex` mutual block (Route A) exceeds 30 LOC. Switch
+  to Route B (`Classical.decEq`) once before aborting.
+
+The abort criterion mirrors cycle 200's rollback discipline:
+sorry-first scaffolds for multi-cycle targets are FORBIDDEN per
+supervisor policy. Better to ship Direction 2 axiom-clean than
+Direction 1 with a `sorry` in `vertices_card`.
+
+## §D — Direction 2 fallback — `lem:342A` (342a) orthogonality
+
+If Direction 1 aborts per §C, ship a single-cycle deliverable on
+the §342 cluster:
+
+### Concrete deliverable
+
+New file `OpenMath/Chapter3/Section342.lean` shipping:
+
+1. `noncomputable def shiftedLegendre (n : ℕ) : Polynomial ℝ` —
+   the shifted Legendre polynomial `P_n^*(x) := P_n(2x - 1)` on
+   `[0, 1]`. Via Mathlib's `Polynomial.legendre` (verify path
+   with `lean_local_search "legendre"` first thing in the worker
+   session) composed with the linear shift `2X - 1`.
+
+2. `theorem shiftedLegendre_orthogonal {m n : ℕ} (hmn : m ≠ n) :
+   ∫ x in (0:ℝ)..1, (shiftedLegendre m).eval x *
+                    (shiftedLegendre n).eval x = 0` — (342a)
+   orthogonality on `[0, 1]`. Closure: change-of-variables
+   `u := 2x - 1` reduces to Mathlib's orthogonality on `[-1, 1]`
+   plus Jacobian `du/2`. Use
+   `intervalIntegral.integral_comp_mul_left` or similar.
+
+3. `theorem shiftedLegendre_eval_one (n : ℕ) :
+   (shiftedLegendre n).eval 1 = 1` — (342b) normalization.
+   Closure: `P_n(1) = 1` (Mathlib) + `2·1 - 1 = 1`.
+
+4. Three non-vacuity examples for `n = 0, 1, 2` exercising both
+   theorems with explicit Legendre values.
+
+### Risk
+
+**Verify Mathlib's Legendre polynomial API FIRST** before
+committing. Run `lean_local_search "Legendre"` and
+`lean_loogle "Polynomial.*legendre"` at session start. If
+Mathlib's Legendre infrastructure is too sparse to support
+`shiftedLegendre_orthogonal` in a single cycle, ABORT
+Direction 2 and pivot to **Direction 3** (§E).
+
+### Axiom budget
+
+`[propext, Classical.choice, Quot.sound]`. NO new axioms.
+
+### LOC budget
+
+~80–120 LOC.
+
+## §E — Direction 3 last-resort fallback — Section319 helper extraction
+
+If both Direction 1 and Direction 2 abort, ship a **pure
+refactor** extracting three private helpers from
+`OpenMath/Chapter3/Section319.lean` (`geometric_sum_one_plus_pos`,
+`geometric_sum_one_plus_zero`, `pow_one_add_le_exp`) into a new
+file `OpenMath/Helpers/GeometricExp.lean`. Update `Section319.lean`
+to import the new file. ~120 LOC moved, zero new content.
+Cycle-neutral on sorry count but counts as a substantive ship.
+
+This fallback was floated in cycle 248 task results and is a
+guaranteed-clean refactor.
+
+## §F — DO NOT do these (cycle 261 specific)
+
+- **Do NOT extend the order-N specialisation chain** (cycle 259's
+  `lem_311A_order_five` chain). Cycle 259 explicitly cut off the
+  chain at order 5; cycle 260 confirmed. Further extensions are
+  forbidden — combinatorial growth, no new mathematical content,
+  and substantive §311 work requires `lem:310B` Phase A
+  infrastructure.
+
+- **Do NOT ship sorry-first scaffolds for Phase A or any phase
+  of `lem_310B_plan.md`.** Cycle 200/201 rollback and cycle
+  149/150 `def:530B` rollback both forbid sorry-first scaffolds
+  for multi-cycle targets. Every phase must close axiom-clean.
+
+- **Do NOT name the cycle 261 deliverable `lem_310B`.** The
+  Phase A.1 deliverable is `vertices_card` (vertex enumeration
+  scaffold). `lem:310B` is the eventual multi-phase capstone
+  (Phase F.1) and must not be claimed prematurely. Plan.md row
+  for `lem:310B` stays `[ ]` and `lean_status.json` row stays
+  `unformalized` for cycle 261.
+
+- **Do NOT attempt the full `lem:310B` proof.** Multi-cycle work
+  per `lem_310B_plan.md` §5 (8–14 cycles).
+
+- **Do NOT define `Vertex` recursing via `RootedTree.rec`'s
+  motive directly.** The nested inductive `RootedTree | mk :
+  List RootedTree → RootedTree` interacts poorly with non-mutual
+  `Vertex` definitions per the memory
+  `feedback_rootedtree_nested_induction`. The inductive
+  declaration with explicit `root`/`child` constructors above is
+  fine, but the PROOFS of `vertices_card` etc. must use the
+  cycle 017 `mutual theorem` block pattern from
+  `Section301.lean:159-178` — not raw `RootedTree.recOn` /
+  `induction t`.
+
+- **Do NOT compile `OpenMath/Chapter4/Section441.lean`.** GPFS
+  pathology has produced 43+ consecutive timeouts since cycle
+  182. Per `.prover-state/issues/cycle_182_gpfs_slowness.md`,
+  skip any §441 compile attempts entirely. Cycle 260 did NOT
+  touch §441.
+
+- **Do NOT poll any Aristotle projects.** There are no pending
+  Aristotle submissions for cycle 261 (per the cycle 260 task
+  results). No `mcp__aristotle__` calls needed.
+
+- **Do NOT modify `scripts/autonomous_loop.py`.** Loop-maintainer
+  territory per CLAUDE.md.
+
+- **Do NOT raise `maxHeartbeats`** above 200000. If
+  `decEqVertex`'s mutual block stalls, switch to
+  `Classical.decEq` (Route B above).
+
+- **Do NOT introduce `axiom`/`constant` declarations.**
+
+## §G — Worker workflow
+
+1. **(5 min)** Read this strategy file and
+   `.prover-state/issues/lem_310B_plan.md` §3 (project hooks)
+   and §7 (cycle 261 entry point).
+2. **(15 min)** Read `OpenMath/Chapter3/Section301.lean:73-179`
+   for the cycle 017 mutual-recursion templates: `decEqTree`,
+   `density`, `densityProd_eq_map_prod`, `density_eq`,
+   `density_pos`, `densityProd_pos`. These are the canonical
+   patterns for Deliverables 2, 3, and 4.
+3. **(5 min)** Verify `RootedTree.cherry`, `RootedTree.broom₃`,
+   `RootedTree.vertex`, `RootedTree.order`, `RootedTree.orderSum`
+   are at the expected locations in
+   `OpenMath/Chapter3/Section310.lean` (Grep). They are —
+   `cherry` @ line 111, `broom₃` @ line 114, `vertex` @ line 108
+   per HEAD inspection.
+4. **(60–90 min)** Implement Deliverables 1–5 in
+   `OpenMath/Chapter3/Section300.lean`. Run
+   `lake env lean OpenMath/Chapter3/Section300.lean` after each
+   deliverable to catch issues early. **TIMEOUT WATCH**: if any
+   single `lake env lean` call exceeds 5 minutes on
+   `Section300.lean`, suspect a `Decidable` instance loop or a
+   mutual-recursion well-foundedness issue — break the proof
+   down or switch `DecidableEq` to Route B (`Classical.decEq`).
+5. **(10 min)** Add `import OpenMath.Chapter3.Section300` to
+   `OpenMath/Chapter3.lean`. Run `lake env lean
+   OpenMath/Chapter3.lean` to verify the aggregator builds.
+6. **(10 min)** Run `lake build OpenMath.Chapter3.Section300`
+   to refresh the `.olean`, then `#print axioms` on
+   `RootedTree.vertices_card` and confirm
+   `[propext, Classical.choice, Quot.sound]`. This `lake build`
+   step is essential — `lake env lean` does NOT update `.olean`
+   files, so `#print axioms` against the freshly-edited
+   declaration would otherwise report `unknownIdentifier`.
+7. **(5 min)** Tautology-scanner check:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section300.lean`
+   should return no matches.
+8. **(20 min)** Write `.prover-state/task_results/cycle_261.md`
+   per CLAUDE.md template. Faithfulness check on Deliverables 1,
+   3, 4 (the new `def`s and `theorem`).
+9. **(5 min)** Update `extraction/formalization_data/lean_status.json`
+   ONLY IF a textbook entity is closed (NOT the case for Phase
+   A.1 — `vertices_card` is engineering infrastructure, not a
+   Butcher entity). Likewise `plan.md`. Cycle 261's deliverable
+   is engineering scaffolding; neither file needs updating
+   beyond a cosmetic `Recent commits` refresh.
+10. **(5 min)** Commit with a message of the form
+    `Cycle 261 — §300 RootedTree.Vertex + vertices_card (lem:310B Phase A.1) SHIPPED.`
+
+## §H — Faithfulness rationale
+
+Deliverable 1 (`Vertex`): Butcher §300 (p. 139) defines vertices
+informally as "the points of a tree". Our inductive `root` /
+`child` constructors faithfully capture the same notion: every
+vertex is either the root or sits inside a specific child
+position. The `Fin cs.length` index plus the recursive
+`Vertex (cs.get i)` argument matches Butcher's "vertex of the
+i-th subtree" framing verbatim.
+
+Deliverable 3 (`vertices`): the enumeration as a `Finset`
+faithfully represents "the set of vertices" Butcher refers to in
+§300's automorphism-group discussion. Each vertex appears exactly
+once; the `Finset` structure ensures this.
+
+Deliverable 4 (`vertices_card = order`): the natural
+"|V(t)| = r(t)" identity. Butcher's §300 defines `r(t)` as "the
+number of vertices of t", so the identity is by definition;
+formally, it requires the mutual induction on `RootedTree`
+against the cycle 017 `order_eq` recursion.
+
+Phase A.1 has **no faithfulness divergence**. The σ-faithfulness
+gap (`symmetry_group_equivalence.md`) does NOT bite here —
+`vertices` is the literal vertex-set enumeration, not the
+symmetry-group-quotient construction.
+
+## §I — Success criteria (cycle 261 grading checklist)
+
+- [ ] `OpenMath/Chapter3/Section300.lean` exists, ≤ 200 LOC.
+- [ ] `OpenMath/Chapter3.lean` imports `Section300`.
+- [ ] `lake env lean OpenMath/Chapter3/Section300.lean` exits 0.
+- [ ] `lake env lean OpenMath/Chapter3.lean` exits 0.
+- [ ] `lake build OpenMath.Chapter3.Section300` exits 0.
+- [ ] `grep -c sorry OpenMath/Chapter3/Section300.lean` returns 0.
+- [ ] `grep -c sorry OpenMath/Chapter3/Section{301,310,311}.lean`
+      unchanged (no regression on cycle 248–260 deliverables).
+- [ ] `#print axioms OpenMath.Chapter3.Section310.RootedTree.vertices_card`
+      returns `[propext, Classical.choice, Quot.sound]`.
+- [ ] Tautology-scanner regex returns no matches on
+      `Section300.lean`.
+- [ ] `task_results/cycle_261.md` written with the seven CLAUDE.md
+      sections (Worked on / Approach / Result / Faithfulness check
+      / Dead ends / Discovery / Suggested next approach).
+- [ ] Three non-vacuity `example`s verify `vertices_card` fires
+      on `cherry`, `broom₃`, and `mk [vertex, cherry]`.
+- [ ] Commit message of the form
+      `Cycle 261 — §300 RootedTree.Vertex + vertices_card (lem:310B Phase A.1) SHIPPED.`
+
+If Direction 2 (`lem:342A`) or Direction 3 (Section319 refactor)
+is shipped instead, adjust the file/symbol names accordingly.
+The axiom-clean + sorry-clean + non-vacuity criteria apply
+uniformly across all three directions.
+
+## §J — Suggested cycle 262+ trajectory (planning only)
+
+Per `lem_310B_plan.md` §5, if cycle 261 ships Phase A.1 cleanly:
+
+* **Cycle 262**: Phase A.2 — `LabelledRootedTree` structure +
+  tree-automorphism `Setoid`. ~150–200 LOC. Builds on cycle 261's
+  `Vertex` enumeration.
+* **Cycle 263**: Phase A.3 — orbit-size theorem
+  `Nat.card (orbit …) = r(t)!/σ(t)` OR defer per
+  `symmetry_group_equivalence.md`. ~100–150 LOC.
+* **Cycles 264–266**: Phase B (Taylor) or skip per
+  `lem_310B_plan.md` §4.2 bypass.
+* **Cycles 267+**: Phase C (orbit-counting bridge), Phase D
+  (multilinear lift), Phase E (small-r `lem:310B` cases),
+  Phase F (general `lem:310B` capstone). See `lem_310B_plan.md`
+  §5 for the full breakdown.
+
+If cycle 261 ships Direction 2 (`lem:342A`) instead:
+
+* **Cycle 262**: extend `lem:342A` properties (342c parity, 342d
+  norm) or pivot to `lem:342B` (Gaussian quadrature exactness).
+  Per `lem_310B_plan.md` §8.3, `lem:342B` consumes `lem:342A`
+  (342g) so the §342 cluster has a multi-cycle structure of its
+  own.
