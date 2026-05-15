@@ -1,461 +1,395 @@
-# Cycle 269 Strategy — §310/§311 Phase E.1 order-5 (Phase 1 of 2):
-# nine new per-tree `bseriesExactTerm_*_scalar` closed forms
+# Cycle 270 Strategy — §310/§311 Phase E.1 order-5 (Phase 2 of 2):
+# `lem_311A_order_five_partialSum` 17-tree bridge
 
 ## §0 Where we are
 
-Cycle 268 shipped Phase E.1 of `.prover-state/issues/lem_310B_plan.md`
-at order 4 (scalar `ℝ → ℝ`):
+Cycle 269 SHIPPED axiom-clean the order-5 per-tree library: nine new
+`bseriesExactTerm_*_scalar` theorems (all 9 unordered rooted trees of
+order 5 — Butcher Table 310(II) row r=5) plus the `bushy₄` def alias.
+Bell-coefficient cross-check vs cycle 259's `lem_311A_order_five`
+verified all five monomial-grouped sums match `(1, 7, 4, 11, 1)`
+verbatim.
 
-* `bseriesExactTerm_bushy_scalar` (h⁴/24 · f'''·f³)
-* `bseriesExactTerm_mkVertexCherry_scalar` (h⁴/8 · f''·f'·f²)
-* `bseriesExactTerm_mkBroom₃_scalar` (h⁴/24 · f'·f''·f²; σ(mk [broom₃]) = 2)
-* `bseriesExactTerm_mkMkCherry_scalar` (h⁴/24 · (f')³·f)
-* `lem_311A_order_four_partialSum` (bridge to cycle 258's order-4
-  closed-form polynomial via 8-tree `bseriesExactPartialSum`)
+State at HEAD (`003706a Cycle 269 …`):
+- `Section310.lean`: `vertex`, `cherry`, `broom₃`, `bushy`, `bushy₄`
+  aliases all present.
+- `Section301.lean`: 13 per-tree `bseriesExactTerm_*_scalar` closed
+  forms (4 order-≤-3 from cycles 266–267, 4 order-4 from cycle 268,
+  9 order-5 from cycle 269).
+- `Section311.lean`: `lem_311A_order_{one..five}` scalar closed-form
+  Taylor specialisations (cycles 248, 256–259) +
+  `lem_311A_order_{two,three,four}_partialSum` bridges (cycles
+  266–268).
 
-All five axiom-clean (`[propext, Classical.choice, Quot.sound]`).
-Sorry count: **0** across the whole repo. No blocker in the
-"What I'm stuck on" field; no pending Aristotle results.
+Zero sorries. No pending Aristotle. No consultant advice. No
+semantic regressions. Clean follow-up cycle in the §310/§311 thread.
 
-Branch tip: `4c92bf7 Cycle 268 — §310/§311 Phase E.1 order-4
-partial-sum bridge SHIPPED.`
+## §1 Target
 
-Cycle 268 task-results §"Suggested next approach" priority:
+**P1 (MUST SHIP)**: `lem_311A_order_five_partialSum` at
+`OpenMath/Chapter3/Section311.lean`. The 17-tree partial-sum bridge
+restating cycle 259's `lem_311A_order_five` using the
+`bseriesExactPartialSum` API. Closes §310/§311 Phase E.1 fully up to
+order 5 in the scalar setting (matching cycle 259's deliberate
+order-5 cutoff in the per-tree chain).
 
-1. **Order-5 partial-sum bridge** (LOW risk, mechanical) ← TARGETED
-2. Polymorphic-`E` lift (MEDIUM-HIGH risk, multilinear plumbing)
-3. Pivot to `lem:342A` (single-cycle independent target)
+**P2 (NICE-TO-HAVE, ~10 LOC)**: A non-vacuity witness on the trivial
+ODE `f := 0, yex := const y₀` exercising the new bridge — confirms
+the residual is identically zero on a degenerate ODE.
 
-Order-5 closure is the deliberate cutoff from cycle 259
-(`iteratedDeriv_five_via_ode` ladder ends there) and provides a
-**clean narrative stopping point**: Phase E.1 closes at the same
-order as cycle 259's `lem_311A_order_five` itself. After cycle 270
-ships the 17-tree bridge, the planner pivots — either to `lem:342A`,
-or to polymorphic-`E` lifting (Phase D.2 / E.2), or to a fresh
-chapter.
+## §2 Approach (concrete recipe)
 
-## §A Cycle 269 deliverable: 9 new per-tree closed forms
+This is a 1:1 mechanical port of cycle 268's order-4 bridge
+(`lem_311A_order_four_partialSum`) at one extra order. **Re-read
+cycle 268's proof body in `OpenMath/Chapter3/Section311.lean` before
+starting** — the recipe transfers verbatim with one extra Finset
+element per `_insert` step.
 
-Per the LOC trajectory of cycles 266–268, the order-5 work cannot
-fit in one cycle:
-
-| cycle | trees added | bridge trees | LOC |
-|-------|-------------|--------------|-----|
-| 266   | 1 (cherry)  | 2 (order-2)  | ~230 |
-| 267   | 2           | 4 (order-3)  | ~210 |
-| 268   | 4           | 8 (order-4)  | ~492 |
-| 269 (this) | **9**  | **DEFER**    | est. ~450 |
-| 270 (next) | 0      | 17 (order-5) | est. ~500 |
-
-**Cycle 269 ships only the per-tree closed forms.** The 17-tree
-partial-sum bridge `lem_311A_order_five_partialSum` is deferred to
-cycle 270.
-
-Rationale: cycle 268's bridge alone was ~290 LOC for 8 trees with
-7 non-membership lemmas; extending to 17 trees with 16 non-membership
-lemmas pushes the combined deliverable well past 1000 LOC. Splitting
-keeps both cycles within the working envelope and gives cycle 270
-a single concentrated target.
-
-## §B The 9 order-5 trees and their closed forms (verified)
-
-All nine trees have `r = 5`. Coefficients computed below were
-**verified by hand** against cycle 259's `lem_311A_order_five`
-Bell coefficients `(1, 7, 4, 11, 1)`. The σ-recursion was applied
-carefully — multi-child cases (T2, T3, T5) and one-child cases
-(T6, T7, T8, T9) follow different patterns of
-`σ(mk children) = ∏_{distinct subtree types} mᵢ! · σ(tᵢ)^{mᵢ}`.
-
-| # | Tree | r | σ | γ | coef · h⁵ | Elementary differential (scalar) |
-|---|------|---|---|---|-----------|-----------------------------------|
-| T1 | `mk [v,v,v,v]` | 5 | 4!=24 | 5 | h⁵/120 | f''''·f⁴ |
-| T2 | `mk [v,v,cherry]` | 5 | 2 | 10 | h⁵/20 | f'''·f'·f³ |
-| T3 | `mk [v,broom₃]` | 5 | 2 | 15 | h⁵/30 | (f'')²·f³ |
-| T4 | `mk [v,mk [cherry]]` | 5 | 1 | 30 | h⁵/30 | f''·(f')²·f² |
-| T5 | `mk [cherry,cherry]` | 5 | 2 | 20 | h⁵/40 | f''·(f')²·f² |
-| T6 | `mk [bushy]` | 5 | 6 | 20 | h⁵/120 | f'''·f'·f³ |
-| T7 | `mk [mk [v,cherry]]` | 5 | 1 | 40 | h⁵/40 | f''·(f')²·f² |
-| T8 | `mk [mk [broom₃]]` | 5 | 2 | 60 | h⁵/120 | f''·(f')²·f² |
-| T9 | `mk [mk [mk [cherry]]]` | 5 | 1 | 120 | h⁵/120 | (f')⁴·f |
-
-**Faithfulness re-derivation** (worker MUST verify):
-
-* σ(mk [broom₃]) = 2 (cycle 268 P3 caught this — propagates here to T8).
-  σ recursion at one-child trees: `σ(mk [t]) = 1!·σ(t)^1 = σ(t)`.
-  So σ(mk [broom₃]) = σ(broom₃) = 2!·σ(v)² = 2. ✓
-* σ(mk [mk [broom₃]]) = σ(mk [broom₃]) = 2. ← T8 coefficient `1/(2·60) = 1/120`,
-  **not** `1/60`.
-* σ(mk [v,broom₃]) = `1!·σ(v)·1!·σ(broom₃)` = `1·1·1·2` = 2. ← T3 coefficient `1/(2·15)`.
-* σ(bushy) = σ(mk [v,v,v]) = `3!·σ(v)³` = 6. (Verified by existing example
-  at `Section301.lean`.)
-* σ(mk [bushy]) = σ(bushy) = 6 (one-child rule). T6 coefficient `1/(6·20) = 1/120`.
-* σ(mk [v,v,cherry]) = `2!·σ(v)²·1!·σ(cherry)¹` = `2·1·1·1` = 2.
-* σ(mk [cherry,cherry]) = `2!·σ(cherry)²` = `2·1` = 2.
-
-**Coefficient sums by monomial** (cross-check vs cycle 259):
-
-| Monomial | Trees | Contributions (·h⁵/120) | Total (cycle 259) |
-|----------|-------|--------------------------|---------------------|
-| f''''·f⁴ | T1 | 1 | **1** ✓ |
-| f'''·f'·f³ | T2, T6 | 6 + 1 | **7** ✓ |
-| (f'')²·f³ | T3 | 4 | **4** ✓ |
-| f''·(f')²·f² | T4, T5, T7, T8 | 4 + 3 + 3 + 1 | **11** ✓ |
-| (f')⁴·f | T9 | 1 | **1** ✓ |
-
-All five sums match `lem_311A_order_five`'s Bell coefficients `(1, 7, 4, 11, 1)`
-verbatim. ✓
-
-## §C Deliverables (P1–P10)
-
-All theorem deliverables land in `OpenMath/Chapter3/Section301.lean`
-inside the existing `namespace OpenMath.Chapter3.Section310.RootedTree`
-block, immediately after cycle 268's `bseriesExactTerm_mkMkCherry_scalar`
-and **before** the existing `bseriesExactPartialSum` block (so the new
-per-tree facts are available to cycle 270's bridge work).
-
-Plus one new `def` alias at `Section310.lean` (sister to existing
-`vertex`, `cherry`, `broom₃`, `bushy` from cycle 268).
-
-### P1. `Section310.lean` — `bushy₄` alias
+### §2.1 Statement signature
 
 ```lean
-/-- `[τ, τ, τ, τ]`: the order-5 tree with four leaves attached to the root.
-Sister to the cycle 268 alias `bushy = mk [vertex, vertex, vertex]`. -/
-def bushy₄ : RootedTree := mk [vertex, vertex, vertex, vertex]
+theorem lem_311A_order_five_partialSum {f : ℝ → ℝ}
+    (hf : ContDiff ℝ 4 f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C6 : ContDiff ℝ 6 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h => yex (x₀ + h)
+              - bseriesExactPartialSum f y₀ h
+                  {RootedTree.vertex,
+                   RootedTree.cherry,
+                   RootedTree.broom₃,
+                   RootedTree.mk [RootedTree.cherry],
+                   RootedTree.bushy,
+                   RootedTree.mk [RootedTree.vertex, RootedTree.cherry],
+                   RootedTree.mk [RootedTree.broom₃],
+                   RootedTree.mk [RootedTree.mk [RootedTree.cherry]],
+                   RootedTree.bushy₄,
+                   RootedTree.mk [RootedTree.vertex, RootedTree.vertex, RootedTree.cherry],
+                   RootedTree.mk [RootedTree.vertex, RootedTree.broom₃],
+                   RootedTree.mk [RootedTree.vertex, RootedTree.mk [RootedTree.cherry]],
+                   RootedTree.mk [RootedTree.cherry, RootedTree.cherry],
+                   RootedTree.mk [RootedTree.bushy],
+                   RootedTree.mk [RootedTree.mk [RootedTree.vertex, RootedTree.cherry]],
+                   RootedTree.mk [RootedTree.mk [RootedTree.broom₃]],
+                   RootedTree.mk [RootedTree.mk [RootedTree.mk [RootedTree.cherry]]]})
+      =O[nhds 0] (fun h => h ^ (5 + 1))
 ```
 
-Optional but recommended for symmetry with cycle 268's naming.
-Alternative is to inline `mk [vertex, vertex, vertex, vertex]` at each
-T1 call site.
+The hypotheses MUST match cycle 259's `lem_311A_order_five`
+verbatim (`hf : ContDiff ℝ 4 f`, `hyex_C6 : ContDiff ℝ 6 yex`,
+`hyex_x₀`, `hyex_ode`). Any divergence would be a strengthening
+or weakening relative to the base lemma.
 
-### P2–P10. Per-tree closed forms in `Section301.lean`
+The 17-tree Finset breakdown:
+- 1 order-1 tree: `vertex`
+- 1 order-2 tree: `cherry`
+- 2 order-3 trees: `broom₃`, `mk [cherry]`
+- 4 order-4 trees: `bushy`, `mk [vertex, cherry]`, `mk [broom₃]`,
+  `mk [mk [cherry]]`
+- 9 order-5 trees (cycle 269): `bushy₄`, `mk [vertex, vertex,
+  cherry]`, `mk [vertex, broom₃]`, `mk [vertex, mk [cherry]]`,
+  `mk [cherry, cherry]`, `mk [bushy]`, `mk [mk [vertex, cherry]]`,
+  `mk [mk [broom₃]]`, `mk [mk [mk [cherry]]]`
 
-Each follows the cycle 268 mechanical recipe (§E below). State the
-theorem precisely, then prove via `unfold` + (order, σ, γ) `rfl`-reduce
-+ `iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod` at the appropriate
-depth + `Fin.prod_univ_n` + nested `iteratedDeriv_succ` + final `ring`.
+### §2.2 Non-membership lemmas (16 of them)
 
-| Deliverable | Theorem | Tree | Closed form |
-|-------------|---------|------|-------------|
-| P2 | `bseriesExactTerm_bushy₄_scalar` | T1 | `h^5 / 120 * (iteratedDeriv 4 f y₀ * (f y₀)^4)` |
-| P3 | `bseriesExactTerm_mkVertexVertexCherry_scalar` | T2 | `h^5 / 20 * (iteratedDeriv 3 f y₀ * deriv f y₀ * (f y₀)^3)` |
-| P4 | `bseriesExactTerm_mkVertexBroom₃_scalar` | T3 | `h^5 / 30 * ((iteratedDeriv 2 f y₀)^2 * (f y₀)^3)` |
-| P5 | `bseriesExactTerm_mkVertexMkCherry_scalar` | T4 | `h^5 / 30 * (iteratedDeriv 2 f y₀ * (deriv f y₀)^2 * (f y₀)^2)` |
-| P6 | `bseriesExactTerm_mkCherryCherry_scalar` | T5 | `h^5 / 40 * (iteratedDeriv 2 f y₀ * (deriv f y₀)^2 * (f y₀)^2)` |
-| P7 | `bseriesExactTerm_mkBushy_scalar` | T6 | `h^5 / 120 * (iteratedDeriv 3 f y₀ * deriv f y₀ * (f y₀)^3)` |
-| P8 | `bseriesExactTerm_mkMkVertexCherry_scalar` | T7 | `h^5 / 40 * (iteratedDeriv 2 f y₀ * (deriv f y₀)^2 * (f y₀)^2)` |
-| P9 | `bseriesExactTerm_mkMkBroom₃_scalar` | T8 | `h^5 / 120 * (iteratedDeriv 2 f y₀ * (deriv f y₀)^2 * (f y₀)^2)` |
-| P10 | `bseriesExactTerm_mkMkMkCherry_scalar` | T9 | `h^5 / 120 * ((deriv f y₀)^4 * f y₀)` |
-
-**Type signature template** (uniform across P2–P10):
+Inside the proof body, establish 16 non-membership facts via the
+cycle 268 idiom. Each is of the form:
 
 ```lean
-theorem bseriesExactTerm_<name>_scalar (f : ℝ → ℝ) (y₀ h : ℝ) :
-    bseriesExactTerm f y₀ h <tree> = <closed-form> := by
-  …
+have hT_not_in_S : T ∉ S := by
+  simp [RootedTree.vertex, RootedTree.cherry, RootedTree.broom₃,
+        RootedTree.bushy, RootedTree.bushy₄, RootedTree.mk.injEq]
 ```
 
-No `ContDiff` hypothesis is needed: `bseriesExactTerm` is a definitional
-expression in `iteratedFDeriv ℝ n f y₀`, and `iteratedFDeriv` is defined
-unconditionally (returning the zero multilinear map if `f` is not
-differentiable enough). The scalar collapse via
-`iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod` works at the
-definitional level. Compare cycle 268's `bseriesExactTerm_bushy_scalar`
-signature — no hypotheses.
+where `S` is the iteratively-shrinking remaining Finset. **Note the
+simp set includes `RootedTree.bushy₄`** (new this cycle vs cycle
+268's simp set).
 
-## §D Recommended ordering
+**Pre-flagged risk R1**: 16 non-membership lemmas may push the
+`simp` elaboration time beyond cycle 268's. If a single `simp` call
+stalls (>30s by `lake env lean` clock), factor the non-membership
+facts into a private named lemma block outside the main theorem,
+or split the `simp` set per-tree (e.g.,
+`simp only [RootedTree.mk.injEq, List.cons.injEq]` to skip the
+heavy alias unfolding when the structural distinctness suffices).
 
-1. **P1** (bushy₄ alias) — trivial single-line `def`. Compile
-   `Section310.lean` to refresh the olean cache before consumers fire.
-2. **P2** (T1, bushy₄) — depth-4 outer iteratedFDeriv. Use
-   `Fin.prod_univ_four`; if missing in Mathlib, fall back to
-   `Fin.prod_univ_succ` × 3 + `Fin.prod_univ_zero`. Validates the
-   depth-4 pattern.
-3. **P10** (T9, mk[mk[mk[cherry]]]) — deepest nesting, all single-child
-   σ=1, simplest algebraically. Closing this early validates the
-   multi-level cherry chain via three nested `iteratedFDeriv ℝ 1`
-   applications.
-4. **P4** (T3, mk[v,broom₃]) — σ-faithfulness checkpoint at multi-distinct
-   children (σ=2 from `1!·σ(v)·1!·σ(broom₃) = 2`).
-5. **P7** (T6, mk[bushy]) — single-child σ=σ(bushy)=6, exercises the
-   one-child rule at the largest σ value among the 9.
-6. **P9** (T8, mk[mk[broom₃]]) — σ=2 propagated through TWO one-child
-   wrappers. The most delicate σ check (and the load-bearing cycle 268
-   precedent).
-7. **P8** (T7, mk[mk[v,cherry]]) — single-child wrapping a multi-child.
-8. **P3** (T2, mk[v,v,cherry]) — multi-distinct-children with cherry,
-   the trickiest depth-3 outer recipe.
-9. **P5** (T4, mk[v,mk[cherry]]) — depth-2 outer with one-child inner.
-10. **P6** (T5, mk[cherry,cherry]) — depth-2 outer with two identical
-    cherries (σ=2 from `2!·σ(cherry)² = 2`).
+### §2.3 Iterated `_insert` unfolds + final `_singleton`
 
-This ordering front-loads σ-faithfulness sanity (P4, P7, P9 are σ ≠ 1
-cases) and saves the trickiest multi-child outer recipes (P3, P5, P6)
-for last when the worker has matured the pattern on the easier cases.
-
-## §E Mechanical recipe (cycle 267/268 template, scaled to order 5)
-
-For each `bseriesExactTerm_<tree>_scalar` theorem:
+Apply `bseriesExactPartialSum_insert` 16 times then
+`bseriesExactPartialSum_singleton` once. Cycle 268's chain is the
+template:
 
 ```lean
-theorem bseriesExactTerm_<tree>_scalar (f : ℝ → ℝ) (y₀ h : ℝ) :
-    bseriesExactTerm f y₀ h <tree>
-      = h^5 / <σ·γ> * <closed-form-monomial> := by
-  unfold bseriesExactTerm <any-tree-aliases-used>
-  -- Rfl-reduce (order, σ, γ):
-  have horder : order <tree> = 5 := rfl
-  have hσ : symmetry <tree> = <σ-value> := rfl
-  have hγ : density <tree> = <γ-value> := rfl
-  rw [horder, hσ, hγ]
-  -- Establish elementaryDiff closed form (inline or via private helper):
-  show (h^5 / ((<σ-value> : ℝ) * <γ-value>)) • elementaryDiff f y₀ <tree>
-        = h^5 / <σ·γ> * <monomial>
-  rw [show elementaryDiff f y₀ <tree> = <scalar-ED-expression> from ?_]
-  · -- Final scalar arithmetic
-    push_cast
-    ring
-  · -- Substep: prove the elementaryDiff equality
-    -- For depth-N outer iteratedFDeriv, apply:
-    --   iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod
-    --   Fin.prod_univ_N
-    --   iteratedFDeriv_zero_apply (for vertex children)
-    --   inner sub-lemmas for non-vertex children (cherry, broom₃,
-    --     mk[cherry], broom₃, mk[v,cherry], etc.).
-    -- For one-child trees mk [t], use iteratedFDeriv ℝ 1 ... =
-    --   fderiv ℝ f y₀ (ED(t)) = deriv f y₀ • ED(t) (scalar)
-    -- via iteratedFDeriv_one_apply + fderiv_eq_smul_deriv + smul_eq_mul
-    -- (cycle 266 recipe).
-    …
+rw [bseriesExactPartialSum_insert _ _ _ _ _ h_T₁_not_in_S₁]
+rw [bseriesExactPartialSum_insert _ _ _ _ _ h_T₂_not_in_S₂]
+... (14 more times) ...
+rw [bseriesExactPartialSum_singleton]
 ```
 
-**Key Mathlib hooks** (all verified at HEAD by cycles 266/267/268):
+Each unfold produces a `bseriesExactTerm f y₀ h <tree> + <rest>`
+shape that the next unfold or substitution can consume.
 
-* `iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod` —
-  `iteratedFDeriv ℝ n f y₀ m = (∏ i, m i) • iteratedDeriv n f y₀`.
-  In `Mathlib.Analysis.Calculus.IteratedDeriv.Defs`.
-* `iteratedFDeriv_zero_apply` — `iteratedFDeriv ℝ 0 f y₀ m = f y₀`.
-* `iteratedFDeriv_one_apply` + `fderiv_eq_smul_deriv` + `smul_eq_mul` —
-  the order-1 recipe from cycle 266.
-* `Fin.prod_univ_one`, `Fin.prod_univ_two`, `Fin.prod_univ_three` —
-  in `Mathlib.Algebra.BigOperators.Fin`.
-* `Fin.prod_univ_four` — verify via `lean_local_search "Fin.prod_univ"`.
-  If missing, fall back to `Fin.prod_univ_succ` × 3 + `Fin.prod_univ_zero`.
-* `iteratedDeriv_succ`, `iteratedDeriv_one` — derivative unfolding.
+### §2.4 Per-tree closed-form substitution (13 substitutions)
 
-**Concrete elementaryDiff closed forms to use** (re-derived inline,
-or quoted from earlier cycle's theorem if available):
+After the unfolds, substitute each of the 13 closed forms:
 
-* ED(vertex) on scalars = `f y₀` (trivially).
-* ED(cherry) on scalars = `deriv f y₀ * f y₀` (cycle 266).
-* ED(broom₃) on scalars = `iteratedDeriv 2 f y₀ * (f y₀)^2` (cycle 267).
-* ED(mk[cherry]) on scalars = `(deriv f y₀)^2 * f y₀` (cycle 267).
-* ED(bushy) on scalars = `iteratedDeriv 3 f y₀ * (f y₀)^3` (cycle 268).
-* ED(mk[v,cherry]) on scalars = `iteratedDeriv 2 f y₀ * deriv f y₀ * (f y₀)^2` (cycle 268).
-* ED(mk[broom₃]) on scalars = `deriv f y₀ * iteratedDeriv 2 f y₀ * (f y₀)^2` (cycle 268).
-* ED(mk[mk[cherry]]) on scalars = `(deriv f y₀)^3 * f y₀` (cycle 268).
+- 4 from cycles 266–267: `bseriesExactTerm_vertex`,
+  `bseriesExactTerm_cherry_scalar`,
+  `bseriesExactTerm_broom₃_scalar`,
+  `bseriesExactTerm_mkCherry_scalar`.
+- 4 from cycle 268: `bseriesExactTerm_bushy_scalar`,
+  `bseriesExactTerm_mkVertexCherry_scalar`,
+  `bseriesExactTerm_mkBroom₃_scalar`,
+  `bseriesExactTerm_mkMkCherry_scalar`.
+- 9 from cycle 269: `bseriesExactTerm_bushy₄_scalar`,
+  `bseriesExactTerm_mkVertexVertexCherry_scalar`,
+  `bseriesExactTerm_mkVertexBroom₃_scalar`,
+  `bseriesExactTerm_mkVertexMkCherry_scalar`,
+  `bseriesExactTerm_mkCherryCherry_scalar`,
+  `bseriesExactTerm_mkBushy_scalar`,
+  `bseriesExactTerm_mkMkVertexCherry_scalar`,
+  `bseriesExactTerm_mkMkBroom₃_scalar`,
+  `bseriesExactTerm_mkMkMkCherry_scalar`.
 
-These eight ED closed forms are NOT stated as standalone lemmas at
-HEAD — they appear inline inside the cycle 266–268 `bseriesExactTerm_*_scalar`
-proofs. Cycle 269 should follow the same inline pattern (don't extract
-as private lemmas unless the same ED is re-used 3+ times in cycle 269).
+After substitution, the partial sum equals the closed-form Taylor
+polynomial of `yex` around `x₀` truncated at order 5:
 
-## §F Non-vacuity (P11)
+```
+h • f y₀
++ (h²/2) • (f' · f)
++ (h³/6) • (f'' · f² + (f')² · f)
++ (h⁴/24) • (f''' · f³ + 4·f'' · f' · f² + (f')³ · f)
++ (h⁵/120) • (f'''' · f⁴ + 7·f''' · f' · f³ + 4·(f'')² · f³
+              + 11·f'' · (f')² · f² + (f')⁴ · f)
+```
 
-After P10, add ONE non-vacuity `example` covering the trivial ODE
-`f := 0`. Pattern from cycle 268:
+(All derivatives at `y₀`.)
+
+### §2.5 Coefficient verification (faithfulness load-bearing)
+
+Monomial groupings for order-5 contributions, after multiplying
+each tree's coefficient by `120 / (σ · γ)`:
+
+| Monomial | Trees contributing | Coefficient sum |
+|----------|--------------------|-----------------|
+| `f''''·f⁴` | T1 (bushy₄, σ=24, γ=5) | 120/120 = 1 |
+| `f'''·f'·f³` | T2 (mk[v,v,cherry], σ=2, γ=10), T6 (mk[bushy], σ=6, γ=20) | 6 + 1 = 7 |
+| `(f'')²·f³` | T3 (mk[v,broom₃], σ=2, γ=15) | 4 |
+| `f''·(f')²·f²` | T4 (mk[v,mk[cherry]], σ=1, γ=30), T5 (mk[cherry,cherry], σ=2, γ=20), T7 (mk[mk[v,cherry]], σ=1, γ=40), T8 (mk[mk[broom₃]], σ=2, γ=60) | 4 + 3 + 3 + 1 = 11 |
+| `(f')⁴·f` | T9 (mk[mk[mk[cherry]]], σ=1, γ=120) | 1 |
+
+All five sums match cycle 259's Bell coefficients `(1, 7, 4, 11, 1)`
+verbatim. The cycle 269 worker already verified this on paper;
+cycle 270 worker must confirm the `ring` step closes the residual
+identity without coefficient drift.
+
+### §2.6 Close via `IsBigO.congr'`
+
+The new statement's residual `yex(x₀+h) - bseriesExactPartialSum f
+y₀ h S` differs from cycle 259's
+`yex(x₀+h) - <closed-form polynomial>` only by definitional
+equality (via the `_insert`/`_singleton` unfolds + per-tree closed
+forms + `smul_eq_mul` + `ring`).
+
+Closure tactic mirrors cycle 268:
 
 ```lean
-example (y₀ h : ℝ) :
-    bseriesExactTerm (fun _ : ℝ => (0 : ℝ)) y₀ h (mk [mk [mk [cherry]]])
-      = 0 := by
-  rw [bseriesExactTerm_mkMkMkCherry_scalar]
-  simp
+have hbase := lem_311A_order_five hf hyex_x₀ hyex_C6 hyex_ode
+refine hbase.congr' ?_ Filter.EventuallyEq.rfl
+filter_upwards with h
+-- Goal: yex (x₀ + h) - bseriesExactPartialSum ... = yex (x₀ + h) - <closed form>
+congr 1
+-- Goal: bseriesExactPartialSum ... = <closed form>
+rw [bseriesExactPartialSum_insert ...] -- ×16
+rw [bseriesExactPartialSum_singleton]
+rw [bseriesExactTerm_vertex,
+    bseriesExactTerm_cherry_scalar,
+    bseriesExactTerm_broom₃_scalar,
+    bseriesExactTerm_mkCherry_scalar,
+    bseriesExactTerm_bushy_scalar,
+    bseriesExactTerm_mkVertexCherry_scalar,
+    bseriesExactTerm_mkBroom₃_scalar,
+    bseriesExactTerm_mkMkCherry_scalar,
+    bseriesExactTerm_bushy₄_scalar,
+    bseriesExactTerm_mkVertexVertexCherry_scalar,
+    bseriesExactTerm_mkVertexBroom₃_scalar,
+    bseriesExactTerm_mkVertexMkCherry_scalar,
+    bseriesExactTerm_mkCherryCherry_scalar,
+    bseriesExactTerm_mkBushy_scalar,
+    bseriesExactTerm_mkMkVertexCherry_scalar,
+    bseriesExactTerm_mkMkBroom₃_scalar,
+    bseriesExactTerm_mkMkMkCherry_scalar]
+simp only [smul_eq_mul]
+ring
 ```
 
-This exercises one of the 9 theorems end-to-end. ONE example is
-sufficient for cycle 269's bar — don't add 9 separate witnesses.
+**Pre-flagged risk R2**: The final `ring` may time out if the
+expression is large (17 terms × 5 derivatives). If so, decompose
+into per-order groupings (`ring_nf` then `linarith`-style sum
+identities) OR factor out `h^k` from each order's contribution to
+shrink the per-monomial `ring` problem.
 
-## §G LOC budget
+## §3 What NOT to try
 
-* `Section310.lean`: +5 LOC (bushy₄ alias).
-* `Section301.lean`: +400–500 LOC (9 per-tree closed forms, ~45–55 LOC each).
-* `Section311.lean`: 0 LOC delta (bridge deferred to cycle 270).
+1. **Do NOT attempt the polymorphic-`E` lift of any per-tree closed
+   form.** Cycle 265's HIGH-risk flag on multilinear-map plumbing
+   for arbitrary `E : Type*` is still live. This is cycle 271+
+   scope and requires its own multi-cycle plan.
 
-Total target: **~450 LOC**. If trending toward 600+ LOC midway through,
-the worker should consider deferring P3, P5, P6 (the depth-3 multi-child
-recipes) to cycle 270 alongside the bridge.
+2. **Do NOT define new `RootedTree` aliases.** All 17 trees needed
+   for the bridge already have either the canonical `mk [...]`
+   form or established aliases (`vertex`, `cherry`, `broom₃`,
+   `bushy`, `bushy₄`).
 
-## §H What NOT to try
+3. **Do NOT touch the cycle 269 per-tree theorems or rename them.**
+   They are axiom-clean and Bell-coefficient verified. Cycle 270
+   only consumes them via `rw`.
 
-* **Do NOT introduce ANY `sorry`.** Cycles 200/201 rolled back
-  sorry-first scaffolds for multi-cycle targets; cycle 138/139 rolled
-  back a sorry'd general-`n` `thm:550A`; cycles 149/150 rolled back
-  `def:530B`'s sorry'd Path A scaffold. Cycle 269's deliverable bar is
-  "ship axiom-clean or skip the cycle". Half-finished closed forms do
-  not count.
+4. **Do NOT pursue `lem:310B` directly.** The full lem:310B is the
+   8–14 cycle multi-phase roadmap in
+   `.prover-state/issues/lem_310B_plan.md`. Cycle 270 deliverable
+   closes Phase E.1 only; Phase E.2+ is a separate planner call.
 
-* **Do NOT attempt the 17-tree partial-sum bridge
-  `lem_311A_order_five_partialSum` in cycle 269.** It is the explicit
-  cycle 270 target. Trying to fit it in this cycle was the reason for
-  the §A split. Cycle 268 spent ~290 LOC on the 8-tree bridge; the
-  17-tree version needs 16 non-membership lemmas plus all 9 cycle 269
-  per-tree closed forms in an iterated `Finset.insert` chain.
+5. **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
+   43 consecutive GPFS timeouts since cycle 182. Skip per
+   `.prover-state/issues/cycle_182_gpfs_slowness.md`. Worker MUST
+   NOT smoke-test §441 this cycle.
 
-* **Do NOT attempt polymorphic-`E` lift of any cycle 266–268 closed
-  form** (Phase D.1 / E.2). Cycle 271+ scope per cycle 268 task results
-  §"Suggested next approach" Option 2. The multilinear-map curry/uncurry
-  plumbing for arbitrary `E : Type*` is MEDIUM-HIGH risk and ad-hoc
-  lifts inflate LOC unpredictably.
+6. **Do NOT raise `maxHeartbeats` above 200000.** If a `simp` or
+   `ring` step times out, decompose into named private helpers per
+   risk R1/R2 mitigations.
 
-* **Do NOT pivot to `lem:342A`** mid-cycle. Cycle 269's directive is
-  Phase E.1 order-5 closure. Pivot is cycle 271's planner decision after
-  cycle 270 ships the bridge.
+7. **Do NOT introduce sorries.** Cycle 200/201 rollback precedent
+   forbids sorry-first scaffolds without a credible single-cycle
+   close path. Cycle 268's 8-tree bridge precedent shows the
+   17-tree bridge is single-cycle achievable.
 
-* **Do NOT rename, audit, or modify any cycle 248–268 theorem.** All
-  are axiom-clean; the cycle 268 task results contain extensive
-  faithfulness checks. Touching them risks scanner false positives per
-  `.prover-state/issues/tautology_scanner_false_positives.md`.
+8. **Do NOT introduce `axiom`/`constant` declarations.**
 
-* **Do NOT touch `OpenMath/Chapter4/Section441.lean`.** 43+ consecutive
-  GPFS timeouts since cycle 182; skip per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`. The deferred Phase
-  C.2 work there is loop-maintainer territory.
+9. **Do NOT modify `scripts/autonomous_loop.py`.** Per
+   `.prover-state/issues/tautology_scanner_false_positives.md`,
+   scanner/prompt-builder issues are loop-maintainer territory.
 
-* **Do NOT raise `maxHeartbeats`** above 200000. If a per-tree closed
-  form stalls during `ring` or `simp`, decompose by extracting an
-  intermediate `have` for the elementaryDiff identity. Cycle 268's P3
-  (mk [broom₃]) precedent: the inner `hED_broom` block was extracted
-  rather than inlined.
+10. **Do NOT alter cycle 259's `lem_311A_order_five` statement or
+    proof.** It is the load-bearing base lemma for the `.congr'`
+    closure.
 
-* **Do NOT edit `scripts/autonomous_loop.py`** or the prompt-builder.
+## §4 Faithfulness checks (mandatory before commit)
 
-* **Do NOT introduce `axiom`/`constant`** declarations. Per CLAUDE.md.
+1. **Statement faithfulness**: the new
+   `lem_311A_order_five_partialSum` must be a *restatement* of
+   cycle 259's `lem_311A_order_five` using the
+   `bseriesExactPartialSum` API, NOT a strengthening or weakening.
+   Hypotheses `(hf, hyex_x₀, hyex_C6, hyex_ode)` should match cycle
+   259's exactly. Verify by side-by-side diff of the two
+   signatures.
 
-* **Do NOT use `Polynomial.ext`** (cycles 172/173 stalled here). N/A
-  for cycle 269 (no polynomials involved), listed defensively.
+2. **Coefficient cross-check**: confirm the 17-tree expansion's
+   order-5 polynomial coefficient is exactly cycle 259's
+   `(1, 7, 4, 11, 1)`. The table in §2.5 is the source of truth;
+   the worker MUST manually verify each per-tree coefficient against
+   the corresponding cycle 269 theorem before invoking `ring`.
 
-* **Do NOT poll Aristotle** more than once if a job is submitted.
-  Cycle 269 should not need Aristotle — the recipe is mechanical from
-  cycles 267/268. If a single P-deliverable proves unexpectedly hard
-  (>60 min on one theorem), submit ONCE to Aristotle and continue
-  manual work on the remaining theorems while it runs.
+3. **Axiom check**: `#print axioms
+   OpenMath.Chapter3.Section311.lem_311A_order_five_partialSum`
+   must return only `[propext, Classical.choice, Quot.sound]`.
 
-## §I Faithfulness check (mandatory pre-commit)
+4. **Sorry count**: `grep -c sorry OpenMath/Chapter3/Section311.lean`
+   must remain 0.
 
-Per CLAUDE.md "Pre-Commit Faithfulness Checklist":
+5. **Tautology scanner**:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$'
+   OpenMath/Chapter3/Section311.lean` must return no hits.
 
-For each P2–P10 closed form:
+6. **Aggregator check**: `lake env lean OpenMath/Chapter3.lean`
+   must succeed.
 
-1. **Anchor entity**: `def:312A` (exact-solution B-series form per
-   Butcher §312), with `def:310A` for elementaryDiff. None of the 9
-   theorems should claim or update `lem:310B` status — they are stepping
-   stones for Phase E.1 of `lem_310B_plan.md`, not the textbook lemma
-   itself.
-2. **σ-recursion verification**: independently compute σ via the
-   recursion `σ(mk children) = ∏_{distinct subtree types} mᵢ! · σ(tᵢ)^{mᵢ}`.
-   For T3, T5: multi-distinct-children case (different formula than
-   T6, T7, T8 one-child case).
-3. **γ-recursion verification**: `γ(mk children) = r(t) · ∏_{children} γ(c)`
-   (NOT distinct-only). Cycle 268's task results document this at P3
-   (σ=2 via single-distinct one-child but γ uses all children).
-4. **Coefficient cross-check**: sum the 9 coefficients grouped by monomial;
-   verify against cycle 259's `lem_311A_order_five` Bell coefficients
-   (1, 7, 4, 11, 1). The table in §B is the reference; ANY mismatch is a
-   hard stop — re-derive, do NOT commit.
-5. **Tautology / identity / absent-theorem check**: each theorem is a
-   substantive computational equality (left side `bseriesExactTerm`,
-   right side closed-form scalar polynomial). No `:= h` or
-   `exact h_<name>` closers.
+## §5 LOC budget and abort threshold
 
-## §J Sequencing
+- **Statement**: ~25 LOC (mostly the 17-tree Finset literal).
+- **Body**: ~450 LOC (cycle 268's 8-tree bridge was ~290 LOC;
+  scales roughly linearly per non-membership lemma + per-tree
+  substitution; the additional 9 trees add ~160 LOC).
+- **Non-vacuity witness (P2)**: ~10 LOC.
+- **Total estimate**: ~500 LOC.
 
-Verification commands (optional but recommended at cycle start):
+**Abort threshold**: if progress stalls at 700 LOC with the bridge
+incomplete, ABORT:
+- Ship cycle 269's deliverable unchanged (no rollback — it's at
+  HEAD).
+- Document the stall in `task_results/cycle_270.md` with the
+  specific failure mode (e.g., `ring` timeout on 17-monomial
+  closure, `simp` blowup on non-membership lemma N).
+- Cycle 271 worker re-attempts with the partial draft preserved at
+  `.prover-state/cycle_270_partial.lean` (analogous to cycle 182's
+  GPFS-blocked draft preservation pattern).
+
+## §6 Verification commands (run at end of cycle)
 
 ```bash
-git log -1 --format='%H %s'  # confirm at 4c92bf7
-grep -c sorry OpenMath/Chapter3/Section301.lean  # confirm 0
-grep -c sorry OpenMath/Chapter3/Section311.lean  # confirm 0
+lake env lean OpenMath/Chapter3/Section311.lean
+grep -c sorry OpenMath/Chapter3/Section311.lean
+# expected: 0
+
+echo '#print axioms OpenMath.Chapter3.Section311.lem_311A_order_five_partialSum' \
+  | lake env lean --stdin OpenMath/Chapter3/Section311.lean
+# expected: [propext, Classical.choice, Quot.sound]
+
+rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section311.lean
+# expected: no hits
+
+lake env lean OpenMath/Chapter3.lean
+# expected: clean exit
 ```
 
-Phase 1 (~5 min): write P1 (`bushy₄` alias) at `Section310.lean`.
-`lake env lean OpenMath/Chapter3/Section310.lean` — verify clean.
-Run `lake build OpenMath.Chapter3.Section310` to refresh the olean for
-downstream consumers (cycle 268's lesson — see "Discovery" §).
+## §7 Update commitments after cycle 270 lands
 
-Phase 2 (~120 min): work through P2, P10, P4, P7, P9 in that order
-(σ-validation front-loaded). Each ~45 min: write, compile, fix.
-Run `lake env lean OpenMath/Chapter3/Section301.lean` after each.
+1. **`extraction/formalization_data/lean_status.json`**: `lem:311A`
+   row stays `partial` (the full textbook `lem:311A` is the
+   combinatorial labelling lemma over `T_S^*` requiring `def:300C`;
+   cycle 270 only extends the scalar specialisation chain). Update
+   the row's `notes` field to mention the cycle 270 partial-sum
+   bridge at order 5.
 
-Phase 3 (~120 min): work through P8, P3, P5, P6 (multi-child outer).
-Hardest of the nine; allocate slack here.
+2. **`plan.md`**: `lem:311A` row's cycle marker bumped from 269 to
+   270, with closure note for the 17-tree order-5 partial-sum
+   bridge. Sub-bullet noting Phase E.1 is now fully closed up to
+   order 5 in the scalar setting.
 
-Phase 4 (~10 min): add ONE non-vacuity example (per §F).
+3. **`.prover-state/issues/lem_310B_plan.md`** §"Phase E.1"
+   subsection (after cycle 269 update lines): append a "Cycle 270
+   update" noting the 17-tree partial-sum bridge SHIPPED and Phase
+   E.1 is fully closed up to order 5 in the scalar setting.
 
-Phase 5 (~15 min):
-* `lake env lean OpenMath/Chapter3.lean` — full chapter rebuild.
-* `#print axioms` on all 9 new theorems — confirm
-  `[propext, Classical.choice, Quot.sound]` only.
-* `grep -c sorry OpenMath/Chapter3/Section{301,310,311}.lean` — confirm
-  all 0.
-* `lean_status.json` `lem:310B` row stays `unformalized` (Phase E.1 is
-  one stepping stone, not the lemma itself). Add cycle 269 note to its
-  `notes` field if present.
-* `plan.md` `lem:310B` row stays `[ ]`. Update its inline note to
-  reference cycle 269's nine new per-tree closed forms.
-* Append cycle 269 closure update to
-  `.prover-state/issues/lem_310B_plan.md` §"Phase E.1" (after the
-  cycle 268 entry).
+4. **`.prover-state/task_results/cycle_270.md`**: standard cycle
+   results template with mandatory faithfulness check section
+   confirming the Bell coefficient cross-check (§2.5 of this
+   strategy is the template).
 
-Phase 6 (~15 min): write `.prover-state/task_results/cycle_269.md`
-following cycle 268's template. Include faithfulness check covering
-all 9 theorems with σ-recursion cross-references.
+**Do NOT update `lean_status.json` for `lem:310B`** (still
+`unformalized` — Phase E.1 closure is one stepping stone of the
+multi-phase roadmap, not closure of the headline lemma).
 
-Phase 7 (~10 min): commit + push. Cycle 270 picks up the 17-tree
-partial-sum bridge.
+## §8 Suggested cycle 271+ pivot (NOT for this cycle's worker)
 
-## §K Recovery / abort thresholds
+After cycle 270 closes Phase E.1 up to order 5, the planner has
+three credible directions per cycle 269 task results:
 
-* If P2 (the first depth-4 outer iteratedFDeriv) stalls past 60 min,
-  abort the cycle and pivot to **only** P10 + P4 + P7 (the simpler
-  one-child-wrapping cases). Three axiom-clean closed forms is well
-  above CLAUDE.md's minimum-progress bar.
-* If `Fin.prod_univ_four` is missing from Mathlib at HEAD, fall back to
-  `Fin.prod_univ_succ` × 3 + `Fin.prod_univ_zero` for P2 only. All other
-  deliverables use `Fin.prod_univ_{one,two,three}` already verified by
-  cycles 266–268.
-* If σ verification fails on T3/T5/T8 mid-proof (i.e. `rfl` doesn't fire
-  for `symmetry <tree> = <value>`), STOP and re-derive. Do NOT guess;
-  the cycle 268 P3 σ=2 catch was exactly this scenario. The σ table in
-  §B was independently verified — if Lean disagrees, the strategy file
-  is wrong and the worker should escalate via the task results.
-* If any per-tree coefficient cross-check (§I step 4) fails to match the
-  cycle 259 Bell coefficient sum, STOP. Do NOT commit a theorem whose
-  closed form is inconsistent with the established order-5 expansion.
+1. **Polymorphic-`E` lift** of cycle 266–269 closed forms (Phase
+   D.2 / E.2). MEDIUM-HIGH risk multilinear-map plumbing. Cycle
+   265's HIGH-risk flag is still live.
 
-## §L Cycle 270 preview (so the worker doesn't accidentally do its work)
+2. **Pivot to `lem:342A`** (shifted Legendre polynomials
+   orthogonality on `[0,1]`). Independent single-cycle target per
+   `lem_310B_plan.md` §8.2. Recommended if the planner wants a
+   clean ship and a break from the §310/§311 thread.
 
-Once cycle 269 lands the 9 closed forms, cycle 270's deliverable is:
+3. **Multi-cycle assault on `lem:310B` Phase A.3** (full recursive
+   `TreeAutomorphism` strengthening to close the σ-faithfulness
+   gap), per the cycle 261 blueprint and the cycle 264 follow-up
+   note in `lem_310B_plan.md`.
 
-* `lem_311A_order_five_partialSum` at `Section311.lean` — bridge cycle
-  259's `lem_311A_order_five` closed-form polynomial residual to
-  `bseriesExactPartialSum f y₀ h S` where S is the 17-tree Finset
-  `{vertex, cherry, broom₃, mk [cherry], bushy, mk [v,cherry],
-  mk [broom₃], mk [mk [cherry]], bushy₄, mk [v,v,cherry], mk [v,broom₃],
-  mk [v,mk [cherry]], mk [cherry,cherry], mk [bushy], mk [mk [v,cherry]],
-  mk [mk [broom₃]], mk [mk [mk [cherry]]]}`.
-
-* 16 non-membership lemmas for the iterated `Finset.insert` chain
-  (cycle 268 pattern: each `simp [vertex, cherry, broom₃, bushy, bushy₄]`
-  on `RootedTree.mk.injEq`).
-
-* One non-vacuity witness `example` exercising the bridge on
-  `f := 0, yex := const y₀`.
-
-Estimated cycle 270 budget: ~500 LOC. After cycle 270 lands, **Phase E.1
-is fully closed up to order 5 in the scalar setting**, matching cycle
-259's deliberate order-5 cutoff and providing a clean stopping point
-for the §310/§311 multi-cycle thread.
-
-Cycle 271+ planner decides: pivot to `lem:342A` (single-cycle, fresh),
-polymorphic-`E` lift (Phase D.2 / E.2, multi-cycle), or fresh chapter
-entry.
+Cycle 270 worker does NOT need to make this call — leave it for
+cycle 271's planner.

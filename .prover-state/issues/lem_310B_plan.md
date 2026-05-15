@@ -655,6 +655,41 @@ chosen).
   iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod + Fin.prod_univ_n
   + iteratedDeriv_succ × (n−1) + iteratedDeriv_one + ring`.
 
+  **Cycle 270 update (order-5 partial-sum bridge — Phase E.1
+  Phase 2 of 2, FULLY CLOSED)**:
+  `lem_311A_order_five_partialSum` SHIPPED at `Section311.lean` —
+  the 17-tree bridge restating cycle 259's `lem_311A_order_five`
+  using `bseriesExactPartialSum f y₀ h S` over the seventeen
+  distinct rooted trees of order ≤ 5:
+  `S = {vertex, cherry, broom₃, mk [cherry], bushy,
+        mk [vertex, cherry], mk [broom₃], mk [mk [cherry]],
+        bushy₄, mk [vertex, vertex, cherry], mk [vertex, broom₃],
+        mk [vertex, mk [cherry]], mk [cherry, cherry], mk [bushy],
+        mk [mk [vertex, cherry]], mk [mk [broom₃]],
+        mk [mk [mk [cherry]]]}`. Recipe (mechanical port of cycle
+  268's 8-tree bridge): 16 non-membership lemmas (each `simp` on
+  `RootedTree.mk.injEq` with the 5 tree aliases `[vertex, cherry,
+  broom₃, bushy, bushy₄]`) + 16 iterated
+  `bseriesExactPartialSum_insert` unfolds + one `_singleton`
+  closure + the 17 per-tree `bseriesExactTerm_*` substitutions
+  (the 4 order-≤-3 + 4 order-4 + 9 order-5 closed forms from
+  cycles 266–269 plus `bseriesExactTerm_vertex`) + `smul_eq_mul`
+  + `ring` collapses the partial sum to cycle 259's closed-form
+  polynomial. Final closure via `hbase.congr'` against
+  `lem_311A_order_five`. Hypotheses `(hf_C4, hyex_x₀, hyex_C6,
+  hyex_ode)` match cycle 259 verbatim — no weakening or
+  strengthening (faithfulness check passed). Non-vacuity witness
+  on trivial ODE `f := 0, yex := const y₀` (residual identically
+  zero). Axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`). LOC delta:
+  Section311 +713.
+
+  **Phase E.1 is now fully closed up to order 5 in the scalar
+  setting**, matching cycle 259's deliberate order-5 cutoff and
+  cycle 269's per-tree library. Beyond order 5, the substantive
+  §311 content needs the labelled-tree quotient `def:300C` (Phase
+  A.2 of this plan).
+
 - **Phase E.2** (1 cycle):
   `lem_310B_truncated_r_le_three` — order ≤ 3, four trees total
   (`vertex`, `cherry`, `broom₃`, `mk [cherry]`). Uses Phase C.2's
