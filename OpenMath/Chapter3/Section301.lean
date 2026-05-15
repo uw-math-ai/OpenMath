@@ -681,6 +681,79 @@ theorem exists_truncated_of_forall_order_le
   intro t ht
   exact ⟨⟨t, hS t ht⟩, rfl⟩
 
+/- ### α-weighted B-series partial sum (cycle 256)
+
+Butcher (310i) is the α-weighted sum
+`Σ_t α(t)·(h^r(t)/σ(t))·F(t)(y₀)`. Cycle 255 shipped the
+unweighted summand `bseriesTerm` and its partial sum
+`bseriesPartialSum`; cycle 256 adds the α-weighted companion as a
+named summand `bseriesAlphaTerm` and partial sum
+`bseriesAlphaPartialSum`. The two share their `_empty`/`_insert`
+shape, so downstream cycles can re-use the cycle-255 tactical
+recipes verbatim. -/
+
+/-- The α-weighted per-tree B-series summand
+`α(t) • (h^r(t)/σ(t)) • F(t)(y₀)` of Butcher's series (310i).
+
+Factored as `alphaWeight t • bseriesTerm f y₀ h t` so that the
+cycle-255 `bseriesTerm_*` rewrite library applies pointwise. -/
+noncomputable def bseriesAlphaTerm
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) : E :=
+  alphaWeight t • bseriesTerm f y₀ h t
+
+/-- At the trivial tree `τ = vertex = mk []`, the α-weight is `1`
+(`alphaWeight_vertex`, cycle 250), so the α-weighted summand
+collapses to the bare `bseriesTerm_vertex` value `h • f y₀`. -/
+theorem bseriesAlphaTerm_vertex
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) :
+    bseriesAlphaTerm f y₀ h vertex = h • f y₀ := by
+  unfold bseriesAlphaTerm
+  rw [show alphaWeight vertex = 1 from alphaWeight_vertex,
+      one_smul, bseriesTerm_vertex]
+
+/-- Butcher's series (310i), partial-sum form: the α-weighted
+B-series approximation truncated to a hand-supplied
+`Finset RootedTree`. For small `S`, this matches the textbook
+`Σ_{t ∈ T} α(t)·(h^r(t)/σ(t))·F(t)(y₀)` exactly. -/
+noncomputable def bseriesAlphaPartialSum
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (S : Finset RootedTree) : E :=
+  ∑ t ∈ S, bseriesAlphaTerm f y₀ h t
+
+@[simp]
+theorem bseriesAlphaPartialSum_empty
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) :
+    bseriesAlphaPartialSum f y₀ h ∅ = 0 := by
+  simp [bseriesAlphaPartialSum]
+
+theorem bseriesAlphaPartialSum_insert
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) {t : RootedTree} {S : Finset RootedTree}
+    (ht : t ∉ S) :
+    bseriesAlphaPartialSum f y₀ h (insert t S) =
+      bseriesAlphaTerm f y₀ h t + bseriesAlphaPartialSum f y₀ h S := by
+  simp [bseriesAlphaPartialSum, Finset.sum_insert ht]
+
+-- §310 (310i) α-weighted partial sum non-vacuity witnesses (cycle 256).
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesAlphaPartialSum f y₀ h {vertex} = h • f y₀ := by
+  rw [bseriesAlphaPartialSum, Finset.sum_singleton]
+  exact bseriesAlphaTerm_vertex f y₀ h
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesAlphaPartialSum f y₀ h {vertex, cherry} =
+      h • f y₀ + bseriesAlphaTerm f y₀ h cherry := by
+  have hcv : (vertex : RootedTree) ∉ ({cherry} : Finset RootedTree) := by
+    simp [Finset.mem_singleton, vertex, cherry]
+  rw [show ({vertex, cherry} : Finset RootedTree) =
+        insert vertex {cherry} from rfl,
+      bseriesAlphaPartialSum_insert _ _ _ hcv,
+      bseriesAlphaPartialSum, Finset.sum_singleton, bseriesAlphaTerm_vertex]
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310
