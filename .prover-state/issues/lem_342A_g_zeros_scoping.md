@@ -112,3 +112,49 @@ changes proposed; the actual (342g) work is deferred to cycle 283+.
 Cycle 294 anchored the work and dispatched to Aristotle. Cycle 295
 single-polls. Closure (Branch A / B / C) depends on Aristotle's
 return.
+
+## Cycle 295 update
+
+* **Aristotle single-poll**: `IN_PROGRESS`, `percent_complete = 16`
+  at `2026-05-15T22:41:20Z` (≈30 min after cycle 294 submission).
+  Growth from `QUEUED` (0%) ⇒ Branch B fired.
+* **`n = 3` anchor shipped**: `butcherShiftedLegendre_three_roots`
+  in `OpenMath/Chapter3/Section342.lean` — three distinct roots
+  of `P_3^*` in `(0, 1)` via parity (middle, `r = 1/2`) plus IVT on
+  `[0, 1/5]` (left, `r ∈ (0, 1/5)`) and `[4/5, 1]` (right,
+  `r ∈ (4/5, 1)`), assembled with interval-disjointness `linarith`.
+* **Reusable helper**: `butcherShiftedLegendre_eval_half_eq_zero_of_odd`
+  generalises the parity-driven middle-root argument to every odd
+  `n`. Reused immediately in cycle 296's `n = 5` anchor.
+* All cycle 295 work axiom-clean (`[propext, Classical.choice, Quot.sound]`).
+
+## Cycle 296 update
+
+* **Aristotle single-poll**: `IN_PROGRESS`, `percent_complete = 25`
+  at `2026-05-15T23:01:44Z` (≈50 min after cycle 294 submission;
+  +9 percentage points from cycle 295's 16%). Healthy growth ⇒
+  Branch B fires; leave Aristotle running.
+* **`n = 5` anchor shipped**: `butcherShiftedLegendre_five_roots`
+  in `OpenMath/Chapter3/Section342.lean` — five distinct roots of
+  `P_5^*` in `(0, 1)`. Recipe:
+  - **Middle root** `r₃ = 1/2` via cycle 295's
+    `butcherShiftedLegendre_eval_half_eq_zero_of_odd 5 ⟨2, rfl⟩`
+    (one-line application of the new helper).
+  - **Two left roots** via IVT on the closed form
+    `P_5^* = 252X^5 - 630X^4 + 560X^3 - 210X^2 + 30X - 1`
+    (cycle 278's `butcherShiftedLegendre_five`):
+    * `P_5^*(0) = -1`, `P_5^*(1/10) = 2497/6250` ⇒ ascending
+      `intermediate_value_Ioo` on `[0, 1/10]`.
+    * `P_5^*(1/10) = 2497/6250`, `P_5^*(1/4) = -23/256` ⇒ descending
+      `intermediate_value_Ioo'` on `[1/10, 1/4]`.
+  - **Two right roots** (parity-symmetric to the left pair):
+    * `P_5^*(3/4) = 23/256`, `P_5^*(9/10) = -2497/6250` ⇒ descending
+      `intermediate_value_Ioo'` on `[3/4, 9/10]`.
+    * `P_5^*(9/10) = -2497/6250`, `P_5^*(1) = 1` ⇒ ascending
+      `intermediate_value_Ioo` on `[9/10, 1]`.
+  - **Distinctness** (10 pairs) via `linarith` on the disjoint
+    intervals
+    `(0, 1/10) < (1/10, 1/4) < {1/2} < (3/4, 9/10) < (9/10, 1)`.
+* Axiom-clean (`[propext, Classical.choice, Quot.sound]`); zero
+  sorries; well within the strategy's 200-LOC budget.
+* Aristotle still in flight; no stall observation appended.

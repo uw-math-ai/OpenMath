@@ -3751,4 +3751,173 @@ theorem butcherShiftedLegendre_eval_half_eq_zero_of_odd
   rw [hn.neg_one_pow] at h
   linarith
 
+/-- **Butcher §342 (342g), witness for `n = 5`** — `P_5^*` has five
+distinct roots in `(0, 1)`.
+
+Strategy (mirrors cycle 295's `n = 3` recipe, scaled to five roots):
+* Middle root `r₃ = 1/2` via cycle 295's
+  `butcherShiftedLegendre_eval_half_eq_zero_of_odd` applied to
+  `Odd 5 = ⟨2, rfl⟩` — `P_5^*(1/2) = 0` is parity-forced.
+* Two roots on the left half via IVT using the closed form
+  `P_5^*(x) = 252X^5 - 630X^4 + 560X^3 - 210X^2 + 30X - 1`:
+  - `P_5^*(0) = -1 < 0 < 2497/6250 = P_5^*(1/10)` ⇒ root in `(0, 1/10)`.
+  - `P_5^*(1/4) = -23/256 < 0 < 2497/6250 = P_5^*(1/10)` ⇒ root in
+    `(1/10, 1/4)` via `intermediate_value_Ioo'` (descending endpoints).
+* Two roots on the right half by the parity-symmetric evaluations:
+  - `P_5^*(9/10) = -2497/6250 < 0 < 23/256 = P_5^*(3/4)` ⇒ root in
+    `(3/4, 9/10)` via `intermediate_value_Ioo'`.
+  - `P_5^*(9/10) = -2497/6250 < 0 < 1 = P_5^*(1)` ⇒ root in `(9/10, 1)`.
+* Distinctness follows from the disjoint open intervals
+  `(0, 1/10)`, `(1/10, 1/4)`, `{1/2}`, `(3/4, 9/10)`, `(9/10, 1)`. -/
+theorem butcherShiftedLegendre_five_roots :
+    ∃ r₁ r₂ r₃ r₄ r₅ : ℝ,
+      r₁ ≠ r₂ ∧ r₁ ≠ r₃ ∧ r₁ ≠ r₄ ∧ r₁ ≠ r₅ ∧
+      r₂ ≠ r₃ ∧ r₂ ≠ r₄ ∧ r₂ ≠ r₅ ∧
+      r₃ ≠ r₄ ∧ r₃ ≠ r₅ ∧
+      r₄ ≠ r₅ ∧
+      r₁ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₂ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₃ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₄ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₅ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      (butcherShiftedLegendre 5).eval r₁ = 0 ∧
+      (butcherShiftedLegendre 5).eval r₂ = 0 ∧
+      (butcherShiftedLegendre 5).eval r₃ = 0 ∧
+      (butcherShiftedLegendre 5).eval r₄ = 0 ∧
+      (butcherShiftedLegendre 5).eval r₅ = 0 := by
+  have hP5 := butcherShiftedLegendre_five
+  have hcont : Continuous (fun x : ℝ => (butcherShiftedLegendre 5).eval x) :=
+    (butcherShiftedLegendre 5).continuous
+  -- Seven key evaluations of `P_5^*`.
+  have hf_0 : (butcherShiftedLegendre 5).eval (0 : ℝ) = -1 := by
+    rw [hP5]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+  have hf_1 : (butcherShiftedLegendre 5).eval (1 : ℝ) = 1 := by
+    rw [hP5]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_tenth : (butcherShiftedLegendre 5).eval (1 / 10 : ℝ) = 2497 / 6250 := by
+    rw [hP5]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_fourth : (butcherShiftedLegendre 5).eval (1 / 4 : ℝ) = -(23 / 256) := by
+    rw [hP5]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_three_fourths : (butcherShiftedLegendre 5).eval (3 / 4 : ℝ) = 23 / 256 := by
+    rw [hP5]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_nine_tenths :
+      (butcherShiftedLegendre 5).eval (9 / 10 : ℝ) = -(2497 / 6250) := by
+    rw [hP5]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_half : (butcherShiftedLegendre 5).eval (1 / 2 : ℝ) = 0 :=
+    butcherShiftedLegendre_eval_half_eq_zero_of_odd 5 ⟨2, rfl⟩
+  -- IVT₁: ascending on `[0, 1/10]` — `P_5^*(0) = -1`, `P_5^*(1/10) = 2497/6250`.
+  have hivt_1 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 5).eval x) ''
+        Set.Ioo (0 : ℝ) (1 / 10) := by
+    apply intermediate_value_Ioo (by norm_num : (0 : ℝ) ≤ 1 / 10) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 5).eval (0 : ℝ))
+        ((butcherShiftedLegendre 5).eval (1 / 10 : ℝ))
+    rw [hf_0, hf_one_tenth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₁, hr₁_mem, hr₁_eval⟩ := hivt_1
+  -- IVT₂: descending on `[1/10, 1/4]` — `P_5^*(1/10) = 2497/6250`,
+  -- `P_5^*(1/4) = -23/256`.  Use `intermediate_value_Ioo'`.
+  have hivt_2 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 5).eval x) ''
+        Set.Ioo (1 / 10 : ℝ) (1 / 4) := by
+    apply intermediate_value_Ioo' (by norm_num : (1 / 10 : ℝ) ≤ 1 / 4) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 5).eval (1 / 4 : ℝ))
+        ((butcherShiftedLegendre 5).eval (1 / 10 : ℝ))
+    rw [hf_one_fourth, hf_one_tenth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₂, hr₂_mem, hr₂_eval⟩ := hivt_2
+  -- IVT₄: descending on `[3/4, 9/10]` — `P_5^*(3/4) = 23/256`,
+  -- `P_5^*(9/10) = -2497/6250`.  Use `intermediate_value_Ioo'`.
+  have hivt_4 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 5).eval x) ''
+        Set.Ioo (3 / 4 : ℝ) (9 / 10) := by
+    apply intermediate_value_Ioo' (by norm_num : (3 / 4 : ℝ) ≤ 9 / 10) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 5).eval (9 / 10 : ℝ))
+        ((butcherShiftedLegendre 5).eval (3 / 4 : ℝ))
+    rw [hf_nine_tenths, hf_three_fourths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₄, hr₄_mem, hr₄_eval⟩ := hivt_4
+  -- IVT₅: ascending on `[9/10, 1]` — `P_5^*(9/10) = -2497/6250`, `P_5^*(1) = 1`.
+  have hivt_5 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 5).eval x) ''
+        Set.Ioo (9 / 10 : ℝ) 1 := by
+    apply intermediate_value_Ioo (by norm_num : (9 / 10 : ℝ) ≤ 1) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 5).eval (9 / 10 : ℝ))
+        ((butcherShiftedLegendre 5).eval (1 : ℝ))
+    rw [hf_nine_tenths, hf_1]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₅, hr₅_mem, hr₅_eval⟩ := hivt_5
+  refine ⟨r₁, r₂, 1 / 2, r₄, r₅,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_,
+          hr₁_eval, hr₂_eval, hf_half, hr₄_eval, hr₅_eval⟩
+  · -- r₁ ≠ r₂: r₁ < 1/10 < r₂.
+    obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₂_gt, _⟩ := hr₂_mem
+    intro h; linarith
+  · -- r₁ ≠ 1/2: r₁ < 1/10 < 1/2.
+    obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    intro h; linarith
+  · -- r₁ ≠ r₄: r₁ < 1/10 < 3/4 < r₄.
+    obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · -- r₁ ≠ r₅: r₁ < 1/10 < 9/10 < r₅.
+    obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · -- r₂ ≠ 1/2: r₂ < 1/4 < 1/2.
+    obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    intro h; linarith
+  · -- r₂ ≠ r₄: r₂ < 1/4 < 3/4 < r₄.
+    obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · -- r₂ ≠ r₅: r₂ < 1/4 < 9/10 < r₅.
+    obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · -- 1/2 ≠ r₄: 1/2 < 3/4 < r₄.
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · -- 1/2 ≠ r₅: 1/2 < 9/10 < r₅.
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · -- r₄ ≠ r₅: r₄ < 9/10 < r₅.
+    obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₅_gt, _⟩ := hr₅_mem
+    intro h; linarith
+  · -- r₁ ∈ (0, 1): lift from `Ioo 0 (1/10)`.
+    obtain ⟨hgt, hlt⟩ := hr₁_mem
+    exact ⟨hgt, by linarith⟩
+  · -- r₂ ∈ (0, 1): lift from `Ioo (1/10) (1/4)`.
+    obtain ⟨hgt, hlt⟩ := hr₂_mem
+    exact ⟨by linarith, by linarith⟩
+  · -- 1/2 ∈ (0, 1).
+    refine ⟨?_, ?_⟩ <;> norm_num
+  · -- r₄ ∈ (0, 1): lift from `Ioo (3/4) (9/10)`.
+    obtain ⟨hgt, hlt⟩ := hr₄_mem
+    exact ⟨by linarith, by linarith⟩
+  · -- r₅ ∈ (0, 1): lift from `Ioo (9/10) 1`.
+    obtain ⟨hgt, hlt⟩ := hr₅_mem
+    exact ⟨by linarith, hlt⟩
+
 end OpenMath.Chapter3.Section342
