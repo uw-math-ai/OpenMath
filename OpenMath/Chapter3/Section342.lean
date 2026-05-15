@@ -1868,4 +1868,81 @@ theorem butcherShiftedLegendre_norm_sq (n : ℕ) :
   -- Step 8: close via the arithmetic identity.
   rw [Section342Helpers.choose_mul_factorial_sq_div]
 
+/-! ### (342f) recurrence — concrete sanity-check witnesses at `n ∈ {2, 3, 4}`
+
+Butcher §342 (342f) asserts the Bonnet-style three-term recurrence
+`n · P_n^*(x) = (2x - 1)(2n - 1) · P_{n−1}^*(x) − (n − 1) · P_{n−2}^*(x)`
+for `n = 2, 3, 4, …`. The general statement requires substantive
+parity/degree reasoning (currently submitted to Aristotle in cycle 282).
+The three witnesses below verify the formula at the smallest cases
+`n ∈ {2, 3, 4}` by direct polynomial computation against cycles
+273–275's explicit forms `_zero` through `_four`. They serve as
+regression sanity-checks for the recurrence form (ruling out
+sign/coefficient errors) and compose with the general theorem once
+it ships. -/
+
+/-- **Butcher §342 (342f) at `n = 2`**:
+`2 · P_2^*(x) = 3 · (2x − 1) · P_1^*(x) − 1 · P_0^*(x)`.
+
+The smallest non-trivial instance of (342f). Direct verification:
+LHS = `2(6x² − 6x + 1) = 12x² − 12x + 2`;
+RHS = `3(2x − 1)² − 1 = 12x² − 12x + 2`. Proved by `Polynomial.funext`
++ explicit-form substitution + `ring` (cycle 180's recipe for
+explicit-polynomial-arithmetic identities). -/
+theorem butcherShiftedLegendre_recurrence_two :
+    (2 : ℝ) • butcherShiftedLegendre 2 =
+      Polynomial.C 3 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 1
+      - Polynomial.C 1 * butcherShiftedLegendre 0 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_two, butcherShiftedLegendre_one,
+      butcherShiftedLegendre_zero]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
+/-- **Butcher §342 (342f) at `n = 3`**:
+`3 · P_3^*(x) = 5 · (2x − 1) · P_2^*(x) − 2 · P_1^*(x)`.
+
+Direct verification:
+LHS = `3(20x³ − 30x² + 12x − 1) = 60x³ − 90x² + 36x − 3`;
+RHS = `5(2x − 1)(6x² − 6x + 1) − 2(2x − 1) = 60x³ − 90x² + 36x − 3`.
+Same `Polynomial.funext` + `ring` recipe. -/
+theorem butcherShiftedLegendre_recurrence_three :
+    (3 : ℝ) • butcherShiftedLegendre 3 =
+      Polynomial.C 5 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 2
+      - Polynomial.C 2 * butcherShiftedLegendre 1 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_three, butcherShiftedLegendre_two,
+      butcherShiftedLegendre_one]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
+/-- **Butcher §342 (342f) at `n = 4`**:
+`4 · P_4^*(x) = 7 · (2x − 1) · P_3^*(x) − 3 · P_2^*(x)`.
+
+Direct verification:
+LHS = `4(70x⁴ − 140x³ + 90x² − 20x + 1) = 280x⁴ − 560x³ + 360x² − 80x + 4`;
+RHS = `7(2x − 1)(20x³ − 30x² + 12x − 1) − 3(6x² − 6x + 1) = 280x⁴ − 560x³ + 360x² − 80x + 4`.
+Same `Polynomial.funext` + `ring` recipe. -/
+theorem butcherShiftedLegendre_recurrence_four :
+    (4 : ℝ) • butcherShiftedLegendre 4 =
+      Polynomial.C 7 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 3
+      - Polynomial.C 3 * butcherShiftedLegendre 2 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_four, butcherShiftedLegendre_three,
+      butcherShiftedLegendre_two]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
 end OpenMath.Chapter3.Section342
