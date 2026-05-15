@@ -353,6 +353,55 @@ example : alphaWeight (mk [vertex, cherry]) = 3 := by
       show density (mk [vertex, cherry]) = 8 from rfl]
   norm_num [Nat.factorial]
 
+/-- Non-trivial witness: the 3-ladder `mk [cherry]` (root with a cherry
+as only child) has `α = 1`. This is row r=3, second entry of Butcher
+Table 310(II) — the depth-2 chain `f'(f'f)`. Order 3, symmetry 1
+(single-child chain has no automorphism), density 3·2·1 = 6,
+so α = 3!/(1·6) = 1. -/
+example : alphaWeight (mk [cherry]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [cherry]) = 3 from rfl,
+      show symmetry (mk [cherry]) = 1 from rfl,
+      show density (mk [cherry]) = 6 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the broom-of-4 tree `mk [vertex, vertex, vertex]`
+(root with three leaves) has `α = 1`. This is row r=4, fourth entry of
+Butcher Table 310(II) — the `f'''(f, f, f)` tree. Order 4, symmetry 3! = 6
+(three indistinguishable leaves), density 4·1·1·1 = 4, so
+α = 4!/(6·4) = 1. -/
+example : alphaWeight (mk [vertex, vertex, vertex]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [vertex, vertex, vertex]) = 4 from rfl,
+      show symmetry (mk [vertex, vertex, vertex]) = 6 from rfl,
+      show density (mk [vertex, vertex, vertex]) = 4 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the lifted broom-3 tree `mk [broom₃]`
+(root with `broom₃ = [τ,τ]` as only child) has `α = 1`. This is
+row r=4, third entry of Butcher Table 310(II) — the depth-2 tree
+`f'(f''(f,f))`. Order 4, symmetry 2 (broom₃'s two leaves remain
+indistinguishable when lifted), density 4·3·1·1 = 12, so
+α = 4!/(2·12) = 1. -/
+example : alphaWeight (mk [broom₃]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [broom₃]) = 4 from rfl,
+      show symmetry (mk [broom₃]) = 2 from rfl,
+      show density (mk [broom₃]) = 12 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the 4-ladder `mk [mk [cherry]]` (chain of
+depth 4) has `α = 1`. This is row r=4, first entry of Butcher Table
+310(II) — the deeply nested `f'(f'(f'f))`. Order 4, symmetry 1
+(single-child chain has no symmetry), density 4·3·2·1 = 24, so
+α = 4!/(1·24) = 1. -/
+example : alphaWeight (mk [mk [cherry]]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [mk [cherry]]) = 4 from rfl,
+      show symmetry (mk [mk [cherry]]) = 1 from rfl,
+      show density (mk [mk [cherry]]) = 24 from rfl]
+  norm_num [Nat.factorial]
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310
