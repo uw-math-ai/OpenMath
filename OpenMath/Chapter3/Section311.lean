@@ -548,6 +548,318 @@ example (x₀ y₀ : ℝ) :
     (x₀ := x₀) (y₀ := y₀) contDiff_const rfl contDiff_const
     (fun x => hasDerivAt_const x y₀)
 
+/-- **Chain-rule identification of the fourth derivative under the ODE
+constraint.** Under `yex' = f ∘ yex` (the ODE), `yex x₀ = y₀`,
+`ContDiff ℝ 3 f` and `ContDiff ℝ 5 yex`, the fourth derivative of
+`yex` at `x₀` equals
+
+`f'''(y₀)·f(y₀)³ + 4·f''(y₀)·f'(y₀)·f(y₀)² + f'(y₀)³·f(y₀)`.
+
+Proof sketch: differentiate cycle 257's closed form of
+`iteratedDeriv 3 yex` (extended pointwise to a function identity) once
+more in `x`. The pointwise identity for `iteratedDeriv 3 yex` holds
+at every `x` (not just `x₀`) because the cycle-257 argument used
+`hyex_x₀` only at the final substitution step. The outer derivative
+splits via `deriv_add` into two product terms; each is opened by
+`deriv_mul`; the chain rule (`deriv_comp`) and power rule
+(`deriv_fun_pow`) reduce every subterm to `deriv yex x₀ = f y₀`
+(via the ODE) times a polynomial in `f`, `f'`, `f''`, `f'''`
+evaluated at `y₀`.
+
+The `ContDiff ℝ 3 f` hypothesis is the minimum needed: `deriv (deriv f)`
+must be differentiable for the outermost chain-rule layer, which
+follows from `(hf_C3.deriv').differentiable_deriv_two`. -/
+private theorem iteratedDeriv_four_via_ode
+    {f : ℝ → ℝ} (hf_C3 : ContDiff ℝ 3 f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C5 : ContDiff ℝ 5 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    iteratedDeriv 4 yex x₀
+      = deriv (deriv (deriv f)) y₀ * (f y₀) ^ 3
+        + 4 * deriv (deriv f) y₀ * deriv f y₀ * (f y₀) ^ 2
+        + (deriv f y₀) ^ 3 * f y₀ := by
+  have hf_C2 : ContDiff ℝ 2 f := hf_C3.of_le (by norm_num)
+  have hf_C1 : ContDiff ℝ 1 f := hf_C3.of_le (by norm_num)
+  have hf_diff : Differentiable ℝ f := hf_C1.differentiable_one
+  have hderivf_diff : Differentiable ℝ (deriv f) :=
+    hf_C2.differentiable_deriv_two
+  have hderivf_C2 : ContDiff ℝ 2 (deriv f) := hf_C3.deriv'
+  have hderiv2f_diff : Differentiable ℝ (deriv (deriv f)) :=
+    hderivf_C2.differentiable_deriv_two
+  have hyex_diff : Differentiable ℝ yex :=
+    hyex_C5.differentiable (by norm_num)
+  -- Step 1: `deriv yex` agrees pointwise with `f ∘ yex`.
+  have hderiv_eq : deriv yex = fun x => f (yex x) := by
+    funext x
+    exact (hyex_ode x).deriv
+  -- Step 2: function-level identity for `iteratedDeriv 2 yex`.
+  have hiter2 : iteratedDeriv 2 yex
+      = fun x => deriv f (yex x) * f (yex x) := by
+    funext x
+    rw [iteratedDeriv_succ, iteratedDeriv_one, hderiv_eq]
+    have hcomp : deriv (fun x => f (yex x)) x
+        = deriv f (yex x) * deriv yex x :=
+      deriv_comp x hf_diff.differentiableAt hyex_diff.differentiableAt
+    rw [hcomp, (hyex_ode x).deriv]
+  -- Step 3: function-level identity for `iteratedDeriv 3 yex`.
+  have hiter3 : iteratedDeriv 3 yex
+      = fun x => deriv (deriv f) (yex x) * (f (yex x)) ^ 2
+                  + (deriv f (yex x)) ^ 2 * f (yex x) := by
+    funext x
+    rw [show (3 : ℕ) = 2 + 1 from rfl, iteratedDeriv_succ, hiter2]
+    have hdf_yex_diff : DifferentiableAt ℝ (fun y => deriv f (yex y)) x :=
+      (hderivf_diff.comp hyex_diff).differentiableAt
+    have hf_yex_diff : DifferentiableAt ℝ (fun y => f (yex y)) x :=
+      (hf_diff.comp hyex_diff).differentiableAt
+    have hprod : deriv (fun y => deriv f (yex y) * f (yex y)) x
+        = deriv (fun y => deriv f (yex y)) x * f (yex x)
+          + deriv f (yex x) * deriv (fun y => f (yex y)) x :=
+      deriv_mul hdf_yex_diff hf_yex_diff
+    rw [hprod]
+    have hchain_df : deriv (fun y => deriv f (yex y)) x
+        = deriv (deriv f) (yex x) * deriv yex x :=
+      deriv_comp x hderivf_diff.differentiableAt hyex_diff.differentiableAt
+    have hchain_f : deriv (fun y => f (yex y)) x
+        = deriv f (yex x) * deriv yex x :=
+      deriv_comp x hf_diff.differentiableAt hyex_diff.differentiableAt
+    rw [hchain_df, hchain_f, (hyex_ode x).deriv]
+    ring
+  -- Step 4: peel off the outer derivative.
+  rw [show (4 : ℕ) = 3 + 1 from rfl, iteratedDeriv_succ, hiter3]
+  -- Step 5: differentiability facts for the two top-level products.
+  have hd2f_yex_diff : DifferentiableAt ℝ (fun y => deriv (deriv f) (yex y)) x₀ :=
+    (hderiv2f_diff.comp hyex_diff).differentiableAt
+  have hdf_yex_diff : DifferentiableAt ℝ (fun y => deriv f (yex y)) x₀ :=
+    (hderivf_diff.comp hyex_diff).differentiableAt
+  have hf_yex_diff : DifferentiableAt ℝ (fun y => f (yex y)) x₀ :=
+    (hf_diff.comp hyex_diff).differentiableAt
+  have hf_yex_sq_diff : DifferentiableAt ℝ (fun y => (f (yex y)) ^ 2) x₀ :=
+    hf_yex_diff.pow 2
+  have hdf_yex_sq_diff : DifferentiableAt ℝ (fun y => (deriv f (yex y)) ^ 2) x₀ :=
+    hdf_yex_diff.pow 2
+  -- Step 6: split the outer sum.
+  have hsum_split :
+      deriv (fun y => deriv (deriv f) (yex y) * (f (yex y)) ^ 2
+                      + (deriv f (yex y)) ^ 2 * f (yex y)) x₀
+        = deriv (fun y => deriv (deriv f) (yex y) * (f (yex y)) ^ 2) x₀
+          + deriv (fun y => (deriv f (yex y)) ^ 2 * f (yex y)) x₀ :=
+    deriv_add (hd2f_yex_diff.mul hf_yex_sq_diff)
+      (hdf_yex_sq_diff.mul hf_yex_diff)
+  rw [hsum_split]
+  -- Step 7: product rule on each term.
+  have hprod1 :
+      deriv (fun y => deriv (deriv f) (yex y) * (f (yex y)) ^ 2) x₀
+        = deriv (fun y => deriv (deriv f) (yex y)) x₀ * (f (yex x₀)) ^ 2
+          + deriv (deriv f) (yex x₀) * deriv (fun y => (f (yex y)) ^ 2) x₀ :=
+    deriv_mul hd2f_yex_diff hf_yex_sq_diff
+  have hprod2 :
+      deriv (fun y => (deriv f (yex y)) ^ 2 * f (yex y)) x₀
+        = deriv (fun y => (deriv f (yex y)) ^ 2) x₀ * f (yex x₀)
+          + (deriv f (yex x₀)) ^ 2 * deriv (fun y => f (yex y)) x₀ :=
+    deriv_mul hdf_yex_sq_diff hf_yex_diff
+  rw [hprod1, hprod2]
+  -- Step 8: chain rule for outer compositions.
+  have hchain_d2f : deriv (fun y => deriv (deriv f) (yex y)) x₀
+      = deriv (deriv (deriv f)) (yex x₀) * deriv yex x₀ :=
+    deriv_comp x₀ hderiv2f_diff.differentiableAt hyex_diff.differentiableAt
+  have hchain_df : deriv (fun y => deriv f (yex y)) x₀
+      = deriv (deriv f) (yex x₀) * deriv yex x₀ :=
+    deriv_comp x₀ hderivf_diff.differentiableAt hyex_diff.differentiableAt
+  have hchain_f : deriv (fun y => f (yex y)) x₀
+      = deriv f (yex x₀) * deriv yex x₀ :=
+    deriv_comp x₀ hf_diff.differentiableAt hyex_diff.differentiableAt
+  -- Step 9: power rule for the two squared inner factors.
+  have hpow_f : deriv (fun y => (f (yex y)) ^ 2) x₀
+      = 2 * f (yex x₀) * deriv (fun y => f (yex y)) x₀ := by
+    have := deriv_fun_pow (f := fun y => f (yex y)) (x := x₀) hf_yex_diff 2
+    simpa using this
+  have hpow_df : deriv (fun y => (deriv f (yex y)) ^ 2) x₀
+      = 2 * deriv f (yex x₀) * deriv (fun y => deriv f (yex y)) x₀ := by
+    have := deriv_fun_pow (f := fun y => deriv f (yex y)) (x := x₀) hdf_yex_diff 2
+    simpa using this
+  rw [hpow_f, hpow_df, hchain_d2f, hchain_df, hchain_f,
+      (hyex_ode x₀).deriv, hyex_x₀]
+  ring
+
+/-- **Order-4 Taylor expansion of the exact solution
+(p = 4 special case of `lem:311A` / `thm:311B`).**
+
+Under the hypotheses
+* `ContDiff ℝ 3 f` (needed for three chain-rule layers on `f ∘ yex`),
+* `yex x₀ = y₀`,
+* `ContDiff ℝ 5 yex` (fifth-order Taylor remainder requires C⁵),
+* `∀ x, HasDerivAt yex (f (yex x)) x` (the ODE constraint),
+
+the residual between the exact solution and the fourth-order Taylor
+truncation is quintic in the step size near `0`:
+
+```
+|yex(x₀+h) - (y₀ + h·f + (h²/2)·f'·f + (h³/6)·(f''·f² + (f')²·f)
+              + (h⁴/24)·(f'''·f³ + 4·f''·f'·f² + (f')³·f))| = O(h⁵)
+```
+
+with all derivatives evaluated at `y₀`.
+
+In Butcher's B-series notation this corresponds to the order-4
+truncation `y₀ + Σ_{|t|≤4} (h^|t| / σ(t)) · α(t) · F(t)(y₀)` for the
+nine rooted trees of order ≤ 4 (Butcher Table 310(II), rows r ≤ 4).
+The three quartic terms in the closed-form expression split according
+to the elementary differentials at the four distinct trees of order 4:
+the broom (root with three leaves), two cherry-with-leaf variants,
+and the chain — combined here into the single closed-form polynomial
+`f'''·f³ + 4·f''·f'·f² + (f')³·f` via cycle 258's
+`iteratedDeriv_four_via_ode`.
+
+Stated for `ℝ → ℝ` scalars using the multiplicative form
+`deriv f y₀ * f y₀`; the polymorphic version (using `fderiv ℝ f y₀`
+and higher-order multilinear-map derivatives) is deferred to future
+cycles. The conclusion uses `h ^ (4 + 1)` to match the `p + 1`
+convention of `lem_311A_order_one`, `_two`, `_three`. -/
+theorem lem_311A_order_four
+    {f : ℝ → ℝ} (hf_C3 : ContDiff ℝ 3 f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C5 : ContDiff ℝ 5 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h : ℝ => yex (x₀ + h) -
+        (y₀
+          + h * f y₀
+          + h ^ 2 / 2 * (deriv f y₀ * f y₀)
+          + h ^ 3 / 6 * (deriv (deriv f) y₀ * (f y₀) ^ 2
+                          + (deriv f y₀) ^ 2 * f y₀)
+          + h ^ 4 / 24 * (deriv (deriv (deriv f)) y₀ * (f y₀) ^ 3
+                          + 4 * deriv (deriv f) y₀ * deriv f y₀ * (f y₀) ^ 2
+                          + (deriv f y₀) ^ 3 * f y₀)))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (4 + 1)) := by
+  have hf_C2 : ContDiff ℝ 2 f := hf_C3.of_le (by norm_num)
+  have hf_C1 : ContDiff ℝ 1 f := hf_C3.of_le (by norm_num)
+  have hyex_C4 : ContDiff ℝ 4 yex := hyex_C5.of_le (by norm_num)
+  have hyex_C3 : ContDiff ℝ 3 yex := hyex_C5.of_le (by norm_num)
+  -- Step 1: fifth-order Taylor remainder for yex at x₀.
+  have htaylor :
+      (fun x : ℝ => yex x - taylorWithinEval yex 5 Set.univ x₀ x)
+        =o[nhds x₀] (fun x : ℝ => (x - x₀) ^ 5) := by
+    have htaylorLoc := taylor_isLittleO (n := 5) (f := yex) (x₀ := x₀)
+      (s := Set.univ) convex_univ (Set.mem_univ _) hyex_C5.contDiffOn
+    simpa [nhdsWithin_univ] using htaylorLoc
+  -- Step 2: evaluate the 5th-order Taylor polynomial at x₀ + h.
+  have hT_eval : ∀ h : ℝ,
+      taylorWithinEval yex 5 Set.univ x₀ (x₀ + h)
+        = yex x₀ + h * iteratedDeriv 1 yex x₀
+            + h ^ 2 / 2 * iteratedDeriv 2 yex x₀
+            + h ^ 3 / 6 * iteratedDeriv 3 yex x₀
+            + h ^ 4 / 24 * iteratedDeriv 4 yex x₀
+            + h ^ 5 / 120 * iteratedDeriv 5 yex x₀ := by
+    intro h
+    rw [taylor_within_apply]
+    simp only [Finset.sum_range_succ, Finset.sum_range_zero, zero_add,
+      iteratedDerivWithin_univ, iteratedDeriv_zero, Nat.factorial,
+      Nat.cast_one, Nat.cast_mul, smul_eq_mul, pow_zero,
+      pow_one, mul_one, one_mul, inv_one]
+    ring
+  -- Step 3: identify the first derivative at x₀ with f y₀.
+  have hderiv1_x0 : iteratedDeriv 1 yex x₀ = f y₀ := by
+    rw [iteratedDeriv_one]
+    have hatx := (hyex_ode x₀).deriv
+    rw [hyex_x₀] at hatx
+    exact hatx
+  -- Step 4: identify the second derivative at x₀.
+  have hderiv2_x0 : iteratedDeriv 2 yex x₀ = deriv f y₀ * f y₀ :=
+    iteratedDeriv_two_via_ode hf_C1 hyex_x₀ hyex_C3 hyex_ode
+  -- Step 5: identify the third derivative at x₀.
+  have hderiv3_x0 : iteratedDeriv 3 yex x₀
+      = deriv (deriv f) y₀ * (f y₀) ^ 2 + (deriv f y₀) ^ 2 * f y₀ :=
+    iteratedDeriv_three_via_ode hf_C2 hyex_x₀ hyex_C4 hyex_ode
+  -- Step 6: identify the fourth derivative at x₀.
+  have hderiv4_x0 : iteratedDeriv 4 yex x₀
+      = deriv (deriv (deriv f)) y₀ * (f y₀) ^ 3
+        + 4 * deriv (deriv f) y₀ * deriv f y₀ * (f y₀) ^ 2
+        + (deriv f y₀) ^ 3 * f y₀ :=
+    iteratedDeriv_four_via_ode hf_C3 hyex_x₀ hyex_C5 hyex_ode
+  -- Step 7: translate the Taylor remainder to a `nhds 0` statement.
+  have htend : Filter.Tendsto (fun h : ℝ => x₀ + h) (nhds 0) (nhds x₀) := by
+    have hcont : Continuous (fun h : ℝ => x₀ + h) :=
+      continuous_const.add continuous_id
+    simpa using hcont.tendsto 0
+  have hres :
+      (fun h : ℝ => yex (x₀ + h) - taylorWithinEval yex 5 Set.univ x₀ (x₀ + h))
+        =o[nhds (0 : ℝ)] (fun h : ℝ => h ^ 5) := by
+    have hcomp := htaylor.comp_tendsto htend
+    refine hcomp.congr' (Filter.Eventually.of_forall fun _ => rfl)
+      (Filter.Eventually.of_forall fun h => ?_)
+    show ((x₀ + h) - x₀) ^ 5 = h ^ 5
+    ring
+  -- Step 8: rewrite the goal's difference into Taylor-residual + quintic.
+  have hdiff_eq :
+      (fun h : ℝ => yex (x₀ + h) -
+          (y₀
+            + h * f y₀
+            + h ^ 2 / 2 * (deriv f y₀ * f y₀)
+            + h ^ 3 / 6 * (deriv (deriv f) y₀ * (f y₀) ^ 2
+                            + (deriv f y₀) ^ 2 * f y₀)
+            + h ^ 4 / 24 * (deriv (deriv (deriv f)) y₀ * (f y₀) ^ 3
+                            + 4 * deriv (deriv f) y₀ * deriv f y₀ * (f y₀) ^ 2
+                            + (deriv f y₀) ^ 3 * f y₀)))
+        = (fun h : ℝ =>
+            (yex (x₀ + h) - taylorWithinEval yex 5 Set.univ x₀ (x₀ + h))
+              + h ^ 5 / 120 * iteratedDeriv 5 yex x₀) := by
+    funext h
+    rw [hT_eval h, hderiv1_x0, hderiv2_x0, hderiv3_x0, hderiv4_x0, hyex_x₀]
+    ring
+  rw [hdiff_eq]
+  -- Step 9: the quintic coefficient term is O(h⁵).
+  have hquintic : (fun h : ℝ => h ^ 5 / 120 * iteratedDeriv 5 yex x₀)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ 5) := by
+    have hbase := Asymptotics.isBigO_const_mul_self
+      (iteratedDeriv 5 yex x₀ / 120) (fun h : ℝ => h ^ 5) (nhds 0)
+    refine hbase.congr' (Filter.Eventually.of_forall fun h => ?_)
+      (Filter.Eventually.of_forall fun _ => rfl)
+    ring
+  -- Step 10: combine and collapse h ^ (4 + 1) to h ^ 5.
+  have hsum := hres.isBigO.add hquintic
+  have hpow : (fun h : ℝ => h ^ (4 + 1)) = (fun h : ℝ => h ^ 5) := by
+    funext h; ring
+  rw [hpow]
+  exact hsum
+
+/-- **Non-vacuity witness for `lem_311A_order_four`.** With the zero
+vector field `f := 0` and the constant exact solution `yex := y₀`,
+all hypotheses of `lem_311A_order_four` are satisfied:
+* `ContDiff ℝ 3 (fun _ => 0)` follows from `contDiff_const`,
+* `yex x₀ = y₀` is `rfl`,
+* `ContDiff ℝ 5 (fun _ => y₀)` follows from `contDiff_const`,
+* `HasDerivAt (fun _ => y₀) 0 x` is `hasDerivAt_const`.
+
+The conclusion specialises to a trivially-zero residual: with the
+zero field, `f y₀ = 0`, `deriv f y₀ = 0`, `deriv (deriv f) y₀ = 0`,
+`deriv (deriv (deriv f)) y₀ = 0`, so the entire B-series collapses
+to `y₀` and the difference is identically zero. -/
+example (x₀ y₀ : ℝ) :
+    (fun h : ℝ => (fun _ : ℝ => y₀) (x₀ + h) -
+        (y₀
+          + h * (fun _ : ℝ => (0 : ℝ)) y₀
+          + h ^ 2 / 2
+              * (deriv (fun _ : ℝ => (0 : ℝ)) y₀
+                  * (fun _ : ℝ => (0 : ℝ)) y₀)
+          + h ^ 3 / 6
+              * (deriv (deriv (fun _ : ℝ => (0 : ℝ))) y₀
+                    * ((fun _ : ℝ => (0 : ℝ)) y₀) ^ 2
+                  + (deriv (fun _ : ℝ => (0 : ℝ)) y₀) ^ 2
+                    * (fun _ : ℝ => (0 : ℝ)) y₀)
+          + h ^ 4 / 24
+              * (deriv (deriv (deriv (fun _ : ℝ => (0 : ℝ)))) y₀
+                    * ((fun _ : ℝ => (0 : ℝ)) y₀) ^ 3
+                  + 4 * deriv (deriv (fun _ : ℝ => (0 : ℝ))) y₀
+                      * deriv (fun _ : ℝ => (0 : ℝ)) y₀
+                      * ((fun _ : ℝ => (0 : ℝ)) y₀) ^ 2
+                  + (deriv (fun _ : ℝ => (0 : ℝ)) y₀) ^ 3
+                    * (fun _ : ℝ => (0 : ℝ)) y₀)))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (4 + 1)) :=
+  lem_311A_order_four (f := fun _ : ℝ => (0 : ℝ)) (yex := fun _ : ℝ => y₀)
+    (x₀ := x₀) (y₀ := y₀) contDiff_const rfl contDiff_const
+    (fun x => hasDerivAt_const x y₀)
+
 /-- **Cross-section bridge (cycle 256 P3).** The cycle-256
 `bseriesAlphaPartialSum` evaluated at the singleton `{vertex}` equals
 the `h • f y₀` contribution of cycle-248's `bseriesOrderOne`. A
