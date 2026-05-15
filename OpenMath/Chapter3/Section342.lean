@@ -2869,4 +2869,248 @@ theorem recurrence_residual_orthogonal_easy (n : ℕ) (hn : 3 ≤ n)
       recurrence_residual_orthogonal_first_term n hk_lt,
       recurrence_residual_orthogonal_third_term n hn hk, add_zero]
 
+/-! ### Phase A.2 P1 — basis-span orthogonality helper
+
+Cycle 292 ships the reusable orthogonality lemma against **any**
+polynomial of natDegree strictly less than `m`. This is the key
+ingredient for the cycle 292 F.3 cross-term and for the cycle 293+
+Phase A.3 basis-spanning conclusion. The proof is by induction on a
+degree bound `d ≥ q.natDegree`, reducing each step to (342a)
+(`butcherShiftedLegendre_orthogonal`, cycle 277). At each inductive
+step we subtract a scalar multiple of `P_d^*` (where `d = q.natDegree`)
+to drop the residual's degree by one; the IH then closes the residual. -/
+
+/-- **Phase A.2 (P1) — basis-span helper for `P_m^*` orthogonality.**
+
+For every polynomial `q` with `q.natDegree < m`, the inner product
+`∫₀¹ P_m^*(x) · q(x) dx = 0`. Equivalently, `P_m^*` is orthogonal to
+every element of `Polynomial.degreeLT ℝ m`.
+
+The proof is by induction on a bound `d` with `q.natDegree ≤ d < m`:
+* Base case `d = 0`: `q` is constant, integrand pulls the scalar out,
+  remaining `∫ P_m^* = ∫ P_m^* · P_0^* = 0` via (342a).
+* Inductive step `d → d + 1`: cases on `q.natDegree ≤ d` (apply IH) or
+  `q.natDegree = d + 1` (subtract `c · P_{d+1}^*` to drop the leading
+  term, apply IH to the residual, and use (342a) on the subtracted
+  term since `d + 1 < m`).
+
+The leading-coefficient bookkeeping uses cycle 281's
+`butcherShiftedLegendre_leadingCoeff` and standard polynomial
+degree API (`Polynomial.degree_sub_lt`,
+`Polynomial.natDegree_C_mul`, `Polynomial.leadingCoeff_mul`). -/
+theorem butcherShiftedLegendre_orthogonal_to_lower_degree
+    (m : ℕ) (q : Polynomial ℝ) (hq : q.natDegree < m) :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre m).eval x * q.eval x = 0 := by
+  -- Reduce to an induction-friendly form indexed by a bound `d`.
+  suffices h : ∀ d : ℕ, d < m → ∀ q : Polynomial ℝ, q.natDegree ≤ d →
+      ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre m).eval x * q.eval x = 0 from
+    h q.natDegree hq q le_rfl
+  intro d
+  induction d with
+  | zero =>
+      intro hm q hq
+      have hq_nd : q.natDegree = 0 := Nat.le_zero.mp hq
+      have hq_eq : q = Polynomial.C (q.coeff 0) :=
+        Polynomial.eq_C_of_natDegree_eq_zero hq_nd
+      rw [hq_eq]
+      simp only [Polynomial.eval_C]
+      simp_rw [mul_comm _ (q.coeff 0)]
+      rw [intervalIntegral.integral_const_mul]
+      have h_orth : ∫ x in (0 : ℝ)..1,
+          (butcherShiftedLegendre m).eval x * (butcherShiftedLegendre 0).eval x = 0 :=
+        butcherShiftedLegendre_orthogonal hm.ne'
+      rw [butcherShiftedLegendre_zero] at h_orth
+      simp only [Polynomial.eval_C, mul_one] at h_orth
+      rw [h_orth, mul_zero]
+  | succ d ih =>
+      intro hm q hq
+      by_cases hq_lt : q.natDegree ≤ d
+      · exact ih (Nat.lt_of_succ_lt hm) q hq_lt
+      · push_neg at hq_lt
+        have heq : q.natDegree = d + 1 := Nat.le_antisymm hq hq_lt
+        have hq_ne : q ≠ 0 := by
+          intro h
+          rw [h] at heq
+          simp at heq
+        have hq_lc : q.leadingCoeff = q.coeff (d + 1) := by
+          rw [Polynomial.leadingCoeff, heq]
+        have hq_coeff_ne : q.coeff (d + 1) ≠ 0 := by
+          rw [← hq_lc]
+          exact Polynomial.leadingCoeff_ne_zero.mpr hq_ne
+        have hPdp1_lc : (butcherShiftedLegendre (d + 1)).leadingCoeff =
+                         (Nat.choose (2 * (d + 1)) (d + 1) : ℝ) :=
+          butcherShiftedLegendre_leadingCoeff (d + 1)
+        have hPdp1_lc_pos : (0 : ℝ) < (Nat.choose (2 * (d + 1)) (d + 1) : ℝ) := by
+          exact_mod_cast Nat.choose_pos (by omega)
+        have hPdp1_lc_ne : (butcherShiftedLegendre (d + 1)).leadingCoeff ≠ 0 := by
+          rw [hPdp1_lc]
+          exact ne_of_gt hPdp1_lc_pos
+        set c : ℝ := q.coeff (d + 1) / (butcherShiftedLegendre (d + 1)).leadingCoeff with hc_def
+        have hc_ne : c ≠ 0 := div_ne_zero hq_coeff_ne hPdp1_lc_ne
+        have h_Cc_Pdp1_lc :
+            (Polynomial.C c * butcherShiftedLegendre (d + 1)).leadingCoeff =
+              q.coeff (d + 1) := by
+          rw [Polynomial.leadingCoeff_mul, Polynomial.leadingCoeff_C, hc_def]
+          field_simp
+        have h_Cc_Pdp1_nd :
+            (Polynomial.C c * butcherShiftedLegendre (d + 1)).natDegree = d + 1 := by
+          rw [Polynomial.natDegree_C_mul hc_ne, butcherShiftedLegendre_natDegree]
+        have h_Cc_Pdp1_ne : Polynomial.C c * butcherShiftedLegendre (d + 1) ≠ 0 :=
+          Polynomial.leadingCoeff_ne_zero.mp (by rw [h_Cc_Pdp1_lc]; exact hq_coeff_ne)
+        have h_deg_eq :
+            q.degree = (Polynomial.C c * butcherShiftedLegendre (d + 1)).degree := by
+          rw [Polynomial.degree_eq_natDegree hq_ne,
+              Polynomial.degree_eq_natDegree h_Cc_Pdp1_ne,
+              heq, h_Cc_Pdp1_nd]
+        have h_lc_eq : q.leadingCoeff =
+            (Polynomial.C c * butcherShiftedLegendre (d + 1)).leadingCoeff := by
+          rw [hq_lc, h_Cc_Pdp1_lc]
+        have h_sub_deg :
+            (q - Polynomial.C c * butcherShiftedLegendre (d + 1)).degree < q.degree :=
+          Polynomial.degree_sub_lt h_deg_eq hq_ne h_lc_eq
+        have h_sub_nd :
+            (q - Polynomial.C c * butcherShiftedLegendre (d + 1)).natDegree ≤ d := by
+          by_cases h_zero : q - Polynomial.C c * butcherShiftedLegendre (d + 1) = 0
+          · rw [h_zero]; simp
+          · rw [Polynomial.degree_eq_natDegree h_zero,
+                Polynomial.degree_eq_natDegree hq_ne, heq] at h_sub_deg
+            exact_mod_cast Nat.lt_succ_iff.mp (by exact_mod_cast h_sub_deg)
+        -- Split q = (q - C c * P_{d+1}^*) + C c * P_{d+1}^* and use linearity.
+        have h_split : q = (q - Polynomial.C c * butcherShiftedLegendre (d + 1)) +
+                        Polynomial.C c * butcherShiftedLegendre (d + 1) := by ring
+        have hf_int : IntervalIntegrable (fun x : ℝ =>
+            (butcherShiftedLegendre m).eval x *
+            (q - Polynomial.C c * butcherShiftedLegendre (d + 1)).eval x)
+            MeasureTheory.volume 0 1 :=
+          ((butcherShiftedLegendre m).continuous.mul
+            (q - Polynomial.C c * butcherShiftedLegendre (d + 1)).continuous).intervalIntegrable
+              _ _
+        have hg_int : IntervalIntegrable (fun x : ℝ =>
+            (butcherShiftedLegendre m).eval x *
+            (Polynomial.C c * butcherShiftedLegendre (d + 1)).eval x)
+            MeasureTheory.volume 0 1 :=
+          ((butcherShiftedLegendre m).continuous.mul
+            (Polynomial.C c * butcherShiftedLegendre (d + 1)).continuous).intervalIntegrable
+              _ _
+        rw [h_split]
+        simp only [Polynomial.eval_add, mul_add]
+        rw [intervalIntegral.integral_add hf_int hg_int]
+        -- First term: by IH on the lower-degree residual.
+        have h_first : ∫ x in (0 : ℝ)..1,
+            (butcherShiftedLegendre m).eval x *
+            (q - Polynomial.C c * butcherShiftedLegendre (d + 1)).eval x = 0 :=
+          ih (Nat.lt_of_succ_lt hm) _ h_sub_nd
+        -- Second term: constant pull-out plus (342a) orthogonality.
+        have h_second : ∫ x in (0 : ℝ)..1,
+            (butcherShiftedLegendre m).eval x *
+            (Polynomial.C c * butcherShiftedLegendre (d + 1)).eval x = 0 := by
+          have h_eq : ∀ x : ℝ,
+              (butcherShiftedLegendre m).eval x *
+              (Polynomial.C c * butcherShiftedLegendre (d + 1)).eval x =
+              c * ((butcherShiftedLegendre m).eval x *
+                   (butcherShiftedLegendre (d + 1)).eval x) := by
+            intro x
+            simp only [Polynomial.eval_mul, Polynomial.eval_C]
+            ring
+          simp_rw [h_eq]
+          rw [intervalIntegral.integral_const_mul,
+              butcherShiftedLegendre_orthogonal (by omega : m ≠ d + 1), mul_zero]
+        rw [h_first, h_second, add_zero]
+
+/-! ### Phase A.2 P2 — F.3 cross-term orthogonality
+
+The cross-term of cycle 290's recurrence residual, `(2n - 1) · (2X - 1) ·
+P_{n-1}^*`, is orthogonal to `P_k^*` for `k ≤ n - 3`. The proof factors
+the constant `(2n - 1)`, commutes the integrand so that `P_{n-1}^*` is
+on the left and `(2X - 1) · P_k^*` is on the right, then applies the P1
+basis-span helper with `m := n - 1` and
+`q := (C 2 · X - C 1) · P_k^*`. The natDegree side condition
+`q.natDegree ≤ 1 + k ≤ n - 2 < n - 1` is discharged via
+`butcherShiftedLegendre_one` (cycle 273: `P_1^* = C 2 · X - C 1`) and
+`butcherShiftedLegendre_natDegree` (cycle 273). -/
+theorem recurrence_residual_orthogonal_cross_term (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1,
+      (Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+       (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+       butcherShiftedLegendre (n - 1)).eval x *
+      (butcherShiftedLegendre k).eval x = 0 := by
+  -- Rewrite the integrand as `(2n - 1) * (P_{n-1}^*.eval x * q.eval x)`
+  -- where `q := (C 2 · X - C 1) * P_k^*`.
+  have h_eq : ∀ x : ℝ,
+      (Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+       (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+       butcherShiftedLegendre (n - 1)).eval x *
+      (butcherShiftedLegendre k).eval x =
+      ((2 * n - 1 : ℕ) : ℝ) *
+        ((butcherShiftedLegendre (n - 1)).eval x *
+          ((Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+            butcherShiftedLegendre k).eval x) := by
+    intro x
+    simp only [Polynomial.eval_mul, Polynomial.eval_sub, Polynomial.eval_C, Polynomial.eval_X]
+    ring
+  simp_rw [h_eq]
+  rw [intervalIntegral.integral_const_mul]
+  -- natDegree bound for the test polynomial.
+  have h_2X_1_nd :
+      (Polynomial.C 2 * Polynomial.X - Polynomial.C 1 : Polynomial ℝ).natDegree = 1 := by
+    rw [← butcherShiftedLegendre_one]
+    exact butcherShiftedLegendre_natDegree 1
+  have h_q_nd :
+      ((Polynomial.C 2 * Polynomial.X - Polynomial.C 1) * butcherShiftedLegendre k).natDegree
+        < n - 1 := by
+    calc ((Polynomial.C 2 * Polynomial.X - Polynomial.C 1) * butcherShiftedLegendre k).natDegree
+        ≤ (Polynomial.C 2 * Polynomial.X - Polynomial.C 1 : Polynomial ℝ).natDegree +
+            (butcherShiftedLegendre k).natDegree := Polynomial.natDegree_mul_le
+      _ = 1 + k := by rw [h_2X_1_nd, butcherShiftedLegendre_natDegree]
+      _ < n - 1 := by omega
+  rw [butcherShiftedLegendre_orthogonal_to_lower_degree (n - 1) _ h_q_nd, mul_zero]
+
+/-! ### Phase A.2 P3 — full residual orthogonality
+
+Combine F.1, F.2 (cycle 291), and F.3 (above) to express the full
+cycle 290 recurrence residual `Q := n • P_n^* - (2n - 1)(2X - 1)
+P_{n-1}^* + (n - 1) P_{n-2}^*` as orthogonal to `P_k^*` for every
+`k ≤ n - 3`. Closure: split via `intervalIntegral.integral_sub` and
+`intervalIntegral.integral_add`, then dispatch each summand via the
+corresponding cycle 291 / cycle 292 component. -/
+theorem recurrence_residual_orthogonal (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1,
+      (((n : ℝ) • butcherShiftedLegendre n
+        - Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+          (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+          butcherShiftedLegendre (n - 1)
+        + Polynomial.C ((n - 1 : ℕ) : ℝ) *
+          butcherShiftedLegendre (n - 2)).eval x) *
+      (butcherShiftedLegendre k).eval x = 0 := by
+  have hk_lt : k < n := by omega
+  have h_int_1 : IntervalIntegrable (fun x : ℝ =>
+      ((n : ℝ) • butcherShiftedLegendre n).eval x * (butcherShiftedLegendre k).eval x)
+      MeasureTheory.volume 0 1 :=
+    (((((n : ℝ) • butcherShiftedLegendre n)).continuous.mul
+      (butcherShiftedLegendre k).continuous).intervalIntegrable _ _)
+  have h_int_2 : IntervalIntegrable (fun x : ℝ =>
+      (Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+        (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+        butcherShiftedLegendre (n - 1)).eval x * (butcherShiftedLegendre k).eval x)
+      MeasureTheory.volume 0 1 :=
+    (((Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+        (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+        butcherShiftedLegendre (n - 1)).continuous.mul
+      (butcherShiftedLegendre k).continuous).intervalIntegrable _ _)
+  have h_int_3 : IntervalIntegrable (fun x : ℝ =>
+      (Polynomial.C ((n - 1 : ℕ) : ℝ) * butcherShiftedLegendre (n - 2)).eval x *
+      (butcherShiftedLegendre k).eval x)
+      MeasureTheory.volume 0 1 :=
+    (((Polynomial.C ((n - 1 : ℕ) : ℝ) * butcherShiftedLegendre (n - 2)).continuous.mul
+      (butcherShiftedLegendre k).continuous).intervalIntegrable _ _)
+  simp only [Polynomial.eval_add, Polynomial.eval_sub, sub_mul, add_mul]
+  rw [intervalIntegral.integral_add (h_int_1.sub h_int_2) h_int_3,
+      intervalIntegral.integral_sub h_int_1 h_int_2,
+      recurrence_residual_orthogonal_first_term n hk_lt,
+      recurrence_residual_orthogonal_cross_term n hn hk,
+      recurrence_residual_orthogonal_third_term n hn hk,
+      sub_zero, add_zero]
+
 end OpenMath.Chapter3.Section342

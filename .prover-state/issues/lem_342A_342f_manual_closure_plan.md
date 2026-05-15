@@ -338,3 +338,101 @@ Budget: ~100–150 LOC for F.3 + basis-span helper.
 Once F.3 lands, Phase A.3 combines `natDegree Q < n` (cycle 290) +
 orthogonality of `Q` to `P_k^*` for `k ≤ n - 2` (cycles 291–292) +
 the basis-span lemma to conclude `Q = 0`, i.e. (342f) general.
+
+### Cycle 292 update — Phase A.2 P1 + P2 + P3 SHIPPED (Phase A.2 fully closed)
+
+Cycle 292 shipped all three planned deliverables axiom-clean
+(`[propext, Classical.choice, Quot.sound]`):
+
+```lean
+theorem butcherShiftedLegendre_orthogonal_to_lower_degree
+    (m : ℕ) (q : Polynomial ℝ) (hq : q.natDegree < m) :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre m).eval x * q.eval x = 0
+
+theorem recurrence_residual_orthogonal_cross_term (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1,
+      (Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+       (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+       butcherShiftedLegendre (n - 1)).eval x *
+      (butcherShiftedLegendre k).eval x = 0
+
+theorem recurrence_residual_orthogonal (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1,
+      (((n : ℝ) • butcherShiftedLegendre n
+        - Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+          (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+          butcherShiftedLegendre (n - 1)
+        + Polynomial.C ((n - 1 : ℕ) : ℝ) *
+          butcherShiftedLegendre (n - 2)).eval x) *
+      (butcherShiftedLegendre k).eval x = 0
+```
+
+All three live at `Section342.lean:2873–3115` (file is now ~3116 LOC).
+Total cycle 292 LOC: ~244 (P1 ~140 LOC for the basis-span helper
+inductive proof, P2 ~35 LOC for F.3, P3 ~50 LOC for the combined
+residual orthogonality + integrability witnesses).
+
+P1 (basis-span helper) is general: it asserts `P_m^*` is orthogonal to
+every polynomial of natDegree `< m`. Independent of (342f) and reusable
+for Phase A.3 / (342g).
+
+P3 combines F.1 (cycle 291), F.3 (cycle 292), F.2 (cycle 291) into the
+full orthogonality of the cycle 290 recurrence residual `Q` against
+`P_k^*` for every `k ≤ n - 3`. Together with cycle 290's
+`recurrence_residual_natDegree_lt` (`Q.natDegree < n`), this is exactly
+the input Phase A.3 needs.
+
+LOC ladder so far: cycle 289 ~80, cycle 290 ~140, cycle 291 ~50,
+cycle 292 ~244. Combined Phase A.1 + A.2 ~510 LOC.
+
+### Cycle 293 entry point — Phase A.3 (conclude `Q = 0`)
+
+Phase A.3 needs to derive `Q = 0` from:
+* `Q.natDegree < n` (cycle 290's `recurrence_residual_natDegree_lt`).
+* `⟨Q, P_k^*⟩ = 0` for `k ≤ n - 3` (cycle 292's
+  `recurrence_residual_orthogonal`).
+
+The textbook's argument (Butcher §342, p. 236) routes through parity:
+"Because `Q` has the same parity as `n`, it is of degree less than
+`n - 1`. A simple calculation shows that `Q` is orthogonal to `P_k^*`
+for `k < n - 2`. Hence, (342f) follows except for the value of the
+`P_{n-2}^*` coefficient, which is resolved by substituting `x = 1`."
+
+Two viable routes for cycle 293:
+
+**Route A — Parity-aided** (closer to textbook):
+1. Show `Q` has the same parity as `n` under `x ↦ 1 - x` (use (342c)
+   on each summand): `Q(1 - x) = (-1)^n Q(x)`.
+2. Combined with `natDegree Q < n` and parity, conclude
+   `natDegree Q < n - 1`.
+3. The orthogonality `⟨Q, P_k^*⟩ = 0` for `k ≤ n - 3` plus the
+   spanning-set argument (P1 in reverse: any polynomial of natDegree
+   `< n - 1` orthogonal to every `P_k^*` for `k < n - 1` is `0`)
+   forces `Q ∈ span {P_{n-2}^*}` modulo orthogonality conditions.
+4. The `P_{n-2}^*` coefficient is fixed by substituting `x = 1`
+   (use (342b): `P_n^*(1) = 1`).
+
+**Route B — Direct Gram-Schmidt**:
+1. Show the orthogonality range extends to `k ≤ n - 1` (compute
+   `⟨Q, P_{n-2}^*⟩` and `⟨Q, P_{n-1}^*⟩` separately).
+   * For `⟨Q, P_{n-1}^*⟩`: F.1 contributes `0` (since `n - 1 < n`),
+     F.2 contributes `0` (since `n - 2 ≠ n - 1` for `n ≥ 3`), F.3
+     cross-term needs `⟨(2X - 1) P_{n-1}^*, P_{n-1}^*⟩` which is
+     `0` by a parity argument on `2X - 1`.
+   * For `⟨Q, P_{n-2}^*⟩`: this is **not** zero in general; the
+     textbook fixes the `P_{n-2}^*` coefficient via `x = 1`. Use
+     (342d) norm-square + (342b) eval-at-one to compute the
+     `P_{n-2}^*` coefficient exactly.
+2. Show that any polynomial with `natDegree < n` orthogonal to
+   `P_0^*, ..., P_{n-1}^*` is zero. This is a standard Gram-Schmidt
+   spanning-set fact, derivable from P1 + induction.
+
+Cycle 293 should aim for ~80-120 LOC. Route A is closer to textbook but
+needs parity setup; Route B is more direct but the `P_{n-2}^*` slot
+needs eval-at-`x = 1` for the coefficient (which is also how the
+textbook resolves it).
+
+If Phase A.3 lands cleanly, cycle 294 extracts the (342f) headline via
+a `linear_combination` step on `Q = 0`.
