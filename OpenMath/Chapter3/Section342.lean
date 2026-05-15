@@ -956,6 +956,32 @@ theorem butcherShiftedLegendre_ten :
       simp [Polynomial.coeff_sub, Polynomial.coeff_add,
             Polynomial.coeff_one, hk]
 
+/-- **Non-vacuity cross-check** for cycle 286's `butcherShiftedLegendre_ten`:
+the explicit polynomial expansion evaluates to `1` at `x = 1`, matching
+Butcher's (342b) `P_n^*(1) = 1` at `n = 10`. Cross-validates the explicit
+coefficient table (cycle 286) against the abstract characterization
+`butcherShiftedLegendre_eval_one`; if the explicit coefficients had a
+sign or magnitude error the `norm_num` call would fail. -/
+theorem butcherShiftedLegendre_ten_explicit_eval_one :
+    (butcherShiftedLegendre 10).eval 1 = 1 := by
+  rw [butcherShiftedLegendre_ten]
+  simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+        Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X,
+        Polynomial.eval_one]
+  norm_num
+
+/-- **Non-vacuity cross-check** for cycle 286's `butcherShiftedLegendre_ten`:
+the explicit polynomial expansion evaluates to `1` at `x = 0`, matching
+Butcher's (342c) parity `P_n^*(0) = (-1)^n` at `n = 10`. Cross-validates the
+explicit coefficient table (cycle 286) against the abstract characterization
+`butcherShiftedLegendre_eval_zero`. -/
+theorem butcherShiftedLegendre_ten_explicit_eval_zero :
+    (butcherShiftedLegendre 10).eval 0 = 1 := by
+  rw [butcherShiftedLegendre_ten]
+  simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+        Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X,
+        Polynomial.eval_one]
+
 /-! ### Non-vacuity witnesses for §342 helpers
 
 These confirm the helper lemmas evaluate correctly on small inputs. -/
