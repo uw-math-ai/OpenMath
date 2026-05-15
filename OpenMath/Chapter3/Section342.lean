@@ -3540,4 +3540,102 @@ theorem butcherShiftedLegendre_recurrence (n : ℕ) (hn : 2 ≤ n) :
     have h_zero := recurrence_residual_eq_zero n hn3
     linear_combination h_zero
 
+/-! ## §342 (342g) — initial witnesses for `P_n^*` zeros in `(0, 1)`
+
+The full clause (342g) — `P_n^*` has `n` distinct real zeros in
+`(0, 1)` for every `n` — is the subject of the cycle-294 Aristotle
+submission (project `5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`) and a
+multi-cycle manual fallback. This section ships three small empirical
+deliverables that anchor the general statement:
+
+* `butcherShiftedLegendre_one_root` (P2.1): `x = 1/2` is the unique
+  root of `P_1^* = 2X - 1` and lies in `(0, 1)`.
+* `butcherShiftedLegendre_two_roots` (P2.2): `(3 ± √3)/6` are two
+  distinct roots of `P_2^* = 6X² - 6X + 1`, both in `(0, 1)`.
+* `butcherShiftedLegendre_card_roots_le` (P3): the upper-bound half
+  of (342g), `(P_n^*).roots.card ≤ n`, via `Polynomial.card_roots'`
+  and `butcherShiftedLegendre_natDegree`.
+-/
+
+/-- **Butcher §342 (342g), witness for `n = 1`** — `P_1^*` has a root
+at `x = 1/2 ∈ (0, 1)`.
+
+Direct evaluation: `P_1^* = 2X - 1`, so `P_1^*(1/2) = 2 · (1/2) - 1 = 0`,
+and `0 < 1/2 < 1` is immediate. -/
+theorem butcherShiftedLegendre_one_root :
+    (butcherShiftedLegendre 1).eval (1 / 2 : ℝ) = 0 ∧
+      (1 / 2 : ℝ) ∈ Set.Ioo (0 : ℝ) 1 := by
+  refine ⟨?_, ?_⟩
+  · rw [butcherShiftedLegendre_one]
+    simp [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_X]
+  · simp [Set.mem_Ioo]
+    norm_num
+
+/-- **Butcher §342 (342g), witness for `n = 2`** — `P_2^*` has two
+distinct roots `(3 ± √3)/6` in `(0, 1)`.
+
+Proof: `P_2^* = 6X² - 6X + 1`. By the quadratic formula, the roots
+are `x = (6 ± √12)/12 = (3 ± √3)/6`. Since `0 < √3 < 2` (from
+`(√3)² = 3` and `3 < 4`), both roots lie strictly between `0` and `1`.
+Distinctness follows from `√3 > 0`. -/
+theorem butcherShiftedLegendre_two_roots :
+    ∃ x₁ x₂ : ℝ,
+      x₁ ≠ x₂ ∧
+      x₁ ∈ Set.Ioo (0 : ℝ) 1 ∧ x₂ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      (butcherShiftedLegendre 2).eval x₁ = 0 ∧
+      (butcherShiftedLegendre 2).eval x₂ = 0 := by
+  have hsqrt3_nonneg : (0 : ℝ) ≤ Real.sqrt 3 := Real.sqrt_nonneg _
+  have hsqrt3_pos : (0 : ℝ) < Real.sqrt 3 :=
+    Real.sqrt_pos.mpr (by norm_num)
+  have hsqrt3_sq : Real.sqrt 3 ^ 2 = 3 :=
+    Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 3)
+  -- √3 < 2 since (√3)² = 3 < 4 = 2².
+  have hsqrt3_lt_two : Real.sqrt 3 < 2 := by
+    nlinarith [hsqrt3_sq, hsqrt3_nonneg]
+  refine ⟨(3 - Real.sqrt 3) / 6, (3 + Real.sqrt 3) / 6, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h
+    have : Real.sqrt 3 = 0 := by linarith
+    linarith
+  · simp only [Set.mem_Ioo]
+    refine ⟨?_, ?_⟩
+    · -- (3 - √3)/6 > 0 since √3 < 3
+      have : Real.sqrt 3 < 3 := by linarith
+      linarith
+    · -- (3 - √3)/6 < 1 since 6 > 3 - √3 i.e. √3 > -3 (trivial)
+      linarith
+  · simp only [Set.mem_Ioo]
+    refine ⟨?_, ?_⟩
+    · -- (3 + √3)/6 > 0
+      linarith
+    · -- (3 + √3)/6 < 1 since 3 + √3 < 6 i.e. √3 < 3
+      have : Real.sqrt 3 < 3 := by linarith
+      linarith
+  · rw [butcherShiftedLegendre_two]
+    simp only [Polynomial.eval_add, Polynomial.eval_sub,
+               Polynomial.eval_mul, Polynomial.eval_pow,
+               Polynomial.eval_C, Polynomial.eval_X]
+    nlinarith [hsqrt3_sq]
+  · rw [butcherShiftedLegendre_two]
+    simp only [Polynomial.eval_add, Polynomial.eval_sub,
+               Polynomial.eval_mul, Polynomial.eval_pow,
+               Polynomial.eval_C, Polynomial.eval_X]
+    nlinarith [hsqrt3_sq]
+
+/-- **Butcher §342 (342g), upper bound** — `P_n^*` has at most `n`
+distinct real roots.
+
+This is the easy half of (342g): combining Mathlib's
+`Polynomial.card_roots'` (`p.roots.card ≤ p.natDegree`) with cycle
+273's `butcherShiftedLegendre_natDegree` gives the multiset bound;
+`Multiset.toFinset_card_le` then yields the `Finset` version. -/
+theorem butcherShiftedLegendre_card_roots_le (n : ℕ) :
+    (butcherShiftedLegendre n).roots.toFinset.card ≤ n := by
+  calc (butcherShiftedLegendre n).roots.toFinset.card
+      ≤ Multiset.card (butcherShiftedLegendre n).roots :=
+        Multiset.toFinset_card_le _
+    _ ≤ (butcherShiftedLegendre n).natDegree :=
+        Polynomial.card_roots' _
+    _ = n := butcherShiftedLegendre_natDegree n
+
 end OpenMath.Chapter3.Section342

@@ -80,7 +80,35 @@ ships.
 - If IN_PROGRESS at low % → continue ladder (n=5, 6, 7 recurrence
   witnesses) as Branch B fallback.
 
+## Cycle 294 update
+
+Cycle 294 executed the measured fire-and-forget pattern from this
+scoping doc:
+
+* **Aristotle submission**: project
+  `5939f28b-c890-4b7f-be4f-ed0f31f0d0b5` (file
+  `.prover-state/aristotle_submissions/cycle_294/342g_zeros.lean`,
+  status `QUEUED` at 2026-05-15 22:11:40 UTC). Cites (342a)–(342f)
+  plus the cycle-292 `butcherShiftedLegendre_orthogonal_to_lower_degree`
+  lemma — the load-bearing prerequisite for the contradiction
+  argument. Single-poll cycle 295.
+* **Empirical anchors shipped**: three theorems in
+  `OpenMath/Chapter3/Section342.lean`, all axiom-clean:
+  * `butcherShiftedLegendre_one_root` — `P_1^*(1/2) = 0 ∧ 1/2 ∈ (0,1)`.
+  * `butcherShiftedLegendre_two_roots` — distinct roots
+    `(3 ± √3)/6 ∈ (0,1)` of `P_2^*`.
+  * `butcherShiftedLegendre_card_roots_le` — upper bound
+    `(P_n^*).roots.toFinset.card ≤ n` via `Polynomial.card_roots'`
+    + cycle 273's `butcherShiftedLegendre_natDegree`.
+* **`n = 3` zeros**: explicitly deferred (closed-form involves
+  cubic-formula nested radicals). The IVT path is viable but
+  belongs to the full closure infrastructure.
+
 ## Closes
 
 This is a scoping document, not a deliverable in itself. No file
 changes proposed; the actual (342g) work is deferred to cycle 283+.
+
+Cycle 294 anchored the work and dispatched to Aristotle. Cycle 295
+single-polls. Closure (Branch A / B / C) depends on Aristotle's
+return.
