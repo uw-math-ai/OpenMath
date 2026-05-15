@@ -745,6 +745,107 @@ theorem butcherShiftedLegendre_eight :
       simp [Polynomial.coeff_sub, Polynomial.coeff_add,
             Polynomial.coeff_one, hk]
 
+/-- **Butcher §342 helper — `P_9^* = 48620X^9 − 218790X^8 + 411840X^7 − 420420X^6
++ 252252X^5 − 90090X^4 + 18480X^3 − 1980X^2 + 90X − 1`**:
+the degree-`9` shifted Legendre polynomial expands explicitly via the
+coefficient formula `(shiftedLegendre 9).coeff k = (-1)^k · C(9,k) · C(9+k, 9)`.
+The relevant values at `k = 0,…,9` are
+`(1, −9, 36, −84, 126, −126, 84, −36, 9, −1)` for `C(9,k)` (signed by `(-1)^k`)
+and `(1, 10, 55, 220, 715, 2002, 5005, 11440, 24310, 48620)` for `C(9+k, 9)`.
+The outer Butcher sign factor `(-1)^9 = -1` flips every coefficient, giving the
+explicit form above. Sanity: evaluating at `x = 0` gives `-1` (matches
+`P_9^*(0) = (-1)^9 = -1`); evaluating at `x = 1` gives
+`48620 − 218790 + 411840 − 420420 + 252252 − 90090 + 18480 − 1980 + 90 − 1 = 1`
+(matches (342b), verified via Python integer arithmetic). -/
+theorem butcherShiftedLegendre_nine :
+    butcherShiftedLegendre 9 =
+      Polynomial.C 48620 * Polynomial.X ^ 9
+        - Polynomial.C 218790 * Polynomial.X ^ 8
+        + Polynomial.C 411840 * Polynomial.X ^ 7
+        - Polynomial.C 420420 * Polynomial.X ^ 6
+        + Polynomial.C 252252 * Polynomial.X ^ 5
+        - Polynomial.C 90090 * Polynomial.X ^ 4
+        + Polynomial.C 18480 * Polynomial.X ^ 3
+        - Polynomial.C 1980 * Polynomial.X ^ 2
+        + Polynomial.C 90 * Polynomial.X
+        - Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  -- Peel off the `C ((-1)^9) * ·` factor BEFORE simp can collapse
+  -- `C ((-1)^9)` to the polynomial `-1` (which would block `coeff_C_mul`).
+  simp only [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+             Polynomial.coeff_shiftedLegendre]
+  match k with
+  | 0 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_X_pow, Polynomial.coeff_X,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 1 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 2 =>
+      have hch1 : Nat.choose 11 9 = 55 := by decide
+      have hch2 : Nat.choose 9 2 = 36 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 3 =>
+      have hch1 : Nat.choose 12 9 = 220 := by decide
+      have hch2 : Nat.choose 9 3 = 84 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 4 =>
+      have hch1 : Nat.choose 13 9 = 715 := by decide
+      have hch2 : Nat.choose 9 4 = 126 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 5 =>
+      have hch1 : Nat.choose 14 9 = 2002 := by decide
+      have hch2 : Nat.choose 9 5 = 126 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 6 =>
+      have hch1 : Nat.choose 15 9 = 5005 := by decide
+      have hch2 : Nat.choose 9 6 = 84 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 7 =>
+      have hch1 : Nat.choose 16 9 = 11440 := by decide
+      have hch2 : Nat.choose 9 7 = 36 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 8 =>
+      have hch1 : Nat.choose 17 9 = 24310 := by decide
+      have hch2 : Nat.choose 9 8 = 9 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 9 =>
+      have hch : Nat.choose 18 9 = 48620 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+      norm_num
+  | (k+10) =>
+      have hk : (9 : ℕ).choose (k + 10) = 0 := Nat.choose_eq_zero_of_lt (by omega)
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_one, hk]
+
 /-! ### Non-vacuity witnesses for §342 helpers
 
 These confirm the helper lemmas evaluate correctly on small inputs. -/
@@ -2130,6 +2231,30 @@ theorem butcherShiftedLegendre_recurrence_eight :
   intro x
   rw [butcherShiftedLegendre_eight, butcherShiftedLegendre_seven,
       butcherShiftedLegendre_six]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
+/-- **Butcher §342 (342f) at `n = 9`**:
+`9 · P_9^*(x) = 17 · (2x − 1) · P_8^*(x) − 8 · P_7^*(x)`.
+
+Direct verification (coefficients in descending degree, paper-verified
+via Python integer arithmetic in cycle 285):
+LHS = `9 · P_9^*` has coefficients
+  `[437580, −1969110, 3706560, −3783780, 2270268, −810810, 166320, −17820, 810, −9]`;
+RHS = `17 · (2X − 1) · P_8^* − 8 · P_7^*` produces the same vector,
+  confirming `(2n − 1, n − 1) = (17, 8)` at `n = 9`.
+Same `Polynomial.funext` + `ring` recipe as cycles 282–284. -/
+theorem butcherShiftedLegendre_recurrence_nine :
+    (9 : ℝ) • butcherShiftedLegendre 9 =
+      Polynomial.C 17 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 8
+      - Polynomial.C 8 * butcherShiftedLegendre 7 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_nine, butcherShiftedLegendre_eight,
+      butcherShiftedLegendre_seven]
   simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
         Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
         Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
