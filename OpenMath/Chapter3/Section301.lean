@@ -402,6 +402,121 @@ example : alphaWeight (mk [mk [cherry]]) = 1 := by
       show density (mk [mk [cherry]]) = 24 from rfl]
   norm_num [Nat.factorial]
 
+/- ### Butcher Table 310(II) row r=5 — α-witnesses for all 9 unordered
+rooted trees of order 5. Each `example` exercises the (302a) definition
+of α on a specific tree, computing the (order, σ, γ) triple by `rfl` on
+the recursive definitions of `RootedTree.order`, `RootedTree.symmetry`,
+and `RootedTree.density`, then closing the resulting numerical equality
+by `norm_num`. Together with the r ≤ 4 witnesses above, this saturates
+Butcher's small-tree data table through r = 5. -/
+
+/-- Non-trivial witness: the 5-ladder `mk [mk [mk [cherry]]]`
+(chain of depth 5) has `α = 1`. Row r=5 of Butcher Table 310(II) —
+the deeply nested `f'(f'(f'(f'f)))`. Order 5, symmetry 1 (single-child
+chain has no automorphism), density 5·4·3·2·1 = 120, so
+α = 5!/(1·120) = 1. -/
+example : alphaWeight (mk [mk [mk [cherry]]]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [mk [mk [cherry]]]) = 5 from rfl,
+      show symmetry (mk [mk [mk [cherry]]]) = 1 from rfl,
+      show density (mk [mk [mk [cherry]]]) = 120 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the broom-of-5 tree
+`mk [vertex, vertex, vertex, vertex]` (root with four leaves) has
+`α = 1`. Row r=5 of Butcher Table 310(II) — the `f''''(f, f, f, f)`
+tree. Order 5, symmetry 4! = 24 (four indistinguishable leaves),
+density 5·1·1·1·1 = 5, so α = 5!/(24·5) = 1. -/
+example : alphaWeight (mk [vertex, vertex, vertex, vertex]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [vertex, vertex, vertex, vertex]) = 5 from rfl,
+      show symmetry (mk [vertex, vertex, vertex, vertex]) = 24 from rfl,
+      show density (mk [vertex, vertex, vertex, vertex]) = 5 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: two cherries `mk [cherry, cherry]` has
+`α = 3`. Row r=5 of Butcher Table 310(II) — the `f''(f'f, f'f)` tree.
+Order 5, symmetry 2 (two indistinguishable cherries → 2! · σ(cherry)²
+= 2 · 1 = 2), density 5·2·2 = 20, so α = 5!/(2·20) = 3. -/
+example : alphaWeight (mk [cherry, cherry]) = 3 := by
+  unfold alphaWeight
+  rw [show order (mk [cherry, cherry]) = 5 from rfl,
+      show symmetry (mk [cherry, cherry]) = 2 from rfl,
+      show density (mk [cherry, cherry]) = 20 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: a cherry plus two leaves
+`mk [cherry, vertex, vertex]` has `α = 6`. Row r=5 of Butcher Table
+310(II) — the `f'''(f, f, f'f)` tree. Order 5, symmetry 2 (cherry
+distinct from leaves: 1!·σ(cherry)¹=1; two indistinguishable leaves:
+2!·σ(τ)²=2), density 5·2·1·1 = 10, so α = 5!/(2·10) = 6. -/
+example : alphaWeight (mk [cherry, vertex, vertex]) = 6 := by
+  unfold alphaWeight
+  rw [show order (mk [cherry, vertex, vertex]) = 5 from rfl,
+      show symmetry (mk [cherry, vertex, vertex]) = 2 from rfl,
+      show density (mk [cherry, vertex, vertex]) = 10 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the lifted broom-of-4 tree
+`mk [mk [vertex, vertex, vertex]]` (root with `mk [v,v,v]` as only
+child) has `α = 1`. Row r=5 of Butcher Table 310(II) — the depth-2
+tree `f'(f'''(f, f, f))`. Order 5, symmetry 6 (single child inherits
+σ(mk [v,v,v]) = 3! = 6), density 5·4 = 20, so α = 5!/(6·20) = 1. -/
+example : alphaWeight (mk [mk [vertex, vertex, vertex]]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [mk [vertex, vertex, vertex]]) = 5 from rfl,
+      show symmetry (mk [mk [vertex, vertex, vertex]]) = 6 from rfl,
+      show density (mk [mk [vertex, vertex, vertex]]) = 20 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the lifted "lifted broom-3" tree
+`mk [mk [broom₃]]` has `α = 1`. Row r=5 of Butcher Table 310(II) —
+the depth-3 tree `f'(f'(f''(f, f)))`. Order 5, symmetry 2 (single
+child inherits σ(mk [broom₃]) = 2), density 5·12 = 60, so
+α = 5!/(2·60) = 1. -/
+example : alphaWeight (mk [mk [broom₃]]) = 1 := by
+  unfold alphaWeight
+  rw [show order (mk [mk [broom₃]]) = 5 from rfl,
+      show symmetry (mk [mk [broom₃]]) = 2 from rfl,
+      show density (mk [mk [broom₃]]) = 60 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the lifted asymmetric order-4 tree
+`mk [mk [vertex, cherry]]` has `α = 3`. Row r=5 of Butcher Table
+310(II) — the depth-3 tree `f'(f'(f, f'f))`. Order 5, symmetry 1
+(single child inherits σ(mk [vertex, cherry]) = 1), density 5·8 = 40,
+so α = 5!/(1·40) = 3. -/
+example : alphaWeight (mk [mk [vertex, cherry]]) = 3 := by
+  unfold alphaWeight
+  rw [show order (mk [mk [vertex, cherry]]) = 5 from rfl,
+      show symmetry (mk [mk [vertex, cherry]]) = 1 from rfl,
+      show density (mk [mk [vertex, cherry]]) = 40 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: broom-3 plus a leaf
+`mk [broom₃, vertex]` has `α = 4`. Row r=5 of Butcher Table 310(II) —
+the tree `f''(f''(f, f), f)`. Order 5, symmetry 2 (broom₃ distinct
+from vertex; 1!·σ(broom₃)¹·1!·σ(τ)¹ = 2·1 = 2), density 5·3·1 = 15,
+so α = 5!/(2·15) = 4. -/
+example : alphaWeight (mk [broom₃, vertex]) = 4 := by
+  unfold alphaWeight
+  rw [show order (mk [broom₃, vertex]) = 5 from rfl,
+      show symmetry (mk [broom₃, vertex]) = 2 from rfl,
+      show density (mk [broom₃, vertex]) = 15 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the 3-ladder plus a leaf
+`mk [mk [cherry], vertex]` has `α = 4`. Row r=5 of Butcher Table
+310(II) — the tree `f''(f'(f'f), f)`. Order 5, symmetry 1 (the
+3-ladder `mk [cherry]` is distinct from the leaf and itself has
+σ = 1), density 5·6·1 = 30, so α = 5!/(1·30) = 4. -/
+example : alphaWeight (mk [mk [cherry], vertex]) = 4 := by
+  unfold alphaWeight
+  rw [show order (mk [mk [cherry], vertex]) = 5 from rfl,
+      show symmetry (mk [mk [cherry], vertex]) = 1 from rfl,
+      show density (mk [mk [cherry], vertex]) = 30 from rfl]
+  norm_num [Nat.factorial]
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310

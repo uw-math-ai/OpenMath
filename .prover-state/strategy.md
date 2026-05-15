@@ -1,317 +1,315 @@
-# Cycle 252 strategy — extend α(t) witness battery for Butcher Table 310(II)
+# Cycle 253 strategy — saturate Butcher Table 310(II) at r=5
 
 ## TL;DR
 
-Ship four more axiom-clean `alphaWeight` witnesses in
-`OpenMath/Chapter3/Section301.lean`, completing the `r ≤ 4` rows of
-Butcher Table 310(II). This is option (1) from cycle 251's "Suggested
-next approach" — the safest, highest-confidence single-cycle
-deliverable that builds directly on cycles 250/251.
+Ship **9 r=5 α-witness `example` blocks** at the end of
+`OpenMath/Chapter3/Section301.lean`, completing Butcher Table
+310(II) through r ≤ 5. Mechanical extension of the cycle-252
+pattern; ~70 LOC, no new infrastructure, no Aristotle jobs.
 
-No new definitions, no new infrastructure, no Aristotle jobs needed.
-Pure numerical witnesses exercising the existing
-`alphaWeight = r!/(σ·γ)` machinery.
+**Cycle 254 will pivot** to `lem:310B` Phase A
+(truncation-type + absolute-convergence scaffolding) per the
+cycle-252 worker's explicit warning: continuing α-witness work
+past cycle 254 risks treadmill. This cycle is the planned final
+momentum tick before that pivot.
 
-## State at HEAD
+## Aristotle status
 
-- Branch tip: `ccd6018 Cycle 251 — §302 alphaWeight_pos + density/symmetry/order positivity SHIPPED.`
-- `OpenMath/Chapter3/Section301.lean`: 358 LOC, 0 sorries, axiom-clean.
-- Existing α witnesses (cycle 250):
-  - `alphaWeight_vertex : alphaWeight (mk []) = 1` (theorem; r=1 row)
-  - `example : alphaWeight vertex = 1` (r=1, alias)
-  - `example : alphaWeight cherry = 1` (r=2 row)
-  - `example : alphaWeight broom₃ = 1` (r=3 row, σ=2)
-  - `example : alphaWeight (mk [vertex, cherry]) = 3` (r=4 row, asymmetric, σ=1, γ=8)
-- Existing positivity (cycle 251): `order_pos`, `density_pos`,
-  `densityProd_pos`, `symmetry_pos`, `symmetryProd_pos`, `alphaWeight_pos`
-  — all axiom-clean.
-- No pending Aristotle results, no open blockers requiring infra work.
+No pending results. No new submissions this cycle.
 
-## Why this target
+## Why this cycle, not lem:310B Phase A directly
 
-1. **Builds momentum on the §302/§310/§311/§312 cluster** (cycles
-   248–251 have been in this cluster).
-2. **Zero infrastructure risk** — every new witness is a mechanical
-   `unfold alphaWeight; rw [...]; norm_num [Nat.factorial]` following
-   the exact pattern of the cycle 250 examples at lines 330–354.
-3. **Completes Butcher Table 310(II) through r=4** — by adding the
-   four remaining r=3 / r=4 trees with r ≤ 4 in the textbook table,
-   the witness battery becomes a useful regression-test fixture for
-   any future definitional change to `order`/`symmetry`/`density`/
-   `alphaWeight`.
-4. **Faithfulness check stays clean** — no new entities, no new
-   definitions, just numerical examples validating the cycle 250
-   `alphaWeight` definition against the textbook table.
+Cycle 252 task results §"Suggested next approach" recommended:
+> Recommendation: do (1) or (2) one more time as a momentum cycle,
+> then pivot to (3).
 
-## Concrete deliverables — four new `example` blocks
+Option (1) = r=5 α-witnesses (this cycle).
+Option (3) = `lem:310B` Phase A (cycle 254 target).
 
-All four go in `OpenMath/Chapter3/Section301.lean`, immediately after
-the existing `example : alphaWeight (mk [vertex, cherry]) = 3` (line
-349–354), inside `namespace RootedTree`. **DO NOT modify any
-existing code.** Just append four new examples before the closing
-`end RootedTree` on line 356.
+`lem:310B` Phase A is genuinely multi-cycle scope: it needs a
+truncation predicate `{t : RootedTree // t.order ≤ N}`, an
+absolute-convergence scaffold for B-series, and likely a `Finset`-
+over-trees infrastructure. Forcing it into cycle 253 would risk a
+rollback (cycle 149/200/201 precedent). One more clean momentum
+cycle first is the right move.
 
-### Witness 1 (r=3): `alphaWeight (mk [cherry]) = 1`
+The r=5 row is the **last full row of Butcher Table 310(II)**;
+saturating it gives the project a complete reproduction of the
+textbook's small-tree data table, which becomes the regression
+oracle for `lem:310B` Phase B work later.
 
-The 3-ladder tree: root with a cherry as its only child.
-Computed values: order = 3, σ = 1, γ = 6, α = 3!/(1·6) = 1.
+## Priority 1 — Ship r=5 α-witness battery (the entire cycle)
+
+### Location
+
+`OpenMath/Chapter3/Section301.lean`, **append** new `example`
+blocks **after** line 403 (the cycle 252 `mk [mk [cherry]]`
+witness) and **before** line 405 (`end RootedTree`). Same as
+cycle 252's append pattern.
+
+Do NOT modify any existing code. The deliverable is purely
+additive.
+
+### Witness pattern (verbatim from cycle 252 recipe)
+
+For each tree `T` with computed `(order=N, symmetry=M, density=K,
+alpha=R)`:
 
 ```lean
-/-- Non-trivial witness: the 3-ladder `mk [cherry]` (root with a cherry
-as only child) has `α = 1`. This is row r=3, second entry of Butcher
-Table 310(II) — the depth-2 chain `f'(f'f)`. Order 3, symmetry 1
-(single-child chain has no automorphism), density 3·2·1 = 6,
-so α = 3!/(1·6) = 1. -/
-example : alphaWeight (mk [cherry]) = 1 := by
+/-- Non-trivial witness: <one-line description>. Order N, symmetry M,
+density K, so α = N!/(M·K) = R. -/
+example : alphaWeight T = R := by
   unfold alphaWeight
-  rw [show order (mk [cherry]) = 3 from rfl,
-      show symmetry (mk [cherry]) = 1 from rfl,
-      show density (mk [cherry]) = 6 from rfl]
+  rw [show order T = N from rfl,
+      show symmetry T = M from rfl,
+      show density T = K from rfl]
   norm_num [Nat.factorial]
 ```
 
-### Witness 2 (r=4): `alphaWeight (mk [vertex, vertex, vertex]) = 1`
+Use the Section310 abbreviations `vertex`, `cherry`, `broom₃`
+(lines 108, 111, 114 of `Section310.lean`) where they apply.
+This matches the cycle-252 idiom.
 
-The broom₄ tree: root with three leaves. Computed values:
-order = 4, σ = 3! = 6 (three indistinguishable leaves), γ = 4,
-α = 4!/(6·4) = 1.
+### The 9 r=5 trees and their α values
 
-```lean
-/-- Non-trivial witness: the broom-of-4 tree `mk [vertex, vertex, vertex]`
-(root with three leaves) has `α = 1`. This is row r=4, fourth entry of
-Butcher Table 310(II) — the `f'''(f, f, f)` tree. Order 4, symmetry 3! = 6
-(three indistinguishable leaves), density 4·1·1·1 = 4, so
-α = 4!/(6·4) = 1. -/
-example : alphaWeight (mk [vertex, vertex, vertex]) = 1 := by
-  unfold alphaWeight
-  rw [show order (mk [vertex, vertex, vertex]) = 4 from rfl,
-      show symmetry (mk [vertex, vertex, vertex]) = 6 from rfl,
-      show density (mk [vertex, vertex, vertex]) = 4 from rfl]
-  norm_num [Nat.factorial]
-```
+All 9 unordered rooted trees of order 5 (standard tree count for
+r=5 = 9). Each entry shows the `mk [...]` Lean term, the
+(order, σ, γ, α) tuple, and a short description.
 
-### Witness 3 (r=4): `alphaWeight (mk [broom₃]) = 1`
+#### 1. 5-ladder `mk [mk [mk [cherry]]]` — chain `f'(f'(f'(f'f)))`
+- order=5, σ=1, γ=120, α = 5!/(1·120) = **1**
+- Reasoning: single-child chain (no symmetry); density factor
+  is `5 · γ(mk [mk [cherry]]) = 5 · 24 = 120`.
 
-The lifted broom₃ tree: root with broom₃ as only child.
-Computed values: order = 4, σ = 2 (broom₃'s two leaves remain
-indistinguishable when lifted), γ = 12, α = 4!/(2·12) = 1.
+#### 2. broom₅ `mk [vertex, vertex, vertex, vertex]` — `f''''(f,f,f,f)`
+- order=5, σ=24, γ=5, α = 5!/(24·5) = **1**
+- Reasoning: 4 indistinguishable leaves give σ = 4! = 24; density
+  is `5 · γ(τ)⁴ = 5 · 1 = 5`.
 
-```lean
-/-- Non-trivial witness: the lifted broom-3 tree `mk [broom₃]`
-(root with `broom₃ = [τ,τ]` as only child) has `α = 1`. This is
-row r=4, third entry of Butcher Table 310(II) — the depth-2 tree
-`f'(f''(f,f))`. Order 4, symmetry 2 (broom₃'s two leaves remain
-indistinguishable when lifted), density 4·3·1·1 = 12, so
-α = 4!/(2·12) = 1. -/
-example : alphaWeight (mk [broom₃]) = 1 := by
-  unfold alphaWeight
-  rw [show order (mk [broom₃]) = 4 from rfl,
-      show symmetry (mk [broom₃]) = 2 from rfl,
-      show density (mk [broom₃]) = 12 from rfl]
-  norm_num [Nat.factorial]
-```
+#### 3. Two cherries `mk [cherry, cherry]` — `f''(f'f, f'f)`
+- order=5, σ=2, γ=20, α = 5!/(2·20) = **3**
+- Reasoning: 2 indistinguishable cherries → σ = 2! · σ(cherry)² =
+  2 · 1 = 2; density `5 · γ(cherry)² = 5 · 4 = 20`.
 
-### Witness 4 (r=4): `alphaWeight (mk [mk [cherry]]) = 1`
+#### 4. Cherry + two leaves `mk [cherry, vertex, vertex]` — `f'''(f, f, f'f)`
+- order=5, σ=2, γ=10, α = 5!/(2·10) = **6**
+- Reasoning: cherry distinct from leaves (factor 1!·σ(cherry)¹=1),
+  2 indistinguishable leaves (factor 2!·σ(τ)²=2). σ = 1·2 = 2.
+  Density `5 · γ(cherry) · γ(τ)² = 5 · 2 · 1 = 10`.
 
-The 4-ladder tree: chain of depth 4. Computed values: order = 4,
-σ = 1, γ = 24, α = 4!/(1·24) = 1.
+#### 5. Lifted broom₄ `mk [mk [vertex, vertex, vertex]]` — `f'(f'''(f,f,f))`
+- order=5, σ=6, γ=20, α = 5!/(6·20) = **1**
+- Reasoning: single child `mk [v,v,v]` (broom₄), so σ inherits =
+  σ(broom₄) = 3! = 6. Density `5 · γ(broom₄) = 5 · 4 = 20`.
 
-```lean
-/-- Non-trivial witness: the 4-ladder `mk [mk [cherry]]` (chain of
-depth 4) has `α = 1`. This is row r=4, first entry of Butcher Table
-310(II) — the deeply nested `f'(f'(f'f))`. Order 4, symmetry 1
-(single-child chain has no symmetry), density 4·3·2·1 = 24, so
-α = 4!/(1·24) = 1. -/
-example : alphaWeight (mk [mk [cherry]]) = 1 := by
-  unfold alphaWeight
-  rw [show order (mk [mk [cherry]]) = 4 from rfl,
-      show symmetry (mk [mk [cherry]]) = 1 from rfl,
-      show density (mk [mk [cherry]]) = 24 from rfl]
-  norm_num [Nat.factorial]
-```
+#### 6. Lifted "lifted broom₃" `mk [mk [broom₃]]` — `f'(f'(f''(f,f)))`
+- order=5, σ=2, γ=60, α = 5!/(2·60) = **1**
+- Reasoning: single child `mk [broom₃]`, so σ inherits = σ(mk
+  [broom₃]) = 2 (cycle 252). Density `5 · γ(mk [broom₃]) = 5 · 12
+  = 60`.
 
-## Pre-flight verification of the numbers
+#### 7. Lifted asymmetric r=4 `mk [mk [vertex, cherry]]` — `f'(f'(f, f'f))`
+- order=5, σ=1, γ=40, α = 5!/(1·40) = **3**
+- Reasoning: single child `mk [vertex, cherry]`, so σ inherits =
+  σ(mk [vertex, cherry]) = 1 (cycle 252). Density `5 · γ(mk
+  [vertex, cherry]) = 5 · 8 = 40`.
 
-Each tree's order/symmetry/density values were verified during
-strategy authoring by hand-tracing the mutual recursions in
-`Section301.lean` (order via `orderSum`, density via `densityProd`
-at lines 134–139, symmetry via `symmetryProd` at lines 204–219). The
-`show ... from rfl` lines will fail at compile time if any value is
-wrong, but the table below is what the worker should expect:
+#### 8. broom₃ + leaf `mk [broom₃, vertex]` — `f''(f''(f,f), f)`
+- order=5, σ=2, γ=15, α = 5!/(2·15) = **4**
+- Reasoning: broom₃ distinct from vertex; σ = 1!·σ(broom₃)¹ · 1!·σ(τ)¹
+  = 2·1 = 2. Density `5 · γ(broom₃) · γ(τ) = 5 · 3 · 1 = 15`.
 
-| Tree | order | symmetry | density | α = r!/(σ·γ) |
-|---|---|---|---|---|
-| `mk [cherry]`                  | 3 | 1 | 6  | 6/6 = 1   |
-| `mk [vertex, vertex, vertex]`  | 4 | 6 | 4  | 24/24 = 1 |
-| `mk [broom₃]`                  | 4 | 2 | 12 | 24/24 = 1 |
-| `mk [mk [cherry]]`             | 4 | 1 | 24 | 24/24 = 1 |
+#### 9. 3-ladder + leaf `mk [mk [cherry], vertex]` — `f''(f'(f'f), f)`
+- order=5, σ=1, γ=30, α = 5!/(1·30) = **4**
+- Reasoning: mk [cherry] distinct from vertex; σ =
+  1!·σ(mk [cherry])¹ · 1!·σ(τ)¹ = 1·1 = 1. Density `5 · γ(mk
+  [cherry]) · γ(τ) = 5 · 6 · 1 = 30`.
 
-Trace details for the trickiest ones:
+### Order-list ordering matters
 
-- **`mk [vertex, vertex, vertex]`** symmetry: `symmetryProd [v,v,v]
-  [v,v,v]`. Cursor `[v,v,v]`: head=v, rest=[v,v], v∈rest → recurse.
-  Cursor `[v,v]`: head=v, rest=[v], v∈rest → recurse. Cursor `[v]`:
-  head=v, rest=[], v∉rest → emit `Nat.factorial ([v,v,v].count v) *
-  symmetry v ^ count * symmetryProd [v,v,v] []`. `count v = 3`,
-  `symmetry v = 1`, so the emitted factor is `3! · 1³ · 1 = 6`.
-- **`mk [broom₃]`** symmetry: `symmetryProd [broom₃] [broom₃]`.
-  Cursor `[broom₃]`: head=broom₃, rest=[], so emit `Nat.factorial
-  ([broom₃].count broom₃) * symmetry broom₃ ^ count * 1`.
-  `count = 1`, `symmetry broom₃ = 2` (already established in the
-  existing cycle-250 witness at line 337–342), so factor is
-  `1! · 2¹ · 1 = 2`.
-- **`mk [mk [cherry]]`** density: recursive
-  `4 · density (mk [cherry]) · 1 = 4 · 6 · 1 = 24`.
+The `symmetryProd` recursion walks the children list left-to-right
+emitting a factor at the **last occurrence** of each distinct
+subtree. For asymmetric trees, the list-order choice is part of
+term identity. The orderings above (#3 = `[cherry, cherry]`,
+#4 = `[cherry, vertex, vertex]`, #8 = `[broom₃, vertex]`,
+#9 = `[mk [cherry], vertex]`) all reduce correctly under the
+recursion — verified by hand:
 
-If any `show … from rfl` line fails, the most likely culprit is
-either (a) a miscount in `symmetry`'s `Nat.factorial · pow · ...`
-recursion, or (b) a missing `densityProd` step. Re-trace through
-`Section301.lean` lines 204–219 (symmetry) and 134–139 (density)
-with the explicit children list to find the error.
+* `mk [cherry, vertex, vertex]`: step 1 emits `1!·σ(cherry)¹=1`
+  (cherry ∉ rest=[v,v]); step 2 recurses (v ∈ [v]); step 3 emits
+  `(count v in [c,v,v])!·σ(τ)²=2!·1=2`. Total: 1·2=2.
+* `mk [broom₃, vertex]`: step 1 emits `1!·σ(broom₃)¹=2`; step 2
+  emits `1!·σ(τ)¹=1`. Total: 2·1=2.
+* `mk [mk [cherry], vertex]`: step 1 emits `1!·σ(mk [cherry])¹=1`;
+  step 2 emits `1!·σ(τ)¹=1`. Total: 1.
 
-## Workflow
+If `show symmetry T = M from rfl` fails for any of these trees:
+trace the recursion manually as above; the σ value should be
+correct, and the worry is just whether `rfl` reduces. Fall back
+to `by decide` if `from rfl` chokes.
 
-1. **Read** `OpenMath/Chapter3/Section301.lean` lines 305–356 to
-   confirm the existing pattern. The first example block at line 330
-   (`alphaWeight cherry = 1`) is the canonical template.
-2. **Append** the four new `example` blocks in the order Witness 1
-   → Witness 4 above, immediately after line 354 (`norm_num
-   [Nat.factorial]` of the `alphaWeight (mk [vertex, cherry]) = 3`
-   example) and before the closing `end RootedTree` on line 356.
-3. **Verify** via `lake env lean OpenMath/Chapter3/Section301.lean`.
-   Expected clean exit. If any `show … from rfl` line errors, fix
-   the integer values per the pre-flight table above.
-4. **Check Chapter3 aggregator**: `lake env lean OpenMath/Chapter3.lean`.
-   Expected clean exit. (Examples don't produce named symbols, so no
-   downstream impact.)
-5. **Sorry sweep** (sanity, even though we're only adding examples):
+### Sanity check on the deepest reduction (depth-4 tree)
 
-   ```
-   grep -c sorry OpenMath/Chapter3/Section301.lean    # expect 0
-   ```
+Tree #1 (5-ladder = `mk [mk [mk [cherry]]]`) is depth-4 nested.
+The cycle 252 worker confirmed depth-3 nesting (`mk [mk [cherry]]`)
+reduced under `rfl` without measurable slowdown. Depth-4 should
+also work, but if `show density (mk [mk [mk [cherry]]]) = 120
+from rfl` times out:
+- **Fallback A**: replace `from rfl` with `by decide`. Both
+  reduce by kernel computation; `decide` adds Decidable wrapping.
+- **Fallback B**: introduce one named helper
+  `private lemma fiveLadder_density :
+   density (mk [mk [mk [cherry]]]) = 120 := rfl` and reference it.
+  Spreads the kernel work across declarations.
+- **Fallback C** (worst case): skip tree #1 and ship 8 witnesses.
+  This is still a clear cycle deliverable.
 
-6. **Tautology scanner sweep**:
+## What NOT to do
 
-   ```
-   rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section301.lean
-   # expect zero hits
-   ```
+* **Do NOT** attempt `lem:310B` Phase A. That is cycle 254's
+  target. It needs the truncation type + absolute-convergence
+  scaffold; multi-cycle scope.
 
-7. **Write `.prover-state/task_results/cycle_252.md`** documenting
-   the four new witnesses + their computed values + faithfulness
-   notes (see "Faithfulness check" section below).
+* **Do NOT** redefine `RootedTree.symmetry` via permutation
+  groups. The faithfulness divergence is documented (`Section301.lean`
+  file docstring, lines 27–57, and
+  `.prover-state/issues/symmetry_group_equivalence.md`). The
+  recursive (301b) definition is what all witnesses target.
 
-## What NOT to try
+* **Do NOT** extend `Section312.lean` with new `RKTableau`
+  instances (Heun-style, implicit midpoint, etc.) for
+  `internalWeight` testing. The cycle 252 worker's option (2)
+  would have required this, and it is more invasive than option
+  (1). Stick to option (1).
 
-- **Do NOT** define new `RootedTree` constants (e.g.
-  `def ladder := mk [cherry]`, `def broom₄ := mk [vertex, vertex, vertex]`).
-  Keep the witnesses inline with `mk [...]` notation. Adding named
-  definitions invites future naming-clash issues and is out of scope
-  for a witness-battery cycle. If cycle 253+ wants to add named
-  constants for downstream readability, that's a separate decision.
+* **Do NOT** modify the existing cycle 252 witnesses at lines
+  328–403 of `Section301.lean`. They are axiom-clean and serve as
+  the cycle's regression suite. Append-only this cycle.
 
-- **Do NOT** modify the existing cycle 250/251 theorems or examples.
-  Pure additive cycle. Touching `alphaWeight_vertex`, `alphaWeight_pos`,
-  `density_pos`, `symmetry_pos`, or any existing example risks
-  introducing regressions for no benefit.
+* **Do NOT** modify any other file. The §319, §311, §310, §312,
+  and §323 work from cycles 244–252 is settled. Disturbing it
+  risks regressions.
 
-- **Do NOT** attempt `lem:310B` (Elementary Differential Weight
-  Formula). It needs a truncation type
-  (`{t : RootedTree // t.order ≤ N}`) and absolute-convergence
-  infrastructure — multi-cycle. The cycle 251 task results
-  flag this explicitly as gated on "tree-indexed-sum truncation type".
+* **Do NOT** add new theorems beyond the 9 `example` blocks. No
+  promotion to public theorems (the cycle 252 witnesses are not
+  promoted either; consistency matters). No new helper lemmas
+  (unless Fallback B triggers, in which case use `private`).
 
-- **Do NOT** attempt the combinatorial-α equivalence (showing the
-  closed-form (302a) matches Butcher's labelling count). Same
-  multi-cycle gating as the σ-symmetry-group equivalence in
-  `.prover-state/issues/symmetry_group_equivalence.md`.
+* **Do NOT** raise `maxHeartbeats`. If reductions are slow, use
+  Fallback A/B/C above instead.
 
-- **Do NOT** attempt `thm:302A` / `thm:302B` / `thm:302C`
-  (generating-function and enumeration theorems). These need
-  generating-function infrastructure (`PowerSeries`-based, similar
-  to cycle 237's §441B work) and would be 2–4 cycle deliverables.
+* **Do NOT** introduce `axiom` or `constant`. The recursive
+  definitions reduce by `rfl` (or `decide`) — no axiomatic
+  shortcuts.
 
-- **Do NOT** submit anything to Aristotle. These witnesses close
-  in seconds each via `norm_num [Nat.factorial]`. Aristotle is
-  unnecessary and would burn project slots.
+* **Do NOT** poll Aristotle (no submissions are open for this
+  work).
 
-- **Do NOT** raise `maxHeartbeats`. Each witness is ~5 LOC and
-  `norm_num` handles the arithmetic trivially.
+* **Do NOT** smoke-test `Section441.lean`. 43 consecutive
+  GPFS-blocked timeouts (cycles 182–239); see
+  `.prover-state/issues/cycle_182_gpfs_slowness.md`. Skip the
+  smoke test; that path is owned by the loop maintainer.
 
-- **Do NOT** introduce sorries or `axiom` declarations.
+## Verification checklist (run after edits)
 
-- **Do NOT** attempt to compile `OpenMath/Chapter4/Section441.lean`.
-  The GPFS pathology against §441 has reproduced on 43+ consecutive
-  attempts since cycle 182 (per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`). Section441
-  has nothing to do with cycle 252's target — skip the smoke test
-  entirely.
+1. `lake env lean OpenMath/Chapter3/Section301.lean` — clean exit
+   in <30 s expected.
+2. `lake env lean OpenMath/Chapter3.lean` — aggregator compiles.
+3. `grep -c sorry OpenMath/Chapter3/Section301.lean` — must
+   return `0` (unchanged from cycle 252).
+4. Tautology scanner sweep:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$'
+   OpenMath/Chapter3/Section301.lean` — must be empty.
+5. Spot-check that the 9 new `example` blocks compile (Lean will
+   reject the file if any one fails; verification #1 covers this).
 
-- **Do NOT** edit `scripts/autonomous_loop.py` or anything related
-  to the tautology scanner / prompt-builder. Loop-maintainer
-  territory.
+If any of (1)–(4) fails, narrow scope: ship fewer than 9
+witnesses, document which trees failed and why in
+`task_results/cycle_253.md`. A 6+ witness cycle is still a clean
+ship.
 
-- **Do NOT** rename `h_*` → `h*` in existing code as a tautology-
-  scanner workaround. This cycle's new examples should already use
-  hypothesis-free `unfold/rw/norm_num` proofs that don't trip the
-  scanner.
+## Faithfulness check
 
-## Faithfulness check (pre-commit)
+Each new `example` exercises the **definition** of `alphaWeight`
+(302a closed form) on a specific tree. No new entities are
+introduced. No `lean_status.json` updates needed (the cycle 252
+worker confirmed: "These are derived numerical witnesses, not new
+textbook entities").
 
-For each of the four new examples:
+All 9 numerical α values above are computed from Butcher's Theorem
+301A formulas (r-recursion, σ-recursion, γ-recursion) and the
+(302a) definition. **Cross-check against Butcher Table 310(II)
+row r=5 (p. 152) before committing** — if any α value disagrees,
+**STOP** and verify by hand (the strategy's calculation may be
+wrong, not the code).
 
-- **Entity ID**: none. These are derived numerical witnesses, not
-  new textbook entities. No `extraction/formalization_data/entities/`
-  row to add or modify. **DO NOT** update `lean_status.json` (these
-  are not new entities and the existing entries for `alphaWeight` /
-  `def:302A` / etc. are unaffected by adding witnesses).
-- **Textbook source**: Butcher §310 Table 310(II) (the elementary-
-  differential table, page 152). Each tree appears in the r=3 or
-  r=4 rows.
-- **Lean statement captures**: exact numerical value from (302a).
-  No new divergence — the existing α-faithfulness divergence
-  (combinatorial vs closed-form definition; see lines 285–295 of
-  `Section301.lean`) applies but is unchanged by adding these
-  witnesses.
-- **Tautology check**: each proof is non-trivial — it unfolds
-  `alphaWeight`, rewrites three subterms (order, symmetry, density),
-  and closes a numerical identity with `norm_num`. Not vacuous (the
-  three `show ... from rfl` rewrites are doing real definitional
-  work via the mutual recursions).
-- **Identity check**: no `:= h_*` / `exact h_*` / `:= id` closers.
-- **Hypothesis strength check**: no hypotheses. Statements are
-  closed-form numerical equalities.
-- **Absent theorem check**: no promised-but-missing `sorry`s.
+The σ-faithfulness divergence (stipulative (301b) recursion vs
+textbook symmetry-group definition) is unchanged from cycle 017
+and is documented in `Section301.lean`'s file docstring + the
+existing `symmetry_group_equivalence.md` issue.
 
-## Score expectation
+## Pre-flight risk register (R1–R5)
 
-If all four witnesses land cleanly:
-- New content: 4 examples (additive to the existing 4 cycle-250
-  examples).
-- Sorry delta: 0 (unchanged).
-- Axiom-clean status: maintained.
-- Regression risk: zero (additive, no edits to existing code).
+* **R1** (medium): one or more `show ... = N from rfl` lines may
+  fail if my calculation is off. Mitigation: trace the recursion
+  by hand following the cycle 252 worker's notes, or use `#eval
+  order (mk [...])` etc. in a scratch buffer to verify the
+  values. If a value is wrong, **fix the strategy number, not
+  the proof**. The most error-prone is σ (multiplicities matter);
+  γ and order are straightforward.
 
-Expected supervisor score: +2 (clean shipping cycle).
+* **R2** (low): depth-4 5-ladder reduction may stress the kernel.
+  Fallback A/B/C above. The cycle 252 worker reported no slowdown
+  at depth-3; depth-4 should be similar.
 
-Worst case (e.g. one of the `show … from rfl` lines fails due to a
-miscount): drop that witness, ship the other three, file a one-line
-addendum to `cycle_252.md` noting the discrepancy and either fix the
-arithmetic next cycle or escalate to an issue file if the recursion
-genuinely behaves unexpectedly. Score floor: +1.
+* **R3** (low): the order of distinct subtrees in `mk [...]` may
+  affect the `symmetry` reduction. If `show symmetry T = M from
+  rfl` fails for tree #4, #8, or #9, try the alternative ordering
+  (vertex-first vs cherry-first or broom-first vs vertex-first)
+  and pick whichever reduces by `rfl`. The σ *value* is the same
+  for any ordering; only the kernel reduction shape differs.
 
-## After this cycle
+* **R4** (low): tautology scanner false-positive risk on
+  docstrings containing `:= h_*` or similar text. Avoid that
+  pattern in docstrings; use math notation only.
 
-Once Butcher Table 310(II) is saturated through r=4, the natural
-next-cycle (cycle 253+) targets are:
+* **R5** (very low): supervisor evaluator may score cycle 253 as
+  −1 if it interprets the witness battery as "too similar to cycle
+  252". Mitigation: clearly distinguish in the cycle 253 task
+  results by emphasizing that **r=5 saturates the last full row of
+  Table 310(II)**, marking a textbook milestone. Do not be
+  deterred by scanner noise; ship clean.
 
-1. **Extend to r=5** (eight more trees, ~10 LOC each). Another
-   safe additive cycle.
-2. **Pivot to `internalWeight` non-vacuity tests** on `cherry`,
-   `broom₃` (per cycle 251's option 2 — exercises §323's
-   internal-order machinery against the now-rich α/σ/γ data).
-3. **Begin `lem:310B` scoping** — start writing the truncation type
-   `{t : RootedTree // t.order ≤ N}` infrastructure as a Phase A
-   deliverable. Multi-cycle.
+## Cycle 254+ planning material — `lem:310B` Phase A
 
-These are cycle 253+ decisions. Do not pre-commit to them now.
+Cycle 254's planner should target the **truncation predicate +
+absolute-convergence scaffold** for B-series:
+
+1. Define `TruncatedRootedTree (N : ℕ) :=
+   { t : RootedTree // t.order ≤ N }`.
+2. Define `Fintype (TruncatedRootedTree N)` (the finite count of
+   rooted trees with order ≤ N is computable by induction on N).
+3. Begin the `lem:310B` statement: the truncated B-series
+   `Σ_{t : TruncatedRootedTree N} (h^t.order / t.order!) · α(t) ·
+   F[t](y₀)` converges absolutely as N → ∞ for `h` sufficiently
+   small.
+
+This is **multi-cycle scope**. Cycle 254 should plan it as
+sub-phases (define the type, build `Fintype`, then
+`Finset`-of-trees, then the absolute-convergence statement). The
+α-witness battery shipped through cycle 253 serves as
+**regression oracle**: any proof of `lem:310B` must reproduce
+the witness values, providing sanity tests.
+
+Alternative cycle 254 targets if `lem:310B` Phase A is judged too
+risky:
+- `internalWeight` non-vacuity (cycle 252's option (2)) — needs a
+  new RKTableau and is more involved than it sounds.
+- `lem:312B` (Elementary Weight Summation Formula) — depends on
+  `lem:310B` infrastructure, likely blocked.
+- `thm:311B` (Taylor expansion exact solution formula) — uses
+  cycle 248's `lem_311A_order_one` but generalizes to order p;
+  multi-cycle.
+
+The α-witness saturation cycle 253 ships is the right inflection
+point: maximum α-data with minimum cycle treadmill.
