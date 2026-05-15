@@ -158,3 +158,27 @@ return.
 * Axiom-clean (`[propext, Classical.choice, Quot.sound]`); zero
   sorries; well within the strategy's 200-LOC budget.
 * Aristotle still in flight; no stall observation appended.
+
+## Cycle 297 update
+
+* **Aristotle single-poll**: `IN_PROGRESS`, `percent_complete = 25`
+  at `2026-05-15T23:19:53Z` (≈68 min after cycle 294 submission;
+  flat from cycle 296's 25%). This is **observation #1** of the
+  three-stall protocol (cycle 285 precedent: cancel only after three
+  consecutive same-or-lower readings). Aristotle remains queued —
+  do **NOT** cancel. Branch C fires (n=7 anchor); continue Aristotle
+  through cycles 298 and 299.
+* **`n = 7` anchor shipped**: `butcherShiftedLegendre_seven_roots`
+  in `OpenMath/Chapter3/Section342.lean` — seven distinct roots of
+  `P_7^*` in `(0, 1)`. Mechanical scaling of cycle 296's `n = 5`
+  recipe:
+  - **Middle root** `r₄ = 1/2` via cycle 295's
+    `butcherShiftedLegendre_eval_half_eq_zero_of_odd 7 ⟨3, rfl⟩`.
+  - **Three left roots** via IVT on cycle 280's closed form
+    `P_7^* = 3432X^7 - 12012X^6 + 16632X^5 - 11550X^4 + 4200X^3 -
+    756X^2 + 56X - 1`:
+    * `(0, 1/20)` ascending; `(1/20, 1/5)` descending; `(1/5, 2/5)` ascending.
+  - **Three right roots** (parity-symmetric):
+    * `(3/5, 4/5)` ascending; `(4/5, 19/20)` descending; `(19/20, 1)` ascending.
+  - **Distinctness** (21 pairs) via disjoint-interval `linarith`.
+* Axiom-clean; zero sorries.
