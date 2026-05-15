@@ -243,4 +243,76 @@ theorem butcherShiftedLegendre_natDegree (n : ℕ) :
       Polynomial.natDegree_map_eq_of_injective h_inj,
       Polynomial.natDegree_shiftedLegendre]
 
+/-- **Butcher §342 helper — `P_n^*(0) = (-1)^n`**: the value at the
+left endpoint follows from (342c) parity applied at `x = 1` combined
+with (342b) `P_n^*(1) = 1`. Useful as an input to the (342g)
+distinct-roots argument and to a future (342f) recurrence check at
+`x = 0`. -/
+theorem butcherShiftedLegendre_eval_zero (n : ℕ) :
+    (butcherShiftedLegendre n).eval 0 = (-1 : ℝ) ^ n := by
+  have h := butcherShiftedLegendre_eval_one_sub n 1
+  rw [show (1 - 1 : ℝ) = 0 from by ring, butcherShiftedLegendre_eval_one] at h
+  simpa using h
+
+/-- **Butcher §342 helper — `P_0^* = 1`**: the degree-`0` shifted
+Legendre polynomial is the constant `1`. Follows by `Polynomial.ext`
++ `coeff_shiftedLegendre` over the unique coefficient slot `k = 0`. -/
+theorem butcherShiftedLegendre_zero :
+    butcherShiftedLegendre 0 = Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  rcases k with _ | k
+  · simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+          Polynomial.coeff_one]
+  · simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+          Polynomial.coeff_one]
+
+/-- **Butcher §342 helper — `P_1^* = 2X - 1`**: the degree-`1` shifted
+Legendre polynomial expands explicitly. Computed via `Polynomial.ext`
++ `coeff_shiftedLegendre` over slots `k ∈ {0, 1}` (higher slots vanish
+by `natDegree`). -/
+theorem butcherShiftedLegendre_one :
+    butcherShiftedLegendre 1 =
+      Polynomial.C 2 * Polynomial.X - Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  match k with
+  | 0 =>
+      simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+            Polynomial.coeff_sub, Polynomial.coeff_C]
+  | 1 =>
+      simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+            Polynomial.coeff_sub, Polynomial.coeff_one]
+  | (k+2) =>
+      have hk : (1 : ℕ).choose (k + 2) = 0 := Nat.choose_eq_zero_of_lt (by omega)
+      simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+            Polynomial.coeff_sub, Polynomial.coeff_one, hk]
+
+/-! ### Non-vacuity witnesses for §342 helpers
+
+These confirm the helper lemmas evaluate correctly on small inputs. -/
+
+example : (butcherShiftedLegendre 0).eval 0 = 1 := by
+  rw [butcherShiftedLegendre_eval_zero 0]; norm_num
+
+example : (butcherShiftedLegendre 1).eval 0 = -1 := by
+  rw [butcherShiftedLegendre_eval_zero 1]; norm_num
+
+example : (butcherShiftedLegendre 2).eval 0 = 1 := by
+  rw [butcherShiftedLegendre_eval_zero 2]; norm_num
+
+example : butcherShiftedLegendre 0 = Polynomial.C 1 :=
+  butcherShiftedLegendre_zero
+
+example : (butcherShiftedLegendre 1).eval 0 = -1 := by
+  rw [butcherShiftedLegendre_one]
+  simp [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
+        Polynomial.eval_X]
+
+example : (butcherShiftedLegendre 1).eval 1 = 1 := by
+  rw [butcherShiftedLegendre_one]
+  simp [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
+        Polynomial.eval_X]
+  norm_num
+
 end OpenMath.Chapter3.Section342
