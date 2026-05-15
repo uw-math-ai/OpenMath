@@ -377,6 +377,60 @@ sub-phase — no partial sorry'd scaffolds.
   identity from cycle 017's deferred issue. Defer if hard; the gap
   becomes a Phase F obligation. Axiom-clean target. ~100–150 LOC.
 
+#### Cycle 263 update — Phase A.2 completion shipped (with weakening)
+
+Cycle 263 shipped the `LabelledRootedTree`-tree-automorphism `Setoid`
+infrastructure in `OpenMath/Chapter3/Section300.lean`, appended to
+cycle 262's `LabelledRootedTree` structure + canonical labelling
+witnesses.
+
+Shipped this cycle (all axiom-clean, depending only on `Quot.sound`):
+- `RootedTree.Vertex.rootOf : (t : RootedTree) → Vertex t` — helper
+  exposing the root vertex of an arbitrary `t` (case-matches `t = mk cs`
+  to dodge implicit `cs` inference failure on generic `t`).
+- `RootedTree.TreeAutomorphism (t : RootedTree) : Type` — structure
+  with fields `perm : Equiv.Perm (Vertex t)` and `perm_root :
+  perm (Vertex.rootOf t) = Vertex.rootOf t`. The single root-fixing
+  field is **strictly weaker** than Butcher's tree-automorphism
+  group: full recursive structure preservation on child subtrees is
+  NOT required. This dodges the nested-inductive mutual-recursion
+  pitfall flagged in `feedback_rootedtree_nested_induction.md`.
+- `TreeAutomorphism.id` / `.trans` / `.symm` — group-theoretic API
+  (identity / composition / inverse).
+- `LabelledRootedTree.Equiv` — pointwise-encoded equivalence
+  (existence of underlying-tree equality plus a tree-automorphism
+  realising the labelling difference). Pointwise avoids
+  dependent-typing issues with `Equiv` equality across heterogeneous
+  `Vertex` types.
+- `LabelledRootedTree.Equiv.refl` / `.symm` / `.trans` — the three
+  Setoid axioms. `symm` and `trans` destructure `a`/`b`/`c` first to
+  expose `underlying : RootedTree` as a free variable, then `cases
+  hEq` performs the type-level substitution.
+- `LabelledRootedTree.setoid : Setoid LabelledRootedTree`.
+- Three reflexivity non-vacuity witnesses (`canonicalVertex`,
+  `canonicalCherry`, `canonicalBroom₃`).
+
+**What is NOT claimed by this Setoid**:
+- The σ-faithfulness orbit-count `Nat.card (orbit …) = r(t)! / σ(t)`
+  (Phase A.3 above). The Setoid is **coarser** than Butcher's
+  quotient because `TreeAutomorphism` doesn't enforce recursive
+  structure preservation — any root-fixing permutation of vertices
+  qualifies.
+- Heterogeneous (genuinely-different-labelling) non-vacuity. This
+  requires evaluating `Fintype.equivFinOfCardEq` on concrete trees,
+  which won't reduce cleanly; deferred to Phase A.2.1 (cycle 264+).
+
+**Cycle 264+ strengthening task**: Replace the weakened
+`TreeAutomorphism` with the full recursive structure-preservation
+predicate. Requires a `mutual` block of definitions through
+`List RootedTree` per `feedback_rootedtree_nested_induction.md`.
+Once shipped, the Setoid recovers Butcher's `def:300C` quotient
+faithfully, and Phase A.3's orbit-count theorem becomes meaningful.
+
+`lem:310B` remains `[ ]` / `unformalized` in `plan.md` and
+`extraction/formalization_data/lean_status.json` — this cycle is
+infrastructure-only.
+
 ### Phase B — `thm:306A` Taylor / multinomial (1–3 cycles, deferrable)
 
 - **Phase B.1** (1 cycle):

@@ -71,6 +71,12 @@ theorem idxOpt_child {cs : List RootedTree} (i : Fin cs.length)
     (v : Vertex (cs.get i)) :
     (child i v : Vertex (mk cs)).idxOpt = some i := rfl
 
+/-- The root vertex of `t : RootedTree`, exposed as a function of `t`.
+Pattern-matches `t = mk cs` so `Vertex.root`'s implicit `cs` is
+inferrable from a generic `t`. -/
+def rootOf : (t : RootedTree) → Vertex t
+  | mk _ => Vertex.root
+
 /-- `Vertex.child i` is injective in its second argument. -/
 theorem child_injective {cs : List RootedTree} (i : Fin cs.length) :
     Function.Injective (Vertex.child (cs := cs) i) := by
@@ -189,7 +195,15 @@ trees up to tree-automorphism (a *quotient* by the symmetry group).
 The structure exposed here singles out one *raw* labelling per
 underlying tree; the tree-automorphism `Setoid` recovering Butcher's
 quotient is deferred to cycle 263+ per
-`.prover-state/issues/lem_310B_plan.md` §4.1. -/
+`.prover-state/issues/lem_310B_plan.md` §4.1.
+
+Cycle 263 update: `TreeAutomorphism t` is weakened to "permutation of
+`Vertex t` fixing `root`" (only one structure-preservation field), which
+is strictly weaker than Butcher's full tree-automorphism group. The
+σ-faithfulness orbit-count identity (Phase A.3 per
+`.prover-state/issues/lem_310B_plan.md` §4.1) is NOT claimed by
+`LabelledRootedTree.setoid`. Strengthening to the full recursive
+structure preservation is deferred to a future cycle. -/
 
 /-- Completeness: every vertex of `t` is in the `vertices t` Finset. -/
 theorem Vertex.mem_vertices : ∀ {t : RootedTree} (v : Vertex t),
@@ -257,6 +271,118 @@ noncomputable def canonicalBroom₃ : LabelledRootedTree where
 example : canonicalVertex.underlying.order = 1 := rfl
 example : canonicalCherry.underlying.order = 2 := rfl
 example : canonicalBroom₃.underlying.order = 3 := rfl
+
+/-! ### Phase A.2 completion — `TreeAutomorphism` + `LabelledRootedTree.setoid`
+
+The tree-automorphism `Setoid` on `LabelledRootedTree` is built from a
+*weakened* `TreeAutomorphism` predicate: a permutation of `Vertex t`
+that fixes `Vertex.root`. This is strictly weaker than Butcher's
+tree-automorphism group, which additionally recursively preserves
+each subtree's structure. The weakening is deliberate to dodge the
+nested-inductive mutual-recursion pitfall in
+`feedback_rootedtree_nested_induction.md`; it makes the Setoid
+**coarser** than Butcher's quotient, and the σ-faithfulness orbit
+count `r(t)!/σ(t)` is NOT claimed here. -/
+
+/-- A *(weak) tree automorphism* of `t` is a permutation of `Vertex t`
+that fixes the root. Strictly weaker than Butcher's tree-automorphism
+group (full recursive structure preservation is deferred — see file
+docstring). -/
+structure TreeAutomorphism (t : RootedTree) : Type where
+  perm : Equiv.Perm (Vertex t)
+  perm_root : perm (Vertex.rootOf t) = Vertex.rootOf t
+
+/-- The identity (weak) tree automorphism. -/
+def TreeAutomorphism.id (t : RootedTree) : TreeAutomorphism t where
+  perm := Equiv.refl _
+  perm_root := rfl
+
+/-- Composition of (weak) tree automorphisms. -/
+def TreeAutomorphism.trans {t : RootedTree}
+    (φ ψ : TreeAutomorphism t) : TreeAutomorphism t where
+  perm := φ.perm.trans ψ.perm
+  perm_root := by
+    show ψ.perm (φ.perm (Vertex.rootOf t)) = Vertex.rootOf t
+    rw [φ.perm_root, ψ.perm_root]
+
+/-- Inverse of a (weak) tree automorphism. -/
+def TreeAutomorphism.symm {t : RootedTree}
+    (φ : TreeAutomorphism t) : TreeAutomorphism t where
+  perm := φ.perm.symm
+  perm_root := by
+    have h := congrArg φ.perm.symm φ.perm_root
+    rw [Equiv.symm_apply_apply] at h
+    exact h.symm
+
+/-- Two labelled rooted trees are equivalent if they share an underlying
+tree and one labelling is obtained from the other by composing with some
+(weak) tree-automorphism.
+
+Encoded pointwise to avoid dependent-typing issues with `Equiv` equality
+across heterogeneous `Vertex` types. -/
+def LabelledRootedTree.Equiv (a b : LabelledRootedTree) : Prop :=
+  ∃ (h : a.underlying = b.underlying)
+    (φ : TreeAutomorphism a.underlying),
+    ∀ (v : Vertex a.underlying),
+      a.labelling v = (h ▸ b.labelling) (φ.perm v)
+
+theorem LabelledRootedTree.Equiv.refl (a : LabelledRootedTree) :
+    LabelledRootedTree.Equiv a a := by
+  refine ⟨rfl, TreeAutomorphism.id _, ?_⟩
+  intro v
+  rfl
+
+theorem LabelledRootedTree.Equiv.symm {a b : LabelledRootedTree}
+    (hab : LabelledRootedTree.Equiv a b) :
+    LabelledRootedTree.Equiv b a := by
+  obtain ⟨ua, la⟩ := a
+  obtain ⟨ub, lb⟩ := b
+  obtain ⟨hEq, φ, hLab⟩ := hab
+  cases hEq
+  refine ⟨rfl, φ.symm, ?_⟩
+  intro v
+  have h := hLab (φ.perm.symm v)
+  show lb v = la (φ.perm.symm v)
+  rw [Equiv.apply_symm_apply] at h
+  exact h.symm
+
+theorem LabelledRootedTree.Equiv.trans {a b c : LabelledRootedTree}
+    (hab : LabelledRootedTree.Equiv a b)
+    (hbc : LabelledRootedTree.Equiv b c) :
+    LabelledRootedTree.Equiv a c := by
+  obtain ⟨ua, la⟩ := a
+  obtain ⟨ub, lb⟩ := b
+  obtain ⟨uc, lc⟩ := c
+  obtain ⟨hEq_ab, φ, hLab_ab⟩ := hab
+  obtain ⟨hEq_bc, ψ, hLab_bc⟩ := hbc
+  cases hEq_ab
+  cases hEq_bc
+  refine ⟨rfl, φ.trans ψ, ?_⟩
+  intro v
+  show la v = lc (ψ.perm (φ.perm v))
+  rw [hLab_ab v, hLab_bc (φ.perm v)]
+
+/-- The `Setoid` of labelled rooted trees modulo (weak) tree automorphism.
+
+Faithfulness divergence: this Setoid is **coarser** than Butcher's
+`def:300C` quotient (which uses the full recursive tree-automorphism
+group). See the file docstring and
+`.prover-state/issues/lem_310B_plan.md` §4.1. -/
+instance LabelledRootedTree.setoid : Setoid LabelledRootedTree where
+  r := LabelledRootedTree.Equiv
+  iseqv := ⟨LabelledRootedTree.Equiv.refl,
+            LabelledRootedTree.Equiv.symm,
+            LabelledRootedTree.Equiv.trans⟩
+
+-- Non-vacuity: reflexivity on each canonical labelling.
+example : LabelledRootedTree.Equiv canonicalVertex canonicalVertex :=
+  LabelledRootedTree.Equiv.refl _
+
+example : LabelledRootedTree.Equiv canonicalCherry canonicalCherry :=
+  LabelledRootedTree.Equiv.refl _
+
+example : LabelledRootedTree.Equiv canonicalBroom₃ canonicalBroom₃ :=
+  LabelledRootedTree.Equiv.refl _
 
 end RootedTree
 
