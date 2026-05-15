@@ -1,306 +1,301 @@
-# Cycle 258 Strategy
+# Cycle 259 strategy
 
-## A. State at cycle start
+## Context
 
-- Branch tip: `01f9ab1 Cycle 257 — §311 lem_311A_order_three SHIPPED`.
-- Sorry count: 0 across the repo.
-- No pending Aristotle results.
-- Cycles 248 / 256 / 257 shipped `lem_311A_order_one` / `_two` / `_three`
-  in `OpenMath/Chapter3/Section311.lean`. Each is a Taylor specialisation
-  for `ℝ → ℝ` scalars, axiom-clean. The recipe is now mechanical: bump
-  `taylor_isLittleO (n := k+1)`, add one chain-rule helper for
-  `iteratedDeriv k yex x₀`, evaluate Taylor polynomial, translate to
-  `nhds 0`, decompose into Taylor-residual + leading polynomial term,
-  combine via `IsLittleO.isBigO.add`, collapse `h^(p+1)`.
-- Cycle 256 shipped α-weighted B-series machinery
-  (`bseriesAlphaTerm`, `bseriesAlphaPartialSum`) in
-  `OpenMath/Chapter3/Section301.lean`; cycle 256 P3 added a thin
-  cross-section bridge in Section311.
+Cycle 258 SHIPPED `lem_311A_order_four` (+ private helper
+`iteratedDeriv_four_via_ode`) axiom-clean in
+`OpenMath/Chapter3/Section311.lean`. Sorry count 0. The order-N
+Taylor chain now stands at orders 1 (cycle 248), 2 (cycle 256),
+3 (cycle 257), 4 (cycle 258) — four consecutive single-cycle
+ships, all axiom-clean.
 
-## B. Pre-flight investigation — why we are NOT pivoting away from §311
+The cycle 258 worker explicitly flagged "diminishing returns now
+genuinely real beyond order 5". The implication: order 5 is the
+**last natural mechanical extension** of this chain. After order 5,
+substantive §311 work requires `lem:310B` infrastructure (labelled
+rooted-tree quotients + B-series sum machinery), which is multi-cycle.
 
-Cycle 257 task results §"Suggested next approach" listed three
-candidates: (1) polymorphic refactor of the order-1/2/3 trio
-(multi-cycle); (2) small-`r` `lem:310B` cases (multi-cycle, blocked on
-labelled-tree machinery); (3) pivot to `lem:312B` or `lem:313A`.
+**No Aristotle results pending. No sorries to incorporate.**
 
-Direct entity inspection (`extraction/formalization_data/entities/`):
+## P1 (primary, ship this) — `lem_311A_order_five`
 
-* `lem:312B` (Elementary Weight Summation Formula) and `lem:313A`
-  (Taylor expansion of approximate solution) **both** list `lem:310B`
-  as a transitive dependency. Their textbook proofs explicitly invoke
-  Lemma 310B (see `proof_text` field). `lem:310B` is unformalized and
-  multi-cycle (requires labelled rooted-tree quotient `def:300C`, not
-  built).
-* Therefore neither `lem:312B` nor `lem:313A` is single-cycle
-  shippable in faithful form. A surface-level "lift to Lean" without
-  consuming the genuine combinatorial content would be definition
-  smuggling (rule violation per CLAUDE.md and
-  `feedback_planner_faithfulness_spotcheck.md`).
+Ship the order-5 Taylor specialisation of `lem:311A` in
+`OpenMath/Chapter3/Section311.lean` immediately after cycle 258's
+`lem_311A_order_four`, following the mechanical port pattern of
+cycles 257 → 258. Axiom-clean expected; sorry count stays 0.
 
-The polymorphic refactor (option 1) is genuinely valuable but
-multi-cycle. The right single-cycle deliverable is therefore to
-**continue the order-N Taylor chain at order 4** — mechanical port of
-cycle 257, axiom-clean by construction, sorry count stays 0.
+### Verified Bell coefficients (DO NOT use the cycle 258 worker's hint)
 
-## C. P1 (mandatory) — Ship `lem_311A_order_four`
+The cycle 258 task results §"Suggested next approach" wrote
+"Bell coefficients 1, 11, 7, 26, 1 — verify before porting".
+**These coefficients are WRONG.** I re-derived from scratch
+by differentiating cycle 258's order-4 closed form once more
+under `y' = f(y)`:
 
-Add to `OpenMath/Chapter3/Section311.lean`, immediately after cycle
-257's `lem_311A_order_three`. Shape mirrors cycle 257 with one extra
-chain-rule layer.
-
-### C.1 Private chain-rule helper `iteratedDeriv_four_via_ode`
-
-Establish the closed form of `iteratedDeriv 4 yex x₀` under the
-autonomous ODE constraint. Differentiate cycle 257's closed form of
-`iteratedDeriv 3 yex` (viewed pointwise) along the ODE.
-
-**Paper derivation** (verify on paper, then port to Lean):
-Let `G(y) := f''(y)·f(y)² + f'(y)²·f(y)`. Then
-`d/dx G(yex(x)) = G'(yex)·yex' = G'(yex)·f(yex)`.
-
-`G'(y) = f'''(y)·f(y)² + f''(y)·2·f(y)·f'(y)
-       + 2·f'(y)·f''(y)·f(y) + f'(y)²·f'(y)
-       = f'''(y)·f(y)² + 4·f''(y)·f'(y)·f(y) + f'(y)³`.
-
-So:
 ```
-iteratedDeriv 4 yex x₀
-  = G'(y₀) · f(y₀)
-  = f'''(y₀) · f(y₀)³
-    + 4 · f''(y₀) · f'(y₀) · f(y₀)²
-    + f'(y₀)³ · f(y₀)
+iteratedDeriv 4 yex = f'''·f³ + 4·f''·f'·f² + (f')³·f
 ```
 
-**Lean proof sketch** (verify each step with `lean_hover_info` /
-`lean_loogle` before commit):
+Differentiating term-by-term (using `d/dt g(y) = g'(y)·f(y)` and
+the product rule):
 
-1. `iteratedDeriv 4 yex x₀ = deriv (iteratedDeriv 3 yex) x₀`
-   via `iteratedDeriv_succ`.
-2. Pointwise identification of `iteratedDeriv 3 yex` as a function:
+- `d/dt[f'''(y)·f(y)³] = f''''·f⁴ + 3·f'''·f'·f³`
+- `d/dt[4·f''(y)·f'(y)·f(y)²] = 4·f'''·f'·f³ + 4·f''²·f³ + 8·f''·f'²·f²`
+- `d/dt[(f'(y))³·f(y)] = 3·f''·f'²·f² + (f')⁴·f`
+
+Summing (with all derivatives evaluated at `y₀` after collapsing
+via `yex x₀ = y₀` + `hyex_ode`):
+
+```
+iteratedDeriv 5 yex x₀
+  = f''''(y₀)·f(y₀)⁴
+    + 7·f'''(y₀)·f'(y₀)·f(y₀)³
+    + 4·f''(y₀)²·f(y₀)³
+    + 11·f''(y₀)·f'(y₀)²·f(y₀)²
+    + f'(y₀)⁴·f(y₀)
+```
+
+**Correct coefficient list: 1, 7, 4, 11, 1.** (Worker's
+"1, 11, 7, 26, 1" had the middle three wrong — 11/7 swapped,
+4 became 26.) Independently re-derive on paper before keying
+anything in, but trust these over the cycle 258 task results.
+
+The order-5 B-series truncation (RHS of the headline `IsBigO`):
+
+```
+y₀ + h·f(y₀)
+  + (h²/2)·f'(y₀)·f(y₀)
+  + (h³/6)·(f''(y₀)·f(y₀)² + f'(y₀)²·f(y₀))
+  + (h⁴/24)·(f'''(y₀)·f(y₀)³ + 4·f''(y₀)·f'(y₀)·f(y₀)² + f'(y₀)³·f(y₀))
+  + (h⁵/120)·(f''''(y₀)·f(y₀)⁴ + 7·f'''(y₀)·f'(y₀)·f(y₀)³
+              + 4·f''(y₀)²·f(y₀)³ + 11·f''(y₀)·f'(y₀)²·f(y₀)²
+              + f'(y₀)⁴·f(y₀))
+```
+
+Residual is `=O[nhds 0] (fun h => h^(5+1))`.
+
+### Hypotheses
+
+Mirror cycle 258 with the regularity bumped one step:
+
+- `(hf_C4 : ContDiff ℝ 4 f)` — one more order than cycle 258
+  (`ContDiff ℝ 3 f`).
+- `(hyex_x₀ : yex x₀ = y₀)` — unchanged.
+- `(hyex_C6 : ContDiff ℝ 6 yex)` — one more than cycle 258
+  (`ContDiff ℝ 5 yex`), to match `taylor_isLittleO (n := 6)`.
+- `(hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x)` — unchanged.
+- Stay scalar `f : ℝ → ℝ`, `yex : ℝ → ℝ` (cycle 257/258 convention).
+
+### Mechanical recipe (port cycle 258 verbatim with one extra layer)
+
+1. **Helper `iteratedDeriv_five_via_ode`** (private). Pattern: extend
+   cycle 258's function-level identity machinery one more order.
+   Concretely:
+   - Reuse `(hyex_ode x).deriv` (`deriv yex = f ∘ yex`) at function level.
+   - Establish three function-level identities, lifting cycle 258's
+     pointwise arguments to every `x`:
+     * `iteratedDeriv 2 yex = fun x => deriv f (yex x) * f (yex x)`
+     * `iteratedDeriv 3 yex = fun x => f''(y) · f(y)² + (f'(y))² · f(y)`
+     * `iteratedDeriv 4 yex = fun x => f'''(y) · f(y)³
+                                       + 4·f''(y)·f'(y)·f(y)²
+                                       + (f'(y))³·f(y)`
+   - Peel `iteratedDeriv 5 yex x₀ = deriv (iteratedDeriv 4 yex) x₀`
+     via `iteratedDeriv_succ`.
+   - Differentiate the three-term sum from the order-4 identity using
+     `deriv_add` × 2 + `deriv_mul` (for products of two functions)
+     and `deriv_fun_pow` (for `f(y)^k` factors, `k ∈ {2, 3}`).
+   - Each `deriv f^(k)(y)` chain step: `deriv_comp` + `(hyex_ode x).deriv`.
+   - For `Differentiable ℝ (deriv (deriv (deriv f)))`, use
+     `hf_C4.deriv'.deriv'.differentiable_deriv_two`. Cycle 258
+     discovery: `ContDiff.deriv'` reduces `ContDiff ℝ (n+1) f`
+     to `ContDiff ℝ n (deriv f)`, composing cleanly. One more
+     application than cycle 258.
+   - Close with `ring`.
+
+2. **Main theorem `lem_311A_order_five`**: mechanical port of cycle
+   258 with:
+   - `taylor_isLittleO (n := 6)` (one more than cycle 258's `n := 5`).
+   - One extra `Finset.sum_range_succ` unfold in `hT_eval`.
+   - New sextic-residual `O(h⁶)` step using
+     `Asymptotics.isBigO_const_mul_self` on
+     `(h⁶/720)·iteratedDeriv 6 yex x₀`.
+   - Identify `iteratedDeriv {1,2,3,4} yex x₀` via cycle 248's
+     `F_tau_eval`, cycle 256/257's helper structure, and cycle 258's
+     `iteratedDeriv_four_via_ode`. Identify `iteratedDeriv 5 yex x₀`
+     via the new `iteratedDeriv_five_via_ode`.
+   - Collapse `h^(5+1) = h^6` by `funext` / `ring`.
+
+3. **Non-vacuity example.** Reuse cycle 258's pattern:
+   ```lean
+   example (y₀ x₀ : ℝ) :
+     ∃ _ : True, ... := by
+     constructor
+     · trivial
+     · -- apply lem_311A_order_five with f := fun _ => 0,
+       -- yex := fun _ => y₀
+       ...
    ```
-   (iteratedDeriv 3 yex : ℝ → ℝ)
-     = fun x => deriv (deriv f) (yex x) * f (yex x) ^ 2
-              + deriv f (yex x) ^ 2 * f (yex x)
-   ```
-   via `funext` + cycle 257's chain-rule argument at every `x`
-   (not just `x₀`).
-3. `deriv_add` to split the sum, then `deriv_mul` × 2 to break each
-   product. Each subterm reduces to `deriv (g ∘ yex) x₀` for some
-   `g`, then `deriv_comp` and `(hyex_ode x₀).deriv` and
-   `rw hyex_x₀` finish.
-4. `ring` aggregates into the four-term expression above.
+   Hypotheses discharged via `contDiff_const` and `hasDerivAt_const`.
+   Residual collapses to identically zero; `IsBigO` closes by
+   `Asymptotics.isBigO_zero` after the closed-form RHS reduces to `y₀`.
 
-Hypothesis profile (verify minimum required):
-- `ContDiff ℝ 3 f` — needed for `Differentiable ℝ (deriv (deriv f))`,
-  the second-derivative differentiability for the inner chain rule.
-- `ContDiff ℝ 5 yex` — needed for `taylor_isLittleO (n := 5)` plus
-  the order-4 chain-rule evaluation.
-- `yex x₀ = y₀` (carried from cycle 257).
-- `∀ x, HasDerivAt yex (f (yex x)) x` (autonomous ODE).
+### Risks (pre-flagged)
 
-### C.2 Main theorem `lem_311A_order_four`
+- **R1 (Bell coefficient typo)**: If the worker uses the cycle 258
+  hint's "1, 11, 7, 26, 1" instead of the verified "1, 7, 4, 11, 1",
+  `ring` will fail to close `hderiv5_x0` because the polynomial
+  identity won't match. **Mitigation**: copy the coefficients from
+  the P1 §"Verified Bell coefficients" subsection above; ignore the
+  cycle 258 task-results hint.
+- **R2 (`hf_C4.deriv'.deriv'.differentiable_deriv_two` lookup)**: This
+  is the cycle 258-discovered idiom — verify it composes for one more
+  layer. If it doesn't fire (e.g. Mathlib API drift), fall back to
+  `differentiable_iteratedDeriv` with explicit unfolding via
+  `iteratedDeriv_succ`.
+- **R3 (`taylor_isLittleO (n := 6)`)**: One more `Finset.sum_range_succ`
+  unfold than cycle 258. The `hT_eval` simp-expansion should still
+  close cleanly; if it stalls, factor into helper sub-steps.
+- **R4 (heartbeat overrun)**: Order-5 is the largest expansion yet.
+  If a single proof step overflows 200000 heartbeats (CLAUDE.md
+  ceiling), decompose via private helpers — separate the algebraic-
+  identity step from the Taylor-application step (cycle 150's
+  `matrix7_oneMinusZSmul_det` precedent).
+- **R5 (universe / NormedSpace generalisation)**: Stay scalar
+  `ℝ → ℝ` per cycles 257/258; do not attempt to generalise.
 
-Signature:
-```lean
-theorem lem_311A_order_four
-    {f : ℝ → ℝ} (hf_C3 : ContDiff ℝ 3 f)
-    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
-    (hyex_x₀ : yex x₀ = y₀)
-    (hyex_C5 : ContDiff ℝ 5 yex)
-    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
-    (fun h : ℝ => yex (x₀ + h) -
-        (y₀
-          + h * f y₀
-          + h ^ 2 / 2 * (deriv f y₀ * f y₀)
-          + h ^ 3 / 6 * (deriv (deriv f) y₀ * f y₀ ^ 2
-                         + deriv f y₀ ^ 2 * f y₀)
-          + h ^ 4 / 24 * (deriv (deriv (deriv f)) y₀ * f y₀ ^ 3
-                          + 4 * deriv (deriv f) y₀ * deriv f y₀ * f y₀ ^ 2
-                          + deriv f y₀ ^ 3 * f y₀)))
-      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (4 + 1))
-```
+## P2 stretch (only if P1 lands quickly) — Scope cycle 260+ pivot
 
-Body recipe verbatim from cycle 257 with these mechanical edits:
+Write a new markdown-only issue file at
+`.prover-state/issues/lem_310B_plan.md` containing:
 
-* `taylor_isLittleO (n := 5)` (was 4 in cycle 257).
-* `hT_eval` evaluates degree-5 polynomial — one extra
-  `Finset.sum_range_succ` unfold beyond cycle 257.
-* Reuse `hderiv1_x0`, `hderiv2_x0`, `hderiv3_x0` verbatim from
-  cycle 257; add new
-  `hderiv4_x0 := iteratedDeriv_four_via_ode hf_C3 hyex_x₀ hyex_C5 hyex_ode`.
-* `hdiff_eq` rewrites the goal into Taylor-residual plus
-  `h^5 / 120 * iteratedDeriv 5 yex x₀`. We do **not** identify
-  `iteratedDeriv 5 yex x₀`'s closed form — we only need the quintic
-  residual as `O(h^5)`.
-* `hquintic` is
-  `(fun h => h^5/120 * iteratedDeriv 5 yex x₀) =O[nhds 0] (fun h => h^5)`
-  via `Asymptotics.isBigO_const_mul_self`.
-* Final `hres.isBigO.add hquintic`, collapse `h ^ (4 + 1) = h ^ 5`
-  via `funext` + `ring`.
+1. **Textbook target.** Quote the exact statement of `lem:310B` from
+   `extraction/formalization_data/entities/lem_310B.json` and from
+   `extraction/raw_text/ch03.txt` (Butcher §310 around p. 167).
 
-### C.3 Non-vacuity witness
+2. **Infrastructure inventory.** Enumerate what's already shipped in
+   `OpenMath/Chapter3/Section301.lean` and Section311 that supports
+   `lem:310B`:
+   - `RootedTree`, `density`, `symmetry`, `alphaWeight` (cycles 017,
+     030, 250, 251).
+   - `theta_eq_one` (cycle 249).
+   - `bseriesTerm`, `bseriesAlphaTerm`, `bseriesPartialSum`,
+     `bseriesAlphaPartialSum`, `TruncatedRootedTree` (cycles 254–256).
+   - `lem_311A_order_one` through `_order_five` (after cycle 259).
+   - `elementaryDiff` (cycle 030).
 
-Add a non-vacuity `example` consuming `lem_311A_order_four` with
-`f := 0`, `yex := fun _ => y₀`. The B-series collapses to `y₀`,
-residual is identically zero, hypotheses discharge via
-`contDiff_const`, `hasDerivAt_const`.
+3. **Missing infrastructure.** Identify the gaps:
+   - `def:300C` labelled rooted-tree quotient (`LabelledTree`,
+     automorphism group, σ-witness Finset enumeration).
+   - The `T_S^*`-indexed sum structure (Butcher §310 page 167).
+   - The combinatorial bridge from `α(t)`'s closed form
+     `r(t)!/(σ(t)·γ(t))` to the labelled-tree count.
 
-## D. P2 (stretch — only if P1 ships with ≥ 30 min budget) — Table 310(II) α-witness via bseriesAlphaPartialSum
+4. **Phased plan.** Sketch a 5–8 cycle decomposition with concrete
+   deliverables per cycle. Each cycle must ship axiom-clean and have
+   a credible single-cycle close — no multi-cycle sorries (cf. cycles
+   200/201 rollback precedent for `thm:381H`).
 
-Cycles 252/253 saturated Butcher Table 310(II) rows r=4 and r=5 with
-α-witness `example`s on individual trees in Section301. Cycle 256
-shipped `bseriesAlphaPartialSum` but no example currently consumes it
-at orders > 2.
+5. **Cycle 260 entry-point recommendation.** Either:
+   - (a) Start with `def:300C` (labelled-tree quotient scaffolding),
+     or
+   - (b) Pivot to a fresh entity (`lem:342A`/`lem:342B`/`thm:351B`/
+     `thm:317A`) and defer `lem:310B` until the labelled-tree
+     infrastructure is naturally pulled in. For each pivot candidate,
+     quote one sentence from its JSON entity file showing why it
+     doesn't depend on `lem:310B` (or admit it does).
 
-Add **one** axiom-clean `example` (in Section301 or Section311 —
-worker's choice based on imports) showing that
-`bseriesAlphaPartialSum f y₀ h S` at `S := {vertex, cherry, broom₃}`
-equals the explicit cubic expansion. The α-values for these three trees
-are all 1 (cycle 251 witnesses), so the partial sum simplifies to
-`bseriesAlphaTerm f y₀ h vertex + bseriesAlphaTerm f y₀ h cherry
-+ bseriesAlphaTerm f y₀ h broom₃`. Close via
-`bseriesAlphaPartialSum_insert` × 2 + `bseriesAlphaPartialSum_empty`
-+ `ring`.
+Keep it under 400 LOC of markdown. **Do not write Lean code for P2.**
 
-**Do NOT** attempt a labelled-tree-counted summation — that is the
-`lem:310B` content and is multi-cycle blocked.
+## What NOT to do this cycle
 
-**Do NOT** attempt to connect this partial sum to
-`lem_311A_order_three`'s Taylor residual — the bridge requires
-`F(t)(y₀)` evaluation lemmas at `cherry` and `broom₃`, which is
-cycle 259+ infrastructure (each tree's `F`-value needs to match a
-specific composition of `f`/`f'`/`f''` evaluated at `y₀`, and the
-matching is `lem:310B`-flavoured).
+- **Do NOT use the cycle 258 worker's "1, 11, 7, 26, 1" coefficient
+  hint.** Use the verified "1, 7, 4, 11, 1" coefficients from P1's
+  §"Verified Bell coefficients" subsection.
+- **Do NOT attempt `lem_311A_order_six` or higher.** The chain
+  terminates at order 5 by deliberate cutoff.
+- **Do NOT attempt full `lem:310B` Lean code this cycle.** P2 is
+  markdown-only scoping; commit to the labelled-tree infrastructure
+  build only after cycle 260's planner picks it as the target.
+- **Do NOT introduce sorries** anywhere in the codebase. CLAUDE.md
+  forbids; precedent cycles 138/149/200/201 all rolled back sorry-first
+  scaffolds. If `lem_311A_order_five` doesn't close cleanly within
+  budget, revert and ship P2 only.
+- **Do NOT compile `OpenMath/Chapter4/Section441.lean`.** 43 consecutive
+  GPFS timeouts (cycles 182–239). See
+  `.prover-state/issues/cycle_182_gpfs_slowness.md`.
+- **Do NOT attempt the `Equivalent → PhiEquivalent` bridge** for
+  `thm:381H` — still multi-cycle Banach-machinery work per
+  `.prover-state/issues/thm_381H_deferred.md`.
+- **Do NOT raise `maxHeartbeats` above 200000.** If a `ring` or
+  `taylor_isLittleO` step overflows, decompose via private helpers
+  (cycle 150 / cycle 158 / cycle 160 precedent).
+- **Do NOT edit `scripts/autonomous_loop.py`.** Tautology-scanner
+  false positives are loop-maintainer territory; see
+  `.prover-state/issues/tautology_scanner_false_positives.md`.
+- **Do NOT generalise** `lem_311A_order_five` to `N : Type*` with
+  `[NormedAddCommGroup N] [NormedSpace ℝ N]`. Cycles 257/258 stayed
+  scalar `ℝ → ℝ`; maintain the convention.
+- **Do NOT touch cycle 258's `lem_311A_order_four` or
+  `iteratedDeriv_four_via_ode`.** They are axiom-clean and load-bearing
+  for cycle 259's `hderiv4_x0` reference inside the new helper.
+- **Do NOT submit `lem_311A_order_five` to Aristotle.** The mechanical
+  port pattern is well-established (4 consecutive single-cycle ships);
+  Aristotle latency would slow rather than help.
 
-## E. P3 (do NOT attempt) — explicit non-targets
+## Verification checklist (post-edit, before commit)
 
-* Do **not** attempt `lem:312B` or `lem:313A`. Both depend on
-  `lem:310B`; their textbook proofs route through Lemma 310B
-  explicitly. Surface-level reformulations would be definition
-  smuggling.
-* Do **not** attempt `lem:310B` in any form (general or small-`r`).
-  Per `extraction/raw_text/ch03.txt` and cycle 254's strategy, the
-  LHS requires labelled rooted-tree quotient infrastructure
-  (`def:300C`) not built; ~5–8 cycles total.
-* Do **not** attempt the polymorphic refactor of the
-  `lem_311A_order_one/two/three/four` family. The
-  `iteratedDeriv` → `iteratedFDeriv` bridge is genuinely multi-cycle
-  and the `ContinuousMultilinearMap` plumbing is heavy. Single-cycle
-  attempts will stall.
-* Do **not** compile `OpenMath/Chapter4/Section441.lean`. Per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`, 43+ consecutive
-  GPFS timeouts. Skip the smoke test entirely; cycle 258 has no
-  §441 deliverable.
-* Do **not** introduce new sorries. Sorry count must remain 0
-  (cycle 200/201 rollback precedent — sorry-first scaffolds without
-  a credible single-cycle close are rejected by the supervisor).
-* Do **not** raise `maxHeartbeats`. If `ring` stalls at degree 5,
-  decompose by adding an intermediate `hT_eval_step` lemma to split
-  the long `simp only` chain in `hT_eval`.
-* Do **not** edit `scripts/autonomous_loop.py` (tautology scanner
-  false-positive bug remains loop-maintainer territory per
-  `.prover-state/issues/tautology_scanner_false_positives.md`).
+1. `lake env lean OpenMath/Chapter3/Section311.lean` — exit 0.
+2. `lake env lean OpenMath/Chapter3.lean` (aggregator) — exit 0.
+3. `lake build OpenMath.Chapter3.Section311` — exit 0 (refresh `.olean`).
+4. `grep -c sorry OpenMath/Chapter3/Section311.lean` — `0`.
+5. `#print axioms OpenMath.Chapter3.Section311.lem_311A_order_five`
+   → `[propext, Classical.choice, Quot.sound]` only.
+6. `#print axioms OpenMath.Chapter3.Section311.lem_311A_order_four`
+   unchanged from cycle 258 (`[propext, Classical.choice, Quot.sound]`).
+7. Tautology scanner regex
+   `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$` on
+   `OpenMath/Chapter3/Section311.lean` — no matches.
+8. Non-vacuity `example` for `lem_311A_order_five` compiles.
 
-## F. Faithfulness rules
+## Faithfulness notes
 
-For `lem_311A_order_four`:
+`lem_311A_order_five` is the **fifth specialisation** in the
+order-N partial-formalisation chain of `lem:311A`. The full textbook
+statement (labelled-tree quotient `T_S^*` indexed sum, see
+`entities/lem_311A.json`) remains unformalized — multi-cycle scope
+gated on `def:300C`. Cycle 259's deliverable captures the
+order-5 Taylor-polynomial *consequence* of `lem:311A` along
+autonomous ODE `y' = f(y)`, exactly as cycles 248/256/257/258 did
+for orders 1/2/3/4.
 
-* Entity ID: `lem:311A` (continues the partial-formalisation chain
-  documented in `plan.md`).
-* Faithfulness divergences inherited from cycles 248/256/257:
-  - `ℝ → ℝ` scalar form (vs textbook's polymorphic `N`-valued).
-  - Closed-form chain-rule expression (vs textbook's elementary-
-    differential notation `F(τ)`, `F([τ])`, etc.). At orders 1–4,
-    each elementary differential term `F(t)(y₀)` corresponds 1:1 to
-    a specific composition of `f`, `f'`, `f''`, `f'''` evaluated at
-    `y₀`.
-* `lean_status.json` row for `lem:311A` stays `unformalized` per
-  cycles 248/256/257 convention. Only Taylor specialisations are
-  shipped; full combinatorial labelling content (`def:300C` +
-  `T_S^*` enumeration) remains absent.
+`lean_status.json` row for `lem:311A` stays `unformalized` per the
+cycle 248 convention. Update only the cycle 259 progress note in
+`plan.md` (mention `lem_311A_order_five` shipped, sextic-residual
+`O(h⁶)` bound, completing the deliberate-cutoff order-N chain).
 
-For `iteratedDeriv_four_via_ode`:
-* Private helper. No textbook entity. No status update needed.
-* `ContDiff ℝ 3 f` and `ContDiff ℝ 5 yex` are the minimum
-  regularity (one more order of each than cycle 257). Document in
-  docstring.
+The private helper `iteratedDeriv_five_via_ode` carries no entity
+ID and needs no `lean_status` update; it's downstream infrastructure
+for the main theorem.
 
-## G. Mandatory pre-commit checks
+## End-of-cycle checklist
 
-After writing the proofs, run:
-
-1. `lake env lean OpenMath/Chapter3/Section311.lean` — must exit 0
-   (clean compile of the affected file).
-2. `lake env lean OpenMath/Chapter3.lean` — must exit 0 (aggregator
-   build, catches downstream breakage).
-3. `grep -c sorry OpenMath/Chapter3/Section311.lean` — must equal 0.
-4. `#print axioms` on `lem_311A_order_four` and
-   `iteratedDeriv_four_via_ode` — must return
-   `[propext, Classical.choice, Quot.sound]` only (no `sorryAx`).
-5. Tautology scanner regex check via Grep:
-   pattern `:=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$`
-   on `OpenMath/Chapter3/Section311.lean` — must return no matches.
-6. Regression-check cycle 257's `lem_311A_order_three` axiom-clean
-   status (`#print axioms`) — should be unchanged.
-7. Update `.prover-state/task_results/cycle_258.md` with full
-   deliverable record per the §"Task Results Format" template in
-   CLAUDE.md.
-
-## H. Risk register
-
-* **R1 (medium)**: `iteratedDeriv_four_via_ode`'s differentiability
-  obligations may not match Mathlib's API surface exactly.
-  Mitigation: early in the cycle, search via
-  `lean_loogle "ContDiff _ 3 _ → Differentiable _ (deriv (deriv _))"`
-  and `lean_hover_info` on candidate names; if the convenient API
-  isn't there, fall back to chaining manual
-  `hf_C3.differentiable_one` / `(hf_C3.deriv_of_lt 3 …).differentiable`
-  calls. Worst case ~30 LOC of explicit differentiability plumbing.
-* **R2 (low)**: `deriv_mul` on a sum-of-two-products may require
-  explicit `Differentiable.add` plumbing before `deriv_mul` fires.
-  Mitigation: introduce intermediate `have hsum_diff : Differentiable
-  ℝ (fun x => ...) := Differentiable.add ...` step.
-* **R3 (low)**: `hT_eval`'s `ring` step at degree 5 may be slow.
-  Mitigation: if `ring` stalls past 30 seconds, factor the closed
-  form into a `show` step that pre-computes the polynomial in
-  `hT_eval`'s body and use `linarith`/`field_simp` instead. If still
-  too slow, split `hT_eval` into two halves (degree-3 partial +
-  degree-4/5 correction).
-* **R4 (low)**: tautology-scanner false-positive flag on bindings
-  like `hderiv4_x0 := iteratedDeriv_four_via_ode ...`. Mitigation:
-  name the binding `hderiv4_x0` WITHOUT a leading underscore
-  (cycle 257 used `hderiv1_x0`, `hderiv2_x0`, `hderiv3_x0` — same
-  pattern); if the scanner still flags it, switch to
-  `have hderiv4 := ...` followed by `set hderiv4_x0 := hderiv4` or
-  inline the expression at the use site.
-
-## I. Cycle 259+ outlook
-
-After cycle 258 closes (whether shipping P1 alone or P1 + P2), three
-viable next moves:
-
-1. **Order-5 Taylor** — continues the chain. The order-5 chain rule
-   has a 5-term Bell-style expansion; one more layer of mechanical
-   work. Diminishing returns are now genuinely real beyond order 5.
-2. **Plan a multi-cycle assault on `lem:310B` infrastructure** — scope
-   the labelled rooted-tree machinery (`def:300C`-like vertex set
-   indexing) in a new issue file first; commit to a 5–8 cycle plan
-   before writing code. This is the highest-leverage long-term move.
-3. **Pivot to a §3 entity independent of `lem:310B`**. Candidates
-   (verify entity JSONs first):
-   - `thm:351B` (A-stability criterion for RK methods).
-   - `lem:342A` / `lem:342B` (Gaussian quadrature; check whether
-     they need `def:310A` machinery).
-   - `thm:317A` (Independence of elementary weights) — likely
-     `lem:310B`-blocked, verify.
-
-Cycle 258's planner can pick freely from these. Order-4 should be
-shipped clean before any planning pivot is committed.
-
-## J. Decisive directive
-
-**Ship `lem_311A_order_four` + `iteratedDeriv_four_via_ode` in
-`OpenMath/Chapter3/Section311.lean` axiom-clean, sorry count 0.**
-P2 (Table 310(II) order-3 partial-sum witness) is optional; skip if
-budget is tight. P3 targets are off-limits.
+- `lem_311A_order_five` shipped axiom-clean (P1).
+- `iteratedDeriv_five_via_ode` private helper landed.
+- Non-vacuity `example` in place.
+- `plan.md` `lem:311A` row note bumped to cycle 259 (mentioning
+  the deliberate stop at order 5).
+- (P2 stretch, if landed) `.prover-state/issues/lem_310B_plan.md`
+  created with phased multi-cycle scoping.
+- `.prover-state/task_results/cycle_259.md` documenting:
+  - What was tried.
+  - What worked / failed.
+  - Faithfulness check on `lem_311A_order_five` and
+    `iteratedDeriv_five_via_ode`.
+  - Dead ends (if any).
+  - Discovery (e.g. confirmation of Bell coefficients 1/7/4/11/1
+    — flag the cycle 258 task-results hint as wrong).
+  - Suggested cycle 260 approach (pivot decision: lem:310B
+    infrastructure vs fresh entity).
+- Sorry count repo-wide remains 0.
+- Commit message format: `Cycle 259 — §311 lem_311A_order_five
+  + iteratedDeriv_five_via_ode SHIPPED.`
