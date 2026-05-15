@@ -1,265 +1,294 @@
-# Cycle 290 Strategy — Phase A.1 (b) for lem:342A (342f) manual closure
+# Cycle 291 Strategy
 
-## A. Target
+## TL;DR
 
-**Phase A.1 (b)** of the lem:342A (342f) manual closure plan:
-`recurrence_residual_natDegree_lt`. Cycle 289 shipped the binomial
-helper `n_mul_choose_two_n_n_eq` (axiom-clean, 80 LOC) and explicitly
-deferred (b) per LOC budget. Cycle 290's job is to ship (b) and
-consume the cycle 289 helper.
+Ship **Phase A.2 starter lemmas** for the cycle 289 manual closure
+plan of `lem:342A` (342f): the two **easy** orthogonality components
+F.1 and F.2 identified in cycle 290's task-results "Suggested next
+approach". Both follow directly from cycle 277's
+`butcherShiftedLegendre_orthogonal` plus scalar/constant pull-out
+through `intervalIntegral.integral_const_mul`.
 
-Reference: `.prover-state/issues/lem_342A_342f_manual_closure_plan.md`
-§5 Phase A.1, and the cycle 289 task results' "Suggested next
-approach" section (verbatim deliverable spec).
+**Do NOT attempt the hard cross-term** `⟨(2n - 1) · (2X - 1) · P_{n-1},
+P_k⟩ = 0` this cycle — it requires the `2X - 1 = P_1^*` substitution
+plus a basis-expansion argument. Defer to cycle 292.
 
-## B. Statement to ship
+**Do NOT poll/resubmit Aristotle** — cycle 289 closed the door on
+search-based closure of (342f) after the third 20% stall on
+`efe4940e`. The manual closure path (Phase A.1 → A.2 → A.3 → final
+combination) is on track; stay disciplined.
 
-In `OpenMath/Chapter3/Section342.lean`, immediately after the cycle
-289 `n_mul_choose_two_n_n_eq` helper:
+## Context
+
+Cycle 290 successfully shipped **Phase A.1 (b)** —
+`recurrence_residual_natDegree_lt` — axiom-clean in ~140 LOC. The
+phase plan in `.prover-state/issues/lem_342A_342f_manual_closure_plan.md`
+§5 now has these checkpoints:
+
+- ✅ Phase A.1 (a): `n_mul_choose_two_n_n_eq` (cycle 289).
+- ✅ Phase A.1 (b): `recurrence_residual_natDegree_lt` (cycle 290).
+- ⏳ Phase A.2: orthogonality `⟨Q, P_k^*⟩ = 0` for `k ≤ n - 2`.
+- ⏳ Phase A.3: basis-span conclusion `Q = 0`.
+- ⏳ Final: close (342f) general + `lean_status.json` bump.
+
+Phase A.2 has three components per the issue file §5:
+1. **(F.1)** `⟨(n : ℝ) • P_n, P_k⟩ = 0` for `k < n` — direct from (342a).
+2. **(F.2)** `⟨C((n - 1):ℝ) · P_{n-2}, P_k⟩ = 0` for `k ≤ n - 3` — direct from (342a) since `k ≠ n - 2`.
+3. **(F.3)** `⟨(2n - 1) · (2X - 1) · P_{n-1}, P_k⟩ = 0` for `k ≤ n - 3` — harder; requires `2X - 1 = P_1^*` (cycle 273's `butcherShiftedLegendre_one`) + basis expansion.
+
+Cycle 291 targets **F.1 and F.2 only**. F.3 deferred to cycle 292.
+
+## What to do this cycle
+
+### Step 0 (preflight, 5 min) — verify `butcherShiftedLegendre_orthogonal` signature
+
+Before writing any code, confirm the exact signature of cycle 277's
+orthogonality theorem. Use `Grep` on `OpenMath/Chapter3/Section342.lean`
+for `butcherShiftedLegendre_orthogonal` and read the declaration. Key
+things to confirm:
+
+- Argument order: is it `(hmn : m ≠ n)` or `(hmn : n ≠ m)`?
+- Integrand order: is it `P_m.eval x * P_n.eval x` or vice versa?
+- Integration variable: is it `(0:ℝ)..1` or `0..(1:ℝ)`?
+
+Adjust the recipes below to match. The arguments matter for the
+final `rw` step.
+
+### Priority 1 (P1, must ship) — `recurrence_residual_orthogonal_first_term`
+
+Location: `OpenMath/Chapter3/Section342.lean`, immediately after
+`recurrence_residual_natDegree_lt` (around line ~2800).
+
+Target signature (adjust integrand order to match Step 0's findings):
 
 ```lean
-theorem recurrence_residual_natDegree_lt (n : ℕ) (hn : 2 ≤ n) :
-    ((n : ℝ) • butcherShiftedLegendre n
-      - Polynomial.C ((2 * n - 1 : ℕ) : ℝ)
-        * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
-        * butcherShiftedLegendre (n - 1)
-      + Polynomial.C ((n - 1 : ℕ) : ℝ)
-        * butcherShiftedLegendre (n - 2)).natDegree < n
+/-- **Phase A.2 (F.1) — orthogonality of `(n : ℝ) • P_n^*` against
+`P_k^*` for `k < n`.** Direct from cycle 277's
+`butcherShiftedLegendre_orthogonal` via scalar pull-out. The first
+summand of the cycle 290 recurrence residual is orthogonal to
+`P_k^*` for every `k < n`. -/
+theorem recurrence_residual_orthogonal_first_term (n : ℕ) (hn : 1 ≤ n)
+    {k : ℕ} (hk : k < n) :
+    ∫ x in (0:ℝ)..1, ((n : ℝ) • butcherShiftedLegendre n).eval x *
+                       (butcherShiftedLegendre k).eval x = 0 := by
+  sorry  -- close manually; do NOT submit to Aristotle
 ```
 
-This is the textbook statement that `Q := n·P_n^* − (2n-1)·(2X-1)·
-P_{n-1}^* + (n-1)·P_{n-2}^*` has `natDegree < n` (Butcher §342 p. 236).
+**Expected LOC: ~15.** Tactic recipe:
 
-## C. Decomposition plan (8 sub-steps, ~100-150 LOC)
-
-Per the cycle 289 task results, the proof decomposes into:
-
-1. **`linearFactor_natDegree`** (private): `(C 2 * X - C 1).natDegree = 1`.
-   `Polynomial.natDegree_X_sub_C` doesn't fire directly because of
-   the leading `C 2`. Approach: compute via
-   `Polynomial.natDegree_sub_eq_left_of_natDegree_lt` after noting
-   `(C 1).natDegree = 0 < (C 2 * X).natDegree = 1`. Alternatively
-   `compute_degree!` tactic.
-
-2. **`linearFactor_leadingCoeff`** (private): `(C 2 * X - C 1).leadingCoeff = 2`.
-   Via `Polynomial.leadingCoeff_X_pow_add_C` family, or direct
-   computation: `leadingCoeff_sub_of_natDegree_lt` plus
-   `Polynomial.leadingCoeff_C_mul_X`.
-
-3. **B-side natDegree and leadingCoeff** (private): for
-   `B := C β * (C 2 * X - C 1) * P_{n-1}` where
-   `β := ((2*n - 1 : ℕ) : ℝ)`:
-   - `B.natDegree = n`: via `Polynomial.natDegree_mul` (needs
-     non-zero factors over `NoZeroDivisors ℝ`). Use
-     `Polynomial.natDegree_C_mul_of_isUnit` for the `C β *` peel
-     (need `β ≠ 0`, i.e. `(2*n - 1 : ℝ) ≠ 0` from `hn`).
-   - `B.leadingCoeff = β * 2 * C(2(n-1), n-1)`: via
-     `Polynomial.leadingCoeff_mul` (`R = ℝ` is integral domain).
-
-4. **A-side natDegree and leadingCoeff** (private): for
-   `A := (n : ℝ) • P_n`:
-   - `A.natDegree = n` via `Polynomial.natDegree_smul` (need
-     `(n : ℝ) ≠ 0` from `hn`).
-   - `A.leadingCoeff = n * C(2n, n)` via `Polynomial.leadingCoeff_smul`
-     + cycle 281's `butcherShiftedLegendre_leadingCoeff`.
-
-5. **Leading-coefficient equality** (key step): use cycle 289's
-   `n_mul_choose_two_n_n_eq` to show `A.leadingCoeff = B.leadingCoeff`.
-   The identity from cycle 289:
-   `n · C(2n, n) = 2 · (2n − 1) · C(2n − 2, n − 1)`.
-
-6. **Apply `Polynomial.degree_sub_lt`**: with `A.degree = B.degree = n`,
-   `A.leadingCoeff = B.leadingCoeff`, and `A ≠ 0` (since leading
-   coefficient `n * C(2n, n) > 0`), conclude `(A - B).degree < n`.
-   Bridge `degree` → `natDegree` via
-   `Polynomial.natDegree_lt_iff_degree_lt` plus `(A - B) ≠ 0` handling.
-
-7. **C-side bound** (private): for
-   `Cterm := Polynomial.C ((n - 1 : ℕ) : ℝ) * P_{n-2}`:
-   `Cterm.natDegree ≤ n - 2 < n`. Use `Polynomial.natDegree_C_mul_le`
-   + `butcherShiftedLegendre_natDegree (n - 2) = n - 2`.
-
-8. **Combine via `Polynomial.natDegree_add_le`**: `(A - B + Cterm).natDegree
-   ≤ max ((A - B).natDegree) (Cterm.natDegree) < n` via `Nat.max_lt`
-   on (6)'s `< n` and (7)'s `< n`.
-
-## D. Tactical guidance
-
-### D.1 Nat-subtraction handling
-
-The hypotheses mix `Nat.sub` (`2*n - 1`, `n - 1`, `n - 2`) with real
-arithmetic. Bridges already used in cycle 289's helper:
-```
-h_2n_minus_1_real : ((2*n - 1 : ℕ) : ℝ) = 2 * (n : ℝ) - 1
-h_n_minus_1_real  : ((n - 1 : ℕ) : ℝ) = (n : ℝ) - 1
-```
-proved via `Nat.cast_sub` + `push_cast` + `ring` (requires `1 ≤ n`
-and `1 ≤ 2*n` from `hn : 2 ≤ n`).
-
-Reuse the same pattern. For `n - 2`, you'll need `2 ≤ n` for
-`Nat.cast_sub` (already from `hn`).
-
-### D.2 Use `compute_degree!` aggressively
-
-The piecewise degree-computation steps (1, 2, 3, 4) are exactly what
-`compute_degree!` was designed for. Try it first on each before
-falling back to manual `natDegree_*_le`/`natDegree_mul` rewriting.
-
-### D.3 `Polynomial.degree_sub_lt` signature
-
-Mathlib's signature (verify with `lean_hover_info` early):
-```
-theorem Polynomial.degree_sub_lt {p q : Polynomial R}
-    (hd : p.degree = q.degree)
-    (hp0 : p ≠ 0)
-    (hlc : p.leadingCoeff = q.leadingCoeff) :
-    (p - q).degree < p.degree
-```
-
-Apply with `p = (n : ℝ) • P_n` and `q = β * (2X - 1) * P_{n-1}`.
-Bridge `degree = n` to `natDegree = n` (since neither is zero) via
-`Polynomial.degree_eq_natDegree` after establishing non-zeroness.
-
-### D.4 Non-zero leading coefficient
-
-`butcherShiftedLegendre_leadingCoeff` gives `C(2n, n)` as the leading
-coefficient. Use `Nat.choose_pos` (lower bound `2n choose n ≥ 1`
-when `n ≤ 2n`, true from `hn`) to conclude `> 0`, hence `≠ 0`. Cast
-to `ℝ` via `Nat.cast_pos`.
-
-### D.5 LOC budget
-
-Target ~100-150 LOC total. If approaching 200 LOC, split the proof
-further: ship the per-step lemmas (1)-(7) as `private` declarations
-and let cycle 291 assemble (8). But ideally land all 8 steps in
-cycle 290.
-
-## E. What NOT to do
-
-### E.1 Do NOT re-submit (342f) to Aristotle.
-
-Cycles 282 (`c8b8f138`, stalled 12% over 3 cycles → cancelled) and
-285/287/288/289 (`efe4940e`, stalled 20% over 3 cycles → cancelled
-cycle 289) are dispositive. Two consecutive Aristotle attempts at
-(342f) at progressively-stronger axiomatizations have both failed.
-**Manual closure only.**
-
-### E.2 Do NOT extend the empirical ladder past `n = 11`.
-
-Cycles 282-288's ladder rungs at `n = 2..11` are sufficient evidence.
-Per cycle 285's protocol, further extension is not informative.
-
-### E.3 Do NOT attempt Möbius/Pascal alternatives.
-
-Cycle 273 documented those paths as too complex without (342a) in
-hand. With (342a)/(342d)/Rodrigues now all shipped, Path A
-(degree-bound + orthogonality basis) is the clean route.
-
-### E.4 Do NOT use `sorry`, `axiom`, or `constant`.
-
-Cycle 290's deliverable must be axiom-clean. The cycle 200/201
-rollback precedent applies.
-
-### E.5 Do NOT increase `maxHeartbeats` above 200000.
-
-If a sub-step blows past the default heartbeat count, decompose
-further into smaller private lemmas (cycle 150's `n=7` Section550
-precedent: factor matrix expansion into its own lemma if simp
-normalization is slow).
-
-### E.6 Do NOT touch §441.
-
-GPFS slowness persists (43+ consecutive timeouts since cycle 182).
-Skip per `.prover-state/issues/cycle_182_gpfs_slowness.md`.
-
-### E.7 Do NOT inline-prove the helper from cycle 289.
-
-`n_mul_choose_two_n_n_eq` is already shipped axiom-clean. Reference
-it directly via name; do not duplicate its proof.
-
-### E.8 Do NOT pivot to a fresh entity.
-
-The §342 (342f) closure is multi-cycle infrastructure work; cycle
-290 is committed to Phase A.1 (b). Cycle 291+ can decide whether
-to continue Phase A.2 immediately or pivot.
-
-## F. Stretch goal (only if A.1 (b) closes in under 100 LOC)
-
-Begin **Phase A.2** setup by shipping the easy orthogonality
-components:
-
-**(F.1)** `recurrence_residual_orthogonal_first_term`:
 ```lean
-theorem recurrence_residual_orthogonal_first_term
-    (n : ℕ) (hn : 2 ≤ n) {k : ℕ} (hk : k < n) :
-    ∫ x in (0 : ℝ)..1, ((n : ℝ) • butcherShiftedLegendre n).eval x
-        * (butcherShiftedLegendre k).eval x = 0
+  simp only [Polynomial.eval_smul, smul_eq_mul]
+  -- Goal: ∫ x in (0:ℝ)..1, (n : ℝ) * (P_n.eval x) * (P_k.eval x) = 0
+  rw [show (fun x : ℝ => (n : ℝ) * (butcherShiftedLegendre n).eval x *
+         (butcherShiftedLegendre k).eval x) =
+       (fun x : ℝ => (n : ℝ) * ((butcherShiftedLegendre n).eval x *
+         (butcherShiftedLegendre k).eval x)) from by funext x; ring]
+  rw [intervalIntegral.integral_const_mul]
+  rw [butcherShiftedLegendre_orthogonal hk.ne']
+  ring
 ```
-Direct from cycle 277's `butcherShiftedLegendre_orthogonal` + scalar
-factor. ~10-20 LOC.
 
-**(F.2)** `recurrence_residual_orthogonal_third_term`:
+**Notes**:
+- `hk.ne'` gives `n ≠ k` from `hk : k < n`. If
+  `butcherShiftedLegendre_orthogonal`'s argument order is reversed
+  (`(hmn : m ≠ n)` with integrand `P_m * P_n`), pass `hk.ne'` as is
+  or `hk.ne` (which gives `k ≠ n`).
+- `intervalIntegral.integral_const_mul` pulls a constant out:
+  `∫ x, c * f x = c * ∫ x, f x`. Verify the exact name; alternatives:
+  `intervalIntegral.integral_const_mul'`, `MeasureTheory.integral_const_mul`.
+- If the `show ... from by funext` rewrite is awkward, try
+  `simp_rw [mul_assoc]` first to associate the multiplication.
+
+### Priority 2 (P2, must ship) — `recurrence_residual_orthogonal_third_term`
+
+Location: immediately after P1.
+
+Target signature:
+
 ```lean
-theorem recurrence_residual_orthogonal_third_term
-    (n : ℕ) (hn : 2 ≤ n) {k : ℕ} (hk_le : k ≤ n - 3) :
-    ∫ x in (0 : ℝ)..1,
-        (Polynomial.C ((n - 1 : ℕ) : ℝ) * butcherShiftedLegendre (n - 2)).eval x
-        * (butcherShiftedLegendre k).eval x = 0
+/-- **Phase A.2 (F.2) — orthogonality of `C((n - 1):ℝ) · P_{n-2}^*`
+against `P_k^*` for `k ≤ n - 3`.** Direct from cycle 277's
+`butcherShiftedLegendre_orthogonal` since `k ≤ n - 3 < n - 2`, so
+`n - 2 ≠ k`. Constant pull-out via `Polynomial.eval_mul`,
+`Polynomial.eval_C`, and `intervalIntegral.integral_const_mul`. The
+third summand of the cycle 290 recurrence residual is orthogonal to
+`P_k^*` for every `k ≤ n - 3`. -/
+theorem recurrence_residual_orthogonal_third_term (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0:ℝ)..1, (Polynomial.C ((n - 1 : ℕ) : ℝ) *
+                       butcherShiftedLegendre (n - 2)).eval x *
+                       (butcherShiftedLegendre k).eval x = 0 := by
+  sorry
 ```
-Direct from `butcherShiftedLegendre_orthogonal` (since `k ≠ n - 2`
-for `k ≤ n - 3`). ~15-25 LOC.
 
-Save the cross-term `⟨(2n-1)·(2X-1)·P_{n-1}^*, P_k^*⟩ = 0` for cycle
-291 — that requires the `2X - 1 = -P_1^*` substitution plus a basis
-expansion argument.
+**Expected LOC: ~20.** Tactic recipe:
 
-**Do NOT attempt (F.1) and (F.2) if A.1 (b) is at all difficult.**
-The Priority 0 deliverable is A.1 (b); stretch is genuinely
-optional.
+```lean
+  simp only [Polynomial.eval_mul, Polynomial.eval_C]
+  -- Goal: ∫ x in (0:ℝ)..1, ((n-1 : ℕ) : ℝ) * P_{n-2}.eval x * P_k.eval x = 0
+  rw [show (fun x : ℝ => ((n - 1 : ℕ) : ℝ) *
+         (butcherShiftedLegendre (n - 2)).eval x *
+         (butcherShiftedLegendre k).eval x) =
+       (fun x : ℝ => ((n - 1 : ℕ) : ℝ) *
+         ((butcherShiftedLegendre (n - 2)).eval x *
+         (butcherShiftedLegendre k).eval x)) from by funext x; ring]
+  rw [intervalIntegral.integral_const_mul]
+  have h_ne : n - 2 ≠ k := by omega
+  rw [butcherShiftedLegendre_orthogonal h_ne]
+  ring
+```
 
-## G. Verification checklist
+**Critical**: the hypothesis pair `(hn : 3 ≤ n)` + `(hk : k ≤ n - 3)`
+forces `k ≤ n - 3 < n - 2` since `n - 2 = (n - 3) + 1 > n - 3 ≥ k`.
+`omega` should close `n - 2 ≠ k` directly given these.
 
-Before commit:
+If `butcherShiftedLegendre_orthogonal`'s argument order is
+`(hmn : k ≠ n - 2)`, swap to `h_ne.symm` or restate as
+`have h_ne : k ≠ n - 2 := by omega`.
 
-1. `lake env lean OpenMath/Chapter3/Section342.lean` exits 0.
-2. `lake env lean OpenMath/Chapter3.lean` exits 0.
-3. `grep -c sorry OpenMath/Chapter3/Section342.lean` → 0.
-4. `#print axioms OpenMath.Chapter3.Section342.recurrence_residual_natDegree_lt`
-   returns `[propext, Classical.choice, Quot.sound]` (no `sorryAx`).
-5. (If F.1/F.2 shipped) same axiom check on each.
+### Priority 3 (P3, optional stretch — only if P1+P2 close cleanly with ≥30 min cycle budget remaining)
 
-## H. Faithfulness
+Combined Phase A.2 partial statement establishing orthogonality of the
+first + third summands together, using `intervalIntegral.integral_add`:
 
-`recurrence_residual_natDegree_lt` is a *helper lemma* toward the
-(342f) closure, not a textbook entity in itself. Butcher §342 p. 236
-implicitly states this fact in the prose:
+```lean
+/-- **Partial Phase A.2** — combined orthogonality of the first and
+third summands of the cycle 290 recurrence residual against `P_k^*`
+for `k ≤ n - 3`. The second summand (cross-term involving
+`(2X - 1) · P_{n-1}`) is deferred to a separate cycle. -/
+theorem recurrence_residual_orthogonal_easy (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0:ℝ)..1, (((n : ℝ) • butcherShiftedLegendre n +
+                       Polynomial.C ((n - 1 : ℕ) : ℝ) *
+                       butcherShiftedLegendre (n - 2)).eval x) *
+                       (butcherShiftedLegendre k).eval x = 0 := by
+  sorry
+```
 
-> The highest degree coefficients in `P_n^*` and `P_{n-1}^*` can be
-> compared so that `n P_n^*(x) − (2x − 1)(2n − 1) P_{n-1}^*(x)` is a
-> polynomial, `Q` say, of degree less than `n`.
+**Expected LOC: ~15.** Recipe: `Polynomial.eval_add` + distribute over
+multiplication via `add_mul` + `intervalIntegral.integral_add` (needs
+integrability witnesses — `Continuous.intervalIntegrable` of a
+polynomial × polynomial product is automatic via
+`Polynomial.continuous.mul`) + apply P1 and P2. Skip if either P1 or
+P2 stalls.
 
-The Lean statement captures the same content via the explicit
-residual polynomial `Q`. The `(n - 1) · P_{n-2}^*` summand is added
-because we work with the full residual (LHS − RHS of the (342f)
-recurrence), not just the textbook's stated subtraction; this is a
-strict generalization (adding a known-low-degree polynomial cannot
-raise the bound above `n - 1`). The added `+ (n - 1) · P_{n-2}^*`
-term has `natDegree ≤ n - 2 < n`, so it does not affect the
-conclusion `< n`.
+Note: P3 needs `hk_strong : k < n` to invoke P1; this follows from
+`hn : 3 ≤ n` and `hk : k ≤ n - 3` via `omega` (`k ≤ n - 3 < n`).
 
-No faithfulness divergence from the textbook; this is helper
-infrastructure.
+### Priority 4 (P4, housekeeping — must do alongside P1/P2)
 
-## I. Cycle 291+ outlook
+Update `.prover-state/issues/lem_342A_342f_manual_closure_plan.md`
+with a "Cycle 291 update" subsection (mirror the cycle 289 / cycle 290
+update style at the end of the file):
 
-If cycle 290 ships A.1 (b) cleanly:
-- **Cycle 291**: Phase A.2 (orthogonality components). Start with
-  F.1/F.2 if not already shipped, then tackle the cross-term
-  `⟨(2X-1)·P_{n-1}^*, P_k^*⟩ = 0` for `k ≤ n - 3`.
-- **Cycle 292**: Phase A.3 (basis-span conclusion `Q = 0`).
-- **Cycle 293**: Final closure of (342f) general theorem + status
-  bump in `lean_status.json`.
+- Phase A.2 starter lemmas F.1 + F.2 shipped axiom-clean.
+- F.3 (cross-term) remains open; cycle 292+ target.
+- Phase A.3 (basis-span conclusion) remains open; cycle 293+ target.
+- LOC ladder so far: cycle 289 ~80 LOC; cycle 290 ~140 LOC;
+  cycle 291 ~35–50 LOC.
 
-Total ~4 cycles to close lem:342A (342f), bringing §342 to fully
-formalized except possibly (342g) `n` distinct real zeros (separate
-scoping in `lem_342A_g_zeros_scoping.md`).
+Do NOT update `lean_status.json` row for `lem:342A` — still `partial`,
+no entity-status change.
+
+Do NOT update `plan.md` row for `lem:342A` — already `[~]`. Append a
+brief cycle 291 note to the existing run of cycle-specific notes
+inline with the partial-status entry (mirror cycle 290's note shape).
+
+## What NOT to try
+
+These are explicitly out of scope; do not freelance them:
+
+1. **DO NOT submit (342f) to Aristotle.** Cycle 289 closed this door
+   after three consecutive 20% stalls on project `efe4940e` over
+   ~35 minutes (cycle 287 obs #1, 288 obs #2, 289 obs #3). Manual
+   closure per `lem_342A_342f_manual_closure_plan.md` only.
+
+2. **DO NOT attempt the F.3 cross-term** `⟨(2n - 1) · (2X - 1) · P_{n-1},
+   P_k⟩ = 0`. Per the issue file §5 and cycle 290 task results
+   §"Suggested next approach", this requires:
+   - Substituting `2X - 1` in terms of `P_1^*` (using cycle 273's
+     `butcherShiftedLegendre_one`).
+   - Expanding `P_1 · P_{n-1}` in the `{P_j^*}_{j=0..n}` basis.
+   - Fourier-coefficient symmetry argument:
+     `⟨P_1 P_{n-1}, P_j⟩ = ⟨P_{n-1}, P_1 P_j⟩` and `P_1 P_j` has
+     `natDegree = j + 1 ≤ n - 2`, so the inner product is zero by
+     orthogonality basis of `P_{n-1}` against `Polynomial.degreeLT ℝ (n - 1)`.
+   - This is ~100–150 LOC of dedicated work; **not a cycle 291 deliverable**.
+
+3. **DO NOT pursue parity-strengthened bounds.** The textbook uses
+   parity (342c) to tighten `natDegree Q < n` to `natDegree Q < n - 1`,
+   which would let Phase A.2 only need `k ≤ n - 3` instead of `k ≤ n - 2`.
+   This optimization is irrelevant for cycle 291's deliverables and
+   should be addressed (or skipped) in the Phase A.3 capstone.
+
+4. **DO NOT modify `butcherShiftedLegendre_orthogonal`** (cycle 277).
+   The cycle 277 deliverable is the load-bearing primitive for Phase
+   A.2. If the argument order `m ≠ n` is awkward, use `Ne.symm`,
+   `.ne'`, or `.ne` at the call site rather than rewriting the theorem.
+
+5. **DO NOT raise `maxHeartbeats` above 200000.** If a `simp` chain
+   stalls, decompose into smaller named lemmas. Cycle 290's approach
+   of using `set` aliases + `rw [hL_def]` for unfolding is the
+   canonical pattern.
+
+6. **DO NOT introduce `sorry`/`axiom`/`constant`.** Cycle 290's
+   deliverable bar applies: ship axiom-clean or skip the cycle.
+
+7. **DO NOT attempt `Section441.lean` compilation.** 43+ consecutive
+   GPFS timeouts since cycle 182. Per
+   `.prover-state/issues/cycle_182_gpfs_slowness.md`, skip any §441
+   compilation; only `Section441B.lean` (cycle 237 new file) is
+   healthy on this cluster.
+
+8. **DO NOT extend the n-ladder past n=11.** Cycle 288 already shipped
+   n=11; further empirical witnesses provide marginal value. The
+   focus is the general-case manual closure, not more concrete cases.
+
+## Verification checklist before commit
+
+After P1 and P2 land:
+
+```bash
+# 1. Single-file compile
+lake env lean OpenMath/Chapter3/Section342.lean    # expect exit 0
+
+# 2. Aggregator
+lake env lean OpenMath/Chapter3.lean               # expect exit 0
+
+# 3. Sorry count
+grep -c sorry OpenMath/Chapter3/Section342.lean    # expect 0
+
+# 4. Axiom-clean on both new theorems (via lean_verify MCP if available,
+#    or via #print axioms inside the file as a temporary check that
+#    is removed before commit)
+```
+
+Use the `mcp__lean-lsp__lean_verify` MCP tool to confirm each new
+theorem's axiom dependency is exactly `[propext, Classical.choice,
+Quot.sound]` (no `sorryAx`).
+
+## Suggested next-cycle planner action (cycle 292)
+
+Phase A.2 (F.3) cross-term `⟨(2n - 1) · (2X - 1) · P_{n-1}, P_k⟩ = 0`
+for `k ≤ n - 3`. Concrete tasks:
+
+1. Establish a helper bridging `C 2 * X - C 1 = butcherShiftedLegendre 1`
+   from cycle 273's `butcherShiftedLegendre_one` (should be a `rfl` or
+   one-line `simp` once the alias direction is matched).
+
+2. Show `⟨P_1 · P_{n-1}, P_k⟩ = 0` for `k ≤ n - 3` via the symmetry
+   `⟨P_1 P_{n-1}, P_k⟩ = ⟨P_{n-1}, P_1 P_k⟩` (commutativity of
+   multiplication inside the integrand) plus
+   `(P_1 * P_k).natDegree ≤ k + 1 ≤ n - 2 < n - 1`.
+
+3. The orthogonality of `P_{n-1}` against any polynomial of
+   `natDegree < n - 1` requires a span argument: any polynomial of
+   degree `< n - 1` lies in `Polynomial.degreeLT ℝ (n - 1)`, which is
+   spanned by `{P_0^*, ..., P_{n-2}^*}`. This is the **basis-span
+   lemma** that is also required by Phase A.3, so cycle 292 should
+   ship it as a reusable helper.
+
+LOC budget: ~100–150 LOC for F.3 + the basis-span helper.
+
+Phase A.3 (basis-span conclusion `Q = 0`) and the final (342f)
+closure remain for cycles 293+ per the issue file §5.

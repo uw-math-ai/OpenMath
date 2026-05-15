@@ -2796,4 +2796,77 @@ theorem recurrence_residual_natDegree_lt (n : ℕ) (hn : 2 ≤ n) :
         rw [Nat.max_lt]
         exact ⟨hAB_nd, hCterm_nd⟩
 
+/-! ### Phase A.2 starter lemmas — orthogonality of easy summands
+
+Cycle 291 ships the two easy components (F.1 and F.2) of Phase A.2 for
+the (342f) manual closure plan. Each reduces to (342a) orthogonality
+(`butcherShiftedLegendre_orthogonal`, cycle 277) via a constant
+pull-out through `intervalIntegral.integral_const_mul`. The hard
+cross-term `⟨(2n - 1) · (2X - 1) · P_{n-1}^*, P_k^*⟩ = 0` (F.3) is
+deferred to a later cycle since it requires the basis expansion of
+`P_1^* · P_{n-1}^*`. -/
+
+/-- **Phase A.2 (F.1) — orthogonality of `(n : ℝ) • P_n^*` against
+`P_k^*` for `k < n`.** Direct from cycle 277's
+`butcherShiftedLegendre_orthogonal` via scalar pull-out. The first
+summand of the cycle 290 recurrence residual is orthogonal to `P_k^*`
+for every `k < n`. -/
+theorem recurrence_residual_orthogonal_first_term (n : ℕ)
+    {k : ℕ} (hk : k < n) :
+    ∫ x in (0 : ℝ)..1, ((n : ℝ) • butcherShiftedLegendre n).eval x *
+                       (butcherShiftedLegendre k).eval x = 0 := by
+  simp only [Polynomial.eval_smul, smul_eq_mul]
+  simp_rw [mul_assoc]
+  rw [intervalIntegral.integral_const_mul,
+      butcherShiftedLegendre_orthogonal hk.ne', mul_zero]
+
+/-- **Phase A.2 (F.2) — orthogonality of `C((n - 1 : ℕ) : ℝ) · P_{n-2}^*`
+against `P_k^*` for `k ≤ n - 3`.** Direct from cycle 277's
+`butcherShiftedLegendre_orthogonal` since `k ≤ n - 3 < n - 2`, so
+`n - 2 ≠ k`. Constant pull-out via `Polynomial.eval_mul`,
+`Polynomial.eval_C`, and `intervalIntegral.integral_const_mul`. The
+third summand of the cycle 290 recurrence residual is orthogonal to
+`P_k^*` for every `k ≤ n - 3`. -/
+theorem recurrence_residual_orthogonal_third_term (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1, (Polynomial.C ((n - 1 : ℕ) : ℝ) *
+                       butcherShiftedLegendre (n - 2)).eval x *
+                       (butcherShiftedLegendre k).eval x = 0 := by
+  simp only [Polynomial.eval_mul, Polynomial.eval_C]
+  simp_rw [mul_assoc]
+  rw [intervalIntegral.integral_const_mul]
+  have h_ne : n - 2 ≠ k := by omega
+  rw [butcherShiftedLegendre_orthogonal h_ne, mul_zero]
+
+/-- **Partial Phase A.2** — combined orthogonality of the first and
+third summands of the cycle 290 recurrence residual against `P_k^*`
+for `k ≤ n - 3`. The second summand (cross-term involving
+`(2X - 1) · P_{n-1}^*`) is deferred to a separate cycle since it
+requires basis expansion via `2X - 1 = butcherShiftedLegendre 1`. -/
+theorem recurrence_residual_orthogonal_easy (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1, (((n : ℝ) • butcherShiftedLegendre n +
+                         Polynomial.C ((n - 1 : ℕ) : ℝ) *
+                         butcherShiftedLegendre (n - 2)).eval x) *
+                       (butcherShiftedLegendre k).eval x = 0 := by
+  have hk_lt : k < n := by omega
+  have hf_int : IntervalIntegrable
+      (fun x : ℝ => ((n : ℝ) • butcherShiftedLegendre n).eval x *
+                    (butcherShiftedLegendre k).eval x)
+      MeasureTheory.volume 0 1 :=
+    (((((n : ℝ) • butcherShiftedLegendre n)).continuous.mul
+      (butcherShiftedLegendre k).continuous).intervalIntegrable _ _)
+  have hg_int : IntervalIntegrable
+      (fun x : ℝ => (Polynomial.C ((n - 1 : ℕ) : ℝ) *
+                     butcherShiftedLegendre (n - 2)).eval x *
+                    (butcherShiftedLegendre k).eval x)
+      MeasureTheory.volume 0 1 :=
+    (((Polynomial.C ((n - 1 : ℕ) : ℝ) *
+        butcherShiftedLegendre (n - 2)).continuous.mul
+      (butcherShiftedLegendre k).continuous).intervalIntegrable _ _)
+  simp only [Polynomial.eval_add, add_mul]
+  rw [intervalIntegral.integral_add hf_int hg_int,
+      recurrence_residual_orthogonal_first_term n hk_lt,
+      recurrence_residual_orthogonal_third_term n hn hk, add_zero]
+
 end OpenMath.Chapter3.Section342

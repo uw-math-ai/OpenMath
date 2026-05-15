@@ -263,3 +263,78 @@ each as a private lemma if it doesn't condense to one or two `simp`
 lines. Target axiom-clean.
 
 After (b) lands, Phase A.2 setup is the next priority.
+
+### Cycle 290 update — Phase A.1 (b) SHIPPED
+
+Cycle 290 shipped `recurrence_residual_natDegree_lt` axiom-clean in
+~140 LOC (`Section342.lean:2667–2797`). The full residual
+`(n : ℝ) • P_n − C (2n - 1) (2X - 1) P_{n-1} + C (n - 1) P_{n-2}` has
+`natDegree < n`. Phase A.1 is now complete.
+
+### Cycle 291 update — Phase A.2 starter lemmas (F.1, F.2, easy
+combination) SHIPPED
+
+Cycle 291 shipped the two easy Phase A.2 orthogonality components
+plus their additive combination, axiom-clean:
+
+```lean
+theorem recurrence_residual_orthogonal_first_term (n : ℕ)
+    {k : ℕ} (hk : k < n) :
+    ∫ x in (0 : ℝ)..1, ((n : ℝ) • butcherShiftedLegendre n).eval x *
+                       (butcherShiftedLegendre k).eval x = 0
+
+theorem recurrence_residual_orthogonal_third_term (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1, (Polynomial.C ((n - 1 : ℕ) : ℝ) *
+                       butcherShiftedLegendre (n - 2)).eval x *
+                       (butcherShiftedLegendre k).eval x = 0
+
+theorem recurrence_residual_orthogonal_easy (n : ℕ) (hn : 3 ≤ n)
+    {k : ℕ} (hk : k ≤ n - 3) :
+    ∫ x in (0 : ℝ)..1, (((n : ℝ) • butcherShiftedLegendre n +
+                         Polynomial.C ((n - 1 : ℕ) : ℝ) *
+                         butcherShiftedLegendre (n - 2)).eval x) *
+                       (butcherShiftedLegendre k).eval x = 0
+```
+
+All three live at `Section342.lean:2800–`. Proofs route through
+`Polynomial.eval_smul` / `Polynomial.eval_mul` /
+`Polynomial.eval_add` + `add_mul` + `mul_assoc` re-association +
+`intervalIntegral.integral_const_mul` (constant pull-out) +
+`butcherShiftedLegendre_orthogonal` (cycle 277). The combined
+statement uses `intervalIntegral.integral_add` with integrability
+witnesses from `Polynomial.continuous _ |>.mul (Polynomial.continuous _)
+|>.intervalIntegrable`. ~50 LOC total (well under the F.1 + F.2 budget
+estimate). The strategy's optional P3 deliverable was shipped because
+P1 and P2 closed in one pass.
+
+Total LOC ladder so far: cycle 289 ~80 LOC; cycle 290 ~140 LOC;
+cycle 291 ~50 LOC. Combined Phase A.1 + Phase A.2 (easy) ~270 LOC.
+
+F.3 (cross-term `⟨(2n - 1) · (2X - 1) · P_{n-1}^*, P_k^*⟩ = 0` for
+`k ≤ n - 3`) remains open and is the next planner deliverable per
+the cycle 292 entry point below.
+
+### Cycle 292 entry point
+
+Phase A.2 F.3: `(2n - 1) · (2X - 1) · P_{n-1}^*` orthogonal to
+`P_k^*` for `k ≤ n - 3`. Concrete plan:
+
+1. Establish `2X - 1 = butcherShiftedLegendre 1` (or `= -P_1^*`,
+   depending on sign convention) — bridge via cycle 273's
+   `butcherShiftedLegendre_one`. One-line lemma.
+2. Reduce the integrand to `c · P_1^* · P_{n-1}^* · P_k^*` and use
+   the inner-product symmetry: `⟨P_1 P_{n-1}, P_k⟩ = ⟨P_{n-1}, P_1
+   P_k⟩` (commutativity of `*` in the integrand). Then
+   `(P_1 · P_k).natDegree ≤ k + 1 ≤ n - 2 < n - 1`.
+3. Show `P_{n-1}^*` is orthogonal to every polynomial of natDegree
+   `< n - 1`. This is the **basis-span lemma** which also unlocks
+   Phase A.3; ship it as a reusable helper.
+
+Budget: ~100–150 LOC for F.3 + basis-span helper.
+
+### Phase A.3 entry point (cycle 293+)
+
+Once F.3 lands, Phase A.3 combines `natDegree Q < n` (cycle 290) +
+orthogonality of `Q` to `P_k^*` for `k ≤ n - 2` (cycles 291–292) +
+the basis-span lemma to conclude `Q = 0`, i.e. (342f) general.
