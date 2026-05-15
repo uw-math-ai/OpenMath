@@ -4195,4 +4195,347 @@ theorem butcherShiftedLegendre_seven_roots :
     obtain ⟨hgt, hlt⟩ := hr₇_mem
     exact ⟨by linarith, hlt⟩
 
+/-- (342g) at `n = 9` — empirical anchor: `P_9^*` has nine distinct real zeros in
+the open interval `(0, 1)`. Strictly weaker than the general (342g) statement
+(`∀ n`, currently held by Aristotle project
+`5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`), but axiom-clean and unconditional.
+
+Mechanical extension of cycle 297's `butcherShiftedLegendre_seven_roots` recipe
+to nine roots, using cycle 285's closed form `butcherShiftedLegendre_nine` and
+cycle 295's parity helper `butcherShiftedLegendre_eval_half_eq_zero_of_odd`
+witnessed by `9 = 2*4 + 1` (i.e. `⟨4, rfl⟩`).
+
+Bracket plan (each endpoint sign hand-verified via Python `Fraction` before
+writing):
+* `r₁ ∈ (0, 1/20)`         ascending  — `P(0) = -1`, `P(1/20) = 9459468441/25600000000`
+* `r₂ ∈ (1/20, 1/8)`       descending — `P(1/8) = -(10413009/33554432)`
+* `r₃ ∈ (1/8, 1/4)`        ascending  — `P(1/4) = 17557/65536`
+* `r₄ ∈ (1/4, 2/5)`        descending — `P(2/5) = -(96077/390625)`
+* `r₅ = 1/2`               parity     — odd-degree forces `P(1/2) = 0`
+* `r₆ ∈ (3/5, 3/4)`        descending — parity-mirror of (1/4, 2/5)
+* `r₇ ∈ (3/4, 7/8)`        ascending  — parity-mirror of (1/8, 1/4)
+* `r₈ ∈ (7/8, 19/20)`      descending — parity-mirror of (1/20, 1/8)
+* `r₉ ∈ (19/20, 1)`        ascending  — parity-mirror of (0, 1/20)
+
+Distinctness (36 pairs) follows from the strict ordering of the brackets:
+`(0, 1/20) < (1/20, 1/8) < (1/8, 1/4) < (1/4, 2/5) < {1/2} < (3/5, 3/4) <
+ (3/4, 7/8) < (7/8, 19/20) < (19/20, 1)`. -/
+theorem butcherShiftedLegendre_nine_roots :
+    ∃ r₁ r₂ r₃ r₄ r₅ r₆ r₇ r₈ r₉ : ℝ,
+      r₁ ≠ r₂ ∧ r₁ ≠ r₃ ∧ r₁ ≠ r₄ ∧ r₁ ≠ r₅ ∧ r₁ ≠ r₆ ∧ r₁ ≠ r₇ ∧
+        r₁ ≠ r₈ ∧ r₁ ≠ r₉ ∧
+      r₂ ≠ r₃ ∧ r₂ ≠ r₄ ∧ r₂ ≠ r₅ ∧ r₂ ≠ r₆ ∧ r₂ ≠ r₇ ∧ r₂ ≠ r₈ ∧ r₂ ≠ r₉ ∧
+      r₃ ≠ r₄ ∧ r₃ ≠ r₅ ∧ r₃ ≠ r₆ ∧ r₃ ≠ r₇ ∧ r₃ ≠ r₈ ∧ r₃ ≠ r₉ ∧
+      r₄ ≠ r₅ ∧ r₄ ≠ r₆ ∧ r₄ ≠ r₇ ∧ r₄ ≠ r₈ ∧ r₄ ≠ r₉ ∧
+      r₅ ≠ r₆ ∧ r₅ ≠ r₇ ∧ r₅ ≠ r₈ ∧ r₅ ≠ r₉ ∧
+      r₆ ≠ r₇ ∧ r₆ ≠ r₈ ∧ r₆ ≠ r₉ ∧
+      r₇ ≠ r₈ ∧ r₇ ≠ r₉ ∧
+      r₈ ≠ r₉ ∧
+      r₁ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₂ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₃ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₄ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₅ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₆ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₇ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₈ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      r₉ ∈ Set.Ioo (0 : ℝ) 1 ∧
+      (butcherShiftedLegendre 9).eval r₁ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₂ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₃ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₄ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₅ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₆ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₇ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₈ = 0 ∧
+      (butcherShiftedLegendre 9).eval r₉ = 0 := by
+  have hP9 := butcherShiftedLegendre_nine
+  have hcont : Continuous (fun x : ℝ => (butcherShiftedLegendre 9).eval x) :=
+    (butcherShiftedLegendre 9).continuous
+  -- Ten key evaluations of `P_9^*`.
+  have hf_0 : (butcherShiftedLegendre 9).eval (0 : ℝ) = -1 := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+  have hf_1 : (butcherShiftedLegendre 9).eval (1 : ℝ) = 1 := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_twentieth :
+      (butcherShiftedLegendre 9).eval (1 / 20 : ℝ) =
+        9459468441 / 25600000000 := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_eighth :
+      (butcherShiftedLegendre 9).eval (1 / 8 : ℝ) =
+        -(10413009 / 33554432) := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_one_fourth :
+      (butcherShiftedLegendre 9).eval (1 / 4 : ℝ) = 17557 / 65536 := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_two_fifths :
+      (butcherShiftedLegendre 9).eval (2 / 5 : ℝ) = -(96077 / 390625) := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_three_fifths :
+      (butcherShiftedLegendre 9).eval (3 / 5 : ℝ) = 96077 / 390625 := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_three_fourths :
+      (butcherShiftedLegendre 9).eval (3 / 4 : ℝ) = -(17557 / 65536) := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_seven_eighths :
+      (butcherShiftedLegendre 9).eval (7 / 8 : ℝ) = 10413009 / 33554432 := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_nineteen_twentieths :
+      (butcherShiftedLegendre 9).eval (19 / 20 : ℝ) =
+        -(9459468441 / 25600000000) := by
+    rw [hP9]
+    simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    norm_num
+  have hf_half : (butcherShiftedLegendre 9).eval (1 / 2 : ℝ) = 0 :=
+    butcherShiftedLegendre_eval_half_eq_zero_of_odd 9 ⟨4, rfl⟩
+  -- IVT₁: ascending on `[0, 1/20]`.
+  have hivt_1 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (0 : ℝ) (1 / 20) := by
+    apply intermediate_value_Ioo (by norm_num : (0 : ℝ) ≤ 1 / 20) hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (0 : ℝ))
+        ((butcherShiftedLegendre 9).eval (1 / 20 : ℝ))
+    rw [hf_0, hf_one_twentieth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₁, hr₁_mem, hr₁_eval⟩ := hivt_1
+  -- IVT₂: descending on `[1/20, 1/8]`.
+  have hivt_2 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (1 / 20 : ℝ) (1 / 8) := by
+    apply intermediate_value_Ioo' (by norm_num : (1 / 20 : ℝ) ≤ 1 / 8)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (1 / 8 : ℝ))
+        ((butcherShiftedLegendre 9).eval (1 / 20 : ℝ))
+    rw [hf_one_eighth, hf_one_twentieth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₂, hr₂_mem, hr₂_eval⟩ := hivt_2
+  -- IVT₃: ascending on `[1/8, 1/4]`.
+  have hivt_3 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (1 / 8 : ℝ) (1 / 4) := by
+    apply intermediate_value_Ioo (by norm_num : (1 / 8 : ℝ) ≤ 1 / 4)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (1 / 8 : ℝ))
+        ((butcherShiftedLegendre 9).eval (1 / 4 : ℝ))
+    rw [hf_one_eighth, hf_one_fourth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₃, hr₃_mem, hr₃_eval⟩ := hivt_3
+  -- IVT₄: descending on `[1/4, 2/5]`.
+  have hivt_4 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (1 / 4 : ℝ) (2 / 5) := by
+    apply intermediate_value_Ioo' (by norm_num : (1 / 4 : ℝ) ≤ 2 / 5)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (2 / 5 : ℝ))
+        ((butcherShiftedLegendre 9).eval (1 / 4 : ℝ))
+    rw [hf_two_fifths, hf_one_fourth]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₄, hr₄_mem, hr₄_eval⟩ := hivt_4
+  -- IVT₆: descending on `[3/5, 3/4]`.
+  have hivt_6 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (3 / 5 : ℝ) (3 / 4) := by
+    apply intermediate_value_Ioo' (by norm_num : (3 / 5 : ℝ) ≤ 3 / 4)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (3 / 4 : ℝ))
+        ((butcherShiftedLegendre 9).eval (3 / 5 : ℝ))
+    rw [hf_three_fourths, hf_three_fifths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₆, hr₆_mem, hr₆_eval⟩ := hivt_6
+  -- IVT₇: ascending on `[3/4, 7/8]`.
+  have hivt_7 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (3 / 4 : ℝ) (7 / 8) := by
+    apply intermediate_value_Ioo (by norm_num : (3 / 4 : ℝ) ≤ 7 / 8)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (3 / 4 : ℝ))
+        ((butcherShiftedLegendre 9).eval (7 / 8 : ℝ))
+    rw [hf_three_fourths, hf_seven_eighths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₇, hr₇_mem, hr₇_eval⟩ := hivt_7
+  -- IVT₈: descending on `[7/8, 19/20]`.
+  have hivt_8 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (7 / 8 : ℝ) (19 / 20) := by
+    apply intermediate_value_Ioo' (by norm_num : (7 / 8 : ℝ) ≤ 19 / 20)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (19 / 20 : ℝ))
+        ((butcherShiftedLegendre 9).eval (7 / 8 : ℝ))
+    rw [hf_nineteen_twentieths, hf_seven_eighths]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₈, hr₈_mem, hr₈_eval⟩ := hivt_8
+  -- IVT₉: ascending on `[19/20, 1]`.
+  have hivt_9 :
+      (0 : ℝ) ∈ (fun x : ℝ => (butcherShiftedLegendre 9).eval x) ''
+        Set.Ioo (19 / 20 : ℝ) 1 := by
+    apply intermediate_value_Ioo (by norm_num : (19 / 20 : ℝ) ≤ 1)
+      hcont.continuousOn
+    show (0 : ℝ) ∈
+      Set.Ioo ((butcherShiftedLegendre 9).eval (19 / 20 : ℝ))
+        ((butcherShiftedLegendre 9).eval (1 : ℝ))
+    rw [hf_nineteen_twentieths, hf_1]
+    refine ⟨?_, ?_⟩ <;> norm_num
+  obtain ⟨r₉, hr₉_mem, hr₉_eval⟩ := hivt_9
+  refine ⟨r₁, r₂, r₃, r₄, 1 / 2, r₆, r₇, r₈, r₉,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_, ?_,
+          ?_, ?_, ?_,
+          ?_, ?_,
+          ?_,
+          ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+          hr₁_eval, hr₂_eval, hr₃_eval, hr₄_eval, hf_half,
+          hr₆_eval, hr₇_eval, hr₈_eval, hr₉_eval⟩
+  -- 36 distinctness goals (8 + 7 + 6 + 5 + 4 + 3 + 2 + 1).
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₂_gt, _⟩ := hr₂_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₃_gt, _⟩ := hr₃_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₆_gt, _⟩ := hr₆_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₁_lt⟩ := hr₁_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₃_gt, _⟩ := hr₃_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₆_gt, _⟩ := hr₆_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₂_lt⟩ := hr₂_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₄_gt, _⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₆_gt, _⟩ := hr₆_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₃_lt⟩ := hr₃_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₆_gt, _⟩ := hr₆_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₄_lt⟩ := hr₄_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨hr₆_gt, _⟩ := hr₆_mem
+    intro h; linarith
+  · obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₆_lt⟩ := hr₆_mem
+    obtain ⟨hr₇_gt, _⟩ := hr₇_mem
+    intro h; linarith
+  · obtain ⟨_, hr₆_lt⟩ := hr₆_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₆_lt⟩ := hr₆_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₇_lt⟩ := hr₇_mem
+    obtain ⟨hr₈_gt, _⟩ := hr₈_mem
+    intro h; linarith
+  · obtain ⟨_, hr₇_lt⟩ := hr₇_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  · obtain ⟨_, hr₈_lt⟩ := hr₈_mem
+    obtain ⟨hr₉_gt, _⟩ := hr₉_mem
+    intro h; linarith
+  -- 9 membership-in-(0,1) goals.
+  · obtain ⟨hgt, hlt⟩ := hr₁_mem
+    exact ⟨hgt, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₂_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₃_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₄_mem
+    exact ⟨by linarith, by linarith⟩
+  · refine ⟨?_, ?_⟩ <;> norm_num
+  · obtain ⟨hgt, hlt⟩ := hr₆_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₇_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₈_mem
+    exact ⟨by linarith, by linarith⟩
+  · obtain ⟨hgt, hlt⟩ := hr₉_mem
+    exact ⟨by linarith, hlt⟩
+
 end OpenMath.Chapter3.Section342

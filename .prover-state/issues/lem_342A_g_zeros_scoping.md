@@ -182,3 +182,42 @@ return.
     * `(3/5, 4/5)` ascending; `(4/5, 19/20)` descending; `(19/20, 1)` ascending.
   - **Distinctness** (21 pairs) via disjoint-interval `linarith`.
 * Axiom-clean; zero sorries.
+
+## Cycle 298 update
+
+* **Aristotle single-poll**: `IN_PROGRESS`, `percent_complete = 28`
+  at `2026-05-15T23:38:59Z` (≈87 min after cycle 294 submission;
+  **+3 percentage points** from cycle 297's 25%). Per the strategy
+  branch table, `> 25%` is healthy progress ⇒ **stall counter
+  resets**; this is no longer observation #2. Branch B fires (n = 9
+  anchor); Aristotle remains queued.
+* **`n = 9` anchor shipped**: `butcherShiftedLegendre_nine_roots`
+  in `OpenMath/Chapter3/Section342.lean` — nine distinct roots of
+  `P_9^*` in `(0, 1)`. Mechanical extension of cycle 297's `n = 7`
+  recipe using cycle 285's closed form `butcherShiftedLegendre_nine`
+  and cycle 295's parity helper applied to `⟨4, rfl⟩` (since
+  `9 = 2·4 + 1`):
+  - **Middle root** `r₅ = 1/2` via
+    `butcherShiftedLegendre_eval_half_eq_zero_of_odd 9 ⟨4, rfl⟩`.
+  - **Four left roots** via IVT (signs pre-verified with Python
+    `Fraction` against the closed form
+    `P_9^* = 48620X^9 − 218790X^8 + 411840X^7 − 420420X^6
+            + 252252X^5 − 90090X^4 + 18480X^3 − 1980X^2 + 90X − 1`):
+    * `(0, 1/20)` ascending — `P(0) = -1`, `P(1/20) = 9459468441/25600000000`.
+    * `(1/20, 1/8)` descending — `P(1/8) = -(10413009/33554432)`.
+    * `(1/8, 1/4)` ascending — `P(1/4) = 17557/65536`.
+    * `(1/4, 2/5)` descending — `P(2/5) = -(96077/390625)`.
+  - **Four right roots** (parity-symmetric to the left tetrad):
+    * `(3/5, 3/4)` descending; `(3/4, 7/8)` ascending;
+      `(7/8, 19/20)` descending; `(19/20, 1)` ascending.
+  - **Distinctness** (36 pairs) via disjoint-interval `linarith`.
+* Axiom-clean (`[propext, Classical.choice, Quot.sound]`); zero
+  sorries. The bracket-sign pre-verification step caught that the
+  strategy table's "Direction" column on the right half was off-by-
+  parity for `n = 9` (table claimed ascending; actual direction is
+  determined by `P_9^*(1 − x) = -P_9^*(x)`). The Lean proof uses
+  the verified directions, not the table directions.
+* Aristotle still in flight; healthy growth ⇒ continue. Cycle 299
+  polls again. If 28% holds flat, that becomes observation #1 of a
+  fresh three-stall window. Cancellation precondition (three
+  consecutive flat readings) not currently met.
