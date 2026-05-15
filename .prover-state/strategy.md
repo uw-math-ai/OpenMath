@@ -1,223 +1,308 @@
-# Cycle 283 Strategy
+# Cycle 284 strategy
 
-## Context (where we are)
+**Cycle 283 outcome**: Shipped three (342f) recurrence ladder rungs at
+`n = 5, 6, 7` axiom-clean (`Section342.lean` 1949 → 2020 LOC, sorry
+count 0). Aristotle project `c8b8f138-f875-4263-94ec-74533b5120d7`
+(general (342f) recurrence) single-polled and was **IN_PROGRESS at 12%**
+(15 min after submission). Cycle 282–283 used the
+`Polynomial.funext + simp [eval_*] + ring` recipe at scale; ring proves
+remain fast.
 
-Cycle 282 SHIPPED axiom-clean: three concrete `(342f)` three-term
-recurrence witnesses for `lem:342A` at `n ∈ {2, 3, 4}` in
-`OpenMath/Chapter3/Section342.lean` (LOC 1871 → ~1949, 0 sorries),
-plus an Aristotle fire-and-forget submission for the **general**
-(342f) recurrence:
+**Current substantive target**: `lem:342A` (§342, Butcher §342 p. 236) —
+the seven properties (342a)–(342g) of the Butcher-normalised shifted
+Legendre polynomials `P_n^*`. Properties (342a)/(342b)/(342c)/(342d)/(342e)
+are formalised; (342f) general and (342g) `n` distinct real zeros remain.
 
-- **Aristotle project**: `c8b8f138-f875-4263-94ec-74533b5120d7`
-- Submission file: `.prover-state/aristotle_submissions/cycle_282/342f_recurrence.lean`
-- Cites cycles 271–281's results as axioms (definition + `eval_one`,
-  `eval_one_sub`, `eval_zero`, `natDegree`, `rodrigues`,
-  `orthogonal`, `norm_sq`, plus explicit `_zero` through `_four`
-  forms).
-- Status on submission: QUEUED. Not polled in cycle 282.
+---
 
-Section342.lean state at HEAD:
-- 0 sorries, all axiom-clean (`[propext, Classical.choice, Quot.sound]`).
-- (342b), (342c), (342a), (342d), (342e) all CLOSED.
-- (342f) general OPEN; (342f) at n=2,3,4 CLOSED. (342g) OPEN; scoping
-  doc at `.prover-state/issues/lem_342A_g_zeros_scoping.md`.
+## §A — P0 Aristotle poll (5 min, mandatory)
 
-`lem:342A` row in `plan.md` is `[~]` (partial). It moves to `[x]`
-when (342a–g) all close.
+**Single-poll** `mcp__aristotle__get_status` on
+`c8b8f138-f875-4263-94ec-74533b5120d7`. **Do NOT poll any other project**
+this cycle. Per CLAUDE.md, one poll only.
 
-## P0 — Aristotle single-poll (5 min, MANDATORY first action)
+Three branches by status:
 
-Call `mcp__aristotle__get_status` ONCE on project
-`c8b8f138-f875-4263-94ec-74533b5120d7`. Branch based on status:
+### Branch A — `COMPLETE` (preferred outcome)
 
-### Branch A — COMPLETE
+Per Aristotle's `d4ce527b` (cycle 281) integration precedent:
 
-Per CLAUDE.md "Aristotle-first" and cycle 281's `d4ce527b` integration
-template:
+1. **Download & inspect** the proof via
+   `mcp__aristotle__download_result`. Read `ARISTOTLE_SUMMARY.md` and
+   the main proof file.
+2. **Decide on helper file**: if the proof introduces ≥2 reusable
+   private helpers (mutual recursion, ring/coefficient identities,
+   multi-step IBP, etc.), extract them into a new file
+   `OpenMath/Chapter3/Section342RecurrenceHelpers.lean` (precedent:
+   cycle 281's `Section342NormSqHelpers.lean`, ~210 LOC). If the proof
+   is ≤80 LOC and self-contained, inline it directly into Section342.
+3. **Integrate as** `butcherShiftedLegendre_recurrence` with signature
+   matching the `c8b8f138` submission target (verify by reading the
+   submission `.lean` file at
+   `.prover-state/aristotle_submissions/cycle_282/`).
+4. **Verify axiom-clean**: `#print axioms` on every new symbol must
+   return `[propext, Classical.choice, Quot.sound]` only. If a `sorry`
+   slips in, ROLL BACK the integration and proceed to Branch B.
+5. **Cross-check** that the cycle 282–283 concrete witnesses
+   `butcherShiftedLegendre_recurrence_{two..seven}` still build (their
+   proofs do NOT route through the general theorem — they are
+   independent `Polynomial.funext + ring` computations — so this should
+   be automatic, but verify).
+6. **Update**:
+   - `extraction/formalization_data/lean_status.json` for `lem:342A`
+     — the (342f) clause is now closed; leave `partial` because
+     (342g) is still open.
+   - `plan.md` `lem:342A` row — append a cycle 284 (342f) general
+     closure note.
+7. **P2 stretch (if Branch A succeeded with budget remaining)**: Fire
+   Aristotle on (342g) `n` distinct real zeros per
+   `.prover-state/issues/lem_342A_g_zeros_scoping.md`. Submit a
+   self-contained `.lean` file at
+   `.prover-state/aristotle_submissions/cycle_284/342g_zeros.lean`
+   citing as axioms:
+   - cycle 271–273's `butcherShiftedLegendre_{eval_one, eval_one_sub,
+     eval_zero, natDegree, rodrigues, zero, one, two, three}`
+   - cycle 275–280's `butcherShiftedLegendre_{four..seven}`
+   - cycle 277's `butcherShiftedLegendre_orthogonal`
+   - cycle 281's `butcherShiftedLegendre_norm_sq`
+   - cycle 284's `butcherShiftedLegendre_recurrence`
+   Use the sign-change-contradiction strategy from
+   `lem_342A_g_zeros_scoping.md` §"Textbook proof sketch". Do NOT
+   poll the new submission this cycle — just submit and move on.
 
-1. Download the result via `mcp__aristotle__download_result`.
-2. Extract the proof body and any helper lemmas Aristotle introduced.
-3. Audit for new private/helper machinery. If Aristotle ships
-   significant new helper infrastructure (the textbook proof needs a
-   leading-coefficient identity `n · C(2n,n) = 2(2n−1) · C(2n−2, n−1)`
-   plus an `xP_{n−1}^* = aP_n^* + bP_{n−1}^* + cP_{n−2}^*` style
-   expansion via inner-product expansion), consider extracting it to
-   a new dedicated file `OpenMath/Chapter3/Section342RecurrenceHelpers.lean`
-   mirroring cycle 281's `Section342NormSqHelpers.lean` structure.
-   Otherwise inline.
-4. Integrate into `OpenMath/Chapter3/Section342.lean` as
-   `butcherShiftedLegendre_recurrence (n : ℕ) (hn : 2 ≤ n) : …`.
-5. Verify the cycle 282 concrete witnesses
-   (`_recurrence_two/three/four`) remain consistent with the general
-   form. They may become redundant — leave them in as numerical
-   witnesses unless they fail to compile.
-6. Run `lake env lean OpenMath/Chapter3/Section342.lean` (and
-   `OpenMath/Chapter3.lean` if new file added).
-7. `#print axioms` on the new general theorem — must be
-   `[propext, Classical.choice, Quot.sound]` only.
-8. Update `lem:342A` cycle in `lean_status.json` to 283.
-9. If COMPLETE, also as P3: **fire (342g) on Aristotle**. Create
-   `.prover-state/aristotle_submissions/cycle_283/342g_distinct_zeros.lean`
-   citing all of (342a–f) as available axioms; sketch the proof
-   recipe (sign-change contradiction with product polynomial
-   `Q := ∏ (X − xᵢ)`); submit. Single fire-and-forget.
+### Branch B — `IN_PROGRESS` at ≤50% (most likely outcome)
 
-### Branch B — IN_PROGRESS (any %) or QUEUED
+Expected at the cycle 283 pace of ~+5–10%/cycle. Per strategy, **do not
+wait** — pivot immediately to manual ladder extension.
 
-Per cycle 282 strategy fallback: continue the recurrence-witness
-ladder. Aristotle's d4ce527b precedent (cycle 274–281) showed
-~14 cycles between submission and completion with ~5%/cycle growth;
-expect general (342f) similar.
+**P1 deliverable: ship `butcherShiftedLegendre_eight` + `butcherShiftedLegendre_recurrence_eight`.**
 
-**Ship `butcherShiftedLegendre_recurrence_five`** at `n = 5`:
+#### B.1 Shape of `butcherShiftedLegendre_eight`
+
+`n = 8` is **even** (like cycle 279's n=6), so `(-1)^8 = 1` and the
+outer Butcher sign flip is trivial. The explicit form is:
 
 ```
-(5 : ℝ) • P_5^* = C 9 · (C 2 · X − C 1) · P_4^* − C 4 · P_3^*
+butcherShiftedLegendre 8 =
+    C 12870 · X^8 - C 51480 · X^7 + C 84084 · X^6 - C 72072 · X^5
+  + C 34650 · X^4 - C 9240 · X^3 + C 1260 · X^2 - C 72 · X + C 1
 ```
 
-Recipe (cycle 282's `Polynomial.funext + ring` template, verified to
-work first-try at n=2,3,4):
+Coefficient derivation (from `coeff_shiftedLegendre k = (-1)^k *
+C(n+k, k) * C(n, k)` at n=8):
 
+| k | (-1)^k · C(n+k,k) · C(n,k) | value |
+|---|----------------------------|-------|
+| 0 | +1 · 1 · 1 | 1 |
+| 1 | -1 · 9 · 8 | -72 |
+| 2 | +1 · 45 · 28 | 1260 |
+| 3 | -1 · 165 · 56 | -9240 |
+| 4 | +1 · 495 · 70 | 34650 |
+| 5 | -1 · 1287 · 56 | -72072 |
+| 6 | +1 · 3003 · 28 | 84084 |
+| 7 | -1 · 6435 · 8 | -51480 |
+| 8 | +1 · 12870 · 1 | 12870 |
+
+Required `decide`-helpers (extending cycle 278/280's pattern):
+```
+Nat.choose 9 8 = 9,  Nat.choose 8 1 = 8
+Nat.choose 10 8 = 45, Nat.choose 8 2 = 28
+Nat.choose 11 8 = 165, Nat.choose 8 3 = 56
+Nat.choose 12 8 = 495, Nat.choose 8 4 = 70
+Nat.choose 13 8 = 1287, Nat.choose 8 5 = 56
+Nat.choose 14 8 = 3003, Nat.choose 8 6 = 28
+Nat.choose 15 8 = 6435, Nat.choose 8 7 = 8
+Nat.choose 16 8 = 12870
+```
+
+**Recipe** (verbatim port of cycle 279's `_six` proof shape at
+`Section342.lean` line ~455 — read it first as template):
 ```lean
-theorem butcherShiftedLegendre_recurrence_five :
-    (5 : ℝ) • butcherShiftedLegendre 5 =
-      Polynomial.C 9 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
-        * butcherShiftedLegendre 4
-      - Polynomial.C 4 * butcherShiftedLegendre 3 := by
+theorem butcherShiftedLegendre_eight :
+    butcherShiftedLegendre 8 = ... := by
+  unfold butcherShiftedLegendre
+  ext k
+  -- Peel-off pattern (cycle 276 onward)
+  simp only [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+             Polynomial.coeff_shiftedLegendre]
+  match k with
+  | 0 => simp [...]; norm_num
+  | 1 => simp [...]; norm_num
+  | 2 => have hch1 : Nat.choose 10 8 = 45 := by decide
+         have hch2 : Nat.choose 8 2 = 28 := by decide
+         simp [..., hch1, hch2]; norm_num
+  ... (case-split through k = 8)
+  | k + 9 =>
+      -- Tail: all coefficients 0 by Nat.choose_eq_zero_of_lt
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_C, Polynomial.coeff_one,
+            Nat.choose_eq_zero_of_lt]
+```
+
+LOC budget ~80 LOC. Faithfulness check: this is a numerical identity
+for a textbook-named polynomial, no risk of definition smuggling.
+
+#### B.2 Shape of `butcherShiftedLegendre_recurrence_eight`
+
+At n=8: `(2n-1, n-1) = (15, 7)`. The recurrence is
+
+```
+(8 : ℝ) • P_8^* = C 15 · (C 2 · X - C 1) · P_7^* - C 7 · P_6^*
+```
+
+Recipe identical to cycle 283's `_recurrence_{five,six,seven}` (~10
+LOC body):
+```lean
+theorem butcherShiftedLegendre_recurrence_eight :
+    (8 : ℝ) • butcherShiftedLegendre 8 =
+      Polynomial.C 15 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 7
+      - Polynomial.C 7 * butcherShiftedLegendre 6 := by
   apply Polynomial.funext
   intro x
-  rw [butcherShiftedLegendre_five, butcherShiftedLegendre_four,
-      butcherShiftedLegendre_three]
+  rw [butcherShiftedLegendre_eight, butcherShiftedLegendre_seven,
+      butcherShiftedLegendre_six]
   simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
         Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
         Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
   ring
 ```
 
-Sanity-check the coefficients numerically before writing the proof:
-- LHS at `n = 5`: `5 · (252x⁵ − 630x⁴ + 560x³ − 210x² + 30x − 1) =
-  1260x⁵ − 3150x⁴ + 2800x³ − 1050x² + 150x − 5`.
-- RHS at `n = 5`: `9 · (2x − 1) · (70x⁴ − 140x³ + 90x² − 20x + 1) −
-  4 · (20x³ − 30x² + 12x − 1)`.
-  - `(2x−1)(70x⁴ − 140x³ + 90x² − 20x + 1)
-     = 140x⁵ − 350x⁴ + 320x³ − 130x² + 22x − 1`.
-  - `· 9 = 1260x⁵ − 3150x⁴ + 2880x³ − 1170x² + 198x − 9`.
-  - Subtract `4(20x³ − 30x² + 12x − 1) = 80x³ − 120x² + 48x − 4`:
-    `1260x⁵ − 3150x⁴ + 2800x³ − 1050x² + 150x − 5`. ✓ Matches LHS.
+LOC budget ~15 LOC.
 
-Optionally also ship `_recurrence_six` and `_recurrence_seven` if
-time allows — same recipe with cycles 279–280's explicit forms
-`_six` and `_seven` already in hand. Each adds ~10–15 LOC.
+#### B.3 Sanity-check the recurrence coefficients before writing
 
-LOC budget: ~20–60 LOC depending on how many rungs ship.
+Before committing, verify by hand or `python -c`:
+- LHS: `8 · P_8^* = 102960 X^8 - 411840 X^7 + 672672 X^6 - 576576 X^5
+  + 277200 X^4 - 73920 X^3 + 10080 X^2 - 576 X + 8`.
+- RHS: `15 · (2X - 1) · P_7^* - 7 · P_6^*`. Compute
+  `(2X - 1) · P_7^*` first, multiply by 15, subtract `7 · P_6^*`,
+  confirm coefficients match LHS. (Cross-checking is mandatory because
+  `ring` will silently close a wrong recurrence as `0 = 0` if both
+  sides match — but it will produce an error if mismatched.)
 
-### Branch C — FAILED / CANCELLED / unexpected
+### Branch C — `COMPLETE_WITH_ERRORS` / `FAILED` / `CANCELLED`
 
-Per cycle 151's precedent (Aristotle general-`n` thm:550A cancelled
-at 21%): cancel the project and pivot to manual stepping stones.
-Ship `_recurrence_five` per Branch B; pivot future cycles to
-`lem:342B` (Gaussian quadrature exactness) which can now consume
-(342a–e) plus the (342f) numerical witnesses.
+Per cycle 184 precedent (Aristotle returned a one-line namespace fix):
+1. Read the error report. If the fix is ≤10 LOC of mechanical edits
+   (namespace qualifications, typo corrections), apply and integrate.
+2. Otherwise treat as Branch B (ship n=8 ladder rung manually) and
+   leave the failed Aristotle project as-is — do NOT cancel and
+   resubmit this cycle (CLAUDE.md: one Aristotle poll per cycle).
 
-## What NOT to try
+---
 
-- **NEVER** attempt the general `(342f)` proof manually via
-  `Polynomial.ext` or `Polynomial.funext + ring`. Cycle 273 confirmed
-  this requires Pascal-style binomial identities (`n · C(2n,n) =
-  2(2n−1) · C(2n−2, n−1)`) plus inner-product expansion of `xP_{n−1}^*`
-  against the basis `{P_k^*}_{k=0..n+1}`. `ring` alone cannot close
-  these. The structural proof requires either Aristotle or building
-  the standard Bonnet recurrence infrastructure — both multi-cycle
-  manually. Stick with Aristotle delegation.
+## §B — DO NOT do this cycle
 
-- **NEVER** attempt to compile `OpenMath/Chapter4/Section441.lean`
-  on this GPFS. 43+ consecutive timeouts since cycle 182 (per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`). Skip §441 work
-  entirely.
+These are explicit fails or known bad patterns; do not repeat.
 
-- **NEVER** introduce a `sorry`-first scaffold for the general
-  (342f) — cycles 200/201 rolled back sorry-first scaffolds; cycles
-  149/150 also rolled back; cycles 138/139 also rolled back. Pattern
-  is well-established: sorry count rises ⇒ supervisor penalty ⇒
-  rollback. Ship axiom-clean or ship recurrence-witness ladder rungs.
+### B.1 — Do NOT attempt manual general-(342f) proof
+Cycle 273 task results §"What was tried" documents that both
+`Polynomial.ext` (coefficient route) and `Polynomial.funext` (eval
+route) require **Pascal-style binomial identities on Nat.choose** that
+`ring` cannot close. Butcher's textbook degree-and-difference outline
+requires (342a) orthogonality + (342e) Rodrigues as inputs, but
+synthesising these into a Lean recurrence proof was estimated
+multi-cycle in cycle 273. Aristotle is in flight (`c8b8f138`); do not
+race it manually.
 
-- **NEVER** poll Aristotle more than once per cycle. Per CLAUDE.md:
-  "Do not poll repeatedly — one check after 30 min is enough." If
-  status is QUEUED or low-% IN_PROGRESS, that is the expected state;
-  proceed to Branch B without complaint.
+### B.2 — Do NOT poll Aristotle more than once
+Per CLAUDE.md "sleep 30 minutes, check once". The cycle 283 poll was
+~15 min after submission and reached 12%; the cycle 284 poll will be
+the second observation. Beyond that, the project is left running for
+cycle 285+.
 
-- Do **NOT** rename anything in Section342.lean to dodge the
-  tautology scanner — past supervisor false-positive scoring (cycles
-  243–247) is loop-maintainer territory per
-  `.prover-state/issues/tautology_scanner_false_positives.md`.
+### B.3 — Do NOT modify Section441.lean
+44+ consecutive GPFS timeouts since cycle 182 per
+`.prover-state/issues/cycle_182_gpfs_slowness.md`. Section441 work is
+loop-maintainer territory until GPFS recovers.
 
-- Do **NOT** raise `maxHeartbeats`. If a proof stalls, decompose
-  it (cycle 281's `Section342NormSqHelpers.lean` extraction precedent).
+### B.4 — Do NOT use `Polynomial.ext` for the new explicit form
+Cycle 273 §"Dead end" documents that `Polynomial.ext` requires
+coefficient-by-coefficient identities that involve `Nat.choose` that
+`ring` cannot close. **Use the cycle 276 onward peel-off pattern**:
+`unfold ; ext k ; simp only [coeff_C_mul, coeff_map,
+coeff_shiftedLegendre] ; match k with ...`.
 
-## P3 (stretch, only if Aristotle COMPLETE and integration finished in <60 min budget)
+### B.5 — Do NOT fire Aristotle on (342g) UNLESS Branch A succeeds
+The (342g) sign-change argument depends on (342f) general (used for
+the orthogonality contradiction in degree-`k` polynomial expansion).
+Without (342f) in hand, Aristotle would have to reprove it as a
+sub-lemma — wasteful. Fire (342g) only after (342f) integrates.
 
-Fire `(342g)` on Aristotle: distinct real zeros of `P_n^*` in `(0, 1)`.
+### B.6 — Do NOT raise `maxHeartbeats`
+Per CLAUDE.md "Never increase `maxHeartbeats` above 200000. Decompose
+the proof instead." The n=8 explicit-form proof should fit within
+default heartbeats with proper case-split structure (cycles 278/280
+hit no heartbeat issues).
 
-Per `.prover-state/issues/lem_342A_g_zeros_scoping.md`:
-- Use cycle 282's scoping doc as the basis for the prompt.
-- Cite (342a)/(342d)/(342e)/(342f) as axioms in the submission.
-- LOC budget for the prompt's stub statement: ~30 LOC.
-- This is fire-and-forget; do not poll this cycle.
+### B.7 — Do NOT skip the case k=0 in the match
+Even though `(-1)^8 * coeff_shiftedLegendre 8 0 = 1`, Lean does not
+auto-simplify the `(-1)^n * ·` factor without explicit `norm_num`. All
+case branches need full `simp [...] ; norm_num` closure (cf. cycle
+279's `_six` proof at Section342.lean line ~455).
 
-## Deliverables checklist
+### B.8 — Do NOT introduce sorries
+Sorry count is 0 and must remain 0 (supervisor policy from cycles
+149/150 + 200/201 rollbacks). If a deliverable threatens to introduce
+a sorry, ship a strictly weaker axiom-clean variant instead, or skip
+the deliverable for this cycle.
 
-Minimum (always — Branch A, B, or C):
-- [ ] Aristotle `c8b8f138` polled exactly once.
-- [ ] If Branch A: general `butcherShiftedLegendre_recurrence` shipped
-      and integrated; cycle 282's three concrete witnesses retained
-      or audited for consistency.
-- [ ] If Branch B: `butcherShiftedLegendre_recurrence_five` shipped
-      axiom-clean.
-- [ ] If Branch C: `_recurrence_five` shipped (same as B); Aristotle
-      project cancelled.
+---
 
-Both branches require:
-- [ ] `lake env lean OpenMath/Chapter3/Section342.lean` exits 0.
-- [ ] `lake env lean OpenMath/Chapter3.lean` exits 0 (chapter
-      aggregator).
-- [ ] `grep -c sorry OpenMath/Chapter3/Section342.lean` returns 0.
-- [ ] `#print axioms` on each new theorem returns
-      `[propext, Classical.choice, Quot.sound]` only.
-- [ ] `lean_status.json` `lem:342A` row's cycle bumped to 283.
-- [ ] `plan.md` `lem:342A` row updated with cycle 283 closure note
-      (still `[~]` partial — (342g) remains).
-- [ ] Cycle 283 task results file written to
-      `.prover-state/task_results/cycle_283.md`.
+## §C — Closure checklist (mandatory before commit)
 
-Branch A only:
-- [ ] (P3 stretch if budget allows) Aristotle (342g) submitted.
+1. **`lake env lean OpenMath/Chapter3/Section342.lean` exits 0**.
+2. **`lake env lean OpenMath/Chapter3.lean` exits 0** (aggregator).
+3. **`grep -c sorry OpenMath/Chapter3/Section342.lean` = 0**.
+4. **Axiom-clean check**: `#print axioms` on every new symbol returns
+   `[propext, Classical.choice, Quot.sound]` only. If `sorryAx` appears,
+   the corresponding proof did not close — revert and re-plan.
+5. **Pre-commit faithfulness checklist** (per CLAUDE.md): for each new
+   `theorem`/`def`, write a short note in `task_results/cycle_284.md`
+   §"Faithfulness check" quoting the textbook statement and confirming
+   the Lean statement matches.
+6. **Write `.prover-state/task_results/cycle_284.md`** documenting:
+   - Worked on (which branch fired)
+   - Approach (poll result + integration/extension recipe)
+   - Result (SUCCESS / branch outcome)
+   - Faithfulness check
+   - Dead ends (none expected if recipes followed)
+   - Discovery (any new Mathlib hooks or Aristotle behaviour notes)
+   - Suggested next approach for cycle 285
+7. **Update `plan.md`** `lem:342A` row with the cycle 284 closure note.
+8. **Update `extraction/formalization_data/lean_status.json`**:
+   - If Branch A succeeded: bump cycle to 284, append (342f) general
+     closure to `lean_symbol` notes, leave status `partial`
+     (still need (342g)).
+   - If Branch B: bump cycle to 284, append "n=8 ladder rung" to the
+     concrete witnesses list, status remains `partial`.
+9. **Commit** with message starting `Cycle 284 — §342 (342f) ...`.
+10. **Push** to `origin/butcher-experiments`.
 
-## Pre-commit faithfulness check
+---
 
-For each new public theorem (general `butcherShiftedLegendre_recurrence`
-or any new `_recurrence_n` rung):
+## §D — Pre-flight risk register (Branch B specifically)
 
-- [ ] Quote the textbook statement from
-      `extraction/formalization_data/entities/lem_342A.json`:
-      `n P_n^*(x) = (2x − 1)(2n − 1) P_{n−1}^*(x) − (n − 1) P_{n−2}^*(x)`.
-- [ ] Confirm the Lean type matches the textbook for the chosen `n`
-      (or generally if Branch A).
-- [ ] Tautology check: no hypothesis equals the conclusion.
-- [ ] Hypothesis strength: minimal (no extra typeclasses or bounds
-      beyond `n ≥ 2`).
-- [ ] No definition smuggling: this is a theorem witnessing the
-      textbook formula, not a redefinition.
+| Risk | Mitigation |
+|---|---|
+| `Nat.choose 16 8 = 12870` slow via `decide` | If `decide` exceeds 10s, fallback `by norm_num [Nat.choose]` (cycle 278/280 precedent shows `decide` worked at these sizes). |
+| `match k with | k + 9 => ...` tail doesn't close via `Nat.choose_eq_zero_of_lt` | Inspect cycle 280's `k + 8 =>` tail (for n=7) at Section342.lean ~line 690 for the working simp set. |
+| `Polynomial.funext` consumes ~5s per use | Acceptable; cycle 283 proofs at n=5,6,7 each closed in <10s warm. |
+| Recurrence LHS≠RHS at n=8 (typo'd coefficient) | Cross-check by hand BEFORE running `ring` — `ring` will report a specific monomial mismatch but the LOC budget assumes first-try close. |
 
-## Cycle 284+ outlook
+---
 
-- If Branch A completed: cycle 284 polls Aristotle (342g). If (342g)
-  closes, `lem:342A` becomes fully formalized (move `[~]` → `[x]`).
-  Then pivot to `lem:342B` (Gaussian quadrature exactness) which
-  consumes (342a)–(342g) as inputs.
-- If Branch B continuing: cycle 284 polls Aristotle (342f) again,
-  extends ladder to `n = 6` if still IN_PROGRESS. Continue until
-  Aristotle completes or the ladder runs out (Section342.lean would
-  be growing >2500 LOC at n ≥ 10; consider splitting into
-  `Section342Ladder.lean` if it crosses 3000 LOC).
-- Always: monitor compile time. Cycle 281 used ~14 cycles for
-  Aristotle on (342d); pattern expected here.
+## §E — Cycle 285+ outlook (briefing for next planner)
+
+- If cycle 284 ships Branch A (general (342f) integrated): cycle 285
+  polls (342g) Aristotle (if P2 stretch fired) OR begins
+  `lem:342B` (Gaussian quadrature exactness, depends on (342g)).
+- If cycle 284 ships Branch B (n=8 ladder rung): cycle 285 polls
+  Aristotle `c8b8f138` again; if still IN_PROGRESS, extend ladder to
+  n=9 (mechanical port) OR pivot to `lem:310B` Phase A.3
+  (TreeAutomorphism strengthening, per `lem_310B_plan.md`).
+- Long-running parallel option: `lem:310B` Phase A.3 is the deferred
+  multi-cycle item that does not block (342f)/(342g). A planner could
+  in principle interleave Phase A.3 cycles with §342 polling cycles.

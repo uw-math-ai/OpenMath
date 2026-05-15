@@ -653,6 +653,98 @@ theorem butcherShiftedLegendre_seven :
       simp [Polynomial.coeff_sub, Polynomial.coeff_add,
             Polynomial.coeff_one, hk]
 
+/-- **Butcher §342 helper — `P_8^* = 12870X^8 - 51480X^7 + 84084X^6 - 72072X^5
++ 34650X^4 - 9240X^3 + 1260X^2 - 72X + 1`**:
+the degree-`8` shifted Legendre polynomial expands explicitly via the
+coefficient formula `(shiftedLegendre 8).coeff k = (-1)^k · C(8,k) · C(8+k, 8)`.
+The relevant values at `k = 0,…,8` are `(1, -72, 1260, -9240, 34650, -72072,
+84084, -51480, 12870)`; higher slots vanish since `8.choose k = 0` for `k ≥ 9`.
+The outer Butcher sign factor `(-1)^8 = 1` is trivial, so the closed form
+matches the unsigned coefficients above. Sanity: evaluating at `x = 0` gives
+`1` (matches `P_8^*(0) = (-1)^8 = 1`); evaluating at `x = 1` gives
+`12870 - 51480 + 84084 - 72072 + 34650 - 9240 + 1260 - 72 + 1 = 1` (matches
+(342b)). -/
+theorem butcherShiftedLegendre_eight :
+    butcherShiftedLegendre 8 =
+      Polynomial.C 12870 * Polynomial.X ^ 8
+        - Polynomial.C 51480 * Polynomial.X ^ 7
+        + Polynomial.C 84084 * Polynomial.X ^ 6
+        - Polynomial.C 72072 * Polynomial.X ^ 5
+        + Polynomial.C 34650 * Polynomial.X ^ 4
+        - Polynomial.C 9240 * Polynomial.X ^ 3
+        + Polynomial.C 1260 * Polynomial.X ^ 2
+        - Polynomial.C 72 * Polynomial.X
+        + Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  -- Peel off the `C ((-1)^8) * ·` factor BEFORE simp can collapse it
+  -- to the polynomial `1` (which would block `coeff_C_mul`).
+  simp only [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+             Polynomial.coeff_shiftedLegendre]
+  match k with
+  | 0 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_X_pow, Polynomial.coeff_X,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 1 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 2 =>
+      have hch1 : Nat.choose 10 8 = 45 := by decide
+      have hch2 : Nat.choose 8 2 = 28 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 3 =>
+      have hch1 : Nat.choose 11 8 = 165 := by decide
+      have hch2 : Nat.choose 8 3 = 56 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 4 =>
+      have hch1 : Nat.choose 12 8 = 495 := by decide
+      have hch2 : Nat.choose 8 4 = 70 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 5 =>
+      have hch1 : Nat.choose 13 8 = 1287 := by decide
+      have hch2 : Nat.choose 8 5 = 56 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 6 =>
+      have hch1 : Nat.choose 14 8 = 3003 := by decide
+      have hch2 : Nat.choose 8 6 = 28 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 7 =>
+      have hch1 : Nat.choose 15 8 = 6435 := by decide
+      have hch2 : Nat.choose 8 7 = 8 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 8 =>
+      have hch : Nat.choose 16 8 = 12870 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+      norm_num
+  | (k+9) =>
+      have hk : (8 : ℕ).choose (k + 9) = 0 := Nat.choose_eq_zero_of_lt (by omega)
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_one, hk]
+
 /-! ### Non-vacuity witnesses for §342 helpers
 
 These confirm the helper lemmas evaluate correctly on small inputs. -/
@@ -2012,6 +2104,32 @@ theorem butcherShiftedLegendre_recurrence_seven :
   intro x
   rw [butcherShiftedLegendre_seven, butcherShiftedLegendre_six,
       butcherShiftedLegendre_five]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
+/-- **Butcher §342 (342f) at `n = 8`**:
+`8 · P_8^*(x) = 15 · (2x − 1) · P_7^*(x) − 7 · P_6^*(x)`.
+
+Direct verification:
+LHS = `8 · (12870x⁸ − 51480x⁷ + 84084x⁶ − 72072x⁵ + 34650x⁴ − 9240x³ + 1260x²
+     − 72x + 1) = 102960x⁸ − 411840x⁷ + 672672x⁶ − 576576x⁵ + 277200x⁴
+     − 73920x³ + 10080x² − 576x + 8`;
+RHS = `15 · (2x − 1) · (3432x⁷ − 12012x⁶ + 16632x⁵ − 11550x⁴ + 4200x³ − 756x²
+     + 56x − 1) − 7 · (924x⁶ − 2772x⁵ + 3150x⁴ − 1680x³ + 420x² − 42x + 1)
+     = 102960x⁸ − 411840x⁷ + 672672x⁶ − 576576x⁵ + 277200x⁴ − 73920x³
+     + 10080x² − 576x + 8`.
+Same `Polynomial.funext` + `ring` recipe. -/
+theorem butcherShiftedLegendre_recurrence_eight :
+    (8 : ℝ) • butcherShiftedLegendre 8 =
+      Polynomial.C 15 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 7
+      - Polynomial.C 7 * butcherShiftedLegendre 6 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_eight, butcherShiftedLegendre_seven,
+      butcherShiftedLegendre_six]
   simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
         Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
         Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
