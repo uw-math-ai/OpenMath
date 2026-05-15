@@ -384,6 +384,96 @@ example : LabelledRootedTree.Equiv canonicalCherry canonicalCherry :=
 example : LabelledRootedTree.Equiv canonicalBroom₃ canonicalBroom₃ :=
   LabelledRootedTree.Equiv.refl _
 
+/-! ### Phase A.2 — heterogeneous-labelling non-vacuity (cycle 264)
+
+The reflexivity-only witnesses above are insufficient to demonstrate the
+Setoid is non-trivial: they hold for the trivial `Eq` setoid too. The
+following definitions witness two *genuinely-distinct* labellings of the
+two-leaf tree `mk [vertex, vertex]` that are nonetheless identified by the
+weak-`TreeAutomorphism` Setoid under the leaf-swap permutation. -/
+
+/-- The two-leaf tree, definitionally identical to `broom₃`. The
+alias clarifies the role of vertex naming in the leaf-swap construction. -/
+def doubleVertex : RootedTree := mk [vertex, vertex]
+
+/-- The leaf at child position `0` of `doubleVertex`. -/
+def leftLeaf : Vertex doubleVertex :=
+  Vertex.child ⟨0, by show 0 < 2; omega⟩ Vertex.root
+
+/-- The leaf at child position `1` of `doubleVertex`. -/
+def rightLeaf : Vertex doubleVertex :=
+  Vertex.child ⟨1, by show 1 < 2; omega⟩ Vertex.root
+
+theorem leftLeaf_ne_rightLeaf : leftLeaf ≠ rightLeaf := by
+  intro h
+  cases h
+
+theorem leftLeaf_ne_root : leftLeaf ≠ Vertex.rootOf doubleVertex := by
+  intro h
+  cases h
+
+theorem rightLeaf_ne_root : rightLeaf ≠ Vertex.rootOf doubleVertex := by
+  intro h
+  cases h
+
+/-- The leaf-swap (weak) tree automorphism of `doubleVertex`: swap the
+two leaves, fix the root. `noncomputable` because `Equiv.swap` requires
+`DecidableEq` on `Vertex`, and `instDecidableEqVertex` is noncomputable. -/
+noncomputable def leafSwapAutomorphism : TreeAutomorphism doubleVertex where
+  perm := Equiv.swap leftLeaf rightLeaf
+  perm_root :=
+    Equiv.swap_apply_of_ne_of_ne
+      (fun h => leftLeaf_ne_root h.symm)
+      (fun h => rightLeaf_ne_root h.symm)
+
+/-- The canonical labelling of `doubleVertex`. -/
+noncomputable def canonicalDoubleVertex : LabelledRootedTree where
+  underlying := doubleVertex
+  labelling := canonicalLabelling doubleVertex
+
+/-- The canonical labelling of `doubleVertex` post-composed with the
+leaf-swap permutation. Distinct from the canonical labelling as a
+function (witnessed by `labellings_distinct`) but Setoid-equivalent to
+it under the leaf-swap automorphism (witnessed by
+`canonical_equiv_swapped`). -/
+noncomputable def swappedDoubleVertex : LabelledRootedTree where
+  underlying := doubleVertex
+  labelling :=
+    (Equiv.swap leftLeaf rightLeaf).trans (canonicalLabelling doubleVertex)
+
+theorem canonical_equiv_swapped :
+    LabelledRootedTree.Equiv canonicalDoubleVertex swappedDoubleVertex := by
+  refine ⟨rfl, leafSwapAutomorphism, ?_⟩
+  intro v
+  show canonicalLabelling doubleVertex v =
+      ((Equiv.swap leftLeaf rightLeaf).trans (canonicalLabelling doubleVertex))
+        (Equiv.swap leftLeaf rightLeaf v)
+  simp [Equiv.trans_apply, Equiv.swap_apply_self]
+
+theorem labellings_distinct :
+    canonicalDoubleVertex.labelling ≠ swappedDoubleVertex.labelling := by
+  intro h
+  apply leftLeaf_ne_rightLeaf
+  apply (canonicalLabelling doubleVertex).injective
+  have heval : canonicalDoubleVertex.labelling leftLeaf =
+               swappedDoubleVertex.labelling leftLeaf :=
+    congrArg (fun e : Vertex doubleVertex ≃ Fin (order doubleVertex) =>
+                e leftLeaf) h
+  simpa [canonicalDoubleVertex, swappedDoubleVertex,
+         Equiv.trans_apply, Equiv.swap_apply_left] using heval
+
+/-- Bottom-line non-vacuity: the weak-`TreeAutomorphism` Setoid genuinely
+identifies distinct labellings. The conjunction is stated against the two
+named witnesses (not behind an existential) because
+`a.labelling ≠ b.labelling` is heterogeneously typed when `a.underlying`
+and `b.underlying` are not unified; with concrete `canonicalDoubleVertex`
+and `swappedDoubleVertex` both reducing to `doubleVertex`, the `≠` is
+well-typed. -/
+example :
+    LabelledRootedTree.Equiv canonicalDoubleVertex swappedDoubleVertex ∧
+      canonicalDoubleVertex.labelling ≠ swappedDoubleVertex.labelling :=
+  ⟨canonical_equiv_swapped, labellings_distinct⟩
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310

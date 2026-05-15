@@ -431,6 +431,51 @@ faithfully, and Phase A.3's orbit-count theorem becomes meaningful.
 `extraction/formalization_data/lean_status.json` — this cycle is
 infrastructure-only.
 
+#### Cycle 264 update — heterogeneous-labelling non-vacuity shipped
+
+Cycle 263 left a non-vacuity gap: the reflexivity witnesses
+(`canonicalVertex`, `canonicalCherry`, `canonicalBroom₃`) hold for the
+trivial `Eq` setoid too, so without a genuinely-distinct labelling
+identified by the Setoid, the cycle 263 deliverable was at risk of being
+vacuously trivial. Cycle 264 closes this gap.
+
+Shipped this cycle (all axiom-clean, depending only on `propext`,
+`Classical.choice`, `Quot.sound`):
+- `RootedTree.doubleVertex : RootedTree` — alias for `mk [vertex, vertex]`
+  (definitionally identical to `broom₃`; the alias clarifies the role of
+  vertex naming in the leaf-swap construction).
+- `RootedTree.leftLeaf` / `rightLeaf : Vertex doubleVertex` — the two
+  child-leaf vertices.
+- `leftLeaf_ne_rightLeaf` / `leftLeaf_ne_root` / `rightLeaf_ne_root` —
+  distinctness lemmas (proved by `intro h; cases h` per
+  `feedback_indexed_inductive_cases_disjoint.md`).
+- `leafSwapAutomorphism : TreeAutomorphism doubleVertex` —
+  `noncomputable` (because `instDecidableEqVertex` is noncomputable); uses
+  `Equiv.swap leftLeaf rightLeaf` and `Equiv.swap_apply_of_ne_of_ne` for
+  root-fixing.
+- `canonicalDoubleVertex` / `swappedDoubleVertex : LabelledRootedTree` —
+  the canonical labelling and its leaf-swap post-composition.
+- `canonical_equiv_swapped` — the two `LabelledRootedTree`s are
+  Setoid-equivalent via `leafSwapAutomorphism`.
+- `labellings_distinct` — they have genuinely distinct labelling
+  functions (proved via injectivity of `canonicalLabelling doubleVertex`
+  applied to `leftLeaf` ≠ `rightLeaf`).
+- Bottom-line `example` exhibiting `canonical_equiv_swapped ∧
+  labellings_distinct`.
+
+The Setoid is now demonstrably non-trivial. Cycle 263's weakening
+remains: the σ-faithfulness orbit-count `r(t)!/σ(t)` is still NOT
+claimed, awaiting Phase A.3 / strengthening of `TreeAutomorphism` to the
+full recursive structure-preservation predicate.
+
+**Cycle 265+ next steps** (planner decision pending):
+- Option 2: strengthen `TreeAutomorphism` (multi-cycle `mutual` block).
+- Option 3: Phase B (`thm:306A` Taylor / multinomial).
+- Option 4: pivot to `lem:342A` or another single-cycle target.
+
+`lem:310B` remains `[ ]` / `unformalized` — cycle 264 is
+infrastructure-validation only.
+
 ### Phase B — `thm:306A` Taylor / multinomial (1–3 cycles, deferrable)
 
 - **Phase B.1** (1 cycle):

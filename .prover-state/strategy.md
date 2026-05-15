@@ -1,535 +1,266 @@
-# Cycle 263 strategy — Phase A.2 completion: tree-automorphism Setoid on `LabelledRootedTree`
+# Cycle 264 Strategy
 
-## §A — Status check
+## A. Target
 
-* HEAD: `fb80441` (Cycle 262 — §300 Phase A.2 partial shipped).
-* Repo-wide sorry count: **0**.
-* `OpenMath/Chapter3/Section300.lean`: 272 LOC, axiom-clean. Contains
-  cycle 261's `Vertex` / `vertices` / `vertices_card` (Phase A.1) plus
-  cycle 262's `Vertex.mem_vertices` / `instFintypeVertex` /
-  `Fintype.card_vertex_eq_order` / `LabelledRootedTree` /
-  `canonicalLabelling` / three canonical labelling witnesses (Phase A.2
-  partial).
-* No pending Aristotle jobs.
-* No active blockers in `.prover-state/issues/`.
-* GPFS Section441 status: skip per `cycle_182_gpfs_slowness.md` (43+
-  consecutive timeouts). Do **not** attempt §441 work this cycle.
+**Option 1 from cycle 263 task results** — heterogeneous-labelling non-vacuity for the
+cycle 263 weakened `LabelledRootedTree.setoid`.
 
-## §B — Target
+Ship a witness showing that the `Setoid` identifies **two genuinely-distinct
+labellings** of `RootedTree.mk [vertex, vertex]` (the two-leaf tree) under the
+leaf-swap permutation. Cycle 263 only shipped reflexivity witnesses; reflexivity
+alone is true for the trivial `Eq` setoid, so without this check the cycle 263
+deliverable could be vacuously trivial.
 
-**Ship Phase A.2 completion of `lem_310B_plan.md`**: the tree-automorphism
-equivalence relation on `LabelledRootedTree`, together with non-vacuity
-witnesses. This finishes the def:300C "labelled rooted trees modulo
-tree-automorphism" piece that Butcher §300 (around p. 140) introduces.
+This is THE recommendation from both the cycle 263 task results §"Suggested next
+approach" Option 1 AND the consultant-advice-cycle-263 §C Option 1. Both
+analyses agree, with a verified-Mathlib-API recipe.
 
-### Concrete sub-deliverables (in priority order P1–P5)
+## B. Why this and not the other options
 
-All declarations live in `OpenMath/Chapter3/Section300.lean` inside the
-existing `namespace OpenMath.Chapter3.Section310.RootedTree` block,
-appended **after** the cycle 262 canonical-labelling examples (line 259).
+- **Option 2 (strengthen TreeAutomorphism to full recursive predicate)**:
+  multi-cycle, requires a `mutual` block through `List RootedTree`. Risks the
+  cycle 149/200/201 sorry-first rollback pattern. **DO NOT attempt this cycle.**
+- **Option 3 (Phase B `thm:306A`)**: multi-cycle Taylor/multinomial work,
+  bypassable per `lem_310B_plan.md` §4.2. Planner decision needed before any
+  Phase B attempt. **DO NOT attempt this cycle.**
+- **Option 4 (pivot to `lem:342A`)**: legitimate single-cycle alternative, but
+  abandons §310 momentum without closing the non-vacuity gap. Reserve as
+  cycle 265+ choice after Option 1 lands.
 
-#### P1 — `TreeAutomorphism` structure (weakened form)
+Option 1 ships a self-contained ~50–70 LOC clean deliverable; cycle 265's
+planner can then decide between strengthening (Option 2), Phase B (Option 3),
+or pivoting (Option 4) with the §310 non-vacuity story complete.
 
-Define a *weakened* tree-automorphism — the minimal predicate sufficient
-to define the Setoid this cycle, deferring full structural recursion to
-Phase A.3.
+## C. Concrete deliverables (append to `OpenMath/Chapter3/Section300.lean` after line 389)
+
+Follow `.prover-state/issues/consultant_advice_cycle_263.md` §D verbatim.
+The recipes there have been verified against Mathlib at HEAD by the consultant.
+
+### C.1 — Definitions
 
 ```lean
-/-- A *(weak) tree automorphism* of `t` is a permutation of `Vertex t`
-that fixes the root.
+def doubleVertex : RootedTree := mk [vertex, vertex]
 
-This is **strictly weaker** than Butcher's tree-automorphism group (which
-additionally recursively preserves each subtree's structure). The
-weakening is documented; Phase A.3's σ-faithfulness identity is NOT
-claimed by this cycle's Setoid. -/
-structure TreeAutomorphism (t : RootedTree) where
-  perm : Equiv.Perm (Vertex t)
-  perm_root : perm Vertex.root = Vertex.root
+def leftLeaf : Vertex doubleVertex :=
+  Vertex.child ⟨0, by show 0 < 2; omega⟩ Vertex.root
+
+def rightLeaf : Vertex doubleVertex :=
+  Vertex.child ⟨1, by show 1 < 2; omega⟩ Vertex.root
 ```
 
-The structure is **deliberately weakened** for cycle 263:
+Try `(0 : Fin 2)` / `(1 : Fin 2)` form first as it may elaborate cleaner; fall
+back to `⟨0, _⟩` with `omega`/`decide` if needed.
 
-(a) Avoids the nested-inductive mutual-recursion pitfall flagged in
-    memory `feedback_rootedtree_nested_induction.md` (defining a
-    recursive `TreeAutomorphism : RootedTree → Type` would require
-    `mutual` through `List RootedTree`).
-(b) Uses Mathlib's existing `Equiv.Perm` infrastructure — no new
-    recursive predicate needed.
-(c) The Setoid built from this is **coarser** than Butcher's quotient,
-    but the σ-faithfulness orbit-count `r(t)!/σ(t)` (Phase A.3) is
-    explicitly deferred per `.prover-state/issues/lem_310B_plan.md` §4.1.
-    Document the weakening prominently.
-
-#### P2 — `TreeAutomorphism` API: identity / composition / inverse
+### C.2 — Distinctness theorems (three)
 
 ```lean
-/-- The identity tree-automorphism. -/
-def TreeAutomorphism.id (t : RootedTree) : TreeAutomorphism t where
-  perm := Equiv.refl _
-  perm_root := rfl
+theorem leftLeaf_ne_rightLeaf : leftLeaf ≠ rightLeaf := by
+  intro h; cases h
+-- fallback if `cases h` fails: `exact absurd h (by decide)`
 
-/-- Composition of tree automorphisms. -/
-def TreeAutomorphism.trans {t : RootedTree}
-    (φ ψ : TreeAutomorphism t) : TreeAutomorphism t where
-  perm := φ.perm.trans ψ.perm
+theorem leftLeaf_ne_root : leftLeaf ≠ Vertex.rootOf doubleVertex := by
+  intro h; cases h
+
+theorem rightLeaf_ne_root : rightLeaf ≠ Vertex.rootOf doubleVertex := by
+  intro h; cases h
+```
+
+Memory `feedback_indexed_inductive_cases_disjoint.md` applies: `cases h` on
+disjoint constructors of an indexed inductive closes by absurdity. If
+`Vertex.rootOf doubleVertex` doesn't reduce to `Vertex.root` by `rfl`, prefix
+with `show leftLeaf ≠ Vertex.root` (and similarly for the other two).
+
+### C.3 — `leafSwapAutomorphism`
+
+```lean
+def leafSwapAutomorphism : TreeAutomorphism doubleVertex where
+  perm := Equiv.swap leftLeaf rightLeaf
   perm_root := by
-    show ψ.perm (φ.perm Vertex.root) = Vertex.root
-    rw [φ.perm_root, ψ.perm_root]
-
-/-- Inverse of a tree automorphism. -/
-def TreeAutomorphism.symm {t : RootedTree}
-    (φ : TreeAutomorphism t) : TreeAutomorphism t where
-  perm := φ.perm.symm
-  perm_root := by
-    have h := φ.perm_root
-    have := congrArg φ.perm.symm h
-    rw [Equiv.symm_apply_apply] at this
-    exact this.symm
+    exact Equiv.swap_apply_of_ne_of_ne
+      (fun h => leftLeaf_ne_root h.symm)
+      (fun h => rightLeaf_ne_root h.symm)
 ```
 
-Verify each `perm_root` proof closes with the indicated tactic. If
-`Equiv.refl_trans` / `Equiv.symm_apply_apply` lemma names have
-drifted in Mathlib, use `lean_local_search "Equiv.symm_apply"` to
-locate.
-
-#### P3 — `LabelledRootedTree.Equiv` relation + Setoid instance
-
-Define the equivalence relation pointwise to dodge dependent-typing
-issues with top-level `Equiv` equality across different `Vertex` types:
+### C.4 — Two distinct labellings + equivalence witness
 
 ```lean
-/-- Two labelled rooted trees are equivalent if they share an underlying
-tree and one labelling is obtained from the other by composing with some
-tree-automorphism (weakened form — see `TreeAutomorphism`).
+noncomputable def canonicalDoubleVertex : LabelledRootedTree :=
+  { underlying := doubleVertex
+    labelling := canonicalLabelling doubleVertex }
 
-Encoded pointwise to avoid dependent-typing issues with `Equiv` equality
-across heterogeneous `Vertex` types. -/
-def LabelledRootedTree.Equiv (a b : LabelledRootedTree) : Prop :=
-  ∃ (h : a.underlying = b.underlying)
-    (φ : TreeAutomorphism a.underlying),
-    ∀ (v : Vertex a.underlying),
-      a.labelling v = (h ▸ b.labelling) (φ.perm v)
-```
+noncomputable def swappedDoubleVertex : LabelledRootedTree :=
+  { underlying := doubleVertex
+    labelling := (Equiv.swap leftLeaf rightLeaf).trans (canonicalLabelling doubleVertex) }
 
-Then the three equivalence-relation lemmas:
-
-```lean
-theorem LabelledRootedTree.Equiv.refl (a : LabelledRootedTree) :
-    LabelledRootedTree.Equiv a a := by
-  refine ⟨rfl, TreeAutomorphism.id _, ?_⟩
+theorem canonical_equiv_swapped :
+    LabelledRootedTree.Equiv canonicalDoubleVertex swappedDoubleVertex := by
+  refine ⟨rfl, leafSwapAutomorphism, ?_⟩
   intro v
-  show a.labelling v = a.labelling ((Equiv.refl _) v)
-  rfl
-
-theorem LabelledRootedTree.Equiv.symm {a b : LabelledRootedTree}
-    (hab : LabelledRootedTree.Equiv a b) :
-    LabelledRootedTree.Equiv b a := by
-  obtain ⟨hEq, φ, hLab⟩ := hab
-  subst hEq  -- now a.underlying = b.underlying definitionally
-  refine ⟨rfl, φ.symm, ?_⟩
-  intro v
-  -- Use hLab at φ.perm.symm v
-  have := hLab (φ.perm.symm v)
-  simp [TreeAutomorphism.symm] at *
-  -- Close via Equiv.apply_symm_apply
-  sorry  -- DO NOT SHIP — see Step 4 in §C below for the actual recipe
-
-theorem LabelledRootedTree.Equiv.trans {a b c : LabelledRootedTree}
-    (hab : LabelledRootedTree.Equiv a b)
-    (hbc : LabelledRootedTree.Equiv b c) :
-    LabelledRootedTree.Equiv a c := by
-  obtain ⟨hEq_ab, φ, hLab_ab⟩ := hab
-  obtain ⟨hEq_bc, ψ, hLab_bc⟩ := hbc
-  subst hEq_ab
-  subst hEq_bc
-  refine ⟨rfl, φ.trans ψ, ?_⟩
-  intro v
-  show a.labelling v = a.labelling ((φ.perm.trans ψ.perm) v)
-  -- chain hLab_ab and hLab_bc
-  sorry  -- DO NOT SHIP — see Step 4 in §C below for the actual recipe
-
-instance LabelledRootedTree.setoid : Setoid LabelledRootedTree where
-  r := LabelledRootedTree.Equiv
-  iseqv := ⟨LabelledRootedTree.Equiv.refl,
-            LabelledRootedTree.Equiv.symm,
-            LabelledRootedTree.Equiv.trans⟩
+  show canonicalLabelling doubleVertex v =
+      ((Equiv.swap leftLeaf rightLeaf).trans (canonicalLabelling doubleVertex))
+        (Equiv.swap leftLeaf rightLeaf v)
+  simp [Equiv.trans_apply, Equiv.swap_apply_self]
 ```
 
-**The sorries in `symm` and `trans` above are sketch placeholders, NOT
-deliverables.** They must be closed in cycle 263 before commit. See
-§C Step 4 for the proof recipe.
+**Field-order verification step** before writing C.4: cycle 263's
+`LabelledRootedTree.Equiv` is in `OpenMath/Chapter3/Section300.lean` lines
+~323-340. READ those lines first via Read tool to confirm the exact shape (∃
+underlying-equality, ∃ TreeAutomorphism, ∀ vertex predicate, etc.) and adjust
+`refine ⟨…⟩` order to match.
 
-#### P4 — Non-vacuity witnesses (reflexivity-only)
+### C.5 — Distinctness of labellings
 
 ```lean
-example : LabelledRootedTree.Equiv canonicalVertex canonicalVertex :=
-  LabelledRootedTree.Equiv.refl _
-
-example : LabelledRootedTree.Equiv canonicalCherry canonicalCherry :=
-  LabelledRootedTree.Equiv.refl _
-
-example : LabelledRootedTree.Equiv canonicalBroom₃ canonicalBroom₃ :=
-  LabelledRootedTree.Equiv.refl _
+theorem labellings_distinct :
+    canonicalDoubleVertex.labelling ≠ swappedDoubleVertex.labelling := by
+  intro h
+  apply leftLeaf_ne_rightLeaf
+  apply (canonicalLabelling doubleVertex).injective
+  have heval : canonicalDoubleVertex.labelling leftLeaf =
+               swappedDoubleVertex.labelling leftLeaf := by rw [h]
+  simpa [canonicalDoubleVertex, swappedDoubleVertex,
+         Equiv.trans_apply, Equiv.swap_apply_left] using heval
 ```
 
-Heterogeneous (genuinely-different-labelling) non-vacuity is **deferred
-to cycle 264+ Phase A.2.1** — that requires evaluating
-`Fintype.equivFinOfCardEq` on concrete trees, which won't reduce
-cleanly.
+If the `simpa` chain doesn't fire, try `lean_multi_attempt` with variations
+on the `Equiv.trans` / `Equiv.swap_apply_left` rewrite ordering. Possible
+alternative: use `Function.funext_iff` to obtain the pointwise version of `h`
+explicitly.
 
-#### P5 — Docstring + issue-file update
-
-(i) Add a faithfulness-divergence paragraph to the file-level docstring
-of `Section300.lean` after the cycle 262 paragraph at lines 187–192:
-
-```
-Cycle 263 update: `TreeAutomorphism t` is weakened to "permutation of
-`Vertex t` fixing `root`" (only one structure-preservation field), which
-is strictly weaker than Butcher's full tree-automorphism group. The
-σ-faithfulness orbit-count identity (Phase A.3 per lem_310B_plan.md §4.1)
-is NOT claimed by `LabelledRootedTree.setoid`. Strengthening to the
-full recursive structure preservation is deferred to a future cycle.
-```
-
-(ii) Append a "Cycle 263 update" subsection to
-`.prover-state/issues/lem_310B_plan.md` §4.1 documenting what shipped,
-the weakening, and the cycle 264+ strengthening task. ~15 lines markdown.
-
-## §C — Approach: concrete proof recipes
-
-### Step 1: `TreeAutomorphism` structure (~10 LOC)
-
-Define exactly as in §B P1. Verify it compiles with:
-
-```bash
-lake env lean OpenMath/Chapter3/Section300.lean
-```
-
-`Equiv.Perm` lives in `Mathlib.Logic.Equiv.Defs` (transitively imported
-via `Mathlib.Algebra.BigOperators.Fin` already in cycle 261's imports;
-double-check with `lean_hover_info` if elaboration fails).
-
-### Step 2: Identity / composition / inverse (~25 LOC)
-
-Define `TreeAutomorphism.id`, `.trans`, `.symm` per §B P2.
-
-* **`.id.perm_root`**: closes by `rfl` because `Equiv.refl _ v = v` is
-  definitional.
-* **`.trans.perm_root`**: the `show` reframes the goal from
-  `(φ.perm.trans ψ.perm) Vertex.root = Vertex.root` to
-  `ψ.perm (φ.perm Vertex.root) = Vertex.root` (a `rfl` unfolding of
-  `Equiv.trans` application). Then two `rw`s with `perm_root` close.
-* **`.symm.perm_root`**: apply `φ.perm.symm` to both sides of `perm_root`,
-  use `Equiv.symm_apply_apply` to simplify the LHS.
-
-If any closure stalls past 10 min, lean on `simp [Equiv.refl,
-Equiv.trans, Equiv.symm, TreeAutomorphism.id]` followed by `exact
-φ.perm_root` / `exact rfl` patterns.
-
-### Step 3: `LabelledRootedTree.Equiv` definition (~10 LOC)
-
-Define exactly as in §B P3 (pointwise form). The `h ▸ b.labelling`
-substitution should elaborate because `h : a.underlying = b.underlying`
-substitutes definitionally into the labelling's domain
-`Vertex a.underlying → Vertex b.underlying`.
-
-If `h ▸ b.labelling` fails to elaborate, fall back to:
+### C.6 — Bottom-line non-vacuity example
 
 ```lean
-def LabelledRootedTree.Equiv (a b : LabelledRootedTree) : Prop :=
-  ∃ (h : a.underlying = b.underlying)
-    (φ : TreeAutomorphism a.underlying),
-    ∀ (v : Vertex a.underlying),
-      HEq (a.labelling v) (b.labelling (h ▸ φ.perm v))
+example :
+    ∃ a b : LabelledRootedTree,
+      a.labelling ≠ b.labelling ∧ LabelledRootedTree.Equiv a b :=
+  ⟨canonicalDoubleVertex, swappedDoubleVertex,
+   labellings_distinct, canonical_equiv_swapped⟩
 ```
 
-`HEq` is more permissive but harder to consume. Try `Eq` form first.
+Adjust the `∧` order if `LabelledRootedTree.Equiv` ⇒ `≠` direction reads
+differently from this template.
 
-### Step 4: Setoid axioms (~50 LOC, the substantive work)
+## D. Verified Mathlib hooks (from consultant analysis at HEAD)
 
-#### refl (5 LOC)
+| Goal | Lemma | File |
+|---|---|---|
+| `swap a b : Perm α` | `Equiv.swap` | `Mathlib/Logic/Equiv/Basic.lean:631` |
+| `swap a b a = b` | `Equiv.swap_apply_left` | line 647 |
+| `swap a b b = a` | `Equiv.swap_apply_right` | line 651 |
+| `x ≠ a → x ≠ b → swap a b x = x` | `Equiv.swap_apply_of_ne_of_ne` | line 654 |
+| `(swap a b).trans (swap a b) = refl _` | `Equiv.swap_swap` | line 662 |
+| `Equiv.trans_apply` | std | std |
+| `Equiv.injective` | std | std |
 
-```lean
-theorem LabelledRootedTree.Equiv.refl (a : LabelledRootedTree) :
-    LabelledRootedTree.Equiv a a := by
-  refine ⟨rfl, TreeAutomorphism.id _, ?_⟩
-  intro v
-  rfl  -- both sides reduce to a.labelling v (because Equiv.refl _ v = v)
-```
+No new Mathlib infrastructure needed.
 
-If `rfl` doesn't close, try `show a.labelling v = a.labelling v; rfl` or
-`simp [TreeAutomorphism.id]`.
+## E. Process
 
-#### symm (~20 LOC)
+1. (5 min) Read `OpenMath/Chapter3/Section300.lean` lines 280-389 to confirm
+   the cycle 263 `LabelledRootedTree.Equiv` signature, `TreeAutomorphism`
+   field names, and `canonicalLabelling`'s type. Use `lean_hover_info` if
+   needed.
+2. (45 min) Ship C.1 through C.6 in order, running
+   `lake env lean OpenMath/Chapter3/Section300.lean` after each block. Each
+   block should compile clean before moving on.
+3. (10 min) Verify aggregator: `lake env lean OpenMath/Chapter3.lean`.
+4. (5 min) Axiom-clean check via `lean_verify` on `labellings_distinct` and
+   `canonical_equiv_swapped`. Expected:
+   `[propext, Classical.choice, Quot.sound]` only.
+5. (10 min) Run tautology scanner regex:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section300.lean`
+   — expect zero hits. If hits appear (e.g. `:= h_foo` patterns), apply the
+   `h_<name> → h<name>` rename workaround per
+   `tautology_scanner_false_positives.md`.
+6. (10 min) Update `.prover-state/issues/lem_310B_plan.md` §4.1 with a cycle
+   264 update subsection documenting the non-vacuity closure (analogous to the
+   cycle 261/262/263 entries already present).
+7. (5 min) Write `.prover-state/task_results/cycle_264.md` per the
+   CLAUDE.md template (Worked on / Approach / Result / Faithfulness check /
+   Dead ends / Discovery / Suggested next approach).
+8. Commit.
 
-After `subst hEq`, the `Equiv` reduces to the homogeneous case where
-`a.underlying = b.underlying` is definitionally true. Then:
+## F. Aristotle suitability
 
-```lean
-theorem LabelledRootedTree.Equiv.symm {a b : LabelledRootedTree}
-    (hab : LabelledRootedTree.Equiv a b) :
-    LabelledRootedTree.Equiv b a := by
-  obtain ⟨hEq, φ, hLab⟩ := hab
-  subst hEq
-  -- Goal: LabelledRootedTree.Equiv b a, with a.underlying = b.underlying definitionally
-  -- hLab : ∀ v, a.labelling v = b.labelling (φ.perm v)
-  refine ⟨rfl, φ.symm, ?_⟩
-  intro v
-  -- Goal: b.labelling v = a.labelling ((φ.symm).perm v) = a.labelling (φ.perm.symm v)
-  -- Specialize hLab at φ.perm.symm v:
-  have h := hLab (φ.perm.symm v)
-  -- h : a.labelling (φ.perm.symm v) = b.labelling (φ.perm (φ.perm.symm v))
-  rw [Equiv.apply_symm_apply] at h
-  -- h : a.labelling (φ.perm.symm v) = b.labelling v
-  show b.labelling v = a.labelling (φ.perm.symm v)
-  exact h.symm
-```
+**Medium-high.** Steps C.1–C.3 and C.5–C.6 are mechanical with the right
+Mathlib lemma names. Step C.4 routes through cycle 263's freshly-defined
+`LabelledRootedTree.Equiv`, which Aristotle hasn't seen.
 
-If the `subst hEq` step errors because `b.underlying` appears in the
-goal, restructure to keep `a` and `b` separate and use `Eq.mp` /
-`Eq.mpr` instead. Specifically, replace `subst hEq` with `cases hEq`,
-which performs the same substitution but is sometimes more permissive
-with motive inference.
+**Submission strategy**: optional. If you do submit, send the **entire
+deliverable C.1–C.6** as one job with the cycle 263 file at HEAD plus this
+strategy as context. Single 30-minute poll discipline per CLAUDE.md.
 
-#### trans (~25 LOC)
+**Do NOT block** on Aristotle — the consultant-verified recipes are direct.
+Manual closure should complete in <90 minutes total.
 
-```lean
-theorem LabelledRootedTree.Equiv.trans {a b c : LabelledRootedTree}
-    (hab : LabelledRootedTree.Equiv a b)
-    (hbc : LabelledRootedTree.Equiv b c) :
-    LabelledRootedTree.Equiv a c := by
-  obtain ⟨hEq_ab, φ, hLab_ab⟩ := hab
-  obtain ⟨hEq_bc, ψ, hLab_bc⟩ := hbc
-  subst hEq_ab
-  subst hEq_bc
-  refine ⟨rfl, φ.trans ψ, ?_⟩
-  intro v
-  -- hLab_ab : ∀ v, a.labelling v = b.labelling (φ.perm v)
-  -- hLab_bc : ∀ v, b.labelling v = c.labelling (ψ.perm v)
-  -- Goal: a.labelling v = c.labelling ((φ.trans ψ).perm v)
-  --              = c.labelling (ψ.perm (φ.perm v))
-  rw [hLab_ab v, hLab_bc (φ.perm v)]
-  -- LHS is now b.labelling (φ.perm v), which becomes c.labelling (ψ.perm (φ.perm v))
-  -- after the second rewrite, matching the RHS exactly.
-  rfl
-```
+## G. What NOT to do
 
-If `rfl` doesn't close the final goal, the issue is `(φ.trans ψ).perm`
-not being definitionally `φ.perm.trans ψ.perm`. Add `show
-a.labelling v = c.labelling (ψ.perm (φ.perm v))` before the rewrites
-to coerce the form, or end with `simp [TreeAutomorphism.trans]`.
+- Do **NOT** strengthen `TreeAutomorphism` to a full recursive predicate. That
+  is Option 2 / Phase A.3 multi-cycle work; risks cycle 149/200/201 rollback
+  pattern.
+- Do **NOT** attempt Phase B (`thm:306A` multinomial Taylor) — multi-cycle,
+  per `lem_310B_plan.md` §4.2.
+- Do **NOT** attempt `lem:310B` itself — multi-cycle infrastructure, see
+  `lem_310B_plan.md` §5 Phases A–F.
+- Do **NOT** label this cycle's deliverable with a textbook entity ID; do not
+  update `lean_status.json` for `lem:310B` or `def:300C`. This is
+  **infrastructure validation**, not a textbook entity closure.
+- Do **NOT** introduce `axiom`, `constant`, or `sorry`. Cycle 264's bar is
+  "ship axiom-clean or skip the cycle entirely".
+- Do **NOT** raise `maxHeartbeats` above 200000.
+- Do **NOT** attempt to compile `OpenMath/Chapter4/Section441.lean` on GPFS —
+  43+ consecutive timeouts since cycle 182, skip per
+  `cycle_182_gpfs_slowness.md`.
+- Do **NOT** edit `scripts/autonomous_loop.py`. The empty "What I'm stuck on"
+  phantom is loop-maintainer territory per
+  `consultant_advice_cycle_248.md` §I and
+  `tautology_scanner_false_positives.md`.
+- Do **NOT** rename your deliverable to `lem_310B_*` — that name is reserved
+  for the actual textbook lemma.
 
-### Step 5: Setoid instance (~5 LOC)
+## H. Previously-failed approaches — do not repeat
 
-```lean
-instance LabelledRootedTree.setoid : Setoid LabelledRootedTree where
-  r := LabelledRootedTree.Equiv
-  iseqv := ⟨LabelledRootedTree.Equiv.refl,
-            LabelledRootedTree.Equiv.symm,
-            LabelledRootedTree.Equiv.trans⟩
-```
+- `induction t with | mk children ih =>` on `RootedTree` fails (nested
+  inductive). Use `mutual` + structural pattern matching, or pattern-match
+  `t = mk cs` first (per cycle 263's `Vertex.rootOf` precedent).
+- `subst hEq` on a projection equality `a.field = b.field` fails. Destructure
+  `a`/`b` first (`obtain ⟨…⟩ := a`), then `cases hEq`.
+- Universe-polymorphism inference on a structure with `Equiv` fields fails
+  without explicit `: Type` annotation.
 
-### Step 6: Non-vacuity examples (~5 LOC)
+## I. Abort criteria
 
-Three reflexivity examples per §B P4.
+If steps C.1–C.3 do not compile within 30 minutes total, STOP and:
+1. Document the specific Lean error in `.prover-state/issues/`.
+2. Roll back any partial edits to `Section300.lean` to ensure sorry count
+   stays at 0.
+3. Write `task_results/cycle_264.md` documenting the stall.
+4. Do NOT ship a partial deliverable with sorries.
 
-### Step 7: Verification
+If steps C.4–C.5 stall (the most delicate, due to `Equiv.coe_fn` /
+`Quotient.mk` plumbing), keep C.1–C.4 + a partial witness exhibiting
+`canonical_equiv_swapped` and treat `labellings_distinct` (C.5) as the stretch
+goal — ship without it if the `simpa` chain doesn't fire.
 
-```bash
-lake env lean OpenMath/Chapter3/Section300.lean
-lake env lean OpenMath/Chapter3.lean
-lake build OpenMath.Chapter3.Section300
-```
+## J. Success criteria
 
-Then `#print axioms` on:
-* `LabelledRootedTree.Equiv`
-* `LabelledRootedTree.Equiv.refl`
-* `LabelledRootedTree.Equiv.symm`
-* `LabelledRootedTree.Equiv.trans`
-* `LabelledRootedTree.setoid`
-* `TreeAutomorphism.id`
-* `TreeAutomorphism.trans`
-* `TreeAutomorphism.symm`
+- **Minimum (P1)**: ship C.1–C.4 + C.6 axiom-clean. ~50 LOC over HEAD. Sorry
+  count remains 0.
+- **Full (P1 + P2)**: also ship C.5 (`labellings_distinct`). ~70 LOC over HEAD.
+- **Stretch (P3)**: the `example` in C.6 uses both `labellings_distinct` and
+  `canonical_equiv_swapped` together — confirming the Setoid is genuinely
+  non-trivial via a single named witness.
 
-All should return `[propext, Classical.choice, Quot.sound]` only.
+Cycle 263 was a clean infrastructure ship. Cycle 264 should be a clean
+infrastructure-validation ship. Cycle 265+ pivots based on the planner's
+choice among Option 2 / 3 / 4.
 
-### Total LOC budget
+## K. Note on the recurring "stuck on" phantom
 
-~100 LOC (Section300.lean: 272 → ~370 LOC). Comfortably within
-single-cycle range.
-
-## §D — Risk assessment and ABORT THRESHOLDS
-
-### R1: dependent-type elaboration on `h ▸ b.labelling`
-
-Lean 4's `▸` can fail when the substitution motive isn't inferable.
-If `LabelledRootedTree.Equiv`'s definition errors, fall back to the
-`HEq` form (Step 3 fallback above).
-
-**Abort threshold**: 30 min on the definition. If neither `Eq` nor
-`HEq` form elaborates, abort P3–P5 and ship only P1–P2
-(`TreeAutomorphism` + API). That alone is still a substantive cycle.
-
-### R2: `subst hEq` motive failure in symm/trans
-
-When `subst`'s motive can't be inferred from the goal, Lean fails with
-"Failed to eliminate". Workaround: replace `subst hEq` with `cases hEq`,
-which performs the same substitution but is sometimes more permissive.
-If both fail, the structural-equality field on `LabelledRootedTree`
-(which has only one `underlying` field) may need to be eliminated via
-`LabelledRootedTree.ext`-style cases.
-
-**Abort threshold**: 30 min each on `symm` and `trans` proofs. If both
-stall, ship P1–P3-P1 piece (just the `Equiv` definition without the
-Setoid).
-
-### R3: `Equiv.apply_symm_apply` name drift
-
-Mathlib has `Equiv.apply_symm_apply`, `Equiv.symm_apply_apply`, and
-possibly `Equiv.coe_apply_symm`-variants. If the recipe's names don't
-resolve, run `lean_local_search "Equiv.apply_symm"` to find the
-current name. Both directions of the cancellation exist; pick the one
-matching the proof's argument order.
-
-### R4: σ-faithfulness divergence audit risk
-
-The weakened `TreeAutomorphism` is a **documented faithfulness
-divergence**. The supervisor's scanner should not flag it because:
-
-* It is documented in the docstring with cross-reference to
-  `.prover-state/issues/lem_310B_plan.md` §4.1.
-* `lean_status.json` is NOT updated for `lem:310B` (still `[ ]` /
-  `unformalized`).
-* `plan.md` is NOT updated for `lem:310B`.
-* No claim is made that `Setoid` quotient cardinality matches σ(t).
-
-If the supervisor flags this as a regression, treat it as a likely
-false positive (cycles 243–248 had similar tautology-scanner false
-positives per `.prover-state/issues/tautology_scanner_false_positives.md`).
-Do NOT remediate with sorries.
-
-### R5: AVOID the recursive Route A trap
-
-The cycle 262 task results recommended "Route A (recursive predicate)"
-as "simpler". **OVERRIDE: do NOT take Route A.** A recursive
-`TreeAutomorphism : RootedTree → Type` definition would require:
-* Mutual recursion through `List RootedTree` (because `RootedTree.mk`
-  takes a `List RootedTree` and the automorphism on children is a list
-  of automorphisms).
-* A motive-inference solution for the nested inductive per
-  `feedback_rootedtree_nested_induction.md`.
-
-Use the `Equiv.Perm` route (§B P1) instead. This is a deliberate
-departure from the cycle 262 task results.
-
-## §E — Backup plan (if main path stalls past 90 min)
-
-If R1–R3 collectively burn 90+ minutes without producing a clean
-`LabelledRootedTree.Equiv` Setoid, abort §B and pivot to the cycle 260
-§342 scouting recommendation: **`lem:342A` (342a) shifted Legendre
-orthogonality on `[0,1]`**.
-
-Per cycle 260's dependency scan (`lem_310B_plan.md` §8.2), `lem:342A`
-is independent of `lem:310B`. Concrete deliverables for the pivot:
-
-1. Define `shiftedLegendre : ℕ → Polynomial ℝ`. Search Mathlib first:
-   `lean_loogle "Polynomial.legendre"`. If `Polynomial.legendre` exists
-   for `[-1, 1]`, define `shiftedLegendre n := Polynomial.legendre n
-   |>.comp (2 * Polynomial.X - 1)`. If not, build via Rodrigues:
-   `P_n(x) = (1/n!) · dⁿ/dxⁿ (x^n · (x-1)^n)`.
-
-2. Define the `[0, 1]` inner product:
-   `⟨P, Q⟩₀₁ := ∫ x in (0:ℝ)..1, P.eval x * Q.eval x`.
-
-3. Prove orthogonality (342a) for `m ≠ n`:
-   `∫ x in (0:ℝ)..1, (shiftedLegendre m).eval x * (shiftedLegendre n).eval x = 0`.
-
-Single-cycle target (~80 LOC). Mathlib has `intervalIntegral` and
-polynomial-derivative machinery. Only pivot to this if Phase A.2 stalls
-past 90 min.
-
-If even the pivot fails, ship a strictly minimal axiom-clean
-deliverable: add ~3 small algebraic helper lemmas to Section301's
-`bseriesAlphaPartialSum` API (e.g. `bseriesAlphaPartialSum_const_mul`)
-to keep the cycle from being completely empty.
-
-## §F — What NOT to try
-
-* **NO sorry-first scaffolds.** Per cycle 200/201 rollback precedent.
-  If P3 cannot close axiom-clean, ship P1–P2 only.
-* **NO recursive `TreeAutomorphism` (Route A).** Per R5 above.
-* **NO `axiom` / `constant` declarations.** Standard project rule.
-* **NO `maxHeartbeats` increase above 200000.** Standard project rule.
-* **NO `lean_status.json` update for `lem:310B`.** Phase A.2 is
-  infrastructure; the textbook entity stays `unformalized`.
-* **NO `plan.md` update for `lem:310B`.** Same reason.
-* **NO modification of `scripts/autonomous_loop.py`.** Per CLAUDE.md
-  and `.prover-state/issues/tautology_scanner_false_positives.md`.
-* **NO Aristotle submission this cycle.** The sub-deliverables are
-  small enough to close manually; no batch warranted.
-* **NO §441 compile attempts.** 44th consecutive GPFS timeout
-  anticipated per `cycle_182_gpfs_slowness.md`. Skip entirely.
-* **NO §381 / `thm_381H_deferred.md` work.** Multi-cycle Banach-
-  fixed-point integration; defer.
-* **NO heterogeneous (genuinely-different-labelling) non-vacuity
-  witness in cycle 263.** Defer to Phase A.2.1 (cycle 264+).
-* **NO attempt to define `LabelledRootedTree.Equiv` via top-level
-  `Equiv` equality (`a.labelling = ψ.trans (h ▸ b.labelling)` at the
-  Equiv level).** The pointwise form (Step 3) is more robust.
-
-## §G — Suggested commit message
-
-```
-Cycle 263 — §300 Phase A.2 completion: TreeAutomorphism + LabelledRootedTree Setoid SHIPPED.
-
-Phase A.2 of lem_310B_plan.md completed. Cycle 262 shipped the
-LabelledRootedTree structure + canonical labelling; cycle 263 ships
-the tree-automorphism equivalence relation + Setoid instance.
-
-New in OpenMath/Chapter3/Section300.lean:
-* TreeAutomorphism: structure on Equiv.Perm (Vertex t) with
-  perm_root field (weakened — see docstring).
-* TreeAutomorphism.id / .trans / .symm: identity, composition, inverse.
-* LabelledRootedTree.Equiv: pointwise-encoded equivalence relation.
-* LabelledRootedTree.Equiv.{refl, symm, trans}.
-* LabelledRootedTree.setoid: Setoid LabelledRootedTree instance.
-* Three reflexivity non-vacuity witnesses on canonicalVertex /
-  canonicalCherry / canonicalBroom₃.
-
-Faithfulness divergence: TreeAutomorphism is weakened relative to
-Butcher's tree-automorphism group (only root-fixing; full recursive
-structure preservation deferred to Phase A.3 if/when needed).
-Documented in file docstring and in lem_310B_plan.md §4.1.
-
-All declarations axiom-clean ([propext, Classical.choice, Quot.sound]).
-Sorry count: 0 → 0. File: 272 → ~370 LOC.
-
-lem:310B remains [ ] / unformalized in plan.md (this cycle is
-infrastructure).
-```
-
-(If R1/R2/R3 forced P1–P2-only ship, adjust accordingly — drop the
-`LabelledRootedTree.Equiv` / `.setoid` references and explain in the
-body that Setoid is deferred to cycle 264.)
-
-## §H — Suggested next-cycle planner note
-
-If cycle 263 closes P1–P5 cleanly, cycle 264 should:
-* **Option 1 (recommended)**: Phase A.2.1 — heterogeneous-labelling
-  non-vacuity. Exhibit two different labellings of `mk [vertex, vertex]`
-  that are equivalent via the leaf-swap permutation. ~30 LOC.
-* **Option 2**: Phase A.3 — strengthen `TreeAutomorphism` with the full
-  recursive structure-preservation field; reprove
-  `TreeAutomorphism.{id, trans, symm}` and `LabelledRootedTree.Equiv`
-  in the strengthened setting. Multi-cycle (likely 2–3). Closes the
-  σ-faithfulness gap from
-  `.prover-state/issues/symmetry_group_equivalence.md`.
-* **Option 3**: proceed to Phase B (`thm:306A` multinomial Taylor) per
-  `lem_310B_plan.md` §5. Phase B.1 single-variable two-input form is
-  the natural first step (~100 LOC).
-* **Option 4 (pivot)**: ship `lem:342A` (342a) per §E above; defer
-  further `lem:310B` work to cycle 265+.
-
-If cycle 263 ships P1–P2 only (P3 aborted), cycle 264 retries P3 with
-HEq fallback or `cases` instead of `subst`. The `TreeAutomorphism` API
-is the load-bearing infrastructure either way.
+Cycle 263's "What I'm stuck on" field was empty. This is the **6th confirmed
+phantom-template invocation** (cycles 015, 040, 174, 180, 248, 263). The
+consultant phase was invoked against a clean cycle ship. Worker MUST NOT treat
+the phantom as a real blocker; pivot directly to route-finding. The standing
+recommendation in `consultant_advice_cycle_248.md` §I (short-circuit
+consultant phase when stuck-on is empty AND sorry count is 0) applies — but
+that's loop-maintainer territory, not worker territory.
