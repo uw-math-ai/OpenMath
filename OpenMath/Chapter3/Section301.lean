@@ -517,6 +517,89 @@ example : alphaWeight (mk [mk [cherry], vertex]) = 4 := by
       show density (mk [mk [cherry], vertex]) = 30 from rfl]
   norm_num [Nat.factorial]
 
+/- ### `bseriesTerm` — Butcher §310 B-series term (cycle 254)
+
+The summand `(h^r(t) / σ(t)) • F(t)(y₀)` of Butcher's series (310i),
+together with the trivial-tree identity (the `t = τ` half of
+`lem:310B`) and the θ-rewriting scaffold that the full `lem:310B`
+proof goes through.
+
+`lem:310B` itself is multi-cycle: per its `dependencies` field it
+requires `thm:306A` (Taylor's theorem — unformalised) plus labeled-
+tree machinery (absent — needed to state the LHS of (310i) as a sum
+over labeled rooted trees with orbit divisions). Cycle 254 ships
+only the pointwise prerequisites; cycle 255+ will extend to truncated
+B-series and the small-r forms of `lem:310B`.
+
+Placement note: this section was originally planned for
+`Section310.lean` but `bseriesTerm` consumes `symmetry` (defined in
+this file, Section301), which would create a circular import. Placed
+here inside the same `OpenMath.Chapter3.Section310.RootedTree`
+namespace so name resolution is unchanged. -/
+
+/-- The per-tree B-series term `(h^r(t) / σ(t)) • F(t)(y₀)`, the
+summand of Butcher's series (310i). For `f` smooth and `y₀ : E`,
+this is the contribution of the rooted tree `t` to the
+elementary-differential expansion of one ODE step.
+
+The `(σ(t) : ℝ)` cast in the denominator mirrors `alphaWeight`'s
+convention (line 305 of this file); `symmetry_pos` gives
+`0 < σ(t)`, so the quotient is well-defined. -/
+noncomputable def bseriesTerm
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) : E :=
+  (h ^ order t / (symmetry t : ℝ)) • elementaryDiff f y₀ t
+
+/-- `lem:310B` `t = τ` case: at the trivial tree, the B-series term
+reduces to `h • f(y₀)`. Butcher's proof of Lemma 310B describes this
+case as "obvious"; in our σ-faithful formalisation it reduces to
+`σ(τ) = 1`, `r(τ) = 1`, and `iteratedFDeriv ℝ 0 f y₀` collapsing to
+`f y₀` (the `Fin 0`-indexed empty-tuple input to a 0-fold
+derivative, `iteratedFDeriv_zero_apply`). -/
+theorem bseriesTerm_vertex
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) :
+    bseriesTerm f y₀ h vertex = h • f y₀ := by
+  unfold bseriesTerm vertex elementaryDiff
+  simp [iteratedFDeriv_zero_apply,
+        show order (mk []) = 1 from rfl,
+        show symmetry (mk []) = 1 from rfl]
+
+/-- `lem:310B` rearrangement core: at every rooted tree `t`, the
+B-series term is invariant under multiplication by the elementary
+weight `θ(t)` of the exact-solution operator. Since `θ ≡ 1`
+(`theta_eq_one`, cycle 249), this is mathematically trivial — but it
+is the pointwise algebraic identity Butcher's `lem:310B` proof goes
+through to relate the labeled and unlabeled forms of (310i).
+
+**NOT** the full statement of `lem:310B`. The full lemma asserts a
+re-summation identity between a labeled-tree-orbit sum (LHS,
+requires labeled-tree machinery not yet built) and the θ-weighted
+unlabeled sum (RHS). Cycle 254 ships only the pointwise scaffold;
+the re-summation requires `thm:306A` (Taylor's theorem) plus
+labeled-tree infrastructure. -/
+theorem bseriesTerm_eq_theta_smul_bseriesTerm
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) :
+    bseriesTerm f y₀ h t = theta t • bseriesTerm f y₀ h t := by
+  rw [theta_eq_one t, one_smul]
+
+-- §310 B-series term non-vacuity witnesses (cycle 254).
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesTerm f y₀ h vertex = h • f y₀ :=
+  bseriesTerm_vertex f y₀ h
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesTerm f y₀ h cherry =
+      theta cherry • bseriesTerm f y₀ h cherry :=
+  bseriesTerm_eq_theta_smul_bseriesTerm f y₀ h cherry
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesTerm f y₀ h broom₃ =
+      theta broom₃ • bseriesTerm f y₀ h broom₃ :=
+  bseriesTerm_eq_theta_smul_bseriesTerm f y₀ h broom₃
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310

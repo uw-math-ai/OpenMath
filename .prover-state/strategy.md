@@ -1,315 +1,429 @@
-# Cycle 253 strategy — saturate Butcher Table 310(II) at r=5
+# Cycle 254 strategy — `lem:310B` Phase A.0 (B-series term scaffold)
 
 ## TL;DR
 
-Ship **9 r=5 α-witness `example` blocks** at the end of
-`OpenMath/Chapter3/Section301.lean`, completing Butcher Table
-310(II) through r ≤ 5. Mechanical extension of the cycle-252
-pattern; ~70 LOC, no new infrastructure, no Aristotle jobs.
+Cycle 253 saturated Butcher Table 310(II) row r=5 with 9 axiom-clean
+α-witnesses. The task results explicitly direct cycle 254 to **pivot to
+`lem:310B` Phase A** and **do not extend the witness battery to r=6**.
 
-**Cycle 254 will pivot** to `lem:310B` Phase A
-(truncation-type + absolute-convergence scaffolding) per the
-cycle-252 worker's explicit warning: continuing α-witness work
-past cycle 254 risks treadmill. This cycle is the planned final
-momentum tick before that pivot.
+`lem:310B` itself (the Elementary Differential Weight Formula) is
+genuinely multi-cycle: per its `dependencies` field it requires
+`thm:306A` (Taylor's theorem — a multinomial expansion theorem that is
+itself unformalised and non-trivial) plus labeled-tree infrastructure
+(currently absent — needed to state the LHS series (310i) which is a
+sum over labeled rooted trees with orbit divisions). Attempting full
+closure in one cycle would either stall or require sorry-first
+scaffolds, which the cycle 149/150 and cycle 200/201 rollback precedents
+forbid.
 
-## Aristotle status
+**Cycle 254 target**: ship Phase A.0 of the `lem:310B` infrastructure:
+define the per-tree B-series term function `bseriesTerm` (the summand
+of equation (310i), an order-`r(t)` term with weight `1/σ(t)` and value
+`F[t](y₀)`), and ship the trivial `t = τ` case of `lem:310B` (the
+"obvious" half per Butcher's own proof) plus the θ-rewriting scaffold
+that the full proof goes through. Axiom-clean, sorry-clean,
+single-cycle, load-bearing prerequisite for any further `lem:310B`
+work.
 
-No pending results. No new submissions this cycle.
+## §A — What to ship
 
-## Why this cycle, not lem:310B Phase A directly
+### P1 (REQUIRED) — `bseriesTerm` definition (Section310.lean)
 
-Cycle 252 task results §"Suggested next approach" recommended:
-> Recommendation: do (1) or (2) one more time as a momentum cycle,
-> then pivot to (3).
+Add the per-tree B-series summand to `OpenMath/Chapter3/Section310.lean`
+immediately after the existing `elementaryDiff` definition (currently
+ending at line 199, just before the trailing `end OpenMath.Chapter3.Section310`).
+Add the new declarations *before* the trailing `end` so they live in
+the same namespace block.
 
-Option (1) = r=5 α-witnesses (this cycle).
-Option (3) = `lem:310B` Phase A (cycle 254 target).
-
-`lem:310B` Phase A is genuinely multi-cycle scope: it needs a
-truncation predicate `{t : RootedTree // t.order ≤ N}`, an
-absolute-convergence scaffold for B-series, and likely a `Finset`-
-over-trees infrastructure. Forcing it into cycle 253 would risk a
-rollback (cycle 149/200/201 precedent). One more clean momentum
-cycle first is the right move.
-
-The r=5 row is the **last full row of Butcher Table 310(II)**;
-saturating it gives the project a complete reproduction of the
-textbook's small-tree data table, which becomes the regression
-oracle for `lem:310B` Phase B work later.
-
-## Priority 1 — Ship r=5 α-witness battery (the entire cycle)
-
-### Location
-
-`OpenMath/Chapter3/Section301.lean`, **append** new `example`
-blocks **after** line 403 (the cycle 252 `mk [mk [cherry]]`
-witness) and **before** line 405 (`end RootedTree`). Same as
-cycle 252's append pattern.
-
-Do NOT modify any existing code. The deliverable is purely
-additive.
-
-### Witness pattern (verbatim from cycle 252 recipe)
-
-For each tree `T` with computed `(order=N, symmetry=M, density=K,
-alpha=R)`:
+Definition (Butcher §310 equation (310i) summand form):
 
 ```lean
-/-- Non-trivial witness: <one-line description>. Order N, symmetry M,
-density K, so α = N!/(M·K) = R. -/
-example : alphaWeight T = R := by
-  unfold alphaWeight
-  rw [show order T = N from rfl,
-      show symmetry T = M from rfl,
-      show density T = K from rfl]
-  norm_num [Nat.factorial]
+/-- The per-tree B-series term `(h^r(t) / σ(t)) • F(t)(y₀)`, the
+summand of Butcher's series (310i). For `f` smooth and `y₀ : E`, this
+is the contribution of the rooted tree `t` to the elementary-differential
+expansion of one ODE step. -/
+noncomputable def bseriesTerm
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) : E :=
+  (h ^ RootedTree.order t / (RootedTree.symmetry t : ℝ)) •
+    elementaryDiff f y₀ t
 ```
 
-Use the Section310 abbreviations `vertex`, `cherry`, `broom₃`
-(lines 108, 111, 114 of `Section310.lean`) where they apply.
-This matches the cycle-252 idiom.
+Justification for placing the `(σ(t) : ℝ)` cast in the denominator
+literally rather than via a `Polynomial.C`-style wrapper: cycle 250's
+`alphaWeight` already adopts this convention
+(`OpenMath/Chapter3/Section301.lean:305`); reuse it for consistency.
+`RootedTree.symmetry_pos` (cycle 017) gives `0 < σ(t)` for
+positivity-driven downstream consumers — note for cycle 255 that the
+cast denominator is non-zero, so `field_simp`-style rewriting is safe.
 
-### The 9 r=5 trees and their α values
+### P2 (REQUIRED) — Trivial-tree identity (`t = τ` case of `lem:310B`)
 
-All 9 unordered rooted trees of order 5 (standard tree count for
-r=5 = 9). Each entry shows the `mk [...]` Lean term, the
-(order, σ, γ, α) tuple, and a short description.
+```lean
+/-- `lem:310B` t = τ case: at the trivial tree, the B-series term
+reduces to `h • f y₀`. Butcher's proof of Lemma 310B describes this
+case as "obvious"; in our σ-faithful formalisation it reduces to:
+σ(τ) = 1 (cycle 017), r(τ) = 1 (cycle 017), and `iteratedFDeriv ℝ 0 f
+y₀` collapsing to `f y₀` (the `Fin 0`-indexed empty-tuple input to a
+0-fold derivative). -/
+theorem bseriesTerm_vertex
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) :
+    bseriesTerm f y₀ h RootedTree.vertex = h • f y₀ := by
+  unfold bseriesTerm
+  rw [show RootedTree.order RootedTree.vertex = 1 from rfl,
+      show RootedTree.symmetry RootedTree.vertex = 1 from rfl]
+  -- Goal: (h ^ 1 / (1 : ℝ)) • elementaryDiff f y₀ vertex = h • f y₀
+  simp [pow_one, div_one]
+  -- Goal: elementaryDiff f y₀ vertex = f y₀
+  -- vertex = mk [] so elementaryDiff unfolds to iteratedFDeriv ℝ 0 f y₀
+  -- evaluated on the empty `Fin 0 → E` tuple, which is f y₀.
+  show elementaryDiff f y₀ (RootedTree.mk []) = f y₀
+  unfold elementaryDiff
+  simp [iteratedFDeriv_zero_apply]
+```
 
-#### 1. 5-ladder `mk [mk [mk [cherry]]]` — chain `f'(f'(f'(f'f)))`
-- order=5, σ=1, γ=120, α = 5!/(1·120) = **1**
-- Reasoning: single-child chain (no symmetry); density factor
-  is `5 · γ(mk [mk [cherry]]) = 5 · 24 = 120`.
+**Risk R-P2.1**: `RootedTree.vertex` may not be a direct `mk []`
+synonym in the cycle 017 file. Check first via `lean_local_search
+"vertex"` in `OpenMath/Chapter3/Section301.lean`. If `vertex` is
+defined as `RootedTree.mk []`, the `show elementaryDiff f y₀ (mk [])`
+step works by `rfl`; if `vertex` is named differently, replace with
+the actual identifier.
 
-#### 2. broom₅ `mk [vertex, vertex, vertex, vertex]` — `f''''(f,f,f,f)`
-- order=5, σ=24, γ=5, α = 5!/(24·5) = **1**
-- Reasoning: 4 indistinguishable leaves give σ = 4! = 24; density
-  is `5 · γ(τ)⁴ = 5 · 1 = 5`.
+**Risk R-P2.2**: `iteratedFDeriv_zero_apply` may have a different
+Mathlib name in the current pin. Backup: use `lean_loogle` with type
+pattern `iteratedFDeriv _ 0 _ _ _ = _`, or `lean_local_search
+"iteratedFDeriv_zero"`. Candidate names to try in `lean_multi_attempt`
+at the failing `simp` line: `["simp [iteratedFDeriv_zero_apply]",
+"simp [iteratedFDeriv_zero_eq_comp]", "rfl",
+"exact iteratedFDeriv_zero_apply _ _"]`.
 
-#### 3. Two cherries `mk [cherry, cherry]` — `f''(f'f, f'f)`
-- order=5, σ=2, γ=20, α = 5!/(2·20) = **3**
-- Reasoning: 2 indistinguishable cherries → σ = 2! · σ(cherry)² =
-  2 · 1 = 2; density `5 · γ(cherry)² = 5 · 4 = 20`.
+**Risk R-P2.3**: `order vertex = 1` and `symmetry vertex = 1` may
+not be definitional. The cycle 017 `tau_values` at
+`Section301.lean:267` proves these. If `show ... from rfl` fails,
+swap to `rw [tau_values]` (extracting both equalities) or use inline
+`have h_order : ... := by simp [...]` / `have h_sigma : ... := by
+simp [...]`. Verify by `lean_hover_info` on `order` and `symmetry`
+to check definitional reducibility.
 
-#### 4. Cherry + two leaves `mk [cherry, vertex, vertex]` — `f'''(f, f, f'f)`
-- order=5, σ=2, γ=10, α = 5!/(2·10) = **6**
-- Reasoning: cherry distinct from leaves (factor 1!·σ(cherry)¹=1),
-  2 indistinguishable leaves (factor 2!·σ(τ)²=2). σ = 1·2 = 2.
-  Density `5 · γ(cherry) · γ(τ)² = 5 · 2 · 1 = 10`.
+### P3 (REQUIRED) — θ-reweighting scaffold
 
-#### 5. Lifted broom₄ `mk [mk [vertex, vertex, vertex]]` — `f'(f'''(f,f,f))`
-- order=5, σ=6, γ=20, α = 5!/(6·20) = **1**
-- Reasoning: single child `mk [v,v,v]` (broom₄), so σ inherits =
-  σ(broom₄) = 3! = 6. Density `5 · γ(broom₄) = 5 · 4 = 20`.
+```lean
+/-- `lem:310B` rearrangement core: at every rooted tree `t`, the
+B-series term is invariant under multiplication by the elementary
+weight `θ(t)` of the exact-solution operator. Since `θ ≡ 1` (cycle
+249, `theta_eq_one`), this is mathematically trivial — but it is the
+pointwise algebraic identity Butcher's `lem:310B` proof goes through
+to relate the labeled and unlabeled forms of (310i).
 
-#### 6. Lifted "lifted broom₃" `mk [mk [broom₃]]` — `f'(f'(f''(f,f)))`
-- order=5, σ=2, γ=60, α = 5!/(2·60) = **1**
-- Reasoning: single child `mk [broom₃]`, so σ inherits = σ(mk
-  [broom₃]) = 2 (cycle 252). Density `5 · γ(mk [broom₃]) = 5 · 12
-  = 60`.
+NOT the full statement of `lem:310B` — the full lemma asserts a
+re-summation identity between a labeled-tree-orbit sum (LHS, requires
+labeled-tree machinery not yet built) and the θ-weighted unlabeled
+sum (RHS). Cycle 254 ships only the pointwise scaffold; the
+re-summation requires `thm:306A` (Taylor's theorem) plus labeled-tree
+infrastructure. -/
+theorem bseriesTerm_eq_theta_smul_bseriesTerm
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) :
+    bseriesTerm f y₀ h t = (RootedTree.theta t) • bseriesTerm f y₀ h t := by
+  rw [RootedTree.theta_eq_one t, one_smul]
+```
 
-#### 7. Lifted asymmetric r=4 `mk [mk [vertex, cherry]]` — `f'(f'(f, f'f))`
-- order=5, σ=1, γ=40, α = 5!/(1·40) = **3**
-- Reasoning: single child `mk [vertex, cherry]`, so σ inherits =
-  σ(mk [vertex, cherry]) = 1 (cycle 252). Density `5 · γ(mk
-  [vertex, cherry]) = 5 · 8 = 40`.
+**Risk R-P3.1**: `theta_eq_one`'s qualified path. Per grep,
+cycle 249 placed `theta` and `theta_eq_one` inside
+`namespace OpenMath.Chapter3.Section310` (the file's own namespace),
+with `theta` itself inside what is effectively the `RootedTree`
+namespace at file scope. Inside Section310's namespace block, write
+just `theta_eq_one t` (no qualifier). If you have to qualify
+externally, use the dot-notation `t.theta` and fully qualified
+`OpenMath.Chapter3.Section310.theta_eq_one` — verify via
+`lean_local_search "theta_eq_one"`.
 
-#### 8. broom₃ + leaf `mk [broom₃, vertex]` — `f''(f''(f,f), f)`
-- order=5, σ=2, γ=15, α = 5!/(2·15) = **4**
-- Reasoning: broom₃ distinct from vertex; σ = 1!·σ(broom₃)¹ · 1!·σ(τ)¹
-  = 2·1 = 2. Density `5 · γ(broom₃) · γ(τ) = 5 · 3 · 1 = 15`.
+**Risk R-P3.2**: Reading the cycle 249 grep output more carefully —
+the `def theta` is at line 137, and `theorem theta_eq_one` is at
+line 154. Both are at indent level 2 (inside a `mutual` block?
+indent suggests nesting). Inspect cycle 249's namespace structure
+with `Read OpenMath/Chapter3/Section310.lean offset=120 limit=80`
+before writing P3. If `theta_eq_one` is inside a `mutual` block,
+it may need `(t)` as an explicit argument, not dot-notation.
 
-#### 9. 3-ladder + leaf `mk [mk [cherry], vertex]` — `f''(f'(f'f), f)`
-- order=5, σ=1, γ=30, α = 5!/(1·30) = **4**
-- Reasoning: mk [cherry] distinct from vertex; σ =
-  1!·σ(mk [cherry])¹ · 1!·σ(τ)¹ = 1·1 = 1. Density `5 · γ(mk
-  [cherry]) · γ(τ) = 5 · 6 · 1 = 30`.
+### P4 (REQUIRED) — Three non-vacuity witnesses
 
-### Order-list ordering matters
+After the three new top-level declarations (and BEFORE the trailing
+`end OpenMath.Chapter3.Section310`), add three concrete `example`
+blocks. They must be in the same namespace block as `bseriesTerm` so
+the name resolves without qualification:
 
-The `symmetryProd` recursion walks the children list left-to-right
-emitting a factor at the **last occurrence** of each distinct
-subtree. For asymmetric trees, the list-order choice is part of
-term identity. The orderings above (#3 = `[cherry, cherry]`,
-#4 = `[cherry, vertex, vertex]`, #8 = `[broom₃, vertex]`,
-#9 = `[mk [cherry], vertex]`) all reduce correctly under the
-recursion — verified by hand:
+```lean
+-- §310 B-series term non-vacuity witnesses (cycle 254).
 
-* `mk [cherry, vertex, vertex]`: step 1 emits `1!·σ(cherry)¹=1`
-  (cherry ∉ rest=[v,v]); step 2 recurses (v ∈ [v]); step 3 emits
-  `(count v in [c,v,v])!·σ(τ)²=2!·1=2`. Total: 1·2=2.
-* `mk [broom₃, vertex]`: step 1 emits `1!·σ(broom₃)¹=2`; step 2
-  emits `1!·σ(τ)¹=1`. Total: 2·1=2.
-* `mk [mk [cherry], vertex]`: step 1 emits `1!·σ(mk [cherry])¹=1`;
-  step 2 emits `1!·σ(τ)¹=1`. Total: 1.
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesTerm f y₀ h RootedTree.vertex = h • f y₀ :=
+  bseriesTerm_vertex f y₀ h
 
-If `show symmetry T = M from rfl` fails for any of these trees:
-trace the recursion manually as above; the σ value should be
-correct, and the worry is just whether `rfl` reduces. Fall back
-to `by decide` if `from rfl` chokes.
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesTerm f y₀ h RootedTree.cherry =
+      RootedTree.theta RootedTree.cherry • bseriesTerm f y₀ h RootedTree.cherry :=
+  bseriesTerm_eq_theta_smul_bseriesTerm f y₀ h RootedTree.cherry
 
-### Sanity check on the deepest reduction (depth-4 tree)
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesTerm f y₀ h RootedTree.broom₃ =
+      RootedTree.theta RootedTree.broom₃ • bseriesTerm f y₀ h RootedTree.broom₃ :=
+  bseriesTerm_eq_theta_smul_bseriesTerm f y₀ h RootedTree.broom₃
+```
 
-Tree #1 (5-ladder = `mk [mk [mk [cherry]]]`) is depth-4 nested.
-The cycle 252 worker confirmed depth-3 nesting (`mk [mk [cherry]]`)
-reduced under `rfl` without measurable slowdown. Depth-4 should
-also work, but if `show density (mk [mk [mk [cherry]]]) = 120
-from rfl` times out:
-- **Fallback A**: replace `from rfl` with `by decide`. Both
-  reduce by kernel computation; `decide` adds Decidable wrapping.
-- **Fallback B**: introduce one named helper
-  `private lemma fiveLadder_density :
-   density (mk [mk [mk [cherry]]]) = 120 := rfl` and reference it.
-  Spreads the kernel work across declarations.
-- **Fallback C** (worst case): skip tree #1 and ship 8 witnesses.
-  This is still a clear cycle deliverable.
+These should close via the named theorems above (no `by` block
+needed; direct term-mode `exact` shape). They provide regression
+oracles for cycle 255+ work.
 
-## What NOT to do
+**Risk R-P4.1**: `RootedTree.cherry` / `RootedTree.broom₃`
+definitions. Per cycle 017 they are concrete constants in
+`Section301.lean`, exercised in cycle 251–253 examples. Use the same
+qualification as cycle 251–253. If `cherry` and `broom₃` are defined
+in a different namespace (e.g. directly under `OpenMath.Chapter3.Section301`
+rather than `RootedTree`), adjust the qualification — but the
+cycle 251–253 examples consistently use `cherry` and `broom₃` bare,
+which means they should be in scope here too.
 
-* **Do NOT** attempt `lem:310B` Phase A. That is cycle 254's
-  target. It needs the truncation type + absolute-convergence
-  scaffold; multi-cycle scope.
+### P5 (STRETCH — DO NOT BLOCK ON) — Order-r homogeneity in h
 
-* **Do NOT** redefine `RootedTree.symmetry` via permutation
-  groups. The faithfulness divergence is documented (`Section301.lean`
-  file docstring, lines 27–57, and
-  `.prover-state/issues/symmetry_group_equivalence.md`). The
-  recursive (301b) definition is what all witnesses target.
+Only if P1–P4 land in under ~75% of cycle time:
 
-* **Do NOT** extend `Section312.lean` with new `RKTableau`
-  instances (Heun-style, implicit midpoint, etc.) for
-  `internalWeight` testing. The cycle 252 worker's option (2)
-  would have required this, and it is more invasive than option
-  (1). Stick to option (1).
+```lean
+/-- B-series term is order-`r(t)` homogeneous in the step size `h`.
+A useful algebraic identity for future cycle 255+ work on summing
+B-series terms across trees of equal order. -/
+theorem bseriesTerm_smul_h
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (c h : ℝ) (t : RootedTree) :
+    bseriesTerm f y₀ (c * h) t =
+      c ^ RootedTree.order t • bseriesTerm f y₀ h t := by
+  unfold bseriesTerm
+  rw [mul_pow]
+  rw [show (c ^ RootedTree.order t * h ^ RootedTree.order t) /
+        (RootedTree.symmetry t : ℝ) =
+      c ^ RootedTree.order t *
+        (h ^ RootedTree.order t / (RootedTree.symmetry t : ℝ)) from by ring]
+  rw [mul_smul]
+```
 
-* **Do NOT** modify the existing cycle 252 witnesses at lines
-  328–403 of `Section301.lean`. They are axiom-clean and serve as
-  the cycle's regression suite. Append-only this cycle.
+**Risk R-P5.1**: the `ring` step is over ℝ-with-explicit-division.
+If it stalls (unlikely on a single rational expression), swap to
+`field_simp [Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp
+RootedTree.symmetry_pos)]; ring`. **Abort P5 cleanly if either form
+stalls — P5 is stretch, not load-bearing.**
 
-* **Do NOT** modify any other file. The §319, §311, §310, §312,
-  and §323 work from cycles 244–252 is settled. Disturbing it
-  risks regressions.
+## §B — What NOT to do (BINDING)
 
-* **Do NOT** add new theorems beyond the 9 `example` blocks. No
-  promotion to public theorems (the cycle 252 witnesses are not
-  promoted either; consistency matters). No new helper lemmas
-  (unless Fallback B triggers, in which case use `private`).
+* **Do NOT attempt the full `lem:310B`.** Per the entity JSON it
+  depends on `thm:306A` (unformalised, heavy multinomial Taylor) and
+  on labeled-tree machinery (absent). The full statement (310i) cannot
+  even be stated in Lean today. Cycle 254 ships *only* the trivial
+  `t = τ` case + the θ-rewriting scaffold.
 
-* **Do NOT** raise `maxHeartbeats`. If reductions are slow, use
-  Fallback A/B/C above instead.
+* **Do NOT introduce sorry-first scaffolds for `lem:310B`** (statement
+  with `sorry` body). The cycle 149/150 rollback (def:530B Path A) and
+  cycle 200/201 rollback (thm:381H scaffold) establish that sorry-first
+  deliverables get rolled back. Sorry count must stay at 0 across
+  cycle 254.
 
-* **Do NOT** introduce `axiom` or `constant`. The recursive
-  definitions reduce by `rfl` (or `decide`) — no axiomatic
-  shortcuts.
+* **Do NOT extend the α-witness battery to r=6.** Per the cycle 253
+  task results: "Butcher Table 310(II) stops at r=5, and the r=6 count
+  is 20 trees (treadmill territory)."
 
-* **Do NOT** poll Aristotle (no submissions are open for this
-  work).
+* **Do NOT introduce `TruncatedRootedTree` + `Fintype` machinery.**
+  These are genuinely needed for `lem:310B` Phase A.1+, but the
+  `Fintype` instance on subtype-of-nested-inductive is multi-cycle.
+  Cycle 254 defers this.
 
-* **Do NOT** smoke-test `Section441.lean`. 43 consecutive
-  GPFS-blocked timeouts (cycles 182–239); see
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`. Skip the
-  smoke test; that path is owned by the loop maintainer.
+* **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
+  43+ consecutive GPFS timeouts since cycle 182 (~12 days). Skip
+  without re-running the smoke test.
 
-## Verification checklist (run after edits)
+* **Do NOT attempt `lem_311A_order_two`** (the p=2 extension of cycle
+  248's `lem_311A_order_one`). Multi-cycle per cycle 248 consultant
+  analysis.
 
-1. `lake env lean OpenMath/Chapter3/Section301.lean` — clean exit
-   in <30 s expected.
-2. `lake env lean OpenMath/Chapter3.lean` — aggregator compiles.
-3. `grep -c sorry OpenMath/Chapter3/Section301.lean` — must
-   return `0` (unchanged from cycle 252).
-4. Tautology scanner sweep:
-   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$'
-   OpenMath/Chapter3/Section301.lean` — must be empty.
-5. Spot-check that the 9 new `example` blocks compile (Lean will
-   reject the file if any one fails; verification #1 covers this).
+* **Do NOT attempt `thm:306A` (Taylor's theorem).** Multinomial
+  expansion theorem; multi-cycle infrastructure work.
 
-If any of (1)–(4) fails, narrow scope: ship fewer than 9
-witnesses, document which trees failed and why in
-`task_results/cycle_253.md`. A 6+ witness cycle is still a clean
-ship.
+* **Do NOT attempt `def:381F` / `thm:381H` deferred-direction Banach
+  fixed-point bridges** per `thm_381H_deferred.md`. Multi-cycle.
 
-## Faithfulness check
+* **Do NOT raise `maxHeartbeats` above 200000.**
 
-Each new `example` exercises the **definition** of `alphaWeight`
-(302a closed form) on a specific tree. No new entities are
-introduced. No `lean_status.json` updates needed (the cycle 252
-worker confirmed: "These are derived numerical witnesses, not new
-textbook entities").
+* **Do NOT introduce `axiom`/`constant` declarations.**
 
-All 9 numerical α values above are computed from Butcher's Theorem
-301A formulas (r-recursion, σ-recursion, γ-recursion) and the
-(302a) definition. **Cross-check against Butcher Table 310(II)
-row r=5 (p. 152) before committing** — if any α value disagrees,
-**STOP** and verify by hand (the strategy's calculation may be
-wrong, not the code).
+* **Do NOT edit `scripts/autonomous_loop.py`** (loop-maintainer
+  territory).
 
-The σ-faithfulness divergence (stipulative (301b) recursion vs
-textbook symmetry-group definition) is unchanged from cycle 017
-and is documented in `Section301.lean`'s file docstring + the
-existing `symmetry_group_equivalence.md` issue.
+* **Do NOT poll any Aristotle project this cycle.** No submissions
+  are planned. If a planned cycle 255+ submission is queued by a
+  future cycle, the single-poll-after-30-min rule from CLAUDE.md
+  applies — not this cycle.
 
-## Pre-flight risk register (R1–R5)
+* **Do NOT touch the cycle 251–253 alphaWeight witnesses** in
+  Section301.lean. They are regression oracles.
 
-* **R1** (medium): one or more `show ... = N from rfl` lines may
-  fail if my calculation is off. Mitigation: trace the recursion
-  by hand following the cycle 252 worker's notes, or use `#eval
-  order (mk [...])` etc. in a scratch buffer to verify the
-  values. If a value is wrong, **fix the strategy number, not
-  the proof**. The most error-prone is σ (multiplicities matter);
-  γ and order are straightforward.
+## §C — Verification commands
 
-* **R2** (low): depth-4 5-ladder reduction may stress the kernel.
-  Fallback A/B/C above. The cycle 252 worker reported no slowdown
-  at depth-3; depth-4 should be similar.
+After P1–P4 (P5 if stretch lands), run these in order:
 
-* **R3** (low): the order of distinct subtrees in `mk [...]` may
-  affect the `symmetry` reduction. If `show symmetry T = M from
-  rfl` fails for tree #4, #8, or #9, try the alternative ordering
-  (vertex-first vs cherry-first or broom-first vs vertex-first)
-  and pick whichever reduces by `rfl`. The σ *value* is the same
-  for any ordering; only the kernel reduction shape differs.
+```bash
+# 1. Section310 compiles standalone.
+time timeout 180 lake env lean OpenMath/Chapter3/Section310.lean
+# Expected: clean exit (~5–15s warm, ≤120s clean).
 
-* **R4** (low): tautology scanner false-positive risk on
-  docstrings containing `:= h_*` or similar text. Avoid that
-  pattern in docstrings; use math notation only.
+# 2. Section301 still compiles (regression check on cycle 250–253 work).
+time timeout 180 lake env lean OpenMath/Chapter3/Section301.lean
+# Expected: clean exit, ≤ 15s warm.
 
-* **R5** (very low): supervisor evaluator may score cycle 253 as
-  −1 if it interprets the witness battery as "too similar to cycle
-  252". Mitigation: clearly distinguish in the cycle 253 task
-  results by emphasizing that **r=5 saturates the last full row of
-  Table 310(II)**, marking a textbook milestone. Do not be
-  deterred by scanner noise; ship clean.
+# 3. Aggregator builds.
+time timeout 300 lake env lean OpenMath/Chapter3.lean
 
-## Cycle 254+ planning material — `lem:310B` Phase A
+# 4. Sorry count unchanged at 0.
+grep -c sorry OpenMath/Chapter3/Section310.lean
+grep -c sorry OpenMath/Chapter3/Section301.lean
 
-Cycle 254's planner should target the **truncation predicate +
-absolute-convergence scaffold** for B-series:
+# 5. Tautology scanner sweep.
+rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section310.lean
+# Expected: no matches.
 
-1. Define `TruncatedRootedTree (N : ℕ) :=
-   { t : RootedTree // t.order ≤ N }`.
-2. Define `Fintype (TruncatedRootedTree N)` (the finite count of
-   rooted trees with order ≤ N is computable by induction on N).
-3. Begin the `lem:310B` statement: the truncated B-series
-   `Σ_{t : TruncatedRootedTree N} (h^t.order / t.order!) · α(t) ·
-   F[t](y₀)` converges absolutely as N → ∞ for `h` sufficiently
-   small.
+# 6. Axiom check on each new theorem (USE `lean_verify` MCP, NOT
+#    `#print axioms` on a standalone file — per CLAUDE.md and the
+#    cycle 192 stale-cache discovery, `#print axioms` on a standalone
+#    Lean invocation can produce false-positive `sorryAx` results
+#    until `lake build` refreshes the cache).
+#    Use lean_verify on:
+#      - OpenMath.Chapter3.Section310.bseriesTerm  (definition)
+#      - OpenMath.Chapter3.Section310.bseriesTerm_vertex
+#      - OpenMath.Chapter3.Section310.bseriesTerm_eq_theta_smul_bseriesTerm
+#      - (P5 stretch) OpenMath.Chapter3.Section310.bseriesTerm_smul_h
+# Expected for each: [propext, Classical.choice, Quot.sound] only.
+```
 
-This is **multi-cycle scope**. Cycle 254 should plan it as
-sub-phases (define the type, build `Fintype`, then
-`Finset`-of-trees, then the absolute-convergence statement). The
-α-witness battery shipped through cycle 253 serves as
-**regression oracle**: any proof of `lem:310B` must reproduce
-the witness values, providing sanity tests.
+If step 1 stalls past 180s for a 4-theorem change of this size, the
+GPFS pathology has spread beyond Section441 — escalate via a fresh
+issue file (do not delete `cycle_182_gpfs_slowness.md`; append).
 
-Alternative cycle 254 targets if `lem:310B` Phase A is judged too
-risky:
-- `internalWeight` non-vacuity (cycle 252's option (2)) — needs a
-  new RKTableau and is more involved than it sounds.
-- `lem:312B` (Elementary Weight Summation Formula) — depends on
-  `lem:310B` infrastructure, likely blocked.
-- `thm:311B` (Taylor expansion exact solution formula) — uses
-  cycle 248's `lem_311A_order_one` but generalizes to order p;
-  multi-cycle.
+## §D — Risk inventory
 
-The α-witness saturation cycle 253 ships is the right inflection
-point: maximum α-data with minimum cycle treadmill.
+| Risk | Severity | Mitigation |
+|---|---|---|
+| R-P2.1 — `RootedTree.vertex` vs `mk []` mismatch | low | Check cycle 017 file; use whichever name resolves. Both should compile under definitional unfolding. |
+| R-P2.2 — `iteratedFDeriv_zero_apply` name drift | medium | `lean_loogle` / `lean_local_search` for current Mathlib name. Backup: `lean_multi_attempt` with three candidates. |
+| R-P2.3 — `order vertex = 1` / `σ vertex = 1` not `rfl`-closable | medium | Inline `simp [...]` proofs of `h_order` / `h_sigma`; route through cycle 017's `tau_values`. |
+| R-P3.1 — `theta_eq_one` qualified name | low | Inside Section310's namespace block, write just `theta_eq_one t`. If qualification needed, use the fully qualified path. |
+| R-P3.2 — `theta_eq_one` mutual-block argument shape | low | Inspect Section310.lean lines 120–200 before writing P3. |
+| R-P4.1 — `RootedTree.cherry` / `RootedTree.broom₃` qualification | low | Per cycle 251–253, both are in scope as `cherry` and `broom₃`. Match their usage exactly. |
+| R-P5.1 — `ring` over ℝ-with-division stalls | low (stretch only) | Swap to `field_simp; ring`. Abort P5 if both stall. |
+| R-namespace-end | low | `bseriesTerm` declarations must go INSIDE the existing namespace block, BEFORE the trailing `end OpenMath.Chapter3.Section310` (line ~199). The P4 examples can be either inside (term mode `exact`) or outside (would need full qualification). Prefer inside for terseness. |
+
+## §E — Faithfulness check
+
+Cycle 254 introduces:
+
+* `bseriesTerm` — pure scaffold definition. Encodes the (310i)
+  summand verbatim with σ-faithfulness divergence inherited from
+  cycle 017 (recursive (301b) definition vs Butcher §300's automorphism-
+  group definition). Same divergence cycle 250's `alphaWeight`
+  inherits; documented in `Section301.lean`'s file docstring and
+  `.prover-state/issues/symmetry_group_equivalence.md`.
+
+* `bseriesTerm_vertex` — the `t = τ` half of `lem:310B`. Butcher's
+  proof calls this "obvious"; our Lean form is the algebraic
+  identity `bseriesTerm f y₀ h vertex = h • f y₀`, which is true by
+  definition under σ(τ)=1, r(τ)=1, and `iteratedFDeriv ℝ 0`-collapse.
+
+* `bseriesTerm_eq_theta_smul_bseriesTerm` — the θ-rewriting scaffold
+  that Butcher's full lem:310B proof relies on after applying
+  thm:306A. **NOT** the full statement of `lem:310B`; it's the
+  pointwise prerequisite identity. Documented explicitly in the
+  docstring: "NOT the full statement of `lem:310B` — the full lemma
+  asserts a re-summation identity between a labeled-tree-orbit sum
+  (LHS, requires labeled-tree machinery not yet built) and the
+  θ-weighted unlabeled sum (RHS)."
+
+`lean_status.json` row for `lem:310B`: **DO NOT MARK AS FORMALIZED**.
+Cycle 254 ships scaffolding only. Status stays `unformalized`. The
+`plan.md` row stays `[ ]`.
+
+The cycle 250 `alphaWeight` row reflects (302a) as a definition
+divergence (a closed-form replacing Butcher §302's labeled-counting
+definition). `bseriesTerm` does NOT introduce a parallel divergence —
+the (310i) summand IS literally `(h^r(t) / σ(t)) • F(t)(y₀)` in
+Butcher, so the Lean definition is a faithful transcription.
+
+## §F — Cycle 255+ outlook
+
+After cycle 254 lands:
+
+* **Cycle 255 candidates** (highest leverage first):
+  - Define `TruncatedRootedTree N := { t : RootedTree // order t ≤ N }`
+    plus minimal API (val coercion, monotone embedding to higher N).
+    Avoid attempting `Fintype` instance (multi-cycle).
+  - Ship a "B-series partial sum" definition that sums `bseriesTerm`
+    over a hand-enumerated `Finset` of small trees (e.g., the four
+    r ≤ 3 trees, then the eight r ≤ 4 trees). This gives a working
+    partial B-series without `Fintype`.
+  - Aristotle batch for the `iteratedFDeriv ℝ 1 f y ↔ fderiv ℝ f y`
+    bridge (cycle 248 task results' P2(a) blocker); single-poll
+    after 30 min.
+
+* **Cycle 256+**: with trunc-trees + partial-sum infrastructure in
+  hand, attempt the small-r form of `lem:310B` (state and prove for
+  `TruncatedRootedTree 2` or 3, mechanically expanded) as a stepping
+  stone toward the general form.
+
+* **Multi-cycle `lem:310B` general form**: ~5–8 cycles (labeled tree
+  theory + `thm:306A` Taylor + the orbit-counting combinatorial
+  bridge per Butcher's proof). Plan in a dedicated scoping doc when
+  cycle 256+ lands the small-r case.
+
+## §G — Bottom-line directive
+
+Cycle 254 deliverable: P1 + P2 + P3 + P4. Ship as one ~80 LOC
+addition to `OpenMath/Chapter3/Section310.lean`. Single-cycle scope,
+axiom-clean, sorry-clean. P5 only if time permits.
+
+NO Aristotle. NO sorries. NO multi-cycle infrastructure commitments.
+NO `TruncatedRootedTree` / `Fintype` attempts. NO labeled tree
+theory. NO `thm:306A` attempts.
+
+If P1–P4 stall in the first half of the cycle, abort and ship a
+minimal alternative: a single new named theorem of the form
+`bseriesTerm_pos_smul_homogeneity` (rewrite of P5 with a non-
+negativity flavor), or alternatively retreat to a 3-line
+`bseriesTerm_zero` theorem proving `bseriesTerm f y₀ 0 t = 0`
+whenever `0 < order t` (a trivial scaling fact). Sorry count stays
+0 either way.
+
+## §H — Pre-flight checklist
+
+Before starting P1, verify by `Read` / `Grep` (these are cheap and
+prevent the most common cycle-stall failure modes):
+
+1. **`Section310.lean` namespace structure at lines 120–200.** Confirm
+   `theta` lives at file scope inside `namespace OpenMath.Chapter3.Section310`,
+   not inside a sub-namespace. Confirm `theta_eq_one` is accessible
+   bare-named from inside the same namespace.
+
+2. **`Section301.lean::tau_values` at line 267.** Confirm it states
+   `order vertex = 1 ∧ symmetry vertex = 1 ∧ density vertex = 1` (or
+   similar). If the structure differs, P2's `show ... from rfl`
+   strategy may need adjustment.
+
+3. **`RootedTree.vertex` definition.** Confirm in Section301.lean
+   that `vertex` is defined as `RootedTree.mk []` (or whichever
+   constructor form). If it's a separate `def`, the `show`
+   manipulation in P2 needs that intermediate `unfold`.
+
+4. **`iteratedFDeriv_zero_apply` Mathlib name.** Run
+   `lean_loogle "iteratedFDeriv _ 0"` or `lean_local_search
+   "iteratedFDeriv_zero"` BEFORE attempting P2's body. If the name
+   differs, pre-load `lean_multi_attempt` candidates.
+
+If checklist items reveal mismatches with the strategy as written,
+adapt P2/P3 locally rather than escalating — the deliverable is the
+mathematical content (B-series term + trivial case + θ-scaffold),
+not the literal Lean text in this strategy.
