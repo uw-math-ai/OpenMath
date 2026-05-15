@@ -819,6 +819,164 @@ example (y₀ h : ℝ) :
       = h • y₀ := by
   rw [bseriesAlphaPartialSum_singleton, bseriesAlphaTerm_vertex]; rfl
 
+/- ### Exact-solution B-series partial sum (cycle 266)
+
+Butcher §312 expresses the exact-solution operator `E` via the
+B-series whose per-tree coefficient is `h^{r(t)} / (σ(t) · γ(t))`.
+Equivalently this is `α(t)/r(t)! · bseriesTerm` (with the factorial
+denominator `γ(t)`, since `γ(t) = r(t) · ∏ γ(tᵢ)` collects the
+factorial-style multiplicity from the recursion — invisible at
+`r = 1` where `γ(τ) = 1!`, but bites at `r ≥ 2`).
+
+This differs from cycle 256's `bseriesAlphaTerm := α • bseriesTerm`,
+which is the Butcher-(310i)-form *RK-method* B-series term **without**
+the `1/r!` factor. Both forms are valid textbook objects but for
+different purposes: `bseriesAlphaTerm` is the RK-method B-series
+(used in `lem:310B`'s LHS), while `bseriesExactTerm` is the
+**exact-solution Taylor B-series** (used to bridge with Butcher §311's
+Taylor expansion of the exact solution).
+
+Concretely, at the cherry `t = [τ]` with `r = 2`, `σ = 1`, `γ = 2`:
+* `bseriesAlphaTerm f y₀ h cherry` = `1 · (h²/1) · F(cherry)(y₀)`
+  = `h² · (f' · f)` (no `1/2` factor).
+* `bseriesExactTerm f y₀ h cherry` = `(h² / (1 · 2)) · F(cherry)(y₀)`
+  = `(h²/2) · (f' · f)` (the factor required by Taylor's theorem).
+
+The Phase E.1 bridge `lem_311A_order_two_partialSum` (Section311)
+consumes `bseriesExactTerm`, not `bseriesAlphaTerm`. -/
+
+/-- The per-tree summand of the **exact-solution B-series**
+(Butcher §312):
+
+  `bseriesExactTerm f y₀ h t = (h^{r(t)} / (σ(t) · γ(t))) • F(t)(y₀)`.
+
+Equivalently `α(t)/r(t)! · bseriesTerm`: the `1/r(t)!` factor is
+collected into the `γ(t)` denominator via `γ(t) = r(t) · ∏ γ(tᵢ)`
+(Butcher (301a)). See the section comment for the cycle-256
+`bseriesAlphaTerm` distinction.
+
+`density_pos t` (= `γ(t) > 0`) and `symmetry_pos t` ensure the
+quotient is well-defined for every `t`. -/
+noncomputable def bseriesExactTerm
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) : E :=
+  (h ^ order t / ((symmetry t : ℝ) * (density t : ℝ))) •
+    elementaryDiff f y₀ t
+
+/-- At the trivial tree `τ = vertex = mk []`: `r(τ) = σ(τ) = γ(τ) = 1`
+(`tau_values`), so the exact-solution coefficient collapses to `h¹`,
+and `elementaryDiff f y₀ vertex = f y₀`. Hence
+`bseriesExactTerm f y₀ h vertex = h • f y₀`. -/
+theorem bseriesExactTerm_vertex
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) :
+    bseriesExactTerm f y₀ h vertex = h • f y₀ := by
+  unfold bseriesExactTerm vertex elementaryDiff
+  simp [iteratedFDeriv_zero_apply,
+        show order (mk []) = 1 from rfl,
+        show symmetry (mk []) = 1 from rfl,
+        show density (mk []) = 1 from rfl]
+
+/-- **Scalar closed form at the cherry tree.** For `f : ℝ → ℝ`, the
+exact-solution B-series term at `cherry = mk [vertex]` is
+`h²/2 · (f'(y₀) · f(y₀))`.
+
+This is the load-bearing faithfulness check distinguishing
+`bseriesExactTerm` from cycle 256's `bseriesAlphaTerm`: the latter
+gives `h² · (f' · f)` at the cherry, the former gives `h²/2 · (f' · f)`
+— the missing `1/r!` factor that makes Taylor's theorem fire. -/
+theorem bseriesExactTerm_cherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h cherry = h^2 / 2 * (deriv f y₀ * f y₀) := by
+  unfold bseriesExactTerm cherry
+  rw [show order (mk [vertex]) = 2 from rfl,
+      show symmetry (mk [vertex]) = 1 from rfl,
+      show density (mk [vertex]) = 2 from rfl]
+  -- Compute `elementaryDiff f y₀ (mk [vertex])`.
+  have hED : elementaryDiff f y₀ (mk [vertex]) = deriv f y₀ * f y₀ := by
+    unfold elementaryDiff
+    have hED_v : elementaryDiff f y₀ vertex = f y₀ := by
+      show elementaryDiff f y₀ (mk []) = f y₀
+      unfold elementaryDiff
+      exact iteratedFDeriv_zero_apply _
+    -- `iteratedFDeriv ℝ 1 f y₀ ![f y₀] = fderiv ℝ f y₀ (f y₀) = f y₀ • deriv f y₀`.
+    show iteratedFDeriv ℝ 1 f y₀
+            (fun i : Fin 1 => elementaryDiff f y₀ ([(vertex : RootedTree)].get i))
+          = deriv f y₀ * f y₀
+    rw [iteratedFDeriv_one_apply, fderiv_eq_smul_deriv,
+        show [(vertex : RootedTree)].get (0 : Fin 1) = vertex from rfl, hED_v,
+        smul_eq_mul]
+    ring
+  rw [hED, smul_eq_mul]
+  push_cast
+  ring
+
+/-- Exact-solution B-series, partial-sum form: the §312 exact-solution
+B-series truncated to a hand-supplied `Finset RootedTree`. Differs
+from cycle 256's `bseriesAlphaPartialSum` by the `1/γ(t)` factor in
+each summand. -/
+noncomputable def bseriesExactPartialSum
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (S : Finset RootedTree) : E :=
+  ∑ t ∈ S, bseriesExactTerm f y₀ h t
+
+@[simp]
+theorem bseriesExactPartialSum_empty
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) :
+    bseriesExactPartialSum f y₀ h ∅ = 0 := by
+  simp [bseriesExactPartialSum]
+
+theorem bseriesExactPartialSum_insert
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) {t : RootedTree} {S : Finset RootedTree}
+    (ht : t ∉ S) :
+    bseriesExactPartialSum f y₀ h (insert t S) =
+      bseriesExactTerm f y₀ h t + bseriesExactPartialSum f y₀ h S := by
+  simp [bseriesExactPartialSum, Finset.sum_insert ht]
+
+/-- Singleton case: the exact-solution B-series partial sum over `{t}`
+collapses to the bare summand `bseriesExactTerm f y₀ h t`. -/
+theorem bseriesExactPartialSum_singleton
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) :
+    bseriesExactPartialSum f y₀ h {t} = bseriesExactTerm f y₀ h t := by
+  simp [bseriesExactPartialSum]
+
+/-- Disjoint-union additivity: the exact-solution B-series partial sum
+over `S₁ ∪ S₂` decomposes additively whenever `S₁` and `S₂` are
+disjoint. -/
+theorem bseriesExactPartialSum_union
+    {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+    (f : E → E) (y₀ : E) (h : ℝ) {S₁ S₂ : Finset RootedTree}
+    (hDisj : Disjoint S₁ S₂) :
+    bseriesExactPartialSum f y₀ h (S₁ ∪ S₂) =
+      bseriesExactPartialSum f y₀ h S₁ + bseriesExactPartialSum f y₀ h S₂ := by
+  simp [bseriesExactPartialSum, Finset.sum_union hDisj]
+
+-- §312 exact-solution B-series partial sum non-vacuity witnesses (cycle 266).
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactPartialSum f y₀ h {vertex} = h • f y₀ := by
+  rw [bseriesExactPartialSum_singleton, bseriesExactTerm_vertex]
+
+example (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactPartialSum f y₀ h {vertex, cherry} =
+      h • f y₀ + h^2 / 2 * (deriv f y₀ * f y₀) := by
+  have hcv : (vertex : RootedTree) ∉ ({cherry} : Finset RootedTree) := by
+    simp [Finset.mem_singleton, vertex, cherry]
+  rw [show ({vertex, cherry} : Finset RootedTree) =
+        insert vertex {cherry} from rfl,
+      bseriesExactPartialSum_insert _ _ _ hcv,
+      bseriesExactPartialSum_singleton, bseriesExactTerm_vertex,
+      bseriesExactTerm_cherry_scalar]
+
+example (y₀ h : ℝ) :
+    bseriesExactPartialSum (id : ℝ → ℝ) y₀ h
+        ({vertex} : Finset RootedTree)
+      = h • y₀ := by
+  rw [bseriesExactPartialSum_singleton, bseriesExactTerm_vertex]; rfl
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310

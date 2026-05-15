@@ -525,6 +525,16 @@ Requires Phase A.
   polynomial in `fderiv^j f y₀` and `f y₀`. State for `k = 2, 3`
   as a starter; defer `k ≥ 4` to Phase D.2. ~150–200 LOC.
 
+  **Cycle 266 stepping stone**: `bseriesExactTerm_cherry_scalar`
+  performs the `iteratedFDeriv ℝ 1` → `fderiv ℝ` → `deriv` collapse
+  at the *single concrete tree* `cherry` on scalar `ℝ → ℝ`. The
+  recipe (`iteratedFDeriv_one_apply` + `fderiv_eq_smul_deriv` +
+  `smul_eq_mul`) is the seed for the polymorphic-`E` order-2 lift:
+  the same collapse generalises pointwise at each tree once the
+  multilinear-map plumbing for arbitrary `E` is in place. See
+  `Section301.lean :: bseriesExactTerm_cherry_scalar` for the
+  reference pattern.
+
 - **Phase D.2** (optional, 1 cycle):
   General `k` via Faà di Bruno. Mathlib's
   `iteratedFDeriv` machinery (`Mathlib.Analysis.Calculus.IteratedDeriv`)
@@ -542,6 +552,36 @@ chosen).
   scalar order-2 specialisation we have already (cycle 256
   `lem_311A_order_two`), reformulated in the polymorphic
   multilinear setting from Phase D. ~100–150 LOC.
+
+  **Cycle 266 update (closed for scalar `ℝ → ℝ`)**:
+  Phase E.1 is now closed in the scalar setting. Cycle 266 shipped:
+
+  * `bseriesExactTerm` (new definition, `Section301.lean`) — the
+    *exact-solution* B-series per-tree summand
+    `(h^{r(t)} / (σ(t) · γ(t))) • F(t)(y₀)` from Butcher §312. This
+    is distinct from cycle 256's `bseriesAlphaTerm := α • bseriesTerm`,
+    which is the Butcher-(310i) RK-method form. The two differ by a
+    factor `1/γ(t)` per tree — invisible at `r = 1`, but `1/2` at
+    cherry. The exact-solution form is what Taylor's theorem
+    produces, so it is the correct partial-sum target for §311's
+    expansion of `yex`.
+  * `bseriesExactTerm_vertex`, `bseriesExactTerm_cherry_scalar`,
+    `bseriesExactPartialSum_{empty,insert,singleton,union}` — the
+    partial-sum API.
+  * `lem_311A_order_two_partialSum` (`Section311.lean`) — restates
+    cycle 256's scalar `lem_311A_order_two` using the new exact
+    partial sum `bseriesExactPartialSum f y₀ h {vertex, cherry}`.
+    Closes the §310/§311 Phase E.1 stepping stone in the scalar
+    case.
+
+  **Polymorphic-`E` Phase E.1 is still open**: the
+  `iteratedFDeriv ℝ 1` → multilinear input plumbing for arbitrary
+  `E : Type*` (cycle 265's HIGH-risk concern) was sidestepped here
+  by restricting `bseriesExactTerm_cherry_scalar` to scalar
+  `ℝ → ℝ`. Lifting `bseriesExactTerm_cherry` to polymorphic `E` is
+  cycle 267+ scope and is now a stepping stone toward
+  the polymorphic order-2 form (rather than a hard prerequisite
+  for any stated theorem).
 
 - **Phase E.2** (1 cycle):
   `lem_310B_truncated_r_le_three` — order ≤ 3, four trees total

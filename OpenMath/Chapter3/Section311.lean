@@ -1359,4 +1359,89 @@ theorem bseriesAlphaPartialSum_singleton_vertex_eq
       Finset.sum_singleton,
       OpenMath.Chapter3.Section310.RootedTree.bseriesAlphaTerm_vertex]
 
+/-- **§310/§311 Phase E.1 (cycle 266) — partial-sum reformulation of
+`lem_311A_order_two`.** Restates cycle 256's `lem_311A_order_two`
+using the cycle-266 exact-solution partial sum
+`bseriesExactPartialSum f y₀ h {vertex, cherry}` in place of the
+closed-form polynomial `h * f y₀ + h^2 / 2 * (deriv f y₀ * f y₀)`.
+
+This is the Phase E.1 stepping stone toward `lem:310B`: it packages
+the order-2 Taylor truncation of the exact solution as a B-series
+partial sum, with no new mathematical content beyond the
+definitional unfolding of `bseriesExactPartialSum`. The full
+`lem:310B` will then relate this exact-solution partial sum to the
+RK-method partial sum `bseriesAlphaPartialSum` via the (310i)
+re-summation.
+
+The proof rewrites `bseriesExactPartialSum f y₀ h {vertex, cherry}`
+via `_insert` + `_singleton` to
+`bseriesExactTerm f y₀ h vertex + bseriesExactTerm f y₀ h cherry`,
+collapses each via `bseriesExactTerm_vertex` and
+`bseriesExactTerm_cherry_scalar`, then invokes `lem_311A_order_two`. -/
+theorem lem_311A_order_two_partialSum
+    {f : ℝ → ℝ} (hf_C1 : ContDiff ℝ 1 f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C3 : ContDiff ℝ 3 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h : ℝ => yex (x₀ + h) -
+        (y₀ + OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum
+          f y₀ h
+          ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+            OpenMath.Chapter3.Section310.RootedTree.cherry}
+            : Finset OpenMath.Chapter3.Section310.RootedTree)))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (2 + 1)) := by
+  have hbase := lem_311A_order_two hf_C1 hyex_x₀ hyex_C3 hyex_ode
+  -- Unfold the partial sum to the closed-form polynomial of lem_311A_order_two.
+  have hcv : (OpenMath.Chapter3.Section310.RootedTree.vertex :
+                OpenMath.Chapter3.Section310.RootedTree)
+              ∉ ({OpenMath.Chapter3.Section310.RootedTree.cherry} :
+                  Finset OpenMath.Chapter3.Section310.RootedTree) := by
+    simp [Finset.mem_singleton,
+          OpenMath.Chapter3.Section310.RootedTree.vertex,
+          OpenMath.Chapter3.Section310.RootedTree.cherry]
+  have hcongr : ∀ h : ℝ,
+      yex (x₀ + h) -
+          (y₀ + OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum
+            f y₀ h
+            ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+              OpenMath.Chapter3.Section310.RootedTree.cherry}
+              : Finset OpenMath.Chapter3.Section310.RootedTree))
+        = yex (x₀ + h) -
+            (y₀ + h * f y₀ + h ^ 2 / 2 * (deriv f y₀ * f y₀)) := by
+    intro h
+    rw [show ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+              OpenMath.Chapter3.Section310.RootedTree.cherry}
+              : Finset OpenMath.Chapter3.Section310.RootedTree)
+            = insert OpenMath.Chapter3.Section310.RootedTree.vertex
+                {OpenMath.Chapter3.Section310.RootedTree.cherry} from rfl,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum_insert
+          _ _ _ hcv,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum_singleton,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactTerm_vertex,
+        OpenMath.Chapter3.Section310.RootedTree.bseriesExactTerm_cherry_scalar,
+        smul_eq_mul]
+    ring
+  refine hbase.congr' (Filter.Eventually.of_forall fun h => ?_)
+    (Filter.Eventually.of_forall fun _ => rfl)
+  exact (hcongr h).symm
+
+/-- Non-vacuity witness for the new Phase E.1 partial-sum bridge:
+on the trivial ODE `f ≡ 0` with constant exact solution `yex ≡ y₀`,
+the residual `yex(x₀ + h) - (y₀ + bseriesExactPartialSum 0 y₀ h
+{vertex, cherry})` is identically zero, hence trivially
+`O(h^3)`. -/
+example (x₀ y₀ : ℝ) :
+    (fun h : ℝ => (fun _ : ℝ => y₀) (x₀ + h) -
+        (y₀ + OpenMath.Chapter3.Section310.RootedTree.bseriesExactPartialSum
+          (fun _ : ℝ => (0 : ℝ)) y₀ h
+          ({OpenMath.Chapter3.Section310.RootedTree.vertex,
+            OpenMath.Chapter3.Section310.RootedTree.cherry}
+            : Finset OpenMath.Chapter3.Section310.RootedTree)))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (2 + 1)) :=
+  lem_311A_order_two_partialSum
+    (f := fun _ : ℝ => (0 : ℝ)) (yex := fun _ : ℝ => y₀)
+    (x₀ := x₀) (y₀ := y₀) contDiff_const rfl contDiff_const
+    (fun x => hasDerivAt_const x y₀)
+
 end OpenMath.Chapter3.Section311

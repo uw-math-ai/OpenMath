@@ -137,3 +137,6 @@ Cycle 245: `*ᵥ` matrix-vector-mul notation (`scoped infixr:73 " *ᵥ " => Matr
 
 ### Cycle 249
 Cycle 249 Section310.lean theta_eq_one: planner's recipe `induction t with | mk children ih =>` fails for RootedTree (nested inductive type — Lean 4 does not autogenerate recursor-with-IH for nested inductives; `RootedTree.recOn` fails for the same reason). Fix: mutual structural recursion in theorem signatures, pattern-matching on constructors, mirrors the mutual def. `show` hint needed in each branch to unfold the definitional equality before `exact` fires.
+
+### Cycle 265
+Cycle 265 `lem_311A_order_one_poly`: `isBigO_const_mul_self` does not lift to smul case (requires `SeminormedRing`, only applies for scalar product `c * h^2`); `IsBigO.const_smul_self` goes wrong direction (constant on scalar side not vector side). Fix: `isBigO_of_le'` with explicit `norm_smul` bound + `linarith [norm_nonneg ...]`. Also: `(↑(Nat.succ 1))⁻¹` does not reduce to `1/2` definitionally after `simp_only`; `norm_num` closes the leftover cast gap where scalar proof used `smul_eq_mul` + `ring`.

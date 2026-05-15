@@ -1,320 +1,474 @@
-# Cycle 265 strategy — `lem_311A_order_one` polymorphic lift to N-space
+# Cycle 266 strategy — Phase E.1 with corrected `bseriesExactTerm` definition
 
-## A. Status confirmation (do this first)
+## TL;DR
 
-Cycle 264 shipped clean: §300 Phase A.2 heterogeneous-labelling
-non-vacuity is at HEAD (`66707e5`), `OpenMath/Chapter3/Section300.lean`
-~389 LOC, sorry count 0, axiom-clean. There is **no blocker**. The
-"What I'm stuck on" field in this cycle's planner prompt is empty for
-a reason — this is the 7th documented occurrence of the empty-stuck-on
-phantom pattern (see `consultant_advice_cycle_248.md` §I,
-`consultant_advice_cycle_263.md` §I).
+Ship a **new** B-series term definition `bseriesExactTerm` (the
+textbook *exact-solution* B-series coefficient `(h^r/(σ·γ)) • F`)
+plus a partial-sum API, then bridge it to cycle 256's
+`lem_311A_order_two`. Axiom-clean, single cycle, ~100 LOC.
 
-Run these verifications at the start of your cycle (~30 seconds):
+**Do NOT** attempt the cycle 265 worker's "Option 1 Phase E.1" as
+literally stated — it has a hidden definitional mismatch that makes
+the bridge mathematically false. See §A below.
 
-```bash
-git log -1 --format='%H %s'
-wc -l OpenMath/Chapter3/Section300.lean OpenMath/Chapter3/Section311.lean
-grep -c sorry OpenMath/Chapter3/Section300.lean OpenMath/Chapter3/Section311.lean
-# Expected: 0 / 0
-```
+## A. Why cycle 265's Option 1 (as stated) is wrong
 
-If everything is clean, proceed to §B. If anything is unexpected,
-abort and file an issue.
+The cycle 265 worker recommended:
 
-## B. Target — Phase D.1 partial: polymorphic `lem_311A_order_one_poly`
+> Phase E.1: restate `lem_311A_order_two`'s conclusion as
+> `yex(x₀+h) − bseriesAlphaPartialSum f y₀ h {vertex, cherry} =O h^3`.
+> ~1 cycle, mostly bookkeeping.
 
-**Ship a polymorphic version of `lem_311A_order_one`** (currently at
-`OpenMath/Chapter3/Section311.lean` line 120, scalar `ℝ → ℝ`) that
-operates on arbitrary real normed spaces `N`:
+This is provably wrong. Compute on scalar `ℝ → ℝ`:
+
+* `bseriesAlphaTerm vertex` = `α(τ) • bseriesTerm τ` =
+  `1 • (h¹/σ(τ)) • F(τ)(y₀)` = `h • f y₀`. ✓
+* `bseriesAlphaTerm cherry` = `α(cherry) • bseriesTerm cherry` =
+  `1 • (h²/σ(cherry)) • F(cherry)(y₀)` =
+  `1 • (h²/1) • (deriv f y₀ * f y₀)` = `h² · (f'·f)`. **NOT**
+  `(h²/2) · (f'·f)`.
+
+So `bseriesAlphaPartialSum {vertex, cherry} = h·f + h² · (f'·f)`,
+but `lem_311A_order_two`'s Taylor truncation is
+`h·f + (h²/2) · (f'·f)`. The two **differ by a factor of 2 on the
+cherry term** — the missing `1/r! = 1/2` factor. Any direct bridge
+would compile to a false statement.
+
+The root cause: `bseriesAlphaTerm := α • bseriesTerm` is the
+Butcher-§310-(310i) RK-method form, NOT the exact-solution Taylor
+form. The exact-solution B-series term is
+
+  `(h^r(t)/(σ(t) · γ(t))) • F(t)(y₀)`
+
+(per Butcher §312 — equivalently `α(t)/r(t)! • bseriesTerm`, with
+the factorial denominator that's invisible at `r = 1` but bites at
+`r ≥ 2`). Note `γ(cherry) = 2`, `γ(broom₃) = 6` — these factorials
+come naturally from `density (mk children) = (order · ∏ density)`
+(cycle 017's `γ`-recursion, Butcher (301a)).
+
+## B. Primary target — Phase E.1 with `bseriesExactTerm`
+
+### P1 — Definitions and basic API (in `OpenMath/Chapter3/Section301.lean`)
+
+Place immediately after cycle 256's `bseriesAlphaPartialSum` block
+(currently lines 716–820 of `Section301.lean`), inside the existing
+`namespace RootedTree` / `namespace OpenMath.Chapter3.Section310`.
+
+Add the following (polymorphic in `E : Type*` with
+`[NormedAddCommGroup E]` `[NormedSpace ℝ E]`):
+
+1. **`bseriesExactTerm`** — the exact-solution B-series per-tree
+   summand:
+   ```lean
+   noncomputable def bseriesExactTerm
+       {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+       (f : E → E) (y₀ : E) (h : ℝ) (t : RootedTree) : E :=
+     (h ^ order t / ((symmetry t : ℝ) * (density t : ℝ))) •
+       elementaryDiff f y₀ t
+   ```
+   Docstring must cite Butcher §312 (the exact-solution B-series
+   convention), note the *factorial denominator* via `γ(t)` per
+   Butcher (301a), and distinguish from cycle 256's
+   `bseriesAlphaTerm` (Butcher-(310i) form *without* the `1/γ`
+   factor; both forms are valid textbook objects but for different
+   purposes — `bseriesAlphaTerm` for the RK-numerical B-series,
+   `bseriesExactTerm` for the exact-solution Taylor B-series).
+
+2. **`bseriesExactTerm_vertex`**: at `vertex`, σ·γ = 1·1 = 1, so
+   the coefficient is `h¹` and the term is `h • f y₀`. Closure:
+   ```lean
+   theorem bseriesExactTerm_vertex
+       {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
+       (f : E → E) (y₀ : E) (h : ℝ) :
+       bseriesExactTerm f y₀ h vertex = h • f y₀ := by
+     unfold bseriesExactTerm vertex elementaryDiff
+     simp [iteratedFDeriv_zero_apply,
+           show order (mk []) = 1 from rfl,
+           show symmetry (mk []) = 1 from rfl,
+           show density (mk []) = 1 from rfl]
+   ```
+
+3. **`bseriesExactPartialSum`** + `_empty` (`@[simp]`), `_insert`,
+   `_singleton`, `_union` — exact ports of cycle 256's
+   `bseriesAlphaPartialSum_*` shape with `bseriesAlphaTerm` →
+   `bseriesExactTerm`.
+
+### P2 — Scalar closed-form witness at cherry (faithfulness test)
+
+This is the load-bearing sanity check that the new definition
+matches the textbook Taylor coefficient. Add (scalar
+specialisation, since cycle 256's `lem_311A_order_two` is scalar):
 
 ```lean
-theorem lem_311A_order_one_poly
-    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    {f : N → N}
-    {yex : ℝ → N} {x₀ : ℝ} {y₀ : N}
-    (hyex_x₀ : yex x₀ = y₀)
-    (hyex_C2 : ContDiff ℝ 2 yex)
-    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
-    (fun h : ℝ => yex (x₀ + h) - bseriesOrderOne f y₀ h)
-      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1))
+theorem bseriesExactTerm_cherry_scalar
+    (f : ℝ → ℝ) (y₀ h : ℝ) :
+    bseriesExactTerm f y₀ h cherry = h^2 / 2 * (deriv f y₀ * f y₀) := by
+  ...
 ```
 
-### Why this is the right target
+Recipe: unfold `bseriesExactTerm`, compute `order cherry = 2`,
+`symmetry cherry = 1`, `density cherry = 2` (all `rfl`-reducible
+from the cycle 017 cherry instance); the smul collapses to scalar
+multiplication via `smul_eq_mul`; identify
+`elementaryDiff f y₀ cherry` with `deriv f y₀ * f y₀` (needs an
+`iteratedFDeriv ℝ 1` → `deriv` bridge, or unfold
+`elementaryDiff (mk [vertex])` directly and use
+`iteratedFDeriv ℝ 1 f y₀` = `fderiv ℝ f y₀` modulo the
+`ContinuousMultilinearMap` coercion, which on scalar reduces to
+multiplication by `deriv f y₀`). If the `iteratedFDeriv`-to-scalar
+collapse needs more than ~10 LOC, ship it as a small private
+helper `_cherry_elementaryDiff_eq` first.
 
-1. **It's the canonical next Phase D step.** The cycle 260 scoping
-   doc `.prover-state/issues/lem_310B_plan.md` §C.4 identifies Phase D
-   (multilinear elementary-differential lift) as the prerequisite
-   before Phase E (small-`r` `lem:310B` cases). Phase D.1 is the
-   polymorphic chain-rule lift. The order-1 case is the smallest
-   Phase D deliverable.
+**Risk note**: the `iteratedFDeriv ℝ 1` vs `fderiv ℝ` bridge is
+exactly the kind of multilinear-map plumbing the cycle 265 worker
+flagged as HIGH risk in the polymorphic order-2 lift. **Here it
+fires at a single concrete tree (`cherry`)** rather than over
+abstract `N`, which should be much easier. If it still stalls, use
+Backup B (§E below) and ship `bseriesExactTerm` + `_vertex` +
+partial-sum API without the cherry closed form.
 
-2. **It was deliberately deferred.** Cycle 256 task results
-   explicitly flagged "polymorphic version ... and order-1 retrofit
-   are cycle 257+ scope". Cycles 257/258/259 chose to extend scalar
-   orders (3, 4, 5) instead, leaving the polymorphic lift open. This
-   is real deferred work, not a freelanced easy ship.
+### P3 — Bridge to `lem_311A_order_two` (in `OpenMath/Chapter3/Section311.lean`)
 
-3. **Single-cycle, axiom-clean achievable.** Unlike Phase A.3
-   (TreeAutomorphism strengthening, multi-cycle high-risk per the
-   cycle 200/201 rollback precedent) or Phase B (multivariate Taylor,
-   multi-cycle), the order-1 lift is a mechanical port. `bseriesOrderOne`
-   is already polymorphic (`OpenMath/Chapter3/Section311.lean:90`); only
-   the theorem statement and proof tactics need lifting.
+Place immediately after cycle 256's
+`bseriesAlphaPartialSum_singleton_vertex_eq` (currently around
+line 1353 of `Section311.lean`). Add:
 
-4. **It validates the port methodology.** A clean order-1 lift opens
-   the path for order-2 polymorphic (which DOES need the
-   `iteratedFDeriv ↔ fderiv` bridge for the chain rule — a separately
-   risky step). Order-1 lets us confirm the basic plumbing works
-   before committing to the harder order-2 work.
+```lean
+/-- §310/§311 Phase E.1 (cycle 266) — restate cycle 256's
+`lem_311A_order_two` using the cycle-266 exact-solution partial
+sum `bseriesExactPartialSum f y₀ h {vertex, cherry}`. ... -/
+theorem lem_311A_order_two_partialSum
+    {f : ℝ → ℝ} (hf_C1 : ContDiff ℝ 1 f)
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C3 : ContDiff ℝ 3 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h : ℝ => yex (x₀ + h) -
+        (y₀ + bseriesExactPartialSum f y₀ h
+          ({vertex, cherry} : Finset RootedTree)))
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (2 + 1)) := by
+  -- Expand bseriesExactPartialSum {vertex, cherry} via _insert + _singleton,
+  -- then bseriesExactTerm_vertex + bseriesExactTerm_cherry_scalar.
+  -- Algebraic rewrite reduces the residual to cycle 256's
+  -- lem_311A_order_two's residual; apply lem_311A_order_two directly.
+  ...
+```
 
-### Why NOT the other candidates
+Recipe:
+1. Rewrite `bseriesExactPartialSum f y₀ h {vertex, cherry}` to
+   `bseriesExactTerm f y₀ h vertex + bseriesExactTerm f y₀ h cherry`
+   via `_insert` (using `vertex ∉ {cherry}` from `vertex ≠ cherry`,
+   `rfl`-disprovable) + `_singleton`.
+2. Rewrite the two terms via `bseriesExactTerm_vertex` and the new
+   scalar `bseriesExactTerm_cherry_scalar`. `smul_eq_mul` collapses
+   `h • f y₀` to `h * f y₀`.
+3. The residual matches cycle 256's `lem_311A_order_two` conclusion
+   verbatim. Discharge by
+   `exact lem_311A_order_two hf_C1 hyex_x₀ hyex_C3 hyex_ode` (or
+   by `Asymptotics.IsBigO.congr_left` + `funext + ring` if the
+   algebraic form differs only by associativity/commutativity).
 
-* **Option 2 (TreeAutomorphism strengthening / Phase A.3)** —
-  multi-cycle `mutual`-block work with rollback risk matching cycles
-  149/200/201. Do NOT attempt as a single-cycle deliverable.
+### P4 — Non-vacuity witnesses
 
-* **Option 4 (lem:342A property 342a)** — pre-flight check:
-  `find .lake -name "Legendre*.lean"` returns only `LegendreSymbol`
-  (number-theoretic Jacobi/Legendre quadratic-residue symbol), NOT
-  orthogonal Legendre polynomials. The cycle 260 scoping doc §8.2
-  assumed Mathlib's Legendre infrastructure but it doesn't exist.
-  Building it from scratch is a multi-cycle Mathlib-PR-grade
-  undertaking. Do NOT attempt.
+Three `example` statements at the end of Section301.lean's
+`bseriesExact*` block (mirror cycle 256's pattern):
 
-* **Phase B.1 (two-variable Taylor)** — multi-cycle per the scoping
-  doc; also bypassable per §4.4 of the plan if Phase D routes through
-  multilinear directly. Skip.
+* `bseriesExactPartialSum {vertex} = h • f y₀`
+* `bseriesExactPartialSum {vertex, cherry} = h • f y₀ + (h²/2) * (deriv f y₀ * f y₀)`
+  [only if P2 ships; otherwise omit]
+* `bseriesExactPartialSum (id : ℝ → ℝ) y₀ h {vertex} = h • y₀`
 
-* **Refactor / cleanup work** (e.g., Section319 helper extraction) —
-  cherry-picking easy deliverables per the planner instruction's
-  explicit exclusion.
+And one in Section311.lean exercising the new bridge on
+`f := fun _ => 0`, `yex := fun _ => y₀` (trivial case, residual
+identically zero, discharged by `Asymptotics.isBigO_zero` after
+the partial-sum unfolding).
 
-## C. Proof recipe (concrete port of cycle 248's proof)
+### P5 — Documentation hygiene
 
-Open `OpenMath/Chapter3/Section311.lean` and read cycle 248's
-`lem_311A_order_one` proof (lines 120–245) before starting. The
-polymorphic port is mechanical with two substitutions:
+* Update `.prover-state/issues/lem_310B_plan.md`:
+  - Append a "Cycle 266 update" subsection under §5 Phase E.1
+    marking Phase E.1 closed with `bseriesExactTerm`
+    infrastructure.
+  - Add a brief note in §4.4 (multilinear lift) flagging
+    `bseriesExactTerm_cherry_scalar` as a stepping stone toward
+    polymorphic-N order-2 form (cycle 267+).
 
-* **`h * f y₀` → `h • f y₀`** wherever the multiplication appears
-  (the `f y₀` is now `N`-valued, requiring `smul`).
-* **`mul`-style lemmas → `smul`-style lemmas** where they appear.
+* Update `plan.md` `lem:310B` row annotation with cycle 266 Phase
+  E.1 closure note.
 
-### Step-by-step port
+* **Do NOT** update `lean_status.json` for `lem:310B` or
+  `lem:311A` — Phase E.1 is one stepping stone of a multi-cycle
+  roadmap; both entities stay `unformalized`.
 
-1. **Step 0 (function rewrite)**: cycle 248 uses
-   `simp [bseriesOrderOne, smul_eq_mul]`. Drop `smul_eq_mul` (for
-   general `N` it does not apply). The polymorphic `bseriesOrderOne`
-   already uses `smul`, so the rewrite is just `simp [bseriesOrderOne]`.
+## C. What NOT to do
 
-2. **Step 1 (Taylor remainder)**: cycle 248 invokes
-   `taylor_isLittleO (n := 2) convex_univ (Set.mem_univ _)
-   hyex_C2.contDiffOn`. This works verbatim for `ℝ → N` — Mathlib's
-   `taylor_isLittleO` (`Mathlib/Analysis/Calculus/Taylor.lean:239`)
-   takes `{f : ℝ → E}` for any `[NormedAddCommGroup E]
-   [NormedSpace ℝ E]`. No changes needed at this step.
+These have been ruled out by cycle 265's task results, cycle 260's
+scoping doc, and my pre-flight analysis (§A above).
 
-3. **Step 2 (Taylor polynomial evaluation)**: cycle 248 uses
-   `taylor_within_apply` + `simp_only` with `Finset.sum_range_succ`,
-   `iteratedDerivWithin_univ`, `iteratedDeriv_zero`, `Nat.factorial`,
-   `smul_eq_mul` (drop this), etc. For polymorphic `N`:
-   - The `iteratedDeriv k yex x₀ : N` (not `ℝ`) — types still
-     align because Mathlib defines `iteratedDeriv` for normed-space
-     codomain.
-   - The `(1 : ℝ) / (k.factorial : ℝ) • (iteratedDeriv k yex x₀)` is
-     a scalar smul on `N`. The `smul_eq_mul` rewrite no longer
-     applies; replace with manual algebraic massaging if needed.
+1. **Do NOT** literally implement cycle 265's "Option 1" using
+   `bseriesAlphaPartialSum` — the factorial mismatch makes any
+   direct bridge a false statement. The correct path uses the
+   **new** `bseriesExactTerm`.
 
-4. **Step 3 (identify `iteratedDeriv 1 yex x₀ = f y₀`)**: cycle 248
-   uses `iteratedDeriv_one` (Mathlib) + `(hyex_ode x₀).deriv` +
-   `hyex_x₀`. Both `iteratedDeriv_one` and `HasDerivAt.deriv` work
-   for normed-space codomain. Port verbatim.
+2. **Do NOT** refactor or remove cycle 256's `bseriesAlphaTerm` /
+   `bseriesAlphaPartialSum`. They are a valid textbook object
+   (the Butcher-(310i) form *before* invoking `lem:310B`'s
+   `1/r!`-rescaling). Let them coexist with the new
+   `bseriesExactTerm`. The two forms differ in semantic role:
+   `bseriesAlphaTerm` for the RK-method's B-series,
+   `bseriesExactTerm` for the exact-solution Taylor B-series.
+   `lem:310B`'s eventual formalisation will bridge them.
 
-5. **Step 4 (compose with `h ↦ x₀ + h`)**: cycle 248 uses
-   `IsLittleO.comp_tendsto`, `congr'`, and `((x₀ + h) - x₀)^2 = h^2`
-   identification via `ring`/`funext`. All these work for the
-   `ℝ → N`-valued residual.
+3. **Do NOT** attempt the polymorphic order-2 lift (Phase D.1
+   continuation from cycle 265). The cycle 265 worker correctly
+   flagged this as HIGH risk: it requires the full
+   `HasFDerivAt.comp_hasDerivAt` chain rule plumbing with
+   multilinear-map bookkeeping over arbitrary normed space `N`.
+   Multi-cycle scope. Defer to cycle 267+ with explicit scoping.
 
-6. **Step 5 (combine + `O(h^(1+1))` collapse)**: cycle 248 uses
-   `IsLittleO.add` + `Asymptotics.isBigO_const_mul_self` for the
-   quadratic-coefficient term, then `IsLittleO.isBigO` to promote.
-   The constant `(1/2) • iteratedDeriv 2 yex x₀ : N` is an `N`-valued
-   scalar coefficient. `Asymptotics.isBigO_const_mul_self` works for
-   `N`-valued functions because the `IsBigO` predicate is norm-based.
+4. **Do NOT** attempt the full `lem:310B` — that requires
+   labelled trees (`def:300C`, Phase A.3 of `lem_310B_plan.md`)
+   plus the multinomial Taylor theorem (`thm:306A`, Phase B).
+   Both are multi-cycle. Per `lem_310B_plan.md` §F.
 
-### Expected proof shape
+5. **Do NOT** introduce sorries. Cycle 200/201 (thm:381H scaffold)
+   and cycle 149/150 (def:530B scaffold) precedent: sorry-first
+   scaffolds without single-cycle closure paths get rolled back.
+   If P2's `bseriesExactTerm_cherry_scalar` stalls on the
+   `iteratedFDeriv ℝ 1` → `deriv` bridge, use Backup B (§E) and
+   ship without the cherry closed form.
 
-~80–120 LOC, similar to cycle 248's scalar proof. If a specific
-tactic line does not port cleanly, factor it into a private helper
-`have` block and identify the exact Mathlib hook needed — DO NOT
-introduce a `sorry`.
+6. **Do NOT** raise `maxHeartbeats` above 200000.
 
-### Non-vacuity witnesses (P2 — single-cycle ship)
+7. **Do NOT** add `axiom`/`constant` declarations.
 
-After the theorem, add up to three `example`s in the same file:
+8. **Do NOT** edit `scripts/autonomous_loop.py`. Tautology-scanner
+   false positives and prompt-builder phantom issues are
+   loop-maintainer territory; see
+   `.prover-state/issues/tautology_scanner_false_positives.md` and
+   `.prover-state/issues/phantom_commit_verdict_pattern.md`.
 
-1. **Trivial f := 0 on ℝ²**: `f : (Fin 2 → ℝ) → (Fin 2 → ℝ) := 0`,
-   `yex : ℝ → (Fin 2 → ℝ) := fun _ => 0`, exhibits the polymorphic
-   shape on a vector space.
-2. **Linear ODE on ℝ²**: `f := fun v => ![v 1, -v 0]` (rotation),
-   `yex x := ![Real.cos x, Real.sin x]`. Verify the order-1
-   residual is `O(h²)`.
-3. **Sanity check that scalar case still discharges**: invoke
-   `lem_311A_order_one_poly` at `N := ℝ` and confirm the resulting
-   statement is equivalent to (or implies) cycle 248's
-   `lem_311A_order_one`.
+9. **Do NOT** attempt to compile `OpenMath/Chapter4/Section441.lean`
+   on GPFS. The cycle 182–239+ track has 43+ consecutive 5-min
+   timeouts and the file is GPFS-blocked. Skip per
+   `.prover-state/issues/cycle_182_gpfs_slowness.md`.
 
-Witness 3 is the most useful for confirming the lift is faithful;
-witnesses 1 and 2 are the "genuinely polymorphic" cases. Ship all
-three if time permits, or witness 3 alone as the minimum.
+10. **Do NOT** redefine `bseriesAlphaTerm` to include a `1/r!`
+    factor "to fix" the cycle 256 issue. The cycle 256 form
+    matches Butcher's (310i) verbatim; it's just not the
+    *Taylor-truncated* form. Don't break working infrastructure.
 
-## D. Mathlib hooks (verify before relying on them)
+## D. Mathlib hooks (verify before consuming)
 
-Each of these should `lean_local_search` or `lean_hover_info` cleanly
-before you commit to using it. If any has drifted or doesn't exist,
-file the gap as a sub-issue and adapt the proof.
+These should be available at HEAD; check each via
+`lean_local_search` or `lean_hover_info` early in the cycle if any
+proof shape feels unfamiliar:
 
-| Hook | Expected signature | Used at |
-|---|---|---|
-| `taylor_isLittleO` | `{f : ℝ → E} ...` for `[NormedAddCommGroup E] [NormedSpace ℝ E]` | Step 1 (verified at `Mathlib/Analysis/Calculus/Taylor.lean:239`) |
-| `taylor_within_apply` | `(f : ℝ → E) (n : ℕ) (s : Set ℝ) (x₀ x : ℝ) → ...` | Step 2 (verified at `Mathlib/Analysis/Calculus/Taylor.lean:114`) |
-| `iteratedDeriv_one` | `iteratedDeriv 1 f = deriv f` (for `f : ℝ → E`) | Step 3 |
-| `HasDerivAt.deriv` | `HasDerivAt f f' x → deriv f x = f'` (vector-valued) | Step 3 |
-| `IsLittleO.comp_tendsto` | standard | Step 4 |
-| `Asymptotics.isBigO_const_mul_self` | `(fun x => c • f x) =O[l] f` (verify smul form) | Step 5 |
-| `IsLittleO.isBigO` | standard | Step 5 |
+| Goal | Likely lemma name |
+|---|---|
+| `Finset.sum_insert` for `{vertex, cherry}` | std |
+| `Finset.sum_singleton` | std |
+| `Finset.sum_union` (disjoint) | std |
+| `iteratedFDeriv ℝ 0 f y₀ ![] = f y₀` | `iteratedFDeriv_zero_apply` (cycle 250 uses) |
+| `iteratedFDeriv ℝ 1 f y₀ vec` → `fderiv ℝ f y₀ vec` | `iteratedFDeriv_one_apply` (verify via `lean_loogle "iteratedFDeriv 1 = fderiv"`) |
+| `(fderiv ℝ f y₀ : ℝ →L[ℝ] ℝ) 1 = deriv f y₀` (scalar) | `fderiv_eq_smul_deriv` or via `ContinuousLinearMap.smulRight` |
+| `Asymptotics.IsBigO.congr_left` / `IsBigO.congr_right` | std |
+| `smul_eq_mul` (scalar smul) | std |
+| `vertex ≠ cherry` (`mk [] ≠ mk [vertex]`) | by `decide` via cycle 017's `DecidableEq RootedTree` |
 
-**Critical pre-flight check**: confirm `Asymptotics.isBigO_const_mul_self`
-or its equivalent fires for the `smul`-by-`N` case (the quadratic
-Taylor remainder coefficient is now a vector, not a scalar). If the
-exact lemma name is different in the current Mathlib, search via
-`lean_loogle "_ • _ =O[_]"` for the right form. If only the `mul`
-version exists, you may need a wrapper `have : ‖(1/2 : ℝ) • c‖ ≤
-(1/2) * ‖c‖ := norm_smul_le _ _` plus a scalar-bound argument on
-`‖h^2 • c‖ ≤ ‖c‖ · ‖h‖^2`.
+If the `iteratedFDeriv ℝ 1` → `deriv` bridge is awkward, an
+alternative approach for P2: prove
+`bseriesExactTerm_cherry_scalar` by direct unfolding of
+`elementaryDiff` at `mk [vertex]` and explicit computation. Cite
+the cycle 256 `lem_311A_order_two` proof's `iteratedDeriv_two_via_ode`
+helper as a template — it does the same `iteratedFDeriv 1` →
+`fderiv` → `deriv` collapse for scalar functions.
 
-## E. What NOT to do
+## E. Backup plan (Backup B — if P2 cherry closed form stalls)
 
-* **Do NOT introduce sorries.** The cycle 149/200/201/263-style
-  rollback precedent is in force: sorry-first scaffolds with no
-  single-cycle close path get reverted. If the polymorphic port
-  stalls, fall back to §F below; do not leave a `sorry` in
-  `Section311.lean`.
+If P2's `bseriesExactTerm_cherry_scalar` requires more than ~30
+LOC of `iteratedFDeriv`-to-`deriv` plumbing, ship a smaller
+deliverable that still meets the cycle's minimum bar:
 
-* **Do NOT modify `lem_311A_order_one`** (the existing scalar
-  theorem at line 120). Add `lem_311A_order_one_poly` as a NEW
-  theorem (with the `_poly` suffix), placed immediately after the
-  scalar version. This preserves the existing 5 orders of scalar
-  Taylor lemmas (cycles 248/256/257/258/259) which downstream code
-  may consume.
+**Backup B**:
+1. P1 in full (`bseriesExactTerm`, `_vertex`, partial-sum API
+   `_empty`/`_insert`/`_singleton`/`_union`). ~60 LOC.
+2. P4 non-vacuity *only for vertex* (the cherry pair example
+   requires P2). ~15 LOC.
+3. Drop P3 (the bridge to `lem_311A_order_two`). File a follow-up
+   note in `.prover-state/issues/lem_310B_plan.md` Phase E.1
+   noting that the closed form for `bseriesExactTerm cherry` is
+   single-cycle work pending the `iteratedFDeriv ℝ 1` → `deriv`
+   plumbing.
 
-* **Do NOT lift `lem_311A_order_two`/`_three`/`_four`/`_five` this
-  cycle.** Those proofs use scalar-specific chain rule
-  (`deriv f y₀ * f y₀` for order 2, Bell-polynomial expansions for
-  higher orders). Lifting them to polymorphic requires the
-  `iteratedFDeriv 1 ↔ fderiv` bridge (cycle 260 scoping doc §C.4 R4,
-  HIGH risk). Order-1 is the only Phase D piece in scope for cycle
-  265.
+Backup B still ships:
+* The corrected definitional infrastructure (`bseriesExactTerm`)
+* Non-vacuity at vertex (matching cycle 256's bridge to
+  `bseriesOrderOne`)
+* Compiles axiom-clean, sorry count 0
 
-* **Do NOT attempt Phase A.3 (TreeAutomorphism strengthening).**
-  Per the cycle 263 rollback note and `lem_310B_plan.md` §6,
-  this is multi-cycle work that requires a `mutual` block through
-  `List RootedTree`. Plan before attempting.
+The next cycle then takes P2+P3 as a clean 1-cycle target with
+the definition already in place.
 
-* **Do NOT attempt lem:342A property (342a).** Mathlib has no
-  orthogonal-Legendre infrastructure (only `LegendreSymbol`,
-  number-theoretic). Building from scratch is multi-cycle.
+**Abort threshold**: if even Backup B's `bseriesExactTerm` and
+`_vertex` don't compile cleanly within the first 60 minutes,
+abandon Phase E.1 entirely and pivot to fresh entity (`lem:342A`
+per `lem_310B_plan.md` §8.2 — single-cycle Legendre-orthogonality
+target). Do NOT leave sorries.
 
-* **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
-  44+ consecutive GPFS timeouts since cycle 182; skip per
-  `cycle_182_gpfs_slowness.md`.
+## F. Verification protocol
 
-* **Do NOT raise `maxHeartbeats` above 200000.** If a tactic stalls,
-  decompose into named intermediate identities.
+Standard verification (per CLAUDE.md and §F of recent cycles):
 
-* **Do NOT modify `scripts/autonomous_loop.py`.** The empty-stuck-on
-  phantom that surfaced this cycle is loop-maintainer territory per
-  `tautology_scanner_false_positives.md` §D3.
+1. **Compile**: `lake env lean OpenMath/Chapter3/Section301.lean`
+   and `lake env lean OpenMath/Chapter3/Section311.lean` must
+   both exit 0.
+2. **Sorry count**:
+   `grep -c sorry OpenMath/Chapter3/Section{301,311}.lean` must
+   each return 0.
+3. **Tautology scanner clean**:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$'` on the two
+   files returns no matches (or matches only on defensible
+   `:= by` `h_<name>` closers — but ideally zero new hits).
+4. **Axiom-clean**: `lean_verify` on each new public theorem
+   (`bseriesExactTerm_vertex`, `bseriesExactTerm_cherry_scalar`
+   if shipped, `bseriesExactPartialSum_empty/insert/singleton/union`,
+   `lem_311A_order_two_partialSum` if shipped). Expected output:
+   `[propext, Classical.choice, Quot.sound]` only.
+5. **Aggregator**: `lake env lean OpenMath/Chapter3.lean` exits 0.
+6. **Faithfulness check** (per CLAUDE.md pre-commit checklist):
+   - Quote textbook (Butcher §312 for `bseriesExactTerm`,
+     Butcher §311 for `lem_311A_order_two_partialSum`).
+   - Tautology check: conclusion ≠ hypothesis literally.
+   - Identity check: proof is not `exact h`.
+   - Documentation: cite the cycle 256 / cycle 265 lineage and
+     the definitional fix.
 
-* **Do NOT name the deliverable as a textbook entity closure.** The
-  polymorphic order-1 case is *infrastructure for* `lem:310B`, not
-  `lem:311A` itself. Keep the name `lem_311A_order_one_poly` and do
-  NOT update `lean_status.json` for `lem:311A` (already at `partial`
-  via the scalar chain) or `lem:310B`. The entity status is unchanged.
+## G. Faithfulness — what to document in cycle 266 task results
 
-## F. Fallback plan (only if Step 5 stalls)
+Mandatory documentation per CLAUDE.md:
 
-If `Asymptotics.isBigO_const_mul_self` doesn't fire cleanly for the
-`smul` case after 30 minutes of investigation, the fallback is to
-ship a more restricted polymorphic version: require `[Module ℝ N]`
-and `[NormSMulClass ℝ N]` (whichever Mathlib uses for the
-`‖c • v‖ ≤ ‖c‖ · ‖v‖` bound), then close via explicit norm-bound
-chase using `norm_smul_le`. This adds ~20 LOC but stays axiom-clean.
+* **`bseriesExactTerm`** (new def): cite Butcher §312
+  (exact-solution B-series). State that the coefficient
+  `h^r/(σ·γ)` is the textbook convention (cf. Butcher (301a) and
+  the Taylor expansion `y(x₀+h) = Σ (h^n/n!) y^(n)(x₀)` combined
+  with `lem:311A`'s `y^(n)(x₀) = Σ_{r(t)=n} α(t) F(t)(y₀)`, which
+  gives per-tree coefficient `h^r · α(t)/r! = h^r/(σ·γ)`).
 
-If that ALSO stalls, the absolute fallback is to leave the
-polymorphic lift for cycle 266 and instead:
+* **Faithfulness divergence from cycle 256**: explicitly note
+  that cycle 256's `bseriesAlphaTerm := α • bseriesTerm` is the
+  Butcher-(310i)-form *RK-method* B-series term (no `1/r!`
+  factor), while cycle 266's `bseriesExactTerm := bseriesTerm/γ`
+  is the *exact-solution* Taylor B-series term (with `1/r!` =
+  `1/γ` factor, since `γ(t) = r(t) · ∏ γ(tᵢ)` collects the
+  factorial from the recursive multiplicities). Both forms are
+  valid textbook objects and `lem:310B`'s eventual formalisation
+  will bridge them.
 
-* **Ship three new non-vacuity examples for the EXISTING scalar
-  `lem_311A_order_one`** at concrete `f`/`yex` triples (e.g.
-  `f := fun y => y`, `yex := Real.exp`; `f := fun y => -y`, `yex :=
-  fun x => Real.exp (-x)`; `f := fun y => 0`, `yex := fun _ => y₀`).
-  This is genuine cycle content (validates the cycle 248 theorem on
-  canonical small-ODE cases) and ships ~30 LOC of axiom-clean
-  witnesses. NOT cherry-picking — it exercises the scalar theorem on
-  real ODE examples that the existing file does not.
+* **`lem_311A_order_two_partialSum`** (new bridge theorem, if
+  shipped): captures the same content as cycle 256's
+  `lem_311A_order_two`, restated using
+  `bseriesExactPartialSum {vertex, cherry}` instead of the
+  closed-form scalar polynomial. This is *equivalent* to
+  `lem_311A_order_two` modulo the definitional unfolding of
+  `bseriesExactPartialSum`; no new mathematical content beyond
+  the partial-sum re-packaging.
 
-## G. Aristotle option
+## H. Suggested next steps for cycle 267+
 
-This is a clean target for Aristotle if you want to batch-submit and
-focus on `simp`-set tuning manually. Submit the polymorphic theorem
-statement + cycle 248's scalar proof as in-context template, with
-the prompt "lift to polymorphic codomain N : Type* with
-[NormedAddCommGroup N] [NormedSpace ℝ N]". Single 30-minute poll
-discipline per CLAUDE.md.
+After Phase E.1 lands, the natural next moves are:
 
-If Aristotle returns clean, incorporate verbatim (after checking it
-doesn't depend on Mathlib hooks that don't exist in our pinned
-version).
+1. **`bseriesExactTerm_broom₃_scalar`** and
+   `_mk_vertex_vertex_scalar` (the two order-3 trees) — extend
+   Phase E.1 to order 3.
+2. **`lem_311A_order_three_partialSum`** — bridge cycle 257's
+   order-3 closed form to a `bseriesExactPartialSum` over the
+   four trees of order ≤ 3. Single cycle.
+3. **Polymorphic order-2 (Phase D.1 continuation)** — now with
+   the `bseriesExactTerm` machinery in place, the polymorphic
+   order-2 lift becomes a more natural target since the cherry
+   contribution factors through `bseriesExactTerm cherry`
+   (polymorphic in `E`).
+4. **Phase E.2 / E.3** — partial-sum forms at order 4 and 5,
+   consuming cycles 258 and 259 respectively. ~1 cycle each.
 
-## H. Update plan.md and lean_status.json
+If the cycle 267 planner sees this strategy as still on track,
+the remaining roadmap (`lem_310B_plan.md` §5) is a clear 8–14
+cycle multi-phase effort. If §310 momentum is no longer
+compounding well, pivot to `lem:342A` (Legendre orthogonality on
+`[0,1]`) per `lem_310B_plan.md` §8.2 — single-cycle, independent
+of `lem:310B`.
 
-* `lean_status.json` for `lem:311A`: cycle reference bump to 265,
-  status remains `partial` (no entity closed).
-* `plan.md` `lem:311A` row: append cycle 265 note documenting the
-  polymorphic order-1 lift.
+## I. Risks (pre-flagged)
 
-DO NOT mark `lem:311A` as `formalized` — the full textbook statement
-requires labelled-tree quotients (`def:300C` infrastructure, still
-deferred to Phase A.2.1 of `lem_310B_plan.md`). The polymorphic
-order-1 lift is one more incremental step toward Phase D.
+* **R1** (medium, P2 only): `iteratedFDeriv ℝ 1` vs `fderiv` API
+  drift in Mathlib. Mitigation: try `lean_loogle "iteratedFDeriv 1"`
+  and `lean_local_search "iteratedFDeriv_one"` early; fall back
+  to Backup B if more than 30 LOC of plumbing needed.
 
-## I. Cycle 266 outlook
+* **R2** (low, P3 only): `lem_311A_order_two`'s residual algebraic
+  form may differ from the `bseriesExactPartialSum`-expansion
+  form by an `add`/`smul` associativity issue. Mitigation: use
+  `Asymptotics.IsBigO.congr_left` (or `congr_right`) with a
+  pointwise rewrite via `funext + ring`.
 
-Once cycle 265 ships polymorphic order-1, cycle 266's planner has
-three credible directions:
+* **R3** (low): `density (mk [])` and `symmetry (mk [])` should
+  both unfold to `1` by `rfl`; if not (unlikely given cycle 017's
+  definitions), use the named lemma `tau_values` (cycle 017,
+  `Section301.lean` line 267–269).
 
-1. **Polymorphic order-2** (Phase D.1 continuation) — needs the
-   `iteratedFDeriv 1 ↔ fderiv` bridge; HIGH risk but is the natural
-   next step.
-2. **Phase E.1** — restate `lem_311A_order_two`/etc. in the
-   `TruncatedRootedTree 2` partial-sum form (1 cycle if D.1
-   complete).
-3. **Pivot to a fresh single-cycle entity** — e.g., one of the
-   short Ch.5 `[ ]` rows.
+* **R4** (verify before proceeding): the cycle 250 worker shipped
+  `alphaWeight = order!/(σ·γ)` — confirm that `density` (= γ) is
+  publicly accessible from `Section301.lean` without import
+  issues. Mitigation: `Grep` for `def density` early.
 
-Cycle 266 should weigh the §310 roadmap velocity vs textbook
-breadth — the same decision cycle 264 worker flagged.
+* **R5** (low): polymorphic vs scalar `smul`. Mitigation: in P2,
+  state `bseriesExactTerm_cherry_scalar` for `ℝ → ℝ` only
+  (matching cycle 256's scalar `lem_311A_order_two`). The
+  polymorphic cherry closed form is cycle 267+ scope.
 
-## J. Confidence level
+* **R6** (low): `vertex ∉ {cherry}` decidability in P3 step 1.
+  Mitigation: `simp [Finset.mem_singleton]` plus `decide` (vertex
+  and cherry are constructor-distinct `RootedTree` values, so
+  `decide` should fire via `DecidableEq RootedTree` from
+  `Section301.lean` line 92).
 
-This strategy targets a single, well-scoped, mechanically-derivable
-extension of cycle 248's already-shipped scalar proof, with all
-critical Mathlib hooks verified (`taylor_isLittleO` for `ℝ → E`,
-`bseriesOrderOne` already polymorphic). Single-cycle close is
-high-confidence. The fallback plan (§F) ensures cycle 265 ships
-non-trivial value even if Step 5 stalls. No sorry-first scaffold
-should be required.
+## J. Aristotle batch (optional)
 
-Trust the cycle 248 proof structure. Port mechanically. Verify each
-Mathlib hook with `lean_local_search` before committing the line.
-Ship axiom-clean.
+If P2's `bseriesExactTerm_cherry_scalar` stalls on the
+`iteratedFDeriv ℝ 1` → `deriv` bridge, an Aristotle batch is
+appropriate:
+
+* **Job target**: `bseriesExactTerm_cherry_scalar` only (the
+  scalar cherry closed form).
+* **In-context**: cycle 017's `cherry` definition, cycle 250's
+  `alphaWeight_cherry` example, cycle 256's `bseriesAlphaTerm_vertex`
+  (template for the simp recipe), and the elementaryDiff
+  Section310 block. Submit with the prompt "compute the closed
+  form for `bseriesExactTerm f y₀ h cherry` on `ℝ → ℝ` using
+  `iteratedFDeriv` and `deriv`".
+* **Single poll** discipline: do NOT re-poll within the cycle.
+
+Otherwise, skip Aristotle — the deliverable is structural enough
+that manual proof should close in 1 cycle.
+
+## K. Bottom line
+
+Cycle 266 is a single-cycle deliverable that:
+
+1. Fixes a definitional gap in cycle 256's `bseriesAlphaTerm`
+   infrastructure by introducing the corrected `bseriesExactTerm`
+   (the textbook *exact-solution* B-series term with `1/γ` factor).
+2. Ships the Phase E.1 bridge between cycle 256's closed-form
+   `lem_311A_order_two` and the tree-indexed partial-sum form,
+   which the cycle 265 worker correctly identified as the
+   highest-value next step — just with the right definitional
+   foundation.
+3. Compounds the §310/§311 investment without committing to the
+   multi-cycle Phase A/B/C/D infrastructure deferred by
+   `lem_310B_plan.md`.
+
+Expected: ~100 LOC across two files, axiom-clean, sorry count 0,
+single cycle. Backup B drops P3 if P2 stalls. Hard abort
+threshold: if even Backup B doesn't compile in 60 minutes, pivot
+to `lem:342A` per `lem_310B_plan.md` §8.2.
