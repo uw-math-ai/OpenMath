@@ -1945,4 +1945,76 @@ theorem butcherShiftedLegendre_recurrence_four :
         Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
   ring
 
+/-- **Butcher §342 (342f) at `n = 5`**:
+`5 · P_5^*(x) = 9 · (2x − 1) · P_4^*(x) − 4 · P_3^*(x)`.
+
+Direct verification:
+LHS = `5 · (252x⁵ − 630x⁴ + 560x³ − 210x² + 30x − 1)
+     = 1260x⁵ − 3150x⁴ + 2800x³ − 1050x² + 150x − 5`;
+RHS = `9 · (2x − 1) · (70x⁴ − 140x³ + 90x² − 20x + 1)
+     − 4 · (20x³ − 30x² + 12x − 1)
+     = 1260x⁵ − 3150x⁴ + 2800x³ − 1050x² + 150x − 5`.
+Same `Polynomial.funext` + `ring` recipe. -/
+theorem butcherShiftedLegendre_recurrence_five :
+    (5 : ℝ) • butcherShiftedLegendre 5 =
+      Polynomial.C 9 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 4
+      - Polynomial.C 4 * butcherShiftedLegendre 3 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_five, butcherShiftedLegendre_four,
+      butcherShiftedLegendre_three]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
+/-- **Butcher §342 (342f) at `n = 6`**:
+`6 · P_6^*(x) = 11 · (2x − 1) · P_5^*(x) − 5 · P_4^*(x)`.
+
+Direct verification:
+LHS = `6 · (924x⁶ − 2772x⁵ + 3150x⁴ − 1680x³ + 420x² − 42x + 1)
+     = 5544x⁶ − 16632x⁵ + 18900x⁴ − 10080x³ + 2520x² − 252x + 6`;
+RHS = `11 · (2x − 1) · (252x⁵ − 630x⁴ + 560x³ − 210x² + 30x − 1)
+     − 5 · (70x⁴ − 140x³ + 90x² − 20x + 1)
+     = 5544x⁶ − 16632x⁵ + 18900x⁴ − 10080x³ + 2520x² − 252x + 6`.
+Same `Polynomial.funext` + `ring` recipe. -/
+theorem butcherShiftedLegendre_recurrence_six :
+    (6 : ℝ) • butcherShiftedLegendre 6 =
+      Polynomial.C 11 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 5
+      - Polynomial.C 5 * butcherShiftedLegendre 4 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_six, butcherShiftedLegendre_five,
+      butcherShiftedLegendre_four]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
+/-- **Butcher §342 (342f) at `n = 7`**:
+`7 · P_7^*(x) = 13 · (2x − 1) · P_6^*(x) − 6 · P_5^*(x)`.
+
+Direct verification:
+LHS = `7 · (3432x⁷ − 12012x⁶ + 16632x⁵ − 11550x⁴ + 4200x³ − 756x² + 56x − 1)
+     = 24024x⁷ − 84084x⁶ + 116424x⁵ − 80850x⁴ + 29400x³ − 5292x² + 392x − 7`;
+RHS = `13 · (2x − 1) · (924x⁶ − 2772x⁵ + 3150x⁴ − 1680x³ + 420x² − 42x + 1)
+     − 6 · (252x⁵ − 630x⁴ + 560x³ − 210x² + 30x − 1)
+     = 24024x⁷ − 84084x⁶ + 116424x⁵ − 80850x⁴ + 29400x³ − 5292x² + 392x − 7`.
+Same `Polynomial.funext` + `ring` recipe. -/
+theorem butcherShiftedLegendre_recurrence_seven :
+    (7 : ℝ) • butcherShiftedLegendre 7 =
+      Polynomial.C 13 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+        * butcherShiftedLegendre 6
+      - Polynomial.C 6 * butcherShiftedLegendre 5 := by
+  apply Polynomial.funext
+  intro x
+  rw [butcherShiftedLegendre_seven, butcherShiftedLegendre_six,
+      butcherShiftedLegendre_five]
+  simp [Polynomial.eval_smul, Polynomial.eval_mul, Polynomial.eval_add,
+        Polynomial.eval_sub, Polynomial.eval_pow, Polynomial.eval_C,
+        Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
+  ring
+
 end OpenMath.Chapter3.Section342
