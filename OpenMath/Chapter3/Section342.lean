@@ -289,6 +289,41 @@ theorem butcherShiftedLegendre_one :
       simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
             Polynomial.coeff_sub, Polynomial.coeff_one, hk]
 
+/-- **Butcher §342 helper — `P_2^* = 6X² - 6X + 1`**: the degree-`2`
+shifted Legendre polynomial expands explicitly via the coefficient
+formula `(shiftedLegendre 2).coeff k = (-1)^k · C(2,k) · C(2+k, 2)`.
+The relevant values are `(1, -6, 6)` at `k = 0, 1, 2`; higher slots
+vanish since `2.choose k = 0` for `k ≥ 3`. The outer `(-1)^2 = 1`
+sign factor from `butcherShiftedLegendre` is trivial. -/
+theorem butcherShiftedLegendre_two :
+    butcherShiftedLegendre 2 =
+      Polynomial.C 6 * Polynomial.X ^ 2 - Polynomial.C 6 * Polynomial.X
+        + Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  match k with
+  | 0 =>
+      simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+            Polynomial.coeff_add, Polynomial.coeff_sub,
+            Polynomial.coeff_X_pow, Polynomial.coeff_X,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+  | 1 =>
+      simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+            Polynomial.coeff_add, Polynomial.coeff_sub,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+  | 2 =>
+      have hch : Nat.choose 4 2 = 6 := by decide
+      simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+            Polynomial.coeff_add, Polynomial.coeff_sub,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+  | (k+3) =>
+      have hk : (2 : ℕ).choose (k + 3) = 0 := Nat.choose_eq_zero_of_lt (by omega)
+      simp [Polynomial.coeff_map, Polynomial.coeff_shiftedLegendre,
+            Polynomial.coeff_add, Polynomial.coeff_sub,
+            Polynomial.coeff_one, hk]
+
 /-! ### Non-vacuity witnesses for §342 helpers
 
 These confirm the helper lemmas evaluate correctly on small inputs. -/
@@ -380,6 +415,62 @@ theorem butcherShiftedLegendre_norm_sq_one :
       h1, h2, integral_one]
   ring
 
+/-- **Butcher §342 (342d) at `n = 2`**: `∫₀¹ (P_2^*(x))^2 dx = 1/5`.
+
+The `n = 2` instance of (342d). Direct computation:
+`P_2^*(x) = 6x² - 6x + 1` (`butcherShiftedLegendre_two`), so
+`(P_2^*(x))^2 = 36x⁴ - 72x³ + 48x² - 12x + 1`. Then
+`∫₀¹ (36x⁴ - 72x³ + 48x² - 12x + 1) dx = 36/5 - 18 + 16 - 6 + 1 = 1/5`. -/
+theorem butcherShiftedLegendre_norm_sq_two :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 2).eval x ^ 2 = 1 / 5 := by
+  have hP : ∀ x : ℝ, (butcherShiftedLegendre 2).eval x ^ 2
+      = 36 * x ^ 4 - 72 * x ^ 3 + 48 * x ^ 2 - 12 * x + 1 := by
+    intro x
+    rw [butcherShiftedLegendre_two]
+    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    ring
+  simp_rw [hP]
+  have hi_x4 : IntervalIntegrable (fun x : ℝ => x ^ 4) MeasureTheory.volume 0 1 :=
+    (continuous_pow 4).intervalIntegrable 0 1
+  have hi_x3 : IntervalIntegrable (fun x : ℝ => x ^ 3) MeasureTheory.volume 0 1 :=
+    (continuous_pow 3).intervalIntegrable 0 1
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h4 : ∫ x in (0 : ℝ)..1, x ^ 4 = 1 / 5 := by
+    rw [integral_pow]; norm_num
+  have h3 : ∫ x in (0 : ℝ)..1, x ^ 3 = 1 / 4 := by
+    rw [integral_pow]; norm_num
+  have h2 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  -- The integrand is `((((36·x⁴ − 72·x³) + 48·x²) − 12·x) + 1)` (left-associative).
+  rw [intervalIntegral.integral_add
+        ((((hi_x4.const_mul 36).sub (hi_x3.const_mul 72)).add
+            (hi_x2.const_mul 48)).sub (hi_x.const_mul 12))
+        intervalIntegrable_const,
+      intervalIntegral.integral_sub
+        (((hi_x4.const_mul 36).sub (hi_x3.const_mul 72)).add
+            (hi_x2.const_mul 48))
+        (hi_x.const_mul 12),
+      intervalIntegral.integral_add
+        ((hi_x4.const_mul 36).sub (hi_x3.const_mul 72))
+        (hi_x2.const_mul 48),
+      intervalIntegral.integral_sub
+        (hi_x4.const_mul 36)
+        (hi_x3.const_mul 72),
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      h4, h3, h2, h1, integral_one]
+  ring
+
 /-! ### Non-vacuity witnesses for (342d) cases -/
 
 -- (342d) at `n = 0`: matches the closed form `1 / (2 * 0 + 1) = 1`.
@@ -391,5 +482,10 @@ example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 0).eval x ^ 2
 example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 1).eval x ^ 2
     = 1 / (2 * (1 : ℕ) + 1) := by
   rw [butcherShiftedLegendre_norm_sq_one]; norm_num
+
+-- (342d) at `n = 2`: matches the closed form `1 / (2 * 2 + 1) = 1/5`.
+example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 2).eval x ^ 2
+    = 1 / (2 * (2 : ℕ) + 1) := by
+  rw [butcherShiftedLegendre_norm_sq_two]; norm_num
 
 end OpenMath.Chapter3.Section342

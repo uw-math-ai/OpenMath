@@ -140,3 +140,6 @@ Cycle 249 Section310.lean theta_eq_one: planner's recipe `induction t with | mk 
 
 ### Cycle 265
 Cycle 265 `lem_311A_order_one_poly`: `isBigO_const_mul_self` does not lift to smul case (requires `SeminormedRing`, only applies for scalar product `c * h^2`); `IsBigO.const_smul_self` goes wrong direction (constant on scalar side not vector side). Fix: `isBigO_of_le'` with explicit `norm_smul` bound + `linarith [norm_nonneg ...]`. Also: `(↑(Nat.succ 1))⁻¹` does not reduce to `1/2` definitionally after `simp_only`; `norm_num` closes the leftover cast gap where scalar proof used `smul_eq_mul` + `ring`.
+
+### Cycle 273
+Cycle 273 (342f): Both Polynomial.ext (coefficient route) and Polynomial.funext (eval route) require Pascal-style binomial identities on Nat.choose that ring cannot close. Butcher's degree-and-difference outline requires (342a) orthogonality as input. Mathlib has no standard Legendre polynomial type or Bonnet recurrence hook. Do not retry (342f) without (342a) in hand.

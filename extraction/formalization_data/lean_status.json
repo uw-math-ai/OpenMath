@@ -301,7 +301,8 @@
   "lem:342A": {
     "lean_file": "OpenMath/Chapter3/Section342.lean",
     "lean_symbol": "OpenMath.Chapter3.Section342.butcherShiftedLegendre_eval_one",
-    "status": "partial"
+    "status": "partial",
+    "cycle_trace": "271: 342b/342c; 272: 342e Rodrigues; 273: 342e helpers (P_0, P_1, eval_zero, natDegree); 274: 342d n=0,1; 275: 342d n=2 + butcherShiftedLegendre_two"
   },
   "lem:342B": {
     "lean_file": null,
