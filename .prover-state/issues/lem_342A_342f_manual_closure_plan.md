@@ -436,3 +436,96 @@ textbook resolves it).
 
 If Phase A.3 lands cleanly, cycle 294 extracts the (342f) headline via
 a `linear_combination` step on `Q = 0`.
+
+### Cycle 293 update — Phase A.3 SHIPPED + (342f) headline closed
+
+Cycle 293 shipped **all six** Phase A.3 deliverables (P1 through P6) in
+a single cycle, axiom-clean
+(`[propext, Classical.choice, Quot.sound]`). Located at
+`OpenMath/Chapter3/Section342.lean:3129–3539` (~423 new LOC).
+
+```lean
+theorem recurrence_residual_eval_at_one (n : ℕ) (hn : 2 ≤ n) :
+    ((residual)).eval 1 = 0
+
+theorem recurrence_residual_parity (n : ℕ) (hn : 2 ≤ n) (x : ℝ) :
+    ((residual)).eval (1 - x) = ((-1 : ℝ) ^ n) * ((residual)).eval x
+
+theorem recurrence_residual_natDegree_le (n : ℕ) (hn : 2 ≤ n) :
+    ((residual)).natDegree ≤ n - 2
+
+theorem polynomial_eq_smul_butcherShiftedLegendre_of_natDegree_le_of_orthogonal
+    (m : ℕ) (q : Polynomial ℝ) (hq_deg : q.natDegree ≤ m)
+    (h_orth : ∀ k, k < m →
+      ∫ x in (0 : ℝ)..1, q.eval x * (butcherShiftedLegendre k).eval x = 0) :
+    ∃ c : ℝ, q = Polynomial.C c * butcherShiftedLegendre m
+
+theorem recurrence_residual_eq_zero (n : ℕ) (hn : 3 ≤ n) :
+    (residual) = 0
+
+theorem butcherShiftedLegendre_recurrence (n : ℕ) (hn : 2 ≤ n) :
+    (n : ℝ) • butcherShiftedLegendre n =
+      Polynomial.C ((2 * n - 1 : ℕ) : ℝ) *
+        (Polynomial.C 2 * Polynomial.X - Polynomial.C 1) *
+        butcherShiftedLegendre (n - 1)
+      - Polynomial.C ((n - 1 : ℕ) : ℝ) *
+        butcherShiftedLegendre (n - 2)
+```
+
+`(residual)` denotes the cycle 290 residual
+`(n : ℝ) • P_n - C ((2*n - 1 : ℕ) : ℝ) * (C 2 * X - C 1) * P_{n-1} +
+C ((n - 1 : ℕ) : ℝ) * P_{n-2}`.
+
+The path used was **Route A** (parity-aided), but with a cleaner
+leadingCoeff-based degree-drop argument in P3:
+* P1 and P2 went directly per the strategy's recipe.
+* P3 lifted P2 to polynomial level via `Polynomial.funext`, then took
+  `Polynomial.leadingCoeff` of both sides of
+  `Q.comp (C 1 - X) = C ((-1)^n) * Q`. With `(C 1 - X).leadingCoeff =
+  -1` and `(C 1 - X).natDegree = 1`, `Polynomial.leadingCoeff_comp`
+  gave `Q.leadingCoeff * (-1)^Q.natDegree` on the LHS. Equating with
+  the RHS `(-1)^n * Q.leadingCoeff` and cancelling `Q.leadingCoeff ≠ 0`
+  produced `(-1)^Q.natDegree = (-1)^n`. Combined with `Q.natDegree < n`
+  (cycle 290), this rules out `Q.natDegree = n - 1`, giving
+  `Q.natDegree ≤ n - 2`. **Much cleaner than the `coeff_comp` route
+  sketched in the strategy.**
+* P4 induction followed cycle 292's `suffices ∀ m', ...` pattern. Each
+  step closed cleanly; only fix was replacing `field_simp` with the
+  more direct `div_mul_cancel₀ + sub_self` in the residual-natDegree
+  step.
+* P5 applied P4 at `m := n - 2` with cycle 292's
+  `recurrence_residual_orthogonal` providing the orthogonality input.
+  P1 then forced the resulting scalar to zero.
+* P6 case-split on `n` vs 3: cycle 282's
+  `butcherShiftedLegendre_recurrence_two` for `n = 2` (with
+  `convert ... using 2 <;> norm_num` to bridge the Nat-cast forms),
+  and `linear_combination` on P5's `Q = 0` for `n ≥ 3`.
+
+Total LOC ladder over Phase A:
+* Cycle 289: ~80 (binomial helper).
+* Cycle 290: ~140 (residual.natDegree < n).
+* Cycle 291: ~50 (F.1 + F.2 + easy combination).
+* Cycle 292: ~244 (basis-span helper + F.3 + full residual orthogonality).
+* Cycle 293: ~423 (parity infrastructure + degree drop + basis-span
+  converse + Q = 0 + (342f) headline).
+
+**Phase A total**: ~937 LOC across cycles 289–293 (5 cycles), closing
+(342f) at all `n ≥ 2`. Was projected 3–5 cycles, 370–570 LOC. Came in
+on cycle count, slightly over LOC due to P3's parity infrastructure
+and P4's full induction proof (more substantive than the cycle 292
+forward direction).
+
+### Status
+
+`lem:342A` properties shipped:
+- (342a) orthogonality — cycle 277.
+- (342b) eval at 1 — cycle 271.
+- (342c) parity — cycle 272.
+- (342d) norm square — cycle 281.
+- (342e) Rodrigues — cycle 277.
+- (342f) recurrence — **cycle 293**.
+- (342g) `n` distinct real zeros — **open** (see
+  `lem_342A_g_zeros_scoping.md`).
+
+This issue file may be closed once (342g) lands. Until then, leave
+open as Phase A reference.
