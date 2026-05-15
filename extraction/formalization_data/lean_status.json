@@ -300,9 +300,9 @@
   },
   "lem:342A": {
     "lean_file": "OpenMath/Chapter3/Section342.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section342.butcherShiftedLegendre_eval_one",
+    "lean_symbol": "OpenMath.Chapter3.Section342.butcherShiftedLegendre_orthogonal",
     "status": "partial",
-    "cycle_trace": "271: 342b/342c; 272: 342e Rodrigues; 273: 342e helpers (P_0, P_1, eval_zero, natDegree); 274: 342d n=0,1; 275: 342d n=2 + butcherShiftedLegendre_two"
+    "cycle_trace": "271: 342b/342c; 272: 342e Rodrigues; 273: 342e helpers (P_0, P_1, eval_zero, natDegree); 274: 342d n=0,1; 275: 342d n=2 + butcherShiftedLegendre_two; 276: 342d n=3 + butcherShiftedLegendre_three; 277: 342a orthogonality (Aristotle 727396d5 integrated) + 342d n=4 + butcherShiftedLegendre_four"
   },
   "lem:342B": {
     "lean_file": null,

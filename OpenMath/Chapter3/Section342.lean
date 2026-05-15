@@ -2,6 +2,9 @@ import Mathlib.RingTheory.Polynomial.ShiftedLegendre
 import Mathlib.Algebra.Polynomial.AlgebraMap
 import Mathlib.Algebra.Polynomial.Degree.Lemmas
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
+import Mathlib.Analysis.Calculus.Deriv.Polynomial
+import Mathlib.Topology.Algebra.Polynomial
+import Mathlib.Tactic.Cases
 import Mathlib.Data.Real.Basic
 
 /-!
@@ -371,6 +374,62 @@ theorem butcherShiftedLegendre_three :
       simp [Polynomial.coeff_sub, Polynomial.coeff_add,
             Polynomial.coeff_one, hk]
 
+/-- **Butcher §342 helper — `P_4^* = 70X^4 - 140X^3 + 90X^2 - 20X + 1`**:
+the degree-`4` shifted Legendre polynomial expands explicitly via the
+coefficient formula `(shiftedLegendre 4).coeff k = (-1)^k · C(4,k) · C(4+k, 4)`.
+The relevant values are `(1, -20, 90, -140, 70)` at `k = 0, 1, 2, 3, 4`;
+higher slots vanish since `4.choose k = 0` for `k ≥ 5`. The outer Butcher
+sign factor `(-1)^4 = 1` is trivial — the even-`n` case mirrors cycle 275's
+`butcherShiftedLegendre_two` recipe (no peel-off needed). Sanity:
+`70 - 140 + 90 - 20 + 1 = 1` at `x = 1` (matches (342b)). -/
+theorem butcherShiftedLegendre_four :
+    butcherShiftedLegendre 4 =
+      Polynomial.C 70 * Polynomial.X ^ 4
+        - Polynomial.C 140 * Polynomial.X ^ 3
+        + Polynomial.C 90 * Polynomial.X ^ 2
+        - Polynomial.C 20 * Polynomial.X
+        + Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  -- Peel off the `C ((-1)^4) * ·` factor BEFORE simp can collapse it
+  -- to the polynomial `1` (which blocks `coeff_C_mul`).
+  simp only [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+             Polynomial.coeff_shiftedLegendre]
+  match k with
+  | 0 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_X_pow, Polynomial.coeff_X,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 1 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 2 =>
+      have hch1 : Nat.choose 6 4 = 15 := by decide
+      have hch2 : Nat.choose 4 2 = 6 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 3 =>
+      have hch : Nat.choose 7 4 = 35 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+      norm_num
+  | 4 =>
+      have hch : Nat.choose 8 4 = 70 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+      norm_num
+  | (k+5) =>
+      have hk : (4 : ℕ).choose (k + 5) = 0 := Nat.choose_eq_zero_of_lt (by omega)
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_one, hk]
+
 /-! ### Non-vacuity witnesses for §342 helpers
 
 These confirm the helper lemmas evaluate correctly on small inputs. -/
@@ -397,6 +456,242 @@ example : (butcherShiftedLegendre 1).eval 1 = 1 := by
   simp [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
         Polynomial.eval_X]
   norm_num
+
+/-! ### (342a) — Orthogonality of `P_n^*` on `[0, 1]`
+
+Butcher §342 (342a): `∫₀¹ P_m^*(x) P_n^*(x) dx = 0` for `m ≠ n`.
+
+Proof strategy (Aristotle, cycle 274 submission, run `727396d5`, COMPLETE
+2026-05-15): WLOG `m < n`. Apply Rodrigues' formula
+(`butcherShiftedLegendre_rodrigues`) to express `P_n^*` as
+`((-1)^n / n!) · D^n (X^n (1-X)^n)`. The boundary terms vanish at both
+endpoints because each Leibniz summand of `D^k (X^n (1-X)^n)` for `k < n`
+retains a factor with positive `X`-exponent (at `x = 0`) or positive
+`(1-X)`-exponent (at `x = 1`). After `n` integrations by parts, all
+derivatives sit on `P_m^*`, whose `natDegree = m < n`
+(`butcherShiftedLegendre_natDegree`), so `D^n P_m^* = 0`. -/
+
+/-- Helper for (342a): the `k`-th derivative of `X^n · (1-X)^n` vanishes
+at `x = 0` for `k < n`. Each Leibniz summand has `X^j` with `j ≥ 1`
+surviving since `j = n - (k - i) ≥ n - k ≥ 1`. -/
+private lemma iterDeriv_XnOneSubXn_eval_zero {n k : ℕ} (hk : k < n) :
+    (Polynomial.derivative^[k]
+      ((Polynomial.X : Polynomial ℝ) ^ n *
+        (1 - Polynomial.X) ^ n)).eval 0 = 0 := by
+  have h_deriv_sum : ∀ k < n,
+      (Polynomial.derivative^[k]
+        (Polynomial.X ^ n * (1 - Polynomial.X) ^ n)).eval (0 : ℝ)
+      = ∑ j ∈ Finset.range (k + 1),
+          Nat.choose k j * (Nat.descFactorial n (k - j)) *
+            (Polynomial.derivative^[j]
+              ((1 - Polynomial.X) ^ n)).eval (0 : ℝ) *
+            0 ^ (n - (k - j)) := by
+    intro k hk
+    have h_leibniz : Polynomial.derivative^[k]
+        (Polynomial.X ^ n * (1 - Polynomial.X) ^ n)
+        = ∑ j ∈ Finset.range (k + 1),
+            Polynomial.C (Nat.choose k j : ℝ)
+              * (Polynomial.derivative^[k - j] (Polynomial.X ^ n))
+              * (Polynomial.derivative^[j] ((1 - Polynomial.X) ^ n)) := by
+      have h_deriv_sum : ∀ p q : Polynomial ℝ, ∀ k,
+          Polynomial.derivative^[k] (p * q)
+          = ∑ j ∈ Finset.range (k + 1),
+              Nat.choose k j •
+                (Polynomial.derivative^[k - j] p *
+                  Polynomial.derivative^[j] q) :=
+        fun p q k => Polynomial.iterate_derivative_mul p q
+      convert h_deriv_sum (Polynomial.X ^ n) ((1 - Polynomial.X) ^ n) k using 1
+      norm_num [mul_assoc]
+    have h_deriv_Xn : ∀ j ≤ k,
+        (Polynomial.derivative^[j] (Polynomial.X ^ n)).eval (0 : ℝ)
+        = Nat.descFactorial n j * 0 ^ (n - j) := by
+      have h_deriv_def : ∀ m : ℕ,
+          Polynomial.derivative^[m] (Polynomial.X ^ n)
+          = Polynomial.C (Nat.descFactorial n m : ℝ) *
+              Polynomial.X ^ (n - m) := by
+        intro m
+        induction' m with m ih
+        · simp
+        · simp_all +decide [Function.iterate_succ_apply',
+                            Polynomial.derivative_pow]
+          rw [Nat.sub_sub]
+          ring
+      simp_all +decide [Polynomial.derivative_pow]
+    simp_all +decide [mul_assoc, mul_comm, mul_left_comm,
+                      Polynomial.eval_finset_sum]
+  rw [h_deriv_sum k hk, Finset.sum_eq_zero]
+  intros
+  simp_all +decide [Nat.sub_eq_zero_of_le, le_of_lt]
+  omega
+
+/-- Helper for (342a): the `k`-th derivative of `X^n · (1-X)^n` vanishes
+at `x = 1` for `k < n`. Each Leibniz summand has `(1 - X)^j` with `j ≥ 1`
+surviving. -/
+private lemma iterDeriv_XnOneSubXn_eval_one {n k : ℕ} (hk : k < n) :
+    (Polynomial.derivative^[k]
+      ((Polynomial.X : Polynomial ℝ) ^ n *
+        (1 - Polynomial.X) ^ n)).eval 1 = 0 := by
+  let P : Polynomial ℝ := Polynomial.X ^ n
+  let Q : Polynomial ℝ := (1 - Polynomial.X) ^ n
+  have h_diff : Polynomial.derivative^[k] (P * Q)
+      = ∑ j ∈ Finset.range k.succ,
+          k.choose j •
+            (Polynomial.derivative^[k - j] P *
+              Polynomial.derivative^[j] Q) :=
+    Polynomial.iterate_derivative_mul P Q
+  have h_Q_deriv : ∀ j < n,
+      (Polynomial.derivative^[j]
+        ((1 - Polynomial.X : Polynomial ℝ) ^ n)).eval 1 = 0 := by
+    intros j hj
+    have h_Q_deriv_step : Polynomial.derivative^[j]
+        ((1 - Polynomial.X : Polynomial ℝ) ^ n)
+        = (-1) ^ j * (Nat.descFactorial n j : ℝ) •
+            (1 - Polynomial.X : Polynomial ℝ) ^ (n - j) := by
+      induction' j with j ih
+      · simp
+      · simp_all +decide [Function.iterate_succ_apply',
+                          Polynomial.derivative_pow]
+        rw [ih (Nat.lt_of_succ_lt hj)]
+        norm_num [Polynomial.derivative_pow, Polynomial.derivative_mul,
+                  Polynomial.derivative_X, Polynomial.derivative_one,
+                  Polynomial.smul_eq_C_mul]
+        ring
+        rw [Nat.sub_sub, add_comm]
+    simp_all +decide [ne_of_gt]
+  replace h_diff := congr_arg (Polynomial.eval 1) h_diff
+  simp_all +decide [Polynomial.eval_finset_sum]
+  exact h_diff.trans
+    (Finset.sum_eq_zero fun x hx => by
+      specialize h_Q_deriv x (by linarith [Finset.mem_range.mp hx])
+      aesop)
+
+/-- Helper for (342a): integration by parts for polynomial evaluations
+on `[0,1]`. A clean specialization of
+`intervalIntegral.integral_mul_deriv_eq_deriv_mul_of_hasDerivAt` with
+`u := f.eval`, `v := g.eval`. -/
+private lemma poly_ibp (f g : Polynomial ℝ) :
+    ∫ x in (0:ℝ)..1, f.eval x * (Polynomial.derivative g).eval x =
+    f.eval 1 * g.eval 1 - f.eval 0 * g.eval 0 -
+    ∫ x in (0:ℝ)..1, (Polynomial.derivative f).eval x * g.eval x :=
+  intervalIntegral.integral_mul_deriv_eq_deriv_mul_of_hasDerivAt
+    (u := fun x => f.eval x) (v := fun x => g.eval x)
+    (u' := fun x => (Polynomial.derivative f).eval x)
+    (v' := fun x => (Polynomial.derivative g).eval x)
+    (Polynomial.continuous f).continuousOn
+    (Polynomial.continuous g).continuousOn
+    (fun x _ => f.hasDerivAt x)
+    (fun x _ => g.hasDerivAt x)
+    ((Polynomial.continuous _).intervalIntegrable _ _)
+    ((Polynomial.continuous _).intervalIntegrable _ _)
+
+/-- General iterated IBP: if `f` has degree `< n` and all derivatives
+`D^k g` for `k < n` vanish at both endpoints `0` and `1`, then
+`∫₀¹ f · D^n(g) = 0`. -/
+private lemma integral_poly_mul_iterDeriv_vanish
+    (f g : Polynomial ℝ) (n : ℕ)
+    (hf : f.natDegree < n)
+    (hg0 : ∀ k, k < n → (Polynomial.derivative^[k] g).eval (0:ℝ) = 0)
+    (hg1 : ∀ k, k < n → (Polynomial.derivative^[k] g).eval (1:ℝ) = 0) :
+    ∫ x in (0:ℝ)..1,
+      f.eval x * (Polynomial.derivative^[n] g).eval x = 0 := by
+  induction' n with n ih generalizing f g <;>
+    simp_all +decide [Function.iterate_succ_apply']
+  have h_parts : ∫ x in (0:ℝ)..1,
+      (f.eval x) *
+        (Polynomial.derivative ((Polynomial.derivative^[n] g))).eval x
+      = (f.eval 1) * ((Polynomial.derivative^[n] g).eval 1)
+          - (f.eval 0) * ((Polynomial.derivative^[n] g).eval 0)
+          - ∫ x in (0:ℝ)..1,
+              (Polynomial.derivative f).eval x *
+                ((Polynomial.derivative^[n] g).eval x) := by
+    rw [poly_ibp]
+  by_cases h : Polynomial.natDegree (Polynomial.derivative f) < n <;>
+    simp_all +decide [Function.iterate_succ_apply']
+  · exact ih _ _ h (fun k hk => hg0 k hk.le) (fun k hk => hg1 k hk.le)
+  · rcases k : Polynomial.natDegree f with (_ | k) <;>
+      simp_all +decide [Polynomial.natDegree]
+    · cases k <;> simp_all +decide [Polynomial.degree_eq_natDegree]
+      rw [Polynomial.eq_C_of_degree_eq_zero ‹f.degree = 0›]
+      aesop
+    · exact absurd h
+        (not_le_of_gt (Nat.lt_of_le_of_lt (Nat.le_refl _) hf))
+
+/-- Specialization of `integral_poly_mul_iterDeriv_vanish` to
+`g = X^n · (1-X)^n`: for `f` with `natDegree f < n`, the integral of
+`f` against `D^n(X^n · (1-X)^n)` is zero. -/
+private lemma integral_poly_mul_iterDeriv_XnOneSubXn_eq_zero
+    (f : Polynomial ℝ) (n : ℕ) (hf : f.natDegree < n) :
+    ∫ x in (0:ℝ)..1,
+      f.eval x * (Polynomial.derivative^[n]
+        ((Polynomial.X : Polynomial ℝ) ^ n *
+          (1 - Polynomial.X) ^ n)).eval x = 0 :=
+  integral_poly_mul_iterDeriv_vanish f _ n hf
+    (fun _ hk => iterDeriv_XnOneSubXn_eval_zero hk)
+    (fun _ hk => iterDeriv_XnOneSubXn_eval_one hk)
+
+/-- **Butcher §342 (342a)** — orthogonality of `P_n^*` on `[0, 1]`.
+
+For all `m ≠ n`, `∫₀¹ P_m^*(x) · P_n^*(x) dx = 0`.
+
+Proof (Aristotle, cycle 274 submission, integrated cycle 277):
+WLOG `m < n`. Substitute Rodrigues' formula
+(`butcherShiftedLegendre_rodrigues`) to write `P_n^*` as
+`((-1)^n / n!) · D^n (X^n (1-X)^n)`. Apply
+`integral_poly_mul_iterDeriv_XnOneSubXn_eq_zero` with `f := P_m^*`
+(which has `natDegree = m < n` by `butcherShiftedLegendre_natDegree`)
+to kill the integral. -/
+theorem butcherShiftedLegendre_orthogonal {m n : ℕ} (hmn : m ≠ n) :
+    ∫ x in (0 : ℝ)..1,
+      (butcherShiftedLegendre m).eval x *
+      (butcherShiftedLegendre n).eval x = 0 := by
+  wlog hmn' : m < n generalizing m n
+  · convert this hmn.symm
+      (lt_of_le_of_ne (le_of_not_gt hmn') hmn.symm) using 1
+    ac_rfl
+  have h_integral : ∫ x in (0 : ℝ)..1,
+      (butcherShiftedLegendre m).eval x * (butcherShiftedLegendre n).eval x
+      = (-1 : ℝ) ^ n / (n.factorial : ℝ) *
+          ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre m).eval x *
+            ((Polynomial.derivative^[n]
+              ((Polynomial.X : Polynomial ℝ) ^ n *
+                (1 - Polynomial.X) ^ n)).eval x) := by
+    have h_subst : ∀ x : ℝ, (butcherShiftedLegendre n).eval x =
+        ((-1 : ℝ) ^ n / (n.factorial : ℝ)) *
+          ((Polynomial.derivative^[n]
+            ((Polynomial.X : Polynomial ℝ) ^ n *
+              (1 - Polynomial.X) ^ n)).eval x) := by
+      intro x
+      have := congr_arg (Polynomial.eval x)
+        (butcherShiftedLegendre_rodrigues n)
+      simp only [Polynomial.eval_mul, Polynomial.eval_C] at this
+      rw [div_mul_eq_mul_div, eq_div_iff] <;> [linarith; positivity]
+    simp_rw [h_subst, ← intervalIntegral.integral_const_mul]
+    congr 1
+    ext
+    ring
+  rw [h_integral,
+      integral_poly_mul_iterDeriv_XnOneSubXn_eq_zero _ _
+        (by rw [butcherShiftedLegendre_natDegree]; exact hmn'),
+      mul_zero]
+
+/-! ### Non-vacuity witnesses (342a)
+
+These confirm orthogonality on the smallest non-trivial pairs. -/
+
+example : ∫ x in (0 : ℝ)..1,
+    (butcherShiftedLegendre 0).eval x * (butcherShiftedLegendre 1).eval x
+      = 0 :=
+  butcherShiftedLegendre_orthogonal (by decide)
+
+example : ∫ x in (0 : ℝ)..1,
+    (butcherShiftedLegendre 1).eval x * (butcherShiftedLegendre 2).eval x
+      = 0 :=
+  butcherShiftedLegendre_orthogonal (by decide)
+
+example : ∫ x in (0 : ℝ)..1,
+    (butcherShiftedLegendre 0).eval x * (butcherShiftedLegendre 2).eval x
+      = 0 :=
+  butcherShiftedLegendre_orthogonal (by decide)
 
 /-! ### (342d) — concrete cases at `n = 0` and `n = 1`
 
@@ -598,6 +893,112 @@ theorem butcherShiftedLegendre_norm_sq_three :
       h6, h5, h4, h3, h2, h1, integral_one]
   ring
 
+/-- **Butcher §342 (342d) at `n = 4`**: `∫₀¹ (P_4^*(x))^2 dx = 1/9`.
+
+The `n = 4` instance of (342d). Direct computation:
+`P_4^*(x) = 70x⁴ - 140x³ + 90x² - 20x + 1` (`butcherShiftedLegendre_four`),
+so
+`(P_4^*(x))^2 = 4900x⁸ - 19600x⁷ + 32200x⁶ - 28000x⁵ + 13840x⁴
+                - 3880x³ + 580x² - 40x + 1`.
+Then
+`∫₀¹ (4900x⁸ − 19600x⁷ + 32200x⁶ − 28000x⁵ + 13840x⁴ − 3880x³
+       + 580x² − 40x + 1) dx`
+`= 4900/9 − 2450 + 4600 − 14000/3 + 2768 − 970 + 580/3 − 20 + 1 = 1/9`. -/
+theorem butcherShiftedLegendre_norm_sq_four :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 4).eval x ^ 2 = 1 / 9 := by
+  have hP : ∀ x : ℝ, (butcherShiftedLegendre 4).eval x ^ 2
+      = 4900 * x ^ 8 - 19600 * x ^ 7 + 32200 * x ^ 6 - 28000 * x ^ 5
+        + 13840 * x ^ 4 - 3880 * x ^ 3 + 580 * x ^ 2 - 40 * x + 1 := by
+    intro x
+    rw [butcherShiftedLegendre_four]
+    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    ring
+  simp_rw [hP]
+  have hi_x8 : IntervalIntegrable (fun x : ℝ => x ^ 8) MeasureTheory.volume 0 1 :=
+    (continuous_pow 8).intervalIntegrable 0 1
+  have hi_x7 : IntervalIntegrable (fun x : ℝ => x ^ 7) MeasureTheory.volume 0 1 :=
+    (continuous_pow 7).intervalIntegrable 0 1
+  have hi_x6 : IntervalIntegrable (fun x : ℝ => x ^ 6) MeasureTheory.volume 0 1 :=
+    (continuous_pow 6).intervalIntegrable 0 1
+  have hi_x5 : IntervalIntegrable (fun x : ℝ => x ^ 5) MeasureTheory.volume 0 1 :=
+    (continuous_pow 5).intervalIntegrable 0 1
+  have hi_x4 : IntervalIntegrable (fun x : ℝ => x ^ 4) MeasureTheory.volume 0 1 :=
+    (continuous_pow 4).intervalIntegrable 0 1
+  have hi_x3 : IntervalIntegrable (fun x : ℝ => x ^ 3) MeasureTheory.volume 0 1 :=
+    (continuous_pow 3).intervalIntegrable 0 1
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h8 : ∫ x in (0 : ℝ)..1, x ^ 8 = 1 / 9 := by
+    rw [integral_pow]; norm_num
+  have h7 : ∫ x in (0 : ℝ)..1, x ^ 7 = 1 / 8 := by
+    rw [integral_pow]; norm_num
+  have h6 : ∫ x in (0 : ℝ)..1, x ^ 6 = 1 / 7 := by
+    rw [integral_pow]; norm_num
+  have h5 : ∫ x in (0 : ℝ)..1, x ^ 5 = 1 / 6 := by
+    rw [integral_pow]; norm_num
+  have h4 : ∫ x in (0 : ℝ)..1, x ^ 4 = 1 / 5 := by
+    rw [integral_pow]; norm_num
+  have h3 : ∫ x in (0 : ℝ)..1, x ^ 3 = 1 / 4 := by
+    rw [integral_pow]; norm_num
+  have h2 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  -- The integrand is left-associative:
+  -- ((((((((4900·x⁸ − 19600·x⁷) + 32200·x⁶) − 28000·x⁵) + 13840·x⁴)
+  --     − 3880·x³) + 580·x²) − 40·x) + 1)
+  rw [intervalIntegral.integral_add
+        ((((((((hi_x8.const_mul 4900).sub (hi_x7.const_mul 19600)).add
+              (hi_x6.const_mul 32200)).sub (hi_x5.const_mul 28000)).add
+              (hi_x4.const_mul 13840)).sub (hi_x3.const_mul 3880)).add
+              (hi_x2.const_mul 580)).sub (hi_x.const_mul 40))
+        intervalIntegrable_const,
+      intervalIntegral.integral_sub
+        (((((((hi_x8.const_mul 4900).sub (hi_x7.const_mul 19600)).add
+              (hi_x6.const_mul 32200)).sub (hi_x5.const_mul 28000)).add
+              (hi_x4.const_mul 13840)).sub (hi_x3.const_mul 3880)).add
+              (hi_x2.const_mul 580))
+        (hi_x.const_mul 40),
+      intervalIntegral.integral_add
+        ((((((hi_x8.const_mul 4900).sub (hi_x7.const_mul 19600)).add
+              (hi_x6.const_mul 32200)).sub (hi_x5.const_mul 28000)).add
+              (hi_x4.const_mul 13840)).sub (hi_x3.const_mul 3880))
+        (hi_x2.const_mul 580),
+      intervalIntegral.integral_sub
+        (((((hi_x8.const_mul 4900).sub (hi_x7.const_mul 19600)).add
+              (hi_x6.const_mul 32200)).sub (hi_x5.const_mul 28000)).add
+              (hi_x4.const_mul 13840))
+        (hi_x3.const_mul 3880),
+      intervalIntegral.integral_add
+        ((((hi_x8.const_mul 4900).sub (hi_x7.const_mul 19600)).add
+              (hi_x6.const_mul 32200)).sub (hi_x5.const_mul 28000))
+        (hi_x4.const_mul 13840),
+      intervalIntegral.integral_sub
+        (((hi_x8.const_mul 4900).sub (hi_x7.const_mul 19600)).add
+              (hi_x6.const_mul 32200))
+        (hi_x5.const_mul 28000),
+      intervalIntegral.integral_add
+        ((hi_x8.const_mul 4900).sub (hi_x7.const_mul 19600))
+        (hi_x6.const_mul 32200),
+      intervalIntegral.integral_sub
+        (hi_x8.const_mul 4900)
+        (hi_x7.const_mul 19600),
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      h8, h7, h6, h5, h4, h3, h2, h1, integral_one]
+  ring
+
 /-! ### Non-vacuity witnesses for (342d) cases -/
 
 -- (342d) at `n = 0`: matches the closed form `1 / (2 * 0 + 1) = 1`.
@@ -619,5 +1020,10 @@ example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 2).eval x ^ 2
 example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 3).eval x ^ 2
     = 1 / (2 * (3 : ℕ) + 1) := by
   rw [butcherShiftedLegendre_norm_sq_three]; norm_num
+
+-- (342d) at `n = 4`: matches the closed form `1 / (2 * 4 + 1) = 1/9`.
+example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 4).eval x ^ 2
+    = 1 / (2 * (4 : ℕ) + 1) := by
+  rw [butcherShiftedLegendre_norm_sq_four]; norm_num
 
 end OpenMath.Chapter3.Section342
