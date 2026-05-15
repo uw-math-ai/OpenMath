@@ -523,9 +523,11 @@
     "status": "unformalized"
   },
   "thm:319B": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section319.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.accumulation_recurrence",
+    "status": "partial",
+    "cycle": 246,
+    "notes": "Phase 1 (cycle 246): accumulation recurrence shipped — ‖yex_n − traj_n‖ ≤ (1 + h L^†)^n · ‖yex_0 − traj_0‖ + ∑ (1+h L^†)^{n-1-k} δ_k. Phase 2 (deferred): geometric-sum closed form yielding the textbook headline (exp(L^†(x-x_0))-1)/L^† · C h^p. Inherits cycle 245 Frobenius-smallness divergence (‖(h_0 L) • |A|‖_F < 1 instead of textbook spectral-radius h_0 L ρ(|A|) < 1)."
   },
   "thm:323B": {
     "lean_file": null,
