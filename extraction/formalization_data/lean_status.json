@@ -302,7 +302,7 @@
     "lean_file": "OpenMath/Chapter3/Section342.lean",
     "lean_symbol": "OpenMath.Chapter3.Section342.butcherShiftedLegendre_orthogonal",
     "status": "partial",
-    "cycle_trace": "271: 342b/342c; 272: 342e Rodrigues; 273: 342e helpers (P_0, P_1, eval_zero, natDegree); 274: 342d n=0,1; 275: 342d n=2 + butcherShiftedLegendre_two; 276: 342d n=3 + butcherShiftedLegendre_three; 277: 342a orthogonality (Aristotle 727396d5 integrated) + 342d n=4 + butcherShiftedLegendre_four"
+    "cycle_trace": "271: 342b/342c; 272: 342e Rodrigues; 273: 342e helpers (P_0, P_1, eval_zero, natDegree); 274: 342d n=0,1; 275: 342d n=2 + butcherShiftedLegendre_two; 276: 342d n=3 + butcherShiftedLegendre_three; 277: 342a orthogonality (Aristotle 727396d5 integrated) + 342d n=4 + butcherShiftedLegendre_four; 278: 342d n=5 + butcherShiftedLegendre_five (Aristotle d4ce527b still IN_PROGRESS at 33%)"
   },
   "lem:342B": {
     "lean_file": null,

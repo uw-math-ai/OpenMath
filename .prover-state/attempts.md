@@ -143,3 +143,6 @@ Cycle 265 `lem_311A_order_one_poly`: `isBigO_const_mul_self` does not lift to sm
 
 ### Cycle 273
 Cycle 273 (342f): Both Polynomial.ext (coefficient route) and Polynomial.funext (eval route) require Pascal-style binomial identities on Nat.choose that ring cannot close. Butcher's degree-and-difference outline requires (342a) orthogonality as input. Mathlib has no standard Legendre polynomial type or Bonnet recurrence hook. Do not retry (342f) without (342a) in hand.
+
+### Cycle 277
+Cycle 277: Aristotle 727396d5 (342a orthogonality) returned COMPLETE and was integrated with 4 helper lemmas. Aristotle's poly_ibp required rewriting from manual intervalIntegral.integral_deriv_eq_sub' chain (parser issues with nested by-blocks) to intervalIntegral.integral_mul_deriv_eq_deriv_mul_of_hasDerivAt. Cycle-275 even-n recipe failed at n=4 (simp collapsed C((-1)^4) before coeff_C_mul could fire); cycle-276 peel-off pattern (simp only [coeff_C_mul, coeff_map, coeff_shiftedLegendre] before ext k) confirmed necessary at all n≥3. Required new imports: Mathlib.Analysis.Calculus.Deriv.Polynomial, Mathlib.Topology.Algebra.Polynomial, Mathlib.Tactic.Cases.

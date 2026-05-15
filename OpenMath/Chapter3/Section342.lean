@@ -430,6 +430,71 @@ theorem butcherShiftedLegendre_four :
       simp [Polynomial.coeff_sub, Polynomial.coeff_add,
             Polynomial.coeff_one, hk]
 
+/-- **Butcher §342 helper — `P_5^* = 252X^5 - 630X^4 + 560X^3 - 210X^2 + 30X - 1`**:
+the degree-`5` shifted Legendre polynomial expands explicitly via the
+coefficient formula `(shiftedLegendre 5).coeff k = (-1)^k · C(5,k) · C(5+k, 5)`.
+The relevant values at `k = 0,…,5` are `(1, -30, 210, -560, 630, -252)`;
+higher slots vanish since `5.choose k = 0` for `k ≥ 6`. The outer Butcher
+sign factor `(-1)^5 = -1` flips every sign, yielding the closed form
+`252X^5 - 630X^4 + 560X^3 - 210X^2 + 30X - 1`. Sanity: evaluating at
+`x = 0` gives `-1` (matches `P_5^*(0) = (-1)^5 = -1`); evaluating at
+`x = 1` gives `252 - 630 + 560 - 210 + 30 - 1 = 1` (matches (342b)). -/
+theorem butcherShiftedLegendre_five :
+    butcherShiftedLegendre 5 =
+      Polynomial.C 252 * Polynomial.X ^ 5
+        - Polynomial.C 630 * Polynomial.X ^ 4
+        + Polynomial.C 560 * Polynomial.X ^ 3
+        - Polynomial.C 210 * Polynomial.X ^ 2
+        + Polynomial.C 30 * Polynomial.X
+        - Polynomial.C 1 := by
+  unfold butcherShiftedLegendre
+  ext k
+  -- Peel off the `C ((-1)^5) * ·` factor BEFORE simp can collapse
+  -- `C ((-1)^5)` to the polynomial `-1` (which would block `coeff_C_mul`).
+  simp only [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+             Polynomial.coeff_shiftedLegendre]
+  match k with
+  | 0 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_X_pow, Polynomial.coeff_X,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 1 =>
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_C, Polynomial.coeff_one]
+      norm_num
+  | 2 =>
+      have hch1 : Nat.choose 7 5 = 21 := by decide
+      have hch2 : Nat.choose 5 2 = 10 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 3 =>
+      have hch1 : Nat.choose 8 5 = 56 := by decide
+      have hch2 : Nat.choose 5 3 = 10 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch1, hch2]
+      norm_num
+  | 4 =>
+      have hch : Nat.choose 9 5 = 126 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+      norm_num
+  | 5 =>
+      have hch : Nat.choose 10 5 = 252 := by decide
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_C_mul, Polynomial.coeff_X_pow,
+            Polynomial.coeff_one, hch]
+      norm_num
+  | (k+6) =>
+      have hk : (5 : ℕ).choose (k + 6) = 0 := Nat.choose_eq_zero_of_lt (by omega)
+      simp [Polynomial.coeff_sub, Polynomial.coeff_add,
+            Polynomial.coeff_one, hk]
+
 /-! ### Non-vacuity witnesses for §342 helpers
 
 These confirm the helper lemmas evaluate correctly on small inputs. -/
@@ -999,6 +1064,138 @@ theorem butcherShiftedLegendre_norm_sq_four :
       h8, h7, h6, h5, h4, h3, h2, h1, integral_one]
   ring
 
+/-- **Butcher §342 (342d) at `n = 5`**: `∫₀¹ (P_5^*(x))^2 dx = 1/11`.
+
+The `n = 5` instance of (342d). Direct computation:
+`P_5^*(x) = 252x⁵ - 630x⁴ + 560x³ - 210x² + 30x - 1`
+(`butcherShiftedLegendre_five`), so
+`(P_5^*(x))^2 = 63504x¹⁰ - 317520x⁹ + 679140x⁸ - 811440x⁷ + 593320x⁶
+                - 273504x⁵ + 78960x⁴ - 13720x³ + 1320x² - 60x + 1`.
+Then
+`∫₀¹ (63504x¹⁰ − 317520x⁹ + 679140x⁸ − 811440x⁷ + 593320x⁶ − 273504x⁵
+       + 78960x⁴ − 13720x³ + 1320x² − 60x + 1) dx`
+`= 63504/11 − 31752 + 75460 − 101430 + 84760 − 45584 + 15792 − 3430
+   + 440 − 30 + 1 = 1/11`. -/
+theorem butcherShiftedLegendre_norm_sq_five :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 5).eval x ^ 2 = 1 / 11 := by
+  have hP : ∀ x : ℝ, (butcherShiftedLegendre 5).eval x ^ 2
+      = 63504 * x ^ 10 - 317520 * x ^ 9 + 679140 * x ^ 8 - 811440 * x ^ 7
+        + 593320 * x ^ 6 - 273504 * x ^ 5 + 78960 * x ^ 4 - 13720 * x ^ 3
+        + 1320 * x ^ 2 - 60 * x + 1 := by
+    intro x
+    rw [butcherShiftedLegendre_five]
+    simp [Polynomial.eval_add, Polynomial.eval_sub, Polynomial.eval_mul,
+          Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
+    ring
+  simp_rw [hP]
+  have hi_x10 : IntervalIntegrable (fun x : ℝ => x ^ 10) MeasureTheory.volume 0 1 :=
+    (continuous_pow 10).intervalIntegrable 0 1
+  have hi_x9 : IntervalIntegrable (fun x : ℝ => x ^ 9) MeasureTheory.volume 0 1 :=
+    (continuous_pow 9).intervalIntegrable 0 1
+  have hi_x8 : IntervalIntegrable (fun x : ℝ => x ^ 8) MeasureTheory.volume 0 1 :=
+    (continuous_pow 8).intervalIntegrable 0 1
+  have hi_x7 : IntervalIntegrable (fun x : ℝ => x ^ 7) MeasureTheory.volume 0 1 :=
+    (continuous_pow 7).intervalIntegrable 0 1
+  have hi_x6 : IntervalIntegrable (fun x : ℝ => x ^ 6) MeasureTheory.volume 0 1 :=
+    (continuous_pow 6).intervalIntegrable 0 1
+  have hi_x5 : IntervalIntegrable (fun x : ℝ => x ^ 5) MeasureTheory.volume 0 1 :=
+    (continuous_pow 5).intervalIntegrable 0 1
+  have hi_x4 : IntervalIntegrable (fun x : ℝ => x ^ 4) MeasureTheory.volume 0 1 :=
+    (continuous_pow 4).intervalIntegrable 0 1
+  have hi_x3 : IntervalIntegrable (fun x : ℝ => x ^ 3) MeasureTheory.volume 0 1 :=
+    (continuous_pow 3).intervalIntegrable 0 1
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h10 : ∫ x in (0 : ℝ)..1, x ^ 10 = 1 / 11 := by
+    rw [integral_pow]; norm_num
+  have h9 : ∫ x in (0 : ℝ)..1, x ^ 9 = 1 / 10 := by
+    rw [integral_pow]; norm_num
+  have h8 : ∫ x in (0 : ℝ)..1, x ^ 8 = 1 / 9 := by
+    rw [integral_pow]; norm_num
+  have h7 : ∫ x in (0 : ℝ)..1, x ^ 7 = 1 / 8 := by
+    rw [integral_pow]; norm_num
+  have h6 : ∫ x in (0 : ℝ)..1, x ^ 6 = 1 / 7 := by
+    rw [integral_pow]; norm_num
+  have h5 : ∫ x in (0 : ℝ)..1, x ^ 5 = 1 / 6 := by
+    rw [integral_pow]; norm_num
+  have h4 : ∫ x in (0 : ℝ)..1, x ^ 4 = 1 / 5 := by
+    rw [integral_pow]; norm_num
+  have h3 : ∫ x in (0 : ℝ)..1, x ^ 3 = 1 / 4 := by
+    rw [integral_pow]; norm_num
+  have h2 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  -- The integrand is left-associative:
+  -- ((((((((((63504·x¹⁰ − 317520·x⁹) + 679140·x⁸) − 811440·x⁷) + 593320·x⁶)
+  --       − 273504·x⁵) + 78960·x⁴) − 13720·x³) + 1320·x²) − 60·x) + 1)
+  rw [intervalIntegral.integral_add
+        ((((((((((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140)).sub (hi_x7.const_mul 811440)).add
+              (hi_x6.const_mul 593320)).sub (hi_x5.const_mul 273504)).add
+              (hi_x4.const_mul 78960)).sub (hi_x3.const_mul 13720)).add
+              (hi_x2.const_mul 1320)).sub (hi_x.const_mul 60))
+        intervalIntegrable_const,
+      intervalIntegral.integral_sub
+        (((((((((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140)).sub (hi_x7.const_mul 811440)).add
+              (hi_x6.const_mul 593320)).sub (hi_x5.const_mul 273504)).add
+              (hi_x4.const_mul 78960)).sub (hi_x3.const_mul 13720)).add
+              (hi_x2.const_mul 1320))
+        (hi_x.const_mul 60),
+      intervalIntegral.integral_add
+        ((((((((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140)).sub (hi_x7.const_mul 811440)).add
+              (hi_x6.const_mul 593320)).sub (hi_x5.const_mul 273504)).add
+              (hi_x4.const_mul 78960)).sub (hi_x3.const_mul 13720))
+        (hi_x2.const_mul 1320),
+      intervalIntegral.integral_sub
+        (((((((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140)).sub (hi_x7.const_mul 811440)).add
+              (hi_x6.const_mul 593320)).sub (hi_x5.const_mul 273504)).add
+              (hi_x4.const_mul 78960))
+        (hi_x3.const_mul 13720),
+      intervalIntegral.integral_add
+        ((((((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140)).sub (hi_x7.const_mul 811440)).add
+              (hi_x6.const_mul 593320)).sub (hi_x5.const_mul 273504))
+        (hi_x4.const_mul 78960),
+      intervalIntegral.integral_sub
+        (((((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140)).sub (hi_x7.const_mul 811440)).add
+              (hi_x6.const_mul 593320))
+        (hi_x5.const_mul 273504),
+      intervalIntegral.integral_add
+        ((((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140)).sub (hi_x7.const_mul 811440))
+        (hi_x6.const_mul 593320),
+      intervalIntegral.integral_sub
+        (((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520)).add
+              (hi_x8.const_mul 679140))
+        (hi_x7.const_mul 811440),
+      intervalIntegral.integral_add
+        ((hi_x10.const_mul 63504).sub (hi_x9.const_mul 317520))
+        (hi_x8.const_mul 679140),
+      intervalIntegral.integral_sub
+        (hi_x10.const_mul 63504)
+        (hi_x9.const_mul 317520),
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      h10, h9, h8, h7, h6, h5, h4, h3, h2, h1, integral_one]
+  ring
+
 /-! ### Non-vacuity witnesses for (342d) cases -/
 
 -- (342d) at `n = 0`: matches the closed form `1 / (2 * 0 + 1) = 1`.
@@ -1025,5 +1222,10 @@ example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 3).eval x ^ 2
 example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 4).eval x ^ 2
     = 1 / (2 * (4 : ℕ) + 1) := by
   rw [butcherShiftedLegendre_norm_sq_four]; norm_num
+
+-- (342d) at `n = 5`: matches the closed form `1 / (2 * 5 + 1) = 1/11`.
+example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 5).eval x ^ 2
+    = 1 / (2 * (5 : ℕ) + 1) := by
+  rw [butcherShiftedLegendre_norm_sq_five]; norm_num
 
 end OpenMath.Chapter3.Section342
