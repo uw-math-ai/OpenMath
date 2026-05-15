@@ -583,6 +583,34 @@ chosen).
   the polymorphic order-2 form (rather than a hard prerequisite
   for any stated theorem).
 
+  **Cycle 267 update (order-3 extension, scalar)**:
+  `bseriesExactTerm_broom₃_scalar` (`h³/6 · f''·f²`) and
+  `bseriesExactTerm_mkCherry_scalar` (`h³/6 · (f')²·f`) at
+  `Section301.lean`, plus `lem_311A_order_three_partialSum` at
+  `Section311.lean` (restates cycle 257's `lem_311A_order_three`
+  using `bseriesExactPartialSum f y₀ h {vertex, cherry, broom₃,
+  mk [cherry]}`). Recipe: `iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod`
+  + `Fin.prod_univ_n` + `iteratedDeriv_succ` × (n−1). All
+  axiom-clean.
+
+  **Cycle 268 update (order-4 extension, scalar — Phase E.1
+  fully closed up to order 4 in scalar setting)**:
+  Four new per-tree scalar closed forms at `Section301.lean`:
+  `bseriesExactTerm_bushy_scalar` (`h⁴/24 · f'''·f³`, where
+  `bushy := mk [vertex, vertex, vertex]` is a new def alias at
+  `Section310.lean`); `bseriesExactTerm_mkVertexCherry_scalar`
+  (`h⁴/8 · f''·f'·f²`); `bseriesExactTerm_mkBroom₃_scalar`
+  (`h⁴/24 · f'·f''·f²`; σ(mk [broom₃]) = 2 by σ-recursion);
+  `bseriesExactTerm_mkMkCherry_scalar` (`h⁴/24 · (f')³·f`).
+  New bridge `lem_311A_order_four_partialSum` at `Section311.lean`
+  (restates cycle 258's `lem_311A_order_four` using
+  `bseriesExactPartialSum f y₀ h {vertex, cherry, broom₃,
+  mk [cherry], bushy, mk [vertex, cherry], mk [broom₃],
+  mk [mk [cherry]]}` — 8 trees). Coefficient on `f''·f'·f²`
+  equals `1/8 + 1/24 = 4/24`, matching cycle 258's `4·h⁴/24`
+  closed-form coefficient. All five new theorems axiom-clean.
+  Non-vacuity witness on trivial ODE.
+
 - **Phase E.2** (1 cycle):
   `lem_310B_truncated_r_le_three` — order ≤ 3, four trees total
   (`vertex`, `cherry`, `broom₃`, `mk [cherry]`). Uses Phase C.2's

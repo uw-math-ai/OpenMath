@@ -272,9 +272,11 @@
     "status": "unformalized"
   },
   "lem:311A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section311.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section311.lem_311A_order_four_partialSum",
+    "status": "partial",
+    "cycle": 268,
+    "notes": "Cycle 266 shipped `lem_311A_order_two_partialSum` (order-2 partial-sum bridge using `bseriesExactPartialSum` over `{vertex, cherry}`). Cycle 267 extended to `lem_311A_order_three_partialSum` (order-3, adding `broom₃` and `mk [cherry]`). Cycle 268 extended to `lem_311A_order_four_partialSum` (order-4, adding `bushy`, `mk [vertex, cherry]`, `mk [broom₃]`, `mk [mk [cherry]]` — 8 trees total). Each per-tree scalar closed form (`bseriesExactTerm_*_scalar` in Section301) discharges via `iteratedFDeriv_apply_eq_iteratedDeriv_mul_prod` + `Fin.prod_univ_n`. The textbook `lem:311A` (combinatorial labelling over `T_S^*`, requiring `def:300C` infrastructure) remains unformalized as a single statement; cycles 266–268 ship its order-≤4 specialisations as discrete bridges. Phase E.1 of `.prover-state/issues/lem_310B_plan.md` is now closed up to order 4 on scalar `ℝ → ℝ`. All axiom-clean (`[propext, Classical.choice, Quot.sound]`)."
   },
   "lem:312B": {
     "lean_file": null,

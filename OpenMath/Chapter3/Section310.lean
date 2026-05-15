@@ -113,9 +113,14 @@ def cherry : RootedTree := mk [vertex]
 /-- The tree `[τ, τ]`: a root with two child leaves. Order 3. -/
 def broom₃ : RootedTree := mk [vertex, vertex]
 
+/-- The tree `[τ, τ, τ]`: a root with three child leaves. Order 4.
+The order-4 first-row tree in Butcher's Table 310(II). -/
+def bushy : RootedTree := mk [vertex, vertex, vertex]
+
 example : vertex.order = 1 := rfl
 example : cherry.order = 2 := rfl
 example : broom₃.order = 3 := rfl
+example : bushy.order = 4 := rfl
 
 /- ### `θ(t)` — exact-solution operator weight
 
