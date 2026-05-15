@@ -48,17 +48,6 @@ auxiliary-tableau phrasing is a notational restatement, not a different
 function.
 -/
 
-namespace OpenMath.Chapter3.Section310.RootedTree
-
-/-- Every rooted tree has at least one vertex (the root), so its order
-is positive. -/
-theorem order_pos : ∀ t : RootedTree, 0 < t.order
-  | mk children => by
-      show 0 < 1 + orderSum children
-      omega
-
-end OpenMath.Chapter3.Section310.RootedTree
-
 namespace OpenMath.Chapter3.Section312.RKTableau
 
 open OpenMath.Chapter3.Section310

@@ -154,6 +154,30 @@ theorem density_eq (children : List RootedTree) :
        order (mk children) * (children.map density).prod
   rw [densityProd_eq_map_prod]
 
+/-- Every rooted tree has at least one vertex (the root), so its order
+is positive. -/
+theorem order_pos : ∀ t : RootedTree, 0 < t.order
+  | mk children => by
+      show 0 < 1 + orderSum children
+      omega
+
+mutual
+  /-- `γ(t) > 0` for every rooted tree (every product factor is
+  positive: the root order is `≥ 1`, and each subtree's density is
+  positive by structural induction). -/
+  theorem density_pos : ∀ t : RootedTree, 0 < density t
+    | mk children => by
+        show 0 < order (mk children) * densityProd children
+        exact Nat.mul_pos (order_pos _) (densityProd_pos children)
+  /-- List companion to `density_pos`: the running density product is
+  positive. -/
+  theorem densityProd_pos : ∀ cs : List RootedTree, 0 < densityProd cs
+    | [] => by decide
+    | t :: ts => by
+        show 0 < density t * densityProd ts
+        exact Nat.mul_pos (density_pos t) (densityProd_pos ts)
+end
+
 /- ### Symmetry (301b)
 
 Stipulative recursion-based definition; faithfulness divergence
@@ -216,6 +240,28 @@ factor per distinct subtree at its last occurrence. -/
 theorem σ_recursion (children : List RootedTree) :
     symmetry (mk children) = symmetryProd children children := rfl
 
+mutual
+  /-- `σ(t) > 0` for every rooted tree. The `symmetryProd` walk emits
+  factors of the form `mᵢ! · σ(tᵢ)^{mᵢ}` (each positive by induction +
+  `Nat.factorial_pos` + `pow_pos`); the empty-cursor base case is `1`. -/
+  theorem symmetry_pos : ∀ t : RootedTree, 0 < symmetry t
+    | mk children => by
+        show 0 < symmetryProd children children
+        exact symmetryProd_pos children children
+  /-- List companion to `symmetry_pos`: the running `symmetryProd`
+  cursor walk is positive at every cursor state. -/
+  theorem symmetryProd_pos :
+      ∀ full cursor : List RootedTree, 0 < symmetryProd full cursor
+    | _, [] => by show (0 : ℕ) < 1; decide
+    | full, t :: rest => by
+        unfold symmetryProd
+        split_ifs with h
+        · exact symmetryProd_pos full rest
+        · refine Nat.mul_pos (Nat.mul_pos (Nat.factorial_pos _) ?_) ?_
+          · exact pow_pos (symmetry_pos t) (full.count t)
+          · exact symmetryProd_pos full rest
+end
+
 /-- (301d) of Theorem 301A — base case for the elementary tree
 `τ = mk []`. -/
 theorem tau_values :
@@ -267,6 +313,17 @@ theorem alphaWeight_vertex : alphaWeight (mk []) = 1 := by
   obtain ⟨hr, hs, hd⟩ := tau_values
   rw [hr, hs, hd]
   norm_num
+
+/-- Butcher §302 α(t) is strictly positive: `r(t)! > 0` (factorials
+are positive), `σ(t) > 0`, and `γ(t) > 0`, so the quotient
+`r(t)!/(σ(t)γ(t))` is positive. -/
+theorem alphaWeight_pos (t : RootedTree) : 0 < alphaWeight t := by
+  unfold alphaWeight
+  apply div_pos
+  · exact_mod_cast Nat.factorial_pos t.order
+  · apply mul_pos
+    · exact_mod_cast symmetry_pos t
+    · exact_mod_cast density_pos t
 
 example : alphaWeight vertex = 1 := alphaWeight_vertex
 
