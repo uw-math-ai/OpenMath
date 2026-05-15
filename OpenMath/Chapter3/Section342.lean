@@ -1,6 +1,7 @@
 import Mathlib.RingTheory.Polynomial.ShiftedLegendre
 import Mathlib.Algebra.Polynomial.AlgebraMap
 import Mathlib.Algebra.Polynomial.Degree.Lemmas
+import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Data.Real.Basic
 
 /-!
@@ -314,5 +315,81 @@ example : (butcherShiftedLegendre 1).eval 1 = 1 := by
   simp [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
         Polynomial.eval_X]
   norm_num
+
+/-! ### (342d) — concrete cases at `n = 0` and `n = 1`
+
+Butcher §342 (342d) asserts the norm-square identity
+`∫₀¹ (P_n^*(x))^2 dx = 1 / (2n + 1)`. The general statement requires
+iterated integration by parts × `n` against the Rodrigues representation
+and the Beta-function identity `∫₀¹ x^n (1 - x)^n dx = (n!)^2 / (2n+1)!`
+— substantial machinery that is deferred (general case submitted to
+Aristotle, cycle 274). The two concrete instances below verify the
+formula at the smallest cases `n = 0` and `n = 1` via direct polynomial
+evaluation, providing concrete witnesses that (342d)'s right-hand side
+`1 / (2n + 1)` is the correct closed form for the small-degree shifted
+Legendre polynomials. -/
+
+/-- **Butcher §342 (342d) at `n = 0`**: `∫₀¹ (P_0^*(x))^2 dx = 1`.
+
+The `n = 0` instance of (342d). Direct computation using
+`butcherShiftedLegendre_zero` (`P_0^* = C 1`, so the integrand is `1`)
+and `intervalIntegral.integral_one`. -/
+theorem butcherShiftedLegendre_norm_sq_zero :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 0).eval x ^ 2 = 1 := by
+  have hP : ∀ x : ℝ, (butcherShiftedLegendre 0).eval x ^ 2 = 1 := by
+    intro x
+    rw [butcherShiftedLegendre_zero]
+    simp
+  simp_rw [hP]
+  simp [intervalIntegral.integral_const]
+
+/-- **Butcher §342 (342d) at `n = 1`**: `∫₀¹ (P_1^*(x))^2 dx = 1/3`.
+
+The `n = 1` instance of (342d). Direct computation:
+`P_1^*(x) = 2x - 1` (cycle 273's `butcherShiftedLegendre_one`), so
+`(P_1^*(x))^2 = 4x^2 - 4x + 1`. Then
+`∫₀¹ (4x^2 - 4x + 1) dx = 4/3 - 2 + 1 = 1/3`. -/
+theorem butcherShiftedLegendre_norm_sq_one :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 1).eval x ^ 2 = 1 / 3 := by
+  have hP : ∀ x : ℝ, (butcherShiftedLegendre 1).eval x ^ 2
+      = 4 * x ^ 2 - 4 * x + 1 := by
+    intro x
+    rw [butcherShiftedLegendre_one]
+    simp [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_X]
+    ring
+  simp_rw [hP]
+  have hint_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hint_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h1 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h2 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_add
+        ((hint_x2.const_mul 4).sub (hint_x.const_mul 4))
+        intervalIntegrable_const,
+      intervalIntegral.integral_sub
+        (hint_x2.const_mul 4)
+        (hint_x.const_mul 4),
+      intervalIntegral.integral_const_mul,
+      intervalIntegral.integral_const_mul,
+      h1, h2, integral_one]
+  ring
+
+/-! ### Non-vacuity witnesses for (342d) cases -/
+
+-- (342d) at `n = 0`: matches the closed form `1 / (2 * 0 + 1) = 1`.
+example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 0).eval x ^ 2
+    = 1 / (2 * (0 : ℕ) + 1) := by
+  rw [butcherShiftedLegendre_norm_sq_zero]; norm_num
+
+-- (342d) at `n = 1`: matches the closed form `1 / (2 * 1 + 1) = 1/3`.
+example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 1).eval x ^ 2
+    = 1 / (2 * (1 : ℕ) + 1) := by
+  rw [butcherShiftedLegendre_norm_sq_one]; norm_num
 
 end OpenMath.Chapter3.Section342
