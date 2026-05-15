@@ -1,266 +1,320 @@
-# Cycle 264 Strategy
+# Cycle 265 strategy — `lem_311A_order_one` polymorphic lift to N-space
 
-## A. Target
+## A. Status confirmation (do this first)
 
-**Option 1 from cycle 263 task results** — heterogeneous-labelling non-vacuity for the
-cycle 263 weakened `LabelledRootedTree.setoid`.
+Cycle 264 shipped clean: §300 Phase A.2 heterogeneous-labelling
+non-vacuity is at HEAD (`66707e5`), `OpenMath/Chapter3/Section300.lean`
+~389 LOC, sorry count 0, axiom-clean. There is **no blocker**. The
+"What I'm stuck on" field in this cycle's planner prompt is empty for
+a reason — this is the 7th documented occurrence of the empty-stuck-on
+phantom pattern (see `consultant_advice_cycle_248.md` §I,
+`consultant_advice_cycle_263.md` §I).
 
-Ship a witness showing that the `Setoid` identifies **two genuinely-distinct
-labellings** of `RootedTree.mk [vertex, vertex]` (the two-leaf tree) under the
-leaf-swap permutation. Cycle 263 only shipped reflexivity witnesses; reflexivity
-alone is true for the trivial `Eq` setoid, so without this check the cycle 263
-deliverable could be vacuously trivial.
+Run these verifications at the start of your cycle (~30 seconds):
 
-This is THE recommendation from both the cycle 263 task results §"Suggested next
-approach" Option 1 AND the consultant-advice-cycle-263 §C Option 1. Both
-analyses agree, with a verified-Mathlib-API recipe.
-
-## B. Why this and not the other options
-
-- **Option 2 (strengthen TreeAutomorphism to full recursive predicate)**:
-  multi-cycle, requires a `mutual` block through `List RootedTree`. Risks the
-  cycle 149/200/201 sorry-first rollback pattern. **DO NOT attempt this cycle.**
-- **Option 3 (Phase B `thm:306A`)**: multi-cycle Taylor/multinomial work,
-  bypassable per `lem_310B_plan.md` §4.2. Planner decision needed before any
-  Phase B attempt. **DO NOT attempt this cycle.**
-- **Option 4 (pivot to `lem:342A`)**: legitimate single-cycle alternative, but
-  abandons §310 momentum without closing the non-vacuity gap. Reserve as
-  cycle 265+ choice after Option 1 lands.
-
-Option 1 ships a self-contained ~50–70 LOC clean deliverable; cycle 265's
-planner can then decide between strengthening (Option 2), Phase B (Option 3),
-or pivoting (Option 4) with the §310 non-vacuity story complete.
-
-## C. Concrete deliverables (append to `OpenMath/Chapter3/Section300.lean` after line 389)
-
-Follow `.prover-state/issues/consultant_advice_cycle_263.md` §D verbatim.
-The recipes there have been verified against Mathlib at HEAD by the consultant.
-
-### C.1 — Definitions
-
-```lean
-def doubleVertex : RootedTree := mk [vertex, vertex]
-
-def leftLeaf : Vertex doubleVertex :=
-  Vertex.child ⟨0, by show 0 < 2; omega⟩ Vertex.root
-
-def rightLeaf : Vertex doubleVertex :=
-  Vertex.child ⟨1, by show 1 < 2; omega⟩ Vertex.root
+```bash
+git log -1 --format='%H %s'
+wc -l OpenMath/Chapter3/Section300.lean OpenMath/Chapter3/Section311.lean
+grep -c sorry OpenMath/Chapter3/Section300.lean OpenMath/Chapter3/Section311.lean
+# Expected: 0 / 0
 ```
 
-Try `(0 : Fin 2)` / `(1 : Fin 2)` form first as it may elaborate cleaner; fall
-back to `⟨0, _⟩` with `omega`/`decide` if needed.
+If everything is clean, proceed to §B. If anything is unexpected,
+abort and file an issue.
 
-### C.2 — Distinctness theorems (three)
+## B. Target — Phase D.1 partial: polymorphic `lem_311A_order_one_poly`
 
-```lean
-theorem leftLeaf_ne_rightLeaf : leftLeaf ≠ rightLeaf := by
-  intro h; cases h
--- fallback if `cases h` fails: `exact absurd h (by decide)`
-
-theorem leftLeaf_ne_root : leftLeaf ≠ Vertex.rootOf doubleVertex := by
-  intro h; cases h
-
-theorem rightLeaf_ne_root : rightLeaf ≠ Vertex.rootOf doubleVertex := by
-  intro h; cases h
-```
-
-Memory `feedback_indexed_inductive_cases_disjoint.md` applies: `cases h` on
-disjoint constructors of an indexed inductive closes by absurdity. If
-`Vertex.rootOf doubleVertex` doesn't reduce to `Vertex.root` by `rfl`, prefix
-with `show leftLeaf ≠ Vertex.root` (and similarly for the other two).
-
-### C.3 — `leafSwapAutomorphism`
+**Ship a polymorphic version of `lem_311A_order_one`** (currently at
+`OpenMath/Chapter3/Section311.lean` line 120, scalar `ℝ → ℝ`) that
+operates on arbitrary real normed spaces `N`:
 
 ```lean
-def leafSwapAutomorphism : TreeAutomorphism doubleVertex where
-  perm := Equiv.swap leftLeaf rightLeaf
-  perm_root := by
-    exact Equiv.swap_apply_of_ne_of_ne
-      (fun h => leftLeaf_ne_root h.symm)
-      (fun h => rightLeaf_ne_root h.symm)
+theorem lem_311A_order_one_poly
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N}
+    {yex : ℝ → N} {x₀ : ℝ} {y₀ : N}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h : ℝ => yex (x₀ + h) - bseriesOrderOne f y₀ h)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1))
 ```
 
-### C.4 — Two distinct labellings + equivalence witness
+### Why this is the right target
 
-```lean
-noncomputable def canonicalDoubleVertex : LabelledRootedTree :=
-  { underlying := doubleVertex
-    labelling := canonicalLabelling doubleVertex }
+1. **It's the canonical next Phase D step.** The cycle 260 scoping
+   doc `.prover-state/issues/lem_310B_plan.md` §C.4 identifies Phase D
+   (multilinear elementary-differential lift) as the prerequisite
+   before Phase E (small-`r` `lem:310B` cases). Phase D.1 is the
+   polymorphic chain-rule lift. The order-1 case is the smallest
+   Phase D deliverable.
 
-noncomputable def swappedDoubleVertex : LabelledRootedTree :=
-  { underlying := doubleVertex
-    labelling := (Equiv.swap leftLeaf rightLeaf).trans (canonicalLabelling doubleVertex) }
+2. **It was deliberately deferred.** Cycle 256 task results
+   explicitly flagged "polymorphic version ... and order-1 retrofit
+   are cycle 257+ scope". Cycles 257/258/259 chose to extend scalar
+   orders (3, 4, 5) instead, leaving the polymorphic lift open. This
+   is real deferred work, not a freelanced easy ship.
 
-theorem canonical_equiv_swapped :
-    LabelledRootedTree.Equiv canonicalDoubleVertex swappedDoubleVertex := by
-  refine ⟨rfl, leafSwapAutomorphism, ?_⟩
-  intro v
-  show canonicalLabelling doubleVertex v =
-      ((Equiv.swap leftLeaf rightLeaf).trans (canonicalLabelling doubleVertex))
-        (Equiv.swap leftLeaf rightLeaf v)
-  simp [Equiv.trans_apply, Equiv.swap_apply_self]
-```
+3. **Single-cycle, axiom-clean achievable.** Unlike Phase A.3
+   (TreeAutomorphism strengthening, multi-cycle high-risk per the
+   cycle 200/201 rollback precedent) or Phase B (multivariate Taylor,
+   multi-cycle), the order-1 lift is a mechanical port. `bseriesOrderOne`
+   is already polymorphic (`OpenMath/Chapter3/Section311.lean:90`); only
+   the theorem statement and proof tactics need lifting.
 
-**Field-order verification step** before writing C.4: cycle 263's
-`LabelledRootedTree.Equiv` is in `OpenMath/Chapter3/Section300.lean` lines
-~323-340. READ those lines first via Read tool to confirm the exact shape (∃
-underlying-equality, ∃ TreeAutomorphism, ∀ vertex predicate, etc.) and adjust
-`refine ⟨…⟩` order to match.
+4. **It validates the port methodology.** A clean order-1 lift opens
+   the path for order-2 polymorphic (which DOES need the
+   `iteratedFDeriv ↔ fderiv` bridge for the chain rule — a separately
+   risky step). Order-1 lets us confirm the basic plumbing works
+   before committing to the harder order-2 work.
 
-### C.5 — Distinctness of labellings
+### Why NOT the other candidates
 
-```lean
-theorem labellings_distinct :
-    canonicalDoubleVertex.labelling ≠ swappedDoubleVertex.labelling := by
-  intro h
-  apply leftLeaf_ne_rightLeaf
-  apply (canonicalLabelling doubleVertex).injective
-  have heval : canonicalDoubleVertex.labelling leftLeaf =
-               swappedDoubleVertex.labelling leftLeaf := by rw [h]
-  simpa [canonicalDoubleVertex, swappedDoubleVertex,
-         Equiv.trans_apply, Equiv.swap_apply_left] using heval
-```
+* **Option 2 (TreeAutomorphism strengthening / Phase A.3)** —
+  multi-cycle `mutual`-block work with rollback risk matching cycles
+  149/200/201. Do NOT attempt as a single-cycle deliverable.
 
-If the `simpa` chain doesn't fire, try `lean_multi_attempt` with variations
-on the `Equiv.trans` / `Equiv.swap_apply_left` rewrite ordering. Possible
-alternative: use `Function.funext_iff` to obtain the pointwise version of `h`
-explicitly.
+* **Option 4 (lem:342A property 342a)** — pre-flight check:
+  `find .lake -name "Legendre*.lean"` returns only `LegendreSymbol`
+  (number-theoretic Jacobi/Legendre quadratic-residue symbol), NOT
+  orthogonal Legendre polynomials. The cycle 260 scoping doc §8.2
+  assumed Mathlib's Legendre infrastructure but it doesn't exist.
+  Building it from scratch is a multi-cycle Mathlib-PR-grade
+  undertaking. Do NOT attempt.
 
-### C.6 — Bottom-line non-vacuity example
+* **Phase B.1 (two-variable Taylor)** — multi-cycle per the scoping
+  doc; also bypassable per §4.4 of the plan if Phase D routes through
+  multilinear directly. Skip.
 
-```lean
-example :
-    ∃ a b : LabelledRootedTree,
-      a.labelling ≠ b.labelling ∧ LabelledRootedTree.Equiv a b :=
-  ⟨canonicalDoubleVertex, swappedDoubleVertex,
-   labellings_distinct, canonical_equiv_swapped⟩
-```
+* **Refactor / cleanup work** (e.g., Section319 helper extraction) —
+  cherry-picking easy deliverables per the planner instruction's
+  explicit exclusion.
 
-Adjust the `∧` order if `LabelledRootedTree.Equiv` ⇒ `≠` direction reads
-differently from this template.
+## C. Proof recipe (concrete port of cycle 248's proof)
 
-## D. Verified Mathlib hooks (from consultant analysis at HEAD)
+Open `OpenMath/Chapter3/Section311.lean` and read cycle 248's
+`lem_311A_order_one` proof (lines 120–245) before starting. The
+polymorphic port is mechanical with two substitutions:
 
-| Goal | Lemma | File |
+* **`h * f y₀` → `h • f y₀`** wherever the multiplication appears
+  (the `f y₀` is now `N`-valued, requiring `smul`).
+* **`mul`-style lemmas → `smul`-style lemmas** where they appear.
+
+### Step-by-step port
+
+1. **Step 0 (function rewrite)**: cycle 248 uses
+   `simp [bseriesOrderOne, smul_eq_mul]`. Drop `smul_eq_mul` (for
+   general `N` it does not apply). The polymorphic `bseriesOrderOne`
+   already uses `smul`, so the rewrite is just `simp [bseriesOrderOne]`.
+
+2. **Step 1 (Taylor remainder)**: cycle 248 invokes
+   `taylor_isLittleO (n := 2) convex_univ (Set.mem_univ _)
+   hyex_C2.contDiffOn`. This works verbatim for `ℝ → N` — Mathlib's
+   `taylor_isLittleO` (`Mathlib/Analysis/Calculus/Taylor.lean:239`)
+   takes `{f : ℝ → E}` for any `[NormedAddCommGroup E]
+   [NormedSpace ℝ E]`. No changes needed at this step.
+
+3. **Step 2 (Taylor polynomial evaluation)**: cycle 248 uses
+   `taylor_within_apply` + `simp_only` with `Finset.sum_range_succ`,
+   `iteratedDerivWithin_univ`, `iteratedDeriv_zero`, `Nat.factorial`,
+   `smul_eq_mul` (drop this), etc. For polymorphic `N`:
+   - The `iteratedDeriv k yex x₀ : N` (not `ℝ`) — types still
+     align because Mathlib defines `iteratedDeriv` for normed-space
+     codomain.
+   - The `(1 : ℝ) / (k.factorial : ℝ) • (iteratedDeriv k yex x₀)` is
+     a scalar smul on `N`. The `smul_eq_mul` rewrite no longer
+     applies; replace with manual algebraic massaging if needed.
+
+4. **Step 3 (identify `iteratedDeriv 1 yex x₀ = f y₀`)**: cycle 248
+   uses `iteratedDeriv_one` (Mathlib) + `(hyex_ode x₀).deriv` +
+   `hyex_x₀`. Both `iteratedDeriv_one` and `HasDerivAt.deriv` work
+   for normed-space codomain. Port verbatim.
+
+5. **Step 4 (compose with `h ↦ x₀ + h`)**: cycle 248 uses
+   `IsLittleO.comp_tendsto`, `congr'`, and `((x₀ + h) - x₀)^2 = h^2`
+   identification via `ring`/`funext`. All these work for the
+   `ℝ → N`-valued residual.
+
+6. **Step 5 (combine + `O(h^(1+1))` collapse)**: cycle 248 uses
+   `IsLittleO.add` + `Asymptotics.isBigO_const_mul_self` for the
+   quadratic-coefficient term, then `IsLittleO.isBigO` to promote.
+   The constant `(1/2) • iteratedDeriv 2 yex x₀ : N` is an `N`-valued
+   scalar coefficient. `Asymptotics.isBigO_const_mul_self` works for
+   `N`-valued functions because the `IsBigO` predicate is norm-based.
+
+### Expected proof shape
+
+~80–120 LOC, similar to cycle 248's scalar proof. If a specific
+tactic line does not port cleanly, factor it into a private helper
+`have` block and identify the exact Mathlib hook needed — DO NOT
+introduce a `sorry`.
+
+### Non-vacuity witnesses (P2 — single-cycle ship)
+
+After the theorem, add up to three `example`s in the same file:
+
+1. **Trivial f := 0 on ℝ²**: `f : (Fin 2 → ℝ) → (Fin 2 → ℝ) := 0`,
+   `yex : ℝ → (Fin 2 → ℝ) := fun _ => 0`, exhibits the polymorphic
+   shape on a vector space.
+2. **Linear ODE on ℝ²**: `f := fun v => ![v 1, -v 0]` (rotation),
+   `yex x := ![Real.cos x, Real.sin x]`. Verify the order-1
+   residual is `O(h²)`.
+3. **Sanity check that scalar case still discharges**: invoke
+   `lem_311A_order_one_poly` at `N := ℝ` and confirm the resulting
+   statement is equivalent to (or implies) cycle 248's
+   `lem_311A_order_one`.
+
+Witness 3 is the most useful for confirming the lift is faithful;
+witnesses 1 and 2 are the "genuinely polymorphic" cases. Ship all
+three if time permits, or witness 3 alone as the minimum.
+
+## D. Mathlib hooks (verify before relying on them)
+
+Each of these should `lean_local_search` or `lean_hover_info` cleanly
+before you commit to using it. If any has drifted or doesn't exist,
+file the gap as a sub-issue and adapt the proof.
+
+| Hook | Expected signature | Used at |
 |---|---|---|
-| `swap a b : Perm α` | `Equiv.swap` | `Mathlib/Logic/Equiv/Basic.lean:631` |
-| `swap a b a = b` | `Equiv.swap_apply_left` | line 647 |
-| `swap a b b = a` | `Equiv.swap_apply_right` | line 651 |
-| `x ≠ a → x ≠ b → swap a b x = x` | `Equiv.swap_apply_of_ne_of_ne` | line 654 |
-| `(swap a b).trans (swap a b) = refl _` | `Equiv.swap_swap` | line 662 |
-| `Equiv.trans_apply` | std | std |
-| `Equiv.injective` | std | std |
+| `taylor_isLittleO` | `{f : ℝ → E} ...` for `[NormedAddCommGroup E] [NormedSpace ℝ E]` | Step 1 (verified at `Mathlib/Analysis/Calculus/Taylor.lean:239`) |
+| `taylor_within_apply` | `(f : ℝ → E) (n : ℕ) (s : Set ℝ) (x₀ x : ℝ) → ...` | Step 2 (verified at `Mathlib/Analysis/Calculus/Taylor.lean:114`) |
+| `iteratedDeriv_one` | `iteratedDeriv 1 f = deriv f` (for `f : ℝ → E`) | Step 3 |
+| `HasDerivAt.deriv` | `HasDerivAt f f' x → deriv f x = f'` (vector-valued) | Step 3 |
+| `IsLittleO.comp_tendsto` | standard | Step 4 |
+| `Asymptotics.isBigO_const_mul_self` | `(fun x => c • f x) =O[l] f` (verify smul form) | Step 5 |
+| `IsLittleO.isBigO` | standard | Step 5 |
 
-No new Mathlib infrastructure needed.
+**Critical pre-flight check**: confirm `Asymptotics.isBigO_const_mul_self`
+or its equivalent fires for the `smul`-by-`N` case (the quadratic
+Taylor remainder coefficient is now a vector, not a scalar). If the
+exact lemma name is different in the current Mathlib, search via
+`lean_loogle "_ • _ =O[_]"` for the right form. If only the `mul`
+version exists, you may need a wrapper `have : ‖(1/2 : ℝ) • c‖ ≤
+(1/2) * ‖c‖ := norm_smul_le _ _` plus a scalar-bound argument on
+`‖h^2 • c‖ ≤ ‖c‖ · ‖h‖^2`.
 
-## E. Process
+## E. What NOT to do
 
-1. (5 min) Read `OpenMath/Chapter3/Section300.lean` lines 280-389 to confirm
-   the cycle 263 `LabelledRootedTree.Equiv` signature, `TreeAutomorphism`
-   field names, and `canonicalLabelling`'s type. Use `lean_hover_info` if
-   needed.
-2. (45 min) Ship C.1 through C.6 in order, running
-   `lake env lean OpenMath/Chapter3/Section300.lean` after each block. Each
-   block should compile clean before moving on.
-3. (10 min) Verify aggregator: `lake env lean OpenMath/Chapter3.lean`.
-4. (5 min) Axiom-clean check via `lean_verify` on `labellings_distinct` and
-   `canonical_equiv_swapped`. Expected:
-   `[propext, Classical.choice, Quot.sound]` only.
-5. (10 min) Run tautology scanner regex:
-   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section300.lean`
-   — expect zero hits. If hits appear (e.g. `:= h_foo` patterns), apply the
-   `h_<name> → h<name>` rename workaround per
-   `tautology_scanner_false_positives.md`.
-6. (10 min) Update `.prover-state/issues/lem_310B_plan.md` §4.1 with a cycle
-   264 update subsection documenting the non-vacuity closure (analogous to the
-   cycle 261/262/263 entries already present).
-7. (5 min) Write `.prover-state/task_results/cycle_264.md` per the
-   CLAUDE.md template (Worked on / Approach / Result / Faithfulness check /
-   Dead ends / Discovery / Suggested next approach).
-8. Commit.
+* **Do NOT introduce sorries.** The cycle 149/200/201/263-style
+  rollback precedent is in force: sorry-first scaffolds with no
+  single-cycle close path get reverted. If the polymorphic port
+  stalls, fall back to §F below; do not leave a `sorry` in
+  `Section311.lean`.
 
-## F. Aristotle suitability
+* **Do NOT modify `lem_311A_order_one`** (the existing scalar
+  theorem at line 120). Add `lem_311A_order_one_poly` as a NEW
+  theorem (with the `_poly` suffix), placed immediately after the
+  scalar version. This preserves the existing 5 orders of scalar
+  Taylor lemmas (cycles 248/256/257/258/259) which downstream code
+  may consume.
 
-**Medium-high.** Steps C.1–C.3 and C.5–C.6 are mechanical with the right
-Mathlib lemma names. Step C.4 routes through cycle 263's freshly-defined
-`LabelledRootedTree.Equiv`, which Aristotle hasn't seen.
+* **Do NOT lift `lem_311A_order_two`/`_three`/`_four`/`_five` this
+  cycle.** Those proofs use scalar-specific chain rule
+  (`deriv f y₀ * f y₀` for order 2, Bell-polynomial expansions for
+  higher orders). Lifting them to polymorphic requires the
+  `iteratedFDeriv 1 ↔ fderiv` bridge (cycle 260 scoping doc §C.4 R4,
+  HIGH risk). Order-1 is the only Phase D piece in scope for cycle
+  265.
 
-**Submission strategy**: optional. If you do submit, send the **entire
-deliverable C.1–C.6** as one job with the cycle 263 file at HEAD plus this
-strategy as context. Single 30-minute poll discipline per CLAUDE.md.
+* **Do NOT attempt Phase A.3 (TreeAutomorphism strengthening).**
+  Per the cycle 263 rollback note and `lem_310B_plan.md` §6,
+  this is multi-cycle work that requires a `mutual` block through
+  `List RootedTree`. Plan before attempting.
 
-**Do NOT block** on Aristotle — the consultant-verified recipes are direct.
-Manual closure should complete in <90 minutes total.
+* **Do NOT attempt lem:342A property (342a).** Mathlib has no
+  orthogonal-Legendre infrastructure (only `LegendreSymbol`,
+  number-theoretic). Building from scratch is multi-cycle.
 
-## G. What NOT to do
-
-- Do **NOT** strengthen `TreeAutomorphism` to a full recursive predicate. That
-  is Option 2 / Phase A.3 multi-cycle work; risks cycle 149/200/201 rollback
-  pattern.
-- Do **NOT** attempt Phase B (`thm:306A` multinomial Taylor) — multi-cycle,
-  per `lem_310B_plan.md` §4.2.
-- Do **NOT** attempt `lem:310B` itself — multi-cycle infrastructure, see
-  `lem_310B_plan.md` §5 Phases A–F.
-- Do **NOT** label this cycle's deliverable with a textbook entity ID; do not
-  update `lean_status.json` for `lem:310B` or `def:300C`. This is
-  **infrastructure validation**, not a textbook entity closure.
-- Do **NOT** introduce `axiom`, `constant`, or `sorry`. Cycle 264's bar is
-  "ship axiom-clean or skip the cycle entirely".
-- Do **NOT** raise `maxHeartbeats` above 200000.
-- Do **NOT** attempt to compile `OpenMath/Chapter4/Section441.lean` on GPFS —
-  43+ consecutive timeouts since cycle 182, skip per
+* **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
+  44+ consecutive GPFS timeouts since cycle 182; skip per
   `cycle_182_gpfs_slowness.md`.
-- Do **NOT** edit `scripts/autonomous_loop.py`. The empty "What I'm stuck on"
-  phantom is loop-maintainer territory per
-  `consultant_advice_cycle_248.md` §I and
-  `tautology_scanner_false_positives.md`.
-- Do **NOT** rename your deliverable to `lem_310B_*` — that name is reserved
-  for the actual textbook lemma.
 
-## H. Previously-failed approaches — do not repeat
+* **Do NOT raise `maxHeartbeats` above 200000.** If a tactic stalls,
+  decompose into named intermediate identities.
 
-- `induction t with | mk children ih =>` on `RootedTree` fails (nested
-  inductive). Use `mutual` + structural pattern matching, or pattern-match
-  `t = mk cs` first (per cycle 263's `Vertex.rootOf` precedent).
-- `subst hEq` on a projection equality `a.field = b.field` fails. Destructure
-  `a`/`b` first (`obtain ⟨…⟩ := a`), then `cases hEq`.
-- Universe-polymorphism inference on a structure with `Equiv` fields fails
-  without explicit `: Type` annotation.
+* **Do NOT modify `scripts/autonomous_loop.py`.** The empty-stuck-on
+  phantom that surfaced this cycle is loop-maintainer territory per
+  `tautology_scanner_false_positives.md` §D3.
 
-## I. Abort criteria
+* **Do NOT name the deliverable as a textbook entity closure.** The
+  polymorphic order-1 case is *infrastructure for* `lem:310B`, not
+  `lem:311A` itself. Keep the name `lem_311A_order_one_poly` and do
+  NOT update `lean_status.json` for `lem:311A` (already at `partial`
+  via the scalar chain) or `lem:310B`. The entity status is unchanged.
 
-If steps C.1–C.3 do not compile within 30 minutes total, STOP and:
-1. Document the specific Lean error in `.prover-state/issues/`.
-2. Roll back any partial edits to `Section300.lean` to ensure sorry count
-   stays at 0.
-3. Write `task_results/cycle_264.md` documenting the stall.
-4. Do NOT ship a partial deliverable with sorries.
+## F. Fallback plan (only if Step 5 stalls)
 
-If steps C.4–C.5 stall (the most delicate, due to `Equiv.coe_fn` /
-`Quotient.mk` plumbing), keep C.1–C.4 + a partial witness exhibiting
-`canonical_equiv_swapped` and treat `labellings_distinct` (C.5) as the stretch
-goal — ship without it if the `simpa` chain doesn't fire.
+If `Asymptotics.isBigO_const_mul_self` doesn't fire cleanly for the
+`smul` case after 30 minutes of investigation, the fallback is to
+ship a more restricted polymorphic version: require `[Module ℝ N]`
+and `[NormSMulClass ℝ N]` (whichever Mathlib uses for the
+`‖c • v‖ ≤ ‖c‖ · ‖v‖` bound), then close via explicit norm-bound
+chase using `norm_smul_le`. This adds ~20 LOC but stays axiom-clean.
 
-## J. Success criteria
+If that ALSO stalls, the absolute fallback is to leave the
+polymorphic lift for cycle 266 and instead:
 
-- **Minimum (P1)**: ship C.1–C.4 + C.6 axiom-clean. ~50 LOC over HEAD. Sorry
-  count remains 0.
-- **Full (P1 + P2)**: also ship C.5 (`labellings_distinct`). ~70 LOC over HEAD.
-- **Stretch (P3)**: the `example` in C.6 uses both `labellings_distinct` and
-  `canonical_equiv_swapped` together — confirming the Setoid is genuinely
-  non-trivial via a single named witness.
+* **Ship three new non-vacuity examples for the EXISTING scalar
+  `lem_311A_order_one`** at concrete `f`/`yex` triples (e.g.
+  `f := fun y => y`, `yex := Real.exp`; `f := fun y => -y`, `yex :=
+  fun x => Real.exp (-x)`; `f := fun y => 0`, `yex := fun _ => y₀`).
+  This is genuine cycle content (validates the cycle 248 theorem on
+  canonical small-ODE cases) and ships ~30 LOC of axiom-clean
+  witnesses. NOT cherry-picking — it exercises the scalar theorem on
+  real ODE examples that the existing file does not.
 
-Cycle 263 was a clean infrastructure ship. Cycle 264 should be a clean
-infrastructure-validation ship. Cycle 265+ pivots based on the planner's
-choice among Option 2 / 3 / 4.
+## G. Aristotle option
 
-## K. Note on the recurring "stuck on" phantom
+This is a clean target for Aristotle if you want to batch-submit and
+focus on `simp`-set tuning manually. Submit the polymorphic theorem
+statement + cycle 248's scalar proof as in-context template, with
+the prompt "lift to polymorphic codomain N : Type* with
+[NormedAddCommGroup N] [NormedSpace ℝ N]". Single 30-minute poll
+discipline per CLAUDE.md.
 
-Cycle 263's "What I'm stuck on" field was empty. This is the **6th confirmed
-phantom-template invocation** (cycles 015, 040, 174, 180, 248, 263). The
-consultant phase was invoked against a clean cycle ship. Worker MUST NOT treat
-the phantom as a real blocker; pivot directly to route-finding. The standing
-recommendation in `consultant_advice_cycle_248.md` §I (short-circuit
-consultant phase when stuck-on is empty AND sorry count is 0) applies — but
-that's loop-maintainer territory, not worker territory.
+If Aristotle returns clean, incorporate verbatim (after checking it
+doesn't depend on Mathlib hooks that don't exist in our pinned
+version).
+
+## H. Update plan.md and lean_status.json
+
+* `lean_status.json` for `lem:311A`: cycle reference bump to 265,
+  status remains `partial` (no entity closed).
+* `plan.md` `lem:311A` row: append cycle 265 note documenting the
+  polymorphic order-1 lift.
+
+DO NOT mark `lem:311A` as `formalized` — the full textbook statement
+requires labelled-tree quotients (`def:300C` infrastructure, still
+deferred to Phase A.2.1 of `lem_310B_plan.md`). The polymorphic
+order-1 lift is one more incremental step toward Phase D.
+
+## I. Cycle 266 outlook
+
+Once cycle 265 ships polymorphic order-1, cycle 266's planner has
+three credible directions:
+
+1. **Polymorphic order-2** (Phase D.1 continuation) — needs the
+   `iteratedFDeriv 1 ↔ fderiv` bridge; HIGH risk but is the natural
+   next step.
+2. **Phase E.1** — restate `lem_311A_order_two`/etc. in the
+   `TruncatedRootedTree 2` partial-sum form (1 cycle if D.1
+   complete).
+3. **Pivot to a fresh single-cycle entity** — e.g., one of the
+   short Ch.5 `[ ]` rows.
+
+Cycle 266 should weigh the §310 roadmap velocity vs textbook
+breadth — the same decision cycle 264 worker flagged.
+
+## J. Confidence level
+
+This strategy targets a single, well-scoped, mechanically-derivable
+extension of cycle 248's already-shipped scalar proof, with all
+critical Mathlib hooks verified (`taylor_isLittleO` for `ℝ → E`,
+`bseriesOrderOne` already polymorphic). Single-cycle close is
+high-confidence. The fallback plan (§F) ensures cycle 265 ships
+non-trivial value even if Step 5 stalls. No sorry-first scaffold
+should be required.
+
+Trust the cycle 248 proof structure. Port mechanically. Verify each
+Mathlib hook with `lean_local_search` before committing the line.
+Ship axiom-clean.

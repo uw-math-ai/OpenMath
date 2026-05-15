@@ -195,6 +195,153 @@ theorem lem_311A_order_one
   rw [hpow]
   exact hsum
 
+/-- **Polymorphic order-1 Taylor expansion of the exact solution
+(p = 1 special case of `lem:311A` / `thm:311B`, codomain a normed
+ℝ-vector space).**
+
+Generalises `lem_311A_order_one` from `ℝ → ℝ` to `ℝ → N` for an
+arbitrary real normed space `N`. The proof structure ports cycle
+248's scalar proof mechanically: every `h * f y₀` becomes `h • f y₀`
+(since `f y₀ : N`), every scalar `iteratedDeriv k yex x₀ : ℝ` becomes
+an `N`-valued tangent vector, and the final quadratic-coefficient
+bound `(h²/2) • iteratedDeriv 2 yex x₀ =O[nhds 0] h²` is closed via a
+direct `norm_smul` bound (Mathlib's `isBigO_const_mul_self` does not
+fire for `smul`-by-`N`).
+
+Under the hypotheses
+* `yex x₀ = y₀` (the exact solution passes through `(x₀, y₀)`),
+* `ContDiff ℝ 2 yex` (twice continuously differentiable),
+* `∀ x, HasDerivAt yex (f (yex x)) x` (`yex` satisfies the ODE
+  `y'(x) = f(y(x))`),
+
+the residual between the exact solution and the first-order B-series
+truncation is quadratic in the step size near `0`:
+
+`‖yex(x₀ + h) - (y₀ + h • f(y₀))‖ = O(h²)`.
+
+This is Phase D.1 (order-1) of the multilinear elementary-differential
+lift identified in the cycle 260 `lem:310B` scoping doc. The order-2
+polymorphic lift requires the `iteratedFDeriv 1 ↔ fderiv` bridge for
+the chain rule and is deferred. -/
+theorem lem_311A_order_one_poly
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N}
+    {yex : ℝ → N} {x₀ : ℝ} {y₀ : N}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h : ℝ => yex (x₀ + h) - bseriesOrderOne f y₀ h)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1)) := by
+  -- Step 0: rewrite the difference using `bseriesOrderOne`'s definition.
+  have hrewrite :
+      (fun h : ℝ => yex (x₀ + h) - bseriesOrderOne f y₀ h)
+        = (fun h : ℝ => yex (x₀ + h) - (y₀ + h • f y₀)) := by
+    funext h
+    simp [bseriesOrderOne]
+  rw [hrewrite]
+  -- Step 1: second-order Taylor remainder for yex at x₀.
+  have htaylor :
+      (fun x : ℝ => yex x - taylorWithinEval yex 2 Set.univ x₀ x)
+        =o[nhds x₀] (fun x : ℝ => (x - x₀) ^ 2) := by
+    have htaylorLoc := taylor_isLittleO (n := 2) (f := yex) (x₀ := x₀)
+      (s := Set.univ) convex_univ (Set.mem_univ _) hyex_C2.contDiffOn
+    simpa [nhdsWithin_univ] using htaylorLoc
+  -- Step 2: evaluate the second-order Taylor polynomial at x₀ + h.
+  -- The polymorphic Taylor poly is
+  --   yex x₀ + h • iter1 + ((1/2) * h^2) • iter2
+  -- (no `smul_eq_mul` collapse since iter1, iter2 : N).
+  have hT_eval : ∀ h : ℝ,
+      taylorWithinEval yex 2 Set.univ x₀ (x₀ + h)
+        = yex x₀ + h • iteratedDeriv 1 yex x₀
+            + ((1 : ℝ)/2 * h ^ 2) • iteratedDeriv 2 yex x₀ := by
+    intro h
+    rw [taylor_within_apply]
+    simp only [Finset.sum_range_succ, Finset.sum_range_zero, zero_add,
+      iteratedDerivWithin_univ, iteratedDeriv_zero, Nat.factorial,
+      Nat.cast_one, Nat.cast_mul, pow_zero, pow_one,
+      mul_one, one_mul, inv_one, one_smul, add_sub_cancel_left]
+    norm_num
+  -- Step 3: identify the first derivative at x₀ with `f y₀` using the ODE.
+  have hderiv_x0 : iteratedDeriv 1 yex x₀ = f y₀ := by
+    rw [iteratedDeriv_one]
+    have hatx := (hyex_ode x₀).deriv
+    rw [hyex_x₀] at hatx
+    exact hatx
+  -- Step 4: translate the Taylor remainder to a `nhds 0` statement.
+  have htend : Filter.Tendsto (fun h : ℝ => x₀ + h) (nhds 0) (nhds x₀) := by
+    have hcont : Continuous (fun h : ℝ => x₀ + h) :=
+      continuous_const.add continuous_id
+    simpa using hcont.tendsto 0
+  have hres :
+      (fun h : ℝ => yex (x₀ + h) - taylorWithinEval yex 2 Set.univ x₀ (x₀ + h))
+        =o[nhds (0 : ℝ)] (fun h : ℝ => h ^ 2) := by
+    have hcomp := htaylor.comp_tendsto htend
+    refine hcomp.congr' (Filter.Eventually.of_forall fun _ => rfl)
+      (Filter.Eventually.of_forall fun h => ?_)
+    show ((x₀ + h) - x₀) ^ 2 = h ^ 2
+    ring
+  -- Step 5: rewrite the goal's difference into Taylor-residual + quadratic.
+  have hdiff_eq :
+      (fun h : ℝ => yex (x₀ + h) - (y₀ + h • f y₀))
+        = (fun h : ℝ =>
+            (yex (x₀ + h) - taylorWithinEval yex 2 Set.univ x₀ (x₀ + h))
+              + ((1 : ℝ)/2 * h ^ 2) • iteratedDeriv 2 yex x₀) := by
+    funext h
+    rw [hT_eval h, hderiv_x0, hyex_x₀]
+    abel
+  rw [hdiff_eq]
+  -- Step 6: the quadratic-coefficient smul term is O(h²) (manual norm bound).
+  have hquad : (fun h : ℝ => ((1 : ℝ)/2 * h ^ 2) • iteratedDeriv 2 yex x₀)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ 2) := by
+    refine Asymptotics.isBigO_of_le' (l := nhds (0 : ℝ))
+      (c := (1/2) * ‖iteratedDeriv 2 yex x₀‖) ?_
+    intro h
+    rw [norm_smul]
+    have habs : ‖((1 : ℝ)/2 * h ^ 2 : ℝ)‖ = (1/2) * ‖h ^ 2‖ := by
+      rw [Real.norm_eq_abs, abs_mul, abs_of_pos (by norm_num : (0:ℝ) < 1/2),
+        Real.norm_eq_abs]
+    rw [habs]
+    linarith [norm_nonneg (h ^ 2 : ℝ), norm_nonneg (iteratedDeriv 2 yex x₀)]
+  -- Step 7: combine and collapse h ^ (1 + 1) to h ^ 2.
+  have hsum := hres.isBigO.add hquad
+  have hpow : (fun h : ℝ => h ^ (1 + 1)) = (fun h : ℝ => h ^ 2) := by
+    funext h; ring
+  rw [hpow]
+  exact hsum
+
+/-- **Scalar specialisation sanity check.** The polymorphic
+`lem_311A_order_one_poly` at `N := ℝ` recovers the scalar
+`lem_311A_order_one` statement (modulo `smul_eq_mul`).
+
+This `example` confirms the polymorphic lift is a faithful generalisation:
+the scalar `bseriesOrderOne f y₀ h = y₀ + h * f y₀` literally agrees with
+the polymorphic form `y₀ + h • f y₀` under `smul_eq_mul`, so the
+conclusion shape is identical. -/
+example
+    {f : ℝ → ℝ}
+    {yex : ℝ → ℝ} {x₀ y₀ : ℝ}
+    (hyex_x₀ : yex x₀ = y₀)
+    (hyex_C2 : ContDiff ℝ 2 yex)
+    (hyex_ode : ∀ x, HasDerivAt yex (f (yex x)) x) :
+    (fun h : ℝ => yex (x₀ + h) - bseriesOrderOne f y₀ h)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1)) :=
+  lem_311A_order_one_poly hyex_x₀ hyex_C2 hyex_ode
+
+/-- **Polymorphic non-vacuity witness — trivial ODE on ℝ².**
+Take `f := 0 : (Fin 2 → ℝ) → (Fin 2 → ℝ)`, `yex := fun _ => 0`,
+`y₀ := 0`. Then `yex` is `C∞` (constant), satisfies the ODE
+`yex'(x) = 0 = f(yex(x))`, and the order-1 residual is the zero
+function, trivially `O(h²)`. -/
+example :
+    (fun h : ℝ => (fun _ : ℝ => (0 : Fin 2 → ℝ)) (0 + h) -
+        bseriesOrderOne (0 : (Fin 2 → ℝ) → (Fin 2 → ℝ)) 0 h)
+      =O[nhds (0 : ℝ)] (fun h : ℝ => h ^ (1 + 1)) :=
+  lem_311A_order_one_poly (yex := fun _ => (0 : Fin 2 → ℝ))
+    (f := (0 : (Fin 2 → ℝ) → (Fin 2 → ℝ))) (x₀ := 0) (y₀ := 0)
+    rfl
+    (contDiff_const)
+    (fun x => by simpa using (hasDerivAt_const x (0 : Fin 2 → ℝ)))
+
 /-- **Chain-rule identification of the second derivative under the ODE
 constraint.** Under `yex' = f ∘ yex` (the ODE) and `yex x₀ = y₀`, the
 second derivative of `yex` at `x₀` equals `f'(y₀) · f(y₀)`.
