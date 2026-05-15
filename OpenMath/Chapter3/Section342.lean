@@ -6,6 +6,7 @@ import Mathlib.Analysis.Calculus.Deriv.Polynomial
 import Mathlib.Topology.Algebra.Polynomial
 import Mathlib.Tactic.Cases
 import Mathlib.Data.Real.Basic
+import OpenMath.Chapter3.Section342NormSqHelpers
 
 /-!
 # Butcher §342 — Shifted Legendre polynomials on `[0,1]`
@@ -1736,5 +1737,135 @@ example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 6).eval x ^ 2
 example : ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre 7).eval x ^ 2
     = 1 / (2 * (7 : ℕ) + 1) := by
   rw [butcherShiftedLegendre_norm_sq_seven]; norm_num
+
+/-! ### (342d) general — `∫₀¹ (P_n^*(x))^2 dx = 1 / (2n + 1)`
+
+Aristotle (cycle 281, project `d4ce527b-b714-4e51-b0a6-e3d06302d7fa`)
+returned a complete proof of the general norm-square identity. The
+proof relies on three substantial helpers extracted to
+`OpenMath.Chapter3.Section342NormSqHelpers`:
+
+1. `iterate_derivative_natDegree_eq` — the `n`-th derivative of a
+   degree-`n` polynomial is the constant `C (leadingCoeff · n!)`.
+2. `iterated_ibp_XnOneSubXn` — iterated IBP `n` times against
+   `X^n · (1-X)^n`, with all boundary terms vanishing thanks to the
+   evaluation lemmas of cycle 277.
+3. `integral_pow_mul_one_sub_pow` — the Beta integral
+   `∫₀¹ x^n (1-x)^n dx = (n!)² / (2n+1)!`, derived from Mathlib's
+   complex `Complex.betaIntegral_eval_nat_add_one_right`.
+
+Combined with `butcherShiftedLegendre_rodrigues` (cycle 272) and
+`butcherShiftedLegendre_natDegree` (cycle 272), these helpers complete
+the textbook (342d) clause of `lem:342A`. -/
+
+/-- Helper: the leading coefficient of `butcherShiftedLegendre n` is
+`Nat.choose (2 * n) n`. The Mathlib coefficient formula
+`(shiftedLegendre n).coeff n = (-1)^n · C(n,n) · C(2n, n)` combined
+with the outer Butcher sign factor `(-1)^n` cancels to give `C(2n, n)`. -/
+private lemma butcherShiftedLegendre_leadingCoeff (n : ℕ) :
+    (butcherShiftedLegendre n).leadingCoeff = (Nat.choose (2 * n) n : ℝ) := by
+  rw [Polynomial.leadingCoeff, butcherShiftedLegendre_natDegree]
+  unfold butcherShiftedLegendre
+  rw [Polynomial.coeff_C_mul, Polynomial.coeff_map,
+      Polynomial.coeff_shiftedLegendre]
+  simp only [Int.coe_castRingHom, Nat.choose_self, Nat.cast_one, Int.cast_mul,
+             Int.cast_pow, Int.cast_neg, Int.cast_one, Int.cast_natCast, mul_one]
+  rw [show (n + n : ℕ) = 2 * n from by ring]
+  have hsq : ((-1 : ℝ) ^ n) * ((-1 : ℝ) ^ n) = 1 := by
+    rw [← pow_add, show n + n = 2 * n from by ring, pow_mul]
+    norm_num
+  nlinarith [hsq, sq_nonneg ((-1 : ℝ) ^ n)]
+
+/-- Helper: `(d/dx)^n P_n^*(x) = C(2n, n) · n!` (a constant in `x`). -/
+private lemma iterate_derivative_butcherShiftedLegendre_eval (n : ℕ) (x : ℝ) :
+    (Polynomial.derivative^[n] (butcherShiftedLegendre n)).eval x =
+      (Nat.choose (2 * n) n : ℝ) * (n.factorial : ℝ) := by
+  rw [Section342Helpers.iterate_derivative_natDegree_eq
+        (butcherShiftedLegendre_natDegree n)]
+  simp [butcherShiftedLegendre_leadingCoeff]
+
+/-- **Butcher §342 (342d)** — general norm-square identity.
+
+For every `n`, `∫₀¹ (P_n^*(x))^2 dx = 1 / (2n + 1)`.
+
+Proof (Aristotle, cycle 281 submission `d4ce527b`, integrated cycle 281):
+substitute Rodrigues' formula `butcherShiftedLegendre_rodrigues` for one of
+the two `P_n^*` factors, expressing it as `((-1)^n / n!) · D^n(X^n(1-X)^n)`.
+Apply iterated integration by parts `n` times via
+`Section342Helpers.iterated_ibp_XnOneSubXn`; boundary terms vanish at every
+step (the helpers `iterDeriv_XnOneSubXn_eval_zero/_eval_one` from cycle 277
+witness this). After all derivatives transfer to the other `P_n^*` factor,
+the remaining `D^n P_n^*` is the constant `C(2n,n) · n!`
+(`iterate_derivative_butcherShiftedLegendre_eval`). The leftover integral
+is the Beta integral `∫₀¹ x^n (1-x)^n dx = (n!)² / (2n+1)!`
+(`Section342Helpers.integral_pow_mul_one_sub_pow`); the final arithmetic
+identity `C(2n,n) · (n!)² / (2n+1)! = 1/(2n+1)`
+(`Section342Helpers.choose_mul_factorial_sq_div`) closes the goal. -/
+theorem butcherShiftedLegendre_norm_sq (n : ℕ) :
+    ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre n).eval x ^ 2 =
+      1 / (2 * (n : ℝ) + 1) := by
+  have hfact_pos : (0 : ℝ) < n.factorial :=
+    Nat.cast_pos.mpr (Nat.factorial_pos n)
+  have hfact_ne : (n.factorial : ℝ) ≠ 0 := ne_of_gt hfact_pos
+  -- Step 1: rewrite `^2` as `_ * _`.
+  simp_rw [sq]
+  -- Step 2: replace one factor of `P_n^*` via Rodrigues.
+  have h_integrand : ∀ x : ℝ,
+      (butcherShiftedLegendre n).eval x * (butcherShiftedLegendre n).eval x =
+      (-1 : ℝ) ^ n / (n.factorial : ℝ) *
+        ((butcherShiftedLegendre n).eval x *
+          (Polynomial.derivative^[n]
+            ((Polynomial.X : Polynomial ℝ) ^ n *
+              (1 - Polynomial.X) ^ n)).eval x) := by
+    intro x
+    have hrod := congr_arg (Polynomial.eval x)
+      (butcherShiftedLegendre_rodrigues n)
+    simp only [Polynomial.eval_mul, Polynomial.eval_C] at hrod
+    have h_subst : (butcherShiftedLegendre n).eval x =
+        (-1 : ℝ) ^ n / (n.factorial : ℝ) *
+          (Polynomial.derivative^[n]
+            ((Polynomial.X : Polynomial ℝ) ^ n *
+              (1 - Polynomial.X) ^ n)).eval x := by
+      field_simp
+      linarith
+    rw [h_subst]; ring
+  rw [intervalIntegral.integral_congr (fun x _ => h_integrand x),
+      intervalIntegral.integral_const_mul]
+  -- Step 3: iterated IBP transfers all `n` derivatives onto `P_n^*`.
+  rw [Section342Helpers.iterated_ibp_XnOneSubXn (butcherShiftedLegendre n) n]
+  -- Step 4: substitute `D^n P_n^* = C(2n,n) · n!` and simplify the
+  -- `(X^n · (1-X)^n).eval x` factor to `x^n · (1-x)^n`.
+  have h_xy : ∀ x : ℝ,
+      ((Polynomial.X : Polynomial ℝ) ^ n * (1 - Polynomial.X) ^ n).eval x =
+        x ^ n * (1 - x) ^ n := by
+    intro x
+    simp [Polynomial.eval_mul, Polynomial.eval_pow,
+          Polynomial.eval_sub, Polynomial.eval_X, Polynomial.eval_one]
+  simp_rw [iterate_derivative_butcherShiftedLegendre_eval, h_xy]
+  -- Step 5: pull the constant `C(2n,n) · n!` out of the integral.
+  have h_split : (fun x : ℝ => (Nat.choose (2 * n) n : ℝ) * (n.factorial : ℝ) *
+        (x ^ n * (1 - x) ^ n)) =
+      (fun x : ℝ => ((Nat.choose (2 * n) n : ℝ) * (n.factorial : ℝ)) *
+        (x ^ n * (1 - x) ^ n)) := by
+    ext x; ring
+  rw [h_split, intervalIntegral.integral_const_mul]
+  -- Step 6: evaluate the Beta integral.
+  rw [Section342Helpers.integral_pow_mul_one_sub_pow]
+  -- Step 7: simplify the `(-1)^n / n! · (-1)^n · …` prefactor to `C(2n,n) · (n!)² / (2n+1)!`.
+  have h_2n1_ne : ((2 * n + 1).factorial : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero _)
+  have h_neg_sq : (-1 : ℝ) ^ n * (-1 : ℝ) ^ n = 1 := by
+    rw [← pow_add, show n + n = 2 * n from by ring, pow_mul]; norm_num
+  have h_collapse : (-1 : ℝ) ^ n / (n.factorial : ℝ) *
+        ((-1 : ℝ) ^ n *
+          ((Nat.choose (2 * n) n : ℝ) * (n.factorial : ℝ) *
+            ((n.factorial : ℝ) ^ 2 / ((2 * n + 1).factorial : ℝ)))) =
+      (Nat.choose (2 * n) n : ℝ) *
+        ((n.factorial : ℝ) ^ 2 / ((2 * n + 1).factorial : ℝ)) := by
+    field_simp
+    nlinarith [h_neg_sq]
+  rw [h_collapse]
+  -- Step 8: close via the arithmetic identity.
+  rw [Section342Helpers.choose_mul_factorial_sq_div]
 
 end OpenMath.Chapter3.Section342
