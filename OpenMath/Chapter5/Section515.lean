@@ -6,7 +6,7 @@ import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Topology.MetricSpace.Lipschitz
 import Mathlib.Tactic.Cases
 import OpenMath.Chapter5.Section512
-import OpenMath.Chapter5.MMatrix
+import OpenMath.Matrix.MMatrix
 
 /-!
 # Butcher §515 — Stability and consistency imply convergence (Lemma 515A)

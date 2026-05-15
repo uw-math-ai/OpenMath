@@ -1,4 +1,5 @@
 import OpenMath.Chapter3.Section381
+import OpenMath.Matrix.MMatrix
 import Mathlib.Topology.MetricSpace.Lipschitz
 import Mathlib.Analysis.Normed.Group.Basic
 
@@ -252,6 +253,161 @@ theorem lem_319A_recurrences {s : ℕ} (M : RKTableau s)
     exact M.stage_diff_recurrence hL hf_lip hh hY_stage hZ_stage i
   · exact M.output_diff_recurrence hL hf_lip hh hY_out hZ_out
 
+section Phase2
+
+open scoped Matrix Matrix.Norms.Frobenius
+
+/-- **Butcher §319 `lem:319A`** — global one-step truncation contraction.
+
+For a Lipschitz right-hand side `f` with constant `L ≥ 0` and stepsize
+`h ≤ h₀` satisfying the M-matrix smallness condition
+`‖(h₀ * L) • |A|‖_F < 1`, the difference of two one-step Runge–Kutta
+outputs starting from different inputs contracts as
+`‖y₁ − z₁‖ ≤ (1 + h L^†) ‖y₀ − z₀‖`, where the textbook constant
+`L^† = L |b|^T (I − h₀ L |A|)^{−1} 𝟙` is exposed existentially as
+`L_dag` (the closed form is the witness built in the proof).
+
+Composes cycle 244's stage/output recurrences (D1, D2) with cycle
+106's M-matrix inverse-positivity (`Matrix.EntrywiseNonneg`).
+
+**Faithfulness divergence**: the textbook smallness condition is
+`h₀ L ρ(|A|) < 1` (spectral-radius form). The Lean hypothesis uses the
+Frobenius operator norm of `(h₀ * L) • |A|` instead, which dominates
+the spectral radius, so the Lean hypothesis is **strictly stronger**
+than the textbook's. This matches the cycle 106/107 M-matrix
+machinery's built-in hypothesis shape. -/
+theorem lem_319A {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {L : ℝ} (hL : 0 ≤ L)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {y₀ z₀ : N} {h h₀ : ℝ} (hh : 0 < h) (hh_le : h ≤ h₀) (hh₀ : 0 ≤ h₀)
+    (h_norm : ‖((h₀ * L) • M.A.map (fun a => |a|))‖ < 1) :
+    ∃ L_dag : ℝ, 0 ≤ L_dag ∧
+      ∀ y₁ z₁,
+        M.IsRKOneStep f y₀ h y₁ → M.IsRKOneStep f z₀ h z₁ →
+        ‖y₁ - z₁‖ ≤ (1 + h * L_dag) * ‖y₀ - z₀‖ := by
+  -- Step A: K = (h₀ * L) • |A|, entrywise non-negative with ‖K‖ < 1.
+  set K : Matrix (Fin s) (Fin s) ℝ :=
+    (h₀ * L) • M.A.map (fun a => |a|) with hK_def
+  have hK_nn : K.EntrywiseNonneg := by
+    have habs_nn : (M.A.map (fun a => |a|)).EntrywiseNonneg := by
+      intro i j
+      simp only [Matrix.map_apply]
+      exact abs_nonneg _
+    exact habs_nn.smul (mul_nonneg hh₀ hL)
+  -- Step B: extract w := (I − K)⁻¹ 𝟙 and prove componentwise non-negativity.
+  set w : Fin s → ℝ :=
+    (Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - K)) *ᵥ (fun _ => 1)
+    with hw_def
+  have h_inv_nn :
+      (Ring.inverse ((1 : Matrix (Fin s) (Fin s) ℝ) - K)).EntrywiseNonneg :=
+    hK_nn.inv_one_sub_of_norm_lt_one h_norm
+  have hw_nn : ∀ i, 0 ≤ w i := by
+    intro i
+    exact h_inv_nn.mulVec_nonneg (fun _ => zero_le_one) i
+  -- Step C: L^† = L * ∑ᵢ |bᵢ| * wᵢ, nonneg.
+  set L_dag : ℝ := L * ∑ i, |M.b i| * w i with hL_dag_def
+  have hL_dag_nn : 0 ≤ L_dag := by
+    refine mul_nonneg hL ?_
+    refine Finset.sum_nonneg (fun i _ => ?_)
+    exact mul_nonneg (abs_nonneg _) (hw_nn i)
+  -- Step D: (I − K) *ᵥ w = 𝟙.
+  have h_unit : IsUnit ((1 : Matrix (Fin s) (Fin s) ℝ) - K) :=
+    isUnit_one_sub_of_norm_lt_one h_norm
+  have h_mul_inv :
+      ((1 : Matrix (Fin s) (Fin s) ℝ) - K)
+        * Ring.inverse (1 - K) = 1 :=
+    Ring.mul_inverse_cancel _ h_unit
+  have h_oneMK_mulVec_w :
+      ((1 : Matrix (Fin s) (Fin s) ℝ) - K) *ᵥ w
+        = (fun _ : Fin s => (1 : ℝ)) := by
+    rw [hw_def, Matrix.mulVec_mulVec, h_mul_inv, Matrix.one_mulVec]
+  -- Step E: open the universal.
+  refine ⟨L_dag, hL_dag_nn, ?_⟩
+  intro y₁ z₁ hY hZ
+  obtain ⟨Y, hY_stage, hY_out⟩ := hY
+  obtain ⟨Z, hZ_stage, hZ_out⟩ := hZ
+  set vM : Fin s → ℝ := fun i => ‖Y i - Z i‖ with hvM_def
+  have hvM_nn : ∀ i, 0 ≤ vM i := fun i => norm_nonneg _
+  -- Step F: stage recurrence (cycle 244 D1).
+  have h_stage_bound : ∀ i,
+      vM i ≤ ‖y₀ - z₀‖ + h * L * ∑ j, |M.A i j| * vM j := by
+    intro i
+    exact M.stage_diff_recurrence hL hf_lip hh.le hY_stage hZ_stage i
+  -- Step G: output recurrence (cycle 244 D2).
+  have h_out_bound :
+      ‖y₁ - z₁‖ ≤ ‖y₀ - z₀‖ + h * L * ∑ i, |M.b i| * vM i :=
+    M.output_diff_recurrence hL hf_lip hh.le hY_out hZ_out
+  -- Step H: (K *ᵥ vM) i = (h₀ * L) * ∑ⱼ |Aᵢⱼ| * vM j.
+  have h_K_mulVec : ∀ i,
+      (K *ᵥ vM) i = (h₀ * L) * ∑ j, |M.A i j| * vM j := by
+    intro i
+    rw [hK_def, Matrix.smul_mulVec]
+    simp only [Pi.smul_apply, smul_eq_mul]
+    congr 1
+  -- Step I: ((I − K) *ᵥ vM) i ≤ ‖y₀ − z₀‖.
+  have h_oneMK_mulVec_vM : ∀ i,
+      (((1 : Matrix (Fin s) (Fin s) ℝ) - K) *ᵥ vM) i
+        = vM i - (K *ᵥ vM) i := by
+    intro i
+    rw [Matrix.sub_mulVec, Pi.sub_apply, Matrix.one_mulVec]
+  have h_inner_sum_nn : ∀ i, 0 ≤ ∑ j, |M.A i j| * vM j := by
+    intro i
+    refine Finset.sum_nonneg (fun j _ => ?_)
+    exact mul_nonneg (abs_nonneg _) (hvM_nn j)
+  have h_hL_le : h * L ≤ h₀ * L :=
+    mul_le_mul_of_nonneg_right hh_le hL
+  have h_vM_oneMK_bound : ∀ i,
+      (((1 : Matrix (Fin s) (Fin s) ℝ) - K) *ᵥ vM) i ≤ ‖y₀ - z₀‖ := by
+    intro i
+    rw [h_oneMK_mulVec_vM i, h_K_mulVec i]
+    have h_step : h * L * ∑ j, |M.A i j| * vM j
+        ≤ (h₀ * L) * ∑ j, |M.A i j| * vM j :=
+      mul_le_mul_of_nonneg_right h_hL_le (h_inner_sum_nn i)
+    have h_recur := h_stage_bound i
+    linarith
+  -- Step J: comparison principle ⇒ vM i ≤ ‖y₀ − z₀‖ * w i.
+  have h_vM_le : ∀ i, vM i ≤ ‖y₀ - z₀‖ * w i := by
+    set v' : Fin s → ℝ := fun i => ‖y₀ - z₀‖ * w i - vM i with hv'_def
+    have h_v'_lin : v' = ‖y₀ - z₀‖ • w - vM := by
+      funext j
+      simp [hv'_def, Pi.smul_apply, Pi.sub_apply, smul_eq_mul]
+    have h_v'_nn : ∀ i, 0 ≤ v' i := by
+      apply hK_nn.nonneg_of_one_sub_mulVec_nonneg h_norm
+      intro i
+      rw [h_v'_lin, Matrix.mulVec_sub, Matrix.mulVec_smul]
+      simp only [Pi.sub_apply, Pi.smul_apply, smul_eq_mul]
+      rw [h_oneMK_mulVec_w]
+      have h_norm_nn : 0 ≤ ‖y₀ - z₀‖ := norm_nonneg _
+      have hbound := h_vM_oneMK_bound i
+      linarith
+    intro i
+    have := h_v'_nn i
+    simp only [hv'_def] at this
+    linarith
+  -- Step K: substitute into the output recurrence.
+  have h_out_sub : ∑ i, |M.b i| * vM i
+      ≤ ∑ i, |M.b i| * (‖y₀ - z₀‖ * w i) := by
+    refine Finset.sum_le_sum (fun i _ => ?_)
+    exact mul_le_mul_of_nonneg_left (h_vM_le i) (abs_nonneg _)
+  have h_hL_nn : 0 ≤ h * L := mul_nonneg hh.le hL
+  have h_sum_eq : ∑ i, |M.b i| * (‖y₀ - z₀‖ * w i)
+      = ‖y₀ - z₀‖ * ∑ i, |M.b i| * w i := by
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun i _ => ?_)
+    ring
+  calc ‖y₁ - z₁‖
+      ≤ ‖y₀ - z₀‖ + h * L * ∑ i, |M.b i| * vM i := h_out_bound
+    _ ≤ ‖y₀ - z₀‖ + h * L * ∑ i, |M.b i| * (‖y₀ - z₀‖ * w i) := by
+        have := mul_le_mul_of_nonneg_left h_out_sub h_hL_nn
+        linarith
+    _ = ‖y₀ - z₀‖ + h * L * (‖y₀ - z₀‖ * ∑ i, |M.b i| * w i) := by
+        rw [h_sum_eq]
+    _ = ‖y₀ - z₀‖ + h * L_dag * ‖y₀ - z₀‖ := by rw [hL_dag_def]; ring
+    _ = (1 + h * L_dag) * ‖y₀ - z₀‖ := by ring
+
+end Phase2
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section319
@@ -278,5 +434,41 @@ example : ∀ (y₀ z₀ y₁ z₁ : ℝ) (h : ℝ) (_hh : 0 ≤ h),
     rw [hone]
     exact LipschitzWith.id
   exact paddedEuler.lem_319A_recurrences hL hlip hh hY hZ
+
+section Phase2
+
+open scoped Matrix Matrix.Norms.Frobenius
+
+/-- **Deliverable D5** — Non-vacuity witness for the Phase 2 headline
+`lem_319A` on `paddedEuler` (where `A = 0`). With `f := id`
+(Lipschitz with constant 1) and any positive `h ≤ h₀`, the M-matrix
+smallness hypothesis is satisfied (`‖0‖ = 0 < 1`), so the existential
+`L_dag` and the corresponding contraction bound exist. -/
+example (h h₀ : ℝ) (hh : 0 < h) (hh_le : h ≤ h₀) (hh₀ : 0 ≤ h₀)
+    (y₀ z₀ y₁ z₁ : ℝ)
+    (hY : paddedEuler.IsRKOneStep (fun y => y) y₀ h y₁)
+    (hZ : paddedEuler.IsRKOneStep (fun y => y) z₀ h z₁) :
+    ∃ L_dag : ℝ, 0 ≤ L_dag ∧
+      ‖y₁ - z₁‖ ≤ (1 + h * L_dag) * ‖y₀ - z₀‖ := by
+  have hL : (0 : ℝ) ≤ 1 := by norm_num
+  have hlip : LipschitzWith (1 : ℝ).toNNReal (fun y : ℝ => y) := by
+    have hone : (1 : ℝ).toNNReal = 1 := Real.toNNReal_one
+    rw [hone]
+    exact LipschitzWith.id
+  -- paddedEuler.A = 0 ⇒ paddedEuler.A.map abs = 0 ⇒ smul = 0 ⇒ ‖0‖ = 0 < 1.
+  have hzero :
+      (h₀ * (1 : ℝ)) • paddedEuler.A.map (fun a : ℝ => |a|)
+        = (0 : Matrix (Fin 2) (Fin 2) ℝ) := by
+    ext i j
+    simp [paddedEuler, Matrix.smul_apply]
+  have hnorm :
+      ‖((h₀ * (1 : ℝ)) • paddedEuler.A.map (fun a : ℝ => |a|))‖ < 1 := by
+    rw [hzero, norm_zero]
+    exact zero_lt_one
+  obtain ⟨L_dag, hL_nn, hbound⟩ :=
+    paddedEuler.lem_319A (L := 1) (h₀ := h₀) hL hlip hh hh_le hh₀ hnorm
+  exact ⟨L_dag, hL_nn, hbound y₁ z₁ hY hZ⟩
+
+end Phase2
 
 end OpenMath.Chapter3.Section319
