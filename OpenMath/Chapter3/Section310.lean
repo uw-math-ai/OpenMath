@@ -117,6 +117,57 @@ example : vertex.order = 1 := rfl
 example : cherry.order = 2 := rfl
 example : broom₃.order = 3 := rfl
 
+/- ### `θ(t)` — exact-solution operator weight
+
+Recursive scaffold for the §312 elementary-weight machinery. By
+construction `θ(t) = 1` for every rooted tree; the recursive form
+`θ(mk children) = ∏ θ(cᵢ)` matches the tree-product structure of the
+exact-solution group `E`.
+
+This is **NOT** the textbook `lem:310B` (Elementary Differential Weight
+Formula), which requires a separate `α : RootedTree → ℝ` definition and
+a non-trivial sum identity. `theta` is the trivial-weight scaffold that
+the future `α(t)`-machinery will compose with. -/
+
+mutual
+  /-- The (trivial) exact-solution operator weight `θ(t)`.
+
+  Defined recursively as `θ(τ) = 1` and `θ([t₁, …, t_m]) = ∏ᵢ θ(tᵢ)`.
+  See `theta_eq_one` for the closure `∀ t, θ(t) = 1`. -/
+  def theta : RootedTree → ℝ
+    | mk children => thetaProd children
+  /-- Running product of `theta` over a list of subtrees. -/
+  def thetaProd : List RootedTree → ℝ
+    | [] => 1
+    | t :: ts => theta t * thetaProd ts
+end
+
+/-- `thetaProd cs` collapses to the standard `(cs.map theta).prod`. -/
+theorem thetaProd_eq_map_prod (children : List RootedTree) :
+    thetaProd children = (children.map theta).prod := by
+  induction children with
+  | nil => rfl
+  | cons t ts ih => simp [thetaProd, ih]
+
+mutual
+  /-- The exact-solution operator weight is identically 1. -/
+  theorem theta_eq_one : ∀ t : RootedTree, theta t = 1
+    | mk children => by
+        show thetaProd children = 1
+        exact thetaProd_eq_one children
+  /-- The list helper `thetaProd` is identically 1. -/
+  theorem thetaProd_eq_one : ∀ ts : List RootedTree, thetaProd ts = 1
+    | [] => rfl
+    | t :: ts => by
+        show theta t * thetaProd ts = 1
+        rw [theta_eq_one t, thetaProd_eq_one ts]
+        ring
+end
+
+example : theta vertex = 1 := theta_eq_one _
+example : theta cherry = 1 := theta_eq_one _
+example : theta broom₃ = 1 := theta_eq_one _
+
 end RootedTree
 
 /-- Butcher §310, Definition 310A — the **elementary differential**
