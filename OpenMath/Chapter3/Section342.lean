@@ -1,5 +1,6 @@
 import Mathlib.RingTheory.Polynomial.ShiftedLegendre
 import Mathlib.Algebra.Polynomial.AlgebraMap
+import Mathlib.Algebra.Polynomial.Degree.Lemmas
 import Mathlib.Data.Real.Basic
 
 /-!
@@ -155,5 +156,91 @@ example (x : ℝ) :
       (butcherShiftedLegendre 2).eval x := by
   have h := butcherShiftedLegendre_eval_one_sub 2 x
   simpa using h
+
+/-- **Butcher §342 (342e)** — Rodrigues' formula for the shifted Legendre
+polynomials on `[0,1]`:
+`n! · P_n^*(x) = (-1)^n (d/dx)^n (x^n (1-x)^n)`.
+
+Equivalent to Butcher's stated `P_n^*(x) = (1/n!) (d/dx)^n ((x^2 - x)^n)`
+via `(x^2 - x)^n = (-x)^n (1-x)^n = (-1)^n x^n (1-x)^n`. The form below
+is the polynomial-ring identity over `ℝ[X]` and avoids dividing by `n!`.
+
+Proof: lift Mathlib's `Polynomial.factorial_mul_shiftedLegendre_eq`
+(stated over `ℤ[X]`) along `Int.castRingHom ℝ` and combine with the
+Butcher sign convention factor `(-1)^n` from the definition of
+`butcherShiftedLegendre`. -/
+theorem butcherShiftedLegendre_rodrigues (n : ℕ) :
+    Polynomial.C ((n.factorial : ℝ)) * butcherShiftedLegendre n
+      = Polynomial.C ((-1 : ℝ) ^ n) *
+        Polynomial.derivative^[n]
+          ((Polynomial.X : Polynomial ℝ) ^ n *
+            (1 - (Polynomial.X : Polynomial ℝ)) ^ n) := by
+  -- Lift Mathlib's `factorial_mul_shiftedLegendre_eq` from `ℤ[X]` to `ℝ[X]`
+  -- by applying `Polynomial.map (Int.castRingHom ℝ)` to both sides.
+  have h := congrArg (Polynomial.map (Int.castRingHom ℝ))
+    (Polynomial.factorial_mul_shiftedLegendre_eq n)
+  rw [Polynomial.map_mul, Polynomial.map_natCast,
+      ← Polynomial.iterate_derivative_map,
+      Polynomial.map_mul, Polynomial.map_pow, Polynomial.map_pow,
+      Polynomial.map_sub, Polynomial.map_one, Polynomial.map_X] at h
+  -- h : ((n.factorial : ℕ) : ℝ[X]) * (shiftedLegendre n).map ι
+  --     = derivative^[n] (X^n * (1 - X)^n)   over ℝ[X]
+  rw [← Polynomial.C_eq_natCast] at h
+  -- h : C ((n.factorial : ℝ)) * (shiftedLegendre n).map ι
+  --     = derivative^[n] (X^n * (1 - X)^n)
+  -- Goal: C (n.factorial : ℝ) * (C ((-1)^n) * (shiftedLegendre n).map ι)
+  --     = C ((-1)^n) * derivative^[n] (X^n * (1 - X)^n)
+  unfold butcherShiftedLegendre
+  rw [← mul_assoc,
+      mul_comm (Polynomial.C ((n.factorial : ℝ))) (Polynomial.C ((-1 : ℝ) ^ n)),
+      mul_assoc, h]
+
+/-! ### Non-vacuity witnesses (342e)
+
+These three witnesses confirm Butcher's small-`n` values match
+`n! · P_n^*(x) = (-1)^n (d/dx)^n (x^n (1-x)^n)`. -/
+
+-- `n = 0`: `0! · P_0^* = (-1)^0 · (X^0 · (1-X)^0) = 1`.
+example :
+    Polynomial.C ((Nat.factorial 0 : ℝ)) * butcherShiftedLegendre 0
+      = Polynomial.C ((-1 : ℝ) ^ 0) *
+        Polynomial.derivative^[0]
+          ((Polynomial.X : Polynomial ℝ) ^ 0 *
+            (1 - (Polynomial.X : Polynomial ℝ)) ^ 0) :=
+  butcherShiftedLegendre_rodrigues 0
+
+-- `n = 1`: `1! · P_1^* = -1 · derivative (X · (1-X)) = 2X - 1`.
+example :
+    Polynomial.C ((Nat.factorial 1 : ℝ)) * butcherShiftedLegendre 1
+      = Polynomial.C ((-1 : ℝ) ^ 1) *
+        Polynomial.derivative^[1]
+          ((Polynomial.X : Polynomial ℝ) ^ 1 *
+            (1 - (Polynomial.X : Polynomial ℝ)) ^ 1) :=
+  butcherShiftedLegendre_rodrigues 1
+
+-- `n = 2`: `2! · P_2^* = 1 · derivative^[2] (X^2 · (1-X)^2)`,
+-- giving Butcher's `2 · P_2^*(x) = 12x^2 - 12x + 2`.
+example :
+    Polynomial.C ((Nat.factorial 2 : ℝ)) * butcherShiftedLegendre 2
+      = Polynomial.C ((-1 : ℝ) ^ 2) *
+        Polynomial.derivative^[2]
+          ((Polynomial.X : Polynomial ℝ) ^ 2 *
+            (1 - (Polynomial.X : Polynomial ℝ)) ^ 2) :=
+  butcherShiftedLegendre_rodrigues 2
+
+/-- **Butcher §342 (degree of `P_n^*`)**: Butcher's shifted Legendre
+polynomial has `natDegree = n`. Follows directly from Mathlib's
+`natDegree_shiftedLegendre` since multiplication by the nonzero
+constant `C ((-1)^n)` and the injective coefficient cast
+`Int.castRingHom ℝ` both preserve `natDegree`. -/
+theorem butcherShiftedLegendre_natDegree (n : ℕ) :
+    (butcherShiftedLegendre n).natDegree = n := by
+  have h_unit : IsUnit ((-1 : ℝ) ^ n) :=
+    isUnit_iff_ne_zero.mpr (pow_ne_zero n (by norm_num : (-1 : ℝ) ≠ 0))
+  have h_inj : Function.Injective (Int.castRingHom ℝ) := Int.cast_injective
+  unfold butcherShiftedLegendre
+  rw [Polynomial.natDegree_C_mul_of_isUnit h_unit,
+      Polynomial.natDegree_map_eq_of_injective h_inj,
+      Polynomial.natDegree_shiftedLegendre]
 
 end OpenMath.Chapter3.Section342

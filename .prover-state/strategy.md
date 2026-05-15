@@ -1,437 +1,435 @@
-# Cycle 271 strategy — open §342 by shipping `lem:342A` (342b) + (342c)
+# Cycle 272 — strategy: ship (342e) Rodrigues bridge; fire-and-forget Aristotle on (342a)
 
-## A. Context
+## Context (one paragraph)
 
-Cycle 270 closed §310/§311 Phase E.1 up to order 5 in the scalar
-setting (the 17-tree partial-sum bridge `lem_311A_order_five_partialSum`
-at `OpenMath/Chapter3/Section311.lean`). Phase E.1 is now fully closed
-at cycle 259's deliberate order-5 cutoff. There is **no pending
-Aristotle work** to incorporate. Sorry count is 0; tautology scanner
-clean.
+Cycle 271 opened §342 axiom-clean: `OpenMath/Chapter3/Section342.lean`
+(165 LOC, 0 sorries) ships `butcherShiftedLegendre` (def) + (342b)
+`P_n*(1) = 1` + (342c) `P_n*(1−x) = (−1)^n P_n*(x)`. The Approach A
+recipe (`shiftedLegendre_eval_symm` + `coeff_shiftedLegendre`) closed
+both on first attempt — no fallbacks fired. Cycle 271 explicitly
+deferred (342a) orthogonality, (342d)–(342g) to cycles 272+ and
+recommended (342e) **Rodrigues** as the highest-confidence
+single-cycle (342*) deliverable (~50–80 LOC, low-risk, only
+algebraic polynomial-ring machinery + `iteratedDeriv` tracking, no
+analysis). The cycle 271 worker also flagged the option of
+fire-and-forget Aristotle submission for (342a) at cycle-start.
 
-The cycle 270 worker's task-results §"Suggested next approach"
-enumerated three follow-up directions and explicitly recommended
-**Option 2: pivot to `lem:342A`** (Legendre orthogonality on `[0,1]`)
-as a "single-cycle independent target per `lem_310B_plan.md` §8.2",
-detaching from the §310/§311 Phase E ladder before diminishing
-returns kick in. Cycle 271 adopts this pivot.
+Cycle 272 ships (342e) and optionally fires off (342a) to Aristotle.
 
-## B. Strategic scope correction
+---
 
-`lem_310B_plan.md` §8.2 (written cycle 260) optimistically estimated
-that **each of `lem:342A`'s seven properties (342a)–(342g)** could
-ship as a single-cycle deliverable. **Re-reading the textbook
-(`extraction/formalization_data/entities/lem_342A.json`) plus a
-Mathlib survey overrides this**:
+## §A — Priority 0 (optional, ~5 min): fire-and-forget Aristotle submission for (342a) orthogonality
 
-* Mathlib has `Polynomial.shiftedLegendre n : ℤ[X]` at
-  `.lake/packages/mathlib/Mathlib/RingTheory/Polynomial/ShiftedLegendre.lean`
-  (115 LOC, axiom-clean). Provides:
-  - `Polynomial.shiftedLegendre n` — the polynomial.
-  - `Polynomial.factorial_mul_shiftedLegendre_eq` — Rodrigues
-    formula: `n! * shiftedLegendre n = D^n (X^n * (1-X)^n)`.
-  - `Polynomial.coeff_shiftedLegendre` — explicit coefficient.
-  - `Polynomial.degree_shiftedLegendre` / `natDegree_shiftedLegendre`.
-  - `Polynomial.shiftedLegendre_eval_symm` —
-    `aeval x (shiftedLegendre n) = (-1)^n * aeval (1 - x) (shiftedLegendre n)`.
+**Do this immediately if you intend to attempt (342a) manually in a
+cycle ≥273.** Skip if you intend to leave (342a) deferred indefinitely.
 
-* Mathlib does **NOT** prove orthogonality (`grep "orthog\|integral"`
-  on the file returns only a docstring mention, no actual lemma).
-  So **(342a) requires us to build the orthogonality proof
-  ourselves** via integration by parts on Rodrigues — likely
-  ~200–400 LOC and 2–3 cycles of work (not single-cycle).
+If you decide to do it:
 
-* **Sign-convention divergence**: Mathlib's `shiftedLegendre n (0) = 1`
-  and `shiftedLegendre n (1) = (-1)^n`. Butcher's `Pn*(0) = (-1)^n`
-  and `Pn*(1) = 1` (see (342b)). The two are related by the mirror
-  `x ↦ 1 − x` (or equivalently the parity factor `(-1)^n`):
+1. Verify the `aristotle` MCP is reachable
+   (`mcp__aristotle__list_projects` returns recent projects).
+2. Construct a self-contained snippet that
+   - Imports `Mathlib.RingTheory.Polynomial.ShiftedLegendre`,
+     `Mathlib.Analysis.SpecialFunctions.Integrals`,
+     `Mathlib.Data.Real.Basic`,
+     `Mathlib.MeasureTheory.Integral.IntervalIntegral.Basic`.
+   - States `butcherShiftedLegendre` exactly as cycle 271 defined it
+     (line ~38 of `OpenMath/Chapter3/Section342.lean`).
+   - States the orthogonality theorem with `m ≠ n` as a hypothesis:
+     ```lean
+     theorem butcherShiftedLegendre_orthogonal (m n : ℕ) (hmn : m ≠ n) :
+         ∫ x in (0:ℝ)..1,
+           (butcherShiftedLegendre m).eval x *
+           (butcherShiftedLegendre n).eval x = 0 := sorry
+     ```
+   - **Includes** (342b) and (342c) as already-proven theorems in the
+     snippet (Aristotle can use them as inputs). DO NOT include
+     (342e) or other unproven properties.
+3. Submit via `mcp__aristotle__submit_prompt` with prompt:
+   "Fill in the sorry. The proof goes by integration by parts
+   (n times) on Rodrigues' formula
+   `n! · butcherShiftedLegendre n = (-1)^n · iteratedDeriv n
+   (X^n · (1 - X)^n)` (lift the ℤ-polynomial to ℝ via
+   `Polynomial.map (Int.castRingHom ℝ)`). After integration by parts,
+   the boundary terms vanish because `X^n · (1 - X)^n` and its first
+   `n-1` derivatives vanish at `0` and `1`; the remaining bulk term
+   becomes `(-1)^n · ∫ (X^n · (1-X)^n) · derivative^[n] P_m*` which
+   vanishes when `m < n` (since `derivative^[n] P_m*` has degree
+   `m - n < 0`, i.e. is zero) and symmetrically when `m > n`."
+4. **Record the project ID** in
+   `.prover-state/aristotle_submissions/cycle_272/orthogonality.md`
+   with submission timestamp.
+5. **DO NOT POLL THIS CYCLE.** Per CLAUDE.md: one check after ~30
+   min. Cycle 273+ can poll once.
 
-  > Butcher's `P_n*(x) = (-1)^n * Polynomial.shiftedLegendre n.eval x
-  >                    = Polynomial.shiftedLegendre n.eval (1 - x)`.
+If you do not want to submit (decision: leave deferred), skip this
+priority entirely.
 
-  Both equalities hold via `shiftedLegendre_eval_symm`.
+---
 
-**Cycle 271 commits to shipping (342b) + (342c) ONLY** as the §342
-opening deliverable. (342a) and the remaining (342d–g) are deferred
-to cycle 272+, each as a separate single-cycle effort.
+## §B — Priority 1 (main deliverable, ~60–90 min): ship (342e) Rodrigues bridge
 
-## C. Deliverables (priority order)
-
-### Priority 0 (mandatory): create `OpenMath/Chapter3/Section342.lean`
-
-Define Butcher's shifted Legendre polynomial via the Mathlib bridge:
-
-```lean
-import Mathlib.RingTheory.Polynomial.ShiftedLegendre
-import Mathlib.Algebra.Polynomial.AlgebraMap
-
-namespace OpenMath.Chapter3.Section342
-
-open Polynomial
-
-/-- Butcher's shifted Legendre polynomial `P_n*` on `[0,1]`
-(Butcher §342, p. 236). Defined as `(-1)^n` times Mathlib's
-`Polynomial.shiftedLegendre n` (cast to `ℝ`), which gives
-`P_n*(1) = 1` per Butcher's normalisation (342b). Equivalently
-(via Mathlib's `shiftedLegendre_eval_symm`), evaluating the same
-polynomial at `1 - x`. -/
-noncomputable def butcherShiftedLegendre (n : ℕ) : Polynomial ℝ :=
-  Polynomial.C ((-1 : ℝ) ^ n) *
-    (Polynomial.shiftedLegendre n).map (Int.castRingHom ℝ)
-```
-
-### Priority 1 (mandatory): prove (342b)
+**Target**: in `OpenMath/Chapter3/Section342.lean`, append
 
 ```lean
-/-- Butcher §342 (342b): `P_n^*(1) = 1` for all `n`. -/
-theorem butcherShiftedLegendre_eval_one (n : ℕ) :
-    (butcherShiftedLegendre n).eval 1 = 1 := by
-  ...
+theorem butcherShiftedLegendre_rodrigues (n : ℕ) :
+    Polynomial.C (n.factorial : ℝ) * butcherShiftedLegendre n
+      = Polynomial.C ((-1 : ℝ) ^ n) *
+        Polynomial.derivative^[n]
+          ((Polynomial.X ^ n) * ((1 - Polynomial.X) ^ n)) := sorry
 ```
 
-**Tactic recipe** (verify the load-bearing lemma names via
-`lean_local_search` and `lean_loogle` BEFORE committing):
+(see §B.2 for shape options; pick whichever yields the shortest proof
+against the actual Mathlib hook).
 
-1. Unfold `butcherShiftedLegendre`:
-   ```
-   unfold butcherShiftedLegendre
-   simp only [Polynomial.eval_mul, Polynomial.eval_C]
-   ```
-   Goal becomes `(-1)^n * ((shiftedLegendre n).map (Int.castRingHom ℝ)).eval 1 = 1`.
-2. Push `eval` through `map` (verify `Polynomial.eval_map` exists,
-   else use `Polynomial.eval₂_at_apply` chain):
-   ```
-   rw [Polynomial.eval_map]
-   -- Goal: (-1)^n * eval₂ (Int.castRingHom ℝ) 1 (shiftedLegendre n) = 1
-   -- Equivalently: (-1)^n * ((shiftedLegendre n).eval (1 : ℤ) : ℝ) = 1.
-   ```
-3. Apply `Polynomial.shiftedLegendre_eval_symm` at `R := ℤ`, `x := 1`:
-   ```
-   have hsymm := Polynomial.shiftedLegendre_eval_symm n (R := ℤ) 1
-   -- hsymm : aeval 1 (shiftedLegendre n) = (-1)^n * aeval 0 (shiftedLegendre n)
-   ```
-4. Simplify `aeval 0 (shiftedLegendre n) = (shiftedLegendre n).coeff 0`:
-   ```
-   have h0 : (shiftedLegendre n).eval (0 : ℤ) = (shiftedLegendre n).coeff 0 := by
-     rw [Polynomial.eval_zero_eq_coeff_zero] -- or unfold eval₂ + sum collapse
-   rw [Polynomial.coeff_shiftedLegendre n 0]
-   -- Goal: (-1)^0 * C(n,0) * C(n,n) = 1 ⇒ 1 * 1 * 1 = 1 ⇒ trivial.
-   ```
-5. Push everything back to ℝ via `Int.cast` and close with `ring` or
-   `norm_num`.
+### §B.1 — Verify the Mathlib hook ahead of writing the proof
 
-**Fallback recipe (if step 3 fails)**: direct coefficient-sum
-evaluation:
+Run `lean_local_search "factorial_mul_shiftedLegendre"` and confirm
+at HEAD:
+
+* `Polynomial.factorial_mul_shiftedLegendre_eq` exists. Expected
+  shape (per cycle 271 task results §"Discovery"):
+  ```
+  (n.factorial : ℤ) • shiftedLegendre n
+    = Polynomial.derivative^[n] ((X^n * (1 - X)^n : ℤ[X]))
+  ```
+  Variant possibilities: `derivative^[n]` may be written as
+  `Polynomial.derivative^[n]` or as iterated composition; the LHS
+  may use `•` (smul) or `*` with `C (n.factorial)`. Either form is
+  fine — adapt the target statement to match.
+
+* `Polynomial.map_pow`, `Polynomial.map_mul`, `Polynomial.map_sub`,
+  `Polynomial.map_one`, `Polynomial.map_X` for the
+  `Int.castRingHom ℝ` substrate push-down.
+
+* `Polynomial.map_derivative` (single-step iterated-derivative
+  commutation with `.map`). Then iterate by induction on `n` if no
+  direct `Polynomial.map_iteratedDerivative` lemma exists — see §B.4
+  for the 6-LOC backup.
+
+### §B.2 — Statement shape options
+
+There are three reasonable shapes; pick the one whose proof is
+shortest against your verified Mathlib hook:
+
+**Shape A (recommended; matches Mathlib's RHS most directly)**:
+```lean
+theorem butcherShiftedLegendre_rodrigues (n : ℕ) :
+    Polynomial.C (n.factorial : ℝ) * butcherShiftedLegendre n
+      = Polynomial.C ((-1 : ℝ) ^ n) *
+        Polynomial.derivative^[n]
+          ((Polynomial.X ^ n) * ((1 - Polynomial.X) ^ n)) := ...
 ```
-rw [butcherShiftedLegendre, Polynomial.eval_mul, Polynomial.eval_C,
-    Polynomial.eval_map_int]
--- After cast simplification:
--- Goal: (-1)^n * (∑ k ∈ Finset.range (n+1),
---                    (-1)^k * C(n,k) * C(n+k,n)) = 1
--- This sum is a known binomial identity:
--- ∑_{k=0}^n (-1)^k C(n,k) C(n+k,n) = (-1)^n.
--- Mathlib may have this; if not, prove via induction or via
--- Vandermonde / Chu-Vandermonde.
+Cycle 271's `(-1)^n * shiftedLegendre n` bookkeeping moves to the
+RHS as `C ((-1)^n) * derivative^[n] (...)`, leaving `n! · P_n*` on
+the LHS in Butcher's textbook form.
+
+**Shape B (Butcher's textbook form)**:
+```lean
+theorem butcherShiftedLegendre_rodrigues (n : ℕ) :
+    Polynomial.C (n.factorial : ℝ) * butcherShiftedLegendre n
+      = Polynomial.derivative^[n]
+          ((Polynomial.X * (1 - Polynomial.X)) ^ n) := ...
 ```
+This requires absorbing the `(-1)^n` from cycle 271's definition
+into the `(X · (1 - X))^n` substrate via `mul_pow`. Equivalent to
+Shape A; pick by aesthetics.
 
-Expected LOC: 10–30. Aristotle suitability: HIGH (the coefficient
-sum identity is a standard target).
+**Shape C (with smul on ℝ)**:
+```lean
+theorem butcherShiftedLegendre_rodrigues (n : ℕ) :
+    (n.factorial : ℝ) • butcherShiftedLegendre n
+      = ((-1 : ℝ) ^ n) • Polynomial.derivative^[n]
+          ((Polynomial.X ^ n) * ((1 - Polynomial.X) ^ n)) := ...
+```
+Mirrors the smul form Mathlib uses for
+`factorial_mul_shiftedLegendre_eq`. Only choose this if Mathlib's
+hook uses smul (verify in §B.1).
 
-### Priority 2 (stretch, ship if Priority 1 closes axiom-clean): prove (342c)
+**Recommended: Shape A** (clean separation of cycle 271's sign
+factor + matches Mathlib's hook RHS).
 
-Butcher's (342c): `P_n*(1-x) = (-1)^n * P_n*(x)`.
+### §B.3 — Proof recipe (Shape A)
 
 ```lean
-/-- Butcher §342 (342c): `P_n^*(1 - x) = (-1)^n * P_n^*(x)`. -/
-theorem butcherShiftedLegendre_eval_one_sub (n : ℕ) (x : ℝ) :
-    (butcherShiftedLegendre n).eval (1 - x) =
-      (-1 : ℝ)^n * (butcherShiftedLegendre n).eval x := by
-  ...
-```
-
-**Tactic recipe**:
-
-1. `unfold butcherShiftedLegendre`; `simp [Polynomial.eval_mul,
-   Polynomial.eval_C, Polynomial.eval_map_int]` on both sides.
-2. Goal reduces to:
-   `(-1)^n * (shiftedLegendre n).eval (1-x) =
-    (-1)^n * ((-1)^n * (shiftedLegendre n).eval x)`
-   (where the inner `.eval` is over ℤ-cast-to-ℝ; the integer-eval
-   via `Polynomial.eval_map_int` and `Int.cast` machinery).
-3. Apply `Polynomial.shiftedLegendre_eval_symm` at `R := ℝ`,
-   `x := x`:
-   `(shiftedLegendre n).eval (1-x) = (-1)^n * (shiftedLegendre n).eval x`
-   (modulo cast manipulations — verify the `R := ℝ` instantiation
-   works against the `.map (Int.castRingHom ℝ)` substrate).
-4. Close by `ring` after cancelling `(-1)^n * (-1)^n = 1`.
-
-Expected LOC: 15–25.
-
-### Priority 3 (mandatory if P1 closes): non-vacuity witnesses
-
-```lean
-example : (butcherShiftedLegendre 0).eval 1 = 1 :=
-  butcherShiftedLegendre_eval_one 0
-
-example : (butcherShiftedLegendre 1).eval 1 = 1 :=
-  butcherShiftedLegendre_eval_one 1
-
-example : (butcherShiftedLegendre 2).eval 1 = 1 :=
-  butcherShiftedLegendre_eval_one 2
-```
-
-If P2 closes, add:
-
-```lean
-example (x : ℝ) :
-    (butcherShiftedLegendre 1).eval (1 - x) =
-      -(butcherShiftedLegendre 1).eval x := by
-  simpa using butcherShiftedLegendre_eval_one_sub 1 x
-```
-
-If time permits, also add a witness exhibiting the polynomial's
-*degree* matches Mathlib's:
-
-```lean
-example (n : ℕ) : (butcherShiftedLegendre n).natDegree = n := by
+theorem butcherShiftedLegendre_rodrigues (n : ℕ) :
+    Polynomial.C (n.factorial : ℝ) * butcherShiftedLegendre n
+      = Polynomial.C ((-1 : ℝ) ^ n) *
+        Polynomial.derivative^[n]
+          ((Polynomial.X ^ n) * ((1 - Polynomial.X) ^ n)) := by
+  -- Step 1: unfold butcherShiftedLegendre.
   unfold butcherShiftedLegendre
-  -- C ((-1)^n) is nonzero (since (-1)^n ≠ 0), so natDegree
-  -- distributes through the multiplication.
-  rw [Polynomial.natDegree_C_mul, Polynomial.natDegree_map]
-  · exact Polynomial.natDegree_shiftedLegendre n
-  · -- (-1)^n ≠ 0
-    exact pow_ne_zero n (by norm_num)
+  -- LHS:
+  --   C (n!) * (C ((-1)^n) * map ι (shiftedLegendre n))
+  -- Step 2: regroup so that C ((-1)^n) is the outermost factor.
+  -- (Both sides have C ((-1)^n) on the outside after this.)
+  rw [← mul_assoc, mul_comm (Polynomial.C ((n.factorial : ℝ)))
+        (Polynomial.C ((-1 : ℝ) ^ n)), mul_assoc]
+  -- Now goal is:
+  --   C ((-1)^n) * (C (n!) * map ι (shiftedLegendre n))
+  --     = C ((-1)^n) * derivative^[n] (X^n · (1 - X)^n)
+  -- Step 3: cancel C ((-1)^n) on both sides.
+  congr 1
+  -- Step 4: lift Mathlib's Rodrigues over ℤ to ℝ via map ι.
+  have hMathlib := Polynomial.factorial_mul_shiftedLegendre_eq n
+  -- hMathlib : (n.factorial : ℤ) • Polynomial.shiftedLegendre n
+  --   = Polynomial.derivative^[n] (X^n * (1 - X)^n)   (over ℤ)
+  -- (adapt the smul-vs-C-mul form based on actual Mathlib shape)
+  have h := congrArg (Polynomial.map (Int.castRingHom ℝ)) hMathlib
+  -- Step 5: push map through smul / C-mul on the LHS of h.
+  -- (Pick the right hook: Polynomial.map_intCast_smul, or
+  --  Polynomial.map_natCast_mul, or unfold smul to C-mul first.)
+  -- Step 6: push map through derivative^[n] on the RHS of h.
+  rw [map_iteratedDerivative_eq] at h        -- §B.4 helper
+  -- Step 7: push map through the X^n · (1 - X)^n substrate.
+  simp only [Polynomial.map_pow, Polynomial.map_mul,
+             Polynomial.map_sub, Polynomial.map_one,
+             Polynomial.map_X] at h
+  exact h
 ```
 
-### Priority 4 (mandatory if P1 closes): bookkeeping
+The proof is mechanical once each step's exact Mathlib lemma name
+is verified. The key Mathlib hooks to look up via §B.1:
 
-1. **Add import to `OpenMath/Chapter3.lean`**: insert
-   `import OpenMath.Chapter3.Section342` between `Section323` and
-   `Section343` (topo order).
-2. **Update `extraction/formalization_data/lean_status.json`** for
-   `lem:342A`: status `unformalized` → `partial`; `lean_file`
-   → `OpenMath/Chapter3/Section342.lean`; `lean_symbol`
-   → `butcherShiftedLegendre_eval_one`; `cycle` → 271.
-3. **Update `plan.md`** for `lem:342A`: `[ ]` → `[~]` with one-line
-   cycle 271 closure note describing the partial coverage and
-   remaining (342a)/(342d-g) deferral.
-4. **Write `.prover-state/task_results/cycle_271.md`** following the
-   CLAUDE.md template, including the faithfulness check from §H
-   below.
+1. `Polynomial.factorial_mul_shiftedLegendre_eq` — *exact name and
+   shape* (smul vs C ·; over ℤ vs ℕ smul).
+2. **`Polynomial.map_derivative`** (single-step iterated-derivative
+   commutation with `.map`). Then build `map_iteratedDerivative_eq`
+   by induction (§B.4) if Mathlib lacks the direct lemma.
+3. **`Polynomial.map_intCast_smul`** or
+   **`Polynomial.map_nsmul`** — pushing a `ℤ`/`ℕ` smul through `.map`.
+   Search via `lean_loogle "Polynomial.map.*HSMul"` if needed.
 
-## D. What NOT to try
+### §B.4 — Backup recipe if `map_iteratedDerivative` is missing
 
-* Do **NOT** attempt (342a) orthogonality in cycle 271. The proof
-  via integration by parts on Rodrigues is genuinely 200–400 LOC
-  and requires `intervalIntegral.integral_eq_sub_of_hasDeriv*` +
-  `Polynomial.iteratedDeriv_*` machinery. It is multi-cycle work;
-  rushing it produces a stalled scaffold per the cycle 200/201,
-  138/139, 149/150 rollback precedents. Sorry-first scaffolds are
-  forbidden by the supervisor's "no sorry increase" policy.
+Build the bridge by induction on `n`:
 
-* Do **NOT** attempt (342e) Rodrigues bridge in this cycle.
-  Mathlib's `factorial_mul_shiftedLegendre_eq` gives the bridge
-  in Mathlib's sign convention; transcribing to Butcher's
-  `(d/dx)^n ((x^2 - x)^n)` form requires `((x^2-x)^n) = (-1)^n *
-  (x^n * (1-x)^n)` expansion plus an interplay with the cycle 271
-  `(-1)^n` definitional factor. Defer.
+```lean
+private lemma map_iteratedDerivative_eq
+    (p : Polynomial ℤ) (n : ℕ) :
+    Polynomial.map (Int.castRingHom ℝ) (Polynomial.derivative^[n] p)
+      = Polynomial.derivative^[n]
+          (Polynomial.map (Int.castRingHom ℝ) p) := by
+  induction n with
+  | zero => simp
+  | succ k ih =>
+    rw [Function.iterate_succ_apply', Function.iterate_succ_apply',
+        Polynomial.map_derivative, ih]
+```
 
-* Do **NOT** redefine `butcherShiftedLegendre` via Mathlib's
-  `.comp (1 - X)` form. Although mathematically equivalent
-  (via `shiftedLegendre_eval_symm` lifted to polynomial equality),
-  the multiplicative `(-1)^n * shiftedLegendre n` form gives
-  cleaner proofs for (342b) and (342c). The `.comp (1 - X)` form
-  forces `Polynomial.eval_comp` expansions that complicate the
-  (342b) closure.
+~6 LOC private helper. `Polynomial.map_derivative` is the
+single-step hook and is standard in Mathlib (confirmed present in
+recent versions; verify name via `lean_local_search`).
 
-* Do **NOT** introduce sorries. The cycle's deliverable bar is
-  "ship axiom-clean (342b) + non-vacuity, or the cycle fails."
-  Stretch P2 must also ship axiom-clean if attempted; do not leave
-  a sorried `_eval_one_sub` for the supervisor to flag.
+### §B.5 — Mandatory non-vacuity witnesses
 
-* Do **NOT** raise `maxHeartbeats` above 200000. If (342b) stalls
-  on a `simp` blowup, decompose into a private helper that
-  evaluates the polynomial at 1 via `coeff_shiftedLegendre`
-  per-term in `Finset.sum_range_succ` form.
+After the theorem closes, add at least three `example` blocks at
+`n ∈ {0, 1, 2}` confirming the identity matches Butcher's small-`n`
+values:
 
-* Do **NOT** introduce `axiom`/`constant` declarations.
+* `n = 0`: `1 · P_0*(x) = derivative^[0] (X^0 · (1−X)^0) = 1`. LHS
+  is `C 1 · 1 = 1`. RHS reduces to `1`. (Possibly closes by `decide`
+  or one-line `simp`.)
+* `n = 1`: `1! · P_1*(x) = C ((-1)^1) · derivative (X · (1-X))
+  = C (-1) · (1 - 2X) = 2X - 1`. Butcher's `P_1*(x) = 2x - 1`.
+  Check via direct evaluation at a point (e.g. `eval 1/2 = 0`).
+* `n = 2`: `2 · P_2*(x) = C 1 · derivative^[2] (X^2 · (1-X)^2)`.
+  Butcher's `P_2*(x) = 6x² - 6x + 1`, so `2 · P_2* = 12x² - 12x + 2`.
+  Verify via coefficient extraction or `eval 0 = 2`.
 
-* Do **NOT** modify any other file beyond
-  `OpenMath/Chapter3/Section342.lean`, `OpenMath/Chapter3.lean`,
-  `extraction/formalization_data/lean_status.json`, and `plan.md`.
-  In particular, do NOT touch cycle 270's `Section311` work or
-  cycles 266–270's `Section301` closed forms.
+These witnesses ALSO serve as a sanity check on the sign convention:
+if (342e) is stated with the wrong sign, `n = 1` will produce a
+visible discrepancy (`-2X + 1` instead of `2X - 1`).
 
-* Do **NOT** attempt to compile `OpenMath/Chapter4/Section441.lean`
-  on GPFS — 43+ consecutive timeouts since cycle 182. Skip per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`.
+### §B.6 — Risk profile
 
-* Do **NOT** edit `scripts/autonomous_loop.py` or any
-  supervisor-side infrastructure. Tautology-scanner false
-  positives and prompt-builder phantoms are loop-maintainer
-  territory per
-  `.prover-state/issues/tautology_scanner_false_positives.md` and
-  `.prover-state/issues/phantom_commit_verdict_pattern.md`.
+| Risk | Mitigation |
+|---|---|
+| Mathlib hook name drift (`factorial_mul_shiftedLegendre_eq`) | Verify with `lean_hover_info` / `lean_local_search` before writing the proof |
+| `map_iteratedDerivative` missing as a direct lemma | Use §B.4 backup induction (~6 LOC) |
+| smul-vs-C-mul shape mismatch with Mathlib's hook | Adapt the `rw` chain at Step 5; try `Polynomial.intCast_mul`, `Polynomial.C_intCast`, or unfold smul to C-mul first |
+| Sign convention error in (342e) | Catch at the `n = 1` non-vacuity witness; check `eval 1/2 = 0` |
+| `Polynomial.map_intCast_smul` not the right name | Try `Polynomial.map_nsmul`, `Polynomial.map_zsmul`, or convert smul to multiplication first |
+| `congr 1` peels wrong layer at Step 3 | Use `rw [Polynomial.C_inj]`-style cancellation, or `have h_ne : Polynomial.C ((-1 : ℝ) ^ n) ≠ 0 := by simp [pow_ne_zero]; ...` and divide |
 
-* Do **NOT** pursue the polymorphic-`E` lift of cycle 266's
-  `bseriesExactTerm_cherry_scalar` this cycle. Cycle 265 flagged
-  this as MEDIUM-HIGH risk due to `ContinuousMultilinearMap`
-  curry/uncurry plumbing, and after Phase E.1 is fully closed in
-  the scalar setting the marginal value of the polymorphic-`E`
-  lift is low without `lem:310B`'s labelled-tree quotient
-  infrastructure.
+None of these is showstopping; all have established workarounds.
+Plan ~80–120 LOC budget (theorem body + private helper + three
+non-vacuity examples + docstring).
 
-## E. Risk inventory
+### §B.7 — Aristotle suitability
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| (R1) `Polynomial.eval_map` name drift | low | If Mathlib renamed to `eval_map'` or `Polynomial.eval_map_int`, fall back via `lean_local_search "eval_map"` |
-| (R2) `simp` blowup on `(shiftedLegendre n).eval 1` | medium | Use Approach B (coefficient sum unfolding) as fallback; cite `coeff_shiftedLegendre` per-coefficient |
-| (R3) `shiftedLegendre_eval_symm` ring instance | low | Mathlib's signature takes `{R : Type*} [Ring R]`; instantiate at `R := ℝ` explicitly via `(R := ℝ)` or at `R := ℤ` with subsequent cast |
-| (R4) `Int.castRingHom ℝ` namespace | low | Verify via `lean_local_search "Int.castRingHom"`; stable since Lean 4.0 |
-| (R5) noncomputable cascade on examples | low | All `example`s reduce to numerical evaluations via the closed theorem; should not trigger `noncomputable` requirement |
-| (R6) `Polynomial.eval_zero_eq_coeff_zero` doesn't exist | low | Use `simp [Polynomial.eval]` to unfold the polynomial evaluation at 0 manually; the result `eval 0 p = p.coeff 0` is a definitional consequence |
+Medium-high. The structural identity is exactly the kind of
+`rw`/`simp` chain Aristotle handles well. If the manual proof
+stalls past 60 minutes, submit a single Aristotle job with the
+target theorem and the (342b)/(342c) infrastructure in context.
+**DO NOT submit preemptively** — manual closure is faster than the
+30-minute Aristotle poll cycle for ~80 LOC of pure algebra.
 
-## F. Aristotle batch suggestion (optional, fire-and-forget for cycle 272)
+---
 
-If P1 closes cleanly in ~30 min, consider submitting **(342a)
-orthogonality** to Aristotle as a fire-and-forget background job
-for cycle 272+. Aristotle template:
+## §C — Priority 2 stretch (~30 min, OPTIONAL): degree lemma `(butcherShiftedLegendre n).natDegree = n`
 
-> namespace `OpenMath.Chapter3.Section342` (with Mathlib's
-> `Polynomial.shiftedLegendre` and the cycle 271 `butcherShiftedLegendre`
-> definition + (342b)/(342c) in scope), prove:
->
-> ```lean
-> theorem butcherShiftedLegendre_orthogonal {m n : ℕ} (hmn : m ≠ n) :
->     ∫ x in (0)..(1), (butcherShiftedLegendre m).eval x *
->       (butcherShiftedLegendre n).eval x = 0
-> ```
->
-> Hint: use Mathlib's `factorial_mul_shiftedLegendre_eq` (Rodrigues
-> formula) and integration by parts `n+1` times on the larger of
-> `m`, `n` to reduce the integrand to a constant times the lower-
-> degree polynomial, then apply the same lemma to halve the
-> degree. The boundary terms vanish because `X^n * (1-X)^n` and
-> its first `n−1` derivatives vanish at both endpoints.
+If §B closes well within budget, add:
 
-Submit one Aristotle job (project_id to be assigned by the worker).
-**Do NOT poll** in cycle 271 per CLAUDE.md single-poll discipline;
-cycle 272 will check the result.
+```lean
+theorem butcherShiftedLegendre_natDegree (n : ℕ) :
+    (butcherShiftedLegendre n).natDegree = n := by
+  unfold butcherShiftedLegendre
+  -- C ((-1)^n) * map ι (shiftedLegendre n)
+  -- The factor C ((-1)^n) is nonzero, so natDegree = natDegree of map ι (P_n)
+  rw [Polynomial.natDegree_C_mul (by
+        rcases Nat.even_or_odd n with he | ho
+        · simp [he.neg_one_pow]
+        · simp [ho.neg_one_pow]
+        -- or: exact pow_ne_zero _ (by norm_num)
+        )]
+  -- Now goal: (map ι (shiftedLegendre n)).natDegree = n
+  -- Mathlib: Polynomial.natDegree_map_eq_iff_of_injective for non-zero leading coeff
+  sorry  -- worker: close via Polynomial.natDegree_shiftedLegendre + leadingCoeff non-zero argument
+```
 
-## G. Verification checklist (run before claiming success)
+Mathlib gives `Polynomial.natDegree_shiftedLegendre n = n`
+(`@[simp]`). The lift to `butcherShiftedLegendre` via `map` and
+`C ·` multiplication should be ~10–20 LOC.
 
-1. `lake env lean OpenMath/Chapter3/Section342.lean` → exit 0.
-2. `lake env lean OpenMath/Chapter3.lean` → exit 0.
-3. `grep -c sorry OpenMath/Chapter3/Section342.lean` → `0`.
-4. `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$'
-   OpenMath/Chapter3/Section342.lean` → no hits.
-5. `#print axioms
-   OpenMath.Chapter3.Section342.butcherShiftedLegendre_eval_one`
-   → `[propext, Classical.choice, Quot.sound]` only (no `sorryAx`).
-6. If P2 shipped, repeat (5) on
-   `butcherShiftedLegendre_eval_one_sub`.
-7. Three non-vacuity `example`s compile.
-8. Aggregator `lake env lean OpenMath/Chapter3.lean` rebuild after
-   the new Section342 import lands.
+**Skip if §B took the full cycle budget.** Do NOT leave a sorry in
+the stretch; if it doesn't close cleanly, omit the lemma entirely.
 
-## H. Faithfulness check (mandatory in task_results/cycle_271.md)
+---
 
-For `butcherShiftedLegendre`:
+## §D — What NOT to try this cycle
 
-* Anchor entity: `lem:342A`
-  (`extraction/formalization_data/entities/lem_342A.json`).
-* Textbook statement (verbatim quote from JSON `statement_text`):
-  > "There exist polynomials Pn∗ : [0, 1] → R, of degrees n, for
-  > n = 0, 1, 2, . . . with the properties that ∫₀¹ P_m^* P_n^* dx
-  > = 0, m ≠ n (342a), P_n^*(1) = 1 (342b), …"
-* Lean type: `ℕ → Polynomial ℝ`. Captures: same content
-  (polynomial on `[0,1]` of degree `n`) with explicit closed-form
-  definition.
-* **Definition smuggling check**: `butcherShiftedLegendre` is
-  defined as `(-1)^n * Polynomial.shiftedLegendre n` (with the
-  int-to-real cast). The "smuggling" concern would be if we
-  defined `P_n*` as "the polynomial satisfying (342a)+(342b)" (an
-  *implicit* definition). We avoid this by using Mathlib's
-  explicit closed form. (342b) becomes a theorem, not a
-  definitional axiom. ✓
+* **DO NOT attempt (342a) orthogonality manually.** 200–400 LOC,
+  multi-cycle. Submit to Aristotle (§A) if pursuing, otherwise defer.
+* **DO NOT attempt (342d) `∫ P_n*² = 1/(2n+1)`.** Depends on (342a).
+* **DO NOT attempt (342g) distinct zeros.** Depends on (342a).
+* **DO NOT attempt (342f) three-term recurrence.** Higher risk
+  (~150 LOC) than (342e); cycle 273 candidate if (342e) lands clean.
+* **DO NOT modify cycle 271 deliverables** (`butcherShiftedLegendre`,
+  `butcherShiftedLegendre_eval_one`,
+  `butcherShiftedLegendre_eval_one_sub`, or non-vacuity examples).
+  They are axiom-clean and load-bearing for §B.
+* **DO NOT pivot to polymorphic-`E` Phase D.2/E.2** (cycle 270's
+  leftover candidate). Cycle 265's HIGH-risk
+  `ContinuousMultilinearMap` plumbing flag still applies; §342
+  yields more textbook progress per cycle.
+* **DO NOT attempt `lem:310B` Phase A.1**
+  (`RootedTree.Vertex` scaffold). It's a legitimate target but
+  belongs to a different sub-track; finish §342 cluster first.
+* **DO NOT raise `maxHeartbeats` above 200000.** If §B's `ring` or
+  `simp` chain stalls, decompose via the §B.4 backup induction.
+* **DO NOT introduce `axiom` or `constant` declarations.**
+* **DO NOT introduce sorries.** Cycles 149/200/201 all rolled back
+  sorry-first scaffolds; cycle 272's deliverable must be axiom-clean
+  or skipped entirely. Sorry count must remain 0.
+* **DO NOT modify `scripts/autonomous_loop.py`.**
+* **DO NOT attempt to compile `OpenMath/Chapter4/Section441.lean`
+  on GPFS.** 43+ consecutive timeouts since cycle 182. Skip per
+  `cycle_182_gpfs_slowness.md`.
+* **DO NOT poll Aristotle this cycle** if you submitted in §A.
+  Single poll discipline: cycle 273 checks once.
+* **DO NOT use `push_cast` on `(Int.castRingHom ℝ) ((-1)^n)`** —
+  cycle 271 dead end. Use `simp only [map_pow, map_neg, map_one]`
+  instead (the `RingHom` `map_*` simp lemma family).
+* **DO NOT use `simp only [Matrix.dotProduct]`** anywhere —
+  `dotProduct` is at root namespace, not `Matrix.dotProduct` (cycle
+  167 dead end).
+* **DO NOT use `Polynomial.ext + ring`** on rational `C` constant
+  identities (cycles 172/173 dead end); `ring` cannot fold
+  `Polynomial.C (4/3) - Polynomial.C (-1/3) = Polynomial.C (5/3)`.
+  Cycle 180's `Polynomial.funext + ring` recipe is the canonical
+  closure for `Polynomial ℝ` constant arithmetic — but (342e) is
+  symbolic, so this should not bite this cycle.
 
-For `butcherShiftedLegendre_eval_one` (342b):
+---
 
-* Hypothesis strength: no hypotheses beyond `n : ℕ`. Matches
-  textbook.
-* Tautology check: conclusion `eval 1 = 1` does NOT appear as a
-  hypothesis. Proof goes through `shiftedLegendre_eval_symm` + a
-  closed-form coefficient identity (non-vacuous).
-* Identity check: not a trivial `exact h` proof.
+## §E — Pre-flight checklist (do these in order at cycle-start)
 
-For `butcherShiftedLegendre_eval_one_sub` (342c, if shipped):
+1. **Verify branch state** (≤30s):
+   - `git log -1 --format='%H %s'` should show
+     `191c709 Cycle 271 — §342 opening …`.
+   - `wc -l OpenMath/Chapter3/Section342.lean` should show ~165 LOC.
+   - `grep -c sorry OpenMath/Chapter3/Section342.lean` should be `0`.
 
-* Hypothesis strength: no hypotheses beyond `n : ℕ`, `x : ℝ`.
-* Definition smuggling check: NO — the parity is proved as a
-  theorem via Mathlib's `shiftedLegendre_eval_symm`, not assumed.
+2. **Decide on Aristotle submission for (342a)**. If yes, do §A
+   first (~5 min). If no, skip.
 
-## I. Cycle 272+ outlook
+3. **Verify Mathlib hook `Polynomial.factorial_mul_shiftedLegendre_eq`
+   exists at HEAD** before writing §B's proof. Use
+   `lean_local_search "factorial_mul_shiftedLegendre"` or
+   `lean_hover_info` from inside Section342.lean. If the name has
+   drifted, adapt the §B.3 recipe. ALSO verify the exact shape
+   (smul-vs-C-mul; index over ℕ-or-ℤ).
 
-* **Cycle 272**: (342a) orthogonality — substantive integration-by-
-  parts on Rodrigues. Estimated 200–400 LOC, single cycle if
-  Aristotle returns the §F job COMPLETE; otherwise multi-cycle.
-* **Cycle 273**: (342d) norm `∫₀¹ P_n*² = 1/(2n+1)` — direct
-  corollary of (342a) + Rodrigues evaluation. ~80 LOC.
-* **Cycle 274**: (342e) Butcher's Rodrigues formula bridge —
-  `P_n*(x) = (1/n!) (d/dx)^n ((x²-x)^n)` from Mathlib's
-  `factorial_mul_shiftedLegendre_eq`. ~50 LOC.
-* **Cycle 275**: (342f) three-term recurrence. ~150 LOC.
-* **Cycle 276**: (342g) `n` distinct real zeros in `(0,1)`. ~100 LOC,
-  uses (342a) for the contradiction argument.
-* **Cycle 277+**: pivot back to `lem:310B` Phase A (multi-cycle)
-  or fresh entity per planner decision.
+4. **Ship §B Priority 1 (Rodrigues bridge)** following the §B.3
+   recipe. Add §B.5 non-vacuity witnesses. Run `lake env lean
+   OpenMath/Chapter3/Section342.lean` after each significant edit.
 
-## J. Why pivot to §342 over polymorphic-E lift
+5. **Run `#print axioms butcherShiftedLegendre_rodrigues`** (and the
+   private helper if any) via `lean_verify`. Expected:
+   `[propext, Classical.choice, Quot.sound]` only.
 
-The cycle 270 worker also listed "polymorphic-E lift of cycle 266's
-`bseriesExactTerm_cherry_scalar`" (Phase D.1 / E.2) as an
-alternative. Rejected for cycle 271:
+6. **Run `lake env lean OpenMath/Chapter3.lean`** to confirm no
+   downstream regressions.
 
-* Risk: cycle 265 flagged this as MEDIUM-HIGH due to
-  `ContinuousMultilinearMap.curry`/`uncurry` plumbing for
-  `iteratedFDeriv ℝ n f` viewed as an N-multilinear map.
-* Compounding: even if order-2 polymorphic ships, the §311 thread
-  is essentially complete (orders 1–5 scalar, order 1 polymorphic).
-  Extending to order ≥ 2 polymorphic delivers limited new content
-  without `lem:310B`'s labelled-tree quotient infrastructure
-  (per `.prover-state/issues/lem_310B_plan.md` Phase D).
-* §342 detaches cleanly: a fresh chapter section, new Mathlib
-  hooks (`Polynomial.shiftedLegendre`), and unblocks 5 downstream
-  entities (`lem:359A`, `thm:324C`, `thm:344A`, `thm:358A`,
-  `thm:363A`) over the multi-cycle `lem:342A` cluster.
+7. **If time permits**, ship §C stretch (`natDegree` lemma).
+   Otherwise skip.
 
-Cycle 271's pivot to §342 is the higher-value option.
+8. **Write `task_results/cycle_272.md`** documenting deliverables,
+   axioms, non-vacuity, and any deviations from this strategy.
 
-## K. Bottom line for the cycle 271 worker
+9. **Update `lean_status.json`** for `lem:342A`: keep at `partial`
+   (the JSON tracks per-entity status, not per-property; even with
+   (342b), (342c), (342e) closed, the entity as a whole — covering
+   all of 342a-g — remains partial until orthogonality lands).
 
-Ship `OpenMath/Chapter3/Section342.lean` with:
-* `butcherShiftedLegendre (n : ℕ) : Polynomial ℝ` (def, ~3 LOC).
-* `butcherShiftedLegendre_eval_one : ∀ n, ... = 1` (theorem, ~15
-  LOC).
-* `butcherShiftedLegendre_eval_one_sub` (theorem, ~20 LOC) **IF
-  AND ONLY IF** Priority 1 closes axiom-clean.
-* Three non-vacuity `example`s (mandatory if P1 closes).
-* One optional `natDegree` example (stretch).
+10. **Update `plan.md`** entry for `lem:342A` to note cycle 272's
+    new closure (342e), maintaining `[~]` status.
 
-Total file: ~80 LOC.
+11. **Commit** with message
+    `Cycle 272 — §342 (342e) Rodrigues bridge SHIPPED.`
 
-All axiom-clean (`[propext, Classical.choice, Quot.sound]`).
-Sorry count remains 0. Update `lean_status.json`, `plan.md`,
-`Chapter3.lean` import. Write `task_results/cycle_271.md` with the
-§H faithfulness check.
+---
 
-If the cycle 271 worker hits a hard wall on Priority 1 — e.g.
-`shiftedLegendre_eval_symm` doesn't fire on the cast substrate
-after 30 min of `lean_multi_attempt` exploration — fall back to
-the coefficient-sum recipe (Approach B in §C Priority 1). If THAT
-also stalls, abandon the cycle to a documentation-only deliverable:
-ship just the definition with a `_eval_one` stub `sorry` and file
-a fresh issue describing the Mathlib API drift. This is the
-absolute floor; under no circumstances should the cycle ship 2+
-sorries.
+## §F — Success criteria
+
+* `butcherShiftedLegendre_rodrigues` shipped axiom-clean
+  (`[propext, Classical.choice, Quot.sound]`).
+* At least 3 non-vacuity `example`s on `n ∈ {0, 1, 2}` confirming
+  Butcher's small-`n` values match.
+* Sorry count: 0 → 0.
+* No regressions on cycle 271's (342b)/(342c) or any other §3 file.
+* `OpenMath/Chapter3.lean` aggregator builds.
+
+Stretch (Priority 2): `butcherShiftedLegendre_natDegree` shipped
+axiom-clean. Skip — do NOT leave a sorry — if it doesn't close
+cleanly.
+
+Optional (Priority 0): Aristotle (342a) project ID recorded for
+cycle 273+ polling.
+
+---
+
+## §G — Outlook for cycle 273+
+
+After (342e) lands:
+
+* **Cycle 273 candidates** (single-cycle each):
+  * (342f) three-term recurrence — ~150 LOC if Mathlib's
+    `shiftedLegendre` has a recurrence already; otherwise direct via
+    `coeff_shiftedLegendre` induction.
+  * Polymorphic-`E` lift of cycle 266's
+    `bseriesExactTerm_cherry_scalar` (Phase D.1/E.2 of
+    `lem_310B_plan.md`). MEDIUM-HIGH risk per cycle 265's
+    `ContinuousMultilinearMap` plumbing flag.
+  * `lem:310B` Phase A.1 (`RootedTree.Vertex` + `vertices` Finset).
+    80–120 LOC, axiom-clean target.
+
+* **Cycle 273 Aristotle poll** (if §A submitted): one check, decide
+  closure path. If COMPLETE clean → incorporate; if
+  COMPLETE_WITH_ERRORS → apply suggested fixes; if IN_PROGRESS at
+  low % → cancel and pivot.
+
+* **Cycles 274+** depend on whether (342a) Aristotle returns
+  cleanly. If yes → (342d) and (342g) become single-cycle
+  consequences. If no → manual (342a) attempt (multi-cycle) or
+  pivot to (342f) / polymorphic-`E` / `lem:310B` infrastructure.
