@@ -222,6 +222,80 @@ theorem tau_values :
     order (mk []) = 1 ∧ symmetry (mk []) = 1 ∧ density (mk []) = 1 :=
   ⟨rfl, rfl, rfl⟩
 
+/- ### α(t) — elementary weight (Butcher equation (302a))
+
+We define `α(t)` directly from Butcher's Theorem 302A formula:
+
+    α(t) = r(t)! / (σ(t) · γ(t))                          (302a)
+
+This is the textbook definition of the elementary weight α (Butcher
+§302, page 142). Butcher introduces α(t) textually as the number of
+distinct labellings of `t` satisfying conditions (i)–(iii) of §302 (each
+vertex labelled exactly once; equivalent labellings under symmetry
+counted once; labels along every edge increasing root-to-leaf). Theorem
+302A then states that this combinatorial α satisfies the closed-form
+(302a).
+
+A fully faithful formalisation would (a) define α as a count of label
+sets satisfying (i)–(iii), then (b) prove (302a) holds. (a) requires
+substantial new infrastructure (vertex labellings on `List`-based trees,
+the symmetry group action, the monotone-edge constraint). We adopt the
+same pragmatic convention used for `RootedTree.symmetry` (see file
+docstring's "σ-faithfulness divergence"): define α via the closed form
+(302a) and treat the combinatorial equivalence as an unformalised
+mathematical fact (filed alongside the σ-symmetry-group gap).
+
+Downstream consumers (`lem:310B`, `lem:312B`, etc.) only consume the
+closed-form value, so they are unaffected by the gap. -/
+
+/-- The elementary weight `α(t)` of a rooted tree (Butcher §302,
+equation (302a)):
+
+    α(t) = r(t)! / (σ(t) · γ(t)).
+
+See the section comment above for the faithfulness convention: α is
+defined here directly via (302a) rather than as the combinatorial
+labelling count of Butcher §302's (i)–(iii). -/
+noncomputable def alphaWeight (t : RootedTree) : ℝ :=
+  (Nat.factorial (order t) : ℝ) / ((symmetry t : ℝ) * (density t : ℝ))
+
+/-- Base case (Butcher Table 310(II), row r=1): `α(τ) = 1`. Combines
+(301d) `r(τ) = σ(τ) = γ(τ) = 1` with the definition (302a)
+`α(τ) = 1!/(1·1) = 1`. -/
+theorem alphaWeight_vertex : alphaWeight (mk []) = 1 := by
+  unfold alphaWeight
+  obtain ⟨hr, hs, hd⟩ := tau_values
+  rw [hr, hs, hd]
+  norm_num
+
+example : alphaWeight vertex = 1 := alphaWeight_vertex
+
+example : alphaWeight cherry = 1 := by
+  unfold alphaWeight
+  rw [show order cherry = 2 from rfl,
+      show symmetry cherry = 1 from rfl,
+      show density cherry = 2 from rfl]
+  norm_num [Nat.factorial]
+
+example : alphaWeight broom₃ = 1 := by
+  unfold alphaWeight
+  rw [show order broom₃ = 3 from rfl,
+      show symmetry broom₃ = 2 from rfl,
+      show density broom₃ = 3 from rfl]
+  norm_num [Nat.factorial]
+
+/-- Non-trivial witness: the asymmetric order-4 tree `[τ, [τ]]` (root with
+two distinct subtrees: a leaf and a cherry) has `α = 3`. This is
+row r=4, second entry of Butcher Table 310(II) (the `f'(f, f'f)` tree).
+Order 4, symmetry 1 (no automorphism — leaf and cherry are distinct),
+density 4·1·2·1 = 8, so α = 4!/(1·8) = 3. -/
+example : alphaWeight (mk [vertex, cherry]) = 3 := by
+  unfold alphaWeight
+  rw [show order (mk [vertex, cherry]) = 4 from rfl,
+      show symmetry (mk [vertex, cherry]) = 1 from rfl,
+      show density (mk [vertex, cherry]) = 8 from rfl]
+  norm_num [Nat.factorial]
+
 end RootedTree
 
 end OpenMath.Chapter3.Section310
