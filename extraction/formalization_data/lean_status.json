@@ -524,10 +524,10 @@
   },
   "thm:319B": {
     "lean_file": "OpenMath/Chapter3/Section319.lean",
-    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.accumulation_recurrence",
-    "status": "partial",
-    "cycle": 246,
-    "notes": "Phase 1 (cycle 246): accumulation recurrence shipped — ‖yex_n − traj_n‖ ≤ (1 + h L^†)^n · ‖yex_0 − traj_0‖ + ∑ (1+h L^†)^{n-1-k} δ_k. Phase 2 (deferred): geometric-sum closed form yielding the textbook headline (exp(L^†(x-x_0))-1)/L^† · C h^p. Inherits cycle 245 Frobenius-smallness divergence (‖(h_0 L) • |A|‖_F < 1 instead of textbook spectral-radius h_0 L ρ(|A|) < 1)."
+    "lean_symbol": "OpenMath.Chapter3.Section312.RKTableau.thm_319B",
+    "status": "formalized",
+    "cycle": 247,
+    "notes": "Phase 2 (cycle 247): textbook headline shipped. Conclusion is ‖yex_n − traj_n‖ ≤ (if L^† = 0 then (n : ℝ) · h else (exp(L^†·(n·h)) - 1)/L^†) · C · h^p, faithful to Butcher's two-case form (§319 p. 190). Proof composes Phase 1's accumulation_recurrence with the geometric-sum closed form (private helpers geometric_sum_one_plus_pos/zero) and (1+a)^n ≤ exp(n·a) (private helper pow_one_add_le_exp). Phase 1 (cycle 246, retained): accumulation_recurrence. Inherits cycle 245 Frobenius-smallness divergence (‖(h_0 L) • |A|‖_F < 1 instead of textbook spectral-radius h_0 L ρ(|A|) < 1); inherits cycle 246 inequality-bound encoding of δ_k. Existential L^† (closed form L · ∑ᵢ |bᵢ| · ((I - h₀ L |A|)⁻¹ 𝟙)ᵢ). Non-vacuity witness D7 on paddedEuler with f := id, C := 0, p := 0. Axiom-clean ([propext, Classical.choice, Quot.sound])."
   },
   "thm:323B": {
     "lean_file": null,

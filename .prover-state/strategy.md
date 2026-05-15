@@ -1,635 +1,494 @@
-# Cycle 246 Strategy — `thm:319B` Phase 1 (accumulation recurrence)
+# Cycle 247 Strategy — `thm:319B` Phase 2 (geometric sum closed form)
 
-## A. Target
+## TL;DR
 
-**`thm:319B` Global truncation error bound via local error accumulation**
-(Butcher §319 p. 190; entity record:
-`extraction/formalization_data/entities/thm_319B.json`).
+Cycle 246 shipped Phase 1 of `thm:319B` (`accumulation_recurrence`, the
+inductive accumulation inequality) axiom-clean. **Cycle 247 ships Phase 2**:
+specialise `δ_k ≤ C h^{p+1}` and bound the geometric sum to recover the
+textbook headline bound on the global truncation error. After Phase 2,
+`thm:319B` is fully formalized and the §319 Butcher chapter is complete
+(both `lem:319A` and `thm:319B` formalized).
 
-Textbook statement (paraphrased; verbatim in JSON):
+**Important meta-note**: Cycle 246's score = −1 was a tautology-scanner
+false positive (`semantic_sorry_count 4→8`). The actual sorry count is 0;
+the new "hits" at `Section319.lean` are scanner false positives on
+hypothesis declarations / docstring patterns in the cycle-246 additions,
+exactly the documented over-firing pattern from
+`tautology_scanner_false_positives.md`. **DO NOT attempt to "fix" any
+code in response to the −1 score.** Trust `grep -c sorry` (= 0) and
+`lean_verify` output. Per CLAUDE.md, scanner patches are loop-maintainer
+territory; the worker must not edit `scripts/autonomous_loop.py`.
 
-> Let `h₀` and `L^†` be such that the local truncation error at step
-> `k = 1, …, n` is bounded by `δ_k ≤ C h^{p+1}` for `h ≤ h₀`. Then
-> the global truncation error is bounded by
+---
+
+## §A. Priority 0 — verify the current state
+
+Run these once at the start of the cycle to confirm Phase 1 ships:
+
+```bash
+git log -1 --format='%H %s'
+# Expected: d21babd Cycle 246 — §319 thm:319B Phase 1 (accumulation recurrence) SHIPPED.
+
+grep -c sorry OpenMath/Chapter3/Section319.lean
+# Expected: 0
+
+wc -l OpenMath/Chapter3/Section319.lean
+# Expected: ~871 (cycle 246 grew it from 474)
+```
+
+If these match, proceed to §B. If any disagree, escalate via a short
+heartbeat note and do not attempt Phase 2 until reconciled.
+
+**DO NOT run the §441 GPFS smoke test** — 43 consecutive timeouts (cycles
+182–239) confirm the pathology is entrenched cluster-side. The cycle 247
+deliverable is §319, not §441; §441 Phase C remains GPFS-blocked.
+
+---
+
+## §B. Substantive target: `thm:319B` Phase 2
+
+### Textbook statement (from `entities/thm_319B.json` + cycle 246 task results)
+
+> Provided the local truncation error has the bound
+> `‖y(x_k) − ŷ_k‖ ≤ C h^{p+1}` for all `k = 1, …, n`, and the conditions
+> of Lemma 319A hold, the global truncation error has the bound
 >
-> ```
-> ‖y(xₙ) − yₙ‖ ≤  (exp(L^† (xₙ − x₀)) − 1) / L^†  · C h^p   if L^† > 0
-> ‖y(xₙ) − yₙ‖ ≤  (xₙ − x₀) · C h^p                        if L^† = 0
-> ```
+>   `‖y(x_n) − y_n‖ ≤ (exp(L^†(x_n − x_0)) − 1) / L^† · C h^p`     (if L^† > 0)
+>
+> degenerating to
+>
+>   `‖y(x_n) − y_n‖ ≤ (x_n − x_0) · C h^p`                          (if L^† = 0).
 
-Textbook proof (Butcher §319 p. 190):
-1. From Figure 319(ii), the global error accumulates as
-   `‖y(xₙ) − yₙ‖ ≤ C h^{p+1} ∑_{k=1}^{n} (1 + h L^†)^{n−k}`
-   (i.e. each local error propagates through the remaining `n − k`
-   steps with growth factor `1 + h L^†` per step, by `lem:319A`).
-2. For `L^† = 0`: the sum is `n`, and `n h = x − x₀`, giving the bound.
-3. For `L^† > 0`: geometric sum
-   `∑_{k=1}^n (1+hL^†)^{n−k} = ((1+hL^†)^n − 1)/(h L^†) ≤
-    (exp(L^† h n) − 1)/(h L^†) = (exp(L^†(x−x₀)) − 1)/(h L^†)`,
-   yielding `C h^p (exp(L^†(x−x₀)) − 1) / L^†`.
+Cycle 246's `accumulation_recurrence` (`Section319.lean`) ships:
 
-## B. Cycle 246 scope: Phase 1 only (accumulation recurrence)
-
-This theorem decomposes cleanly into two phases matching the cycle
-244 → 245 split for `lem:319A`:
-
-* **Phase 1 (cycle 246, this cycle)** — define the iterated-step
-  trajectory framework, define the per-step local truncation error
-  abstractly, and prove the **accumulation recurrence**:
-  ```
-  ‖yex(n) − traj(n)‖
-    ≤ (1 + h L^†)^n · ‖yex(0) − traj(0)‖
-      + ∑_{k=0}^{n−1} (1 + h L^†)^{n−1−k} · δ_k
-  ```
-  by induction on `n`, with the inductive step composing `lem_319A`
-  with the triangle inequality. No closed-form `exp` bound yet.
-
-* **Phase 2 (cycle 247, deferred)** — specialise `δ_k ≤ C h^{p+1}` and
-  bound the geometric sum by `(exp(L^† n h) − 1)/L^†` to recover the
-  headline. Splits cleanly because `(1 + h L^†)^n ≤ exp(h L^† n)`
-  requires a real-analysis bound (`Real.add_one_le_exp` and friends)
-  that is conceptually orthogonal to the induction skeleton.
-
-The split mirrors `lem:319A`'s cycle 244 (recurrences) → cycle 245
-(M-matrix closed-form) pattern. Phase 1 is structural; Phase 2 is
-analytic.
-
-## C. File and location
-
-Continue in `OpenMath/Chapter3/Section319.lean` (after cycle 244–245's
-work, currently 474 LOC, 0 sorries). Open a new `section Phase3`
-inside `namespace OpenMath.Chapter3.Section312.RKTableau` after the
-existing `Phase2` section, *before* its closing `end Phase2`.
-
-Imports are already sufficient (the file imports
-`OpenMath/Chapter3/Section381`, `OpenMath/Matrix/MMatrix`, and the
-relevant Mathlib normed-space machinery). Do **not** add new imports
-unless a chosen Mathlib lemma fails to resolve.
-
-## D. Deliverables
-
-### D1 — Iterated trajectory predicate
-
-Define a predicate capturing "`traj : Fin (n + 1) → N` is the sequence
-of RK iterates starting from `traj 0`":
-
-```lean
-def IsRKTrajectory {s : ℕ} (M : RKTableau s) {N : Type*}
-    [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (f : N → N) (h : ℝ) {n : ℕ} (traj : Fin (n + 1) → N) : Prop :=
-  ∀ k : Fin n,
-    M.IsRKOneStep f (traj k.castSucc) h (traj k.succ)
+```
+‖yex_n − traj_n‖ ≤ (1 + h L^†)^n · ‖yex_0 − traj_0‖
+                  + ∑_{k=0}^{n-1} (1 + h L^†)^{n-1-k} · δ_k
 ```
 
-Each `Fin n` index `k` represents the step from node `k` to node
-`k+1`. The predicate composes with cycle 245's `lem_319A` naturally
-via `Fin.castSucc` / `Fin.succ`.
+Phase 2 specialises this to the textbook headline. The four ingredient
+steps are listed in cycle 246's "Suggested next approach".
 
-### D2 — Local truncation error bound predicate (abstract)
+### Phase 2 deliverable structure
 
-Rather than introducing a separate "local truncation error" function
-(which would require defining the *exact* one-step image of `yex k`
-under `f`, an existential), absorb the bound into a hypothesis on
-`δ : Fin n → ℝ`:
+Three new public theorems in `OpenMath/Chapter3/Section319.lean`, plus
+two private helpers. All in the existing namespace from cycles 244–246.
+
+#### D1 (private helper): `geometric_sum_one_plus`
+
+Closed form (or near-closed form) for the geometric sum
+`∑_{k < n} (1 + a)^(n - 1 - k)`. Split into two private helpers:
 
 ```lean
-/-- `HasLocalTruncationErrorBound M f h yex δ` says that for each step
-`k`, there exists an intermediate value `y_step` such that the method
-`M` produces `y_step` from `yex k.castSucc` in one step, and
-`‖yex k.succ − y_step‖ ≤ δ k`. This is Butcher's Figure 319(ii). -/
-def HasLocalTruncationErrorBound {s : ℕ} (M : RKTableau s) {N : Type*}
-    [NormedAddCommGroup N] [NormedSpace ℝ N]
-    (f : N → N) (h : ℝ) {n : ℕ} (yex : Fin (n + 1) → N)
-    (δ : Fin n → ℝ) : Prop :=
-  ∀ k : Fin n, ∃ y_step : N,
-    M.IsRKOneStep f (yex k.castSucc) h y_step ∧
-    ‖yex k.succ - y_step‖ ≤ δ k
+private lemma geometric_sum_one_plus_pos (a : ℝ) (n : ℕ) (ha : 0 < a) :
+    ∑ k : Fin n, (1 + a)^(n - 1 - k.val) = ((1 + a)^n - 1) / a := …
+
+private lemma geometric_sum_one_plus_zero (n : ℕ) :
+    ∑ k : Fin n, (1 + (0 : ℝ))^(n - 1 - k.val) = (n : ℝ) := …
 ```
 
-### D3 — Phase 1 headline: `accumulation_recurrence`
+Pull `(C * h^(p+1))` out of the sum via `Finset.mul_sum` (or its flipped
+sibling); the geometric helper handles the remainder.
+
+#### D2 (private helper): `pow_one_add_le_exp`
 
 ```lean
-theorem accumulation_recurrence {s : ℕ} (M : RKTableau s)
+private lemma pow_one_add_le_exp (a : ℝ) (n : ℕ) (ha : 0 ≤ a) :
+    (1 + a)^n ≤ Real.exp ((n : ℝ) * a) := …
+```
+
+#### D3 (main public theorem): `RKTableau.thm_319B`
+
+The headline bound. Statement sketch (fix names / binders precisely
+when writing):
+
+```lean
+theorem thm_319B
     {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
-    {f : N → N} {L : ℝ} (hL : 0 ≤ L)
-    (hf_lip : LipschitzWith L.toNNReal f)
-    {h h₀ : ℝ} (hh : 0 < h) (hh_le : h ≤ h₀) (hh₀ : 0 ≤ h₀)
-    (h_norm : ‖((h₀ * L) • M.A.map (fun a => |a|))‖ < 1)
-    {n : ℕ} {traj yex : Fin (n + 1) → N}
-    (h_traj : M.IsRKTrajectory f h traj)
-    {δ : Fin n → ℝ} (_hδ_nn : ∀ k, 0 ≤ δ k)
-    (h_lte : M.HasLocalTruncationErrorBound f h yex δ) :
+    {s : ℕ} (M : RKTableau s)
+    {f : N → N} {L : ℝ≥0} (hL_pos : 0 < (L : ℝ))
+    (hLip : LipschitzWith L f)
+    {h₀ : ℝ} (hh₀_pos : 0 < h₀)
+    (hsmall : ‖(h₀ * (L : ℝ)) • M.A.map (·|·|)‖ < 1)
+    {h : ℝ} (hh_pos : 0 < h) (hh_le : h ≤ h₀)
+    {C : ℝ} (hC_nn : 0 ≤ C) {p : ℕ}
+    {n : ℕ}
+    {yex : Fin (n + 1) → N} {traj : Fin (n + 1) → N}
+    (htraj : M.IsRKTrajectory f h traj)
+    (h_init_eq : yex 0 = traj 0)
+    (h_lte : M.HasLocalTruncationErrorBound f h yex
+              (fun _ => C * h^(p + 1))) :
     ∃ L_dag : ℝ, 0 ≤ L_dag ∧
       ‖yex (Fin.last n) - traj (Fin.last n)‖
-        ≤ (1 + h * L_dag) ^ n * ‖yex 0 - traj 0‖
-          + ∑ k : Fin n, (1 + h * L_dag) ^ (n - 1 - k.val) * δ k
+        ≤ (if L_dag = 0
+            then (n : ℝ) * h
+            else (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / L_dag)
+          * C * h^p
 ```
 
-**Note on existential**: the `∃ L_dag` mirrors `lem_319A`'s shape
-(cycle 245). This is the cleanest interface because `L_dag` is fully
-determined by `(M, L, h₀)` but its closed-form
-`L * ∑ᵢ |bᵢ| * ((I − h₀ L |A|)⁻¹ 𝟙)ᵢ` is non-trivial to expose;
-existential packaging defers that surface.
+Proof recipe per §C.2 below.
 
-### D4 — Non-vacuity witness on `paddedEuler`
+#### D4 (non-vacuity witness): `paddedEuler` example
+
+Mirror cycle 246's D6 pattern. The `f := id` choice on `paddedEuler`
+makes everything degenerate (Lipschitz constant 1 works, `A = 0` makes
+smallness trivial). Construct a constant-`y` trajectory + the trivial
+local-truncation bound (e.g. `δ k := 0`, so `C := 0`, `p := 0`); verify
+the headline reduces to `0 ≤ 0`.
+
+---
+
+## §C. Concrete tactic plan
+
+### §C.1 — The geometric-sum identity
+
+For `a ∈ ℝ`, `a ≠ 0`, the standard identity is
+`∑_{i=0}^{n-1} x^i = (x^n - 1) / (x - 1)`. With `x := 1 + a`:
+`∑_{i=0}^{n-1} (1 + a)^i = ((1 + a)^n - 1) / a`.
+
+For our shape `∑_{k < n} (1 + a)^(n - 1 - k)`:
+- Reindex `i := n - 1 - k`; as `k` ranges `0..n-1`, so does `i`.
+- The reindexed sum equals `∑_{i=0}^{n-1} (1 + a)^i`.
+- Apply the closed form.
+
+In Lean over `Fin n`:
+
+1. **Reindex** via `Finset.sum_range_reflect`. Statement form:
+   `∑ i ∈ Finset.range n, f (n - 1 - i) = ∑ i ∈ Finset.range n, f i`.
+   Convert `Fin n` sum to `Finset.range n` sum first via
+   `Fin.sum_univ_eq_sum_range` (or `Finset.sum_fin_eq_sum_range`).
+
+2. **Closed form** for `a ≠ 0`: use `geom_sum_eq` from
+   `Mathlib.Algebra.GeomSum`. Statement (verify exact form with
+   `lean_hover_info`):
+   `∀ {α : Type*} [CommRing α] {x : α}, x ≠ 1 →
+     ∀ n : ℕ, ∑ i ∈ Finset.range n, x^i = (x^n - 1) / (x - 1)`.
+   Apply with `x := 1 + a`, side condition `1 + a ≠ 1 ↔ a ≠ 0`.
+   The denominator `(1 + a) - 1 = a` simplifies via `add_sub_cancel_left`.
+
+3. **`a = 0` case**: each summand is `(1 + 0)^(n - 1 - k.val) = 1`,
+   so the sum is `n`. Direct via `simp` + `Finset.sum_const` +
+   `Finset.card_fin`.
+
+**Risk R1**: `geom_sum_eq` may exist under a slightly different name
+(`Finset.geom_sum_eq`, or in `Mathlib.Algebra.GeomSum`). Verify
+EARLY with `lean_local_search "geom_sum"`. If it doesn't fire,
+prove by direct induction on `n` (~12 LOC):
+```
+∑_{i < n+1} x^i = ∑_{i < n} x^i + x^n
+                = (x^n - 1)/(x-1) + x^n      [by IH]
+                = ((x^n - 1) + x^n (x - 1))/(x-1)
+                = (x^{n+1} - 1)/(x-1)
+```
+
+**Risk R2**: `Finset.sum_range_reflect` shape may differ slightly
+(some Mathlib versions index from `1`, or use `Finset.Ico 0 n`).
+Verify with `lean_hover_info`. If shape mismatch, work via
+`Finset.sum_bij` with `i ↔ n - 1 - i` directly.
+
+### §C.2 — `thm_319B` proof body
+
+Outline (~120 LOC body):
+
+1. Apply `accumulation_recurrence` to get
+   ```
+   ∃ L_dag ≥ 0,
+     ‖yex_n − traj_n‖
+       ≤ (1 + h L_dag)^n · ‖yex_0 − traj_0‖
+         + ∑_{k < n} (1 + h L_dag)^(n-1-k) · δ_k
+   ```
+
+2. Substitute `δ k := C * h^(p+1)` from `h_lte`. Use
+   `h_init_eq : yex 0 = traj 0` to vanish the first term:
+   `‖yex 0 − traj 0‖ = ‖0‖ = 0` via `sub_self`.
+
+3. Pull `(C * h^(p+1))` out of the sum (it doesn't depend on `k`):
+   ```
+   ∑ (1 + h L_dag)^(n-1-k) · (C * h^(p+1))
+     = (C * h^(p+1)) · ∑ (1 + h L_dag)^(n-1-k)
+   ```
+   via `Finset.mul_sum` (or `Finset.sum_mul` flipped) +
+   `Finset.sum_congr` to move the constant out.
+
+4. **Case-split on `L_dag = 0` vs `L_dag > 0`** (use `lt_or_eq_of_le`
+   on `0 ≤ L_dag`, then `Eq.symm`):
+
+   - **`L_dag = 0` branch**: `h * L_dag = 0`, so `(1 + h * L_dag) = 1`.
+     By D1's `geometric_sum_one_plus_zero` (after rewriting
+     `h * L_dag = 0`), the sum equals `n`. Conclusion reduces to
+     `(C * h^(p+1)) · n ≤ ((n : ℝ) * h) · C * h^p`, which uses
+     `h^(p+1) = h * h^p` and closes by `ring` (with appropriate
+     `linarith` plumbing if `ring` doesn't directly fire due to
+     the `n` cast and the `if-then-else` branch shape).
+
+   - **`L_dag > 0` branch**: by D1's `geometric_sum_one_plus_pos`,
+     ```
+     ∑ (1 + h L_dag)^(n-1-k) = ((1 + h L_dag)^n - 1) / (h L_dag).
+     ```
+     Use D2 (`pow_one_add_le_exp`) at `a := h * L_dag` to bound
+     `(1 + h L_dag)^n ≤ exp(n h L_dag)`. Use
+     `div_le_div_of_nonneg_right` (verify name) with denominator
+     `h * L_dag > 0` to lift the bound on the numerator. Combine
+     with the `(C * h^(p+1))` factor:
+     ```
+     (C * h^(p+1)) · (exp(n h L_dag) - 1) / (h L_dag)
+       = C · h^p · (exp(L_dag · (n h)) - 1) / L_dag
+     ```
+     (cancel one `h` from `h^(p+1) / (h L_dag) = h^p / L_dag`,
+     reassociate `n · h · L_dag = L_dag · (n · h)`). Close by
+     `field_simp [ne_of_gt hh_pos, ne_of_gt hL_dag_pos]` + `ring`.
+
+**Risk R3**: the `field_simp` step in the positive `L_dag` branch
+will need explicit `ne_zero` hypotheses passed as arguments to
+`field_simp [...]`. Pre-declare them:
+```
+have hh_ne : h ≠ 0 := ne_of_gt hh_pos
+have hL_ne : L_dag ≠ 0 := ne_of_gt hL_dag_pos
+```
+
+**Risk R4**: `div_le_div_of_nonneg_right` may instead be named
+`div_le_div_of_le_left`, `div_le_div_iff_of_pos`, or
+`div_le_div_right`. Verify via `lean_loogle "(_ / _ ≤ _ / _)"`. If
+none matches, work around manually: bound numerator first, then
+multiply by `(1 / (h * L_dag))` (positive) using `mul_le_mul_of_nonneg_right`.
+
+**Risk R5**: the `if-then-else` shape in the conclusion may not
+unify cleanly via `split_ifs`. Use `split_ifs with hL_eq` AFTER
+the case-split (so the branch the conclusion takes matches the
+branch the proof is in). Alternatively, use a `by_cases hL_eq : L_dag = 0`
+at the very top of the proof, and inside each branch substitute
+the corresponding form of the `if-then-else` via `rw [if_pos hL_eq]`
+or `rw [if_neg hL_eq]`.
+
+### §C.3 — `pow_one_add_le_exp` proof
 
 ```lean
-example (h h₀ : ℝ) (hh : 0 < h) (hh_le : h ≤ h₀) (hh₀ : 0 ≤ h₀)
-    {n : ℕ} (traj yex : Fin (n + 1) → ℝ)
-    (h_traj : paddedEuler.IsRKTrajectory (fun y => y) h traj)
-    (δ : Fin n → ℝ) (hδ_nn : ∀ k, 0 ≤ δ k)
-    (h_lte : paddedEuler.HasLocalTruncationErrorBound
-              (fun y => y) h yex δ) :
-    ∃ L_dag : ℝ, 0 ≤ L_dag ∧
-      ‖yex (Fin.last n) - traj (Fin.last n)‖
-        ≤ (1 + h * L_dag) ^ n * ‖yex 0 - traj 0‖
-          + ∑ k : Fin n, (1 + h * L_dag) ^ (n - 1 - k.val) * δ k := by
-  /- Reuse cycle 245's D5 paddedEuler smallness witness with f := id. -/
+private lemma pow_one_add_le_exp (a : ℝ) (n : ℕ) (ha : 0 ≤ a) :
+    (1 + a)^n ≤ Real.exp ((n : ℝ) * a) := by
+  induction n with
+  | zero => simp
+  | succ k ih =>
+    have h1pa_nn : 0 ≤ 1 + a := by linarith
+    have hpow_nn : 0 ≤ (1 + a) ^ k := pow_nonneg h1pa_nn _
+    calc (1 + a) ^ (k + 1)
+        = (1 + a) ^ k * (1 + a) := by ring
+      _ ≤ Real.exp ((k : ℝ) * a) * Real.exp a := by
+          apply mul_le_mul ih (Real.add_one_le_exp a) h1pa_nn
+          exact (Real.exp_pos _).le
+      _ = Real.exp (((k : ℝ) + 1) * a) := by
+          rw [← Real.exp_add]; congr 1; ring
+      _ = Real.exp (((k + 1 : ℕ) : ℝ) * a) := by push_cast; ring_nf
 ```
 
-The witness reuses cycle 245's D5 example shape: `paddedEuler.A = 0`
-⇒ `K = 0` ⇒ `‖K‖ = 0 < 1`, so the M-matrix hypothesis is automatic.
-
-## E. Proof recipe for D3 (accumulation_recurrence)
-
-This is the substantive content. ~80–120 LOC of induction.
-
-### E.1 Extract `L_dag` once at the top
-
-Cycle 245's `lem_319A` (line 279 of Section319.lean) has signature
-
-```
-theorem lem_319A {s} (M) {N} [...] {f} {L} (hL) (hf_lip)
-    {y₀ z₀} {h h₀} (hh) (hh_le) (hh₀) (h_norm) :
-  ∃ L_dag, 0 ≤ L_dag ∧
-    ∀ y₁ z₁, M.IsRKOneStep f y₀ h y₁ → M.IsRKOneStep f z₀ h z₁ →
-              ‖y₁ - z₁‖ ≤ (1 + h * L_dag) * ‖y₀ - z₀‖
-```
-
-Notice `(y₀, z₀)` are **implicit** binders — the existential
-captures `L_dag` and the conclusion is universally quantified in
-`(y₁, z₁)`. But `(y₀, z₀)` themselves are implicit in the outer
-theorem signature, so `L_dag` actually depends on them syntactically
-(though not mathematically). **Workaround**: at the use site, when
-we want to apply `lem_319A` at multiple `(y₀, z₀)` pairs (one per
-step `k`), each application produces a *possibly different* `L_dag`.
-
-**Practical solution**: pass dummy values. Re-derive `L_dag` once at
-the start of `accumulation_recurrence` with `y₀ := (0 : N), z₀ := (0 : N)`
-(or any fixed pair), then notice that the *body* of `lem_319A` only
-uses `(y₀, z₀)` to bind `y₁, z₁` in the contraction conclusion —
-the existential `L_dag` and its non-negativity are constructed
-independently of `(y₀, z₀)`. So the extracted `L_dag` works
-uniformly.
-
-Actually, even simpler: **re-state our own internal `lem_319A`-style
-lemma** with `(y₀, z₀)` *universal* in the conclusion. The existing
-`lem_319A`'s body (cycle 245) does construct `L_dag` from
-`(K, w, b)` only — never touches `(y₀, z₀)` until the final `refine
-⟨L_dag, hL_dag_nn, ?_⟩` and the inner `intro y₁ z₁ hY hZ`. So
-we can either:
-
-* **Option (a)**: extract `L_dag` once with dummy `(y₀ := 0, z₀ := 0)`
-  via `obtain ⟨L_dag, hL_dag_nn, _⟩ := M.lem_319A hL hf_lip hh hh_le hh₀ h_norm`
-  (Lean will infer `y₀, z₀ := default`). Then re-invoke `lem_319A`
-  inside the induction step with the correct `(y₀, z₀)` to get the
-  actual contraction at that step. The two `L_dag`s are *definitionally
-  the same* because the existential's choose is built from
-  `(K, w, b)` only.
-
-* **Option (b)** (cleaner; recommended): introduce a private helper
-  `lem_319A_extract` that produces a *universal* `L_dag`:
-
-  ```lean
-  private theorem lem_319A_extract {s} (M) {N} [...] {f} {L} (hL) (hf_lip)
-      {h h₀} (hh) (hh_le) (hh₀) (h_norm) :
-    ∃ L_dag : ℝ, 0 ≤ L_dag ∧
-      ∀ y₀ z₀ y₁ z₁,
-        M.IsRKOneStep f y₀ h y₁ → M.IsRKOneStep f z₀ h z₁ →
-        ‖y₁ - z₁‖ ≤ (1 + h * L_dag) * ‖y₀ - z₀‖
-  ```
-
-  The proof inlines the cycle 245 body but moves the `intro y₀ z₀`
-  inside the final `refine`. ~5 LOC delta from `lem_319A`'s body —
-  factor by `apply lem_319A` no, doesn't work because of the
-  implicit `{y₀, z₀}` binders. Just copy-paste cycle 245's body
-  with one line moved.
-
-**Recommendation**: go with **Option (a)** first. It's a one-liner
-at the call site. If the definitional `L_dag`-equality between two
-calls turns out to not hold (because Lean's `Classical.choose` is
-opaque), fall back to Option (b) — which is a clean ~50-LOC private
-helper. Worker should attempt Option (a) for 15 minutes; pivot to
-Option (b) if `L_dag` doesn't unify across two `lem_319A` invocations
-inside the proof.
-
-Actually, **simplest path** is Option (b) outright. It's a verbatim
-re-issue of cycle 245's body with the `(y₀, z₀)` quantifier moved
-inside. Worth the ~50 LOC for clarity. **Recommend Option (b)
-directly** — skip the gamble on definitional `L_dag` equality.
-
-### E.2 Induction on `n`
-
-```lean
-induction n with
-| zero =>
-  /- Goal: after `refine ⟨L_dag, hL_dag_nn, ?_⟩`,
-     ‖yex (Fin.last 0) - traj (Fin.last 0)‖
-       ≤ (1 + h L_dag)^0 * ‖yex 0 - traj 0‖
-         + ∑ k : Fin 0, _
-     LHS = ‖yex 0 - traj 0‖ since Fin.last 0 = 0.
-     RHS = 1 * ‖yex 0 - traj 0‖ + 0.
-  -/
-  simp [Fin.last, pow_zero]
-| succ m ih =>
-  /- Inductive step. -/
-  …
-```
-
-#### Base case (`n = 0`)
-
-`Fin.last 0 = 0`, so the LHS is `‖yex 0 - traj 0‖`. The RHS is
-`(1 + h L_dag)^0 * ‖yex 0 - traj 0‖ + ∑_{k : Fin 0} … = ‖yex 0 - traj 0‖ + 0`.
-Closes by `simp [Fin.last, pow_zero, Finset.sum_empty]` or
-explicit `le_refl`.
-
-#### Inductive step (`n = m + 1`)
-
-**Step S1 — restrict the prefix**.
-Define the restricted trajectory `yex' traj' : Fin (m + 1) → N` by
-composing with the embedding `Fin (m + 1) ↪ Fin (m + 2)` (i.e.
-`Fin.castSucc`). The restricted local-truncation-error sequence is
-`δ' : Fin m → ℝ`, `δ' k := δ k.castSucc`.
-
-The restricted `IsRKTrajectory` and `HasLocalTruncationErrorBound`
-hypotheses are direct restrictions of the originals.
-
-**Step S2 — apply `ih`**.
-This gives:
-```
-‖yex' (Fin.last m) - traj' (Fin.last m)‖
-  ≤ (1 + h L_dag)^m * ‖yex' 0 - traj' 0‖
-    + ∑ k : Fin m, (1 + h L_dag)^(m-1-k.val) * δ' k
-```
-
-Unfold: `yex' 0 = yex (Fin.castSucc 0) = yex 0` (similarly for
-`traj`); `yex' (Fin.last m) = yex (Fin.castSucc (Fin.last m)) =
-yex ⟨m, by omega⟩` which has Lean-value `m`. Call this `m_in_Fin
-m_plus_two`. The key identity:
-
-`Fin.castSucc (Fin.last m) = ⟨m, m.lt_succ_self⟩ : Fin (m + 2)`
-
-This is *NOT* the same as `Fin.last (m+1) = ⟨m+1, …⟩`, but it IS
-the predecessor of `Fin.last (m+1)`:
-
-`(Fin.castSucc (Fin.last m)).succ = (Fin.last m).succ = Fin.last (m+1)`
-
-(via `Fin.succ_last` or by direct construction).
-
-**Step S3 — bound the last step via triangle inequality and `lem_319A_extract`**.
-
-Let `M_m := Fin.castSucc (Fin.last m) : Fin (m+2)` (this is the
-index pointing to node `m`). By `M_m.succ = Fin.last (m+1)`, the
-"last step" of the full trajectory takes us from `traj M_m` to
-`traj (Fin.last (m+1))`, witnessed by `h_traj ⟨m, m.lt_succ_self⟩`
-(or `h_traj (Fin.last m)` — verify the right index by
-unfolding `IsRKTrajectory`).
-
-Extract the local-truncation-error step `k := Fin.last m : Fin (m+1)`:
-```
-obtain ⟨y_step, h_step, h_diff⟩ := h_lte (Fin.last m)
-```
-`h_step : M.IsRKOneStep f (yex (Fin.castSucc (Fin.last m))) h y_step`
-`h_diff : ‖yex (Fin.last m).succ - y_step‖ ≤ δ (Fin.last m)`
-
-By `Fin.succ_last m`: `(Fin.last m).succ = Fin.last (m+1)`, so
-`h_diff : ‖yex (Fin.last (m+1)) - y_step‖ ≤ δ (Fin.last m)`.
-
-Apply `lem_319A_extract`'s contraction property to
-`(y₀ := yex M_m, z₀ := traj M_m, y₁ := y_step, z₁ := traj (Fin.last (m+1)))`:
-```
-‖y_step - traj (Fin.last (m+1))‖
-  ≤ (1 + h L_dag) * ‖yex M_m - traj M_m‖
-```
-
-Now triangle inequality:
-```
-‖yex (Fin.last (m+1)) - traj (Fin.last (m+1))‖
-  ≤ ‖yex (Fin.last (m+1)) - y_step‖ + ‖y_step - traj (Fin.last (m+1))‖
-  ≤ δ (Fin.last m) + (1 + h L_dag) * ‖yex M_m - traj M_m‖
-```
-
-**Step S4 — combine with `ih` and rearrange**.
-
-From `ih` at `M_m = Fin.castSucc (Fin.last m)`:
-```
-‖yex M_m - traj M_m‖
-  ≤ (1 + h L_dag)^m * ‖yex 0 - traj 0‖
-    + ∑ k : Fin m, (1 + h L_dag)^(m-1-k.val) * δ k.castSucc
-```
-
-Multiplying by `(1 + h L_dag) ≥ 0`:
-```
-(1 + h L_dag) * ‖yex M_m - traj M_m‖
-  ≤ (1 + h L_dag)^(m+1) * ‖yex 0 - traj 0‖
-    + ∑ k : Fin m, (1 + h L_dag)^(m-k.val) * δ k.castSucc
-```
-
-(using `(1 + h L_dag) * (1 + h L_dag)^(m-1-k.val) = (1 + h L_dag)^(m-k.val)`
-when `k.val ≤ m - 1`, which holds because `k : Fin m` implies
-`k.val < m`. Use `omega` to discharge `m - 1 - k.val + 1 = m - k.val`.)
-
-Adding `δ (Fin.last m)` to both sides:
-```
-‖yex (Fin.last (m+1)) - traj (Fin.last (m+1))‖
-  ≤ δ (Fin.last m)
-    + (1 + h L_dag)^(m+1) * ‖yex 0 - traj 0‖
-    + ∑ k : Fin m, (1 + h L_dag)^(m-k.val) * δ k.castSucc
-```
-
-The RHS of the goal at `n = m + 1`:
-```
-(1 + h L_dag)^(m+1) * ‖yex 0 - traj 0‖
-  + ∑ k : Fin (m+1), (1 + h L_dag)^((m+1)-1-k.val) * δ k
-= (1 + h L_dag)^(m+1) * ‖yex 0 - traj 0‖
-  + ∑ k : Fin (m+1), (1 + h L_dag)^(m-k.val) * δ k
-```
-
-By `Fin.sum_univ_castSucc`:
-```
-∑ k : Fin (m+1), (1 + h L_dag)^(m-k.val) * δ k
-  = ∑ k : Fin m, (1 + h L_dag)^(m-k.castSucc.val) * δ k.castSucc
-    + (1 + h L_dag)^(m-(Fin.last m).val) * δ (Fin.last m)
-```
-
-Since `k.castSucc.val = k.val` (definitionally) and
-`(Fin.last m).val = m`, so `m - (Fin.last m).val = 0`. The last
-term becomes `(1 + h L_dag)^0 * δ (Fin.last m) = δ (Fin.last m)`.
-
-So the RHS reduces to exactly the LHS bound we derived. Close
-with `linarith` or explicit `add_le_add` + rewriting.
-
-### E.3 Tactical hints
-
-* `Fin.sum_univ_castSucc` splits `∑ : Fin (m+1)` into `∑ : Fin m` of
-  the castSucc'd indices plus the `Fin.last m` term. Reference:
-  `Mathlib.Algebra.BigOperators.Fin`.
-* `Fin.succ_last`: `(Fin.last m).succ = Fin.last (m+1)`. Verify
-  with `lean_local_search "Fin.succ_last"` or check
-  `Mathlib.Data.Fin.Basic`. If unavailable by that name, prove
-  inline as `by ext; simp [Fin.val_succ, Fin.val_last]`.
-* `pow_succ` and `pow_zero` for the `(1 + h L_dag)^n` manipulations.
-* `Finset.mul_sum` to pull the outer `(1 + h L_dag)` into the sum.
-* `omega` for the `Nat`-subtraction arithmetic
-  `m - 1 - k.val + 1 = m - k.val` inside the exponent (given
-  `k.val < m`).
-* `linarith` or explicit `nlinarith` for the final algebraic
-  combine step. `nlinarith` may be needed because the bound
-  involves products of non-negative reals; prefer `linarith` after
-  explicit calc steps.
-* For the destructuring of `HasLocalTruncationErrorBound`:
-  `obtain ⟨y_step, h_step, h_diff⟩ := h_lte (Fin.last m)`.
-* For `0 ≤ 1 + h * L_dag`: `have : 0 ≤ 1 + h * L_dag :=
-  add_nonneg zero_le_one (mul_nonneg hh.le hL_dag_nn)` (or
-  `by positivity`).
-
-### E.4 Caveats
-
-* **Index gymnastics**. The `Fin (m+1) → Fin (m+2)` embedding and
-  the `Fin.last`/`Fin.castSucc`/`Fin.succ` interactions are subtle.
-  Write small `have` blocks proving the key index identities
-  (e.g. `(Fin.last m).castSucc = ⟨m, by omega⟩` and
-  `(Fin.last m).succ = Fin.last (m+1)`) explicitly, then `rw`/
-  `simp` with them.
-* **Nat-subtraction inside exponents**. `m - 1 - k.val` is
-  Nat-subtraction; if `k.val ≥ m`, it would saturate at 0. Inside
-  the proof `k : Fin m` guarantees `k.val < m`, so subtraction is
-  well-behaved, but `omega` may need help. Use
-  `Nat.sub_add_cancel` after establishing `k.val + 1 ≤ m`.
-* **Restricting `IsRKTrajectory` and `HasLocalTruncationErrorBound`**.
-  Both are universally quantified over `Fin n`; restricting to
-  `Fin m ⊂ Fin (m+1)` should be a one-line `fun k => …`-style
-  composition. Be careful with the implicit
-  `Fin.castSucc`-coercion of the index argument.
-
-## F. Pre-flight checks (do these first, ~5–10 min)
-
-1. **Verify `lem_319A` extraction works as planned**. Read the
-   signature at `OpenMath/Chapter3/Section319.lean:279`. Confirm
-   that `(y₀, z₀)` are implicit binders. They are
-   (`{y₀ z₀ : N}`), and Lean's `Classical.choose` may not preserve
-   definitional equality across two `lem_319A` invocations with
-   different implicit `y₀, z₀`. **Recommended**: just write the
-   internal helper `lem_319A_extract` (Option (b) above, §E.1) — it's
-   a verbatim port of cycle 245's body with one line moved (~50 LOC).
-   Saves a potential debugging cycle.
-
-2. **`Fin.succ_last` lookup**. Quick `lean_local_search
-   "Fin.succ_last"` or check Mathlib's `Fin.Basic`. Likely
-   available; if not, prove inline.
-
-3. **Open scopes**: `open scoped Matrix Matrix.Norms.Frobenius` is
-   needed inside `section Phase3` because the `h_norm` hypothesis
-   uses the Frobenius scope on a matrix. Mirror cycle 245's
-   `section Phase2` opening (line 438).
-
-## G. Anti-recipes (do NOT do)
-
-1. **Do NOT attempt the closed-form `exp` bound this cycle.** Phase
-   2 is explicitly deferred. Touching `Real.add_one_le_exp` or
-   geometric-sum closed forms would blow the LOC budget.
-
-2. **Do NOT try to compile `OpenMath/Chapter4/Section441.lean`**.
-   That file is the documented GPFS-pathology trigger (~43rd
-   consecutive timeout per `cycle_182_gpfs_slowness.md`). Section
-   319 / 381 / Matrix dependencies compile healthy.
-
-3. **Do NOT introduce a separate "exact one-step image" function**.
-   The textbook's Figure 319(ii) framework can be encoded
-   abstractly through `HasLocalTruncationErrorBound`'s existential
-   `∃ y_step, M.IsRKOneStep … ∧ ‖yex k.succ - y_step‖ ≤ δ k`. This
-   is cleaner than defining a non-computable `oneStepImage` function
-   that would require its own infrastructure.
-
-4. **Do NOT rename `L_dag` in the existing `lem_319A`**. The
-   existential interface is correct; cycle 246 builds on it.
-
-5. **Do NOT add a `(p : ℕ)`-parameter to `accumulation_recurrence`**.
-   The order `p` of the method only matters for Phase 2 (where
-   `δ_k ≤ C h^{p+1}` is invoked). Phase 1's recurrence is
-   order-agnostic.
-
-6. **Do NOT introduce `axiom` or `constant`**. The infrastructure
-   needed (`lem_319A` from cycle 245, `Fin` induction lemmas from
-   Mathlib) is all in place.
-
-7. **Do NOT touch `IsRKOneStep` or `RKTableau`**. They are stable
-   in `Section381.lean` (cycle 202 era).
-
-8. **Do NOT extract `L_dag` from `lem_319A` and rely on
-   definitional unification across two calls.** Write
-   `lem_319A_extract` per §E.1 Option (b). Saves time vs. debugging
-   `Classical.choose`-related goals.
-
-## H. Aristotle batching (optional, low priority this cycle)
-
-The induction is small enough (~80 LOC body) that hand-proving is
-preferred. **If** the inductive-step algebraic combine (Step S4)
-proves fiddly, a single Aristotle job on the standalone
-arithmetic identity
-
-```
-∀ (a c : ℝ) (m : ℕ) (g : Fin (m+1) → ℝ), 0 ≤ a → 0 ≤ c →
-  c^(m+1) * a + ∑ k : Fin (m+1), c^(m - k.val) * g k
-  = c^(m+1) * a + c * ∑ k : Fin m, c^(m - 1 - k.val) * g k.castSucc
-    + g (Fin.last m)
-```
-
-(or equivalent) could be useful as a side helper. But this is
-optional; the recipe is concrete enough to close manually.
-
-Otherwise: no batch this cycle.
-
-## I. Verification checklist (apply at end)
-
-1. `lake env lean OpenMath/Chapter3/Section319.lean` exits 0
-   (timeout 10 min — should be much faster).
-2. `grep -c sorry OpenMath/Chapter3/Section319.lean` returns 0.
-3. `#print axioms
-   OpenMath.Chapter3.Section312.RKTableau.accumulation_recurrence`
-   returns `[propext, Classical.choice, Quot.sound]` only.
-4. `#print axioms` on `IsRKTrajectory` and
-   `HasLocalTruncationErrorBound` (definitions; no axioms beyond
-   the standard trio).
-5. Cycle 244/245 theorems
-   (`stage_diff_recurrence`, `output_diff_recurrence`,
-   `lem_319A_recurrences`, `lem_319A`) and non-vacuity examples
-   (D4 cycle 244, D5 cycle 245) regression-check axiom-clean.
-6. Pre-commit faithfulness check (CLAUDE.md):
-   * `IsRKTrajectory` — encoding of Butcher's `y_k`-sequence; not
-     a textbook-named concept. Document in docstring.
-   * `HasLocalTruncationErrorBound` — Butcher's Figure 319(ii)
-     local truncation error bound. Faithfulness divergence: the
-     textbook defines `δ_k = ‖y(x_k) − ŷ_k‖` as an *equality*; we
-     use an *inequality* `‖…‖ ≤ δ k`. This is the right interface
-     for accumulation (the *bound* on δ is what propagates).
-     Document in docstring.
-   * `accumulation_recurrence` — Butcher's intermediate inequality
-     "`y(xn) − yn ≤ Chp+1 ∑(1+hL')^k`". Our version is more
-     general — it does not pre-specialise `δ_k = C h^{p+1}` and
-     ships the corresponding `∑(1+hL†)^{n-1-k} δ_k` bound.
-     Phase 2 (cycle 247) will specialise.
-   * Faithfulness divergence (smallness): cycle 245's `lem_319A`
-     uses Frobenius-norm smallness `‖(h₀ L) • |A|‖_F < 1` instead
-     of textbook spectral-radius `h₀ L ρ(|A|) < 1`. Inherited.
-     Document in `accumulation_recurrence`'s docstring.
-7. Update `extraction/formalization_data/lean_status.json`:
-   * `thm:319B` row: `unformalized` → `partial` (Phase 1 only).
-   * `lean_file`: `OpenMath/Chapter3/Section319.lean`.
-   * `lean_symbol`:
-     `OpenMath.Chapter3.Section312.RKTableau.accumulation_recurrence`.
-   * `cycle`: 246.
-   * `notes`: Phase 1 vs. Phase 2 split, deferral of geometric-sum
-     bound, inherited Frobenius-smallness divergence.
-8. Update `plan.md`: `thm:319B` row `[ ]` → `[~]` with cycle 246
-   closure note.
-
-## J. Task results template
-
-Write `.prover-state/task_results/cycle_246.md` documenting:
-* **Worked on**: thm:319B Phase 1 (accumulation recurrence).
-* **Approach**: sorry-first scaffold of `IsRKTrajectory`,
-  `HasLocalTruncationErrorBound`, `accumulation_recurrence`;
-  closure by induction on `n` consuming `lem_319A_extract`.
-* **Result**: SUCCESS (axiom-clean) / FAILED (with explanation).
-* **Faithfulness check**: per §I.6 above.
-* **Discoveries**: any `Fin`/`Nat`-subtraction gotchas, any new
-  Mathlib lemmas located.
-* **Suggested next**: Phase 2 (cycle 247) — geometric-sum closed
-  form yielding the headline `(exp(L^†(x−x₀)) − 1)/L^† · C h^p`
-  bound, case-split on `L^† > 0` vs `L^† = 0`.
-
-## K. Backup pivots (only if D3 stalls past 90 min)
-
-If the induction proves harder than expected:
-
-1. **Backup B1 — ship D1, D2, and a *sorry'd skeleton* of D3**.
-   Sorry count goes 0 → 1, flagged as Phase 1 scaffold. This
-   satisfies CLAUDE.md "minimum: decompose a sorry or write an
-   issue" — D1+D2 are real progress and the D3 sorry is one
-   focused step from closure. **Do NOT** ship D3 sorry'd without
-   the D1/D2 infrastructure also landed.
-
-2. **Backup B2 — pivot to `lem:310B`** (Elementary Differential
-   Weight Formula, §310). Pure tree combinatorics consuming cycle
-   232+ `elementaryWeight` infrastructure. Single-cycle scope,
-   well-isolated from §319. Use only if `accumulation_recurrence`
-   induction proves structurally infeasible.
-
-3. **Backup B3 — `thm:443A`** (Order arrows for LMM, §441). NOT a
-   viable backup unless GPFS health recovers. Skip if
-   `Section441.lean` compile still times out.
-
-Recommended: prefer B1 over B2 to preserve §319 momentum.
-
-## L. Concrete cycle plan (step-by-step)
-
-1. (5 min) Read `lem_319A` signature at line 279; confirm extraction
-   strategy (Option (b) recommended).
-2. (5 min) Open `section Phase3` block after Phase2's `end Phase2`
-   (currently line 409) inside
-   `namespace OpenMath.Chapter3.Section312.RKTableau`. Open scopes:
-   `open scoped Matrix Matrix.Norms.Frobenius`.
-3. (15 min) Write D1 (`IsRKTrajectory`) and D2
-   (`HasLocalTruncationErrorBound`) definitions with docstrings.
-4. (15 min) Write the internal helper `lem_319A_extract` (§E.1
-   Option (b)) by porting cycle 245's body with the `(y₀, z₀)`
-   quantifier moved inside the conclusion. ~50 LOC.
-5. (10 min) Write D3 sorry-first scaffold: theorem statement +
-   `sorry` body, verify it elaborates and the goal type displays as
-   expected. Add `obtain ⟨L_dag, hL_dag_nn, h_contract⟩ :=
-   M.lem_319A_extract hL hf_lip hh hh_le hh₀ h_norm` + `refine
-   ⟨L_dag, hL_dag_nn, ?_⟩` upfront.
-6. (45–60 min) Close D3 induction. Base case is one-liner. Inductive
-   step is the meat — 60–80 LOC of `Fin.sum_univ_castSucc` +
-   `Finset.mul_sum` + `pow_succ` + `omega` + `linarith`.
-7. (10 min) Write D4 paddedEuler witness using the cycle 245 `f := id`
-   pattern.
-8. (10 min) Verification: compile, axiom-check, `grep -c sorry`,
-   tautology scanner.
-9. (10 min) Faithfulness check (§I.6) + status updates (§I.7, §I.8).
-10. (10 min) Task results write-up (§J).
-11. (5 min) Commit + push.
-
-Total: ~3 hours of focused work. Within cycle budget.
-
-## M. Cross-references
-
-* `OpenMath/Chapter3/Section319.lean` — file being extended; cycles
-  244 (Phase 1 of lem_319A) and 245 (Phase 2 of lem_319A) shipped
-  there.
-* `extraction/formalization_data/entities/thm_319B.json` — textbook
-  statement.
-* `extraction/formalization_data/entities/lem_319A.json` —
-  prerequisite (axiom-clean per cycle 245).
-* `extraction/raw_text/ch03.txt` — §319 paragraphs (search "Figure
-  319" or "319B") for the local truncation error definition context.
-* `Mathlib.Algebra.BigOperators.Fin` —
-  `Fin.sum_univ_castSucc`/`Fin.sum_univ_succ` for the inductive
-  step's sum manipulation.
-* `Mathlib.Data.Fin.Basic` — `Fin.succ_last`, `Fin.val_last`,
-  `Fin.castSucc_lt_last`, etc.
-* Cycle 245 task results (`task_results/cycle_245.md`) — recipe
-  template and tactical hints for `lem_319A` Phase 2; the §319 work
-  pattern is now well-established.
-
-## N. Memory / lesson-of-the-cycle to record
-
-After completion, add to `attempts.md` under cycle 246:
-* The Option (b) `lem_319A_extract` pattern (factor out an
-  existential-extractor with universal `(y₀, z₀)`) is worth
-  remembering for future "use this contraction at many step bases"
-  patterns.
-* Any `Fin.last`/`Fin.castSucc`/`Fin.succ` interaction lessons.
-* Confirm or refute the `Classical.choose` definitional-equality
-  concern from §E.1 (would inform future cycles).
+**Risk R6**: `Real.add_one_le_exp` is the standard Mathlib name (no
+deprecation as of recent Mathlib versions). Verify via
+`lean_local_search "Real.add_one_le_exp"` — backup names are
+`Real.add_one_le_exp_of_nonneg` (less likely) or building from
+`Real.one_plus_le_exp` (older).
+
+---
+
+## §D. Mathlib hooks to verify before writing the proof
+
+Confirm with `lean_local_search` or `lean_loogle` EARLY in the cycle
+(within the first 15 minutes):
+
+| Goal | Candidate lemma | Backup |
+|---|---|---|
+| `1 + x ≤ exp x` | `Real.add_one_le_exp` | Direct from `Real.one_le_exp` + `Real.exp_le_exp` |
+| Geometric sum closed form | `geom_sum_eq` (in `Mathlib.Algebra.GeomSum`) | Direct induction (~12 LOC) |
+| Reindex `Fin n` sum | `Finset.sum_range_reflect` + `Fin.sum_univ_eq_sum_range` | Manual `Finset.sum_bij` |
+| Pull constant out of sum | `Finset.mul_sum`, `Finset.sum_mul` | Direct `Finset.sum_congr` |
+| `(1 + a)^n ≤ exp(n a)` | Build via D2 (this file §C.3) | (no fallback needed) |
+| `(a/c ≤ b/c)` from `a ≤ b` and `0 < c` | `div_le_div_of_nonneg_right` / `div_le_div_right` | Manual `mul_le_mul_of_nonneg_right` plumbing |
+| `exp(a + b) = exp a * exp b` | `Real.exp_add` | (no realistic backup needed) |
+| `field_simp` cleanup | Mathlib's `field_simp` tactic | Manual `mul_div_assoc` chain |
+| `if-then-else` rewrites | `if_pos`, `if_neg`, `split_ifs` | Manual `by_cases` |
+
+Do all the searches BEFORE writing the proof body so you have the
+right names in hand.
+
+---
+
+## §E. What NOT to do
+
+### NOT-1. Don't redo Phase 1
+
+Cycle 246's `accumulation_recurrence`, `IsRKTrajectory`,
+`HasLocalTruncationErrorBound`, and `lem_319A_extract` are correct and
+axiom-clean. Do not modify them. The cycle 246 task results document
+the design choices.
+
+### NOT-2. Don't introduce axioms or raise `maxHeartbeats`
+
+If a `ring` or `field_simp` step times out, decompose the algebra into
+named sub-lemmas (`have h₁ : ... := by ...; have h₂ : ... := by ...;`
+then combine). The Phase 2 algebra is mechanical — there should be no
+need for tactics that approach 200000 heartbeats.
+
+### NOT-3. Don't attempt §441 Phase C.2
+
+§441 has 43 consecutive GPFS timeouts spanning cycles 182–239. The
+pathology is cluster-side; the worker cannot fix it. Cycle 247
+deliverable is §319, full stop.
+
+### NOT-4. Don't try to make `thm_319B` unconditional in `L_dag`
+
+The `if L_dag = 0 then ... else ...` shape is faithful to Butcher's
+two-case textbook statement. Don't attempt to unify the two cases
+into a single closed-form expression (e.g. via `Real.expm1` or
+similar) — that would diverge from the textbook and add risk.
+
+### NOT-5. Don't try to remove the existential `L_dag`
+
+Cycle 245's `lem_319A` and cycle 246's `accumulation_recurrence` both
+expose `L_dag` existentially because the precise formula
+(`L * ∑ᵢ |bᵢ| * ((I - h₀ L |A|)⁻¹ 𝟙)ᵢ`) is unwieldy for downstream
+consumers. Phase 2 inherits the existential shape — keep it.
+
+### NOT-6. Don't extract `L_dag` from `accumulation_recurrence` and ALSO re-extract a separate one from `lem_319A`
+
+Apply `accumulation_recurrence` ONCE at the start of the proof, get the
+existential `L_dag`, use the SAME `L_dag` throughout Phase 2's
+case-split. Do not re-extract from `lem_319A` or `lem_319A_extract` —
+those would produce a different (definitionally equal but not
+definitionally identified) `L_dag`, forcing equality plumbing.
+
+### NOT-7. Don't worry about the tautology scanner
+
+Cycle 246's score = −1 was a documented false-positive pattern. Per
+`tautology_scanner_false_positives.md`, the scanner over-fires on:
+- hypothesis declarations in theorem signatures (lines like
+  `(hY_out : ...)` that match `:= h_<word>` regex),
+- patterns like `with hw_def` where `hw_def` starts with `h`.
+
+The actual sorry count is 0. **Do not modify code to "fix" scanner
+hits.** The remediation is a one-time scanner patch in
+`scripts/autonomous_loop.py`, which is loop-maintainer territory.
+
+If new tautology-scanner hits appear in Phase 2 code, leave them alone
+and document the pattern in the cycle 247 task results.
+
+---
+
+## §F. Faithfulness check (mandatory before commit)
+
+For the new public theorem `thm_319B`:
+
+- [ ] **Entity ID and textbook statement**: quote from
+      `extraction/formalization_data/entities/thm_319B.json` and
+      `extraction/raw_text/ch03.txt` (§319 p. 190).
+- [ ] **Lean statement captures**: same content / weaker / stronger /
+      different. Expect "captures with caveats":
+  - Frobenius vs spectral-radius smallness (inherited from cycle 245).
+  - Iterated-step trajectory `IsRKTrajectory` vs textbook's prose
+    "values produced by `n` steps of the method" (cycle 246 D1).
+  - `HasLocalTruncationErrorBound` inequality vs textbook's equality
+    `δ_k = ‖y(x_k) − ŷ_k‖` (cycle 246 D2).
+  - Existential `L_dag` vs textbook's symbol `L^†` with
+    explicit closed-form `L * ∑ᵢ |bᵢ| * ((I - h₀ L |A|)⁻¹ 𝟙)ᵢ`
+    (inherited from cycle 245).
+- [ ] **Tautology check**: conclusion does not appear verbatim as a
+      hypothesis. ✓ (expected — the conclusion is a closed-form
+      bound; no hypothesis has that shape).
+- [ ] **Identity check**: proof is non-trivial (≥ 80 LOC body
+      expected; uses `accumulation_recurrence` + geometric sum +
+      case split). ✓
+- [ ] **Hypothesis strength check**: no extra hypotheses beyond what
+      cycle 245's `lem_319A` requires plus the new
+      `HasLocalTruncationErrorBound` (Phase 2's textbook
+      precondition) plus `0 < L` (needed for `L_dag` case analysis
+      and `lem_319A`'s Lipschitz signature). ✓
+
+After running the checklist:
+1. Update `lean_status.json` row for `thm:319B`: `partial` → `formalized`,
+   bump cycle reference to 247.
+2. Update `plan.md` row: `[~]` → `[x]`.
+3. Record progress in the cycle 247 task results: 71 entities done → 72.
+
+---
+
+## §G. Aristotle delegation policy
+
+**Not recommended for cycle 247.** The Phase 2 proof has:
+- A clear textbook recipe (4 steps in cycle 246 task results).
+- Decomposable algebra (case-split + geometric sum + power-exponential
+  bound).
+- High Aristotle dependency-management overhead (would need to ship
+  all of `accumulation_recurrence`, `IsRKTrajectory`,
+  `HasLocalTruncationErrorBound`, `lem_319A_extract` as in-context
+  templates plus the `Matrix.EntrywiseNonneg` / `M-matrix` machinery
+  from `OpenMath/Matrix/MMatrix.lean`).
+
+Manual closure with the §C plan should succeed in ~250 LOC body across
+2 helpers + 1 main theorem + 1 example. If the worker stalls past
+60 minutes on any single sub-step, decompose the stuck step into a
+narrower named helper and continue. Do NOT submit to Aristotle as a
+first move.
+
+If the cycle ends without Phase 2 closure despite genuine progress
+(e.g. helpers landed but main theorem stuck), package as a focused
+single-sorry-style scaffold and write up the recovery plan in cycle
+247 task results.
+
+---
+
+## §H. LOC budget and abort threshold
+
+- D1 helpers (private, geometric sum × 2 variants + pow-exp): ~50 LOC
+  + ~40 LOC = ~90 LOC total.
+- D3 main theorem `thm_319B`: ~120 LOC body + ~30 LOC docstring.
+- D4 non-vacuity example: ~30 LOC.
+- Total: ~270 LOC.
+
+**Abort threshold**: if at the 75-minute mark, no helper has compiled
+clean, pause and re-evaluate. The most likely cause is a Mathlib hook
+mismatch (Risk R1/R2/R6); switch to direct induction proofs of the
+geometric and exponential lemmas rather than searching Mathlib further.
+
+**Stretch**: if Phase 2 closes ahead of schedule (e.g. 90 min in with
+all 4 deliverables landed), consider:
+- Cleaner non-vacuity: a non-trivial `paddedEuler` example with
+  `f` non-constant and a real exact solution (e.g. `yex` linear),
+  exercising the case-split branch `L_dag > 0`.
+- Bookkeeping cleanup: factor the cycle 244/245/246 helpers into
+  documentation sub-sections within `Section319.lean` for
+  navigability.
+
+Do NOT pursue stretches if Phase 2 isn't already shipped.
+
+---
+
+## §I. Heartbeat / progress reporting
+
+If Phase 2 lands clean:
+- Commit message: `Cycle 247 — §319 thm:319B Phase 2 (geometric sum closed form) SHIPPED.`
+- Cycle 247 task results should record: which Mathlib hooks were used
+  vs alternatives, the case-split structure, and any cycle-248
+  follow-up suggestions (likely "§319 fully closed; pivot to another
+  Ch.3 §380 entity or open Ch.5 deliverable").
+
+If Phase 2 stalls:
+- Commit any landed helpers as a partial step.
+- Write cycle 247 task results documenting the stall location and the
+  specific Lean error / proof-state snapshot.
+- Update an issue file at `.prover-state/issues/thm_319B_phase_2_*.md`
+  with the stall's narrow cause for cycle 248 to address.
+
+---
+
+## §J. Summary checklist for cycle 247 worker
+
+- [ ] §A: verify git state and Phase 1 ship at start.
+- [ ] §D: verify Mathlib hooks within the first 15 minutes.
+- [ ] §B: ship Phase 2 deliverables D1–D4.
+- [ ] §C: follow the geometric-sum + pow-exp + case-split recipe.
+- [ ] §E: avoid the 7 NOT-todos.
+- [ ] §F: run the faithfulness checklist before commit.
+- [ ] §H: respect the 75-min abort threshold; decompose if needed.
+- [ ] Commit with the §I-format message.
+- [ ] Update `lean_status.json`, `plan.md`, write cycle 247 task results.
+
+After Phase 2 ships, `thm:319B` is fully formalized and the §319
+Butcher chapter (lem:319A + thm:319B) is **complete** — a substantive
+chapter milestone.

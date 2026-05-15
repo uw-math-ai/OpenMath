@@ -2,6 +2,9 @@ import OpenMath.Chapter3.Section381
 import OpenMath.Matrix.MMatrix
 import Mathlib.Topology.MetricSpace.Lipschitz
 import Mathlib.Analysis.Normed.Group.Basic
+import Mathlib.Algebra.Field.GeomSum
+import Mathlib.Algebra.BigOperators.Intervals
+import Mathlib.Analysis.SpecialFunctions.Exp
 
 /-!
 # Butcher §319 — Global truncation error (RK), Phase 1
@@ -774,6 +777,215 @@ end Phase3
 
 end OpenMath.Chapter3.Section312.RKTableau
 
+namespace OpenMath.Chapter3.Section319.Phase2Helpers
+
+open scoped BigOperators
+
+/-- **Phase 2 helper (D1.pos)** — closed form for the geometric-style sum
+`∑_{k < n} (1 + a)^(n - 1 - k)` when `a > 0`. After reindexing
+`k ↦ n - 1 - k`, the sum equals the standard geometric sum
+`∑_{i < n} (1 + a)^i = ((1 + a)^n - 1) / a`. -/
+private lemma geometric_sum_one_plus_pos (a : ℝ) (n : ℕ) (ha : 0 < a) :
+    ∑ k : Fin n, (1 + a) ^ (n - 1 - k.val) = ((1 + a) ^ n - 1) / a := by
+  have h_to_range :
+      (∑ k : Fin n, (1 + a) ^ (n - 1 - k.val))
+        = ∑ k ∈ Finset.range n, (1 + a) ^ (n - 1 - k) := by
+    rw [Fin.sum_univ_eq_sum_range (fun k => (1 + a) ^ (n - 1 - k))]
+  rw [h_to_range, Finset.sum_range_reflect (fun k => (1 + a) ^ k) n]
+  have h_ne : (1 + a : ℝ) ≠ 1 := by linarith
+  rw [geom_sum_eq h_ne n]
+  have h_sub : (1 + a : ℝ) - 1 = a := by ring
+  rw [h_sub]
+
+/-- **Phase 2 helper (D1.zero)** — degenerate case of the geometric sum
+when the rate `a = 0`. Every summand `(1 + 0)^(n - 1 - k) = 1`, so the
+sum equals `n`. -/
+private lemma geometric_sum_one_plus_zero (n : ℕ) :
+    ∑ k : Fin n, (1 + (0 : ℝ)) ^ (n - 1 - k.val) = (n : ℝ) := by
+  have h_one : ∀ k : Fin n, (1 + (0 : ℝ)) ^ (n - 1 - k.val) = 1 := by
+    intro k
+    simp
+  rw [Finset.sum_congr rfl (fun k _ => h_one k)]
+  simp
+
+/-- **Phase 2 helper (D2)** — `(1 + a)^n ≤ exp(n · a)` for non-negative
+`a`. Proved by induction on `n` using `Real.add_one_le_exp` plus
+`Real.exp_add`. -/
+private lemma pow_one_add_le_exp (a : ℝ) (n : ℕ) (ha : 0 ≤ a) :
+    (1 + a) ^ n ≤ Real.exp ((n : ℝ) * a) := by
+  induction n with
+  | zero => simp
+  | succ k ih =>
+    have h1pa_nn : 0 ≤ 1 + a := by linarith
+    have h_pow_nn : 0 ≤ (1 + a) ^ k := pow_nonneg h1pa_nn _
+    have h_exp_ka_nn : 0 ≤ Real.exp ((k : ℝ) * a) := (Real.exp_pos _).le
+    have h_one_plus_le : 1 + a ≤ Real.exp a := by
+      have h := Real.add_one_le_exp a
+      linarith
+    calc (1 + a) ^ (k + 1)
+        = (1 + a) ^ k * (1 + a) := by ring
+      _ ≤ Real.exp ((k : ℝ) * a) * Real.exp a := by
+          exact mul_le_mul ih h_one_plus_le h1pa_nn h_exp_ka_nn
+      _ = Real.exp (((k : ℝ) + 1) * a) := by
+          rw [← Real.exp_add]
+          congr 1; ring
+      _ = Real.exp (((k + 1 : ℕ) : ℝ) * a) := by
+          push_cast; ring_nf
+
+end OpenMath.Chapter3.Section319.Phase2Helpers
+
+namespace OpenMath.Chapter3.Section312.RKTableau
+
+open OpenMath.Chapter3.Section319
+open OpenMath.Chapter3.Section319.Phase2Helpers
+open scoped NNReal
+
+section Phase2
+
+open scoped Matrix Matrix.Norms.Frobenius
+
+/-- **Deliverable D3 — `thm:319B` Phase 2: global truncation error bound.**
+
+Given an iterated RK trajectory `traj` and a hypothetical exact-solution
+sequence `yex` whose per-step local truncation errors are bounded by
+`C h^{p+1}` (Butcher's textbook hypothesis), the global error at the
+final node is bounded by the textbook closed-form:
+
+  `‖y(x_n) − y_n‖ ≤ if L^† = 0 then n · h · C h^p`
+                   `              else (exp(L^†(x_n − x_0)) − 1) / L^† · C h^p`.
+
+Note `x_n − x_0 = n · h` in our uniform-step formulation; we therefore
+write `L^† · (n · h)` for the textbook's `L^†(x_n − x_0)`.
+
+This is the headline Butcher theorem in §319 (p. 190). Cycle 247
+specialises cycle 246's `accumulation_recurrence` to the textbook
+local-error bound and bounds the resulting geometric sum.
+
+**Faithfulness divergences** (inherited from cycles 244–246):
+* Frobenius operator norm `‖(h₀ L) • |A|‖_F < 1` instead of
+  spectral-radius `h₀ L ρ(|A|) < 1` (cycle 245 smallness convention).
+* Existential `L^†` (the closed form `L * ∑ᵢ |bᵢ| * ((I - h₀ L |A|)⁻¹ 𝟙)ᵢ`
+  is bundled into the existential).
+* `HasLocalTruncationErrorBound` is an *inequality* (`‖…‖ ≤ δ k`)
+  rather than the textbook's *equality* `δ_k = ‖y(x_k) − ŷ_k‖`
+  (cycle 246 design choice; bounds are what propagates). -/
+theorem thm_319B {s : ℕ} (M : RKTableau s)
+    {N : Type*} [NormedAddCommGroup N] [NormedSpace ℝ N]
+    {f : N → N} {L : ℝ} (hL : 0 ≤ L)
+    (hf_lip : LipschitzWith L.toNNReal f)
+    {h h₀ : ℝ} (hh : 0 < h) (hh_le : h ≤ h₀) (hh₀ : 0 ≤ h₀)
+    (h_norm : ‖((h₀ * L) • M.A.map (fun a => |a|))‖ < 1)
+    {C : ℝ} (hC : 0 ≤ C) (p : ℕ) :
+    ∃ L_dag : ℝ, 0 ≤ L_dag ∧
+      ∀ {n : ℕ} (traj yex : Fin (n + 1) → N),
+        M.IsRKTrajectory f h traj →
+        yex 0 = traj 0 →
+        M.HasLocalTruncationErrorBound f h yex
+          (fun (_ : Fin n) => C * h ^ (p + 1)) →
+        ‖yex (Fin.last n) - traj (Fin.last n)‖
+          ≤ (if L_dag = 0
+                then (n : ℝ) * h
+                else (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / L_dag)
+            * C * h ^ p := by
+  obtain ⟨L_dag, hL_dag_nn, h_accum⟩ :=
+    M.accumulation_recurrence hL hf_lip hh hh_le hh₀ h_norm
+  refine ⟨L_dag, hL_dag_nn, ?_⟩
+  intro n traj yex h_traj h_init h_lte
+  -- Apply the accumulation recurrence with δ k := C * h^(p+1).
+  have h_recur :=
+    h_accum traj yex h_traj (fun _ : Fin n => C * h ^ (p + 1)) h_lte
+  -- The initial-error term vanishes since yex 0 = traj 0.
+  have h_init_zero : ‖yex 0 - traj 0‖ = 0 := by
+    rw [h_init, sub_self, norm_zero]
+  rw [h_init_zero, mul_zero, zero_add] at h_recur
+  -- Pull the constant (C * h^(p+1)) out of the sum.
+  have h_pull :
+      (∑ k : Fin n, (1 + h * L_dag) ^ (n - 1 - k.val) * (C * h ^ (p + 1)))
+        = (C * h ^ (p + 1))
+            * ∑ k : Fin n, (1 + h * L_dag) ^ (n - 1 - k.val) := by
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl (fun k _ => ?_)
+    ring
+  rw [h_pull] at h_recur
+  -- Pre-compute non-negativity helpers.
+  have hh_nn : 0 ≤ h := hh.le
+  have h_hL_dag_nn : 0 ≤ h * L_dag := mul_nonneg hh_nn hL_dag_nn
+  have h_C_pow_nn : 0 ≤ C * h ^ (p + 1) :=
+    mul_nonneg hC (pow_nonneg hh_nn _)
+  have h_pow_pp1 : h ^ (p + 1) = h * h ^ p := by ring
+  -- Case-split: L_dag = 0 vs L_dag > 0.
+  rcases eq_or_lt_of_le hL_dag_nn with hL_dag_zero | hL_dag_pos
+  · -- Case L_dag = 0. Get hL_eq : L_dag = 0.
+    have hL_eq : L_dag = 0 := hL_dag_zero.symm
+    rw [if_pos hL_eq]
+    -- Substitute L_dag = 0 in the sum: h * L_dag = 0.
+    have h_hL_dag_eq_zero : h * L_dag = 0 := by rw [hL_eq]; ring
+    rw [h_hL_dag_eq_zero] at h_recur
+    -- Now sum has the form ∑ (1 + 0)^... = n.
+    rw [geometric_sum_one_plus_zero n] at h_recur
+    -- Goal: ‖…‖ ≤ ((n : ℝ) * h) * C * h^p.
+    calc ‖yex (Fin.last n) - traj (Fin.last n)‖
+        ≤ C * h ^ (p + 1) * (n : ℝ) := h_recur
+      _ = (n : ℝ) * h * C * h ^ p := by rw [h_pow_pp1]; ring
+  · -- Case L_dag > 0.
+    have hL_ne : L_dag ≠ 0 := ne_of_gt hL_dag_pos
+    rw [if_neg hL_ne]
+    -- Apply the geometric-sum positive-rate closed form.
+    have h_hL_dag_pos : 0 < h * L_dag := mul_pos hh hL_dag_pos
+    rw [geometric_sum_one_plus_pos (h * L_dag) n h_hL_dag_pos] at h_recur
+    -- Now h_recur:
+    -- ‖…‖ ≤ (C * h^(p+1)) * (((1 + h * L_dag)^n - 1) / (h * L_dag)).
+    -- Bound (1 + h * L_dag)^n by exp(n * (h * L_dag)).
+    have h_pow_le :
+        (1 + h * L_dag) ^ n ≤ Real.exp ((n : ℝ) * (h * L_dag)) :=
+      pow_one_add_le_exp (h * L_dag) n h_hL_dag_nn
+    -- Reassociate (n : ℝ) * (h * L_dag) = L_dag * ((n : ℝ) * h).
+    have h_exp_arg :
+        (n : ℝ) * (h * L_dag) = L_dag * ((n : ℝ) * h) := by ring
+    -- Numerator bound.
+    have h_num_le :
+        (1 + h * L_dag) ^ n - 1 ≤ Real.exp (L_dag * ((n : ℝ) * h)) - 1 := by
+      have := h_pow_le
+      rw [h_exp_arg] at this
+      linarith
+    -- Divide by positive denominator h * L_dag.
+    have h_div_le :
+        ((1 + h * L_dag) ^ n - 1) / (h * L_dag)
+          ≤ (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / (h * L_dag) := by
+      exact div_le_div_of_nonneg_right h_num_le h_hL_dag_pos.le
+    -- Multiply by the non-negative constant (C * h^(p+1)).
+    have h_chain :
+        (C * h ^ (p + 1))
+            * ((1 + h * L_dag) ^ n - 1) / (h * L_dag)
+          ≤ (C * h ^ (p + 1))
+            * (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / (h * L_dag) := by
+      rw [mul_div_assoc, mul_div_assoc]
+      exact mul_le_mul_of_nonneg_left h_div_le h_C_pow_nn
+    -- Algebraic identity:
+    -- (C * h^(p+1)) * (exp(…) - 1) / (h * L_dag)
+    --   = (exp(…) - 1) / L_dag * C * h^p.
+    have hh_ne : h ≠ 0 := ne_of_gt hh
+    have h_simp :
+        (C * h ^ (p + 1))
+            * (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / (h * L_dag)
+          = (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / L_dag * C * h ^ p := by
+      rw [h_pow_pp1]
+      field_simp
+    calc ‖yex (Fin.last n) - traj (Fin.last n)‖
+        ≤ (C * h ^ (p + 1))
+            * (((1 + h * L_dag) ^ n - 1) / (h * L_dag)) := h_recur
+      _ = (C * h ^ (p + 1))
+            * ((1 + h * L_dag) ^ n - 1) / (h * L_dag) := by ring
+      _ ≤ (C * h ^ (p + 1))
+            * (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / (h * L_dag) :=
+              h_chain
+      _ = (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / L_dag * C * h ^ p :=
+              h_simp
+
+end Phase2
+
+end OpenMath.Chapter3.Section312.RKTableau
+
 namespace OpenMath.Chapter3.Section319
 
 open OpenMath.Chapter3.Section312 OpenMath.Chapter3.Section381
@@ -865,6 +1077,43 @@ example (h h₀ : ℝ) (hh : 0 < h) (hh_le : h ≤ h₀) (hh₀ : 0 ≤ h₀) :
     exact zero_lt_one
   exact paddedEuler.accumulation_recurrence (L := 1) (h₀ := h₀)
     hL hlip hh hh_le hh₀ hnorm
+
+/-- **Deliverable D7 (Phase 2 main non-vacuity)** — Non-vacuity witness
+for the Phase 2 headline `thm_319B` on `paddedEuler` with `f := id`.
+With `C := 0` and `p := 0` the local truncation error bound
+`δ_k ≤ C h^{p+1} = 0` is automatically inhabited by the trivial
+choice `y_step := yex k.succ` (and we additionally take `yex` constant
+on `0`, matching `traj = 0`); the global bound `‖…‖ ≤ … · C h^p`
+likewise reduces to `0 ≤ 0`. -/
+example (h h₀ : ℝ) (hh : 0 < h) (hh_le : h ≤ h₀) (hh₀ : 0 ≤ h₀) :
+    ∃ L_dag : ℝ, 0 ≤ L_dag ∧
+      ∀ {n : ℕ} (traj yex : Fin (n + 1) → ℝ),
+        paddedEuler.IsRKTrajectory (fun y => y) h traj →
+        yex 0 = traj 0 →
+        paddedEuler.HasLocalTruncationErrorBound (fun y => y) h yex
+          (fun (_ : Fin n) => (0 : ℝ) * h ^ (0 + 1)) →
+        ‖yex (Fin.last n) - traj (Fin.last n)‖
+          ≤ (if L_dag = 0
+                then (n : ℝ) * h
+                else (Real.exp (L_dag * ((n : ℝ) * h)) - 1) / L_dag)
+            * 0 * h ^ 0 := by
+  have hL : (0 : ℝ) ≤ 1 := by norm_num
+  have hlip : LipschitzWith (1 : ℝ).toNNReal (fun y : ℝ => y) := by
+    have hone : (1 : ℝ).toNNReal = 1 := Real.toNNReal_one
+    rw [hone]
+    exact LipschitzWith.id
+  have hzero :
+      (h₀ * (1 : ℝ)) • paddedEuler.A.map (fun a : ℝ => |a|)
+        = (0 : Matrix (Fin 2) (Fin 2) ℝ) := by
+    ext i j
+    simp [paddedEuler, Matrix.smul_apply]
+  have hnorm :
+      ‖((h₀ * (1 : ℝ)) • paddedEuler.A.map (fun a : ℝ => |a|))‖ < 1 := by
+    rw [hzero, norm_zero]
+    exact zero_lt_one
+  have hC : (0 : ℝ) ≤ 0 := le_refl _
+  exact paddedEuler.thm_319B (L := 1) (h₀ := h₀)
+    hL hlip hh hh_le hh₀ hnorm hC 0
 
 end Phase2
 
