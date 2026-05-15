@@ -1,270 +1,276 @@
-# Cycle 288 Strategy
+# Cycle 289 strategy
 
-## Context summary
+## Context
 
-- **Repo state**: HEAD `419d4a3` — cycle 287 polled Aristotle (20% IN_PROGRESS,
-  +9pp from cycle 286's 11%), shipped two axiom-clean non-vacuity cross-check
-  theorems anchoring cycle 286's `butcherShiftedLegendre_ten` to (342b)/(342c).
-  Sorry count: **0**.
-- **Current target**: `lem:342A` clause (342f) — general three-term recurrence
-  `(n : ℝ) • P_n^* = C(2n-1) · (2X - 1) · P_{n-1}^* − C(n-1) · P_{n-2}^*` for `n ≥ 2`.
-- **Aristotle project**: `efe4940e-0931-4fb2-8549-7eafab20d7f7` (strengthened
-  resubmission from cycle 285).
-- **Last observed status** (cycle 287 poll, 2026-05-15 18:35 UTC, ~32 min after submission):
-  `IN_PROGRESS / 20%` — up +9pp from cycle 286's 11% observation at 18:19 UTC.
-  Pace ~+9pp / 16 min; linear extrapolation puts completion at ~21:00 UTC, which
-  cycle 288 may catch.
-- **Empirical ladder**: explicit recurrence witnesses shipped for `n ∈ {2,...,10}`
-  (cycles 282–286) plus cycle 287's two cross-check theorems anchoring the
-  `n = 10` form to (342b)/(342c). Sorry count: 0.
-- **§441 GPFS pathology**: 43+ consecutive timeouts since cycle 182.
-  **Do NOT** attempt to compile or modify `OpenMath/Chapter4/Section441.lean`
-  this cycle. See `.prover-state/issues/cycle_182_gpfs_slowness.md`.
+Cycle 288 shipped axiom-clean `butcherShiftedLegendre_eleven` and
+`butcherShiftedLegendre_recurrence_eleven` (the `n = 11` rung of the
+(342f) ladder). The empirical evidence base for the general (342f)
+recurrence now spans `n ∈ {2, 3, 4, 5, 6, 7, 8, 9, 10, 11}`. Aristotle
+project `efe4940e-0931-4fb2-8549-7eafab20d7f7` (general (342f)
+resubmission from cycle 285) was IN_PROGRESS at **20%** for two
+consecutive cycle observations (cycle 287 saw 20% at 18:35 UTC, cycle
+288 saw 20% at 18:51 UTC — flat for ~16 min). This is observation
+**#2 of 3** in the cycle 285 three-stall protocol.
 
-## Priority 0 (mandatory, ~30 seconds): single Aristotle poll
+§342 status (axiom-clean, `partial`): (342a) orthogonality + (342b)
+eval-one + (342c) eval-one-sub + (342d) general norm-square + (342e)
+Rodrigues + (342f) at `n = 2..11` shipped. Open: general (342f)
+recurrence, (342g) `n` distinct real zeros.
 
-Run `mcp__aristotle__get_status` **once** on project
-`efe4940e-0931-4fb2-8549-7eafab20d7f7`. Record `status`, `percent_complete`,
-and `last_updated_at`. **Do NOT re-poll later in the cycle** — CLAUDE.md is
-explicit on single-poll-per-cycle discipline.
+Repo sorry count = 0. Section441.lean still GPFS-blocked (43+
+consecutive timeouts since cycle 182) — do NOT attempt.
 
-Based on the result, branch as follows.
+## Priority 0 (mandatory, ~30s): single-poll Aristotle `efe4940e`
 
-## Priority 1: branch on poll result
+Run `mcp__aristotle__get_status` **once** on
+`efe4940e-0931-4fb2-8549-7eafab20d7f7`. Record `status`,
+`percent_complete`, and `last_updated_at` in the cycle's task results.
+Do NOT re-poll later — single-poll discipline per CLAUDE.md.
 
-### Branch A — `COMPLETE` or `COMPLETE_WITH_ERRORS`
+Compare `percent_complete` against cycle 288's observation (20% at
+18:51 UTC) to decide branching below.
 
-The general (342f) recurrence proof is back. Integrate it as the cycle 288
-headline deliverable.
+## Branching decision tree
 
-1. Download the proof with `mcp__aristotle__download_result project_id=efe4940e-0931-4fb2-8549-7eafab20d7f7`.
-2. Extract the file with `mcp__aristotle__extract_result`.
-3. **Read the proof carefully** before integrating. Check:
-   - Does it use any helper lemmas not already in `Section342.lean` /
-     `Section342NormSqHelpers.lean`? If so, prepare to land them in a new file
-     `OpenMath/Chapter3/Section342RecurrenceHelpers.lean` (mirror cycle 281's
-     `Section342NormSqHelpers.lean` pattern — namespace
-     `OpenMath.Chapter3.Section342Helpers`, axiom-clean, ~150–250 LOC).
-   - Are there any Aristotle-substituted stubs / axioms for cycles 271–281
-     results? Replace them with citations to the genuine theorems already
-     in our codebase (`butcherShiftedLegendre_eval_one`, `_eval_one_sub`,
-     `_eval_zero`, `_natDegree`, `_rodrigues`, `_orthogonal`, `_norm_sq`,
-     and the explicit `_zero` through `_ten` forms).
-   - Does it apply at the right type signature? The target is morally:
-     ```
-     theorem butcherShiftedLegendre_recurrence {n : ℕ} (hn : 2 ≤ n) :
-         (n : ℝ) • butcherShiftedLegendre n
-           = Polynomial.C ((2 * n : ℝ) - 1) * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
-               * butcherShiftedLegendre (n - 1)
-             - Polynomial.C ((n : ℝ) - 1) * butcherShiftedLegendre (n - 2)
-     ```
-     Verify against Aristotle's exact statement; adjust if Aristotle used
-     different parenthesization or expressed the `(n-1) / (n-2)` indices as
-     `Nat.pred` etc.
-4. **Ship in `OpenMath/Chapter3/Section342.lean`** after the cycle 286 `_ten`
-   rung. Add helper imports as needed.
-5. **Verify axiom-clean**: run `mcp__lean-lsp__lean_verify` on the new
-   `butcherShiftedLegendre_recurrence` theorem. Required:
-   `[propext, Classical.choice, Quot.sound]` only.
-6. **Cross-check via specialization**: add 1–2 `example` blocks confirming
-   the general theorem specializes to cycles 282–286's ladder rungs. If
-   `rfl` bridging fails (likely due to `(n : ℝ) - 1` not reducing
-   definitionally for fixed `n`), accept the redundancy — the ladder rungs
-   stand on their own as named theorems.
-7. **Do NOT delete** cycles 282–286's `_recurrence_two..._ten` ladder rung
-   theorems. They are valuable as cross-validation witnesses.
-8. Update `extraction/formalization_data/lean_status.json`:
-   `lem:342A` cycle bumped to 288, `lean_symbol` switched to
-   `butcherShiftedLegendre_recurrence`. Status stays `partial` until (342g)
-   `n` distinct real zeros also lands.
-9. Update `plan.md` `lem:342A` row with the cycle 288 closure note.
-10. Run `lake env lean OpenMath/Chapter3.lean` to confirm no aggregator
-    regression.
+### Branch A: `efe4940e` COMPLETE or COMPLETE_WITH_ERRORS
 
-### Branch B — `IN_PROGRESS` with `percent_complete ≥ 30%`
+This is the headline outcome. Skip all other branches; ship the
+integration:
 
-Aristotle continues to make progress (≥10pp advance from cycle 287's 20%).
-Adopt the cycle 287 pattern: ship a **small non-vacuity / cross-check theorem**
-as the cycle deliverable, without competing computational work.
+1. Download the proof with `mcp__aristotle__download_result project_id=efe4940e-0931-4fb2-8549-7eafab20d7f7`,
+   extract via `mcp__aristotle__extract_result`. Read
+   `ARISTOTLE_SUMMARY.md` carefully.
+2. Read the actual Lean proof file. Cross-check it proves the target
+   statement (Butcher's general (342f) three-term recurrence:
+   `(n : ℝ) • butcherShiftedLegendre n
+     = C (2*n - 1) * (C 2 * X - C 1) * butcherShiftedLegendre (n - 1)
+       - C (n - 1) * butcherShiftedLegendre (n - 2)`
+   for `n ≥ 2`, or whatever exact form Aristotle delivers).
+3. If Aristotle introduces non-trivial helper lemmas, follow cycle
+   281's pattern for `butcherShiftedLegendre_norm_sq`: factor them
+   into a new dedicated file
+   `OpenMath/Chapter3/Section342RecurrenceHelpers.lean` in namespace
+   `OpenMath.Chapter3.Section342Helpers`. Mirror cycle 281's
+   `Section342NormSqHelpers.lean` (~210 LOC reusable polynomial /
+   integral lemmas), keeping `Section342.lean` itself focused on
+   `butcherShiftedLegendre`-specific theorems.
+4. If COMPLETE_WITH_ERRORS: identify the specific edits needed
+   (likely namespace fixes per cycle 277's integration pattern, simp-
+   set reordering, or import additions). Apply them locally. Do NOT
+   blindly trust Aristotle's stub replacements for our codebase's
+   existing definitions — only adopt the genuinely new content.
+5. Verify the integrated headline theorem axiom-clean via
+   `mcp__lean-lsp__lean_verify` (expect
+   `[propext, Classical.choice, Quot.sound]`). Add specialization
+   cross-checks: confirm cycles 282–288's `_recurrence_two..._eleven`
+   ladder rungs follow as numerical witnesses of the general theorem
+   via `rw [← <general theorem>] at` or as standalone re-proofs.
+6. Update `lean_status.json` `lem:342A` row with cycle 289 trace;
+   keep `status: partial` (since (342g) still open); update
+   `lean_symbol` to point at the general theorem.
+7. Update `plan.md` `lem:342A` bullet with cycle 289 ship line.
+8. **P3 stretch (if time permits, ~10 min)**: fire-and-forget
+   Aristotle on (342g) per `.prover-state/issues/lem_342A_g_zeros_scoping.md`.
+   Submit project with cycles 271–289 as cited prerequisites
+   (`butcherShiftedLegendre_orthogonal`, `_norm_sq`,
+   `_recurrence`, `_natDegree`, `_eval_one`, `_eval_zero`,
+   `_rodrigues`, the explicit `_zero..._eleven` forms). Cycle 290
+   polls.
 
-**Preferred deliverable**: extend cycle 287's two cross-check theorems to
-cover the `n = 9` and `n = 8` cases (downward along the ladder). Recipe is
-the cycle 287 idiom — 3–5 line proofs each:
+### Branch B: `efe4940e` IN_PROGRESS at ≥30%
 
-```lean
-theorem butcherShiftedLegendre_nine_explicit_eval_zero :
-    (butcherShiftedLegendre 9).eval 0 = -1 := by
-  rw [butcherShiftedLegendre_nine]
-  simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
-        Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X,
-        Polynomial.eval_one]
-  norm_num
-```
+Aristotle made real progress beyond the cycle 287/288 plateau. Skip
+ladder extension; let Aristotle finish. Ship 1–2 axiom-clean cross-
+check theorems extending cycle 287's pattern to fill an odd-`n`
+parity-coverage gap:
 
-(Odd `n = 9` gives `(-1)^9 = -1` at `x = 0` per (342c) parity.)
+- **`butcherShiftedLegendre_nine_explicit_eval_zero`** —
+  `(butcherShiftedLegendre 9).eval 0 = -1`. Cross-validates (342c) at
+  odd `n = 9`. Recipe (mirrors cycle 287's `_ten_explicit_eval_zero`,
+  ~3 lines):
+  ```lean
+  theorem butcherShiftedLegendre_nine_explicit_eval_zero :
+      (butcherShiftedLegendre 9).eval 0 = -1 := by
+    rw [butcherShiftedLegendre_nine]
+    simp [Polynomial.eval_add, Polynomial.eval_sub,
+          Polynomial.eval_mul, Polynomial.eval_pow,
+          Polynomial.eval_C, Polynomial.eval_X, Polynomial.eval_one]
+  ```
 
-```lean
-theorem butcherShiftedLegendre_eight_explicit_eval_one :
-    (butcherShiftedLegendre 8).eval 1 = 1 := by
-  rw [butcherShiftedLegendre_eight]
-  simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
-        Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X,
-        Polynomial.eval_one]
-  norm_num
-```
+- **`butcherShiftedLegendre_eleven_explicit_eval_one`** —
+  `(butcherShiftedLegendre 11).eval 1 = 1`. Cross-validates (342b) at
+  `n = 11`. Recipe mirrors cycle 287's `_ten_explicit_eval_one`:
+  ```lean
+  theorem butcherShiftedLegendre_eleven_explicit_eval_one :
+      (butcherShiftedLegendre 11).eval 1 = 1 := by
+    rw [butcherShiftedLegendre_eleven]
+    simp [Polynomial.eval_add, Polynomial.eval_sub,
+          Polynomial.eval_mul, Polynomial.eval_pow,
+          Polynomial.eval_C, Polynomial.eval_X, Polynomial.eval_one]
+    norm_num
+  ```
 
-(Even `n = 8` gives `+1` at `x = 1` per (342b).)
+- **`butcherShiftedLegendre_eleven_explicit_eval_zero`** —
+  `(butcherShiftedLegendre 11).eval 0 = -1`. Cross-validates (342c) at
+  odd `n = 11`. ~3 lines, same recipe as `_nine_explicit_eval_zero`.
 
-Place them after cycle 287's `butcherShiftedLegendre_ten_explicit_eval_zero`
-in `OpenMath/Chapter3/Section342.lean`. Both must verify axiom-clean.
+These exercise odd-`n` parity at `n ∈ {9, 11}` (cycle 287 covered only
+even `n = 10`). Place after cycle 287's cross-check theorems.
 
-Do **NOT** ship a new `n = 11` ladder rung in Branch B. The progress signal
-is healthy; let Aristotle finish without competing computational work.
+### Branch C: `efe4940e` IN_PROGRESS at 21%–29%
 
-### Branch C — `IN_PROGRESS` at `<30%` (regressed or stalled near 20%)
+Some advance from cycle 288's 20%, but slow. Treat as Branch B (ship
+cross-checks); reset stall count for cycle 290. Do NOT cancel.
 
-This is observation #2 of 3 in the cycle 285 three-stall protocol (a flat
-or weakly-advancing observation since cycle 287's 20%). **Do NOT cancel yet.**
-Ship the `n = 11` ladder rung as the empirical backstop.
+### Branch D: `efe4940e` IN_PROGRESS at exactly 20% (or below), or FAILED, or CANCELLED
 
-Recipe — mechanical port of cycle 286's `n = 10`:
+Three-stall threshold met (per cycle 285 protocol: cycle 287 = 20%,
+cycle 288 = 20%, cycle 289 = 20% would be observation #3). Time for
+manual closure.
 
-1. **Compute coefficients via Python before writing Lean code.** Pattern:
-   ```python
-   from math import comb
-   n = 11
-   # (butcherShiftedLegendre n).coeff k = (-1)^k * C(n, k) * C(n+k, k)
-   coeffs = [(-1)**k * comb(n, k) * comb(n + k, k) for k in range(n + 1)]
-   print(coeffs)
-   # Cross-check (342b): coeffs sum to 1 (since P_n^*(1) = 1)
-   assert sum(coeffs) == 1
-   # Cross-check (342c) at x = 0: coeff[0] = (-1)^n
-   assert coeffs[0] == (-1)**n
+1. **Cancel** `efe4940e` via `mcp__aristotle__cancel_project`.
+2. **Open issue file** `.prover-state/issues/lem_342A_342f_manual_closure_plan.md`
+   mirroring the cycle 285 `lem_441A_phase_C_scoping.md` precedent
+   (full §1 textbook statement, §2 distilled mathematical content,
+   §3 project-hook inventory, §4 gap inventory, §5 phase decomposition,
+   §6 risk assessment, §7 cycle-290 entry point). Recommended path:
+
+   **Path A — Polynomial-degree closure**. Define
    ```
-   Expected leading at `k = 11`: `(-1)^11 · C(11,11) · C(22,11) =
-   -1 · 1 · 705432 = -705432`.
-
-2. **Write `butcherShiftedLegendre_eleven`** following cycle 285's
-   `_nine` template (odd `n`):
-   - `ext k`, `match k with | 0 => ... | 1 => ... | ... | 11 => ... | k + 12 => Polynomial.coeff_eq_zero_of_natDegree_lt`.
-   - Each `0..11` arm closes by `simp [coeff_C_mul, coeff_map,
-     coeff_shiftedLegendre]; norm_num` with appropriate `Nat.choose`
-     `decide`-helpers (e.g. `Nat.choose 13 11`, `Nat.choose 22 11`).
-
-3. **Write `butcherShiftedLegendre_recurrence_eleven`** following
-   cycle 285's `_recurrence_nine` template:
-   ```lean
-   theorem butcherShiftedLegendre_recurrence_eleven :
-       (11 : ℝ) • butcherShiftedLegendre 11
-         = Polynomial.C 21 * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
-             * butcherShiftedLegendre 10
-           - Polynomial.C 10 * butcherShiftedLegendre 9 := by
-     apply Polynomial.funext
-     intro x
-     rw [butcherShiftedLegendre_eleven, butcherShiftedLegendre_ten,
-         butcherShiftedLegendre_nine]
-     simp [Polynomial.eval_smul, Polynomial.eval_add, Polynomial.eval_sub,
-           Polynomial.eval_mul, Polynomial.eval_pow, Polynomial.eval_C,
-           Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
-     ring
+   Q n := (n : ℝ) • butcherShiftedLegendre n
+        − C (2*n − 1) · (C 2 · X − C 1) · butcherShiftedLegendre (n−1)
+        + C (n − 1) · butcherShiftedLegendre (n−2)
    ```
-   Coefficient check: `(2n - 1, n - 1) = (21, 10)` at `n = 11`.
+   (the LHS − RHS of the target recurrence). Three-phase plan:
+   - **Phase A.1** (cycle 290): show `Q.natDegree < n`. Both sides
+     have degree ≤ `n` (LHS is `n • P_n^*` with degree `n`; RHS top
+     block is `(2n−1) · (2X − 1) · P_{n−1}^*` with degree `1 + (n−1)
+     = n`); the leading coefficients cancel via the binomial identity
+     `n · C(2n, n) = 2 · (2n − 1) · C(2n − 2, n − 1)` (paper-checked:
+     both reduce to `(2n)! / ((n − 1)! · n!)`). Use cycle 281's
+     `butcherShiftedLegendre_leadingCoeff` + `Polynomial.natDegree`
+     arithmetic. Estimated 80–120 LOC.
+   - **Phase A.2** (cycle 291): show `∫₀¹ Q · butcherShiftedLegendre k
+     = 0` for all `k ∈ {0, 1, ..., n−2}`. The `n • P_n^*` and `C(n−1)
+     · P_{n−2}^*` summands vanish by cycle 277's
+     `butcherShiftedLegendre_orthogonal` (since `deg P_k^* = k < n`);
+     the cross-term `(2X − 1) · P_{n−1}^* · P_k^*` requires the
+     observation that `2X − 1 = -P_1^*` (paper-check via cycle 273's
+     `butcherShiftedLegendre_one : P_1^* = C 2 * X - C 1`), so the
+     cross-term reduces to `-∫₀¹ P_1^* · P_{n−1}^* · P_k^*` which
+     vanishes for `k ≤ n − 2` by orthogonality applied to the product
+     `P_{n−1}^* · P_k^*` (which has degree ≤ `n − 2`). Estimated
+     100–150 LOC.
+   - **Phase A.3** (cycle 292): conclude `Q = 0` from Phase A.1 + A.2.
+     The basis `{P_0^*, ..., P_{n−1}^*}` spans the polynomial space
+     `Polynomial.degreeLT ℝ n`; any `Q ∈ degreeLT n` orthogonal to
+     all basis elements is zero. Use `Polynomial.degreeLT` +
+     `LinearMap.span` + a Gram-Schmidt-style argument. Estimated
+     60–100 LOC.
 
-4. **Verify axiom-clean** via `mcp__lean-lsp__lean_verify` on both.
-5. Update `lean_status.json` cycle stamp to 288, status `partial`. Note in
-   `plan.md` that this is observation #2 of 3 stalls.
+   Total: 3 cycles (290–292), all axiom-clean targets, no new Mathlib
+   gaps.
 
-### Branch D — `FAILED`, `CANCELLED`, or status confused
+3. **Ship the Phase A.1 first deliverable in cycle 289 itself**
+   (after the issue file). Two sub-steps:
 
-The Aristotle attempt is dead. Execute the cycle 285 three-stall protocol:
+   a. **Helper lemma** — the binomial identity:
+      ```lean
+      private lemma n_mul_choose_two_n_n_eq (n : ℕ) (hn : 1 ≤ n) :
+          (n : ℝ) * (Nat.choose (2 * n) n : ℝ)
+            = 2 * ((2 * n - 1 : ℕ) : ℝ) * (Nat.choose (2 * n - 2) (n - 1) : ℝ)
+      ```
+      Proof: cast all `Nat.choose` via `Nat.choose_eq_factorial_div_factorial`
+      + `field_simp` + `Nat.factorial_succ` × 2 + `ring`. Or close
+      directly via `decide`-helpers if the values can be computed
+      arithmetically (probably not for general `n`). Estimated ~30–50 LOC.
 
-1. **Cancel** the project (if not already terminal) with
-   `mcp__aristotle__cancel_project project_id=efe4940e-0931-4fb2-8549-7eafab20d7f7`.
-2. **Open** `.prover-state/issues/lem_342A_342f_manual_closure_plan.md`
-   documenting the multi-cycle manual closure plan. Structure:
-   - **§1**: Textbook statement of (342f) verbatim from
-     `extraction/formalization_data/entities/lem_342A.json`.
-   - **§2**: Distilled mathematical content. Note that the recurrence is
-     equivalent to a polynomial identity `LHS − RHS = 0` where both sides
-     have `natDegree ≤ n`.
-   - **§3**: Three closure paths:
-     - **Path A — `Q := LHS − RHS`, prove `Q = 0` via orthogonality basis**.
-       Show `Q.natDegree < n` and `∫₀¹ Q · P_k^* = 0` for all `k ≤ n−1`
-       using cycle 277's `butcherShiftedLegendre_orthogonal`. Then `Q = 0`
-       follows from the basis property (any degree-< n polynomial orthogonal
-       to all `P_k^*` with `k < n` is zero by dimension counting). Estimated
-       2–3 cycles.
-     - **Path B — Coefficient-by-coefficient comparison via `Polynomial.ext`**.
-       Match each coefficient of LHS and RHS using `Nat.choose` identities
-       (Pascal-style). High LOC, mechanical but tedious. Estimated 3–4 cycles.
-     - **Path C — Continue ladder to `n = 12, 13, ...` and avoid the general
-       claim**. Each ladder rung is ~70 LOC, axiom-clean. Pragmatic but does
-       not close (342f) generally.
-   - **§4**: Recommended path (A), with cycle-by-cycle decomposition.
-   - **§5**: Cycle 289 entry point.
-3. **Ship `n = 11` ladder rung** (using the Branch C recipe above) as the
-   first step in Path C while planning Path A. This gives the cycle a
-   concrete deliverable.
+   b. **Main residual-degree theorem**:
+      ```lean
+      theorem recurrence_residual_natDegree_lt (n : ℕ) (hn : 2 ≤ n) :
+          ((n : ℝ) • butcherShiftedLegendre n
+            - Polynomial.C ((2 * n - 1 : ℕ) : ℝ)
+              * (Polynomial.C 2 * Polynomial.X - Polynomial.C 1)
+              * butcherShiftedLegendre (n - 1)
+            + Polynomial.C ((n - 1 : ℕ) : ℝ)
+              * butcherShiftedLegendre (n - 2)).natDegree < n
+      ```
+      Proof: bound the natDegree of each summand, then show the leading-
+      coefficient cancellation via `Polynomial.natDegree_sub_lt_of_leadingCoeff_eq`
+      (or similar; verify exact name with `lean_local_search "natDegree_sub_lt"`).
+      Use cycle 281's `butcherShiftedLegendre_natDegree` and
+      `butcherShiftedLegendre_leadingCoeff`. Estimated 80–120 LOC.
 
-## Priorities NOT to pursue
+   If the LOC budget for (a)+(b) exceeds 150, ship only (a) in cycle
+   289 + the issue file + cancellation, and defer (b) to cycle 290.
+   Phase A.1 must be axiom-clean — no sorries.
 
-- **Do NOT** attempt to compile `OpenMath/Chapter4/Section441.lean`
-  (43+ consecutive GPFS timeouts since cycle 182).
-- **Do NOT** re-poll Aristotle (single-poll discipline per CLAUDE.md).
-- **Do NOT** ship `n = 12` or higher in Branch C/D — `n = 11` is sufficient
-  to mark observation/backstop. Higher rungs are diminishing returns.
-- **Do NOT** modify `scripts/autonomous_loop.py` (loop-maintainer territory;
-  see `.prover-state/issues/phantom_commit_verdict_pattern.md`).
-- **Do NOT** introduce sorries, axioms, or `maxHeartbeats` bumps.
-- **Do NOT** attempt (342g) `n` distinct real zeros this cycle. Per
-  `.prover-state/issues/lem_342A_g_zeros_scoping.md`, it should follow
-  (342f) closure (Branch A), not precede it.
-- **Do NOT** rewrite cycle 287's two cross-check theorems
-  (`butcherShiftedLegendre_ten_explicit_eval_one` and `_eval_zero`).
-- **Do NOT** start `lem:310B` Phase A.3 or other multi-cycle work. The
-  cycle 288 focus is on (342f) closure / continued progress on Aristotle.
-- **Do NOT** attempt to compose Aristotle's general recurrence with the
-  ladder rungs to reduce LOC. Keep both forms — the ladder rungs are
-  empirical regression witnesses, the general theorem is the abstract content.
-- **Do NOT** ship a Branch B deliverable AND a Branch C ladder rung in
-  the same cycle. Pick one branch based on the poll result.
+## What NOT to do
 
-## Verification checklist (run before commit)
+- **Do NOT re-poll Aristotle** (single-poll per CLAUDE.md).
+- **Do NOT ship `n = 12` or higher ladder rung**. Per cycle 285's
+  protocol and cycle 288's observation, the empirical base at `n ∈
+  {2..11}` is sufficient. Further ladder extension provides no new
+  information; pivot to manual closure (Branch D) or cross-checks
+  (Branch B).
+- **Do NOT start (342g) manual work** unless Branch A succeeds.
+  (342g) has its own scoping doc (`lem_342A_g_zeros_scoping.md`);
+  fire-and-forget Aristotle on (342g) is fine post-(342f) (Branch A
+  P3), but manual work on (342g) is out of scope until (342f) lands.
+- **Do NOT attempt `Section441.lean`** — 43+ consecutive GPFS
+  timeouts since cycle 182. Skip per
+  `.prover-state/issues/cycle_182_gpfs_slowness.md`.
+- **Do NOT raise `maxHeartbeats`** above 200000 (CLAUDE.md). If a
+  proof stalls, decompose.
+- **Do NOT introduce `axiom`/`constant`** declarations.
+- **Do NOT introduce sorries**. Cycles 149/200/201 all rolled back
+  sorry-first scaffolds; cycle 289's deliverables must be axiom-clean
+  or skipped entirely.
+- **Do NOT modify `scripts/autonomous_loop.py`** — loop-maintainer
+  territory per `tautology_scanner_false_positives.md`.
+- **Do NOT pursue a definitionally-different Möbius-style or Pascal-
+  identity manual closure for (342f)**. Cycle 273's task results
+  documented those paths as too complex without (342a) infrastructure;
+  with (342a) + (342d) + Rodrigues now in hand, Path A above (degree-
+  bound + orthogonality basis) is the clean route.
+- **Do NOT trust supervisor "commit-not-reaching-repo" verdicts
+  without git verification**. The phantom verdict pattern persists
+  (cycles 008, 035, 073, 170, 176–179, 196 — see
+  `.prover-state/issues/phantom_commit_verdict_pattern.md`). Always
+  run `git show --stat <sha>` before reacting to such a verdict.
 
-- `lake env lean OpenMath/Chapter3/Section342.lean` exit 0.
-- `lake env lean OpenMath/Chapter3.lean` (aggregator) exit 0.
-- `grep -c "sorry" OpenMath/Chapter3/Section342.lean` = 0.
-- `mcp__lean-lsp__lean_verify` on **every** new theorem returns
-  `[propext, Classical.choice, Quot.sound]` only.
-- Tautology-scanner clean (no `exact h_<name>` or `:= h_<name>` patterns
-  in proofs that aren't doing real work).
-- Faithfulness check per CLAUDE.md for any new `def`/`theorem`.
+## Pre-flight verification commands
 
-## Cycle 289+ outlook
+Before declaring the cycle done, run:
 
-- **Branch A landed**: pivot cycle 289 to (342g) `n` distinct real zeros
-  per `.prover-state/issues/lem_342A_g_zeros_scoping.md` §5. Estimated
-  1–2 cycles; can be fire-and-forget to Aristotle since all of
-  (342a)/(342b)/(342c)/(342d)/(342e)/(342f) are now available as citable
-  prerequisites.
-- **Branch B (continued progress)**: cycle 289 polls again, expects
-  ~40%+ at that point. Continue with more cross-check theorems or
-  small witnesses until Aristotle completes.
-- **Branch C (stalled, observation #2)**: cycle 289 is observation #3
-  of 3. If status has still not advanced, cancel and pivot to manual
-  closure per Branch D's plan.
-- **Branch D (failed)**: cycle 289 executes Path A from the manual
-  closure plan (define `Q := LHS − RHS`, show `Q.natDegree < n`, prove
-  `∫₀¹ Q · P_k^* = 0` for `k < n`, conclude `Q = 0`).
-
-## Suggested commit message
-
+```bash
+lake env lean OpenMath/Chapter3/Section342.lean
+lake env lean OpenMath/Chapter3.lean
+grep -c "sorry" OpenMath/Chapter3/Section342.lean   # expect 0
 ```
-Cycle 288 — §342 (342f) [Aristotle <status>] + <deliverable>.
+
+If Branch A produced a new helper file:
+
+```bash
+lake env lean OpenMath/Chapter3/Section342RecurrenceHelpers.lean
 ```
 
-Replace `<status>` with the observed Aristotle status (e.g.
-`COMPLETE`, `20% IN_PROGRESS`, `30% IN_PROGRESS`, `CANCELLED`) and
-`<deliverable>` with the cycle's main contribution (e.g. "general
-recurrence integrated", "`n=9,8` explicit cross-checks", "`n=11`
-ladder rung", "manual closure plan opened").
+For each new public theorem, run `mcp__lean-lsp__lean_verify
+OpenMath.Chapter3.Section342.<symbol>` and confirm axioms are
+`[propext, Classical.choice, Quot.sound]` only.
+
+## Bookkeeping checklist
+
+- [ ] `.prover-state/task_results/cycle_289.md` written (Worked on /
+      Approach / Result / Faithfulness check / Dead ends / Discovery /
+      Suggested next approach sections).
+- [ ] `extraction/formalization_data/lean_status.json` `lem:342A` row
+      updated with cycle 289 trace.
+- [ ] `plan.md` `lem:342A` bullet appended with cycle 289 line.
+- [ ] If Branch D: new issue file
+      `.prover-state/issues/lem_342A_342f_manual_closure_plan.md`
+      opened; Aristotle `efe4940e` cancelled; Phase A.1 helper +
+      main theorem shipped (or just helper + deferral note if the
+      main theorem exceeds budget).
+- [ ] `git add` + `git commit` + `git push` (only if there are
+      changes).

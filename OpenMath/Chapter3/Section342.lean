@@ -2566,4 +2566,88 @@ theorem butcherShiftedLegendre_recurrence_eleven :
         Polynomial.eval_X, Polynomial.eval_one, smul_eq_mul]
   ring
 
+/-! ### (342f) general recurrence — Phase A.1: residual has `natDegree < n`
+
+Per `.prover-state/issues/lem_342A_342f_manual_closure_plan.md` (opened
+cycle 289 after Aristotle project `efe4940e` cancelled at the third
+consecutive 20% stall), the manual closure of the general (342f)
+three-term recurrence proceeds in three phases:
+
+* **Phase A.1** (cycle 289+): residual `Q := n·P_n^* − (2n−1)·(2X−1)·P_{n−1}^*
+  + (n−1)·P_{n−2}^*` satisfies `Q.natDegree < n` via the binomial
+  leading-coefficient identity `n·C(2n,n) = 2(2n−1)·C(2n−2,n−1)`.
+* **Phase A.2** (cycle 291): `⟨Q, P_k^*⟩ = 0` for `k ≤ n − 2` via
+  (342a)/(342d) orthogonality on each summand.
+* **Phase A.3** (cycle 292): conclude `Q = 0` from A.1 + A.2 via the
+  polynomial-basis spanning argument on `Polynomial.degreeLT ℝ n`.
+
+This block ships Phase A.1.
+-/
+
+/-- **Phase A.1 binomial helper** (cycle 289): the leading-coefficient
+identity behind (342f). For every `n ≥ 2`,
+`n · C(2n, n) = 2 · (2n − 1) · C(2n − 2, n − 1)`.
+
+Paper proof: both sides equal `(2n)! / (n! · (n − 1)!)`. Lean route:
+- `Nat.choose_mul_right` gives `C(2n, n) = 2 · C(2n − 1, n − 1)`.
+- `Nat.choose_eq_choose_pred_add` (Pascal) gives
+  `C(2n − 1, n − 1) = C(2n − 2, n − 2) + C(2n − 2, n − 1)`.
+- `Nat.choose_succ_right_eq` at `(2n − 2, n − 2)` gives
+  `C(2n − 2, n − 1) · (n − 1) = C(2n − 2, n − 2) · n`.
+Composing, `n · C(2n, n) = 2n · (C(2n−2,n−2) + C(2n−2,n−1))
+  = 2(n − 1) · C(2n − 2, n − 1) + 2n · C(2n − 2, n − 1)
+  = (4n − 2) · C(2n − 2, n − 1) = 2(2n − 1) · C(2n − 2, n − 1)`. -/
+private lemma n_mul_choose_two_n_n_eq (n : ℕ) (hn : 2 ≤ n) :
+    (n : ℝ) * (Nat.choose (2 * n) n : ℝ)
+      = 2 * ((2 * n - 1 : ℕ) : ℝ) * (Nat.choose (2 * n - 2) (n - 1) : ℝ) := by
+  set C1 := (Nat.choose (2 * n - 2) (n - 1) : ℝ) with hC1_def
+  set C2 := (Nat.choose (2 * n - 2) (n - 2) : ℝ) with hC2_def
+  -- step1 over ℕ, then cast.
+  have step1_nat : Nat.choose (2 * n) n = 2 * Nat.choose (2 * n - 1) (n - 1) :=
+    Nat.choose_mul_right (m := 2) (n := n) (by omega)
+  have step1 : ((Nat.choose (2 * n) n : ℕ) : ℝ)
+      = 2 * ((Nat.choose (2 * n - 1) (n - 1) : ℕ) : ℝ) := by
+    exact_mod_cast step1_nat
+  -- step3 (Pascal) over ℕ, then cast.
+  have step3_nat : Nat.choose (2 * n - 1) (n - 1)
+      = Nat.choose (2 * n - 2) (n - 2) + Nat.choose (2 * n - 2) (n - 1) := by
+    have h := Nat.choose_eq_choose_pred_add
+      (n := 2 * n - 1) (k := n - 1) (by omega) (by omega)
+    rw [show ((2 * n - 1) - 1 : ℕ) = 2 * n - 2 from by omega,
+        show ((n - 1) - 1 : ℕ) = n - 2 from by omega] at h
+    exact h
+  have step3 : ((Nat.choose (2 * n - 1) (n - 1) : ℕ) : ℝ) = C2 + C1 := by
+    have := congrArg (Nat.cast (R := ℝ)) step3_nat
+    push_cast at this
+    -- this : C(2n-1,n-1) = C(2n-2,n-2) + C(2n-2,n-1)  (all cast to ℝ)
+    -- The RHS matches C2 + C1 by definition.
+    exact this
+  -- step2 (Bonnet-style choose identity): C(2n-2,n-1) · (n-1) = C(2n-2,n-2) · n
+  have step2_nat : Nat.choose (2 * n - 2) (n - 1) * (n - 1)
+      = Nat.choose (2 * n - 2) (n - 2) * n := by
+    have h := Nat.choose_succ_right_eq (2 * n - 2) (n - 2)
+    rw [show ((n - 2) + 1 : ℕ) = n - 1 from by omega,
+        show ((2 * n - 2) - (n - 2) : ℕ) = n from by omega] at h
+    exact h
+  have step2 : C1 * ((n - 1 : ℕ) : ℝ) = C2 * (n : ℝ) := by
+    have := congrArg (Nat.cast (R := ℝ)) step2_nat
+    push_cast at this
+    exact this
+  -- Convert nat-subtractions inside `((... : ℕ) : ℝ)` to real subtractions.
+  have h_2n_minus_1_real : ((2 * n - 1 : ℕ) : ℝ) = 2 * (n : ℝ) - 1 := by
+    rw [Nat.cast_sub (by omega : 1 ≤ 2 * n)]
+    push_cast
+    ring
+  have h_n_minus_1_real : ((n - 1 : ℕ) : ℝ) = (n : ℝ) - 1 := by
+    rw [Nat.cast_sub (by omega : 1 ≤ n)]
+    push_cast
+    ring
+  -- Rewrite step2 in terms of real subtraction.
+  rw [h_n_minus_1_real] at step2
+  -- Rewrite the goal: substitute the chain step1 ↦ step3 and convert (2n - 1).
+  rw [step1, step3, h_2n_minus_1_real]
+  -- Goal: (n : ℝ) * (2 * (C2 + C1)) = 2 * (2 * (n : ℝ) - 1) * C1.
+  -- Use step2 : C1 * ((n : ℝ) - 1) = C2 * (n : ℝ).
+  linear_combination (-2 : ℝ) * step2
+
 end OpenMath.Chapter3.Section342
