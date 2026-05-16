@@ -956,3 +956,90 @@ instantiation of the universal `Eq422a`.
 **Phase D pre-infrastructure status: CLOSED.** τ-additivity of
 `elementaryWeightQ_phi` under the §383 group is shipped axiom-clean.
 Phase D.1 / D.2 / D.3 / E / F remain deferred per §5.
+
+## Cycle 342 update — Phase D.1 closed-form `η(τ)` base-case solver
+
+**Status: SHIPPED.** Phase D.1 base case closed at
+`OpenMath/Chapter4/Section422.lean:524–696`. Three new public
+theorems plus one non-vacuity `example`:
+
+* **P1 (load-bearing) — `Eq422a_at_vertex_linear`:**
+  ```
+  ((Σ_{i:Fin k} (i+1) · M.α i.succ) + (Σ_{i:Fin (k+1)} i · M.β i))
+    * elementaryWeightQ_phi η_q τ
+    = Σ_{i:Fin (k+1)} M.β i
+  ```
+  Reduces (422a) at `u = τ` to a linear equation in `η(τ)`. Proof
+  recipe (matches the strategy's §B.2 plan):
+
+  1. Specialize `hEq` at `RootedTree.vertex`.
+  2. Collapse `Φ_1(τ) = 0` via cycle 239 `elementaryWeightQ_phi_id`.
+  3. Rewrite each α-summand via cycle 341 P3
+     (`elementaryWeightQ_phi_zpow_vertex`) + `push_cast; ring` into
+     `-((i+1) · M.α i.succ) · η`.
+  4. Rewrite each β-summand via cycle 341 P1+P3 + cycle 337
+     `D_element_elementaryWeight_vertex` + `push_cast; ring` into
+     `-(i · M.β i) · η + M.β i`.
+  5. Pull η outside both sums via `← Finset.sum_neg_distrib, ←
+     Finset.sum_mul` (after `Finset.sum_add_distrib + congr 1` on the
+     β-side).
+  6. Close by `linarith`.
+
+  The strategy's "alternative" `nlinarith`/`linarith` one-shot was
+  not attempted; the manual factoring closed cleanly. The
+  `Finset.sum_neg_distrib` and `Finset.sum_mul` names were verified
+  current at HEAD.
+
+* **P2 (consistency-strengthened corollary) —
+  `Eq422a_at_vertex_linear_of_isConsistent`:** under
+  `M.IsConsistent`, the RHS `sum_β(M)` substitutes to `coef_α(M)`,
+  giving `(coef_α + coef_β) · η = coef_α`. This matches Butcher
+  §422 p. 1163's textbook η-coefficient arrangement. The
+  `IsConsistent` bridge required a `push_cast`+`ring` step to align
+  `SatisfiesEq404b`'s `((i : ℕ) + 1 : ℝ)` cast form with
+  `Eq422a_at_vertex_linear`'s `((i.val + 1 : ℕ) : ℝ)` form (these
+  are equal but not definitionally so).
+
+* **P4 (closed-form extraction stretch) — `Eq422a_at_vertex_eta_eq`:**
+  under the non-vanishing-coefficient hypothesis
+  `coef_α + coef_β ≠ 0`,
+  ```
+  η(τ) = sum_β(M) / (coef_α(M) + coef_β(M)).
+  ```
+  Proof: `field_simp` + `linarith`. The non-vanishing hypothesis is
+  downstream of `M.IsStable + M.IsPreconsistent` via cycle 178's
+  `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`; bridge
+  deferred to cycle 343+.
+
+* **P3 non-vacuity — anonymous `example`:** for `k = 0`,
+  `Eq422a_at_vertex_linear` collapses (both sums empty / one β
+  term) to `0 = M.β 0` via `simp`.
+
+**Strategy deviation:** P3 used Option A (`k = 0`) instead of Option
+B (`explicitEulerLMM`). Reason: Option A's `simp`-closure was clean
+and immediate; Option B would have needed careful handling of
+`explicitEulerLMM`'s field-`fun`-with-`if` shape and was redundant
+given P1 + P2 + P4 already exercise the theorem on heterogeneous
+hypotheses.
+
+**Axioms:** all 3 new public theorems depend on only
+`[propext, Classical.choice, Quot.sound]`.
+
+**Cycle 342 LOC trajectory:** Section422.lean: 484 (cycle 341) → 696
+(cycle 342), +~212 LOC. Slightly above the strategy's 150 LOC
+target; the overage is in per-theorem docstrings (each of P1/P2/P4
+carries a multi-paragraph proof-recipe rationale matching the cycle
+341 P1/P2/P3 style for downstream consumer clarity).
+
+**Cycle 343 entry point (Phase D.2 well-founded recursion):** with
+the base case closed, Phase D.2's job is well-founded-recursion
+infrastructure on `RootedTree.order`. Verify Mathlib's
+`WellFoundedRelation RootedTree` instance is available at HEAD (or
+build it via `Function.WellFoundedRelation.onFun` on
+`RootedTree.order`); cycle 195's
+`RKTableau.PReducesTo.size_lt_of_step` is the analogous template.
+~60–100 LOC. Phase D.3 (inductive step for `r(t) ≥ 2`) follows in
+cycle 344+.
+
+**Phase D.1 status: CLOSED.** Phase D.2 / D.3 / E / F remain
+deferred per §5.

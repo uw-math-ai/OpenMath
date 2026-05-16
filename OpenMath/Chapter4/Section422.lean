@@ -481,4 +481,194 @@ example :
   rw [elementaryWeightQ_phi_zpow_vertex, D_element_elementaryWeight_vertex]
   norm_num
 
+/-! ### Phase D.1 — closed-form `η(τ)` base-case solver (cycle 342)
+
+Cycle 341's P1/P2/P3 (`elementaryWeightQ_phi_{mul,inv,zpow}_vertex`)
+make the (422a) equation at `u = RootedTree.vertex` collapse to a
+*linear equation in* `η(τ) := elementaryWeightQ_phi η_q τ`. This
+section ships that algebraic specialization.
+
+Substituting cycle 341 P3 into both sums of `Eq422a M η_q vertex` and
+collecting `η`-terms yields
+
+```
+(coef_α(M) + coef_β(M)) * η(τ) = sum_β(M)
+```
+
+where, with `Fin k` indexing the α-side and `Fin (k+1)` indexing the
+β-side,
+
+```
+coef_α(M) := Σ_{i:Fin k}     ((i.val + 1 : ℕ) : ℝ) * M.α i.succ
+coef_β(M) := Σ_{i:Fin (k+1)} ((i.val : ℕ) : ℝ)     * M.β i
+sum_β(M)  := Σ_{i:Fin (k+1)} M.β i
+```
+
+Note: `coef_α(M) = M.SatisfiesEq404b.LHS` (Butcher's (404b) α-side).
+Under consistency (`M.IsConsistent → M.SatisfiesEq404b`), `coef_α =
+sum_β`, recovering Butcher §422 p. 1163's textbook form.
+
+See `.prover-state/issues/def_422B_path.md` §5 row D.1 for the phase
+plan. Phase D.2 (well-founded recursion on `RootedTree.order`) and
+Phase D.3 (inductive step for `r(t) ≥ 2`) remain deferred. -/
+
+/-- *Phase D.1 main theorem (cycle 342):* the (422a) equation at the
+single-vertex tree `τ` is **linear** in `η(τ) := elementaryWeightQ_phi
+η_q τ`. Specifically,
+
+```
+(coef_α(M) + coef_β(M)) · η(τ) = sum_β(M)
+```
+
+where `coef_α(M) := Σ_{i:Fin k} (i+1) · α_{i+1}`, `coef_β(M) :=
+Σ_{i:Fin (k+1)} i · β_i`, and `sum_β(M) := Σ_{i:Fin (k+1)} β_i`.
+
+Proof sketch:
+
+1. Specialize `Eq422a M η_q` at `u = vertex`.
+2. Collapse `elementaryWeightQ_phi 1 vertex = 0` via cycle 239's
+   `elementaryWeightQ_phi_id` (b₀-invisibility — `1` at `τ` vanishes).
+3. Rewrite each α-summand via cycle 341 P3
+   (`elementaryWeightQ_phi_zpow_vertex`):
+   `Φ(η_q^{-(i+1)})(τ) = -(i+1) · η(τ)`.
+4. Rewrite each β-summand via cycle 341 P1+P3 + cycle 337's
+   `D_element_elementaryWeight_vertex = 1`:
+   `Φ((η_q^{-i}) · D_element)(τ) = -i · η(τ) + 1`.
+5. Collect `η(τ)`-terms via `Finset.sum_mul`/`Finset.mul_sum`/`ring`
+   and close by `linarith`.
+
+This is the **unconditional** algebraic form; the
+`IsConsistent`-strengthened version `Eq422a_at_vertex_linear_of_isConsistent`
+recovers Butcher's textbook η-coefficient simplification. -/
+theorem Eq422a_at_vertex_linear
+    {k : ℕ} {M : OpenMath.Chapter4.Section404.LinearMultistepMethod k}
+    {η_q : Quotient PhiEquivalent.setoidSigma}
+    (hEq : Eq422a M η_q) :
+    ((∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+        + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i))
+      * elementaryWeightQ_phi η_q RootedTree.vertex
+      = ∑ i : Fin (k + 1), M.β i := by
+  have h := hEq RootedTree.vertex
+  -- Collapse `elementaryWeightQ_phi 1 vertex = 0` via cycle 239.
+  have h_one : (1 : Quotient PhiEquivalent.setoidSigma)
+      = Quotient.mk PhiEquivalent.setoidSigma ⟨0, RKTableau.id⟩ := rfl
+  rw [h_one, elementaryWeightQ_phi_id] at h
+  -- Rewrite each α-summand via cycle 341 P3.
+  have hα_simp : ∀ i : Fin k,
+      M.α i.succ * elementaryWeightQ_phi
+                    (η_q ^ (-((i.val + 1 : ℕ) : ℤ))) RootedTree.vertex
+        = -(((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+            * elementaryWeightQ_phi η_q RootedTree.vertex := by
+    intro i
+    rw [elementaryWeightQ_phi_zpow_vertex]
+    push_cast
+    ring
+  -- Rewrite each β-summand via cycle 341 P1+P3 + cycle 337 `D_element_…_vertex`.
+  have hβ_simp : ∀ i : Fin (k + 1),
+      M.β i * elementaryWeightQ_phi
+              ((η_q ^ (-((i.val : ℕ) : ℤ))) * D_element) RootedTree.vertex
+        = -(((i.val : ℕ) : ℝ) * M.β i)
+            * elementaryWeightQ_phi η_q RootedTree.vertex + M.β i := by
+    intro i
+    rw [elementaryWeightQ_phi_mul_vertex,
+        elementaryWeightQ_phi_zpow_vertex,
+        D_element_elementaryWeight_vertex]
+    push_cast
+    ring
+  rw [Finset.sum_congr rfl (fun i _ => hα_simp i),
+      Finset.sum_congr rfl (fun i _ => hβ_simp i)] at h
+  -- Set `η := Φ_{η_q}(τ)` and factor it out of both sums.
+  set η := elementaryWeightQ_phi η_q RootedTree.vertex with hη_def
+  -- Pull η out of α-sum: Σ -(coef_i) · η = -(Σ coef_i) · η.
+  have hα_factor :
+      (∑ i : Fin k,
+          -(((i.val + 1 : ℕ) : ℝ) * M.α i.succ) * η)
+        = -(∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ) * η := by
+    rw [← Finset.sum_neg_distrib, ← Finset.sum_mul]
+  -- Pull η out of β-sum: Σ (-(coef_i) · η + βᵢ) = -(Σ coef_i) · η + Σ βᵢ.
+  have hβ_factor :
+      (∑ i : Fin (k + 1),
+          (-(((i.val : ℕ) : ℝ) * M.β i) * η + M.β i))
+        = -(∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i) * η
+            + ∑ i : Fin (k + 1), M.β i := by
+    rw [Finset.sum_add_distrib]
+    congr 1
+    rw [← Finset.sum_neg_distrib, ← Finset.sum_mul]
+  rw [hα_factor, hβ_factor] at h
+  linarith
+
+/-- *Phase D.1 corollary (cycle 342) — consistency-strengthened form:*
+under Butcher's full consistency (`M.IsConsistent`, i.e. (404a) ∧
+(404b)), the right-hand side `sum_β(M)` of `Eq422a_at_vertex_linear`
+simplifies to `coef_α(M) = Σ_{i:Fin k} (i+1) · α_{i+1}`. This matches
+Butcher §422 p. 1163's textbook arrangement of the η-coefficient.
+
+Proof: from `M.IsConsistent.2 : M.SatisfiesEq404b`, we have
+`coef_α(M) = sum_β(M)`. Rewrite the RHS of `Eq422a_at_vertex_linear`
+via this identity. (Note: `SatisfiesEq404b`'s LHS uses the cast form
+`((i : ℕ) + 1 : ℝ)` while `Eq422a_at_vertex_linear` uses
+`((i.val + 1 : ℕ) : ℝ)`; these agree under `push_cast`.) -/
+theorem Eq422a_at_vertex_linear_of_isConsistent
+    {k : ℕ} {M : OpenMath.Chapter4.Section404.LinearMultistepMethod k}
+    (hCons : M.IsConsistent)
+    {η_q : Quotient PhiEquivalent.setoidSigma}
+    (hEq : Eq422a M η_q) :
+    ((∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+        + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i))
+      * elementaryWeightQ_phi η_q RootedTree.vertex
+      = ∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ := by
+  have h := Eq422a_at_vertex_linear hEq
+  have h404b : (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+      = ∑ i : Fin (k + 1), M.β i := by
+    have := hCons.2
+    -- `SatisfiesEq404b` uses `((i : ℕ) + 1 : ℝ)`; we use
+    -- `((i.val + 1 : ℕ) : ℝ)`. Bridge via `push_cast`.
+    have h_eq : (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+        = ∑ i : Fin k, ((i : ℕ) + 1 : ℝ) * M.α i.succ := by
+      apply Finset.sum_congr rfl
+      intro i _
+      push_cast
+      ring
+    rw [h_eq]
+    exact this
+  rw [h, ← h404b]
+
+/-- *Phase D.1 non-vacuity (cycle 342) — `k = 0` degenerate case:*
+for a 0-step LMM (which has only `α 0 = -1` and a single `β 0`), the
+linear (422a) reduction yields `0 = M.β 0`. Both sums in
+`Eq422a_at_vertex_linear` collapse via `Finset.univ_eq_empty` for
+`Fin 0` and `Fin.sum_univ_one` for `Fin 1`. -/
+example {η_q : Quotient PhiEquivalent.setoidSigma}
+    (M : OpenMath.Chapter4.Section404.LinearMultistepMethod 0)
+    (hEq : Eq422a M η_q) :
+    (0 : ℝ) = M.β 0 := by
+  have h := Eq422a_at_vertex_linear hEq
+  simp at h
+  exact h
+
+/-- *Phase D.1 closed-form `η(τ)` extraction (cycle 342, stretch):*
+under a non-vanishing-coefficient hypothesis `coef_α(M) + coef_β(M) ≠
+0`, the (422a) reduction at `τ` determines `η(τ)` *uniquely* as
+`sum_β(M) / (coef_α(M) + coef_β(M))`. This is the Phase D.1 closed-form
+base-case solver: it pins `η(τ)` from the linear reduction without
+needing the inductive step (Phase D.3).
+
+The non-vanishing hypothesis is downstream of `M.IsStable +
+M.IsPreconsistent` via cycle 178's
+`ρPoly_deriv_eval_one_pos_of_stable_preconsistent`; that bridge is
+deferred to cycle 343+. -/
+theorem Eq422a_at_vertex_eta_eq
+    {k : ℕ} {M : OpenMath.Chapter4.Section404.LinearMultistepMethod k}
+    {η_q : Quotient PhiEquivalent.setoidSigma}
+    (hEq : Eq422a M η_q)
+    (h_ne : (∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+              + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i) ≠ 0) :
+    elementaryWeightQ_phi η_q RootedTree.vertex
+      = (∑ i : Fin (k + 1), M.β i)
+          / ((∑ i : Fin k, ((i.val + 1 : ℕ) : ℝ) * M.α i.succ)
+              + (∑ i : Fin (k + 1), ((i.val : ℕ) : ℝ) * M.β i)) := by
+  have h := Eq422a_at_vertex_linear hEq
+  field_simp
+  linarith
+
 end OpenMath.Chapter4.Section422
