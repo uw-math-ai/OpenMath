@@ -765,4 +765,394 @@ theorem butcherLobatto_zeros_three_mem_Icc (i : Fin 3) :
   fin_cases i <;> simp [butcherLobatto_zeros_three, Set.mem_Icc]
   norm_num
 
+/-! ### Phase D.1 — Lagrange quadrature weights
+
+For each cycle-320 abscissae function `butcher<Family>_zeros_<s>`, the
+quadrature weights `b_j := ∫₀¹ L_j(x) dx` are the integrals of the
+Lagrange basis polynomials interpolating `δ_jk` at the abscissae.
+Mirrors cycle 303's `butcherShiftedLegendre_quadratureWeights`
+construction at the §342 zeros. The six closed-form `_apply` theorems
+verify the textbook values:
+
+* Radau I  `s=1` → `(1)`              ; `s=2` → `(1/4, 3/4)`
+* Radau II `s=1` → `(1)`              ; `s=2` → `(3/4, 1/4)`
+* Lobatto  `s=2` → `(1/2, 1/2)` (trapezoidal rule)
+* Lobatto  `s=3` → `(1/6, 2/3, 1/6)` (Simpson's rule)
+-/
+
+/-- **Butcher §344 — Radau I `s = 1` quadrature weight.**
+`b_j := ∫₀¹ L_j(x) dx` at the single Radau I abscissa `c_1 = 0`. The
+Lagrange basis on a singleton is identically `1` (Mathlib's
+`Lagrange.basis_singleton`), so the unique entry is `∫₀¹ 1 dx = 1`. -/
+noncomputable def butcherRadauI_quadratureWeights_one (j : Fin 1) : ℝ :=
+  ∫ x in (0 : ℝ)..1,
+    (Lagrange.basis Finset.univ butcherRadauI_zeros_one j).eval x
+
+/-- **Butcher §344 — Radau I `s = 2` quadrature weights.**
+`b_j := ∫₀¹ L_j(x) dx` at the Radau I abscissae `(0, 2/3)`. Closed-form
+weights `(b_0, b_1) = (1/4, 3/4)` (Butcher Table 344(I) p. 245). -/
+noncomputable def butcherRadauI_quadratureWeights_two (j : Fin 2) : ℝ :=
+  ∫ x in (0 : ℝ)..1,
+    (Lagrange.basis Finset.univ butcherRadauI_zeros_two j).eval x
+
+/-- **Butcher §344 — Radau II `s = 1` quadrature weight.**
+`b_j := ∫₀¹ L_j(x) dx` at the single Radau II abscissa `c_1 = 1`. The
+Lagrange basis on a singleton is identically `1`, so the unique entry
+is `∫₀¹ 1 dx = 1`. -/
+noncomputable def butcherRadauII_quadratureWeights_one (j : Fin 1) : ℝ :=
+  ∫ x in (0 : ℝ)..1,
+    (Lagrange.basis Finset.univ butcherRadauII_zeros_one j).eval x
+
+/-- **Butcher §344 — Radau II `s = 2` quadrature weights.**
+`b_j := ∫₀¹ L_j(x) dx` at the Radau II abscissae `(1/3, 1)`. Closed-form
+weights `(b_0, b_1) = (3/4, 1/4)` (Butcher Table 344(II) p. 245). -/
+noncomputable def butcherRadauII_quadratureWeights_two (j : Fin 2) : ℝ :=
+  ∫ x in (0 : ℝ)..1,
+    (Lagrange.basis Finset.univ butcherRadauII_zeros_two j).eval x
+
+/-- **Butcher §344 — Lobatto `s = 2` quadrature weights.**
+`b_j := ∫₀¹ L_j(x) dx` at the Lobatto abscissae `(0, 1)`. Closed-form
+weights `(b_0, b_1) = (1/2, 1/2)` — the trapezoidal rule. -/
+noncomputable def butcherLobatto_quadratureWeights_two (j : Fin 2) : ℝ :=
+  ∫ x in (0 : ℝ)..1,
+    (Lagrange.basis Finset.univ butcherLobatto_zeros_two j).eval x
+
+/-- **Butcher §344 — Lobatto `s = 3` quadrature weights.**
+`b_j := ∫₀¹ L_j(x) dx` at the Lobatto abscissae `(0, 1/2, 1)`.
+Closed-form weights `(b_0, b_1, b_2) = (1/6, 2/3, 1/6)` — Simpson's
+rule. -/
+noncomputable def butcherLobatto_quadratureWeights_three (j : Fin 3) : ℝ :=
+  ∫ x in (0 : ℝ)..1,
+    (Lagrange.basis Finset.univ butcherLobatto_zeros_three j).eval x
+
+/-! #### `_apply` theorems for `s = 1` (singleton Lagrange basis) -/
+
+/-- **Radau I `s = 1` weight at `j = 0`.** Value `1`. The basis on the
+singleton `Finset.univ : Finset (Fin 1)` is `1` (`Lagrange.basis_singleton`),
+so the integral collapses to `∫₀¹ 1 dx = 1`. -/
+theorem butcherRadauI_quadratureWeights_one_apply :
+    butcherRadauI_quadratureWeights_one ⟨0, by omega⟩ = 1 := by
+  unfold butcherRadauI_quadratureWeights_one
+  simp [Lagrange.basis_singleton, Polynomial.eval_one]
+
+/-- **Radau II `s = 1` weight at `j = 0`.** Value `1`. The basis on the
+singleton `Finset.univ : Finset (Fin 1)` is `1`, so the integral
+collapses to `∫₀¹ 1 dx = 1`. -/
+theorem butcherRadauII_quadratureWeights_one_apply :
+    butcherRadauII_quadratureWeights_one ⟨0, by omega⟩ = 1 := by
+  unfold butcherRadauII_quadratureWeights_one
+  simp [Lagrange.basis_singleton, Polynomial.eval_one]
+
+/-! #### `_apply` theorems for `s = 2` (two-node Lagrange basis)
+
+For two-stage methods, the Lagrange basis polynomials are
+`L_0(x) = (x − c_1)/(c_0 − c_1)` and `L_1(x) = (x − c_0)/(c_1 − c_0)`.
+After computing the concrete pointwise expression, the integrals collapse
+to `∫₀¹ 1 dx + (slope) · ∫₀¹ x dx` via `integral_id` and `integral_one`. -/
+
+/-- **Lobatto `s = 2` weight at `j = 0`.** Value `1/2` (trapezoidal
+rule). With nodes `(0, 1)`, the basis polynomial `L_0(x) = 1 − x`, so
+`b_0 = ∫₀¹ (1 − x) dx = 1 − 1/2 = 1/2`. -/
+theorem butcherLobatto_quadratureWeights_two_apply_zero :
+    butcherLobatto_quadratureWeights_two ⟨0, by omega⟩ = 1 / 2 := by
+  unfold butcherLobatto_quadratureWeights_two
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherLobatto_zeros_two
+          ⟨0, by omega⟩).eval x = 1 - x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_two, Polynomial.eval_sub,
+          Polynomial.eval_X]
+  simp_rw [h_eval]
+  have h_int : ∫ x in (0 : ℝ)..1, ((1 : ℝ) - x) = 1 / 2 := by
+    have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+      continuous_id.intervalIntegrable 0 1
+    have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+      have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+      simp only [pow_one, Nat.cast_one] at hp1
+      rw [hp1]; norm_num
+    rw [intervalIntegral.integral_sub intervalIntegrable_const hi_x,
+        integral_one, hx]
+    norm_num
+  exact h_int
+
+/-- **Lobatto `s = 2` weight at `j = 1`.** Value `1/2` (trapezoidal
+rule). With nodes `(0, 1)`, the basis polynomial `L_1(x) = x`, so
+`b_1 = ∫₀¹ x dx = 1/2`. -/
+theorem butcherLobatto_quadratureWeights_two_apply_one :
+    butcherLobatto_quadratureWeights_two ⟨1, by omega⟩ = 1 / 2 := by
+  unfold butcherLobatto_quadratureWeights_two
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherLobatto_zeros_two
+          ⟨1, by omega⟩).eval x = x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_two, Polynomial.eval_X]
+  simp_rw [h_eval]
+  have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+  simp only [pow_one, Nat.cast_one] at hp1
+  rw [hp1]; norm_num
+
+/-- **Radau I `s = 2` weight at `j = 0`.** Value `1/4`. With nodes
+`(0, 2/3)`, the basis polynomial `L_0(x) = 1 − (3/2)x`, so
+`b_0 = ∫₀¹ (1 − (3/2)x) dx = 1 − 3/4 = 1/4`
+(Butcher Table 344(I) p. 245). -/
+theorem butcherRadauI_quadratureWeights_two_apply_zero :
+    butcherRadauI_quadratureWeights_two ⟨0, by omega⟩ = 1 / 4 := by
+  unfold butcherRadauI_quadratureWeights_two
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauI_zeros_two
+          ⟨0, by omega⟩).eval x = 1 - (3/2) * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauI_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub intervalIntegrable_const
+        (hi_x.const_mul (3/2)),
+      integral_one, intervalIntegral.integral_const_mul, hx]
+  norm_num
+
+/-- **Radau I `s = 2` weight at `j = 1`.** Value `3/4`. With nodes
+`(0, 2/3)`, the basis polynomial `L_1(x) = (3/2)x`, so
+`b_1 = ∫₀¹ (3/2)x dx = 3/4` (Butcher Table 344(I) p. 245). -/
+theorem butcherRadauI_quadratureWeights_two_apply_one :
+    butcherRadauI_quadratureWeights_two ⟨1, by omega⟩ = 3 / 4 := by
+  unfold butcherRadauI_quadratureWeights_two
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauI_zeros_two
+          ⟨1, by omega⟩).eval x = (3/2) * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauI_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_X]
+  simp_rw [h_eval]
+  have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_const_mul, hx]
+  norm_num
+
+/-- **Radau II `s = 2` weight at `j = 0`.** Value `3/4`. With nodes
+`(1/3, 1)`, the basis polynomial `L_0(x) = (3/2) − (3/2)x`, so
+`b_0 = ∫₀¹ ((3/2) − (3/2)x) dx = 3/2 − 3/4 = 3/4`
+(Butcher Table 344(II) p. 245). -/
+theorem butcherRadauII_quadratureWeights_two_apply_zero :
+    butcherRadauII_quadratureWeights_two ⟨0, by omega⟩ = 3 / 4 := by
+  unfold butcherRadauII_quadratureWeights_two
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauII_zeros_two
+          ⟨0, by omega⟩).eval x = (3/2) - (3/2) * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauII_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub intervalIntegrable_const
+        (hi_x.const_mul (3/2)),
+      intervalIntegral.integral_const, intervalIntegral.integral_const_mul,
+      hx]
+  norm_num
+
+/-- **Radau II `s = 2` weight at `j = 1`.** Value `1/4`. With nodes
+`(1/3, 1)`, the basis polynomial `L_1(x) = (3/2)x − 1/2`, so
+`b_1 = ∫₀¹ ((3/2)x − 1/2) dx = 3/4 − 1/2 = 1/4`
+(Butcher Table 344(II) p. 245). -/
+theorem butcherRadauII_quadratureWeights_two_apply_one :
+    butcherRadauII_quadratureWeights_two ⟨1, by omega⟩ = 1 / 4 := by
+  unfold butcherRadauII_quadratureWeights_two
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauII_zeros_two
+          ⟨1, by omega⟩).eval x = (3/2) * x - (1/2) := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauII_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub (hi_x.const_mul (3/2))
+        intervalIntegrable_const,
+      intervalIntegral.integral_const_mul, intervalIntegral.integral_const,
+      hx]
+  norm_num
+
+/-! #### `_apply` theorems for `s = 3` (three-node Lagrange basis)
+
+For three-stage Lobatto, the basis polynomials are quadratic. The
+expansion via `Finset.prod_pair` reduces the two-factor product to the
+explicit polynomial form, after which integration follows the cycle 274
+`_norm_sq_*` template (`integral_pow` for `x²`, `x`, and `integral_one`
+for the constant term). -/
+
+/-- **Lobatto `s = 3` weight at `j = 0`.** Value `1/6` (Simpson's rule
+endpoint weight). With nodes `(0, 1/2, 1)`, the basis polynomial
+`L_0(x) = 2x² − 3x + 1`, so
+`b_0 = ∫₀¹ (2x² − 3x + 1) dx = 2/3 − 3/2 + 1 = 1/6`. -/
+theorem butcherLobatto_quadratureWeights_three_apply_zero :
+    butcherLobatto_quadratureWeights_three ⟨0, by omega⟩ = 1 / 6 := by
+  unfold butcherLobatto_quadratureWeights_three
+  have h_erase : ((Finset.univ : Finset (Fin 3)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩, ⟨2, by omega⟩} : Finset (Fin 3)) := by decide
+  have h_ne : (⟨1, by omega⟩ : Fin 3) ≠ ⟨2, by omega⟩ := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 3)) butcherLobatto_zeros_three
+          ⟨0, by omega⟩).eval x = 2 * x ^ 2 - 3 * x + 1 := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_pair h_ne, Polynomial.eval_mul,
+        Lagrange.basisDivisor, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_three, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h2 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_add
+        ((hi_x2.const_mul 2).sub (hi_x.const_mul 3))
+        intervalIntegrable_const,
+      intervalIntegral.integral_sub (hi_x2.const_mul 2) (hi_x.const_mul 3),
+      intervalIntegral.integral_const_mul, intervalIntegral.integral_const_mul,
+      h2, h1, integral_one]
+  norm_num
+
+/-- **Lobatto `s = 3` weight at `j = 1`.** Value `2/3` (Simpson's rule
+midpoint weight). With nodes `(0, 1/2, 1)`, the basis polynomial
+`L_1(x) = −4x² + 4x`, so
+`b_1 = ∫₀¹ (−4x² + 4x) dx = −4/3 + 2 = 2/3`. -/
+theorem butcherLobatto_quadratureWeights_three_apply_one :
+    butcherLobatto_quadratureWeights_three ⟨1, by omega⟩ = 2 / 3 := by
+  unfold butcherLobatto_quadratureWeights_three
+  have h_erase : ((Finset.univ : Finset (Fin 3)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩, ⟨2, by omega⟩} : Finset (Fin 3)) := by decide
+  have h_ne : (⟨0, by omega⟩ : Fin 3) ≠ ⟨2, by omega⟩ := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 3)) butcherLobatto_zeros_three
+          ⟨1, by omega⟩).eval x = -4 * x ^ 2 + 4 * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_pair h_ne, Polynomial.eval_mul,
+        Lagrange.basisDivisor, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_three, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h2 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_add (hi_x2.const_mul (-4)) (hi_x.const_mul 4),
+      intervalIntegral.integral_const_mul, intervalIntegral.integral_const_mul,
+      h2, h1]
+  norm_num
+
+/-- **Lobatto `s = 3` weight at `j = 2`.** Value `1/6` (Simpson's rule
+endpoint weight). With nodes `(0, 1/2, 1)`, the basis polynomial
+`L_2(x) = 2x² − x`, so
+`b_2 = ∫₀¹ (2x² − x) dx = 2/3 − 1/2 = 1/6`. -/
+theorem butcherLobatto_quadratureWeights_three_apply_two :
+    butcherLobatto_quadratureWeights_three ⟨2, by omega⟩ = 1 / 6 := by
+  unfold butcherLobatto_quadratureWeights_three
+  have h_erase : ((Finset.univ : Finset (Fin 3)).erase ⟨2, by omega⟩)
+      = ({⟨0, by omega⟩, ⟨1, by omega⟩} : Finset (Fin 3)) := by decide
+  have h_ne : (⟨0, by omega⟩ : Fin 3) ≠ ⟨1, by omega⟩ := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 3)) butcherLobatto_zeros_three
+          ⟨2, by omega⟩).eval x = 2 * x ^ 2 - x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_pair h_ne, Polynomial.eval_mul,
+        Lagrange.basisDivisor, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_three, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  have hi_x2 : IntervalIntegrable (fun x : ℝ => x ^ 2) MeasureTheory.volume 0 1 :=
+    (continuous_pow 2).intervalIntegrable 0 1
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have h2 : ∫ x in (0 : ℝ)..1, x ^ 2 = 1 / 3 := by
+    rw [integral_pow]; norm_num
+  have h1 : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub (hi_x2.const_mul 2) hi_x,
+      intervalIntegral.integral_const_mul, h2, h1]
+  norm_num
+
+/-! #### Non-vacuity anchors — weight-sum equals `1`
+
+For any interpolatory quadrature exact on constants, the weights sum
+to `1` (the integral of the constant function `1` over `[0, 1]`). The
+three multi-stage examples below confirm this concretely for the
+small-`s` Radau I, Lobatto s=2, and Lobatto s=3 weight arrays. -/
+
+/-- **Radau I `s = 2` weight-sum**: `1/4 + 3/4 = 1`. -/
+example : butcherRadauI_quadratureWeights_two ⟨0, by omega⟩
+        + butcherRadauI_quadratureWeights_two ⟨1, by omega⟩ = 1 := by
+  rw [butcherRadauI_quadratureWeights_two_apply_zero,
+      butcherRadauI_quadratureWeights_two_apply_one]
+  norm_num
+
+/-- **Lobatto `s = 2` weight-sum**: `1/2 + 1/2 = 1` (trapezoidal rule). -/
+example : butcherLobatto_quadratureWeights_two ⟨0, by omega⟩
+        + butcherLobatto_quadratureWeights_two ⟨1, by omega⟩ = 1 := by
+  rw [butcherLobatto_quadratureWeights_two_apply_zero,
+      butcherLobatto_quadratureWeights_two_apply_one]
+  norm_num
+
+/-- **Lobatto `s = 3` weight-sum**: `1/6 + 2/3 + 1/6 = 1` (Simpson's
+rule). -/
+example : butcherLobatto_quadratureWeights_three ⟨0, by omega⟩
+        + butcherLobatto_quadratureWeights_three ⟨1, by omega⟩
+        + butcherLobatto_quadratureWeights_three ⟨2, by omega⟩ = 1 := by
+  rw [butcherLobatto_quadratureWeights_three_apply_zero,
+      butcherLobatto_quadratureWeights_three_apply_one,
+      butcherLobatto_quadratureWeights_three_apply_two]
+  norm_num
+
 end OpenMath.Chapter3.Section344
