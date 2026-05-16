@@ -7,6 +7,7 @@ import Mathlib.Topology.Algebra.Polynomial
 import Mathlib.Tactic.Cases
 import Mathlib.Data.Real.Basic
 import OpenMath.Chapter3.Section342NormSqHelpers
+import OpenMath.Chapter3.Section342DistinctRootsHelpers
 
 /-!
 # Butcher §342 — Shifted Legendre polynomials on `[0,1]`
@@ -5743,5 +5744,365 @@ theorem butcherShiftedLegendre_thirteen_roots :
     exact ⟨by linarith, by linarith⟩
   · obtain ⟨hgt, hlt⟩ := hr₁₃_mem
     exact ⟨by linarith, hlt⟩
+
+/-! ### (342g) — `P_n^*` has `n` distinct real zeros in `(0, 1)`
+
+The remainder of this section closes the seventh and last clause of
+`lem:342A` (clause (342g)) at full generality: the shifted Legendre
+polynomial `P_n^*` has exactly `n` distinct real zeros in the open
+interval `(0, 1)`, for every `n : ℕ`.
+
+The textbook strategy (Butcher, p. 236) is a sign-change contradiction
+on the orthogonality clause (342a) — equivalently, on its strengthened
+form `butcherShiftedLegendre_orthogonal_to_lower_degree` (cycle 292).
+If `P_n^*` had fewer than `n` odd-multiplicity zeros in `(0, 1)`,
+collecting them into a polynomial `Q = ∏ (X − C xᵢ)` of `natDegree < n`
+would force `P_n^* · Q = Q² · R` for some `R` with only even-multiplicity
+zeros in `(0,1)`, hence `R` has constant sign on `[0, 1]` (by IVT on
+the residual factor) and `P_n^* · Q` has constant non-zero sign. But
+then `∫₀¹ P_n^* · Q ≠ 0`, contradicting `_orthogonal_to_lower_degree`.
+
+The generic sign-change / polynomial machinery lives in
+`OpenMath.Chapter3.Section342DistinctRootsHelpers` (mirrors the cycle
+281 `Section342NormSqHelpers.lean` extraction pattern). Here we
+specialise it to `butcherShiftedLegendre n`.
+
+This closure was produced by Aristotle (cycle 301, project
+`5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`); the proof reproduced below
+has been adapted (namespace + import refactoring; replaced the
+`Irreducible.coprime_iff_not_dvd` path with the more direct
+`Polynomial.isCoprime_X_sub_C_of_isUnit_sub` to remove a spurious
+`IsBezout` synth requirement) and verified to compile without any
+heartbeat bump above the project default of 200000. -/
+
+open OpenMath.Chapter3.Section342DistinctRootsHelpers
+
+/-- `P_n^*` is not the zero polynomial (immediate from
+`butcherShiftedLegendre_eval_one n : P_n^*(1) = 1 ≠ 0`). -/
+theorem butcherShiftedLegendre_ne_zero (n : ℕ) :
+    butcherShiftedLegendre n ≠ 0 := by
+  intro h
+  have h1 := butcherShiftedLegendre_eval_one n
+  rw [h] at h1
+  simp at h1
+
+/-- The Finset of distinct real roots of `P_n^*` that lie in the open
+interval `(0, 1)`. -/
+noncomputable def butcherShiftedLegendre_rootsInIoo (n : ℕ) : Finset ℝ :=
+  (butcherShiftedLegendre n).roots.toFinset.filter
+    (fun x => x ∈ Set.Ioo (0 : ℝ) 1)
+
+/-- Every element of `butcherShiftedLegendre_rootsInIoo n` lies in
+`(0, 1)`. -/
+lemma butcherShiftedLegendre_rootsInIoo_subset (n : ℕ) :
+    ∀ x ∈ butcherShiftedLegendre_rootsInIoo n, x ∈ Set.Ioo (0 : ℝ) 1 := by
+  intro x hx
+  simp only [butcherShiftedLegendre_rootsInIoo, Finset.mem_filter] at hx
+  exact hx.2
+
+/-- Every element of `butcherShiftedLegendre_rootsInIoo n` is a root of
+`P_n^*`. -/
+lemma butcherShiftedLegendre_rootsInIoo_are_roots (n : ℕ) :
+    ∀ x ∈ butcherShiftedLegendre_rootsInIoo n,
+      (butcherShiftedLegendre n).eval x = 0 := by
+  intro x hx
+  simp only [butcherShiftedLegendre_rootsInIoo, Finset.mem_filter,
+             Multiset.mem_toFinset] at hx
+  exact (mem_roots (butcherShiftedLegendre_ne_zero n)).mp hx.1
+
+/-- **Butcher §342 (342g), upper bound** — the number of roots of
+`P_n^*` in `(0, 1)` is at most `n`. Refines
+`butcherShiftedLegendre_card_roots_le` (cycle 294) to the open-interval
+filter. -/
+lemma butcherShiftedLegendre_rootsInIoo_card_le (n : ℕ) :
+    (butcherShiftedLegendre_rootsInIoo n).card ≤ n := by
+  calc (butcherShiftedLegendre_rootsInIoo n).card
+      ≤ (butcherShiftedLegendre n).roots.toFinset.card :=
+        Finset.card_filter_le _ _
+    _ ≤ (butcherShiftedLegendre n).roots.card :=
+        Multiset.toFinset_card_le _
+    _ ≤ (butcherShiftedLegendre n).natDegree :=
+        Polynomial.card_roots' _
+    _ = n := butcherShiftedLegendre_natDegree n
+
+/-- **Butcher §342 (342g), lower bound** — the number of roots of
+`P_n^*` in `(0, 1)` is at least `n`.
+
+This is the **key** half of (342g), proved by sign-change contradiction
+on `butcherShiftedLegendre_orthogonal_to_lower_degree` (cycle 292).
+Aristotle integrated cycle 301. -/
+theorem butcherShiftedLegendre_rootsInIoo_card_ge (n : ℕ) :
+    n ≤ (butcherShiftedLegendre_rootsInIoo n).card := by
+  apply le_of_not_gt
+  intro h
+  set S := ((butcherShiftedLegendre n).roots.toFinset.filter
+              (fun x => x ∈ Set.Ioo (0 : ℝ) 1)).filter
+              (fun x => Odd ((butcherShiftedLegendre n).rootMultiplicity x))
+            with hS_def
+  have hS_card : S.card < n := by
+    refine lt_of_le_of_lt (Finset.card_le_card ?_) h
+    exact Finset.filter_subset _ _
+  set Q : Polynomial ℝ := S.prod (fun r => Polynomial.X - Polynomial.C r)
+    with hQ_def
+  have hQ_div : Q ∣ butcherShiftedLegendre n := by
+    apply prod_linear_factors_dvd_of_roots
+    aesop
+  have hQ_natDegree : Q.natDegree < n := by
+    rw [Polynomial.natDegree_prod _ _ fun x _ => Polynomial.X_sub_C_ne_zero x]
+    aesop
+  obtain ⟨R, hR⟩ : ∃ R : Polynomial ℝ, butcherShiftedLegendre n = Q * R :=
+    hQ_div
+  have hR_natDegree : R.natDegree = n - S.card := by
+    have hR_natDegree : R.natDegree + Q.natDegree = n := by
+      rw [add_comm, ← Polynomial.natDegree_mul'] <;> norm_num [hR]
+      · rw [← hR, butcherShiftedLegendre_natDegree]
+      · exact ⟨Finset.prod_ne_zero_iff.mpr
+                fun x _ => Polynomial.X_sub_C_ne_zero x,
+              by rintro rfl
+                 exact absurd hR <| by
+                   exact ne_of_apply_ne (Polynomial.eval 1) <| by
+                     norm_num [butcherShiftedLegendre_eval_one]⟩
+    rw [show Q.natDegree = S.card from ?_] at hR_natDegree
+    · omega
+    rw [Polynomial.natDegree_prod _ _ fun x _ => Polynomial.X_sub_C_ne_zero x,
+        Finset.sum_congr rfl fun x _ => Polynomial.natDegree_X_sub_C _]
+    norm_num
+  have hR_eval_zero : R.eval 0 ≠ 0 := by
+    intro hR_zero
+    have h_contra : (butcherShiftedLegendre n).eval 0 = 0 := by
+      simp [hR, hR_zero]
+    exact absurd h_contra
+      (by rw [butcherShiftedLegendre_eval_zero]; positivity)
+  have hR_eval_one : R.eval 1 ≠ 0 := by
+    intro hR_eval_one_zero
+    have h_contra : (butcherShiftedLegendre n).eval 1 = 0 := by
+      rw [hR, Polynomial.eval_mul, hR_eval_one_zero, MulZeroClass.mul_zero]
+    exact absurd h_contra (by rw [butcherShiftedLegendre_eval_one]; norm_num)
+  have hR_even_mult_roots :
+      ∀ r ∈ Set.Ioo (0 : ℝ) 1, Even (R.rootMultiplicity r) := by
+    intro r hr
+    have h_root_multiplicity :
+        rootMultiplicity r (butcherShiftedLegendre n) =
+          rootMultiplicity r Q + rootMultiplicity r R := by
+      rw [hR, rootMultiplicity_mul]
+      exact hR ▸ butcherShiftedLegendre_ne_zero n
+    by_cases hrS : r ∈ S <;> simp +decide at h_root_multiplicity ⊢
+    · have h_root_multiplicity_Q : rootMultiplicity r Q = 1 := by
+        rw [hQ_def, rootMultiplicity_eq_multiplicity]
+        rw [if_neg <| Finset.prod_ne_zero_iff.mpr
+              fun x _ => Polynomial.X_sub_C_ne_zero x,
+            multiplicity_eq_of_dvd_of_not_dvd]
+        · exact dvd_trans (by norm_num) (Finset.dvd_prod_of_mem _ hrS)
+        · rw [Finset.prod_eq_prod_diff_singleton_mul hrS]
+          rw [pow_add, pow_one,
+              mul_dvd_mul_iff_right (Polynomial.X_sub_C_ne_zero r)]
+          rw [Polynomial.dvd_iff_isRoot]
+          simp +decide [Polynomial.eval_prod, Finset.prod_eq_zero_iff,
+                        sub_eq_zero]
+      grind
+    · by_cases hr_root : r ∈ (butcherShiftedLegendre n).roots.toFinset <;>
+        simp +decide at hrS ⊢
+      · simp +zetaDelta at *
+        rw [h_root_multiplicity] at hrS
+        rw [rootMultiplicity_eq_zero] at hrS <;> norm_num at hrS ⊢
+        · exact hrS hr_root.1 hr_root.2 hr.1 hr.2
+        · rw [Polynomial.eval_prod]
+          simp +decide [Finset.prod_eq_zero_iff, sub_eq_zero]
+          grind +locals
+      · simp +zetaDelta at *
+        rw [rootMultiplicity_eq_zero] <;>
+          norm_num [hr_root (butcherShiftedLegendre_ne_zero n)]
+        intro h
+        specialize hr_root (butcherShiftedLegendre_ne_zero n)
+        simp_all +singlePass
+  have hR_ne_zero : R ≠ 0 := by
+    rintro rfl
+    simp_all +decide
+  have hR_constant_sign :
+      (∀ x ∈ Set.Icc (0 : ℝ) 1, 0 ≤ R.eval x) ∨
+      (∀ x ∈ Set.Icc (0 : ℝ) 1, R.eval x ≤ 0) := by
+    exact poly_constant_sign_of_even_mult_roots R hR_ne_zero
+      hR_eval_zero hR_eval_one hR_even_mult_roots
+  have h_integrand_constant_sign :
+      (∀ x ∈ Set.Icc (0 : ℝ) 1, 0 ≤ (butcherShiftedLegendre n).eval x * Q.eval x) ∨
+      (∀ x ∈ Set.Icc (0 : ℝ) 1, (butcherShiftedLegendre n).eval x * Q.eval x ≤ 0) := by
+    rcases hR_constant_sign with hR_constant_sign | hR_constant_sign <;>
+      [left; right] <;> intro x hx <;> simp +decide [hR]
+    · nlinarith only [sq_nonneg (eval x Q), hR_constant_sign x hx]
+    · nlinarith only [mul_self_nonneg (eval x Q), hR_constant_sign x hx]
+  have h_integrand_nonzero :
+      ∃ x ∈ Set.Ioo (0 : ℝ) 1, (butcherShiftedLegendre n).eval x * Q.eval x ≠ 0 := by
+    have h_integrand_zeros :
+        Set.Finite {x ∈ Set.Ioo (0 : ℝ) 1 |
+                    (butcherShiftedLegendre n).eval x * Q.eval x = 0} := by
+      refine Set.Finite.subset
+        (Q.roots.toFinset.finite_toSet.union
+          ((butcherShiftedLegendre n |> Polynomial.roots |>
+              Multiset.toFinset |> Finset.finite_toSet))) ?_
+      norm_num [Set.subset_def]
+      exact fun x _ _ hx₃ => Or.symm <|
+        Or.imp
+          (fun hx₄ => ⟨butcherShiftedLegendre_ne_zero n, hx₄⟩)
+          (fun hx₄ => ⟨Finset.prod_ne_zero_iff.mpr
+                        fun y _ => Polynomial.X_sub_C_ne_zero y, hx₄⟩)
+          hx₃
+    contrapose! h_integrand_zeros
+    exact Set.Infinite.mono
+      (fun x hx => ⟨hx, h_integrand_zeros x hx⟩)
+      (Set.Ioo_infinite (by norm_num))
+  have h_integral_zero :
+      ∫ x in (0 : ℝ)..1, (butcherShiftedLegendre n).eval x * Q.eval x = 0 := by
+    convert butcherShiftedLegendre_orthogonal_to_lower_degree n Q hQ_natDegree using 1
+  rcases h_integrand_constant_sign with h | h
+  · rw [intervalIntegral.integral_of_le zero_le_one,
+        MeasureTheory.integral_eq_zero_iff_of_nonneg_ae] at h_integral_zero
+    · rw [Filter.EventuallyEq, MeasureTheory.ae_restrict_iff'] at h_integral_zero <;>
+        norm_num at *
+      rw [MeasureTheory.ae_iff] at h_integral_zero
+      contrapose! h_integral_zero
+      obtain ⟨x, hx₁, hx₂, hx₃⟩ := h_integrand_nonzero
+      obtain ⟨ε, hε_pos, hε⟩ : ∃ ε > 0, ∀ y, abs (y - x) < ε →
+            (butcherShiftedLegendre n).eval y ≠ 0 ∧ Q.eval y ≠ 0 := by
+        have hcontP :
+            Continuous fun y => (butcherShiftedLegendre n).eval y :=
+          Polynomial.continuous _
+        have hcontQ : Continuous fun y => Q.eval y := Polynomial.continuous _
+        obtain ⟨δ₁, hδ₁_pos, hδ₁⟩ :=
+          Metric.continuous_iff.mp hcontP x (|eval x (butcherShiftedLegendre n)|)
+            (abs_pos.mpr hx₂)
+        obtain ⟨δ₂, hδ₂_pos, hδ₂⟩ :=
+          Metric.continuous_iff.mp hcontQ x (|eval x Q|) (abs_pos.mpr hx₃)
+        refine ⟨min δ₁ δ₂, lt_min hδ₁_pos hδ₂_pos, fun y hy₁ => ?_⟩
+        refine ⟨?_, ?_⟩
+        · cases abs_cases (eval x (butcherShiftedLegendre n)) <;>
+            linarith [abs_lt.mp (hδ₁ y (lt_of_lt_of_le hy₁ (min_le_left _ _)))]
+        · cases abs_cases (eval x Q) <;>
+            linarith [abs_lt.mp (hδ₂ y (lt_of_lt_of_le hy₁ (min_le_right _ _)))]
+      have hxgt : (0 : ℝ) < x := hx₁.1
+      have hxlt : x < (1 : ℝ) := hx₁.2
+      have hmax_lt : max (0 : ℝ) (x - ε) < x := by
+        rcases le_or_gt (x - ε) 0 with hle | hlt
+        · rw [max_eq_left hle]; exact hxgt
+        · rw [max_eq_right hlt.le]; linarith
+      have hlt_min : x < min (1 : ℝ) (x + ε) := by
+        rcases le_or_gt 1 (x + ε) with hle | hlt
+        · rw [min_eq_left hle]; exact hxlt
+        · rw [min_eq_right hlt.le]; linarith
+      have h_interval_pos_measure :
+          0 < MeasureTheory.MeasureSpace.volume
+                (Set.Ioo (max 0 (x - ε)) (min 1 (x + ε))) := by
+        rw [Real.volume_Ioo]
+        exact ENNReal.ofReal_pos.mpr (by linarith)
+      refine ne_of_gt (lt_of_lt_of_le h_interval_pos_measure
+        (MeasureTheory.measure_mono fun y hy => ?_))
+      obtain ⟨hyL, hyR⟩ := hy
+      have hyε : |y - x| < ε := by
+        refine abs_lt.mpr ⟨?_, ?_⟩
+        · rcases le_or_gt (x - ε) 0 with hle | hlt
+          · rw [max_eq_left hle] at hyL; linarith
+          · rw [max_eq_right hlt.le] at hyL; linarith
+        · rcases le_or_gt 1 (x + ε) with hle | hlt
+          · rw [min_eq_left hle] at hyR; linarith
+          · rw [min_eq_right hlt.le] at hyR; linarith
+      have hyPQ := hε y hyε
+      refine ⟨?_, ?_, ?_⟩
+      · rcases le_or_gt (x - ε) 0 with hle | hlt
+        · rw [max_eq_left hle] at hyL; exact hyL
+        · rw [max_eq_right hlt.le] at hyL; linarith
+      · rcases le_or_gt 1 (x + ε) with hle | hlt
+        · rw [min_eq_left hle] at hyR; exact hyR.le
+        · rw [min_eq_right hlt.le] at hyR; linarith
+      · exact hyPQ
+    · filter_upwards [MeasureTheory.ae_restrict_mem measurableSet_Ioc] with x hx using
+        h x <| Set.Ioc_subset_Icc_self hx
+    · refine Continuous.integrableOn_Ioc ?_
+      exact ((butcherShiftedLegendre n).continuous.mul Q.continuous)
+  · have h_integral_neg :
+        ∫ x in (0 : ℝ)..1, -((butcherShiftedLegendre n).eval x * Q.eval x) > 0 := by
+      rw [intervalIntegral.integral_of_le zero_le_one]
+      refine lt_of_le_of_lt ?_ ((MeasureTheory.setIntegral_pos_iff_support_of_nonneg_ae
+        ?_ ?_).2 ?_)
+      · norm_num
+      · filter_upwards [MeasureTheory.ae_restrict_mem measurableSet_Ioc] with x hx using
+          neg_nonneg_of_nonpos (h x <| Set.Ioc_subset_Icc_self hx)
+      · refine Continuous.integrableOn_Ioc ?_
+        exact ((butcherShiftedLegendre n).continuous.mul Q.continuous).neg
+      · obtain ⟨x, hx₁, hx₂⟩ := h_integrand_nonzero
+        obtain ⟨ε, hε_pos, hε⟩ : ∃ ε > 0, ∀ y, abs (y - x) < ε →
+            (butcherShiftedLegendre n).eval y * Q.eval y ≠ 0 := by
+          have hcontPQ :
+              Continuous fun y => (butcherShiftedLegendre n).eval y * Q.eval y :=
+            (butcherShiftedLegendre n).continuous.mul Q.continuous
+          obtain ⟨δ, hδ_pos, hδ⟩ :=
+            Metric.continuous_iff.mp hcontPQ x
+              (|eval x (butcherShiftedLegendre n) * eval x Q|) (abs_pos.mpr hx₂)
+          refine ⟨δ, hδ_pos, fun y hy₁ => ?_⟩
+          cases abs_cases (eval x (butcherShiftedLegendre n) * eval x Q) <;>
+            linarith [abs_lt.mp (hδ y hy₁)]
+        have hxgt : (0 : ℝ) < x := hx₁.1
+        have hxlt : x < (1 : ℝ) := hx₁.2
+        have hmax_lt : max (0 : ℝ) (x - ε) < x := by
+          rcases le_or_gt (x - ε) 0 with hle | hlt
+          · rw [max_eq_left hle]; exact hxgt
+          · rw [max_eq_right hlt.le]; linarith
+        have hlt_min : x < min (1 : ℝ) (x + ε) := by
+          rcases le_or_gt 1 (x + ε) with hle | hlt
+          · rw [min_eq_left hle]; exact hxlt
+          · rw [min_eq_right hlt.le]; linarith
+        have h_interval_pos_measure :
+            0 < MeasureTheory.MeasureSpace.volume
+                  (Set.Ioo (max 0 (x - ε)) (min 1 (x + ε))) := by
+          rw [Real.volume_Ioo]
+          exact ENNReal.ofReal_pos.mpr (by linarith)
+        refine h_interval_pos_measure.trans_le (MeasureTheory.measure_mono ?_)
+        intro y hy
+        obtain ⟨hyL, hyR⟩ := hy
+        have hyε : |y - x| < ε := by
+          refine abs_lt.mpr ⟨?_, ?_⟩
+          · rcases le_or_gt (x - ε) 0 with hle | hlt
+            · rw [max_eq_left hle] at hyL; linarith
+            · rw [max_eq_right hlt.le] at hyL; linarith
+          · rcases le_or_gt 1 (x + ε) with hle | hlt
+            · rw [min_eq_left hle] at hyR; linarith
+            · rw [min_eq_right hlt.le] at hyR; linarith
+        refine ⟨?_, ?_, ?_⟩
+        · simpa using neg_ne_zero.mpr (hε y hyε)
+        · rcases le_or_gt (x - ε) 0 with hle | hlt
+          · rw [max_eq_left hle] at hyL; exact hyL
+          · rw [max_eq_right hlt.le] at hyL; linarith
+        · rcases le_or_gt 1 (x + ε) with hle | hlt
+          · rw [min_eq_left hle] at hyR; exact hyR.le
+          · rw [min_eq_right hlt.le] at hyR; linarith
+    rw [intervalIntegral.integral_neg] at h_integral_neg
+    linarith
+
+/-- **Butcher §342 (342g)** — `P_n^*` has `n` distinct real zeros in
+the open interval `(0, 1)`, for every `n : ℕ`.
+
+This is the final clause of `lem:342A`. Combined with clauses
+(342a)–(342f) closed in cycles 271–293, this completes Butcher's
+characterisation of the shifted Legendre polynomial family.
+
+The proof uses
+`butcherShiftedLegendre_rootsInIoo_card_le` (upper bound, this file,
+refining cycle 294) and
+`butcherShiftedLegendre_rootsInIoo_card_ge` (lower bound, the
+sign-change contradiction integrated from Aristotle cycle 301).
+
+Cross-check: the cycle 295–300 empirical anchors
+`butcherShiftedLegendre_{one,three,five,seven,nine,eleven,thirteen}_roots`
+are consistent with this general theorem specialised at the
+corresponding `n` (they additionally supply explicit closed-form
+sub-interval witnesses that the existential statement here does not). -/
+theorem butcherShiftedLegendre_n_distinct_real_zeros (n : ℕ) :
+    ∃ (xs : Finset ℝ), xs.card = n ∧
+      (∀ x ∈ xs, x ∈ Set.Ioo (0 : ℝ) 1) ∧
+      (∀ x ∈ xs, (butcherShiftedLegendre n).eval x = 0) :=
+  ⟨butcherShiftedLegendre_rootsInIoo n,
+    le_antisymm
+      (butcherShiftedLegendre_rootsInIoo_card_le n)
+      (butcherShiftedLegendre_rootsInIoo_card_ge n),
+    butcherShiftedLegendre_rootsInIoo_subset n,
+    butcherShiftedLegendre_rootsInIoo_are_roots n⟩
 
 end OpenMath.Chapter3.Section342

@@ -278,3 +278,71 @@ return.
   flat that becomes observation #1 of a fresh three-stall window.
   Cancellation precondition (three consecutive flat readings) not
   currently met.
+
+## Cycle 301 closure
+
+**RESOLVED.** Aristotle project
+`5939f28b-c890-4b7f-be4f-ed0f31f0d0b5` returned `COMPLETE` at 100%
+on the cycle 301 single-poll (created 2026-05-15T22:11Z, completed
+2026-05-16T00:37Z). The proof was integrated into
+`OpenMath/Chapter3/Section342.lean` with:
+
+* Generic polynomial-sign helpers extracted to a new file
+  `OpenMath/Chapter3/Section342DistinctRootsHelpers.lean` (mirror of
+  cycle 281's `Section342NormSqHelpers.lean` pattern):
+  - `poly_nonneg_or_nonpos_near_even_mult_root`
+  - `poly_constant_sign_of_even_mult_roots`
+  - `prod_linear_factors_dvd_of_roots`
+
+* New theorems in `Section342.lean` (`OpenMath.Chapter3.Section342`
+  namespace):
+  - `butcherShiftedLegendre_ne_zero (n : ℕ) : butcherShiftedLegendre n ≠ 0`
+  - `butcherShiftedLegendre_rootsInIoo (n : ℕ) : Finset ℝ`
+  - `butcherShiftedLegendre_rootsInIoo_subset`
+  - `butcherShiftedLegendre_rootsInIoo_are_roots`
+  - `butcherShiftedLegendre_rootsInIoo_card_le` (refines cycle 294's
+    `butcherShiftedLegendre_card_roots_le` to the open-interval filter)
+  - `butcherShiftedLegendre_rootsInIoo_card_ge` (sign-change
+    contradiction, ~250 LOC, the load-bearing lemma)
+  - `butcherShiftedLegendre_n_distinct_real_zeros (n : ℕ) : ∃ xs : Finset ℝ, xs.card = n ∧ (∀ x ∈ xs, x ∈ Set.Ioo 0 1) ∧ (∀ x ∈ xs, P_n^*.eval x = 0)`
+
+* **All theorems axiom-clean** (`[propext, Classical.choice, Quot.sound]`
+  only) under the CLAUDE.md default `maxHeartbeats := 200000`.
+  Aristotle's `set_option maxHeartbeats 800000` defensive bumps on
+  `poly_constant_sign_of_even_mult_roots` and `rootsInIoo_card_ge`
+  were dropped without any proof decomposition — they were defensive
+  and unneeded once two surgical fixes landed:
+
+  1. **`IsBezout` synthesis fix**: Aristotle's
+     `Irreducible.coprime_iff_not_dvd` path requires `IsBezout R[X]`,
+     which the elaborator couldn't pin from the bare `_` placeholder
+     metavariable. Swapped to the more direct
+     `Polynomial.isCoprime_X_sub_C_of_isUnit_sub
+       (sub_ne_zero_of_ne hrs).isUnit`
+     (in `Mathlib.Algebra.Polynomial.RingDivision`), which does not
+     require `IsBezout`.
+
+  2. **`simp +zetaDelta at *` blow-up fix**: Aristotle's volume
+     positivity argument
+     `0 < volume (Set.Ioo (max 0 (x-ε)) (min 1 (x+ε)))`
+     used `simp +zetaDelta at *` which timed out at 200000 heartbeats.
+     Replaced with explicit `rcases le_or_gt (x - ε) 0` / `rcases
+     le_or_gt 1 (x + ε)` case-splits on the `max` / `min` formulas,
+     followed by `rw [Real.volume_Ioo]; exact ENNReal.ofReal_pos.mpr ...`.
+
+* Cycle 295–300 empirical anchors (`butcherShiftedLegendre_{one,three,
+  five,seven,nine,eleven,thirteen}_roots`) are **retained as
+  defensive regression witnesses** — they provide explicit closed-form
+  sub-interval brackets that the existential headline does not. Per
+  cycle 301 strategy §D.6.
+
+* `extraction/formalization_data/lean_status.json`: `lem:342A` updated
+  to `formalized`, `lean_symbol` updated to
+  `butcherShiftedLegendre_n_distinct_real_zeros`.
+
+* `plan.md`: `[~] lem:342A` → `[x] lem:342A` with cycle 301 closure
+  paragraph documenting the Aristotle integration and the two
+  surgical fixes.
+
+**lem:342A complete**: all seven clauses (342a)–(342g) closed over
+cycles 271–301.
