@@ -1,324 +1,243 @@
-# Cycle 298 Strategy — (342g) Aristotle poll + branch-dispatch
+# Cycle 300 Strategy
 
-## Context
+## Context recap (cycle 299 close)
 
-`lem:342A` is **partial**: properties (342a)–(342f) are all formalized
-(cycles 271–293); only (342g) — `P_n^*` has `n` distinct real zeros in
-`(0, 1)` — remains. Empirical anchors are shipped for `n ∈ {1, 2, 3, 5, 7}`
-(cycles 294–297, all axiom-clean).
+Last cycle shipped `butcherShiftedLegendre_eleven_roots` (n=11 empirical
+anchor for `lem:342A` clause (342g)), axiom-clean. The empirical ladder
+now stands at `n ∈ {1, 3, 5, 7, 9, 11}`. Section342.lean is ~3500 LOC,
+0 sorries.
 
-Aristotle project `5939f28b-c890-4b7f-be4f-ed0f31f0d0b5` was submitted
-cycle 294 for the general (342g) statement. Most recent poll (cycle 297,
-2026-05-15T23:19:53Z): `IN_PROGRESS`, `percent_complete = 25`. This is
-**observation #1** of the three-stall protocol (cycle 285 precedent
-established by `c8b8f138` / `efe4940e`).
+Aristotle project `5939f28b-c890-4b7f-be4f-ed0f31f0d0b5` (general (342g)
+statement, citing all of (342a)–(342f) + cycle 292's
+`butcherShiftedLegendre_orthogonal_to_lower_degree`) is in flight. Last
+poll (cycle 299, 2026-05-15T23:56:34Z) returned `IN_PROGRESS` at 29%.
+Growth trajectory: 16% → 19% → 25% → 28% → 29% across cycles 295–299.
+**The +1pp gain in cycle 299 reset the stall counter to 0**; no
+three-stall protocol is currently armed.
 
-Three-stall protocol (recap):
-- Stall obs #1: poll, observe flat at X%, DO NOT cancel. Branch B (ship
-  anchor).
-- Stall obs #2: poll, observe still flat at X%, DO NOT cancel. Branch B.
-- Stall obs #3: poll, observe still flat at X% → **cancel**, pivot to
-  manual closure plan from `lem_342A_g_zeros_scoping.md` Branch D.
+## Cycle 300 plan — three branches based on Aristotle poll
 
-Current sorry count: 0. No active blockers; no infrastructure work
-required. Cycle 298 is a continuation of the (342g) closure track.
+### Priority 0 (mandatory) — single Aristotle poll
 
-## Priority 1 (P1) — Single-poll Aristotle `5939f28b`
+Run **exactly one** `mcp__aristotle__get_status` call on project
+`5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`. Record:
+- `status` (`COMPLETE` / `COMPLETE_WITH_ERRORS` / `IN_PROGRESS` / `FAILED`)
+- `percent_complete`
+- `last_updated` timestamp
 
-**Command**: invoke `mcp__aristotle__get_status` with project_id
-`5939f28b-c890-4b7f-be4f-ed0f31f0d0b5`. **One poll only.** Do NOT
-re-poll under any circumstances per CLAUDE.md and the cycle 282–286
-precedent.
+Per CLAUDE.md: **do NOT re-poll within this cycle.** One poll, then proceed.
 
-### Branch dispatch table
+### Branch decision table
 
-After the single poll, dispatch on `status` and `percent_complete`:
-
-| Status | percent_complete | Action |
+| Aristotle status | percent | Action |
 |---|---|---|
-| `COMPLETE` | 100 | **Branch A** — integrate, see §A below |
-| `IN_PROGRESS` | < 25 | Branch B + flag regression for cycle 299 |
-| `IN_PROGRESS` | 25 (same as cycle 297) | **Branch B** — observation #2, ship n=9 anchor |
-| `IN_PROGRESS` | > 25 (healthy progress) | Branch B — ship n=9 anchor, stall counter resets |
-| `COMPLETE_WITH_ERRORS` | — | **Branch C** — review errors, see §C below |
-| `FAILED` / `CANCELLED` / `ERROR` | — | **Branch D** — escalate to manual plan |
+| `COMPLETE` | 100% | **Branch A** — integrate general theorem (§A) |
+| `COMPLETE_WITH_ERRORS` | any | **Branch A'** — integrate after fixing errors (§A') |
+| `IN_PROGRESS`, ≥ 30% | up | **Branch B** — ship n=13 anchor (§B) |
+| `IN_PROGRESS`, = 29% (flat) | flat #1 | **Branch B** — ship n=13 anchor; flag stall observation #1 |
+| `IN_PROGRESS`, < 29% (regression) | down | **Branch C** — investigate; ship anchor as fallback |
+| `FAILED` / cancelled | n/a | **Branch D** — pivot to manual closure plan (§D) |
 
-**Most likely outcome**: IN_PROGRESS at 25% (observation #2). Per cycle
-296→297 pace, +0pp/cycle has been the steady state since cycle 296.
-Plan around Branch B.
+### §A — Aristotle COMPLETE (Branch A)
 
-## Priority 2 (P2) — Branch B (most likely): ship `butcherShiftedLegendre_nine_roots`
+If Aristotle returned a successful proof of the general (342g) theorem:
 
-### Deliverable
-
-Mechanical extension of the cycle 297 `n = 7` recipe to `n = 9`. Reuse:
-
-- `butcherShiftedLegendre_nine` (cycle 285, `Section342.lean`):
-  closed form
-  `P_9^* = 48620X^9 − 218790X^8 + 411840X^7 − 420420X^6
-   + 252252X^5 − 90090X^4 + 18480X^3 − 1980X^2 + 90X − 1`
-- `butcherShiftedLegendre_eval_half_eq_zero_of_odd` (cycle 295):
-  middle root `r_5 = 1/2` via `Odd 9` witnessed by `9 = 2·4 + 1`,
-  i.e. `⟨4, rfl⟩`.
-- `Polynomial.continuous` + `intermediate_value_Ioo` /
-  `intermediate_value_Ioo'`: same IVT machinery as cycles 295/296/297.
-
-### Bracket plan (9 roots in (0,1))
-
-Approximate root locations (Gauss-Legendre nodes on [0,1] for n=9):
-≈ {0.0159, 0.0820, 0.1934, 0.3378, 0.5, 0.6622, 0.8066, 0.9180, 0.9841}.
-
-Choose disjoint brackets with small denominators. Suggested:
-
-| Root | Bracket | Direction | Strategy |
-|---|---|---|---|
-| r₁ ≈ 0.016 | (0, 1/20) | ascending | `f(0) = -1`, `f(1/20) > 0` |
-| r₂ ≈ 0.082 | (1/20, 1/8) | descending | `f(1/20) > 0`, `f(1/8) < 0` |
-| r₃ ≈ 0.193 | (1/8, 1/4) | ascending | `f(1/8) < 0`, `f(1/4) > 0` |
-| r₄ ≈ 0.338 | (1/4, 2/5) | descending | `f(1/4) > 0`, `f(2/5) < 0` |
-| r₅ = 1/2 | — | parity helper | `f(1/2) = 0` exact |
-| r₆ ≈ 0.662 | (3/5, 3/4) | ascending | parity-symmetric to r₄ |
-| r₇ ≈ 0.807 | (3/4, 7/8) | descending | parity-symmetric to r₃ |
-| r₈ ≈ 0.918 | (7/8, 19/20) | ascending | parity-symmetric to r₂ |
-| r₉ ≈ 0.984 | (19/20, 1) | descending | parity-symmetric to r₁ |
-
-**Sanity-check brackets before committing**: compute each
-`P_9^*(endpoint)` using exact rational arithmetic (Python `Fraction`
-or hand-evaluation). Worker should verify each sign is as table claims;
-if any sign mismatches, **adjust the bracket** before writing Lean.
-Likely-tight brackets at the outer roots r₁ and r₉ — denominator 20 may
-be too coarse; try 1/50 or 1/100 if 1/20 doesn't give correct sign.
-
-**Backup bracket strategy** (if 1/20 fails): use denominators ≤ 100
-(e.g. 1/100, 9/50, …). The denominator size only affects `norm_num`
-load, not soundness. Cycle 296/297 used denominators ≤ 10/20; n=9 may
-need ≤ 100.
-
-### Recipe (per cycle 296/297 template)
-
-For each bracket `(a, b)`:
-1. Evaluate `P_9^*(a)` and `P_9^*(b)` via:
-   ```lean
-   have hfa : (butcherShiftedLegendre 9).eval a = <value> := by
-     rw [butcherShiftedLegendre_nine]
-     simp [Polynomial.eval_sub, Polynomial.eval_add, Polynomial.eval_mul,
-           Polynomial.eval_pow, Polynomial.eval_C, Polynomial.eval_X]
-     norm_num
+1. **Download the result** via `mcp__aristotle__download_result`.
+2. **Inspect** the proof structure. Expected shape (per cycle 294
+   submission): a sign-change-cardinality contradiction argument using
+   `butcherShiftedLegendre_orthogonal_to_lower_degree` (cycle 292) on a
+   product polynomial `Q := ∏ᵢ (X − xᵢ)` built from the sign-change zeros.
+3. **Helper extraction**: if Aristotle's proof has multiple supporting
+   lemmas, follow the cycle 281 / cycle 277 precedent and split helpers
+   into a new file `OpenMath/Chapter3/Section342GZerosHelpers.lean`
+   (analogous to `Section342NormSqHelpers.lean`). Section342.lean keeps
+   only the headline + non-vacuity examples.
+4. **Headline target**: a theorem of shape
    ```
-2. Apply `intermediate_value_Ioo` (ascending) or `intermediate_value_Ioo'`
-   (descending) with `Polynomial.continuous _ |>.continuousOn` and the
-   appropriate `Set.mem_Ioo` witness for `0 ∈ Ioo (f a) (f b)`.
-3. Extract `r ∈ Ioo a b` with `(butcherShiftedLegendre 9).eval r = 0`.
-
-For the middle root r₅:
-```lean
-have hf5 : (butcherShiftedLegendre 9).eval (1/2 : ℝ) = 0 :=
-  butcherShiftedLegendre_eval_half_eq_zero_of_odd 9 ⟨4, rfl⟩
-```
-
-Membership in `(0, 1)`: each `r_i ∈ Ioo a b ⊆ Ioo 0 1` via
-`Set.Ioo_subset_Ioo` (need `0 ≤ a` and `b ≤ 1`).
-
-Distinctness (36 pairs for 9 roots): use disjoint intervals + `linarith`
-in a chain:
-```
-(0, 1/20) < (1/20, 1/8) < (1/8, 1/4) < (1/4, 2/5)
-  < {1/2} < (3/5, 3/4) < (3/4, 7/8) < (7/8, 19/20) < (19/20, 1)
-```
-Each consecutive pair has the closing endpoint ≤ the next opening
-endpoint. `1/2` is strictly between `2/5` and `3/5`.
-
-### Statement skeleton
-
-```lean
-/-- (342g) at n = 9: `P_9^*` has 9 distinct real zeros in (0, 1). -/
-theorem butcherShiftedLegendre_nine_roots :
-    ∃ r₁ r₂ r₃ r₄ r₅ r₆ r₇ r₈ r₉ : ℝ,
-      r₁ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₂ ∈ Set.Ioo (0 : ℝ) 1 ∧
-      r₃ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₄ ∈ Set.Ioo (0 : ℝ) 1 ∧
-      r₅ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₆ ∈ Set.Ioo (0 : ℝ) 1 ∧
-      r₇ ∈ Set.Ioo (0 : ℝ) 1 ∧ r₈ ∈ Set.Ioo (0 : ℝ) 1 ∧
-      r₉ ∈ Set.Ioo (0 : ℝ) 1 ∧
-      r₁ ≠ r₂ ∧ r₁ ≠ r₃ ∧ … ∧ r₈ ≠ r₉ ∧  -- 36 distinctness conjuncts
-      (butcherShiftedLegendre 9).eval r₁ = 0 ∧
-      (butcherShiftedLegendre 9).eval r₂ = 0 ∧ … ∧
-      (butcherShiftedLegendre 9).eval r₉ = 0 := by
-  -- ~340 LOC, mechanical port of cycle 297's n=7 proof
-```
-
-**LOC estimate**: ~340 (one more bracket pair than n=7's 274 LOC plus
-the parity-symmetric tail). Hard ceiling 400 LOC; if blowing past,
-factor evaluations into private helpers.
-
-### Risks and mitigations (P2)
-
-| Risk | Mitigation |
-|---|---|
-| Bracket sign mismatch | Pre-compute every endpoint with Python `Fraction`; verify before writing |
-| `norm_num` slow at n=9 (9-digit coefficients) | If a single evaluation > 60s wall, split coefficients into `have`-binds |
-| Heartbeat ceiling on the full proof | Factor each bracket pair into a `private theorem`, then assemble. **Do NOT raise maxHeartbeats** |
-| Distinctness `linarith` chain blowing up | Pre-establish bracket endpoints as named `have`s; use `linarith [h₁, h₂, …]` with explicit list |
-
-### Faithfulness check (P2)
-
-- **Entity ID**: `lem:342A` clause (342g) at n = 9.
-- **Textbook**: clause (342g) is a ∀-claim; this is an empirical anchor
-  (strictly weaker). Do NOT bump `lean_status.json` row for `lem:342A`
-  to `formalized`. State remains `partial` until Aristotle (or manual
-  closure) lands the general statement.
-- **Definition smuggling check**: no new definitions. Only one new
-  theorem `butcherShiftedLegendre_nine_roots`.
-- **Hypothesis strength**: zero hypotheses (a closed theorem about a
-  concrete polynomial).
-
-## Priority 3 (P3) — Branch A (if Aristotle COMPLETE)
-
-### Integration recipe
-
-1. Download Aristotle artifact:
+   butcherShiftedLegendre_distinct_real_roots (n : ℕ) :
+     ∃ (S : Finset ℝ), S.card = n ∧
+       (∀ x ∈ S, x ∈ Set.Ioo (0 : ℝ) 1) ∧
+       (∀ x ∈ S, (butcherShiftedLegendre n).eval x = 0)
    ```
-   mcp__aristotle__download_result project_id=5939f28b…
-   mcp__aristotle__extract_result project_id=5939f28b…
-   ```
-2. Inspect `ARISTOTLE_SUMMARY.md` and the generated Lean file(s) in
-   `.prover-state/aristotle_results/5939f28b-c890-4b7f-be4f-ed0f31f0d0b5/`.
-3. Identify the main theorem (probably named
-   `butcherShiftedLegendre_distinct_zeros` or
-   `butcherShiftedLegendre_has_n_distinct_real_zeros`).
-4. Identify all helper lemmas (sign-change extraction, product-polynomial
-   construction, integral-positivity, orthogonality-contradiction).
-5. **Decide placement**:
-   - If helpers are reusable (sign-change machinery is general), place
-     in a new file `OpenMath/Chapter3/Section342ZerosHelpers.lean`
-     (mirroring cycle 281's `Section342NormSqHelpers.lean` pattern).
-   - If helpers are tightly coupled to the main theorem, inline them
-     into `Section342.lean` as `private` lemmas.
-6. Integrate the main theorem into `Section342.lean` at the end of the
-   namespace (after the empirical anchors).
-7. **Audit imports**: Aristotle uses cycles 271–293 results
-   (`butcherShiftedLegendre_orthogonal`, `_orthogonal_to_lower_degree`,
-   `_recurrence`, `_natDegree`, `_leadingCoeff`, `_zero`/`_one`/…/`_eleven`).
-   Verify each is cited at HEAD; rename if Aristotle used a stub name.
-8. Compile: `lake env lean OpenMath/Chapter3/Section342.lean` (or
-   `Section342ZerosHelpers.lean` first). Must close clean.
-9. Verify axiom-clean: `#print axioms <main_theorem>` returns
-   `[propext, Classical.choice, Quot.sound]` only.
-10. **Update entity status** (only if integration succeeds):
-    - `extraction/formalization_data/lean_status.json` row for
-      `lem:342A`: status `partial` → `formalized`, `lean_symbol` set
-      to the main theorem name, `cycle_closed` set to 298.
-    - `plan.md` Chapter 3 row for `lem:342A`: `[~]` → `[x]`, update
-      the inline note.
-11. Update `MEMORY.md` if any new Lean idiom or Mathlib lemma is
-    introduced by Aristotle.
+   or the multiset/`Polynomial.roots` form, depending on Aristotle's
+   formulation. Reformulate if Aristotle's exact statement diverges
+   from the cycle 294 submission.
+5. **Verify axiom-clean**: `#print axioms` on the headline must return
+   `[propext, Classical.choice, Quot.sound]`. No new axioms.
+6. **Retain the empirical anchors** (`n ∈ {1, 3, 5, 7, 9, 11}`). They
+   provide concrete numerical witnesses and may simplify downstream
+   computations even after the general theorem lands. Do NOT delete.
+7. **`lean_status.json`**: bump `lem:342A` from `partial` to
+   `formalized`. **All seven (342a)–(342g) properties now closed.**
+8. **`plan.md`**: bump `lem:342A` row from `[~]` to `[x]`. Update the
+   §342 cluster progress note.
+9. **Task results §"Worked on"**: emphasise that this closes the entire
+   §342 (Gaussian quadrature foundation) cluster except for `lem:342B`
+   (Gaussian quadrature exactness degree) and `thm:342C` (order-condition
+   equivalence), both of which depend on `lem:342A` and now become
+   single-cycle viable targets.
 
-### Branch A risks
+### §A' — Aristotle COMPLETE_WITH_ERRORS
 
-| Risk | Mitigation |
-|---|---|
-| Aristotle uses a stub helper name not at HEAD | Rename to the correct project symbol (e.g. `M.foo` → `LinearMultistepMethod.foo M`) |
-| Aristotle's proof has tactic errors | Run `lake env lean` to surface, fix the first error (often namespace), retry |
-| Aristotle's helpers conflict with existing private symbols | Rename Aristotle's symbols with a `private` prefix or move to the helpers file |
-| Main theorem statement diverges from textbook | If Aristotle proves a weaker / stronger statement, document the divergence; consider re-submitting if strictly weaker |
+If Aristotle returned a proof but with compile errors:
 
-## Priority 4 (P4) — Branch C (if COMPLETE_WITH_ERRORS)
+1. **Download** and **inspect** the errors. Common patterns:
+   - Namespace-resolution errors (cf. cycle 184): the cycle 294
+     submission cited theorems by `M.theorem_name` style; Aristotle may
+     have written them in the wrong namespace. Fix with explicit
+     `LinearMultistepMethod.xxx` / `OpenMath.Chapter3.Section342.xxx`.
+   - Missing imports.
+   - Tactic / simp set drift since cycle 294 submission.
+2. **Apply fixes locally**. Time-box to **30 minutes** of fixing. If
+   errors are substantial (>5 distinct issues), fall through to Branch B.
+3. If a clean fix lands, proceed with §A steps 3–9.
 
-Mirror the cycle 184 protocol for `7c4d0ffb` (Phase C.2 of `lem:441A`):
-1. Read `ARISTOTLE_SUMMARY.md` for the error description.
-2. Diff Aristotle's generated file against the submission file.
-3. If errors are ≤ 3 syntactic issues (namespace, simp set, name drift):
-   apply fixes locally, run `lake env lean`, integrate.
-4. If errors are deeper (wrong proof strategy, missing premise): treat
-   as Branch B and ship the n=9 anchor instead; cycle 299 re-submits
-   to Aristotle with the corrected premise.
+### §B — Aristotle IN_PROGRESS at ≥29% (Branch B, healthy or first stall)
 
-**DO NOT** spend more than 30 minutes on error remediation. If
-remediation is non-trivial, defer to cycle 299 and ship Branch B.
+Ship the `n = 13` empirical anchor `butcherShiftedLegendre_thirteen_roots`.
+This is mechanical extension of cycle 299's recipe.
 
-## Priority 5 (P5) — Branch D (if Aristotle FAILED/CANCELLED)
+**Critical preflight steps**:
 
-Pivot to manual closure per `.prover-state/issues/lem_342A_g_zeros_scoping.md`:
-1. Cancel any other pending Aristotle jobs to free the slot.
-2. Update the issue file with a Branch D entry recording the failure.
-3. Re-submit with a strengthened prompt that includes worked examples
-   of sign-change extraction in `Polynomial`-over-ℝ.
-4. **Also ship n=9 anchor** as Branch B safety net.
+1. **Python `Fraction` pre-verification**. Compute `P_13^*(x)` at the
+   chosen 14 bracket endpoints + `1/2` *before* writing Lean. The
+   closed form `butcherShiftedLegendre_thirteen` does NOT exist yet
+   (cycles 287/278/280 stopped at `_eleven`); you will need to add it
+   first. Recommend the cycle 287 `_eleven` template.
 
-## What NOT to do this cycle
+2. **Bracket grid**: outer brackets of `P_13^*` are tighter than n=11
+   (≈ 0.008 vs ≈ 0.02). **Denominator 100 will likely be required**
+   for the outer brackets (`(0, 1/100)` and `(99/100, 1)`). Inner
+   brackets can use denominator 20 or 50 per the n=11 pattern.
 
-- **Do NOT poll Aristotle more than once.** CLAUDE.md is explicit; one
-  poll per cycle. The cycle 282–286 precedent confirmed this discipline
-  works.
-- **Do NOT cancel `5939f28b` at observation #2.** The three-stall
-  protocol requires three consecutive flat readings (obs #1 from cycle
-  297, obs #2 from cycle 298, obs #3 from cycle 299) before cancelling.
-- **Do NOT attempt the general (342g) statement manually.** While
-  Aristotle is healthy (or only at stall obs #2), manual closure is
-  forbidden per the cycle 297 strategy §F.1 and cycle 285 protocol.
-  Cycle 300 is the earliest cycle that may cancel and pivot manual.
-- **Do NOT raise `maxHeartbeats` above 200000.** If n=9 evaluations
-  blow past, decompose into private helpers per cycle 281's pattern.
-- **Do NOT introduce `axiom` or `constant` declarations.**
-- **Do NOT introduce `sorry`.** Cycle 298's deliverables must be
-  axiom-clean or skipped entirely. If P2 stalls, ship nothing and
-  document — do not leave a sorry behind.
-- **Do NOT skip the bracket sanity-check.** Pre-compute every
-  endpoint sign with Python `Fraction` arithmetic BEFORE writing the
-  Lean proof. Cycle 296/297 used hand verification; cycle 298's larger
-  bracket count makes this non-optional.
-- **Do NOT pivot to a fresh entity.** §342 (342g) is the current
-  target, and n=9 is the natural anchor extension. Pivot only if
-  Aristotle FAILS (Branch D), in which case the pivot is to the manual
-  closure plan, not a new entity.
-- **Do NOT attempt `lem:342B` (Gaussian quadrature).** It depends on
-  (342g) for the existence of nodes; blocked until (342g) lands.
-- **Do NOT modify** `scripts/autonomous_loop.py` or any other
-  supervisor infrastructure.
+   Suggested grid (verify with Python before committing):
+   `(0, 1/100)`, `(1/100, 1/20)`, `(1/20, 1/10)`, `(1/10, 1/5)`,
+   `(1/5, 3/10)`, `(3/10, 2/5)`, `(2/5, 9/20)`, then `r₇ = 1/2`,
+   then parity-symmetric right brackets `(11/20, 3/5)`, `(3/5, 7/10)`,
+   `(7/10, 4/5)`, `(4/5, 9/10)`, `(9/10, 19/20)`, `(19/20, 99/100)`,
+   `(99/100, 1)`.
 
-## What you actually do this cycle (concrete checklist)
+3. **Mandatory `clear` step** (cycle 299 discovery): insert
+   `clear hP13 hcont hf_0 hf_1 hf_<frac>...` (retaining only `hf_half`
+   + IVT `hrᵢ_*` outputs) **immediately before the post-`refine` block**.
+   Without this, `linarith` will time out on `isDefEq` preprocessing of
+   the large-rational `hf_*` hypotheses. Outer-bracket denominators at
+   n=13 will be on the order of 10^25+, making the timeout effectively
+   guaranteed without the clear.
 
-1. **(2 min)** Single-poll Aristotle `5939f28b` via
-   `mcp__aristotle__get_status`.
-2. **(1 min)** Dispatch on result per the branch table above. Most
-   likely outcome: IN_PROGRESS at 25% → Branch B.
-3. **Branch B path (most likely, ~90 min)**:
-   a. Pre-compute the 8 IVT bracket endpoint evaluations of `P_9^*`
-      via Python `Fraction` (one-liner script if needed) to confirm
-      signs match the bracket plan above.
-   b. Adjust bracket denominators if any sign mismatches.
-   c. Open `OpenMath/Chapter3/Section342.lean` and append
-      `butcherShiftedLegendre_nine_roots` after cycle 297's
-      `butcherShiftedLegendre_seven_roots` (around line ~4196).
-   d. Mechanical port of cycle 297's recipe: 8 IVT applications + 1
-      parity helper + 36-pair distinctness `linarith` chain.
-   e. `lake build OpenMath.Chapter3.Section342` to verify.
-   f. `#print axioms butcherShiftedLegendre_nine_roots` for axiom
-      check.
-   g. Append cycle 298 stall observation #2 update to
-      `.prover-state/issues/lem_342A_g_zeros_scoping.md`.
-4. **Write task results** to
-   `.prover-state/task_results/cycle_298.md` per the CLAUDE.md format.
-5. **Commit and push** with a message like
-   `Cycle 298 — §342 (342g) n=9 empirical anchor + Aristotle obs #2.`
+4. **Closed form first**: add `butcherShiftedLegendre_thirteen` to
+   Section342.lean using the cycle 287 odd-`n` template:
+   - `Nat.choose` decide-helpers at `k ∈ {2..13}`.
+   - Per-`k` `simp` arms with `norm_num`.
+   - Outer Butcher sign `(-1)^13 = -1` flips every coefficient and
+     gives constant term `-1`.
+   - Leading coefficient `Nat.choose 26 13 = 10400600`.
 
-## Stretch (P6, only if cycle has spare budget)
+5. **Workflow**:
+   1. Write the Python pre-verification snippet (record results in a
+      comment block at the top of the new theorem for reference).
+   2. Add `butcherShiftedLegendre_thirteen` closed form (~80 LOC).
+   3. Add `butcherShiftedLegendre_thirteen_roots` (~450 LOC):
+      - 14 `hf_*` bracket evaluations.
+      - Middle via `butcherShiftedLegendre_eval_half_eq_zero_of_odd 13 ⟨6, rfl⟩`.
+      - 12 IVT calls (alternating ascending/descending per parity).
+      - **Insert `clear` block here.**
+      - `refine` with 13 distinct roots + 78 distinctness pairs.
+   4. Verify `lake env lean OpenMath/Chapter3/Section342.lean` exits 0.
+   5. Axiom check.
 
-If Branch B ships in < 60 min and `lake build` is clean, consider:
+6. **Stall observation**: if Aristotle returned exactly 29% (flat from
+   cycle 299), record this as **stall observation #1**. Per cycle 285
+   three-stall protocol, do NOT cancel yet — only observe.
 
-- **Cross-check witness**: state and prove
-  `butcherShiftedLegendre_seven_roots_distinct_from_zero` (a corollary
-  of the cycle 297 theorem confirming all 7 roots are non-zero — trivial
-  from `r_i ∈ Ioo 0 1` so `r_i > 0`, but useful for downstream
-  `lem:342B` consumers). ~10 LOC.
-- **Sanity helper**: `butcherShiftedLegendre_n_roots_le_n` —
-  `(P_n^*).roots.toFinset.card ≤ n` for ANY `n`, generalising cycle
-  294's `butcherShiftedLegendre_card_roots_le`. May already be implied;
-  audit.
+### §C — Aristotle IN_PROGRESS at <29% (Branch C, regression)
 
-DO NOT take on P6 unless Branch B completed comfortably.
+Regression below 29% is **unexpected** but possible (e.g. if Aristotle
+backtracked from a failed proof attempt). Action:
+
+1. **Record the regression** in cycle 300 task results.
+2. **Do NOT cancel yet**. Regression-then-recovery is a normal
+   exploration pattern.
+3. Proceed with **§B (n=13 anchor)** as the cycle deliverable.
+4. If next cycle's poll shows another regression or no recovery, that
+   becomes observation #1 of a new stall protocol.
+
+### §D — Aristotle FAILED or cancelled
+
+If Aristotle returned `FAILED` or has been cancelled:
+
+1. **Investigate**: download the failure log if available.
+2. **Pivot to manual closure**. Open a new issue file
+   `.prover-state/issues/lem_342A_g_zeros_manual_closure_plan.md`
+   modelled on `lem_342A_342f_manual_closure_plan.md` (cycle 289), with
+   a phased manual approach:
+   - Phase A: sign-change cardinality lemma (`P_n^*` has ≥ `n`
+     sign-change zeros in `(0,1)` from any candidate set of bracket
+     endpoints).
+   - Phase B: product polynomial construction `Q := ∏ (X - xᵢ)` over
+     the assumed sign-change set, with `Q.natDegree < n`.
+   - Phase C: contradiction via cycle 292's
+     `butcherShiftedLegendre_orthogonal_to_lower_degree`:
+     `∫₀¹ P_n^* · Q = 0` while the integrand has constant sign on
+     each sub-interval.
+   - Phase D: capstone combining the cardinality lemma with the
+     general-`n` distinctness conclusion.
+3. Estimated 4–6 cycles total. Mirror the Phase A.1/A.2/A.3 cadence
+   from `lem_342A_342f_manual_closure_plan.md`.
+4. **Cycle 300 deliverable**: scoping doc + Phase A.1 starter lemma
+   (sign-change → root cardinality). Single-cycle target ~80–120 LOC.
+
+## What NOT to try
+
+* **Do NOT re-poll Aristotle within this cycle.** One poll only per
+  CLAUDE.md. If `IN_PROGRESS`, accept it and move on.
+* **Do NOT cancel Aristotle prematurely** if stall counter is not at 3
+  consecutive observations. Cycle 299 reset the counter; do not act on
+  one new flat reading alone.
+* **Do NOT extend the empirical ladder past `n = 13` in cycle 300.**
+  The marginal value drops sharply after n=11. If Aristotle stalls
+  hard, pivot to manual closure (§D) rather than continuing to n=15+.
+* **Do NOT attempt the `n = 13` proof without the cycle 299 `clear`
+  step.** The `linarith` / `isDefEq` timeout is *guaranteed* at this
+  bracket-denominator scale. The `clear` is not optional infrastructure;
+  it is required.
+* **Do NOT use `Polynomial.ext` on `butcherShiftedLegendre_thirteen`**.
+  Use the cycle 287 `_eleven` template (per-`k` simp arms + `norm_num`),
+  which is the only tactic shape known to close `Polynomial ℝ`
+  closed-form witnesses at this size without timing out.
+* **Do NOT introduce `axiom` / `constant`** to bridge any (342g) gap.
+  Manual closure (§D) is the fallback if Aristotle fails.
+* **Do NOT pivot to a fresh entity in cycle 300** unless Aristotle
+  returns `COMPLETE` and the §342 cluster fully closes. The §342 ladder
+  has compounding value; finishing it cleanly takes priority over
+  cluster-switching.
+* **Do NOT raise `maxHeartbeats` above 200000.** If `n=13` stalls
+  somewhere unexpected, decompose into named helper lemmas (cycle 281
+  pattern).
+* **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`**.
+  45+ consecutive GPFS timeouts since cycle 182 (per
+  `cycle_182_gpfs_slowness.md`). Skip without smoke-testing.
+* **Do NOT modify `scripts/autonomous_loop.py`** or the prompt-builder.
+  Loop-maintainer territory.
+
+## Faithfulness & housekeeping
+
+* Cycle 300's deliverable updates `lean_status.json` only on Branch A
+  (full closure). Branches B/C/D keep `lem:342A` as `partial` /
+  `plan.md` row as `[~]`.
+* Branch B's `_thirteen` and `_thirteen_roots` are not textbook
+  entities — they are anchors of the unformalized general claim. Do
+  NOT promote `plan.md` rows for them.
+* Tautology-scanner regex must return 0 hits on Section342.lean before
+  closing the cycle.
 
 ## Bottom line
 
-Cycle 298 is a continuation: one Aristotle poll, then ship n=9 anchor
-on the most-likely IN_PROGRESS branch. ~340 LOC mechanical port of
-cycle 297. Axiom-clean expected; no infrastructure work needed.
+1. Poll Aristotle once.
+2. Branch on the result per the decision table.
+3. Most likely path: **Branch B (n=13 anchor)** with cycle 299's `clear`
+   step baked into the template.
+4. Less likely but high-payoff: **Branch A (integrate general theorem)**
+   if Aristotle finished. This would close `lem:342A` end-to-end.
+5. Fallback: **Branch D (manual closure plan)** if Aristotle fails.
+   Scoping + Phase A.1 starter as the cycle deliverable.

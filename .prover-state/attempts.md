@@ -146,3 +146,6 @@ Cycle 273 (342f): Both Polynomial.ext (coefficient route) and Polynomial.funext 
 
 ### Cycle 277
 Cycle 277: Aristotle 727396d5 (342a orthogonality) returned COMPLETE and was integrated with 4 helper lemmas. Aristotle's poly_ibp required rewriting from manual intervalIntegral.integral_deriv_eq_sub' chain (parser issues with nested by-blocks) to intervalIntegral.integral_mul_deriv_eq_deriv_mul_of_hasDerivAt. Cycle-275 even-n recipe failed at n=4 (simp collapsed C((-1)^4) before coeff_C_mul could fire); cycle-276 peel-off pattern (simp only [coeff_C_mul, coeff_map, coeff_shiftedLegendre] before ext k) confirmed necessary at all n≥3. Required new imports: Mathlib.Analysis.Calculus.Deriv.Polynomial, Mathlib.Topology.Algebra.Polynomial, Mathlib.Tactic.Cases.
+
+### Cycle 299
+Cycle 299 `butcherShiftedLegendre_eleven_roots`: 12 large-rational `hf_*` hypotheses (max denominator ≈76 quintillion for 1/50-bracket evaluations of P_11^*) caused `linarith` to time out at `isDefEq` during the post-`refine` distinctness/membership block; mitigation is an explicit `clear hP11 hcont hf_0 hf_1_fiftieth …` (retaining only `hf_half` + IVT outputs) inserted immediately before `refine`. This is now mandatory for any n≥11 anchor — cycle 298's n=9 proof avoided this because its max denominator was ~3 orders of magnitude smaller.
