@@ -6911,4 +6911,77 @@ example : butcherGaussLegendreRK_one.SatisfiesB 2 := by
   · simp [OpenMath.Chapter3.Section321.gaussLegendre1Stage]
   · simp [OpenMath.Chapter3.Section321.gaussLegendre1Stage]
 
+/-! ### Phase 2 of the §342 ↔ §321 Gauss–Legendre `RKTableau` lift (cycle 309)
+
+Cycle 308 shipped the `n = 1` anchor: the definition
+`butcherGaussLegendreRK_one`, its coincidence with §321's
+hand-built `gaussLegendre1Stage`, and the `B(2)` witness for that
+literal. Cycle 309 abstracts the stage count from `1` to a general
+`n : ℕ`, lifting the cycle 307 algebraic `B(2n)` bridge onto a
+concrete `RKTableau` at all `n` simultaneously.
+
+The `A`-matrix and `b`/`c` vectors are the cycle 302/303/308
+definitions verbatim; cycle 309 introduces no new infrastructure.
+The headline corollary `butcherGaussLegendreRK_satisfiesB` lifts
+`butcherShiftedLegendre_quadratureWeights_satisfiesB` (cycle 307)
+through `RKTableau.SatisfiesB`'s definitional unfolding.
+
+The C(n), D(n), and E(n, n) halves of the §342 order-2n proof
+remain deferred (multi-cycle infrastructure for the upper-limit
+parametrised quadrature exactness theorem). -/
+
+/-- **General-`n` Gauss–Legendre `RKTableau`** assembled from the
+canonical collocation `A`-matrix, Lagrange quadrature weights, and
+shifted Legendre zeros (Butcher §342 p. 237). At `n = 1` this
+literal coincides with `butcherGaussLegendreRK_one` (cycle 308) and
+hence — by the cycle 308 coincidence theorem — with §321's
+`gaussLegendre1Stage`. -/
+noncomputable def butcherGaussLegendreRK (n : ℕ) :
+    OpenMath.Chapter3.Section312.RKTableau n where
+  A := butcherShiftedLegendre_collocationA n
+  b := butcherShiftedLegendre_quadratureWeights n
+  c := butcherShiftedLegendre_zeros n
+
+/-- **Coincidence with cycle 308's `n = 1` literal.** Both
+constructions reduce to the same `RKTableau.mk` literal with
+identical field bodies, so this is `rfl`. Genuine bookkeeping:
+asserts the two distinct-looking definitions agree at `n = 1`. -/
+theorem butcherGaussLegendreRK_one_eq :
+    butcherGaussLegendreRK 1 = butcherGaussLegendreRK_one := rfl
+
+/-- **Headline cycle 309 corollary: §342 ↔ §321 `B(2n)` lift.**
+The general-`n` Gauss–Legendre `RKTableau` (collocation `A`-matrix,
+canonical Lagrange weights at the shifted Legendre zeros) satisfies
+the Butcher §321 `B(2n)` quadrature condition. Discharged by
+unfolding `SatisfiesB` and citing cycle 307's algebraic bridge,
+`butcherShiftedLegendre_quadratureWeights_satisfiesB`, which in
+turn routes through cycle 304's `2n`-degree exactness theorem. -/
+theorem butcherGaussLegendreRK_satisfiesB (n : ℕ) (hn : 0 < n) :
+    (butcherGaussLegendreRK n).SatisfiesB (2 * n) := by
+  intro k h1 hk
+  show (∑ j : Fin n,
+          butcherShiftedLegendre_quadratureWeights n j *
+            butcherShiftedLegendre_zeros n j ^ (k - 1))
+        = 1 / (k : ℝ)
+  exact butcherShiftedLegendre_quadratureWeights_satisfiesB n hn k h1 hk
+
+/-- **Non-vacuity witness at `n = 2`.** Exercises the general
+theorem at a stage count beyond the cycle 308 `n = 1` anchor: the
+2-stage Gauss–Legendre method satisfies the §321 `B(4)` condition
+(four quadrature identities `∑ⱼ bⱼ cⱼ^(k-1) = 1/k` for `k = 1..4`). -/
+example : (butcherGaussLegendreRK 2).SatisfiesB 4 :=
+  butcherGaussLegendreRK_satisfiesB 2 (by norm_num)
+
+/-- **Round-trip witness through §321's `gaussLegendre1Stage`.**
+Cycle 306 proved this `B(2)` fact directly via `interval_cases k`;
+cycle 309 re-derives it through the general theorem
+`butcherGaussLegendreRK_satisfiesB` at `n = 1`, validating that the
+cycle 308/309 bridge is downstream-consumable: §321's hand-built
+implicit-midpoint tableau is `B(2)`-correct *via* the §342
+collocation construction. -/
+example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesB 2 := by
+  rw [← butcherGaussLegendreRK_one_eq_gaussLegendre1Stage,
+      ← butcherGaussLegendreRK_one_eq]
+  exact butcherGaussLegendreRK_satisfiesB 1 (by norm_num)
+
 end OpenMath.Chapter3.Section342
