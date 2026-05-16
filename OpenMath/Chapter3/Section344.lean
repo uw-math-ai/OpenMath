@@ -327,4 +327,143 @@ theorem butcherLobatto_natDegree (s : ℕ) (hs : 2 ≤ s) :
   rw [Polynomial.natDegree_sub_eq_left_of_natDegree_lt h_lt,
       butcherShiftedLegendre_natDegree]
 
+/-! ## Deliverable E — Orthogonality to lower-degree polynomials (Phase B.1)
+
+Each Radau/Lobatto polynomial inherits orthogonality from cycle 292's
+`butcherShiftedLegendre_orthogonal_to_lower_degree`: a Radau/Lobatto
+polynomial is a sum or difference of two shifted Legendre polynomials,
+so orthogonality to a test polynomial `q` of degree `< s - 1` (Radau)
+or `< s - 2` (Lobatto) follows from linearity of the integral and
+orthogonality of each summand.
+
+These statements are the input to the Phase B.2 polynomial-exactness
+theorem (Butcher p. 244): the textbook proof divides `φ = Q · F + R`
+where `F` is the Radau/Lobatto polynomial, and the `Q · F` summand
+vanishes against the quadrature precisely because `Q.natDegree < s - 1`
+(Radau) or `Q.natDegree < s - 2` (Lobatto). -/
+
+private lemma intervalIntegrable_polyMul (p q : Polynomial ℝ) :
+    IntervalIntegrable (fun x : ℝ => p.eval x * q.eval x)
+      MeasureTheory.volume 0 1 :=
+  (p.continuous.mul q.continuous).intervalIntegrable _ _
+
+/-- **Butcher §344 — Radau I orthogonality** —
+For `s ≥ 1` and `q` a polynomial with `q.natDegree < s - 1`,
+`∫₀¹ (P_s^* + P_{s-1}^*)(x) · q(x) dx = 0`.
+
+This is the orthogonality property that powers Butcher's polynomial-
+exactness argument (p. 244) for Radau I quadrature: any polynomial
+`φ` of degree `≤ 2s − 2` divides as `Q · (P_s^* + P_{s-1}^*) + R`
+with `Q.natDegree < s − 1`, and the `Q · (P_s^* + P_{s-1}^*)` summand
+integrates to zero.
+
+Proof: unfold `butcherRadauI`, distribute via `eval_add` + `add_mul`,
+split via `intervalIntegral.integral_add`, and apply cycle 292's
+`butcherShiftedLegendre_orthogonal_to_lower_degree` at `m := s` (using
+`s - 1 ≤ s`) and `m := s - 1` (using the hypothesis directly). -/
+theorem butcherRadauI_orthogonal_to_lower_degree (s : ℕ) (hs : 1 ≤ s)
+    (q : Polynomial ℝ) (hq : q.natDegree < s - 1) :
+    ∫ x in (0 : ℝ)..1, (butcherRadauI s).eval x * q.eval x = 0 := by
+  unfold butcherRadauI
+  have h_int1 := intervalIntegrable_polyMul (butcherShiftedLegendre s) q
+  have h_int2 := intervalIntegrable_polyMul (butcherShiftedLegendre (s - 1)) q
+  have h_eq : ∀ x : ℝ,
+      (butcherShiftedLegendre s + butcherShiftedLegendre (s - 1)).eval x * q.eval x =
+      (butcherShiftedLegendre s).eval x * q.eval x +
+      (butcherShiftedLegendre (s - 1)).eval x * q.eval x := by
+    intro x
+    simp only [Polynomial.eval_add]
+    ring
+  simp_rw [h_eq]
+  rw [intervalIntegral.integral_add h_int1 h_int2]
+  have h1 : q.natDegree < s := by omega
+  rw [butcherShiftedLegendre_orthogonal_to_lower_degree s q h1,
+      butcherShiftedLegendre_orthogonal_to_lower_degree (s - 1) q hq]
+  ring
+
+/-- **Butcher §344 — Radau II orthogonality** —
+For `s ≥ 1` and `q` a polynomial with `q.natDegree < s - 1`,
+`∫₀¹ (P_s^* - P_{s-1}^*)(x) · q(x) dx = 0`.
+
+This is the orthogonality property powering Butcher's polynomial-
+exactness argument (p. 244) for Radau II quadrature, the dual of
+Radau I.
+
+Proof: same recipe as `butcherRadauI_orthogonal_to_lower_degree`,
+with `add` replaced by `sub` (using `intervalIntegral.integral_sub`). -/
+theorem butcherRadauII_orthogonal_to_lower_degree (s : ℕ) (hs : 1 ≤ s)
+    (q : Polynomial ℝ) (hq : q.natDegree < s - 1) :
+    ∫ x in (0 : ℝ)..1, (butcherRadauII s).eval x * q.eval x = 0 := by
+  unfold butcherRadauII
+  have h_int1 := intervalIntegrable_polyMul (butcherShiftedLegendre s) q
+  have h_int2 := intervalIntegrable_polyMul (butcherShiftedLegendre (s - 1)) q
+  have h_eq : ∀ x : ℝ,
+      (butcherShiftedLegendre s - butcherShiftedLegendre (s - 1)).eval x * q.eval x =
+      (butcherShiftedLegendre s).eval x * q.eval x -
+      (butcherShiftedLegendre (s - 1)).eval x * q.eval x := by
+    intro x
+    simp only [Polynomial.eval_sub]
+    ring
+  simp_rw [h_eq]
+  rw [intervalIntegral.integral_sub h_int1 h_int2]
+  have h1 : q.natDegree < s := by omega
+  rw [butcherShiftedLegendre_orthogonal_to_lower_degree s q h1,
+      butcherShiftedLegendre_orthogonal_to_lower_degree (s - 1) q hq]
+  ring
+
+/-- **Butcher §344 — Lobatto orthogonality** —
+For `s ≥ 2` and `q` a polynomial with `q.natDegree < s - 2`,
+`∫₀¹ (P_s^* - P_{s-2}^*)(x) · q(x) dx = 0`.
+
+This is the orthogonality property powering Butcher's polynomial-
+exactness argument (p. 244) for Lobatto quadrature: any polynomial
+`φ` of degree `≤ 2s − 3` divides as `Q · (P_s^* - P_{s-2}^*) + R`
+with `Q.natDegree < s − 2`, and the `Q · (P_s^* - P_{s-2}^*)` summand
+integrates to zero.
+
+Proof: same recipe as `butcherRadauII_orthogonal_to_lower_degree`,
+with the lower-index shift bumped from `s - 1` to `s - 2`, applying
+cycle 292's orthogonality at `m := s` and `m := s - 2`. -/
+theorem butcherLobatto_orthogonal_to_lower_degree (s : ℕ) (hs : 2 ≤ s)
+    (q : Polynomial ℝ) (hq : q.natDegree < s - 2) :
+    ∫ x in (0 : ℝ)..1, (butcherLobatto s).eval x * q.eval x = 0 := by
+  unfold butcherLobatto
+  have h_int1 := intervalIntegrable_polyMul (butcherShiftedLegendre s) q
+  have h_int2 := intervalIntegrable_polyMul (butcherShiftedLegendre (s - 2)) q
+  have h_eq : ∀ x : ℝ,
+      (butcherShiftedLegendre s - butcherShiftedLegendre (s - 2)).eval x * q.eval x =
+      (butcherShiftedLegendre s).eval x * q.eval x -
+      (butcherShiftedLegendre (s - 2)).eval x * q.eval x := by
+    intro x
+    simp only [Polynomial.eval_sub]
+    ring
+  simp_rw [h_eq]
+  rw [intervalIntegral.integral_sub h_int1 h_int2]
+  have h1 : q.natDegree < s := by omega
+  rw [butcherShiftedLegendre_orthogonal_to_lower_degree s q h1,
+      butcherShiftedLegendre_orthogonal_to_lower_degree (s - 2) q hq]
+  ring
+
+/-! ### Non-vacuity witnesses for the orthogonality lemmas
+
+Each lemma is fired against a constant test polynomial `q = C 1`,
+which has `natDegree = 0`. The hypothesis `0 < s - 1` (Radau) or
+`0 < s - 2` (Lobatto) is satisfied at `s = 2` (Radau) and `s = 3`
+(Lobatto). -/
+
+example :
+    ∫ x in (0 : ℝ)..1, (butcherRadauI 2).eval x * (Polynomial.C (1 : ℝ)).eval x = 0 :=
+  butcherRadauI_orthogonal_to_lower_degree 2 (by norm_num) (Polynomial.C 1)
+    (by simp)
+
+example :
+    ∫ x in (0 : ℝ)..1, (butcherRadauII 2).eval x * (Polynomial.C (1 : ℝ)).eval x = 0 :=
+  butcherRadauII_orthogonal_to_lower_degree 2 (by norm_num) (Polynomial.C 1)
+    (by simp)
+
+example :
+    ∫ x in (0 : ℝ)..1, (butcherLobatto 3).eval x * (Polynomial.C (1 : ℝ)).eval x = 0 :=
+  butcherLobatto_orthogonal_to_lower_degree 3 (by norm_num) (Polynomial.C 1)
+    (by simp)
+
 end OpenMath.Chapter3.Section344
