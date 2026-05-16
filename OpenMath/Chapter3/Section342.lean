@@ -4,6 +4,7 @@ import Mathlib.Algebra.Polynomial.Degree.Lemmas
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 import Mathlib.Analysis.Calculus.Deriv.Polynomial
 import Mathlib.Topology.Algebra.Polynomial
+import Mathlib.LinearAlgebra.Lagrange
 import Mathlib.Tactic.Cases
 import Mathlib.Data.Real.Basic
 import OpenMath.Chapter3.Section342NormSqHelpers
@@ -6196,5 +6197,92 @@ example : butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩ = (1 / 2 : ℝ) := by
   obtain ⟨a, ha⟩ := Finset.card_eq_one.mp hcard
   rw [ha, Finset.mem_singleton] at h_mem h12_mem
   rw [h_mem, ← h12_mem]
+
+/-! ### Phase A.2 of `lem:342B` — Lagrange quadrature weights (cycle 303)
+
+Butcher §342 p. 237 (`lem:342B`): "Let `c₁, c₂, …, c_s` denote the zeros
+of `P_s^*`. Then there exist positive numbers `b₁, b₂, …, b_s` such that
+`∫₀¹ φ(x) dx = ∑ᵢ bᵢ φ(cᵢ)` for any polynomial of degree less than `2s`."
+
+The textbook proof opens with: *"Choose `bᵢ` so that (342h) holds for any
+`φ` of degree less than `s`. Because the `cᵢ` are distinct the choice of
+the `bᵢ` is unique."* That is Phase A.2 — defining the weights and
+proving exactness on the `< n` half. The `2n`-degree extension via
+`φ = P_s^* · Q + R` is Phase B and consumes (342a) orthogonality.
+
+The weight `bⱼ` is the canonical Lagrange-quadrature formula
+`bⱼ = ∫₀¹ Lⱼ(x) dx`, where `Lⱼ` is the Lagrange basis polynomial at the
+node `c_j = butcherShiftedLegendre_zeros n j`. This is **not** definition
+smuggling of the exactness conclusion: the formula is the canonical
+choice, and the exactness theorem `butcherShiftedLegendre_quadrature_exact_lt_n`
+below is a genuine consequence of the polynomial-interpolation identity
+`Lagrange.eq_interpolate` (`f = interpolate s v (fun i ↦ eval (vᵢ) f)`
+for `f.degree < s.card`). -/
+
+/-- **Lagrange quadrature weights** at the canonical zeros of
+`butcherShiftedLegendre n` (Butcher's `bⱼ` from §342 p. 237).
+Defined as the integral of the Lagrange basis polynomial `Lⱼ` over
+`[0, 1]`, where `Lⱼ` interpolates the value `1` at the node `c_j` and
+`0` at the other `n - 1` nodes. The full lemma `lem:342B` also asserts
+positivity (`0 < bⱼ`) and `2n`-degree exactness; both are Phase B and
+deferred to a future cycle. -/
+noncomputable def butcherShiftedLegendre_quadratureWeights
+    (n : ℕ) (j : Fin n) : ℝ :=
+  ∫ x in (0 : ℝ)..1,
+    (Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j).eval x
+
+/-- **Quadrature exactness on polynomials of degree `< n`.** Phase A.2
+of `lem:342B`: for every polynomial `φ ∈ ℝ[X]` with `natDegree < n`,
+`∫₀¹ φ(x) dx = ∑ⱼ bⱼ · φ(cⱼ)`, where the `bⱼ` are the Lagrange weights
+defined above and the `cⱼ` are the canonical zeros of the shifted
+Legendre polynomial of degree `n`.
+
+The proof is the textbook recipe: decompose `φ` via
+`Lagrange.eq_interpolate` as `φ = ∑ⱼ C(φ(cⱼ)) · Lⱼ`, integrate term by
+term, and recognise each integrand as a constant times the basis
+polynomial `Lⱼ`. Distinctness of the nodes for the Lagrange identity
+comes from `butcherShiftedLegendre_zeros_injective` (cycle 302). -/
+theorem butcherShiftedLegendre_quadrature_exact_lt_n
+    (n : ℕ) (φ : Polynomial ℝ) (hdeg : φ.natDegree < n) :
+    (∫ x in (0 : ℝ)..1, φ.eval x)
+      = ∑ j : Fin n,
+          butcherShiftedLegendre_quadratureWeights n j *
+          φ.eval (butcherShiftedLegendre_zeros n j) := by
+  set v : Fin n → ℝ := butcherShiftedLegendre_zeros n with hv_def
+  have hv : Function.Injective v :=
+    butcherShiftedLegendre_zeros_injective n
+  -- Step 1: decompose φ via the Lagrange interpolation identity.
+  have hdecomp : φ = ∑ j : Fin n,
+      Polynomial.C (Polynomial.eval (v j) φ) * Lagrange.basis Finset.univ v j := by
+    have hdeg' : φ.degree < ((Finset.univ : Finset (Fin n)).card : WithBot ℕ) := by
+      rw [Finset.card_univ, Fintype.card_fin]
+      rcases eq_or_ne φ 0 with hφ | hφ
+      · subst hφ; rw [Polynomial.degree_zero]; exact WithBot.bot_lt_coe _
+      · rw [Polynomial.degree_eq_natDegree hφ]; exact_mod_cast hdeg
+    have h_interp :=
+      Lagrange.eq_interpolate (s := (Finset.univ : Finset (Fin n))) (v := v)
+        hv.injOn hdeg'
+    conv_lhs => rw [h_interp]
+    rw [Lagrange.interpolate_apply]
+  -- Step 2: integrate both sides; swap integral and sum.
+  conv_lhs => rw [hdecomp]
+  simp_rw [Polynomial.eval_finset_sum, Polynomial.eval_mul, Polynomial.eval_C]
+  rw [intervalIntegral.integral_finset_sum]
+  · apply Finset.sum_congr rfl
+    intro j _
+    rw [intervalIntegral.integral_const_mul, butcherShiftedLegendre_quadratureWeights]
+    ring
+  · intro j _
+    refine Continuous.intervalIntegrable ?_ _ _
+    exact continuous_const.mul (Polynomial.continuous _)
+
+/-- **Non-vacuity anchor at `n = 1`.** The unique Lagrange weight at the
+single node `c_1 = 1/2` is `1`, matching the elementary observation
+`∫₀¹ 1 dx = 1 · φ(1/2)` for any constant `φ`. The Lagrange basis on a
+singleton is identically `1` (`Lagrange.basis_singleton`), so the
+defining integral collapses to `∫₀¹ 1 dx = 1`. -/
+example : butcherShiftedLegendre_quadratureWeights 1 ⟨0, by omega⟩ = 1 := by
+  unfold butcherShiftedLegendre_quadratureWeights
+  simp [Lagrange.basis_singleton, Polynomial.eval_one]
 
 end OpenMath.Chapter3.Section342
