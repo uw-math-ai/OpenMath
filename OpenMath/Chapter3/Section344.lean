@@ -1708,4 +1708,54 @@ example : butcherRadauIA_one.SatisfiesB 1 := by
   interval_cases k
   · simp [butcherForwardEulerRK]
 
+/-! ## Deliverable D.6 — Small-`s` RKTableau (Radau IA, `s = 2`)
+
+Cycle 326. Per Butcher Table 344(I) (`extraction/raw_text/ch03.txt:5214`)
+the Radau IA family's `A`-matrix is *"the reflections of Radau II"*,
+**not** the plain Lagrange collocation matrix
+`A_{ij} = ∫₀^{c_i} L_j(x) dx`. The cycle 326 §D faithfulness audit
+confirmed this divergence at `s = 2`: plain collocation at the
+Radau I abscissae `(0, 2/3)` yields rows `(0, 0)` and `(1/3, 1/3)`,
+while Butcher's printed Radau IA `s = 2` table (p. 225,
+`ch03.txt:5274`) gives rows `(1/4, -1/4)` and `(1/4, 5/12)`. See
+`.prover-state/issues/radau_ia_collocation_divergence.md` for the
+full audit.
+
+Cycle 326 therefore ships only the **direct form** of the Radau IA
+`s = 2` tableau, with the textbook values declared inline. The
+collocation/reflection bridge from `butcherRadauIIA_two` (cycle 324)
+to `butcherRadauIADirect_two` (this cycle) is deferred to a future
+cycle that formalises Butcher's "reflections of Radau II"
+construction in full. -/
+
+/-- **Butcher §344 — Radau IA `s = 2` tableau** declared inline from
+Butcher's printed Table 344(I), p. 225: `c = (0, 2/3)`,
+`b = (1/4, 3/4)`, `A = !![1/4, -1/4; 1/4, 5/12]`. This is the
+classical Radau IA two-stage method with attainable order
+`p = 2s − 1 = 3`.
+
+The A-matrix follows the *"reflections of Radau II"* recipe from
+Butcher Table 344(I) rather than plain Lagrange collocation; see
+the section header docstring and
+`.prover-state/issues/radau_ia_collocation_divergence.md` for the
+audit. -/
+noncomputable def butcherRadauIADirect_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![1/4, -(1/4); 1/4, 5/12]
+  b := ![1/4, 3/4]
+  c := ![0, 2/3]
+
+/-- **Non-vacuity**: the direct Radau IA `s = 2` tableau satisfies
+the order-3 quadrature condition `B(3)` (Radau IA at `s = 2` is
+exact for polynomials of degree `2s − 1 = 3`).
+`∑ⱼ bⱼ · cⱼ^0 = 1/4 + 3/4 = 1 = 1/1`,
+`∑ⱼ bⱼ · cⱼ^1 = (1/4)·0 + (3/4)·(2/3) = 1/2`,
+`∑ⱼ bⱼ · cⱼ^2 = 0 + (3/4)·(4/9) = 1/3`. -/
+example : butcherRadauIADirect_two.SatisfiesB 3 := by
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherRadauIADirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIADirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIADirect_two, Fin.sum_univ_two]; norm_num
+
 end OpenMath.Chapter3.Section344
