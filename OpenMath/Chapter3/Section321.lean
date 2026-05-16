@@ -178,6 +178,81 @@ theorem SatisfiesE.mono {s : ℕ} {M : RKTableau s} {η η' ζ ζ' : ℕ}
     M.SatisfiesE η' ζ' :=
   fun k h1 hk l hl1 hl => h k h1 (hk.trans hη) l hl1 (hl.trans hζ)
 
+/-! ### Butcher §342 Theorem 342C, clause (342m) — `B(2s) ∧ C(s) ⇒ E(s, s)`
+
+Butcher §342 (3rd ed., p. 238) states the seven-way equivalence
+`thm:342C` between `G(2s)`, `B(2s)`, `C(s)`, `D(s)`, and `E(s, s)`.
+Four of those clauses are *purely algebraic* in the B/C/D/E predicates
+and require no elementary-differential / `G(2s)` machinery. Clause
+(342m), shipped here, is the first such clause:
+
+>     `B(2s) ∧ C(s) ⇒ E(s, s)`            (342m)
+
+The proof is a two-step algebraic composition matching the cycle 312
+specialisation `butcherGaussLegendreRK_satisfiesE`:
+
+1. apply `C(s)` at exponent `l` per row `i` to reduce
+   `∑ⱼ A i j · c j ^ (l - 1) = c i ^ l / l`;
+2. factor `(1 / l)` out of the outer `i`-sum, combine the powers
+   `c i ^ (k - 1) · c i ^ l = c i ^ (k + l - 1)`;
+3. apply `B(2s)` at combined exponent `k + l` (legal since
+   `1 ≤ k ≤ s` and `1 ≤ l ≤ s` give `1 ≤ k + l ≤ 2s`) to reduce
+   the outer sum to `1 / (k + l)`;
+4. close with `(1 / l) · (1 / (k + l)) = 1 / (l · (k + l))` via
+   `field_simp`.
+
+No `0 < s` hypothesis is required: at `s = 0`, the universally
+quantified `∀ k, 1 ≤ k → k ≤ 0` is vacuous (closed by `omega`
+inside the proof's `hkl_hi` step, which would derive `False`). -/
+theorem satisfiesE_of_satisfiesB_satisfiesC {s : ℕ}
+    (M : RKTableau s) (hB : M.SatisfiesB (2 * s))
+    (hC : M.SatisfiesC s) :
+    M.SatisfiesE s s := by
+  intro k h1 hk l hl1 hl
+  have hl_pos : 0 < (l : ℝ) := by exact_mod_cast hl1
+  have hl_ne : (l : ℝ) ≠ 0 := ne_of_gt hl_pos
+  -- Step 1: C(s) at exponent l, restated for downstream rewriting.
+  have hCi : ∀ i : Fin s,
+      (∑ j : Fin s, M.A i j * M.c j ^ (l - 1))
+        = M.c i ^ l / (l : ℝ) :=
+    fun i => hC i l hl1 hl
+  -- Step 2: outer rewrite — factor i-only out of the inner j-sum,
+  -- apply C(s), pull (1/l) out of the outer i-sum, combine powers.
+  have h_outer :
+      (∑ i : Fin s, ∑ j : Fin s,
+        M.b i * M.c i ^ (k - 1) * M.A i j * M.c j ^ (l - 1))
+      = (1 / (l : ℝ)) *
+        ∑ i : Fin s, M.b i * M.c i ^ ((k + l) - 1) := by
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro i _
+    rw [show (∑ j : Fin s,
+              M.b i * M.c i ^ (k - 1) * M.A i j * M.c j ^ (l - 1))
+            = M.b i * M.c i ^ (k - 1) *
+              (∑ j : Fin s, M.A i j * M.c j ^ (l - 1)) by
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro j _
+        ring]
+    rw [hCi i]
+    have hexp : (k - 1) + l = (k + l) - 1 := by omega
+    rw [show M.c i ^ ((k + l) - 1)
+          = M.c i ^ ((k - 1) + l) by rw [hexp]]
+    rw [pow_add]
+    field_simp
+  rw [h_outer]
+  -- Step 3: B(2s) at exponent k + l.
+  have hkl_lo : 1 ≤ k + l := by omega
+  have hkl_hi : k + l ≤ 2 * s := by omega
+  have hB_eval :
+      (∑ i : Fin s, M.b i * M.c i ^ ((k + l) - 1))
+        = 1 / ((k + l : ℕ) : ℝ) :=
+    hB (k + l) hkl_lo hkl_hi
+  rw [hB_eval]
+  -- Step 4: arithmetic closure (1/l) · (1/(k+l)) = 1 / (l · (k+l)).
+  push_cast
+  field_simp
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section321
@@ -262,5 +337,24 @@ example : gaussLegendre1Stage.SatisfiesE 1 1 := by
   interval_cases l
   simp [gaussLegendre1Stage]
   norm_num
+
+/-- *Non-vacuity for the abstract (342m) clause via `gaussLegendre1Stage`.*
+The implicit-midpoint tableau satisfies `B(2)` and `C(1)` (existing
+witnesses immediately above), so the abstract bridge
+`RKTableau.satisfiesE_of_satisfiesB_satisfiesC` yields `E(1, 1)`.
+This is the *abstract-route* counterpart to the hand-built
+`gaussLegendre1Stage.SatisfiesE 1 1` example above and confirms the
+new theorem (342m) is non-vacuous at the smallest stage count. -/
+example : gaussLegendre1Stage.SatisfiesE 1 1 :=
+  gaussLegendre1Stage.satisfiesE_of_satisfiesB_satisfiesC
+    (hB := by
+      intro k h1 hk
+      interval_cases k
+      · simp [gaussLegendre1Stage]
+      · simp [gaussLegendre1Stage])
+    (hC := by
+      intro i k h1 hk
+      interval_cases k
+      simp [gaussLegendre1Stage])
 
 end OpenMath.Chapter3.Section321

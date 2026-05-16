@@ -7576,4 +7576,20 @@ example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesE 1 1 := b
       ← butcherGaussLegendreRK_one_eq]
   exact butcherGaussLegendreRK_satisfiesE 1
 
+/-- **Cycle 313 regression check.** The general-`n` Gauss–Legendre
+tableau satisfies `E(n, n)` via the abstract §321 (342m) bridge
+`RKTableau.satisfiesE_of_satisfiesB_satisfiesC`, agreeing with
+cycle 312's direct `butcherGaussLegendreRK_satisfiesE`. This
+re-derivation through the abstract clause closes the loop: the
+canonical Gauss–Legendre tableau is `E(n, n)`-correct *either* via
+the direct two-step composition in `butcherGaussLegendreRK_satisfiesE`
+*or* via the abstract `B(2s) ∧ C(s) ⇒ E(s, s)` clause specialised
+at `s := n` and discharged with cycle 309's `B(2n)` and cycle 310's
+`C(n)`. -/
+example (n : ℕ) (hn : 0 < n) :
+    (butcherGaussLegendreRK n).SatisfiesE n n :=
+  (butcherGaussLegendreRK n).satisfiesE_of_satisfiesB_satisfiesC
+    (butcherGaussLegendreRK_satisfiesB n hn)
+    (butcherGaussLegendreRK_satisfiesC n)
+
 end OpenMath.Chapter3.Section342

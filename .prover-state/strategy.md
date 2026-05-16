@@ -1,408 +1,462 @@
-# Cycle 312 Strategy — §342 Phase 3.3: `E(n,n)` for the Gauss–Legendre `RKTableau`
+# Cycle 313 strategy — ship `thm:342C` clause (342m): `B(2s) ∧ C(s) ⇒ E(s,s)` for arbitrary `RKTableau`
 
-## §A — Target
+## §A. TL;DR
 
-Ship `butcherGaussLegendreRK_satisfiesE` (fourth prong of `cor:342D`)
-for the canonical Gauss–Legendre `RKTableau`, completing the
-B/C/D/E quadrature characterisation. This is **NOT** an IBP repeat
-of cycle 311's D(n) recipe — E(n,n) reduces to a mechanical
-two-step algebraic composition of cycle 309's B(2n) and cycle 310's
-C(n).
+Cycle 312 just shipped `butcherGaussLegendreRK_satisfiesE` — the
+specialisation of Butcher's `E(n,n)` simplifying assumption to the
+canonical Gauss–Legendre tableau. Its proof was a **purely algebraic
+two-step composition** of B(2n) and C(n), and it **never inspected the
+specific Gauss–Legendre structure** — only consumed the abstract
+`SatisfiesB`/`SatisfiesC` predicates.
 
-Cycle 311 closed D(n); cycle 312 closes E(n,n); after this, the
-canonical Gauss–Legendre tableau provably satisfies all four §321
-simplifying assumptions B(2n) / C(n) / D(n) / E(n,n) for general
-`n`. The full `cor:342D` iff statement still requires `thm:342C` +
-`thm:314A` infrastructure (multi-cycle, out of scope).
-
-## §B — Why E(n,n) is single-cycle
-
-Cycle 311's task results §"Suggested next approach" calls E(n,n)
-"a plausible 2-cycle target", but the actual proof reduces to a
-two-step composition of B(2n) and C(n) — not an IBP repeat. The
-key observation: for the canonical Gauss–Legendre tableau, the
-inner sum `∑ⱼ aᵢⱼ · cⱼ^(l-1)` is *exactly* C(n)'s LHS at `k := l`,
-so it evaluates to `cᵢ^l / l`. The outer sum then becomes B(2n)'s
-LHS at the combined exponent `k+l`.
-
-Mathematical sketch:
-
-```
-∑ᵢ ∑ⱼ bᵢ · cᵢ^(k-1) · aᵢⱼ · cⱼ^(l-1)
-  = ∑ᵢ bᵢ · cᵢ^(k-1) · (∑ⱼ aᵢⱼ · cⱼ^(l-1))   [factor out i-only term]
-  = ∑ᵢ bᵢ · cᵢ^(k-1) · (cᵢ^l / l)             [by C(n) at k := l, l ≤ n]
-  = (1/l) · ∑ᵢ bᵢ · cᵢ^(k+l-1)                [pull 1/l out, combine powers]
-  = (1/l) · (1 / (k+l))                        [by B(2n) at k+l, 1 ≤ k+l ≤ 2n]
-  = 1 / (l · (k+l))                            [arithmetic]
-```
-
-Two `rw` invocations + arithmetic close. Estimated 40–80 LOC for
-the headline + non-vacuity witnesses.
-
-## §C — Pre-flight verification (MANDATORY, 10 minutes upfront)
-
-Before writing any proof, **verify these three signatures** via
-`lean_hover_info` (or `lean_file_outline` on
-`OpenMath/Chapter3/Section321.lean`):
-
-1. **`SatisfiesE p q` exact field shape.** Possible forms:
-   - `∀ k, 1 ≤ k → k ≤ p, ∀ l, 1 ≤ l → l ≤ q, ∑ᵢⱼ bᵢ · cᵢ^(k-1) · aᵢⱼ · cⱼ^(l-1) = 1/(l·(k+l))`
-   - or with `Fin p`, `Fin q` binders.
-   - The RHS denominator may be `l·(k+l)` or `k·(k+l)` or
-     `(k+l)·l` — verify which.
-   - There may or may not be a `0 < p ∨ 0 < q` precondition.
-
-2. **`SatisfiesB k` and `SatisfiesC k` cycle 309/310 signatures.**
-   Confirm:
-   - `butcherGaussLegendreRK_satisfiesB n hn` expects
-     `(hn : 0 < n)` — derive inside E(n,n) proof from
-     `k : Fin n` or `l : Fin n` via
-     `lt_of_le_of_lt (Nat.zero_le _) (k.lt_of_lt …)`.
-   - `butcherGaussLegendreRK_satisfiesC n` does *not* need
-     `0 < n` (cycle 310 confirmed this).
-   - The exact predicate signature (e.g. `∀ k, 1 ≤ k → k ≤ p,
-     ∀ i, ∑ⱼ aᵢⱼ · cⱼ^(k-1) = cᵢ^k / k` for SatisfiesC).
-
-3. **Cycle 308's coincidence theorem name and signature.** The
-   `gaussLegendre1Stage.SatisfiesE 1 1` round-trip witness will
-   need
-   `butcherGaussLegendreRK_one_eq_gaussLegendre1Stage`.
-
-If the SatisfiesE field shape is significantly different from
-the sketch above (e.g., uses `Fin` binders with a different
-denominator), adapt the proof recipe in §D accordingly. **Do
-NOT skip this step.**
-
-## §D — Concrete Lean recipe
-
-After signature verification:
+**Cycle 313 generalises that proof to arbitrary `RKTableau`**, shipping
+Butcher's `thm:342C` clause (342m):
 
 ```lean
-theorem butcherGaussLegendreRK_satisfiesE (n : ℕ) :
-    (butcherGaussLegendreRK n).SatisfiesE n n := by
-  intro k l hk_lo hk_hi hl_lo hl_hi  -- adapt to actual predicate
-  -- Step 0: derive 0 < n from l (or k).
-  have hn : 0 < n := lt_of_lt_of_le hl_lo hl_hi
-  -- Step 1: rewrite the inner sum via SatisfiesC.
-  -- Outer is ∑ᵢ bᵢ · cᵢ^(k-1) · (∑ⱼ aᵢⱼ · cⱼ^(l-1)).
-  -- Use Finset.sum_congr to replace inner with cᵢ^l / l (via C(n)).
-  conv_lhs =>
-    rw [show (∑ i j, _) = ∑ i, _ from ?_]
-    -- ... details, see §"Sub-step details" below
+theorem RKTableau.satisfiesE_of_satisfiesB_satisfiesC {s : ℕ}
+    (M : RKTableau s)
+    (hB : M.SatisfiesB (2 * s)) (hC : M.SatisfiesC s) :
+    M.SatisfiesE s s
+```
+
+Cycle 312's worker incorrectly claimed `thm:342C` requires `thm:314A`
+elementary-differential infrastructure (multi-cycle). That is wrong:
+`thm:342C` has **7 sub-implications**, of which **4 are purely
+algebraic** among the B/C/D/E predicates and require **no** elementary-
+weight machinery:
+
+* (342j) `G(2s) ⇒ B(2s)` ← needs G = order = elementary differentials
+* (342k) `G(2s) ⇒ E(s,s)` ← needs G = order
+* (342l) `B(2s) ∧ C(s) ∧ D(s) ⇒ G(2s)` ← needs G = order
+* **(342m) `B(2s) ∧ C(s) ⇒ E(s,s)` ← purely algebraic — cycle 313 target**
+* (342n) `B(2s) ∧ E(s,s) ⇒ C(s)` ← purely algebraic (non-singular matrix)
+* (342o) `B(2s) ∧ D(s) ⇒ E(s,s)` ← purely algebraic — cycle 313 P2 stretch
+* (342p) `B(2s) ∧ E(s,s) ⇒ D(s)` ← purely algebraic (non-singular matrix)
+
+Verified by reading `extraction/formalization_data/entities/thm_342C.json`:
+`transitive_dependencies = []`.
+
+Plan: ship (342m) as the cycle 313 headline (high-confidence,
+~80 LOC mechanical port of cycle 312). Optionally ship (342o) as a
+P2 stretch (~80 LOC, analogous algebraic composition using D(s)
+instead of C(s)). The G(2s)-involving clauses and the converse
+clauses (342n)/(342p) are deferred to future cycles.
+
+## §B. Mandatory pre-flight reading
+
+Read these files **before writing any Lean code**:
+
+1. **`OpenMath/Chapter3/Section321.lean` lines 85–135** — confirm the
+   `SatisfiesB`/`SatisfiesC`/`SatisfiesE` definitions verbatim:
+
+   ```lean
+   def SatisfiesB {s : ℕ} (M : RKTableau s) (η : ℕ) : Prop :=
+     ∀ k : ℕ, 1 ≤ k → k ≤ η →
+       (∑ i : Fin s, M.b i * M.c i ^ (k - 1)) = 1 / (k : ℝ)
+
+   def SatisfiesC {s : ℕ} (M : RKTableau s) (ξ : ℕ) : Prop :=
+     ∀ i : Fin s, ∀ k : ℕ, 1 ≤ k → k ≤ ξ →
+       (∑ j : Fin s, M.A i j * M.c j ^ (k - 1)) = M.c i ^ k / (k : ℝ)
+
+   def SatisfiesE {s : ℕ} (M : RKTableau s) (η ζ : ℕ) : Prop :=
+     ∀ k : ℕ, 1 ≤ k → k ≤ η →
+     ∀ l : ℕ, 1 ≤ l → l ≤ ζ →
+       (∑ i : Fin s, ∑ j : Fin s,
+           M.b i * M.c i ^ (k - 1) * M.A i j * M.c j ^ (l - 1))
+         = 1 / ((l : ℝ) * ((k : ℝ) + (l : ℝ)))
+   ```
+
+2. **`OpenMath/Chapter3/Section342.lean`'s `butcherGaussLegendreRK_satisfiesE`
+   proof** (just landed cycle 312, near the bottom of the file). This is the
+   **template** for cycle 313. Read its proof body completely. The
+   tactic skeleton is:
+
+   ```
+   intro k h1 hk l hl1 hl
+   have hn : 0 < n := lt_of_lt_of_le hl1 hl
+   show (∑ i, ... butcherGaussLegendreRK ...) = ...
+   have hC_i := fun i => butcherGaussLegendreRK_satisfiesC n i l hl1 hl
+   -- outer rewrite: factor (1/l) out; per-i substitution via hC_i
+   have h_outer : (outer LHS) = (1/l) • (∑ i, b_i · c_i^(k+l-1))
+   rw [h_outer]
+   -- B(2n) at exponent (k+l):
+   have hB_kl : (∑ i, b_i · c_i^((k+l)-1)) = 1/(k+l)
+     := butcherGaussLegendreRK_satisfiesB n hn (k+l) hkl_lo hkl_hi
+   rw [hB_kl]
+   -- arithmetic closes
+   push_cast; field_simp
+   ```
+
+   **Cycle 313's job is to delete the Gauss-Legendre-specific lemma
+   calls and replace them with `hC i k hk_ok` / `hB (k+l) hkl_ok` from
+   the new hypotheses.** Almost nothing else changes.
+
+3. **`extraction/formalization_data/entities/thm_342C.json`** — confirm
+   the textbook statement and `dependencies = []`. Read at minimum
+   `statement_text`, `proof_text`, and `dependents`.
+
+4. **`extraction/formalization_data/entities/cor_342D.json`** —
+   understand how (342m) feeds into `cor:342D` (along with B(2n)/C(n),
+   the partial closure of cor:342D advances one more prong toward
+   general RK-method order characterisation).
+
+## §C. Concrete signature and proof recipe — P1 deliverable
+
+Add to `OpenMath/Chapter3/Section321.lean` (NOT Section342 — this is
+a generic §321 lemma about the predicates defined there):
+
+```lean
+namespace RKTableau
+
+/-- *Butcher §342 Theorem 342C, clause (342m).* `B(2s)` (quadrature
+order `2s`) plus `C(s)` (interpolation order `s`) imply `E(s, s)`
+(the pair condition for trees `[τ^{k-1} [τ^{l-1}]]` at `k, l ≤ s`).
+
+Pure algebraic two-step composition: per row `i`, use `C(s)` at
+exponent `l` to reduce `∑ⱼ A_ij c_j^(l-1) = c_i^l / l`; pull `1/l`
+out of the outer `i`-sum and combine powers via `pow_add`; apply
+`B(2s)` at exponent `k + l` (legal because `1 ≤ k+l ≤ 2s` from
+`1 ≤ k ≤ s` and `1 ≤ l ≤ s`) to reduce `∑ᵢ b_i c_i^(k+l-1) =
+1/(k+l)`; close `(1/l) · (1/(k+l)) = 1/(l·(k+l))` by `field_simp`.
+
+No `0 < s` hypothesis required: at `s = 0` the goal quantifies
+`∀ k, 1 ≤ k → k ≤ 0`, vacuously true. -/
+theorem satisfiesE_of_satisfiesB_satisfiesC {s : ℕ}
+    (M : RKTableau s) (hB : M.SatisfiesB (2 * s))
+    (hC : M.SatisfiesC s) :
+    M.SatisfiesE s s := by
+  intro k h1 hk l hl1 hl
+  -- ... port cycle 312's _satisfiesE proof body verbatim, replacing
+  --     `butcherGaussLegendreRK_satisfiesC n i l hl1 hl`
+  --       → `hC i l hl1 hl`
+  --     `butcherGaussLegendreRK_satisfiesB n hn (k+l) hkl_lo hkl_hi`
+  --       → `hB (k+l) hkl_lo hkl_hi` (no `hn` needed: B(2s) hypothesis
+  --                                    is already universally quantified)
+  sorry  -- replace with port of cycle 312 proof body
+end RKTableau
+```
+
+**Critical difference from cycle 312**: there is no `0 < n` derivation
+step. Cycle 312 needed `hn : 0 < n` because
+`butcherGaussLegendreRK_satisfiesB` *itself* takes `0 < n` as a
+hypothesis. Here, `hB` is the abstract predicate `M.SatisfiesB (2*s)`,
+which is already universally quantified — no precondition extraction
+needed. Just verify `1 ≤ k+l` and `k+l ≤ 2*s` from `hk`/`hl` via
+`omega` and invoke `hB`.
+
+### Step-by-step decomposition (mirrors cycle 312 verbatim)
+
+1. `intro k h1 hk l hl1 hl` — unpack the universal SatisfiesE binders.
+2. Compute `hkl_lo : 1 ≤ k + l` and `hkl_hi : k + l ≤ 2 * s` via
+   `omega` (using `1 ≤ k ≤ s` and `1 ≤ l ≤ s`).
+3. Compute `hl_ne : (l : ℝ) ≠ 0` from `hl1 : 1 ≤ l`. Cycle 312 uses
+   `exact_mod_cast Nat.one_le_iff_ne_zero.mp hl1` or similar — port verbatim.
+4. `have hCi := fun i => hC i l hl1 hl` — per-row C(s) application.
+5. Outer-sum rewrite: `have h_outer : (∑ i, ∑ j, M.b i · M.c i^(k-1) · M.A i j · M.c j^(l-1)) = (1/l) • (∑ i, M.b i · M.c i^(k+l-1))`.
+   Inside the `have`:
+   * `rw [Finset.mul_sum]` to factor `(1/l)` outside.
+   * `apply Finset.sum_congr rfl; intro i _`.
+   * Per-`i` goal: `∑ j, M.b i · M.c i^(k-1) · M.A i j · M.c j^(l-1)
+                     = (1/l) · (M.b i · M.c i^(k+l-1))`.
+   * Internal `show ... = M.b i · M.c i^(k-1) · (∑ j, M.A i j · M.c j^(l-1))
+                          by rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro j _; ring`
+     factors `b_i · c_i^(k-1)` out of the inner `j`-sum.
+   * `rw [hCi i]` substitutes `∑ j, M.A i j · M.c j^(l-1) = M.c i^l / l`.
+   * Combine `c_i^(k-1) · c_i^l = c_i^(k+l-1)` via `← pow_add` plus
+     `Nat.sub_add_cancel h1` to bridge `(k - 1) + l = (k + l) - 1`
+     (cycle 312 uses this exact pattern — port directly).
+   * `field_simp` closes (NO trailing `ring` — cycle 312 task results
+     flagged that `field_simp` already closes; a trailing `ring` triggers
+     "No goals to be solved").
+6. `rw [h_outer]`.
+7. Handle the `(1/l) •` factor — cycle 312 likely uses `smul_eq_mul`
+   or pulls the scalar outside via `Finset.smul_sum` rewriting; port directly.
+8. `have hB_kl := hB (k+l) hkl_lo hkl_hi`.
+9. `rw [hB_kl]`.
+10. `push_cast` to lift `((k + l : ℕ) : ℝ) = (k : ℝ) + (l : ℝ)`.
+11. `field_simp` closes `(1/l) · (1/(k+l)) = 1/(l · (k+l))`.
+
+**Strategy: literally open `Section342.lean`, find
+`butcherGaussLegendreRK_satisfiesE`, copy its body, and apply the
+substitutions:**
+
+* `butcherGaussLegendreRK_satisfiesC n i l hl1 hl` → `hC i l hl1 hl`
+* `butcherGaussLegendreRK_satisfiesB n hn (k+l) hkl_lo hkl_hi` →
+  `hB (k+l) hkl_lo hkl_hi`
+* Delete the `have hn : 0 < n := ...` step
+* Delete (or generalise) any `show ...` line that unfolds
+  `butcherGaussLegendreRK`'s `.A`/`.b`/`.c` projections (the generic
+  version stays at the abstract `M.A`/`M.b`/`M.c` form throughout —
+  no projection-unfolding `show` should be needed)
+
+That's the entire proof.
+
+### Non-vacuity witnesses
+
+Add two `example`s near the new theorem in `Section321.lean`:
+
+```lean
+/-- Non-vacuity at `s = 1`: `gaussLegendre1Stage` satisfies `E(1, 1)`
+because it satisfies `B(2)` and `C(1)`. Cites the existing
+`Section321.lean:242`/`248` SatisfiesB/SatisfiesC examples. -/
+example : gaussLegendre1Stage.SatisfiesE 1 1 := by
+  -- Match `(2 * 1)` with `2` for hB via `show` or by inlining;
+  -- existing examples provide SatisfiesB 2 / SatisfiesC 1 directly.
+  refine gaussLegendre1Stage.satisfiesE_of_satisfiesB_satisfiesC
+    (hB := ?_) (hC := ?_)
+  · -- gaussLegendre1Stage.SatisfiesB 2  (port existing example body)
+    sorry  -- replace with the body from Section321.lean:242
+  · -- gaussLegendre1Stage.SatisfiesC 1  (port existing example body)
+    sorry  -- replace with the body from Section321.lean:248
+```
+
+(If the existing `example` at `Section321.lean:259` already proves
+`gaussLegendre1Stage.SatisfiesE 1 1` by hand, leave that one
+untouched and add the *abstract-route* version as a fresh
+`example` so the regression check is meaningful.)
+
+Plus a parametric regression-check:
+
+```lean
+/-- *Regression check.* The general-`n` Gauss-Legendre tableau
+satisfies `E(n, n)` via the abstract (342m) lemma, agreeing with
+cycle 312's direct `butcherGaussLegendreRK_satisfiesE`. -/
+example (n : ℕ) (hn : 0 < n) :
+    (butcherGaussLegendreRK n).SatisfiesE n n :=
+  (butcherGaussLegendreRK n).satisfiesE_of_satisfiesB_satisfiesC
+    (butcherGaussLegendreRK_satisfiesB n hn)
+    (butcherGaussLegendreRK_satisfiesC n)
+```
+
+Place this *inside* `Section321.lean` if the Gauss-Legendre symbols
+are visible there, OR inside `Section342.lean` if they're not (the
+cycle 309–311 Gauss-Legendre symbols live in `Section342`).
+
+**Do NOT delete cycle 312's `butcherGaussLegendreRK_satisfiesE`** —
+keep it as a regression-witness alongside the abstract lemma.
+
+## §D. P2 stretch — clause (342o): `B(2s) ∧ D(s) ⇒ E(s,s)`
+
+Butcher's prose says "proved in similar way" without spelling it out.
+The algebraic derivation, mirroring (342m) but swapping roles:
+
+**Given**: `D(s)` says `∑ᵢ b_i · c_i^(k-1) · A_ij = (b_j/k)(1 - c_j^k)`.
+**Goal**: `E(s,s)` says `∑ᵢ ∑ⱼ b_i · c_i^(k-1) · A_ij · c_j^(l-1) = 1/(l(k+l))`.
+
+Algebraic derivation:
+
+1. Sum-swap LHS via `Finset.sum_comm`:
+   `LHS = ∑ⱼ (∑ᵢ b_i · c_i^(k-1) · A_ij) · c_j^(l-1)`
+   (need to inject the `c_j^(l-1)` factor inside, which is constant in i,
+   then swap).
+2. Apply D(s) at exponent `k` per `j`:
+   `LHS = ∑ⱼ (b_j/k)(1 - c_j^k) · c_j^(l-1)
+        = (1/k) (∑ⱼ b_j · c_j^(l-1) - ∑ⱼ b_j · c_j^(k+l-1))`.
+3. Apply B(2s) at exponent `l` (`1 ≤ l ≤ s ≤ 2s`):
+   `∑ⱼ b_j · c_j^(l-1) = 1/l`.
+4. Apply B(2s) at exponent `k+l` (`1 ≤ k+l ≤ 2s`):
+   `∑ⱼ b_j · c_j^(k+l-1) = 1/(k+l)`.
+5. `LHS = (1/k)(1/l - 1/(k+l)) = (1/k) · k/(l(k+l)) = 1/(l(k+l))`. ✓
+
+Implementation sketch:
+
+```lean
+theorem satisfiesE_of_satisfiesB_satisfiesD {s : ℕ}
+    (M : RKTableau s) (hB : M.SatisfiesB (2 * s))
+    (hD : M.SatisfiesD s) :
+    M.SatisfiesE s s := by
+  intro k h1 hk l hl1 hl
+  have hkl_lo : 1 ≤ k + l := by omega
+  have hkl_hi : k + l ≤ 2 * s := by omega
+  have hl_2s : l ≤ 2 * s := by omega
+  have hl_ne : (l : ℝ) ≠ 0 := by exact_mod_cast Nat.one_le_iff_ne_zero.mp hl1
+  have hk_ne : (k : ℝ) ≠ 0 := by exact_mod_cast Nat.one_le_iff_ne_zero.mp h1
+  have hkl_ne : ((k : ℝ) + (l : ℝ)) ≠ 0 := by positivity
+  -- sum-swap: ∑i ∑j = ∑j ∑i, then factor c_j^(l-1) out of inner i-sum
+  -- (it's constant in i)
+  have h_swap : (∑ i, ∑ j, M.b i * M.c i^(k-1) * M.A i j * M.c j^(l-1))
+              = (∑ j, (∑ i, M.b i * M.c i^(k-1) * M.A i j) * M.c j^(l-1)) := by
+    rw [Finset.sum_comm]
+    apply Finset.sum_congr rfl; intro j _
+    rw [Finset.sum_mul]; apply Finset.sum_congr rfl; intro i _; ring
+  rw [h_swap]
+  -- apply D(s) per j
+  have hDj := fun j => hD j k h1 hk
+  -- replace each inner i-sum with (b_j/k)(1 - c_j^k)
+  -- ... etc
   sorry
 ```
 
-### Sub-step details
+Expected LOC: ~90, similar to (342m). Ship only if P1 (342m) closes
+in <100 LOC and there's budget remaining. **Do NOT block on (342o)**
+— it is a stretch deliverable.
 
-After the `intro` block, the goal looks roughly like:
+## §E. What NOT to try
 
-```
-∑ i : Fin n, ∑ j : Fin n,
-  (butcherGaussLegendreRK n).b i
-    * ((butcherGaussLegendreRK n).c i) ^ (k - 1)
-    * (butcherGaussLegendreRK n).A i j
-    * ((butcherGaussLegendreRK n).c j) ^ (l - 1)
-  = 1 / (↑l * (↑k + ↑l))   -- or however the RHS reads
-```
+### Forbidden approaches
 
-**Step 1 — factor i-only out of the inner sum.** Use
-`Finset.mul_sum` (read direction: `c · ∑ f = ∑ c · f` becomes
-`∑ c · f = c · ∑ f`):
+* **Do NOT attempt clauses (342j), (342k), (342l)**. These involve
+  `G(2s)` = "method has order 2s" which requires the elementary-
+  differential framework (Butcher §31x): `RootedTree`, `α(t)`, `F(t)(y₀)`,
+  Φ(t)-matching. None of this is currently formalised. Cycle 312's worker
+  was correct that *those* clauses need `thm:314A` infrastructure;
+  they were wrong only in claiming (342m) needs it.
 
-```lean
-have hfactor : ∀ i,
-    (∑ j, (b i) * (c i)^(k-1) * (A i j) * (c j)^(l-1))
-    = (b i) * (c i)^(k-1) * (∑ j, (A i j) * (c j)^(l-1)) := by
-  intro i
-  rw [← Finset.mul_sum]
-  apply Finset.sum_congr rfl
-  intro j _
-  ring
-```
+* **Do NOT attempt clauses (342n), (342p)**. These are the
+  "converse" implications `B(2s) ∧ E(s,s) ⇒ C(s)` and
+  `B(2s) ∧ E(s,s) ⇒ D(s)`. Butcher's proof argues that the matrix
+  multiplier `[b_i c_i^(k-1)]` is non-singular (Vandermonde-style),
+  so inverting it recovers `C(s)` / `D(s)` from `E(s,s)` and `B(2s)`.
+  This requires `Matrix.det` of a `b`-weighted Vandermonde matrix to
+  be nonzero — tractable but its own cycle.
 
-(Use the qualified field names from the actual goal; this is
-schematic.)
+* **Do NOT attempt `cor:342D` headline closure**. The full iff
+  `RK order 2s ⇔ Gauss-Legendre collocation` requires `thm:342C`
+  (only one prong shipped this cycle) + `thm:314A` (multi-cycle). Just
+  ship (342m) and let the planner pivot.
 
-**Step 2 — apply C(n) to the inner sum.** Cycle 310's
-`butcherGaussLegendreRK_satisfiesC n` evaluated at the index
-`l` (using `hl_lo : 1 ≤ l` and `hl_hi : l ≤ n`) gives:
+* **Do NOT add a `(hs : 0 < s)` hypothesis**. The cycle 310–312
+  pattern is: B(2n)/`_satisfiesB` takes `0 < n` only because the
+  underlying weight-positivity proof needs it; C/D/E predicates and
+  the abstract clauses don't. At `s = 0`, `SatisfiesE 0 0` is
+  vacuous (no `k` satisfies `1 ≤ k ≤ 0`), so the conclusion holds
+  with no hypotheses needed. The `intro k h1 hk` step at `s = 0`
+  produces `1 ≤ k ∧ k ≤ 0`, which `omega` closes by deriving False.
 
-```lean
-have hC : ∀ i, (∑ j, (A i j) * (c j)^(l-1)) = (c i)^l / l :=
-  butcherGaussLegendreRK_satisfiesC n l hl_lo hl_hi
-```
+### Dead-end tactics flagged by recent cycles
 
-Substitute this into the outer sum.
+* **`ring` after `field_simp`** — cycle 312 task results flagged this:
+  `field_simp` already closes the final field identity, so a trailing
+  `ring` triggers Lean's "No goals to be solved" error. Use one or the
+  other.
 
-**Step 3 — pull `(1/l)` out and combine powers.** After
-substitution, the outer sum is
+* **`simp [butcherGaussLegendreRK]; ring` directly on the goal** — too
+  aggressive; blows past 200000 heartbeats. Use the `show ... by rw + ring`
+  pattern from cycle 312 for inner-sum factoring.
 
-```
-∑ i, (b i) * (c i)^(k-1) * ((c i)^l / l)
-  = (1/l) * ∑ i, (b i) * (c i)^(k+l-1)
-```
+* **Skipping the `hl_ne : (l : ℝ) ≠ 0` derivation** — `field_simp`
+  needs it explicitly when dividing by `l`. Derive it eagerly from
+  `hl1 : 1 ≤ l`.
 
-via `Finset.mul_sum`, `pow_add`, and the identity
-`(k-1) + l = k+l-1` (for `1 ≤ k`). The `Nat`-subtraction
-identity `(k-1) + l = k+l-1` needs `omega` (works since
-`k ≥ 1`).
+### Infrastructure-cycle traps
 
-**Step 4 — apply B(2n) to the outer power-sum.** Cycle 309's
-`butcherGaussLegendreRK_satisfiesB n hn` evaluated at `k+l`
-(with bounds `1 ≤ k+l` from `hk_lo + hl_lo` and `k+l ≤ 2n`
-from `hk_hi + hl_hi`) gives:
+* **Do NOT write a "scoping doc" for thm:342C as the cycle 313
+  primary deliverable**. Cycle 312's worker recommended this, but
+  inspection of `thm_342C.json` reveals (342m) is a clean single-cycle
+  Lean target — no multi-phase plan needed. Just ship it. (If P2
+  (342o) also closes, the remaining clauses can be enumerated in a
+  short paragraph appended to `lean_status.json`'s cycle-313 note;
+  no separate `.md` file needed.)
 
-```lean
-have hB : ∑ i, (b i) * (c i)^(k+l-1) = 1 / (k+l) := by
-  have h1 : 1 ≤ k + l := by linarith
-  have h2 : k + l ≤ 2 * n := by linarith
-  exact butcherGaussLegendreRK_satisfiesB n hn (k+l) h1 h2
-```
+* **Do NOT pivot to a fresh entity** (e.g. `thm:352A` Padé
+  approximations, or §35x stability). The §342 momentum is preserved
+  by shipping (342m), and the abstract (342m) is genuinely useful
+  for downstream §342/§344/§35x consumers.
 
-**Step 5 — close `(1/l) · (1/(k+l)) = 1/(l·(k+l))`.** Plain
-`field_simp; ring` should suffice. If not, decompose into a
-private helper.
+## §F. Faithfulness check requirements
 
-## §E — Non-vacuity witnesses
+Before commit:
 
-Two examples, mirroring cycle 311's structure:
+* Read `extraction/formalization_data/entities/thm_342C.json` and
+  quote `(342m)` verbatim in the new theorem's docstring.
+* The Lean theorem's hypothesis pack must be exactly
+  `M.SatisfiesB (2 * s) ∧ M.SatisfiesC s` — no extra hypotheses, no
+  weaker hypotheses. (Butcher's statement is `B(2s) ∧ C(s) ⇒ E(s,s)`
+  flat; we ship the implication form with the same hypothesis names.)
+* The Lean conclusion `M.SatisfiesE s s` matches the textbook `E(s,s)`.
+  The Section321 definitions audit (cycle 306) already verified the
+  three predicates correctly encode Butcher's §321 (321a)/(321b)/(321c)
+  equations — no faithfulness divergence introduced here.
+* Tautology scan: the conclusion `M.SatisfiesE s s` does NOT appear
+  among the hypotheses (which are `M.SatisfiesB (2*s)` and
+  `M.SatisfiesC s` — distinct predicates). Genuine algebraic content.
+* Identity scan: the proof is structural (multiple `rw`s + per-row
+  `Finset.sum_congr` rewriting); NOT a single `:= h_*` or `:= id`.
+* Hypothesis strength: cannot weaken to `SatisfiesB s` (need 2s for
+  the `k+l ≤ 2s` step) or `SatisfiesC` at lower index (need exponent
+  up to s). Match Butcher exactly.
 
-```lean
-example : (butcherGaussLegendreRK 2).SatisfiesE 2 2 :=
-  butcherGaussLegendreRK_satisfiesE 2
+## §G. Verification protocol
 
-example : gaussLegendre1Stage.SatisfiesE 1 1 := by
-  rw [← butcherGaussLegendreRK_one_eq_gaussLegendre1Stage]
-  exact butcherGaussLegendreRK_satisfiesE 1
-```
+After landing the new theorem:
 
-## §F — Step-by-step procedure
+1. `lake env lean OpenMath/Chapter3/Section321.lean` — exit 0
+2. `lake env lean OpenMath/Chapter3.lean` — exit 0 (aggregator)
+3. `grep -c sorry OpenMath/Chapter3/Section321.lean` — 0
+4. `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section321.lean`
+   — zero hits (tautology-scanner safe)
+5. `lean_verify
+    OpenMath.Chapter3.Section321.RKTableau.satisfiesE_of_satisfiesB_satisfiesC`
+   — axiom set should be `[propext, Classical.choice, Quot.sound]`
+   (no `sorryAx`)
+6. Cycle 312's `butcherGaussLegendreRK_satisfiesE` should remain
+   axiom-clean and unchanged; verify no regression.
 
-1. **(5 min) Pre-flight signature verification** (§C above).
-   `lean_hover_info` on `SatisfiesE`, `SatisfiesB`, `SatisfiesC`
+## §H. Housekeeping at end of cycle
+
+* `extraction/formalization_data/lean_status.json`: update `thm:342C`
+  row to `partial` with `lean_symbol = "satisfiesE_of_satisfiesB_satisfiesC"`
+  and a note explaining that clauses (342m) and (any stretch) are
+  shipped, while (342j)/(342k)/(342l) await elementary-differential
+  infrastructure and (342n)/(342p) await the non-singular-matrix
+  argument.
+* `plan.md`: bump `thm:342C` row from `[ ]` to `[~]` with a cycle 313
+  cumulative note (single line, ~150 chars) capturing the clauses
+  shipped.
+* Cycle 312's `cor:342D` row: add a one-line cycle-313 update noting
+  that the (342m) generalisation means we now have *generic* (B+C → E)
+  evidence applicable to any RKTableau, not just butcherGaussLegendreRK.
+
+## §I. Optional P3 — a tiny scoping note (within lean_status.json)
+
+If both (342m) and (342o) ship cleanly, write a short scoping note
+**inside `lean_status.json`'s cycle 313 entry** (not a separate
+file) enumerating the remaining `thm:342C` work:
+
+* (342n)/(342p) [converses]: ~150 LOC each, need Vandermonde-style
+  non-singular-matrix argument. Could ship in cycles 314-315.
+* (342j)/(342k)/(342l) [G(2s) clauses]: blocked on `thm:314A`
+  (multi-cycle) per `lem_310B_plan.md` Phase D infrastructure.
+
+Don't create a separate `thm_342C_plan.md` file. The remaining work
+is shallow enough that a paragraph in `lean_status.json` suffices.
+
+## §J. Cycle 313 success criteria
+
+Cycle 313 ships clean if:
+
+1. `RKTableau.satisfiesE_of_satisfiesB_satisfiesC` lands axiom-clean
    in `OpenMath/Chapter3/Section321.lean`.
+2. At least one non-vacuity `example` (preferably both — the
+   `gaussLegendre1Stage` abstract-route witness AND the parametric
+   `butcherGaussLegendreRK n` regression check) closes cleanly.
+3. Sorry count remains 0 across the file and the chapter aggregator.
+4. `lean_status.json` and `plan.md` are updated.
 
-2. **(45 min) Write the headline proof** per §D.
-   - Locate the right place to insert in `Section342.lean`
-     (after cycle 311's D(n) deliverables).
-   - Mirror cycle 310's `satisfiesC` proof structure.
-   - Use `Finset.sum_congr` for the inner sum rewrite, then
-     `Finset.mul_sum` to factor.
+P2 stretch (342o) is a bonus, not a requirement. Failing P2 should
+not abort the cycle; ship P1 in isolation if P2 stalls.
 
-3. **(15 min) Non-vacuity witnesses** per §E.
+## §K. Bailout plan
 
-4. **(10 min) Verification.**
-   - `lake env lean OpenMath/Chapter3/Section342.lean` exits 0.
-   - `lake env lean OpenMath/Chapter3.lean` exits 0.
-   - `grep -c sorry OpenMath/Chapter3/Section342.lean` = 0.
-   - `lean_verify` on the headline returns axiom set
-     `[propext, sorryAx, Classical.choice, Quot.sound]` — same
-     profile as cycles 309/310/311 (the `sorryAx` is the
-     pre-existing cycle-301 upstream leak; not a regression).
-   - Tautology-scanner clean (no `:= h_*` / `exact h_*` / `:= id`
-     patterns).
+If the P1 port stalls (e.g. unexpected Lean elaboration issue with
+the abstract `M.A`/`M.b`/`M.c` projections versus
+`butcherGaussLegendreRK`'s concrete projections):
 
-5. **(10 min) Housekeeping.**
-   - `extraction/formalization_data/lean_status.json`: add a
-     cycle 312 note on `cor:342D`'s row mentioning E(n,n)
-     prong shipped. The full row stays `unformalized` because
-     the iff headline is multi-cycle work; this is partial
-     evidence.
-   - `plan.md`: append a one-line cycle 312 paragraph to
-     `cor:342D`'s entry noting the complete B/C/D/E package
-     for the canonical Gauss–Legendre tableau.
-   - `task_results/cycle_312.md`: full deliverable record per
-     CLAUDE.md format.
+1. **First fallback**: try `show ∑ i, ∑ j, M.b i * M.c i^(k-1) * M.A i j * M.c j^(l-1) = ...`
+   at the very top of the proof body to force Lean to use the
+   explicit `Finset.sum` form before any `rw` fires. This matches
+   cycle 312's pattern of using `show` to unfold definitional
+   equalities deterministically.
+2. **Second fallback**: split the proof into two private lemmas — one
+   for the per-`i` factorisation (`per_row_lemma`) and one for the
+   outer `(1/l) · (1/(k+l)) = 1/(l(k+l))` arithmetic. The cycle 312
+   recipe lives inside a single `theorem` body, but a 2-lemma split
+   reduces single-step heartbeat load.
+3. **Third fallback**: if all else fails, ship a scoping doc in
+   `.prover-state/issues/thm_342C_plan.md` documenting the algebra
+   in full and the obstacle. Cycle 314 then ships (342m) with the
+   obstacle pre-resolved. This is the rollback path matching cycle
+   149/200's precedent.
 
-## §G — What NOT to try
-
-- **Do NOT attempt `thm:342C`** (RK order 2s ⇔ B(2s) ∧ C(s) ∧
-  D(s)). Its forward direction requires `thm:314A` (independence
-  of elementary differentials), which is currently unformalized
-  and multi-cycle prerequisite work. Cycle 311's task results
-  explicitly defer this.
-- **Do NOT attempt the `cor:342D` iff statement itself.** Same
-  reason — requires `thm:342C` + `thm:314A`. Out of scope.
-- **Do NOT use cycle 311's IBP recipe.** E(n,n) is *not* an
-  integration-by-parts theorem. The proof is purely algebraic
-  composition of cycle 309/310's already-shipped results. No
-  `poly_ibp`, no antiderivative, no FTC.
-- **Do NOT submit to Aristotle.** E(n,n) is a structural
-  composition, not a premise-search problem. Cycle 282's (342f)
-  Aristotle stalls (12% → 20% across three observations) and
-  the cycle 285 resubmission stall (11% → 20% across three more)
-  document that Aristotle does not handle structural §342 proofs
-  well. Manual closure is fast and reliable here.
-- **Do NOT skip the pre-flight signature verification (§C).**
-  The proof recipe in §D assumes specific predicate shapes; if
-  Section321's `SatisfiesE` uses different binders (e.g.,
-  `Fin p` instead of `1 ≤ k ∧ k ≤ p`) or a different RHS
-  denominator (e.g., `k·(k+l)` instead of `l·(k+l)`), the
-  arithmetic close in Step 5 will fail with a confusing error.
-  Verify upfront.
-- **Do NOT introduce `axiom`, `constant`, or new sorries.**
-  Sorry count must remain 0. The pre-existing `sorryAx` leak
-  from cycle 301's `_rootsInIoo_card_ge` is fine — it's upstream
-  and not a cycle 312 issue.
-- **Do NOT raise `maxHeartbeats` above 200000.** If
-  `field_simp + ring` is slow on the final closure, extract a
-  private arithmetic helper lemma `private lemma cycle312_arith :
-  ∀ (l k : ℕ), 0 < l → 0 < k+l → (1 : ℝ) / l * (1 / (k+l)) = 1 /
-  (l * (k+l)) := by intros; field_simp` and apply it.
-- **Do NOT attempt to compile
-  `OpenMath/Chapter4/Section441.lean`.** Per
-  `cycle_182_gpfs_slowness.md`: 43+ consecutive GPFS timeouts
-  since cycle 182. Skip §441 entirely.
-- **Do NOT pivot to a fresh entity** unless E(n,n) genuinely
-  proves intractable (see §I fallback). The cycle 311 → cycle
-  312 path is a clean two-cycle completion of the §342 ↔ §321
-  bridge; abandoning it leaves the package half-finished.
-- **Do NOT modify cycle 309's `butcherGaussLegendreRK_satisfiesB`
-  or cycle 310's `butcherGaussLegendreRK_satisfiesC`.** They
-  are axiom-clean and load-bearing. The E(n,n) proof should
-  consume them as-is via direct invocation.
-
-## §H — Faithfulness check requirements
-
-For the new `butcherGaussLegendreRK_satisfiesE` theorem:
-
-- **Entity ID**: `cor:342D` partial (fourth prong only).
-  The full `cor:342D` is the iff "RK order 2s ⇔ collocation at
-  shifted Legendre zeros". This cycle ships *evidence* (the
-  E(n,n) prong) that the canonical Gauss–Legendre tableau
-  satisfies one of the §321 simplifying assumptions implied
-  by the iff's RHS. Document explicitly in the theorem
-  docstring.
-- **Quote the textbook statement** from
-  `extraction/formalization_data/entities/cor_342D.json` and
-  confirm Section321's `SatisfiesE` predicate captures it
-  faithfully. The predicate shape (cycle 306) was already
-  audited; the cycle 312 proof should not introduce any new
-  divergence.
-- **No `0 < n` precondition on the signature** (matching cycle
-  310's `_satisfiesC` and cycle 311's `_satisfiesD`). Derive
-  `0 < n` inside the proof from `k : Fin n` (or the analogous
-  binder).
-- **Tautology check**: the conclusion `1 / (l · (k+l))` does
-  NOT appear verbatim among hypotheses — it's an arithmetic
-  consequence of B(2n) at `k+l` plus C(n) at `l`. Genuine
-  theorem, not a re-export of a hypothesis.
-- **Hypothesis strength check**: the proof uses exactly
-  `(butcherGaussLegendreRK n).satisfiesB n hn` and
-  `(butcherGaussLegendreRK n).satisfiesC n` (no extra
-  hypotheses), matching the §321/§342 textbook
-  derivation. Document this in the theorem docstring.
-
-## §I — Fallback if E(n,n) stalls
-
-If pre-flight verification (§C) reveals a SatisfiesE shape
-that doesn't decompose cleanly via the §D recipe, or if the
-proof body exceeds the 90-minute budget:
-
-1. **Ship partial E(n,n) at fixed small n.** Concrete
-   instances `(butcherGaussLegendreRK 1).SatisfiesE 1 1` and
-   `(butcherGaussLegendreRK 2).SatisfiesE 2 2` shipped via
-   direct unfolding without the general proof. ~30 LOC each.
-   Then defer the general proof to cycle 313.
-
-2. **Ship a `_satisfiesE` helper lemma** that captures only
-   the C(n) substitution step:
-   ```
-   ∑ⱼ (butcherGaussLegendreRK n).A i j * (c j)^(l-1)
-     = (c i)^l / l    for 1 ≤ l ≤ n
-   ```
-   abstracted from the inner sum. This is essentially a
-   re-export of `satisfiesC` with the index renamed; useful
-   as a stepping stone. ~20 LOC.
-
-3. **Pivot to E(n,n) Phase A** (build a polynomial
-   `∑ⱼ A i j · X^(l-1)` antiderivative-style helper) and
-   defer the full headline to cycle 313. This is the
-   IBP-style fallback the strategy-of-strategy from cycle
-   311 anticipates.
-
-4. **Last-resort pivot**: ship one of the small auxiliary
-   theorems flagged in cycle 311's outlook (e.g. polishing
-   the cycle 308 coincidence theorem, or extracting a public
-   `_collocationA_satisfies_C_n_helper` lemma that cycle
-   310's `satisfiesC` consumes internally). This keeps the
-   cycle non-empty.
-
-If E(n,n) genuinely needs IBP machinery (e.g., the predicate
-involves a `cⱼ^(l-1)` factor that doesn't reduce to C(n)'s
-shape directly), document the divergence in a new issue file
-`.prover-state/issues/satisfiesE_predicate_shape.md` and treat
-cycle 312 as a scoping cycle for cycle 313+.
-
-## §J — Cycle budget
-
-- **90 minutes total.** The pre-flight verification is 5 min;
-  the proof body is the bulk (45 min); non-vacuity is 15 min;
-  verification and housekeeping is 25 min combined.
-- **LOC budget**: ~80 LOC for the headline + two non-vacuity
-  examples + possibly one private arithmetic helper. Aggressive
-  but achievable given the proof's algebraic simplicity.
-
-## §K — Cross-references
-
-- **Cycle 311 task results**: `task_results/cycle_311.md` —
-  recommended E(n,n) as cycle 312 target; flagged the
-  "B(2n) + C(n) ⇒ E(n,n)" composition as plausible.
-- **Cycle 310 C(n)**: `OpenMath/Chapter3/Section342.lean`
-  `butcherGaussLegendreRK_satisfiesC` — consumed in Step 2 of
-  the recipe. Template for proof structure (intro + sum_congr
-  + arithmetic).
-- **Cycle 309 B(2n)**:
-  `butcherGaussLegendreRK_satisfiesB` — consumed in Step 4 of
-  the recipe.
-- **Cycle 306 predicates**: `OpenMath/Chapter3/Section321.lean`
-  — `SatisfiesB`, `SatisfiesC`, `SatisfiesD`, `SatisfiesE`
-  definitions. **Verify SatisfiesE shape via `lean_hover_info`
-  in §C BEFORE writing the proof.**
-- **Cycle 308 coincidence theorem**:
-  `butcherGaussLegendreRK_one_eq_gaussLegendre1Stage` —
-  consumed in the `n = 1` round-trip non-vacuity witness.
-- **Memory `feedback_heterogeneous_matrix_algebra.md`** —
-  relevant if matrix-vector manipulations arise (likely not,
-  since E(n,n) works in sum form). Useful to know exists.
-- **Memory `feedback_finset_sum_le_sum_nbij_nonexistent.md`** —
-  reminder that `Finset.sum_le_sum_nbij'` does not exist; use
-  alternatives.
-
-## §L — Status target after this cycle
-
-- **`cor:342D` row in `lean_status.json`**: still
-  `unformalized` overall (iff not shipped), but cycle 312
-  note documents that all four prongs (B/C/D/E) for the
-  canonical Gauss–Legendre tableau are shipped axiom-clean.
-- **`plan.md` `cor:342D` row**: still `[ ]`, but cycle history
-  notes the complete B/C/D/E package.
-- **Sorry count**: 0 (unchanged).
-- **Section342.lean**: grows roughly +80 LOC (E(n,n) theorem
-  + two non-vacuity witnesses + possibly one private helper).
-- **Axiom profile**: same `[propext, sorryAx, Classical.choice,
-  Quot.sound]` as cycles 308–311 (the `sorryAx` is the
-  pre-existing cycle-301 leak).
-
-## §M — Out-of-scope pivots (DO NOT pursue this cycle)
-
-These are valid future targets but explicitly excluded from
-cycle 312:
-
-- `thm:314A` (independence of elementary differentials) —
-  needed for `cor:342D` iff, but multi-cycle scope.
-- `thm:342C` (RK order 2s ⇔ B(2s) ∧ C(s) ∧ D(s)) — needs
-  `thm:314A` first.
-- §314A elementary-weight infrastructure broadly.
-- `sorryAx` cleanup of cycle 301's `_rootsInIoo_card_ge` —
-  pre-existing leak, doesn't affect cycle 312, defer to a
-  dedicated cleanup cycle.
-- Phase A polynomial-antiderivative-style helpers for E(n,n)
-  (only relevant in §I fallback).
-- Any §441 work (GPFS-blocked, 43+ consecutive timeouts).
-
-The right pivots for cycle 313+ (if cycle 312 ships cleanly):
-either start `thm:314A` infrastructure scoping, or pivot to a
-fresh chapter entity per `lem_310B_plan.md` §8 (e.g.
-`lem:342A` is closed; consider `lem:312B`, `lem:313A`, or a
-§3 §35x stability target).
+Do NOT introduce sorries. Do NOT introduce `axiom`/`constant`. Do
+NOT raise `maxHeartbeats` above 200000.
