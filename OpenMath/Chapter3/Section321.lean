@@ -497,6 +497,155 @@ theorem satisfiesD_of_satisfiesB_satisfiesE {s : ℕ}
   simp only [v_def] at hvj
   linarith
 
+/-! ### Butcher §342 Theorem 342C, clause (342n) — `B(2s) ∧ E(s, s) ⇒ C(s)`
+
+Clause (342n) of the seven-way `thm:342C` equivalence (Butcher §342,
+3rd ed., p. 238):
+
+>     `B(2s) ∧ E(s, s) ⇒ C(s)`            (342n)
+
+This is the Vandermonde-converse partner of clause (342m): same
+`B(2s)` premise, but the `C(s)` and `E(s, s)` roles are exchanged.
+Like (342p), the proof is **not** a direct algebraic composition —
+it requires inverting a Vandermonde-style linear system, plus the
+extra non-vanishing-weight hypothesis to extract the per-row
+residual.
+
+Butcher's textbook proof: "because the matrix multiplier is non-
+singular, (342n) also follows". The "matrix multiplier" is
+`(bᵢ cⱼ^{l-1})_{l, j}`, which is non-singular precisely when the
+abscissae are distinct (Vandermonde core) AND the weights do not
+vanish (diagonal multiplier). We surface both as explicit
+hypotheses `Function.Injective M.c` and `∀ i, M.b i ≠ 0`.
+
+Proof recipe (Vandermonde inversion):
+
+1. Fix `i : Fin s` and `k : ℕ` with `1 ≤ k ≤ s` (the C(s) target).
+2. Define the residual `u : Fin s → ℝ` by
+   `u i' = (∑ⱼ Aᵢ'ⱼ cⱼ^{k-1}) − cᵢ'^k / k`.
+   `C(s)` at `(i, k)` is exactly `u i = 0`.
+3. Define the weighted residual `w i' = M.b i' * u i'` and show
+   `w = 0` via `Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero`:
+   it suffices to prove `∑ᵢ' w i' * cᵢ'^p = 0` for every `p : Fin s`.
+   Set `l = p.val + 1` so `l - 1 = p.val` and `1 ≤ l ≤ s`.
+4. Split `∑ᵢ' w i' · cᵢ'^{l-1}` as a difference of two sums:
+   * First sum: `∑ᵢ' bᵢ' · (∑ⱼ Aᵢ'ⱼ cⱼ^{k-1}) · cᵢ'^{l-1}`.
+     Reshape via `Finset.sum_mul` + `Finset.mul_sum` to expose
+     `E(s, s)` at `(l, k)`: outer `bᵢ' cᵢ'^{l-1}`, inner
+     `Aᵢ'ⱼ cⱼ^{k-1}`. Result: `1 / (k(l + k))`.
+   * Second sum: `∑ᵢ' bᵢ' · (cᵢ'^k / k) · cᵢ'^{l-1}`. Combine
+     `cᵢ'^k · cᵢ'^{l-1} = cᵢ'^{(k+l)-1}`, factor `1/k`, apply
+     `B(2s)` at `k + l` to get `(1/k)(1/(k+l)) = 1/(k(k+l))`.
+5. Both equal `1 / (k(k+l))`, so the difference vanishes.
+6. Conclude `w i = 0` via `congrFun`, then use `mul_eq_zero` plus
+   `hb i` to extract `u i = 0`, then rearrange to `C(s)`.
+
+No `0 < s` hypothesis: at `s = 0` the universally quantified
+`∀ i : Fin 0, …` is vacuous. -/
+theorem satisfiesC_of_satisfiesB_satisfiesE {s : ℕ}
+    (M : RKTableau s) (hc : Function.Injective M.c)
+    (hb : ∀ i : Fin s, M.b i ≠ 0)
+    (hB : M.SatisfiesB (2 * s)) (hE : M.SatisfiesE s s) :
+    M.SatisfiesC s := by
+  intro i k hk1 hk
+  have hk_pos : 0 < (k : ℝ) := by exact_mod_cast hk1
+  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+  -- Define the C-residual u and its b-weighted form w.
+  set u : Fin s → ℝ := fun i' =>
+      (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
+        - M.c i' ^ k / (k : ℝ)
+    with u_def
+  set w : Fin s → ℝ := fun i' => M.b i' * u i' with w_def
+  -- Show w = 0 via Vandermonde non-singularity.
+  have hw_zero : w = 0 := by
+    refine Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero hc ?_
+    intro p
+    set l : ℕ := p.val + 1 with l_def
+    have hl1 : 1 ≤ l := Nat.succ_le_succ (Nat.zero_le _)
+    have hl_le_s : l ≤ s := p.isLt
+    have hl_pos : 0 < (l : ℝ) := by exact_mod_cast hl1
+    have hl_ne : (l : ℝ) ≠ 0 := ne_of_gt hl_pos
+    have hkl_real_pos : 0 < (k : ℝ) + (l : ℝ) := by positivity
+    have hkl_real_ne : (k : ℝ) + (l : ℝ) ≠ 0 := ne_of_gt hkl_real_pos
+    have hp_eq : (p : ℕ) = l - 1 := by simp [l_def]
+    rw [hp_eq]
+    simp only [w_def, u_def]
+    -- First sum: ∑ᵢ' bᵢ' · (∑ⱼ Aᵢ'ⱼ cⱼ^(k-1)) · cᵢ'^(l-1)  =  1/(k(k+l))
+    have h_first :
+        (∑ i' : Fin s,
+            M.b i' * (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
+              * M.c i' ^ (l - 1))
+          = 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ))) := by
+      rw [show (∑ i' : Fin s,
+                  M.b i' * (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
+                    * M.c i' ^ (l - 1))
+              = ∑ i' : Fin s, ∑ j : Fin s,
+                  M.b i' * M.c i' ^ (l - 1) * M.A i' j * M.c j ^ (k - 1) by
+          apply Finset.sum_congr rfl
+          intro i' _
+          rw [show M.b i' * (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
+                    * M.c i' ^ (l - 1)
+                  = M.b i' * M.c i' ^ (l - 1) *
+                    (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1)) by ring]
+          rw [Finset.mul_sum]
+          apply Finset.sum_congr rfl
+          intro j _
+          ring]
+      have hE_eval := hE l hl1 hl_le_s k hk1 hk
+      rw [hE_eval]
+      ring
+    -- Second sum: ∑ᵢ' bᵢ' · (cᵢ'^k / k) · cᵢ'^(l-1)  =  1/(k(k+l))
+    have h_second :
+        (∑ i' : Fin s,
+            M.b i' * (M.c i' ^ k / (k : ℝ)) * M.c i' ^ (l - 1))
+          = 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ))) := by
+      have h_per_i : ∀ i' : Fin s,
+          M.b i' * (M.c i' ^ k / (k : ℝ)) * M.c i' ^ (l - 1)
+            = (1 / (k : ℝ)) * (M.b i' * M.c i' ^ ((k + l) - 1)) := by
+        intro i'
+        have h_exp : k + (l - 1) = (k + l) - 1 := by omega
+        have h_pow_split : M.c i' ^ k * M.c i' ^ (l - 1)
+            = M.c i' ^ ((k + l) - 1) := by
+          rw [← pow_add, h_exp]
+        rw [← h_pow_split]
+        field_simp
+      rw [Finset.sum_congr rfl (fun i' _ => h_per_i i')]
+      rw [← Finset.mul_sum]
+      have hkl_lo : 1 ≤ k + l := by omega
+      have hkl_hi : k + l ≤ 2 * s := by omega
+      have hB_kl :
+          (∑ i' : Fin s, M.b i' * M.c i' ^ ((k + l) - 1))
+            = 1 / ((k + l : ℕ) : ℝ) :=
+        hB (k + l) hkl_lo hkl_hi
+      rw [hB_kl]
+      push_cast
+      field_simp
+    -- Difference of the two sums is zero.
+    calc (∑ i' : Fin s,
+              M.b i' *
+                ((∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
+                  - M.c i' ^ k / (k : ℝ))
+                * M.c i' ^ (l - 1))
+        = (∑ i' : Fin s,
+              M.b i' * (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
+                * M.c i' ^ (l - 1))
+          - ∑ i' : Fin s,
+              M.b i' * (M.c i' ^ k / (k : ℝ)) * M.c i' ^ (l - 1) := by
+            rw [← Finset.sum_sub_distrib]
+            apply Finset.sum_congr rfl
+            intros; ring
+      _ = 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ)))
+          - 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ))) := by
+            rw [h_first, h_second]
+      _ = 0 := by ring
+  -- Extract u i = 0 via mul_eq_zero + hb.
+  have hwi : w i = 0 := congrFun hw_zero i
+  simp only [w_def] at hwi
+  rcases mul_eq_zero.mp hwi with hbi | hui
+  · exact absurd hbi (hb i)
+  · simp only [u_def] at hui
+    linarith
+
 end OpenMath.Chapter3.Section312.RKTableau
 
 namespace OpenMath.Chapter3.Section321
@@ -634,6 +783,36 @@ example : gaussLegendre1Stage.SatisfiesD 1 :=
     (hc := by
       intro i j _
       fin_cases i; fin_cases j; rfl)
+    (hB := by
+      intro k h1 hk
+      interval_cases k
+      · simp [gaussLegendre1Stage]
+      · simp [gaussLegendre1Stage])
+    (hE := by
+      intro k h1 hk l hl1 hl
+      interval_cases k
+      interval_cases l
+      simp [gaussLegendre1Stage]
+      norm_num)
+
+/-- *Non-vacuity for the abstract (342n) clause via `gaussLegendre1Stage`.*
+The implicit-midpoint tableau has a 1-stage abscissa map, so
+`Function.Injective gaussLegendre1Stage.c` is vacuously true; its
+weight `b 0 = 1` is non-vanishing; and it satisfies `B(2)` and
+`E(1, 1)` (existing witnesses above). The abstract bridge
+`RKTableau.satisfiesC_of_satisfiesB_satisfiesE` therefore yields
+`C(1)`. This is the *abstract-route* counterpart to the hand-built
+`gaussLegendre1Stage.SatisfiesC 1` example above and confirms the
+new theorem (342n) is non-vacuous at the smallest stage count. -/
+example : gaussLegendre1Stage.SatisfiesC 1 :=
+  gaussLegendre1Stage.satisfiesC_of_satisfiesB_satisfiesE
+    (hc := by
+      intro i j _
+      fin_cases i; fin_cases j; rfl)
+    (hb := by
+      intro i
+      fin_cases i
+      simp [gaussLegendre1Stage])
     (hB := by
       intro k h1 hk
       interval_cases k
