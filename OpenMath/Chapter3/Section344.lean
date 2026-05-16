@@ -1758,4 +1758,50 @@ example : butcherRadauIADirect_two.SatisfiesB 3 := by
   · simp [butcherRadauIADirect_two, Fin.sum_univ_two]; norm_num
   · simp [butcherRadauIADirect_two, Fin.sum_univ_two]; norm_num
 
+/-! ## Deliverable D.7 — Small-`s` RKTableau (Lobatto IIIB, `s = 3`)
+
+Cycle 327. Per Butcher Table 344(I) p. 224
+(`extraction/raw_text/ch03.txt:5263`), the Lobatto IIIB family does
+**not** exist at `s = 2`, so `s = 3` is the smallest available stage
+count. The `A`-matrix follows Butcher's D(s) recipe rather than plain
+Lagrange collocation; the `b` and `c` agree with Lobatto IIIA `s = 3`
+(both come from Lobatto quadrature at `(0, 1/2, 1)` with weights
+`(1/6, 2/3, 1/6)`). The classical order is `p = 2s − 2 = 4`.
+
+As with cycle 326's Radau IA direct-form ship, the
+collocation/reflection bridge to an abstract construction of
+`butcherLobattoIIIBDirect_three` is deferred. -/
+
+/-- **Butcher §344 — Lobatto IIIB `s = 3` tableau** declared inline
+from Butcher's printed Table 344(III), p. 245
+(`extraction/raw_text/ch03.txt:5426-5434`): `c = (0, 1/2, 1)`,
+`b = (1/6, 2/3, 1/6)`,
+`A = !![1/6, -(1/6), 0; 1/6, 1/3, 0; 1/6, 5/6, 0]`. The classical
+attainable order is `p = 2s − 2 = 4`.
+
+The `A`-matrix follows Butcher's D(s) recipe (NOT plain Lagrange
+collocation, which would diverge in the same manner as the cycle 326
+Radau IA audit); `b` and `c` coincide with Lobatto IIIA `s = 3` since
+both families share the Lobatto quadrature choice. -/
+noncomputable def butcherLobattoIIIBDirect_three :
+    OpenMath.Chapter3.Section312.RKTableau 3 where
+  A := !![1/6, -(1/6), 0; 1/6, 1/3, 0; 1/6, 5/6, 0]
+  b := ![1/6, 2/3, 1/6]
+  c := ![0, 1/2, 1]
+
+/-- **Non-vacuity**: the direct Lobatto IIIB `s = 3` tableau satisfies
+the order-4 quadrature condition `B(4)` (Lobatto IIIB at `s = 3` is
+exact for polynomials of degree `2s − 2 = 4`).
+`∑ⱼ bⱼ · cⱼ^0 = 1/6 + 2/3 + 1/6 = 1 = 1/1`,
+`∑ⱼ bⱼ · cⱼ^1 = 0 + (2/3)·(1/2) + (1/6)·1 = 1/2`,
+`∑ⱼ bⱼ · cⱼ^2 = 0 + (2/3)·(1/4) + (1/6)·1 = 1/3`,
+`∑ⱼ bⱼ · cⱼ^3 = 0 + (2/3)·(1/8) + (1/6)·1 = 1/4`. -/
+example : butcherLobattoIIIBDirect_three.SatisfiesB 4 := by
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherLobattoIIIBDirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIBDirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIBDirect_three, Fin.sum_univ_three]; norm_num
+  · simp [butcherLobattoIIIBDirect_three, Fin.sum_univ_three]; norm_num
+
 end OpenMath.Chapter3.Section344

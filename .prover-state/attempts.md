@@ -149,3 +149,6 @@ Cycle 277: Aristotle 727396d5 (342a orthogonality) returned COMPLETE and was int
 
 ### Cycle 299
 Cycle 299 `butcherShiftedLegendre_eleven_roots`: 12 large-rational `hf_*` hypotheses (max denominator ≈76 quintillion for 1/50-bracket evaluations of P_11^*) caused `linarith` to time out at `isDefEq` during the post-`refine` distinctness/membership block; mitigation is an explicit `clear hP11 hcont hf_0 hf_1_fiftieth …` (retaining only `hf_half` + IVT outputs) inserted immediately before `refine`. This is now mandatory for any n≥11 anchor — cycle 298's n=9 proof avoided this because its max denominator was ~3 orders of magnitude smaller.
+
+### Cycle 326
+Cycle 326 §344 Radau IA s=2: plain Lagrange collocation (cycle-324 template) fails — gives rows (0,0)/(1/3,1/3) vs. Butcher's (1/4,-1/4)/(1/4,5/12); §343 RKTableau.reflection of butcherRadauIIA_two also fails (gives !![5/12,1/4;5/12,1/4] after permutation, not Butcher's values). Strategy Branch B (Lobatto IIIB s=2) is blocked — Butcher line 5263 states it does not exist. Pivoted to inline direct-form declaration from textbook table.
