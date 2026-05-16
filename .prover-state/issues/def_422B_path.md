@@ -600,3 +600,150 @@ Cycle 336 delivers:
 No `def:422B` *body* this cycle. No Phase A through Phase E content
 this cycle. The cycle 337 entry point (§7) is the next planner /
 worker target.
+
+## §A.0 D-operator decision (cycle 337)
+
+Cycle 337's reading of Butcher §387 (`extraction/raw_text/ch03.txt`
+lines 9391–9465) and §385 (lines 9101–9131) pins `D ∈ G` and **rules
+out all three of §4.1's candidates**. The correct interpretation is
+a refined fourth candidate.
+
+### §A.0.1 Textbook source — §387 (verbatim)
+
+From `extraction/raw_text/ch03.txt:9392`:
+
+> As we have remarked, `D ∈ G` represents the differentiation operation,
+> scaled by the unit stepsize `h`. If `ξ` denotes the element in `G₁`
+> corresponding to a generalized Runge–Kutta tableau …
+> then `ξD` will correspond to the s-stage tableau …
+
+The (387b) tableau extends `ξ`'s `(c, A, b)` data with a new (s+1)-th
+stage `(c = Σ bᵢ, a_{s+1,j} = bⱼ, a_{s+1,s+1} = 0)` and output
+`b' = (0, …, 0, 1)` plus `b₀ = 0`. The result computed is "just
+`hf(y)`, where `y` is the result computed by (387a)".
+
+From `extraction/raw_text/ch03.txt:9117–9130` (§385b), `D` itself is
+the **one-stage generalized RK method**:
+
+```
+0 0
+0 1
+```
+
+i.e. `s=1, A=0, b=[1], c=[0]` with `b₀=0`. The elementary weights of
+this method are: `Φ(τ) = 1`; `Φ(t) = 0` for `t` of order ≥ 2.
+
+### §A.0.2 Choice — (D.4) Generalized-RK differentiation operator
+
+`D` is **the §385b one-stage generalized RK method with `b₀=0`**.
+
+Specifically, at the elementary-weight level on `T` (rooted trees,
+*excluding* the empty tree `∅`):
+
+* `Φ_D(τ) = 1` (single-vertex tree)
+* `Φ_D(t) = 0` for `t` of order ≥ 2
+
+For `η ∈ G₁`, the right-multiplication `(ηD)(t)` reduces via (383a)'s
+convolution formula to:
+
+* `(ηD)(τ) = 1` (constant)
+* `(ηD)(mk children) = Π_{c ∈ children} η(c)` for non-empty `children`
+
+(Derivation: `(ηD)(S) = Σ_{R≼S} η(S\R) D(R)`. Since `Φ_D` vanishes on
+any multi-vertex sub-forest containing the root, the only non-zero
+term is `R = {root only}`, giving `Π η(child)`.)
+
+### §A.0.3 Rejection of (D.1)/(D.2)/(D.3)
+
+* **(D.1) Tree-grafting / root-appending `D(t) = mk [t]`** —
+  WRONG DIRECTION. The cycle 336 hypothesis predicted `D(τ)` should
+  reduce to a tree of order 2 (the cherry). The actual definition
+  has `(ηD)(τ) = 1` (constant, no tree at all). (D.1) strips/adds in
+  the wrong direction: `D` *consumes* children rather than *appending*
+  a root.
+* **(D.2) Order-weighted multiplication `(Df)(t) = r(t)·f(t)`** —
+  rejected by the planner (cycle 336 §6 Discovery). Confirmed wrong:
+  this would give `(ηD)(t) = r(t) η(t)`, but the textbook formula
+  gives `(ηD)(t) = Π_{children} η(child)` (a tree-shape-dependent
+  *product*, not a scalar multiple).
+* **(D.3) Forest-convolution `D`** — too general; (D.4) is the
+  specific element in `G ⊇ G₁` that admits the (387b) tableau
+  realisation. The convolution-product structure (383a) IS used to
+  compute `ηD`, but `D` itself is the specific (385b) element.
+
+### §A.0.4 Framework wire-up — `b₀=1` implicit in `RKTableau`
+
+**Critical observation:** our `RKTableau` structure
+(`OpenMath/Chapter3/Section312.lean:66`) has only `A, b, c` — *no
+`b₀` field*. The associated B-series interpretation hardcodes
+`b₀ = 1`: every `RKTableau` computes `y_n = y_{n-1} + h·Σᵢ bᵢ Fᵢ`.
+
+Therefore Butcher's `D ∈ G` (with `b₀ = 0`) is **not directly
+representable** as an `RKTableau`.
+
+**However:** the equivalence relation `PhiEquivalent`
+(`OpenMath/Chapter3/Section381.lean:124`) is `∀ t : RootedTree,
+M.elementaryWeight t = M'.elementaryWeight t` — quantifying only
+over `t : RootedTree`. The inductive `RootedTree`
+(`OpenMath/Chapter3/Section310.lean:83`) has the single constructor
+`mk : List RootedTree → RootedTree` and admits *no* empty-tree
+representative. Consequently the `b₀` value (which would be tested
+at `∅`) is **invisible** to `PhiEquivalent`.
+
+**Consequence:** at the `Quotient PhiEquivalent.setoidSigma` level,
+`Φ_D|_T` and `Φ_{1+D}|_T` are *equal*. The class
+`⟦⟨1, RKTableau.explicitEuler⟩⟧` (with explicit Euler's `b₀=1`
+implicit) is **the natural representative of `D`** in our framework,
+since explicit Euler has elementary weight `Φ(τ) = 1, Φ(t≥2) = 0` —
+exactly `Φ_D|_T`.
+
+This is *not* definition smuggling: the b₀-invisibility is a
+*property* of the §383 quotient construction, not a hack.
+Equation (422a) is naturally interpreted on rooted trees `T`, so
+the `∅` term in (422a) (the constant `1 − Σ αᵢ`) is absorbed into
+the separate **preconsistency** hypothesis `Σ αᵢ = 1`. The
+b₀-collapse therefore preserves the on-`T` semantics of (422a)
+exactly, with no information loss.
+
+### §A.0.5 Lean signature
+
+```lean
+noncomputable def D_element :
+    Quotient OpenMath.Chapter3.Section312.RKTableau.PhiEquivalent.setoidSigma :=
+  Quotient.mk _ ⟨1, OpenMath.Chapter3.Section312.RKTableau.explicitEuler⟩
+
+noncomputable def D_phi
+    (η : Quotient OpenMath.Chapter3.Section312.RKTableau.PhiEquivalent.setoidSigma) :
+    Quotient OpenMath.Chapter3.Section312.RKTableau.PhiEquivalent.setoidSigma :=
+  η * D_element
+```
+
+**Cycle 337 ships:**
+1. `D_element` (the chosen group representative).
+2. `D_phi : Q → Q` (right-multiplication by `D_element`).
+3. `D_phi_one : D_phi 1 = D_element` (non-vacuity at identity input).
+4. `D_element_elementaryWeight_vertex :
+   elementaryWeightQ_phi D_element RootedTree.vertex = 1`
+   (non-vacuity at the single-vertex tree — verifies `D` has the
+   right action on `τ`).
+
+**Phase A.0.2 (deferred, cycle 338+):**
+5. `D_element_elementaryWeight_higher_order` — verify
+   `Φ_{D_element}(t) = 0` for trees of order ≥ 2 (requires unfolding
+   `derivativeWeight` for `RKTableau.explicitEuler` on a non-vertex
+   tree).
+6. Simp-lemma library for `D_phi` (e.g. `D_phi_mul`, congruence under
+   `PhiEquivalent`).
+
+### §A.0.6 Impact on §4 and §5 of this doc
+
+§4.1's three candidates (D.1, D.2, D.3) are SUPERSEDED by (D.4)
+above. §5's Phase A.0 row estimate (80–120 LOC) stands; cycle 337
+ships items 1–4 above; item 5 (the higher-order vanishing
+elementary-weight lemma) is deferred to Phase A.0.2.
+
+§4.3's preliminary `Eq422a` draft remains correct *modulo* the
+b₀-invisibility observation above: the on-`T` quantification is the
+right scope, and the constant-term `1 − Σ αᵢ = 0` (the `∅`-tree case
+in Butcher's notation) is satisfied a priori by the preconsistency
+hypothesis already required by `IsPreconsistent`.
