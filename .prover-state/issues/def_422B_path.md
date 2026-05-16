@@ -747,3 +747,66 @@ b₀-invisibility observation above: the on-`T` quantification is the
 right scope, and the constant-term `1 − Σ αᵢ = 0` (the `∅`-tree case
 in Butcher's notation) is satisfied a priori by the preconsistency
 hypothesis already required by `IsPreconsistent`.
+
+## §A.0.2 Closure (cycle 338)
+
+Cycle 338 ships the higher-order vanishing of `D_element`'s
+elementary weight (item 5 from §A.0.5), plus the Phase A.0.2 capstone
+packaging both `_vertex` and `_higher_order` into a single on-tree
+signature theorem, plus a `D_phi` distributivity simp lemma (item 6,
+partial).
+
+**Cycle 338 ships:**
+
+7. `D_element_elementaryWeight_higher_order :
+   ∀ t : RootedTree, 2 ≤ t.order →
+     elementaryWeightQ_phi D_element t = 0`
+
+   Proof recipe (per cycle 338 strategy §B.1):
+   destructure `t = mk children` via `match`; show `children ≠ []`
+   from `2 ≤ order` (the `mk []` case reduces to `1 + 0 = 1`); unfold
+   `elementaryWeightQ_phi` via cycle 239's `_mk` def-eq; `rw
+   [elementaryWeight_eq, Fin.sum_univ_one, derivativeWeight_mk]` to
+   expose the product; close via `simp [List.map_cons,
+   List.prod_cons, explicitEuler_internalWeight_zero]` where the
+   private helper `explicitEuler_internalWeight_zero` follows from
+   `explicitEuler.A = 0` (cycle 323 pattern).
+
+8. `D_element_elementaryWeight (t : RootedTree) :
+   elementaryWeightQ_phi D_element t =
+     if t = RootedTree.vertex then 1 else 0`
+
+   Phase A.0.2 capstone: packages item 4 (`_vertex`) and item 7
+   (`_higher_order`) into the full on-tree elementary-weight
+   signature of `D_element`. Matches Butcher §387's `Φ_D` exactly on
+   `T`. The private helper
+   `RootedTree_two_le_order_of_ne_vertex : t ≠ vertex → 2 ≤ t.order`
+   bridges the case split (proved via `cases children with` + `0 <
+   c.order` from `Section301.RootedTree.order_pos` + `omega`).
+
+9. `D_phi_mul : ∀ η η', D_phi (η * η') = η * D_phi η'`
+
+   Simp lemma for `D_phi` distributivity over the §383 group product
+   on the left, by `mul_assoc` in cycle 236's `instGroup_phi`.
+   Useful for downstream Phase B/C rewrites of `D_phi (η * η')`.
+
+**Total cycle 338 additions:** 3 new public theorems + 2 private
+helpers, ~80 LOC. All axiom-clean (`[propext, Classical.choice,
+Quot.sound]`).
+
+**Section422.lean LOC trajectory:** 56 (cycle 336) → 137 (cycle 337) →
+~210 (cycle 338).
+
+**Cycle 339 entry point (Phase B):** `Group.zpow` API non-vacuity on
+the §383 quotient group. Verify Mathlib's `Group.zpow_natCast`,
+`Group.zpow_neg`, etc., fire correctly on `Quotient
+PhiEquivalent.setoidSigma`, plus 1–2 non-vacuity sanity theorems
+(e.g. `D_element^(0) = 1`, `D_element^(1) = D_element`). Estimated
+30–60 LOC. Low risk.
+
+**Phase A.0.2 status: CLOSED.** The on-tree elementary-weight
+signature of `D_element` is now fully pinned to Butcher §387's
+`Φ_D`: `1` at `τ`, `0` elsewhere. No further Phase A.0 sub-phase is
+planned; Phase A is complete pending an optional Phase A.0.3
+(elementary-weight multiplicativity bridge over `composeQ_phi`) which
+is deferred unless a downstream consumer demands it.

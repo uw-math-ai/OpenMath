@@ -1,4 +1,5 @@
 import Mathlib
+import OpenMath.Chapter3.Section301
 import OpenMath.Chapter3.Section381
 import OpenMath.Chapter4.Section404
 
@@ -33,6 +34,9 @@ namespace OpenMath.Chapter4.Section422
 
 open OpenMath.Chapter3.Section310 OpenMath.Chapter3.Section312
 open OpenMath.Chapter3.Section312.RKTableau
+
+/-- Local alias to disambiguate from Mathlib's `_root_.RootedTree`. -/
+private abbrev RT := OpenMath.Chapter3.Section310.RootedTree
 
 /-- `def:422B` Phase 0 sanity (cycle 336): the §383 quotient group
 `Q = Quotient PhiEquivalent.setoidSigma` is non-empty.
@@ -129,5 +133,135 @@ theorem D_element_elementaryWeight_vertex :
   show ∑ i : Fin 1, RKTableau.explicitEuler.b i *
         RKTableau.explicitEuler.derivativeWeight i RootedTree.vertex = 1
   simp [RKTableau.explicitEuler, RKTableau.derivativeWeight_vertex]
+
+/-- *Phase A.0.2 helper:* every internal weight of `explicitEuler` is `0`.
+Direct consequence of `explicitEuler.A = 0`: the defining sum
+`∑ j, A 0 j * (Φⱼ D)(c)` reduces to `0 * _ = 0` via `Fin.sum_univ_one`. -/
+private theorem explicitEuler_internalWeight_zero (c : RT)
+    (i : Fin 1) :
+    RKTableau.explicitEuler.internalWeight c i = 0 := by
+  show ∑ j : Fin 1, RKTableau.explicitEuler.A i j *
+        RKTableau.explicitEuler.derivativeWeight j c = 0
+  simp [RKTableau.explicitEuler]
+
+/-- *Phase A.0.2:* at every tree of order ≥ 2, the elementary weight of
+`D_element` vanishes. Matches Butcher §387's `Φ_D(t) = 0` for `t≥2`
+from the (385b) generalized tableau (whose `A = 0` zeroes out every
+internal-weight factor `Σⱼ Aᵢⱼ · Φⱼ` in the recursion).
+
+Together with `D_element_elementaryWeight_vertex`, this pins
+`D_element`'s on-tree elementary-weight signature to exactly Butcher's
+`Φ_D`: `1` at `τ`, `0` elsewhere on `T`. -/
+theorem D_element_elementaryWeight_higher_order
+    (t : RT) (h : 2 ≤ t.order) :
+    RKTableau.elementaryWeightQ_phi D_element t = 0 := by
+  cases t with
+  | mk children =>
+    have hne : children ≠ [] := by
+      intro heq
+      subst heq
+      simp [RootedTree.order, RootedTree.orderSum] at h
+    show RKTableau.explicitEuler.elementaryWeight
+          (OpenMath.Chapter3.Section310.RootedTree.mk children) = 0
+    rw [RKTableau.elementaryWeight_eq, Fin.sum_univ_one,
+        RKTableau.derivativeWeight_mk]
+    cases children with
+    | nil => exact absurd rfl hne
+    | cons c rest =>
+      simp [List.map_cons, List.prod_cons,
+            explicitEuler_internalWeight_zero]
+
+/-- *Phase A.0.2 helper:* a non-vertex tree has order at least `2`.
+By cases on the child list: `mk []` is `vertex` (contradicting the
+hypothesis); `mk (c :: rest)` has `order = 1 + (c.order + orderSum rest)
+≥ 1 + 1 = 2` since `c.order ≥ 1` (Section301's `order_pos`). -/
+private theorem RootedTree_two_le_order_of_ne_vertex
+    (t : RT) (h : t ≠ RootedTree.vertex) : 2 ≤ t.order := by
+  cases t with
+  | mk children =>
+    cases children with
+    | nil =>
+      exact absurd rfl h
+    | cons c rest =>
+      show 2 ≤ 1 + RootedTree.orderSum (c :: rest)
+      have hc : 0 < c.order := RootedTree.order_pos c
+      show 2 ≤ 1 + (c.order + RootedTree.orderSum rest)
+      omega
+
+/-- *Phase A.0.2 capstone:* the full on-tree elementary-weight signature
+of `D_element`. Matches Butcher §387's `Φ_D` exactly: `1` at the
+single-vertex tree `τ`, `0` everywhere else on `T`. -/
+theorem D_element_elementaryWeight (t : RT) :
+    RKTableau.elementaryWeightQ_phi D_element t =
+      if t = RootedTree.vertex then 1 else 0 := by
+  by_cases h : t = RootedTree.vertex
+  · subst h
+    rw [if_pos rfl]
+    exact D_element_elementaryWeight_vertex
+  · rw [if_neg h]
+    exact D_element_elementaryWeight_higher_order t
+      (RootedTree_two_le_order_of_ne_vertex t h)
+
+/-- *Phase A.0.2 simp:* `D_phi` distributes over the §383 group product
+on the left, by associativity of group multiplication. Useful for
+unfolding `D_phi (η * η')` rewrites in downstream Phase B/C lemmas. -/
+@[simp]
+theorem D_phi_mul (η η' : Quotient PhiEquivalent.setoidSigma) :
+    D_phi (η * η') = η * D_phi η' := by
+  show (η * η') * D_element = η * (η' * D_element)
+  exact mul_assoc _ _ _
+
+/-! ### Phase B — `Group.zpow` non-vacuity (cycle 339)
+
+Sanity-check that Mathlib's `Group.zpow` API fires correctly on
+`Quotient PhiEquivalent.setoidSigma` via cycle 236's `instGroup_phi`.
+These integer-power lemmas (`zpow_zero`, `zpow_one`, `zpow_neg_one`,
+`zpow_two`) are infrastructure for Phase C's equation (422a)
+predicate, which builds terms like `D_element ^ (-(i + 1 : ℤ))` (the
+`η^{-i} D(u)` factor in Butcher's (422a)).
+
+See `.prover-state/issues/def_422B_path.md` §5 for the full
+phase decomposition; Phase B verifies the zpow hookup before Phase C
+ships the (422a) predicate. -/
+
+/-- *Phase B.1 (cycle 339):* `D_element ^ 0 = 1` in the §383 group.
+Direct application of Mathlib's `zpow_zero`, exercising the `Group`
+instance's `zpow` at the zero exponent. -/
+@[simp]
+theorem D_element_zpow_zero : D_element ^ (0 : ℤ) = 1 := zpow_zero _
+
+/-- *Phase B.2 (cycle 339):* `D_element ^ 1 = D_element` in the §383
+group. Direct application of Mathlib's `zpow_one`. -/
+@[simp]
+theorem D_element_zpow_one : D_element ^ (1 : ℤ) = D_element := zpow_one _
+
+/-- *Phase B.3 (cycle 339):* `D_element ^ (-1) = D_element⁻¹` in the
+§383 group. Direct application of Mathlib's `zpow_neg_one`, which
+routes through cycle 236's `inverseQ_phi` lift via the §383 `Group`
+instance's `Inv` field. -/
+theorem D_element_zpow_neg_one :
+    D_element ^ (-1 : ℤ) = D_element⁻¹ := zpow_neg_one _
+
+/-- *Phase B.4 (cycle 339):* `D_element ^ 2 = D_element * D_element` in
+the §383 group. Direct application of Mathlib's `zpow_two`, exercising
+the `Group.zpow` API at a small positive integer exponent. Confirms the
+integer-power machinery unfolds cleanly for downstream Phase C use. -/
+theorem D_element_zpow_two :
+    D_element ^ (2 : ℤ) = D_element * D_element := zpow_two _
+
+/-- *Phase B.5 (cycle 339):* `paddedEuler` non-vacuity sanity check —
+the `Group.zpow` API at `n = -1` applied to a heterogeneous-stage
+representative `⟦⟨2, paddedEuler⟩⟧` recovers cycle 184's
+`paddedEuler.inverse` class via cycle 236's `inverseQ_phi_mk`
+definitional unfold. Confirms the zpow infrastructure works beyond
+`D_element` to arbitrary classes in the §383 quotient group. -/
+example :
+    (Quotient.mk PhiEquivalent.setoidSigma
+        ⟨2, OpenMath.Chapter3.Section381.paddedEuler⟩ :
+          Quotient PhiEquivalent.setoidSigma) ^ (-1 : ℤ)
+      = Quotient.mk PhiEquivalent.setoidSigma
+          ⟨2, OpenMath.Chapter3.Section381.paddedEuler.inverse⟩ := by
+  rw [zpow_neg_one]
+  rfl
 
 end OpenMath.Chapter4.Section422
