@@ -9,6 +9,7 @@ import Mathlib.Tactic.Cases
 import Mathlib.Data.Real.Basic
 import OpenMath.Chapter3.Section342NormSqHelpers
 import OpenMath.Chapter3.Section342DistinctRootsHelpers
+import OpenMath.Chapter3.Section321
 
 /-!
 # Butcher §342 — Shifted Legendre polynomials on `[0,1]`
@@ -6180,8 +6181,11 @@ lemma butcherShiftedLegendre_zeros_injective (n : ℕ) :
 /-- **Non-vacuity anchor at `n = 1`.** The unique canonical zero of
 `P_1^* = 2X - 1` is `1/2`. Cross-checks the Phase A.1 enumeration
 against the concrete witness from `butcherShiftedLegendre_one_root`
-(cycle 294). -/
-example : butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩ = (1 / 2 : ℝ) := by
+(cycle 294). Promoted to a named theorem in cycle 308 so that the
+cycle 308 `_collocationA_one_apply` and `butcherGaussLegendreRK_one`
+coincidence proofs can cite it. -/
+theorem butcherShiftedLegendre_zeros_one_apply :
+    butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩ = (1 / 2 : ℝ) := by
   have h_mem :
       butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩
         ∈ butcherShiftedLegendre_rootsInIoo 1 :=
@@ -6280,8 +6284,11 @@ theorem butcherShiftedLegendre_quadrature_exact_lt_n
 single node `c_1 = 1/2` is `1`, matching the elementary observation
 `∫₀¹ 1 dx = 1 · φ(1/2)` for any constant `φ`. The Lagrange basis on a
 singleton is identically `1` (`Lagrange.basis_singleton`), so the
-defining integral collapses to `∫₀¹ 1 dx = 1`. -/
-example : butcherShiftedLegendre_quadratureWeights 1 ⟨0, by omega⟩ = 1 := by
+defining integral collapses to `∫₀¹ 1 dx = 1`. Promoted to a named
+theorem in cycle 308 so the `butcherGaussLegendreRK_one` coincidence
+proof can cite it. -/
+theorem butcherShiftedLegendre_quadratureWeights_one_apply :
+    butcherShiftedLegendre_quadratureWeights 1 ⟨0, by omega⟩ = 1 := by
   unfold butcherShiftedLegendre_quadratureWeights
   simp [Lagrange.basis_singleton, Polynomial.eval_one]
 
@@ -6802,5 +6809,106 @@ example :
   have h := butcherShiftedLegendre_quadratureWeights_satisfiesB 1
     (by norm_num) 1 (by norm_num) (by norm_num)
   simpa using h
+
+/-! ### Phase 1 of the §342 ↔ §321 Gauss–Legendre `RKTableau` lift (cycle 308)
+
+Cycle 307 packaged the algebraic content of Butcher §321's `B(2n)`
+condition for the canonical Lagrange weights at the shifted Legendre
+zeros. To lift it onto a genuine `RKTableau` (so the bridge can be
+phrased as `(butcherGaussLegendreRK n).SatisfiesB (2 * n)`), we need
+the matching collocation `A`-matrix construction. Cycle 308 ships
+the definition plus the concrete `n = 1` witness identifying the
+assembled tableau with §321's hand-built `gaussLegendre1Stage`
+(implicit midpoint). The general-`n` `B(2n)` corollary and the
+remaining `C(n)`/`D(n)`/`E(n,n)` halves are deferred to cycle 309+.
+
+Butcher §342 page 237 introduces the collocation method via the
+identity `Yᵢ = y₀ + h Σⱼ Aᵢⱼ f(Yⱼ)`, where the polynomial
+interpolating `(cⱼ, f(Yⱼ))` integrates to `Yᵢ − y₀` over `[0, cᵢ]`.
+The matrix entries are therefore `Aᵢⱼ = ∫₀^{cᵢ} Lⱼ(x) dx`, with
+`Lⱼ` the Lagrange basis polynomial interpolating `δⱼₖ` at the
+canonical zeros. This is a one-line variation of cycle 303's
+`butcherShiftedLegendre_quadratureWeights` (integral over `[0, 1]`
+rather than `[0, cᵢ]`). -/
+
+/-- **Collocation A-matrix** at the canonical zeros of
+`butcherShiftedLegendre n` (Butcher §342 collocation method). The
+`(i, j)` entry is the integral of the Lagrange basis polynomial `Lⱼ`
+over `[0, cᵢ]`:
+
+  `Aᵢⱼ := ∫₀^{cᵢ} Lⱼ(x) dx`,    `Lⱼ` interpolating `δⱼₖ` at `cₖ`.
+
+This is the standard collocation construction: `Yᵢ = y₀ + h Σⱼ Aᵢⱼ
+f(Yⱼ)` is exactly the equation that forces the polynomial
+interpolating `(cⱼ, f(Yⱼ))` to integrate to `Yᵢ − y₀` over `[0, cᵢ]`.
+At `n = 1` it collapses to the implicit-midpoint A-entry `1/2`
+(matches §321's `gaussLegendre1Stage` from cycle 306). -/
+noncomputable def butcherShiftedLegendre_collocationA
+    (n : ℕ) (i j : Fin n) : ℝ :=
+  ∫ x in (0 : ℝ)..butcherShiftedLegendre_zeros n i,
+    (Lagrange.basis Finset.univ (butcherShiftedLegendre_zeros n) j).eval x
+
+/-- **Non-vacuity anchor at `n = 1`.** The unique collocation entry at
+the single node `c_1 = 1/2` is `1/2`, matching the implicit-midpoint
+A-entry of `gaussLegendre1Stage`. The Lagrange basis on a singleton
+is identically `1` (`Lagrange.basis_singleton`), so the defining
+integral collapses to `∫₀^{1/2} 1 dx = 1/2`. -/
+theorem butcherShiftedLegendre_collocationA_one_apply :
+    butcherShiftedLegendre_collocationA 1 ⟨0, by omega⟩ ⟨0, by omega⟩
+      = 1 / 2 := by
+  unfold butcherShiftedLegendre_collocationA
+  rw [butcherShiftedLegendre_zeros_one_apply]
+  simp [Lagrange.basis_singleton, Polynomial.eval_one]
+
+/-- **The 1-stage Gauss–Legendre `RKTableau`** assembled from the
+canonical Lagrange weights and zeros of `butcherShiftedLegendre 1`.
+At `n = 1` this is the implicit-midpoint method with `c = 1/2`,
+`b = 1`, `A = 1/2` — verified to coincide with §321's hand-defined
+`gaussLegendre1Stage` (cycle 306) in
+`butcherGaussLegendreRK_one_eq_gaussLegendre1Stage` below. -/
+noncomputable def butcherGaussLegendreRK_one :
+    OpenMath.Chapter3.Section312.RKTableau 1 where
+  A := butcherShiftedLegendre_collocationA 1
+  b := butcherShiftedLegendre_quadratureWeights 1
+  c := butcherShiftedLegendre_zeros 1
+
+/-- **Coincidence with §321's `gaussLegendre1Stage` (cycle 306).**
+The assembled cycle-308 Gauss–Legendre `RKTableau` at `n = 1`
+equals the hand-defined implicit-midpoint tableau from §321. This
+is a *bridge* theorem — neither definition is reduced to the other,
+and the proof routes through three non-trivial evaluations:
+* `A`-field: `_collocationA_one_apply` (`∫₀^{1/2} 1 = 1/2`).
+* `b`-field: `_quadratureWeights_one_apply` (`∫₀¹ 1 = 1`).
+* `c`-field: `_zeros_one_apply` (the root of `2X - 1` is `1/2`). -/
+theorem butcherGaussLegendreRK_one_eq_gaussLegendre1Stage :
+    butcherGaussLegendreRK_one =
+      OpenMath.Chapter3.Section321.gaussLegendre1Stage := by
+  refine OpenMath.Chapter3.Section312.RKTableau.mk.injEq .. |>.mpr ⟨?_, ?_, ?_⟩
+  · funext i j
+    fin_cases i; fin_cases j
+    show butcherShiftedLegendre_collocationA 1 ⟨0, by omega⟩ ⟨0, by omega⟩
+        = 1 / 2
+    exact butcherShiftedLegendre_collocationA_one_apply
+  · funext i
+    fin_cases i
+    show butcherShiftedLegendre_quadratureWeights 1 ⟨0, by omega⟩ = 1
+    exact butcherShiftedLegendre_quadratureWeights_one_apply
+  · funext i
+    fin_cases i
+    show butcherShiftedLegendre_zeros 1 ⟨0, by omega⟩ = 1 / 2
+    exact butcherShiftedLegendre_zeros_one_apply
+
+/-- **Bridge to §321's `B(2)` predicate at `n = 1`.** Lifts cycle
+307's algebraic identity onto the assembled `RKTableau`: the
+1-stage Gauss–Legendre tableau satisfies the order-2 quadrature
+condition `B(2)`. Discharged by rewriting through the coincidence
+theorem and invoking §321's existing `gaussLegendre1Stage`
+`B(2)` example pattern. -/
+example : butcherGaussLegendreRK_one.SatisfiesB 2 := by
+  rw [butcherGaussLegendreRK_one_eq_gaussLegendre1Stage]
+  intro k h1 hk
+  interval_cases k
+  · simp [OpenMath.Chapter3.Section321.gaussLegendre1Stage]
+  · simp [OpenMath.Chapter3.Section321.gaussLegendre1Stage]
 
 end OpenMath.Chapter3.Section342
