@@ -810,3 +810,59 @@ signature of `D_element` is now fully pinned to Butcher §387's
 planned; Phase A is complete pending an optional Phase A.0.3
 (elementary-weight multiplicativity bridge over `composeQ_phi`) which
 is deferred unless a downstream consumer demands it.
+
+## Cycle 340 update — Phase C closure
+
+Cycle 340 ships Phase C: the (422a) condition predicate on the §383
+quotient group.
+
+**Shipped:**
+
+* `Eq422a {k} (M : LMM k) (η_q : Q) : Prop` — Butcher's
+  underlying-one-step-method condition, quantifying over
+  `u : RootedTree`:
+
+  ```
+  1(u) − Σᵢ₌₁..ₖ αᵢ · η_q^(-i)(u)
+       − Σᵢ₌₀..ₖ βᵢ · (η_q^(-i) · D)(u) = 0.
+  ```
+
+  α-sum indexed by `Fin k` with `i.succ : Fin (k+1)` selecting
+  `M.α i.succ` and exponent `-((i.val + 1 : ℕ) : ℤ)`; β-sum
+  indexed by `Fin (k + 1)` with `M.β i` and exponent
+  `-((i.val : ℕ) : ℤ)`. Right-multiplication by `D_element` on the
+  β-side matches Butcher's `η^{-i} D` (cycle 337 `D_phi`).
+
+* `Eq422a_congr` — non-vacuity sanity: `Eq422a` respects equality
+  on its quotient-class argument (one-line `subst`+`rfl`).
+
+**Design choices:**
+
+* No `IsPreconsistent`/`IsStable` hypothesis on `Eq422a`'s
+  signature — those are *existence* hypotheses for `thm:422A`
+  ("such η exists"), not preconditions for the *predicate*. Keeps
+  the predicate reusable across `thm:422A` (existence) and any
+  future converse direction.
+
+* `1(u)` term retained for verbatim Butcher correspondence. At the
+  quotient level `1(u) = elementaryWeightQ_phi 1 u` reduces to `0`
+  for every `u : RootedTree` via cycle 239's
+  `elementaryWeightQ_phi_id` simp lemma (cycle 337 §A.0.4
+  b₀-invisibility). The Butcher empty-tree case is handled
+  separately by `IsPreconsistent`.
+
+**Cycle 340 LOC trajectory:** Section422.lean: ~280 (cycle 339) →
+~360 (cycle 340), +~80 LOC for the docstring-rich Phase C block.
+
+**Cycle 341 entry point (Phase D.1):** base case `η(τ)` solver. The
+coefficient of `η(τ)` in `Eq422a` at `u = τ` is `-(α₁ + 2α₂ + ⋯ +
+k·αₖ)` (Butcher's proof at `extraction/raw_text/ch04.txt:1163`).
+Under preconsistency this equals `-Σ i·αᵢ`, non-zero by stability.
+So `η(τ)` is determined by the lower-order (empty) terms. Phase D
+likely needs 3 cycles (D.1 base case, D.2 well-founded recursion
+infrastructure on `RootedTree.order`, D.3 inductive step); Phase E
+(lift to quotient + seal) is then a single cycle.
+
+**Phase C status: CLOSED.** The (422a) predicate is defined and
+respects quotient-class equality. Phase D / E / F remain deferred
+per §5.

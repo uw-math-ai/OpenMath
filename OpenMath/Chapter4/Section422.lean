@@ -264,4 +264,87 @@ example :
   rw [zpow_neg_one]
   rfl
 
+/-! ### Phase C — the (422a) condition predicate (cycle 340)
+
+Butcher §422 p. 358 equation (422a) (`extraction/raw_text/ch04.txt:1115–1116`):
+
+```
+  1 − α₁ η⁻¹ − α₂ η⁻² − ⋯ − αₖ η⁻ᵏ
+                 − β₀ D − β₁ η⁻¹ D − β₂ η⁻² D − ⋯ − βₖ η⁻ᵏ D = 0
+```
+
+This is the *defining* equation for the underlying one-step method of
+a linear multistep method `M = [α, β]`: a quotient class `η_q : Q`
+solves (422a) iff, at every rooted tree `u`,
+
+```
+  1(u) − Σᵢ₌₁..ₖ αᵢ · η_q^(-i)(u)
+       − Σᵢ₌₀..ₖ βᵢ · (η_q^(-i) · D)(u) = 0.
+```
+
+The predicate `Eq422a M η_q` captures this equation. Note:
+
+* `1(u) = 0` on every `u : RootedTree` (cycle 239's
+  `elementaryWeightQ_phi_id` simp lemma) — this is the
+  b₀-invisibility property documented in cycle 337 §A.0.4. The
+  empty-tree case of (422a), where `1` would contribute non-zero,
+  is invisible at the `PhiEquivalent` quotient level and is
+  handled separately by `M.IsPreconsistent` (Butcher's proof at
+  `:1152`).
+* `Eq422a` does **not** require `IsPreconsistent` / `IsStable` in
+  its signature: those are *existence* hypotheses for `thm:422A`
+  (the "such η exists" theorem), not preconditions for the
+  *predicate*. Keeping them off makes the predicate reusable.
+
+See `.prover-state/issues/def_422B_path.md` §5 for the full phase
+decomposition. Phase D (inductive η-solver) and Phase E (lift/seal)
+remain deferred. -/
+
+/-- *Phase C (cycle 340):* Butcher §422 (422a) — the
+underlying-one-step-method condition. Given a `k`-step linear
+multistep method `M = [α, β]` and a quotient class `η_q` in the §383
+quotient group, `Eq422a M η_q` states that at every rooted tree `u`,
+
+```
+  1(u) − Σᵢ₌₁..ₖ αᵢ · η_q^(-i)(u)
+       − Σᵢ₌₀..ₖ βᵢ · (η_q^(-i) · D)(u) = 0.
+```
+
+* α-sum: indexed by `Fin k`, with `i.succ : Fin (k+1)` selecting
+  `M.α i.succ` and exponent `-(i.val + 1 : ℤ)` giving `-1, -2, …, -k`.
+* β-sum: indexed by `Fin (k+1)`, with `M.β i` and exponent
+  `-(i.val : ℤ)` giving `0, -1, -2, …, -k`.
+
+The β-side's right-multiplication by `D_element` matches Butcher's
+`η^{-i} D` (cycle 337 `D_phi η := η * D_element`).
+
+This is a `Prop`-valued predicate; the existence of `η_q` solving
+this equation for a preconsistent and stable `M` is the content of
+`thm:422A` (deferred to later cycles per the scoping doc §5). -/
+def Eq422a {k : ℕ}
+    (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    (η_q : Quotient PhiEquivalent.setoidSigma) : Prop :=
+  ∀ u : RT,
+    elementaryWeightQ_phi (1 : Quotient PhiEquivalent.setoidSigma) u
+      - (∑ i : Fin k,
+          M.α i.succ
+            * elementaryWeightQ_phi (η_q ^ (-((i.val + 1 : ℕ) : ℤ))) u)
+      - (∑ i : Fin (k + 1),
+          M.β i
+            * elementaryWeightQ_phi
+                ((η_q ^ (-((i.val : ℕ) : ℤ))) * D_element) u)
+      = 0
+
+/-- *Phase C non-vacuity (cycle 340):* `Eq422a` respects equality on
+its quotient-class argument. Trivial well-definedness check: the
+predicate's body is a function of `η_q`, so quotient-class equality
+preserves the truth value. Useful for chaining `Quotient.sound`
+rewrites through `Eq422a` in downstream Phase D/E lemmas. -/
+theorem Eq422a_congr {k : ℕ}
+    (M : OpenMath.Chapter4.Section404.LinearMultistepMethod k)
+    {η_q η_q' : Quotient PhiEquivalent.setoidSigma} (h : η_q = η_q') :
+    Eq422a M η_q ↔ Eq422a M η_q' := by
+  subst h
+  rfl
+
 end OpenMath.Chapter4.Section422
