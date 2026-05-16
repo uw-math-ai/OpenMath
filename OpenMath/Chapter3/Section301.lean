@@ -161,6 +161,24 @@ theorem order_pos : ∀ t : RootedTree, 0 < t.order
       show 0 < 1 + orderSum children
       omega
 
+/-- Subtree strict-descent: every immediate child of a rooted tree has
+strictly smaller order than the parent. Phase D.2 infrastructure for
+Butcher §422's `η`-recursion (see `def_422B_path.md`). -/
+theorem order_lt_of_mem_children {c : RootedTree} {children : List RootedTree}
+    (hc : c ∈ children) : c.order < (mk children).order := by
+  rw [order_eq]
+  have h₁ : c.order ∈ children.map order := List.mem_map_of_mem hc
+  have h₂ : c.order ≤ (children.map order).sum := List.le_sum_of_mem h₁
+  omega
+
+/-- `WellFoundedRelation` on `RootedTree` via `order`. Enables
+well-founded recursion on subtree-order for downstream definitions
+(notably §422 Phase D.3's `η` solver). -/
+instance : WellFoundedRelation RootedTree := measure RootedTree.order
+
+example : RootedTree.vertex.order < RootedTree.cherry.order := by decide
+example : RootedTree.cherry.order < RootedTree.broom₃.order := by decide
+
 mutual
   /-- `γ(t) > 0` for every rooted tree (every product factor is
   positive: the root order is `≥ 1`, and each subtree's density is

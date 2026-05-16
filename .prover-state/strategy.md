@@ -1,234 +1,378 @@
-# Cycle 339 strategy — `def:422B` Phase B: `Group.zpow` non-vacuity
+# Cycle 343 — strategy
 
-## §A. Context
+## §A. State at HEAD
 
-Cycle 338 shipped Phase A.0.2 of `def:422B`, closing the on-tree
-elementary-weight signature of `D_element`:
+Cycle 342 (commit `cbc1aca`) shipped Phase D.1 of `def:422B` cleanly:
 
-* `D_element_elementaryWeight_higher_order` — `Φ_D(t) = 0` for
-  `t.order ≥ 2`.
-* `D_element_elementaryWeight` — Phase A.0.2 capstone packaging
-  cycle 337's `_vertex` (`Φ_D(τ) = 1`) and B.1, matching Butcher
-  §387's `Φ_D` exactly on `T`.
-* `D_phi_mul` — `D_phi (η * η') = η * D_phi η'` simp lemma via
-  `mul_assoc` in cycle 236's `instGroup_phi`.
+* `OpenMath/Chapter4/Section422.lean` is at HEAD, 674 LOC, 0 sorries,
+  tautology-scanner clean. Verified with
+  `git log -1 -- OpenMath/Chapter4/Section422.lean` (`cbc1aca`) and
+  `wc -l` (674).
+* New public theorems landed this cycle (all axiom-clean
+  `[propext, Classical.choice, Quot.sound]`):
+  * `Eq422a_at_vertex_linear` — reduces (422a) at `u = τ` to a linear
+    equation in `η(τ)`.
+  * `Eq422a_at_vertex_linear_of_isConsistent` — consistency
+    strengthening recovering Butcher's textbook η-coefficient.
+  * `Eq422a_at_vertex_eta_eq` — closed-form `η(τ) = sum_β / (coef_α +
+    coef_β)` under a non-vanishing-coefficient hypothesis.
 
-Section422.lean: 133 → ~220 LOC. Sorry count 0. Phase A is complete.
+The supervisor's score=1 for cycle 342 reflects the standing phantom-
+verdict bug (`phantom_commit_verdict_pattern.md`) — the work IS at
+HEAD. **Do not re-derive Phase D.1.** Trust git state.
 
-Per `.prover-state/issues/def_422B_path.md` §5 / §7 and cycle 338's
-"Suggested next approach", **the next deliverable is Phase B**:
-`Group.zpow` API non-vacuity on `Quotient PhiEquivalent.setoidSigma`.
+§422 multi-phase plan status per `.prover-state/issues/def_422B_path.md`:
 
-There are no Aristotle results pending and no blocker issues
-reported. Sorry count is 0. The cycle 338 supervisor verdict and
-recent §344 streak break have left the project in a clean state with
-clear forward momentum on the §422 LMM↔§383-group bridge.
+* Phase 0 wire-up (cycle 336) — closed.
+* Phase A.0 `D` operator pin (cycles 337+338) — closed.
+* Phase B `Group.zpow` non-vacuity (cycle 339) — closed.
+* Phase C (422a) condition predicate (cycle 340) — closed.
+* Phase D pre-infrastructure τ-additivity (cycle 341) — closed.
+* **Phase D.1 closed-form `η(τ)` base case (cycle 342) — closed.**
+* **Phase D.2 well-founded recursion infrastructure — open (this cycle's target).**
+* Phase D.3 inductive step, Phase E lift+seal, Phase F (`thm:422A`)
+  — deferred.
 
-## §B. Priority 1 (P1) — Phase B: Group.zpow sanity ship
+## §B. Primary target — Phase D.2 (well-founded recursion on `RootedTree.order`)
 
-**Goal**: Verify Mathlib's `Group.zpow_natCast`, `zpow_neg_one`,
-`zpow_zero`, `zpow_one`, and related integer-power lemmas fire
-correctly on `Quotient PhiEquivalent.setoidSigma`, and ship 2–4
-small non-vacuity sanity theorems exercising `D_element`'s integer
-powers.
+Per `def_422B_path.md` §5 row D.2 (60–100 LOC estimate, single cycle,
+low–medium risk). The deliverable is the well-founded recursion
+infrastructure that Phase D.3's inductive step will consume to
+recurse on subtrees by strictly decreasing `RootedTree.order`.
 
-**Location**: append to `OpenMath/Chapter4/Section422.lean` after the
-existing `D_phi_mul` simp lemma.
+### B.1. What is already in place (verified)
 
-**Concrete deliverables** (~30–60 LOC total):
+* `OpenMath/Chapter3/Section310.lean:98` — `RootedTree.order : RootedTree → ℕ`
+  (mutual with `orderSum : List RootedTree → ℕ`).
+* `OpenMath/Chapter3/Section301.lean:159` — `order_pos : ∀ t, 0 < t.order`.
+* `OpenMath/Chapter3/Section301.lean:101` — `orderSum_eq_map_sum`.
+* `OpenMath/Chapter3/Section301.lean:112` — `order_eq`.
+* `OpenMath/Chapter3/Section310.lean:204` — existing `termination_by +
+  decreasing_by` pattern using Lean's auto-generated `sizeOf` recursor
+  on `RootedTree` (the `theta`/`thetaProd` mutual block at lines
+  204–208 already terminates by `sizeOf`).
+* `OpenMath/Chapter3/Section301.lean:626` — `TruncatedRootedTree N`
+  subtype + `order_le` accessor.
 
-### B.1 — `D_element_zpow_zero`
+### B.2. What needs to ship in cycle 343
 
-```lean
-@[simp]
-theorem D_element_zpow_zero : D_element ^ (0 : ℤ) = 1 := zpow_zero _
-```
+Concrete deliverables in priority order (do **P1 first**, then **P2**;
+P3 is documentation-only stretch):
 
-Trivial verification that the `Group` instance's `zpow` reduces at
-`n = 0` to the group identity. One-liner.
+**P1 — `RootedTree.order_lt_of_mem_children` (subtree strict-descent
+lemma, ~10–20 LOC).** For `t = mk children` and `c ∈ children`,
+`c.order < t.order`. Proof recipe:
 
-### B.2 — `D_element_zpow_one`
+* Unfold via `order_eq` (Section301:112) to get
+  `t.order = 1 + (children.map RootedTree.order).sum`.
+* Bound `c.order ≤ (children.map RootedTree.order).sum` via
+  `List.le_sum_of_mem` (or equivalent) applied to `c.order ∈
+  (children.map order)` (mem follows from `c ∈ children` via
+  `List.mem_map_of_mem`).
+* Conclude `c.order < t.order` by adding 1.
 
-```lean
-@[simp]
-theorem D_element_zpow_one : D_element ^ (1 : ℤ) = D_element := zpow_one _
-```
+If `List.le_sum_of_mem` does not exist verbatim in current Mathlib,
+fallback: induct on `children` directly (~15 LOC). Use
+`lean_local_search "List.le_sum"` and `lean_loogle "_ ≤ List.sum _"`
+to find the right name. **Verify axiom-clean** via `#print axioms`.
 
-Trivial verification that `zpow` reduces at `n = 1` to `D_element`
-itself. One-liner.
-
-### B.3 — `D_element_zpow_neg_one`
-
-```lean
-theorem D_element_zpow_neg_one :
-    D_element ^ (-1 : ℤ) = D_element⁻¹ := zpow_neg_one _
-```
-
-Verification that `zpow` at `n = -1` reduces to the group inverse.
-This exercises cycle 236's `inverseQ_phi` lift through `Group.zpow`.
-One-liner.
-
-### B.4 — `D_element_zpow_two` (computational sanity)
-
-Demonstrate that `D_element ^ (n : ℤ)` can be computed when `n` is a
-concrete numeral, e.g.:
-
-```lean
-example : D_element ^ (2 : ℤ) = D_element * D_element := by
-  rw [show (2 : ℤ) = (1 : ℤ) + (1 : ℤ) from rfl, zpow_add]
-  simp [D_element_zpow_one]
-```
-
-Or via `zpow_natCast`:
+**P2 — `WellFoundedRelation` instance via `RootedTree.order` (~10
+LOC).** Build
 
 ```lean
-example : D_element ^ (2 : ℤ) = D_element * D_element := by
-  rw [show (2 : ℤ) = ((2 : ℕ) : ℤ) from rfl, zpow_natCast]
-  rfl
+instance : WellFoundedRelation RootedTree :=
+  { rel := fun a b => a.order < b.order
+    wf  := InvImage.wf RootedTree.order Nat.lt_wfRel.wf }
 ```
 
-Use whichever closes. The goal is to confirm Mathlib's `Group.zpow`
-unfolds cleanly for downstream Phase C use (which will need terms
-like `D_element ^ (-(i + 1 : ℤ))` for equation (422a)).
+If `InvImage.wf` namespace has drifted, alternatives to try (use
+`lean_local_search`):
 
-### B.5 (optional stretch) — `paddedEuler` non-vacuity
+* `Subrelation.wf`
+* `WellFounded.onFun`
+* `measure RootedTree.order` (Mathlib has `measure` as the
+  canonical name for `InvImage Nat.lt ...`)
 
-If LOC budget permits, ship one example computing
-`⟦⟨2, paddedEuler⟩⟧ ^ (-1 : ℤ)` and verifying it equals
-`⟦⟨2, paddedEuler.inverse⟩⟧` via `inverseQ_phi`. This exercises the
-heterogeneous-stage path and confirms the `Group.zpow` API works
-beyond `D_element`.
+A safer Lean-4 spelling:
 
 ```lean
-example :
-    (⟦⟨2, RKTableau.paddedEuler⟩⟧ :
-      Quotient OpenMath.Chapter3.Section312.RKTableau.PhiEquivalent.setoidSigma)
-      ^ (-1 : ℤ)
-      = ⟦⟨2, RKTableau.paddedEuler.inverse⟩⟧ := by
-  rw [zpow_neg_one]
-  rfl  -- or `simp [inverseQ_phi_mk]`
+instance : WellFoundedRelation RootedTree :=
+  measure RootedTree.order
 ```
 
-## §C. Proof recipe
+Add two non-vacuity examples:
 
-The deliverables above are each ≤5 LOC. The recipe is:
-
-1. **For B.1–B.3**: Direct application of Mathlib's `zpow_zero`,
-   `zpow_one`, `zpow_neg_one` lemmas. If these names have drifted,
-   verify via `lean_loogle "_ ^ (0 : ℤ) = 1"` / `lean_loogle "_ ^
-   (-1 : ℤ)"` early in the cycle.
-
-2. **For B.4**: Test both `zpow_add` + arithmetic and
-   `zpow_natCast` + `pow_succ` paths via `lean_multi_attempt` if
-   needed. The cleanest closure is usually `rfl` after a
-   `zpow_natCast` cast (since `(2 : ℕ) → ℤ` is definitional and
-   `pow` for groups unfolds via `Monoid.npow_succ`).
-
-3. **For B.5**: Use `inverseQ_phi_mk` (cycle 236's `@[simp]` unfold)
-   to reduce `⟦⟨2, paddedEuler⟩⟧⁻¹ = ⟦⟨2, paddedEuler.inverse⟩⟧`,
-   then chain via `zpow_neg_one` + standard inverse manipulations.
-
-## §D. What NOT to attempt this cycle
-
-* **Do NOT attempt Phase C (`Eq422a` predicate)** —
-  `.prover-state/issues/def_422B_path.md` §5 lists this as a separate
-  cycle (~50–100 LOC), and it depends on Phase B's zpow API being
-  in place. Cycle 340 target.
-
-* **Do NOT attempt Phase D (inductive solver for η)** — multi-cycle
-  work per the scoping doc §5; well-founded recursion on
-  `RootedTree.order` requires careful planning and is explicitly
-  flagged as "must NOT be attempted as a single deliverable" per the
-  cycle 149/150 (`def:530B` operator-body sorry-first) and cycle
-  200/201 (`thm:381H` deferred direction) rollback precedents.
-
-* **Do NOT introduce a sorry-first scaffold for Phase C or D**. The
-  rollback precedents mean any sorry that lacks a credible
-  single-cycle close will be reverted. Phase B's deliverables are
-  each axiom-clean targets, no sorry.
-
-* **Do NOT attempt the `elementaryWeightQ_phi`-multiplicativity
-  bridge over `composeQ_phi`** (Phase A.0.3 optional). The cycle 338
-  task results explicitly noted this is "deferred unless a
-  downstream consumer demands it"; Phase B (zpow API) does not
-  consume it.
-
-* **Do NOT raise `maxHeartbeats` above 200000**. The Phase B
-  deliverables are all single-tactic / few-line proofs; no heartbeat
-  pressure expected.
-
-* **Do NOT modify `Section422.lean`'s existing cycle 336–338 work**
-  (`D_element`, `D_phi`, `D_phi_one`, `D_element_elementaryWeight_vertex`,
-  `D_element_elementaryWeight_higher_order`, `D_element_elementaryWeight`,
-  `D_phi_mul`). All are axiom-clean and load-bearing for Phase B.
-
-* **Do NOT compile `Section441.lean`** — 43+ consecutive GPFS
-  timeouts per `.prover-state/issues/cycle_182_gpfs_slowness.md`. Not
-  relevant to cycle 339's §422 work.
-
-* **Do NOT try to compute `D_element^n` by unfolding `D_element`
-  manually**. Stay at the `Group.zpow` abstraction level — Mathlib's
-  lemmas do the work. Manual unfolding to `⟦⟨1, RKTableau.explicitEuler⟩⟧`
-  and computing `(explicitEuler).inverse` would balloon LOC and
-  duplicate cycle 236's `inverseQ_phi` work.
-
-## §E. Mathlib hooks to verify early
-
-Run `lean_local_search` / `lean_loogle` once at the start of cycle
-339 to confirm these names at HEAD:
-
-| Goal | Candidate lemma | File |
-|---|---|---|
-| `g ^ (0 : ℤ) = 1` | `zpow_zero` | `Mathlib.Algebra.GroupPower.Basic` |
-| `g ^ (1 : ℤ) = g` | `zpow_one` | same |
-| `g ^ (-1 : ℤ) = g⁻¹` | `zpow_neg_one` | same |
-| `g ^ ((n : ℕ) : ℤ) = g ^ n` | `zpow_natCast` | same |
-| `g ^ (m + n : ℤ) = g ^ m * g ^ n` | `zpow_add` | same |
-
-If any names have drifted (e.g. `zpow_neg_one` may be `zpow_neg_one'`
-or `Group.zpow_neg_one` in recent Mathlib), adjust accordingly. The
-`instGroup_phi` instance (cycle 236) provides the `Group` typeclass,
-so all `Group.zpow` lemmas should fire on `Quotient
-PhiEquivalent.setoidSigma` without further setup.
-
-If `lean_loogle` is rate-limited, fall back to `lean_local_search
-"zpow"` or grep Mathlib directly:
-```
-grep -rn "theorem zpow_zero\|theorem zpow_one\|theorem zpow_neg_one\|theorem zpow_natCast" \
-    .lake/packages/mathlib/Mathlib/Algebra/GroupPower/
+```lean
+example : (RootedTree.vertex).order < (RootedTree.cherry).order := by decide
+example : (RootedTree.cherry).order < (RootedTree.broom₃).order := by decide
 ```
 
-## §F. Ship checklist
+(`vertex`/`cherry`/`broom₃` are defined in Section310; `decide` should
+close once `order` definitionally unfolds. If `decide` stalls, fall
+back to `simp [RootedTree.order, ...]; norm_num`.)
 
-Cycle 339 should ship:
+**P3 (stretch, documentation only — only if P1+P2 close in <60 min;
+NO sorry, NO axiom).** Append a `/-- … -/` docstring block to
+`Section422.lean` (immediately before the `Eq422a` definition or at
+the end of the file) sketching the Phase D.3 inductive-step solver's
+target signature. Example block:
 
-1. **B.1–B.4**: 4 axiom-clean theorems / examples at
-   `OpenMath/Chapter4/Section422.lean`, appended after `D_phi_mul`.
-2. **B.5 (optional)**: 1 `paddedEuler` non-vacuity example if budget
-   permits.
-3. **lean_status.json**: `def:422B` row updated to bump cycle
-   reference to 339; status remains `partial` (Phase B is
-   infrastructure, not a textbook entity closure).
-4. **plan.md**: append cycle 339 note to the `[~] def:422B` row
-   documenting Phase B closure.
-5. **task_results/cycle_339.md** — standard sections (Worked on,
-   Approach, Result, Faithfulness check, Dead ends, Discovery,
-   Suggested next approach).
-6. **Run `lake env lean OpenMath/Chapter4/Section422.lean`** to
-   verify clean compile.
-7. **Run `#print axioms` on each new theorem** to confirm
-   `[propext, Classical.choice, Quot.sound]` only.
+```lean
+/-!
+### Phase D.3 (cycle 344+) preview
 
-LOC budget: ~30–60 LOC across Section422.lean. Well under any
-budget concern.
+The inductive step solver will have a signature similar to:
 
-## §G. Outlook beyond cycle 339
+```
+noncomputable def underlyingEta_aux {k : ℕ}
+    (M : LinearMultistepMethod k)
+    (hPre : M.IsPreconsistent) (hStab : M.IsStable) :
+    RootedTree → ℝ
+```
 
-After Phase B lands, cycle 340 ships Phase C (`Eq422a` predicate +
-non-vacuity sanity check), and cycle 341+ begins Phase D (the
-inductive η-solver, multi-cycle with sub-phase decomposition per
-the scoping doc §5: D.1 base case at `τ`, D.2 well-founded recursion
-infrastructure, D.3 inductive step). See
-`.prover-state/issues/def_422B_path.md` §5 for the full 6-phase
-roadmap toward sealing `def:422B`. Phase E (lift to quotient + seal)
-and optional Phase F (connect to thm:422A existence) close the chain.
+terminating by `t.order` (well-founded via `Section301`'s instance).
+Base case `t = τ` uses cycle 342's `Eq422a_at_vertex_eta_eq`. The
+recursive case at `t = mk children` solves the linear equation in
+`η(t)` by substituting `η` at proper sub-trees `c ∈ children`
+(strict descent by P1) and at `t = mk children`'s own row.
+-/
+```
+
+**DO NOT scaffold the `def` with `sorry`** — sorry count must stay at
+0 (cycle 149/150, 200/201 rollback precedents).
+
+### B.3. Verification checklist for primary deliverables
+
+After P1+P2 land:
+
+1. `lake env lean OpenMath/Chapter3/Section301.lean` → exit 0.
+2. `lake env lean OpenMath/Chapter3.lean` → exit 0 (aggregator).
+3. `grep -c sorry OpenMath/Chapter3/Section301.lean` → 0.
+4. Tautology scanner clean:
+   `rg ':=\s*h_\w+\s*$|exact\s+h_\w+\s*$|:=\s*id\s*$' OpenMath/Chapter3/Section301.lean`
+   → no hits.
+5. `#print axioms OpenMath.Chapter3.Section310.RootedTree.order_lt_of_mem_children`
+   → `[propext, Classical.choice, Quot.sound]` only (or just
+   `[Quot.sound]` if the proof is purely structural).
+6. `#print axioms` on the WellFoundedRelation instance → check it
+   does NOT depend on `sorryAx`.
+
+### B.4. File placement decision
+
+**Place P1 (`order_lt_of_mem_children`) in
+`OpenMath/Chapter3/Section301.lean`** near `order_pos` (line 159) —
+it's an intrinsic `RootedTree`-API lemma about `order`, not §422-
+specific.
+
+**Place P2 (`WellFoundedRelation` instance) in
+`OpenMath/Chapter3/Section301.lean`** immediately after P1. The
+instance is reusable infrastructure that future cycles (Phase D.3
+plus any other RootedTree-recursive definitions) will consume.
+
+Adding `import OpenMath.Chapter3.Section301` to `Section422.lean` is
+already in place (cycle 338); no aggregator changes needed.
+
+If P1+P2 turn out to need machinery only available in `Section310`'s
+namespace (unlikely — `Section301` imports `Section310`), place them
+there instead. But `Section301` is preferred since it hosts the rest
+of the `order` API.
+
+**Namespace**: put both inside `namespace OpenMath.Chapter3.Section310`
+(matching the existing `order_pos`'s home) so `RootedTree.order_lt_of_mem_children`
+resolves via dot notation.
+
+## §C. Backup plan — stability bridge for `Eq422a_at_vertex_eta_eq`
+
+If P1+P2 stall (Mathlib name drift on `InvImage.wf` etc.) and 30+ min
+are spent without progress on the WellFoundedRelation instance,
+**pivot to the stability bridge** as the cycle's deliverable.
+
+### C.1. Deliverable
+
+A new public theorem in `OpenMath/Chapter4/Section422.lean` (after
+`Eq422a_at_vertex_eta_eq`):
+
+```lean
+theorem Eq422a_at_vertex_eta_eq_of_stable_preconsistent
+    {k : ℕ} (M : LinearMultistepMethod k) (hk : 0 < k)
+    (hStable : M.IsStable) (hPre : M.IsPreconsistent)
+    (η_q : Quotient PhiEquivalent.setoidSigma)
+    (hEq : Eq422a M η_q) :
+    elementaryWeightQ_phi η_q RootedTree.vertex
+      = sum_β M / (coef_α M + coef_β M)
+```
+
+where `sum_β`, `coef_α`, `coef_β` are exactly cycle 342's abbreviations
+(worker should grep the cycle 342 source for the canonical naming).
+
+### C.2. Proof recipe
+
+Bridge `coef_α + coef_β ≠ 0` to cycle 178's
+`ρPoly_deriv_eval_one_pos_of_stable_preconsistent` (in
+`OpenMath/Chapter4/Section441.lean`):
+
+1. Under preconsistency, `coef_α(M) = sum_β(M)` (this is
+   `M.SatisfiesEq404b` recast — already used by cycle 342's
+   `Eq422a_at_vertex_linear_of_isConsistent`).
+2. Cycle 174's `aPoly_coeff_one_eq_two_rho_deriv_at_one_of_preconsistent`
+   plus cycle 178's `ρPoly_deriv_eval_one_pos_of_stable_preconsistent`
+   imply `coef_α(M) > 0` under stability + preconsistency.
+3. `coef_β(M) = Σ_{i : Fin (k+1)} i · M.β i`. The sign of this is NOT
+   directly controlled by stability — but if `coef_α > 0` and the
+   problem only needs `coef_α + coef_β ≠ 0`, it suffices to show
+   `coef_α + coef_β > 0` or to find a different non-vanishing
+   argument.
+4. Apply `Eq422a_at_vertex_eta_eq` (cycle 342) with the derived
+   non-vanishing hypothesis.
+
+### C.3. If C.2 step 3 cannot be discharged
+
+Time-box: if after 30 min of search the `coef_α + coef_β ≠ 0`
+inequality cannot be derived from existing §441 infrastructure +
+preconsistency, **abandon the stability bridge** and either:
+
+* Fall back to backup §D (Phase D.3 small-tree manual case), OR
+* Accept Phase D.2 deferral and ship a smaller P1-only deliverable
+  (just `order_lt_of_mem_children`, ~15 LOC, axiom-clean) as the
+  cycle's only ship. P1 alone is a useful infrastructure lemma even
+  without P2.
+
+Document the dead end in this strategy file's epilogue so cycle 344+
+planners know the gap.
+
+## §D. Tertiary backup — manual closed-form at `u = cherry`
+
+Only if BOTH §B and §C stall.
+
+* Specialize `Eq422a M η_q` at `u = cherry := mk [vertex]` (already
+  defined in Section310).
+* Derive a `cherry`-specific analogue of cycle 341 P1/P2/P3 (additivity
+  of `elementaryWeightQ_phi` at `cherry`) — but note: cycle 341's
+  P1/P2/P3 are stated for `u = vertex` and use the specific
+  combinatorial structure of `RootedTree.vertex` (a leaf, so
+  `derivativeWeightWithSrc` recursion bottoms out at the empty-list
+  base case). At `cherry = mk [vertex]`, the recursion descends one
+  step into `vertex` — so the cherry-specific lemmas would be:
+  `elementaryWeightQ_phi (η_q · D) cherry =
+   elementaryWeightQ_phi η_q vertex` (since `D` collapses the leaf),
+  plus the analogous mul/inv/zpow rules.
+* Solve for `η(cherry)` in terms of `η(τ)` (cycle 342) plus `M.α`,
+  `M.β`.
+
+This is ~150 LOC scope and is the natural Phase D.3 entry point;
+only ship in cycle 343 if §B and §C are both blocked. Otherwise defer
+to cycle 344.
+
+## §E. What NOT to do this cycle
+
+* **DO NOT attempt the Phase D.3 inductive step in full** (multi-cycle,
+  ~150–300 LOC per `def_422B_path.md` §5 row D.3). The single-tree
+  manual case (§D backup) is the only Phase D.3 work appropriate
+  for one cycle.
+* **DO NOT re-derive cycle 342 Phase D.1 work.** It is at HEAD,
+  axiom-clean, verified. The phantom commit verdict is a
+  supervisor-side bug (`phantom_commit_verdict_pattern.md`).
+* **DO NOT submit Aristotle jobs.** Phase D.2 is structural Lean
+  type-class engineering, not premise selection — Aristotle's
+  strength does not apply here. Cycle 342 strategy explicitly
+  forbade Aristotle for the same reason; same logic holds.
+* **DO NOT change file placement of cycle 342 deliverables.** Keep
+  `Eq422a_at_vertex_linear` and its corollaries where they are.
+* **DO NOT pivot to a fresh entity.** Cycle 342 task results §F
+  notes "pivot pressure starts mounting" but Phase D.2/D.3 are still
+  ~2-3 cycles from sealing `def:422B`. Finish the streak. Pivot
+  candidates in `cycle_336_pivot_options.md` and
+  `def_422B_path.md` §8 remain available for cycle 346+ if needed.
+* **DO NOT raise `maxHeartbeats` above 200000.** None of the Phase
+  D.2 work approaches that limit.
+* **DO NOT introduce sorry / axiom / constant.** Phase D.2
+  deliverables must be axiom-clean per project rules. The cycle
+  149/150 (`def:530B` Path A scaffold) and 200/201 (`thm:381H`
+  sorry-first scaffold) rollback precedents apply here too.
+* **DO NOT add the P3 stretch as a `def ... := sorry`** scaffold.
+  Sorry count must remain 0. P3 is documentation-only (Lean-comment
+  block).
+* **DO NOT attempt to compile `Section441.lean` locally.** 43+
+  consecutive GPFS timeouts since cycle 182 per
+  `cycle_182_gpfs_slowness.md`. The stability bridge backup (§C) can
+  cite cycle 178's symbols by name without recompiling §441.
+* **DO NOT edit `scripts/autonomous_loop.py`.** Phantom-verdict
+  remediation is loop-maintainer territory.
+
+## §F. Faithfulness considerations
+
+For each new public symbol introduced:
+
+* **P1 `order_lt_of_mem_children`**: pure `RootedTree`-API lemma. Not
+  a textbook-named entity; no faithfulness divergence concern.
+* **P2 `WellFoundedRelation RootedTree` instance**: Lean-engineering
+  scaffold. No textbook analogue.
+* **P3 (if shipped as docstring)**: documentation only, no code
+  obligation.
+
+Backup C deliverable `Eq422a_at_vertex_eta_eq_of_stable_preconsistent`:
+strict strengthening of cycle 342's `Eq422a_at_vertex_eta_eq` (drops
+the explicit `coef_α + coef_β ≠ 0` hypothesis in favor of `IsStable +
+IsPreconsistent`). This matches Butcher §422 p. 1163's textbook
+implicit "by stability the coefficient is non-zero" — surfacing
+that bridge explicitly is a faithfulness improvement.
+
+Backup D deliverable `Eq422a_at_cherry_*`: specialization of the
+(422a) condition at a specific order-2 tree. Honest specialization
+of cycle 340's `Eq422a`, no faithfulness concern.
+
+## §G. Cycle 343 ship checklist
+
+1. (5 min) Verify §A's HEAD state. Run
+   `git log -1 -- OpenMath/Chapter4/Section422.lean` and confirm
+   `cbc1aca`. `wc -l OpenMath/Chapter4/Section422.lean` should give
+   674. Skip if both match.
+2. (10 min) Verify §B.1 hooks exist at expected lines via
+   `grep -n` on Section301.lean / Section310.lean.
+3. (60–80 min) Ship P1 + P2 (§B.2). Place in
+   `OpenMath/Chapter3/Section301.lean` per §B.4.
+4. (5–10 min) Verify axiom-clean (§B.3 checklist).
+5. (10 min) Update `.prover-state/issues/def_422B_path.md` §5 with
+   cycle 343 closure note (Phase D.2 closed; cycle 344 starts
+   Phase D.3).
+6. (5 min) Write `.prover-state/task_results/cycle_343.md`.
+7. Commit. Branch tip should advance to cycle 343's commit.
+
+If §B stalls per §C.3 timeout, time-box at 30 min and pivot to §C
+(stability bridge) or §D (manual cherry case) as documented.
+
+## §H. Expected output
+
+* **Best case (P1+P2 land)**: cycle 343 closes Phase D.2 of `def:422B`
+  in ~30–40 LOC. `Section301.lean` grows ~25–35 LOC; nothing else
+  changes. `def:422B` row in `lean_status.json` stays `partial`
+  (Phase D.3 / E / F remain). Cycle 344 attempts Phase D.3.
+* **P1+P2+P3 stretch**: same as best case plus a Phase D.3 signature
+  docstring-only sketch in `Section422.lean`.
+* **Backup C (stability bridge)**: cycle 343 closes a strengthening
+  of cycle 342's `Eq422a_at_vertex_eta_eq`. `def:422B` stays `partial`;
+  Phase D.2 deferred to cycle 344.
+* **Backup D (manual cherry)**: cycle 343 ships the order-2 manual
+  case as a Phase D.3 stepping stone. `def:422B` stays `partial`;
+  Phase D.2 deferred.
+
+In all cases: 0 sorries, axiom-clean, no faithfulness divergences
+introduced beyond those documented in §F.
+
+## §I. Cross-references
+
+* `.prover-state/issues/def_422B_path.md` §5 row D.2 — the Phase D.2
+  spec (60–100 LOC, single cycle, low–medium risk).
+* `.prover-state/task_results/cycle_342.md` §"Suggested next
+  approach" — worker's three-option recommendation; this strategy
+  picks option 1 (Phase D.2) with option 2 (stability bridge) as
+  backup.
+* `.prover-state/issues/phantom_commit_verdict_pattern.md` — standing
+  supervisor-side bug; not actionable from worker side.
+* `OpenMath/Chapter3/Section301.lean:159` (`order_pos`),
+  `:101` (`orderSum_eq_map_sum`), `:112` (`order_eq`) — existing
+  RootedTree.order API the P1 lemma will compose with.
+* `OpenMath/Chapter3/Section310.lean:204` — existing
+  `termination_by + decreasing_by` pattern (uses `sizeOf`; P2 builds
+  the order-based `WellFoundedRelation` for future consumers that
+  prefer `order` over `sizeOf`).

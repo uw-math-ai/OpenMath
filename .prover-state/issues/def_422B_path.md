@@ -1043,3 +1043,52 @@ cycle 344+.
 
 **Phase D.1 status: CLOSED.** Phase D.2 / D.3 / E / F remain
 deferred per §5.
+
+## Cycle 343 update — Phase D.2 well-founded-recursion infrastructure
+
+**Status: SHIPPED.** Phase D.2 closed in ~17 LOC added to
+`OpenMath/Chapter3/Section301.lean` immediately after `order_pos`
+(line 159). Two public deliverables landed:
+
+* `RootedTree.order_lt_of_mem_children` — subtree strict-descent
+  lemma: for `c ∈ children`, `c.order < (mk children).order`. Proved
+  via `order_eq` (Section301:112) + `List.mem_map_of_mem` +
+  `List.le_sum_of_mem` (the Mathlib lemma for `CanonicallyOrderedAdd`
+  monoids; `ℕ` qualifies). 4-line proof body.
+* `instance : WellFoundedRelation RootedTree := measure RootedTree.order`
+  — the canonical well-founded relation on `RootedTree` derived from
+  `order`. Phase D.3's `η`-solver (cycle 344+) will consume this for
+  `termination_by t => t` clauses.
+
+Plus two `example` sanity checks (`vertex.order < cherry.order`,
+`cherry.order < broom₃.order`, both `by decide`).
+
+**Axioms (verified via `#print axioms`):**
+* `order_lt_of_mem_children` → `[propext, Quot.sound]` only (no
+  `Classical.choice` since the proof is purely structural).
+* `instWellFoundedRelation` → does not depend on any axioms.
+
+**LOC trajectory:** Section301.lean: 1850 → 1867, +17 LOC (well under
+the 60–100 LOC strategy estimate; the work turned out to be a near-
+trivial composition of existing Mathlib infrastructure once
+`List.le_sum_of_mem` was identified). No changes to Section422.lean.
+
+**Cycle 344 entry point (Phase D.3 inductive step):** with the
+strict-descent lemma and `WellFoundedRelation` instance in place,
+Phase D.3 can scaffold:
+
+```
+noncomputable def underlyingEta_aux {k : ℕ}
+    (M : LinearMultistepMethod k) (hPre : ...) (hStab : ...) :
+    RootedTree → ℝ
+  | RootedTree.mk children => ...  -- linear solve in η, recurse on c ∈ children
+termination_by t => t  -- consumes the WellFoundedRelation
+decreasing_by ... order_lt_of_mem_children ...
+```
+
+The base case at `t = mk [] = vertex` reduces to cycle 342's
+`Eq422a_at_vertex_eta_eq`. Inductive step requires expanding the
+(422a) condition at a non-vertex `t = mk children` and isolating
+`η(t)` from the lower-order `η(c)` terms.
+
+**Phase D.2 status: CLOSED.** Phase D.3 / E / F remain deferred per §5.
