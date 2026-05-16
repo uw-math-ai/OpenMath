@@ -2014,4 +2014,80 @@ example : butcherLobattoIIICDirect_two.SatisfiesB 2 := by
   · simp [butcherLobattoIIICDirect_two, Fin.sum_univ_two]; norm_num
   · simp [butcherLobattoIIICDirect_two, Fin.sum_univ_two]
 
+/-! ## Deliverable D.11 — Small-`s` RKTableau (Lobatto III, `s = 2`)
+
+Cycle 331. Per Butcher Table 344(I) (`ch03.txt:5221`), the *unsuffixed*
+Lobatto III family's `A`-matrix is *"C(s − 1), a1s = a2s = · · · = ass = 0"*
+— i.e. it satisfies the C(s − 1) simplifying assumption (so row sums
+equal the abscissae) AND has zero last column. At `s = 2`, C(s − 1) =
+C(1) just says row sums equal `c`, and the last-column-zero condition
+forces `A` to have its second column identically zero.
+
+The cycle 331 §B audit confirmed that plain Lagrange collocation at
+the Lobatto abscissae `(0, 1)` yields rows `(0, 0)` and `(1/2, 1/2)`
+(= the Lobatto IIIA tableau, cycle 323), but Butcher's printed
+Lobatto III `s = 2` table (p. 226, `ch03.txt:5372-5378`) gives rows
+`(0, 0)` and `(1, 0)`. Row 0 coincides (vacuous: `c_0 = 0`); row 1
+diverges entry-for-entry. So Lobatto III differs from plain Lagrange
+collocation — *sixth divergent classification* in the cycle 326–331
+audit ladder; only Radau I C(s) (cycle 329) and Lobatto IIIA (cycle 323,
+matched by construction) coincide with plain collocation.
+
+This cycle ships the printed values inline plus `SatisfiesB 2`
+(the maximal quadrature certificate; matches Butcher's printed `p = 2`)
+and `SatisfiesC 1` (the family-defining `C(s − 1)` certificate). The
+formal collocation/printed-table bridge for the C(s) variants
+(Radau I + Lobatto IIIA) is deferred to a future cycle. -/
+
+/-- **Butcher §344 — Lobatto III `s = 2` tableau (unsuffixed family,
+`C(s − 1)` + last-column-zero variant)** declared inline from Butcher's
+printed Table 344(I), p. 226 (`extraction/raw_text/ch03.txt:5372-5378`):
+`c = (0, 1)`, `b = (1/2, 1/2)`, `A = !![0, 0; 1, 0]`. This is the
+classical two-stage Lobatto III method (Butcher's `Choice of A = C(s − 1),
+a1s = a2s = · · · = ass = 0` row of Table 344(I)), with printed order
+`p = 2`.
+
+The `b` and `c` agree with `butcherLobattoIIIA_two` (cycle 323) and
+`butcherLobattoIIICDirect_two` (cycle 330) — all three share the
+Lobatto `(0, 1)` abscissae and the trapezoidal `(1/2, 1/2)` weights.
+(Lobatto IIIB at `s = 2` does not exist — Butcher line 5263.)
+
+The A-matrix has zero second column (the family-defining
+last-column-zero property: `A_{ij} = 0` for `j = s − 1 = 1`). At
+`s = 2`, the row-sums-equal-c condition (C(s − 1) = C(1)) plus the
+last-column-zero condition uniquely determines the matrix:
+`A_{00} = 0` (forced by `c_0 = 0`), `A_{01} = 0` (last column zero),
+`A_{10} = 1` (forced by `c_1 = 1` and `A_{11} = 0`), `A_{11} = 0`
+(last column zero). -/
+noncomputable def butcherLobattoIIIDirect_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![0, 0; 1, 0]
+  b := ![1/2, 1/2]
+  c := ![0, 1]
+
+/-- **Non-vacuity (B(2))**: the direct Lobatto III `s = 2` tableau
+satisfies the order-2 quadrature condition `B(2)` (Lobatto III at
+`s = 2` has classical order `p = 2`). Arithmetic:
+`∑ⱼ bⱼ · cⱼ^0 = 1/2 + 1/2 = 1 = 1/1`,
+`∑ⱼ bⱼ · cⱼ^1 = (1/2)·0 + (1/2)·1 = 1/2 = 1/2`. -/
+example : butcherLobattoIIIDirect_two.SatisfiesB 2 := by
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherLobattoIIIDirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherLobattoIIIDirect_two, Fin.sum_univ_two]
+
+/-- **Non-vacuity (C(1))** — the certificate that characterises this
+tableau as the C(s − 1) variant of Lobatto III: the direct Lobatto III
+`s = 2` tableau satisfies the order-1 collocation simplifying assumption
+`C(1)`, namely `∑ⱼ Aᵢⱼ · cⱼ^(k-1) = cᵢ^k / k` for `i ∈ {0, 1}` and
+`k = 1`.
+
+Arithmetic checks:
+- `(i=0, k=1)`: `0·1 + 0·1 = 0 = 0^1/1`.
+- `(i=1, k=1)`: `1·1 + 0·1 = 1 = 1^1/1`. -/
+example : butcherLobattoIIIDirect_two.SatisfiesC 1 := by
+  intro i k h1 hk
+  fin_cases i <;> interval_cases k <;>
+    simp [butcherLobattoIIIDirect_two, Fin.sum_univ_two]
+
 end OpenMath.Chapter3.Section344
