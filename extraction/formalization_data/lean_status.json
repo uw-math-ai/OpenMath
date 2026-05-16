@@ -576,9 +576,10 @@
     "status": "unformalized"
   },
   "thm:344A": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section344.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section344.butcherRadauI_eval_zero",
+    "status": "partial",
+    "note": "Cycle 317 opens §344 Phase A: polynomial-family definitions for Radau I (P_s* + P_{s-1}*), Radau II (P_s* - P_{s-1}*), and Lobatto (P_s* - P_{s-2}*); endpoint vanishing theorems at 0 and 1 (4 thms); small-s explicit forms (6 thms); natDegree = s bounds (3 thms). All axiom-clean. Full thm:344A (degree-2s-2 / 2s-3 polynomial exactness, c_i ∈ [0,1], b_i > 0 via homotopy) deferred to cycles 318+. Symbol points to the cycle 317 Radau I endpoint vanishing theorem."
   },
   "thm:351B": {
     "lean_file": null,

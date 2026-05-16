@@ -1,465 +1,291 @@
-# Strategy — cycle 316
+# Strategy — Cycle 317
 
-## TL;DR
+## State entering this cycle
 
-Ship `thm:342C` clause **(342n)** — `B(2s) ∧ E(s, s) ⇒ C(s)` —
-as `RKTableau.satisfiesC_of_satisfiesB_satisfiesE` in
-`OpenMath/Chapter3/Section321.lean`, the matching Vandermonde-
-converse partner of cycle 315's (342p). With (342n) shipped, all
-four "purely algebraic" §342C clauses (m, n, o, p) are formalised;
-remaining (342j/k/l) are blocked on `thm:314A` elementary-
-differential infrastructure and are out of scope.
+- §342 `lem:342A` fully closed (cycles 271–301; seven properties (342a)–(342g)).
+- §342 `thm:342C` "purely algebraic" cluster fully shipped: (342m), (342n), (342o), (342p) closed in cycles 313/316/314/315. All axiom-clean.
+- §342 `cor:342D` partial: §321 simplifying assumptions B(2n)/C(n)/D(n)/E(n,n) for the canonical Gauss–Legendre tableau all shipped (cycles 309–312). Full end-to-end iff still blocked on remaining (342j/k/l) G(2s) clauses, which require `thm:314A` elementary-differential infrastructure (multi-cycle).
+- §342 has been the predominant focus for **46 consecutive cycles** (271–316).
+- No sorries anywhere, no Aristotle pending, no blockers escalated.
+- Cycle 316 worker explicitly recommended `thm:344A` as next.
 
-Single-cycle target, axiom-clean, ~150 LOC. The cycle 315 proof of
-(342p) is the structural template: same `Matrix.eq_zero_of_forall_
-pow_sum_mul_pow_eq_zero` machinery, same two-sub-sum decomposition,
-same Vandermonde injectivity hypothesis on `M.c`, **plus** a new
-non-vanishing-weights hypothesis `hb : ∀ i, M.b i ≠ 0`.
+## Decision: pivot to `thm:344A` Phase A (open §344)
 
-No Aristotle results pending. No outstanding sorries. No blockers
-from issue files. This is a clean continuation cycle.
+Rationale:
+1. `thm:344A` directly extends the §342 Gaussian quadrature work to Radau and Lobatto quadrature families — natural continuation that reuses cycles 271–316 infrastructure heavily.
+2. Phase A scope mirrors cycle 271's successful opening of §342 (polynomial def + basic endpoint property + small-n witnesses) — known-good template.
+3. Clean dependencies: only `lem:342A` properties (342a)/(342b)/(342c)/(342e), all shipped.
+4. Single-cycle ship achievable; multi-cycle follow-up plan is straightforward (cycles 318+: degree exactness, weights, RKTableau lifts, mirroring §342's cycle 281+/308+ trajectory).
+5. Continuing in §342 has no remaining tractable single-cycle work (G(2s) blocked on `thm:314A`).
 
----
+## Target deliverables (this cycle)
 
-## §A. Target
+Open new file `OpenMath/Chapter3/Section344.lean` (namespace `OpenMath.Chapter3.Section344`) with the following axiom-clean deliverables.
 
-`OpenMath.Chapter3.Section312.RKTableau.satisfiesC_of_satisfiesB_satisfiesE`
-in `OpenMath/Chapter3/Section321.lean`, immediately after cycle 315's
-`satisfiesD_of_satisfiesB_satisfiesE` (currently lines 402–498).
+### Deliverable A — Polynomial family definitions (~50 LOC)
 
-**Statement (Butcher §342, p. 238, clause 342n):**
+Three `noncomputable def`s:
 
 ```lean
-/-- *Butcher §342, clause (342n).*
+/-- The Radau I polynomial `P_s^* + P_{s-1}^*` whose roots in [0,1] are the
+Radau I quadrature abscissae. Has `s` as `natDegree` and `0` as one root
+for `s ≥ 1`. -/
+noncomputable def butcherRadauI (s : ℕ) : Polynomial ℝ :=
+  butcherShiftedLegendre s + butcherShiftedLegendre (s - 1)
 
-`B(2s) ∧ E(s, s) ⇒ C(s)` — the Vandermonde-converse direction of
-clause (342m). For an RK tableau `M` with `s` stages, distinct
-abscissae (`Function.Injective M.c`), and non-vanishing weights
-(`∀ i, M.b i ≠ 0`), the quadrature condition `B(2s)` together
-with the pair condition `E(s, s)` implies the interpolation/
-collocation condition `C(s)`.
+/-- The Radau II polynomial `P_s^* - P_{s-1}^*` whose roots in [0,1] are
+the Radau II quadrature abscissae. Has `s` as `natDegree` and `1` as one
+root for `s ≥ 1`. -/
+noncomputable def butcherRadauII (s : ℕ) : Polynomial ℝ :=
+  butcherShiftedLegendre s - butcherShiftedLegendre (s - 1)
 
-Textbook proof sketch (Butcher §342, p. 238): Fix the exponent
-`k ∈ [1, s]`. Define the C-residual
-`u i := ∑ⱼ Aᵢⱼ cⱼ^(k-1) - cᵢ^k / k`.
-For every `l ∈ [1, s]`, the weighted Vandermonde sum
-`∑ᵢ (bᵢ · u i) · cᵢ^(l-1)` splits as
-* (first half, exact-quadrature side) `∑ᵢⱼ bᵢ cᵢ^(l-1) Aᵢⱼ cⱼ^(k-1)`,
-  which equals `1 / (k(k+l))` by `E(s, s)` at `(l, k)`.
-* (second half, integration side) `(1/k) ∑ᵢ bᵢ cᵢ^(k+l-1)`,
-  which equals `1 / (k(k+l))` by `B(2s)` at `k+l` (using `2 ≤ k+l ≤ 2s`).
-Their difference is zero, so the matrix `(b · u, V[c])` has zero
-column sums for every `l ∈ [1, s]`. Because the abscissae are
-distinct, the Vandermonde matrix `(cⱼ^(l-1))_{l, j}` is invertible,
-forcing `bᵢ · uᵢ = 0` for every `i`. With non-vanishing weights,
-`uᵢ = 0`, i.e. `C(s)` at stage `i` and exponent `k`. -/
-theorem satisfiesC_of_satisfiesB_satisfiesE {s : ℕ}
-    (M : RKTableau s)
-    (hc : Function.Injective M.c)
-    (hb : ∀ i : Fin s, M.b i ≠ 0)
-    (hB : M.SatisfiesB (2 * s))
-    (hE : M.SatisfiesE s s) :
-    M.SatisfiesC s
+/-- The Lobatto polynomial `P_s^* - P_{s-2}^*` whose roots in [0,1] are
+the Lobatto quadrature abscissae. Has `s` as `natDegree` (for `s ≥ 2`)
+and both `0` and `1` as roots. -/
+noncomputable def butcherLobatto (s : ℕ) : Polynomial ℝ :=
+  butcherShiftedLegendre s - butcherShiftedLegendre (s - 2)
 ```
 
----
+Notes:
+- `s - 1` and `s - 2` use ℕ truncated subtraction. Theorems below carry
+  `0 < s` (Radau) or `2 ≤ s` (Lobatto) hypotheses to rule out degenerate
+  cases.
+- At `s = 1`: `butcherRadauI 1 = P_1^* + P_0^* = (2X - 1) + 1 = 2X`. Has
+  root at 0. ✓
+- At `s = 1`: `butcherRadauII 1 = P_1^* - P_0^* = (2X - 1) - 1 = 2X - 2`.
+  Has root at 1. ✓
+- At `s = 2`: `butcherLobatto 2 = P_2^* - P_0^* = (6X² - 6X + 1) - 1 = 6X² - 6X = 6X(X - 1)`.
+  Has roots at 0 and 1. ✓
 
-## §B. Approach — verbatim port of cycle 315 with three changes
+### Deliverable B — Endpoint vanishing (~80 LOC, four theorems)
 
-Cycle 315's `satisfiesD_of_satisfiesB_satisfiesE` body (lines 405–498
-of `Section321.lean`) is the structural template. The three changes:
-
-1. **Residual structure is "per-i" instead of "per-j".** C(s) is
-   indexed by stage `i`; D(s) is indexed by stage `j`. Define the
-   weighted residual `w` so it sits on the row index `i`:
-
-   ```lean
-   set u : Fin s → ℝ := fun i' =>
-       (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
-         - M.c i' ^ k / (k : ℝ)
-     with u_def
-   set w : Fin s → ℝ := fun i' => M.b i' * u i' with w_def
-   ```
-
-2. **Roles of `k` and `l` swap inside `E(s, s)`.** Cycle 315 applied
-   `hE k hk1 hk l hl1 hl_le_s` (i.e. the lemma's `k` matched the
-   theorem's `k`). Here we need the matrix sum
-   `∑ᵢⱼ bᵢ cᵢ^(l-1) Aᵢⱼ cⱼ^(k-1)`, so apply
-   `hE l hl1 hl_le_s k hk1 hk` (swap the two Vandermonde exponents).
-   The output `1/(k·(l+k))` then matches the (342n) target
-   `1/(k·(k+l))` up to `add_comm`, closed by a trailing `ring`.
-
-3. **Final extraction needs `hb`.** After `congrFun hw_zero i` gives
-   `w i = 0`, i.e. `M.b i * u i = 0`, use `mul_eq_zero.mp` plus
-   `hb i` to extract `u i = 0`:
-
-   ```lean
-   have hwi : w i = 0 := congrFun hw_zero i
-   simp only [w_def] at hwi
-   rcases mul_eq_zero.mp hwi with hbi | hui
-   · exact absurd hbi (hb i)
-   · simp only [u_def] at hui
-     linarith
-   ```
-
-   The final `linarith` rearranges `(∑ⱼ Aᵢⱼ cⱼ^(k-1)) - cᵢ^k / k = 0`
-   into the C(s) form `∑ⱼ Aᵢⱼ cⱼ^(k-1) = cᵢ^k / k`.
-
-### §B.1. Body skeleton (concrete)
+Each follows a 3–7 line template: unfold + `Polynomial.eval_add` / `eval_sub` + cycle 271's `butcherShiftedLegendre_eval_one` and cycle 273's `butcherShiftedLegendre_eval_zero` + parity collapse.
 
 ```lean
-theorem satisfiesC_of_satisfiesB_satisfiesE {s : ℕ}
-    (M : RKTableau s)
-    (hc : Function.Injective M.c)
-    (hb : ∀ i : Fin s, M.b i ≠ 0)
-    (hB : M.SatisfiesB (2 * s)) (hE : M.SatisfiesE s s) :
-    M.SatisfiesC s := by
-  intro i k hk1 hk
-  have hk_pos : 0 < (k : ℝ) := by exact_mod_cast hk1
-  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
-  -- Define C-residual u and its b-weighted form w.
-  set u : Fin s → ℝ := fun i' =>
-      (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
-        - M.c i' ^ k / (k : ℝ)
-    with u_def
-  set w : Fin s → ℝ := fun i' => M.b i' * u i' with w_def
-  -- Vandermonde inversion: show w = 0.
-  have hw_zero : w = 0 := by
-    refine Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero hc ?_
-    intro p  -- p : Fin s
-    set l : ℕ := p.val + 1 with l_def
-    have hl1 : 1 ≤ l := Nat.succ_le_succ (Nat.zero_le _)
-    have hl_le_s : l ≤ s := p.isLt
-    have hl_pos : 0 < (l : ℝ) := by exact_mod_cast hl1
-    have hl_ne : (l : ℝ) ≠ 0 := ne_of_gt hl_pos
-    have hkl_real_pos : 0 < (k : ℝ) + (l : ℝ) := by positivity
-    have hkl_real_ne : (k : ℝ) + (l : ℝ) ≠ 0 := ne_of_gt hkl_real_pos
-    have hp_eq : (p : ℕ) = l - 1 := by simp [l_def]
-    rw [hp_eq]
-    simp only [w_def, u_def]
-    -- (1) first half: ∑ᵢ bᵢ · (∑ⱼ Aᵢⱼ cⱼ^(k-1)) · cᵢ^(l-1) = 1/(k(k+l))
-    have h_first :
-        (∑ i' : Fin s,
-            M.b i' * (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
-              * M.c i' ^ (l - 1))
-          = 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ))) := by
-      -- Reshape factors to match E(s, s)'s shape
-      --   bᵢ · cᵢ^(l-1) · Aᵢⱼ · cⱼ^(k-1).
-      rw [show (∑ i' : Fin s,
-                  M.b i' * (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
-                    * M.c i' ^ (l - 1))
-              = ∑ i' : Fin s, ∑ j : Fin s,
-                  M.b i' * M.c i' ^ (l - 1) * M.A i' j * M.c j ^ (k - 1) by
-          apply Finset.sum_congr rfl
-          intro i' _
-          rw [Finset.sum_mul, Finset.mul_sum]
-          apply Finset.sum_congr rfl
-          intro j _
-          ring]
-      -- E(s, s) at exponents l (outer) and k (inner) gives 1/(k·(l+k)).
-      have hE_eval := hE l hl1 hl_le_s k hk1 hk
-      rw [hE_eval]
-      -- Bridge 1/(k·(l+k)) = 1/(k·(k+l)).
-      ring
-    -- (2) second half: ∑ᵢ bᵢ · (cᵢ^k / k) · cᵢ^(l-1) = 1/(k(k+l))
-    have h_second :
-        (∑ i' : Fin s,
-            M.b i' * (M.c i' ^ k / (k : ℝ)) * M.c i' ^ (l - 1))
-          = 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ))) := by
-      have h_per_i : ∀ i' : Fin s,
-          M.b i' * (M.c i' ^ k / (k : ℝ)) * M.c i' ^ (l - 1)
-            = (1 / (k : ℝ)) * (M.b i' * M.c i' ^ ((k + l) - 1)) := by
-        intro i'
-        have h_exp : k + (l - 1) = (k + l) - 1 := by omega
-        have h_pow_split : M.c i' ^ k * M.c i' ^ (l - 1)
-            = M.c i' ^ ((k + l) - 1) := by
-          rw [← pow_add, h_exp]
-        rw [← h_pow_split]
-        field_simp
-      rw [Finset.sum_congr rfl (fun i' _ => h_per_i i')]
-      rw [← Finset.mul_sum]
-      have hkl_lo : 1 ≤ k + l := by omega
-      have hkl_hi : k + l ≤ 2 * s := by omega
-      have hB_kl :
-          (∑ i' : Fin s, M.b i' * M.c i' ^ ((k + l) - 1))
-            = 1 / ((k + l : ℕ) : ℝ) :=
-        hB (k + l) hkl_lo hkl_hi
-      rw [hB_kl]
-      push_cast
-      field_simp
-    -- Difference of the two sums is zero.
-    calc (∑ i' : Fin s,
-              M.b i' *
-                ((∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
-                  - M.c i' ^ k / (k : ℝ))
-                * M.c i' ^ (l - 1))
-        = (∑ i' : Fin s,
-              M.b i' * (∑ j : Fin s, M.A i' j * M.c j ^ (k - 1))
-                * M.c i' ^ (l - 1))
-          - ∑ i' : Fin s,
-              M.b i' * (M.c i' ^ k / (k : ℝ)) * M.c i' ^ (l - 1) := by
-            rw [← Finset.sum_sub_distrib]
-            apply Finset.sum_congr rfl
-            intros; ring
-      _ = 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ)))
-          - 1 / ((k : ℝ) * ((k : ℝ) + (l : ℝ))) := by
-            rw [h_first, h_second]
-      _ = 0 := by ring
-  -- Extract u i = 0 via mul_eq_zero + hb.
-  have hwi : w i = 0 := congrFun hw_zero i
-  simp only [w_def] at hwi
-  rcases mul_eq_zero.mp hwi with hbi | hui
-  · exact absurd hbi (hb i)
-  · simp only [u_def] at hui
-    linarith
+/-- Radau I polynomial vanishes at 0: `(P_s^* + P_{s-1}^*)(0) = 0` for `s ≥ 1`.
+Computation: `P_s^*(0) = (-1)^s` and `P_{s-1}^*(0) = (-1)^{s-1}`, sum to 0. -/
+theorem butcherRadauI_eval_zero (s : ℕ) (hs : 0 < s) :
+    (butcherRadauI s).eval 0 = 0
+
+/-- Radau II polynomial vanishes at 1: `(P_s^* - P_{s-1}^*)(1) = 0` for `s ≥ 1`.
+Computation: `P_s^*(1) = 1` and `P_{s-1}^*(1) = 1`, subtract to 0. -/
+theorem butcherRadauII_eval_one (s : ℕ) (hs : 0 < s) :
+    (butcherRadauII s).eval 1 = 0
+
+/-- Lobatto polynomial vanishes at 0: `(P_s^* - P_{s-2}^*)(0) = 0` for `s ≥ 2`.
+Computation: `P_s^*(0) = (-1)^s` and `P_{s-2}^*(0) = (-1)^{s-2} = (-1)^s`,
+subtract to 0. -/
+theorem butcherLobatto_eval_zero (s : ℕ) (hs : 2 ≤ s) :
+    (butcherLobatto s).eval 0 = 0
+
+/-- Lobatto polynomial vanishes at 1: `(P_s^* - P_{s-2}^*)(1) = 0` for `s ≥ 2`.
+Computation: `P_s^*(1) = 1` and `P_{s-2}^*(1) = 1`, subtract to 0. -/
+theorem butcherLobatto_eval_one (s : ℕ) (hs : 2 ≤ s) :
+    (butcherLobatto s).eval 1 = 0
 ```
 
-### §B.2. Verification + naming check
+**Critical parity-collapse helpers** (the only non-trivial proof step):
 
-After writing the proof:
+For Radau I's `(-1)^s + (-1)^(s-1) = 0`: use
+`obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.pos_iff_ne_zero.mp hs)`
+to write `s = k + 1`, then `s - 1 = k`, and the sum becomes
+`(-1)^(k+1) + (-1)^k = -(-1)^k + (-1)^k = 0`. Close with `pow_succ` + `ring`.
 
-* `lake build OpenMath.Chapter3` — expect exit 0.
-* `grep -c sorry OpenMath/Chapter3/Section321.lean` — expect 0.
-* `#print axioms
-   OpenMath.Chapter3.Section312.RKTableau.satisfiesC_of_satisfiesB_satisfiesE` —
-   expect `[propext, Classical.choice, Quot.sound]`, matching cycles
-   313/314/315 exactly.
+For Lobatto's `(-1)^s - (-1)^(s-2) = 0`: use
+`obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hs` (where `hs : 2 ≤ s`)
+to write `s = 2 + k`, then `s - 2 = k`, and the difference becomes
+`(-1)^(2+k) - (-1)^k = (-1)^k - (-1)^k = 0`. Close with `pow_add` +
+`neg_one_sq` + `ring`.
 
----
+**If `obtain` shape doesn't fire cleanly**, the backup recipe is
+`Nat.sub_add_cancel hs` + `← pow_succ` + manual case-split, OR
+`Nat.even_or_odd s` + `Nat.even_sub` + `Nat.even_pow` (longer but
+mechanical).
 
-## §C. Non-vacuity witness
+### Deliverable C — Small-n explicit forms (~80 LOC)
 
-Add immediately after the cycle 315 abstract-route example
-(line ~633 of `Section321.lean`):
+Concrete witnesses at `s ∈ {1, 2, 3}` verifying the formulas algebraically:
 
 ```lean
-/-- Cycle 316 non-vacuity: the canonical Gauss–Legendre 1-stage tableau
-satisfies `C(1)` via the abstract bridge
-`RKTableau.satisfiesC_of_satisfiesB_satisfiesE`. This re-derives the
-existing `gaussLegendre1Stage.SatisfiesC 1` example through the new
-(342n) clause, exercising `hc`, `hb`, `hB`, and `hE` together. -/
-example : gaussLegendre1Stage.SatisfiesC 1 :=
-  gaussLegendre1Stage.satisfiesC_of_satisfiesB_satisfiesE
-    (by  -- hc : Function.Injective gaussLegendre1Stage.c
-      intro i j _
-      fin_cases i; fin_cases j; rfl)
-    (by  -- hb : ∀ i, gaussLegendre1Stage.b i ≠ 0
-      intro i
-      fin_cases i
-      simp [gaussLegendre1Stage])
-    (by  -- hB (2)
-      -- inline if no named lemma exists; mirror the existing
-      -- `gaussLegendre1Stage.SatisfiesB 2` example body.
-      intro k h1 hk
-      interval_cases k <;> simp [gaussLegendre1Stage] <;> norm_num)
-    (by  -- hE (1, 1)
-      intro k h1 hk l h1' hl
-      interval_cases k <;> interval_cases l <;>
-        simp [gaussLegendre1Stage] <;> norm_num)
+theorem butcherRadauI_one : butcherRadauI 1 = Polynomial.C 2 * Polynomial.X
+theorem butcherRadauI_two : butcherRadauI 2 = -- compute via _two/_one
+theorem butcherRadauII_one : butcherRadauII 1 = Polynomial.C 2 * Polynomial.X - Polynomial.C 2
+theorem butcherRadauII_two : butcherRadauII 2 = -- compute
+theorem butcherLobatto_two : butcherLobatto 2 = -- compute (= 6X² - 6X)
+theorem butcherLobatto_three : butcherLobatto 3 = -- compute
 ```
 
-**IMPORTANT: verify the exact non-vacuity body** by reading the
-existing `gaussLegendre1Stage.SatisfiesB 2`, `SatisfiesC 1`,
-`SatisfiesD 1`, `SatisfiesE 1 1` examples in `Section321.lean`
-(lines ~561, 567, 572, 578) before writing the cycle 316 example.
-The `hc`, `hB`, `hE` blocks should be *copy-paste* from existing
-examples, NOT freshly written. If `gaussLegendre1Stage`'s `b 0` is
-defined as `1`, the `hb` block reduces to `simp [gaussLegendre1Stage]`
-or `exact one_ne_zero` after `fin_cases i`; if `b 0` is some other
-non-zero constant, adapt the `simp` set.
+Proof recipe (cycle 282+ template): `unfold butcherRadauI` (or others) +
+`rw [butcherShiftedLegendre_zero, butcherShiftedLegendre_one, ...]` +
+`ring` or `Polynomial.funext + ring`. Each closes in 3–5 lines.
 
-**Faithfulness fallback if `simp [gaussLegendre1Stage]` doesn't
-reduce `b 0` to a literal:** unfold via `show gaussLegendre1Stage.b
-0 ≠ 0` and then `simp` / `norm_num` / `exact one_ne_zero` chain.
+Also include `example` non-vacuity blocks confirming the endpoint
+theorems fire on the small-n explicit forms:
 
----
+```lean
+example : (butcherRadauI 1).eval 0 = 0 := by
+  rw [butcherRadauI_one]; simp
+```
 
-## §D. What NOT to try (verified pitfalls)
+### Deliverable D — Degree bounds (~30 LOC, three theorems)
 
-Listed from cycle 315's debugging log plus (342n)-specific risks:
+```lean
+/-- Radau I polynomial has `natDegree = s` for `s ≥ 1` (leading
+coefficient comes from `P_s^*` since `P_{s-1}^*` has degree `s - 1 < s`). -/
+theorem butcherRadauI_natDegree (s : ℕ) (hs : 0 < s) :
+    (butcherRadauI s).natDegree = s
 
-1. **Do NOT add a trailing `ring` after `field_simp` in `h_per_i`.**
-   Cycle 315 hit "No goals to be solved" with that pattern. After
-   `rw [← h_pow_split]; field_simp` the goal closes cleanly; any
-   subsequent tactic fails. Inherited verified pitfall.
+theorem butcherRadauII_natDegree (s : ℕ) (hs : 0 < s) :
+    (butcherRadauII s).natDegree = s
 
-2. **Do NOT apply `hE k hk1 hk l hl1 hl_le_s` in `h_first`.** That's
-   the cycle 315 order (for the D(s) shape with `cᵢ^(k-1)` outer
-   and `cⱼ^(l-1)` inner). For (342n) the shape is *reversed*:
-   `cᵢ^(l-1)` outer and `cⱼ^(k-1)` inner. The correct invocation is
-   `hE l hl1 hl_le_s k hk1 hk` (swap the two pairs of args).
-   Verify by reading the goal after the `show ... = ∑ i' ∑ j, ...`
-   rewrite: the matrix sum should be `bᵢ · cᵢ^(l-1) · Aᵢⱼ · cⱼ^(k-1)`.
-   If it reads with the swapped exponents, the rewrite failed —
-   reread pitfall #5 below.
+theorem butcherLobatto_natDegree (s : ℕ) (hs : 2 ≤ s) :
+    (butcherLobatto s).natDegree = s
+```
 
-3. **Do NOT skip the `ring` after `rw [hE_eval]` in `h_first`.**
-   `E(s, s)` evaluates to `1/(l·(k+l))` in the lemma's notation,
-   which under the variable swap becomes `1/(k·(l+k))`. We need
-   `1/(k·(k+l))` — these differ only by `add_comm` on the
-   denominator. The trailing `ring` resolves this. If `ring` is
-   absent, the proof fails at the calc step where `h_first` is
-   substituted.
+Proof recipe: `Polynomial.natDegree_add_eq_left_of_natDegree_lt`
+(or `_sub_` variant; verify name with `lean_local_search "natDegree_sub"`)
++ cycle 273's `butcherShiftedLegendre_natDegree`. If the sub-variant
+doesn't exist directly, use `natDegree_add_eq_left_of_natDegree_lt` on
+`P_s^* + (-P_{s-1}^*)` after `sub_eq_add_neg` rewrite, plus
+`natDegree_neg`.
 
-4. **Do NOT use `mul_eq_zero.elim`.** Use `rcases mul_eq_zero.mp hwi
-   with hbi | hui` — the `rcases` form gives named branches the
-   `absurd` / `linarith` recipe expects. Equivalent: `obtain hbi |
-   hui := mul_eq_zero.mp hwi`.
+## Required imports for `Section344.lean`
 
-5. **Do NOT forget the `Finset.sum_mul` / `Finset.mul_sum`
-   reordering in `h_first`.** Unlike cycle 315 where the residual
-   factored as `b · c^(k-1) · A` (outer factor already on left), in
-   (342n) the residual structure is `b · (∑ⱼ A · c^(k-1)) · c^(l-1)`.
-   To match `E(s, s)`'s `b · c^(l-1) · A · c^(k-1)` shape requires
-   both `Finset.sum_mul` (distribute outer `c^(l-1)` into the
-   inner sum) and `Finset.mul_sum` (distribute outer `b · _` into
-   the inner sum). The cleanest recipe is the explicit `show ... =
-   ∑ i ∑ j, ...; apply Finset.sum_congr rfl; intro i _; rw
-   [Finset.sum_mul, Finset.mul_sum]; apply Finset.sum_congr rfl;
-   intro j _; ring` block in §B.1.
+```lean
+import OpenMath.Chapter3.Section342
+```
 
-6. **Do NOT introduce `Function.Injective M.c` via implicit `[…]`
-   typeclass syntax.** It's a `Prop`-valued explicit hypothesis,
-   not a class. Pass as `(hc : Function.Injective M.c)`, matching
-   cycle 315.
+The `butcherShiftedLegendre` infrastructure (and its `Polynomial`
+machinery from Mathlib) is the only dependency. No new Mathlib imports
+expected.
 
-7. **Do NOT raise `maxHeartbeats`.** Default is sufficient.
-   Decompose into named sub-lemmas if any step times out.
+## What NOT to attempt this cycle
 
-8. **Do NOT update `lean_status.json` for `thm:342C` to
-   `formalized`.** Three of seven §342C clauses (j, k, l) remain
-   blocked on `thm:314A`. Status stays `partial`.
+1. **Do NOT** attempt the full `thm:344A` statement. The homotopy
+   argument for `c_i ∈ [0, 1]` and `b_i > 0` is multi-cycle and requires:
+   - Continuous-deformation arguments via `IntermediateValue` on the
+     polynomial root multiset.
+   - The "no weight vanishes" optimality contradiction using cycle
+     292's `butcherShiftedLegendre_orthogonal_to_lower_degree`
+     (basis-span lemma).
+   - The Lobatto-specific s-odd middle-weight argument that uses
+     (342f) recurrence (cycle 293's `butcherShiftedLegendre_recurrence`).
+   This is genuinely multi-cycle — defer to cycle 320+ after Phase B
+   (degree exactness) ships.
 
-9. **Do NOT attempt (342j), (342k), or (342l).** Multi-cycle,
-   blocked on `thm:314A` / `lem:310B` per
-   `.prover-state/issues/lem_310B_plan.md`. Out of scope.
+2. **Do NOT** attempt the polynomial-exactness theorems
+   ("exact for polynomials of degree up to 2s - 2"). That's Phase B,
+   requires polynomial division + orthogonality of the quotient `Q`
+   against the Radau/Lobatto polynomial. Cycle 318+ target.
 
-10. **Do NOT add a `0 < s` hypothesis.** At `s = 0` both the C(s)
-    `∀ i : Fin 0` quantifier and the Vandermonde `∀ p : Fin 0`
-    hypothesis are vacuous, so the proof closes trivially.
-    Match cycle 315's signature.
+3. **Do NOT** attempt to build a `RKTableau` from these polynomials
+   (the Radau IA / IIA, Lobatto IIIA/IIIB/IIIC tables from
+   Table 344(I)). That requires defining Radau abscissae as roots, then
+   constructing the collocation A-matrix and weights — mirrors cycles
+   308–312 for Gauss–Legendre, multi-cycle.
 
-11. **Do NOT use `Finset.sum_sub` (singular).** The Mathlib name
-    is `Finset.sum_sub_distrib` (confirmed used twice in cycle 315
-    at the difference-of-sums step). Other names (`sub_sum`,
-    `Finset.sub_sum`) do not exist.
+4. **Do NOT** attempt `cor:342D` end-to-end iff. Still blocked on the
+   G(2s) clauses requiring `thm:314A`. Document only.
 
----
+5. **Do NOT** attempt `lem:359A` (V and W transformations). Requires
+   orthonormal polynomial matrix `W` infrastructure not yet in repo —
+   multi-cycle.
 
-## §E. Faithfulness check (run before commit)
+6. **Do NOT** attempt `lem:351A` (stability function determinant
+   formula). Requires `RKTableau.stabilityFunction` rational-function
+   definition not yet in repo. Worth doing in a future cycle but needs
+   its own scoping document for the `R(z)` rational-function
+   representation question (`Polynomial`-quotient vs `RatFunc` vs
+   conditional `det(...)/det(...)` evaluation).
 
-For the new theorem `satisfiesC_of_satisfiesB_satisfiesE`:
+7. **Do NOT** raise `maxHeartbeats` above 200000. Each small theorem
+   should close in well under the default; if any theorem stalls,
+   factor into named per-coefficient helpers (cycle 274–278 pattern).
 
-* **Entity ID**: `thm:342C`, clause (342n), Butcher §342, p. 238.
-* **Textbook statement** (from
-  `extraction/formalization_data/entities/thm_342C.json`):
-  > `B(2s) ∧ E(s, s) ⇒ C(s)` (342n)
-* **Lean statement captures**: **same content**, **plus** two
-  extra explicit hypotheses:
-  - `Function.Injective M.c` (distinct abscissae — same as cycle
-    315 for (342p); Butcher's implicit Vandermonde non-singularity).
-  - `∀ i, M.b i ≠ 0` (non-vanishing weights — Butcher's implicit
-    "diagonal multiplier is invertible" extension for the converse
-    direction of C(s)).
-* **Justification for divergence**: Butcher's proof of (342n) says
-  "the matrix `(bᵢ cⱼ^{l-1})ᵢⱼ` is non-singular", conjoining two
-  conditions: distinct abscissae (Vandermonde core) and
-  non-vanishing weights (diagonal multiplier). We surface both
-  explicitly. The Gauss–Legendre tableau satisfies both via cycle
-  302's `butcherShiftedLegendre_zeros_strictMono` (injectivity) and
-  cycle 305's `butcherShiftedLegendre_quadratureWeights_pos`
-  (positivity ⇒ non-vanishing).
-* **Tautology check**: ✓ Conclusion `M.SatisfiesC s` does NOT
-  appear among hypotheses.
-* **Identity check**: ✓ Proof is substantive (~140 LOC) including
-  a Vandermonde inversion, two named sub-sums (`h_first`,
-  `h_second`), and the `mul_eq_zero` extraction.
-* **Definition smuggling**: ✓ No new defs/structures.
-* **Hypothesis strength**: All four hypotheses minimal. `B(2s)` at
-  `k+l ∈ [2, 2s]`. `E(s, s)` at all `(l, k) ∈ [1, s]²`.
-  `Function.Injective M.c` required for Vandermonde invertibility.
-  `∀ i, M.b i ≠ 0` required to extract `u i = 0` from
-  `bᵢ · u i = 0`. None can be weakened.
-* **Absent theorem check**: N/A.
+8. **Do NOT** introduce `sorry`/`axiom`/`constant`. Phase A
+   deliverables must be axiom-clean
+   (`[propext, Classical.choice, Quot.sound]`).
 
-For the non-vacuity `example`: standard pattern; verify the cited
-existing `gaussLegendre1Stage.SatisfiesB 2` / `SatisfiesE 1 1`
-example bodies exist at HEAD (lines ~561, 578) before consuming.
+9. **Do NOT** submit anything to Aristotle this cycle. Each endpoint
+   theorem is a 3–7 line manual proof, well within the cycle budget.
+   Reserve Aristotle for Phase B/C (degree exactness, homotopy
+   weight-positivity).
 
----
+10. **Do NOT** name the Lobatto polynomial `butcherLobattoIII` or
+    similar — Table 344(I) reserves "Lobatto III/IIIA/IIIB/IIIC" for
+    the various RKTableau families built FROM Lobatto quadrature, not
+    for the quadrature polynomial itself. Use `butcherLobatto` for the
+    polynomial; reserve the suffixed names for the future tableau
+    constructions (cycle 322+).
 
-## §F. Housekeeping after the theorem lands
+## Pitfalls to avoid (cycle 273+ learned lessons)
 
-1. **`plan.md` — `thm:342C` row update**: append one sentence to the
-   existing cycle 315 paragraph:
+- **`Polynomial.ext` over rationals fails** when `ring` cannot fold
+  `Polynomial.C` arithmetic. Use `Polynomial.funext + ring` instead
+  (cycle 282 pattern, working at the evaluated-polynomial level).
+- **`simp` over `Polynomial.coeff` for explicit small-n forms** is
+  the cycle 273+ pattern; do NOT mix it with `ring`-on-`Polynomial`
+  (cycle 276 dead end).
+- **Nat-cast in `(-1)^(s-1)`**: Lean tries to interpret `s - 1` as
+  ℕ truncated subtraction first; if `s = 0`, `s - 1 = 0` and the
+  formula degenerates. Always guard with `hs : 0 < s` (Radau) or
+  `2 ≤ s` (Lobatto).
 
-   > Cycle 316 ships the matching converse clause (342n)
-   > `B(2s) ∧ E(s, s) ⇒ C(s)` as
-   > `RKTableau.satisfiesC_of_satisfiesB_satisfiesE` — same
-   > Vandermonde-inversion recipe as (342p) with an additional
-   > `∀ i, M.b i ≠ 0` hypothesis surfacing Butcher's implicit
-   > diagonal-multiplier non-singularity. All four "purely
-   > algebraic" §342C clauses (342m, 342n, 342o, 342p) now shipped;
-   > the remaining G(2s) clauses (342j/k/l) remain blocked on
-   > `thm:314A`.
+## Pre-commit faithfulness checklist (mandatory)
 
-2. **`plan.md` — `cor:342D` row update**: append one line to the
-   existing cycle 315 paragraph noting (342n) is now shipped, with
-   the same "still requires G(2s) clauses blocked on thm:314A"
-   caveat. Do NOT mark `cor:342D` as formalized.
+For each new `def` (`butcherRadauI`, `butcherRadauII`, `butcherLobatto`):
+- [ ] Open `extraction/formalization_data/entities/thm_344A.json` and confirm the textbook definitions match (Butcher §344 p. 244):
+  > "x = 0 is a zero of P_s^* + P_{s-1}^* ... x = 1 is a zero of P_s^* − P_{s-1}^* ... x = 0 and x = 1 are zeros of P_s^* − P_{s-2}^*"
+- [ ] Confirm the Lean type matches the textbook (a `Polynomial ℝ`).
+- [ ] **Definition smuggling check**: each polynomial IS the literal
+  sum/difference per the textbook recipe, NOT a stipulative definition
+  of "the polynomial whose roots are the Radau/Lobatto abscissae".
 
-3. **`lean_status.json` — `thm:342C` row**: keep status `partial`;
-   update `cycle_last_modified` to 316; update notes to reflect
-   (342n) closure (all four purely-algebraic clauses shipped).
+For each new `theorem`:
+- [ ] Tautology check: each endpoint theorem makes a non-trivial claim
+  about polynomial evaluation, not an identity-of-hypothesis closer.
+- [ ] Hypothesis strength: `0 < s` (Radau) and `2 ≤ s` (Lobatto) are
+  minimal; weaker hypotheses make the statement degenerate or false.
+- [ ] Absent theorem check: every theorem named in this strategy ships
+  with a real body (no promised sorries).
 
-4. **`task_results/cycle_316.md`**: standard template (Worked on /
-   Approach / Result / Faithfulness check / Dead ends / Discovery /
-   Suggested next approach), citing
-   `satisfiesC_of_satisfiesB_satisfiesE` as the headline.
+For each small-n explicit form:
+- [ ] Cross-check the closed form against textbook conventions.
+  E.g. `butcherRadauI 1 = 2X` matches "Radau I quadrature with 1 stage
+  at c_1 = 0" (the single root of 2X is 0). ✓
+  `butcherLobatto 2 = 6X² - 6X = 6X(X-1)` matches "Lobatto quadrature
+  with 2 stages at c_1 = 0, c_2 = 1". ✓
 
-5. **Commit message**: `Cycle 316 — §342 thm:342C clause (342n):
-   Vandermonde converse B(2s) ∧ E(s,s) ⇒ C(s).`
+## Files to update at end of cycle
 
----
+1. `OpenMath/Chapter3.lean` — add `import OpenMath.Chapter3.Section344` to the aggregator.
+2. `extraction/formalization_data/lean_status.json` — bump `thm:344A` row from `unformalized` to `partial`, set `lean_file` to `OpenMath/Chapter3/Section344.lean`, set `lean_symbol` to one of the endpoint-vanishing theorems (e.g. `butcherRadauI_eval_zero`), and add a cycle 317 entry to the changelog.
+3. `plan.md` — update `[ ] thm:344A` row to `[~]` with a one-line cycle 317 closure note: "Cycle 317 ships Phase A — polynomial definitions for Radau I, Radau II, Lobatto + endpoint vanishing + small-n explicit forms + degree bounds. Full theorem (homotopy for `c_i ∈ [0,1]` and `b_i > 0`) deferred."
+4. `.prover-state/task_results/cycle_317.md` — full deliverable record per CLAUDE.md template, including the faithfulness check section quoting the textbook definitions for all three new polynomial defs.
+5. If any deliverable stalls or the LOC budget overflows, write `.prover-state/issues/thm_344A_phase_A_scoping.md` documenting the remaining work for cycle 318+.
 
-## §G. Suggested cycle 317+ outlook
+## LOC budget
 
-With (342m/n/o/p) all formalised, the next single-cycle targets in
-order of leverage:
+Total estimate: ~240 LOC for the file (50 def + 80 endpoint + 80 small-n + 30 degree). Well within single-cycle scope.
 
-1. **`thm:344A` Radau and Lobatto methods** (§344). Concrete
-   tableau constructions analogous to cycle 308's
-   `butcherGaussLegendreRK`. Likely 2–3 cycles for the Radau IA/IIA
-   and Lobatto IIIA/IIIB/IIIC families. Independent of `thm:314A`.
-2. **`lem:359A` V and W transformations** (§359). Single named
-   transformation lemmas; downstream §357/§358 unlock.
-3. **`lem:351A` / `thm:351B` A-stability criteria** (§351). Verify
-   Mathlib's `Polynomial.IsRoot` plumbing first.
-4. **Pivot to Chapter 4 §441 `lem:441A` Phase C** per
-   `.prover-state/issues/lem_441A_phase_C_scoping.md`. Multi-cycle
-   but incremental.
+**Abort threshold**: if the file exceeds ~350 LOC, ship only Deliverables A + B and defer C + D to cycle 318. The endpoint-vanishing theorems (Deliverable B) are the load-bearing Phase A content; small-n explicit forms (Deliverable C) and degree bounds (Deliverable D) are stretch.
 
-The cycle 317 planner should re-check `lem_310B_plan.md` to see
-whether any Phase A.3 / Phase B work has been freelanced in
-intervening cycles, and pick a path that doesn't duplicate effort.
+## Cycle 318+ outlook (if Phase A lands cleanly)
 
----
+Continuation plan for the §344 cluster (Phase B onward):
+- **Cycle 318** (Phase B.1): more endpoint properties + cycle-292-style
+  `butcherRadauI_orthogonal_to_lower_degree` basis-span lemma
+  (analogous to cycle 292's shifted-Legendre version).
+- **Cycle 319** (Phase B.2): polynomial-exactness theorem ("exact for
+  polynomials of degree up to 2s - 2 for Radau, 2s - 3 for Lobatto") —
+  uses Phase B.1 + polynomial-division decomposition.
+- **Cycle 320** (Phase C.1): start the homotopy argument for `c_i ∈ [0, 1]`
+  and `b_i > 0`. Multi-cycle; scope first via a dedicated
+  `thm_344A_homotopy_plan.md` issue file.
+- **Cycle 322+**: construct `butcherRadauIA_RKTableau`,
+  `butcherRadauIIA_RKTableau`, `butcherLobattoIIIA_RKTableau`,
+  `butcherLobattoIIIB_RKTableau`, `butcherLobattoIIIC_RKTableau` per
+  Table 344(I) — mirrors cycles 308–312 for Gauss–Legendre.
 
-## §H. Abort threshold
-
-* **Soft abort (ship partial)**: if the manual proof exceeds ~3
-  hours of focused work or hits ~250 LOC without closure, ship a
-  no-op cycle 316 (no new theorems, task results documenting the
-  stall). Do NOT introduce `sorry`; the cycle 200/201 rollback
-  precedent forbids sorry-first scaffolds without single-cycle
-  close.
-* **Hard abort (rollback)**: if three structured attempts fail to
-  compile, revert Section321.lean, preserve the draft at
-  `.prover-state/cycle_316_draft.lean`, and document the dead end
-  in `.prover-state/issues/thm_342C_clause_342n_stall.md`.
-
-Neither is anticipated. Cycle 315 closed (342p) in a single cycle
-with essentially identical structure; (342n) adds only the
-`mul_eq_zero` extraction (~5 LOC) and the `Finset.sum_mul` /
-`Finset.mul_sum` reorder in `h_first` (~10 LOC). Target: ~150 LOC,
-single cycle, axiom-clean.
+This plan is not committed; cycle 318+'s planner re-scopes based on
+cycle 317's actual outcome.

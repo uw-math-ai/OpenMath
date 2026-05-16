@@ -99,7 +99,7 @@ of Ch.2 and resumed after Ch.4 §404 is done.
 - [ ] `lem:359A` **The V and W transformations** (§359)
 - [ ] `thm:304A` **Enumerating non-rooted trees** (§304)
 - [ ] `thm:306A` **Taylor’s theorem** (§306)
-- [ ] `thm:344A` **Methods based on Radau and Lobatto quadrature** (§344)
+- [~] `thm:344A` **Methods based on Radau and Lobatto quadrature** (§344) — Cycle 317 ships Phase A at `OpenMath/Chapter3/Section344.lean`: three polynomial-family definitions (`butcherRadauI s := P_s* + P_{s-1}*`, `butcherRadauII s := P_s* - P_{s-1}*`, `butcherLobatto s := P_s* - P_{s-2}*`) + endpoint vanishing theorems (`butcherRadauI_eval_zero` at 0 for `s ≥ 1`, `butcherRadauII_eval_one` at 1, `butcherLobatto_eval_zero` at 0 for `s ≥ 2`, `butcherLobatto_eval_one` at 1) + small-`s` explicit forms (Radau I/II at `s = 1, 2`, Lobatto at `s = 2, 3`) + natDegree bounds (`butcherRadauI_natDegree`, `butcherRadauII_natDegree`, `butcherLobatto_natDegree` all `= s` under the minimal `s ≥ 1`/`s ≥ 2` hypothesis). All 13 new public symbols axiom-clean ([propext, Classical.choice, Quot.sound]). Full theorem (polynomial exactness `2s-2`/`2s-3`, homotopy for `c_i ∈ [0,1]` and `b_i > 0`, associated `RKTableau` constructions) deferred to cycles 318+.
 - [ ] `thm:381G` **Irreducible Runge Kutta Stage Distinguishability** (§380)
 - [ ] `thm:381H` **Runge Kutta Equivalence Conditions** (§380)
 - [x] `def:357A` **B-stability** (§357) — `OpenMath/Chapter3/Section357.lean`

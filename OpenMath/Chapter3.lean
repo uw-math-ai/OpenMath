@@ -11,6 +11,7 @@ import OpenMath.Chapter3.Section342NormSqHelpers
 import OpenMath.Chapter3.Section342DistinctRootsHelpers
 import OpenMath.Chapter3.Section342
 import OpenMath.Chapter3.Section343
+import OpenMath.Chapter3.Section344
 import OpenMath.Chapter3.Section350
 import OpenMath.Chapter3.Section355
 import OpenMath.Chapter3.Section356
