@@ -1804,4 +1804,80 @@ example : butcherLobattoIIIBDirect_three.SatisfiesB 4 := by
   · simp [butcherLobattoIIIBDirect_three, Fin.sum_univ_three]; norm_num
   · simp [butcherLobattoIIIBDirect_three, Fin.sum_univ_three]; norm_num
 
+/-! ## Deliverable D.8 — Small-`s` RKTableau (Radau II, `s = 2`, D(s) variant)
+
+Cycle 328. Per Butcher Table 344(I) p. 244 (`ch03.txt:5219`), the
+Radau II family uses `Choice of A = D(s)` — the matrix satisfying the
+D(s) simplifying assumption — while Radau IIA uses
+`Choice of A = "reflections of Radau I"` (which, for the printed
+small-`s` tables, agrees with the plain Lagrange collocation matrix
+at the Radau II abscissae). The two families share `b` and `c` (both
+use the Radau II quadrature) but the `A`-matrices differ.
+
+The cycle 328 §D faithfulness audit (Butcher Table 344(II) p. 245,
+`ch03.txt:5284-5289`) confirms this divergence at `s = 2`: the
+printed Radau II `s = 2` table reads `c = (1/3, 1)`, `b = (3/4, 1/4)`,
+`A = !![1/3, 0; 1, 0]`, whereas the cycle-324
+`butcherRadauIIA_two` direct form ships
+`A = !![5/12, -1/12; 3/4, 1/4]`. The D(s) A-matrix has its last
+column equal to zero (since `c_s = 1` forces
+`(b_j/k)(1 - c_j^k) = 0` for `j = s`, and the D(s) construction
+fixes the entries individually); this matches the printed Radau II
+`s = 3` table at `ch03.txt:5344-5350` where the last column of `A`
+is also `(0, 0, 0)`.
+
+As with cycles 326/327's direct-form ships, the abstract
+construction of the D(s) A-matrix from the simplifying-assumption
+equations is deferred; this cycle ships the printed values inline. -/
+
+/-- **Butcher §344 — Radau II `s = 2` tableau (D(s) variant)**
+declared inline from Butcher's printed Table 344(II), p. 245
+(`extraction/raw_text/ch03.txt:5284-5289`): `c = (1/3, 1)`,
+`b = (3/4, 1/4)`, `A = !![1/3, 0; 1, 0]`. This is the classical
+Radau II two-stage method (Butcher's `Choice of A = D(s)` row of
+Table 344(I)), with attainable order `p = 2s − 1 = 3`.
+
+The A-matrix follows Butcher's *D(s) simplifying-assumption* recipe
+rather than the *"reflections of Radau I"* recipe used by Radau IIA;
+the two coincide on `b` and `c` (both arise from the Radau II
+quadrature) but disagree on `A`. See `butcherRadauIIA_two` (cycle
+324) for the IIA variant, and the section header docstring for the
+audit. -/
+noncomputable def butcherRadauIIDirect_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![1/3, 0; 1, 0]
+  b := ![3/4, 1/4]
+  c := ![1/3, 1]
+
+/-- **Non-vacuity (B(3))**: the direct Radau II `s = 2` tableau
+satisfies the order-3 quadrature condition `B(3)` (Radau II at
+`s = 2` is exact for polynomials of degree `2s − 1 = 3`). The
+`b` and `c` agree with `butcherRadauIIA_two`, so the same arithmetic
+applies:
+`∑ⱼ bⱼ · cⱼ^0 = 3/4 + 1/4 = 1 = 1/1`,
+`∑ⱼ bⱼ · cⱼ^1 = (3/4)·(1/3) + (1/4)·1 = 1/4 + 1/4 = 1/2`,
+`∑ⱼ bⱼ · cⱼ^2 = (3/4)·(1/9) + (1/4)·1 = 1/12 + 3/12 = 1/3`. -/
+example : butcherRadauIIDirect_two.SatisfiesB 3 := by
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherRadauIIDirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIIDirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIIDirect_two, Fin.sum_univ_two]; norm_num
+
+/-- **Non-vacuity (D(2))** — the certificate that distinguishes
+this tableau from `butcherRadauIIA_two`: the D(s)-variant Radau II
+tableau satisfies the order-2 simplifying assumption
+`D(2)`, namely `∑ᵢ bᵢ · cᵢ^(k-1) · Aᵢⱼ = (bⱼ/k)·(1 - cⱼ^k)` for
+`k ∈ {1, 2}` and `j ∈ {0, 1}`.
+
+Arithmetic checks:
+- `(k=1, j=0)`: `(3/4)(1/3) + (1/4)(1) = 1/2 = (3/4)(1 - 1/3)`.
+- `(k=1, j=1)`: `(3/4)(0) + (1/4)(0) = 0 = (1/4)(1 - 1)`.
+- `(k=2, j=0)`: `(3/4)(1/3)(1/3) + (1/4)(1)(1) = 1/3 = (3/8)(1 - 1/9)`.
+- `(k=2, j=1)`: `(3/4)(1/3)(0) + (1/4)(1)(0) = 0 = (1/8)(0)`. -/
+example : butcherRadauIIDirect_two.SatisfiesD 2 := by
+  intro j k h1 hk
+  fin_cases j <;> interval_cases k <;>
+    simp [butcherRadauIIDirect_two, Fin.sum_univ_two] <;> norm_num
+
 end OpenMath.Chapter3.Section344

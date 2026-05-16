@@ -1,372 +1,247 @@
-# Cycle 327 Strategy — §344 Phase D.7: Lobatto IIIB `s = 3` direct-form `RKTableau`
+# Cycle 328 Strategy — §344 Phase D.8: Radau II `s = 2` direct-form `RKTableau` (D(s) variant)
 
-## §A One-line summary
+## §A. State summary
 
-Ship `butcherLobattoIIIBDirect_three : RKTableau 3` direct-form, plus a
-`SatisfiesB 4` non-vacuity example, per cycle 326 task results
-recommendation. Mechanical port of cycle 326's direct-form pattern
-to Butcher Table 344(III) p. 245 Lobatto IIIB s=3 printed values.
+* **Sorry count**: 0 (clean).
+* **Open blockers**: none.
+* **Aristotle pending**: none.
+* **Branch tip**: `9b7e49f Cycle 327 — §344 Phase D.7: Lobatto IIIB s=3 direct-form RKTableau shipped.`
+* **Section344.lean LOC**: 1807 (post-cycle 327).
+* **Recent §344 momentum**: cycles 322–327 have shipped six consecutive
+  `s ≤ 3` small-`s` Radau / Lobatto `RKTableau` deliverables (Radau IIA
+  s=1, Lobatto IIIA s=2, Radau IIA s=2, Radau IA s=1, Radau IA s=2,
+  Lobatto IIIB s=3). The mechanical-template pattern is well-confirmed
+  across the cycles 326/327 direct-form ships.
 
-## §B Why this target
+## §B. Cycle 328 target
 
-* **Recommended by cycle 326 task results** Option 1 (LOW complexity).
-* **Single-cycle scope**: ~50–80 LOC, no new infrastructure, no
-  multi-cycle prerequisites.
-* **Continues §344 §D ladder** without taking on multi-cycle reflection
-  debt (the cycle 326 "reflections of Radau II" investigation remains
-  deferred, see `.prover-state/issues/radau_ia_collocation_divergence.md`).
-* **Smallest available `s` for Lobatto IIIB**: per Butcher line 5263
-  (`extraction/raw_text/ch03.txt`), Lobatto IIIB s=2 does **not exist**,
-  so s=3 is the natural entry.
-* **Reflection partner of Lobatto IIIA s=3** (cycle 323 shipped
-  Lobatto IIIA s=2 as trapezoidal rule; Lobatto IIIA s=3 = Simpson's
-  rule is multi-cycle scope per cycle 325 task results).
-* **Order p = 4** at s=3 means `SatisfiesB 4` is the natural non-vacuity
-  example.
+**Ship `butcherRadauIIDirect_two : RKTableau 2`** — the `s = 2` Radau II
+tableau in the D(s)-choice variant. Per Butcher Table 344(I) p. 244 the
+Radau II family uses `Choice of A = D(s)` (the matrix satisfying the
+D(s) simplifying assumption), whereas cycle 324's `butcherRadauIIA_two`
+uses the plain Lagrange-collocation A-matrix (which corresponds to
+Butcher's Radau **IIA** = `Choice of A = "the reflections of Radau I"`).
 
-## §C Pre-flight: textbook values (already verified by strategy author)
+The deliverable closes a coverage gap: Butcher distinguishes
+**Radau II** (D(s)) from **Radau IIA** (collocation/reflections) in
+Table 344(I), but the project so far has only the IIA variant.
 
-Read from `extraction/raw_text/ch03.txt:5426-5434`:
+### Expected shape
+
+Per Butcher Table 344(II) p. 245 (one of the four printed tables in
+Section 344):
 
 ```
-Lobatto IIIB   (s = 3, p = 4),
-                              0         1/6      -1/6           0
-                              1/2       1/6       1/3           0
-                              1         1/6       5/6           0
-                                        1/6       2/3           1/6
+Radau II   (s = 2, p = 3)
+                     c           A
+                     1/3        Something
+                     1          Something
+                                b
 ```
 
-Translates to:
+`c` and `b` agree with Radau IIA (both use the Radau II quadrature
+choice at `c = (1/3, 1)`, so by uniqueness of the quadrature weights
+`b = (3/4, 1/4)`). The two families differ **only in A**.
 
-* `c = ![0, 1/2, 1]`
-* `A = !![1/6, -(1/6), 0; 1/6, 1/3, 0; 1/6, 5/6, 0]`
-* `b = ![1/6, 2/3, 1/6]`
+### Mandatory audit step (per the cycle 326 protocol)
 
-Note: `b` and `c` are identical to Lobatto IIIA's at s=3 (Simpson's
-quadrature points and weights — both families share the same
-quadrature choice per Butcher Table 344(I), but differ on A-matrix
-construction: IIIA uses C(s) = plain collocation; IIIB uses D(s)).
+**BEFORE writing any Lean code**, read `extraction/raw_text/ch03.txt`
+around the Radau II `s = 2` printed table. Search for the literal
+string `Radau II` and then the literal `(s = 2, p = 3)`. Quote the
+exact numerical values from the printed table verbatim in the cycle
+328 task results §"Faithfulness check".
 
-## §D Faithfulness audit (per cycle 326 protocol)
+If the printed Radau II `s = 2` `A`-matrix matches cycle 324's
+`butcherRadauIIA_two` A-matrix (`!![5/12, -1/12; 3/4, 1/4]`), then
+**Radau II and Radau IIA coincide at `s = 2`** — in that case, ship a
+short `theorem butcherRadauII_two_eq_butcherRadauIIA_two :
+butcherRadauIIDirect_two = butcherRadauIIA_two` (rfl or by
+componentwise injectivity) instead of a fresh tableau definition.
+Document the coincidence in Section344's section docstring.
 
-The cycle 326 faithfulness audit pattern is **load-bearing**: ALWAYS
-verify printed Butcher values before writing Lean. For this cycle
-the audit has already happened in §C above — values copied verbatim
-from `extraction/raw_text/ch03.txt:5426-5434`. **The strategy author
-has verified them; the worker need not re-audit unless suspicious.**
+If the printed values **differ** from cycle 324, ship as a fresh
+`butcherRadauIIDirect_two : RKTableau 2` with the printed values.
+This is the more interesting outcome — it would mirror cycle 326's
+Radau IA/IIA divergence and confirm that the D(s)-vs-C(s) distinction
+is non-trivial at small `s`.
 
-The name `butcherLobattoIIIBDirect_three` makes the construction
-provenance explicit: we declare the table values directly, with no
-claim that they come from a specific abstract construction
-(consistent with the cycle 326 `butcherRadauIADirect_two` naming
-convention).
+## §C. Concrete plan
 
-## §E Concrete deliverables
+### §C.1. Audit (≤ 10 minutes)
 
-### E.1 (P1, REQUIRED) `butcherLobattoIIIBDirect_three : RKTableau 3`
+Grep for "Radau II" in `extraction/raw_text/ch03.txt`. Locate the
+printed Radau II `s = 2` table. Quote it verbatim in the cycle 328
+task results §"Faithfulness check". Confirm `c = (1/3, 1)`,
+`b = (3/4, 1/4)`, and read the four A-entries.
 
-Inline in `OpenMath/Chapter3/Section344.lean` after cycle 326's
-`butcherRadauIADirect_two` (around line ~1745–1760 of HEAD).
-Pattern verbatim from cycle 326:
+Cross-check by computing what D(s) at `s = 2` should produce
+algebraically: D(s) requires
+`∑ᵢ bᵢ · cᵢ^(k-1) · Aᵢⱼ = bⱼ/k · (1 − cⱼ^k)` for `k = 1, …, s`,
+`j = 1, …, s`. At `s = 2` with `b = (3/4, 1/4), c = (1/3, 1)`, this is
+four linear equations in the four `Aᵢⱼ` — solvable by hand for a
+spot-check.
+
+### §C.2. Ship
+
+After the audit, write the `RKTableau 2` declaration immediately after
+`butcherLobattoIIIBDirect_three` in `OpenMath/Chapter3/Section344.lean`
+(approximately line 1807+, following the cycle 327 anchor block). Use
+the cycle 326/327 direct-form template literally:
 
 ```lean
-/-- The Lobatto IIIB `s = 3` Runge–Kutta tableau in its direct form
-(Butcher Table 344(III) p. 245). The classical order is
-`p = 2s − 2 = 4`. The `b` and `c` agree with Lobatto IIIA `s = 3`
-(both come from Lobatto quadrature at `(0, 1/2, 1)` with weights
-`(1/6, 2/3, 1/6)`); the `A`-matrix differs (IIIA uses C(s) plain
-collocation; IIIB uses D(s)).
+/--
+Butcher §344 Table 344(II) p. 245 — Radau II at `s = 2` (D(s) choice).
 
-Per Butcher Table 344(I) p. 224, Lobatto IIIB at `s = 2` does not
-exist (line 5263 in `extraction/raw_text/ch03.txt`), so `s = 3`
-is the smallest available stage count. -/
-noncomputable def butcherLobattoIIIBDirect_three : RKTableau 3 where
-  A := !![1/6, -(1/6), 0; 1/6, 1/3, 0; 1/6, 5/6, 0]
-  b := ![1/6, 2/3, 1/6]
-  c := ![0, 1/2, 1]
+…docstring documenting the audit + faithfulness divergence vs Radau IIA…
+-/
+noncomputable def butcherRadauIIDirect_two : RKTableau 2 where
+  A := !![A₀₀, A₀₁; A₁₀, A₁₁]  -- values from audit
+  b := ![3/4, 1/4]
+  c := ![1/3, 1]
 ```
 
-### E.2 (P1, REQUIRED) `SatisfiesB 4` non-vacuity example
+Where `A₀₀, A₀₁, A₁₀, A₁₁` are the audited values (likely involving
+`1/4`, `-1/4`, `3/4`, `5/12` or similar simple rationals).
 
-Lobatto IIIB at s=3 has classical order `p = 2s − 2 = 4`, so the
-maximal `B(η)` quadrature order is `η = p = 4`. The example
-should prove:
+### §C.3. Non-vacuity witness
 
-```
-∀ k, 1 ≤ k → k ≤ 4 → ∑ⱼ bⱼ · cⱼ^{k-1} = 1/k
-```
-
-at the four arms (verified by hand):
-* k=1: `1/6 + 2/3 + 1/6 = 1 = 1/1` ✓
-* k=2: `(1/6)·0 + (2/3)·(1/2) + (1/6)·1 = 1/3 + 1/6 = 1/2` ✓
-* k=3: `0 + (2/3)·(1/4) + (1/6)·1 = 1/6 + 1/6 = 1/3` ✓
-* k=4: `0 + (2/3)·(1/8) + (1/6)·1 = 1/12 + 1/6 = 1/4` ✓
-
-All four arms close cleanly with `norm_num`. Recipe (mirrors cycle
-326's pattern):
+Ship a `SatisfiesB 3` example (Radau II at `s = 2` has classical order
+`p = 2s − 1 = 3`, matching the cycle 324 Radau IIA example):
 
 ```lean
-example : butcherLobattoIIIBDirect_three.SatisfiesB 4 := by
+example : butcherRadauIIDirect_two.SatisfiesB 3 := by
   intro k h1 hk
   interval_cases k <;>
-    simp [RKTableau.SatisfiesB, butcherLobattoIIIBDirect_three,
-          Fin.sum_univ_three] <;>
-    norm_num
+    simp [butcherRadauIIDirect_two, Fin.sum_univ_two] <;> norm_num
 ```
 
-If `interval_cases k` doesn't fire cleanly, fallback to explicit
-match: `match k, h1, hk with | 1, _, _ => ... | 2, _, _ => ... |
-3, _, _ => ... | 4, _, _ => ...`. Or use cycle 326's exact pattern
-(check the `butcherRadauIADirect_two` `SatisfiesB 3` example at
-`Section344.lean` ~line 1745+ for the precise tactic incantation
-that the linker accepts here).
+Three arms `k ∈ {1, 2, 3}`. Each arm: `∑ⱼ bⱼ · cⱼ^(k-1) = 1/k`.
+Mechanical close per cycle 324's recipe in Section344.lean.
 
-## §F Risks and pre-flagged pitfalls
+### §C.4. Optional stretch — D(s) certificate
 
-### R1 (low) — Negative literal `-(1/6)` in matrix entry
+If the audit confirms a divergence from Radau IIA, ship a tiny stretch
+theorem documenting the divergence:
 
-The `!![...]` matrix-row literal should accept `-(1/6)` as a
-ℝ-literal, but Lean's elaborator may complain about expected
-positive numerals. Workaround if it does:
-* Write `-1/6` (without parens) — may parse differently.
-* Or write `(-1 : ℝ)/6` with explicit type ascription.
-* Or pull it out as a local: `let n1_6 : ℝ := -1/6` before the
-  matrix definition.
-* Or refactor entire matrix to `Matrix.of (fun i j => ...)` style
-  with explicit per-entry case analysis.
+```lean
+theorem butcherRadauIIDirect_two_satisfiesD_two :
+    butcherRadauIIDirect_two.SatisfiesD 2 := by
+  …four-arm Fin.sum_univ_two + norm_num close…
+```
 
-Cycle 324's Radau IIA used `-(1/12)` in **theorem statements**
-without trouble, so this is well-trodden territory at the entry
-level — the worry is specifically inside `!![...]` literal syntax.
-Try `-(1/6)` first; if it fails, switch to `Matrix.of` form.
+This makes explicit that the D(s) construction was used (vs cycle
+324's IIA which satisfies `C(s)` but not `D(s)` in general). Skip if
+the audit shows coincidence or if LOC budget is tight.
 
-### R2 (low) — `Fin.sum_univ_three` arity
+## §D. Verification
 
-Cycle 323 used `Fin.sum_univ_two` for Lobatto IIIA s=2's
-`SatisfiesB 2` non-vacuity. The s=3 analog `Fin.sum_univ_three`
-exists in `Mathlib/Algebra/BigOperators/Fin.lean` with the same
-signature. If `simp` doesn't fire, fall back to explicit
-`Fin.sum_univ_succ` × 3 unfolding (verified to exist in cycles
-322/323/324/325).
+Per the cycle 326/327 protocol:
 
-### R3 (low) — `noncomputable` annotation
+```
+lake env lean OpenMath/Chapter3/Section344.lean
+lake build OpenMath.Chapter3.Section344
+lake env lean OpenMath/Chapter3.lean
+```
 
-Cycle 326's `butcherRadauIADirect_two` is `noncomputable def`
-(check the file). Numeric literals in `RKTableau ℝ` fields are
-computable in principle, but the `RKTableau` constructor may
-require it. Default: write `noncomputable def` to match cycle 326.
-If Lean complains "noncomputable not needed", drop it.
+All three should exit 0. Sorry count must stay 0.
 
-### R4 (very low) — `axiom-clean` regression
+Axiom-clean spot-check on the new `def` and any new theorems:
 
-Verify with
-`#print axioms butcherLobattoIIIBDirect_three` after the build.
-Expected: `[propext, Classical.choice, Quot.sound]`.
+```
+#print axioms OpenMath.Chapter3.Section344.butcherRadauIIDirect_two
+```
 
-### R5 (very low) — `interval_cases k` may need explicit bounds
+Expected: `[propext, Classical.choice, Quot.sound]` only.
 
-If `interval_cases k` complains, supply explicit bounds via
-`interval_cases (h1 : 1 ≤ k) (hk : k ≤ 4)` or destructure the
-hypotheses first. Cycle 326's `SatisfiesB 3` example used the
-same `interval_cases` pattern; check its exact form before
-deviating.
+## §E. LOC budget
 
-## §G What NOT to do
+* Audit + docstring: ~15 LOC
+* `butcherRadauIIDirect_two` def: ~10 LOC
+* `SatisfiesB 3` example: ~5 LOC
+* Optional D(2) certificate: ~10 LOC
+* **Total**: ~30–40 LOC if coincidence; ~50 LOC if divergence with
+  D(2) stretch.
 
-* **Do NOT attempt plain Lagrange collocation for Lobatto IIIB.**
-  Per Butcher Table 344(I), Lobatto IIIB uses D(s), NOT C(s).
-  Computing `∫_0^{c_i} L_j(x) dx` over Lobatto abscissae will
-  produce values that **differ from Butcher's printed table**
-  (same kind of audit failure as cycle 326's Radau IA collocation
-  divergence). Just declare the printed values inline.
+Within the cycle 326/327 ~50 LOC small-cycle pattern.
 
-* **Do NOT attempt to derive Lobatto IIIB from a §343 reflection
-  of Lobatto IIIA s=3.** This is the multi-cycle "reflections"
-  investigation (Option 2 in cycle 326 task results) — deferred.
+## §F. What NOT to do
 
-* **Do NOT extend the Radau IA collocation/reflection investigation
-  in this cycle.** Per `.prover-state/issues/radau_ia_collocation_divergence.md`,
-  this is multi-cycle scope.
-
-* **Do NOT attempt Phase B.2 polynomial exactness** (the `thm:344A`
-  `2s − 2`/`2s − 3` headline). Multi-cycle, blocked on `thm:314A`.
-
-* **Do NOT attempt Lobatto IIIA s=3 (Simpson's rule).** Per cycle
-  325 task results, multi-cycle. The substantive Simpson's-rule
-  collocation construction needs more infrastructure than fits
-  in one cycle.
-
-* **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
-  43+ consecutive GPFS timeouts since cycle 182. Skip per
-  `.prover-state/issues/cycle_182_gpfs_slowness.md`.
-
-* **Do NOT raise `maxHeartbeats`** above 200000.
-
-* **Do NOT introduce `axiom`/`constant`.** Strict axiom-clean target.
-
-* **Do NOT introduce `sorry`.** Strict axiom-clean target.
-
-* **Do NOT modify `scripts/autonomous_loop.py`.** Loop-maintainer
-  territory.
-
-* **Do NOT cherry-pick a different "easier" §344 target.** The
-  cycle 326 task results explicitly named Lobatto IIIB s=3 as
-  the recommended cycle 327 target. Stick to it.
-
-## §H Pre-commit faithfulness checklist
-
-Before committing:
-
-1. **For the new `def butcherLobattoIIIBDirect_three`**: confirm
-   `(A, b, c)` match `extraction/raw_text/ch03.txt:5426-5434`
-   verbatim. The strategy author has verified above; the worker
-   should still spot-check.
-
-2. **For the `SatisfiesB 4` example**: confirm the four arms
-   evaluate as computed in §E.2.
-
-3. **Tautology / smuggling sweep**:
-   - No `:= h_*` / `exact h_*` / `:= id` proofs in the new
-     additions.
-   - No new `theorem` re-exports a hypothesis as a conclusion.
-   - The `RKTableau` structure has no `Prop` fields, so the
-     "Prop field should be consequence" smuggling pattern does
-     not apply.
-
-4. **Axiom-clean spot-check**:
-   ```
-   echo '#print axioms OpenMath.Chapter3.Section344.butcherLobattoIIIBDirect_three' \
-     | lake env lean --stdin OpenMath/Chapter3/Section344.lean
-   ```
-   Expected: `[propext, Classical.choice, Quot.sound]`.
-
-5. **Aggregator build**: `lake env lean OpenMath/Chapter3.lean` exit 0.
-
-6. **Sorry count unchanged**: `grep -c sorry OpenMath/Chapter3/Section344.lean` → 0.
-
-## §I Step-by-step worker instructions
-
-1. **Read** `extraction/raw_text/ch03.txt:5426-5434` and confirm
-   Lobatto IIIB s=3 values match §C above. (Sanity check; values
-   already pre-verified.)
-
-2. **Open** `OpenMath/Chapter3/Section344.lean`. Locate cycle 326's
-   `butcherRadauIADirect_two` (around line 1711–1745). Confirm the
-   exact tactic pattern of cycle 326's `SatisfiesB 3` example so
-   you can mirror it.
-
-3. **Insert** the `butcherLobattoIIIBDirect_three : RKTableau 3` def
-   per §E.1 immediately after cycle 326's `butcherRadauIADirect_two`
-   block.
-
-4. **Insert** the `SatisfiesB 4` example per §E.2 immediately after
-   the definition.
-
-5. **Compile** with `lake env lean OpenMath/Chapter3/Section344.lean`
-   to confirm clean build.
-
-6. **Verify axiom-clean** per §H.4.
-
-7. **Run aggregator** per §H.5.
-
-8. **Update** `extraction/formalization_data/lean_status.json`: this
-   is an *instance* of `thm:344A` (not a per-instance entity), so
-   no row update is strictly required, but if the `thm:344A` row
-   has a cycle-326 note, append a cycle-327 line documenting this
-   ship.
-
-9. **Update** `plan.md`'s `thm:344A` row entry to note cycle 327's
-   ship in the partial-status paragraph (same pattern as cycle 326).
-
-10. **Write** `.prover-state/task_results/cycle_327.md` per the
-    CLAUDE.md template.
-
-11. **Commit** with message
-    `"Cycle 327 — §344 Phase D.7: Lobatto IIIB s = 3 direct-form RKTableau."`
-    and push.
-
-## §J LOC budget and abort threshold
-
-* **Target**: ~50 LOC (matches cycle 326's `+49 LOC` ship).
-* **Soft ceiling**: 100 LOC. If past 80 LOC and not done, STOP and
-  ask whether you've drifted from the strategy.
-* **Hard abort**: 200 LOC. The cycle 326 deliverable shows this
-  pattern is fundamentally a ~50-LOC drop-in; if past 200 LOC
-  something is wrong (likely you've started trying to derive the
-  A-matrix from collocation or reflection, which §G forbids).
-
-* **Time budget**: ≤60 minutes. The cycle 326 ship is the closest
+* **Do NOT skip the audit.** Cycle 326 caught the Radau IA collocation
+  divergence precisely *because* the audit ran first. Skipping the
+  audit risks shipping incorrect values. If the worker writes A-matrix
+  entries before quoting Butcher's table, abort and restart with the
+  audit.
+* **Do NOT compute the D(s) solution from scratch as the primary
+  deliverable.** The audit-from-printed-table path is mechanical;
+  re-deriving D(s) from the simplifying-assumption equations is
+  multi-cycle infrastructure. If the audit fails to surface usable
+  printed values, ship a deferral issue and pivot to a different §344
+  target (Lobatto IIIC s=2 or Radau I s=2 direct forms).
+* **Do NOT pursue the "reflections of X" canonical bridge.** Per
+  `.prover-state/issues/radau_ia_collocation_divergence.md`, this is
+  multi-cycle work. The direct-form pattern sidesteps it cleanly.
+* **Do NOT attempt the Phase B.2 polynomial exactness `thm:344A`
+  headline.** Multi-cycle. Stay with small-`s` direct-form ships.
+* **Do NOT touch GPFS-blocked Section441.lean work.** 43+ consecutive
+  timeouts per `cycle_182_gpfs_slowness.md`. Skip.
+* **Do NOT submit to Aristotle.** The cycles 326/327 direct-form ships
+  closed in single cycles without Aristotle; this cycle should too.
+* **Do NOT introduce sorries.** Per the cycle 200/201 rollback
   precedent.
+* **Do NOT raise `maxHeartbeats`.** The `Fin.sum_univ_two` + `simp` +
+  `norm_num` close fits under the default 200000 budget at `s = 2`.
 
-## §K Failed approaches (DO NOT REPEAT)
+## §G. Risk register
 
-From `attempts.md` and prior cycle task results, these are
-known-failed paths in adjacent territory — do not retry:
+* **R1 — Audit shows Radau II = Radau IIA at s = 2.** Mitigation: ship
+  the coincidence theorem (cycle 328 §C alt path); still a valid
+  cycle deliverable (closes the open question about D(s) vs C(s)
+  divergence at small `s`).
+* **R2 — Negative literals in `!![...]`.** Confirmed safe by cycles
+  324/326/327. Use `-(1/12)` or `-(1/4)` syntax directly.
+* **R3 — `Fin.sum_univ_two` not in default simp set.** Per cycle 324
+  precedent, must be passed explicitly to `simp`. The example
+  template above already includes it.
+* **R4 — D(s) constraints algebraically incompatible at `s = 2`
+  (over-determined system).** Mitigation: trust the printed Butcher
+  table; if its values fail D(2), that's a typo to document via an
+  issue file, not a Lean problem.
 
-* **Plain collocation for "reflection" tableau families** (cycle 326):
-  computing `A_{ij} = ∫_0^{c_i} L_j(x) dx` for Radau IA at s=2
-  produced row 0 = `(0, 0)` and row 1 = `(1/3, 1/3)` instead of
-  Butcher's `(1/4, -1/4)` and `(1/4, 5/12)`. Same kind of
-  divergence applies to Lobatto IIIB (uses D(s), not C(s)).
+## §H. Faithfulness anchors
 
-* **§343 bare `RKTableau.reflection` for "reflection" families**
-  (cycle 326): computing `(butcherRadauIIA s=2).reflection` gave
-  `Â = !![5/12, 1/4; 5/12, 1/4]` after permutation, NOT Butcher's
-  `!![1/4, -1/4; 1/4, 5/12]`. Butcher's "reflections of X" is a
-  refined construction beyond §343. Not in scope for this cycle.
+For the new `def butcherRadauIIDirect_two`:
 
-* **`Polynomial.ext` + `simp` + `ring` for `Polynomial ℝ` constant
-  arithmetic** (cycles 172/173 from §441 work): does not handle
-  `C(rational)` arithmetic. Use `Polynomial.funext + ring` if
-  needed (cycle 180 recipe). Not relevant to this cycle's direct-
-  form ship.
+* **Source**: `extraction/raw_text/ch03.txt` — Radau II `s = 2`,
+  `p = 3` printed table from §344. Worker must quote verbatim in task
+  results.
+* **Coverage gap closed**: Butcher Table 344(I) p. 244 lists Radau II
+  with `Choice of A = D(s)` distinct from Radau IIA's
+  `Choice of A = "reflections of Radau I"`. Cycle 324 shipped the IIA
+  (plain Lagrange collocation) variant; this cycle ships the D(s)
+  variant.
 
-* **Sorry-first scaffolds for multi-cycle targets** (cycles 138/139,
-  149/150, 200/201): all rolled back with `score = -2` for sorry
-  count regression. Do not introduce sorries.
+For the `SatisfiesB 3` example:
 
-## §L Follow-up scope for cycle 328+
+* **Source**: Radau II `s = 2` has classical order `p = 2s − 1 = 3`
+  (Butcher Table 344(I) col 3); the maximal `B(η)` quadrature
+  condition is `η = p = 3`.
 
-After cycle 327, the §344 small-`s` ladder will have:
+## §I. Cycle 329+ outlook
 
-* Radau IIA: s=1 (cycle 322), s=2 (cycle 324)
-* Radau IA: s=1 (cycle 325), s=2 direct-form (cycle 326)
-* Lobatto IIIA: s=2 (cycle 323)
-* Lobatto IIIB: s=3 direct-form (this cycle)
+If cycle 328 ships cleanly:
 
-Natural cycle 328 candidates (in order of expected LOC):
+* **Cycle 329**: Radau I `s = 2` direct form (cycle 326's Radau IA is
+  *not* the plain collocation form, but Radau I per Butcher Table
+  344(I) col 4 uses `Choice of A = C(s)` — straightforward direct
+  ship, may coincide with plain collocation at small `s`).
+* **Cycle 330**: Lobatto IIIC `s = 2` direct form (Butcher Table
+  344(IV) p. 246). Per `ch03.txt:5224`, Lobatto IIIC = "reflections of
+  Lobatto III". Audit Butcher's printed table first.
+* **Cycle 331+**: Lobatto IIIA `s = 3` (Simpson's-rule extension,
+  multi-cycle since the `A`-matrix at `s = 3` is no longer trivial) or
+  pivot to a fresh entity (Chapter 5 §550, def:442A, def:422B, etc).
 
-* **Radau II s=2 direct form** (Butcher Table 344(II), the D(s)
-  choice — distinct from cycle 324's Radau **IIA** which uses
-  reflection of Radau I). ~50 LOC direct.
-* **Radau I s=2 direct form** (matches plain collocation per the
-  cycle 326 audit math; would also be expressible via the cycle
-  326 collocation template if a §343-style reflection isn't
-  needed). ~50 LOC direct.
-* **Lobatto IIIC s=2 direct form** if it exists (Butcher Table
-  344(IV) p. 246; per Table 344(I) line 5224, Lobatto IIIC =
-  "reflections of Lobatto III" — needs textbook value
-  verification first).
-* **Lobatto III s=2** (the unsuffixed family, "C(s-1) +
-  $a_{1s} = \cdots = a_{ss} = 0$" choice; Table 344(I) line 5221).
-
-The planner for cycle 328 should pick one of these — direct-form
-ships are mechanical at this point and the ladder fills out
-nicely. The "reflections of X" investigation (cycle 326's
-deferred Option 2) remains multi-cycle scope.
-
-## §M Why this is the right cycle 327 target
-
-1. **Cycle 326 task results explicitly recommended it** (Option 1).
-2. **Smallest available `s` for a fresh §344 entry** — Lobatto IIIB
-   s=2 doesn't exist, so s=3 is the natural target.
-3. **Single-cycle scope** with high confidence (matches cycle 326
-   shape almost exactly).
-4. **No new multi-cycle debt** — explicitly chooses the LOW-
-   complexity path from cycle 326's options menu.
-5. **Closes a meaningful gap** in the §344 small-`s` coverage matrix
-   (Lobatto IIIB family was entirely empty before this).
-6. **Pattern is well-tested** — cycle 326 just shipped exactly this
-   shape successfully.
-
-Proceed.
+Each remaining direct-form ship is a ~50 LOC mechanical template
+deliverable. The mechanical-template hypothesis has been confirmed
+across cycles 326/327 — pattern continuation is the highest-confidence
+single-cycle work available.
