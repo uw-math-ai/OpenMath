@@ -1,408 +1,437 @@
-# Cycle 314 Strategy — `thm:342C` clause (342o): `B(2s) ∧ D(s) ⇒ E(s, s)`
+# Cycle 315 Strategy
 
-## A. Target
+## TL;DR
 
-Ship the **second** algebraic clause of `thm:342C` (Butcher §342, p. 238):
+Ship `thm:342C` clause **(342p)** `B(2s) ∧ E(s, s) ⇒ D(s)` in
+`OpenMath/Chapter3/Section321.lean` — the structural converse of
+cycle 314's clause (342o). This is the **first Vandermonde-converse**
+clause and unlocks the bidirectional B+E ⇔ D portion of the §342C
+algebraic toolkit. Aim for ~130–160 LOC, axiom-clean.
 
-> `B(2s) ∧ D(s) ⇒ E(s, s)`     (342o)
+## Why this target
 
-This is the partner of cycle 313's clause (342m) — same conclusion
-`E(s, s)`, same `B(2s)` half of the hypothesis, but with `D(s)`
-replacing `C(s)`. Like (342m), this clause is purely algebraic in the
-abstract `RKTableau` B/C/D/E predicates of §321 and requires zero new
-infrastructure.
+Cycle 314 task results explicitly recommended the Vandermonde-converse
+pair (342n)+(342p) as the highest-strategic-value next step. Reading
+the four-option menu in the task results §"Suggested next approach":
 
-**Deliverable**: a new theorem
-`OpenMath.Chapter3.Section312.RKTableau.satisfiesE_of_satisfiesB_satisfiesD`
-inserted into `OpenMath/Chapter3/Section321.lean` immediately after
-the cycle 313 `satisfiesE_of_satisfiesB_satisfiesC` block (line 207),
-plus one non-vacuity `example` exercising it through
-`gaussLegendre1Stage`.
+* (1) **Vandermonde converses (342n)/(342p)** — recommended primary;
+  builds the inversion infrastructure for the §342C iff.
+* (2) `thm:344A` Radau/Lobatto — multi-cycle, premature without (1).
+* (3) `cor:359B`/`lem:359A` — likely multi-cycle and dependency-heavy.
 
-## B. Why this is the right target
+**Key discovery this strategy session**: Mathlib's
+`Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero`
+(`.lake/packages/mathlib/Mathlib/LinearAlgebra/Vandermonde.lean:258`)
+delivers Vandermonde non-singularity directly:
 
-Per cycle 313's task results §"Suggested next approach":
+```
+theorem eq_zero_of_forall_pow_sum_mul_pow_eq_zero [IsDomain R]
+    {f v : Fin n → R} (hf : Function.Injective f)
+    (hfv : ∀ i : Fin n, (∑ j : Fin n, v j * f j ^ (i : ℕ)) = 0) :
+    v = 0
+```
 
-> **Clause (342o) `B(2s) ∧ D(s) ⇒ E(s, s)`** — the partner algebraic
-> clause sketched in cycle 313 strategy §D. Sum-swap LHS via
-> `Finset.sum_comm`, apply `D(s)` per column `j` at exponent `k`,
-> collapse via `B(2s)` at exponents `l` and `k + l`, arithmetic
-> close `(1/k)(1/l - 1/(k+l)) = 1/(l(k+l))`. Estimated ~90 LOC.
-> No new infrastructure needed; pure algebraic composition like
-> (342m). High-confidence single-cycle target.
+This is **exactly** what (342p) needs after a routine algebraic
+manipulation. The cycle 314 worker's ~150-LOC-each estimate was made
+without knowing about this helper; with it, (342p) closes in ~130 LOC.
 
-The Vandermonde-converse clauses (342n)/(342p) are deferred — they
-need a non-singular-matrix argument (~150 LOC each) and should ship
-as a pair in a separate cycle. The G(2s)-involving clauses
-(342j)/(342k)/(342l) remain blocked on unformalised `thm:314A`
-elementary-differential infrastructure (multi-cycle).
+## Why (342p) before (342n)
 
-## C. Proof recipe (concrete tactic script)
+Both clauses use the same Vandermonde inversion, but they differ in
+side hypotheses:
 
-The proof is a mirror of cycle 313's (342m) proof at
-`OpenMath/Chapter3/Section321.lean:207-254`, with the following
-substitutions:
+* **(342p) `B(2s) ∧ E(s, s) ⇒ D(s)`**: needs only
+  `Function.Injective M.c` (distinct abscissae). The Vandermonde
+  matrix is `(c_j^{l-1})_{l,j}`, non-singular iff `c_j` distinct.
+* **(342n) `B(2s) ∧ E(s, s) ⇒ C(s)`**: needs **both**
+  `Function.Injective M.c` AND `∀ i, M.b i ≠ 0`. The Vandermonde
+  appears as `diag(b) · V`, requiring both factors invertible.
 
-1. **Sum-swap first** (the key structural change): apply
-   `Finset.sum_comm` to swap `∑_i ∑_j` to `∑_j ∑_i`. This puts the
-   `D(s)` shape `∑_i b_i · c_i^(k-1) · A_{ij} = (b_j/k)(1 - c_j^k)`
-   in the inner sum.
-2. **Per column** apply `D(s)` at exponent `k` (legal: `1 ≤ k ≤ s`).
-3. **Distribute** `(1/k)` and split the resulting `b_j · c_j^(l-1) ·
-   (1 - c_j^k) = b_j · c_j^(l-1) - b_j · c_j^((k+l)-1)`.
-4. **Apply `B(2s)` twice** — at exponents `l` (legal: `1 ≤ l ≤ s ≤
-   2s`) and `k+l` (legal: `1 ≤ k+l ≤ 2s`).
-5. **Arithmetic close**: `(1/k) · (1/l - 1/(k+l)) = 1/(l·(k+l))`
-   via `field_simp` + `ring`.
+Ship (342p) first as the cleaner single-cycle deliverable. (342n)
+is cycle 316's target.
 
-### Concrete skeleton (use this verbatim; the body slots in directly)
+## Target (P1, mandatory)
+
+**Theorem name**: `satisfiesD_of_satisfiesB_satisfiesE`
+in namespace `OpenMath.Chapter3.Section312.RKTableau`, inserted in
+`OpenMath/Chapter3/Section321.lean` immediately after cycle 314's
+`satisfiesE_of_satisfiesB_satisfiesD` block.
+
+**Signature**:
 
 ```lean
-/-! ### Butcher §342 Theorem 342C, clause (342o) — `B(2s) ∧ D(s) ⇒ E(s, s)`
+theorem satisfiesD_of_satisfiesB_satisfiesE {s : ℕ}
+    (M : RKTableau s) (hc : Function.Injective M.c)
+    (hB : M.SatisfiesB (2 * s)) (hE : M.SatisfiesE s s) :
+    M.SatisfiesD s
+```
 
-Clause (342o) of the seven-way `thm:342C` equivalence:
+**New import** to add at top of `Section321.lean`:
+`import Mathlib.LinearAlgebra.Vandermonde`
 
->     `B(2s) ∧ D(s) ⇒ E(s, s)`            (342o)
+## Required side hypothesis: `Function.Injective M.c`
 
-This is the partner of (342m) shipped cycle 313: same conclusion
-`E(s, s)`, but routed through `D(s)` (the adjoint condition) rather
-than `C(s)` (the collocation condition). Like (342m), the proof is
-purely algebraic in the §321 B/C/D/E predicates.
+Butcher §342's textbook proof says "the matrix multiplier is non-
+singular" — implicitly assuming distinct abscissae. In our Lean
+formalisation we surface this explicitly as a hypothesis. Document
+it in the docstring as a faithfulness note.
 
-Proof recipe:
+The canonical Gauss-Legendre tableau satisfies `Function.Injective M.c`
+automatically (cycle 302's `butcherShiftedLegendre_zeros_strictMono`
++ `StrictMono.injective`). The 1-stage `gaussLegendre1Stage` consumer
+discharges injectivity vacuously by `fin_cases`.
 
-1. Sum-swap `∑ᵢ ∑ⱼ` → `∑ⱼ ∑ᵢ` via `Finset.sum_comm`.
-2. Factor `c_j ^ (l - 1)` out of the inner `i`-sum (per column `j`).
-3. Apply `D(s)` at exponent `k` per column `j` to reduce
-   `∑ᵢ bᵢ cᵢ^{k-1} aᵢⱼ = (bⱼ / k)(1 - cⱼ^k)`.
-4. Distribute `(1/k)` and use `1 - cⱼ^k` to split into two sums:
-   `bⱼ cⱼ^{l-1} - bⱼ cⱼ^{(k+l)-1}`.
-5. Apply `B(2s)` at exponents `l` and `k+l` to reduce both sums.
-6. Close via `(1/k)(1/l - 1/(k+l)) = 1/(l(k+l))` with `field_simp + ring`.
+## Proof recipe (~130 LOC)
 
-No `0 < s` hypothesis required. -/
-theorem satisfiesE_of_satisfiesB_satisfiesD {s : ℕ}
-    (M : RKTableau s) (hB : M.SatisfiesB (2 * s))
-    (hD : M.SatisfiesD s) :
-    M.SatisfiesE s s := by
-  intro k h1 hk l hl1 hl
-  have hk_pos : 0 < (k : ℝ) := by exact_mod_cast h1
-  have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
-  -- Step 1: D(s) at exponent k, per column j.
-  have hDj : ∀ j : Fin s,
-      (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j)
-        = (M.b j / (k : ℝ)) * (1 - M.c j ^ k) :=
-    fun j => hD j k h1 hk
-  -- Step 2: sum-swap, factor c_j^(l-1) out per column, apply D(s),
-  -- expand the (1 - c_j^k) split, and re-express both sums in B(2s)
-  -- shape.
-  have h_outer :
-      (∑ i : Fin s, ∑ j : Fin s,
-        M.b i * M.c i ^ (k - 1) * M.A i j * M.c j ^ (l - 1))
-      = (1 / (k : ℝ)) *
-        ((∑ j : Fin s, M.b j * M.c j ^ (l - 1))
-          - ∑ j : Fin s, M.b j * M.c j ^ ((k + l) - 1)) := by
-    rw [Finset.sum_comm]
-    -- Goal: ∑_j ∑_i (b_i · c_i^(k-1) · A_ij · c_j^(l-1)) = ...
-    rw [show (∑ j : Fin s, ∑ i : Fin s,
-              M.b i * M.c i ^ (k - 1) * M.A i j * M.c j ^ (l - 1))
-            = ∑ j : Fin s, M.c j ^ (l - 1) *
-              (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j) by
-        apply Finset.sum_congr rfl
-        intro j _
-        rw [Finset.mul_sum]
-        apply Finset.sum_congr rfl
-        intro i _
-        ring]
-    -- Apply D(s) per column j.
-    rw [show (∑ j : Fin s, M.c j ^ (l - 1) *
-              (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j))
-            = ∑ j : Fin s, M.c j ^ (l - 1) *
-              ((M.b j / (k : ℝ)) * (1 - M.c j ^ k)) by
-        apply Finset.sum_congr rfl
-        intro j _
-        rw [hDj j]]
-    -- Split each summand: c_j^(l-1) · (b_j/k) · (1 - c_j^k)
-    --                   = (1/k) · (b_j · c_j^(l-1) - b_j · c_j^((k+l)-1))
-    rw [show (∑ j : Fin s, M.c j ^ (l - 1) *
-              ((M.b j / (k : ℝ)) * (1 - M.c j ^ k)))
-            = (1 / (k : ℝ)) * ∑ j : Fin s,
-              (M.b j * M.c j ^ (l - 1)
-                - M.b j * M.c j ^ ((k + l) - 1)) by
-        rw [Finset.mul_sum]
-        apply Finset.sum_congr rfl
-        intro j _
-        have hexp : (l - 1) + k = (k + l) - 1 := by omega
-        rw [show M.c j ^ ((k + l) - 1)
-              = M.c j ^ ((l - 1) + k) by rw [hexp]]
-        rw [pow_add]
-        field_simp
-        ring]
-    rw [Finset.sum_sub_distrib]
-  rw [h_outer]
-  -- Step 3: B(2s) at exponents l and k + l.
-  have hl_hi : l ≤ 2 * s := by omega
-  have hkl_lo : 1 ≤ k + l := by omega
-  have hkl_hi : k + l ≤ 2 * s := by omega
-  have hB_l : (∑ j : Fin s, M.b j * M.c j ^ (l - 1))
-                = 1 / ((l : ℕ) : ℝ) :=
-    hB l hl1 hl_hi
+Structure:
+
+### Step 0 — outer intro and goal setup
+
+```lean
+intro j k hk1 hk
+have hk_pos : 0 < (k : ℝ) := by exact_mod_cast hk1
+have hk_ne : (k : ℝ) ≠ 0 := ne_of_gt hk_pos
+```
+
+### Step 1 — define the residual vector `v : Fin s → ℝ`
+
+`v j' := (∑ᵢ bᵢ cᵢ^{k-1} aᵢⱼ') − (bⱼ'/k)(1 − cⱼ'^k)` (the D(s)
+residual at exponent k, indexed by stage j').
+
+```lean
+set v : Fin s → ℝ := fun j' =>
+    (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j')
+      - (M.b j' / (k : ℝ)) * (1 - M.c j' ^ k)
+  with v_def
+```
+
+### Step 2 — prove `v = 0` via Vandermonde
+
+```lean
+have hv_zero : v = 0 := by
+  refine Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero hc ?_
+  intro i  -- i : Fin s
+  set l : ℕ := i.val + 1
+  have hl1 : 1 ≤ l := Nat.succ_le_succ (Nat.zero_le _)
+  have hl_le_s : l ≤ s := i.isLt
+  have hl_pos : 0 < (l : ℝ) := by exact_mod_cast hl1
+  have hl_ne : (l : ℝ) ≠ 0 := ne_of_gt hl_pos
+  have hkl_pos : 0 < (k : ℝ) + (l : ℝ) := by positivity
+  have hkl_ne : (k : ℝ) + (l : ℝ) ≠ 0 := ne_of_gt hkl_pos
+  -- Goal: ∑ j' : Fin s, v j' * M.c j' ^ (i : ℕ) = 0
+  -- Use l - 1 = i.val:
+  have hi_eq : (i : ℕ) = l - 1 := by omega
+  rw [hi_eq]
+  -- Now: ∑ j' : Fin s, v j' * M.c j' ^ (l - 1) = 0
+  simp only [v_def]
+  -- ... see Step 3 below ...
+```
+
+### Step 3 — the analytic core
+
+The mathematics:
+
+```
+∑ⱼ' v(j') · c_j'^{l-1}
+  = ∑ⱼ' c_j'^{l-1} · (∑ᵢ bᵢ cᵢ^{k-1} aᵢⱼ' − (bⱼ'/k)(1 − cⱼ'^k))
+  = [first term] − [second term]
+  first  = ∑ᵢⱼ' bᵢ cᵢ^{k-1} aᵢⱼ' c_j'^{l-1}    [sum-swap]
+         = 1/(l(k+l))                            [by hE (k, l)]
+  second = (1/k) (∑ⱼ' bⱼ' c_j'^{l-1} − ∑ⱼ' bⱼ' c_j'^{k+l-1})
+         = (1/k) (1/l − 1/(k+l))                 [by hB at l and k+l]
+         = 1/(l(k+l))                            [arithmetic]
+  Difference = 0.
+```
+
+Recommended factoring into two named `have` steps:
+
+```lean
+have h_first :
+    (∑ j' : Fin s,
+        (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j') * M.c j' ^ (l - 1))
+      = 1 / ((l : ℝ) * ((k : ℝ) + (l : ℝ))) := by
+  -- Pull c j'^(l-1) inside the inner sum, then swap sums, then apply hE.
+  have h_pull :
+      (fun j' : Fin s =>
+        (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j') * M.c j' ^ (l - 1))
+      = (fun j' : Fin s =>
+        ∑ i : Fin s,
+          M.b i * M.c i ^ (k - 1) * M.A i j' * M.c j' ^ (l - 1)) := by
+    funext j'
+    rw [Finset.sum_mul]
+  rw [show (∑ j' : Fin s,
+            (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j') * M.c j' ^ (l - 1))
+         = ∑ j' : Fin s,
+             ∑ i : Fin s,
+               M.b i * M.c i ^ (k - 1) * M.A i j' * M.c j' ^ (l - 1)
+       from by congr 1; exact h_pull]
+  rw [Finset.sum_comm]
+  exact hE k hk1 hk l hl1 hl_le_s
+
+have h_second :
+    (∑ j' : Fin s,
+        (M.b j' / (k : ℝ)) * (1 - M.c j' ^ k) * M.c j' ^ (l - 1))
+      = 1 / ((l : ℝ) * ((k : ℝ) + (l : ℝ))) := by
+  -- Per-j' rewrite: factor (1/k), then split via (1 − c^k) · c^(l-1).
+  have h_per_j : ∀ j' : Fin s,
+      (M.b j' / (k : ℝ)) * (1 - M.c j' ^ k) * M.c j' ^ (l - 1)
+        = (1 / (k : ℝ)) *
+            (M.b j' * M.c j' ^ (l - 1) - M.b j' * M.c j' ^ ((k + l) - 1)) := by
+    intro j'
+    have h_exp : k + (l - 1) = (k + l) - 1 := by omega
+    have h_pow_split : M.c j' ^ k * M.c j' ^ (l - 1)
+        = M.c j' ^ ((k + l) - 1) := by
+      rw [← pow_add, h_exp]
+    field_simp
+    linear_combination
+      -- The identity is `(b/k)·(1 - c^k)·c^(l-1) = (1/k)·(b·c^(l-1) - b·c^(k+l-1))`.
+      -- After field_simp the goal will be a polynomial identity that
+      -- `ring` closes given h_pow_split. If `linear_combination` is
+      -- tricky to invoke, use `rw [← h_pow_split]; ring` instead.
+      sorry
+  -- Apply h_per_j inside the sum, distribute (1/k), apply hB twice.
+  rw [Finset.sum_congr rfl (fun j' _ => h_per_j j')]
+  rw [← Finset.mul_sum, Finset.sum_sub_distrib]
+  have hB_l :
+      (∑ j' : Fin s, M.b j' * M.c j' ^ (l - 1)) = 1 / (l : ℝ) := by
+    have := hB l hl1 (by omega)
+    convert this
   have hB_kl :
-      (∑ j : Fin s, M.b j * M.c j ^ ((k + l) - 1))
-        = 1 / ((k + l : ℕ) : ℝ) :=
-    hB (k + l) hkl_lo hkl_hi
+      (∑ j' : Fin s, M.b j' * M.c j' ^ ((k + l) - 1))
+        = 1 / ((k : ℝ) + (l : ℝ)) := by
+    have h := hB (k + l) (by omega) (by omega)
+    push_cast at h
+    convert h using 2
   rw [hB_l, hB_kl]
-  -- Step 4: arithmetic closure.
-  -- (1/k) · (1/l - 1/(k+l)) = 1/(l · (k+l)).
-  push_cast
+  -- Goal: (1 / k) * (1 / l - 1 / (k + l)) = 1 / (l * (k + l))
   field_simp
   ring
+
+-- Combine h_first and h_second.
+calc (∑ j' : Fin s,
+        ((∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j')
+          - (M.b j' / (k : ℝ)) * (1 - M.c j' ^ k)) * M.c j' ^ (l - 1))
+    = (∑ j' : Fin s,
+        (∑ i : Fin s, M.b i * M.c i ^ (k - 1) * M.A i j') * M.c j' ^ (l - 1))
+      - (∑ j' : Fin s,
+        (M.b j' / (k : ℝ)) * (1 - M.c j' ^ k) * M.c j' ^ (l - 1)) := by
+        rw [← Finset.sum_sub_distrib]
+        apply Finset.sum_congr rfl
+        intros; ring
+  _ = 1 / ((l : ℝ) * ((k : ℝ) + (l : ℝ)))
+      - 1 / ((l : ℝ) * ((k : ℝ) + (l : ℝ))) := by rw [h_first, h_second]
+  _ = 0 := by ring
 ```
 
-### Likely tactic snags & fallbacks
-
-* **`Finset.sum_sub_distrib` direction.** Mathlib provides
-  `Finset.sum_sub_distrib : ∑ x ∈ s, (f x - g x) = (∑ x ∈ s, f x) -
-  (∑ x ∈ s, g x)`. We need the **forward** direction to convert the
-  `∑_j (X_j - Y_j)` shape into `∑ X_j - ∑ Y_j`. Use `rw
-  [Finset.sum_sub_distrib]` (no arrow). If the name has drifted in
-  the pinned Mathlib version, try `lean_local_search "sum_sub"` —
-  alternatives include `Finset.sum_sub_distrib`, `Finset.sum_sub`,
-  or expanding via `simp only [← Finset.sum_sub_distrib]`.
-  **Five existing files** in the repo already use this lemma
-  (Sections 319, 381, 441, 454Aux, 515); grep them for the exact
-  spelling if any uncertainty arises.
-
-* **`hexp : (l - 1) + k = (k + l) - 1`.** Closed by `omega` because
-  `1 ≤ l` (from `hl1`) ensures the Nat subtraction is well-behaved.
-  Same pattern as cycle 313 (which used `(k - 1) + l = (k + l) - 1`).
-
-* **`field_simp` + `ring` final close.** If `field_simp` leaves a
-  goal that `ring` cannot close because of the `(l : ℝ)` and
-  `((k + l : ℕ) : ℝ)` casts not aligning, run `push_cast` *before*
-  `field_simp` (as written above) so all natural-number arguments
-  push outward to `ℝ` numerals first.
-
-* **Inner `ring` after `pow_add`.** After
-  `rw [show M.c j ^ ((k + l) - 1) = M.c j ^ ((l - 1) + k) by ...,
-      pow_add]`, the summand is
-  `M.c j ^ (l - 1) · ((M.b j / k) · (1 - M.c j ^ k))
-   = (1/k) · (M.b j · M.c j ^ (l - 1)
-              - M.b j · (M.c j ^ (l - 1) · M.c j ^ k))`.
-  `field_simp` followed by `ring` should discharge this, since
-  `k ≠ 0` (we have `hk_ne` in scope). If `field_simp; ring` stalls,
-  try the more aggressive `field_simp [hk_ne]; ring` or split into
-  two rewrites.
-
-## D. Non-vacuity witness
-
-Add one `example` after the cycle 313 `gaussLegendre1Stage`
-non-vacuity block (currently lines 341–358 of `Section321.lean`):
+### Step 4 — extract `v j = 0` and rearrange to D(s)
 
 ```lean
-/-- *Non-vacuity for the abstract (342o) clause via `gaussLegendre1Stage`.*
-The implicit-midpoint tableau satisfies `B(2)` and `D(1)` (existing
-witnesses above), so the abstract bridge
-`RKTableau.satisfiesE_of_satisfiesB_satisfiesD` yields `E(1, 1)`. -/
-example : gaussLegendre1Stage.SatisfiesE 1 1 :=
-  gaussLegendre1Stage.satisfiesE_of_satisfiesB_satisfiesD
-    (hB := by
-      intro k h1 hk
-      interval_cases k
-      · simp [gaussLegendre1Stage]
-      · simp [gaussLegendre1Stage])
-    (hD := by
-      intro j k h1 hk
-      interval_cases k
-      simp [gaussLegendre1Stage]
-      norm_num)
+have hvj : v j = 0 := congrFun hv_zero j
+simp only [v_def] at hvj
+linarith
 ```
 
-The `D(1)` proof body matches the existing `gaussLegendre1Stage.SatisfiesD
-1` witness at line 328-332 verbatim.
+**Note**: `v_def` is the `with v_def` artifact from `set`. If you
+forget that, use `show v j = 0` and unfold manually.
 
-## E. Verification protocol (mandatory, in order)
+## Non-vacuity (P2, mandatory after P1 lands)
 
-After editing `OpenMath/Chapter3/Section321.lean`:
+Add an `example` exercising the new theorem on `gaussLegendre1Stage`,
+mirroring cycle 313/314's pattern:
 
-1. **Compile**: `lake env lean OpenMath/Chapter3/Section321.lean`
-   (exit 0).
-2. **Refresh oleans** (cycle 313 discovery — `lake env lean` does
-   NOT update `.olean` files):
-   `lake build OpenMath.Chapter3.Section321`.
-3. **Aggregator**: `lake build OpenMath.Chapter3` (exit 0; this also
-   catches any downstream regressions in `Section342.lean`).
-4. **Sorry count**: `grep -c sorry OpenMath/Chapter3/Section321.lean`
-   → 0.
-5. **Axiom check on the new theorem**:
-   ```text
-   #print axioms OpenMath.Chapter3.Section312.RKTableau.satisfiesE_of_satisfiesB_satisfiesD
-   ```
-   Expected: `[propext, Classical.choice, Quot.sound]`. NO
-   `sorryAx`, NO custom axioms.
-6. **Regression check**: cycle 313's
-   `satisfiesE_of_satisfiesB_satisfiesC` and cycle 312's
-   `butcherGaussLegendreRK_satisfiesE` should remain axiom-clean.
+```lean
+example : RKTableau.gaussLegendre1Stage.SatisfiesD 1 := by
+  apply RKTableau.satisfiesD_of_satisfiesB_satisfiesE
+  · -- Function.Injective gaussLegendre1Stage.c (vacuous at s = 1)
+    intro i j _
+    fin_cases i; fin_cases j; rfl
+  · -- gaussLegendre1Stage.SatisfiesB 2
+    intro k h1 hk
+    interval_cases k <;>
+      (simp [RKTableau.SatisfiesB, gaussLegendre1Stage]; norm_num)
+  · -- gaussLegendre1Stage.SatisfiesE 1 1
+    intro k h1 hk l hl1 hl
+    interval_cases k; interval_cases l
+    simp [RKTableau.SatisfiesE, gaussLegendre1Stage]; norm_num
+```
 
-If step 5 leaks `sorryAx` from upstream, that is a **pre-existing**
-status of cycles 301+'s `_rootsInIoo_card_ge` (see `plan.md`'s
-`lem:342B` row); the cycle 313 theorem was also affected and is
-documented. Do NOT attempt to fix this leak — it's outside cycle
-314 scope.
+The `Function.Injective` clause is vacuously true at `s = 1` since
+both `i` and `j` reduce to `(0 : Fin 1)` and `rfl` closes. The B(2)
+and E(1,1) witnesses are pattern-match with cycle 313/314's
+analogous examples — same `simp`/`norm_num` recipe.
 
-## F. Pre-commit faithfulness checklist (mandatory per CLAUDE.md)
+## Stretch (P3, only if P1+P2 close in <120 minutes)
 
-Cycle 314 introduces ONE new theorem (`satisfiesE_of_satisfiesB_satisfiesD`)
-and ONE unnamed `example`. The example has no faithfulness
-obligation. For the theorem:
+Ship clause **(342n)** `B(2s) ∧ E(s, s) ⇒ C(s)` with additional
+hypothesis `(hb : ∀ i, M.b i ≠ 0)`. Structurally identical: define
+`v i := M.b i * (residual_C i k)`, apply the same Vandermonde
+lemma, then divide by `M.b i` to extract the C(s) residual = 0.
 
-* **Entity ID**: `thm:342C` (clause (342o)).
-* **Quote from textbook** (from
-  `extraction/formalization_data/entities/thm_342C.json`'s
-  `statement_latex`):
-  > `B(2s) \land D(s) \Rightarrow E(s, s)`     (342o)
-* **Lean statement captures**: *same content* — flat implication
-  with hypothesis pack (B(2s) ∧ D(s)) expressed as named hypotheses
-  `hB`/`hD`, conclusion `E(s, s)`.
-* **Tautology check**: ✓ Conclusion `M.SatisfiesE s s` does NOT
-  appear among hypotheses (which are `M.SatisfiesB (2*s)` and
-  `M.SatisfiesD s`).
-* **Identity check**: ✓ Proof is structural, multi-step `have`/`rw`
-  composition; NOT a one-line `:= h_*`.
-* **Definition smuggling check**: ✓ No new `def`/`class`/`structure`.
-  The §321 B/D/E predicates were audited cycle 306.
-* **Hypothesis strength check**: ✓ Hypotheses match Butcher's
-  (342o) exactly. Cannot weaken `SatisfiesB (2*s)` (needed at
-  exponent `k+l ≤ 2*s`). Cannot weaken `SatisfiesD s` (needed at
-  full exponent `s`, since `1 ≤ k ≤ s`).
-* **No extra hypotheses**: ✓ no `0 < s` precondition (vacuous case
-  closed by `omega` inside the `hkl_hi` check).
+Faithfulness note for (342n): the `b nonzero` hypothesis is NOT
+explicit in Butcher §342 — Butcher implicitly assumes non-vanishing
+weights. Cycle 305's `butcherShiftedLegendre_quadratureWeights_pos`
+confirms this for the canonical Gauss-Legendre tableau. Document
+the divergence clearly in the docstring.
 
-## G. What NOT to do
+**Do NOT attempt P3 unless P1+P2 close cleanly and quickly.** Pushing
+to 250+ LOC in one cycle risks elaboration stalls (cf. cycle 166's
+Section454 monolithic-proof timeout). Better to ship (342p) clean
+than to land a partial (342n).
 
-* **Do NOT add `(hs : 0 < s)`** as a hypothesis. The cycle 313
-  (342m) theorem proves the analogous fact without it; (342o)
-  should do the same. The vacuous-case analysis (`s = 0` ⇒
-  empty quantifier) closes via `omega` from the `interval_cases`
-  bound contradictions.
+## What NOT to try
 
-* **Do NOT touch `OpenMath/Chapter3/Section342.lean`.** The (342o)
-  clause is a *generic* RKTableau theorem that belongs in
-  `Section321.lean` alongside the predicate definitions and cycle
-  313's (342m). The Gauss–Legendre specialisations in
-  `Section342.lean` are downstream *consumers* of these abstract
-  clauses (cycles 309–312); they do not need new content this
-  cycle.
+* **Do NOT reprove Vandermonde non-singularity from scratch.**
+  Mathlib's `eq_zero_of_forall_pow_sum_mul_pow_eq_zero` is the
+  intended shortcut. Path A from cycle 314's task results explicitly
+  anticipates "non-singular Vandermonde-style matrix argument"; this
+  Mathlib lemma IS that argument, packaged.
 
-* **Do NOT attempt (342n) or (342p) in the same cycle.** Those are
-  the Vandermonde-converse clauses (forward direction: E ⇒ C, or
-  E ⇒ D, via a non-singular `b`-weighted Vandermonde matrix). They
-  require ~150 LOC of matrix-inverse infrastructure each and should
-  ship as a paired cycle (the proof skeletons are symmetric). The
-  cycle 313 task results explicitly flag them as a separate
-  deliverable.
+* **Do NOT use `eq_zero_of_forall_index_sum_pow_mul_eq_zero`**
+  (the swapped variant). Our setup has the residual `v` multiplied
+  by `c^{l-1}` on the right; the `_pow_sum_mul_pow_` version matches
+  this shape:
+  `∀ i : Fin n, (∑ j : Fin n, v j * f j ^ (i : ℕ)) = 0 → v = 0`.
 
-* **Do NOT attempt clauses (342j)/(342k)/(342l).** These involve
-  `G(2s)` — the elementary-differential / B-series order condition
-  — which is blocked on the unformalised `thm:314A`. Multi-cycle
-  prerequisite work.
+* **Do NOT try to invert cycle 313's (342m) proof "backwards".**
+  That proof builds E(s,s) FROM C(s); it doesn't invert. The
+  Vandermonde argument is the genuinely new piece.
 
-* **Do NOT pivot to `thm:344A` (Radau/Lobatto methods).** That is
-  the natural cycle 315+ target, but it consumes the §321 B/C/D/E
-  predicates wholesale; shipping (342o) first strengthens the
-  abstract toolkit before that pivot.
+* **Do NOT add a `0 < s` hypothesis.** At `s = 0`, the universally
+  quantified `∀ j : Fin 0, ∀ k, …` is vacuous and the theorem holds
+  trivially. Matches cycle 313/314 signatures.
 
-* **Do NOT submit to Aristotle.** This is a single-cycle target
-  with a known mechanical proof recipe. Aristotle is appropriate
-  for: long-running parallel jobs (cf. cycle 273's (342a)), or
-  proofs needing nontrivial premise selection. A 90-LOC port of a
-  cycle 313 proof body does not need it.
+* **Do NOT freelance to (342n) before (342p) closes.** P3 is
+  explicitly gated on P1+P2 success.
 
-* **Do NOT use `simp only [Matrix.dotProduct]`** anywhere in this
-  cycle. The `dotProduct` symbol lives at root namespace (per
-  `consultant_advice_cycle_167.md`); if any expansion is needed,
-  use `show ∑ i, _ = _` to expose the sum form directly.
+* **Do NOT submit to Aristotle for the analytic step.** This is
+  routine algebra with named Mathlib hooks; manual proof is faster
+  than Aristotle round-trip. Aristotle is for genuinely hard
+  searches; this is not one.
 
-* **Do NOT raise `maxHeartbeats`.** The proof should fit
-  comfortably under the default 200000.
+* **Do NOT split (342p) into a "Phase 1 statement-only scaffold"
+  and a "Phase 2 closure".** The cycle 200/201 / 149/150 rollback
+  precedents make sorry-first scaffolds unacceptable when single-
+  cycle closure is feasible — and per the Mathlib-helper discovery
+  above, single-cycle closure IS feasible here.
 
-* **Do NOT introduce `sorry`/`axiom`/`constant`.** Cycle 314's
-  deliverable bar is "ship axiom-clean or skip the cycle". The
-  cycle 313 proof has a clear-cut, 50-LOC body — the (342o)
-  counterpart will be similar size.
+## Common pitfalls (verified in cycles 311–314)
 
-* **Do NOT attempt to compile `OpenMath/Chapter4/Section441.lean`.**
-  43+ consecutive GPFS timeouts since cycle 182. Skip per
-  `cycle_182_gpfs_slowness.md`. (Not relevant to cycle 314 anyway —
-  this cycle's deliverable lives entirely in Chapter 3.)
+1. **Inner `field_simp` may close the goal alone.** Cycle 314 hit
+   "No goals" after `field_simp` followed by an unneeded `ring`.
+   If you see that error, just remove the trailing `ring`.
 
-## H. Sizing / time budget
+2. **`push_cast` is needed before `field_simp`** to normalise
+   `((k + l : ℕ) : ℝ)` to `(k : ℝ) + (l : ℝ)`. Without it,
+   `field_simp` may not recognise `(k + l) ≠ 0` correctly.
 
-* **Theorem body**: ~80 LOC (matches cycle 313's 47-line body plus
-  the extra sub-rewrite for the `1 - c^k` split).
-* **Docstring + non-vacuity**: ~30 LOC.
-* **Total file delta**: ~110 LOC inserted at `Section321.lean:255`
-  (after cycle 313 block, before `namespace OpenMath.Chapter3.Section321`).
-* **Estimated time**: 30–60 min, with the bulk being verifying the
-  intermediate `show` rewrites elaborate cleanly. If you blow past
-  90 min, the bottleneck is most likely the `Finset.sum_sub_distrib`
-  direction or the inner `ring` after `pow_add`; consult the
-  fallbacks in §C.
+3. **`Finset.sum_comm` works for `∑ᵢ ∑ⱼ → ∑ⱼ ∑ᵢ`** over
+   `Finset.univ × Finset.univ`. No primed variant needed.
 
-## I. After landing
+4. **`set` artifacts**: `set v := expr with v_def` creates a
+   hypothesis `v_def : v = expr`. To unfold `v` later, use
+   `simp only [v_def]` or `show` reframing. **A bare `set v := expr`
+   without `with` does NOT create the hypothesis** — easy mistake.
 
-* Update `plan.md`'s `thm:342C` row to reflect the (342o) addition
-  (the partial `[~]` status persists — (342n)/(342p) Vandermonde
-  clauses and (342j)/(342k)/(342l) `G(2s)` clauses remain open).
-* Update `lean_status.json`'s `thm:342C` entry's `notes` field to
-  add: "cycle 314 — (342o) `B(2s) ∧ D(s) ⇒ E(s, s)` shipped
-  axiom-clean as
-  `RKTableau.satisfiesE_of_satisfiesB_satisfiesD`."
-* Write `.prover-state/task_results/cycle_314.md` documenting:
-  worked on (342o); approach (sum-swap + D(s) + B(2s) × 2);
-  result (SUCCESS, axiom-clean); faithfulness check (above);
-  dead ends (any tactic snags encountered); discovery (anything
-  about Mathlib's `Finset.sum_sub_distrib` direction or pow_add
-  composition worth flagging); suggested next approach (cycle 315
-  candidate: (342n)/(342p) Vandermonde-converse pair, OR pivot to
-  `thm:344A` Radau/Lobatto, OR `thm:344A` predecessor scoping).
-* Commit and push.
+5. **`Mathlib.LinearAlgebra.Vandermonde` is NOT transitively imported**
+   by `Mathlib.Algebra.BigOperators.Fin` or by the `Section312` chain.
+   Explicit `import` line needed at the top of `Section321.lean`.
 
-## J. If something goes wrong
+6. **Pow arithmetic `c^k · c^(l-1) = c^((k+l)-1)`** needs care:
+   `← pow_add` gives `c^(k + (l-1))`, then `omega` shows
+   `k + (l - 1) = (k + l) - 1` (using `1 ≤ l`). Lean's Nat-subtraction
+   is truncating, so `omega` is the right tactic to verify the
+   identity, not `ring`.
 
-* **Compile fails on `Finset.sum_sub_distrib`**: try
-  `Finset.sum_sub_distrib`, `Finset.sum_sub_distrib`, or in the
-  worst case factor the split outward:
-  ```lean
-  rw [show (∑ j : Fin s, (M.b j * M.c j ^ (l - 1)
-                          - M.b j * M.c j ^ ((k + l) - 1)))
-            = (∑ j : Fin s, M.b j * M.c j ^ (l - 1))
-              - (∑ j : Fin s, M.b j * M.c j ^ ((k + l) - 1)) by
-        rw [← Finset.sum_sub_distrib]]
-  ```
-  Then both directions are available. If still stuck, grep the
-  5 files using the lemma (`OpenMath/Chapter3/Section319.lean`,
-  `Section381.lean`, `OpenMath/Chapter4/Section441.lean`,
-  `Section454Aux.lean`, `OpenMath/Chapter5/Section515.lean`) to
-  see the exact form.
+7. **`Finset.sum_sub_distrib`** is the canonical name in current
+   Mathlib (NOT `Finset.sum_sub` or `sub_sum`). It's at
+   `Mathlib.Algebra.BigOperators.Basic` and transitively imported.
 
-* **`field_simp` blow-up**: split the final arithmetic into named
-  `have` steps. The identity
-  `(1/k) · (1/l - 1/(k+l)) = 1/(l·(k+l))`
-  rearranges as `(k+l - l) / (k · l · (k+l)) = 1/(l · (k+l))`, i.e.
-  `k · l · (k+l) = k · l · (k+l)`. If `field_simp + ring` cannot
-  navigate this, try `field_simp [hk_ne, hl_ne, hkl_ne]` after
-  introducing the three non-zeroness facts (where `hl_ne` and
-  `hkl_ne` are derived analogously to `hk_ne`).
+## Verification checklist (run at end of cycle)
 
-* **`hkl_hi` fails**: this requires `k + l ≤ 2 * s` from `k ≤ s`
-  and `l ≤ s`. `omega` should close it directly. If not, add the
-  step `have : k + l ≤ s + s := by omega` then `linarith`.
+1. `lake env lean OpenMath/Chapter3/Section321.lean` exits 0.
+2. `lake build OpenMath.Chapter3` (full chapter) exits 0.
+3. `grep -c sorry OpenMath/Chapter3/Section321.lean` returns 0.
+4. `#print axioms
+   OpenMath.Chapter3.Section312.RKTableau.satisfiesD_of_satisfiesB_satisfiesE`
+   returns `[propext, Classical.choice, Quot.sound]` only.
+5. Cycle 313/314 regression check: `#print axioms` on
+   `satisfiesE_of_satisfiesB_satisfiesC` and
+   `satisfiesE_of_satisfiesB_satisfiesD` returns the same axiom set
+   (no regression).
 
-* **Proof body exceeds ~100 LOC**: split into named private
-  helper lemmas (e.g. one per step). The cycle 308 / 311 /
-  312 / 313 examples all show this pattern. Do NOT keep grinding
-  a single proof block past 100 LOC.
+## Faithfulness check (mandatory per CLAUDE.md)
 
-The proof is concrete and tractable. Ship axiom-clean, write task
-results, commit, push. Cycle 314 done.
+`satisfiesD_of_satisfiesB_satisfiesE`:
+
+* **Textbook entity**: `thm:342C` clause (342p), Butcher §342, p. 238.
+* **Statement quoted from
+  `extraction/formalization_data/entities/thm_342C.json`**:
+  > `B(2s) \land E(s, s) \Rightarrow D(s)`     (342p)
+* **Lean statement captures**: same content, **plus** the extra
+  hypothesis `Function.Injective M.c` (distinct abscissae).
+* **Faithfulness divergence**: the textbook implicitly assumes
+  distinct abscissae via "the matrix multiplier is non-singular";
+  we surface this explicitly. The Gauss-Legendre tableau satisfies
+  injectivity automatically (cycle 302), so downstream consumers
+  are unaffected. Document in the theorem docstring.
+* **Tautology check**: ✓ Conclusion `M.SatisfiesD s` does NOT appear
+  among hypotheses (B and E are distinct §321 predicates).
+* **Identity check**: ✓ Proof is substantive (~130 LOC) including
+  a Vandermonde-inversion appeal and two-step algebraic factoring;
+  not `exact h_*`.
+* **Definition smuggling check**: ✓ No new defs/structures; consumes
+  §321's existing B/D/E predicates (audited cycle 306).
+* **Hypothesis strength check**: All four hypotheses are minimal:
+  `B(2s)` used at exponents `l` and `k+l` (both ≤ 2s);
+  `E(s, s)` used at all `(k, l) ∈ [1, s]²`; `Function.Injective M.c`
+  required for the Vandermonde matrix to be invertible. None can
+  be weakened.
+* **Absent theorem check**: N/A — no comments promising deferred
+  content.
+
+## Cycle structure suggestion
+
+* **0–25 min**: Read this strategy. Verify the Mathlib Vandermonde
+  lemma signature with `lean_local_search` or by reading
+  `.lake/packages/mathlib/Mathlib/LinearAlgebra/Vandermonde.lean:258`.
+  Add the `import Mathlib.LinearAlgebra.Vandermonde` line.
+
+* **25–60 min**: Shape the proof skeleton (Steps 0/1/2/4 + the
+  `hv_zero` outer structure with `h_first` and `h_second` left as
+  named `sorry`s initially). Confirm the file still compiles with
+  the two sorries.
+
+* **60–110 min**: Fill `h_first` (sum-swap + hE application). Should
+  be the easier of the two — ~25 LOC.
+
+* **110–160 min**: Fill `h_second` (per-`j'` rewrite + hB twice +
+  arithmetic). Harder — ~50 LOC. The `linear_combination` in the
+  per-`j'` rewrite may need to be replaced with explicit
+  `rw [← h_pow_split]; ring` if `linear_combination` doesn't fire.
+
+* **160–175 min**: P2 non-vacuity example on `gaussLegendre1Stage`.
+
+* **175–195 min**: Faithfulness check + axiom check + commit message
+  + push.
+
+If you blow past 195 min on the analytic core, **extract sub-results
+as private named helpers** rather than inlining. Cycle 166→167 lesson:
+extraction beats monolithic proofs when elaboration stalls.
+
+## Cycle 316+ outlook
+
+* **Cycle 316**: ship (342n) `B(2s) ∧ E(s, s) ⇒ C(s)` using the
+  same Vandermonde recipe + the extra `b i ≠ 0` hypothesis. With
+  (342p) in hand as a template, this is a guaranteed single-cycle
+  ship (~150 LOC).
+
+* **Cycle 317+**: pivot to one of:
+  - **`thm:344A` Radau/Lobatto methods** — concrete-tableau ship,
+    consumes the full §321 B/C/D/E toolkit.
+  - **`thm:342C` G(2s) clauses (342j)/(342k)/(342l)** — blocked on
+    `thm:314A` elementary-differential infrastructure
+    (see `lem_310B_plan.md`); multi-cycle.
+  - **`lem:359A`** (V and W transformations) — first user of
+    `lem:342A`/`lem:342B` outside the direct §342 chain.
+
+The planner for cycle 316 will revisit this list once (342p) lands.
