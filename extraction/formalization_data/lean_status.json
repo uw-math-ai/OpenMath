@@ -1,8 +1,9 @@
 {
   "cor:342D": {
-    "lean_file": null,
-    "lean_symbol": null,
-    "status": "unformalized"
+    "lean_file": "OpenMath/Chapter3/Section342.lean",
+    "lean_symbol": "OpenMath.Chapter3.Section342.butcherGaussLegendreRK_satisfiesE",
+    "status": "unformalized",
+    "note": "Cycle 312: E(n,n) prong shipped, completing the B/C/D/E quadrature characterisation of the canonical Gauss-Legendre RKTableau at general n (cycles 309/310/311/312). Full iff (cor:342D headline) still requires thm:342C + thm:314A; multi-cycle, out-of-scope. Symbol points to the cycle 312 E(n,n) corollary."
   },
   "cor:356D": {
     "lean_file": null,

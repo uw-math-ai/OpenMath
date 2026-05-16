@@ -7453,4 +7453,127 @@ example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesD 1 := by
       ← butcherGaussLegendreRK_one_eq]
   exact butcherGaussLegendreRK_satisfiesD 1
 
+/-! ### Phase 3.3 — `E(n, n)` lift via algebraic composition of B(2n) + C(n) (cycle 312)
+
+Cycles 309/310/311 shipped the `B(2n)`, `C(n)`, and `D(n)` prongs of
+`cor:342D`. Cycle 312 closes the fourth prong, `E(n, n)`, completing
+the full B/C/D/E quadrature characterisation for the canonical
+Gauss–Legendre tableau at general `n`. The full `cor:342D` iff
+statement still requires `thm:342C` + `thm:314A` infrastructure
+(out-of-scope; multi-cycle).
+
+Unlike the cycle 311 `D(n)` recipe (IBP via polynomial
+antiderivatives), `E(n, n)` reduces to a *purely algebraic*
+two-step composition: the inner `j`-sum is exactly `C(n)`'s LHS at
+exponent `l`, evaluating to `c_i^l / l`; the outer `i`-sum is then
+`B(2n)`'s LHS at the combined exponent `k + l`, evaluating to
+`1 / (k + l)`. The final closure `(1/l) · (1/(k+l)) = 1/(l (k+l))`
+is plain field arithmetic. -/
+
+/-- **Headline cycle 312 corollary: §342 ↔ §321 `E(n, n)` lift.**
+The general-`n` Gauss–Legendre `RKTableau` (collocation `A`-matrix,
+canonical Lagrange weights at the shifted Legendre zeros) satisfies
+the Butcher §321 `E(n, n)` order condition. Together with cycles
+309/310/311's `B(2n)`, `C(n)`, `D(n)` corollaries, this completes
+the four-prong B/C/D/E quadrature characterisation of the
+canonical Gauss–Legendre tableau (partial evidence for `cor:342D`;
+the full iff `RK order 2s ⇔ collocation at shifted Legendre zeros`
+remains multi-cycle work, requiring `thm:342C` and `thm:314A`).
+
+The proof is a two-step algebraic composition: apply `C(n)` at
+exponent `l` to reduce the inner `j`-sum to `c_i^l / l`; apply
+`B(2n)` at combined exponent `k + l` to reduce the outer `i`-sum
+to `1 / (k + l)`; close with field arithmetic. No `0 < n`
+precondition is required on the signature; we derive it inside
+the proof from `1 ≤ l ≤ n` (matching the cycle 310 `_satisfiesC`
+signature). -/
+theorem butcherGaussLegendreRK_satisfiesE (n : ℕ) :
+    (butcherGaussLegendreRK n).SatisfiesE n n := by
+  intro k h1 hk l hl1 hl
+  show (∑ i : Fin n, ∑ j : Fin n,
+          butcherShiftedLegendre_quadratureWeights n i *
+            butcherShiftedLegendre_zeros n i ^ (k - 1) *
+            butcherShiftedLegendre_collocationA n i j *
+            butcherShiftedLegendre_zeros n j ^ (l - 1))
+        = 1 / ((l : ℝ) * ((k : ℝ) + (l : ℝ)))
+  have hn : 0 < n := lt_of_lt_of_le hl1 hl
+  have hl_pos : 0 < (l : ℝ) := by exact_mod_cast hl1
+  have hl_ne : (l : ℝ) ≠ 0 := ne_of_gt hl_pos
+  -- Step 1: C(n) at exponent l, restated with unfolded field names.
+  have hCi : ∀ i : Fin n,
+      (∑ j : Fin n,
+        butcherShiftedLegendre_collocationA n i j *
+          butcherShiftedLegendre_zeros n j ^ (l - 1))
+        = butcherShiftedLegendre_zeros n i ^ l / (l : ℝ) :=
+    fun i => butcherGaussLegendreRK_satisfiesC n i l hl1 hl
+  -- Step 2: outer rewrite — factor i-only out of inner sum, apply C(n),
+  -- pull (1/l) out of the outer sum, and combine powers.
+  have h_outer :
+      (∑ i : Fin n, ∑ j : Fin n,
+        butcherShiftedLegendre_quadratureWeights n i *
+          butcherShiftedLegendre_zeros n i ^ (k - 1) *
+          butcherShiftedLegendre_collocationA n i j *
+          butcherShiftedLegendre_zeros n j ^ (l - 1))
+      = (1 / (l : ℝ)) *
+        ∑ i : Fin n,
+          butcherShiftedLegendre_quadratureWeights n i *
+            butcherShiftedLegendre_zeros n i ^ ((k + l) - 1) := by
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro i _
+    rw [show (∑ j : Fin n,
+              butcherShiftedLegendre_quadratureWeights n i *
+                butcherShiftedLegendre_zeros n i ^ (k - 1) *
+                butcherShiftedLegendre_collocationA n i j *
+                butcherShiftedLegendre_zeros n j ^ (l - 1))
+            = butcherShiftedLegendre_quadratureWeights n i *
+              butcherShiftedLegendre_zeros n i ^ (k - 1) *
+              (∑ j : Fin n,
+                butcherShiftedLegendre_collocationA n i j *
+                  butcherShiftedLegendre_zeros n j ^ (l - 1)) by
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro j _
+        ring]
+    rw [hCi i]
+    have hexp : (k - 1) + l = (k + l) - 1 := by omega
+    rw [show butcherShiftedLegendre_zeros n i ^ ((k + l) - 1)
+          = butcherShiftedLegendre_zeros n i ^ ((k - 1) + l) by rw [hexp]]
+    rw [pow_add]
+    field_simp
+  rw [h_outer]
+  -- Step 3: B(2n) at exponent k + l.
+  have hkl_lo : 1 ≤ k + l := by omega
+  have hkl_hi : k + l ≤ 2 * n := by omega
+  have hB_eval :
+      (∑ i : Fin n,
+        butcherShiftedLegendre_quadratureWeights n i *
+          butcherShiftedLegendre_zeros n i ^ ((k + l) - 1))
+        = 1 / ((k + l : ℕ) : ℝ) :=
+    butcherGaussLegendreRK_satisfiesB n hn (k + l) hkl_lo hkl_hi
+  rw [hB_eval]
+  -- Step 4: arithmetic closure (1/l) * (1/(k+l)) = 1 / (l * (k+l)).
+  push_cast
+  field_simp
+
+/-- **Non-vacuity witness at `n = 2`.** Exercises the cycle 312 `E(n, n)`
+theorem at the smallest non-anchor stage count: the 2-stage
+Gauss–Legendre method satisfies the §321 `E(2, 2)` condition (four
+double-sum identities `∑ᵢⱼ bᵢ cᵢ^(k-1) Aᵢⱼ cⱼ^(l-1) = 1/(l (k+l))`
+for `k, l ∈ {1, 2}`). -/
+example : (butcherGaussLegendreRK 2).SatisfiesE 2 2 :=
+  butcherGaussLegendreRK_satisfiesE 2
+
+/-- **Round-trip witness through §321's `gaussLegendre1Stage`.**
+Cycle 306 proved this `E(1, 1)` fact directly via `interval_cases`;
+cycle 312 re-derives it through the general theorem
+`butcherGaussLegendreRK_satisfiesE` at `n = 1`, validating that the
+cycle 312 `E(n, n)` bridge is downstream-consumable: §321's
+hand-built implicit-midpoint tableau is `E(1, 1)`-correct *via* the
+§342 collocation construction. -/
+example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesE 1 1 := by
+  rw [← butcherGaussLegendreRK_one_eq_gaussLegendre1Stage,
+      ← butcherGaussLegendreRK_one_eq]
+  exact butcherGaussLegendreRK_satisfiesE 1
+
 end OpenMath.Chapter3.Section342
