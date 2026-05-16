@@ -1954,4 +1954,64 @@ example : butcherRadauIDirect_two.SatisfiesC 2 := by
   fin_cases i <;> interval_cases k <;>
     simp [butcherRadauIDirect_two, Fin.sum_univ_two] <;> norm_num
 
+/-! ## Deliverable D.10 — Small-`s` RKTableau (Lobatto IIIC, `s = 2`)
+
+Cycle 330. Per Butcher Table 344(I) (`ch03.txt:5224`), the Lobatto IIIC
+family's `A`-matrix is *"the reflections of Lobatto III"* — neither the
+plain C(s) collocation matrix (which produces Lobatto IIIA) nor the D(s)
+matrix (Lobatto IIIB). The cycle 330 §B audit confirmed that plain
+Lagrange collocation at the Lobatto abscissae `(0, 1)` yields rows
+`(0, 0)` and `(1/2, 1/2)`, but Butcher's printed Lobatto IIIC `s = 2`
+table (p. 226, `ch03.txt:5389-5396`) gives rows `(1/2, -1/2)` and
+`(1/2, 1/2)`. Row 0 disagrees entry-for-entry.
+
+This is the **fourth divergent audit outcome** in the small-`s`
+direct-form ladder (cycles 326 Radau IA, 327 Lobatto IIIB, 328 Radau II
+D(s), and now 330 Lobatto IIIC). Only cycle 329's Radau I C(s)
+variant coincided with plain collocation. The pattern matches Butcher's
+Table 344(I) classification: reflection-style and D(s) variants do not
+arise from plain Lagrange collocation; only the C(s) variants do.
+
+See `.prover-state/issues/radau_ia_collocation_divergence.md` (cycle 326)
+for the broader precedent. The formal lift from a reflection-style
+collocation construction to a `RKTableau` is deferred; this cycle ships
+the printed values inline. -/
+
+/-- **Butcher §344 — Lobatto IIIC `s = 2` tableau** declared inline from
+Butcher's printed Table 344(IV), p. 226
+(`extraction/raw_text/ch03.txt:5389-5396`): `c = (0, 1)`,
+`b = (1/2, 1/2)`, `A = !![1/2, -1/2; 1/2, 1/2]`. This is the classical
+Lobatto IIIC two-stage method with attainable order `p = 2` (printed
+as `(s = 2, p = 2)` in Butcher's table heading).
+
+The A-matrix follows Butcher's *"reflections of Lobatto III"* recipe
+(Table 344(I) row 5224) rather than plain Lagrange collocation; row 0
+disagrees with the C(s) collocation matrix at the same abscissae
+(`(1/2, -1/2)` vs `(0, 0)`). See the section header docstring and
+`.prover-state/issues/radau_ia_collocation_divergence.md` for the
+broader audit pattern across reflection-style RK families. -/
+noncomputable def butcherLobattoIIICDirect_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![1/2, -(1/2); 1/2, 1/2]
+  b := ![1/2, 1/2]
+  c := ![0, 1]
+
+/-- **Non-vacuity (B(2))**: the direct Lobatto IIIC `s = 2` tableau
+satisfies the order-2 quadrature condition `B(2)` (Lobatto IIIC at
+`s = 2` is exact for polynomials of degree `p = 2`, per Butcher's
+printed table heading `(s = 2, p = 2)` at `ch03.txt:5389`).
+`∑ⱼ bⱼ · cⱼ^0 = 1/2 + 1/2 = 1 = 1/1`,
+`∑ⱼ bⱼ · cⱼ^1 = (1/2)·0 + (1/2)·1 = 1/2 = 1/2`.
+
+B(3) provably fails for this tableau:
+`∑ⱼ bⱼ · cⱼ^2 = 0 + (1/2)·1 = 1/2 ≠ 1/3`, consistent with the printed
+order `p = 2`. C(2) and D(2) also fail (cycle 330 strategy §B.2); the
+B(2) certificate is the appropriate non-vacuity bar for this reflection
+variant, mirroring cycle 326's Radau IA direct-form ship. -/
+example : butcherLobattoIIICDirect_two.SatisfiesB 2 := by
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherLobattoIIICDirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherLobattoIIICDirect_two, Fin.sum_univ_two]
+
 end OpenMath.Chapter3.Section344

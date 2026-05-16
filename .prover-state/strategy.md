@@ -1,287 +1,246 @@
-# Cycle 329 Strategy — §344 Phase D.9: Radau I `s = 2` direct-form `RKTableau` (C(s) variant)
+# Cycle 330 Strategy — §344 Phase D.10: Lobatto IIIC `s = 2` direct-form `RKTableau`
 
-## §A. Status check
+## A. Headline target
 
-Cycle 328 shipped `butcherRadauIIDirect_two : RKTableau 2` (D(s)
-variant of Radau II) plus `B(3)` and `D(2)` non-vacuity witnesses,
-all axiom-clean. Section344.lean is at 1883 LOC, sorry count 0.
-The audit-first protocol has now caught divergence three times in a
-row (cycles 326 Radau IA, 327 Lobatto IIIB, 328 Radau II) — keep it.
+Ship `butcherLobattoIIICDirect_two : RKTableau 2` (the "reflections of
+Lobatto III" variant per Butcher Table 344(IV)) plus a `SatisfiesB 2`
+non-vacuity witness, all inline in
+`OpenMath/Chapter3/Section344.lean` immediately after cycle 329's
+`butcherRadauIDirect_two` block.
 
-## §B. Target
+This is the 5th cycle in the small-`s` direct-form ladder and the
+**4th divergent audit outcome** (after cycles 326 / 327 / 328 each
+diverged from plain Lagrange collocation; cycle 329 was the unique
+coincident outcome). The mechanical template is now five-cycle stable.
 
-Ship **`butcherRadauIDirect_two : RKTableau 2`** (the C(s) variant of
-Radau I at `s = 2`) plus non-vacuity witnesses. This is the natural
-continuation of the small-`s` ladder and the most-likely-to-coincide-
-with-collocation case from the cycle 328 task results §I outlook.
+## B. Pre-write audit (DONE — values verified by the planner)
 
-### §B.1 Why Radau I s=2 first (vs Lobatto IIIC or Radau I s=3)
-
-* **Lower LOC budget**: same template as cycles 326/327/328 (~50 LOC).
-* **Tests the C(s) recipe specifically**: per Butcher Table 344(I)
-  p. 244, Radau I uses `Choice of A = C(s)`. C(s) is *defined* as
-  the plain Lagrange-collocation matrix `A_{ij} = ∫₀^{c_i} L_j(x) dx`
-  at the chosen abscissae (Butcher §321 (321b)). So this case is the
-  one where direct-form should **agree** with collocation — opposite
-  of cycles 326 (Radau IA) and 328 (Radau II D(s)) where direct-form
-  diverged from collocation.
-* **Validates the audit pattern**: a "coincidence" outcome (rather
-  than divergence) is just as informative — confirms that audit-first
-  catches both divergent AND coincident cases cleanly.
-* **Existing infrastructure**: cycles 320–321 already shipped
-  `butcherRadauI_zeros_two = ![0, 2/3]` and
-  `butcherRadauI_quadratureWeights_two = ![1/4, 3/4]`, so `b` and `c`
-  fields conceptually match (definitional `rfl` against those defs is
-  a stretch goal, not a requirement).
-
-## §C. Audit-first protocol (MANDATORY before writing any Lean code)
-
-Cycles 326/327/328 established that the audit step is load-bearing.
-Run it FIRST.
-
-### §C.1 Quote Butcher's printed Radau I `s = 2` table
-
-From `extraction/raw_text/ch03.txt:5265–5270`:
+Butcher Table 344(IV) line 5389–5396 of `extraction/raw_text/ch03.txt`
+prints the Lobatto IIIC `s = 2, p = 2` table as:
 
 ```
-Radau I        (s = 2, p = 3),
-                                                      0        0       0
-                                                      2        1       1
-                                                      3        3       3
-                                                               1       3
-                                                               4       4
+                    0       1/2     -1/2
+                    1       1/2      1/2
+                            1/2      1/2
 ```
 
-Parsing the column layout (`c | A` on top, `b` row at bottom):
+Parsed:
 
-* **c**: `c₁ = 0, c₂ = 2/3`
-* **A** row 1: `A₁₁ = 0, A₁₂ = 0`
-* **A** row 2: `A₂₁ = 1/3, A₂₂ = 1/3`
-* **b**: `b₁ = 1/4, b₂ = 3/4`
+```
+c = ![0, 1]
+b = ![1/2, 1/2]
+A = !![1/2, -1/2; 1/2, 1/2]
+```
 
-So the audited values are
-`A = !![0, 0; 1/3, 1/3]`, `b = ![1/4, 3/4]`, `c = ![0, 2/3]`.
+### B.1 — Audit step (Path α): plain Lagrange collocation at `c = (0, 1)`
 
-### §C.2 Verify against plain Lagrange collocation
+`L_0(x) = (x - 1) / (0 - 1) = 1 - x`,  `L_1(x) = x / 1 = x`. Then
 
-Per Butcher Table 344(I), Radau I uses `Choice of A = C(s)`. C(s) is
-the collocation matrix `A_{ij} = ∫₀^{c_i} L_j(x) dx` at the Radau I
-abscissae. Compute by hand:
+| `(i, j)` | `∫₀^{c_i} L_j(x) dx` | Value |
+|----------|-----------------------|-------|
+| `(0, 0)` | `∫₀^0 (1-x) dx`       | `0`   |
+| `(0, 1)` | `∫₀^0 x dx`           | `0`   |
+| `(1, 0)` | `∫₀^1 (1-x) dx`       | `1/2` |
+| `(1, 1)` | `∫₀^1 x dx`           | `1/2` |
 
-* Lagrange basis at `(0, 2/3)`:
-  * `L₀(x) = (x − 2/3) / (0 − 2/3) = 1 − (3/2)x`
-  * `L₁(x) = x / (2/3) = (3/2)x`
-* `A_{0,0} = ∫₀^0 (1 − (3/2)x) dx = 0` ✓
-* `A_{0,1} = ∫₀^0 ((3/2)x) dx = 0` ✓
-* `A_{1,0} = ∫₀^{2/3} (1 − (3/2)x) dx = 2/3 − (3/4)·(4/9) = 2/3 − 1/3 = 1/3` ✓
-* `A_{1,1} = ∫₀^{2/3} ((3/2)x) dx = (3/4)·(4/9) = 1/3` ✓
+Plain collocation gives `!![0, 0; 1/2, 1/2]`. Butcher's printed
+Lobatto IIIC gives `!![1/2, -1/2; 1/2, 1/2]`. **DIVERGENT.** Row 0
+differs entry-for-entry; row 1 happens to coincide. This matches
+the cycle 326 / 327 / 328 divergence pattern (reflection variants
+do NOT come from plain collocation), confirming cycle 329's
+classification of the C(s) row as the unique liftable row.
 
-**Audit conclusion**: Radau I `s = 2` **agrees with plain Lagrange
-collocation** at the Radau I abscissae. This is the OPPOSITE of cycle
-326 (Radau IA) and cycle 328 (Radau II D(s) variant), where direct-
-form values diverged from collocation. The cycle 324 collocation
-template **does** lift to Radau I `s = 2`.
+### B.2 — Certificate selection: B(2) only
 
-### §C.3 Implication for the ship
+Numerical verification of which `SatisfiesX` certificates hold
+(using the SatisfiesB / SatisfiesC / SatisfiesD definitions at
+`OpenMath/Chapter3/Section321.lean:89–115`):
 
-This means cycle 329 has **two valid paths**:
+* **B(2)**: `∑ b_i c_i^0 = 1/2 + 1/2 = 1 = 1/1` ✓;
+  `∑ b_i c_i^1 = 0 + 1/2 = 1/2 = 1/2` ✓. **B(2) HOLDS.** B(3) fails
+  (`∑ b_i c_i^2 = 0 + 1/2 = 1/2 ≠ 1/3`), matching the printed `p = 2`.
+* **C(2)**: at `(i=0, k=2)`, `∑ A_{0,j} c_j^1 = 0 + (-1/2)·1 = -1/2`
+  but RHS `c_0^2/2 = 0`. **C(2) FAILS.**
+* **D(2)**: at `(j=1, k=2)`,
+  `∑ b_i c_i^1 A_{i,1} = b_0·0·A_{0,1} + b_1·1·A_{1,1} = 0 + 1/2·1/2 = 1/4`
+  but RHS `(b_1/2)(1 - c_1^2) = 1/4·0 = 0`. **D(2) FAILS.**
 
-* **Path α (direct-form only, recommended)**: Ship
-  `butcherRadauIDirect_two` declared inline with the audited values
-  (matches cycle 326/327/328's pattern; ~50 LOC, low risk). Add a
-  docstring note that audit-first confirmed agreement with plain
-  collocation, deferring the formal collocation-tableau lift.
-* **Path β (collocation-derived, more work)**: Build
-  `butcherRadauI_collocationA_two : Fin 2 → Fin 2 → ℝ` (mirror of
-  cycle 324's `butcherRadauII_collocationA_two`), four `_apply`
-  theorems, then assemble `butcherRadauI_two` from cycles 320/321
-  arrays plus the collocation A-matrix. Stretches into ~200 LOC and
-  reduces parity with cycles 326/327/328.
+So **B(2) is the only non-trivial certificate available**. C(1) and
+D(1) both hold trivially but they're weak — at order ≤ 1, every
+reasonable Lobatto tableau satisfies them. Per cycle 326 (Radau IA
+direct, which was also a reflection variant), shipping just
+`B(p)` is the appropriate non-vacuity bar for reflection variants.
 
-**Pick Path α.** Path β is more LOC, and the cycle 327 worker's
-discovery that mechanical direct-form ships are the robust pattern
-across `s = 2` variants means Path α is the right scope. The audit
-note in the docstring documents the coincidence with collocation for
-future cycles that might want to build the formal bridge.
+## C. Concrete deliverables
 
-## §D. Lean implementation — Path α
+### C.1 — `def butcherLobattoIIICDirect_two : RKTableau 2`
 
-### §D.1 File location
+Located immediately after cycle 329's `butcherRadauIDirect_two`
+block (line ~1957 in current HEAD), inside the existing
+`namespace OpenMath.Chapter3.Section344`. Use the cycle 329 template
+verbatim with substitutions `Radau I` → `Lobatto IIIC`,
+`c = ![0, 2/3]` → `c = ![0, 1]`, `b = ![1/4, 3/4]` → `b = ![1/2, 1/2]`,
+`A = !![0, 0; 1/3, 1/3]` → `A = !![1/2, -1/2; 1/2, 1/2]`.
 
-Append a new `D.9` section to `OpenMath/Chapter3/Section344.lean`
-after the existing `D.8` block (cycle 328's
-`butcherRadauIIDirect_two` example block).
+The docstring should:
+1. Cite Butcher Table 344(IV) p. 246, raw text `ch03.txt:5389–5396`.
+2. State `(s = 2, p = 2)`, the "reflections of Lobatto III" variant
+   per `ch03.txt:5224`.
+3. Note the audit outcome: **DIVERGES** from plain Lagrange
+   collocation (`A` row 0 disagrees: printed `(1/2, -1/2)` vs
+   collocation `(0, 0)`).
+4. Cross-reference cycle 326's `radau_ia_collocation_divergence.md`
+   for the broader pattern of reflection variants not coming from
+   plain collocation.
 
-### §D.2 Required deliverables
+### C.2 — `example : butcherLobattoIIICDirect_two.SatisfiesB 2`
 
-1. **`butcherRadauIDirect_two : RKTableau 2`** (~15 LOC including
-   docstring). Inline declaration matching the cycle 326/327/328
-   template:
+Mechanical two-arm `interval_cases k; simp [butcherLobattoIIICDirect_two,
+Fin.sum_univ_two]; norm_num` close. Exactly mirrors cycle 326's
+`butcherRadauIADirect_two.SatisfiesB 3` example (which used three
+arms for B(3)); here we have two arms for B(2).
 
-   ```lean
-   /-- Butcher Table 344(I) p. 245: the Radau I s=2 RK tableau, direct
-   form (the C(s) variant — agrees with plain Lagrange collocation at
-   the Radau I abscissae `(0, 2/3)` per the cycle 329 audit). Distinct
-   from cycle 326's `butcherRadauIADirect_two`, which is the
-   "reflections of Radau II" variant at the same abscissae. … -/
-   noncomputable def butcherRadauIDirect_two : RKTableau 2 where
-     A := !![0, 0; 1/3, 1/3]
-     b := ![1/4, 3/4]
-     c := ![0, 2/3]
-   ```
+Pre-write arithmetic spot-check (DONE in §B.2):
+- `k = 1`: `1/2·1 + 1/2·1 = 1 = 1/1` ✓
+- `k = 2`: `1/2·0 + 1/2·1 = 1/2 = 1/2` ✓
 
-2. **`SatisfiesB 3` non-vacuity** (~12 LOC). Radau I `s = 2` achieves
-   classical order `p = 2s − 1 = 3`, so `B(3)` is maximal. Use cycle
-   324's exact three-arm `interval_cases k` recipe:
+(Recall the SatisfiesB sum is `∑ b_i · c_i^(k-1)`; for `k = 2`
+that's `b_0·c_0^1 + b_1·c_1^1 = 0 + 1/2 = 1/2`.)
 
-   ```lean
-   example : butcherRadauIDirect_two.SatisfiesB 3 := by
-     intro k hk1 hk3
-     interval_cases k
-     all_goals (simp [butcherRadauIDirect_two, Fin.sum_univ_two]; norm_num)
-   ```
+### C.3 — Faithfulness check anchors
 
-3. **`SatisfiesC 2` certificate** (~12 LOC). This is the cycle 329
-   analogue of cycle 328's `D(2)` certificate — it certifies the
-   defining property of the C(s) variant. C(s) at `s = 2` covers
-   `(i, k) ∈ {0, 1} × {1, 2}`. Mechanical four-arm close:
+For the cycle results' faithfulness section:
 
-   ```lean
-   example : butcherRadauIDirect_two.SatisfiesC 2 := by
-     intro i k hk1 hk2
-     fin_cases i <;> interval_cases k <;>
-       simp [butcherRadauIDirect_two, Fin.sum_univ_two] <;> norm_num
-   ```
+* Entity ID: no per-entity JSON exists for `def:Lobatto_IIIC_s2`
+  (extractor only emits `thm:344A` for §344). Source is Butcher
+  Table 344(IV) p. 246, `ch03.txt:5389–5396`. Quote these line
+  numbers in the docstring.
+* Lean values: entry-for-entry copy of the printed table.
+* Lean statement captures: **same content**.
+* Audit divergence (DOC NOTE only, not a faithfulness issue):
+  the printed A-matrix is NOT the plain Lagrange-collocation
+  matrix at `(0, 1)`. Document in the docstring; do NOT attempt
+  to prove a coincidence theorem (none exists).
 
-   `SatisfiesC` is defined in `OpenMath/Chapter3/Section321.lean`.
-   Verify the exact `intro` arity before writing the example — it
-   should match cycle 328's `D(2)` pattern (`intro` arity 4:
-   `j, k, hk1, hk_max`, or `i, k, hk1, hk_max`). Adjust accordingly
-   if it differs.
+## D. What NOT to try
 
-### §D.3 Optional fourth deliverable (stretch, ship only if §D.2 takes <30 min)
+1. **Do NOT attempt collocation-coincidence formalisation.** The
+   audit shows divergence; trying to prove
+   `butcherLobattoIIICDirect_two.A = butcherLobattoIIIC_collocationA_two`
+   would fail at row 0 entry-for-entry. The collocation/reflection
+   bridge for Lobatto IIIC is multi-cycle work (requires Butcher's
+   "reflections of Lobatto III" precise meaning — see cycle 326's
+   `radau_ia_collocation_divergence.md` for the precedent that bare
+   `RKTableau.reflection` does not reproduce these values).
+2. **Do NOT ship `SatisfiesC 2` or `SatisfiesD 2` examples.** Both
+   provably FAIL per §B.2 above. Pre-write arithmetic counter-
+   examples are already noted; do not waste cycle time discovering
+   this inside Lean.
+3. **Do NOT ship `SatisfiesC 1` or `SatisfiesD 1` as bonus
+   non-vacuity.** They hold but are weak. Cycle 326 precedent: for
+   reflection variants, `SatisfiesB p` alone is the appropriate
+   non-vacuity bar.
+4. **Do NOT submit to Aristotle.** Same reasoning as cycle 329:
+   the `B(2)` mechanical close is a textbook two-arm `simp +
+   norm_num` pattern lifted verbatim from cycles 326 / 327 / 328 /
+   329; it will fire on the first compile. Aristotle would be pure
+   overhead for a ~50 LOC mechanical ship.
+5. **Do NOT raise `maxHeartbeats`.** The single `simp` on a 2×2
+   matrix with `Fin.sum_univ_two` is trivial.
+6. **Do NOT introduce a new `Mathlib.Tactic.*` import.** All
+   needed tactics (`simp`, `norm_num`, `interval_cases`,
+   `Fin.sum_univ_two`) are already in scope via Section344's
+   existing imports.
+7. **Do NOT pursue the cycle 329 §I option 2** (collocation lift
+   for Radau I `s = 2`). That's a ~150 LOC medium-cycle deliverable;
+   defer to cycle 331+.
+8. **Do NOT attempt Lobatto IIIB `s = 2`.** Per `ch03.txt:5263`,
+   Lobatto IIIB at `s = 2` does NOT exist (cycle 327's `s = 3`
+   ship is the canonical entry point for that family).
 
-A **collocation-coincidence cross-check** — a lemma showing that the
-plain collocation integral `∫₀^{c_i} L_j(x) dx` evaluated at the Radau
-I abscissae produces the same values as `butcherRadauIDirect_two.A i j`,
-for one entry (e.g. `(1, 0)`). This would be ~20 LOC mirroring cycle
-324's `butcherRadauII_collocationA_two_apply_one_zero` shape.
+## E. Verification checklist (do these in order)
 
-**Skip this if it doesn't fit the cycle budget cleanly.** Path α's
-P1/P2/P3 are the required deliverable; the cross-check is a future-
-cycle pickup point.
+After writing the D.10 block:
 
-## §E. Faithfulness checklist
+1. `lake env lean OpenMath/Chapter3/Section344.lean` — expect exit 0,
+   silent (no warnings / errors).
+2. `lake build OpenMath.Chapter3.Section344` — expect ✔ all jobs in
+   <30s warm rebuild.
+3. `grep -c sorry OpenMath/Chapter3/Section344.lean` — expect 0.
+4. `#print axioms OpenMath.Chapter3.Section344.butcherLobattoIIICDirect_two`
+   — expect `[propext, Classical.choice, Quot.sound]`.
+5. Verify the aggregator `OpenMath/Chapter3.lean` still builds (warm
+   rebuild ≤10s).
 
-For the `def butcherRadauIDirect_two`:
+If any check fails, diagnose minimally (most likely culprits:
+typo'd matrix value, missing parenthesis on `1/2`, mistaken
+exponent in `B(2)` example). Do not rewrite the strategy.
 
-* **Entity ID**: no per-entity JSON exists for `def:RadauI_s2` (the
-  extractor only emits `thm:344A`). The reference is Butcher Table
-  344(I) p. 245, `ch03.txt:5265–5270`.
-* **Textbook statement**: quote the printed table in the docstring
-  (see §C.1). Lean values must agree entry-for-entry with the
-  printed table.
-* **No equivalence required**: printed values copied verbatim.
+## F. LOC and time budget
 
-For the `SatisfiesB 3` and `SatisfiesC 2` examples:
+Cycle 329's D.9 block was 74 LOC (def + two examples + docstrings).
+This cycle's D.10 block should be ~50 LOC because only one example
+is needed (B(2) instead of B(3) + C(2)/D(2)). Breakdown:
 
-* **Tautology check**: examples have no hypotheses beyond the
-  `intro k hk1 hk_max` / `intro i k hk1 hk_max` quantification.
-* **Definition smuggling**: `RKTableau`, `SatisfiesB`, `SatisfiesC`
-  are existing structure / Prop definitions; no new ones introduced.
+- Docstring: ~25 LOC.
+- Def body: ~5 LOC.
+- B(2) example: ~15 LOC (two arms instead of three).
 
-## §F. Verification checklist (run before commit)
+Time budget per cycle 329's experience: ~5 min docstring + parsing,
+~10 min Lean writeup, ~5 min build + axiom check + faithfulness
+section. Total ≤30 min focused work.
 
-1. `lake env lean OpenMath/Chapter3/Section344.lean` → exit 0.
-2. `lake build OpenMath.Chapter3.Section344` → exit 0.
-3. `lake env lean OpenMath/Chapter3.lean` → exit 0 (aggregator).
-4. `grep -c sorry OpenMath/Chapter3/Section344.lean` → 0.
-5. `#print axioms OpenMath.Chapter3.Section344.butcherRadauIDirect_two`
-   → `[propext, Classical.choice, Quot.sound]`.
+## G. Faithfulness divergence to record
 
-## §G. What NOT to do this cycle
+Update the cycle 330 task results §"Faithfulness check" section to
+note:
 
-* Do **NOT** build the formal collocation A-matrix
-  `butcherRadauI_collocationA_two` (Path β). The audit confirms the
-  values agree, but the formal lift would consume the cycle budget
-  on `_apply` proofs that mirror cycle 324's Radau IIA construction.
-  Path α ships the direct-form anchor; the formal bridge is a future
-  cycle pickup point.
-* Do **NOT** skip the audit step. Three consecutive cycles
-  (326/327/328) have caught divergences that would have produced
-  silently wrong tableaux. Even though §C.2 above already does the
-  audit, the worker MUST re-verify the values against the raw text
-  before writing the `def`.
-* Do **NOT** push to `s = 3` (Radau I `s = 3` at `ch03.txt:5307`).
-  The `s = 3` Radau I table involves `√6` arithmetic and is multi-
-  cycle work per the cycle 328 task results §"Suggested next
-  approach". Cycle 330+ territory.
-* Do **NOT** pursue Lobatto IIIC `s = 2` this cycle. Per
-  `ch03.txt:5224`, Lobatto IIIC uses `"reflections of Lobatto III"`,
-  which is the C(s)-vs-reflection question and a separate audit-
-  divergence flavor. Cycle 330 candidate.
-* Do **NOT** introduce `sorry`, `axiom`, or `constant`. Direct-form
-  ships are axiom-clean by construction.
-* Do **NOT** raise `maxHeartbeats`. The `SatisfiesB 3` and
-  `SatisfiesC 2` `norm_num` arithmetic is within default limits at
-  `s = 2`.
-* Do **NOT** modify cycle 326 (`butcherRadauIADirect_two`) or
-  cycle 328 (`butcherRadauIIDirect_two`). They are independent direct-
-  form shipments and reference different tableau values.
-* Do **NOT** attempt to compile `OpenMath/Chapter4/Section441.lean`
-  on GPFS. The 43+ consecutive timeout pattern from cycles 182–239
-  is still in force per `.prover-state/issues/cycle_182_gpfs_slowness.md`.
+* The five direct-form ships through cycle 330 form a clean pattern:
+  four reflection-style / D(s) variants diverge from plain
+  collocation (cycles 326 Radau IA, 327 Lobatto IIIB, 328 Radau II
+  D(s), 330 Lobatto IIIC) and only the C(s) variant of Radau I at
+  `s = 2` coincides (cycle 329).
+* `plan.md` row change: just bump the §344 update paragraph for
+  `thm:344A` to add a "**Cycle 330 ships Phase D.10**: Lobatto IIIC
+  `s = 2` direct-form ..." sentence after the existing cycle 329
+  block. Status stays `[~]`.
+* `lean_status.json` `thm:344A` row: bump `cycle` to 330 with a
+  brief note about the D.10 Lobatto IIIC ship; status stays
+  `partial`.
 
-## §H. Workflow
+## H. Cycle 331+ outlook (informational, NOT this cycle's work)
 
-1. (~5 min) Re-read `extraction/raw_text/ch03.txt:5265–5270` to
-   confirm §C.1's parse of Butcher's printed Radau I `s = 2` table.
-2. (~5 min) Open `OpenMath/Chapter3/Section344.lean`, locate the
-   cycle 328 `D.8` section (around line 1807+). Inspect how cycle
-   328's `butcherRadauIIDirect_two` is declared, including its
-   docstring format and the `SatisfiesB 3` / `SatisfiesD 2`
-   examples that follow it. Use this as the literal template.
-3. (~5 min) Read `OpenMath/Chapter3/Section321.lean::SatisfiesC` to
-   confirm the `intro` arity expected by the `SatisfiesC 2` example.
-4. (~20 min) Write the `D.9` section: header docstring, the `def`,
-   the `SatisfiesB 3` example, the `SatisfiesC 2` example.
-5. (~10 min) Build + verify per §F. If `lake env lean` complains
-   about `SatisfiesC` signature mismatch, adjust the `intro` arity
-   from step 3.
-6. (~10 min) Update `.prover-state/task_results/cycle_329.md` and
-   the §344 row in `plan.md` (append the cycle 329 ship note).
-   `lean_status.json` does NOT need updating — `thm:344A` remains
-   `partial` until the full polynomial-exactness Phase B.2 lands.
-7. (~5 min) Verify axiom-cleanliness via the §F.5 `#print axioms`
-   check.
-8. Commit + push per CLAUDE.md commit workflow.
+After cycle 330 lands Lobatto IIIC `s = 2`, the small-`s` direct-form
+ladder is approximately saturated for `s ≤ 2` (cycles 322, 323, 324,
+325, 326, 328, 329, 330 each shipped one direct-form RKTableau at
+`s ∈ {1, 2}`). Cycle 331+ planner choices, ranked:
 
-## §I. Expected outcome and cycle 330+ outlook
+1. **Lobatto III `s = 2` (unsuffixed family)** — `ch03.txt:5372`
+   confirms a printed table at `p = 2`; A-matrix per `ch03.txt:5221`
+   is `C(s−1)` with last-column zeros. This would be a 6th
+   direct-form ship; ~50 LOC. Audit outcome uncertain (last-column
+   zero implies divergence from plain collocation but a specific
+   variant of it).
+2. **Collocation-coincidence cross-check for Radau I `s = 2`**
+   (the cycle 329 §I option 2): build `butcherRadauI_collocationA_two`
+   and prove `butcherRadauIDirect_two.A = _collocationA_two` as
+   the first formal collocation/printed-table bridge. ~150 LOC.
+3. **`butcherRadauIDirect_three` (Radau I `s = 3`)** — defer.
+   `ch03.txt:5307` involves `√6` arithmetic; multi-cycle.
+4. **Lobatto IIIA `s = 3` (Simpson's rule)** — defer per cycle
+   323 outlook.
+5. **Pivot to fresh Chapter 5 entity** if the §344 D ladder is
+   approaching diminishing returns. Candidates: `def:451A` G-stable
+   companion, `def:422B`, `def:442A`, `thm:535A`, `thm:541A`.
 
-**Cycle 329 delivers**: 3 new public symbols (1 `def` + 2 anonymous
-`example`s), all axiom-clean, ~50 LOC delta to Section344.lean.
-File grows 1883 → ~1935 LOC. Sorry count stays at 0.
+Cycle 331 planner should choose based on whether to saturate the
+small-`s` ladder (option 1) or pivot (option 5).
 
-**Cycle 330 candidates** (planner decides next cycle):
+## I. Summary
 
-* **Lobatto IIIC `s = 2` direct form** (mirrors cycle 327's Lobatto
-  IIIB pattern; `ch03.txt` has the printed table near the §344
-  Lobatto cluster). Likely-divergent A-matrix per `ch03.txt:5224`
-  ("reflections of Lobatto III"). Same ~50 LOC small cycle.
-* **Lobatto III `s = 2` (unsuffixed family)** if it exists in
-  printed form. Need to grep `ch03.txt` first.
-* **`butcherRadauIDirect_three`** (Radau I `s = 3`, multi-cycle
-  due to `√6` arithmetic per `ch03.txt:5307`). Defer until the
-  small-`s` ladder is saturated.
-* **Investigation of Butcher's "reflections of X" precise meaning**
-  (multi-cycle, unlocks canonical Radau IA / Lobatto IIIB / IIIC
-  collocation/reflection bridges).
-* **Pivot to a fresh Chapter 5 entity** (cycle 327 outlook
-  candidates: `def:451A` G-stable companion, `def:422B`,
-  `def:442A`, `thm:535A`, `thm:541A`).
-
-**Pattern consolidated**: cycles 326/327/328/329 confirm the audit-
-first direct-form template across **four** small-`s` Radau/Lobatto
-variants. The cycle 327 worker's "mechanical-template" hypothesis
-is now robust to four data points across both the divergent (IA,
-IIIB, II D(s)) and coincident (I C(s)) cases.
+**Single deliverable**: ship `butcherLobattoIIICDirect_two : RKTableau 2`
+with one `SatisfiesB 2` non-vacuity example. ~50 LOC, axiom-clean,
+sorry count stays 0. Mechanical lift of cycle 329's template with
+the C(2) arm dropped (Lobatto IIIC at `s = 2` provably fails C(2)
+and D(2) per §B.2). All audit work is pre-done in §B; the worker
+just writes and verifies.
