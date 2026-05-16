@@ -1,319 +1,417 @@
-# Cycle 323 Strategy — §344 Phase D.3: Lobatto IIIA `s = 2` `RKTableau`
+# Cycle 324 strategy — §344 Phase D.4: Radau IIA `s = 2` `RKTableau`
 
-## §A. Pre-flight: state of the work
+## §A. Decision tree
 
-Cycle 322 closed Phase D.2 (Radau IIA `s = 1` `RKTableau`): three new
-public symbols (`butcherRadauII_collocationA_one`,
-`butcherRadauIIA_one`, `butcherBackwardEulerRK`) + one coincidence
-theorem (`butcherRadauIIA_one_eq_backwardEuler`) + one `SatisfiesB 1`
-non-vacuity example, all axiom-clean. Section344.lean: 1158 → 1247
-LOC, **0 explicit sorries**.
+* **Skip §441**: 43+ consecutive GPFS timeouts on
+  `OpenMath/Chapter4/Section441.lean`. Do **not** attempt a smoke
+  test or any §441 work. Skip per
+  `.prover-state/issues/cycle_182_gpfs_slowness.md`.
+* **No pending Aristotle results**: nothing to incorporate.
+* **No sorries in the repo**: cycle 323 closed clean.
+* **No phantom verdicts**: cycle 323 scored +2; nothing to verify.
 
-The cycle 322 task results explicitly recommend **Lobatto IIIA `s = 2`
-(trapezoidal rule)** as the cycle 323 target. This is the natural
-two-stage extension of the Radau IIA `s = 1` ship and exercises the
-collocation-A-matrix machinery at multiple entries for the first time.
+## §B. Substantive target — `thm:344A` Phase D.4: Radau IIA `s = 2` `RKTableau`
 
-## §B. Cycle 323 target — Lobatto IIIA `s = 2` `RKTableau`
+Ship the **2-stage Radau IIA** Runge–Kutta tableau (Butcher §344
+Table 344(II), p. 245). Direct two-stage extension of cycle 322's
+Radau IIA `s = 1` and structural mirror of cycle 323's Lobatto IIIA
+`s = 2` ship, but with non-trivial integration over `[0, 1/3]` for
+the `(0, j)` A-matrix entries.
 
-### Textbook tableau (Butcher §344, Table 344(III))
+### §B.1 The Butcher §344 Table 344(II) tableau
 
-Lobatto IIIA at `s = 2` is the **trapezoidal rule**:
-- `c = (0, 1)` — already shipped as `butcherLobatto_zeros_two` (cycle 320).
-- `b = (1/2, 1/2)` — already shipped as `butcherLobatto_quadratureWeights_two` (cycle 321).
-- `A = !![0, 0; 1/2, 1/2]` — to be computed in this cycle.
+```
+c = (1/3, 1)
+b = (3/4, 1/4)               ← cycle 321 already shipped these
+A = !![5/12, -1/12;
+       3/4,   1/4 ]
+```
 
-### §B.1 — define the collocation A-matrix
+The `(1, j)` entries are by design the quadrature weights (since
+`c_1 = 1` makes the upper limit of integration coincide with `[0, 1]`
+in the cycle-321 weight definitions). The `(0, j)` entries integrate
+the basis polynomials `L_j` (over abscissae `c = (1/3, 1)`) on
+`[0, 1/3]`:
+
+* `L_0(x) = (3/2) - (3/2)·x` (cycle 321's `_quadratureWeights_two_apply_zero`
+  h_eval lemma).
+* `L_1(x) = (3/2)·x - (1/2)` (cycle 321's `_quadratureWeights_two_apply_one`
+  h_eval lemma).
+
+Paper-verified closed forms:
+
+* `∫₀^{1/3} ((3/2) - (3/2)·x) dx = (3/2)(1/3) - (3/4)(1/9)
+    = 1/2 - 1/12 = 5/12`.
+* `∫₀^{1/3} ((3/2)·x - (1/2)) dx = (3/4)(1/9) - (1/2)(1/3)
+    = 1/12 - 1/6 = -1/12`.
+
+### §B.2 Six new public symbols + one direct-form witness + one coincidence theorem + one non-vacuity example
+
+Insert in `OpenMath/Chapter3/Section344.lean` immediately after
+cycle 323's `example : butcherLobattoIIIA_two.SatisfiesB 2` block
+(before `end OpenMath.Chapter3.Section344`):
+
+#### (1) `butcherRadauII_collocationA_two : Fin 2 → Fin 2 → ℝ`
 
 ```lean
-/-- The Lobatto IIIA collocation A-matrix at `s = 2`. Entry `(i, j)` is
-the integral of the j-th Lagrange basis polynomial (over the two-leaf
-abscissae `c = (0, 1)`) over `[0, c_i]`. -/
-noncomputable def butcherLobatto_collocationA_two
+noncomputable def butcherRadauII_collocationA_two
     (i j : Fin 2) : ℝ :=
-  ∫ x in (0 : ℝ)..butcherLobatto_zeros_two i,
-    (Lagrange.basis Finset.univ butcherLobatto_zeros_two j).eval x
+  ∫ x in (0 : ℝ)..butcherRadauII_zeros_two i,
+    (Lagrange.basis Finset.univ butcherRadauII_zeros_two j).eval x
 ```
 
-Place immediately after `butcherLobatto_quadratureWeights_two_apply_one`
-in Section344.lean (the natural sequel to the cycle 321 weight machinery).
+Mirror of cycle 323's `butcherLobatto_collocationA_two`, swapping
+`butcherLobatto_zeros_two` for `butcherRadauII_zeros_two`.
 
-### §B.2 — close the four entries
+#### (2-5) Four `_apply` theorems
 
-Four cases via a single `fin_cases` theorem:
+* `butcherRadauII_collocationA_two_apply_zero_zero : ... = 5 / 12`
+* `butcherRadauII_collocationA_two_apply_zero_one  : ... = -(1 / 12)`
+* `butcherRadauII_collocationA_two_apply_one_zero  : ... = 3 / 4`
+* `butcherRadauII_collocationA_two_apply_one_one   : ... = 1 / 4`
 
-| `(i, j)` | upper limit `c_i` | integrand | value |
-|---|---|---|---|
-| `(0, 0)` | `0` | `1 - x` | `0` (vacuous: `∫₀⁰`) |
-| `(0, 1)` | `0` | `x` | `0` (vacuous) |
-| `(1, 0)` | `1` | `1 - x` | `1/2` |
-| `(1, 1)` | `1` | `x` | `1/2` |
+**Recipe for (4) and (5) (the `(1, j)` entries — c_1 = 1)**: copy
+cycle 321's `butcherRadauII_quadratureWeights_two_apply_zero/_one`
+proofs *verbatim*, prepending one `show ∫ x in (0 : ℝ)..
+butcherRadauII_zeros_two ⟨1, _⟩, ... = ...` reframing, then a
+`have h_c1 : butcherRadauII_zeros_two ⟨1, by omega⟩ = 1 := rfl`,
+then `rw [h_c1]`. The h_erase + h_eval + simp_rw + integration
+chain is identical to cycle 321's recipe (the upper limit `1`
+matches `[0, 1]` exactly). The values `3/4` and `1/4` are unchanged.
 
-Recommended shape: ship **four separate `_apply` theorems** for clarity
-and downstream reusability, mirroring cycle 321's
-`butcherLobatto_quadratureWeights_two_apply_zero/_one` split:
+**Recipe for (2) and (3) (the `(0, j)` entries — c_0 = 1/3)**: same
+shape but with upper limit `1/3` instead of `1`. Concrete sketch
+for `_apply_zero_zero` (target `5/12`):
 
 ```lean
-theorem butcherLobatto_collocationA_two_apply_zero_zero :
-    butcherLobatto_collocationA_two 0 0 = 0 := by
-  unfold butcherLobatto_collocationA_two
-  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_two 0,
-        (Lagrange.basis Finset.univ butcherLobatto_zeros_two 0).eval x = 0
-  simp [butcherLobatto_zeros_two, intervalIntegral.integral_same]
-
-theorem butcherLobatto_collocationA_two_apply_zero_one : ... -- analogous
-
-theorem butcherLobatto_collocationA_two_apply_one_zero :
-    butcherLobatto_collocationA_two 1 0 = 1/2 := by
-  unfold butcherLobatto_collocationA_two
-  -- upper limit = c_1 = 1
-  -- integrand = L_0(x) = (x - 1) / (0 - 1) = 1 - x
-  -- ∫₀¹ (1 - x) dx = 1 - 1/2 = 1/2
-  -- Use cycle 321's recipe: unfold Lagrange.basis on the singleton erase,
-  -- close via integral_sub/integral_one/integral_id/norm_num.
-  sorry  -- to be filled in following the cycle 321
-         -- _quadratureWeights_two_apply_zero pattern
-
-theorem butcherLobatto_collocationA_two_apply_one_one : ... -- analogous, value 1/2
+theorem butcherRadauII_collocationA_two_apply_zero_zero :
+    butcherRadauII_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = 5 / 12 := by
+  unfold butcherRadauII_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherRadauII_zeros_two
+          ⟨0, by omega⟩).eval x = 5 / 12
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauII_zeros_two
+          ⟨0, by omega⟩).eval x = (3/2) - (3/2) * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauII_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨0, by omega⟩,
+      ((3 : ℝ)/2 - (3/2) * x) = 5 / 12
+  have h_c0 : butcherRadauII_zeros_two ⟨0, by omega⟩ = 1 / 3 := rfl
+  rw [h_c0]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 (1/3) :=
+    continuous_id.intervalIntegrable 0 (1/3)
+  have hx : ∫ x in (0 : ℝ)..(1/3 : ℝ), x = 1/18 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := (1/3 : ℝ)) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub intervalIntegrable_const
+        (hi_x.const_mul (3/2)),
+      intervalIntegral.integral_const, intervalIntegral.integral_const_mul,
+      hx]
+  norm_num
 ```
 
-For the `i = 0` cases, `intervalIntegral.integral_same` closes
-directly. For the `i = 1` cases, follow cycle 321's pattern exactly
-(the integrands are identical to those used in the `_quadratureWeights_two`
-proofs since `c_1 = 1` matches the standard `[0, 1]` integration range).
+`_apply_zero_one` (target `-1/12`): same shape, h_eval reduces to
+`(3/2)*x - (1/2)`, h_c0 same. Integral chain becomes `∫ - ∫`
+(mirror of cycle 321's `_apply_one` with `[0, 1] → [0, 1/3]`).
+Paper arithmetic: `(3/2) · (1/18) - (1/2) · (1/3) = 1/12 - 1/6 = -1/12`.
 
-### §B.3 — assemble the `RKTableau 2`
+**The `(1, j)` entries (cases 4 and 5) should be shorter than the
+`(0, j)` cases (2 and 3) — they don't introduce any new integration
+arithmetic vs cycle 321.**
+
+#### (6) `butcherRadauIIA_two : RKTableau 2`
 
 ```lean
-noncomputable def butcherLobattoIIIA_two : RKTableau 2 where
-  A := butcherLobatto_collocationA_two
-  b := butcherLobatto_quadratureWeights_two
-  c := butcherLobatto_zeros_two
+noncomputable def butcherRadauIIA_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := butcherRadauII_collocationA_two
+  b := butcherRadauII_quadratureWeights_two
+  c := butcherRadauII_zeros_two
 ```
 
-### §B.4 — direct trapezoidal `RKTableau` for cross-validation
-
-Following the cycle 322 `butcherBackwardEulerRK` precedent:
+#### (7) `butcherRadauIIADirect_two : RKTableau 2` (optional cross-validation form)
 
 ```lean
-noncomputable def butcherTrapezoidalRK : RKTableau 2 where
-  A := !![0, 0; 1/2, 1/2]
-  b := ![1/2, 1/2]
-  c := ![0, 1]
+noncomputable def butcherRadauIIADirect_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![5/12, -(1/12); 3/4, 1/4]
+  b := ![3/4, 1/4]
+  c := ![1/3, 1]
 ```
 
-**Verify field shapes first** by reading cycle 322's `butcherBackwardEulerRK`
-in Section344.lean — the `b` and `c` fields are `Fin s → ℝ`, not column
-matrices. Use `![a, b]` (Mathlib's `Matrix.of` notation) for `Fin 2 → ℝ`
-or the more explicit `fun i => match i with | 0 => a | 1 => b` form.
+No famous shorter name (cycle 322 had backward Euler, cycle 323 had
+trapezoidal — Radau IIA s=2 has no equally well-known alias). This
+is just for `RKTableau.mk.injEq`-style cross-validation. Ship if
+LOC budget allows; skip if it inflates the cycle.
 
-### §B.5 — coincidence theorem
+#### (8) `butcherRadauIIA_two_eq_direct` (optional coincidence theorem)
+
+If shipping (7), include this. Same shape as cycle 323's
+`butcherLobattoIIIA_two_eq_trapezoidal`: `RKTableau.mk.injEq` + four
+A-field `_apply` rewrites + two b-field `_apply` rewrites + four
+c-field `rfl` reductions:
 
 ```lean
-theorem butcherLobattoIIIA_two_eq_trapezoidal :
-    butcherLobattoIIIA_two = butcherTrapezoidalRK := by
-  apply RKTableau.mk.injEq.mpr
-  refine ⟨?_, ?_, ?_⟩
-  · -- A field: four-entry match
-    ext i j
-    fin_cases i <;> fin_cases j
-    · show butcherLobatto_collocationA_two 0 0 = _
-      rw [butcherLobatto_collocationA_two_apply_zero_zero]; rfl
-    · show butcherLobatto_collocationA_two 0 1 = _
-      rw [butcherLobatto_collocationA_two_apply_zero_one]; rfl
-    · show butcherLobatto_collocationA_two 1 0 = _
-      rw [butcherLobatto_collocationA_two_apply_one_zero]; norm_num
-    · show butcherLobatto_collocationA_two 1 1 = _
-      rw [butcherLobatto_collocationA_two_apply_one_one]; norm_num
-  · -- b field: cite cycle 321's weight applies
-    funext i; fin_cases i
-    · exact butcherLobatto_quadratureWeights_two_apply_zero
-    · exact butcherLobatto_quadratureWeights_two_apply_one
-  · -- c field: pattern-matched _zeros_two reduces by rfl
-    funext i; fin_cases i <;> rfl
+theorem butcherRadauIIA_two_eq_direct :
+    butcherRadauIIA_two = butcherRadauIIADirect_two := by
+  refine OpenMath.Chapter3.Section312.RKTableau.mk.injEq .. |>.mpr ⟨?_, ?_, ?_⟩
+  · funext i j; fin_cases i <;> fin_cases j
+    · show butcherRadauII_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_zero_zero]; rfl
+    · show butcherRadauII_collocationA_two ⟨0, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_zero_one]; rfl
+    · show butcherRadauII_collocationA_two ⟨1, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_one_zero]; rfl
+    · show butcherRadauII_collocationA_two ⟨1, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_one_one]; rfl
+  · funext i; fin_cases i
+    · show butcherRadauII_quadratureWeights_two ⟨0, by omega⟩ = _
+      rw [butcherRadauII_quadratureWeights_two_apply_zero]; rfl
+    · show butcherRadauII_quadratureWeights_two ⟨1, by omega⟩ = _
+      rw [butcherRadauII_quadratureWeights_two_apply_one]; rfl
+  · funext i; fin_cases i <;> rfl
 ```
 
-### §B.6 — `SatisfiesB 2` non-vacuity example
+#### (9) Non-vacuity: `SatisfiesB 2`
+
+Radau IIA `s = 2` has classical order `2s − 1 = 3`, so it should
+satisfy `B(3)`. To mirror cycle 322's `B(1)` and cycle 323's `B(2)`
+non-vacuity bars and keep the example short, ship the **B(2)**
+witness as the default:
 
 ```lean
-example : butcherLobattoIIIA_two.SatisfiesB 2 := by
-  rw [butcherLobattoIIIA_two_eq_trapezoidal]
+example : butcherRadauIIA_two.SatisfiesB 2 := by
+  rw [butcherRadauIIA_two_eq_direct]   -- if (8) shipped
   intro k h1 hk
   interval_cases k
-  · -- k = 1: ∑ⱼ bⱼ · cⱼ^0 = ∑ⱼ bⱼ = 1
-    simp [butcherTrapezoidalRK, Fin.sum_univ_two]; norm_num
-  · -- k = 2: ∑ⱼ bⱼ · cⱼ^1 = (1/2)·0 + (1/2)·1 = 1/2
-    simp [butcherTrapezoidalRK, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIIADirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIIADirect_two, Fin.sum_univ_two]; norm_num
 ```
 
-## §C. LOC budget
+Sanity values:
 
-| Block | Estimate |
+* `k = 1`: `3/4 + 1/4 = 1 = 1/1` ✓
+* `k = 2`: `(3/4)·(1/3) + (1/4)·1 = 1/4 + 1/4 = 1/2` ✓
+
+**Stretch — try `B(3)` first**: Radau IIA s=2 has order 3. The
+`k = 3` arm checks `(3/4)·(1/3)² + (1/4)·1² = (3/4)·(1/9) + 1/4
+= 1/12 + 3/12 = 1/3` ✓. If `simp + norm_num` closes the `k = 3`
+arm in one shot, ship `B(3)`. If `norm_num` doesn't close after
+~30 seconds, drop back to `B(2)` — don't burn the cycle on this
+optional stretch.
+
+If (7)+(8) skipped, replace the `rw [butcherRadauIIA_two_eq_direct]`
+opener with `unfold butcherRadauIIA_two` and inline the per-`k`
+field applications via `butcherRadauII_zeros_two`,
+`butcherRadauII_quadratureWeights_two_apply_*`. The direct-form
+version (7)+(8) is the cleaner path; default to shipping it.
+
+### §B.3 LOC budget
+
+| Component | LOC |
 |---|---|
-| `butcherLobatto_collocationA_two` def | ~5 LOC |
-| Four `_apply` theorems | ~60 LOC (15 each, the `i=1` cases dominate) |
-| `butcherLobattoIIIA_two` def | ~5 LOC |
-| `butcherTrapezoidalRK` def | ~10 LOC |
-| Coincidence theorem | ~30 LOC |
-| `SatisfiesB 2` example | ~10 LOC |
-| **Total** | **~120 LOC** (Section344: 1247 → ~1370) |
+| (1) `_collocationA_two` def + docstring | ~10 |
+| (2) `_apply_zero_zero = 5/12` | ~30 |
+| (3) `_apply_zero_one = -1/12` | ~30 |
+| (4) `_apply_one_zero = 3/4` (cycle 321 mirror) | ~25 |
+| (5) `_apply_one_one = 1/4` (cycle 321 mirror) | ~25 |
+| (6) `butcherRadauIIA_two` def | ~5 |
+| (7) `butcherRadauIIADirect_two` def (optional) | ~5 |
+| (8) `butcherRadauIIA_two_eq_direct` (optional) | ~25 |
+| (9) `SatisfiesB 2` non-vacuity | ~10 |
+| Docstrings + section comments | ~20 |
+| **Total** | **~185 LOC** |
 
-Cycle 322 came in at +89 LOC for a one-entry tableau. The four-entry
-A-matrix is the dominant addition; the rest scales linearly.
+Larger than cycle 323's 162 LOC because the `(0, j)` entries
+require a substantive `∫₀^{1/3}` integration step that cycle 323's
+vacuous `∫₀⁰` cases collapsed. If LOC overshoots ~250, drop
+(7)+(8) and replace the `SatisfiesB` example opener with direct
+field unfolding (cycle 323 used `rw [_eq_trapezoidal]` as a
+convenience; not strictly required).
 
-## §D. Fallback — if §B over-budget
+### §B.4 Risk register
 
-If the four `_apply` proofs eat the cycle budget, ship only:
-1. `butcherLobatto_collocationA_two` def.
-2. The four `_apply` theorems.
+* **R1 — h_c0 := rfl bridging `butcherRadauII_zeros_two ⟨0, _⟩ = 1/3`.**
+  Cycle 320's def of `butcherRadauII_zeros_two` should pattern-match
+  to `1/3` at `i.val = 0`. The cycle 323 Lobatto `h_c1 := rfl` worked
+  cleanly under the same shape. Fallback: if `rfl` fails, use
+  `by simp [butcherRadauII_zeros_two]` or `by decide`.
 
-Defer §B.3–B.6 (assembly + coincidence + non-vacuity) to cycle 324.
-This is the cycle 321/322 split pattern: definition + apply theorems
-first, RKTableau assembly second.
+* **R2 — h_c1 := rfl for `butcherRadauII_zeros_two ⟨1, _⟩ = 1`.**
+  Same as R1. Should work.
 
-LOC for fallback: ~65 LOC.
+* **R3 — sign handling on `-1/12`.** The goal might render as
+  `-(1/12)`, `(-1)/12`, or `-1/12` depending on simp normalisation.
+  `norm_num` should handle all three. If it doesn't, add `show ... =
+  -(1/12)` before `norm_num`, or include `neg_div` /
+  `neg_eq_neg_one_mul` in the final simp set.
 
-## §E. Verification protocol
+* **R4 — `integral_pow` over fractional upper limit.** Cycle 321
+  used `integral_pow (a := 0) (b := 1)`; we now need `(b := 1/3)`.
+  Mathlib's `integral_pow` works for arbitrary real bounds. The
+  resulting `(1/3)^2 / 2 = 1/18` is closed by `norm_num`.
+
+* **R5 — `IntervalIntegrable` on `[0, 1/3]`.** Same shape as cycle
+  321's `[0, 1]` usage; `continuous_id.intervalIntegrable 0 (1/3)`
+  and `continuous_pow ...` should produce the required witnesses
+  without surprises.
+
+* **R6 — `SatisfiesB 3` stretch arm.** If `simp [_, Fin.sum_univ_two]
+  + norm_num` doesn't close `(3/4)·(1/3)² + (1/4)·1² = 1/3` in one
+  shot, the `(1/3)^2` term may need an extra `pow_two` or `mul_self`
+  step. Don't fight this — drop back to `B(2)` if it sticks.
+
+### §B.5 Verification
+
+After writing, run:
 
 1. `lake env lean OpenMath/Chapter3/Section344.lean` — clean exit.
 2. `lake env lean OpenMath/Chapter3.lean` — aggregator clean.
-3. `grep -c sorry OpenMath/Chapter3/Section344.lean` → 0.
-4. `#print axioms` on each new public symbol → `[propext, Classical.choice, Quot.sound]`.
-5. Update `plan.md` thm:344A row to record cycle 323 closure.
-6. **No** `lean_status.json` change this cycle — `thm:344A` remains
-   `partial` since Phase B.2 (polynomial-exactness) is still open
-   and the Phase D ladder is not exhaustive.
+3. `grep -c sorry OpenMath/Chapter3/Section344.lean` → expect `0`.
+4. `lean_verify` on each new public symbol:
+   - `OpenMath.Chapter3.Section344.butcherRadauII_collocationA_two`
+   - `_apply_zero_zero` / `_apply_zero_one` / `_apply_one_zero` /
+     `_apply_one_one`
+   - `butcherRadauIIA_two`
+   - `butcherRadauIIADirect_two` (if shipped)
+   - `butcherRadauIIA_two_eq_direct` (if shipped)
+   All should report `[propext, Classical.choice, Quot.sound]`.
+5. Sorry count delta: 0 → 0.
 
-## §F. Faithfulness checklist
+If any axiom check leaks `sorryAx`, treat it as a fatal error
+(rollback and use a hand-written proof instead).
+
+### §B.6 Faithfulness check
 
 For each new `def`/`theorem`:
 
-### `butcherLobatto_collocationA_two`
-- Textbook reference: Butcher §344 Table 344(III), Lobatto IIIA at `s = 2`.
-- Definition matches `∫₀^{c_i} L_j(x) dx` exactly (the canonical collocation
-  recipe used at cycle 308 for Gauss–Legendre and cycle 322 for Radau IIA).
-- No definition smuggling: the recipe is the literal textbook one.
+* `butcherRadauII_collocationA_two` (def):
+  - Textbook reference: Butcher §344 p. 245, Table 344(II)
+    collocation A-matrix.
+  - The Lean def integrates Lagrange basis polynomials from 0 to
+    `c_i`. Matches the textbook collocation recipe exactly. No
+    definition smuggling.
 
-### Each `_apply` theorem
-- Tautology check: hypothesis-free; conclusion `... = 0` or `... = 1/2`
-  is not a hypothesis re-export.
-- Identity check: proofs route through `intervalIntegral.integral_same`
-  (`i = 0` cases) or substantive integration computations (`i = 1` cases),
-  not `exact h` or single rewrites.
-- Hypothesis strength: no hypotheses; minimal signatures.
+* `butcherRadauIIA_two` (def):
+  - Textbook reference: Butcher §344 Table 344(II), Radau IIA at
+    `s = 2`. The Lean def is `RKTableau` assembled from cycle 320's
+    zeros, cycle 321's weights, and this cycle's collocation
+    A-matrix. Faithful.
 
-### `butcherTrapezoidalRK`
-- Faithful to the textbook trapezoidal rule. Implicit stage equation
-  `Y₀ = y₀`, `Y₁ = y₀ + (h/2)·(f(Y₀) + f(Y₁))`. Output
-  `y₁ = y₀ + (h/2)·(f(Y₀) + f(Y₁)) = Y₁`. Recovers
-  `y₁ = y₀ + (h/2)·(f(y₀) + f(y₁))`, the standard trapezoidal rule.
+* Four `_apply` theorems: closed-form values (5/12, -1/12, 3/4,
+  1/4). Match Butcher Table 344(II). Paper-verified in §B.1 above.
 
-### `butcherLobattoIIIA_two_eq_trapezoidal`
-- Tautology check: structure equality across two independently-defined
-  tableaux, not a hypothesis re-export.
-- Identity check: proof routes through four substantive `_apply` calls
-  + two cycle-321 weight applies + four `rfl` reductions; no single
-  `exact h`.
-- Faithfulness: textbook identification of Lobatto IIIA `s = 2` with
-  the trapezoidal rule (Butcher §344 Table 344(III); Hairer–Wanner
-  Vol. II §IV.5).
+* `butcherRadauIIA_two_eq_direct` (coincidence, optional):
+  Tautology check: structure equality across two distinct
+  definitions, not a hypothesis re-export. Identity check: proof
+  routes through 6 substantive `rw` calls + 4 `rfl` reductions, not
+  a single `exact h`.
 
-## §G. What NOT to attempt
+## §C. NOT to try this cycle
 
-- **Do NOT** generalize to Lobatto IIIA `s = 3` (Simpson). The cycle 320
-  `_zeros_three` + cycle 321 `_quadratureWeights_three` data IS
-  available, but a 9-entry A-matrix is multi-cycle scope. Save for
-  cycle 326+.
-- **Do NOT** start Radau IIA `s = 2` in parallel. Keep the cycle focused
-  on one tableau.
-- **Do NOT** revisit Phase B.2 polynomial-exactness clauses
-  (`2s − 2` for Radau, `2s − 3` for Lobatto). Blocked on
-  polynomial-division infrastructure; multi-cycle scope.
-- **Do NOT** touch §441 (43+ consecutive GPFS timeouts since cycle 182).
-- **Do NOT** attempt the deferred `lem:310B` infrastructure path.
-- **Do NOT** raise `maxHeartbeats` above 200000.
-- **Do NOT** introduce `axiom`/`constant` declarations.
-- **Do NOT** introduce sorries. Cycles 200/201, 138/139, 149/150
-  rollback precedent: sorry-first scaffolds without single-cycle close
-  get rolled back.
+* **§441 in any form.** 43+ GPFS timeouts. Skip per
+  `cycle_182_gpfs_slowness.md`.
+* **Lobatto IIIA s=3 (Simpson's rule).** The 9-entry A-matrix is
+  multi-cycle scope per cycle 323's task results. Defer.
+* **Radau IA s=1 (forward Euler analogue).** Mathematically smaller
+  than Radau IIA s=2 (no novel integration arithmetic since `c_1 = 0`
+  makes all A-matrix entries vacuous via `integral_same`). Reserve
+  for cycle 325 (an easier cycle if the planner wants).
+* **Full `thm:344A`.** Phase B.2 polynomial-exactness clauses
+  (`2s − 2`, `2s − 3`) require polynomial-division infrastructure
+  and are multi-cycle. Phase D.4 ships *one specific RKTableau* —
+  the headline thm:344A iff remains open.
+* **A direct one-shot `simp; ring` for the `_apply_zero_*` proofs.**
+  Cycle 321/322/323 confirmed that the cycle 321 recipe (unfold →
+  show → h_erase → h_eval → simp_rw → integration chain → norm_num)
+  is the working pattern; don't deviate.
+* **Renaming `h_*` hypotheses to dodge the tautology scanner.** The
+  patterns used in cycle 321/322/323 (`h_erase`, `h_eval`, `h_c1`,
+  `hi_x`, `hx`) have not triggered scanner false positives — keep
+  them.
+* **`axiom` or `constant` declarations.** Not allowed under
+  CLAUDE.md rules.
+* **`maxHeartbeats` above 200000.** Default is sufficient for every
+  step above; if any single tactic stalls, decompose.
+* **Pivoting to a different cluster.** Cycle 322/323's ladder is
+  the right shape; cycle 324 is a clean port. Don't redirect to
+  thm:381G / lem:312B / etc. — those are multi-cycle pre-requisite
+  work.
 
-## §H. Failed approaches to avoid
+## §D. Aristotle policy
 
-From recent attempts.md / memory entries:
+* **No new submissions this cycle.** All deliverables above are
+  mechanical ports of well-validated cycle 321/322/323 patterns.
+  Manual is cleaner.
+* **No polls.** No pending project IDs from prior cycles relevant
+  to §344.
 
-- **`Polynomial.ext + simp + ring`** for `Polynomial ℝ` constant
-  arithmetic — `ring` cannot fold `Polynomial.C` operations. Use
-  `Polynomial.funext + ring` instead (cycle 180 pattern). Not directly
-  relevant this cycle (no polynomial equalities), but keep in mind
-  for any future small-`s` exactness-check work.
-- **`simp only [Matrix.dotProduct]`** does not fire — `dotProduct`
-  lives at the root namespace, not `Matrix.dotProduct`. Use `show ∑ i, _`
-  to expose the sum form (cycle 167 pattern). Not directly relevant
-  this cycle.
-- **`linarith` on large-rational hypotheses without `clear`** — only
-  matters at extreme denominators (cycle 299's `_eleven_roots` IVT
-  brackets had 76-quintillion denominators). The trapezoidal-rule
-  rationals (`1/2`, `1`) are tiny; not relevant.
-- **`Fin.sum_univ_succ` on `Fin s` sums where `s` doesn't reduce**
-  (memory: `feedback_fin_sum_univ_succ_coerce.md`) — at concrete
-  `s = 2` this is not an issue, but prepend `show (∑ i : Fin 2, …) = …`
-  if the `simp` chain fails to unfold.
+## §E. Deliverable order
 
-## §I. Confidence assessment
+1. (5 min) §B.2 (1): define `butcherRadauII_collocationA_two`.
+2. (15 min) §B.2 (4) `_apply_one_zero = 3/4`: port from cycle 321.
+   Compile, axiom-check.
+3. (15 min) §B.2 (5) `_apply_one_one = 1/4`: port from cycle 321.
+   Compile, axiom-check.
+4. (30 min) §B.2 (2) `_apply_zero_zero = 5/12`: substantive new
+   `[0, 1/3]` integration. Compile, axiom-check.
+5. (20 min) §B.2 (3) `_apply_zero_one = -1/12`: mirror of (4) with
+   sign change. Compile, axiom-check.
+6. (5 min) §B.2 (6) `butcherRadauIIA_two`: assemble.
+7. (10 min, optional) §B.2 (7)+(8): direct form + coincidence.
+8. (5 min) §B.2 (9): `SatisfiesB 2` non-vacuity. Try `B(3)` first;
+   fall back if it sticks.
+9. (5 min) Run §B.5 verification commands.
+10. (5 min) Run faithfulness check §B.6.
+11. (5 min) Update `extraction/formalization_data/lean_status.json`
+    `thm:344A` row to record Phase D.4 closure (status stays
+    `partial`).
+12. (5 min) Update `plan.md` `thm:344A` row with the cycle 324
+    closure paragraph appended to the existing trailing notes.
+13. (15 min) Write `.prover-state/task_results/cycle_324.md`.
+14. (5 min) Commit:
+    `Cycle 324 — §344 Phase D.4: Radau IIA \`s = 2\` RKTableau shipped.`
 
-- **Risk: low.** The cycle 322 Radau IIA `s = 1` template is a direct
-  precedent; the only structural change is scaling from 1×1 to 2×2.
-  All prerequisites (`_zeros_two`, `_quadratureWeights_two`,
-  `_quadratureWeights_two_apply_*`) are shipped and axiom-clean.
-- **Risk: medium on the `i = 1` integration proofs.** The cycle 321
-  pattern for `butcherLobatto_quadratureWeights_two_apply_zero/_one`
-  is the exact precedent (same integrand, same integration range).
-  Worker should open Section344.lean and read those proofs directly
-  before writing the `_apply_one_zero`/`_apply_one_one` cases — they
-  should be near-verbatim ports.
+Total budget: ~2.5 hrs (slightly longer than cycle 323 due to the
+`[0, 1/3]` integration steps in (2) and (3)).
 
-## §J. Cycle 324+ outlook
+## §F. Stretch (if cycle 324 closes in ≤ 1.5 hrs)
 
-Successful cycle 323 closure unlocks:
-- **Cycle 324**: Radau IIA `s = 2` (`c = (1/3, 1)`, `b = (3/4, 1/4)`,
-  4-entry A-matrix). Same shape as cycle 323 but with non-trivial
-  abscissa `1/3` requiring fractional-denominator integration.
-- **Cycle 325**: Radau IA `s = 1` (forward Euler analogue) for left-
-  endpoint symmetry.
-- **Cycle 326+**: Lobatto IIIA `s = 3` (Simpson's rule, 9-entry A) or
-  pivot to Phase B.2 polynomial-exactness if motivated by downstream
-  consumers.
+Open `OpenMath/Chapter3/Section344.lean` and inspect cycle 320's
+`butcherRadauI_zeros_one` and cycle 321's
+`butcherRadauI_quadratureWeights_one_apply` (Radau I, `s = 1`,
+`c = (0)`). If the infrastructure is in place, ship Radau IA s=1:
 
-If cycle 323 ships only the §D fallback (def + applies, no assembly):
-- **Cycle 324**: complete the Lobatto IIIA `s = 2` assembly +
-  coincidence + non-vacuity. Then cycle 325 starts Radau IIA `s = 2`.
+* Define `butcherRadauI_collocationA_one : Fin 1 → Fin 1 → ℝ`
+  (single entry `∫₀⁰ L_0(x) dx = 0`, vacuous via
+  `intervalIntegral.integral_same` — cycle 323 `(0, j)` template).
+* `_apply` theorem returning `0`.
+* `butcherRadauIA_one : RKTableau 1` — assembles to `A = !![0]`,
+  `b = ![1]`, `c = ![0]` (essentially forward Euler).
+* Optionally `butcherForwardEulerRK : RKTableau 1` (`A = 0`, `b = 1`,
+  `c = 0`) + coincidence theorem.
+* `SatisfiesB 1` non-vacuity.
 
-## §K. Quick-reference Mathlib hooks
+Adds ~80 LOC. Do **not** attempt Radau IA s=2 as stretch — its
+A-matrix needs integration on `[0, c_1]` with `c_1 = ...` (need to
+check; nontrivial). Reserve for a dedicated cycle.
 
-| Goal | Hook | Notes |
-|---|---|---|
-| `∫_a^a f = 0` | `intervalIntegral.integral_same` | direct |
-| `∫₀¹ x dx = 1/2` | `integral_id` (or cycle 321 ladder) | `cycle 321 pattern` |
-| `∫₀¹ 1 dx = 1` | `intervalIntegral.integral_const` + `smul_eq_mul` | `cycle 321 pattern` |
-| `∫₀¹ (1-x) dx = 1/2` | `integral_sub` + `integral_one` + `integral_id` | follow cycle 321 |
-| Lagrange basis at singleton | `Lagrange.basis_singleton` | for the `i = 0` cases the basis pre-collapses |
-| Lagrange basis with one erase | `Lagrange.basisDivisor` decomposition | cycle 321 pattern |
-| `RKTableau` field equality | `RKTableau.mk.injEq` | cycle 322 pattern |
-| `Matrix.of` via `!![..]` | `Matrix.of_apply` | for `A` field of `butcherTrapezoidalRK` |
+## §G. Status flags
 
-## §L. Concrete first actions for the worker
-
-1. **Read** `OpenMath/Chapter3/Section344.lean` around the cycle 321
-   `butcherLobatto_quadratureWeights_two_apply_zero` proof to learn the
-   exact tactic chain for `∫₀¹ (1-x) dx = 1/2` style integrals.
-2. **Read** the cycle 322 `butcherRadauIIA_one_eq_backwardEuler` proof
-   for the `RKTableau.mk.injEq` decomposition pattern.
-3. Ship §B.1 (def) + §B.2 (four `_apply`s).
-4. Verify the def + applies compile clean before proceeding to §B.3–B.6.
-5. Ship §B.3 (Lobatto IIIA tableau) + §B.4 (trapezoidal direct form).
-6. Ship §B.5 (coincidence) + §B.6 (`SatisfiesB 2` example).
-7. Run §E verification protocol.
-8. Write `task_results/cycle_323.md` documenting deliverables + axioms
-   + non-vacuity + faithfulness check.
-9. Update `plan.md` thm:344A row.
-10. Commit and push.
+* sorry count target: 0 → 0.
+* axiom target: `[propext, Classical.choice, Quot.sound]` on every
+  new symbol.
+* `lean_status.json` `thm:344A` row: remains `partial`. Update the
+  cycle-324 note to record Phase D.4 ship (Radau IIA s=2 RKTableau).
+* `plan.md` `thm:344A` row: stays `[~]`; append cycle 324 closure
+  paragraph to the existing trailing notes.
+* `extraction/formalization_data/lean_status.json` other rows: no
+  change.

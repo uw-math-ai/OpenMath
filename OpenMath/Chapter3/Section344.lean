@@ -1394,4 +1394,238 @@ example : butcherLobattoIIIA_two.SatisfiesB 2 := by
   · simp [butcherTrapezoidalRK, Fin.sum_univ_two]; norm_num
   · simp [butcherTrapezoidalRK, Fin.sum_univ_two]
 
+/-! ## Deliverable D.4 — Small-`s` RKTableau (Radau IIA, `s = 2`)
+
+Cycle 324: lift cycle 320's `butcherRadauII_zeros_two`, cycle 321's
+`butcherRadauII_quadratureWeights_two`, and this cycle's
+`butcherRadauII_collocationA_two` into a concrete `RKTableau 2`
+matching Butcher §344 Table 344(II) (p. 245). Direct extension of
+cycle 322's Radau IIA `s = 1` and structural mirror of cycle 323's
+Lobatto IIIA `s = 2` ship, but with non-trivial integration over
+`[0, 1/3]` for the `(0, j)` A-matrix entries. The textbook tableau
+(Butcher §344, Table 344(II)) is
+
+  `c = (1/3, 1)`, `b = (3/4, 1/4)`,
+  `A = !![5/12, -1/12; 3/4, 1/4]`. -/
+
+/-- **Butcher §344 — Radau II collocation A-matrix at `s = 2`**.
+Entry `(i, j) = ∫₀^{c_i} L_j(x) dx`, where the Lagrange basis
+polynomials `L_j` are taken over the two-leaf abscissae
+`c = (c_0, c_1) = (1/3, 1)` (`butcherRadauII_zeros_two`). At `s = 2`
+the four entries are `(5/12, -1/12, 3/4, 1/4)` — i.e. the Radau IIA
+A-matrix `!![5/12, -1/12; 3/4, 1/4]` (Butcher Table 344(II) p. 245). -/
+noncomputable def butcherRadauII_collocationA_two
+    (i j : Fin 2) : ℝ :=
+  ∫ x in (0 : ℝ)..butcherRadauII_zeros_two i,
+    (Lagrange.basis Finset.univ butcherRadauII_zeros_two j).eval x
+
+/-- The `(0, 0)` entry of `butcherRadauII_collocationA_two` is `5/12`.
+The upper limit is `c_0 = 1/3` and the integrand is the basis polynomial
+`L_0(x) = (3/2) − (3/2)x`, so `∫₀^{1/3} ((3/2) − (3/2)x) dx
+= (3/2)(1/3) − (3/4)(1/9) = 1/2 − 1/12 = 5/12`. -/
+theorem butcherRadauII_collocationA_two_apply_zero_zero :
+    butcherRadauII_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = 5 / 12 := by
+  unfold butcherRadauII_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherRadauII_zeros_two
+          ⟨0, by omega⟩).eval x = 5 / 12
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauII_zeros_two
+          ⟨0, by omega⟩).eval x = (3/2) - (3/2) * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauII_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨0, by omega⟩,
+      ((3 : ℝ)/2 - (3/2) * x) = 5 / 12
+  have h_c0 : butcherRadauII_zeros_two ⟨0, by omega⟩ = 1 / 3 := rfl
+  rw [h_c0]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 (1/3) :=
+    continuous_id.intervalIntegrable 0 (1/3)
+  have hx : ∫ x in (0 : ℝ)..(1/3 : ℝ), x = 1/18 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := (1/3 : ℝ)) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub intervalIntegrable_const
+        (hi_x.const_mul (3/2)),
+      intervalIntegral.integral_const, intervalIntegral.integral_const_mul,
+      hx]
+  norm_num
+
+/-- The `(0, 1)` entry of `butcherRadauII_collocationA_two` is `-1/12`.
+The upper limit is `c_0 = 1/3` and the integrand is the basis polynomial
+`L_1(x) = (3/2)x − 1/2`, so `∫₀^{1/3} ((3/2)x − 1/2) dx
+= (3/4)(1/9) − (1/2)(1/3) = 1/12 − 1/6 = −1/12`. -/
+theorem butcherRadauII_collocationA_two_apply_zero_one :
+    butcherRadauII_collocationA_two ⟨0, by omega⟩ ⟨1, by omega⟩ = -(1 / 12) := by
+  unfold butcherRadauII_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherRadauII_zeros_two
+          ⟨1, by omega⟩).eval x = -(1 / 12)
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauII_zeros_two
+          ⟨1, by omega⟩).eval x = (3/2) * x - (1/2) := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauII_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨0, by omega⟩,
+      ((3 : ℝ)/2 * x - (1/2)) = -(1 / 12)
+  have h_c0 : butcherRadauII_zeros_two ⟨0, by omega⟩ = 1 / 3 := rfl
+  rw [h_c0]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 (1/3) :=
+    continuous_id.intervalIntegrable 0 (1/3)
+  have hx : ∫ x in (0 : ℝ)..(1/3 : ℝ), x = 1/18 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := (1/3 : ℝ)) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub (hi_x.const_mul (3/2))
+        intervalIntegrable_const,
+      intervalIntegral.integral_const_mul, intervalIntegral.integral_const,
+      hx]
+  norm_num
+
+/-- The `(1, 0)` entry of `butcherRadauII_collocationA_two` is `3/4`.
+The upper limit is `c_1 = 1` and the integrand is the basis polynomial
+`L_0(x) = (3/2) − (3/2)x`, so `∫₀¹ ((3/2) − (3/2)x) dx
+= 3/2 − 3/4 = 3/4`. Same integral as
+`butcherRadauII_quadratureWeights_two_apply_zero` (cycle 321). -/
+theorem butcherRadauII_collocationA_two_apply_one_zero :
+    butcherRadauII_collocationA_two ⟨1, by omega⟩ ⟨0, by omega⟩ = 3 / 4 := by
+  unfold butcherRadauII_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨1, by omega⟩,
+      (Lagrange.basis Finset.univ butcherRadauII_zeros_two
+          ⟨0, by omega⟩).eval x = 3 / 4
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauII_zeros_two
+          ⟨0, by omega⟩).eval x = (3/2) - (3/2) * x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauII_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨1, by omega⟩,
+      ((3 : ℝ)/2 - (3/2) * x) = 3 / 4
+  have h_c1 : butcherRadauII_zeros_two ⟨1, by omega⟩ = 1 := rfl
+  rw [h_c1]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub intervalIntegrable_const
+        (hi_x.const_mul (3/2)),
+      intervalIntegral.integral_const, intervalIntegral.integral_const_mul,
+      hx]
+  norm_num
+
+/-- The `(1, 1)` entry of `butcherRadauII_collocationA_two` is `1/4`.
+The upper limit is `c_1 = 1` and the integrand is the basis polynomial
+`L_1(x) = (3/2)x − 1/2`, so `∫₀¹ ((3/2)x − 1/2) dx
+= 3/4 − 1/2 = 1/4`. Same integral as
+`butcherRadauII_quadratureWeights_two_apply_one` (cycle 321). -/
+theorem butcherRadauII_collocationA_two_apply_one_one :
+    butcherRadauII_collocationA_two ⟨1, by omega⟩ ⟨1, by omega⟩ = 1 / 4 := by
+  unfold butcherRadauII_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨1, by omega⟩,
+      (Lagrange.basis Finset.univ butcherRadauII_zeros_two
+          ⟨1, by omega⟩).eval x = 1 / 4
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherRadauII_zeros_two
+          ⟨1, by omega⟩).eval x = (3/2) * x - (1/2) := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherRadauII_zeros_two, Polynomial.eval_mul, Polynomial.eval_C,
+          Polynomial.eval_sub, Polynomial.eval_X]
+    ring
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherRadauII_zeros_two ⟨1, by omega⟩,
+      ((3 : ℝ)/2 * x - (1/2)) = 1 / 4
+  have h_c1 : butcherRadauII_zeros_two ⟨1, by omega⟩ = 1 := rfl
+  rw [h_c1]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub (hi_x.const_mul (3/2))
+        intervalIntegrable_const,
+      intervalIntegral.integral_const_mul, intervalIntegral.integral_const,
+      hx]
+  norm_num
+
+/-- **The 2-stage Radau IIA `RKTableau`** assembled from the
+canonical Lagrange weights, zeros, and collocation A-matrix of the
+Radau II quadrature. At `s = 2` this is Butcher §344 Table 344(II)
+with `c = (1/3, 1)`, `b = (3/4, 1/4)`,
+`A = !![5/12, -1/12; 3/4, 1/4]`. -/
+noncomputable def butcherRadauIIA_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := butcherRadauII_collocationA_two
+  b := butcherRadauII_quadratureWeights_two
+  c := butcherRadauII_zeros_two
+
+/-- **Direct Radau IIA `s = 2` tableau** for cross-validation:
+`c = (1/3, 1)`, `b = (3/4, 1/4)`, `A = !![5/12, -1/12; 3/4, 1/4]`
+declared inline rather than via collocation. -/
+noncomputable def butcherRadauIIADirect_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![5/12, -(1/12); 3/4, 1/4]
+  b := ![3/4, 1/4]
+  c := ![1/3, 1]
+
+/-- **Coincidence**: the cycle-324 collocation-assembled Radau IIA
+tableau at `s = 2` equals the direct Radau IIA tableau. The bridge
+routes through four `_apply` evaluations of the collocation A-matrix
+(`butcherRadauII_collocationA_two_apply_*`), the cycle 321 weight
+`_apply` lemmas, and the pattern-matched abscissae reductions. -/
+theorem butcherRadauIIA_two_eq_direct :
+    butcherRadauIIA_two = butcherRadauIIADirect_two := by
+  refine OpenMath.Chapter3.Section312.RKTableau.mk.injEq .. |>.mpr ⟨?_, ?_, ?_⟩
+  · funext i j; fin_cases i <;> fin_cases j
+    · show butcherRadauII_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_zero_zero]; rfl
+    · show butcherRadauII_collocationA_two ⟨0, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_zero_one]; rfl
+    · show butcherRadauII_collocationA_two ⟨1, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_one_zero]; rfl
+    · show butcherRadauII_collocationA_two ⟨1, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherRadauII_collocationA_two_apply_one_one]; rfl
+  · funext i; fin_cases i
+    · show butcherRadauII_quadratureWeights_two ⟨0, by omega⟩ = _
+      rw [butcherRadauII_quadratureWeights_two_apply_zero]; rfl
+    · show butcherRadauII_quadratureWeights_two ⟨1, by omega⟩ = _
+      rw [butcherRadauII_quadratureWeights_two_apply_one]; rfl
+  · funext i; fin_cases i <;> rfl
+
+/-- **Non-vacuity**: the collocation-assembled Radau IIA tableau at
+`s = 2` satisfies the order-3 quadrature condition `B(3)` (Radau IIA
+at `s = 2` is exact for polynomials of degree `2s − 1 = 3`). Routes
+through the coincidence theorem to the direct Radau IIA form, where
+`∑ⱼ bⱼ · cⱼ^0 = 3/4 + 1/4 = 1 = 1/1`,
+`∑ⱼ bⱼ · cⱼ^1 = (3/4)·(1/3) + (1/4)·1 = 1/4 + 1/4 = 1/2`, and
+`∑ⱼ bⱼ · cⱼ^2 = (3/4)·(1/9) + (1/4)·1 = 1/12 + 3/12 = 1/3`. -/
+example : butcherRadauIIA_two.SatisfiesB 3 := by
+  rw [butcherRadauIIA_two_eq_direct]
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherRadauIIADirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIIADirect_two, Fin.sum_univ_two]; norm_num
+  · simp [butcherRadauIIADirect_two, Fin.sum_univ_two]; norm_num
+
 end OpenMath.Chapter3.Section344
