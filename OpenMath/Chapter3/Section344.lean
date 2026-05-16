@@ -1232,4 +1232,166 @@ example : butcherRadauIIA_one.SatisfiesB 1 := by
   interval_cases k
   · simp [butcherBackwardEulerRK]
 
+/-! ## Deliverable D.3 — Small-`s` RKTableau (Lobatto IIIA, `s = 2`)
+
+Cycle 323: lift cycle 320's `butcherLobatto_zeros_two`, cycle 321's
+`butcherLobatto_quadratureWeights_two`, and this cycle's
+`butcherLobatto_collocationA_two` into a concrete `RKTableau 2`
+matching the trapezoidal rule. Direct extension of cycle 322's
+Radau IIA `s = 1` ship to two stages — exercises the
+collocation-A-matrix machinery at four entries for the first time.
+The textbook tableau (Butcher §344, Table 344(III)) is
+
+  `c = (0, 1)`, `b = (1/2, 1/2)`, `A = !![0, 0; 1/2, 1/2]`,
+
+i.e. the trapezoidal rule. -/
+
+/-- **Butcher §344 — Lobatto IIIA collocation A-matrix at `s = 2`**.
+Entry `(i, j) = ∫₀^{c_i} L_j(x) dx`, where the Lagrange basis
+polynomials `L_j` are taken over the two-leaf abscissae
+`c = (c_0, c_1) = (0, 1)` (`butcherLobatto_zeros_two`). At `s = 2`
+the four entries are `(0, 0, 1/2, 1/2)` — i.e. the trapezoidal-rule
+A-matrix `!![0, 0; 1/2, 1/2]`. -/
+noncomputable def butcherLobatto_collocationA_two
+    (i j : Fin 2) : ℝ :=
+  ∫ x in (0 : ℝ)..butcherLobatto_zeros_two i,
+    (Lagrange.basis Finset.univ butcherLobatto_zeros_two j).eval x
+
+/-- The `(0, 0)` entry of `butcherLobatto_collocationA_two` is `0`.
+The upper limit is `c_0 = 0`, so the integral is vacuous
+(`intervalIntegral.integral_same`). -/
+theorem butcherLobatto_collocationA_two_apply_zero_zero :
+    butcherLobatto_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = 0 := by
+  unfold butcherLobatto_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_two ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_two
+          ⟨0, by omega⟩).eval x = 0
+  simp [butcherLobatto_zeros_two, intervalIntegral.integral_same]
+
+/-- The `(0, 1)` entry of `butcherLobatto_collocationA_two` is `0`.
+The upper limit is `c_0 = 0`, so the integral is vacuous
+(`intervalIntegral.integral_same`). -/
+theorem butcherLobatto_collocationA_two_apply_zero_one :
+    butcherLobatto_collocationA_two ⟨0, by omega⟩ ⟨1, by omega⟩ = 0 := by
+  unfold butcherLobatto_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_two ⟨0, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_two
+          ⟨1, by omega⟩).eval x = 0
+  simp [butcherLobatto_zeros_two, intervalIntegral.integral_same]
+
+/-- The `(1, 0)` entry of `butcherLobatto_collocationA_two` is `1/2`.
+The upper limit is `c_1 = 1` and the integrand is the basis polynomial
+`L_0(x) = 1 - x`, so `∫₀¹ (1 - x) dx = 1/2`. Same integral as
+`butcherLobatto_quadratureWeights_two_apply_zero` (cycle 321). -/
+theorem butcherLobatto_collocationA_two_apply_one_zero :
+    butcherLobatto_collocationA_two ⟨1, by omega⟩ ⟨0, by omega⟩ = 1 / 2 := by
+  unfold butcherLobatto_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_two ⟨1, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_two
+          ⟨0, by omega⟩).eval x = 1 / 2
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨0, by omega⟩)
+      = ({⟨1, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherLobatto_zeros_two
+          ⟨0, by omega⟩).eval x = 1 - x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_two, Polynomial.eval_sub,
+          Polynomial.eval_X]
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_two ⟨1, by omega⟩, ((1 : ℝ) - x)
+      = 1 / 2
+  have h_c1 : butcherLobatto_zeros_two ⟨1, by omega⟩ = 1 := rfl
+  rw [h_c1]
+  have hi_x : IntervalIntegrable (fun x : ℝ => x) MeasureTheory.volume 0 1 :=
+    continuous_id.intervalIntegrable 0 1
+  have hx : ∫ x in (0 : ℝ)..1, x = 1 / 2 := by
+    have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+    simp only [pow_one, Nat.cast_one] at hp1
+    rw [hp1]; norm_num
+  rw [intervalIntegral.integral_sub intervalIntegrable_const hi_x,
+      integral_one, hx]
+  norm_num
+
+/-- The `(1, 1)` entry of `butcherLobatto_collocationA_two` is `1/2`.
+The upper limit is `c_1 = 1` and the integrand is the basis polynomial
+`L_1(x) = x`, so `∫₀¹ x dx = 1/2`. Same integral as
+`butcherLobatto_quadratureWeights_two_apply_one` (cycle 321). -/
+theorem butcherLobatto_collocationA_two_apply_one_one :
+    butcherLobatto_collocationA_two ⟨1, by omega⟩ ⟨1, by omega⟩ = 1 / 2 := by
+  unfold butcherLobatto_collocationA_two
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_two ⟨1, by omega⟩,
+      (Lagrange.basis Finset.univ butcherLobatto_zeros_two
+          ⟨1, by omega⟩).eval x = 1 / 2
+  have h_erase : ((Finset.univ : Finset (Fin 2)).erase ⟨1, by omega⟩)
+      = ({⟨0, by omega⟩} : Finset (Fin 2)) := by decide
+  have h_eval : ∀ x : ℝ,
+      (Lagrange.basis (Finset.univ : Finset (Fin 2)) butcherLobatto_zeros_two
+          ⟨1, by omega⟩).eval x = x := by
+    intro x
+    rw [Lagrange.basis, h_erase, Finset.prod_singleton, Lagrange.basisDivisor]
+    simp [butcherLobatto_zeros_two, Polynomial.eval_X]
+  simp_rw [h_eval]
+  show ∫ x in (0 : ℝ)..butcherLobatto_zeros_two ⟨1, by omega⟩, x = 1 / 2
+  have h_c1 : butcherLobatto_zeros_two ⟨1, by omega⟩ = 1 := rfl
+  rw [h_c1]
+  have hp1 := integral_pow (a := (0 : ℝ)) (b := 1) 1
+  simp only [pow_one, Nat.cast_one] at hp1
+  rw [hp1]; norm_num
+
+/-- **The 2-stage Lobatto IIIA `RKTableau`** assembled from the
+canonical Lagrange weights, zeros, and collocation A-matrix of the
+Lobatto quadrature. At `s = 2` this is the trapezoidal rule with
+`c = (0, 1)`, `b = (1/2, 1/2)`, `A = !![0, 0; 1/2, 1/2]`. -/
+noncomputable def butcherLobattoIIIA_two :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := butcherLobatto_collocationA_two
+  b := butcherLobatto_quadratureWeights_two
+  c := butcherLobatto_zeros_two
+
+/-- **Direct trapezoidal-rule tableau** for cross-validation:
+`c = (0, 1)`, `b = (1/2, 1/2)`, `A = !![0, 0; 1/2, 1/2]`
+declared inline rather than via collocation. -/
+noncomputable def butcherTrapezoidalRK :
+    OpenMath.Chapter3.Section312.RKTableau 2 where
+  A := !![0, 0; 1/2, 1/2]
+  b := ![1/2, 1/2]
+  c := ![0, 1]
+
+/-- **Coincidence**: the cycle-323 collocation-assembled Lobatto IIIA
+tableau at `s = 2` equals the direct trapezoidal-rule tableau. The
+bridge routes through four `_apply` evaluations of the collocation
+A-matrix (`butcherLobatto_collocationA_two_apply_*`), the cycle 321
+weight `_apply` lemmas, and the pattern-matched abscissae reductions. -/
+theorem butcherLobattoIIIA_two_eq_trapezoidal :
+    butcherLobattoIIIA_two = butcherTrapezoidalRK := by
+  refine OpenMath.Chapter3.Section312.RKTableau.mk.injEq .. |>.mpr ⟨?_, ?_, ?_⟩
+  · funext i j; fin_cases i <;> fin_cases j
+    · show butcherLobatto_collocationA_two ⟨0, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherLobatto_collocationA_two_apply_zero_zero]; rfl
+    · show butcherLobatto_collocationA_two ⟨0, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherLobatto_collocationA_two_apply_zero_one]; rfl
+    · show butcherLobatto_collocationA_two ⟨1, by omega⟩ ⟨0, by omega⟩ = _
+      rw [butcherLobatto_collocationA_two_apply_one_zero]; rfl
+    · show butcherLobatto_collocationA_two ⟨1, by omega⟩ ⟨1, by omega⟩ = _
+      rw [butcherLobatto_collocationA_two_apply_one_one]; rfl
+  · funext i; fin_cases i
+    · show butcherLobatto_quadratureWeights_two ⟨0, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_two_apply_zero]; rfl
+    · show butcherLobatto_quadratureWeights_two ⟨1, by omega⟩ = _
+      rw [butcherLobatto_quadratureWeights_two_apply_one]; rfl
+  · funext i; fin_cases i <;> rfl
+
+/-- **Non-vacuity**: the collocation-assembled Lobatto IIIA tableau at
+`s = 2` satisfies the order-2 quadrature condition `B(2)`. Routes
+through the coincidence theorem to the direct trapezoidal-rule form,
+where `∑ⱼ bⱼ · cⱼ^0 = 1/2 + 1/2 = 1 = 1/1` and
+`∑ⱼ bⱼ · cⱼ^1 = (1/2)·0 + (1/2)·1 = 1/2 = 1/2`. -/
+example : butcherLobattoIIIA_two.SatisfiesB 2 := by
+  rw [butcherLobattoIIIA_two_eq_trapezoidal]
+  intro k h1 hk
+  interval_cases k
+  · simp [butcherTrapezoidalRK, Fin.sum_univ_two]; norm_num
+  · simp [butcherTrapezoidalRK, Fin.sum_univ_two]
+
 end OpenMath.Chapter3.Section344
