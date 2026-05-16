@@ -6984,4 +6984,114 @@ example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesB 2 := by
       ← butcherGaussLegendreRK_one_eq]
   exact butcherGaussLegendreRK_satisfiesB 1 (by norm_num)
 
+/-! ### Phase 3.1 — collocation A-matrix exactness on `[0, cᵢ]` (cycle 310)
+
+Cycle 309 shipped the headline `B(2n)` lift; cycle 310 ships the
+companion `C(n)` lift via the upper-limit-parametrised quadrature
+exactness theorem. The proof recipe is verbatim from cycle 303's
+`butcherShiftedLegendre_quadrature_exact_lt_n` with the upper bound
+swapped from `1` to `cᵢ := butcherShiftedLegendre_zeros n i`; the
+final per-`j` integral is then the defining body of the cycle 308
+`butcherShiftedLegendre_collocationA` matrix.
+
+Specialising to `φ = X^(k-1)` yields the §321 `C(n)` order condition
+`∑ⱼ aᵢⱼ cⱼ^(k-1) = cᵢ^k / k` for `1 ≤ k ≤ n`, lifted onto the
+general-`n` Gauss–Legendre `RKTableau` from cycle 309. -/
+
+/-- **Collocation A-matrix exactness on `[0, cᵢ]`.** For every
+polynomial `φ ∈ ℝ[X]` with `natDegree < n`,
+`∫₀^{cᵢ} φ(x) dx = ∑ⱼ Aᵢⱼ · φ(cⱼ)`, where `Aᵢⱼ` is the cycle 308
+collocation matrix entry (`∫₀^{cᵢ} Lⱼ`) at the shifted Legendre
+zeros. This is the upper-limit-parametrised analog of cycle 303's
+`butcherShiftedLegendre_quadrature_exact_lt_n` (which fixed the
+upper bound at `1`); the proof is a verbatim port — only the bound
+changes, and every `intervalIntegral.*` lemma in the recipe is
+bound-agnostic. -/
+theorem butcherShiftedLegendre_collocation_exact_lt_n
+    (n : ℕ) (i : Fin n) (φ : Polynomial ℝ) (hdeg : φ.natDegree < n) :
+    (∫ x in (0 : ℝ)..butcherShiftedLegendre_zeros n i, φ.eval x)
+      = ∑ j : Fin n,
+          butcherShiftedLegendre_collocationA n i j *
+          φ.eval (butcherShiftedLegendre_zeros n j) := by
+  set v : Fin n → ℝ := butcherShiftedLegendre_zeros n with hv_def
+  have hv : Function.Injective v :=
+    butcherShiftedLegendre_zeros_injective n
+  -- Step 1: decompose φ via the Lagrange interpolation identity.
+  have hdecomp : φ = ∑ j : Fin n,
+      Polynomial.C (Polynomial.eval (v j) φ) * Lagrange.basis Finset.univ v j := by
+    have hdeg' : φ.degree < ((Finset.univ : Finset (Fin n)).card : WithBot ℕ) := by
+      rw [Finset.card_univ, Fintype.card_fin]
+      rcases eq_or_ne φ 0 with hφ | hφ
+      · subst hφ; rw [Polynomial.degree_zero]; exact WithBot.bot_lt_coe _
+      · rw [Polynomial.degree_eq_natDegree hφ]; exact_mod_cast hdeg
+    have h_interp :=
+      Lagrange.eq_interpolate (s := (Finset.univ : Finset (Fin n))) (v := v)
+        hv.injOn hdeg'
+    conv_lhs => rw [h_interp]
+    rw [Lagrange.interpolate_apply]
+  -- Step 2: integrate both sides; swap integral and sum.
+  conv_lhs => rw [hdecomp]
+  simp_rw [Polynomial.eval_finset_sum, Polynomial.eval_mul, Polynomial.eval_C]
+  rw [intervalIntegral.integral_finset_sum]
+  · apply Finset.sum_congr rfl
+    intro j _
+    rw [intervalIntegral.integral_const_mul, butcherShiftedLegendre_collocationA]
+    ring
+  · intro j _
+    refine Continuous.intervalIntegrable ?_ _ _
+    exact continuous_const.mul (Polynomial.continuous _)
+
+/-- **Headline cycle 310 corollary: §342 ↔ §321 `C(n)` lift.**
+The general-`n` Gauss–Legendre `RKTableau` (collocation `A`-matrix,
+shifted Legendre zeros) satisfies the Butcher §321 `C(n)` order
+condition. Discharged by unfolding `SatisfiesC` and specialising
+the upper-limit-parametrised quadrature exactness theorem
+`butcherShiftedLegendre_collocation_exact_lt_n` to `φ = X^(k-1)`,
+then using `intervalIntegral.integral_pow` to evaluate the LHS.
+
+No `0 < n` hypothesis is required: at `n = 0`, `Fin 0` is empty so
+the `∀ i` quantifier is vacuous and the conclusion holds trivially.
+This is a strengthening over the `B(2n)` corollary's signature
+(which requires `0 < n` because the existence of `1 ≤ k ≤ 2n` forces
+`n ≥ 1`). -/
+theorem butcherGaussLegendreRK_satisfiesC (n : ℕ) :
+    (butcherGaussLegendreRK n).SatisfiesC n := by
+  intro i k h1 hk
+  show (∑ j : Fin n,
+          butcherShiftedLegendre_collocationA n i j *
+            butcherShiftedLegendre_zeros n j ^ (k - 1))
+        = butcherShiftedLegendre_zeros n i ^ k / (k : ℝ)
+  have hdeg : (Polynomial.X ^ (k - 1) : Polynomial ℝ).natDegree < n := by
+    rw [Polynomial.natDegree_X_pow]; omega
+  have h_exact :=
+    butcherShiftedLegendre_collocation_exact_lt_n n i
+      (Polynomial.X ^ (k - 1) : Polynomial ℝ) hdeg
+  simp only [Polynomial.eval_pow, Polynomial.eval_X] at h_exact
+  have hcast : ((k - 1 : ℕ) : ℝ) + 1 = (k : ℝ) := by
+    have h2 : (k - 1 : ℕ) + 1 = k := Nat.sub_add_cancel h1
+    exact_mod_cast h2
+  rw [integral_pow, Nat.sub_add_cancel h1, hcast,
+      zero_pow (by omega : k ≠ 0), sub_zero] at h_exact
+  exact h_exact.symm
+
+/-- **Non-vacuity witness at `n = 2`.** Exercises the cycle 310 `C(n)`
+theorem at the smallest non-anchor stage count: the 2-stage
+Gauss–Legendre method satisfies the §321 `C(2)` condition (two
+collocation identities `∑ⱼ a₁ⱼ cⱼ^(k-1) = c₁^k / k` and
+`∑ⱼ a₂ⱼ cⱼ^(k-1) = c₂^k / k` for `k = 1, 2`). -/
+example : (butcherGaussLegendreRK 2).SatisfiesC 2 :=
+  butcherGaussLegendreRK_satisfiesC 2
+
+/-- **Round-trip witness through §321's `gaussLegendre1Stage`.**
+Cycle 306 proved this `C(1)` fact directly via `interval_cases k`;
+cycle 310 re-derives it through the general theorem
+`butcherGaussLegendreRK_satisfiesC` at `n = 1`, validating that the
+cycle 310 `C(n)` bridge is downstream-consumable: §321's hand-built
+implicit-midpoint tableau is `C(1)`-correct *via* the §342
+collocation construction. -/
+example : (OpenMath.Chapter3.Section321.gaussLegendre1Stage).SatisfiesC 1 := by
+  rw [← butcherGaussLegendreRK_one_eq_gaussLegendre1Stage,
+      ← butcherGaussLegendreRK_one_eq]
+  exact butcherGaussLegendreRK_satisfiesC 1
+
 end OpenMath.Chapter3.Section342
